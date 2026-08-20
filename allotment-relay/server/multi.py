@@ -1,0 +1,467 @@
+from typing import Any
+
+import aiosqlite
+
+from . import db, world
+from .catalog import ITEM_NAMES
+from .config import (
+    ASSIST_RAPPORT,
+    ASSIST_TICKETS,
+    FORAGE_COOLDOWN_DAY,
+    LARDER_DRAW_FEE,
+    LARDER_DRAWS_PER_DAY,
+    LEAGUE_BONUS_TICKETS,
+    LEAGUE_GOALS,
+    ONLINE_WINDOW,
+)
+from .game import require_steward
+
+
+def _week_id() -> int:
+    return db.now() // (7 * 86400)
+
+
+def _day_id() -> int:
+    return db.now() // FORAGE_COOLDOWN_DAY
+
+
+def _pair_ids(a: int, b: int) -> tuple[int, int]:
+    return (a, b) if a < b else (b, a)
+
+
+async def _bump_rapport(conn: aiosqlite.Connection, a: int, b: int, delta: int) -> None:
+    sa, sb = _pair_ids(a, b)
+    await conn.execute(
+        """
+        INSERT INTO rapport (steward_a, steward_b, score) VALUES (?, ?, ?)
+        ON CONFLICT(steward_a, steward_b) DO UPDATE SET score = score + excluded.score
+        """,
+        (sa, sb, delta),
+    )
+
+
+async def _get_rapport(a: int, b: int) -> int:
+    sa, sb = _pair_ids(a, b)
+    async with aiosqlite.connect(db.DB_PATH) as conn:
+        cur = await conn.execute(
+            "SELECT score FROM rapport WHERE steward_a=? AND steward_b=?",
+            (sa, sb),
+        )
+        row = await cur.fetchone()
+        return row[0] if row else 0
+
+
+async def _ensure_league_week(conn: aiosqlite.Connection) -> dict[str, Any]:
+    conn.row_factory = aiosqlite.Row
+    wid = _week_id()
+    cur = await conn.execute("SELECT * FROM league_week WHERE week_id=?", (wid,))
+    row = await cur.fetchone()
+    if row:
+        return dict(row)
+    goal = LEAGUE_GOALS[wid % len(LEAGUE_GOALS)]
+    await conn.execute(
+        "INSERT INTO league_week (week_id, goal_key, target, progress, completed) VALUES (?,?,?,0,0)",
+        (wid, goal["key"], goal["target"]),
+    )
+    return {"week_id": wid, "goal_key": goal["key"], "target": goal["target"], "progress": 0, "completed": 0}
+
+
+def _goal_meta(key: str) -> dict[str, Any]:
+    for g in LEAGUE_GOALS:
+        if g["key"] == key:
+            return g
+    return {"key": key, "label": key, "target": 0}
+
+
+async def league_snapshot() -> dict[str, Any]:
+    async with aiosqlite.connect(db.DB_PATH) as conn:
+        conn.row_factory = aiosqlite.Row
+        row = await _ensure_league_week(conn)
+        await conn.commit()
+        meta = _goal_meta(row["goal_key"])
+        return {
+            "label": meta.get("label", row["goal_key"]),
+            "progress": row["progress"],
+            "target": row["target"],
+            "completed": bool(row["completed"]),
+        }
+
+
+async def _league_add_progress(conn: aiosqlite.Connection, steward_id: int, amount: int = 1) -> str | None:
+    row = await _ensure_league_week(conn)
+    if row["completed"]:
+        return None
+    wid = row["week_id"]
+    await conn.execute(
+        "UPDATE league_week SET progress = progress + ? WHERE week_id=?",
+        (amount, wid),
+    )
+    await conn.execute(
+        """
+        INSERT INTO league_contrib (week_id, steward_id, amount) VALUES (?,?,?)
+        ON CONFLICT(week_id, steward_id) DO UPDATE SET amount = amount + excluded.amount
+        """,
+        (wid, steward_id, amount),
+    )
+    cur = await conn.execute("SELECT progress, target FROM league_week WHERE week_id=?", (wid,))
+    prog, target = await cur.fetchone()
+    if prog >= target:
+        await conn.execute(
+            "UPDATE league_week SET completed=1, completed_at=? WHERE week_id=?",
+            (db.now(), wid),
+        )
+        cur = await conn.execute("SELECT steward_id FROM league_contrib WHERE week_id=?", (wid,))
+        for (sid,) in await cur.fetchall():
+            await conn.execute(
+                "UPDATE stewards SET tickets = tickets + ? WHERE id=?",
+                (LEAGUE_BONUS_TICKETS, sid),
+            )
+        meta = _goal_meta(row["goal_key"])
+        return f"联盟周目标「{meta['label']}」达成！参与者各 +{LEAGUE_BONUS_TICKETS} 票"
+    return None
+
+
+async def _league_on_item(conn: aiosqlite.Connection, steward_id: int, item: str, qty: int = 1) -> str | None:
+    row = await _ensure_league_week(conn)
+    if row["completed"]:
+        return None
+    meta = _goal_meta(row["goal_key"])
+    if meta.get("item") != item:
+        return None
+    return await _league_add_progress(conn, steward_id, qty)
+
+
+async def _league_on_assist(conn: aiosqlite.Connection, steward_id: int) -> str | None:
+    row = await _ensure_league_week(conn)
+    if row["completed"] or row["goal_key"] != "assist":
+        return None
+    return await _league_add_progress(conn, steward_id, 1)
+
+
+async def on_league_item(steward_id: int, item: str, qty: int = 1) -> str | None:
+    async with aiosqlite.connect(db.DB_PATH) as conn:
+        bonus = await _league_on_item(conn, steward_id, item, qty)
+        await conn.commit()
+        return bonus
+
+
+async def on_league_assist(steward_id: int) -> str | None:
+    async with aiosqlite.connect(db.DB_PATH) as conn:
+        bonus = await _league_on_assist(conn, steward_id)
+        await conn.commit()
+        return bonus
+
+
+async def public_contracts_list() -> list[dict[str, Any]]:
+    async with aiosqlite.connect(db.DB_PATH) as conn:
+        conn.row_factory = aiosqlite.Row
+        rows = await (await conn.execute(
+            """
+            SELECT c.id, c.want_item, c.want_qty, c.reward_tickets, p.name AS poster
+            FROM contracts c JOIN stewards p ON p.id = c.poster_id
+            WHERE c.status='open' ORDER BY c.created_at DESC LIMIT 15
+            """
+        )).fetchall()
+        return [
+            {
+                "id": r["id"],
+                "poster": r["poster"],
+                "item": r["want_item"],
+                "item_name": ITEM_NAMES.get(r["want_item"], r["want_item"]),
+                "quantity": r["want_qty"],
+                "reward": r["reward_tickets"],
+            }
+            for r in rows
+        ]
+
+
+async def alliance_ops(key_id: int, command: str) -> str:
+    s = await require_steward(key_id)
+    parts = command.strip().split(maxsplit=2)
+    verb = parts[0].lower() if parts else "online"
+
+    if verb == "online":
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            conn.row_factory = aiosqlite.Row
+            rows = await (await conn.execute(
+                """
+                SELECT name, badge, last_active_at FROM stewards
+                WHERE enrolled=1 AND id != ? AND last_active_at > ?
+                ORDER BY last_active_at DESC LIMIT 30
+                """,
+                (s["id"], db.now() - ONLINE_WINDOW),
+            )).fetchall()
+        if not rows:
+            return "此刻没有在线管理员"
+        lines = [f"- {r['name']} ({r['badge']})" for r in rows if r["name"] != s["name"]]
+        return "在线：\n" + ("\n".join(lines) if lines else "（仅你一人）")
+
+    if verb == "rapport" and len(parts) >= 2:
+        peer = await db.get_steward_by_name(parts[1])
+        if not peer:
+            raise ValueError("找不到该管理员")
+        score = await _get_rapport(s["id"], peer["id"])
+        return f"与 {peer['name']} 的协作度：{score}（互助/合约/协助会提升）"
+
+    if verb == "assist" and len(parts) >= 2:
+        peer = await db.get_steward_by_name(parts[1])
+        if not peer:
+            raise ValueError("找不到该管理员")
+        if peer["id"] == s["id"]:
+            raise ValueError("不能 assist 自己")
+        day = _day_id()
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            cur = await conn.execute(
+                "SELECT 1 FROM assist_log WHERE helper_id=? AND target_id=? AND day=?",
+                (s["id"], peer["id"], day),
+            )
+            if await cur.fetchone():
+                raise ValueError(f"今天已帮过 {peer['name']}，明天再来")
+            cur = await conn.execute(
+                "SELECT id FROM parcels WHERE steward_id=? AND crop IS NOT NULL AND tended=0",
+                (peer["id"],),
+            )
+            rows = await cur.fetchall()
+            if not rows:
+                raise ValueError(f"{peer['name']} 的份地不需要打理")
+            for (pid,) in rows:
+                await conn.execute("UPDATE parcels SET tended=1 WHERE id=?", (pid,))
+            await conn.execute(
+                "INSERT INTO assist_log (helper_id, target_id, day) VALUES (?,?,?)",
+                (s["id"], peer["id"], day),
+            )
+            await conn.execute(
+                "UPDATE stewards SET tickets = tickets + ? WHERE id=?",
+                (ASSIST_TICKETS, s["id"]),
+            )
+            await _bump_rapport(conn, s["id"], peer["id"], ASSIST_RAPPORT)
+            bonus = await _league_on_assist(conn, s["id"])
+            await conn.commit()
+        msg = f"{s['name']} 帮 {peer['name']} 打理了 {len(rows)} 块份地，+{ASSIST_TICKETS} 票"
+        await db.add_chronicle("assist", msg, s["id"], peer["id"])
+        if bonus:
+            await db.add_chronicle("league", bonus, s["id"])
+            return msg + f"\n{bonus}"
+        return msg
+
+    if verb == "donate" and len(parts) >= 3:
+        item, qty = parts[1], int(parts[2])
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            if not await db.take_item(conn, s["id"], item, qty):
+                raise ValueError("行囊不足")
+            await conn.execute(
+                """
+                INSERT INTO larder (item, quantity) VALUES (?, ?)
+                ON CONFLICT(item) DO UPDATE SET quantity = quantity + excluded.quantity
+                """,
+                (item, qty),
+            )
+            bonus = await _league_on_item(conn, s["id"], item, qty)
+            await conn.commit()
+        msg = f"{s['name']} 向联盟储藏室捐赠 {ITEM_NAMES.get(item, item)} x{qty}"
+        await db.add_chronicle("donate", msg, s["id"])
+        if bonus:
+            await db.add_chronicle("league", bonus, None)
+            return msg + f"\n{bonus}"
+        return msg
+
+    if verb == "larder":
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            conn.row_factory = aiosqlite.Row
+            rows = await (await conn.execute(
+                "SELECT item, quantity FROM larder WHERE quantity > 0 ORDER BY item"
+            )).fetchall()
+        if not rows:
+            return "储藏室是空的，欢迎 donate"
+        return "联盟储藏室：\n" + "\n".join(
+            f"  {ITEM_NAMES.get(r['item'], r['item'])} x{r['quantity']}" for r in rows
+        )
+
+    if verb == "draw" and len(parts) >= 3:
+        item, qty = parts[1], int(parts[2])
+        day = _day_id()
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            conn.row_factory = aiosqlite.Row
+            cur = await conn.execute(
+                "SELECT count FROM larder_draws WHERE steward_id=? AND day=?",
+                (s["id"], day),
+            )
+            row = await cur.fetchone()
+            used = row["count"] if row else 0
+            if used >= LARDER_DRAWS_PER_DAY:
+                raise ValueError(f"今日领取上限 {LARDER_DRAWS_PER_DAY}")
+            cur = await conn.execute("SELECT quantity FROM larder WHERE item=?", (item,))
+            lrow = await cur.fetchone()
+            if not lrow or lrow[0] < qty:
+                raise ValueError("储藏室库存不足")
+            cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
+            if (await cur.fetchone())[0] < LARDER_DRAW_FEE:
+                raise ValueError(f"领取需 {LARDER_DRAW_FEE} 票")
+            await conn.execute(
+                "UPDATE larder SET quantity = quantity - ? WHERE item=?",
+                (qty, item),
+            )
+            await db.add_item(conn, s["id"], item, qty)
+            await conn.execute(
+                "UPDATE stewards SET tickets = tickets - ? WHERE id=?",
+                (LARDER_DRAW_FEE, s["id"]),
+            )
+            await conn.execute(
+                """
+                INSERT INTO larder_draws (steward_id, day, count) VALUES (?,?,1)
+                ON CONFLICT(steward_id, day) DO UPDATE SET count = count + 1
+                """,
+                (s["id"], day),
+            )
+            await conn.commit()
+        return f"从储藏室领取 {ITEM_NAMES.get(item, item)} x{qty}（-{LARDER_DRAW_FEE} 票）"
+
+    raise ValueError(f"未知 alliance 指令: {command}")
+
+
+async def contract_ops(key_id: int, command: str) -> str:
+    s = await require_steward(key_id)
+    parts = command.strip().split()
+    verb = parts[0].lower() if parts else "list"
+
+    if verb == "list":
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            conn.row_factory = aiosqlite.Row
+            rows = await (await conn.execute(
+                """
+                SELECT c.*, p.name AS poster_name FROM contracts c
+                JOIN stewards p ON p.id = c.poster_id
+                WHERE c.status='open' ORDER BY c.created_at DESC LIMIT 20
+                """
+            )).fetchall()
+        if not rows:
+            return "暂无开放合约"
+        return "\n".join(
+            f"#{r['id']} {r['poster_name']} 要 {ITEM_NAMES.get(r['want_item'], r['want_item'])} x{r['want_qty']} "
+            f"酬 {r['reward_tickets']} 票"
+            for r in rows
+        )
+
+    if verb == "mine":
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            conn.row_factory = aiosqlite.Row
+            rows = await (await conn.execute(
+                "SELECT * FROM contracts WHERE poster_id=? AND status='open' ORDER BY id DESC",
+                (s["id"],),
+            )).fetchall()
+        if not rows:
+            return "你没有挂出的合约"
+        return "\n".join(
+            f"#{r['id']} 要 {ITEM_NAMES.get(r['want_item'], r['want_item'])} x{r['want_qty']} "
+            f"酬 {r['reward_tickets']} 票"
+            for r in rows
+        )
+
+    if verb == "post" and len(parts) >= 4:
+        item, qty, reward = parts[1], int(parts[2]), int(parts[3])
+        if reward < 1:
+            raise ValueError("酬劳至少 1 票")
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
+            if (await cur.fetchone())[0] < reward:
+                raise ValueError("工分票不足以支付酬劳")
+            await conn.execute(
+                "UPDATE stewards SET tickets = tickets - ? WHERE id=?",
+                (reward, s["id"]),
+            )
+            await conn.execute(
+                """
+                INSERT INTO contracts (poster_id, want_item, want_qty, reward_tickets, created_at)
+                VALUES (?,?,?,?,?)
+                """,
+                (s["id"], item, qty, reward, db.now()),
+            )
+            await conn.commit()
+        msg = f"{s['name']} 发布合约：{ITEM_NAMES.get(item, item)} x{qty}，酬 {reward} 票"
+        await db.add_chronicle("contract", msg, s["id"])
+        return msg + "（酬劳已托管）"
+
+    if verb == "fill" and len(parts) >= 2:
+        cid = int(parts[1])
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            conn.row_factory = aiosqlite.Row
+            c = dict(await (await conn.execute(
+                "SELECT * FROM contracts WHERE id=? AND status='open'", (cid,)
+            )).fetchone() or {})
+            if not c:
+                raise ValueError("合约不存在或已关闭")
+            if c["poster_id"] == s["id"]:
+                raise ValueError("不能交付自己的合约")
+            if not await db.take_item(conn, s["id"], c["want_item"], c["want_qty"]):
+                raise ValueError("行囊里没有足够物资")
+            await db.add_item(conn, c["poster_id"], c["want_item"], c["want_qty"])
+            await conn.execute(
+                "UPDATE stewards SET tickets = tickets + ? WHERE id=?",
+                (c["reward_tickets"], s["id"]),
+            )
+            await conn.execute(
+                "UPDATE contracts SET status='filled', filler_id=? WHERE id=?",
+                (s["id"], cid),
+            )
+            poster = await db.get_steward_by_id(c["poster_id"])
+            await _bump_rapport(conn, s["id"], c["poster_id"], ASSIST_RAPPORT * 2)
+            await conn.commit()
+        pname = poster["name"] if poster else "?"
+        msg = f"{s['name']} 完成 {pname} 的合约 #{cid}，+{c['reward_tickets']} 票"
+        await db.add_chronicle("contract_fill", msg, s["id"], c["poster_id"])
+        return msg
+
+    if verb == "cancel" and len(parts) >= 2:
+        cid = int(parts[1])
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            conn.row_factory = aiosqlite.Row
+            c = dict(await (await conn.execute(
+                "SELECT * FROM contracts WHERE id=? AND poster_id=? AND status='open'",
+                (cid, s["id"]),
+            )).fetchone() or {})
+            if not c:
+                raise ValueError("无法取消该合约")
+            await conn.execute(
+                "UPDATE stewards SET tickets = tickets + ? WHERE id=?",
+                (c["reward_tickets"], s["id"]),
+            )
+            await conn.execute("UPDATE contracts SET status='cancelled' WHERE id=?", (cid,))
+            await conn.commit()
+        return f"合约 #{cid} 已取消，酬劳退回"
+
+    raise ValueError(f"未知 contract 指令: {command}")
+
+
+async def league_ops(key_id: int, command: str) -> str:
+    s = await require_steward(key_id)
+    parts = command.strip().split()
+    verb = parts[0].lower() if parts else "status"
+
+    if verb == "status":
+        snap = await league_snapshot()
+        if snap["completed"]:
+            return f"本周「{snap['label']}」已达成 ({snap['progress']}/{snap['target']})"
+        return f"本周联盟目标：{snap['label']} {snap['progress']}/{snap['target']}"
+
+    if verb == "contribute" and len(parts) >= 3:
+        item, qty = parts[1], int(parts[2])
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            row = await _ensure_league_week(conn)
+            if row["completed"]:
+                raise ValueError("本周目标已完成")
+            meta = _goal_meta(row["goal_key"])
+            if meta.get("item") != item:
+                raise ValueError(f"本周目标是「{meta['label']}」，请捐 {meta.get('item', '?')}")
+            if not await db.take_item(conn, s["id"], item, qty):
+                raise ValueError("行囊不足")
+            bonus = await _league_add_progress(conn, s["id"], qty)
+            await conn.commit()
+        msg = f"{s['name']} 为联盟周目标贡献 {ITEM_NAMES.get(item, item)} x{qty}"
+        await db.add_chronicle("league", msg, s["id"])
+        if bonus:
+            await db.add_chronicle("league", bonus, None)
+            return msg + f"\n{bonus}"
+        snap = await league_snapshot()
+        return msg + f"\n进度 {snap['progress']}/{snap['target']}"
+
+    raise ValueError(f"未知 league 指令: {command}")

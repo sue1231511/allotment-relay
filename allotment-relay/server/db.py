@@ -107,6 +107,59 @@ CREATE TABLE IF NOT EXISTS handoffs (
     picked_up INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS assist_log (
+    helper_id INTEGER NOT NULL REFERENCES stewards(id),
+    target_id INTEGER NOT NULL REFERENCES stewards(id),
+    day INTEGER NOT NULL,
+    PRIMARY KEY (helper_id, target_id, day)
+);
+
+CREATE TABLE IF NOT EXISTS rapport (
+    steward_a INTEGER NOT NULL REFERENCES stewards(id),
+    steward_b INTEGER NOT NULL REFERENCES stewards(id),
+    score INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (steward_a, steward_b)
+);
+
+CREATE TABLE IF NOT EXISTS larder (
+    item TEXT PRIMARY KEY,
+    quantity INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS larder_draws (
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    day INTEGER NOT NULL,
+    count INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (steward_id, day)
+);
+
+CREATE TABLE IF NOT EXISTS contracts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    poster_id INTEGER NOT NULL REFERENCES stewards(id),
+    want_item TEXT NOT NULL,
+    want_qty INTEGER NOT NULL,
+    reward_tickets INTEGER NOT NULL,
+    filler_id INTEGER,
+    status TEXT NOT NULL DEFAULT 'open',
+    created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS league_week (
+    week_id INTEGER PRIMARY KEY,
+    goal_key TEXT NOT NULL,
+    target INTEGER NOT NULL,
+    progress INTEGER NOT NULL DEFAULT 0,
+    completed INTEGER NOT NULL DEFAULT 0,
+    completed_at INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS league_contrib (
+    week_id INTEGER NOT NULL,
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    amount INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (week_id, steward_id)
+);
 """
 
 
@@ -322,13 +375,20 @@ async def public_stats() -> dict[str, Any]:
         scrumps = (await (await db.execute(
             "SELECT COUNT(*) c FROM chronicle WHERE action IN ('scrump', 'scrump_busted')"
         )).fetchone())["c"]
+        open_contracts = (await (await db.execute(
+            "SELECT COUNT(*) c FROM contracts WHERE status='open'"
+        )).fetchone())["c"]
         w, t = world.current_weather(), world.current_tide()
+        from . import multi
+        league = await multi.league_snapshot()
         return {
             "stewards": stewards,
             "online": online,
             "open_swaps": swaps,
             "hearth_recipes": recipes,
             "total_scrumps": scrumps,
+            "open_contracts": open_contracts,
+            "league": league,
             "weather": w,
             "tide": t,
         }

@@ -94,6 +94,12 @@ async def public_allotments():
     return await db.public_allotments()
 
 
+@app.get("/api/public/contracts")
+async def public_contracts():
+    from . import multi
+    return await multi.public_contracts_list()
+
+
 @app.get("/health")
 async def health():
     return {"ok": True}

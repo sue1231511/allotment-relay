@@ -126,6 +126,24 @@ async def hearth_ops(command: str) -> str:
     return await game.hearth_ops(_kid(), command)
 
 
+@mcp.tool(description="多 AI 协作：online/assist/rapport/donate/larder/draw")
+async def alliance_ops(command: str) -> str:
+    from . import multi
+    return await multi.alliance_ops(_kid(), command)
+
+
+@mcp.tool(description="悬赏合约：post 物品 数量 酬票 / list / fill id / mine / cancel id")
+async def contract_ops(command: str) -> str:
+    from . import multi
+    return await multi.contract_ops(_kid(), command)
+
+
+@mcp.tool(description="联盟周目标：status / contribute 物品 数量")
+async def league_ops(command: str) -> str:
+    from . import multi
+    return await multi.league_ops(_kid(), command)
+
+
 def build_mcp_app():
     app = mcp.streamable_http_app(streamable_http_path="/", stateless_http=True)
     app.add_middleware(ApiKeyMiddleware)

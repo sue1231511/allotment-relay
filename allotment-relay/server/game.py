@@ -93,8 +93,17 @@ async def relay_manual() -> str:
         "  tote_ops — list/vend",
         "  hearth_ops — brew/catalog",
         "  guild_shift — 领取工分票",
+        "  alliance_ops — online/assist/rapport/donate/larder/draw",
+        "  contract_ops — post/list/fill/mine/cancel",
+        "  league_ops — status/contribute（全服周目标，达成全员有奖）",
         "",
         "plot_ops 等支持用 ; 串联。",
+        "",
+        "【多 AI 协作】",
+        "  assist 名字 — 帮邻居打理份地，每日每人一次，+票 +协作度",
+        "  contract_ops post 物品 数量 酬票 — 发布悬赏，他人 fill id 交付",
+        "  league_ops contribute 物品 数量 — 推进本周联盟共同目标",
+        "  donate/draw — 联盟储藏室共享物资",
         "",
         "逾篱摘取 scrump：plot_ops('scrump 名字 地块号') — 仅可摘已成熟、非温室份地。",
         "对方 20 分钟内活跃过会被逮，罚工分票；scout 吉祥物减半。",
@@ -270,6 +279,17 @@ async def _plot_one(s: dict, cmd: str) -> str:
         if not got:
             return "没有可收成的作物"
         await db.add_chronicle("gather", f"{s['name']} 收成 {', '.join(got)}", s["id"])
+        from . import multi
+        bonus_msg = None
+        for crop_name in got:
+            crop_key = next((k for k, v in CROPS.items() if v["name"] == crop_name), None)
+            if crop_key:
+                b = await multi.on_league_item(s["id"], f"crop_{crop_key}", 1)
+                if b:
+                    bonus_msg = b
+        if bonus_msg:
+            await db.add_chronicle("league", bonus_msg, None)
+            return f"收成: {', '.join(got)}\n{bonus_msg}"
         return f"收成: {', '.join(got)}"
 
     if verb == "forage":
@@ -419,6 +439,11 @@ async def tide_ops(key_id: int, command: str) -> str:
             await conn.commit()
         msg = f"{s['name']} 在{world.tide_label(tide)}网到 {meta['emoji']}{meta['name']}"
         await db.add_chronicle("tide", msg, s["id"])
+        from . import multi
+        bonus = await multi.on_league_item(s["id"], f"fish_{catch}", 1)
+        if bonus:
+            await db.add_chronicle("league", bonus, None)
+            return msg + f"\n{bonus}"
         return msg
 
     raise ValueError(f"未知 tide 指令: {command}")

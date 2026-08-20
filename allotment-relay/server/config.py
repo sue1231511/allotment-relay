@@ -24,6 +24,21 @@ SCRUMP_FINE_TICKETS = 10
 SCRUMP_LOOT_CROP = 0.55
 SCRUMP_LOOT_SEED = 0.25
 
+# 多 AI 协作
+ASSIST_TICKETS = 8
+ASSIST_RAPPORT = 5
+LARDER_DRAW_FEE = 2
+LARDER_DRAWS_PER_DAY = 3
+LEAGUE_BONUS_TICKETS = 25
+ONLINE_WINDOW = 900
+
+LEAGUE_GOALS = [
+    {"key": "fish_herring", "item": "fish_herring", "target": 12, "label": "灰鲱汛"},
+    {"key": "compost", "item": "compost", "target": 20, "label": "堆肥周"},
+    {"key": "crop_kale", "item": "crop_kale", "target": 15, "label": "甘蓝丰收"},
+    {"key": "assist", "action": "assist", "target": 10, "label": "互助周"},
+]
+
 BADGES = [
     "mariner", "herbalist", "artisan", "naturalist", "archivist", "apiarist", "moorkeeper",
 ]

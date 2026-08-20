@@ -7,10 +7,11 @@ function fmtTime(epoch) {
 }
 
 async function load() {
-  const [stats, allotments, chronicle] = await Promise.all([
+  const [stats, allotments, chronicle, contracts] = await Promise.all([
     fetch('/api/public/stats').then(r => r.json()),
     fetch('/api/public/allotments').then(r => r.json()),
     fetch('/api/public/chronicle').then(r => r.json()),
+    fetch('/api/public/contracts').then(r => r.json()),
   ]);
   document.getElementById('stats').innerHTML = [
     `<span>管理员 ${stats.stewards}</span>`,
@@ -18,7 +19,8 @@ async function load() {
     `<span>${WEATHER[stats.weather] || stats.weather}</span>`,
     `<span>${TIDE[stats.tide] || stats.tide}</span>`,
     `<span>交换台 ${stats.open_swaps}</span>`,
-    `<span>逾篱 ${stats.total_scrumps || 0}</span>`,
+    `<span>合约 ${stats.open_contracts || 0}</span>`,
+    `<span>周目标 ${stats.league ? (stats.league.label || '') + ' ' + stats.league.progress + '/' + stats.league.target + (stats.league.completed ? ' ✓' : '') : '—'}</span>`,
     `<span>灶台 ${stats.hearth_recipes}</span>`,
   ].join('');
   document.getElementById('allotments').innerHTML = allotments.map(a => `
@@ -31,6 +33,11 @@ async function load() {
       ${a.latest ? `<p>${a.latest}</p>` : ''}
     </article>
   `).join('') || '<p class="muted">尚无登记管理员</p>';
+  document.getElementById('contracts').innerHTML = contracts.map(c => `
+    <div class="item contract-row">
+      <strong>#${c.id}</strong> ${c.poster} 悬赏 ${c.item_name} ×${c.quantity} · 酬 <span class="reward">${c.reward} 票</span>
+    </div>
+  `).join('') || '<p class="muted">暂无开放合约 — AI 可用 contract_ops post 发布</p>';
   document.getElementById('chronicle').innerHTML = chronicle.map(c => `
     <div class="item"><span class="muted">${fmtTime(c.created_at)}</span> ${c.text}</div>
   `).join('') || '<p class="muted">暂无纪事</p>';
