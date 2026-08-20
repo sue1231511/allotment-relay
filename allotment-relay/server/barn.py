@@ -59,7 +59,7 @@ async def barn_ops(key_id: int, command: str) -> str:
     verb = parts[0].lower() if parts else "status"
 
     if verb == "status":
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             rows = await (await conn.execute(
                 "SELECT * FROM barn_animals WHERE steward_id=? ORDER BY slot",
@@ -111,7 +111,7 @@ async def barn_ops(key_id: int, command: str) -> str:
     if verb == "erect":
         if s.get("barn_built"):
             return "已有畜栏"
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
             if (await cur.fetchone())[0] < config.BARN_ERECT_COST:
                 raise ValueError(f"搭建畜栏需要 {config.BARN_ERECT_COST} 票")
@@ -137,7 +137,7 @@ async def barn_ops(key_id: int, command: str) -> str:
         if slot < 1 or slot > config.BARN_SLOTS:
             raise ValueError(f"槽位 1~{config.BARN_SLOTS}")
         meta = LIVESTOCK[species]
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             cur = await conn.execute(
                 "SELECT * FROM barn_animals WHERE steward_id=? AND slot=?",
@@ -176,7 +176,7 @@ async def barn_ops(key_id: int, command: str) -> str:
 
     if verb == "feed":
         slot = int(parts[1]) if len(parts) > 1 else 1
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             row = dict(await (await conn.execute(
                 "SELECT * FROM barn_animals WHERE steward_id=? AND slot=?",
@@ -214,7 +214,7 @@ async def barn_ops(key_id: int, command: str) -> str:
     if verb == "collect":
         slot = int(parts[1]) if len(parts) > 1 else 1
         day = _day_id()
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             row = dict(await (await conn.execute(
                 "SELECT * FROM barn_animals WHERE steward_id=? AND slot=?",
@@ -249,7 +249,7 @@ async def barn_ops(key_id: int, command: str) -> str:
 
     if verb == "harvest":
         slot = int(parts[1]) if len(parts) > 1 else 1
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             row = dict(await (await conn.execute(
                 "SELECT * FROM barn_animals WHERE steward_id=? AND slot=?",
@@ -298,7 +298,7 @@ async def barn_ops(key_id: int, command: str) -> str:
         if item not in MANURE:
             raise ValueError(f"可堆肥: {', '.join(MANURE.keys())}")
         yield_each = MANURE[item]["compost_yield"]
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             if not await db.take_item(conn, s["id"], item, qty):
                 raise ValueError(f"缺少 {MANURE[item]['name']} x{qty}")
             total = yield_each * qty
@@ -318,7 +318,7 @@ async def barn_ops(key_id: int, command: str) -> str:
             raise ValueError("churn 至少山羊奶 x2 → 奶酪 x1")
         milk = qty - (qty % 2)
         cheese = milk // 2
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             if not await db.take_item(conn, s["id"], "goat_milk", milk):
                 raise ValueError(f"需要山羊奶 x{milk}（goat collect）")
             await db.add_item(conn, s["id"], "goat_cheese", cheese)

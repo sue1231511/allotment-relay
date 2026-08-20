@@ -20,7 +20,7 @@ async def bottle_ops(key_id: int, command: str) -> str:
     verb = parts[0].lower() if parts else "scan"
 
     if verb == "scan":
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             count = (await (await conn.execute(
                 "SELECT COUNT(*) FROM drift_bottles WHERE found_by IS NULL"
@@ -49,7 +49,7 @@ async def bottle_ops(key_id: int, command: str) -> str:
         body = body[:180]
         signature = signature[:40]
         day = _day_id()
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             cur = await conn.execute(
                 "SELECT count FROM bottle_rolls WHERE steward_id=? AND day=?",
                 (s["id"], day),
@@ -75,7 +75,7 @@ async def bottle_ops(key_id: int, command: str) -> str:
         return f"瓶已入海：「{body}」— {signature}"
 
     if verb == "fish":
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             if random.random() > config.BOTTLE_FISH_CHANCE + 0.25:
                 await conn.commit()
@@ -119,7 +119,7 @@ async def bottle_ops(key_id: int, command: str) -> str:
 
     if verb == "read" and len(parts) >= 2:
         bid = int(parts[1])
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             row = await (await conn.execute(
                 """
@@ -144,7 +144,7 @@ async def bottle_ops(key_id: int, command: str) -> str:
         if len(rp) < 2:
             raise ValueError("用法: bottle_ops reply 编号 正文")
         bid, body = int(rp[0]), rp[1][:180]
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             row = await (await conn.execute(
                 "SELECT * FROM drift_bottles WHERE id=?", (bid,)

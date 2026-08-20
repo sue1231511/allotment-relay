@@ -527,7 +527,7 @@ async def voyage_fail_modifier() -> float:
 
 async def active_world_pulse(conn: aiosqlite.Connection | None = None) -> dict[str, Any] | None:
     if conn is None:
-        async with aiosqlite.connect(db.DB_PATH) as c:
+        async with db.connect() as c:
             c.row_factory = aiosqlite.Row
             return await active_world_pulse(c)
     conn.row_factory = aiosqlite.Row
@@ -540,7 +540,7 @@ async def active_world_pulse(conn: aiosqlite.Connection | None = None) -> dict[s
 
 
 async def maybe_world_pulse(steward: dict[str, Any]) -> str | None:
-    async with aiosqlite.connect(db.DB_PATH) as conn:
+    async with db.connect() as conn:
         conn.row_factory = aiosqlite.Row
         if await active_world_pulse(conn):
             return None
@@ -596,7 +596,7 @@ async def public_pulse_snapshot() -> dict[str, Any] | None:
 
 
 async def list_open_incidents(steward_id: int) -> list[dict[str, Any]]:
-    async with aiosqlite.connect(db.DB_PATH) as conn:
+    async with db.connect() as conn:
         conn.row_factory = aiosqlite.Row
         rows = await (await conn.execute(
             """
@@ -646,7 +646,7 @@ async def incident_ops(key_id: int, command: str) -> str:
 
     if verb == "repair" and len(parts) >= 2:
         iid = int(parts[1].lstrip("#"))
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             row = await (await conn.execute(
                 "SELECT * FROM steward_incidents WHERE id=? AND steward_id=? AND resolved=0",

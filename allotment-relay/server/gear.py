@@ -117,7 +117,7 @@ async def gear_ops(key_id: int, command: str) -> str:
     verb = parts[0].lower() if parts else "status"
 
     if verb == "status":
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             gear = await get_gear(conn, s["id"])
             await conn.commit()
         lines = [
@@ -134,7 +134,7 @@ async def gear_ops(key_id: int, command: str) -> str:
         kind = parts[1].lower()
         if kind not in GEAR_TIERS:
             raise ValueError("可升级: bait, rod, net")
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             gear = await get_gear(conn, s["id"])
             current = gear[kind]
             nxt = _next_tier(kind, current)

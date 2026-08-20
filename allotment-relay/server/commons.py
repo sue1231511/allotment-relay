@@ -112,7 +112,7 @@ def _spawn_line(row: dict[str, Any]) -> str:
 
 async def commons_snapshot(conn: aiosqlite.Connection | None = None) -> list[dict[str, Any]]:
     if conn is None:
-        async with aiosqlite.connect(db.DB_PATH) as c:
+        async with db.connect() as c:
             return await commons_snapshot(c)
     return await _active_spawns(conn)
 
@@ -124,7 +124,7 @@ async def commons_ops(key_id: int, command: str) -> str:
     parts = command.strip().split()
     verb = parts[0].lower() if parts else "scan"
 
-    async with aiosqlite.connect(db.DB_PATH) as conn:
+    async with db.connect() as conn:
         conn.row_factory = aiosqlite.Row
         spawned = await maybe_spawn_commons(conn, steward_id=s["id"])
 

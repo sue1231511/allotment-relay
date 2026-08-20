@@ -15,7 +15,7 @@ async def market_ops(key_id: int, command: str) -> str:
     verb = parts[0].lower() if parts else "list"
 
     if verb == "list":
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             rows = await (await conn.execute(
                 """
@@ -45,7 +45,7 @@ async def market_ops(key_id: int, command: str) -> str:
         return "\n".join(lines)
 
     if verb == "mine":
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             rows = await (await conn.execute(
                 """
@@ -74,7 +74,7 @@ async def market_ops(key_id: int, command: str) -> str:
                 f"{ITEM_NAMES.get(item_key, item_key)}（{item_key}）不宜上架"
             )
         sug = suggested_price(item_key)
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             cur = await conn.execute(
                 "SELECT COUNT(*) FROM market_listings WHERE seller_id=? AND buyer_id IS NULL",
                 (s["id"],),
@@ -107,7 +107,7 @@ async def market_ops(key_id: int, command: str) -> str:
     if verb == "buy" and len(parts) >= 2:
         lot_id = int(parts[1])
         qty = int(parts[2]) if len(parts) > 2 else None
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             lot = dict(await (await conn.execute(
                 "SELECT * FROM market_listings WHERE id=? AND buyer_id IS NULL",
@@ -159,7 +159,7 @@ async def market_ops(key_id: int, command: str) -> str:
 
     if verb == "cancel" and len(parts) >= 2:
         lot_id = int(parts[1])
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             lot = dict(await (await conn.execute(
                 "SELECT * FROM market_listings WHERE id=? AND seller_id=? AND buyer_id IS NULL",

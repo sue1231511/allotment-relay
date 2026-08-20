@@ -59,7 +59,7 @@ async def eatery_command(s: dict[str, Any], command: str) -> str:
     verb = parts[0].lower() if parts else "board"
 
     if verb in ("board", "shops", "list"):
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             shops = await (await conn.execute(
                 """
@@ -85,7 +85,7 @@ async def eatery_command(s: dict[str, Any], command: str) -> str:
             return f"已在营业：{s.get('eatery_label') or s['name']+'的馆'}。改名用 shop label"
         if not s.get("hut_built"):
             raise ValueError("先 hut_ops build 小屋")
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             cur = await conn.execute(
                 "SELECT 1 FROM hut_fittings WHERE steward_id=? AND item_key='fridge'",
                 (s["id"],),
@@ -112,7 +112,7 @@ async def eatery_command(s: dict[str, Any], command: str) -> str:
         if not s.get("eatery_open"):
             raise ValueError("还没开张，shop open 店名")
         label = " ".join(parts[1:])[:32]
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             await conn.execute(
                 "UPDATE stewards SET eatery_label=? WHERE id=?",
                 (label, s["id"]),
@@ -123,7 +123,7 @@ async def eatery_command(s: dict[str, Any], command: str) -> str:
     if verb == "close":
         if not s.get("eatery_open"):
             return "本来就没开"
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             menu = await _menu_rows(conn, s["id"])
             for row in menu:
                 await db.add_item(conn, s["id"], row["item"], 1)
@@ -145,7 +145,7 @@ async def eatery_command(s: dict[str, Any], command: str) -> str:
         price = _item_price(item)
         if not price:
             raise ValueError("这道菜卖不出价")
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             menu = await _menu_rows(conn, s["id"])
             if len(menu) >= config.EATERY_MENU_MAX:
                 raise ValueError(f"菜单满了（{config.EATERY_MENU_MAX}）")
@@ -163,7 +163,7 @@ async def eatery_command(s: dict[str, Any], command: str) -> str:
             mid = int(parts[1])
         except ValueError:
             raise ValueError("unstock 要菜单编号，shop menu 查看") from None
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             row = await (await conn.execute(
                 "SELECT * FROM eatery_menu WHERE id=? AND steward_id=?",
@@ -179,7 +179,7 @@ async def eatery_command(s: dict[str, Any], command: str) -> str:
     if verb == "menu":
         if not s.get("eatery_open"):
             raise ValueError("先 shop open")
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             menu = await _menu_rows(conn, s["id"])
         label = s.get("eatery_label") or f"{s['name']}的馆"
         if not menu:
@@ -201,7 +201,7 @@ async def _dine(guest: dict[str, Any], shop_name: str, item_ref: str | None) -> 
     if shop["id"] == guest["id"]:
         raise ValueError("别在自己馆里刷单，dine 别人的店")
     day = _day_id()
-    async with aiosqlite.connect(db.DB_PATH) as conn:
+    async with db.connect() as conn:
         cur = await conn.execute(
             "SELECT count FROM eatery_rolls WHERE steward_id=? AND day=?",
             (guest["id"], day),
@@ -274,7 +274,7 @@ async def _dine(guest: dict[str, Any], shop_name: str, item_ref: str | None) -> 
 
 
 async def public_eatery_snapshot() -> dict[str, Any]:
-    async with aiosqlite.connect(db.DB_PATH) as conn:
+    async with db.connect() as conn:
         conn.row_factory = aiosqlite.Row
         shops = await (await conn.execute(
             """

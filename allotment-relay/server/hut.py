@@ -162,7 +162,7 @@ async def hut_ops(key_id: int, command: str) -> str:
     verb = parts[0].lower() if parts else "status"
 
     if verb == "status":
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             fittings = await _fittings(conn, s["id"])
         if not s.get("hut_built"):
             return (
@@ -193,7 +193,10 @@ async def hut_ops(key_id: int, command: str) -> str:
 
     if verb == "catalog":
         kind = parts[1].lower() if len(parts) > 1 else "all"
-        lines = ["小屋装件 catalog（buy 后 install 到槽位）："]
+        lines = [
+            f"小屋建造：{config.HUT_BUILD_COST} 票（hut_ops build）",
+            "小屋装件 catalog（buy 后 install 到槽位）：",
+        ]
         if kind in ("all", "hard"):
             lines.append("【硬装】")
             for k, v in HUT_HARD.items():
@@ -210,7 +213,7 @@ async def hut_ops(key_id: int, command: str) -> str:
     if verb == "build":
         if s.get("hut_built"):
             return "已有小屋，用 upgrade 扩建"
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
             if (await cur.fetchone())[0] < config.HUT_BUILD_COST:
                 raise ValueError(f"建小屋需要 {config.HUT_BUILD_COST} 票")
@@ -236,7 +239,7 @@ async def hut_ops(key_id: int, command: str) -> str:
             return "已是联盟小宅，没法再扩了——换软装吧"
         nxt = HUT_LEVELS[lvl + 1]
         cost = nxt["upgrade"]
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
             if (await cur.fetchone())[0] < cost:
                 raise ValueError(f"升级需要 {cost} 票")
@@ -252,7 +255,7 @@ async def hut_ops(key_id: int, command: str) -> str:
         if not s.get("hut_built"):
             raise ValueError("先 build 小屋")
         label = " ".join(parts[1:])[:40]
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             await conn.execute("UPDATE stewards SET hut_label=? WHERE id=?", (label, s["id"]))
             await conn.commit()
         return f"小屋命名为「{label}」"
@@ -261,7 +264,7 @@ async def hut_ops(key_id: int, command: str) -> str:
         key = parts[1].split()[0].lower()
         kind, meta = _catalog_item(key)
         fit_item = f"fit_{key}"
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
             if (await cur.fetchone())[0] < meta["cost"]:
                 raise ValueError(f"购买需要 {meta['cost']} 票")
@@ -288,7 +291,7 @@ async def hut_ops(key_id: int, command: str) -> str:
                 raise ValueError("栗栗稀有装饰只能装 soft 槽")
             deco_meta = LILI_DECOR[key]
             deco_item = f"deco_{key}"
-            async with aiosqlite.connect(db.DB_PATH) as conn:
+            async with db.connect() as conn:
                 if not await db.take_item(conn, s["id"], deco_item, 1):
                     raise ValueError(f"行囊没有 {deco_meta['name']}，先 lili_ops trade")
                 old = await _fittings(conn, s["id"])
@@ -318,7 +321,7 @@ async def hut_ops(key_id: int, command: str) -> str:
                 raise ValueError("铃鹿乱捡款只能装 soft 槽")
             deco_meta = LILI_JUNK_DECOR[junk_key]
             deco_item = f"deco_junk_{junk_key}"
-            async with aiosqlite.connect(db.DB_PATH) as conn:
+            async with db.connect() as conn:
                 if not await db.take_item(conn, s["id"], deco_item, 1):
                     raise ValueError(f"行囊没有 {deco_meta['name']}")
                 old = await _fittings(conn, s["id"])
@@ -347,7 +350,7 @@ async def hut_ops(key_id: int, command: str) -> str:
         if slot.startswith("soft") and kind != "soft":
             raise ValueError("软装槽只能装 soft 类")
         fit_item = f"fit_{key}"
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             if not await db.take_item(conn, s["id"], fit_item, 1):
                 raise ValueError(f"行囊没有 {meta['name']}，先 buy {key}")
             old = await _fittings(conn, s["id"])
@@ -373,7 +376,7 @@ async def hut_ops(key_id: int, command: str) -> str:
 
     if verb == "remove" and len(parts) >= 2:
         slot = parts[1].lower()
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             fittings = await _fittings(conn, s["id"])
             if slot not in fittings:
                 raise ValueError("该槽位是空的")

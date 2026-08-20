@@ -583,7 +583,7 @@ async def connect() -> aiosqlite.Connection:
 
 async def init_db() -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with aiosqlite.connect(DB_PATH, timeout=30.0) as db:
         await db.execute("PRAGMA journal_mode=WAL")
         await db.execute("PRAGMA synchronous=NORMAL")
         await db.execute("PRAGMA busy_timeout=10000")
@@ -670,7 +670,7 @@ async def create_api_key(email: str) -> str:
     if not email or "@" not in email:
         raise ValueError("邮箱格式无效")
     api_key = make_key()
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with connect() as db:
         await db.execute(
             "INSERT INTO api_keys (api_key, email, created_at) VALUES (?, ?, ?)",
             (api_key, email, now()),
@@ -681,7 +681,7 @@ async def create_api_key(email: str) -> str:
 
 async def recover_api_key(email: str) -> str | None:
     email = email.strip().lower()
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with connect() as db:
         db.row_factory = aiosqlite.Row
         cur = await db.execute(
             "SELECT api_key FROM api_keys WHERE email = ? ORDER BY id DESC LIMIT 1",
@@ -692,7 +692,7 @@ async def recover_api_key(email: str) -> str | None:
 
 
 async def get_key_row(api_key: str) -> dict[str, Any] | None:
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with connect() as db:
         db.row_factory = aiosqlite.Row
         cur = await db.execute("SELECT * FROM api_keys WHERE api_key = ?", (api_key,))
         row = await cur.fetchone()
@@ -700,7 +700,7 @@ async def get_key_row(api_key: str) -> dict[str, Any] | None:
 
 
 async def get_steward_by_key_id(key_id: int) -> dict[str, Any] | None:
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with connect() as db:
         db.row_factory = aiosqlite.Row
         cur = await db.execute("SELECT * FROM stewards WHERE key_id = ?", (key_id,))
         row = await cur.fetchone()
@@ -708,7 +708,7 @@ async def get_steward_by_key_id(key_id: int) -> dict[str, Any] | None:
 
 
 async def get_steward_by_name(name: str) -> dict[str, Any] | None:
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with connect() as db:
         db.row_factory = aiosqlite.Row
         cur = await db.execute(
             "SELECT * FROM stewards WHERE name = ? COLLATE NOCASE", (name.strip(),)
@@ -718,7 +718,7 @@ async def get_steward_by_name(name: str) -> dict[str, Any] | None:
 
 
 async def get_steward_by_id(steward_id: int) -> dict[str, Any] | None:
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with connect() as db:
         db.row_factory = aiosqlite.Row
         cur = await db.execute("SELECT * FROM stewards WHERE id = ?", (steward_id,))
         row = await cur.fetchone()
@@ -726,7 +726,7 @@ async def get_steward_by_id(steward_id: int) -> dict[str, Any] | None:
 
 
 async def touch_steward(steward_id: int) -> None:
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with connect() as db:
         await db.execute(
             "UPDATE stewards SET last_active_at = ? WHERE id = ?",
             (now(), steward_id),
@@ -750,14 +750,13 @@ async def add_chronicle(
     if conn is not None:
         await conn.execute(sql, args)
         return
-    async with aiosqlite.connect(DB_PATH, timeout=30.0) as db:
-        await db.execute("PRAGMA busy_timeout=10000")
+    async with connect() as db:
         await db.execute(sql, args)
         await db.commit()
 
 
 async def get_satchel(steward_id: int) -> dict[str, int]:
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with connect() as db:
         db.row_factory = aiosqlite.Row
         cur = await db.execute(
             "SELECT item, quantity FROM satchel WHERE steward_id = ? AND quantity > 0 ORDER BY item",
@@ -799,7 +798,7 @@ async def take_item(db: aiosqlite.Connection, steward_id: int, item: str, qty: i
 
 
 async def get_parcels(steward_id: int) -> list[dict[str, Any]]:
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with connect() as db:
         db.row_factory = aiosqlite.Row
         cur = await db.execute(
             "SELECT * FROM parcels WHERE steward_id = ? ORDER BY slot",
@@ -825,7 +824,7 @@ async def enroll_steward(key_id: int, name: str, motto: str, badge: str, portrai
     if len(name) < 2 or len(name) > 24:
         raise ValueError("名字长度需在 2~24 之间")
     ts = now()
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with connect() as db:
         db.row_factory = aiosqlite.Row
         if await (await db.execute(
             "SELECT id FROM stewards WHERE name = ? COLLATE NOCASE", (name,)
@@ -861,7 +860,7 @@ async def enroll_steward(key_id: int, name: str, motto: str, badge: str, portrai
 
 async def public_stats() -> dict[str, Any]:
     from . import world
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with connect() as db:
         db.row_factory = aiosqlite.Row
         stewards = (await (await db.execute(
             "SELECT COUNT(*) c FROM stewards WHERE enrolled = 1"
@@ -945,7 +944,7 @@ async def public_stats() -> dict[str, Any]:
 
 
 async def public_chronicle(limit: int = 40) -> list[dict[str, Any]]:
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with connect() as db:
         db.row_factory = aiosqlite.Row
         cur = await db.execute(
             """
@@ -973,7 +972,7 @@ async def public_chronicle(limit: int = 40) -> list[dict[str, Any]]:
 async def public_allotments() -> list[dict[str, Any]]:
     from .catalog import CROPS, ITEM_NAMES
     from . import farming
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with connect() as db:
         db.row_factory = aiosqlite.Row
         cur = await db.execute(
             "SELECT * FROM stewards WHERE enrolled = 1 ORDER BY last_active_at DESC LIMIT 100"

@@ -106,7 +106,7 @@ async def beach_ops(key_id: int, command: str) -> str:
 
     if verb == "catalog":
         from . import catches as catches_mod
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             return await catches_mod.beach_catalog(conn, s["id"])
 
     if verb == "dig":
@@ -120,7 +120,7 @@ async def beach_ops(key_id: int, command: str) -> str:
         now = db.now()
         day = now // config.FORAGE_COOLDOWN_DAY
         w = world.current_weather()
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             cur = await conn.execute(
                 "SELECT last_at, count FROM beach_rolls WHERE steward_id=? AND day=?",
                 (s["id"], day),
@@ -204,7 +204,7 @@ async def beach_ops(key_id: int, command: str) -> str:
         now = db.now()
         day = now // config.FORAGE_COOLDOWN_DAY
         w = world.current_weather()
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             cur = await conn.execute(
                 "SELECT last_at FROM beach_probe_rolls WHERE steward_id=? AND day=?",
                 (s["id"], day),

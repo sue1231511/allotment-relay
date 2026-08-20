@@ -142,7 +142,7 @@ async def lili_ops(key_id: int, command: str) -> str:
     verb = parts[0].lower() if parts else "scan"
     today = day_id()
 
-    async with aiosqlite.connect(db.DB_PATH) as conn:
+    async with db.connect() as conn:
         block = await lili_extras.stars_block(conn, s["id"])
         if block:
             await conn.commit()

@@ -96,7 +96,7 @@ async def shaonian_ops(key_id: int, command: str) -> str:
     today = day_id()
 
     if verb == "visit":
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             row = await _ensure_row(conn, s["id"], today)
             note = ""
             if not row["visit_done"]:
@@ -121,7 +121,7 @@ async def shaonian_ops(key_id: int, command: str) -> str:
         return f"韶年：{line}{note}"
 
     if verb == "fortune":
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             row = await _ensure_row(conn, s["id"], today)
             casts = row["fortune_casts"]
             cost = 0 if casts == 0 else FORTUNE_COST
@@ -159,7 +159,7 @@ async def shaonian_ops(key_id: int, command: str) -> str:
         )
 
     if verb == "transfer":
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             row = await _ensure_row(conn, s["id"], today)
             fortune = row.get("fortune") or ""
             if not fortune:
@@ -190,6 +190,7 @@ async def shaonian_ops(key_id: int, command: str) -> str:
                     "shaonian",
                     f"{s['name']} 韶年转运得{meta['name']}",
                     s["id"],
+                    conn=conn,
                 )
                 await conn.commit()
                 return (
@@ -204,7 +205,7 @@ async def shaonian_ops(key_id: int, command: str) -> str:
                 """,
                 (s["id"], today),
             )
-            await db.add_chronicle("shaonian", f"{s['name']} 韶年转运未成", s["id"])
+            await db.add_chronicle("shaonian", f"{s['name']} 韶年转运未成", s["id"], conn=conn)
             await conn.commit()
             bad_meta = FORTUNES[fortune]
             return (
@@ -219,7 +220,7 @@ async def shaonian_ops(key_id: int, command: str) -> str:
             raise ValueError(f"未知符：{parts[1]}（shaonian_ops catalog 看符名）")
         meta = CHARMS[charm_key]
         price = meta["price"]
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             if await has_charm(conn, s["id"], charm_key):
                 raise ValueError(f"今日已买过「{meta['name']}」，每人每日每种限购 1")
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
@@ -240,6 +241,7 @@ async def shaonian_ops(key_id: int, command: str) -> str:
                 "shaonian",
                 f"{s['name']} 向韶年买{meta['name']}",
                 s["id"],
+                conn=conn,
             )
             await conn.commit()
         buy_line = meta["line"]
@@ -248,7 +250,7 @@ async def shaonian_ops(key_id: int, command: str) -> str:
         return f"韶年：{buy_line}\n「{meta['name']}」当日生效 · -{price} 票 · {meta['hint']}"
 
     if verb == "catalog":
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             row = await _ensure_row(conn, s["id"], today)
             charms = await (await conn.execute(
                 "SELECT charm_key FROM shaonian_charms WHERE steward_id=? AND day=?",

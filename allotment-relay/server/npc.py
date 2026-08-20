@@ -50,9 +50,12 @@ async def npc_ops(key_id: int, command: str) -> str:
                 tag = " · 集市挂单"
             elif npc["key"] == "shiye":
                 tag = " · 巷口碰到：小偷/乞丐/碰瓷/敲诈"
+            elif npc["key"] == "lizhi":
+                tag = " · 酒吧老板娘，bar_ops tonight/chat"
+            elif npc["key"] == "wangfu":
+                tag = " · 固定驻唱，bar_ops song"
             lines.append(f"  {npc['key']} — {npc['name']}{tag}")
         lines.append(f"偷菜贼名号: {', '.join(NPC_THIEVES[:3])}…")
-        lines.append("  wangfu — 我哪有旺夫命（固定驻唱，bar_ops song）")
         lines.append("每日首次 visit 略回暖雾智/档信（斑鸠、拾叶除外）")
         return "\n".join(lines)
 
@@ -85,7 +88,7 @@ async def _visit_context(steward: dict, key: str) -> str:
         ])
     if key == "lili":
         from . import lili as lili_mod
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             hint = await lili_mod.active_visit_hint(conn)
         if hint:
             return f"——{hint}"
@@ -117,7 +120,7 @@ async def _visit_context(steward: dict, key: str) -> str:
         return f"——{hours}。{duty}"
     if key == "qiaoqiao":
         from . import health as health_mod
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             ailments = await health_mod.list_ailments(conn, steward["id"])
         if ailments:
             names = "、".join(a["name"] for a in ailments[:3])
@@ -134,7 +137,7 @@ async def _daily_visit_gift(steward_id: int, npc_key: str) -> str:
     if npc_key in ("gugu_dove", "shiye"):
         return ""
     day = _day_id()
-    async with aiosqlite.connect(db.DB_PATH) as conn:
+    async with db.connect() as conn:
         cur = await conn.execute(
             "SELECT 1 FROM npc_visits WHERE steward_id=? AND npc_key=? AND day=?",
             (steward_id, npc_key, day),
@@ -379,7 +382,7 @@ async def maybe_shiye_bump(
 
 
 async def _visit_shiye(steward: dict[str, Any]) -> str:
-    async with aiosqlite.connect(db.DB_PATH) as conn:
+    async with db.connect() as conn:
         if await _shiye_count(conn, steward["id"]) >= config.SHIYE_DAILY_MAX:
             line = random.choice(next(n["lines"] for n in NPC_FIXED if n["key"] == "shiye"))
             return f"拾叶：{line}\n{flavor.pick(flavor.SHIYE_IDLE)}"
