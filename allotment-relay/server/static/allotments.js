@@ -18,6 +18,7 @@ async function load() {
     `<span>${WEATHER[stats.weather] || stats.weather}</span>`,
     `<span>${TIDE[stats.tide] || stats.tide}</span>`,
     `<span>交换台 ${stats.open_swaps}</span>`,
+    `<span>逾篱 ${stats.total_scrumps || 0}</span>`,
     `<span>灶台 ${stats.hearth_recipes}</span>`,
   ].join('');
   document.getElementById('allotments').innerHTML = allotments.map(a => `

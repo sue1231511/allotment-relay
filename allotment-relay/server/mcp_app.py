@@ -86,7 +86,7 @@ async def guild_shift() -> str:
     return await game.guild_shift(_kid())
 
 
-@mcp.tool(description="份地：sow/tend/gather/forage/cohort/weather/buy/post。可用 ; 串联。")
+@mcp.tool(description="份地：sow/tend/gather/forage/scrump/hedge_note/amends/cohort/weather/buy。scrump 名字 地块号")
 async def plot_ops(command: str) -> str:
     return await game.plot_ops(_kid(), command)
 

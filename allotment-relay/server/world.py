@@ -2,12 +2,12 @@ from .config import TIDE_CYCLE, TIDE_LABELS, WEATHER_CYCLE, WEATHER_LABELS
 
 
 def current_weather() -> str:
-    phase = (__import__("time").time() // WEATHER_CYCLE) % 3
+    phase = int(__import__("time").time() // WEATHER_CYCLE) % 3
     return ["clear", "misty", "gale"][phase]
 
 
 def current_tide() -> str:
-    phase = (__import__("time").time() // TIDE_CYCLE) % 3
+    phase = int(__import__("time").time() // TIDE_CYCLE) % 3
     return ["ebb", "slack", "flood"][phase]
 
 

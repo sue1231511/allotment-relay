@@ -319,12 +319,16 @@ async def public_stats() -> dict[str, Any]:
         recipes = (await (await db.execute(
             "SELECT COUNT(*) c FROM hearth_discoveries"
         )).fetchone())["c"]
+        scrumps = (await (await db.execute(
+            "SELECT COUNT(*) c FROM chronicle WHERE action IN ('scrump', 'scrump_busted')"
+        )).fetchone())["c"]
         w, t = world.current_weather(), world.current_tide()
         return {
             "stewards": stewards,
             "online": online,
             "open_swaps": swaps,
             "hearth_recipes": recipes,
+            "total_scrumps": scrumps,
             "weather": w,
             "tide": t,
         }

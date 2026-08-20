@@ -19,6 +19,10 @@ from .config import (
     FORAGE_COOLDOWN_DAY,
     GREENHOUSE_COST,
     GUILD_TICKETS,
+    SCRUMP_ACTIVE_WINDOW,
+    SCRUMP_FINE_TICKETS,
+    SCRUMP_LOOT_CROP,
+    SCRUMP_LOOT_SEED,
     SWAP_CLAIM_FEE,
 )
 
@@ -80,7 +84,7 @@ async def relay_manual() -> str:
         "",
         "工具一览：",
         "  steward_enroll / steward_sheet / steward_revise / peer_sheet",
-        "  plot_ops — sow/tend/gather/forage/cohort/weather/buy",
+        "  plot_ops — sow/tend/gather/forage/scrump/hedge_note/amends/cohort/weather/buy",
         "  tide_ops — net/status",
         "  shed_ops — erect/label/visit/handoff",
         "  mascot_ops — adopt/upkeep/train/status",
@@ -90,7 +94,11 @@ async def relay_manual() -> str:
         "  hearth_ops — brew/catalog",
         "  guild_shift — 领取工分票",
         "",
-        "plot_ops 等支持用 ; 串联。无偷菜机制；互助走 swap_ops 与 handoff。",
+        "plot_ops 等支持用 ; 串联。",
+        "",
+        "逾篱摘取 scrump：plot_ops('scrump 名字 地块号') — 仅可摘已成熟、非温室份地。",
+        "对方 20 分钟内活跃过会被逮，罚工分票；scout 吉祥物减半。",
+        "摘完可 hedge_note 留话，或 amends 公开致歉。互助仍可用 swap_ops / handoff。",
         f"徽章可选：{', '.join(BADGES)}",
     ])
 
@@ -290,6 +298,90 @@ async def _plot_one(s: dict, cmd: str) -> str:
             )
             await conn.commit()
         return f"已在公告栏 @ {peer}"
+
+    if verb == "scrump" and len(parts) >= 3:
+        peer_name, slot_s = parts[1], parts[2]
+        slot = int(slot_s)
+        peer = await db.get_steward_by_name(peer_name)
+        if not peer:
+            raise ValueError(f"找不到 {peer_name}")
+        if peer["id"] == s["id"]:
+            raise ValueError("不能摘自己的份地")
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            conn.row_factory = aiosqlite.Row
+            plot = dict(await (await conn.execute(
+                "SELECT * FROM parcels WHERE steward_id=? AND slot=?",
+                (peer["id"], slot),
+            )).fetchone() or {})
+            if not plot or not plot.get("crop"):
+                raise ValueError(f"{peer_name} 的 #{slot} 没有可摘的作物")
+            if plot.get("greenhouse"):
+                raise ValueError("温室份地受联盟条例保护，不可 scrump")
+            if not _ready(plot):
+                raise ValueError("还没成熟，逾篱也摘不走")
+            crop = plot["crop"]
+            meta = CROPS[crop]
+            active = db.now() - peer["last_active_at"] <= SCRUMP_ACTIVE_WINDOW
+            weather = world.current_weather()
+            if weather == "misty":
+                active = active and db.now() - peer["last_active_at"] <= 600
+            elif weather == "gale" and active:
+                active = True
+            caught = active
+            fine = SCRUMP_FINE_TICKETS
+            if caught and s.get("mascot_trait") == "scout":
+                fine = max(1, fine // 2)
+            loot_msg = "空手"
+            if not caught:
+                roll = random.random()
+                bonus = 0.05 if s.get("mascot_trait") == "lucky" else 0.0
+                if roll < SCRUMP_LOOT_CROP + bonus:
+                    await db.add_item(conn, s["id"], f"crop_{crop}", 1)
+                    loot_msg = meta["name"]
+                elif roll < SCRUMP_LOOT_CROP + SCRUMP_LOOT_SEED + bonus:
+                    await db.add_item(conn, s["id"], f"seed_{crop}", 1)
+                    loot_msg = f"{meta['name']}种"
+            await conn.execute(
+                "UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0 WHERE id=?",
+                (plot["id"],),
+            )
+            if caught:
+                await conn.execute(
+                    "UPDATE stewards SET tickets=MAX(0, tickets-?) WHERE id=?",
+                    (fine, s["id"]),
+                )
+            await conn.commit()
+        if caught:
+            msg = (
+                f"{s['name']} 逾篱摘 {peer_name} 的 #{slot} 被逮，"
+                f"罚 {fine} 票，{meta['name']} 仍被带走"
+            )
+            await db.add_chronicle("scrump_busted", msg, s["id"], peer["id"])
+            return msg
+        msg = f"{s['name']} 从 {peer_name} 的 #{slot} scrump 了 {loot_msg}"
+        await db.add_chronicle("scrump", msg, s["id"], peer["id"])
+        return msg
+
+    if verb == "hedge_note" and len(parts) >= 3:
+        peer, text = parts[1], " ".join(parts[2:])
+        target = await db.get_steward_by_name(peer)
+        if not target:
+            raise ValueError("找不到该管理员")
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            await conn.execute(
+                "INSERT INTO beacons (author_id, tag, body, created_at) VALUES (?, 'hedge', ?, ?)",
+                (s["id"], f"@{peer} 篱笆条：{text[:160]}", db.now()),
+            )
+            await conn.commit()
+        return f"篱笆条已留给 {peer}"
+
+    if verb == "amends" and len(parts) >= 2:
+        peer = await db.get_steward_by_name(parts[1])
+        if not peer:
+            raise ValueError("找不到该管理员")
+        msg = f"{s['name']} 向 {peer['name']} 为逾篱之事致歉"
+        await db.add_chronicle("amends", msg, s["id"], peer["id"])
+        return msg
 
     raise ValueError(f"未知 plot 指令: {cmd}")
 
