@@ -797,6 +797,43 @@ async def init_db() -> None:
             "ALTER TABLE steward_undertide ADD COLUMN casino_lose INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE steward_undertide ADD COLUMN casino_day INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE steward_undertide ADD COLUMN pending_grudge INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE steward_undertide ADD COLUMN k_room INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE steward_undertide ADD COLUMN vr_until INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE steward_undertide ADD COLUMN vr_target INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE steward_undertide ADD COLUMN highlight_done INTEGER NOT NULL DEFAULT 0",
+
+            "ALTER TABLE ut_market_log ADD COLUMN net INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE ut_debts ADD COLUMN penalty INTEGER NOT NULL DEFAULT 0",
+            """
+            CREATE TABLE IF NOT EXISTS ut_bounty (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                poster TEXT NOT NULL,
+                poster_id INTEGER,
+                target_name TEXT NOT NULL,
+                target_id INTEGER,
+                tier TEXT NOT NULL,
+                bounty INTEGER NOT NULL,
+                status TEXT NOT NULL DEFAULT 'open',
+                expires_at INTEGER NOT NULL,
+                created_at INTEGER NOT NULL
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS ut_tide_state (
+                id INTEGER PRIMARY KEY CHECK (id=1),
+                week INTEGER NOT NULL DEFAULT 0,
+                score INTEGER NOT NULL DEFAULT 50,
+                mult REAL NOT NULL DEFAULT 1.0,
+                reason TEXT NOT NULL DEFAULT '',
+                manual_mult REAL,
+                updated_at INTEGER NOT NULL DEFAULT 0
+            )
+            """,
+            "ALTER TABLE bar_daily_state ADD COLUMN owner_bogo INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE bar_daily_state ADD COLUMN owner_bogo_count INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE ut_tide_state ADD COLUMN gate_drinks INTEGER NOT NULL DEFAULT 3",
+            "ALTER TABLE ut_tide_state ADD COLUMN event_mult REAL NOT NULL DEFAULT 1.0",
+            "ALTER TABLE ut_tide_state ADD COLUMN highlight INTEGER NOT NULL DEFAULT 150",
             """
             CREATE TABLE IF NOT EXISTS ut_mood_proposals (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -807,6 +844,7 @@ async def init_db() -> None:
                 created_at INTEGER NOT NULL
             )
             """,
+            "ALTER TABLE ut_mood_proposals ADD COLUMN target TEXT NOT NULL DEFAULT 'cat'",
         ):
             try:
                 await db.execute(ddl)

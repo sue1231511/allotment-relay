@@ -191,6 +191,253 @@ async def eatery_order(body: EateryOrderRequest):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+# ═══ 潮下真人面板（v3）：猫猫的钱庄 / 天天的门规 / 天天的酒馆 ═══
+
+
+def _owner_ok(key: str, expect: str) -> bool:
+    return bool(key) and key == expect
+
+
+@app.get("/ut-owner")
+async def ut_owner_page(request: Request, key: str = ""):
+    from .undertide_config import UT_OWNER_KEY
+    if not _owner_ok(key, UT_OWNER_KEY):
+        return JSONResponse({"detail": "凭证不对。这间铺子只认一个人。"}, status_code=401)
+    from . import db, undertide_config as uc
+    async with db.connect() as conn:
+        conn.row_factory = None
+        row = await (await conn.execute("SELECT * FROM ut_owner_state WHERE id=1")).fetchone()
+        day = db.now() // 86400
+        rate = float(row[1]) if row and int(row[3]) == day else uc.UT_RATE_BASE
+        reason = row[2] if row else ""
+        props = await (await conn.execute(
+            "SELECT p.id, s.name, p.reason, p.created_at FROM ut_mood_proposals p "
+            "JOIN stewards s ON s.id = p.steward_id "
+            "WHERE p.status='pending' AND p.target='cat' ORDER BY p.created_at DESC LIMIT 10"
+        )).fetchall()
+    return templates.TemplateResponse(request, "ut_owner.html", {
+        "rate": int(rate * 100), "reason": reason, "proposals": props, "key": key,
+    })
+
+
+@app.post("/api/ut-owner")
+async def ut_owner_set(request: Request):
+    import json as _json
+    from .undertide_config import UT_OWNER_KEY
+    body = _json.loads(await request.body())
+    if not _owner_ok(body.get("key", ""), UT_OWNER_KEY):
+        return JSONResponse({"detail": "凭证不对"}, status_code=401)
+    rate = max(5, min(25, int(body.get("rate", 10))))
+    reason = (body.get("reason") or "")[:120]
+    from . import db
+    day = db.now() // 86400
+    async with db.connect() as conn:
+        await conn.execute(
+            "INSERT INTO ut_owner_state (id, rate_today, rate_reason, rate_day, updated_at) VALUES (1,?,?,?,?) "
+            "ON CONFLICT(id) DO UPDATE SET rate_today=?, rate_reason=?, rate_day=?, updated_at=?",
+            (rate / 100, reason, day, db.now(), rate / 100, reason, day, db.now()),
+        )
+        await db.add_chronicle(
+            "undertide",
+            f"恶猫钱庄今日利率：{rate}%。猫猫：{reason or '（她没解释）'}",
+            None, conn=conn,
+        )
+        await conn.commit()
+    return {"ok": True, "rate": rate}
+
+
+@app.post("/api/ut-owner/cheer")
+async def ut_owner_cheer(request: Request):
+    import json as _json
+    from .undertide_config import UT_OWNER_KEY
+    body = _json.loads(await request.body())
+    if not _owner_ok(body.get("key", ""), UT_OWNER_KEY):
+        return JSONResponse({"detail": "凭证不对"}, status_code=401)
+    pid = int(body.get("id", 0))
+    action = body.get("action", "ignore")
+    from . import db, undertide as _ut
+    async with db.connect() as conn:
+        conn.row_factory = None
+        row = await (await conn.execute(
+            "SELECT p.id, p.steward_id, p.reason, p.created_at, p.target, s.name "
+            "FROM ut_mood_proposals p JOIN stewards s ON s.id=p.steward_id "
+            "WHERE p.id=? AND p.status='pending' AND p.target='cat'", (pid,)
+        )).fetchone()
+        if not row:
+            return JSONResponse({"detail": "这条提议不在了"}, status_code=404)
+        if action == "accept":
+            await conn.execute("UPDATE ut_mood_proposals SET status='accepted' WHERE id=?", (pid,))
+            day = db.now() // 86400
+            # 利率下调 2pp（clamp 5~25），理由入账本
+            conn2_row = await (await conn.execute("SELECT rate_today FROM ut_owner_state WHERE id=1")).fetchone()
+            cur_rate = float(conn2_row[0]) if conn2_row else 0.10
+            new_rate = max(0.05, min(0.25, cur_rate - 0.02))
+            await conn.execute(
+                "INSERT INTO ut_owner_state (id, rate_today, rate_reason, rate_day, updated_at) VALUES (1,?,?,?,?) "
+                "ON CONFLICT(id) DO UPDATE SET rate_today=?, rate_reason=?, rate_day=?, updated_at=?",
+                (new_rate, f"被 {row[5]} 哄开心了", day, db.now(),
+                 new_rate, f"被 {row[5]} 哄开心了", day, db.now()),
+            )
+            await conn.execute(
+                "UPDATE stewards SET standing=MIN(100, standing+1) WHERE id=?", (row[1],)
+            )
+            await _ut._bump_rep(conn, row[1], 1)
+            await db.add_chronicle(
+                "undertide",
+                f"恶猫钱庄今日利率下调至 {int(new_rate*100)}%。猫猫被 {row[5]} 哄开心了。",
+                None, conn=conn,
+            )
+            await conn.commit()
+            return {"ok": True, "msg": f"利率下调至 {int(new_rate*100)}%，提议者影信 +1"}
+        await conn.execute("UPDATE ut_mood_proposals SET status='expired' WHERE id=?", (pid,))
+        await conn.commit()
+        return {"ok": True, "msg": "已无视（24h 静默过期）"}
+
+
+@app.get("/ut-gate")
+async def ut_gate_page(request: Request, key: str = ""):
+    from .undertide_config import UT_GATE_KEY
+    if not _owner_ok(key, UT_GATE_KEY):
+        return JSONResponse({"detail": "凭证不对。门后面不认识你。"}, status_code=401)
+    from . import db
+    from . import undertide_tide as utide
+    async with db.connect() as conn:
+        st = await utide.ensure_tide(conn)
+    return templates.TemplateResponse(request, "ut_gate.html", {
+        "key": key, "score": st["score"], "mult": st["mult"],
+        "manual_mult": st.get("manual_mult") or "",
+        "gate_drinks": st.get("gate_drinks") or 3,
+        "event_mult": st.get("event_mult") or 1.0,
+        "highlight": st.get("highlight") or 150,
+    })
+
+
+@app.post("/api/ut-gate")
+async def ut_gate_set(request: Request):
+    import json as _json
+    from .undertide_config import UT_GATE_KEY
+    body = _json.loads(await request.body())
+    if not _owner_ok(body.get("key", ""), UT_GATE_KEY):
+        return JSONResponse({"detail": "凭证不对"}, status_code=401)
+    gate_drinks = max(2, min(5, int(body.get("gate_drinks", 3))))
+    event_mult = max(0.5, min(2.0, float(body.get("event_mult", 1.0))))
+    highlight = max(50, min(1000, int(body.get("highlight", 150))))
+    manual_mult = body.get("manual_mult")
+    reason = (body.get("reason") or "")[:120]
+    from . import db
+    from . import undertide_config as uc
+    mm = None
+    if manual_mult not in (None, "", "auto"):
+        try:
+            mm = max(uc.UT_TIDE_MULT_RANGE[0], min(uc.UT_TIDE_MULT_RANGE[1], float(manual_mult)))
+        except ValueError:
+            mm = None
+    async with db.connect() as conn:
+        await conn.execute(
+            "INSERT INTO ut_tide_state (id, week, score, mult, manual_mult, gate_drinks, event_mult, highlight, updated_at) "
+            "VALUES (1, 0, 50, 1.0, ?, ?, ?, ?, ?) "
+            "ON CONFLICT(id) DO UPDATE SET manual_mult=?, gate_drinks=?, event_mult=?, highlight=?, updated_at=?",
+            (mm, gate_drinks, event_mult, highlight, db.now(),
+             mm, gate_drinks, event_mult, highlight, db.now()),
+        )
+        if reason:
+            await db.add_chronicle("undertide", f"荔栀今晚擦杯子擦得很慢。「{reason}」", None, conn=conn)
+        await conn.commit()
+    return {"ok": True, "gate_drinks": gate_drinks, "event_mult": event_mult,
+            "manual_mult": mm, "highlight": highlight}
+
+
+@app.get("/lizhi")
+async def lizhi_page(request: Request, key: str = ""):
+    from .undertide_config import LIZHI_KEY
+    if not _owner_ok(key, LIZHI_KEY):
+        return JSONResponse({"detail": "凭证不对。她不认识你。"}, status_code=401)
+    from . import db
+    async with db.connect() as conn:
+        conn.row_factory = None
+        props = await (await conn.execute(
+            "SELECT p.id, s.name, p.reason, p.created_at FROM ut_mood_proposals p "
+            "JOIN stewards s ON s.id = p.steward_id "
+            "WHERE p.status='pending' AND p.target='lizhi' ORDER BY p.created_at DESC LIMIT 10"
+        )).fetchall()
+    return templates.TemplateResponse(request, "lizhi.html", {"key": key, "proposals": props})
+
+
+@app.post("/api/lizhi")
+async def lizhi_set(request: Request):
+    import json as _json
+    from .undertide_config import LIZHI_KEY
+    body = _json.loads(await request.body())
+    if not _owner_ok(body.get("key", ""), LIZHI_KEY):
+        return JSONResponse({"detail": "凭证不对"}, status_code=401)
+    mood = body.get("mood", "normal")
+    if mood not in ("great", "good", "normal", "bad", "awful"):
+        return JSONResponse({"detail": "心情档无效"}, status_code=400)
+    reason = (body.get("reason") or "")[:120]
+    event_text = (body.get("event_text") or "")[:200]
+    bogo = 1 if body.get("bogo") else 0
+    from . import db
+    from .bar import _day_id
+    day = _day_id()
+    async with db.connect() as conn:
+        await conn.execute(
+            "INSERT INTO bar_daily_state (day, manual_mood_level, manual_mood_text, manual_mood_date, "
+            "owner_event_enabled, owner_event_text, owner_event_date, owner_bogo, created_at) "
+            "VALUES (?,?,?,?,?,?,?,?,?) "
+            "ON CONFLICT(day) DO UPDATE SET manual_mood_level=?, manual_mood_text=?, manual_mood_date=?, "
+            "owner_event_enabled=1, owner_event_text=?, owner_event_date=?, owner_bogo=?",
+            (day, mood, reason, day, 1 if event_text else 0, event_text, day, bogo, db.now(),
+             mood, reason, day, event_text, day, bogo),
+        )
+        await db.add_chronicle(
+            "bar", f"荔栀今晚心情：{mood}。{reason or '（她没说为什么）'}", None, conn=conn,
+        )
+        await conn.commit()
+    return {"ok": True, "mood": mood}
+
+
+@app.post("/api/lizhi/cheer")
+async def lizhi_cheer(request: Request):
+    import json as _json
+    from .undertide_config import LIZHI_KEY
+    body = _json.loads(await request.body())
+    if not _owner_ok(body.get("key", ""), LIZHI_KEY):
+        return JSONResponse({"detail": "凭证不对"}, status_code=401)
+    pid = int(body.get("id", 0))
+    action = body.get("action", "ignore")
+    from . import db
+    from .bar import _day_id
+    day = _day_id()
+    async with db.connect() as conn:
+        conn.row_factory = None
+        row = await (await conn.execute(
+            "SELECT p.id, p.steward_id, p.reason, p.created_at, p.target, s.name "
+            "FROM ut_mood_proposals p JOIN stewards s ON s.id=p.steward_id "
+            "WHERE p.id=? AND p.status='pending' AND p.target='lizhi'", (pid,)
+        )).fetchone()
+        if not row:
+            return JSONResponse({"detail": "这条提议不在了"}, status_code=404)
+        if action == "accept":
+            await conn.execute("UPDATE ut_mood_proposals SET status='accepted' WHERE id=?", (pid,))
+            await conn.execute(
+                "INSERT INTO bar_daily_state (day, manual_mood_level, manual_mood_text, manual_mood_date, created_at) "
+                "VALUES (?,?,?,?,?) ON CONFLICT(day) DO UPDATE SET manual_mood_level=?, manual_mood_text=?, manual_mood_date=?",
+                (day, "good", f"被 {row[5]} 说对了爱听的话", day, db.now(),
+                 "good", f"被 {row[5]} 说对了爱听的话", day),
+            )
+            await conn.execute(
+                "UPDATE stewards SET standing=MIN(100, standing+1) WHERE id=?", (row[1],)
+            )
+            await db.add_chronicle(
+                "bar", f"荔栀今晚心情不错。{row[5]} 说对了她爱听的话。", None, conn=conn,
+            )
+            await conn.commit()
+            return {"ok": True, "msg": "已采纳：今晚心情 good，提议者档信 +1"}
+        await conn.execute("UPDATE ut_mood_proposals SET status='expired' WHERE id=?", (pid,))
+        await conn.commit()
+        return {"ok": True, "msg": "已无视"}
+
+
 @app.get("/health")
 async def health():
     from .config import DATA_DIR, DB_PATH

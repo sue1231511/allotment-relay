@@ -372,6 +372,12 @@ def _drink_price(
         meta = BAR_MOOD_LEVELS.get(mood, {})
         mood_mult = meta.get("drink_mult", 1.0)
         price = max(1, int(price * mood_mult))
+    else:
+        # 荔栀的当晚：全场酒价随心情浮动（/lizhi 面板，v3）——与特调自身折扣不叠，取更深档
+        from .undertide_config import UT_LIZHI_MOOD_PRICE
+        lizhi_mult = UT_LIZHI_MOOD_PRICE.get(mood, 1.0)
+        if lizhi_mult != 1.0:
+            price = max(1, int(price * lizhi_mult))
 
     return price
 
@@ -784,6 +790,14 @@ async def _cmd_order(conn: aiosqlite.Connection, s: dict[str, Any], drink_name: 
     ghost = await undertide.on_bar_order(conn, s, cost)
     if ghost:
         msg += ghost
+    # 荔栀的买一赠一（/lizhi 面板开启，v3）：每单送一杯海盐拉格，当日 30 单封顶
+    if state.get("owner_bogo") and int(state.get("owner_bogo_count") or 0) < 30:
+        await conn.execute(
+            "UPDATE bar_daily_state SET owner_bogo_count=owner_bogo_count+1 WHERE day=?", (day,)
+        )
+        from .undertide_config import UT_LIZHI_BOGO_GIFT
+        await db.add_item(conn, s["id"], f"ut_{UT_LIZHI_BOGO_GIFT}", 1)
+        msg += "\n\n荔栀把另一杯也推过来：「开心。送你的。」（海盐拉格 ×1 已入行囊）"
     reaction = owner_event_reaction(state, day, "order")
     return append_owner_reaction(msg, reaction)
 
@@ -1253,7 +1267,41 @@ async def bar_ops(key_id: int, command: str) -> str:
         await db.add_chronicle("bar", f"{s['name']} 在{COASTAL_BAR['name']}上工（shift→{job}）", s["id"])
         return msg + "\n（shift 兼容旧指令，推荐 bar_ops work 岗位 day|night）"
 
-    if verb == "set_mood":
+    if verb in ("set_mood", "set_owner_event"):
+        # v3 起废弃：荔栀的心情只有她本人（/lizhi 面板）能定。AI 想哄她，用 cheer。
+        raise ValueError(
+            "这条指令已经关了。\n\n"
+            "荔栀看了你一眼：「我的心情，什么时候轮到别人定了。」\n"
+            "（想哄她开心：bar_ops cheer 你想说的话——她听不听得进去，她说得算。）"
+        )
+
+    if verb == "cheer":
+        reason = command.strip()[len("cheer"):].strip()
+        if not reason:
+            raise ValueError("说点什么。荔栀不接受沉默的讨好。（bar_ops cheer 话）")
+        day = _day_id()
+        async with db.connect() as conn:
+            row = await (await conn.execute(
+                "SELECT COUNT(*) FROM ut_mood_proposals WHERE steward_id=? AND status='pending' "
+                "AND target='lizhi' AND created_at > ?",
+                (s["id"], db.now() - 86400),
+            )).fetchone()
+            if row[0] >= 1:
+                raise ValueError("今天已经说过一次了。说太多显得不诚恳。")
+            await conn.execute(
+                "INSERT INTO ut_mood_proposals (steward_id, target_mood, reason, status, created_at, target) "
+                "VALUES (?,?,?,?,?, 'lizhi')",
+                (s["id"], "good", reason[:100], "pending", db.now()),
+            )
+            await conn.commit()
+        return (
+            "荔栀擦杯子的手没停。她听完，抬眼看了你一下。\n\n"
+            "「哦。」她说。\n\n"
+            "就一个字。但她记不记得住，谁也说不准。\n"
+            "（提议已入队——她今晚心情如何，只有她自己知道。）"
+        )
+
+    if verb == "set_mood_deprecated":
         rest = command.strip()[len("set_mood"):].strip()
         if not rest:
             raise ValueError("用法: bar_ops set_mood great|good|normal|bad|awful 文案")

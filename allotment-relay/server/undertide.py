@@ -275,8 +275,10 @@ async def _cmd_sell(
     base_key = key[3:-2] if key.endswith("_s") else key[3:]
     meta = _item_meta(base_key)
     is_stolen = not key.endswith("_s")
+    from . import undertide_tide as utide
+    tide, _ = await utide.tide_mult(conn)
     if is_stolen:
-        mult = random.uniform(1.5, 1.9)
+        mult = random.uniform(1.5, 1.9) * tide
     else:
         mult = 0.45  # 次品出货价
     total = int(meta["vend"] * mult) * qty
@@ -627,6 +629,106 @@ async def _maybe_event(
     return f"\n\n——\n{ev['text']}{tail}"
 
 
+# ══ K室（三期）══════════════════════════════════════════════
+
+async def _check_k_room(conn: aiosqlite.Connection, ut: dict[str, Any]) -> str:
+    """影信 <5 且有逾期债 → K室触发（返回提示文案，否则空串）。"""
+    if int(ut["shadow_rep"]) >= utcfg.UT_K_ROOM_REP or ut.get("k_room"):
+        return ""
+    conn.row_factory = aiosqlite.Row
+    row = await (await conn.execute(
+        "SELECT COUNT(*) FROM ut_debts WHERE steward_id=? AND status='open'",
+        (ut["steward_id"],),
+    )).fetchone()
+    if not row[0]:
+        return ""
+    await conn.execute(
+        "UPDATE steward_undertide SET k_room=1 WHERE steward_id=?", (ut["steward_id"],)
+    )
+    await conn.commit()
+    return "\n\n" + utcopy.K_ROOM_ENTER
+
+
+async def _vr_frozen(ut: dict[str, Any]) -> bool:
+    """价值回收期：地下消费冻结。"""
+    return bool(ut.get("vr_until")) and db.now() < int(ut["vr_until"])
+
+
+async def _cmd_kroom(
+    conn: aiosqlite.Connection, s: dict[str, Any], ut: dict[str, Any], rest: str
+) -> str:
+    verb = rest.split()[0].lower() if rest.split() else "status"
+
+    if verb == "status":
+        lines = ["«K 室»", ""]
+        if ut.get("k_room"):
+            debts, total = await _bank_summary(conn, s)
+            penalty = int(total * utcfg.UT_K_ROOM_PENALTY)
+            lines.append(f"桌上摊着你所有的账。合计 {total} 票 · 清偿价（含 20% 罚金）：{penalty} 票。")
+            if await _vr_frozen(ut):
+                hours = max(0, (int(ut["vr_until"]) - db.now()) // 3600)
+                lines.append(
+                    f"\n价值回收进行中——剩余 {hours} 小时。"
+                    f"目标：攒够 {ut.get('vr_target')} 票（kroom vr claim 交付）。"
+                    "\n期间地下消费冻结。"
+                )
+            lines.append("\nkroom settle — 清偿 · kroom vr — 价值回收")
+        else:
+            lines.append("K 室的门关着。希望你永远不用知道里面长什么样。")
+        return "\n".join(lines)
+
+    if not ut.get("k_room"):
+        raise ValueError("K 没有要见你。这是好事。")
+
+    debts, total = await _bank_summary(conn, s)
+
+    if verb == "settle":
+        penalty = int(total * utcfg.UT_K_ROOM_PENALTY)
+        cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
+        wallet = (await cur.fetchone())[0]
+        if wallet < penalty:
+            raise ValueError(
+                f"清偿需要 {penalty} 票（含罚金），你只有 {wallet}。"
+                "付不起的话——kroom vr，K 给你另一条路。"
+            )
+        await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (penalty, s["id"]))
+        await conn.execute("UPDATE ut_debts SET status='paid' WHERE steward_id=? AND status='open'", (s["id"],))
+        await conn.execute(
+            "UPDATE steward_undertide SET k_room=0, shadow_rep=?, vr_until=0, vr_target=0 WHERE steward_id=?",
+            (utcfg.UT_K_ROOM_RESET_REP, s["id"]),
+        )
+        await conn.commit()
+        return utcopy.K_ROOM_SETTLE + f"\n（−{penalty} 票）"
+
+    if verb == "vr":
+        if rest.split()[1:2] and rest.split()[1].lower() == "claim":
+            if not await _vr_frozen(ut):
+                raise ValueError("不在价值回收期。")
+            cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
+            wallet = (await cur.fetchone())[0]
+            target = int(ut.get("vr_target") or 0)
+            if wallet < target:
+                raise ValueError(f"K 要的是 {target} 票。你现在只有 {wallet}。继续攒。")
+            await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (target, s["id"]))
+            await conn.execute("UPDATE ut_debts SET status='paid' WHERE steward_id=? AND status='open'", (s["id"],))
+            await conn.execute(
+                "UPDATE steward_undertide SET k_room=0, shadow_rep=?, vr_until=0, vr_target=0 WHERE steward_id=?",
+                (utcfg.UT_K_ROOM_RESET_REP, s["id"]),
+            )
+            await conn.commit()
+            return utcopy.K_ROOM_SETTLE + f"\n（价值回收交付 −{target} 票）"
+        if await _vr_frozen(ut):
+            return utcopy.VR_FROZEN_MSG
+        await conn.execute(
+            "UPDATE steward_undertide SET vr_until=?, vr_target=? WHERE steward_id=?",
+            (db.now() + utcfg.UT_VR_DAYS * 86400, int(total), s["id"]),
+        )
+        await conn.commit()
+        return utcopy.K_ROOM_VR + f"\n（目标：{total} 票）"
+
+    raise ValueError("未知 kroom 指令（status/settle/vr）")
+
+
 # ══ 主入口 ═════════════════════════════════════════════════
 
 async def _cmd_status(conn: aiosqlite.Connection, s: dict[str, Any], ut: dict[str, Any]) -> str:
@@ -643,6 +745,8 @@ async def _cmd_status(conn: aiosqlite.Connection, s: dict[str, Any], ut: dict[st
         lines.append(f"\n恶猫钱庄在册欠单 {len(debts)} 笔，合计 {total} 票（bank debt 详情）")
     if int(ut["busted_count"]):
         lines.append(f"档口在册案底 {ut['busted_count']} 条")
+    if ut.get("k_room"):
+        lines.append("\n⚠ K 想见你（kroom status）")
     return "\n".join(lines)
 
 
@@ -664,6 +768,12 @@ async def undertide_ops(key_id: int, command: str) -> str:
 
         if jailed and verb not in ("jail", "status", "help"):
             raise ValueError(utcopy.JAILED_LOCK_MSG)
+
+        # 价值回收期：地下消费冻结（只留查看/还款/K室/苦力）
+        if await _vr_frozen(ut) and verb not in (
+            "help", "status", "bank", "kroom", "jail", "cheer", "grudge", "well"
+        ):
+            raise ValueError(utcopy.VR_FROZEN_MSG)
 
         if verb == "help":
             return utcopy.HELP
@@ -695,7 +805,11 @@ async def undertide_ops(key_id: int, command: str) -> str:
             if not ut["access"]:
                 raise ValueError(utcopy.NO_ACCESS_HINT)
             event = await _maybe_event(conn, s, ut)
-            return utcopy.pick(utcopy.ENTER_POOL) + event
+            kroom = await _check_k_room(conn, ut)
+            from . import undertide_tide as utide
+            mult, tide_line = await utide.tide_mult(conn)
+            tide_note = f"\n\n（{utcopy.TIDE_HINT.format(line=tide_line)}）" if tide_line else ""
+            return utcopy.pick(utcopy.ENTER_POOL) + tide_note + event + kroom
 
         if verb == "status":
             return await _cmd_status(conn, s, ut)
@@ -769,5 +883,21 @@ async def undertide_ops(key_id: int, command: str) -> str:
         if verb == "grudge":
             from . import undertide_muscle as um
             return await um.grudge_ops(conn, s, ut, rest.split()[0] if rest else "")
+
+        # ── 三期路由 ──
+        if verb in ("tavern", "whisper", "spy"):
+            if not ut["access"]:
+                raise ValueError(utcopy.NO_ACCESS_HINT)
+            from . import undertide_tavern as utav
+            return await utav.tavern_ops(conn, s, ut, command.strip())
+
+        if verb in ("bounty",):
+            if not ut["access"]:
+                raise ValueError(utcopy.NO_ACCESS_HINT)
+            from . import undertide_bounty as ub
+            return await ub.bounty_ops(conn, s, ut, rest or "list")
+
+        if verb == "kroom":
+            return await _cmd_kroom(conn, s, ut, rest)
 
     raise ValueError(f"未知 undertide 指令: {command}\n{utcopy.HELP}")

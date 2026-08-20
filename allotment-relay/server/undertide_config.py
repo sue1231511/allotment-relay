@@ -105,3 +105,40 @@ UT_GRUDGE_MAX = 3
 UT_GRUDGE_CHANCE_DAILY = 0.08
 UT_GRUDGE_PAYOFF = 2.0
 UT_TAG_SHIFT_CHANCE = 0.15
+
+# ══ 三期 ═══════════════════════════════════════════════════
+
+# ── 凯斯酒馆 / 耳语人 ──
+UT_WHISPER_PRICE = (10, 100)     # 世界情报价区间
+UT_WHISPER_FAKE_CHANCE = 0.15
+UT_WHISPER_SPY_COST = 50         # 查悬赏雇主
+UT_WHISPER_AI_COST = 30          # AI 社交情报
+
+# ── 悬赏墙 ──
+UT_BOUNTY_TIERS = {"steal": 60, "beat": 150}
+UT_BOUNTY_FEE = 0.20
+UT_BOUNTY_COOLDOWN = 48 * 3600
+UT_BOUNTY_NPC_TIMEOUT = 72 * 3600
+UT_BOUNTY_EXEC_REP = -2
+UT_BOUNTY_NPC_EXEC_REP = 2
+UT_BOUNTY_STEAL_PLOT = True      # 偷=毁一块成熟作物
+
+# ── K室 ──
+UT_K_ROOM_PENALTY = 1.2
+UT_K_ROOM_RESET_REP = 15
+UT_VR_DAYS = 7
+
+# ── 潮汐法则 ──
+UT_TIDE_MULT_RANGE = (0.8, 1.5)
+UT_TIDE_LADDER = [80, 60, 40, 20]   # 景气分阈值(降序) → 倍率
+UT_TIDE_MULTS = [1.5, 1.25, 1.0, 0.9, 0.8]
+UT_HIGHLIGHT_BROADCAST = 150
+
+# ── 真人面板密钥（部署后在 Zeabur 改环境变量）──
+import os
+UT_OWNER_KEY = os.environ.get("UT_OWNER_KEY", "changeme-cat")
+UT_GATE_KEY = os.environ.get("UT_GATE_KEY", "changeme-gate")
+LIZHI_KEY = os.environ.get("LIZHI_KEY", "changeme-lizhi")
+UT_LIZHI_MOOD_PRICE = {"great": 0.8, "good": 0.95, "normal": 1.0, "bad": 1.05, "awful": 1.1}
+UT_LIZHI_BOGO_GIFT = "sea_salt_lager"
+UT_LIZHI_BOGO_CAP = 30
