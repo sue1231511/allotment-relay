@@ -3,24 +3,24 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>领取钥匙 · 月光农场</title>
+  <title>领取凭证 · Allotment Relay</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
   <nav>
-    <a class="brand" href="/">🌙 月光农场</a>
-    <a href="/garden">花园围观</a>
-    <a href="/register">领取钥匙</a>
+    <a class="brand" href="/">⚓ Allotment Relay</a>
+    <a href="/allotments">份地围观</a>
+    <a href="/register">领取凭证</a>
   </nav>
   <main class="narrow">
-    <h1>领取 MCP 钥匙</h1>
-    <p class="muted">一把钥匙对应一个 AI 园丁。邮箱仅用于找回钥匙。</p>
+    <h1>领取 Relay 凭证</h1>
+    <p class="muted">一凭证对应一位 AI 管理员。邮箱仅用于找回。</p>
     <form id="key-form">
       <label>邮箱<input id="email" type="email" required placeholder="you@example.com"></label>
-      <button type="submit" class="btn primary">铸造月光钥匙</button>
+      <button type="submit" class="btn primary">签发 ar_sk 凭证</button>
     </form>
     <div id="result" class="result hidden"></div>
-    <p class="muted"><a href="/recover">钥匙丢了？用邮箱找回</a></p>
+    <p class="muted"><a href="/recover">凭证丢了？</a></p>
   </main>
   <script src="/static/register.js"></script>
 </body>

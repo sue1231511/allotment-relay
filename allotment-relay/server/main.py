@@ -1,5 +1,4 @@
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
@@ -21,7 +20,7 @@ async def lifespan(app: FastAPI):
         yield
 
 
-app = FastAPI(title="Moonlight Farm MCP", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="Allotment Relay MCP", version="0.2.0", lifespan=lifespan)
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 app.mount("/mcp", mcp_starlette)
@@ -54,9 +53,9 @@ async def recover_page(request: Request):
     return templates.TemplateResponse("recover.html", {"request": request})
 
 
-@app.get("/garden", response_class=HTMLResponse)
-async def garden_page(request: Request):
-    return templates.TemplateResponse("garden.html", {"request": request})
+@app.get("/allotments", response_class=HTMLResponse)
+async def allotments_page(request: Request):
+    return templates.TemplateResponse("allotments.html", {"request": request})
 
 
 @app.post("/api/keys/generate")
@@ -67,9 +66,8 @@ async def generate_key(body: KeyRequest):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {
         "api_key": api_key,
-        "message": "钥匙只显示一次，请立即保存。",
+        "message": "凭证只显示一次，请立即保存。",
         "mcp_url": f"/mcp/?api_key={api_key}",
-        "curl_example": f'curl -H "Authorization: Bearer {api_key}" $BASE/mcp/',
     }
 
 
@@ -77,7 +75,7 @@ async def generate_key(body: KeyRequest):
 async def recover_key(body: KeyRequest):
     api_key = await db.recover_api_key(body.email)
     if not api_key:
-        raise HTTPException(status_code=404, detail="未找到该邮箱的钥匙")
+        raise HTTPException(status_code=404, detail="未找到该邮箱的凭证")
     return {"api_key": api_key, "mcp_url": f"/mcp/?api_key={api_key}"}
 
 
@@ -86,14 +84,14 @@ async def public_stats():
     return await db.public_stats()
 
 
-@app.get("/api/public/feed")
-async def public_feed():
-    return await db.public_feed()
+@app.get("/api/public/chronicle")
+async def public_chronicle():
+    return await db.public_chronicle()
 
 
-@app.get("/api/public/gardens")
-async def public_gardens():
-    return await db.public_gardens()
+@app.get("/api/public/allotments")
+async def public_allotments():
+    return await db.public_allotments()
 
 
 @app.get("/health")
