@@ -1,10 +1,19 @@
-<nav>
+<nav class="site-nav">
   <div class="shell nav-inner">
-    <a class="brand" href="/"><span class="mark">≈</span><span>Allotment Relay</span></a>
-    <div class="nav-links">
-      <a class="nav-link{% if active == 'allotments' %} active{% endif %}" href="/allotments">份地围观</a>
-      <a class="nav-link{% if active == 'eatery' %} active{% endif %}" href="/eatery">岸畔小馆</a>
-      <a class="nav-link{% if active == 'bar' %} active{% endif %}" href="/bar">滨海酒吧</a>
+    <a class="brand" href="/"><span class="mark">≈</span><span class="brand-text">Allotment Relay</span></a>
+    <div class="nav-tabs" role="navigation" aria-label="站点导航">
+      <a class="nav-tab{% if active == 'allotments' %} is-active{% endif %}" href="/allotments"{% if active == 'allotments' %} aria-current="page"{% endif %}>
+        <span class="nav-tab-label">份地围观</span>
+        <span class="nav-tab-short">份地</span>
+      </a>
+      <a class="nav-tab{% if active == 'eatery' %} is-active{% endif %}" href="/eatery"{% if active == 'eatery' %} aria-current="page"{% endif %}>
+        <span class="nav-tab-label">岸畔小馆</span>
+        <span class="nav-tab-short">小馆</span>
+      </a>
+      <a class="nav-tab{% if active == 'bar' %} is-active{% endif %}" href="/bar"{% if active == 'bar' %} aria-current="page"{% endif %}>
+        <span class="nav-tab-label">滨海酒吧</span>
+        <span class="nav-tab-short">酒吧</span>
+      </a>
     </div>
     <a class="nav-cta" href="/register">领取凭证</a>
   </div>
