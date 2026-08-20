@@ -113,9 +113,11 @@ def generate_event(
             ))
         elif domain == "land" and roll < 0.62:
             effects.append("plot_delay")
-            detail_parts.append(
-                f"#{slot} 被{flavor.pick(['咸雾', '阴潮', '霜冻', '睡过头'])}耽误了一程"
-            )
+            detail_parts.append(flavor.fill(
+                flavor.pick(flavor.LAND_DELAY_DETAIL),
+                slot=slot,
+                reason=flavor.pick(flavor.LAND_DELAY),
+            ))
         elif domain == "land":
             effects.append("steal_item")
             detail_parts.append(flavor.fill(
@@ -134,7 +136,10 @@ def generate_event(
             ))
         elif domain == "sea":
             effects.append("steal_item")
-            detail_parts.append(f"{flavor.pick(flavor.MESS_SEA)}卷走点东西，网说它不背锅")
+            detail_parts.append(flavor.fill(
+                flavor.pick(flavor.SEA_STEAL),
+                mess=flavor.pick(flavor.MESS_SEA),
+            ))
 
         elif domain == "pen" and pen and roll < 0.5:
             effects.append("pen_unfeed")
@@ -145,7 +150,11 @@ def generate_event(
             ))
         elif domain == "pen" and pen:
             effects.append("pen_wreck")
-            detail_parts.append(f"#{slot} 号渔排{flavor.pick(['缺氧', '倒灌', '闹脾气'])}，鱼苗集体跑路")
+            detail_parts.append(flavor.fill(
+                flavor.pick(flavor.PEN_WRECK_DETAIL),
+                slot=slot,
+                reason=flavor.pick(flavor.PEN_WRECK),
+            ))
 
         elif domain == "voyage" and roll < 0.4:
             effects.append("boat_damage")
@@ -156,35 +165,52 @@ def generate_event(
         elif domain == "voyage" and voyage and roll < 0.65:
             delay = random.randint(300, 900)
             effects.append(f"voyage_delay:{delay}")
-            detail_parts.append(
-                f"{flavor.pick(['无风带', '迷雾', '逆流'])}多耗你 {delay // 60} 分钟，海在摸鱼"
-            )
+            detail_parts.append(flavor.fill(
+                flavor.pick(flavor.VOYAGE_DELAY_DETAIL),
+                reason=flavor.pick(flavor.VOYAGE_DELAY),
+                mins=delay // 60,
+            ))
         elif domain == "voyage":
             effects.append("boat_damage")
-            detail_parts.append(f"出航前{flavor.pick(flavor.VOYAGE_MESS)}——今天不宜硬刚")
+            detail_parts.append(flavor.fill(
+                flavor.pick(flavor.VOYAGE_HARD_NO),
+                mess=flavor.pick(flavor.VOYAGE_MESS),
+            ))
 
         elif domain == "guild":
             fine = random.randint(5, 12)
             effects.append(f"ticket_fine:{fine}")
-            detail_parts.append(
-                f"巡查员皱眉：「{flavor.pick(['篱笆松了', '档口太乱', '桶是空的', '猫在份地上开会'])}」——{fine} 票"
-            )
+            detail_parts.append(flavor.fill(
+                flavor.pick(flavor.GUILD_FINE_DETAIL),
+                reason=flavor.pick(flavor.GUILD_FINE_REASON),
+                fine=fine,
+            ))
 
         elif domain == "hearth" and steward.get("mascot_name") and roll < 0.5:
             delta = -random.randint(12, 22)
             effects.append(f"mascot_spirit:{delta}")
-            detail_parts.append(
-                f"{flavor.pick(['锅崩', '烟呛', '闷雷'])}，{steward['mascot_name']} 士气 {delta}"
-            )
+            detail_parts.append(flavor.fill(
+                flavor.pick(flavor.HEARTH_MASCOT_DETAIL),
+                mess=flavor.pick(flavor.HEARTH_MASCOT_BAD),
+                name=steward["mascot_name"],
+                delta=delta,
+            ))
         elif domain == "hearth":
             fine = random.randint(3, 7)
             effects.append(f"ticket_fine:{fine}")
-            detail_parts.append(f"灶台{flavor.pick(['糊锅', '溢汤', '把盐当糖'])}，-{fine} 票")
+            detail_parts.append(flavor.fill(
+                flavor.pick(flavor.HEARTH_BAD_DETAIL),
+                mess=flavor.pick(flavor.HEARTH_BAD),
+                fine=fine,
+            ))
 
         else:
             fine = random.randint(*_ticket_range(domain, kind))
             effects.append(f"ticket_fine:{fine}")
-            detail_parts.append(f"联盟今天跟你开玩笑，-{fine} 票")
+            detail_parts.append(flavor.fill(
+                flavor.pick(flavor.GENERIC_FINE),
+                fine=fine,
+            ))
 
         lo, hi = _ticket_range(domain, kind)
         repair_tickets = random.randint(lo, hi)
@@ -216,20 +242,27 @@ def generate_event(
         else:
             bonus = random.randint(6, 14)
             effects.append(f"ticket_bonus:{bonus}")
-            detail_parts.append(f"{flavor.pick(['退潮', '晨雾', '过路鸟'])}送你 {bonus} 票，意外之喜")
+            detail_parts.append(flavor.fill(
+                flavor.pick(flavor.GOOD_WEATHER_DETAIL),
+                who=flavor.pick(flavor.GOOD_WEATHER_GIFT),
+                n=bonus,
+            ))
 
         if weather == "clear" and random.random() < 0.2:
             item = flavor.pick([x[0] for x in FORAGE_LOOT[:3]])
             effects.append(f"loot:{item}:1")
-            detail_parts.append(f"顺路捡到 {ITEM_NAMES.get(item, item)}，赚")
+            detail_parts.append(flavor.fill(
+                flavor.pick(flavor.FORAGE_BONUS),
+                item=ITEM_NAMES.get(item, item),
+            ))
 
     if not detail_parts:
         return None
 
     if weather == "gale" and kind == "bad" and random.random() < 0.3:
-        detail_parts.append("阵风在一旁起哄")
+        detail_parts.append(flavor.pick(flavor.WEATHER_TAIL_BAD))
     if tide == "flood" and domain == "sea" and kind == "bad" and random.random() < 0.25:
-        detail_parts.append("涨潮也在看热闹")
+        detail_parts.append(flavor.pick(flavor.TIDE_TAIL_BAD))
 
     return GeneratedEvent(
         kind=kind,
@@ -292,10 +325,7 @@ def generate_naval_encounter(
             fine = random.randint(4, 10)
             effects.append(f"ticket_fine:{fine}")
             detail = flavor.fill(
-                flavor.pick([
-                    "{who}擦过船舷，舵索断了——修船吧",
-                    "{who}追了一程，你丢货才脱身",
-                ]),
+                flavor.pick(flavor.NAVAL_BAD_EXTRA),
                 who=flavor.pick(flavor.NAVAL_WHO),
             )
         elif sub < 0.82:
@@ -314,10 +344,8 @@ def generate_naval_encounter(
             standing = -random.randint(4, 9)
             effects.append(f"standing:{standing}")
             detail = flavor.fill(
-                flavor.pick([
-                    "关税巡逻贴舷：「解释清楚」——档信 {n}，货也少了一格",
-                    "黑帆小艇「借走」了舱里最好那格",
-                ]),
+                flavor.pick(flavor.NAVAL_BAD_EXTRA),
+                who=flavor.pick(flavor.NAVAL_WHO),
                 n=abs(standing),
             )
     elif roll < bad_weight + 0.38:
@@ -346,7 +374,7 @@ def generate_naval_encounter(
             )
     else:
         kind = "neutral"
-        label = flavor.pick(["航道插曲", "海上怪谈", "浪里八卦"])
+        label = flavor.pick(flavor.NAVAL_NEUTRAL_LABEL)
         if random.random() < 0.55:
             fine = random.randint(3, 8)
             fk = random.choice(fish_keys_for_zones({route, "shore"}) or ["herring"])
@@ -359,22 +387,19 @@ def generate_naval_encounter(
                 loot=iname,
             )
         else:
-            detail = flavor.pick(flavor.NAVAL_NEUTRAL + [
-                "远处有炮声——后来证实是渔船敲空桶",
-                "海面漂来联盟传单，被浪打湿了",
-            ])
+            detail = flavor.pick(flavor.NAVAL_NEUTRAL)
 
     return NavalEncounter(kind=kind, label=label, detail=detail, effects=effects)
 
 
 def generate_world_pulse() -> dict[str, Any]:
     effect_types = [
-        ("storm_front", "bad", "户外份地得重打理，苗盘表示抗议"),
-        ("fish_run", "good", "撒网手气上调，渔获更愿意上钩"),
-        ("blight_whisper", "bad", "收成时偶尔会「蒸发」一点点"),
-        ("loot_surge", "good", "交换台台阶像退潮礼包区"),
-        ("red_tide", "bad", "渔排和网都不太给面子"),
-        ("calm_sea", "good", "出海报废略降，适合胆小船长"),
+        ("storm_front", "bad", "户外份地得重打理，苗盘：这班我不上了"),
+        ("fish_run", "good", "撒网手气上调，渔获更愿意上钩——海偶尔做个人"),
+        ("blight_whisper", "bad", "收成偶尔会「蒸发」一点点，别问去哪了"),
+        ("loot_surge", "good", "交换台台阶像退潮礼包区，捡到的算你眼神好"),
+        ("red_tide", "bad", "渔排和网都不太给面子，今天宜躺"),
+        ("calm_sea", "good", "出海报废略降，胆小船长也能装勇敢"),
     ]
     effect, kind, hint = random.choice(effect_types)
 

@@ -78,15 +78,9 @@ def event_multiplier(steward: dict[str, Any]) -> float:
 def guild_ticket_multiplier(steward: dict[str, Any]) -> tuple[float, str]:
     standing = steward.get("standing", config.START_STANDING)
     if standing < config.STANDING_SHUT:
-        return 0.35, flavor.pick([
-            "档口只开半扇，巡查员盯着你呢",
-            "联盟记名了——先 brew 或 amends 暖暖档信",
-        ])
+        return 0.35, flavor.pick(flavor.GUILD_STANDING_SHUT)
     if standing < config.STANDING_LOW:
-        return 0.65, flavor.pick([
-            "档口半开，票少点但不算查封",
-            "工分票打了折，档信得补补",
-        ])
+        return 0.65, flavor.pick(flavor.GUILD_STANDING_LOW)
     return 1.0, ""
 
 
@@ -105,11 +99,11 @@ def meter_line(steward: dict[str, Any]) -> str:
     bits = [f"饱食 {s}", f"雾智 {m}", f"档信 {d}"]
     hints = []
     if s < config.SATIETY_LOW:
-        hints.append("有点饿")
+        hints.append(flavor.METER_HINT_SATIETY)
     if m < config.MIST_WIT_LOW:
-        hints.append("海雾进脑子了")
+        hints.append(flavor.METER_HINT_MIST)
     if d < config.STANDING_LOW:
-        hints.append("档口对你爱搭不理")
+        hints.append(flavor.METER_HINT_STANDING)
     line = " · ".join(bits)
     if hints:
         line += f"（{ '，'.join(hints) }）"
@@ -118,13 +112,7 @@ def meter_line(steward: dict[str, Any]) -> str:
 
 def low_meter_hint(steward: dict[str, Any]) -> str | None:
     if steward.get("standing", 100) < config.STANDING_SHUT:
-        return flavor.pick([
-            "档口半查封：brew / amends 可回暖档信",
-            "巡查员在档口晃——致歉或煮一锅再说",
-        ])
+        return flavor.pick(flavor.LOW_STANDING_HINT)
     if steward.get("satiety", 100) < config.SATIETY_LOW:
-        return flavor.pick([
-            "肚子咕咕叫，gather / net / brew 都能填",
-            "饱食偏低，意外更容易找茬（但不致命）",
-        ])
+        return flavor.pick(flavor.LOW_SATIETY_HINT)
     return None
