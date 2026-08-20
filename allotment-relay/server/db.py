@@ -1,6 +1,7 @@
 import secrets
 import time
-from typing import Any
+from contextlib import asynccontextmanager
+from typing import Any, AsyncIterator
 
 import aiosqlite
 
@@ -574,15 +575,25 @@ CREATE TABLE IF NOT EXISTS guild_shifts (
 """
 
 
-async def connect() -> aiosqlite.Connection:
-    """Open DB with busy wait — prefer this over bare aiosqlite.connect."""
-    conn = await aiosqlite.connect(DB_PATH, timeout=30.0)
-    await conn.execute("PRAGMA busy_timeout=10000")
-    return conn
+@asynccontextmanager
+async def connect() -> AsyncIterator[aiosqlite.Connection]:
+    """Open DB with busy wait — use as `async with connect() as conn:`."""
+    async with aiosqlite.connect(DB_PATH, timeout=30.0) as conn:
+        await conn.execute("PRAGMA busy_timeout=10000")
+        yield conn
 
 
 async def init_db() -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
+    probe = DATA_DIR / ".write_probe"
+    try:
+        probe.write_text("ok")
+        probe.unlink(missing_ok=True)
+    except OSError as exc:
+        raise RuntimeError(
+            f"数据库目录不可写: {DATA_DIR} ({exc}). "
+            "请检查 Zeabur 持久卷是否挂载到 /app/server/data"
+        ) from exc
     async with aiosqlite.connect(DB_PATH, timeout=30.0) as db:
         await db.execute("PRAGMA journal_mode=WAL")
         await db.execute("PRAGMA synchronous=NORMAL")

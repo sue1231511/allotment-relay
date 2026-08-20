@@ -1,5 +1,6 @@
 from contextvars import ContextVar
 
+import aiosqlite
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
@@ -8,6 +9,7 @@ from mcp.server.mcpserver import MCPServer
 from mcp.server.transport_security import TransportSecuritySettings
 
 from . import db, game
+from .config import DATA_DIR
 
 current_key_id: ContextVar[int | None] = ContextVar("current_key_id", default=None)
 
@@ -27,7 +29,18 @@ class ApiKeyMiddleware(BaseHTTPMiddleware):
                 {"detail": "缺少凭证。Authorization: Bearer <ar_sk_...> 或 ?api_key=<...>"},
                 status_code=401,
             )
-        row = await db.get_key_row(api_key)
+        try:
+            row = await db.get_key_row(api_key)
+        except (aiosqlite.Error, OSError) as exc:
+            return JSONResponse(
+                {
+                    "detail": (
+                        f"数据库不可用 ({DATA_DIR}): {exc}. "
+                        "请检查 Zeabur 持久卷是否挂载到 /app/server/data"
+                    )
+                },
+                status_code=503,
+            )
         if not row:
             return JSONResponse({"detail": "无效的 Relay 凭证"}, status_code=401)
         token = current_key_id.set(row["id"])

@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, field_validator
@@ -193,7 +193,25 @@ async def eatery_order(body: EateryOrderRequest):
 
 @app.get("/health")
 async def health():
-    return {"ok": True}
+    from .config import DATA_DIR, DB_PATH
+
+    ok = True
+    detail: dict[str, str] = {}
+    try:
+        probe = DATA_DIR / ".write_probe"
+        probe.write_text("ok")
+        probe.unlink(missing_ok=True)
+        detail["data_dir"] = str(DATA_DIR)
+        detail["db_path"] = str(DB_PATH)
+    except OSError as exc:
+        ok = False
+        detail["storage"] = (
+            f"不可写: {DATA_DIR} ({exc}). "
+            "请检查 Zeabur 持久卷是否挂载到 /app/server/data"
+        )
+    if not ok:
+        return JSONResponse({"ok": False, **detail}, status_code=503)
+    return {"ok": True, **detail}
 
 
 app = NormalizeMcpPathMiddleware(app)
