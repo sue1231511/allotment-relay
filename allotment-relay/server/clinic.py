@@ -17,7 +17,7 @@ async def clinic_ops(key_id: int, command: str) -> str:
     verb = parts[0].lower() if parts else "status"
 
     if verb == "status":
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             s = await db.get_steward_by_id(s["id"]) or s
             ailments = await health.list_ailments(conn, s["id"])
         lines = [
@@ -47,7 +47,7 @@ async def clinic_ops(key_id: int, command: str) -> str:
             "桥桥大夫指价目表：「看清数字再开口，我不还价。」",
             "桥桥大夫：「宿醉也是病，酒吧赚的票别全花在下一顿酒上。」",
         ])
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             ailments = await health.list_ailments(conn, s["id"])
         if ailments:
             total = sum(a["cost"] for a in ailments)
@@ -61,7 +61,7 @@ async def clinic_ops(key_id: int, command: str) -> str:
 
     if verb == "treat" and len(parts) >= 2:
         target = parts[1].lower()
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             if target == "all":
                 msg = await health.treat_all(conn, s["id"])
             else:

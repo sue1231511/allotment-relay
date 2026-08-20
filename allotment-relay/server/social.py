@@ -31,7 +31,7 @@ def _pair_ids(a: int, b: int) -> tuple[int, int]:
 
 async def get_rapport(a: int, b: int) -> int:
     sa, sb = _pair_ids(a, b)
-    async with aiosqlite.connect(db.DB_PATH) as conn:
+    async with db.connect() as conn:
         cur = await conn.execute(
             "SELECT score FROM rapport WHERE steward_a=? AND steward_b=?",
             (sa, sb),
@@ -41,7 +41,7 @@ async def get_rapport(a: int, b: int) -> int:
 
 
 async def max_rapport(steward_id: int) -> int:
-    async with aiosqlite.connect(db.DB_PATH) as conn:
+    async with db.connect() as conn:
         cur = await conn.execute(
             """
             SELECT MAX(score) FROM rapport

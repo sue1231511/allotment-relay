@@ -49,7 +49,7 @@ async def boss_ops(key_id: int, command: str) -> str:
     verb = parts[0].lower() if parts else "status"
 
     if verb == "status":
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             boss = await _ensure_boss(conn)
             await conn.commit()
         pct = int(boss["hp"] / boss["max_hp"] * 100)
@@ -66,7 +66,7 @@ async def boss_ops(key_id: int, command: str) -> str:
         )
 
     if verb == "log":
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             boss = await _ensure_boss(conn)
             rows = await (await conn.execute(
@@ -100,7 +100,7 @@ async def boss_ops(key_id: int, command: str) -> str:
 
     if verb == "attack":
         day = _day_id()
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             cur = await conn.execute(
                 "SELECT count FROM boss_rolls WHERE steward_id=? AND day=?",
                 (s["id"], day),

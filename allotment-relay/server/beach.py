@@ -80,14 +80,15 @@ async def beach_ops(key_id: int, command: str) -> str:
         lines = [
             world.climate_line(),
             f"铲子: {'有' if has_shovel else '无 — tool_ops buy shovel'}",
-            f"dig 翻沙 {config.BEACH_ENERGY} 精力 · probe 掏洞 {config.BEACH_PROBE_ENERGY} 精力",
+            f"dig 翻沙 {config.BEACH_ENERGY} 精力（须 tool_shovel）"
+            f" · probe 掏洞 {config.BEACH_PROBE_ENERGY} 精力",
         ]
         if tide == "ebb":
             lines.append("退潮：贝壳/渔获权重 ↑")
         elif tide == "slack":
             lines.append("平潮：可用 probe 掏洞（收益略低）")
         else:
-            lines.append("涨潮：dig 不可用，probe 勉强试试")
+            lines.append("涨潮：dig 不可用；probe 需退潮或平潮")
         if w == "clear":
             lines.append("晴朗：贝壳权重 +5")
         if w == "misty":
@@ -105,7 +106,7 @@ async def beach_ops(key_id: int, command: str) -> str:
 
     if verb == "catalog":
         from . import catches as catches_mod
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             return await catches_mod.beach_catalog(conn, s["id"])
 
     if verb == "dig":
@@ -119,7 +120,7 @@ async def beach_ops(key_id: int, command: str) -> str:
         now = db.now()
         day = now // config.FORAGE_COOLDOWN_DAY
         w = world.current_weather()
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             cur = await conn.execute(
                 "SELECT last_at, count FROM beach_rolls WHERE steward_id=? AND day=?",
                 (s["id"], day),
@@ -203,7 +204,7 @@ async def beach_ops(key_id: int, command: str) -> str:
         now = db.now()
         day = now // config.FORAGE_COOLDOWN_DAY
         w = world.current_weather()
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             cur = await conn.execute(
                 "SELECT last_at FROM beach_probe_rolls WHERE steward_id=? AND day=?",
                 (s["id"], day),

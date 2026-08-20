@@ -36,7 +36,7 @@ async def tool_ops(key_id: int, command: str) -> str:
             raise ValueError(f"可购: {', '.join(TOOLS.keys())}")
         item = f"tool_{key}"
         cost = TOOLS[key]["cost"]
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
             if (await cur.fetchone())[0] < cost:
                 raise ValueError(f"需要 {cost} 票")

@@ -9,7 +9,9 @@ from . import commons
 from .catalog import (
     CROPS,
     resolve_crop_key,
+    resolve_item_key,
     unknown_crop_message,
+    unknown_item_message,
     FORAGE_LOOT,
     ITEM_NAMES,
     ITEM_PRICES,
@@ -21,10 +23,19 @@ from .config import (
     BOATS,
     FORAGE_COOLDOWN_DAY,
     GREENHOUSE_COST,
+    GUILD_SHIFT_DAILY,
     GUILD_TICKETS,
     SWAP_CLAIM_FEE,
     BAR_MANDATORY_DAYS,
 )
+
+
+def _parse_int(token: str, label: str = "数量") -> int:
+    cleaned = token.strip().rstrip(";,")
+    try:
+        return int(cleaned)
+    except ValueError:
+        raise ValueError(f"{label}须为整数，收到: {token!r}") from None
 
 
 def _parcel_line(plot: dict) -> str:
@@ -89,7 +100,7 @@ async def relay_manual() -> str:
         "  swap_ops — offer/claim/cancel（白送，领取 3 票手续费）",
         "  tote_ops — list/vend（系统回收，不是玩家互卖）",
         "  hearth_ops — brew/catalog（转发厨房灶台，配方全表可见）",
-        "  guild_shift — 领取工分票",
+        "  guild_shift — 领取工分票（每日 1 次）",
         "  alliance_ops — online/assist/rapport/donate/larder/draw",
         "  contract_ops — post/list/fill/mine/cancel",
         "  league_ops — status/contribute（全服周目标，达成全员有奖）",
@@ -146,7 +157,7 @@ async def relay_manual() -> str:
 
 async def steward_sheet(key_id: int) -> str:
     s = await require_steward(key_id, exempt_duty=True)
-    async with aiosqlite.connect(db.DB_PATH) as conn:
+    async with db.connect() as conn:
         from . import energy as energy_mod
         from . import health as health_mod
         await energy_mod.soft_regen(conn, s["id"])
@@ -158,6 +169,7 @@ async def steward_sheet(key_id: int) -> str:
         hut_summary = (await hut_mod.get_bonuses(conn, s["id"])).summary()
         handoff_notes = await _collect_handoffs(conn, s["id"])
         bottle_notes = await _collect_bottle_replies(conn, s["id"])
+        open_incidents = await events.list_open_incidents_on(conn, s["id"])
         await conn.commit()
     s = await db.get_steward_by_id(s["id"]) or s
     parcels = await db.get_parcels(s["id"])
@@ -183,6 +195,14 @@ async def steward_sheet(key_id: int) -> str:
     clinic_nag = health_mod.clinic_hint(ailments)
     if clinic_nag:
         lines.append(clinic_nag)
+    if open_incidents:
+        lines.append(
+            f"未处理意外 {len(open_incidents)} 条 → incident_ops status / repair 编号"
+        )
+        for r in open_incidents[:4]:
+            label = r.get("label") or r["incident_key"]
+            cost = r.get("repair_tickets") or 0
+            lines.append(f"  编号 #{r['id']} {label}（repair {cost} 票）")
     if lili_hint:
         lines.append(lili_hint)
     for note in handoff_notes:
@@ -206,7 +226,7 @@ async def steward_sheet(key_id: int) -> str:
         lines.append("畜栏: 已建")
     if s.get("eatery_open"):
         lines.append(f"小馆: {s.get('eatery_label') or s['name']+'的馆'}（kitchen_ops shop menu）")
-    async with aiosqlite.connect(db.DB_PATH) as conn:
+    async with db.connect() as conn:
         conn.row_factory = aiosqlite.Row
         pen = await (await conn.execute(
             "SELECT * FROM fish_pens WHERE steward_id=? AND slot=1", (s["id"],)
@@ -248,13 +268,13 @@ async def steward_sheet(key_id: int) -> str:
     if stock:
         lines.append("行囊:")
         for item, qty in stock.items():
-            lines.append(f"  {ITEM_NAMES.get(item, item)} x{qty}")
+            lines.append(f"  {ITEM_NAMES.get(item, item)} x{qty} · {item}")
     return "\n".join(lines)
 
 
 async def steward_revise(key_id: int, motto: str = "", portrait: str = "") -> str:
     s = await require_steward(key_id)
-    async with aiosqlite.connect(db.DB_PATH) as conn:
+    async with db.connect() as conn:
         if motto.strip():
             await conn.execute("UPDATE stewards SET motto = ? WHERE id = ?", (motto.strip()[:200], s["id"]))
         if portrait.strip():
@@ -280,20 +300,38 @@ async def peer_sheet(name: str) -> str:
 
 async def guild_shift(key_id: int) -> str:
     s = await require_steward(key_id)
+    day = db.now() // FORAGE_COOLDOWN_DAY
     mult, note = survival.guild_ticket_multiplier(s)
     gain = max(1, int(GUILD_TICKETS * mult))
-    async with aiosqlite.connect(db.DB_PATH) as conn:
+    async with db.connect() as conn:
+        cur = await conn.execute(
+            "SELECT count FROM guild_shifts WHERE steward_id=? AND day=?",
+            (s["id"], day),
+        )
+        row = await cur.fetchone()
+        used = row[0] if row else 0
+        if used >= GUILD_SHIFT_DAILY:
+            raise ValueError(
+                f"今日 guild 轮值已领取（每日 {GUILD_SHIFT_DAILY} 次，明天再来）"
+            )
         from . import hut as hut_mod
         hut_b = await hut_mod.get_bonuses(conn, s["id"])
         await conn.execute(
             "UPDATE stewards SET tickets = tickets + ? WHERE id = ?",
             (gain, s["id"]),
         )
+        await conn.execute(
+            """
+            INSERT INTO guild_shifts (steward_id, day, count) VALUES (?,?,1)
+            ON CONFLICT(steward_id, day) DO UPDATE SET count = count + 1
+            """,
+            (s["id"], day),
+        )
         await survival.bump(conn, s["id"], standing=4 + hut_b.guild_standing, mist_wit=2)
         extra = await events.roll_after_action(s, "guild", conn)
         await conn.commit()
     await db.add_chronicle("guild", f"{s['name']} 完成一轮 guild 轮值，+{gain} 票", s["id"])
-    msg = f"获得 {gain} 工分票"
+    msg = f"获得 {gain} 工分票（今日 guild {used + 1}/{GUILD_SHIFT_DAILY}）"
     if note:
         msg += f"（{note}）"
     msg += flavor.maybe_suffix(flavor.GUILD_SUFFIX)
@@ -303,11 +341,17 @@ async def guild_shift(key_id: int) -> str:
 async def plot_ops(key_id: int, command: str) -> str:
     s = await require_steward(key_id)
     pulse = await events.maybe_world_pulse(s)
-    async with aiosqlite.connect(db.DB_PATH) as conn:
+    async with db.connect() as conn:
         await commons.maybe_spawn_commons(conn, steward_id=s["id"])
         await conn.commit()
     parts = [c.strip() for c in command.split(";") if c.strip()]
-    out = "\n".join([await _plot_one(s, c) for c in parts])
+    results: list[str] = []
+    for c in parts:
+        try:
+            results.append(await _plot_one(s, c))
+        except ValueError as exc:
+            results.append(f"⚠ {exc}")
+    out = "\n".join(results)
     return f"{pulse}\n{out}" if pulse else out
 
 
@@ -323,7 +367,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
         return "份地\n" + "\n".join(_parcel_line(p) for p in parcels)
 
     if verb == "cohort":
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             rows = await (await conn.execute(
                 "SELECT name, badge, last_active_at FROM stewards WHERE enrolled=1 AND id!=? ORDER BY last_active_at DESC LIMIT 20",
@@ -338,12 +382,12 @@ async def _plot_one(s: dict, cmd: str) -> str:
         return "作物清单（buy/sow 可用 key 或中文名/别名）\n" + "\n".join(lines)
 
     if verb == "buy" and len(parts) >= 3:
-        qty, crop = int(parts[1]), resolve_crop_key(parts[2])
+        qty, crop = _parse_int(parts[1]), resolve_crop_key(" ".join(parts[2:]))
         if not crop:
-            raise ValueError(unknown_crop_message(parts[2]))
+            raise ValueError(unknown_crop_message(" ".join(parts[2:])))
         seed = f"seed_{crop}"
         cost = CROPS[crop]["seed_price"] * qty
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
             if (await cur.fetchone())[0] < cost:
                 raise ValueError(f"工分票不足，需要 {cost}")
@@ -353,11 +397,12 @@ async def _plot_one(s: dict, cmd: str) -> str:
         return f"购入 {CROPS[crop]['name']}种 x{qty}（-{cost} 票）"
 
     if verb == "sow" and len(parts) >= 3:
-        slot, crop = int(parts[1]), resolve_crop_key(parts[2])
+        slot = _parse_int(parts[1], "地块编号")
+        crop = resolve_crop_key(" ".join(parts[2:]))
         if not crop:
-            raise ValueError(unknown_crop_message(parts[2]))
+            raise ValueError(unknown_crop_message(" ".join(parts[2:])))
         seed = f"seed_{crop}"
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             plot = dict(await (await conn.execute(
                 "SELECT * FROM parcels WHERE steward_id=? AND slot=?", (s["id"], slot)
@@ -376,7 +421,9 @@ async def _plot_one(s: dict, cmd: str) -> str:
                 """,
                 (crop, db.now(), grow_target, grow_pace, plot["id"]),
             )
-            extra = await events.roll_after_action(s, "sow", conn)
+            extra = await events.roll_after_action(
+                s, "sow", conn, protected_parcel_id=plot["id"],
+            )
             farm = await farming.roll_farm_event(conn, s, "sow")
             await conn.commit()
         msg = f"#{slot} 播下 {CROPS[crop]['emoji']}{CROPS[crop]['name']}\n{sow_flavor}"
@@ -385,7 +432,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
         return f"{msg}\n{extra}" if extra else msg
 
     if verb == "tend":
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             cur = await conn.execute(
                 "SELECT id FROM parcels WHERE steward_id=? AND crop IS NOT NULL AND tended=0",
                 (s["id"],),
@@ -435,7 +482,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
 
     if verb == "shake" and len(parts) >= 2:
         slot = int(parts[1])
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             plot = dict(await (await conn.execute(
                 "SELECT * FROM parcels WHERE steward_id=? AND slot=?", (s["id"], slot)
@@ -456,7 +503,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
     if verb == "fertilize" and len(parts) >= 2:
         slot = int(parts[1])
         fert_item = parts[2] if len(parts) > 2 else "compost"
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             plot = dict(await (await conn.execute(
                 "SELECT * FROM parcels WHERE steward_id=? AND slot=?", (s["id"], slot)
@@ -492,7 +539,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
 
     if verb == "scarecrow" and len(parts) >= 2:
         slot = int(parts[1])
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             plot = dict(await (await conn.execute(
                 "SELECT * FROM parcels WHERE steward_id=? AND slot=?", (s["id"], slot)
@@ -512,7 +559,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
 
     if verb == "compost" and len(parts) >= 2:
         slot = int(parts[1])
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             plot = dict(await (await conn.execute(
                 "SELECT * FROM parcels WHERE steward_id=? AND slot=?", (s["id"], slot)
@@ -535,7 +582,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
 
     if verb == "gather":
         got = []
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             parcels = [dict(r) for r in await (await conn.execute(
                 "SELECT * FROM parcels WHERE steward_id=?", (s["id"],)
@@ -578,9 +625,11 @@ async def _plot_one(s: dict, cmd: str) -> str:
                             (p["id"],),
                         )
                     if item_key.startswith("seed_"):
-                        got.append(f"{CROPS[p['crop']]['name']}种(过熟){harvest_note}")
+                        got.append(
+                            f"{CROPS[p['crop']]['name']}种(过熟) x{qty}{harvest_note}"
+                        )
                     else:
-                        got.append(f"{CROPS[p['crop']]['name']}{harvest_note}")
+                        got.append(f"{CROPS[p['crop']]['name']} x{qty}{harvest_note}")
                 elif farming.plot_overripe(p):
                     if random.random() < 0.5:
                         await db.add_item(conn, s["id"], "compost", 2)
@@ -594,18 +643,41 @@ async def _plot_one(s: dict, cmd: str) -> str:
                     )
             extra = await events.roll_after_action(s, "gather", conn)
             farm = await farming.roll_farm_event(conn, s, "gather")
-            disc = await commons.roll_discovery(conn, s, "gather")
+            found: list[tuple[str, int, str]] = []
+            disc = await commons.roll_discovery(conn, s, "gather", found=found)
+            for item, qty, iname in found:
+                got.append(f"{iname} x{qty}（发现 · {item}）")
             if got:
                 await survival.bump(conn, s["id"], satiety=min(6, 2 + len(got)))
             await conn.commit()
         if not got:
+            nearest = None
+            min_left = None
+            for p in parcels:
+                if p.get("crop") and not farming.plot_ready(p) and not farming.plot_overripe(p):
+                    _, _, left = farming.grow_progress(p)
+                    if min_left is None or left < min_left:
+                        min_left = left
+                        nearest = p
             msg = "没有可收成的作物"
+            if nearest is not None and min_left is not None:
+                cname = CROPS[nearest["crop"]]["name"]
+                slot = nearest.get("slot", "?")
+                if min_left < 60:
+                    msg += f"（#{slot} {cname} 还需 {min_left} 秒）"
+                else:
+                    msg += f"（#{slot} {cname} 还需约 {min_left // 60} 分）"
             return f"{msg}\n{extra}" if extra else msg
         await db.add_chronicle("gather", f"{s['name']} 收成 {', '.join(got)}", s["id"])
         from . import multi
         bonus_msg = None
         for crop_name in got:
-            crop_key = next((k for k, v in CROPS.items() if v["name"] == crop_name), None)
+            if "发现" in crop_name or "枯病" in crop_name or "堆肥" in crop_name:
+                continue
+            crop_key = next(
+                (k for k, v in CROPS.items() if crop_name.startswith(v["name"])),
+                None,
+            )
             if crop_key:
                 b = await multi.on_league_item(s["id"], f"crop_{crop_key}", 1)
                 if b:
@@ -633,7 +705,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
             raise ValueError("今日已在边际采过，明天再来")
         roll = random.choices(FORAGE_LOOT, weights=[x[3] for x in FORAGE_LOOT])[0]
         item_id, label, qty, _ = roll
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             await db.add_item(conn, s["id"], item_id, qty)
             await conn.execute("UPDATE stewards SET forage_at=? WHERE id=?", (db.now(), s["id"]))
             await survival.bump(conn, s["id"], satiety=4)
@@ -652,7 +724,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
         target = await db.get_steward_by_name(peer)
         if not target:
             raise ValueError("找不到该管理员")
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             await conn.execute(
                 "INSERT INTO beacons (author_id, tag, body, created_at) VALUES (?, 'notice', ?, ?)",
                 (s["id"], f"@{peer}: {text[:180]}", db.now()),
@@ -671,7 +743,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
         target = await db.get_steward_by_name(peer)
         if not target:
             raise ValueError("找不到该管理员")
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             await conn.execute(
                 "INSERT INTO beacons (author_id, tag, body, created_at) VALUES (?, 'hedge', ?, ?)",
                 (s["id"], f"@{peer} 篱笆条：{text[:160]}", db.now()),
@@ -685,7 +757,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
         peer = await db.get_steward_by_name(parts[1])
         if not peer:
             raise ValueError("找不到该管理员")
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             await survival.bump(conn, s["id"], standing=10, mist_wit=3)
             await survival.bump(conn, peer["id"], standing=3)
             await conn.commit()
@@ -707,7 +779,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
             raise ValueError(f"份地已达上限 {MAX_PARCELS} 块")
         idx = max(0, min(count - START_PARCELS, len(PARCEL_EXPAND_COSTS) - 1))
         cost = PARCEL_EXPAND_COSTS[idx]
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
             if (await cur.fetchone())[0] < cost:
                 raise ValueError(f"扩地需要 {cost} 票")
@@ -741,12 +813,12 @@ async def tide_ops(key_id: int, command: str) -> str:
 
     if verb == "catalog":
         from . import catches as catches_mod
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             return await catches_mod.fish_catalog(conn, s["id"])
 
     if verb == "net":
         cost = 4
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             await commons.maybe_spawn_commons(conn, steward_id=s["id"])
             from . import energy as energy_mod, gear
             energy_cost, catch_bonus, rarity_bonus, empty_reduce = await energy_mod.net_energy_cost(conn, s["id"])
@@ -778,7 +850,7 @@ async def tide_ops(key_id: int, command: str) -> str:
         if catch_bonus and random.random() < catch_bonus:
             catch = shaonian_mod.pick_fish_with_fortune(tide, min(6, rarity_cap + 1), fortune_key)
         meta = SEA_CATCH[catch]
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             await db.add_item(conn, s["id"], f"fish_{catch}", 1)
             from . import catches as catches_mod
             await catches_mod.record_catch(conn, s["id"], f"fish_{catch}")
@@ -812,7 +884,7 @@ async def tide_ops(key_id: int, command: str) -> str:
 
     if verb == "cast":
         cost = 3
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             from . import energy as energy_mod, gear
             stats = await gear.get_stats(conn, s["id"])
             rod, bait = stats["rod"], stats["bait"]
@@ -822,7 +894,7 @@ async def tide_ops(key_id: int, command: str) -> str:
             if (await cur.fetchone())[0] < cost:
                 raise ValueError(f"坐钓需要 {cost} 工分票")
             if not await db.take_item(conn, s["id"], "bait_worm", 1):
-                raise ValueError("消耗 bait_worm x1（tend/beach_ops 获取）")
+                raise ValueError("缺少蚯蚓饵 bait_worm（tend 地块 / beach_ops dig 获取）")
             await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (cost, s["id"]))
             await energy_mod.spend(conn, s["id"], rod["energy"], action="坐钓")
             extra = await events.roll_after_action(s, "net", conn)
@@ -843,7 +915,7 @@ async def tide_ops(key_id: int, command: str) -> str:
         if catch_b and random.random() < catch_b + 0.08:
             catch = shaonian_mod.pick_fish_with_fortune(tide, min(6, rarity_cap + 1), fortune_key)
         meta = SEA_CATCH[catch]
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             await db.add_item(conn, s["id"], f"fish_{catch}", 1)
             from . import catches as catches_mod
             await catches_mod.record_catch(conn, s["id"], f"fish_{catch}")
@@ -934,7 +1006,7 @@ async def _shed_one(s: dict, cmd: str) -> str:
     verb = parts[0].lower()
 
     if verb == "status":
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             notes = await _collect_handoffs(conn, s["id"])
             await conn.commit()
         base = f"温室: {s['greenhouse_label']}" if s["greenhouse"] else "尚未搭建温室"
@@ -947,7 +1019,7 @@ async def _shed_one(s: dict, cmd: str) -> str:
     if verb == "erect":
         if s["greenhouse"]:
             return "已有温室"
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
             if (await cur.fetchone())[0] < GREENHOUSE_COST:
                 raise ValueError(f"搭建温室需要 {GREENHOUSE_COST} 票")
@@ -967,7 +1039,7 @@ async def _shed_one(s: dict, cmd: str) -> str:
         if not s["greenhouse"]:
             raise ValueError("先 erect 温室")
         label = " ".join(parts[1:])[:40]
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             await conn.execute("UPDATE stewards SET greenhouse_label=? WHERE id=?", (label, s["id"]))
             await conn.commit()
         return f"温室命名为「{label}」"
@@ -989,7 +1061,7 @@ async def _shed_one(s: dict, cmd: str) -> str:
         peer = await db.get_steward_by_name(peer_name)
         if not peer:
             raise ValueError("找不到管理员")
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             if not await db.take_item(conn, s["id"], item, qty):
                 raise ValueError("行囊数量不足")
             online = db.now() - peer["last_active_at"] <= 900
@@ -1031,7 +1103,7 @@ async def mascot_ops(key_id: int, command: str) -> str:
         name, trait = parts[1][:20], parts[2][:16]
         if trait not in ("scout", "lucky", "compost"):
             raise ValueError("特质必须是 scout / lucky / compost")
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             await conn.execute(
                 "UPDATE stewards SET mascot_name=?, mascot_trait=?, mascot_spirit=70 WHERE id=?",
                 (name, trait, s["id"]),
@@ -1043,7 +1115,7 @@ async def mascot_ops(key_id: int, command: str) -> str:
     if verb == "upkeep":
         if not s["mascot_name"]:
             raise ValueError("还没有吉祥物")
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
             if (await cur.fetchone())[0] < 4:
                 raise ValueError("upkeep 需要 4 票")
@@ -1057,7 +1129,7 @@ async def mascot_ops(key_id: int, command: str) -> str:
     if verb == "train":
         if not s["mascot_name"]:
             raise ValueError("还没有吉祥物")
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             await conn.execute(
                 "UPDATE stewards SET mascot_spirit=MIN(100, mascot_spirit+8) WHERE id=?",
                 (s["id"],),
@@ -1075,7 +1147,7 @@ async def beacon_ops(key_id: int, command: str) -> str:
 
     if verb == "scan":
         tag = parts[1] if len(parts) > 1 else None
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             if tag and tag.isdigit():
                 row = await (await conn.execute(
@@ -1125,7 +1197,7 @@ async def beacon_ops(key_id: int, command: str) -> str:
 
     if verb == "post" and len(parts) >= 3:
         tag, body = parts[1][:20], parts[2][:220]
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             await conn.execute(
                 "INSERT INTO beacons (author_id, tag, body, created_at) VALUES (?,?,?,?)",
                 (s["id"], tag, body, db.now()),
@@ -1135,7 +1207,7 @@ async def beacon_ops(key_id: int, command: str) -> str:
 
     if verb == "respond" and len(parts) >= 3:
         bid, body = int(parts[1]), parts[2][:200]
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             await conn.execute(
                 "INSERT INTO beacon_replies (beacon_id, author_id, body, created_at) VALUES (?,?,?,?)",
                 (bid, s["id"], body, db.now()),
@@ -1152,7 +1224,7 @@ async def swap_ops(key_id: int, command: str) -> str:
     verb = parts[0].lower() if parts else "list"
 
     if verb == "list":
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             rows = await (await conn.execute(
                 """
@@ -1169,23 +1241,32 @@ async def swap_ops(key_id: int, command: str) -> str:
         )
 
     if verb == "offer" and len(parts) >= 3:
-        item, qty = parts[1], int(parts[2])
+        item_key = resolve_item_key(parts[1])
+        if not item_key:
+            raise ValueError(unknown_item_message(parts[1]))
+        qty = _parse_int(parts[2])
         note = parts[3] if len(parts) > 3 else ""
-        async with aiosqlite.connect(db.DB_PATH) as conn:
-            if not await db.take_item(conn, s["id"], item, qty):
-                raise ValueError("行囊不足")
+        async with db.connect() as conn:
+            if not await db.take_item(conn, s["id"], item_key, qty):
+                raise ValueError(
+                    f"行囊不足 {ITEM_NAMES.get(item_key, item_key)}（id: {item_key}）"
+                )
             await conn.execute(
                 "INSERT INTO swap_lots (depositor_id, item, quantity, note, created_at) VALUES (?,?,?,?,?)",
-                (s["id"], item, qty, note[:80], db.now()),
+                (s["id"], item_key, qty, note[:80], db.now()),
             )
             await conn.commit()
-        await db.add_chronicle("swap", f"{s['name']} 在交换台挂单 {ITEM_NAMES.get(item,item)} x{qty}", s["id"])
-        return "挂单成功"
+        await db.add_chronicle(
+            "swap",
+            f"{s['name']} 在交换台挂单 {ITEM_NAMES.get(item_key, item_key)} x{qty}",
+            s["id"],
+        )
+        return f"挂单成功 · {ITEM_NAMES.get(item_key, item_key)}（{item_key}）x{qty}"
 
     if verb == "claim" and len(parts) >= 2:
         from . import social as social_mod
         lot_id = int(parts[1])
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             lot = dict(await (await conn.execute(
                 "SELECT * FROM swap_lots WHERE id=? AND claimed_by IS NULL", (lot_id,)
@@ -1208,7 +1289,7 @@ async def swap_ops(key_id: int, command: str) -> str:
 
     if verb == "cancel" and len(parts) >= 2:
         lot_id = int(parts[1])
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             lot = dict(await (await conn.execute(
                 "SELECT * FROM swap_lots WHERE id=? AND depositor_id=? AND claimed_by IS NULL",
@@ -1224,8 +1305,7 @@ async def swap_ops(key_id: int, command: str) -> str:
     raise ValueError(f"未知 swap 指令: {command}（list/offer/claim/cancel）")
 
 
-async def tote_ops(key_id: int, command: str) -> str:
-    s = await require_steward(key_id)
+async def _tote_one(s: dict, command: str) -> str:
     parts = command.strip().split()
     verb = parts[0].lower() if parts else "list"
     if verb == "list":
@@ -1233,21 +1313,33 @@ async def tote_ops(key_id: int, command: str) -> str:
         lines = [f"工分票: {s['tickets']}"]
         for item, qty in stock.items():
             price = ITEM_PRICES.get(item, 0)
-            lines.append(f"  {ITEM_NAMES.get(item,item)} x{qty}（ vend {price}/个）")
+            name = ITEM_NAMES.get(item, item)
+            lines.append(f"  {name} x{qty} · {item} · vend {price}/个")
         return "\n".join(lines) if stock else f"工分票: {s['tickets']}\n行囊空"
     if verb == "vend" and len(parts) >= 3:
-        item, qty = parts[1], int(parts[2])
-        price = ITEM_PRICES.get(item)
+        item_key = resolve_item_key(parts[1])
+        if not item_key:
+            raise ValueError(unknown_item_message(parts[1]))
+        qty = _parse_int(parts[2])
+        price = ITEM_PRICES.get(item_key)
         if not price:
-            raise ValueError(f"不可出售 {item}")
-        async with aiosqlite.connect(db.DB_PATH) as conn:
-            if not await db.take_item(conn, s["id"], item, qty):
-                raise ValueError("数量不足")
+            raise ValueError(f"不可出售 {ITEM_NAMES.get(item_key, item_key)}（{item_key}）")
+        async with db.connect() as conn:
+            if not await db.take_item(conn, s["id"], item_key, qty):
+                raise ValueError(f"数量不足（需要 {item_key} x{qty}）")
             gain = price * qty
             await conn.execute("UPDATE stewards SET tickets=tickets+? WHERE id=?", (gain, s["id"]))
             await conn.commit()
-        return f"出售 {ITEM_NAMES.get(item,item)} x{qty}，+{gain} 票"
+        return f"出售 {ITEM_NAMES.get(item_key, item_key)}（{item_key}）x{qty}，+{gain} 票"
     raise ValueError(f"未知 tote 指令: {command}")
+
+
+async def tote_ops(key_id: int, command: str) -> str:
+    s = await require_steward(key_id)
+    parts_cmd = [c.strip() for c in command.split(";") if c.strip()]
+    if len(parts_cmd) > 1:
+        return "\n".join([await _tote_one(s, c) for c in parts_cmd])
+    return await _tote_one(s, command.strip())
 
 
 async def hearth_ops(key_id: int, command: str) -> str:

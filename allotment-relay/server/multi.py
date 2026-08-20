@@ -46,7 +46,7 @@ async def _bump_rapport(conn: aiosqlite.Connection, a: int, b: int, delta: int) 
 
 async def _get_rapport(a: int, b: int) -> int:
     sa, sb = _pair_ids(a, b)
-    async with aiosqlite.connect(db.DB_PATH) as conn:
+    async with db.connect() as conn:
         cur = await conn.execute(
             "SELECT score FROM rapport WHERE steward_a=? AND steward_b=?",
             (sa, sb),
@@ -78,7 +78,7 @@ def _goal_meta(key: str) -> dict[str, Any]:
 
 
 async def league_snapshot() -> dict[str, Any]:
-    async with aiosqlite.connect(db.DB_PATH) as conn:
+    async with db.connect() as conn:
         conn.row_factory = aiosqlite.Row
         row = await _ensure_league_week(conn)
         await conn.commit()
@@ -143,21 +143,21 @@ async def _league_on_assist(conn: aiosqlite.Connection, steward_id: int) -> str 
 
 
 async def on_league_item(steward_id: int, item: str, qty: int = 1) -> str | None:
-    async with aiosqlite.connect(db.DB_PATH) as conn:
+    async with db.connect() as conn:
         bonus = await _league_on_item(conn, steward_id, item, qty)
         await conn.commit()
         return bonus
 
 
 async def on_league_assist(steward_id: int) -> str | None:
-    async with aiosqlite.connect(db.DB_PATH) as conn:
+    async with db.connect() as conn:
         bonus = await _league_on_assist(conn, steward_id)
         await conn.commit()
         return bonus
 
 
 async def public_contracts_list() -> list[dict[str, Any]]:
-    async with aiosqlite.connect(db.DB_PATH) as conn:
+    async with db.connect() as conn:
         conn.row_factory = aiosqlite.Row
         rows = await (await conn.execute(
             """
@@ -185,7 +185,7 @@ async def alliance_ops(key_id: int, command: str) -> str:
     verb = parts[0].lower() if parts else "online"
 
     if verb == "online":
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             rows = await (await conn.execute(
                 """
@@ -215,7 +215,7 @@ async def alliance_ops(key_id: int, command: str) -> str:
             raise ValueError("不能 assist 自己")
         day = _day_id()
         extra_tickets = 0
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             cur = await conn.execute(
                 "SELECT 1 FROM assist_log WHERE helper_id=? AND target_id=? AND day=?",
                 (s["id"], peer["id"], day),
@@ -262,7 +262,7 @@ async def alliance_ops(key_id: int, command: str) -> str:
 
     if verb == "donate" and len(parts) >= 3:
         item, qty = parts[1], int(parts[2])
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             if not await db.take_item(conn, s["id"], item, qty):
                 raise ValueError("行囊不足")
             await conn.execute(
@@ -282,7 +282,7 @@ async def alliance_ops(key_id: int, command: str) -> str:
         return msg
 
     if verb == "larder":
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             rows = await (await conn.execute(
                 "SELECT item, quantity FROM larder WHERE quantity > 0 ORDER BY item"
@@ -296,7 +296,7 @@ async def alliance_ops(key_id: int, command: str) -> str:
     if verb == "draw" and len(parts) >= 3:
         item, qty = parts[1], int(parts[2])
         day = _day_id()
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             cur = await conn.execute(
                 "SELECT count FROM larder_draws WHERE steward_id=? AND day=?",
@@ -341,7 +341,7 @@ async def contract_ops(key_id: int, command: str) -> str:
     verb = parts[0].lower() if parts else "list"
 
     if verb == "list":
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             rows = await (await conn.execute(
                 """
@@ -359,7 +359,7 @@ async def contract_ops(key_id: int, command: str) -> str:
         )
 
     if verb == "mine":
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             rows = await (await conn.execute(
                 "SELECT * FROM contracts WHERE poster_id=? AND status='open' ORDER BY id DESC",
@@ -377,7 +377,7 @@ async def contract_ops(key_id: int, command: str) -> str:
         item, qty, reward = parts[1], int(parts[2]), int(parts[3])
         if reward < 1:
             raise ValueError("酬劳至少 1 票")
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
             if (await cur.fetchone())[0] < reward:
                 raise ValueError("工分票不足以支付酬劳")
@@ -399,7 +399,7 @@ async def contract_ops(key_id: int, command: str) -> str:
 
     if verb == "fill" and len(parts) >= 2:
         cid = int(parts[1])
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             c = dict(await (await conn.execute(
                 "SELECT * FROM contracts WHERE id=? AND status='open'", (cid,)
@@ -429,7 +429,7 @@ async def contract_ops(key_id: int, command: str) -> str:
 
     if verb == "cancel" and len(parts) >= 2:
         cid = int(parts[1])
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             c = dict(await (await conn.execute(
                 "SELECT * FROM contracts WHERE id=? AND poster_id=? AND status='open'",
@@ -461,7 +461,7 @@ async def league_ops(key_id: int, command: str) -> str:
 
     if verb == "contribute" and len(parts) >= 3:
         item, qty = parts[1], int(parts[2])
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             row = await _ensure_league_week(conn)
             if row["completed"]:
                 raise ValueError("本周目标已完成")
@@ -482,7 +482,7 @@ async def league_ops(key_id: int, command: str) -> str:
 
     if verb == "board":
         wid = _week_id()
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             row = await _ensure_league_week(conn)
             meta = _goal_meta(row["goal_key"])

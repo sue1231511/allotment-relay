@@ -267,7 +267,7 @@ async def pen_ops(key_id: int, command: str) -> str:
     verb = parts[0].lower() if parts else "status"
 
     if verb == "status":
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             pens = await _list_pens(conn, s["id"])
         boat = BOATS.get(s.get("boat_key") or "", {})
         lines = [
@@ -286,7 +286,7 @@ async def pen_ops(key_id: int, command: str) -> str:
         return "\n".join(lines)
 
     if verb == "erect":
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             if await _get_pen(conn, s["id"]):
                 return "已有渔排"
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
@@ -305,7 +305,7 @@ async def pen_ops(key_id: int, command: str) -> str:
         return f"渔排就绪（-{PEN_ERECT_COST} 票）。stock 品种名 投苗，feed 投饵，harvest 收网"
 
     if verb == "expand":
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             pens = await _list_pens(conn, s["id"])
             if not pens:
                 raise ValueError("先 erect 第一池渔排")
@@ -327,7 +327,7 @@ async def pen_ops(key_id: int, command: str) -> str:
 
     if verb == "label" and len(parts) >= 2:
         label = " ".join(parts[1:])[:40]
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             pen = await _get_pen(conn, s["id"])
             if not pen:
                 raise ValueError("先 erect 渔排")
@@ -341,7 +341,7 @@ async def pen_ops(key_id: int, command: str) -> str:
             pen_keys = [k for k, v in SEA_CATCH.items() if v.get("pen")]
             raise ValueError(f"可养品种: {', '.join(pen_keys)}")
         meta = SEA_CATCH[species]
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             pen = await _get_pen(conn, s["id"])
             if not pen:
                 raise ValueError("先 erect 渔排")
@@ -366,7 +366,7 @@ async def pen_ops(key_id: int, command: str) -> str:
         return f"{msg}\n{extra}" if extra else msg
 
     if verb == "feed":
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             pen = await _get_pen(conn, s["id"])
             if not pen or not pen.get("species"):
                 raise ValueError("空池无法投饵")
@@ -386,7 +386,7 @@ async def pen_ops(key_id: int, command: str) -> str:
         return f"{msg}\n{extra}" if extra else msg
 
     if verb == "harvest":
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             pen = await _get_pen(conn, s["id"])
             if not pen or not pen.get("species"):
                 raise ValueError("空池无可收")
@@ -743,7 +743,7 @@ async def _resolve_voyage(
 
 
 async def _finish_voyage(steward_id: int, voyage: dict[str, Any], choice: str | None = None) -> str:
-    async with aiosqlite.connect(db.DB_PATH) as conn:
+    async with db.connect() as conn:
         s = await _refresh_steward(conn, steward_id)
         fish_loot: list[str] = []
         if voyage.get("status") == "fish_encounter":
@@ -804,7 +804,7 @@ async def voyage_ops(key_id: int, command: str) -> str:
     verb = parts[0].lower() if parts else "status"
 
     if verb == "status":
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             voyage = await _get_voyage(conn, s["id"])
             s = await _refresh_steward(conn, s["id"])
         if voyage and voyage.get("status") == "hailed":
@@ -846,7 +846,7 @@ async def voyage_ops(key_id: int, command: str) -> str:
         if key not in BOATS:
             raise ValueError(f"可购: {', '.join(BOATS.keys())}")
         meta = BOATS[key]
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             s = await _refresh_steward(conn, s["id"])
             if s.get("boat_key"):
                 cur_rank = _boat_rank(s["boat_key"])
@@ -867,7 +867,7 @@ async def voyage_ops(key_id: int, command: str) -> str:
         return f"购入 {meta['name']}（-{cost} 票）。可 voyage_ops depart 出海"
 
     if verb == "repair":
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             s = await _refresh_steward(conn, s["id"])
             if not s.get("boat_key"):
                 raise ValueError("还没有船")
@@ -889,7 +889,7 @@ async def voyage_ops(key_id: int, command: str) -> str:
         if route_key not in VOYAGE_ROUTES:
             raise ValueError(f"航线: {', '.join(VOYAGE_ROUTES.keys())}")
         route = VOYAGE_ROUTES[route_key]
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             s = await _refresh_steward(conn, s["id"])
             if not s.get("boat_key"):
                 raise ValueError("先 voyage_ops buy 购船")
@@ -936,7 +936,7 @@ async def voyage_ops(key_id: int, command: str) -> str:
         return msg
 
     if verb in ("fight", "flee", "parley", "bribe"):
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             voyage = await _get_voyage(conn, s["id"])
         if not voyage:
             raise ValueError("没有截停中的航程")
@@ -947,7 +947,7 @@ async def voyage_ops(key_id: int, command: str) -> str:
                 left = voyage["returns_at"] - db.now()
                 raise ValueError(f"还在海上，约 {left // 60} 分后归港才可能截停")
             first = await _finish_voyage(s["id"], voyage)
-            async with aiosqlite.connect(db.DB_PATH) as conn:
+            async with db.connect() as conn:
                 voyage = await _get_voyage(conn, s["id"])
             if voyage and voyage.get("status") == "hailed":
                 combat = await _finish_voyage(s["id"], voyage, choice=verb)
@@ -960,7 +960,7 @@ async def voyage_ops(key_id: int, command: str) -> str:
         return prefix + combat
 
     if verb == "return":
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             voyage = await _get_voyage(conn, s["id"])
         if not voyage:
             return "没有进行中的航程"
@@ -972,7 +972,7 @@ async def voyage_ops(key_id: int, command: str) -> str:
         return await _finish_voyage(s["id"], voyage)
 
     if verb == "moor":
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             voyage = await _get_voyage(conn, s["id"])
         if not voyage:
             return "没有进行中的航程"
@@ -984,7 +984,7 @@ async def voyage_ops(key_id: int, command: str) -> str:
         return await _finish_voyage(s["id"], voyage)
 
     if verb in ("compliment", "release", "catch", "grab"):
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             voyage = await _get_voyage(conn, s["id"])
             if not voyage or voyage.get("status") != "fish_encounter":
                 raise ValueError("没有未命名小鱼遭遇 — 出海期间 tide_ops net|cast 钓鱼才可能碰上")

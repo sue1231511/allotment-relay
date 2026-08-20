@@ -1004,7 +1004,7 @@ async def _cmd_tip(
 
 
 async def public_bar_snapshot() -> dict[str, Any]:
-    async with aiosqlite.connect(db.DB_PATH) as conn:
+    async with db.connect() as conn:
         hosts = await _hosts_on_duty(conn)
         state = await _ensure_daily_state(conn)
         state = await _refresh_state_mood(conn, state)
@@ -1090,7 +1090,7 @@ async def place_human_order(
     svc = BAR_SERVICES[service_key]
     cost = svc["cost"]
 
-    async with aiosqlite.connect(db.DB_PATH) as conn:
+    async with db.connect() as conn:
         cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (patron["id"],))
         if (await cur.fetchone())[0] < cost:
             raise ValueError(f"票不足，需要 {cost}，当前 {patron['tickets']}")
@@ -1138,7 +1138,7 @@ async def place_human_order(
 
 
 async def grant_bar_unlock(steward_id: int, unlock_key: str) -> None:
-    async with aiosqlite.connect(db.DB_PATH) as conn:
+    async with db.connect() as conn:
         await _grant_unlock(conn, steward_id, unlock_key)
         await conn.commit()
 
@@ -1149,39 +1149,41 @@ async def bar_ops(key_id: int, command: str) -> str:
     verb = parts[0].lower() if parts else "status"
 
     if verb == "status":
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             return await _cmd_status(conn, s)
 
     if verb in ("tonight", "night"):
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             return await _cmd_tonight(conn)
 
     if verb == "menu":
-        async with aiosqlite.connect(db.DB_PATH) as conn:
-            return await _cmd_menu(conn, s)
+        async with db.connect() as conn:
+            msg = await _cmd_menu(conn, s)
+            await conn.commit()
+        return msg
 
     if verb == "order":
         drink_q = command.strip()[5:].strip()
         if not drink_q:
             raise ValueError("用法: bar_ops order 酒名")
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             msg = await _cmd_order(conn, s, drink_q)
             await conn.commit()
         return msg
 
     if verb == "staff":
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             return await _cmd_staff(conn)
 
     if verb == "song":
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             return await _cmd_song(conn)
 
     if verb == "request_song":
         song_q = command.strip()[len("request_song"):].strip()
         if not song_q:
             raise ValueError("用法: bar_ops request_song 歌名")
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             msg = await _cmd_request_song(conn, s, song_q)
             await conn.commit()
         return msg
@@ -1197,7 +1199,7 @@ async def bar_ops(key_id: int, command: str) -> str:
             amount = int(amount_s)
         except ValueError:
             raise ValueError("小费数量须为整数")
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             msg = await _cmd_tip(conn, s, target, amount, note)
             await conn.commit()
         return msg
@@ -1211,7 +1213,7 @@ async def bar_ops(key_id: int, command: str) -> str:
         if job_id not in BAR_JOBS:
             raise ValueError(f"未知岗位，可选: {', '.join(BAR_JOBS.keys())}")
         period = _work_period(period, overdue=is_shift_overdue(s))
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             msg = await _run_work(conn, s, job_id, period)
             await conn.commit()
         await db.add_chronicle(
@@ -1225,7 +1227,7 @@ async def bar_ops(key_id: int, command: str) -> str:
         phase = world.current_day_phase()
         period = "night" if phase == "night" else "day"
         job = "host" if period == "night" else "runner"
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             skills = await _ensure_skills(conn, s["id"])
             ok, _ = _job_eligible(skills, job, period)
             if not ok:
@@ -1249,7 +1251,7 @@ async def bar_ops(key_id: int, command: str) -> str:
         if level not in BAR_MOOD_LEVELS:
             raise ValueError(f"心情须为: {', '.join(BAR_MOOD_LEVELS.keys())}")
         day = _day_id()
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             await _ensure_daily_state(conn)
             await conn.execute(
                 """
@@ -1270,7 +1272,7 @@ async def bar_ops(key_id: int, command: str) -> str:
 
     if verb == "clear_mood":
         day = _day_id()
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             await _ensure_daily_state(conn)
             await conn.execute(
                 """
@@ -1293,7 +1295,7 @@ async def bar_ops(key_id: int, command: str) -> str:
         if not text:
             raise ValueError("用法: bar_ops set_owner_event 当晚全局文案")
         day = _day_id()
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             await _ensure_daily_state(conn)
             await conn.execute(
                 """
@@ -1308,7 +1310,7 @@ async def bar_ops(key_id: int, command: str) -> str:
 
     if verb == "clear_owner_event":
         day = _day_id()
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             await _ensure_daily_state(conn)
             await conn.execute(
                 """
@@ -1323,7 +1325,7 @@ async def bar_ops(key_id: int, command: str) -> str:
 
     if verb == "chat":
         topic = command.strip()[4:].strip()
-        async with aiosqlite.connect(db.DB_PATH) as conn:
+        async with db.connect() as conn:
             state = await _ensure_daily_state(conn)
             state = await _refresh_state_mood(conn, state)
             day = _day_id()

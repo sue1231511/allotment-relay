@@ -57,15 +57,79 @@ def resolve_crop_key(token: str) -> str | None:
 
 
 def unknown_crop_message(token: str) -> str:
-    samples = ", ".join(
-        f"{k}/{meta['name']}" for k, meta in list(CROPS.items())[:6]
-    )
+    lines = [f"未知作物: {token}。可用 key 或中文名，例如："]
+    for k, meta in CROPS.items():
+        aliases = meta.get("aliases", ())
+        alias_s = f"（{','.join(aliases)}）" if aliases else ""
+        lines.append(f"  {k} / {meta['name']}{alias_s}")
+    lines.append("plot_ops catalog 查全表")
+    return "\n".join(lines)
+
+
+def unknown_item_message(token: str) -> str:
     return (
-        f"未知作物: {token}。可用英文名或中文名，如 {samples}…"
-        "（甘蓝=羽衣甘蓝/kale）· plot_ops catalog 查全表"
+        f"无法识别物品: {token}。tote_ops list 会显示中文名与英文 id；"
+        "也可直接用 fish_mackerel、crop_beet、wild_mint 等"
     )
 
-# 渔获 — zones: shore/near/far/deep；pen=True 可渔排放养
+def resolve_item_key(token: str, *, prefer: str = "any") -> str | None:
+    """中文名/简称/英文 key → 行囊 item id（vend/market/swap/brew 通用）。"""
+    raw = token.strip().rstrip(";,")
+    if not raw:
+        return None
+
+    norm = raw.lower().replace(" ", "_")
+    if norm in ITEM_PRICES or norm in ITEM_NAMES:
+        return norm
+
+    exact = [k for k, v in ITEM_NAMES.items() if v == raw]
+    if len(exact) == 1:
+        return exact[0]
+
+    for fk, meta in SEA_CATCH.items():
+        if meta["name"] == raw:
+            return f"fish_{fk}"
+    if norm in SEA_CATCH:
+        return f"fish_{norm}"
+    fish_key = f"fish_{norm}"
+    if fish_key in ITEM_PRICES:
+        return fish_key
+
+    crop = resolve_crop_key(raw)
+    if crop:
+        crop_key, seed_key = f"crop_{crop}", f"seed_{crop}"
+        if prefer == "seed":
+            if seed_key in ITEM_PRICES:
+                return seed_key
+            if crop_key in ITEM_PRICES:
+                return crop_key
+        else:
+            if crop_key in ITEM_PRICES:
+                return crop_key
+            if seed_key in ITEM_PRICES:
+                return seed_key
+
+    if raw.endswith("种"):
+        crop = resolve_crop_key(raw[:-1])
+        if crop:
+            sk = f"seed_{crop}"
+            if sk in ITEM_PRICES:
+                return sk
+
+    for ck in CROPS:
+        if norm == ck:
+            ck_item = f"crop_{ck}"
+            if ck_item in ITEM_PRICES:
+                return ck_item
+
+    return None
+
+
+def item_vendable(item_key: str) -> bool:
+    if item_key.startswith("dish_"):
+        return True
+    return ITEM_PRICES.get(item_key, 0) > 0
+
 SEA_CATCH = {
     "herring": {"name": "灰鲱", "emoji": "🐟", "sell": 14, "tides": ["ebb", "slack"], "zones": ["shore", "near"], "rarity": 1, "pen": True, "grow": 400, "stock_tickets": 9, "feed_item": "compost", "feed_qty": 1},
     "sandeel": {"name": "沙鳗", "emoji": "🪱", "sell": 11, "tides": ["ebb"], "zones": ["shore"], "rarity": 1, "pen": True, "grow": 360, "stock_tickets": 7, "feed_item": "compost", "feed_qty": 1},
@@ -769,17 +833,18 @@ def dish_sell_price(key: str, stars: int) -> int:
 
 
 def suggested_price(item: str) -> int:
-    if item.startswith("dish_") and "_s" in item:
-        base, star_s = item.rsplit("_s", 1)
+    key = resolve_item_key(item) or item
+    if key.startswith("dish_") and "_s" in key:
+        base, star_s = key.rsplit("_s", 1)
         if star_s.isdigit():
-            key = base.replace("dish_", "", 1)
-            if key in KITCHEN_DISHES:
-                return dish_sell_price(key, int(star_s))
-    if item.startswith("dish_"):
-        key = item.replace("dish_", "", 1)
-        if key in KITCHEN_DISHES:
-            return KITCHEN_DISHES[key]["base_sell"]
-    return ITEM_PRICES.get(item, 0)
+            dish_key = base.replace("dish_", "", 1)
+            if dish_key in KITCHEN_DISHES:
+                return dish_sell_price(dish_key, int(star_s))
+    if key.startswith("dish_"):
+        dish_key = key.replace("dish_", "", 1)
+        if dish_key in KITCHEN_DISHES:
+            return KITCHEN_DISHES[dish_key]["base_sell"]
+    return ITEM_PRICES.get(key, 0)
 
 
 for dk in KITCHEN_DISHES:
