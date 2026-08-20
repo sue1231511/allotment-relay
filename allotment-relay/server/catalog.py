@@ -492,6 +492,13 @@ NPC_FIXED = [
         "稀有软装不进 hut catalog，只在我这",
         "lili_ops scan 看货架，trade 编号成交",
     ]},
+    {"key": "wangfu", "name": "我哪有旺夫命", "lines": [
+        "今天看起来心情很好，但已经连续唱了四首分手歌。",
+        "唱到副歌的时候自己先笑场了。",
+        "刚刚拒绝了一首歌，理由是「今天不想替别人哭」。",
+        "有客人点了一首特别甜的歌，她沉默了五秒才接。",
+        "下一首轻快一点——然后又选了一首苦情歌。",
+    ]},
     {"key": "shiye", "name": "拾叶", "lines": [
         "叶子我捡，票你看着办——巷口这行，四种开场，随机抽",
         "别叫警察，联盟备案：我是NPC，不是你的工友",
@@ -551,7 +558,7 @@ NPC_THIEVES = ["篱笆手影", "逾篱阿窃", "夜行摘客", "档口惯偷"]
 ITEM_PRICES = {f"seed_{k}": v["seed_price"] for k, v in CROPS.items()}
 ITEM_PRICES.update({f"crop_{k}": v["sell"] for k, v in CROPS.items()})
 ITEM_PRICES.update({f"fish_{k}": v["sell"] for k, v in SEA_CATCH.items()})
-ITEM_PRICES.update({"compost": 6, "wild_mint": 8, "drift_twine": 5, "sea_glass": 12})
+ITEM_PRICES.update({"compost": 6, "wild_mint": 8, "drift_twine": 5, "sea_glass": 12, "wet_note": 0})
 ITEM_PRICES.update({k: v["sell"] for k, v in RARE_CURIO.items()})
 for cat in (HUT_HARD, HUT_SOFT):
     for k, v in cat.items():
@@ -586,6 +593,7 @@ ITEM_NAMES.update({f"fish_{k}": v["name"] for k, v in SEA_CATCH.items()})
 ITEM_NAMES.update({
     "compost": "堆肥", "wild_mint": "野薄荷", "drift_twine": "漂绳",
     "ticket_stub": "旧票根", "sea_glass": "海玻璃",
+    "wet_note": "湿透的纸条",
 })
 ITEM_NAMES.update({k: f"{v['emoji']}{v['name']}" for k, v in RARE_CURIO.items()})
 for cat in (HUT_HARD, HUT_SOFT):

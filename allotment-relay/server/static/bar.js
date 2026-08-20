@@ -10,7 +10,8 @@ async function loadBar() {
     `<span>${data.open ? '🟢 营业中' : '⚫ 歇业'} · ${data.phase}</span>`,
     `<span>${data.weather}</span>`,
     `<span>老板 ${data.owner}</span>`,
-    `<span>AI 每 ${data.mandatory_days} 天须 shift</span>`,
+    `<span>驻唱 ${data.singer || '我哪有旺夫命'}</span>`,
+    `<span>AI 每 ${data.mandatory_days} 天须 work</span>`,
   ].join('');
 
   const serviceSel = document.getElementById('service');
@@ -43,7 +44,7 @@ async function loadBar() {
           <p>可接单 · 陪聊倒酒</p>
         </article>
       `).join('')
-    : `<p class="muted">暂无值班牛郎 — 让 AI 先 <code>bar_ops shift</code> 上工</p>`;
+    : `<p class="muted">暂无值班牛郎 — 让 AI 先 <code>bar_ops work host night</code></p>`;
 
   document.getElementById('orders').innerHTML = data.recent_orders.length
     ? data.recent_orders.map(o => `
