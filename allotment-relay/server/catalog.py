@@ -1,26 +1,31 @@
 # 份地作物 — 偏北欧/沿海/湿地，与常见农场游戏区分
-# grow=基准分钟；spread 控制播种时随机生长窗口
+# grow=基准分钟（farming.py base_grow_seconds 内 ×60 转秒）；spread 控制播种时随机生长窗口
+# 梯度：基础蔬菜 ~1h → 普通 1.5~2.5h → 浆果/谷物 2.5~4h → 树 4~5.5h → 稀有封顶 6h
 CROPS = {
-    "kale": {"name": "羽衣甘蓝", "emoji": "🥬", "seed_price": 7, "sell": 16, "grow": 280, "spread": 0.32, "tags": ["leaf"], "aliases": ["甘蓝", "羽衣"]},
-    "beet": {"name": "甜菜", "emoji": "🫘", "seed_price": 9, "sell": 21, "grow": 340, "spread": 0.26, "tags": ["root"]},
-    "rye": {"name": "黑麦", "emoji": "🌾", "seed_price": 8, "sell": 19, "grow": 400, "spread": 0.28, "tags": ["grain"]},
-    "bramble": {"name": "荆棘莓", "emoji": "🫐", "seed_price": 14, "sell": 32, "grow": 360, "spread": 0.38, "tags": ["berry"]},
-    "kelp": {"name": "浅海藻", "emoji": "🌿", "seed_price": 11, "sell": 24, "grow": 300, "spread": 0.34, "tags": ["sea"]},
-    "fogpea": {"name": "雾豌豆", "emoji": "🫛", "seed_price": 10, "sell": 23, "grow": 320, "spread": 0.30, "tags": ["legume"]},
-    # ── 热带 / 调味 / 浆果 ──
-    "blueberry": {"name": "蓝莓", "emoji": "🫐", "seed_price": 16, "sell": 36, "grow": 340, "spread": 0.30, "tags": ["berry", "tropic"]},
-    "banana": {"name": "香蕉", "emoji": "🍌", "seed_price": 18, "sell": 28, "grow": 420, "spread": 0.28, "tags": ["fruit", "tropic"], "tree": True},
-    "coconut": {"name": "椰子", "emoji": "🥥", "seed_price": 22, "sell": 24, "grow": 500, "spread": 0.25, "tags": ["fruit", "tropic"], "tree": True, "shake": True},
-    "durian": {"name": "榴莲", "emoji": "🍈", "seed_price": 48, "sell": 95, "grow": 720, "spread": 0.40, "tags": ["fruit", "tropic"], "tree": True, "ultra_rare": True},
-    "garlic": {"name": "大蒜", "emoji": "🧄", "seed_price": 9, "sell": 18, "grow": 260, "spread": 0.22, "tags": ["seasoning"]},
-    "chili": {"name": "辣椒", "emoji": "🌶️", "seed_price": 11, "sell": 22, "grow": 280, "spread": 0.26, "tags": ["seasoning"]},
-    "ginger": {"name": "姜", "emoji": "🫚", "seed_price": 12, "sell": 24, "grow": 300, "spread": 0.24, "tags": ["seasoning", "tropic"]},
-    "mango": {"name": "芒果", "emoji": "🥭", "seed_price": 20, "sell": 38, "grow": 440, "spread": 0.30, "tags": ["fruit", "tropic"], "tree": True, "shake": True},
-    "pineapple": {"name": "菠萝", "emoji": "🍍", "seed_price": 17, "sell": 32, "grow": 380, "spread": 0.28, "tags": ["fruit", "tropic"]},
-    "papaya": {"name": "木瓜", "emoji": "🍈", "seed_price": 19, "sell": 34, "grow": 400, "spread": 0.32, "tags": ["fruit", "tropic"], "tree": True},
-    "lemongrass": {"name": "香茅", "emoji": "🌿", "seed_price": 10, "sell": 20, "grow": 240, "spread": 0.22, "tags": ["seasoning", "tropic", "herb"]},
-    "lime": {"name": "青柠", "emoji": "🍋", "seed_price": 14, "sell": 26, "grow": 320, "spread": 0.26, "tags": ["fruit", "tropic"], "tree": True, "shake": True},
-    "sweetpotato": {"name": "红薯", "emoji": "🍠", "seed_price": 8, "sell": 17, "grow": 300, "spread": 0.24, "tags": ["root", "tropic"], "aliases": ["番薯", "地瓜"]},
+    # ── 基础蔬菜（1h 左右）──
+    "kale":        {"name": "羽衣甘蓝", "emoji": "🥬", "seed_price": 7,  "sell": 16, "grow":  60, "spread": 0.30, "tags": ["leaf"], "aliases": ["甘蓝", "羽衣"]},
+    "garlic":      {"name": "大蒜",     "emoji": "🧄", "seed_price": 9,  "sell": 18, "grow":  65, "spread": 0.22, "tags": ["seasoning"]},
+    "lemongrass":  {"name": "香茅",     "emoji": "🌿", "seed_price": 10, "sell": 20, "grow":  70, "spread": 0.22, "tags": ["seasoning", "tropic", "herb"]},
+    "chili":       {"name": "辣椒",     "emoji": "🌶️", "seed_price": 11, "sell": 22, "grow":  70, "spread": 0.24, "tags": ["seasoning"]},
+    "sweetpotato": {"name": "红薯",     "emoji": "🍠", "seed_price": 8,  "sell": 17, "grow":  80, "spread": 0.24, "tags": ["root", "tropic"], "aliases": ["番薯", "地瓜"]},
+    "ginger":      {"name": "姜",       "emoji": "🫚", "seed_price": 12, "sell": 24, "grow":  80, "spread": 0.22, "tags": ["seasoning", "tropic"]},
+    # ── 普通（1.5~2.5h）──
+    "kelp":        {"name": "浅海藻",   "emoji": "🌿", "seed_price": 11, "sell": 24, "grow":  85, "spread": 0.30, "tags": ["sea"]},
+    "fogpea":      {"name": "雾豌豆",   "emoji": "🫛", "seed_price": 10, "sell": 23, "grow":  90, "spread": 0.28, "tags": ["legume"]},
+    "beet":        {"name": "甜菜",     "emoji": "🫘", "seed_price": 9,  "sell": 21, "grow": 100, "spread": 0.26, "tags": ["root"]},
+    "rye":         {"name": "黑麦",     "emoji": "🌾", "seed_price": 8,  "sell": 19, "grow": 120, "spread": 0.28, "tags": ["grain"]},
+    # ── 中级浆果 / 热带非树（2.5~4h）──
+    "bramble":     {"name": "荆棘莓",   "emoji": "🫐", "seed_price": 14, "sell": 32, "grow": 150, "spread": 0.28, "tags": ["berry"]},
+    "blueberry":   {"name": "蓝莓",     "emoji": "🫐", "seed_price": 16, "sell": 36, "grow": 160, "spread": 0.26, "tags": ["berry", "tropic"]},
+    "pineapple":   {"name": "菠萝",     "emoji": "🍍", "seed_price": 17, "sell": 32, "grow": 180, "spread": 0.26, "tags": ["fruit", "tropic"]},
+    # ── 树类（3~5.5h）──
+    "lime":        {"name": "青柠",     "emoji": "🍋", "seed_price": 14, "sell": 26, "grow": 200, "spread": 0.24, "tags": ["fruit", "tropic"], "tree": True, "shake": True},
+    "papaya":      {"name": "木瓜",     "emoji": "🍈", "seed_price": 19, "sell": 34, "grow": 210, "spread": 0.24, "tags": ["fruit", "tropic"], "tree": True},
+    "banana":      {"name": "香蕉",     "emoji": "🍌", "seed_price": 18, "sell": 28, "grow": 240, "spread": 0.24, "tags": ["fruit", "tropic"], "tree": True},
+    "mango":       {"name": "芒果",     "emoji": "🥭", "seed_price": 20, "sell": 38, "grow": 260, "spread": 0.24, "tags": ["fruit", "tropic"], "tree": True, "shake": True},
+    # ── 稀有树 / 封顶（4~6h）──
+    "coconut":     {"name": "椰子",     "emoji": "🥥", "seed_price": 22, "sell": 24, "grow": 270, "spread": 0.20, "tags": ["fruit", "tropic"], "tree": True, "shake": True},
+    "durian":      {"name": "榴莲",     "emoji": "🍈", "seed_price": 48, "sell": 95, "grow": 300, "spread": 0.20, "tags": ["fruit", "tropic"], "tree": True, "ultra_rare": True},
 }
 
 _CROP_SUFFIXES = ("种子", "种", "苗")
