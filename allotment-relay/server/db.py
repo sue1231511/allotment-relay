@@ -160,6 +160,31 @@ CREATE TABLE IF NOT EXISTS league_contrib (
     amount INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (week_id, steward_id)
 );
+
+CREATE TABLE IF NOT EXISTS steward_incidents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    incident_key TEXT NOT NULL,
+    plot_id INTEGER,
+    detail TEXT NOT NULL DEFAULT '',
+    resolved INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS event_rolls (
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    day INTEGER NOT NULL,
+    count INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (steward_id, day)
+);
+
+CREATE TABLE IF NOT EXISTS world_pulse (
+    pulse_key TEXT PRIMARY KEY,
+    label TEXT NOT NULL,
+    kind TEXT NOT NULL DEFAULT 'bad',
+    started_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL
+);
 """
 
 
@@ -380,7 +405,9 @@ async def public_stats() -> dict[str, Any]:
         )).fetchone())["c"]
         w, t = world.current_weather(), world.current_tide()
         from . import multi
+        from . import events
         league = await multi.league_snapshot()
+        pulse = await events.public_pulse_snapshot()
         return {
             "stewards": stewards,
             "online": online,
@@ -389,6 +416,7 @@ async def public_stats() -> dict[str, Any]:
             "total_scrumps": scrumps,
             "open_contracts": open_contracts,
             "league": league,
+            "pulse": pulse,
             "weather": w,
             "tide": t,
         }

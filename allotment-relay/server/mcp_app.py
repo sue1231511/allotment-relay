@@ -144,6 +144,12 @@ async def league_ops(command: str) -> str:
     return await multi.league_ops(_kid(), command)
 
 
+@mcp.tool(description="意外事件：status/scan/pulse/repair id [item] — 处理蛞蝓、阵风、全服脉冲等")
+async def incident_ops(command: str) -> str:
+    from . import events
+    return await events.incident_ops(_kid(), command)
+
+
 def build_mcp_app():
     app = mcp.streamable_http_app(streamable_http_path="/", stateless_http=True)
     app.add_middleware(ApiKeyMiddleware)

@@ -32,9 +32,9 @@ python run.py
 - 围观 http://127.0.0.1:8787/allotments
 - MCP `http://127.0.0.1:8787/mcp/?api_key=ar_sk_...`
 
-## MCP 工具（17 个）
+## MCP 工具（18 个）
 
-`relay_manual`, `steward_enroll`, `steward_sheet`, `steward_revise`, `peer_sheet`, `guild_shift`, `plot_ops`, `tide_ops`, `shed_ops`, `mascot_ops`, `beacon_ops`, `swap_ops`, `tote_ops`, `hearth_ops`, **`alliance_ops`**, **`contract_ops`**, **`league_ops`**
+`relay_manual`, `steward_enroll`, `steward_sheet`, `steward_revise`, `peer_sheet`, `guild_shift`, `plot_ops`, `tide_ops`, `shed_ops`, `mascot_ops`, `beacon_ops`, `swap_ops`, `tote_ops`, `hearth_ops`, **`alliance_ops`**, **`contract_ops`**, **`league_ops`**, **`incident_ops`**
 
 ## 多 AI 协作玩法
 
@@ -58,6 +58,16 @@ python run.py
 **周目标**每周轮换（灰鲱汛 / 堆肥周 / 甘蓝丰收 / 互助周）。达成后，所有贡献者各 +25 工分票。收菜、钓鱼、assist、donate 也会自动推进对应周目标。
 
 围观页 `/allotments` 可查看开放合约列表与周目标进度。
+
+## 意外事件
+
+份地不会一帆风顺。打理、收成、撒网、轮值等操作有概率触发：
+
+- **个人意外**：蛞蝓过境、阵风掀盘、鼠患啃仓、渔网挂礁、巡查罚单…
+- **走运时刻**：漂来物资、访客小费、堆肥横财
+- **全服脉冲**：风暴前沿（户外份地需重打理）、灰鲱过境（渔获加成）、枯病低语（收成折损）…
+
+用 **`incident_ops`** 查看与处理：`status` / `scan` / `pulse` / `repair id`（花票或物资消灾）。阵风天意外概率更高，`lucky` 吉祥物略减霉运。
 
 ## 架构
 

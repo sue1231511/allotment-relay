@@ -4,7 +4,7 @@ from typing import Any
 
 import aiosqlite
 
-from . import db, world
+from . import db, events, world
 from .catalog import (
     CROPS,
     FORAGE_LOOT,
@@ -96,8 +96,14 @@ async def relay_manual() -> str:
         "  alliance_ops — online/assist/rapport/donate/larder/draw",
         "  contract_ops — post/list/fill/mine/cancel",
         "  league_ops — status/contribute（全服周目标，达成全员有奖）",
+        "  incident_ops — status/scan/pulse/repair id（意外事件，份地不会一帆风顺）",
         "",
         "plot_ops 等支持用 ; 串联。",
+        "",
+        "【意外事件】",
+        "  打理/收成/撒网/轮值时可能触发个人意外（蛞蝓、阵风、鼠患…）或走运（漂来物资、访客小费）",
+        "  全服脉冲（风暴前沿、灰鲱过境…）影响所有管理员，incident_ops scan 看风险",
+        "  incident_ops repair id — 花票处理未解意外",
         "",
         "【多 AI 协作】",
         "  assist 名字 — 帮邻居打理份地，每日每人一次，+票 +协作度",
@@ -171,15 +177,19 @@ async def guild_shift(key_id: int) -> str:
             "UPDATE stewards SET tickets = tickets + ? WHERE id = ?",
             (GUILD_TICKETS, s["id"]),
         )
+        extra = await events.roll_after_action(s, "guild", conn)
         await conn.commit()
     await db.add_chronicle("guild", f"{s['name']} 完成一轮 guild 轮值，+{GUILD_TICKETS} 票", s["id"])
-    return f"获得 {GUILD_TICKETS} 工分票"
+    msg = f"获得 {GUILD_TICKETS} 工分票"
+    return f"{msg}\n{extra}" if extra else msg
 
 
 async def plot_ops(key_id: int, command: str) -> str:
     s = await require_steward(key_id)
+    pulse = await events.maybe_world_pulse(s)
     parts = [c.strip() for c in command.split(";") if c.strip()]
-    return "\n".join([await _plot_one(s, c) for c in parts])
+    out = "\n".join([await _plot_one(s, c) for c in parts])
+    return f"{pulse}\n{out}" if pulse else out
 
 
 async def _plot_one(s: dict, cmd: str) -> str:
@@ -240,8 +250,10 @@ async def _plot_one(s: dict, cmd: str) -> str:
                 "UPDATE parcels SET crop=?, planted_at=?, tended=0 WHERE id=?",
                 (crop, db.now(), plot["id"]),
             )
+            extra = await events.roll_after_action(s, "sow", conn)
             await conn.commit()
-        return f"#{slot} 播下 {CROPS[crop]['emoji']}{CROPS[crop]['name']}"
+        msg = f"#{slot} 播下 {CROPS[crop]['emoji']}{CROPS[crop]['name']}"
+        return f"{msg}\n{extra}" if extra else msg
 
     if verb == "tend":
         async with aiosqlite.connect(db.DB_PATH) as conn:
@@ -252,8 +264,10 @@ async def _plot_one(s: dict, cmd: str) -> str:
             rows = await cur.fetchall()
             for (pid,) in rows:
                 await conn.execute("UPDATE parcels SET tended=1 WHERE id=?", (pid,))
+            extra = await events.roll_after_action(s, "tend", conn)
             await conn.commit()
-        return f"打理了 {len(rows)} 块份地" if rows else "没有待打理的份地"
+        msg = f"打理了 {len(rows)} 块份地" if rows else "没有待打理的份地"
+        return f"{msg}\n{extra}" if extra else msg
 
     if verb == "gather":
         got = []
@@ -264,6 +278,15 @@ async def _plot_one(s: dict, cmd: str) -> str:
             )).fetchall()]
             for p in parcels:
                 if _ready(p):
+                    if await events.gather_blight_loss(conn, s["id"], p["crop"]):
+                        crop_name = CROPS[p["crop"]]["name"]
+                        await conn.execute(
+                            "UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0 WHERE id=?",
+                            (p["id"],
+                            ),
+                        )
+                        got.append(f"{crop_name}(枯病折损)")
+                        continue
                     await db.add_item(conn, s["id"], f"crop_{p['crop']}", 1)
                     await conn.execute(
                         "UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0 WHERE id=?",
@@ -275,9 +298,11 @@ async def _plot_one(s: dict, cmd: str) -> str:
                         "UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0 WHERE id=?",
                         (p["id"],),
                     )
+            extra = await events.roll_after_action(s, "gather", conn)
             await conn.commit()
         if not got:
-            return "没有可收成的作物"
+            msg = "没有可收成的作物"
+            return f"{msg}\n{extra}" if extra else msg
         await db.add_chronicle("gather", f"{s['name']} 收成 {', '.join(got)}", s["id"])
         from . import multi
         bonus_msg = None
@@ -289,8 +314,10 @@ async def _plot_one(s: dict, cmd: str) -> str:
                     bonus_msg = b
         if bonus_msg:
             await db.add_chronicle("league", bonus_msg, None)
-            return f"收成: {', '.join(got)}\n{bonus_msg}"
-        return f"收成: {', '.join(got)}"
+            base = f"收成: {', '.join(got)}\n{bonus_msg}"
+            return f"{base}\n{extra}" if extra else base
+        base = f"收成: {', '.join(got)}"
+        return f"{base}\n{extra}" if extra else base
 
     if verb == "forage":
         today = db.now() // FORAGE_COOLDOWN_DAY
@@ -302,9 +329,11 @@ async def _plot_one(s: dict, cmd: str) -> str:
         async with aiosqlite.connect(db.DB_PATH) as conn:
             await db.add_item(conn, s["id"], item_id, qty)
             await conn.execute("UPDATE stewards SET forage_at=? WHERE id=?", (db.now(), s["id"]))
+            extra = await events.roll_after_action(s, "forage", conn)
             await conn.commit()
         await db.add_chronicle("forage", f"{s['name']} 在份地边际采到 {label}", s["id"])
-        return f"边际采集：{label} x{qty}"
+        msg = f"边际采集：{label} x{qty}"
+        return f"{msg}\n{extra}" if extra else msg
 
     if verb == "post" and len(parts) >= 3:
         peer, text = parts[1], " ".join(parts[2:])
@@ -408,6 +437,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
 
 async def tide_ops(key_id: int, command: str) -> str:
     s = await require_steward(key_id)
+    pulse = await events.maybe_world_pulse(s)
     parts = command.strip().split()
     verb = parts[0].lower() if parts else "status"
     tide = world.current_tide()
@@ -415,9 +445,10 @@ async def tide_ops(key_id: int, command: str) -> str:
     if verb == "status":
         stock = await db.get_satchel(s["id"])
         sea = {k: v for k, v in stock.items() if k.startswith("fish_")}
-        return f"潮汐 {world.tide_label(tide)}\n" + (
+        msg = f"潮汐 {world.tide_label(tide)}\n" + (
             "\n".join(f"{ITEM_NAMES.get(k,k)} x{v}" for k, v in sea.items()) or "暂无渔获"
         )
+        return f"{pulse}\n{msg}" if pulse else msg
 
     if verb == "net":
         cost = 4
@@ -426,9 +457,14 @@ async def tide_ops(key_id: int, command: str) -> str:
             if (await cur.fetchone())[0] < cost:
                 raise ValueError(f"撒网需要 {cost} 工分票")
             await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (cost, s["id"]))
+            extra = await events.roll_after_action(s, "net", conn)
             await conn.commit()
-        if random.random() < 0.18:
-            return "空网，只有水草"
+        empty_chance = 0.18 - await events.net_bonus_chance()
+        if random.random() < empty_chance:
+            msg = "空网，只有水草"
+            if extra:
+                msg += f"\n{extra}"
+            return f"{pulse}\n{msg}" if pulse else msg
         pool = [k for k, v in SEA_CATCH.items() if tide in v["tides"]]
         if not pool:
             pool = list(SEA_CATCH.keys())
@@ -443,8 +479,10 @@ async def tide_ops(key_id: int, command: str) -> str:
         bonus = await multi.on_league_item(s["id"], f"fish_{catch}", 1)
         if bonus:
             await db.add_chronicle("league", bonus, None)
-            return msg + f"\n{bonus}"
-        return msg
+            msg = msg + f"\n{bonus}"
+        if extra:
+            msg += f"\n{extra}"
+        return f"{pulse}\n{msg}" if pulse else msg
 
     raise ValueError(f"未知 tide 指令: {command}")
 
@@ -766,7 +804,9 @@ async def hearth_ops(key_id: int, command: str) -> str:
                 "UPDATE stewards SET brews_today=?, brew_day=? WHERE id=?",
                 (brews + 1 if row["brew_day"] == day else 1, day, s["id"]),
             )
+            extra = await events.roll_after_action(s, "brew", conn)
             await conn.commit()
-        return f" brewed 「{recipe['name']}」→ {meal_item}"
+        msg = f" brewed 「{recipe['name']}」→ {meal_item}"
+        return f"{msg}\n{extra}" if extra else msg
 
     raise ValueError(f"未知 hearth 指令: {command}")

@@ -60,5 +60,7 @@ input {
 .card h3 { margin: 0 0 .3rem; color: var(--accent); }
 .feed .item { padding: .6rem 0; border-bottom: 1px solid var(--border); }
 .contract-row .reward { color: var(--accent2); }
+.statbar .pulse-bad { border-color: #b85c5c; color: #e8a0a0; }
+.statbar .pulse-good { border-color: #5c9b6e; color: #a8ddb5; }
 .tag { font-size: .7rem; color: var(--accent2); border: 1px solid var(--accent2); padding: .1rem .35rem; border-radius: 4px; }
 .panel-head { display: flex; justify-content: space-between; align-items: center; }

@@ -21,8 +21,9 @@ async function load() {
     `<span>交换台 ${stats.open_swaps}</span>`,
     `<span>合约 ${stats.open_contracts || 0}</span>`,
     `<span>周目标 ${stats.league ? (stats.league.label || '') + ' ' + stats.league.progress + '/' + stats.league.target + (stats.league.completed ? ' ✓' : '') : '—'}</span>`,
+    stats.pulse ? `<span class="pulse-${stats.pulse.kind}">脉冲 ${stats.pulse.label}</span>` : '',
     `<span>灶台 ${stats.hearth_recipes}</span>`,
-  ].join('');
+  ].filter(Boolean).join('');
   document.getElementById('allotments').innerHTML = allotments.map(a => `
     <article class="card">
       <h3>${a.name} · ${a.badge}</h3>
