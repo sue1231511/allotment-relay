@@ -1,0 +1,32 @@
+{
+  "id": "plugin-guide",
+  "name": "插件开发指南",
+  "version": "1.2.0",
+  "description": "为 AI 提供 Mikeko 插件系统的完整开发指南：manifest.json 全字段规则、main.js 沙盒环境与注入 API、fetch 白名单机制、UI 插件 WebView 桥、配置项加密存储、安装包校验限制、审计日志。开发任何插件前先用它核对写法并强制执行开发规范（一次交付/事实优先/错误处理红线），另附四种可直接复制的模板（纯工具/联网/带UI/带配置）。本版在 QuickJS 引擎中完成语法与全工具调用验证。",
+  "tools": [
+    {
+      "name": "plugin_guide",
+      "description": "查询 Mikeko 插件开发指南（字段名/规则/限制/机制）。section 可选：standards、manifest、tools_schema、mainjs、sandbox、fetch、ui、config、install、limits、audit、workflow_sample、troubleshooting；缺省 all 返回目录+全量。开发或修改插件前调用以核对写法。",
+      "parameters": [
+        {
+          "name": "section",
+          "type": "string",
+          "description": "要查询的章节名，缺省返回全部。可选值见工具描述。",
+          "required": false
+        }
+      ]
+    },
+    {
+      "name": "plugin_template",
+      "description": "输出一份可直接复制的插件模板。kind 可选：minimal（纯工具，默认）、network（联网+allowedHosts）、ui（带 WebView 界面）、config（带配置项+密钥保管）。返回 manifest.json 与 main.js（ui 模板另含 index.html）的完整内容。",
+      "parameters": [
+        {
+          "name": "kind",
+          "type": "string",
+          "description": "模板类型：minimal / network / ui / config，缺省 minimal。",
+          "required": false
+        }
+      ]
+    }
+  ]
+}
