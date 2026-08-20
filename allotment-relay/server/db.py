@@ -222,6 +222,12 @@ CREATE TABLE IF NOT EXISTS farm_rolls (
     PRIMARY KEY (steward_id, day)
 );
 
+CREATE TABLE IF NOT EXISTS gugu_dove_pending (
+    steward_id INTEGER PRIMARY KEY REFERENCES stewards(id),
+    plot_id INTEGER NOT NULL REFERENCES parcels(id),
+    created_at INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS commons_spawns (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     spawn_key TEXT NOT NULL,
@@ -660,6 +666,14 @@ async def init_db() -> None:
                 blessing_uses INTEGER NOT NULL DEFAULT 0
             )
             """,
+            """
+            CREATE TABLE IF NOT EXISTS gugu_dove_pending (
+                steward_id INTEGER PRIMARY KEY REFERENCES stewards(id),
+                plot_id INTEGER NOT NULL REFERENCES parcels(id),
+                created_at INTEGER NOT NULL
+            )
+            """,
+            "ALTER TABLE parcels ADD COLUMN dove_yield_mult REAL NOT NULL DEFAULT 1.0",
         ):
             try:
                 await db.execute(ddl)

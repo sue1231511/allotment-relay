@@ -69,7 +69,7 @@ async def relay_manual() -> str:
         "",
         "工具一览：",
         "  steward_enroll / steward_sheet / steward_revise / peer_sheet",
-        "  plot_ops — catalog/buy/sow/tend/gather/shake/fertilize/scarecrow/compost/forage/weather",
+        "  plot_ops — catalog/buy/sow/tend/gather/shake/fertilize/scarecrow/compost/dove/forage/weather",
         "  tide_ops — net/cast/status/bottle",
         "  gear_ops — status/upgrade 鱼饵·鱼竿·渔网 tier",
         "  beach_ops — scan/dig/probe（退潮+铲子赶海，雾天稀有↑）",
@@ -87,7 +87,7 @@ async def relay_manual() -> str:
         "",
         "【份地农事 · 随机生长】",
         "  每次 sow 摇出不同生长周期（急长/稳长/慢熟/摸鱼型）",
-        "  tend/gather 可能触发野生动物；**昼间斑鸠**咕咕偷吃庄稼（伤不得）",
+        "  tend/gather 可能触发野生动物；**昼间斑鸠**盯梢可 plot_ops dove 忽略|驱赶",
         "  commons_ops scan — 全服稀有公共物资，随机时间上线，claim 抢",
         "",
         "  pen_ops — erect/stock/feed/harvest（渔排养鱼）",
@@ -172,6 +172,7 @@ async def steward_sheet(key_id: int) -> str:
         handoff_notes = await _collect_handoffs(conn, s["id"])
         bottle_notes = await _collect_bottle_replies(conn, s["id"])
         open_incidents = await events.list_open_incidents_on(conn, s["id"])
+        dove_pending = await farming.get_gugu_dove_pending(conn, s["id"])
         await conn.commit()
     s = await db.get_steward_by_id(s["id"]) or s
     parcels = await db.get_parcels(s["id"])
@@ -205,6 +206,8 @@ async def steward_sheet(key_id: int) -> str:
             label = r.get("label") or r["incident_key"]
             cost = r.get("repair_tickets") or 0
             lines.append(f"  编号 #{r['id']} {label}（repair {cost} 票）")
+    if dove_pending:
+        lines.append("🕊️ 斑鸠盯梢中 → plot_ops dove 忽略|驱赶")
     if lili_hint:
         lines.append(lili_hint)
     for note in handoff_notes:
@@ -364,6 +367,18 @@ async def _plot_one(s: dict, cmd: str) -> str:
     if verb == "weather":
         return world.climate_report()
 
+    if verb == "dove":
+        sub = parts[1].lower() if len(parts) > 1 else ""
+        async with db.connect() as conn:
+            if not sub:
+                pending = await farming.get_gugu_dove_pending(conn, s["id"])
+                if not pending:
+                    return "没有斑鸠盯梢。昼间 sow/tend 种菜时有概率触发"
+                return farming.gugu_dove_prompt_text(pending)
+            msg = await farming.resolve_gugu_dove(conn, s, sub)
+            await conn.commit()
+        return msg
+
     if verb == "status":
         parcels = await db.get_parcels(s["id"])
         return "份地\n" + "\n".join(_parcel_line(p) for p in parcels)
@@ -427,9 +442,12 @@ async def _plot_one(s: dict, cmd: str) -> str:
                 s, "sow", conn, protected_parcel_id=plot["id"],
             )
             farm = await farming.roll_farm_event(conn, s, "sow")
+            dove = await farming.maybe_gugu_dove_stalk(conn, s, plot["id"])
             await conn.commit()
         msg = f"#{slot} 播下 {CROPS[crop]['emoji']}{CROPS[crop]['name']}\n{sow_flavor}"
-        if farm:
+        if dove:
+            msg += f"\n{dove}"
+        elif farm:
             msg += f"\n{farm}"
         return f"{msg}\n{extra}" if extra else msg
 
@@ -461,6 +479,10 @@ async def _plot_one(s: dict, cmd: str) -> str:
                     )
             extra = await events.roll_after_action(s, "tend", conn)
             farm = await farming.roll_farm_event(conn, s, "tend")
+            dove = None
+            if rows:
+                stalk_pid = random.choice(rows)[0]
+                dove = await farming.maybe_gugu_dove_stalk(conn, s, stalk_pid)
             disc = await commons.roll_discovery(conn, s, "tend")
             worm_msg = ""
             worm_chance = 0.28 if hoe else 0.14
@@ -474,7 +496,9 @@ async def _plot_one(s: dict, cmd: str) -> str:
         if hoe and rows:
             msg += " · 锄头松土"
         msg += flavor.maybe_suffix(flavor.TEND_SUFFIX)
-        if farm:
+        if dove:
+            msg += f"\n{dove}"
+        elif farm:
             msg += f"\n{farm}"
         if disc:
             msg += f"\n{disc}"
@@ -602,7 +626,22 @@ async def _plot_one(s: dict, cmd: str) -> str:
                         )
                         got.append(f"{crop_name}(枯病折损)")
                         continue
+                    mult = float(p.get("dove_yield_mult") or 1.0)
+                    dove_note = "" if mult == 1.0 else f"(斑鸠收成×{mult:g})"
                     item_key, qty, keep_plot = await farming.gather_yield(conn, s["id"], p)
+                    if qty <= 0:
+                        crop_name = CROPS[p["crop"]]["name"]
+                        got.append(f"{crop_name}(斑鸠啄食，颗粒无收)")
+                        if not keep_plot:
+                            await conn.execute(
+                                """
+                                UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
+                                grow_target=0, grow_pace='', fertilized=0, scarecrow=0,
+                                dove_yield_mult=1.0 WHERE id=?
+                                """,
+                                (p["id"],),
+                            )
+                        continue
                     await db.add_item(conn, s["id"], item_key, qty)
                     harvest_note = ""
                     from . import shaonian as shaonian_mod
@@ -631,7 +670,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
                             f"{CROPS[p['crop']]['name']}种(过熟) x{qty}{harvest_note}"
                         )
                     else:
-                        got.append(f"{CROPS[p['crop']]['name']} x{qty}{harvest_note}")
+                        got.append(f"{CROPS[p['crop']]['name']} x{qty}{harvest_note}{dove_note}")
                 elif farming.plot_overripe(p):
                     if random.random() < 0.5:
                         await db.add_item(conn, s["id"], "compost", 2)
