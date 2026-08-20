@@ -55,11 +55,12 @@
       </div>
       <div>
         <div class="terminal">
-          <code><span class="dim">MCP URL</span>
-{{ request.url.scheme }}://{{ request.headers.get('host') }}/mcp/?api_key=<span class="accent">&lt;ar_sk_...&gt;</span>
+          <code><span class="dim">MCP URL（末尾要有 /）</span>
+https://{{ request.headers.get('host') }}/mcp/?api_key=<span class="accent">&lt;ar_sk_...&gt;</span>
 
-<span class="dim">Header</span>
-Authorization: Bearer <span class="accent">&lt;ar_sk_...&gt;</span></code>
+<span class="dim">或分开填</span>
+URL: https://{{ request.headers.get('host') }}/mcp/
+Header: Authorization: Bearer <span class="accent">&lt;ar_sk_...&gt;</span></code>
         </div>
         <div class="steps">
           <div class="step">

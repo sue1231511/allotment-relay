@@ -1,5 +1,4 @@
 from contextvars import ContextVar
-import os
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -22,8 +21,6 @@ def extract_api_key(request: Request) -> str | None:
 
 class ApiKeyMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        if request.url.path.rstrip("/") != "/mcp" and not request.url.path.startswith("/mcp/"):
-            return await call_next(request)
         api_key = extract_api_key(request)
         if not api_key:
             return JSONResponse(
@@ -266,22 +263,8 @@ async def bar_ops(command: str) -> str:
 
 
 def _mcp_transport_security() -> TransportSecuritySettings:
-    """Cloud deploy must allow the public Host (Zeabur/custom domain), not only localhost."""
-    hosts = ["127.0.0.1:*", "localhost:*", "[::1]:*"]
-    raw = os.environ.get("MCP_ALLOWED_HOSTS", "allotment-relay.zeabur.app")
-    for part in raw.split(","):
-        h = part.strip()
-        if not h:
-            continue
-        if ":" in h:
-            hosts.append(h)
-        else:
-            hosts.append(f"{h}:*")
-            hosts.append(h)
-    return TransportSecuritySettings(
-        enable_dns_rebinding_protection=True,
-        allowed_hosts=hosts,
-    )
+    """Public cloud deploy: DNS rebinding guard blocks non-local Host headers (421)."""
+    return TransportSecuritySettings(enable_dns_rebinding_protection=False)
 
 
 def build_mcp_app():

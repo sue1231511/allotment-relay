@@ -5,12 +5,35 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, field_validator
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from . import db
 from .config import STATIC_DIR, TEMPLATES_DIR
 from .mcp_app import build_mcp_app
 
 mcp_starlette, mcp_session_manager = build_mcp_app()
+
+
+class NormalizeMcpPathMiddleware:
+    """Zeabur/Cursor 常配 /mcp 无尾斜杠；避免 307 跳到 http:// 导致 Streamable HTTP 失败。"""
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "http" and scope.get("path") == "/mcp":
+            scope["path"] = "/mcp/"
+            scope["raw_path"] = b"/mcp/"
+        await self.app(scope, receive, send)
+
+
+def public_base_url(request: Request) -> str:
+    """Zeabur 反代下用 X-Forwarded-* 拼对外 https URL。"""
+    proto = request.headers.get("x-forwarded-proto", request.url.scheme)
+    scheme = proto.split(",")[0].strip() if proto else request.url.scheme
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host") or request.url.netloc
+    host = host.split(",")[0].strip()
+    return f"{scheme}://{host}"
 
 
 @asynccontextmanager
@@ -20,7 +43,12 @@ async def lifespan(app: FastAPI):
         yield
 
 
-app = FastAPI(title="Allotment Relay MCP", version="0.2.0", lifespan=lifespan)
+app = FastAPI(
+    title="Allotment Relay MCP",
+    version="0.2.0",
+    lifespan=lifespan,
+    redirect_slashes=False,
+)
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 app.mount("/mcp", mcp_starlette)
@@ -91,7 +119,7 @@ async def generate_key(request: Request, body: KeyRequest):
             status_code=503,
             detail="数据库写入失败，请检查 Zeabur 持久卷是否挂载到 /app/server/data",
         ) from exc
-    base = str(request.base_url).rstrip("/")
+    base = public_base_url(request).rstrip("/")
     return {
         "api_key": api_key,
         "message": "凭证只显示一次，请立即保存。",
@@ -104,7 +132,7 @@ async def recover_key(request: Request, body: KeyRequest):
     api_key = await db.recover_api_key(body.email)
     if not api_key:
         raise HTTPException(status_code=404, detail="未找到该邮箱的凭证")
-    base = str(request.base_url).rstrip("/")
+    base = public_base_url(request).rstrip("/")
     return {"api_key": api_key, "mcp_url": f"{base}/mcp/?api_key={api_key}"}
 
 
@@ -166,3 +194,6 @@ async def eatery_order(body: EateryOrderRequest):
 @app.get("/health")
 async def health():
     return {"ok": True}
+
+
+app = NormalizeMcpPathMiddleware(app)

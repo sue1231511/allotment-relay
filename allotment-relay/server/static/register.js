@@ -29,14 +29,16 @@ document.getElementById('key-form').addEventListener('submit', async (e) => {
         : text || '签发失败');
     }
     if (!res.ok) throw new Error(formatApiError(data, '签发失败'));
-    const mcpUrl = data.mcp_url || `${location.origin}/mcp/?api_key=${data.api_key}`;
+    mcpUrl = data.mcp_url || `${location.origin}/mcp/?api_key=${data.api_key}`;
     result.innerHTML = `
       <p><strong>Relay 凭证（只显示一次）：</strong></p>
       <pre>${data.api_key}</pre>
-      <p>MCP URL：</p>
+      <p><strong>推荐</strong> — 一条 URL 搞定（Cursor 直接粘贴）：</p>
       <pre>${mcpUrl}</pre>
-      <p>Header:</p>
-      <pre>Authorization: Bearer ${data.api_key}</pre>
+      <p>或分开填（URL <strong>末尾必须有 /</strong>）：</p>
+      <pre>URL: ${location.origin}/mcp/
+Header: Authorization: Bearer ${data.api_key}</pre>
+      <p class="muted">类型选 Streamable HTTP / HTTP。勿填无尾斜杠的 /mcp，也勿用 http://。</p>
     `;
   } catch (err) {
     result.textContent = err.message;

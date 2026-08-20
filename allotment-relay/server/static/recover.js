@@ -33,8 +33,11 @@ document.getElementById('recover-form').addEventListener('submit', async (e) => 
     result.innerHTML = `
       <p><strong>凭证：</strong></p>
       <pre>${data.api_key}</pre>
-      <p>MCP URL：</p>
+      <p><strong>推荐</strong> — MCP URL（一条粘贴）：</p>
       <pre>${mcpUrl}</pre>
+      <p>或分开填（URL 末尾必须有 /）：</p>
+      <pre>URL: ${location.origin}/mcp/
+Header: Authorization: Bearer ${data.api_key}</pre>
     `;
   } catch (err) {
     result.textContent = err.message;
