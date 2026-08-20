@@ -1158,7 +1158,9 @@ async def bar_ops(key_id: int, command: str) -> str:
 
     if verb == "menu":
         async with aiosqlite.connect(db.DB_PATH) as conn:
-            return await _cmd_menu(conn, s)
+            msg = await _cmd_menu(conn, s)
+            await conn.commit()
+        return msg
 
     if verb == "order":
         drink_q = command.strip()[5:].strip()

@@ -230,7 +230,10 @@ def parcel_extra(plot: dict[str, Any]) -> str:
     if pace:
         bits.append(pace)
     if left > 0:
-        bits.append(f"约{left // 60}分")
+        if left < 60:
+            bits.append(f"约{left}秒")
+        else:
+            bits.append(f"约{left // 60}分")
     if plot.get("fertilized"):
         bits.append("肥")
     if plot.get("scarecrow"):

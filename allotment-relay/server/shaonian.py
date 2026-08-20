@@ -110,6 +110,7 @@ async def shaonian_ops(key_id: int, command: str) -> str:
                     "shaonian",
                     f"{s['name']} 拜访滩头韶年",
                     s["id"],
+                    conn=conn,
                 )
                 await conn.commit()
             fortune = row.get("fortune") or ""
@@ -148,6 +149,7 @@ async def shaonian_ops(key_id: int, command: str) -> str:
                 "shaonian",
                 f"{s['name']} 韶年卜得{meta['name']}",
                 s["id"],
+                conn=conn,
             )
             await conn.commit()
         return (

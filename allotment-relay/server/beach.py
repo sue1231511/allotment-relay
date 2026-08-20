@@ -80,14 +80,15 @@ async def beach_ops(key_id: int, command: str) -> str:
         lines = [
             world.climate_line(),
             f"铲子: {'有' if has_shovel else '无 — tool_ops buy shovel'}",
-            f"dig 翻沙 {config.BEACH_ENERGY} 精力 · probe 掏洞 {config.BEACH_PROBE_ENERGY} 精力",
+            f"dig 翻沙 {config.BEACH_ENERGY} 精力（须 tool_shovel）"
+            f" · probe 掏洞 {config.BEACH_PROBE_ENERGY} 精力",
         ]
         if tide == "ebb":
             lines.append("退潮：贝壳/渔获权重 ↑")
         elif tide == "slack":
             lines.append("平潮：可用 probe 掏洞（收益略低）")
         else:
-            lines.append("涨潮：dig 不可用，probe 勉强试试")
+            lines.append("涨潮：dig 不可用；probe 需退潮或平潮")
         if w == "clear":
             lines.append("晴朗：贝壳权重 +5")
         if w == "misty":

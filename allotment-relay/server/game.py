@@ -9,7 +9,9 @@ from . import commons
 from .catalog import (
     CROPS,
     resolve_crop_key,
+    resolve_item_key,
     unknown_crop_message,
+    unknown_item_message,
     FORAGE_LOOT,
     ITEM_NAMES,
     ITEM_PRICES,
@@ -21,10 +23,19 @@ from .config import (
     BOATS,
     FORAGE_COOLDOWN_DAY,
     GREENHOUSE_COST,
+    GUILD_SHIFT_DAILY,
     GUILD_TICKETS,
     SWAP_CLAIM_FEE,
     BAR_MANDATORY_DAYS,
 )
+
+
+def _parse_int(token: str, label: str = "数量") -> int:
+    cleaned = token.strip().rstrip(";,")
+    try:
+        return int(cleaned)
+    except ValueError:
+        raise ValueError(f"{label}须为整数，收到: {token!r}") from None
 
 
 def _parcel_line(plot: dict) -> str:
@@ -89,7 +100,7 @@ async def relay_manual() -> str:
         "  swap_ops — offer/claim/cancel（白送，领取 3 票手续费）",
         "  tote_ops — list/vend（系统回收，不是玩家互卖）",
         "  hearth_ops — brew/catalog（转发厨房灶台，配方全表可见）",
-        "  guild_shift — 领取工分票",
+        "  guild_shift — 领取工分票（每日 1 次）",
         "  alliance_ops — online/assist/rapport/donate/larder/draw",
         "  contract_ops — post/list/fill/mine/cancel",
         "  league_ops — status/contribute（全服周目标，达成全员有奖）",
@@ -280,20 +291,38 @@ async def peer_sheet(name: str) -> str:
 
 async def guild_shift(key_id: int) -> str:
     s = await require_steward(key_id)
+    day = db.now() // FORAGE_COOLDOWN_DAY
     mult, note = survival.guild_ticket_multiplier(s)
     gain = max(1, int(GUILD_TICKETS * mult))
     async with aiosqlite.connect(db.DB_PATH) as conn:
+        cur = await conn.execute(
+            "SELECT count FROM guild_shifts WHERE steward_id=? AND day=?",
+            (s["id"], day),
+        )
+        row = await cur.fetchone()
+        used = row[0] if row else 0
+        if used >= GUILD_SHIFT_DAILY:
+            raise ValueError(
+                f"今日 guild 轮值已领取（每日 {GUILD_SHIFT_DAILY} 次，明天再来）"
+            )
         from . import hut as hut_mod
         hut_b = await hut_mod.get_bonuses(conn, s["id"])
         await conn.execute(
             "UPDATE stewards SET tickets = tickets + ? WHERE id = ?",
             (gain, s["id"]),
         )
+        await conn.execute(
+            """
+            INSERT INTO guild_shifts (steward_id, day, count) VALUES (?,?,1)
+            ON CONFLICT(steward_id, day) DO UPDATE SET count = count + 1
+            """,
+            (s["id"], day),
+        )
         await survival.bump(conn, s["id"], standing=4 + hut_b.guild_standing, mist_wit=2)
         extra = await events.roll_after_action(s, "guild", conn)
         await conn.commit()
     await db.add_chronicle("guild", f"{s['name']} 完成一轮 guild 轮值，+{gain} 票", s["id"])
-    msg = f"获得 {gain} 工分票"
+    msg = f"获得 {gain} 工分票（今日 guild {used + 1}/{GUILD_SHIFT_DAILY}）"
     if note:
         msg += f"（{note}）"
     msg += flavor.maybe_suffix(flavor.GUILD_SUFFIX)
@@ -307,7 +336,13 @@ async def plot_ops(key_id: int, command: str) -> str:
         await commons.maybe_spawn_commons(conn, steward_id=s["id"])
         await conn.commit()
     parts = [c.strip() for c in command.split(";") if c.strip()]
-    out = "\n".join([await _plot_one(s, c) for c in parts])
+    results: list[str] = []
+    for c in parts:
+        try:
+            results.append(await _plot_one(s, c))
+        except ValueError as exc:
+            results.append(f"⚠ {exc}")
+    out = "\n".join(results)
     return f"{pulse}\n{out}" if pulse else out
 
 
@@ -338,9 +373,9 @@ async def _plot_one(s: dict, cmd: str) -> str:
         return "作物清单（buy/sow 可用 key 或中文名/别名）\n" + "\n".join(lines)
 
     if verb == "buy" and len(parts) >= 3:
-        qty, crop = int(parts[1]), resolve_crop_key(parts[2])
+        qty, crop = _parse_int(parts[1]), resolve_crop_key(" ".join(parts[2:]))
         if not crop:
-            raise ValueError(unknown_crop_message(parts[2]))
+            raise ValueError(unknown_crop_message(" ".join(parts[2:])))
         seed = f"seed_{crop}"
         cost = CROPS[crop]["seed_price"] * qty
         async with aiosqlite.connect(db.DB_PATH) as conn:
@@ -353,9 +388,10 @@ async def _plot_one(s: dict, cmd: str) -> str:
         return f"购入 {CROPS[crop]['name']}种 x{qty}（-{cost} 票）"
 
     if verb == "sow" and len(parts) >= 3:
-        slot, crop = int(parts[1]), resolve_crop_key(parts[2])
+        slot = _parse_int(parts[1], "地块编号")
+        crop = resolve_crop_key(" ".join(parts[2:]))
         if not crop:
-            raise ValueError(unknown_crop_message(parts[2]))
+            raise ValueError(unknown_crop_message(" ".join(parts[2:])))
         seed = f"seed_{crop}"
         async with aiosqlite.connect(db.DB_PATH) as conn:
             conn.row_factory = aiosqlite.Row
@@ -376,7 +412,9 @@ async def _plot_one(s: dict, cmd: str) -> str:
                 """,
                 (crop, db.now(), grow_target, grow_pace, plot["id"]),
             )
-            extra = await events.roll_after_action(s, "sow", conn)
+            extra = await events.roll_after_action(
+                s, "sow", conn, protected_parcel_id=plot["id"],
+            )
             farm = await farming.roll_farm_event(conn, s, "sow")
             await conn.commit()
         msg = f"#{slot} 播下 {CROPS[crop]['emoji']}{CROPS[crop]['name']}\n{sow_flavor}"
@@ -578,9 +616,11 @@ async def _plot_one(s: dict, cmd: str) -> str:
                             (p["id"],),
                         )
                     if item_key.startswith("seed_"):
-                        got.append(f"{CROPS[p['crop']]['name']}种(过熟){harvest_note}")
+                        got.append(
+                            f"{CROPS[p['crop']]['name']}种(过熟) x{qty}{harvest_note}"
+                        )
                     else:
-                        got.append(f"{CROPS[p['crop']]['name']}{harvest_note}")
+                        got.append(f"{CROPS[p['crop']]['name']} x{qty}{harvest_note}")
                 elif farming.plot_overripe(p):
                     if random.random() < 0.5:
                         await db.add_item(conn, s["id"], "compost", 2)
@@ -599,7 +639,22 @@ async def _plot_one(s: dict, cmd: str) -> str:
                 await survival.bump(conn, s["id"], satiety=min(6, 2 + len(got)))
             await conn.commit()
         if not got:
+            nearest = None
+            min_left = None
+            for p in parcels:
+                if p.get("crop") and not farming.plot_ready(p) and not farming.plot_overripe(p):
+                    _, _, left = farming.grow_progress(p)
+                    if min_left is None or left < min_left:
+                        min_left = left
+                        nearest = p
             msg = "没有可收成的作物"
+            if nearest is not None and min_left is not None:
+                cname = CROPS[nearest["crop"]]["name"]
+                slot = nearest.get("slot", "?")
+                if min_left < 60:
+                    msg += f"（#{slot} {cname} 还需 {min_left} 秒）"
+                else:
+                    msg += f"（#{slot} {cname} 还需约 {min_left // 60} 分）"
             return f"{msg}\n{extra}" if extra else msg
         await db.add_chronicle("gather", f"{s['name']} 收成 {', '.join(got)}", s["id"])
         from . import multi
@@ -822,7 +877,7 @@ async def tide_ops(key_id: int, command: str) -> str:
             if (await cur.fetchone())[0] < cost:
                 raise ValueError(f"坐钓需要 {cost} 工分票")
             if not await db.take_item(conn, s["id"], "bait_worm", 1):
-                raise ValueError("消耗 bait_worm x1（tend/beach_ops 获取）")
+                raise ValueError("缺少蚯蚓饵 bait_worm（tend 地块 / beach_ops dig 获取）")
             await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (cost, s["id"]))
             await energy_mod.spend(conn, s["id"], rod["energy"], action="坐钓")
             extra = await events.roll_after_action(s, "net", conn)
@@ -1169,18 +1224,27 @@ async def swap_ops(key_id: int, command: str) -> str:
         )
 
     if verb == "offer" and len(parts) >= 3:
-        item, qty = parts[1], int(parts[2])
+        item_key = resolve_item_key(parts[1])
+        if not item_key:
+            raise ValueError(unknown_item_message(parts[1]))
+        qty = _parse_int(parts[2])
         note = parts[3] if len(parts) > 3 else ""
         async with aiosqlite.connect(db.DB_PATH) as conn:
-            if not await db.take_item(conn, s["id"], item, qty):
-                raise ValueError("行囊不足")
+            if not await db.take_item(conn, s["id"], item_key, qty):
+                raise ValueError(
+                    f"行囊不足 {ITEM_NAMES.get(item_key, item_key)}（id: {item_key}）"
+                )
             await conn.execute(
                 "INSERT INTO swap_lots (depositor_id, item, quantity, note, created_at) VALUES (?,?,?,?,?)",
-                (s["id"], item, qty, note[:80], db.now()),
+                (s["id"], item_key, qty, note[:80], db.now()),
             )
             await conn.commit()
-        await db.add_chronicle("swap", f"{s['name']} 在交换台挂单 {ITEM_NAMES.get(item,item)} x{qty}", s["id"])
-        return "挂单成功"
+        await db.add_chronicle(
+            "swap",
+            f"{s['name']} 在交换台挂单 {ITEM_NAMES.get(item_key, item_key)} x{qty}",
+            s["id"],
+        )
+        return f"挂单成功 · {ITEM_NAMES.get(item_key, item_key)}（{item_key}）x{qty}"
 
     if verb == "claim" and len(parts) >= 2:
         from . import social as social_mod
@@ -1224,8 +1288,7 @@ async def swap_ops(key_id: int, command: str) -> str:
     raise ValueError(f"未知 swap 指令: {command}（list/offer/claim/cancel）")
 
 
-async def tote_ops(key_id: int, command: str) -> str:
-    s = await require_steward(key_id)
+async def _tote_one(s: dict, command: str) -> str:
     parts = command.strip().split()
     verb = parts[0].lower() if parts else "list"
     if verb == "list":
@@ -1233,21 +1296,33 @@ async def tote_ops(key_id: int, command: str) -> str:
         lines = [f"工分票: {s['tickets']}"]
         for item, qty in stock.items():
             price = ITEM_PRICES.get(item, 0)
-            lines.append(f"  {ITEM_NAMES.get(item,item)} x{qty}（ vend {price}/个）")
+            name = ITEM_NAMES.get(item, item)
+            lines.append(f"  {name} x{qty} · {item} · vend {price}/个")
         return "\n".join(lines) if stock else f"工分票: {s['tickets']}\n行囊空"
     if verb == "vend" and len(parts) >= 3:
-        item, qty = parts[1], int(parts[2])
-        price = ITEM_PRICES.get(item)
+        item_key = resolve_item_key(parts[1])
+        if not item_key:
+            raise ValueError(unknown_item_message(parts[1]))
+        qty = _parse_int(parts[2])
+        price = ITEM_PRICES.get(item_key)
         if not price:
-            raise ValueError(f"不可出售 {item}")
+            raise ValueError(f"不可出售 {ITEM_NAMES.get(item_key, item_key)}（{item_key}）")
         async with aiosqlite.connect(db.DB_PATH) as conn:
-            if not await db.take_item(conn, s["id"], item, qty):
-                raise ValueError("数量不足")
+            if not await db.take_item(conn, s["id"], item_key, qty):
+                raise ValueError(f"数量不足（需要 {item_key} x{qty}）")
             gain = price * qty
             await conn.execute("UPDATE stewards SET tickets=tickets+? WHERE id=?", (gain, s["id"]))
             await conn.commit()
-        return f"出售 {ITEM_NAMES.get(item,item)} x{qty}，+{gain} 票"
+        return f"出售 {ITEM_NAMES.get(item_key, item_key)}（{item_key}）x{qty}，+{gain} 票"
     raise ValueError(f"未知 tote 指令: {command}")
+
+
+async def tote_ops(key_id: int, command: str) -> str:
+    s = await require_steward(key_id)
+    parts_cmd = [c.strip() for c in command.split(";") if c.strip()]
+    if len(parts_cmd) > 1:
+        return "\n".join([await _tote_one(s, c) for c in parts_cmd])
+    return await _tote_one(s, command.strip())
 
 
 async def hearth_ops(key_id: int, command: str) -> str:

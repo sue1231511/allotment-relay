@@ -564,12 +564,29 @@ CREATE TABLE IF NOT EXISTS shaonian_charms (
     purchased_at INTEGER NOT NULL,
     PRIMARY KEY (steward_id, day, charm_key)
 );
+
+CREATE TABLE IF NOT EXISTS guild_shifts (
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    day INTEGER NOT NULL,
+    count INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (steward_id, day)
+);
 """
+
+
+async def connect() -> aiosqlite.Connection:
+    """Open DB with busy wait — prefer this over bare aiosqlite.connect."""
+    conn = await aiosqlite.connect(DB_PATH, timeout=30.0)
+    await conn.execute("PRAGMA busy_timeout=10000")
+    return conn
 
 
 async def init_db() -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("PRAGMA journal_mode=WAL")
+        await db.execute("PRAGMA synchronous=NORMAL")
+        await db.execute("PRAGMA busy_timeout=10000")
         await db.executescript(SCHEMA)
         for ddl in (
             "ALTER TABLE stewards ADD COLUMN boat_key TEXT NOT NULL DEFAULT ''",
@@ -607,6 +624,7 @@ async def init_db() -> None:
             "ALTER TABLE bar_daily_state ADD COLUMN owner_event_text TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE bar_daily_state ADD COLUMN owner_event_date INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE bar_daily_state ADD COLUMN owner_event_enabled INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE bar_daily_state ADD COLUMN first_order_free INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE drift_bottles ADD COLUMN reply_body TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE drift_bottles ADD COLUMN reply_by INTEGER REFERENCES stewards(id)",
             "ALTER TABLE drift_bottles ADD COLUMN reply_at INTEGER",
@@ -716,12 +734,25 @@ async def touch_steward(steward_id: int) -> None:
         await db.commit()
 
 
-async def add_chronicle(action: str, text: str, actor_id: int | None = None, target_id: int | None = None) -> None:
-    async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute(
-            "INSERT INTO chronicle (action, actor_id, target_id, text, created_at) VALUES (?, ?, ?, ?, ?)",
-            (action, actor_id, target_id, text, now()),
-        )
+async def add_chronicle(
+    action: str,
+    text: str,
+    actor_id: int | None = None,
+    target_id: int | None = None,
+    *,
+    conn: aiosqlite.Connection | None = None,
+) -> None:
+    sql = (
+        "INSERT INTO chronicle (action, actor_id, target_id, text, created_at) "
+        "VALUES (?, ?, ?, ?, ?)"
+    )
+    args = (action, actor_id, target_id, text, now())
+    if conn is not None:
+        await conn.execute(sql, args)
+        return
+    async with aiosqlite.connect(DB_PATH, timeout=30.0) as db:
+        await db.execute("PRAGMA busy_timeout=10000")
+        await db.execute(sql, args)
         await db.commit()
 
 

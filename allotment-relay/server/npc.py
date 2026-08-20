@@ -52,7 +52,6 @@ async def npc_ops(key_id: int, command: str) -> str:
                 tag = " · 巷口碰到：小偷/乞丐/碰瓷/敲诈"
             lines.append(f"  {npc['key']} — {npc['name']}{tag}")
         lines.append(f"偷菜贼名号: {', '.join(NPC_THIEVES[:3])}…")
-        lines.append("  lizhi — 荔栀（滨海酒吧老板娘，bar_ops tonight/chat）")
         lines.append("  wangfu — 我哪有旺夫命（固定驻唱，bar_ops song）")
         lines.append("每日首次 visit 略回暖雾智/档信（斑鸠、拾叶除外）")
         return "\n".join(lines)

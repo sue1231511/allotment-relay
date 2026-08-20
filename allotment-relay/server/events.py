@@ -47,17 +47,36 @@ async def _mark_roll(conn: aiosqlite.Connection, steward_id: int) -> None:
     )
 
 
-async def _pick_plot(conn: aiosqlite.Connection, steward_id: int, *, need_crop: bool = True) -> dict[str, Any] | None:
+async def _pick_plot(
+    conn: aiosqlite.Connection,
+    steward_id: int,
+    *,
+    need_crop: bool = True,
+    exclude_ids: set[int] | None = None,
+) -> dict[str, Any] | None:
     conn.row_factory = aiosqlite.Row
+    exclude_ids = exclude_ids or set()
     if need_crop:
-        cur = await conn.execute(
-            """
-            SELECT * FROM parcels
-            WHERE steward_id=? AND crop IS NOT NULL AND greenhouse=0
-            ORDER BY RANDOM() LIMIT 1
-            """,
-            (steward_id,),
-        )
+        if exclude_ids:
+            placeholders = ",".join("?" * len(exclude_ids))
+            cur = await conn.execute(
+                f"""
+                SELECT * FROM parcels
+                WHERE steward_id=? AND crop IS NOT NULL AND greenhouse=0
+                  AND id NOT IN ({placeholders})
+                ORDER BY RANDOM() LIMIT 1
+                """,
+                (steward_id, *exclude_ids),
+            )
+        else:
+            cur = await conn.execute(
+                """
+                SELECT * FROM parcels
+                WHERE steward_id=? AND crop IS NOT NULL AND greenhouse=0
+                ORDER BY RANDOM() LIMIT 1
+                """,
+                (steward_id,),
+            )
     else:
         cur = await conn.execute(
             "SELECT * FROM parcels WHERE steward_id=? ORDER BY RANDOM() LIMIT 1",
@@ -232,16 +251,18 @@ async def _apply_effects(
     *,
     pen: dict[str, Any] | None = None,
     plot_id_holder: list[int | None],
+    exclude_parcel_id: int | None = None,
 ) -> list[str]:
     ailment_msgs: list[str] = []
+    exclude = {exclude_parcel_id} if exclude_parcel_id else set()
     for eff in effects:
         if eff == "plot_untend":
-            plot = await _pick_plot(conn, steward["id"])
+            plot = await _pick_plot(conn, steward["id"], exclude_ids=exclude)
             if plot:
                 plot_id_holder[0] = plot["id"]
                 await conn.execute("UPDATE parcels SET tended=0 WHERE id=?", (plot["id"],))
         elif eff == "plot_wreck":
-            plot = await _pick_plot(conn, steward["id"])
+            plot = await _pick_plot(conn, steward["id"], exclude_ids=exclude)
             if plot:
                 plot_id_holder[0] = plot["id"]
                 await conn.execute(
@@ -249,7 +270,7 @@ async def _apply_effects(
                     (plot["id"],),
                 )
         elif eff == "plot_delay":
-            plot = await _pick_plot(conn, steward["id"])
+            plot = await _pick_plot(conn, steward["id"], exclude_ids=exclude)
             if plot and plot.get("planted_at"):
                 plot_id_holder[0] = plot["id"]
                 delay = random.randint(600, 1200)
@@ -318,9 +339,13 @@ async def apply_effects(
     *,
     pen: dict[str, Any] | None = None,
     plot_id_holder: list[int | None] | None = None,
+    exclude_parcel_id: int | None = None,
 ) -> list[str]:
     holder = plot_id_holder if plot_id_holder is not None else [None]
-    return await _apply_effects(conn, steward, effects, pen=pen, plot_id_holder=holder)
+    return await _apply_effects(
+        conn, steward, effects, pen=pen, plot_id_holder=holder,
+        exclude_parcel_id=exclude_parcel_id,
+    )
 
 
 async def roll_after_action(
@@ -330,6 +355,7 @@ async def roll_after_action(
     *,
     pen: dict[str, Any] | None = None,
     voyage: dict[str, Any] | None = None,
+    protected_parcel_id: int | None = None,
 ) -> str | None:
     if trigger not in event_gen.ALL_TRIGGERS:
         return None
@@ -416,7 +442,10 @@ async def roll_after_action(
             event.detail, plot_id_holder[0], _ = res
             event.effects = [e for e in event.effects if e != "scrump_attempt"]
             is_scrump = True
-        ailment_msgs = await _apply_effects(conn, steward, event.effects, pen=pen, plot_id_holder=plot_id_holder)
+        ailment_msgs = await _apply_effects(
+            conn, steward, event.effects, pen=pen, plot_id_holder=plot_id_holder,
+            exclude_parcel_id=protected_parcel_id,
+        )
     except Exception:
         return None
 
@@ -616,7 +645,7 @@ async def incident_ops(key_id: int, command: str) -> str:
         return f"{pulse['label']}：{pulse.get('detail', '影响联盟中')}（剩余 {pulse['remaining'] // 60} 分钟）"
 
     if verb == "repair" and len(parts) >= 2:
-        iid = int(parts[1])
+        iid = int(parts[1].lstrip("#"))
         async with aiosqlite.connect(db.DB_PATH) as conn:
             conn.row_factory = aiosqlite.Row
             row = await (await conn.execute(
