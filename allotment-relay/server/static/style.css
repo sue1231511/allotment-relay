@@ -206,7 +206,7 @@ main {
 }
 
 h1, h2, h3 {
-  font-family: Georgia, "Songti SC", "STSong", serif;
+  font-family: "Noto Serif SC", Georgia, "Songti SC", "STSong", serif;
   font-weight: 500;
 }
 
