@@ -145,9 +145,9 @@ def base_grow_seconds(crop_key: str) -> int:
     meta = CROPS[crop_key]
     if meta.get("grow_min") and meta.get("grow_max"):
         return random.randint(meta["grow_min"], meta["grow_max"])
-    base = meta["grow"]
+    base = meta["grow"] * 60          # grow 单位为分钟，转换为秒
     spread = meta.get("spread", 0.30)
-    lo = max(120, int(base * (1 - spread)))
+    lo = max(300, int(base * (1 - spread)))   # 最短 5 分钟
     hi = int(base * (1 + spread))
     return random.randint(lo, hi)
 
