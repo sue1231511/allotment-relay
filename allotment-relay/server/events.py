@@ -333,10 +333,16 @@ async def roll_after_action(
 ) -> str | None:
     if trigger not in event_gen.ALL_TRIGGERS:
         return None
+
+    from . import npc as npc_mod
+    shiye = await npc_mod.maybe_shiye_bump(conn, steward, trigger)
+
     if not await _can_roll(conn, steward["id"]):
-        return None
+        return shiye
 
     await survival.on_action(conn, steward["id"], trigger)
+    if shiye:
+        return shiye
 
     from . import hut as hut_mod
     hut_b = await hut_mod.get_bonuses(conn, steward["id"])

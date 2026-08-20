@@ -221,7 +221,7 @@ async def boss_ops(command: str) -> str:
     return await boss.boss_ops(_kid(), command)
 
 
-@mcp.tool(description="NPC：list/visit/thieves — 固定访客与偷菜贼")
+@mcp.tool(description="NPC：list/visit/thieves — 固定访客；visit 拾叶会随机小偷/乞丐/碰瓷/敲诈")
 async def npc_ops(command: str) -> str:
     from . import npc
     return await npc.npc_ops(_kid(), command)

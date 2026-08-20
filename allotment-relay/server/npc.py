@@ -1,18 +1,28 @@
-"""NPC — 固定访客台词 + 偷菜贼名号。visit 给语境提示，每日首次有小回暖。"""
+"""NPC — 固定访客台词 + 偷菜贼名号。拾叶巷口随机小偷/乞丐/碰瓷/敲诈。"""
 
 from __future__ import annotations
 
 import random
+from typing import Any
 
 import aiosqlite
 
 from . import config, db, flavor, survival, world
-from .catalog import KITCHEN_DISHES, NPC_FIXED, NPC_THIEVES
+from .catalog import ITEM_NAMES, KITCHEN_DISHES, NPC_FIXED, NPC_THIEVES
 from .game import require_steward
 
 
 def _day_id() -> int:
     return db.now() // config.FORAGE_COOLDOWN_DAY
+
+
+def _find_npc(query: str) -> dict[str, Any] | None:
+    q = query.strip()
+    ql = q.lower()
+    for npc in NPC_FIXED:
+        if npc["key"] == ql or npc["name"] == q or npc["name"].lower() == ql:
+            return npc
+    return None
 
 
 async def npc_ops(key_id: int, command: str) -> str:
@@ -21,7 +31,7 @@ async def npc_ops(key_id: int, command: str) -> str:
     verb = parts[0].lower() if parts else "list"
 
     if verb == "list":
-        lines = ["固定 NPC（visit 名字）:"]
+        lines = ["固定 NPC（visit 名字或 key）:"]
         for npc in NPC_FIXED:
             tag = ""
             if npc["key"] == "gugu_dove":
@@ -36,17 +46,20 @@ async def npc_ops(key_id: int, command: str) -> str:
                 tag = " · 厨房配方提示"
             elif npc["key"] == "market_fan":
                 tag = " · 集市挂单"
+            elif npc["key"] == "shiye":
+                tag = " · 巷口碰到：小偷/乞丐/碰瓷/敲诈"
             lines.append(f"  {npc['key']} — {npc['name']}{tag}")
         lines.append(f"偷菜贼名号: {', '.join(NPC_THIEVES[:3])}…")
         lines.append("  lizhi — 荔栀（滨海酒吧老板，也可 bar_ops chat）")
-        lines.append("每日首次 visit 略回暖雾智/档信")
+        lines.append("每日首次 visit 略回暖雾智/档信（斑鸠、拾叶除外）")
         return "\n".join(lines)
 
     if verb == "visit" and len(parts) >= 2:
-        key = parts[1].lower()
-        npc = next((n for n in NPC_FIXED if n["key"] == key), None)
+        npc = _find_npc(parts[1])
         if not npc:
-            raise ValueError(f"未知 NPC，list 查看")
+            raise ValueError("未知 NPC，list 查看")
+        if npc["key"] == "shiye":
+            return await _visit_shiye(s)
         line = random.choice(npc["lines"])
         extra = await _visit_context(s, npc["key"])
         gift = await _daily_visit_gift(s["id"], npc["key"])
@@ -89,7 +102,6 @@ async def _visit_context(steward: dict, key: str) -> str:
             bits.append("雾天珠砂/海玻璃略多")
         return "——" + "；".join(bits)
     if key == "herb_aunt":
-        from .catalog import ITEM_NAMES
         dish_key, meta = random.choice(list(KITCHEN_DISHES.items()))
         ings = " + ".join(ITEM_NAMES.get(i, i) for i in meta["ings"])
         return f"——今儿提一嘴：kitchen_ops cook {dish_key}（{ings}）"
@@ -117,7 +129,7 @@ async def _visit_context(steward: dict, key: str) -> str:
 
 
 async def _daily_visit_gift(steward_id: int, npc_key: str) -> str:
-    if npc_key == "gugu_dove":
+    if npc_key in ("gugu_dove", "shiye"):
         return ""
     day = _day_id()
     async with aiosqlite.connect(db.DB_PATH) as conn:
@@ -156,3 +168,206 @@ def pick_thief_name(peer_name: str | None = None) -> str:
     if random.random() < 0.35:
         return random.choice(NPC_THIEVES)
     return flavor.pick(["过路家伙", "无名之手", "篱笆外的影子"])
+
+
+async def _shiye_count(conn: aiosqlite.Connection, steward_id: int) -> int:
+    cur = await conn.execute(
+        "SELECT count FROM shiye_rolls WHERE steward_id=? AND day=?",
+        (steward_id, _day_id()),
+    )
+    row = await cur.fetchone()
+    return row[0] if row else 0
+
+
+async def _mark_shiye(conn: aiosqlite.Connection, steward_id: int) -> None:
+    await conn.execute(
+        """
+        INSERT INTO shiye_rolls (steward_id, day, count) VALUES (?,?,1)
+        ON CONFLICT(steward_id, day) DO UPDATE SET count = count + 1
+        """,
+        (steward_id, _day_id()),
+    )
+
+
+async def _take_tickets(conn: aiosqlite.Connection, steward_id: int, amount: int) -> int:
+    cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (steward_id,))
+    have = (await cur.fetchone())[0]
+    pay = min(max(0, have), max(0, amount))
+    if pay:
+        await conn.execute(
+            "UPDATE stewards SET tickets=tickets-? WHERE id=?",
+            (pay, steward_id),
+        )
+    return pay
+
+
+async def _steal_item(conn: aiosqlite.Connection, steward_id: int) -> str | None:
+    prev = conn.row_factory
+    conn.row_factory = aiosqlite.Row
+    try:
+        rows = await (await conn.execute(
+            """
+            SELECT item, quantity FROM satchel
+            WHERE steward_id=? AND quantity > 0
+              AND item NOT LIKE 'tool_%'
+              AND item NOT LIKE 'deco_%'
+            ORDER BY RANDOM() LIMIT 8
+            """,
+            (steward_id,),
+        )).fetchall()
+    finally:
+        conn.row_factory = prev
+    if not rows:
+        return None
+    item = random.choice(rows)["item"]
+    if await db.take_item(conn, steward_id, item, 1):
+        return item
+    return None
+
+
+def _pick_shiye_kind(steward: dict[str, Any]) -> str:
+    weights = {"beggar": 34, "thief": 26, "scam": 22, "extort": 18}
+    phase = world.current_day_phase()
+    if phase in ("dusk", "night"):
+        weights["thief"] += 10
+        weights["extort"] += 8
+        weights["beggar"] -= 6
+    if steward.get("standing", 50) < 40:
+        weights["extort"] += 12
+        weights["scam"] += 6
+    if steward.get("mist_wit", 50) < 40:
+        weights["scam"] += 8
+        weights["thief"] += 6
+    if steward.get("tickets", 0) < 20:
+        weights["beggar"] += 10
+    keys = list(weights)
+    return random.choices(keys, weights=[max(1, weights[k]) for k in keys], k=1)[0]
+
+
+async def _run_shiye_encounter(conn: aiosqlite.Connection, steward: dict[str, Any]) -> str:
+    prev = conn.row_factory
+    conn.row_factory = aiosqlite.Row
+    try:
+        row = await (await conn.execute(
+            "SELECT * FROM stewards WHERE id=?", (steward["id"],)
+        )).fetchone()
+    finally:
+        conn.row_factory = prev
+    s = dict(row) if row else steward
+    kind = _pick_shiye_kind(s)
+    await _mark_shiye(conn, s["id"])
+    hello = flavor.pick(flavor.SHIYE_HELLO)
+    body = await _resolve_shiye_kind(conn, s, kind)
+    await conn.execute(
+        "INSERT INTO chronicle (action, actor_id, target_id, text, created_at) VALUES (?,?,?,?,?)",
+        ("shiye", s["id"], None, f"{s['name']} 碰上拾叶（{kind}）", db.now()),
+    )
+    return f"{hello}\n{body}"
+
+
+async def _resolve_shiye_kind(
+    conn: aiosqlite.Connection, s: dict[str, Any], kind: str
+) -> str:
+    mist = s.get("mist_wit", 50)
+    standing = s.get("standing", 50)
+
+    if kind == "thief":
+        catch = 0.16 + mist / 220 + standing / 300
+        from . import barn as barn_mod
+        if await barn_mod.has_guard_dog(conn, s["id"]):
+            catch += 0.22
+        if random.random() < catch:
+            await survival.bump(conn, s["id"], standing=1)
+            return flavor.pick(flavor.SHIYE_THIEF_CATCH) + "（档信 +1）"
+        stolen = await _steal_item(conn, s["id"])
+        if stolen:
+            label = ITEM_NAMES.get(stolen, stolen)
+            return flavor.fill(flavor.pick(flavor.SHIYE_THIEF_WIN), item=label)
+        n = random.randint(*config.SHIYE_THIEF_TICKETS)
+        paid = await _take_tickets(conn, s["id"], n)
+        if paid:
+            return flavor.fill(flavor.pick(flavor.SHIYE_THIEF_WIN), item=f"{paid} 票")
+        return "小偷档：你口袋空空。拾叶掏了个寂寞，丢下一片叶走了"
+
+    if kind == "beggar":
+        n = random.randint(*config.SHIYE_BEG_TICKETS)
+        paid = await _take_tickets(conn, s["id"], n)
+        if paid:
+            await survival.bump(conn, s["id"], standing=2)
+            msg = flavor.fill(flavor.pick(flavor.SHIYE_BEG_PAY), n=paid) + "（档信 +2）"
+            if random.random() < 0.22:
+                gift = random.choice(["wild_mint", "compost"])
+                await db.add_item(conn, s["id"], gift, 1)
+                msg += f" · 她回赠 {ITEM_NAMES.get(gift, gift)} x1"
+            return msg
+        await survival.bump(conn, s["id"], mist_wit=1)
+        return flavor.pick(flavor.SHIYE_BEG_BROKE) + "（雾智 +1）"
+
+    if kind == "scam":
+        resist = 0.20 + mist / 180 + standing / 320
+        n = random.randint(*config.SHIYE_SCAM_TICKETS)
+        if random.random() < resist:
+            await survival.bump(conn, s["id"], mist_wit=2)
+            return flavor.pick(flavor.SHIYE_SCAM_WIN) + "（雾智 +2）"
+        paid = await _take_tickets(conn, s["id"], n)
+        await survival.bump(conn, s["id"], standing=-2)
+        msg = flavor.fill(flavor.pick(flavor.SHIYE_SCAM_LOSE), n=paid or n)
+        msg += "（档信 -2）"
+        from . import health as health_mod
+        extra = await health_mod.maybe_roll_ailment(
+            conn, s["id"], "shiye_scam",
+            pool=["sprain", "blister", "cut"],
+            chance=0.18,
+            source="shiye",
+        )
+        if extra:
+            msg += f"\n{extra}\n→ clinic_ops treat …（必须花票）"
+        return msg
+
+    # extort
+    resist = 0.18 + standing / 140 + mist / 280
+    n = random.randint(*config.SHIYE_EXTORT_TICKETS)
+    if random.random() < resist:
+        await survival.bump(conn, s["id"], standing=1)
+        return flavor.pick(flavor.SHIYE_EXTORT_WIN) + "（档信 +1）"
+    paid = await _take_tickets(conn, s["id"], n)
+    await survival.bump(conn, s["id"], standing=-3)
+    if paid:
+        return flavor.fill(flavor.pick(flavor.SHIYE_EXTORT_LOSE), n=paid) + "（档信 -3）"
+    stolen = await _steal_item(conn, s["id"])
+    if stolen:
+        label = ITEM_NAMES.get(stolen, stolen)
+        return (
+            f"敲诈档：票不够，她改顺 {label}。档信 -3。"
+            "拾叶：穷也有穷的缴法"
+        )
+    return "敲诈档：你既没票也没货。拾叶骂了一句叶子，走了（档信 -3）"
+
+
+async def maybe_shiye_bump(
+    conn: aiosqlite.Connection,
+    steward: dict[str, Any],
+    trigger: str,
+) -> str | None:
+    if trigger not in config.SHIYE_TRIGGERS:
+        return None
+    if await _shiye_count(conn, steward["id"]) >= config.SHIYE_DAILY_MAX:
+        return None
+    chance = config.SHIYE_BUMP_CHANCE
+    if world.current_day_phase() in ("dusk", "night"):
+        chance += 0.04
+    if steward.get("standing", 50) < 40:
+        chance += 0.03
+    if random.random() > chance:
+        return None
+    return await _run_shiye_encounter(conn, steward)
+
+
+async def _visit_shiye(steward: dict[str, Any]) -> str:
+    async with aiosqlite.connect(db.DB_PATH) as conn:
+        if await _shiye_count(conn, steward["id"]) >= config.SHIYE_DAILY_MAX:
+            line = random.choice(next(n["lines"] for n in NPC_FIXED if n["key"] == "shiye"))
+            return f"拾叶：{line}\n{flavor.pick(flavor.SHIYE_IDLE)}"
+        msg = await _run_shiye_encounter(conn, steward)
+        await conn.commit()
+    return msg

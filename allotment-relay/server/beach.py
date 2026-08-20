@@ -126,6 +126,8 @@ async def beach_ops(key_id: int, command: str) -> str:
             )
             from . import lili as lili_mod
             lili_spawn = await lili_mod.maybe_spawn_visit(conn)
+            from . import npc as npc_mod
+            shiye = await npc_mod.maybe_shiye_bump(conn, s, "beach")
             await conn.commit()
 
         msg = f"赶海：{label} x{qty}{extra_msg}"
@@ -133,6 +135,8 @@ async def beach_ops(key_id: int, command: str) -> str:
             msg += f"\n{beach_ill}\n→ clinic_ops treat …（必须花票）"
         if lili_spawn:
             msg += f"\n✨ {lili_spawn['detail']} → lili_ops scan"
+        if shiye:
+            msg += f"\n{shiye}"
         msg += flavor.maybe_suffix([
             "沙里藏货，铲子诚不欺我",
             "猫眼螺在看你，你也看它",
@@ -187,6 +191,8 @@ async def beach_ops(key_id: int, command: str) -> str:
                 (s["id"], day, now),
             )
             disc = await commons.roll_discovery(conn, s, "beach")
+            from . import npc as npc_mod
+            shiye = await npc_mod.maybe_shiye_bump(conn, s, "beach")
             await conn.commit()
 
         msg = f"掏洞：{label} x{qty}{clock_msg}"
@@ -197,6 +203,8 @@ async def beach_ops(key_id: int, command: str) -> str:
         ])
         if disc:
             msg += f"\n{disc}"
+        if shiye:
+            msg += f"\n{shiye}"
         await db.add_chronicle("beach", f"{s['name']} 掏洞得 {label}", s["id"])
         return msg
 
