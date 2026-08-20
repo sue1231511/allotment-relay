@@ -74,7 +74,7 @@ async def relay_manual() -> str:
         "",
         "【份地农事 · 随机生长】",
         "  每次 sow 摇出不同生长周期（急长/稳长/慢熟/摸鱼型）",
-        "  tend/gather 可能触发野生动物；tend/forage/net 可能意外挖到/钓到",
+        "  tend/gather 可能触发野生动物；**昼间斑鸠**咕咕偷吃庄稼（伤不得）",
         "  commons_ops scan — 全服稀有公共物资，随机时间上线，claim 抢",
         "",
         "  pen_ops — erect/stock/feed/harvest（渔排养鱼）",

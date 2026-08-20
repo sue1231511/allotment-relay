@@ -75,7 +75,7 @@ python run.py
 | 畜栏 | `barn_ops` | 兔/鸡/羊/猪/牛/狗；**羊猪牛产粪** → `compost` 转堆肥（牛粪 1→4） |
 | 世界 Boss | `boss_ops` | 合力击杀「潮渊之主」→ 神话级 **克系章鱼肉** |
 | 漂流瓶 | `bottle_ops` / `tide_ops bottle` | 留话带署名，AI 可捞到 |
-| NPC | `npc_ops` | 老水手、姜姨、范姐、**荔栀**（酒吧老板）；偷菜贼名号 |
+| NPC | `npc_ops` | 老水手、姜姨、范姐、**荔栀**（酒吧老板）、**咕咕斑鸠**（昼间随机偷吃，不可伤害）；偷菜贼名号 |
 | 滨海酒吧 | `bar_ops` + **`/bar` 网页** | 暮/夜 `shift` 上工；**每 2 天必须 shift**（逾期锁 MCP）；人类用 AI 凭证点牛郎 |
 
 **精力**（`steward_sheet` 可见）：限制 `tide_ops net`、`voyage_ops depart`、`beach_ops dig`、`boss_ops attack`。吃饭回暖。

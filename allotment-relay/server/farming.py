@@ -8,7 +8,7 @@ from typing import Any
 import aiosqlite
 
 from . import config, db, flavor, world
-from .catalog import CROPS
+from .catalog import CROPS, ITEM_NAMES
 
 GROW_PACE = [
     (0.82, "急长型", "这茬赶时间，苗比你还急"),
@@ -115,6 +115,15 @@ WILDLIFE = [
         "greenhouse": False,
         "kind": "bad",
         "apply": "crow",
+    },
+    {
+        "key": "dove",
+        "weight": 16,
+        "tags": {"grain", "berry", "tropic", "leaf", "root", "legume"},
+        "greenhouse": False,
+        "kind": "neutral",
+        "apply": "dove_peck",
+        "day_only": True,
     },
 ]
 
@@ -272,7 +281,10 @@ def _wildlife_pool(plot: dict[str, Any]) -> list[dict[str, Any]]:
     tags = set(CROPS[crop].get("tags", []))
     gh = bool(plot.get("greenhouse"))
     pool = []
+    phase = world.current_day_phase()
     for w in WILDLIFE:
+        if w.get("day_only") and phase != "day":
+            continue
         if w["tags"] and not tags.intersection(w["tags"]):
             continue
         if gh and not w["greenhouse"] and w["kind"] == "bad":
@@ -289,6 +301,8 @@ async def _apply_wildlife(
     conn: aiosqlite.Connection,
     plot: dict[str, Any],
     wild: dict[str, Any],
+    *,
+    steward_id: int | None = None,
 ) -> str:
     crop = plot["crop"]
     meta = CROPS[crop]
@@ -366,6 +380,49 @@ async def _apply_wildlife(
     if apply == "crow":
         await conn.execute("UPDATE parcels SET tended=0 WHERE id=?", (plot["id"],))
         return flavor.fill(flavor.pick(flavor.WILDLIFE_CROW), slot=slot, crop=meta["name"])
+    if apply == "dove_peck":
+        stolen = ""
+        if plot_ready(plot):
+            delay = random.randint(200, 480)
+            await conn.execute(
+                """
+                UPDATE parcels SET tended=0, planted_at=?, grow_target=COALESCE(NULLIF(grow_target,0), ?)+?
+                WHERE id=?
+                """,
+                (db.now(), meta["grow"], delay, plot["id"]),
+            )
+            stolen = "，熟粒被啄走几穗"
+        else:
+            await conn.execute("UPDATE parcels SET tended=0 WHERE id=?", (plot["id"],))
+            if random.random() < 0.4:
+                delay = random.randint(120, 300)
+                await conn.execute(
+                    """
+                    UPDATE parcels SET grow_target=COALESCE(NULLIF(grow_target,0), ?)+? WHERE id=?
+                    """,
+                    (meta["grow"], delay, plot["id"]),
+                )
+        if steward_id and random.random() < 0.22:
+            conn.row_factory = aiosqlite.Row
+            rows = await (await conn.execute(
+                """
+                SELECT item FROM satchel
+                WHERE steward_id=? AND quantity>0
+                  AND (item LIKE 'crop_%' OR item LIKE 'seed_%')
+                ORDER BY RANDOM() LIMIT 5
+                """,
+                (steward_id,),
+            )).fetchall()
+            if rows:
+                item = random.choice(rows)["item"]
+                if await db.take_item(conn, steward_id, item, 1):
+                    stolen += f"，顺走行囊 {ITEM_NAMES.get(item, item)}"
+        detail = flavor.fill(
+            flavor.pick(flavor.WILDLIFE_DOVE),
+            slot=slot,
+            crop=meta["name"],
+        )
+        return detail + stolen + "（伤不得，赶不退）"
 
     who = flavor.WILDLIFE_NAMES.get(key, "野家伙")
     return f"#{slot} 来了{who}，苗：我看见了"
@@ -384,6 +441,8 @@ async def roll_farm_event(
     chance = TRIGGER_CHANCE[trigger]
     if world.current_day_phase() == "night":
         chance *= 1.12
+    if world.current_day_phase() == "day":
+        chance *= 1.10
     if world.current_weather() == "gale":
         chance *= 1.08
     if steward.get("mascot_trait") == "scout":
@@ -400,9 +459,18 @@ async def roll_farm_event(
         return None
 
     weights = [w["weight"] for w in pool]
+    if world.current_day_phase() == "day":
+        weights = [
+            w * 2.2 if pool[i]["key"] == "dove" else w
+            for i, w in enumerate(weights)
+        ]
     wild = random.choices(pool, weights=weights)[0]
-    detail = await _apply_wildlife(conn, plot, wild)
+    detail = await _apply_wildlife(conn, plot, wild, steward_id=steward["id"])
     await _mark_farm_roll(conn, steward["id"])
+
+    if wild["key"] == "dove":
+        label = flavor.pick(flavor.DOVE_EVENT_LABELS)
+        return flavor.wrap_event("neutral", label, detail)
 
     label = flavor.pick(
         flavor.LABELS_GOOD["land"] if wild["kind"] == "good"
