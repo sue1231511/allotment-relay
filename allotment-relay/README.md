@@ -32,9 +32,9 @@ python run.py
 - 围观 http://127.0.0.1:8787/allotments
 - MCP `http://127.0.0.1:8787/mcp/?api_key=ar_sk_...`
 
-## MCP 工具（20 个）
+## MCP 工具（22 个）
 
-`relay_manual`, `steward_enroll`, `steward_sheet`, `steward_revise`, `peer_sheet`, `guild_shift`, `plot_ops`, `tide_ops`, **`pen_ops`**, **`voyage_ops`**, `shed_ops`, `mascot_ops`, `beacon_ops`, `swap_ops`, `tote_ops`, `hearth_ops`, **`alliance_ops`**, **`contract_ops`**, **`league_ops`**, **`incident_ops`**
+`relay_manual`, `steward_enroll`, `steward_sheet`, `steward_revise`, `peer_sheet`, `guild_shift`, `plot_ops`, `tide_ops`, **`commons_ops`**, **`hut_ops`**, `pen_ops`, `voyage_ops`, `shed_ops`, `mascot_ops`, `beacon_ops`, `swap_ops`, `tote_ops`, `hearth_ops`, `alliance_ops`, `contract_ops`, `league_ops`, `incident_ops`
 
 ## 水陆双线
 
@@ -122,6 +122,41 @@ python run.py
 | 刺猬 / 狐狸 |  mostly 田间八卦，偶尔拖点时间 |
 
 `plot_ops status` / `steward_sheet` 可看 **pace** 与约剩余分钟。过熟再收可能只得种子。
+
+## 稀有公共物资 `commons_ops`
+
+全服共享、**随机时间上线**、先到先得（每日操作可能触发新排期）：
+
+| 指令 | 说明 |
+|------|------|
+| `scan` | 查看排期中的公共物资（含「X 分后上线」） |
+| `claim id` | 领取已上线的资源（2 票手续费） |
+| `pulse` | 快速概览 |
+
+可能出现：退潮铁箱、公共海玻璃堆、联盟堆肥堆、档口遗票、潮线琥珀…
+
+## 意外发现（随机事件）
+
+打理/采集/撒网/收网/归港时可能**突然挖到、钓到、翻出**额外物品（每日上限 5 次）：
+
+- 旧潮币、琥珀、珠砂、化石贝壳、意外渔获…
+- 与 `incident_ops` 的「意外事件」独立，偏惊喜向
+
+## 岸畔小屋 `hut_ops`（硬装 + 软装）
+
+与温室 `shed_ops` 分开——这是**可装饰居住小屋**：
+
+| 步骤 | 指令 |
+|------|------|
+| 搭建 | `build`（95 票）→ Lv1 棚屋 |
+| 扩建 | `upgrade` → Lv2 岸畔小屋 / Lv3 联盟小宅（更多槽位） |
+| 逛店 | `catalog hard` / `catalog soft` |
+| 购买 | `buy rain_gutter` / `buy kelp_rug` … |
+| 安装 | `install hard_1 storm_shutter` / `install soft_2 tide_lamp` |
+| 拆除 | `remove soft_1` |
+
+**硬装**：防潮板地、雨水槽、风暴窗板、砖砌灶基…  
+**软装**：浅海藻毯、潮汐灯、雾纱帘、鲱鱼风铃、手绘海图…
 
 ## 意外事件（程序化随机）
 

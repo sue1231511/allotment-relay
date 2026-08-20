@@ -469,6 +469,32 @@ LOW_STANDING_HINT = [
     "巡查员在档口晃——致歉或煮一锅，别装看不见",
 ]
 
+COMMONS_SPAWN_LINES = [
+    "联盟排期 {label}，约 {mins} 分后上线，窗口 {live} 分——手快有",
+    "公共池加了 {label}，{mins} 分钟后开抢，过期不候",
+    "全服公告：{label} 正在路上，定闹钟吧",
+]
+
+COMMONS_CLAIM_LINES = [
+    "抢到 {label}：{loot}（-{fine} 票手续费）——公共池少一项",
+    "手速 OK，{label} 到手 {loot}，-{fine} 票买平安",
+    "{label} 归你：{loot}，别人只能酸",
+]
+
+DISCOVERY_LABELS = ["意外收获", "土里彩蛋", "海的小号惊喜", "谁埋的宝贝"]
+
+DISCOVERY_LINES = [
+    "{hint}——{item}，今天算你眼神好",
+    "突然：{hint}，{item} 进包",
+    "{hint}，{item}。联盟：这不算作弊",
+]
+
+HUT_INSTALL_LINES = [
+    "{slot} 装上 {item}——{hint}",
+    "{item} 就位（{slot}），小屋像样了",
+    "硬装/软装到位：{item}，{hint}",
+]
+
 METER_HINT_SATIETY = "有点饿"
 METER_HINT_MIST = "海雾进脑子了"
 METER_HINT_STANDING = "档口对你爱搭不理"

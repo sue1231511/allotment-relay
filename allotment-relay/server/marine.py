@@ -4,6 +4,7 @@ from typing import Any
 import aiosqlite
 
 from . import db, events, event_gen, flavor, world
+from . import commons
 from .catalog import ITEM_NAMES, SEA_CATCH, voyage_loot_table
 from .config import BOATS, PEN_ERECT_COST, VOYAGE_ROUTES
 from .game import require_steward
@@ -177,6 +178,7 @@ async def pen_ops(key_id: int, command: str) -> str:
                 (pen["id"],),
             )
             extra = await events.roll_after_action(s, "pen_harvest", conn, pen=pen)
+            disc = await commons.roll_discovery(conn, s, "pen_harvest")
             await conn.commit()
         from . import multi
         bonus = await multi.on_league_item(s["id"], f"fish_{species}", qty)
@@ -186,6 +188,8 @@ async def pen_ops(key_id: int, command: str) -> str:
             await db.add_chronicle("league", bonus, None)
             msg += f"\n{bonus}"
         await db.add_chronicle("pen", f"{s['name']} 渔排收网 {meta['name']} x{qty}", s["id"])
+        if disc:
+            msg += f"\n{disc}"
         if extra:
             return f"{msg}\n{extra}"
         return msg
@@ -294,6 +298,10 @@ async def _resolve_voyage(conn: aiosqlite.Connection, s: dict[str, Any], voyage:
         msg += "（船损，voyage_ops repair）"
     if naval_msg:
         msg += f"\n{naval_msg}"
+
+    disc = await commons.roll_discovery(conn, s, "voyage_return")
+    if disc:
+        msg += f"\n{disc}"
 
     await conn.execute(
         "INSERT INTO chronicle (action, actor_id, target_id, text, created_at) VALUES (?, ?, ?, ?, ?)",

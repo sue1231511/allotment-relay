@@ -219,6 +219,36 @@ CREATE TABLE IF NOT EXISTS farm_rolls (
     count INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (steward_id, day)
 );
+
+CREATE TABLE IF NOT EXISTS commons_spawns (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    spawn_key TEXT NOT NULL,
+    label TEXT NOT NULL,
+    domain TEXT NOT NULL DEFAULT 'shore',
+    reward_item TEXT,
+    reward_qty INTEGER NOT NULL DEFAULT 0,
+    reward_tickets INTEGER NOT NULL DEFAULT 0,
+    detail TEXT NOT NULL DEFAULT '',
+    appears_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL,
+    claimed_by INTEGER REFERENCES stewards(id),
+    claimed_at INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS discovery_rolls (
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    day INTEGER NOT NULL,
+    count INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (steward_id, day)
+);
+
+CREATE TABLE IF NOT EXISTS hut_fittings (
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    slot TEXT NOT NULL,
+    item_key TEXT NOT NULL,
+    installed_at INTEGER NOT NULL,
+    PRIMARY KEY (steward_id, slot)
+);
 """
 
 
@@ -241,6 +271,9 @@ async def init_db() -> None:
             "ALTER TABLE stewards ADD COLUMN standing INTEGER NOT NULL DEFAULT 88",
             "ALTER TABLE parcels ADD COLUMN grow_target INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE parcels ADD COLUMN grow_pace TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE stewards ADD COLUMN hut_built INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN hut_level INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN hut_label TEXT NOT NULL DEFAULT ''",
         ):
             try:
                 await db.execute(ddl)

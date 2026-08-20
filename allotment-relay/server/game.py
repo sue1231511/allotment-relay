@@ -5,6 +5,7 @@ from typing import Any
 import aiosqlite
 
 from . import db, events, flavor, farming, survival, world
+from . import commons
 from .catalog import (
     CROPS,
     FORAGE_LOOT,
@@ -60,12 +61,14 @@ async def relay_manual() -> str:
         "",
         "【份地农事 · 随机生长】",
         "  每次 sow 摇出不同生长周期（急长/稳长/慢熟/摸鱼型）",
-        "  tend/gather 可能触发野生动物：兔踩、鹿啃、蜂授粉、蛙守夜…",
-        "  steward_sheet / plot_ops status 可看 pace 与剩余时间",
+        "  tend/gather 可能触发野生动物；tend/forage/net 可能意外挖到/钓到",
+        "  commons_ops scan — 全服稀有公共物资，随机时间上线，claim 抢",
         "",
         "  pen_ops — erect/stock/feed/harvest（渔排养鱼）",
         "  voyage_ops — buy/repair/depart/return（购船出海，归港可触发海上遭遇）",
-        "  shed_ops — erect/label/visit/handoff",
+        "  shed_ops — erect/label/visit/handoff（温室）",
+        "  hut_ops — build/upgrade/catalog/buy/install（岸畔小屋硬装软装）",
+        "  commons_ops — scan/claim/pulse（稀有公共物资，随机上线）",
         "  mascot_ops — adopt/upkeep/train/status",
         "  beacon_ops — post/scan/respond",
         "  swap_ops — offer/claim/list",
@@ -133,6 +136,11 @@ async def steward_sheet(key_id: int) -> str:
         boat = BOATS.get(s["boat_key"], {})
         dmg = " ⚠待修" if s.get("boat_damaged") else ""
         lines.append(f"船: {boat.get('name', s['boat_key'])}{dmg}")
+    if s.get("hut_built"):
+        from .catalog import HUT_LEVELS
+        lvl = s.get("hut_level") or 1
+        hname = s.get("hut_label") or HUT_LEVELS[lvl]["name"]
+        lines.append(f"小屋: {hname}（Lv{lvl}）")
     async with aiosqlite.connect(db.DB_PATH) as conn:
         conn.row_factory = aiosqlite.Row
         pen = await (await conn.execute(
@@ -210,6 +218,9 @@ async def guild_shift(key_id: int) -> str:
 async def plot_ops(key_id: int, command: str) -> str:
     s = await require_steward(key_id)
     pulse = await events.maybe_world_pulse(s)
+    async with aiosqlite.connect(db.DB_PATH) as conn:
+        await commons.maybe_spawn_commons(conn)
+        await conn.commit()
     parts = [c.strip() for c in command.split(";") if c.strip()]
     out = "\n".join([await _plot_one(s, c) for c in parts])
     return f"{pulse}\n{out}" if pulse else out
@@ -299,11 +310,14 @@ async def _plot_one(s: dict, cmd: str) -> str:
                 await conn.execute("UPDATE parcels SET tended=1 WHERE id=?", (pid,))
             extra = await events.roll_after_action(s, "tend", conn)
             farm = await farming.roll_farm_event(conn, s, "tend")
+            disc = await commons.roll_discovery(conn, s, "tend")
             await conn.commit()
         msg = f"打理了 {len(rows)} 块份地" if rows else "没有待打理的份地——苗都乖，或你还没种"
         msg += flavor.maybe_suffix(flavor.TEND_SUFFIX)
         if farm:
             msg += f"\n{farm}"
+        if disc:
+            msg += f"\n{disc}"
         return f"{msg}\n{extra}" if extra else msg
 
     if verb == "gather":
@@ -349,6 +363,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
                     )
             extra = await events.roll_after_action(s, "gather", conn)
             farm = await farming.roll_farm_event(conn, s, "gather")
+            disc = await commons.roll_discovery(conn, s, "gather")
             if got:
                 await survival.bump(conn, s["id"], satiety=min(6, 2 + len(got)))
             await conn.commit()
@@ -369,11 +384,15 @@ async def _plot_one(s: dict, cmd: str) -> str:
             base = f"收成: {', '.join(got)}\n{bonus_msg}"
             if farm:
                 base += f"\n{farm}"
+            if disc:
+                base += f"\n{disc}"
             return f"{base}\n{extra}" if extra else base
         base = f"收成: {', '.join(got)}"
         base += flavor.maybe_suffix(flavor.GATHER_SUFFIX)
         if farm:
             base += f"\n{farm}"
+        if disc:
+            base += f"\n{disc}"
         return f"{base}\n{extra}" if extra else base
 
     if verb == "forage":
@@ -388,10 +407,13 @@ async def _plot_one(s: dict, cmd: str) -> str:
             await conn.execute("UPDATE stewards SET forage_at=? WHERE id=?", (db.now(), s["id"]))
             await survival.bump(conn, s["id"], satiety=4)
             extra = await events.roll_after_action(s, "forage", conn)
+            disc = await commons.roll_discovery(conn, s, "forage")
             await conn.commit()
         await db.add_chronicle("forage", f"{s['name']} 在份地边际采到 {label}", s["id"])
         msg = f"边际采集：{label} x{qty}"
         msg += flavor.maybe_suffix(flavor.FORAGE_SUFFIX)
+        if disc:
+            msg += f"\n{disc}"
         return f"{msg}\n{extra}" if extra else msg
 
     if verb == "post" and len(parts) >= 3:
@@ -459,17 +481,21 @@ async def tide_ops(key_id: int, command: str) -> str:
     if verb == "net":
         cost = 4
         async with aiosqlite.connect(db.DB_PATH) as conn:
+            await commons.maybe_spawn_commons(conn)
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
             if (await cur.fetchone())[0] < cost:
                 raise ValueError(f"撒网需要 {cost} 工分票")
             await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (cost, s["id"]))
             extra = await events.roll_after_action(s, "net", conn)
+            disc = await commons.roll_discovery(conn, s, "net")
             await conn.commit()
         empty_chance = 0.18 - await events.net_bonus_chance()
         if random.random() < empty_chance:
             msg = "空网，只有水草"
             if extra:
                 msg += f"\n{extra}"
+            if disc:
+                msg += f"\n{disc}"
             return f"{pulse}\n{msg}" if pulse else msg
         catch = weighted_fish_pick(tide=tide)
         meta = SEA_CATCH[catch]
@@ -487,6 +513,8 @@ async def tide_ops(key_id: int, command: str) -> str:
             msg = msg + f"\n{bonus}"
         if extra:
             msg += f"\n{extra}"
+        if disc:
+            msg += f"\n{disc}"
         return f"{pulse}\n{msg}" if pulse else msg
 
     raise ValueError(f"未知 tide 指令: {command}")

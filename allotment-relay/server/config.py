@@ -94,3 +94,26 @@ NAVAL_ENCOUNTER_CHANCE = {
 
 # 份地野生动物 / 田间随机
 FARM_EVENT_DAILY_CAP = 6
+
+# 稀有公共资源 — 随机时间上线，全服争抢
+COMMONS_MAX_ACTIVE = 4
+COMMONS_SPAWN_CHANCE = 0.09
+COMMONS_APPEAR_MIN = 120
+COMMONS_APPEAR_MAX = 2400
+COMMONS_LIVE_MIN = 480
+COMMONS_LIVE_MAX = 3600
+COMMONS_CLAIM_FEE = 2
+
+# 意外发现 — 挖到/钓到/翻出
+DISCOVERY_DAILY_CAP = 5
+DISCOVERY_CHANCE = {
+    "tend": 0.11,
+    "forage": 0.14,
+    "net": 0.13,
+    "gather": 0.10,
+    "pen_harvest": 0.09,
+    "voyage_return": 0.08,
+}
+
+# 岸畔小屋
+HUT_BUILD_COST = 95

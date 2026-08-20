@@ -76,10 +76,95 @@ HEARTH_RECIPES = {
     "fish_glassshrimp|wild_mint": {"name": "水晶虾盘", "sell": 58, "tags": ["sea"]},
 }
 
+COMMONS_TEMPLATES = [
+    {"key": "tide_chest", "label": "退潮铁箱", "domain": "shore", "item": "relic_iron", "qty": 1, "tickets": 0, "weight": 10},
+    {"key": "glass_pocket", "label": "公共海玻璃堆", "domain": "shore", "item": "sea_glass", "qty": 3, "tickets": 0, "weight": 14},
+    {"key": "compost_heap", "label": "联盟堆肥堆", "domain": "plot", "item": "compost", "qty": 4, "tickets": 0, "weight": 16},
+    {"key": "mint_patch", "label": "野薄荷丛", "domain": "plot", "item": "wild_mint", "qty": 2, "tickets": 0, "weight": 12},
+    {"key": "silver_net", "label": "借网点", "domain": "sea", "item": "drift_twine", "qty": 3, "tickets": 0, "weight": 11},
+    {"key": "ticket_cache", "label": "档口遗票", "domain": "guild", "item": None, "qty": 0, "tickets": 22, "weight": 8},
+    {"key": "amber_hunk", "label": "潮线琥珀", "domain": "shore", "item": "curio_amber", "qty": 1, "tickets": 0, "weight": 5},
+    {"key": "pearl_grit", "label": "浅湾珠砂", "domain": "sea", "item": "curio_pearl", "qty": 1, "tickets": 0, "weight": 4},
+    {"key": "seed_cache", "label": "公共种箱", "domain": "plot", "item": "seed_kale", "qty": 2, "tickets": 0, "weight": 9},
+]
+
+DISCOVERY_LOOT = {
+    "tend": [
+        ("curio_coin", 1, 12, "土下挖到旧币"),
+        ("relic_iron", 1, 8, "一锹下去碰到铁疙瘩"),
+        ("fossil_shell", 1, 6, "翻出化石贝壳"),
+        ("compost", 1, 18, "土松了，顺手多一堆肥"),
+        ("seed_fogpea", 1, 10, "埋着的雾豌豆种自己冒出来"),
+    ],
+    "forage": [
+        ("curio_amber", 1, 5, "边际捡到琥珀块"),
+        ("sea_glass", 1, 14, "海玻璃反光晃你眼"),
+        ("wild_mint", 2, 16, "薄荷长得比你还精神"),
+        ("ticket_stub", 2, 12, "旧票根成堆，像彩蛋"),
+    ],
+    "net": [
+        ("curio_pearl", 1, 4, "网底卡了粒珠砂"),
+        ("fish_moonjelly", 1, 7, "网到月水母——意外款"),
+        ("drift_twine", 2, 15, "网缠漂绳，赚"),
+        ("fish_razorclam", 1, 10, "网底竹蛏：惊喜"),
+    ],
+    "gather": [
+        ("curio_coin", 1, 10, "收菜带起旧币"),
+        ("seed_bramble", 1, 8, "藤间藏着荆棘莓种"),
+        ("crop_kelp", 1, 9, "土里有浅海藻——谁种的"),
+    ],
+    "pen_harvest": [
+        ("curio_pearl", 1, 6, "收网带出一粒珠砂"),
+        ("fish_periwinkle", 2, 12, "渔排夹带滨螺"),
+    ],
+    "voyage_return": [
+        ("curio_amber", 1, 4, "舱缝卡琥珀"),
+        ("relic_iron", 1, 7, "锚链旁铁 relic"),
+        ("fish_seaurchin", 1, 9, "归港网到海胆"),
+    ],
+}
+
+RARE_CURIO = {
+    "curio_coin": {"name": "旧潮币", "emoji": "🪙", "sell": 28},
+    "curio_amber": {"name": "潮线琥珀", "emoji": "🟠", "sell": 42},
+    "curio_pearl": {"name": "浅湾珠砂", "emoji": "⚪", "sell": 38},
+    "relic_iron": {"name": "锈铁 relic", "emoji": "⚙️", "sell": 22},
+    "fossil_shell": {"name": "化石贝壳", "emoji": "🐚", "sell": 26},
+}
+
+HUT_LEVELS = {
+    1: {"name": "棚屋", "upgrade": 0, "hard": 1, "soft": 2},
+    2: {"name": "岸畔小屋", "upgrade": 165, "hard": 2, "soft": 3},
+    3: {"name": "联盟小宅", "upgrade": 290, "hard": 3, "soft": 5},
+}
+
+HUT_HARD = {
+    "plank_floor": {"name": "防潮板地", "cost": 48, "emoji": "🪵", "hint": "脚感踏实，意外略少"},
+    "rain_gutter": {"name": "雨水槽", "cost": 55, "emoji": "🌧️", "hint": "阵风天份地少点罪"},
+    "storm_shutter": {"name": "风暴窗板", "cost": 72, "emoji": "🪟", "hint": "硬装护体，坏事件权重降"},
+    "brick_hearth": {"name": "砖砌灶基", "cost": 88, "emoji": "🧱", "hint": "brew 多回一点雾智"},
+    "glass_window": {"name": "海雾玻璃窗", "cost": 65, "emoji": "✨", "hint": "温室槽位更抗天气"},
+}
+
+HUT_SOFT = {
+    "kelp_rug": {"name": "浅海藻毯", "cost": 32, "emoji": "🧶", "hint": "软装入门，脚不凉"},
+    "tide_lamp": {"name": "潮汐灯", "cost": 38, "emoji": "💡", "hint": "暮夜雾智少掉一点"},
+    "fog_curtain": {"name": "雾纱帘", "cost": 28, "emoji": "🪭", "hint": "档口看你顺眼些"},
+    "herring_mobile": {"name": "鲱鱼风铃", "cost": 34, "emoji": "🎐", "hint": "风来有响，心情 +"},
+    "mint_cushion": {"name": "薄荷靠垫", "cost": 26, "emoji": "🛋️", "hint": "guild 多一丢丢档信"},
+    "sea_chart": {"name": "手绘海图", "cost": 45, "emoji": "🗺️", "hint": "出海归港略顺"},
+    "bramble_wreath": {"name": "荆棘莓环", "cost": 30, "emoji": "🌸", "hint": "纯好看，访客爱拍"},
+    "glass_float": {"name": "玻璃浮标", "cost": 36, "emoji": "🔮", "hint": "公共物资刷新略快——玄学"},
+}
+
 ITEM_PRICES = {f"seed_{k}": v["seed_price"] for k, v in CROPS.items()}
 ITEM_PRICES.update({f"crop_{k}": v["sell"] for k, v in CROPS.items()})
 ITEM_PRICES.update({f"fish_{k}": v["sell"] for k, v in SEA_CATCH.items()})
 ITEM_PRICES.update({"compost": 6, "wild_mint": 8, "drift_twine": 5, "sea_glass": 12})
+ITEM_PRICES.update({k: v["sell"] for k, v in RARE_CURIO.items()})
+for cat in (HUT_HARD, HUT_SOFT):
+    for k, v in cat.items():
+        ITEM_PRICES[f"fit_{k}"] = v["cost"] // 2
 ITEM_PRICES.update({f"meal_{i}": r["sell"] for i, r in enumerate(HEARTH_RECIPES.values(), 1)})
 
 ITEM_NAMES = {f"seed_{k}": f"{v['name']}种" for k, v in CROPS.items()}
@@ -89,6 +174,10 @@ ITEM_NAMES.update({
     "compost": "堆肥", "wild_mint": "野薄荷", "drift_twine": "漂绳",
     "ticket_stub": "旧票根", "sea_glass": "海玻璃",
 })
+ITEM_NAMES.update({k: f"{v['emoji']}{v['name']}" for k, v in RARE_CURIO.items()})
+for cat in (HUT_HARD, HUT_SOFT):
+    for k, v in cat.items():
+        ITEM_NAMES[f"fit_{k}"] = f"{v['emoji']}{v['name']}"
 for i, r in enumerate(HEARTH_RECIPES.values(), 1):
     ITEM_NAMES[f"meal_{i}"] = r["name"]
 
