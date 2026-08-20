@@ -699,6 +699,8 @@ async def _cmd_menu(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
         lines.append(f"  {drink['name']}（{drink['type']}）— {price} 票{flag_s}")
     lines.append("")
     lines.append("点酒: bar_ops order 酒名")
+    lines.append("")
+    lines.append("常客说，好酒喝到第三杯，老板娘会讲一个不写进菜单的故事。")
     return "\n".join(lines)
 
 

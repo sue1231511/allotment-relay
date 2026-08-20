@@ -4,7 +4,7 @@ from __future__ import annotations
 
 # ── 入口链 ────────────────────────────────────────────────
 UT_UNLOCK_DRINKS = 3          # 单杯≥UT_UNLOCK_DRINK_PRICE 的酒计数
-UT_UNLOCK_DRINK_PRICE = 40    # 计数门槛（最贵常规酒「老板娘心情」45 在此之上）
+UT_UNLOCK_DRINK_PRICE = 30    # 计数门槛（30 票档以上的酒都算；30x3=90 票≈五天低保）
 UT_DESCEND_COST = 3           # 枯井门票
 
 # ── 影信 shadow_rep ───────────────────────────────────────

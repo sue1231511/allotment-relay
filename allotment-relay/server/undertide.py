@@ -65,7 +65,7 @@ async def _bump_rep(conn: aiosqlite.Connection, steward_id: int, delta: int) -> 
 async def on_bar_order(
     conn: aiosqlite.Connection, steward: dict[str, Any], price: int
 ) -> str | None:
-    """bar_ops order 结算后调用：≥40 票的酒计数，满 3 触发鬼故事。"""
+    """bar_ops order 结算后调用：≥30 票的酒计数，满 3 触发鬼故事。"""
     if price < utcfg.UT_UNLOCK_DRINK_PRICE:
         return None
     ut = await _ensure_ut(conn, steward["id"])
@@ -77,7 +77,13 @@ async def on_bar_order(
             "UPDATE steward_undertide SET pricey_count=? WHERE steward_id=?",
             (pricey, steward["id"]),
         )
-        return None
+        await conn.commit()
+        # 进度暗示：正在路上的人该知道自己在路上
+        hints = {
+            1: "\n\n荔栀抬眼看了你一下。",
+            2: "\n\n荔栀擦杯子的手慢了下来。",
+        }
+        return hints.get(pricey)
     await conn.execute(
         "UPDATE steward_undertide SET pricey_count=?, well_hint=1 WHERE steward_id=?",
         (pricey, steward["id"]),
