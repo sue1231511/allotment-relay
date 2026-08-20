@@ -144,6 +144,18 @@ async def league_ops(command: str) -> str:
     return await multi.league_ops(_kid(), command)
 
 
+@mcp.tool(description="渔排养鱼：erect/label/stock/feed/harvest/status")
+async def pen_ops(command: str) -> str:
+    from . import marine
+    return await marine.pen_ops(_kid(), command)
+
+
+@mcp.tool(description="购船出海：buy skiff|cutter|drifter / repair / depart near|far|deep / return")
+async def voyage_ops(command: str) -> str:
+    from . import marine
+    return await marine.voyage_ops(_kid(), command)
+
+
 @mcp.tool(description="意外事件：status/scan/pulse/repair id [item] — 处理蛞蝓、阵风、全服脉冲等")
 async def incident_ops(command: str) -> str:
     from . import events

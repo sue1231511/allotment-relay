@@ -101,6 +101,9 @@ async def _apply_incident(
     conn: aiosqlite.Connection,
     steward: dict[str, Any],
     key: str,
+    *,
+    pen: dict[str, Any] | None = None,
+    voyage: dict[str, Any] | None = None,
 ) -> tuple[str, int | None]:
     spec = config.INCIDENT_DEFS[key]
     plot_id = None
@@ -125,6 +128,36 @@ async def _apply_incident(
             )
         elif key == "slug_trail":
             await conn.execute("UPDATE parcels SET tended=0 WHERE id=?", (plot_id,))
+
+    if spec.get("pen"):
+        if not pen or not pen.get("species"):
+            raise ValueError("no_pen")
+        slot = pen["slot"]
+        detail = detail.replace("#{slot}", str(slot))
+        plot_id = pen["id"]
+        if spec.get("pen_unfeed"):
+            await conn.execute("UPDATE fish_pens SET fed=0 WHERE id=?", (pen["id"],))
+        if spec.get("pen_wreck"):
+            await conn.execute(
+                "UPDATE fish_pens SET species=NULL, stocked_at=NULL, fed=0 WHERE id=?",
+                (pen["id"],),
+            )
+
+    if spec.get("boat_damage"):
+        await conn.execute("UPDATE stewards SET boat_damaged=1 WHERE id=?", (steward["id"],))
+        detail += "（voyage_ops repair 修船）"
+
+    if spec.get("voyage_delay") and voyage:
+        await conn.execute(
+            "UPDATE voyages SET returns_at = returns_at + ? WHERE steward_id=? AND status='sailing'",
+            (spec["voyage_delay"], steward["id"]),
+        )
+        detail += f"（+{spec['voyage_delay'] // 60} 分钟）"
+
+    if spec.get("voyage_bonus_loot"):
+        item, qty = spec["voyage_bonus_loot"]
+        await db.add_item(conn, steward["id"], item, qty)
+        detail += f"（+{ITEM_NAMES.get(item, item)} x{qty}）"
 
     if spec.get("steal_item"):
         stolen = await _steal_random_item(conn, steward["id"])
@@ -169,16 +202,31 @@ async def _apply_incident(
         await db.add_item(conn, steward["id"], item, qty)
         detail += f"（获得 {ITEM_NAMES.get(item, item)} x{qty}）"
 
-    iid = await _create_incident(conn, steward["id"], key, plot_id=plot_id, detail=detail)
+    iid = None
+    if spec.get("kind") == "bad":
+        iid = await _create_incident(conn, steward["id"], key, plot_id=plot_id, detail=detail)
     return detail, iid
 
 
-def _pick_incident(trigger: str, steward: dict[str, Any], *, good: bool) -> str | None:
-    pool = [
-        (k, v["weight"])
-        for k, v in config.INCIDENT_DEFS.items()
-        if trigger in v.get("triggers", set()) and v.get("kind") == ("good" if good else "bad")
-    ]
+def _pick_incident(
+    trigger: str,
+    steward: dict[str, Any],
+    *,
+    good: bool,
+    pen: dict[str, Any] | None = None,
+    voyage: dict[str, Any] | None = None,
+) -> str | None:
+    pool = []
+    for k, v in config.INCIDENT_DEFS.items():
+        if trigger not in v.get("triggers", set()):
+            continue
+        if v.get("kind") != ("good" if good else "bad"):
+            continue
+        if v.get("pen") and not pen:
+            continue
+        if v.get("voyage_delay") and not voyage:
+            continue
+        pool.append((k, v["weight"]))
     if not pool:
         return None
     if steward.get("mascot_trait") == "compost" and not good:
@@ -187,7 +235,14 @@ def _pick_incident(trigger: str, steward: dict[str, Any], *, good: bool) -> str 
     return random.choices(keys, weights=weights, k=1)[0]
 
 
-async def roll_after_action(steward: dict[str, Any], trigger: str, conn: aiosqlite.Connection) -> str | None:
+async def roll_after_action(
+    steward: dict[str, Any],
+    trigger: str,
+    conn: aiosqlite.Connection,
+    *,
+    pen: dict[str, Any] | None = None,
+    voyage: dict[str, Any] | None = None,
+) -> str | None:
     if trigger not in {t for spec in config.INCIDENT_DEFS.values() for t in spec.get("triggers", set())}:
         return None
     if not await _can_roll(conn, steward["id"]):
@@ -198,14 +253,14 @@ async def roll_after_action(steward: dict[str, Any], trigger: str, conn: aiosqli
         return None
 
     good = random.random() < config.EVENT_GOOD_SHARE
-    if world.current_weather() == "gale" and trigger in {"tend", "gather", "sow"}:
+    if world.current_weather() == "gale" and trigger in {"tend", "gather", "sow", "voyage_depart", "voyage_return", "pen_feed"}:
         good = False
-    key = _pick_incident(trigger, steward, good=good)
+    key = _pick_incident(trigger, steward, good=good, pen=pen, voyage=voyage)
     if not key:
         return None
 
     try:
-        detail, iid = await _apply_incident(conn, steward, key)
+        detail, iid = await _apply_incident(conn, steward, key, pen=pen, voyage=voyage)
     except ValueError:
         return None
 

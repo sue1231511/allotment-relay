@@ -55,7 +55,48 @@ TIDE_LABELS = {
     "flood": "涨潮",
 }
 
-# 意外事件 — 份地不会一帆风顺
+PEN_ERECT_COST = 140
+BOAT_REPAIR_BASE = 12
+
+BOATS = {
+    "skiff": {"name": "小舢板", "cost": 85, "rank": 1, "repair": 12, "cargo": 2},
+    "cutter": {"name": "切波艇", "cost": 220, "rank": 2, "repair": 28, "cargo": 4},
+    "drifter": {"name": "漂航船", "cost": 420, "rank": 3, "repair": 45, "cargo": 6},
+}
+
+PEN_SPECIES = {
+    "herring": {
+        "name": "灰鲱", "emoji": "🐟", "grow": 420,
+        "stock_tickets": 10, "feed_item": "compost", "feed_qty": 1,
+    },
+    "mackerel": {
+        "name": "鲭鱼", "emoji": "🐠", "grow": 540,
+        "stock_tickets": 16, "feed_item": "crop_kelp", "feed_qty": 1,
+    },
+    "kelpcrab": {
+        "name": "藻滩蟹", "emoji": "🦀", "grow": 660,
+        "stock_tickets": 22, "feed_item": "compost", "feed_qty": 2,
+    },
+}
+
+VOYAGE_ROUTES = {
+    "near": {
+        "label": "近岸", "duration": 480, "fuel": 8, "min_boat": "skiff",
+        "fail": 0.14,
+        "loot": ["fish_herring", "fish_herring", "drift_twine", "compost", "fish_herring"],
+    },
+    "far": {
+        "label": "外海", "duration": 1200, "fuel": 18, "min_boat": "cutter",
+        "fail": 0.24,
+        "loot": ["fish_mackerel", "fish_kelpcrab", "fish_herring", "sea_glass", "fish_mackerel"],
+    },
+    "deep": {
+        "label": "深漂", "duration": 2400, "fuel": 35, "min_boat": "drifter",
+        "fail": 0.34,
+        "loot": ["fish_pipefish", "fish_glassshrimp", "fish_mackerel", "sea_glass", "fish_pipefish"],
+    },
+}
+
 EVENT_ROLL_CHANCE = 0.14
 EVENT_DAILY_CAP = 4
 EVENT_GOOD_SHARE = 0.22
@@ -152,6 +193,52 @@ INCIDENT_DEFS: dict[str, dict] = {
         "weight": 5,
         "loot": ("compost", 2),
         "text": "边际发现一坨意外堆肥",
+    },
+    "pen_algae": {
+        "label": "藻膜封池",
+        "kind": "bad",
+        "triggers": {"pen_feed", "pen_harvest"},
+        "weight": 8,
+        "pen": True,
+        "pen_unfeed": True,
+        "text": "藻膜封住 #{slot} 号渔排，需重新投饵",
+        "repair_tickets": 4,
+    },
+    "pen_oxygen": {
+        "label": "缺氧翻池",
+        "kind": "bad",
+        "triggers": {"pen_harvest", "pen_stock"},
+        "weight": 5,
+        "pen": True,
+        "pen_wreck": True,
+        "text": " #{slot} 号渔排缺氧，鱼苗尽失",
+        "repair_tickets": 10,
+    },
+    "voyage_leak": {
+        "label": "船底渗漏",
+        "kind": "bad",
+        "triggers": {"voyage_return", "voyage_depart"},
+        "weight": 7,
+        "boat_damage": True,
+        "text": "船底渗漏，须入坞修理才能再出海",
+        "repair_tickets": 0,
+    },
+    "voyage_doldrums": {
+        "label": "无风停滞",
+        "kind": "bad",
+        "triggers": {"voyage_return"},
+        "weight": 6,
+        "voyage_delay": 600,
+        "text": "无风停滞，归港延误",
+        "repair_tickets": 3,
+    },
+    "voyage_bounty": {
+        "label": "满舱而归",
+        "kind": "good",
+        "triggers": {"voyage_return"},
+        "weight": 5,
+        "voyage_bonus_loot": ("fish_herring", 2),
+        "text": "满舱而归，额外渔获入仓",
     },
 }
 

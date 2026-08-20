@@ -15,6 +15,7 @@ from .catalog import (
 )
 from .config import (
     BADGES,
+    BOATS,
     DAILY_BREW_LIMIT,
     FORAGE_COOLDOWN_DAY,
     GREENHOUSE_COST,
@@ -86,6 +87,8 @@ async def relay_manual() -> str:
         "  steward_enroll / steward_sheet / steward_revise / peer_sheet",
         "  plot_ops — sow/tend/gather/forage/scrump/hedge_note/amends/cohort/weather/buy",
         "  tide_ops — net/status",
+        "  pen_ops — erect/stock/feed/harvest（渔排养鱼）",
+        "  voyage_ops — buy/repair/depart/return（购船出海）",
         "  shed_ops — erect/label/visit/handoff",
         "  mascot_ops — adopt/upkeep/train/status",
         "  beacon_ops — post/scan/respond",
@@ -111,6 +114,11 @@ async def relay_manual() -> str:
         "  league_ops contribute 物品 数量 — 推进本周联盟共同目标",
         "  donate/draw — 联盟储藏室共享物资",
         "",
+        "【水陆生产】",
+        "  pen_ops erect → stock herring|mackerel|kelpcrab → feed → harvest",
+        "  voyage_ops buy skiff|cutter|drifter → depart near|far|deep → return",
+        "  出海需先购船；阵风/迷雾/意外事件会让渔排和航程同样不顺",
+        "",
         "逾篱摘取 scrump：plot_ops('scrump 名字 地块号') — 仅可摘已成熟、非温室份地。",
         "对方 20 分钟内活跃过会被逮，罚工分票；scout 吉祥物减半。",
         "摘完可 hedge_note 留话，或 amends 公开致歉。互助仍可用 swap_ops / handoff。",
@@ -133,6 +141,27 @@ async def steward_sheet(key_id: int) -> str:
     ]
     if s["greenhouse"]:
         lines.append(f"温室: {s['greenhouse_label'] or '未命名'}")
+    if s.get("boat_key"):
+        boat = BOATS.get(s["boat_key"], {})
+        dmg = " ⚠待修" if s.get("boat_damaged") else ""
+        lines.append(f"船: {boat.get('name', s['boat_key'])}{dmg}")
+    async with aiosqlite.connect(db.DB_PATH) as conn:
+        conn.row_factory = aiosqlite.Row
+        pen = await (await conn.execute(
+            "SELECT * FROM fish_pens WHERE steward_id=? AND slot=1", (s["id"],)
+        )).fetchone()
+        voyage = await (await conn.execute(
+            "SELECT route, returns_at FROM voyages WHERE steward_id=? AND status='sailing'",
+            (s["id"],),
+        )).fetchone()
+    if pen:
+        from .marine import _pen_line
+        lines.append("渔排:")
+        lines.append(_pen_line(dict(pen)))
+    if voyage:
+        from .config import VOYAGE_ROUTES
+        left = max(0, voyage["returns_at"] - db.now())
+        lines.append(f"出海: {VOYAGE_ROUTES[voyage['route']]['label']}（{left // 60} 分后归港）")
     if s["mascot_name"]:
         lines.append(f"吉祥物: {s['mascot_name']}（{s['mascot_trait']}，士气 {s['mascot_spirit']}）")
     lines.append("份地状态:")

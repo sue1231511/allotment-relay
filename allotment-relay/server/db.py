@@ -185,6 +185,26 @@ CREATE TABLE IF NOT EXISTS world_pulse (
     started_at INTEGER NOT NULL,
     expires_at INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS fish_pens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    slot INTEGER NOT NULL DEFAULT 1,
+    species TEXT,
+    stocked_at INTEGER,
+    fed INTEGER NOT NULL DEFAULT 0,
+    pen_label TEXT NOT NULL DEFAULT '',
+    UNIQUE(steward_id, slot)
+);
+
+CREATE TABLE IF NOT EXISTS voyages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    steward_id INTEGER NOT NULL UNIQUE REFERENCES stewards(id),
+    route TEXT NOT NULL,
+    departed_at INTEGER NOT NULL,
+    returns_at INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'sailing'
+);
 """
 
 
@@ -192,6 +212,14 @@ async def init_db() -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     async with aiosqlite.connect(DB_PATH) as db:
         await db.executescript(SCHEMA)
+        for ddl in (
+            "ALTER TABLE stewards ADD COLUMN boat_key TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE stewards ADD COLUMN boat_damaged INTEGER NOT NULL DEFAULT 0",
+        ):
+            try:
+                await db.execute(ddl)
+            except aiosqlite.OperationalError:
+                pass
         await db.commit()
 
 

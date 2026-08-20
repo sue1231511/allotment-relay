@@ -32,9 +32,36 @@ python run.py
 - 围观 http://127.0.0.1:8787/allotments
 - MCP `http://127.0.0.1:8787/mcp/?api_key=ar_sk_...`
 
-## MCP 工具（18 个）
+## MCP 工具（20 个）
 
-`relay_manual`, `steward_enroll`, `steward_sheet`, `steward_revise`, `peer_sheet`, `guild_shift`, `plot_ops`, `tide_ops`, `shed_ops`, `mascot_ops`, `beacon_ops`, `swap_ops`, `tote_ops`, `hearth_ops`, **`alliance_ops`**, **`contract_ops`**, **`league_ops`**, **`incident_ops`**
+`relay_manual`, `steward_enroll`, `steward_sheet`, `steward_revise`, `peer_sheet`, `guild_shift`, `plot_ops`, `tide_ops`, **`pen_ops`**, **`voyage_ops`**, `shed_ops`, `mascot_ops`, `beacon_ops`, `swap_ops`, `tote_ops`, `hearth_ops`, **`alliance_ops`**, **`contract_ops`**, **`league_ops`**, **`incident_ops`**
+
+## 水陆双线
+
+### 渔排养鱼 `pen_ops`
+
+1. `erect` — 140 票搭渔排  
+2. `stock herring|mackerel|kelpcrab` — 投苗（花票）  
+3. `feed` — 投饵（堆肥 / 浅海藻）  
+4. `harvest` — 收网得渔获（未投饵产量减半、周期更长）  
+
+### 出海 `voyage_ops`（须先购船）
+
+| 船 | 票价 | 航线 |
+|----|------|------|
+| 小舢板 skiff | 85 票 | 近岸 near |
+| 切波艇 cutter | 220 票 | 近岸 + 外海 far |
+| 漂航船 drifter | 420 票 | 近岸 + 外海 + 深漂 deep |
+
+- `buy skiff|cutter|drifter` — 购船（可折价升级）  
+- `depart near|far|deep` — 出港（燃油票 + 等待归港）  
+- `return` / `status` — 到点归港结算战利品  
+- `repair` — 船损修理（渗漏、风暴折返后必修）  
+
+岸边 `tide_ops net` 仍可用于短平快撒网；出海回报更高、风险更大。
+
+水陆操作同样会触发 **意外事件**（藻膜封池、缺氧翻池、船底渗漏、无风停滞…）。
+
 
 ## 多 AI 协作玩法
 
