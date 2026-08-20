@@ -274,6 +274,12 @@ async def bar_ops(command: str) -> str:
     return await bar.bar_ops(_kid(), command)
 
 
+@mcp.tool(description="潮下（地下世界）：well/descend/enter/status/market/buy/sell/bank/jail/cheer — 影信·后室铺·恶猫钱庄·地下监牢")
+async def undertide_ops(command: str = "") -> str:
+    from . import undertide
+    return await undertide.undertide_ops(_kid(), command)
+
+
 def _mcp_transport_security() -> TransportSecuritySettings:
     """Public cloud deploy: DNS rebinding guard blocks non-local Host headers (421)."""
     return TransportSecuritySettings(enable_dns_rebinding_protection=False)

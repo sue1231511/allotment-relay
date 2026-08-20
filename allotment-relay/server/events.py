@@ -175,6 +175,7 @@ async def _scrump_attempt(
     conn: aiosqlite.Connection,
     steward: dict[str, Any],
 ) -> tuple[str, int | None, int | None] | None:
+    jail_note = ""
     peer = await _random_peer(conn, steward["id"])
     if not peer:
         return None
@@ -216,6 +217,8 @@ async def _scrump_attempt(
             (fine, steward["id"]),
         )
         await survival.bump(conn, steward["id"], standing=-random.randint(6, 12))
+        from . import undertide as _ut
+        jail_note = await _ut.on_scrump_busted(conn, steward) or ""
         detail = flavor.fill(
             flavor.pick(flavor.SCRUMP_CAUGHT),
             slot=plot["slot"],
@@ -241,6 +244,7 @@ async def _scrump_attempt(
         ),
     )
     hint = flavor.pick(flavor.HEDGE_QUIPS)
+    detail = detail + jail_note
     return f"{detail}（{hint}；可 plot_ops amends {peer['name']}）", plot["id"], peer["id"]
 
 

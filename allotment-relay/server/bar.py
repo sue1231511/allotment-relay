@@ -780,6 +780,10 @@ async def _cmd_order(conn: aiosqlite.Connection, s: dict[str, Any], drink_name: 
     await db.add_chronicle(
         "bar_drink", f"{s['name']} 点 {drink['name']}（-{cost}票）", s["id"], conn=conn,
     )
+    from . import undertide
+    ghost = await undertide.on_bar_order(conn, s, cost)
+    if ghost:
+        msg += ghost
     reaction = owner_event_reaction(state, day, "order")
     return append_owner_reaction(msg, reaction)
 

@@ -58,6 +58,8 @@ async def require_steward(key_id: int, *, exempt_duty: bool = False) -> dict[str
     if not exempt_duty:
         from . import bar
         await bar.assert_bar_duty(s)
+    from . import undertide
+    await undertide.assert_not_jailed(s["id"])
     await db.touch_steward(s["id"])
     return s
 

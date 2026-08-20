@@ -674,6 +674,81 @@ async def init_db() -> None:
             )
             """,
             "ALTER TABLE parcels ADD COLUMN dove_yield_mult REAL NOT NULL DEFAULT 1.0",
+            """
+            CREATE TABLE IF NOT EXISTS steward_undertide (
+                steward_id INTEGER PRIMARY KEY REFERENCES stewards(id),
+                shadow_rep INTEGER NOT NULL DEFAULT 10,
+                access INTEGER NOT NULL DEFAULT 0,
+                well_hint INTEGER NOT NULL DEFAULT 0,
+                pricey_count INTEGER NOT NULL DEFAULT 0,
+                busted_count INTEGER NOT NULL DEFAULT 0,
+                jail_state TEXT NOT NULL DEFAULT '',
+                jail_until INTEGER NOT NULL DEFAULT 0,
+                jail_work_today INTEGER NOT NULL DEFAULT 0,
+                jail_work_day INTEGER NOT NULL DEFAULT 0,
+                seen_events TEXT NOT NULL DEFAULT '',
+                created_at INTEGER NOT NULL DEFAULT 0
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS ut_market_shelf (
+                day_id INTEGER NOT NULL,
+                slot INTEGER NOT NULL,
+                layer TEXT NOT NULL,
+                item_key TEXT NOT NULL,
+                stock INTEGER NOT NULL,
+                price_mult REAL NOT NULL DEFAULT 1.0,
+                PRIMARY KEY (day_id, slot)
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS ut_market_log (
+                steward_id INTEGER NOT NULL,
+                day_id INTEGER NOT NULL,
+                item_key TEXT NOT NULL,
+                quality TEXT NOT NULL,
+                price INTEGER NOT NULL,
+                created_at INTEGER NOT NULL
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS ut_debts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                steward_id INTEGER NOT NULL,
+                principal INTEGER NOT NULL,
+                due_day INTEGER NOT NULL,
+                source TEXT NOT NULL DEFAULT 'bank',
+                status TEXT NOT NULL DEFAULT 'open',
+                created_day INTEGER NOT NULL
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS ut_event_log (
+                steward_id INTEGER NOT NULL,
+                day_id INTEGER NOT NULL,
+                count INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (steward_id, day_id)
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS ut_owner_state (
+                id INTEGER PRIMARY KEY CHECK (id=1),
+                rate_today REAL NOT NULL DEFAULT 0,
+                rate_reason TEXT NOT NULL DEFAULT '',
+                rate_day INTEGER NOT NULL DEFAULT 0,
+                updated_at INTEGER NOT NULL DEFAULT 0
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS ut_mood_proposals (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                steward_id INTEGER NOT NULL,
+                target_mood TEXT NOT NULL,
+                reason TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending',
+                created_at INTEGER NOT NULL
+            )
+            """,
         ):
             try:
                 await db.execute(ddl)

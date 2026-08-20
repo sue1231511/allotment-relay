@@ -1,0 +1,733 @@
+"""潮下 Undertide — 地下世界主逻辑（一期：入口/影信/后室铺/恶猫钱庄/监牢/事件）。
+
+天天侧维护。设计总纲见 GDD（D:\\undertide\\undertide_gdd_v2.md）。
+二期：深坑/赌场/劫持/胁迫经济/寻仇；三期：凯斯/悬赏墙/K室。
+"""
+
+from __future__ import annotations
+
+import random
+from typing import Any
+
+import aiosqlite
+
+from . import db
+from . import undertide_catalog as cat
+from . import undertide_config as utcfg
+from . import undertide_copy as utcopy
+
+
+def _day_id() -> int:
+    return db.now() // 86400
+
+
+def _fmt_rate(rate: float) -> str:
+    return f"{int(rate * 100)}个百分点"
+
+
+# ══ 状态层 ══════════════════════════════════════════════════
+
+async def _ensure_ut(conn: aiosqlite.Connection, steward_id: int) -> dict[str, Any]:
+    cur = await conn.execute(
+        """INSERT OR IGNORE INTO steward_undertide (steward_id, created_at)
+           VALUES (?, ?)""",
+        (steward_id, db.now()),
+    )
+    if cur.rowcount:  # 新建行立即提交——否则只读分支退出时会回滚丢行
+        await conn.commit()
+    conn.row_factory = aiosqlite.Row
+    row = await (await conn.execute(
+        "SELECT * FROM steward_undertide WHERE steward_id=?", (steward_id,)
+    )).fetchone()
+    return dict(row)
+
+
+def _rep_tier(rep: int) -> tuple[str, float, float]:
+    """返回 (档名, 黑市价格系数, 真货率加成)。"""
+    tier_name, mult, bonus = "烂账鬼", 1.50, -0.05
+    for floor, name, m, b in utcfg.UT_REP_TIERS:
+        if rep >= floor:
+            tier_name, mult, bonus = name, m, b
+    return tier_name, mult, bonus
+
+
+async def _bump_rep(conn: aiosqlite.Connection, steward_id: int, delta: int) -> None:
+    if not delta:
+        return
+    await conn.execute(
+        "UPDATE steward_undertide SET shadow_rep = MAX(0, MIN(100, shadow_rep + ?)) WHERE steward_id=?",
+        (delta, steward_id),
+    )
+
+
+# ══ 地面 hooks ═════════════════════════════════════════════
+
+async def on_bar_order(
+    conn: aiosqlite.Connection, steward: dict[str, Any], price: int
+) -> str | None:
+    """bar_ops order 结算后调用：≥40 票的酒计数，满 3 触发鬼故事。"""
+    if price < utcfg.UT_UNLOCK_DRINK_PRICE:
+        return None
+    ut = await _ensure_ut(conn, steward["id"])
+    if ut["well_hint"]:
+        return None
+    pricey = int(ut.get("pricey_count") or 0) + 1
+    if pricey < utcfg.UT_UNLOCK_DRINKS:
+        await conn.execute(
+            "UPDATE steward_undertide SET pricey_count=? WHERE steward_id=?",
+            (pricey, steward["id"]),
+        )
+        return None
+    await conn.execute(
+        "UPDATE steward_undertide SET pricey_count=?, well_hint=1 WHERE steward_id=?",
+        (pricey, steward["id"]),
+    )
+    await db.add_chronicle(
+        "undertide", f"{steward['name']} 今晚喝得很慢，荔栀讲了个故事", steward["id"], conn=conn
+    )
+    return "\n\n" + utcopy.GHOST_STORY
+
+
+async def on_scrump_busted(
+    conn: aiosqlite.Connection, steward: dict[str, Any]
+) -> str | None:
+    """events.py 逾篱被抓分支调用：案底累计，满 5 条强制收监。"""
+    ut = await _ensure_ut(conn, steward["id"])
+    count = int(ut["busted_count"]) + 1
+    if count < utcfg.UT_JAIL_BUSTED_TRIGGER or ut["jail_state"]:
+        await conn.execute(
+            "UPDATE steward_undertide SET busted_count=? WHERE steward_id=?",
+            (count, steward["id"]),
+        )
+        return None
+    await conn.execute(
+        """UPDATE steward_undertide SET busted_count=?, jail_state='serving',
+           jail_until=?, access=1 WHERE steward_id=?""",
+        (count, db.now() + utcfg.UT_JAIL_TERM_HOURS * 3600, steward["id"]),
+    )
+    await db.add_chronicle(
+        "undertide",
+        utcopy.JAIL_CHRONICLE.format(name=steward["name"]),
+        steward["id"],
+        conn=conn,
+    )
+    return "\n\n" + utcopy.JAIL_ARREST
+
+
+async def assert_not_jailed(steward_id: int) -> None:
+    """game.require_steward 调用：服刑中锁地面交互。"""
+    async with db.connect() as conn:
+        row = await (await conn.execute(
+            "SELECT jail_state, jail_until FROM steward_undertide WHERE steward_id=?",
+            (steward_id,),
+        )).fetchone()
+        if row and row[0] == "serving" and db.now() < int(row[1]):
+            raise ValueError(utcopy.JAILED_LOCK_MSG)
+
+
+# ══ 货架 ═══════════════════════════════════════════════════
+
+async def _ensure_shelf(conn: aiosqlite.Connection, day: int) -> list[dict[str, Any]]:
+    conn.row_factory = aiosqlite.Row
+    rows = await (await conn.execute(
+        "SELECT * FROM ut_market_shelf WHERE day_id=? ORDER BY slot", (day,)
+    )).fetchall()
+    if rows:
+        return [dict(r) for r in rows]
+
+    rng = random.Random(day * 7919)
+    slots: list[tuple[str, str]] = []
+    for key in rng.sample(list(cat.COMMON_GOODS), rng.randint(*utcfg.UT_SHELF["common"][:2])):
+        slots.append(("common", key))
+    linked_keys = list(cat.LINKED_GOODS)
+    rng.shuffle(linked_keys)
+    for key in linked_keys[: rng.randint(*utcfg.UT_SHELF["linked"][:2])]:
+        slots.append(("linked", key))
+    if rng.random() < 0.55:
+        slots.append(("rare", rng.choice(list(cat.RARE_GOODS))))
+    rng.shuffle(slots)
+
+    for slot, (layer, item_key) in enumerate(slots, start=1):
+        stock = rng.randint(*utcfg.UT_SHELF[layer][2:])
+        await conn.execute(
+            "INSERT INTO ut_market_shelf (day_id, slot, layer, item_key, stock, price_mult) VALUES (?,?,?,?,?,?)",
+            (day, slot, layer, item_key, stock, 1.0),
+        )
+    await conn.commit()
+    rows = await (await conn.execute(
+        "SELECT * FROM ut_market_shelf WHERE day_id=? ORDER BY slot", (day,)
+    )).fetchall()
+    return [dict(r) for r in rows]
+
+
+def _item_meta(item_key: str) -> dict[str, Any]:
+    if item_key in cat.LINKED_GOODS:
+        return cat.LINKED_GOODS[item_key]
+    if item_key in cat.RARE_GOODS:
+        return cat.RARE_GOODS[item_key]
+    return cat.COMMON_GOODS[item_key]
+
+
+def _shelf_price(meta: dict[str, Any], layer: str, rep: int) -> int:
+    _, rep_mult, _ = _rep_tier(rep)
+    return max(1, int(meta["base"] * cat.LAYER_MULT.get(layer, 1.5) * rep_mult))
+
+
+async def _cmd_market(conn: aiosqlite.Connection, s: dict[str, Any], ut: dict[str, Any]) -> str:
+    day = _day_id()
+    shelf = await _ensure_shelf(conn, day)
+    lines = [utcopy.SHELF_HEADER, utcopy.KEEPER_DESC.split("\n")[0], ""]
+    for row in shelf:
+        meta = _item_meta(row["item_key"])
+        price = _shelf_price(meta, row["layer"], int(ut["shadow_rep"]))
+        stock_note = "已售" if row["stock"] <= 0 else f"剩 {row['stock']}"
+        layer_tag = {"common": "", "linked": "·联动", "rare": "·稀有"}[row["layer"]]
+        lines.append(
+            f"  #{row['slot']} {meta['emoji']}{meta['name']}{layer_tag} — {price} 票（{stock_note}）"
+        )
+    lines.append("")
+    lines.append("buy 编号 买入 · 离柜概不认账 · sell 物品 [数量] 在掌柜处出货")
+    return "\n".join(lines)
+
+
+async def _cmd_buy(
+    conn: aiosqlite.Connection, s: dict[str, Any], ut: dict[str, Any], slot_token: str
+) -> str:
+    try:
+        slot = int(slot_token.lstrip("#"))
+    except ValueError:
+        raise ValueError("用法: undertide_ops buy 编号")
+
+    day = _day_id()
+    shelf = await _ensure_shelf(conn, day)
+    row = next((r for r in shelf if r["slot"] == slot), None)
+    if not row:
+        raise ValueError(f"货架 #{slot} 不存在（market 查看当日货架）")
+    if row["stock"] <= 0:
+        raise ValueError("已售。后室铺不为任何人留货。")
+
+    meta = _item_meta(row["item_key"])
+    price = _shelf_price(meta, row["layer"], int(ut["shadow_rep"]))
+    cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
+    if (await cur.fetchone())[0] < price:
+        raise ValueError(f"票不足，掌柜报价 {price} 票（他不接受分期）")
+
+    # 质量：真/次/假（影信修正真货率）
+    g, sub, fake = utcfg.UT_QUALITY_BASE
+    _, _, bonus = _rep_tier(int(ut["shadow_rep"]))
+    g = min(0.92, max(0.30, g + bonus))
+    fake = max(0.0, min(0.35, fake - bonus * 0.5))
+    sub = max(0.0, 1.0 - g - fake)
+
+    roll = random.random()
+    await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (price, s["id"]))
+    await conn.execute(
+        "UPDATE ut_market_shelf SET stock=stock-1 WHERE day_id=? AND slot=?", (day, slot)
+    )
+
+    if roll < g:
+        quality = "genuine"
+        item_key = f"ut_{row['item_key']}"
+        await db.add_item(conn, s["id"], item_key, 1)
+        head = utcopy.pick(utcopy.BUY_GENUINE)
+        extra = meta.get("genuine_hint") or meta.get("hint") or ""
+        await _bump_rep(conn, s["id"], 1)
+        tail = f"\n\n【真货】{meta['name']} 已入行囊（ut_{row['item_key']}，掌柜处可出货）"
+        if extra:
+            tail += f"\n{extra}"
+    elif roll < g + sub:
+        quality = "substandard"
+        item_key = f"ut_{row['item_key']}_s"
+        await db.add_item(conn, s["id"], item_key, 1)
+        head = utcopy.pick(utcopy.BUY_SUBSTANDARD)
+        tail = f"\n\n【次品】{meta['name']}（缩水版）已入行囊——能用，只是「能用」的意思。"
+        await _bump_rep(conn, s["id"], 1)
+    else:
+        quality = "fake"
+        head = utcopy.BUY_FAKE.get(row["item_key"]) or utcopy.pick(utcopy.BUY_FAKE_GENERIC)
+        tail = "\n\n【假货】离柜，概不认账。"
+
+    await conn.execute(
+        "INSERT INTO ut_market_log (steward_id, day_id, item_key, quality, price, created_at) VALUES (?,?,?,?,?,?)",
+        (s["id"], day, row["item_key"], quality, price, db.now()),
+    )
+    await conn.commit()
+    return f"掌柜报价 {price} 票。\n{head}{tail}"
+
+
+async def _cmd_sell(
+    conn: aiosqlite.Connection, s: dict[str, Any], ut: dict[str, Any],
+    item_token: str, qty_token: str = "1",
+) -> str:
+    """掌柜处出货（销赃 fence 一期基础版：只收 ut_ 物品）。"""
+    key = item_token.strip()
+    try:
+        qty = max(1, int(qty_token))
+    except ValueError:
+        qty = 1
+    conn.row_factory = aiosqlite.Row
+    row = await (await conn.execute(
+        "SELECT quantity FROM satchel WHERE steward_id=? AND item=?", (s["id"], key)
+    )).fetchone()
+    if not row or row["quantity"] < qty:
+        raise ValueError(f"行囊里没有 {key} x{qty}（tote_ops list 查看）")
+
+    base_key = key[3:-2] if key.endswith("_s") else key[3:]
+    meta = _item_meta(base_key)
+    is_stolen = not key.endswith("_s")
+    if is_stolen:
+        mult = random.uniform(1.5, 1.9)
+    else:
+        mult = 0.45  # 次品出货价
+    total = int(meta["vend"] * mult) * qty
+    lucky = is_stolen and random.random() < 0.05
+    if lucky:
+        total *= 2
+
+    await conn.execute(
+        "UPDATE satchel SET quantity=quantity-? WHERE steward_id=? AND item=?",
+        (qty, s["id"], key),
+    )
+    await conn.execute(
+        "UPDATE satchel SET quantity=0 WHERE steward_id=? AND item=? AND quantity<=0",
+        (s["id"], key),
+    )
+    await conn.execute("UPDATE stewards SET tickets=tickets+? WHERE id=?", (total, s["id"]))
+    await conn.commit()
+
+    if lucky:
+        line = f"掌柜理货的手停了一下。\n「今晚刚好有人找这个。」\n\n{meta['name']} x{qty} → {total} 票（识货·双倍）"
+    elif is_stolen:
+        line = f"{meta['name']} x{qty} → {total} 票。\n掌柜收货的手很稳。他不问来路，只认货。"
+    else:
+        line = f"{meta['name']}（次品）x{qty} → {total} 票。\n掌柜掂了掂：「缩水的就按缩水的算。」"
+    return line
+
+
+# ══ 恶猫钱庄 ═══════════════════════════════════════════════
+
+async def _get_rate(conn: aiosqlite.Connection, day: int) -> tuple[float, str]:
+    conn.row_factory = aiosqlite.Row
+    row = await (await conn.execute("SELECT * FROM ut_owner_state WHERE id=1")).fetchone()
+    if row and int(row["rate_day"]) == day and float(row["rate_today"]) > 0:
+        return float(row["rate_today"]), row["rate_reason"] or ""
+    return utcfg.UT_RATE_BASE, ""
+
+
+def _debt_accrued(principal: int, rate: float, created_day: int, now_day: int) -> int:
+    days = max(0, min(utcfg.UT_LOAN_MAX_DAYS, now_day - created_day))
+    return int(principal * rate * days)
+
+
+async def _bank_summary(
+    conn: aiosqlite.Connection, s: dict[str, Any]
+) -> tuple[list[dict[str, Any]], int]:
+    day = _day_id()
+    rate, reason = await _get_rate(conn, day)
+    conn.row_factory = aiosqlite.Row
+    rows = await (await conn.execute(
+        "SELECT * FROM ut_debts WHERE steward_id=? AND status='open' ORDER BY created_day",
+        (s["id"],),
+    )).fetchall()
+    debts = []
+    total = 0
+    for r in rows:
+        acc = _debt_accrued(int(r["principal"]), rate, int(r["created_day"]), day)
+        overdue = day > int(r["due_day"])
+        total += int(r["principal"]) + acc
+        debts.append({**dict(r), "accrued": acc, "overdue": overdue})
+    return debts, total
+
+
+async def _cmd_bank(
+    conn: aiosqlite.Connection, s: dict[str, Any], ut: dict[str, Any], rest: str
+) -> str:
+    parts = rest.split()
+    verb = parts[0].lower() if parts else "debt"
+    day = _day_id()
+    rate, reason = await _get_rate(conn, day)
+
+    if verb == "borrow":
+        if len(parts) < 2:
+            raise ValueError("用法: undertide_ops bank borrow 票数")
+        try:
+            amount = int(parts[1])
+        except ValueError:
+            raise ValueError("票数须为数字")
+        if amount <= 0:
+            raise ValueError("猫猫不借零票")
+        cap = min(utcfg.UT_LOAN_CAP, int(ut["shadow_rep"]) * 3)
+        if amount > cap:
+            raise ValueError(
+                f"猫猫笑着摇头：「你最多借 {cap} 票哦。」（影信 {ut['shadow_rep']} × 3）"
+            )
+        cur = await conn.execute(
+            "SELECT COUNT(*) FROM ut_debts WHERE steward_id=? AND status='open'", (s["id"],)
+        )
+        open_count = (await cur.fetchone())[0]
+        if open_count >= utcfg.UT_LOAN_CONCURRENT:
+            raise ValueError("「上次的还清了再来说。」（未结清借单已达上限）")
+        await conn.execute(
+            "INSERT INTO ut_debts (steward_id, principal, due_day, source, created_day) VALUES (?,?,?,?,?)",
+            (s["id"], amount, day + utcfg.UT_LOAN_MAX_DAYS, "bank", day),
+        )
+        await conn.execute("UPDATE stewards SET tickets=tickets+? WHERE id=?", (amount, s["id"]))
+        await conn.commit()
+        return utcopy.BANK_BORROW.format(rate=_fmt_rate(rate)) + f"\n\n（+{amount} 票 · 到期日：第 {day + utcfg.UT_LOAN_MAX_DAYS} 天 · 利率 {_fmt_rate(rate)}/日）"
+
+    if verb == "repay":
+        arg = parts[1].lower() if len(parts) > 1 else "all"
+        debts, total = await _bank_summary(conn, s)
+        if not debts:
+            return "猫猫翻了翻账本：「你目前不欠我。」（这句话在她这儿算是夸奖。）"
+        cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
+        wallet = (await cur.fetchone())[0]
+        want = total if arg == "all" else (int(arg) if arg.isdigit() else 0)
+        if want <= 0:
+            raise ValueError("还款数额无效。")
+        pay = min(wallet, want)
+        if pay <= 0:
+            raise ValueError("票不够——小八已经开始念你的名字了。")
+        remaining = pay
+        lines = []
+        settled_all = True
+        for d in debts:
+            if remaining <= 0:
+                settled_all = False
+                break
+            owe = d["principal"] + d["accrued"]
+            take = min(remaining, owe)
+            if take >= owe:
+                await conn.execute("UPDATE ut_debts SET status='paid' WHERE id=?", (d["id"],))
+                lines.append(f"单 #{d['id']} 结清。")
+            else:
+                fold = 1 + rate * max(0, min(utcfg.UT_LOAN_MAX_DAYS, day - d["created_day"]))
+                new_principal = max(1, int((owe - take) / fold))
+                await conn.execute(
+                    "UPDATE ut_debts SET principal=? WHERE id=?", (new_principal, d["id"])
+                )
+                lines.append(f"单 #{d['id']} 部分还款，折算后剩本金 {new_principal} 票继续滚。")
+                settled_all = False
+            remaining -= take
+        paid_total = pay - remaining
+        await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (paid_total, s["id"]))
+        if settled_all:
+            await _bump_rep(conn, s["id"], 3)
+            lines.append(utcopy.BANK_REPAY_FULL)
+        await conn.commit()
+        return "\n".join(lines) + f"\n\n（本次还款 {paid_total} 票）"
+
+    # debt（默认）
+    debts, total = await _bank_summary(conn, s)
+    lines = [utcopy.BANK_DEBT_HEADER]
+    if reason:
+        lines.insert(0, utcopy.RATE_TODAY_HEADER.format(
+            rate=_fmt_rate(rate), reason=reason))
+    if not debts:
+        lines.append("在册欠单：无。小八今天没你的名字可念。")
+    else:
+        for d in debts:
+            flag = " ⚠逾期" if d["overdue"] else ""
+            lines.append(
+                f"  单 #{d['id']} · 本金 {d['principal']} + 利 {d['accrued']} · "
+                f"第 {d['due_day']} 天到期{flag}"
+            )
+        lines.append(f"合计 {total} 票 · {utcopy.XIAOBA_DEBT}")
+    overdue_days = 0
+    for d in debts:
+        if d["overdue"]:
+            overdue_days = max(overdue_days, day - int(d["due_day"]))
+    if overdue_days >= 1:
+        lines.append("\n" + utcopy.OVERDUE_DAY1)
+    if overdue_days >= 3:
+        lines.append(utcopy.OVERDUE_DAY3)
+    if overdue_days >= 5:
+        lines.append(utcopy.OVERDUE_DAY5)
+    if overdue_days >= 7:
+        lines.append(utcopy.OVERDUE_DAY7)
+    return "\n".join(lines)
+
+
+# ══ 地下监牢 ═══════════════════════════════════════════════
+
+async def _maybe_release(conn: aiosqlite.Connection, ut: dict[str, Any], steward_id: int) -> dict[str, Any]:
+    if ut["jail_state"] == "serving" and db.now() >= int(ut["jail_until"]):
+        await conn.execute(
+            "UPDATE steward_undertide SET jail_state='', jail_work_today=0 WHERE steward_id=?",
+            (steward_id,),
+        )
+        await _bump_rep(conn, steward_id, utcfg.UT_JAIL_SERVE_REP)
+        ut = {**ut, "jail_state": "", "released": "serve"}
+    return ut
+
+
+async def _cmd_jail(
+    conn: aiosqlite.Connection, s: dict[str, Any], ut: dict[str, Any], rest: str
+) -> str:
+    parts = rest.split()
+    verb = parts[0].lower() if parts else "status"
+    day = _day_id()
+
+    if verb == "status":
+        lines = [utcopy.JAIL_DESC, ""]
+        lines.append(f"档口在册案底：{ut['busted_count']} 条。")
+        lines.append("恶猫钱庄那本上也记着。猫猫那本，比档口的全。")
+        if ut["jail_state"] == "serving":
+            hours_left = max(0, (int(ut["jail_until"]) - db.now()) // 3600)
+            lines.append(
+                f"\n服刑中——剩余约 {hours_left} 小时。"
+                f"今日已搬 {ut.get('jail_work_today', 0)}/{utcfg.UT_JAIL_WORK_PER_DAY} 趟"
+                f"（满 {utcfg.UT_JAIL_WORK_PER_DAY} 趟减刑 {utcfg.UT_JAIL_REDUCE_HOURS} 小时）。"
+            )
+        return "\n".join(lines)
+
+    if verb == "ransom":
+        if ut["jail_state"] != "serving":
+            raise ValueError("你不在里面。（jail ransom 只对服刑中开放）")
+        cost = int(ut["busted_count"]) * utcfg.UT_JAIL_RANSOM_PER_COUNT
+        cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
+        if (await cur.fetchone())[0] < cost:
+            raise ValueError(
+                f"赎身需 {cost} 票（案底 {ut['busted_count']} 条 × {utcfg.UT_JAIL_RANSOM_PER_COUNT}）。"
+                f"票不够的话——墙上有写的第三种，没人试过。"
+            )
+        remain = int(ut["busted_count"]) // 2
+        await conn.execute(
+            "UPDATE steward_undertide SET busted_count=?, jail_state='', jail_until=0 WHERE steward_id=?",
+            (remain, s["id"]),
+        )
+        await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (cost, s["id"]))
+        await _bump_rep(conn, s["id"], utcfg.UT_JAIL_RANSOM_REP)
+        await conn.commit()
+        return utcopy.JAIL_RELEASE_RANSOM + f"\n（−{cost} 票 · 案底减半至 {remain} 条）"
+
+    if verb == "serve":
+        if ut["jail_state"]:
+            return "你已经在里面了。认了就搬货：jail work。"
+        raise ValueError("你不在里面，也最好别进去。")
+
+    if verb == "work":
+        if ut["jail_state"] != "serving":
+            raise ValueError("你不是在服刑——想挣钱去上面打工，或者下面赌。")
+        today = int(ut.get("jail_work_day") or 0)
+        done = int(ut.get("jail_work_today") or 0)
+        if today != day:
+            done = 0
+        if done >= utcfg.UT_JAIL_WORK_PER_DAY:
+            raise ValueError(f"今天搬满 {utcfg.UT_JAIL_WORK_PER_DAY} 趟了。手要废的。明天继续。")
+        done += 1
+        reduce_note = ""
+        if done == utcfg.UT_JAIL_WORK_PER_DAY:
+            await conn.execute(
+                "UPDATE steward_undertide SET jail_until=jail_until-? WHERE steward_id=?",
+                (utcfg.UT_JAIL_REDUCE_HOURS * 3600, s["id"]),
+            )
+            reduce_note = f"\n\n今日满额——减刑 {utcfg.UT_JAIL_REDUCE_HOURS} 小时。"
+        await conn.execute(
+            "UPDATE steward_undertide SET jail_work_today=?, jail_work_day=? WHERE steward_id=?",
+            (done, day, s["id"]),
+        )
+        await conn.execute(
+            "UPDATE stewards SET tickets=tickets+?, health=MAX(0,MIN(100,health+?)) WHERE id=?",
+            (utcfg.UT_JAIL_WORK_PAY, utcfg.UT_JAIL_WORK_BODY, s["id"]),
+        )
+        await conn.commit()
+        body = utcopy.pick(utcopy.JAIL_WORK_POOL).format(n=done)
+        hours_left = max(0, (int(ut["jail_until"]) - db.now()) // 3600)
+        return (
+            f"{body}\n\n（+{utcfg.UT_JAIL_WORK_PAY} 票 · body {utcfg.UT_JAIL_WORK_BODY} · "
+            f"今日 {done}/{utcfg.UT_JAIL_WORK_PER_DAY} 趟 · 剩余约 {hours_left} 小时）{reduce_note}"
+        )
+
+    raise ValueError("未知 jail 指令（status/ransom/serve/work）")
+
+
+# ══ 哄猫猫 ═════════════════════════════════════════════════
+
+async def _cmd_cheer(
+    conn: aiosqlite.Connection, s: dict[str, Any], rest: str
+) -> str:
+    reason = rest.strip()
+    if not reason:
+        raise ValueError("说点什么。猫猫不接受沉默的讨好。")
+    day = _day_id()
+    row = await (await conn.execute(
+        "SELECT COUNT(*) FROM ut_mood_proposals WHERE steward_id=? AND status='pending' AND created_at>?",
+        (s["id"], db.now() - 86400),
+    )).fetchone()
+    if row[0] >= utcfg.UT_CHEER_DAILY:
+        raise ValueError("今天已经说过一次了。说太多显得不诚恳。")
+    await conn.execute(
+        "INSERT INTO ut_mood_proposals (steward_id, target_mood, reason, status, created_at) VALUES (?,?,?,?,?)",
+        (s["id"], "good", reason[:100], "pending", db.now()),
+    )
+    await conn.commit()
+    return utcopy.CHEER_SUBMIT
+
+
+# ══ 随机事件 ═══════════════════════════════════════════════
+
+async def _maybe_event(
+    conn: aiosqlite.Connection, s: dict[str, Any], ut: dict[str, Any]
+) -> str:
+    day = _day_id()
+    row = await (await conn.execute(
+        "SELECT count FROM ut_event_log WHERE steward_id=? AND day_id=?", (s["id"], day)
+    )).fetchone()
+    used = int(row[0]) if row else 0
+    if used >= utcfg.UT_EVENT_DAILY_CAP or random.random() > utcfg.UT_EVENT_CHANCE:
+        return ""
+
+    # 一期事件池
+    pool = ["pickpocket", "black_warehouse", "restock_night", "xiaoba_reminder"]
+    row2 = await (await conn.execute(
+        "SELECT seen_events FROM steward_undertide WHERE steward_id=?", (s["id"],)
+    )).fetchone()
+    seen = set((row2["seen_events"] or "").split(",")) if row2 and row2["seen_events"] else set()
+    if "well_voice" not in seen:
+        pool.insert(0, "well_voice")
+    key = random.choice(pool)
+    ev = utcopy.EVENTS[key]
+
+    effects = []
+    if ev.get("tickets"):
+        lo, hi = ev["tickets"]
+        delta = -random.randint(abs(lo), abs(hi)) if lo < 0 else random.randint(lo, hi)
+        await conn.execute(
+            "UPDATE stewards SET tickets=MAX(0,tickets+?) WHERE id=?", (delta, s["id"])
+        )
+        effects.append(f"工分票 {delta}")
+    if ev.get("body"):
+        await conn.execute(
+            "UPDATE stewards SET health=MAX(0,MIN(100,health+?)) WHERE id=?", (ev["body"], s["id"])
+        )
+        effects.append(f"body {ev['body']}")
+    if ev.get("rep"):
+        await _bump_rep(conn, s["id"], ev["rep"])
+        effects.append(f"影信 +{ev['rep']}")
+    if ev.get("info"):
+        effects.append(ev["info"])
+    if ev.get("once"):
+        seen.add(key)
+        await conn.execute(
+            "UPDATE steward_undertide SET seen_events=? WHERE steward_id=?",
+            (",".join(sorted(seen)), s["id"]),
+        )
+    if not row:
+        await conn.execute(
+            "INSERT INTO ut_event_log (steward_id, day_id, count) VALUES (?,?,1)", (s["id"], day)
+        )
+    else:
+        await conn.execute(
+            "UPDATE ut_event_log SET count=count+1 WHERE steward_id=? AND day_id=?",
+            (s["id"], day),
+        )
+    await conn.commit()
+    tail = f"\n（{' · '.join(effects)}）" if effects else ""
+    return f"\n\n——\n{ev['text']}{tail}"
+
+
+# ══ 主入口 ═════════════════════════════════════════════════
+
+async def _cmd_status(conn: aiosqlite.Connection, s: dict[str, Any], ut: dict[str, Any]) -> str:
+    tier, mult, bonus = _rep_tier(int(ut["shadow_rep"]))
+    lines = ["«潮下 · 状态»", ""]
+    lines.append(f"影信 {ut['shadow_rep']} · {tier} — {utcopy.REP_TIER_DESC[tier]}")
+    lines.append(f"黑市价格系数 ×{mult:.2f} · 真货率修正 {bonus:+.0%}")
+    if not ut["access"]:
+        lines.append("\n你还没下去过。（跟荔栀混熟点——好酒喝到位，她会给你讲故事的。）")
+    if ut["jail_state"] == "serving":
+        lines.append(f"\n⚠ 服刑中（jail status 查看详情）")
+    debts, total = await _bank_summary(conn, s)
+    if debts:
+        lines.append(f"\n恶猫钱庄在册欠单 {len(debts)} 笔，合计 {total} 票（bank debt 详情）")
+    if int(ut["busted_count"]):
+        lines.append(f"档口在册案底 {ut['busted_count']} 条")
+    return "\n".join(lines)
+
+
+async def undertide_ops(key_id: int, command: str) -> str:
+    s = await db.get_steward_by_key_id(key_id)
+    if not s or not s["enrolled"]:
+        raise ValueError("请先调用 steward_enroll 登记管理员身份")
+    await db.touch_steward(s["id"])
+
+    parts = command.strip().split()
+    verb = parts[0].lower() if parts else "help"
+    rest = command.strip()[len(verb):].strip()
+
+    async with db.connect() as conn:
+        ut = await _ensure_ut(conn, s["id"])
+        ut = await _maybe_release(conn, ut, s["id"])
+        jailed = ut["jail_state"] == "serving"
+        day = _day_id()
+
+        if jailed and verb not in ("jail", "status", "help"):
+            raise ValueError(utcopy.JAILED_LOCK_MSG)
+
+        if verb == "help":
+            return utcopy.HELP
+
+        if verb == "well":
+            if not ut["well_hint"]:
+                return utcopy.WELL_LOCKED
+            return utcopy.WELL_HINTED + ("\n\n（undertide_ops descend — 下去，3 票）" if not ut["access"] else "")
+
+        if verb == "descend":
+            if not ut["well_hint"]:
+                raise ValueError("后院那口枯井被木板半封着。没什么特别的。（还不该下去）")
+            if ut["access"]:
+                raise ValueError("你已经下来过了。undertide_ops enter。")
+            cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
+            if (await cur.fetchone())[0] < utcfg.UT_DESCEND_COST:
+                raise ValueError("井底的人要 3 票门票。你现在连这个都拿不出。")
+            await conn.execute(
+                "UPDATE stewards SET tickets=tickets-? WHERE id=?", (utcfg.UT_DESCEND_COST, s["id"])
+            )
+            await conn.execute("UPDATE steward_undertide SET access=1 WHERE steward_id=?", (s["id"],))
+            await db.add_chronicle(
+                "undertide", f"井底的人收了一张新门票。{s['name']} 下去了。", s["id"], conn=conn
+            )
+            await conn.commit()
+            return utcopy.DESCEND_TEXT
+
+        if verb == "enter":
+            if not ut["access"]:
+                raise ValueError(utcopy.NO_ACCESS_HINT)
+            event = await _maybe_event(conn, s, ut)
+            return utcopy.pick(utcopy.ENTER_POOL) + event
+
+        if verb == "status":
+            return await _cmd_status(conn, s, ut)
+
+        if verb == "market":
+            if not ut["access"]:
+                raise ValueError(utcopy.NO_ACCESS_HINT)
+            return await _cmd_market(conn, s, ut)
+
+        if verb == "buy":
+            if not ut["access"]:
+                raise ValueError(utcopy.NO_ACCESS_HINT)
+            if not rest:
+                raise ValueError("用法: undertide_ops buy 编号")
+            msg = await _cmd_buy(conn, s, ut, rest.split()[0])
+            return msg + await _maybe_event(conn, s, ut)
+
+        if verb == "sell":
+            if not ut["access"]:
+                raise ValueError(utcopy.NO_ACCESS_HINT)
+            tokens = rest.split()
+            if not tokens:
+                raise ValueError("用法: undertide_ops sell 物品key [数量]")
+            return await _cmd_sell(conn, s, ut, tokens[0], tokens[1] if len(tokens) > 1 else "1")
+
+        if verb == "bank":
+            return await _cmd_bank(conn, s, ut, rest)
+
+        if verb == "jail":
+            return await _cmd_jail(conn, s, ut, rest)
+
+        if verb == "cheer":
+            return await _cmd_cheer(conn, s, rest)
+
+    raise ValueError(f"未知 undertide 指令: {command}\n{utcopy.HELP}")
