@@ -102,7 +102,7 @@ async def relay_manual() -> str:
         "  boss_ops 合力击杀潮渊之主 → 神话章鱼肉",
         "  票紧？暮/夜 bar_ops work 岗位 day|night — 洗碗到牛郎；逾期白天可补班 ×0.72",
         "  bar_ops tonight 看驻唱·特调·活动；menu/order 点酒；tip 给当班员工小费",
-        "  驻唱固定 NPC：我哪有旺夫命；老板荔栀。小屋装件会改意外、出海、赶海、小费",
+        "  驻唱固定 NPC：我哪有旺夫命；老板荔枝。小屋装件会改意外、出海、赶海、小费",
         "  意外/赶海/出海/上工可能致病 → clinic_ops treat 花钱治（桥桥大夫不赊账）",
         f"  **每 {BAR_MANDATORY_DAYS} 天必须 work 一次**，逾期其它 MCP 锁定",
         "  人类网页 /bar 点牛郎 · /eatery 点小馆熟菜",

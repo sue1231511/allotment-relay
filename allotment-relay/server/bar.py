@@ -20,9 +20,24 @@ from .bar_catalog import (
     BAR_OWNER_MOODS,
     BAR_SINGER,
     BAR_SONGS,
+    BAR_STAFF_FLAVOR,
     BEER_TYPES,
     LIZHI_BAR_STORY,
     SONG_REQUEST_COST,
+)
+from .bar_copy import (
+    BAR_ACTIVITY_FLAVOR,
+    BAR_DEEP_ECHO,
+    BAR_ORDER_AMBIENT,
+    BAR_OWNER_NAME,
+    BAR_SHIPWRECK_TEXT,
+    BAR_SONG_REQUEST_LINES,
+    BAR_TIP_LARGE,
+    BAR_TIP_NORMAL,
+    BAR_TIP_NOTE,
+    BAR_TIP_SMALL,
+    BAR_WEB,
+    pick_tonight_ambient,
 )
 from .bar_owner import (
     append_owner_reaction,
@@ -113,7 +128,7 @@ async def assert_bar_duty(steward: dict[str, Any]) -> None:
     if is_shift_overdue(steward):
         raise ValueError(
             f"联盟规定每 {config.BAR_MANDATORY_DAYS} 天必须 bar_ops work 滨海酒吧上工。"
-            f"荔栀：「{steward['name']}，打卡去，别的指令等你上完班。」"
+            f"{BAR_OWNER_NAME}：「{steward['name']}，打卡去，别的指令等你上完班。」"
         )
 
 
@@ -383,10 +398,13 @@ def _job_eligible(skills: dict[str, Any], job_id: str, period: str) -> tuple[boo
 
 
 def _pick_event(job_id: str, late: bool) -> dict[str, Any]:
-    job_pool = BAR_EVENTS.get(job_id if job_id in ("dishwasher", "server", "bartender", "host") else "dishwasher", [])
     if job_id in BAR_EVENTS:
         job_pool = BAR_EVENTS[job_id]
-    elif job_id in ("runner", "greeter"):
+    elif job_id == "runner":
+        job_pool = BAR_EVENTS.get("runner", BAR_EVENTS.get("server", []))
+    elif job_id == "greeter":
+        job_pool = BAR_EVENTS.get("greeter", BAR_EVENTS.get("server", []))
+    else:
         job_pool = BAR_EVENTS.get("server", []) + BAR_EVENTS.get("dishwasher", [])
 
     roll = random.random()
@@ -496,7 +514,7 @@ async def _run_work(
     mult, poor_note = _poor_bonus(s.get("tickets", 0))
     if makeup:
         mult *= 0.72
-        poor_note = (poor_note + " · " if poor_note else "") + "白天补班，荔栀让你擦杯子"
+        poor_note = (poor_note + " · " if poor_note else "") + f"白天补班，{BAR_OWNER_NAME}让你擦杯子"
     wage = max(1, int(base_wage * mult))
 
     tips = random.randint(0, config.BAR_TIP_MAX)
@@ -592,7 +610,7 @@ def _poor_bonus(tickets: int) -> tuple[float, str]:
     if tickets <= config.BAR_POOR_THRESHOLD:
         return config.BAR_POOR_PAY_MULT, flavor.pick(config.BAR_POOR_LABELS)
     if tickets <= config.BAR_POOR_THRESHOLD * 2:
-        return 1.25, "票不多，荔栀多塞了两张"
+        return 1.25, f"票不多，{BAR_OWNER_NAME}多塞了两张"
     return 1.0, ""
 
 
@@ -601,15 +619,26 @@ async def _cmd_tonight(conn: aiosqlite.Connection) -> str:
     state = await _refresh_state_mood(conn, state)
     day = _day_id()
     staff = await _staff_today(conn)
-    activity = BAR_ACTIVITIES.get(state.get("activity_key") or "", {})
+    activity_key = state.get("activity_key") or ""
+    activity = BAR_ACTIVITIES.get(activity_key, {})
     mood = state.get("effective_mood", "normal")
     auto_mood = state.get("auto_mood", mood)
     playlist = _playlist_keys(state)
     special = BAR_DRINKS.get(state.get("special_drink", ""), {})
     phase = world.day_phase_label(world.current_day_phase())
+    late = _is_late_night()
+    rev = int(state.get("revenue_tickets") or 0)
+    if mood in ("great", "good") or rev >= 100:
+        tier = "busy"
+    elif mood in ("bad", "awful") or rev < 35:
+        tier = "slow"
+    else:
+        tier = "normal"
 
     lines = [
         f"«{COASTAL_BAR['name']} · {_weekday_label()}{phase}场",
+        "",
+        pick_tonight_ambient(tier, late),
         "",
         f"驻唱：{BAR_SINGER['name']}",
         f"今晚歌单：{len(playlist)} 首",
@@ -617,7 +646,11 @@ async def _cmd_tonight(conn: aiosqlite.Connection) -> str:
         f"今日特调：{special.get('name', state.get('special_drink', '—'))}",
     ]
     if activity:
-        lines.append(f"当前活动：{activity.get('name')}，{activity.get('desc', '')}")
+        act_line = f"当前活动：{activity.get('name')}，{activity.get('desc', '')}"
+        flavor_line = BAR_ACTIVITY_FLAVOR.get(activity_key)
+        if flavor_line:
+            act_line += f"\n{flavor_line}"
+        lines.append(act_line)
     if state.get("global_event"):
         lines.append(f"全场事件：{state['global_event']}")
     if state.get("owner_event_enabled") and int(state.get("owner_event_date") or 0) == day:
@@ -631,7 +664,7 @@ async def _cmd_tonight(conn: aiosqlite.Connection) -> str:
     if int(state.get("manual_mood_date") or 0) == day:
         lines.append(f"  人工覆盖 · auto={mood_label(auto_mood)} · effective={mood_label(mood)}")
     else:
-        lines.append(f"  自动营收 · auto={mood_label(auto_mood)} · 今日营收 {state.get('revenue_tickets', 0)} 票")
+        lines.append(f"  自动营收 · auto={mood_label(auto_mood)} · 今日营收 {rev} 票")
     lines.append("）»")
     return "\n".join(lines)
 
@@ -703,15 +736,25 @@ async def _cmd_order(conn: aiosqlite.Connection, s: dict[str, Any], drink_name: 
             (_day_id(),),
         )
 
-    text = drink["text"]
+    text = random.choice(drink["texts"]) if drink.get("texts") else drink["text"]
     if drink_key == "owner_mood":
         text = _owner_mood_drink_text(state)
-    elif drink_key == "shipwreck" and shipwreck:
-        text += "\n\n（今日你懂这杯的意思。首杯价已按沉船互助夜折算。）"
+    elif drink_key == "shipwreck":
+        text = BAR_SHIPWRECK_TEXT["default"]
+        if shipwreck:
+            text += "\n\n" + BAR_SHIPWRECK_TEXT["shipwreck"]
+        elif random.random() < 0.2:
+            text += "\n\n" + BAR_SHIPWRECK_TEXT["success"]
+    elif drink_key == "deep_echo":
+        text = BAR_DEEP_ECHO["again"]
+        if random.random() < 0.4:
+            text = BAR_DEEP_ECHO["first"]
+        if s.get("boat_damaged") and random.random() < 0.35:
+            text = BAR_DEEP_ECHO["after_accident"]
 
-    note = flavor.pick([
-        f"荔栀记帐：{s['name']} 点 {drink['name']}",
-        f"杯沿凝露，{world.weather_label(world.current_weather())} 夜",
+    note = random.choice([
+        f"{BAR_OWNER_NAME}记帐：{s['name']} 点 {drink['name']}",
+        random.choice(BAR_ORDER_AMBIENT),
     ])
     await conn.execute(
         """
@@ -799,7 +842,10 @@ async def _cmd_staff(conn: aiosqlite.Connection) -> str:
         seen.add(sid)
         meta = BAR_JOBS.get(row["job"], {"name": row["job"]})
         plabel = "白班" if row["period"] == "day" else "夜班"
-        lines.append(f"{row['name']} —— {meta['name']}（{plabel}）")
+        flavor_pool = BAR_STAFF_FLAVOR.get(row["job"], [])
+        status = random.choice(flavor_pool) if flavor_pool else ""
+        extra = f" — {status}" if status else ""
+        lines.append(f"{row['name']} —— {meta['name']}（{plabel}）{extra}")
     lines.append("")
     lines.append("小费: bar_ops tip AI 数量 [备注]»")
     msg = "\n".join(lines)
@@ -867,14 +913,15 @@ async def _cmd_request_song(conn: aiosqlite.Connection, s: dict[str, Any], song_
     )
     await bump_revenue(conn, cost, day)
 
-    replies = [
-        f"我哪有旺夫命：「{song['title']}？行，你点的。」",
-        f"我哪有旺夫命：「这首啊……（沉默两秒）好，安排。」",
-        f"我哪有旺夫命：「{song['title']} 已加入队列——别催，我在找调。」",
-    ]
+    from .bar_copy import BAR_SINGER_ACCEPT, BAR_SINGER_RELUCTANT, BAR_SINGER_REFUSE
+
+    replies = list(BAR_SINGER_ACCEPT)
     if "苦情" in song["tags"]:
-        replies.append(f"我哪有旺夫命：「又是苦情歌……今晚第几首了。」")
-    msg = f"点歌成功 · -{cost} 票\n{random.choice(replies)}"
+        replies = BAR_SINGER_RELUCTANT + replies
+    if random.random() < 0.08:
+        replies = BAR_SINGER_REFUSE + replies
+    singer_line = random.choice(replies)
+    msg = f"{random.choice(BAR_SONG_REQUEST_LINES)} · -{cost} 票\n我哪有旺夫命：「{singer_line}」"
     if random.random() < 0.15:
         msg += "\n【全场有人跟着哼了两句】"
     await db.add_chronicle("bar_song", f"{s['name']} 点歌《{song['title']}》", s["id"])
@@ -940,7 +987,14 @@ async def _cmd_tip(
     msg = f"小费已送达 · -{amount} 票 → {peer['name']}"
     if tip_bonus:
         msg += f"（协作度≥{social_mod.RAPPORT_TIP_BONUS}，对方实收 +{tip_bonus}）"
-    msg += (f"\n备注：{note}" if note else "")
+    if note:
+        msg += f"\n备注：{note}\n{random.choice(BAR_TIP_NOTE)}"
+    elif amount >= 40:
+        msg += f"\n{random.choice(BAR_TIP_LARGE)}"
+    elif amount <= 5:
+        msg += f"\n{random.choice(BAR_TIP_SMALL)}"
+    else:
+        msg += f"\n{random.choice(BAR_TIP_NORMAL)}"
     reaction = owner_event_reaction(state, day, "tip")
     return append_owner_reaction(msg, reaction)
 
@@ -972,7 +1026,8 @@ async def public_bar_snapshot() -> dict[str, Any]:
         "open": is_open(),
         "phase": world.day_phase_label(phase),
         "weather": world.weather_label(world.current_weather()),
-        "mandatory_days": config.BAR_MANDATORY_DAYS,
+        "tagline": BAR_WEB["tagline"],
+        "rules": BAR_WEB["rules"],
         "activity": activity.get("name"),
         "owner_mood": mood_label(mood),
         "owner_mood_key": mood,
@@ -1045,8 +1100,8 @@ async def place_human_order(
         note = flavor.pick([
             f"{host_label} 倒了杯{svc['name']}，嘴挺会聊",
             f"卡座灯暗了一档，{host_label} 开始上班",
-            f"荔栀记帐：{patron['name']} 点单成功",
-            f"{host_label}：「今晚我嘴归你，票归荔栀」——别当真",
+            f"{BAR_OWNER_NAME}记帐：{patron['name']} 点单成功",
+            f"{host_label}：「今晚我嘴归你，票归{BAR_OWNER_NAME}」——别当真",
         ])
         await conn.execute(
             """

@@ -13,6 +13,8 @@ async function loadBar() {
     `<span>驻唱 ${data.singer || '我哪有旺夫命'}</span>`,
     `<span>AI 每 ${data.mandatory_days} 天须 work</span>`,
   ].join('');
+  const tagline = document.querySelector('.bar-head .tagline');
+  if (tagline && data.tagline) tagline.textContent = data.tagline + ' · 老板：' + data.owner;
 
   const serviceSel = document.getElementById('service');
   if (!serviceSel.options.length) {

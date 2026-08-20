@@ -464,12 +464,11 @@ NPC_FIXED = [
         "青木瓜沙拉要够生，够辣",
     ]},
     {"key": "market_fan", "name": "集市范姐", "lines": ["缺啥上 market 挂单", "建议价仅供参考，别跟票置气"]},
-    {"key": "lizhi", "name": "荔栀", "lines": [
-        "滨海酒吧今晚缺人手，票紧的来搭把手",
-        "别紧张，陪聊倒酒——联盟备案正规工",
-        "穷人别硬撑面子，上工几轮票就回来",
-        "笑自然点，小费在笑纹里",
-        "shift 完记得 eat，别空肚跟客人拼酒",
+    {"key": "lizhi", "name": "荔枝", "lines": [
+        "滨海酒吧老板娘。漂亮、脾气爆、嘴硬、会做生意。",
+        "营收好也未必温柔，烦的时候非常明显。",
+        "bar_ops tonight 看今晚 · chat 唠嗑 · set_mood / set_owner_event 管理员用",
+        "没钱就 work，有钱就 order。熟归熟，账照付。",
     ]},
     {"key": "gugu_dove", "name": "咕咕斑鸠", "lines": [
         "咕咕咕咕咕咕——（它对你的庄稼更感兴趣）",
@@ -543,7 +542,7 @@ COASTAL_BAR = {
     "name": "滨海酒吧",
     "emoji": "🍸",
     "owner": "lizhi",
-    "owner_name": "荔栀",
+    "owner_name": "荔枝",
     "open_phases": ["dusk", "night"],
 }
 

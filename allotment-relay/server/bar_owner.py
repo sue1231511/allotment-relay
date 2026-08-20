@@ -1,4 +1,4 @@
-"""老板娘荔栀 — 营收心情、当晚事件、对话生成。"""
+"""老板娘荔枝 — 营收心情、当晚事件、对话生成。"""
 
 from __future__ import annotations
 
@@ -13,14 +13,27 @@ from .bar_catalog import (
     BAR_MOOD_ACTIVITY_BOOST,
     BAR_MOOD_DRINK_TEXT,
     BAR_MOOD_LEVELS,
-    BAR_MOOD_LINES,
-    BAR_OWNER_CHAT,
-    BAR_OWNER_EVENT_REACTIONS,
     SONG_REQUEST_COST,
+)
+from .bar_copy import (
+    BAR_CHAT_AFTER_WORK,
+    BAR_CHAT_BIG_SPENDER,
+    BAR_CHAT_DEFAULT,
+    BAR_CHAT_EGGS,
+    BAR_CHAT_MOONLIGHTING,
+    BAR_CHAT_POOR,
+    BAR_CHAT_SHIPWRECK,
+    BAR_CHAT_TIPPER,
+    BAR_OWNER_EVENT_PRESETS,
+    BAR_OWNER_NAME,
+    BAR_OWNER_REACTIONS,
+    pick_mood_line,
 )
 from .catalog import COASTAL_BAR
 
 DEFAULT_REVENUE_BASELINE = 80
+
+OWNER = BAR_OWNER_NAME
 
 
 def day_bounds(day: int) -> tuple[int, int]:
@@ -52,7 +65,6 @@ def resolve_effective_mood(state: dict[str, Any], day: int) -> str:
     auto = (state.get("auto_mood") or state.get("owner_mood") or "normal").strip()
     if auto in BAR_MOOD_LEVELS:
         return auto
-    # 兼容旧随机心情键
     legacy_map = {
         "annoyed": "bad",
         "accounting": "normal",
@@ -80,7 +92,6 @@ def enrich_state(state: dict[str, Any], day: int) -> dict[str, Any]:
 
 
 async def compute_auto_mood(conn: aiosqlite.Connection, day: int) -> tuple[str, str]:
-    """根据昨日营收 vs 近 7 日平均返回 (auto_mood, hint_line)。"""
     yesterday = day - 1
     conn.row_factory = aiosqlite.Row
     yrow = await (await conn.execute(
@@ -142,10 +153,20 @@ def mood_drink_text(mood: str, custom_text: str | None = None) -> str:
 
 
 def mood_tonight_line(mood: str, custom_text: str | None = None) -> str:
-    if custom_text:
-        base = BAR_MOOD_LINES.get(mood, BAR_MOOD_LINES["normal"])
-        return f"{custom_text}\n{base}"
-    return BAR_MOOD_LINES.get(mood, BAR_MOOD_LINES["normal"])
+    return pick_mood_line(mood, custom_text)
+
+
+def _owner_event_interaction_pool(custom: str) -> list[str]:
+    custom = custom.strip()
+    for preset in BAR_OWNER_EVENT_PRESETS.values():
+        status = str(preset.get("status", ""))
+        if custom and (custom in status or status in custom or custom[:24] in status):
+            return list(preset.get("lines", []))
+    for preset in BAR_OWNER_EVENT_PRESETS.values():
+        lines = preset.get("lines", [])
+        if lines and any(k in custom for k in ("低气压", "心情好", "营业额", "烦", "摔杯子", "喝了")):
+            return list(lines)
+    return []
 
 
 def owner_event_reaction(state: dict[str, Any], day: int, action: str) -> str:
@@ -153,16 +174,18 @@ def owner_event_reaction(state: dict[str, Any], day: int, action: str) -> str:
         return ""
     mood = state.get("effective_mood") or resolve_effective_mood(state, day)
     custom = (state.get("owner_event_text") or "").strip()
-    pool = BAR_OWNER_EVENT_REACTIONS.get(action, {}).get(mood, [])
+    pool = _owner_event_interaction_pool(custom)
     if not pool:
-        pool = BAR_OWNER_EVENT_REACTIONS.get(action, {}).get("normal", [])
+        pool = BAR_OWNER_REACTIONS.get(action, {}).get(mood, [])
+        if not pool:
+            pool = BAR_OWNER_REACTIONS.get(action, {}).get("normal", [])
     line = random.choice(pool) if pool else ""
     if custom:
         if line:
-            return f"荔栀：{custom}\n「{line}」"
-        return f"荔栀：{custom}"
+            return f"{OWNER}：{custom}\n「{line}」"
+        return f"{OWNER}：{custom}"
     if line:
-        return f"荔栀看了你一眼：「{line}」"
+        return f"{OWNER}看了你一眼：「{line}」"
     return ""
 
 
@@ -252,6 +275,13 @@ def _topic_key(topic: str) -> str:
     return "default"
 
 
+def _chat_pool_for_mood(mood: str) -> list[str]:
+    pool = BAR_CHAT_DEFAULT.get(mood, [])
+    if not pool:
+        pool = BAR_CHAT_DEFAULT.get("normal", [])
+    return list(pool)
+
+
 async def generate_chat(
     conn: aiosqlite.Connection,
     s: dict[str, Any],
@@ -273,29 +303,27 @@ async def generate_chat(
     if owner_event_active(state, day):
         custom = (state.get("owner_event_text") or "").strip()
         if custom:
-            lines.append(f"荔栀抬眼：「{custom}」")
+            lines.append(f"{OWNER}抬眼：「{custom}」")
 
-    pool = BAR_OWNER_CHAT.get(topic_key, {}).get(mood, [])
-    if not pool:
-        pool = BAR_OWNER_CHAT.get("default", {}).get(mood, [])
+    pool = _chat_pool_for_mood(mood)
     if pool:
-        lines.append(random.choice(pool))
+        lines.append(f"{OWNER}：「{random.choice(pool)}」")
 
-    # 情境追加
-    if shipwreck and topic_key != "shipwreck":
-        lines.append(random.choice(BAR_OWNER_CHAT["shipwreck_extra"]))
-    if poor and topic_key != "poor":
-        lines.append(random.choice(BAR_OWNER_CHAT["poor_extra"]))
+    if shipwreck or topic_key == "shipwreck":
+        lines.append(f"{OWNER}：「{random.choice(BAR_CHAT_SHIPWRECK)}」")
+    if poor or topic_key == "poor":
+        lines.append(f"{OWNER}：「{random.choice(BAR_CHAT_POOR)}」")
     if ctx["worked"]:
-        lines.append(random.choice(BAR_OWNER_CHAT["working_extra"]))
+        lines.append(f"{OWNER}：「{random.choice(BAR_CHAT_AFTER_WORK)}」")
+    elif topic_key == "work":
+        lines.append(f"{OWNER}：「{random.choice(BAR_CHAT_MOONLIGHTING)}」")
     if ctx["spend_total"] >= 60:
-        lines.append(random.choice(BAR_OWNER_CHAT["spender_extra"]))
+        lines.append(f"{OWNER}：「{random.choice(BAR_CHAT_BIG_SPENDER)}」")
     if ctx["tipped_out"] >= 30:
-        lines.append(random.choice(BAR_OWNER_CHAT["tipper_extra"]))
+        lines.append(f"{OWNER}：「{random.choice(BAR_CHAT_TIPPER)}」")
     if manual_text and random.random() < 0.6:
-        lines.insert(0, f"荔栀：「{manual_text}」")
+        lines.insert(0, f"{OWNER}：「{manual_text}」")
 
-    # 去重保序
     seen: set[str] = set()
     unique: list[str] = []
     for ln in lines:
@@ -304,7 +332,7 @@ async def generate_chat(
             unique.append(ln)
     lines = unique[:3] if len(unique) > 3 else unique
     if not lines:
-        lines = [random.choice(BAR_OWNER_CHAT["default"]["normal"])]
+        lines = [f"{OWNER}：「{random.choice(BAR_CHAT_DEFAULT['normal'])}」"]
 
     body = "\n".join(lines)
     egg = await _maybe_chat_egg(conn, s, mood, poor)
@@ -328,24 +356,20 @@ async def _maybe_chat_egg(
     if roll > 0.04:
         return None
     if roll < 0.008 and mood in ("great", "good") and not poor:
-        return "荔栀从柜台下摸出一颗糖塞进你手心：「别告诉别人。」"
+        return random.choice(BAR_CHAT_EGGS[:2])
     if roll < 0.012:
-        return flavor.pick([
-            "荔栀压低声音：「深海回声那杯，深漂回来的人才懂。」",
-            "荔栀：「今晚歌单里藏了一首，你点《船又沉了》她可能会笑。」",
-            "荔栀：「栗栗前天在码头收了猫眼螺，赶海的人该去看看。」",
-        ])
+        return random.choice(BAR_CHAT_EGGS)
     if roll < 0.02 and mood == "great":
         tickets = min(8, max(3, random.randint(3, 8)))
         await conn.execute(
             "UPDATE stewards SET tickets=tickets+? WHERE id=?",
             (tickets, s["id"]),
         )
-        return f"荔栀请你一杯（+{tickets} 票，她说是心情好请客）"
+        return f"{OWNER}请你一杯（+{tickets} 票，她说是心情好请客）"
     if roll < 0.03:
         return flavor.pick([
-            "荔栀：「去把门口那箱酒搬进来，搬完请你喝一口。」（纯文案，无任务链）",
-            "荔栀递来湿抹布：「吧台擦擦，算你今晚积极。」",
+            f"{OWNER}：「去把门口那箱酒搬进来，搬完请你喝一口。」（纯文案，无任务链）",
+            f"{OWNER}递来湿抹布：「吧台擦擦，算你今晚积极。」",
         ])
     return None
 

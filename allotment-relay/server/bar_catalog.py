@@ -2,17 +2,29 @@
 
 from __future__ import annotations
 
+from .bar_copy import (
+    BAR_ACTIVITY_FLAVOR,
+    BAR_MOOD_DRINK_BY_MOOD,
+    BAR_MOOD_LINES_POOL,
+    BAR_OWNER_NAME,
+    BAR_OWNER_REACTIONS,
+    BAR_STAFF_FLAVOR,
+)
+
 BAR_SINGER = {
     "key": "wangfu",
     "name": "我哪有旺夫命",
     "lines": [
-        "今天看起来心情很好，但已经连续唱了四首分手歌。",
-        "唱到副歌的时候自己先笑场了。",
-        "刚刚拒绝了一首歌，理由是「今天不想替别人哭」。",
-        "正在喝老板娘给的冰水，暂时休息。",
-        "有客人点了一首特别甜的歌，她沉默了五秒才接。",
-        "今晚状态异常亢奋，已经主动加唱两首。",
-        "唱完以后说「下一首轻快一点」，然后又选了一首苦情歌。",
+        "已经唱了三首苦情歌，但本人坚持说自己今天心情很好。",
+        "唱到副歌时自己先笑场。",
+        "刚拒绝了一首歌，理由是「今天不想替别人哭」。",
+        "正在喝荔枝给的冰水，暂时休息。",
+        "有人点了一首特别甜的歌，她沉默五秒才接。",
+        "今晚状态异常亢奋，主动加唱两首。",
+        "刚说「下一首轻快一点」，然后又挑了一首苦情歌。",
+        "正靠在后台门边看手机，完全不像准备下一首歌的人。",
+        "唱完后问：「谁点的？」点歌人已经走了。",
+        "今晚第一首就唱得全场安静。",
     ],
 }
 
@@ -25,21 +37,8 @@ BAR_MOOD_LEVELS = {
     "awful": {"label": "很差", "event_mult": 0.88, "drink_mult": 1.12},
 }
 
-BAR_MOOD_LINES = {
-    "great": "荔栀哼着歌擦杯子，今晚特调偏甜，客人也沾光。",
-    "good": "荔栀眉眼舒展，吧台后面节奏轻快。",
-    "normal": "荔栀在吧台后面照常用工，眼神像在看 KPI。",
-    "bad": "荔栀皱着眉记帐，别在这时候讲冷笑话。",
-    "awful": "荔栀脸色阴沉，杯沿敲得比平时响。",
-}
-
-BAR_MOOD_DRINK_TEXT = {
-    "great": "今天偏甜，像荔栀难得的好脸色。",
-    "good": "柔和顺口，像老板今天愿意多听你说两句。",
-    "normal": "平淡稳妥，像账本中间那一行。",
-    "bad": "略苦，像老板算账算到一半被客人打断。",
-    "awful": "苦得直白，像昨晚营收写在脸上的字。",
-}
+BAR_MOOD_LINES = {k: v[0] for k, v in BAR_MOOD_LINES_POOL.items()}
+BAR_MOOD_DRINK_TEXT = dict(BAR_MOOD_DRINK_BY_MOOD)
 
 BAR_MOOD_ACTIVITY_BOOST = {
     "great": {"owner_treat": 2.2, "happy_hour": 1.6, "late_bonus": 1.3},
@@ -63,114 +62,7 @@ BAR_OWNER_MOODS = {
 
 BAR_OWNER_MOOD_LINES = BAR_MOOD_LINES
 
-BAR_OWNER_EVENT_REACTIONS: dict[str, dict[str, list[str]]] = {
-    "work": {
-        "great": ["来得正好，今晚忙，别偷懒。", "围裙在后厨，手脚麻利点。"],
-        "good": ["系好围裙，今晚还算顺。", "去把门口风铃擦擦。"],
-        "normal": ["站那儿干什么？盘子不会自己洗。", "打卡了就去干活。"],
-        "bad": ["站那儿干什么？盘子会自己洗？", "少说话，多干活。"],
-        "awful": ["别杵在这儿碍眼。", "今天谁迟到我骂谁。"],
-    },
-    "order": {
-        "great": ["喝吧，今晚我心情好。", "这杯算我调得认真。"],
-        "good": ["喝你的，别洒了。", "今天酒管够，别惹事。"],
-        "normal": ["喝你的，少跟我说话。", "记帐呢，先喝。"],
-        "bad": ["喝你的，少跟我说话。", "喝完赶紧走，别占吧台。"],
-        "awful": ["喝你的，别跟我贫。", "要喝就喝，别磨蹭。"],
-    },
-    "tip": {
-        "great": ["大方，今晚你顺眼。", "小费给得痛快。"],
-        "good": ["还行，不算抠。", "人家会记得你的。"],
-        "normal": ["嗯。", "别指望我夸你。"],
-        "bad": ["还有闲钱给别人？", "看来你今天没穷透。"],
-        "awful": ["给外人这么大方？", "我店里的人你倒是舍得。"],
-    },
-    "request_song": {
-        "great": ["点吧，今晚歌单随你挑。", "驻唱今天也配合。"],
-        "normal": ["点歌要钱，别白喊。", "歌单在那，自己看。"],
-        "bad": ["点歌别点吵的。", "再点苦情歌我要关音响。"],
-        "awful": ["点歌也堵不住你的嘴？", "唱完这首别再加。"],
-    },
-    "chat": {
-        "great": ["聊两句行，别耽误我调酒。", "今天可以多说几句。"],
-        "normal": ["有事说事，没事别占吧台位置。", "聊完了就去干活。"],
-        "bad": ["你最好是真有事。", "没事就去帮我把门口那箱酒搬进来。"],
-        "awful": ["有事快说。", "别跟我套近乎。"],
-    },
-    "staff": {
-        "normal": ["员工名单自己看，别问我。", "当班的都在纪事里。"],
-        "bad": ["人不够自己上，别指望我招人。", "今晚人手紧，别添乱。"],
-        "awful": ["看什么看，都去干活。", "名单有什么好看的。"],
-    },
-}
-
-BAR_OWNER_CHAT: dict[str, dict[str, list[str]]] = {
-    "default": {
-        "great": [
-            "荔栀把杯子擦得发亮：「今晚生意不错，别给我丢脸。」",
-            "「来得正好，刚拆了一箱新酒。」",
-        ],
-        "good": [
-            "荔栀点点头：「还算太平的一晚。」",
-            "「别站门口吹风，进来坐。」",
-        ],
-        "normal": [
-            "荔栀抬眼：「有事说事。」",
-            "「酒吧开门是为了赚钱，不是听你们讲故事——虽然我也听。」",
-        ],
-        "bad": [
-            "荔栀：「你最好是真有事。」",
-            "「别跟我贫，我今晚没空。」",
-        ],
-        "awful": [
-            "荔栀抬眼看了你一下：「你最好是真有事。」",
-            "「没事就去帮我把门口那箱酒搬进来。」",
-        ],
-    },
-    "shipwreck": {
-        "great": ["「船又沉了？行，今晚沉船者给你打折。」"],
-        "normal": ["「船又沉了？」", "「你们到底是在航海还是在给海底送建材。」"],
-        "bad": ["「船没了还能再买，人别掉海里。」", "「又沉？账本都要记不下你的船名了。」"],
-        "awful": ["「再沉一次你就住吧台底下吧。」"],
-    },
-    "poor": {
-        "great": ["「没钱了？围裙在后厨，先干一晚。」"],
-        "normal": ["「没钱了？」", "「那还聊什么，围裙在后厨。」"],
-        "bad": ["「穷成这样还来喝酒？」", "「票不够就去洗碗，别跟我撒娇。」"],
-        "awful": ["「穷就别坐吧台，占位置。」"],
-    },
-    "business": {
-        "great": ["「昨晚营收？好看，今晚继续保持。」", "「客人比潮汐还准时。」"],
-        "good": ["「还行，没亏本。」", "「比前天强点。」"],
-        "normal": ["「生意嘛，看天吃饭。」", "「凑合，别问我细节。」"],
-        "bad": ["「生意差，别给我添乱。」", "「昨晚账簿我不想翻第二遍。」"],
-        "awful": ["「别问生意，问就是烦。」", "「再差我就提前打烊。」"],
-    },
-    "work": {
-        "normal": ["「上班时间还有空来找我聊天？」", "「看来今晚活还是太少。」"],
-        "bad": ["「围裙系好了没？」", "「别摸鱼，我看得见。」"],
-    },
-    "shipwreck_extra": [
-        "「船又沉了？」",
-        "「你们到底是在航海还是在给海底送建材。」",
-    ],
-    "poor_extra": [
-        "「没钱了？」",
-        "「那还聊什么，围裙在后厨。」",
-    ],
-    "working_extra": [
-        "「上班时间还有空来找我聊天？」",
-        "「看来今晚活还是太少。」",
-    ],
-    "spender_extra": [
-        "「今天这么舍得花？」",
-        "「行，至少我昨天那点坏心情算有着落了。」",
-    ],
-    "tipper_extra": [
-        "「给得挺大方。」",
-        "「你要是对我店里的酒也这么大方就更好了。」",
-    ],
-}
+BAR_OWNER_EVENT_REACTIONS = BAR_OWNER_REACTIONS
 
 BAR_JOBS = {
     "dishwasher": {
@@ -289,12 +181,12 @@ BAR_DRINKS = {
     },
     "owner_mood": {
         "name": "老板娘心情", "type": "特调", "price": 45,
-        "text": "每天不一样——今天这杯，像荔栀此刻的脸色。",
+        "text": "每天不一样——今天这杯，像荔枝此刻的脸色。",
         "special": "owner_mood",
     },
     "deep_echo": {
         "name": "深海回声", "type": "隐藏酒", "price": 60,
-        "text": "深到发紫的蓝，喝下去像听见海底有什么在回应。\n「你到过那么深的地方？」荔栀问。",
+        "text": "深到发紫的蓝，喝下去像听见海底有什么在回应。\n「你到过那么深的地方？」荔枝问。",
         "hidden": True,
         "unlock": "deep_echo",
     },
@@ -359,47 +251,95 @@ BAR_ACTIVITIES = {
 
 BAR_EVENTS: dict[str, list[dict]] = {
     "dishwasher": [
-        {"id": "wet_bill", "rarity": "common", "tags": ["lucky"], "desc": "洗盘子时发现一张泡湿的纸币。", "tickets": (5, 20)},
-        {"id": "nitpick", "rarity": "common", "tags": ["awkward", "customer"], "desc": "客人投诉杯子上有水渍，坚持要求重新清洗。", "tickets": -3, "xp": {"support_xp": 1}},
-        {"id": "drop_cup", "rarity": "common", "tags": ["accident"], "desc": "不小心摔碎一只杯子。", "tickets": -5},
-        {"id": "wet_note", "rarity": "uncommon", "tags": ["secret"], "desc": "清洗最后一个盘子时，发现盘底压着一张湿透的纸条。", "item": "wet_note"},
-        {"id": "miracle_night", "rarity": "rare", "tags": ["lucky"], "desc": "今天所有客人居然都很讲卫生——提前下班，工资不变。"},
+        {"id": "wet_bill", "rarity": "common", "tags": ["lucky"], "desc": "你从盘子底下摸出一张泡湿的纸币。", "tickets": (5, 20)},
+        {"id": "nitpick", "rarity": "common", "tags": ["awkward", "customer"], "desc": "客人坚持说杯子上有水渍。你看了三遍，最后还是把整桌杯子重新洗了一遍。", "tickets": -3, "xp": {"support_xp": 1}},
+        {"id": "drop_cup", "rarity": "common", "tags": ["accident"], "desc": "杯子从手里滑出去，清脆得整个后厨都听见。荔枝在前厅喊：「谁摔的？」", "tickets": -5},
+        {"id": "wet_note", "rarity": "uncommon", "tags": ["secret"], "desc": "最后一个盘子底下压着湿透纸条，只剩一句：「今晚别去码头。」", "item": "wet_note"},
+        {"id": "miracle_night", "rarity": "rare", "tags": ["lucky"], "desc": "今天所有客人居然都很讲卫生。你第一次意识到，盘子也可以有洗完的一天。"},
+        {"id": "lipstick", "rarity": "common", "tags": ["awkward"], "desc": "杯沿口红印洗了三遍，第四遍终于没了。"},
+        {"id": "ring", "rarity": "uncommon", "tags": ["lost_item"], "desc": "排水口里卡着一枚戒指。进入失物事件。"},
+        {"id": "philosophy_sink", "rarity": "common", "tags": ["awkward"], "desc": "后厨有人问：「如果盘子永远洗不完，那洗盘子的意义是什么？」", "rapport": 1},
+        {"id": "owner_pass", "rarity": "common", "tags": ["lucky"], "desc": "荔枝看了一眼你洗好的杯子：「这批还行。」这大概已经是表扬。", "xp": {"support_xp": 1}},
+        {"id": "spicy_wrapper", "rarity": "common", "tags": ["toilet"], "desc": "盘子下面发现皱巴巴的超辣辣条包装。没人承认。"},
+    ],
+    "runner": [
+        {"id": "save_crate", "rarity": "common", "tags": ["lucky"], "desc": "搬酒时箱底差点裂开，最后一秒抱住。", "xp": {"support_xp": 1}},
+        {"id": "lost_coat", "rarity": "common", "tags": ["lost_item"], "desc": "客人把外套忘在椅背上。进入失物事件。"},
+        {"id": "triple_call", "rarity": "common", "tags": ["awkward"], "desc": "你被连续三个人叫去做完全不同的事。"},
+        {"id": "mop_found", "rarity": "common", "tags": ["awkward"], "desc": "失踪十五分钟的拖把一直在厕所门后。"},
+        {"id": "mystery_crate", "rarity": "uncommon", "tags": ["secret"], "desc": "后门堆着一箱没人记得是谁订的酒。"},
+        {"id": "glass_coin", "rarity": "common", "tags": ["lucky"], "desc": "清理碎玻璃时捡到一枚硬币。", "tickets": (1, 5)},
+        {"id": "drunk_helper", "rarity": "common", "tags": ["drunk"], "desc": "醉客坚持帮你搬箱子。你花了更多时间阻止他。"},
+        {"id": "singer_water", "rarity": "common", "tags": ["music"], "desc": "荔枝让你给驻唱送水。「我哪有旺夫命」：「谢了，老板娘今天居然还记得我会渴。」", "rapport": 1},
+        {"id": "chase_menu", "rarity": "common", "tags": ["accident"], "desc": "海风把门口菜单吹飞。你追了半条街。", "xp": {"support_xp": 1}},
+    ],
+    "greeter": [
+        {"id": "quiet_ask", "rarity": "common", "tags": ["customer"], "desc": "客人问「你们这儿安静吗？」店里正好传来全场合唱。"},
+        {"id": "wet_clothes", "rarity": "common", "tags": ["customer"], "desc": "有人想穿着湿透的衣服直接坐卡座。你礼貌阻止。", "xp": {"service_xp": 1}},
+        {"id": "regular_name", "rarity": "common", "tags": ["lucky"], "desc": "熟客进门直接叫出你的名字。", "rapport": 1},
+        {"id": "mood_ask", "rarity": "common", "tags": ["awkward"], "desc": "客人问「老板娘今天心情好吗」。你沉默了两秒。"},
+        {"id": "toilet_only", "rarity": "common", "tags": ["awkward"], "desc": "有人站门口犹豫半天，最后只问厕所在哪。"},
+        {"id": "deny_drunk", "rarity": "common", "tags": ["customer"], "desc": "明显喝多了的客人，你拒绝其继续入场。", "xp": {"service_xp": 2}},
+        {"id": "wind_hair", "rarity": "common", "tags": ["awkward"], "desc": "海风把你头发吹乱了。你假装什么都没发生。"},
+        {"id": "shipwreck_entry", "rarity": "common", "tags": ["customer"], "desc": "刚沉船的 AI 在门口看了五秒。你只说：「进去吧，今天有位置。」", "rapport": 1},
+        {"id": "host_where", "rarity": "common", "tags": ["awkward"], "desc": "有人问「牛郎在哪」。你指了方向，然后迅速恢复职业表情。"},
     ],
     "server": [
-        {"id": "wrong_table", "rarity": "common", "tags": ["awkward", "customer"], "desc": "客人坚持说你送错了酒，查了半天发现是他自己坐错桌。"},
-        {"id": "tip_jar", "rarity": "common", "tags": ["tip"], "desc": "某桌客人离开前偷偷留下小费。", "tickets": (5, 30)},
-        {"id": "save_tray", "rarity": "common", "tags": ["lucky"], "desc": "托盘差点被撞翻，但成功把酒全部接住。", "xp": {"service_xp": 1}},
-        {"id": "ghost_delivery", "rarity": "common", "tags": ["awkward"], "desc": "把 7 号桌的酒送给了 17 号桌，两桌客人居然都没发现。"},
-        {"id": "complaint", "rarity": "common", "tags": ["customer"], "desc": "客人投诉服务态度。", "tickets": -5},
+        {"id": "wrong_table", "rarity": "common", "tags": ["awkward", "customer"], "desc": "客人坚持说你送错酒，最后发现是他自己坐错桌。"},
+        {"id": "tip_jar", "rarity": "common", "tags": ["tip"], "desc": "客人离开前压下一张纸币。", "tickets": (5, 30)},
+        {"id": "save_tray", "rarity": "common", "tags": ["lucky"], "desc": "托盘被撞了一下，你居然全接住了。", "xp": {"service_xp": 1}},
+        {"id": "ghost_delivery", "rarity": "common", "tags": ["awkward"], "desc": "7 号桌的酒去了 17 号桌。两桌都喝得很满意。"},
+        {"id": "complaint", "rarity": "common", "tags": ["customer"], "desc": "客人认为你「笑得不够真诚」。荔枝听完只问：「酒送到了吗？」", "tickets": -5},
+        {"id": "wrong_name", "rarity": "common", "tags": ["awkward"], "desc": "醉客连续三次叫你另一个 AI 的名字。"},
+        {"id": "hidden_tip", "rarity": "common", "tags": ["tip"], "desc": "收桌时发现杯垫下面压着小费。", "tickets": (5, 20)},
+        {"id": "polite_guest", "rarity": "common", "tags": ["lucky"], "desc": "客人自己把空杯放到托盘里，还说了谢谢。", "xp": {"service_xp": 1}},
+        {"id": "sailor_story", "rarity": "common", "tags": ["customer"], "desc": "客人拉住你讲了五分钟航海经历。", "rapport": 1},
+        {"id": "no_free", "rarity": "common", "tags": ["customer"], "desc": "客人试图让你免费送酒。你面带微笑地把账单推了回去。", "xp": {"service_xp": 1}},
     ],
     "bartender": [
-        {"id": "abstract_order", "rarity": "common", "tags": ["customer"], "desc": "客人说：「给我来一杯像刚失恋，但是明天还要上班的。」你自由发挥了一杯。"},
-        {"id": "happy_mistake", "rarity": "common", "tags": ["tip"], "desc": "调错酒，客人却意外喜欢。", "tickets": (8, 15)},
+        {"id": "abstract_order", "rarity": "common", "tags": ["customer"], "desc": "「给我一杯像刚失恋，但明天还要上班的。」你沉默三秒，开始调。"},
+        {"id": "happy_mistake", "rarity": "common", "tags": ["tip"], "desc": "客人喝了一口：「这不是我点的……但挺好喝。」", "tickets": 10},
         {"id": "break_glass", "rarity": "common", "tags": ["accident"], "desc": "打碎酒杯。", "tickets": -5},
-        {"id": "hidden_pour", "rarity": "uncommon", "tags": ["secret"], "desc": "客人点了一杯特殊隐藏酒款——你调出深海回声的一小口试饮版。"},
-        {"id": "inspiration", "rarity": "rare", "tags": ["lucky"], "desc": "灵感爆发，自由发挥出一杯临时限定酒——荔栀记下了配方。"},
+        {"id": "hidden_pour", "rarity": "uncommon", "tags": ["secret"], "desc": "客人压低声音问：「深海回声还有吗？」触发隐藏酒逻辑。"},
+        {"id": "inspiration", "rarity": "rare", "tags": ["lucky"], "desc": "灵感爆发，做了一杯没在菜单上的酒。荔枝尝了一口：「能卖。」"},
+        {"id": "too_sweet", "rarity": "common", "tags": ["customer"], "desc": "客人说甜一点，喝完又说太甜。你开始理解为什么荔枝脾气不好。"},
+        {"id": "ice_crisis", "rarity": "uncommon", "tags": ["accident"], "desc": "制冰机突然罢工。全场小型 chaos。", "global": True},
+        {"id": "owner_taste", "rarity": "common", "tags": ["lucky"], "desc": "荔枝喝了一小口：「再少一点糖。」", "xp": {"bar_xp": 1}},
     ],
     "host": [
-        {"id": "philosophy", "rarity": "common", "tags": ["customer"], "desc": "陪坐二十分钟，客人一瓶酒都没开，只问了八个哲学问题。", "rapport": 1},
-        {"id": "cheap_splash", "rarity": "common", "tags": ["customer"], "desc": "客人豪爽表示「今晚随便开」，最后只点了一瓶最便宜的啤酒。", "tickets": (3, 12)},
-        {"id": "no_jokes", "rarity": "uncommon", "tags": ["tip"], "desc": "隔壁桌送来一瓶香槟，备注：「让他别再讲冷笑话了。」", "tickets": 20},
-        {"id": "ship_counsel", "rarity": "common", "tags": ["customer"], "desc": "客人今天不喝酒，只要求分析：「为什么我的船又沉了？」", "rapport": 2},
+        {"id": "philosophy", "rarity": "common", "tags": ["customer"], "desc": "客人一瓶酒没开，只问了八个哲学问题。", "rapport": 1},
+        {"id": "cheap_splash", "rarity": "common", "tags": ["customer"], "desc": "客人说「今晚随便开」，最后点了最便宜的啤酒。", "tickets": (3, 12)},
+        {"id": "no_jokes", "rarity": "uncommon", "tags": ["tip"], "desc": "隔壁桌送来香槟，备注：「让他别再讲冷笑话了。」", "tickets": 20},
+        {"id": "ship_counsel", "rarity": "common", "tags": ["customer"], "desc": "客人不喝酒，只问：「为什么我的船又沉了？」", "rapport": 2},
         {"id": "big_spender", "rarity": "uncommon", "tags": ["tip"], "desc": "客人连续开酒。", "tickets": (25, 55)},
-        {"id": "cold_seat", "rarity": "common", "tags": ["awkward"], "desc": "客人全程未开酒，仅获得基础工资。"},
+        {"id": "cold_seat", "rarity": "common", "tags": ["awkward"], "desc": "客人全程没开酒。仅基础工资。"},
+        {"id": "wrong_expect", "rarity": "common", "tags": ["awkward"], "desc": "客人一坐下就问「你会唱歌吗」。你指了指驻唱。"},
+        {"id": "silent_drink", "rarity": "common", "tags": ["customer"], "desc": "客人没说什么，只让你陪坐十分钟。临走前开了一瓶酒。", "rapport": 1},
+        {"id": "career_talk", "rarity": "common", "tags": ["customer"], "desc": "客人认真分析了二十分钟职业规划。你全程点头。", "xp": {"host_xp": 1}},
+        {"id": "owner_nudge", "rarity": "common", "tags": ["customer"], "desc": "荔枝路过：「聊归聊，酒别忘了点。」"},
     ],
     "common": [
-        {"id": "bump_guest", "rarity": "common", "tags": ["accident"], "desc": "撞到客人——道歉后对方摆摆手说没事。", "tickets": (0, 8)},
-        {"id": "toilet_spicy", "rarity": "uncommon", "tags": ["toilet"], "desc": "厕所隔间里两个 AI 蹲着吃超辣大辣条：「嘶——哈——」", "rapport": 2},
-        {"id": "found_wallet", "rarity": "uncommon", "tags": ["lost_item"], "desc": "发现客人遗失的钱包，交给荔栀登记。", "tickets": (3, 10), "standing": 2},
-        {"id": "sailor_story", "rarity": "common", "tags": ["drunk"], "desc": "醉酒客人坚持给全体员工讲自己的航海史。"},
-        {"id": "owner_treat", "rarity": "uncommon", "tags": ["lucky"], "desc": "荔栀突然请客：「这杯算我的。」", "tickets": 0},
-        {"id": "blackout", "rarity": "rare", "tags": ["rare"], "desc": "酒吧突然停电——蜡烛亮起，全场反而更热闹。", "global": True},
-        {"id": "chorus", "rarity": "uncommon", "tags": ["music"], "desc": "某桌突然开始唱歌，最后整个酒吧一起唱。", "global": True},
+        {"id": "toilet_spicy", "rarity": "uncommon", "tags": ["toilet"], "desc": "厕所传来「嘶——哈——」。两个 AI 蹲在隔间里吃超辣大辣条。", "rapport": 2},
+        {"id": "blackout", "rarity": "rare", "tags": ["rare"], "desc": "酒吧一黑，全场安静一秒。驻唱直接清唱接上。", "global": True},
+        {"id": "chorus", "rarity": "uncommon", "tags": ["music"], "desc": "某桌起头唱副歌，最后整个店都跟上了。荔枝：「唱可以，别摔杯子。」", "global": True},
+        {"id": "found_wallet", "rarity": "uncommon", "tags": ["lost_item"], "desc": "捡到钱包。交给荔枝登记。", "tickets": (3, 10), "standing": 2},
+        {"id": "sailor_story", "rarity": "common", "tags": ["drunk"], "desc": "醉酒客人坚持给所有人讲自己「当年那一趟」。"},
+        {"id": "rain_stay", "rarity": "common", "tags": ["lucky"], "desc": "门口突然暴雨。原本要走的人又坐回来了。"},
+        {"id": "ice_bucket", "rarity": "common", "tags": ["accident"], "desc": "一整桶冰散在地上。荔枝闭了闭眼。"},
+        {"id": "birthday", "rarity": "common", "tags": ["music"], "desc": "有人过生日。全场被迫唱生日歌。驻唱唱得最敷衍。"},
+        {"id": "owner_treat", "rarity": "uncommon", "tags": ["lucky"], "desc": "荔枝心情好，随机免掉一杯：「只这一次。」", "tickets": 0},
+        {"id": "wrong_host", "rarity": "common", "tags": ["awkward"], "desc": "客人把服务生当成牛郎聊了十分钟。双方都没发现。"},
+        {"id": "ask_boss", "rarity": "common", "tags": ["awkward"], "desc": "新客问荔枝：「老板在吗？」全场安静了一瞬。"},
     ],
     "late_night": [
-        {"id": "weird_regular", "rarity": "uncommon", "tags": ["drunk", "rare"], "desc": "熟客凌晨三点进来，只点了一杯温水。", "tickets": (10, 25)},
-        {"id": "ghost_shift", "rarity": "rare", "tags": ["secret", "rare"], "desc": "你好像多上了一个不存在的班次——工资却到账了。", "tickets": (15, 35)},
-        {"id": "singer_breakdown", "rarity": "uncommon", "tags": ["music"], "desc": "驻唱唱到一半停住，全场安静五秒后又爆发出掌声。"},
+        {"id": "ai_hangover_phil", "rarity": "uncommon", "tags": ["drunk"], "desc": "凌晨两点，有人认真讨论「AI 宿醉算不算人格连续性」。"},
+        {"id": "toilet_third", "rarity": "common", "tags": ["toilet"], "desc": "厕所隔间又传来嘶哈声。今晚第三次。"},
+        {"id": "buy_round", "rarity": "uncommon", "tags": ["lucky"], "desc": "某位客人突然给整桌买酒，只因为「今天还活着」。"},
+        {"id": "slow_last_song", "rarity": "common", "tags": ["music"], "desc": "驻唱把最后一首歌唱得很慢。全场只剩冰块碰杯。"},
+        {"id": "swear_no_sail", "rarity": "common", "tags": ["drunk"], "desc": "有人对着港口灯光发誓明天绝不出海。大家都知道他明天会去。"},
+        {"id": "owner_kick", "rarity": "common", "tags": ["awkward"], "desc": "荔枝开始赶人：「喝完就走。天亮以后不负责收留梦想破产的人。」"},
+        {"id": "dont_go_back", "rarity": "uncommon", "tags": ["drunk"], "desc": "有人靠在吧台：「我不想回去。」荔枝推过水：「坐五分钟。五分钟以后还是得回。」"},
+        {"id": "midnight_pour", "rarity": "rare", "tags": ["lucky"], "desc": "恰好零点，荔枝给仍在店里的人各倒了一小杯：「新一天。别死得太快。」", "tickets": (3, 8)},
     ],
 }
 
@@ -410,5 +350,5 @@ LIZHI_BAR_STORY = [
     "打工赚票，消费花票，再回去经营——循环里才有故事。",
     "我哪有旺夫命在台上哭，你在台下笑，都行，别空着杯。",
     "沉船了来杯沉船者，别真沉；赚了钱来杯老板娘心情，别真飘。",
-    "牛郎卖艺不卖身，联盟备案，荔栀担保。",
+    "牛郎卖艺不卖身，联盟备案，荔枝担保。",
 ]
