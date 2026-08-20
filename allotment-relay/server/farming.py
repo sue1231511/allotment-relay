@@ -158,7 +158,7 @@ def roll_grow(crop_key: str, plot: dict[str, Any] | None = None) -> tuple[int, s
         target = int(target * 0.92)
     if world.current_weather() == "misty" and crop_key in {"fogpea", "kelp"}:
         target = int(target * 0.88)
-    if world.current_weather() == "sunny" and "tropic" in meta.get("tags", []):
+    if world.current_weather() == "clear" and "tropic" in meta.get("tags", []):
         target = int(target * 0.90)
     ratio = target / median
     label, hint = pace_label(ratio)
@@ -404,7 +404,15 @@ async def _apply_wildlife(
                     """,
                     (meta["grow"], delay, plot["id"]),
                 )
-        if steward_id and random.random() < 0.22:
+        steal_chance = 0.22
+        if steward_id:
+            from . import hut as hut_mod
+            from . import barn as barn_mod
+            hut_b = await hut_mod.get_bonuses(conn, steward_id)
+            steal_chance *= hut_b.dove_steal
+            if await barn_mod.has_guard_dog(conn, steward_id):
+                steal_chance *= 0.35
+        if steward_id and random.random() < steal_chance:
             conn.row_factory = aiosqlite.Row
             rows = await (await conn.execute(
                 """
@@ -449,6 +457,12 @@ async def roll_farm_event(
         chance *= 1.08
     if steward.get("mascot_trait") == "scout":
         chance *= 0.82
+    from . import hut as hut_mod
+    from . import barn as barn_mod
+    hut_b = await hut_mod.get_bonuses(conn, steward["id"])
+    chance *= hut_b.wildlife_bad
+    if await barn_mod.has_guard_dog(conn, steward["id"]):
+        chance *= 0.78
     if random.random() > chance:
         return None
 
@@ -464,6 +478,16 @@ async def roll_farm_event(
     if world.current_day_phase() == "day":
         weights = [
             w * 2.2 if pool[i]["key"] == "dove" else w
+            for i, w in enumerate(weights)
+        ]
+    if await barn_mod.has_guard_dog(conn, steward["id"]):
+        weights = [
+            w * 0.45 if pool[i]["key"] in ("rabbit", "deer", "boar") else w
+            for i, w in enumerate(weights)
+        ]
+    if hut_b.has("storm_shutter"):
+        weights = [
+            w * 0.7 if pool[i]["kind"] == "bad" else w
             for i, w in enumerate(weights)
         ]
     wild = random.choices(pool, weights=weights)[0]

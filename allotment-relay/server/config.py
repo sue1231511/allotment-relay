@@ -37,6 +37,10 @@ LEAGUE_GOALS = [
     {"key": "compost", "item": "compost", "target": 20, "label": "堆肥周"},
     {"key": "crop_kale", "item": "crop_kale", "target": 15, "label": "甘蓝丰收"},
     {"key": "assist", "action": "assist", "target": 10, "label": "互助周"},
+    {"key": "crop_blueberry", "item": "crop_blueberry", "target": 12, "label": "蓝莓周"},
+    {"key": "honey", "item": "honey", "target": 8, "label": "蜂糖周"},
+    {"key": "shell_catseye", "item": "shell_catseye", "target": 10, "label": "猫眼螺周"},
+    {"key": "egg", "item": "egg", "target": 16, "label": "鲜蛋周"},
 ]
 
 BADGES = [

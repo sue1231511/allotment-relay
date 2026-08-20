@@ -1,7 +1,8 @@
-"""岸畔小屋 — 硬装 / 软装 / 升级。"""
+"""岸畔小屋 — 硬装 / 软装 / 升级。装件加成在 catalog hint 里写了，这里真正生效。"""
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from typing import Any
 
 import aiosqlite
@@ -40,6 +41,113 @@ def _fit_name(item_key: str) -> str:
     return ITEM_NAMES.get(f"fit_{item_key}", item_key)
 
 
+def normalize_fitting_keys(raw: set[str] | list[str]) -> set[str]:
+    """fridge / plank_floor / deco_coral_lamp / coral_lamp 都能对上。"""
+    out: set[str] = set()
+    for v in raw:
+        if not v:
+            continue
+        out.add(v)
+        if v.startswith("deco_"):
+            out.add(v[5:])
+        elif v.startswith("fit_"):
+            out.add(v[4:])
+    return out
+
+
+@dataclass
+class HutBonus:
+    keys: set[str] = field(default_factory=set)
+    event_mult: float = 1.0
+    good_share: float = 1.0
+    gale_grow: float = 1.0
+    gale_event: float = 1.0
+    brew_mist: int = 0
+    night_mist_save: int = 0
+    guild_standing: int = 0
+    voyage_fail: float = 1.0
+    commons_chance: float = 1.0
+    beach_extra: float = 0.0
+    bar_tip: int = 0
+    wildlife_bad: float = 1.0
+    dove_steal: float = 1.0
+
+    def has(self, *names: str) -> bool:
+        return any(n in self.keys for n in names)
+
+    def summary(self) -> str | None:
+        bits = []
+        if self.event_mult < 1:
+            bits.append("意外↓")
+        if self.good_share > 1:
+            bits.append("坏事件略少")
+        if self.gale_grow < 1:
+            bits.append("阵风份地稳些")
+        if self.brew_mist:
+            bits.append("brew 雾智+")
+        if self.night_mist_save:
+            bits.append("暮夜雾智少掉")
+        if self.guild_standing:
+            bits.append("档口更顺眼")
+        if self.voyage_fail < 1:
+            bits.append("出海略顺")
+        if self.commons_chance > 1:
+            bits.append("公共物资玄学↑")
+        if self.beach_extra:
+            bits.append("赶海铃响")
+        if self.bar_tip:
+            bits.append("酒吧小费+")
+        if self.has("fridge"):
+            bits.append("冰箱")
+        if not bits:
+            return None
+        return "装件生效：" + " · ".join(bits)
+
+
+def bonuses_for(keys: set[str] | list[str]) -> HutBonus:
+    b = HutBonus(keys=normalize_fitting_keys(keys))
+    if b.has("plank_floor"):
+        b.event_mult *= 0.90
+    if b.has("storm_shutter", "net_dreamcatcher"):
+        b.good_share *= 1.18
+        b.wildlife_bad *= 0.82
+        b.gale_event *= 0.85
+        b.dove_steal *= 0.7
+    if b.has("rain_gutter"):
+        b.gale_grow *= 0.86
+        b.gale_event *= 0.90
+    if b.has("glass_window"):
+        b.gale_grow *= 0.92
+    if b.has("brick_hearth"):
+        b.brew_mist += 4
+    if b.has("tide_lamp", "coral_lamp"):
+        b.night_mist_save += 1
+    if b.has("mint_cushion"):
+        b.guild_standing += 2
+    if b.has("fog_curtain", "pearl_garland"):
+        b.guild_standing += 1
+    if b.has("sea_chart"):
+        b.voyage_fail *= 0.86
+    if b.has("glass_float"):
+        b.commons_chance *= 1.22
+    if b.has("tide_clock"):
+        b.beach_extra += 0.14
+    if b.has("star_crown", "herring_mobile"):
+        b.bar_tip += 2
+    if b.has("shell_windchime", "kelp_tassel"):
+        b.bar_tip += 1
+    return b
+
+
+async def installed_keys(conn: aiosqlite.Connection, steward_id: int) -> set[str]:
+    fittings = await _fittings(conn, steward_id)
+    return normalize_fitting_keys(fittings.values())
+
+
+async def get_bonuses(conn: aiosqlite.Connection, steward_id: int) -> HutBonus:
+    return bonuses_for(await installed_keys(conn, steward_id))
+
+
 async def hut_ops(key_id: int, command: str) -> str:
     from .game import require_steward
 
@@ -72,6 +180,9 @@ async def hut_ops(key_id: int, command: str) -> str:
         if lvl < 3:
             nxt = HUT_LEVELS[lvl + 1]
             lines.append(f"升级 Lv{lvl + 1} {nxt['name']}：{nxt['upgrade']} 票 → upgrade")
+        active = bonuses_for(fittings.values()).summary()
+        if active:
+            lines.append(active)
         return "\n".join(lines)
 
     if verb == "catalog":

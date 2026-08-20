@@ -12,7 +12,7 @@ def _day_id() -> int:
     return db.now() // config.FORAGE_COOLDOWN_DAY
 
 
-def _roll_multiplier(steward: dict[str, Any]) -> float:
+def _roll_multiplier(steward: dict[str, Any], hut_event_mult: float = 1.0) -> float:
     mult = 1.0
     weather = world.current_weather()
     if weather == "gale":
@@ -21,7 +21,7 @@ def _roll_multiplier(steward: dict[str, Any]) -> float:
         mult *= 0.85
     if steward.get("mascot_trait") == "lucky":
         mult *= 0.72
-    return mult
+    return mult * hut_event_mult
 
 
 async def _can_roll(conn: aiosqlite.Connection, steward_id: int) -> bool:
@@ -338,17 +338,27 @@ async def roll_after_action(
 
     await survival.on_action(conn, steward["id"], trigger)
 
-    mult = _roll_multiplier(steward) * survival.event_multiplier(steward) * world.incident_night_bias()
+    from . import hut as hut_mod
+    hut_b = await hut_mod.get_bonuses(conn, steward["id"])
+    if hut_b.night_mist_save and world.current_day_phase() in ("dusk", "night"):
+        await survival.bump(conn, steward["id"], mist_wit=hut_b.night_mist_save)
+
+    mult = (
+        _roll_multiplier(steward, hut_b.event_mult)
+        * survival.event_multiplier(steward)
+        * world.incident_night_bias()
+    )
     ailments = await health.list_ailments(conn, steward["id"])
     mult *= health.event_bias(steward, len(ailments))
     if random.random() > config.EVENT_ROLL_CHANCE * mult:
         return None
 
-    good = random.random() < config.EVENT_GOOD_SHARE
+    good = random.random() < config.EVENT_GOOD_SHARE * hut_b.good_share
     if world.current_weather() == "gale" and trigger in {
         "tend", "gather", "sow", "voyage_depart", "voyage_return", "pen_feed", "net",
     }:
-        good = False
+        if random.random() < hut_b.gale_event:
+            good = False
 
     pulse = await active_world_pulse(conn)
     if pulse and pulse.get("effect_type") == "red_tide" and trigger in {"net", "pen_feed", "pen_harvest"}:

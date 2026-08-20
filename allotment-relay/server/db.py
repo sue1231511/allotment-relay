@@ -404,6 +404,13 @@ CREATE TABLE IF NOT EXISTS lili_offers (
     stock INTEGER NOT NULL DEFAULT 1,
     sold INTEGER NOT NULL DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS npc_visits (
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    npc_key TEXT NOT NULL,
+    day INTEGER NOT NULL,
+    PRIMARY KEY (steward_id, npc_key, day)
+);
 """
 
 

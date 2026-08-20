@@ -205,7 +205,7 @@ async def market_ops(command: str) -> str:
     return await market.market_ops(_kid(), command)
 
 
-@mcp.tool(description="畜栏：status/erect/buy/feed/harvest/compost — 牛羊猪狗兔鸡，粪肥转堆肥")
+@mcp.tool(description="畜栏：status/erect/buy/feed/collect/harvest/compost/churn — 牛羊猪狗兔鸡，粪肥转堆肥，山羊奶打奶酪")
 async def barn_ops(command: str) -> str:
     from . import barn
     return await barn.barn_ops(_kid(), command)

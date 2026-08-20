@@ -82,7 +82,7 @@ async def relay_manual() -> str:
         "  pen_ops — erect/stock/feed/harvest（渔排养鱼）",
         "  voyage_ops — buy/repair/depart/return（购船出海，归港可触发海上遭遇）",
         "  shed_ops — erect/label/visit/handoff（温室）",
-        "  hut_ops — build/upgrade/catalog/buy/install（岸畔小屋硬装软装）",
+        "  hut_ops — build/upgrade/catalog/buy/install（岸畔小屋；装件加成已生效）",
         "  commons_ops — scan/claim/pulse（稀有公共物资，随机上线）",
         "  mascot_ops — adopt/upkeep/train/status",
         "  beacon_ops — post/scan/respond",
@@ -104,9 +104,9 @@ async def relay_manual() -> str:
         "  精力限制 net/出海/赶海；吃饭 kitchen_ops eat 回精力",
         "  施肥/稻草人/堆肥桶/挖蚯蚓饵；羊猪牛产粪→堆肥",
         "  boss_ops 合力击杀潮渊之主 → 神话章鱼肉",
-        "  票紧？暮/夜 bar_ops shift 滨海酒吧上工，老板荔栀",
+        "  票紧？暮/夜 bar_ops shift；逾期白天可补班。小屋装件/栗栗装饰会改意外、出海、赶海",
         "  意外/赶海/出海/上工可能致病 → clinic_ops treat 花钱治（桥桥大夫不赊账）",
-        f"  **每 {config.BAR_MANDATORY_DAYS} 天必须 shift 一次**，逾期其它 MCP 锁定",
+        f"  **每 {BAR_MANDATORY_DAYS} 天必须 shift 一次**，逾期其它 MCP 锁定",
         "  人类网页 /bar 可花 AI 的票点牛郎",
         "",
         "  饱食 / 雾智 / 档信 三项慢衰减，无硬死亡",
@@ -146,8 +146,10 @@ async def steward_sheet(key_id: int) -> str:
         await energy_mod.soft_regen(conn, s["id"])
         ailments = await health_mod.list_ailments(conn, s["id"])
         from . import lili as lili_mod
+        from . import hut as hut_mod
         await lili_mod.maybe_spawn_visit(conn)
         lili_hint = await lili_mod.active_visit_hint(conn)
+        hut_summary = (await hut_mod.get_bonuses(conn, s["id"])).summary()
         await conn.commit()
     s = await db.get_steward_by_id(s["id"]) or s
     parcels = await db.get_parcels(s["id"])
@@ -188,6 +190,8 @@ async def steward_sheet(key_id: int) -> str:
         lvl = s.get("hut_level") or 1
         hname = s.get("hut_label") or HUT_LEVELS[lvl]["name"]
         lines.append(f"小屋: {hname}（Lv{lvl}）")
+        if hut_summary:
+            lines.append(hut_summary)
     if s.get("barn_built"):
         lines.append("畜栏: 已建")
     async with aiosqlite.connect(db.DB_PATH) as conn:
@@ -249,11 +253,13 @@ async def guild_shift(key_id: int) -> str:
     mult, note = survival.guild_ticket_multiplier(s)
     gain = max(1, int(GUILD_TICKETS * mult))
     async with aiosqlite.connect(db.DB_PATH) as conn:
+        from . import hut as hut_mod
+        hut_b = await hut_mod.get_bonuses(conn, s["id"])
         await conn.execute(
             "UPDATE stewards SET tickets = tickets + ? WHERE id = ?",
             (gain, s["id"]),
         )
-        await survival.bump(conn, s["id"], standing=4, mist_wit=2)
+        await survival.bump(conn, s["id"], standing=4 + hut_b.guild_standing, mist_wit=2)
         extra = await events.roll_after_action(s, "guild", conn)
         await conn.commit()
     await db.add_chronicle("guild", f"{s['name']} 完成一轮 guild 轮值，+{gain} 票", s["id"])
@@ -268,7 +274,7 @@ async def plot_ops(key_id: int, command: str) -> str:
     s = await require_steward(key_id)
     pulse = await events.maybe_world_pulse(s)
     async with aiosqlite.connect(db.DB_PATH) as conn:
-        await commons.maybe_spawn_commons(conn)
+        await commons.maybe_spawn_commons(conn, steward_id=s["id"])
         await conn.commit()
     parts = [c.strip() for c in command.split(";") if c.strip()]
     out = "\n".join([await _plot_one(s, c) for c in parts])
@@ -355,17 +361,39 @@ async def _plot_one(s: dict, cmd: str) -> str:
                 (s["id"],),
             )
             rows = await cur.fetchall()
+            hoe = await (await conn.execute(
+                "SELECT quantity FROM satchel WHERE steward_id=? AND item='tool_hoe' AND quantity>0",
+                (s["id"],),
+            )).fetchone()
+            from . import hut as hut_mod
+            hut_b = await hut_mod.get_bonuses(conn, s["id"])
             for (pid,) in rows:
                 await conn.execute("UPDATE parcels SET tended=1 WHERE id=?", (pid,))
+                if hoe:
+                    await conn.execute(
+                        "UPDATE parcels SET grow_target=MAX(120, grow_target-40) WHERE id=? AND grow_target>0",
+                        (pid,),
+                    )
+                if world.current_weather() == "gale" and hut_b.gale_grow < 1:
+                    cut = int(80 * (1 - hut_b.gale_grow))
+                    await conn.execute(
+                        "UPDATE parcels SET grow_target=MAX(120, grow_target-?) WHERE id=? AND grow_target>0",
+                        (cut, pid),
+                    )
             extra = await events.roll_after_action(s, "tend", conn)
             farm = await farming.roll_farm_event(conn, s, "tend")
             disc = await commons.roll_discovery(conn, s, "tend")
             worm_msg = ""
-            if random.random() < 0.14:
+            worm_chance = 0.28 if hoe else 0.14
+            if random.random() < worm_chance:
                 await db.add_item(conn, s["id"], "bait_worm", random.randint(1, 2))
                 worm_msg = "\n翻出蚯蚓饵，钓鱼佬狂喜"
+                if hoe:
+                    worm_msg += "（锄头加分）"
             await conn.commit()
         msg = f"打理了 {len(rows)} 块份地" if rows else "没有待打理的份地——苗都乖，或你还没种"
+        if hoe and rows:
+            msg += " · 锄头松土"
         msg += flavor.maybe_suffix(flavor.TEND_SUFFIX)
         if farm:
             msg += f"\n{farm}"
@@ -420,12 +448,17 @@ async def _plot_one(s: dict, cmd: str) -> str:
                     raise ValueError("施肥需要堆肥 x1")
             else:
                 raise ValueError("可用 compost 或 manure_sheep|manure_pig|manure_cow")
+            if s.get("mascot_trait") == "compost":
+                boost += 0.05
             await conn.execute(
                 "UPDATE parcels SET fertilized=1, grow_target=MAX(120, grow_target-?) WHERE id=?",
                 (int((plot.get("grow_target") or 300) * boost), plot["id"]),
             )
             await conn.commit()
-        return f"#{slot} 已施{label}，生长加速"
+        return (
+            f"#{slot} 已施{label}，生长加速"
+            + (" · 吉祥物堆肥加持" if s.get("mascot_trait") == "compost" else "")
+        )
 
     if verb == "scarecrow" and len(parts) >= 2:
         slot = int(parts[1])
@@ -644,7 +677,7 @@ async def tide_ops(key_id: int, command: str) -> str:
     if verb == "net":
         cost = 4
         async with aiosqlite.connect(db.DB_PATH) as conn:
-            await commons.maybe_spawn_commons(conn)
+            await commons.maybe_spawn_commons(conn, steward_id=s["id"])
             from . import energy as energy_mod, gear
             energy_cost, catch_bonus, rarity_bonus, empty_reduce = await energy_mod.net_energy_cost(conn, s["id"])
             stats = await gear.get_stats(conn, s["id"])
@@ -1043,6 +1076,8 @@ async def hearth_ops(key_id: int, command: str) -> str:
             brews = row["brews_today"] if row["brew_day"] == day else 0
             if brews >= DAILY_BREW_LIMIT:
                 raise ValueError(f"今日 brew 上限 {DAILY_BREW_LIMIT}")
+            from . import hut as hut_mod
+            hut_b = await hut_mod.get_bonuses(conn, s["id"])
             for item in ings:
                 if not await db.take_item(conn, s["id"], item, 1):
                     raise ValueError(f"缺少 {item}")
@@ -1061,7 +1096,7 @@ async def hearth_ops(key_id: int, command: str) -> str:
                 "UPDATE stewards SET brews_today=?, brew_day=? WHERE id=?",
                 (brews + 1 if row["brew_day"] == day else 1, day, s["id"]),
             )
-            await survival.bump(conn, s["id"], satiety=10, mist_wit=8)
+            await survival.bump(conn, s["id"], satiety=10, mist_wit=8 + hut_b.brew_mist)
             extra = await events.roll_after_action(s, "brew", conn)
             await conn.commit()
         msg = f" brewed 「{recipe['name']}」→ {meal_item}"

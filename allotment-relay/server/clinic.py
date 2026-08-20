@@ -12,7 +12,7 @@ from .game import require_steward
 
 
 async def clinic_ops(key_id: int, command: str) -> str:
-    s = await require_steward(key_id)
+    s = await require_steward(key_id, exempt_duty=True)
     parts = command.strip().split()
     verb = parts[0].lower() if parts else "status"
 

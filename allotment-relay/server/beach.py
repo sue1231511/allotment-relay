@@ -26,7 +26,7 @@ def _beach_weights(tide: str, weather: str, *, probe: bool = False) -> list[int]
             item.startswith("curio_") or item == "sea_glass" or item.startswith("fish_sea")
         ):
             weights[i] += 8
-        if weather == "sunny" and item.startswith("shell"):
+        if weather == "clear" and item.startswith("shell"):
             weights[i] += 5
         if probe:
             if item.startswith("fish_") or item in ("beach_crab", "beach_squid", "bait_worm"):
@@ -104,6 +104,12 @@ async def beach_ops(key_id: int, command: str) -> str:
                 bait = random.choice([x for x in BEACH_LOOT if x[0].startswith("bait_")])
                 await db.add_item(conn, s["id"], bait[0], 1)
                 extra_msg = f"，顺手 {bait[1]}"
+            from . import hut as hut_mod
+            hut_b = await hut_mod.get_bonuses(conn, s["id"])
+            if hut_b.beach_extra and random.random() < hut_b.beach_extra:
+                bonus_item, bonus_label, bonus_qty = _roll_loot(tide, w, probe=False)
+                await db.add_item(conn, s["id"], bonus_item, bonus_qty)
+                extra_msg += f"，潮汐钟多响一声：{bonus_label} x{bonus_qty}"
             await conn.execute(
                 """
                 INSERT INTO beach_rolls (steward_id, day, last_at, count)
@@ -164,6 +170,13 @@ async def beach_ops(key_id: int, command: str) -> str:
             if tide != "ebb":
                 qty = max(1, qty // 2)
             await db.add_item(conn, s["id"], item, qty)
+            clock_msg = ""
+            from . import hut as hut_mod
+            hut_b = await hut_mod.get_bonuses(conn, s["id"])
+            if hut_b.beach_extra and random.random() < hut_b.beach_extra:
+                bonus_item, bonus_label, bonus_qty = _roll_loot(tide, w, probe=True)
+                await db.add_item(conn, s["id"], bonus_item, max(1, bonus_qty))
+                clock_msg = f"，潮汐钟：{bonus_label}"
             await conn.execute(
                 """
                 INSERT INTO beach_probe_rolls (steward_id, day, last_at, count)
@@ -176,7 +189,7 @@ async def beach_ops(key_id: int, command: str) -> str:
             disc = await commons.roll_discovery(conn, s, "beach")
             await conn.commit()
 
-        msg = f"掏洞：{label} x{qty}"
+        msg = f"掏洞：{label} x{qty}{clock_msg}"
         msg += flavor.maybe_suffix([
             "洞里货不多，但胜在新鲜",
             "沙蟹横着跑，你横着捞",

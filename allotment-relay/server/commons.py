@@ -34,12 +34,20 @@ async def _active_spawns(conn: aiosqlite.Connection) -> list[dict[str, Any]]:
     return [dict(r) for r in rows]
 
 
-async def maybe_spawn_commons(conn: aiosqlite.Connection) -> dict[str, Any] | None:
+async def maybe_spawn_commons(
+    conn: aiosqlite.Connection,
+    steward_id: int | None = None,
+) -> dict[str, Any] | None:
     """Roll a new public resource with random appear/live window."""
     active = await _active_spawns(conn)
     if len(active) >= config.COMMONS_MAX_ACTIVE:
         return None
-    if random.random() > config.COMMONS_SPAWN_CHANCE:
+    chance = config.COMMONS_SPAWN_CHANCE
+    if steward_id:
+        from . import hut as hut_mod
+        hut_b = await hut_mod.get_bonuses(conn, steward_id)
+        chance *= hut_b.commons_chance
+    if random.random() > chance:
         return None
 
     tmpl = random.choices(
@@ -118,7 +126,7 @@ async def commons_ops(key_id: int, command: str) -> str:
 
     async with aiosqlite.connect(db.DB_PATH) as conn:
         conn.row_factory = aiosqlite.Row
-        spawned = await maybe_spawn_commons(conn)
+        spawned = await maybe_spawn_commons(conn, steward_id=s["id"])
 
         if verb == "scan":
             rows = await _active_spawns(conn)

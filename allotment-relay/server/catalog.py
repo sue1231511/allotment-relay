@@ -218,7 +218,7 @@ LARGE_LIVESTOCK = {"sheep", "pig", "cow", "goat"}
 
 LIVESTOCK = {
     "rabbit": {"name": "兔", "emoji": "🐰", "buy": 55, "feed": "crop_fogpea", "feed_qty": 1, "grow": 600, "product": "meat_rabbit", "product_qty": 1},
-    "chicken": {"name": "鸡", "emoji": "🐔", "buy": 48, "feed": "crop_rye", "feed_qty": 1, "grow": 480, "product": "egg", "product_qty": 2},
+    "chicken": {"name": "鸡", "emoji": "🐔", "buy": 48, "feed": "crop_rye", "feed_qty": 1, "grow": 480, "product": "egg", "product_qty": 2, "daily": True},
     "duck": {"name": "鸭", "emoji": "🦆", "buy": 58, "feed": "crop_sweetpotato", "feed_qty": 1, "grow": 520, "product": "duck_egg", "product_qty": 2, "daily": True},
     "sheep": {"name": "羊", "emoji": "🐑", "buy": 95, "feed": "crop_kale", "feed_qty": 2, "grow": 900, "product": "wool", "product_qty": 1, "manure": "manure_sheep", "manure_feed": 1, "manure_harvest": 1},
     "pig": {"name": "猪", "emoji": "🐷", "buy": 110, "feed": "crop_beet", "feed_qty": 2, "grow": 840, "product": "meat_pork", "product_qty": 2, "manure": "manure_pig", "manure_feed": 1, "manure_harvest": 2},
@@ -355,6 +355,36 @@ KITCHEN_DISHES = {
         "name": "红薯烙", "emoji": "🥞",
         "ings": ["crop_sweetpotato", "crop_rye", "honey"],
         "base_sell": 42, "energy": 16, "tags": ["dessert"],
+    },
+    "salt_crab": {
+        "name": "盐焗沙蟹", "emoji": "🦀",
+        "ings": ["beach_crab", "crop_garlic", "crop_chili"],
+        "base_sell": 58, "energy": 18, "tags": ["sea", "spicy"],
+    },
+    "stir_squid": {
+        "name": "姜葱炒小管", "emoji": "🦑",
+        "ings": ["beach_squid", "crop_ginger", "crop_garlic"],
+        "base_sell": 62, "energy": 20, "tags": ["sea"],
+    },
+    "pork_sweetpotato": {
+        "name": "红薯烧肉", "emoji": "🍖",
+        "ings": ["meat_pork", "crop_sweetpotato", "crop_chili"],
+        "base_sell": 64, "energy": 22, "tags": ["rich"],
+    },
+    "rabbit_stew": {
+        "name": "姜焖兔", "emoji": "🍲",
+        "ings": ["meat_rabbit", "crop_kale", "crop_ginger"],
+        "base_sell": 56, "energy": 20, "tags": ["rich"],
+    },
+    "banana_fritters": {
+        "name": "香蕉椰丝饼", "emoji": "🍌",
+        "ings": ["crop_banana", "crop_coconut", "honey"],
+        "base_sell": 50, "energy": 16, "tags": ["dessert", "tropic"],
+    },
+    "mussel_garlic": {
+        "name": "蒜香青口", "emoji": "🦪",
+        "ings": ["shell_mussel", "crop_garlic", "crop_chili"],
+        "base_sell": 48, "energy": 16, "tags": ["sea"],
     },
 }
 

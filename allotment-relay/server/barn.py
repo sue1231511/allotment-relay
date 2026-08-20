@@ -15,6 +15,14 @@ def _day_id() -> int:
     return db.now() // config.FORAGE_COOLDOWN_DAY
 
 
+async def has_guard_dog(conn: aiosqlite.Connection, steward_id: int) -> bool:
+    cur = await conn.execute(
+        "SELECT 1 FROM barn_animals WHERE steward_id=? AND species='dog' AND guard=1 LIMIT 1",
+        (steward_id,),
+    )
+    return await cur.fetchone() is not None
+
+
 def _ready(animal: dict, species: str) -> bool:
     meta = LIVESTOCK[species]
     if meta.get("guard") or meta.get("hive"):
@@ -66,7 +74,7 @@ async def barn_ops(key_id: int, command: str) -> str:
         for slot in range(1, config.BARN_SLOTS + 1):
             lines.append(_line(by_slot.get(slot), slot))
         lines.append(f"可购: {', '.join(LIVESTOCK.keys())}")
-        lines.append("catalog 看详情 · collect 日常收奶/蛋/蜜 · 大型动物产粪→compost")
+        lines.append("catalog 看详情 · collect 日常收奶/蛋/蜜 · churn 山羊奶→奶酪 · 粪肥 compost")
         return "\n".join(lines)
 
     if verb == "catalog":
@@ -291,13 +299,31 @@ async def barn_ops(key_id: int, command: str) -> str:
             if not await db.take_item(conn, s["id"], item, qty):
                 raise ValueError(f"缺少 {MANURE[item]['name']} x{qty}")
             total = yield_each * qty
+            if s.get("mascot_trait") == "compost":
+                total += qty
             await db.add_item(conn, s["id"], "compost", total)
+            extra = f"+吉祥物堆肥" if s.get("mascot_trait") == "compost" else ""
             await conn.commit()
         return (
             f"{MANURE[item]['name']} x{qty} → 堆肥 x{total} "
-            f"（每份{yield_each}）"
+            f"（每份{yield_each}{extra}）"
         ) + flavor.maybe_suffix(["粪肥到位，土力拉满", "大型动物回馈，堆肥桶笑纳"])
 
+    if verb == "churn":
+        qty = int(parts[1]) if len(parts) > 1 else 2
+        if qty < 2:
+            raise ValueError("churn 至少山羊奶 x2 → 奶酪 x1")
+        milk = qty - (qty % 2)
+        cheese = milk // 2
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            if not await db.take_item(conn, s["id"], "goat_milk", milk):
+                raise ValueError(f"需要山羊奶 x{milk}（goat collect）")
+            await db.add_item(conn, s["id"], "goat_cheese", cheese)
+            await conn.commit()
+        return (
+            f"山羊奶 x{milk} → 山羊奶酪 x{cheese}"
+        ) + flavor.maybe_suffix(["姜姨：这才叫奶制品", "厨房 goat_cheese_salad 等着"])
+
     raise ValueError(
-        f"未知 barn 指令: {command}（status/catalog/erect/buy/feed/collect/harvest/compost）"
+        f"未知 barn 指令: {command}（status/catalog/erect/buy/feed/collect/harvest/compost/churn）"
     )

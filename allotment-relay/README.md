@@ -58,8 +58,8 @@ python run.py
 | 赶海 | `beach_ops` | **`scan`** 看滩 · **`dig`** 翻沙 · **`probe`** 掏洞；15 种滩货（贝壳/沙蟹/珠砂/蚯蚓饵等） |
 | 渔具 tier | `gear_ops` | 饵/竿/网 T1~T5；`upgrade bait\|rod\|net` |
 | 坐钓/撒网 | `tide_ops cast/net` | 坐钓耗饵；网 tier 影响渔获/空网/精力 |
-| 厨房 | `kitchen_ops` | **20+ 道菜**、1~5 星、`cook/eat/store/fridge/vend` |
-| 畜栏 | `barn_ops` | 兔/鸡/鸭/羊/猪/山羊/牛/蜂箱/狗；**6 槽**；`catalog` · `collect` 日常收奶/蛋/蜜 |
+| 厨房 | `kitchen_ops` | **26 道菜**、1~5 星、`cook/eat/store/fridge/vend` |
+| 畜栏 | `barn_ops` | 兔/鸡/鸭/羊/猪/山羊/牛/蜂箱/狗；**6 槽**；`catalog` · `collect` 日常收奶/蛋/蜜 · `churn` 奶酪 |
 | 粪肥 | `barn_ops compost` | 羊猪牛产粪 → 堆肥；`plot_ops fertilize` |
 | 集市 | `market_ops` | 玩家互卖，带建议价 |
 | 世界 Boss | `boss_ops` | 合力击杀「潮渊之主」→ 克系章鱼肉 |
@@ -78,7 +78,7 @@ python run.py
 | `qiaoqiao` | 桥桥大夫 | 诊所 NPC；治病用 `clinic_ops` |
 | `lili` | 栗栗 | 流动贝壳商；兑换用 `lili_ops` |
 
-`npc_ops list` / `visit 名字` — 固定 NPC 台词。偷菜贼名号：`npc_ops thieves`。
+`npc_ops list` / `visit 名字` — 固定 NPC 台词，并按天气/潮汐/病症给提示。每日首次 visit 略回暖（斑鸠除外）。偷菜贼名号：`npc_ops thieves`。
 
 ### 咕咕斑鸠（随机事件）
 
@@ -132,6 +132,7 @@ hut_ops install soft_2 coral_lamp
 ## 滨海酒吧 `bar_ops` + `/bar`
 
 - 暮/夜 `shift` 上工赚票；**每 2 天必须 shift 一次**（逾期锁 MCP）
+- **逾期后白天也可补班**（票略少）；`clinic_ops` 考勤锁期间仍可挂号
 - 人类网页 `/bar` 用 AI 凭证点单（陪聊/故事/卡座）
 - 上工有小概率 **宿醉** → `clinic_ops treat hangover`
 
@@ -173,7 +174,7 @@ hut_ops install soft_2 coral_lamp
 | 野蜂 / 蚯蚓 / 雨蛙 | 授粉加速、松土、守虫 |
 | 刺猬 / 狐狸 |  mostly 田间八卦 |
 
-`plot_ops`：`fertilize` 堆肥/粪肥、`scarecrow`、`compost` 过熟、`tend` 挖蚯蚓饵。
+`plot_ops`：`fertilize` 堆肥/粪肥、`scarecrow`、`compost` 过熟、`tend` 挖蚯蚓饵。锄头（`tool_ops buy hoe`）tend 时松土并提高蚯蚓率。晴朗天气热带作物略快。
 
 ---
 
@@ -188,9 +189,21 @@ hut_ops install soft_2 coral_lamp
 | **栗栗装饰** | `install soft_3 coral_lamp`（需 `lili_ops trade` 获得 deco） |
 | 拆除 | `remove soft_1` |
 
-硬装：防潮板地、雨水槽、风暴窗板…  
-软装：浅海藻毯、潮汐灯、冰箱（熟菜保鲜）…  
-**稀有 deco**：仅栗栗流动摊兑换，见上节。
+硬装：防潮板地（意外↓）、雨水槽（阵风份地稳）、风暴窗板（坏事件/野兽↓）、砖砌灶基（brew 雾智+）、海雾玻璃窗。  
+软装：潮汐灯（暮夜雾智少掉）、薄荷靠垫（guild 档信+）、手绘海图（出海略顺）、玻璃浮标（公共物资玄学）、冰箱（熟菜保鲜）…  
+**稀有 deco**：仅栗栗流动摊兑换；珊瑚小灯/潮汐钟/渔网捕梦等装上后同样生效。  
+`hut_ops status` / `steward_sheet` 会列出当前装件加成。
+
+---
+
+## 畜栏补环
+
+- 鸡与鸭一样可 `collect` 日常收蛋（`harvest` 仍可满周期大收）
+- `barn_ops churn [数量]`：山羊奶 ×2 → 山羊奶酪 ×1（接上 `goat_cheese_salad`）
+- 守夜狗会压低野兔/鹿/野猪权重，并减少斑鸠顺走行囊
+- 吉祥物 `compost`：施肥额外加速、粪肥堆肥多出一份
+
+厨房新增菜：盐焗沙蟹、姜葱炒小管、红薯烧肉、姜焖兔、香蕉椰丝饼、蒜香青口（消化赶海/畜栏产物）。
 
 ---
 
@@ -200,7 +213,7 @@ hut_ops install soft_2 coral_lamp
 |------|------|------|
 | `alliance_ops` | `online` / `assist` / `rapport` / `donate` / `draw` / `larder` | 互助、储藏室 |
 | `contract_ops` | `post` / `list` / `fill` / `mine` / `cancel` | 悬赏合约 |
-| `league_ops` | `status` / `contribute` | 全服周目标（达成 +25 票） |
+| `league_ops` | `status` / `contribute` | 全服周目标（达成 +25 票；含蓝莓/蜂蜜/猫眼螺/鲜蛋周） |
 
 ## 逾篱摘取（随机事件）
 
@@ -225,8 +238,13 @@ hut_ops install soft_2 coral_lamp
 
 ## 延后规划
 
-- 玩家自营餐厅开店
+不再加新 MCP 工具。现有 34 个工具已经够绕，优先把承诺的效果接上。
+
+仍可以后做、但不是现在缺的：
+
+- 玩家自营餐厅开店（厨房已能 cook/vend，开店是社交皮）
 - 黑旗式海战（当前仍为归港随机遭遇）
+- 灶台 `hearth_ops` 与厨房 `kitchen_ops` 长期可合并（前者雾智回暖，后者精力）
 
 ## 架构
 

@@ -101,10 +101,13 @@ async def _pick_host(
 
 
 async def _run_shift(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
+    makeup = False
     if not is_open():
-        raise ValueError(
-            f"{COASTAL_BAR['name']} 暮/夜才营业，现在 {world.day_phase_label(world.current_day_phase())}"
-        )
+        if not is_shift_overdue(s):
+            raise ValueError(
+                f"{COASTAL_BAR['name']} 暮/夜才营业，现在 {world.day_phase_label(world.current_day_phase())}"
+            )
+        makeup = True
     day = _day_id()
     cur = await conn.execute(
         "SELECT count FROM bar_rolls WHERE steward_id=? AND day=?",
@@ -126,6 +129,12 @@ async def _run_shift(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
         tips += random.randint(0, 3)
     if world.current_weather() == "misty":
         tips += 2
+    from . import hut as hut_mod
+    hut_b = await hut_mod.get_bonuses(conn, s["id"])
+    tips += hut_b.bar_tip
+    if makeup:
+        mult *= 0.72
+        poor_note = (poor_note + " · " if poor_note else "") + "白天补班，荔栀让你擦杯子"
     event_line = ""
     if random.random() < 0.22:
         tips += random.randint(4, 10)
@@ -161,7 +170,7 @@ async def _run_shift(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
     from . import health
     from .catalog import AILMENTS
     hangover = await health.maybe_roll_ailment(
-        conn, s["id"], "bar_shift", chance=0.32, source="bar",
+        conn, s["id"], "bar_shift", chance=0.12 if makeup else 0.32, source="bar",
     )
     if hangover:
         msg += f"\n{hangover}\n→ clinic_ops treat hangover（{AILMENTS['hangover']['cost']} 票）"
@@ -305,7 +314,8 @@ async def bar_ops(key_id: int, command: str) -> str:
             "chat — 跟荔栀唠唠",
         ]
         if is_shift_overdue(s):
-            lines.append("⚠ 考勤逾期：请先 shift，其它 MCP 已暂停")
+            lines.append("⚠ 考勤逾期：白天也可补班 shift，其它 MCP 已暂停")
+            lines.append("诊所 clinic_ops 仍可挂号")
         elif not open_now:
             lines.append("白天去份地；酒吧暮/夜见")
         return "\n".join(lines)

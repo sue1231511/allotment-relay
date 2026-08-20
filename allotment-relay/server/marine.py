@@ -264,6 +264,9 @@ async def _resolve_voyage(conn: aiosqlite.Connection, s: dict[str, Any], voyage:
         fail_chance += 0.12
     if s.get("mascot_trait") == "lucky":
         fail_chance *= 0.75
+    from . import hut as hut_mod
+    hut_b = await hut_mod.get_bonuses(conn, s["id"])
+    fail_chance *= hut_b.voyage_fail
     pulse = await events.active_world_pulse(conn)
     if pulse and pulse.get("effect_type") == "fish_run":
         fail_chance *= 0.85
