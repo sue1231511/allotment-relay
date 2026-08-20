@@ -81,24 +81,31 @@ class EateryOrderRequest(BaseModel):
 
 
 @app.post("/api/keys/generate")
-async def generate_key(body: KeyRequest):
+async def generate_key(request: Request, body: KeyRequest):
     try:
         api_key = await db.create_api_key(body.email)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="数据库写入失败，请检查 Zeabur 持久卷是否挂载到 /app/server/data",
+        ) from exc
+    base = str(request.base_url).rstrip("/")
     return {
         "api_key": api_key,
         "message": "凭证只显示一次，请立即保存。",
-        "mcp_url": f"/mcp/?api_key={api_key}",
+        "mcp_url": f"{base}/mcp/?api_key={api_key}",
     }
 
 
 @app.post("/api/keys/recover")
-async def recover_key(body: KeyRequest):
+async def recover_key(request: Request, body: KeyRequest):
     api_key = await db.recover_api_key(body.email)
     if not api_key:
         raise HTTPException(status_code=404, detail="未找到该邮箱的凭证")
-    return {"api_key": api_key, "mcp_url": f"/mcp/?api_key={api_key}"}
+    base = str(request.base_url).rstrip("/")
+    return {"api_key": api_key, "mcp_url": f"{base}/mcp/?api_key={api_key}"}
 
 
 @app.get("/api/public/stats")
