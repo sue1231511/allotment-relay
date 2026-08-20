@@ -80,10 +80,10 @@ VOYAGE_ROUTES = {
     "deep": {"label": "深漂", "duration": 2400, "fuel": 35, "min_boat": "drifter", "fail": 0.34},
 }
 
-EVENT_ROLL_CHANCE = 0.16
-EVENT_DAILY_CAP = 5
+EVENT_ROLL_CHANCE = 0.09
+EVENT_DAILY_CAP = 4
 EVENT_GOOD_SHARE = 0.24
-WORLD_PULSE_CHANCE = 0.07
+WORLD_PULSE_CHANCE = 0.05
 WORLD_PULSE_DURATION = WEATHER_CYCLE
 
 # 休闲生存感 — 慢衰减、无硬死亡
