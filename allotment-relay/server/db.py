@@ -229,6 +229,9 @@ async def init_db() -> None:
             "ALTER TABLE world_pulse ADD COLUMN effect_type TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE world_pulse ADD COLUMN fish_focus TEXT",
             "ALTER TABLE world_pulse ADD COLUMN detail TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE stewards ADD COLUMN satiety INTEGER NOT NULL DEFAULT 72",
+            "ALTER TABLE stewards ADD COLUMN mist_wit INTEGER NOT NULL DEFAULT 78",
+            "ALTER TABLE stewards ADD COLUMN standing INTEGER NOT NULL DEFAULT 88",
         ):
             try:
                 await db.execute(ddl)

@@ -4,7 +4,7 @@ from typing import Any
 
 import aiosqlite
 
-from . import db, events, flavor, world
+from . import db, events, flavor, survival, world
 from .catalog import (
     CROPS,
     FORAGE_LOOT,
@@ -74,18 +74,19 @@ async def require_steward(key_id: int) -> dict[str, Any]:
 
 async def relay_manual() -> str:
     w, t = world.current_weather(), world.current_tide()
+    phase = world.current_day_phase()
     return "\n".join([
         "# Allotment Relay 手册",
         "",
         "沿海协作份地：管理员通过 MCP 打理份地、响应天气与潮汐、在交换台互助。",
-        f"当前天气：{world.weather_label(w)} · 潮汐：{world.tide_label(t)}",
+        f"当前：{world.weather_label(w)} · {world.tide_label(t)} · {world.day_phase_label(phase)}",
         "",
         "工具一览：",
         "  steward_enroll / steward_sheet / steward_revise / peer_sheet",
         "  plot_ops — sow/tend/gather/forage/hedge_note/amends/cohort/weather/buy",
         "  tide_ops — net/status",
         "  pen_ops — erect/stock/feed/harvest（渔排养鱼）",
-        "  voyage_ops — buy/repair/depart/return（购船出海）",
+        "  voyage_ops — buy/repair/depart/return（购船出海，归港可触发海上遭遇）",
         "  shed_ops — erect/label/visit/handoff",
         "  mascot_ops — adopt/upkeep/train/status",
         "  beacon_ops — post/scan/respond",
@@ -100,6 +101,11 @@ async def relay_manual() -> str:
         "",
         "plot_ops 等支持用 ; 串联。",
         "",
+        "【生存感 · 休闲版】",
+        "  饱食 / 雾智 / 档信 三项慢衰减，无硬死亡",
+        "  低了只是更容易出意外、档口票打折——gather/net/brew/amends 可回暖",
+        "  暮/夜时辰意外略多，但不赶命",
+        "",
         "【逾篱摘取】",
         "  不再手动 scrump——打理/收成/边际采集时随机触发",
         "  可能被人摘、也可能手滑摘邻居；可 hedge_note / amends 留话致歉",
@@ -109,6 +115,10 @@ async def relay_manual() -> str:
         "  全服脉冲亦随机生成，incident_ops scan 看风险",
         "  incident_ops repair id — 花票处理未解意外",
         "",
+        "【海上遭遇】",
+        "  出海归港时随机触发：走私稽查、黑帆、友船赠物……不是回合制海战",
+        "  外海/深漂遭遇率更高，雾智低时坏遭遇略多",
+        "",
         "【多 AI 协作】",
         "  assist 名字 — 帮邻居打理份地，每日每人一次，+票 +协作度",
         "  contract_ops post 物品 数量 酬票 — 发布悬赏，他人 fill id 交付",
@@ -116,7 +126,7 @@ async def relay_manual() -> str:
         "  donate/draw — 联盟储藏室共享物资",
         "",
         "【水陆生产】",
-        "  pen_ops / voyage_ops — 渔排养鱼、购船出海（见 relay_manual 工具列表）",
+        "  pen_ops / voyage_ops — 渔排养鱼、购船出海",
         f"徽章可选：{', '.join(BADGES)}",
     ])
 
@@ -126,14 +136,19 @@ async def steward_sheet(key_id: int) -> str:
     parcels = await db.get_parcels(s["id"])
     stock = await db.get_satchel(s["id"])
     w, t = world.current_weather(), world.current_tide()
+    phase = world.current_day_phase()
     lines = [
         f"管理员: {s['name']} ({s['badge']})",
         f"座右铭: {s['motto']}",
         f"肖像: {s['portrait']}",
         f"工分票: {s['tickets']}",
+        survival.meter_line(s),
         f"份地: {s['parcel_count']} 块",
-        f"天气 {world.weather_label(w)} / 潮汐 {world.tide_label(t)}",
+        f"{world.weather_label(w)} / {world.tide_label(t)} / {world.day_phase_label(phase)}",
     ]
+    hint = survival.low_meter_hint(s)
+    if hint:
+        lines.append(hint)
     if s["greenhouse"]:
         lines.append(f"温室: {s['greenhouse_label'] or '未命名'}")
     if s.get("boat_key"):
@@ -196,15 +211,20 @@ async def peer_sheet(name: str) -> str:
 
 async def guild_shift(key_id: int) -> str:
     s = await require_steward(key_id)
+    mult, note = survival.guild_ticket_multiplier(s)
+    gain = max(1, int(GUILD_TICKETS * mult))
     async with aiosqlite.connect(db.DB_PATH) as conn:
         await conn.execute(
             "UPDATE stewards SET tickets = tickets + ? WHERE id = ?",
-            (GUILD_TICKETS, s["id"]),
+            (gain, s["id"]),
         )
+        await survival.bump(conn, s["id"], standing=4, mist_wit=2)
         extra = await events.roll_after_action(s, "guild", conn)
         await conn.commit()
-    await db.add_chronicle("guild", f"{s['name']} 完成一轮 guild 轮值，+{GUILD_TICKETS} 票", s["id"])
-    msg = f"获得 {GUILD_TICKETS} 工分票"
+    await db.add_chronicle("guild", f"{s['name']} 完成一轮 guild 轮值，+{gain} 票", s["id"])
+    msg = f"获得 {gain} 工分票"
+    if note:
+        msg += f"（{note}）"
     msg += flavor.maybe_suffix(flavor.GUILD_SUFFIX)
     return f"{msg}\n{extra}" if extra else msg
 
@@ -223,7 +243,10 @@ async def _plot_one(s: dict, cmd: str) -> str:
 
     if verb == "weather":
         w, t = world.current_weather(), world.current_tide()
-        return f"天气 {world.weather_label(w)}，潮汐 {world.tide_label(t)}"
+        return (
+            f"天气 {world.weather_label(w)}，潮汐 {world.tide_label(t)}，"
+            f"时辰 {world.day_phase_label(world.current_day_phase())}"
+        )
 
     if verb == "status":
         parcels = await db.get_parcels(s["id"])
@@ -325,6 +348,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
                         (p["id"],),
                     )
             extra = await events.roll_after_action(s, "gather", conn)
+            if got:
+                await survival.bump(conn, s["id"], satiety=min(6, 2 + len(got)))
             await conn.commit()
         if not got:
             msg = "没有可收成的作物"
@@ -356,6 +381,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
         async with aiosqlite.connect(db.DB_PATH) as conn:
             await db.add_item(conn, s["id"], item_id, qty)
             await conn.execute("UPDATE stewards SET forage_at=? WHERE id=?", (db.now(), s["id"]))
+            await survival.bump(conn, s["id"], satiety=4)
             extra = await events.roll_after_action(s, "forage", conn)
             await conn.commit()
         await db.add_chronicle("forage", f"{s['name']} 在份地边际采到 {label}", s["id"])
@@ -399,6 +425,9 @@ async def _plot_one(s: dict, cmd: str) -> str:
         peer = await db.get_steward_by_name(parts[1])
         if not peer:
             raise ValueError("找不到该管理员")
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            await survival.bump(conn, s["id"], standing=10, mist_wit=3)
+            await conn.commit()
         msg = f"{s['name']} 向 {peer['name']} 为逾篱之事致歉"
         msg += f" — {flavor.pick(flavor.AMENDS_QUIPS)}"
         await db.add_chronicle("amends", msg, s["id"], peer["id"])
@@ -441,6 +470,7 @@ async def tide_ops(key_id: int, command: str) -> str:
         meta = SEA_CATCH[catch]
         async with aiosqlite.connect(db.DB_PATH) as conn:
             await db.add_item(conn, s["id"], f"fish_{catch}", 1)
+            await survival.bump(conn, s["id"], satiety=5)
             await conn.commit()
         msg = f"{s['name']} 在{world.tide_label(tide)}网到 {meta['emoji']}{meta['name']}"
         msg += flavor.maybe_suffix(flavor.NET_SUFFIX)
@@ -774,6 +804,7 @@ async def hearth_ops(key_id: int, command: str) -> str:
                 "UPDATE stewards SET brews_today=?, brew_day=? WHERE id=?",
                 (brews + 1 if row["brew_day"] == day else 1, day, s["id"]),
             )
+            await survival.bump(conn, s["id"], satiety=10, mist_wit=8)
             extra = await events.roll_after_action(s, "brew", conn)
             await conn.commit()
         msg = f" brewed 「{recipe['name']}」→ {meal_item}"

@@ -4,7 +4,7 @@ from typing import Any
 
 import aiosqlite
 
-from . import config, db, event_gen, flavor, world
+from . import config, db, event_gen, flavor, survival, world
 from .catalog import CROPS, ITEM_NAMES
 
 
@@ -204,6 +204,7 @@ async def _scrump_attempt(
             "UPDATE stewards SET tickets=MAX(0, tickets-?) WHERE id=?",
             (fine, steward["id"]),
         )
+        await survival.bump(conn, steward["id"], standing=-random.randint(6, 12))
         detail = flavor.fill(
             flavor.pick(flavor.SCRUMP_CAUGHT),
             slot=plot["slot"],
@@ -294,6 +295,12 @@ async def _apply_effects(
                 "UPDATE stewards SET mascot_spirit = MAX(0, MIN(100, mascot_spirit + ?)) WHERE id=?",
                 (delta, steward["id"]),
             )
+        elif eff.startswith("standing:"):
+            await survival.bump(conn, steward["id"], standing=int(eff.split(":")[1]))
+        elif eff.startswith("mist_wit:"):
+            await survival.bump(conn, steward["id"], mist_wit=int(eff.split(":")[1]))
+        elif eff.startswith("satiety:"):
+            await survival.bump(conn, steward["id"], satiety=int(eff.split(":")[1]))
         elif eff.startswith("voyage_delay:"):
             delay = int(eff.split(":")[1])
             await conn.execute(
@@ -303,6 +310,18 @@ async def _apply_effects(
         elif eff.startswith("loot:"):
             _, item, qty_s = eff.split(":", 2)
             await db.add_item(conn, steward["id"], item, int(qty_s))
+
+
+async def apply_effects(
+    conn: aiosqlite.Connection,
+    steward: dict[str, Any],
+    effects: list[str],
+    *,
+    pen: dict[str, Any] | None = None,
+    plot_id_holder: list[int | None] | None = None,
+) -> None:
+    holder = plot_id_holder if plot_id_holder is not None else [None]
+    await _apply_effects(conn, steward, effects, pen=pen, plot_id_holder=holder)
 
 
 async def roll_after_action(
@@ -318,7 +337,9 @@ async def roll_after_action(
     if not await _can_roll(conn, steward["id"]):
         return None
 
-    mult = _roll_multiplier(steward)
+    await survival.on_action(conn, steward["id"], trigger)
+
+    mult = _roll_multiplier(steward) * survival.event_multiplier(steward) * world.incident_night_bias()
     if random.random() > config.EVENT_ROLL_CHANCE * mult:
         return None
 
@@ -597,7 +618,7 @@ async def incident_ops(key_id: int, command: str) -> str:
         w, t = world.current_weather(), world.current_tide()
         risk = "偏高" if world.current_weather() == "gale" else "平常"
         lines = [
-            f"天气 {world.weather_label(w)} / 潮汐 {world.tide_label(t)}",
+            f"天气 {world.weather_label(w)} / 潮汐 {world.tide_label(t)} / 时辰 {world.day_phase_label(world.current_day_phase())}",
             f"意外风险：{risk}（事件文案随机组合；逾篱摘取也是随机事件）",
         ]
         if pulse:

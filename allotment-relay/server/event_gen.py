@@ -9,6 +9,7 @@ from typing import Any
 from . import world
 from .catalog import FORAGE_LOOT, ITEM_NAMES, RANDOM_LOOT, fish_keys_for_tide, fish_keys_for_zones
 from . import flavor
+from .config import NAVAL_ENCOUNTER_CHANCE
 
 
 TRIGGER_DOMAIN = {
@@ -239,6 +240,131 @@ def generate_event(
         repair_qty=repair_qty,
         effects=effects,
     )
+
+
+@dataclass
+class NavalEncounter:
+    kind: str
+    label: str
+    detail: str
+    effects: list[str] = field(default_factory=list)
+
+
+def generate_naval_encounter(
+    route: str,
+    steward: dict[str, Any],
+    *,
+    bad_bias: float = 0.0,
+) -> NavalEncounter | None:
+    chance = NAVAL_ENCOUNTER_CHANCE.get(route, 0.25)
+    if random.random() > chance:
+        return None
+
+    from . import survival
+
+    bad_weight = 0.42 + bad_bias + survival.naval_bad_bias(steward)
+    if world.current_weather() == "gale":
+        bad_weight += 0.12
+    if world.current_day_phase() == "night":
+        bad_weight += 0.08
+    if world.current_weather() == "clear":
+        bad_weight -= 0.06
+
+    roll = random.random()
+    effects: list[str] = []
+    label = flavor.event_label("naval", "bad")
+
+    if roll < bad_weight:
+        kind = "bad"
+        sub = random.random()
+        if sub < 0.35:
+            fine = random.randint(6, 16)
+            effects.append(f"ticket_fine:{fine}")
+            detail = flavor.fill(
+                flavor.pick(flavor.NAVAL_BAD),
+                who=flavor.pick(flavor.NAVAL_WHO),
+                n=fine,
+                loot="一点舱货",
+                mins=random.randint(8, 22),
+            )
+        elif sub < 0.6:
+            effects.append("boat_damage")
+            fine = random.randint(4, 10)
+            effects.append(f"ticket_fine:{fine}")
+            detail = flavor.fill(
+                flavor.pick([
+                    "{who}擦过船舷，舵索断了——修船吧",
+                    "{who}追了一程，你丢货才脱身",
+                ]),
+                who=flavor.pick(flavor.NAVAL_WHO),
+            )
+        elif sub < 0.82:
+            fine = random.randint(5, 12)
+            effects.append(f"ticket_fine:{fine}")
+            effects.append(f"standing:{-random.randint(3, 7)}")
+            detail = flavor.fill(
+                flavor.pick(flavor.NAVAL_BAD),
+                who="海雾",
+                n=fine,
+                loot="方向感",
+                mins=random.randint(8, 18),
+            )
+        else:
+            effects.append("cargo_loss:1")
+            standing = -random.randint(4, 9)
+            effects.append(f"standing:{standing}")
+            detail = flavor.fill(
+                flavor.pick([
+                    "关税巡逻贴舷：「解释清楚」——档信 {n}，货也少了一格",
+                    "黑帆小艇「借走」了舱里最好那格",
+                ]),
+                n=abs(standing),
+            )
+    elif roll < bad_weight + 0.38:
+        kind = "good"
+        label = flavor.event_label("naval", "good")
+        sub = random.random()
+        if sub < 0.4:
+            bonus = random.randint(8, 18)
+            effects.append(f"ticket_bonus:{bonus}")
+            detail = flavor.fill(flavor.pick(flavor.NAVAL_GOOD), n=bonus, loot="红包")
+        elif sub < 0.72:
+            zones = {"near", "far", "deep"} if route != "near" else {"near", "shore"}
+            fk = random.choice(fish_keys_for_zones(zones) or ["herring"])
+            qty = random.randint(1, 2)
+            effects.append(f"loot:fish_{fk}:{qty}")
+            iname = ITEM_NAMES.get(f"fish_{fk}", fk)
+            detail = flavor.fill(flavor.pick(flavor.NAVAL_GOOD), loot=f"{iname} x{qty}", n=0)
+        else:
+            wit = random.randint(6, 14)
+            effects.append(f"mist_wit:{wit}")
+            effects.append(f"satiety:{random.randint(3, 8)}")
+            detail = flavor.fill(
+                flavor.pick(flavor.NAVAL_GOOD),
+                loot="热汤",
+                n=wit,
+            )
+    else:
+        kind = "neutral"
+        label = flavor.pick(["航道插曲", "海上怪谈", "浪里八卦"])
+        if random.random() < 0.55:
+            fine = random.randint(3, 8)
+            fk = random.choice(fish_keys_for_zones({route, "shore"}) or ["herring"])
+            effects.append(f"ticket_fine:{fine}")
+            effects.append(f"loot:fish_{fk}:1")
+            iname = ITEM_NAMES.get(f"fish_{fk}", fk)
+            detail = flavor.fill(
+                flavor.pick(flavor.NAVAL_NEUTRAL),
+                n=fine,
+                loot=iname,
+            )
+        else:
+            detail = flavor.pick(flavor.NAVAL_NEUTRAL + [
+                "远处有炮声——后来证实是渔船敲空桶",
+                "海面漂来联盟传单，被浪打湿了",
+            ])
+
+    return NavalEncounter(kind=kind, label=label, detail=detail, effects=effects)
 
 
 def generate_world_pulse() -> dict[str, Any]:

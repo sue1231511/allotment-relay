@@ -3,7 +3,7 @@ from typing import Any
 
 import aiosqlite
 
-from . import db, events, flavor, world
+from . import db, events, event_gen, flavor, world
 from .catalog import ITEM_NAMES, SEA_CATCH, voyage_loot_table
 from .config import BOATS, PEN_ERECT_COST, VOYAGE_ROUTES
 from .game import require_steward
@@ -193,6 +193,53 @@ async def pen_ops(key_id: int, command: str) -> str:
     raise ValueError(f"未知 pen 指令: {command}（status/erect/label/stock/feed/harvest）")
 
 
+async def _apply_naval_encounter(
+    conn: aiosqlite.Connection,
+    s: dict[str, Any],
+    voyage: dict[str, Any],
+    loot_lines: list[str],
+    fish_loot: list[str],
+) -> str:
+    s = await _refresh_steward(conn, s["id"])
+    enc = event_gen.generate_naval_encounter(
+        voyage["route"],
+        s,
+        bad_bias=0.12 if s.get("boat_damaged") else 0.0,
+    )
+    if not enc:
+        return ""
+
+    cargo_loss = 0
+    for eff in enc.effects:
+        if eff.startswith("cargo_loss:"):
+            cargo_loss = int(eff.split(":")[1])
+
+    await events.apply_effects(conn, s, [e for e in enc.effects if not e.startswith("cargo_loss:")])
+
+    if cargo_loss:
+        conn.row_factory = aiosqlite.Row
+        rows = await (await conn.execute(
+            "SELECT item, quantity FROM satchel WHERE steward_id=? AND quantity > 0 ORDER BY RANDOM() LIMIT 6",
+            (s["id"],),
+        )).fetchall()
+        removed_label = None
+        for _ in range(cargo_loss):
+            if not rows:
+                break
+            row = random.choice(rows)
+            item, qty = row["item"], row["quantity"]
+            take = 1
+            if await db.take_item(conn, s["id"], item, take):
+                removed_label = ITEM_NAMES.get(item, item)
+                if item in fish_loot:
+                    fish_loot.remove(item)
+                rows = [r for r in rows if not (r["item"] == item and r["quantity"] <= take)]
+        if removed_label:
+            loot_lines.append(f"遭遇扣货：{removed_label} x1")
+
+    return flavor.wrap_naval(enc.kind, enc.label, enc.detail)
+
+
 async def _resolve_voyage(conn: aiosqlite.Connection, s: dict[str, Any], voyage: dict[str, Any]) -> str:
     route = VOYAGE_ROUTES[voyage["route"]]
     s = await _refresh_steward(conn, s["id"])
@@ -240,10 +287,14 @@ async def _resolve_voyage(conn: aiosqlite.Connection, s: dict[str, Any], voyage:
     )
     await conn.execute("DELETE FROM voyages WHERE id=?", (voyage["id"],))
 
+    naval_msg = await _apply_naval_encounter(conn, s, voyage, loot_lines, fish_loot)
     msg = f"{route['label']}归港：" + "，".join(loot_lines)
     msg += flavor.maybe_suffix(flavor.VOYAGE_RETURN_BAD if failed else flavor.VOYAGE_RETURN_GOOD)
     if s.get("boat_damaged"):
         msg += "（船损，voyage_ops repair）"
+    if naval_msg:
+        msg += f"\n{naval_msg}"
+
     await conn.execute(
         "INSERT INTO chronicle (action, actor_id, target_id, text, created_at) VALUES (?, ?, ?, ?, ?)",
         ("voyage", s["id"], None, f"{s['name']} {msg}", db.now()),
@@ -294,7 +345,7 @@ async def voyage_ops(key_id: int, command: str) -> str:
             lines.append(f"出海中: {route}，约 {left // 60} 分 {left % 60} 秒后归港")
         else:
             lines.append("出海: 无 — depart near|far|deep")
-        lines.append(f"潮汐 {world.tide_label(world.current_tide())}")
+        lines.append(f"潮汐 {world.tide_label(world.current_tide())} · {world.day_phase_label(world.current_day_phase())}")
         msg = "\n".join(lines)
         return f"{pulse}\n{msg}" if pulse else msg
 
