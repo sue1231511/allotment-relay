@@ -14,6 +14,37 @@
 
 * { box-sizing: border-box; }
 
+/* 滚动条：细、同色系、贴背景 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(127, 167, 171, .22) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(127, 167, 171, .16);
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(81, 119, 125, .28);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 html { scroll-behavior: smooth; }
 
 body {
