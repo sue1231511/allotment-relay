@@ -43,6 +43,30 @@ def _roll_loot(tide: str, weather: str, *, probe: bool = False) -> tuple[str, st
     return item, label, qty
 
 
+async def _grant_loot(
+    conn,
+    steward_id: int,
+    item: str,
+    qty: int,
+) -> tuple[str, int]:
+    """发放赶海掉落；贝壳带品相。"""
+    if item.startswith("shell_"):
+        from . import lili_extras
+        from collections import Counter
+        graded = [lili_extras.beach_shell_item(item) for _ in range(qty)]
+        for gitem, gqty in Counter(graded).items():
+            await db.add_item(conn, steward_id, gitem, gqty)
+        label = next(x[1] for x in BEACH_LOOT if x[0] == item)
+        if any(g.startswith("shell_shine_") for g in graded):
+            label += "（✨亮壳）"
+        elif any(g.startswith("shell_rough_") for g in graded):
+            label += "（💧糙壳）"
+        return label, qty
+    await db.add_item(conn, steward_id, item, qty)
+    label = next(x[1] for x in BEACH_LOOT if x[0] == item)
+    return label, qty
+
+
 async def beach_ops(key_id: int, command: str) -> str:
     s = await require_steward(key_id)
     parts = command.strip().split()
@@ -68,6 +92,8 @@ async def beach_ops(key_id: int, command: str) -> str:
             lines.append("晴朗：贝壳权重 +5")
         if w == "misty":
             lines.append("雾天：珠砂/海玻璃等稀有 +8")
+        if tide == "ebb":
+            lines.append("刚退潮前 10 分钟：亮壳率 ↑（捡得好不如捡得巧）")
         if verb == "scan":
             lines.append("")
             lines.append("常见货色（权重参考）:")
@@ -105,12 +131,17 @@ async def beach_ops(key_id: int, command: str) -> str:
             await energy.spend(conn, s["id"], config.BEACH_ENERGY, action="赶海")
 
             item, label, qty = _roll_loot(tide, w, probe=False)
-            await db.add_item(conn, s["id"], item, qty)
+            label, qty = await _grant_loot(conn, s["id"], item, qty)
             extra_msg = ""
+            from . import lili_extras
+            if await lili_extras.has_blessing(conn, s["id"], "fair_wind"):
+                await lili_extras.consume_blessing(conn, s["id"], "fair_wind")
+                bonus_label, _ = await _grant_loot(conn, s["id"], item, max(1, qty // 2))
+                extra_msg += f"，顺风 +{bonus_label}"
             from . import shaonian as shaonian_mod
             if await shaonian_mod.beach_double(conn, s["id"]):
-                await db.add_item(conn, s["id"], item, qty)
-                extra_msg += f"，赶海符翻倍 +{label} x{qty}"
+                dlabel, _ = await _grant_loot(conn, s["id"], item, qty)
+                extra_msg += f"，赶海符翻倍 +{dlabel} x{qty}"
             from . import catches as catches_mod
             await catches_mod.record_catch(conn, s["id"], item)
             if tide == "ebb" and random.random() < 0.14:
@@ -120,9 +151,9 @@ async def beach_ops(key_id: int, command: str) -> str:
             from . import hut as hut_mod
             hut_b = await hut_mod.get_bonuses(conn, s["id"])
             if hut_b.beach_extra and random.random() < hut_b.beach_extra:
-                bonus_item, bonus_label, bonus_qty = _roll_loot(tide, w, probe=False)
-                await db.add_item(conn, s["id"], bonus_item, bonus_qty)
-                extra_msg += f"，潮汐钟多响一声：{bonus_label} x{bonus_qty}"
+                bonus_item, _, bonus_qty = _roll_loot(tide, w, probe=False)
+                blabel, _ = await _grant_loot(conn, s["id"], bonus_item, max(1, bonus_qty))
+                extra_msg += f"，潮汐钟多响一声：{blabel}"
             await conn.execute(
                 """
                 INSERT INTO beach_rolls (steward_id, day, last_at, count)
@@ -183,24 +214,24 @@ async def beach_ops(key_id: int, command: str) -> str:
                 raise ValueError(f"洞刚掏过，{left // 60} 分后再试")
             await energy.spend(conn, s["id"], config.BEACH_PROBE_ENERGY, action="掏洞")
 
-            item, label, qty = _roll_loot(tide, w, probe=True)
+            item, _, qty = _roll_loot(tide, w, probe=True)
             if tide != "ebb":
                 qty = max(1, qty // 2)
-            await db.add_item(conn, s["id"], item, qty)
+            label, qty = await _grant_loot(conn, s["id"], item, qty)
             charm_msg = ""
             from . import shaonian as shaonian_mod
             if await shaonian_mod.beach_double(conn, s["id"]):
-                await db.add_item(conn, s["id"], item, qty)
-                charm_msg = f"，赶海符翻倍 +{label} x{qty}"
+                dlabel, _ = await _grant_loot(conn, s["id"], item, qty)
+                charm_msg = f"，赶海符翻倍 +{dlabel} x{qty}"
             from . import catches as catches_mod
             await catches_mod.record_catch(conn, s["id"], item)
             clock_msg = ""
             from . import hut as hut_mod
             hut_b = await hut_mod.get_bonuses(conn, s["id"])
             if hut_b.beach_extra and random.random() < hut_b.beach_extra:
-                bonus_item, bonus_label, bonus_qty = _roll_loot(tide, w, probe=True)
-                await db.add_item(conn, s["id"], bonus_item, max(1, bonus_qty))
-                clock_msg = f"，潮汐钟：{bonus_label}"
+                bonus_item, _, bonus_qty = _roll_loot(tide, w, probe=True)
+                blabel, _ = await _grant_loot(conn, s["id"], bonus_item, max(1, bonus_qty))
+                clock_msg = f"，潮汐钟：{blabel}"
             await conn.execute(
                 """
                 INSERT INTO beach_probe_rolls (steward_id, day, last_at, count)

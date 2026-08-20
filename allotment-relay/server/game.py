@@ -69,7 +69,7 @@ async def relay_manual() -> str:
         "  boss_ops — 世界Boss潮渊之主",
         "  npc_ops / bottle_ops — 固定NPC与漂流瓶；拾叶巷口随机小偷/乞丐/碰瓷/敲诈",
         "  clinic_ops — 桥桥大夫诊所（随机致病，必须花票 treat）",
-        "  lili_ops — 栗栗流动摊（每日货单换稀有装饰，四域等级减票）",
+        "  lili_ops — 栗栗流动摊（品相收壳·铃鹿乱捡·夜栖 pet/junk）",
         "  shaonian_ops — 韶年望潮人（fortune 卜卦·transfer 转运·buy 占卜符）",
         "  lore_ops — scan [主题] 查沿海联盟背景（alliance/deep/blackflag/bar/hedge…）",
         "  bar_ops — 滨海酒吧 tonight/work/menu/order/tip（暮夜打工赚票·消费社交）",

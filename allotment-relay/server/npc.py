@@ -278,11 +278,16 @@ async def _resolve_shiye_kind(
     if kind == "thief":
         catch = 0.16 + mist / 220 + standing / 300
         from . import barn as barn_mod
+        from . import lili_extras
+        if await lili_extras.has_blessing(conn, s["id"], "see_through"):
+            catch += 0.50
         if await barn_mod.has_guard_dog(conn, s["id"]):
             catch += 0.22
         if random.random() < catch:
+            if await lili_extras.consume_blessing(conn, s["id"], "see_through"):
+                pass
             await survival.bump(conn, s["id"], standing=1)
-            return flavor.pick(flavor.SHIYE_THIEF_CATCH) + "（档信 +1）"
+            return flavor.pick(flavor.SHIYE_THIEF_CATCH) + "（档信 +1 · 夜栖看破）"
         stolen = await _steal_item(conn, s["id"])
         if stolen:
             label = ITEM_NAMES.get(stolen, stolen)
@@ -309,10 +314,15 @@ async def _resolve_shiye_kind(
 
     if kind == "scam":
         resist = 0.20 + mist / 180 + standing / 320
+        from . import lili_extras
+        if await lili_extras.has_blessing(conn, s["id"], "see_through"):
+            resist += 0.45
         n = random.randint(*config.SHIYE_SCAM_TICKETS)
         if random.random() < resist:
+            if await lili_extras.consume_blessing(conn, s["id"], "see_through"):
+                pass
             await survival.bump(conn, s["id"], mist_wit=2)
-            return flavor.pick(flavor.SHIYE_SCAM_WIN) + "（雾智 +2）"
+            return flavor.pick(flavor.SHIYE_SCAM_WIN) + "（雾智 +2 · 夜栖看破）"
         paid = await _take_tickets(conn, s["id"], n)
         await survival.bump(conn, s["id"], standing=-2)
         msg = flavor.fill(flavor.pick(flavor.SHIYE_SCAM_LOSE), n=paid or n)

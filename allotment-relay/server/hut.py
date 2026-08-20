@@ -8,7 +8,7 @@ from typing import Any
 import aiosqlite
 
 from . import config, db, flavor
-from .catalog import HUT_HARD, HUT_LEVELS, HUT_SOFT, ITEM_NAMES, LILI_DECOR
+from .catalog import HUT_HARD, HUT_LEVELS, HUT_SOFT, ITEM_NAMES, LILI_DECOR, LILI_JUNK_DECOR
 
 
 def _slots(level: int) -> tuple[list[str], list[str]]:
@@ -136,6 +136,12 @@ def bonuses_for(keys: set[str] | list[str]) -> HutBonus:
         b.bar_tip += 2
     if b.has("shell_windchime", "kelp_tassel"):
         b.bar_tip += 1
+    from .catalog import LILI_FENG_SHUI_SETS
+    if b.has(*LILI_FENG_SHUI_SETS["moon_tide"]["needs"]):
+        b.night_mist_save += 1
+    if b.has(*LILI_FENG_SHUI_SETS["sea_dream"]["needs"]):
+        b.good_share *= 1.08
+        b.wildlife_bad *= 0.95
     return b
 
 
@@ -305,6 +311,35 @@ async def hut_ops(key_id: int, command: str) -> str:
                 item=deco_meta["name"],
                 hint=deco_meta["hint"],
             )
+
+        junk_key = key[5:] if key.startswith("junk_") else key
+        if junk_key in LILI_JUNK_DECOR:
+            if not slot.startswith("soft"):
+                raise ValueError("铃鹿乱捡款只能装 soft 槽")
+            deco_meta = LILI_JUNK_DECOR[junk_key]
+            deco_item = f"deco_junk_{junk_key}"
+            async with aiosqlite.connect(db.DB_PATH) as conn:
+                if not await db.take_item(conn, s["id"], deco_item, 1):
+                    raise ValueError(f"行囊没有 {deco_meta['name']}")
+                old = await _fittings(conn, s["id"])
+                if slot in old:
+                    await db.add_item(conn, s["id"], old[slot], 1)
+                await conn.execute(
+                    """
+                    INSERT INTO hut_fittings (steward_id, slot, item_key, installed_at)
+                    VALUES (?,?,?,?)
+                    ON CONFLICT(steward_id, slot) DO UPDATE SET item_key=excluded.item_key,
+                    installed_at=excluded.installed_at
+                    """,
+                    (s["id"], slot, deco_item, db.now()),
+                )
+                await db.add_chronicle(
+                    "lili",
+                    f"{s['name']} 把铃鹿乱捡款「{deco_meta['name']}」挂上了",
+                    s["id"],
+                )
+                await conn.commit()
+            return f"#{slot} 挂上 {deco_meta['emoji']}{deco_meta['name']}。{deco_meta['hint']}"
 
         kind, meta = _catalog_item(key)
         if slot.startswith("hard") and kind != "hard":

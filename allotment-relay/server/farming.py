@@ -496,6 +496,12 @@ async def roll_farm_event(
             for i, w in enumerate(weights)
         ]
     wild = random.choices(pool, weights=weights)[0]
+    if wild["key"] == "dove" and trigger == "tend":
+        from . import lili_extras
+        if await lili_extras.has_blessing(conn, steward["id"], "guard_crop"):
+            await lili_extras.consume_blessing(conn, steward["id"], "guard_crop")
+            await _mark_farm_roll(conn, steward["id"])
+            return "夜栖替你瞪了斑鸠一眼。它咕了一声，改去别家试吃。（护苗）"
     detail = await _apply_wildlife(conn, plot, wild, steward_id=steward["id"])
     await _mark_farm_roll(conn, steward["id"])
 

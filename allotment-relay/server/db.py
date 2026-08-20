@@ -493,6 +493,20 @@ CREATE TABLE IF NOT EXISTS lili_offers (
     note TEXT NOT NULL DEFAULT ''
 );
 
+CREATE TABLE IF NOT EXISTS steward_lili (
+    steward_id INTEGER PRIMARY KEY REFERENCES stewards(id),
+    stars_until INTEGER NOT NULL DEFAULT 0,
+    fool_visit_id INTEGER NOT NULL DEFAULT 0,
+    fool_count INTEGER NOT NULL DEFAULT 0,
+    favored_visit_id INTEGER NOT NULL DEFAULT 0,
+    pet_day INTEGER NOT NULL DEFAULT 0,
+    pet_visit_id INTEGER NOT NULL DEFAULT 0,
+    dog_fur INTEGER NOT NULL DEFAULT 0,
+    bell_hint_day INTEGER NOT NULL DEFAULT 0,
+    blessing_key TEXT NOT NULL DEFAULT '',
+    blessing_uses INTEGER NOT NULL DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS npc_visits (
     steward_id INTEGER NOT NULL REFERENCES stewards(id),
     npc_key TEXT NOT NULL,
@@ -602,6 +616,21 @@ async def init_db() -> None:
             "ALTER TABLE lili_offers ADD COLUMN offer_tier INTEGER NOT NULL DEFAULT 1",
             "ALTER TABLE lili_offers ADD COLUMN value_total INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE lili_offers ADD COLUMN note TEXT NOT NULL DEFAULT ''",
+            """
+            CREATE TABLE IF NOT EXISTS steward_lili (
+                steward_id INTEGER PRIMARY KEY REFERENCES stewards(id),
+                stars_until INTEGER NOT NULL DEFAULT 0,
+                fool_visit_id INTEGER NOT NULL DEFAULT 0,
+                fool_count INTEGER NOT NULL DEFAULT 0,
+                favored_visit_id INTEGER NOT NULL DEFAULT 0,
+                pet_day INTEGER NOT NULL DEFAULT 0,
+                pet_visit_id INTEGER NOT NULL DEFAULT 0,
+                dog_fur INTEGER NOT NULL DEFAULT 0,
+                bell_hint_day INTEGER NOT NULL DEFAULT 0,
+                blessing_key TEXT NOT NULL DEFAULT '',
+                blessing_uses INTEGER NOT NULL DEFAULT 0
+            )
+            """,
         ):
             try:
                 await db.execute(ddl)

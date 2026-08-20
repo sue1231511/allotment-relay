@@ -365,6 +365,11 @@ async def roll_after_action(
     if bad_bonus:
         good_share = max(0.05, good_share - bad_bonus)
     good = random.random() < good_share
+    if not good:
+        from . import lili_extras
+        if await lili_extras.has_blessing(conn, steward["id"], "shield"):
+            await lili_extras.consume_blessing(conn, steward["id"], "shield")
+            return "夜栖替你挡了一下。这次坏事件没了。"
     if world.current_weather() == "gale" and trigger in {
         "tend", "gather", "sow", "voyage_depart", "voyage_return", "pen_feed", "net",
     }:

@@ -9,7 +9,7 @@ from typing import Any
 import aiosqlite
 
 from . import config, db
-from .catalog import BEACH_LOOT, CROPS, ITEM_PRICES, LILI_DECOR, RARE_CURIO, SEA_CATCH
+from .catalog import BEACH_LOOT, CROPS, ITEM_PRICES, LILI_DECOR, LILI_JUNK_DECOR, RARE_CURIO, SEA_CATCH
 from .config import BOATS
 from .gear import get_gear
 
@@ -232,7 +232,28 @@ def generate_daily_offers(day: int, count: int | None = None) -> list[dict[str, 
     decos = decos[:n]
 
     offers: list[dict[str, Any]] = []
+    junk_slot = rng.random() < 0.14 and decos
     for i, deco_key in enumerate(decos):
+        if junk_slot and i == len(decos) - 1:
+            junk_key = rng.choice(list(LILI_JUNK_DECOR.keys()))
+            sub = random.Random(day * 100003 + i * 9176)
+            give = {"shell_rough_scallop": sub.randint(6, 10)}
+            if sub.random() < 0.4:
+                give["shell_rough_conch"] = sub.randint(2, 4)
+            offers.append({
+                "trade_key": f"d{day}_junk_{junk_key}_{sub.randint(100, 999)}",
+                "give": give,
+                "get": f"deco_junk_{junk_key}",
+                "get_qty": 1,
+                "ticket_cost": 0,
+                "stock": 1,
+                "day_id": day,
+                "domains_json": json.dumps(["beach"], ensure_ascii=False),
+                "offer_tier": 1,
+                "value_total": sub.randint(18, 28),
+                "note": "铃鹿乱捡款·不退不换",
+            })
+            continue
         sub = random.Random(day * 100003 + i * 9176)
         tier = DECO_TIER.get(deco_key, 2)
         domains = _pick_domains(deco_key, sub)

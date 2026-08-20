@@ -545,11 +545,11 @@ NPC_FIXED = [
         "npc_ops visit 只能聊天，真治得 clinic_ops treat",
     ]},
     {"key": "lili", "name": "栗栗", "lines": [
-        "贝壳换装饰，装饰换心情——我只收现货",
-        "驮包不会说话，我会——今天货不多",
-        "路过就换，错过等下回，别跟摊儿置气",
-        "稀有软装不进 hut catalog，只在我这",
-        "lili_ops scan 看货架，trade 编号成交",
+        "潮汐游商。滩头喊栗栗，驮包兽铃鹿、护摊犬夜栖。",
+        "贝壳按品相收：亮壳硬通货，糙壳凑一把可换乱捡款。",
+        "lili_ops scan 看货架 · trade 编号 · pet 摸夜栖 · junk 糙壳换货",
+        "路过就换，错过等下回。联盟工分票经济外的另一条线。",
+        "糊弄她指名要好货 → 弹脑壳；亮壳献好货 → 揉头顺延 5 分钟。",
     ]},
     {"key": "shaonian", "name": "韶年", "lines": [
         "滩头看潮卜卦的人，通称韶年望潮人",
@@ -586,6 +586,49 @@ LILI_DECOR = {
     "star_crown": {"name": "海星冠", "emoji": "⭐", "hint": "酒吧小费 +2（与鲱鱼风铃同组不叠）", "sell": 62},
     "amber_frame": {"name": "琥珀画框", "emoji": "🖼️", "hint": "纯好看，无数值", "sell": 68},
     "kelp_tassel": {"name": "海藻流苏", "emoji": "🌿", "hint": "酒吧小费 +1（与贝壳风铃同组不叠）", "sell": 38},
+}
+
+# 铃鹿乱捡款 — 无数值或极小，纪事向收藏
+LILI_JUNK_DECOR = {
+    "stubborn_tide_clock": {
+        "name": "只在退潮才准的潮汐钟", "emoji": "🕰️",
+        "hint": "涨潮时坚持报退潮。纯收藏。",
+        "quip": "栗栗：「铃鹿捡的，不退换。」",
+    },
+    "single_slipper": {
+        "name": "单只贝壳拖鞋", "emoji": "🩴",
+        "hint": "另一只据说还在海里漂。",
+        "quip": "栗栗：「下回补货。」（从未补过）",
+    },
+    "leaky_coral_lamp": {
+        "name": "会漏光的珊瑚小灯", "emoji": "🪸",
+        "hint": "专照隔壁邻居家。",
+        "quip": "铃鹿铃铛响了一声，算它认罪。",
+    },
+    "wish_glass": {
+        "name": "据说能许愿的海玻璃", "emoji": "🔮",
+        "hint": "许了愿就碎。栗栗说碎了才灵。",
+        "quip": "栗栗：「碎了才灵。」",
+    },
+    "half_sea_bottle": {
+        "name": "装了半瓶海的瓶子", "emoji": "🫙",
+        "hint": "摇一摇有浪声，毫无用处，但治愈。",
+        "quip": "都是海给的，不好意思不要。",
+    },
+}
+
+# 风水成组 — 栗栗不提示，凑齐才亮隐藏加成（与档口同组不叠）
+LILI_FENG_SHUI_SETS = {
+    "moon_tide": {
+        "name": "月潮对",
+        "needs": ("moon_mirror", "tide_clock"),
+        "hint": "月海镜 + 潮汐钟：暮夜雾智再 +1",
+    },
+    "sea_dream": {
+        "name": "海梦帘",
+        "needs": ("net_dreamcatcher", "pearl_garland"),
+        "hint": "渔网捕梦 + 珠串帘：意外再略少",
+    },
 }
 
 LILI_TRADE_POOL = [
@@ -652,6 +695,8 @@ for k, v in MYTH_INGREDIENTS.items():
     ITEM_PRICES[k] = v["sell"]
 for k, v in LILI_DECOR.items():
     ITEM_PRICES[f"deco_{k}"] = v["sell"]
+for k, v in LILI_JUNK_DECOR.items():
+    ITEM_PRICES[f"deco_junk_{k}"] = 0
 
 ITEM_NAMES = {f"seed_{k}": f"{v['name']}种" for k, v in CROPS.items()}
 ITEM_NAMES.update({f"crop_{k}": v["name"] for k, v in CROPS.items()})
@@ -681,6 +726,13 @@ ITEM_NAMES.update({
     "meat_rabbit": "🍖兔肉", "meat_pork": "🥓猪肉",
     "scarecrow": "🌾稻草人",
 })
+for _shell_base in ("shell_catseye", "shell_conch", "shell_scallop", "shell_starfish", "shell_mussel"):
+    _plain = ITEM_NAMES[_shell_base]
+    _suffix = _shell_base.replace("shell_", "")
+    ITEM_NAMES[f"shell_shine_{_suffix}"] = f"✨亮壳·{_plain}"
+    ITEM_NAMES[f"shell_rough_{_suffix}"] = f"💧糙壳·{_plain}"
+    ITEM_PRICES[f"shell_shine_{_suffix}"] = ITEM_PRICES[_shell_base]
+    ITEM_PRICES[f"shell_rough_{_suffix}"] = ITEM_PRICES[_shell_base]
 ITEM_NAMES.update({k: f"{v['emoji']}{v['name']}" for k, v in MANURE.items()})
 for k, v in LIVESTOCK.items():
     ITEM_NAMES[f"live_{k}"] = f"{v['emoji']}{v['name']}(幼)"
@@ -690,6 +742,8 @@ for k, v in MYTH_INGREDIENTS.items():
     ITEM_NAMES[k] = f"{v['emoji']}{v['name']}"
 for k, v in LILI_DECOR.items():
     ITEM_NAMES[f"deco_{k}"] = f"{v['emoji']}{v['name']}"
+for k, v in LILI_JUNK_DECOR.items():
+    ITEM_NAMES[f"deco_junk_{k}"] = f"{v['emoji']}{v['name']}"
 
 
 def dish_item(key: str, stars: int = 3) -> str:
