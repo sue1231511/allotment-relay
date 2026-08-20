@@ -169,6 +169,7 @@ async def steward_sheet(key_id: int) -> str:
         hut_summary = (await hut_mod.get_bonuses(conn, s["id"])).summary()
         handoff_notes = await _collect_handoffs(conn, s["id"])
         bottle_notes = await _collect_bottle_replies(conn, s["id"])
+        open_incidents = await events.list_open_incidents_on(conn, s["id"])
         await conn.commit()
     s = await db.get_steward_by_id(s["id"]) or s
     parcels = await db.get_parcels(s["id"])
@@ -194,6 +195,14 @@ async def steward_sheet(key_id: int) -> str:
     clinic_nag = health_mod.clinic_hint(ailments)
     if clinic_nag:
         lines.append(clinic_nag)
+    if open_incidents:
+        lines.append(
+            f"未处理意外 {len(open_incidents)} 条 → incident_ops status / repair 编号"
+        )
+        for r in open_incidents[:4]:
+            label = r.get("label") or r["incident_key"]
+            cost = r.get("repair_tickets") or 0
+            lines.append(f"  编号 #{r['id']} {label}（repair {cost} 票）")
     if lili_hint:
         lines.append(lili_hint)
     for note in handoff_notes:
@@ -259,7 +268,7 @@ async def steward_sheet(key_id: int) -> str:
     if stock:
         lines.append("行囊:")
         for item, qty in stock.items():
-            lines.append(f"  {ITEM_NAMES.get(item, item)} x{qty}")
+            lines.append(f"  {ITEM_NAMES.get(item, item)} x{qty} · {item}")
     return "\n".join(lines)
 
 
@@ -634,7 +643,10 @@ async def _plot_one(s: dict, cmd: str) -> str:
                     )
             extra = await events.roll_after_action(s, "gather", conn)
             farm = await farming.roll_farm_event(conn, s, "gather")
-            disc = await commons.roll_discovery(conn, s, "gather")
+            found: list[tuple[str, int, str]] = []
+            disc = await commons.roll_discovery(conn, s, "gather", found=found)
+            for item, qty, iname in found:
+                got.append(f"{iname} x{qty}（发现 · {item}）")
             if got:
                 await survival.bump(conn, s["id"], satiety=min(6, 2 + len(got)))
             await conn.commit()
@@ -660,7 +672,12 @@ async def _plot_one(s: dict, cmd: str) -> str:
         from . import multi
         bonus_msg = None
         for crop_name in got:
-            crop_key = next((k for k, v in CROPS.items() if v["name"] == crop_name), None)
+            if "发现" in crop_name or "枯病" in crop_name or "堆肥" in crop_name:
+                continue
+            crop_key = next(
+                (k for k, v in CROPS.items() if crop_name.startswith(v["name"])),
+                None,
+            )
             if crop_key:
                 b = await multi.on_league_item(s["id"], f"crop_{crop_key}", 1)
                 if b:

@@ -252,8 +252,9 @@ async def _apply_effects(
     pen: dict[str, Any] | None = None,
     plot_id_holder: list[int | None],
     exclude_parcel_id: int | None = None,
-) -> list[str]:
+) -> tuple[list[str], dict[str, Any]]:
     ailment_msgs: list[str] = []
+    ledger: dict[str, Any] = {"ticket_delta": 0, "stolen": None, "loot": []}
     exclude = {exclude_parcel_id} if exclude_parcel_id else set()
     for eff in effects:
         if eff == "plot_untend":
@@ -279,7 +280,9 @@ async def _apply_effects(
                     (delay, plot["id"]),
                 )
         elif eff == "steal_item":
-            await _steal_random_item(conn, steward["id"])
+            stolen = await _steal_random_item(conn, steward["id"])
+            if stolen:
+                ledger["stolen"] = stolen
         elif eff == "pen_unfeed" and pen:
             plot_id_holder[0] = pen["id"]
             await conn.execute("UPDATE fish_pens SET fed=0 WHERE id=?", (pen["id"],))
@@ -297,12 +300,14 @@ async def _apply_effects(
                 "UPDATE stewards SET tickets = MAX(0, tickets - ?) WHERE id=?",
                 (amt, steward["id"]),
             )
+            ledger["ticket_delta"] -= amt
         elif eff.startswith("ticket_bonus:"):
             amt = int(eff.split(":")[1])
             await conn.execute(
                 "UPDATE stewards SET tickets = tickets + ? WHERE id=?",
                 (amt, steward["id"]),
             )
+            ledger["ticket_delta"] += amt
         elif eff.startswith("mascot_spirit:"):
             delta = int(eff.split(":")[1])
             await conn.execute(
@@ -323,13 +328,35 @@ async def _apply_effects(
             )
         elif eff.startswith("loot:"):
             _, item, qty_s = eff.split(":", 2)
-            await db.add_item(conn, steward["id"], item, int(qty_s))
+            qty = int(qty_s)
+            await db.add_item(conn, steward["id"], item, qty)
+            ledger["loot"].append((item, qty))
         elif eff.startswith("ailment:"):
             key = eff.split(":", 1)[1]
             msg = await health.inflict(conn, steward["id"], key, source="event")
             if msg:
                 ailment_msgs.append(msg)
-    return ailment_msgs
+    return ailment_msgs, ledger
+
+
+async def _ledger_lines(
+    conn: aiosqlite.Connection,
+    steward_id: int,
+    ledger: dict[str, Any],
+) -> list[str]:
+    lines: list[str] = []
+    stolen = ledger.get("stolen")
+    if stolen:
+        lines.append(f"失物：{stolen}")
+    for item, qty in ledger.get("loot") or ():
+        lines.append(f"入袋：{ITEM_NAMES.get(item, item)}（{item}）x{qty}")
+    delta = int(ledger.get("ticket_delta") or 0)
+    if delta:
+        cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (steward_id,))
+        left = (await cur.fetchone())[0]
+        sign = f"+{delta}" if delta > 0 else str(delta)
+        lines.append(f"工分票 {sign}（余 {left}）")
+    return lines
 
 
 async def apply_effects(
@@ -342,10 +369,11 @@ async def apply_effects(
     exclude_parcel_id: int | None = None,
 ) -> list[str]:
     holder = plot_id_holder if plot_id_holder is not None else [None]
-    return await _apply_effects(
+    msgs, _ = await _apply_effects(
         conn, steward, effects, pen=pen, plot_id_holder=holder,
         exclude_parcel_id=exclude_parcel_id,
     )
+    return msgs
 
 
 async def roll_after_action(
@@ -442,7 +470,7 @@ async def roll_after_action(
             event.detail, plot_id_holder[0], _ = res
             event.effects = [e for e in event.effects if e != "scrump_attempt"]
             is_scrump = True
-        ailment_msgs = await _apply_effects(
+        ailment_msgs, ledger = await _apply_effects(
             conn, steward, event.effects, pen=pen, plot_id_holder=plot_id_holder,
             exclude_parcel_id=protected_parcel_id,
         )
@@ -451,6 +479,8 @@ async def roll_after_action(
 
     await _mark_roll(conn, steward["id"])
     msg = flavor.wrap_event(event.kind, event.label, event.detail)
+    for line in await _ledger_lines(conn, steward["id"], ledger):
+        msg += f"\n{line}"
     if ailment_msgs:
         msg += "\n" + ailment_msgs[0]
         msg += "\n→ clinic_ops status · treat 病症（必须花票）"
@@ -482,14 +512,17 @@ async def roll_after_action(
             ),
         )
         iid = cur.lastrowid
+        already = -int(ledger.get("ticket_delta") or 0) if int(ledger.get("ticket_delta") or 0) < 0 else 0
         hint = f"incident_ops repair {iid}"
         if event.repair_item:
             hint += (
-                f"（或 {event.repair_tickets} 票 / "
+                f"（处理另需 {event.repair_tickets} 票 / "
                 f"{ITEM_NAMES.get(event.repair_item, event.repair_item)} x{event.repair_qty or 1}）"
             )
         elif event.repair_tickets:
-            hint += f"（需 {event.repair_tickets} 票）"
+            hint += f"（处理另需 {event.repair_tickets} 票）"
+        if already:
+            hint += f" · 刚才已当场扣 {already} 票"
         msg += f"\n→ {hint}"
 
     if not is_scrump:
@@ -595,19 +628,25 @@ async def public_pulse_snapshot() -> dict[str, Any] | None:
     }
 
 
+async def list_open_incidents_on(
+    conn: aiosqlite.Connection, steward_id: int,
+) -> list[dict[str, Any]]:
+    conn.row_factory = aiosqlite.Row
+    rows = await (await conn.execute(
+        """
+        SELECT i.*, p.slot FROM steward_incidents i
+        LEFT JOIN parcels p ON p.id = i.plot_id
+        WHERE i.steward_id=? AND i.resolved=0
+        ORDER BY i.created_at DESC LIMIT 12
+        """,
+        (steward_id,),
+    )).fetchall()
+    return [dict(r) for r in rows]
+
+
 async def list_open_incidents(steward_id: int) -> list[dict[str, Any]]:
     async with db.connect() as conn:
-        conn.row_factory = aiosqlite.Row
-        rows = await (await conn.execute(
-            """
-            SELECT i.*, p.slot FROM steward_incidents i
-            LEFT JOIN parcels p ON p.id = i.plot_id
-            WHERE i.steward_id=? AND i.resolved=0
-            ORDER BY i.created_at DESC LIMIT 12
-            """,
-            (steward_id,),
-        )).fetchall()
-        return [dict(r) for r in rows]
+        return await list_open_incidents_on(conn, steward_id)
 
 
 async def incident_ops(key_id: int, command: str) -> str:
@@ -635,7 +674,10 @@ async def incident_ops(key_id: int, command: str) -> str:
             for r in open_rows:
                 label = r.get("label") or r["incident_key"]
                 cost = r.get("repair_tickets") or 0
-                lines.append(f"  #{r['id']} {label} — {r['detail']}（repair {cost} 票起）")
+                lines.append(
+                    f"  编号 #{r['id']} {label} — {r['detail']}"
+                    f"（incident_ops repair {r['id']} · {cost} 票起）"
+                )
         return "\n".join(lines) if lines else "风平浪静，暂无意外"
 
     if verb == "pulse":

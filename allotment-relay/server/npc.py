@@ -263,11 +263,19 @@ async def _run_shiye_encounter(conn: aiosqlite.Connection, steward: dict[str, An
     kind = await _pick_shiye_kind(conn, s)
     await _mark_shiye(conn, s["id"])
     hello = flavor.pick(flavor.SHIYE_HELLO)
+    cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
+    before = (await cur.fetchone())[0]
     body = await _resolve_shiye_kind(conn, s, kind)
+    cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
+    after = (await cur.fetchone())[0]
     await conn.execute(
         "INSERT INTO chronicle (action, actor_id, target_id, text, created_at) VALUES (?,?,?,?,?)",
         ("shiye", s["id"], None, f"{s['name']} 碰上拾叶（{kind}）", db.now()),
     )
+    delta = after - before
+    if delta:
+        sign = f"+{delta}" if delta > 0 else str(delta)
+        body += f"\n工分票 {sign}（余 {after}）"
     return f"{hello}\n{body}"
 
 

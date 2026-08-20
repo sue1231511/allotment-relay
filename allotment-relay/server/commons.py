@@ -229,6 +229,8 @@ async def roll_discovery(
     conn: aiosqlite.Connection,
     steward: dict[str, Any],
     trigger: str,
+    *,
+    found: list[tuple[str, int, str]] | None = None,
 ) -> str | None:
     pool_cfg = DISCOVERY_LOOT.get(trigger)
     if not pool_cfg or not await _can_discover(conn, steward["id"]):
@@ -255,10 +257,12 @@ async def roll_discovery(
     await _mark_discover(conn, steward["id"])
 
     iname = ITEM_NAMES.get(item, item)
+    if found is not None:
+        found.append((item, qty, iname))
     detail = flavor.fill(
         flavor.pick(flavor.DISCOVERY_LINES),
         hint=hint,
-        item=f"{iname} x{qty}",
+        item=f"{iname}（{item}）x{qty}",
     )
     label = flavor.pick(flavor.DISCOVERY_LABELS)
     return flavor.wrap_event("good", label, detail)
