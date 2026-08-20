@@ -450,10 +450,14 @@ def generate_world_pulse() -> dict[str, Any]:
         fish_focus = random.choice(fish_keys_for_tide(world.current_tide()) or ["herring"])
         text += f"（{ITEM_NAMES.get(f'fish_{fish_focus}', fish_focus)} 特别多）"
 
+    from . import lore as lore_mod
+    detail = lore_mod.pulse_season_detail(effect) or hint
+
     return {
         "effect": effect,
         "kind": kind,
         "label": label,
         "text": text,
+        "detail": detail,
         "fish_focus": fish_focus,
     }

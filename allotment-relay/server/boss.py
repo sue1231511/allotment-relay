@@ -165,6 +165,8 @@ async def boss_ops(key_id: int, command: str) -> str:
                     f"{s['name']} 等合力击倒 {WORLD_BOSS['name']}",
                     s["id"],
                 )
+                from . import lore as lore_mod
+                loot_msg += f"\n{lore_mod.boss_defeat_lore()}"
             await conn.commit()
         detail = flavor.pick([
             "触须抽打海面，你仍砍了一刀",

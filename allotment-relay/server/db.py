@@ -840,6 +840,8 @@ async def public_stats() -> dict[str, Any]:
             WHERE l.claimed_by IS NULL ORDER BY l.created_at DESC LIMIT 5
             """
         )).fetchall()
+        from . import lore as lore_mod
+        lore_tip = lore_mod.daily_lore_tip()
         return {
             "stewards": stewards,
             "online": online,
@@ -859,6 +861,7 @@ async def public_stats() -> dict[str, Any]:
             "swap_preview": [
                 {"item": r[0], "qty": r[1], "from": r[2]} for r in swap_rows
             ],
+            "lore_tip": lore_tip,
         }
 
 

@@ -42,6 +42,9 @@ async function load() {
   const side = document.getElementById('world-side');
   if (side) {
     side.innerHTML = [
+      stats.lore_tip
+        ? `<div class="panel mini"><h3>沿海纪事</h3><p class="muted">${stats.lore_tip}</p></div>`
+        : '',
       stats.beacons && stats.beacons.length
         ? `<div class="panel mini"><h3>公告栏</h3>${stats.beacons.map(b => `<p class="muted">${b.author}</p><p>${b.body}</p>`).join('')}</div>`
         : '',

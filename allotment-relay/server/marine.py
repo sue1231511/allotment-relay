@@ -284,12 +284,20 @@ async def _apply_naval_payload(
 
 def _hail_prompt(payload: dict[str, Any]) -> str:
     who = payload.get("who") or flavor.pick(flavor.NAVAL_WHO)
+    from . import lore as lore_mod
+    fac = lore_mod.black_flag_faction(who)
+    who = fac["tag"]
+    payload = dict(payload)
+    payload["who"] = who
+    detail = payload.get("detail") or lore_mod.black_flag_detail(who)
+    lore_line = fac.get("lore", "")
     banner = flavor.fill(
         flavor.pick(flavor.HAIL_BANNER),
         who=who,
-        detail=payload.get("detail") or "",
+        detail=detail,
     )
-    return banner + "\n" + flavor.HAIL_CHOICES
+    extra = f"\n（{lore_line}）" if lore_line and random.random() < 0.7 else ""
+    return banner + extra + "\n" + flavor.HAIL_CHOICES
 
 
 def _hail_expired(voyage: dict[str, Any]) -> bool:

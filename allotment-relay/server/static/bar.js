@@ -81,6 +81,7 @@ document.getElementById('order-form').addEventListener('submit', async (e) => {
       <p>${data.patron} 点了 ${data.service}（-${data.cost} 票）· 值班 ${data.host}</p>
       <p>${data.message}</p>
       <p class="muted">剩余 ${data.tickets_left} 票</p>
+      <p class="muted">已记账。成年人做的消费决定，成年人自己负责。</p>
     `;
     loadBar();
   } catch (err) {

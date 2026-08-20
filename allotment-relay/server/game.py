@@ -68,6 +68,7 @@ async def relay_manual() -> str:
         "  npc_ops / bottle_ops — 固定NPC与漂流瓶；拾叶巷口随机小偷/乞丐/碰瓷/敲诈",
         "  clinic_ops — 桥桥大夫诊所（随机致病，必须花票 treat）",
         "  lili_ops — 栗栗流动摊（每日货单换稀有装饰，四域等级减票）",
+        "  lore_ops — scan [主题] 查沿海联盟背景（alliance/deep/blackflag/bar/hedge…）",
         "  bar_ops — 滨海酒吧 tonight/work/menu/order/tip（暮夜打工赚票·消费社交）",
         "",
         "【份地农事 · 随机生长】",
@@ -659,7 +660,9 @@ async def _plot_one(s: dict, cmd: str) -> str:
                 (s["id"], f"@{peer} 篱笆条：{text[:160]}", db.now()),
             )
             await conn.commit()
-        return f"篱笆条已留给 {peer}"
+        from . import lore as lore_mod
+        hint = lore_mod.hedge_note_hint()
+        return f"篱笆条已留给 {peer}\n（篱间文学灵感：「{hint}」· lore_ops hedge 换一条）"
 
     if verb == "amends" and len(parts) >= 2:
         peer = await db.get_steward_by_name(parts[1])

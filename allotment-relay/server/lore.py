@@ -1,0 +1,315 @@
+"""沿海联盟 lore 扩写 — 回流玩法文案，不改机制。"""
+
+from __future__ import annotations
+
+import random
+
+BAR_OWNER = "荔枝"
+
+# ── 十一、纪事模板（可拼进 add_chronicle 或随机尾缀）──
+CHRONICLE_LORE: dict[str, list[str]] = {
+    "voyage_deep": [
+        "某管理员从深漂回来。船还在，人也还在。酒吧当晚可能解锁「深海回声」。",
+        "深漂归港。旧账本边角那句话又在传：归港者可饮。",
+    ],
+    "hail_parley": [
+        "外海今天少打一架。对方收了票，联盟少修一条船。",
+        "买路票成交。黑旗也要算油钱——联盟记下了。",
+    ],
+    "amends": [
+        "一次逾篱，一次致歉。菜没长回来，档信长回来一点。",
+        "篱笆条火药味散了。联盟公约：自然脱落越界，不视作主动逾篱。",
+    ],
+    "lili": [
+        "栗栗来了。她不收票。有贝壳的赶紧。",
+        "流动摊出现。今日货单全服一份，换完部分就走。",
+    ],
+    "boss": [
+        "潮渊之主再次被联盟合力打回深处。神话暂时结束。厨房开始研究怎么做。",
+        "神话可以敬畏，肉不能浪费。——联盟厨房传统",
+    ],
+    "bar_blackout": [
+        "灯灭了。歌没停。荔枝骂人的声音也没停。",
+        "停电全场合唱。纪事里又有人喊「来一个！」荔枝：「滚。」",
+    ],
+    "hangover": [
+        "昨晚属于酒吧。今天属于桥桥大夫。",
+        "宿醉。桥桥：「昨晚自己喝，今天自己付。」",
+    ],
+}
+
+# ── 九、季象 · 脉冲 lore（effect_type → 文案）──
+PULSE_SEASON_LORE: dict[str, list[str]] = {
+    "red_tide": [
+        "赤潮周：近岸捕捞波动，别跟海较劲。姜姨：不新鲜的别往厨房拿。",
+        "海红了，岸上人就得学会吃菜。——老水手惯例",
+    ],
+    "blight_whisper": [
+        "枯病周：某类作物生长发虚，堆肥和温室更值钱，邻里 assist 变多。",
+        "叶脉发黄那周，联盟周目标常转成救助型——互相搭把手更划算。",
+    ],
+    "fish_run": [
+        "渔汛周：赶海与撒网手气上调，集市水产暴增，酒吧晚上更挤。",
+        "白天都发财，晚上都来花钱。——荔枝对渔汛周的总结",
+    ],
+    "storm_front": [
+        "大雾/风暴周：雾智管理更重要，海玻璃与珠砂概率偶升，黑旗时隐时现。",
+        "看不清，但大家还在生活。——沿海季象老话",
+    ],
+    "calm_sea": [
+        "平流周：出海报废略降，胆小船长也能装勇敢。",
+        "镜面海的日子，适合修船、晒网、去酒吧坐一会儿。",
+    ],
+    "loot_surge": [
+        "退潮礼包周：交换台台阶像宝藏区，捡到的算你眼神好。",
+        "滩上旧物多：潮币、relic、化石贝壳——这里不是第一批人。",
+    ],
+}
+
+BARTON_SEASON_NOTES: dict[str, list[str]] = {
+    "red_tide": [
+        "二十年前也有过这种雾。那年三条船没出港，反而都活得挺好。",
+        "赤潮别贪。海里红了，岸上人就得学会吃菜。",
+    ],
+    "blight_whisper": [
+        "枯病别硬扛。温室里那几棵，往往是全联盟的指望。",
+        "以前叫住在一块儿。后来事情多了，就改叫联盟。",
+    ],
+    "fish_run": [
+        "渔汛来了就干活，别全扔给酒吧。——虽然酒吧也会忙。",
+        "网沉下去那一下，心跳也跟着沉。正常。",
+    ],
+    "storm_front": [
+        "风大不可怕。觉得自己比风大才可怕。",
+        "二十年前也有过这种雾。那年没人深漂，大家都还行。",
+    ],
+    "calm_sea": [
+        "平流日子修船最划算。别等下一阵风来才想起漏洞。",
+        "海今天像账本中间一行：平淡，但够用。",
+    ],
+    "loot_surge": [
+        "滩上捡到的旧潮币，别全当故事。能换票的是真票。",
+        "退潮后多走两步，篱笆有记性，海也有。",
+    ],
+}
+
+# ── 三、黑旗派系（who → 一句话定位）──
+BLACK_FLAG_FACTIONS: dict[str, dict[str, str]] = {
+    "雾角快船": {
+        "tag": "雾角快船",
+        "lore": "船快、抢小件、不太恋战。穷船别追，追上也没油水。",
+        "detail": "黑帆在雾里贴舷，他们只想要轻便货。",
+    },
+    "兼职海盗": {
+        "tag": "兼职海盗",
+        "lore": "白天可能还在集市卖鱼。范姐：认出来也别在我摊前打。",
+        "detail": "你好像昨天在摊位见过这张脸——也可能没有。",
+    },
+    "关税巡逻": {
+        "tag": "关税巡逻",
+        "lore": "自称旧航路税务维护者。荔枝：会做表格的海盗。",
+        "detail": "他们要航线登记费、雾区通行费，还有「临时海况管理费」。",
+    },
+    "无名追猎者": {
+        "tag": "无名追猎者",
+        "lore": "很少谈判。老水手：你有钱他们拦你，你看见了不该看的他们也拦你。",
+        "detail": "几乎不抢东西。只是跟着。",
+    },
+    "黑帆小艇": {
+        "tag": "黑帆小艇",
+        "lore": "外海松散协调：买路价别卷同行。",
+        "detail": "三票战争以后，大家都学乖了一点。",
+    },
+    "走私稽查": {
+        "tag": "走私稽查",
+        "lore": "真假难辨。有人说是黑旗，有人说是旧登记处外包。",
+        "detail": "要查舱，也要查你的表情。",
+    },
+}
+
+# ── 五、篱间 ──
+HEDGE_NOTE_SAMPLES = [
+    "今天帮你看了一眼地，没动东西。",
+    "再伸手我就去档口。",
+    "希望你家的菜和你的边界感一起茁壮成长。",
+    "昨天确实手快了，票已补，别挂我名册。",
+    "篱笆是木头做的，边界不是。",
+    "自然脱落越界，不视作主动逾篱。——三颗雾豌豆案后追加",
+]
+
+LORE_AMENDS_QUIPS = [
+    "三颗雾豌豆案之后，联盟才写下「自然脱落越界不算逾篱」。",
+    "致歉完毕。篱笆条可以删了，档信慢慢长回来。",
+    "一次逾篱，一次 amends。邻居：勉强算人。",
+]
+
+# ── 二、深海 ──
+DEEP_LORE_SNIPPETS = [
+    "深漂以后，海开始按另一套账本工作。越深，越不像给岸上人准备的。",
+    "酒吧最老账本边角：三人归港。一人不说话。一人说海底有人唱歌。一人只要烈酒。",
+    "「深海回声」不是纪念英雄，是给确实走到很深又回来的人一个位置坐。",
+    "潮渊之主不是邪神，是深海应激。神话可以敬畏，肉不能浪费。",
+]
+
+MYTH_OCTOPUS_TABOOS = [
+    "第一次吃神话章鱼肉别一个人吃。",
+    "深漂当天不吃。吃的时候别讨论它是不是还活着。",
+]
+
+# ── 六、栗栗 ──
+LILI_LORE = [
+    "栗栗不收联盟票，只收贝壳与海玻璃——票只在联盟内部好使。",
+    "月海镜不进常规目录。夜里照它，有人说看见旧海岸，有人说什么都没有。",
+    "驮包别乱摸。上次有人被拖了十米。栗栗：「它不喜欢。」",
+]
+
+# ── 七、诊所 ──
+CLINIC_LORE = [
+    "桥桥不赊账。同情不能当库存。——诊所柜台下旧账本",
+    "真正拖垮小聚落的不是传奇瘟疫，是「小病扛扛就过去了」。",
+    "宿醉患者说酒是荔枝推荐的：桥桥让你找荔枝报销。荔枝：滚。",
+]
+
+# ── 八、岸上人 ──
+SHORE_OBSERVER_LINES = [
+    "岸上人从网页看世界，像隔着一层玻璃站在码头边。",
+    "荔枝：谁来都一样，进门消费就行。",
+    "人类留下的是故事层影响，不是管理员外挂。",
+]
+
+# ── 四、酒吧 origin ──
+BAR_ORIGIN_LORE = [
+    "酒吧最初是旧码头补给屋：热水、腌鱼、麦酒、干毛巾。",
+    "经营失败 → 来赚票 → 有钱再消费 → 票流回人群。荔枝：没钱就干活，有钱就喝。",
+    "牛郎挣的不是钱，是概率。——酒吧内部都市传说",
+    "联盟备案正规工。——荔枝名言，档口从未正式用过这措辞。",
+]
+
+# ── lore_ops 主题 ──
+LORE_TOPICS: dict[str, list[str]] = {
+    "alliance": [
+        "沿海联盟不是建国神话，是生活点互相认账后形成的共同体。",
+        "最早工分票因为三件事：船坏了要人帮、偷菜不能天天打架、欠账要有人记。",
+        "老水手巴顿：以前叫住在一块儿。后来事情多了，就改叫联盟。",
+        "滩上会挖出旧潮币、锈铁 relic、化石贝壳——这里不是第一批人。",
+    ],
+    "deep": DEEP_LORE_SNIPPETS,
+    "blackflag": [
+        "「黑旗」不是单一组织，是岸上统称：船快、旗黑、雾里拦人、不报登记号。",
+        "雾角快船 / 兼职海盗 / 关税巡逻 / 无名追猎者——至少四路。",
+        "买路票早期靠喊价。三票战争后外海流传：抢归抢，别卷同行。",
+        "黑帆议会是否存在，联盟从未证实。但买路价偶尔异常一致。",
+    ],
+    "bar": BAR_ORIGIN_LORE + [
+        "著名停电全场合唱：我哪有旺夫命清唱，后厨洗盘子的也跟。",
+        "厕所辣条案：现在默认酒吧民俗。门口贴过「禁止蹲地吃辣条」，第三天又有人吃。",
+    ],
+    "hedge": [
+        "联盟最早公约只有「自己的地自己管」——完全没用。",
+        "三颗雾豌豆案：巴顿判定风吹脱落，联盟追加自然脱落越界不算逾篱。",
+        "hedge_note 后来发展成篱间文学：礼貌型、威胁型、阴阳型、认错型、哲学型。",
+    ] + HEDGE_NOTE_SAMPLES[:3],
+    "lili": LILI_LORE,
+    "clinic": CLINIC_LORE,
+    "season": [
+        "联盟季象不是固定节日，是沿海生活者都知道的周期性麻烦。",
+        "赤潮周 / 枯病周 / 渔汛周 / 大雾周——各有玩法侧重，不是全员绝望。",
+    ],
+    "barton": [
+        "巴顿不卖预言，只提醒：这些事以前也发生过，联盟以前也熬过去了。",
+    ] + [x for notes in BARTON_SEASON_NOTES.values() for x in notes[:1]],
+    "boss": CHRONICLE_LORE["boss"] + MYTH_OCTOPUS_TABOOS,
+    "shore": SHORE_OBSERVER_LINES,
+}
+
+LORE_TOPIC_LABELS = {
+    "alliance": "沿海联盟旧史",
+    "deep": "深海与潮渊",
+    "blackflag": "黑旗政治",
+    "bar": "滨海酒吧",
+    "hedge": "篱间伦理",
+    "lili": "游商栗栗",
+    "clinic": "桥桥诊所",
+    "season": "季象与脉冲",
+    "barton": "老水手巴顿",
+    "boss": "潮渊之主",
+    "shore": "岸上人",
+}
+
+
+def pulse_season_detail(effect_type: str) -> str:
+    pool = PULSE_SEASON_LORE.get(effect_type, [])
+    return random.choice(pool) if pool else ""
+
+
+def barton_season_note(effect_type: str) -> str:
+    pool = BARTON_SEASON_NOTES.get(effect_type, [])
+    return random.choice(pool) if pool else ""
+
+
+def black_flag_faction(who: str | None = None) -> dict[str, str]:
+    if who and who in BLACK_FLAG_FACTIONS:
+        return BLACK_FLAG_FACTIONS[who]
+    key = random.choice(list(BLACK_FLAG_FACTIONS.keys()))
+    return BLACK_FLAG_FACTIONS[key]
+
+
+def black_flag_detail(who: str) -> str:
+    fac = BLACK_FLAG_FACTIONS.get(who)
+    if fac:
+        return fac["detail"]
+    return random.choice([
+        "黑帆贴舷，要你表态。",
+        "海上没有政府，只有「你今天遇到谁」。",
+    ])
+
+
+def chronicle_lore(action: str) -> str | None:
+    pool = CHRONICLE_LORE.get(action)
+    if not pool or random.random() > 0.35:
+        return None
+    return random.choice(pool)
+
+
+def hedge_note_hint() -> str:
+    return random.choice(HEDGE_NOTE_SAMPLES)
+
+
+def amends_quip() -> str:
+    if random.random() < 0.4:
+        return random.choice(LORE_AMENDS_QUIPS)
+    return ""
+
+
+def boss_defeat_lore() -> str:
+    return random.choice(CHRONICLE_LORE["boss"])
+
+
+def daily_lore_tip() -> str:
+    topic = random.choice(list(LORE_TOPICS.keys()))
+    return random.choice(LORE_TOPICS[topic])
+
+
+def lore_topic_text(topic: str) -> str:
+    key = topic.strip().lower()
+    if key in ("list", "topics", "help"):
+        lines = ["lore 主题（lore_ops scan 主题名）："]
+        for k, label in LORE_TOPIC_LABELS.items():
+            lines.append(f"  {k} — {label}")
+        return "\n".join(lines)
+    if key not in LORE_TOPICS:
+        known = " / ".join(LORE_TOPIC_LABELS.keys())
+        return f"未知主题。可用: {known}\n或 lore_ops scan 随机抽一条。"
+    label = LORE_TOPIC_LABELS.get(key, key)
+    body = random.choice(LORE_TOPICS[key])
+    extra = ""
+    if key == "season" and random.random() < 0.5:
+        note = barton_season_note(random.choice(list(BARTON_SEASON_NOTES.keys())))
+        if note:
+            extra = f"\n\n老水手巴顿：「{note}」"
+    return f"«{label}»\n\n{body}{extra}"
+
+
+def lore_scan_random() -> str:
+    topic = random.choice(list(LORE_TOPICS.keys()))
+    return lore_topic_text(topic)

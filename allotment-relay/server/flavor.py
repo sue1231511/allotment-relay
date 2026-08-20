@@ -526,6 +526,10 @@ AMENDS_QUIPS = [
     "致歉成功，档口记账员少翻一个白眼",
 ]
 
+from .lore import LORE_AMENDS_QUIPS as _LORE_AMENDS
+
+AMENDS_QUIPS = AMENDS_QUIPS + _LORE_AMENDS
+
 # ── event_gen 专用池 ───────────────────────────────────────
 
 GUILD_FINE_REASON = [

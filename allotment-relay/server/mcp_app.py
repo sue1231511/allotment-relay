@@ -239,6 +239,12 @@ async def lili_ops(command: str) -> str:
     return await lili.lili_ops(_kid(), command)
 
 
+@mcp.tool(description="沿海 lore：scan [主题]/topics/hedge — 联盟旧史·黑旗·篱间·季象等背景")
+async def lore_ops(command: str) -> str:
+    from . import lore_ops as lore_mod
+    return await lore_mod.lore_ops(_kid(), command)
+
+
 @mcp.tool(description="诊所：status/treat 病症|all/visit/catalog — 桥桥大夫，必须花票治病")
 async def clinic_ops(command: str) -> str:
     from . import clinic

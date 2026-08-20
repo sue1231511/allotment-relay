@@ -523,7 +523,7 @@ async def maybe_world_pulse(steward: dict[str, Any]) -> str | None:
                 pulse["kind"],
                 pulse["effect"],
                 pulse.get("fish_focus"),
-                pulse["text"],
+                pulse.get("detail") or pulse["text"],
                 now,
                 now + config.WORLD_PULSE_DURATION,
             ),
@@ -533,7 +533,11 @@ async def maybe_world_pulse(steward: dict[str, Any]) -> str | None:
                 "UPDATE parcels SET tended=0 WHERE greenhouse=0 AND crop IS NOT NULL",
             )
         await conn.commit()
+        from . import lore as lore_mod
         msg = f"🌊 全服脉冲·{pulse['label']}：{pulse['text']}"
+        barton = lore_mod.barton_season_note(pulse["effect"])
+        if barton and random.random() < 0.55:
+            msg += f"\n老水手巴顿：「{barton}」"
         await db.add_chronicle("pulse", msg, steward["id"])
         return msg
 
