@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>井下的传闻 · 潮汐岛</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    /* 井下沉色 — 建立在地面纸色系之上的「往下看」 */
+    .ut-well{max-width:720px;margin:0 auto;padding:8px 0 64px}
+    .ut-card{background:#14161b;border:1px solid #262b33;border-radius:6px;padding:20px 22px;margin-bottom:16px;color:#c9cdd4}
+    .ut-card h2{font-size:13px;color:#b08d4f;margin:0 0 12px;letter-spacing:.32em;font-weight:500}
+    .ut-tide{font-size:15px;margin:0;color:#d8dce2}
+    .ut-bank{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+    .ut-rate{font-size:28px;color:#b08d4f;font-family:"Noto Serif SC",Georgia,serif}
+    .ut-rate small{font-size:12px;color:#6b7280}
+    .ut-reason{color:#8a9099;font-size:13px;font-style:italic}
+    .ut-paper{border-left:3px solid #2c323b;padding:10px 14px;margin-bottom:10px;background:#101318}
+    .ut-paper.gilt{border-left-color:#b08d4f;background:#16130b}
+    .ut-paper .head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+    .ut-paper .bounty{color:#b08d4f;white-space:nowrap}
+    .ut-paper .note{color:#6b7280;font-size:12px;margin-top:4px}
+    .ut-paper.gilt .note{color:#8a7440}
+    .ut-rumor{padding:9px 0;border-bottom:1px dashed #262b33;font-size:14px}
+    .ut-rumor:last-child{border-bottom:0}
+    .ut-rumor .when{color:#586069;font-size:11px;white-space:nowrap;margin-left:8px}
+    .ut-empty{color:#6b7280;font-size:13px;font-style:italic}
+    .ut-wall{display:flex;align-items:baseline;gap:14px}
+    .ut-whites{font-size:28px;color:#8a4a4a;font-family:Georgia,serif}
+    .ut-wall .sub{color:#8a9099;font-size:12px}
+    .ut-divider{text-align:center;color:#b08d4f;margin:22px 0;font-size:11px;letter-spacing:.5em;opacity:.7}
+    .ut-motto{text-align:center;margin-top:34px;color:#233038;font-size:16px;letter-spacing:.28em}
+    .ut-back{text-align:center;color:#708087;font-size:12px;margin-top:8px}
+    .ut-back a{color:#708087}
+  </style>
+</head>
+<body>
+  {% include "partials/nav.html" %}
+  <main>
+    <header class="page-head">
+      <div>
+        <div class="eyebrow">井下的传闻</div>
+        <h1>滨海酒吧 · 后院 · 那口井</h1>
+        <p class="tagline">听说而已，谁也没下去过。井里的事，只有纸条和传闻能浮上来。</p>
+      </div>
+    </header>
+
+    <section class="soft-hero">
+      <div class="note">这里只贴已经传遍全岛的消息——钱庄的告示、恩怨墙的纸条、井壁上的白。影信和账本不给人看，那是井底自己的事。</div>
+    </section>
+
+    <div class="ut-well">
+      <div class="ut-card">
+        <h2>今日潮汐</h2>
+        <p class="ut-tide" id="tide">潮平两岸阔。老样子。</p>
+      </div>
+
+      <div class="ut-card">
+        <h2>钱庄告示</h2>
+        <div class="ut-bank">
+          <span class="ut-rate" id="rate">10<small>%/日</small></span>
+          <span class="ut-reason" id="reason"></span>
+        </div>
+      </div>
+
+      <div class="ut-card">
+        <h2>恩怨墙</h2>
+        <div id="bounties"><p class="ut-empty">墙是空的。空墙最罕见，也最不安。</p></div>
+      </div>
+
+      <div class="ut-divider">· · ·</div>
+
+      <div class="ut-card">
+        <h2>井壁的白</h2>
+        <div class="ut-wall">
+          <span class="ut-whites" id="whites">0</span>
+          <span class="sub">块白<span id="lastname"></span></span>
+        </div>
+      </div>
+
+      <div class="ut-card">
+        <h2>井下传闻</h2>
+        <div id="rumors"><p class="ut-empty">最近很安静。安静得不像话。</p></div>
+      </div>
+
+      <p class="ut-motto">井不深。是人自己往下看的。</p>
+      <p class="ut-back"><a href="/">回到地上</a></p>
+    </div>
+  </main>
+<script>
+async function load(){
+  const r = await fetch('/api/public/undertide');
+  const d = await r.json();
+  if (d.tide && d.tide.line) document.getElementById('tide').textContent = '「' + d.tide.line + '」';
+  document.getElementById('rate').innerHTML = d.bank.rate + '<small>%/日</small>';
+  document.getElementById('reason').textContent = d.bank.reason ? '「' + d.bank.reason + '」' : '（她今天没解释）';
+  if (d.bounties && d.bounties.length){
+    document.getElementById('bounties').innerHTML = d.bounties.map(b =>
+      '<div class="ut-paper' + (b.gilt ? ' gilt' : '') + '">' +
+      '<div class="head"><span>【' + b.tier + '】' + b.target + '</span>' +
+      '<span class="bounty">赏 ' + b.bounty + ' 票</span></div>' +
+      (b.gilt ? '<div class="note">烫金。钱庄的纸条。措辞很客气。</div>' : '') +
+      '</div>').join('');
+  }
+  if (d.wall && d.wall.whites){
+    document.getElementById('whites').textContent = d.wall.whites;
+    document.getElementById('lastname').textContent = d.wall.last ? ' —— 最近的一块，属于「' + d.wall.last + '」' : '';
+  }
+  if (d.rumors && d.rumors.length){
+    document.getElementById('rumors').innerHTML = d.rumors.map(x =>
+      '<div class="ut-rumor">' + x.text + '<span class="when">' + new Date(x.at * 1000).toLocaleString('zh-CN', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'}) + '</span></div>').join('');
+  }
+}
+load();
+</script>
+</body>
+</html>

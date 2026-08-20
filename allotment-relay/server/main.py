@@ -11,6 +11,8 @@ from . import db
 from .config import STATIC_DIR, TEMPLATES_DIR
 from .mcp_app import build_mcp_app
 
+import aiosqlite
+
 mcp_starlette, mcp_session_manager = build_mcp_app()
 
 
@@ -452,6 +454,57 @@ async def lizhi_cheer(request: Request):
         await conn.execute("UPDATE ut_mood_proposals SET status='expired' WHERE id=?", (pid,))
         await conn.commit()
         return {"ok": True, "msg": "已无视"}
+
+
+@app.get("/undertide")
+async def undertide_page(request: Request):
+    return templates.TemplateResponse(request, "undertide.html", {"active": "undertide"})
+
+
+@app.get("/api/public/undertide")
+async def public_undertide():
+    from . import db
+    from . import undertide_tide as utide
+    from . import undertide_config as uc
+    out: dict = {}
+    async with db.connect() as conn:
+        conn.row_factory = aiosqlite.Row
+        # 潮汐
+        try:
+            mult, line = await utide.tide_mult(conn)
+            out["tide"] = {"mult": mult, "line": line}
+        except Exception:
+            out["tide"] = {"mult": 1.0, "line": ""}
+        # 钱庄今日利率
+        day = db.now() // 86400
+        row = await (await conn.execute("SELECT * FROM ut_owner_state WHERE id=1")).fetchone()
+        if row and int(row["rate_day"]) == day and (row["rate_reason"] or "").strip():
+            out["bank"] = {"rate": int(float(row["rate_today"]) * 100), "reason": row["rate_reason"]}
+        else:
+            out["bank"] = {"rate": int(uc.UT_RATE_BASE * 100), "reason": ""}
+        # 恩怨墙（匿名：不露雇主）
+        rows = await (await conn.execute(
+            "SELECT tier, target_name, bounty, poster FROM ut_bounty WHERE status='open' ORDER BY created_at DESC LIMIT 8"
+        )).fetchall()
+        out["bounties"] = [
+            {"tier": "偷" if r["tier"] == "steal" else "打", "target": r["target_name"],
+             "bounty": r["bounty"], "gilt": r["poster"] == "__npc__"}
+            for r in rows
+        ]
+        # 井下纪事
+        rows = await (await conn.execute(
+            "SELECT text, created_at FROM chronicle WHERE action='undertide' ORDER BY created_at DESC LIMIT 12"
+        )).fetchall()
+        out["rumors"] = [{"text": r["text"], "at": r["created_at"]} for r in rows]
+        # 井壁的白
+        row = await (await conn.execute(
+            "SELECT COUNT(*) c FROM ut_pit_fighters WHERE alive=0"
+        )).fetchone()
+        last = await (await conn.execute(
+            "SELECT name FROM ut_pit_fighters WHERE alive=0 ORDER BY id DESC LIMIT 1"
+        )).fetchone()
+        out["wall"] = {"whites": row["c"], "last": last["name"] if last else ""}
+    return out
 
 
 @app.get("/health")
