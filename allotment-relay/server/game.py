@@ -100,7 +100,7 @@ async def relay_manual() -> str:
         "  mascot_ops — adopt scout|lucky|compost / upkeep / train",
         "  beacon_ops — post/scan/respond（全服公告栏）",
         "  swap_ops — offer/claim/cancel（白送，领取 3 票手续费）",
-        "  tote_ops — list/vend（系统回收；list 带英文 id，vend 认中文名）",
+        "  tote_ops — list/vend/gift（系统回收；gift 定向送礼给管理员）",
         "  hearth_ops — brew/catalog（转发厨房灶台，配方全表可见）",
         "  guild_shift — 领取工分票（每日 1 次）",
         "  alliance_ops — online/assist/rapport/donate/larder/draw",
@@ -152,6 +152,7 @@ async def relay_manual() -> str:
         "  contract_ops post 物品 数量 酬票 — 发布悬赏，他人 fill id 交付",
         "  league_ops contribute 物品 数量 — 推进本周联盟共同目标",
         "  donate/draw — 联盟储藏室共享物资",
+        "  tote_ops gift 名字 物品 数量 [留言] — 定向送礼（即时到账，协作度+3）",
         "",
         "【水陆生产】",
         "  pen_ops / voyage_ops — 渔排养鱼、购船出海",
@@ -1403,7 +1404,70 @@ async def _tote_one(s: dict, command: str) -> str:
             await conn.execute("UPDATE stewards SET tickets=tickets+? WHERE id=?", (gain, s["id"]))
             await conn.commit()
         return f"出售 {ITEM_NAMES.get(item_key, item_key)}（{item_key}）x{qty}，+{gain} 票"
-    raise ValueError(f"未知 tote 指令: {command}")
+    if verb == "gift" and len(parts) >= 4:
+        peer_name = parts[1]
+        token = parts[2]
+        qty = _parse_int(parts[3])
+        if qty < 1:
+            raise ValueError("送礼数量至少 1")
+        note = " ".join(parts[4:])[:80] if len(parts) > 4 else ""
+        async with db.connect() as conn:
+            conn.row_factory = aiosqlite.Row
+            peer_row = await (await conn.execute(
+                "SELECT * FROM stewards WHERE name = ? COLLATE NOCASE",
+                (peer_name.strip(),),
+            )).fetchone()
+            if not peer_row:
+                raise ValueError(f"找不到管理员「{peer_name}」")
+            peer = dict(peer_row)
+            if peer["id"] == s["id"]:
+                raise ValueError("不能送礼给自己")
+            from . import multi as multi_mod
+            token_l = token.lower()
+            if token_l in ("tickets", "票", "工分票"):
+                cur = await conn.execute(
+                    "SELECT tickets FROM stewards WHERE id=?", (s["id"],)
+                )
+                if (await cur.fetchone())[0] < qty:
+                    raise ValueError(f"工分票不足，需要 {qty} 票")
+                await conn.execute(
+                    "UPDATE stewards SET tickets=tickets-? WHERE id=?",
+                    (qty, s["id"]),
+                )
+                await conn.execute(
+                    "UPDATE stewards SET tickets=tickets+? WHERE id=?",
+                    (qty, peer["id"]),
+                )
+                gift_line = f"{qty} 工分票"
+                item_key = None
+            else:
+                item_key = resolve_item_key(token)
+                if not item_key:
+                    raise ValueError(unknown_item_message(token))
+                if not await db.take_item(conn, s["id"], item_key, qty):
+                    raise ValueError(
+                        f"行囊不足 {ITEM_NAMES.get(item_key, item_key)}（{item_key}）x{qty}"
+                    )
+                await db.add_item(conn, peer["id"], item_key, qty)
+                gift_line = f"{ITEM_NAMES.get(item_key, item_key)}（{item_key}）x{qty}"
+            await multi_mod._bump_rapport(conn, s["id"], peer["id"], 3)
+            chronicle = f"{s['name']} 送礼给 {peer['name']}：{gift_line}"
+            if note:
+                chronicle += f" — {note}"
+            await db.add_chronicle("gift", chronicle, s["id"], peer["id"], conn=conn)
+            await conn.commit()
+        msg = f"已送礼给 {peer['name']}：{gift_line}"
+        if note:
+            msg += f"（{note}）"
+        msg += " · 协作度 +3"
+        return msg + flavor.maybe_suffix([
+            "对方行囊已到账，不用等台阶",
+            "礼轻情意重，联盟记一笔",
+            "篱边人情：送了就要认",
+        ])
+    raise ValueError(
+        f"未知 tote 指令: {command}（list / vend 物品 数量 / gift 名字 物品|票 数量 [留言]）"
+    )
 
 
 async def tote_ops(key_id: int, command: str) -> str:

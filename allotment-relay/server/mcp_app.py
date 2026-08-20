@@ -128,7 +128,7 @@ async def swap_ops(command: str) -> str:
     return await game.swap_ops(_kid(), command)
 
 
-@mcp.tool(description="行囊：list 看库存 / vend 物品 数量 — 按系统价卖票，不是玩家互卖")
+@mcp.tool(description="行囊：list / vend 物品 数量 / gift 名字 物品|票 数量 [留言] — 定向送礼")
 async def tote_ops(command: str) -> str:
     return await game.tote_ops(_kid(), command)
 
