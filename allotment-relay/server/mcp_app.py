@@ -245,7 +245,7 @@ async def clinic_ops(command: str) -> str:
     return await clinic.clinic_ops(_kid(), command)
 
 
-@mcp.tool(description="滨海酒吧：tonight/menu/order/work/status/staff/song/request_song/tip/chat — 多岗位打工·点酒·驻唱·小费；每2天须work")
+@mcp.tool(description="滨海酒吧：tonight/menu/order/work/chat/set_mood/set_owner_event — 老板娘营收心情·当晚事件·多岗位打工")
 async def bar_ops(command: str) -> str:
     from . import bar
     return await bar.bar_ops(_kid(), command)

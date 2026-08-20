@@ -15,6 +15,7 @@ from .bar_catalog import (
     BAR_DRINKS,
     BAR_EVENTS,
     BAR_JOBS,
+    BAR_MOOD_LEVELS,
     BAR_OWNER_MOOD_LINES,
     BAR_OWNER_MOODS,
     BAR_SINGER,
@@ -22,6 +23,20 @@ from .bar_catalog import (
     BEER_TYPES,
     LIZHI_BAR_STORY,
     SONG_REQUEST_COST,
+)
+from .bar_owner import (
+    append_owner_reaction,
+    bump_revenue,
+    compute_auto_mood,
+    enrich_state,
+    generate_chat,
+    mood_drink_text,
+    mood_event_chance_mult,
+    mood_label,
+    mood_tonight_line,
+    owner_event_reaction,
+    activity_weights_for_mood,
+    resolve_effective_mood,
 )
 from .catalog import BAR_SERVICES, COASTAL_BAR, ITEM_NAMES, NPC_FIXED
 from .game import require_steward
@@ -143,21 +158,20 @@ async def _ensure_daily_state(conn: aiosqlite.Connection) -> dict[str, Any]:
     cur = await conn.execute("SELECT * FROM bar_daily_state WHERE day=?", (day,))
     row = await cur.fetchone()
     if row:
-        return dict(row)
+        state = enrich_state(dict(row), day)
+        return state
 
+    auto_mood, _ = await compute_auto_mood(conn, day)
     rng = random.Random(day)
-    moods = list(BAR_OWNER_MOODS.keys())
-    mweights = [BAR_OWNER_MOODS[m]["weight"] for m in moods]
-    owner_mood = rng.choices(moods, weights=mweights, k=1)[0]
 
     activities = list(BAR_ACTIVITIES.keys())
     if await _league_completed(conn):
         activity_key = "celebration"
     else:
-        aw = [BAR_ACTIVITIES[a]["weight"] for a in activities if a != "celebration"]
-        activity_key = rng.choices(
-            [a for a in activities if a != "celebration"], weights=aw, k=1
-        )[0]
+        weights_map = activity_weights_for_mood(auto_mood, False)
+        act_keys = [a for a in activities if a != "celebration" and a in weights_map]
+        aw = [weights_map[a] for a in act_keys]
+        activity_key = rng.choices(act_keys, weights=aw, k=1)[0]
 
     tag_boost = BAR_ACTIVITIES.get(activity_key, {}).get("tag_boost")
     pool = BAR_SONGS[:]
@@ -174,13 +188,23 @@ async def _ensure_daily_state(conn: aiosqlite.Connection) -> dict[str, Any]:
     await conn.execute(
         """
         INSERT INTO bar_daily_state (
-            day, owner_mood, special_drink, activity_key, singer_state,
+            day, owner_mood, auto_mood, manual_mood_level, manual_mood_text,
+            manual_mood_date, revenue_tickets, owner_event_text, owner_event_date,
+            owner_event_enabled, special_drink, activity_key, singer_state,
             playlist_json, song_queue_json, created_at
-        ) VALUES (?,?,?,?,?,?,?,?)
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """,
         (
             day,
-            owner_mood,
+            auto_mood,
+            auto_mood,
+            "",
+            "",
+            0,
+            0,
+            "",
+            0,
+            0,
             special,
             activity_key,
             singer_state,
@@ -190,7 +214,19 @@ async def _ensure_daily_state(conn: aiosqlite.Connection) -> dict[str, Any]:
         ),
     )
     cur = await conn.execute("SELECT * FROM bar_daily_state WHERE day=?", (day,))
-    return dict(await cur.fetchone())
+    return enrich_state(dict(await cur.fetchone()), day)
+
+
+async def _refresh_state_mood(conn: aiosqlite.Connection, state: dict[str, Any]) -> dict[str, Any]:
+    day = _day_id()
+    enriched = enrich_state(state, day)
+    effective = enriched["effective_mood"]
+    await conn.execute(
+        "UPDATE bar_daily_state SET owner_mood=? WHERE day=?",
+        (effective, day),
+    )
+    enriched["owner_mood"] = effective
+    return enriched
 
 
 def _playlist_keys(state: dict[str, Any]) -> list[str]:
@@ -312,23 +348,22 @@ def _drink_price(
     if first_discount and activity.get("first_order_discount"):
         price = max(1, int(price * (1 - activity["first_order_discount"])))
 
-    mood = state.get("owner_mood", "normal")
+    mood = state.get("effective_mood") or resolve_effective_mood(state, _day_id())
     if drink_key == "owner_mood":
-        mood_mult = {"great": 0.9, "annoyed": 1.1, "treat": 0.85}.get(mood, 1.0)
+        meta = BAR_MOOD_LEVELS.get(mood, {})
+        mood_mult = meta.get("drink_mult", 1.0)
         price = max(1, int(price * mood_mult))
 
     return price
 
 
-def _owner_mood_drink_text(mood: str) -> str:
-    texts = {
-        "great": "今天偏甜，像荔栀难得的好脸色。",
-        "annoyed": "略苦，像老板算账算到一半被客人打断。",
-        "treat": "意外柔和——她今天想对人好一点。",
-        "experiment": "配方还在试验，但居然不难喝。",
-        "accounting": "平淡，像账本最后一行的句号。",
-    }
-    return texts.get(mood, BAR_DRINKS["owner_mood"]["text"])
+def _owner_mood_drink_text(state: dict[str, Any]) -> str:
+    day = _day_id()
+    mood = state.get("effective_mood") or resolve_effective_mood(state, day)
+    custom = ""
+    if int(state.get("manual_mood_date") or 0) == day:
+        custom = (state.get("manual_mood_text") or "").strip() or None
+    return mood_drink_text(mood, custom)
 
 
 def _job_eligible(skills: dict[str, Any], job_id: str, period: str) -> tuple[bool, str]:
@@ -451,6 +486,7 @@ async def _run_work(
     await energy.spend(conn, s["id"], config.BAR_SHIFT_ENERGY, action="酒吧上工")
 
     state = await _ensure_daily_state(conn)
+    state = await _refresh_state_mood(conn, state)
     activity = BAR_ACTIVITIES.get(state.get("activity_key") or "", {})
     base_wage = job_meta["pay"][period]
     if _is_late_night() and activity.get("wage_mult"):
@@ -477,6 +513,8 @@ async def _run_work(
     event_chance = 0.55
     if activity.get("event_mult"):
         event_chance = min(0.85, event_chance * activity["event_mult"])
+    mood_mult = mood_event_chance_mult(state.get("effective_mood", "normal"))
+    event_chance = min(0.92, event_chance * mood_mult)
     if late:
         event_chance = min(0.90, event_chance + 0.12)
 
@@ -546,7 +584,8 @@ async def _run_work(
     )
     if hangover:
         msg += f"\n{hangover}\n→ clinic_ops treat hangover（{AILMENTS['hangover']['cost']} 票）"
-    return msg
+    reaction = owner_event_reaction(state, day, "work")
+    return append_owner_reaction(msg, reaction)
 
 
 def _poor_bonus(tickets: int) -> tuple[float, str]:
@@ -559,10 +598,12 @@ def _poor_bonus(tickets: int) -> tuple[float, str]:
 
 async def _cmd_tonight(conn: aiosqlite.Connection) -> str:
     state = await _ensure_daily_state(conn)
+    state = await _refresh_state_mood(conn, state)
+    day = _day_id()
     staff = await _staff_today(conn)
     activity = BAR_ACTIVITIES.get(state.get("activity_key") or "", {})
-    mood = state.get("owner_mood", "normal")
-    mood_label = BAR_OWNER_MOODS.get(mood, {}).get("label", mood)
+    mood = state.get("effective_mood", "normal")
+    auto_mood = state.get("auto_mood", mood)
     playlist = _playlist_keys(state)
     special = BAR_DRINKS.get(state.get("special_drink", ""), {})
     phase = world.day_phase_label(world.current_day_phase())
@@ -579,9 +620,19 @@ async def _cmd_tonight(conn: aiosqlite.Connection) -> str:
         lines.append(f"当前活动：{activity.get('name')}，{activity.get('desc', '')}")
     if state.get("global_event"):
         lines.append(f"全场事件：{state['global_event']}")
+    if state.get("owner_event_enabled") and int(state.get("owner_event_date") or 0) == day:
+        lines.append(f"老板娘当晚状态：{state.get('owner_event_text', '')}")
     lines.append("")
-    lines.append(BAR_OWNER_MOOD_LINES.get(mood, BAR_OWNER_MOOD_LINES["normal"]))
-    lines.append(f"（老板娘状态：{mood_label}）»")
+    manual_text = ""
+    if int(state.get("manual_mood_date") or 0) == day:
+        manual_text = (state.get("manual_mood_text") or "").strip()
+    lines.append(mood_tonight_line(mood, manual_text or None))
+    lines.append(f"（老板娘心情：{mood_label(mood)}")
+    if int(state.get("manual_mood_date") or 0) == day:
+        lines.append(f"  人工覆盖 · auto={mood_label(auto_mood)} · effective={mood_label(mood)}")
+    else:
+        lines.append(f"  自动营收 · auto={mood_label(auto_mood)} · 今日营收 {state.get('revenue_tickets', 0)} 票")
+    lines.append("）»")
     return "\n".join(lines)
 
 
@@ -628,6 +679,8 @@ async def _cmd_order(conn: aiosqlite.Connection, s: dict[str, Any], drink_name: 
         raise ValueError(f"{drink['name']} 仅夜场供应")
 
     state = await _ensure_daily_state(conn)
+    state = await _refresh_state_mood(conn, state)
+    day = _day_id()
     first_free = not state.get("first_order_free")
     shipwreck = await _shipwreck_eligible(conn, s)
     cost = _drink_price(
@@ -652,7 +705,7 @@ async def _cmd_order(conn: aiosqlite.Connection, s: dict[str, Any], drink_name: 
 
     text = drink["text"]
     if drink_key == "owner_mood":
-        text = _owner_mood_drink_text(state.get("owner_mood", "normal"))
+        text = _owner_mood_drink_text(state)
     elif drink_key == "shipwreck" and shipwreck:
         text += "\n\n（今日你懂这杯的意思。首杯价已按沉船互助夜折算。）"
 
@@ -667,6 +720,7 @@ async def _cmd_order(conn: aiosqlite.Connection, s: dict[str, Any], drink_name: 
         """,
         (s["id"], drink_key, cost, note, db.now()),
     )
+    await bump_revenue(conn, cost, day)
     await survival.bump(conn, s["id"], mist_wit=random.randint(1, 4), satiety=-1)
 
     from . import health
@@ -677,7 +731,8 @@ async def _cmd_order(conn: aiosqlite.Connection, s: dict[str, Any], drink_name: 
     if hangover:
         msg += f"\n\n{hangover}"
     await db.add_chronicle("bar_drink", f"{s['name']} 点 {drink['name']}（-{cost}票）", s["id"])
-    return msg
+    reaction = owner_event_reaction(state, day, "order")
+    return append_owner_reaction(msg, reaction)
 
 
 async def _cmd_status(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
@@ -723,6 +778,7 @@ async def _cmd_status(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
         "",
         f"今日已上工 {used}/{config.BAR_SHIFT_DAILY} · 耗能 {config.BAR_SHIFT_ENERGY}/班",
         "指令: tonight / menu / order / work / staff / song / request_song / tip / chat",
+        "  set_mood level 文案 · clear_mood · set_owner_event 文案 · clear_owner_event",
     ])
     if is_shift_overdue(s):
         lines.append("⚠ 考勤逾期：白天也可补班 work 岗位 day（票 ×0.72），其它 MCP 已暂停")
@@ -746,7 +802,11 @@ async def _cmd_staff(conn: aiosqlite.Connection) -> str:
         lines.append(f"{row['name']} —— {meta['name']}（{plabel}）")
     lines.append("")
     lines.append("小费: bar_ops tip AI 数量 [备注]»")
-    return "\n".join(lines)
+    msg = "\n".join(lines)
+    state = await _ensure_daily_state(conn)
+    state = await _refresh_state_mood(conn, state)
+    reaction = owner_event_reaction(state, _day_id(), "staff")
+    return append_owner_reaction(msg, reaction)
 
 
 async def _cmd_song(conn: aiosqlite.Connection) -> str:
@@ -793,6 +853,8 @@ async def _cmd_request_song(conn: aiosqlite.Connection, s: dict[str, Any], song_
         raise ValueError(f"点歌需要 {cost} 票")
 
     state = await _ensure_daily_state(conn)
+    state = await _refresh_state_mood(conn, state)
+    day = _day_id()
     queue = _song_queue(state)
     queue.append(song["key"])
     await conn.execute(
@@ -801,8 +863,9 @@ async def _cmd_request_song(conn: aiosqlite.Connection, s: dict[str, Any], song_
     )
     await conn.execute(
         "UPDATE bar_daily_state SET song_queue_json=? WHERE day=?",
-        (json.dumps(queue, ensure_ascii=False), _day_id()),
+        (json.dumps(queue, ensure_ascii=False), day),
     )
+    await bump_revenue(conn, cost, day)
 
     replies = [
         f"我哪有旺夫命：「{song['title']}？行，你点的。」",
@@ -815,7 +878,8 @@ async def _cmd_request_song(conn: aiosqlite.Connection, s: dict[str, Any], song_
     if random.random() < 0.15:
         msg += "\n【全场有人跟着哼了两句】"
     await db.add_chronicle("bar_song", f"{s['name']} 点歌《{song['title']}》", s["id"])
-    return msg
+    reaction = owner_event_reaction(state, day, "request_song")
+    return append_owner_reaction(msg, reaction)
 
 
 async def _cmd_tip(
@@ -866,13 +930,19 @@ async def _cmd_tip(
     if note:
         chronicle += f"：{note}"
     await db.add_chronicle("bar_tip", chronicle, s["id"], peer["id"])
-    return f"小费已送达 · -{amount} 票 → {peer['name']}" + (f"\n备注：{note}" if note else "")
+    state = await _ensure_daily_state(conn)
+    state = await _refresh_state_mood(conn, state)
+    day = _day_id()
+    msg = f"小费已送达 · -{amount} 票 → {peer['name']}" + (f"\n备注：{note}" if note else "")
+    reaction = owner_event_reaction(state, day, "tip")
+    return append_owner_reaction(msg, reaction)
 
 
 async def public_bar_snapshot() -> dict[str, Any]:
     async with aiosqlite.connect(db.DB_PATH) as conn:
         hosts = await _hosts_on_duty(conn)
         state = await _ensure_daily_state(conn)
+        state = await _refresh_state_mood(conn, state)
         conn.row_factory = aiosqlite.Row
         orders = await (await conn.execute(
             """
@@ -886,6 +956,7 @@ async def public_bar_snapshot() -> dict[str, Any]:
         staff = await _staff_today(conn)
     phase = world.current_day_phase()
     activity = BAR_ACTIVITIES.get(state.get("activity_key") or "", {})
+    mood = state.get("effective_mood", "normal")
     return {
         "name": COASTAL_BAR["name"],
         "emoji": COASTAL_BAR["emoji"],
@@ -896,6 +967,10 @@ async def public_bar_snapshot() -> dict[str, Any]:
         "weather": world.weather_label(world.current_weather()),
         "mandatory_days": config.BAR_MANDATORY_DAYS,
         "activity": activity.get("name"),
+        "owner_mood": mood_label(mood),
+        "owner_mood_key": mood,
+        "owner_event": state.get("owner_event_text") if state.get("owner_event_enabled") else None,
+        "revenue_today": state.get("revenue_tickets", 0),
         "services": [
             {
                 "key": k,
@@ -973,6 +1048,7 @@ async def place_human_order(
             """,
             (patron["id"], host_id, service_key, cost, note, db.now()),
         )
+        await bump_revenue(conn, cost, _day_id())
         if host and host["id"] != patron["id"]:
             tip = max(2, cost // 5)
             await conn.execute(
@@ -1097,16 +1173,101 @@ async def bar_ops(key_id: int, command: str) -> str:
         await db.add_chronicle("bar", f"{s['name']} 在{COASTAL_BAR['name']}上工（shift→{job}）", s["id"])
         return msg + "\n（shift 兼容旧指令，推荐 bar_ops work 岗位 day|night）"
 
+    if verb == "set_mood":
+        rest = command.strip()[len("set_mood"):].strip()
+        if not rest:
+            raise ValueError("用法: bar_ops set_mood great|good|normal|bad|awful 文案")
+        mood_parts = rest.split(maxsplit=1)
+        level = mood_parts[0].lower()
+        text = mood_parts[1] if len(mood_parts) > 1 else ""
+        if level not in BAR_MOOD_LEVELS:
+            raise ValueError(f"心情须为: {', '.join(BAR_MOOD_LEVELS.keys())}")
+        day = _day_id()
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            await _ensure_daily_state(conn)
+            await conn.execute(
+                """
+                UPDATE bar_daily_state SET
+                    manual_mood_level=?, manual_mood_text=?, manual_mood_date=?
+                WHERE day=?
+                """,
+                (level, text[:200], day, day),
+            )
+            cur = await conn.execute("SELECT * FROM bar_daily_state WHERE day=?", (day,))
+            conn.row_factory = aiosqlite.Row
+            state = enrich_state(dict(await cur.fetchone()), day)
+            await _refresh_state_mood(conn, state)
+            await conn.commit()
+        label = mood_label(level)
+        hint = f"「{text[:80]}」" if text else ""
+        return f"已设置老板娘人工心情：{label}{hint}（仅今日有效，覆盖营收算法）"
+
+    if verb == "clear_mood":
+        day = _day_id()
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            await _ensure_daily_state(conn)
+            await conn.execute(
+                """
+                UPDATE bar_daily_state SET
+                    manual_mood_level='', manual_mood_text='', manual_mood_date=0
+                WHERE day=?
+                """,
+                (day,),
+            )
+            cur = await conn.execute("SELECT * FROM bar_daily_state WHERE day=?", (day,))
+            conn.row_factory = aiosqlite.Row
+            state = enrich_state(dict(await cur.fetchone()), day)
+            await _refresh_state_mood(conn, state)
+            await conn.commit()
+        auto = state.get("auto_mood", "normal")
+        return f"已清除人工心情，恢复营收算法：{mood_label(auto)}"
+
+    if verb == "set_owner_event":
+        text = command.strip()[len("set_owner_event"):].strip()
+        if not text:
+            raise ValueError("用法: bar_ops set_owner_event 当晚全局文案")
+        day = _day_id()
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            await _ensure_daily_state(conn)
+            await conn.execute(
+                """
+                UPDATE bar_daily_state SET
+                    owner_event_text=?, owner_event_date=?, owner_event_enabled=1
+                WHERE day=?
+                """,
+                (text[:220], day, day),
+            )
+            await conn.commit()
+        return f"已设置老板娘当晚状态（仅文案）：{text[:120]}"
+
+    if verb == "clear_owner_event":
+        day = _day_id()
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            await _ensure_daily_state(conn)
+            await conn.execute(
+                """
+                UPDATE bar_daily_state SET
+                    owner_event_text='', owner_event_date=0, owner_event_enabled=0
+                WHERE day=?
+                """,
+                (day,),
+            )
+            await conn.commit()
+        return "已清除老板娘当晚全局状态"
+
     if verb == "chat":
-        line = random.choice(_owner_lines())
-        tail = flavor.pick([
-            "——荔栀擦着杯子，眼神像在看 KPI",
-            "——说罢往你领口别了一枚塑料领针：工牌，别扔",
-            "——背后调酒声叮当，像给你打节拍",
-        ])
-        return f"荔栀：{line}{tail}"
+        topic = command.strip()[4:].strip()
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            state = await _ensure_daily_state(conn)
+            state = await _refresh_state_mood(conn, state)
+            day = _day_id()
+            msg = await generate_chat(conn, s, state, day, topic)
+            reaction = owner_event_reaction(state, day, "chat")
+            await conn.commit()
+        return append_owner_reaction(msg, reaction)
 
     raise ValueError(
         "未知 bar 指令: "
-        f"{command}（tonight/menu/order/work/status/staff/song/request_song/tip/chat/shift）"
+        f"{command}（tonight/menu/order/work/status/staff/song/request_song/tip/chat/"
+        "set_mood/clear_mood/set_owner_event/clear_owner_event/shift）"
     )

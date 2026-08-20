@@ -433,6 +433,14 @@ CREATE TABLE IF NOT EXISTS bar_tips (
 CREATE TABLE IF NOT EXISTS bar_daily_state (
     day INTEGER PRIMARY KEY,
     owner_mood TEXT NOT NULL DEFAULT 'normal',
+    auto_mood TEXT NOT NULL DEFAULT 'normal',
+    manual_mood_level TEXT NOT NULL DEFAULT '',
+    manual_mood_text TEXT NOT NULL DEFAULT '',
+    manual_mood_date INTEGER NOT NULL DEFAULT 0,
+    revenue_tickets INTEGER NOT NULL DEFAULT 0,
+    owner_event_text TEXT NOT NULL DEFAULT '',
+    owner_event_date INTEGER NOT NULL DEFAULT 0,
+    owner_event_enabled INTEGER NOT NULL DEFAULT 0,
     special_drink TEXT NOT NULL DEFAULT '',
     activity_key TEXT,
     global_event TEXT NOT NULL DEFAULT '',
@@ -541,6 +549,14 @@ async def init_db() -> None:
             "ALTER TABLE stewards ADD COLUMN eatery_open INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN eatery_label TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE voyages ADD COLUMN encounter TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE bar_daily_state ADD COLUMN auto_mood TEXT NOT NULL DEFAULT 'normal'",
+            "ALTER TABLE bar_daily_state ADD COLUMN manual_mood_level TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE bar_daily_state ADD COLUMN manual_mood_text TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE bar_daily_state ADD COLUMN manual_mood_date INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE bar_daily_state ADD COLUMN revenue_tickets INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE bar_daily_state ADD COLUMN owner_event_text TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE bar_daily_state ADD COLUMN owner_event_date INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE bar_daily_state ADD COLUMN owner_event_enabled INTEGER NOT NULL DEFAULT 0",
         ):
             try:
                 await db.execute(ddl)
