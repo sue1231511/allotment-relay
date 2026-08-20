@@ -1,7 +1,7 @@
 # 份地作物 — 偏北欧/沿海/湿地，与常见农场游戏区分
 # grow=基准分钟；spread 控制播种时随机生长窗口
 CROPS = {
-    "kale": {"name": "羽衣甘蓝", "emoji": "🥬", "seed_price": 7, "sell": 16, "grow": 280, "spread": 0.32, "tags": ["leaf"]},
+    "kale": {"name": "羽衣甘蓝", "emoji": "🥬", "seed_price": 7, "sell": 16, "grow": 280, "spread": 0.32, "tags": ["leaf"], "aliases": ["甘蓝", "羽衣"]},
     "beet": {"name": "甜菜", "emoji": "🫘", "seed_price": 9, "sell": 21, "grow": 340, "spread": 0.26, "tags": ["root"]},
     "rye": {"name": "黑麦", "emoji": "🌾", "seed_price": 8, "sell": 19, "grow": 400, "spread": 0.28, "tags": ["grain"]},
     "bramble": {"name": "荆棘莓", "emoji": "🫐", "seed_price": 14, "sell": 32, "grow": 360, "spread": 0.38, "tags": ["berry"]},
@@ -20,8 +20,50 @@ CROPS = {
     "papaya": {"name": "木瓜", "emoji": "🍈", "seed_price": 19, "sell": 34, "grow": 400, "spread": 0.32, "tags": ["fruit", "tropic"], "tree": True},
     "lemongrass": {"name": "香茅", "emoji": "🌿", "seed_price": 10, "sell": 20, "grow": 240, "spread": 0.22, "tags": ["seasoning", "tropic", "herb"]},
     "lime": {"name": "青柠", "emoji": "🍋", "seed_price": 14, "sell": 26, "grow": 320, "spread": 0.26, "tags": ["fruit", "tropic"], "tree": True, "shake": True},
-    "sweetpotato": {"name": "红薯", "emoji": "🍠", "seed_price": 8, "sell": 17, "grow": 300, "spread": 0.24, "tags": ["root", "tropic"]},
+    "sweetpotato": {"name": "红薯", "emoji": "🍠", "seed_price": 8, "sell": 17, "grow": 300, "spread": 0.24, "tags": ["root", "tropic"], "aliases": ["番薯", "地瓜"]},
 }
+
+_CROP_SUFFIXES = ("种子", "种", "苗")
+
+
+def resolve_crop_key(token: str) -> str | None:
+    """英文 key、中文全名、别名、去后缀种/种子 均可解析。"""
+    raw = token.strip()
+    if not raw:
+        return None
+
+    key = raw.lower()
+    if key in CROPS:
+        return key
+
+    for suffix in _CROP_SUFFIXES:
+        if raw.endswith(suffix) and len(raw) > len(suffix):
+            hit = resolve_crop_key(raw[: -len(suffix)])
+            if hit:
+                return hit
+
+    for ck, meta in CROPS.items():
+        if meta["name"] == raw:
+            return ck
+        for alias in meta.get("aliases", ()):
+            if alias == raw or alias.lower() == key:
+                return ck
+
+    by_substr = [ck for ck, meta in CROPS.items() if raw in meta["name"]]
+    if len(by_substr) == 1:
+        return by_substr[0]
+
+    return None
+
+
+def unknown_crop_message(token: str) -> str:
+    samples = ", ".join(
+        f"{k}/{meta['name']}" for k, meta in list(CROPS.items())[:6]
+    )
+    return (
+        f"未知作物: {token}。可用英文名或中文名，如 {samples}…"
+        "（甘蓝=羽衣甘蓝/kale）· plot_ops catalog 查全表"
+    )
 
 # 渔获 — zones: shore/near/far/deep；pen=True 可渔排放养
 SEA_CATCH = {

@@ -8,6 +8,8 @@ from . import db, events, flavor, farming, survival, world
 from . import commons
 from .catalog import (
     CROPS,
+    resolve_crop_key,
+    unknown_crop_message,
     FORAGE_LOOT,
     ITEM_NAMES,
     ITEM_PRICES,
@@ -56,7 +58,7 @@ async def relay_manual() -> str:
         "",
         "工具一览：",
         "  steward_enroll / steward_sheet / steward_revise / peer_sheet",
-        "  plot_ops — sow/tend/gather/shake/fertilize/scarecrow/compost/forage/weather",
+        "  plot_ops — catalog/buy/sow/tend/gather/shake/fertilize/scarecrow/compost/forage/weather",
         "  tide_ops — net/cast/status/bottle",
         "  gear_ops — status/upgrade 鱼饵·鱼竿·渔网 tier",
         "  beach_ops — scan/dig/probe（退潮+铲子赶海，雾天稀有↑）",
@@ -331,10 +333,14 @@ async def _plot_one(s: dict, cmd: str) -> str:
             return "联盟里还没有其他管理员"
         return "\n".join(f"- {r['name']} ({r['badge']})" for r in rows)
 
+    if verb in ("catalog", "crops"):
+        lines = [f"  {k} — {v['emoji']}{v['name']}" for k, v in CROPS.items()]
+        return "作物清单（buy/sow 可用 key 或中文名/别名）\n" + "\n".join(lines)
+
     if verb == "buy" and len(parts) >= 3:
-        qty, crop = int(parts[1]), parts[2].lower()
-        if crop not in CROPS:
-            raise ValueError(f"未知作物: {crop}")
+        qty, crop = int(parts[1]), resolve_crop_key(parts[2])
+        if not crop:
+            raise ValueError(unknown_crop_message(parts[2]))
         seed = f"seed_{crop}"
         cost = CROPS[crop]["seed_price"] * qty
         async with aiosqlite.connect(db.DB_PATH) as conn:
@@ -347,9 +353,9 @@ async def _plot_one(s: dict, cmd: str) -> str:
         return f"购入 {CROPS[crop]['name']}种 x{qty}（-{cost} 票）"
 
     if verb == "sow" and len(parts) >= 3:
-        slot, crop = int(parts[1]), parts[2].lower()
-        if crop not in CROPS:
-            raise ValueError(f"未知作物: {crop}")
+        slot, crop = int(parts[1]), resolve_crop_key(parts[2])
+        if not crop:
+            raise ValueError(unknown_crop_message(parts[2]))
         seed = f"seed_{crop}"
         async with aiosqlite.connect(db.DB_PATH) as conn:
             conn.row_factory = aiosqlite.Row
