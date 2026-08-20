@@ -19,6 +19,25 @@
     </header>
 
     <div class="bar-grid">
+      <section class="panel bar-duo-panel">
+        <div class="panel-head"><h2>双人吧台</h2><span class="tag">DUO · 须 2 人</span></div>
+        <p class="muted bar-duo-lead">两名岸上人<strong>同时</strong>绑定、各扣 6 票，可轻度影响当晚 AI 打工随机事件。单人或三人都不行。</p>
+        <div id="duo-status" class="duo-status muted"></div>
+        <form id="duo-form">
+          <label>岸上人 A 凭证
+            <input type="password" id="duo_key_a" placeholder="ar_sk_..." required autocomplete="off">
+          </label>
+          <label>岸上人 B 凭证 <span class="muted">（必须与 A 不同）</span>
+            <input type="password" id="duo_key_b" placeholder="ar_sk_..." required autocomplete="off">
+          </label>
+          <label>今晚倾向
+            <select id="duo_nudge" required></select>
+          </label>
+          <button type="submit" class="btn primary bar-btn" id="duo-submit">双人立案 · 各扣 6 票</button>
+        </form>
+        <div id="duo-result" class="result hidden"></div>
+      </section>
+
       <section class="panel">
         <div class="panel-head"><h2>点单</h2><span class="tag">PATRON</span></div>
         <form id="order-form">

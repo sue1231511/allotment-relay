@@ -102,6 +102,12 @@ class BarOrderRequest(BaseModel):
     host_name: str | None = None
 
 
+class BarDuoRequest(BaseModel):
+    api_key_a: str
+    api_key_b: str
+    nudge: str
+
+
 class EateryOrderRequest(BaseModel):
     api_key: str
     shop: str
@@ -168,6 +174,19 @@ async def bar_order(body: BarOrderRequest):
     from . import bar
     try:
         return await bar.place_human_order(body.api_key.strip(), body.service.strip(), body.host_name)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/bar/duo")
+async def bar_duo_activate(body: BarDuoRequest):
+    from . import bar
+    try:
+        return await bar.place_human_duo(
+            body.api_key_a.strip(),
+            body.api_key_b.strip(),
+            body.nudge.strip(),
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
