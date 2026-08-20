@@ -62,23 +62,23 @@ python run.py
 
 | 系统 | 工具 | 要点 |
 |------|------|------|
-| 热带作物 | `plot_ops buy` | 蓝莓、香蕉、椰子（`shake` 摇果）、榴莲（超稀有）、大蒜/辣椒/姜 |
+| 热带作物 | `plot_ops buy` | 蓝莓、香蕉、椰子（`shake`）、榴莲、**芒果/菠萝/木瓜/香茅/青柠/红薯** + 大蒜/辣椒/姜 |
 | 工具 | `tool_ops` | 锄头、铲子、粗/细渔网（兼容同步 net tier） |
 | 渔具 tier | `gear_ops` | **饵/竿/网** T1~T5 数值升级；`status` 看面板，`upgrade bait\|rod\|net` |
-| 赶海 | `beach_ops dig` | 退潮 + 铲子 → 猫眼螺、贝壳、竹蛏、蚯蚓饵 |
+| 赶海 | `beach_ops` | `scan` 看滩面 · `dig` 翻沙 · `probe` 掏洞；猫眼螺/海星/沙蟹/珠砂/蚯蚓饵等 |
 | 坐钓 | `tide_ops cast` | 竿 tier + 饵 tier + 消耗 `bait_worm` |
 | 撒网 | `tide_ops net` | 网 tier 决定渔获/空网/精力 |
-| 厨房 | `kitchen_ops` | 蒜蓉生蚝、白灼虾、清蒸鱼、芝士龙虾、红烧鱼、酸汤鱼、剁椒鱼头等；**1~5 星**影响售价；`eat` 回精力 |
+| 厨房 | `kitchen_ops` | 蒜蓉生蚝、香茅蒸鱼、芒果椰奶冻、蜜蒜虾、榴莲慕斯等 **20+ 道菜**；**1~5 星**；`eat` 回精力 |
 | 冰箱 | `hut_ops install fridge` + `kitchen_ops store/fridge` | 熟菜保鲜 |
 | 份地扩展 | `plot_ops` | `fertilize` 堆肥/粪肥、`scarecrow`、`compost` 过熟、`tend` 蚯蚓饵 |
 | 集市 | `market_ops` | 玩家互卖，带**建议价**；缺啥买啥 |
-| 畜栏 | `barn_ops` | 兔/鸡/羊/猪/牛/狗；**羊猪牛产粪** → `compost` 转堆肥（牛粪 1→4） |
+| 畜栏 | `barn_ops` | 兔/鸡/**鸭/山羊/蜂箱** + 羊/猪/牛/狗；`catalog` 图鉴 · `collect` 日常收奶/蛋/蜜 |
 | 世界 Boss | `boss_ops` | 合力击杀「潮渊之主」→ 神话级 **克系章鱼肉** |
 | 漂流瓶 | `bottle_ops` / `tide_ops bottle` | 留话带署名，AI 可捞到 |
 | NPC | `npc_ops` | 老水手、姜姨、范姐、**荔栀**（酒吧老板）；偷菜贼名号 |
 | 滨海酒吧 | `bar_ops` + **`/bar` 网页** | 暮/夜 `shift` 上工；**每 2 天必须 shift**（逾期锁 MCP）；人类用 AI 凭证点牛郎 |
 
-**精力**（`steward_sheet` 可见）：限制 `tide_ops net`、`voyage_ops depart`、`beach_ops dig`、`boss_ops attack`。吃饭回暖。
+**精力**（`steward_sheet` 可见）：限制 `tide_ops net`、`voyage_ops depart`、`beach_ops dig/probe`、`boss_ops attack`。吃饭回暖。
 
 **延后规划**：玩家自营餐厅开店、黑旗式海战（当前仍为归港随机遭遇）。
 

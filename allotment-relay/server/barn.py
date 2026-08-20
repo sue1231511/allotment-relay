@@ -1,6 +1,8 @@
-"""畜栏 — 牛羊猪狗兔鸡，喂食产出。"""
+"""畜栏 — 牛羊猪狗兔鸡鸭山羊蜂箱，喂食产出与日常收奶。"""
 
 from __future__ import annotations
+
+import random
 
 import aiosqlite
 
@@ -9,9 +11,13 @@ from .catalog import ITEM_NAMES, LIVESTOCK, MANURE
 from .game import require_steward
 
 
+def _day_id() -> int:
+    return db.now() // config.FORAGE_COOLDOWN_DAY
+
+
 def _ready(animal: dict, species: str) -> bool:
     meta = LIVESTOCK[species]
-    if meta.get("guard"):
+    if meta.get("guard") or meta.get("hive"):
         return False
     if not animal.get("stocked_at"):
         return False
@@ -27,10 +33,13 @@ def _line(animal: dict | None, slot: int) -> str:
     spec = LIVESTOCK[animal["species"]]
     if spec.get("guard"):
         state = "守夜中" if animal.get("guard") else "幼犬"
+    elif spec.get("hive"):
+        state = "采蜜中" if animal.get("fed") else "待喂"
     elif _ready(animal, animal["species"]):
         state = "可收"
     elif animal.get("fed"):
-        state = "放养"
+        extra = "·可 collect" if spec.get("daily") or spec.get("hive") else ""
+        state = f"放养{extra}"
     else:
         state = "待喂"
     return f"  #{slot}: {spec['emoji']}{spec['name']}（{state}）"
@@ -57,7 +66,35 @@ async def barn_ops(key_id: int, command: str) -> str:
         for slot in range(1, config.BARN_SLOTS + 1):
             lines.append(_line(by_slot.get(slot), slot))
         lines.append(f"可购: {', '.join(LIVESTOCK.keys())}")
-        lines.append("大型动物(羊/猪/牛)喂食产粪 → barn_ops compost 转堆肥")
+        lines.append("catalog 看详情 · collect 日常收奶/蛋/蜜 · 大型动物产粪→compost")
+        return "\n".join(lines)
+
+    if verb == "catalog":
+        lines = ["畜栏图鉴（buy 物种 槽位 / feed 槽位 / harvest|collect 槽位）:"]
+        for key, meta in LIVESTOCK.items():
+            feed = ITEM_NAMES.get(meta["feed"], meta["feed"])
+            if meta.get("guard"):
+                lines.append(f"  {meta['emoji']}{meta['name']} {meta['buy']}票 — 喂{feed}守夜")
+            elif meta.get("hive"):
+                lines.append(
+                    f"  {meta['emoji']}{meta['name']} {meta['buy']}票 — "
+                    f"喂{feed} x{meta['feed_qty']} · collect 采{ITEM_NAMES.get(meta['product'], meta['product'])}"
+                )
+            elif meta.get("daily"):
+                prod = ITEM_NAMES.get(meta["product"], meta["product"])
+                lines.append(
+                    f"  {meta['emoji']}{meta['name']} {meta['buy']}票 — "
+                    f"feed 后 collect 日常{prod} · harvest 满周期大收"
+                )
+            else:
+                prod = ITEM_NAMES.get(meta["product"], meta["product"])
+                manure = ""
+                if meta.get("manure"):
+                    manure = f" · 产{MANURE[meta['manure']]['name']}"
+                lines.append(
+                    f"  {meta['emoji']}{meta['name']} {meta['buy']}票 — "
+                    f"喂{feed} x{meta['feed_qty']} → {prod} x{meta['product_qty']}{manure}"
+                )
         return "\n".join(lines)
 
     if verb == "erect":
@@ -77,7 +114,7 @@ async def barn_ops(key_id: int, command: str) -> str:
                     (s["id"], slot),
                 )
             await conn.commit()
-        return f"畜栏就绪（-{config.BARN_ERECT_COST} 票）"
+        return f"畜栏就绪（-{config.BARN_ERECT_COST} 票，{config.BARN_SLOTS} 槽）"
 
     if verb == "buy" and len(parts) >= 2:
         if not s.get("barn_built"):
@@ -86,6 +123,8 @@ async def barn_ops(key_id: int, command: str) -> str:
         slot = int(parts[2]) if len(parts) > 2 else 1
         if species not in LIVESTOCK:
             raise ValueError(f"可购: {', '.join(LIVESTOCK.keys())}")
+        if slot < 1 or slot > config.BARN_SLOTS:
+            raise ValueError(f"槽位 1~{config.BARN_SLOTS}")
         meta = LIVESTOCK[species]
         async with aiosqlite.connect(db.DB_PATH) as conn:
             conn.row_factory = aiosqlite.Row
@@ -109,16 +148,19 @@ async def barn_ops(key_id: int, command: str) -> str:
                 (meta["buy"], s["id"]),
             )
             guard = 1 if meta.get("guard") else 0
+            stocked = db.now() if not meta.get("hive") else db.now()
             await conn.execute(
                 """
                 UPDATE barn_animals SET species=?, stocked_at=?, fed=0, guard=?
                 WHERE steward_id=? AND slot=?
                 """,
-                (species, db.now(), guard, s["id"], slot),
+                (species, stocked, guard, s["id"], slot),
             )
             await conn.commit()
         if meta.get("guard"):
             return f"#{slot} 入驻 {meta['name']} — 守夜减偷菜概率"
+        if meta.get("hive"):
+            return f"#{slot} 安置 {meta['emoji']}{meta['name']} — feed 后 collect 采蜜"
         return f"#{slot} 购入 {meta['emoji']}{meta['name']}（-{meta['buy']} 票）"
 
     if verb == "feed":
@@ -158,6 +200,42 @@ async def barn_ops(key_id: int, command: str) -> str:
             await conn.commit()
         return f"#{slot} 已喂食{manure_msg}"
 
+    if verb == "collect":
+        slot = int(parts[1]) if len(parts) > 1 else 1
+        day = _day_id()
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            conn.row_factory = aiosqlite.Row
+            row = dict(await (await conn.execute(
+                "SELECT * FROM barn_animals WHERE steward_id=? AND slot=?",
+                (s["id"], slot),
+            )).fetchone() or {})
+            if not row.get("species"):
+                raise ValueError("空栏")
+            meta = LIVESTOCK[row["species"]]
+            if not (meta.get("daily") or meta.get("hive")):
+                raise ValueError("该动物不支持 collect，用 harvest")
+            if not row.get("fed"):
+                raise ValueError("先 feed 再 collect")
+            cur = await conn.execute(
+                "SELECT 1 FROM barn_daily_collect WHERE steward_id=? AND slot=? AND day=?",
+                (s["id"], slot, day),
+            )
+            if await cur.fetchone():
+                raise ValueError("今日已收过")
+            product = meta["product"]
+            qty = meta["product_qty"]
+            if meta.get("hive") and random.random() < 0.2:
+                qty += 1
+            await db.add_item(conn, s["id"], product, qty)
+            await conn.execute(
+                "INSERT INTO barn_daily_collect (steward_id, slot, day) VALUES (?,?,?)",
+                (s["id"], slot, day),
+            )
+            await conn.commit()
+        msg = f"#{slot} 收取 {ITEM_NAMES.get(product, product)} x{qty}"
+        msg += flavor.maybe_suffix(["日常小收，积少成多", "栏里忙，票里稳"])
+        return msg
+
     if verb == "harvest":
         slot = int(parts[1]) if len(parts) > 1 else 1
         async with aiosqlite.connect(db.DB_PATH) as conn:
@@ -172,13 +250,19 @@ async def barn_ops(key_id: int, command: str) -> str:
             meta = LIVESTOCK[species]
             if meta.get("guard"):
                 raise ValueError("狗不产肉，它产安全感")
+            if meta.get("hive"):
+                raise ValueError("蜂箱用 collect 采蜜，别连箱端走")
             if not _ready(row, species):
-                raise ValueError("还没长成，继续 feed")
+                raise ValueError("还没长成，继续 feed（或 daily 动物先 collect）")
             product = meta["product"]
             qty = meta["product_qty"]
             if not row.get("fed"):
                 qty = max(1, qty // 2)
             await db.add_item(conn, s["id"], product, qty)
+            bonus_msg = ""
+            if species == "goat":
+                await db.add_item(conn, s["id"], "goat_cheese", 1)
+                bonus_msg = "，山羊奶酪 x1"
             manure_msg = ""
             if meta.get("manure"):
                 mqty = meta.get("manure_harvest", 1)
@@ -192,7 +276,7 @@ async def barn_ops(key_id: int, command: str) -> str:
                 (s["id"], slot),
             )
             await conn.commit()
-        msg = f"#{slot} 收获 {ITEM_NAMES.get(product, product)} x{qty}{manure_msg}"
+        msg = f"#{slot} 收获 {ITEM_NAMES.get(product, product)} x{qty}{bonus_msg}{manure_msg}"
         msg += flavor.maybe_suffix(["栏里忙，票里稳", "牲畜：今天也努力了"])
         await db.add_chronicle("barn", f"{s['name']} 畜栏收 {product}", s["id"])
         return msg
@@ -215,5 +299,5 @@ async def barn_ops(key_id: int, command: str) -> str:
         ) + flavor.maybe_suffix(["粪肥到位，土力拉满", "大型动物回馈，堆肥桶笑纳"])
 
     raise ValueError(
-        f"未知 barn 指令: {command}（status/erect/buy/feed/harvest/compost）"
+        f"未知 barn 指令: {command}（status/catalog/erect/buy/feed/collect/harvest/compost）"
     )

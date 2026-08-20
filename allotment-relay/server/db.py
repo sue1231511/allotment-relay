@@ -324,6 +324,21 @@ CREATE TABLE IF NOT EXISTS beach_rolls (
     PRIMARY KEY (steward_id, day)
 );
 
+CREATE TABLE IF NOT EXISTS beach_probe_rolls (
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    day INTEGER NOT NULL,
+    last_at INTEGER NOT NULL DEFAULT 0,
+    count INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (steward_id, day)
+);
+
+CREATE TABLE IF NOT EXISTS barn_daily_collect (
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    slot INTEGER NOT NULL,
+    day INTEGER NOT NULL,
+    PRIMARY KEY (steward_id, slot, day)
+);
+
 CREATE TABLE IF NOT EXISTS boss_rolls (
     steward_id INTEGER NOT NULL REFERENCES stewards(id),
     day INTEGER NOT NULL,

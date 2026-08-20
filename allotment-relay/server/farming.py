@@ -149,6 +149,8 @@ def roll_grow(crop_key: str, plot: dict[str, Any] | None = None) -> tuple[int, s
         target = int(target * 0.92)
     if world.current_weather() == "misty" and crop_key in {"fogpea", "kelp"}:
         target = int(target * 0.88)
+    if world.current_weather() == "sunny" and "tropic" in meta.get("tags", []):
+        target = int(target * 0.90)
     ratio = target / median
     label, hint = pace_label(ratio)
     sow_line = flavor.fill(

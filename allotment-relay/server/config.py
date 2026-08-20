@@ -113,6 +113,7 @@ DISCOVERY_CHANCE = {
     "gather": 0.10,
     "pen_harvest": 0.09,
     "voyage_return": 0.08,
+    "beach": 0.12,
 }
 
 # 岸畔小屋
@@ -125,7 +126,9 @@ ENERGY_REGEN_IDLE = 2  # 每次 sheet 查看慢回（软机制）
 
 # 赶海 / 工具
 BEACH_COOLDOWN = 1800
+BEACH_PROBE_COOLDOWN = 900
 BEACH_ENERGY = 8
+BEACH_PROBE_ENERGY = 5
 SCARECROW_COST = {"drift_twine": 2, "compost": 1}
 
 # 厨房 / 冰箱
@@ -138,7 +141,7 @@ MARKET_FEE = 2
 MARKET_LIST_MAX = 6
 
 # 畜栏
-BARN_SLOTS = 4
+BARN_SLOTS = 6
 BARN_ERECT_COST = 75
 
 # 世界 Boss

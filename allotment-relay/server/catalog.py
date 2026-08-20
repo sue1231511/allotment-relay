@@ -15,6 +15,12 @@ CROPS = {
     "garlic": {"name": "大蒜", "emoji": "🧄", "seed_price": 9, "sell": 18, "grow": 260, "spread": 0.22, "tags": ["seasoning"]},
     "chili": {"name": "辣椒", "emoji": "🌶️", "seed_price": 11, "sell": 22, "grow": 280, "spread": 0.26, "tags": ["seasoning"]},
     "ginger": {"name": "姜", "emoji": "🫚", "seed_price": 12, "sell": 24, "grow": 300, "spread": 0.24, "tags": ["seasoning", "tropic"]},
+    "mango": {"name": "芒果", "emoji": "🥭", "seed_price": 20, "sell": 38, "grow": 440, "spread": 0.30, "tags": ["fruit", "tropic"], "tree": True, "shake": True},
+    "pineapple": {"name": "菠萝", "emoji": "🍍", "seed_price": 17, "sell": 32, "grow": 380, "spread": 0.28, "tags": ["fruit", "tropic"]},
+    "papaya": {"name": "木瓜", "emoji": "🍈", "seed_price": 19, "sell": 34, "grow": 400, "spread": 0.32, "tags": ["fruit", "tropic"], "tree": True},
+    "lemongrass": {"name": "香茅", "emoji": "🌿", "seed_price": 10, "sell": 20, "grow": 240, "spread": 0.22, "tags": ["seasoning", "tropic", "herb"]},
+    "lime": {"name": "青柠", "emoji": "🍋", "seed_price": 14, "sell": 26, "grow": 320, "spread": 0.26, "tags": ["fruit", "tropic"], "tree": True, "shake": True},
+    "sweetpotato": {"name": "红薯", "emoji": "🍠", "seed_price": 8, "sell": 17, "grow": 300, "spread": 0.24, "tags": ["root", "tropic"]},
 }
 
 # 渔获 — zones: shore/near/far/deep；pen=True 可渔排放养
@@ -120,6 +126,16 @@ DISCOVERY_LOOT = {
         ("curio_coin", 1, 10, "收菜带起旧币"),
         ("seed_bramble", 1, 8, "藤间藏着荆棘莓种"),
         ("crop_kelp", 1, 9, "土里有浅海藻——谁种的"),
+        ("seed_mango", 1, 5, "熟果掉出芒果种"),
+        ("seed_papaya", 1, 5, "木瓜藤间藏着种"),
+        ("seed_lemongrass", 1, 6, "香茅根旁多一撮种"),
+    ],
+    "beach": [
+        ("curio_pearl", 1, 4, "沙面反光——珠砂"),
+        ("sea_glass", 1, 12, "浪退留下海玻璃"),
+        ("bait_worm", 3, 14, "湿沙下蚯蚓成窝"),
+        ("fish_razorclam", 1, 8, "探到竹蛏，惊喜"),
+        ("shell_starfish", 1, 6, "海星在看你"),
     ],
     "pen_harvest": [
         ("curio_pearl", 1, 6, "收网带出一粒珠砂"),
@@ -173,12 +189,23 @@ TOOLS = {
     "net_fine": {"name": "细渔网", "cost": 75, "emoji": "🎣", "fish_bonus": 0.18, "energy": 7},
 }
 
+# (item, label, qty, weight, price) — weight 越高越常见
 BEACH_LOOT = [
     ("shell_catseye", "猫眼螺", 1, 22, 18),
     ("shell_conch", "海螺", 1, 14, 25),
     ("shell_scallop", "扇贝壳", 1, 10, 30),
+    ("shell_starfish", "海星", 1, 8, 22),
+    ("shell_mussel", "青口贝", 1, 12, 16),
     ("fish_razorclam", "竹蛏", 1, 12, 20),
+    ("fish_cockle", "鸟蛤", 1, 14, 10),
+    ("fish_periwinkle", "滨螺", 2, 18, 8),
+    ("beach_crab", "沙蟹", 1, 10, 24),
+    ("beach_squid", "小管鱿鱼", 1, 7, 28),
+    ("crop_kelp", "浅海藻", 1, 15, 12),
     ("bait_worm", "蚯蚓饵", 2, 16, 15),
+    ("sea_glass", "海玻璃", 1, 6, 12),
+    ("fish_seaurchin", "海胆", 1, 5, 30),
+    ("curio_pearl", "浅湾珠砂", 1, 3, 38),
 ]
 
 MANURE = {
@@ -187,14 +214,17 @@ MANURE = {
     "manure_cow": {"name": "牛粪", "emoji": "💩", "compost_yield": 4, "sell": 6, "fertilize_boost": 0.20},
 }
 
-LARGE_LIVESTOCK = {"sheep", "pig", "cow"}
+LARGE_LIVESTOCK = {"sheep", "pig", "cow", "goat"}
 
 LIVESTOCK = {
     "rabbit": {"name": "兔", "emoji": "🐰", "buy": 55, "feed": "crop_fogpea", "feed_qty": 1, "grow": 600, "product": "meat_rabbit", "product_qty": 1},
     "chicken": {"name": "鸡", "emoji": "🐔", "buy": 48, "feed": "crop_rye", "feed_qty": 1, "grow": 480, "product": "egg", "product_qty": 2},
+    "duck": {"name": "鸭", "emoji": "🦆", "buy": 58, "feed": "crop_sweetpotato", "feed_qty": 1, "grow": 520, "product": "duck_egg", "product_qty": 2, "daily": True},
     "sheep": {"name": "羊", "emoji": "🐑", "buy": 95, "feed": "crop_kale", "feed_qty": 2, "grow": 900, "product": "wool", "product_qty": 1, "manure": "manure_sheep", "manure_feed": 1, "manure_harvest": 1},
     "pig": {"name": "猪", "emoji": "🐷", "buy": 110, "feed": "crop_beet", "feed_qty": 2, "grow": 840, "product": "meat_pork", "product_qty": 2, "manure": "manure_pig", "manure_feed": 1, "manure_harvest": 2},
-    "cow": {"name": "牛", "emoji": "🐄", "buy": 180, "feed": "crop_rye", "feed_qty": 3, "grow": 1200, "product": "milk", "product_qty": 2, "manure": "manure_cow", "manure_feed": 2, "manure_harvest": 3},
+    "goat": {"name": "山羊", "emoji": "🐐", "buy": 125, "feed": "crop_lemongrass", "feed_qty": 2, "grow": 960, "product": "goat_milk", "product_qty": 2, "manure": "manure_sheep", "manure_feed": 1, "manure_harvest": 1, "daily": True},
+    "cow": {"name": "牛", "emoji": "🐄", "buy": 180, "feed": "crop_rye", "feed_qty": 3, "grow": 1200, "product": "milk", "product_qty": 2, "manure": "manure_cow", "manure_feed": 2, "manure_harvest": 3, "daily": True},
+    "bee": {"name": "蜂箱", "emoji": "🐝", "buy": 85, "feed": "crop_blueberry", "feed_qty": 1, "grow": 0, "product": "honey", "product_qty": 2, "hive": True},
     "dog": {"name": "狗", "emoji": "🐕", "buy": 70, "feed": "meat_rabbit", "feed_qty": 1, "grow": 0, "product": "guard", "product_qty": 0, "guard": True},
 }
 
@@ -266,6 +296,66 @@ KITCHEN_DISHES = {
         "ings": ["crop_blueberry", "crop_rye", "milk"],
         "base_sell": 48, "energy": 16, "tags": ["dessert"],
     },
+    "mango_pudding": {
+        "name": "芒果椰奶冻", "emoji": "🍮",
+        "ings": ["crop_mango", "crop_coconut", "milk"],
+        "base_sell": 55, "energy": 18, "tags": ["dessert", "tropic"],
+    },
+    "pineapple_fried_rice": {
+        "name": "菠萝炒饭", "emoji": "🍚",
+        "ings": ["crop_pineapple", "crop_rye", "egg", "crop_garlic"],
+        "base_sell": 52, "energy": 20, "tags": ["tropic"],
+    },
+    "papaya_salad": {
+        "name": "青木瓜沙拉", "emoji": "🥗",
+        "ings": ["crop_papaya", "crop_chili", "crop_lime", "crop_lemongrass"],
+        "base_sell": 46, "energy": 14, "tags": ["tropic", "sour"],
+    },
+    "lemongrass_steamed_fish": {
+        "name": "香茅蒸鱼", "emoji": "🐟",
+        "ings": ["fish_seatrout", "crop_lemongrass", "crop_ginger", "crop_lime"],
+        "base_sell": 70, "energy": 22, "tags": ["sea", "tropic"],
+    },
+    "coconut_curry": {
+        "name": "椰香咖喱", "emoji": "🍛",
+        "ings": ["crop_coconut", "crop_chili", "crop_ginger", "crop_sweetpotato"],
+        "base_sell": 58, "energy": 20, "tags": ["tropic", "spicy"],
+    },
+    "honey_garlic_prawn": {
+        "name": "蜜蒜虾", "emoji": "🦐",
+        "ings": ["fish_glassshrimp", "honey", "crop_garlic", "crop_ginger"],
+        "base_sell": 75, "energy": 24, "tags": ["sea", "sweet"],
+    },
+    "duck_egg_fried_rice": {
+        "name": "鸭蛋炒饭", "emoji": "🍳",
+        "ings": ["duck_egg", "crop_rye", "crop_garlic", "crop_chili"],
+        "base_sell": 50, "energy": 18, "tags": ["rich"],
+    },
+    "goat_cheese_salad": {
+        "name": "山羊奶酪沙拉", "emoji": "🧀",
+        "ings": ["goat_cheese", "crop_kale", "crop_lime", "crop_blueberry"],
+        "base_sell": 54, "energy": 16, "tags": ["tropic"],
+    },
+    "durian_mousse": {
+        "name": "榴莲慕斯", "emoji": "🍰",
+        "ings": ["crop_durian", "milk", "crop_blueberry"],
+        "base_sell": 92, "energy": 26, "tags": ["dessert", "rich"],
+    },
+    "lime_coconut_shrimp": {
+        "name": "青柠椰香虾", "emoji": "🦐",
+        "ings": ["fish_glassshrimp", "crop_lime", "crop_coconut", "crop_chili"],
+        "base_sell": 72, "energy": 22, "tags": ["sea", "tropic"],
+    },
+    "scallop_garlic": {
+        "name": "蒜蓉粉丝扇贝", "emoji": "🦪",
+        "ings": ["shell_scallop", "crop_garlic", "crop_chili", "crop_ginger"],
+        "base_sell": 68, "energy": 20, "tags": ["sea"],
+    },
+    "sweetpotato_pancake": {
+        "name": "红薯烙", "emoji": "🥞",
+        "ings": ["crop_sweetpotato", "crop_rye", "honey"],
+        "base_sell": 42, "energy": 16, "tags": ["dessert"],
+    },
 }
 
 MYTH_INGREDIENTS = {
@@ -281,8 +371,16 @@ WORLD_BOSS = {
 }
 
 NPC_FIXED = [
-    {"key": "old_salt", "name": "老水手巴顿", "lines": ["今天潮线低，适合赶海", "细网比粗网省劲"]},
-    {"key": "herb_aunt", "name": "姜姨", "lines": ["酸汤鱼要够辣", "种点姜，厨房才像样"]},
+    {"key": "old_salt", "name": "老水手巴顿", "lines": [
+        "今天潮线低，适合赶海", "细网比粗网省劲",
+        "beach_ops scan 先看滩面", "雾天滩上容易出珠砂",
+        "probe 掏洞，dig 翻沙——别搞反",
+    ]},
+    {"key": "herb_aunt", "name": "姜姨", "lines": [
+        "酸汤鱼要够辣", "种点姜，厨房才像样",
+        "香茅蒸鱼别省柠檬", "蜜蒜虾——蜂蜜别用假的",
+        "青木瓜沙拉要够生，够辣",
+    ]},
     {"key": "market_fan", "name": "集市范姐", "lines": ["缺啥上 market 挂单", "建议价仅供参考，别跟票置气"]},
     {"key": "lizhi", "name": "荔栀", "lines": [
         "滨海酒吧今晚缺人手，票紧的来搭把手",
@@ -324,7 +422,10 @@ for k, _, _, _, price in BEACH_LOOT:
 ITEM_PRICES.update({
     "bait_worm": 6,
     "shell_catseye": 18, "shell_conch": 25, "shell_scallop": 30,
-    "egg": 14, "milk": 16, "wool": 22,
+    "shell_starfish": 22, "shell_mussel": 16,
+    "beach_crab": 24, "beach_squid": 28,
+    "egg": 14, "duck_egg": 18, "milk": 16, "goat_milk": 18,
+    "goat_cheese": 32, "honey": 26, "wool": 22,
     "meat_rabbit": 20, "meat_pork": 28,
     "scarecrow": 35,
 })
@@ -355,7 +456,11 @@ for k, _, _, _, _ in BEACH_LOOT:
 ITEM_NAMES.update({
     "bait_worm": "蚯蚓饵",
     "shell_catseye": "🐚猫眼螺", "shell_conch": "🐚海螺", "shell_scallop": "🐚扇贝壳",
-    "egg": "🥚鸡蛋", "milk": "🥛牛奶", "wool": "🧶羊毛",
+    "shell_starfish": "⭐海星", "shell_mussel": "🦪青口贝",
+    "beach_crab": "🦀沙蟹", "beach_squid": "🦑小管鱿鱼",
+    "egg": "🥚鸡蛋", "duck_egg": "🥚鸭蛋", "milk": "🥛牛奶",
+    "goat_milk": "🥛山羊奶", "goat_cheese": "🧀山羊奶酪", "honey": "🍯蜂蜜",
+    "wool": "🧶羊毛",
     "meat_rabbit": "🍖兔肉", "meat_pork": "🥓猪肉",
     "scarecrow": "🌾稻草人",
 })
