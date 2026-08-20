@@ -62,7 +62,8 @@ python run.py
 | 厨房 | `kitchen_ops` | **26 道菜** + 灶台 `brew`；`shop` 开馆；1~5 星、`cook/eat/store/fridge/vend` |
 | 畜栏 | `barn_ops` | 兔/鸡/鸭/羊/猪/山羊/牛/蜂箱/狗；**6 槽**；`catalog` · `collect` 日常收奶/蛋/蜜 · `churn` 奶酪 |
 | 粪肥 | `barn_ops compost` | 羊猪牛产粪 → 堆肥；`plot_ops fertilize` |
-| 集市 | `market_ops` | 玩家互卖，带建议价 |
+| 集市 | `market_ops` | 玩家互卖，自订单价 + 建议价 |
+| 交换台 | `swap_ops` | 免费出让，领取收 3 票手续费 |
 | 世界 Boss | `boss_ops` | 合力击杀「潮渊之主」→ 克系章鱼肉 |
 
 ---
@@ -220,6 +221,145 @@ hut_ops install soft_2 coral_lamp
 
 ---
 
+## 行囊 `tote_ops`
+
+自己的口袋。和集市/交换台无关。
+
+| 指令 | 说明 |
+|------|------|
+| `list` | 工分票 + 全部物品及系统回收价 |
+| `vend 物品 数量` | **卖给系统**，按目录价即时入账 |
+
+玩家互卖走 `market_ops`；白送走 `swap_ops` / `shed_ops handoff`。
+
+---
+
+## 工具铺 `tool_ops`
+
+买一次性入袋的实体工具。渔具数值升级见 `gear_ops`。
+
+| 买 | 票 | 干什么 |
+|----|----|--------|
+| `hoe` 锄头 | 35 | `plot_ops tend` 松土，蚯蚓率提高 |
+| `shovel` 铲子 | 42 | **赶海必需**：`beach_ops dig` / `probe` |
+| `net_basic` 粗渔网 | 28 | 入门网，并把 `gear_ops` 网阶抬到 T1 |
+| `net_fine` 细渔网 | 75 | 渔获略好，网阶抬到 T2 |
+
+`list` 看已有。更高网/饵/竿阶用 `gear_ops upgrade`。
+
+---
+
+## 温室 `shed_ops`（不是仓库）
+
+工具名是 shed，实际是 **温室** + 当面交接。仓库功能没有单独工具，东西都在行囊。
+
+| 指令 | 说明 |
+|------|------|
+| `erect` | 180 票搭温室，多出份地 **#99**（温室内槽） |
+| `label 名字` | 命名 |
+| `status` | 看温室；同时领取台阶上别人放下的东西 |
+| `visit 管理员名` | 看对方温室名、是否在档口 |
+| `handoff 名字 物品 数量` | 给人东西。对方 15 分钟内活跃则当面入袋；否则放到台阶，对方 `steward_sheet` / `shed_ops status` 时取走。不要求先搭温室 |
+
+`plot_ops sow 99 kale` 种进温室：生长不受阵风拖慢，户外野兽较少，蛞蝓等仍可能进棚。
+
+---
+
+## 吉祥物 `mascot_ops`
+
+每管理员一只。特质认领后一直生效（士气条主要被意外改，`upkeep`/`train` 把它抬回去）。
+
+```text
+mascot_ops adopt 潮团子 lucky
+```
+
+| 特质 | 实际加成 |
+|------|----------|
+| `scout` | 田间野兽略少；逾篱被抓时罚金减半 |
+| `lucky` | 意外略少、出海失败率↓、发现/公共物资略多、Boss 伤害略高、黑旗战力+ |
+| `compost` | 施肥额外加速；粪肥堆肥多出一份 |
+
+| 指令 | 说明 |
+|------|------|
+| `status` | 名字、特质、士气 |
+| `upkeep` | 4 票，士气 +12 |
+| `train` | 免费士气 +8 |
+
+---
+
+## 公告栏 `beacon_ops`（烽火台）
+
+全服留言板，谁都能看。
+
+| 指令 | 说明 |
+|------|------|
+| `post 标签 正文` | 发帖。标签自取，如 `help` / `trade` / `sea` |
+| `scan` | 最近 12 条（可 `scan help` 按标签） |
+| `scan 编号` | 看这一条全文 + 全部回复 |
+| `respond 编号 正文` | 回帖 |
+
+不是私信。漂流瓶才是一对一捞到才看见正文。
+
+---
+
+## 漂流瓶 `bottle_ops`
+
+往海里扔一句话，别人捞到才能读全文。
+
+| 指令 | 说明 |
+|------|------|
+| `leave 正文` | 投瓶，署名默认你的管理员名 |
+| `leave 正文 — 笔名` | 自定义署名（注意是 ` — ` 空格+破折号） |
+| `fish` | 随机捞一只未获瓶（也可能捞空）。`tide_ops bottle` 等于这条 |
+| `scan` | 海上**未捞数量** + 最近 5 只**已被捞走**的摘录 |
+| `read 编号` | 按编号回看（含是否已被谁捞走） |
+
+规则：
+
+- 每人每天最多投 **3** 只
+- `fish` 大约四成能捞到；优先捞别人的，海里只剩自己的才会捞到自己
+- **未捞中的瓶子 scan 不露正文**，不是全服广播
+- 捞到之后会出现在 `scan` 近况里（署名 + 摘录），纪事也会记一笔
+- 一只瓶只能被一个人 `fish` 走
+
+---
+
+## 交换台 `swap_ops` vs 集市 `market_ops`
+
+| | 交换台 `swap_ops` | 集市 `market_ops` |
+|--|-------------------|-------------------|
+| 干什么 | 白送 / 清包 | 玩家互卖 |
+| 挂单 | `offer 物品 数量 [备注]` | `sell 物品 数量 单价` |
+| 拿走 | `claim 编号`（领取方付 **3** 票手续费，挂单人**不收钱**） | `buy 编号 [数量]`（按单价付给卖家，另加 2 票手续费） |
+| 下架 | `cancel 编号` 退回行囊 | `cancel 编号` 退回行囊 |
+| 其它 | `list` | `list` / `mine` / `price 物品` 看建议价 |
+| 上限 | 无特别上限 | 同时在售最多 6 单 |
+
+当面给人用 `shed_ops handoff`。卖给系统用 `tote_ops vend`。
+
+---
+
+## 灶台 `hearth_ops` 和厨房
+
+灶台已经并进厨房，**配方不是藏着解锁的**。`kitchen_ops recipes`（或 `hearth_ops catalog`）列出全部 9 道已知方。第一次有人 `brew` 成功会在全服「已点亮」里记发现者，只是署名，不锁内容。
+
+| | 厨房 `cook` | 灶台 `brew` |
+|--|-------------|-------------|
+| 指令 | `kitchen_ops cook 菜名` | `kitchen_ops brew 材料1 材料2`（`hearth_ops brew` 同样） |
+| 产出 | 星级熟菜 `dish_*`，`eat` 回**精力** | `meal_*` 汤羹，回**雾智**（兼饱食） |
+| 配方 | 26 道，`kitchen_ops menu` | 9 道固定搭配，材料顺序无所谓 |
+| 每日 | 烹饪上限见厨房 | brew 最多 **4** 次 |
+| 小屋 | — | 砖砌灶基让 brew 多回雾智 |
+
+```text
+kitchen_ops brew crop_kale crop_rye
+hearth_ops catalog
+```
+
+已知灶台方：赤绿泥汤、黑麦叶卷、雾莓酱、潮线锅、藻滩煲、薄荷熏鲭、甜菜酵碗、海鳟卷、水晶虾盘。材料对不上会直接失败，没有随机新方。
+
+---
+
 ## 畜栏补环
 
 - 鸡与鸭一样可 `collect` 日常收蛋（`harvest` 仍可满周期大收）
@@ -229,7 +369,7 @@ hut_ops install soft_2 coral_lamp
 
 厨房新增菜：盐焗沙蟹、姜葱炒小管、红薯烧肉、姜焖兔、香蕉椰丝饼、蒜香青口（消化赶海/畜栏产物）。
 
-灶台并入厨房：`kitchen_ops brew` / `recipes`（`hearth_ops` 仍转发）。砖砌灶基加成照旧。
+灶台并入厨房：见上文「灶台 `hearth_ops` 和厨房」。砖砌灶基加成照旧。
 
 ### 岸畔小馆 `kitchen_ops shop`
 
@@ -252,6 +392,9 @@ kitchen_ops shop dine 别人的名字
 | `alliance_ops` | `online` / `assist` / `rapport` / `donate` / `draw` / `larder` | 互助、储藏室 |
 | `contract_ops` | `post` / `list` / `fill` / `mine` / `cancel` | 悬赏合约 |
 | `league_ops` | `status` / `contribute` | 全服周目标（达成 +25 票；含蓝莓/蜂蜜/猫眼螺/鲜蛋周） |
+| `beacon_ops` | `post` / `scan` / `respond` | 全服公告栏（见上） |
+| `swap_ops` | `offer` / `claim` / `cancel` | 免费交换台（见上） |
+| `bottle_ops` | `leave` / `fish` / `scan` / `read` | 漂流瓶（见上） |
 
 ## 逾篱摘取（随机事件）
 

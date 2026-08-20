@@ -79,14 +79,14 @@ async def relay_manual() -> str:
         "",
         "  pen_ops — erect/stock/feed/harvest（渔排养鱼）",
         "  voyage_ops — buy/repair/depart/return；归港坏遭遇会黑旗截停 fight/flee/parley/bribe",
-        "  shed_ops — erect/label/visit/handoff（温室）",
+        "  shed_ops — erect/label/visit/handoff（温室；离线交接走台阶，sheet 时入袋）",
         "  hut_ops — build/upgrade/catalog/buy/install（岸畔小屋；装件加成已生效）",
         "  commons_ops — scan/claim/pulse（稀有公共物资，随机上线）",
-        "  mascot_ops — adopt/upkeep/train/status",
-        "  beacon_ops — post/scan/respond",
-        "  swap_ops — offer/claim/list",
-        "  tote_ops — list/vend",
-        "  hearth_ops — brew/catalog",
+        "  mascot_ops — adopt scout|lucky|compost / upkeep / train",
+        "  beacon_ops — post/scan/respond（全服公告栏）",
+        "  swap_ops — offer/claim/cancel（白送，领取 3 票手续费）",
+        "  tote_ops — list/vend（系统回收，不是玩家互卖）",
+        "  hearth_ops — brew/catalog（转发厨房灶台，配方全表可见）",
         "  guild_shift — 领取工分票",
         "  alliance_ops — online/assist/rapport/donate/larder/draw",
         "  contract_ops — post/list/fill/mine/cancel",
@@ -152,6 +152,7 @@ async def steward_sheet(key_id: int) -> str:
         await lili_mod.maybe_spawn_visit(conn)
         lili_hint = await lili_mod.active_visit_hint(conn)
         hut_summary = (await hut_mod.get_bonuses(conn, s["id"])).summary()
+        handoff_notes = await _collect_handoffs(conn, s["id"])
         await conn.commit()
     s = await db.get_steward_by_id(s["id"]) or s
     parcels = await db.get_parcels(s["id"])
@@ -181,6 +182,8 @@ async def steward_sheet(key_id: int) -> str:
         lines.append(clinic_nag)
     if lili_hint:
         lines.append(lili_hint)
+    for note in handoff_notes:
+        lines.append(note)
     if s["greenhouse"]:
         lines.append(f"温室: {s['greenhouse_label'] or '未命名'}")
     if s.get("boat_key"):
@@ -790,6 +793,31 @@ async def tide_ops(key_id: int, command: str) -> str:
     raise ValueError(f"未知 tide 指令: {command}")
 
 
+async def _collect_handoffs(conn: aiosqlite.Connection, steward_id: int) -> list[str]:
+    """台阶上的离线交接进袋，并标已取。"""
+    prev = conn.row_factory
+    conn.row_factory = aiosqlite.Row
+    try:
+        rows = await (await conn.execute(
+            """
+            SELECT h.id, h.item, h.quantity, p.name AS from_name
+            FROM handoffs h JOIN stewards p ON p.id=h.from_id
+            WHERE h.to_id=? AND h.picked_up=0
+            ORDER BY h.created_at
+            """,
+            (steward_id,),
+        )).fetchall()
+    finally:
+        conn.row_factory = prev
+    notes = []
+    for r in rows:
+        await db.add_item(conn, steward_id, r["item"], r["quantity"])
+        await conn.execute("UPDATE handoffs SET picked_up=1 WHERE id=?", (r["id"],))
+        label = ITEM_NAMES.get(r["item"], r["item"])
+        notes.append(f"台阶交接：{r['from_name']} 放下的 {label} x{r['quantity']} 已入袋")
+    return notes
+
+
 async def shed_ops(key_id: int, command: str) -> str:
     s = await require_steward(key_id)
     chunks = [c.strip() for c in command.split(";") if c.strip()]
@@ -801,7 +829,15 @@ async def _shed_one(s: dict, cmd: str) -> str:
     verb = parts[0].lower()
 
     if verb == "status":
-        return f"温室: {s['greenhouse_label']}" if s["greenhouse"] else "尚未搭建温室"
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            notes = await _collect_handoffs(conn, s["id"])
+            await conn.commit()
+        base = f"温室: {s['greenhouse_label']}" if s["greenhouse"] else "尚未搭建温室"
+        if s["greenhouse"]:
+            base += " · 份地 #99 为温室内槽，plot_ops sow 99 …"
+        if notes:
+            return base + "\n" + "\n".join(notes)
+        return base
 
     if verb == "erect":
         if s["greenhouse"]:
@@ -840,7 +876,7 @@ async def _shed_one(s: dict, cmd: str) -> str:
         return f"拜访 {peer['name']}：{gh}（{'在档口' if online else '不在'}）"
 
     if verb == "handoff":
-        m = re.match(r"(\S+)\s+(\S+)\s+(\d+)$", cmd)
+        m = re.match(r"handoff\s+(\S+)\s+(\S+)\s+(\d+)$", cmd, re.I)
         if not m:
             raise ValueError("用法: handoff 名字 物品 数量")
         peer_name, item, qty_s = m.group(1), m.group(2), m.group(3)
@@ -863,7 +899,7 @@ async def _shed_one(s: dict, cmd: str) -> str:
                 (s["id"], peer["id"], item, qty, db.now()),
             )
             await conn.commit()
-        return f"已把 {ITEM_NAMES.get(item,item)} x{qty} 放在 {peer_name} 温室台阶"
+        return f"已把 {ITEM_NAMES.get(item,item)} x{qty} 放在 {peer_name} 温室台阶（对方 steward_sheet / shed_ops status 时入袋）"
 
     raise ValueError(f"未知 shed 指令: {cmd}")
 
@@ -928,6 +964,31 @@ async def beacon_ops(key_id: int, command: str) -> str:
         tag = parts[1] if len(parts) > 1 else None
         async with aiosqlite.connect(db.DB_PATH) as conn:
             conn.row_factory = aiosqlite.Row
+            if tag and tag.isdigit():
+                row = await (await conn.execute(
+                    """
+                    SELECT b.id, b.tag, b.body, a.name FROM beacons b
+                    JOIN stewards a ON a.id=b.author_id WHERE b.id=?
+                    """,
+                    (int(tag),),
+                )).fetchone()
+                if not row:
+                    raise ValueError("没有这条公告")
+                replies = await (await conn.execute(
+                    """
+                    SELECT r.body, a.name FROM beacon_replies r
+                    JOIN stewards a ON a.id=r.author_id
+                    WHERE r.beacon_id=? ORDER BY r.created_at
+                    """,
+                    (row["id"],),
+                )).fetchall()
+                lines = [f"#{row['id']} [{row['tag']}] {row['name']}: {row['body']}"]
+                if replies:
+                    lines.append("回复:")
+                    lines.extend(f"  · {r['name']}: {r['body']}" for r in replies)
+                else:
+                    lines.append("还没有回复 — respond 编号 正文")
+                return "\n".join(lines)
             if tag:
                 rows = await (await conn.execute(
                     "SELECT b.id, b.tag, b.body, a.name FROM beacons b JOIN stewards a ON a.id=b.author_id WHERE b.tag=? ORDER BY b.created_at DESC LIMIT 12",
@@ -937,9 +998,17 @@ async def beacon_ops(key_id: int, command: str) -> str:
                 rows = await (await conn.execute(
                     "SELECT b.id, b.tag, b.body, a.name FROM beacons b JOIN stewards a ON a.id=b.author_id ORDER BY b.created_at DESC LIMIT 12"
                 )).fetchall()
-        if not rows:
-            return "公告栏暂无帖子"
-        return "\n".join(f"#{r['id']} [{r['tag']}] {r['name']}: {r['body'][:80]}" for r in rows)
+            if not rows:
+                return "公告栏暂无帖子"
+            lines = []
+            for r in rows:
+                n = (await (await conn.execute(
+                    "SELECT COUNT(*) FROM beacon_replies WHERE beacon_id=?", (r["id"],)
+                )).fetchone())[0]
+                tail = f" ↩{n}" if n else ""
+                lines.append(f"#{r['id']} [{r['tag']}] {r['name']}: {r['body'][:80]}{tail}")
+            lines.append("scan 编号 看回复 · respond 编号 正文")
+            return "\n".join(lines)
 
     if verb == "post" and len(parts) >= 3:
         tag, body = parts[1][:20], parts[2][:220]
@@ -1020,7 +1089,22 @@ async def swap_ops(key_id: int, command: str) -> str:
             await conn.commit()
         return f"领取 #{lot_id}（-{SWAP_CLAIM_FEE} 票）"
 
-    raise ValueError(f"未知 swap 指令: {command}")
+    if verb == "cancel" and len(parts) >= 2:
+        lot_id = int(parts[1])
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            conn.row_factory = aiosqlite.Row
+            lot = dict(await (await conn.execute(
+                "SELECT * FROM swap_lots WHERE id=? AND depositor_id=? AND claimed_by IS NULL",
+                (lot_id, s["id"]),
+            )).fetchone() or {})
+            if not lot:
+                raise ValueError("找不到可撤回的挂单")
+            await db.add_item(conn, s["id"], lot["item"], lot["quantity"])
+            await conn.execute("DELETE FROM swap_lots WHERE id=?", (lot_id,))
+            await conn.commit()
+        return f"已撤回 #{lot_id}，物品退回行囊"
+
+    raise ValueError(f"未知 swap 指令: {command}（list/offer/claim/cancel）")
 
 
 async def tote_ops(key_id: int, command: str) -> str:

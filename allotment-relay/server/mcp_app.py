@@ -107,17 +107,17 @@ async def mascot_ops(command: str) -> str:
     return await game.mascot_ops(_kid(), command)
 
 
-@mcp.tool(description="公告栏：post 标签 正文 / scan [标签] / respond id 正文")
+@mcp.tool(description="公告栏：post 标签 正文 / scan [标签|编号] / respond id 正文")
 async def beacon_ops(command: str) -> str:
     return await game.beacon_ops(_kid(), command)
 
 
-@mcp.tool(description="交换台：offer 物品 数量 [备注] / claim id / list")
+@mcp.tool(description="交换台：offer 物品 数量 [备注] / claim id / list / cancel id — 免费出让，领走收手续费")
 async def swap_ops(command: str) -> str:
     return await game.swap_ops(_kid(), command)
 
 
-@mcp.tool(description="行囊：list / vend 物品 数量")
+@mcp.tool(description="行囊：list 看库存 / vend 物品 数量 — 按系统价卖票，不是玩家互卖")
 async def tote_ops(command: str) -> str:
     return await game.tote_ops(_kid(), command)
 
@@ -179,7 +179,7 @@ async def incident_ops(command: str) -> str:
     return await events.incident_ops(_kid(), command)
 
 
-@mcp.tool(description="工具：list / buy hoe|shovel|net_basic|net_fine（网 tier 见 gear_ops）")
+@mcp.tool(description="工具铺：list / buy hoe|shovel|net_basic|net_fine。锄头松土，铲子赶海，网入门；更高网阶走 gear_ops")
 async def tool_ops(command: str) -> str:
     from . import tools
     return await tools.tool_ops(_kid(), command)
@@ -227,7 +227,7 @@ async def npc_ops(command: str) -> str:
     return await npc.npc_ops(_kid(), command)
 
 
-@mcp.tool(description="漂流瓶：scan/leave/fish/read — 留话捞瓶带署名")
+@mcp.tool(description="漂流瓶：leave 正文 [— 署名] / fish 捞瓶 / scan 近况 / read 编号。未捞只报数量")
 async def bottle_ops(command: str) -> str:
     from . import bottles
     return await bottles.bottle_ops(_kid(), command)
