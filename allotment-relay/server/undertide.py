@@ -730,4 +730,44 @@ async def undertide_ops(key_id: int, command: str) -> str:
         if verb == "cheer":
             return await _cmd_cheer(conn, s, rest)
 
+        # ── 二期路由 ──
+        if verb in ("street", "muscle", "push"):
+            if not ut["access"]:
+                raise ValueError(utcopy.NO_ACCESS_HINT)
+            from . import undertide_muscle as um
+            if verb == "street":
+                return await um.street_ops(conn, s, ut)
+            return await um.muscle_ops(conn, s, ut, verb, rest)
+
+        if verb in ("pit", "fight", "medic"):
+            if not ut["access"]:
+                raise ValueError(utcopy.NO_ACCESS_HINT)
+            from . import undertide_pit as up
+            return await up.pit_ops(conn, s, ut, command.strip())
+
+        if verb in ("casino", "dice", "lantern", "draw"):
+            if not ut["access"]:
+                raise ValueError(utcopy.NO_ACCESS_HINT)
+            if verb == "casino":
+                return f"{utcopy.CASINO_HEADER}\n{utcopy.CASINO_DESC}\n\n" \
+                       f"骰子：dice small|big|black 注（×2/×2/×5）\n" \
+                       f"灯：lantern 注 → lantern continue/cash（×1.5→×8）\n" \
+                       f"牌：draw 注 停牌点12~20（胜×2）"
+            from . import undertide_casino as uc
+            from . import undertide_muscle as um
+            msg = await uc.casino_ops(conn, s, ut, verb, rest)
+            grudge = await um.maybe_grudge(conn, s, ut)
+            await conn.commit()
+            return msg + grudge
+
+        if verb == "hijack":
+            if not ut["access"]:
+                raise ValueError(utcopy.NO_ACCESS_HINT)
+            from . import undertide_muscle as um
+            return await um.hijack_ops(conn, s, ut, rest)
+
+        if verb == "grudge":
+            from . import undertide_muscle as um
+            return await um.grudge_ops(conn, s, ut, rest.split()[0] if rest else "")
+
     raise ValueError(f"未知 undertide 指令: {command}\n{utcopy.HELP}")

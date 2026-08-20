@@ -573,6 +573,14 @@ AILMENTS = {
         "name": "蟹钳印", "emoji": "🦀", "cost": 16, "health_loss": 9, "health_restore": 12,
         "hint": "沙蟹脾气比嘴硬", "energy_extra": 2,
     },
+    "ring_shock": {
+        "name": "斗场震伤", "emoji": "💫", "cost": 75, "health_loss": 25, "health_restore": 30,
+        "hint": "深坑专属——桥桥查得了，治不了", "energy_extra": 4,
+    },
+    "pit_trauma": {
+        "name": "深坑重创", "emoji": "🩸", "cost": 100, "health_loss": 35, "health_restore": 40,
+        "hint": "深坑专属——回地下治", "energy_extra": 6,
+    },
 }
 
 WORLD_BOSS = {

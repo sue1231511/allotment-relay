@@ -274,7 +274,7 @@ async def bar_ops(command: str) -> str:
     return await bar.bar_ops(_kid(), command)
 
 
-@mcp.tool(description="潮下（地下世界）：well/descend/enter/status/market/buy/sell/bank/jail/cheer — 影信·后室铺·恶猫钱庄·地下监牢")
+@mcp.tool(description="潮下（地下世界）：入口/影信/后室铺market/销赃sell/恶猫钱庄bank/监牢jail/深坑pit·fight·medic/赌场dice·lantern·draw/劫持hijack/强买muscle·push/寻仇grudge/哄猫猫cheer — undertide_ops help 看全表")
 async def undertide_ops(command: str = "") -> str:
     from . import undertide
     return await undertide.undertide_ops(_kid(), command)

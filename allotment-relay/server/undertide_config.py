@@ -55,3 +55,53 @@ UT_JAIL_RANSOM_REP = 1
 UT_CHEER_DAILY = 1
 UT_CHEER_CAT_RATE_CUT = 0.02 # 采纳后当日利率 -2pp（面板二期）
 UT_CHEER_EXPIRE_HOURS = 24
+
+# ══ 二期 ═══════════════════════════════════════════════════
+
+# ── 深坑 ──
+UT_PIT_MIN_BODY = 40
+UT_PIT_LADDER = [  # (级, 入场费, 胜奖, 战力底盘, 重伤率)
+    (1, 20, 60, 30, 0.05), (2, 35, 110, 45, 0.15), (3, 60, 200, 60, 0.30),
+    (4, 90, 320, 78, 0.45), (5, 140, 520, 100, 0.60),
+]
+UT_PIT_MEDIC = {"ring_shock": (60, 90), "pit_trauma": (80, 120)}
+UT_PIT_WIN_REP = 2
+UT_PIT_DEATH_CHANCE = 0.15   # NPC 惨败死亡概率(差值≥15)
+
+# ── 死人抽牌 ──
+UT_DICE_PAY = {"small": 2, "big": 2, "black": 5}      # 全部 EV 0.833
+UT_LANTERN_LADDER = [1.5, 2, 4, 8]
+UT_LANTERN_SURVIVE = [0.65, 0.55, 0.45, 0.35]
+UT_LANTERN_TIMEOUT = 7200
+UT_DRAW_DEALER_STAND = 17
+UT_BET_CAP = [(0, 15), (5, 15), (15, 30), (40, 60), (70, 120), (90, 200)]  # (rep_floor, cap)
+UT_CASINO_HIGHLIGHT = 150   # 单日净赢触发后屋事件
+UT_CASINO_LOSE_STREAK = 3   # 连输停发
+
+# ── 劫持 ──
+UT_HIJACK_DAILY = 1
+UT_HIJACK_OUTCOMES = {"clean": 0.40, "hurt_npc": 0.25, "hurt_self": 0.20, "fail": 0.15}
+UT_HIJACK_LOOT = (20, 50)
+UT_HIJACK_REP = {"clean": -4, "hurt_npc": -8, "hurt_self": -4, "fail": -10}
+UT_HIJACK_BODY_SELF = (-10, -20)
+UT_HIJACK_CAT_BODY = (30, 45)    # 劫猫猫 body 损耗（正数，用时取负）
+UT_HIJACK_LIZHI_BODY = (15, 25)  # 劫荔栀 body 损耗（正数，用时取负）
+UT_HIJACK_LIZHI_CASH = 0.25
+UT_HIJACK_BAN_COUNT = 3
+UT_SURGERY_FEE = 60
+UT_CAT_MARK_DEBUFF = 48     # 小时
+
+# ── 胁迫经济 ──
+UT_MUSCLE_DAILY = 1
+UT_PUSH_DAILY = 1
+UT_NPC_POOL_DAILY = (3, 5)
+UT_NPC_TIERS = {"soft": 15, "norm": 30, "hard": 50, "danger": 70}
+UT_NPC_GRUDGE = {"soft": 0.20, "norm": 0.40, "hard": 0.60, "danger": 0.90}
+UT_MUSCLE_PAY = 0.20
+UT_NPC_RARE_CHANCE = 0.10
+UT_PUSH_GAIN = (1.3, 1.8)
+UT_FENCE_NORMAL = 0.9
+UT_GRUDGE_MAX = 3
+UT_GRUDGE_CHANCE_DAILY = 0.08
+UT_GRUDGE_PAYOFF = 2.0
+UT_TAG_SHIFT_CHANCE = 0.15

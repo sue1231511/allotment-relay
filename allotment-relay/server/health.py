@@ -175,6 +175,13 @@ async def treat_one(
 ) -> str:
     if ailment_key not in AILMENTS:
         raise ValueError(f"未知病症，clinic_ops status 查看")
+    if ailment_key in ("pit_trauma", "ring_shock"):
+        raise ValueError(
+            "桥桥看了一眼伤势，又看了你一眼。\n"
+            "「这不是摔的。哪儿弄的，回哪儿治。」\n"
+            "「别把地下那套账算我头上。」\n"
+            "（深坑专属重伤 — undertide_ops pit medic 处理）"
+        )
     cur = await conn.execute(
         "SELECT 1 FROM steward_ailments WHERE steward_id=? AND ailment_key=?",
         (steward_id, ailment_key),

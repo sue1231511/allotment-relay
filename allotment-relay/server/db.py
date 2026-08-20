@@ -740,6 +740,64 @@ async def init_db() -> None:
             )
             """,
             """
+            CREATE TABLE IF NOT EXISTS ut_pit_fighters (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE,
+                level INTEGER NOT NULL,
+                power INTEGER NOT NULL,
+                wins INTEGER NOT NULL DEFAULT 0,
+                losses INTEGER NOT NULL DEFAULT 0,
+                alive INTEGER NOT NULL DEFAULT 1,
+                flavor TEXT NOT NULL DEFAULT ''
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS ut_lantern (
+                steward_id INTEGER PRIMARY KEY,
+                bet INTEGER NOT NULL,
+                stage INTEGER NOT NULL DEFAULT 0,
+                created_at INTEGER NOT NULL
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS ut_street_npc (
+                day_id INTEGER NOT NULL,
+                slot INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                tier TEXT NOT NULL,
+                stock_json TEXT NOT NULL DEFAULT '[]',
+                PRIMARY KEY (day_id, slot)
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS ut_grudge (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                steward_id INTEGER NOT NULL,
+                npc_name TEXT NOT NULL,
+                tier TEXT NOT NULL,
+                item_value INTEGER NOT NULL DEFAULT 0,
+                status TEXT NOT NULL DEFAULT 'active',
+                created_at INTEGER NOT NULL
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS ut_hijack_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                steward_id INTEGER NOT NULL,
+                day_id INTEGER NOT NULL,
+                target TEXT NOT NULL,
+                outcome TEXT NOT NULL
+            )
+            """,
+            "ALTER TABLE steward_undertide ADD COLUMN hijack_fails INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE steward_undertide ADD COLUMN ban_until INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE steward_undertide ADD COLUMN mark_sewn TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE steward_undertide ADD COLUMN pit_banned INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE steward_undertide ADD COLUMN casino_net INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE steward_undertide ADD COLUMN casino_lose INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE steward_undertide ADD COLUMN casino_day INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE steward_undertide ADD COLUMN pending_grudge INTEGER NOT NULL DEFAULT 0",
+            """
             CREATE TABLE IF NOT EXISTS ut_mood_proposals (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 steward_id INTEGER NOT NULL,
