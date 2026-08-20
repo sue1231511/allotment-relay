@@ -910,8 +910,12 @@ async def _cmd_tip(
         raise ValueError(f"票不足，需要 {amount}")
 
     await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (amount, s["id"]))
+    from . import social as social_mod
+    rapport = await social_mod.get_rapport(s["id"], peer["id"])
+    tip_bonus = social_mod.tip_amount_bonus(rapport, amount)
+    total_to_peer = amount + tip_bonus
     await conn.execute(
-        "UPDATE stewards SET tickets=tickets+? WHERE id=?", (amount, peer["id"])
+        "UPDATE stewards SET tickets=tickets+? WHERE id=?", (total_to_peer, peer["id"])
     )
     await conn.execute(
         """
@@ -923,7 +927,7 @@ async def _cmd_tip(
     skills = await _ensure_skills(conn, peer["id"])
     await conn.execute(
         "UPDATE bar_skills SET total_tips=total_tips+? WHERE steward_id=?",
-        (amount, peer["id"]),
+        (total_to_peer, peer["id"]),
     )
 
     chronicle = f"{s['name']} 给 {peer['name']} 小费 {amount} 票"
@@ -933,7 +937,10 @@ async def _cmd_tip(
     state = await _ensure_daily_state(conn)
     state = await _refresh_state_mood(conn, state)
     day = _day_id()
-    msg = f"小费已送达 · -{amount} 票 → {peer['name']}" + (f"\n备注：{note}" if note else "")
+    msg = f"小费已送达 · -{amount} 票 → {peer['name']}"
+    if tip_bonus:
+        msg += f"（协作度≥{social_mod.RAPPORT_TIP_BONUS}，对方实收 +{tip_bonus}）"
+    msg += (f"\n备注：{note}" if note else "")
     reaction = owner_event_reaction(state, day, "tip")
     return append_owner_reaction(msg, reaction)
 

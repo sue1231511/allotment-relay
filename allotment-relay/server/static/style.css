@@ -53,6 +53,10 @@ input {
   padding: .35rem .65rem; border-radius: 999px; font-size: .82rem;
 }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; margin: 1rem 0; }
+.world-side { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: .75rem; margin-bottom: 1rem; }
+.panel.mini { padding: .75rem 1rem; font-size: .92rem; }
+.panel.mini h3 { font-size: .95rem; margin: 0 0 .5rem; }
+.pulse-good { color: var(--accent, #3d8b6e); }
 .card {
   background: var(--panel); border: 1px solid var(--border); border-left: 3px solid var(--accent2);
   border-radius: 10px; padding: 1rem;

@@ -60,6 +60,10 @@ TIDE_LABELS = {
 }
 
 PEN_ERECT_COST = 140
+PEN_EXPAND_COST = 120
+MAX_FISH_PENS = 2
+MAX_PARCELS = 8
+PARCEL_EXPAND_COSTS = [80, 120, 180, 260]
 
 BOATS = {
     "skiff": {"name": "小舢板", "cost": 85, "rank": 1, "repair": 12, "cargo": 2},

@@ -7,7 +7,7 @@ import aiosqlite
 from . import db, events, event_gen, flavor, world
 from . import commons
 from .catalog import ITEM_NAMES, SEA_CATCH, voyage_loot_table
-from .config import BOATS, HAIL_BRIBE, HAIL_FIGHT_ENERGY, HAIL_FLEE_ENERGY, HAIL_THREAT, HAIL_TIMEOUT, PEN_ERECT_COST, VOYAGE_ROUTES
+from .config import BOATS, HAIL_BRIBE, HAIL_FIGHT_ENERGY, HAIL_FLEE_ENERGY, HAIL_THREAT, HAIL_TIMEOUT, MAX_FISH_PENS, PEN_ERECT_COST, PEN_EXPAND_COST, VOYAGE_ROUTES
 from .game import require_steward
 
 
@@ -40,6 +40,15 @@ def _pen_line(pen: dict) -> str:
     return f"  {label}: {spec['emoji']}{spec['name']}（{state}）"
 
 
+async def _list_pens(conn: aiosqlite.Connection, steward_id: int) -> list[dict[str, Any]]:
+    conn.row_factory = aiosqlite.Row
+    rows = await (await conn.execute(
+        "SELECT * FROM fish_pens WHERE steward_id=? ORDER BY slot",
+        (steward_id,),
+    )).fetchall()
+    return [dict(r) for r in rows]
+
+
 async def _get_pen(conn: aiosqlite.Connection, steward_id: int, slot: int = 1) -> dict[str, Any] | None:
     conn.row_factory = aiosqlite.Row
     row = await (await conn.execute(
@@ -70,16 +79,18 @@ async def pen_ops(key_id: int, command: str) -> str:
 
     if verb == "status":
         async with aiosqlite.connect(db.DB_PATH) as conn:
-            pen = await _get_pen(conn, s["id"])
+            pens = await _list_pens(conn, s["id"])
         boat = BOATS.get(s.get("boat_key") or "", {})
         lines = [
             f"船只: {boat.get('name', '无')} {'(待修)' if s.get('boat_damaged') else ''}".strip(),
         ]
-        if pen:
+        if pens:
             lines.append("渔排:")
-            lines.append(_pen_line(pen))
+            for pen in pens:
+                lines.append(_pen_line(pen))
         else:
             lines.append("渔排: 未搭建（erect）")
+        lines.append(f"扩池: pen_ops expand（第2池 {PEN_EXPAND_COST} 票，最多 {MAX_FISH_PENS} 池）")
         from .catalog import pen_species_keys
         farmable = pen_species_keys()
         lines.append(f"可养 {len(farmable)} 种: {', '.join(farmable[:8])}{'…' if len(farmable) > 8 else ''}")
@@ -103,6 +114,27 @@ async def pen_ops(key_id: int, command: str) -> str:
             await conn.commit()
         await db.add_chronicle("pen", f"{s['name']} 搭好了渔排", s["id"])
         return f"渔排就绪（-{PEN_ERECT_COST} 票）。stock 品种名 投苗，feed 投饵，harvest 收网"
+
+    if verb == "expand":
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            pens = await _list_pens(conn, s["id"])
+            if not pens:
+                raise ValueError("先 erect 第一池渔排")
+            if len(pens) >= MAX_FISH_PENS:
+                raise ValueError(f"渔排已达上限 {MAX_FISH_PENS} 池")
+            cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
+            if (await cur.fetchone())[0] < PEN_EXPAND_COST:
+                raise ValueError(f"扩池需要 {PEN_EXPAND_COST} 票")
+            await conn.execute(
+                "UPDATE stewards SET tickets=tickets-? WHERE id=?",
+                (PEN_EXPAND_COST, s["id"]),
+            )
+            await conn.execute(
+                "INSERT INTO fish_pens (steward_id, slot, pen_label) VALUES (?,?,'')",
+                (s["id"], len(pens) + 1),
+            )
+            await conn.commit()
+        return f"第 {len(pens) + 1} 池渔排就绪（-{PEN_EXPAND_COST} 票）"
 
     if verb == "label" and len(parts) >= 2:
         label = " ".join(parts[1:])[:40]
@@ -346,7 +378,9 @@ async def _resolve_hail(
     if choice == "parley":
         standing = s.get("standing", 50)
         mist = s.get("mist_wit", 50)
-        chance = 0.22 + standing / 220 + mist / 280
+        from . import social as social_mod
+        max_r = await social_mod.max_rapport(s["id"])
+        chance = 0.22 + standing / 220 + mist / 280 + social_mod.parley_bonus_chance(max_r)
         if random.random() < chance:
             fine = random.randint(3, 8)
             await conn.execute(
@@ -402,6 +436,8 @@ async def _resolve_voyage(
     route = VOYAGE_ROUTES[voyage["route"]]
     s = await _refresh_steward(conn, s["id"])
     fail_chance = route["fail"] + await events.voyage_fail_modifier()
+    from . import social as social_mod
+    fail_chance = max(0.05, fail_chance - social_mod.badge_val(s, "voyage_fail_reduce"))
     if world.current_weather() == "gale":
         fail_chance += 0.12
     if s.get("mascot_trait") == "lucky":

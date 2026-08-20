@@ -7,7 +7,7 @@ from typing import Any
 
 import aiosqlite
 
-from . import config, db, energy, flavor, survival
+from . import config, db, energy, flavor, social, survival
 from .catalog import (
     HEARTH_RECIPES,
     ITEM_NAMES,
@@ -330,7 +330,7 @@ async def _hearth_brew(s: dict[str, Any], ings: list[str]) -> str:
             "UPDATE stewards SET brews_today=?, brew_day=? WHERE id=?",
             (brews + 1 if row["brew_day"] == day else 1, day, s["id"]),
         )
-        await survival.bump(conn, s["id"], satiety=10, mist_wit=8 + hut_b.brew_mist)
+        await survival.bump(conn, s["id"], satiety=10, mist_wit=8 + hut_b.brew_mist + int(social.badge_val(s, "brew_mist")))
         extra = await events.roll_after_action(s, "brew", conn)
         await conn.commit()
     msg = f"灶台煮成「{recipe['name']}」→ {meal_item}（回雾智，可 eat / shop stock）"

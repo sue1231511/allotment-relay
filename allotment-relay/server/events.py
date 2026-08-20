@@ -20,7 +20,8 @@ def _roll_multiplier(steward: dict[str, Any], hut_event_mult: float = 1.0) -> fl
     elif weather == "clear":
         mult *= 0.85
     if steward.get("mascot_trait") == "lucky":
-        mult *= 0.72
+        from . import social as social_mod
+        mult *= 0.72 / social_mod.mascot_trait_mult(steward.get("mascot_spirit", 70))
     return mult * hut_event_mult
 
 

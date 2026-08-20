@@ -153,6 +153,7 @@ async def steward_sheet(key_id: int) -> str:
         lili_hint = await lili_mod.active_visit_hint(conn)
         hut_summary = (await hut_mod.get_bonuses(conn, s["id"])).summary()
         handoff_notes = await _collect_handoffs(conn, s["id"])
+        bottle_notes = await _collect_bottle_replies(conn, s["id"])
         await conn.commit()
     s = await db.get_steward_by_id(s["id"]) or s
     parcels = await db.get_parcels(s["id"])
@@ -181,6 +182,8 @@ async def steward_sheet(key_id: int) -> str:
     if lili_hint:
         lines.append(lili_hint)
     for note in handoff_notes:
+        lines.append(note)
+    for note in bottle_notes:
         lines.append(note)
     if s["greenhouse"]:
         lines.append(f"温室: {s['greenhouse_label'] or '未命名'}")
@@ -226,7 +229,11 @@ async def steward_sheet(key_id: int) -> str:
             left = max(0, voyage["returns_at"] - db.now())
             lines.append(f"出海: {VOYAGE_ROUTES[voyage['route']]['label']}（{left // 60} 分后归港）")
     if s["mascot_name"]:
+        from . import social as social_mod
         lines.append(f"吉祥物: {s['mascot_name']}（{s['mascot_trait']}，士气 {s['mascot_spirit']}）")
+        mhint = social_mod.mascot_spirit_hint(s.get("mascot_spirit", 70))
+        if mhint:
+            lines.append(mhint)
     lines.append("份地状态:")
     lines.extend(_parcel_line(p) for p in parcels)
     if stock:
@@ -660,11 +667,39 @@ async def _plot_one(s: dict, cmd: str) -> str:
             raise ValueError("找不到该管理员")
         async with aiosqlite.connect(db.DB_PATH) as conn:
             await survival.bump(conn, s["id"], standing=10, mist_wit=3)
+            await survival.bump(conn, peer["id"], standing=3)
             await conn.commit()
         msg = f"{s['name']} 向 {peer['name']} 为逾篱之事致歉"
         msg += f" — {flavor.pick(flavor.AMENDS_QUIPS)}"
         await db.add_chronicle("amends", msg, s["id"], peer["id"])
-        return msg
+        await db.add_chronicle(
+            "notice",
+            f"{s['name']} 向你致歉（逾篱），你的档信回暖 +3",
+            peer["id"],
+            s["id"],
+        )
+        return msg + f"\n{peer['name']} 已收到通知（档信 +3）"
+
+    if verb == "expand":
+        from .config import MAX_PARCELS, PARCEL_EXPAND_COSTS, START_PARCELS
+        count = s["parcel_count"]
+        if count >= MAX_PARCELS:
+            raise ValueError(f"份地已达上限 {MAX_PARCELS} 块")
+        idx = max(0, min(count - START_PARCELS, len(PARCEL_EXPAND_COSTS) - 1))
+        cost = PARCEL_EXPAND_COSTS[idx]
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
+            if (await cur.fetchone())[0] < cost:
+                raise ValueError(f"扩地需要 {cost} 票")
+            new_count = count + 1
+            await conn.execute(
+                "UPDATE stewards SET tickets=tickets-?, parcel_count=? WHERE id=?",
+                (cost, new_count, s["id"]),
+            )
+            await db.ensure_parcels(conn, s["id"], new_count)
+            await conn.commit()
+        await db.add_chronicle("plot", f"{s['name']} 扩地至 {new_count} 块", s["id"])
+        return f"扩地成功：现 {new_count} 块份地（slot #{new_count}），-{cost} 票"
 
     raise ValueError(f"未知 plot 指令: {cmd}")
 
@@ -683,6 +718,11 @@ async def tide_ops(key_id: int, command: str) -> str:
             "\n".join(f"{ITEM_NAMES.get(k,k)} x{v}" for k, v in sea.items()) or "暂无渔获"
         )
         return f"{pulse}\n{msg}" if pulse else msg
+
+    if verb == "catalog":
+        from . import catches as catches_mod
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            return await catches_mod.fish_catalog(conn, s["id"])
 
     if verb == "net":
         cost = 4
@@ -716,6 +756,8 @@ async def tide_ops(key_id: int, command: str) -> str:
         meta = SEA_CATCH[catch]
         async with aiosqlite.connect(db.DB_PATH) as conn:
             await db.add_item(conn, s["id"], f"fish_{catch}", 1)
+            from . import catches as catches_mod
+            await catches_mod.record_catch(conn, s["id"], f"fish_{catch}")
             await survival.bump(conn, s["id"], satiety=5)
             await conn.commit()
         msg = (
@@ -766,6 +808,8 @@ async def tide_ops(key_id: int, command: str) -> str:
         meta = SEA_CATCH[catch]
         async with aiosqlite.connect(db.DB_PATH) as conn:
             await db.add_item(conn, s["id"], f"fish_{catch}", 1)
+            from . import catches as catches_mod
+            await catches_mod.record_catch(conn, s["id"], f"fish_{catch}")
             await survival.bump(conn, s["id"], satiety=4)
             await conn.commit()
         msg = (
@@ -785,6 +829,28 @@ async def tide_ops(key_id: int, command: str) -> str:
         return await bottles.bottle_ops(key_id, "fish")
 
     raise ValueError(f"未知 tide 指令: {command}")
+
+
+async def _collect_bottle_replies(conn: aiosqlite.Connection, steward_id: int) -> list[str]:
+    prev = conn.row_factory
+    conn.row_factory = aiosqlite.Row
+    try:
+        rows = await (await conn.execute(
+            """
+            SELECT b.id, b.reply_body, r.name AS from_name
+            FROM drift_bottles b
+            JOIN stewards r ON r.id=b.reply_by
+            WHERE b.author_id=? AND b.reply_at IS NOT NULL
+            ORDER BY b.reply_at DESC LIMIT 3
+            """,
+            (steward_id,),
+        )).fetchall()
+    finally:
+        conn.row_factory = prev
+    return [
+        f"漂流瓶 #{r['id']} 有回瓶：{r['from_name']} — {r['reply_body'][:60]}"
+        for r in rows
+    ]
 
 
 async def _collect_handoffs(conn: aiosqlite.Connection, steward_id: int) -> list[str]:
@@ -906,7 +972,15 @@ async def mascot_ops(key_id: int, command: str) -> str:
     if verb == "status":
         if not s["mascot_name"]:
             return "尚无吉祥物，adopt 名字 特质(scout/lucky/compost)"
-        return f"{s['mascot_name']} [{s['mascot_trait']}] 士气 {s['mascot_spirit']}/100"
+        from . import social as social_mod
+        hint = social_mod.mascot_spirit_hint(s["mascot_spirit"])
+        base = f"{s['mascot_name']} [{s['mascot_trait']}] 士气 {s['mascot_spirit']}/100"
+        mult = social_mod.mascot_trait_mult(s["mascot_spirit"])
+        if mult != 1.0:
+            base += f" · 特质效果 ×{mult:.2f}"
+        if hint:
+            base += f"\n{hint}"
+        return base
 
     if verb == "adopt" and len(parts) >= 3:
         name, trait = parts[1][:20], parts[2][:16]
@@ -1064,6 +1138,7 @@ async def swap_ops(key_id: int, command: str) -> str:
         return "挂单成功"
 
     if verb == "claim" and len(parts) >= 2:
+        from . import social as social_mod
         lot_id = int(parts[1])
         async with aiosqlite.connect(db.DB_PATH) as conn:
             conn.row_factory = aiosqlite.Row
@@ -1074,14 +1149,17 @@ async def swap_ops(key_id: int, command: str) -> str:
                 raise ValueError("该挂单不存在或已被领走")
             if lot["depositor_id"] == s["id"]:
                 raise ValueError("不能领取自己的挂单")
+            rapport = await social_mod.get_rapport(s["id"], lot["depositor_id"])
+            claim_fee = social_mod.swap_claim_fee(rapport)
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
-            if (await cur.fetchone())[0] < SWAP_CLAIM_FEE:
-                raise ValueError(f"领取需要 {SWAP_CLAIM_FEE} 票")
-            await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (SWAP_CLAIM_FEE, s["id"]))
+            if (await cur.fetchone())[0] < claim_fee:
+                raise ValueError(f"领取需要 {claim_fee} 票")
+            await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (claim_fee, s["id"]))
             await db.add_item(conn, s["id"], lot["item"], lot["quantity"])
             await conn.execute("UPDATE swap_lots SET claimed_by=? WHERE id=?", (s["id"], lot_id))
             await conn.commit()
-        return f"领取 #{lot_id}（-{SWAP_CLAIM_FEE} 票）"
+        fee_note = f"（协作度≥{social_mod.RAPPORT_SWAP_DISCOUNT} 手续费 {claim_fee} 票）" if claim_fee < SWAP_CLAIM_FEE else ""
+        return f"领取 #{lot_id}（-{claim_fee} 票）{fee_note}"
 
     if verb == "cancel" and len(parts) >= 2:
         lot_id = int(parts[1])

@@ -138,4 +138,40 @@ async def bottle_ops(key_id: int, command: str) -> str:
             finder = f"（已被 {fs['name'] if fs else '?'} 捞走）"
         return f"#{row['id']} {sig}: {row['body']}{finder}"
 
-    raise ValueError(f"未知 bottle 指令: {command}（scan/leave/fish/read）")
+    if verb == "reply" and len(parts) >= 2:
+        rest = command.strip()[len("reply"):].strip()
+        rp = rest.split(maxsplit=1)
+        if len(rp) < 2:
+            raise ValueError("用法: bottle_ops reply 编号 正文")
+        bid, body = int(rp[0]), rp[1][:180]
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            conn.row_factory = aiosqlite.Row
+            row = await (await conn.execute(
+                "SELECT * FROM drift_bottles WHERE id=?", (bid,)
+            )).fetchone()
+            if not row:
+                raise ValueError("没有这个瓶子")
+            bottle = dict(row)
+            if bottle.get("reply_at"):
+                raise ValueError("这只瓶已经回过话了")
+            if bottle["found_by"] != s["id"]:
+                raise ValueError("只有你捞到的瓶才能 reply 给投瓶者")
+            await conn.execute(
+                """
+                UPDATE drift_bottles SET reply_body=?, reply_by=?, reply_at=?
+                WHERE id=?
+                """,
+                (body, s["id"], db.now(), bid),
+            )
+            await conn.commit()
+        author = await db.get_steward_by_id(bottle["author_id"])
+        aname = author["name"] if author else "?"
+        await db.add_chronicle(
+            "bottle",
+            f"{s['name']} 回瓶 #{bid} → {aname}",
+            s["id"],
+            bottle["author_id"],
+        )
+        return f"已回瓶 #{bid}：「{body}」（{aname} 下次 steward_sheet 可见）"
+
+    raise ValueError(f"未知 bottle 指令: {command}（scan/leave/fish/read/reply）")

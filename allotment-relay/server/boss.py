@@ -65,6 +65,39 @@ async def boss_ops(key_id: int, command: str) -> str:
             f"击杀全员掉落 {WORLD_BOSS['loot']}"
         )
 
+    if verb == "log":
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            conn.row_factory = aiosqlite.Row
+            boss = await _ensure_boss(conn)
+            rows = await (await conn.execute(
+                """
+                SELECT ba.damage, ba.created_at, st.name
+                FROM boss_attacks ba
+                JOIN stewards st ON st.id=ba.steward_id
+                WHERE ba.boss_key=? AND ba.created_at > ?
+                ORDER BY ba.damage DESC LIMIT 12
+                """,
+                (WORLD_BOSS["key"], db.now() - 86400 * 2),
+            )).fetchall()
+            my = await (await conn.execute(
+                "SELECT count FROM boss_rolls WHERE steward_id=? AND day=?",
+                (s["id"], _day_id()),
+            )).fetchone()
+            await conn.commit()
+        lines = [f"「{WORLD_BOSS['name']}」近期伤害榜（48h）"]
+        if boss["hp"] <= 0:
+            lines.append("Boss 已沉寂")
+        else:
+            lines.append(f"当前 HP {boss['hp']}/{boss['max_hp']}")
+        if not rows:
+            lines.append("尚无攻击记录 — boss_ops attack")
+        else:
+            for i, r in enumerate(rows, 1):
+                lines.append(f"  {i}. {r['name']} -{r['damage']}")
+        used = my[0] if my else 0
+        lines.append(f"你今日攻击 {used}/{config.BOSS_DAILY_ATTACKS}")
+        return "\n".join(lines)
+
     if verb == "attack":
         day = _day_id()
         async with aiosqlite.connect(db.DB_PATH) as conn:
@@ -82,7 +115,8 @@ async def boss_ops(key_id: int, command: str) -> str:
             lo, hi = config.BOSS_ATTACK_DAMAGE
             dmg = random.randint(lo, hi)
             if s.get("mascot_trait") == "lucky":
-                dmg = int(dmg * 1.12)
+                from . import social as social_mod
+                dmg = int(dmg * 1.12 * social_mod.mascot_trait_mult(s.get("mascot_spirit", 70)))
             new_hp = max(0, boss["hp"] - dmg)
             await conn.execute(
                 "UPDATE world_boss SET hp=? WHERE boss_key=?",

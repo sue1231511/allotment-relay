@@ -264,6 +264,14 @@ CREATE TABLE IF NOT EXISTS market_listings (
     created_at INTEGER NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS steward_catches (
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    catch_key TEXT NOT NULL,
+    first_at INTEGER NOT NULL,
+    catch_count INTEGER NOT NULL DEFAULT 1,
+    PRIMARY KEY (steward_id, catch_key)
+);
+
 CREATE TABLE IF NOT EXISTS drift_bottles (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     author_id INTEGER NOT NULL REFERENCES stewards(id),
@@ -271,6 +279,9 @@ CREATE TABLE IF NOT EXISTS drift_bottles (
     signature TEXT NOT NULL DEFAULT '',
     found_by INTEGER REFERENCES stewards(id),
     found_at INTEGER,
+    reply_body TEXT NOT NULL DEFAULT '',
+    reply_by INTEGER REFERENCES stewards(id),
+    reply_at INTEGER,
     created_at INTEGER NOT NULL
 );
 
@@ -557,6 +568,9 @@ async def init_db() -> None:
             "ALTER TABLE bar_daily_state ADD COLUMN owner_event_text TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE bar_daily_state ADD COLUMN owner_event_date INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE bar_daily_state ADD COLUMN owner_event_enabled INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE drift_bottles ADD COLUMN reply_body TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE drift_bottles ADD COLUMN reply_by INTEGER REFERENCES stewards(id)",
+            "ALTER TABLE drift_bottles ADD COLUMN reply_at INTEGER",
         ):
             try:
                 await db.execute(ddl)
@@ -713,6 +727,10 @@ async def ensure_parcels(db: aiosqlite.Connection, steward_id: int, count: int) 
 
 async def enroll_steward(key_id: int, name: str, motto: str, badge: str, portrait: str) -> dict[str, Any]:
     name = name.strip()
+    badge = badge.strip().lower() or "naturalist"
+    from .config import BADGES
+    if badge not in BADGES:
+        raise ValueError(f"徽章须为: {', '.join(BADGES)}")
     if len(name) < 2 or len(name) > 24:
         raise ValueError("名字长度需在 2~24 之间")
     ts = now()
@@ -774,10 +792,42 @@ async def public_stats() -> dict[str, Any]:
             "SELECT COUNT(*) c FROM contracts WHERE status='open'"
         )).fetchone())["c"]
         w, t = world.current_weather(), world.current_tide()
+        p = world.current_day_phase()
         from . import multi
         from . import events
+        from . import lili as lili_mod
+        from .catalog import WORLD_BOSS
         league = await multi.league_snapshot()
         pulse = await events.public_pulse_snapshot()
+        lili_hint = await lili_mod.active_visit_hint(db)
+        boss_row = await (await db.execute(
+            "SELECT hp, max_hp, respawn_at FROM world_boss WHERE boss_key=?",
+            (WORLD_BOSS["key"],),
+        )).fetchone()
+        boss = None
+        if boss_row:
+            hp, max_hp, respawn = boss_row[0], boss_row[1], boss_row[2]
+            boss = {
+                "name": WORLD_BOSS["name"],
+                "hp": hp,
+                "max_hp": max_hp,
+                "pct": int(hp / max_hp * 100) if max_hp else 0,
+                "alive": hp > 0,
+            }
+        beacons = await (await db.execute(
+            """
+            SELECT b.body, a.name FROM beacons b
+            JOIN stewards a ON a.id=b.author_id
+            ORDER BY b.created_at DESC LIMIT 5
+            """
+        )).fetchall()
+        swap_rows = await (await db.execute(
+            """
+            SELECT l.item, l.quantity, d.name
+            FROM swap_lots l JOIN stewards d ON d.id=l.depositor_id
+            WHERE l.claimed_by IS NULL ORDER BY l.created_at DESC LIMIT 5
+            """
+        )).fetchall()
         return {
             "stewards": stewards,
             "online": online,
@@ -789,6 +839,14 @@ async def public_stats() -> dict[str, Any]:
             "pulse": pulse,
             "weather": w,
             "tide": t,
+            "day_phase": p,
+            "day_phase_label": world.day_phase_label(p),
+            "lili": lili_hint,
+            "boss": boss,
+            "beacons": [{"author": r[1], "body": r[0][:80]} for r in beacons],
+            "swap_preview": [
+                {"item": r[0], "qty": r[1], "from": r[2]} for r in swap_rows
+            ],
         }
 
 
@@ -819,7 +877,8 @@ async def public_chronicle(limit: int = 40) -> list[dict[str, Any]]:
 
 
 async def public_allotments() -> list[dict[str, Any]]:
-    from .catalog import ITEM_NAMES
+    from .catalog import CROPS, ITEM_NAMES
+    from . import farming
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
         cur = await db.execute(
@@ -829,6 +888,22 @@ async def public_allotments() -> list[dict[str, Any]]:
         for p in [dict(r) for r in await cur.fetchall()]:
             inv = await get_satchel(p["id"])
             parcels = await get_parcels(p["id"])
+            parcel_views = []
+            for pl in parcels:
+                if not pl.get("crop"):
+                    parcel_views.append({"slot": pl["slot"], "crop": None, "state": "休耕"})
+                else:
+                    meta = CROPS.get(pl["crop"], {"name": pl["crop"], "emoji": "🌱"})
+                    parcel_views.append({
+                        "slot": pl["slot"],
+                        "crop": pl["crop"],
+                        "emoji": meta.get("emoji", "🌱"),
+                        "state": farming.parcel_status(pl),
+                    })
+            summary = " · ".join(
+                f"#{v['slot']}{v.get('emoji', '')}{v['state'][:2] if v.get('state') else '休'}"
+                for v in parcel_views[:5]
+            )
             latest = await (await db.execute(
                 "SELECT text FROM chronicle WHERE actor_id = ? OR target_id = ? ORDER BY created_at DESC LIMIT 1",
                 (p["id"], p["id"]),
@@ -846,7 +921,8 @@ async def public_allotments() -> list[dict[str, Any]]:
                 "mascot_name": p["mascot_name"],
                 "mascot_trait": p["mascot_trait"],
                 "last_active_at": p["last_active_at"],
-                "parcels": parcels,
+                "parcels": parcel_views,
+                "parcel_summary": summary,
                 "stock": [{"item": k, "name": ITEM_NAMES.get(k, k), "quantity": v} for k, v in list(inv.items())[:10]],
                 "latest": latest[0] if latest else "",
             })

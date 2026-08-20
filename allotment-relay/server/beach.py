@@ -74,8 +74,13 @@ async def beach_ops(key_id: int, command: str) -> str:
             preview = sorted(BEACH_LOOT, key=lambda x: -x[3])[:8]
             for item, label, _, wt, price in preview:
                 lines.append(f"  {label}（约{wt} · 建议{price}票）")
-            lines.append("指令: dig / probe")
+            lines.append("指令: dig / probe · catalog 图鉴")
         return "\n".join(lines)
+
+    if verb == "catalog":
+        from . import catches as catches_mod
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            return await catches_mod.beach_catalog(conn, s["id"])
 
     if verb == "dig":
         tide = world.current_tide()
@@ -101,6 +106,8 @@ async def beach_ops(key_id: int, command: str) -> str:
 
             item, label, qty = _roll_loot(tide, w, probe=False)
             await db.add_item(conn, s["id"], item, qty)
+            from . import catches as catches_mod
+            await catches_mod.record_catch(conn, s["id"], item)
             extra_msg = ""
             if tide == "ebb" and random.random() < 0.14:
                 bait = random.choice([x for x in BEACH_LOOT if x[0].startswith("bait_")])
@@ -176,6 +183,8 @@ async def beach_ops(key_id: int, command: str) -> str:
             if tide != "ebb":
                 qty = max(1, qty // 2)
             await db.add_item(conn, s["id"], item, qty)
+            from . import catches as catches_mod
+            await catches_mod.record_catch(conn, s["id"], item)
             clock_msg = ""
             from . import hut as hut_mod
             hut_b = await hut_mod.get_bonuses(conn, s["id"])

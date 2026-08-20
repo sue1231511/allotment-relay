@@ -210,6 +210,7 @@ async def alliance_ops(key_id: int, command: str) -> str:
         if peer["id"] == s["id"]:
             raise ValueError("不能 assist 自己")
         day = _day_id()
+        extra_tickets = 0
         async with aiosqlite.connect(db.DB_PATH) as conn:
             cur = await conn.execute(
                 "SELECT 1 FROM assist_log WHERE helper_id=? AND target_id=? AND day=?",
@@ -235,9 +236,20 @@ async def alliance_ops(key_id: int, command: str) -> str:
                 (ASSIST_TICKETS, s["id"]),
             )
             await _bump_rapport(conn, s["id"], peer["id"], ASSIST_RAPPORT)
+            from . import social as social_mod
+            rapport = await social_mod.get_rapport(s["id"], peer["id"])
+            extra_tickets = social_mod.assist_ticket_bonus(rapport)
+            if extra_tickets:
+                await conn.execute(
+                    "UPDATE stewards SET tickets = tickets + ? WHERE id=?",
+                    (extra_tickets, s["id"]),
+                )
             bonus = await _league_on_assist(conn, s["id"])
             await conn.commit()
-        msg = f"{s['name']} 帮 {peer['name']} 打理了 {len(rows)} 块份地，+{ASSIST_TICKETS} 票"
+        ticket_gain = ASSIST_TICKETS + extra_tickets
+        msg = f"{s['name']} 帮 {peer['name']} 打理了 {len(rows)} 块份地，+{ticket_gain} 票"
+        if extra_tickets:
+            msg += f"（协作度≥{social_mod.RAPPORT_ASSIST_BONUS} 额外 +{extra_tickets}）"
         await db.add_chronicle("assist", msg, s["id"], peer["id"])
         if bonus:
             await db.add_chronicle("league", bonus, s["id"])
@@ -464,4 +476,28 @@ async def league_ops(key_id: int, command: str) -> str:
         snap = await league_snapshot()
         return msg + f"\n进度 {snap['progress']}/{snap['target']}"
 
-    raise ValueError(f"未知 league 指令: {command}")
+    if verb == "board":
+        wid = _week_id()
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            conn.row_factory = aiosqlite.Row
+            row = await _ensure_league_week(conn)
+            meta = _goal_meta(row["goal_key"])
+            leaders = await (await conn.execute(
+                """
+                SELECT s.name, c.amount FROM league_contrib c
+                JOIN stewards s ON s.id=c.steward_id
+                WHERE c.week_id=? ORDER BY c.amount DESC LIMIT 8
+                """,
+                (wid,),
+            )).fetchall()
+        lines = [
+            f"联盟周目标：{meta['label']} {row['progress']}/{row['target']}",
+            "贡献榜：",
+        ]
+        if not leaders:
+            lines.append("  尚无贡献 — league_ops contribute 物品 数量")
+        for r in leaders:
+            lines.append(f"  · {r['name']} +{r['amount']}")
+        return "\n".join(lines)
+
+    raise ValueError(f"未知 league 指令: {command}（status/contribute/board）")

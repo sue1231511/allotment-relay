@@ -456,7 +456,8 @@ async def roll_farm_event(
     if world.current_weather() == "gale":
         chance *= 1.08
     if steward.get("mascot_trait") == "scout":
-        chance *= 0.82
+        from . import social as social_mod
+        chance *= 0.82 / social_mod.mascot_trait_mult(steward.get("mascot_spirit", 70))
     from . import hut as hut_mod
     from . import barn as barn_mod
     hut_b = await hut_mod.get_bonuses(conn, steward["id"])
