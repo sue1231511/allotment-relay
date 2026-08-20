@@ -472,7 +472,8 @@ CREATE TABLE IF NOT EXISTS lili_visits (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     started_at INTEGER NOT NULL,
     expires_at INTEGER NOT NULL,
-    detail TEXT NOT NULL DEFAULT ''
+    detail TEXT NOT NULL DEFAULT '',
+    day_id INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS lili_offers (
@@ -484,7 +485,12 @@ CREATE TABLE IF NOT EXISTS lili_offers (
     get_qty INTEGER NOT NULL DEFAULT 1,
     ticket_cost INTEGER NOT NULL DEFAULT 0,
     stock INTEGER NOT NULL DEFAULT 1,
-    sold INTEGER NOT NULL DEFAULT 0
+    sold INTEGER NOT NULL DEFAULT 0,
+    day_id INTEGER NOT NULL DEFAULT 0,
+    domains_json TEXT NOT NULL DEFAULT '[]',
+    offer_tier INTEGER NOT NULL DEFAULT 1,
+    value_total INTEGER NOT NULL DEFAULT 0,
+    note TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS npc_visits (
@@ -571,6 +577,12 @@ async def init_db() -> None:
             "ALTER TABLE drift_bottles ADD COLUMN reply_body TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE drift_bottles ADD COLUMN reply_by INTEGER REFERENCES stewards(id)",
             "ALTER TABLE drift_bottles ADD COLUMN reply_at INTEGER",
+            "ALTER TABLE lili_visits ADD COLUMN day_id INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE lili_offers ADD COLUMN day_id INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE lili_offers ADD COLUMN domains_json TEXT NOT NULL DEFAULT '[]'",
+            "ALTER TABLE lili_offers ADD COLUMN offer_tier INTEGER NOT NULL DEFAULT 1",
+            "ALTER TABLE lili_offers ADD COLUMN value_total INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE lili_offers ADD COLUMN note TEXT NOT NULL DEFAULT ''",
         ):
             try:
                 await db.execute(ddl)
