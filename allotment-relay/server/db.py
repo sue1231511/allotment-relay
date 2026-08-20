@@ -293,7 +293,7 @@ CREATE TABLE IF NOT EXISTS barn_animals (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     steward_id INTEGER NOT NULL REFERENCES stewards(id),
     slot INTEGER NOT NULL,
-    species TEXT NOT NULL,
+    species TEXT,
     stocked_at INTEGER,
     fed INTEGER NOT NULL DEFAULT 0,
     guard INTEGER NOT NULL DEFAULT 0,
@@ -336,6 +336,13 @@ CREATE TABLE IF NOT EXISTS bottle_rolls (
     day INTEGER NOT NULL,
     count INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (steward_id, day)
+);
+
+CREATE TABLE IF NOT EXISTS steward_gear (
+    steward_id INTEGER PRIMARY KEY REFERENCES stewards(id),
+    bait_tier INTEGER NOT NULL DEFAULT 1,
+    rod_tier INTEGER NOT NULL DEFAULT 0,
+    net_tier INTEGER NOT NULL DEFAULT 0
 );
 """
 

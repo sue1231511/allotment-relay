@@ -57,7 +57,8 @@ async def relay_manual() -> str:
         "工具一览：",
         "  steward_enroll / steward_sheet / steward_revise / peer_sheet",
         "  plot_ops — sow/tend/gather/shake/fertilize/scarecrow/compost/forage/…",
-        "  tide_ops — net/status/bottle",
+        "  tide_ops — net/cast/status/bottle",
+        "  gear_ops — status/upgrade 鱼饵·鱼竿·渔网 tier",
         "  beach_ops — dig（退潮+铲子赶海）",
         "  tool_ops — list/buy 锄头铲子渔网",
         "  kitchen_ops — menu/cook/eat/store/fridge（星级料理+冰箱）",
@@ -91,10 +92,10 @@ async def relay_manual() -> str:
         "",
         "【热带份地 · 料理 · 集市】",
         "  蓝莓/香蕉/椰子(可shake)/榴莲(超稀有) + 大蒜辣椒姜",
-        "  铲子赶海：猫眼螺/贝壳；细渔网加渔获省精力",
+        "  铲子赶海：猫眼螺/贝壳；gear_ops 升级饵/竿/网 tier 数值",
         "  kitchen_ops 蒜蓉生蚝/白灼虾/清蒸鱼/芝士龙虾等，星级影响售价",
         "  精力限制 net/出海/赶海；吃饭 kitchen_ops eat 回精力",
-        "  施肥/稻草人/堆肥桶/挖蚯蚓饵；market_ops 玩家互卖",
+        "  施肥/稻草人/堆肥桶/挖蚯蚓饵；羊猪牛产粪→堆肥",
         "  boss_ops 合力击杀潮渊之主 → 神话章鱼肉",
         "",
         "  饱食 / 雾智 / 档信 三项慢衰减，无硬死亡",
@@ -371,6 +372,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
 
     if verb == "fertilize" and len(parts) >= 2:
         slot = int(parts[1])
+        fert_item = parts[2] if len(parts) > 2 else "compost"
         async with aiosqlite.connect(db.DB_PATH) as conn:
             conn.row_factory = aiosqlite.Row
             plot = dict(await (await conn.execute(
@@ -380,14 +382,25 @@ async def _plot_one(s: dict, cmd: str) -> str:
                 raise ValueError(f"#{slot} 没种东西")
             if plot.get("fertilized"):
                 return f"#{slot} 已经施过肥"
-            if not await db.take_item(conn, s["id"], "compost", 1):
-                raise ValueError("施肥需要堆肥 x1")
+            from .catalog import MANURE
+            boost = 0.12
+            label = "堆肥"
+            if fert_item in MANURE:
+                if not await db.take_item(conn, s["id"], fert_item, 1):
+                    raise ValueError(f"需要 {MANURE[fert_item]['name']} x1")
+                boost = MANURE[fert_item]["fertilize_boost"]
+                label = MANURE[fert_item]["name"]
+            elif fert_item == "compost":
+                if not await db.take_item(conn, s["id"], "compost", 1):
+                    raise ValueError("施肥需要堆肥 x1")
+            else:
+                raise ValueError("可用 compost 或 manure_sheep|manure_pig|manure_cow")
             await conn.execute(
                 "UPDATE parcels SET fertilized=1, grow_target=MAX(120, grow_target-?) WHERE id=?",
-                (int((plot.get("grow_target") or 300) * 0.12), plot["id"]),
+                (int((plot.get("grow_target") or 300) * boost), plot["id"]),
             )
             await conn.commit()
-        return f"#{slot} 已施肥，生长加速"
+        return f"#{slot} 已施{label}，生长加速"
 
     if verb == "scarecrow" and len(parts) >= 2:
         slot = int(parts[1])
@@ -607,8 +620,11 @@ async def tide_ops(key_id: int, command: str) -> str:
         cost = 4
         async with aiosqlite.connect(db.DB_PATH) as conn:
             await commons.maybe_spawn_commons(conn)
-            from . import energy as energy_mod
-            energy_cost, fish_bonus = await energy_mod.net_energy_cost(conn, s["id"])
+            from . import energy as energy_mod, gear
+            energy_cost, catch_bonus, rarity_bonus, empty_reduce = await energy_mod.net_energy_cost(conn, s["id"])
+            stats = await gear.get_stats(conn, s["id"])
+            if stats["net"]["tier"] < 1:
+                raise ValueError("先 gear_ops upgrade net 升到 T1 粗渔网（或 tool_ops buy net_basic 兼容）")
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
             if (await cur.fetchone())[0] < cost:
                 raise ValueError(f"撒网需要 {cost} 工分票")
@@ -617,25 +633,27 @@ async def tide_ops(key_id: int, command: str) -> str:
             extra = await events.roll_after_action(s, "net", conn)
             disc = await commons.roll_discovery(conn, s, "net")
             await conn.commit()
-        empty_chance = 0.18 - await events.net_bonus_chance() - fish_bonus * 0.5
-        if random.random() < empty_chance:
-            msg = "空网，只有水草"
+        empty_chance = 0.18 - await events.net_bonus_chance() - empty_reduce - catch_bonus * 0.4
+        if random.random() < max(0.04, empty_chance):
+            msg = f"空网 T{stats['net']['tier']}，只有水草"
             if extra:
                 msg += f"\n{extra}"
             if disc:
                 msg += f"\n{disc}"
             return f"{pulse}\n{msg}" if pulse else msg
-        catch = weighted_fish_pick(tide=tide)
-        if fish_bonus and random.random() < fish_bonus:
-            catch = weighted_fish_pick(tide=tide, rarity_cap=4)
+        rarity_cap = 3 + rarity_bonus
+        catch = weighted_fish_pick(tide=tide, rarity_cap=rarity_cap)
+        if catch_bonus and random.random() < catch_bonus:
+            catch = weighted_fish_pick(tide=tide, rarity_cap=min(6, rarity_cap + 1))
         meta = SEA_CATCH[catch]
         async with aiosqlite.connect(db.DB_PATH) as conn:
             await db.add_item(conn, s["id"], f"fish_{catch}", 1)
             await survival.bump(conn, s["id"], satiety=5)
             await conn.commit()
-        msg = f"{s['name']} 在{world.tide_label(tide)}网到 {meta['emoji']}{meta['name']}"
-        if fish_bonus:
-            msg += "（细网加成）"
+        msg = (
+            f"{s['name']} 在{world.tide_label(tide)}网到 {meta['emoji']}{meta['name']} "
+            f"[网T{stats['net']['tier']}]"
+        )
         msg += flavor.maybe_suffix(flavor.NET_SUFFIX)
         await db.add_chronicle("tide", msg, s["id"])
         from . import multi
@@ -643,6 +661,51 @@ async def tide_ops(key_id: int, command: str) -> str:
         if bonus:
             await db.add_chronicle("league", bonus, None)
             msg = msg + f"\n{bonus}"
+        if extra:
+            msg += f"\n{extra}"
+        if disc:
+            msg += f"\n{disc}"
+        return f"{pulse}\n{msg}" if pulse else msg
+
+    if verb == "cast":
+        cost = 3
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            from . import energy as energy_mod, gear
+            stats = await gear.get_stats(conn, s["id"])
+            rod, bait = stats["rod"], stats["bait"]
+            if rod["tier"] < 1:
+                raise ValueError("先 gear_ops upgrade rod（T1 竹钓竿 30票）")
+            cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
+            if (await cur.fetchone())[0] < cost:
+                raise ValueError(f"坐钓需要 {cost} 工分票")
+            if not await db.take_item(conn, s["id"], "bait_worm", 1):
+                raise ValueError("消耗 bait_worm x1（tend/beach_ops 获取）")
+            await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (cost, s["id"]))
+            await energy_mod.spend(conn, s["id"], rod["energy"], action="坐钓")
+            extra = await events.roll_after_action(s, "net", conn)
+            disc = await commons.roll_discovery(conn, s, "net")
+            await conn.commit()
+        catch_b, rarity_b, empty_b, _ = gear.combined_fish_bonus(bait=bait, rod=rod)
+        empty_chance = 0.24 - empty_b - await events.net_bonus_chance()
+        if random.random() < max(0.05, empty_chance):
+            msg = f"空杆 饵T{bait['tier']} 竿T{rod['tier']}——鱼看了直摇头"
+            parts = [x for x in (pulse, msg, extra) if x]
+            return "\n".join(parts)
+        rarity_cap = 3 + rarity_b
+        catch = weighted_fish_pick(tide=tide, rarity_cap=rarity_cap)
+        if catch_b and random.random() < catch_b + 0.08:
+            catch = weighted_fish_pick(tide=tide, rarity_cap=min(6, rarity_cap + 1))
+        meta = SEA_CATCH[catch]
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            await db.add_item(conn, s["id"], f"fish_{catch}", 1)
+            await survival.bump(conn, s["id"], satiety=4)
+            await conn.commit()
+        msg = (
+            f"坐钓 {meta['emoji']}{meta['name']} "
+            f"[饵T{bait['tier']} 竿T{rod['tier']}]"
+        )
+        msg += flavor.maybe_suffix(["竿弯了，票没白花", "饵对路，鱼自来"])
+        await db.add_chronicle("tide", f"{s['name']} 坐钓 {meta['name']}", s["id"])
         if extra:
             msg += f"\n{extra}"
         if disc:

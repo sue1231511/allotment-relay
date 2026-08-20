@@ -181,13 +181,48 @@ BEACH_LOOT = [
     ("bait_worm", "蚯蚓饵", 2, 16, 15),
 ]
 
+MANURE = {
+    "manure_sheep": {"name": "羊粪", "emoji": "💩", "compost_yield": 2, "sell": 4, "fertilize_boost": 0.14},
+    "manure_pig": {"name": "猪粪", "emoji": "💩", "compost_yield": 3, "sell": 5, "fertilize_boost": 0.16},
+    "manure_cow": {"name": "牛粪", "emoji": "💩", "compost_yield": 4, "sell": 6, "fertilize_boost": 0.20},
+}
+
+LARGE_LIVESTOCK = {"sheep", "pig", "cow"}
+
 LIVESTOCK = {
     "rabbit": {"name": "兔", "emoji": "🐰", "buy": 55, "feed": "crop_fogpea", "feed_qty": 1, "grow": 600, "product": "meat_rabbit", "product_qty": 1},
     "chicken": {"name": "鸡", "emoji": "🐔", "buy": 48, "feed": "crop_rye", "feed_qty": 1, "grow": 480, "product": "egg", "product_qty": 2},
-    "sheep": {"name": "羊", "emoji": "🐑", "buy": 95, "feed": "crop_kale", "feed_qty": 2, "grow": 900, "product": "wool", "product_qty": 1},
-    "pig": {"name": "猪", "emoji": "🐷", "buy": 110, "feed": "crop_beet", "feed_qty": 2, "grow": 840, "product": "meat_pork", "product_qty": 2},
-    "cow": {"name": "牛", "emoji": "🐄", "buy": 180, "feed": "crop_rye", "feed_qty": 3, "grow": 1200, "product": "milk", "product_qty": 2},
+    "sheep": {"name": "羊", "emoji": "🐑", "buy": 95, "feed": "crop_kale", "feed_qty": 2, "grow": 900, "product": "wool", "product_qty": 1, "manure": "manure_sheep", "manure_feed": 1, "manure_harvest": 1},
+    "pig": {"name": "猪", "emoji": "🐷", "buy": 110, "feed": "crop_beet", "feed_qty": 2, "grow": 840, "product": "meat_pork", "product_qty": 2, "manure": "manure_pig", "manure_feed": 1, "manure_harvest": 2},
+    "cow": {"name": "牛", "emoji": "🐄", "buy": 180, "feed": "crop_rye", "feed_qty": 3, "grow": 1200, "product": "milk", "product_qty": 2, "manure": "manure_cow", "manure_feed": 2, "manure_harvest": 3},
     "dog": {"name": "狗", "emoji": "🐕", "buy": 70, "feed": "meat_rabbit", "feed_qty": 1, "grow": 0, "product": "guard", "product_qty": 0, "guard": True},
+}
+
+# 渔具数值 tier — gear_ops status / upgrade bait|rod|net
+GEAR_TIERS = {
+    "bait": [
+        {"tier": 1, "name": "蚯蚓饵", "catch": 0.00, "rarity": 0, "empty": 0.00, "tickets": 0},
+        {"tier": 2, "name": "发酵饵", "catch": 0.06, "rarity": 0, "empty": 0.05, "tickets": 32, "need": {"bait_worm": 10, "compost": 2}},
+        {"tier": 3, "name": "腥香饵", "catch": 0.12, "rarity": 1, "empty": 0.09, "tickets": 58, "need": {"bait_worm": 15, "fish_herring": 3}},
+        {"tier": 4, "name": "蛋白饵", "catch": 0.18, "rarity": 1, "empty": 0.13, "tickets": 92, "need": {"manure_cow": 2, "crop_kelp": 4}},
+        {"tier": 5, "name": "龙涎拟饵", "catch": 0.26, "rarity": 2, "empty": 0.18, "tickets": 140, "need": {"bait_worm": 8, "fish_glassshrimp": 2}},
+    ],
+    "rod": [
+        {"tier": 0, "name": "无竿", "catch": 0.00, "rarity": 0, "empty": 0.00, "energy": 0},
+        {"tier": 1, "name": "竹钓竿", "catch": 0.04, "rarity": 0, "empty": 0.03, "energy": 9, "tickets": 30},
+        {"tier": 2, "name": "碳素竿", "catch": 0.10, "rarity": 0, "empty": 0.06, "energy": 8, "tickets": 55, "need": {"drift_twine": 4}},
+        {"tier": 3, "name": "海钓竿", "catch": 0.16, "rarity": 1, "empty": 0.10, "energy": 7, "tickets": 85, "need": {"fish_mackerel": 2, "sea_glass": 2}},
+        {"tier": 4, "name": "投力竿", "catch": 0.22, "rarity": 1, "empty": 0.14, "energy": 6, "tickets": 120, "need": {"fish_seatrout": 1, "wool": 2}},
+        {"tier": 5, "name": "潮纹竿", "catch": 0.30, "rarity": 2, "empty": 0.18, "energy": 5, "tickets": 170, "need": {"fish_lingcod": 1, "curio_pearl": 1}},
+    ],
+    "net": [
+        {"tier": 0, "name": "无网", "catch": 0.00, "rarity": 0, "empty": 0.00, "energy": 14},
+        {"tier": 1, "name": "粗渔网", "catch": 0.00, "rarity": 0, "empty": 0.02, "energy": 10, "tickets": 28},
+        {"tier": 2, "name": "细渔网", "catch": 0.10, "rarity": 0, "empty": 0.06, "energy": 8, "tickets": 52, "need": {"drift_twine": 5}},
+        {"tier": 3, "name": "染网", "catch": 0.18, "rarity": 1, "empty": 0.10, "energy": 7, "tickets": 82, "need": {"crop_kelp": 5, "compost": 3}},
+        {"tier": 4, "name": "银丝网", "catch": 0.26, "rarity": 1, "empty": 0.14, "energy": 6, "tickets": 118, "need": {"curio_pearl": 1, "fish_kelpcrab": 1}},
+        {"tier": 5, "name": "潮纹网", "catch": 0.34, "rarity": 2, "empty": 0.18, "energy": 5, "tickets": 168, "need": {"fish_kingcrab": 1, "drift_twine": 6}},
+    ],
 }
 
 KITCHEN_DISHES = {
@@ -272,6 +307,7 @@ ITEM_PRICES.update({
     "meat_rabbit": 20, "meat_pork": 28,
     "scarecrow": 35,
 })
+ITEM_PRICES.update({k: v["sell"] for k, v in MANURE.items()})
 for k, v in LIVESTOCK.items():
     ITEM_PRICES[f"live_{k}"] = v["buy"]
 for k, v in KITCHEN_DISHES.items():
@@ -302,6 +338,7 @@ ITEM_NAMES.update({
     "meat_rabbit": "🍖兔肉", "meat_pork": "🥓猪肉",
     "scarecrow": "🌾稻草人",
 })
+ITEM_NAMES.update({k: f"{v['emoji']}{v['name']}" for k, v in MANURE.items()})
 for k, v in LIVESTOCK.items():
     ITEM_NAMES[f"live_{k}"] = f"{v['emoji']}{v['name']}(幼)"
 for k, v in KITCHEN_DISHES.items():

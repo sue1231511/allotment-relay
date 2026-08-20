@@ -72,19 +72,12 @@ def meter_line(steward: dict[str, Any]) -> str:
     return f"精力 {e}/{config.MAX_ENERGY}" + (f"（{hint}）" if hint else "")
 
 
-async def net_energy_cost(conn: aiosqlite.Connection, steward_id: int) -> tuple[int, float]:
-    """Return (energy_cost, fish_bonus) from best net owned."""
-    from .catalog import TOOLS
+async def net_energy_cost(conn: aiosqlite.Connection, steward_id: int) -> tuple[int, float, int, float]:
+    """Return (energy, catch_bonus, rarity_bonus, empty_reduce) from net tier."""
+    from . import gear
 
-    stock_cur = await conn.execute(
-        "SELECT item FROM satchel WHERE steward_id=? AND quantity>0 AND item LIKE 'tool_net_%'",
-        (steward_id,),
-    )
-    nets = [r[0] for r in await stock_cur.fetchall()]
-    if "tool_net_fine" in nets:
-        meta = TOOLS["net_fine"]
-        return meta["energy"], meta["fish_bonus"]
-    if "tool_net_basic" in nets:
-        meta = TOOLS["net_basic"]
-        return meta["energy"], meta["fish_bonus"]
-    return 12, 0.0
+    stats = await gear.get_stats(conn, steward_id)
+    net = stats["net"]
+    if net["tier"] <= 0:
+        return 14, 0.0, 0, 0.0
+    return net["energy"], net["catch"], net["rarity"], net["empty"]

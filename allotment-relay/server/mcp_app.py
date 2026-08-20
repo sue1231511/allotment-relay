@@ -92,7 +92,7 @@ async def plot_ops(command: str) -> str:
     return await game.plot_ops(_kid(), command)
 
 
-@mcp.tool(description="潮汐渔获：net / status。渔种随潮汐变化。")
+@mcp.tool(description="潮汐渔获：net / cast（坐钓）/ status / bottle")
 async def tide_ops(command: str) -> str:
     return await game.tide_ops(_kid(), command)
 
@@ -175,10 +175,16 @@ async def incident_ops(command: str) -> str:
     return await events.incident_ops(_kid(), command)
 
 
-@mcp.tool(description="工具：list / buy hoe|shovel|net_basic|net_fine")
+@mcp.tool(description="工具：list / buy hoe|shovel|net_basic|net_fine（网 tier 见 gear_ops）")
 async def tool_ops(command: str) -> str:
     from . import tools
     return await tools.tool_ops(_kid(), command)
+
+
+@mcp.tool(description="渔具 tier：status / upgrade bait|rod|net — 数值升级饵/竿/网")
+async def gear_ops(command: str) -> str:
+    from . import gear
+    return await gear.gear_ops(_kid(), command)
 
 
 @mcp.tool(description="赶海：status / dig（退潮+铲子，猫眼螺/贝壳）")
@@ -199,7 +205,7 @@ async def market_ops(command: str) -> str:
     return await market.market_ops(_kid(), command)
 
 
-@mcp.tool(description="畜栏：status/erect/buy/feed/harvest — 牛羊猪狗兔鸡")
+@mcp.tool(description="畜栏：status/erect/buy/feed/harvest/compost — 牛羊猪狗兔鸡，粪肥转堆肥")
 async def barn_ops(command: str) -> str:
     from . import barn
     return await barn.barn_ops(_kid(), command)

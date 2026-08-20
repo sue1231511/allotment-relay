@@ -5,7 +5,7 @@ from __future__ import annotations
 import aiosqlite
 
 from . import config, db, flavor
-from .catalog import ITEM_NAMES, LIVESTOCK
+from .catalog import ITEM_NAMES, LIVESTOCK, MANURE
 from .game import require_steward
 
 
@@ -57,6 +57,7 @@ async def barn_ops(key_id: int, command: str) -> str:
         for slot in range(1, config.BARN_SLOTS + 1):
             lines.append(_line(by_slot.get(slot), slot))
         lines.append(f"可购: {', '.join(LIVESTOCK.keys())}")
+        lines.append("大型动物(羊/猪/牛)喂食产粪 → barn_ops compost 转堆肥")
         return "\n".join(lines)
 
     if verb == "erect":
@@ -149,8 +150,13 @@ async def barn_ops(key_id: int, command: str) -> str:
                     "UPDATE barn_animals SET fed=1 WHERE steward_id=? AND slot=?",
                     (s["id"], slot),
                 )
+            manure_msg = ""
+            if meta.get("manure"):
+                qty = meta.get("manure_feed", 1)
+                await db.add_item(conn, s["id"], meta["manure"], qty)
+                manure_msg = f"，顺手收 {MANURE[meta['manure']]['name']} x{qty}"
             await conn.commit()
-        return f"#{slot} 已喂食"
+        return f"#{slot} 已喂食{manure_msg}"
 
     if verb == "harvest":
         slot = int(parts[1]) if len(parts) > 1 else 1
@@ -173,6 +179,11 @@ async def barn_ops(key_id: int, command: str) -> str:
             if not row.get("fed"):
                 qty = max(1, qty // 2)
             await db.add_item(conn, s["id"], product, qty)
+            manure_msg = ""
+            if meta.get("manure"):
+                mqty = meta.get("manure_harvest", 1)
+                await db.add_item(conn, s["id"], meta["manure"], mqty)
+                manure_msg = f"，{MANURE[meta['manure']]['name']} x{mqty}"
             await conn.execute(
                 """
                 UPDATE barn_animals SET species=NULL, stocked_at=NULL, fed=0, guard=0
@@ -181,11 +192,28 @@ async def barn_ops(key_id: int, command: str) -> str:
                 (s["id"], slot),
             )
             await conn.commit()
-        msg = f"#{slot} 收获 {ITEM_NAMES.get(product, product)} x{qty}"
+        msg = f"#{slot} 收获 {ITEM_NAMES.get(product, product)} x{qty}{manure_msg}"
         msg += flavor.maybe_suffix(["栏里忙，票里稳", "牲畜：今天也努力了"])
         await db.add_chronicle("barn", f"{s['name']} 畜栏收 {product}", s["id"])
         return msg
 
+    if verb == "compost" and len(parts) >= 2:
+        item = parts[1]
+        qty = int(parts[2]) if len(parts) > 2 else 1
+        if item not in MANURE:
+            raise ValueError(f"可堆肥: {', '.join(MANURE.keys())}")
+        yield_each = MANURE[item]["compost_yield"]
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            if not await db.take_item(conn, s["id"], item, qty):
+                raise ValueError(f"缺少 {MANURE[item]['name']} x{qty}")
+            total = yield_each * qty
+            await db.add_item(conn, s["id"], "compost", total)
+            await conn.commit()
+        return (
+            f"{MANURE[item]['name']} x{qty} → 堆肥 x{total} "
+            f"（每份{yield_each}）"
+        ) + flavor.maybe_suffix(["粪肥到位，土力拉满", "大型动物回馈，堆肥桶笑纳"])
+
     raise ValueError(
-        f"未知 barn 指令: {command}（status/erect/buy/feed/harvest）"
+        f"未知 barn 指令: {command}（status/erect/buy/feed/harvest/compost）"
     )

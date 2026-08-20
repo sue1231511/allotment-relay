@@ -25,7 +25,7 @@ async def tool_ops(key_id: int, command: str) -> str:
                 f"  [{tag}] {meta['emoji']}{meta['name']} — {meta['cost']} 票"
                 + (f" 渔获+{int(meta['fish_bonus']*100)}%" if meta.get("fish_bonus") else "")
             )
-        lines.append("buy hoe|shovel|net_basic|net_fine")
+        lines.append("buy hoe|shovel — 渔具 tier 见 gear_ops upgrade net|rod|bait")
         return "\n".join(lines)
 
     if verb == "buy" and len(parts) >= 2:
@@ -48,6 +48,15 @@ async def tool_ops(key_id: int, command: str) -> str:
                 (cost, s["id"]),
             )
             await db.add_item(conn, s["id"], item, 1)
+            if key.startswith("net_"):
+                from . import gear
+                g = await gear.get_gear(conn, s["id"])
+                tier = 2 if key == "net_fine" else 1
+                if g["net"] < tier:
+                    await conn.execute(
+                        "UPDATE steward_gear SET net_tier=? WHERE steward_id=?",
+                        (tier, s["id"]),
+                    )
             await conn.commit()
         await db.add_chronicle(
             "tool",
