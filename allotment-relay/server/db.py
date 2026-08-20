@@ -167,6 +167,10 @@ CREATE TABLE IF NOT EXISTS steward_incidents (
     incident_key TEXT NOT NULL,
     plot_id INTEGER,
     detail TEXT NOT NULL DEFAULT '',
+    label TEXT NOT NULL DEFAULT '',
+    repair_tickets INTEGER NOT NULL DEFAULT 0,
+    repair_item TEXT,
+    repair_qty INTEGER NOT NULL DEFAULT 0,
     resolved INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER NOT NULL
 );
@@ -182,6 +186,9 @@ CREATE TABLE IF NOT EXISTS world_pulse (
     pulse_key TEXT PRIMARY KEY,
     label TEXT NOT NULL,
     kind TEXT NOT NULL DEFAULT 'bad',
+    effect_type TEXT NOT NULL DEFAULT '',
+    fish_focus TEXT,
+    detail TEXT NOT NULL DEFAULT '',
     started_at INTEGER NOT NULL,
     expires_at INTEGER NOT NULL
 );
@@ -215,6 +222,13 @@ async def init_db() -> None:
         for ddl in (
             "ALTER TABLE stewards ADD COLUMN boat_key TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE stewards ADD COLUMN boat_damaged INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE steward_incidents ADD COLUMN label TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE steward_incidents ADD COLUMN repair_tickets INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE steward_incidents ADD COLUMN repair_item TEXT",
+            "ALTER TABLE steward_incidents ADD COLUMN repair_qty INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE world_pulse ADD COLUMN effect_type TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE world_pulse ADD COLUMN fish_focus TEXT",
+            "ALTER TABLE world_pulse ADD COLUMN detail TEXT NOT NULL DEFAULT ''",
         ):
             try:
                 await db.execute(ddl)

@@ -4,8 +4,8 @@ from typing import Any
 import aiosqlite
 
 from . import db, events, world
-from .catalog import ITEM_NAMES
-from .config import BOATS, PEN_ERECT_COST, PEN_SPECIES, VOYAGE_ROUTES
+from .catalog import ITEM_NAMES, SEA_CATCH, voyage_loot_table
+from .config import BOATS, PEN_ERECT_COST, VOYAGE_ROUTES
 from .game import require_steward
 
 
@@ -14,7 +14,7 @@ def _boat_rank(key: str) -> int:
 
 
 def _pen_grow(species: str, fed: bool) -> int:
-    base = PEN_SPECIES[species]["grow"]
+    base = SEA_CATCH[species]["grow"]
     return base if fed else int(base * 1.45)
 
 
@@ -28,7 +28,7 @@ def _pen_line(pen: dict) -> str:
     label = pen.get("pen_label") or f"#{pen['slot']}"
     if not pen.get("species"):
         return f"  {label}: 空池"
-    spec = PEN_SPECIES[pen["species"]]
+    spec = SEA_CATCH[pen["species"]]
     if _pen_ready(pen):
         state = "可收"
     elif pen.get("fed"):
@@ -77,6 +77,9 @@ async def pen_ops(key_id: int, command: str) -> str:
             lines.append(_pen_line(pen))
         else:
             lines.append("渔排: 未搭建（erect）")
+        from .catalog import pen_species_keys
+        farmable = pen_species_keys()
+        lines.append(f"可养 {len(farmable)} 种: {', '.join(farmable[:8])}{'…' if len(farmable) > 8 else ''}")
         return "\n".join(lines)
 
     if verb == "erect":
@@ -110,9 +113,10 @@ async def pen_ops(key_id: int, command: str) -> str:
 
     if verb == "stock" and len(parts) >= 2:
         species = parts[1].lower()
-        if species not in PEN_SPECIES:
-            raise ValueError(f"可养品种: {', '.join(PEN_SPECIES.keys())}")
-        meta = PEN_SPECIES[species]
+        if species not in SEA_CATCH or not SEA_CATCH[species].get("pen"):
+            pen_keys = [k for k, v in SEA_CATCH.items() if v.get("pen")]
+            raise ValueError(f"可养品种: {', '.join(pen_keys)}")
+        meta = SEA_CATCH[species]
         async with aiosqlite.connect(db.DB_PATH) as conn:
             pen = await _get_pen(conn, s["id"])
             if not pen:
@@ -144,7 +148,7 @@ async def pen_ops(key_id: int, command: str) -> str:
                 raise ValueError("空池无法投饵")
             if pen.get("fed"):
                 return "今日已投饵"
-            meta = PEN_SPECIES[pen["species"]]
+            meta = SEA_CATCH[pen["species"]]
             if not await db.take_item(conn, s["id"], meta["feed_item"], meta["feed_qty"]):
                 raise ValueError(
                     f"投饵需要 {ITEM_NAMES.get(meta['feed_item'], meta['feed_item'])} x{meta['feed_qty']}"
@@ -154,7 +158,7 @@ async def pen_ops(key_id: int, command: str) -> str:
             assert pen
             extra = await events.roll_after_action(s, "pen_feed", conn, pen=pen)
             await conn.commit()
-        msg = f"已向 {PEN_SPECIES[pen['species']]['name']} 池投饵"
+        msg = f"已向 {SEA_CATCH[pen['species']]['name']} 池投饵"
         return f"{msg}\n{extra}" if extra else msg
 
     if verb == "harvest":
@@ -165,7 +169,7 @@ async def pen_ops(key_id: int, command: str) -> str:
             if not _pen_ready(pen):
                 raise ValueError("尚未长成，继续 feed 或等待")
             species = pen["species"]
-            meta = PEN_SPECIES[species]
+            meta = SEA_CATCH[species]
             qty = 2 if pen.get("fed") else 1
             await db.add_item(conn, s["id"], f"fish_{species}", qty)
             await conn.execute(
@@ -191,14 +195,16 @@ async def pen_ops(key_id: int, command: str) -> str:
 async def _resolve_voyage(conn: aiosqlite.Connection, s: dict[str, Any], voyage: dict[str, Any]) -> str:
     route = VOYAGE_ROUTES[voyage["route"]]
     s = await _refresh_steward(conn, s["id"])
-    fail_chance = route["fail"]
+    fail_chance = route["fail"] + await events.voyage_fail_modifier()
     if world.current_weather() == "gale":
         fail_chance += 0.12
     if s.get("mascot_trait") == "lucky":
         fail_chance *= 0.75
     pulse = await events.active_world_pulse(conn)
-    if pulse and pulse["pulse_key"] == "herring_run":
-        fail_chance *= 0.7
+    if pulse and pulse.get("effect_type") == "fish_run":
+        fail_chance *= 0.85
+    if pulse and pulse.get("effect_type") == "storm_front":
+        fail_chance += 0.08
 
     extra = await events.roll_after_action(s, "voyage_return", conn, voyage=voyage)
     s = await _refresh_steward(conn, s["id"])
@@ -208,18 +214,19 @@ async def _resolve_voyage(conn: aiosqlite.Connection, s: dict[str, Any], voyage:
     boat = BOATS.get(s.get("boat_key") or "", {})
     cargo = boat.get("cargo", 2)
     fish_loot: list[str] = []
+    loot_table = voyage_loot_table(voyage["route"])
 
     if failed:
         await conn.execute("UPDATE stewards SET boat_damaged=1 WHERE id=?", (s["id"],))
         loot_lines.append("风暴折返，几乎空舱")
         if random.random() < 0.35:
-            item = random.choice(route["loot"])
+            item = random.choice(loot_table)
             await db.add_item(conn, s["id"], item, 1)
             loot_lines.append(f"勉强留下 {ITEM_NAMES.get(item, item)} x1")
             if item.startswith("fish_"):
                 fish_loot.append(item)
     else:
-        picks = random.sample(route["loot"], k=min(cargo, len(route["loot"])))
+        picks = random.sample(loot_table, k=min(cargo, len(loot_table)))
         for item in picks:
             await db.add_item(conn, s["id"], item, 1)
             loot_lines.append(f"{ITEM_NAMES.get(item, item)} x1")

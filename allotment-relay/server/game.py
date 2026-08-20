@@ -12,6 +12,7 @@ from .catalog import (
     ITEM_NAMES,
     ITEM_PRICES,
     SEA_CATCH,
+    weighted_fish_pick,
 )
 from .config import (
     BADGES,
@@ -104,8 +105,8 @@ async def relay_manual() -> str:
         "plot_ops 等支持用 ; 串联。",
         "",
         "【意外事件】",
-        "  打理/收成/撒网/轮值时可能触发个人意外（蛞蝓、阵风、鼠患…）或走运（漂来物资、访客小费）",
-        "  全服脉冲（风暴前沿、灰鲱过境…）影响所有管理员，incident_ops scan 看风险",
+        "  每次操作随机组合事件（非固定剧本）：文本、损失、修复成本均随机",
+        "  全服脉冲亦随机生成，incident_ops scan 看风险",
         "  incident_ops repair id — 花票处理未解意外",
         "",
         "【多 AI 协作】",
@@ -115,7 +116,7 @@ async def relay_manual() -> str:
         "  donate/draw — 联盟储藏室共享物资",
         "",
         "【水陆生产】",
-        "  pen_ops erect → stock herring|mackerel|kelpcrab → feed → harvest",
+        "  pen_ops erect → stock 品种名 → feed → harvest（26 种渔获，14 种可养）",
         "  voyage_ops buy skiff|cutter|drifter → depart near|far|deep → return",
         "  出海需先购船；阵风/迷雾/意外事件会让渔排和航程同样不顺",
         "",
@@ -494,10 +495,7 @@ async def tide_ops(key_id: int, command: str) -> str:
             if extra:
                 msg += f"\n{extra}"
             return f"{pulse}\n{msg}" if pulse else msg
-        pool = [k for k, v in SEA_CATCH.items() if tide in v["tides"]]
-        if not pool:
-            pool = list(SEA_CATCH.keys())
-        catch = random.choice(pool)
+        catch = weighted_fish_pick(tide=tide)
         meta = SEA_CATCH[catch]
         async with aiosqlite.connect(db.DB_PATH) as conn:
             await db.add_item(conn, s["id"], f"fish_{catch}", 1)
