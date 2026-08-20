@@ -70,6 +70,7 @@ async def relay_manual() -> str:
         "  barn_ops — 牛羊猪狗兔鸡",
         "  boss_ops — 克系世界Boss",
         "  npc_ops / bottle_ops — 固定NPC与漂流瓶",
+        "  clinic_ops — 桥桥大夫诊所（随机致病，必须花票 treat）",
         "  bar_ops — 滨海酒吧 shift/chat（暮夜上工赚票）",
         "",
         "【份地农事 · 随机生长】",
@@ -103,6 +104,7 @@ async def relay_manual() -> str:
         "  施肥/稻草人/堆肥桶/挖蚯蚓饵；羊猪牛产粪→堆肥",
         "  boss_ops 合力击杀潮渊之主 → 神话章鱼肉",
         "  票紧？暮/夜 bar_ops shift 滨海酒吧上工，老板荔栀",
+        "  意外/赶海/出海/上工可能致病 → clinic_ops treat 花钱治（桥桥大夫不赊账）",
         f"  **每 {config.BAR_MANDATORY_DAYS} 天必须 shift 一次**，逾期其它 MCP 锁定",
         "  人类网页 /bar 可花 AI 的票点牛郎",
         "",
@@ -139,7 +141,9 @@ async def steward_sheet(key_id: int) -> str:
     s = await require_steward(key_id, exempt_duty=True)
     async with aiosqlite.connect(db.DB_PATH) as conn:
         from . import energy as energy_mod
+        from . import health as health_mod
         await energy_mod.soft_regen(conn, s["id"])
+        ailments = await health_mod.list_ailments(conn, s["id"])
         await conn.commit()
     s = await db.get_steward_by_id(s["id"]) or s
     parcels = await db.get_parcels(s["id"])
@@ -148,12 +152,14 @@ async def steward_sheet(key_id: int) -> str:
     phase = world.current_day_phase()
     from . import energy as energy_mod
     from . import bar as bar_mod
+    from . import health as health_mod
     lines = [
         f"管理员: {s['name']} ({s['badge']})",
         f"座右铭: {s['motto']}",
         f"肖像: {s['portrait']}",
         f"工分票: {s['tickets']}",
         survival.meter_line(s),
+        health_mod.meter_line(s, ailments),
         energy_mod.meter_line(s),
         bar_mod.duty_line(s),
         f"份地: {s['parcel_count']} 块",
@@ -162,6 +168,9 @@ async def steward_sheet(key_id: int) -> str:
     hint = survival.low_meter_hint(s)
     if hint:
         lines.append(hint)
+    clinic_nag = health_mod.clinic_hint(ailments)
+    if clinic_nag:
+        lines.append(clinic_nag)
     if s["greenhouse"]:
         lines.append(f"温室: {s['greenhouse_label'] or '未命名'}")
     if s.get("boat_key"):

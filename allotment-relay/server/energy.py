@@ -18,14 +18,21 @@ async def spend(
 ) -> None:
     if amount <= 0:
         return
+    from . import health
+
+    ailments = await health.list_ailments(conn, steward_id)
+    amount += health.energy_extra(ailments)
     cur = await conn.execute("SELECT energy FROM stewards WHERE id=?", (steward_id,))
     row = await cur.fetchone()
     current = row[0] if row else config.START_ENERGY
     if current < amount:
         label = action or "此操作"
+        nag = ""
+        if ailments:
+            nag = f"（还带伤：{'、'.join(a['name'] for a in ailments[:2])}，clinic_ops treat）"
         raise ValueError(
             f"精力不足（{current}/{config.MAX_ENERGY}），需要 {amount}。"
-            f"先 kitchen_ops eat 吃饭回精力"
+            f"先 kitchen_ops eat 吃饭回精力{nag}"
         )
     await conn.execute(
         "UPDATE stewards SET energy = energy - ? WHERE id=?",

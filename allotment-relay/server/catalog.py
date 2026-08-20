@@ -272,6 +272,58 @@ MYTH_INGREDIENTS = {
     "myth_octopus": {"name": "克系章鱼肉", "emoji": "🐙", "sell": 220, "energy": 40},
 }
 
+# 病症 — 随机事件致病，clinic_ops treat 花钱治（必须花票）
+AILMENTS = {
+    "sprain": {
+        "name": "扭伤", "emoji": "🦵", "cost": 18, "health_loss": 10, "health_restore": 14,
+        "hint": "干农活扭的，走路抽抽", "energy_extra": 2,
+    },
+    "cut": {
+        "name": "篱笆划伤", "emoji": "🩹", "cost": 12, "health_loss": 8, "health_restore": 10,
+        "hint": "铁丝网留的，别硬撑", "energy_extra": 1,
+    },
+    "backache": {
+        "name": "腰肌劳损", "emoji": "💢", "cost": 20, "health_loss": 12, "health_restore": 15,
+        "hint": "弯腰太多，直不起来", "energy_extra": 2, "max_energy_cut": 5,
+    },
+    "allergy": {
+        "name": "花粉过敏", "emoji": "🤧", "cost": 16, "health_loss": 9, "health_restore": 12,
+        "hint": "打喷嚏停不下来", "energy_extra": 1,
+    },
+    "cold": {
+        "name": "海雾感冒", "emoji": "🤒", "cost": 15, "health_loss": 10, "health_restore": 13,
+        "hint": "雾进肺里，咳", "energy_extra": 2,
+    },
+    "shell_scratch": {
+        "name": "贝壳刮脚", "emoji": "🦶", "cost": 10, "health_loss": 6, "health_restore": 8,
+        "hint": "退潮滩上血线一道", "energy_extra": 1,
+    },
+    "jelly_sting": {
+        "name": "水母蛰", "emoji": "🌊", "cost": 22, "health_loss": 14, "health_restore": 16,
+        "hint": "网底惊喜，又肿又痒", "energy_extra": 3,
+    },
+    "food_poison": {
+        "name": "肠胃闹腾", "emoji": "🤢", "cost": 24, "health_loss": 15, "health_restore": 18,
+        "hint": "吃了不该吃的", "energy_extra": 2, "max_energy_cut": 8,
+    },
+    "hangover": {
+        "name": "宿醉", "emoji": "🍺", "cost": 18, "health_loss": 11, "health_restore": 14,
+        "hint": "昨晚陪聊陪多了", "energy_extra": 2, "max_energy_cut": 10,
+    },
+    "sunburn": {
+        "name": "日晒灼伤", "emoji": "☀️", "cost": 14, "health_loss": 8, "health_restore": 11,
+        "hint": "赶海没涂泥，红成虾", "energy_extra": 1,
+    },
+    "blister": {
+        "name": "磨起泡", "emoji": "💧", "cost": 11, "health_loss": 5, "health_restore": 8,
+        "hint": "锄头柄握手处", "energy_extra": 1,
+    },
+    "crab_pinch": {
+        "name": "蟹钳印", "emoji": "🦀", "cost": 16, "health_loss": 9, "health_restore": 12,
+        "hint": "沙蟹脾气比嘴硬", "energy_extra": 2,
+    },
+}
+
 WORLD_BOSS = {
     "key": "cthulhu_tide",
     "name": "潮渊之主",
@@ -297,6 +349,13 @@ NPC_FIXED = [
         "你挥胳膊它咕咕，你骂它它还咕咕——纯嘴炮免疫",
         "偷吃两口算它上班，别跟斑鸠讲理，讲不过",
         "稻草人瞪它，它对视咕咕咕——平局",
+    ]},
+    {"key": "qiaoqiao", "name": "桥桥大夫", "lines": [
+        "诊所规矩：必须花钱，不赊账，不还价",
+        "随机事件落下的病，找随机事件哭去——诊费照收",
+        "扭了脚、着了凉、宿醉——都挂号，都花钱",
+        "身体指标低了意外多，别硬撑到票都不够挂号",
+        "npc_ops visit 只能聊天，真治得 clinic_ops treat",
     ]},
 ]
 

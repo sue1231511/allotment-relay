@@ -7,7 +7,7 @@ from typing import Any
 
 import aiosqlite
 
-from . import config, db, flavor, world
+from . import config, db, flavor, health, world
 from .catalog import CROPS, ITEM_NAMES
 
 GROW_PACE = [
@@ -468,16 +468,25 @@ async def roll_farm_event(
     detail = await _apply_wildlife(conn, plot, wild, steward_id=steward["id"])
     await _mark_farm_roll(conn, steward["id"])
 
+    farm_ill = None
+    if wild["kind"] in ("bad", "neutral") and wild["key"] in ("rabbit", "boar", "slug", "dove"):
+        farm_ill = await health.maybe_roll_ailment(
+            conn, steward["id"], "farm_wild", chance=0.14, source="farm",
+        )
+
     if wild["key"] == "dove":
         label = flavor.pick(flavor.DOVE_EVENT_LABELS)
-        return flavor.wrap_event("neutral", label, detail)
-
-    label = flavor.pick(
-        flavor.LABELS_GOOD["land"] if wild["kind"] == "good"
-        else flavor.LABELS_BAD["land"] if wild["kind"] == "bad"
-        else ["田间插曲", "篱边访客", "土里的八卦"]
-    )
-    return flavor.wrap_event(wild["kind"] if wild["kind"] != "neutral" else "good", label, detail)
+        msg = flavor.wrap_event("neutral", label, detail)
+    else:
+        label = flavor.pick(
+            flavor.LABELS_GOOD["land"] if wild["kind"] == "good"
+            else flavor.LABELS_BAD["land"] if wild["kind"] == "bad"
+            else ["田间插曲", "篱边访客", "土里的八卦"]
+        )
+        msg = flavor.wrap_event(wild["kind"] if wild["kind"] != "neutral" else "good", label, detail)
+    if farm_ill:
+        msg += f"\n{farm_ill}\n→ clinic_ops treat …（必须花票）"
+    return msg
 
 
 async def gather_yield(

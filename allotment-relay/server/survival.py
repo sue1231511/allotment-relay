@@ -72,6 +72,8 @@ def event_multiplier(steward: dict[str, Any]) -> float:
         mult *= 1.08
     if steward.get("standing", 100) < config.STANDING_LOW:
         mult *= 1.06
+    if steward.get("health", config.START_HEALTH) < config.HEALTH_LOW:
+        mult *= 1.10
     return mult
 
 

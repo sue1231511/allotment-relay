@@ -324,6 +324,15 @@ CREATE TABLE IF NOT EXISTS beach_rolls (
     PRIMARY KEY (steward_id, day)
 );
 
+CREATE TABLE IF NOT EXISTS steward_ailments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    ailment_key TEXT NOT NULL,
+    source TEXT NOT NULL DEFAULT 'event',
+    inflicted_at INTEGER NOT NULL,
+    UNIQUE(steward_id, ailment_key)
+);
+
 CREATE TABLE IF NOT EXISTS boss_rolls (
     steward_id INTEGER NOT NULL REFERENCES stewards(id),
     day INTEGER NOT NULL,
@@ -392,6 +401,7 @@ async def init_db() -> None:
             "ALTER TABLE parcels ADD COLUMN fertilized INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE parcels ADD COLUMN scarecrow INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN last_bar_shift_at INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN health INTEGER NOT NULL DEFAULT 100",
         ):
             try:
                 await db.execute(ddl)

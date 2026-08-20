@@ -220,6 +220,18 @@ async def _apply_naval_encounter(
 
     await events.apply_effects(conn, s, [e for e in enc.effects if not e.startswith("cargo_loss:")])
 
+    naval_extra = ""
+    if enc.kind == "bad":
+        from . import health
+        extra = await health.maybe_roll_ailment(
+            conn, s["id"], "voyage_return",
+            pool=health.TRIGGER_AILMENTS["naval_bad"],
+            chance=0.22,
+            source="naval",
+        )
+        if extra:
+            naval_extra = f"\n{extra}\n→ clinic_ops treat …（必须花票）"
+
     if cargo_loss:
         conn.row_factory = aiosqlite.Row
         rows = await (await conn.execute(
@@ -241,7 +253,7 @@ async def _apply_naval_encounter(
         if removed_label:
             loot_lines.append(f"遭遇扣货：{removed_label} x1")
 
-    return flavor.wrap_naval(enc.kind, enc.label, enc.detail)
+    return flavor.wrap_naval(enc.kind, enc.label, enc.detail) + naval_extra
 
 
 async def _resolve_voyage(conn: aiosqlite.Connection, s: dict[str, Any], voyage: dict[str, Any]) -> str:

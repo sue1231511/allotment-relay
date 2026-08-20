@@ -22,6 +22,8 @@ async def npc_ops(key_id: int, command: str) -> str:
             tag = ""
             if npc["key"] == "gugu_dove":
                 tag = " · 昼间随机偷吃庄稼，不可伤害"
+            elif npc["key"] == "qiaoqiao":
+                tag = " · 诊所 NPC，治病用 clinic_ops treat"
             lines.append(f"  {npc['key']} — {npc['name']}{tag}")
         lines.append(f"偷菜贼名号: {', '.join(NPC_THIEVES[:3])}…")
         lines.append("  lizhi — 荔栀（滨海酒吧老板，也可 bar_ops chat）")

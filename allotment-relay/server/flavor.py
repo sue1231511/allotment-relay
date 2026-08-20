@@ -510,6 +510,27 @@ METER_HINT_SATIETY = "有点饿"
 METER_HINT_MIST = "海雾进脑子了"
 METER_HINT_STANDING = "档口对你爱搭不理"
 
+HEALTH_HINT_LOW = "身体发虚"
+HEALTH_HINT_CLINIC = "去 clinic_ops 挂号"
+
+AILMENT_INFlict_LINES = [
+    "身体：{name}（{hint}）——桥桥大夫等着收票",
+    "意外附带 {name}，{hint}，clinic_ops status 看诊费",
+    "病号 +1：{name}。必须花钱，别装能扛",
+]
+
+CLINIC_NAG_LINES = [
+    "桥桥大夫探头：{n} 项待治，合计 {total} 票，不赊",
+    "诊所灯还亮着：{n} 项病，{total} 票打包",
+    "身体别硬撑，{n} 项挂号费 {total} 票",
+]
+
+CLINIC_TREAT_LINES = [
+    "——药到票除，桥桥大夫不废话",
+    "——收据拿好，下次别省诊费",
+    "——身体回一点，票袋空一点",
+]
+
 EVENT_TAILS = [
     "海在笑，别理它。",
     "篱笆听见了，记小本本。",
