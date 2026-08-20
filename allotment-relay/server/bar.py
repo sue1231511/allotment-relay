@@ -777,7 +777,9 @@ async def _cmd_order(conn: aiosqlite.Connection, s: dict[str, Any], drink_name: 
     msg = f"«{drink['name']} · -{cost} 票\n\n{text}\n\n{note}»"
     if hangover:
         msg += f"\n\n{hangover}"
-    await db.add_chronicle("bar_drink", f"{s['name']} 点 {drink['name']}（-{cost}票）", s["id"])
+    await db.add_chronicle(
+        "bar_drink", f"{s['name']} 点 {drink['name']}（-{cost}票）", s["id"], conn=conn,
+    )
     reaction = owner_event_reaction(state, day, "order")
     return append_owner_reaction(msg, reaction)
 
@@ -928,7 +930,7 @@ async def _cmd_request_song(conn: aiosqlite.Connection, s: dict[str, Any], song_
     msg = f"{random.choice(BAR_SONG_REQUEST_LINES)} · -{cost} 票\n我哪有旺夫命：「{singer_line}」"
     if random.random() < 0.15:
         msg += "\n【全场有人跟着哼了两句】"
-    await db.add_chronicle("bar_song", f"{s['name']} 点歌《{song['title']}》", s["id"])
+    await db.add_chronicle("bar_song", f"{s['name']} 点歌《{song['title']}》", s["id"], conn=conn)
     reaction = owner_event_reaction(state, day, "request_song")
     return append_owner_reaction(msg, reaction)
 
@@ -945,9 +947,13 @@ async def _cmd_tip(
     if amount > 500:
         raise ValueError("单次小费上限 500 票")
 
-    peer = await db.get_steward_by_name(target_name)
-    if not peer:
+    conn.row_factory = aiosqlite.Row
+    peer_row = await (await conn.execute(
+        "SELECT * FROM stewards WHERE name = ? COLLATE NOCASE", (target_name.strip(),)
+    )).fetchone()
+    if not peer_row:
         raise ValueError(f"找不到管理员「{target_name}」")
+    peer = dict(peer_row)
     if peer["id"] == s["id"]:
         raise ValueError("不能给自己小费")
 
@@ -962,7 +968,7 @@ async def _cmd_tip(
 
     await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (amount, s["id"]))
     from . import social as social_mod
-    rapport = await social_mod.get_rapport(s["id"], peer["id"])
+    rapport = await social_mod.get_rapport(s["id"], peer["id"], conn=conn)
     tip_bonus = social_mod.tip_amount_bonus(rapport, amount)
     total_to_peer = amount + tip_bonus
     await conn.execute(
@@ -984,7 +990,7 @@ async def _cmd_tip(
     chronicle = f"{s['name']} 给 {peer['name']} 小费 {amount} 票"
     if note:
         chronicle += f"：{note}"
-    await db.add_chronicle("bar_tip", chronicle, s["id"], peer["id"])
+    await db.add_chronicle("bar_tip", chronicle, s["id"], peer["id"], conn=conn)
     state = await _ensure_daily_state(conn)
     state = await _refresh_state_mood(conn, state)
     day = _day_id()
@@ -1166,6 +1172,8 @@ async def bar_ops(key_id: int, command: str) -> str:
         drink_q = command.strip()[5:].strip()
         if not drink_q:
             raise ValueError("用法: bar_ops order 酒名")
+        # 只取第一个词作酒名，避免整句被当成酒款
+        drink_q = drink_q.split()[0]
         async with db.connect() as conn:
             msg = await _cmd_order(conn, s, drink_q)
             await conn.commit()

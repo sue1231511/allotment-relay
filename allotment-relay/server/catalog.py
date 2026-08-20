@@ -36,6 +36,11 @@ def resolve_crop_key(token: str) -> str | None:
     if key in CROPS:
         return key
 
+    if key.startswith("seed_"):
+        crop_key = key[5:]
+        if crop_key in CROPS:
+            return crop_key
+
     for suffix in _CROP_SUFFIXES:
         if raw.endswith(suffix) and len(raw) > len(suffix):
             hit = resolve_crop_key(raw[: -len(suffix)])
@@ -57,7 +62,7 @@ def resolve_crop_key(token: str) -> str | None:
 
 
 def unknown_crop_message(token: str) -> str:
-    lines = [f"未知作物: {token}。可用 key 或中文名，例如："]
+    lines = [f"未知作物: {token}。可用 key、seed_ 前缀或中文名，例如："]
     for k, meta in CROPS.items():
         aliases = meta.get("aliases", ())
         alias_s = f"（{','.join(aliases)}）" if aliases else ""

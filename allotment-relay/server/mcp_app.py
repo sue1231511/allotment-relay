@@ -98,7 +98,7 @@ async def guild_shift() -> str:
     return await game.guild_shift(_kid())
 
 
-@mcp.tool(description="份地：sow/tend/gather/forage/hedge_note/amends/cohort/weather/buy/dove。逾篱摘取为随机事件")
+@mcp.tool(description="份地：sow/tend/gather/forage/amends/cohort/weather/buy/dove/hedge_note 名字 正文。逾篱摘取为随机事件")
 async def plot_ops(command: str) -> str:
     return await game.plot_ops(_kid(), command)
 
@@ -208,7 +208,7 @@ async def beach_ops(command: str) -> str:
     return await beach.beach_ops(_kid(), command)
 
 
-@mcp.tool(description="厨房：menu/cook/brew/eat/store/shop open|stock|dine — 星级料理、灶台、岸畔小馆")
+@mcp.tool(description="厨房：menu|status/cook/brew/eat/store/shop open|stock|dine — 星级料理、灶台、岸畔小馆")
 async def kitchen_ops(command: str) -> str:
     from . import kitchen
     return await kitchen.kitchen_ops(_kid(), command)
