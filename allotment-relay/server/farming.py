@@ -171,6 +171,8 @@ def effective_grow(plot: dict[str, Any], crop_key: str | None = None) -> int:
         bool(plot.get("tended")),
         bool(plot.get("greenhouse")),
     )
+    if plot.get("fertilized"):
+        mult *= 0.88
     return max(60, int(base * mult))
 
 
@@ -207,7 +209,10 @@ def parcel_status(plot: dict[str, Any]) -> str:
 
 def parcel_extra(plot: dict[str, Any]) -> str:
     if not plot.get("crop") or plot_ready(plot) or plot_overripe(plot):
-        return ""
+        extra = ""
+        if plot.get("scarecrow"):
+            extra = "·🌾稻草人"
+        return extra
     _, _, left = grow_progress(plot)
     pace = plot.get("grow_pace") or ""
     bits = []
@@ -215,6 +220,13 @@ def parcel_extra(plot: dict[str, Any]) -> str:
         bits.append(pace)
     if left > 0:
         bits.append(f"约{left // 60}分")
+    if plot.get("fertilized"):
+        bits.append("肥")
+    if plot.get("scarecrow"):
+        bits.append("🌾")
+    meta = CROPS.get(plot["crop"], {})
+    if meta.get("tree") and meta.get("shake") and plot_ready(plot):
+        bits.append("可摇")
     return f"·{'·'.join(bits)}" if bits else ""
 
 
@@ -266,6 +278,10 @@ def _wildlife_pool(plot: dict[str, Any]) -> list[dict[str, Any]]:
         if gh and not w["greenhouse"] and w["kind"] == "bad":
             continue
         pool.append(w)
+    if plot.get("scarecrow"):
+        filtered = [w for w in pool if w["key"] not in ("crow", "gull")]
+        if filtered:
+            pool = filtered
     return pool or [w for w in WILDLIFE if not w["tags"]]
 
 
@@ -400,18 +416,45 @@ async def gather_yield(
     conn: aiosqlite.Connection,
     steward_id: int,
     plot: dict[str, Any],
-) -> tuple[str, int]:
-    """Return (crop_item_key, quantity). Handles trampled/overripe edge cases."""
+) -> tuple[str, int, bool]:
+    """Return (crop_item_key, quantity, keep_plot). Tree crops keep plot."""
     crop = plot["crop"]
+    meta = CROPS[crop]
     item = f"crop_{crop}"
     qty = 1
+    keep = bool(meta.get("tree"))
     if plot_overripe(plot):
         if random.random() < 0.45:
             seed = f"seed_{crop}"
             await db.add_item(conn, steward_id, seed, 1)
-            return seed, 1
-        return item, 1
+            return seed, 1, keep
+        return item, 1, keep
     if not plot.get("tended") and random.random() < 0.18:
         qty = 1
-        return item, qty
+        return item, qty, keep
+    return item, qty, keep
+
+
+async def shake_tree(
+    conn: aiosqlite.Connection,
+    steward_id: int,
+    plot: dict[str, Any],
+) -> tuple[str, int] | None:
+    crop = plot.get("crop")
+    if not crop:
+        return None
+    meta = CROPS.get(crop, {})
+    if not meta.get("shake") or not plot_ready(plot):
+        return None
+    item = f"crop_{crop}"
+    qty = 2 if random.random() < 0.25 else 1
+    await db.add_item(conn, steward_id, item, qty)
+    grow_target, grow_pace, _ = roll_grow(crop, plot)
+    await conn.execute(
+        """
+        UPDATE parcels SET planted_at=?, tended=0, grow_target=?, grow_pace=?
+        WHERE id=?
+        """,
+        (db.now(), grow_target, grow_pace, plot["id"]),
+    )
     return item, qty

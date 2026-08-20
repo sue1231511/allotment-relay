@@ -56,8 +56,15 @@ async def relay_manual() -> str:
         "",
         "工具一览：",
         "  steward_enroll / steward_sheet / steward_revise / peer_sheet",
-        "  plot_ops — sow/tend/gather/forage/hedge_note/amends/cohort/weather/buy",
-        "  tide_ops — net/status",
+        "  plot_ops — sow/tend/gather/shake/fertilize/scarecrow/compost/forage/…",
+        "  tide_ops — net/status/bottle",
+        "  beach_ops — dig（退潮+铲子赶海）",
+        "  tool_ops — list/buy 锄头铲子渔网",
+        "  kitchen_ops — menu/cook/eat/store/fridge（星级料理+冰箱）",
+        "  market_ops — list/sell/buy 玩家集市",
+        "  barn_ops — 牛羊猪狗兔鸡",
+        "  boss_ops — 克系世界Boss",
+        "  npc_ops / bottle_ops — 固定NPC与漂流瓶",
         "",
         "【份地农事 · 随机生长】",
         "  每次 sow 摇出不同生长周期（急长/稳长/慢熟/摸鱼型）",
@@ -82,7 +89,14 @@ async def relay_manual() -> str:
         "",
         "plot_ops 等支持用 ; 串联。",
         "",
-        "【生存感 · 休闲版】",
+        "【热带份地 · 料理 · 集市】",
+        "  蓝莓/香蕉/椰子(可shake)/榴莲(超稀有) + 大蒜辣椒姜",
+        "  铲子赶海：猫眼螺/贝壳；细渔网加渔获省精力",
+        "  kitchen_ops 蒜蓉生蚝/白灼虾/清蒸鱼/芝士龙虾等，星级影响售价",
+        "  精力限制 net/出海/赶海；吃饭 kitchen_ops eat 回精力",
+        "  施肥/稻草人/堆肥桶/挖蚯蚓饵；market_ops 玩家互卖",
+        "  boss_ops 合力击杀潮渊之主 → 神话章鱼肉",
+        "",
         "  饱食 / 雾智 / 档信 三项慢衰减，无硬死亡",
         "  低了只是更容易出意外、档口票打折——gather/net/brew/amends 可回暖",
         "  暮/夜时辰意外略多，但不赶命",
@@ -114,16 +128,23 @@ async def relay_manual() -> str:
 
 async def steward_sheet(key_id: int) -> str:
     s = await require_steward(key_id)
+    async with aiosqlite.connect(db.DB_PATH) as conn:
+        from . import energy as energy_mod
+        await energy_mod.soft_regen(conn, s["id"])
+        await conn.commit()
+    s = await db.get_steward_by_id(s["id"]) or s
     parcels = await db.get_parcels(s["id"])
     stock = await db.get_satchel(s["id"])
     w, t = world.current_weather(), world.current_tide()
     phase = world.current_day_phase()
+    from . import energy as energy_mod
     lines = [
         f"管理员: {s['name']} ({s['badge']})",
         f"座右铭: {s['motto']}",
         f"肖像: {s['portrait']}",
         f"工分票: {s['tickets']}",
         survival.meter_line(s),
+        energy_mod.meter_line(s),
         f"份地: {s['parcel_count']} 块",
         f"{world.weather_label(w)} / {world.tide_label(t)} / {world.day_phase_label(phase)}",
     ]
@@ -141,6 +162,8 @@ async def steward_sheet(key_id: int) -> str:
         lvl = s.get("hut_level") or 1
         hname = s.get("hut_label") or HUT_LEVELS[lvl]["name"]
         lines.append(f"小屋: {hname}（Lv{lvl}）")
+    if s.get("barn_built"):
+        lines.append("畜栏: 已建")
     async with aiosqlite.connect(db.DB_PATH) as conn:
         conn.row_factory = aiosqlite.Row
         pen = await (await conn.execute(
@@ -311,6 +334,10 @@ async def _plot_one(s: dict, cmd: str) -> str:
             extra = await events.roll_after_action(s, "tend", conn)
             farm = await farming.roll_farm_event(conn, s, "tend")
             disc = await commons.roll_discovery(conn, s, "tend")
+            worm_msg = ""
+            if random.random() < 0.14:
+                await db.add_item(conn, s["id"], "bait_worm", random.randint(1, 2))
+                worm_msg = "\n翻出蚯蚓饵，钓鱼佬狂喜"
             await conn.commit()
         msg = f"打理了 {len(rows)} 块份地" if rows else "没有待打理的份地——苗都乖，或你还没种"
         msg += flavor.maybe_suffix(flavor.TEND_SUFFIX)
@@ -318,7 +345,92 @@ async def _plot_one(s: dict, cmd: str) -> str:
             msg += f"\n{farm}"
         if disc:
             msg += f"\n{disc}"
+        if worm_msg:
+            msg += worm_msg
         return f"{msg}\n{extra}" if extra else msg
+
+    if verb == "shake" and len(parts) >= 2:
+        slot = int(parts[1])
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            conn.row_factory = aiosqlite.Row
+            plot = dict(await (await conn.execute(
+                "SELECT * FROM parcels WHERE steward_id=? AND slot=?", (s["id"], slot)
+            )).fetchone() or {})
+            if not plot.get("crop"):
+                raise ValueError(f"#{slot} 没有可摇的树")
+            meta = CROPS.get(plot["crop"], {})
+            if not meta.get("shake"):
+                raise ValueError(f"{meta.get('name', plot['crop'])} 不能摇，只能 gather")
+            result = await farming.shake_tree(conn, s["id"], plot)
+            if not result:
+                raise ValueError("还没熟，等等再摇")
+            item, qty = result
+            await conn.commit()
+        name = ITEM_NAMES.get(item, item)
+        return f"#{slot} 摇下 {name} x{qty}" + flavor.maybe_suffix(["椰子：重力赞助", "树：今天也配合"])
+
+    if verb == "fertilize" and len(parts) >= 2:
+        slot = int(parts[1])
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            conn.row_factory = aiosqlite.Row
+            plot = dict(await (await conn.execute(
+                "SELECT * FROM parcels WHERE steward_id=? AND slot=?", (s["id"], slot)
+            )).fetchone() or {})
+            if not plot.get("crop"):
+                raise ValueError(f"#{slot} 没种东西")
+            if plot.get("fertilized"):
+                return f"#{slot} 已经施过肥"
+            if not await db.take_item(conn, s["id"], "compost", 1):
+                raise ValueError("施肥需要堆肥 x1")
+            await conn.execute(
+                "UPDATE parcels SET fertilized=1, grow_target=MAX(120, grow_target-?) WHERE id=?",
+                (int((plot.get("grow_target") or 300) * 0.12), plot["id"]),
+            )
+            await conn.commit()
+        return f"#{slot} 已施肥，生长加速"
+
+    if verb == "scarecrow" and len(parts) >= 2:
+        slot = int(parts[1])
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            conn.row_factory = aiosqlite.Row
+            plot = dict(await (await conn.execute(
+                "SELECT * FROM parcels WHERE steward_id=? AND slot=?", (s["id"], slot)
+            )).fetchone() or {})
+            if plot.get("scarecrow"):
+                return f"#{slot} 已有稻草人"
+            if await db.take_item(conn, s["id"], "scarecrow", 1):
+                pass
+            else:
+                from .config import SCARECROW_COST
+                for item, need in SCARECROW_COST.items():
+                    if not await db.take_item(conn, s["id"], item, need):
+                        raise ValueError(f"扎稻草人需要 scarecrow 或 漂绳x2+堆肥x1")
+            await conn.execute("UPDATE parcels SET scarecrow=1 WHERE id=?", (plot["id"],))
+            await conn.commit()
+        return f"#{slot} 扎好稻草人，鸟儿的自助餐厅关门"
+
+    if verb == "compost" and len(parts) >= 2:
+        slot = int(parts[1])
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            conn.row_factory = aiosqlite.Row
+            plot = dict(await (await conn.execute(
+                "SELECT * FROM parcels WHERE steward_id=? AND slot=?", (s["id"], slot)
+            )).fetchone() or {})
+            if not plot.get("crop"):
+                raise ValueError(f"#{slot} 空着")
+            if not farming.plot_overripe(plot) and not farming.plot_ready(plot):
+                raise ValueError("只有过熟/枯的才进堆肥桶")
+            crop_name = CROPS[plot["crop"]]["name"]
+            await db.add_item(conn, s["id"], "compost", random.randint(2, 3))
+            await conn.execute(
+                """
+                UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
+                grow_target=0, grow_pace='', fertilized=0 WHERE id=?
+                """,
+                (plot["id"],),
+            )
+            await conn.commit()
+        return f"#{slot} {crop_name} → 堆肥桶，土肥了"
 
     if verb == "gather":
         got = []
@@ -340,24 +452,37 @@ async def _plot_one(s: dict, cmd: str) -> str:
                         )
                         got.append(f"{crop_name}(枯病折损)")
                         continue
-                    item_key, qty = await farming.gather_yield(conn, s["id"], p)
+                    item_key, qty, keep_plot = await farming.gather_yield(conn, s["id"], p)
                     await db.add_item(conn, s["id"], item_key, qty)
-                    await conn.execute(
-                        """
-                        UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
-                        grow_target=0, grow_pace='' WHERE id=?
-                        """,
-                        (p["id"],),
-                    )
+                    if keep_plot:
+                        grow_target, grow_pace, _ = farming.roll_grow(p["crop"], p)
+                        await conn.execute(
+                            """
+                            UPDATE parcels SET planted_at=?, tended=0, grow_target=?, grow_pace=?,
+                            fertilized=0 WHERE id=?
+                            """,
+                            (db.now(), grow_target, grow_pace, p["id"]),
+                        )
+                    else:
+                        await conn.execute(
+                            """
+                            UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
+                            grow_target=0, grow_pace='', fertilized=0, scarecrow=0 WHERE id=?
+                            """,
+                            (p["id"],),
+                        )
                     if item_key.startswith("seed_"):
                         got.append(f"{CROPS[p['crop']]['name']}种(过熟)")
                     else:
                         got.append(CROPS[p["crop"]]["name"])
                 elif farming.plot_overripe(p):
+                    if random.random() < 0.5:
+                        await db.add_item(conn, s["id"], "compost", 2)
+                        got.append(f"{CROPS[p['crop']]['name']}(堆肥)")
                     await conn.execute(
                         """
                         UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
-                        grow_target=0, grow_pace='' WHERE id=?
+                        grow_target=0, grow_pace='', fertilized=0 WHERE id=?
                         """,
                         (p["id"],),
                     )
@@ -482,14 +607,17 @@ async def tide_ops(key_id: int, command: str) -> str:
         cost = 4
         async with aiosqlite.connect(db.DB_PATH) as conn:
             await commons.maybe_spawn_commons(conn)
+            from . import energy as energy_mod
+            energy_cost, fish_bonus = await energy_mod.net_energy_cost(conn, s["id"])
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
             if (await cur.fetchone())[0] < cost:
                 raise ValueError(f"撒网需要 {cost} 工分票")
             await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (cost, s["id"]))
+            await energy_mod.spend(conn, s["id"], energy_cost, action="撒网")
             extra = await events.roll_after_action(s, "net", conn)
             disc = await commons.roll_discovery(conn, s, "net")
             await conn.commit()
-        empty_chance = 0.18 - await events.net_bonus_chance()
+        empty_chance = 0.18 - await events.net_bonus_chance() - fish_bonus * 0.5
         if random.random() < empty_chance:
             msg = "空网，只有水草"
             if extra:
@@ -498,12 +626,16 @@ async def tide_ops(key_id: int, command: str) -> str:
                 msg += f"\n{disc}"
             return f"{pulse}\n{msg}" if pulse else msg
         catch = weighted_fish_pick(tide=tide)
+        if fish_bonus and random.random() < fish_bonus:
+            catch = weighted_fish_pick(tide=tide, rarity_cap=4)
         meta = SEA_CATCH[catch]
         async with aiosqlite.connect(db.DB_PATH) as conn:
             await db.add_item(conn, s["id"], f"fish_{catch}", 1)
             await survival.bump(conn, s["id"], satiety=5)
             await conn.commit()
         msg = f"{s['name']} 在{world.tide_label(tide)}网到 {meta['emoji']}{meta['name']}"
+        if fish_bonus:
+            msg += "（细网加成）"
         msg += flavor.maybe_suffix(flavor.NET_SUFFIX)
         await db.add_chronicle("tide", msg, s["id"])
         from . import multi
@@ -516,6 +648,10 @@ async def tide_ops(key_id: int, command: str) -> str:
         if disc:
             msg += f"\n{disc}"
         return f"{pulse}\n{msg}" if pulse else msg
+
+    if verb == "bottle":
+        from . import bottles
+        return await bottles.bottle_ops(key_id, "fish")
 
     raise ValueError(f"未知 tide 指令: {command}")
 

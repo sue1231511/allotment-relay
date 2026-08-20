@@ -175,6 +175,54 @@ async def incident_ops(command: str) -> str:
     return await events.incident_ops(_kid(), command)
 
 
+@mcp.tool(description="工具：list / buy hoe|shovel|net_basic|net_fine")
+async def tool_ops(command: str) -> str:
+    from . import tools
+    return await tools.tool_ops(_kid(), command)
+
+
+@mcp.tool(description="赶海：status / dig（退潮+铲子，猫眼螺/贝壳）")
+async def beach_ops(command: str) -> str:
+    from . import beach
+    return await beach.beach_ops(_kid(), command)
+
+
+@mcp.tool(description="厨房：menu/cook/eat/store/fridge/take/vend — 星级料理与冰箱")
+async def kitchen_ops(command: str) -> str:
+    from . import kitchen
+    return await kitchen.kitchen_ops(_kid(), command)
+
+
+@mcp.tool(description="集市：list/sell/buy/mine/cancel/price — 玩家互卖")
+async def market_ops(command: str) -> str:
+    from . import market
+    return await market.market_ops(_kid(), command)
+
+
+@mcp.tool(description="畜栏：status/erect/buy/feed/harvest — 牛羊猪狗兔鸡")
+async def barn_ops(command: str) -> str:
+    from . import barn
+    return await barn.barn_ops(_kid(), command)
+
+
+@mcp.tool(description="世界Boss：status/attack — 合力击杀掉神话章鱼肉")
+async def boss_ops(command: str) -> str:
+    from . import boss
+    return await boss.boss_ops(_kid(), command)
+
+
+@mcp.tool(description="NPC：list/visit/thieves — 固定访客与偷菜贼")
+async def npc_ops(command: str) -> str:
+    from . import npc
+    return await npc.npc_ops(_kid(), command)
+
+
+@mcp.tool(description="漂流瓶：scan/leave/fish/read — 留话捞瓶带署名")
+async def bottle_ops(command: str) -> str:
+    from . import bottles
+    return await bottles.bottle_ops(_kid(), command)
+
+
 def build_mcp_app():
     app = mcp.streamable_http_app(streamable_http_path="/", stateless_http=True)
     app.add_middleware(ApiKeyMiddleware)

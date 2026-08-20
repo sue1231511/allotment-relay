@@ -5,7 +5,7 @@ from typing import Any
 import aiosqlite
 
 from .catalog import STARTER_STOCK
-from .config import DATA_DIR, DB_PATH, KEY_PREFIX, START_PARCELS, START_TICKETS
+from .config import DATA_DIR, DB_PATH, KEY_PREFIX, START_ENERGY, START_PARCELS, START_TICKETS
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS api_keys (
@@ -249,6 +249,94 @@ CREATE TABLE IF NOT EXISTS hut_fittings (
     installed_at INTEGER NOT NULL,
     PRIMARY KEY (steward_id, slot)
 );
+
+CREATE TABLE IF NOT EXISTS market_listings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    seller_id INTEGER NOT NULL REFERENCES stewards(id),
+    item TEXT NOT NULL,
+    quantity INTEGER NOT NULL,
+    price INTEGER NOT NULL,
+    suggested INTEGER NOT NULL DEFAULT 0,
+    note TEXT NOT NULL DEFAULT '',
+    buyer_id INTEGER REFERENCES stewards(id),
+    sold_at INTEGER,
+    created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS drift_bottles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    author_id INTEGER NOT NULL REFERENCES stewards(id),
+    body TEXT NOT NULL,
+    signature TEXT NOT NULL DEFAULT '',
+    found_by INTEGER REFERENCES stewards(id),
+    found_at INTEGER,
+    created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS world_boss (
+    boss_key TEXT PRIMARY KEY,
+    hp INTEGER NOT NULL,
+    max_hp INTEGER NOT NULL,
+    defeated_at INTEGER,
+    respawn_at INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS boss_attacks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    boss_key TEXT NOT NULL,
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    damage INTEGER NOT NULL,
+    created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS barn_animals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    slot INTEGER NOT NULL,
+    species TEXT NOT NULL,
+    stocked_at INTEGER,
+    fed INTEGER NOT NULL DEFAULT 0,
+    guard INTEGER NOT NULL DEFAULT 0,
+    UNIQUE(steward_id, slot)
+);
+
+CREATE TABLE IF NOT EXISTS meal_storage (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    dish_key TEXT NOT NULL,
+    stars INTEGER NOT NULL DEFAULT 3,
+    quantity INTEGER NOT NULL DEFAULT 1,
+    stored_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS kitchen_rolls (
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    day INTEGER NOT NULL,
+    count INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (steward_id, day)
+);
+
+CREATE TABLE IF NOT EXISTS beach_rolls (
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    day INTEGER NOT NULL,
+    last_at INTEGER NOT NULL DEFAULT 0,
+    count INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (steward_id, day)
+);
+
+CREATE TABLE IF NOT EXISTS boss_rolls (
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    day INTEGER NOT NULL,
+    count INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (steward_id, day)
+);
+
+CREATE TABLE IF NOT EXISTS bottle_rolls (
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    day INTEGER NOT NULL,
+    count INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (steward_id, day)
+);
 """
 
 
@@ -274,6 +362,11 @@ async def init_db() -> None:
             "ALTER TABLE stewards ADD COLUMN hut_built INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN hut_level INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN hut_label TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE stewards ADD COLUMN energy INTEGER NOT NULL DEFAULT 80",
+            "ALTER TABLE stewards ADD COLUMN barn_built INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN beach_at INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE parcels ADD COLUMN fertilized INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE parcels ADD COLUMN scarecrow INTEGER NOT NULL DEFAULT 0",
         ):
             try:
                 await db.execute(ddl)
@@ -447,11 +540,11 @@ async def enroll_steward(key_id: int, name: str, motto: str, badge: str, portrai
             """
             INSERT INTO stewards (
                 key_id, name, motto, badge, portrait, tickets, parcel_count,
-                enrolled, last_active_at, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+                enrolled, last_active_at, created_at, energy
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)
             """,
             (key_id, name, motto.strip()[:200], badge.strip()[:32], portrait.strip()[:120],
-             START_TICKETS, START_PARCELS, ts, ts),
+             START_TICKETS, START_PARCELS, ts, ts, START_ENERGY),
         )
         sid = (await (await db.execute("SELECT last_insert_rowid()")).fetchone())[0]
         await ensure_parcels(db, sid, START_PARCELS)

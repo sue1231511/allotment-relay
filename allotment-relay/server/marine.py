@@ -423,6 +423,9 @@ async def voyage_ops(key_id: int, command: str) -> str:
                 "UPDATE stewards SET tickets=tickets-? WHERE id=?",
                 (route["fuel"], s["id"]),
             )
+            from . import energy as energy_mod
+            fuel_energy = {"near": 15, "far": 28, "deep": 40}.get(route_key, 20)
+            await energy_mod.spend(conn, s["id"], fuel_energy, action="出海")
             now = db.now()
             duration = route["duration"]
             if world.current_weather() == "misty":

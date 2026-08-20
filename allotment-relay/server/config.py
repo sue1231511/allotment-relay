@@ -117,3 +117,35 @@ DISCOVERY_CHANCE = {
 
 # 岸畔小屋
 HUT_BUILD_COST = 95
+
+# 精力 — 出海/撒网/赶海消耗，吃饭恢复
+START_ENERGY = 80
+MAX_ENERGY = 100
+ENERGY_REGEN_IDLE = 2  # 每次 sheet 查看慢回（软机制）
+
+# 赶海 / 工具
+BEACH_COOLDOWN = 1800
+BEACH_ENERGY = 8
+SCARECROW_COST = {"drift_twine": 2, "compost": 1}
+
+# 厨房 / 冰箱
+KITCHEN_COOK_DAILY = 8
+FRIDGE_SLOTS = 12
+FRIDGE_DAYS = 7
+
+# 集市 — 玩家互卖，建议价参考 catalog
+MARKET_FEE = 2
+MARKET_LIST_MAX = 6
+
+# 畜栏
+BARN_SLOTS = 4
+BARN_ERECT_COST = 75
+
+# 世界 Boss
+BOSS_ATTACK_ENERGY = 12
+BOSS_ATTACK_DAMAGE = (18, 45)
+BOSS_DAILY_ATTACKS = 8
+
+# 漂流瓶
+BOTTLE_LEAVE_DAILY = 3
+BOTTLE_FISH_CHANCE = 0.12

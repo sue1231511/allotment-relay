@@ -124,7 +124,8 @@ async def _scrump_victim(
     if not plot:
         return None
     peer = await _random_peer(conn, steward["id"])
-    thief = peer["name"] if peer else flavor.pick(["过路家伙", "无名之手", "篱笆外的影子"])
+    from . import npc
+    thief = npc.pick_thief_name(peer["name"] if peer else None)
     crop = plot["crop"]
     meta = CROPS[crop]
     await conn.execute(
@@ -345,6 +346,13 @@ async def roll_after_action(
         good = False
 
     allow_scrump = await _has_peers(conn, steward["id"])
+    if allow_scrump:
+        cur = await conn.execute(
+            "SELECT 1 FROM barn_animals WHERE steward_id=? AND guard=1 LIMIT 1",
+            (steward["id"],),
+        )
+        if await cur.fetchone() and random.random() < 0.5:
+            allow_scrump = False
     event = event_gen.generate_event(
         trigger,
         steward,

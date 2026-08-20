@@ -7,6 +7,14 @@ CROPS = {
     "bramble": {"name": "荆棘莓", "emoji": "🫐", "seed_price": 14, "sell": 32, "grow": 360, "spread": 0.38, "tags": ["berry"]},
     "kelp": {"name": "浅海藻", "emoji": "🌿", "seed_price": 11, "sell": 24, "grow": 300, "spread": 0.34, "tags": ["sea"]},
     "fogpea": {"name": "雾豌豆", "emoji": "🫛", "seed_price": 10, "sell": 23, "grow": 320, "spread": 0.30, "tags": ["legume"]},
+    # ── 热带 / 调味 / 浆果 ──
+    "blueberry": {"name": "蓝莓", "emoji": "🫐", "seed_price": 16, "sell": 36, "grow": 340, "spread": 0.30, "tags": ["berry", "tropic"]},
+    "banana": {"name": "香蕉", "emoji": "🍌", "seed_price": 18, "sell": 28, "grow": 420, "spread": 0.28, "tags": ["fruit", "tropic"], "tree": True},
+    "coconut": {"name": "椰子", "emoji": "🥥", "seed_price": 22, "sell": 24, "grow": 500, "spread": 0.25, "tags": ["fruit", "tropic"], "tree": True, "shake": True},
+    "durian": {"name": "榴莲", "emoji": "🍈", "seed_price": 48, "sell": 95, "grow": 720, "spread": 0.40, "tags": ["fruit", "tropic"], "tree": True, "ultra_rare": True},
+    "garlic": {"name": "大蒜", "emoji": "🧄", "seed_price": 9, "sell": 18, "grow": 260, "spread": 0.22, "tags": ["seasoning"]},
+    "chili": {"name": "辣椒", "emoji": "🌶️", "seed_price": 11, "sell": 22, "grow": 280, "spread": 0.26, "tags": ["seasoning"]},
+    "ginger": {"name": "姜", "emoji": "🫚", "seed_price": 12, "sell": 24, "grow": 300, "spread": 0.24, "tags": ["seasoning", "tropic"]},
 }
 
 # 渔获 — zones: shore/near/far/deep；pen=True 可渔排放养
@@ -155,7 +163,95 @@ HUT_SOFT = {
     "sea_chart": {"name": "手绘海图", "cost": 45, "emoji": "🗺️", "hint": "出海归港略顺"},
     "bramble_wreath": {"name": "荆棘莓环", "cost": 30, "emoji": "🌸", "hint": "纯好看，访客爱拍"},
     "glass_float": {"name": "玻璃浮标", "cost": 36, "emoji": "🔮", "hint": "公共物资刷新略快——玄学"},
+    "fridge": {"name": "冰箱", "cost": 120, "emoji": "🧊", "hint": "熟菜保鲜，kitchen store"},
 }
+
+TOOLS = {
+    "hoe": {"name": "锄头", "cost": 35, "emoji": "⛏️"},
+    "shovel": {"name": "铲子", "cost": 42, "emoji": "🪏"},
+    "net_basic": {"name": "粗渔网", "cost": 28, "emoji": "🕸️", "fish_bonus": 0.0, "energy": 10},
+    "net_fine": {"name": "细渔网", "cost": 75, "emoji": "🎣", "fish_bonus": 0.18, "energy": 7},
+}
+
+BEACH_LOOT = [
+    ("shell_catseye", "猫眼螺", 1, 22, 18),
+    ("shell_conch", "海螺", 1, 14, 25),
+    ("shell_scallop", "扇贝壳", 1, 10, 30),
+    ("fish_razorclam", "竹蛏", 1, 12, 20),
+    ("bait_worm", "蚯蚓饵", 2, 16, 15),
+]
+
+LIVESTOCK = {
+    "rabbit": {"name": "兔", "emoji": "🐰", "buy": 55, "feed": "crop_fogpea", "feed_qty": 1, "grow": 600, "product": "meat_rabbit", "product_qty": 1},
+    "chicken": {"name": "鸡", "emoji": "🐔", "buy": 48, "feed": "crop_rye", "feed_qty": 1, "grow": 480, "product": "egg", "product_qty": 2},
+    "sheep": {"name": "羊", "emoji": "🐑", "buy": 95, "feed": "crop_kale", "feed_qty": 2, "grow": 900, "product": "wool", "product_qty": 1},
+    "pig": {"name": "猪", "emoji": "🐷", "buy": 110, "feed": "crop_beet", "feed_qty": 2, "grow": 840, "product": "meat_pork", "product_qty": 2},
+    "cow": {"name": "牛", "emoji": "🐄", "buy": 180, "feed": "crop_rye", "feed_qty": 3, "grow": 1200, "product": "milk", "product_qty": 2},
+    "dog": {"name": "狗", "emoji": "🐕", "buy": 70, "feed": "meat_rabbit", "feed_qty": 1, "grow": 0, "product": "guard", "product_qty": 0, "guard": True},
+}
+
+KITCHEN_DISHES = {
+    "garlic_oyster": {
+        "name": "蒜蓉生蚝", "emoji": "🦪",
+        "ings": ["fish_seaurchin", "crop_garlic", "crop_chili"],
+        "base_sell": 72, "energy": 22, "tags": ["sea", "spicy"],
+    },
+    "blanch_shrimp": {
+        "name": "白灼虾", "emoji": "🦐",
+        "ings": ["fish_glassshrimp", "crop_ginger"],
+        "base_sell": 65, "energy": 20, "tags": ["sea"],
+    },
+    "steam_fish": {
+        "name": "清蒸鱼", "emoji": "🐟",
+        "ings": ["fish_seatrout", "crop_ginger", "crop_garlic"],
+        "base_sell": 58, "energy": 18, "tags": ["sea"],
+    },
+    "cheese_lobster": {
+        "name": "芝士龙虾", "emoji": "🦞",
+        "ings": ["fish_kingcrab", "crop_kale", "milk"],
+        "base_sell": 98, "energy": 28, "tags": ["sea", "rich"],
+    },
+    "braised_fish": {
+        "name": "红烧鱼", "emoji": "🍲",
+        "ings": ["fish_mackerel", "crop_garlic", "crop_chili", "crop_beet"],
+        "base_sell": 62, "energy": 20, "tags": ["sea"],
+    },
+    "sour_fish": {
+        "name": "酸汤鱼", "emoji": "🥘",
+        "ings": ["fish_streakbass", "crop_chili", "crop_blueberry"],
+        "base_sell": 68, "energy": 22, "tags": ["sea", "sour"],
+    },
+    "chop_head": {
+        "name": "剁椒鱼头", "emoji": "🌶️",
+        "ings": ["fish_lingcod", "crop_chili", "crop_garlic"],
+        "base_sell": 88, "energy": 24, "tags": ["sea", "spicy"],
+    },
+    "blueberry_tart": {
+        "name": "蓝莓派", "emoji": "🥧",
+        "ings": ["crop_blueberry", "crop_rye", "milk"],
+        "base_sell": 48, "energy": 16, "tags": ["dessert"],
+    },
+}
+
+MYTH_INGREDIENTS = {
+    "myth_octopus": {"name": "克系章鱼肉", "emoji": "🐙", "sell": 220, "energy": 40},
+}
+
+WORLD_BOSS = {
+    "key": "cthulhu_tide",
+    "name": "潮渊之主",
+    "hp": 5000,
+    "loot": "myth_octopus",
+    "loot_qty": 2,
+}
+
+NPC_FIXED = [
+    {"key": "old_salt", "name": "老水手巴顿", "lines": ["今天潮线低，适合赶海", "细网比粗网省劲"]},
+    {"key": "herb_aunt", "name": "姜姨", "lines": ["酸汤鱼要够辣", "种点姜，厨房才像样"]},
+    {"key": "market_fan", "name": "集市范姐", "lines": ["缺啥上 market 挂单", "建议价仅供参考，别跟票置气"]},
+]
+
+NPC_THIEVES = ["篱笆手影", "逾篱阿窃", "夜行摘客", "档口惯偷"]
 
 ITEM_PRICES = {f"seed_{k}": v["seed_price"] for k, v in CROPS.items()}
 ITEM_PRICES.update({f"crop_{k}": v["sell"] for k, v in CROPS.items()})
@@ -166,6 +262,22 @@ for cat in (HUT_HARD, HUT_SOFT):
     for k, v in cat.items():
         ITEM_PRICES[f"fit_{k}"] = v["cost"] // 2
 ITEM_PRICES.update({f"meal_{i}": r["sell"] for i, r in enumerate(HEARTH_RECIPES.values(), 1)})
+ITEM_PRICES.update({f"tool_{k}": v["cost"] for k, v in TOOLS.items()})
+for k, _, _, _, price in BEACH_LOOT:
+    ITEM_PRICES[k] = price
+ITEM_PRICES.update({
+    "bait_worm": 6,
+    "shell_catseye": 18, "shell_conch": 25, "shell_scallop": 30,
+    "egg": 14, "milk": 16, "wool": 22,
+    "meat_rabbit": 20, "meat_pork": 28,
+    "scarecrow": 35,
+})
+for k, v in LIVESTOCK.items():
+    ITEM_PRICES[f"live_{k}"] = v["buy"]
+for k, v in KITCHEN_DISHES.items():
+    ITEM_PRICES[f"dish_{k}"] = v["base_sell"]
+for k, v in MYTH_INGREDIENTS.items():
+    ITEM_PRICES[k] = v["sell"]
 
 ITEM_NAMES = {f"seed_{k}": f"{v['name']}种" for k, v in CROPS.items()}
 ITEM_NAMES.update({f"crop_{k}": v["name"] for k, v in CROPS.items()})
@@ -180,6 +292,63 @@ for cat in (HUT_HARD, HUT_SOFT):
         ITEM_NAMES[f"fit_{k}"] = f"{v['emoji']}{v['name']}"
 for i, r in enumerate(HEARTH_RECIPES.values(), 1):
     ITEM_NAMES[f"meal_{i}"] = r["name"]
+ITEM_NAMES.update({f"tool_{k}": f"{v['emoji']}{v['name']}" for k, v in TOOLS.items()})
+for k, _, _, _, _ in BEACH_LOOT:
+    ITEM_NAMES[k] = next(x[1] for x in BEACH_LOOT if x[0] == k)
+ITEM_NAMES.update({
+    "bait_worm": "蚯蚓饵",
+    "shell_catseye": "🐚猫眼螺", "shell_conch": "🐚海螺", "shell_scallop": "🐚扇贝壳",
+    "egg": "🥚鸡蛋", "milk": "🥛牛奶", "wool": "🧶羊毛",
+    "meat_rabbit": "🍖兔肉", "meat_pork": "🥓猪肉",
+    "scarecrow": "🌾稻草人",
+})
+for k, v in LIVESTOCK.items():
+    ITEM_NAMES[f"live_{k}"] = f"{v['emoji']}{v['name']}(幼)"
+for k, v in KITCHEN_DISHES.items():
+    ITEM_NAMES[f"dish_{k}"] = f"{v['emoji']}{v['name']}"
+for k, v in MYTH_INGREDIENTS.items():
+    ITEM_NAMES[k] = f"{v['emoji']}{v['name']}"
+
+
+def dish_item(key: str, stars: int = 3) -> str:
+    return f"dish_{key}_s{max(1, min(5, stars))}"
+
+
+def dish_display_name(key: str, stars: int) -> str:
+    meta = KITCHEN_DISHES[key]
+    suffix = "★" * stars
+    return f"{meta['emoji']}{meta['name']}{suffix}"
+
+
+def register_dish_item(key: str, stars: int) -> None:
+    item = dish_item(key, stars)
+    ITEM_NAMES[item] = dish_display_name(key, stars)
+    ITEM_PRICES[item] = dish_sell_price(key, stars)
+
+
+def dish_sell_price(key: str, stars: int) -> int:
+    base = KITCHEN_DISHES[key]["base_sell"]
+    mult = {1: 0.6, 2: 0.85, 3: 1.0, 4: 1.35, 5: 1.8}.get(stars, 1.0)
+    return max(8, int(base * mult))
+
+
+def suggested_price(item: str) -> int:
+    if item.startswith("dish_") and "_s" in item:
+        base, star_s = item.rsplit("_s", 1)
+        if star_s.isdigit():
+            key = base.replace("dish_", "", 1)
+            if key in KITCHEN_DISHES:
+                return dish_sell_price(key, int(star_s))
+    if item.startswith("dish_"):
+        key = item.replace("dish_", "", 1)
+        if key in KITCHEN_DISHES:
+            return KITCHEN_DISHES[key]["base_sell"]
+    return ITEM_PRICES.get(item, 0)
+
+
+for dk in KITCHEN_DISHES:
+    for st in range(1, 6):
+        register_dish_item(dk, st)
 
 
 def pen_species_keys() -> list[str]:
