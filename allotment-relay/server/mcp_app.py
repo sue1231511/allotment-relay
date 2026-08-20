@@ -153,7 +153,7 @@ async def pen_ops(command: str) -> str:
     return await marine.pen_ops(_kid(), command)
 
 
-@mcp.tool(description="购船出海：buy/repair/depart/return；归港黑旗截停 fight|flee|parley|bribe")
+@mcp.tool(description="购船出海：buy/repair/depart/return；出海钓鱼遇未命名小鱼 compliment|release|catch|grab；黑旗 fight|flee|parley|bribe")
 async def voyage_ops(command: str) -> str:
     from . import marine
     return await marine.voyage_ops(_kid(), command)

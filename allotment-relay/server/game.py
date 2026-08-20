@@ -78,7 +78,7 @@ async def relay_manual() -> str:
         "  commons_ops scan — 全服稀有公共物资，随机时间上线，claim 抢",
         "",
         "  pen_ops — erect/stock/feed/harvest（渔排养鱼）",
-        "  voyage_ops — buy/repair/depart/return；归港坏遭遇会黑旗截停 fight/flee/parley/bribe",
+        "  voyage_ops — buy/repair/depart/return；出海期间 tide_ops 钓鱼或遇未命名小鱼 compliment|release|catch|grab；黑旗 fight/flee/parley/bribe",
         "  shed_ops — erect/label/visit/handoff（温室；离线交接走台阶，sheet 时入袋）",
         "  hut_ops — build/upgrade/catalog/buy/install（岸畔小屋；装件加成已生效）",
         "  commons_ops — scan/claim/pulse（稀有公共物资，随机上线）",
@@ -212,7 +212,7 @@ async def steward_sheet(key_id: int) -> str:
         voyage = await (await conn.execute(
             """
             SELECT route, returns_at, status FROM voyages
-            WHERE steward_id=? AND status IN ('sailing','hailed')
+            WHERE steward_id=? AND status IN ('sailing','hailed','fish_encounter')
             """,
             (s["id"],),
         )).fetchone()
@@ -226,6 +226,11 @@ async def steward_sheet(key_id: int) -> str:
             lines.append(
                 f"出海: {VOYAGE_ROUTES[voyage['route']]['label']} 🏴 黑旗截停 — "
                 "voyage_ops fight|flee|parley|bribe"
+            )
+        elif voyage["status"] == "fish_encounter":
+            lines.append(
+                f"出海: {VOYAGE_ROUTES[voyage['route']]['label']} 🐟 未命名小鱼 — "
+                "voyage_ops compliment|release|catch|grab"
             )
         else:
             left = max(0, voyage["returns_at"] - db.now())
@@ -772,6 +777,13 @@ async def tide_ops(key_id: int, command: str) -> str:
             from . import catches as catches_mod
             await catches_mod.record_catch(conn, s["id"], f"fish_{catch}")
             await survival.bump(conn, s["id"], satiety=5)
+            from . import marine as marine_mod
+            voyage = await marine_mod._get_voyage(conn, s["id"])
+            if voyage and voyage.get("status") == "sailing":
+                await marine_mod.append_voyage_fish(conn, voyage, f"fish_{catch}")
+                legged = await marine_mod.try_legged_fish_encounter(conn, s, voyage)
+            else:
+                legged = None
             await conn.commit()
         msg = (
             f"{s['name']} 在{world.tide_label(tide)}网到 {meta['emoji']}{meta['name']} "
@@ -788,6 +800,8 @@ async def tide_ops(key_id: int, command: str) -> str:
             msg += f"\n{extra}"
         if disc:
             msg += f"\n{disc}"
+        if legged:
+            msg += f"\n{legged}"
         return f"{pulse}\n{msg}" if pulse else msg
 
     if verb == "cast":
@@ -828,6 +842,12 @@ async def tide_ops(key_id: int, command: str) -> str:
             from . import catches as catches_mod
             await catches_mod.record_catch(conn, s["id"], f"fish_{catch}")
             await survival.bump(conn, s["id"], satiety=4)
+            from . import marine as marine_mod
+            voyage = await marine_mod._get_voyage(conn, s["id"])
+            legged = None
+            if voyage and voyage.get("status") == "sailing":
+                await marine_mod.append_voyage_fish(conn, voyage, f"fish_{catch}")
+                legged = await marine_mod.try_legged_fish_encounter(conn, s, voyage)
             await conn.commit()
         msg = (
             f"坐钓 {meta['emoji']}{meta['name']} "
@@ -839,6 +859,8 @@ async def tide_ops(key_id: int, command: str) -> str:
             msg += f"\n{extra}"
         if disc:
             msg += f"\n{disc}"
+        if legged:
+            msg += f"\n{legged}"
         return f"{pulse}\n{msg}" if pulse else msg
 
     if verb == "bottle":

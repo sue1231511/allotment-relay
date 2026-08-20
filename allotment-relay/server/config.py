@@ -108,6 +108,15 @@ NAVAL_ENCOUNTER_CHANCE = {
     "deep": 0.48,
 }
 
+# 出海钓鱼 — 未命名小鱼（有腿蓝鱼）随机遭遇
+LEGGED_FISH_CHANCE = {
+    "near": 0.05,
+    "far": 0.07,
+    "deep": 0.10,
+}
+LEGGED_FISH_RARE_GIFT_CHANCE = 0.14
+LEGGED_FISH_GRAB_ENERGY = 30
+
 # 份地野生动物 / 田间随机
 FARM_EVENT_DAILY_CAP = 6
 

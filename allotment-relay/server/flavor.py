@@ -699,3 +699,42 @@ def fill(template: str, **kwargs: Any) -> str:
     for k, v in kwargs.items():
         template = template.replace("{" + k + "}", str(v))
     return template
+
+
+# ── 未命名小鱼（有腿蓝鱼）出海钓鱼遭遇 ─────────────────────
+
+LEGGED_FISH_BANNER = [
+    "🐟 网边蹦出一只长了脚的 2D 蓝色小鱼——NPC：未命名小鱼。{detail}",
+    "🐟 浪里贴脸一只扁平蓝鱼，腿比鳍勤快。它盯着你，像在等评语。",
+    "🐟 未命名小鱼在绳结上踩水：蓝、扁、腿多，眼神很 2D。",
+]
+
+LEGGED_FISH_DETAIL = [
+    "它歪头看你，像在等一句夸奖。",
+    "脚蹼啪嗒啪嗒，比鱼鳍还忙。",
+    "扁平蓝光一闪，它没跑，也没自我介绍。",
+]
+
+LEGGED_FISH_CHOICES = (
+    "voyage_ops compliment — 夸奖并放生（赠小鱼，小概率稀有）\n"
+    "voyage_ops release — 同上\n"
+    "voyage_ops catch — 抓取（丢已获鱼 + 大耗精力）\n"
+    "voyage_ops grab — 同上"
+)
+
+LEGGED_FISH_RELEASE = [
+    "你夸它腿走得稳，它赠你一尾小鱼作谢，蹦回浪里。",
+    "未命名小鱼听罢点点头，抛来一条小鱼——礼尚往来。",
+    "它被你夸害羞了，塞来小鱼当回礼，腿一蹬没影了。",
+]
+
+LEGGED_FISH_RELEASE_RARE = [
+    "它听罢狂踩水，赠你一条稀罕货——今天海真给脸。",
+    "未命名小鱼眼睛亮了一下，回礼是条稀有鱼——腿鱼有品位。",
+]
+
+LEGGED_FISH_GRAB = [
+    "你伸手捞它，它溜了——网里鱼掉回海里，精力也掏空。",
+    "抓取失败：蓝鱼腿一蹬，你手里的鱼跟着飞，人也跟着累。",
+    "想抓？它比你会躲。渔获散了一半，胳膊也软了。",
+]

@@ -7,7 +7,21 @@ import aiosqlite
 from . import db, events, event_gen, flavor, shaonian as shaonian_mod, world
 from . import commons
 from .catalog import ITEM_NAMES, SEA_CATCH, voyage_loot_table
-from .config import BOATS, HAIL_BRIBE, HAIL_FIGHT_ENERGY, HAIL_FLEE_ENERGY, HAIL_THREAT, HAIL_TIMEOUT, MAX_FISH_PENS, PEN_ERECT_COST, PEN_EXPAND_COST, VOYAGE_ROUTES
+from .config import (
+    BOATS,
+    HAIL_BRIBE,
+    HAIL_FIGHT_ENERGY,
+    HAIL_FLEE_ENERGY,
+    HAIL_THREAT,
+    HAIL_TIMEOUT,
+    LEGGED_FISH_CHANCE,
+    LEGGED_FISH_GRAB_ENERGY,
+    LEGGED_FISH_RARE_GIFT_CHANCE,
+    MAX_FISH_PENS,
+    PEN_ERECT_COST,
+    PEN_EXPAND_COST,
+    VOYAGE_ROUTES,
+)
 from .game import require_steward
 
 
@@ -60,10 +74,185 @@ async def _get_pen(conn: aiosqlite.Connection, steward_id: int, slot: int = 1) -
 async def _get_voyage(conn: aiosqlite.Connection, steward_id: int) -> dict[str, Any] | None:
     conn.row_factory = aiosqlite.Row
     row = await (await conn.execute(
-        "SELECT * FROM voyages WHERE steward_id=? AND status IN ('sailing','hailed')",
+        "SELECT * FROM voyages WHERE steward_id=? AND status IN ('sailing','hailed','fish_encounter')",
         (steward_id,),
     )).fetchone()
     return dict(row) if row else None
+
+
+def _parse_voyage_encounter(voyage: dict[str, Any]) -> dict[str, Any]:
+    raw = voyage.get("encounter") or "{}"
+    try:
+        data = json.loads(raw) if isinstance(raw, str) else dict(raw)
+    except json.JSONDecodeError:
+        data = {}
+    if "voyage_fish" not in data:
+        data["voyage_fish"] = []
+    return data
+
+
+async def _save_voyage_encounter(
+    conn: aiosqlite.Connection, voyage_id: int, data: dict[str, Any], status: str | None = None
+) -> None:
+    payload = json.dumps(data, ensure_ascii=False)
+    if status:
+        await conn.execute(
+            "UPDATE voyages SET encounter=?, status=? WHERE id=?",
+            (payload, status, voyage_id),
+        )
+    else:
+        await conn.execute("UPDATE voyages SET encounter=? WHERE id=?", (payload, voyage_id))
+
+
+async def append_voyage_fish(
+    conn: aiosqlite.Connection, voyage: dict[str, Any], fish_item: str
+) -> None:
+    data = _parse_voyage_encounter(voyage)
+    fish = list(data.get("voyage_fish") or [])
+    fish.append(fish_item)
+    data["voyage_fish"] = fish
+    await _save_voyage_encounter(conn, voyage["id"], data)
+    voyage["encounter"] = json.dumps(data, ensure_ascii=False)
+
+
+def _legged_fish_route_zones(route_key: str) -> set[str]:
+    return {"near": {"near", "far"}, "far": {"far", "deep"}, "deep": {"deep"}}.get(
+        route_key, {"near", "far"}
+    )
+
+
+def _legged_fish_roll_chance(route_key: str) -> float:
+    chance = LEGGED_FISH_CHANCE.get(route_key, 0.05)
+    if world.current_weather() == "misty":
+        chance += 0.02
+    return min(0.22, chance)
+
+
+async def _legged_fish_roll_chance_async(conn: aiosqlite.Connection, route_key: str) -> float:
+    chance = _legged_fish_roll_chance(route_key)
+    pulse = await events.active_world_pulse(conn)
+    if pulse and pulse.get("effect_type") == "fish_run":
+        chance += 0.03
+    if pulse and pulse.get("effect_type") == "red_tide":
+        chance -= 0.02
+    return max(0.02, min(0.25, chance))
+
+
+def _legged_fish_prompt(payload: dict[str, Any]) -> str:
+    detail = payload.get("detail") or flavor.pick(flavor.LEGGED_FISH_DETAIL)
+    banner = flavor.fill(flavor.pick(flavor.LEGGED_FISH_BANNER), detail=detail)
+    return banner + "\n" + flavor.LEGGED_FISH_CHOICES
+
+
+async def try_legged_fish_encounter(
+    conn: aiosqlite.Connection, s: dict[str, Any], voyage: dict[str, Any]
+) -> str | None:
+    """出海期间 tide_ops 钓鱼后判定未命名小鱼遭遇。"""
+    if voyage.get("status") != "sailing":
+        return None
+    chance = await _legged_fish_roll_chance_async(conn, voyage["route"])
+    if random.random() >= chance:
+        return None
+    data = _parse_voyage_encounter(voyage)
+    payload = {
+        "type": "legged_blue_fish",
+        "who": "未命名小鱼",
+        "detail": flavor.pick(flavor.LEGGED_FISH_DETAIL),
+        "voyage_fish": list(data.get("voyage_fish") or []),
+    }
+    await _save_voyage_encounter(conn, voyage["id"], payload, "fish_encounter")
+    voyage["status"] = "fish_encounter"
+    voyage["encounter"] = json.dumps(payload, ensure_ascii=False)
+    return _legged_fish_prompt(payload)
+
+
+async def _resolve_legged_fish(
+    conn: aiosqlite.Connection,
+    s: dict[str, Any],
+    voyage: dict[str, Any],
+    choice: str,
+) -> str:
+    from . import catches as catches_mod, energy as energy_mod
+
+    payload = _parse_voyage_encounter(voyage)
+    if payload.get("type") != "legged_blue_fish":
+        payload = {
+            "type": "legged_blue_fish",
+            "who": "未命名小鱼",
+            "voyage_fish": payload.get("voyage_fish") or [],
+        }
+    voyage_fish = list(payload.get("voyage_fish") or [])
+    choice = choice.lower()
+    good = choice in ("compliment", "release")
+
+    if good:
+        zones = _legged_fish_route_zones(voyage["route"])
+        tide = world.current_tide()
+        rarity_cap = 4
+        rare = random.random() < LEGGED_FISH_RARE_GIFT_CHANCE
+        if rare:
+            rarity_cap = 6
+        from .catalog import weighted_fish_pick
+
+        gift_key = weighted_fish_pick(tide=tide, zones=zones, rarity_cap=rarity_cap)
+        gift_item = f"fish_{gift_key}"
+        meta = SEA_CATCH[gift_key]
+        await db.add_item(conn, s["id"], gift_item, 1)
+        await catches_mod.record_catch(conn, s["id"], gift_item)
+        await survival_bump_safe(conn, s["id"], standing=2, mist_wit=2)
+        if rare:
+            msg = flavor.pick(flavor.LEGGED_FISH_RELEASE_RARE)
+        else:
+            msg = flavor.pick(flavor.LEGGED_FISH_RELEASE)
+        msg += f"\n赠予 {meta['emoji']}{meta['name']} x1"
+        remaining = voyage_fish
+    else:
+        lost: list[str] = []
+        pool = list(voyage_fish)
+        if pool:
+            n = max(1, len(pool) // 2 + random.randint(0, 1))
+            to_lose = random.sample(pool, min(n, len(pool)))
+            for item in to_lose:
+                if await db.take_item(conn, s["id"], item, 1):
+                    lost.append(item)
+        remaining = list(pool)
+        for item in lost:
+            if item in remaining:
+                remaining.remove(item)
+        else:
+            stock = await db.get_satchel(s["id"])
+            fish_items = [k for k, v in stock.items() if k.startswith("fish_") and v > 0]
+            for _ in range(min(2, len(fish_items))):
+                if not fish_items:
+                    break
+                item = random.choice(fish_items)
+                if await db.take_item(conn, s["id"], item, 1):
+                    lost.append(item)
+            remaining = []
+        try:
+            await energy_mod.spend(conn, s["id"], LEGGED_FISH_GRAB_ENERGY, action="捞怪鱼")
+        except ValueError:
+            cur = await conn.execute("SELECT energy FROM stewards WHERE id=?", (s["id"],))
+            row = await cur.fetchone()
+            if row:
+                await conn.execute(
+                    "UPDATE stewards SET energy=0 WHERE id=?",
+                    (s["id"],),
+                )
+        msg = flavor.pick(flavor.LEGGED_FISH_GRAB)
+        if lost:
+            names = [ITEM_NAMES.get(x, x) for x in lost]
+            msg += f"\n失去：{', '.join(names)}"
+        else:
+            msg += "\n（舱里没剩鱼可丢，但精力照扣）"
+
+    await _save_voyage_encounter(
+        conn,
+        voyage["id"],
+        {"voyage_fish": remaining},
+        "sailing",
+    )
+    return msg
 
 
 async def _refresh_steward(conn: aiosqlite.Connection, steward_id: int) -> dict[str, Any]:
@@ -557,6 +746,19 @@ async def _finish_voyage(steward_id: int, voyage: dict[str, Any], choice: str | 
     async with aiosqlite.connect(db.DB_PATH) as conn:
         s = await _refresh_steward(conn, steward_id)
         fish_loot: list[str] = []
+        if voyage.get("status") == "fish_encounter":
+            leg_choice = choice if choice in ("compliment", "release", "catch", "grab") else "release"
+            leg_msg = await _resolve_legged_fish(conn, s, voyage, leg_choice)
+            await conn.commit()
+            voyage = await _get_voyage(conn, steward_id)
+            if not voyage:
+                return leg_msg
+            prefix = leg_msg + "\n"
+            if voyage.get("status") == "hailed":
+                return prefix + await _finish_voyage(steward_id, voyage, choice)
+            if voyage.get("status") == "sailing" and db.now() >= voyage["returns_at"]:
+                return prefix + await _finish_voyage(steward_id, voyage)
+            return prefix + "航程继续。可用 tide_ops net|cast 钓鱼，或等归港 voyage_ops return"
         if voyage.get("status") == "hailed":
             if choice is None and not _hail_expired(voyage):
                 raw = voyage.get("encounter") or "{}"
@@ -609,6 +811,14 @@ async def voyage_ops(key_id: int, command: str) -> str:
             auto = await _finish_voyage(s["id"], voyage)
             prefix = f"{pulse}\n" if pulse else ""
             return prefix + auto
+        if voyage and voyage.get("status") == "fish_encounter":
+            raw = voyage.get("encounter") or "{}"
+            try:
+                payload = json.loads(raw)
+            except json.JSONDecodeError:
+                payload = {}
+            prefix = f"{pulse}\n" if pulse else ""
+            return prefix + _legged_fish_prompt(payload)
         if voyage and db.now() >= voyage["returns_at"]:
             auto = await _finish_voyage(s["id"], voyage)
             prefix = f"{pulse}\n" if pulse else ""
@@ -624,6 +834,7 @@ async def voyage_ops(key_id: int, command: str) -> str:
             left = max(0, voyage["returns_at"] - db.now())
             route = VOYAGE_ROUTES[voyage["route"]]["label"]
             lines.append(f"出海中: {route}，约 {left // 60} 分 {left % 60} 秒后归港")
+            lines.append("海上钓鱼: tide_ops net|cast（出海期间随机遇未命名小鱼）")
         else:
             lines.append("出海: 无 — depart near|far|deep")
         lines.append(world.climate_line())
@@ -705,10 +916,10 @@ async def voyage_ops(key_id: int, command: str) -> str:
                 duration = int(duration * 1.15)
             await conn.execute(
                 """
-                INSERT INTO voyages (steward_id, route, departed_at, returns_at, status)
-                VALUES (?,?,?,?, 'sailing')
+                INSERT INTO voyages (steward_id, route, departed_at, returns_at, status, encounter)
+                VALUES (?,?,?,?, 'sailing', ?)
                 """,
-                (s["id"], route_key, now, now + duration),
+                (s["id"], route_key, now, now + duration, json.dumps({"voyage_fish": []})),
             )
             voyage = await _get_voyage(conn, s["id"])
             assert voyage
@@ -729,6 +940,8 @@ async def voyage_ops(key_id: int, command: str) -> str:
             voyage = await _get_voyage(conn, s["id"])
         if not voyage:
             raise ValueError("没有截停中的航程")
+        if voyage.get("status") == "fish_encounter":
+            raise ValueError("未命名小鱼还在 — 先 voyage_ops compliment|release|catch|grab")
         if voyage.get("status") == "sailing":
             if db.now() < voyage["returns_at"]:
                 left = voyage["returns_at"] - db.now()
@@ -751,6 +964,8 @@ async def voyage_ops(key_id: int, command: str) -> str:
             voyage = await _get_voyage(conn, s["id"])
         if not voyage:
             return "没有进行中的航程"
+        if voyage.get("status") == "fish_encounter":
+            raise ValueError("未命名小鱼还在 — 先 voyage_ops compliment|release|catch|grab")
         if db.now() < voyage["returns_at"]:
             left = voyage["returns_at"] - db.now()
             raise ValueError(f"尚未归港，还需约 {left // 60} 分 {left % 60} 秒")
@@ -761,11 +976,24 @@ async def voyage_ops(key_id: int, command: str) -> str:
             voyage = await _get_voyage(conn, s["id"])
         if not voyage:
             return "没有进行中的航程"
+        if voyage.get("status") == "fish_encounter":
+            raise ValueError("未命名小鱼还在 — 先 voyage_ops compliment|release|catch|grab")
         if db.now() < voyage["returns_at"]:
             left = voyage["returns_at"] - db.now()
             return f"仍在 {VOYAGE_ROUTES[voyage['route']]['label']}，约 {left // 60} 分后可用 return"
         return await _finish_voyage(s["id"], voyage)
 
+    if verb in ("compliment", "release", "catch", "grab"):
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            voyage = await _get_voyage(conn, s["id"])
+            if not voyage or voyage.get("status") != "fish_encounter":
+                raise ValueError("没有未命名小鱼遭遇 — 出海期间 tide_ops net|cast 钓鱼才可能碰上")
+            msg = await _resolve_legged_fish(conn, s, voyage, verb)
+            await conn.commit()
+        prefix = f"{pulse}\n" if pulse else ""
+        return prefix + msg
+
     raise ValueError(
-        f"未知 voyage 指令: {command}（status/buy/repair/depart/return/moor/fight/flee/parley/bribe）"
+        f"未知 voyage 指令: {command}（status/buy/repair/depart/return/moor/"
+        "compliment|release|catch|grab/fight|flee|parley|bribe）"
     )

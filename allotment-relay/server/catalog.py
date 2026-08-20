@@ -51,6 +51,15 @@ SEA_CATCH = {
     "razorclam": {"name": "竹蛏", "emoji": "🔪", "sell": 16, "tides": ["ebb"], "zones": ["shore"], "rarity": 2, "pen": False},
     "seaurchin": {"name": "海胆", "emoji": "🦔", "sell": 30, "tides": ["ebb", "slack"], "zones": ["near", "shore"], "rarity": 3, "pen": False},
     "oarfish": {"name": "皇带鱼", "emoji": "🎏", "sell": 72, "tides": ["flood"], "zones": ["deep"], "rarity": 6, "pen": False},
+    "walkblue": {
+        "name": "未命名小鱼",
+        "emoji": "🐟",
+        "sell": 52,
+        "tides": ["slack", "flood"],
+        "zones": ["far", "deep"],
+        "rarity": 5,
+        "pen": False,
+    },
 }
 
 RANDOM_LOOT = [
