@@ -62,7 +62,8 @@ async def steward_enroll(name: str, motto: str = "", badge: str = "naturalist", 
     s = await db.enroll_steward(_kid(), name, motto, badge, portrait)
     return (
         f"欢迎 {s['name']}！{s['tickets']} 工分票、{s['parcel_count']} 块份地、 starter 物资。\n"
-        "下一步 relay_manual() 或 plot_ops('status')"
+        "下一步 relay_manual() 或 plot_ops('status')。\n"
+        "小提示：逾篱摘取是随机事件，别找 scrump 指令啦。"
     )
 
 
@@ -86,7 +87,7 @@ async def guild_shift() -> str:
     return await game.guild_shift(_kid())
 
 
-@mcp.tool(description="份地：sow/tend/gather/forage/scrump/hedge_note/amends/cohort/weather/buy。scrump 名字 地块号")
+@mcp.tool(description="份地：sow/tend/gather/forage/hedge_note/amends/cohort/weather/buy。逾篱摘取为随机事件")
 async def plot_ops(command: str) -> str:
     return await game.plot_ops(_kid(), command)
 

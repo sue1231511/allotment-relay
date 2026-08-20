@@ -18,7 +18,7 @@ WEATHER_CYCLE = 7200
 TIDE_CYCLE = 3600
 DAILY_BREW_LIMIT = 4
 
-# 逾篱摘取 scrump — 份地题材里的「偷菜」，规则自成一套
+# 逾篱摘取 — 随机事件触发（见 events.py），非手动指令
 SCRUMP_ACTIVE_WINDOW = 1200
 SCRUMP_FINE_TICKETS = 10
 SCRUMP_LOOT_CROP = 0.55

@@ -4,7 +4,7 @@ from typing import Any
 
 import aiosqlite
 
-from . import db, events, world
+from . import db, events, flavor, world
 from .catalog import (
     CROPS,
     FORAGE_LOOT,
@@ -21,10 +21,6 @@ from .config import (
     FORAGE_COOLDOWN_DAY,
     GREENHOUSE_COST,
     GUILD_TICKETS,
-    SCRUMP_ACTIVE_WINDOW,
-    SCRUMP_FINE_TICKETS,
-    SCRUMP_LOOT_CROP,
-    SCRUMP_LOOT_SEED,
     SWAP_CLAIM_FEE,
 )
 
@@ -86,7 +82,7 @@ async def relay_manual() -> str:
         "",
         "工具一览：",
         "  steward_enroll / steward_sheet / steward_revise / peer_sheet",
-        "  plot_ops — sow/tend/gather/forage/scrump/hedge_note/amends/cohort/weather/buy",
+        "  plot_ops — sow/tend/gather/forage/hedge_note/amends/cohort/weather/buy",
         "  tide_ops — net/status",
         "  pen_ops — erect/stock/feed/harvest（渔排养鱼）",
         "  voyage_ops — buy/repair/depart/return（购船出海）",
@@ -104,6 +100,10 @@ async def relay_manual() -> str:
         "",
         "plot_ops 等支持用 ; 串联。",
         "",
+        "【逾篱摘取】",
+        "  不再手动 scrump——打理/收成/边际采集时随机触发",
+        "  可能被人摘、也可能手滑摘邻居；可 hedge_note / amends 留话致歉",
+        "",
         "【意外事件】",
         "  每次操作随机组合事件（非固定剧本）：文本、损失、修复成本均随机",
         "  全服脉冲亦随机生成，incident_ops scan 看风险",
@@ -116,13 +116,7 @@ async def relay_manual() -> str:
         "  donate/draw — 联盟储藏室共享物资",
         "",
         "【水陆生产】",
-        "  pen_ops erect → stock 品种名 → feed → harvest（26 种渔获，14 种可养）",
-        "  voyage_ops buy skiff|cutter|drifter → depart near|far|deep → return",
-        "  出海需先购船；阵风/迷雾/意外事件会让渔排和航程同样不顺",
-        "",
-        "逾篱摘取 scrump：plot_ops('scrump 名字 地块号') — 仅可摘已成熟、非温室份地。",
-        "对方 20 分钟内活跃过会被逮，罚工分票；scout 吉祥物减半。",
-        "摘完可 hedge_note 留话，或 amends 公开致歉。互助仍可用 swap_ops / handoff。",
+        "  pen_ops / voyage_ops — 渔排养鱼、购船出海（见 relay_manual 工具列表）",
         f"徽章可选：{', '.join(BADGES)}",
     ])
 
@@ -211,6 +205,7 @@ async def guild_shift(key_id: int) -> str:
         await conn.commit()
     await db.add_chronicle("guild", f"{s['name']} 完成一轮 guild 轮值，+{GUILD_TICKETS} 票", s["id"])
     msg = f"获得 {GUILD_TICKETS} 工分票"
+    msg += flavor.maybe_suffix(flavor.GUILD_SUFFIX)
     return f"{msg}\n{extra}" if extra else msg
 
 
@@ -296,7 +291,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
                 await conn.execute("UPDATE parcels SET tended=1 WHERE id=?", (pid,))
             extra = await events.roll_after_action(s, "tend", conn)
             await conn.commit()
-        msg = f"打理了 {len(rows)} 块份地" if rows else "没有待打理的份地"
+        msg = f"打理了 {len(rows)} 块份地" if rows else "没有待打理的份地——苗都乖，或你还没种"
+        msg += flavor.maybe_suffix(flavor.TEND_SUFFIX)
         return f"{msg}\n{extra}" if extra else msg
 
     if verb == "gather":
@@ -347,6 +343,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
             base = f"收成: {', '.join(got)}\n{bonus_msg}"
             return f"{base}\n{extra}" if extra else base
         base = f"收成: {', '.join(got)}"
+        base += flavor.maybe_suffix(flavor.GATHER_SUFFIX)
         return f"{base}\n{extra}" if extra else base
 
     if verb == "forage":
@@ -363,6 +360,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
             await conn.commit()
         await db.add_chronicle("forage", f"{s['name']} 在份地边际采到 {label}", s["id"])
         msg = f"边际采集：{label} x{qty}"
+        msg += flavor.maybe_suffix(flavor.FORAGE_SUFFIX)
         return f"{msg}\n{extra}" if extra else msg
 
     if verb == "post" and len(parts) >= 3:
@@ -378,68 +376,11 @@ async def _plot_one(s: dict, cmd: str) -> str:
             await conn.commit()
         return f"已在公告栏 @ {peer}"
 
-    if verb == "scrump" and len(parts) >= 3:
-        peer_name, slot_s = parts[1], parts[2]
-        slot = int(slot_s)
-        peer = await db.get_steward_by_name(peer_name)
-        if not peer:
-            raise ValueError(f"找不到 {peer_name}")
-        if peer["id"] == s["id"]:
-            raise ValueError("不能摘自己的份地")
-        async with aiosqlite.connect(db.DB_PATH) as conn:
-            conn.row_factory = aiosqlite.Row
-            plot = dict(await (await conn.execute(
-                "SELECT * FROM parcels WHERE steward_id=? AND slot=?",
-                (peer["id"], slot),
-            )).fetchone() or {})
-            if not plot or not plot.get("crop"):
-                raise ValueError(f"{peer_name} 的 #{slot} 没有可摘的作物")
-            if plot.get("greenhouse"):
-                raise ValueError("温室份地受联盟条例保护，不可 scrump")
-            if not _ready(plot):
-                raise ValueError("还没成熟，逾篱也摘不走")
-            crop = plot["crop"]
-            meta = CROPS[crop]
-            active = db.now() - peer["last_active_at"] <= SCRUMP_ACTIVE_WINDOW
-            weather = world.current_weather()
-            if weather == "misty":
-                active = active and db.now() - peer["last_active_at"] <= 600
-            elif weather == "gale" and active:
-                active = True
-            caught = active
-            fine = SCRUMP_FINE_TICKETS
-            if caught and s.get("mascot_trait") == "scout":
-                fine = max(1, fine // 2)
-            loot_msg = "空手"
-            if not caught:
-                roll = random.random()
-                bonus = 0.05 if s.get("mascot_trait") == "lucky" else 0.0
-                if roll < SCRUMP_LOOT_CROP + bonus:
-                    await db.add_item(conn, s["id"], f"crop_{crop}", 1)
-                    loot_msg = meta["name"]
-                elif roll < SCRUMP_LOOT_CROP + SCRUMP_LOOT_SEED + bonus:
-                    await db.add_item(conn, s["id"], f"seed_{crop}", 1)
-                    loot_msg = f"{meta['name']}种"
-            await conn.execute(
-                "UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0 WHERE id=?",
-                (plot["id"],),
-            )
-            if caught:
-                await conn.execute(
-                    "UPDATE stewards SET tickets=MAX(0, tickets-?) WHERE id=?",
-                    (fine, s["id"]),
-                )
-            await conn.commit()
-        if caught:
-            msg = (
-                f"{s['name']} 逾篱摘 {peer_name} 的 #{slot} 被逮，"
-                f"罚 {fine} 票，{meta['name']} 仍被带走"
-            )
-            await db.add_chronicle("scrump_busted", msg, s["id"], peer["id"])
-            return msg
-        msg = f"{s['name']} 从 {peer_name} 的 #{slot} scrump 了 {loot_msg}"
-        await db.add_chronicle("scrump", msg, s["id"], peer["id"])
-        return msg
+    if verb == "scrump":
+        return (
+            "逾篱摘取已改为随机事件——继续 tend/gather/forage 吧，"
+            "篱笆自己会出剧情。想留话用 hedge_note，想道歉用 amends。"
+        )
 
     if verb == "hedge_note" and len(parts) >= 3:
         peer, text = parts[1], " ".join(parts[2:])
@@ -459,6 +400,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
         if not peer:
             raise ValueError("找不到该管理员")
         msg = f"{s['name']} 向 {peer['name']} 为逾篱之事致歉"
+        msg += f" — {flavor.pick(flavor.AMENDS_QUIPS)}"
         await db.add_chronicle("amends", msg, s["id"], peer["id"])
         return msg
 
@@ -501,6 +443,7 @@ async def tide_ops(key_id: int, command: str) -> str:
             await db.add_item(conn, s["id"], f"fish_{catch}", 1)
             await conn.commit()
         msg = f"{s['name']} 在{world.tide_label(tide)}网到 {meta['emoji']}{meta['name']}"
+        msg += flavor.maybe_suffix(flavor.NET_SUFFIX)
         await db.add_chronicle("tide", msg, s["id"])
         from . import multi
         bonus = await multi.on_league_item(s["id"], f"fish_{catch}", 1)

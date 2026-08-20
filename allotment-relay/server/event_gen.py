@@ -1,4 +1,4 @@
-"""Procedural random events — composed at runtime, not hardcoded incident tables."""
+"""Procedural random events — composed at runtime with flavor.py voice."""
 
 from __future__ import annotations
 
@@ -6,8 +6,9 @@ import random
 from dataclasses import dataclass, field
 from typing import Any
 
-from . import config, world
+from . import world
 from .catalog import FORAGE_LOOT, ITEM_NAMES, RANDOM_LOOT, fish_keys_for_tide, fish_keys_for_zones
+from . import flavor
 
 
 TRIGGER_DOMAIN = {
@@ -27,6 +28,8 @@ TRIGGER_DOMAIN = {
 
 ALL_TRIGGERS = set(TRIGGER_DOMAIN)
 
+SCRUMP_TRIGGERS = {"tend", "gather", "forage", "guild"}
+
 
 @dataclass
 class GeneratedEvent:
@@ -39,32 +42,6 @@ class GeneratedEvent:
     effects: list[str] = field(default_factory=list)
 
 
-def _pick(pool: list[str]) -> str:
-    return random.choice(pool)
-
-
-def _compose_label(domain: str, kind: str) -> str:
-    if kind == "good":
-        pools = {
-            "land": ["边际馈赠", "访客留礼", "意外丰收", "篱笆好运"],
-            "sea": ["满网惊喜", "退潮遗宝", "渔汛余泽", "浪尖礼物"],
-            "pen": ["池面吉兆", "放养顺遂", "水纹赐福"],
-            "voyage": ["顺风归港", "舱满星照", "航道眷顾"],
-            "guild": ["档口红包", "巡值嘉奖"],
-            "hearth": ["灶台灵光", "香气招财"],
-        }
-    else:
-        pools = {
-            "land": ["份地波折", "篱间祸事", "作物劫难", "田间意外"],
-            "sea": ["渔网波折", "岸口祸事", "潮汐反噬"],
-            "pen": ["渔排险情", "池面祸端", "放养波折"],
-            "voyage": ["海上险情", "航道波折", "舱底祸事"],
-            "guild": ["巡查风波", "档口罚单"],
-            "hearth": ["灶台失手", "烟火意外"],
-        }
-    return _pick(pools.get(domain, ["风云突变"]))
-
-
 def _ticket_range(domain: str, kind: str) -> tuple[int, int]:
     if kind == "good":
         return (8, 18)
@@ -75,6 +52,7 @@ def _ticket_range(domain: str, kind: str) -> tuple[int, int]:
         "voyage": (5, 14),
         "guild": (6, 12),
         "hearth": (3, 8),
+        "scrump": (4, 10),
     }
     return ranges.get(domain, (4, 10))
 
@@ -86,13 +64,25 @@ def generate_event(
     good: bool,
     pen: dict[str, Any] | None = None,
     voyage: bool = False,
+    allow_scrump: bool = False,
 ) -> GeneratedEvent | None:
     domain = TRIGGER_DOMAIN.get(trigger)
     if not domain:
         return None
 
+    # 逾篱摘取 — 纯随机事件，不再靠手动指令
+    if allow_scrump and trigger in SCRUMP_TRIGGERS and not good and random.random() < 0.18:
+        sub = "scrump_victim" if random.random() < 0.55 else "scrump_attempt"
+        return GeneratedEvent(
+            kind="bad",
+            label=flavor.event_label("scrump", "bad"),
+            detail="……",  # filled by apply
+            repair_tickets=random.randint(4, 8) if sub == "scrump_attempt" else 0,
+            effects=[sub],
+        )
+
     kind = "good" if good else "bad"
-    label = _compose_label(domain, kind)
+    label = flavor.event_label(domain, kind)
     effects: list[str] = []
     detail_parts: list[str] = []
     repair_tickets = 0
@@ -105,66 +95,95 @@ def generate_event(
 
     if kind == "bad":
         roll = random.random()
-        if domain == "land" and roll < 0.34:
+        if domain == "land" and roll < 0.32:
             effects.append("plot_untend")
-            detail_parts.append(
-                f"{_pick(['蛞蝓', '鼠窜', '寒露', '杂草'])}掠过 #{slot}，得重新打理"
-            )
-        elif domain == "land" and roll < 0.52:
+            detail_parts.append(flavor.fill(
+                flavor.pick(flavor.LAND_BAD),
+                who=flavor.pick(flavor.WHO_LAND),
+                slot=slot,
+                mess=flavor.pick(flavor.MESS_LAND),
+            ))
+        elif domain == "land" and roll < 0.48:
             effects.append("plot_wreck")
-            detail_parts.append(f"{_pick(['阵风', '冰雹', '野狗'])}掀翻了 #{slot} 的育苗盘")
-        elif domain == "land" and roll < 0.68:
+            detail_parts.append(flavor.fill(
+                flavor.pick(flavor.LAND_WRECK),
+                slot=slot,
+                mess=flavor.pick(flavor.MESS_LAND),
+            ))
+        elif domain == "land" and roll < 0.62:
             effects.append("plot_delay")
-            detail_parts.append(f"{_pick(['咸雾', '阴潮', '霜冻'])}打乱 #{slot} 的生长节奏")
+            detail_parts.append(
+                f"#{slot} 被{flavor.pick(['咸雾', '阴潮', '霜冻', '睡过头'])}耽误了一程"
+            )
         elif domain == "land":
             effects.append("steal_item")
-            detail_parts.append(f"{_pick(['鼠患', '潮虫', '窃贼'])}动了你的储备")
+            detail_parts.append(flavor.fill(
+                flavor.pick(flavor.LAND_STEAL),
+                who=flavor.pick(flavor.WHO_LAND),
+            ))
 
-        elif domain == "sea" and roll < 0.45:
+        elif domain == "sea" and roll < 0.5:
             effects.append("net_cost")
             extra = random.randint(4, 10)
             effects.append(f"ticket_fine:{extra}")
-            detail_parts.append(f"{_pick(['暗礁', '废网', '缠枝'])}挂住了渔网（-{extra} 票）")
+            detail_parts.append(flavor.fill(
+                flavor.pick(flavor.SEA_BAD),
+                mess=flavor.pick(flavor.MESS_SEA),
+                n=extra,
+            ))
         elif domain == "sea":
             effects.append("steal_item")
-            detail_parts.append(f"{_pick(['浪头', '贼鸥', '漏袋'])}卷走了些物资")
+            detail_parts.append(f"{flavor.pick(flavor.MESS_SEA)}卷走点东西，网说它不背锅")
 
         elif domain == "pen" and pen and roll < 0.5:
             effects.append("pen_unfeed")
-            detail_parts.append(f"{_pick(['藻膜', '浮渣', '油膜'])}封住 #{slot} 号渔排，需再投饵")
+            detail_parts.append(flavor.fill(
+                flavor.pick(flavor.PEN_BAD),
+                slot=slot,
+                mess=flavor.pick(flavor.MESS_PEN),
+            ))
         elif domain == "pen" and pen:
             effects.append("pen_wreck")
-            detail_parts.append(f"#{slot} 号渔排{_pick(['缺氧', '倒灌', '寒流'])}，鱼苗尽失")
+            detail_parts.append(f"#{slot} 号渔排{flavor.pick(['缺氧', '倒灌', '闹脾气'])}，鱼苗集体跑路")
 
-        elif domain == "voyage" and roll < 0.38:
+        elif domain == "voyage" and roll < 0.4:
             effects.append("boat_damage")
-            detail_parts.append(f"{_pick(['船底渗漏', '舵索断裂', '舱缝进水'])}，须修船再出海")
-        elif domain == "voyage" and voyage and roll < 0.62:
+            detail_parts.append(flavor.fill(
+                flavor.pick(flavor.VOYAGE_BAD),
+                mess=flavor.pick(flavor.VOYAGE_MESS),
+            ))
+        elif domain == "voyage" and voyage and roll < 0.65:
             delay = random.randint(300, 900)
             effects.append(f"voyage_delay:{delay}")
-            detail_parts.append(f"{_pick(['无风停滞', '迷雾迷航', '逆流顶浪'])}，归港延误 {delay // 60} 分钟")
+            detail_parts.append(
+                f"{flavor.pick(['无风带', '迷雾', '逆流'])}多耗你 {delay // 60} 分钟，海在摸鱼"
+            )
         elif domain == "voyage":
             effects.append("boat_damage")
-            detail_parts.append(f"出航前发现{_pick(['缆绳磨损', '帆眼松动', '舱底暗裂'])}")
+            detail_parts.append(f"出航前{flavor.pick(flavor.VOYAGE_MESS)}——今天不宜硬刚")
 
         elif domain == "guild":
             fine = random.randint(5, 12)
             effects.append(f"ticket_fine:{fine}")
-            detail_parts.append(f"联盟巡查：{_pick(['篱笆松脱', '档口杂乱', '消防桶空'])}，罚 {fine} 票")
+            detail_parts.append(
+                f"巡查员皱眉：「{flavor.pick(['篱笆松了', '档口太乱', '桶是空的', '猫在份地上开会'])}」——{fine} 票"
+            )
 
         elif domain == "hearth" and steward.get("mascot_name") and roll < 0.5:
             delta = -random.randint(12, 22)
             effects.append(f"mascot_spirit:{delta}")
-            detail_parts.append(f"{_pick(['闷雷', '锅崩', '烟呛'])}把吉祥物吓退了士气")
+            detail_parts.append(
+                f"{flavor.pick(['锅崩', '烟呛', '闷雷'])}，{steward['mascot_name']} 士气 {delta}"
+            )
         elif domain == "hearth":
             fine = random.randint(3, 7)
             effects.append(f"ticket_fine:{fine}")
-            detail_parts.append(f"灶台{_pick(['糊锅', '溢汤', '熄火'])}，浪费 {fine} 票")
+            detail_parts.append(f"灶台{flavor.pick(['糊锅', '溢汤', '把盐当糖'])}，-{fine} 票")
 
         else:
             fine = random.randint(*_ticket_range(domain, kind))
             effects.append(f"ticket_fine:{fine}")
-            detail_parts.append(f"一波{_pick(['小劫', '波折', '意外'])}，损失 {fine} 票")
+            detail_parts.append(f"联盟今天跟你开玩笑，-{fine} 票")
 
         lo, hi = _ticket_range(domain, kind)
         repair_tickets = random.randint(lo, hi)
@@ -178,36 +197,38 @@ def generate_event(
         if roll < 0.28:
             bonus = random.randint(*_ticket_range(domain, "good"))
             effects.append(f"ticket_bonus:{bonus}")
-            detail_parts.append(f"{_pick(['路人', '邻居', '过客', '巡潮员'])}留下 {bonus} 票")
-        elif roll < 0.55 and domain in {"sea", "voyage", "pen"}:
+            detail_parts.append(flavor.fill(flavor.pick(flavor.GOOD_TICKETS), n=bonus))
+        elif roll < 0.52 and domain in {"sea", "voyage", "pen"}:
             zones = {"near", "shore"} if domain == "pen" else {"near", "far", "deep", "shore"}
             if domain == "voyage":
                 zones = {"far", "deep"}
             fk = random.choice(fish_keys_for_zones(zones) or ["herring"])
             qty = random.randint(1, 2)
+            item = ITEM_NAMES.get(f"fish_{fk}", fk)
             effects.append(f"loot:fish_{fk}:{qty}")
-            detail_parts.append(f"意外收获 {ITEM_NAMES.get(f'fish_{fk}', fk)} x{qty}")
+            detail_parts.append(flavor.fill(flavor.pick(flavor.GOOD_FISH), item=f"{item} x{qty}"))
         elif roll < 0.72:
             item, qty = random.choice(RANDOM_LOOT)
+            iname = ITEM_NAMES.get(item, item)
             effects.append(f"loot:{item}:{qty}")
-            detail_parts.append(f"捡到 {ITEM_NAMES.get(item, item)} x{qty}")
+            detail_parts.append(flavor.fill(flavor.pick(flavor.GOOD_LOOT), item=f"{iname} x{qty}"))
         else:
             bonus = random.randint(6, 14)
             effects.append(f"ticket_bonus:{bonus}")
-            detail_parts.append(f"{_pick(['退潮', '晨雾', '顺风'])}带来 {bonus} 票小确幸")
+            detail_parts.append(f"{flavor.pick(['退潮', '晨雾', '过路鸟'])}送你 {bonus} 票，意外之喜")
 
         if weather == "clear" and random.random() < 0.2:
-            item, qty = random.choice(FORAGE_LOOT[:3])[0], 1
-            effects.append(f"loot:{item}:{qty}")
-            detail_parts.append(f"顺道得 {ITEM_NAMES.get(item, item)}")
+            item = flavor.pick([x[0] for x in FORAGE_LOOT[:3]])
+            effects.append(f"loot:{item}:1")
+            detail_parts.append(f"顺路捡到 {ITEM_NAMES.get(item, item)}，赚")
 
     if not detail_parts:
         return None
 
     if weather == "gale" and kind == "bad" and random.random() < 0.3:
-        detail_parts.append("（阵风加剧）")
+        detail_parts.append("阵风在一旁起哄")
     if tide == "flood" and domain == "sea" and kind == "bad" and random.random() < 0.25:
-        detail_parts.append("（涨潮作祟）")
+        detail_parts.append("涨潮也在看热闹")
 
     return GeneratedEvent(
         kind=kind,
@@ -221,32 +242,31 @@ def generate_event(
 
 
 def generate_world_pulse() -> dict[str, Any]:
-    """Random server-wide pulse with procedural label + effect type."""
     effect_types = [
-        ("storm_front", "bad", "户外份地需重新打理"),
-        ("fish_run", "good", "渔网更容易有收获"),
-        ("blight_whisper", "bad", "收成时有小概率折损"),
-        ("loot_surge", "good", "交换台台阶上多了漂流物资"),
-        ("red_tide", "bad", "渔排与撒网更易出问题"),
-        ("calm_sea", "good", "出海报废略降"),
+        ("storm_front", "bad", "户外份地得重打理，苗盘表示抗议"),
+        ("fish_run", "good", "撒网手气上调，渔获更愿意上钩"),
+        ("blight_whisper", "bad", "收成时偶尔会「蒸发」一点点"),
+        ("loot_surge", "good", "交换台台阶像退潮礼包区"),
+        ("red_tide", "bad", "渔排和网都不太给面子"),
+        ("calm_sea", "good", "出海报废略降，适合胆小船长"),
     ]
     effect, kind, hint = random.choice(effect_types)
 
     subjects = {
-        "storm_front": ["风暴前沿", "低压槽", "雷暴脊", "黑云压境"],
-        "fish_run": ["渔汛", "鱼群过境", "银鳞翻浪", "潮线沸腾"],
-        "blight_whisper": ["枯病低语", "霉丝蔓延", "叶脉发黄"],
-        "loot_surge": ["玻璃潮", "漂物汛", "宝箱潮"],
-        "red_tide": ["赤潮", "藻华", "紫水带"],
-        "calm_sea": ["平流", "镜海", "无风带"],
+        "storm_front": ["风暴前沿", "低压槽", "雷暴脊", "黑云压境", "乌云快递"],
+        "fish_run": ["渔汛", "银鳞翻浪", "潮线沸腾", "鱼群开派对"],
+        "blight_whisper": ["枯病低语", "霉丝蔓延", "叶脉发黄", "蔫菜预警"],
+        "loot_surge": ["玻璃潮", "漂物汛", "宝箱潮", "退潮大清仓"],
+        "red_tide": ["赤潮", "藻华", "紫水带", "海的颜色不对"],
+        "calm_sea": ["平流", "镜海", "无风带", "海面躺平"],
     }
-    verbs = ["掠过", "笼罩", "扫过", "渗入", "降临在"]
-    label = _pick(subjects.get(effect, ["异象"]))
-    text = f"{label}{_pick(verbs)}联盟，{hint}"
+    verbs = ["掠过", "笼罩", "扫过", "渗入", "降临在", "打卡"]
+    label = flavor.pick(subjects.get(effect, ["异象"]))
+    text = f"{label}{flavor.pick(verbs)}联盟——{hint}"
     fish_focus = None
     if effect == "fish_run":
-        fish_focus = random.choice(fish_keys_for_tide(world.current_tide()) or list(["herring"]))
-        text += f"（{ITEM_NAMES.get(f'fish_{fish_focus}', fish_focus)} 尤多）"
+        fish_focus = random.choice(fish_keys_for_tide(world.current_tide()) or ["herring"])
+        text += f"（{ITEM_NAMES.get(f'fish_{fish_focus}', fish_focus)} 特别多）"
 
     return {
         "effect": effect,

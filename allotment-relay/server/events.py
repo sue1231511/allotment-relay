@@ -4,8 +4,8 @@ from typing import Any
 
 import aiosqlite
 
-from . import config, db, event_gen, world
-from .catalog import ITEM_NAMES
+from . import config, db, event_gen, flavor, world
+from .catalog import CROPS, ITEM_NAMES
 
 
 def _day_id() -> int:
@@ -21,7 +21,6 @@ def _roll_multiplier(steward: dict[str, Any]) -> float:
         mult *= 0.85
     if steward.get("mascot_trait") == "lucky":
         mult *= 0.72
-    pulse = None  # filled by caller when needed
     return mult
 
 
@@ -79,6 +78,158 @@ async def _steal_random_item(conn: aiosqlite.Connection, steward_id: int) -> str
     qty = 1 if row["quantity"] == 1 else min(row["quantity"], random.randint(1, max(1, row["quantity"] // 2)))
     await db.take_item(conn, steward_id, row["item"], qty)
     return f"{ITEM_NAMES.get(row['item'], row['item'])} x{qty}"
+
+
+def _plot_ready(plot: dict[str, Any]) -> bool:
+    if not plot.get("crop") or not plot.get("planted_at"):
+        return False
+    crop = plot["crop"]
+    base = CROPS[crop]["grow"]
+    mult = world.grow_multiplier(
+        world.current_weather(),
+        bool(plot.get("tended")),
+        bool(plot.get("greenhouse")),
+    )
+    return db.now() - plot["planted_at"] >= int(base * mult)
+
+
+async def _has_peers(conn: aiosqlite.Connection, steward_id: int) -> bool:
+    cur = await conn.execute(
+        "SELECT 1 FROM stewards WHERE enrolled=1 AND id!=? LIMIT 1",
+        (steward_id,),
+    )
+    return await cur.fetchone() is not None
+
+
+async def _random_peer(conn: aiosqlite.Connection, steward_id: int) -> dict[str, Any] | None:
+    conn.row_factory = aiosqlite.Row
+    row = await (await conn.execute(
+        "SELECT * FROM stewards WHERE enrolled=1 AND id!=? ORDER BY RANDOM() LIMIT 1",
+        (steward_id,),
+    )).fetchone()
+    return dict(row) if row else None
+
+
+async def _pick_ripe_plot(conn: aiosqlite.Connection, steward_id: int) -> dict[str, Any] | None:
+    conn.row_factory = aiosqlite.Row
+    rows = [
+        dict(r) for r in await (await conn.execute(
+            """
+            SELECT * FROM parcels
+            WHERE steward_id=? AND crop IS NOT NULL AND greenhouse=0
+            """,
+            (steward_id,),
+        )).fetchall()
+    ]
+    ready = [p for p in rows if _plot_ready(p)]
+    return random.choice(ready) if ready else None
+
+
+async def _scrump_victim(
+    conn: aiosqlite.Connection,
+    steward: dict[str, Any],
+) -> tuple[str, int | None, int | None] | None:
+    plot = await _pick_ripe_plot(conn, steward["id"])
+    if not plot:
+        return None
+    peer = await _random_peer(conn, steward["id"])
+    thief = peer["name"] if peer else flavor.pick(["过路家伙", "无名之手", "篱笆外的影子"])
+    crop = plot["crop"]
+    meta = CROPS[crop]
+    await conn.execute(
+        "UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0 WHERE id=?",
+        (plot["id"],),
+    )
+    detail = flavor.fill(
+        flavor.pick(flavor.SCRUMP_VICTIM),
+        thief=thief,
+        slot=plot["slot"],
+        crop=meta["name"],
+    )
+    action = "scrump"
+    await conn.execute(
+        "INSERT INTO chronicle (action, actor_id, target_id, text, created_at) VALUES (?, ?, ?, ?, ?)",
+        (
+            action,
+            peer["id"] if peer else None,
+            steward["id"],
+            f"{thief} 逾篱摘了 {steward['name']} 的 {meta['name']}",
+            db.now(),
+        ),
+    )
+    return detail, plot["id"], peer["id"] if peer else None
+
+
+async def _scrump_attempt(
+    conn: aiosqlite.Connection,
+    steward: dict[str, Any],
+) -> tuple[str, int | None, int | None] | None:
+    peer = await _random_peer(conn, steward["id"])
+    if not peer:
+        return None
+    plot = await _pick_ripe_plot(conn, peer["id"])
+    if not plot:
+        return None
+    crop = plot["crop"]
+    meta = CROPS[crop]
+    active = db.now() - peer["last_active_at"] <= config.SCRUMP_ACTIVE_WINDOW
+    weather = world.current_weather()
+    if weather == "misty":
+        active = active and db.now() - peer["last_active_at"] <= 600
+    elif weather == "gale":
+        active = True
+    caught = active
+    fine = config.SCRUMP_FINE_TICKETS
+    if caught and steward.get("mascot_trait") == "scout":
+        fine = max(1, fine // 2)
+    loot = flavor.pick(flavor.SCRUMP_EMPTY)
+    if not caught:
+        roll = random.random()
+        bonus = 0.05 if steward.get("mascot_trait") == "lucky" else 0.0
+        if roll < config.SCRUMP_LOOT_CROP + bonus:
+            await db.add_item(conn, steward["id"], f"crop_{crop}", 1)
+            loot = meta["name"]
+        elif roll < config.SCRUMP_LOOT_CROP + config.SCRUMP_LOOT_SEED + bonus:
+            await db.add_item(conn, steward["id"], f"seed_{crop}", 1)
+            loot = f"{meta['name']}种"
+        detail = flavor.fill(
+            flavor.pick(flavor.SCRUMP_SUCCESS),
+            crop=loot,
+            victim=peer["name"],
+            slot=plot["slot"],
+        )
+        action = "scrump"
+    elif caught:
+        await conn.execute(
+            "UPDATE stewards SET tickets=MAX(0, tickets-?) WHERE id=?",
+            (fine, steward["id"]),
+        )
+        detail = flavor.fill(
+            flavor.pick(flavor.SCRUMP_CAUGHT),
+            slot=plot["slot"],
+            victim=peer["name"],
+            fine=fine,
+        )
+        action = "scrump_busted"
+    else:
+        detail = flavor.pick(flavor.SCRUMP_EMPTY)
+        action = "scrump"
+    await conn.execute(
+        "UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0 WHERE id=?",
+        (plot["id"],),
+    )
+    await conn.execute(
+        "INSERT INTO chronicle (action, actor_id, target_id, text, created_at) VALUES (?, ?, ?, ?, ?)",
+        (
+            action,
+            steward["id"],
+            peer["id"],
+            f"{steward['name']} ↔ {peer['name']} #{plot['slot']} {loot}",
+            db.now(),
+        ),
+    )
+    hint = flavor.pick(flavor.HEDGE_QUIPS)
+    return f"{detail}（{hint}；可 plot_ops amends {peer['name']}）", plot["id"], peer["id"]
 
 
 async def _apply_effects(
@@ -181,28 +332,44 @@ async def roll_after_action(
     if pulse and pulse.get("effect_type") == "red_tide" and trigger in {"net", "pen_feed", "pen_harvest"}:
         good = False
 
+    allow_scrump = await _has_peers(conn, steward["id"])
     event = event_gen.generate_event(
         trigger,
         steward,
         good=good,
         pen=pen,
         voyage=voyage is not None,
+        allow_scrump=allow_scrump,
     )
     if not event:
         return None
 
     plot_id_holder: list[int | None] = [None]
+    is_scrump = False
     try:
+        if "scrump_victim" in event.effects:
+            res = await _scrump_victim(conn, steward)
+            if not res:
+                return None
+            event.detail, plot_id_holder[0], _ = res
+            event.effects = [e for e in event.effects if e != "scrump_victim"]
+            is_scrump = True
+        elif "scrump_attempt" in event.effects:
+            res = await _scrump_attempt(conn, steward)
+            if not res:
+                return None
+            event.detail, plot_id_holder[0], _ = res
+            event.effects = [e for e in event.effects if e != "scrump_attempt"]
+            is_scrump = True
         await _apply_effects(conn, steward, event.effects, pen=pen, plot_id_holder=plot_id_holder)
     except Exception:
         return None
 
     await _mark_roll(conn, steward["id"])
-    kind = "走运" if event.kind == "good" else "意外"
-    msg = f"⚠ {kind}·{event.label}：{event.detail}"
+    msg = flavor.wrap_event(event.kind, event.label, event.detail)
 
     iid = None
-    if event.kind == "bad":
+    if event.kind == "bad" and not is_scrump:
         key = f"gen:{uuid.uuid4().hex[:10]}"
         cur = await conn.execute(
             """
@@ -234,10 +401,11 @@ async def roll_after_action(
             hint += f"（需 {event.repair_tickets} 票）"
         msg += f"\n→ {hint}"
 
-    await conn.execute(
-        "INSERT INTO chronicle (action, actor_id, target_id, text, created_at) VALUES (?, ?, ?, ?, ?)",
-        ("incident", steward["id"], None, f"{steward['name']} — {event.detail}", db.now()),
-    )
+    if not is_scrump:
+        await conn.execute(
+            "INSERT INTO chronicle (action, actor_id, target_id, text, created_at) VALUES (?, ?, ?, ?, ?)",
+            ("incident", steward["id"], None, f"{steward['name']} — {event.detail}", db.now()),
+        )
     return msg
 
 
@@ -430,7 +598,7 @@ async def incident_ops(key_id: int, command: str) -> str:
         risk = "偏高" if world.current_weather() == "gale" else "平常"
         lines = [
             f"天气 {world.weather_label(w)} / 潮汐 {world.tide_label(t)}",
-            f"意外风险：{risk}（事件每次随机组合，非固定剧本）",
+            f"意外风险：{risk}（事件文案随机组合；逾篱摘取也是随机事件）",
         ]
         if pulse:
             lines.append(f"全服：{pulse['label']}")

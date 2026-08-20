@@ -3,7 +3,7 @@ from typing import Any
 
 import aiosqlite
 
-from . import db, events, world
+from . import db, events, flavor, world
 from .catalog import ITEM_NAMES, SEA_CATCH, voyage_loot_table
 from .config import BOATS, PEN_ERECT_COST, VOYAGE_ROUTES
 from .game import require_steward
@@ -181,6 +181,7 @@ async def pen_ops(key_id: int, command: str) -> str:
         from . import multi
         bonus = await multi.on_league_item(s["id"], f"fish_{species}", qty)
         msg = f"收网 {meta['emoji']}{meta['name']} x{qty}"
+        msg += flavor.maybe_suffix(flavor.PEN_HARVEST_SUFFIX)
         if bonus:
             await db.add_chronicle("league", bonus, None)
             msg += f"\n{bonus}"
@@ -240,6 +241,7 @@ async def _resolve_voyage(conn: aiosqlite.Connection, s: dict[str, Any], voyage:
     await conn.execute("DELETE FROM voyages WHERE id=?", (voyage["id"],))
 
     msg = f"{route['label']}归港：" + "，".join(loot_lines)
+    msg += flavor.maybe_suffix(flavor.VOYAGE_RETURN_BAD if failed else flavor.VOYAGE_RETURN_GOOD)
     if s.get("boat_damaged"):
         msg += "（船损，voyage_ops repair）"
     await conn.execute(
@@ -381,6 +383,7 @@ async def voyage_ops(key_id: int, command: str) -> str:
             f"{s['name']} 出航 {route['label']}（-{route['fuel']} 票），"
             f"约 {duration // 60} 分钟后归港"
         )
+        msg += flavor.maybe_suffix(flavor.VOYAGE_DEPART_SUFFIX)
         await db.add_chronicle("voyage", msg, s["id"])
         if extra:
             return f"{msg}\n{extra}"
