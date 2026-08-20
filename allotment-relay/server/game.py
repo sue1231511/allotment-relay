@@ -31,7 +31,7 @@ from .config import (
 
 
 def _parse_int(token: str, label: str = "数量") -> int:
-    cleaned = token.strip().rstrip(";,")
+    cleaned = token.strip().rstrip(";,").lstrip("#")
     try:
         return int(cleaned)
     except ValueError:
@@ -708,6 +708,10 @@ async def _plot_one(s: dict, cmd: str) -> str:
                     msg += f"（#{slot} {cname} 还需 {min_left} 秒）"
                 else:
                     msg += f"（#{slot} {cname} 还需约 {min_left // 60} 分）"
+                msg += (
+                    "\n等待期间可做: tend · forage · tide_ops net|cast · "
+                    "beach_ops scan · kitchen_ops eat · clinic_ops status"
+                )
             return f"{msg}\n{extra}" if extra else msg
         await db.add_chronicle("gather", f"{s['name']} 收成 {', '.join(got)}", s["id"])
         from . import multi
@@ -779,7 +783,9 @@ async def _plot_one(s: dict, cmd: str) -> str:
             "篱笆自己会出剧情。想留话用 hedge_note，想道歉用 amends。"
         )
 
-    if verb == "hedge_note" and len(parts) >= 3:
+    if verb == "hedge_note":
+        if len(parts) < 3:
+            raise ValueError("用法: plot_ops hedge_note 管理员名 篱笆条正文")
         peer, text = parts[1], " ".join(parts[2:])
         target = await db.get_steward_by_name(peer)
         if not target:
@@ -1306,7 +1312,7 @@ async def swap_ops(key_id: int, command: str) -> str:
 
     if verb == "claim" and len(parts) >= 2:
         from . import social as social_mod
-        lot_id = int(parts[1])
+        lot_id = _parse_int(parts[1], "挂单编号")
         async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             lot = dict(await (await conn.execute(
@@ -1316,7 +1322,7 @@ async def swap_ops(key_id: int, command: str) -> str:
                 raise ValueError("该挂单不存在或已被领走")
             if lot["depositor_id"] == s["id"]:
                 raise ValueError("不能领取自己的挂单")
-            rapport = await social_mod.get_rapport(s["id"], lot["depositor_id"])
+            rapport = await social_mod.get_rapport(s["id"], lot["depositor_id"], conn=conn)
             claim_fee = social_mod.swap_claim_fee(rapport)
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
             if (await cur.fetchone())[0] < claim_fee:
@@ -1329,7 +1335,7 @@ async def swap_ops(key_id: int, command: str) -> str:
         return f"领取 #{lot_id}（-{claim_fee} 票）{fee_note}"
 
     if verb == "cancel" and len(parts) >= 2:
-        lot_id = int(parts[1])
+        lot_id = _parse_int(parts[1], "挂单编号")
         async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             lot = dict(await (await conn.execute(

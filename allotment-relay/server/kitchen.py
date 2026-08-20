@@ -79,7 +79,7 @@ async def kitchen_ops(key_id: int, command: str) -> str:
     exempt = verb in ("eat", "brew", "recipes", "menu")
     s = await require_steward(key_id, exempt_duty=exempt)
 
-    if verb == "menu":
+    if verb in ("menu", "status"):
         lines = [
             "厨房菜单（cook 菜名 / brew 材料 / eat 菜或生食）:",
             "生鱼/作物/野薄荷也可 eat，回少量精力。",

@@ -29,8 +29,17 @@ def _pair_ids(a: int, b: int) -> tuple[int, int]:
     return (a, b) if a < b else (b, a)
 
 
-async def get_rapport(a: int, b: int) -> int:
+async def get_rapport(
+    a: int, b: int, conn: aiosqlite.Connection | None = None,
+) -> int:
     sa, sb = _pair_ids(a, b)
+    if conn is not None:
+        cur = await conn.execute(
+            "SELECT score FROM rapport WHERE steward_a=? AND steward_b=?",
+            (sa, sb),
+        )
+        row = await cur.fetchone()
+        return row[0] if row else 0
     async with db.connect() as conn:
         cur = await conn.execute(
             "SELECT score FROM rapport WHERE steward_a=? AND steward_b=?",

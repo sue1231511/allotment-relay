@@ -14,7 +14,7 @@ from .config import (
     LEAGUE_GOALS,
     ONLINE_WINDOW,
 )
-from .game import require_steward
+from .game import require_steward, _parse_int
 
 
 def _week_id() -> int:
@@ -398,7 +398,7 @@ async def contract_ops(key_id: int, command: str) -> str:
         return msg + "（酬劳已托管）"
 
     if verb == "fill" and len(parts) >= 2:
-        cid = int(parts[1])
+        cid = _parse_int(parts[1], "合约编号")
         async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             c = dict(await (await conn.execute(
@@ -428,7 +428,7 @@ async def contract_ops(key_id: int, command: str) -> str:
         return msg
 
     if verb == "cancel" and len(parts) >= 2:
-        cid = int(parts[1])
+        cid = _parse_int(parts[1], "合约编号")
         async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             c = dict(await (await conn.execute(

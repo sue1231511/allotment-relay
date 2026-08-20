@@ -66,7 +66,7 @@ async def clinic_ops(key_id: int, command: str) -> str:
                 msg = await health.treat_all(conn, s["id"])
             else:
                 msg = await health.treat_one(conn, s["id"], target)
-            await db.add_chronicle("clinic", f"{s['name']} {msg}", s["id"])
+            await db.add_chronicle("clinic", f"{s['name']} {msg}", s["id"], conn=conn)
             await conn.commit()
         return msg
 

@@ -105,8 +105,8 @@ async def market_ops(key_id: int, command: str) -> str:
         )
 
     if verb == "buy" and len(parts) >= 2:
-        lot_id = int(parts[1])
-        qty = int(parts[2]) if len(parts) > 2 else None
+        lot_id = _parse_int(parts[1], "挂单编号")
+        qty = _parse_int(parts[2], "数量") if len(parts) > 2 else None
         async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             lot = dict(await (await conn.execute(
@@ -158,7 +158,7 @@ async def market_ops(key_id: int, command: str) -> str:
         return msg
 
     if verb == "cancel" and len(parts) >= 2:
-        lot_id = int(parts[1])
+        lot_id = _parse_int(parts[1], "挂单编号")
         async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             lot = dict(await (await conn.execute(
