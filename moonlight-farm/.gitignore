@@ -1,0 +1,7 @@
+__pycache__/
+*.py[cod]
+.server/data/
+server/data/
+*.db
+.venv/
+venv/

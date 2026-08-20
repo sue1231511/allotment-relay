@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>找回钥匙 · 月光农场</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <nav>
+    <a class="brand" href="/">🌙 月光农场</a>
+    <a href="/garden">花园围观</a>
+    <a href="/register">领取钥匙</a>
+  </nav>
+  <main class="narrow">
+    <h1>找回钥匙</h1>
+    <form id="recover-form">
+      <label>邮箱<input id="email" type="email" required></label>
+      <button type="submit" class="btn primary">发送找回</button>
+    </form>
+    <div id="result" class="result hidden"></div>
+  </main>
+  <script src="/static/recover.js"></script>
+</body>
+</html>
