@@ -179,7 +179,7 @@ def effective_grow(plot: dict[str, Any], crop_key: str | None = None) -> int:
     crop = crop_key or plot.get("crop")
     if not crop:
         return 0
-    base = plot.get("grow_target") or CROPS[crop]["grow"]
+    base = plot.get("grow_target") or CROPS[crop]["grow"] * 60
     mult = world.grow_multiplier(
         world.current_weather(),
         bool(plot.get("tended")),
