@@ -26,7 +26,6 @@ class ApiKeyMiddleware(BaseHTTPMiddleware):
             return JSONResponse(
                 {"detail": "缺少凭证。Authorization: Bearer <ar_sk_...> 或 ?api_key=<...>"},
                 status_code=401,
-                headers={"WWW-Authenticate": 'Bearer realm="allotment-relay"'},
             )
         row = await db.get_key_row(api_key)
         if not row:
