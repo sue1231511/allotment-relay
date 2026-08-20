@@ -85,6 +85,12 @@ MIST_WIT_LOW = 30
 STANDING_LOW = 28
 STANDING_SHUT = 15
 
+# 身体状况 / 诊所
+START_HEALTH = 100
+HEALTH_LOW = 40
+AILMENT_ROLL_CHANCE = 0.20
+AILMENT_BAD_EVENT_CHANCE = 0.28
+
 # 海上遭遇 — 归港时随机，非回合制海战
 NAVAL_ENCOUNTER_CHANCE = {
     "near": 0.22,
@@ -189,3 +195,10 @@ BAR_OOPS_EVENTS = [
     "失手打翻杯垫，小费扣一点——杯垫比脸贵",
     "讲冷笑话，全场安静，小费也安静",
 ]
+
+# 栗栗 — 流动贝壳商人（羊驼商人式随机刷新）
+LILI_SPAWN_CHANCE = 0.08
+LILI_VISIT_MIN = 2400
+LILI_VISIT_MAX = 5400
+LILI_OFFERS_MIN = 4
+LILI_OFFERS_MAX = 6

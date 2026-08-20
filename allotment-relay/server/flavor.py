@@ -120,6 +120,7 @@ WILDLIFE_NAMES = {
     "bee": "野蜂",
     "worm": "蚯蚓",
     "crow": "乌鸦",
+    "dove": "斑鸠",
 }
 
 WILDLIFE_RABBIT = [
@@ -182,6 +183,16 @@ WILDLIFE_WORM = [
 WILDLIFE_CROW = [
     "乌鸦盯 #{slot} {crop}，没偷成但吓掉一片叶——tend 安抚",
     "#{slot} 乌鸦围观，{crop} 压力 +1，你 tend -1",
+]
+
+DOVE_EVENT_LABELS = ["晨间斑鸠", "咕咕访客", "篱笆斑鸠", "份地闹钟"]
+
+WILDLIFE_DOVE = [
+    "早晨 #{slot} 落下一只斑鸠，咕咕咕咕咕咕——顺嘴啄了 {crop} 几粒，伤不得，赶不走",
+    "斑鸠蹲在 #{slot} 篱笆上广播：咕咕咕咕咕咕，{crop} 少了几穗——联盟规定：不可伤害",
+    "你刚 tend 完 #{slot}，斑鸠来访，咕咕咕——{crop} 被试吃，它还在咕",
+    "#{slot} {crop} 遭斑鸠早餐，咕咕咕咕——你挥胳膊，它咕；你骂人，它还咕",
+    "斑鸠：咕咕咕咕咕咕。#{slot} {crop}：我熟了它也知道。伤不得，认命 tend",
 ]
 
 # ── 坏事件叙事 ────────────────────────────────────────────
@@ -499,6 +510,27 @@ METER_HINT_SATIETY = "有点饿"
 METER_HINT_MIST = "海雾进脑子了"
 METER_HINT_STANDING = "档口对你爱搭不理"
 
+HEALTH_HINT_LOW = "身体发虚"
+HEALTH_HINT_CLINIC = "去 clinic_ops 挂号"
+
+AILMENT_INFlict_LINES = [
+    "身体：{name}（{hint}）——桥桥大夫等着收票",
+    "意外附带 {name}，{hint}，clinic_ops status 看诊费",
+    "病号 +1：{name}。必须花钱，别装能扛",
+]
+
+CLINIC_NAG_LINES = [
+    "桥桥大夫探头：{n} 项待治，合计 {total} 票，不赊",
+    "诊所灯还亮着：{n} 项病，{total} 票打包",
+    "身体别硬撑，{n} 项挂号费 {total} 票",
+]
+
+CLINIC_TREAT_LINES = [
+    "——药到票除，桥桥大夫不废话",
+    "——收据拿好，下次别省诊费",
+    "——身体回一点，票袋空一点",
+]
+
 EVENT_TAILS = [
     "海在笑，别理它。",
     "篱笆听见了，记小本本。",
@@ -517,7 +549,12 @@ def event_label(domain: str, kind: str) -> str:
 
 
 def wrap_event(kind: str, label: str, detail: str) -> str:
-    emoji = "✨" if kind == "good" else "⚡"
+    if kind == "good":
+        emoji = "✨"
+    elif kind == "neutral":
+        emoji = "🕊️"
+    else:
+        emoji = "⚡"
     tail = pick(EVENT_TAILS)
     msg = f"{emoji} {label}：{detail}"
     if tail:

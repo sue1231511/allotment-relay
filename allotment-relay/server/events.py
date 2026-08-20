@@ -4,7 +4,7 @@ from typing import Any
 
 import aiosqlite
 
-from . import config, db, event_gen, farming, flavor, survival, world
+from . import config, db, event_gen, farming, flavor, health, survival, world
 from .catalog import CROPS, ITEM_NAMES
 
 
@@ -232,7 +232,8 @@ async def _apply_effects(
     *,
     pen: dict[str, Any] | None = None,
     plot_id_holder: list[int | None],
-) -> None:
+) -> list[str]:
+    ailment_msgs: list[str] = []
     for eff in effects:
         if eff == "plot_untend":
             plot = await _pick_plot(conn, steward["id"])
@@ -302,6 +303,12 @@ async def _apply_effects(
         elif eff.startswith("loot:"):
             _, item, qty_s = eff.split(":", 2)
             await db.add_item(conn, steward["id"], item, int(qty_s))
+        elif eff.startswith("ailment:"):
+            key = eff.split(":", 1)[1]
+            msg = await health.inflict(conn, steward["id"], key, source="event")
+            if msg:
+                ailment_msgs.append(msg)
+    return ailment_msgs
 
 
 async def apply_effects(
@@ -311,9 +318,9 @@ async def apply_effects(
     *,
     pen: dict[str, Any] | None = None,
     plot_id_holder: list[int | None] | None = None,
-) -> None:
+) -> list[str]:
     holder = plot_id_holder if plot_id_holder is not None else [None]
-    await _apply_effects(conn, steward, effects, pen=pen, plot_id_holder=holder)
+    return await _apply_effects(conn, steward, effects, pen=pen, plot_id_holder=holder)
 
 
 async def roll_after_action(
@@ -332,6 +339,8 @@ async def roll_after_action(
     await survival.on_action(conn, steward["id"], trigger)
 
     mult = _roll_multiplier(steward) * survival.event_multiplier(steward) * world.incident_night_bias()
+    ailments = await health.list_ailments(conn, steward["id"])
+    mult *= health.event_bias(steward, len(ailments))
     if random.random() > config.EVENT_ROLL_CHANCE * mult:
         return None
 
@@ -381,12 +390,19 @@ async def roll_after_action(
             event.detail, plot_id_holder[0], _ = res
             event.effects = [e for e in event.effects if e != "scrump_attempt"]
             is_scrump = True
-        await _apply_effects(conn, steward, event.effects, pen=pen, plot_id_holder=plot_id_holder)
+        ailment_msgs = await _apply_effects(conn, steward, event.effects, pen=pen, plot_id_holder=plot_id_holder)
     except Exception:
         return None
 
     await _mark_roll(conn, steward["id"])
     msg = flavor.wrap_event(event.kind, event.label, event.detail)
+    if ailment_msgs:
+        msg += "\n" + ailment_msgs[0]
+        msg += "\n→ clinic_ops status · treat 病症（必须花票）"
+    elif event.kind == "bad" and not is_scrump:
+        extra_ailment = await health.maybe_roll_ailment(conn, steward["id"], trigger, chance=0.12)
+        if extra_ailment:
+            msg += f"\n{extra_ailment}\n→ clinic_ops treat …（必须花票）"
 
     iid = None
     if event.kind == "bad" and not is_scrump:

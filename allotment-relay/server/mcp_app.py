@@ -229,6 +229,18 @@ async def bottle_ops(command: str) -> str:
     return await bottles.bottle_ops(_kid(), command)
 
 
+@mcp.tool(description="栗栗流动摊：scan/trade 编号/visit/catalog — 贝壳换稀有装饰")
+async def lili_ops(command: str) -> str:
+    from . import lili
+    return await lili.lili_ops(_kid(), command)
+
+
+@mcp.tool(description="诊所：status/treat 病症|all/visit/catalog — 桥桥大夫，必须花票治病")
+async def clinic_ops(command: str) -> str:
+    from . import clinic
+    return await clinic.clinic_ops(_kid(), command)
+
+
 @mcp.tool(description="滨海酒吧：status/shift/chat — 每2天必须shift，逾期锁MCP；人类点单见 /bar")
 async def bar_ops(command: str) -> str:
     from . import bar

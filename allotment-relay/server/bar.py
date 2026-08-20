@@ -158,6 +158,13 @@ async def _run_shift(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
     msg += flavor.maybe_suffix(config.BAR_SHIFT_SUFFIX, chance=0.55)
     if was_overdue:
         msg += "\n考勤补签成功，其它 MCP 已解锁"
+    from . import health
+    from .catalog import AILMENTS
+    hangover = await health.maybe_roll_ailment(
+        conn, s["id"], "bar_shift", chance=0.32, source="bar",
+    )
+    if hangover:
+        msg += f"\n{hangover}\n→ clinic_ops treat hangover（{AILMENTS['hangover']['cost']} 票）"
     return msg
 
 

@@ -19,7 +19,14 @@ async def npc_ops(key_id: int, command: str) -> str:
     if verb == "list":
         lines = ["固定 NPC（visit 名字）:"]
         for npc in NPC_FIXED:
-            lines.append(f"  {npc['key']} — {npc['name']}")
+            tag = ""
+            if npc["key"] == "gugu_dove":
+                tag = " · 昼间随机偷吃庄稼，不可伤害"
+            elif npc["key"] == "qiaoqiao":
+                tag = " · 诊所 NPC，治病用 clinic_ops treat"
+            elif npc["key"] == "lili":
+                tag = " · 流动贝壳商，lili_ops scan/trade"
+            lines.append(f"  {npc['key']} — {npc['name']}{tag}")
         lines.append(f"偷菜贼名号: {', '.join(NPC_THIEVES[:3])}…")
         lines.append("  lizhi — 荔栀（滨海酒吧老板，也可 bar_ops chat）")
         return "\n".join(lines)
@@ -30,11 +37,26 @@ async def npc_ops(key_id: int, command: str) -> str:
         if not npc:
             raise ValueError(f"未知 NPC，list 查看")
         line = random.choice(npc["lines"])
-        extra = flavor.pick([
-            "——说完就溜达走了",
-            "——留下一股姜味",
-            "——顺便看了眼你的份地",
-        ])
+        if npc["key"] == "gugu_dove":
+            extra = flavor.pick([
+                "——咕咕咕咕咕咕，飞走了",
+                "——伤不得，联盟牌子上写着呢",
+                "——它看你不顺眼，但主要是看庄稼顺眼",
+            ])
+        elif npc["key"] == "lili":
+            from . import lili as lili_mod
+            async with aiosqlite.connect(db.DB_PATH) as conn:
+                hint = await lili_mod.active_visit_hint(conn)
+            if hint:
+                extra = f"——{hint}"
+            else:
+                extra = "——驮包叮当远去了，lili_ops scan 蹲下一回"
+        else:
+            extra = flavor.pick([
+                "——说完就溜达走了",
+                "——留下一股姜味",
+                "——顺便看了眼你的份地",
+            ])
         return f"{npc['name']}：{line}{extra}"
 
     if verb == "thieves":

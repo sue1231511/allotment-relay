@@ -362,6 +362,58 @@ MYTH_INGREDIENTS = {
     "myth_octopus": {"name": "克系章鱼肉", "emoji": "🐙", "sell": 220, "energy": 40},
 }
 
+# 病症 — 随机事件致病，clinic_ops treat 花钱治（必须花票）
+AILMENTS = {
+    "sprain": {
+        "name": "扭伤", "emoji": "🦵", "cost": 18, "health_loss": 10, "health_restore": 14,
+        "hint": "干农活扭的，走路抽抽", "energy_extra": 2,
+    },
+    "cut": {
+        "name": "篱笆划伤", "emoji": "🩹", "cost": 12, "health_loss": 8, "health_restore": 10,
+        "hint": "铁丝网留的，别硬撑", "energy_extra": 1,
+    },
+    "backache": {
+        "name": "腰肌劳损", "emoji": "💢", "cost": 20, "health_loss": 12, "health_restore": 15,
+        "hint": "弯腰太多，直不起来", "energy_extra": 2, "max_energy_cut": 5,
+    },
+    "allergy": {
+        "name": "花粉过敏", "emoji": "🤧", "cost": 16, "health_loss": 9, "health_restore": 12,
+        "hint": "打喷嚏停不下来", "energy_extra": 1,
+    },
+    "cold": {
+        "name": "海雾感冒", "emoji": "🤒", "cost": 15, "health_loss": 10, "health_restore": 13,
+        "hint": "雾进肺里，咳", "energy_extra": 2,
+    },
+    "shell_scratch": {
+        "name": "贝壳刮脚", "emoji": "🦶", "cost": 10, "health_loss": 6, "health_restore": 8,
+        "hint": "退潮滩上血线一道", "energy_extra": 1,
+    },
+    "jelly_sting": {
+        "name": "水母蛰", "emoji": "🌊", "cost": 22, "health_loss": 14, "health_restore": 16,
+        "hint": "网底惊喜，又肿又痒", "energy_extra": 3,
+    },
+    "food_poison": {
+        "name": "肠胃闹腾", "emoji": "🤢", "cost": 24, "health_loss": 15, "health_restore": 18,
+        "hint": "吃了不该吃的", "energy_extra": 2, "max_energy_cut": 8,
+    },
+    "hangover": {
+        "name": "宿醉", "emoji": "🍺", "cost": 18, "health_loss": 11, "health_restore": 14,
+        "hint": "昨晚陪聊陪多了", "energy_extra": 2, "max_energy_cut": 10,
+    },
+    "sunburn": {
+        "name": "日晒灼伤", "emoji": "☀️", "cost": 14, "health_loss": 8, "health_restore": 11,
+        "hint": "赶海没涂泥，红成虾", "energy_extra": 1,
+    },
+    "blister": {
+        "name": "磨起泡", "emoji": "💧", "cost": 11, "health_loss": 5, "health_restore": 8,
+        "hint": "锄头柄握手处", "energy_extra": 1,
+    },
+    "crab_pinch": {
+        "name": "蟹钳印", "emoji": "🦀", "cost": 16, "health_loss": 9, "health_restore": 12,
+        "hint": "沙蟹脾气比嘴硬", "energy_extra": 2,
+    },
+}
+
 WORLD_BOSS = {
     "key": "cthulhu_tide",
     "name": "潮渊之主",
@@ -389,6 +441,58 @@ NPC_FIXED = [
         "笑自然点，小费在笑纹里",
         "shift 完记得 eat，别空肚跟客人拼酒",
     ]},
+    {"key": "gugu_dove", "name": "咕咕斑鸠", "lines": [
+        "咕咕咕咕咕咕——（它对你的庄稼更感兴趣）",
+        "早晨准时到岗，联盟登记在册，伤不得也赶不走",
+        "你挥胳膊它咕咕，你骂它它还咕咕——纯嘴炮免疫",
+        "偷吃两口算它上班，别跟斑鸠讲理，讲不过",
+        "稻草人瞪它，它对视咕咕咕——平局",
+    ]},
+    {"key": "qiaoqiao", "name": "桥桥大夫", "lines": [
+        "诊所规矩：必须花钱，不赊账，不还价",
+        "随机事件落下的病，找随机事件哭去——诊费照收",
+        "扭了脚、着了凉、宿醉——都挂号，都花钱",
+        "身体指标低了意外多，别硬撑到票都不够挂号",
+        "npc_ops visit 只能聊天，真治得 clinic_ops treat",
+    ]},
+    {"key": "lili", "name": "栗栗", "lines": [
+        "贝壳换装饰，装饰换心情——我只收现货",
+        "驮包不会说话，我会——今天货不多",
+        "路过就换，错过等下回，别跟摊儿置气",
+        "稀有软装不进 hut catalog，只在我这",
+        "lili_ops scan 看货架，trade 编号成交",
+    ]},
+]
+
+# 栗栗流动摊 — 稀有装饰（deco_*），hut_ops install 到 soft 槽
+LILI_DECOR = {
+    "coral_lamp": {"name": "珊瑚小灯", "emoji": "🪸", "hint": "栗栗亲制，暮夜雾智少掉一点", "sell": 55},
+    "shell_windchime": {"name": "贝壳风铃", "emoji": "🎐", "hint": "比鲱鱼风铃贵气，风来有响", "sell": 48},
+    "pearl_garland": {"name": "珠串帘", "emoji": "📿", "hint": "档口看你顺眼些——玄学", "sell": 52},
+    "tide_clock": {"name": "潮汐钟", "emoji": "🕰️", "hint": "退潮铃响，赶海更准", "sell": 50},
+    "drift_bonsai": {"name": "漂木盆景", "emoji": "🪴", "hint": "枯而不死，访客爱拍", "sell": 46},
+    "moon_mirror": {"name": "月海镜", "emoji": "🪞", "hint": "映潮线，纯好看", "sell": 58},
+    "net_dreamcatcher": {"name": "渔网捕梦", "emoji": "🕸️", "hint": "噩运权重略降——信则灵", "sell": 44},
+    "star_crown": {"name": "海星冠", "emoji": "⭐", "hint": "纯炫，肖像加成 vibe", "sell": 62},
+    "amber_frame": {"name": "琥珀画框", "emoji": "🖼️", "hint": "装什么都是艺术品", "sell": 68},
+    "kelp_tassel": {"name": "海藻流苏", "emoji": "🌿", "hint": "门帘响，心情 +", "sell": 38},
+}
+
+LILI_TRADE_POOL = [
+    {"key": "conch_lamp", "give": {"shell_conch": 4, "shell_scallop": 2}, "get": "deco_coral_lamp", "weight": 12, "stock": 1},
+    {"key": "catseye_chime", "give": {"shell_catseye": 5, "sea_glass": 2}, "get": "deco_shell_windchime", "weight": 14, "stock": 1},
+    {"key": "pearl_garland", "give": {"shell_scallop": 3, "curio_pearl": 1}, "get": "deco_pearl_garland", "weight": 8, "stock": 1},
+    {"key": "tide_clock", "give": {"shell_conch": 3, "shell_catseye": 3, "drift_twine": 2}, "get": "deco_tide_clock", "weight": 10, "stock": 1},
+    {"key": "drift_bonsai", "give": {"shell_scallop": 4, "fish_cockle": 2, "compost": 1}, "get": "deco_drift_bonsai", "weight": 9, "stock": 1},
+    {"key": "moon_mirror", "give": {"shell_catseye": 4, "curio_amber": 1}, "get": "deco_moon_mirror", "weight": 6, "stock": 1},
+    {"key": "net_dream", "give": {"drift_twine": 5, "shell_scallop": 3}, "get": "deco_net_dreamcatcher", "weight": 11, "stock": 1},
+    {"key": "star_crown", "give": {"shell_catseye": 6, "fish_periwinkle": 4}, "get": "deco_star_crown", "weight": 7, "stock": 1},
+    {"key": "amber_frame", "give": {"curio_amber": 1, "shell_conch": 2, "sea_glass": 3}, "get": "deco_amber_frame", "weight": 5, "stock": 1},
+    {"key": "kelp_tassel", "give": {"crop_kelp": 3, "shell_scallop": 2, "bait_worm": 4}, "get": "deco_kelp_tassel", "weight": 13, "stock": 2},
+    {"key": "blueberry_glass", "give": {"crop_blueberry": 4, "shell_conch": 2, "sea_glass": 2}, "get": "deco_moon_mirror", "weight": 8, "stock": 1},
+    {"key": "premium_float", "give": {"shell_conch": 3, "curio_pearl": 1}, "get": "deco_star_crown", "tickets": 8, "weight": 4, "stock": 1},
+    {"key": "worm_special", "give": {"bait_worm": 8, "shell_scallop": 2}, "get": "deco_kelp_tassel", "weight": 10, "stock": 1},
+    {"key": "fossil_deal", "give": {"fossil_shell": 1, "shell_catseye": 3}, "get": "deco_amber_frame", "weight": 5, "stock": 1},
 ]
 
 COASTAL_BAR = {
@@ -436,6 +540,8 @@ for k, v in KITCHEN_DISHES.items():
     ITEM_PRICES[f"dish_{k}"] = v["base_sell"]
 for k, v in MYTH_INGREDIENTS.items():
     ITEM_PRICES[k] = v["sell"]
+for k, v in LILI_DECOR.items():
+    ITEM_PRICES[f"deco_{k}"] = v["sell"]
 
 ITEM_NAMES = {f"seed_{k}": f"{v['name']}种" for k, v in CROPS.items()}
 ITEM_NAMES.update({f"crop_{k}": v["name"] for k, v in CROPS.items()})
@@ -471,6 +577,8 @@ for k, v in KITCHEN_DISHES.items():
     ITEM_NAMES[f"dish_{k}"] = f"{v['emoji']}{v['name']}"
 for k, v in MYTH_INGREDIENTS.items():
     ITEM_NAMES[k] = f"{v['emoji']}{v['name']}"
+for k, v in LILI_DECOR.items():
+    ITEM_NAMES[f"deco_{k}"] = f"{v['emoji']}{v['name']}"
 
 
 def dish_item(key: str, stars: int = 3) -> str:

@@ -8,7 +8,7 @@ from typing import Any
 
 from . import world
 from .catalog import FORAGE_LOOT, ITEM_NAMES, RANDOM_LOOT, fish_keys_for_tide, fish_keys_for_zones
-from . import flavor
+from . import config, flavor
 from .config import NAVAL_ENCOUNTER_CHANCE
 
 
@@ -30,6 +30,32 @@ TRIGGER_DOMAIN = {
 ALL_TRIGGERS = set(TRIGGER_DOMAIN)
 
 SCRUMP_TRIGGERS = {"tend", "gather", "forage", "guild"}
+
+DOMAIN_AILMENTS = {
+    "land": ["sprain", "cut", "backache", "allergy", "blister"],
+    "sea": ["cold", "jelly_sting", "shell_scratch"],
+    "pen": ["cut", "crab_pinch", "blister"],
+    "voyage": ["cold", "food_poison", "backache"],
+    "guild": ["blister", "sprain"],
+    "hearth": ["food_poison"],
+}
+
+
+def _pick_ailment(domain: str, trigger: str, weather: str) -> str | None:
+    from .health import TRIGGER_AILMENTS
+
+    pool = list(DOMAIN_AILMENTS.get(domain, []))
+    extra = TRIGGER_AILMENTS.get(trigger, [])
+    for k in extra:
+        if k not in pool:
+            pool.append(k)
+    if weather == "misty" and "cold" not in pool:
+        pool.append("cold")
+    if weather == "gale" and "sprain" not in pool:
+        pool.append("sprain")
+    if not pool:
+        return None
+    return random.choice(pool)
 
 
 @dataclass
@@ -258,6 +284,11 @@ def generate_event(
 
     if not detail_parts:
         return None
+
+    if kind == "bad" and random.random() < config.AILMENT_BAD_EVENT_CHANCE:
+        picked = _pick_ailment(domain, trigger, weather)
+        if picked:
+            effects.append(f"ailment:{picked}")
 
     if weather == "gale" and kind == "bad" and random.random() < 0.3:
         detail_parts.append(flavor.pick(flavor.WEATHER_TAIL_BAD))

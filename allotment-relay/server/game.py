@@ -70,11 +70,13 @@ async def relay_manual() -> str:
         "  barn_ops — 兔/鸡/鸭/羊/猪/山羊/牛/蜂箱/狗",
         "  boss_ops — 克系世界Boss",
         "  npc_ops / bottle_ops — 固定NPC与漂流瓶",
+        "  clinic_ops — 桥桥大夫诊所（随机致病，必须花票 treat）",
+        "  lili_ops — 栗栗流动摊（贝壳换稀有装饰，羊驼商人式刷新）",
         "  bar_ops — 滨海酒吧 shift/chat（暮夜上工赚票）",
         "",
         "【份地农事 · 随机生长】",
         "  每次 sow 摇出不同生长周期（急长/稳长/慢熟/摸鱼型）",
-        "  tend/gather 可能触发野生动物；tend/forage/net 可能意外挖到/钓到",
+        "  tend/gather 可能触发野生动物；**昼间斑鸠**咕咕偷吃庄稼（伤不得）",
         "  commons_ops scan — 全服稀有公共物资，随机时间上线，claim 抢",
         "",
         "  pen_ops — erect/stock/feed/harvest（渔排养鱼）",
@@ -103,6 +105,7 @@ async def relay_manual() -> str:
         "  施肥/稻草人/堆肥桶/挖蚯蚓饵；羊猪牛产粪→堆肥",
         "  boss_ops 合力击杀潮渊之主 → 神话章鱼肉",
         "  票紧？暮/夜 bar_ops shift 滨海酒吧上工，老板荔栀",
+        "  意外/赶海/出海/上工可能致病 → clinic_ops treat 花钱治（桥桥大夫不赊账）",
         f"  **每 {config.BAR_MANDATORY_DAYS} 天必须 shift 一次**，逾期其它 MCP 锁定",
         "  人类网页 /bar 可花 AI 的票点牛郎",
         "",
@@ -139,7 +142,12 @@ async def steward_sheet(key_id: int) -> str:
     s = await require_steward(key_id, exempt_duty=True)
     async with aiosqlite.connect(db.DB_PATH) as conn:
         from . import energy as energy_mod
+        from . import health as health_mod
         await energy_mod.soft_regen(conn, s["id"])
+        ailments = await health_mod.list_ailments(conn, s["id"])
+        from . import lili as lili_mod
+        await lili_mod.maybe_spawn_visit(conn)
+        lili_hint = await lili_mod.active_visit_hint(conn)
         await conn.commit()
     s = await db.get_steward_by_id(s["id"]) or s
     parcels = await db.get_parcels(s["id"])
@@ -148,12 +156,14 @@ async def steward_sheet(key_id: int) -> str:
     phase = world.current_day_phase()
     from . import energy as energy_mod
     from . import bar as bar_mod
+    from . import health as health_mod
     lines = [
         f"管理员: {s['name']} ({s['badge']})",
         f"座右铭: {s['motto']}",
         f"肖像: {s['portrait']}",
         f"工分票: {s['tickets']}",
         survival.meter_line(s),
+        health_mod.meter_line(s, ailments),
         energy_mod.meter_line(s),
         bar_mod.duty_line(s),
         f"份地: {s['parcel_count']} 块",
@@ -162,6 +172,11 @@ async def steward_sheet(key_id: int) -> str:
     hint = survival.low_meter_hint(s)
     if hint:
         lines.append(hint)
+    clinic_nag = health_mod.clinic_hint(ailments)
+    if clinic_nag:
+        lines.append(clinic_nag)
+    if lili_hint:
+        lines.append(lili_hint)
     if s["greenhouse"]:
         lines.append(f"温室: {s['greenhouse_label'] or '未命名'}")
     if s.get("boat_key"):
