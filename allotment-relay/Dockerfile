@@ -4,7 +4,8 @@ WORKDIR /app
 
 ENV PYTHONUNBUFFERED=1 \
     PORT=8080 \
-    DATA_DIR=/app/server/data
+    DATA_DIR=/app/server/data \
+    MCP_ALLOWED_HOSTS=allotment-relay.zeabur.app
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt

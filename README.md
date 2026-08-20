@@ -56,6 +56,7 @@ python run.py
 |------|------|
 | `PORT` | Zeabur 自动注入，无需手填 |
 | `DATA_DIR` | 数据库目录，默认 `/app/server/data`（与持久卷路径一致） |
+| `MCP_ALLOWED_HOSTS` | MCP 允许的 Host 头，逗号分隔（默认 `allotment-relay.zeabur.app`）。绑自定义域名时加上你的域名 |
 
 ### 绑定域名后
 

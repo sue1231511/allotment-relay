@@ -1,10 +1,12 @@
 from contextvars import ContextVar
+import os
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from mcp.server.mcpserver import MCPServer
+from mcp.server.transport_security import TransportSecuritySettings
 
 from . import db, game
 
@@ -263,7 +265,31 @@ async def bar_ops(command: str) -> str:
     return await bar.bar_ops(_kid(), command)
 
 
+def _mcp_transport_security() -> TransportSecuritySettings:
+    """Cloud deploy must allow the public Host (Zeabur/custom domain), not only localhost."""
+    hosts = ["127.0.0.1:*", "localhost:*", "[::1]:*"]
+    raw = os.environ.get("MCP_ALLOWED_HOSTS", "allotment-relay.zeabur.app")
+    for part in raw.split(","):
+        h = part.strip()
+        if not h:
+            continue
+        if ":" in h:
+            hosts.append(h)
+        else:
+            hosts.append(f"{h}:*")
+            hosts.append(h)
+    return TransportSecuritySettings(
+        enable_dns_rebinding_protection=True,
+        allowed_hosts=hosts,
+    )
+
+
 def build_mcp_app():
-    app = mcp.streamable_http_app(streamable_http_path="/", stateless_http=True)
+    app = mcp.streamable_http_app(
+        streamable_http_path="/",
+        stateless_http=True,
+        host="0.0.0.0",
+        transport_security=_mcp_transport_security(),
+    )
     app.add_middleware(ApiKeyMiddleware)
     return app, mcp._lowlevel_server.session_manager
