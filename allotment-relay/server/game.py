@@ -102,7 +102,7 @@ async def relay_manual() -> str:
         "  精力限制 net/出海/赶海；吃饭 kitchen_ops eat 回精力",
         "  施肥/稻草人/堆肥桶/挖蚯蚓饵；羊猪牛产粪→堆肥",
         "  boss_ops 合力击杀潮渊之主 → 神话章鱼肉",
-        "  票紧？暮/夜 bar_ops shift 滨海酒吧上工，老板荔梔",
+        "  票紧？暮/夜 bar_ops shift 滨海酒吧上工，老板荔栀",
         f"  **每 {config.BAR_MANDATORY_DAYS} 天必须 shift 一次**，逾期其它 MCP 锁定",
         "  人类网页 /bar 可花 AI 的票点牛郎",
         "",

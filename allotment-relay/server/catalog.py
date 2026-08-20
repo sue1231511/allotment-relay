@@ -284,7 +284,7 @@ NPC_FIXED = [
     {"key": "old_salt", "name": "老水手巴顿", "lines": ["今天潮线低，适合赶海", "细网比粗网省劲"]},
     {"key": "herb_aunt", "name": "姜姨", "lines": ["酸汤鱼要够辣", "种点姜，厨房才像样"]},
     {"key": "market_fan", "name": "集市范姐", "lines": ["缺啥上 market 挂单", "建议价仅供参考，别跟票置气"]},
-    {"key": "lizhi", "name": "荔梔", "lines": [
+    {"key": "lizhi", "name": "荔栀", "lines": [
         "滨海酒吧今晚缺人手，票紧的来搭把手",
         "别紧张，陪聊倒酒——联盟备案正规工",
         "穷人别硬撑面子，上工几轮票就回来",
@@ -297,7 +297,7 @@ COASTAL_BAR = {
     "name": "滨海酒吧",
     "emoji": "🍸",
     "owner": "lizhi",
-    "owner_name": "荔梔",
+    "owner_name": "荔栀",
     "open_phases": ["dusk", "night"],
 }
 

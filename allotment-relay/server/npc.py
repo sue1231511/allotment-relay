@@ -21,7 +21,7 @@ async def npc_ops(key_id: int, command: str) -> str:
         for npc in NPC_FIXED:
             lines.append(f"  {npc['key']} — {npc['name']}")
         lines.append(f"偷菜贼名号: {', '.join(NPC_THIEVES[:3])}…")
-        lines.append("  lizhi — 荔梔（滨海酒吧老板，也可 bar_ops chat）")
+        lines.append("  lizhi — 荔栀（滨海酒吧老板，也可 bar_ops chat）")
         return "\n".join(lines)
 
     if verb == "visit" and len(parts) >= 2:

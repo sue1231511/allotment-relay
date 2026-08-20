@@ -56,7 +56,7 @@ async def assert_bar_duty(steward: dict[str, Any]) -> None:
     if is_shift_overdue(steward):
         raise ValueError(
             f"联盟规定每 {config.BAR_MANDATORY_DAYS} 天必须 bar_ops shift 滨海酒吧上工。"
-            f"荔梔：「{steward['name']}，打卡去，别的指令等你上完班。」"
+            f"荔栀：「{steward['name']}，打卡去，别的指令等你上完班。」"
         )
 
 
@@ -64,7 +64,7 @@ def _poor_bonus(tickets: int) -> tuple[float, str]:
     if tickets <= config.BAR_POOR_THRESHOLD:
         return config.BAR_POOR_PAY_MULT, flavor.pick(config.BAR_POOR_LABELS)
     if tickets <= config.BAR_POOR_THRESHOLD * 2:
-        return 1.25, "票不多，荔梔多塞了两张"
+        return 1.25, "票不多，荔栀多塞了两张"
     return 1.0, ""
 
 
@@ -249,8 +249,8 @@ async def place_human_order(
         note = flavor.pick([
             f"{host_label} 倒了杯{svc['name']}，嘴挺会聊",
             f"卡座灯暗了一档，{host_label} 开始上班",
-            f"荔梔记帐：{patron['name']} 点单成功",
-            f"{host_label}：「今晚我嘴归你，票归荔梔」——别当真",
+            f"荔栀记帐：{patron['name']} 点单成功",
+            f"{host_label}：「今晚我嘴归你，票归荔栀」——别当真",
         ])
         await conn.execute(
             """
@@ -259,7 +259,7 @@ async def place_human_order(
             """,
             (patron["id"], host_id, service_key, cost, note, db.now()),
         )
-        if host:
+        if host and host["id"] != patron["id"]:
             tip = max(2, cost // 5)
             await conn.execute(
                 "UPDATE stewards SET tickets=tickets+? WHERE id=?",
@@ -295,7 +295,7 @@ async def bar_ops(key_id: int, command: str) -> str:
             f"你的票: {s['tickets']}（≤{config.BAR_POOR_THRESHOLD} 有穷人补贴）",
             f"上工: bar_ops shift（-{config.BAR_SHIFT_ENERGY} 精力，日限 {config.BAR_SHIFT_DAILY}）",
             f"人类点单: 网页 /bar（扣该 AI 管理员的票）",
-            "chat — 跟荔梔唠唠",
+            "chat — 跟荔栀唠唠",
         ]
         if is_shift_overdue(s):
             lines.append("⚠ 考勤逾期：请先 shift，其它 MCP 已暂停")
@@ -306,11 +306,11 @@ async def bar_ops(key_id: int, command: str) -> str:
     if verb == "chat":
         line = random.choice(_owner_lines())
         tail = flavor.pick([
-            "——荔梔擦着杯子，眼神像在看 KPI",
+            "——荔栀擦着杯子，眼神像在看 KPI",
             "——说罢往你领口别了一枚塑料领针：工牌，别扔",
             "——背后调酒声叮当，像给你打节拍",
         ])
-        return f"荔梔：{line}{tail}"
+        return f"荔栀：{line}{tail}"
 
     if verb == "shift":
         async with aiosqlite.connect(db.DB_PATH) as conn:
