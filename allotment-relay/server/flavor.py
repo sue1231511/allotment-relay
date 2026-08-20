@@ -100,6 +100,90 @@ LABELS_GOOD = {
     "scrump": ["逾篱神手", "篱笆漏洞"],
 }
 
+# ── 播种 & 生长 ────────────────────────────────────────────
+
+SOW_GROW_LINES = [
+    "播下 {crop}，{pace}，基准约 {mins} 分——{hint}",
+    "{crop} 入土：{pace}，计时器已启动（{mins} 分起）",
+    "这茬 {crop} 走 {pace} 路线，{hint}",
+]
+
+WILDLIFE_NAMES = {
+    "rabbit": "野兔",
+    "deer": "幼鹿",
+    "boar": "野猪",
+    "gull": "贼鸥",
+    "slug": "蛞蝓团",
+    "fox": "狐狸",
+    "hedgehog": "刺猬",
+    "frog": "雨蛙",
+    "bee": "野蜂",
+    "worm": "蚯蚓",
+    "crow": "乌鸦",
+}
+
+WILDLIFE_RABBIT = [
+    "野兔踩过 #{slot} {crop}，苗倒一片——得重 tend，还白等 {mins} 分",
+    "#{slot} 遭野兔蹦迪，{crop}：我招谁了，生长条 +{mins} 分",
+    "兔脚印满 #{slot}，{crop} 被踩得怀疑人生，tend 再来",
+]
+
+WILDLIFE_DEER = [
+    "幼鹿啃了 #{slot} {crop} 顶芽——嘴挺刁，你得再 tend",
+    "#{slot} {crop} 被鹿试吃，苗：我只是长得比较好吃",
+    "鹿路过 #{slot}，{crop} 少半口气，生长略拖",
+]
+
+WILDLIFE_BOAR = [
+    "野猪拱 #{slot}，{crop} 翻了一半——tend 收拾残局",
+    "#{slot} 被野猪当自助餐台，{crop}：我尽力了",
+]
+
+WILDLIFE_BOAR_WRECK = [
+    "野猪把 #{slot} {crop} 拱没了——苗：我自由了，你重种吧",
+    "#{slot} 遭野猪拆迁，{crop} 当场离职",
+]
+
+WILDLIFE_GULL = [
+    "贼鸥啄 #{slot} {crop}，莓/叶少一层——tend 补妆",
+    "#{slot} {crop} 被海鸥试味，苗：我咸了",
+]
+
+WILDLIFE_SLUG = [
+    "蛞蝓团夜袭 #{slot} {crop}，滑腻腻——tend 清理",
+    "#{slot} 蛞蝓开派对，{crop}：下次别带滑石粉",
+]
+
+WILDLIFE_FOX = [
+    "狐狸踩过 #{slot} 边沟，没动 {crop}，但留脚印——你仍想 tend 一下",
+    "#{slot} 有狐狸脚印，{crop} 没事，你有点事（疑心病）",
+]
+
+WILDLIFE_HEDGEHOG = [
+    "刺猬滚过 #{slot}，{crop} 毫发无伤——纯访客",
+    "#{slot} 来了刺猬，看了眼 {crop}，走了——篱边八卦 +1",
+]
+
+WILDLIFE_FROG = [
+    "雨蛙蹲 #{slot} 帮 {crop} 吃虫——顺手 tend 了，省心",
+    "#{slot} 青蛙守夜，{crop} 少遭虫，你少跑一趟",
+]
+
+WILDLIFE_BEE = [
+    "野蜂巡 #{slot} {crop}，授粉加速——生长条缩短一截",
+    "#{slot} {crop} 被蜜蜂开光，长得快一点，别问原理",
+]
+
+WILDLIFE_WORM = [
+    "蚯蚓松 #{slot} 土，你省一次 tend——土：谢谢",
+    "#{slot} 蚯蚓加班，{crop} 呼吸顺畅",
+]
+
+WILDLIFE_CROW = [
+    "乌鸦盯 #{slot} {crop}，没偷成但吓掉一片叶——tend 安抚",
+    "#{slot} 乌鸦围观，{crop} 压力 +1，你 tend -1",
+]
+
 # ── 坏事件叙事 ────────────────────────────────────────────
 
 LAND_BAD = [

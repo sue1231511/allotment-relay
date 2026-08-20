@@ -4,7 +4,7 @@ from typing import Any
 
 import aiosqlite
 
-from . import db, events, flavor, survival, world
+from . import db, events, flavor, farming, survival, world
 from .catalog import (
     CROPS,
     FORAGE_LOOT,
@@ -25,43 +25,15 @@ from .config import (
 )
 
 
-def _effective_grow(plot: dict, crop_key: str) -> int:
-    base = CROPS[crop_key]["grow"]
-    mult = world.grow_multiplier(
-        world.current_weather(),
-        bool(plot.get("tended")),
-        bool(plot.get("greenhouse")),
-    )
-    return int(base * mult)
-
-
-def _ready(plot: dict) -> bool:
-    if not plot.get("crop") or not plot.get("planted_at"):
-        return False
-    return db.now() - plot["planted_at"] >= _effective_grow(plot, plot["crop"])
-
-
-def _overripe(plot: dict) -> bool:
-    if not plot.get("crop") or not plot.get("planted_at"):
-        return False
-    return db.now() - plot["planted_at"] >= _effective_grow(plot, plot["crop"]) * 2
-
-
 def _parcel_line(plot: dict) -> str:
     slot = plot["slot"]
     gh = "🪴" if plot.get("greenhouse") else ""
     if not plot.get("crop"):
         return f"  #{slot}{gh}: 休耕"
     meta = CROPS.get(plot["crop"], {"name": plot["crop"], "emoji": "🌱"})
-    if _overripe(plot):
-        state = "过熟"
-    elif _ready(plot):
-        state = "可收"
-    elif plot.get("tended"):
-        state = "生长"
-    else:
-        state = "待打理"
-    return f"  #{slot}{gh}: {meta['emoji']}{meta['name']}（{state}）"
+    state = farming.parcel_status(plot)
+    extra = farming.parcel_extra(plot)
+    return f"  #{slot}{gh}: {meta['emoji']}{meta['name']}（{state}{extra}）"
 
 
 async def require_steward(key_id: int) -> dict[str, Any]:
@@ -85,6 +57,12 @@ async def relay_manual() -> str:
         "  steward_enroll / steward_sheet / steward_revise / peer_sheet",
         "  plot_ops — sow/tend/gather/forage/hedge_note/amends/cohort/weather/buy",
         "  tide_ops — net/status",
+        "",
+        "【份地农事 · 随机生长】",
+        "  每次 sow 摇出不同生长周期（急长/稳长/慢熟/摸鱼型）",
+        "  tend/gather 可能触发野生动物：兔踩、鹿啃、蜂授粉、蛙守夜…",
+        "  steward_sheet / plot_ops status 可看 pace 与剩余时间",
+        "",
         "  pen_ops — erect/stock/feed/harvest（渔排养鱼）",
         "  voyage_ops — buy/repair/depart/return（购船出海，归港可触发海上遭遇）",
         "  shed_ops — erect/label/visit/handoff",
@@ -294,13 +272,20 @@ async def _plot_one(s: dict, cmd: str) -> str:
                 raise ValueError(f"#{slot} 已在种植")
             if not await db.take_item(conn, s["id"], seed, 1):
                 raise ValueError(f"缺少 {CROPS[crop]['name']}种")
+            grow_target, grow_pace, sow_flavor = farming.roll_grow(crop, plot)
             await conn.execute(
-                "UPDATE parcels SET crop=?, planted_at=?, tended=0 WHERE id=?",
-                (crop, db.now(), plot["id"]),
+                """
+                UPDATE parcels SET crop=?, planted_at=?, tended=0, grow_target=?, grow_pace=?
+                WHERE id=?
+                """,
+                (crop, db.now(), grow_target, grow_pace, plot["id"]),
             )
             extra = await events.roll_after_action(s, "sow", conn)
+            farm = await farming.roll_farm_event(conn, s, "sow")
             await conn.commit()
-        msg = f"#{slot} 播下 {CROPS[crop]['emoji']}{CROPS[crop]['name']}"
+        msg = f"#{slot} 播下 {CROPS[crop]['emoji']}{CROPS[crop]['name']}\n{sow_flavor}"
+        if farm:
+            msg += f"\n{farm}"
         return f"{msg}\n{extra}" if extra else msg
 
     if verb == "tend":
@@ -313,9 +298,12 @@ async def _plot_one(s: dict, cmd: str) -> str:
             for (pid,) in rows:
                 await conn.execute("UPDATE parcels SET tended=1 WHERE id=?", (pid,))
             extra = await events.roll_after_action(s, "tend", conn)
+            farm = await farming.roll_farm_event(conn, s, "tend")
             await conn.commit()
         msg = f"打理了 {len(rows)} 块份地" if rows else "没有待打理的份地——苗都乖，或你还没种"
         msg += flavor.maybe_suffix(flavor.TEND_SUFFIX)
+        if farm:
+            msg += f"\n{farm}"
         return f"{msg}\n{extra}" if extra else msg
 
     if verb == "gather":
@@ -326,28 +314,41 @@ async def _plot_one(s: dict, cmd: str) -> str:
                 "SELECT * FROM parcels WHERE steward_id=?", (s["id"],)
             )).fetchall()]
             for p in parcels:
-                if _ready(p):
+                if farming.plot_ready(p):
                     if await events.gather_blight_loss(conn, s["id"], p["crop"]):
                         crop_name = CROPS[p["crop"]]["name"]
                         await conn.execute(
-                            "UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0 WHERE id=?",
-                            (p["id"],
-                            ),
+                            """
+                            UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
+                            grow_target=0, grow_pace='' WHERE id=?
+                            """,
+                            (p["id"],),
                         )
                         got.append(f"{crop_name}(枯病折损)")
                         continue
-                    await db.add_item(conn, s["id"], f"crop_{p['crop']}", 1)
+                    item_key, qty = await farming.gather_yield(conn, s["id"], p)
+                    await db.add_item(conn, s["id"], item_key, qty)
                     await conn.execute(
-                        "UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0 WHERE id=?",
+                        """
+                        UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
+                        grow_target=0, grow_pace='' WHERE id=?
+                        """,
                         (p["id"],),
                     )
-                    got.append(CROPS[p["crop"]]["name"])
-                elif _overripe(p):
+                    if item_key.startswith("seed_"):
+                        got.append(f"{CROPS[p['crop']]['name']}种(过熟)")
+                    else:
+                        got.append(CROPS[p["crop"]]["name"])
+                elif farming.plot_overripe(p):
                     await conn.execute(
-                        "UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0 WHERE id=?",
+                        """
+                        UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
+                        grow_target=0, grow_pace='' WHERE id=?
+                        """,
                         (p["id"],),
                     )
             extra = await events.roll_after_action(s, "gather", conn)
+            farm = await farming.roll_farm_event(conn, s, "gather")
             if got:
                 await survival.bump(conn, s["id"], satiety=min(6, 2 + len(got)))
             await conn.commit()
@@ -366,9 +367,13 @@ async def _plot_one(s: dict, cmd: str) -> str:
         if bonus_msg:
             await db.add_chronicle("league", bonus_msg, None)
             base = f"收成: {', '.join(got)}\n{bonus_msg}"
+            if farm:
+                base += f"\n{farm}"
             return f"{base}\n{extra}" if extra else base
         base = f"收成: {', '.join(got)}"
         base += flavor.maybe_suffix(flavor.GATHER_SUFFIX)
+        if farm:
+            base += f"\n{farm}"
         return f"{base}\n{extra}" if extra else base
 
     if verb == "forage":

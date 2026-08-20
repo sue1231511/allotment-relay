@@ -212,6 +212,13 @@ CREATE TABLE IF NOT EXISTS voyages (
     returns_at INTEGER NOT NULL,
     status TEXT NOT NULL DEFAULT 'sailing'
 );
+
+CREATE TABLE IF NOT EXISTS farm_rolls (
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    day INTEGER NOT NULL,
+    count INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (steward_id, day)
+);
 """
 
 
@@ -232,6 +239,8 @@ async def init_db() -> None:
             "ALTER TABLE stewards ADD COLUMN satiety INTEGER NOT NULL DEFAULT 72",
             "ALTER TABLE stewards ADD COLUMN mist_wit INTEGER NOT NULL DEFAULT 78",
             "ALTER TABLE stewards ADD COLUMN standing INTEGER NOT NULL DEFAULT 88",
+            "ALTER TABLE parcels ADD COLUMN grow_target INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE parcels ADD COLUMN grow_pace TEXT NOT NULL DEFAULT ''",
         ):
             try:
                 await db.execute(ddl)

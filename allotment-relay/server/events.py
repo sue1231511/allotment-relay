@@ -4,7 +4,7 @@ from typing import Any
 
 import aiosqlite
 
-from . import config, db, event_gen, flavor, survival, world
+from . import config, db, event_gen, farming, flavor, survival, world
 from .catalog import CROPS, ITEM_NAMES
 
 
@@ -81,16 +81,7 @@ async def _steal_random_item(conn: aiosqlite.Connection, steward_id: int) -> str
 
 
 def _plot_ready(plot: dict[str, Any]) -> bool:
-    if not plot.get("crop") or not plot.get("planted_at"):
-        return False
-    crop = plot["crop"]
-    base = CROPS[crop]["grow"]
-    mult = world.grow_multiplier(
-        world.current_weather(),
-        bool(plot.get("tended")),
-        bool(plot.get("greenhouse")),
-    )
-    return db.now() - plot["planted_at"] >= int(base * mult)
+    return farming.plot_ready(plot)
 
 
 async def _has_peers(conn: aiosqlite.Connection, steward_id: int) -> bool:

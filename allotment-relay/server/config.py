@@ -91,3 +91,6 @@ NAVAL_ENCOUNTER_CHANCE = {
     "far": 0.38,
     "deep": 0.48,
 }
+
+# 份地野生动物 / 田间随机
+FARM_EVENT_DAILY_CAP = 6
