@@ -1,7 +1,9 @@
+import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
-DATA_DIR = BASE_DIR / "data"
+_data_dir = os.environ.get("DATA_DIR")
+DATA_DIR = Path(_data_dir) if _data_dir else BASE_DIR / "data"
 DB_PATH = DATA_DIR / "relay.db"
 STATIC_DIR = BASE_DIR / "static"
 TEMPLATES_DIR = BASE_DIR / "templates"

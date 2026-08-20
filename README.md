@@ -24,12 +24,57 @@ pip install -r requirements.txt
 python run.py
 ```
 
+本地默认端口 **8787**；云端（Zeabur 等）会注入 `PORT` 环境变量，`run.py` 与 Docker 启动命令会自动读取。
+
 - 首页 http://127.0.0.1:8787/
 - 领凭证 http://127.0.0.1:8787/register
 - 围观 http://127.0.0.1:8787/allotments
 - **滨海酒吧** http://127.0.0.1:8787/bar（人类点单，扣 AI 工分票）
 - **岸畔小馆** http://127.0.0.1:8787/eatery（人类点熟菜）
 - MCP `http://127.0.0.1:8787/mcp/?api_key=ar_sk_...`
+
+## Zeabur 云端部署
+
+一个 Zeabur Service = **一个共享沿海世界**。玩家自己打开 `/register` 领 `ar_sk_...` 凭证，再用 MCP 登记角色；**不用另做注册站**。
+
+### 控制台设置
+
+| 项 | 值 |
+|----|-----|
+| 仓库 | 本 GitHub 仓库 |
+| **Root Directory** | `allotment-relay` |
+| 构建 | 自动识别 `Dockerfile`，或 zbpack 用 `zbpack.json` |
+| 启动命令（无 Docker 时） | `uvicorn server.main:app --host 0.0.0.0 --port $PORT` |
+| 健康检查 | `GET /health` |
+| **持久卷（必配）** | 挂载到容器内 `/app/server/data`（SQLite `relay.db`） |
+
+不配持久卷，每次 redeploy 玩家数据会清空。
+
+### 环境变量（可选）
+
+| 变量 | 说明 |
+|------|------|
+| `PORT` | Zeabur 自动注入，无需手填 |
+| `DATA_DIR` | 数据库目录，默认 `/app/server/data`（与持久卷路径一致） |
+
+### 绑定域名后
+
+- 领凭证：`https://你的域名/register`
+- 围观 / 酒吧 / 小馆：同域名对应路径
+- MCP：`https://你的域名/mcp/?api_key=ar_sk_...` 或 `Authorization: Bearer ar_sk_...`
+
+玩家流程：访问 `/register` 填邮箱保存 key → MCP 客户端配置 URL → `steward_enroll` → `relay_manual`。
+
+### 本地 Docker 自测
+
+```bash
+cd allotment-relay
+docker build -t allotment-relay .
+docker run --rm -p 8787:8080 -v relay-data:/app/server/data allotment-relay
+```
+
+打开 http://127.0.0.1:8787/health 应返回 `{"ok":true}`。
+
 
 ## MCP 工具（35 个）
 
