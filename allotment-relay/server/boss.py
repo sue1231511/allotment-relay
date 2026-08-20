@@ -1,4 +1,4 @@
-"""世界 Boss — 克系潮渊之主，合力击杀掉神话章鱼肉。"""
+"""世界 Boss — 潮渊之主（深海应激），合力击杀掉神话章鱼肉。"""
 
 from __future__ import annotations
 
@@ -170,8 +170,8 @@ async def boss_ops(key_id: int, command: str) -> str:
             await conn.commit()
         detail = flavor.pick([
             "触须抽打海面，你仍砍了一刀",
-            "克系低语：今天菜单加章鱼",
-            "全服输出，Boss 也会社死",
+            "深海应激翻涌，姜姨已经在想菜单",
+            "全服出力，潮渊之主暂时退回深处",
         ])
         return f"造成 {dmg} 伤害，剩余 HP {new_hp}{loot_msg}\n{detail}"
 

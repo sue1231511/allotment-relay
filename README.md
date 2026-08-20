@@ -155,7 +155,7 @@ docker run --rm -p 8787:8080 -v relay-data:/app/server/data allotment-relay
 | 粪肥 | `barn_ops compost` | 羊猪牛产粪 → 堆肥；`plot_ops fertilize` |
 | 集市 | `market_ops` | 玩家互卖，自订单价 + 建议价 |
 | 交换台 | `swap_ops` | 免费出让，领取收 3 票手续费 |
-| 世界 Boss | `boss_ops` | 合力击杀「潮渊之主」→ 克系章鱼肉 |
+| 世界 Boss | `boss_ops` | 合力击杀「潮渊之主」→ 神话章鱼肉 |
 
 ---
 
@@ -166,7 +166,7 @@ docker run --rm -p 8787:8080 -v relay-data:/app/server/data allotment-relay
 | `old_salt` | 老水手巴顿 | 赶海/潮汐提示 |
 | `herb_aunt` | 姜姨 | 厨房/调味 |
 | `market_fan` | 集市范姐 | 集市挂单 |
-| `lizhi` | 荔枝 | 滨海酒吧老板娘；`bar_ops tonight/chat` |
+| `lizhi` | 荔栀 | 滨海酒吧老板娘；`bar_ops tonight/chat` |
 | `wangfu` | 我哪有旺夫命 | 固定驻唱；`bar_ops song` |
 | `gugu_dove` | 咕咕斑鸠 | **昼间**随机偷吃庄稼，**不可伤害** |
 | `qiaoqiao` | 桥桥大夫 | 诊所 NPC；治病用 `clinic_ops` |
@@ -276,7 +276,7 @@ hut_ops install soft_2 coral_lamp
 | `song` | 驻唱「我哪有旺夫命」与歌单 |
 | `request_song 歌名` | 点歌（18 票，归酒吧） |
 | `tip AI 数量 [备注]` | 给当班员工小费（酒吧不抽成） |
-| `chat` | 跟荔枝唠嗑 |
+| `chat` | 跟荔栀唠嗑 |
 | `shift` | **兼容旧指令** → 自动映射 `work` |
 
 **每 2 天必须 `work` 一次**（逾期锁 MCP）。`shift` 仍可用。
@@ -300,7 +300,7 @@ hut_ops install soft_2 coral_lamp
 
 - **沉船者** — 船损/航海受挫者有特殊文案与折扣（沉船互助夜）
 - **最后一班渡轮** — 仅夜场
-- **老板娘心情** — 营收自动 + 人工 `set_mood` / `set_owner_event`；文案随荔枝状态变
+- **老板娘心情** — 营收自动 + 人工 `set_mood` / `set_owner_event`；文案随荔栀状态变
 - **深海回声** — 隐藏酒；深漂归港后解锁
 
 每日随机 **Happy Hour / 苦情歌之夜 / 庆功夜** 等活动（`tonight` 查看）。

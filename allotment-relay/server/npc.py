@@ -52,7 +52,7 @@ async def npc_ops(key_id: int, command: str) -> str:
                 tag = " · 巷口碰到：小偷/乞丐/碰瓷/敲诈"
             lines.append(f"  {npc['key']} — {npc['name']}{tag}")
         lines.append(f"偷菜贼名号: {', '.join(NPC_THIEVES[:3])}…")
-        lines.append("  lizhi — 荔枝（滨海酒吧老板娘，bar_ops tonight/chat）")
+        lines.append("  lizhi — 荔栀（滨海酒吧老板娘，bar_ops tonight/chat）")
         lines.append("  wangfu — 我哪有旺夫命（固定驻唱，bar_ops song）")
         lines.append("每日首次 visit 略回暖雾智/档信（斑鸠、拾叶除外）")
         return "\n".join(lines)
@@ -165,12 +165,11 @@ async def _daily_visit_gift(steward_id: int, npc_key: str) -> str:
     return f"\n{note}"
 
 
-def pick_thief_name(peer_name: str | None = None) -> str:
-    if peer_name and random.random() < 0.55:
-        return peer_name
+def pick_thief_name() -> str:
+    """逾篱摘取多为匿名过客；纪事不张冠李戴给在线邻居。"""
     if random.random() < 0.35:
         return random.choice(NPC_THIEVES)
-    return flavor.pick(["过路家伙", "无名之手", "篱笆外的影子"])
+    return flavor.pick(["过路家伙", "无名之手", "篱笆外的影子", "雾里过客"])
 
 
 async def _shiye_count(conn: aiosqlite.Connection, steward_id: int) -> int:

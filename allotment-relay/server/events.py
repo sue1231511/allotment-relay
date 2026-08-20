@@ -124,9 +124,8 @@ async def _scrump_victim(
     plot = await _pick_ripe_plot(conn, steward["id"])
     if not plot:
         return None
-    peer = await _random_peer(conn, steward["id"])
     from . import npc
-    thief = npc.pick_thief_name(peer["name"] if peer else None)
+    thief = npc.pick_thief_name()
     crop = plot["crop"]
     meta = CROPS[crop]
     await conn.execute(
@@ -144,13 +143,13 @@ async def _scrump_victim(
         "INSERT INTO chronicle (action, actor_id, target_id, text, created_at) VALUES (?, ?, ?, ?, ?)",
         (
             action,
-            peer["id"] if peer else None,
+            None,
             steward["id"],
             f"{thief} 逾篱摘了 {steward['name']} 的 {meta['name']}",
             db.now(),
         ),
     )
-    return detail, plot["id"], peer["id"] if peer else None
+    return detail, plot["id"], None
 
 
 async def _scrump_attempt(

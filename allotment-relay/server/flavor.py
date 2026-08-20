@@ -483,7 +483,7 @@ SCRUMP_VICTIM = [
     "你忙着，{thief} 从篱笆缝摘走 #{slot} 的 {crop}——留言「借味」，挺会起名",
     "{thief} 逾篱一手，{crop} 去了对面，#{slot} 空了，效率感人",
     "回头 #{slot} 空了：{thief} 来过，{crop} 没了，篱笆：我拦了，但没完全拦",
-    "篱笆条上多脚印，{crop} 少一棵，{thief} 嫌疑最大——也最有创意",
+    "篱笆条上多脚印，{crop} 少一棵——{thief} 的脚印，或者只是风",
 ]
 
 SCRUMP_CAUGHT = [

@@ -398,7 +398,7 @@ KITCHEN_DISHES = {
 }
 
 MYTH_INGREDIENTS = {
-    "myth_octopus": {"name": "克系章鱼肉", "emoji": "🐙", "sell": 220, "energy": 40},
+    "myth_octopus": {"name": "神话章鱼肉", "emoji": "🐙", "sell": 220, "energy": 40},
 }
 
 # 病症 — 随机事件致病，clinic_ops treat 花钱治（必须花票）
@@ -482,7 +482,7 @@ NPC_FIXED = [
         "认出来也别在我摊前打。要打出去打。——兼职海盗那档事",
         "渔汛周水产多，价别太卷。",
     ]},
-    {"key": "lizhi", "name": "荔枝", "lines": [
+    {"key": "lizhi", "name": "荔栀", "lines": [
         "滨海酒吧老板娘。漂亮、脾气爆、嘴硬、会做生意。",
         "营收好也未必温柔，烦的时候非常明显。",
         "bar_ops tonight 看今晚 · chat 唠嗑 · set_mood / set_owner_event 管理员用",
@@ -567,7 +567,7 @@ COASTAL_BAR = {
     "name": "滨海酒吧",
     "emoji": "🍸",
     "owner": "lizhi",
-    "owner_name": "荔枝",
+    "owner_name": "荔栀",
     "open_phases": ["dusk", "night"],
 }
 
@@ -617,7 +617,7 @@ ITEM_NAMES.update({f"fish_{k}": v["name"] for k, v in SEA_CATCH.items()})
 ITEM_NAMES.update({
     "compost": "堆肥", "wild_mint": "野薄荷", "drift_twine": "漂绳",
     "ticket_stub": "旧票根", "sea_glass": "海玻璃",
-    "wet_note": "湿透的纸条",
+    "wet_note": "湿透的纸条（「今晚别去码头」——旧码头黑旗换班夜的提醒）",
 })
 ITEM_NAMES.update({k: f"{v['emoji']}{v['name']}" for k, v in RARE_CURIO.items()})
 for cat in (HUT_HARD, HUT_SOFT):
