@@ -116,15 +116,6 @@ WILDLIFE = [
         "kind": "bad",
         "apply": "crow",
     },
-    {
-        "key": "dove",
-        "weight": 16,
-        "tags": {"grain", "berry", "tropic", "leaf", "root", "legume"},
-        "greenhouse": False,
-        "kind": "neutral",
-        "apply": "dove_peck",
-        "day_only": True,
-    },
 ]
 
 TRIGGER_CHANCE = {
@@ -385,61 +376,6 @@ async def _apply_wildlife(
     if apply == "crow":
         await conn.execute("UPDATE parcels SET tended=0 WHERE id=?", (plot["id"],))
         return flavor.fill(flavor.pick(flavor.WILDLIFE_CROW), slot=slot, crop=meta["name"])
-    if apply == "dove_peck":
-        stolen = ""
-        if plot_ready(plot):
-            delay = random.randint(200, 480)
-            await conn.execute(
-                """
-                UPDATE parcels SET tended=0, planted_at=?, grow_target=COALESCE(NULLIF(grow_target,0), ?)+?
-                WHERE id=?
-                """,
-                (db.now(), meta["grow"], delay, plot["id"]),
-            )
-            stolen = "，熟粒被啄走几穗"
-        else:
-            await conn.execute("UPDATE parcels SET tended=0 WHERE id=?", (plot["id"],))
-            if random.random() < 0.4:
-                delay = random.randint(120, 300)
-                await conn.execute(
-                    """
-                    UPDATE parcels SET grow_target=COALESCE(NULLIF(grow_target,0), ?)+? WHERE id=?
-                    """,
-                    (meta["grow"], delay, plot["id"]),
-                )
-        steal_chance = 0.22
-        if steward_id:
-            from . import hut as hut_mod
-            from . import barn as barn_mod
-            hut_b = await hut_mod.get_bonuses(conn, steward_id)
-            steal_chance *= hut_b.dove_steal
-            if await barn_mod.has_guard_dog(conn, steward_id):
-                steal_chance *= 0.35
-        if steward_id and random.random() < steal_chance:
-            from . import shaonian as shaonian_mod
-            if await shaonian_mod.dove_protected(conn, steward_id):
-                stolen += "，护田符挡了斑鸠顺包"
-            else:
-                conn.row_factory = aiosqlite.Row
-                rows = await (await conn.execute(
-                    """
-                    SELECT item FROM satchel
-                    WHERE steward_id=? AND quantity>0
-                      AND (item LIKE 'crop_%' OR item LIKE 'seed_%')
-                    ORDER BY RANDOM() LIMIT 5
-                    """,
-                    (steward_id,),
-                )).fetchall()
-                if rows:
-                    item = random.choice(rows)["item"]
-                    if await db.take_item(conn, steward_id, item, 1):
-                        stolen += f"，顺走行囊 {ITEM_NAMES.get(item, item)}"
-        detail = flavor.fill(
-            flavor.pick(flavor.WILDLIFE_DOVE),
-            slot=slot,
-            crop=meta["name"],
-        )
-        return detail + stolen + "（伤不得，赶不退）"
 
     who = flavor.WILDLIFE_NAMES.get(key, "野家伙")
     return f"#{slot} 来了{who}，苗：我看见了"
@@ -483,11 +419,6 @@ async def roll_farm_event(
         return None
 
     weights = [w["weight"] for w in pool]
-    if world.current_day_phase() == "day":
-        weights = [
-            w * 2.2 if pool[i]["key"] == "dove" else w
-            for i, w in enumerate(weights)
-        ]
     if await barn_mod.has_guard_dog(conn, steward["id"]):
         weights = [
             w * 0.45 if pool[i]["key"] in ("rabbit", "deer", "boar") else w
@@ -499,31 +430,21 @@ async def roll_farm_event(
             for i, w in enumerate(weights)
         ]
     wild = random.choices(pool, weights=weights)[0]
-    if wild["key"] == "dove" and trigger == "tend":
-        from . import lili_extras
-        if await lili_extras.has_blessing(conn, steward["id"], "guard_crop"):
-            await lili_extras.consume_blessing(conn, steward["id"], "guard_crop")
-            await _mark_farm_roll(conn, steward["id"])
-            return "夜栖替你瞪了斑鸠一眼。它咕了一声，改去别家试吃。（护苗）"
     detail = await _apply_wildlife(conn, plot, wild, steward_id=steward["id"])
     await _mark_farm_roll(conn, steward["id"])
 
     farm_ill = None
-    if wild["kind"] in ("bad", "neutral") and wild["key"] in ("rabbit", "boar", "slug", "dove"):
+    if wild["kind"] in ("bad", "neutral") and wild["key"] in ("rabbit", "boar", "slug"):
         farm_ill = await health.maybe_roll_ailment(
             conn, steward["id"], "farm_wild", chance=0.14, source="farm",
         )
 
-    if wild["key"] == "dove":
-        label = flavor.pick(flavor.DOVE_EVENT_LABELS)
-        msg = flavor.wrap_event("neutral", label, detail)
-    else:
-        label = flavor.pick(
-            flavor.LABELS_GOOD["land"] if wild["kind"] == "good"
-            else flavor.LABELS_BAD["land"] if wild["kind"] == "bad"
-            else ["田间插曲", "篱边访客", "土里的八卦"]
-        )
-        msg = flavor.wrap_event(wild["kind"] if wild["kind"] != "neutral" else "good", label, detail)
+    label = flavor.pick(
+        flavor.LABELS_GOOD["land"] if wild["kind"] == "good"
+        else flavor.LABELS_BAD["land"] if wild["kind"] == "bad"
+        else ["田间插曲", "篱边访客", "土里的八卦"]
+    )
+    msg = flavor.wrap_event(wild["kind"] if wild["kind"] != "neutral" else "good", label, detail)
     if farm_ill:
         msg += f"\n{farm_ill}\n→ clinic_ops treat …（必须花票）"
     return msg
@@ -548,8 +469,175 @@ async def gather_yield(
         return item, 1, keep
     if not plot.get("tended") and random.random() < 0.18:
         qty = 1
-        return item, qty, keep
+    mult = float(plot.get("dove_yield_mult") or 1.0)
+    if mult != 1.0:
+        qty = _apply_yield_mult(qty, mult)
+        await conn.execute(
+            "UPDATE parcels SET dove_yield_mult=1.0 WHERE id=?",
+            (plot["id"],),
+        )
     return item, qty, keep
+
+
+def _apply_yield_mult(qty: int, mult: float) -> int:
+    if mult <= 0:
+        return 0
+    expected = qty * mult
+    whole = int(expected)
+    frac = expected - whole
+    if random.random() < frac:
+        whole += 1
+    return whole
+
+
+async def get_gugu_dove_pending(
+    conn: aiosqlite.Connection, steward_id: int,
+) -> dict[str, Any] | None:
+    conn.row_factory = aiosqlite.Row
+    row = await (await conn.execute(
+        """
+        SELECT p.*, par.slot, par.crop
+        FROM gugu_dove_pending p
+        JOIN parcels par ON par.id = p.plot_id
+        WHERE p.steward_id=? AND par.crop IS NOT NULL
+        """,
+        (steward_id,),
+    )).fetchone()
+    return dict(row) if row else None
+
+
+def gugu_dove_prompt_text(pending: dict[str, Any]) -> str:
+    crop_name = CROPS.get(pending["crop"], {}).get("name", pending["crop"])
+    slot = pending["slot"]
+    return (
+        f"🕊️ 哎呀！你的菜被咕咕斑鸠盯上了！#{slot} {crop_name}\n"
+        "plot_ops dove 忽略 — 随它去（50% 啄庄稼收 60%，50% 吃虫收 150%）\n"
+        "plot_ops dove 驱赶 — 成功无事；20% 失败则吃光这块地"
+    )
+
+
+async def maybe_gugu_dove_stalk(
+    conn: aiosqlite.Connection,
+    steward: dict[str, Any],
+    plot_id: int,
+) -> str | None:
+    """20% chance on sow/tend (day only) to start a gugu dove encounter."""
+    if world.current_day_phase() != "day":
+        return None
+    if await get_gugu_dove_pending(conn, steward["id"]):
+        return None
+    conn.row_factory = aiosqlite.Row
+    plot = dict(await (await conn.execute(
+        "SELECT * FROM parcels WHERE id=? AND steward_id=?",
+        (plot_id, steward["id"]),
+    )).fetchone() or {})
+    if not plot.get("crop"):
+        return None
+    if plot.get("scarecrow"):
+        return None
+    from . import lili_extras
+    if await lili_extras.has_blessing(conn, steward["id"], "guard_crop"):
+        await lili_extras.consume_blessing(conn, steward["id"], "guard_crop")
+        return "夜栖替你瞪了斑鸠一眼。它咕了一声，改去别家。（护苗）"
+    chance = config.GUGU_DOVE_STALK_CHANCE
+    from . import hut as hut_mod
+    from . import barn as barn_mod
+    hut_b = await hut_mod.get_bonuses(conn, steward["id"])
+    chance *= hut_b.dove_steal
+    if await barn_mod.has_guard_dog(conn, steward["id"]):
+        chance *= 0.65
+    if random.random() > chance:
+        return None
+    await conn.execute(
+        """
+        INSERT INTO gugu_dove_pending (steward_id, plot_id, created_at)
+        VALUES (?, ?, ?)
+        ON CONFLICT(steward_id) DO UPDATE SET plot_id=excluded.plot_id, created_at=excluded.created_at
+        """,
+        (steward["id"], plot_id, db.now()),
+    )
+    pending = await get_gugu_dove_pending(conn, steward["id"])
+    if not pending:
+        return None
+    return flavor.wrap_event(
+        "neutral",
+        flavor.pick(flavor.DOVE_EVENT_LABELS),
+        gugu_dove_prompt_text(pending),
+    )
+
+
+async def resolve_gugu_dove(
+    conn: aiosqlite.Connection,
+    steward: dict[str, Any],
+    choice: str,
+) -> str:
+    pending = await get_gugu_dove_pending(conn, steward["id"])
+    if not pending:
+        raise ValueError("没有斑鸠盯梢事件。继续 sow/tend 种菜时可能触发")
+    plot_id = pending["plot_id"]
+    slot = pending["slot"]
+    crop = pending["crop"]
+    crop_name = CROPS.get(crop, {}).get("name", crop)
+    choice = choice.strip().lower()
+    ignore_keys = {"ignore", "忽略", "放任", "skip"}
+    drive_keys = {"drive", "驱赶", "赶走", "shoo"}
+    if choice not in ignore_keys | drive_keys:
+        raise ValueError("plot_ops dove 忽略|驱赶")
+
+    await conn.execute("DELETE FROM gugu_dove_pending WHERE steward_id=?", (steward["id"],))
+
+    if choice in drive_keys:
+        from . import shaonian as shaonian_mod
+        if await shaonian_mod.dove_protected(conn, steward["id"]):
+            return (
+                f"🕊️ #{slot} 咕咕斑鸠扑棱翅膀——护田符一亮，它骂骂咧咧飞走了。\n"
+                "（驱赶成功，庄稼无事）"
+            )
+        if random.random() < config.GUGU_DOVE_DRIVE_FAIL_CHANCE:
+            await conn.execute(
+                """
+                UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
+                grow_target=0, grow_pace='', fertilized=0, dove_yield_mult=1.0
+                WHERE id=?
+                """,
+                (plot_id,),
+            )
+            await db.add_chronicle(
+                "farm",
+                f"{steward['name']} 驱赶斑鸠失败，#{slot} {crop_name} 被吃光",
+                steward["id"],
+            )
+            return (
+                f"🕊️ 你挥手驱赶，斑鸠生气了！咕咕咕——#{slot} {crop_name} 被啄得一根不剩。\n"
+                "（驱赶失败，这块地要重种）"
+            )
+        return (
+            f"🕊️ #{slot} 斑鸠咕咕两声，扑棱飞走。{crop_name} 安然无恙。\n"
+            "（驱赶成功）"
+        )
+
+    # ignore — 50/50 eat vs help bugs
+    if random.random() < 0.5:
+        mult = config.GUGU_DOVE_EAT_YIELD
+        await conn.execute(
+            "UPDATE parcels SET dove_yield_mult=?, tended=0 WHERE id=?",
+            (mult, plot_id),
+        )
+        pct = int(mult * 100)
+        return (
+            f"🕊️ 你装作没看见。斑鸠啄了几口 #{slot} {crop_name}，咕咕咕飞走了。\n"
+            f"（收成约 {pct}%）"
+        )
+    mult = config.GUGU_DOVE_HELP_YIELD
+    await conn.execute(
+        "UPDATE parcels SET dove_yield_mult=?, tended=1 WHERE id=?",
+        (mult, plot_id),
+    )
+    pct = int(mult * 100)
+    return (
+        f"🕊️ 斑鸠帮你吃掉地里虫子，还替你 tend 了一把 #{slot} {crop_name}。\n"
+        f"（收成约 {pct}%）"
+    )
 
 
 async def shake_tree(
