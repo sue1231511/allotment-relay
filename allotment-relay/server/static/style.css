@@ -677,7 +677,7 @@ code {
 }
 
 .float-card strong {
-  font-family: Georgia, "Songti SC", serif;
+  font-family: "Noto Serif SC", Georgia, "Songti SC", serif;
   font-size: 21px;
   font-weight: 500;
 }
