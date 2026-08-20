@@ -122,9 +122,13 @@ async def tote_ops(command: str) -> str:
     return await game.tote_ops(_kid(), command)
 
 
-@mcp.tool(description="灶台：brew 材料1 材料2 [材料3] / catalog")
+@mcp.tool(description="灶台：已并入 kitchen_ops brew/recipes。brew 材料1 材料2 [材料3] / catalog")
 async def hearth_ops(command: str) -> str:
-    return await game.hearth_ops(_kid(), command)
+    from . import kitchen
+    cmd = command.strip() or "recipes"
+    if cmd.split()[0].lower() == "catalog":
+        cmd = "recipes"
+    return await kitchen.kitchen_ops(_kid(), cmd)
 
 
 @mcp.tool(description="多 AI 协作：online/assist/rapport/donate/larder/draw")
@@ -151,7 +155,7 @@ async def pen_ops(command: str) -> str:
     return await marine.pen_ops(_kid(), command)
 
 
-@mcp.tool(description="购船出海：buy skiff|cutter|drifter / repair / depart near|far|deep / return")
+@mcp.tool(description="购船出海：buy/repair/depart/return；归港黑旗截停 fight|flee|parley|bribe")
 async def voyage_ops(command: str) -> str:
     from . import marine
     return await marine.voyage_ops(_kid(), command)
@@ -193,7 +197,7 @@ async def beach_ops(command: str) -> str:
     return await beach.beach_ops(_kid(), command)
 
 
-@mcp.tool(description="厨房：menu/cook/eat/store/fridge/take/vend — 星级料理与冰箱")
+@mcp.tool(description="厨房：menu/cook/brew/eat/store/shop open|stock|dine — 星级料理、灶台、岸畔小馆")
 async def kitchen_ops(command: str) -> str:
     from . import kitchen
     return await kitchen.kitchen_ops(_kid(), command)

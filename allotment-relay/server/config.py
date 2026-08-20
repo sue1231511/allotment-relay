@@ -206,3 +206,15 @@ LILI_VISIT_MIN = 2400
 LILI_VISIT_MAX = 5400
 LILI_OFFERS_MIN = 4
 LILI_OFFERS_MAX = 6
+
+# 岸畔小馆 — 玩家用熟菜开店，人类网页点餐
+EATERY_OPEN_COST = 80
+EATERY_MENU_MAX = 8
+EATERY_DINE_DAILY = 4
+
+# 黑旗截停 — 坏遭遇需选手，超时当 flee
+HAIL_TIMEOUT = 5400
+HAIL_BRIBE = {"near": 10, "far": 18, "deep": 28}
+HAIL_FIGHT_ENERGY = 12
+HAIL_FLEE_ENERGY = 8
+HAIL_THREAT = {"near": 38, "far": 54, "deep": 70}

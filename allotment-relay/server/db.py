@@ -210,7 +210,8 @@ CREATE TABLE IF NOT EXISTS voyages (
     route TEXT NOT NULL,
     departed_at INTEGER NOT NULL,
     returns_at INTEGER NOT NULL,
-    status TEXT NOT NULL DEFAULT 'sailing'
+    status TEXT NOT NULL DEFAULT 'sailing',
+    encounter TEXT
 );
 
 CREATE TABLE IF NOT EXISTS farm_rolls (
@@ -411,6 +412,31 @@ CREATE TABLE IF NOT EXISTS npc_visits (
     day INTEGER NOT NULL,
     PRIMARY KEY (steward_id, npc_key, day)
 );
+
+CREATE TABLE IF NOT EXISTS eatery_menu (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    item TEXT NOT NULL,
+    price INTEGER NOT NULL,
+    listed_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS eatery_orders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    shop_id INTEGER NOT NULL REFERENCES stewards(id),
+    patron_id INTEGER NOT NULL REFERENCES stewards(id),
+    item TEXT NOT NULL,
+    price INTEGER NOT NULL,
+    note TEXT NOT NULL DEFAULT '',
+    created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS eatery_rolls (
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    day INTEGER NOT NULL,
+    count INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (steward_id, day)
+);
 """
 
 
@@ -443,6 +469,9 @@ async def init_db() -> None:
             "ALTER TABLE parcels ADD COLUMN scarecrow INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN last_bar_shift_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN health INTEGER NOT NULL DEFAULT 100",
+            "ALTER TABLE stewards ADD COLUMN eatery_open INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN eatery_label TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE voyages ADD COLUMN encounter TEXT NOT NULL DEFAULT ''",
         ):
             try:
                 await db.execute(ddl)

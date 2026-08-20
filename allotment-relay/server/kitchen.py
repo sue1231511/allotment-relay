@@ -9,8 +9,10 @@ import aiosqlite
 
 from . import config, db, energy, flavor, survival
 from .catalog import (
-    KITCHEN_DISHES,
+    HEARTH_RECIPES,
     ITEM_NAMES,
+    ITEM_PRICES,
+    KITCHEN_DISHES,
     dish_display_name,
     dish_item,
     dish_sell_price,
@@ -75,14 +77,19 @@ async def kitchen_ops(key_id: int, command: str) -> str:
     verb = parts[0].lower() if parts else "menu"
 
     if verb == "menu":
-        lines = ["厨房菜单（cook 菜名 / eat 物品 / store / fridge / vend 物品）:"]
+        lines = ["厨房菜单（cook 菜名 / brew 材料 / eat / store / shop）:"]
         for key, meta in KITCHEN_DISHES.items():
             ings = " + ".join(ITEM_NAMES.get(i, i) for i in meta["ings"])
             lines.append(
                 f"  {meta['emoji']}{meta['name']} — {ings} "
                 f"（+{meta['energy']}精力 · 基价{meta['base_sell']}票）"
             )
-        lines.append("随机事件可组装；星级影响售价与精力")
+        lines.append("")
+        lines.append("灶台 brew（回雾智，2~3 种材料；原 hearth_ops 仍可用）:")
+        for sig, recipe in HEARTH_RECIPES.items():
+            ings = " + ".join(ITEM_NAMES.get(i, i) for i in sig.split("|"))
+            lines.append(f"  {recipe['name']} — brew {sig.replace('|', ' ')}")
+        lines.append("小馆: kitchen_ops shop board|open|stock|dine")
         return "\n".join(lines)
 
     if verb == "cook" and len(parts) >= 2:
@@ -134,6 +141,9 @@ async def kitchen_ops(key_id: int, command: str) -> str:
                     gain = KITCHEN_DISHES[dish_key]["energy"]
             elif item == "myth_octopus":
                 gain = 40
+            elif item.startswith("meal_"):
+                gain = 12
+                await survival.bump(conn, s["id"], mist_wit=6)
             restored = await energy.restore(conn, s["id"], gain)
             await survival.bump(conn, s["id"], satiety=min(20, gain // 2 + 8))
             await conn.commit()
@@ -242,6 +252,88 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             await conn.commit()
         return f"出售 {ITEM_NAMES.get(item, item)} +{price} 票"
 
+    if verb in ("shop", "stall", "eatery"):
+        rest = " ".join(parts[1:]) if len(parts) > 1 else "board"
+        from . import eatery
+        return await eatery.eatery_command(s, rest)
+
+    if verb == "recipes":
+        return await _hearth_catalog()
+
+    if verb == "brew":
+        return await _hearth_brew(s, parts[1:])
+
     raise ValueError(
-        f"未知 kitchen 指令: {command}（menu/cook/eat/store/fridge/take/vend）"
+        f"未知 kitchen 指令: {command}（menu/cook/eat/store/fridge/take/vend/brew/recipes/shop）"
     )
+
+
+async def _hearth_catalog() -> str:
+    async with aiosqlite.connect(db.DB_PATH) as conn:
+        conn.row_factory = aiosqlite.Row
+        rows = await (await conn.execute(
+            """
+            SELECT h.signature, h.meal_key, p.name
+            FROM hearth_discoveries h JOIN stewards p ON p.id=h.discoverer_id
+            ORDER BY h.discovered_at DESC LIMIT 20
+            """
+        )).fetchall()
+    lines = ["灶台配方（brew 材料1 材料2 [材料3]）:"]
+    for sig, recipe in HEARTH_RECIPES.items():
+        ings = " ".join(sig.split("|"))
+        lines.append(f"  「{recipe['name']}」 brew {ings} → {recipe['sell']}票级")
+    if rows:
+        lines.append("已点亮:")
+        for r in rows:
+            recipe = HEARTH_RECIPES.get(r["signature"], {})
+            lines.append(f"  「{recipe.get('name', r['meal_key'])}」 by {r['name']}")
+    return "\n".join(lines)
+
+
+async def _hearth_brew(s: dict[str, Any], ings: list[str]) -> str:
+    from .config import DAILY_BREW_LIMIT
+    from . import events
+
+    ings = sorted(ings)
+    if len(ings) < 2 or len(ings) > 3:
+        raise ValueError("brew 需要 2~3 种材料，kitchen_ops recipes 看配方")
+    sig = "|".join(ings)
+    if sig not in HEARTH_RECIPES:
+        raise ValueError("这组材料没有已知配方，kitchen_ops recipes 查看")
+    recipe = HEARTH_RECIPES[sig]
+    day = db.now() // 86400
+    async with aiosqlite.connect(db.DB_PATH) as conn:
+        conn.row_factory = aiosqlite.Row
+        row = await (await conn.execute(
+            "SELECT brews_today, brew_day FROM stewards WHERE id=?", (s["id"],)
+        )).fetchone()
+        brews = row["brews_today"] if row["brew_day"] == day else 0
+        if brews >= DAILY_BREW_LIMIT:
+            raise ValueError(f"今日 brew 上限 {DAILY_BREW_LIMIT}")
+        from . import hut as hut_mod
+        hut_b = await hut_mod.get_bonuses(conn, s["id"])
+        for item in ings:
+            if not await db.take_item(conn, s["id"], item, 1):
+                raise ValueError(f"缺少 {ITEM_NAMES.get(item, item)}")
+        meal_ids = list(HEARTH_RECIPES.keys())
+        meal_idx = meal_ids.index(sig) + 1
+        meal_item = f"meal_{meal_idx}"
+        await db.add_item(conn, s["id"], meal_item, 1)
+        cur = await conn.execute("SELECT 1 FROM hearth_discoveries WHERE signature=?", (sig,))
+        if not await cur.fetchone():
+            await conn.execute(
+                "INSERT INTO hearth_discoveries (signature, meal_key, discoverer_id, discovered_at) VALUES (?,?,?,?)",
+                (sig, meal_item, s["id"], db.now()),
+            )
+            await db.add_chronicle("hearth", f"{s['name']} 点亮配方「{recipe['name']}」", s["id"])
+        await conn.execute(
+            "UPDATE stewards SET brews_today=?, brew_day=? WHERE id=?",
+            (brews + 1 if row["brew_day"] == day else 1, day, s["id"]),
+        )
+        await survival.bump(conn, s["id"], satiety=10, mist_wit=8 + hut_b.brew_mist)
+        extra = await events.roll_after_action(s, "brew", conn)
+        await conn.commit()
+    msg = f"灶台煮成「{recipe['name']}」→ {meal_item}（回雾智，可 eat / shop stock）"
+    if hut_b.brew_mist:
+        msg += " · 砖砌灶基加持"
+    return f"{msg}\n{extra}" if extra else msg

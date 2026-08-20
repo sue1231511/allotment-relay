@@ -1,3 +1,4 @@
+import json
 import random
 from typing import Any
 
@@ -6,7 +7,7 @@ import aiosqlite
 from . import db, events, event_gen, flavor, world
 from . import commons
 from .catalog import ITEM_NAMES, SEA_CATCH, voyage_loot_table
-from .config import BOATS, PEN_ERECT_COST, VOYAGE_ROUTES
+from .config import BOATS, HAIL_BRIBE, HAIL_FIGHT_ENERGY, HAIL_FLEE_ENERGY, HAIL_THREAT, HAIL_TIMEOUT, PEN_ERECT_COST, VOYAGE_ROUTES
 from .game import require_steward
 
 
@@ -50,7 +51,8 @@ async def _get_pen(conn: aiosqlite.Connection, steward_id: int, slot: int = 1) -
 async def _get_voyage(conn: aiosqlite.Connection, steward_id: int) -> dict[str, Any] | None:
     conn.row_factory = aiosqlite.Row
     row = await (await conn.execute(
-        "SELECT * FROM voyages WHERE steward_id=? AND status='sailing'", (steward_id,)
+        "SELECT * FROM voyages WHERE steward_id=? AND status IN ('sailing','hailed')",
+        (steward_id,),
     )).fetchone()
     return dict(row) if row else None
 
@@ -197,31 +199,22 @@ async def pen_ops(key_id: int, command: str) -> str:
     raise ValueError(f"未知 pen 指令: {command}（status/erect/label/stock/feed/harvest）")
 
 
-async def _apply_naval_encounter(
+async def _apply_naval_payload(
     conn: aiosqlite.Connection,
     s: dict[str, Any],
     voyage: dict[str, Any],
     loot_lines: list[str],
     fish_loot: list[str],
+    payload: dict[str, Any],
 ) -> str:
-    s = await _refresh_steward(conn, s["id"])
-    enc = event_gen.generate_naval_encounter(
-        voyage["route"],
-        s,
-        bad_bias=0.12 if s.get("boat_damaged") else 0.0,
-    )
-    if not enc:
-        return ""
-
     cargo_loss = 0
-    for eff in enc.effects:
+    effects = list(payload.get("effects") or [])
+    for eff in effects:
         if eff.startswith("cargo_loss:"):
             cargo_loss = int(eff.split(":")[1])
-
-    await events.apply_effects(conn, s, [e for e in enc.effects if not e.startswith("cargo_loss:")])
-
+    await events.apply_effects(conn, s, [e for e in effects if not e.startswith("cargo_loss:")])
     naval_extra = ""
-    if enc.kind == "bad":
+    if payload.get("kind") == "bad":
         from . import health
         extra = await health.maybe_roll_ailment(
             conn, s["id"], "voyage_return",
@@ -231,7 +224,6 @@ async def _apply_naval_encounter(
         )
         if extra:
             naval_extra = f"\n{extra}\n→ clinic_ops treat …（必须花票）"
-
     if cargo_loss:
         conn.row_factory = aiosqlite.Row
         rows = await (await conn.execute(
@@ -243,20 +235,170 @@ async def _apply_naval_encounter(
             if not rows:
                 break
             row = random.choice(rows)
-            item, qty = row["item"], row["quantity"]
-            take = 1
-            if await db.take_item(conn, s["id"], item, take):
+            item = row["item"]
+            if await db.take_item(conn, s["id"], item, 1):
                 removed_label = ITEM_NAMES.get(item, item)
                 if item in fish_loot:
                     fish_loot.remove(item)
-                rows = [r for r in rows if not (r["item"] == item and r["quantity"] <= take)]
+                rows = [r for r in rows if not (r["item"] == item and r["quantity"] <= 1)]
         if removed_label:
             loot_lines.append(f"遭遇扣货：{removed_label} x1")
+    return flavor.wrap_naval(
+        payload.get("kind") or "neutral",
+        payload.get("label") or "海上遭遇",
+        payload.get("detail") or "",
+    ) + naval_extra
 
-    return flavor.wrap_naval(enc.kind, enc.label, enc.detail) + naval_extra
+
+def _hail_prompt(payload: dict[str, Any]) -> str:
+    who = payload.get("who") or flavor.pick(flavor.NAVAL_WHO)
+    banner = flavor.fill(
+        flavor.pick(flavor.HAIL_BANNER),
+        who=who,
+        detail=payload.get("detail") or "",
+    )
+    return banner + "\n" + flavor.HAIL_CHOICES
 
 
-async def _resolve_voyage(conn: aiosqlite.Connection, s: dict[str, Any], voyage: dict[str, Any]) -> str:
+def _hail_expired(voyage: dict[str, Any]) -> bool:
+    return db.now() - (voyage.get("returns_at") or 0) >= HAIL_TIMEOUT
+
+
+async def _fight_power(conn: aiosqlite.Connection, s: dict[str, Any]) -> int:
+    boat = BOATS.get(s.get("boat_key") or "", {})
+    power = int(boat.get("rank", 1)) * 22
+    power += int(s.get("mist_wit", 50) * 0.28)
+    power += int(s.get("health", 100) * 0.08)
+    if s.get("mascot_trait") == "lucky":
+        power += 10
+    from . import hut as hut_mod
+    hut_b = await hut_mod.get_bonuses(conn, s["id"])
+    if hut_b.has("sea_chart"):
+        power += 10
+    if world.current_weather() == "gale":
+        power -= 8
+    return power
+
+
+async def _maybe_spend(conn, steward_id: int, amount: int, action: str, forced: bool) -> None:
+    from . import energy as energy_mod
+
+    try:
+        await energy_mod.spend(conn, steward_id, amount, action=action)
+    except ValueError:
+        if not forced:
+            raise
+
+
+async def _resolve_hail(
+    conn: aiosqlite.Connection,
+    s: dict[str, Any],
+    voyage: dict[str, Any],
+    choice: str,
+    loot_lines: list[str],
+    fish_loot: list[str],
+    *,
+    forced: bool = False,
+) -> str:
+    raw = voyage.get("encounter") or "{}"
+    try:
+        payload = json.loads(raw) if isinstance(raw, str) else dict(raw)
+    except json.JSONDecodeError:
+        payload = {}
+    who = payload.get("who") or flavor.pick(flavor.NAVAL_WHO)
+    route = voyage["route"]
+    threat = HAIL_THREAT.get(route, 50)
+    effects = list(payload.get("effects") or [])
+
+    if choice == "bribe":
+        cost = HAIL_BRIBE.get(route, 18)
+        cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
+        tickets = (await cur.fetchone())[0]
+        if tickets < cost:
+            if forced:
+                choice = "flee"
+            else:
+                raise ValueError(f"买路要 {cost} 票，你只有 {tickets} — 换 fight / flee / parley")
+        else:
+            await conn.execute(
+                "UPDATE stewards SET tickets=tickets-? WHERE id=?",
+                (cost, s["id"]),
+            )
+            await survival_bump_safe(conn, s["id"], standing=-1)
+            return flavor.fill(flavor.pick(flavor.HAIL_BRIBE), who=who, n=cost)
+
+    if choice == "flee":
+        await _maybe_spend(conn, s["id"], HAIL_FLEE_ENERGY, "砍缆跑路", forced)
+        boat_rank = BOATS.get(s.get("boat_key") or "", {}).get("rank", 1)
+        chance = 0.32 + boat_rank * 0.16
+        if world.current_weather() == "misty":
+            chance += 0.08
+        if random.random() < chance:
+            return flavor.fill(flavor.pick(flavor.HAIL_FLEE_WIN), who=who)
+        payload = dict(payload)
+        if "cargo_loss:1" not in effects:
+            effects = effects + ["cargo_loss:1"]
+        payload["effects"] = effects
+        msg = flavor.fill(flavor.pick(flavor.HAIL_FLEE_LOSE), who=who)
+        naval = await _apply_naval_payload(conn, s, voyage, loot_lines, fish_loot, payload)
+        return msg + "\n" + naval
+
+    if choice == "parley":
+        standing = s.get("standing", 50)
+        mist = s.get("mist_wit", 50)
+        chance = 0.22 + standing / 220 + mist / 280
+        if random.random() < chance:
+            fine = random.randint(3, 8)
+            await conn.execute(
+                "UPDATE stewards SET tickets=MAX(0, tickets-?) WHERE id=?",
+                (fine, s["id"]),
+            )
+            await survival_bump_safe(conn, s["id"], standing=2)
+            return flavor.fill(flavor.pick(flavor.HAIL_PARLEY_WIN), who=who) + f"（交涉费 {fine} 票）"
+        msg = flavor.fill(flavor.pick(flavor.HAIL_PARLEY_LOSE), who=who)
+        naval = await _apply_naval_payload(conn, s, voyage, loot_lines, fish_loot, payload)
+        return msg + "\n" + naval
+
+    await _maybe_spend(conn, s["id"], HAIL_FIGHT_ENERGY, "黑旗接舷", forced)
+    power = await _fight_power(conn, s)
+    player = power + random.randint(0, 22)
+    pirate = threat + random.randint(0, 22)
+    if player >= pirate:
+        bonus = random.randint(8, 16) + BOATS.get(s.get("boat_key") or "", {}).get("rank", 1) * 3
+        await conn.execute(
+            "UPDATE stewards SET tickets=tickets+? WHERE id=?",
+            (bonus, s["id"]),
+        )
+        if random.random() < 0.45:
+            table = voyage_loot_table(route)
+            extra_fish = random.choice(table)
+            await db.add_item(conn, s["id"], extra_fish, 1)
+            if extra_fish.startswith("fish_"):
+                fish_loot.append(extra_fish)
+            loot_lines.append(f"缴获 {ITEM_NAMES.get(extra_fish, extra_fish)} x1")
+        await survival_bump_safe(conn, s["id"], standing=3, mist_wit=2)
+        msg = flavor.fill(flavor.pick(flavor.HAIL_FIGHT_WIN), who=who, n=bonus)
+        if loot_lines:
+            msg += " · " + "，".join(loot_lines)
+        return msg
+
+    payload = dict(payload)
+    if "boat_damage" not in effects:
+        effects = effects + ["boat_damage"]
+    payload["effects"] = effects
+    msg = flavor.fill(flavor.pick(flavor.HAIL_FIGHT_LOSE), who=who)
+    naval = await _apply_naval_payload(conn, s, voyage, loot_lines, fish_loot, payload)
+    return msg + "\n" + naval
+
+
+async def survival_bump_safe(conn, steward_id: int, **kwargs) -> None:
+    from . import survival
+    await survival.bump(conn, steward_id, **kwargs)
+
+
+async def _resolve_voyage(
+    conn: aiosqlite.Connection, s: dict[str, Any], voyage: dict[str, Any]
+) -> tuple[str, list[str], bool]:
     route = VOYAGE_ROUTES[voyage["route"]]
     s = await _refresh_steward(conn, s["id"])
     fail_chance = route["fail"] + await events.voyage_fail_modifier()
@@ -300,17 +442,51 @@ async def _resolve_voyage(conn: aiosqlite.Connection, s: dict[str, Any], voyage:
             if item.startswith("fish_"):
                 fish_loot.append(item)
 
-    await conn.execute(
-        "UPDATE voyages SET status='returned' WHERE id=?",
-        (voyage["id"],),
+    enc = event_gen.generate_naval_encounter(
+        voyage["route"],
+        s,
+        bad_bias=0.12 if s.get("boat_damaged") else 0.0,
     )
-    await conn.execute("DELETE FROM voyages WHERE id=?", (voyage["id"],))
-
-    naval_msg = await _apply_naval_encounter(conn, s, voyage, loot_lines, fish_loot)
     msg = f"{route['label']}归港：" + "，".join(loot_lines)
     msg += flavor.maybe_suffix(flavor.VOYAGE_RETURN_BAD if failed else flavor.VOYAGE_RETURN_GOOD)
     if s.get("boat_damaged"):
         msg += "（船损，voyage_ops repair）"
+
+    if enc and enc.kind == "bad":
+        payload = {
+            "kind": enc.kind,
+            "label": enc.label,
+            "detail": enc.detail,
+            "effects": enc.effects,
+            "who": flavor.pick(flavor.NAVAL_WHO),
+            "looted": True,
+        }
+        await conn.execute(
+            "UPDATE voyages SET status='hailed', encounter=? WHERE id=?",
+            (json.dumps(payload, ensure_ascii=False), voyage["id"]),
+        )
+        disc = await commons.roll_discovery(conn, s, "voyage_return")
+        if disc:
+            msg += f"\n{disc}"
+        if extra:
+            msg += f"\n{extra}"
+        msg += "\n" + _hail_prompt(payload)
+        await conn.execute(
+            "INSERT INTO chronicle (action, actor_id, target_id, text, created_at) VALUES (?, ?, ?, ?, ?)",
+            ("voyage", s["id"], None, f"{s['name']} 归港遇黑旗截停", db.now()),
+        )
+        return msg, fish_loot, True
+
+    naval_msg = ""
+    if enc:
+        payload = {
+            "kind": enc.kind,
+            "label": enc.label,
+            "detail": enc.detail,
+            "effects": enc.effects,
+        }
+        naval_msg = await _apply_naval_payload(conn, s, voyage, loot_lines, fish_loot, payload)
+    await conn.execute("DELETE FROM voyages WHERE id=?", (voyage["id"],))
     if naval_msg:
         msg += f"\n{naval_msg}"
 
@@ -324,14 +500,42 @@ async def _resolve_voyage(conn: aiosqlite.Connection, s: dict[str, Any], voyage:
     )
     if extra:
         msg += f"\n{extra}"
-    return msg, fish_loot
+    return msg, fish_loot, False
 
 
-async def _finish_voyage(steward_id: int, voyage: dict[str, Any]) -> str:
+async def _finish_voyage(steward_id: int, voyage: dict[str, Any], choice: str | None = None) -> str:
     async with aiosqlite.connect(db.DB_PATH) as conn:
         s = await _refresh_steward(conn, steward_id)
-        msg, fish_loot = await _resolve_voyage(conn, s, voyage)
-        await conn.commit()
+        fish_loot: list[str] = []
+        if voyage.get("status") == "hailed":
+            if choice is None and not _hail_expired(voyage):
+                raw = voyage.get("encounter") or "{}"
+                try:
+                    payload = json.loads(raw)
+                except json.JSONDecodeError:
+                    payload = {}
+                return _hail_prompt(payload)
+            if choice is None:
+                choice = "flee"
+                try:
+                    who = json.loads(voyage.get("encounter") or "{}").get("who", "黑帆")
+                except json.JSONDecodeError:
+                    who = "黑帆"
+                timeout_note = flavor.fill(flavor.pick(flavor.HAIL_TIMEOUT), who=who)
+            else:
+                timeout_note = ""
+            hail_msg = await _resolve_hail(
+                conn, s, voyage, choice, [], fish_loot, forced=bool(timeout_note)
+            )
+            await conn.execute("DELETE FROM voyages WHERE id=?", (voyage["id"],))
+            await conn.commit()
+            msg = hail_msg
+            if timeout_note:
+                msg = timeout_note + "\n" + msg
+            await db.add_chronicle("voyage", f"{s['name']} 黑旗：{choice}", steward_id)
+        else:
+            msg, fish_loot, _hailed = await _resolve_voyage(conn, s, voyage)
+            await conn.commit()
     from . import multi
     for item in fish_loot:
         bonus = await multi.on_league_item(steward_id, item, 1)
@@ -351,6 +555,10 @@ async def voyage_ops(key_id: int, command: str) -> str:
         async with aiosqlite.connect(db.DB_PATH) as conn:
             voyage = await _get_voyage(conn, s["id"])
             s = await _refresh_steward(conn, s["id"])
+        if voyage and voyage.get("status") == "hailed":
+            auto = await _finish_voyage(s["id"], voyage)
+            prefix = f"{pulse}\n" if pulse else ""
+            return prefix + auto
         if voyage and db.now() >= voyage["returns_at"]:
             auto = await _finish_voyage(s["id"], voyage)
             prefix = f"{pulse}\n" if pulse else ""
@@ -430,7 +638,7 @@ async def voyage_ops(key_id: int, command: str) -> str:
                 need = BOATS[route["min_boat"]]["name"]
                 raise ValueError(f"{route['label']} 至少需要 {need}")
             if await _get_voyage(conn, s["id"]):
-                raise ValueError("已在海上，return 或等 status 归港")
+                raise ValueError("已在海上或正被截停，return / fight / flee 先收场")
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
             if (await cur.fetchone())[0] < route["fuel"]:
                 raise ValueError(f"出海燃油 {route['fuel']} 票")
@@ -466,6 +674,28 @@ async def voyage_ops(key_id: int, command: str) -> str:
             return f"{msg}\n{extra}"
         return msg
 
+    if verb in ("fight", "flee", "parley", "bribe"):
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            voyage = await _get_voyage(conn, s["id"])
+        if not voyage:
+            raise ValueError("没有截停中的航程")
+        if voyage.get("status") == "sailing":
+            if db.now() < voyage["returns_at"]:
+                left = voyage["returns_at"] - db.now()
+                raise ValueError(f"还在海上，约 {left // 60} 分后归港才可能截停")
+            first = await _finish_voyage(s["id"], voyage)
+            async with aiosqlite.connect(db.DB_PATH) as conn:
+                voyage = await _get_voyage(conn, s["id"])
+            if voyage and voyage.get("status") == "hailed":
+                combat = await _finish_voyage(s["id"], voyage, choice=verb)
+                prefix = f"{pulse}\n" if pulse else ""
+                return prefix + first + "\n" + combat
+            prefix = f"{pulse}\n" if pulse else ""
+            return prefix + first + "\n这趟没碰上黑旗，指令空放了"
+        combat = await _finish_voyage(s["id"], voyage, choice=verb)
+        prefix = f"{pulse}\n" if pulse else ""
+        return prefix + combat
+
     if verb == "return":
         async with aiosqlite.connect(db.DB_PATH) as conn:
             voyage = await _get_voyage(conn, s["id"])
@@ -487,5 +717,5 @@ async def voyage_ops(key_id: int, command: str) -> str:
         return await _finish_voyage(s["id"], voyage)
 
     raise ValueError(
-        f"未知 voyage 指令: {command}（status/buy/repair/depart/return/moor）"
+        f"未知 voyage 指令: {command}（status/buy/repair/depart/return/moor/fight/flee/parley/bribe）"
     )

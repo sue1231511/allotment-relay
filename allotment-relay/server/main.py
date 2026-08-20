@@ -63,10 +63,21 @@ async def bar_page(request: Request):
     return templates.TemplateResponse("bar.html", {"request": request})
 
 
+@app.get("/eatery", response_class=HTMLResponse)
+async def eatery_page(request: Request):
+    return templates.TemplateResponse("eatery.html", {"request": request})
+
+
 class BarOrderRequest(BaseModel):
     api_key: str
     service: str
     host_name: str | None = None
+
+
+class EateryOrderRequest(BaseModel):
+    api_key: str
+    shop: str
+    item: str | None = None
 
 
 @app.post("/api/keys/generate")
@@ -122,6 +133,25 @@ async def bar_order(body: BarOrderRequest):
     from . import bar
     try:
         return await bar.place_human_order(body.api_key.strip(), body.service.strip(), body.host_name)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/public/eatery")
+async def public_eatery():
+    from . import eatery
+    return await eatery.public_eatery_snapshot()
+
+
+@app.post("/api/eatery/order")
+async def eatery_order(body: EateryOrderRequest):
+    from . import eatery
+    try:
+        return await eatery.place_human_order(
+            body.api_key.strip(),
+            body.shop.strip(),
+            body.item.strip() if body.item else None,
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

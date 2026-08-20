@@ -82,4 +82,6 @@ select {
   width: 100%; margin-top: .4rem; padding: .65rem .75rem;
   border-radius: 8px; border: 1px solid var(--border); background: #0a1218; color: var(--text);
 }
-button.btn { font-family: inherit; }
+.eatery-page .bar-head h1 { color: #d4b483; }
+.eatery-page .host-card { border-left-color: #c4a35a; }
+.eatery-page .host-card h3 { color: #e6c98a; }

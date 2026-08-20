@@ -9,7 +9,6 @@ from . import commons
 from .catalog import (
     CROPS,
     FORAGE_LOOT,
-    HEARTH_RECIPES,
     ITEM_NAMES,
     ITEM_PRICES,
     SEA_CATCH,
@@ -18,7 +17,6 @@ from .catalog import (
 from .config import (
     BADGES,
     BOATS,
-    DAILY_BREW_LIMIT,
     FORAGE_COOLDOWN_DAY,
     GREENHOUSE_COST,
     GUILD_TICKETS,
@@ -65,7 +63,7 @@ async def relay_manual() -> str:
         "  gear_ops — status/upgrade 鱼饵·鱼竿·渔网 tier",
         "  beach_ops — scan/dig/probe（退潮+铲子赶海，雾天稀有↑）",
         "  tool_ops — list/buy 锄头铲子渔网",
-        "  kitchen_ops — menu/cook/eat/store/fridge（星级料理+冰箱）",
+        "  kitchen_ops — menu/cook/brew/eat/shop（星级料理+灶台+岸畔小馆）",
         "  market_ops — list/sell/buy 玩家集市",
         "  barn_ops — 兔/鸡/鸭/羊/猪/山羊/牛/蜂箱/狗",
         "  boss_ops — 克系世界Boss",
@@ -80,7 +78,7 @@ async def relay_manual() -> str:
         "  commons_ops scan — 全服稀有公共物资，随机时间上线，claim 抢",
         "",
         "  pen_ops — erect/stock/feed/harvest（渔排养鱼）",
-        "  voyage_ops — buy/repair/depart/return（购船出海，归港可触发海上遭遇）",
+        "  voyage_ops — buy/repair/depart/return；归港坏遭遇会黑旗截停 fight/flee/parley/bribe",
         "  shed_ops — erect/label/visit/handoff（温室）",
         "  hut_ops — build/upgrade/catalog/buy/install（岸畔小屋；装件加成已生效）",
         "  commons_ops — scan/claim/pulse（稀有公共物资，随机上线）",
@@ -107,7 +105,7 @@ async def relay_manual() -> str:
         "  票紧？暮/夜 bar_ops shift；逾期白天可补班。小屋装件/栗栗装饰会改意外、出海、赶海",
         "  意外/赶海/出海/上工可能致病 → clinic_ops treat 花钱治（桥桥大夫不赊账）",
         f"  **每 {BAR_MANDATORY_DAYS} 天必须 shift 一次**，逾期其它 MCP 锁定",
-        "  人类网页 /bar 可花 AI 的票点牛郎",
+        "  人类网页 /bar 点牛郎 · /eatery 点小馆熟菜",
         "",
         "  饱食 / 雾智 / 档信 三项慢衰减，无硬死亡",
         "  低了只是更容易出意外、档口票打折——gather/net/brew/amends 可回暖",
@@ -123,8 +121,8 @@ async def relay_manual() -> str:
         "  incident_ops repair id — 花票处理未解意外",
         "",
         "【海上遭遇】",
-        "  出海归港时随机触发：走私稽查、黑帆、友船赠物……不是回合制海战",
-        "  外海/深漂遭遇率更高，雾智低时坏遭遇略多",
+        "  归港坏遭遇会黑旗截停：fight / flee / parley / bribe，不是回合制海战",
+        "  友船赠物仍自动结算；外海/深漂截停更多，雾智低时坏遭遇略多",
         "",
         "【多 AI 协作】",
         "  assist 名字 — 帮邻居打理份地，每日每人一次，+票 +协作度",
@@ -194,13 +192,18 @@ async def steward_sheet(key_id: int) -> str:
             lines.append(hut_summary)
     if s.get("barn_built"):
         lines.append("畜栏: 已建")
+    if s.get("eatery_open"):
+        lines.append(f"小馆: {s.get('eatery_label') or s['name']+'的馆'}（kitchen_ops shop menu）")
     async with aiosqlite.connect(db.DB_PATH) as conn:
         conn.row_factory = aiosqlite.Row
         pen = await (await conn.execute(
             "SELECT * FROM fish_pens WHERE steward_id=? AND slot=1", (s["id"],)
         )).fetchone()
         voyage = await (await conn.execute(
-            "SELECT route, returns_at FROM voyages WHERE steward_id=? AND status='sailing'",
+            """
+            SELECT route, returns_at, status FROM voyages
+            WHERE steward_id=? AND status IN ('sailing','hailed')
+            """,
             (s["id"],),
         )).fetchone()
     if pen:
@@ -209,8 +212,14 @@ async def steward_sheet(key_id: int) -> str:
         lines.append(_pen_line(dict(pen)))
     if voyage:
         from .config import VOYAGE_ROUTES
-        left = max(0, voyage["returns_at"] - db.now())
-        lines.append(f"出海: {VOYAGE_ROUTES[voyage['route']]['label']}（{left // 60} 分后归港）")
+        if voyage["status"] == "hailed":
+            lines.append(
+                f"出海: {VOYAGE_ROUTES[voyage['route']]['label']} 🏴 黑旗截停 — "
+                "voyage_ops fight|flee|parley|bribe"
+            )
+        else:
+            left = max(0, voyage["returns_at"] - db.now())
+            lines.append(f"出海: {VOYAGE_ROUTES[voyage['route']]['label']}（{left // 60} 分后归港）")
     if s["mascot_name"]:
         lines.append(f"吉祥物: {s['mascot_name']}（{s['mascot_trait']}，士气 {s['mascot_spirit']}）")
     lines.append("份地状态:")
@@ -1037,69 +1046,8 @@ async def tote_ops(key_id: int, command: str) -> str:
 
 
 async def hearth_ops(key_id: int, command: str) -> str:
-    s = await require_steward(key_id)
-    parts = command.strip().split()
-    verb = parts[0].lower() if parts else "catalog"
-
-    if verb == "catalog":
-        async with aiosqlite.connect(db.DB_PATH) as conn:
-            conn.row_factory = aiosqlite.Row
-            rows = await (await conn.execute(
-                """
-                SELECT h.signature, h.meal_key, p.name
-                FROM hearth_discoveries h JOIN stewards p ON p.id=h.discoverer_id
-                ORDER BY h.discovered_at DESC LIMIT 20
-                """
-            )).fetchall()
-        if not rows:
-            return "尚无人点亮灶台配方"
-        lines = []
-        for r in rows:
-            recipe = HEARTH_RECIPES.get(r["signature"], {})
-            lines.append(f"「{recipe.get('name', r['meal_key'])}」 by {r['name']}")
-        return "\n".join(lines)
-
-    if verb == "brew":
-        ings = sorted(parts[1:])
-        if len(ings) < 2 or len(ings) > 3:
-            raise ValueError("brew 需要 2~3 种材料")
-        sig = "|".join(ings)
-        if sig not in HEARTH_RECIPES:
-            raise ValueError("这组材料没有已知配方，试试 catalog 里的组合")
-        recipe = HEARTH_RECIPES[sig]
-        day = db.now() // 86400
-        async with aiosqlite.connect(db.DB_PATH) as conn:
-            conn.row_factory = aiosqlite.Row
-            row = await (await conn.execute(
-                "SELECT brews_today, brew_day FROM stewards WHERE id=?", (s["id"],)
-            )).fetchone()
-            brews = row["brews_today"] if row["brew_day"] == day else 0
-            if brews >= DAILY_BREW_LIMIT:
-                raise ValueError(f"今日 brew 上限 {DAILY_BREW_LIMIT}")
-            from . import hut as hut_mod
-            hut_b = await hut_mod.get_bonuses(conn, s["id"])
-            for item in ings:
-                if not await db.take_item(conn, s["id"], item, 1):
-                    raise ValueError(f"缺少 {item}")
-            meal_ids = list(HEARTH_RECIPES.keys())
-            meal_idx = meal_ids.index(sig) + 1
-            meal_item = f"meal_{meal_idx}"
-            await db.add_item(conn, s["id"], meal_item, 1)
-            cur = await conn.execute("SELECT 1 FROM hearth_discoveries WHERE signature=?", (sig,))
-            if not await cur.fetchone():
-                await conn.execute(
-                    "INSERT INTO hearth_discoveries (signature, meal_key, discoverer_id, discovered_at) VALUES (?,?,?,?)",
-                    (sig, meal_item, s["id"], db.now()),
-                )
-                await db.add_chronicle("hearth", f"{s['name']} 点亮配方「{recipe['name']}」", s["id"])
-            await conn.execute(
-                "UPDATE stewards SET brews_today=?, brew_day=? WHERE id=?",
-                (brews + 1 if row["brew_day"] == day else 1, day, s["id"]),
-            )
-            await survival.bump(conn, s["id"], satiety=10, mist_wit=8 + hut_b.brew_mist)
-            extra = await events.roll_after_action(s, "brew", conn)
-            await conn.commit()
-        msg = f" brewed 「{recipe['name']}」→ {meal_item}"
-        return f"{msg}\n{extra}" if extra else msg
-
-    raise ValueError(f"未知 hearth 指令: {command}")
+    from . import kitchen
+    cmd = command.strip() or "recipes"
+    if cmd.split()[0].lower() == "catalog":
+        cmd = "recipes"
+    return await kitchen.kitchen_ops(key_id, cmd)

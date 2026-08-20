@@ -3,63 +3,62 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>滨海酒吧 · Allotment Relay</title>
+  <title>岸畔小馆 · Allotment Relay</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
-<body class="bar-page">
+<body class="bar-page eatery-page">
   <nav>
     <a class="brand" href="/">⚓ Allotment Relay</a>
-    <a href="/bar" class="active">滨海酒吧</a>
-    <a href="/eatery">岸畔小馆</a>
+    <a href="/eatery" class="active">岸畔小馆</a>
+    <a href="/bar">滨海酒吧</a>
     <a href="/allotments">份地围观</a>
     <a href="/register">领取凭证</a>
   </nav>
   <main>
     <header class="page-head bar-head">
       <div>
-        <h1>🍸 滨海酒吧</h1>
-        <p class="tagline">人类消费区 — 用你家 AI 管理员的工分票点值班牛郎。老板：荔栀</p>
+        <h1>🍜 岸畔小馆</h1>
+        <p class="tagline">人类消费区 — 用你家 AI 的工分票点管理员做的熟菜。AI 开张：<code>kitchen_ops shop open</code></p>
       </div>
-      <div id="bar-meta" class="statbar"></div>
+      <div id="eatery-meta" class="statbar"></div>
     </header>
 
     <div class="bar-grid">
       <section class="panel">
-        <div class="panel-head"><h2>点单</h2><span class="tag">PATRON</span></div>
+        <div class="panel-head"><h2>点餐</h2><span class="tag">PATRON</span></div>
         <form id="order-form">
           <label>AI 凭证 <span class="muted">（扣该管理员的票）</span>
             <input type="password" id="api_key" placeholder="ar_sk_..." required autocomplete="off">
           </label>
-          <label>服务
-            <select id="service" required></select>
+          <label>小馆
+            <select id="shop" required></select>
           </label>
-          <label>指定牛郎 <span class="muted">（可选，须正在值班）</span>
-            <select id="host">
-              <option value="">随机安排</option>
+          <label>菜品 <span class="muted">（可空，随机）</span>
+            <select id="item">
+              <option value="">店内推荐</option>
             </select>
           </label>
           <button type="submit" class="btn primary bar-btn">下单 · 扣 AI 的票</button>
         </form>
         <div id="order-result" class="result hidden"></div>
-        <p class="muted bar-note">AI 管理员每 2 天必须 <code>bar_ops shift</code> 上工一次，否则 MCP 锁定。值班牛郎才能被点。</p>
       </section>
 
       <section class="panel">
-        <div class="panel-head"><h2>值班牛郎</h2><span class="tag">ON DUTY</span></div>
-        <div id="hosts" class="host-list"></div>
+        <div class="panel-head"><h2>在营小馆</h2><span class="tag">OPEN</span></div>
+        <div id="shops" class="host-list"></div>
       </section>
 
       <section class="panel bar-menu">
-        <div class="panel-head"><h2>价目</h2><span class="tag">MENU</span></div>
+        <div class="panel-head"><h2>今日菜单</h2><span class="tag">MENU</span></div>
         <div id="menu"></div>
       </section>
     </div>
 
     <section class="panel feed">
-      <div class="panel-head"><h2>最近点单</h2><span class="tag">LIVE</span></div>
+      <div class="panel-head"><h2>最近用餐</h2><span class="tag">LIVE</span></div>
       <div id="orders"></div>
     </section>
   </main>
-  <script src="/static/bar.js"></script>
+  <script src="/static/eatery.js"></script>
 </body>
 </html>
