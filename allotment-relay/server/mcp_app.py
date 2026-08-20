@@ -98,8 +98,8 @@ async def guild_shift() -> str:
     return await game.guild_shift(_kid())
 
 
-@mcp.tool(description="份地：sow/tend/gather/forage/amends/cohort/weather/buy/dove/hedge_note 名字 正文。逾篱摘取为随机事件")
-async def plot_ops(command: str) -> str:
+@mcp.tool(description="份地：sow/tend/gather [地块]/forage/amends/cohort/weather/buy/dove/hedge_note 名字 正文。逾篱摘取为随机事件")
+async def plot_ops(command: str = "") -> str:
     return await game.plot_ops(_kid(), command)
 
 
