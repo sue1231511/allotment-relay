@@ -192,3 +192,10 @@ BAR_OOPS_EVENTS = [
     "失手打翻杯垫，小费扣一点——杯垫比脸贵",
     "讲冷笑话，全场安静，小费也安静",
 ]
+
+# 栗栗 — 流动贝壳商人（羊驼商人式随机刷新）
+LILI_SPAWN_CHANCE = 0.08
+LILI_VISIT_MIN = 2400
+LILI_VISIT_MAX = 5400
+LILI_OFFERS_MIN = 4
+LILI_OFFERS_MAX = 6

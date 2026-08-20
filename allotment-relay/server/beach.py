@@ -70,11 +70,15 @@ async def beach_ops(key_id: int, command: str) -> str:
             beach_ill = await health.maybe_roll_ailment(
                 conn, s["id"], "beach", chance=0.10, source="beach",
             )
+            from . import lili as lili_mod
+            lili_spawn = await lili_mod.maybe_spawn_visit(conn)
             await conn.commit()
 
         msg = f"赶海：{label} x{qty}"
         if beach_ill:
             msg += f"\n{beach_ill}\n→ clinic_ops treat …（必须花票）"
+        if lili_spawn:
+            msg += f"\n✨ {lili_spawn['detail']} → lili_ops scan"
         msg += flavor.maybe_suffix([
             "沙里藏货，铲子诚不欺我",
             "猫眼螺在看你，你也看它",

@@ -24,6 +24,8 @@ async def npc_ops(key_id: int, command: str) -> str:
                 tag = " · 昼间随机偷吃庄稼，不可伤害"
             elif npc["key"] == "qiaoqiao":
                 tag = " · 诊所 NPC，治病用 clinic_ops treat"
+            elif npc["key"] == "lili":
+                tag = " · 流动贝壳商，lili_ops scan/trade"
             lines.append(f"  {npc['key']} — {npc['name']}{tag}")
         lines.append(f"偷菜贼名号: {', '.join(NPC_THIEVES[:3])}…")
         lines.append("  lizhi — 荔栀（滨海酒吧老板，也可 bar_ops chat）")
@@ -41,6 +43,14 @@ async def npc_ops(key_id: int, command: str) -> str:
                 "——伤不得，联盟牌子上写着呢",
                 "——它看你不顺眼，但主要是看庄稼顺眼",
             ])
+        elif npc["key"] == "lili":
+            from . import lili as lili_mod
+            async with aiosqlite.connect(db.DB_PATH) as conn:
+                hint = await lili_mod.active_visit_hint(conn)
+            if hint:
+                extra = f"——{hint}"
+            else:
+                extra = "——驮包叮当远去了，lili_ops scan 蹲下一回"
         else:
             extra = flavor.pick([
                 "——说完就溜达走了",

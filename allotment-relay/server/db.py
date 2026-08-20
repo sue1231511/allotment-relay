@@ -370,6 +370,25 @@ CREATE TABLE IF NOT EXISTS bar_orders (
     note TEXT NOT NULL DEFAULT '',
     created_at INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS lili_visits (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    started_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL,
+    detail TEXT NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS lili_offers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    visit_id INTEGER NOT NULL REFERENCES lili_visits(id),
+    trade_key TEXT NOT NULL,
+    give_json TEXT NOT NULL,
+    get_item TEXT NOT NULL,
+    get_qty INTEGER NOT NULL DEFAULT 1,
+    ticket_cost INTEGER NOT NULL DEFAULT 0,
+    stock INTEGER NOT NULL DEFAULT 1,
+    sold INTEGER NOT NULL DEFAULT 0
+);
 """
 
 

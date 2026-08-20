@@ -71,6 +71,7 @@ async def relay_manual() -> str:
         "  boss_ops — 克系世界Boss",
         "  npc_ops / bottle_ops — 固定NPC与漂流瓶",
         "  clinic_ops — 桥桥大夫诊所（随机致病，必须花票 treat）",
+        "  lili_ops — 栗栗流动摊（贝壳换稀有装饰，羊驼商人式刷新）",
         "  bar_ops — 滨海酒吧 shift/chat（暮夜上工赚票）",
         "",
         "【份地农事 · 随机生长】",
@@ -144,6 +145,9 @@ async def steward_sheet(key_id: int) -> str:
         from . import health as health_mod
         await energy_mod.soft_regen(conn, s["id"])
         ailments = await health_mod.list_ailments(conn, s["id"])
+        from . import lili as lili_mod
+        await lili_mod.maybe_spawn_visit(conn)
+        lili_hint = await lili_mod.active_visit_hint(conn)
         await conn.commit()
     s = await db.get_steward_by_id(s["id"]) or s
     parcels = await db.get_parcels(s["id"])
@@ -171,6 +175,8 @@ async def steward_sheet(key_id: int) -> str:
     clinic_nag = health_mod.clinic_hint(ailments)
     if clinic_nag:
         lines.append(clinic_nag)
+    if lili_hint:
+        lines.append(lili_hint)
     if s["greenhouse"]:
         lines.append(f"温室: {s['greenhouse_label'] or '未命名'}")
     if s.get("boat_key"):

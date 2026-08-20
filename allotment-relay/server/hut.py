@@ -7,7 +7,7 @@ from typing import Any
 import aiosqlite
 
 from . import config, db, flavor
-from .catalog import HUT_HARD, HUT_LEVELS, HUT_SOFT, ITEM_NAMES
+from .catalog import HUT_HARD, HUT_LEVELS, HUT_SOFT, ITEM_NAMES, LILI_DECOR
 
 
 def _slots(level: int) -> tuple[list[str], list[str]]:
@@ -35,6 +35,8 @@ async def _fittings(conn: aiosqlite.Connection, steward_id: int) -> dict[str, st
 
 
 def _fit_name(item_key: str) -> str:
+    if item_key.startswith("deco_"):
+        return ITEM_NAMES.get(item_key, item_key)
     return ITEM_NAMES.get(f"fit_{item_key}", item_key)
 
 
@@ -83,6 +85,9 @@ async def hut_ops(key_id: int, command: str) -> str:
             lines.append("【软装】")
             for k, v in HUT_SOFT.items():
                 lines.append(f"  {k} — {v['emoji']}{v['name']} {v['cost']} 票 · {v['hint']}")
+            lines.append("【栗栗稀有装饰】deco_* — lili_ops 换，install soft_N 键名")
+            for k, v in LILI_DECOR.items():
+                lines.append(f"  {k} — {v['emoji']}{v['name']} · {v['hint']}")
         return "\n".join(lines)
 
     if verb == "build":
@@ -160,6 +165,36 @@ async def hut_ops(key_id: int, command: str) -> str:
         hard_slots, soft_slots = _slots(lvl)
         if slot not in hard_slots + soft_slots:
             raise ValueError(f"无效槽位，可用: {', '.join(hard_slots + soft_slots)}")
+
+        if key in LILI_DECOR:
+            if not slot.startswith("soft"):
+                raise ValueError("栗栗稀有装饰只能装 soft 槽")
+            deco_meta = LILI_DECOR[key]
+            deco_item = f"deco_{key}"
+            async with aiosqlite.connect(db.DB_PATH) as conn:
+                if not await db.take_item(conn, s["id"], deco_item, 1):
+                    raise ValueError(f"行囊没有 {deco_meta['name']}，先 lili_ops trade")
+                old = await _fittings(conn, s["id"])
+                if slot in old:
+                    old_key = old[slot]
+                    await db.add_item(conn, s["id"], old_key, 1)
+                await conn.execute(
+                    """
+                    INSERT INTO hut_fittings (steward_id, slot, item_key, installed_at)
+                    VALUES (?,?,?,?)
+                    ON CONFLICT(steward_id, slot) DO UPDATE SET item_key=excluded.item_key,
+                    installed_at=excluded.installed_at
+                    """,
+                    (s["id"], slot, deco_item, db.now()),
+                )
+                await conn.commit()
+            return flavor.fill(
+                flavor.pick(flavor.HUT_INSTALL_LINES),
+                slot=slot,
+                item=deco_meta["name"],
+                hint=deco_meta["hint"],
+            )
+
         kind, meta = _catalog_item(key)
         if slot.startswith("hard") and kind != "hard":
             raise ValueError("硬装槽只能装 hard 类")
@@ -201,7 +236,10 @@ async def hut_ops(key_id: int, command: str) -> str:
                 "DELETE FROM hut_fittings WHERE steward_id=? AND slot=?",
                 (s["id"], slot),
             )
-            await db.add_item(conn, s["id"], f"fit_{key}", 1)
+            if key.startswith("deco_"):
+                await db.add_item(conn, s["id"], key, 1)
+            else:
+                await db.add_item(conn, s["id"], f"fit_{key}", 1)
             await conn.commit()
         return f"已拆下 {slot} 的 {_fit_name(key)}，装件回行囊"
 
