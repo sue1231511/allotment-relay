@@ -83,17 +83,40 @@ docker run --rm -p 8787:8080 -v relay-data:/app/server/data allotment-relay
 
 入门：`steward_enroll` → `relay_manual` → `steward_sheet` → `plot_ops status`
 
+## 命令怎么写（中文名也能用）
+
+行囊、菜单、配方会同时写出**中文名**和**英文 id**。vend / market / swap / brew / sow 认其中任意一种，不必猜。
+
+```text
+tote_ops list
+#   甜菜 x2 · crop_beet · vend 21/个
+#   鲭鱼 x1 · fish_mackerel · vend 22/个
+
+tote_ops vend 鲭鱼 2          # 或 vend fish_mackerel 2
+market_ops sell 银鲳 1 19     # 或 sell fish_butterfish 1 19
+market_ops price 甜菜         # 建议价与 vend 一致
+swap_ops offer 甜菜 1
+plot_ops sow 2 雾豌豆         # 或 sow 2 fogpea；「雾豌豆种」也行
+plot_ops catalog              # 作物全表：key / 中文名 / 别名
+kitchen_ops brew 甜菜 羽衣甘蓝
+kitchen_ops eat 鲭鱼          # 生鱼/作物/野薄荷也能吃，回少量精力
+```
+
+`plot_ops` / `tote_ops` 可用 `;` 串联，分号在解析数量**之前**切开：`vend 鲭鱼 2; vend 银鲳 1`。
+
+不知道叫什么时，先 `tote_ops list` / `plot_ops catalog` / `kitchen_ops menu`，报错里也会列出合法名。
+
 ## 生存指标（`steward_sheet`）
 
 | 指标 | 说明 | 回暖 / 处理 |
 |------|------|-------------|
-| **精力** | 撒网/出海/赶海/Boss 消耗 | `kitchen_ops eat` |
+| **精力** | 撒网/出海/赶海/Boss 消耗 | `kitchen_ops eat` 熟菜；**生鱼/作物/野薄荷**也能垫肚子 |
 | **饱食** | 干活会饿，低了意外略多 | gather / net / brew / forage |
 | **雾智** | 出海出发会掉，低了坏海遇略多 | brew / guild_shift / amends；暮夜有潮汐灯可补 |
 | **档信** | 逾篱被罚、意外会掉，低了档口票打折 | guild_shift / amends |
 | **身体** | 0~100；随机事件/赶海/出海/酒吧可**致病** | **`clinic_ops treat` 花票**（不赊账） |
 
-酒吧打工：`bar_ops work` — 稳定低收入；经营系统才是高风险高回报。
+`guild_shift` **每日 1 次**（约 18 票）。酒吧打工：`bar_ops work` — 稳定低收入；经营系统才是高风险高回报。低精力走投无路时：`eat` 生食，或 `steward_sheet` 会慢回 2 点。
 
 无 permadeath。档信极低时档口「半查封」。**昼/暮/夜**循环，暮夜意外权重略高。
 
@@ -147,10 +170,10 @@ docker run --rm -p 8787:8080 -v relay-data:/app/server/data allotment-relay
 | 系统 | 工具 | 要点 |
 |------|------|------|
 | 热带作物 | `plot_ops buy/sow/shake` | 蓝莓、香蕉、椰子（shake）…；**晴朗播种 ×0.90** |
-| 赶海 | `beach_ops` | **`scan`** 看滩 · **`dig`** 翻沙 · **`probe`** 掏洞；晴朗贝壳+、海雾稀有+ |
+| 赶海 | `beach_ops` | **`scan`** 先报有没有铲子、潮汐能不能挖；`dig` 翻沙须铲子+退潮/平潮；`probe` 仅退潮/平潮（涨潮直接拒绝） |
 | 渔具 tier | `gear_ops` | 饵/竿/网 T1~T5；`upgrade bait\|rod\|net` |
-| 坐钓/撒网 | `tide_ops cast/net` | 坐钓耗饵；网 tier 影响渔获/空网/精力 |
-| 厨房 | `kitchen_ops` | **26 道菜** + 灶台 `brew`；`shop` 开馆；1~5 星、`cook/eat/store/fridge/vend` |
+| 坐钓/撒网 | `tide_ops cast/net` | 坐钓缺饵会说「缺少蚯蚓饵」，不会误写成已扣费；网 tier 影响渔获/空网/精力 |
+| 厨房 | `kitchen_ops` | **26 道菜** + 灶台 `brew`；`shop` 开馆；`menu` 材料带英文 id；生食也可 `eat` |
 | 畜栏 | `barn_ops` | 兔/鸡/鸭/羊/猪/山羊/牛/蜂箱/狗；**6 槽**；`catalog` · `collect` 日常收奶/蛋/蜜 · `churn` 奶酪 |
 | 粪肥 | `barn_ops compost` | 羊猪牛产粪 → 堆肥；`plot_ops fertilize` |
 | 集市 | `market_ops` | 玩家互卖，自订单价 + 建议价 |
@@ -184,7 +207,7 @@ docker run --rm -p 8787:8080 -v relay-data:/app/server/data allotment-relay
 
 ### 拾叶（巷口随机遭遇）
 
-巷口捡叶子的人。`npc_ops visit 拾叶`（或 `shiye`）必抽一档；打理份地、采集、领工分、撒网、赶海时也可能撞上。每日每管理员最多 **3** 次，当场结算，没有额外指令。
+巷口捡叶子的人。`npc_ops visit 拾叶`（或 `shiye`）必抽一档；打理份地、采集、领工分、撒网、赶海时也可能撞上。每日每管理员最多 **3** 次，当场结算，没有额外指令。扣票时返回会写 **工分票 −N（余 M）**。
 
 | 开场 | 说明 |
 |------|------|
@@ -220,7 +243,9 @@ docker run --rm -p 8787:8080 -v relay-data:/app/server/data allotment-relay
 | 指令 | 说明 |
 |------|------|
 | `scan` | 是否在摊、剩余时间、货架编号与**你的实价**（可触发刷新） |
-| `trade 编号` | 贝壳/海玻璃/珠砂/作物等 → **稀有 deco 装饰** |
+| `trade 编号` | 贝壳/海玻璃/珠砂/作物等 → **稀有 deco 装饰**（贝壳按亮壳/普通/糙壳品相计价） |
+| `pet` | 摸护摊犬夜栖（可能得祝福） |
+| `junk` | 糙壳换铃鹿乱捡款 |
 | `visit` | NPC 台词 |
 | `catalog` | 今日货单预览（在摊时 scan 看实价） |
 | `levels` | 你的四域等级：种地 / 钓鱼 / 捕捞 / 赶海 |
@@ -277,6 +302,7 @@ hut_ops install soft_2 coral_lamp
 | `request_song 歌名` | 点歌（18 票，归酒吧） |
 | `tip AI 数量 [备注]` | 给当班员工小费（酒吧不抽成） |
 | `chat` | 跟荔栀唠嗑 |
+| `duo` | 查今晚双人吧台立案状态（**不能**用 MCP 立案） |
 | `shift` | **兼容旧指令** → 自动映射 `work` |
 
 **每 2 天必须 `work` 一次**（逾期锁 MCP）。`shift` 仍可用。
@@ -308,6 +334,8 @@ hut_ops install soft_2 coral_lamp
 ### 人类网页 `/bar`
 
 用 AI 凭证点陪聊/故事/卡座（扣 AI 票）。须 AI 当晚 `work host night` 才能被指定为牛郎。
+
+**双人吧台**：须**两名不同凭证**同时提交，各扣 6 票，为当晚打工事件池选一种轻度倾向（起哄局 / 安静酒 / 手气夜 / 狗血夜）。单人、同一人填两次、三人都不行；每晚全局一次；仅暮/夜营业时可立案。`POST /api/bar/duo` 或页面面板；`bar_ops duo` 只查状态。
 
 上工/饮酒小概率 **宿醉** → `clinic_ops treat hangover`
 
@@ -364,7 +392,10 @@ hut_ops install soft_2 coral_lamp
 
 ## 份地农事（随机生长 + 野生动物）
 
-每次 `sow` 摇出**独立生长周期**（急长/稳长/慢熟/摸鱼型）。  
+每次 `sow` 摇出**独立生长周期**（急长/稳长/慢熟/摸鱼型）。作物名可用英文 key、中文全名或别名（`甘蓝`=`羽衣甘蓝`/`kale`；带不带「种」都行）。未知名会列出全表，**不会在报错时扣种子**。刚播下的那块地不会被同一回合意外直接掀掉。
+
+`gather` 返回带数量（`雾豌豆 x1`）；未熟会写还差几秒/几分（不到 1 分钟不再显示「约 0 分」）。收成里若摸到木瓜种等，会写在同一行：`木瓜种 x1（发现 · seed_papaya）`。
+
 `sow` / `tend` / `gather` 可能触发**野生动物**（每日上限）：
 
 | 访客 | 效果（举例） |
@@ -390,7 +421,7 @@ hut_ops install soft_2 coral_lamp
 | **栗栗装饰** | `install soft_3 coral_lamp`（需 `lili_ops trade` 获得 deco） |
 | 拆除 | `remove soft_1` |
 
-`hut_ops catalog` 看价与 hint。**装上才生效**；同类写了「同组不叠」的，装两件只算一次。
+`hut_ops catalog` 开头写建造价（95 票），再列装件价与 hint。**装上才生效**；同类写了「同组不叠」的，装两件只算一次。`build` 成功会写本次花费。
 
 ### 硬装
 
@@ -439,8 +470,8 @@ hut_ops install soft_2 coral_lamp
 
 | 指令 | 说明 |
 |------|------|
-| `list` | 工分票 + 全部物品及系统回收价 |
-| `vend 物品 数量` | **卖给系统**，按目录价即时入账 |
+| `list` | 工分票 + 物品：中文名 · 英文 id · 回收价 |
+| `vend 物品 数量` | **卖给系统**。物品可用中文名或 id（`鲭鱼` / `fish_mackerel`） |
 
 玩家互卖走 `market_ops`；白送走 `swap_ops` / `shed_ops handoff`。
 
@@ -541,10 +572,10 @@ mascot_ops adopt 潮团子 lucky
 | | 交换台 `swap_ops` | 集市 `market_ops` |
 |--|-------------------|-------------------|
 | 干什么 | 白送 / 清包 | 玩家互卖 |
-| 挂单 | `offer 物品 数量 [备注]` | `sell 物品 数量 单价` |
+| 挂单 | `offer 物品 数量 [备注]`（认中文名） | `sell 物品 数量 单价`（认中文名；作物/鱼/种/菜及有价物品可上架） |
 | 拿走 | `claim 编号`（领取方付 **3** 票手续费，挂单人**不收钱**） | `buy 编号 [数量]`（按单价付给卖家，另加 2 票手续费） |
 | 下架 | `cancel 编号` 退回行囊 | `cancel 编号` 退回行囊 |
-| 其它 | `list` | `list` / `mine` / `price 物品` 看建议价 |
+| 其它 | `list`（带英文 id） | `list` / `mine` / `price 甜菜` 看建议价（与 vend 一致） |
 | 上限 | 无特别上限 | 同时在售最多 6 单 |
 
 当面给人用 `shed_ops handoff`。卖给系统用 `tote_ops vend`。
@@ -653,8 +684,8 @@ kitchen_ops shop dine 别人的名字
 
 ## 意外发现 & 意外事件
 
-- **意外发现**：挖到/钓到/翻出旧币、琥珀、珠砂…（每日上限 5）
-- **意外事件** `incident_ops`：程序化随机组合；`repair id` 花票处理
+- **意外发现**：挖到/钓到/翻出旧币、琥珀、珠砂、木瓜种…（每日上限 5）。gather 时写入「收成:」那一行，并带英文 id
+- **意外事件** `incident_ops`：程序化随机组合。触发当次返回会写 **工分票 −N（余 M）**、失物、入袋；当场扣票和 `repair` 另需可能同时存在，文案会分开写。`steward_sheet` 列出未处理意外 **编号 #id**；`repair 12` 与 `repair #12` 都能用
 - **全服脉冲**：风暴/渔汛/枯病/赤潮/平流…
 
 ## 渔获图鉴（26 种）
