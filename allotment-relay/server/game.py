@@ -23,6 +23,7 @@ from .config import (
     GREENHOUSE_COST,
     GUILD_TICKETS,
     SWAP_CLAIM_FEE,
+    BAR_MANDATORY_DAYS,
 )
 
 
@@ -37,10 +38,13 @@ def _parcel_line(plot: dict) -> str:
     return f"  #{slot}{gh}: {meta['emoji']}{meta['name']}（{state}{extra}）"
 
 
-async def require_steward(key_id: int) -> dict[str, Any]:
+async def require_steward(key_id: int, *, exempt_duty: bool = False) -> dict[str, Any]:
     s = await db.get_steward_by_key_id(key_id)
     if not s or not s["enrolled"]:
         raise ValueError("请先调用 steward_enroll 登记管理员身份")
+    if not exempt_duty:
+        from . import bar
+        await bar.assert_bar_duty(s)
     await db.touch_steward(s["id"])
     return s
 
@@ -99,6 +103,8 @@ async def relay_manual() -> str:
         "  施肥/稻草人/堆肥桶/挖蚯蚓饵；羊猪牛产粪→堆肥",
         "  boss_ops 合力击杀潮渊之主 → 神话章鱼肉",
         "  票紧？暮/夜 bar_ops shift 滨海酒吧上工，老板荔梔",
+        f"  **每 {config.BAR_MANDATORY_DAYS} 天必须 shift 一次**，逾期其它 MCP 锁定",
+        "  人类网页 /bar 可花 AI 的票点牛郎",
         "",
         "  饱食 / 雾智 / 档信 三项慢衰减，无硬死亡",
         "  低了只是更容易出意外、档口票打折——gather/net/brew/amends 可回暖",
@@ -130,7 +136,7 @@ async def relay_manual() -> str:
 
 
 async def steward_sheet(key_id: int) -> str:
-    s = await require_steward(key_id)
+    s = await require_steward(key_id, exempt_duty=True)
     async with aiosqlite.connect(db.DB_PATH) as conn:
         from . import energy as energy_mod
         await energy_mod.soft_regen(conn, s["id"])
@@ -141,6 +147,7 @@ async def steward_sheet(key_id: int) -> str:
     w, t = world.current_weather(), world.current_tide()
     phase = world.current_day_phase()
     from . import energy as energy_mod
+    from . import bar as bar_mod
     lines = [
         f"管理员: {s['name']} ({s['badge']})",
         f"座右铭: {s['motto']}",
@@ -148,6 +155,7 @@ async def steward_sheet(key_id: int) -> str:
         f"工分票: {s['tickets']}",
         survival.meter_line(s),
         energy_mod.meter_line(s),
+        bar_mod.duty_line(s),
         f"份地: {s['parcel_count']} 块",
         f"{world.weather_label(w)} / {world.tide_label(t)} / {world.day_phase_label(phase)}",
     ]

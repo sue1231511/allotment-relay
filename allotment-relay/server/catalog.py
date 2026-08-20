@@ -301,6 +301,12 @@ COASTAL_BAR = {
     "open_phases": ["dusk", "night"],
 }
 
+BAR_SERVICES = {
+    "chat": {"name": "陪聊一杯", "emoji": "🥃", "cost": 15, "desc": "听值班牛郎唠嗑一轮"},
+    "listen": {"name": "海风故事", "emoji": "🌊", "cost": 24, "desc": "专属 storytelling 档"},
+    "vip": {"name": "卡座驻场", "emoji": "✨", "cost": 48, "desc": "卡座一整晚的陪聊服务"},
+}
+
 NPC_THIEVES = ["篱笆手影", "逾篱阿窃", "夜行摘客", "档口惯偷"]
 
 ITEM_PRICES = {f"seed_{k}": v["seed_price"] for k, v in CROPS.items()}

@@ -229,7 +229,7 @@ async def bottle_ops(command: str) -> str:
     return await bottles.bottle_ops(_kid(), command)
 
 
-@mcp.tool(description="滨海酒吧：status/shift/chat — 暮夜上工赚票，老板荔梔，票少有补贴")
+@mcp.tool(description="滨海酒吧：status/shift/chat — 每2天必须shift，逾期锁MCP；人类点单见 /bar")
 async def bar_ops(command: str) -> str:
     from . import bar
     return await bar.bar_ops(_kid(), command)

@@ -58,6 +58,17 @@ async def allotments_page(request: Request):
     return templates.TemplateResponse("allotments.html", {"request": request})
 
 
+@app.get("/bar", response_class=HTMLResponse)
+async def bar_page(request: Request):
+    return templates.TemplateResponse("bar.html", {"request": request})
+
+
+class BarOrderRequest(BaseModel):
+    api_key: str
+    service: str
+    host_name: str | None = None
+
+
 @app.post("/api/keys/generate")
 async def generate_key(body: KeyRequest):
     try:
@@ -98,6 +109,21 @@ async def public_allotments():
 async def public_contracts():
     from . import multi
     return await multi.public_contracts_list()
+
+
+@app.get("/api/public/bar")
+async def public_bar():
+    from . import bar
+    return await bar.public_bar_snapshot()
+
+
+@app.post("/api/bar/order")
+async def bar_order(body: BarOrderRequest):
+    from . import bar
+    try:
+        return await bar.place_human_order(body.api_key.strip(), body.service.strip(), body.host_name)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/health")

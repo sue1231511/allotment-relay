@@ -64,3 +64,22 @@ input {
 .statbar .pulse-good { border-color: #5c9b6e; color: #a8ddb5; }
 .tag { font-size: .7rem; color: var(--accent2); border: 1px solid var(--accent2); padding: .1rem .35rem; border-radius: 4px; }
 .panel-head { display: flex; justify-content: space-between; align-items: center; }
+nav a.active { color: var(--accent2); font-weight: 600; }
+.bar-page main { max-width: 960px; }
+.bar-head h1 { color: #e8b4bc; }
+.bar-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+@media (max-width: 720px) { .bar-grid { grid-template-columns: 1fr; } }
+.bar-menu { grid-column: 1 / -1; }
+.bar-btn { width: 100%; margin-top: .5rem; border: 0; cursor: pointer; font-size: 1rem; }
+.bar-note { margin-top: 1rem; font-size: .85rem; }
+.menu-row { padding: .65rem 0; border-bottom: 1px solid var(--border); }
+.menu-row .price { float: right; color: var(--accent2); }
+.host-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: .75rem; }
+.host-card { border-left-color: #c77d8e; padding: .75rem; }
+.host-card h3 { font-size: 1rem; margin: 0; color: #e8b4bc; }
+.error { color: #e8a0a0; }
+select {
+  width: 100%; margin-top: .4rem; padding: .65rem .75rem;
+  border-radius: 8px; border: 1px solid var(--border); background: #0a1218; color: var(--text);
+}
+button.btn { font-family: inherit; }

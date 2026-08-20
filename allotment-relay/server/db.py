@@ -351,6 +351,16 @@ CREATE TABLE IF NOT EXISTS bar_rolls (
     count INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (steward_id, day)
 );
+
+CREATE TABLE IF NOT EXISTS bar_orders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    patron_id INTEGER NOT NULL REFERENCES stewards(id),
+    host_id INTEGER REFERENCES stewards(id),
+    service TEXT NOT NULL,
+    cost INTEGER NOT NULL,
+    note TEXT NOT NULL DEFAULT '',
+    created_at INTEGER NOT NULL
+);
 """
 
 
@@ -381,6 +391,7 @@ async def init_db() -> None:
             "ALTER TABLE stewards ADD COLUMN beach_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE parcels ADD COLUMN fertilized INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE parcels ADD COLUMN scarecrow INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN last_bar_shift_at INTEGER NOT NULL DEFAULT 0",
         ):
             try:
                 await db.execute(ddl)
@@ -554,11 +565,11 @@ async def enroll_steward(key_id: int, name: str, motto: str, badge: str, portrai
             """
             INSERT INTO stewards (
                 key_id, name, motto, badge, portrait, tickets, parcel_count,
-                enrolled, last_active_at, created_at, energy
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)
+                enrolled, last_active_at, created_at, energy, last_bar_shift_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
             """,
             (key_id, name, motto.strip()[:200], badge.strip()[:32], portrait.strip()[:120],
-             START_TICKETS, START_PARCELS, ts, ts, START_ENERGY),
+             START_TICKETS, START_PARCELS, ts, ts, START_ENERGY, ts),
         )
         sid = (await (await db.execute("SELECT last_insert_rowid()")).fetchone())[0]
         await ensure_parcels(db, sid, START_PARCELS)
