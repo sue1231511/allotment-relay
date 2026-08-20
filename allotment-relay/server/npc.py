@@ -28,7 +28,8 @@ async def npc_ops(key_id: int, command: str) -> str:
                 tag = " · 流动贝壳商，lili_ops scan/trade"
             lines.append(f"  {npc['key']} — {npc['name']}{tag}")
         lines.append(f"偷菜贼名号: {', '.join(NPC_THIEVES[:3])}…")
-        lines.append("  lizhi — 荔栀（滨海酒吧老板，也可 bar_ops chat）")
+        lines.append("  lizhi — 荔栀（滨海酒吧老板娘，bar_ops tonight/chat）")
+        lines.append("  wangfu — 我哪有旺夫命（固定驻唱，bar_ops song）")
         return "\n".join(lines)
 
     if verb == "visit" and len(parts) >= 2:

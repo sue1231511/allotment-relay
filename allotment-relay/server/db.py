@@ -386,6 +386,68 @@ CREATE TABLE IF NOT EXISTS bar_orders (
     created_at INTEGER NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS bar_skills (
+    steward_id INTEGER PRIMARY KEY REFERENCES stewards(id),
+    support_xp INTEGER NOT NULL DEFAULT 0,
+    service_xp INTEGER NOT NULL DEFAULT 0,
+    bar_xp INTEGER NOT NULL DEFAULT 0,
+    host_xp INTEGER NOT NULL DEFAULT 0,
+    shift_count INTEGER NOT NULL DEFAULT 0,
+    total_wages INTEGER NOT NULL DEFAULT 0,
+    total_tips INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS bar_shifts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    day INTEGER NOT NULL,
+    job TEXT NOT NULL,
+    period TEXT NOT NULL,
+    wage INTEGER NOT NULL DEFAULT 0,
+    tips INTEGER NOT NULL DEFAULT 0,
+    event_id TEXT,
+    event_text TEXT NOT NULL DEFAULT '',
+    created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS bar_drink_orders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    patron_id INTEGER NOT NULL REFERENCES stewards(id),
+    drink_key TEXT NOT NULL,
+    cost INTEGER NOT NULL,
+    note TEXT NOT NULL DEFAULT '',
+    created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS bar_tips (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    from_id INTEGER NOT NULL REFERENCES stewards(id),
+    to_id INTEGER NOT NULL REFERENCES stewards(id),
+    amount INTEGER NOT NULL,
+    note TEXT NOT NULL DEFAULT '',
+    day INTEGER NOT NULL,
+    created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS bar_daily_state (
+    day INTEGER PRIMARY KEY,
+    owner_mood TEXT NOT NULL DEFAULT 'normal',
+    special_drink TEXT NOT NULL DEFAULT '',
+    activity_key TEXT,
+    global_event TEXT NOT NULL DEFAULT '',
+    singer_state TEXT NOT NULL DEFAULT '',
+    playlist_json TEXT NOT NULL DEFAULT '[]',
+    song_queue_json TEXT NOT NULL DEFAULT '[]',
+    first_order_free INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS bar_unlocks (
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    unlock_key TEXT NOT NULL,
+    PRIMARY KEY (steward_id, unlock_key)
+);
+
 CREATE TABLE IF NOT EXISTS lili_visits (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     started_at INTEGER NOT NULL,

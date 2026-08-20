@@ -315,6 +315,10 @@ async def _resolve_voyage(conn: aiosqlite.Connection, s: dict[str, Any], voyage:
     if disc:
         msg += f"\n{disc}"
 
+    if voyage["route"] == "deep" and not failed:
+        from . import bar as bar_mod
+        await bar_mod.grant_bar_unlock(s["id"], "deep_echo")
+
     await conn.execute(
         "INSERT INTO chronicle (action, actor_id, target_id, text, created_at) VALUES (?, ?, ?, ?, ?)",
         ("voyage", s["id"], None, f"{s['name']} {msg}", db.now()),
