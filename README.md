@@ -705,4 +705,26 @@ kitchen_ops shop dine 别人的名字
 
 代码在 `allotment-relay/` 子目录。FastAPI + Streamable HTTP MCP + SQLite（`allotment-relay/server/data/relay.db`）
 
-MIT
+- **HTTP MCP**：`server/mcp_app.py` — Streamable HTTP、`?api_key=` / `Authorization: Bearer` 鉴权
+- **网页领凭证 / 围观**：`server/main.py` — `/register`、`/recover`、`/allotments` 等公开页
+- **共享世界持久化**：`server/db.py` — 单 SQLite 文件，多 steward 共用一个沿海世界实例
+
+## 许可证
+
+本项目以 **[MIT License](LICENSE)** 发布。
+
+## 参考与致谢
+
+**Allotment Relay 为原创实现**：未 fork、未整包拷贝下列仓库的源码。Rebrand 之后工具名（如 `steward_enroll`、`plot_ops`、`tide_ops`）、沿海世界观与各子系统均为重写或自行扩展；栗栗「羊驼商人式」流动摊、滨海酒吧等属于**玩法类比**，不对应某个被照搬的仓库。
+
+早期探索 `moonlight-farm` 方向时，仅从下列项目获得**思路与文档层面**的参考：
+
+| 项目 | 仓库 | 协议 | 我们参考了什么 |
+|------|------|------|----------------|
+| **Moonlight Garden** | [xactobear/moonlight-garden](https://github.com/xactobear/moonlight-garden) | 仓库内**无 License**（仅 README + 截图，**无公开源码**） | 玩法说明、MCP 工具命名/流程思路（如登记 → 农事 → 渔获那套分层；本项目的 `steward_enroll` / `plot_ops` / `tide_ops` 等为独立命名与实现） |
+| **Agent World** | [sbenodiz/agent-world](https://github.com/sbenodiz/agent-world) | [Apache-2.0](https://github.com/sbenodiz/agent-world/blob/main/LICENSE) | HTTP MCP + API Key 鉴权 + 网页公开领 key / 围观世界的整体架构思路（见上「架构」） |
+| **Turnstone** | [turnstonelabs/turnstone](https://github.com/turnstonelabs/turnstone) | [Apache-2.0](https://github.com/turnstonelabs/turnstone/blob/main/LICENSE) | `examples/door-game` 示例中的 SQLite 共享世界、多参与者写入同一数据库、流式交互思路 |
+
+**补充（不算「扒来的仓库」）：** 本 GitHub 组织下 **Plugin-Guide** 仓库最早上传的 `main.js` / `manifest.json` 来自 **Mikeko 插件开发指南**，为自行上传的文档素材，与上表三个项目无关。
+
+若你基于 Apache-2.0 项目二次开发，请同时遵守对应上游许可证；本仓库自有代码仍以 MIT 为准。
