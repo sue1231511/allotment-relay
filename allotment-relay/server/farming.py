@@ -413,20 +413,24 @@ async def _apply_wildlife(
             if await barn_mod.has_guard_dog(conn, steward_id):
                 steal_chance *= 0.35
         if steward_id and random.random() < steal_chance:
-            conn.row_factory = aiosqlite.Row
-            rows = await (await conn.execute(
-                """
-                SELECT item FROM satchel
-                WHERE steward_id=? AND quantity>0
-                  AND (item LIKE 'crop_%' OR item LIKE 'seed_%')
-                ORDER BY RANDOM() LIMIT 5
-                """,
-                (steward_id,),
-            )).fetchall()
-            if rows:
-                item = random.choice(rows)["item"]
-                if await db.take_item(conn, steward_id, item, 1):
-                    stolen += f"，顺走行囊 {ITEM_NAMES.get(item, item)}"
+            from . import shaonian as shaonian_mod
+            if await shaonian_mod.dove_protected(conn, steward_id):
+                stolen += "，护田符挡了斑鸠顺包"
+            else:
+                conn.row_factory = aiosqlite.Row
+                rows = await (await conn.execute(
+                    """
+                    SELECT item FROM satchel
+                    WHERE steward_id=? AND quantity>0
+                      AND (item LIKE 'crop_%' OR item LIKE 'seed_%')
+                    ORDER BY RANDOM() LIMIT 5
+                    """,
+                    (steward_id,),
+                )).fetchall()
+                if rows:
+                    item = random.choice(rows)["item"]
+                    if await db.take_item(conn, steward_id, item, 1):
+                        stolen += f"，顺走行囊 {ITEM_NAMES.get(item, item)}"
         detail = flavor.fill(
             flavor.pick(flavor.WILDLIFE_DOVE),
             slot=slot,

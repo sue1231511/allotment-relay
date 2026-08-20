@@ -40,6 +40,8 @@ async def npc_ops(key_id: int, command: str) -> str:
                 tag = " · 诊所 NPC，治病用 clinic_ops treat"
             elif npc["key"] == "lili":
                 tag = " · 流动贝壳商，lili_ops scan/trade"
+            elif npc["key"] == "shaonian":
+                tag = " · 滩头卜卦，shaonian_ops fortune/catalog"
             elif npc["key"] == "old_salt":
                 tag = " · 赶海/潮汐提示"
             elif npc["key"] == "herb_aunt":
@@ -226,7 +228,7 @@ async def _steal_item(conn: aiosqlite.Connection, steward_id: int) -> str | None
     return None
 
 
-def _pick_shiye_kind(steward: dict[str, Any]) -> str:
+async def _pick_shiye_kind(conn: aiosqlite.Connection, steward: dict[str, Any]) -> str:
     weights = {"beggar": 34, "thief": 26, "scam": 22, "extort": 18}
     phase = world.current_day_phase()
     if phase in ("dusk", "night"):
@@ -241,6 +243,8 @@ def _pick_shiye_kind(steward: dict[str, Any]) -> str:
         weights["thief"] += 6
     if steward.get("tickets", 0) < 20:
         weights["beggar"] += 10
+    from . import shaonian as shaonian_mod
+    weights = await shaonian_mod.shiye_kind_weights(conn, steward["id"], weights)
     keys = list(weights)
     return random.choices(keys, weights=[max(1, weights[k]) for k in keys], k=1)[0]
 
@@ -255,7 +259,7 @@ async def _run_shiye_encounter(conn: aiosqlite.Connection, steward: dict[str, An
     finally:
         conn.row_factory = prev
     s = dict(row) if row else steward
-    kind = _pick_shiye_kind(s)
+    kind = await _pick_shiye_kind(conn, s)
     await _mark_shiye(conn, s["id"])
     hello = flavor.pick(flavor.SHIYE_HELLO)
     body = await _resolve_shiye_kind(conn, s, kind)
@@ -359,6 +363,8 @@ async def maybe_shiye_bump(
         chance += 0.04
     if steward.get("standing", 50) < 40:
         chance += 0.03
+    from . import shaonian as shaonian_mod
+    chance += await shaonian_mod.shiye_bump_bonus(conn, steward["id"])
     if random.random() > chance:
         return None
     return await _run_shiye_encounter(conn, steward)

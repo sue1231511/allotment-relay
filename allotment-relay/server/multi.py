@@ -30,6 +30,10 @@ def _pair_ids(a: int, b: int) -> tuple[int, int]:
 
 
 async def _bump_rapport(conn: aiosqlite.Connection, a: int, b: int, delta: int) -> None:
+    from . import shaonian as shaonian_mod
+    mult = await shaonian_mod.rapport_multiplier(conn, a)
+    if mult > 1.0 and delta > 0:
+        delta = max(1, int(delta * mult))
     sa, sb = _pair_ids(a, b)
     await conn.execute(
         """

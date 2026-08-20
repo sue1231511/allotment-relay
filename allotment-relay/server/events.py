@@ -357,10 +357,15 @@ async def roll_after_action(
     )
     ailments = await health.list_ailments(conn, steward["id"])
     mult *= health.event_bias(steward, len(ailments))
+    from . import shaonian as shaonian_mod
+    bad_bonus = await shaonian_mod.event_bad_share_bonus(conn, steward["id"])
     if random.random() > config.EVENT_ROLL_CHANCE * mult:
         return None
 
-    good = random.random() < config.EVENT_GOOD_SHARE * hut_b.good_share
+    good_share = config.EVENT_GOOD_SHARE * hut_b.good_share
+    if bad_bonus:
+        good_share = max(0.05, good_share - bad_bonus)
+    good = random.random() < good_share
     if world.current_weather() == "gale" and trigger in {
         "tend", "gather", "sow", "voyage_depart", "voyage_return", "pen_feed", "net",
     }:

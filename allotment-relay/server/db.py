@@ -531,6 +531,25 @@ CREATE TABLE IF NOT EXISTS shiye_rolls (
     count INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (steward_id, day)
 );
+
+CREATE TABLE IF NOT EXISTS shaonian_daily (
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    day INTEGER NOT NULL,
+    fortune TEXT NOT NULL DEFAULT '',
+    fortune_casts INTEGER NOT NULL DEFAULT 0,
+    transfer_done INTEGER NOT NULL DEFAULT 0,
+    transfer_failed INTEGER NOT NULL DEFAULT 0,
+    visit_done INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (steward_id, day)
+);
+
+CREATE TABLE IF NOT EXISTS shaonian_charms (
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    day INTEGER NOT NULL,
+    charm_key TEXT NOT NULL,
+    purchased_at INTEGER NOT NULL,
+    PRIMARY KEY (steward_id, day, charm_key)
+);
 """
 
 

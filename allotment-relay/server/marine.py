@@ -4,7 +4,7 @@ from typing import Any
 
 import aiosqlite
 
-from . import db, events, event_gen, flavor, world
+from . import db, events, event_gen, flavor, shaonian as shaonian_mod, world
 from . import commons
 from .catalog import ITEM_NAMES, SEA_CATCH, voyage_loot_table
 from .config import BOATS, HAIL_BRIBE, HAIL_FIGHT_ENERGY, HAIL_FLEE_ENERGY, HAIL_THREAT, HAIL_TIMEOUT, MAX_FISH_PENS, PEN_ERECT_COST, PEN_EXPAND_COST, VOYAGE_ROUTES
@@ -489,8 +489,10 @@ async def _resolve_voyage(
     enc = event_gen.generate_naval_encounter(
         voyage["route"],
         s,
-        bad_bias=0.12 if s.get("boat_damaged") else 0.0,
+        bad_bias=(0.12 if s.get("boat_damaged") else 0.0) + await shaonian_mod.naval_bad_bias(conn, s["id"]),
     )
+    if enc and enc.kind == "bad" and await shaonian_mod.skip_bad_sea(conn, s["id"]):
+        enc = None
     msg = f"{route['label']}归港：" + "，".join(loot_lines)
     msg += flavor.maybe_suffix(flavor.VOYAGE_RETURN_BAD if failed else flavor.VOYAGE_RETURN_GOOD)
     if s.get("boat_damaged"):

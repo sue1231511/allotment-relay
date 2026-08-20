@@ -68,6 +68,7 @@ async def relay_manual() -> str:
         "  npc_ops / bottle_ops — 固定NPC与漂流瓶；拾叶巷口随机小偷/乞丐/碰瓷/敲诈",
         "  clinic_ops — 桥桥大夫诊所（随机致病，必须花票 treat）",
         "  lili_ops — 栗栗流动摊（每日货单换稀有装饰，四域等级减票）",
+        "  shaonian_ops — 韶年望潮人（fortune 卜卦·transfer 转运·buy 占卜符）",
         "  lore_ops — scan [主题] 查沿海联盟背景（alliance/deep/blackflag/bar/hedge…）",
         "  bar_ops — 滨海酒吧 tonight/work/menu/order/tip（暮夜打工赚票·消费社交）",
         "",
@@ -543,6 +544,11 @@ async def _plot_one(s: dict, cmd: str) -> str:
                         continue
                     item_key, qty, keep_plot = await farming.gather_yield(conn, s["id"], p)
                     await db.add_item(conn, s["id"], item_key, qty)
+                    harvest_note = ""
+                    from . import shaonian as shaonian_mod
+                    if await shaonian_mod.harvest_bonus_roll(conn, s["id"]):
+                        await db.add_item(conn, s["id"], item_key, qty)
+                        harvest_note = f"(丰收卦+{qty})"
                     if keep_plot:
                         grow_target, grow_pace, _ = farming.roll_grow(p["crop"], p)
                         await conn.execute(
@@ -561,9 +567,9 @@ async def _plot_one(s: dict, cmd: str) -> str:
                             (p["id"],),
                         )
                     if item_key.startswith("seed_"):
-                        got.append(f"{CROPS[p['crop']]['name']}种(过熟)")
+                        got.append(f"{CROPS[p['crop']]['name']}种(过熟){harvest_note}")
                     else:
-                        got.append(CROPS[p["crop"]]["name"])
+                        got.append(f"{CROPS[p['crop']]['name']}{harvest_note}")
                 elif farming.plot_overripe(p):
                     if random.random() < 0.5:
                         await db.add_item(conn, s["id"], "compost", 2)
@@ -743,9 +749,13 @@ async def tide_ops(key_id: int, command: str) -> str:
             await energy_mod.spend(conn, s["id"], energy_cost, action="撒网")
             extra = await events.roll_after_action(s, "net", conn)
             disc = await commons.roll_discovery(conn, s, "net")
+            from . import shaonian as shaonian_mod
+            daily = await shaonian_mod.get_daily(conn, s["id"])
+            fortune_key = daily.get("fortune") or ""
+            no_empty = await shaonian_mod.fishing_no_empty(conn, s["id"])
             await conn.commit()
         empty_chance = 0.18 - await events.net_bonus_chance() - empty_reduce - catch_bonus * 0.4
-        if random.random() < max(0.04, empty_chance):
+        if not no_empty and random.random() < max(0.04, empty_chance):
             msg = f"空网 T{stats['net']['tier']}，只有水草"
             if extra:
                 msg += f"\n{extra}"
@@ -753,9 +763,9 @@ async def tide_ops(key_id: int, command: str) -> str:
                 msg += f"\n{disc}"
             return f"{pulse}\n{msg}" if pulse else msg
         rarity_cap = 3 + rarity_bonus
-        catch = weighted_fish_pick(tide=tide, rarity_cap=rarity_cap)
+        catch = shaonian_mod.pick_fish_with_fortune(tide, rarity_cap, fortune_key)
         if catch_bonus and random.random() < catch_bonus:
-            catch = weighted_fish_pick(tide=tide, rarity_cap=min(6, rarity_cap + 1))
+            catch = shaonian_mod.pick_fish_with_fortune(tide, min(6, rarity_cap + 1), fortune_key)
         meta = SEA_CATCH[catch]
         async with aiosqlite.connect(db.DB_PATH) as conn:
             await db.add_item(conn, s["id"], f"fish_{catch}", 1)
@@ -797,17 +807,21 @@ async def tide_ops(key_id: int, command: str) -> str:
             await energy_mod.spend(conn, s["id"], rod["energy"], action="坐钓")
             extra = await events.roll_after_action(s, "net", conn)
             disc = await commons.roll_discovery(conn, s, "net")
+            from . import shaonian as shaonian_mod
+            daily = await shaonian_mod.get_daily(conn, s["id"])
+            fortune_key = daily.get("fortune") or ""
+            no_empty = await shaonian_mod.fishing_no_empty(conn, s["id"])
             await conn.commit()
         catch_b, rarity_b, empty_b, _ = gear.combined_fish_bonus(bait=bait, rod=rod)
         empty_chance = 0.24 - empty_b - await events.net_bonus_chance()
-        if random.random() < max(0.05, empty_chance):
+        if not no_empty and random.random() < max(0.05, empty_chance):
             msg = f"空杆 饵T{bait['tier']} 竿T{rod['tier']}——鱼看了直摇头"
             parts = [x for x in (pulse, msg, extra) if x]
             return "\n".join(parts)
         rarity_cap = 3 + rarity_b
-        catch = weighted_fish_pick(tide=tide, rarity_cap=rarity_cap)
+        catch = shaonian_mod.pick_fish_with_fortune(tide, rarity_cap, fortune_key)
         if catch_b and random.random() < catch_b + 0.08:
-            catch = weighted_fish_pick(tide=tide, rarity_cap=min(6, rarity_cap + 1))
+            catch = shaonian_mod.pick_fish_with_fortune(tide, min(6, rarity_cap + 1), fortune_key)
         meta = SEA_CATCH[catch]
         async with aiosqlite.connect(db.DB_PATH) as conn:
             await db.add_item(conn, s["id"], f"fish_{catch}", 1)

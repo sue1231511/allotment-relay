@@ -245,6 +245,12 @@ async def lore_ops(command: str) -> str:
     return await lore_mod.lore_ops(_kid(), command)
 
 
+@mcp.tool(description="韶年望潮人：visit/fortune/transfer/buy 符名/catalog — 滩头卜卦·转运·占卜符")
+async def shaonian_ops(command: str) -> str:
+    from . import shaonian
+    return await shaonian.shaonian_ops(_kid(), command)
+
+
 @mcp.tool(description="诊所：status/treat 病症|all/visit/catalog — 桥桥大夫，必须花票治病")
 async def clinic_ops(command: str) -> str:
     from . import clinic

@@ -106,9 +106,13 @@ async def beach_ops(key_id: int, command: str) -> str:
 
             item, label, qty = _roll_loot(tide, w, probe=False)
             await db.add_item(conn, s["id"], item, qty)
+            extra_msg = ""
+            from . import shaonian as shaonian_mod
+            if await shaonian_mod.beach_double(conn, s["id"]):
+                await db.add_item(conn, s["id"], item, qty)
+                extra_msg += f"，赶海符翻倍 +{label} x{qty}"
             from . import catches as catches_mod
             await catches_mod.record_catch(conn, s["id"], item)
-            extra_msg = ""
             if tide == "ebb" and random.random() < 0.14:
                 bait = random.choice([x for x in BEACH_LOOT if x[0].startswith("bait_")])
                 await db.add_item(conn, s["id"], bait[0], 1)
@@ -183,6 +187,11 @@ async def beach_ops(key_id: int, command: str) -> str:
             if tide != "ebb":
                 qty = max(1, qty // 2)
             await db.add_item(conn, s["id"], item, qty)
+            charm_msg = ""
+            from . import shaonian as shaonian_mod
+            if await shaonian_mod.beach_double(conn, s["id"]):
+                await db.add_item(conn, s["id"], item, qty)
+                charm_msg = f"，赶海符翻倍 +{label} x{qty}"
             from . import catches as catches_mod
             await catches_mod.record_catch(conn, s["id"], item)
             clock_msg = ""
@@ -206,7 +215,7 @@ async def beach_ops(key_id: int, command: str) -> str:
             shiye = await npc_mod.maybe_shiye_bump(conn, s, "beach")
             await conn.commit()
 
-        msg = f"掏洞：{label} x{qty}{clock_msg}"
+        msg = f"掏洞：{label} x{qty}{charm_msg}{clock_msg}"
         msg += flavor.maybe_suffix([
             "洞里货不多，但胜在新鲜",
             "沙蟹横着跑，你横着捞",
