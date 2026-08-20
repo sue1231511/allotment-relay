@@ -195,12 +195,24 @@ async def eatery_order(body: EateryOrderRequest):
 
 
 def _owner_ok(key: str, expect: str) -> bool:
-    return bool(key) and key == expect
+    return bool(expect) and bool(key) and key == expect
+
+
+_PANEL_DISABLED_HINT = (
+    "面板未启用：请在 Zeabur 环境变量设置对应钥匙"
+    "（UT_OWNER_KEY / UT_GATE_KEY / LIZHI_KEY）。"
+)
 
 
 @app.get("/ut-owner")
 async def ut_owner_page(request: Request, key: str = ""):
     from .undertide_config import UT_OWNER_KEY
+    if not UT_OWNER_KEY:
+        return JSONResponse({"detail": _PANEL_DISABLED_HINT}, status_code=503)
+    if not UT_OWNER_KEY:
+        return JSONResponse({"detail": _PANEL_DISABLED_HINT}, status_code=503)
+    if not UT_OWNER_KEY:
+        return JSONResponse({"detail": _PANEL_DISABLED_HINT}, status_code=503)
     if not _owner_ok(key, UT_OWNER_KEY):
         return JSONResponse({"detail": "凭证不对。这间铺子只认一个人。"}, status_code=401)
     from . import db, undertide_config as uc
@@ -297,6 +309,8 @@ async def ut_owner_cheer(request: Request):
 @app.get("/ut-gate")
 async def ut_gate_page(request: Request, key: str = ""):
     from .undertide_config import UT_GATE_KEY
+    if not UT_GATE_KEY:
+        return JSONResponse({"detail": _PANEL_DISABLED_HINT}, status_code=503)
     if not _owner_ok(key, UT_GATE_KEY):
         return JSONResponse({"detail": "凭证不对。门后面不认识你。"}, status_code=401)
     from . import db
@@ -350,6 +364,8 @@ async def ut_gate_set(request: Request):
 @app.get("/lizhi")
 async def lizhi_page(request: Request, key: str = ""):
     from .undertide_config import LIZHI_KEY
+    if not LIZHI_KEY:
+        return JSONResponse({"detail": _PANEL_DISABLED_HINT}, status_code=503)
     if not _owner_ok(key, LIZHI_KEY):
         return JSONResponse({"detail": "凭证不对。她不认识你。"}, status_code=401)
     from . import db

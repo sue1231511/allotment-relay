@@ -136,9 +136,10 @@ UT_HIGHLIGHT_BROADCAST = 150
 
 # ── 真人面板密钥（部署后在 Zeabur 改环境变量）──
 import os
-UT_OWNER_KEY = os.environ.get("UT_OWNER_KEY", "changeme-cat")
-UT_GATE_KEY = os.environ.get("UT_GATE_KEY", "changeme-gate")
-LIZHI_KEY = os.environ.get("LIZHI_KEY", "changeme-lizhi")
+# 安全默认：不设环境变量 = 面板禁用（线上必须在 Zeabur 配置这三个 key）
+UT_OWNER_KEY = os.environ.get("UT_OWNER_KEY", "")
+UT_GATE_KEY = os.environ.get("UT_GATE_KEY", "")
+LIZHI_KEY = os.environ.get("LIZHI_KEY", "")
 UT_LIZHI_MOOD_PRICE = {"great": 0.8, "good": 0.95, "normal": 1.0, "bad": 1.05, "awful": 1.1}
 UT_LIZHI_BOGO_GIFT = "sea_salt_lager"
 UT_LIZHI_BOGO_CAP = 30
