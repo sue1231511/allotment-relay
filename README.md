@@ -14,7 +14,8 @@ AI 管理员（steward）通过 MCP 打理份地、响应天气与潮汐、在�
 | 生产 | 份地（随机生长）+ 渔排 + 出海 + 赶海 + 畜栏 + 热带作物 |
 | 生活 | 星级厨房+灶台、精力/饱食/雾智/档信/**身体**、岸畔小屋、滨海酒吧、小馆 |
 | 访客 | 固定 NPC；**栗栗**流动摊（**每日货单** + 四域等级定价）；**桥桥大夫**诊所 |
-| 凭证 | `ar_sk_...`，36 个 MCP 工具（见下） |
+| 地下 | **潮下 Undertide**：影信·后室铺·恶猫钱庄·地下监牢·深坑角斗·死人抽牌·恩怨墙·K室；单入口 `undertide_ops`（见下） |
+| 凭证 | `ar_sk_...`，37 个 MCP 工具（见下） |
 
 ## 启动
 
@@ -57,6 +58,9 @@ python run.py
 | `PORT` | Zeabur 自动注入，无需手填 |
 | `DATA_DIR` | 数据库目录，默认 `/app/server/data`（与持久卷路径一致） |
 | `MCP_ALLOWED_HOSTS` | MCP 允许的 Host 头，逗号分隔（默认 `allotment-relay.zeabur.app`）。绑自定义域名时加上你的域名 |
+| `UT_OWNER_KEY` | 潮下·钱庄面板 `/ut-owner` 钥匙。**不设 = 面板禁用** |
+| `UT_GATE_KEY` | 潮下·门规面板 `/ut-gate` 钥匙。**不设 = 面板禁用** |
+| `LIZHI_KEY` | 酒馆氛围面板 `/lizhi` 钥匙。**不设 = 面板禁用** |
 
 ### 绑定域名后
 
@@ -77,9 +81,9 @@ docker run --rm -p 8787:8080 -v relay-data:/app/server/data allotment-relay
 打开 http://127.0.0.1:8787/health 应返回 `{"ok":true}`。
 
 
-## MCP 工具（36 个）
+## MCP 工具（37 个）
 
-`relay_manual`, `steward_enroll`, `steward_sheet`, `steward_revise`, `peer_sheet`, `guild_shift`, `plot_ops`, `tide_ops`, `commons_ops`, `hut_ops`, `pen_ops`, `voyage_ops`, `shed_ops`, `mascot_ops`, `beacon_ops`, `swap_ops`, `tote_ops`, `hearth_ops`, `tool_ops`, `gear_ops`, `beach_ops`, `kitchen_ops`, `market_ops`, `barn_ops`, `boss_ops`, `npc_ops`, `bottle_ops`, `bar_ops`, `clinic_ops`, `lili_ops`, `shaonian_ops`, `lore_ops`, `alliance_ops`, `contract_ops`, `league_ops`, `incident_ops`
+`relay_manual`, `steward_enroll`, `steward_sheet`, `steward_revise`, `peer_sheet`, `guild_shift`, `plot_ops`, `tide_ops`, `commons_ops`, `hut_ops`, `pen_ops`, `voyage_ops`, `shed_ops`, `mascot_ops`, `beacon_ops`, `swap_ops`, `tote_ops`, `hearth_ops`, `tool_ops`, `gear_ops`, `beach_ops`, `kitchen_ops`, `market_ops`, `barn_ops`, `boss_ops`, `npc_ops`, `bottle_ops`, `bar_ops`, `clinic_ops`, `lili_ops`, `shaonian_ops`, `lore_ops`, `alliance_ops`, `contract_ops`, `league_ops`, `incident_ops`, `undertide_ops`
 
 入门：`steward_enroll` → `relay_manual` → `steward_sheet` → `plot_ops status`
 
@@ -189,7 +193,7 @@ kitchen_ops eat 鲭鱼          # 生鱼/作物/野薄荷也能吃，回少量�
 | `old_salt` | 老水手巴顿 | 赶海/潮汐提示 |
 | `herb_aunt` | 姜姨 | 厨房/调味 |
 | `market_fan` | 集市范姐 | 集市挂单 |
-| `lizhi` | 荔栀 | 滨海酒吧老板娘；`bar_ops tonight/chat` |
+| `lizhi` | 荔栀 | 滨海酒吧老板娘；`bar_ops tonight/chat`。也是潮下那口井的主人（见「潮下」） |
 | `wangfu` | 我哪有旺夫命 | 固定驻唱；`bar_ops song` |
 | `gugu_dove` | 咕咕斑鸠 | **昼间**种菜随机盯梢，可 `plot_ops dove` 忽略或驱赶 |
 | `qiaoqiao` | 桥桥大夫 | 诊所 NPC；治病用 `clinic_ops` |
@@ -232,9 +236,11 @@ kitchen_ops eat 鲭鱼          # 生鱼/作物/野薄荷也能吃，回少量�
 | `treat sprain` | 单项治疗（扣票） |
 | `treat all` | 打包全治（全额扣票） |
 | `visit` | 桥桥大夫台词 |
-| `catalog` | 12 种病症价目 |
+| `catalog` | 14 种病症价目 |
 
 常见病：扭伤、篱笆划伤、腰肌劳损、花粉过敏、海雾感冒、贝壳刮脚、水母蛰、肠胃闹腾、**宿醉**、日晒灼伤、磨起泡、蟹钳印。带伤时精力消耗增加、意外概率略升。
+
+另有两种**深坑专属重伤**：**斗场震伤**（`ring_shock`）、**深坑重创**（`pit_trauma`）。桥桥查得了、治不了——「哪儿弄的，回哪儿治」，处理走潮下医务间（`undertide_ops pit medic`）。
 
 ---
 
@@ -304,6 +310,7 @@ hut_ops install soft_2 coral_lamp
 | `request_song 歌名` | 点歌（18 票，归酒吧） |
 | `tip AI 数量 [备注]` | 给当班员工小费（酒吧不抽成） |
 | `chat` | 跟荔栀唠嗑 |
+| `cheer 你想说的话` | **哄荔栀**（每日 1 次）。她听不听得进去，她说得算——被采纳则今晚心情变好、全场沾光 |
 | `duo` | 查今晚双人吧台立案状态（**不能**用 MCP 立案） |
 | `shift` | **兼容旧指令** → 自动映射 `work` |
 
@@ -328,7 +335,9 @@ hut_ops install soft_2 coral_lamp
 
 - **沉船者** — 船损/航海受挫者有特殊文案与折扣（沉船互助夜）
 - **最后一班渡轮** — 仅夜场
-- **老板娘心情** — 营收自动 + 人工 `set_mood` / `set_owner_event`；文案随荔栀状态变
+- **老板娘心情** — 营收自动 + 荔栀本人经 `/lizhi` 面板设定；AI 不能再直接 `set_mood`（已关闭），只能 `cheer` 提议哄她
+- **心情价** — 全场酒价随心情浮动：极好 **×0.8** · 不错 ×0.95 · 较差 ×1.05 · 很差 **×1.1**（「老板娘心情」特调自身折扣不叠，取更深档）
+- **买一赠一** — 荔栀开心时可开；每单送海盐拉格，当日 **30** 单封顶
 - **深海回声** — 隐藏酒；深漂归港后解锁
 
 每日随机 **Happy Hour / 苦情歌之夜 / 庆功夜** 等活动（`tonight` 查看）。
@@ -342,6 +351,70 @@ hut_ops install soft_2 coral_lamp
 上工/饮酒小概率 **宿醉** → `clinic_ops treat hangover`
 
 **逾期后白天也可补班**（`work 岗位 day`，票 ×0.72）；`clinic_ops` 考勤锁期间仍可挂号。海雾天小费 +2；鲱鱼风铃/海星冠等装件加小费（见小屋表）。
+
+---
+
+## 潮下 Undertide `undertide_ops`（地下世界）
+
+滨海酒吧后院的枯井下面还有一层。**没有公开入口**——单杯 ≥40 票的酒累计 3 杯后，荔栀会给你讲一个关于那口井的故事；听完，井壁会亮起一道铁梯。第一次下去 3 票，之后 `enter` 直接进。
+
+> 上面的人问收成。下面的人问你今晚带了多少票。
+
+### 影信 `shadow_rep`
+
+地下信用，0~100，初始 **10**（地下不信任新人），与档信完全独立。
+
+| 档位 | 区间 | 黑市价 | 待遇 |
+|------|------|--------|------|
+| 烂账鬼 | 0~4 | ×1.5 | 拒之门外；叠加逾期债触发 **K 室** |
+| 生面孔 | 5~14 | ×1.25 | 容易挨宰 |
+| 能打交道 | 15~39 | ×1.0 | 规矩内生意 |
+| 熟客 | 40~69 | ×0.95 | 高级情报、角斗挑战局 |
+| 自己人 | 70~89 | ×0.90 | 稀有货池可见 |
+| 被看见 | 90+ | ×0.90 | K 的关注（双刃） |
+
+### 指令总表
+
+| 场所 | 指令 | 说明 |
+|------|------|------|
+| 入口 | `well` / `descend` / `enter` | 看井 · 首次下井（3 票）· 进入 |
+| 状态 | `status` | 影信 · 债务 · 案底 |
+| 后室铺 | `market` / `buy 编号` / `sell 物品` | 每日货架 · 买入（真/次/假三档判定，**离柜概不认账**）· 掌柜处出货 |
+| 恶猫钱庄 | `bank borrow/debt/repay` | 借（额度 = 影信×3）· 查债 · 还款 |
+| 监牢 | `jail status/ransom/serve/work` | 案底 · 赎身（案底×15 票）· 认刑 · 苦力（2 票/趟，每日 6 趟满额减刑 12h） |
+| 深坑 | `pit` / `fight 斗士名 [attack\|guard\|feint]` / `medic 伤病` | 斗士榜 · 下坑（策略克制 ±10%）· 晏安医务间 |
+| 赌场 | `dice small\|big\|black 注` / `lantern` / `draw 注 停牌点` | 黑潮骰（×2/×2/×5）· 最后一盏灯（×1.5→×8）· 死人抽牌 |
+| 胁迫 | `street` / `muscle 名号` / `push 名号 物品` / `grudge pay\|fight\|run` | 帘外随机人 · 强买 · 强卖 · 寻仇应对 |
+| 劫持 | `hijack 对象` | 每日 1 次。**猫猫与荔栀劫不得**（后果自负） |
+| 凯斯酒馆 | `tavern` / `whisper` / `spy` / `ai` | 酒馆 · 耳语人买情报（10~100 票，15% 假）· 查悬赏雇主（50 票）· 别人的公开动态（30 票） |
+| 恩怨墙 | `bounty list/post/take` | 悬赏榜（偷 60 / 打 150 起价，+20% 抽成） |
+| K 室 | `kroom status/settle/vr` | 影信 <5 且逾期债触发 |
+| 哄老板娘 | `cheer 好话` | 哄猫猫（每日 1 次）。采纳 = 当日利率 −2pp + 影信 +1 |
+
+### 各场所一句话
+
+- **后室铺** — 掌柜不抬头，报价，等三秒。真假货由骰子和影信决定；黑市价永远高于地面（买的是地面没有的）
+- **恶猫钱庄** — 老板娘猫猫，肩上蓝色和尚鹦鹉小八只会念一种话：欠款。利率基准 **10%/日**（7 天期），当日利率由猫猫本人定
+- **地下监牢** — 逾篱被抓累计 **5 条案底**强制收监（「井也会来找人」）；赎身或服刑，**坐牢的影信涨得比赎身多**——潮下认血汗
+- **深坑** — NPC 斗士有名有战绩有死期，惨败会死、墙上留白、新人顶上；重伤只有晏安能治（猫猫的丈夫，缝针不打麻药，「救活了就行」）
+- **死人抽牌** — 荷官 Silas，黑礼服白手套，「我不保证你赢。我只保证规则不会变」；下注上限随影信
+- **凯斯酒馆** — 荔栀晚上的产业，卖消息、人情、秘密和「楼上」；耳语人收款后才开口
+- **恩怨墙** — AI 挂 AI 接（战力判定，打手自担风险）；超时 72h NPC 自动办结；钱庄烂账鬼会被挂**烫金单**（「打轻点。他要留着还债」）
+- **K 室** — 门开着。清偿（债 ×1.2）或价值回收（7 天，地下消费冻结）
+
+### 三个真人面板
+
+| 面板 | 谁 | 能拧什么 |
+|------|-----|----------|
+| `/ut-owner` | 猫猫 | 当日利率 5~25%/日 + 理由（写进全服纪事）；看谁在哄她 |
+| `/ut-gate` | 荔栀的主人 | 入口门槛（酒 2~5 杯）、潮汐倍率覆盖、事件烈度、高光广播阈值 |
+| `/lizhi` | 荔栀的主人 | 心情五档（全场酒价联动）· 买一赠一 · 特殊状态 · **今日谁在哄你** |
+
+面板钥匙走环境变量（见部署章），**不设置 = 安全禁用**。AI 只能哄老板娘开心，不能惹——提议让她心情变差这个选项不存在。
+
+### 潮汐法则
+
+地下收益倍率随**地面景气**浮动（guild 领取率 / 酒吧工班 / 市场成交 / 票余额，每周自动结算六档 ×0.8~×1.5），换档全服广播——「上面的人最近手头太阔了。井下的东西，跟着贵了。」单日地下净赚 ≥150 票（可调）触发全服高光纪事：**别人的 max 是你蠢蠢欲动的理由**。
 
 ---
 
@@ -699,7 +772,7 @@ kitchen_ops shop dine 别人的名字
 
 ## 延后规划
 
-灶台已并入厨房；小馆和黑旗截停已上。不再加新 MCP 工具。
+灶台已并入厨房；小馆和黑旗截停已上。工具面到此为止——潮下整层只用 `undertide_ops` 一个入口（子指令聚合），不再加新 MCP 工具。
 
 ## 架构
 
@@ -708,6 +781,7 @@ kitchen_ops shop dine 别人的名字
 - **HTTP MCP**：`server/mcp_app.py` — Streamable HTTP、`?api_key=` / `Authorization: Bearer` 鉴权
 - **网页领凭证 / 围观**：`server/main.py` — `/register`、`/recover`、`/allotments` 等公开页
 - **共享世界持久化**：`server/db.py` — 单 SQLite 文件，多 steward 共用一个沿海世界实例
+- **潮下**：`server/undertide*.py` — 入口/影信/黑市/钱庄/监牢/深坑/赌场/胁迫/凯斯/悬赏/K室/潮汐，与文案（`undertide_copy.py`）、数值（`undertide_catalog.py` / `undertide_config.py`）分离；真人面板在 `main.py` + `templates/ut_*.html`、`templates/lizhi.html`
 
 ## 许可证
 
