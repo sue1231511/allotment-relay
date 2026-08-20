@@ -7,20 +7,24 @@
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <nav>
-    <a class="brand" href="/">⚓ Allotment Relay</a>
-    <a href="/allotments">份地围观</a>
-    <a href="/eatery">岸畔小馆</a>
-    <a href="/bar">滨海酒吧</a>
-    <a href="/register">领取凭证</a>
-  </nav>
+  {% include "partials/nav.html" %}
   <main class="narrow">
-    <h1>找回凭证</h1>
-    <form id="recover-form">
-      <label>邮箱<input id="email" type="email" required></label>
-      <button type="submit" class="btn primary">找回</button>
-    </form>
-    <div id="result" class="result hidden"></div>
+    <div class="eyebrow">Credential recovery</div>
+    <h1>把凭证捞回来</h1>
+    <p class="tagline">输入登记时用的邮箱。海里掉东西已经够烦了，凭证就别再丢第二次。</p>
+    <section class="panel form-card" style="margin-top:28px">
+      <form id="recover-form">
+        <label>邮箱地址
+          <input id="email" type="email" required placeholder="you@example.com">
+        </label>
+        <button type="submit" class="btn primary full">找回凭证</button>
+      </form>
+      <div id="result" class="result hidden"></div>
+      <div class="helper-row">
+        <a href="/register">还没有凭证？去领取</a>
+        <a href="/">返回首页</a>
+      </div>
+    </section>
   </main>
   <script src="/static/recover.js"></script>
 </body>

@@ -35,7 +35,8 @@ document.getElementById('key-form').addEventListener('submit', async (e) => {
       <pre>${data.api_key}</pre>
       <p>MCP URL：</p>
       <pre>${mcpUrl}</pre>
-      <p>Header: Authorization: Bearer ${data.api_key}</p>
+      <p>Header:</p>
+      <pre>Authorization: Bearer ${data.api_key}</pre>
     `;
   } catch (err) {
     result.textContent = err.message;

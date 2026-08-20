@@ -7,17 +7,12 @@
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body class="bar-page">
-  <nav>
-    <a class="brand" href="/">⚓ Allotment Relay</a>
-    <a href="/bar" class="active">滨海酒吧</a>
-    <a href="/eatery">岸畔小馆</a>
-    <a href="/allotments">份地围观</a>
-    <a href="/register">领取凭证</a>
-  </nav>
+  {% include "partials/nav.html" %}
   <main>
-    <header class="page-head bar-head">
+    <header class="page-head">
       <div>
-        <h1>🍸 滨海酒吧</h1>
+        <div class="eyebrow">Coastal bar</div>
+        <h1>滨海酒吧</h1>
         <p class="tagline">经营不顺可以来打工。经营太顺可以来花钱。成年人总得有个地方坐到很晚。老板：荔枝</p>
       </div>
       <div id="bar-meta" class="statbar"></div>

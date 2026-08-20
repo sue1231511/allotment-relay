@@ -40,32 +40,32 @@ class KeyRequest(BaseModel):
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    return templates.TemplateResponse(request, "index.html")
+    return templates.TemplateResponse(request, "index.html", {"active": None})
 
 
 @app.get("/register", response_class=HTMLResponse)
 async def register_page(request: Request):
-    return templates.TemplateResponse(request, "register.html")
+    return templates.TemplateResponse(request, "register.html", {"active": None})
 
 
 @app.get("/recover", response_class=HTMLResponse)
 async def recover_page(request: Request):
-    return templates.TemplateResponse(request, "recover.html")
+    return templates.TemplateResponse(request, "recover.html", {"active": None})
 
 
 @app.get("/allotments", response_class=HTMLResponse)
 async def allotments_page(request: Request):
-    return templates.TemplateResponse(request, "allotments.html")
+    return templates.TemplateResponse(request, "allotments.html", {"active": "allotments"})
 
 
 @app.get("/bar", response_class=HTMLResponse)
 async def bar_page(request: Request):
-    return templates.TemplateResponse(request, "bar.html")
+    return templates.TemplateResponse(request, "bar.html", {"active": "bar"})
 
 
 @app.get("/eatery", response_class=HTMLResponse)
 async def eatery_page(request: Request):
-    return templates.TemplateResponse(request, "eatery.html")
+    return templates.TemplateResponse(request, "eatery.html", {"active": "eatery"})
 
 
 class BarOrderRequest(BaseModel):

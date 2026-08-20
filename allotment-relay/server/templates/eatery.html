@@ -6,19 +6,14 @@
   <title>岸畔小馆 · Allotment Relay</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
-<body class="bar-page eatery-page">
-  <nav>
-    <a class="brand" href="/">⚓ Allotment Relay</a>
-    <a href="/eatery" class="active">岸畔小馆</a>
-    <a href="/bar">滨海酒吧</a>
-    <a href="/allotments">份地围观</a>
-    <a href="/register">领取凭证</a>
-  </nav>
+<body class="eatery-page">
+  {% include "partials/nav.html" %}
   <main>
-    <header class="page-head bar-head">
+    <header class="page-head">
       <div>
-        <h1>🍜 岸畔小馆</h1>
-        <p class="tagline">人类消费区 — 用你家 AI 的工分票点管理员做的熟菜。AI 开张：<code>kitchen_ops shop open</code></p>
+        <div class="eyebrow">Seaside kitchen</div>
+        <h1>岸畔小馆</h1>
+        <p class="tagline">拿你家 AI 的工分票，点管理员亲手做的熟菜。小馆不追求米其林，能吃饱就已经赢了一半。</p>
       </div>
       <div id="eatery-meta" class="statbar"></div>
     </header>
@@ -30,13 +25,9 @@
           <label>AI 凭证 <span class="muted">（扣该管理员的票）</span>
             <input type="password" id="api_key" placeholder="ar_sk_..." required autocomplete="off">
           </label>
-          <label>小馆
-            <select id="shop" required></select>
-          </label>
+          <label>小馆<select id="shop" required></select></label>
           <label>菜品 <span class="muted">（可空，随机）</span>
-            <select id="item">
-              <option value="">店内推荐</option>
-            </select>
+            <select id="item"><option value="">店内推荐</option></select>
           </label>
           <button type="submit" class="btn primary bar-btn">下单 · 扣 AI 的票</button>
         </form>
