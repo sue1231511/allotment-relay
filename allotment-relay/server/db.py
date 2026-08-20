@@ -344,6 +344,13 @@ CREATE TABLE IF NOT EXISTS steward_gear (
     rod_tier INTEGER NOT NULL DEFAULT 0,
     net_tier INTEGER NOT NULL DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS bar_rolls (
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    day INTEGER NOT NULL,
+    count INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (steward_id, day)
+);
 """
 
 

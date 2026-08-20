@@ -229,6 +229,12 @@ async def bottle_ops(command: str) -> str:
     return await bottles.bottle_ops(_kid(), command)
 
 
+@mcp.tool(description="滨海酒吧：status/shift/chat — 暮夜上工赚票，老板荔梔，票少有补贴")
+async def bar_ops(command: str) -> str:
+    from . import bar
+    return await bar.bar_ops(_kid(), command)
+
+
 def build_mcp_app():
     app = mcp.streamable_http_app(streamable_http_path="/", stateless_http=True)
     app.add_middleware(ApiKeyMiddleware)

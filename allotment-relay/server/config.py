@@ -149,3 +149,38 @@ BOSS_DAILY_ATTACKS = 8
 # 漂流瓶
 BOTTLE_LEAVE_DAILY = 3
 BOTTLE_FISH_CHANCE = 0.12
+
+# 滨海酒吧 — 暮/夜上工，票少补贴厚
+BAR_SHIFT_DAILY = 4
+BAR_SHIFT_ENERGY = 10
+BAR_PAY_MIN = 10
+BAR_PAY_MAX = 18
+BAR_TIP_MAX = 12
+BAR_POOR_THRESHOLD = 45
+BAR_POOR_PAY_MULT = 1.85
+BAR_POOR_LABELS = [
+    "穷人补贴：荔梔多塞几张",
+    "票袋见底，老板按加急算",
+    "联盟低保线，上工不丢人",
+]
+BAR_ROLE_LINES = [
+    "陪聊倒酒一轮",
+    "牛郎档值班——正经陪聊那种",
+    "哄客人开心，票进兜",
+    "端盘听故事，故事换小费",
+]
+BAR_SHIFT_SUFFIX = [
+    "下班时荔梔抛来一条毛巾：擦擦汗，票是真的",
+    "领班记了你名字，下回优先排班",
+    "酒吧灯还亮，你的票袋总算鼓了点",
+    "海风吹进来，像给你这班结费鼓掌",
+]
+BAR_TIP_EVENTS = [
+    "客人豪掷小费：「今晚你嘴挺会说的」",
+    "荔梔补刀：「这单算你绩效」",
+    "角落老水手闷声多了张票：别问，谢就行",
+]
+BAR_OOPS_EVENTS = [
+    "失手打翻杯垫，小费扣一点——杯垫比脸贵",
+    "讲冷笑话，全场安静，小费也安静",
+]
