@@ -875,7 +875,7 @@ async def enroll_steward(key_id: int, name: str, motto: str, badge: str, portrai
             await add_item(db, sid, item, qty)
         await db.execute(
             "INSERT INTO chronicle (action, actor_id, text, created_at) VALUES ('enroll', ?, ?, ?)",
-            (sid, f"{name} 加入了 Allotment Relay 份地联盟", ts),
+            (sid, f"{name} 加入了潮汐岛份地联盟", ts),
         )
         await db.commit()
     steward = await get_steward_by_id(sid)

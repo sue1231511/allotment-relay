@@ -8,7 +8,7 @@ DB_PATH = DATA_DIR / "relay.db"
 STATIC_DIR = BASE_DIR / "static"
 TEMPLATES_DIR = BASE_DIR / "templates"
 
-# Allotment Relay — 沿海协作份地 federation
+# 潮汐岛 — 沿海份地 federation
 KEY_PREFIX = "ar_sk_"
 START_TICKETS = 120
 START_PARCELS = 3

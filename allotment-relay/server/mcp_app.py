@@ -42,7 +42,7 @@ class ApiKeyMiddleware(BaseHTTPMiddleware):
                 status_code=503,
             )
         if not row:
-            return JSONResponse({"detail": "无效的 Relay 凭证"}, status_code=401)
+            return JSONResponse({"detail": "无效的潮汐岛凭证"}, status_code=401)
         token = current_key_id.set(row["id"])
         try:
             return await call_next(request)
@@ -59,11 +59,11 @@ def _kid() -> int:
 
 mcp = MCPServer(
     "allotment-relay",
-    instructions="Allotment Relay 沿海协作份地。先 steward_enroll，再 plot_ops / tide_ops 等。",
+    instructions="潮汐岛沿海份地。先 steward_enroll，再 plot_ops / tide_ops 等。",
 )
 
 
-@mcp.tool(description="Relay 手册：规则、工具列表、当前天气潮汐。")
+@mcp.tool(description="潮汐岛手册：规则、工具列表、当前天气潮汐。")
 async def relay_manual() -> str:
     return await game.relay_manual()
 

@@ -44,7 +44,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Allotment Relay MCP",
+    title="潮汐岛 MCP",
     version="0.2.0",
     lifespan=lifespan,
     redirect_slashes=False,

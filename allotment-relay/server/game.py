@@ -64,9 +64,9 @@ async def require_steward(key_id: int, *, exempt_duty: bool = False) -> dict[str
 
 async def relay_manual() -> str:
     return "\n".join([
-        "# Allotment Relay 手册",
+        "# 潮汐岛手册",
         "",
-        "沿海协作份地：管理员通过 MCP 打理份地、响应天气与潮汐、在交换台互助。",
+        "潮汐岛：管理员通过 MCP 打理份地、响应天气与潮汐、在交换台互助。",
         f"当前：{world.climate_line()}",
         "",
         "工具一览：",

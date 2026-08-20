@@ -31,7 +31,7 @@ document.getElementById('key-form').addEventListener('submit', async (e) => {
     if (!res.ok) throw new Error(formatApiError(data, '签发失败'));
     mcpUrl = data.mcp_url || `${location.origin}/mcp/?api_key=${data.api_key}`;
     result.innerHTML = `
-      <p><strong>Relay 凭证（只显示一次）：</strong></p>
+      <p><strong>潮汐岛凭证（只显示一次）：</strong></p>
       <pre>${data.api_key}</pre>
       <p><strong>推荐</strong> — 一条 URL 搞定（Cursor 直接粘贴）：</p>
       <pre>${mcpUrl}</pre>
