@@ -163,23 +163,23 @@ HUT_LEVELS = {
 }
 
 HUT_HARD = {
-    "plank_floor": {"name": "防潮板地", "cost": 48, "emoji": "🪵", "hint": "脚感踏实，意外略少"},
-    "rain_gutter": {"name": "雨水槽", "cost": 55, "emoji": "🌧️", "hint": "阵风天份地少点罪"},
-    "storm_shutter": {"name": "风暴窗板", "cost": 72, "emoji": "🪟", "hint": "硬装护体，坏事件权重降"},
-    "brick_hearth": {"name": "砖砌灶基", "cost": 88, "emoji": "🧱", "hint": "brew 多回一点雾智"},
-    "glass_window": {"name": "海雾玻璃窗", "cost": 65, "emoji": "✨", "hint": "温室槽位更抗天气"},
+    "plank_floor": {"name": "防潮板地", "cost": 48, "emoji": "🪵", "hint": "意外掷骰 ×0.90"},
+    "rain_gutter": {"name": "雨水槽", "cost": 55, "emoji": "🌧️", "hint": "阵风生长惩罚 ×0.86，阵风坏事件 ×0.90"},
+    "storm_shutter": {"name": "风暴窗板", "cost": 72, "emoji": "🪟", "hint": "坏事件略少、野兽 ×0.82、斑鸠偷包 ×0.70（与渔网捕梦同组不叠）"},
+    "brick_hearth": {"name": "砖砌灶基", "cost": 88, "emoji": "🧱", "hint": "brew 雾智 +4"},
+    "glass_window": {"name": "海雾玻璃窗", "cost": 65, "emoji": "✨", "hint": "阵风生长惩罚 ×0.92（与雨水槽可叠）"},
 }
 
 HUT_SOFT = {
-    "kelp_rug": {"name": "浅海藻毯", "cost": 32, "emoji": "🧶", "hint": "软装入门，脚不凉"},
-    "tide_lamp": {"name": "潮汐灯", "cost": 38, "emoji": "💡", "hint": "暮夜雾智少掉一点"},
-    "fog_curtain": {"name": "雾纱帘", "cost": 28, "emoji": "🪭", "hint": "档口看你顺眼些"},
-    "herring_mobile": {"name": "鲱鱼风铃", "cost": 34, "emoji": "🎐", "hint": "风来有响，心情 +"},
-    "mint_cushion": {"name": "薄荷靠垫", "cost": 26, "emoji": "🛋️", "hint": "guild 多一丢丢档信"},
-    "sea_chart": {"name": "手绘海图", "cost": 45, "emoji": "🗺️", "hint": "出海归港略顺"},
-    "bramble_wreath": {"name": "荆棘莓环", "cost": 30, "emoji": "🌸", "hint": "纯好看，访客爱拍"},
-    "glass_float": {"name": "玻璃浮标", "cost": 36, "emoji": "🔮", "hint": "公共物资刷新略快——玄学"},
-    "fridge": {"name": "冰箱", "cost": 120, "emoji": "🧊", "hint": "熟菜保鲜，kitchen store"},
+    "kelp_rug": {"name": "浅海藻毯", "cost": 32, "emoji": "🧶", "hint": "纯好看，无数值"},
+    "tide_lamp": {"name": "潮汐灯", "cost": 38, "emoji": "💡", "hint": "暮/夜行动补雾智 +1（与珊瑚小灯同组不叠）"},
+    "fog_curtain": {"name": "雾纱帘", "cost": 28, "emoji": "🪭", "hint": "guild_shift 档信 +1（与珠串帘同组不叠）"},
+    "herring_mobile": {"name": "鲱鱼风铃", "cost": 34, "emoji": "🎐", "hint": "酒吧小费 +2（与海星冠同组不叠）"},
+    "mint_cushion": {"name": "薄荷靠垫", "cost": 26, "emoji": "🛋️", "hint": "guild_shift 档信 +2"},
+    "sea_chart": {"name": "手绘海图", "cost": 45, "emoji": "🗺️", "hint": "出海失败率 ×0.86，黑旗战力 +10"},
+    "bramble_wreath": {"name": "荆棘莓环", "cost": 30, "emoji": "🌸", "hint": "纯好看，无数值"},
+    "glass_float": {"name": "玻璃浮标", "cost": 36, "emoji": "🔮", "hint": "公共物资刷新 ×1.22"},
+    "fridge": {"name": "冰箱", "cost": 120, "emoji": "🧊", "hint": "kitchen store 保鲜；开小馆必需"},
 }
 
 TOOLS = {
@@ -503,16 +503,16 @@ NPC_FIXED = [
 
 # 栗栗流动摊 — 稀有装饰（deco_*），hut_ops install 到 soft 槽
 LILI_DECOR = {
-    "coral_lamp": {"name": "珊瑚小灯", "emoji": "🪸", "hint": "栗栗亲制，暮夜雾智少掉一点", "sell": 55},
-    "shell_windchime": {"name": "贝壳风铃", "emoji": "🎐", "hint": "比鲱鱼风铃贵气，风来有响", "sell": 48},
-    "pearl_garland": {"name": "珠串帘", "emoji": "📿", "hint": "档口看你顺眼些——玄学", "sell": 52},
-    "tide_clock": {"name": "潮汐钟", "emoji": "🕰️", "hint": "退潮铃响，赶海更准", "sell": 50},
-    "drift_bonsai": {"name": "漂木盆景", "emoji": "🪴", "hint": "枯而不死，访客爱拍", "sell": 46},
-    "moon_mirror": {"name": "月海镜", "emoji": "🪞", "hint": "映潮线，纯好看", "sell": 58},
-    "net_dreamcatcher": {"name": "渔网捕梦", "emoji": "🕸️", "hint": "噩运权重略降——信则灵", "sell": 44},
-    "star_crown": {"name": "海星冠", "emoji": "⭐", "hint": "纯炫，肖像加成 vibe", "sell": 62},
-    "amber_frame": {"name": "琥珀画框", "emoji": "🖼️", "hint": "装什么都是艺术品", "sell": 68},
-    "kelp_tassel": {"name": "海藻流苏", "emoji": "🌿", "hint": "门帘响，心情 +", "sell": 38},
+    "coral_lamp": {"name": "珊瑚小灯", "emoji": "🪸", "hint": "暮/夜行动补雾智 +1（与潮汐灯同组不叠）", "sell": 55},
+    "shell_windchime": {"name": "贝壳风铃", "emoji": "🎐", "hint": "酒吧小费 +1（与海藻流苏同组不叠）", "sell": 48},
+    "pearl_garland": {"name": "珠串帘", "emoji": "📿", "hint": "guild_shift 档信 +1（与雾纱帘同组不叠）", "sell": 52},
+    "tide_clock": {"name": "潮汐钟", "emoji": "🕰️", "hint": "赶海 14% 额外一抽", "sell": 50},
+    "drift_bonsai": {"name": "漂木盆景", "emoji": "🪴", "hint": "纯好看，无数值", "sell": 46},
+    "moon_mirror": {"name": "月海镜", "emoji": "🪞", "hint": "纯好看，无数值", "sell": 58},
+    "net_dreamcatcher": {"name": "渔网捕梦", "emoji": "🕸️", "hint": "坏事件略少、野兽 ×0.82、斑鸠偷包 ×0.70（与风暴窗板同组不叠）", "sell": 44},
+    "star_crown": {"name": "海星冠", "emoji": "⭐", "hint": "酒吧小费 +2（与鲱鱼风铃同组不叠）", "sell": 62},
+    "amber_frame": {"name": "琥珀画框", "emoji": "🖼️", "hint": "纯好看，无数值", "sell": 68},
+    "kelp_tassel": {"name": "海藻流苏", "emoji": "🌿", "hint": "酒吧小费 +1（与贝壳风铃同组不叠）", "sell": 38},
 }
 
 LILI_TRADE_POOL = [

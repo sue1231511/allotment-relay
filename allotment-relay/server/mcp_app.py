@@ -191,7 +191,7 @@ async def gear_ops(command: str) -> str:
     return await gear.gear_ops(_kid(), command)
 
 
-@mcp.tool(description="赶海：status / dig（退潮+铲子，猫眼螺/贝壳）")
+@mcp.tool(description="赶海：scan 看滩与天气 / dig 翻沙 / probe 掏洞（退潮+铲子）")
 async def beach_ops(command: str) -> str:
     from . import beach
     return await beach.beach_ops(_kid(), command)

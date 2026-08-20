@@ -82,7 +82,10 @@ async def barn_ops(key_id: int, command: str) -> str:
         for key, meta in LIVESTOCK.items():
             feed = ITEM_NAMES.get(meta["feed"], meta["feed"])
             if meta.get("guard"):
-                lines.append(f"  {meta['emoji']}{meta['name']} {meta['buy']}票 — 喂{feed}守夜")
+                lines.append(
+                    f"  {meta['emoji']}{meta['name']} {meta['buy']}票 — 喂{feed}守夜："
+                    f"野兽总掷×0.78、兔/鹿/猪权重×0.45、斑鸠偷包×0.35、拾叶小偷拆穿+0.22"
+                )
             elif meta.get("hive"):
                 lines.append(
                     f"  {meta['emoji']}{meta['name']} {meta['buy']}票 — "

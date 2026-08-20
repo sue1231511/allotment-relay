@@ -48,24 +48,22 @@ async def require_steward(key_id: int, *, exempt_duty: bool = False) -> dict[str
 
 
 async def relay_manual() -> str:
-    w, t = world.current_weather(), world.current_tide()
-    phase = world.current_day_phase()
     return "\n".join([
         "# Allotment Relay 手册",
         "",
         "沿海协作份地：管理员通过 MCP 打理份地、响应天气与潮汐、在交换台互助。",
-        f"当前：{world.weather_label(w)} · {world.tide_label(t)} · {world.day_phase_label(phase)}",
+        f"当前：{world.climate_line()}",
         "",
         "工具一览：",
         "  steward_enroll / steward_sheet / steward_revise / peer_sheet",
-        "  plot_ops — sow/tend/gather/shake/fertilize/scarecrow/compost/forage/…",
+        "  plot_ops — sow/tend/gather/shake/fertilize/scarecrow/compost/forage/weather",
         "  tide_ops — net/cast/status/bottle",
         "  gear_ops — status/upgrade 鱼饵·鱼竿·渔网 tier",
         "  beach_ops — scan/dig/probe（退潮+铲子赶海，雾天稀有↑）",
         "  tool_ops — list/buy 锄头铲子渔网",
         "  kitchen_ops — menu/cook/brew/eat/shop（星级料理+灶台+岸畔小馆）",
         "  market_ops — list/sell/buy 玩家集市",
-        "  barn_ops — 兔/鸡/鸭/羊/猪/山羊/牛/蜂箱/狗",
+        "  barn_ops — 兔/鸡/鸭/羊/猪/山羊/牛/蜂箱/狗；churn 山羊奶打奶酪",
         "  boss_ops — 克系世界Boss",
         "  npc_ops / bottle_ops — 固定NPC与漂流瓶；拾叶巷口随机小偷/乞丐/碰瓷/敲诈",
         "  clinic_ops — 桥桥大夫诊所（随机致病，必须花票 treat）",
@@ -157,8 +155,6 @@ async def steward_sheet(key_id: int) -> str:
     s = await db.get_steward_by_id(s["id"]) or s
     parcels = await db.get_parcels(s["id"])
     stock = await db.get_satchel(s["id"])
-    w, t = world.current_weather(), world.current_tide()
-    phase = world.current_day_phase()
     from . import energy as energy_mod
     from . import bar as bar_mod
     from . import health as health_mod
@@ -172,7 +168,7 @@ async def steward_sheet(key_id: int) -> str:
         energy_mod.meter_line(s),
         bar_mod.duty_line(s),
         f"份地: {s['parcel_count']} 块",
-        f"{world.weather_label(w)} / {world.tide_label(t)} / {world.day_phase_label(phase)}",
+        world.climate_line(),
     ]
     hint = survival.low_meter_hint(s)
     if hint:
@@ -302,11 +298,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
     verb = parts[0].lower() if parts else ""
 
     if verb == "weather":
-        w, t = world.current_weather(), world.current_tide()
-        return (
-            f"天气 {world.weather_label(w)}，潮汐 {world.tide_label(t)}，"
-            f"时辰 {world.day_phase_label(world.current_day_phase())}"
-        )
+        return world.climate_report()
 
     if verb == "status":
         parcels = await db.get_parcels(s["id"])

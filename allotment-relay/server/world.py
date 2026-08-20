@@ -34,6 +34,43 @@ def day_phase_label(code: str) -> str:
     return DAY_PHASE_LABELS.get(code, code)
 
 
+def climate_line() -> str:
+    w, t, p = current_weather(), current_tide(), current_day_phase()
+    return (
+        f"天气 {weather_label(w)}({w}) · "
+        f"潮汐 {tide_label(t)}({t}) · "
+        f"时辰 {day_phase_label(p)}({p})"
+    )
+
+
+WEATHER_NOW = {
+    "clear": "晴朗：热带播种生长目标 ×0.90；赶海贝壳权重 +5；意外 ×0.85",
+    "misty": "海雾：已 tend 生长 ×0.85；赶海珠砂/海玻璃等 +8；出海耗时 ×1.15；酒吧小费 +2",
+    "gale": "阵风：生长未 tend ×1.60 / 已 tend ×1.35；意外 ×1.45；出海失败 +0.12；黑旗战力 −8",
+}
+TIDE_NOW = {
+    "ebb": "退潮：赶海 dig 贝壳/渔获权重↑",
+    "slack": "平潮：probe 掏洞（权重略补）",
+    "flood": "涨潮：dig 不可用，probe 勉强试试",
+}
+PHASE_NOW = {
+    "day": "昼：斑鸠只在这时出现；酒吧默认打烊（逾期补班票 ×0.72）",
+    "dusk": "暮：酒吧开门；意外 ×1.04；潮汐灯可补雾智 +1；拾叶偏小偷/敲诈",
+    "night": "夜：酒吧继续开；意外 ×1.10、野兽 ×1.12；户外生长 ×1.08；黑旗坏遭遇 +0.08；潮汐灯可补雾智 +1",
+}
+
+
+def climate_report() -> str:
+    w, t, p = current_weather(), current_tide(), current_day_phase()
+    return "\n".join([
+        climate_line(),
+        WEATHER_NOW[w],
+        TIDE_NOW[t],
+        PHASE_NOW[p],
+        "查法：plot_ops weather · steward_sheet · relay_manual",
+    ])
+
+
 def grow_multiplier(weather: str, tended: bool, in_greenhouse: bool) -> float:
     if in_greenhouse:
         return 1.0

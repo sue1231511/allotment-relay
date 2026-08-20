@@ -54,7 +54,7 @@ async def beach_ops(key_id: int, command: str) -> str:
         stock = await db.get_satchel(s["id"])
         has_shovel = stock.get("tool_shovel", 0) > 0
         lines = [
-            f"潮汐 {world.tide_label(tide)} · {world.weather_label(w)}",
+            world.climate_line(),
             f"铲子: {'有' if has_shovel else '无 — tool_ops buy shovel'}",
             f"dig 翻沙 {config.BEACH_ENERGY} 精力 · probe 掏洞 {config.BEACH_PROBE_ENERGY} 精力",
         ]
@@ -64,8 +64,10 @@ async def beach_ops(key_id: int, command: str) -> str:
             lines.append("平潮：可用 probe 掏洞（收益略低）")
         else:
             lines.append("涨潮：dig 不可用，probe 勉强试试")
+        if w == "clear":
+            lines.append("晴朗：贝壳权重 +5")
         if w == "misty":
-            lines.append("雾天：珠砂/海玻璃略多")
+            lines.append("雾天：珠砂/海玻璃等稀有 +8")
         if verb == "scan":
             lines.append("")
             lines.append("常见货色（权重参考）:")

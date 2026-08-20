@@ -576,7 +576,7 @@ async def voyage_ops(key_id: int, command: str) -> str:
             lines.append(f"出海中: {route}，约 {left // 60} 分 {left % 60} 秒后归港")
         else:
             lines.append("出海: 无 — depart near|far|deep")
-        lines.append(f"潮汐 {world.tide_label(world.current_tide())} · {world.day_phase_label(world.current_day_phase())}")
+        lines.append(world.climate_line())
         msg = "\n".join(lines)
         return f"{pulse}\n{msg}" if pulse else msg
 

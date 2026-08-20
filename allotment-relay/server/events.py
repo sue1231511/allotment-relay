@@ -646,10 +646,9 @@ async def incident_ops(key_id: int, command: str) -> str:
 
     if verb == "scan":
         pulse = await public_pulse_snapshot()
-        w, t = world.current_weather(), world.current_tide()
         risk = "偏高" if world.current_weather() == "gale" else "平常"
         lines = [
-            f"天气 {world.weather_label(w)} / 潮汐 {world.tide_label(t)} / 时辰 {world.day_phase_label(world.current_day_phase())}",
+            world.climate_line(),
             f"意外风险：{risk}（事件文案随机组合；逾篱摘取也是随机事件）",
         ]
         if pulse:
