@@ -27,6 +27,18 @@ def pace_label(ratio: float) -> tuple[str, str]:
     return label, hint
 
 
+def format_grow_eta(left: int) -> str:
+    """生长剩余时间 — 秒级与分秒混排，避免「约1分」长时间不变。"""
+    if left <= 0:
+        return ""
+    if left < 60:
+        return f"约{left}秒"
+    mins, secs = divmod(left, 60)
+    if secs:
+        return f"约{mins}分{secs}秒"
+    return f"约{mins}分"
+
+
 WILDLIFE = [
     {
         "key": "rabbit",
@@ -221,10 +233,7 @@ def parcel_extra(plot: dict[str, Any]) -> str:
     if pace:
         bits.append(pace)
     if left > 0:
-        if left < 60:
-            bits.append(f"约{left}秒")
-        else:
-            bits.append(f"约{left // 60}分")
+        bits.append(format_grow_eta(left))
     if plot.get("fertilized"):
         bits.append("肥")
     if plot.get("scarecrow"):

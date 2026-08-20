@@ -96,9 +96,15 @@ def resolve_item_key(token: str, *, prefer: str = "any") -> str | None:
             return f"fish_{fk}"
     if norm in SEA_CATCH:
         return f"fish_{norm}"
+    compact = norm.replace("_", "")
+    if compact in SEA_CATCH:
+        return f"fish_{compact}"
     fish_key = f"fish_{norm}"
     if fish_key in ITEM_PRICES:
         return fish_key
+    fish_compact = f"fish_{compact}"
+    if fish_compact in ITEM_PRICES:
+        return fish_compact
 
     crop = resolve_crop_key(raw)
     if crop:

@@ -32,6 +32,8 @@ from .config import (
 
 def _parse_int(token: str, label: str = "数量") -> int:
     cleaned = token.strip().rstrip(";,").lstrip("#")
+    if cleaned.lower().startswith("x") and len(cleaned) > 1:
+        cleaned = cleaned[1:]
     try:
         return int(cleaned)
     except ValueError:
@@ -69,7 +71,7 @@ async def relay_manual() -> str:
         "",
         "工具一览：",
         "  steward_enroll / steward_sheet / steward_revise / peer_sheet",
-        "  plot_ops — catalog/buy/sow/tend/gather/shake/fertilize/scarecrow/compost/dove/forage/weather",
+        "  plot_ops — catalog/buy/sow/tend/gather [地块]/shake/fertilize/scarecrow/compost/dove/forage/weather",
         "  tide_ops — net/cast/status/bottle",
         "  gear_ops — status/upgrade 鱼饵·鱼竿·渔网 tier",
         "  beach_ops — scan/dig/probe（退潮+铲子赶海，雾天稀有↑）",
@@ -343,13 +345,22 @@ async def guild_shift(key_id: int) -> str:
     return f"{msg}\n{extra}" if extra else msg
 
 
-async def plot_ops(key_id: int, command: str) -> str:
+async def plot_ops(key_id: int, command: str = "") -> str:
+    cmd = (command or "").strip()
+    if not cmd:
+        return (
+            "plot_ops 需要子指令。常用:\n"
+            "  status · catalog · weather\n"
+            "  sow 地块 作物 · tend · gather [地块] · shake 地块\n"
+            "  forage · buy 数量 作物 · dove 忽略|驱赶\n"
+            "例: plot_ops status · plot_ops gather 1（只收 #1）"
+        )
     s = await require_steward(key_id)
     pulse = await events.maybe_world_pulse(s)
     async with db.connect() as conn:
         await commons.maybe_spawn_commons(conn, steward_id=s["id"])
         await conn.commit()
-    parts = [c.strip() for c in command.split(";") if c.strip()]
+    parts = [c.strip() for c in cmd.split(";") if c.strip()]
     results: list[str] = []
     for c in parts:
         try:
@@ -607,12 +618,19 @@ async def _plot_one(s: dict, cmd: str) -> str:
         return f"#{slot} {crop_name} → 堆肥桶，土肥了"
 
     if verb == "gather":
+        slot_filter: int | None = None
+        if len(parts) >= 2:
+            slot_filter = _parse_int(parts[1], "地块编号")
         got = []
         async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             parcels = [dict(r) for r in await (await conn.execute(
                 "SELECT * FROM parcels WHERE steward_id=?", (s["id"],)
             )).fetchall()]
+            if slot_filter is not None:
+                parcels = [p for p in parcels if p.get("slot") == slot_filter]
+                if not parcels:
+                    raise ValueError(f"没有份地 #{slot_filter}")
             for p in parcels:
                 if farming.plot_ready(p):
                     if await events.gather_blight_loss(conn, s["id"], p["crop"]):
@@ -700,18 +718,25 @@ async def _plot_one(s: dict, cmd: str) -> str:
                     if min_left is None or left < min_left:
                         min_left = left
                         nearest = p
+            wait_hint = (
+                "\n等待期间可做: tend · forage · tide_ops net|cast · "
+                "beach_ops scan · kitchen_ops eat · clinic_ops status"
+            )
             msg = "没有可收成的作物"
-            if nearest is not None and min_left is not None:
+            if slot_filter is not None and parcels:
+                p = parcels[0]
+                if not p.get("crop"):
+                    msg = f"#{slot_filter} 休耕，无可收"
+                elif not farming.plot_ready(p) and not farming.plot_overripe(p):
+                    cname = CROPS[p["crop"]]["name"]
+                    _, _, left = farming.grow_progress(p)
+                    msg = f"#{slot_filter} {cname} 还需 {farming.format_grow_eta(left)}{wait_hint}"
+                else:
+                    msg = f"#{slot_filter} 暂无可收（plot_ops status 查看详情）"
+            elif nearest is not None and min_left is not None:
                 cname = CROPS[nearest["crop"]]["name"]
                 slot = nearest.get("slot", "?")
-                if min_left < 60:
-                    msg += f"（#{slot} {cname} 还需 {min_left} 秒）"
-                else:
-                    msg += f"（#{slot} {cname} 还需约 {min_left // 60} 分）"
-                msg += (
-                    "\n等待期间可做: tend · forage · tide_ops net|cast · "
-                    "beach_ops scan · kitchen_ops eat · clinic_ops status"
-                )
+                msg += f"（#{slot} {cname} 还需 {farming.format_grow_eta(min_left)}）{wait_hint}"
             return f"{msg}\n{extra}" if extra else msg
         await db.add_chronicle("gather", f"{s['name']} 收成 {', '.join(got)}", s["id"])
         from . import multi
