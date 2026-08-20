@@ -121,6 +121,11 @@ nav {
   font-size: 15px;
 }
 
+.nav-links {
+  display: flex;
+  gap: 24px;
+}
+
 .nav-link {
   color: var(--muted);
   text-decoration: none;
@@ -766,8 +771,6 @@ code {
 }
 
 @media (max-width: 760px) {
-  .nav-link { display: none; }
-
   main { padding-top: 38px; }
 
   .bar-grid { grid-template-columns: 1fr; }
@@ -786,8 +789,6 @@ code {
     width: min(100% - 24px, 1180px);
   }
 
-  .nav-inner { min-height: 62px; }
-
   .brand { font-size: 14px; }
 
   .nav-cta { padding: 8px 12px; }
@@ -805,4 +806,38 @@ code {
   .connect { margin-top: 58px; }
 
   .steps { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 760px) {
+  .nav-inner {
+    min-height: auto;
+    padding: 16px 0 0;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 14px;
+  }
+
+  .brand {
+    margin: 0;
+  }
+
+  .nav-cta {
+    justify-self: end;
+  }
+
+  .nav-links {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: space-around;
+    gap: 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .nav-link {
+    display: block;
+    flex: 1;
+    padding: 16px 4px;
+    text-align: center;
+    font-size: 14px;
+  }
 }
