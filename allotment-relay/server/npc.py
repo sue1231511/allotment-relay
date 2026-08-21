@@ -42,6 +42,8 @@ async def npc_ops(key_id: int, command: str) -> str:
                 tag = " · 流动贝壳商，visit_ops lili scan/trade"
             elif npc["key"] == "shaonian":
                 tag = " · 滩头卜卦，visit_ops shaonian fortune/catalog"
+            elif npc["key"] == "tt":
+                tag = " · 杂货店，visit_ops tt catalog/buy/gift"
             elif npc["key"] == "old_salt":
                 tag = " · 赶海/潮汐提示"
             elif npc["key"] == "herb_aunt":
@@ -65,6 +67,9 @@ async def npc_ops(key_id: int, command: str) -> str:
             raise ValueError("未知 NPC，list 查看")
         if npc["key"] == "shiye":
             return await _visit_shiye(s)
+        if npc["key"] == "tt":
+            from . import tt as tt_mod
+            return await tt_mod.tt_ops(key_id, "visit")
         line = random.choice(npc["lines"])
         extra = await _visit_context(s, npc["key"])
         gift = await _daily_visit_gift(s["id"], npc["key"])
@@ -126,6 +131,8 @@ async def _visit_context(steward: dict, key: str) -> str:
             names = "、".join(a["name"] for a in ailments[:3])
             return f"——你挂着 {names}，visit_ops clinic treat，不赊账"
         return "——身子还行。别等病了再来聊天"
+    if key == "tt":
+        return "——店在档口东头。visit_ops tt catalog 看货架，gift 送礼涨好感"
     return flavor.pick([
         "——说完就溜达走了",
         "——留下一股姜味",

@@ -79,7 +79,7 @@ async def relay_manual() -> str:
         "  tote_ops — list/vend/gift；swap 交换台；market 集市",
         "  kitchen_ops — menu/cook/brew/eat/shop（星级料理+灶台+岸畔小馆）",
         "  alliance_ops — online/assist；contract 合约；league 周目标；beacon 公告；bottle 漂流瓶",
-        "  visit_ops — NPC；lili 栗栗；shaonian 韶年；lore；clinic 诊所",
+        "  visit_ops — NPC；lili 栗栗；shaonian 韶年；tt Tt酱杂货；lore；clinic 诊所",
         "  bar_ops — tonight/work/menu/order/tip/duo（暮夜打工；双人吧台网页立案）",
         "  undertide_ops — 井下的传闻（help 看子指令；入口自己找）",
         "",
@@ -98,7 +98,7 @@ async def relay_manual() -> str:
         "  tote_ops swap / market — 交换台与集市",
         "  steward_ops guild — 每日一轮工分票；steward_ops board — 全服榜",
         "  alliance_ops contract / league / beacon / bottle — 合约、周目标、公告、漂流瓶",
-        "  visit_ops lili / shaonian / lore / clinic — 栗栗、韶年、旧史、诊所",
+        "  visit_ops lili / shaonian / tt / lore / clinic — 栗栗、韶年、Tt酱杂货、旧史、诊所",
         "",
         "plot_ops / tote_ops 可用 ; 串联（分号先切开再解析数量）。",
         "物品名：中文或英文 id 都行。tote_ops list / kitchen_ops menu / plot_ops catalog 会列出 id。",
@@ -128,6 +128,11 @@ async def relay_manual() -> str:
         "【巷口拾叶】",
         "  visit_ops visit 拾叶；sow/tend/gather/forage/guild/net/赶海也可能碰到",
         "  随机小偷 / 乞丐 / 碰瓷 / 敲诈，当场结算，每日最多 3 次",
+        "",
+        "【Tt酱杂货店】",
+        "  visit_ops tt catalog / buy 物品 / gift 物品 — 种子（含调味料）、动物/宠物饲料、剪毛剪刀、挤奶器",
+        "  送礼涨好感，100 满、十颗心；每两心 -0.5 折，满心 75 折",
+        "  每日首次进店 10% 她心情好送礼；份地上也可能撞见",
         "",
         "【意外事件】",
         "  每次操作随机组合事件（非固定剧本）：文本、损失、修复成本均随机",
@@ -208,6 +213,8 @@ async def steward_sheet(key_id: int) -> str:
         lines.append("🕊️ 斑鸠盯梢中 → plot_ops dove 忽略|驱赶")
     if lili_hint:
         lines.append(lili_hint)
+    from . import tt as tt_mod
+    lines.append(tt_mod.shopfront_line() + " → visit_ops tt")
     for note in handoff_notes:
         lines.append(note)
     for note in bottle_notes:
@@ -422,7 +429,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
             await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (cost, s["id"]))
             await db.add_item(conn, s["id"], seed, qty)
             await conn.commit()
-        return f"购入 {CROPS[crop]['name']}种 x{qty}（-{cost} 票）"
+        return f"购入 {CROPS[crop]['name']}种 x{qty}（-{cost} 票）。好感打折去 visit_ops tt buy"
 
     if verb == "sow" and len(parts) >= 3:
         slot = _parse_int(parts[1], "地块编号")
@@ -1198,6 +1205,19 @@ async def mascot_ops(key_id: int, command: str) -> str:
             await conn.commit()
         return f"{s['mascot_name']} 士气上升"
 
+    if verb == "feed":
+        if not s["mascot_name"]:
+            raise ValueError("还没有吉祥物")
+        async with db.connect() as conn:
+            if not await db.take_item(conn, s["id"], "feed_pet", 1):
+                raise ValueError("需要宠物饲料 — visit_ops tt buy 宠物饲料")
+            await conn.execute(
+                "UPDATE stewards SET mascot_spirit=MIN(100, mascot_spirit+18) WHERE id=?",
+                (s["id"],),
+            )
+            await conn.commit()
+        return f"{s['mascot_name']} 吃了宠物饲料，士气上升"
+
     if verb == "train":
         if not s["mascot_name"]:
             raise ValueError("还没有吉祥物")
@@ -1209,7 +1229,7 @@ async def mascot_ops(key_id: int, command: str) -> str:
             await conn.commit()
         return f"训练了 {s['mascot_name']} 的 {s['mascot_trait']} 特质"
 
-    raise ValueError(f"未知 mascot 指令: {command}")
+    raise ValueError(f"未知 mascot 指令: {command}（status/adopt/upkeep/feed/train）")
 
 
 async def beacon_ops(key_id: int, command: str) -> str:

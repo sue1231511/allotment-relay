@@ -522,6 +522,22 @@ CREATE TABLE IF NOT EXISTS npc_visits (
     PRIMARY KEY (steward_id, npc_key, day)
 );
 
+CREATE TABLE IF NOT EXISTS tt_affinity (
+    steward_id INTEGER PRIMARY KEY REFERENCES stewards(id),
+    score INTEGER NOT NULL DEFAULT 0,
+    updated_at INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS tt_daily (
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    day INTEGER NOT NULL,
+    visit_done INTEGER NOT NULL DEFAULT 0,
+    mood_gift INTEGER NOT NULL DEFAULT 0,
+    gifts INTEGER NOT NULL DEFAULT 0,
+    bumps INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (steward_id, day)
+);
+
 CREATE TABLE IF NOT EXISTS eatery_menu (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     steward_id INTEGER NOT NULL REFERENCES stewards(id),
@@ -864,6 +880,24 @@ async def init_db() -> None:
             "ALTER TABLE ut_mood_proposals ADD COLUMN target TEXT NOT NULL DEFAULT 'cat'",
             "ALTER TABLE stewards ADD COLUMN xp INTEGER NOT NULL DEFAULT 0",
             """
+            CREATE TABLE IF NOT EXISTS tt_affinity (
+                steward_id INTEGER PRIMARY KEY REFERENCES stewards(id),
+                score INTEGER NOT NULL DEFAULT 0,
+                updated_at INTEGER NOT NULL DEFAULT 0
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS tt_daily (
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                day INTEGER NOT NULL,
+                visit_done INTEGER NOT NULL DEFAULT 0,
+                mood_gift INTEGER NOT NULL DEFAULT 0,
+                gifts INTEGER NOT NULL DEFAULT 0,
+                bumps INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (steward_id, day)
+            )
+            """,
+            """
             CREATE TRIGGER IF NOT EXISTS trg_steward_xp_gain
             AFTER UPDATE OF tickets ON stewards
             WHEN NEW.tickets > OLD.tickets
@@ -1137,6 +1171,8 @@ async def public_stats() -> dict[str, Any]:
         league = await multi.league_snapshot()
         pulse = await events.public_pulse_snapshot()
         lili_hint = await lili_mod.active_visit_hint(db)
+        from . import tt as tt_mod
+        tt_hint = tt_mod.shopfront_line()
         boss_row = await (await db.execute(
             "SELECT hp, max_hp, respawn_at FROM world_boss WHERE boss_key=?",
             (WORLD_BOSS["key"],),
@@ -1188,6 +1224,7 @@ async def public_stats() -> dict[str, Any]:
             "day_phase": p,
             "day_phase_label": world.day_phase_label(p),
             "lili": lili_hint,
+            "tt": tt_hint,
             "boss": boss,
             "beacons": [{"author": r[1], "body": r[0][:80]} for r in beacons],
             "swap_preview": [

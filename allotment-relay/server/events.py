@@ -394,13 +394,15 @@ async def roll_after_action(
 
     from . import npc as npc_mod
     shiye = await npc_mod.maybe_shiye_bump(conn, steward, trigger)
+    from . import tt as tt_mod
+    tt_hit = None if shiye else await tt_mod.maybe_tt_bump(conn, steward, trigger)
 
     if not await _can_roll(conn, steward["id"]):
-        return shiye
+        return shiye or tt_hit
 
     await survival.on_action(conn, steward["id"], trigger)
-    if shiye:
-        return shiye
+    if shiye or tt_hit:
+        return shiye or tt_hit
 
     from . import hut as hut_mod
     hut_b = await hut_mod.get_bonuses(conn, steward["id"])

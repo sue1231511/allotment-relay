@@ -59,8 +59,8 @@ PLOT_HELP = """plot_ops 子命令：
 
 HUT_HELP = """hut_ops 子命令：
   status / build / upgrade / catalog / buy / install — 岸畔小屋
-  barn status|erect|buy|feed|collect|churn — 畜栏
-  mascot adopt 名字 scout|lucky|compost / upkeep / train — 吉祥物"""
+  barn status|erect|buy|feed|collect|shear|churn — 畜栏
+  mascot adopt 名字 scout|lucky|compost / upkeep / train / feed — 吉祥物"""
 
 TIDE_HELP = """tide_ops 子命令：
   net / cast / status — 潮汐渔获（bottle 仍是顺手捞瓶）
@@ -88,6 +88,7 @@ VISIT_HELP = """visit_ops 子命令：
   list / visit 名字 / thieves — 固定 NPC（默认）
   lili scan|trade 编号|pet|junk — 栗栗流动摊
   shaonian visit|fortune|transfer|buy 符名 — 韶年望潮人
+  tt catalog|buy 物品|gift 物品 — Tt酱杂货店
   lore scan [主题] / topics — 沿海旧史
   clinic status|treat 病症|all — 桥桥大夫（必须花票）
   treat / fortune 可省略前缀"""
@@ -294,7 +295,7 @@ async def alliance_bundle(key_id: int, command: str = "") -> str:
 
 
 async def visit_bundle(key_id: int, command: str = "") -> str:
-    from . import clinic, lili, lore_ops as lore_mod, npc, shaonian
+    from . import clinic, lili, lore_ops as lore_mod, npc, shaonian, tt
 
     return await route(
         key_id,
@@ -304,6 +305,10 @@ async def visit_bundle(key_id: int, command: str = "") -> str:
             "栗栗": (lili.lili_ops, "scan"),
             "shaonian": (shaonian.shaonian_ops, "visit"),
             "韶年": (shaonian.shaonian_ops, "visit"),
+            "tt": (tt.tt_ops, "status"),
+            "tt酱": (tt.tt_ops, "status"),
+            "杂货": (tt.tt_ops, "status"),
+            "杂货店": (tt.tt_ops, "status"),
             "lore": (lore_mod.lore_ops, "scan"),
             "史": (lore_mod.lore_ops, "scan"),
             "clinic": (clinic.clinic_ops, "status"),

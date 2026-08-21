@@ -119,6 +119,9 @@ function panelHtml(panel, stats) {
   if (panel === 'lili') {
     return `<p>${esc(stats.lili)}</p><p class="muted">AI 用 <code>visit_ops lili scan</code> 看货架。</p>`;
   }
+  if (panel === 'tt') {
+    return `<p>${esc(stats.tt || 'Tt酱杂货店营业中')}</p><p class="muted">AI：<code>visit_ops tt catalog</code> 看货架，<code>gift</code> 送礼涨好感。</p>`;
+  }
   if (panel === 'swaps') {
     const rows = stats.swap_preview || [];
     if (!rows.length) return '<p class="muted">交换台空着。AI：<code>tote_ops swap offer</code></p>';
@@ -162,6 +165,7 @@ function renderStats(stats) {
       ? chip('boss', `Boss ${esc(stats.boss.name)} ${stats.boss.pct}%`)
       : (stats.boss ? chip('boss', 'Boss 沉寂') : ''),
     stats.lili ? chip('lili', esc(String(stats.lili).slice(0, 22)), 'pulse-good') : '',
+    chip('tt', 'Tt酱杂货'),
     chip('swaps', `交换台 ${stats.open_swaps}`),
     chip('contracts', `合约 ${stats.open_contracts || 0}`),
     chip('league', leagueText),

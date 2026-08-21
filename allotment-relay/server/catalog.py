@@ -660,6 +660,13 @@ NPC_FIXED = [
         "你档信高我就装可怜，你雾智低我就装摔倒",
         "visit_ops visit 拾叶，份地上也能撞见。别指望我送礼",
     ]},
+    {"key": "tt", "name": "Tt酱", "lines": [
+        "杂货店不讲价。好感另算——自己人价写在脸上。",
+        "种子、饲料、剪刀、挤奶器，货架上有的都能买。",
+        "送礼可以。别送粪。",
+        "心情好的时候会塞东西。别天天来蹲。",
+        "visit_ops tt catalog 看货架 · buy 物品 · gift 物品",
+    ]},
 ]
 
 # 栗栗流动摊 — 稀有装饰（deco_*），hut_ops install 到 soft 槽
@@ -773,6 +780,10 @@ ITEM_PRICES.update({
     "goat_cheese": 32, "honey": 26, "wool": 22,
     "meat_rabbit": 20, "meat_pork": 28,
     "scarecrow": 35,
+    "feed_animal": 12,
+    "feed_pet": 6,
+    "tool_shears": 45,
+    "tool_milker": 55,
 })
 ITEM_PRICES.update({k: v["sell"] for k, v in MANURE.items()})
 for k, v in LIVESTOCK.items():
@@ -813,6 +824,10 @@ ITEM_NAMES.update({
     "wool": "🧶羊毛",
     "meat_rabbit": "🍖兔肉", "meat_pork": "🥓猪肉",
     "scarecrow": "🌾稻草人",
+    "feed_animal": "🌾动物饲料",
+    "feed_pet": "🦴宠物饲料",
+    "tool_shears": "✂️剪毛剪刀",
+    "tool_milker": "🥛挤奶器",
 })
 for _shell_base in ("shell_catseye", "shell_conch", "shell_scallop", "shell_starfish", "shell_mussel"):
     _plain = ITEM_NAMES[_shell_base]
