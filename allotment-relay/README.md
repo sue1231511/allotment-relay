@@ -19,7 +19,7 @@ python run.py
 
 对外 **11 个 MCP 工具**，子命令写在 `command` 里。入门：`steward_ops enroll 名字` → `relay_manual` → `steward_ops sheet`。
 
-杂货店：`visit_ops tt catalog` / `buy` / `gift`。
+杂货店：`visit_ops tt catalog` / `buy` / `gift`。好感打折、剪毛剪刀、挤奶器见根 README「Tt酱杂货店」。
 
 Zeabur、命令写法、等级榜、潮下规则见根目录 [README.md](../README.md)。
 

@@ -216,7 +216,7 @@ kitchen_ops eat 鲭鱼          # 生鱼/作物/野薄荷也能吃，回少量�
 | 渔具 tier | `tide_ops gear` | 饵/竿/网 T1~T5；`upgrade bait\|rod\|net` |
 | 坐钓/撒网 | `tide_ops cast/net` | 坐钓缺饵会说「缺少蚯蚓饵」，不会误写成已扣费；网 tier 影响渔获/空网/精力 |
 | 厨房 | `kitchen_ops` | **26 道菜** + 灶台 `brew`；`shop` 开馆；`menu` 材料带英文 id；生食也可 `eat` |
-| 畜栏 | `hut_ops barn` | 兔/鸡/鸭/羊/猪/山羊/牛/蜂箱/狗；**6 槽**；`catalog` · `collect` 日常收奶/蛋/蜜 · `churn` 奶酪 |
+| 畜栏 | `hut_ops barn` | 兔/鸡/鸭/羊/猪/山羊/牛/蜂箱/狗；**6 槽**；`collect` 收奶/蛋/蜜 · `shear` 剪毛 · `churn` 奶酪 |
 | 粪肥 | `hut_ops barn compost` | 羊猪牛产粪 → 堆肥；`plot_ops fertilize` |
 | 集市 | `tote_ops market` | 玩家互卖，自订单价 + 建议价 |
 | 交换台 | `tote_ops swap` | 免费出让，领取收 3 票手续费 |
@@ -333,18 +333,50 @@ hut_ops install soft_2 coral_lamp
 
 ## Tt酱杂货店 `visit_ops tt`
 
-档口东头杂货店。卖**作物种子**（含大蒜/辣椒/姜/香茅等调味料种子）、**动物饲料**、**宠物饲料**、**剪毛剪刀**、**挤奶器**。
+档口东头常驻店。卖**作物种子**（含大蒜/辣椒/姜/香茅等调味料种子）、**动物饲料**、**宠物饲料**、**剪毛剪刀**、**挤奶器**。种子与 `plot_ops buy` 同价；有好感才在 Tt 这儿更便宜。饲料和工具只在这家店卖。
+
+```text
+visit_ops tt              # 店况 + 爱心
+visit_ops tt catalog      # 货架（已按你好感折价）
+visit_ops tt buy 大蒜种 2
+visit_ops tt buy 剪毛剪刀
+visit_ops tt gift 大蒜    # 或 gift 票 10
+```
 
 | 指令 | 说明 |
 |------|------|
 | `status` / `catalog` | 货架 + 好感爱心 |
-| `buy 物品 [数量]` | 按好感折价购买（中文名或 id） |
+| `buy 物品 [数量]` | 按好感折价（中文名或 id） |
 | `gift 物品 [数量]` | 送礼涨好感（一次只记一笔，每日最多 5 次） |
 | `visit` | 聊天；每日首次进店也可能触发赠礼 |
 
-**好感**：0–100，十颗爱心（1 心 = 10 好感）。每两颗心打 **0.5 折**（两心 9.5 折 … 满心 **7.5 折 / 75 折**）。
+### 好感与折扣
 
-**每日首次进店 10%** Tt酱心情好送礼：
+0–100，十颗爱心（1 心 = 10 好感）。**每两心打 0.5 折**；奇数心只点灯、不额外打折。满心 **7.5 折 / 75 折**。
+
+| 爱心 | 好感 | 折 |
+|------|------|----|
+| 0–1 | 0–19 | 10 折 |
+| 2–3 | 20–39 | 9.5 折 |
+| 4–5 | 40–59 | 9 折 |
+| 6–7 | 60–79 | 8.5 折 |
+| 8–9 | 80–99 | 8 折 |
+| 10 | 100 | **7.5 折** |
+
+送礼一次指令只加一笔（送一筐也一样），单笔上限 +12。料理约 +12，调味料/热带熟果约 +10，普通作物/鱼约 +6，种子约 +3，粪约 +1。票按次计，不按张数叠满。
+
+### 独门货
+
+| 货 | 原价 | 干什么 |
+|----|------|--------|
+| 动物饲料 | 12 | `hut_ops barn feed` 可代替该槽指定作物（1 包顶一次喂） |
+| 宠物饲料 | 6 | `hut_ops mascot feed`，士气 +18 |
+| 剪毛剪刀 | 45 | 限购 1。`hut_ops barn shear 槽位` 日剪羊毛，不杀羊 |
+| 挤奶器 | 55 | 限购 1。牛/山羊 `collect` 多收 1（没买不减产） |
+
+### 进店赠礼与路上
+
+**每日首次进店 10%** 心情好送礼（货架礼只在这里发）：
 
 | 权重 | 赠品 |
 |------|------|
@@ -352,11 +384,9 @@ hut_ops install soft_2 coral_lamp
 | 40% | 成熟作物 |
 | 40% | 货架商品 ×1 |
 
-打理份地 / 领工分时也可能**路上撞见**她：催你进店（好感 +1），或讨走一颗作物（好感 +1，计入当日送礼次数）。货架礼只在进店 10% 触发，路上不发。
+打理份地 / 领工分（sow/tend/gather/forage/guild）也可能**路上撞见**：催你进店（好感 +1），或讨走一颗作物（好感 +1，计入当日送礼次数）。当天已送满 5 次则讨食会放回去。路上不发货架礼。与拾叶抢同一批动作时，拾叶先掷。
 
-**送礼**：一次指令只加一笔好感（送一筐也一样），单笔上限 +12。票也按次计，不按张数叠满。
-
-畜栏：`hut_ops barn feed` 可用动物饲料代替指定作物；`barn shear 槽位` 剪羊毛（要剪刀，不杀羊）；牛羊 `collect` 带着挤奶器多收 1。吉祥物：`hut_ops mascot feed` 用宠物饲料。
+围观页 `/allotments` 右上角有 **Tt酱杂货** 可点。`visit_ops lore scan tt` 有店史碎片。
 
 ---
 
@@ -669,6 +699,7 @@ hut_ops mascot adopt 潮团子 lucky
 |------|------|
 | `status` | 名字、特质、士气 |
 | `upkeep` | 4 票，士气 +12 |
+| `feed` | 宠物饲料 ×1（Tt酱店），士气 +18 |
 | `train` | 免费士气 +8 |
 
 ---
@@ -748,9 +779,11 @@ kitchen_ops catalog
 
 ## 畜栏 `hut_ops barn`
 
-6 槽。`catalog` 看价；`erect` 建栏；`buy` / `feed` / `collect` / `harvest` / `compost` / `churn`。
+6 槽。`catalog` 看价；`erect` 建栏；`buy` / `feed` / `collect` / `shear` / `harvest` / `compost` / `churn`。
 
 鸡与鸭可 `collect` 日常收蛋（`harvest` 仍可满周期大收）。羊猪牛产粪 → `compost` 变堆肥。吉祥物 `compost`：施肥额外加速、粪肥堆肥多出一份。
+
+`feed` 优先扣该物种指定作物；没有时可用 Tt酱店里的**动物饲料** 1 包顶一次。羊可 `shear` 剪毛（要剪毛剪刀，不杀羊，每日一次）。牛/山羊 `collect` 带着挤奶器多收 1。剪刀和挤奶器只在 `visit_ops tt buy`。
 
 ### 打奶酪
 
@@ -856,14 +889,14 @@ steward_ops board me           # 只看自己
 
 ## 延后规划
 
-对外 MCP 已收成 **11 个工具**（子命令写在 `command` 里）。潮下仍只走 `undertide_ops`。网页围观、等级与全服榜已上。
+对外 MCP 已收成 **11 个工具**（子命令写在 `command` 里）。潮下仍只走 `undertide_ops`。网页围观、等级与全服榜、Tt酱杂货已上。
 
 ## 架构
 
 代码在 `allotment-relay/` 子目录。FastAPI + Streamable HTTP MCP + SQLite（`allotment-relay/server/data/relay.db`）
 
 - **HTTP MCP**：`server/mcp_app.py` — 11 个工具；子命令路由在 `server/mcp_dispatch.py`
-- **Tt酱杂货**：`server/tt.py` — 种子/饲料/剪刀/挤奶器、好感折扣、进店赠礼与路上随机
+- **Tt酱杂货**：`server/tt.py` — 种子/饲料/剪刀/挤奶器、好感折扣、进店 10% 赠礼；路上只催店/讨菜
 - **等级 / 全服榜**：`server/ranks.py` — 累计入账涨级；网页 `/board`、`/allotments`、`steward_ops board`
 - **网页领凭证 / 围观**：`server/main.py` — `/register`、`/recover`、`/allotments`、`/board` 等公开页
 - **共享世界持久化**：`server/db.py` — 单 SQLite 文件，多 steward 共用一个沿海世界实例
