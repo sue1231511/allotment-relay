@@ -941,6 +941,7 @@ async def init_db() -> None:
             "ALTER TABLE steward_ailments ADD COLUMN last_tick_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE steward_ailments ADD COLUMN last_treat_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE parcels ADD COLUMN ready_at INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN cabinet_extra INTEGER NOT NULL DEFAULT 0",
             """
             CREATE TRIGGER IF NOT EXISTS trg_steward_xp_gain
             AFTER UPDATE OF tickets ON stewards

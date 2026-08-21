@@ -121,6 +121,7 @@ async def relay_manual() -> str:
         "  hut_ops barn / mascot — 畜栏与吉祥物",
         "  hut_ops buy cabinet → install soft_N cabinet；buy fridge → install soft_N fridge",
         "  hut_ops 冰柜 存|取 — 生鲜进潮柜（小偷翻不到），熟菜进冰箱（柜子/潮柜/冰箱同义）",
+        "  hut_ops 潮柜 扩 — 潮柜加格（基础 30，12票/格，顶 60）",
         "  hut_ops 卖掉 槽位 — 旧家具按折旧回收（刚装约六成，越用越残）",
         "  tote_ops swap / market — 交换台与集市",
         "  steward_ops guild — 每日一轮工分票；steward_ops board — 全服榜",

@@ -75,6 +75,7 @@ HUT_HELP = """hut_ops 子命令（整句写进 command）：
   status / build / upgrade / catalog / buy / install — 岸畔小屋
   冰柜 存|取 物品 [数量] — 小屋存菜（柜子/潮柜/冰箱是同一条指令）。例子：冰柜 存 甘蓝 3
     生鲜自动进潮柜（buy cabinet → install）；熟菜自动进冰箱（buy fridge → install）
+    潮柜基础 30 格，满了 hut_ops 潮柜 扩 [数量]（12票/格，顶 60）
   卖掉 槽位 [确认] — 旧家具按折旧卖。例子：卖掉 soft_1 确认
     小馆开着时冰箱不能卖（先 kitchen_ops shop 卖掉 或 shop close）
   barn status|erect|buy|feed|collect|shear|churn — 畜栏

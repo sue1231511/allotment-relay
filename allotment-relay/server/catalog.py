@@ -361,7 +361,7 @@ HUT_SOFT = {
     "bramble_wreath": {"name": "荆棘莓环", "cost": 30, "emoji": "🌸", "hint": "纯好看，无数值"},
     "glass_float": {"name": "玻璃浮标", "cost": 36, "emoji": "🔮", "hint": "公共物资刷新 ×1.22"},
     "fridge": {"name": "冰箱", "cost": 120, "emoji": "🧊", "hint": "hut_ops 冰柜 存/取 熟菜；kitchen_ops fridge；开小馆必需"},
-    "cabinet": {"name": "潮柜", "cost": 58, "emoji": "🗄️", "hint": "hut_ops 冰柜 存/取 生鲜（柜子/潮柜同义）；小偷和斑鸠翻不到行囊外的货"},
+    "cabinet": {"name": "潮柜", "cost": 58, "emoji": "🗄️", "hint": "hut_ops 冰柜 存/取 生鲜（柜子/潮柜同义）；基础 30 格，满了 hut_ops 潮柜 扩（12票/格，顶 60）；小偷和斑鸠翻不到行囊外的货"},
 }
 
 TOOLS = {
