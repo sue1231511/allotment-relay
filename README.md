@@ -906,9 +906,11 @@ hut_ops barn churn 4      # 奶 ×4 → 奶酪 ×2
 kitchen_ops shop open 潮线小馆
 kitchen_ops shop stock dish_salt_crab_s4
 kitchen_ops shop dine 别人的名字
+kitchen_ops shop 卖掉
+kitchen_ops shop 卖掉 确认
 ```
 
-每日每客 4 顿。打烊 `shop close`，菜单退回行囊。
+每日每客 4 顿。打烊 `shop close` 只收摊：菜单退回行囊，**开张费不退**。不想开了走 `shop 卖掉`：先报价，`卖掉 确认` 才成交。开张费按折旧回收（刚开约 62%，每天再折 7 个百分点，最低 25% / 约 20 票）。冰箱是小屋装件，不随店卖掉。
 
 ---
 

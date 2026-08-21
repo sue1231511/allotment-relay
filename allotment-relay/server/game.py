@@ -114,6 +114,7 @@ async def relay_manual() -> str:
         "  蓝莓/香蕉/椰子(shake)/榴莲/芒果/菠萝/木瓜/香茅/青柠/红薯 + 大蒜辣椒姜",
         "  赶海 scan 看滩 · dig 翻沙 · probe 掏洞；贝壳/沙蟹/珠砂/蚯蚓饵",
         "  kitchen_ops 热带料理+星级；定点菜 3★ 起不亏材料回收；也可 cook 材料自由组合（垃圾菜几乎没价）；蜂箱 honey · 山羊奶酪 · 鸭蛋",
+        "  kitchen_ops shop 卖掉 — 变卖岸畔小馆，开张费按折旧回收（刚开约六成，越开越残；打烊 close 不退钱）",
         "  精力限制 net/出海/赶海；kitchen_ops eat 熟菜或生鱼/作物/野薄荷回精力",
         "  施肥/稻草人/堆肥桶/挖蚯蚓饵；羊猪牛产粪→堆肥",
         "  tide_ops boss 合力击杀潮渊之主 → 神话章鱼肉",
@@ -251,7 +252,10 @@ async def steward_sheet(key_id: int) -> str:
     if s.get("barn_built"):
         lines.append("畜栏: 已建")
     if s.get("eatery_open"):
-        lines.append(f"小馆: {s.get('eatery_label') or s['name']+'的馆'}（kitchen_ops shop menu）")
+        lines.append(
+            f"小馆: {s.get('eatery_label') or s['name']+'的馆'}"
+            f"（kitchen_ops shop menu · 不想开了 shop 卖掉）"
+        )
     async with db.connect() as conn:
         conn.row_factory = aiosqlite.Row
         from . import marine as marine_mod

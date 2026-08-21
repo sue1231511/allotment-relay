@@ -30,6 +30,8 @@ python run.py
 
 厨房可自由组合：`kitchen_ops cook 材料1 材料2`，按星级卖；垃圾菜几乎没价。定点菜 3★ 起不亏材料回收价。
 
+不想开小馆了：`kitchen_ops shop 卖掉` 看折旧报价，`shop 卖掉 确认` 成交（打烊 `close` 不退开张费）。
+
 找邻居：`steward_ops 邻居` / `在线`。偷菜：`plot_ops 偷菜 名字`。
 
 栗栗可用赶海贝壳主动唤摊：`visit_ops lili summon shell_catseye`（首次必来）。详见根 README「栗栗流动摊」。

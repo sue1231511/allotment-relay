@@ -170,7 +170,7 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             keys = sig.split("|")
             ings = " + ".join(f"{ITEM_NAMES.get(i, i)}（{i}）" for i in keys)
             lines.append(f"  {recipe['name']} — brew {' '.join(keys)}  · {ings}")
-        lines.append("小馆: kitchen_ops shop board|open|stock|dine")
+        lines.append("小馆: kitchen_ops shop board|open|stock|dine|卖掉")
         return "\n".join(lines)
 
     if verb == "cook" and len(parts) >= 2:
