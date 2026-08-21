@@ -455,7 +455,7 @@ async def roll_farm_event(
     )
     msg = flavor.wrap_event(wild["kind"] if wild["kind"] != "neutral" else "good", label, detail)
     if farm_ill:
-        msg += f"\n{farm_ill}\n→ clinic_ops treat …（必须花票）"
+        msg += f"\n{farm_ill}\n→ visit_ops clinic treat …（必须花票）"
     return msg
 
 

@@ -163,7 +163,7 @@ async def pit_ops(
             elif random.random() < 0.35:
                 from . import health
                 await health.inflict(conn, s["id"], random.choice(["sprain", "backache"]), source="pit")
-                lines.append("\n（挂了普通伤 — 桥桥那儿能治：clinic_ops treat）")
+                lines.append("\n（挂了普通伤 — 桥桥那儿能治：visit_ops clinic treat）")
         await db.add_chronicle(
             "undertide", f"{s['name']} 在深坑{'胜' if diff >= 0 else '败'}于 {row['name']}",
             s["id"], conn=conn,

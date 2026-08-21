@@ -25,7 +25,7 @@ async def tool_ops(key_id: int, command: str) -> str:
                 f"  [{tag}] {meta['emoji']}{meta['name']} — {meta['cost']} 票"
                 + (f" 渔获+{int(meta['fish_bonus']*100)}%" if meta.get("fish_bonus") else "")
             )
-        lines.append("buy hoe|shovel — 锄头 tend 松土+蚯蚓↑；渔具 tier 见 gear_ops")
+        lines.append("buy hoe|shovel — 锄头 tend 松土+蚯蚓↑；渔具 tier 见 tide_ops gear")
         return "\n".join(lines)
 
     if verb == "buy" and len(parts) >= 2:

@@ -634,7 +634,7 @@ HEALTH_HINT_CLINIC = "去 clinic_ops 挂号"
 
 AILMENT_INFlict_LINES = [
     "身体：{name}（{hint}）——桥桥大夫等着收票",
-    "意外附带 {name}，{hint}，clinic_ops status 看诊费",
+    "意外附带 {name}，{hint}，visit_ops clinic 看诊费",
     "病号 +1：{name}。必须花钱，别装能扛",
 ]
 

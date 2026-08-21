@@ -487,11 +487,11 @@ async def roll_after_action(
         msg += f"\n{line}"
     if ailment_msgs:
         msg += "\n" + ailment_msgs[0]
-        msg += "\n→ clinic_ops status · treat 病症（必须花票）"
+        msg += "\n→ visit_ops clinic · treat 病症（必须花票）"
     elif event.kind == "bad" and not is_scrump:
         extra_ailment = await health.maybe_roll_ailment(conn, steward["id"], trigger, chance=0.12)
         if extra_ailment:
-            msg += f"\n{extra_ailment}\n→ clinic_ops treat …（必须花票）"
+            msg += f"\n{extra_ailment}\n→ visit_ops clinic treat …（必须花票）"
 
     iid = None
     if event.kind == "bad" and not is_scrump:

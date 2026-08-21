@@ -196,7 +196,7 @@ def _fmt_row(i: int, row: dict[str, Any], *, kind: str) -> str:
 def _fmt_board(title: str, rows: list[dict[str, Any]], *, kind: str) -> list[str]:
     lines = [title]
     if not rows:
-        lines.append("  还没有人上榜。steward_enroll 之后就会出现。")
+        lines.append("  还没有人上榜。steward_ops enroll 之后就会出现。")
         return lines
     for i, row in enumerate(rows, 1):
         lines.append(_fmt_row(i, row, kind=kind))
@@ -252,7 +252,7 @@ async def board_ops(key_id: int, command: str = "") -> str:
             *_fmt_board("全服等级榜（累计入账，花掉不降级）", l_rows, kind="level"),
             "",
             you,
-            "board_ops tickets · board_ops level · board_ops me",
+            "steward_ops board tickets · steward_ops board level · steward_ops board me",
         ])
 
     raise ValueError("未知 board 指令（tickets/level/me/status）")

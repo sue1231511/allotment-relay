@@ -337,7 +337,7 @@ async def place_human_order(api_key: str, shop_name: str, item_ref: str | None =
         raise ValueError("无效凭证")
     patron = await db.get_steward_by_key_id(row["id"])
     if not patron or not patron["enrolled"]:
-        raise ValueError("该凭证尚未 steward_enroll")
+        raise ValueError("该凭证尚未 steward_ops enroll")
     msg = await _dine(patron, shop_name, item_ref)
     patron = await db.get_steward_by_id(patron["id"])
     return {

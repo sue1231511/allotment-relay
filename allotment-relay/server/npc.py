@@ -37,11 +37,11 @@ async def npc_ops(key_id: int, command: str) -> str:
             if npc["key"] == "gugu_dove":
                 tag = " · 昼间随机偷吃庄稼，不可伤害"
             elif npc["key"] == "qiaoqiao":
-                tag = " · 诊所 NPC，治病用 clinic_ops treat"
+                tag = " · 诊所 NPC，治病用 visit_ops clinic treat"
             elif npc["key"] == "lili":
-                tag = " · 流动贝壳商，lili_ops scan/trade"
+                tag = " · 流动贝壳商，visit_ops lili scan/trade"
             elif npc["key"] == "shaonian":
-                tag = " · 滩头卜卦，shaonian_ops fortune/catalog"
+                tag = " · 滩头卜卦，visit_ops shaonian fortune/catalog"
             elif npc["key"] == "old_salt":
                 tag = " · 赶海/潮汐提示"
             elif npc["key"] == "herb_aunt":
@@ -92,13 +92,13 @@ async def _visit_context(steward: dict, key: str) -> str:
             hint = await lili_mod.active_visit_hint(conn)
         if hint:
             return f"——{hint}"
-        return "——驮包叮当远去了，lili_ops scan 蹲下一回"
+        return "——驮包叮当远去了，visit_ops lili scan 蹲下一回"
     if key == "old_salt":
         bits = [
             f"现在 {world.tide_label(tide)} · {world.weather_label(weather)}",
         ]
         if tide == "ebb":
-            bits.append("退潮赶海：beach_ops dig，贝壳权重高")
+            bits.append("退潮赶海：tide_ops beach dig，贝壳权重高")
         elif tide == "slack":
             bits.append("平潮可 probe 掏洞，dig 也行")
         else:
@@ -124,7 +124,7 @@ async def _visit_context(steward: dict, key: str) -> str:
             ailments = await health_mod.list_ailments(conn, steward["id"])
         if ailments:
             names = "、".join(a["name"] for a in ailments[:3])
-            return f"——你挂着 {names}，clinic_ops treat，不赊账"
+            return f"——你挂着 {names}，visit_ops clinic treat，不赊账"
         return "——身子还行。别等病了再来聊天"
     return flavor.pick([
         "——说完就溜达走了",
@@ -345,7 +345,7 @@ async def _resolve_shiye_kind(
             source="shiye",
         )
         if extra:
-            msg += f"\n{extra}\n→ clinic_ops treat …（必须花票）"
+            msg += f"\n{extra}\n→ visit_ops clinic treat …（必须花票）"
         return msg
 
     # extort

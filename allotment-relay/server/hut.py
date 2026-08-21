@@ -205,7 +205,7 @@ async def hut_ops(key_id: int, command: str) -> str:
             lines.append("【软装】")
             for k, v in HUT_SOFT.items():
                 lines.append(f"  {k} — {v['emoji']}{v['name']} {v['cost']} 票 · {v['hint']}")
-            lines.append("【栗栗稀有装饰】deco_* — lili_ops 换，install soft_N 键名")
+            lines.append("【栗栗稀有装饰】deco_* — visit_ops lili 换，install soft_N 键名")
             for k, v in LILI_DECOR.items():
                 lines.append(f"  {k} — {v['emoji']}{v['name']} · {v['hint']}")
         return "\n".join(lines)
@@ -293,7 +293,7 @@ async def hut_ops(key_id: int, command: str) -> str:
             deco_item = f"deco_{key}"
             async with db.connect() as conn:
                 if not await db.take_item(conn, s["id"], deco_item, 1):
-                    raise ValueError(f"行囊没有 {deco_meta['name']}，先 lili_ops trade")
+                    raise ValueError(f"行囊没有 {deco_meta['name']}，先 visit_ops lili trade")
                 old = await _fittings(conn, s["id"])
                 if slot in old:
                     old_key = old[slot]

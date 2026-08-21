@@ -359,7 +359,7 @@ LIVESTOCK = {
     "dog": {"name": "狗", "emoji": "🐕", "buy": 70, "feed": "meat_rabbit", "feed_qty": 1, "grow": 0, "product": "guard", "product_qty": 0, "guard": True},
 }
 
-# 渔具数值 tier — gear_ops status / upgrade bait|rod|net
+# 渔具数值 tier — tide_ops gear status / upgrade bait|rod|net
 GEAR_TIERS = {
     "bait": [
         {"tier": 1, "name": "蚯蚓饵", "catch": 0.00, "rarity": 0, "empty": 0.00, "tickets": 0},
@@ -523,7 +523,7 @@ MYTH_INGREDIENTS = {
     "myth_octopus": {"name": "神话章鱼肉", "emoji": "🐙", "sell": 220, "energy": 40},
 }
 
-# 病症 — 随机事件致病，clinic_ops treat 花钱治（必须花票）
+# 病症 — 随机事件致病，visit_ops clinic treat 花钱治（必须花票）
 AILMENTS = {
     "sprain": {
         "name": "扭伤", "emoji": "🦵", "cost": 18, "health_loss": 10, "health_restore": 14,
@@ -594,7 +594,7 @@ WORLD_BOSS = {
 NPC_FIXED = [
     {"key": "old_salt", "name": "老水手巴顿", "lines": [
         "今天潮线低，适合赶海", "细网比粗网省劲",
-        "beach_ops scan 先看滩面", "雾天滩上容易出珠砂",
+        "tide_ops beach scan 先看滩面", "雾天滩上容易出珠砂",
         "probe 掏洞，dig 翻沙——别搞反",
         "以前叫住在一块儿。后来事情多了，就改叫联盟。",
         "赤潮别贪。风大不可怕，觉得自己比风大才可怕。",
@@ -630,19 +630,19 @@ NPC_FIXED = [
         "随机事件落下的病，找随机事件哭去——诊费照收",
         "扭了脚、着了凉、宿醉——都挂号，都花钱",
         "身体指标低了意外多，别硬撑到票都不够挂号",
-        "npc_ops visit 只能聊天，真治得 clinic_ops treat",
+        "visit_ops visit 只能聊天，真治得 visit_ops clinic treat",
     ]},
     {"key": "lili", "name": "栗栗", "lines": [
         "潮汐游商。滩头喊栗栗，驮包兽铃鹿、护摊犬夜栖。",
         "贝壳按品相收：亮壳硬通货，糙壳凑一把可换乱捡款。",
-        "lili_ops scan 看货架 · trade 编号 · pet 摸夜栖 · junk 糙壳换货",
+        "visit_ops lili scan 看货架 · trade 编号 · pet 摸夜栖 · junk 糙壳换货",
         "路过就换，错过等下回。联盟工分票经济外的另一条线。",
         "糊弄她指名要好货 → 弹脑壳；亮壳献好货 → 揉头顺延 5 分钟。",
     ]},
     {"key": "shaonian", "name": "韶年", "lines": [
         "滩头看潮卜卦的人，通称韶年望潮人",
         "今日卦象挂玩法，符能躲一点坏运气",
-        "shaonian_ops fortune 卜卦 · transfer 转凶运 · buy 买符",
+        "visit_ops shaonian fortune 卜卦 · transfer 转凶运 · buy 买符",
         "坐，我替你卜一卦，看今日这光景，宜不宜下海。",
         "纪事标签：韶年、望潮人、滩头韶年",
     ]},
@@ -658,7 +658,7 @@ NPC_FIXED = [
         "别叫警察，联盟备案：我是NPC，不是你的工友",
         "碰瓷、伸手、顺手、开口要——哪张牌朝上，走着瞧",
         "你档信高我就装可怜，你雾智低我就装摔倒",
-        "npc_ops visit 拾叶，份地上也能撞见。别指望我送礼",
+        "visit_ops visit 拾叶，份地上也能撞见。别指望我送礼",
     ]},
 ]
 

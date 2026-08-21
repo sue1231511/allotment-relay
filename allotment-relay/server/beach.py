@@ -79,7 +79,7 @@ async def beach_ops(key_id: int, command: str) -> str:
         has_shovel = stock.get("tool_shovel", 0) > 0
         lines = [
             world.climate_line(),
-            f"铲子: {'有' if has_shovel else '无 — tool_ops buy shovel'}",
+            f"铲子: {'有' if has_shovel else '无 — tide_ops tool buy shovel'}",
             f"dig 翻沙 {config.BEACH_ENERGY} 精力（须 tool_shovel）"
             f" · probe 掏洞 {config.BEACH_PROBE_ENERGY} 精力",
         ]
@@ -115,7 +115,7 @@ async def beach_ops(key_id: int, command: str) -> str:
             raise ValueError("涨潮没过脚面，等退潮再赶海（或 probe 掏洞碰运气）")
         stock = await db.get_satchel(s["id"])
         if not stock.get("tool_shovel"):
-            raise ValueError("需要铲子 tool_ops buy shovel")
+            raise ValueError("需要铲子 tide_ops tool buy shovel")
 
         now = db.now()
         day = now // config.FORAGE_COOLDOWN_DAY
@@ -177,9 +177,9 @@ async def beach_ops(key_id: int, command: str) -> str:
 
         msg = f"赶海：{label} x{qty}{extra_msg}"
         if beach_ill:
-            msg += f"\n{beach_ill}\n→ clinic_ops treat …（必须花票）"
+            msg += f"\n{beach_ill}\n→ visit_ops clinic treat …（必须花票）"
         if lili_spawn:
-            msg += f"\n✨ {lili_spawn['detail']} → lili_ops scan"
+            msg += f"\n✨ {lili_spawn['detail']} → visit_ops lili scan"
         if shiye:
             msg += f"\n{shiye}"
         msg += flavor.maybe_suffix([
@@ -199,7 +199,7 @@ async def beach_ops(key_id: int, command: str) -> str:
             raise ValueError("浪涌没过脚面，probe 也掏不着")
         stock = await db.get_satchel(s["id"])
         if not stock.get("tool_shovel"):
-            raise ValueError("需要铲子 tool_ops buy shovel")
+            raise ValueError("需要铲子 tide_ops tool buy shovel")
 
         now = db.now()
         day = now // config.FORAGE_COOLDOWN_DAY

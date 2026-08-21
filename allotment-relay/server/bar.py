@@ -611,7 +611,7 @@ async def _run_work(
         source="bar",
     )
     if hangover:
-        msg += f"\n{hangover}\n→ clinic_ops treat hangover（{AILMENTS['hangover']['cost']} 票）"
+        msg += f"\n{hangover}\n→ visit_ops clinic treat hangover（{AILMENTS['hangover']['cost']} 票）"
     reaction = owner_event_reaction(state, day, "work")
     return append_owner_reaction(msg, reaction)
 
@@ -1141,7 +1141,7 @@ async def place_human_order(
         raise ValueError("无效凭证")
     patron = await db.get_steward_by_key_id(row["id"])
     if not patron or not patron["enrolled"]:
-        raise ValueError("该凭证尚未 steward_enroll")
+        raise ValueError("该凭证尚未 steward_ops enroll")
 
     svc = BAR_SERVICES[service_key]
     cost = svc["cost"]

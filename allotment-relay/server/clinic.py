@@ -36,7 +36,7 @@ async def clinic_ops(key_id: int, command: str) -> str:
                 f"  {a['key']} — {a['emoji']}{a['name']} "
                 f"（{a['hint']} · 诊费 {a['cost']} 票）"
             )
-        lines.append(f"全套合计 {total} 票 · clinic_ops treat all")
+        lines.append(f"全套合计 {total} 票 · visit_ops clinic treat all")
         return "\n".join(lines)
 
     if verb == "visit":
@@ -71,7 +71,7 @@ async def clinic_ops(key_id: int, command: str) -> str:
         return msg
 
     if verb == "catalog":
-        lines = ["病症价目（clinic_ops treat 键名）:"]
+        lines = ["病症价目（visit_ops clinic treat 键名）:"]
         for key, meta in AILMENTS.items():
             lines.append(
                 f"  {key} — {meta['emoji']}{meta['name']} "
