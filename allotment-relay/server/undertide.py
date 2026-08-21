@@ -855,6 +855,37 @@ async def _cmd_status(conn: aiosqlite.Connection, s: dict[str, Any], ut: dict[st
     return "\n".join(lines)
 
 
+async def _check_k_auto_settle(conn: aiosqlite.Connection, s: dict[str, Any], ut: dict[str, Any]) -> str:
+    """K 真身·逾期≥3天：不等他自己走进办公室——潮下直接来请。"""
+    av = await avatar_key(conn, s["id"])
+    if av != "K":
+        return ""
+    day = _day_id()
+    row = await (await conn.execute(
+        "SELECT COUNT(*) FROM ut_debts WHERE steward_id=? AND status='open' AND ? > due_day + 2",
+        (s["id"], day),
+    )).fetchone()
+    if not row[0]:
+        return ""
+    # 办公室结案：债全清，影信恢复（不低于 70，高于 70 保持不动）
+    await conn.execute(
+        "UPDATE ut_debts SET status='paid' WHERE steward_id=? AND status='open'", (s["id"],)
+    )
+    cur_rep = int(ut.get("shadow_rep") or 0)
+    new_rep = cur_rep if cur_rep >= 70 else 70
+    await conn.execute(
+        "UPDATE steward_undertide SET shadow_rep=?, k_room=0, vr_until=0, vr_target=0 WHERE steward_id=?",
+        (new_rep, s["id"]),
+    )
+    await db.add_chronicle(
+        "undertide",
+        f"K 室的灯亮了一晚。第二天，账上 {s['name']} 的名字那一页，干干净净。",
+        s["id"], conn=conn,
+    )
+    await conn.commit()
+    return utcopy.AVATAR_K_AUTO_SETTLE + utcopy.AVATAR_CAT_REVENGE_WARNING
+
+
 async def undertide_ops(key_id: int, command: str) -> str:
     s = await db.get_steward_by_key_id(key_id)
     if not s or not s["enrolled"]:
@@ -869,6 +900,8 @@ async def undertide_ops(key_id: int, command: str) -> str:
         ut = await _ensure_ut(conn, s["id"])
         ut = await _maybe_release(conn, ut, s["id"])
         drug_note = await _settle_drug(conn, ut)
+        # K 真身·逾期第3天：不等他来，潮下去请（结果拼在最前面，谁都拦不住）
+        k_settle_note = await _check_k_auto_settle(conn, s, ut)
         jailed = ut["jail_state"] == "serving"
         day = _day_id()
 
@@ -895,7 +928,7 @@ async def undertide_ops(key_id: int, command: str) -> str:
                 "UPDATE steward_undertide SET unread_hits='[]' WHERE steward_id=?", (s["id"],)
             )
             await conn.commit()
-        hits_prefix = drug_note + hits_prefix
+        hits_prefix = drug_note + k_settle_note + hits_prefix
 
         if verb == "help":
             body = utcopy.HELP
