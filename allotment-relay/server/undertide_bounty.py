@@ -127,9 +127,9 @@ async def _ensure_daily_quests(conn: aiosqlite.Connection) -> list[dict[str, Any
     import random
     day = _day_id()
     conn.row_factory = aiosqlite.Row
-    # 今日委托已生成？
+    # 今日委托已生成？（用当日已有条目判断——生成后立即 commit）
     cur = await conn.execute(
-        "SELECT COUNT(*) FROM ut_bounty WHERE poster='__quest__' AND created_at > ?",
+        "SELECT COUNT(*) FROM ut_bounty WHERE poster='__quest__' AND created_at >= ?",
         (day * 86400,),
     )
     if (await cur.fetchone())[0]:
@@ -143,7 +143,7 @@ async def _ensure_daily_quests(conn: aiosqlite.Connection) -> list[dict[str, Any
         # errand/scare 类可重复接（每人限一次）；fight 类单发单接
         expires = day * 86400 + 86400 * 2  # 两天有效
         await conn.execute(
-            """INSERT INTO ut_bounty (poster, poster_id, target_name, target_id, tier, bounty, status, expires_at, created_at)
+            """INSERT OR IGNORE INTO ut_bounty (poster, poster_id, target_name, target_id, tier, bounty, status, expires_at, created_at)
                VALUES ('__quest__', NULL, ?, 0, ?, ?, 'open', ?, ?)""",
             (q["name"], "quest", q["pay"], expires, day * 86400),
         )
