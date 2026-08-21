@@ -217,6 +217,8 @@ async def plot_bundle(key_id: int, command: str = "") -> str:
             "incident": (events.incident_ops, "status"),
             "incidents": (events.incident_ops, "status"),
             "意外": (events.incident_ops, "status"),
+            "camera": (events.camera_ops, "check"),
+            "监控": (events.camera_ops, "check"),
         },
         hoist={
             "repair": (events.incident_ops, True),
