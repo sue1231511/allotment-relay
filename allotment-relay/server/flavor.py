@@ -637,7 +637,7 @@ METER_HINT_MIST = "海雾进脑子了"
 METER_HINT_STANDING = "档口对你爱搭不理"
 
 HEALTH_HINT_LOW = "身体发虚"
-HEALTH_HINT_CLINIC = "去 clinic_ops 挂号"
+HEALTH_HINT_CLINIC = "去 visit_ops clinic 挂号"
 
 AILMENT_INFlict_LINES = [
     "身体：{name}（{hint}）——桥桥大夫等着收票",

@@ -24,8 +24,15 @@ from .catalog import (
     resolve_item_key,
     suggested_price,
     unknown_item_message,
+    is_raw_meat,
 )
 from .game import require_steward
+
+EAT_RULES = (
+    "eat 可吃：熟菜 dish_/meal_；"
+    "生吃作物 crop_*（甘蓝等）安全；生鱼 fish_* 安全；野薄荷安全。"
+    "只有生肉 meat_*（兔肉/猪肉）可能感染。"
+)
 
 
 def _day_id() -> int:
@@ -144,15 +151,28 @@ async def _cook_mix(s: dict[str, Any], ings: list[str]) -> str:
 async def kitchen_ops(key_id: int, command: str) -> str:
     parts = command.strip().split()
     verb = parts[0].lower() if parts else "menu"
-    exempt = verb in ("eat", "brew", "recipes", "menu")
+    exempt = verb in ("eat", "brew", "recipes", "menu", "help", "?", "帮助", "status")
     s = await require_steward(key_id, exempt_duty=exempt)
+
+    if verb in ("help", "?", "帮助"):
+        return (
+            "kitchen_ops 子命令（整句写进 command）：\n"
+            "  menu — 菜谱与定价\n"
+            "  cook 菜名 — 定点菜，例如 cook 蒜蓉生蚝\n"
+            "  cook 材料1 材料2 … — 自由组合 2~5 样，例如 cook 甘蓝 鲭鱼\n"
+            "  eat 物品 — 回精力。作物/生鱼/野薄荷生吃安全；只有生肉可能感染\n"
+            "             例子：eat 甘蓝 · eat 鲭鱼 · eat 兔肉 · eat 蒜蓉生蚝\n"
+            "  brew 材料 — 灶台（回雾智）\n"
+            "  shop board|open|stock|dine|卖掉 — 岸畔小馆\n"
+            f"{EAT_RULES}"
+        )
 
     if verb in ("menu", "status"):
         lines = [
-            "厨房菜单（cook 菜名 / cook 材料1 材料2 … / brew 材料 / eat 菜或生食）:",
+            "厨房菜单（command 例子：cook 蒜蓉生蚝 / cook 甘蓝 鲭鱼 / brew 材料 / eat 甘蓝）:",
+            EAT_RULES,
             "定点菜谱如下。也可以 cook 材料自由组合（2~5 样），按星级可卖；垃圾菜几乎没价。",
             "定点菜 3★ 起至少不亏材料回收价（直接 vend 生鲜）。小屋 Lv2 更容易出 4★。",
-            "生鱼/作物/野薄荷也可 eat，回少量精力。",
         ]
         for key, meta in KITCHEN_DISHES.items():
             ings = " + ".join(
@@ -199,11 +219,13 @@ async def kitchen_ops(key_id: int, command: str) -> str:
         return await _cook_mix(s, ings)
 
     if verb == "eat" and len(parts) >= 2:
-        item = resolve_item_key(parts[1]) or parts[1]
+        token = " ".join(parts[1:])
+        item = resolve_item_key(token) or token
         async with db.connect() as conn:
             if not await db.take_item(conn, s["id"], item, 1):
                 raise ValueError(
-                    f"行囊里没有 {ITEM_NAMES.get(item, item)}（{item}）"
+                    f"行囊里没有 {ITEM_NAMES.get(item, item)}（{item}）。"
+                    "tote_ops list 看有什么；中文名或英文 id 都行。"
                 )
             gain = 15
             mix_e = dish_energy(item)
@@ -230,15 +252,30 @@ async def kitchen_ops(key_id: int, command: str) -> str:
                 gain = 10
             elif item == "wild_mint":
                 gain = 6
+            elif is_raw_meat(item):
+                gain = 12
             else:
                 raise ValueError(
-                    f"{ITEM_NAMES.get(item, item)} 不能直接吃；"
-                    "试试 kitchen_ops brew 或吃 meal_/dish_"
+                    f"{ITEM_NAMES.get(item, item)} 不能直接吃。"
+                    f"{EAT_RULES}"
+                    "或 kitchen_ops brew 下锅。"
                 )
+            infect_line = None
+            if is_raw_meat(item):
+                from . import health as health_mod
+                infect_line = await health_mod.maybe_infect_raw_meat(conn, s["id"])
             restored = await energy.restore(conn, s["id"], gain)
             await survival.bump(conn, s["id"], satiety=min(20, gain // 2 + 8))
             await conn.commit()
-        return f"吃了 {item_label(item)}（{item}），精力 +{restored}"
+        msg = f"吃了 {item_label(item)}（{item}），精力 +{restored}"
+        if item.startswith("crop_") or item.startswith("fish_") or item == "wild_mint":
+            msg += "（生吃安全，不会感染）"
+        if infect_line:
+            msg += (
+                f"\n{infect_line}\n"
+                "→ visit_ops clinic treat infection（桥桥一次压不干净，要连看几次）"
+            )
+        return msg
 
     if verb == "store" and len(parts) >= 2:
         item = parts[1]
@@ -352,7 +389,8 @@ async def kitchen_ops(key_id: int, command: str) -> str:
         return await _hearth_brew(s, parts[1:])
 
     raise ValueError(
-        f"未知 kitchen 指令: {command}（menu/cook/eat/store/fridge/take/vend/brew/recipes/shop）"
+        f"未知 kitchen 指令: {command}。先 kitchen_ops help 或 menu。"
+        "常用：cook 菜名 · cook 材料1 材料2 · eat 甘蓝 · eat 鲭鱼 · shop"
     )
 
 

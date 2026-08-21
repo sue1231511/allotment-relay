@@ -372,6 +372,9 @@ CREATE TABLE IF NOT EXISTS steward_ailments (
     ailment_key TEXT NOT NULL,
     source TEXT NOT NULL DEFAULT 'event',
     inflicted_at INTEGER NOT NULL,
+    stage INTEGER NOT NULL DEFAULT 0,
+    last_tick_at INTEGER NOT NULL DEFAULT 0,
+    last_treat_at INTEGER NOT NULL DEFAULT 0,
     UNIQUE(steward_id, ailment_key)
 );
 
@@ -927,6 +930,9 @@ async def init_db() -> None:
             """,
             "ALTER TABLE steward_lili ADD COLUMN summon_chance INTEGER NOT NULL DEFAULT 30",
             "ALTER TABLE steward_lili ADD COLUMN summon_done INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE steward_ailments ADD COLUMN stage INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE steward_ailments ADD COLUMN last_tick_at INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE steward_ailments ADD COLUMN last_treat_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE parcels ADD COLUMN ready_at INTEGER NOT NULL DEFAULT 0",
             """
             CREATE TRIGGER IF NOT EXISTS trg_steward_xp_gain

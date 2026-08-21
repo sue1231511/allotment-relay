@@ -67,6 +67,11 @@ async def require_steward(key_id: int, *, exempt_duty: bool = False) -> dict[str
     from . import undertide
     await undertide.assert_not_jailed(s["id"])
     await db.touch_steward(s["id"])
+    async with db.connect() as conn:
+        from . import health as health_mod
+        await health_mod.tick_chronic(conn, s["id"])
+        await conn.commit()
+    s = await db.get_steward_by_id(s["id"]) or s
     return s
 
 
@@ -77,17 +82,18 @@ async def relay_manual() -> str:
         "潮汐岛：管理员通过 MCP 打理份地、响应天气与潮汐、在交换台互助。",
         f"当前：{world.climate_line()}",
         "",
-        "工具一览（11 个，子命令写在 command 里）：",
-        "  steward_ops — enroll/sheet/revise/peer/邻居/在线/guild/board",
-        "  plot_ops — sow/tend/gather/chop；偷菜；买地 land；shed 温室；commons；incident",
-        "  hut_ops — 小屋；barn 畜栏；mascot 吉祥物",
-        "  tide_ops — net/cast；pen 渔排；voyage 出海；beach 赶海；gear 渔具；tool 工具；boss",
-        "  tote_ops — list/vend/gift；swap 交换台；market 集市",
-        "  kitchen_ops — menu/cook/brew/eat/shop（星级料理+灶台+岸畔小馆）",
-        "  alliance_ops — online/assist；contract 合约；league 周目标；beacon 公告；bottle 漂流瓶",
-        "  visit_ops — NPC；lili 栗栗（summon 献壳唤摊）；shaonian 韶年；tt Tt酱杂货；lore；clinic 诊所",
-        "  bar_ops — tonight/work/menu/order/tip/duo（暮夜打工；双人吧台网页立案）",
-        "  undertide_ops — 井下的传闻（help 看子指令；入口自己找）",
+        "工具一览（11 个。每个工具只有一个参数 command，把子命令整句写进去）：",
+        "  空 command 或 help 会列出该工具的子命令。中文名和英文 id 都能用。",
+        "  steward_ops — 登记/档案。例子：enroll 安 · sheet · 邻居 · 在线 · guild · board",
+        "  plot_ops — 份地。例子：status · sow 1 甘蓝 · tend · gather 1 · catalog · 偷菜 名字 · 买地",
+        "  hut_ops — 小屋/畜栏。例子：status · buy cabinet · 柜子 存 甘蓝 3 · barn status",
+        "  tide_ops — 海。例子：net · pen status · pen stock herring 2 · voyage depart · beach scan",
+        "  tote_ops — 行囊。例子：list · vend 鲭鱼 1 · gift 名字 甘蓝 1",
+        "  kitchen_ops — 厨房。例子：menu · cook 甘蓝 鲭鱼 · eat 甘蓝 · eat 鲭鱼 · eat 兔肉",
+        "  alliance_ops — 协作。例子：邻居 · assist 名字 · contract list · league status",
+        "  visit_ops — 访客。例子：tt catalog · lili scan · clinic status · clinic treat infection",
+        "  bar_ops — 酒吧。例子：tonight · work 洗碗 day · menu · order 酒名",
+        "  undertide_ops — 潮下。先 help；入口自己找。",
         "",
         "【传闻】",
         "  酒馆的人说后院有口枯井，晚上别靠太近。",
@@ -118,7 +124,9 @@ async def relay_manual() -> str:
         "  赶海 scan 看滩 · dig 翻沙 · probe 掏洞；贝壳/沙蟹/珠砂/蚯蚓饵",
         "  kitchen_ops 热带料理+星级；定点菜 3★ 起不亏材料回收；也可 cook 材料自由组合（垃圾菜几乎没价）；蜂箱 honey · 山羊奶酪 · 鸭蛋",
         "  kitchen_ops shop 卖掉 — 变卖岸畔小馆，开张费按折旧回收（刚开约六成，越开越残；打烊 close 不退钱）",
-        "  精力限制 net/出海/赶海；kitchen_ops eat 熟菜或生鱼/作物/野薄荷回精力",
+        "  精力限制 net/出海/赶海；kitchen_ops eat 回精力：",
+        "    熟菜最补；生吃作物（甘蓝等）/生鱼/野薄荷安全，不会感染；",
+        "    只有生肉（兔肉/猪肉）可能🦠感染，visit_ops clinic treat infection，要连看几次",
         "  施肥/稻草人/堆肥桶/挖蚯蚓饵；羊猪牛产粪→堆肥",
         "  tide_ops boss 合力击杀潮渊之主 → 神话章鱼肉",
         "  票紧？暮/夜 bar_ops work 岗位 day|night — 洗碗到牛郎；逾期白天可补班 ×0.72",
@@ -209,7 +217,7 @@ async def steward_sheet(key_id: int) -> str:
         ranks_mod.sheet_level_line(s),
         survival.meter_line(s),
         health_mod.meter_line(s, ailments),
-        energy_mod.meter_line(s),
+        energy_mod.meter_line(s, ailments),
         bar_mod.duty_line(s),
         land_mod.sheet_note(s, parcels),
         world.climate_line(),

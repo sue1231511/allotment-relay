@@ -133,6 +133,10 @@ def resolve_item_key(token: str, *, prefer: str = "any") -> str | None:
     exact = [k for k, v in ITEM_NAMES.items() if v == raw]
     if len(exact) == 1:
         return exact[0]
+    if raw in ("兔肉", "生兔肉", "🍖兔肉"):
+        return "meat_rabbit"
+    if raw in ("猪肉", "生猪肉", "🥓猪肉"):
+        return "meat_pork"
 
     for fk, meta in SEA_CATCH.items():
         if meta["name"] == raw:
@@ -565,7 +569,7 @@ MYTH_INGREDIENTS = {
     "myth_octopus": {"name": "神话章鱼肉", "emoji": "🐙", "sell": 220, "energy": 40},
 }
 
-# 病症 — 随机事件致病，visit_ops clinic treat 花钱治（必须花票）
+# 病症 — 随机事件致病；生肉感染要多次治疗。visit_ops clinic treat 花钱治（必须花票）
 AILMENTS = {
     "sprain": {
         "name": "扭伤", "emoji": "🦵", "cost": 18, "health_loss": 10, "health_restore": 14,
@@ -623,7 +627,54 @@ AILMENTS = {
         "name": "深坑重创", "emoji": "🩸", "cost": 100, "health_loss": 35, "health_restore": 40,
         "hint": "深坑专属——回地下治", "energy_extra": 6,
     },
+    "infection": {
+        "name": "生肉感染", "emoji": "🦠", "cost": 22, "health_loss": 12, "health_restore": 8,
+        "hint": "只有生肉会感染。作物/生鱼/野薄荷生吃安全。菌要过夜，桥桥一次压不干净",
+        "energy_extra": 3, "max_energy_cut": 10,
+        "courses": 3, "drain_energy": 2, "drain_every": 1800,
+        "stage_names": {3: "重症", 2: "迁延", 1: "余菌"},
+    },
 }
+
+PIT_AILMENTS = frozenset({"ring_shock", "pit_trauma"})
+AILMENT_ALIASES = {
+    "感染": "infection",
+    "生肉感染": "infection",
+    "生肉": "infection",
+}
+
+
+def ailment_courses(key: str) -> int:
+    return int(AILMENTS.get(key, {}).get("courses", 1) or 1)
+
+
+def is_chronic_ailment(key: str) -> bool:
+    return ailment_courses(key) > 1
+
+
+def is_raw_meat(item: str) -> bool:
+    """生吃会感染的只有肉类 meat_*。作物/生鱼不算肉。"""
+    return (item or "").startswith("meat_")
+
+
+def resolve_ailment_key(token: str) -> str | None:
+    raw = (token or "").strip()
+    if not raw:
+        return None
+    key = raw.lower()
+    if key in AILMENTS:
+        return key
+    alias = AILMENT_ALIASES.get(raw) or AILMENT_ALIASES.get(key)
+    if alias:
+        return alias
+    for k, meta in AILMENTS.items():
+        if meta.get("name") == raw:
+            return k
+    return None
+
+
+CHRONIC_AILMENTS = frozenset(k for k in AILMENTS if is_chronic_ailment(k))
+
 
 WORLD_BOSS = {
     "key": "cthulhu_tide",
@@ -672,6 +723,7 @@ NPC_FIXED = [
         "诊所规矩：必须花钱，不赊账，不还价",
         "随机事件落下的病，找随机事件哭去——诊费照收",
         "扭了脚、着了凉、宿醉——都挂号，都花钱",
+        "生肉生吃容易感染。菜和生鱼没事，菌要过夜，一次压不干净",
         "身体指标低了意外多，别硬撑到票都不够挂号",
         "visit_ops visit 只能聊天，真治得 visit_ops clinic treat",
     ]},

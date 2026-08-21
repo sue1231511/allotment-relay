@@ -8,7 +8,13 @@ from typing import Any
 import aiosqlite
 
 from . import config, db, flavor
-from .catalog import AILMENTS
+from .catalog import (
+    AILMENTS,
+    PIT_AILMENTS,
+    ailment_courses,
+    is_chronic_ailment,
+    resolve_ailment_key,
+)
 
 TRIGGER_AILMENTS: dict[str, list[str]] = {
     "tend": ["sprain", "backache", "blister", "cut", "allergy"],
@@ -30,29 +36,99 @@ TRIGGER_AILMENTS: dict[str, list[str]] = {
 }
 
 
+def _stage_name(key: str, stage: int) -> str:
+    names = AILMENTS.get(key, {}).get("stage_names") or {}
+    return str(names.get(stage) or names.get(str(stage)) or "")
+
+
+def _effective_stage(key: str, raw_stage: int) -> int:
+    if not is_chronic_ailment(key):
+        return 0
+    if raw_stage > 0:
+        return int(raw_stage)
+    return ailment_courses(key)
+
+
+def fmt_wait(seconds: int) -> str:
+    seconds = max(0, int(seconds))
+    h, rem = divmod(seconds, 3600)
+    m = rem // 60
+    if h and m:
+        return f"{h}小时{m}分"
+    if h:
+        return f"{h}小时"
+    if m:
+        return f"{m}分钟"
+    return "片刻"
+
+
+def _treat_wait(last_treat_at: int, now: int | None = None) -> int:
+    now = config_now(now)
+    last = int(last_treat_at or 0)
+    if last <= 0:
+        return 0
+    ready_at = last + int(config.INFECTION_TREAT_COOLDOWN)
+    return max(0, ready_at - now)
+
+
+def config_now(now: int | None = None) -> int:
+    return int(now) if now is not None else db.now()
+
+
+def _enrich(row: Any, now: int) -> dict[str, Any]:
+    key = row["ailment_key"]
+    meta = AILMENTS.get(key, {})
+    stage = _effective_stage(key, int(row["stage"] or 0) if "stage" in row.keys() else 0)
+    last_treat = int(row["last_treat_at"] or 0) if "last_treat_at" in row.keys() else 0
+    wait = _treat_wait(last_treat, now) if is_chronic_ailment(key) else 0
+    courses = ailment_courses(key)
+    remaining = stage if is_chronic_ailment(key) else 1
+    return {
+        "key": key,
+        "name": meta.get("name", key),
+        "emoji": meta.get("emoji", "🩹"),
+        "cost": meta.get("cost", 0),
+        "hint": meta.get("hint", ""),
+        "source": row["source"],
+        "inflicted_at": row["inflicted_at"],
+        "stage": stage,
+        "stage_name": _stage_name(key, stage),
+        "courses": courses,
+        "remaining_courses": remaining,
+        "last_tick_at": int(row["last_tick_at"] or 0) if "last_tick_at" in row.keys() else 0,
+        "last_treat_at": last_treat,
+        "treat_wait": wait,
+        "treat_ready": wait <= 0,
+        "chronic": is_chronic_ailment(key),
+        "pit": key in PIT_AILMENTS,
+    }
+
+
 async def list_ailments(conn: aiosqlite.Connection, steward_id: int) -> list[dict[str, Any]]:
     conn.row_factory = aiosqlite.Row
     rows = await (await conn.execute(
         """
-        SELECT ailment_key, source, inflicted_at FROM steward_ailments
+        SELECT ailment_key, source, inflicted_at, stage, last_tick_at, last_treat_at
+        FROM steward_ailments
         WHERE steward_id=? ORDER BY inflicted_at
         """,
         (steward_id,),
     )).fetchall()
-    out = []
-    for r in rows:
-        key = r["ailment_key"]
-        meta = AILMENTS.get(key, {})
-        out.append({
-            "key": key,
-            "name": meta.get("name", key),
-            "emoji": meta.get("emoji", "🩹"),
-            "cost": meta.get("cost", 0),
-            "hint": meta.get("hint", ""),
-            "source": r["source"],
-            "inflicted_at": r["inflicted_at"],
-        })
-    return out
+    now = db.now()
+    return [_enrich(r, now) for r in rows]
+
+
+async def has_chronic_drain(conn: aiosqlite.Connection, steward_id: int) -> bool:
+    cur = await conn.execute(
+        "SELECT ailment_key FROM steward_ailments WHERE steward_id=?",
+        (steward_id,),
+    )
+    rows = await cur.fetchall()
+    for row in rows:
+        key = row[0]
+        if int(AILMENTS.get(key, {}).get("drain_energy", 0) or 0) > 0:
+            return True
+    return False
 
 
 async def inflict(
@@ -64,33 +140,73 @@ async def inflict(
 ) -> str | None:
     if ailment_key not in AILMENTS:
         return None
+    meta = AILMENTS[ailment_key]
+    now = db.now()
     cur = await conn.execute(
-        "SELECT 1 FROM steward_ailments WHERE steward_id=? AND ailment_key=?",
+        """
+        SELECT stage, last_treat_at FROM steward_ailments
+        WHERE steward_id=? AND ailment_key=?
+        """,
         (steward_id, ailment_key),
     )
-    if await cur.fetchone():
-        return None
-    meta = AILMENTS[ailment_key]
+    existing = await cur.fetchone()
     loss = meta.get("health_loss", 8)
     await conn.execute(
-        """
-        UPDATE stewards SET health = MAX(0, health - ?) WHERE id=?
-        """,
+        "UPDATE stewards SET health = MAX(0, health - ?) WHERE id=?",
         (loss, steward_id),
     )
+    name = f"{meta['emoji']}{meta['name']}"
+    if existing:
+        if not is_chronic_ailment(ailment_key):
+            return None
+        stage = ailment_courses(ailment_key)
+        await conn.execute(
+            """
+            UPDATE steward_ailments
+            SET stage=?, last_tick_at=?, source=?
+            WHERE steward_id=? AND ailment_key=?
+            """,
+            (stage, now, source, steward_id, ailment_key),
+        )
+        stage_name = _stage_name(ailment_key, stage) or "重症"
+        return (
+            f"生肉又下肚，{name}烧回{stage_name}。"
+            "桥桥一次压不干净，visit_ops clinic treat infection 连看几次。"
+        )
+    stage = ailment_courses(ailment_key) if is_chronic_ailment(ailment_key) else 0
+    last_tick = now if is_chronic_ailment(ailment_key) else 0
     await conn.execute(
         """
-        INSERT INTO steward_ailments (steward_id, ailment_key, source, inflicted_at)
-        VALUES (?,?,?,?)
+        INSERT INTO steward_ailments
+            (steward_id, ailment_key, source, inflicted_at, stage, last_tick_at, last_treat_at)
+        VALUES (?,?,?,?,?,?,0)
         """,
-        (steward_id, ailment_key, source, db.now()),
+        (steward_id, ailment_key, source, now, stage, last_tick),
     )
-    name = f"{meta['emoji']}{meta['name']}"
-    return flavor.fill(
+    line = flavor.fill(
         flavor.pick(flavor.AILMENT_INFlict_LINES),
         name=name,
         hint=meta.get("hint", ""),
     )
+    if is_chronic_ailment(ailment_key):
+        line += (
+            " 菌要过夜，visit_ops clinic treat infection 连看几次，"
+            "一次清不干净。"
+        )
+    return line
+
+
+async def maybe_infect_raw_meat(
+    conn: aiosqlite.Connection,
+    steward_id: int,
+    *,
+    force: bool | None = None,
+) -> str | None:
+    if force is False:
+        return None
+    if force is not True and random.random() >= config.RAW_MEAT_INFECT_CHANCE:
+        return None
+    return await inflict(conn, steward_id, "infection", source="raw_meat")
 
 
 async def maybe_roll_ailment(
@@ -110,6 +226,57 @@ async def maybe_roll_ailment(
         return None
     key = random.choice(keys)
     return await inflict(conn, steward_id, key, source=source)
+
+
+async def tick_chronic(conn: aiosqlite.Connection, steward_id: int) -> int:
+    """按档位长期扣精力。返回本次扣掉的点数。"""
+    conn.row_factory = aiosqlite.Row
+    rows = await (await conn.execute(
+        """
+        SELECT ailment_key, stage, last_tick_at
+        FROM steward_ailments WHERE steward_id=?
+        """,
+        (steward_id,),
+    )).fetchall()
+    now = db.now()
+    drained = 0
+    for r in rows:
+        key = r["ailment_key"]
+        meta = AILMENTS.get(key, {})
+        drain = int(meta.get("drain_energy", 0) or 0)
+        if drain <= 0:
+            continue
+        every = int(meta.get("drain_every") or config.INFECTION_DRAIN_EVERY)
+        if every <= 0:
+            continue
+        last = int(r["last_tick_at"] or 0)
+        if last <= 0:
+            await conn.execute(
+                """
+                UPDATE steward_ailments SET last_tick_at=?
+                WHERE steward_id=? AND ailment_key=?
+                """,
+                (now, steward_id, key),
+            )
+            continue
+        ticks = (now - last) // every
+        if ticks <= 0:
+            continue
+        stage = _effective_stage(key, int(r["stage"] or 0))
+        amount = drain * max(1, stage) * ticks
+        await conn.execute(
+            "UPDATE stewards SET energy = MAX(0, energy - ?) WHERE id=?",
+            (amount, steward_id),
+        )
+        await conn.execute(
+            """
+            UPDATE steward_ailments SET last_tick_at=?
+            WHERE steward_id=? AND ailment_key=?
+            """,
+            (last + ticks * every, steward_id, key),
+        )
+        drained += amount
+    return drained
 
 
 def energy_extra(ailments: list[dict[str, Any]]) -> int:
@@ -144,9 +311,14 @@ def meter_line(steward: dict[str, Any], ailments: list[dict[str, Any]]) -> str:
     h = steward.get("health", config.START_HEALTH)
     line = f"身体 {h}/100"
     if ailments:
-        names = "、".join(f"{a['emoji']}{a['name']}" for a in ailments[:3])
+        bits = []
+        for a in ailments[:3]:
+            label = f"{a['emoji']}{a['name']}"
+            if a.get("stage_name"):
+                label += f"·{a['stage_name']}"
+            bits.append(label)
         extra = f" 等{len(ailments)}项" if len(ailments) > 3 else ""
-        line += f"（{names}{extra}）"
+        line += f"（{'、'.join(bits)}{extra}）"
     hints = []
     if h < config.HEALTH_LOW:
         hints.append(flavor.HEALTH_HINT_LOW)
@@ -161,11 +333,85 @@ def clinic_hint(ailments: list[dict[str, Any]]) -> str | None:
     if not ailments:
         return None
     total = sum(a["cost"] for a in ailments)
-    return flavor.fill(
+    line = flavor.fill(
         flavor.pick(flavor.CLINIC_NAG_LINES),
         n=len(ailments),
         total=total,
     )
+    if any(a.get("chronic") for a in ailments):
+        line += "（生肉感染不能打包一次清干净）"
+    return line
+
+
+def _pit_refuse() -> str:
+    return (
+        "桥桥看了一眼伤势，又看了你一眼。\n"
+        "「这不是摔的。哪儿弄的，回哪儿治。」\n"
+        "「别把地下那套账算我头上。」\n"
+        "（深坑专属重伤 — undertide_ops pit medic 处理）"
+    )
+
+
+async def _pay_and_heal(
+    conn: aiosqlite.Connection,
+    steward_id: int,
+    cost: int,
+    heal: int,
+) -> None:
+    cur = await conn.execute("SELECT tickets, health FROM stewards WHERE id=?", (steward_id,))
+    row = await cur.fetchone()
+    tickets = row[0]
+    if tickets < cost:
+        raise ValueError(f"诊费 {cost} 票，你只有 {tickets} 票——桥桥大夫不赊账")
+    await conn.execute(
+        "UPDATE stewards SET tickets=tickets-?, health=MIN(100, health+?) WHERE id=?",
+        (cost, heal, steward_id),
+    )
+
+
+async def _apply_chronic_course(
+    conn: aiosqlite.Connection,
+    steward_id: int,
+    ailment: dict[str, Any],
+) -> str:
+    key = ailment["key"]
+    meta = AILMENTS[key]
+    wait = int(ailment.get("treat_wait") or 0)
+    if wait > 0:
+        raise ValueError(
+            f"桥桥大夫摇头：「菌还压着，{fmt_wait(wait)}后再来。"
+            "一次清不干净，别连号。」"
+        )
+    cost = meta["cost"]
+    heal = meta.get("health_restore", 8)
+    await _pay_and_heal(conn, steward_id, cost, heal)
+    now = db.now()
+    stage = int(ailment.get("stage") or 1)
+    name = f"{meta['emoji']}{meta['name']}"
+    if stage <= 1:
+        await conn.execute(
+            "DELETE FROM steward_ailments WHERE steward_id=? AND ailment_key=?",
+            (steward_id, key),
+        )
+        return (
+            f"桥桥大夫收 {cost} 票，把{name}余菌压住了（身体 +{heal}）。"
+            "这次算清了——别再生吃。"
+        )
+    new_stage = stage - 1
+    await conn.execute(
+        """
+        UPDATE steward_ailments
+        SET stage=?, last_treat_at=?
+        WHERE steward_id=? AND ailment_key=?
+        """,
+        (new_stage, now, steward_id, key),
+    )
+    left_name = _stage_name(key, new_stage) or f"还剩{new_stage}档"
+    return (
+        f"桥桥大夫收 {cost} 票，给{name}压了一档"
+        f"（现为{left_name}，疗程还剩 {new_stage} 次，身体 +{heal}）。"
+        "菌没清干净，隔几小时再来，别指望一次根治。"
+    ) + flavor.maybe_suffix(flavor.CLINIC_TREAT_LINES)
 
 
 async def treat_one(
@@ -173,36 +419,24 @@ async def treat_one(
     steward_id: int,
     ailment_key: str,
 ) -> str:
-    if ailment_key not in AILMENTS:
-        raise ValueError(f"未知病症，visit_ops clinic 查看")
-    if ailment_key in ("pit_trauma", "ring_shock"):
-        raise ValueError(
-            "桥桥看了一眼伤势，又看了你一眼。\n"
-            "「这不是摔的。哪儿弄的，回哪儿治。」\n"
-            "「别把地下那套账算我头上。」\n"
-            "（深坑专属重伤 — undertide_ops pit medic 处理）"
-        )
-    cur = await conn.execute(
-        "SELECT 1 FROM steward_ailments WHERE steward_id=? AND ailment_key=?",
-        (steward_id, ailment_key),
-    )
-    if not await cur.fetchone():
-        raise ValueError(f"你没有 {AILMENTS[ailment_key]['name']}")
-    meta = AILMENTS[ailment_key]
+    resolved = resolve_ailment_key(ailment_key) or ailment_key
+    if resolved not in AILMENTS:
+        raise ValueError("未知病症，visit_ops clinic 查看")
+    if resolved in PIT_AILMENTS:
+        raise ValueError(_pit_refuse())
+    ailments = await list_ailments(conn, steward_id)
+    hit = next((a for a in ailments if a["key"] == resolved), None)
+    if not hit:
+        raise ValueError(f"你没有 {AILMENTS[resolved]['name']}")
+    if hit["chronic"]:
+        return await _apply_chronic_course(conn, steward_id, hit)
+    meta = AILMENTS[resolved]
     cost = meta["cost"]
-    cur = await conn.execute("SELECT tickets, health FROM stewards WHERE id=?", (steward_id,))
-    row = await cur.fetchone()
-    tickets, health = row[0], row[1]
-    if tickets < cost:
-        raise ValueError(f"诊费 {cost} 票，你只有 {tickets} 票——桥桥大夫不赊账")
     heal = meta.get("health_restore", 12)
-    await conn.execute(
-        "UPDATE stewards SET tickets=tickets-?, health=MIN(100, health+?) WHERE id=?",
-        (cost, heal, steward_id),
-    )
+    await _pay_and_heal(conn, steward_id, cost, heal)
     await conn.execute(
         "DELETE FROM steward_ailments WHERE steward_id=? AND ailment_key=?",
-        (steward_id, ailment_key),
+        (steward_id, resolved),
     )
     return (
         f"桥桥大夫收 {cost} 票，治好 {meta['emoji']}{meta['name']} "
@@ -214,25 +448,86 @@ async def treat_all(conn: aiosqlite.Connection, steward_id: int) -> str:
     ailments = await list_ailments(conn, steward_id)
     if not ailments:
         return "身体倍儿棒——没病别占桥桥大夫的号"
-    total = sum(a["cost"] for a in ailments)
-    cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (steward_id,))
-    tickets = (await cur.fetchone())[0]
-    if tickets < total:
-        raise ValueError(
-            f"全套治疗需 {total} 票（{len(ailments)} 项），你只有 {tickets} 票——必须花钱，不能赊"
+    simple = [a for a in ailments if not a["chronic"] and not a["pit"]]
+    chronic = [a for a in ailments if a["chronic"]]
+    pit = [a for a in ailments if a["pit"]]
+    course_target = None
+    skipped_wait = None
+    for a in chronic:
+        wait = int(a.get("treat_wait") or 0)
+        if wait > 0:
+            skipped_wait = (a, wait)
+            continue
+        course_target = a
+        break
+    if not simple and course_target is None:
+        if skipped_wait:
+            a, wait = skipped_wait
+            raise ValueError(
+                f"桥桥大夫摇头：「{a['emoji']}{a['name']}菌还压着，"
+                f"{fmt_wait(wait)}后再来。一次清不干净，别连号。」"
+            )
+        if pit:
+            raise ValueError(_pit_refuse())
+        return "身体倍儿棒——没病别占桥桥大夫的号"
+
+    cost = sum(a["cost"] for a in simple)
+    heal_total = sum(AILMENTS[a["key"]].get("health_restore", 12) for a in simple)
+    if course_target is not None:
+        cost += course_target["cost"]
+        heal_total += AILMENTS[course_target["key"]].get("health_restore", 8)
+    await _pay_and_heal(conn, steward_id, cost, heal_total)
+
+    names: list[str] = []
+    for a in simple:
+        names.append(f"{a['emoji']}{a['name']}")
+        await conn.execute(
+            "DELETE FROM steward_ailments WHERE steward_id=? AND ailment_key=?",
+            (steward_id, a["key"]),
         )
-    names = []
-    heal_total = 0
-    for a in ailments:
-        meta = AILMENTS[a["key"]]
-        heal_total += meta.get("health_restore", 12)
-        names.append(f"{meta['emoji']}{meta['name']}")
-    await conn.execute(
-        "UPDATE stewards SET tickets=tickets-?, health=MIN(100, health+?) WHERE id=?",
-        (total, heal_total, steward_id),
-    )
-    await conn.execute("DELETE FROM steward_ailments WHERE steward_id=?", (steward_id,))
+
+    extra = ""
+    if course_target is not None:
+        # 付过账，直接落档，避免 _apply_chronic_course 再扣一次票
+        now = db.now()
+        stage = int(course_target.get("stage") or 1)
+        meta = AILMENTS[course_target["key"]]
+        label = f"{meta['emoji']}{meta['name']}"
+        if stage <= 1:
+            await conn.execute(
+                "DELETE FROM steward_ailments WHERE steward_id=? AND ailment_key=?",
+                (steward_id, course_target["key"]),
+            )
+            names.append(f"{label}（余菌压住）")
+        else:
+            new_stage = stage - 1
+            await conn.execute(
+                """
+                UPDATE steward_ailments
+                SET stage=?, last_treat_at=?
+                WHERE steward_id=? AND ailment_key=?
+                """,
+                (new_stage, now, steward_id, course_target["key"]),
+            )
+            left = _stage_name(course_target["key"], new_stage) or f"还剩{new_stage}档"
+            extra = (
+                f" {label}只压了一档（现为{left}），打包也一次清不干净，"
+                f"{fmt_wait(config.INFECTION_TREAT_COOLDOWN)}后再来。"
+            )
+            names.append(f"{label}·{left}")
+
+    if skipped_wait and course_target is None:
+        a, wait = skipped_wait
+        extra += (
+            f" {a['emoji']}{a['name']}还在疗程间隔（{fmt_wait(wait)}后再看），"
+            "打包清不掉。"
+        )
+    if pit:
+        extra += " 深坑伤桥桥不接。"
+
+    cleared = "、".join(names) if names else "（普通伤已空）"
     return (
-        f"桥桥大夫打包收 {total} 票，清掉 {len(ailments)} 项："
-        f"{'、'.join(names)}（身体 +{min(100, heal_total)}）"
+        f"桥桥大夫收 {cost} 票，处理：{cleared}"
+        f"（身体 +{min(100, heal_total)}）"
+        f"{extra}"
     )
