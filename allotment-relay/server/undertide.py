@@ -1250,20 +1250,31 @@ async def undertide_ops(key_id: int, command: str) -> str:
                 raise ValueError(utcopy.NO_ACCESS_HINT)
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
             if (await cur.fetchone())[0] < utcfg.LOTTERY_COST:
-                raise ValueError("5 票都拿不出——这台机器不收赊账。")
+                raise ValueError("5 票都拿不出——Jester 的机器不收赊账。")
             await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (utcfg.LOTTERY_COST, s["id"]))
-            if random.random() < utcfg.LOTTERY_WIN_CHANCE:
-                prize = random.randint(utcfg.LOTTERY_PRIZE_MIN, utcfg.LOTTERY_PRIZE_MAX)
-                await conn.execute("UPDATE stewards SET tickets=tickets+? WHERE id=?", (prize, s["id"]))
-                await db.add_chronicle(
-                    "undertide",
-                    f"{s['name']} 在恶猫钱庄的旧机器上中了 {prize} 票。整个潮下都听见了吐票的声音。",
-                    s["id"], conn=conn,
-                )
-                await conn.commit()
-                return utcopy.LOTTERY_WIN.format(prize=prize)
+            roll = random.random()
+            acc = 0.0
+            won = False
+            for prob, (lo, hi), tier_name in utcfg.LOTTERY_TIERS:
+                acc += prob
+                if roll < acc:
+                    prize = random.randint(lo, hi)
+                    await conn.execute("UPDATE stewards SET tickets=tickets+? WHERE id=?", (prize, s["id"]))
+                    if tier_name == "头奖":
+                        tpl = utcopy.JESTER_JACKPOT
+                        chron = f"{s['name']} 在潮汐博彩中了头奖 {prize} 票。整个潮下都听见了吐票的声音。"
+                    elif tier_name == "大奖":
+                        tpl = utcopy.JESTER_BIG
+                        chron = f"{s['name']} 在潮汐博彩中了大奖 {prize} 票。"
+                    else:
+                        tpl = utcopy.JESTER_SMALL
+                        chron = None
+                    if chron:
+                        await db.add_chronicle("undertide", chron, s["id"], conn=conn)
+                    await conn.commit()
+                    return tpl.format(prize=prize)
             await conn.commit()
-            return utcopy.pick(utcopy.LOTTERY_LOSE)
+            return utcopy.pick(utcopy.JESTER_LOSE)
 
         # ── 二期路由 ──
         if verb in ("street", "muscle", "push"):

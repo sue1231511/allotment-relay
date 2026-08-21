@@ -171,8 +171,11 @@ PIT_RANKS = [
 REP_RECOVER_PER_DAY = 1
 REP_RECOVER_CAP = 15        # 到"能打交道"档停，再上要靠良性交易
 
-# ── 彩票（穷人最后的翻盘幻想）──
+# ── 潮汐博彩（Jester 的旧机器，穷人翻盘幻想）──
 LOTTERY_COST = 5
-LOTTERY_WIN_CHANCE = 0.02
-LOTTERY_PRIZE_MIN = 100
-LOTTERY_PRIZE_MAX = 300
+LOTTERY_TIERS = [
+    # (概率, 奖金区间, 档名)
+    (0.0015, (300, 600), "头奖"),
+    (0.012,  (60, 150),  "大奖"),
+    (0.12,   (8, 20),    "小奖"),
+]
