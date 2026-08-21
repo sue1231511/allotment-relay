@@ -336,6 +336,4 @@ STAR_POST_DAILY = 5       # 面板发动态日上限
 
 # 潮闻 — 故事探索任务
 TALE_EXPLORE_ENERGY = 5          # 主动探索耗精力
-TALE_EXPLORE_DAILY = 3           # 每日主动探索次数
-TALE_DAY_UTC_OFFSET = 8 * 3600   # 潮闻日界线按北京时间 UTC+8 的 00:00
 TALE_BOARD_LIMIT = 10            # 完成榜显示人数

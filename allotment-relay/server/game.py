@@ -182,7 +182,7 @@ async def relay_manual() -> str:
         "",
         "【潮闻 · 故事探索任务】",
         "  tale_ops list — 查看可接任务和阶段/通关奖励；accept 任务key 接取。空 command 和 list 相同",
-        "  status 看当前阶段；按 hint 的地点 explore。匹配才耗 5 精力并计每日 3 次，北京时间 00:00 刷新；错误地点不扣",
+        "  status 看当前阶段；按 hint 的地点 explore。匹配阶段每次耗 5 精力、不限次数；错误地点不扣",
         "  首个任务：阶段1 explore beach → 阶段2 explore sea 找锈铁 → 阶段3 explore plot → 阶段4 explore bar",
         "  阶段5 explore beach 找海玻璃 → 阶段6 explore beach 找化石贝壳 → turnin",
         "  自然发现所需物品也会推进；行囊已有物品会直接识别，不必重复找",
