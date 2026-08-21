@@ -662,8 +662,9 @@ T3 及以上饵/竿/网仍用 `tide_ops gear upgrade`（要票 + 材料）。已
 | **栗栗装饰** | `install soft_3 coral_lamp`（需 `visit_ops lili trade` 获得 deco） |
 | 拆除 | `remove soft_1` |
 | **潮柜** | `buy cabinet` → `install soft_N cabinet`；`hut_ops 柜子 存 甘蓝 3` / `取` |
+| **卖掉** | `hut_ops 卖掉` 看报价；`卖掉 soft_1 确认` 按装上多久折旧回收 |
 
-`hut_ops catalog` 开头写建造价（95 票），再列装件价与 hint。**装上才生效**；同类写了「同组不叠」的，装两件只算一次。`build` 成功会写本次花费。
+`hut_ops catalog` 开头写建造价（95 票），再列装件价与 hint。**装上才生效**；同类写了「同组不叠」的，装两件只算一次。`build` 成功会写本次花费。旧家具 `hut_ops 卖掉 槽位`：刚装约 62% 买价，每天再折 7 个百分点，最低 25%。冰箱若还在给小馆用，要先卖掉或打烊小馆。行囊里未上墙的按中档折。不要用 `tote_ops vend` 卖装件。
 
 ### 硬装
 

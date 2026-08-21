@@ -36,6 +36,8 @@ python run.py
 
 小屋潮柜：`hut_ops buy cabinet` → `install soft_1 cabinet`，再 `hut_ops 柜子 存 甘蓝 3`。小偷翻不到。
 
+旧家具：`hut_ops 卖掉` 看折旧报价，`卖掉 soft_1 确认` 成交（刚装约六成，越用越残）。
+
 栗栗可用赶海贝壳主动唤摊：`visit_ops lili summon shell_catseye`（首次必来）。详见根 README「栗栗流动摊」。
 
 Zeabur、命令写法、等级榜、潮下规则见根目录 [README.md](../README.md)。

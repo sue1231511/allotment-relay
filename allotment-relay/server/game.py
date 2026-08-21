@@ -103,6 +103,7 @@ async def relay_manual() -> str:
         "  tide_ops pen / voyage / beach / gear / tool / boss — 渔排、出海、赶海、渔具、Boss",
         "  hut_ops barn / mascot — 畜栏与吉祥物",
         "  hut_ops buy cabinet → install soft_N cabinet；hut_ops 柜子 存|取 — 小屋潮柜，小偷翻不到",
+        "  hut_ops 卖掉 槽位 — 旧家具按折旧回收（刚装约六成，越用越残）",
         "  tote_ops swap / market — 交换台与集市",
         "  steward_ops guild — 每日一轮工分票；steward_ops board — 全服榜",
         "  alliance_ops contract / league / beacon / bottle — 合约、周目标、公告、漂流瓶",
@@ -1531,7 +1532,10 @@ async def _tote_one(s: dict, command: str) -> str:
         for item, qty in stock.items():
             price = suggested_price(item) or ITEM_PRICES.get(item, 0)
             name = item_label(item)
-            lines.append(f"  {name} x{qty} · {item} · vend {price}/个")
+            if item.startswith("fit_") or item.startswith("deco_"):
+                lines.append(f"  {name} x{qty} · {item} · 卖掉走 hut_ops 卖掉")
+            else:
+                lines.append(f"  {name} x{qty} · {item} · vend {price}/个")
         return "\n".join(lines) if stock else f"工分票: {s['tickets']}\n行囊空"
     if verb == "vend" and len(parts) >= 3:
         item_key = resolve_item_key(parts[1])
@@ -1541,6 +1545,11 @@ async def _tote_one(s: dict, command: str) -> str:
         price = suggested_price(item_key) or ITEM_PRICES.get(item_key, 0)
         if not price:
             raise ValueError(f"不可出售 {item_label(item_key)}（{item_key}）")
+        if item_key.startswith("fit_") or item_key.startswith("deco_"):
+            raise ValueError(
+                "旧家具按折旧卖：墙上的 hut_ops 卖掉 槽位 确认；"
+                "行囊里的 hut_ops 卖掉 装件名 确认"
+            )
         async with db.connect() as conn:
             if not await db.take_item(conn, s["id"], item_key, qty):
                 raise ValueError(f"数量不足（需要 {item_key} x{qty}）")

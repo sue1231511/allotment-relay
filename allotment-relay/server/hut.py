@@ -8,7 +8,18 @@ from typing import Any
 import aiosqlite
 
 from . import config, db, flavor
-from .catalog import HUT_HARD, HUT_LEVELS, HUT_SOFT, ITEM_NAMES, LILI_DECOR, LILI_JUNK_DECOR, item_label, resolve_item_key, unknown_item_message
+from .catalog import (
+    HUT_HARD,
+    HUT_LEVELS,
+    HUT_SOFT,
+    ITEM_NAMES,
+    LILI_DECOR,
+    LILI_JUNK_DECOR,
+    dish_item,
+    item_label,
+    resolve_item_key,
+    unknown_item_message,
+)
 
 
 def _slots(level: int) -> tuple[list[str], list[str]]:
@@ -217,6 +228,268 @@ async def _maybe_dump_cabinet(
     return await dump_cabinet(conn, steward_id)
 
 
+def _wear_text(seconds: int | None) -> str:
+    if seconds is None:
+        return "装上日不明"
+    sec = max(0, int(seconds))
+    if sec < 3600:
+        mins = max(1, sec // 60)
+        return f"装了 {mins} 分钟"
+    if sec < 86400:
+        return f"装了 {sec // 3600} 小时"
+    days = sec / 86400
+    if days < 10:
+        return f"装了 {days:.1f} 天".replace(".0", "")
+    return f"装了 {int(days)} 天"
+
+
+def furniture_sell_quote(cost: int, installed_at: int | None, now: int | None = None) -> dict[str, Any]:
+    """买价按折旧回收。刚装约 62%，随天数掉到 25%。"""
+    now = db.now() if now is None else now
+    cost = max(0, int(cost))
+    installed = int(installed_at or 0)
+    if installed <= 0:
+        rate = (config.EATERY_SELL_RATE_START + config.EATERY_SELL_RATE_FLOOR) / 2
+        age_s = None
+        note = "没记下装上日，按中档折旧"
+    else:
+        age_s = max(0, now - installed)
+        days = age_s / 86400
+        rate = max(
+            config.EATERY_SELL_RATE_FLOOR,
+            config.EATERY_SELL_RATE_START - days * config.EATERY_SELL_DECAY_PER_DAY,
+        )
+        if days < 0.5:
+            note = "刚装上，二手也要折一截"
+        elif days < 2:
+            note = "用了没几天，边还新"
+        elif days < 7:
+            note = "旧家具，按折旧收"
+        else:
+            note = "用旧了，残值见底"
+    refund = max(1, int(round(cost * rate))) if cost else 1
+    return {
+        "cost": cost,
+        "rate": rate,
+        "refund": refund,
+        "age_s": age_s,
+        "note": note,
+        "pct": int(round(rate * 100)),
+    }
+
+
+def _fitting_value(key: str) -> dict[str, Any]:
+    raw = key or ""
+    if raw.startswith("deco_junk_") or raw in LILI_JUNK_DECOR:
+        jk = raw.replace("deco_junk_", "") if raw.startswith("deco_junk_") else raw
+        meta = LILI_JUNK_DECOR.get(jk, {})
+        return {"name": meta.get("name", key), "cost": 8, "junk": True}
+    if raw.startswith("deco_"):
+        dk = raw[5:]
+        if dk in LILI_DECOR:
+            meta = LILI_DECOR[dk]
+            return {"name": meta["name"], "cost": meta["sell"], "junk": False}
+    bare = _fitting_bare(raw)
+    if bare in LILI_DECOR:
+        meta = LILI_DECOR[bare]
+        return {"name": meta["name"], "cost": meta["sell"], "junk": False}
+    if bare in HUT_HARD:
+        meta = HUT_HARD[bare]
+        return {"name": meta["name"], "cost": meta["cost"], "junk": False}
+    if bare in HUT_SOFT:
+        meta = HUT_SOFT[bare]
+        return {"name": meta["name"], "cost": meta["cost"], "junk": False}
+    raise ValueError(f"这不是能卖的家具: {key}")
+
+
+def _is_fridge_key(key: str) -> bool:
+    return _fitting_bare(key) == "fridge"
+
+
+def _is_cabinet_key(key: str) -> bool:
+    return _fitting_bare(key) == "cabinet"
+
+
+async def _fitting_rows(conn: aiosqlite.Connection, steward_id: int) -> list[dict[str, Any]]:
+    prev = conn.row_factory
+    conn.row_factory = aiosqlite.Row
+    try:
+        rows = await (await conn.execute(
+            """
+            SELECT slot, item_key, installed_at FROM hut_fittings
+            WHERE steward_id=? ORDER BY slot
+            """,
+            (steward_id,),
+        )).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.row_factory = prev
+
+
+async def _dump_meals(conn: aiosqlite.Connection, steward_id: int) -> int:
+    prev = conn.row_factory
+    conn.row_factory = aiosqlite.Row
+    try:
+        rows = await (await conn.execute(
+            "SELECT dish_key, stars, quantity FROM meal_storage WHERE steward_id=?",
+            (steward_id,),
+        )).fetchall()
+    finally:
+        conn.row_factory = prev
+    moved = 0
+    for r in rows:
+        qty = int(r["quantity"] or 1)
+        await db.add_item(conn, steward_id, dish_item(r["dish_key"], r["stars"]), qty)
+        moved += qty
+    if moved:
+        await conn.execute("DELETE FROM meal_storage WHERE steward_id=?", (steward_id,))
+    return moved
+
+
+def _token_hits_fitting(token: str, key: str, name: str) -> bool:
+    t = token.strip().lower()
+    if not t:
+        return False
+    bare = _fitting_bare(key).lower()
+    aliases = {
+        key.lower(),
+        bare,
+        f"fit_{bare}",
+        name.lower(),
+        name,
+    }
+    return t in aliases or t == key.lower()
+
+
+async def furniture_sell_command(s: dict[str, Any], rest: list[str]) -> str:
+    confirm_words = {"确认", "ok", "yes", "confirm", "卖"}
+    confirm = bool(rest) and rest[-1].lower() in confirm_words
+    tokens = rest[:-1] if confirm else rest
+    token = " ".join(tokens).strip()
+
+    async with db.connect() as conn:
+        rows = await _fitting_rows(conn, s["id"])
+        prev = conn.row_factory
+        conn.row_factory = aiosqlite.Row
+        try:
+            stock_rows = await (await conn.execute(
+                "SELECT item, quantity FROM satchel WHERE steward_id=? AND quantity>0",
+                (s["id"],),
+            )).fetchall()
+            bag_fits = [
+                (r["item"], r["quantity"]) for r in stock_rows
+                if r["item"].startswith("fit_") or r["item"].startswith("deco_")
+            ]
+        finally:
+            conn.row_factory = prev
+
+        if not token:
+            lines = ["旧家具变卖（hut_ops 卖掉 槽位|装件名 确认）:"]
+            if not rows and not bag_fits:
+                lines.append("  小屋和行囊都没有装件")
+                return "\n".join(lines)
+            for r in rows:
+                val = _fitting_value(r["item_key"])
+                quote = furniture_sell_quote(val["cost"], r.get("installed_at"))
+                lines.append(
+                    f"  {r['slot']} {_fit_name(r['item_key'])} · "
+                    f"{_wear_text(quote['age_s'])} · 回收 {quote['refund']} 票（{quote['pct']}%）"
+                )
+            for item, qty in bag_fits:
+                val = _fitting_value(item)
+                quote = furniture_sell_quote(val["cost"], 0)
+                extra = f" x{qty}" if qty > 1 else ""
+                lines.append(
+                    f"  行囊 {item_label(item)}{extra} · 未上墙按中档 {quote['refund']} 票"
+                )
+            lines.append("确认：hut_ops 卖掉 soft_1 确认")
+            return "\n".join(lines)
+
+        target: dict[str, Any] | None = None
+        for r in rows:
+            val = _fitting_value(r["item_key"])
+            if token.lower() == r["slot"] or _token_hits_fitting(token, r["item_key"], val["name"]):
+                target = {"where": "slot", **r, "val": val}
+                break
+        if target is None:
+            for item, qty in bag_fits:
+                val = _fitting_value(item)
+                if _token_hits_fitting(token, item, val["name"]):
+                    target = {"where": "bag", "item": item, "qty": qty, "val": val}
+                    break
+        if target is None:
+            raise ValueError("找不到这件家具。hut_ops 卖掉 看清单（槽位或名字）")
+
+        val = target["val"]
+        installed_at = target.get("installed_at") if target["where"] == "slot" else 0
+        quote = furniture_sell_quote(val["cost"], installed_at)
+        extras: list[str] = []
+        if target["where"] == "slot":
+            if _is_fridge_key(target["item_key"]) and s.get("eatery_open"):
+                raise ValueError("冰箱还在给小馆用。先 kitchen_ops shop 卖掉 或 shop close")
+            if _is_fridge_key(target["item_key"]):
+                extras.append("冰箱里的熟菜退回行囊")
+            if _is_cabinet_key(target["item_key"]):
+                extras.append("潮柜里的货退回行囊")
+        if not confirm:
+            lines = [
+                f"变卖{_fit_name(target['item_key']) if target['where']=='slot' else item_label(target['item'])}",
+                f"买价 {quote['cost']} 票 · {_wear_text(quote['age_s'])} · "
+                f"折旧回收 {quote['refund']} 票（{quote['pct']}%）",
+                quote["note"],
+                *extras,
+                f"确认：hut_ops 卖掉 {token} 确认",
+            ]
+            return "\n".join(lines)
+
+        notes: list[str] = []
+        if target["where"] == "slot":
+            key = target["item_key"]
+            if _is_fridge_key(key) and s.get("eatery_open"):
+                raise ValueError("冰箱还在给小馆用。先 kitchen_ops shop 卖掉 或 shop close")
+            if _is_cabinet_key(key):
+                dumped = await _maybe_dump_cabinet(
+                    conn, s["id"], key, except_slot=target["slot"],
+                )
+                if dumped:
+                    notes.append(f"潮柜货回行囊 x{dumped}")
+            if _is_fridge_key(key):
+                meals = await _dump_meals(conn, s["id"])
+                if meals:
+                    notes.append(f"熟菜退回行囊 x{meals}")
+            await conn.execute(
+                "DELETE FROM hut_fittings WHERE steward_id=? AND slot=?",
+                (s["id"], target["slot"]),
+            )
+            label = _fit_name(key)
+        else:
+            if not await db.take_item(conn, s["id"], target["item"], 1):
+                raise ValueError("行囊里已经没有这件了")
+            label = item_label(target["item"])
+        await conn.execute(
+            "UPDATE stewards SET tickets=tickets+? WHERE id=?",
+            (quote["refund"], s["id"]),
+        )
+        await conn.execute(
+            "UPDATE stewards SET xp = MAX(0, COALESCE(xp, 0) - ?) WHERE id=?",
+            (quote["refund"], s["id"]),
+        )
+        await conn.commit()
+    await db.add_chronicle(
+        "hut",
+        f"{s['name']} 变卖{label}，折旧回收 {quote['refund']} 票",
+        s["id"],
+    )
+    extra = "。".join(notes)
+    if extra:
+        extra = extra + "。"
+    return (
+        f"{label}卖掉了。{extra}"
+        f"{quote['note']} 折旧回收 {quote['refund']} 票"
+        f"（买价 {quote['cost']} 的 {quote['pct']}%）。"
+    )
+
+
 def _cabinet_forbid(item: str) -> str | None:
     if item.startswith("dish_") or item.startswith("meal_"):
         return "熟菜放冰箱 kitchen_ops store"
@@ -326,6 +599,9 @@ async def hut_ops(key_id: int, command: str) -> str:
     if verb in ("cabinet", "柜子", "chest", "locker", "柜"):
         return await cabinet_command(s, command.strip().split()[1:])
 
+    if verb in ("卖掉", "sell", "变卖", "出售"):
+        return await furniture_sell_command(s, command.strip().split()[1:])
+
     if verb == "status":
         async with db.connect() as conn:
             fittings = await _fittings(conn, s["id"])
@@ -358,13 +634,15 @@ async def hut_ops(key_id: int, command: str) -> str:
             async with db.connect() as conn:
                 n = len(await _cabinet_rows(conn, s["id"]))
             lines.append(f"潮柜 {n}/{config.CABINET_SLOTS} 种 — hut_ops 柜子 存|取")
+        if fittings:
+            lines.append("旧家具按折旧卖：hut_ops 卖掉 槽位")
         return "\n".join(lines)
 
     if verb == "catalog":
         kind = parts[1].lower() if len(parts) > 1 else "all"
         lines = [
             f"小屋建造：{config.HUT_BUILD_COST} 票（hut_ops build）",
-            "小屋装件 catalog（buy 后 install 到槽位）：",
+            "小屋装件 catalog（buy 后 install 到槽位；旧了 hut_ops 卖掉 槽位）:",
         ]
         if kind in ("all", "hard"):
             lines.append("【硬装】")
@@ -587,8 +865,9 @@ async def hut_ops(key_id: int, command: str) -> str:
         msg = f"已拆下 {slot} 的 {_fit_name(key)}，装件回行囊"
         if dumped:
             msg += f"；潮柜货回行囊 x{dumped}"
+        msg += "。要按折旧卖掉：hut_ops 卖掉 槽位"
         return msg
 
     raise ValueError(
-        f"未知 hut 指令: {command}（status/build/upgrade/label/catalog/buy/install/remove/柜子）"
+        f"未知 hut 指令: {command}（status/build/upgrade/label/catalog/buy/install/remove/柜子/卖掉）"
     )
