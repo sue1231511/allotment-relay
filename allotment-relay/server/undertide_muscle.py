@@ -99,8 +99,15 @@ def _find_npc(npcs: list[dict[str, Any]], query: str) -> dict[str, Any] | None:
 
 async def _my_power(conn: aiosqlite.Connection, steward_id: int) -> int:
     from . import undertide_pit
+    from . import db as _db
     cur = await conn.execute("SELECT health, energy FROM stewards WHERE id=?", (steward_id,))
     health, energy = (await cur.fetchone())
+    cur = await conn.execute(
+        "SELECT drug_buff, drug_until FROM steward_undertide WHERE steward_id=?", (steward_id,)
+    )
+    drow = await cur.fetchone()
+    if drow and drow[1] and _db.now() < int(drow[1]):
+        health = min(130, health + int(drow[0] or 0))
     return int(health / 100 * 30 + energy / 100 * 15 + random.randint(1, 20))
 
 

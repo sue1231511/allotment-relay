@@ -840,6 +840,10 @@ async def init_db() -> None:
             """,
             "ALTER TABLE steward_undertide ADD COLUMN spouse_free_day INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE steward_undertide ADD COLUMN unread_hits TEXT NOT NULL DEFAULT '[]'",
+            "ALTER TABLE steward_undertide ADD COLUMN drug_buff INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE steward_undertide ADD COLUMN drug_until INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE steward_undertide ADD COLUMN drug_crash INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE steward_undertide ADD COLUMN spouse_allow_week INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE ut_owner_state ADD COLUMN an_happy_day INTEGER NOT NULL DEFAULT 0",
             """
             CREATE TABLE IF NOT EXISTS ut_cheer_discount (

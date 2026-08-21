@@ -29,10 +29,17 @@ async def _ensure_fighters(conn: aiosqlite.Connection) -> None:
 
 
 async def combat_power(conn: aiosqlite.Connection, steward: dict[str, Any]) -> int:
-    """玩家战力 = body/100×30 + energy/100×15 + 1d20。"""
+    """玩家战力 = (body+药buff)/100×30 + energy/100×15 + 1d20。"""
     cur = await conn.execute("SELECT health, energy FROM stewards WHERE id=?", (steward["id"],))
     row = await cur.fetchone()
     health, energy = row[0], row[1]
+    cur = await conn.execute(
+        "SELECT drug_buff, drug_until FROM steward_undertide WHERE steward_id=?",
+        (steward["id"],),
+    )
+    drow = await cur.fetchone()
+    if drow and drow[1] and db.now() < int(drow[1]):
+        health = min(130, health + int(drow[0] or 0))  # 药可超100，封顶130
     return int(health / 100 * 30 + energy / 100 * 15 + random.randint(1, 20))
 
 
@@ -54,7 +61,9 @@ async def pit_ops(
     parts = rest.split()
     verb = parts[0].lower() if parts else "list"
     if verb == "pit":
-        verb = "list"
+        # pit drug xxx / pit fight xxx → 二级动词，参数整体前移
+        parts = parts[1:]
+        verb = parts[0].lower() if parts else "list"
 
     if verb == "list":
         conn.row_factory = aiosqlite.Row
@@ -230,6 +239,39 @@ async def pit_ops(
             tpl = utcopy.PIT_MEDIC_RING if ailment == "ring_shock" else utcopy.PIT_MEDIC_TRAUMA
             body = tpl.format(cost=cost)
         return body + f"\n\n{paid_note}\n（body +{heal} · {ailment} 已处理）"
+
+    if verb == "drug":
+        # 医务间·体质药：越贵副作用越小
+        from . import undertide_catalog as cat
+        sub = parts[1] if len(parts) > 1 else ""
+        if not sub or sub == "list":
+            lines = [utcopy.MEDIC_SHOP_HEADER, ""]
+            for key, d in cat.MEDIC_DRUGS.items():
+                crash_note = f"药劲过后 body −{d['crash']}" if d["crash"] else "无副作用"
+                lines.append(
+                    f"  {key} — {d['emoji']}{d['name']} {d['price']} 票 · "
+                    f"body +{d['buff']}（{d['hours']}h）· {crash_note}"
+                )
+                lines.append(f"    {d['hint']}")
+            lines.append("")
+            lines.append("medic drug key 购买 · 同类药不叠，新药覆盖旧药")
+            return "\n".join(lines)
+        if sub not in cat.MEDIC_DRUGS:
+            raise ValueError("用法: undertide_ops pit medic drug list|药名key")
+        d = cat.MEDIC_DRUGS[sub]
+        cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
+        if (await cur.fetchone())[0] < d["price"]:
+            raise ValueError(f"{d['name']} 要 {d['price']} 票。他这儿不赊账——赊账的去找猫猫。")
+        await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (d["price"], s["id"]))
+        await conn.execute(
+            "UPDATE steward_undertide SET drug_buff=?, drug_until=?, drug_crash=? WHERE steward_id=?",
+            (d["buff"], db.now() + d["hours"] * 3600, d["crash"], s["id"]),
+        )
+        await conn.commit()
+        return utcopy.MEDIC_DRUG_BUY.format(drug=f"{d['emoji']}{d['name']}") + (
+            f"\n\n（body 战力 +{d['buff']}，{d['hours']} 小时内有效"
+            + (f" · 药劲过后反噬 body −{d['crash']}）" if d["crash"] else " · 无副作用）")
+        )
 
     raise ValueError("未知 pit 指令（list/fight/medic）")
 

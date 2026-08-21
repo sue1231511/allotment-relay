@@ -35,6 +35,32 @@ async def avatar_key(conn: aiosqlite.Connection, steward_id: int) -> str:
     return row[0] if row else ""
 
 
+async def _settle_drug(conn: aiosqlite.Connection, ut: dict[str, Any]) -> str:
+    """体质药懒结算：到期自动结算效果与反噬。返回提示文本（无则空串）。"""
+    now = db.now()
+    until = int(ut.get("drug_until") or 0)
+    if not until:
+        return ""
+    if now < until:
+        return ""
+    crash = int(ut.get("drug_crash") or 0)
+    from . import undertide_catalog as _cat
+    # 反噬
+    if crash > 0:
+        await conn.execute(
+            "UPDATE stewards SET health=MAX(0, health-?) WHERE id=?", (crash, ut["steward_id"])
+        )
+        note = utcopy.MEDIC_DRUG_CRASH.format(drug="药劲", crash=crash)
+    else:
+        note = utcopy.MEDIC_DRUG_CRASH_ZERO.format(drug="药劲")
+    await conn.execute(
+        "UPDATE steward_undertide SET drug_buff=0, drug_until=0, drug_crash=0 WHERE steward_id=?",
+        (ut["steward_id"],),
+    )
+    await conn.commit()
+    return "\n\n" + note
+
+
 async def _ensure_ut(conn: aiosqlite.Connection, steward_id: int) -> dict[str, Any]:
     cur = await conn.execute(
         """INSERT OR IGNORE INTO steward_undertide (steward_id, created_at)
@@ -842,6 +868,7 @@ async def undertide_ops(key_id: int, command: str) -> str:
     async with db.connect() as conn:
         ut = await _ensure_ut(conn, s["id"])
         ut = await _maybe_release(conn, ut, s["id"])
+        drug_note = await _settle_drug(conn, ut)
         jailed = ut["jail_state"] == "serving"
         day = _day_id()
 
@@ -868,9 +895,15 @@ async def undertide_ops(key_id: int, command: str) -> str:
                 "UPDATE steward_undertide SET unread_hits='[]' WHERE steward_id=?", (s["id"],)
             )
             await conn.commit()
+        hits_prefix = drug_note + hits_prefix
 
         if verb == "help":
             return (hits_prefix + utcopy.HELP) if hits_prefix else utcopy.HELP
+
+        if verb == "guide":
+            if not ut["access"]:
+                raise ValueError(utcopy.NO_ACCESS_HINT)
+            return hits_prefix + utcopy.GUIDE_TEXT
 
         if verb == "well":
             if not ut["well_hint"]:
@@ -906,13 +939,13 @@ async def undertide_ops(key_id: int, command: str) -> str:
                 return utcopy.DESCEND_TEXT.replace(
                     "井底有人给你让了半步路。没人看你，但所有人都知道你是新来的。",
                     "井底有人给你让了半步路——抬头看清是你，又把那半步收了回去。\n\n没人议论。议论老板，不是这儿的规矩。",
-                )
+                ) + "\n\n" + utcopy.GUIDE_NOTE
             if av == "anan":
                 return utcopy.DESCEND_TEXT.replace(
                     "井底有人给你让了半步路。没人看你，但所有人都知道你是新来的。",
                     "越往下越暖。医务间的方向飘来消毒水的味道——你闭着眼都认得。\n\n井底有人给你让了半步路。你摆摆手，径直往下。\n\n回家的路，不用人让。",
-                )
-            return utcopy.DESCEND_TEXT
+                ) + "\n\n" + utcopy.GUIDE_NOTE
+            return utcopy.DESCEND_TEXT + "\n\n" + utcopy.GUIDE_NOTE
 
         if verb == "enter":
             if not ut["access"]:
@@ -932,7 +965,7 @@ async def undertide_ops(key_id: int, command: str) -> str:
         if verb == "market":
             if not ut["access"]:
                 raise ValueError(utcopy.NO_ACCESS_HINT)
-            return await _cmd_market(conn, s, ut)
+            return await _cmd_market(conn, s, ut) + await _maybe_event(conn, s, ut)
 
         if verb == "buy":
             if not ut["access"]:
@@ -948,7 +981,7 @@ async def undertide_ops(key_id: int, command: str) -> str:
             tokens = rest.split()
             if not tokens:
                 raise ValueError("用法: undertide_ops sell 物品key [数量]")
-            return await _cmd_sell(conn, s, ut, tokens[0], tokens[1] if len(tokens) > 1 else "1")
+            return await _cmd_sell(conn, s, ut, tokens[0], tokens[1] if len(tokens) > 1 else "1") + await _maybe_event(conn, s, ut)
 
         if verb == "bank":
             return await _cmd_bank(conn, s, ut, rest)
@@ -957,7 +990,8 @@ async def undertide_ops(key_id: int, command: str) -> str:
             return await _cmd_jail(conn, s, ut, rest)
 
         if verb == "cheer":
-            return await _cmd_cheer(conn, s, rest)
+            msg = await _cmd_cheer(conn, s, rest)
+            return msg + await _maybe_event(conn, s, ut)
 
         # ── 二期路由 ──
         if verb in ("street", "muscle", "push"):
@@ -966,13 +1000,13 @@ async def undertide_ops(key_id: int, command: str) -> str:
             from . import undertide_muscle as um
             if verb == "street":
                 return await um.street_ops(conn, s, ut)
-            return await um.muscle_ops(conn, s, ut, verb, rest)
+            return await um.muscle_ops(conn, s, ut, verb, rest) + await _maybe_event(conn, s, ut)
 
         if verb in ("pit", "fight", "medic"):
             if not ut["access"]:
                 raise ValueError(utcopy.NO_ACCESS_HINT)
             from . import undertide_pit as up
-            return await up.pit_ops(conn, s, ut, command.strip())
+            return await up.pit_ops(conn, s, ut, command.strip()) + await _maybe_event(conn, s, ut)
 
         if verb in ("casino", "dice", "lantern", "draw"):
             if not ut["access"]:
@@ -987,13 +1021,13 @@ async def undertide_ops(key_id: int, command: str) -> str:
             msg = await uc.casino_ops(conn, s, ut, verb, rest)
             grudge = await um.maybe_grudge(conn, s, ut)
             await conn.commit()
-            return msg + grudge
+            return msg + grudge + await _maybe_event(conn, s, ut)
 
         if verb == "hijack":
             if not ut["access"]:
                 raise ValueError(utcopy.NO_ACCESS_HINT)
             from . import undertide_muscle as um
-            return await um.hijack_ops(conn, s, ut, rest)
+            return await um.hijack_ops(conn, s, ut, rest) + await _maybe_event(conn, s, ut)
 
         if verb == "grudge":
             from . import undertide_muscle as um
@@ -1004,13 +1038,13 @@ async def undertide_ops(key_id: int, command: str) -> str:
             if not ut["access"]:
                 raise ValueError(utcopy.NO_ACCESS_HINT)
             from . import undertide_tavern as utav
-            return await utav.tavern_ops(conn, s, ut, command.strip())
+            return await utav.tavern_ops(conn, s, ut, command.strip()) + await _maybe_event(conn, s, ut)
 
         if verb in ("bounty",):
             if not ut["access"]:
                 raise ValueError(utcopy.NO_ACCESS_HINT)
             from . import undertide_bounty as ub
-            return await ub.bounty_ops(conn, s, ut, rest or "list")
+            return await ub.bounty_ops(conn, s, ut, rest or "list") + await _maybe_event(conn, s, ut)
 
         if verb == "kroom":
             return await _cmd_kroom(conn, s, ut, rest)

@@ -99,6 +99,25 @@ TIER_MOOD = {
     "danger": "那人坐在阴影里。你看不清脸。你唯一确定的是——其他人绕着他走。",
 }
 
+# ── 医务间·体质药（越贵副作用越小）─────────────────────────
+MEDIC_DRUGS = {
+    "rough_stim": {
+        "name": "粗制兴奋剂", "emoji": "💉", "price": 15,
+        "buff": 10, "hours": 24, "crash": 8,
+        "hint": "见效快，来路不明。药劲过去的那一下，会把你打回原形。",
+    },
+    "standard_boost": {
+        "name": "标准强化剂", "emoji": "🧪", "price": 40,
+        "buff": 15, "hours": 24, "crash": 4,
+        "hint": "正经手艺提的。副作用轻，但别指望白坐车。",
+    },
+    "refined_extract": {
+        "name": "精制提取物", "emoji": "💠", "price": 90,
+        "buff": 20, "hours": 24, "crash": 0,
+        "hint": "晏安自己那套流程出的。没有副作用——只有价格。",
+    },
+}
+
 # ── 黑市价格 ──────────────────────────────────────────────
 # 实价 = base × 倍率区间(按层) × 影信系数(undertide_config.UT_REP_TIERS)
 LAYER_MULT = {"common": 1.4, "linked": 1.6, "rare": 1.8}

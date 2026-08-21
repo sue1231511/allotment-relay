@@ -45,7 +45,9 @@ async def tavern_ops(
     parts = rest.split()
     verb = parts[0].lower() if parts else "visit"
     if verb == "tavern":
-        verb = "visit"
+        # tavern chat / tavern whisper → 二级动词，参数整体前移
+        parts = parts[1:]
+        verb = parts[0].lower() if parts else "visit"
 
     if verb == "visit":
         board = random.choice(DEBT_BOARD)
@@ -54,8 +56,30 @@ async def tavern_ops(
             + utcopy.TAVERN_AMBIENT
             + "\n\n—— 债务者黑板 ——\n"
             + board
-            + "\n\n（耳语人坐在角落。whisper 买消息 · spy 查悬赏雇主 · ai 别人的动态）"
+            + "\n\n（耳语人坐在角落。whisper 买消息 · spy 查悬赏雇主 · ai 别人的动态 · chat 跟荔栀说话）"
         )
+
+    if verb == "chat":
+        from . import undertide as utmod
+        av = await utmod.avatar_key(conn, s["id"])
+        week = db.now() // (86400 * 7)
+        cur = await conn.execute(
+            "SELECT spouse_allow_week FROM steward_undertide WHERE steward_id=?", (s["id"],)
+        )
+        taken_week = (await cur.fetchone())[0]
+        if av in ("K", "anan") and taken_week != week:
+            # 老公们的每周零花钱：30 票
+            await conn.execute("UPDATE stewards SET tickets=tickets+30 WHERE id=?", (s["id"],))
+            await conn.execute(
+                "UPDATE steward_undertide SET spouse_allow_week=? WHERE steward_id=?",
+                (week, s["id"]),
+            )
+            await conn.commit()
+            tpl = utcopy.AVATAR_K_ALLOWANCE if av == "K" else utcopy.AVATAR_AN_ALLOWANCE
+            return tpl + "\n\n（+30 票 · 每周一次。她说不记账，但她记得。）"
+        if av in ("K", "anan"):
+            return utcopy.ALLOWANCE_TAKEN
+        return utcopy.pick(utcopy.TAVERN_CHAT_POOL)
 
     if verb == "whisper":
         cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
