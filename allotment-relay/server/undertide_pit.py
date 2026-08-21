@@ -28,8 +28,37 @@ async def _ensure_fighters(conn: aiosqlite.Connection) -> None:
         await conn.commit()
 
 
+async def pit_record(
+    conn: aiosqlite.Connection, steward_id: int, kind: str, outcome: str, opponent: str = ""
+) -> None:
+    """写战绩（角斗/强买/强卖/劫持/悬赏take都记）。"""
+    await conn.execute(
+        "INSERT INTO pit_log (steward_id, kind, outcome, opponent, created_at) VALUES (?,?,?,?,?)",
+        (steward_id, kind, outcome, opponent, db.now()),
+    )
+
+
+async def pit_fight_count(conn: aiosqlite.Connection, steward_id: int) -> int:
+    """总场次（胜负都算——挨打也是经验）。"""
+    row = await (await conn.execute(
+        "SELECT COUNT(*) FROM pit_log WHERE steward_id=? AND kind IN ('pit','hijack','muscle','push','bounty')",
+        (steward_id,),
+    )).fetchone()
+    return int(row[0])
+
+
+async def pit_rank(conn: aiosqlite.Connection, steward_id: int) -> tuple[str, int, int]:
+    """返回 (称号, 战力加成, 总场次)。"""
+    n = await pit_fight_count(conn, steward_id)
+    label, bonus = "没下过坑的人", 0
+    for floor, lab, bo in utcfg.PIT_RANKS:
+        if n >= floor:
+            label, bonus = lab, bo
+    return label, bonus, n
+
+
 async def combat_power(conn: aiosqlite.Connection, steward: dict[str, Any]) -> int:
-    """玩家战力 = (body+药buff)/100×30 + energy/100×15 + 1d20。"""
+    """玩家战力 = (body+药buff)/100×30 + energy/100×15 + 战绩等级加成 + 1d20。"""
     cur = await conn.execute("SELECT health, energy FROM stewards WHERE id=?", (steward["id"],))
     row = await cur.fetchone()
     health, energy = row[0], row[1]
@@ -40,7 +69,8 @@ async def combat_power(conn: aiosqlite.Connection, steward: dict[str, Any]) -> i
     drow = await cur.fetchone()
     if drow and drow[1] and db.now() < int(drow[1]):
         health = min(130, health + int(drow[0] or 0))  # 药可超100，封顶130
-    return int(health / 100 * 30 + energy / 100 * 15 + random.randint(1, 20))
+    _, rank_bonus, _ = await pit_rank(conn, steward["id"])
+    return int(health / 100 * 30 + energy / 100 * 15 + rank_bonus + random.randint(1, 20))
 
 
 STRATEGY_BEATS = {"attack": "feint", "guard": "attack", "feint": "guard"}
@@ -77,6 +107,17 @@ async def pit_ops(
                 f"  Lv{r['level']} {r['name']} — 入场 {entry} · 胜奖 {prize} · "
                 f"战绩 {r['wins']}胜{r['losses']}负\n    {r['flavor']}"
             )
+        lines.append("")
+        # 看门人认得你：战绩等级展示
+        rank_label, rank_bonus, fights = await pit_rank(conn, s["id"])
+        if fights == 0:
+            lines.append("看门人扫了你一眼，没说话。第一场还没打的人，不值得开口。")
+        elif fights < 10:
+            lines.append(f"看门人认出了你：「{fights} 场了。手还生。」（战绩加成 +{rank_bonus}）")
+        elif fights < 100:
+            lines.append(f"看门人朝你点了一下头——那是给熟人的。{fights} 场，「{rank_label}」。（战绩加成 +{rank_bonus}）")
+        else:
+            lines.append(f"看门人站了起来。{fights} 场——「墙上，你的位置留着。」（战绩加成 +{rank_bonus}，封顶）")
         lines.append("")
         lines.append(utcopy.PIT_STRATEGY_HINT)
         lines.append("fight 斗士名 [attack|guard|feint] — 下坑")
@@ -177,6 +218,7 @@ async def pit_ops(
             "undertide", f"{s['name']} 在深坑{'胜' if diff >= 0 else '败'}于 {row['name']}",
             s["id"], conn=conn,
         )
+        await pit_record(conn, s["id"], "pit", "win" if diff >= 0 else "lose", row["name"])
         await conn.commit()
         return "\n".join(lines)
 

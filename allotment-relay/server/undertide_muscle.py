@@ -108,7 +108,8 @@ async def _my_power(conn: aiosqlite.Connection, steward_id: int) -> int:
     drow = await cur.fetchone()
     if drow and drow[1] and _db.now() < int(drow[1]):
         health = min(130, health + int(drow[0] or 0))
-    return int(health / 100 * 30 + energy / 100 * 15 + random.randint(1, 20))
+    _, rank_bonus, _ = await undertide_pit.pit_rank(conn, steward_id)
+    return int(health / 100 * 30 + energy / 100 * 15 + rank_bonus + random.randint(1, 20))
 
 
 async def muscle_ops(
@@ -177,6 +178,8 @@ async def muscle_ops(
             await utmod._bump_rep(conn, s["id"], -5)
             lines.append(utcopy.pick(utcopy.MUSCLE_FAIL).format(npc=npc["name"]))
             lines.append(f"\n（没拿到货 · 被反抢 {steal} 票 · 影信 −5）")
+        from . import undertide_pit as _upt
+        await _upt.pit_record(conn, s["id"], "muscle", "win" if margin >= 0 else "lose", npc["name"])
         await conn.commit()
         return "\n".join(lines)
 
@@ -232,6 +235,8 @@ async def muscle_ops(
             await utmod._bump_rep(conn, s["id"], -4)
             lines = [utcopy.pick(utcopy.PUSH_FAIL).format(npc=npc["name"])]
             lines.append("\n（货还在你手里 · 影信 −4）")
+        from . import undertide_pit as _upt2
+        await _upt2.pit_record(conn, s["id"], "push", "win" if win else "lose", npc["name"])
         await conn.commit()
         return "\n".join(lines)
 
@@ -419,6 +424,10 @@ async def hijack_ops(
         "INSERT INTO ut_hijack_log (steward_id, day_id, target, outcome) VALUES (?,?,?,?)",
         (s["id"], day, target, outcome),
     )
+    # 普通劫持计入战绩（猫猫/荔栀特例不计——那不是打架是作死）
+    if target not in ("猫猫", "猫猫老板娘", "恶猫钱庄老板娘", "荔栀", "老板娘", "lizhi"):
+        from . import undertide_pit as _upt3
+        await _upt3.pit_record(conn, s["id"], "hijack", "win" if outcome in ("clean","hurt_npc","hurt_self") else "lose", target)
     await conn.commit()
     lines.append(note)
     return "\n".join(lines)
