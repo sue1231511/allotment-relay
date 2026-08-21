@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""潮闻 — 故事探索任务：接取、探索推进、物品推进、交付领奖、放弃、完成榜。"""
+"""潮闻：接取、探索推进、交付领奖、永久纪念品、放弃、完成榜。"""
 from __future__ import annotations
 
 import asyncio
@@ -46,6 +46,11 @@ async def test_tale_flow() -> None:
     lst = await tale.tale_ops(kid, "list")
     assert "black_box_lover" in lst, lst
     assert "黑盒与潮声" in lst, lst
+    assert "工分票+30" in lst, lst
+    assert "永久纪念品" in lst, lst
+
+    empty_souvenirs = await tale.tale_ops(kid, "souvenirs")
+    assert "还是空的" in empty_souvenirs, empty_souvenirs
 
     # accept 后 status 显示阶段1
     accepted = await tale.tale_ops(kid, "accept black_box_lover")
@@ -101,6 +106,21 @@ async def test_tale_flow() -> None:
     assert "已完成" in finish, finish
     assert "最后一封信" in finish, finish
     assert "工分票 +30" in finish, finish
+    assert "野薄荷 x2" in finish, finish
+    assert "停在六月的小猪闹钟" in finish, finish
+    assert "潮闻收藏册" in finish, finish
+
+    async with db.connect() as conn:
+        row = await (await conn.execute(
+            "SELECT quantity FROM satchel WHERE steward_id=? AND item='wild_mint'",
+            (sid,),
+        )).fetchone()
+    assert row and row[0] == 2, row
+
+    souvenirs = await tale.tale_ops(kid, "纪念品")
+    assert "停在六月的小猪闹钟" in souvenirs, souvenirs
+    assert "黑盒与潮声" in souvenirs, souvenirs
+    assert "不能出售或赠送" in souvenirs, souvenirs
 
     # 重复接取被挡
     try:
@@ -157,6 +177,8 @@ def test_tale_mcp_description() -> None:
     )
     assert "潮闻" in blob
     assert "black_box_lover" in blob
+    assert "souvenirs" in blob
+    assert "纪念品" in blob
 
 
 def main() -> None:

@@ -155,6 +155,8 @@ def test_relay_manual_covers_systems() -> None:
         "真人在面板",
         "tale_ops",
         "accept black_box_lover",
+        "souvenirs",
+        "永久纪念品",
     ]
     missing = [n for n in needles if n not in text]
     assert not missing, f"relay_manual missing: {missing}"

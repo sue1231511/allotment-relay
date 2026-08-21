@@ -6,6 +6,8 @@
   deliver — 手动 tale_ops turnin 交付物品领奖
   choice  — 分支选择
 
+完成奖励会自动到账；纪念品由完成记录永久解锁，可用 tale_ops souvenirs 查看。
+
 任务目录以静态数据形式维护，启动时刷入 tale_catalog 表，便于后续热更。
 """
 
@@ -28,6 +30,7 @@ TALE_HELP = """tale_ops 子命令（整句写进 command）：
   turnin — 交付并领奖
   abandon 任务key — 放弃
   board — 完成榜
+  souvenirs — 查看已解锁的永久纪念品（不占行囊，不能出售或赠送）
   help — 本帮助"""
 
 DOMAIN_LABELS = {
@@ -290,7 +293,13 @@ TALE_CATALOG: list[dict[str, Any]] = [
             "tickets": 30,
             "standing": 5,
             "mist_wit": 5,
-            "items": {},
+            "items": {"wild_mint": 2},
+            "souvenir": {
+                "key": "pig_clock_june",
+                "name": "停在六月的小猪闹钟",
+                "emoji": "🐷",
+                "description": "屏幕仍亮着六月的那一天。靠近时，仿佛还能读到一句：静漪，开心。",
+            },
         },
     }
 ]
@@ -527,6 +536,29 @@ async def _grant_rewards(
     return lines
 
 
+def _reward_preview(rewards: dict[str, Any]) -> str:
+    """接取前可见的结算奖励；纪念品内容完成后才揭晓。"""
+    parts: list[str] = []
+    for key, label in (
+        ("tickets", "工分票"),
+        ("standing", "档信"),
+        ("mist_wit", "雾智"),
+        ("xp", "经验"),
+    ):
+        value = int(rewards.get(key) or 0)
+        if value:
+            parts.append(f"{label}+{value}")
+    for item, qty in rewards.get("items", {}).items():
+        parts.append(f"{ITEM_NAMES.get(item, item)}×{qty}")
+    if rewards.get("souvenir"):
+        parts.append("永久纪念品×1（完成后揭晓）")
+    return " · ".join(parts) or "无"
+
+
+def _souvenir_line(souvenir: dict[str, Any]) -> str:
+    return f"{souvenir.get('emoji', '🎁')}{souvenir['name']}"
+
+
 async def _advance(
     conn: aiosqlite.Connection,
     steward: dict[str, Any],
@@ -589,7 +621,13 @@ async def _advance(
             """,
             (steward["id"], tale["key"], ts),
         )
-        reward_lines = await _grant_rewards(conn, steward, tale.get("rewards", {}))
+        rewards = tale.get("rewards", {})
+        reward_lines = await _grant_rewards(conn, steward, rewards)
+        souvenir = rewards.get("souvenir")
+        if souvenir:
+            reward_lines.append(
+                f"永久纪念品：{_souvenir_line(souvenir)}（已收入潮闻收藏册）"
+            )
         await db.add_chronicle(
             "tale", f"{steward['name']} 完成潮闻「{tale['title']}」", steward["id"], conn=conn
         )
@@ -683,6 +721,7 @@ async def _cmd_list(conn: aiosqlite.Connection, steward: dict[str, Any]) -> str:
     else:
         for tale in available:
             lines.append(f"  {tale['key']} — {tale['title']}（{tale['intro']}）")
+            lines.append(f"    完成奖励：{_reward_preview(tale.get('rewards', {}))}")
     if active:
         catalog = await _catalog(conn)
         lines.append("\n进行中的任务：")
@@ -718,7 +757,8 @@ async def _cmd_status(conn: aiosqlite.Connection, steward: dict[str, Any]) -> st
         lines.append(
             f"«{tale['title']}» 阶段 {p['stage_idx'] + 1}/{len(tale['stages'])}\n"
             f"当前：{stage['title']}\n"
-            f"{stage['hint']}"
+            f"{stage['hint']}\n"
+            f"完成奖励：{_reward_preview(tale.get('rewards', {}))}"
         )
     return "\n\n".join(lines)
 
@@ -815,6 +855,38 @@ async def _cmd_board(conn: aiosqlite.Connection, steward: dict[str, Any]) -> str
     for i, r in enumerate(rows, 1):
         lines.append(f"  {i}. {r['name']} — 完成 {r['count']} 个")
     return "\n".join(lines)
+
+
+async def _cmd_souvenirs(conn: aiosqlite.Connection, steward: dict[str, Any]) -> str:
+    catalog = await _catalog(conn)
+    conn.row_factory = aiosqlite.Row
+    rows = await (await conn.execute(
+        """
+        SELECT tale_key, completed_at
+        FROM steward_tales_done
+        WHERE steward_id=? AND outcome='completed'
+        ORDER BY completed_at, tale_key
+        """,
+        (steward["id"],),
+    )).fetchall()
+    entries: list[str] = []
+    for row in rows:
+        tale = catalog.get(row["tale_key"])
+        if not tale:
+            continue
+        souvenir = tale.get("rewards", {}).get("souvenir")
+        if not souvenir:
+            continue
+        entries.append(
+            f"  {_souvenir_line(souvenir)} · 来自「{tale['title']}」\n"
+            f"    {souvenir['description']}"
+        )
+    if not entries:
+        return "潮闻收藏册还是空的。完成带纪念品的潮闻后会永久收录在这里。"
+    return (
+        f"潮闻收藏册 · {len(entries)} 件（不占行囊，不能出售或赠送）：\n"
+        + "\n".join(entries)
+    )
 
 
 # ══ 外部钩子 ═══════════════════════════════════════════════════
@@ -915,5 +987,7 @@ async def tale_ops(key_id: int, command: str) -> str:
             return await _cmd_abandon(conn, s, rest)
         if verb in ("board", "榜"):
             return await _cmd_board(conn, s)
+        if verb in ("souvenirs", "souvenir", "纪念品", "收藏册", "藏品"):
+            return await _cmd_souvenirs(conn, s)
 
     raise ValueError(f"未知 tale 指令: {command}\n{TALE_HELP}")

@@ -71,7 +71,7 @@ mcp = MCPServer(
         "新号必须先 steward_ops enroll 名字。"
         "找人用 steward_ops 邻居。全服票榜/等级榜是 steward_ops board；alliance_ops board 是周目标贡献榜。"
         "bar_ops cheer 哄荔栀；undertide_ops cheer 哄潮下猫猫；star_ops 应援 哄小橘，三套互不占用。"
-        "潮闻故事任务：tale_ops list / accept black_box_lover / status / explore beach / turnin。"
+        "潮闻故事任务：tale_ops list / accept black_box_lover / status / explore beach / turnin / souvenirs。"
         "回精力：kitchen_ops eat。作物/生鱼/野薄荷生吃安全；只有生肉可能感染，visit_ops clinic treat infection。"
     ),
 )
@@ -174,9 +174,9 @@ async def star_ops(
     return await star.star_ops(_kid(), command)
 
 
-@mcp.tool(description="潮闻 — 故事探索任务。command 写一整句。例子：list · accept black_box_lover · status · explore beach · turnin。空 command=可接任务列表。地点行动或取得指定物品也可推进；不会就 help。")
+@mcp.tool(description="潮闻 — 故事探索任务。完成会自动发工分票、属性、物品，并永久解锁不占行囊的纪念品。例子：list · accept black_box_lover · souvenirs。空 command=可接任务与奖励预览。地点行动或取得指定物品也可推进；不会就 help。")
 async def tale_ops(
-    command: Annotated[str, Field(description="子命令整句。list / accept 任务key / status / explore [地点] / turnin / abandon 任务key / board / help。空=list；explore 耗 5 精力，每日 3 次。不要和 visit_ops lore 混淆。")] = "list",
+    command: Annotated[str, Field(description="子命令整句。list / accept 任务key / status / explore [地点] / turnin / abandon 任务key / board / souvenirs / help。空=list（含奖励预览）；souvenirs=永久纪念品收藏册。explore 耗 5 精力，每日 3 次。不要和 visit_ops lore 混淆。")] = "list",
 ) -> str:
     from . import tale
     return await tale.tale_ops(_kid(), command)
