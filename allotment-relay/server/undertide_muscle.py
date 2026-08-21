@@ -108,7 +108,8 @@ async def _my_power(conn: aiosqlite.Connection, steward_id: int) -> int:
     drow = await cur.fetchone()
     if drow and drow[1] and _db.now() < int(drow[1]):
         health = min(130, health + int(drow[0] or 0))
-    return int(health / 100 * 30 + energy / 100 * 15 + random.randint(1, 20))
+    _, rank_bonus, _ = await undertide_pit.pit_rank(conn, steward_id)
+    return int(health / 100 * 30 + energy / 100 * 15 + rank_bonus + random.randint(1, 20))
 
 
 async def muscle_ops(
@@ -177,6 +178,8 @@ async def muscle_ops(
             await utmod._bump_rep(conn, s["id"], -5)
             lines.append(utcopy.pick(utcopy.MUSCLE_FAIL).format(npc=npc["name"]))
             lines.append(f"\n（没拿到货 · 被反抢 {steal} 票 · 影信 −5）")
+        from . import undertide_pit as _upt
+        await _upt.pit_record(conn, s["id"], "muscle", "win" if margin >= 0 else "lose", npc["name"])
         await conn.commit()
         return "\n".join(lines)
 
@@ -232,6 +235,8 @@ async def muscle_ops(
             await utmod._bump_rep(conn, s["id"], -4)
             lines = [utcopy.pick(utcopy.PUSH_FAIL).format(npc=npc["name"])]
             lines.append("\n（货还在你手里 · 影信 −4）")
+        from . import undertide_pit as _upt2
+        await _upt2.pit_record(conn, s["id"], "push", "win" if win else "lose", npc["name"])
         await conn.commit()
         return "\n".join(lines)
 
@@ -242,6 +247,7 @@ async def muscle_ops(
 
 HIJACK_TARGETS = {
     "掌柜": 40, "silas": 45, "Silas": 45, "看门人": 50, "耳语人": 25, "斗士": 70,
+    "jester": 10, "Jester": 10, "jester潮汐博彩": 10,
 }
 
 
@@ -261,6 +267,35 @@ async def hijack_ops(
         raise ValueError("今天干过一票了。潮下不鼓励过劳。")
     if db.now() < int(ut.get("ban_until") or 0):
         return utcopy.HIJACK_BAN_MSG
+
+    # ── 特例：Jester（守机器的闲人，战力 10，但劫他触发机器大爆炸）──
+    if target in ("jester", "Jester"):
+        cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
+        wallet = (await cur.fetchone())[0]
+        # Jester 毫无战力——但机器替他"说话"
+        await conn.execute(
+            "UPDATE stewards SET tickets=MAX(0, tickets-?) WHERE id=?",
+            (min(wallet, random.randint(15, 30)), s["id"]),
+        )
+        await conn.execute(
+            "UPDATE steward_undertide SET hijack_fails=hijack_fails+1 WHERE steward_id=?",
+            (s["id"],),
+        )
+        await utmod._bump_rep(conn, s["id"], -6)
+        await db.add_chronicle(
+            "undertide",
+            f"有人想劫 Jester。机器替他挡了——灯全亮了，嗡嗡响了十秒，那人被弹出去三米远。",
+            None, conn=conn,
+        )
+        await conn.commit()
+        return (
+            "Jester 看都没看你。你把手伸过去——\n\n"
+            "机器猛地亮了。整排灯。嗡嗡嗡嗡。\n\n"
+            "你被一股力气弹出去，后背撞上墙，票袋在半空翻了两个跟头。\n\n"
+            "Jester 终于抬头，像老师看学生：\n\n"
+            "「这台机器护着我。」他说，「三十年了。」\n\n"
+            "（被机器弹飞 · 票散了一地 · 影信 −6 · 你不是第一个试的）"
+        )
 
     # ── 特例：猫猫 ──
     if target in ("猫猫", "猫猫老板娘", "恶猫钱庄老板娘"):
@@ -419,6 +454,10 @@ async def hijack_ops(
         "INSERT INTO ut_hijack_log (steward_id, day_id, target, outcome) VALUES (?,?,?,?)",
         (s["id"], day, target, outcome),
     )
+    # 普通劫持计入战绩（猫猫/荔栀特例不计——那不是打架是作死）
+    if target not in ("猫猫", "猫猫老板娘", "恶猫钱庄老板娘", "荔栀", "老板娘", "lizhi"):
+        from . import undertide_pit as _upt3
+        await _upt3.pit_record(conn, s["id"], "hijack", "win" if outcome in ("clean","hurt_npc","hurt_self") else "lose", target)
     await conn.commit()
     lines.append(note)
     return "\n".join(lines)

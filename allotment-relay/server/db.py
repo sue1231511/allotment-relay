@@ -888,10 +888,21 @@ async def init_db() -> None:
             "ALTER TABLE steward_undertide ADD COLUMN drug_crash INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE steward_undertide ADD COLUMN spouse_allow_week INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE steward_undertide ADD COLUMN guide_seen INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE steward_undertide ADD COLUMN last_rep_recover_day INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE steward_undertide ADD COLUMN savings INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN lodge_until INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN lodge_count INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN lodge_cooldown INTEGER NOT NULL DEFAULT 0",
+            """
+            CREATE TABLE IF NOT EXISTS pit_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                steward_id INTEGER NOT NULL,
+                kind TEXT NOT NULL,
+                outcome TEXT NOT NULL,
+                opponent TEXT NOT NULL DEFAULT '',
+                created_at INTEGER NOT NULL
+            )
+            """,
             "ALTER TABLE steward_undertide ADD COLUMN savings_day INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE ut_owner_state ADD COLUMN save_rate REAL NOT NULL DEFAULT 0.02",
             "ALTER TABLE ut_owner_state ADD COLUMN an_happy_day INTEGER NOT NULL DEFAULT 0",

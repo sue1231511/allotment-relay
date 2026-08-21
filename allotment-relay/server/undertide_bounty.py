@@ -308,6 +308,8 @@ async def bounty_ops(
                 f"{utcopy.pick(utcopy.BOUNTY_FIGHT_MID)}\n\n"
                 f"{utcopy.pick(utcopy.BOUNTY_FIGHT_END)}"
             )
+            from . import undertide_pit as _upt5
+            await _upt5.pit_record(conn, s["id"], "bounty", "win", b["target_name"])
             return (
                 fight_story + "\n\n——\n\n"
                 + "\n".join(effect_lines)
@@ -319,6 +321,8 @@ async def bounty_ops(
             "UPDATE stewards SET health=MAX(0,health-?) WHERE id=?",
             (random.randint(10, 15), s["id"]),
         )
+        from . import undertide_pit as _upt4
+        await _upt4.pit_record(conn, s["id"], "bounty", "lose", b["target_name"])
         await conn.commit()
         return (
             "你找错了人。练家子不好打——这句话你现在用身体理解了。\n\n"
