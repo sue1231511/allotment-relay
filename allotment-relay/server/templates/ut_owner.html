@@ -29,6 +29,15 @@
   <p class="note">生效即时全服统一；在途借单剩余天数按新旧利率较高者计。</p>
 </div>
 <div class="card">
+  <h1>💰 存款利率</h1>
+  <h2>钱放着也是放着</h2>
+  <p>当前存款利率：<b>{{ save_rate }}%</b>/日（T+1起息，复利滚入）</p>
+  <label>存款利率（1 ~ 5 %/日）</label>
+  <input id="save_rate" type="number" min="1" max="5" value="{{ save_rate }}">
+  <button onclick="setSaveRate()">定存款利率</button>
+  <span id="smsg" class="ok"></span>
+</div>
+<div class="card">
   <h1>🗣 今日谁在哄你</h1>
   {% if not proposals %}<p class="note">还没人说话。小八在打盹。</p>{% endif %}
   {% for p in proposals %}
@@ -48,6 +57,12 @@ async function setRate(){
   const j = await r.json();
   document.getElementById('msg').textContent = j.ok ? '已生效 ' + j.rate + '%' : (j.detail||'失败');
   if(j.ok) document.getElementById('cur').textContent = j.rate + '%';
+}
+async function setSaveRate(){
+  const r = await fetch('/api/ut-owner/save-rate', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({key:KEY, save_rate:+document.getElementById('save_rate').value})});
+  const j = await r.json();
+  document.getElementById('smsg').textContent = j.ok ? '已生效 ' + j.save_rate + '%' : (j.detail||'失败');
 }
 async function cheer(id, action){
   const r = await fetch('/api/ut-owner/cheer', {method:'POST', headers:{'Content-Type':'application/json'},

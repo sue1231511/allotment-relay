@@ -235,6 +235,7 @@ async def ut_owner_page(request: Request, key: str = ""):
         day = db.now() // 86400
         rate = float(row[1]) if row and int(row[3]) == day else uc.UT_RATE_BASE
         reason = row[2] if row else ""
+        save_rate = float(row[6]) if row and len(row) > 6 and row[6] else uc.UT_SAVE_RATE_BASE
         props = await (await conn.execute(
             "SELECT p.id, s.name, p.reason, p.created_at FROM ut_mood_proposals p "
             "JOIN stewards s ON s.id = p.steward_id "
@@ -242,7 +243,34 @@ async def ut_owner_page(request: Request, key: str = ""):
         )).fetchall()
     return templates.TemplateResponse(request, "ut_owner.html", {
         "rate": int(rate * 100), "reason": reason, "proposals": props, "key": key,
+        "save_rate": int(save_rate * 100),
     })
+
+
+@app.post("/api/ut-owner/save-rate")
+async def ut_owner_save_rate(request: Request):
+    import json as _json
+    from .undertide_config import UT_OWNER_KEY
+    body = _json.loads(await request.body())
+    if not _owner_ok(body.get("key", ""), UT_OWNER_KEY):
+        return JSONResponse({"detail": "凭证不对"}, status_code=401)
+    from .undertide_config import UT_SAVE_RATE_MIN, UT_SAVE_RATE_MAX
+    save_rate = max(int(UT_SAVE_RATE_MIN * 100), min(int(UT_SAVE_RATE_MAX * 100), int(body.get("save_rate", 2))))
+    from . import db
+    day = db.now() // 86400
+    async with db.connect() as conn:
+        await conn.execute(
+            "INSERT INTO ut_owner_state (id, save_rate, rate_day, updated_at) VALUES (1,?,?,?) "
+            "ON CONFLICT(id) DO UPDATE SET save_rate=?, updated_at=?",
+            (save_rate / 100, day, db.now(), save_rate / 100, db.now()),
+        )
+        await db.add_chronicle(
+            "undertide",
+            f"恶猫钱庄今日存款利率：{save_rate}%。钱放着也是放着。",
+            None, conn=conn,
+        )
+        await conn.commit()
+    return {"ok": True, "save_rate": save_rate}
 
 
 @app.post("/api/ut-owner")

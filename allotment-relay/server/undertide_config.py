@@ -39,6 +39,13 @@ UT_LOAN_MAX_DAYS = 7
 UT_LOAN_CAP = 200            # min(200, shadow_rep × 3)
 UT_LOAN_CONCURRENT = 2
 
+# ── 存款（黑心银行：借 10% 存 2%）──
+UT_SAVE_RATE_BASE = 0.02     # 基准日利率（猫猫面板可调 1%~5%）
+UT_SAVE_RATE_MIN = 0.01
+UT_SAVE_RATE_MAX = 0.05
+UT_SAVE_CAP = 500            # 硬上限
+UT_SAVE_CAP_PER_REP = 5      # 影信 × 5
+
 # ── 地下监牢 ──────────────────────────────────────────────
 UT_JAIL_BUSTED_TRIGGER = 5   # 案底触发线
 UT_JAIL_RANSOM_PER_COUNT = 15
