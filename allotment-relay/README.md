@@ -24,6 +24,8 @@ python run.py
 
 树（青柠/木瓜/香蕉/芒果/椰子/榴莲）收完会再长；清地 `plot_ops chop 地块`，不必等过熟堆肥。
 
+渔排多池：`tide_ops pen stock herring 2` / `feed 2` / `harvest 2` / `label 2 薄荷池`。不写池号会优先找空池。
+
 买地：`plot_ops 买地` 看现有块数/价钱/开垦时间，`plot_ops 买地 确认` 付钱。起步 3 块，最多 8 块。
 
 厨房可自由组合：`kitchen_ops cook 材料1 材料2`，按星级卖；垃圾菜几乎没价。定点菜仍 `cook 菜名`。

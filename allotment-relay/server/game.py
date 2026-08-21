@@ -161,6 +161,7 @@ async def relay_manual() -> str:
         "",
         "【水陆生产】",
         "  tide_ops pen / voyage — 渔排养鱼、购船出海",
+        "  多池: stock herring 2 · feed 2 · harvest 2 · label 2 薄荷池；不写池号会选空池/待投饵/可收",
         f"徽章可选：{', '.join(BADGES)}",
     ])
 
@@ -250,9 +251,8 @@ async def steward_sheet(key_id: int) -> str:
         lines.append(f"小馆: {s.get('eatery_label') or s['name']+'的馆'}（kitchen_ops shop menu）")
     async with db.connect() as conn:
         conn.row_factory = aiosqlite.Row
-        pen = await (await conn.execute(
-            "SELECT * FROM fish_pens WHERE steward_id=? AND slot=1", (s["id"],)
-        )).fetchone()
+        from . import marine as marine_mod
+        pens = await marine_mod._list_pens(conn, s["id"])
         voyage = await (await conn.execute(
             """
             SELECT route, returns_at, status FROM voyages
@@ -260,10 +260,10 @@ async def steward_sheet(key_id: int) -> str:
             """,
             (s["id"],),
         )).fetchone()
-    if pen:
-        from .marine import _pen_line
+    if pens:
         lines.append("渔排:")
-        lines.append(_pen_line(dict(pen)))
+        for pen in pens:
+            lines.append(marine_mod._pen_line(pen))
     if voyage:
         from .config import VOYAGE_ROUTES
         if voyage["status"] == "hailed":

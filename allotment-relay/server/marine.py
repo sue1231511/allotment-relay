@@ -1,12 +1,13 @@
 import json
 import random
+import re
 from typing import Any
 
 import aiosqlite
 
 from . import db, events, event_gen, flavor, shaonian as shaonian_mod, world
 from . import commons
-from .catalog import ITEM_NAMES, SEA_CATCH, voyage_loot_table
+from .catalog import ITEM_NAMES, SEA_CATCH, pen_species_keys, resolve_item_key, voyage_loot_table
 from .config import (
     BOATS,
     HAIL_BRIBE,
@@ -40,10 +41,16 @@ def _pen_ready(pen: dict) -> bool:
     return db.now() - pen["stocked_at"] >= _pen_grow(pen["species"], bool(pen.get("fed")))
 
 
+def _pen_tag(pen: dict) -> str:
+    slot = pen["slot"]
+    custom = (pen.get("pen_label") or "").strip()
+    return f"#{slot} {custom}" if custom else f"#{slot}"
+
+
 def _pen_line(pen: dict) -> str:
-    label = pen.get("pen_label") or f"#{pen['slot']}"
+    tag = _pen_tag(pen)
     if not pen.get("species"):
-        return f"  {label}: 空池"
+        return f"  {tag}: 空池"
     spec = SEA_CATCH[pen["species"]]
     if _pen_ready(pen):
         state = "可收"
@@ -51,7 +58,92 @@ def _pen_line(pen: dict) -> str:
         state = "放养"
     else:
         state = "待投饵"
-    return f"  {label}: {spec['emoji']}{spec['name']}（{state}）"
+    return f"  {tag}: {spec['emoji']}{spec['name']}（{state}）"
+
+
+_SLOT_TOKEN = re.compile(
+    r"^(?:#|第|池|pool)?(\d+)(?:号池|号|池)?$",
+    re.IGNORECASE,
+)
+
+
+def _parse_slot_token(tok: str) -> int | None:
+    raw = (tok or "").strip()
+    if not raw:
+        return None
+    m = _SLOT_TOKEN.fullmatch(raw)
+    if not m:
+        return None
+    n = int(m.group(1))
+    return n if n >= 1 else None
+
+
+def _extract_slot_and_rest(tokens: list[str]) -> tuple[int | None, list[str]]:
+    """从参数里抽出可选池号；多出来的数字（数量）丢掉。"""
+    slot: int | None = None
+    leftover: list[str] = []
+    for tok in tokens:
+        n = _parse_slot_token(tok)
+        if n is not None:
+            if slot is None:
+                slot = n
+            continue
+        leftover.append(tok)
+    return slot, leftover
+
+
+def _resolve_pen_species(raw: str) -> str:
+    s = (raw or "").strip()
+    if not s:
+        return ""
+    low = s.lower().replace(" ", "_")
+    if low.startswith("fish_"):
+        low = low[5:]
+    if low in SEA_CATCH:
+        return low
+    compact = low.replace("_", "")
+    if compact in SEA_CATCH:
+        return compact
+    for key, meta in SEA_CATCH.items():
+        if meta.get("name") == s:
+            return key
+    item = resolve_item_key(s)
+    if item and item.startswith("fish_"):
+        return item[5:]
+    return low
+
+
+def _unfarmable_message(species: str) -> str:
+    farmable = ", ".join(pen_species_keys())
+    if species in SEA_CATCH and not SEA_CATCH[species].get("pen"):
+        meta = SEA_CATCH[species]
+        item = f"fish_{species}"
+        return (
+            f"{meta['emoji']}{meta['name']}（{item}）不能投进渔排，建议卖掉或吃掉："
+            f"tote_ops vend {item} · kitchen_ops eat {item}。"
+            f"可养品种: {farmable}"
+        )
+    return f"可养品种: {farmable}"
+
+
+def _pen_usage() -> str:
+    return "用法: pen stock herring 2 · pen feed 2 · pen harvest 2 · pen label 2 薄荷池"
+
+
+async def _require_owned_pen(
+    conn: aiosqlite.Connection, steward_id: int, slot: int
+) -> dict[str, Any]:
+    pens = await _list_pens(conn, steward_id)
+    if not pens:
+        raise ValueError("先 erect 渔排")
+    pen = await _get_pen(conn, steward_id, slot)
+    if not pen:
+        raise ValueError(
+            f"没有第{slot}池。当前 {len(pens)} 口。"
+            f"{' pen expand 扩池。' if len(pens) < MAX_FISH_PENS else ' '}"
+            f"{_pen_usage()}"
+        )
+    return pen
 
 
 async def _list_pens(conn: aiosqlite.Connection, steward_id: int) -> list[dict[str, Any]]:
@@ -263,8 +355,9 @@ async def _refresh_steward(conn: aiosqlite.Connection, steward_id: int) -> dict[
 
 async def pen_ops(key_id: int, command: str) -> str:
     s = await require_steward(key_id)
-    parts = command.strip().split(maxsplit=2)
+    parts = command.strip().split()
     verb = parts[0].lower() if parts else "status"
+    args = parts[1:]
 
     if verb == "status":
         async with db.connect() as conn:
@@ -279,8 +372,8 @@ async def pen_ops(key_id: int, command: str) -> str:
                 lines.append(_pen_line(pen))
         else:
             lines.append("渔排: 未搭建（erect）")
-        lines.append(f"扩池: pen_ops expand（第2池 {PEN_EXPAND_COST} 票，最多 {MAX_FISH_PENS} 池）")
-        from .catalog import pen_species_keys
+        lines.append(f"扩池: pen expand（第2池 {PEN_EXPAND_COST} 票，最多 {MAX_FISH_PENS} 池）")
+        lines.append(_pen_usage())
         farmable = pen_species_keys()
         lines.append(f"可养 {len(farmable)} 种: {', '.join(farmable[:8])}{'…' if len(farmable) > 8 else ''}")
         return "\n".join(lines)
@@ -302,7 +395,10 @@ async def pen_ops(key_id: int, command: str) -> str:
             )
             await conn.commit()
         await db.add_chronicle("pen", f"{s['name']} 搭好了渔排", s["id"])
-        return f"渔排就绪（-{PEN_ERECT_COST} 票）。stock 品种名 投苗，feed 投饵，harvest 收网"
+        return (
+            f"渔排就绪（-{PEN_ERECT_COST} 票）。stock 品种名 投苗，feed 投饵，harvest 收网。"
+            f"扩第二池后可写 stock herring 2；不写池号会优先投空池"
+        )
 
     if verb == "expand":
         async with db.connect() as conn:
@@ -318,35 +414,61 @@ async def pen_ops(key_id: int, command: str) -> str:
                 "UPDATE stewards SET tickets=tickets-? WHERE id=?",
                 (PEN_EXPAND_COST, s["id"]),
             )
+            new_slot = len(pens) + 1
             await conn.execute(
                 "INSERT INTO fish_pens (steward_id, slot, pen_label) VALUES (?,?,'')",
-                (s["id"], len(pens) + 1),
+                (s["id"], new_slot),
             )
             await conn.commit()
-        return f"第 {len(pens) + 1} 池渔排就绪（-{PEN_EXPAND_COST} 票）"
+        return (
+            f"第 {new_slot} 池渔排就绪（-{PEN_EXPAND_COST} 票）。"
+            f"投苗: stock herring {new_slot} 或 stock {new_slot} 灰鲱；不写池号会优先投空池"
+        )
 
-    if verb == "label" and len(parts) >= 2:
-        label = " ".join(parts[1:])[:40]
+    if verb == "label":
+        slot, name_parts = _extract_slot_and_rest(args)
+        label = " ".join(name_parts).strip()[:40]
+        if not label:
+            raise ValueError("用法: pen label 薄荷池  或  pen label 2 薄荷池")
+        if slot is None:
+            slot = 1
         async with db.connect() as conn:
-            pen = await _get_pen(conn, s["id"])
-            if not pen:
-                raise ValueError("先 erect 渔排")
+            pen = await _require_owned_pen(conn, s["id"], slot)
             await conn.execute("UPDATE fish_pens SET pen_label=? WHERE id=?", (label, pen["id"]))
             await conn.commit()
-        return f"渔排命名为「{label}」"
+        return f"#{slot} 命名为「{label}」"
 
-    if verb == "stock" and len(parts) >= 2:
-        species = parts[1].lower()
+    if verb == "stock":
+        slot, rest = _extract_slot_and_rest(args)
+        species_raw = " ".join(rest).strip()
+        if not species_raw:
+            raise ValueError("用法: pen stock herring  或  pen stock herring 2  /  pen stock 2 灰鲱")
+        species = _resolve_pen_species(species_raw)
         if species not in SEA_CATCH or not SEA_CATCH[species].get("pen"):
-            pen_keys = [k for k, v in SEA_CATCH.items() if v.get("pen")]
-            raise ValueError(f"可养品种: {', '.join(pen_keys)}")
+            raise ValueError(_unfarmable_message(species or species_raw))
         meta = SEA_CATCH[species]
         async with db.connect() as conn:
-            pen = await _get_pen(conn, s["id"])
-            if not pen:
+            pens = await _list_pens(conn, s["id"])
+            if not pens:
                 raise ValueError("先 erect 渔排")
+            if slot is None:
+                empty = next((p for p in pens if not p.get("species")), None)
+                if empty:
+                    slot = empty["slot"]
+                else:
+                    occupied = "、".join(
+                        f"{_pen_tag(p)} {SEA_CATCH[p['species']]['name']}"
+                        for p in pens if p.get("species")
+                    )
+                    raise ValueError(
+                        f"所有池都有鱼苗（{occupied}）。先 harvest，或 stock {species} 2 指定空池。"
+                    )
+            pen = await _require_owned_pen(conn, s["id"], slot)
             if pen.get("species"):
-                raise ValueError("池中已有鱼苗，先 harvest 或等收网")
+                raise ValueError(
+                    f"{_pen_tag(pen)} 已有鱼苗，先 harvest 或等收网。"
+                    f"空池请写 stock {species} 2"
+                )
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
             if (await cur.fetchone())[0] < meta["stock_tickets"]:
                 raise ValueError(f"投苗需要 {meta['stock_tickets']} 票")
@@ -358,40 +480,76 @@ async def pen_ops(key_id: int, command: str) -> str:
                 "UPDATE fish_pens SET species=?, stocked_at=?, fed=0 WHERE id=?",
                 (species, db.now(), pen["id"]),
             )
-            pen = await _get_pen(conn, s["id"])
+            pen = await _get_pen(conn, s["id"], slot)
             assert pen
             extra = await events.roll_after_action(s, "pen_stock", conn, pen=pen)
             await conn.commit()
-        msg = f"投苗 {meta['emoji']}{meta['name']}（-{meta['stock_tickets']} 票），记得 feed 投饵"
+        msg = (
+            f"投苗到 {_pen_tag(pen)} {meta['emoji']}{meta['name']}"
+            f"（-{meta['stock_tickets']} 票），记得 feed {slot}"
+        )
         return f"{msg}\n{extra}" if extra else msg
 
     if verb == "feed":
+        slot, _rest = _extract_slot_and_rest(args)
         async with db.connect() as conn:
-            pen = await _get_pen(conn, s["id"])
-            if not pen or not pen.get("species"):
-                raise ValueError("空池无法投饵")
+            pens = await _list_pens(conn, s["id"])
+            if not pens:
+                raise ValueError("先 erect 渔排")
+            if slot is None:
+                hungry = next(
+                    (p for p in pens if p.get("species") and not p.get("fed")),
+                    None,
+                )
+                if hungry:
+                    slot = hungry["slot"]
+                else:
+                    occupied = [p for p in pens if p.get("species")]
+                    if not occupied:
+                        raise ValueError("空池无法投饵")
+                    tags = "、".join(_pen_tag(p) for p in occupied)
+                    return f"在养鱼的池今日都已投饵（{tags}）。指定池: pen feed 2"
+            pen = await _require_owned_pen(conn, s["id"], slot)
+            if not pen.get("species"):
+                raise ValueError(f"{_pen_tag(pen)} 是空池，无法投饵")
             if pen.get("fed"):
-                return "今日已投饵"
+                return f"{_pen_tag(pen)} 今日已投饵"
             meta = SEA_CATCH[pen["species"]]
             if not await db.take_item(conn, s["id"], meta["feed_item"], meta["feed_qty"]):
                 raise ValueError(
                     f"投饵需要 {ITEM_NAMES.get(meta['feed_item'], meta['feed_item'])} x{meta['feed_qty']}"
                 )
             await conn.execute("UPDATE fish_pens SET fed=1 WHERE id=?", (pen["id"],))
-            pen = await _get_pen(conn, s["id"])
+            pen = await _get_pen(conn, s["id"], slot)
             assert pen
             extra = await events.roll_after_action(s, "pen_feed", conn, pen=pen)
             await conn.commit()
-        msg = f"已向 {SEA_CATCH[pen['species']]['name']} 池投饵"
+        msg = f"已向 {_pen_tag(pen)} {SEA_CATCH[pen['species']]['name']} 池投饵"
         return f"{msg}\n{extra}" if extra else msg
 
     if verb == "harvest":
+        slot, _rest = _extract_slot_and_rest(args)
         async with db.connect() as conn:
-            pen = await _get_pen(conn, s["id"])
-            if not pen or not pen.get("species"):
-                raise ValueError("空池无可收")
+            pens = await _list_pens(conn, s["id"])
+            if not pens:
+                raise ValueError("先 erect 渔排")
+            if slot is None:
+                ready = next((p for p in pens if _pen_ready(p)), None)
+                if ready:
+                    slot = ready["slot"]
+                else:
+                    growing = [p for p in pens if p.get("species")]
+                    if not growing:
+                        raise ValueError("空池无可收")
+                    tags = "、".join(_pen_tag(p) for p in growing)
+                    raise ValueError(
+                        f"尚未长成（{tags}），继续 feed 或等待。指定池: pen harvest 2"
+                    )
+            pen = await _require_owned_pen(conn, s["id"], slot)
+            if not pen.get("species"):
+                raise ValueError(f"{_pen_tag(pen)} 空池无可收")
             if not _pen_ready(pen):
-                raise ValueError("尚未长成，继续 feed 或等待")
+                raise ValueError(f"{_pen_tag(pen)} 尚未长成，继续 feed 或等待")
             species = pen["species"]
             meta = SEA_CATCH[species]
             qty = 2 if pen.get("fed") else 1
@@ -405,7 +563,7 @@ async def pen_ops(key_id: int, command: str) -> str:
             await conn.commit()
         from . import multi
         bonus = await multi.on_league_item(s["id"], f"fish_{species}", qty)
-        msg = f"收网 {meta['emoji']}{meta['name']} x{qty}"
+        msg = f"收网 {_pen_tag(pen)} {meta['emoji']}{meta['name']} x{qty}"
         msg += flavor.maybe_suffix(flavor.PEN_HARVEST_SUFFIX)
         if bonus:
             await db.add_chronicle("league", bonus, None)
@@ -417,7 +575,9 @@ async def pen_ops(key_id: int, command: str) -> str:
             return f"{msg}\n{extra}"
         return msg
 
-    raise ValueError(f"未知 pen 指令: {command}（status/erect/label/stock/feed/harvest）")
+    raise ValueError(
+        f"未知 pen 指令: {command}（status/erect/expand/label/stock/feed/harvest）"
+    )
 
 
 async def _apply_naval_payload(
