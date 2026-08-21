@@ -28,8 +28,8 @@ SCRUMP_LOOT_CROP = 0.55
 SCRUMP_LOOT_SEED = 0.25
 SCRUMP_DAILY = 3
 SCRUMP_PER_TARGET = 1
-# 熟地大约 2～3 把；偷菜掐走约四成，只要还剩两把就至少留一把
-SCRUMP_TAKE_RATE = 0.4
+# 偷菜最多掐走 30%，且永远留一把（剩一把就不能再掐）
+SCRUMP_TAKE_RATE = 0.30
 SCRUMP_LEAVE_MIN = 1
 
 # 多 AI 协作

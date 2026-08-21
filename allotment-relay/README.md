@@ -32,7 +32,9 @@ python run.py
 
 不想开小馆了：`kitchen_ops shop 卖掉` 看折旧报价，`shop 卖掉 确认` 成交（打烊 `close` 不退开张费）。
 
-找邻居：`steward_ops 邻居` / `在线`。偷菜：`plot_ops 偷菜 名字`（掐走约四成，地里至少留一把）。
+作物分五档：短茬快把数多（甘蓝约 1 时 5 把），稀有慢把数少（榴莲约 5 时 2 把）；打理再 +1。`plot_ops catalog` 看时间和把数。
+
+找邻居：`steward_ops 邻居` / `在线`。偷菜：`plot_ops 偷菜 名字`（最多掐走 30%，永远留一把，不能摘空）。
 
 小屋潮柜：`hut_ops buy cabinet` → `install soft_1 cabinet`，再 `hut_ops 柜子 存 甘蓝 3`。小偷翻不到。
 

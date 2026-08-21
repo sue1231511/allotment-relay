@@ -212,14 +212,13 @@ def plot_overripe(plot: dict[str, Any]) -> bool:
 
 
 def harvest_pool(plot: dict[str, Any]) -> int:
-    """一块熟地大约几把。打理过的多一把。"""
-    if not plot.get("crop"):
+    """熟地把数：按作物等级；打理过再多一把。"""
+    crop = plot.get("crop")
+    if not crop:
         return 0
-    n = 2
+    n = int(CROPS.get(crop, {}).get("yield") or 3)
     if plot.get("tended"):
         n += 1
-    if CROPS.get(plot["crop"], {}).get("tree"):
-        return 2 + (1 if plot.get("tended") else 0)
     return n
 
 
@@ -233,12 +232,10 @@ def remaining_harvest(plot: dict[str, Any]) -> int:
 
 
 def scrump_take_qty(left: int) -> int:
-    """掐走约四成；还剩两把以上时至少留一把。"""
-    if left <= 0:
-        return 0
+    """最多 30%，且不能全部拿走。剩一把则 0。"""
     if left <= config.SCRUMP_LEAVE_MIN:
-        return left
-    taken = max(1, int(round(left * config.SCRUMP_TAKE_RATE)))
+        return 0
+    taken = max(1, int(left * config.SCRUMP_TAKE_RATE))
     return min(taken, left - config.SCRUMP_LEAVE_MIN)
 
 

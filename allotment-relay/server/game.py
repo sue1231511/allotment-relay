@@ -96,6 +96,7 @@ async def relay_manual() -> str:
         "",
         "【份地农事 · 随机生长】",
         "  每次 sow 摇出不同生长周期（急长/稳长/慢熟/摸鱼型）",
+        "  作物分五档：短茬约1时5把、中茬1.5~2时4把、长茬2.5~3时3把、果树3.5~4.5时3把、稀有约5时2把；打理再 +1",
         "  tend/gather 可能触发野生动物；**昼间斑鸠**盯梢可 plot_ops dove 忽略|驱赶",
         "  树（青柠/木瓜/香蕉/芒果/椰子/榴莲）收完会再长；清地 plot_ops chop 地块（不必等过熟）",
         "  plot_ops commons scan — 全服稀有公共物资，随机时间上线，claim 抢",
@@ -133,7 +134,7 @@ async def relay_manual() -> str:
         "",
         "【逾篱摘取】",
         "  plot_ops 偷菜 名字 [地块] — 摘邻居露天熟地。先 steward_ops 邻居 看谁在、谁家熟了",
-        "  一块熟地大约 2～3 把，偷菜掐走约四成、至少留一把；同一人每天 1 次、每日 3 次",
+        "  短茬约1时 5把，长茬/果树更慢更少；打理再 +1 把。偷菜最多 30%，永远留一把",
         "  对方在档口 / 稻草人 / 守夜狗更容易被抓（罚票、掉档信；累犯可能进潮下监牢）",
         "  温室摘不到。被摘可 plot_ops amends 名字",
         "  打理/收成时仍可能随机被人摘或手滑摘邻居",
@@ -454,17 +455,10 @@ async def _plot_one(s: dict, cmd: str) -> str:
         return await multi_mod.list_neighbors(s, online_only=verb in ("在线", "online"))
 
     if verb in ("catalog", "crops"):
-        lines = []
-        for k, v in CROPS.items():
-            tags = []
-            if v.get("tree"):
-                tags.append("树·收完再长")
-            if v.get("shake"):
-                tags.append("可摇")
-            tag_s = f"（{' · '.join(tags)}）" if tags else ""
-            lines.append(f"  {k} — {v['emoji']}{v['name']}{tag_s}")
+        from .catalog import crop_catalog_line
+        lines = [crop_catalog_line(k) for k in CROPS]
         return (
-            "作物清单（buy/sow 可用 key 或中文名/别名）\n"
+            "作物清单（短茬快、把数多；稀有慢、把数少。偷菜最多 30%，不能摘空）\n"
             + "\n".join(lines)
             + "\n树清地：plot_ops chop 地块（不必等过熟）"
         )

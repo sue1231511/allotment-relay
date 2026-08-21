@@ -132,7 +132,10 @@ async def _pick_ripe_plot(conn: aiosqlite.Connection, steward_id: int) -> dict[s
             (steward_id,),
         )).fetchall()
     ]
-    ready = [p for p in rows if _plot_ready(p)]
+    ready = [
+        p for p in rows
+        if _plot_ready(p) and farming.scrump_take_qty(farming.remaining_harvest(p)) > 0
+    ]
     return random.choice(ready) if ready else None
 
 
@@ -265,56 +268,29 @@ async def nibble_ripe_plot(
     *,
     thief_id: int | None = None,
 ) -> dict[str, Any]:
-    """从熟地掐走一部分。地里至少留一把（只剩一把时才能摘空）。"""
+    """从熟地掐走至多三成。永远留一把，不能摘空。"""
     crop = plot["crop"]
     meta = CROPS[crop]
-    keep_tree = bool(meta.get("tree"))
     left = farming.remaining_harvest(plot)
     taken = farming.scrump_take_qty(left)
-    leftover = max(0, left - taken)
-    if thief_id is not None and taken:
+    if taken <= 0:
+        raise ValueError("就剩一把了，不能再摘空。换一块地，或等主人 gather。")
+    leftover = left - taken
+    if thief_id is not None:
         await db.add_item(conn, thief_id, f"crop_{crop}", taken)
-    if leftover > 0:
-        await conn.execute(
-            "UPDATE parcels SET harvest_left=? WHERE id=?",
-            (leftover, plot["id"]),
-        )
-        emptied = False
-        note = f"地里还剩 {leftover} 把"
-        tree_note = ""
-    elif keep_tree:
-        grow_target, grow_pace, _ = farming.roll_grow(crop, plot)
-        await conn.execute(
-            """
-            UPDATE parcels SET planted_at=?, tended=0, grow_target=?, grow_pace=?,
-            fertilized=0, harvest_left=0 WHERE id=?
-            """,
-            (db.now(), grow_target, grow_pace, plot["id"]),
-        )
-        emptied = False
-        note = "果摘完了，树还在"
-        tree_note = "（树还在）"
-    else:
-        await conn.execute(
-            """
-            UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
-            grow_target=0, grow_pace='', fertilized=0, scarecrow=0, harvest_left=0
-            WHERE id=?
-            """,
-            (plot["id"],),
-        )
-        emptied = True
-        note = "这垄摘空了"
-        tree_note = ""
-    label = f"{meta['name']} x{taken}" if taken else meta["name"]
+    await conn.execute(
+        "UPDATE parcels SET harvest_left=? WHERE id=?",
+        (leftover, plot["id"]),
+    )
+    label = f"{meta['name']} x{taken}"
     return {
         "crop": crop,
         "name": meta["name"],
-        "label": label + tree_note,
+        "label": label,
         "taken": taken,
         "left": leftover,
-        "note": note,
-        "emptied": emptied,
+        "note": f"地里还剩 {leftover} 把",
+        "emptied": False,
     }
 
 
