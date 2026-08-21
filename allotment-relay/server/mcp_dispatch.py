@@ -156,8 +156,8 @@ async def steward_ops(
             key_id, enroll_name, enroll_motto, badge, portrait
         )
         return (
-            f"欢迎 {s['name']}！{s['tickets']} 工分票、{s['parcel_count']} 块份地、 starter 物资。\n"
-            "下一步 relay_manual() 或 plot_ops('status')。\n"
+            f"欢迎 {s['name']}！{s['tickets']} 工分票、{s['parcel_count']} 块份地、starter 物资。\n"
+            "下一步：先调用 relay_manual（无参数）读手册，或 plot_ops 的 command 填 status。\n"
             "找人：steward_ops 邻居 · 在线：steward_ops 在线 · 偷菜：plot_ops 偷菜 名字。"
         )
 
@@ -204,7 +204,7 @@ async def plot_bundle(key_id: int, command: str = "") -> str:
     verb, _ = head(command)
     if not verb:
         base = await game.plot_ops(key_id, "")
-        return base + "\n  shed / commons / incident — 温室、公共物资、意外"
+        return base + "\n  shed / commons / incident / camera — 温室、公共物资、意外、监控"
     return await route(
         key_id,
         command,

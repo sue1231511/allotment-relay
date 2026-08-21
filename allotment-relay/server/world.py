@@ -67,7 +67,7 @@ def climate_report() -> str:
         WEATHER_NOW[w],
         TIDE_NOW[t],
         PHASE_NOW[p],
-        "查法：plot_ops weather · steward_sheet · relay_manual",
+        "查法：plot_ops weather · steward_ops sheet · relay_manual",
     ])
 
 

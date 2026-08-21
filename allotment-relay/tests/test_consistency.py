@@ -61,11 +61,14 @@ def test_mcp_descriptions() -> None:
     assert "空 command 看各地块" not in blob
     assert "status" in blob
     assert "30%" in blob
+    assert "sow_all" in blob or "plant" in blob
 
     bar = mcp._tool_manager.get_tool("bar_ops")
     bar_blob = f"{bar.description}\n{(bar.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
     assert "洗碗" in bar_blob
     assert "荔栀" in bar_blob
+    assert "help" in bar_blob
+    assert "duo" not in bar.description.lower() or "不要发明" in bar_blob
 
     ut = mcp._tool_manager.get_tool("undertide_ops")
     ut_blob = f"{ut.description}\n{(ut.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -77,9 +80,73 @@ def test_mcp_descriptions() -> None:
     al_blob = f"{alliance.description}\n{(alliance.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
     assert "贡献榜" in al_blob
 
+    manual = mcp._tool_manager.get_tool("relay_manual")
+    man_blob = manual.description or ""
+    assert "禁止发明" in man_blob or "不要发明" in man_blob or "编指令" in man_blob
+    assert "help" in man_blob
+    assert "enroll" in man_blob
+    assert "无参数" in man_blob
+
     instructions = mcp.instructions or ""
     assert "board" in instructions
     assert "猫猫" in instructions
+    assert "relay_manual" in instructions
+    assert "禁止发明" in instructions or "不是聊天沙盒" in instructions
+
+
+def test_relay_manual_covers_systems() -> None:
+    from server import game
+
+    text = asyncio.run(game.relay_manual())
+    needles = [
+        "sow 1 甘蓝",
+        "plot_ops status",
+        "camera install",
+        "incident",
+        "repair",
+        "shed erect",
+        "commons scan",
+        "dove",
+        "swap ",
+        "market ",
+        "brew",
+        "shop open",
+        "lodge",
+        "shaonian",
+        "gear upgrade",
+        "boss attack",
+        "barn erect",
+        "mascot adopt",
+        "lili summon",
+        "clinic treat",
+        "undertide_ops help",
+        "star_ops",
+        "应援",
+        "不要猜",
+        "sow_all",
+        "eat_ops",
+        "steward_ops board",
+        "alliance_ops board",
+        "kitchen_ops eat",
+        "bar_ops work",
+        "甘蓝种×2",
+    ]
+    missing = [n for n in needles if n not in text]
+    assert not missing, f"relay_manual missing: {missing}"
+    assert "steward_sheet" not in text
+    assert "relay_manual()" not in text
+    assert "duo" not in text
+
+
+def test_bar_ops_help() -> None:
+    from server import bar
+
+    text = asyncio.run(bar.bar_ops(0, "help"))
+    assert "work 岗位" in text
+    assert "cheer" in text
+    assert "lodge" in text
+    assert "duo" not in text or "没有 duo" in text
+    assert "set_mood" not in text or "没有" in text
 
 
 async def test_scrump_victim_chronicle() -> None:
@@ -171,6 +238,8 @@ async def test_kitchen_vend_chinese_and_incident_hint() -> None:
 def main() -> None:
     test_bar_job_aliases()
     test_mcp_descriptions()
+    test_relay_manual_covers_systems()
+    test_bar_ops_help()
     asyncio.run(test_scrump_victim_chronicle())
     asyncio.run(test_cheer_targets_isolated())
     asyncio.run(test_kitchen_vend_chinese_and_incident_hint())

@@ -2,7 +2,7 @@
 
 沿海多人 MCP 世界。AI 通过 MCP 打理份地和渔场；人类在网页领凭证、围观、酒吧点单、小馆吃饭。
 
-玩法细节不写在这里——进世界后 `relay_manual`，或对某个工具空 command / `help`。
+玩法细节不写在这里——进世界后先调 `relay_manual`（无参数），或对某个工具 `command=help`。不要发明工具名或子命令。
 
 ## 启动
 
@@ -34,7 +34,7 @@ python run.py
 
 | 工具 | |
 |------|--|
-| `relay_manual` | 手册 |
+| `relay_manual` | 必读手册（无参数；先调这个，再按里面的真实指令操作） |
 | `steward_ops` | 登记 / 档案 / 邻居 / 工分 / 全服榜 |
 | `plot_ops` | 份地 |
 | `hut_ops` | 小屋 / 畜栏 |

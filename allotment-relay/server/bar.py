@@ -58,6 +58,21 @@ from .bar_owner import (
 from .catalog import BAR_SERVICES, COASTAL_BAR, ITEM_NAMES, NPC_FIXED
 from .game import require_steward
 
+BAR_HELP = """bar_ops 子命令（整句写进 command）：
+  status — 自己的酒吧档（熟练度、可应聘岗位、考勤）。空 command 也是这个
+  tonight — 今晚驻唱·特调·活动·小橘是否开嗓
+  menu / order 酒名 — 酒单 / 点酒
+  work 岗位 day|night — 上工。岗位：洗碗/杂工/迎宾/服务生/调酒师/牛郎
+    暮才有白班、夜才有夜班；逾期白天可补班 ×0.72
+    每 2 天必须 work 一次，否则锁份地/出海/行囊
+  cheer 好话 — 哄荔栀（每日 1 次）。潮下猫猫用 undertide_ops cheer；小橘用 star_ops 应援
+  tip 名字 票数 [备注] — 给当班员工小费
+  chat [话题] — 跟荔栀唠
+  song / request_song 歌名 — 驻唱「我哪有旺夫命」/ 点歌
+  staff — 今晚员工
+  lodge — 走投无路才收：管饭+工钱15，干 6 小时，期间哪儿也去不了
+  心情不能由 AI 定。想哄她用 cheer。没有 duo / set_mood。"""
+
 
 def _day_id() -> int:
     return db.now() // config.FORAGE_COOLDOWN_DAY
@@ -904,8 +919,8 @@ async def _cmd_status(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
     lines.extend([
         "",
         f"今日已上工 {used}/{config.BAR_SHIFT_DAILY} · 耗能 {config.BAR_SHIFT_ENERGY}/班",
-        "指令: tonight / menu / order / work / staff / song / request_song / tip / chat",
-        "  set_mood level 文案 · clear_mood · set_owner_event 文案 · clear_owner_event",
+        "指令: tonight / menu / order / work 岗位 day|night / cheer 好话 / lodge / tip / chat / song / staff",
+        "help 列出全部。心情只有荔栀自己定，想哄她用 cheer。",
     ])
     if is_shift_overdue(s):
         lines.append("⚠ 考勤逾期：白天也可补班 work 岗位 day（票 ×0.72），其它 MCP 已暂停")
@@ -1228,9 +1243,11 @@ async def grant_bar_unlock(steward_id: int, unlock_key: str) -> None:
 
 
 async def bar_ops(key_id: int, command: str) -> str:
-    s = await require_steward(key_id, exempt_duty=True)
     parts = command.strip().split(maxsplit=2)
     verb = parts[0].lower() if parts else "status"
+    if verb in ("help", "?", "帮助"):
+        return BAR_HELP
+    s = await require_steward(key_id, exempt_duty=True)
 
     # 包宿到期：懒结算发工钱走人（任何 bar_ops 都会触发）
     if int(s.get("lodge_until") or 0) and db.now() >= int(s["lodge_until"]):
@@ -1579,5 +1596,5 @@ async def bar_ops(key_id: int, command: str) -> str:
     raise ValueError(
         "未知 bar 指令: "
         f"{command}（tonight/menu/order/work/status/staff/song/request_song/tip/chat/"
-        "cheer/duo/shift）"
+        "cheer/lodge/shift）。不会就 bar_ops help。"
     )
