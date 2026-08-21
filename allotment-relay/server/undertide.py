@@ -854,8 +854,23 @@ async def undertide_ops(key_id: int, command: str) -> str:
         ):
             raise ValueError(utcopy.VR_FROZEN_MSG)
 
+        # 未读打击报告（悬赏受害者侧通知，读后清空）
+        import json as _json
+        _hits = []
+        try:
+            _hits = _json.loads(ut.get("unread_hits") or "[]")
+        except Exception:
+            _hits = []
+        hits_prefix = ""
+        if _hits:
+            hits_prefix = "\n\n—— ⚠ 你不在的时候 ——\n" + "\n\n".join(f"· {h}" for h in _hits) + "\n\n——\n"
+            await conn.execute(
+                "UPDATE steward_undertide SET unread_hits='[]' WHERE steward_id=?", (s["id"],)
+            )
+            await conn.commit()
+
         if verb == "help":
-            return utcopy.HELP
+            return (hits_prefix + utcopy.HELP) if hits_prefix else utcopy.HELP
 
         if verb == "well":
             if not ut["well_hint"]:
@@ -909,10 +924,10 @@ async def undertide_ops(key_id: int, command: str) -> str:
             tide_note = f"\n\n（{utcopy.TIDE_HINT.format(line=tide_line)}）" if tide_line else ""
             av = await avatar_key(conn, s["id"])
             head = utcopy.AVATAR_K_ENTER if av == "K" else utcopy.pick(utcopy.ENTER_POOL)
-            return head + tide_note + event + kroom
+            return hits_prefix + head + tide_note + event + kroom
 
         if verb == "status":
-            return await _cmd_status(conn, s, ut)
+            return hits_prefix + await _cmd_status(conn, s, ut)
 
         if verb == "market":
             if not ut["access"]:
