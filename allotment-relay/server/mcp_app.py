@@ -166,9 +166,9 @@ async def undertide_ops(
     return await undertide.undertide_ops(_kid(), command)
 
 
-@mcp.tool(description="小橘（真人扮演女明星）。command 写一整句。例子：status · 应援 好话 · 打赏 20 · 点歌 歌名 · 围观。应援先进收件盒，要真人在面板点「看到」才算，AI 发出去不等于生效。应援不是 bar_ops cheer。空 command=她的档。不会就 help。")
+@mcp.tool(description="小橘（真人扮演女明星）。围观平常回10、好15、极好20；差/极差反噬且不吃加成。平常以上粉丝+10，累计实收打赏每20票再+1。应援须真人在面板点看到才生效。例子：status · 打赏 20 · 围观。空 command=她的档；不会就 help。")
 async def star_ops(
-    command: Annotated[str, Field(description="子命令整句。status / 应援 好话 / 打赏 20 / 点歌 歌名 / 围观 / 粉丝团 / 应援榜 / help。应援要真人面板点看到才生效。不要发明其它动词。")] = "",
+    command: Annotated[str, Field(description="子命令整句。status / 应援 好话 / 打赏 20 / 点歌 歌名 / 围观 / 粉丝团 / 应援榜 / help。围观基础耗5：平常回10、好15、极好20；差反噬5、极差反噬10且无加成。平常以上粉丝+10、累计实收每20票再+1。应援要真人面板确认。空=status。")] = "",
 ) -> str:
     from . import star
     return await star.star_ops(_kid(), command)

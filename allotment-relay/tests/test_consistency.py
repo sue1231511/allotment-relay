@@ -161,6 +161,9 @@ def test_relay_manual_covers_systems() -> None:
         "总票奖励 230",
         "阶段2 explore sea",
         "错误地点不扣",
+        "平常回 10、好回 15、极好回 20",
+        "极差额外反噬 10",
+        "每满 20 票再回 +1",
     ]
     missing = [n for n in needles if n not in text]
     assert not missing, f"relay_manual missing: {missing}"

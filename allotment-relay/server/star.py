@@ -20,16 +20,17 @@ STAR_NAME = config.STAR_NAME
 VENUES = {"rest", "bar", "stage"}
 VENUE_LABELS = {"rest": "不开嗓", "bar": "滨海酒吧驻场", "stage": "小剧场专场"}
 MOODS = {"great", "good", "normal", "bad", "awful"}
-MOOD_LABELS = {"great": "极好", "good": "不错", "normal": "平常", "bad": "较差", "awful": "很差"}
+MOOD_LABELS = {"great": "极好", "good": "好", "normal": "平常", "bad": "较差", "awful": "极差"}
 
 STAR_HELP = f"""star_ops 子命令（整句写进 command）：
   status / {STAR_NAME} — 她的档：热度档位、今晚场子、曲目造型、粉丝团
   应援 好话 — 每日一条，进她的收件盒。要真人在面板点「看到」才生效，压下=她没看到。AI 发出去不等于算数。
   打赏 N票 [备注] — 1~100。酒馆场子荔栀抽三成；小剧场全归她（tip）
   点歌 歌名 — 15票，纸条递上台。她唱不唱，得看她自己（song）
-  围观 — 今晚开嗓才能看。耗精力5，**听歌回神+4~12**（看她今晚心情档；专场+3），
-    另档信+1、雾智回升、散场可能捡到台上扔下的贝壳。每日 2 次（watch）
-  粉丝团 — 入团。一人一次，退团这个选项不存在；围观档信翻倍（fan）
+  围观 — 今晚开嗓才能看。基础耗精力5；平常回10、好回15、极好回20，专场再+3；
+    差额外反噬5、极差额外反噬10，且不触发加成。每日 2 次（watch）
+    平常及以上：粉丝固定再+10；粉丝累计给小橘的实收打赏每满20票再+1。
+  粉丝团 — 入团。一人一次，退团这个选项不存在；围观回神+10、档信翻倍（fan）
   应援榜 — 谁在真金白银地捧她（board）
   她常驻荔栀的酒馆；热度≥{config.STAR_STAGE_HEAT} 才开得起小剧场专场。网页 /star 围观打赏。"""
 
@@ -351,20 +352,32 @@ async def _cmd_watch(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
             f"今天听过 {watched} 场了——一场演出听两遍，第三遍是赖着不走。明天再来。"
         )
     venue = VENUE_LABELS[state["venue"]]
-    await energy_mod.spend(conn, s["id"], config.STAR_WATCH_ENERGY, action="star_watch")
-
     mood = state.get("mood") if state.get("mood") in MOODS else "normal"
     event = random.choice(SHOW_POOLS[mood])
-    # 听歌回神：她状态好观众回得多，唱砸了观众心累；专场票房子更值
-    gain = config.STAR_WATCH_GAIN.get(mood, 8)
-    if state["venue"] == "stage":
-        gain += config.STAR_STAGE_WATCH_BONUS
-    restored = await energy_mod.restore(conn, s["id"], gain)
-
     fan_row = await (await conn.execute(
-        "SELECT 1 FROM star_fans WHERE steward_id=?", (s["id"],)
+        "SELECT tip_total FROM star_fans WHERE steward_id=?", (s["id"],)
     )).fetchone()
     is_fan = bool(fan_row)
+    tip_total = int(fan_row["tip_total"]) if fan_row else 0
+
+    # 差/极差直接反噬，不能被粉丝、打赏或专场加成翻成正收益
+    mood_gain = config.STAR_WATCH_GAIN.get(mood, 10)
+    positive_show = mood_gain >= 0
+    fan_bonus = config.STAR_FAN_WATCH_BONUS if is_fan and positive_show else 0
+    tip_bonus = (
+        tip_total // config.STAR_TIP_WATCH_STEP if is_fan and positive_show else 0
+    )
+    stage_bonus = (
+        config.STAR_STAGE_WATCH_BONUS
+        if state["venue"] == "stage" and positive_show
+        else 0
+    )
+    backlash = max(0, -mood_gain)
+    total_cost = config.STAR_WATCH_ENERGY + backlash
+    await energy_mod.spend(conn, s["id"], total_cost, action="star_watch")
+    gain = max(0, mood_gain) + fan_bonus + tip_bonus + stage_bonus
+    restored = await energy_mod.restore(conn, s["id"], gain) if gain else 0
+
     await survival_mod.bump(
         conn, s["id"], standing=2 if is_fan else 1, mist_wit=random.randint(2, 4)
     )
@@ -385,11 +398,22 @@ async def _cmd_watch(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
     if state.get("note"):
         note_line = f"\n她留了句话：{state['note']}"
     await conn.commit()
+    if backlash:
+        energy_line = (
+            f"-{total_cost} 精力（围观 {config.STAR_WATCH_ENERGY} + "
+            f"{MOOD_LABELS[mood]}反噬 {backlash}；粉丝与打赏加成不生效）"
+        )
+    else:
+        energy_line = (
+            f"-{config.STAR_WATCH_ENERGY} 精力 · 听歌回神 +{restored}"
+            f"（今晚她心情 {MOOD_LABELS[mood]}"
+            f"{'，粉丝团 +' + str(fan_bonus) if is_fan else ''}"
+            f"{'，实收打赏 ' + str(tip_total) + ' 票，每 ' + str(config.STAR_TIP_WATCH_STEP) + ' 票 +' + str(tip_bonus) if tip_bonus else ''}"
+            f"{'，专场 +' + str(stage_bonus) if stage_bonus else ''}）"
+        )
     return (
         f"«{venue} · {STAR_NAME}的场\n\n{event}{note_line}\n\n"
-        f"-{config.STAR_WATCH_ENERGY} 精力 · 听歌回神 +{restored}"
-        f"（今晚她心情 {MOOD_LABELS[mood]}"
-        f"{'，专场加成' if state['venue'] == 'stage' else ''}）"
+        f"{energy_line}"
         f" · 档信+{2 if is_fan else 1}{'（粉丝团加成）' if is_fan else ''}{gift_line}»"
     )
 

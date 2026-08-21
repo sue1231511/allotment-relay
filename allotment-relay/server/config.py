@@ -324,8 +324,10 @@ STAR_TIP_HEAT_DAILY = 3   # 打赏来源热度日上限
 STAR_TIP_CHRONICLE_MIN = 20  # ≥20 票写全服纪事
 STAR_WATCH_ENERGY = 5     # 围观演出耗精力
 STAR_WATCH_DAILY = 2      # 围观每日上限——一场演出听两遍，第三遍是赖着不走
-# 围观回精力按她当晚心情档浮动：她状态好观众回得多，唱砸了观众心累
-STAR_WATCH_GAIN = {"great": 12, "good": 10, "normal": 8, "bad": 6, "awful": 4}
+# 围观心情效果：平常及以上回精力；差/极差为负数，表示额外反噬精力
+STAR_WATCH_GAIN = {"great": 20, "good": 15, "normal": 10, "bad": -5, "awful": -10}
+STAR_FAN_WATCH_BONUS = 10
+STAR_TIP_WATCH_STEP = 20
 STAR_STAGE_WATCH_BONUS = 3    # 专场的票房子更值：围观回精力再+3
 STAR_WATCH_GIFT_CHANCE = 0.18   # 观众小概率捡到台下掉的花
 STAR_SETTLE_GAIN = 2      # 开嗓当晚跨天 +2

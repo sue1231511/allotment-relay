@@ -87,17 +87,10 @@ async def test_star_flow() -> None:
     assert after_rev - before_rev == 6, (before_rev, after_rev)
     assert fans_tip is None, "打赏不该自动入粉丝团"
 
-    # 粉丝团入团一次，重复被挡
-    join = await star.star_ops(kid, "粉丝团")
-    assert "团" in join, join
-    try:
-        await star.star_ops(kid, "粉丝团")
-        raise AssertionError("fan rejoin should block")
-    except ValueError as exc:
-        assert "退团" in str(exc), exc
-
-    # 围观成功：耗精力5、听歌回神（normal=8，净+3），每日2次
+    # 普通围观：耗精力5、normal 回神10
     async with db.connect() as conn:
+        await conn.execute("UPDATE stewards SET energy=20 WHERE id=?", (sid,))
+        await conn.commit()
         energy_before = (await (await conn.execute(
             "SELECT energy FROM stewards WHERE id=?", (sid,)
         )).fetchone())[0]
@@ -107,8 +100,30 @@ async def test_star_flow() -> None:
         energy_after = (await (await conn.execute(
             "SELECT energy FROM stewards WHERE id=?", (sid,)
         )).fetchone())[0]
-    assert energy_after >= energy_before - 5 + 8, (energy_before, energy_after)
-    await star.star_ops(kid, "围观")
+    assert energy_after == energy_before - 5 + 10, (energy_before, energy_after)
+
+    # 极好场：粉丝固定+10；酒馆打赏60，小橘实收42，每20票再+1，共回32
+    join = await star.star_ops(kid, "粉丝团")
+    assert "团" in join, join
+    try:
+        await star.star_ops(kid, "粉丝团")
+        raise AssertionError("fan rejoin should block")
+    except ValueError as exc:
+        assert "退团" in str(exc), exc
+    await star.star_ops(kid, "打赏 60")
+    await star.owner_set_tonight("bar", "great", "", "", "", "")
+    async with db.connect() as conn:
+        await conn.execute("UPDATE stewards SET energy=20 WHERE id=?", (sid,))
+        await conn.commit()
+    fan_watch = await star.star_ops(kid, "围观")
+    assert "粉丝团 +10" in fan_watch, fan_watch
+    assert "实收打赏 42 票，每 20 票 +2" in fan_watch, fan_watch
+    async with db.connect() as conn:
+        fan_energy = (await (await conn.execute(
+            "SELECT energy FROM stewards WHERE id=?", (sid,)
+        )).fetchone())[0]
+    assert fan_energy == 20 - 5 + 20 + 10 + 2, fan_energy
+
     try:
         await star.star_ops(kid, "围观")
         raise AssertionError("watch daily cap should block")
@@ -204,6 +219,33 @@ async def test_star_stage_and_lazy_settle() -> None:
     except ValueError as exc:
         assert "神秘感" in str(exc), exc
 
+    # 差和极差必须反向，不能被粉丝或打赏翻正
+    await star.owner_set_tonight("bar", "bad", "", "", "", "")
+    async with db.connect() as conn:
+        await conn.execute("UPDATE stewards SET energy=30 WHERE id=?", (sid,))
+        await conn.commit()
+    bad = await star.star_ops(kid, "围观")
+    assert "较差反噬 5" in bad, bad
+    async with db.connect() as conn:
+        energy_after_bad = (await (await conn.execute(
+            "SELECT energy FROM stewards WHERE id=?", (sid,)
+        )).fetchone())[0]
+    assert energy_after_bad == 20, energy_after_bad
+
+    # 极差额外反噬10，连同基础消耗共净减15
+    await star.owner_set_tonight("bar", "awful", "", "", "", "")
+    async with db.connect() as conn:
+        await conn.execute("UPDATE stewards SET energy=30 WHERE id=?", (sid,))
+        await conn.commit()
+    awful = await star.star_ops(kid, "围观")
+    assert "极差反噬 10" in awful, awful
+    assert "加成不生效" in awful, awful
+    async with db.connect() as conn:
+        energy_after_awful = (await (await conn.execute(
+            "SELECT energy FROM stewards WHERE id=?", (sid,)
+        )).fetchone())[0]
+    assert energy_after_awful == 15, energy_after_awful
+
 
 def test_star_mcp_description() -> None:
     from server.mcp_app import mcp
@@ -213,6 +255,9 @@ def test_star_mcp_description() -> None:
     assert "小橘" in blob
     assert "应援" in blob
     assert "打赏" in blob
+    assert "平常回10、好15、极好20" in blob
+    assert "差/极差反噬" in blob
+    assert "每20票再+1" in blob
 
 
 def main() -> None:
