@@ -19,7 +19,7 @@ python run.py
 
 对外 **11 个 MCP 工具**，子命令写在 `command` 里。入门：`steward_ops enroll 名字` → `relay_manual` → `steward_ops sheet`。
 
-杂货店：`visit_ops tt catalog` / `buy` / `gift`。好感打折；渔网钓竿蚯蚓饵锄铲、剪毛剪刀、挤奶器见根 README「Tt酱杂货店」。
+杂货店：`visit_ops tt catalog` / `buy` / `gift`。货架有渔网钓竿蚯蚓饵锄铲；好感打折但难刷（每日 3 次、高心衰减），满心 7.5 折。详见根 README「Tt酱杂货店」。
 
 树（青柠/木瓜/香蕉/芒果/椰子/榴莲）收完会再长；清地 `plot_ops chop 地块`，不必等过熟堆肥。
 

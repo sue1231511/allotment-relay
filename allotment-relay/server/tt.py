@@ -28,10 +28,15 @@ MOOD_CHANCE = config.TT_MOOD_CHANCE
 MOOD_DISH = 0.20
 MOOD_CROP = 0.40  # 其余为货架商品
 GIFT_DAILY_CAP = config.TT_GIFT_DAILY_CAP
-GIFT_GAIN_CAP = 12  # 一次送礼只记一笔，不按件数叠
+GIFT_GAIN_CAP = config.TT_GIFT_GAIN_CAP
+TICKET_GIFT_MIN = config.TT_TICKET_GIFT_MIN
+TICKET_PER_POINT = config.TT_TICKET_PER_POINT
+TICKET_GAIN_CAP = config.TT_TICKET_GAIN_CAP
 BUMP_CHANCE = config.TT_BUMP_CHANCE
 BUMP_DAILY_MAX = config.TT_BUMP_DAILY_MAX
 BUMP_TRIGGERS = {"sow", "tend", "gather", "forage", "guild"}
+SCALE_HALF_HEARTS = 4
+SCALE_SLOW_HEARTS = 8
 
 FEED_ANIMAL = "feed_animal"
 FEED_PET = "feed_pet"
@@ -113,7 +118,7 @@ SHOP_ALIASES = {
     "shovel": TOOL_SHOVEL,
 }
 
-LOVED_CROPS = {"garlic", "chili", "ginger", "lemongrass", "mango", "durian", "coconut", "honey"}
+LOVED_CROPS = {"garlic", "chili", "ginger", "durian"}
 LIKED_PREFIXES = ("crop_", "fish_", "egg", "duck_egg", "milk", "goat_milk", "wool", "honey")
 DISLIKED_PREFIXES = ("manure_", "ticket_stub", "wet_note", "deco_junk_")
 
@@ -121,6 +126,7 @@ VISIT_LINES = [
     "杂货店不讲价。好感另算——自己人价写在脸上。",
     "种子、饲料、渔网、钓竿、蚯蚓饵、锄头铲子，货架上有的都能买。",
     "送礼可以。别送粪。粪我自己畜栏里有。",
+    "75 折是自己人价。别想两天送熟菜刷满——心多了她懒得记账。",
     "心情好的时候会塞东西。别天天来蹲，概率就那一点。",
     "调味料种子在左边。大蒜辣椒姜香茅，厨房没这几样别来跟我哭。",
     "渔具入门在这儿买。更高档带着漂绳去 tide_ops gear upgrade。",
@@ -223,15 +229,35 @@ async def _resolve_owned_item(
 
 
 def gift_gain(item: str) -> int:
+    """未衰减的单笔基础分。件数不叠。"""
     if item.startswith("dish_"):
-        return 12
-    if item in ("honey",) or item.replace("crop_", "") in LOVED_CROPS:
-        return 10
-    if item.startswith(DISLIKED_PREFIXES) or item in ("ticket_stub", "wet_note"):
-        return 1
-    if item.startswith(LIKED_PREFIXES) or item in ("egg", "duck_egg", "milk", "goat_milk", "wool"):
         return 6
-    return 3
+    if item in ("honey",) or item.replace("crop_", "") in LOVED_CROPS:
+        return 4
+    if item.startswith(DISLIKED_PREFIXES) or item in ("ticket_stub", "wet_note"):
+        return 0
+    if item.startswith(LIKED_PREFIXES) or item in ("egg", "duck_egg", "milk", "goat_milk", "wool"):
+        return 2
+    return 1
+
+
+def gift_scale(score: int) -> float:
+    """7.5 折很难：4 心减半，8 心只剩 1/4。"""
+    h = hearts(score)
+    if h >= SCALE_SLOW_HEARTS:
+        return 0.25
+    if h >= SCALE_HALF_HEARTS:
+        return 0.5
+    return 1.0
+
+
+def apply_gift_gain(base: int, score: int, *, cap: int | None = None) -> int:
+    if base <= 0:
+        return 0
+    scaled = int(base * gift_scale(score))
+    if scaled < 1:
+        scaled = 1
+    return min(cap if cap is not None else GIFT_GAIN_CAP, scaled)
 
 
 def pick_mood_gift(*, rng: random.Random | None = None) -> tuple[str, str]:
@@ -369,10 +395,17 @@ def _status_block(score: int) -> str:
     h = hearts(score)
     z = zhe(h)
     zhe_s = f"{z:g}折" if z != int(z) else f"{int(z)}折"
+    if h >= SCALE_SLOW_HEARTS:
+        pace = "送礼几乎只加 1 点"
+    elif h >= SCALE_HALF_HEARTS:
+        pace = "送礼收益减半"
+    else:
+        pace = "4 心起送礼减半，8 心起更慢"
     return (
         f"{TT_NAME}杂货店\n"
         f"好感 {score}/{AFFINITY_MAX}  {heart_bar(score)}（{h} 心）\n"
-        f"现价 {zhe_s}（每两心 -0.5 折，满心 7.5 折 / 75 折）"
+        f"现价 {zhe_s}（每两心 -0.5 折，满心 7.5 折 / 75 折）\n"
+        f"涨好感难：每日 {GIFT_DAILY_CAP} 次 · {pace}"
     )
 
 
@@ -458,6 +491,7 @@ def _catalog_text(score: int) -> str:
         lines.extend(groups[key])
         lines.append("")
     lines.append("buy 物品 [数量] · gift 物品 [数量] · 中文名或 id 都行")
+    lines.append("送礼一次一笔，件数不叠；4 心起减半，8 心起更慢")
     return "\n".join(lines).rstrip()
 
 
@@ -471,7 +505,7 @@ async def tt_ops(key_id: int, command: str) -> str:
             "visit_ops tt — Tt酱杂货店\n"
             "  status / catalog — 货架与好感\n"
             "  buy 物品 [数量] — 种子/饲料/渔网钓竿/蚯蚓饵/锄铲/剪刀挤奶器\n"
-            "  gift 物品 [数量] — 送礼涨好感（一次一笔，每日最多 5 次）\n"
+            "  gift 物品 [数量] — 送礼（一次一笔，每日最多 3 次；4 心减半，8 心更慢）\n"
             "  visit — 聊天；每日首次进店 10% 她心情好送礼"
         )
 
@@ -560,7 +594,7 @@ async def tt_ops(key_id: int, command: str) -> str:
 
     if verb in ("gift", "送礼"):
         if len(parts) < 2:
-            raise ValueError("用法: visit_ops tt gift 大蒜  或 gift 票 10")
+            raise ValueError("用法: visit_ops tt gift 大蒜  或 gift 票 12")
         qty = 1
         name_toks = parts[1:]
         if name_toks[-1].isdigit():
@@ -577,9 +611,8 @@ async def tt_ops(key_id: int, command: str) -> str:
 
 
 async def _gift_tickets(steward: dict[str, Any], qty: int) -> str:
-    if qty < 1:
-        raise ValueError("票数至少 1")
-    gain = min(GIFT_GAIN_CAP, max(1, qty // 8) if qty >= 5 else 1)
+    if qty < TICKET_GIFT_MIN:
+        raise ValueError(f"塞票至少 {TICKET_GIFT_MIN} 张才入账。零钱她不收。")
     async with db.connect() as conn:
         daily = await _daily(conn, steward["id"], day_id())
         gift_note = await _maybe_mood_gift(conn, steward, daily)
@@ -589,6 +622,8 @@ async def _gift_tickets(steward: dict[str, Any], qty: int) -> str:
             return f"今日送礼已满 {GIFT_DAILY_CAP} 次。Tt酱挥手：账本要下班。"
         await _pay(conn, steward["id"], qty)
         score = await _affinity(conn, steward["id"])
+        raw = min(TICKET_GAIN_CAP, max(1, qty // TICKET_PER_POINT))
+        gain = apply_gift_gain(raw, score, cap=TICKET_GAIN_CAP)
         new = await _set_affinity(conn, steward["id"], score + gain)
         await conn.execute(
             "UPDATE tt_daily SET gifts=gifts+1 WHERE steward_id=? AND day=?",
@@ -597,7 +632,7 @@ async def _gift_tickets(steward: dict[str, Any], qty: int) -> str:
         await conn.commit()
     extra = f"\n{gift_note}" if gift_note else ""
     return (
-        f"Tt酱把 {qty} 票收进抽屉。好感 {score}→{new} {heart_bar(new)}"
+        f"Tt酱把 {qty} 票收进抽屉。好感 +{gain}（{score}→{new}） {heart_bar(new)}"
         f"{extra}"
     )
 
@@ -608,7 +643,9 @@ async def _gift_item(steward: dict[str, Any], token: str, qty: int) -> str:
         item = await _resolve_owned_item(conn, steward["id"], token)
         if not item:
             raise ValueError("行囊里对不上这件。tote_ops list 看中文名")
-        gain = min(GIFT_GAIN_CAP, gift_gain(item))
+        base = gift_gain(item)
+        if base <= 0:
+            raise ValueError("粪和废纸她自己有。换点能吃的或厨房做的。")
         daily = await _daily(conn, steward["id"], day_id())
         gift_note = await _maybe_mood_gift(conn, steward, daily)
         used = int(daily.get("gifts") or 0)
@@ -618,6 +655,7 @@ async def _gift_item(steward: dict[str, Any], token: str, qty: int) -> str:
         if not await db.take_item(conn, steward["id"], item, qty):
             raise ValueError(f"行囊没有 {_item_label(item)} x{qty}")
         score = await _affinity(conn, steward["id"])
+        gain = apply_gift_gain(base, score)
         new = await _set_affinity(conn, steward["id"], score + gain)
         await conn.execute(
             "UPDATE tt_daily SET gifts=gifts+1 WHERE steward_id=? AND day=?",
@@ -631,17 +669,20 @@ async def _gift_item(steward: dict[str, Any], token: str, qty: int) -> str:
         )
         await conn.commit()
     extra = f"\n{gift_note}" if gift_note else ""
-    if gift_gain(item) <= 1:
-        reaction = "她接了，表情很复杂。"
-    elif gift_gain(item) >= 10:
+    if base >= 4:
         reaction = "Tt酱眼睛亮了一下：「……行。」"
-    else:
+    elif base >= 2:
         reaction = "她点点头，收下了。"
+    else:
+        reaction = "她接了，表情很复杂。"
     pile = ""
     if qty > 1:
         pile = f" 一筐 {qty} 份她收下了，好感只记一笔。"
+    slow = ""
+    if gift_scale(score) < 1:
+        slow = " 心多了，账记少。"
     return (
-        f"{reaction}{pile} {_item_label(item)} x{qty} → 好感 +{new - score}（{score}→{new}） "
+        f"{reaction}{pile}{slow} {_item_label(item)} x{qty} → 好感 +{gain}（{score}→{new}） "
         f"{heart_bar(new)}"
         f"{extra}"
     )
