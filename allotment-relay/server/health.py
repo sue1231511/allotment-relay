@@ -190,8 +190,8 @@ async def inflict(
     )
     if is_chronic_ailment(ailment_key):
         line += (
-            " 菌要过夜，visit_ops clinic treat infection 连看几次，"
-            "一次清不干净。"
+            " 菌压不干净，visit_ops clinic treat infection 约三次、两次间隔 6 小时；"
+            "第一次可以马上挂。"
         )
     return line
 
@@ -348,7 +348,7 @@ def _pit_refuse() -> str:
         "桥桥看了一眼伤势，又看了你一眼。\n"
         "「这不是摔的。哪儿弄的，回哪儿治。」\n"
         "「别把地下那套账算我头上。」\n"
-        "（深坑专属重伤 — undertide_ops pit medic 处理）"
+        "（深坑专属重伤 — undertide_ops medic 处理）"
     )
 
 
