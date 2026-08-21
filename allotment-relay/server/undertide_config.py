@@ -166,3 +166,13 @@ PIT_RANKS = [
     (50, "墙上名字的候补", 8),
     (100, "墙上留了位置的人", 10),
 ]
+
+# ── 影信自然恢复（保底防死亡螺旋）──
+REP_RECOVER_PER_DAY = 1
+REP_RECOVER_CAP = 15        # 到"能打交道"档停，再上要靠良性交易
+
+# ── 彩票（穷人最后的翻盘幻想）──
+LOTTERY_COST = 5
+LOTTERY_WIN_CHANCE = 0.02
+LOTTERY_PRIZE_MIN = 100
+LOTTERY_PRIZE_MAX = 300

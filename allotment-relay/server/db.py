@@ -888,6 +888,7 @@ async def init_db() -> None:
             "ALTER TABLE steward_undertide ADD COLUMN drug_crash INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE steward_undertide ADD COLUMN spouse_allow_week INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE steward_undertide ADD COLUMN guide_seen INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE steward_undertide ADD COLUMN last_rep_recover_day INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE steward_undertide ADD COLUMN savings INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN lodge_until INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN lodge_count INTEGER NOT NULL DEFAULT 0",

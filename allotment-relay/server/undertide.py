@@ -994,6 +994,30 @@ async def _cmd_status(conn: aiosqlite.Connection, s: dict[str, Any], ut: dict[st
     return "\n".join(lines)
 
 
+async def _maybe_recover_rep(
+    conn: aiosqlite.Connection, ut: dict[str, Any], steward_id: int
+) -> str:
+    """影信自然恢复：每天 +1 到 15 停（保底防死亡螺旋）。"""
+    day = _day_id()
+    last = int(ut.get("last_rep_recover_day") or 0)
+    if day <= last:
+        return ""
+    cur_rep = int(ut.get("shadow_rep") or 0)
+    if cur_rep >= utcfg.REP_RECOVER_CAP:
+        await conn.execute(
+            "UPDATE steward_undertide SET last_rep_recover_day=? WHERE steward_id=?",
+            (day, steward_id),
+        )
+        return ""
+    gain = min(utcfg.REP_RECOVER_PER_DAY, utcfg.REP_RECOVER_CAP - cur_rep)
+    await conn.execute(
+        "UPDATE steward_undertide SET shadow_rep=shadow_rep+?, last_rep_recover_day=? WHERE steward_id=?",
+        (gain, day, steward_id),
+    )
+    await conn.commit()
+    return f"\n\n（影信 +{gain}——小八早上撕掉了一行旧账。慢慢回，不急。）"
+
+
 async def _check_k_auto_settle(conn: aiosqlite.Connection, s: dict[str, Any], ut: dict[str, Any]) -> str:
     """K 真身·逾期≥3天：不等他自己走进办公室——潮下直接来请。"""
     av = await avatar_key(conn, s["id"])
@@ -1042,6 +1066,8 @@ async def undertide_ops(key_id: int, command: str) -> str:
         ut = await _ensure_ut(conn, s["id"])
         ut = await _maybe_release(conn, ut, s["id"])
         drug_note = await _settle_drug(conn, ut)
+        # 影信自然恢复：每天 +1 到 15 停（破死亡螺旋）
+        rep_note = await _maybe_recover_rep(conn, ut, s["id"])
         # K 真身·逾期第3天：不等他来，潮下去请（结果拼在最前面，谁都拦不住）
         k_settle_note = await _check_k_auto_settle(conn, s, ut)
         jailed = ut["jail_state"] == "serving"
@@ -1070,7 +1096,7 @@ async def undertide_ops(key_id: int, command: str) -> str:
                 "UPDATE steward_undertide SET unread_hits='[]' WHERE steward_id=?", (s["id"],)
             )
             await conn.commit()
-        hits_prefix = drug_note + k_settle_note + hits_prefix
+        hits_prefix = drug_note + k_settle_note + rep_note + hits_prefix
 
         if verb == "help":
             body = utcopy.HELP
@@ -1218,6 +1244,26 @@ async def undertide_ops(key_id: int, command: str) -> str:
                 raise ValueError(utcopy.NO_ACCESS_HINT)
             msg = await _cmd_cheer(conn, s, rest)
             return msg + await _maybe_event(conn, s, ut)
+
+        if verb == "lottery":
+            if not ut["access"]:
+                raise ValueError(utcopy.NO_ACCESS_HINT)
+            cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
+            if (await cur.fetchone())[0] < utcfg.LOTTERY_COST:
+                raise ValueError("5 票都拿不出——这台机器不收赊账。")
+            await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (utcfg.LOTTERY_COST, s["id"]))
+            if random.random() < utcfg.LOTTERY_WIN_CHANCE:
+                prize = random.randint(utcfg.LOTTERY_PRIZE_MIN, utcfg.LOTTERY_PRIZE_MAX)
+                await conn.execute("UPDATE stewards SET tickets=tickets+? WHERE id=?", (prize, s["id"]))
+                await db.add_chronicle(
+                    "undertide",
+                    f"{s['name']} 在恶猫钱庄的旧机器上中了 {prize} 票。整个潮下都听见了吐票的声音。",
+                    s["id"], conn=conn,
+                )
+                await conn.commit()
+                return utcopy.LOTTERY_WIN.format(prize=prize)
+            await conn.commit()
+            return utcopy.pick(utcopy.LOTTERY_LOSE)
 
         # ── 二期路由 ──
         if verb in ("street", "muscle", "push"):
