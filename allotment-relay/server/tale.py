@@ -26,7 +26,8 @@ TALE_HELP = """tale_ops 子命令（整句写进 command）：
   list — 可接任务
   accept 任务key — 接任务
   status — 当前进行中的任务
-  explore [地点] — 主动探索，耗 5 精力，每日 3 次
+  explore [地点] — 按 status/hint 探索；阶段2 sea 找锈铁，阶段5/6 beach 找任务物品
+                    匹配阶段才耗 5 精力并计每日 3 次；错误地点不扣精力、不占次数
   turnin — 交付并领奖
   abandon 任务key — 放弃
   board — 完成榜
@@ -255,9 +256,10 @@ TALE_CATALOG: list[dict[str, Any]] = [
                 "kind": "item",
                 "item": "relic_iron",
                 "qty": 1,
+                "explore_domain": "sea",
                 "title": "九月十七日",
                 "text": _STAGE_2_TEXT,
-                "hint": "种地、赶海、发现物品时可能获得 relic_iron",
+                "hint": "tale_ops explore sea 可从旧锚链找到任务锈铁；自然发现 relic_iron 也会推进",
             },
             {
                 "kind": "explore",
@@ -277,17 +279,19 @@ TALE_CATALOG: list[dict[str, Any]] = [
                 "kind": "item",
                 "item": "sea_glass",
                 "qty": 1,
+                "explore_domain": "beach",
                 "title": "出国材料",
                 "text": _STAGE_5_TEXT,
-                "hint": "赶海或发现物品时可能获得 sea_glass",
+                "hint": "tale_ops explore beach 可找到任务海玻璃；自然发现 sea_glass 也会推进",
             },
             {
                 "kind": "deliver",
                 "item": "fossil_shell",
                 "qty": 1,
+                "explore_domain": "beach",
                 "title": "最后一封信",
                 "text": _STAGE_6_TEXT,
-                "hint": "获得 fossil_shell 后 tale_ops turnin 交付",
+                "hint": "tale_ops explore beach 找化石贝壳，获得 fossil_shell 后 tale_ops turnin 交付",
             },
         ],
         "rewards": {
@@ -803,6 +807,50 @@ async def _cmd_explore(
             f"未知地点：{domain}。可用：{', '.join(DOMAIN_LABELS.keys())}"
         )
 
+    catalog = await _catalog(conn)
+    active = await _active_tales(conn, steward["id"])
+    target: tuple[dict[str, Any], dict[str, Any]] | None = None
+    current_hints: list[str] = []
+    for progress in active:
+        tale = catalog.get(progress["tale_key"])
+        if not tale or progress["stage_idx"] >= len(tale["stages"]):
+            continue
+        stage = tale["stages"][progress["stage_idx"]]
+        current_hints.append(f"「{tale['title']}」当前需要：{stage['hint']}")
+        if stage.get("kind") == "explore" and stage.get("domain") == domain:
+            target = (tale, stage)
+            break
+        if stage.get("kind") in ("item", "deliver") and stage.get("explore_domain") == domain:
+            target = (tale, stage)
+            break
+
+    if target is None:
+        hint = "\n".join(current_hints) if current_hints else "当前没有进行中的潮闻任务。"
+        return (
+            f"{DOMAIN_LABELS[domain]}不能推进当前阶段；未消耗精力，也不占今日探索次数。\n"
+            f"{hint}"
+        )
+
+    tale, stage = target
+    kind = stage.get("kind")
+    if kind in ("item", "deliver"):
+        item = stage["item"]
+        qty = int(stage.get("qty", 1))
+        row = await (await conn.execute(
+            "SELECT quantity FROM satchel WHERE steward_id=? AND item=?",
+            (steward["id"], item),
+        )).fetchone()
+        owned = int(row[0]) if row else 0
+        if owned >= qty:
+            if kind == "deliver":
+                return (
+                    f"行囊已有 {ITEM_NAMES.get(item, item)} x{owned}；未消耗精力。\n"
+                    "下一步：tale_ops turnin"
+                )
+            result = await _advance(conn, steward, tale, "item_gain", trigger=item)
+            await conn.commit()
+            return result or "已识别行囊物品，但任务状态没有变化。"
+
     used = await _explore_count(conn, steward["id"])
     if used + 1 > config.TALE_EXPLORE_DAILY:
         raise ValueError(
@@ -814,23 +862,28 @@ async def _cmd_explore(
     await energy_mod.spend(conn, steward["id"], config.TALE_EXPLORE_ENERGY, action="tale_explore")
     await _use_explore(conn, steward["id"])
 
-    catalog = await _catalog(conn)
-    active = await _active_tales(conn, steward["id"])
-    for p in active:
-        tale = catalog.get(p["tale_key"])
-        if not tale:
-            continue
-        stage = tale["stages"][p["stage_idx"]]
-        if stage.get("kind") == "explore" and stage.get("domain") == domain:
-            result = await _advance(conn, steward, tale, "explore_cmd", trigger=domain)
-            await conn.commit()
-            return result or "探索结束，什么也没有发生。"
+    if kind == "explore":
+        result = await _advance(conn, steward, tale, "explore_cmd", trigger=domain)
+        await conn.commit()
+        return result or "探索结束，什么也没有发生。"
 
+    item = stage["item"]
+    qty = int(stage.get("qty", 1))
+    row = await (await conn.execute(
+        "SELECT quantity FROM satchel WHERE steward_id=? AND item=?",
+        (steward["id"], item),
+    )).fetchone()
+    owned = int(row[0]) if row else 0
+    found = max(0, qty - owned)
+    if found:
+        await db.add_item(conn, steward["id"], item, found)
+    found_line = f"在{DOMAIN_LABELS[domain]}找到 {ITEM_NAMES.get(item, item)} x{found or qty}。"
+    if kind == "deliver":
+        await conn.commit()
+        return f"{found_line}\n下一步：tale_ops turnin"
+    result = await _advance(conn, steward, tale, "item_gain", trigger=item)
     await conn.commit()
-    return (
-        f"你在 {DOMAIN_LABELS[domain]} 找了一会儿，黑盒安静地躺着，"
-        "没有新的字迹浮出来。"
-    )
+    return f"{found_line}\n\n{result or '任务状态没有变化。'}"
 
 
 async def _cmd_turnin(conn: aiosqlite.Connection, steward: dict[str, Any]) -> str:

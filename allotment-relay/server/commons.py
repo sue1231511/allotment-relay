@@ -167,8 +167,13 @@ async def commons_ops(key_id: int, command: str) -> str:
                 (config.COMMONS_CLAIM_FEE, s["id"]),
             )
             loot_parts = []
+            tale_extra = None
             if row.get("reward_item") and row.get("reward_qty"):
                 await db.add_item(conn, s["id"], row["reward_item"], row["reward_qty"])
+                from . import tale as tale_mod
+                tale_extra = await tale_mod.check_item_progress(
+                    conn, s["id"], row["reward_item"], row["reward_qty"]
+                )
                 loot_parts.append(
                     f"{ITEM_NAMES.get(row['reward_item'], row['reward_item'])} x{row['reward_qty']}"
                 )
@@ -191,6 +196,8 @@ async def commons_ops(key_id: int, command: str) -> str:
                 fine=config.COMMONS_CLAIM_FEE,
             )
             await db.add_chronicle("commons", f"{s['name']} 领取 {row['label']}：{loot}", s["id"])
+            if tale_extra:
+                msg += f"\n\n{tale_extra}"
             return msg
 
         if verb == "pulse":

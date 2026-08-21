@@ -159,6 +159,8 @@ def test_relay_manual_covers_systems() -> None:
         "永久纪念品",
         "6×30=180",
         "总票奖励 230",
+        "阶段2 explore sea",
+        "错误地点不扣",
     ]
     missing = [n for n in needles if n not in text]
     assert not missing, f"relay_manual missing: {missing}"

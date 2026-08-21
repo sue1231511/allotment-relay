@@ -84,12 +84,26 @@ async def test_tale_flow() -> None:
         )).fetchone())[0]
     assert energy_after == energy_before - 5, (energy_before, energy_after)
 
-    # 获得 relic_iron 自动推进到阶段3
+    # 错误地点不扣精力，也不占探索次数
     async with db.connect() as conn:
-        await db.add_item(conn, sid, "relic_iron", 1)
-        item_msg = await tale.check_item_progress(conn, sid, "relic_iron", 1)
-        await conn.commit()
-    assert item_msg and "这身体太小了" in item_msg, item_msg
+        wrong_energy_before = (await (await conn.execute(
+            "SELECT energy FROM stewards WHERE id=?", (sid,)
+        )).fetchone())[0]
+        rolls_before = await tale._explore_count(conn, sid)
+    wrong = await tale.tale_ops(kid, "explore beach")
+    assert "未消耗精力" in wrong, wrong
+    assert "explore sea" in wrong, wrong
+    async with db.connect() as conn:
+        wrong_energy_after = (await (await conn.execute(
+            "SELECT energy FROM stewards WHERE id=?", (sid,)
+        )).fetchone())[0]
+        rolls_after = await tale._explore_count(conn, sid)
+    assert wrong_energy_after == wrong_energy_before
+    assert rolls_after == rolls_before
+
+    # 阶段2 explore sea 必定找到 relic_iron 并推进到阶段3
+    item_msg = await tale.tale_ops(kid, "explore sea")
+    assert "锈铁" in item_msg and "这身体太小了" in item_msg, item_msg
 
     status = await tale.tale_ops(kid, "status")
     assert "阶段 3/6" in status, status
@@ -98,21 +112,20 @@ async def test_tale_flow() -> None:
     exp2 = await tale.tale_ops(kid, "explore plot")
     assert "声音与生日" in exp2, exp2
 
-    # explore bar 推进到阶段5
+    # 次日继续：explore bar 推进到阶段5
+    async with db.connect() as conn:
+        await conn.execute("DELETE FROM tale_explore_rolls WHERE steward_id=?", (sid,))
+        await conn.commit()
     exp3 = await tale.tale_ops(kid, "explore bar")
     assert "出国材料" in exp3, exp3
 
-    # 获得 sea_glass 自动推进到阶段6
-    async with db.connect() as conn:
-        await db.add_item(conn, sid, "sea_glass", 1)
-        item_msg2 = await tale.check_item_progress(conn, sid, "sea_glass", 1)
-        await conn.commit()
+    # 阶段5 explore beach 必定找到 sea_glass 并推进到阶段6
+    item_msg2 = await tale.tale_ops(kid, "explore beach")
     assert item_msg2 and "最后一封信" in item_msg2, item_msg2
 
-    # 给 fossil_shell 后 turnin 完成
-    async with db.connect() as conn:
-        await db.add_item(conn, sid, "fossil_shell", 1)
-        await conn.commit()
+    # 阶段6 explore beach 找 fossil_shell，再 turnin 完成
+    fossil = await tale.tale_ops(kid, "explore beach")
+    assert "化石贝壳" in fossil and "turnin" in fossil, fossil
     finish = await tale.tale_ops(kid, "turnin")
     assert "已完成" in finish, finish
     assert "最后一封信" in finish, finish
@@ -165,15 +178,61 @@ async def test_tale_explore_daily_cap() -> None:
 
     kid, _ = await _enroll(db, "tale-cap@example.com", "探索者乙")
     await tale.tale_ops(kid, "accept black_box_lover")
-    # 每日 3 次主动探索
+    # 每日只计算能推进当前阶段的 3 次主动探索
     await tale.tale_ops(kid, "explore beach")
-    await tale.tale_ops(kid, "explore beach")
-    await tale.tale_ops(kid, "explore beach")
+    await tale.tale_ops(kid, "explore sea")
+    await tale.tale_ops(kid, "explore plot")
     try:
-        await tale.tale_ops(kid, "explore beach")
+        await tale.tale_ops(kid, "explore bar")
         raise AssertionError("daily cap should block")
     except ValueError as exc:
         assert "今天已经主动探索" in str(exc), exc
+
+
+async def test_commons_claim_advances_item_stage() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="tale-commons-"))
+    db = await _boot(tmp)
+    from server import commons, tale
+
+    kid, sid = await _enroll(db, "tale-commons@example.com", "拾荒者")
+    await tale.tale_ops(kid, "accept black_box_lover")
+    await tale.tale_ops(kid, "explore beach")
+
+    now = db.now()
+    async with db.connect() as conn:
+        cur = await conn.execute(
+            """
+            INSERT INTO commons_spawns (
+                spawn_key, label, domain, reward_item, reward_qty,
+                reward_tickets, detail, appears_at, expires_at
+            ) VALUES (?,?,?,?,?,?,?,?,?)
+            """,
+            (
+                "test:tale-iron",
+                "退潮铁箱",
+                "shore",
+                "relic_iron",
+                1,
+                0,
+                "测试任务物品推进",
+                now - 1,
+                now + 3600,
+            ),
+        )
+        spawn_id = cur.lastrowid
+        await conn.commit()
+
+    claimed = await commons.commons_ops(kid, f"claim {spawn_id}")
+    assert "锈铁" in claimed and "这身体太小了" in claimed, claimed
+    status = await tale.tale_ops(kid, "status")
+    assert "阶段 3/6" in status, status
+
+    async with db.connect() as conn:
+        row = await (await conn.execute(
+            "SELECT quantity FROM satchel WHERE steward_id=? AND item='relic_iron'",
+            (sid,),
+        )).fetchone()
+    assert row and row[0] == 1, row
 
 
 async def test_tale_abandon() -> None:
@@ -207,6 +266,7 @@ def test_tale_mcp_description() -> None:
 def main() -> None:
     asyncio.run(test_tale_flow())
     asyncio.run(test_tale_explore_daily_cap())
+    asyncio.run(test_commons_claim_advances_item_stage())
     asyncio.run(test_tale_abandon())
     test_tale_mcp_description()
     print("tale tests ok")

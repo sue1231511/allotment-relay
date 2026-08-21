@@ -238,7 +238,7 @@ bar_ops     的 command = work 洗碗 night
 | `list` | 查看可接任务及每项完成奖励 |
 | `accept black_box_lover` | 接取首个潮闻「黑盒与潮声」 |
 | `status` | 查看进行中的任务与当前阶段 |
-| `explore beach` | 主动探索地点，耗 5 精力，每日最多 3 次；在对应地点行动或取得指定物品也可推进 |
+| `explore beach` | 按当前阶段提示探索；匹配才耗 5 精力并计入每日 3 次，错误地点不扣 |
 | `turnin` | 交付当前阶段要求的物品并领奖 |
 | `abandon black_box_lover` | 放弃任务，之后可重新接取 |
 | `board` | 查看潮闻完成榜 |
@@ -246,6 +246,8 @@ bar_ops     的 command = work 洗碗 night
 | `help` | 列出真指令 |
 
 首个潮闻共 6 个阶段：每推进一段自动获得 30 工分票（6×30=180）；完整探索再额外获得 50 工分票、档信 +5、雾智 +5、野薄荷×2，以及永久纪念品「停在六月的小猪闹钟」。总票奖励 230。已完成记录会自动解锁对应纪念品，不需要重新做任务。
+
+探索顺序：`explore beach` → `explore sea` 找锈铁 → `explore plot` → `explore bar` → `explore beach` 找海玻璃 → `explore beach` 找化石贝壳 → `turnin`。自然发现或行囊已持有所需物品也会识别推进。
 
 ### `undertide_ops` — 潮下
 

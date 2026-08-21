@@ -174,9 +174,9 @@ async def star_ops(
     return await star.star_ops(_kid(), command)
 
 
-@mcp.tool(description="潮闻 — 故事探索任务。首个任务共 6 阶段，每推进一段自动发 30 票，完整探索再额外发 50 票、属性、物品和永久纪念品（总票奖励 230）。例子：list · accept black_box_lover · souvenirs。空 command=可接任务与奖励预览；不会就 help。")
+@mcp.tool(description="潮闻 — 故事探索任务。按 status/hint 指定地点探索：阶段2 explore sea 找锈铁，阶段5/6 explore beach 找海玻璃/化石贝壳；错误地点不扣精力。每阶段30票×6，完整探索额外50票并发纪念品。例子：list · accept black_box_lover · explore sea。空 command=任务与奖励；不会就 help。")
 async def tale_ops(
-    command: Annotated[str, Field(description="子命令整句。list / accept 任务key / status / explore [地点] / turnin / abandon 任务key / board / souvenirs / help。空=list（含每阶段30票×6、通关额外50票的奖励预览）；souvenirs=永久纪念品收藏册。explore 耗 5 精力，每日 3 次。不要和 visit_ops lore 混淆。")] = "list",
+    command: Annotated[str, Field(description="子命令整句。list / accept 任务key / status / explore beach|sea|plot|bar / turnin / abandon 任务key / board / souvenirs / help。阶段2用 explore sea；阶段5/6用 explore beach。匹配阶段才耗5精力并计入每日3次，错误地点不扣。空=list。不要和 visit_ops lore 混淆。")] = "list",
 ) -> str:
     from . import tale
     return await tale.tale_ops(_kid(), command)
