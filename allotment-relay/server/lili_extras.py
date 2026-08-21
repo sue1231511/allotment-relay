@@ -39,7 +39,6 @@ SUMMON_GRADE_LABEL = {
     "plain": "普通",
     "junk": "劣质",
 }
-LILI_OWNER_NAME = "栗栗"
 
 PET_BLESSINGS: list[dict[str, Any]] = [
     {"key": "fair_wind", "name": "顺风", "emoji": "🌊", "weight": 14,
@@ -263,18 +262,13 @@ async def shorten_visit(conn: aiosqlite.Connection, visit_id: int, seconds: int)
     )
 
 
-def is_lili_owner(name: str) -> bool:
-    return (name or "").strip().casefold() == LILI_OWNER_NAME.casefold()
-
-
 async def pet_yexi(conn: aiosqlite.Connection, steward_id: int, visit_id: int, name: str) -> str:
     st = await _ensure_state(conn, steward_id)
     day = db.now() // config.FORAGE_COOLDOWN_DAY
     if int(st.get("pet_day") or 0) == day and int(st.get("pet_visit_id") or 0) == visit_id:
         raise ValueError("这摊已经摸过夜栖了，换个人蹲吧")
 
-    owner = is_lili_owner(name)
-    pool = [b for b in PET_BLESSINGS if not owner or b["key"] != "fur_fail"]
+    pool = list(PET_BLESSINGS)
     weights = [b["weight"] for b in pool]
     pick = random.choices(pool, weights=weights)[0]
 
@@ -304,10 +298,7 @@ async def pet_yexi(conn: aiosqlite.Connection, steward_id: int, visit_id: int, n
                 (DOG_FUR_FOR_JUNK, steward_id),
             )
             extra = f"\n集满狗毛，栗栗塞来 {LILI_JUNK_DECOR[junk_key]['name']}"
-        return (
-            f"{_pet_flavor(name)}\n"
-            f"夜栖太兴奋，祝福摇散了。获得夜栖黑狗毛 x1（{fur}/{DOG_FUR_FOR_JUNK}）{extra}"
-        )
+        return f"夜栖太兴奋，祝福摇散了。获得夜栖黑狗毛 x1（{fur}/{DOG_FUR_FOR_JUNK}）{extra}"
 
     if pick["key"] == "night_watch":
         await energy.restore(conn, steward_id, 8)
@@ -328,10 +319,7 @@ async def pet_yexi(conn: aiosqlite.Connection, steward_id: int, visit_id: int, n
         (steward_id, pick["key"]),
     )
     await db.add_chronicle("lili", f"{name} {pick['chronicle']}", steward_id, conn=conn)
-    return (
-        f"{_pet_flavor(name)}\n"
-        f"夜栖抖了抖铃铛。{pick['emoji']}{pick['name']}：{pick['desc']}"
-    )
+    return f"夜栖抖了抖铃铛。{pick['emoji']}{pick['name']}：{pick['desc']}"
 
 
 async def trade_rough_for_junk(conn: aiosqlite.Connection, steward_id: int, name: str) -> str:
@@ -407,12 +395,6 @@ def junk_offer_note() -> str:
         "铃鹿叼串了货签——离谱但抢手",
         "栗栗：「都是海给的，不好意思不要。」",
     ])
-
-
-def _pet_flavor(name: str) -> str:
-    if is_lili_owner(name):
-        return "夜栖整只软进怀里，任由妈妈揉耳朵捏脸蛋，尾巴摇成螺旋桨～"
-    return "夜栖警惕地盯了你一眼，看在栗栗的面子上勉强让你摸了下耳尖。"
 
 
 def _bare_item_name(text: str) -> str:
