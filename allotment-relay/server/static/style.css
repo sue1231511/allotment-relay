@@ -668,7 +668,8 @@ select:focus {
 .board-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 18px;
+  column-gap: 8px;
+  row-gap: 14px;
   align-items: stretch;
   margin: 8px 0 24px;
 }
