@@ -391,6 +391,8 @@ async def manual_scrump(steward: dict[str, Any], target_name: str, slot: int | N
                 extra.append("稻草人盯上了")
             if dog:
                 extra.append("守夜狗叫了")
+            if has_cam:
+                extra.append("监控拍到了")
             if extra:
                 detail += f"（{'、'.join(extra)}）"
             action = "scrump_busted"
