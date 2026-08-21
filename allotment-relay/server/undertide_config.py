@@ -150,3 +150,11 @@ LIZHI_KEY = os.environ.get("LIZHI_KEY", "")
 UT_LIZHI_MOOD_PRICE = {"great": 0.8, "good": 0.95, "normal": 1.0, "bad": 1.05, "awful": 1.1}
 UT_LIZHI_BOGO_GIFT = "sea_salt_lager"
 UT_LIZHI_BOGO_CAP = 30
+
+# ── 滨海酒吧·包宿救济（社会兜底）──
+LODGE_WALLET_LINE = 20      # 钱包低于此线可进
+LODGE_DURATION_H = 6        # 真实小时（一个"整天"）
+LODGE_PAY = 15              # 救济工钱（<洗碗18）
+LODGE_ENERGY = 65           # 管饭回的精力
+LODGE_MAX_STREAK = 3        # 连续3次后荔栀翻脸
+LODGE_COOLDOWN_H = 24       # 翻脸冷却

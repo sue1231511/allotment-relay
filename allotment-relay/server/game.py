@@ -66,6 +66,15 @@ async def require_steward(key_id: int, *, exempt_duty: bool = False) -> dict[str
         await bar.assert_bar_duty(s)
     from . import undertide
     await undertide.assert_not_jailed(s["id"])
+    # 包宿行动锁：在后厨洗碗的人哪儿也去不了
+    from . import bar as bar_mod
+    if bar_mod.is_lodging(s):
+        hours = (int(s["lodge_until"]) - __import__("time").time()) // 3600
+        if hours > 0:
+            raise ValueError(
+                "你还在后厨。碗没洗完，水汽糊在脸上。\n\n"
+                f"（包宿中——约 {hours} 小时后结账走人。bar_ops lodge 查你的状态。）"
+            )
     await db.touch_steward(s["id"])
     async with db.connect() as conn:
         from . import health as health_mod

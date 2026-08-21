@@ -301,7 +301,24 @@ async def _hosts_on_duty(conn: aiosqlite.Connection) -> list[dict[str, Any]]:
         """,
         (day,),
     )).fetchall()
-    return [dict(r) for r in rows]
+    hosts = [dict(r) for r in rows]
+    # 包宿救济者：当晚强制在列（无提成，营收全归酒馆）
+    now = db.now()
+    lodgers = await (await conn.execute(
+        "SELECT id, name, badge, portrait, tickets FROM stewards WHERE lodge_until > ?",
+        (now,),
+    )).fetchall()
+    for lod in lodgers:
+        if not any(h["id"] == lod["id"] for h in hosts):
+            entry = dict(lod)
+            entry["lodger"] = True
+            hosts.append(entry)
+    return hosts
+
+
+def is_lodging(s: dict[str, Any]) -> bool:
+    """包宿中（行动锁）。"""
+    return int(s.get("lodge_until") or 0) > db.now()
 
 
 async def _pick_host(conn: aiosqlite.Connection, host_name: str | None) -> dict[str, Any] | None:
@@ -1211,9 +1228,36 @@ async def bar_ops(key_id: int, command: str) -> str:
     parts = command.strip().split(maxsplit=2)
     verb = parts[0].lower() if parts else "status"
 
+    # 包宿到期：懒结算发工钱走人（任何 bar_ops 都会触发）
+    if int(s.get("lodge_until") or 0) and db.now() >= int(s["lodge_until"]):
+        from .undertide_config import LODGE_PAY
+        async with db.connect() as conn:
+            await conn.execute(
+                "UPDATE stewards SET tickets=tickets+?, lodge_until=0 WHERE id=?",
+                (LODGE_PAY, s["id"]),
+            )
+            await db.add_chronicle(
+                "bar", f"{s['name']} 在后厨干满了一整天，领了工钱从后门走了。", s["id"], conn=conn,
+            )
+            await conn.commit()
+        s = await db.get_steward_by_id(s["id"]) or s
+        release_note = (
+            "\n\n——\n\n天亮了。荔栀在后门口把 "
+            f"{LODGE_PAY} 票拍进你手里，顺手塞了两个昨天剩的包子。\n\n"
+            "「楼上那单不错，」她说，「客人都说那孩子眼神虽然像要死了，"
+            "倒酒倒得挺稳。」\n\n"
+            f"（工钱 +{LODGE_PAY} · 包宿结束，你自由了。）"
+        )
+    else:
+        release_note = ""
+
+    if verb == "lodge" and not is_lodging(s) and release_note:
+        return release_note + "\n\n" + _LODGE_HINT
+
     if verb == "status":
         async with db.connect() as conn:
-            return await _cmd_status(conn, s)
+            msg = await _cmd_status(conn, s)
+            return msg + release_note if release_note else msg
 
     if verb in ("tonight", "night"):
         async with db.connect() as conn:
@@ -1320,6 +1364,65 @@ async def bar_ops(key_id: int, command: str) -> str:
             "这条指令已经关了。\n\n"
             "荔栀看了你一眼：「我的心情，什么时候轮到别人定了。」\n"
             "（想哄她开心：bar_ops cheer 你想说的话——她听不听得进去，她说得算。）"
+        )
+
+    if verb == "lodge":
+        # 包宿救济：社会兜底。准进穷得叮当响的人，管饭+救济工钱+被迫当牛郎（无提成）
+        day = _day_id()
+        if is_lodging(s):
+            hours = (int(s["lodge_until"]) - db.now()) // 3600
+            raise ValueError(
+                f"你还在后厨。碗没洗完。\n\n（包宿中——剩余约 {max(0,hours)} 小时。"
+                f"干完活自动结账走人，急也没用。）"
+            )
+        if db.now() < int(s.get("lodge_cooldown") or 0):
+            raise ValueError(
+                "荔栀看了你一眼，把门帘放了下来。\n\n"
+                "「你把这儿当收容所了？」\n\n"
+                "（连续包宿太多次——歇一天再来说。）"
+            )
+        wallet = int(s.get("tickets") or 0)
+        if wallet >= 60 and int(s.get("energy") or 100) >= 40:
+            raise ValueError(
+                "「你？」荔栀上下看了你一遍。\n\n"
+                "「你还没到那个地步。」她朝正常的招聘启事抬了抬下巴，"
+                "「bar_ops work——那是给还有力气的人准备的。」\n\n"
+                "（包宿只收真正走投无路的：钱包 <20，或饿得没力气干活）"
+            )
+        if wallet >= 60:
+            # 有钱但饿瘫——也不收，先吃饭
+            raise ValueError(
+                "「你身上还有票，」荔栀指了指菜单，「先点吃的。饿成这样是因为没吃饭，不是没活干。」\n"
+                "（bar_ops order 点杯热汤或 kitchen_ops eat）"
+            )
+        async with db.connect() as conn:
+            now = db.now()
+            until = now + 6 * 3600
+            count = int(s.get("lodge_count") or 0) + 1
+            cooldown = 0
+            if count >= 3:
+                cooldown = until + 24 * 3600
+            await conn.execute(
+                "UPDATE stewards SET lodge_until=?, lodge_count=?, lodge_cooldown=?, "
+                "energy=MIN(100, MAX(energy, 65)), satiety=100 WHERE id=?",
+                (until, count, cooldown, s["id"]),
+            )
+            await db.add_chronicle(
+                "bar", f"{s['name']} 从后门进了滨海酒吧的包宿名单。今晚楼上的名单也多了一个名字。",
+                s["id"], conn=conn,
+            )
+            await conn.commit()
+        streak_note = f"\n\n（这是你第 {count} 次包宿。荔栀什么都没说，但她记着数。）" if count >= 2 else ""
+        ban_note = "\n\n（下次她不会再收你了——歇一天。）" if count >= 3 else ""
+        return (
+            "「看你这样，档口都不会收你了。」\n\n"
+            "荔栀掀开后门的帘子，朝里面扬了扬头。\n\n"
+            "「后厨缺个洗碗的。管饭，工钱十五，明早结。」\n\n"
+            "你还没来得及道谢，她又补了一句：\n\n"
+            "「晚上——楼上缺人。你就在牛郎名单里了，别问为什么。」\n\n"
+            "（包宿 6 小时：管饭已吃饱 · 精力恢复至 65 · 工钱 15 明早结 · "
+            "今晚你的名字会出现在牛郎单上——**点单收入全归酒馆，你没有提成** · "
+            "期间哪儿都去不了）" + streak_note + ban_note
         )
 
     if verb == "cheer":

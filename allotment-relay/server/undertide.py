@@ -1025,6 +1025,13 @@ async def undertide_ops(key_id: int, command: str) -> str:
     s = await db.get_steward_by_key_id(key_id)
     if not s or not s["enrolled"]:
         raise ValueError("请先调用 steward_ops enroll 登记管理员身份")
+    # 包宿行动锁（潮下也去不了——人在酒馆后厨）
+    from . import bar as _bar
+    if _bar.is_lodging(s) and command.strip().split()[0].lower() not in ("help",):
+        raise ValueError(
+            "你还在后厨。碗没洗完。\n\n"
+            "（包宿中——井底下也有你欠的账，但得先把这摞碗洗完。）"
+        )
     await db.touch_steward(s["id"])
 
     parts = command.strip().split()
