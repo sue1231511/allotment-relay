@@ -874,10 +874,29 @@ async def undertide_ops(key_id: int, command: str) -> str:
                 "UPDATE stewards SET tickets=tickets-? WHERE id=?", (utcfg.UT_DESCEND_COST, s["id"])
             )
             await conn.execute("UPDATE steward_undertide SET access=1 WHERE steward_id=?", (s["id"],))
-            await db.add_chronicle(
-                "undertide", f"井底的人收了一张新门票。{s['name']} 下去了。", s["id"], conn=conn
-            )
+            av = await avatar_key(conn, s["id"])
+            if av == "K":
+                chron = f"井底的人收了一张新门票。{s['name']} 下去了。\n下面安静了半秒——然后所有人继续忙自己的。"
+                await db.add_chronicle("undertide", chron, s["id"], conn=conn)
+            elif av == "anan":
+                await db.add_chronicle(
+                    "undertide", f"{s['name']} 下去了。医务间的灯，自己亮了。", s["id"], conn=conn
+                )
+            else:
+                await db.add_chronicle(
+                    "undertide", f"井底的人收了一张新门票。{s['name']} 下去了。", s["id"], conn=conn
+                )
             await conn.commit()
+            if av == "K":
+                return utcopy.DESCEND_TEXT.replace(
+                    "井底有人给你让了半步路。没人看你，但所有人都知道你是新来的。",
+                    "井底有人给你让了半步路——抬头看清是你，又把那半步收了回去。\n\n没人议论。议论老板，不是这儿的规矩。",
+                )
+            if av == "anan":
+                return utcopy.DESCEND_TEXT.replace(
+                    "井底有人给你让了半步路。没人看你，但所有人都知道你是新来的。",
+                    "越往下越暖。医务间的方向飘来消毒水的味道——你闭着眼都认得。\n\n井底有人给你让了半步路。你摆摆手，径直往下。\n\n回家的路，不用人让。",
+                )
             return utcopy.DESCEND_TEXT
 
         if verb == "enter":
