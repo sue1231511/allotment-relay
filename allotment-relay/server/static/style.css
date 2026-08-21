@@ -637,16 +637,26 @@ select:focus {
 
 .board-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(300px, .75fr);
+  grid-template-columns: 1fr 1fr;
   gap: 18px;
-  align-items: start;
+  align-items: stretch;
   margin: 8px 0 24px;
 }
 
-.board-secondary { display: grid; gap: 14px; }
+.board-primary,
+.board-secondary {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+}
 
-.board-primary .panel { padding: 28px; }
-.board-secondary .panel { padding: 22px; }
+.board-primary .panel,
+.board-secondary .panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+}
 
 .board-primary .panel-head,
 .board-secondary .panel-head {
@@ -661,6 +671,11 @@ select:focus {
 .board-primary .board-hint,
 .board-secondary .board-hint {
   margin: 6px 0 0;
+}
+
+.board-primary .board-list,
+.board-secondary .board-list {
+  flex: 1;
 }
 
 .board-summary {
@@ -702,14 +717,8 @@ select:focus {
   background: rgba(255, 255, 255, .55);
 }
 
-.board-primary .board-row {
-  grid-template-columns: 2.6em 1fr auto;
-  padding: 14px 0;
-}
-
-.board-primary .board-who b { font-size: 17px; }
-
 .board-note {
+  grid-column: 1 / -1;
   margin-top: 0;
   padding: 16px 18px;
   border: 1px solid var(--line);
