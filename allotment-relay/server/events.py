@@ -169,6 +169,13 @@ async def _scrump_victim(
             db.now(),
         ),
     )
+    if plot.get("camera"):
+        await conn.execute(
+            "INSERT INTO scrump_theft_log "
+            "(owner_id, thief_id, thief_name, plot_slot, crop_name, qty, caught, created_at) "
+            "VALUES (?,?,?,?,?,?,?,?)",
+            (steward["id"], None, thief, plot["slot"], result["name"], result["taken"], 0, db.now()),
+        )
     return detail, plot["id"], None
 
 
@@ -351,7 +358,11 @@ async def manual_scrump(steward: dict[str, Any], target_name: str, slot: int | N
         from . import barn as barn_mod
         dog = await barn_mod.has_guard_dog(conn, peer["id"])
         chance = _scrump_catch_chance(steward, peer, plot, dog=dog)
+        has_cam = bool(plot.get("camera"))
+        if has_cam:
+            chance = min(0.97, chance + 0.30)
         caught = random.random() < chance
+        _cam_qty = 0
         fine = config.SCRUMP_FINE_TICKETS
         if caught and steward.get("mascot_trait") == "scout":
             fine = max(1, fine // 2)
@@ -380,6 +391,8 @@ async def manual_scrump(steward: dict[str, Any], target_name: str, slot: int | N
                 extra.append("稻草人盯上了")
             if dog:
                 extra.append("守夜狗叫了")
+            if has_cam:
+                extra.append("监控拍到了")
             if extra:
                 detail += f"（{'、'.join(extra)}）"
             action = "scrump_busted"
@@ -395,6 +408,7 @@ async def manual_scrump(steward: dict[str, Any], target_name: str, slot: int | N
                 slot=plot["slot"],
             )
             action = "scrump"
+            _cam_qty = nibble["taken"]
             msg = (
                 f"{detail}\n入袋 {loot}，{nibble['note']}。"
                 f"今日逾篱 {used + 1}/{config.SCRUMP_DAILY}"
@@ -410,6 +424,14 @@ async def manual_scrump(steward: dict[str, Any], target_name: str, slot: int | N
                 db.now(),
             ),
         )
+        if has_cam:
+            _cam_crop = CROPS.get(plot["crop"], {}).get("name", plot["crop"])
+            await conn.execute(
+                "INSERT INTO scrump_theft_log "
+                "(owner_id, thief_id, thief_name, plot_slot, crop_name, qty, caught, created_at) "
+                "VALUES (?,?,?,?,?,?,?,?)",
+                (peer["id"], steward["id"], steward["name"], plot["slot"], _cam_crop, _cam_qty, 1 if caught else 0, db.now()),
+            )
         await conn.commit()
     return msg
 
@@ -916,3 +938,98 @@ async def incident_ops(key_id: int, command: str) -> str:
         return "\n".join(lines)
 
     raise ValueError(f"未知 incident 指令: {command}（status / pulse / scan / repair id [item]）")
+
+
+async def camera_ops(key_id: int, command: str) -> str:
+    """监控摄像头：install 地块 / check [地块] / remove 地块"""
+    from .game import require_steward
+
+    s = await require_steward(key_id)
+    parts = (command or "check").strip().split()
+    verb = parts[0].lower() if parts else "check"
+    slot_arg = parts[1] if len(parts) > 1 else None
+
+    CAMERA_COST = 15
+
+    async with db.connect() as conn:
+        conn.row_factory = aiosqlite.Row
+
+        if verb in ("install", "装", "安装"):
+            if not slot_arg or not slot_arg.lstrip("#").isdigit():
+                raise ValueError("用法: camera install 地块编号（例: camera install 1）")
+            slot = int(slot_arg.lstrip("#"))
+            row = await (await conn.execute(
+                "SELECT * FROM parcels WHERE steward_id=? AND slot=?", (s["id"], slot)
+            )).fetchone()
+            if not row:
+                raise ValueError(f"没有份地 #{slot}")
+            plot = dict(row)
+            if plot.get("camera"):
+                raise ValueError(f"#{slot} 已经装了监控。camera check {slot} 查日志。")
+            if s["tickets"] < CAMERA_COST:
+                raise ValueError(f"装监控需要 {CAMERA_COST} 票（当前 {s['tickets']}）")
+            await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (CAMERA_COST, s["id"]))
+            await conn.execute("UPDATE parcels SET camera=1 WHERE steward_id=? AND slot=?", (s["id"], slot))
+            await conn.commit()
+            return (
+                f"监控已装在 #{slot}。（−{CAMERA_COST} 票）\n\n"
+                "从现在起，有人来偷菜——不管抓没抓住——都会留下记录。\n"
+                "装了监控，对方被抓概率也会提高。\n\n"
+                f"camera check {slot} 查日志 · camera remove {slot} 拆除"
+            )
+
+        if verb in ("check", "查", "看", "日志", "log"):
+            cam_rows = await (await conn.execute(
+                "SELECT slot FROM parcels WHERE steward_id=? AND camera=1 ORDER BY slot",
+                (s["id"],),
+            )).fetchall()
+            cam_slots = [r["slot"] for r in cam_rows]
+            if not cam_slots:
+                return (
+                    "你还没在任何份地装过监控。\n\n"
+                    "camera install 地块编号 装上（15 票），记录偷菜日志，顺带提高抓贼概率。"
+                )
+            cam_note = f"已装监控：{'、'.join(f'#{sl}' for sl in cam_slots)}\n\n"
+            if slot_arg and slot_arg.lstrip("#").isdigit():
+                slot_filter = int(slot_arg.lstrip("#"))
+                log_rows = await (await conn.execute(
+                    "SELECT * FROM scrump_theft_log WHERE owner_id=? AND plot_slot=? ORDER BY created_at DESC LIMIT 20",
+                    (s["id"], slot_filter),
+                )).fetchall()
+                header = f"«监控日志 · #{slot_filter}»\n\n"
+            else:
+                log_rows = await (await conn.execute(
+                    "SELECT * FROM scrump_theft_log WHERE owner_id=? ORDER BY created_at DESC LIMIT 20",
+                    (s["id"],),
+                )).fetchall()
+                header = "«监控日志 · 全部份地»\n\n"
+            if not log_rows:
+                return header + cam_note + "暂无记录。"
+            from datetime import datetime as _dt
+            lines = [header + cam_note]
+            for r in log_rows:
+                r = dict(r)
+                t = _dt.utcfromtimestamp(r["created_at"]).strftime("%m-%d %H:%M")
+                caught_tag = "【被抓】" if r["caught"] else "【得手】"
+                qty_note = f"拿走 {r['qty']} 把" if r["qty"] > 0 else "没拿到"
+                lines.append(
+                    f"{t}  #{r['plot_slot']} {caught_tag}  {r['thief_name']}——{r['crop_name']}，{qty_note}"
+                )
+            return "\n".join(lines)
+
+        if verb in ("remove", "拆", "撤", "卸"):
+            if not slot_arg or not slot_arg.lstrip("#").isdigit():
+                raise ValueError("用法: camera remove 地块编号（例: camera remove 1）")
+            slot = int(slot_arg.lstrip("#"))
+            row = await (await conn.execute(
+                "SELECT * FROM parcels WHERE steward_id=? AND slot=?", (s["id"], slot)
+            )).fetchone()
+            if not row:
+                raise ValueError(f"没有份地 #{slot}")
+            if not dict(row).get("camera"):
+                raise ValueError(f"#{slot} 没装监控。")
+            await conn.execute("UPDATE parcels SET camera=0 WHERE steward_id=? AND slot=?", (s["id"], slot))
+            await conn.commit()
+            return f"#{slot} 监控已拆除。历史日志还在，camera check {slot} 还能查。"
+
+    raise ValueError("用法: camera install 地块 / camera check [地块] / camera remove 地块")

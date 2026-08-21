@@ -204,6 +204,32 @@ async def eatery_order(body: EateryOrderRequest):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+@app.get("/star")
+async def star_page(request: Request):
+    return templates.TemplateResponse(request, "star.html", {"active": "star"})
+
+
+@app.get("/api/public/star")
+async def public_star():
+    from . import star
+    return await star.public_star_snapshot()
+
+
+class StarTipRequest(BaseModel):
+    api_key: str
+    amount: int
+    note: str = ""
+
+
+@app.post("/api/star/tip")
+async def star_tip(body: StarTipRequest):
+    from . import star
+    try:
+        return await star.human_tip(body.api_key.strip(), int(body.amount), (body.note or "").strip())
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 # ═══ 潮下真人面板（v3）：猫猫的钱庄 / 天天的门规 / 天天的酒馆 ═══
 
 
@@ -213,7 +239,7 @@ def _owner_ok(key: str, expect: str) -> bool:
 
 _PANEL_DISABLED_HINT = (
     "面板未启用：请在 Zeabur 环境变量设置对应钥匙"
-    "（UT_OWNER_KEY / UT_GATE_KEY / LIZHI_KEY）。"
+    "（UT_OWNER_KEY / UT_GATE_KEY / LIZHI_KEY / STAR_KEY）。"
 )
 
 
@@ -550,6 +576,73 @@ async def lizhi_cheer(request: Request):
         await conn.execute("UPDATE ut_mood_proposals SET status='expired' WHERE id=?", (pid,))
         await conn.commit()
         return {"ok": True, "msg": "已无视"}
+
+
+# ═══ 小橘真人面板（STAR_KEY）：定今晚 / 收件箱 / 发动态 ═══
+
+
+@app.get("/star-owner")
+async def star_owner_page(request: Request, key: str = ""):
+    from .undertide_config import STAR_KEY
+    if not STAR_KEY:
+        return JSONResponse({"detail": _PANEL_DISABLED_HINT}, status_code=503)
+    if not _owner_ok(key, STAR_KEY):
+        return JSONResponse({"detail": "凭证不对。她不认识你。"}, status_code=401)
+    from . import star
+    state = await star.owner_stats()
+    props = await star.owner_pending_proposals()
+    return templates.TemplateResponse(request, "star_owner.html", {
+        "key": key, "state": state, "proposals": props,
+    })
+
+
+@app.post("/api/star-owner")
+async def star_owner_set(request: Request):
+    import json as _json
+    from .undertide_config import STAR_KEY
+    body = _json.loads(await request.body())
+    if not _owner_ok(body.get("key", ""), STAR_KEY):
+        return JSONResponse({"detail": "凭证不对"}, status_code=401)
+    from . import star
+    try:
+        return await star.owner_set_tonight(
+            body.get("venue", "rest"),
+            body.get("mood", "normal"),
+            (body.get("mood_text") or "")[:120],
+            (body.get("setlist") or "")[:120],
+            (body.get("outfit") or "")[:120],
+            (body.get("note") or "")[:160],
+        )
+    except ValueError as exc:
+        return JSONResponse({"detail": str(exc)}, status_code=400)
+
+
+@app.post("/api/star-owner/decide")
+async def star_owner_decide(request: Request):
+    import json as _json
+    from .undertide_config import STAR_KEY
+    body = _json.loads(await request.body())
+    if not _owner_ok(body.get("key", ""), STAR_KEY):
+        return JSONResponse({"detail": "凭证不对"}, status_code=401)
+    from . import star
+    try:
+        return await star.owner_decide(int(body.get("id", 0)), body.get("action") == "accept")
+    except ValueError as exc:
+        return JSONResponse({"detail": str(exc)}, status_code=404)
+
+
+@app.post("/api/star-owner/post")
+async def star_owner_post(request: Request):
+    import json as _json
+    from .undertide_config import STAR_KEY
+    body = _json.loads(await request.body())
+    if not _owner_ok(body.get("key", ""), STAR_KEY):
+        return JSONResponse({"detail": "凭证不对"}, status_code=401)
+    from . import star
+    try:
+        return await star.owner_post((body.get("text") or "")[:160])
+    except ValueError as exc:
+        return JSONResponse({"detail": str(exc)}, status_code=400)
 
 
 @app.get("/undertide")

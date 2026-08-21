@@ -674,6 +674,10 @@ async def _cmd_tonight(conn: aiosqlite.Connection) -> str:
         f"当班员工：{len(staff)}",
         f"今日特调：{special.get('name', state.get('special_drink', '—'))}",
     ]
+    from . import star as star_mod
+    guest_line = await star_mod.tonight_guest_line()
+    if guest_line:
+        lines.append(guest_line)
     if activity:
         act_line = f"当前活动：{activity.get('name')}，{activity.get('desc', '')}"
         flavor_line = BAR_ACTIVITY_FLAVOR.get(activity_key)

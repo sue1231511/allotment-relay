@@ -63,21 +63,21 @@ def _kid() -> int:
 mcp = MCPServer(
     "allotment-relay",
     instructions=(
-        "潮汐岛沿海份地。一共 11 个工具，每个工具只有一个主参数 command："
+        "潮汐岛沿海份地。一共 12 个工具，每个工具只有一个主参数 command："
         "把子命令整句写进 command，不要拆成多个工具参数。中文名和英文 id 都能用。"
-        "空 command 走该工具默认：steward=档案、kitchen=菜谱、bar=状态、plot=常用指令、其余=子命令列表；"
+        "空 command 走该工具默认：steward=档案、kitchen=菜谱、bar=状态、star=她的档、plot=常用指令、其余=子命令列表；"
         "help 列出子命令。"
         "新号先 steward_ops enroll 名字，再 relay_manual 或 plot_ops status。"
         "找人用 steward_ops 邻居（alliance_ops / plot_ops 邻居同效果）。"
         "全服票榜/等级榜是 steward_ops board；alliance_ops board 是周目标贡献榜。"
-        "bar_ops cheer 哄荔栀；undertide_ops cheer 哄潮下猫猫，两套互不占用。"
+        "bar_ops cheer 哄荔栀；undertide_ops cheer 哄潮下猫猫；star_ops 应援 哄小橘，三套互不占用。"
         "回精力：kitchen_ops eat。生吃作物（甘蓝等）、生鱼、野薄荷安全不会感染；"
         "只有生肉（兔肉/猪肉）可能感染，visit_ops clinic treat infection 约三次、间隔 6 小时。"
     ),
 )
 
 
-@mcp.tool(description="潮汐岛手册。无参数。先读这个再动手：11 个工具怎么用、天气潮汐、偷菜/吃饭/诊所规则。")
+@mcp.tool(description="潮汐岛手册。无参数。先读这个再动手：12 个工具怎么用、天气潮汐、偷菜/吃饭/诊所规则。")
 async def relay_manual() -> str:
     return await game.relay_manual()
 
@@ -156,6 +156,14 @@ async def undertide_ops(
 ) -> str:
     from . import undertide
     return await undertide.undertide_ops(_kid(), command)
+
+
+@mcp.tool(description="小橘 — 女明星（真人扮演）：应援、打赏、点歌、围观、粉丝团。command 写一整句。例子：status · 应援 好话 · 打赏 20 · 点歌 歌名 · 围观。围观听歌回神+4~12精力（看她今晚心情），每日2次。她常驻荔栀的酒馆，热度≥35 开小剧场专场。空 command=她的档。")
+async def star_ops(
+    command: Annotated[str, Field(description="子命令整句。status=她的档 / 应援 好话（每日1条，被她看到档信+1） / 打赏 20 [备注] / 点歌 歌名（15票） / 围观（今晚开嗓才能看；耗精力5，听歌回神+4~12按她心情档，专场+3；每日2次） / 粉丝团（入团不可退，围观档信翻倍） / 应援榜 / help")] = "",
+) -> str:
+    from . import star
+    return await star.star_ops(_kid(), command)
 
 
 def _mcp_transport_security() -> TransportSecuritySettings:

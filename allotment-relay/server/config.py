@@ -300,3 +300,34 @@ TT_TICKET_PER_POINT = 20
 TT_TICKET_GAIN_CAP = 3
 TT_BUMP_CHANCE = 0.03
 TT_BUMP_DAILY_MAX = 1
+
+# 小橘 — 真人扮演的女明星（酒馆驻场 + 小剧场专场）
+# 热度节奏在真人手里：应援/点歌只有面板采纳才 +1；打赏自动涨但有日上限
+STAR_NAME = "小橘"
+STAR_HEAT_TIERS = [
+    (0, "无名之辈"),
+    (15, "档口新声"),
+    (35, "酒吧红人"),
+    (60, "潮汐名片"),
+    (85, "顶流"),
+]
+STAR_START_HEAT = 20
+STAR_STAGE_HEAT = 35      # 小剧场专场解锁热度
+STAR_BAR_CUT = 0.30       # 酒馆场子荔栀抽成；小剧场专场全额归她
+STAR_CHEER_DAILY = 1      # 每 24h 一条应援 pending（照荔栀 cheer）
+STAR_CHEER_WINDOW = 86400
+STAR_SONG_COST = 15       # 点歌进收件箱的票（纸条递给她，钱归她的账）
+STAR_TIP_MIN = 1
+STAR_TIP_MAX = 100
+STAR_TIP_HEAT_MIN = 10    # 单笔 ≥10 票才给热度
+STAR_TIP_HEAT_DAILY = 3   # 打赏来源热度日上限
+STAR_TIP_CHRONICLE_MIN = 20  # ≥20 票写全服纪事
+STAR_WATCH_ENERGY = 5     # 围观演出耗精力
+STAR_WATCH_DAILY = 2      # 围观每日上限——一场演出听两遍，第三遍是赖着不走
+# 围观回精力按她当晚心情档浮动：她状态好观众回得多，唱砸了观众心累
+STAR_WATCH_GAIN = {"great": 12, "good": 10, "normal": 8, "bad": 6, "awful": 4}
+STAR_STAGE_WATCH_BONUS = 3    # 专场的票房子更值：围观回精力再+3
+STAR_WATCH_GIFT_CHANCE = 0.18   # 观众小概率捡到台下掉的花
+STAR_SETTLE_GAIN = 2      # 开嗓当晚跨天 +2
+STAR_SETTLE_DECAY = 1     # 每日热度衰减 -1
+STAR_POST_DAILY = 5       # 面板发动态日上限

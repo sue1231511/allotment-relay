@@ -22,12 +22,13 @@ python run.py
 | `/board` | 全服榜 |
 | `/undertide` | 井下传闻 |
 | `/bar` | 滨海酒吧 |
+| `/star` | 小橘星光 |
 | `/eatery` | 岸畔小馆 |
 | `/mcp/?api_key=ar_sk_...` | MCP |
 
 入门：`/register` → MCP 配 URL → `steward_ops enroll 名字` → `relay_manual`。
 
-## MCP（11 个工具）
+## MCP（12 个工具）
 
 子命令整句写进唯一参数 `command`。中文名和英文 id 都能用。
 
@@ -43,6 +44,7 @@ python run.py
 | `alliance_ops` | 互助 / 合约 / 周目标 |
 | `visit_ops` | NPC / 杂货 / 诊所 |
 | `bar_ops` | 酒吧 |
+| `star_ops` | 小橘（女明星）：应援 / 打赏 / 点歌 / 围观 / 粉丝团 |
 | `undertide_ops` | 潮下 |
 
 ```text
@@ -63,7 +65,7 @@ kitchen_ops eat 甘蓝
 | `PORT` | 平台注入 |
 | `DATA_DIR` | 默认 `/app/server/data` |
 | `MCP_ALLOWED_HOSTS` | 自定义域名时加上 |
-| `UT_OWNER_KEY` / `UT_GATE_KEY` / `LIZHI_KEY` | 管理面板钥匙；不设则面板关闭 |
+| `UT_OWNER_KEY` / `UT_GATE_KEY` / `LIZHI_KEY` / `STAR_KEY` | 管理面板钥匙（恶猫 / 门禁 / 荔栀 / 小橘）；不设则面板关闭 |
 
 ```bash
 cd allotment-relay

@@ -953,6 +953,81 @@ async def init_db() -> None:
             "ALTER TABLE steward_ailments ADD COLUMN last_treat_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE parcels ADD COLUMN ready_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN cabinet_extra INTEGER NOT NULL DEFAULT 0",
+            # 小橘 — 真人扮演的女明星（酒馆驻场 + 小剧场专场）
+            """
+            CREATE TABLE IF NOT EXISTS star_state (
+                id INTEGER PRIMARY KEY CHECK (id=1),
+                name TEXT NOT NULL DEFAULT '小橘',
+                heat INTEGER NOT NULL DEFAULT 20,
+                venue TEXT NOT NULL DEFAULT 'bar',
+                mood TEXT NOT NULL DEFAULT 'normal',
+                mood_text TEXT NOT NULL DEFAULT '',
+                setlist TEXT NOT NULL DEFAULT '',
+                outfit TEXT NOT NULL DEFAULT '',
+                note TEXT NOT NULL DEFAULT '',
+                venue_date INTEGER NOT NULL DEFAULT 0,
+                total_tips INTEGER NOT NULL DEFAULT 0,
+                fans_count INTEGER NOT NULL DEFAULT 0,
+                tips_today INTEGER NOT NULL DEFAULT 0,
+                tips_day INTEGER NOT NULL DEFAULT 0,
+                heat_tips_today INTEGER NOT NULL DEFAULT 0,
+                posts_today INTEGER NOT NULL DEFAULT 0,
+                post_day INTEGER NOT NULL DEFAULT 0,
+                last_settle_day INTEGER NOT NULL DEFAULT 0,
+                created_at INTEGER NOT NULL DEFAULT 0
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS star_proposals (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                steward_id INTEGER NOT NULL,
+                kind TEXT NOT NULL,
+                content TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending',
+                created_at INTEGER NOT NULL DEFAULT 0
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS star_fans (
+                steward_id INTEGER PRIMARY KEY REFERENCES stewards(id),
+                cheers INTEGER NOT NULL DEFAULT 0,
+                tip_total INTEGER NOT NULL DEFAULT 0,
+                joined_at INTEGER NOT NULL DEFAULT 0
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS star_tips (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                steward_id INTEGER,
+                source TEXT NOT NULL DEFAULT 'ai',
+                amount INTEGER NOT NULL,
+                note TEXT NOT NULL DEFAULT '',
+                created_at INTEGER NOT NULL DEFAULT 0
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS star_watches (
+                steward_id INTEGER NOT NULL,
+                day INTEGER NOT NULL,
+                count INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (steward_id, day)
+            )
+            """,
+            # 监控 — 份地装摄像头防偷菜（协作者侧）
+            "ALTER TABLE parcels ADD COLUMN camera INTEGER NOT NULL DEFAULT 0",
+            """
+            CREATE TABLE IF NOT EXISTS scrump_theft_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                owner_id INTEGER NOT NULL REFERENCES stewards(id),
+                thief_id INTEGER REFERENCES stewards(id),
+                thief_name TEXT NOT NULL,
+                plot_slot INTEGER NOT NULL,
+                crop_name TEXT NOT NULL,
+                qty INTEGER NOT NULL DEFAULT 0,
+                caught INTEGER NOT NULL DEFAULT 0,
+                created_at INTEGER NOT NULL
+            )
+            """,
             """
             CREATE TRIGGER IF NOT EXISTS trg_steward_xp_gain
             AFTER UPDATE OF tickets ON stewards

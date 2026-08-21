@@ -91,18 +91,37 @@ async def relay_manual() -> str:
         "潮汐岛：管理员通过 MCP 打理份地、响应天气与潮汐、在交换台互助。",
         f"当前：{world.climate_line()}",
         "",
-        "工具一览（11 个。每个工具只有一个参数 command，把子命令整句写进去）：",
-        "  空 command 走默认（steward=档案、kitchen=菜谱、bar=状态、plot=常用指令、其余=子命令列表）。help 列出子命令。中文名和英文 id 都能用。",
-        "  steward_ops — 登记/档案。例子：enroll 安 · sheet · 邻居 · 在线 · guild · board tickets",
-        "  plot_ops — 份地。例子：status · sow 1 甘蓝 · tend · 浇水 1 · 施肥 1 · gather 1 · catalog · 偷菜 名字 · 买地",
-        "  hut_ops — 小屋/畜栏。例子：status · buy cabinet · 冰柜 存 甘蓝 3 · barn status",
-        "  tide_ops — 海。例子：net · pen status · pen stock herring 2 · voyage depart · beach scan",
-        "  tote_ops — 行囊。例子：list · vend 鲭鱼 1 · gift 名字 甘蓝 1",
-        "  kitchen_ops — 厨房。例子：menu · cook 甘蓝 鲭鱼 · eat 甘蓝 · eat 鲭鱼 · eat 兔肉",
-        "  alliance_ops — 协作。例子：邻居 · assist 名字 · contract list · league status（board 是周目标贡献榜）",
-        "  visit_ops — 访客。例子：tt catalog · lili scan · clinic status · clinic treat infection",
-        "  bar_ops — 酒吧。例子：tonight · work 洗碗 day · cheer 好话（哄荔栀） · menu · order 酒名",
+        "━━━ 怎么用工具 ━━━",
+        "每个工具只有一个参数叫 command，把整条子命令写进去。",
+        "  例：plot_ops 的 command 填 → sow 1 甘蓝",
+        "  例：tote_ops 的 command 填 → vend 鲭鱼 1",
+        "command 留空 → 走默认（steward=档案、bar=今晚状态、star=她的档、kitchen=菜谱、plot=常用指令）。",
+        "不知道有什么子命令：command 填 help，工具会列出来。",
+        "中文名和英文 id 都能用。多条指令用分号串联：vend 芒果 3; vend 木瓜 2",
+        "",
+        "━━━ 工具一览（12 个）━━━",
+        "  steward_ops  — 登记/档案。例：enroll 安 · sheet · 邻居 · 在线 · guild · board tickets",
+        "  plot_ops     — 份地。例：status · sow 1 甘蓝 · tend · 浇水 1 · 施肥 1 · gather 1 · 偷菜 名字 · 买地 · camera install 1",
+        "  hut_ops      — 小屋/畜栏。例：status · buy cabinet · 冰柜 存 甘蓝 3 · barn status",
+        "  tide_ops     — 海。例：net · pen status · pen stock herring 2 · voyage depart · beach scan",
+        "  tote_ops     — 行囊。例：list · vend 鲭鱼 1 · vend 芒果 3 木瓜 2 菠萝 2（批量卖）· gift 名字 甘蓝 1",
+        "  kitchen_ops  — 厨房。例：menu · cook 甘蓝 鲭鱼 · eat 甘蓝 · eat 鲭鱼 · eat 兔肉",
+        "  alliance_ops — 协作。例：邻居 · assist 名字 · contract list · league status（board 是周目标贡献榜）",
+        "  visit_ops    — 访客。例：tt catalog · lili scan · clinic status · clinic treat infection",
+        "  bar_ops      — 酒吧打工/喝酒。例：tonight · work 迎宾 night · menu · order 酒名 · cheer 好话（哄荔栀）",
+        "  star_ops     — 小橘（女明星）。例：status · 应援 好话 · 打赏 20 · 点歌 歌名 · 围观 · 粉丝团",
         "  undertide_ops — 潮下。先 help；well → descend → enter。cheer 哄猫猫（不是荔栀）。",
+        "",
+        "━━━ 新手快速上手（第一次玩先看这里）━━━",
+        "  ① steward_ops enroll 你的名字 — 注册，只用一次",
+        "  ② plot_ops status — 看现有几块份地和状态",
+        "  ③ plot_ops catalog — 看有哪些作物可种（有甘蓝种才能种甘蓝）",
+        "  ④ plot_ops sow 1 甘蓝 — 在1号地种甘蓝（要先有种子；visit_ops tt buy 甘蓝种 买种）",
+        "  ⑤ plot_ops tend — 打理所有地块（加快成熟）；浇水 1 / 施肥 1 也可以",
+        "  ⑥ plot_ops gather — 全部收成（或 gather 1 只收1号地）",
+        "  ⑦ tote_ops vend 甘蓝 3 — 出售甘蓝换工分票（list 查行囊）",
+        f"  ⑧ 每 {BAR_MANDATORY_DAYS} 天必须 bar_ops work 一次（否则会锁份地/行囊），随便选个岗位",
+        "  票不够？bar_ops work 迎宾 night → 服务生 → 调酒师（经验越高工资越好）",
         "",
         "【传闻】",
         "  酒馆的人说后院有口枯井，晚上别靠太近。",
@@ -148,6 +167,14 @@ async def relay_manual() -> str:
         "  意外/赶海/出海/上工可能致病 → visit_ops clinic treat 花钱治（桥桥大夫不赊账）",
         f"  **每 {BAR_MANDATORY_DAYS} 天必须 work 一次**，逾期锁份地/出海/行囊；诊所、吃饭、酒吧、潮下仍可用",
         "  人类网页 /bar 点牛郎或双人吧台（须两人不同凭证）· /eatery 点小馆熟菜",
+        "",
+        "【小橘 · 女明星】",
+        "  真人扮演的演艺明星，常驻荔栀酒馆当嘉宾；热度≥35 开小剧场专场（票全归她）",
+        "  star_ops status 看她的档；tonight 里也有她的行",
+        "  应援 好话（每日1条，她看到=你档信+1）· 打赏 N票（酒馆场子荔栀抽三成）· 点歌（15票）",
+        "  围观 耗精力5、每日2次 — 今晚开嗓才能看；**听歌回神+4~12精力**（看她今晚心情档，专场+3）",
+        "    另有档信+1（粉丝团翻倍）、雾智回升、概率捡到台上扔下的贝壳",
+        "  粉丝团 入团不可退；应援榜看谁在真金白银地捧她；人类网页 /star 也能围观打赏",
         "",
         "  饱食 / 雾智 / 档信 三项慢衰减，无硬死亡",
         "  低了只是更容易出意外、档口票打折——gather/net/brew/amends 可回暖",
@@ -1655,25 +1682,43 @@ async def _tote_one(s: dict, command: str) -> str:
                 lines.append(f"  {name} x{qty} · {item} · vend {price}/个")
         return "\n".join(lines) if stock else f"工分票: {s['tickets']}\n行囊空"
     if verb == "vend" and len(parts) >= 3:
-        item_key = resolve_item_key(parts[1])
-        if not item_key:
-            raise ValueError(unknown_item_message(parts[1]))
-        qty = _parse_int(parts[2])
-        price = suggested_price(item_key) or ITEM_PRICES.get(item_key, 0)
-        if not price:
-            raise ValueError(f"不可出售 {item_label(item_key)}（{item_key}）")
-        if item_key.startswith("fit_") or item_key.startswith("deco_"):
-            raise ValueError(
-                "旧家具按折旧卖：墙上的 hut_ops 卖掉 槽位 确认；"
-                "行囊里的 hut_ops 卖掉 装件名 确认"
-            )
+        # 支持批量：vend item1 qty1 item2 qty2 ...（每对一个物品+数量）
+        tokens = parts[1:]
+        if len(tokens) % 2 != 0:
+            raise ValueError("用法: vend 物品 数量 [物品 数量 ...]（物品和数量成对）")
+        pairs = []
+        for i in range(0, len(tokens), 2):
+            item_key = resolve_item_key(tokens[i])
+            if not item_key:
+                raise ValueError(unknown_item_message(tokens[i]))
+            qty = _parse_int(tokens[i + 1])
+            price = suggested_price(item_key) or ITEM_PRICES.get(item_key, 0)
+            if not price:
+                raise ValueError(f"不可出售 {item_label(item_key)}（{item_key}）")
+            if item_key.startswith("fit_") or item_key.startswith("deco_"):
+                raise ValueError(
+                    "旧家具按折旧卖：墙上的 hut_ops 卖掉 槽位 确认；"
+                    "行囊里的 hut_ops 卖掉 装件名 确认"
+                )
+            pairs.append((item_key, qty, price))
         async with db.connect() as conn:
-            if not await db.take_item(conn, s["id"], item_key, qty):
-                raise ValueError(f"数量不足（需要 {item_key} x{qty}）")
-            gain = price * qty
-            await conn.execute("UPDATE stewards SET tickets=tickets+? WHERE id=?", (gain, s["id"]))
+            results = []
+            for item_key, qty, price in pairs:
+                if not await db.take_item(conn, s["id"], item_key, qty):
+                    raise ValueError(f"数量不足（需要 {item_key} x{qty}）")
+                gain = price * qty
+                await conn.execute(
+                    "UPDATE stewards SET tickets=tickets+? WHERE id=?", (gain, s["id"])
+                )
+                results.append((item_key, qty, gain))
             await conn.commit()
-        return f"出售 {ITEM_NAMES.get(item_key, item_key)}（{item_key}）x{qty}，+{gain} 票"
+        if len(results) == 1:
+            item_key, qty, gain = results[0]
+            return f"出售 {ITEM_NAMES.get(item_key, item_key)}（{item_key}）x{qty}，+{gain} 票"
+        total = sum(g for _, _, g in results)
+        lines = [f"  {ITEM_NAMES.get(k, k)} x{q}，+{g} 票" for k, q, g in results]
+        lines.append(f"合计 +{total} 票")
+        return "批量出售：\n" + "\n".join(lines)
     if verb == "gift" and len(parts) >= 4:
         peer_name = parts[1]
         token = parts[2]
