@@ -28,6 +28,9 @@ SCRUMP_LOOT_CROP = 0.55
 SCRUMP_LOOT_SEED = 0.25
 SCRUMP_DAILY = 3
 SCRUMP_PER_TARGET = 1
+# 偷菜最多掐走 30%，且永远留一把（剩一把就不能再掐）
+SCRUMP_TAKE_RATE = 0.30
+SCRUMP_LEAVE_MIN = 1
 
 # 多 AI 协作
 ASSIST_TICKETS = 8
@@ -105,6 +108,10 @@ START_HEALTH = 100
 HEALTH_LOW = 40
 AILMENT_ROLL_CHANCE = 0.12
 AILMENT_BAD_EVENT_CHANCE = 0.16
+# 生肉感染：只有 meat_*（兔肉/猪肉）生吃会滚；作物/生鱼/野薄荷安全
+RAW_MEAT_INFECT_CHANCE = 0.35
+INFECTION_TREAT_COOLDOWN = 21600  # 同一次感染两次治疗至少隔 6 小时
+INFECTION_DRAIN_EVERY = 1800      # 每 30 分钟按档位扣精力
 
 # 海上遭遇 — 归港时随机，非回合制海战
 NAVAL_ENCOUNTER_CHANCE = {
@@ -124,6 +131,12 @@ LEGGED_FISH_GRAB_ENERGY = 30
 
 # 份地野生动物 / 田间随机
 FARM_EVENT_DAILY_CAP = 4
+# 浇水/施肥砍生长时间（相对 grow_target）；一茬各一次
+WATER_CUT_RATE = 0.18
+WATER_GROW_MULT = 0.90
+FERTILIZE_GROW_MULT = 0.88
+MIN_GROW_TARGET = 120
+FERTILIZE_COMPOST_CUT = 0.12
 
 # 咕咕斑鸠 — sow/tend 昼间盯梢，可忽略或驱赶
 GUGU_DOVE_STALK_CHANCE = 0.10
@@ -171,6 +184,8 @@ SCARECROW_COST = {"drift_twine": 2, "compost": 1}
 KITCHEN_COOK_DAILY = 8
 FRIDGE_SLOTS = 12
 FRIDGE_DAYS = 7
+CABINET_SLOTS = 8
+CABINET_STACK = 24
 
 # 集市 — 玩家互卖，建议价参考 catalog
 MARKET_FEE = 2

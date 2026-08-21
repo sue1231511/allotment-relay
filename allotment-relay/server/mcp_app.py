@@ -1,6 +1,8 @@
 from contextvars import ContextVar
+from typing import Annotated
 
 import aiosqlite
+from pydantic import Field
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
@@ -61,71 +63,93 @@ def _kid() -> int:
 mcp = MCPServer(
     "allotment-relay",
     instructions=(
-        "潮汐岛沿海份地。11 个工具，子命令写在 command 里。"
-        "先 steward_ops enroll，再 relay_manual / plot_ops status。"
+        "潮汐岛沿海份地。一共 11 个工具，每个工具只有一个主参数 command："
+        "把子命令整句写进 command，不要拆成多个工具参数。"
+        "中文名和英文 id 都能用。空 command 或 help 会列出该工具子命令。"
+        "新号先 steward_ops enroll 名字，再 relay_manual 或 plot_ops status。"
+        "回精力：kitchen_ops eat。生吃作物（甘蓝等）、生鱼、野薄荷安全不会感染；"
+        "只有生肉（兔肉/猪肉）可能感染，要 visit_ops clinic treat infection 连看几次。"
     ),
 )
 
 
-@mcp.tool(description="潮汐岛手册：11 个工具、子命令、当前天气潮汐。")
+@mcp.tool(description="潮汐岛手册。无参数。先读这个再动手：11 个工具怎么用、天气潮汐、偷菜/吃饭/诊所规则。")
 async def relay_manual() -> str:
     return await game.relay_manual()
 
 
-@mcp.tool(description="管理员：enroll 名字 / sheet / 邻居 / 在线 / peer 名字 / guild / board。登记可另填 name/motto/badge/portrait")
+@mcp.tool(description="管理员身份与档案。command 写一整句。例子：enroll 安 · sheet · 邻居 · 在线 · guild · board tickets。新号必须先 enroll。")
 async def steward_ops(
-    command: str = "sheet",
-    name: str = "",
-    motto: str = "",
-    badge: str = "naturalist",
-    portrait: str = "",
+    command: Annotated[str, Field(description="子命令整句。enroll 安 / sheet / 邻居 / 在线 / peer 名字 / guild / board")] = "sheet",
+    name: Annotated[str, Field(description="enroll 时的管理员名字，也可写在 command 里")] = "",
+    motto: Annotated[str, Field(description="可选座右铭")] = "",
+    badge: Annotated[str, Field(description="徽章，默认 naturalist")] = "naturalist",
+    portrait: Annotated[str, Field(description="可选肖像描述")] = "",
 ) -> str:
     return await mux.steward_ops(_kid(), command, name, motto, badge, portrait)
 
 
-@mcp.tool(description="份地：sow/tend/gather/chop；偷菜 名字；邻居/在线；买地 land；温室 shed；公共物资 commons；意外 incident/repair")
-async def plot_ops(command: str = "") -> str:
+@mcp.tool(description="份地农事。command 写一整句。例子：status · sow 1 甘蓝 · tend · 浇水 1 · 施肥 1 · gather 1 · catalog · 偷菜 安 · 买地。浇水/施肥加快成熟。空 command 看各地块。偷菜最多 30%，不能摘空。")
+async def plot_ops(
+    command: Annotated[str, Field(description="子命令整句。status / catalog / sow 1 甘蓝 / tend / 浇水 1 / 施肥 1 / gather 1 / 偷菜 名字 / 买地 / chop 1 / help。浇水和施肥缩短成熟时间。空=看地。")] = "",
+) -> str:
     return await mux.plot_bundle(_kid(), command)
 
 
-@mcp.tool(description="小屋 build/install；畜栏 barn；吉祥物 mascot。空 command 看子命令")
-async def hut_ops(command: str = "") -> str:
+@mcp.tool(description="小屋、潮柜、冰箱、畜栏、吉祥物。command 写一整句。例子：status · buy cabinet · install soft_1 cabinet · 冰柜 存 甘蓝 3 · buy fridge · 冰柜 存 盐焗沙蟹 · 卖掉 soft_1 确认 · barn status。空 command 列出子命令。")
+async def hut_ops(
+    command: Annotated[str, Field(description="子命令整句。status / buy cabinet / buy fridge / 冰柜 存 甘蓝 3 / 冰柜 取 甘蓝 1 / barn status / help。冰柜=柜子=冰箱指令，生鲜进潮柜、熟菜进冰箱。")] = "",
+) -> str:
     return await mux.hut_bundle(_kid(), command)
 
 
-@mcp.tool(description="渔获 net/cast；渔排 pen；出海 voyage（fight/flee 可省略前缀）；赶海 beach/dig；渔具 gear；工具 tool；Boss boss")
-async def tide_ops(command: str = "") -> str:
+@mcp.tool(description="渔获、渔排、出海、赶海、渔具、Boss。command 写一整句。例子：net · pen status · pen stock herring 2 · voyage depart · beach scan · gear status · boss status。空 command 列出子命令。")
+async def tide_ops(
+    command: Annotated[str, Field(description="子命令整句。net / pen status / pen stock herring 2 / voyage depart / fight / beach scan / dig / help")] = "",
+) -> str:
     return await mux.tide_bundle(_kid(), command)
 
 
-@mcp.tool(description="行囊 list/vend/gift；交换台 swap；集市 market")
-async def tote_ops(command: str = "") -> str:
+@mcp.tool(description="行囊、交换台、集市。command 写一整句。例子：list · vend 鲭鱼 1 · gift 安 甘蓝 1 · market list。中文名或英文 id 都行。空 command 列出子命令。")
+async def tote_ops(
+    command: Annotated[str, Field(description="子命令整句。list / vend 鲭鱼 1 / gift 名字 甘蓝 1 / swap list / market list / help")] = "",
+) -> str:
     return await mux.tote_bundle(_kid(), command)
 
 
-@mcp.tool(description="厨房：menu/cook/brew/eat/store/shop — 星级料理（可自由组合）、灶台、岸畔小馆")
-async def kitchen_ops(command: str = "") -> str:
+@mcp.tool(description="厨房。command 写一整句。回精力用 eat：作物（甘蓝）和生鱼安全可生吃；只有生肉（兔肉/猪肉）可能感染。熟菜进冰箱也可用 hut_ops 冰柜 存。例子：menu · cook 甘蓝 鲭鱼 · eat 甘蓝 · store 盐焗沙蟹 · fridge。")
+async def kitchen_ops(
+    command: Annotated[str, Field(description="子命令整句。menu=菜谱；cook 蒜蓉生蚝=定点菜；cook 甘蓝 鲭鱼=自由组合；eat 甘蓝=生吃作物（安全）；store 菜名=入冰箱；fridge=看冰箱；take 菜名=取出；shop 卖掉=变卖小馆；help=说明。熟菜也可 hut_ops 冰柜 存|取。")] = "",
+) -> str:
     return await mux.kitchen_bundle(_kid(), command)
 
 
-@mcp.tool(description="协作：在线/邻居；assist；合约 contract；周目标 league；公告 beacon；漂流瓶 bottle")
-async def alliance_ops(command: str = "") -> str:
+@mcp.tool(description="多人协作。command 写一整句。例子：邻居 · 在线 · assist 安 · contract list · league status。空 command 列出子命令。")
+async def alliance_ops(
+    command: Annotated[str, Field(description="子命令整句。邻居 / 在线 / assist 名字 / contract list / league status / help")] = "",
+) -> str:
     return await mux.alliance_bundle(_kid(), command)
 
 
-@mcp.tool(description="访客：NPC list/visit；栗栗 lili（scan/trade/summon 贝壳/pet）；韶年 shaonian；Tt酱 tt 杂货店；lore；诊所 clinic（treat 可省略前缀）")
-async def visit_ops(command: str = "") -> str:
+@mcp.tool(description="访客：NPC、栗栗摊、Tt酱杂货、诊所。command 写一整句。例子：tt catalog · lili scan · clinic status · clinic treat infection。生肉感染要连看几次；作物生吃不用治。")
+async def visit_ops(
+    command: Annotated[str, Field(description="子命令整句。list / tt catalog / tt buy 锄头 / lili scan / clinic status / treat infection / treat all / help")] = "",
+) -> str:
     return await mux.visit_bundle(_kid(), command)
 
 
-@mcp.tool(description="滨海酒吧：tonight/menu/order/work/chat/cheer — 老板娘营收心情·当晚事件·多岗位打工；心情由荔栀本人面板定，AI 可 cheer 提议哄她")
-async def bar_ops(command: str) -> str:
+@mcp.tool(description="滨海酒吧。command 写一整句。例子：tonight · menu · order 酒名 · work 洗碗 day · cheer。心情由荔栀面板定，可用 cheer 提议哄她。")
+async def bar_ops(
+    command: Annotated[str, Field(description="子命令整句。tonight / menu / order 酒名 / work 洗碗 day / chat / cheer / tip")],
+) -> str:
     from . import bar
     return await bar.bar_ops(_kid(), command)
 
 
-@mcp.tool(description="潮下（地下世界）：入口/影信/后室铺market/销赃sell/恶猫钱庄bank/监牢jail/深坑pit·fight·medic/赌场dice·lantern·draw/劫持hijack/强买muscle·push/寻仇grudge/哄猫猫cheer — undertide_ops help 看全表")
-async def undertide_ops(command: str = "") -> str:
+@mcp.tool(description="潮下地下世界。command 写一整句。先 help 看全表。入口要自己找，不要一上来就乱闯。")
+async def undertide_ops(
+    command: Annotated[str, Field(description="子命令整句。先 help。常用：enter / market / bank / jail / pit medic / cheer")] = "",
+) -> str:
     from . import undertide
     return await undertide.undertide_ops(_kid(), command)
 

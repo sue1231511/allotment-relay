@@ -372,6 +372,9 @@ CREATE TABLE IF NOT EXISTS steward_ailments (
     ailment_key TEXT NOT NULL,
     source TEXT NOT NULL DEFAULT 'event',
     inflicted_at INTEGER NOT NULL,
+    stage INTEGER NOT NULL DEFAULT 0,
+    last_tick_at INTEGER NOT NULL DEFAULT 0,
+    last_treat_at INTEGER NOT NULL DEFAULT 0,
     UNIQUE(steward_id, ailment_key)
 );
 
@@ -703,6 +706,17 @@ async def init_db() -> None:
             )
             """,
             "ALTER TABLE parcels ADD COLUMN dove_yield_mult REAL NOT NULL DEFAULT 1.0",
+            "ALTER TABLE parcels ADD COLUMN harvest_left INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE parcels ADD COLUMN watered INTEGER NOT NULL DEFAULT 0",
+            """
+            CREATE TABLE IF NOT EXISTS hut_cabinet (
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                item TEXT NOT NULL,
+                quantity INTEGER NOT NULL,
+                stored_at INTEGER NOT NULL,
+                PRIMARY KEY (steward_id, item)
+            )
+            """,
             """
             CREATE TABLE IF NOT EXISTS steward_undertide (
                 steward_id INTEGER PRIMARY KEY REFERENCES stewards(id),
@@ -920,6 +934,9 @@ async def init_db() -> None:
             """,
             "ALTER TABLE steward_lili ADD COLUMN summon_chance INTEGER NOT NULL DEFAULT 30",
             "ALTER TABLE steward_lili ADD COLUMN summon_done INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE steward_ailments ADD COLUMN stage INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE steward_ailments ADD COLUMN last_tick_at INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE steward_ailments ADD COLUMN last_treat_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE parcels ADD COLUMN ready_at INTEGER NOT NULL DEFAULT 0",
             """
             CREATE TRIGGER IF NOT EXISTS trg_steward_xp_gain

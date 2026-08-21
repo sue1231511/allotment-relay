@@ -1,34 +1,35 @@
 # 份地作物 — 偏北欧/沿海/湿地，与常见农场游戏区分
 # grow=基准分钟（farming.py base_grow_seconds 内 ×60 转秒）；spread 控制播种时随机生长窗口
-# 梯度：基础蔬菜 ~1h → 普通 1.5~2.5h → 浆果/谷物 2.5~4h → 树 4~5.5h → 稀有封顶 6h
+# yield=熟地把数（打理再 +1）；偷菜最多掐走 30%，且不能摘空
+# 梯度：短茬 ~1h 5把 → 中茬 1.5~2h 4把 → 长茬 2.5~3h 3把 → 果树 3.5~4.5h 3把 → 稀有 ~5h 2把
 from __future__ import annotations
 
 import re
 CROPS = {
-    # ── 基础蔬菜（1h 左右）──
-    "kale":        {"name": "羽衣甘蓝", "emoji": "🥬", "seed_price": 7,  "sell": 16, "grow":  60, "spread": 0.30, "tags": ["leaf"], "aliases": ["甘蓝", "羽衣"]},
-    "garlic":      {"name": "大蒜",     "emoji": "🧄", "seed_price": 9,  "sell": 18, "grow":  65, "spread": 0.22, "tags": ["seasoning"]},
-    "lemongrass":  {"name": "香茅",     "emoji": "🌿", "seed_price": 10, "sell": 20, "grow":  70, "spread": 0.22, "tags": ["seasoning", "tropic", "herb"]},
-    "chili":       {"name": "辣椒",     "emoji": "🌶️", "seed_price": 11, "sell": 22, "grow":  70, "spread": 0.24, "tags": ["seasoning"]},
-    "sweetpotato": {"name": "红薯",     "emoji": "🍠", "seed_price": 8,  "sell": 17, "grow":  80, "spread": 0.24, "tags": ["root", "tropic"], "aliases": ["番薯", "地瓜"]},
-    "ginger":      {"name": "姜",       "emoji": "🫚", "seed_price": 12, "sell": 24, "grow":  80, "spread": 0.22, "tags": ["seasoning", "tropic"]},
-    # ── 普通（1.5~2.5h）──
-    "kelp":        {"name": "浅海藻",   "emoji": "🌿", "seed_price": 11, "sell": 24, "grow":  85, "spread": 0.30, "tags": ["sea"]},
-    "fogpea":      {"name": "雾豌豆",   "emoji": "🫛", "seed_price": 10, "sell": 23, "grow":  90, "spread": 0.28, "tags": ["legume"]},
-    "beet":        {"name": "甜菜",     "emoji": "🫘", "seed_price": 9,  "sell": 21, "grow": 100, "spread": 0.26, "tags": ["root"]},
-    "rye":         {"name": "黑麦",     "emoji": "🌾", "seed_price": 8,  "sell": 19, "grow": 120, "spread": 0.28, "tags": ["grain"]},
-    # ── 中级浆果 / 热带非树（2.5~4h）──
-    "bramble":     {"name": "荆棘莓",   "emoji": "🫐", "seed_price": 14, "sell": 32, "grow": 150, "spread": 0.28, "tags": ["berry"]},
-    "blueberry":   {"name": "蓝莓",     "emoji": "🫐", "seed_price": 16, "sell": 36, "grow": 160, "spread": 0.26, "tags": ["berry", "tropic"]},
-    "pineapple":   {"name": "菠萝",     "emoji": "🍍", "seed_price": 17, "sell": 32, "grow": 180, "spread": 0.26, "tags": ["fruit", "tropic"]},
-    # ── 树类（3~5.5h；收完再长，清地 plot_ops chop）──
-    "lime":        {"name": "青柠",     "emoji": "🍋", "seed_price": 14, "sell": 26, "grow": 200, "spread": 0.24, "tags": ["fruit", "tropic"], "tree": True, "shake": True},
-    "papaya":      {"name": "木瓜",     "emoji": "🍈", "seed_price": 19, "sell": 34, "grow": 210, "spread": 0.24, "tags": ["fruit", "tropic"], "tree": True},
-    "banana":      {"name": "香蕉",     "emoji": "🍌", "seed_price": 18, "sell": 28, "grow": 240, "spread": 0.24, "tags": ["fruit", "tropic"], "tree": True},
-    "mango":       {"name": "芒果",     "emoji": "🥭", "seed_price": 20, "sell": 38, "grow": 260, "spread": 0.24, "tags": ["fruit", "tropic"], "tree": True, "shake": True},
-    # ── 稀有树 / 封顶（4~6h）──
-    "coconut":     {"name": "椰子",     "emoji": "🥥", "seed_price": 22, "sell": 24, "grow": 270, "spread": 0.20, "tags": ["fruit", "tropic"], "tree": True, "shake": True},
-    "durian":      {"name": "榴莲",     "emoji": "🍈", "seed_price": 48, "sell": 95, "grow": 300, "spread": 0.20, "tags": ["fruit", "tropic"], "tree": True, "ultra_rare": True},
+    # ── 短茬（约 1 时，把数多）──
+    "kale":        {"name": "羽衣甘蓝", "emoji": "🥬", "seed_price": 7,  "sell": 16, "grow":  60, "yield": 5, "tier": 1, "spread": 0.30, "tags": ["leaf"], "aliases": ["甘蓝", "羽衣"]},
+    "garlic":      {"name": "大蒜",     "emoji": "🧄", "seed_price": 9,  "sell": 18, "grow":  65, "yield": 5, "tier": 1, "spread": 0.22, "tags": ["seasoning"]},
+    "lemongrass":  {"name": "香茅",     "emoji": "🌿", "seed_price": 10, "sell": 20, "grow":  70, "yield": 5, "tier": 1, "spread": 0.22, "tags": ["seasoning", "tropic", "herb"]},
+    "chili":       {"name": "辣椒",     "emoji": "🌶️", "seed_price": 11, "sell": 22, "grow":  70, "yield": 5, "tier": 1, "spread": 0.24, "tags": ["seasoning"]},
+    "sweetpotato": {"name": "红薯",     "emoji": "🍠", "seed_price": 8,  "sell": 17, "grow":  80, "yield": 5, "tier": 1, "spread": 0.24, "tags": ["root", "tropic"], "aliases": ["番薯", "地瓜"]},
+    "ginger":      {"name": "姜",       "emoji": "🫚", "seed_price": 12, "sell": 24, "grow":  80, "yield": 5, "tier": 1, "spread": 0.22, "tags": ["seasoning", "tropic"]},
+    # ── 中茬（约 1.5~2 时）──
+    "kelp":        {"name": "浅海藻",   "emoji": "🌿", "seed_price": 11, "sell": 24, "grow":  85, "yield": 4, "tier": 2, "spread": 0.30, "tags": ["sea"]},
+    "fogpea":      {"name": "雾豌豆",   "emoji": "🫛", "seed_price": 10, "sell": 23, "grow":  90, "yield": 4, "tier": 2, "spread": 0.28, "tags": ["legume"]},
+    "beet":        {"name": "甜菜",     "emoji": "🫘", "seed_price": 9,  "sell": 21, "grow": 100, "yield": 4, "tier": 2, "spread": 0.26, "tags": ["root"]},
+    "rye":         {"name": "黑麦",     "emoji": "🌾", "seed_price": 8,  "sell": 19, "grow": 120, "yield": 4, "tier": 2, "spread": 0.28, "tags": ["grain"]},
+    # ── 长茬（约 2.5~3 时）──
+    "bramble":     {"name": "荆棘莓",   "emoji": "🫐", "seed_price": 14, "sell": 32, "grow": 150, "yield": 3, "tier": 3, "spread": 0.28, "tags": ["berry"]},
+    "blueberry":   {"name": "蓝莓",     "emoji": "🫐", "seed_price": 16, "sell": 36, "grow": 160, "yield": 3, "tier": 3, "spread": 0.26, "tags": ["berry", "tropic"]},
+    "pineapple":   {"name": "菠萝",     "emoji": "🍍", "seed_price": 17, "sell": 32, "grow": 180, "yield": 3, "tier": 3, "spread": 0.26, "tags": ["fruit", "tropic"]},
+    # ── 果树（约 3.5~4.5 时；收完再长，清地 plot_ops chop）──
+    "lime":        {"name": "青柠",     "emoji": "🍋", "seed_price": 14, "sell": 26, "grow": 200, "yield": 3, "tier": 4, "spread": 0.24, "tags": ["fruit", "tropic"], "tree": True, "shake": True},
+    "papaya":      {"name": "木瓜",     "emoji": "🍈", "seed_price": 19, "sell": 34, "grow": 210, "yield": 3, "tier": 4, "spread": 0.24, "tags": ["fruit", "tropic"], "tree": True},
+    "banana":      {"name": "香蕉",     "emoji": "🍌", "seed_price": 18, "sell": 28, "grow": 240, "yield": 3, "tier": 4, "spread": 0.24, "tags": ["fruit", "tropic"], "tree": True},
+    "mango":       {"name": "芒果",     "emoji": "🥭", "seed_price": 20, "sell": 38, "grow": 260, "yield": 3, "tier": 4, "spread": 0.24, "tags": ["fruit", "tropic"], "tree": True, "shake": True},
+    # ── 稀有树（约 4.5~5 时）──
+    "coconut":     {"name": "椰子",     "emoji": "🥥", "seed_price": 22, "sell": 24, "grow": 270, "yield": 2, "tier": 5, "spread": 0.20, "tags": ["fruit", "tropic"], "tree": True, "shake": True},
+    "durian":      {"name": "榴莲",     "emoji": "🍈", "seed_price": 48, "sell": 95, "grow": 300, "yield": 2, "tier": 5, "spread": 0.20, "tags": ["fruit", "tropic"], "tree": True, "ultra_rare": True},
 }
 
 _CROP_SUFFIXES = ("种子", "种", "苗")
@@ -69,6 +70,37 @@ def resolve_crop_key(token: str) -> str | None:
     return None
 
 
+CROP_TIER_LABELS = {
+    1: "短茬",
+    2: "中茬",
+    3: "长茬",
+    4: "果树",
+    5: "稀有",
+}
+
+
+def crop_grow_label(minutes: int) -> str:
+    if minutes < 60:
+        return f"约{minutes}分"
+    hours = minutes / 60
+    if abs(hours - round(hours)) < 0.08:
+        return f"约{int(round(hours))}时"
+    text = f"{hours:.1f}".rstrip("0").rstrip(".")
+    return f"约{text}时"
+
+
+def crop_catalog_line(key: str) -> str:
+    meta = CROPS[key]
+    tags = [CROP_TIER_LABELS.get(int(meta.get("tier") or 2), "中茬")]
+    tags.append(crop_grow_label(int(meta["grow"])))
+    tags.append(f"{int(meta.get('yield') or 3)}把")
+    if meta.get("tree"):
+        tags.append("收完再长")
+    if meta.get("shake"):
+        tags.append("可摇")
+    return f"  {key} — {meta['emoji']}{meta['name']} · {' · '.join(tags)}"
+
+
 def unknown_crop_message(token: str) -> str:
     lines = [f"未知作物: {token}。可用 key、seed_ 前缀或中文名，例如："]
     for k, meta in CROPS.items():
@@ -101,6 +133,18 @@ def resolve_item_key(token: str, *, prefer: str = "any") -> str | None:
     exact = [k for k, v in ITEM_NAMES.items() if v == raw]
     if len(exact) == 1:
         return exact[0]
+    if raw in ("兔肉", "生兔肉", "🍖兔肉"):
+        return "meat_rabbit"
+    if raw in ("猪肉", "生猪肉", "🥓猪肉"):
+        return "meat_pork"
+    if raw in ("堆肥", "肥"):
+        return "compost"
+    if raw in ("羊粪", "💩羊粪"):
+        return "manure_sheep"
+    if raw in ("猪粪", "💩猪粪"):
+        return "manure_pig"
+    if raw in ("牛粪", "💩牛粪"):
+        return "manure_cow"
 
     for fk, meta in SEA_CATCH.items():
         if meta["name"] == raw:
@@ -316,7 +360,8 @@ HUT_SOFT = {
     "sea_chart": {"name": "手绘海图", "cost": 45, "emoji": "🗺️", "hint": "出海失败率 ×0.86，黑旗战力 +10"},
     "bramble_wreath": {"name": "荆棘莓环", "cost": 30, "emoji": "🌸", "hint": "纯好看，无数值"},
     "glass_float": {"name": "玻璃浮标", "cost": 36, "emoji": "🔮", "hint": "公共物资刷新 ×1.22"},
-    "fridge": {"name": "冰箱", "cost": 120, "emoji": "🧊", "hint": "kitchen store 保鲜；开小馆必需"},
+    "fridge": {"name": "冰箱", "cost": 120, "emoji": "🧊", "hint": "hut_ops 冰柜 存/取 熟菜；kitchen_ops fridge；开小馆必需"},
+    "cabinet": {"name": "潮柜", "cost": 58, "emoji": "🗄️", "hint": "hut_ops 冰柜 存/取 生鲜（柜子/潮柜同义）；小偷和斑鸠翻不到行囊外的货"},
 }
 
 TOOLS = {
@@ -532,7 +577,7 @@ MYTH_INGREDIENTS = {
     "myth_octopus": {"name": "神话章鱼肉", "emoji": "🐙", "sell": 220, "energy": 40},
 }
 
-# 病症 — 随机事件致病，visit_ops clinic treat 花钱治（必须花票）
+# 病症 — 随机事件致病；生肉感染要多次治疗。visit_ops clinic treat 花钱治（必须花票）
 AILMENTS = {
     "sprain": {
         "name": "扭伤", "emoji": "🦵", "cost": 18, "health_loss": 10, "health_restore": 14,
@@ -590,7 +635,54 @@ AILMENTS = {
         "name": "深坑重创", "emoji": "🩸", "cost": 100, "health_loss": 35, "health_restore": 40,
         "hint": "深坑专属——回地下治", "energy_extra": 6,
     },
+    "infection": {
+        "name": "生肉感染", "emoji": "🦠", "cost": 22, "health_loss": 12, "health_restore": 8,
+        "hint": "只有生肉会感染。作物/生鱼/野薄荷生吃安全。菌要过夜，桥桥一次压不干净",
+        "energy_extra": 3, "max_energy_cut": 10,
+        "courses": 3, "drain_energy": 2, "drain_every": 1800,
+        "stage_names": {3: "重症", 2: "迁延", 1: "余菌"},
+    },
 }
+
+PIT_AILMENTS = frozenset({"ring_shock", "pit_trauma"})
+AILMENT_ALIASES = {
+    "感染": "infection",
+    "生肉感染": "infection",
+    "生肉": "infection",
+}
+
+
+def ailment_courses(key: str) -> int:
+    return int(AILMENTS.get(key, {}).get("courses", 1) or 1)
+
+
+def is_chronic_ailment(key: str) -> bool:
+    return ailment_courses(key) > 1
+
+
+def is_raw_meat(item: str) -> bool:
+    """生吃会感染的只有肉类 meat_*。作物/生鱼不算肉。"""
+    return (item or "").startswith("meat_")
+
+
+def resolve_ailment_key(token: str) -> str | None:
+    raw = (token or "").strip()
+    if not raw:
+        return None
+    key = raw.lower()
+    if key in AILMENTS:
+        return key
+    alias = AILMENT_ALIASES.get(raw) or AILMENT_ALIASES.get(key)
+    if alias:
+        return alias
+    for k, meta in AILMENTS.items():
+        if meta.get("name") == raw:
+            return k
+    return None
+
+
+CHRONIC_AILMENTS = frozenset(k for k in AILMENTS if is_chronic_ailment(k))
+
 
 WORLD_BOSS = {
     "key": "cthulhu_tide",
@@ -639,6 +731,7 @@ NPC_FIXED = [
         "诊所规矩：必须花钱，不赊账，不还价",
         "随机事件落下的病，找随机事件哭去——诊费照收",
         "扭了脚、着了凉、宿醉——都挂号，都花钱",
+        "生肉生吃容易感染。菜和生鱼没事，菌要过夜，一次压不干净",
         "身体指标低了意外多，别硬撑到票都不够挂号",
         "visit_ops visit 只能聊天，真治得 visit_ops clinic treat",
     ]},

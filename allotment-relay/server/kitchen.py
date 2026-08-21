@@ -24,8 +24,15 @@ from .catalog import (
     resolve_item_key,
     suggested_price,
     unknown_item_message,
+    is_raw_meat,
 )
 from .game import require_steward
+
+EAT_RULES = (
+    "eat 可吃：熟菜 dish_/meal_；"
+    "生吃作物 crop_*（甘蓝等）安全；生鱼 fish_* 安全；野薄荷安全。"
+    "只有生肉 meat_*（兔肉/猪肉）可能感染。"
+)
 
 
 def _day_id() -> int:
@@ -55,6 +62,243 @@ async def _has_fridge(conn: aiosqlite.Connection, steward_id: int) -> bool:
         (steward_id,),
     )
     return await cur.fetchone() is not None
+
+
+def is_cooked_item(item: str) -> bool:
+    return item.startswith("dish_") or item.startswith("meal_")
+
+
+def _has_star_suffix(item: str) -> bool:
+    if "_s" not in item:
+        return False
+    _, star = item.rsplit("_s", 1)
+    return star.isdigit() and 1 <= int(star) <= 5
+
+
+def _resolve_cooked_token(token: str) -> str | None:
+    raw = (token or "").strip()
+    if not raw:
+        return None
+    if is_cooked_item(raw):
+        return raw
+    resolved = resolve_item_key(raw)
+    if resolved and is_cooked_item(resolved):
+        return resolved
+    from . import cook_mix
+    dish = cook_mix.resolve_dish_key(raw.rstrip("★☆*"))
+    if dish:
+        return f"dish_{dish}"
+    return resolved
+
+
+def _fridge_parts(item: str) -> tuple[str, int]:
+    mix = parse_mix_item(item)
+    if mix:
+        grade, tier, sig, stars = mix
+        return f"mix_{grade}{tier}_{sig}", stars
+    if item.startswith("meal_"):
+        return item, 3
+    if item.startswith("dish_"):
+        if _has_star_suffix(item):
+            base, star_s = item.rsplit("_s", 1)
+            return base.replace("dish_", "", 1), int(star_s)
+        return item.replace("dish_", "", 1), 3
+    raise ValueError("冰箱只收熟菜")
+
+
+def _fridge_satchel_item(dish_key: str, stars: int) -> str:
+    if dish_key.startswith("meal_"):
+        return dish_key
+    return dish_item(dish_key, stars)
+
+
+def _fridge_label(dish_key: str, stars: int) -> str:
+    if dish_key.startswith("meal_"):
+        return item_label(dish_key)
+    try:
+        return dish_display_name(dish_key, stars)
+    except KeyError:
+        return item_label(_fridge_satchel_item(dish_key, stars))
+
+
+async def _pick_cooked_satchel(
+    conn: aiosqlite.Connection, steward_id: int, resolved: str
+) -> str:
+    cur = await conn.execute(
+        "SELECT quantity FROM satchel WHERE steward_id=? AND item=? AND quantity>0",
+        (steward_id, resolved),
+    )
+    if await cur.fetchone():
+        return resolved
+    if resolved.startswith("dish_") and not _has_star_suffix(resolved):
+        cur = await conn.execute(
+            """
+            SELECT item FROM satchel
+            WHERE steward_id=? AND quantity>0 AND item LIKE ?
+            ORDER BY item DESC
+            """,
+            (steward_id, resolved + "_s%"),
+        )
+        for (item,) in await cur.fetchall():
+            if item.startswith(resolved + "_s") and _has_star_suffix(item):
+                return item
+    raise ValueError("行囊里没有这道菜")
+
+
+def _fridge_need_msg() -> str:
+    return (
+        "熟菜放冰箱。先 hut_ops buy fridge → install soft_N fridge，"
+        "再 hut_ops 冰柜 存 菜名。kitchen_ops store 也能存。"
+    )
+
+
+async def fridge_status_text(s: dict[str, Any]) -> str:
+    async with db.connect() as conn:
+        installed = await _has_fridge(conn, s["id"])
+        conn.row_factory = aiosqlite.Row
+        rows = await (await conn.execute(
+            """
+            SELECT dish_key, stars, quantity, stored_at FROM meal_storage
+            WHERE steward_id=? ORDER BY stored_at
+            """,
+            (s["id"],),
+        )).fetchall()
+    if not installed:
+        return (
+            "冰箱：未装 — hut_ops buy fridge → install soft_N fridge。"
+            "熟菜用 hut_ops 冰柜 存 盐焗沙蟹"
+        )
+    if not rows:
+        return (
+            f"冰箱空（{config.FRIDGE_SLOTS} 格）。"
+            "hut_ops 冰柜 存 盐焗沙蟹 · kitchen_ops store 菜名"
+        )
+    lines = [f"冰箱 {len(rows)}/{config.FRIDGE_SLOTS}:"]
+    expire = config.FRIDGE_DAYS * config.FORAGE_COOLDOWN_DAY
+    for r in rows:
+        age = db.now() - r["stored_at"]
+        stale = " ⚠快过期" if age > expire * 0.85 else ""
+        lines.append(f"  {_fridge_label(r['dish_key'], r['stars'])} x{r['quantity']}{stale}")
+    lines.append("取：hut_ops 冰柜 取 菜名 · kitchen_ops take 菜名")
+    return "\n".join(lines)
+
+
+async def fridge_put(s: dict[str, Any], token: str, qty: int = 1) -> str:
+    qty = max(1, int(qty))
+    resolved = _resolve_cooked_token(token)
+    if not resolved or not is_cooked_item(resolved):
+        raise ValueError(
+            f"{token} 不是熟菜。生鲜请 hut_ops 冰柜 存（进潮柜）；熟菜才进冰箱。"
+        )
+    async with db.connect() as conn:
+        if not await _has_fridge(conn, s["id"]):
+            raise ValueError(_fridge_need_msg())
+        item = await _pick_cooked_satchel(conn, s["id"], resolved)
+        cur = await conn.execute(
+            "SELECT quantity FROM satchel WHERE steward_id=? AND item=?",
+            (s["id"], item),
+        )
+        row = await cur.fetchone()
+        have = row[0] if row else 0
+        if have < qty:
+            raise ValueError("行囊里没有这么多熟菜")
+        dish_key, stars = _fridge_parts(item)
+        cur = await conn.execute(
+            """
+            SELECT id, quantity FROM meal_storage
+            WHERE steward_id=? AND dish_key=? AND stars=?
+            ORDER BY id LIMIT 1
+            """,
+            (s["id"], dish_key, stars),
+        )
+        existing = await cur.fetchone()
+        if not existing:
+            cur = await conn.execute(
+                "SELECT COUNT(*) FROM meal_storage WHERE steward_id=?",
+                (s["id"],),
+            )
+            if (await cur.fetchone())[0] >= config.FRIDGE_SLOTS:
+                raise ValueError(f"冰箱满了（{config.FRIDGE_SLOTS} 格）")
+        if not await db.take_item(conn, s["id"], item, qty):
+            raise ValueError("行囊里没有这么多熟菜")
+        if existing:
+            await conn.execute(
+                "UPDATE meal_storage SET quantity=quantity+? WHERE id=?",
+                (qty, existing[0]),
+            )
+        else:
+            await conn.execute(
+                """
+                INSERT INTO meal_storage (steward_id, dish_key, stars, quantity, stored_at)
+                VALUES (?,?,?,?,?)
+                """,
+                (s["id"], dish_key, stars, qty, db.now()),
+            )
+        await conn.commit()
+    return f"入冰箱 {_fridge_label(dish_key, stars)} x{qty}"
+
+
+def _fridge_row_matches(row: dict[str, Any], token: str) -> bool:
+    dish_key = row["dish_key"]
+    stars = int(row["stars"])
+    item = _fridge_satchel_item(dish_key, stars)
+    raw = (token or "").strip()
+    bare = raw.rstrip("★☆*")
+    needles: set[str] = {raw, bare}
+    resolved = _resolve_cooked_token(raw)
+    if resolved:
+        needles.add(resolved)
+        if resolved.startswith("dish_"):
+            needles.add(resolved.replace("dish_", "", 1))
+            if _has_star_suffix(resolved):
+                needles.add(resolved.rsplit("_s", 1)[0].replace("dish_", "", 1))
+    from . import cook_mix
+    dish = cook_mix.resolve_dish_key(bare)
+    if dish:
+        needles.add(dish)
+        needles.add(f"dish_{dish}")
+        if dish == dish_key:
+            return True
+    haystack = {
+        item,
+        dish_key,
+        f"{dish_key}_s{stars}",
+        f"dish_{dish_key}",
+        f"dish_{dish_key}_s{stars}",
+    }
+    return bool(needles & haystack)
+
+
+async def fridge_take(s: dict[str, Any], token: str, qty: int = 1) -> str:
+    qty = max(1, int(qty))
+    async with db.connect() as conn:
+        conn.row_factory = aiosqlite.Row
+        rows = [dict(r) for r in await (await conn.execute(
+            "SELECT * FROM meal_storage WHERE steward_id=? ORDER BY stored_at",
+            (s["id"],),
+        )).fetchall()]
+        picked = None
+        for r in rows:
+            if _fridge_row_matches(r, token):
+                picked = r
+                break
+        if not picked:
+            raise ValueError("冰箱里没有这道菜")
+        have = int(picked["quantity"] or 1)
+        if have < qty:
+            raise ValueError("冰箱里没有这么多")
+        item = _fridge_satchel_item(picked["dish_key"], picked["stars"])
+        await db.add_item(conn, s["id"], item, qty)
+        left = have - qty
+        if left <= 0:
+            await conn.execute("DELETE FROM meal_storage WHERE id=?", (picked["id"],))
+        else:
+            await conn.execute(
+                "UPDATE meal_storage SET quantity=? WHERE id=?",
+                (left, picked["id"]),
+            )
+        await conn.commit()
+    return f"从冰箱取出 {_fridge_label(picked['dish_key'], picked['stars'])} x{qty}，回行囊"
 
 
 async def _can_cook(conn: aiosqlite.Connection, steward_id: int) -> bool:
@@ -144,15 +388,30 @@ async def _cook_mix(s: dict[str, Any], ings: list[str]) -> str:
 async def kitchen_ops(key_id: int, command: str) -> str:
     parts = command.strip().split()
     verb = parts[0].lower() if parts else "menu"
-    exempt = verb in ("eat", "brew", "recipes", "menu")
+    exempt = verb in ("eat", "brew", "recipes", "menu", "help", "?", "帮助", "status")
     s = await require_steward(key_id, exempt_duty=exempt)
+
+    if verb in ("help", "?", "帮助"):
+        return (
+            "kitchen_ops 子命令（整句写进 command）：\n"
+            "  menu — 菜谱与定价\n"
+            "  cook 菜名 — 定点菜，例如 cook 蒜蓉生蚝\n"
+            "  cook 材料1 材料2 … — 自由组合 2~5 样，例如 cook 甘蓝 鲭鱼\n"
+            "  eat 物品 — 回精力。作物/生鱼/野薄荷生吃安全；只有生肉可能感染\n"
+            "             例子：eat 甘蓝 · eat 鲭鱼 · eat 兔肉 · eat 蒜蓉生蚝\n"
+            "  store 菜名 [数量] / fridge / take 菜名 — 冰箱熟菜（小屋要先装 fridge）\n"
+            "             也可 hut_ops 冰柜 存|取，生鲜进潮柜、熟菜进冰箱\n"
+            "  brew 材料 — 灶台（回雾智）\n"
+            "  shop board|open|stock|dine|卖掉 — 岸畔小馆\n"
+            f"{EAT_RULES}"
+        )
 
     if verb in ("menu", "status"):
         lines = [
-            "厨房菜单（cook 菜名 / cook 材料1 材料2 … / brew 材料 / eat 菜或生食）:",
+            "厨房菜单（command 例子：cook 蒜蓉生蚝 / cook 甘蓝 鲭鱼 / brew 材料 / eat 甘蓝）:",
+            EAT_RULES,
             "定点菜谱如下。也可以 cook 材料自由组合（2~5 样），按星级可卖；垃圾菜几乎没价。",
             "定点菜 3★ 起至少不亏材料回收价（直接 vend 生鲜）。小屋 Lv2 更容易出 4★。",
-            "生鱼/作物/野薄荷也可 eat，回少量精力。",
         ]
         for key, meta in KITCHEN_DISHES.items():
             ings = " + ".join(
@@ -171,6 +430,7 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             ings = " + ".join(f"{ITEM_NAMES.get(i, i)}（{i}）" for i in keys)
             lines.append(f"  {recipe['name']} — brew {' '.join(keys)}  · {ings}")
         lines.append("小馆: kitchen_ops shop board|open|stock|dine|卖掉")
+        lines.append("冰箱: hut_ops 冰柜 存|取 熟菜（先装 fridge）· kitchen_ops store/fridge/take")
         return "\n".join(lines)
 
     if verb == "cook" and len(parts) >= 2:
@@ -199,11 +459,13 @@ async def kitchen_ops(key_id: int, command: str) -> str:
         return await _cook_mix(s, ings)
 
     if verb == "eat" and len(parts) >= 2:
-        item = resolve_item_key(parts[1]) or parts[1]
+        token = " ".join(parts[1:])
+        item = resolve_item_key(token) or token
         async with db.connect() as conn:
             if not await db.take_item(conn, s["id"], item, 1):
                 raise ValueError(
-                    f"行囊里没有 {ITEM_NAMES.get(item, item)}（{item}）"
+                    f"行囊里没有 {ITEM_NAMES.get(item, item)}（{item}）。"
+                    "tote_ops list 看有什么；中文名或英文 id 都行。"
                 )
             gain = 15
             mix_e = dish_energy(item)
@@ -230,95 +492,65 @@ async def kitchen_ops(key_id: int, command: str) -> str:
                 gain = 10
             elif item == "wild_mint":
                 gain = 6
+            elif is_raw_meat(item):
+                gain = 12
             else:
                 raise ValueError(
-                    f"{ITEM_NAMES.get(item, item)} 不能直接吃；"
-                    "试试 kitchen_ops brew 或吃 meal_/dish_"
+                    f"{ITEM_NAMES.get(item, item)} 不能直接吃。"
+                    f"{EAT_RULES}"
+                    "或 kitchen_ops brew 下锅。"
                 )
+            infect_line = None
+            if is_raw_meat(item):
+                from . import health as health_mod
+                infect_line = await health_mod.maybe_infect_raw_meat(conn, s["id"])
             restored = await energy.restore(conn, s["id"], gain)
             await survival.bump(conn, s["id"], satiety=min(20, gain // 2 + 8))
             await conn.commit()
-        return f"吃了 {item_label(item)}（{item}），精力 +{restored}"
+        msg = f"吃了 {item_label(item)}（{item}），精力 +{restored}"
+        if item.startswith("crop_") or item.startswith("fish_") or item == "wild_mint":
+            msg += "（生吃安全，不会感染）"
+        if infect_line:
+            msg += (
+                f"\n{infect_line}\n"
+                "→ visit_ops clinic treat infection（桥桥一次压不干净，要连看几次）"
+            )
+        return msg
 
     if verb == "store" and len(parts) >= 2:
-        item = parts[1]
-        if not item.startswith("dish_"):
-            raise ValueError("只能存熟菜 dish_*")
-        async with db.connect() as conn:
-            if not await _has_fridge(conn, s["id"]):
-                raise ValueError("需要 hut_ops install fridge 冰箱")
-            cur = await conn.execute(
-                "SELECT COUNT(*) FROM meal_storage WHERE steward_id=?",
-                (s["id"],),
-            )
-            if (await cur.fetchone())[0] >= config.FRIDGE_SLOTS:
-                raise ValueError(f"冰箱满了（{config.FRIDGE_SLOTS} 格）")
-            if not await db.take_item(conn, s["id"], item, 1):
-                raise ValueError("行囊里没有这道菜")
-            dish_key, stars = item, 3
-            if "_s" in item:
-                base, star_s = item.rsplit("_s", 1)
-                dish_key = base.replace("dish_", "", 1)
-                stars = int(star_s) if star_s.isdigit() else 3
-            await conn.execute(
-                """
-                INSERT INTO meal_storage (steward_id, dish_key, stars, quantity, stored_at)
-                VALUES (?,?,?,1,?)
-                """,
-                (s["id"], dish_key, stars, db.now()),
-            )
-            await conn.commit()
-        return f"已入冰箱 {item_label(item)}"
+        tokens = parts[1:]
+        qty = 1
+        if tokens[-1].isdigit():
+            qty = max(1, int(tokens[-1]))
+            tokens = tokens[:-1]
+        if not tokens:
+            raise ValueError("用法: kitchen_ops store 菜名 [数量]（或 hut_ops 冰柜 存 菜名）")
+        return await fridge_put(s, " ".join(tokens), qty)
 
-    if verb == "fridge":
-        async with db.connect() as conn:
-            conn.row_factory = aiosqlite.Row
-            rows = await (await conn.execute(
-                """
-                SELECT dish_key, stars, quantity, stored_at FROM meal_storage
-                WHERE steward_id=? ORDER BY stored_at
-                """,
-                (s["id"],),
-            )).fetchall()
-        if not rows:
-            return "冰箱空 — cook 后 store 物品"
-        lines = ["冰箱:"]
-        expire = config.FRIDGE_DAYS * config.FORAGE_COOLDOWN_DAY
-        for r in rows:
-            age = db.now() - r["stored_at"]
-            stale = " ⚠快过期" if age > expire * 0.85 else ""
-            name = dish_display_name(r["dish_key"], r["stars"])
-            lines.append(f"  {name} x{r['quantity']}{stale}")
-        lines.append("取菜: kitchen_ops take 菜名_s星")
-        return "\n".join(lines)
+    if verb in ("fridge", "冰箱", "冰柜"):
+        rest = parts[1:]
+        if rest:
+            sub = rest[0].lower()
+            tokens = rest[1:]
+            qty = 1
+            if tokens and tokens[-1].isdigit():
+                qty = max(1, int(tokens[-1]))
+                tokens = tokens[:-1]
+            if sub in ("put", "store", "存", "放", "入") and tokens:
+                return await fridge_put(s, " ".join(tokens), qty)
+            if sub in ("take", "取", "拿") and tokens:
+                return await fridge_take(s, " ".join(tokens), qty)
+        return await fridge_status_text(s)
 
     if verb == "take" and len(parts) >= 2:
-        target = parts[1]
-        async with db.connect() as conn:
-            conn.row_factory = aiosqlite.Row
-            rows = [dict(r) for r in await (await conn.execute(
-                "SELECT * FROM meal_storage WHERE steward_id=? ORDER BY stored_at",
-                (s["id"],),
-            )).fetchall()]
-            picked = None
-            for r in rows:
-                item = dish_item(r["dish_key"], r["stars"])
-                if target in (item, r["dish_key"], f"{r['dish_key']}_s{r['stars']}"):
-                    picked = r
-                    break
-            if not picked:
-                raise ValueError("冰箱里没有这道菜")
-            item = dish_item(picked["dish_key"], picked["stars"])
-            await db.add_item(conn, s["id"], item, 1)
-            if picked["quantity"] <= 1:
-                await conn.execute("DELETE FROM meal_storage WHERE id=?", (picked["id"],))
-            else:
-                await conn.execute(
-                    "UPDATE meal_storage SET quantity=quantity-1 WHERE id=?",
-                    (picked["id"],),
-                )
-            await conn.commit()
-        return f"取出 {item_label(item)}"
+        tokens = parts[1:]
+        qty = 1
+        if tokens[-1].isdigit():
+            qty = max(1, int(tokens[-1]))
+            tokens = tokens[:-1]
+        if not tokens:
+            raise ValueError("用法: kitchen_ops take 菜名 [数量]（或 hut_ops 冰柜 取 菜名）")
+        return await fridge_take(s, " ".join(tokens), qty)
 
     if verb == "vend" and len(parts) >= 2:
         item = parts[1]
@@ -352,7 +584,8 @@ async def kitchen_ops(key_id: int, command: str) -> str:
         return await _hearth_brew(s, parts[1:])
 
     raise ValueError(
-        f"未知 kitchen 指令: {command}（menu/cook/eat/store/fridge/take/vend/brew/recipes/shop）"
+        f"未知 kitchen 指令: {command}。先 kitchen_ops help 或 menu。"
+        "常用：cook 菜名 · cook 材料1 材料2 · eat 甘蓝 · eat 鲭鱼 · shop"
     )
 
 

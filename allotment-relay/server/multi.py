@@ -90,7 +90,8 @@ async def list_neighbors(steward: dict[str, Any], *, online_only: bool = False) 
         lines.extend(_line(p) for p in away)
     lines.append("")
     lines.append(
-        f"偷菜：plot_ops 偷菜 名字。对方在档口、稻草人、守夜狗更容易被抓。"
+        f"偷菜：plot_ops 偷菜 名字。最多掐走三成，永远留一把。"
+        f"对方在档口、稻草人、守夜狗更容易被抓。"
         f"每日 {SCRUMP_DAILY} 次、同一人每天 1 次。温室摘不到。"
     )
     return "\n".join(lines)

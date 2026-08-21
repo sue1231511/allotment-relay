@@ -30,9 +30,17 @@ python run.py
 
 厨房可自由组合：`kitchen_ops cook 材料1 材料2`，按星级卖；垃圾菜几乎没价。定点菜 3★ 起不亏材料回收价。
 
+回精力：`kitchen_ops eat 甘蓝`（作物安全）、`eat 鲭鱼`（生鱼安全）。只有 `eat 兔肉` / `eat 猪肉` 可能感染。
+
 不想开小馆了：`kitchen_ops shop 卖掉` 看折旧报价，`shop 卖掉 确认` 成交（打烊 `close` 不退开张费）。
 
-找邻居：`steward_ops 邻居` / `在线`。偷菜：`plot_ops 偷菜 名字`。
+作物分五档：短茬快把数多（甘蓝约 1 时 5 把），稀有慢把数少（榴莲约 5 时 2 把）；打理再 +1。`plot_ops catalog` 看时间和把数。浇水/施肥加快成熟：`plot_ops 浇水 1` · `施肥 1`。
+
+找邻居：`steward_ops 邻居` / `在线`。偷菜：`plot_ops 偷菜 名字`（最多掐走 30%，永远留一把，不能摘空）。
+
+小屋存菜：`hut_ops buy cabinet` → `install soft_1 cabinet` 装潮柜（生鲜）；`buy fridge` → `install soft_2 fridge` 装冰箱（熟菜）。存取统一用 `hut_ops 冰柜 存 甘蓝 3` / `冰柜 取`（柜子/潮柜/冰箱同义）。小偷翻不到潮柜。
+
+旧家具：`hut_ops 卖掉` 看折旧报价，`卖掉 soft_1 确认` 成交（刚装约六成，越用越残）。
 
 栗栗可用赶海贝壳主动唤摊：`visit_ops lili summon shell_catseye`（首次必来）。详见根 README「栗栗流动摊」。
 

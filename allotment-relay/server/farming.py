@@ -39,6 +39,43 @@ def format_grow_eta(left: int) -> str:
     return f"约{mins}分"
 
 
+def grow_cut_seconds(grow_target: int, rate: float) -> int:
+    """按比例砍掉生长目标秒数，一茬地板 MIN_GROW_TARGET。"""
+    target = int(grow_target or 0)
+    floor = int(config.MIN_GROW_TARGET)
+    if target <= floor:
+        return 0
+    cut = max(1, int(target * rate))
+    return min(cut, target - floor)
+
+
+def apply_grow_cut(plot: dict[str, Any], rate: float) -> tuple[int, int]:
+    """Return (new_grow_target, seconds_saved)."""
+    old = int(plot.get("grow_target") or 0)
+    cut = grow_cut_seconds(old, rate)
+    return old - cut, cut
+
+
+def fertilizer_cut_rate(item: str, *, compost_mascot: bool = False) -> float:
+    from .catalog import MANURE
+
+    if item in MANURE:
+        rate = float(MANURE[item]["fertilize_boost"])
+    else:
+        rate = config.FERTILIZE_COMPOST_CUT
+    if compost_mascot:
+        rate += 0.05
+    return rate
+
+
+def fertilizer_label(item: str) -> str:
+    from .catalog import MANURE
+
+    if item in MANURE:
+        return MANURE[item]["name"]
+    return "堆肥"
+
+
 WILDLIFE = [
     {
         "key": "rabbit",
@@ -186,7 +223,9 @@ def effective_grow(plot: dict[str, Any], crop_key: str | None = None) -> int:
         bool(plot.get("greenhouse")),
     )
     if plot.get("fertilized"):
-        mult *= 0.88
+        mult *= config.FERTILIZE_GROW_MULT
+    if plot.get("watered"):
+        mult *= config.WATER_GROW_MULT
     return max(60, int(base * mult))
 
 
@@ -209,6 +248,34 @@ def plot_overripe(plot: dict[str, Any]) -> bool:
         return False
     elapsed, need, _ = grow_progress(plot)
     return elapsed >= need * 2
+
+
+def harvest_pool(plot: dict[str, Any]) -> int:
+    """熟地把数：按作物等级；打理过再多一把。"""
+    crop = plot.get("crop")
+    if not crop:
+        return 0
+    n = int(CROPS.get(crop, {}).get("yield") or 3)
+    if plot.get("tended"):
+        n += 1
+    return n
+
+
+def remaining_harvest(plot: dict[str, Any]) -> int:
+    if not plot.get("crop"):
+        return 0
+    left = int(plot.get("harvest_left") or 0)
+    if left > 0:
+        return left
+    return harvest_pool(plot)
+
+
+def scrump_take_qty(left: int) -> int:
+    """最多 30%，且不能全部拿走。剩一把则 0。"""
+    if left <= config.SCRUMP_LEAVE_MIN:
+        return 0
+    taken = max(1, int(left * config.SCRUMP_TAKE_RATE))
+    return min(taken, left - config.SCRUMP_LEAVE_MIN)
 
 
 def parcel_status(plot: dict[str, Any]) -> str:
@@ -234,6 +301,8 @@ def parcel_extra(plot: dict[str, Any]) -> str:
             bits.append("🌾稻草人")
         return f"·{'·'.join(bits)}" if bits else ""
     if plot_ready(plot):
+        left = remaining_harvest(plot)
+        bits.append(f"{left}把")
         if is_tree:
             bits.append("树·收完再长·chop清地")
             if meta.get("shake"):
@@ -247,6 +316,8 @@ def parcel_extra(plot: dict[str, Any]) -> str:
         bits.append(pace)
     if left > 0:
         bits.append(format_grow_eta(left))
+    if plot.get("watered"):
+        bits.append("水")
     if plot.get("fertilized"):
         bits.append("肥")
     if plot.get("scarecrow"):
@@ -353,7 +424,7 @@ async def _apply_wildlife(
     if apply == "till":
         if random.random() < 0.55:
             await conn.execute(
-                "UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0, grow_target=0, grow_pace='' WHERE id=?",
+                "UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0, grow_target=0, grow_pace='', fertilized=0, watered=0, harvest_left=0 WHERE id=?",
                 (plot["id"],),
             )
             return flavor.fill(flavor.pick(flavor.WILDLIFE_BOAR_WRECK), slot=slot, crop=meta["name"])
@@ -480,7 +551,7 @@ async def gather_yield(
     crop = plot["crop"]
     meta = CROPS[crop]
     item = f"crop_{crop}"
-    qty = 1
+    qty = remaining_harvest(plot)
     keep = bool(meta.get("tree"))
     if plot_overripe(plot):
         if random.random() < 0.45:
@@ -648,7 +719,8 @@ async def resolve_gugu_dove(
             await conn.execute(
                 """
                 UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
-                grow_target=0, grow_pace='', fertilized=0, dove_yield_mult=1.0
+                grow_target=0, grow_pace='', fertilized=0, watered=0, dove_yield_mult=1.0,
+                harvest_left=0
                 WHERE id=?
                 """,
                 (plot_id,),
@@ -708,7 +780,8 @@ async def shake_tree(
     grow_target, grow_pace, _ = roll_grow(crop, plot)
     await conn.execute(
         """
-        UPDATE parcels SET planted_at=?, tended=0, grow_target=?, grow_pace=?
+        UPDATE parcels SET planted_at=?, tended=0, grow_target=?, grow_pace=?,
+        harvest_left=0
         WHERE id=?
         """,
         (db.now(), grow_target, grow_pace, plot["id"]),
