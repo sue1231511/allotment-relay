@@ -1,4 +1,4 @@
-"""Tt酱杂货店 — 种子/饲料/畜栏工具，送礼涨好感，进店可能塞东西。"""
+"""Tt酱杂货店 — 种子/饲料/渔具/农具，送礼涨好感，进店可能塞东西。"""
 
 from __future__ import annotations
 
@@ -37,12 +37,33 @@ FEED_ANIMAL = "feed_animal"
 FEED_PET = "feed_pet"
 TOOL_SHEARS = "tool_shears"
 TOOL_MILKER = "tool_milker"
+TOOL_HOE = "tool_hoe"
+TOOL_SHOVEL = "tool_shovel"
+TOOL_NET_BASIC = "tool_net_basic"
+TOOL_NET_FINE = "tool_net_fine"
+TOOL_ROD = "tool_rod"
 
 SHOP_EXTRAS: dict[str, dict[str, Any]] = {
     FEED_ANIMAL: {"name": "动物饲料", "emoji": "🌾", "price": 12, "kind": "feed"},
     FEED_PET: {"name": "宠物饲料", "emoji": "🦴", "price": 6, "kind": "feed"},
-    TOOL_SHEARS: {"name": "剪毛剪刀", "emoji": "✂️", "price": 45, "kind": "tool"},
-    TOOL_MILKER: {"name": "挤奶器", "emoji": "🥛", "price": 55, "kind": "tool"},
+    "bait_worm": {"name": "蚯蚓饵", "emoji": "🪱", "price": 10, "kind": "supply"},
+    "drift_twine": {"name": "漂绳", "emoji": "🪢", "price": 12, "kind": "supply"},
+    TOOL_NET_BASIC: {
+        "name": "粗渔网", "emoji": "🕸️", "price": 28, "kind": "gear",
+        "unique": True, "gear": ("net", 1),
+    },
+    TOOL_NET_FINE: {
+        "name": "细渔网", "emoji": "🎣", "price": 75, "kind": "gear",
+        "unique": True, "gear": ("net", 2),
+    },
+    TOOL_ROD: {
+        "name": "竹钓竿", "emoji": "🎣", "price": 30, "kind": "gear",
+        "unique": True, "gear": ("rod", 1),
+    },
+    TOOL_HOE: {"name": "锄头", "emoji": "⛏️", "price": 35, "kind": "tool", "unique": True},
+    TOOL_SHOVEL: {"name": "铲子", "emoji": "🪏", "price": 42, "kind": "tool", "unique": True},
+    TOOL_SHEARS: {"name": "剪毛剪刀", "emoji": "✂️", "price": 45, "kind": "tool", "unique": True},
+    TOOL_MILKER: {"name": "挤奶器", "emoji": "🥛", "price": 55, "kind": "tool", "unique": True},
 }
 
 SHOP_ALIASES = {
@@ -59,6 +80,37 @@ SHOP_ALIASES = {
     "宠物饲料": FEED_PET,
     "宠物粮": FEED_PET,
     "吉祥物饲料": FEED_PET,
+    "蚯蚓饵": "bait_worm",
+    "蚯蚓": "bait_worm",
+    "鱼饵": "bait_worm",
+    "饵": "bait_worm",
+    "bait": "bait_worm",
+    "worm": "bait_worm",
+    "漂绳": "drift_twine",
+    "绳子": "drift_twine",
+    "麻绳": "drift_twine",
+    "twine": "drift_twine",
+    "渔网": TOOL_NET_BASIC,
+    "网": TOOL_NET_BASIC,
+    "粗渔网": TOOL_NET_BASIC,
+    "粗网": TOOL_NET_BASIC,
+    "net": TOOL_NET_BASIC,
+    "net_basic": TOOL_NET_BASIC,
+    "细渔网": TOOL_NET_FINE,
+    "细网": TOOL_NET_FINE,
+    "net_fine": TOOL_NET_FINE,
+    "钓竿": TOOL_ROD,
+    "鱼竿": TOOL_ROD,
+    "竹钓竿": TOOL_ROD,
+    "竹竿": TOOL_ROD,
+    "rod": TOOL_ROD,
+    "锄头": TOOL_HOE,
+    "锄": TOOL_HOE,
+    "hoe": TOOL_HOE,
+    "铲子": TOOL_SHOVEL,
+    "铲": TOOL_SHOVEL,
+    "锹": TOOL_SHOVEL,
+    "shovel": TOOL_SHOVEL,
 }
 
 LOVED_CROPS = {"garlic", "chili", "ginger", "lemongrass", "mango", "durian", "coconut", "honey"}
@@ -67,10 +119,11 @@ DISLIKED_PREFIXES = ("manure_", "ticket_stub", "wet_note", "deco_junk_")
 
 VISIT_LINES = [
     "杂货店不讲价。好感另算——自己人价写在脸上。",
-    "种子、饲料、剪刀、挤奶器，货架上有的都能买。",
+    "种子、饲料、渔网、钓竿、蚯蚓饵、锄头铲子，货架上有的都能买。",
     "送礼可以。别送粪。粪我自己畜栏里有。",
     "心情好的时候会塞东西。别天天来蹲，概率就那一点。",
     "调味料种子在左边。大蒜辣椒姜香茅，厨房没这几样别来跟我哭。",
+    "渔具入门在这儿买。更高档带着漂绳去 tide_ops gear upgrade。",
 ]
 
 
@@ -113,6 +166,10 @@ def shop_skus() -> list[tuple[str, int, str]]:
     return rows
 
 
+def unique_shop_items() -> set[str]:
+    return {k for k, m in SHOP_EXTRAS.items() if m.get("unique")}
+
+
 def sku_base_price(item: str) -> int | None:
     for key, price, _kind in shop_skus():
         if key == item:
@@ -127,6 +184,12 @@ def resolve_shop_item(token: str) -> str | None:
     alias = SHOP_ALIASES.get(raw) or SHOP_ALIASES.get(raw.lower())
     if alias:
         return alias
+    key = raw.lower().replace(" ", "_")
+    if key in SHOP_EXTRAS:
+        return key
+    for sku, meta in SHOP_EXTRAS.items():
+        if raw == meta.get("name"):
+            return sku
     if raw in SHOP_EXTRAS or raw.lower() in SHOP_EXTRAS:
         return raw.lower()
     hit = resolve_item_key(raw, prefer="seed")
@@ -247,6 +310,49 @@ async def _satchel_has(conn: aiosqlite.Connection, steward_id: int, item: str) -
     return await cur.fetchone() is not None
 
 
+async def _unique_blocked(
+    conn: aiosqlite.Connection, steward_id: int, item: str
+) -> str | None:
+    meta = SHOP_EXTRAS.get(item) or {}
+    if not meta.get("unique"):
+        return None
+    if await _satchel_has(conn, steward_id, item):
+        return f"已经有{_item_label(item)}了"
+    grant = meta.get("gear")
+    if grant:
+        kind, tier = grant
+        from . import gear as gear_mod
+        g = await gear_mod.get_gear(conn, steward_id)
+        if g[kind] >= tier:
+            return (
+                f"{_item_label(item)}这档已经有了（{kind} T{g[kind]}）。"
+                f"更高档 `tide_ops gear upgrade {kind}`"
+            )
+    return None
+
+
+async def _grant_shop_gear(
+    conn: aiosqlite.Connection, steward_id: int, item: str
+) -> str:
+    meta = SHOP_EXTRAS.get(item) or {}
+    grant = meta.get("gear")
+    if not grant:
+        return ""
+    kind, tier = grant
+    if kind not in ("net", "rod", "bait"):
+        return ""
+    from . import gear as gear_mod
+    g = await gear_mod.get_gear(conn, steward_id)
+    if g[kind] >= tier:
+        return ""
+    await conn.execute(
+        f"UPDATE steward_gear SET {kind}_tier=? WHERE steward_id=?",
+        (tier, steward_id),
+    )
+    label = {"net": "渔网", "rod": "钓竿", "bait": "鱼饵"}.get(kind, kind)
+    return f" · {label}升至 T{tier}"
+
+
 async def _pay(conn: aiosqlite.Connection, steward_id: int, cost: int) -> int:
     cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (steward_id,))
     have = (await cur.fetchone())[0]
@@ -284,12 +390,13 @@ async def _maybe_mood_gift(
     if random.random() > MOOD_CHANCE:
         return ""
     kind, item = pick_mood_gift()
-    if kind == "sku" and item in (TOOL_SHEARS, TOOL_MILKER):
-        if await _satchel_has(conn, steward["id"], item):
-            item, _price, _k = random.choice(
-                [row for row in shop_skus() if row[0] not in (TOOL_SHEARS, TOOL_MILKER)]
-            )
-            kind = "sku"
+    unique = unique_shop_items()
+    if kind == "sku" and item in unique:
+        pool = [row for row in shop_skus() if row[0] not in unique]
+        if not pool:
+            return ""
+        item, _price, _k = random.choice(pool)
+        kind = "sku"
     await db.add_item(conn, steward["id"], item, 1)
     await conn.execute(
         "UPDATE tt_daily SET mood_gift=1 WHERE steward_id=? AND day=?",
@@ -328,20 +435,26 @@ async def on_enter(
 
 
 def _catalog_text(score: int) -> str:
-    groups = {
-        "seasoning": ["【调味料种子】"],
-        "seed": ["【作物种子】"],
-        "feed": ["【饲料】"],
-        "tool": ["【工具】（各限购 1）"],
+    headers = {
+        "seasoning": "【调味料种子】",
+        "seed": "【作物种子】",
+        "feed": "【饲料】",
+        "supply": "【渔需】（可回购）",
+        "gear": "【渔具】（限购；入门升档，更高走 tide_ops gear upgrade）",
+        "tool": "【工具】（各限购 1）",
     }
+    order = ("seasoning", "seed", "feed", "supply", "gear", "tool")
+    groups = {k: [headers[k]] for k in order}
     for item, base, kind in shop_skus():
         price = sale_price(base, score)
         tag = ""
         if price != base:
             tag = f"（原 {base}）"
-        groups[kind].append(f"  {_item_label(item)} · {item} · {price}票{tag}")
+        groups.setdefault(kind, [f"【{kind}】"]).append(
+            f"  {_item_label(item)} · {item} · {price}票{tag}"
+        )
     lines = [_status_block(score), ""]
-    for key in ("seasoning", "seed", "feed", "tool"):
+    for key in order:
         lines.extend(groups[key])
         lines.append("")
     lines.append("buy 物品 [数量] · gift 物品 [数量] · 中文名或 id 都行")
@@ -357,7 +470,7 @@ async def tt_ops(key_id: int, command: str) -> str:
         return (
             "visit_ops tt — Tt酱杂货店\n"
             "  status / catalog — 货架与好感\n"
-            "  buy 物品 [数量] — 种子/饲料/剪毛剪刀/挤奶器\n"
+            "  buy 物品 [数量] — 种子/饲料/渔网钓竿/蚯蚓饵/锄铲/剪刀挤奶器\n"
             "  gift 物品 [数量] — 送礼涨好感（一次一笔，每日最多 5 次）\n"
             "  visit — 聊天；每日首次进店 10% 她心情好送礼"
         )
@@ -409,21 +522,24 @@ async def tt_ops(key_id: int, command: str) -> str:
             name_toks = name_toks[1:]
         item = resolve_shop_item(" ".join(name_toks))
         if not item:
-            raise ValueError("货架上没有这件。catalog 看种子/饲料/剪刀/挤奶器")
+            raise ValueError("货架上没有这件。catalog 看种子/饲料/渔具/工具")
         base = sku_base_price(item)
         if base is None:
             raise ValueError("货架上没有这件")
         async with db.connect() as conn:
             score = await _affinity(conn, s["id"])
             gift = await on_enter(conn, s)
-            if item in (TOOL_SHEARS, TOOL_MILKER):
+            extra_meta = SHOP_EXTRAS.get(item) or {}
+            if extra_meta.get("unique"):
                 if qty != 1:
-                    raise ValueError("工具限购 1 把")
-                if await _satchel_has(conn, s["id"], item):
-                    raise ValueError(f"已经有{_item_label(item)}了")
+                    raise ValueError("工具/渔具限购 1")
+                blocked = await _unique_blocked(conn, s["id"], item)
+                if blocked:
+                    raise ValueError(blocked)
             cost = sale_price(base, score) * qty
             left = await _pay(conn, s["id"], cost)
             await db.add_item(conn, s["id"], item, qty)
+            gear_note = await _grant_shop_gear(conn, s["id"], item)
             await db.add_chronicle(
                 "tt",
                 f"{s['name']} 在 Tt酱店里买了 {_item_label(item)} x{qty}",
@@ -439,7 +555,7 @@ async def tt_ops(key_id: int, command: str) -> str:
             note = f"，原价 {base * qty}"
         return (
             f"购入 {_item_label(item)} x{qty}（-{cost} 票{note} · {zhe_s} · 余 {left}）"
-            f"{extra}"
+            f"{gear_note}{extra}"
         )
 
     if verb in ("gift", "送礼"):
@@ -608,4 +724,4 @@ async def _bump_ask_crop(
 
 
 def shopfront_line() -> str:
-    return "Tt酱杂货店营业中 · 种子/饲料/剪刀/挤奶器 · 送礼涨好感"
+    return "Tt酱杂货店营业中 · 种子/饲料/渔网钓竿/蚯蚓饵/锄铲 · 送礼涨好感"
