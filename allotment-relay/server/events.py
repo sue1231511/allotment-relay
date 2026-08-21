@@ -358,7 +358,11 @@ async def manual_scrump(steward: dict[str, Any], target_name: str, slot: int | N
         from . import barn as barn_mod
         dog = await barn_mod.has_guard_dog(conn, peer["id"])
         chance = _scrump_catch_chance(steward, peer, plot, dog=dog)
+        has_cam = bool(plot.get("camera"))
+        if has_cam:
+            chance = min(0.97, chance + 0.30)
         caught = random.random() < chance
+        _cam_qty = 0
         fine = config.SCRUMP_FINE_TICKETS
         if caught and steward.get("mascot_trait") == "scout":
             fine = max(1, fine // 2)
