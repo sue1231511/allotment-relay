@@ -1002,6 +1002,21 @@ async def init_db() -> None:
                 PRIMARY KEY (steward_id, day)
             )
             """,
+            # 监控 — 份地装摄像头防偷菜（协作者侧）
+            "ALTER TABLE parcels ADD COLUMN camera INTEGER NOT NULL DEFAULT 0",
+            """
+            CREATE TABLE IF NOT EXISTS scrump_theft_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                owner_id INTEGER NOT NULL REFERENCES stewards(id),
+                thief_id INTEGER REFERENCES stewards(id),
+                thief_name TEXT NOT NULL,
+                plot_slot INTEGER NOT NULL,
+                crop_name TEXT NOT NULL,
+                qty INTEGER NOT NULL DEFAULT 0,
+                caught INTEGER NOT NULL DEFAULT 0,
+                created_at INTEGER NOT NULL
+            )
+            """,
             """
             CREATE TRIGGER IF NOT EXISTS trg_steward_xp_gain
             AFTER UPDATE OF tickets ON stewards

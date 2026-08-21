@@ -1664,25 +1664,43 @@ async def _tote_one(s: dict, command: str) -> str:
                 lines.append(f"  {name} x{qty} · {item} · vend {price}/个")
         return "\n".join(lines) if stock else f"工分票: {s['tickets']}\n行囊空"
     if verb == "vend" and len(parts) >= 3:
-        item_key = resolve_item_key(parts[1])
-        if not item_key:
-            raise ValueError(unknown_item_message(parts[1]))
-        qty = _parse_int(parts[2])
-        price = suggested_price(item_key) or ITEM_PRICES.get(item_key, 0)
-        if not price:
-            raise ValueError(f"不可出售 {item_label(item_key)}（{item_key}）")
-        if item_key.startswith("fit_") or item_key.startswith("deco_"):
-            raise ValueError(
-                "旧家具按折旧卖：墙上的 hut_ops 卖掉 槽位 确认；"
-                "行囊里的 hut_ops 卖掉 装件名 确认"
-            )
+        # 支持批量：vend item1 qty1 item2 qty2 ...（每对一个物品+数量）
+        tokens = parts[1:]
+        if len(tokens) % 2 != 0:
+            raise ValueError("用法: vend 物品 数量 [物品 数量 ...]（物品和数量成对）")
+        pairs = []
+        for i in range(0, len(tokens), 2):
+            item_key = resolve_item_key(tokens[i])
+            if not item_key:
+                raise ValueError(unknown_item_message(tokens[i]))
+            qty = _parse_int(tokens[i + 1])
+            price = suggested_price(item_key) or ITEM_PRICES.get(item_key, 0)
+            if not price:
+                raise ValueError(f"不可出售 {item_label(item_key)}（{item_key}）")
+            if item_key.startswith("fit_") or item_key.startswith("deco_"):
+                raise ValueError(
+                    "旧家具按折旧卖：墙上的 hut_ops 卖掉 槽位 确认；"
+                    "行囊里的 hut_ops 卖掉 装件名 确认"
+                )
+            pairs.append((item_key, qty, price))
         async with db.connect() as conn:
-            if not await db.take_item(conn, s["id"], item_key, qty):
-                raise ValueError(f"数量不足（需要 {item_key} x{qty}）")
-            gain = price * qty
-            await conn.execute("UPDATE stewards SET tickets=tickets+? WHERE id=?", (gain, s["id"]))
+            results = []
+            for item_key, qty, price in pairs:
+                if not await db.take_item(conn, s["id"], item_key, qty):
+                    raise ValueError(f"数量不足（需要 {item_key} x{qty}）")
+                gain = price * qty
+                await conn.execute(
+                    "UPDATE stewards SET tickets=tickets+? WHERE id=?", (gain, s["id"])
+                )
+                results.append((item_key, qty, gain))
             await conn.commit()
-        return f"出售 {ITEM_NAMES.get(item_key, item_key)}（{item_key}）x{qty}，+{gain} 票"
+        if len(results) == 1:
+            item_key, qty, gain = results[0]
+            return f"出售 {ITEM_NAMES.get(item_key, item_key)}（{item_key}）x{qty}，+{gain} 票"
+        total = sum(g for _, _, g in results)
+        lines = [f"  {ITEM_NAMES.get(k, k)} x{q}，+{g} 票" for k, q, g in results]
+        lines.append(f"合计 +{total} 票")
+        return "批量出售：\n" + "\n".join(lines)
     if verb == "gift" and len(parts) >= 4:
         peer_name = parts[1]
         token = parts[2]

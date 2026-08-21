@@ -84,7 +84,7 @@ BAR_JOBS = {
     "greeter": {
         "name": "迎宾",
         "support_req": 0,
-        "service_req": 2,
+        "service_req": 0,
         "pay": {"day": 24, "night": 36},
         "xp": "service_xp",
         "night_only": False,

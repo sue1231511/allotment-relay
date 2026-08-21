@@ -69,7 +69,10 @@ PLOT_HELP = """plot_ops 子命令（整句写进 command）：
   shed erect|status|handoff — 温室
   commons scan|claim id — 稀有公共物资
   incident status|scan|repair 编号 — 意外（scan 看风险；repair 也可省略 incident）
-  repair 12 — 同上，可省略 incident"""
+  repair 12 — 同上，可省略 incident
+  camera install 地块 — 装监控（15票），记录偷菜日志，提高抓贼概率
+  camera check [地块] — 查偷菜日志（不写地块看所有）
+  camera remove 地块 — 拆监控"""
 
 HUT_HELP = """hut_ops 子命令（整句写进 command）：
   status / build / upgrade / catalog / buy / install — 岸畔小屋
@@ -214,6 +217,8 @@ async def plot_bundle(key_id: int, command: str = "") -> str:
             "incident": (events.incident_ops, "status"),
             "incidents": (events.incident_ops, "status"),
             "意外": (events.incident_ops, "status"),
+            "camera": (events.camera_ops, "check"),
+            "监控": (events.camera_ops, "check"),
         },
         hoist={
             "repair": (events.incident_ops, True),
