@@ -138,6 +138,20 @@ def test_relay_manual_covers_systems() -> None:
     assert "duo" not in text
 
 
+def test_readme_workflow_rules() -> None:
+    root = Path(__file__).resolve().parents[2]
+    readme = (root / "README.md").read_text(encoding="utf-8")
+    agents = (root / "AGENTS.md").read_text(encoding="utf-8")
+    for blob in (readme, agents):
+        assert "merge origin/main" in blob
+        assert "relay_manual" in blob
+        assert "mcp_app.py" in blob
+    assert "12 个工具" in readme
+    assert "steward_ops" in readme and "plot_ops" in readme and "bar_ops" in readme
+    assert "空 command" in readme
+    assert "禁止" in readme
+
+
 def test_bar_ops_help() -> None:
     from server import bar
 
@@ -239,6 +253,7 @@ def main() -> None:
     test_bar_job_aliases()
     test_mcp_descriptions()
     test_relay_manual_covers_systems()
+    test_readme_workflow_rules()
     test_bar_ops_help()
     asyncio.run(test_scrump_victim_chronicle())
     asyncio.run(test_cheer_targets_isolated())
