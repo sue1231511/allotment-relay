@@ -57,13 +57,14 @@ PLOT_HELP = """plot_ops 子命令（整句写进 command）：
   weather — 天气潮汐时辰
   买地 / land — 现有几块、价钱、开垦时间；买地 确认 付钱开垦
   sow 地块 作物 — 例子：sow 1 甘蓝 · sow 2 fogpea
-  tend · gather [地块] · forage
+  tend · 浇水 [地块] · 施肥 [地块] [堆肥|羊粪|猪粪|牛粪] — 浇水/施肥加快成熟（各一次）
+  gather [地块] · forage
   偷菜 名字 [地块] — 最多掐走 30%，永远留一把。先 邻居 看谁熟了
   邻居 / 在线 — 找人
   shake 地块 — 摇果（青柠/芒果/椰子）
   chop 地块 — 砍树腾地（树收完会再长；清地不必等过熟）
   compost 地块 — 过熟进堆肥（未熟的树请 chop）
-  fertilize 地块 [compost|粪肥] · scarecrow 地块
+  scarecrow 地块 — 扎稻草人
   shed erect|status|handoff — 温室
   commons scan|claim id — 稀有公共物资
   incident status|repair 编号 — 意外

@@ -131,6 +131,12 @@ LEGGED_FISH_GRAB_ENERGY = 30
 
 # 份地野生动物 / 田间随机
 FARM_EVENT_DAILY_CAP = 4
+# 浇水/施肥砍生长时间（相对 grow_target）；一茬各一次
+WATER_CUT_RATE = 0.18
+WATER_GROW_MULT = 0.90
+FERTILIZE_GROW_MULT = 0.88
+MIN_GROW_TARGET = 120
+FERTILIZE_COMPOST_CUT = 0.12
 
 # 咕咕斑鸠 — sow/tend 昼间盯梢，可忽略或驱赶
 GUGU_DOVE_STALK_CHANCE = 0.10

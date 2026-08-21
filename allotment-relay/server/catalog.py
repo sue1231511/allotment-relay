@@ -137,6 +137,14 @@ def resolve_item_key(token: str, *, prefer: str = "any") -> str | None:
         return "meat_rabbit"
     if raw in ("猪肉", "生猪肉", "🥓猪肉"):
         return "meat_pork"
+    if raw in ("堆肥", "肥"):
+        return "compost"
+    if raw in ("羊粪", "💩羊粪"):
+        return "manure_sheep"
+    if raw in ("猪粪", "💩猪粪"):
+        return "manure_pig"
+    if raw in ("牛粪", "💩牛粪"):
+        return "manure_cow"
 
     for fk, meta in SEA_CATCH.items():
         if meta["name"] == raw:

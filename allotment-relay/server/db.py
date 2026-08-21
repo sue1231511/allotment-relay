@@ -707,6 +707,7 @@ async def init_db() -> None:
             """,
             "ALTER TABLE parcels ADD COLUMN dove_yield_mult REAL NOT NULL DEFAULT 1.0",
             "ALTER TABLE parcels ADD COLUMN harvest_left INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE parcels ADD COLUMN watered INTEGER NOT NULL DEFAULT 0",
             """
             CREATE TABLE IF NOT EXISTS hut_cabinet (
                 steward_id INTEGER NOT NULL REFERENCES stewards(id),

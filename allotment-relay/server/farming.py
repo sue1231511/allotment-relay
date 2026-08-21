@@ -39,6 +39,43 @@ def format_grow_eta(left: int) -> str:
     return f"约{mins}分"
 
 
+def grow_cut_seconds(grow_target: int, rate: float) -> int:
+    """按比例砍掉生长目标秒数，一茬地板 MIN_GROW_TARGET。"""
+    target = int(grow_target or 0)
+    floor = int(config.MIN_GROW_TARGET)
+    if target <= floor:
+        return 0
+    cut = max(1, int(target * rate))
+    return min(cut, target - floor)
+
+
+def apply_grow_cut(plot: dict[str, Any], rate: float) -> tuple[int, int]:
+    """Return (new_grow_target, seconds_saved)."""
+    old = int(plot.get("grow_target") or 0)
+    cut = grow_cut_seconds(old, rate)
+    return old - cut, cut
+
+
+def fertilizer_cut_rate(item: str, *, compost_mascot: bool = False) -> float:
+    from .catalog import MANURE
+
+    if item in MANURE:
+        rate = float(MANURE[item]["fertilize_boost"])
+    else:
+        rate = config.FERTILIZE_COMPOST_CUT
+    if compost_mascot:
+        rate += 0.05
+    return rate
+
+
+def fertilizer_label(item: str) -> str:
+    from .catalog import MANURE
+
+    if item in MANURE:
+        return MANURE[item]["name"]
+    return "堆肥"
+
+
 WILDLIFE = [
     {
         "key": "rabbit",
@@ -186,7 +223,9 @@ def effective_grow(plot: dict[str, Any], crop_key: str | None = None) -> int:
         bool(plot.get("greenhouse")),
     )
     if plot.get("fertilized"):
-        mult *= 0.88
+        mult *= config.FERTILIZE_GROW_MULT
+    if plot.get("watered"):
+        mult *= config.WATER_GROW_MULT
     return max(60, int(base * mult))
 
 
@@ -277,6 +316,8 @@ def parcel_extra(plot: dict[str, Any]) -> str:
         bits.append(pace)
     if left > 0:
         bits.append(format_grow_eta(left))
+    if plot.get("watered"):
+        bits.append("水")
     if plot.get("fertilized"):
         bits.append("肥")
     if plot.get("scarecrow"):
@@ -383,7 +424,7 @@ async def _apply_wildlife(
     if apply == "till":
         if random.random() < 0.55:
             await conn.execute(
-                "UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0, grow_target=0, grow_pace='' WHERE id=?",
+                "UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0, grow_target=0, grow_pace='', fertilized=0, watered=0, harvest_left=0 WHERE id=?",
                 (plot["id"],),
             )
             return flavor.fill(flavor.pick(flavor.WILDLIFE_BOAR_WRECK), slot=slot, crop=meta["name"])
@@ -678,7 +719,7 @@ async def resolve_gugu_dove(
             await conn.execute(
                 """
                 UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
-                grow_target=0, grow_pace='', fertilized=0, dove_yield_mult=1.0,
+                grow_target=0, grow_pace='', fertilized=0, watered=0, dove_yield_mult=1.0,
                 harvest_left=0
                 WHERE id=?
                 """,

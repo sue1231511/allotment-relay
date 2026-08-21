@@ -89,9 +89,9 @@ async def steward_ops(
     return await mux.steward_ops(_kid(), command, name, motto, badge, portrait)
 
 
-@mcp.tool(description="份地农事。command 写一整句。例子：status · sow 1 甘蓝 · tend · gather 1 · catalog · 偷菜 安 · 买地。空 command 看各地块。偷菜最多 30%，不能摘空。")
+@mcp.tool(description="份地农事。command 写一整句。例子：status · sow 1 甘蓝 · tend · 浇水 1 · 施肥 1 · gather 1 · catalog · 偷菜 安 · 买地。浇水/施肥加快成熟。空 command 看各地块。偷菜最多 30%，不能摘空。")
 async def plot_ops(
-    command: Annotated[str, Field(description="子命令整句。status / catalog / weather / sow 1 甘蓝 / tend / gather 1 / 偷菜 名字 / 买地 / chop 1 / help。空=看地。")] = "",
+    command: Annotated[str, Field(description="子命令整句。status / catalog / sow 1 甘蓝 / tend / 浇水 1 / 施肥 1 / gather 1 / 偷菜 名字 / 买地 / chop 1 / help。浇水和施肥缩短成熟时间。空=看地。")] = "",
 ) -> str:
     return await mux.plot_bundle(_kid(), command)
 
