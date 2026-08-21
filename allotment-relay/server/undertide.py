@@ -344,10 +344,20 @@ def _debt_accrued(principal: int, rate: float, created_day: int, now_day: int) -
 
 
 async def _bank_summary(
-    conn: aiosqlite.Connection, s: dict[str, Any]
+    conn: aiosqlite.Connection, s: dict[str, Any], rate_override: float | None = None
 ) -> tuple[list[dict[str, Any]], int]:
     day = _day_id()
     rate, reason = await _get_rate(conn, day)
+    # 家人价：今天他被猫猫采纳哄开心了 → 全部欠单按 5% 计
+    av = await avatar_key(conn, s["id"])
+    if av == "anan":
+        row = await (await conn.execute(
+            "SELECT an_happy_day FROM ut_owner_state WHERE id=1"
+        )).fetchone()
+        if row and int(row[0]) == day:
+            rate = utcfg.UT_RATE_MIN
+    if rate_override is not None:
+        rate = rate_override
     conn.row_factory = aiosqlite.Row
     rows = await (await conn.execute(
         "SELECT * FROM ut_debts WHERE steward_id=? AND status='open' ORDER BY created_day",
@@ -370,6 +380,14 @@ async def _cmd_bank(
     verb = parts[0].lower() if parts else "debt"
     day = _day_id()
     rate, reason = await _get_rate(conn, day)
+    # 真身家人价：今天他被猫猫采纳哄开心了 → 当日他的利率打到下限（借/查/还一致）
+    _av = await avatar_key(conn, s["id"])
+    if _av == "anan":
+        row = await (await conn.execute(
+            "SELECT an_happy_day FROM ut_owner_state WHERE id=1"
+        )).fetchone()
+        if row and int(row[0]) == day:
+            rate = utcfg.UT_RATE_MIN
 
     if verb == "borrow":
         if len(parts) < 2:

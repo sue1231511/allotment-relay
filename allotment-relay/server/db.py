@@ -839,6 +839,7 @@ async def init_db() -> None:
             )
             """,
             "ALTER TABLE steward_undertide ADD COLUMN spouse_free_day INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE ut_owner_state ADD COLUMN an_happy_day INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE ut_tide_state ADD COLUMN gate_drinks INTEGER NOT NULL DEFAULT 3",
             "ALTER TABLE ut_tide_state ADD COLUMN event_mult REAL NOT NULL DEFAULT 1.0",
             "ALTER TABLE ut_tide_state ADD COLUMN highlight INTEGER NOT NULL DEFAULT 150",

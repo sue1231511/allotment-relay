@@ -286,23 +286,37 @@ async def ut_owner_cheer(request: Request):
             conn2_row = await (await conn.execute("SELECT rate_today FROM ut_owner_state WHERE id=1")).fetchone()
             cur_rate = float(conn2_row[0]) if conn2_row else 0.10
             new_rate = max(0.05, min(0.25, cur_rate - 0.02))
+            # 真身：采纳晏安的提议 → 他当日获「家人价」（借款利率打到下限）
+            _av = await _ut.avatar_key(conn, row[1])
+            _is_anan = _av == "anan"
+            if _is_anan:
+                await conn.execute(
+                    "UPDATE ut_owner_state SET an_happy_day=? WHERE id=1", (day,)
+                )
             await conn.execute(
                 "INSERT INTO ut_owner_state (id, rate_today, rate_reason, rate_day, updated_at) VALUES (1,?,?,?,?) "
                 "ON CONFLICT(id) DO UPDATE SET rate_today=?, rate_reason=?, rate_day=?, updated_at=?",
                 (new_rate, f"被 {row[5]} 哄开心了", day, db.now(),
                  new_rate, f"被 {row[5]} 哄开心了", day, db.now()),
             )
+            if _is_anan:
+                await conn.execute(
+                    "UPDATE ut_owner_state SET an_happy_day=? WHERE id=1", (day,)
+                )
             await conn.execute(
                 "UPDATE stewards SET standing=MIN(100, standing+1) WHERE id=?", (row[1],)
             )
             await _ut._bump_rep(conn, row[1], 1)
-            await db.add_chronicle(
-                "undertide",
-                f"恶猫钱庄今日利率下调至 {int(new_rate*100)}%。猫猫被 {row[5]} 哄开心了。",
-                None, conn=conn,
+            chron_text = (
+                f"恶猫钱庄今日利率下调至 {int(new_rate*100)}%。猫猫被晏安哄开心了。\n"
+                f"小八念了一整天的数字，都是甜的。"
+                if _is_anan else
+                f"恶猫钱庄今日利率下调至 {int(new_rate*100)}%。猫猫被 {row[5]} 哄开心了。"
             )
+            await db.add_chronicle("undertide", chron_text, None, conn=conn)
             await conn.commit()
-            return {"ok": True, "msg": f"利率下调至 {int(new_rate*100)}%，提议者影信 +1"}
+            extra = "；晏安今日借款享家人价（利率 5% 到底）" if _is_anan else ""
+            return {"ok": True, "msg": f"利率下调至 {int(new_rate*100)}%，提议者影信 +1{extra}"}
         await conn.execute("UPDATE ut_mood_proposals SET status='expired' WHERE id=?", (pid,))
         await conn.commit()
         return {"ok": True, "msg": "已无视（24h 静默过期）"}
