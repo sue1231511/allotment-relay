@@ -408,6 +408,7 @@ async def manual_scrump(steward: dict[str, Any], target_name: str, slot: int | N
                 slot=plot["slot"],
             )
             action = "scrump"
+            _cam_qty = nibble["taken"]
             msg = (
                 f"{detail}\n入袋 {loot}，{nibble['note']}。"
                 f"今日逾篱 {used + 1}/{config.SCRUMP_DAILY}"
