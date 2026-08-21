@@ -153,6 +153,8 @@ def test_relay_manual_covers_systems() -> None:
         "旧史文本",
         "不是流水",
         "真人在面板",
+        "tale_ops",
+        "accept black_box_lover",
     ]
     missing = [n for n in needles if n not in text]
     assert not missing, f"relay_manual missing: {missing}"
@@ -169,8 +171,9 @@ def test_readme_workflow_rules() -> None:
         assert "merge origin/main" in blob
         assert "relay_manual" in blob
         assert "mcp_app.py" in blob
-    assert "12 个工具" in readme
+    assert "13 个工具" in readme
     assert "steward_ops" in readme and "plot_ops" in readme and "bar_ops" in readme
+    assert "tale_ops" in readme
     assert "空 command" in readme
     assert "禁止" in readme
 

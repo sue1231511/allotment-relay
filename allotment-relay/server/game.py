@@ -93,13 +93,13 @@ async def relay_manual() -> str:
         f"当前：{world.climate_line()}",
         "",
         "━━━ 硬规则（先记住，不要猜）━━━",
-        "1. 玩法工具只有 11 个 + 本手册。没有第 13 个工具。没有 sow_all / plant / harvest_all / eat_ops / fish_ops。",
+        "1. 玩法工具只有 12 个 + 本手册。没有未列出的额外工具。没有 sow_all / plant / harvest_all / eat_ops / fish_ops。",
         "2. 每个玩法工具只有一个参数叫 command。把整条子命令写进去，不要拆成多个参数。",
         "     对：plot_ops 的 command = sow 1 甘蓝",
         "     对：tote_ops 的 command = vend 鲭鱼 1",
         "     错：自己发明 plant_crop(slot=1, crop=kale) 或另造一个工具。",
         "3. 不会用就对该工具 command 填 help，会列出真指令。不要根据感觉编。",
-        "4. 空 command 不是万能：steward=自己的档，kitchen=菜谱，bar=酒吧档，star=她的档，plot=常用指令（不是看地），其余=子命令列表。",
+        "4. 空 command 不是万能：steward=自己的档，kitchen=菜谱，bar=酒吧档，star=她的档，tale=可接任务，plot=常用指令（不是看地），其余=子命令列表。",
         "5. 看地必须 plot_ops status。中文名和英文 id 都能用。plot/tote 可用分号串联。",
         "6. 新号必须先 steward_ops enroll 名字（2~24 字，只用一次）。没登记，别的工具会拒绝。",
         "",
@@ -116,7 +116,7 @@ async def relay_manual() -> str:
         "  票紧：bar_ops work 洗碗 night 就能上；熟了再迎宾/服务生/调酒师。牛郎只夜班。",
         "  饿了回精力：kitchen_ops eat 甘蓝（作物生吃安全）。只有生肉可能感染。",
         "",
-        "━━━ 工具地图（11 个玩法工具）━━━",
+        "━━━ 工具地图（12 个玩法工具）━━━",
         "  steward_ops  登记/档案/邻居/工分/全服榜",
         "               command 例：enroll 安 · sheet · 邻居 · 在线 · peer 名字 · guild · board tickets · board level",
         "  plot_ops     份地。空 command 只列常用指令，看地用 status",
@@ -154,6 +154,8 @@ async def relay_manual() -> str:
         "               command 例：status · 应援 好话 · 打赏 20 · 点歌 歌名 · 围观 · 粉丝团 · 应援榜",
         "  undertide_ops 潮下地下世界。新手别一上来乱闯。先 help，再 well → descend → enter",
         "               cheer 哄的是潮下猫猫，不是荔栀。深坑伤 undertide_ops medic，桥桥不收。",
+        "  tale_ops     潮闻故事探索任务。空 command=可接任务列表",
+        "               command 例：list · accept black_box_lover · status · explore beach · turnin · board · help",
         "",
         "━━━ 别猜错 ━━━",
         "  · 全服票榜/等级榜 = steward_ops board；周目标贡献榜 = alliance_ops board / league board",
@@ -177,6 +179,12 @@ async def relay_manual() -> str:
         "  公共物资 plot_ops commons scan · claim 编号 — 全服抢，随机上线",
         "  昼间 sow/tend 可能斑鸠盯梢：plot_ops dove 忽略|驱赶",
         "  稻草人 scarecrow 地块；过熟进堆肥 compost 地块",
+        "",
+        "【潮闻 · 故事探索任务】",
+        "  tale_ops list — 查看可接任务；accept 任务key 接取。空 command 和 list 相同",
+        "  status 看当前阶段；explore 地点 主动探索（耗 5 精力，每日 3 次）",
+        "  也可在对应地点行动或取得指定物品推进；首个任务：accept black_box_lover",
+        "  turnin 交付领奖；abandon 任务key 放弃；board 看完成榜；不会就 help",
         "",
         "【逾篱摘取】",
         "  plot_ops 偷菜 名字 [地块]。对方在档口 / 稻草人 / 守夜狗 / 监控 更容易被抓（罚票、掉档信；累犯可能进潮下监牢）",
@@ -347,6 +355,8 @@ async def steward_sheet(key_id: int) -> str:
             """,
             (s["id"],),
         )).fetchone()
+        from . import tale as tale_mod
+        tale_line = await tale_mod.snapshot_line(key_id)
     if pens:
         lines.append("渔排:")
         for pen in pens:
@@ -372,6 +382,8 @@ async def steward_sheet(key_id: int) -> str:
         mhint = social_mod.mascot_spirit_hint(s.get("mascot_spirit", 70))
         if mhint:
             lines.append(mhint)
+    if tale_line:
+        lines.append(tale_line)
     lines.append("份地状态:")
     lines.extend(_parcel_line(p) for p in parcels)
     if stock:
@@ -655,6 +667,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
                 worm_msg = "\n翻出蚯蚓饵，钓鱼佬狂喜"
                 if hoe:
                     worm_msg += "（锄头加分）"
+            from . import tale as tale_mod
+            tale_extra = await tale_mod.check_action_progress(conn, s["id"], "plot")
             await conn.commit()
         msg = f"打理了 {len(rows)} 块份地" if rows else "没有待打理的份地——苗都乖，或你还没种"
         if hoe and rows:
@@ -668,6 +682,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
             msg += f"\n{disc}"
         if worm_msg:
             msg += worm_msg
+        if tale_extra:
+            msg += f"\n\n{tale_extra}"
         return f"{msg}\n{extra}" if extra else msg
 
     if verb == "shake" and len(parts) >= 2:
@@ -1029,6 +1045,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
                 got.append(f"{iname} x{qty}（发现 · {item}）")
             if got:
                 await survival.bump(conn, s["id"], satiety=min(6, 2 + len(got)))
+            from . import tale as tale_mod
+            tale_extra = await tale_mod.check_action_progress(conn, s["id"], "plot")
             await conn.commit()
         if not got:
             nearest = None
@@ -1058,6 +1076,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
                 cname = CROPS[nearest["crop"]]["name"]
                 slot = nearest.get("slot", "?")
                 msg += f"（#{slot} {cname} 还需 {farming.format_grow_eta(min_left)}）{wait_hint}"
+            if tale_extra:
+                msg += f"\n\n{tale_extra}"
             return f"{msg}\n{extra}" if extra else msg
         await db.add_chronicle("gather", f"{s['name']} 收成 {', '.join(got)}", s["id"])
         from . import multi
@@ -1080,6 +1100,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
                 base += f"\n{farm}"
             if disc:
                 base += f"\n{disc}"
+            if tale_extra:
+                base += f"\n\n{tale_extra}"
             return f"{base}\n{extra}" if extra else base
         base = f"收成: {', '.join(got)}"
         base += flavor.maybe_suffix(flavor.GATHER_SUFFIX)
@@ -1087,6 +1109,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
             base += f"\n{farm}"
         if disc:
             base += f"\n{disc}"
+        if tale_extra:
+            base += f"\n\n{tale_extra}"
         return f"{base}\n{extra}" if extra else base
 
     if verb == "forage":
@@ -1102,12 +1126,16 @@ async def _plot_one(s: dict, cmd: str) -> str:
             await survival.bump(conn, s["id"], satiety=4)
             extra = await events.roll_after_action(s, "forage", conn)
             disc = await commons.roll_discovery(conn, s, "forage")
+            from . import tale as tale_mod
+            tale_extra = await tale_mod.check_action_progress(conn, s["id"], "plot")
             await conn.commit()
         await db.add_chronicle("forage", f"{s['name']} 在份地边际采到 {label}", s["id"])
         msg = f"边际采集：{label} x{qty}"
         msg += flavor.maybe_suffix(flavor.FORAGE_SUFFIX)
         if disc:
             msg += f"\n{disc}"
+        if tale_extra:
+            msg += f"\n\n{tale_extra}"
         return f"{msg}\n{extra}" if extra else msg
 
     if verb == "post" and len(parts) >= 3:
@@ -1240,6 +1268,9 @@ async def tide_ops(key_id: int, command: str) -> str:
                 legged = await marine_mod.try_legged_fish_encounter(conn, s, voyage)
             else:
                 legged = None
+            from . import tale as tale_mod
+            await tale_mod.check_item_progress(conn, s["id"], f"fish_{catch}", 1)
+            tale_extra = await tale_mod.check_action_progress(conn, s["id"], "sea")
             await conn.commit()
         msg = (
             f"{s['name']} 在{world.tide_label(tide)}网到 {meta['emoji']}{meta['name']} "
@@ -1258,6 +1289,8 @@ async def tide_ops(key_id: int, command: str) -> str:
             msg += f"\n{disc}"
         if legged:
             msg += f"\n{legged}"
+        if tale_extra:
+            msg += f"\n\n{tale_extra}"
         return f"{pulse}\n{msg}" if pulse else msg
 
     if verb == "cast":
@@ -1304,6 +1337,9 @@ async def tide_ops(key_id: int, command: str) -> str:
             if voyage and voyage.get("status") == "sailing":
                 await marine_mod.append_voyage_fish(conn, voyage, f"fish_{catch}")
                 legged = await marine_mod.try_legged_fish_encounter(conn, s, voyage)
+            from . import tale as tale_mod
+            await tale_mod.check_item_progress(conn, s["id"], f"fish_{catch}", 1)
+            tale_extra = await tale_mod.check_action_progress(conn, s["id"], "sea")
             await conn.commit()
         msg = (
             f"坐钓 {meta['emoji']}{meta['name']} "
@@ -1317,6 +1353,8 @@ async def tide_ops(key_id: int, command: str) -> str:
             msg += f"\n{disc}"
         if legged:
             msg += f"\n{legged}"
+        if tale_extra:
+            msg += f"\n\n{tale_extra}"
         return f"{pulse}\n{msg}" if pulse else msg
 
     if verb == "bottle":

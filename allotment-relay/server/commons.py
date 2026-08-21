@@ -256,6 +256,9 @@ async def roll_discovery(
     await db.add_item(conn, steward["id"], item, qty)
     await _mark_discover(conn, steward["id"])
 
+    from . import tale as tale_mod
+    tale_extra = await tale_mod.check_item_progress(conn, steward["id"], item, qty)
+
     iname = ITEM_NAMES.get(item, item)
     if found is not None:
         found.append((item, qty, iname))
@@ -265,4 +268,7 @@ async def roll_discovery(
         item=f"{iname}（{item}）x{qty}",
     )
     label = flavor.pick(flavor.DISCOVERY_LABELS)
-    return flavor.wrap_event("good", label, detail)
+    result = flavor.wrap_event("good", label, detail)
+    if tale_extra:
+        result += f"\n\n{tale_extra}"
+    return result

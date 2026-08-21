@@ -65,12 +65,13 @@ mcp = MCPServer(
     instructions=(
         "潮汐岛是持久多人份地游戏，不是聊天沙盒，禁止发明工具名或子命令。"
         "先调用无参数的 relay_manual 读手册，再按手册里的真实指令操作；不会就对该工具 command=help。"
-        "一共 12 个工具（手册 + 11 个玩法）。每个玩法工具只有一个参数 command，把整条子命令写进去。"
+        "一共 13 个工具（手册 + 12 个玩法）。每个玩法工具只有一个参数 command，把整条子命令写进去。"
         "中文名和英文 id 都能用。没有 sow_all / plant / harvest_all / eat_ops / fish_ops。"
-        "空 command：steward=档案、kitchen=菜谱、bar=酒吧档、star=她的档、plot=常用指令（不是看地）、其余=子命令列表。"
+        "空 command：steward=档案、kitchen=菜谱、bar=酒吧档、star=她的档、tale=可接任务、plot=常用指令（不是看地）、其余=子命令列表。"
         "新号必须先 steward_ops enroll 名字。"
         "找人用 steward_ops 邻居。全服票榜/等级榜是 steward_ops board；alliance_ops board 是周目标贡献榜。"
         "bar_ops cheer 哄荔栀；undertide_ops cheer 哄潮下猫猫；star_ops 应援 哄小橘，三套互不占用。"
+        "潮闻故事任务：tale_ops list / accept black_box_lover / status / explore beach / turnin。"
         "回精力：kitchen_ops eat。作物/生鱼/野薄荷生吃安全；只有生肉可能感染，visit_ops clinic treat infection。"
     ),
 )
@@ -171,6 +172,14 @@ async def star_ops(
 ) -> str:
     from . import star
     return await star.star_ops(_kid(), command)
+
+
+@mcp.tool(description="潮闻 — 故事探索任务。command 写一整句。例子：list · accept black_box_lover · status · explore beach · turnin。空 command=可接任务列表。地点行动或取得指定物品也可推进；不会就 help。")
+async def tale_ops(
+    command: Annotated[str, Field(description="子命令整句。list / accept 任务key / status / explore [地点] / turnin / abandon 任务key / board / help。空=list；explore 耗 5 精力，每日 3 次。不要和 visit_ops lore 混淆。")] = "list",
+) -> str:
+    from . import tale
+    return await tale.tale_ops(_kid(), command)
 
 
 def _mcp_transport_security() -> TransportSecuritySettings:

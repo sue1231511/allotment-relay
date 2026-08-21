@@ -1298,7 +1298,11 @@ async def bar_ops(key_id: int, command: str) -> str:
         drink_q = drink_q.split()[0]
         async with db.connect() as conn:
             msg = await _cmd_order(conn, s, drink_q)
+            from . import tale as tale_mod
+            tale_extra = await tale_mod.check_action_progress(conn, s["id"], "bar")
             await conn.commit()
+        if tale_extra:
+            msg += f"\n\n{tale_extra}"
         return msg
 
     if verb == "staff":
@@ -1353,7 +1357,11 @@ async def bar_ops(key_id: int, command: str) -> str:
         period = _work_period(period, overdue=is_shift_overdue(s))
         async with db.connect() as conn:
             msg = await _run_work(conn, s, job_id, period)
+            from . import tale as tale_mod
+            tale_extra = await tale_mod.check_action_progress(conn, s["id"], "bar")
             await conn.commit()
+        if tale_extra:
+            msg += f"\n\n{tale_extra}"
         await db.add_chronicle(
             "bar",
             f"{s['name']} 在{COASTAL_BAR['name']}上工（{BAR_JOBS[job_id]['name']}）",
@@ -1479,12 +1487,18 @@ async def bar_ops(key_id: int, command: str) -> str:
                 _au = await cur_ut.fetchone()
                 if _au and _au[0]:
                     return _utc.AVATAR_K_CHEER
-        return (
+        from . import tale as tale_mod
+        async with db.connect() as conn:
+            tale_extra = await tale_mod.check_action_progress(conn, s["id"], "bar")
+        base_msg = (
             "荔栀擦杯子的手没停。她听完，抬眼看了你一下。\n\n"
             "「哦。」她说。\n\n"
             "就一个字。但她记不记得住，谁也说不准。\n"
             "（提议已入队——她今晚心情如何，只有她自己知道。）"
         )
+        if tale_extra:
+            return base_msg + f"\n\n{tale_extra}"
+        return base_msg
 
     if verb == "set_mood_deprecated":
         rest = command.strip()[len("set_mood"):].strip()

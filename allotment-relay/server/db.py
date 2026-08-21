@@ -607,6 +607,48 @@ CREATE TABLE IF NOT EXISTS guild_shifts (
     count INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (steward_id, day)
 );
+
+CREATE TABLE IF NOT EXISTS tale_catalog (
+    tale_key TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    intro TEXT NOT NULL,
+    min_level INTEGER NOT NULL DEFAULT 1,
+    min_standing INTEGER NOT NULL DEFAULT 0,
+    domain TEXT NOT NULL DEFAULT 'shore',
+    stages_json TEXT NOT NULL,
+    rewards_json TEXT NOT NULL,
+    repeatable INTEGER NOT NULL DEFAULT 0,
+    sort_order INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS steward_tales (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    tale_key TEXT NOT NULL,
+    stage_idx INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'active',
+    accepted_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    choices_json TEXT NOT NULL DEFAULT '{}',
+    UNIQUE(steward_id, tale_key)
+);
+
+CREATE TABLE IF NOT EXISTS steward_tales_done (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    tale_key TEXT NOT NULL,
+    outcome TEXT NOT NULL DEFAULT 'completed',
+    completed_at INTEGER NOT NULL,
+    times INTEGER NOT NULL DEFAULT 1,
+    UNIQUE(steward_id, tale_key, outcome)
+);
+
+CREATE TABLE IF NOT EXISTS tale_explore_rolls (
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    day INTEGER NOT NULL,
+    count INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (steward_id, day)
+);
 """
 
 
@@ -1037,6 +1079,52 @@ async def init_db() -> None:
                 SET xp = COALESCE(xp, 0) + (NEW.tickets - OLD.tickets)
                 WHERE id = NEW.id;
             END
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS tale_catalog (
+                tale_key TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                intro TEXT NOT NULL,
+                min_level INTEGER NOT NULL DEFAULT 1,
+                min_standing INTEGER NOT NULL DEFAULT 0,
+                domain TEXT NOT NULL DEFAULT 'shore',
+                stages_json TEXT NOT NULL,
+                rewards_json TEXT NOT NULL,
+                repeatable INTEGER NOT NULL DEFAULT 0,
+                sort_order INTEGER NOT NULL DEFAULT 0
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS steward_tales (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                tale_key TEXT NOT NULL,
+                stage_idx INTEGER NOT NULL DEFAULT 0,
+                status TEXT NOT NULL DEFAULT 'active',
+                accepted_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL,
+                choices_json TEXT NOT NULL DEFAULT '{}',
+                UNIQUE(steward_id, tale_key)
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS steward_tales_done (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                tale_key TEXT NOT NULL,
+                outcome TEXT NOT NULL DEFAULT 'completed',
+                completed_at INTEGER NOT NULL,
+                times INTEGER NOT NULL DEFAULT 1,
+                UNIQUE(steward_id, tale_key, outcome)
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS tale_explore_rolls (
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                day INTEGER NOT NULL,
+                count INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (steward_id, day)
+            )
             """,
         ):
             try:

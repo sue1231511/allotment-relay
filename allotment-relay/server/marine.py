@@ -560,6 +560,9 @@ async def pen_ops(key_id: int, command: str) -> str:
             )
             extra = await events.roll_after_action(s, "pen_harvest", conn, pen=pen)
             disc = await commons.roll_discovery(conn, s, "pen_harvest")
+            from . import tale as tale_mod
+            await tale_mod.check_item_progress(conn, s["id"], f"fish_{species}", qty)
+            tale_extra = await tale_mod.check_action_progress(conn, s["id"], "sea")
             await conn.commit()
         from . import multi
         bonus = await multi.on_league_item(s["id"], f"fish_{species}", qty)
@@ -572,7 +575,9 @@ async def pen_ops(key_id: int, command: str) -> str:
         if disc:
             msg += f"\n{disc}"
         if extra:
-            return f"{msg}\n{extra}"
+            msg += f"\n{extra}"
+        if tale_extra:
+            msg += f"\n\n{tale_extra}"
         return msg
 
     raise ValueError(
@@ -954,6 +959,11 @@ async def _finish_voyage(steward_id: int, voyage: dict[str, Any], choice: str | 
         if bonus:
             msg += f"\n{bonus}"
             await db.add_chronicle("league", bonus, None)
+    async with db.connect() as conn:
+        from . import tale as tale_mod
+        tale_extra = await tale_mod.check_action_progress(conn, steward_id, "sea")
+    if tale_extra:
+        msg += f"\n\n{tale_extra}"
     return msg
 
 

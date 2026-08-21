@@ -173,6 +173,8 @@ async def beach_ops(key_id: int, command: str) -> str:
             lili_spawn = await lili_mod.maybe_spawn_visit(conn)
             from . import npc as npc_mod
             shiye = await npc_mod.maybe_shiye_bump(conn, s, "beach")
+            from . import tale as tale_mod
+            tale_extra = await tale_mod.check_action_progress(conn, s["id"], "beach")
             await conn.commit()
 
         msg = f"赶海：{label} x{qty}{extra_msg}"
@@ -190,6 +192,8 @@ async def beach_ops(key_id: int, command: str) -> str:
         ])
         if disc:
             msg += f"\n{disc}"
+        if tale_extra:
+            msg += f"\n\n{tale_extra}"
         await db.add_chronicle("beach", f"{s['name']} 赶海得 {label}", s["id"])
         return msg
 
@@ -245,6 +249,8 @@ async def beach_ops(key_id: int, command: str) -> str:
             disc = await commons.roll_discovery(conn, s, "beach")
             from . import npc as npc_mod
             shiye = await npc_mod.maybe_shiye_bump(conn, s, "beach")
+            from . import tale as tale_mod
+            tale_extra = await tale_mod.check_action_progress(conn, s["id"], "beach")
             await conn.commit()
 
         msg = f"掏洞：{label} x{qty}{charm_msg}{clock_msg}"
@@ -257,6 +263,8 @@ async def beach_ops(key_id: int, command: str) -> str:
             msg += f"\n{disc}"
         if shiye:
             msg += f"\n{shiye}"
+        if tale_extra:
+            msg += f"\n\n{tale_extra}"
         await db.add_chronicle("beach", f"{s['name']} 掏洞得 {label}", s["id"])
         return msg
 

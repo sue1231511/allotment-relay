@@ -331,3 +331,8 @@ STAR_WATCH_GIFT_CHANCE = 0.18   # 观众小概率捡到台下掉的花
 STAR_SETTLE_GAIN = 2      # 开嗓当晚跨天 +2
 STAR_SETTLE_DECAY = 1     # 每日热度衰减 -1
 STAR_POST_DAILY = 5       # 面板发动态日上限
+
+# 潮闻 — 故事探索任务
+TALE_EXPLORE_ENERGY = 5          # 主动探索耗精力
+TALE_EXPLORE_DAILY = 3           # 每日主动探索次数
+TALE_BOARD_LIMIT = 10            # 完成榜显示人数
