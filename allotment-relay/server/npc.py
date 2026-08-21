@@ -107,7 +107,7 @@ async def _visit_context(steward: dict, key: str) -> str:
         elif tide == "slack":
             bits.append("平潮可 probe 掏洞，dig 也行")
         else:
-            bits.append("涨潮别翻沙，坐钓 tide_ops cast 碰运气")
+            bits.append("涨潮：dig 和 probe 都关，坐钓 tide_ops cast 碰运气")
         if weather == "misty":
             bits.append("雾天珠砂/海玻璃略多")
         return "——" + "；".join(bits)

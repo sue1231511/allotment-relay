@@ -1101,7 +1101,7 @@ async def voyage_ops(key_id: int, command: str) -> str:
         if not voyage:
             raise ValueError("没有截停中的航程")
         if voyage.get("status") == "fish_encounter":
-            raise ValueError("未命名小鱼还在 — 先 voyage_ops compliment|release|catch|grab")
+            raise ValueError("未命名小鱼还在 — 先 tide_ops compliment|release|catch|grab")
         if voyage.get("status") == "sailing":
             if db.now() < voyage["returns_at"]:
                 left = voyage["returns_at"] - db.now()
@@ -1125,7 +1125,7 @@ async def voyage_ops(key_id: int, command: str) -> str:
         if not voyage:
             return "没有进行中的航程"
         if voyage.get("status") == "fish_encounter":
-            raise ValueError("未命名小鱼还在 — 先 voyage_ops compliment|release|catch|grab")
+            raise ValueError("未命名小鱼还在 — 先 tide_ops compliment|release|catch|grab")
         if db.now() < voyage["returns_at"]:
             left = voyage["returns_at"] - db.now()
             raise ValueError(f"尚未归港，还需约 {left // 60} 分 {left % 60} 秒")
@@ -1137,7 +1137,7 @@ async def voyage_ops(key_id: int, command: str) -> str:
         if not voyage:
             return "没有进行中的航程"
         if voyage.get("status") == "fish_encounter":
-            raise ValueError("未命名小鱼还在 — 先 voyage_ops compliment|release|catch|grab")
+            raise ValueError("未命名小鱼还在 — 先 tide_ops compliment|release|catch|grab")
         if db.now() < voyage["returns_at"]:
             left = voyage["returns_at"] - db.now()
             return f"仍在 {VOYAGE_ROUTES[voyage['route']]['label']}，约 {left // 60} 分后可用 return"

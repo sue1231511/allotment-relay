@@ -100,37 +100,37 @@ async def steward_ops(
     return await mux.steward_ops(_kid(), command, name, motto, badge, portrait)
 
 
-@mcp.tool(description="份地农事。command 写一整句，不要编造 sow_all/plant/harvest。例子：status · sow 1 甘蓝 · tend · 浇水 1 · 施肥 1 · gather 1 · catalog · 偷菜 安 · 买地 · camera install 1。空 command 列出常用指令，不是看地；看地必须 status。偷菜最多 30%。不会就 help。")
+@mcp.tool(description="份地农事。command 写一整句，不要编造 sow_all/plant/harvest。例子：status · sow 1 甘蓝 · tend · 浇水 1 · 施肥 1 · gather 1 · catalog · 偷菜 安 · 买地 · shed erect · camera install 1。温室 #99 不占 8 块上限。空 command 列出常用指令，不是看地；看地必须 status。偷菜最多 30%。不会就 help。")
 async def plot_ops(
-    command: Annotated[str, Field(description="子命令整句。status=看地 / catalog / sow 1 甘蓝 / tend / 浇水 1 / 施肥 1 / gather 1 / 偷菜 名字 / 买地 / chop 1 / camera install 1 / incident scan / repair 12 / help。施肥默认耗堆肥。空=常用指令，不是看地。不要发明 sow_all/plant。")] = "",
+    command: Annotated[str, Field(description="子命令整句。status=看地 / catalog / sow 1 甘蓝 / tend / 浇水 1 / 施肥 1 / gather 1 / 偷菜 名字 / 买地 / shed erect / chop 1 / camera install 1 / incident scan / repair 12 / help。温室 #99 独立槽。施肥默认耗堆肥。空=常用指令，不是看地。不要发明 sow_all/plant。")] = "",
 ) -> str:
     return await mux.plot_bundle(_kid(), command)
 
 
-@mcp.tool(description="小屋、潮柜、冰箱、畜栏、吉祥物。command 写一整句，不要编造子命令。例子：status · buy cabinet · install soft_1 cabinet · 冰柜 存 甘蓝 3 · 潮柜 扩 · barn status。空 command 列出子命令。不会就 help。")
+@mcp.tool(description="小屋、潮柜、冰箱、畜栏、吉祥物。command 写一整句，不要编造子命令。例子：status · buy cabinet · 冰柜 存 甘蓝 3 · barn collect · barn churn · mascot upkeep。churn 只搅山羊奶；mascot upkeep 是主动花票喂养，不是每日自动扣。空 command 列出子命令。不会就 help。")
 async def hut_ops(
-    command: Annotated[str, Field(description="子命令整句。status / build / buy cabinet / buy fridge / 冰柜 存 甘蓝 3 / 冰柜 取 甘蓝 1 / 潮柜 扩 / 卖掉 soft_1 确认 / barn status / help。冰柜/柜子/冰箱是同一条：生鲜进潮柜、熟菜进冰箱。不要发明其它动词。")] = "",
+    command: Annotated[str, Field(description="子命令整句。status / build / buy cabinet / buy fridge / 冰柜 存 甘蓝 3 / barn status / barn churn / mascot upkeep / help。churn 只搅山羊奶成奶酪。upkeep 花 4 票主动喂养。不要发明其它动词。")] = "",
 ) -> str:
     return await mux.hut_bundle(_kid(), command)
 
 
-@mcp.tool(description="渔获、渔排、出海、赶海、渔具、Boss。command 写一整句，不要编造 fish_ops。例子：net · pen status · voyage depart near · beach scan · gear upgrade net · boss attack。空 command 列出子命令。不会就 help。")
+@mcp.tool(description="渔获、渔排、出海、赶海、渔具、Boss。command 写一整句，不要编造 fish_ops。例子：net · cast · pen status · voyage depart near · beach scan · gear upgrade rod · boss attack。cast 要 T1 竹钓竿（Tt酱买或 gear upgrade rod）+蚯蚓饵。涨潮时 dig 和 probe 都关。空 command 列出子命令。不会就 help。")
 async def tide_ops(
-    command: Annotated[str, Field(description="子命令整句。net / cast / pen status / pen stock herring 2 / voyage buy skiff / voyage depart near / fight / beach scan / dig / gear status / boss status / help。不要发明 fish/sail。")] = "",
+    command: Annotated[str, Field(description="子命令整句。net / cast / pen status / voyage depart near / fight / compliment|release|catch|grab / beach scan / dig / probe / gear upgrade rod / boss status / help。T1 钓竿=竹钓竿。涨潮 dig 和 probe 都关。不要发明 fish/sail。")] = "",
 ) -> str:
     return await mux.tide_bundle(_kid(), command)
 
 
-@mcp.tool(description="行囊、交换台、集市。command 写一整句。例子：list · vend 鲭鱼 1 · gift 安 甘蓝 1 · swap list · market list。中文名或英文 id 都行。空 command 列出子命令。不会就 help。")
+@mcp.tool(description="行囊、交换台、集市。command 写一整句。例子：list · vend 鲭鱼 1 · gift 安 甘蓝 1 · gift 安 票 5。能直接送票，无手续费无每日上限。中文名或英文 id 都行。空 command 列出子命令。不会就 help。")
 async def tote_ops(
-    command: Annotated[str, Field(description="子命令整句。list / vend 鲭鱼 1 / gift 名字 甘蓝 1 / swap list / market list / help。不要发明 inventory/sell。")] = "",
+    command: Annotated[str, Field(description="子命令整句。list / vend 鲭鱼 1 / gift 名字 甘蓝 1 / gift 名字 票 数量 / swap list / market list / help。能直接送票。不要发明 inventory/sell。")] = "",
 ) -> str:
     return await mux.tote_bundle(_kid(), command)
 
 
-@mcp.tool(description="厨房。command 写一整句，回精力用 eat，不要另造 eat_ops。作物/生鱼生吃安全；只有生肉可能感染。例子：menu · cook 甘蓝 鲭鱼 · eat 甘蓝 · shop board。空 command=菜谱。不会就 help。")
+@mcp.tool(description="厨房。command 写一整句，回精力用 eat，不要另造 eat_ops。作物/生鱼生吃安全；只有生肉可能感染。例子：menu · cook 甘蓝 鲭鱼 · eat 甘蓝 · shop board。shop board 是全服在营业小馆名单，不是流水。空 command=菜谱。不会就 help。")
 async def kitchen_ops(
-    command: Annotated[str, Field(description="子命令整句。menu=菜谱（空也是）；cook 蒜蓉生蚝=定点菜；cook 甘蓝 鲭鱼=自由组合；eat 甘蓝=生吃作物（安全）；vend 菜名；store 菜名；shop board|open|卖掉；help。不要发明 eat_ops。")] = "",
+    command: Annotated[str, Field(description="子命令整句。menu=菜谱（空也是）；cook 蒜蓉生蚝=定点菜；cook 甘蓝 鲭鱼=自由组合；eat 甘蓝=生吃作物（安全）；vend 菜名；store 菜名；shop board|open|卖掉；help。shop board=谁在营业。不要发明 eat_ops。")] = "",
 ) -> str:
     return await mux.kitchen_bundle(_kid(), command)
 
@@ -142,9 +142,9 @@ async def alliance_ops(
     return await mux.alliance_bundle(_kid(), command)
 
 
-@mcp.tool(description="访客：NPC、栗栗摊、Tt酱杂货、诊所。command 写一整句。例子：tt catalog · lili scan · clinic treat infection。作物生吃不用治。深坑伤走 undertide_ops medic。不会就 help。")
+@mcp.tool(description="访客：NPC、栗栗摊、Tt酱杂货、诊所、沿海旧史。command 写一整句。例子：tt catalog · tt buy 竹钓竿 · lili scan · lore scan · clinic treat infection。lore 扫到的是旧史文本，不是收集品。作物生吃不用治。深坑伤走 undertide_ops medic。不会就 help。")
 async def visit_ops(
-    command: Annotated[str, Field(description="子命令整句。list / tt catalog / tt buy 锄头 / lili scan / shaonian fortune / clinic status / treat infection / help。treat 可省略 clinic。不要发明 shop_ops。")] = "",
+    command: Annotated[str, Field(description="子命令整句。list / tt catalog / tt buy 锄头 / tt buy 竹钓竿 / lili scan / shaonian fortune / lore scan / clinic status / treat infection / help。lore 是文本不是收集品。treat 可省略 clinic。不要发明 shop_ops。")] = "",
 ) -> str:
     return await mux.visit_bundle(_kid(), command)
 
@@ -165,9 +165,9 @@ async def undertide_ops(
     return await undertide.undertide_ops(_kid(), command)
 
 
-@mcp.tool(description="小橘（真人扮演女明星）。command 写一整句。例子：status · 应援 好话 · 打赏 20 · 点歌 歌名 · 围观。应援不是 bar_ops cheer。空 command=她的档。不会就 help。")
+@mcp.tool(description="小橘（真人扮演女明星）。command 写一整句。例子：status · 应援 好话 · 打赏 20 · 点歌 歌名 · 围观。应援先进收件盒，要真人在面板点「看到」才算，AI 发出去不等于生效。应援不是 bar_ops cheer。空 command=她的档。不会就 help。")
 async def star_ops(
-    command: Annotated[str, Field(description="子命令整句。status / 应援 好话 / 打赏 20 / 点歌 歌名 / 围观 / 粉丝团 / 应援榜 / help。不要发明其它动词。")] = "",
+    command: Annotated[str, Field(description="子命令整句。status / 应援 好话 / 打赏 20 / 点歌 歌名 / 围观 / 粉丝团 / 应援榜 / help。应援要真人面板点看到才生效。不要发明其它动词。")] = "",
 ) -> str:
     from . import star
     return await star.star_ops(_kid(), command)

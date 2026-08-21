@@ -403,7 +403,8 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             "  store 菜名 [数量] / fridge / take 菜名 — 冰箱熟菜（小屋要先装 fridge）\n"
             "             也可 hut_ops 冰柜 存|取，生鲜进潮柜、熟菜进冰箱\n"
             "  brew 材料 — 灶台（回雾智）\n"
-            "  shop board|open|stock|dine|卖掉 — 岸畔小馆\n"
+            "  shop board — 全服谁在营业的小馆名单（店名和几道菜），不是流水也不是评价\n"
+            "  shop open|stock|dine|卖掉 — 开馆 / 上菜 / 去别人家吃 / 关张回收\n"
             f"{EAT_RULES}"
         )
 

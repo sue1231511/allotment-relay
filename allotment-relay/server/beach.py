@@ -112,7 +112,7 @@ async def beach_ops(key_id: int, command: str) -> str:
     if verb == "dig":
         tide = world.current_tide()
         if tide not in ("ebb", "slack"):
-            raise ValueError("涨潮没过脚面，等退潮再赶海（或 probe 掏洞碰运气）")
+            raise ValueError("涨潮没过脚面。dig 和 probe 都不可用，等落潮再来。beach scan 还能看一眼。")
         stock = await db.get_satchel(s["id"])
         if not stock.get("tool_shovel"):
             raise ValueError("需要铲子 tide_ops tool buy shovel")

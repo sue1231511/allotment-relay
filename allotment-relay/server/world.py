@@ -51,7 +51,7 @@ WEATHER_NOW = {
 TIDE_NOW = {
     "ebb": "退潮：赶海 dig 贝壳/渔获权重↑",
     "slack": "平潮：probe 掏洞（权重略补）",
-    "flood": "涨潮：dig 不可用，probe 勉强试试",
+    "flood": "涨潮：dig 和 probe 都不可用，只有 beach scan 还能看一眼",
 }
 PHASE_NOW = {
     "day": "昼：斑鸠只在这时出现；酒吧默认打烊（逾期补班票 ×0.72）",

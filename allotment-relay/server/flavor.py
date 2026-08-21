@@ -401,10 +401,10 @@ HAIL_BANNER = [
 ]
 
 HAIL_CHOICES = (
-    "voyage_ops fight — 硬刚（耗精力，船阶+雾智）\n"
-    "voyage_ops flee — 砍缆跑（耗精力，可能丢货）\n"
-    "voyage_ops parley — 交涉（看档信/雾智）\n"
-    "voyage_ops bribe — 买路票（现票打发）"
+    "tide_ops fight — 硬刚（耗精力，船阶+雾智）\n"
+    "tide_ops flee — 砍缆跑（耗精力，可能丢货）\n"
+    "tide_ops parley — 交涉（看档信/雾智）\n"
+    "tide_ops bribe — 买路票（现票打发）"
 )
 
 HAIL_FIGHT_WIN = [
@@ -723,10 +723,9 @@ LEGGED_FISH_DETAIL = [
 ]
 
 LEGGED_FISH_CHOICES = (
-    "voyage_ops compliment — 夸奖并放生（赠小鱼，小概率稀有）\n"
-    "voyage_ops release — 同上\n"
-    "voyage_ops catch — 抓取（丢已获鱼 + 大耗精力）\n"
-    "voyage_ops grab — 同上"
+    "选一个：tide_ops compliment / release / catch / grab\n"
+    "（compliment 和 release 一样，是礼遇，有时小鱼会回赠；\n"
+    "catch 和 grab 一样，是动手——舱里的鱼和精力会出事）"
 )
 
 LEGGED_FISH_RELEASE = [

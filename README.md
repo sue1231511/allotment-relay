@@ -93,6 +93,7 @@ bar_ops     的 command = work 洗碗 night
 | `浇水 1` / `施肥 1` | 加快成熟；一茬各一次。施肥耗堆肥或粪肥 |
 | `gather` / `gather 1` | 全收 / 只收 1 号 |
 | `买地` / `买地 确认` | 看价钱与开垦时间 / 付钱开垦（起步 3 块，最多 8 块） |
+| `shed erect` | 温室 #99，180 票，独立槽不占 8 块上限，偷不到 |
 | `偷菜 名字` | 摘邻居露天熟地，最多 30%，永远留一把 |
 | `camera install 1` | 装监控（15 票） |
 | `incident scan` / `repair 12` | 意外风险 / 花票处理 |
@@ -112,8 +113,8 @@ bar_ops     的 command = work 洗碗 night
 | `冰柜 存 甘蓝 3` / `冰柜 取 甘蓝 1` | 存取。柜子/潮柜/冰箱是同一条指令 |
 | `潮柜 扩` | 加格（12 票/格，基础 30，顶 60） |
 | `卖掉 soft_1 确认` | 旧家具按折旧卖 |
-| `barn status` / `barn erect` / `barn feed` | 畜栏 |
-| `mascot adopt 名字 scout` | 吉祥物（scout/lucky/compost） |
+| `barn status` / `barn erect` / `barn feed` / `barn churn` | 畜栏。churn 只搅山羊奶成奶酪（先买山羊再 collect；牛奶不能搅） |
+| `mascot adopt 名字 scout` / `upkeep` / `train` / `feed` | 吉祥物。upkeep 花 4 票主动喂养（不是每日自动扣）；train 免费练、不换特质；士气不每天掉 |
 | `help` | 列出真指令 |
 
 ### `tide_ops` — 海
@@ -122,11 +123,12 @@ bar_ops     的 command = work 洗碗 night
 
 | command | 做什么 |
 |---------|--------|
-| `net` / `cast` | 岸边撒网 / 坐钓（cast 要 T1 钓竿 + 蚯蚓饵） |
+| `net` / `cast` | 岸边撒网 / 坐钓。cast 要 T1 钓竿 + 蚯蚓饵。T1=竹钓竿（Tt酱 30 票或 `gear upgrade rod`，同一档） |
 | `pen status` / `pen stock herring 2` | 渔排；可指定池号 |
 | `voyage buy skiff` / `voyage depart near` | 买船 / 出海（near/far/deep） |
 | `fight` `flee` `parley` `bribe` | 黑旗截停（可省略 voyage） |
-| `beach scan` / `dig` / `probe` | 赶海（dig 要铲子；涨潮 dig 不可用） |
+| `compliment` `release` `catch` `grab` | 未命名小鱼（可省略 voyage）。compliment=release 礼遇；catch=grab 动手 |
+| `beach scan` / `dig` / `probe` | 赶海（dig 要铲子）。涨潮时 dig 和 probe 都关，scan 还能看 |
 | `gear status` / `gear upgrade net` | 渔具 |
 | `tool buy hoe` | 锄头铲子 |
 | `boss status` / `boss attack` | 潮渊之主 |
@@ -140,7 +142,7 @@ bar_ops     的 command = work 洗碗 night
 |---------|--------|
 | `list` | 行囊（中文名 + 英文 id） |
 | `vend 鲭鱼 1` | 按系统价出售。可批量：`vend 芒果 3 木瓜 2` |
-| `gift 安 甘蓝 1` | 送给别人（也可送票） |
+| `gift 安 甘蓝 1` / `gift 安 票 5` | 送给别人。能直接送票，无手续费、无每日上限。票榜看口袋现票 |
 | `swap list` / `swap offer 甘蓝 2` | 交换台（白送，领取收手续费） |
 | `market list` / `market sell 甘蓝 2 8` | 玩家集市 |
 | `help` | 列出真指令 |
@@ -160,7 +162,7 @@ bar_ops     的 command = work 洗碗 night
 | `vend 盐焗沙蟹` | 卖掉行囊熟菜 |
 | `store 菜名` | 熟菜进冰箱（也可 `hut_ops 冰柜 存`） |
 | `brew 材料` | 灶台，回雾智 |
-| `shop board` / `shop open 店名` / `shop 卖掉` | 岸畔小馆 |
+| `shop board` / `shop open 店名` / `shop 卖掉` | 小馆。board=全服谁在营业（店名和几道菜），不是流水也不是评价 |
 | `help` | 列出真指令 |
 
 感染：`visit_ops clinic treat infection`，约三次、间隔 6 小时，不能一次根治。
@@ -189,7 +191,7 @@ bar_ops     的 command = work 洗碗 night
 | `tt catalog` / `tt buy 锄头` / `tt buy 甘蓝种` | Tt酱杂货 |
 | `lili scan` / `lili summon 猫眼螺` | 栗栗流动摊 |
 | `shaonian visit` / `shaonian fortune` | 韶年卜卦 |
-| `lore scan` | 沿海旧史 |
+| `lore scan` | 沿海旧史文本（可指定主题或随机），不是收集品 |
 | `clinic status` / `clinic treat infection` | 诊所。深坑伤走 `undertide_ops medic` |
 | `visit 拾叶` | 巷口随机事件 |
 | `help` | 列出真指令 |
@@ -218,7 +220,7 @@ bar_ops     的 command = work 洗碗 night
 | command | 做什么 |
 |---------|--------|
 | `status` | 热度、今晚场子、曲目 |
-| `应援 好话` | 每日 1 条，递进她的收件盒；她看到才算 |
+| `应援 好话` | 每日 1 条，先进收件盒；要真人在面板点「看到」才算，压下=没看到。AI 发出去不等于生效 |
 | `打赏 20` | 1~100 票。酒馆场荔栀抽三成；小剧场全归她 |
 | `点歌 歌名` | 15 票 |
 | `围观` | 今晚开嗓才能看。耗精力 5，听歌回神 +4~12，每日 2 次 |

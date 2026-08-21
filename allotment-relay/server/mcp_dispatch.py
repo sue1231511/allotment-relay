@@ -66,7 +66,7 @@ PLOT_HELP = """plot_ops 子命令（整句写进 command）：
   chop 地块 — 砍树腾地（树收完会再长；清地不必等过熟）
   compost 地块 — 过熟进堆肥（未熟的树请 chop）
   scarecrow 地块 — 扎稻草人
-  shed erect|status|handoff — 温室
+  shed erect|status|handoff — 温室（#99 独立槽，180票，不占 8 块上限，偷不到）
   commons scan|claim id — 稀有公共物资
   incident status|scan|repair 编号 — 意外（scan 看风险；repair 也可省略 incident）
   repair 12 — 同上，可省略 incident
@@ -81,23 +81,26 @@ HUT_HELP = """hut_ops 子命令（整句写进 command）：
     潮柜基础 30 格，满了 hut_ops 潮柜 扩 [数量]（12票/格，顶 60）
   卖掉 槽位 [确认] — 旧家具按折旧卖。例子：卖掉 soft_1 确认
     小馆开着时冰箱不能卖（先 kitchen_ops shop 卖掉 或 shop close）
-  barn status|erect|buy|feed|collect|shear|churn — 畜栏
-  mascot adopt 名字 scout|lucky|compost / upkeep / train / feed — 吉祥物"""
+  barn status|erect|buy|feed|collect|shear|churn — 畜栏。churn 只搅山羊奶成奶酪（先买山羊再 collect；牛奶不能搅）
+  mascot adopt 名字 scout|lucky|compost / upkeep / train / feed — 吉祥物
+    upkeep 花 4 票主动喂养，不是每日自动扣；train 免费练、不换特质；feed 耗宠物饲料。士气不每天掉。"""
 
 TIDE_HELP = """tide_ops 子命令（整句写进 command）：
   net / cast / status — 岸边撒网 / 坐钓（cast 要 T1 钓竿 + 蚯蚓饵）
+    T1 钓竿 = 竹钓竿：visit_ops tt buy 竹钓竿 或 tide_ops gear upgrade rod，同一档
   pen status — 渔排；扩池后可指定池号：stock herring 2 · feed 2 · harvest 2 · label 2 薄荷池
   voyage buy|depart|return|fight|flee|parley|bribe — 出海 / 黑旗（fight/flee 可省略 voyage）
-  beach scan|dig|probe — 赶海（dig 要铲子）
-  gear status|upgrade bait|rod|net — 渔具
+  compliment|release|catch|grab — 未命名小鱼（可省略 voyage）。compliment=release 礼遇；catch=grab 动手
+  beach scan|dig|probe — 赶海（dig 要铲子）。涨潮时 dig 和 probe 都关，scan 还能看
+  gear status|upgrade bait|rod|net — 渔具（T0–T5；更高档要票+材料）
   tool list|buy hoe|shovel — 锄头铲子
   boss status|attack — 潮渊之主（无船也能岸边围攻）
-  fight/flee/dig/probe 可省略前缀"""
+  fight/flee/dig/probe/compliment 可省略前缀"""
 
 TOTE_HELP = """tote_ops 子命令（整句写进 command）：
   list — 行囊（中文名 + 英文 id）
   vend 物品 数量 — 卖掉。例子：vend 鲭鱼 1 · vend crop_kale 2
-  gift 名字 物品 数量 — 送给别人
+  gift 名字 物品|票 数量 — 送给别人。能直接送票，无手续费、无每日上限
   swap offer|claim|list|cancel — 交换台（白送，领取 3 票手续费）
   market list|sell|buy|price — 玩家集市"""
 
@@ -117,7 +120,7 @@ VISIT_HELP = """visit_ops 子命令（整句写进 command）：
   lili scan|trade 编号|summon 贝壳 — 栗栗流动摊。例子：lili summon shell_catseye
   shaonian visit|fortune|transfer|buy 符名 — 韶年望潮人
   tt catalog|buy 物品|gift 物品 — Tt酱杂货店。例子：tt buy 锄头
-  lore scan [主题] / topics — 沿海旧史
+  lore scan [主题] / topics — 沿海旧史文本（不是收集品，背包里不会多东西）
   clinic status — 看病症和诊费
   clinic treat 病症 — 花钱治。例子：treat sprain · treat infection · treat all
   生肉感染约三次、两次间隔 6 小时；作物/生鱼生吃不会感染

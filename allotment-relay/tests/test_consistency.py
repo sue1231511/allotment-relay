@@ -62,6 +62,20 @@ def test_mcp_descriptions() -> None:
     assert "status" in blob
     assert "30%" in blob
     assert "sow_all" in blob or "plant" in blob
+    assert "shed erect" in blob or "#99" in blob
+
+    tide = mcp._tool_manager.get_tool("tide_ops")
+    tide_blob = f"{tide.description}\n{(tide.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
+    assert "竹钓竿" in tide_blob
+    assert "probe" in tide_blob
+
+    tote = mcp._tool_manager.get_tool("tote_ops")
+    tote_blob = f"{tote.description}\n{(tote.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
+    assert "送票" in tote_blob
+
+    star = mcp._tool_manager.get_tool("star_ops")
+    star_blob = f"{star.description}\n{(star.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
+    assert "面板" in star_blob
 
     bar = mcp._tool_manager.get_tool("bar_ops")
     bar_blob = f"{bar.description}\n{(bar.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -130,6 +144,15 @@ def test_relay_manual_covers_systems() -> None:
         "kitchen_ops eat",
         "bar_ops work",
         "甘蓝种×2",
+        "不占 8 块上限",
+        "只搅山羊奶",
+        "不是每日自动扣",
+        "compliment 和 release",
+        "dig 和 probe 都关",
+        "能直接送票",
+        "旧史文本",
+        "不是流水",
+        "真人在面板",
     ]
     missing = [n for n in needles if n not in text]
     assert not missing, f"relay_manual missing: {missing}"
