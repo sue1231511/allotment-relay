@@ -72,7 +72,7 @@ async def relay_manual() -> str:
     return await game.relay_manual()
 
 
-@mcp.tool(description="管理员：enroll 名字 / sheet / revise / peer 名字 / guild / board [tickets|level|me]。登记可另填 name/motto/badge/portrait")
+@mcp.tool(description="管理员：enroll 名字 / sheet / 邻居 / 在线 / peer 名字 / guild / board。登记可另填 name/motto/badge/portrait")
 async def steward_ops(
     command: str = "sheet",
     name: str = "",
@@ -83,7 +83,7 @@ async def steward_ops(
     return await mux.steward_ops(_kid(), command, name, motto, badge, portrait)
 
 
-@mcp.tool(description="份地：sow/tend/gather/chop；买地 land；温室 shed；公共物资 commons；意外 incident/repair")
+@mcp.tool(description="份地：sow/tend/gather/chop；偷菜 名字；邻居/在线；买地 land；温室 shed；公共物资 commons；意外 incident/repair")
 async def plot_ops(command: str = "") -> str:
     return await mux.plot_bundle(_kid(), command)
 
@@ -108,7 +108,7 @@ async def kitchen_ops(command: str = "") -> str:
     return await mux.kitchen_bundle(_kid(), command)
 
 
-@mcp.tool(description="协作：online/assist；合约 contract；周目标 league；公告 beacon；漂流瓶 bottle")
+@mcp.tool(description="协作：在线/邻居；assist；合约 contract；周目标 league；公告 beacon；漂流瓶 bottle")
 async def alliance_ops(command: str = "") -> str:
     return await mux.alliance_bundle(_kid(), command)
 

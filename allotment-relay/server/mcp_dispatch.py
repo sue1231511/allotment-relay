@@ -44,8 +44,9 @@ async def route(
 STEWARD_HELP = """steward_ops 子命令：
   enroll 名字 [座右铭] — 登记（也可填 name/motto/badge/portrait）
   sheet — 自己的档
+  邻居 / 在线 — 全员邻居 / 档口里的人
+  peer 名字 — 看别人的公开档（不写名字=邻居名单）
   revise [座右铭] — 改座右铭；肖像用 portrait 参数
-  peer 名字 — 看别人的公开档
   guild — 每日一轮工分票
   board [tickets|level|me] — 全服工分票榜 / 等级榜"""
 
@@ -53,6 +54,7 @@ PLOT_HELP = """plot_ops 子命令：
   status / catalog / weather
   买地 / land — 现有几块、价钱、开垦时间；买地 确认 付钱开垦
   sow 地块 作物 · tend · gather [地块] · forage
+  偷菜 名字 [地块] · 邻居 / 在线 — 逾篱摘取、找人
   shake 地块 — 摇果（青柠/芒果/椰子）
   chop 地块 — 砍树腾地（树收完会再长；清地不必等过熟）
   compost 地块 — 过熟进堆肥（未熟的树请 chop）
@@ -83,7 +85,9 @@ TOTE_HELP = """tote_ops 子命令：
   market list|sell|buy|price — 玩家集市"""
 
 ALLIANCE_HELP = """alliance_ops 子命令：
-  online / assist 名字 / rapport / donate / larder / draw — 互助
+  在线 / online — 档口里的人（15 分钟内有操作）
+  邻居 / neighbors — 全员邻居（熟地、可否偷菜/assist）
+  assist 名字 / rapport / donate / larder / draw — 互助
   contract post|list|fill|mine|cancel — 悬赏合约
   league status|contribute|board — 全服周目标
   beacon post|scan|respond — 公告栏
@@ -132,7 +136,7 @@ async def steward_ops(
         return (
             f"欢迎 {s['name']}！{s['tickets']} 工分票、{s['parcel_count']} 块份地、 starter 物资。\n"
             "下一步 relay_manual() 或 plot_ops('status')。\n"
-            "小提示：逾篱摘取是随机事件，别找 scrump 指令啦。"
+            "找人：steward_ops 邻居 · 在线：steward_ops 在线 · 偷菜：plot_ops 偷菜 名字。"
         )
 
     if verb in ("sheet", "档案", "me", "档"):
@@ -145,8 +149,20 @@ async def steward_ops(
     if verb in ("peer", "别人", "公开档"):
         peer = (name or "").strip() or rest.strip()
         if not peer:
-            raise ValueError("用法: steward_ops peer 名字")
+            from . import multi
+            s = await game.require_steward(key_id)
+            return await multi.list_neighbors(s, online_only=False)
         return await game.peer_sheet(peer)
+
+    if verb in ("online", "在线"):
+        from . import multi
+        s = await game.require_steward(key_id)
+        return await multi.list_neighbors(s, online_only=True)
+
+    if verb in ("neighbors", "邻居", "neighbour", "peers", "邻居们"):
+        from . import multi
+        s = await game.require_steward(key_id)
+        return await multi.list_neighbors(s, online_only=False)
 
     if verb in ("guild", "轮值", "shift"):
         return await game.guild_shift(key_id)

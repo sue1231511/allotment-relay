@@ -30,6 +30,8 @@ python run.py
 
 厨房可自由组合：`kitchen_ops cook 材料1 材料2`，按星级卖；垃圾菜几乎没价。定点菜 3★ 起不亏材料回收价。
 
+找邻居：`steward_ops 邻居` / `在线`。偷菜：`plot_ops 偷菜 名字`。
+
 栗栗可用赶海贝壳主动唤摊：`visit_ops lili summon shell_catseye`（首次必来）。详见根 README「栗栗流动摊」。
 
 Zeabur、命令写法、等级榜、潮下规则见根目录 [README.md](../README.md)。

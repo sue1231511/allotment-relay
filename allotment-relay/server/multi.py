@@ -13,8 +13,87 @@ from .config import (
     LEAGUE_BONUS_TICKETS,
     LEAGUE_GOALS,
     ONLINE_WINDOW,
+    SCRUMP_DAILY,
 )
 from .game import require_steward, _parse_int
+
+
+def _ago(ts: int) -> str:
+    delta = max(0, db.now() - int(ts or 0))
+    if delta < 60:
+        return "刚刚"
+    if delta < 3600:
+        return f"{delta // 60} 分钟前"
+    if delta < 86400:
+        return f"{delta // 3600} 小时前"
+    return f"{delta // 86400} 天前"
+
+
+async def _ripe_outdoor_count(conn: aiosqlite.Connection, steward_id: int) -> int:
+    from . import farming
+    conn.row_factory = aiosqlite.Row
+    rows = await (await conn.execute(
+        "SELECT * FROM parcels WHERE steward_id=? AND crop IS NOT NULL AND greenhouse=0",
+        (steward_id,),
+    )).fetchall()
+    return sum(1 for r in rows if farming.plot_ready(dict(r)))
+
+
+async def list_neighbors(steward: dict[str, Any], *, online_only: bool = False) -> str:
+    """在线管理员 + 邻居名册。peer / 偷菜 / assist 都要先有名字。"""
+    cut = db.now() - ONLINE_WINDOW
+    async with db.connect() as conn:
+        conn.row_factory = aiosqlite.Row
+        rows = await (await conn.execute(
+            """
+            SELECT id, name, badge, last_active_at FROM stewards
+            WHERE enrolled=1 AND id != ?
+            ORDER BY last_active_at DESC LIMIT 40
+            """,
+            (steward["id"],),
+        )).fetchall()
+        peers = [dict(r) for r in rows]
+        for p in peers:
+            p["ripe"] = await _ripe_outdoor_count(conn, p["id"])
+            p["home"] = p["last_active_at"] > cut
+
+    if not peers:
+        return "联盟里还没有其他管理员。有人 enroll 之后才能串门、偷菜、assist。"
+
+    def _line(p: dict[str, Any]) -> str:
+        ripe = f"熟地 {p['ripe']}" if p["ripe"] else "暂无熟地"
+        return (
+            f"- {p['name']} · {p['badge']} · {ripe} · {_ago(p['last_active_at'])}\n"
+            f"  steward_ops peer {p['name']} · plot_ops 偷菜 {p['name']} · alliance_ops assist {p['name']}"
+        )
+
+    home = [p for p in peers if p["home"]]
+    away = [p for p in peers if not p["home"]]
+    lines: list[str] = []
+    if online_only:
+        lines.append(f"在档口（{ONLINE_WINDOW // 60} 分钟内有操作）:")
+        if home:
+            lines.extend(_line(p) for p in home)
+        else:
+            lines.append("（此刻没有别人在档口）")
+            lines.append("全员邻居：alliance_ops 邻居  或  steward_ops 邻居")
+        return "\n".join(lines)
+
+    lines.append(f"邻居 {len(peers)} 人（{ONLINE_WINDOW // 60} 分钟内算在档口）:")
+    if home:
+        lines.append("")
+        lines.append("在档口:")
+        lines.extend(_line(p) for p in home)
+    if away:
+        lines.append("")
+        lines.append("不在档口:")
+        lines.extend(_line(p) for p in away)
+    lines.append("")
+    lines.append(
+        f"偷菜：plot_ops 偷菜 名字。对方在档口、稻草人、守夜狗更容易被抓。"
+        f"每日 {SCRUMP_DAILY} 次、同一人每天 1 次。温室摘不到。"
+    )
+    return "\n".join(lines)
 
 
 def _week_id() -> int:
@@ -184,21 +263,11 @@ async def alliance_ops(key_id: int, command: str) -> str:
     parts = command.strip().split(maxsplit=2)
     verb = parts[0].lower() if parts else "online"
 
-    if verb == "online":
-        async with db.connect() as conn:
-            conn.row_factory = aiosqlite.Row
-            rows = await (await conn.execute(
-                """
-                SELECT name, badge, last_active_at FROM stewards
-                WHERE enrolled=1 AND id != ? AND last_active_at > ?
-                ORDER BY last_active_at DESC LIMIT 30
-                """,
-                (s["id"], db.now() - ONLINE_WINDOW),
-            )).fetchall()
-        if not rows:
-            return "此刻没有在线管理员"
-        lines = [f"- {r['name']} ({r['badge']})" for r in rows if r["name"] != s["name"]]
-        return "在线：\n" + ("\n".join(lines) if lines else "（仅你一人）")
+    if verb in ("online", "在线"):
+        return await list_neighbors(s, online_only=True)
+
+    if verb in ("neighbors", "邻居", "neighbour", "cohort", "peers"):
+        return await list_neighbors(s, online_only=False)
 
     if verb == "rapport" and len(parts) >= 2:
         peer = await db.get_steward_by_name(parts[1])

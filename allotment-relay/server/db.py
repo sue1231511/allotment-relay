@@ -117,6 +117,12 @@ CREATE TABLE IF NOT EXISTS assist_log (
     day INTEGER NOT NULL,
     PRIMARY KEY (helper_id, target_id, day)
 );
+CREATE TABLE IF NOT EXISTS scrump_log (
+    thief_id INTEGER NOT NULL REFERENCES stewards(id),
+    target_id INTEGER NOT NULL REFERENCES stewards(id),
+    day INTEGER NOT NULL,
+    PRIMARY KEY (thief_id, target_id, day)
+);
 
 CREATE TABLE IF NOT EXISTS rapport (
     steward_a INTEGER NOT NULL REFERENCES stewards(id),
