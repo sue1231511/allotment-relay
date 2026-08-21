@@ -123,20 +123,32 @@ async def muscle_ops(
         pay = max(1, int(value * utcfg.UT_MUSCLE_PAY))
         my_power = await _my_power(conn, s["id"])
         their_power = utcfg.UT_NPC_TIERS[npc["tier"]] + random.randint(1, 20)
-        margin = my_power - their_power
+        # K 真身·老板威压：软柿子和普通人不抵抗；硬茬和别惹 +10 气场
+        _av = await utmod.avatar_key(conn, s["id"])
+        no_resist = _av == "K" and npc["tier"] in ("soft", "norm")
+        if _av == "K":
+            my_power += 10
+        margin = 999 if no_resist else my_power - their_power
 
+        power_line = (
+            "（他认出了你——没有抵抗。）" if no_resist
+            else f"战力 {my_power} vs {their_power}"
+        )
         lines = [f"«强买 · {npc['name']}»", f"真实档位：【{cat.TIER_LABEL[npc['tier']]}】（标签可能是走眼的）",
-                 f"战力 {my_power} vs {their_power}", ""]
+                 power_line, ""]
         if margin >= 0:
-            hurt = margin < 8
+            hurt = margin < 8 and not no_resist
             for key, qty in data["stock"]:
                 await db.add_item(conn, s["id"], key, qty)
             await conn.execute(
                 "UPDATE stewards SET tickets=MAX(0,tickets-?) WHERE id=?", (pay, s["id"])
             )
-            await utmod._bump_rep(conn, s["id"], -4 if not hurt else -4)
-            body = utcopy.pick(utcopy.MUSCLE_WIN_HURT if hurt else utcopy.MUSCLE_WIN).format(
-                npc=npc["name"], pay=pay)
+            await utmod._bump_rep(conn, s["id"], -4)
+            if no_resist:
+                body = utcopy.AVATAR_K_MUSCLE_NO_RESIST
+            else:
+                body = utcopy.pick(utcopy.MUSCLE_WIN_HURT if hurt else utcopy.MUSCLE_WIN).format(
+                    npc=npc["name"], pay=pay)
             if hurt:
                 await conn.execute(
                     "UPDATE stewards SET health=MAX(0,health-?) WHERE id=?",
@@ -182,8 +194,14 @@ async def muscle_ops(
 
         my_power = await _my_power(conn, s["id"])
         their_power = utcfg.UT_NPC_TIERS[npc["tier"]] + random.randint(1, 20)
+        # K 真身·老板威压
+        _av = await utmod.avatar_key(conn, s["id"])
+        no_resist = _av == "K" and npc["tier"] in ("soft", "norm")
+        if _av == "K":
+            my_power += 10
+        win = no_resist or my_power >= their_power
 
-        if my_power >= their_power:
+        if win:
             await conn.execute(
                 "UPDATE satchel SET quantity=quantity-1 WHERE steward_id=? AND item=?",
                 (s["id"], item_key),
@@ -193,9 +211,12 @@ async def muscle_ops(
                 (s["id"], item_key),
             )
             await conn.execute("UPDATE stewards SET tickets=tickets+? WHERE id=?", (gain, s["id"]))
-            near = (my_power - their_power) < 8
+            near = not no_resist and (my_power - their_power) < 8
             await utmod._bump_rep(conn, s["id"], -3 if near else -2)
-            lines = [utcopy.pick(utcopy.PUSH_WIN).format(npc=npc["name"], item=meta["name"], gain=gain)]
+            if no_resist:
+                lines = [utcopy.AVATAR_K_PUSH_NO_RESIST]
+            else:
+                lines = [utcopy.pick(utcopy.PUSH_WIN).format(npc=npc["name"], item=meta["name"], gain=gain)]
             lines.append(f"\n（{meta['name']} ×1 → {gain} 票 · 影信 −{3 if near else 2}）")
             if near and random.random() < utcfg.UT_NPC_GRUDGE[npc["tier"]] * 2:
                 await _add_grudge(conn, s["id"], npc["name"], npc["tier"], gain)
@@ -321,12 +342,21 @@ async def hijack_ops(
         raise ValueError(f"不认识「{target}」。{utcopy.HIJACK_TARGETS_HINT}")
     my_power = await _my_power(conn, s["id"])
     their_power = power + random.randint(1, 20)
+    _av = await utmod.avatar_key(conn, s["id"])
     roll = random.random()
-    outcome = (
-        "clean" if roll < 0.40 else
-        "hurt_npc" if roll < 0.65 else
-        "hurt_self" if roll < 0.85 else "fail"
-    )
+    if _av == "K":
+        # 老板威压：没人敢惹，但也没人假装高兴
+        outcome = (
+            "clean" if roll < 0.70 else
+            "hurt_npc" if roll < 0.85 else
+            "hurt_self" if roll < 0.95 else "fail"
+        )
+    else:
+        outcome = (
+            "clean" if roll < 0.40 else
+            "hurt_npc" if roll < 0.65 else
+            "hurt_self" if roll < 0.85 else "fail"
+        )
     # 战力差修正：碾压时更顺，劣势时易翻车
     if my_power - their_power >= 15 and outcome == "fail":
         outcome = "hurt_self"
@@ -341,7 +371,10 @@ async def hijack_ops(
         await conn.execute("UPDATE stewards SET tickets=tickets+? WHERE id=?", (loot, s["id"]))
         pool = {"clean": utcopy.HIJACK_CLEAN, "hurt_npc": utcopy.HIJACK_HURT_NPC,
                 "hurt_self": utcopy.HIJACK_HURT_SELF}[outcome]
-        lines.append(utcopy.pick(pool))
+        if _av == "K":
+            lines.append(utcopy.pick(utcopy.AVATAR_K_HIJACK_WIN))
+        else:
+            lines.append(utcopy.pick(pool))
         note = f"（+{loot} 票 · 影信 {rep_delta}）"
         if outcome == "hurt_self":
             body_loss = random.randint(*[abs(x) for x in utcfg.UT_HIJACK_BODY_SELF])
