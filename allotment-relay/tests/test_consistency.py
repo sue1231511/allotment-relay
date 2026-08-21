@@ -152,6 +152,21 @@ def test_readme_workflow_rules() -> None:
     assert "禁止" in readme
 
 
+def test_register_key_copy_ui() -> None:
+    root = Path(__file__).resolve().parents[1]
+    keys_js = (root / "server/static/keys.js").read_text(encoding="utf-8")
+    css = (root / "server/static/style.css").read_text(encoding="utf-8")
+    register_html = (root / "server/templates/register.html").read_text(encoding="utf-8")
+    recover_html = (root / "server/templates/recover.html").read_text(encoding="utf-8")
+    assert "copyText" in keys_js
+    assert "secret-copy" in keys_js
+    assert "Authorization: Bearer" in keys_js
+    assert "break-all" in css
+    assert "pre-wrap" in css
+    assert "/static/keys.js" in register_html
+    assert "/static/keys.js" in recover_html
+
+
 def test_bar_ops_help() -> None:
     from server import bar
 
@@ -254,6 +269,7 @@ def main() -> None:
     test_mcp_descriptions()
     test_relay_manual_covers_systems()
     test_readme_workflow_rules()
+    test_register_key_copy_ui()
     test_bar_ops_help()
     asyncio.run(test_scrump_victim_chronicle())
     asyncio.run(test_cheer_targets_isolated())

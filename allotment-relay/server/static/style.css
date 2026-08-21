@@ -564,13 +564,61 @@ select:focus {
   word-break: break-word;
 }
 
-.result pre {
-  margin: 8px 0;
-  padding: 12px;
+.result pre,
+.secret-value {
+  margin: 8px 0 0;
+  padding: 12px 14px;
   border-radius: 12px;
   background: rgba(255, 255, 255, .5);
   font-size: 13px;
-  overflow-x: auto;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+  overflow-x: visible;
+  user-select: all;
+  max-width: 100%;
+}
+
+.secret-block {
+  margin: 16px 0 0;
+}
+
+.secret-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.secret-head span {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.secret-copy {
+  flex-shrink: 0;
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.secret-copy:disabled {
+  opacity: .85;
+}
+
+.secret-note {
+  margin-top: 14px;
+  font-size: 13px;
+}
+
+.secret-inline {
+  display: inline;
+  overflow-wrap: anywhere;
+  word-break: break-all;
 }
 
 .hidden { display: none; }
