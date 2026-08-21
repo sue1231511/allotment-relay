@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>小橘的当晚</title>
+<style>
+  body{background:#14101c;color:#e8e2f0;font-family:system-ui;max-width:560px;margin:40px auto;padding:0 16px}
+  .card{background:#201a2c;border:1px solid #453a5c;border-radius:10px;padding:20px;margin-bottom:16px}
+  h1{font-size:20px;color:#e8b46a} h2{font-size:14px;color:#a998c2;margin-top:0}
+  input,select,textarea{background:#14101c;color:#e8e2f0;border:1px solid #453a5c;border-radius:6px;padding:8px;width:100%;box-sizing:border-box}
+  textarea{min-height:56px;resize:vertical}
+  button{background:#8a5a9e;color:#fff;border:0;border-radius:6px;padding:10px 18px;margin-top:10px;cursor:pointer}
+  button.gray{background:#453a5c}
+  .prop{border-top:1px dashed #453a5c;padding:10px 0}
+  .note{color:#8a7fa0;font-size:12px} .ok{color:#9fd8a8} .err{color:#e88a8a}
+  .stat{display:inline-block;margin:2px 6px 2px 0;padding:4px 10px;background:#2a2338;border:1px solid #453a5c;border-radius:6px;font-size:13px}
+  .preset{margin:4px 2px;padding:6px 10px;background:#2a2338;border:1px solid #453a5c;border-radius:6px;cursor:pointer;display:inline-block;font-size:13px}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>🎤 小橘的当晚</h1>
+  <h2>场子、心情、曲目——由她定</h2>
+  <div>
+    <span class="preset" onclick="presetVenue('bar','great','今晚会唱到很晚。','开嗓')">状态大好（酒馆开嗓·心情极好）</span>
+    <span class="preset" onclick="presetVenue('rest','normal','','')">今晚不唱（休息）</span>
+  </div>
+  <br>
+  <label>场子（今晚开不开嗓，每天要定一次——和荔栀一样）</label>
+  <select id="venue">
+    <option value="bar">bar 滨海酒吧驻场（打赏荔栀抽三成）</option>
+    <option value="stage" {% if not state.stage_unlocked %}disabled{% endif %}>stage 小剧场专场（热度≥35，票全归你）{% if not state.stage_unlocked %} — 还没解锁{% endif %}</option>
+    <option value="rest">rest 今晚不开嗓</option>
+  </select>
+  <label>心情档（观众听得出好坏——影响今晚演出事件，也决定观众回多少精力：极好+12~很差+4）</label>
+  <select id="mood">
+    <option value="great">great 极好</option>
+    <option value="good">good 不错</option>
+    <option value="normal" selected>normal 平常</option>
+    <option value="bad">bad 较差</option>
+    <option value="awful">awful 很差</option>
+  </select>
+  <label>今晚曲目（自由填，写在 /star 和她的档上）</label>
+  <input id="setlist" placeholder="例：三首短的，最后一首没在歌单上">
+  <label>今晚造型</label>
+  <input id="outfit" placeholder="例：洗旧的牛仔外套，别了一枚猫眼螺">
+  <label>留一句话（当日围观的观众都会看到）</label>
+  <input id="note" placeholder="例：今晚的最后一首，点给还没睡的人。">
+  <br><button onclick="setTonight()">定今晚</button>
+  <span id="msg" class="ok"></span>
+</div>
+
+<div class="card">
+  <h1>📬 收件盒</h1>
+  <h2>应援与点歌。看到=热度+1，点歌人档信+1；压下=她今晚没看到</h2>
+  {% if not proposals %}<p class="note">今晚盒子还空着。名片压在化妆镜下。</p>{% endif %}
+  {% for p in proposals %}
+  <div class="prop">
+    <b>{{ p.name }}</b>（{{ '点歌' if p.kind == 'song' else '应援' }}）说：「{{ p.content }}」
+    <br>
+    <button onclick="decide({{ p.id }},'accept')">看到（热度+1 · 对方档信+1 · 全服小报）</button>
+    <button class="gray" onclick="decide({{ p.id }},'ignore')">压下</button>
+  </div>
+  {% endfor %}
+  <p class="note">应援和点歌只有你看到才涨热度——红不红，你说了算。</p>
+</div>
+
+<div class="card">
+  <h1>✍️ 发动态</h1>
+  <h2>全服小报（chronicle·star）· 每日 5 条</h2>
+  <textarea id="post_text" placeholder="例：今晚风大，第三首改慢一点唱。"></textarea>
+  <br><button onclick="post()">发出去</button>
+  <span id="post_msg" class="ok"></span>
+</div>
+
+<div class="card">
+  <h1>📊 她的账</h1>
+  <div>
+    <span class="stat">热度 {{ state.heat }}/100 · {{ state.tier }}</span>
+    <span class="stat">粉丝团 {{ state.fans_count }} 人</span>
+    <span class="stat">今日打赏 {{ state.tips_today }} 票</span>
+    <span class="stat">累计 {{ state.total_tips }} 票</span>
+    <span class="stat">{{ '今晚：' + state.venue_label + ('（已定）' if state.active_today else '（还没定）') }}</span>
+  </div>
+  <p class="note">每晚开嗓跨天热度+2；不开嗓每天-1。过气的人翻红，票房子反而更满。</p>
+</div>
+
+<script>
+const KEY = new URLSearchParams(location.search).get('key');
+function presetVenue(v, m, n, s){
+  document.getElementById('venue').value = v;
+  document.getElementById('mood').value = m;
+  document.getElementById('note').value = n;
+  document.getElementById('setlist').value = s;
+}
+async function setTonight(){
+  const res = await fetch('/api/star-owner', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      key: KEY,
+      venue: document.getElementById('venue').value,
+      mood: document.getElementById('mood').value,
+      setlist: document.getElementById('setlist').value,
+      outfit: document.getElementById('outfit').value,
+      note: document.getElementById('note').value,
+    }),
+  });
+  const data = await res.json();
+  const msg = document.getElementById('msg');
+  msg.className = res.ok ? 'ok' : 'err';
+  msg.textContent = res.ok ? '定好了。今晚见。' : (data.detail || '失败');
+  if (res.ok) setTimeout(() => location.reload(), 900);
+}
+async function decide(id, action){
+  const res = await fetch('/api/star-owner/decide', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({key: KEY, id: id, action: action}),
+  });
+  const data = await res.json();
+  alert(res.ok ? (data.msg || '已处理') : (data.detail || '失败'));
+  location.reload();
+}
+async function post(){
+  const res = await fetch('/api/star-owner/post', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({key: KEY, text: document.getElementById('post_text').value}),
+  });
+  const data = await res.json();
+  const msg = document.getElementById('post_msg');
+  msg.className = res.ok ? 'ok' : 'err';
+  msg.textContent = res.ok ? '发出去了。' : (data.detail || '失败');
+  if (res.ok) document.getElementById('post_text').value = '';
+}
+</script>
+</body>
+</html>
