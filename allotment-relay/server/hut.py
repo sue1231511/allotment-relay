@@ -51,6 +51,7 @@ STORAGE_USAGE = (
     "（柜子/潮柜/冰箱同义）。生鲜进潮柜，熟菜进冰箱。"
     "买潮柜：hut_ops buy cabinet → install soft_N cabinet；"
     "买冰箱：hut_ops buy fridge → install soft_N fridge（也可 buy 冰柜）。"
+    f"潮柜基础 {config.CABINET_SLOTS} 格，满了 hut_ops 潮柜 扩（{config.CABINET_SLOT_COST}票/格，顶 {config.CABINET_SLOTS_MAX}）。"
 )
 
 
@@ -218,6 +219,19 @@ def _fitting_bare(key: str) -> str:
     if key.startswith("fit_"):
         return key[4:]
     return key
+
+
+def cabinet_capacity(extra: int | None) -> int:
+    extra_n = max(0, int(extra or 0))
+    return min(config.CABINET_SLOTS_MAX, config.CABINET_SLOTS + extra_n)
+
+
+async def _cabinet_extra(conn: aiosqlite.Connection, steward_id: int) -> int:
+    cur = await conn.execute(
+        "SELECT cabinet_extra FROM stewards WHERE id=?", (steward_id,)
+    )
+    row = await cur.fetchone()
+    return int((row[0] if row else 0) or 0)
 
 
 async def has_cabinet(conn: aiosqlite.Connection, steward_id: int) -> bool:
@@ -580,21 +594,28 @@ def _is_cooked_item(item: str) -> bool:
 async def _cabinet_status_text(s: dict[str, Any]) -> str:
     async with db.connect() as conn:
         installed = await has_cabinet(conn, s["id"])
+        extra = await _cabinet_extra(conn, s["id"]) if installed else 0
         rows = await _cabinet_rows(conn, s["id"]) if installed else []
     if not installed:
         return (
             "潮柜：未装 — hut_ops buy cabinet → install soft_N cabinet。"
             "生鲜用 hut_ops 冰柜 存 甘蓝 3（小偷翻不到）"
         )
+    cap = cabinet_capacity(extra)
+    expand_hint = (
+        f"满了 hut_ops 潮柜 扩（{config.CABINET_SLOT_COST}票/格，顶 {config.CABINET_SLOTS_MAX}）"
+    )
     if not rows:
         return (
-            f"潮柜空（{config.CABINET_SLOTS} 格，每格最多 {config.CABINET_STACK}）。"
-            "hut_ops 冰柜 存 甘蓝 3"
+            f"潮柜空（{cap} 格，每格最多 {config.CABINET_STACK}）。"
+            f"hut_ops 冰柜 存 甘蓝 3。{expand_hint}"
         )
-    lines = [f"潮柜 {len(rows)}/{config.CABINET_SLOTS}:"]
+    lines = [f"潮柜 {len(rows)}/{cap}:"]
     for item, qty in rows:
         lines.append(f"  {item_label(item)}（{item}） x{qty}")
     lines.append("取：hut_ops 冰柜 取 物品 [数量]")
+    if cap < config.CABINET_SLOTS_MAX:
+        lines.append(expand_hint)
     return "\n".join(lines)
 
 
@@ -622,8 +643,12 @@ async def cabinet_put(s: dict[str, Any], item: str, qty: int) -> str:
             raise ValueError(blocked)
         rows = await _cabinet_rows(conn, s["id"])
         have = {k: v for k, v in rows}
-        if item not in have and len(have) >= config.CABINET_SLOTS:
-            raise ValueError(f"柜子满了（{config.CABINET_SLOTS} 种）")
+        cap = cabinet_capacity(await _cabinet_extra(conn, s["id"]))
+        if item not in have and len(have) >= cap:
+            raise ValueError(
+                f"柜子满了（{cap} 种）。hut_ops 潮柜 扩 再买一格"
+                f"（{config.CABINET_SLOT_COST}票，顶 {config.CABINET_SLOTS_MAX}）"
+            )
         stacked = have.get(item, 0)
         if stacked + qty > config.CABINET_STACK:
             raise ValueError(
@@ -675,10 +700,48 @@ async def cabinet_take(s: dict[str, Any], item: str, qty: int) -> str:
     return f"取出 {item_label(item)} x{qty}，回行囊"
 
 
+async def cabinet_expand(s: dict[str, Any], n: int = 1) -> str:
+    n = max(1, int(n))
+    async with db.connect() as conn:
+        if not await has_cabinet(conn, s["id"]):
+            raise ValueError(
+                "先装潮柜再扩格。hut_ops buy cabinet → install soft_N cabinet"
+            )
+        extra = await _cabinet_extra(conn, s["id"])
+        cap = cabinet_capacity(extra)
+        room = config.CABINET_SLOTS_MAX - cap
+        if room <= 0:
+            raise ValueError(f"潮柜已经扩到顶了（{config.CABINET_SLOTS_MAX} 格）")
+        n = min(n, room)
+        cost = n * config.CABINET_SLOT_COST
+        cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
+        have = (await cur.fetchone())[0]
+        if have < cost:
+            raise ValueError(
+                f"加 {n} 格需要 {cost} 票（每格 {config.CABINET_SLOT_COST}）"
+            )
+        await conn.execute(
+            "UPDATE stewards SET tickets=tickets-?, cabinet_extra=cabinet_extra+? WHERE id=?",
+            (cost, n, s["id"]),
+        )
+        await conn.commit()
+        new_cap = cabinet_capacity(extra + n)
+    return (
+        f"潮柜加了 {n} 格（-{cost} 票）。现在 {new_cap}/{config.CABINET_SLOTS_MAX} 格，"
+        f"每格最多 {config.CABINET_STACK}。格子跟着人走，卸了柜子再装还在。"
+    )
+
+
 async def cabinet_command(s: dict[str, Any], rest: list[str]) -> str:
     verb = rest[0].lower() if rest else "status"
     if verb in ("status", "list", "看", "柜子", "潮柜", "冰柜", "冰箱"):
         return await storage_status(s)
+
+    if verb in ("扩", "扩容", "加格", "买格", "expand"):
+        n = 1
+        if len(rest) > 1 and rest[1].isdigit():
+            n = max(1, int(rest[1]))
+        return await cabinet_expand(s, n)
 
     putting = verb in ("put", "store", "存", "放", "入")
     taking = verb in ("take", "取", "拿")
@@ -705,6 +768,12 @@ async def hut_ops(key_id: int, command: str) -> str:
 
     if verb in STORAGE_ALIASES:
         return await cabinet_command(s, command.strip().split()[1:])
+
+    if verb in ("扩柜", "加格"):
+        n = 1
+        if len(parts) > 1 and parts[1].isdigit():
+            n = max(1, int(parts[1]))
+        return await cabinet_expand(s, n)
 
     if verb in ("卖掉", "sell", "变卖", "出售"):
         return await furniture_sell_command(s, command.strip().split()[1:])
@@ -743,7 +812,11 @@ async def hut_ops(key_id: int, command: str) -> str:
         if bonus.has("cabinet"):
             async with db.connect() as conn:
                 n = len(await _cabinet_rows(conn, s["id"]))
-            lines.append(f"潮柜 {n}/{config.CABINET_SLOTS} 种 — hut_ops 冰柜 存|取（生鲜）")
+                cap = cabinet_capacity(await _cabinet_extra(conn, s["id"]))
+            lines.append(
+                f"潮柜 {n}/{cap} 种 — hut_ops 冰柜 存|取（生鲜）；"
+                f"满了 hut_ops 潮柜 扩（{config.CABINET_SLOT_COST}票/格）"
+            )
         if bonus.has("fridge"):
             lines.append("冰箱 — hut_ops 冰柜 存|取（熟菜）· kitchen_ops fridge")
         if not bonus.has("cabinet") and not bonus.has("fridge"):
@@ -771,7 +844,8 @@ async def hut_ops(key_id: int, command: str) -> str:
                 lines.append(f"  {k} — {v['emoji']}{v['name']} {v['cost']} 票 · {v['hint']}")
             lines.append(
                 "存菜：buy cabinet（潮柜·生鲜）或 buy fridge（冰箱·熟菜，也可 buy 冰柜）；"
-                "装好后 hut_ops 冰柜 存|取"
+                f"装好后 hut_ops 冰柜 存|取。潮柜基础 {config.CABINET_SLOTS} 格，"
+                f"hut_ops 潮柜 扩 加格（{config.CABINET_SLOT_COST}票/格，顶 {config.CABINET_SLOTS_MAX}）"
             )
             lines.append("【栗栗稀有装饰】deco_* — visit_ops lili 换，install soft_N 键名")
             for k, v in LILI_DECOR.items():
@@ -846,7 +920,11 @@ async def hut_ops(key_id: int, command: str) -> str:
             await conn.commit()
         extra = ""
         if key == "cabinet":
-            extra = "。生鲜：install 后 hut_ops 冰柜 存 甘蓝 3"
+            extra = (
+                f"。生鲜：install 后 hut_ops 冰柜 存 甘蓝 3；"
+                f"基础 {config.CABINET_SLOTS} 格，满了 hut_ops 潮柜 扩"
+                f"（{config.CABINET_SLOT_COST}票/格）"
+            )
         elif key == "fridge":
             extra = "。熟菜：install 后 hut_ops 冰柜 存 盐焗沙蟹"
         return (

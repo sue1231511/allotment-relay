@@ -168,9 +168,9 @@ WILDLIFE = [
 ]
 
 TRIGGER_CHANCE = {
-    "sow": 0.06,
-    "tend": 0.09,
-    "gather": 0.07,
+    "sow": 0.05,
+    "tend": 0.08,
+    "gather": 0.06,
 }
 
 

@@ -93,6 +93,7 @@ async def test_cabinet_and_scrump() -> None:
 
     listed = await hut.cabinet_command(s, [])
     assert "空" in listed, listed
+    assert "30 格" in listed, listed
     assert "冰柜 存" in listed, listed
     put = await hut.cabinet_command(s, ["存", "甘蓝", "3"])
     assert "入柜" in put, put
@@ -301,12 +302,98 @@ async def test_cabinet_dump_on_remove() -> None:
     assert empty[0] == 0
 
 
+def test_event_and_cabinet_knobs() -> None:
+    from server import config
+    from server.hut import cabinet_capacity
+
+    assert config.EVENT_ROLL_CHANCE == 0.08
+    assert config.EVENT_GOOD_SHARE == 0.30
+    assert config.AILMENT_BAD_EVENT_CHANCE == 0.13
+    assert config.CABINET_SLOTS == 30
+    assert config.CABINET_SLOT_COST == 12
+    assert config.CABINET_SLOTS_MAX == 60
+    assert cabinet_capacity(0) == 30
+    assert cabinet_capacity(5) == 35
+    assert cabinet_capacity(999) == 60
+
+
+async def test_cabinet_expand() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="cab-exp-"))
+    db = await _boot(tmp)
+    from server import config, hut
+
+    old = (config.CABINET_SLOTS, config.CABINET_SLOTS_MAX, config.CABINET_SLOT_COST)
+    config.CABINET_SLOTS = 2
+    config.CABINET_SLOTS_MAX = 4
+    config.CABINET_SLOT_COST = 10
+    try:
+        sid = await _enroll(db, "exp@example.com", "扩柜人")
+        async with db.connect() as conn:
+            await conn.execute(
+                "UPDATE stewards SET hut_built=1, hut_level=1, tickets=50 WHERE id=?",
+                (sid,),
+            )
+            await conn.execute(
+                """
+                INSERT INTO hut_fittings (steward_id, slot, item_key, installed_at)
+                VALUES (?, 'soft_1', 'cabinet', ?)
+                """,
+                (sid, db.now()),
+            )
+            await db.add_item(conn, sid, "crop_kale", 1)
+            await db.add_item(conn, sid, "crop_fogpea", 1)
+            await db.add_item(conn, sid, "shell_catseye", 1)
+            await conn.commit()
+        s = await db.get_steward_by_id(sid)
+        listed = await hut.cabinet_command(s, [])
+        assert "2 格" in listed, listed
+
+        await hut.cabinet_command(s, ["存", "甘蓝", "1"])
+        await hut.cabinet_command(s, ["存", "雾豌豆", "1"])
+        try:
+            await hut.cabinet_command(s, ["存", "shell_catseye", "1"])
+            raise AssertionError("should be full at 2 slots")
+        except ValueError as exc:
+            assert "满" in str(exc)
+
+        msg = await hut.cabinet_command(s, ["扩"])
+        assert "加了 1 格" in msg, msg
+        async with db.connect() as conn:
+            tickets, extra = await (await conn.execute(
+                "SELECT tickets, cabinet_extra FROM stewards WHERE id=?", (sid,),
+            )).fetchone()
+        assert tickets == 40, tickets
+        assert extra == 1, extra
+
+        put3 = await hut.cabinet_command(s, ["存", "shell_catseye", "1"])
+        assert "入柜" in put3, put3
+
+        msg2 = await hut.cabinet_command(s, ["扩", "5"])
+        assert "加了 1 格" in msg2, msg2
+        async with db.connect() as conn:
+            tickets, extra = await (await conn.execute(
+                "SELECT tickets, cabinet_extra FROM stewards WHERE id=?", (sid,),
+            )).fetchone()
+        assert tickets == 30, tickets
+        assert extra == 2, extra
+
+        try:
+            await hut.cabinet_command(s, ["扩"])
+            raise AssertionError("should refuse at max")
+        except ValueError as exc:
+            assert "顶" in str(exc) or "扩到顶" in str(exc)
+    finally:
+        config.CABINET_SLOTS, config.CABINET_SLOTS_MAX, config.CABINET_SLOT_COST = old
+
+
 def main() -> None:
     test_scrump_take_qty()
+    test_event_and_cabinet_knobs()
     asyncio.run(test_cabinet_and_scrump())
     asyncio.run(test_cannot_take_last())
     asyncio.run(test_cabinet_dump_on_remove())
     asyncio.run(test_icebox_alias_routes_dishes())
+    asyncio.run(test_cabinet_expand())
     print("cabinet/scrump tests ok")
 
 

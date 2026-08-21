@@ -100,9 +100,9 @@ async def plot_ops(
     return await mux.plot_bundle(_kid(), command)
 
 
-@mcp.tool(description="小屋、潮柜、冰箱、畜栏、吉祥物。command 写一整句。例子：status · buy cabinet · install soft_1 cabinet · 冰柜 存 甘蓝 3 · buy fridge · 冰柜 存 盐焗沙蟹 · 卖掉 soft_1 确认 · barn status。空 command 列出子命令。")
+@mcp.tool(description="小屋、潮柜、冰箱、畜栏、吉祥物。command 写一整句。例子：status · buy cabinet · install soft_1 cabinet · 冰柜 存 甘蓝 3 · 潮柜 扩 · buy fridge · 冰柜 存 盐焗沙蟹 · 卖掉 soft_1 确认 · barn status。空 command 列出子命令。")
 async def hut_ops(
-    command: Annotated[str, Field(description="子命令整句。status / buy cabinet / buy fridge / 冰柜 存 甘蓝 3 / 冰柜 取 甘蓝 1 / 卖掉 soft_1 / barn status / help。冰柜/柜子/冰箱是同一条指令：生鲜自动进潮柜、熟菜自动进冰箱。卖冰箱前若小馆开着要先 shop close。")] = "",
+    command: Annotated[str, Field(description="子命令整句。status / buy cabinet / buy fridge / 冰柜 存 甘蓝 3 / 冰柜 取 甘蓝 1 / 潮柜 扩 / 卖掉 soft_1 / barn status / help。冰柜/柜子/冰箱是同一条指令：生鲜自动进潮柜、熟菜自动进冰箱。潮柜基础 30 格，扩格 12 票一张。卖冰箱前若小馆开着要先 shop close。")] = "",
 ) -> str:
     return await mux.hut_bundle(_kid(), command)
 
