@@ -637,7 +637,7 @@ AILMENTS = {
     },
     "infection": {
         "name": "生肉感染", "emoji": "🦠", "cost": 22, "health_loss": 12, "health_restore": 8,
-        "hint": "只有生肉会感染。作物/生鱼/野薄荷生吃安全。菌要过夜，桥桥一次压不干净",
+        "hint": "只有生肉会感染。作物/生鱼/野薄荷生吃安全。约三次挂号，两次间隔 6 小时",
         "energy_extra": 3, "max_energy_cut": 10,
         "courses": 3, "drain_energy": 2, "drain_every": 1800,
         "stage_names": {3: "重症", 2: "迁延", 1: "余菌"},
@@ -717,7 +717,7 @@ NPC_FIXED = [
     {"key": "lizhi", "name": "荔栀", "lines": [
         "滨海酒吧老板娘。漂亮、脾气爆、嘴硬、会做生意。",
         "营收好也未必温柔，烦的时候非常明显。",
-        "bar_ops tonight 看今晚 · chat 唠嗑 · set_mood / set_owner_event 管理员用",
+        "bar_ops tonight 看今晚 · chat 唠嗑 · cheer 话 提议哄她（她听不听得进去，她说得算）",
         "没钱就 work，有钱就 order。熟归熟，账照付。",
     ]},
     {"key": "gugu_dove", "name": "咕咕斑鸠", "lines": [
@@ -731,7 +731,7 @@ NPC_FIXED = [
         "诊所规矩：必须花钱，不赊账，不还价",
         "随机事件落下的病，找随机事件哭去——诊费照收",
         "扭了脚、着了凉、宿醉——都挂号，都花钱",
-        "生肉生吃容易感染。菜和生鱼没事，菌要过夜，一次压不干净",
+        "生肉生吃容易感染。菜和生鱼没事。约三次挂号，两次间隔 6 小时，一次压不干净",
         "身体指标低了意外多，别硬撑到票都不够挂号",
         "visit_ops visit 只能聊天，真治得 visit_ops clinic treat",
     ]},

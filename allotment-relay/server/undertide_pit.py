@@ -254,10 +254,10 @@ async def pit_ops(
                 )
                 lines.append(f"    {d['hint']}")
             lines.append("")
-            lines.append("medic drug key 购买 · 同类药不叠，新药覆盖旧药")
+            lines.append("pit drug key 购买 · 同类药不叠，新药覆盖旧药")
             return "\n".join(lines)
         if sub not in cat.MEDIC_DRUGS:
-            raise ValueError("用法: undertide_ops pit medic drug list|药名key")
+            raise ValueError("用法: undertide_ops pit drug list|药名key")
         d = cat.MEDIC_DRUGS[sub]
         cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
         if (await cur.fetchone())[0] < d["price"]:

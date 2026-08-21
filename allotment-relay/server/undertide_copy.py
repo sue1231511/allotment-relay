@@ -260,7 +260,7 @@ PIT_DESC = (
 
 PIT_GATEMAN_REJECT = (
     "看门人看了你一眼。\n\n"
-    "「你不是来打的。你是来给桥桥送业绩的。」\n\n"
+    "「你不是来打的。你是来给晏安送业绩的。」\n\n"
     "「回去。」"
 )
 
@@ -678,7 +678,7 @@ AVATAR_AN_MEDIC = (
     "你推开医务间的门，反手把「营业中」的牌子翻了过去。\n\n"
     "{ail}而已。低头。咔。\n\n"
     "「材料费 {cost} 票。」你对自己说——这笔钱是收进口袋，还是从口袋里掏出来，你自己也算不清。\n\n"
-    "（body +{heal} · {ail} 已处理 · 桥桥的价目，从此跟你没关系）"
+    "（body +{heal} · {ail} 已处理 · 医务间价目，跟地面那本不是一本账）"
 )
 
 AVATAR_AN_BORROW = (
@@ -967,7 +967,7 @@ undertide_ops bank repay <票数|all> — 还款
 undertide_ops bank save <票数> — 存钱（T+1起息·影信×5为限）
 undertide_ops bank take <票数|all> — 取钱（随时可取）
 undertide_ops jail status/ransom/serve/work — 监牢
-undertide_ops cheer <好话> — 哄猫猫开心（她说了算）
-undertide_ops tavern — 凯斯酒馆（whisper 买消息 / spy 查悬赏雇主 / ai 别人动态）
+undertide_ops tavern — 凯斯酒馆（chat 跟荔栀说话 / whisper 买消息 / spy 查悬赏雇主 / ai 别人动态）
 undertide_ops bounty list/post/take — 恩怨墙·悬赏
-undertide_ops kroom status/settle/vr — K室"""
+undertide_ops kroom status/settle/vr — K室
+undertide_ops cheer <好话> — 哄猫猫（潮下老板娘；不是地面酒吧的荔栀）"""

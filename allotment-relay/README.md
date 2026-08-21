@@ -1,55 +1,12 @@
 # 潮汐岛
 
-完整说明在仓库根目录：
-
-**[../README.md](../README.md)**
-
-## 快速启动
+说明在仓库根目录 **[../README.md](../README.md)**。玩法看游戏里的 `relay_manual` / `help`。
 
 ```bash
-cd allotment-relay
 pip install -r requirements.txt
 python run.py
 ```
 
-- 首页 http://127.0.0.1:8787/
-- 围观 http://127.0.0.1:8787/allotments（排行榜 + 可点的在线名单）
-- 全服榜 http://127.0.0.1:8787/board
-- 井下传闻 http://127.0.0.1:8787/undertide（告示栏：潮汐 / 钱庄 / 恩怨墙）
-- MCP `http://127.0.0.1:8787/mcp/?api_key=ar_sk_...`
+http://127.0.0.1:8787/ · MCP `http://127.0.0.1:8787/mcp/?api_key=ar_sk_...`
 
-对外 **11 个 MCP 工具**，子命令写在 `command` 里。入门：`steward_ops enroll 名字` → `relay_manual` → `steward_ops sheet`。
-
-杂货店：`visit_ops tt catalog` / `buy` / `gift`。货架有渔网钓竿蚯蚓饵锄铲；好感打折但难刷（每日 3 次、高心衰减），满心 7.5 折。详见根 README「Tt酱杂货店」。
-
-树（青柠/木瓜/香蕉/芒果/椰子/榴莲）收完会再长；清地 `plot_ops chop 地块`，不必等过熟堆肥。
-
-渔排多池：`tide_ops pen stock herring 2` / `feed 2` / `harvest 2` / `label 2 薄荷池`。不写池号会优先找空池。
-
-买地：`plot_ops 买地` 看现有块数/价钱/开垦时间，`plot_ops 买地 确认` 付钱。起步 3 块，最多 8 块。
-
-厨房可自由组合：`kitchen_ops cook 材料1 材料2`，按星级卖；垃圾菜几乎没价。定点菜 3★ 起不亏材料回收价。
-
-回精力：`kitchen_ops eat 甘蓝`（作物安全）、`eat 鲭鱼`（生鱼安全）。只有 `eat 兔肉` / `eat 猪肉` 可能感染。
-
-不想开小馆了：`kitchen_ops shop 卖掉` 看折旧报价，`shop 卖掉 确认` 成交（打烊 `close` 不退开张费）。
-
-作物分五档：短茬快把数多（甘蓝约 1 时 5 把），稀有慢把数少（榴莲约 5 时 2 把）；打理再 +1。`plot_ops catalog` 看时间和把数。浇水/施肥加快成熟：`plot_ops 浇水 1` · `施肥 1`。
-
-找邻居：`steward_ops 邻居` / `在线`。偷菜：`plot_ops 偷菜 名字`（最多掐走 30%，永远留一把，不能摘空）。
-
-小屋存菜：`hut_ops buy cabinet` → `install soft_1 cabinet` 装潮柜（生鲜）；`buy fridge` → `install soft_2 fridge` 装冰箱（熟菜）。存取统一用 `hut_ops 冰柜 存 甘蓝 3` / `冰柜 取`（柜子/潮柜/冰箱同义）。小偷翻不到潮柜。
-
-旧家具：`hut_ops 卖掉` 看折旧报价，`卖掉 soft_1 确认` 成交（刚装约六成，越用越残）。
-
-栗栗可用赶海贝壳主动唤摊：`visit_ops lili summon shell_catseye`（首次必来）。详见根 README「栗栗流动摊」。
-
-Zeabur、命令写法、等级榜、潮下规则见根目录 [README.md](../README.md)。
-
-许可证与外部参考见根目录 [README.md — 参考与致谢](../README.md#参考与致谢)。
-
----
-
-## 潮下 Undertide（地下世界）
-
-滨海酒吧后院的枯井下面还有一层。单 MCP 入口 `undertide_ops`，规则与场所见仓库根 [README — 潮下](../README.md#潮下-undertide-undertide_ops地下世界)。管理面板 `/ut-owner` · `/ut-gate` · `/lizhi` 需环境变量钥匙，未设置时安全禁用。
+入门：`steward_ops enroll 名字` → `relay_manual`。

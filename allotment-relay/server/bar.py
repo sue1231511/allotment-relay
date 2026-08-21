@@ -24,6 +24,8 @@ from .bar_catalog import (
     BEER_TYPES,
     LIZHI_BAR_STORY,
     SONG_REQUEST_COST,
+    resolve_bar_job,
+    resolve_bar_period,
 )
 from .bar_copy import (
     BAR_ACTIVITY_FLAVOR,
@@ -117,7 +119,7 @@ def duty_line(steward: dict[str, Any]) -> str:
     left = shift_seconds_left(steward)
     if left < 0:
         overdue_h = abs(left) // 3600
-        return f"⚠ 酒吧考勤逾期 {overdue_h}h — 必须 bar_ops work，其它 MCP 已锁"
+        return f"⚠ 酒吧考勤逾期 {overdue_h}h — 必须 bar_ops work。份地/出海/行囊已锁；诊所、吃饭、酒吧、潮下仍可用"
     if left < 86400:
         return f"酒吧考勤：{left // 3600}h 内须 bar_ops work（每 {config.BAR_MANDATORY_DAYS} 天一次）"
     days = left // 86400
@@ -724,7 +726,7 @@ async def _cmd_order(conn: aiosqlite.Connection, s: dict[str, Any], drink_name: 
 
     drink = BAR_DRINKS[drink_key]
     if drink.get("hidden") and not await _has_unlock(conn, s["id"], drink.get("unlock", drink_key)):
-        raise ValueError("隐藏酒款未解锁（深海航行 / 特殊成就后可点）")
+        raise ValueError("隐藏酒款未解锁（深漂归港后可点「深海回声」）")
     if drink.get("night_only") and world.current_day_phase() != "night":
         raise ValueError(f"{drink['name']} 仅夜场供应")
 
@@ -1271,10 +1273,18 @@ async def bar_ops(key_id: int, command: str) -> str:
         rest = command.strip()[4:].strip()
         wp = rest.split()
         if len(wp) < 2:
-            raise ValueError("用法: bar_ops work 岗位 day|night（岗位: dishwasher/runner/greeter/server/bartender/host）")
-        job_id, period = wp[0].lower(), wp[1].lower()
-        if job_id not in BAR_JOBS:
-            raise ValueError(f"未知岗位，可选: {', '.join(BAR_JOBS.keys())}")
+            raise ValueError(
+                "用法: bar_ops work 岗位 day|night"
+                "（岗位: 洗碗/杂工/迎宾/服务生/调酒师/牛郎，或 dishwasher/runner/greeter/server/bartender/host）"
+            )
+        job_id = resolve_bar_job(wp[0])
+        period = resolve_bar_period(wp[1])
+        if not job_id:
+            raise ValueError(
+                f"未知岗位「{wp[0]}」，可选: 洗碗/杂工/迎宾/服务生/调酒师/牛郎"
+            )
+        if not period:
+            raise ValueError("班次写 day/dusk/白班 或 night/夜班")
         period = _work_period(period, overdue=is_shift_overdue(s))
         async with db.connect() as conn:
             msg = await _run_work(conn, s, job_id, period)
@@ -1462,5 +1472,5 @@ async def bar_ops(key_id: int, command: str) -> str:
     raise ValueError(
         "未知 bar 指令: "
         f"{command}（tonight/menu/order/work/status/staff/song/request_song/tip/chat/"
-        "set_mood/clear_mood/set_owner_event/clear_owner_event/shift）"
+        "cheer/duo/shift）"
     )

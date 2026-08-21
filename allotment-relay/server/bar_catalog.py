@@ -116,6 +116,49 @@ BAR_JOBS = {
     },
 }
 
+BAR_JOB_ALIASES = {
+    "dishwasher": "dishwasher",
+    "洗碗": "dishwasher",
+    "洗碗工": "dishwasher",
+    "runner": "runner",
+    "杂工": "runner",
+    "跑堂": "runner",
+    "greeter": "greeter",
+    "迎宾": "greeter",
+    "server": "server",
+    "服务生": "server",
+    "服务员": "server",
+    "bartender": "bartender",
+    "调酒师": "bartender",
+    "调酒": "bartender",
+    "host": "host",
+    "牛郎": "host",
+}
+
+BAR_PERIOD_ALIASES = {
+    "day": "day",
+    "dusk": "day",
+    "白班": "day",
+    "暮": "day",
+    "暮场": "day",
+    "night": "night",
+    "夜": "night",
+    "夜班": "night",
+    "夜场": "night",
+}
+
+
+def resolve_bar_job(token: str) -> str | None:
+    return BAR_JOB_ALIASES.get((token or "").strip().lower()) or BAR_JOB_ALIASES.get(
+        (token or "").strip()
+    )
+
+
+def resolve_bar_period(token: str) -> str | None:
+    raw = (token or "").strip()
+    return BAR_PERIOD_ALIASES.get(raw.lower()) or BAR_PERIOD_ALIASES.get(raw)
+
+
 BAR_DRINKS = {
     "sea_salt_lager": {
         "name": "海盐拉格", "type": "啤酒", "price": 12,

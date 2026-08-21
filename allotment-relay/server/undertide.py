@@ -774,13 +774,15 @@ async def _cmd_cheer(
         raise ValueError("说点什么。猫猫不接受沉默的讨好。")
     day = _day_id()
     row = await (await conn.execute(
-        "SELECT COUNT(*) FROM ut_mood_proposals WHERE steward_id=? AND status='pending' AND created_at>?",
+        "SELECT COUNT(*) FROM ut_mood_proposals WHERE steward_id=? AND status='pending' "
+        "AND target='cat' AND created_at>?",
         (s["id"], db.now() - 86400),
     )).fetchone()
     if row[0] >= utcfg.UT_CHEER_DAILY:
         raise ValueError("今天已经说过一次了。说太多显得不诚恳。")
     await conn.execute(
-        "INSERT INTO ut_mood_proposals (steward_id, target_mood, reason, status, created_at) VALUES (?,?,?,?,?)",
+        "INSERT INTO ut_mood_proposals (steward_id, target_mood, reason, status, created_at, target) "
+        "VALUES (?,?,?,?,?, 'cat')",
         (s["id"], "good", reason[:100], "pending", db.now()),
     )
     await conn.commit()
@@ -1205,6 +1207,8 @@ async def undertide_ops(key_id: int, command: str) -> str:
             return await _cmd_jail(conn, s, ut, rest)
 
         if verb == "cheer":
+            if not ut["access"]:
+                raise ValueError(utcopy.NO_ACCESS_HINT)
             msg = await _cmd_cheer(conn, s, rest)
             return msg + await _maybe_event(conn, s, ut)
 
@@ -1250,7 +1254,7 @@ async def undertide_ops(key_id: int, command: str) -> str:
             return await um.grudge_ops(conn, s, ut, rest.split()[0] if rest else "")
 
         # ── 三期路由 ──
-        if verb in ("tavern", "whisper", "spy"):
+        if verb in ("tavern", "whisper", "spy", "ai", "chat"):
             if not ut["access"]:
                 raise ValueError(utcopy.NO_ACCESS_HINT)
             from . import undertide_tavern as utav
