@@ -28,6 +28,9 @@ SCRUMP_LOOT_CROP = 0.55
 SCRUMP_LOOT_SEED = 0.25
 SCRUMP_DAILY = 3
 SCRUMP_PER_TARGET = 1
+# 熟地大约 2～3 把；偷菜掐走约四成，只要还剩两把就至少留一把
+SCRUMP_TAKE_RATE = 0.4
+SCRUMP_LEAVE_MIN = 1
 
 # 多 AI 协作
 ASSIST_TICKETS = 8
@@ -171,6 +174,8 @@ SCARECROW_COST = {"drift_twine": 2, "compost": 1}
 KITCHEN_COOK_DAILY = 8
 FRIDGE_SLOTS = 12
 FRIDGE_DAYS = 7
+CABINET_SLOTS = 8
+CABINET_STACK = 24
 
 # 集市 — 玩家互卖，建议价参考 catalog
 MARKET_FEE = 2

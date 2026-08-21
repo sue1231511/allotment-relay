@@ -8,7 +8,7 @@ from typing import Any
 import aiosqlite
 
 from . import config, db, flavor
-from .catalog import HUT_HARD, HUT_LEVELS, HUT_SOFT, ITEM_NAMES, LILI_DECOR, LILI_JUNK_DECOR
+from .catalog import HUT_HARD, HUT_LEVELS, HUT_SOFT, ITEM_NAMES, LILI_DECOR, LILI_JUNK_DECOR, item_label, resolve_item_key, unknown_item_message
 
 
 def _slots(level: int) -> tuple[list[str], list[str]]:
@@ -99,6 +99,8 @@ class HutBonus:
             bits.append("酒吧小费+")
         if self.has("fridge"):
             bits.append("冰箱")
+        if self.has("cabinet"):
+            bits.append("潮柜")
         if not bits:
             return None
         return "装件生效：" + " · ".join(bits)
@@ -154,12 +156,175 @@ async def get_bonuses(conn: aiosqlite.Connection, steward_id: int) -> HutBonus:
     return bonuses_for(await installed_keys(conn, steward_id))
 
 
+def _fitting_bare(key: str) -> str:
+    if key.startswith("deco_junk_"):
+        return key
+    if key.startswith("deco_"):
+        return key[5:]
+    if key.startswith("fit_"):
+        return key[4:]
+    return key
+
+
+async def has_cabinet(conn: aiosqlite.Connection, steward_id: int) -> bool:
+    cur = await conn.execute(
+        "SELECT 1 FROM hut_fittings WHERE steward_id=? AND item_key='cabinet'",
+        (steward_id,),
+    )
+    return bool(await cur.fetchone())
+
+
+async def _cabinet_rows(conn: aiosqlite.Connection, steward_id: int) -> list[tuple[str, int]]:
+    prev = conn.row_factory
+    conn.row_factory = aiosqlite.Row
+    try:
+        rows = await (await conn.execute(
+            "SELECT item, quantity FROM hut_cabinet WHERE steward_id=? AND quantity>0 ORDER BY item",
+            (steward_id,),
+        )).fetchall()
+        return [(r["item"], r["quantity"]) for r in rows]
+    finally:
+        conn.row_factory = prev
+
+
+async def dump_cabinet(conn: aiosqlite.Connection, steward_id: int) -> int:
+    rows = await _cabinet_rows(conn, steward_id)
+    moved = 0
+    for item, qty in rows:
+        await db.add_item(conn, steward_id, item, qty)
+        moved += qty
+    await conn.execute("DELETE FROM hut_cabinet WHERE steward_id=?", (steward_id,))
+    return moved
+
+
+async def _maybe_dump_cabinet(
+    conn: aiosqlite.Connection,
+    steward_id: int,
+    old_key: str | None,
+    *,
+    except_slot: str | None = None,
+) -> int:
+    if _fitting_bare(old_key or "") != "cabinet":
+        return 0
+    sql = "SELECT 1 FROM hut_fittings WHERE steward_id=? AND item_key='cabinet'"
+    args: list[Any] = [steward_id]
+    if except_slot:
+        sql += " AND slot!=?"
+        args.append(except_slot)
+    still = await (await conn.execute(sql, args)).fetchone()
+    if still:
+        return 0
+    return await dump_cabinet(conn, steward_id)
+
+
+def _cabinet_forbid(item: str) -> str | None:
+    if item.startswith("dish_") or item.startswith("meal_"):
+        return "熟菜放冰箱 kitchen_ops store"
+    if item.startswith("live_"):
+        return "活物走畜栏 hut_ops barn"
+    if item.startswith("fit_"):
+        return "装件直接 install，不必进柜子"
+    return None
+
+
+async def cabinet_command(s: dict[str, Any], rest: list[str]) -> str:
+    verb = rest[0].lower() if rest else "status"
+    async with db.connect() as conn:
+        if not await has_cabinet(conn, s["id"]):
+            raise ValueError(
+                "先 hut_ops buy cabinet → install soft_N cabinet。"
+                "潮柜在小屋里，小偷和斑鸠翻不到。"
+            )
+        if verb in ("status", "list", "看", "柜子"):
+            rows = await _cabinet_rows(conn, s["id"])
+            if not rows:
+                return (
+                    f"潮柜空（{config.CABINET_SLOTS} 格，每格最多 {config.CABINET_STACK}）。"
+                    "hut_ops 柜子 存 物品 [数量]"
+                )
+            lines = [f"潮柜 {len(rows)}/{config.CABINET_SLOTS}:"]
+            for item, qty in rows:
+                lines.append(f"  {item_label(item)}（{item}） x{qty}")
+            lines.append("取：hut_ops 柜子 取 物品 [数量]")
+            return "\n".join(lines)
+
+        putting = verb in ("put", "store", "存", "放", "入")
+        taking = verb in ("take", "取", "拿")
+        if not (putting or taking) or len(rest) < 2:
+            raise ValueError("用法: hut_ops 柜子 存|取 物品 [数量]")
+
+        tokens = rest[1:]
+        qty = 1
+        name_tokens = tokens
+        if tokens and tokens[-1].isdigit():
+            qty = max(1, int(tokens[-1]))
+            name_tokens = tokens[:-1]
+        if not name_tokens:
+            raise ValueError("要写物品名")
+        item = resolve_item_key(" ".join(name_tokens))
+        if not item:
+            raise ValueError(unknown_item_message(" ".join(name_tokens)))
+        blocked = _cabinet_forbid(item)
+        if blocked:
+            raise ValueError(blocked)
+
+        if putting:
+            rows = await _cabinet_rows(conn, s["id"])
+            have = {k: v for k, v in rows}
+            if item not in have and len(have) >= config.CABINET_SLOTS:
+                raise ValueError(f"柜子满了（{config.CABINET_SLOTS} 种）")
+            stacked = have.get(item, 0)
+            if stacked + qty > config.CABINET_STACK:
+                raise ValueError(
+                    f"{item_label(item)} 这格最多 {config.CABINET_STACK}，已有 {stacked}"
+                )
+            if not await db.take_item(conn, s["id"], item, qty):
+                raise ValueError("行囊没有这么多")
+            await conn.execute(
+                """
+                INSERT INTO hut_cabinet (steward_id, item, quantity, stored_at)
+                VALUES (?,?,?,?)
+                ON CONFLICT(steward_id, item) DO UPDATE SET
+                quantity = quantity + excluded.quantity
+                """,
+                (s["id"], item, qty, db.now()),
+            )
+            await conn.commit()
+            return f"入柜 {item_label(item)} x{qty}（小偷翻不到）"
+
+        cur = await conn.execute(
+            "SELECT quantity FROM hut_cabinet WHERE steward_id=? AND item=?",
+            (s["id"], item),
+        )
+        row = await cur.fetchone()
+        have_n = row[0] if row else 0
+        if have_n < qty:
+            raise ValueError("柜子里没有这么多")
+        new_n = have_n - qty
+        if new_n <= 0:
+            await conn.execute(
+                "DELETE FROM hut_cabinet WHERE steward_id=? AND item=?",
+                (s["id"], item),
+            )
+        else:
+            await conn.execute(
+                "UPDATE hut_cabinet SET quantity=? WHERE steward_id=? AND item=?",
+                (new_n, s["id"], item),
+            )
+        await db.add_item(conn, s["id"], item, qty)
+        await conn.commit()
+        return f"取出 {item_label(item)} x{qty}，回行囊"
+
+
 async def hut_ops(key_id: int, command: str) -> str:
     from .game import require_steward
 
     s = await require_steward(key_id)
     parts = command.strip().split(maxsplit=2)
     verb = parts[0].lower() if parts else "status"
+
+    if verb in ("cabinet", "柜子", "chest", "locker", "柜"):
+        return await cabinet_command(s, command.strip().split()[1:])
 
     if verb == "status":
         async with db.connect() as conn:
@@ -189,6 +354,10 @@ async def hut_ops(key_id: int, command: str) -> str:
         active = bonuses_for(fittings.values()).summary()
         if active:
             lines.append(active)
+        if bonuses_for(fittings.values()).has("cabinet"):
+            async with db.connect() as conn:
+                n = len(await _cabinet_rows(conn, s["id"]))
+            lines.append(f"潮柜 {n}/{config.CABINET_SLOTS} 种 — hut_ops 柜子 存|取")
         return "\n".join(lines)
 
     if verb == "catalog":
@@ -295,9 +464,16 @@ async def hut_ops(key_id: int, command: str) -> str:
                 if not await db.take_item(conn, s["id"], deco_item, 1):
                     raise ValueError(f"行囊没有 {deco_meta['name']}，先 visit_ops lili trade")
                 old = await _fittings(conn, s["id"])
+                dumped = 0
                 if slot in old:
                     old_key = old[slot]
-                    await db.add_item(conn, s["id"], old_key, 1)
+                    dumped = await _maybe_dump_cabinet(
+                        conn, s["id"], old_key, except_slot=slot,
+                    )
+                    if old_key.startswith("deco_"):
+                        await db.add_item(conn, s["id"], old_key, 1)
+                    else:
+                        await db.add_item(conn, s["id"], f"fit_{old_key}", 1)
                 await conn.execute(
                     """
                     INSERT INTO hut_fittings (steward_id, slot, item_key, installed_at)
@@ -325,8 +501,16 @@ async def hut_ops(key_id: int, command: str) -> str:
                 if not await db.take_item(conn, s["id"], deco_item, 1):
                     raise ValueError(f"行囊没有 {deco_meta['name']}")
                 old = await _fittings(conn, s["id"])
+                dumped = 0
                 if slot in old:
-                    await db.add_item(conn, s["id"], old[slot], 1)
+                    dumped = await _maybe_dump_cabinet(
+                        conn, s["id"], old[slot], except_slot=slot,
+                    )
+                    old_key = old[slot]
+                    if old_key.startswith("deco_"):
+                        await db.add_item(conn, s["id"], old_key, 1)
+                    else:
+                        await db.add_item(conn, s["id"], f"fit_{old_key}", 1)
                 await conn.execute(
                     """
                     INSERT INTO hut_fittings (steward_id, slot, item_key, installed_at)
@@ -342,7 +526,10 @@ async def hut_ops(key_id: int, command: str) -> str:
                     s["id"],
                 )
                 await conn.commit()
-            return f"#{slot} 挂上 {deco_meta['emoji']}{deco_meta['name']}。{deco_meta['hint']}"
+            msg = f"#{slot} 挂上 {deco_meta['emoji']}{deco_meta['name']}。{deco_meta['hint']}"
+            if dumped:
+                msg += f" 潮柜货回行囊 x{dumped}"
+            return msg
 
         kind, meta = _catalog_item(key)
         if slot.startswith("hard") and kind != "hard":
@@ -350,11 +537,15 @@ async def hut_ops(key_id: int, command: str) -> str:
         if slot.startswith("soft") and kind != "soft":
             raise ValueError("软装槽只能装 soft 类")
         fit_item = f"fit_{key}"
+        dumped = 0
         async with db.connect() as conn:
             if not await db.take_item(conn, s["id"], fit_item, 1):
                 raise ValueError(f"行囊没有 {meta['name']}，先 buy {key}")
             old = await _fittings(conn, s["id"])
             if slot in old:
+                dumped = await _maybe_dump_cabinet(
+                    conn, s["id"], old[slot], except_slot=slot,
+                )
                 await db.add_item(conn, s["id"], f"fit_{old[slot]}", 1)
             await conn.execute(
                 """
@@ -372,6 +563,8 @@ async def hut_ops(key_id: int, command: str) -> str:
             item=meta["name"],
             hint=meta["hint"],
         )
+        if dumped:
+            msg += f" 潮柜货回行囊 x{dumped}"
         return msg
 
     if verb == "remove" and len(parts) >= 2:
@@ -381,6 +574,7 @@ async def hut_ops(key_id: int, command: str) -> str:
             if slot not in fittings:
                 raise ValueError("该槽位是空的")
             key = fittings[slot]
+            dumped = await _maybe_dump_cabinet(conn, s["id"], key, except_slot=slot)
             await conn.execute(
                 "DELETE FROM hut_fittings WHERE steward_id=? AND slot=?",
                 (s["id"], slot),
@@ -390,8 +584,11 @@ async def hut_ops(key_id: int, command: str) -> str:
             else:
                 await db.add_item(conn, s["id"], f"fit_{key}", 1)
             await conn.commit()
-        return f"已拆下 {slot} 的 {_fit_name(key)}，装件回行囊"
+        msg = f"已拆下 {slot} 的 {_fit_name(key)}，装件回行囊"
+        if dumped:
+            msg += f"；潮柜货回行囊 x{dumped}"
+        return msg
 
     raise ValueError(
-        f"未知 hut 指令: {command}（status/build/upgrade/label/catalog/buy/install/remove）"
+        f"未知 hut 指令: {command}（status/build/upgrade/label/catalog/buy/install/remove/柜子）"
     )

@@ -317,6 +317,7 @@ HUT_SOFT = {
     "bramble_wreath": {"name": "荆棘莓环", "cost": 30, "emoji": "🌸", "hint": "纯好看，无数值"},
     "glass_float": {"name": "玻璃浮标", "cost": 36, "emoji": "🔮", "hint": "公共物资刷新 ×1.22"},
     "fridge": {"name": "冰箱", "cost": 120, "emoji": "🧊", "hint": "kitchen store 保鲜；开小馆必需"},
+    "cabinet": {"name": "潮柜", "cost": 58, "emoji": "🗄️", "hint": "hut_ops 柜子 存/取；小偷和斑鸠偷不到行囊外的货"},
 }
 
 TOOLS = {

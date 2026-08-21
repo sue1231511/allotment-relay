@@ -211,6 +211,37 @@ def plot_overripe(plot: dict[str, Any]) -> bool:
     return elapsed >= need * 2
 
 
+def harvest_pool(plot: dict[str, Any]) -> int:
+    """一块熟地大约几把。打理过的多一把。"""
+    if not plot.get("crop"):
+        return 0
+    n = 2
+    if plot.get("tended"):
+        n += 1
+    if CROPS.get(plot["crop"], {}).get("tree"):
+        return 2 + (1 if plot.get("tended") else 0)
+    return n
+
+
+def remaining_harvest(plot: dict[str, Any]) -> int:
+    if not plot.get("crop"):
+        return 0
+    left = int(plot.get("harvest_left") or 0)
+    if left > 0:
+        return left
+    return harvest_pool(plot)
+
+
+def scrump_take_qty(left: int) -> int:
+    """掐走约四成；还剩两把以上时至少留一把。"""
+    if left <= 0:
+        return 0
+    if left <= config.SCRUMP_LEAVE_MIN:
+        return left
+    taken = max(1, int(round(left * config.SCRUMP_TAKE_RATE)))
+    return min(taken, left - config.SCRUMP_LEAVE_MIN)
+
+
 def parcel_status(plot: dict[str, Any]) -> str:
     if plot_overripe(plot):
         return "过熟"
@@ -234,6 +265,8 @@ def parcel_extra(plot: dict[str, Any]) -> str:
             bits.append("🌾稻草人")
         return f"·{'·'.join(bits)}" if bits else ""
     if plot_ready(plot):
+        left = remaining_harvest(plot)
+        bits.append(f"{left}把")
         if is_tree:
             bits.append("树·收完再长·chop清地")
             if meta.get("shake"):
@@ -480,7 +513,7 @@ async def gather_yield(
     crop = plot["crop"]
     meta = CROPS[crop]
     item = f"crop_{crop}"
-    qty = 1
+    qty = remaining_harvest(plot)
     keep = bool(meta.get("tree"))
     if plot_overripe(plot):
         if random.random() < 0.45:
@@ -648,7 +681,8 @@ async def resolve_gugu_dove(
             await conn.execute(
                 """
                 UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
-                grow_target=0, grow_pace='', fertilized=0, dove_yield_mult=1.0
+                grow_target=0, grow_pace='', fertilized=0, dove_yield_mult=1.0,
+                harvest_left=0
                 WHERE id=?
                 """,
                 (plot_id,),
@@ -708,7 +742,8 @@ async def shake_tree(
     grow_target, grow_pace, _ = roll_grow(crop, plot)
     await conn.execute(
         """
-        UPDATE parcels SET planted_at=?, tended=0, grow_target=?, grow_pace=?
+        UPDATE parcels SET planted_at=?, tended=0, grow_target=?, grow_pace=?,
+        harvest_left=0
         WHERE id=?
         """,
         (db.now(), grow_target, grow_pace, plot["id"]),

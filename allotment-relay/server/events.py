@@ -145,18 +145,16 @@ async def _scrump_victim(
         return None
     from . import npc
     thief = npc.pick_thief_name()
-    crop = plot["crop"]
-    meta = CROPS[crop]
-    await conn.execute(
-        "UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0 WHERE id=?",
-        (plot["id"],),
-    )
+    result = await nibble_ripe_plot(conn, plot)
+    crop_name = result["label"]
     detail = flavor.fill(
         flavor.pick(flavor.SCRUMP_VICTIM),
         thief=thief,
         slot=plot["slot"],
-        crop=meta["name"],
+        crop=crop_name,
     )
+    if result["left"] > 0:
+        detail += f"（{result['note']}）"
     action = "scrump"
     await conn.execute(
         "INSERT INTO chronicle (action, actor_id, target_id, text, created_at) VALUES (?, ?, ?, ?, ?)",
@@ -182,8 +180,6 @@ async def _scrump_attempt(
     plot = await _pick_ripe_plot(conn, peer["id"])
     if not plot:
         return None
-    crop = plot["crop"]
-    meta = CROPS[crop]
     active = db.now() - peer["last_active_at"] <= config.SCRUMP_ACTIVE_WINDOW
     weather = world.current_weather()
     if weather == "misty":
@@ -196,20 +192,16 @@ async def _scrump_attempt(
         fine = max(1, fine // 2)
     loot = flavor.pick(flavor.SCRUMP_EMPTY)
     if not caught:
-        roll = random.random()
-        bonus = 0.05 if steward.get("mascot_trait") == "lucky" else 0.0
-        if roll < config.SCRUMP_LOOT_CROP + bonus:
-            await db.add_item(conn, steward["id"], f"crop_{crop}", 1)
-            loot = meta["name"]
-        elif roll < config.SCRUMP_LOOT_CROP + config.SCRUMP_LOOT_SEED + bonus:
-            await db.add_item(conn, steward["id"], f"seed_{crop}", 1)
-            loot = f"{meta['name']}种"
+        result = await nibble_ripe_plot(conn, plot, thief_id=steward["id"])
+        loot = result["label"]
         detail = flavor.fill(
             flavor.pick(flavor.SCRUMP_SUCCESS),
             crop=loot,
             victim=peer["name"],
             slot=plot["slot"],
         )
+        if result["left"] > 0:
+            detail += f"（{result['note']}）"
         action = "scrump"
     elif caught:
         await conn.execute(
@@ -229,10 +221,6 @@ async def _scrump_attempt(
     else:
         detail = flavor.pick(flavor.SCRUMP_EMPTY)
         action = "scrump"
-    await conn.execute(
-        "UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0 WHERE id=?",
-        (plot["id"],),
-    )
     await conn.execute(
         "INSERT INTO chronicle (action, actor_id, target_id, text, created_at) VALUES (?, ?, ?, ?, ?)",
         (
@@ -271,34 +259,73 @@ def _scrump_catch_chance(
     return max(0.08, min(0.92, chance))
 
 
+async def nibble_ripe_plot(
+    conn: aiosqlite.Connection,
+    plot: dict[str, Any],
+    *,
+    thief_id: int | None = None,
+) -> dict[str, Any]:
+    """从熟地掐走一部分。地里至少留一把（只剩一把时才能摘空）。"""
+    crop = plot["crop"]
+    meta = CROPS[crop]
+    keep_tree = bool(meta.get("tree"))
+    left = farming.remaining_harvest(plot)
+    taken = farming.scrump_take_qty(left)
+    leftover = max(0, left - taken)
+    if thief_id is not None and taken:
+        await db.add_item(conn, thief_id, f"crop_{crop}", taken)
+    if leftover > 0:
+        await conn.execute(
+            "UPDATE parcels SET harvest_left=? WHERE id=?",
+            (leftover, plot["id"]),
+        )
+        emptied = False
+        note = f"地里还剩 {leftover} 把"
+        tree_note = ""
+    elif keep_tree:
+        grow_target, grow_pace, _ = farming.roll_grow(crop, plot)
+        await conn.execute(
+            """
+            UPDATE parcels SET planted_at=?, tended=0, grow_target=?, grow_pace=?,
+            fertilized=0, harvest_left=0 WHERE id=?
+            """,
+            (db.now(), grow_target, grow_pace, plot["id"]),
+        )
+        emptied = False
+        note = "果摘完了，树还在"
+        tree_note = "（树还在）"
+    else:
+        await conn.execute(
+            """
+            UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
+            grow_target=0, grow_pace='', fertilized=0, scarecrow=0, harvest_left=0
+            WHERE id=?
+            """,
+            (plot["id"],),
+        )
+        emptied = True
+        note = "这垄摘空了"
+        tree_note = ""
+    label = f"{meta['name']} x{taken}" if taken else meta["name"]
+    return {
+        "crop": crop,
+        "name": meta["name"],
+        "label": label + tree_note,
+        "taken": taken,
+        "left": leftover,
+        "note": note,
+        "emptied": emptied,
+    }
+
+
 async def take_ripe_plot(
     conn: aiosqlite.Connection,
     thief_id: int,
     plot: dict[str, Any],
 ) -> str:
-    """摘走一块熟地：菜进小偷行囊；树还在，普通作物清空。"""
-    crop = plot["crop"]
-    meta = CROPS[crop]
-    keep = bool(meta.get("tree"))
-    await db.add_item(conn, thief_id, f"crop_{crop}", 1)
-    if keep:
-        grow_target, grow_pace, _ = farming.roll_grow(crop, plot)
-        await conn.execute(
-            """
-            UPDATE parcels SET planted_at=?, tended=0, grow_target=?, grow_pace=?,
-            fertilized=0 WHERE id=?
-            """,
-            (db.now(), grow_target, grow_pace, plot["id"]),
-        )
-        return f"{meta['name']}（树还在）"
-    await conn.execute(
-        """
-        UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
-        grow_target=0, grow_pace='', fertilized=0, scarecrow=0 WHERE id=?
-        """,
-        (plot["id"],),
-    )
-    return meta["name"]
+    """摘走一块熟地的一部分：菜进小偷行囊。"""
+    result = await nibble_ripe_plot(conn, plot, thief_id=thief_id)
+    return result["label"]
 
 
 async def manual_scrump(steward: dict[str, Any], target_name: str, slot: int | None = None) -> str:
@@ -383,7 +410,8 @@ async def manual_scrump(steward: dict[str, Any], target_name: str, slot: int | N
             loot = "被抓"
             msg = detail + jail_note + f"（可 plot_ops amends {peer['name']}）"
         else:
-            loot = await take_ripe_plot(conn, steward["id"], plot)
+            nibble = await nibble_ripe_plot(conn, plot, thief_id=steward["id"])
+            loot = nibble["label"]
             detail = flavor.fill(
                 flavor.pick(flavor.SCRUMP_SUCCESS),
                 crop=loot,
@@ -391,7 +419,10 @@ async def manual_scrump(steward: dict[str, Any], target_name: str, slot: int | N
                 slot=plot["slot"],
             )
             action = "scrump"
-            msg = detail + f"\n入袋 {loot}。今日逾篱 {used + 1}/{config.SCRUMP_DAILY}"
+            msg = (
+                f"{detail}\n入袋 {loot}，{nibble['note']}。"
+                f"今日逾篱 {used + 1}/{config.SCRUMP_DAILY}"
+            )
 
         await conn.execute(
             "INSERT INTO chronicle (action, actor_id, target_id, text, created_at) VALUES (?,?,?,?,?)",

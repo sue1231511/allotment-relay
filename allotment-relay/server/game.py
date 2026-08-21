@@ -102,6 +102,7 @@ async def relay_manual() -> str:
         "  plot_ops 买地 — 看现有几块、下一块价钱和开垦时间；买地 确认 付钱开垦（起步3块，最多8块）",
         "  tide_ops pen / voyage / beach / gear / tool / boss — 渔排、出海、赶海、渔具、Boss",
         "  hut_ops barn / mascot — 畜栏与吉祥物",
+        "  hut_ops buy cabinet → install soft_N cabinet；hut_ops 柜子 存|取 — 小屋潮柜，小偷翻不到",
         "  tote_ops swap / market — 交换台与集市",
         "  steward_ops guild — 每日一轮工分票；steward_ops board — 全服榜",
         "  alliance_ops contract / league / beacon / bottle — 合约、周目标、公告、漂流瓶",
@@ -131,8 +132,9 @@ async def relay_manual() -> str:
         "",
         "【逾篱摘取】",
         "  plot_ops 偷菜 名字 [地块] — 摘邻居露天熟地。先 steward_ops 邻居 看谁在、谁家熟了",
+        "  一块熟地大约 2～3 把，偷菜掐走约四成、至少留一把；同一人每天 1 次、每日 3 次",
         "  对方在档口 / 稻草人 / 守夜狗更容易被抓（罚票、掉档信；累犯可能进潮下监牢）",
-        "  每日 3 次、同一人每天 1 次。温室摘不到。被摘可 plot_ops amends 名字",
+        "  温室摘不到。被摘可 plot_ops amends 名字",
         "  打理/收成时仍可能随机被人摘或手滑摘邻居",
         "",
         "【巷口拾叶】",
@@ -516,7 +518,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
             grow_target, grow_pace, sow_flavor = farming.roll_grow(crop, plot)
             await conn.execute(
                 """
-                UPDATE parcels SET crop=?, planted_at=?, tended=0, grow_target=?, grow_pace=?
+                UPDATE parcels SET crop=?, planted_at=?, tended=0, grow_target=?, grow_pace=?,
+                harvest_left=0
                 WHERE id=?
                 """,
                 (crop, db.now(), grow_target, grow_pace, plot["id"]),
@@ -706,7 +709,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
             await conn.execute(
                 """
                 UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
-                grow_target=0, grow_pace='', fertilized=0 WHERE id=?
+                grow_target=0, grow_pace='', fertilized=0, harvest_left=0 WHERE id=?
                 """,
                 (plot["id"],),
             )
@@ -734,7 +737,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
             await conn.execute(
                 """
                 UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
-                grow_target=0, grow_pace='', fertilized=0 WHERE id=?
+                grow_target=0, grow_pace='', fertilized=0, harvest_left=0 WHERE id=?
                 """,
                 (plot["id"],),
             )
@@ -781,7 +784,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
                         await conn.execute(
                             """
                             UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
-                            grow_target=0, grow_pace='' WHERE id=?
+                            grow_target=0, grow_pace='', harvest_left=0 WHERE id=?
                             """,
                             (p["id"],),
                         )
@@ -798,7 +801,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
                                 """
                                 UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
                                 grow_target=0, grow_pace='', fertilized=0, scarecrow=0,
-                                dove_yield_mult=1.0 WHERE id=?
+                                dove_yield_mult=1.0, harvest_left=0 WHERE id=?
                                 """,
                                 (p["id"],),
                             )
@@ -814,7 +817,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
                         await conn.execute(
                             """
                             UPDATE parcels SET planted_at=?, tended=0, grow_target=?, grow_pace=?,
-                            fertilized=0 WHERE id=?
+                            fertilized=0, harvest_left=0 WHERE id=?
                             """,
                             (db.now(), grow_target, grow_pace, p["id"]),
                         )
@@ -822,7 +825,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
                         await conn.execute(
                             """
                             UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
-                            grow_target=0, grow_pace='', fertilized=0, scarecrow=0 WHERE id=?
+                            grow_target=0, grow_pace='', fertilized=0, scarecrow=0, harvest_left=0 WHERE id=?
                             """,
                             (p["id"],),
                         )
@@ -842,7 +845,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
                     await conn.execute(
                         """
                         UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
-                        grow_target=0, grow_pace='', fertilized=0 WHERE id=?
+                        grow_target=0, grow_pace='', fertilized=0, harvest_left=0 WHERE id=?
                         """,
                         (p["id"],),
                     )

@@ -66,6 +66,7 @@ PLOT_HELP = """plot_ops 子命令：
 
 HUT_HELP = """hut_ops 子命令：
   status / build / upgrade / catalog / buy / install — 岸畔小屋
+  柜子 / cabinet 存|取 物品 [数量] — 潮柜（先 buy cabinet 装上；小偷翻不到）
   barn status|erect|buy|feed|collect|shear|churn — 畜栏
   mascot adopt 名字 scout|lucky|compost / upkeep / train / feed — 吉祥物"""
 

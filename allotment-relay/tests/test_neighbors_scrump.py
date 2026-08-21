@@ -70,17 +70,19 @@ async def test_neighbors_and_scrump() -> None:
     events.random.random = lambda: 0.99  # type: ignore[method-assign]
     msg = await events.manual_scrump(thief, "邻乙", 1)
     assert "入袋" in msg and "羽衣甘蓝" in msg, msg
+    assert "还剩" in msg, msg
     async with db.connect() as conn:
         qty = (await (await conn.execute(
             "SELECT quantity FROM satchel WHERE steward_id=? AND item='crop_kale'",
             (thief_sid,),
         )).fetchone())
         assert qty and qty[0] >= 1, qty
-        crop = (await (await conn.execute(
-            "SELECT crop FROM parcels WHERE steward_id=? AND slot=1",
+        row = (await (await conn.execute(
+            "SELECT crop, harvest_left FROM parcels WHERE steward_id=? AND slot=1",
             (vic_sid,),
-        )).fetchone())[0]
-        assert crop in (None, ""), crop
+        )).fetchone())
+        assert row and row[0] == "kale", row
+        assert row[1] >= 1, row
 
     from server import game as game_mod
     empty = await game_mod.plot_ops(thief_kid, "邻居")

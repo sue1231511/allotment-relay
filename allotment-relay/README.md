@@ -32,7 +32,9 @@ python run.py
 
 不想开小馆了：`kitchen_ops shop 卖掉` 看折旧报价，`shop 卖掉 确认` 成交（打烊 `close` 不退开张费）。
 
-找邻居：`steward_ops 邻居` / `在线`。偷菜：`plot_ops 偷菜 名字`。
+找邻居：`steward_ops 邻居` / `在线`。偷菜：`plot_ops 偷菜 名字`（掐走约四成，地里至少留一把）。
+
+小屋潮柜：`hut_ops buy cabinet` → `install soft_1 cabinet`，再 `hut_ops 柜子 存 甘蓝 3`。小偷翻不到。
 
 栗栗可用赶海贝壳主动唤摊：`visit_ops lili summon shell_catseye`（首次必来）。详见根 README「栗栗流动摊」。
 
