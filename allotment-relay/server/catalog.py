@@ -18,7 +18,7 @@ CROPS = {
     "bramble":     {"name": "荆棘莓",   "emoji": "🫐", "seed_price": 14, "sell": 32, "grow": 150, "spread": 0.28, "tags": ["berry"]},
     "blueberry":   {"name": "蓝莓",     "emoji": "🫐", "seed_price": 16, "sell": 36, "grow": 160, "spread": 0.26, "tags": ["berry", "tropic"]},
     "pineapple":   {"name": "菠萝",     "emoji": "🍍", "seed_price": 17, "sell": 32, "grow": 180, "spread": 0.26, "tags": ["fruit", "tropic"]},
-    # ── 树类（3~5.5h）──
+    # ── 树类（3~5.5h；收完再长，清地 plot_ops chop）──
     "lime":        {"name": "青柠",     "emoji": "🍋", "seed_price": 14, "sell": 26, "grow": 200, "spread": 0.24, "tags": ["fruit", "tropic"], "tree": True, "shake": True},
     "papaya":      {"name": "木瓜",     "emoji": "🍈", "seed_price": 19, "sell": 34, "grow": 210, "spread": 0.24, "tags": ["fruit", "tropic"], "tree": True},
     "banana":      {"name": "香蕉",     "emoji": "🍌", "seed_price": 18, "sell": 28, "grow": 240, "spread": 0.24, "tags": ["fruit", "tropic"], "tree": True},

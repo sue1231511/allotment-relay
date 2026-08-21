@@ -83,7 +83,7 @@ async def steward_ops(
     return await mux.steward_ops(_kid(), command, name, motto, badge, portrait)
 
 
-@mcp.tool(description="份地：sow/tend/gather/forage/weather；温室 shed；公共物资 commons；意外 incident/repair")
+@mcp.tool(description="份地：sow/tend/gather/chop/forage/weather；温室 shed；公共物资 commons；意外 incident/repair")
 async def plot_ops(command: str = "") -> str:
     return await mux.plot_bundle(_kid(), command)
 

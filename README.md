@@ -109,7 +109,7 @@ docker run --rm -p 8787:8080 -v relay-data:/app/server/data allotment-relay
 |------|--------|
 | `relay_manual` | 手册 |
 | `steward_ops` | enroll / sheet / revise / peer / guild / board |
-| `plot_ops` | 份地 sow/tend/gather；**shed** 温室；**commons** 公共物资；**incident** 意外 |
+| `plot_ops` | 份地 sow/tend/gather/**chop**；**shed** 温室；**commons** 公共物资；**incident** 意外 |
 | `hut_ops` | 小屋；**barn** 畜栏；**mascot** 吉祥物 |
 | `tide_ops` | net/cast；**pen** 渔排；**voyage** 出海；**beach** 赶海；**gear** 渔具；**tool** 工具；**boss** |
 | `tote_ops` | 行囊 list/vend/gift；**swap** 交换台；**market** 集市 |
@@ -139,6 +139,7 @@ tote_ops market sell 银鲳 1 19     # 或 sell fish_butterfish 1 19
 tote_ops market price 甜菜         # 建议价与 vend 一致
 tote_ops swap offer 甜菜 1
 plot_ops sow 2 雾豌豆         # 或 sow 2 fogpea；「雾豌豆种」也行
+plot_ops chop 1               # 砍树腾地（树收完会再长）
 plot_ops catalog              # 作物全表：key / 中文名 / 别名
 kitchen_ops brew 甜菜 羽衣甘蓝
 kitchen_ops eat 鲭鱼          # 生鱼/作物/野薄荷也能吃，回少量精力
@@ -211,7 +212,7 @@ kitchen_ops eat 鲭鱼          # 生鱼/作物/野薄荷也能吃，回少量�
 
 | 系统 | 工具 | 要点 |
 |------|------|------|
-| 热带作物 | `plot_ops buy/sow/shake` | 蓝莓、香蕉、椰子（shake）…；**晴朗播种 ×0.90** |
+| 热带作物 | `plot_ops buy/sow/shake/chop` | 蓝莓、香蕉、椰子（shake）…；**树收完会再长**，清地 `chop`（不必等过熟）；晴朗播种 ×0.90 |
 | 赶海 | `tide_ops beach` | **`scan`** 先报有没有铲子、潮汐能不能挖；`dig` 翻沙须铲子+退潮/平潮；`probe` 仅退潮/平潮（涨潮直接拒绝） |
 | 渔具 tier | `tide_ops gear` | 饵/竿/网 T1~T5；`upgrade bait\|rod\|net` |
 | 坐钓/撒网 | `tide_ops cast/net` | 坐钓缺饵会说「缺少蚯蚓饵」，不会误写成已扣费；网 tier 影响渔获/空网/精力 |
@@ -569,6 +570,8 @@ visit_ops tt gift 大蒜    # 或 gift 票 10
 
 `gather` 返回带数量（`雾豌豆 x1`）；未熟会写还差几秒/几分（不到 1 分钟不再显示「约 0 分」）。收成里若摸到木瓜种等，会写在同一行：`木瓜种 x1（发现 · seed_papaya）`。
 
+**树**（青柠、木瓜、香蕉、芒果、椰子、榴莲）`gather` / `shake` 后**还在地里再长**。不想要了：`plot_ops chop 地块`，随时砍倒腾地（未熟只掉漂绳；熟了带 1 个果；过熟改堆肥）。未熟的树不能 `compost`，过熟仍可堆肥。
+
 `sow` / `tend` / `gather` 可能触发**野生动物**（每日上限）：
 
 | 访客 | 效果（举例） |
@@ -579,7 +582,7 @@ visit_ops tt gift 大蒜    # 或 gift 票 10
 | 野蜂 / 蚯蚓 / 雨蛙 | 授粉加速、松土、守虫 |
 | 刺猬 / 狐狸 |  mostly 田间八卦 |
 
-`plot_ops`：`fertilize` 堆肥/粪肥、`scarecrow`、`compost` 过熟、`tend` 挖蚯蚓饵。锄头（`tide_ops tool buy hoe`）tend 时松土并提高蚯蚓率。晴朗播种热带作物 ×0.90；守夜狗压走兽/斑鸠偷包（见畜栏）。
+`plot_ops`：`fertilize` 堆肥/粪肥、`scarecrow`、`chop` 砍树腾地、`compost` 过熟、`tend` 挖蚯蚓饵。锄头（`tide_ops tool buy hoe`）tend 时松土并提高蚯蚓率。晴朗播种热带作物 ×0.90；守夜狗压走兽/斑鸠偷包（见畜栏）。
 
 ---
 

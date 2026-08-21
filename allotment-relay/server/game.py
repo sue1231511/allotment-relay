@@ -91,6 +91,7 @@ async def relay_manual() -> str:
         "【份地农事 · 随机生长】",
         "  每次 sow 摇出不同生长周期（急长/稳长/慢熟/摸鱼型）",
         "  tend/gather 可能触发野生动物；**昼间斑鸠**盯梢可 plot_ops dove 忽略|驱赶",
+        "  树（青柠/木瓜/香蕉/芒果/椰子/榴莲）收完会再长；清地 plot_ops chop 地块（不必等过熟）",
         "  plot_ops commons scan — 全服稀有公共物资，随机时间上线，claim 抢",
         "  plot_ops shed — 温室；plot_ops incident / repair 编号 — 意外",
         "  tide_ops pen / voyage / beach / gear / tool / boss — 渔排、出海、赶海、渔具、Boss",
@@ -358,9 +359,9 @@ async def plot_ops(key_id: int, command: str = "") -> str:
         return (
             "plot_ops 需要子指令。常用:\n"
             "  status · catalog · weather\n"
-            "  sow 地块 作物 · tend · gather [地块] · shake 地块\n"
-            "  forage · buy 数量 作物 · dove 忽略|驱赶\n"
-            "例: plot_ops status · plot_ops gather 1（只收 #1）"
+            "  sow 地块 作物 · tend · gather [地块] · shake 地块 · chop 地块\n"
+            "  compost 地块 · forage · buy 数量 作物 · dove 忽略|驱赶\n"
+            "例: plot_ops status · plot_ops gather 1 · plot_ops chop 2（砍树腾地）"
         )
     s = await require_steward(key_id)
     pulse = await events.maybe_world_pulse(s)
@@ -413,8 +414,20 @@ async def _plot_one(s: dict, cmd: str) -> str:
         return "\n".join(f"- {r['name']} ({r['badge']})" for r in rows)
 
     if verb in ("catalog", "crops"):
-        lines = [f"  {k} — {v['emoji']}{v['name']}" for k, v in CROPS.items()]
-        return "作物清单（buy/sow 可用 key 或中文名/别名）\n" + "\n".join(lines)
+        lines = []
+        for k, v in CROPS.items():
+            tags = []
+            if v.get("tree"):
+                tags.append("树·收完再长")
+            if v.get("shake"):
+                tags.append("可摇")
+            tag_s = f"（{' · '.join(tags)}）" if tags else ""
+            lines.append(f"  {k} — {v['emoji']}{v['name']}{tag_s}")
+        return (
+            "作物清单（buy/sow 可用 key 或中文名/别名）\n"
+            + "\n".join(lines)
+            + "\n树清地：plot_ops chop 地块（不必等过熟）"
+        )
 
     if verb == "buy" and len(parts) >= 3:
         qty, crop = _parse_int(parts[1]), resolve_crop_key(" ".join(parts[2:]))
@@ -602,17 +615,27 @@ async def _plot_one(s: dict, cmd: str) -> str:
         return f"#{slot} 扎好稻草人，鸟儿的自助餐厅关门"
 
     if verb == "compost" and len(parts) >= 2:
-        slot = int(parts[1])
+        slot = _parse_int(parts[1], "地块编号")
         async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             plot = dict(await (await conn.execute(
                 "SELECT * FROM parcels WHERE steward_id=? AND slot=?", (s["id"], slot)
             )).fetchone() or {})
+            if not plot:
+                raise ValueError(f"没有份地 #{slot}")
             if not plot.get("crop"):
                 raise ValueError(f"#{slot} 空着")
-            if not farming.plot_overripe(plot) and not farming.plot_ready(plot):
+            meta = CROPS.get(plot["crop"], {"name": plot["crop"]})
+            overripe = farming.plot_overripe(plot)
+            ready = farming.plot_ready(plot)
+            if meta.get("tree") and not overripe:
+                raise ValueError(
+                    f"#{slot} {meta['name']}树还没过熟。树收完会再长，清地请 `plot_ops chop {slot}`；"
+                    "过熟才能 compost。"
+                )
+            if not overripe and not ready:
                 raise ValueError("只有过熟/枯的才进堆肥桶")
-            crop_name = CROPS[plot["crop"]]["name"]
+            crop_name = meta["name"]
             await db.add_item(conn, s["id"], "compost", random.randint(2, 3))
             await conn.execute(
                 """
@@ -623,6 +646,49 @@ async def _plot_one(s: dict, cmd: str) -> str:
             )
             await conn.commit()
         return f"#{slot} {crop_name} → 堆肥桶，土肥了"
+
+    if verb == "chop" and len(parts) >= 2:
+        slot = _parse_int(parts[1], "地块编号")
+        async with db.connect() as conn:
+            conn.row_factory = aiosqlite.Row
+            plot = dict(await (await conn.execute(
+                "SELECT * FROM parcels WHERE steward_id=? AND slot=?", (s["id"], slot)
+            )).fetchone() or {})
+            if not plot:
+                raise ValueError(f"没有份地 #{slot}")
+            result = farming.chop_tree(plot)
+            if not result["ok"]:
+                raise ValueError(f"#{slot} {result['msg']}")
+            loot_txt = []
+            for iid, n in result["loot"]:
+                await db.add_item(conn, s["id"], iid, n)
+                loot_txt.append(f"{ITEM_NAMES.get(iid, iid)}×{n}")
+            await conn.execute(
+                """
+                UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
+                grow_target=0, grow_pace='', fertilized=0 WHERE id=?
+                """,
+                (plot["id"],),
+            )
+            extra = await events.roll_after_action(s, "gather", conn)
+            farm = await farming.roll_farm_event(conn, s, "gather")
+            await db.add_chronicle(
+                "chop", f"{s['name']} 砍倒 #{slot} {result['name']}树", s["id"], conn=conn
+            )
+            await conn.commit()
+        loot_s = "、".join(loot_txt)
+        msg = (
+            f"#{slot} 砍倒{result['name']}树，地空了。{result['note']} 捡到 {loot_s}。"
+            + flavor.maybe_suffix(flavor.CHOP_SUFFIX)
+        )
+        if farm:
+            msg += f"\n{farm}"
+        if extra:
+            msg += f"\n{extra}"
+        return msg
+
+    if verb == "chop":
+        raise ValueError("用法: plot_ops chop 地块")
 
     if verb == "gather":
         slot_filter: int | None = None
@@ -690,12 +756,15 @@ async def _plot_one(s: dict, cmd: str) -> str:
                             """,
                             (p["id"],),
                         )
+                    tree_note = "（树还在）" if keep_plot else ""
                     if item_key.startswith("seed_"):
                         got.append(
-                            f"{CROPS[p['crop']]['name']}种(过熟) x{qty}{harvest_note}"
+                            f"{CROPS[p['crop']]['name']}种(过熟) x{qty}{harvest_note}{tree_note}"
                         )
                     else:
-                        got.append(f"{CROPS[p['crop']]['name']} x{qty}{harvest_note}{dove_note}")
+                        got.append(
+                            f"{CROPS[p['crop']]['name']} x{qty}{harvest_note}{dove_note}{tree_note}"
+                        )
                 elif farming.plot_overripe(p):
                     if random.random() < 0.5:
                         await db.add_item(conn, s["id"], "compost", 2)

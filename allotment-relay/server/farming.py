@@ -222,14 +222,27 @@ def parcel_status(plot: dict[str, Any]) -> str:
 
 
 def parcel_extra(plot: dict[str, Any]) -> str:
-    if not plot.get("crop") or plot_ready(plot) or plot_overripe(plot):
-        extra = ""
+    if not plot.get("crop"):
+        return ""
+    meta = CROPS.get(plot["crop"], {})
+    is_tree = bool(meta.get("tree"))
+    bits: list[str] = []
+    if plot_overripe(plot):
+        if is_tree:
+            bits.append("树·chop清地")
         if plot.get("scarecrow"):
-            extra = "·🌾稻草人"
-        return extra
+            bits.append("🌾稻草人")
+        return f"·{'·'.join(bits)}" if bits else ""
+    if plot_ready(plot):
+        if is_tree:
+            bits.append("树·收完再长·chop清地")
+            if meta.get("shake"):
+                bits.append("可摇")
+        if plot.get("scarecrow"):
+            bits.append("🌾稻草人")
+        return f"·{'·'.join(bits)}" if bits else ""
     _, _, left = grow_progress(plot)
     pace = plot.get("grow_pace") or ""
-    bits = []
     if pace:
         bits.append(pace)
     if left > 0:
@@ -238,9 +251,8 @@ def parcel_extra(plot: dict[str, Any]) -> str:
         bits.append("肥")
     if plot.get("scarecrow"):
         bits.append("🌾")
-    meta = CROPS.get(plot["crop"], {})
-    if meta.get("tree") and meta.get("shake") and plot_ready(plot):
-        bits.append("可摇")
+    if is_tree:
+        bits.append("树")
     return f"·{'·'.join(bits)}" if bits else ""
 
 
@@ -486,6 +498,36 @@ async def gather_yield(
             (plot["id"],),
         )
     return item, qty, keep
+
+
+def chop_tree(plot: dict[str, Any]) -> dict[str, Any]:
+    """砍树腾地。树 gather 后会再长，不想要了才 chop（不必等过熟）。"""
+    crop = plot.get("crop")
+    if not crop:
+        return {"ok": False, "msg": "空地没有树可砍。"}
+    meta = CROPS.get(crop) or {}
+    if not meta.get("tree"):
+        name = meta.get("name", crop)
+        return {"ok": False, "msg": f"{name}不是树。过熟用 `plot_ops compost`。"}
+    loot: list[tuple[str, int]] = []
+    twine = random.randint(1, 2)
+    loot.append(("drift_twine", twine))
+    if plot_overripe(plot):
+        n = random.randint(2, 3)
+        loot.append(("compost", n))
+        note = f"过熟的果进了堆肥桶 ×{n}。"
+    elif plot_ready(plot):
+        loot.append((f"crop_{crop}", 1))
+        note = f"熟果收了 1 个{meta['name']}。"
+    else:
+        note = "还没熟，只劈下了枝条。"
+    return {
+        "ok": True,
+        "crop": crop,
+        "name": meta["name"],
+        "loot": loot,
+        "note": note,
+    }
 
 
 def _apply_yield_mult(qty: int, mult: float) -> int:
