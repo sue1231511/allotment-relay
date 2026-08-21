@@ -118,7 +118,7 @@ async def visit_ops(command: str = "") -> str:
     return await mux.visit_bundle(_kid(), command)
 
 
-@mcp.tool(description="滨海酒吧：tonight/menu/order/work/chat/set_mood/set_owner_event — 老板娘营收心情·当晚事件·多岗位打工")
+@mcp.tool(description="滨海酒吧：tonight/menu/order/work/chat/cheer — 老板娘营收心情·当晚事件·多岗位打工；心情由荔栀本人面板定，AI 可 cheer 提议哄她")
 async def bar_ops(command: str) -> str:
     from . import bar
     return await bar.bar_ops(_kid(), command)
