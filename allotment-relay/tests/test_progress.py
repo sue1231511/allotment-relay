@@ -42,17 +42,17 @@ def test_knobs() -> None:
     from server.ranks import level_from_xp, xp_to_reach
 
     assert "scrump" in ACHIEVEMENTS
-    assert ACHIEVEMENTS["scrump"]["name"] == "顺手牵菜"
+    assert ACHIEVEMENTS["scrump"]["name"] == "逾篱客"
     assert resolve_achievement("逾篱手") == "scrump"
     assert resolve_achievement("顺手牵菜") == "scrump"
+    assert resolve_achievement("逾篱客") == "scrump"
     assert resolve_achievement("有屋的") == "hut"
-    assert ACHIEVEMENTS["scrump"]["name"] == "顺手牵菜"
     assert 5 in LEVEL_REWARDS and 8 in LEVEL_REWARDS
     assert "潮柜" in format_reward(8)
     assert level_from_xp(120) == 3
     assert xp_to_reach(4) == 216
     assert display_title({"xp": 120, "worn_title": ""}) == "岸民"
-    assert display_title({"xp": 120, "worn_title": "scrump"}) == "顺手牵菜"
+    assert display_title({"xp": 120, "worn_title": "scrump"}) == "逾篱客"
 
 
 async def test_level_gifts_and_titles() -> None:
@@ -80,7 +80,7 @@ async def test_level_gifts_and_titles() -> None:
 
     listed = await progress.progress_ops(kid, "成就")
     assert "升级礼" in listed or "份地手" in listed or "站稳了" in listed, listed
-    assert "岸上有窝" in listed, listed
+    assert "棚主" in listed, listed
     s = await db.get_steward_by_id(sid)
     assert int(s["reward_level"]) >= 5
     assert int(s["tickets"]) > tickets0
@@ -88,11 +88,11 @@ async def test_level_gifts_and_titles() -> None:
     assert satchel.get("seed_kale", 0) >= 2, satchel
 
     worn = await progress.progress_ops(kid, "称呼 有屋的")
-    assert "岸上有窝" in worn, worn
+    assert "棚主" in worn, worn
     s = await db.get_steward_by_id(sid)
     assert s["worn_title"] == "hut"
     peer = await game.peer_sheet("岸测")
-    assert "岸上有窝" in peer, peer
+    assert "棚主" in peer, peer
 
     off = await progress.progress_ops(kid, "称呼 卸")
     assert "岸民" in off or "份地手" in off, off

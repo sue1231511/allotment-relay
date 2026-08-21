@@ -171,111 +171,111 @@ async def _check_packed(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
 
 ACHIEVEMENTS: dict[str, dict[str, Any]] = {
     "sower": {
-        "name": "土里报到",
-        "hint": "往份地里塞过种子",
-        "aliases": ("下种人",),
+        "name": "播手",
+        "hint": "份地上播过种",
+        "aliases": ("下种人", "土里报到"),
         "check": _check_sower,
     },
     "harvester": {
-        "name": "篮子有货",
-        "hint": "收过一茬，不是空篮表演",
-        "aliases": ("收成手",),
+        "name": "满篮",
+        "hint": "收过一茬",
+        "aliases": ("收成手", "篮子有货"),
         "check": _check_harvester,
     },
     "hut": {
-        "name": "岸上有窝",
-        "hint": "搭过小屋，雨终于有地方躲",
-        "aliases": ("有屋的",),
+        "name": "棚主",
+        "hint": "搭过岸畔小屋",
+        "aliases": ("有屋的", "岸上有窝"),
         "check": _check_hut,
     },
     "barkeep": {
-        "name": "荔栀手底下",
-        "hint": "酒吧上过工，老板还没炒",
-        "aliases": ("荔栀的人",),
+        "name": "店伙",
+        "hint": "酒吧上过工",
+        "aliases": ("荔栀的人", "荔栀手底下"),
         "check": _check_barkeep,
     },
     "dish": {
-        "name": "手泡皱了",
-        "hint": "洗碗满 8 班，水槽认得你",
-        "aliases": ("洗碗工",),
+        "name": "控碗",
+        "hint": "洗碗满 8 班",
+        "aliases": ("洗碗工", "手泡皱了"),
         "check": _check_dish,
     },
     "scrump": {
-        "name": "顺手牵菜",
-        "hint": "邻家的菜进过你篮子",
-        "aliases": ("逾篱手",),
+        "name": "逾篱客",
+        "hint": "偷菜得手过",
+        "aliases": ("逾篱手", "顺手牵菜"),
         "check": _check_scrump,
     },
     "busted": {
-        "name": "潮下房客",
-        "hint": "案底满 5，潮下住过海景小号",
-        "aliases": ("坐过的",),
+        "name": "潮下客",
+        "hint": "潮下收监过（案底满 5）",
+        "aliases": ("坐过的", "潮下房客"),
         "check": _check_busted,
     },
     "boat": {
-        "name": "码头有位",
-        "hint": "船是自己掏票买的",
-        "aliases": ("有船的",),
+        "name": "船户",
+        "hint": "买过船",
+        "aliases": ("有船的", "码头有位"),
         "check": _check_boat,
     },
     "voyager": {
-        "name": "海放人了",
-        "hint": "出过海，岸还认你",
-        "aliases": ("归港人",),
+        "name": "过海客",
+        "hint": "出过海并归港",
+        "aliases": ("归港人", "海放人了"),
         "check": _check_voyager,
     },
     "barn": {
-        "name": "圈里有呼吸",
-        "hint": "建过畜栏，里头会动",
-        "aliases": ("养牲口的",),
+        "name": "饲手",
+        "hint": "建过畜栏",
+        "aliases": ("养牲口的", "圈里有呼吸"),
         "check": _check_barn,
     },
     "pen": {
-        "name": "鱼的房东",
-        "hint": "搭过渔排，鱼开始交租",
-        "aliases": ("渔排主",),
+        "name": "排主",
+        "hint": "搭过渔排",
+        "aliases": ("渔排主", "鱼的房东"),
         "check": _check_pen,
     },
     "cook": {
-        "name": "锅没投诉",
-        "hint": "做过菜，灶还在",
-        "aliases": ("灶边人",),
+        "name": "灶手",
+        "hint": "做过菜",
+        "aliases": ("灶边人", "锅没投诉"),
         "check": _check_cook,
     },
     "helper": {
-        "name": "闲得去帮",
-        "hint": "锄头伸过邻田",
-        "aliases": ("爱帮忙的",),
+        "name": "邻锄",
+        "hint": "帮邻居打理过",
+        "aliases": ("爱帮忙的", "闲得去帮"),
         "check": _check_helper,
     },
     "well": {
-        "name": "另一只鞋还在",
-        "hint": "下过枯井，活着上来了",
-        "aliases": ("井口过客",),
+        "name": "井口客",
+        "hint": "下过枯井",
+        "aliases": ("井口过客", "另一只鞋还在"),
         "check": _check_well,
     },
     "mascot": {
-        "name": "跟了个活的",
-        "hint": "认领过吉祥物，岛上不止你一个呼吸",
-        "aliases": ("带活物的",),
+        "name": "有伴",
+        "hint": "认领过吉祥物",
+        "aliases": ("带活物的", "跟了个活的"),
         "check": _check_mascot,
     },
     "eatery": {
-        "name": "敢开馆",
-        "hint": "挂过小馆招牌",
-        "aliases": ("开馆人",),
+        "name": "馆主",
+        "hint": "开过岸畔小馆",
+        "aliases": ("开馆人", "敢开馆"),
         "check": _check_eatery,
     },
     "giver": {
-        "name": "手比口袋松",
-        "hint": "东西真的送走过",
-        "aliases": ("手松的",),
+        "name": "散手",
+        "hint": "送过别人东西",
+        "aliases": ("手松的", "手比口袋松"),
         "check": _check_giver,
     },
     "packed": {
-        "name": "格还不够",
-        "hint": "潮柜扩过容，还是觉得少",
-        "aliases": ("屯货的",),
+        "name": "柜客",
+        "hint": "潮柜扩过容",
+        "aliases": ("屯货的", "格还不够"),
         "check": _check_packed,
     },
 }
@@ -525,7 +525,7 @@ async def list_text(steward: dict[str, Any]) -> str:
         lines.append(f"下一档升级礼：{format_reward(nxt)}")
     else:
         lines.append("升级礼已领到满级。")
-    lines.append("佩戴：steward_ops 称呼 顺手牵菜 · 卸下：steward_ops 称呼 卸")
+    lines.append("佩戴：steward_ops 称呼 逾篱客 · 卸下：steward_ops 称呼 卸")
     return "\n".join(lines)
 
 
@@ -581,4 +581,4 @@ async def progress_ops(key_id: int, command: str) -> str:
         return await wear(s, "卸")
     if verb in ("领奖", "rewards", "升级礼"):
         return await list_text(s)
-    raise ValueError("用法：steward_ops 成就 · steward_ops 称呼 顺手牵菜 · steward_ops 称呼 卸")
+    raise ValueError("用法：steward_ops 成就 · steward_ops 称呼 逾篱客 · steward_ops 称呼 卸")

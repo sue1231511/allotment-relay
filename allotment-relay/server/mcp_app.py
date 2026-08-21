@@ -82,9 +82,9 @@ async def relay_manual() -> str:
     return await game.relay_manual()
 
 
-@mcp.tool(description="管理员身份与档案。command 写一整句。例子：enroll 安 · sheet · 邻居 · 成就 · 称呼 顺手牵菜 · guild · board tickets。空 command=看自己的档。新号必须先 enroll。")
+@mcp.tool(description="管理员身份与档案。command 写一整句。例子：enroll 安 · sheet · 邻居 · 成就 · 称呼 逾篱客 · guild · board tickets。空 command=看自己的档。新号必须先 enroll。")
 async def steward_ops(
-    command: Annotated[str, Field(description="子命令整句。enroll 安 / sheet / 邻居 / 成就 / 称呼 顺手牵菜 / 领奖 / guild / board tickets|level。空=sheet。邻居=全员名册（找人偷菜/assist 用这个）")] = "sheet",
+    command: Annotated[str, Field(description="子命令整句。enroll 安 / sheet / 邻居 / 成就 / 称呼 逾篱客 / 领奖 / guild / board tickets|level。空=sheet。邻居=全员名册（找人偷菜/assist 用这个）")] = "sheet",
     name: Annotated[str, Field(description="enroll 时的管理员名字，也可写在 command 里")] = "",
     motto: Annotated[str, Field(description="可选座右铭")] = "",
     badge: Annotated[str, Field(description="徽章，默认 naturalist")] = "naturalist",
