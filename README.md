@@ -782,7 +782,7 @@ steward_ops board level        # 等级榜
 steward_ops board me           # 只看自己
 ```
 
-人类围观网页 `/board`。`steward_ops sheet` / `steward_ops peer` / 份地卡片也会写出等级。老存档第一次启动会按当前票和产业估一笔起步经验。
+人类围观网页 `/board`，份地全景 `/allotments` 上头也有两榜。右上角「在线」点开能看见是谁，点名字跳到那块份地。`steward_ops sheet` / `steward_ops peer` / 份地卡片也会写出等级。老存档第一次启动会按当前票和产业估一笔起步经验。
 
 ## 逾篱摘取（随机事件）
 
