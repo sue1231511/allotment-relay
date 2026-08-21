@@ -179,7 +179,7 @@ async def relay_manual() -> str:
         "  donate 物品 数量 / draw 物品 数量 / larder — 联盟储藏室共享物资",
         "  tote_ops gift 名字 物品 数量 [留言] — 定向送礼（即时到账，协作度+3）",
         "  steward_ops board tickets — 全服工分票榜；board level 等级榜；网页 /board",
-        "  steward_ops 成就 — 做事解锁称呼，称呼 逾篱手 佩戴；升级礼在 sheet / 领奖 时自动发",
+        "  steward_ops 成就 — 做事解锁称呼，称呼 顺手牵菜 佩戴；升级礼在 sheet / 领奖 时自动发",
         "",
         "【水陆生产】",
         "  tide_ops pen / voyage — 渔排养鱼、购船出海",

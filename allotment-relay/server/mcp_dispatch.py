@@ -55,7 +55,7 @@ STEWARD_HELP = """steward_ops 子命令（整句写进 command）：
   revise [座右铭] — 改座右铭；肖像用 portrait 参数
   guild — 每日一轮工分票
   board [tickets|level|me] — 全服工分票榜 / 等级榜（不是周目标贡献榜）
-  成就 — 已解锁称呼；称呼 逾篱手 佩戴；称呼 卸 改回等级称号
+  成就 — 已解锁称呼；称呼 顺手牵菜 佩戴；称呼 卸 改回等级称号
   领奖 — 看升级礼（升级时会自动发）"""
 
 PLOT_HELP = """plot_ops 子命令（整句写进 command）：

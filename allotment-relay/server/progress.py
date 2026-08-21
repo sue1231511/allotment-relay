@@ -170,24 +170,114 @@ async def _check_packed(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
 
 
 ACHIEVEMENTS: dict[str, dict[str, Any]] = {
-    "sower": {"name": "下种人", "hint": "份地上播过种", "check": _check_sower},
-    "harvester": {"name": "收成手", "hint": "收过一茬", "check": _check_harvester},
-    "hut": {"name": "有屋的", "hint": "搭过岸畔小屋", "check": _check_hut},
-    "barkeep": {"name": "荔栀的人", "hint": "酒吧上过工", "check": _check_barkeep},
-    "dish": {"name": "洗碗工", "hint": "洗碗满 8 班", "check": _check_dish},
-    "scrump": {"name": "逾篱手", "hint": "偷菜得手过", "check": _check_scrump},
-    "busted": {"name": "坐过的", "hint": "潮下收监过（案底满 5）", "check": _check_busted},
-    "boat": {"name": "有船的", "hint": "买过船", "check": _check_boat},
-    "voyager": {"name": "归港人", "hint": "出过海", "check": _check_voyager},
-    "barn": {"name": "养牲口的", "hint": "建过畜栏", "check": _check_barn},
-    "pen": {"name": "渔排主", "hint": "搭过渔排", "check": _check_pen},
-    "cook": {"name": "灶边人", "hint": "做过菜", "check": _check_cook},
-    "helper": {"name": "爱帮忙的", "hint": "帮邻居打理过", "check": _check_helper},
-    "well": {"name": "井口过客", "hint": "下过枯井", "check": _check_well},
-    "mascot": {"name": "带活物的", "hint": "认领过吉祥物", "check": _check_mascot},
-    "eatery": {"name": "开馆人", "hint": "开过岸畔小馆", "check": _check_eatery},
-    "giver": {"name": "手松的", "hint": "送过别人东西", "check": _check_giver},
-    "packed": {"name": "屯货的", "hint": "潮柜扩过容", "check": _check_packed},
+    "sower": {
+        "name": "土里报到",
+        "hint": "往份地里塞过种子",
+        "aliases": ("下种人",),
+        "check": _check_sower,
+    },
+    "harvester": {
+        "name": "篮子有货",
+        "hint": "收过一茬，不是空篮表演",
+        "aliases": ("收成手",),
+        "check": _check_harvester,
+    },
+    "hut": {
+        "name": "岸上有窝",
+        "hint": "搭过小屋，雨终于有地方躲",
+        "aliases": ("有屋的",),
+        "check": _check_hut,
+    },
+    "barkeep": {
+        "name": "荔栀手底下",
+        "hint": "酒吧上过工，老板还没炒",
+        "aliases": ("荔栀的人",),
+        "check": _check_barkeep,
+    },
+    "dish": {
+        "name": "手泡皱了",
+        "hint": "洗碗满 8 班，水槽认得你",
+        "aliases": ("洗碗工",),
+        "check": _check_dish,
+    },
+    "scrump": {
+        "name": "顺手牵菜",
+        "hint": "邻家的菜进过你篮子",
+        "aliases": ("逾篱手",),
+        "check": _check_scrump,
+    },
+    "busted": {
+        "name": "潮下房客",
+        "hint": "案底满 5，潮下住过海景小号",
+        "aliases": ("坐过的",),
+        "check": _check_busted,
+    },
+    "boat": {
+        "name": "码头有位",
+        "hint": "船是自己掏票买的",
+        "aliases": ("有船的",),
+        "check": _check_boat,
+    },
+    "voyager": {
+        "name": "海放人了",
+        "hint": "出过海，岸还认你",
+        "aliases": ("归港人",),
+        "check": _check_voyager,
+    },
+    "barn": {
+        "name": "圈里有呼吸",
+        "hint": "建过畜栏，里头会动",
+        "aliases": ("养牲口的",),
+        "check": _check_barn,
+    },
+    "pen": {
+        "name": "鱼的房东",
+        "hint": "搭过渔排，鱼开始交租",
+        "aliases": ("渔排主",),
+        "check": _check_pen,
+    },
+    "cook": {
+        "name": "锅没投诉",
+        "hint": "做过菜，灶还在",
+        "aliases": ("灶边人",),
+        "check": _check_cook,
+    },
+    "helper": {
+        "name": "闲得去帮",
+        "hint": "锄头伸过邻田",
+        "aliases": ("爱帮忙的",),
+        "check": _check_helper,
+    },
+    "well": {
+        "name": "另一只鞋还在",
+        "hint": "下过枯井，活着上来了",
+        "aliases": ("井口过客",),
+        "check": _check_well,
+    },
+    "mascot": {
+        "name": "跟了个活的",
+        "hint": "认领过吉祥物，岛上不止你一个呼吸",
+        "aliases": ("带活物的",),
+        "check": _check_mascot,
+    },
+    "eatery": {
+        "name": "敢开馆",
+        "hint": "挂过小馆招牌",
+        "aliases": ("开馆人",),
+        "check": _check_eatery,
+    },
+    "giver": {
+        "name": "手比口袋松",
+        "hint": "东西真的送走过",
+        "aliases": ("手松的",),
+        "check": _check_giver,
+    },
+    "packed": {
+        "name": "格还不够",
+        "hint": "潮柜扩过容，还是觉得少",
+        "aliases": ("屯货的",),
+        "check": _check_packed,
+    },
 }
 
 # 里程碑才发，不对每一级。新客起步约 Lv3，从 Lv4 开始。
@@ -217,7 +307,8 @@ def resolve_achievement(token: str) -> str | None:
     if low in ACHIEVEMENTS:
         return low
     for key, meta in ACHIEVEMENTS.items():
-        if meta["name"] == raw or str(meta["name"]).lower() == low:
+        names = (str(meta.get("name") or ""),) + tuple(meta.get("aliases") or ())
+        if raw in names or low in {n.lower() for n in names}:
             return key
     return None
 
@@ -434,7 +525,7 @@ async def list_text(steward: dict[str, Any]) -> str:
         lines.append(f"下一档升级礼：{format_reward(nxt)}")
     else:
         lines.append("升级礼已领到满级。")
-    lines.append("佩戴：steward_ops 称呼 逾篱手 · 卸下：steward_ops 称呼 卸")
+    lines.append("佩戴：steward_ops 称呼 顺手牵菜 · 卸下：steward_ops 称呼 卸")
     return "\n".join(lines)
 
 
@@ -490,4 +581,4 @@ async def progress_ops(key_id: int, command: str) -> str:
         return await wear(s, "卸")
     if verb in ("领奖", "rewards", "升级礼"):
         return await list_text(s)
-    raise ValueError("用法：steward_ops 成就 · steward_ops 称呼 逾篱手 · steward_ops 称呼 卸")
+    raise ValueError("用法：steward_ops 成就 · steward_ops 称呼 顺手牵菜 · steward_ops 称呼 卸")
