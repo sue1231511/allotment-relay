@@ -916,9 +916,26 @@ async def undertide_ops(key_id: int, command: str) -> str:
                 await conn.commit()
             _gav = await avatar_key(conn, s["id"])
             if _gav == "K":
-                return hits_prefix + utcopy.AVATAR_K_GUIDE_HEAD + utcopy.GUIDE_BODY
+                # 真身版：跳过普通结尾（影信段+普通饵），用汇报口吻的 K 版饵收尾
+                return hits_prefix + utcopy.AVATAR_K_GUIDE_HEAD + utcopy.GUIDE_BODY.replace(
+                    "他重新把腿翘回货箱上。\n\n"
+                    "「最后一条：**影信**就是你在下面的脸面。买卖守信它涨，坑蒙拐骗它跌——脸面掉了，处处挨宰。」\n\n"
+                    "他好像想起什么，又压低了声音：\n\n"
+                    "「哦对了。上礼拜有人在死人抽牌，一晚上带了三百多票上去。」\n"
+                    "他重新翘起腿，「也有人在医务间躺了三天。你自己算哪种命。」\n\n"
+                    "「没了。」",
+                    "「最后一条不用我说——**影信**，您定的规矩。」",
+                ) + utcopy.AVATAR_K_GUIDE_BAIT
             if _gav == "anan":
-                return hits_prefix + utcopy.AVATAR_AN_GUIDE_HEAD + utcopy.GUIDE_BODY
+                return hits_prefix + utcopy.AVATAR_AN_GUIDE_HEAD + utcopy.GUIDE_BODY.replace(
+                    "他重新把腿翘回货箱上。\n\n"
+                    "「最后一条：**影信**就是你在下面的脸面。买卖守信它涨，坑蒙拐骗它跌——脸面掉了，处处挨宰。」\n\n"
+                    "他好像想起什么，又压低了声音：\n\n"
+                    "「哦对了。上礼拜有人在死人抽牌，一晚上带了三百多票上去。」\n"
+                    "他重新翘起腿，「也有人在医务间躺了三天。你自己算哪种命。」\n\n"
+                    "「没了。」",
+                    "「最后一条：**影信**就是您在下面的脸面——晏医生的信用，比谁的都值钱。」",
+                ) + utcopy.AVATAR_AN_GUIDE_BAIT
             return hits_prefix + utcopy.GUIDE_TEXT
 
         if verb == "well":
@@ -973,12 +990,22 @@ async def undertide_ops(key_id: int, command: str) -> str:
             tide_note = f"\n\n（{utcopy.TIDE_HINT.format(line=tide_line)}）" if tide_line else ""
             av = await avatar_key(conn, s["id"])
             head = utcopy.AVATAR_K_ENTER if av == "K" else utcopy.pick(utcopy.ENTER_POOL)
+            # 高光时效钩：今晚有人在井下发了财，全大厅都听得见
+            hype_note = ""
+            row_h = await (await conn.execute(
+                "SELECT text FROM chronicle WHERE action='undertide' "
+                "AND (text LIKE '%净赚%' OR text LIKE '%带上来%' OR text LIKE '%大数目%') "
+                "AND created_at > ? ORDER BY created_at DESC LIMIT 1",
+                (db.now() - 86400,),
+            )).fetchone()
+            if row_h and random.random() < 0.5:
+                hype_note = f"\n\n今晚都在传同一件事——{row_h[0]}"
             guide_tip = ""
             if not int(ut.get("guide_seen") or 0):
                 _gav = await avatar_key(conn, s["id"])
                 guide_tip = {"K": utcopy.AVATAR_K_GUIDE_ENTER, "anan": utcopy.AVATAR_AN_GUIDE_ENTER}.get(
                     _gav, utcopy.GUIDE_FIRST_ENTER)
-            return hits_prefix + head + tide_note + event + kroom + guide_tip
+            return hits_prefix + head + tide_note + event + kroom + hype_note + guide_tip
 
         if verb == "status":
             return hits_prefix + await _cmd_status(conn, s, ut)
@@ -986,7 +1013,8 @@ async def undertide_ops(key_id: int, command: str) -> str:
         if verb == "market":
             if not ut["access"]:
                 raise ValueError(utcopy.NO_ACCESS_HINT)
-            return await _cmd_market(conn, s, ut) + await _maybe_event(conn, s, ut)
+            keeper_bait = utcopy.pick(utcopy.KEEPER_BAIT) if random.random() < 0.20 else ""
+            return await _cmd_market(conn, s, ut) + keeper_bait + await _maybe_event(conn, s, ut)
 
         if verb == "buy":
             if not ut["access"]:
@@ -1042,7 +1070,8 @@ async def undertide_ops(key_id: int, command: str) -> str:
             msg = await uc.casino_ops(conn, s, ut, verb, rest)
             grudge = await um.maybe_grudge(conn, s, ut)
             await conn.commit()
-            return msg + grudge + await _maybe_event(conn, s, ut)
+            silas_bait = utcopy.pick(utcopy.SILAS_BAIT) if random.random() < 0.20 else ""
+            return msg + grudge + silas_bait + await _maybe_event(conn, s, ut)
 
         if verb == "hijack":
             if not ut["access"]:
@@ -1059,7 +1088,8 @@ async def undertide_ops(key_id: int, command: str) -> str:
             if not ut["access"]:
                 raise ValueError(utcopy.NO_ACCESS_HINT)
             from . import undertide_tavern as utav
-            return await utav.tavern_ops(conn, s, ut, command.strip()) + await _maybe_event(conn, s, ut)
+            whisper_bait = utcopy.pick(utcopy.WHISPER_BAIT) if random.random() < 0.15 else ""
+            return await utav.tavern_ops(conn, s, ut, command.strip()) + whisper_bait + await _maybe_event(conn, s, ut)
 
         if verb in ("bounty",):
             if not ut["access"]:
