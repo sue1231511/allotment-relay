@@ -931,7 +931,7 @@ async def init_db() -> None:
             "ALTER TABLE steward_undertide ADD COLUMN spouse_allow_week INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE steward_undertide ADD COLUMN guide_seen INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE steward_undertide ADD COLUMN last_rep_recover_day INTEGER NOT NULL DEFAULT 0",
-            "CREATE UNIQUE INDEX IF NOT EXISTS idx_ut_quest_dedup ON ut_bounty(poster, target_name, created_at)",
+            "DELETE FROM ut_bounty WHERE poster='__quest__' AND id NOT IN (SELECT MIN(id) FROM ut_bounty WHERE poster='__quest__' GROUP BY target_name, created_at)",
             "ALTER TABLE steward_undertide ADD COLUMN savings INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN lodge_until INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN lodge_count INTEGER NOT NULL DEFAULT 0",

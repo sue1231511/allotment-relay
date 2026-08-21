@@ -150,6 +150,12 @@ async def _ensure_daily_quests(conn: aiosqlite.Connection) -> list[dict[str, Any
         out.append(q)
     if out:
         await conn.commit()
+        # 二次验证：如因并发插入出现重复，保留最早一条
+        await conn.execute(
+            """DELETE FROM ut_bounty WHERE poster='__quest__' AND id NOT IN
+               (SELECT MIN(id) FROM ut_bounty WHERE poster='__quest__' GROUP BY target_name, created_at)"""
+        )
+        await conn.commit()
     return out
 
 
