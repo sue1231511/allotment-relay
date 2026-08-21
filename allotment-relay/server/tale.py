@@ -6,7 +6,7 @@
   deliver — 手动 tale_ops turnin 交付物品领奖
   choice  — 分支选择
 
-完成奖励会自动到账；纪念品由完成记录永久解锁，可用 tale_ops souvenirs 查看。
+阶段奖励随推进自动到账，完整探索另结通关奖励；纪念品由完成记录永久解锁，可用 tale_ops souvenirs 查看。
 
 任务目录以静态数据形式维护，启动时刷入 tale_catalog 表，便于后续热更。
 """
@@ -31,7 +31,8 @@ TALE_HELP = """tale_ops 子命令（整句写进 command）：
   abandon 任务key — 放弃
   board — 完成榜
   souvenirs — 查看已解锁的永久纪念品（不占行囊，不能出售或赠送）
-  help — 本帮助"""
+  help — 本帮助
+奖励：首个任务 6 阶段，每推进一段自动 +30 票；完整探索再 +50 票（总计 230 票），并发属性、物品和永久纪念品。"""
 
 DOMAIN_LABELS = {
     "shore": "海岸",
@@ -290,7 +291,8 @@ TALE_CATALOG: list[dict[str, Any]] = [
             },
         ],
         "rewards": {
-            "tickets": 30,
+            "stage_tickets": 30,
+            "tickets": 50,
             "standing": 5,
             "mist_wit": 5,
             "items": {"wild_mint": 2},
@@ -536,11 +538,15 @@ async def _grant_rewards(
     return lines
 
 
-def _reward_preview(rewards: dict[str, Any]) -> str:
+def _reward_preview(rewards: dict[str, Any], stage_count: int | None = None) -> str:
     """接取前可见的结算奖励；纪念品内容完成后才揭晓。"""
     parts: list[str] = []
+    stage_tickets = int(rewards.get("stage_tickets") or 0)
+    if stage_tickets:
+        multiplier = f"×{stage_count}" if stage_count else ""
+        parts.append(f"每阶段工分票+{stage_tickets}{multiplier}")
     for key, label in (
-        ("tickets", "工分票"),
+        ("tickets", "完整探索工分票"),
         ("standing", "档信"),
         ("mist_wit", "雾智"),
         ("xp", "经验"),
@@ -557,6 +563,19 @@ def _reward_preview(rewards: dict[str, Any]) -> str:
 
 def _souvenir_line(souvenir: dict[str, Any]) -> str:
     return f"{souvenir.get('emoji', '🎁')}{souvenir['name']}"
+
+
+async def _grant_stage_rewards(
+    conn: aiosqlite.Connection, steward_id: int, rewards: dict[str, Any]
+) -> list[str]:
+    tickets = int(rewards.get("stage_tickets") or 0)
+    if not tickets:
+        return []
+    await conn.execute(
+        "UPDATE stewards SET tickets=tickets+? WHERE id=?",
+        (tickets, steward_id),
+    )
+    return [f"工分票 +{tickets}"]
 
 
 async def _advance(
@@ -604,6 +623,8 @@ async def _advance(
 
     text = stage.get("text", "")
     title = stage.get("title", f"阶段 {stage_idx + 1}")
+    rewards = tale.get("rewards", {})
+    stage_reward_lines = await _grant_stage_rewards(conn, steward["id"], rewards)
 
     if new_idx >= len(stages):
         # 任务完成
@@ -621,7 +642,6 @@ async def _advance(
             """,
             (steward["id"], tale["key"], ts),
         )
-        rewards = tale.get("rewards", {})
         reward_lines = await _grant_rewards(conn, steward, rewards)
         souvenir = rewards.get("souvenir")
         if souvenir:
@@ -631,17 +651,25 @@ async def _advance(
         await db.add_chronicle(
             "tale", f"{steward['name']} 完成潮闻「{tale['title']}」", steward["id"], conn=conn
         )
+        stage_reward_text = "\n".join(stage_reward_lines) if stage_reward_lines else "无"
         reward_text = "\n".join(reward_lines) if reward_lines else "无"
         return (
             f"«{tale['title']}» 已完成\n\n"
             f"—— {title} ——\n\n{text}\n\n"
-            f"奖励：\n{reward_text}"
+            f"第 {new_idx}/{len(stages)} 阶段奖励：\n{stage_reward_text}\n\n"
+            f"完整探索额外奖励：\n{reward_text}"
         )
 
     next_stage = stages[new_idx]
+    stage_reward_note = (
+        f"\n\n第 {new_idx}/{len(stages)} 阶段奖励："
+        + " · ".join(stage_reward_lines)
+        if stage_reward_lines
+        else ""
+    )
     return (
         f"«{tale['title']}» 阶段 {new_idx + 1}/{len(stages)}\n\n"
-        f"—— {title} ——\n\n{text}\n\n"
+        f"—— {title} ——\n\n{text}{stage_reward_note}\n\n"
         f"下一阶段：{next_stage['title']}\n"
         f"{next_stage['hint']}"
     )
@@ -721,7 +749,9 @@ async def _cmd_list(conn: aiosqlite.Connection, steward: dict[str, Any]) -> str:
     else:
         for tale in available:
             lines.append(f"  {tale['key']} — {tale['title']}（{tale['intro']}）")
-            lines.append(f"    完成奖励：{_reward_preview(tale.get('rewards', {}))}")
+            lines.append(
+                f"    奖励：{_reward_preview(tale.get('rewards', {}), len(tale['stages']))}"
+            )
     if active:
         catalog = await _catalog(conn)
         lines.append("\n进行中的任务：")
@@ -758,7 +788,7 @@ async def _cmd_status(conn: aiosqlite.Connection, steward: dict[str, Any]) -> st
             f"«{tale['title']}» 阶段 {p['stage_idx'] + 1}/{len(tale['stages'])}\n"
             f"当前：{stage['title']}\n"
             f"{stage['hint']}\n"
-            f"完成奖励：{_reward_preview(tale.get('rewards', {}))}"
+            f"奖励：{_reward_preview(tale.get('rewards', {}), len(tale['stages']))}"
         )
     return "\n\n".join(lines)
 

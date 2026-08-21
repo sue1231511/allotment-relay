@@ -42,15 +42,25 @@ async def test_tale_flow() -> None:
 
     kid, sid = await _enroll(db, "tale@example.com", "探索者")
 
+    help_text = await tale.tale_ops(kid, "help")
+    assert "每推进一段自动 +30 票" in help_text, help_text
+    assert "总计 230 票" in help_text, help_text
+
     # list 能看到唯一任务
     lst = await tale.tale_ops(kid, "list")
     assert "black_box_lover" in lst, lst
     assert "黑盒与潮声" in lst, lst
-    assert "工分票+30" in lst, lst
+    assert "每阶段工分票+30×6" in lst, lst
+    assert "完整探索工分票+50" in lst, lst
     assert "永久纪念品" in lst, lst
 
     empty_souvenirs = await tale.tale_ops(kid, "souvenirs")
     assert "还是空的" in empty_souvenirs, empty_souvenirs
+
+    async with db.connect() as conn:
+        tickets_before = (await (await conn.execute(
+            "SELECT tickets FROM stewards WHERE id=?", (sid,)
+        )).fetchone())[0]
 
     # accept 后 status 显示阶段1
     accepted = await tale.tale_ops(kid, "accept black_box_lover")
@@ -67,6 +77,7 @@ async def test_tale_flow() -> None:
         )).fetchone())[0]
     exp1 = await tale.tale_ops(kid, "explore beach")
     assert "九月十七日" in exp1, exp1
+    assert "第 1/6 阶段奖励：工分票 +30" in exp1, exp1
     async with db.connect() as conn:
         energy_after = (await (await conn.execute(
             "SELECT energy FROM stewards WHERE id=?", (sid,)
@@ -105,7 +116,10 @@ async def test_tale_flow() -> None:
     finish = await tale.tale_ops(kid, "turnin")
     assert "已完成" in finish, finish
     assert "最后一封信" in finish, finish
+    assert "第 6/6 阶段奖励" in finish, finish
     assert "工分票 +30" in finish, finish
+    assert "完整探索额外奖励" in finish, finish
+    assert "工分票 +50" in finish, finish
     assert "野薄荷 x2" in finish, finish
     assert "停在六月的小猪闹钟" in finish, finish
     assert "潮闻收藏册" in finish, finish
@@ -116,6 +130,15 @@ async def test_tale_flow() -> None:
             (sid,),
         )).fetchone()
     assert row and row[0] == 2, row
+
+    async with db.connect() as conn:
+        tickets_after = (await (await conn.execute(
+            "SELECT tickets FROM stewards WHERE id=?", (sid,)
+        )).fetchone())[0]
+    assert tickets_after - tickets_before == 6 * 30 + 50, (
+        tickets_before,
+        tickets_after,
+    )
 
     souvenirs = await tale.tale_ops(kid, "纪念品")
     assert "停在六月的小猪闹钟" in souvenirs, souvenirs
