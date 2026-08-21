@@ -33,7 +33,8 @@ async def spend(
         raise ValueError(
             f"精力不足（{current}/{cap}），需要 {amount}。"
             "恢复：kitchen_ops eat 熟菜，或生吃作物/生鱼/野薄荷（安全，不会感染）；"
-            f"生肉也能垫但可能感染。steward_ops sheet 路过档口会慢慢回{nag}"
+            f"生肉也能垫但可能感染。steward_ops sheet 路过档口会慢慢回{nag}\n"
+            "实在没钱吃饭、饿得干不动活：bar_ops lodge — 酒馆包宿（管饭+工钱15，干一整天）"
         )
     await conn.execute(
         "UPDATE stewards SET energy = energy - ? WHERE id=?",

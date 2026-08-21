@@ -142,6 +142,7 @@ async def relay_manual() -> str:
         "  tide_ops boss 合力击杀潮渊之主 → 神话章鱼肉",
         "  票紧？暮/夜 bar_ops work 岗位 day|night — 洗碗到牛郎；逾期白天可补班 ×0.72",
         "  bar_ops tonight 看驻唱·特调·活动；menu/order 点酒；cheer 哄荔栀；tip 给当班员工小费",
+        "  走投无路（没钱没粮饿瘫）？bar_ops lodge — 酒馆包宿：管饭+工钱15，干一整天换口饭吃",
         "  驻唱固定 NPC：我哪有旺夫命；老板荔栀。小屋装件会改意外、出海、赶海、小费",
         "  意外/赶海/出海/上工可能致病 → visit_ops clinic treat 花钱治（桥桥大夫不赊账）",
         f"  **每 {BAR_MANDATORY_DAYS} 天必须 work 一次**，逾期锁份地/出海/行囊；诊所、吃饭、酒吧、潮下仍可用",
@@ -321,6 +322,12 @@ async def steward_sheet(key_id: int) -> str:
         lines.append("行囊:")
         for item, qty in stock.items():
             lines.append(f"  {ITEM_NAMES.get(item, item)} x{qty} · {item}")
+    # 濒死提示：钱包见底+精力见底时，把包宿的门指给他
+    if int(s.get("tickets") or 0) < 20 and int(s.get("energy") or 100) < 30:
+        lines.append(
+            "\n⚠ 混不下去了？bar_ops lodge — 酒馆包宿：管饭+工钱 15，"
+            "干一整天（当晚还要帮忙陪酒）。荔栀的后门只救人，不养人。"
+        )
     return "\n".join(lines)
 
 
