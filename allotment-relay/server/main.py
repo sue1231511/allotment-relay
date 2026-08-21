@@ -88,6 +88,11 @@ async def allotments_page(request: Request):
     return templates.TemplateResponse(request, "allotments.html", {"active": "allotments"})
 
 
+@app.get("/board", response_class=HTMLResponse)
+async def board_page(request: Request):
+    return templates.TemplateResponse(request, "board.html", {"active": "board"})
+
+
 @app.get("/bar", response_class=HTMLResponse)
 async def bar_page(request: Request):
     return templates.TemplateResponse(request, "bar.html", {"active": "bar"})
@@ -151,6 +156,12 @@ async def public_chronicle():
 @app.get("/api/public/allotments")
 async def public_allotments():
     return await db.public_allotments()
+
+
+@app.get("/api/public/board")
+async def public_board():
+    from . import ranks
+    return await ranks.public_board()
 
 
 @app.get("/api/public/contracts")

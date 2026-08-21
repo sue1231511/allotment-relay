@@ -58,7 +58,7 @@ async function load() {
     <article class="card">
       <h3>${a.name} · ${a.badge}</h3>
       <p class="muted">${a.motto || '无座右铭'}</p>
-      <p>${a.tickets} 票 · ${a.parcel_count} 份地 · ${a.greenhouse ? '温室「' + a.greenhouse_label + '」' : '无温室'}</p>
+      <p>${a.tickets} 票 · Lv${a.level || 1} ${a.title || ''} · ${a.parcel_count} 份地 · ${a.greenhouse ? '温室「' + a.greenhouse_label + '」' : '无温室'}</p>
       <p class="muted">${a.parcel_summary || parcelSummary(a.parcels)}</p>
       ${a.mascot_name ? `<p>吉祥物 ${a.mascot_name} (${a.mascot_trait})</p>` : ''}
       <p class="muted">活跃 ${fmtTime(a.last_active_at)}</p>

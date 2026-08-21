@@ -160,6 +160,12 @@ async def league_ops(command: str) -> str:
     return await multi.league_ops(_kid(), command)
 
 
+@mcp.tool(description="全服排行榜：tickets 工分票榜 / level 等级榜 / me 自己的名次 / status 两榜")
+async def board_ops(command: str = "") -> str:
+    from . import ranks
+    return await ranks.board_ops(_kid(), command)
+
+
 @mcp.tool(description="渔排养鱼：erect/label/stock/feed/harvest/status")
 async def pen_ops(command: str) -> str:
     from . import marine

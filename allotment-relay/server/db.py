@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS stewards (
     badge TEXT NOT NULL DEFAULT 'naturalist',
     portrait TEXT NOT NULL DEFAULT '',
     tickets INTEGER NOT NULL DEFAULT 0,
+    xp INTEGER NOT NULL DEFAULT 0,
     parcel_count INTEGER NOT NULL DEFAULT 3,
     greenhouse INTEGER NOT NULL DEFAULT 0,
     greenhouse_label TEXT NOT NULL DEFAULT '',
@@ -861,11 +862,24 @@ async def init_db() -> None:
             )
             """,
             "ALTER TABLE ut_mood_proposals ADD COLUMN target TEXT NOT NULL DEFAULT 'cat'",
+            "ALTER TABLE stewards ADD COLUMN xp INTEGER NOT NULL DEFAULT 0",
+            """
+            CREATE TRIGGER IF NOT EXISTS trg_steward_xp_gain
+            AFTER UPDATE OF tickets ON stewards
+            WHEN NEW.tickets > OLD.tickets
+            BEGIN
+                UPDATE stewards
+                SET xp = COALESCE(xp, 0) + (NEW.tickets - OLD.tickets)
+                WHERE id = NEW.id;
+            END
+            """,
         ):
             try:
                 await db.execute(ddl)
             except aiosqlite.OperationalError:
                 pass
+        from . import ranks as ranks_mod
+        await ranks_mod.seed_xp(db)
         await db.commit()
 
 
@@ -1049,12 +1063,12 @@ async def enroll_steward(key_id: int, name: str, motto: str, badge: str, portrai
         await db.execute(
             """
             INSERT INTO stewards (
-                key_id, name, motto, badge, portrait, tickets, parcel_count,
+                key_id, name, motto, badge, portrait, tickets, xp, parcel_count,
                 enrolled, last_active_at, created_at, energy, last_bar_shift_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
             """,
             (key_id, name, motto.strip()[:200], badge.strip()[:32], portrait.strip()[:120],
-             START_TICKETS, START_PARCELS, ts, ts, START_ENERGY, ts),
+             START_TICKETS, START_TICKETS, START_PARCELS, ts, ts, START_ENERGY, ts),
         )
         sid = (await (await db.execute("SELECT last_insert_rowid()")).fetchone())[0]
         await ensure_parcels(db, sid, START_PARCELS)
@@ -1184,6 +1198,7 @@ async def public_chronicle(limit: int = 40) -> list[dict[str, Any]]:
 async def public_allotments() -> list[dict[str, Any]]:
     from .catalog import CROPS, ITEM_NAMES
     from . import farming
+    from . import ranks as ranks_mod
     async with connect() as db:
         db.row_factory = aiosqlite.Row
         cur = await db.execute(
@@ -1213,6 +1228,7 @@ async def public_allotments() -> list[dict[str, Any]]:
                 "SELECT text FROM chronicle WHERE actor_id = ? OR target_id = ? ORDER BY created_at DESC LIMIT 1",
                 (p["id"], p["id"]),
             )).fetchone()
+            ranked = ranks_mod.attach_level(p)
             result.append({
                 "id": p["id"],
                 "name": p["name"],
@@ -1220,6 +1236,9 @@ async def public_allotments() -> list[dict[str, Any]]:
                 "badge": p["badge"],
                 "portrait": p["portrait"],
                 "tickets": p["tickets"],
+                "xp": ranked["xp"],
+                "level": ranked["level"],
+                "title": ranked["title"],
                 "parcel_count": p["parcel_count"],
                 "greenhouse": bool(p["greenhouse"]),
                 "greenhouse_label": p["greenhouse_label"],

@@ -433,6 +433,77 @@ select:focus {
   gap: 14px;
 }
 
+.board-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 8px 0 24px;
+}
+
+.board-hint {
+  margin: 0 0 14px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.board-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.board-row {
+  display: grid;
+  grid-template-columns: 2.2em 1fr auto;
+  grid-template-areas:
+    "rank who score"
+    "rank sub score";
+  column-gap: 10px;
+  align-items: baseline;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.board-row:last-child { border-bottom: 0; }
+
+.board-rank {
+  grid-area: rank;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.board-who { grid-area: who; min-width: 0; }
+
+.board-who b {
+  font-family: "Noto Serif SC", Georgia, serif;
+  font-weight: 500;
+}
+
+.board-who small {
+  display: inline-block;
+  margin-left: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.board-score {
+  grid-area: score;
+  text-align: right;
+  color: var(--sea-deep);
+  white-space: nowrap;
+}
+
+.board-sub {
+  grid-area: sub;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.board-row.is-top .board-rank,
+.board-row.is-top .board-score {
+  color: #9a7f4f;
+}
+
 .bar-menu {
   grid-column: 1 / -1;
 }
@@ -811,6 +882,8 @@ code {
   main { padding-top: 38px; }
 
   .bar-grid { grid-template-columns: 1fr; }
+
+  .board-grid { grid-template-columns: 1fr; }
 
   .bar-menu { grid-column: auto; }
 

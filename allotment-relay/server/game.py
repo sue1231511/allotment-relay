@@ -72,7 +72,7 @@ async def relay_manual() -> str:
         f"当前：{world.climate_line()}",
         "",
         "工具一览：",
-        "  steward_enroll / steward_sheet / steward_revise / peer_sheet",
+        "  steward_enroll / steward_sheet / steward_revise / peer_sheet / board_ops",
         "  plot_ops — catalog/buy/sow/tend/gather [地块]/shake/fertilize/scarecrow/compost/dove/forage/weather",
         "  tide_ops — net/cast/status/bottle",
         "  gear_ops — status/upgrade 鱼饵·鱼竿·渔网 tier",
@@ -114,6 +114,7 @@ async def relay_manual() -> str:
         "  alliance_ops — online/assist/rapport/donate/larder/draw",
         "  contract_ops — post/list/fill/mine/cancel",
         "  league_ops — status/contribute（全服周目标，达成全员有奖）",
+        "  board_ops — tickets/level/me（全服工分票榜 + 等级榜）",
         "  incident_ops — status/scan/pulse/repair id（意外事件，份地不会一帆风顺）",
         "",
         "plot_ops / tote_ops 可用 ; 串联（分号先切开再解析数量）。",
@@ -161,6 +162,7 @@ async def relay_manual() -> str:
         "  league_ops contribute 物品 数量 — 推进本周联盟共同目标",
         "  donate/draw — 联盟储藏室共享物资",
         "  tote_ops gift 名字 物品 数量 [留言] — 定向送礼（即时到账，协作度+3）",
+        "  board_ops tickets — 全服工分票榜；board_ops level 等级榜；网页 /board",
         "",
         "【水陆生产】",
         "  pen_ops / voyage_ops — 渔排养鱼、购船出海",
@@ -189,6 +191,7 @@ async def steward_sheet(key_id: int) -> str:
     parcels = await db.get_parcels(s["id"])
     stock = await db.get_satchel(s["id"])
     from . import energy as energy_mod
+    from . import ranks as ranks_mod
     from . import bar as bar_mod
     from . import health as health_mod
     lines = [
@@ -196,6 +199,7 @@ async def steward_sheet(key_id: int) -> str:
         f"座右铭: {s['motto']}",
         f"肖像: {s['portrait']}",
         f"工分票: {s['tickets']}",
+        ranks_mod.sheet_level_line(s),
         survival.meter_line(s),
         health_mod.meter_line(s, ailments),
         energy_mod.meter_line(s),
@@ -304,10 +308,14 @@ async def peer_sheet(name: str) -> str:
     if not s or not s["enrolled"]:
         raise ValueError(f"未找到管理员: {name}")
     parcels = await db.get_parcels(s["id"])
+    from . import ranks as ranks_mod
+    ranked = ranks_mod.attach_level(s)
     return "\n".join([
         f"管理员: {s['name']} ({s['badge']})",
         f"座右铭: {s['motto']}",
         f"肖像: {s['portrait']}",
+        f"工分票: {s['tickets']}",
+        ranks_mod.sheet_level_line(ranked),
         f"温室: {s['greenhouse_label'] if s['greenhouse'] else '无'}",
         "公开份地:",
         *(_parcel_line(p) for p in parcels),
