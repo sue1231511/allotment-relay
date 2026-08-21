@@ -900,7 +900,10 @@ async def undertide_ops(key_id: int, command: str) -> str:
         if verb == "help":
             body = utcopy.HELP
             if ut["access"] and not int(ut.get("guide_seen") or 0):
-                body = utcopy.GUIDE_HELP_TIP + "\n\n" + body
+                _gav = await avatar_key(conn, s["id"])
+                tip = {"K": utcopy.AVATAR_K_GUIDE_TIP, "anan": utcopy.AVATAR_AN_GUIDE_TIP}.get(
+                    _gav, utcopy.GUIDE_HELP_TIP)
+                body = tip + "\n\n" + body
             return (hits_prefix + body) if hits_prefix else body
 
         if verb == "guide":
@@ -911,6 +914,11 @@ async def undertide_ops(key_id: int, command: str) -> str:
                     "UPDATE steward_undertide SET guide_seen=1 WHERE steward_id=?", (s["id"],)
                 )
                 await conn.commit()
+            _gav = await avatar_key(conn, s["id"])
+            if _gav == "K":
+                return hits_prefix + utcopy.AVATAR_K_GUIDE_HEAD + utcopy.GUIDE_BODY
+            if _gav == "anan":
+                return hits_prefix + utcopy.AVATAR_AN_GUIDE_HEAD + utcopy.GUIDE_BODY
             return hits_prefix + utcopy.GUIDE_TEXT
 
         if verb == "well":
@@ -965,7 +973,11 @@ async def undertide_ops(key_id: int, command: str) -> str:
             tide_note = f"\n\n（{utcopy.TIDE_HINT.format(line=tide_line)}）" if tide_line else ""
             av = await avatar_key(conn, s["id"])
             head = utcopy.AVATAR_K_ENTER if av == "K" else utcopy.pick(utcopy.ENTER_POOL)
-            guide_tip = "" if int(ut.get("guide_seen") or 0) else utcopy.GUIDE_FIRST_ENTER
+            guide_tip = ""
+            if not int(ut.get("guide_seen") or 0):
+                _gav = await avatar_key(conn, s["id"])
+                guide_tip = {"K": utcopy.AVATAR_K_GUIDE_ENTER, "anan": utcopy.AVATAR_AN_GUIDE_ENTER}.get(
+                    _gav, utcopy.GUIDE_FIRST_ENTER)
             return hits_prefix + head + tide_note + event + kroom + guide_tip
 
         if verb == "status":
