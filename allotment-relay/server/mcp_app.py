@@ -103,7 +103,7 @@ async def tote_ops(command: str = "") -> str:
     return await mux.tote_bundle(_kid(), command)
 
 
-@mcp.tool(description="厨房：menu/cook/brew/eat/store/shop — 星级料理、灶台、岸畔小馆")
+@mcp.tool(description="厨房：menu/cook/brew/eat/store/shop — 星级料理（可自由组合）、灶台、岸畔小馆")
 async def kitchen_ops(command: str = "") -> str:
     return await mux.kitchen_bundle(_kid(), command)
 

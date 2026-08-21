@@ -16,6 +16,8 @@ from .catalog import (
     ITEM_NAMES,
     ITEM_PRICES,
     SEA_CATCH,
+    item_label,
+    suggested_price,
     weighted_fish_pick,
 )
 from .config import (
@@ -111,7 +113,7 @@ async def relay_manual() -> str:
         "【热带份地 · 料理 · 集市】",
         "  蓝莓/香蕉/椰子(shake)/榴莲/芒果/菠萝/木瓜/香茅/青柠/红薯 + 大蒜辣椒姜",
         "  赶海 scan 看滩 · dig 翻沙 · probe 掏洞；贝壳/沙蟹/珠砂/蚯蚓饵",
-        "  kitchen_ops 热带料理+星级；蜂箱 honey · 山羊奶酪 · 鸭蛋",
+        "  kitchen_ops 热带料理+星级；也可 cook 材料自由组合（垃圾菜几乎没价）；蜂箱 honey · 山羊奶酪 · 鸭蛋",
         "  精力限制 net/出海/赶海；kitchen_ops eat 熟菜或生鱼/作物/野薄荷回精力",
         "  施肥/稻草人/堆肥桶/挖蚯蚓饵；羊猪牛产粪→堆肥",
         "  tide_ops boss 合力击杀潮渊之主 → 神话章鱼肉",
@@ -1519,8 +1521,8 @@ async def _tote_one(s: dict, command: str) -> str:
         stock = await db.get_satchel(s["id"])
         lines = [f"工分票: {s['tickets']}"]
         for item, qty in stock.items():
-            price = ITEM_PRICES.get(item, 0)
-            name = ITEM_NAMES.get(item, item)
+            price = suggested_price(item) or ITEM_PRICES.get(item, 0)
+            name = item_label(item)
             lines.append(f"  {name} x{qty} · {item} · vend {price}/个")
         return "\n".join(lines) if stock else f"工分票: {s['tickets']}\n行囊空"
     if verb == "vend" and len(parts) >= 3:
@@ -1528,9 +1530,9 @@ async def _tote_one(s: dict, command: str) -> str:
         if not item_key:
             raise ValueError(unknown_item_message(parts[1]))
         qty = _parse_int(parts[2])
-        price = ITEM_PRICES.get(item_key)
+        price = suggested_price(item_key) or ITEM_PRICES.get(item_key, 0)
         if not price:
-            raise ValueError(f"不可出售 {ITEM_NAMES.get(item_key, item_key)}（{item_key}）")
+            raise ValueError(f"不可出售 {item_label(item_key)}（{item_key}）")
         async with db.connect() as conn:
             if not await db.take_item(conn, s["id"], item_key, qty):
                 raise ValueError(f"数量不足（需要 {item_key} x{qty}）")

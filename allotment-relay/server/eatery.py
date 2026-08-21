@@ -8,7 +8,7 @@ from typing import Any
 import aiosqlite
 
 from . import config, db, energy, flavor, survival
-from .catalog import ITEM_NAMES, ITEM_PRICES, KITCHEN_DISHES, dish_sell_price
+from .catalog import ITEM_PRICES, dish_energy, item_label, suggested_price
 
 
 def _day_id() -> int:
@@ -16,26 +16,18 @@ def _day_id() -> int:
 
 
 def _item_price(item: str) -> int:
-    if item.startswith("dish_") and "_s" in item:
-        base, star_s = item.rsplit("_s", 1)
-        key = base.replace("dish_", "", 1)
-        if star_s.isdigit() and key in KITCHEN_DISHES:
-            return dish_sell_price(key, int(star_s))
+    price = suggested_price(item)
+    if price:
+        return price
     if item.startswith("meal_"):
         return ITEM_PRICES.get(item, 18)
     return ITEM_PRICES.get(item, 0)
 
 
 def _eat_gain(item: str) -> int:
-    if item.startswith("dish_") and "_s" in item:
-        base, star_s = item.rsplit("_s", 1)
-        key = base.replace("dish_", "", 1)
-        if star_s.isdigit() and key in KITCHEN_DISHES:
-            return KITCHEN_DISHES[key]["energy"] + int(star_s) * 2
-    if item.startswith("dish_"):
-        key = item.replace("dish_", "", 1)
-        if key in KITCHEN_DISHES:
-            return KITCHEN_DISHES[key]["energy"]
+    gain = dish_energy(item)
+    if gain is not None:
+        return gain
     if item.startswith("meal_"):
         return 12
     return 15
@@ -51,7 +43,7 @@ async def _menu_rows(conn: aiosqlite.Connection, shop_id: int) -> list[dict[str,
 
 
 def _menu_line(row: dict[str, Any]) -> str:
-    return f"  #{row['id']} {ITEM_NAMES.get(row['item'], row['item'])} — {row['price']} 票"
+    return f"  #{row['id']} {item_label(row['item'])} — {row['price']} 票"
 
 
 async def eatery_command(s: dict[str, Any], command: str) -> str:
@@ -156,7 +148,7 @@ async def eatery_command(s: dict[str, Any], command: str) -> str:
                 (s["id"], item, price, db.now()),
             )
             await conn.commit()
-        return f"上架 {ITEM_NAMES.get(item, item)} — {price} 票"
+        return f"上架 {item_label(item)} — {price} 票"
 
     if verb == "unstock" and len(parts) >= 2:
         try:
@@ -174,7 +166,7 @@ async def eatery_command(s: dict[str, Any], command: str) -> str:
             await db.add_item(conn, s["id"], row["item"], 1)
             await conn.execute("DELETE FROM eatery_menu WHERE id=?", (mid,))
             await conn.commit()
-        return f"撤下 {ITEM_NAMES.get(row['item'], row['item'])}，回行囊"
+        return f"撤下 {item_label(row['item'])}，回行囊"
 
     if verb == "menu":
         if not s.get("eatery_open"):
@@ -259,7 +251,7 @@ async def _dine(guest: dict[str, Any], shop_name: str, item_ref: str | None) -> 
             (shop["id"], guest["id"], picked["item"], price, note, db.now()),
         )
         await conn.commit()
-    dish = ITEM_NAMES.get(picked["item"], picked["item"])
+    dish = item_label(picked["item"])
     label = shop.get("eatery_label") or f"{shop['name']}的馆"
     msg = (
         f"在「{label}」吃了 {dish}（-{price} 票，精力 +{restored}）\n{note}"
@@ -295,7 +287,7 @@ async def public_eatery_snapshot() -> dict[str, Any]:
                     {
                         "id": m["id"],
                         "item": m["item"],
-                        "name": ITEM_NAMES.get(m["item"], m["item"]),
+                        "name": item_label(m["item"]),
                         "price": m["price"],
                     }
                     for m in menu
@@ -321,7 +313,7 @@ async def public_eatery_snapshot() -> dict[str, Any]:
                 "patron": r["patron_name"],
                 "shop": r["eatery_label"] or r["shop_name"],
                 "host": r["shop_name"],
-                "dish": ITEM_NAMES.get(r["item"], r["item"]),
+                "dish": item_label(r["item"]),
                 "cost": r["price"],
                 "note": r["note"],
                 "created_at": r["created_at"],

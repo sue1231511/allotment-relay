@@ -14,9 +14,14 @@ from .catalog import (
     ITEM_PRICES,
     KITCHEN_DISHES,
     dish_display_name,
+    dish_energy,
     dish_item,
     dish_sell_price,
+    item_label,
+    parse_mix_item,
+    register_mix_item,
     resolve_item_key,
+    suggested_price,
     unknown_item_message,
 )
 from .game import require_steward
@@ -73,6 +78,67 @@ async def _mark_cook(conn: aiosqlite.Connection, steward_id: int) -> None:
     )
 
 
+async def _cook_named(s: dict[str, Any], dish_key: str) -> str:
+    meta = KITCHEN_DISHES[dish_key]
+    async with db.connect() as conn:
+        if not await _can_cook(conn, s["id"]):
+            raise ValueError(f"今日烹饪上限 {config.KITCHEN_COOK_DAILY}")
+        for ing in meta["ings"]:
+            if not await db.take_item(conn, s["id"], ing, 1):
+                raise ValueError(f"缺少 {ITEM_NAMES.get(ing, ing)}")
+        stars = _roll_stars(s, dish_key)
+        item = dish_item(dish_key, stars)
+        await db.add_item(conn, s["id"], item, 1)
+        await _mark_cook(conn, s["id"])
+        await survival.bump(conn, s["id"], satiety=6, mist_wit=4)
+        await conn.commit()
+    sell = dish_sell_price(dish_key, stars)
+    msg = (
+        f"出菜 {dish_display_name(dish_key, stars)} "
+        f"（建议 vend {sell} 票 · +{meta['energy']}精力若 eat）"
+    )
+    msg += flavor.maybe_suffix([
+        "灶台：这锅有灵魂",
+        "姜姨点头：够味",
+        "这是定点菜谱，星级照旧。",
+    ])
+    await db.add_chronicle("kitchen", f"{s['name']} 做了 {meta['name']} {stars}星", s["id"])
+    return msg
+
+
+async def _cook_mix(s: dict[str, Any], ings: list[str]) -> str:
+    from . import cook_mix
+    for ing in ings:
+        if cook_mix.classify(ing) == "refuse":
+            raise ValueError("活物、工具、装饰、熟菜不能下锅")
+    async with db.connect() as conn:
+        if not await _can_cook(conn, s["id"]):
+            raise ValueError(f"今日烹饪上限 {config.KITCHEN_COOK_DAILY}")
+        for ing in ings:
+            if not await db.take_item(conn, s["id"], ing, 1):
+                raise ValueError(f"缺少 {ITEM_NAMES.get(ing, ing)}")
+        result = cook_mix.score_mix(ings, s)
+        await db.add_item(conn, s["id"], result.item, 1)
+        await _mark_cook(conn, s["id"])
+        sat = 3 if result.grade == "j" else 6
+        await survival.bump(conn, s["id"], satiety=sat, mist_wit=2)
+        await conn.commit()
+    used = " + ".join(ITEM_NAMES.get(i, i) for i in ings)
+    junk_note = "垃圾菜，卖不了几个钱。" if result.grade == "j" else f"按星级可卖。"
+    msg = (
+        f"出菜 {result.display}（{result.item}）\n"
+        f"材料 {used}\n"
+        f"{result.comment}\n"
+        f"建议 vend {result.sell} 票 · eat +{result.energy}精力。{junk_note}"
+    )
+    await db.add_chronicle(
+        "kitchen",
+        f"{s['name']} 即兴做了 {result.display}（{result.stars}星）",
+        s["id"],
+    )
+    return msg
+
+
 async def kitchen_ops(key_id: int, command: str) -> str:
     parts = command.strip().split()
     verb = parts[0].lower() if parts else "menu"
@@ -81,7 +147,8 @@ async def kitchen_ops(key_id: int, command: str) -> str:
 
     if verb in ("menu", "status"):
         lines = [
-            "厨房菜单（cook 菜名 / brew 材料 / eat 菜或生食）:",
+            "厨房菜单（cook 菜名 / cook 材料1 材料2 … / brew 材料 / eat 菜或生食）:",
+            "定点菜谱如下。也可以 cook 材料自由组合（2~5 样），按星级可卖；垃圾菜几乎没价。",
             "生鱼/作物/野薄荷也可 eat，回少量精力。",
         ]
         for key, meta in KITCHEN_DISHES.items():
@@ -102,34 +169,29 @@ async def kitchen_ops(key_id: int, command: str) -> str:
         return "\n".join(lines)
 
     if verb == "cook" and len(parts) >= 2:
-        dish_key = parts[1].lower()
-        if dish_key not in KITCHEN_DISHES:
-            raise ValueError(f"未知菜品，kitchen_ops menu 查看")
-        meta = KITCHEN_DISHES[dish_key]
-        async with db.connect() as conn:
-            if not await _can_cook(conn, s["id"]):
-                raise ValueError(f"今日烹饪上限 {config.KITCHEN_COOK_DAILY}")
-            for ing in meta["ings"]:
-                if not await db.take_item(conn, s["id"], ing, 1):
-                    raise ValueError(f"缺少 {ITEM_NAMES.get(ing, ing)}")
-            stars = _roll_stars(s, dish_key)
-            item = dish_item(dish_key, stars)
-            await db.add_item(conn, s["id"], item, 1)
-            await _mark_cook(conn, s["id"])
-            await survival.bump(conn, s["id"], satiety=6, mist_wit=4)
-            await conn.commit()
-        sell = dish_sell_price(dish_key, stars)
-        msg = (
-            f"出菜 {dish_display_name(dish_key, stars)} "
-            f"（建议 vend {sell} 票 · +{meta['energy']}精力若 eat）"
-        )
-        msg += flavor.maybe_suffix([
-            "灶台：这锅有灵魂",
-            "姜姨点头：够味",
-            "随机组装成功，别问配方",
-        ])
-        await db.add_chronicle("kitchen", f"{s['name']} 做了 {meta['name']} {stars}星", s["id"])
-        return msg
+        tokens = parts[1:]
+        from . import cook_mix
+        named = cook_mix.resolve_dish_key(tokens[0]) if len(tokens) == 1 else None
+        if named:
+            return await _cook_named(s, named)
+        ings: list[str] = []
+        for tok in tokens:
+            key = resolve_item_key(tok) or cook_mix.resolve_dish_key(tok)
+            if key and key in KITCHEN_DISHES and len(tokens) == 1:
+                return await _cook_named(s, key)
+            item = resolve_item_key(tok)
+            if not item:
+                raise ValueError(unknown_item_message(tok))
+            ings.append(item)
+        if len(ings) < 2:
+            raise ValueError(
+                "自由组合至少 2 样材料。定点菜：kitchen_ops cook 菜名；"
+                "乱搭：cook 材料1 材料2"
+            )
+        matched = cook_mix.match_named_recipe(ings)
+        if matched:
+            return await _cook_named(s, matched)
+        return await _cook_mix(s, ings)
 
     if verb == "eat" and len(parts) >= 2:
         item = resolve_item_key(parts[1]) or parts[1]
@@ -139,8 +201,10 @@ async def kitchen_ops(key_id: int, command: str) -> str:
                     f"行囊里没有 {ITEM_NAMES.get(item, item)}（{item}）"
                 )
             gain = 15
-            dish_key = None
-            if item.startswith("dish_") and "_s" in item:
+            mix_e = dish_energy(item)
+            if mix_e is not None:
+                gain = mix_e
+            elif item.startswith("dish_") and "_s" in item:
                 base, star_s = item.rsplit("_s", 1)
                 dish_key = base.replace("dish_", "", 1)
                 if star_s.isdigit() and dish_key in KITCHEN_DISHES:
@@ -169,7 +233,7 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             restored = await energy.restore(conn, s["id"], gain)
             await survival.bump(conn, s["id"], satiety=min(20, gain // 2 + 8))
             await conn.commit()
-        return f"吃了 {ITEM_NAMES.get(item, item)}（{item}），精力 +{restored}"
+        return f"吃了 {item_label(item)}（{item}），精力 +{restored}"
 
     if verb == "store" and len(parts) >= 2:
         item = parts[1]
@@ -199,7 +263,7 @@ async def kitchen_ops(key_id: int, command: str) -> str:
                 (s["id"], dish_key, stars, db.now()),
             )
             await conn.commit()
-        return f"已入冰箱 {ITEM_NAMES.get(item, item)}"
+        return f"已入冰箱 {item_label(item)}"
 
     if verb == "fridge":
         async with db.connect() as conn:
@@ -249,21 +313,18 @@ async def kitchen_ops(key_id: int, command: str) -> str:
                     (picked["id"],),
                 )
             await conn.commit()
-        return f"取出 {ITEM_NAMES.get(item, item)}"
+        return f"取出 {item_label(item)}"
 
     if verb == "vend" and len(parts) >= 2:
         item = parts[1]
         async with db.connect() as conn:
             if not await db.take_item(conn, s["id"], item, 1):
                 raise ValueError("行囊里没有这道菜")
-            price = 0
-            if item.startswith("dish_") and "_s" in item:
-                base, star_s = item.rsplit("_s", 1)
-                key = base.replace("dish_", "", 1)
-                if star_s.isdigit() and key in KITCHEN_DISHES:
-                    price = dish_sell_price(key, int(star_s))
+            price = suggested_price(item)
+            if parse_mix_item(item):
+                register_mix_item(item)
+                price = suggested_price(item)
             if not price:
-                from .catalog import ITEM_PRICES
                 price = ITEM_PRICES.get(item, 0)
             if not price:
                 raise ValueError("这道菜卖不出价")
@@ -272,7 +333,7 @@ async def kitchen_ops(key_id: int, command: str) -> str:
                 (price, s["id"]),
             )
             await conn.commit()
-        return f"出售 {ITEM_NAMES.get(item, item)} +{price} 票"
+        return f"出售 {item_label(item)} +{price} 票"
 
     if verb in ("shop", "stall", "eatery"):
         rest = " ".join(parts[1:]) if len(parts) > 1 else "board"

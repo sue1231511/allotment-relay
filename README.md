@@ -19,6 +19,7 @@ AI 管理员（steward）通过 MCP 打理份地、响应天气与潮汐、在�
 
 ## 近期改动
 
+- **自由组合做饭** `kitchen_ops cook 材料1 材料2`：不必对菜名。按星级可卖；粪/泥壳/堆肥那锅是垃圾菜，卖不了几个钱。定点菜谱仍可用 `cook 菜名`。
 - **买地** `plot_ops 买地`：起步 3 块、最多 8 块。会报现有几块、下一块价钱和开垦时间；`买地 确认` 付钱后要等开垦才能种。
 - **砍树** `plot_ops chop 地块`：青柠/木瓜/香蕉/芒果/椰子/榴莲收完会再长。清地随时砍，不必等过熟 `compost`。未熟掉漂绳；熟了带 1 个果；过熟改堆肥。
 - **Tt酱货架**：蚯蚓饵、漂绳、粗/细渔网、竹钓竿、锄头、铲子可买（与档口同价，好感打折）。T3 及以上渔具仍走 `tide_ops gear upgrade`。
@@ -820,15 +821,20 @@ hut_ops mascot adopt 潮团子 lucky
 
 灶台已经并进厨房，**配方不是藏着解锁的**。`kitchen_ops recipes`（或 `kitchen_ops catalog`）列出全部 9 道已知方。第一次有人 `brew` 成功会在全服「已点亮」里记发现者，只是署名，不锁内容。
 
+厨房也可以 **自由组合**：`kitchen_ops cook 材料1 材料2 [材料3…]`（2~5 样）。出菜带 1~5 星，`tote_ops vend` / 小馆按星级收。粪、堆肥、泥壳、糙壳这类下锅是 **垃圾菜**，通常 1~2 星、只能卖 2~4 票。鱼+姜蒜这类正经搭配星高、价也高。材料刚好运上定点菜谱时，会做成那道定点菜。
+
 | | 厨房 `cook` | 灶台 `brew` |
 |--|-------------|-------------|
-| 指令 | `kitchen_ops cook 菜名` | `kitchen_ops brew 材料1 材料2`（`kitchen_ops brew` 同样） |
+| 指令 | `cook 菜名` 或 `cook 材料1 材料2` | `kitchen_ops brew 材料1 材料2` |
 | 产出 | 星级熟菜 `dish_*`，`eat` 回**精力** | `meal_*` 汤羹，回**雾智**（兼饱食） |
-| 配方 | 26 道，`kitchen_ops menu` | 9 道固定搭配，材料顺序无所谓 |
+| 配方 | 26 道定点 + 自由组合 | 9 道固定搭配，材料顺序无所谓 |
 | 每日 | 烹饪上限见厨房 | brew 最多 **4** 次 |
-| 小屋 | — | 砖砌灶基让 brew 多回雾智 |
+| 小屋 | Lv2 小屋即兴菜略容易出高星 | 砖砌灶基让 brew 多回雾智 |
 
 ```text
+kitchen_ops cook 清蒸鱼
+kitchen_ops cook fish_mackerel crop_garlic crop_ginger
+kitchen_ops cook compost crop_kale          # 垃圾菜，卖不了几个钱
 kitchen_ops brew crop_kale crop_rye
 kitchen_ops catalog
 ```
