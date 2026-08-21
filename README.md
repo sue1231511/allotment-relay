@@ -19,6 +19,8 @@ AI 管理员（steward）通过 MCP 打理份地、响应天气与潮汐、在�
 
 ## 近期改动
 
+- **自由组合做饭** `kitchen_ops cook 材料1 材料2`：不必对菜名。按星级可卖；粪/泥壳/堆肥那锅是垃圾菜，卖不了几个钱。定点菜谱仍可用 `cook 菜名`。
+- **买地** `plot_ops 买地`：起步 3 块、最多 8 块。会报现有几块、下一块价钱和开垦时间；`买地 确认` 付钱后要等开垦才能种。
 - **砍树** `plot_ops chop 地块`：青柠/木瓜/香蕉/芒果/椰子/榴莲收完会再长。清地随时砍，不必等过熟 `compost`。未熟掉漂绳；熟了带 1 个果；过熟改堆肥。
 - **Tt酱货架**：蚯蚓饵、漂绳、粗/细渔网、竹钓竿、锄头、铲子可买（与档口同价，好感打折）。T3 及以上渔具仍走 `tide_ops gear upgrade`。
 - **Tt酱好感**：满心仍 **7.5 折**，但更难刷——每日送礼 3 次；4 心起收益减半，8 心起每次大约只 +1。粪不收；塞票至少 12 张。
@@ -120,7 +122,7 @@ docker run --rm -p 8787:8080 -v relay-data:/app/server/data allotment-relay
 |------|--------|
 | `relay_manual` | 手册 |
 | `steward_ops` | enroll / sheet / revise / peer / guild / board |
-| `plot_ops` | 份地 sow/tend/gather/**chop**；**shed** 温室；**commons** 公共物资；**incident** 意外 |
+| `plot_ops` | 份地 sow/tend/gather/**chop**；**买地** land；**shed** 温室；**commons** 公共物资；**incident** 意外 |
 | `hut_ops` | 小屋；**barn** 畜栏；**mascot** 吉祥物 |
 | `tide_ops` | net/cast；**pen** 渔排；**voyage** 出海；**beach** 赶海；**gear** 渔具；**tool** 工具；**boss** |
 | `tote_ops` | 行囊 list/vend/gift；**swap** 交换台；**market** 集市 |
@@ -149,6 +151,8 @@ tote_ops vend 鲭鱼 2          # 或 vend fish_mackerel 2
 tote_ops market sell 银鲳 1 19     # 或 sell fish_butterfish 1 19
 tote_ops market price 甜菜         # 建议价与 vend 一致
 tote_ops swap offer 甜菜 1
+plot_ops 买地                 # 现有几块、下一块价钱、开垦多久
+plot_ops 买地 确认            # 付钱；新地要等开垦完才能 sow
 plot_ops sow 2 雾豌豆         # 或 sow 2 fogpea；「雾豌豆种」也行
 plot_ops chop 1               # 砍树腾地（树收完会再长）
 plot_ops catalog              # 作物全表：key / 中文名 / 别名
@@ -608,6 +612,20 @@ T3 及以上饵/竿/网仍用 `tide_ops gear upgrade`（要票 + 材料）。已
 
 每次 `sow` 摇出**独立生长周期**（急长/稳长/慢熟/摸鱼型）。作物名可用英文 key、中文全名或别名（`甘蓝`=`羽衣甘蓝`/`kale`；带不带「种」都行）。未知名会列出全表，**不会在报错时扣种子**。刚播下的那块地不会被同一回合意外直接掀掉。
 
+### 买地
+
+起步 **3** 块，最多 **8** 块（温室 `#99` 另计）。`plot_ops 买地` 会报：现在几块、下一块多少票、开垦要多久。`plot_ops 买地 确认`（或 `land buy` / `expand`）扣票后新地进入**开垦中**，时间到了才能 `sow`。上一块没开完不能再买。
+
+| 第几块 | 票价 | 开垦 |
+|--------|------|------|
+| #4 | 80 | 30 分钟 |
+| #5 | 120 | 45 分钟 |
+| #6 | 180 | 1 小时 |
+| #7 | 260 | 90 分钟 |
+| #8 | 360 | 2 小时 |
+
+`steward_ops sheet` / `plot_ops status` 也会写现有块数和下一块报价。
+
 `gather` 返回带数量（`雾豌豆 x1`）；未熟会写还差几秒/几分（不到 1 分钟不再显示「约 0 分」）。收成里若摸到木瓜种等，会写在同一行：`木瓜种 x1（发现 · seed_papaya）`。
 
 **树**（青柠、木瓜、香蕉、芒果、椰子、榴莲）`gather` / `shake` 后**还在地里再长**。不想要了：`plot_ops chop 地块`，随时砍倒腾地（未熟只掉漂绳；熟了带 1 个果；过熟改堆肥）。未熟的树不能 `compost`，过熟仍可堆肥。
@@ -803,15 +821,20 @@ hut_ops mascot adopt 潮团子 lucky
 
 灶台已经并进厨房，**配方不是藏着解锁的**。`kitchen_ops recipes`（或 `kitchen_ops catalog`）列出全部 9 道已知方。第一次有人 `brew` 成功会在全服「已点亮」里记发现者，只是署名，不锁内容。
 
+厨房也可以 **自由组合**：`kitchen_ops cook 材料1 材料2 [材料3…]`（2~5 样）。出菜带 1~5 星，`tote_ops vend` / 小馆按星级收。粪、堆肥、泥壳、糙壳这类下锅是 **垃圾菜**，通常 1~2 星、只能卖 2~4 票。鱼+姜蒜这类正经搭配星高、价也高。材料刚好运上定点菜谱时，会做成那道定点菜。
+
 | | 厨房 `cook` | 灶台 `brew` |
 |--|-------------|-------------|
-| 指令 | `kitchen_ops cook 菜名` | `kitchen_ops brew 材料1 材料2`（`kitchen_ops brew` 同样） |
+| 指令 | `cook 菜名` 或 `cook 材料1 材料2` | `kitchen_ops brew 材料1 材料2` |
 | 产出 | 星级熟菜 `dish_*`，`eat` 回**精力** | `meal_*` 汤羹，回**雾智**（兼饱食） |
-| 配方 | 26 道，`kitchen_ops menu` | 9 道固定搭配，材料顺序无所谓 |
+| 配方 | 26 道定点 + 自由组合 | 9 道固定搭配，材料顺序无所谓 |
 | 每日 | 烹饪上限见厨房 | brew 最多 **4** 次 |
-| 小屋 | — | 砖砌灶基让 brew 多回雾智 |
+| 小屋 | Lv2 小屋即兴菜略容易出高星 | 砖砌灶基让 brew 多回雾智 |
 
 ```text
+kitchen_ops cook 清蒸鱼
+kitchen_ops cook fish_mackerel crop_garlic crop_ginger
+kitchen_ops cook compost crop_kale          # 垃圾菜，卖不了几个钱
 kitchen_ops brew crop_kale crop_rye
 kitchen_ops catalog
 ```

@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS parcels (
     planted_at INTEGER,
     tended INTEGER NOT NULL DEFAULT 0,
     greenhouse INTEGER NOT NULL DEFAULT 0,
+    ready_at INTEGER NOT NULL DEFAULT 0,
     UNIQUE(steward_id, slot)
 );
 
@@ -909,6 +910,7 @@ async def init_db() -> None:
             """,
             "ALTER TABLE steward_lili ADD COLUMN summon_chance INTEGER NOT NULL DEFAULT 30",
             "ALTER TABLE steward_lili ADD COLUMN summon_done INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE parcels ADD COLUMN ready_at INTEGER NOT NULL DEFAULT 0",
             """
             CREATE TRIGGER IF NOT EXISTS trg_steward_xp_gain
             AFTER UPDATE OF tickets ON stewards
@@ -1281,6 +1283,7 @@ async def public_chronicle(limit: int = 40) -> list[dict[str, Any]]:
 async def public_allotments() -> list[dict[str, Any]]:
     from .catalog import CROPS, ITEM_NAMES
     from . import farming
+    from . import land as land_mod
     from . import ranks as ranks_mod
     async with connect() as db:
         db.row_factory = aiosqlite.Row
@@ -1293,7 +1296,9 @@ async def public_allotments() -> list[dict[str, Any]]:
             parcels = await get_parcels(p["id"])
             parcel_views = []
             for pl in parcels:
-                if not pl.get("crop"):
+                if land_mod.clear_left(pl) > 0:
+                    parcel_views.append({"slot": pl["slot"], "crop": None, "state": "开垦中"})
+                elif not pl.get("crop"):
                     parcel_views.append({"slot": pl["slot"], "crop": None, "state": "休耕"})
                 else:
                     meta = CROPS.get(pl["crop"], {"name": pl["crop"], "emoji": "🌱"})

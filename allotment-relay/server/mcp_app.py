@@ -83,7 +83,7 @@ async def steward_ops(
     return await mux.steward_ops(_kid(), command, name, motto, badge, portrait)
 
 
-@mcp.tool(description="份地：sow/tend/gather/chop/forage/weather；温室 shed；公共物资 commons；意外 incident/repair")
+@mcp.tool(description="份地：sow/tend/gather/chop；买地 land；温室 shed；公共物资 commons；意外 incident/repair")
 async def plot_ops(command: str = "") -> str:
     return await mux.plot_bundle(_kid(), command)
 
@@ -103,7 +103,7 @@ async def tote_ops(command: str = "") -> str:
     return await mux.tote_bundle(_kid(), command)
 
 
-@mcp.tool(description="厨房：menu/cook/brew/eat/store/shop — 星级料理、灶台、岸畔小馆")
+@mcp.tool(description="厨房：menu/cook/brew/eat/store/shop — 星级料理（可自由组合）、灶台、岸畔小馆")
 async def kitchen_ops(command: str = "") -> str:
     return await mux.kitchen_bundle(_kid(), command)
 

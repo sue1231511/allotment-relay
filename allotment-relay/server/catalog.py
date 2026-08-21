@@ -1,6 +1,9 @@
 # 份地作物 — 偏北欧/沿海/湿地，与常见农场游戏区分
 # grow=基准分钟（farming.py base_grow_seconds 内 ×60 转秒）；spread 控制播种时随机生长窗口
 # 梯度：基础蔬菜 ~1h → 普通 1.5~2.5h → 浆果/谷物 2.5~4h → 树 4~5.5h → 稀有封顶 6h
+from __future__ import annotations
+
+import re
 CROPS = {
     # ── 基础蔬菜（1h 左右）──
     "kale":        {"name": "羽衣甘蓝", "emoji": "🥬", "seed_price": 7,  "sell": 16, "grow":  60, "spread": 0.30, "tags": ["leaf"], "aliases": ["甘蓝", "羽衣"]},
@@ -89,6 +92,9 @@ def resolve_item_key(token: str, *, prefer: str = "any") -> str | None:
         return None
 
     norm = raw.lower().replace(" ", "_")
+    if parse_mix_item(norm):
+        register_mix_item(norm)
+        return norm
     if norm in ITEM_PRICES or norm in ITEM_NAMES:
         return norm
 
@@ -606,6 +612,7 @@ NPC_FIXED = [
         "青木瓜沙拉要够生，够辣",
         "赤潮周不新鲜的别往我厨房拿。",
         "神话章鱼肉处理不好会腥——第一次吃别一个人吃。",
+        "随便扔进锅也行。星级看搭配，粪和泥壳那锅卖不了几个钱。",
     ]},
     {"key": "market_fan", "name": "集市范姐", "lines": [
         "缺啥上 market 挂单", "建议价仅供参考，别跟票置气",
@@ -855,7 +862,103 @@ def dish_item(key: str, stars: int = 3) -> str:
     return f"dish_{key}_s{max(1, min(5, stars))}"
 
 
+MIX_ITEM_RE = re.compile(r"^dish_mix_([jogx])([0-9])_([0-9a-f]{8})_s([1-5])$")
+
+MIX_TITLES: dict[str, list[tuple[str, str]]] = {
+    "j": [
+        ("🥣", "糊涂锅"), ("🫕", "将就烩"), ("🥫", "灶台事故"),
+        ("🍲", "说不上来的一盘"), ("🍛", "灰烬糊"), ("🥘", "将就糊"),
+    ],
+    "o": [
+        ("🍲", "份地乱炖"), ("🥗", "随手炒"), ("🥘", "田园便饭"),
+        ("🍳", "凑合一盘"), ("🍛", "灶台即兴"),
+    ],
+    "g": [
+        ("🍽️", "即兴好菜"), ("🦐", "手打一锅"), ("🥘", "入味拼盘"),
+        ("🥗", "时令炒"), ("🍲", "姜姨点头款"),
+    ],
+    "x": [
+        ("✨", "神来一锅"), ("🦞", "压轴菜"), ("⭐", "今日灶台"),
+        ("💎", "碰巧神作"),
+    ],
+}
+
+# 垃圾菜封顶几票；正经搭配按星级+材料档
+MIX_SELL = {
+    "j": {1: 2, 2: 4, 3: 5, 4: 6, 5: 7},
+    "o": {1: 8, 2: 12, 3: 18, 4: 24, 5: 32},
+    "g": {1: 16, 2: 22, 3: 34, 4: 48, 5: 64},
+    "x": {1: 28, 2: 40, 3: 58, 4: 82, 5: 110},
+}
+
+
+def parse_mix_item(item: str) -> tuple[str, int, str, int] | None:
+    m = MIX_ITEM_RE.match(item or "")
+    if not m:
+        return None
+    return m.group(1), int(m.group(2)), m.group(3), int(m.group(4))
+
+
+def mix_item_key(grade: str, tier: int, sig: str, stars: int) -> str:
+    return f"dish_mix_{grade}{int(tier)}_{sig}_s{max(1, min(5, stars))}"
+
+
+def mix_title(grade: str, sig: str) -> tuple[str, str]:
+    titles = MIX_TITLES.get(grade) or MIX_TITLES["o"]
+    idx = int(sig[:2], 16) % len(titles)
+    return titles[idx]
+
+
+def mix_display_name(grade: str, sig: str, stars: int) -> str:
+    emoji, name = mix_title(grade, sig)
+    return f"{emoji}{name}{'★' * stars}"
+
+
+def mix_sell_price(grade: str, tier: int, stars: int) -> int:
+    base = MIX_SELL.get(grade, MIX_SELL["o"]).get(stars, 8)
+    if grade == "j":
+        return base
+    return base + max(0, int(tier)) * 8
+
+
+def mix_energy(grade: str, stars: int) -> int:
+    if grade == "j":
+        return 4 + stars
+    if grade == "o":
+        return 8 + stars * 2
+    if grade == "g":
+        return 12 + stars * 2
+    return 16 + stars * 3
+
+
+def register_mix_item(item: str) -> str:
+    parsed = parse_mix_item(item)
+    if not parsed:
+        return item
+    grade, tier, sig, stars = parsed
+    ITEM_NAMES[item] = mix_display_name(grade, sig, stars)
+    ITEM_PRICES[item] = mix_sell_price(grade, tier, stars)
+    return item
+
+
+def item_label(item: str) -> str:
+    if item in ITEM_NAMES:
+        return ITEM_NAMES[item]
+    parsed = parse_mix_item(item)
+    if parsed:
+        grade, _tier, sig, stars = parsed
+        return mix_display_name(grade, sig, stars)
+    return item
+
+
 def dish_display_name(key: str, stars: int) -> str:
+    if key.startswith("mix_"):
+        dummy = dish_item(key, stars)
+        parsed = parse_mix_item(dummy)
+        if parsed:
+            grade, _tier, sig, st = parsed
+            return mix_display_name(grade, sig, st)
+        return f"即兴菜{'★' * stars}"
     meta = KITCHEN_DISHES[key]
     suffix = "★" * stars
     return f"{meta['emoji']}{meta['name']}{suffix}"
@@ -868,13 +971,41 @@ def register_dish_item(key: str, stars: int) -> None:
 
 
 def dish_sell_price(key: str, stars: int) -> int:
+    if key.startswith("mix_"):
+        parsed = parse_mix_item(dish_item(key, stars))
+        if parsed:
+            grade, tier, _sig, st = parsed
+            return mix_sell_price(grade, tier, st)
+        return 2
     base = KITCHEN_DISHES[key]["base_sell"]
     mult = {1: 0.6, 2: 0.85, 3: 1.0, 4: 1.35, 5: 1.8}.get(stars, 1.0)
     return max(8, int(base * mult))
 
 
+def dish_energy(item: str) -> int | None:
+    parsed = parse_mix_item(item)
+    if parsed:
+        grade, _tier, _sig, stars = parsed
+        return mix_energy(grade, stars)
+    if item.startswith("dish_") and "_s" in item:
+        base, star_s = item.rsplit("_s", 1)
+        if star_s.isdigit():
+            dish_key = base.replace("dish_", "", 1)
+            if dish_key in KITCHEN_DISHES:
+                return KITCHEN_DISHES[dish_key]["energy"] + int(star_s) * 2
+    if item.startswith("dish_"):
+        dish_key = item.replace("dish_", "", 1)
+        if dish_key in KITCHEN_DISHES:
+            return KITCHEN_DISHES[dish_key]["energy"]
+    return None
+
+
 def suggested_price(item: str) -> int:
     key = resolve_item_key(item) or item
+    parsed = parse_mix_item(key)
+    if parsed:
+        grade, tier, _sig, stars = parsed
+        return mix_sell_price(grade, tier, stars)
     if key.startswith("dish_") and "_s" in key:
         base, star_s = key.rsplit("_s", 1)
         if star_s.isdigit():

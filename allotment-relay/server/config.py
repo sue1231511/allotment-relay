@@ -66,7 +66,9 @@ PEN_ERECT_COST = 140
 PEN_EXPAND_COST = 120
 MAX_FISH_PENS = 2
 MAX_PARCELS = 8
-PARCEL_EXPAND_COSTS = [80, 120, 180, 260]
+# 第 4～8 块：票价；开垦时长（秒）30 / 45 / 60 / 90 / 120 分钟
+PARCEL_EXPAND_COSTS = [80, 120, 180, 260, 360]
+PARCEL_CLEAR_SECONDS = [1800, 2700, 3600, 5400, 7200]
 
 BOATS = {
     "skiff": {"name": "小舢板", "cost": 85, "rank": 1, "repair": 12, "cargo": 2},
