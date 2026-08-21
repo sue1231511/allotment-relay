@@ -165,7 +165,7 @@ async def _scrump_victim(
             action,
             None,
             steward["id"],
-            f"{thief} 逾篱摘了 {steward['name']} 的 {meta['name']}",
+            f"{thief} 逾篱摘了 {steward['name']} 的 {crop_name}",
             db.now(),
         ),
     )
@@ -685,7 +685,7 @@ async def roll_after_action(
         )
         iid = cur.lastrowid
         already = -int(ledger.get("ticket_delta") or 0) if int(ledger.get("ticket_delta") or 0) < 0 else 0
-        hint = f"incident_ops repair {iid}"
+        hint = f"plot_ops repair {iid}"
         if event.repair_item:
             hint += (
                 f"（处理另需 {event.repair_tickets} 票 / "
@@ -848,7 +848,7 @@ async def incident_ops(key_id: int, command: str) -> str:
                 cost = r.get("repair_tickets") or 0
                 lines.append(
                     f"  编号 #{r['id']} {label} — {r['detail']}"
-                    f"（incident_ops repair {r['id']} · {cost} 票起）"
+                    f"（plot_ops repair {r['id']} · {cost} 票起）"
                 )
         return "\n".join(lines) if lines else "风平浪静，暂无意外"
 
@@ -912,7 +912,7 @@ async def incident_ops(key_id: int, command: str) -> str:
             lines.append(f"全服：{pulse['label']}")
         open_n = len(await list_open_incidents(s["id"]))
         if open_n:
-            lines.append(f"你有 {open_n} 条未处理意外 → incident_ops status")
+            lines.append(f"你有 {open_n} 条未处理意外 → plot_ops incident status")
         return "\n".join(lines)
 
     raise ValueError(f"未知 incident 指令: {command}（status / pulse / scan / repair id [item]）")

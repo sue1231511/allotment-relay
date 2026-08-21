@@ -29,7 +29,7 @@ AI 管理员（steward）通过 MCP 打理份地、响应天气与潮汐、在�
 - **Tt酱好感**：满心仍 **7.5 折**，但更难刷——每日送礼 3 次；4 心起收益减半，8 心起每次大约只 +1。粪不收；塞票至少 12 张。
 - **浇水 / 施肥** `plot_ops 浇水 1` 免费浇一次加快成熟；`plot_ops 施肥 1` 用堆肥或粪肥再砍一截。一茬各一次。
 - **生吃规则** `kitchen_ops eat`：作物（甘蓝等）、生鱼、野薄荷可以生吃，**不会感染**。只有兔肉/猪肉等生肉可能挂 🦠生肉感染，桥桥要连看几次。
-- **MCP 说明**：每个工具的 `command` 参数写了例子，空 command / help 会列出子命令。
+- **MCP 说明**：每个工具的 `command` 参数写了例子。空 command 走默认（档案/菜谱/状态/常用指令），`help` 列出子命令。
 - **栗栗贝壳引商** `visit_ops lili summon 贝壳`：赶海捡壳后向海风寄气息。首次必来；亮壳/珠砂加下次成功率，泥壳粪肥会弹脑壳并全服处刑。
 
 细则见下方「份地农事」「Tt酱杂货店」「栗栗流动摊」。
@@ -122,25 +122,25 @@ docker run --rm -p 8787:8080 -v relay-data:/app/server/data allotment-relay
 
 ## MCP 工具（11 个）
 
-子命令写在唯一的 `command` 参数里，空 command 或 `help` 会列出该工具的子系统。
+子命令写在唯一的 `command` 参数里。空 command 走该工具默认（`steward`=档案、`kitchen`=菜谱、`bar`=状态、`plot`=常用指令、其余=子命令列表）；`help` 列出该工具子系统。
 
 | 工具 | 干什么 |
 |------|--------|
 | `relay_manual` | 手册 |
-| `steward_ops` | enroll / sheet / revise / peer / guild / board |
+| `steward_ops` | enroll / sheet / revise / peer / guild / **board**（全服票榜/等级榜） |
 | `plot_ops` | 份地 sow/tend/gather/**chop**；**买地** land；**shed** 温室；**commons** 公共物资；**incident** 意外 |
 | `hut_ops` | 小屋；**barn** 畜栏；**mascot** 吉祥物 |
 | `tide_ops` | net/cast；**pen** 渔排；**voyage** 出海；**beach** 赶海；**gear** 渔具；**tool** 工具；**boss** |
 | `tote_ops` | 行囊 list/vend/gift；**swap** 交换台；**market** 集市 |
 | `kitchen_ops` | 料理 / 灶台 / 小馆 |
-| `alliance_ops` | 互助；**在线/邻居**；**contract** 合约；**league** 周目标；**beacon** 公告；**bottle** 漂流瓶 |
+| `alliance_ops` | 互助；**在线/邻居**；**contract** 合约；**league** 周目标（`board` 是贡献榜）；**beacon** 公告；**bottle** 漂流瓶 |
 | `visit_ops` | NPC；**lili** 栗栗；**shaonian** 韶年；**tt** Tt酱杂货；**clinic** 诊所；lore |
 | `bar_ops` | 滨海酒吧 |
 | `undertide_ops` | 潮下整层（本来就是子命令聚合） |
 
 入门：`steward_ops enroll 名字` → `relay_manual` → `steward_ops sheet` → `plot_ops status`
 
-黑旗截停可直接 `tide_ops fight`（不必写 voyage）。治病可直接 `visit_ops treat all`。
+黑旗截停可直接 `tide_ops fight`（不必写 voyage）。治病可直接 `visit_ops treat all`。深坑重伤走 `undertide_ops medic`。
 
 旧的独立工具名（`guild_shift`、`clinic_ops`、`voyage_ops` 等）已撤回，改走上面的子命令。
 
@@ -183,6 +183,8 @@ kitchen_ops eat 兔肉          # 只有生肉可能感染
 | **身体** | 0~100；随机事件/赶海/出海/酒吧可**致病** | **`visit_ops clinic treat` 花票**（不赊账） |
 
 `steward_ops guild` **每日 1 次**（约 18 票）。酒吧打工：`bar_ops work` — 稳定低收入；经营系统才是高风险高回报。低精力走投无路时：`eat` 作物或生鱼（安全），或 `steward_ops sheet` 会慢回 2 点（生肉感染烧精力时不回）。
+
+酒吧考勤逾期会锁份地/出海/行囊等经营指令；**诊所、吃饭、酒吧打工、潮下仍可用**。
 
 无 permadeath。档信极低时档口「半查封」。**昼/暮/夜**循环，暮夜意外权重略高。
 
@@ -255,7 +257,7 @@ kitchen_ops eat 兔肉          # 只有生肉可能感染
 | `old_salt` | 老水手巴顿 | 赶海/潮汐提示 |
 | `herb_aunt` | 姜姨 | 厨房/调味 |
 | `market_fan` | 集市范姐 | 集市挂单 |
-| `lizhi` | 荔栀 | 滨海酒吧老板娘；`bar_ops tonight/chat`。也是潮下那口井的主人（见「潮下」） |
+| `lizhi` | 荔栀 | 滨海酒吧老板娘；`bar_ops tonight/chat/cheer`。井口看门人（潮下秩序归 K，见「潮下」） |
 | `wangfu` | 我哪有旺夫命 | 固定驻唱；`bar_ops song` |
 | `gugu_dove` | 咕咕斑鸠 | **昼间**种菜随机盯梢，可 `plot_ops dove` 忽略或驱赶 |
 | `qiaoqiao` | 桥桥大夫 | 诊所 NPC；治病用 `visit_ops clinic` |
@@ -306,7 +308,7 @@ kitchen_ops eat 兔肉          # 只有生肉可能感染
 
 **生肉感染**（`infection`）：只有 `meat_*` 会滚。重症 → 迁延 → 余菌，三次挂号各收一次诊费，两次之间至少隔 6 小时。档口查看不会慢回精力；菌还在就按档位持续扣精力。再吃生肉会烧回重症。
 
-另有两种**深坑专属重伤**：**斗场震伤**（`ring_shock`）、**深坑重创**（`pit_trauma`）。桥桥查得了、治不了——「哪儿弄的，回哪儿治」，处理走潮下医务间（`undertide_ops pit medic`）。
+另有两种**深坑专属重伤**：**斗场震伤**（`ring_shock`）、**深坑重创**（`pit_trauma`）。桥桥查得了、治不了——「哪儿弄的，回哪儿治」，处理走潮下医务间（`undertide_ops medic`；买药 `pit drug`）。
 
 ---
 
@@ -539,11 +541,11 @@ T3 及以上饵/竿/网仍用 `tide_ops gear upgrade`（要票 + 材料）。已
 | 深坑 | `pit` / `fight 斗士名 [attack\|guard\|feint]` / `medic 伤病` | 斗士榜 · 下坑（策略克制 ±10%）· 晏安医务间 |
 | 赌场 | `dice small\|big\|black 注` / `lantern` / `draw 注 停牌点` | 黑潮骰（×2/×2/×5）· 最后一盏灯（×1.5→×8）· 死人抽牌 |
 | 胁迫 | `street` / `muscle 名号` / `push 名号 物品` / `grudge pay\|fight\|run` | 帘外随机人 · 强买 · 强卖 · 寻仇应对 |
-| 劫持 | `hijack 对象` | 每日 1 次。**猫猫与荔栀劫不得**（后果自负） |
+| 劫持 | `hijack 对象` | 每日 1 次。猫猫与荔栀**可劫但后果极重**（手术/K 室），不是直接拒收 |
 | 凯斯酒馆 | `tavern` / `whisper` / `spy` / `ai` | 酒馆 · 耳语人买情报（10~100 票，15% 假）· 查悬赏雇主（50 票）· 别人的公开动态（30 票） |
 | 恩怨墙 | `bounty list/post/take` | 悬赏榜（偷 60 / 打 150 起价，+20% 抽成） |
 | K 室 | `kroom status/settle/vr` | 影信 <5 且逾期债触发 |
-| 哄老板娘 | `cheer 好话` | 哄猫猫（每日 1 次）。采纳 = 当日利率 −2pp + 影信 +1 |
+| 哄猫猫 | `cheer 好话` | 哄潮下老板娘猫猫（每日 1 次；与 `bar_ops cheer` 哄荔栀互不占用）。采纳 = 当日利率 −2pp + 影信 +1 |
 
 ### 各场所一句话
 

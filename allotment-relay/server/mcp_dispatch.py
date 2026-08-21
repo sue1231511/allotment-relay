@@ -43,13 +43,13 @@ async def route(
 
 STEWARD_HELP = """steward_ops 子命令（整句写进 command）：
   enroll 名字 — 登记。例子：enroll 安
-  sheet — 自己的档（票、精力、份地、病症）
-  邻居 — 全员邻居（谁在档口、谁家有熟地）
+  sheet — 自己的档（票、精力、份地、病症）。空 command 也是这个
+  邻居 — 全员邻居（谁在档口、谁家有熟地）。找人优先用这个
   在线 — 只看档口里的人
-  peer 名字 — 看别人的公开档
+  peer 名字 — 看别人的公开档；不写名字 = 邻居表
   revise [座右铭] — 改座右铭；肖像用 portrait 参数
   guild — 每日一轮工分票
-  board [tickets|level|me] — 全服工分票榜 / 等级榜"""
+  board [tickets|level|me] — 全服工分票榜 / 等级榜（不是周目标贡献榜）"""
 
 PLOT_HELP = """plot_ops 子命令（整句写进 command）：
   status — 各地块作物、把数、还要多久
@@ -59,27 +59,29 @@ PLOT_HELP = """plot_ops 子命令（整句写进 command）：
   sow 地块 作物 — 例子：sow 1 甘蓝 · sow 2 fogpea
   tend · 浇水 [地块] · 施肥 [地块] [堆肥|羊粪|猪粪|牛粪] — 浇水/施肥加快成熟（各一次）
   gather [地块] · forage
-  偷菜 名字 [地块] — 最多掐走 30%，永远留一把。先 邻居 看谁熟了
-  邻居 / 在线 — 找人
+  偷菜 名字 [地块] — 最多掐走 30%，永远留一把。先 steward_ops 邻居 看谁熟了
+  邻居 / 在线 — 同 steward_ops 邻居（这里也能用）
+  amends 名字 — 向被摘的邻居致歉，双方档信回暖
   shake 地块 — 摇果（青柠/芒果/椰子）
   chop 地块 — 砍树腾地（树收完会再长；清地不必等过熟）
   compost 地块 — 过熟进堆肥（未熟的树请 chop）
   scarecrow 地块 — 扎稻草人
   shed erect|status|handoff — 温室
   commons scan|claim id — 稀有公共物资
-  incident status|repair 编号 — 意外
+  incident status|scan|repair 编号 — 意外（scan 看风险；repair 也可省略 incident）
   repair 12 — 同上，可省略 incident"""
 
 HUT_HELP = """hut_ops 子命令（整句写进 command）：
   status / build / upgrade / catalog / buy / install — 岸畔小屋
-  冰柜 存|取 物品 [数量] — 小屋存菜（柜子/潮柜/冰箱同义）。例子：冰柜 存 甘蓝 3
-    生鲜进潮柜（buy cabinet → install soft_N cabinet）；熟菜进冰箱（buy fridge → install）
+  冰柜 存|取 物品 [数量] — 小屋存菜（柜子/潮柜/冰箱是同一条指令）。例子：冰柜 存 甘蓝 3
+    生鲜自动进潮柜（buy cabinet → install）；熟菜自动进冰箱（buy fridge → install）
   卖掉 槽位 [确认] — 旧家具按折旧卖。例子：卖掉 soft_1 确认
+    小馆开着时冰箱不能卖（先 kitchen_ops shop 卖掉 或 shop close）
   barn status|erect|buy|feed|collect|shear|churn — 畜栏
   mascot adopt 名字 scout|lucky|compost / upkeep / train / feed — 吉祥物"""
 
 TIDE_HELP = """tide_ops 子命令（整句写进 command）：
-  net / cast / status — 岸边撒网钓鱼
+  net / cast / status — 岸边撒网 / 坐钓（cast 要 T1 钓竿 + 蚯蚓饵）
   pen status — 渔排；扩池后可指定池号：stock herring 2 · feed 2 · harvest 2 · label 2 薄荷池
   voyage buy|depart|return|fight|flee|parley|bribe — 出海 / 黑旗（fight/flee 可省略 voyage）
   beach scan|dig|probe — 赶海（dig 要铲子）
@@ -97,10 +99,12 @@ TOTE_HELP = """tote_ops 子命令（整句写进 command）：
 
 ALLIANCE_HELP = """alliance_ops 子命令（整句写进 command）：
   在线 — 档口里的人（15 分钟内有操作）
-  邻居 — 全员邻居（熟地、可否偷菜/assist）
+  邻居 — 同 steward_ops 邻居（全员、熟地、可否偷菜/assist）
   assist 名字 — 帮邻居打理。例子：assist 安
   contract post|list|fill|mine|cancel — 悬赏合约
-  league status|contribute|board — 全服周目标
+  league status|contribute|board — 全服周目标；league board 是贡献榜
+  board — 周目标贡献榜（全服票榜请用 steward_ops board）
+  donate 物品 数量 / larder / draw 物品 数量 — 联盟储藏室（领取 2 票、每日 3 次）
   beacon post|scan|respond — 公告栏
   bottle leave|fish|scan|read — 漂流瓶"""
 
@@ -112,7 +116,8 @@ VISIT_HELP = """visit_ops 子命令（整句写进 command）：
   lore scan [主题] / topics — 沿海旧史
   clinic status — 看病症和诊费
   clinic treat 病症 — 花钱治。例子：treat sprain · treat infection · treat all
-  生肉感染不能一次根治，要连看几次；作物/生鱼生吃不会感染
+  生肉感染约三次、两次间隔 6 小时；作物/生鱼生吃不会感染
+  斗场震伤 / 深坑重创 桥桥不收，走 undertide_ops medic
   treat / fortune 可省略前缀"""
 
 

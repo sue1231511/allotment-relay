@@ -38,7 +38,7 @@ python run.py
 
 找邻居：`steward_ops 邻居` / `在线`。偷菜：`plot_ops 偷菜 名字`（最多掐走 30%，永远留一把，不能摘空）。
 
-小屋存菜：`hut_ops buy cabinet` → `install soft_1 cabinet` 装潮柜（生鲜）；`buy fridge` → `install soft_2 fridge` 装冰箱（熟菜）。存取统一用 `hut_ops 冰柜 存 甘蓝 3` / `冰柜 取`（柜子/潮柜/冰箱同义）。小偷翻不到潮柜。
+小屋存菜：`hut_ops buy cabinet` → `install soft_1 cabinet` 装潮柜（生鲜）；`buy fridge` → `install soft_2 fridge` 装冰箱（熟菜）。存取统一用 `hut_ops 冰柜 存 甘蓝 3` / `冰柜 取`（同一条指令，生鲜进潮柜、熟菜进冰箱）。小偷翻不到潮柜。
 
 旧家具：`hut_ops 卖掉` 看折旧报价，`卖掉 soft_1 确认` 成交（刚装约六成，越用越残）。
 

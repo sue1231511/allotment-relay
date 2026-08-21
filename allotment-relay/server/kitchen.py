@@ -399,6 +399,7 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             "  cook 材料1 材料2 … — 自由组合 2~5 样，例如 cook 甘蓝 鲭鱼\n"
             "  eat 物品 — 回精力。作物/生鱼/野薄荷生吃安全；只有生肉可能感染\n"
             "             例子：eat 甘蓝 · eat 鲭鱼 · eat 兔肉 · eat 蒜蓉生蚝\n"
+            "  vend 菜名 — 卖掉行囊里的熟菜（中文名也行；家具请 hut_ops 卖掉）\n"
             "  store 菜名 [数量] / fridge / take 菜名 — 冰箱熟菜（小屋要先装 fridge）\n"
             "             也可 hut_ops 冰柜 存|取，生鲜进潮柜、熟菜进冰箱\n"
             "  brew 材料 — 灶台（回雾智）\n"
@@ -424,7 +425,7 @@ async def kitchen_ops(key_id: int, command: str) -> str:
                 f"+{meta['energy']}精力）"
             )
         lines.append("")
-        lines.append("灶台 brew（回雾智，2~3 种材料；原 hearth_ops 仍可用）:")
+        lines.append("灶台 brew（回雾智，2~3 种材料）：")
         for sig, recipe in HEARTH_RECIPES.items():
             keys = sig.split("|")
             ings = " + ".join(f"{ITEM_NAMES.get(i, i)}（{i}）" for i in keys)
@@ -513,7 +514,7 @@ async def kitchen_ops(key_id: int, command: str) -> str:
         if infect_line:
             msg += (
                 f"\n{infect_line}\n"
-                "→ visit_ops clinic treat infection（桥桥一次压不干净，要连看几次）"
+                "→ visit_ops clinic treat infection（约三次、间隔 6 小时；第一次可以马上挂）"
             )
         return msg
 
@@ -553,8 +554,17 @@ async def kitchen_ops(key_id: int, command: str) -> str:
         return await fridge_take(s, " ".join(tokens), qty)
 
     if verb == "vend" and len(parts) >= 2:
-        item = parts[1]
+        token = " ".join(parts[1:])
+        resolved = _resolve_cooked_token(token) or resolve_item_key(token)
+        if not resolved:
+            raise ValueError(unknown_item_message(token))
         async with db.connect() as conn:
+            item = resolved
+            if is_cooked_item(resolved):
+                try:
+                    item = await _pick_cooked_satchel(conn, s["id"], resolved)
+                except ValueError:
+                    item = resolved
             if not await db.take_item(conn, s["id"], item, 1):
                 raise ValueError("行囊里没有这道菜")
             price = suggested_price(item)

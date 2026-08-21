@@ -143,4 +143,4 @@ async def tavern_ops(
         lines.append(f"\n（−{cost} 票 · 三天内的公开动态，不含私事）")
         return "\n".join(lines)
 
-    raise ValueError("未知 tavern 指令（visit/whisper/spy/ai）")
+    raise ValueError("未知 tavern 指令（visit/chat/whisper/spy/ai）")
