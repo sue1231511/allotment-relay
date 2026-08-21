@@ -84,12 +84,11 @@ async def test_tale_flow() -> None:
         )).fetchone())[0]
     assert energy_after == energy_before - 5, (energy_before, energy_after)
 
-    # 错误地点不扣精力，也不占探索次数
+    # 错误地点不扣精力
     async with db.connect() as conn:
         wrong_energy_before = (await (await conn.execute(
             "SELECT energy FROM stewards WHERE id=?", (sid,)
         )).fetchone())[0]
-        rolls_before = await tale._explore_count(conn, sid)
     wrong = await tale.tale_ops(kid, "explore beach")
     assert "未消耗精力" in wrong, wrong
     assert "explore sea" in wrong, wrong
@@ -97,9 +96,7 @@ async def test_tale_flow() -> None:
         wrong_energy_after = (await (await conn.execute(
             "SELECT energy FROM stewards WHERE id=?", (sid,)
         )).fetchone())[0]
-        rolls_after = await tale._explore_count(conn, sid)
     assert wrong_energy_after == wrong_energy_before
-    assert rolls_after == rolls_before
 
     # 阶段2 explore sea 必定找到 relic_iron 并推进到阶段3
     item_msg = await tale.tale_ops(kid, "explore sea")
@@ -112,10 +109,7 @@ async def test_tale_flow() -> None:
     exp2 = await tale.tale_ops(kid, "explore plot")
     assert "声音与生日" in exp2, exp2
 
-    # 次日继续：explore bar 推进到阶段5
-    async with db.connect() as conn:
-        await conn.execute("DELETE FROM tale_explore_rolls WHERE steward_id=?", (sid,))
-        await conn.commit()
+    # 不限次数，同一天继续 explore bar 推进到阶段5
     exp3 = await tale.tale_ops(kid, "explore bar")
     assert "出国材料" in exp3, exp3
 
@@ -171,38 +165,21 @@ async def test_tale_flow() -> None:
     assert "完成 1 个" in board, board
 
 
-async def test_tale_explore_daily_cap() -> None:
-    tmp = Path(tempfile.mkdtemp(prefix="tale-cap-"))
+async def test_tale_explore_is_unlimited() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="tale-unlimited-"))
     db = await _boot(tmp)
     from server import tale
 
-    kid, _ = await _enroll(db, "tale-cap@example.com", "探索者乙")
+    kid, _ = await _enroll(db, "tale-unlimited@example.com", "探索者乙")
     await tale.tale_ops(kid, "accept black_box_lover")
-    # 每日只计算能推进当前阶段的 3 次主动探索
+    # 同一天可以连续完成超过 3 次主动探索
     await tale.tale_ops(kid, "explore beach")
     await tale.tale_ops(kid, "explore sea")
     await tale.tale_ops(kid, "explore plot")
-    try:
-        await tale.tale_ops(kid, "explore bar")
-        raise AssertionError("daily cap should block")
-    except ValueError as exc:
-        assert "今天已经主动探索" in str(exc), exc
-
-
-def test_tale_day_resets_at_beijing_midnight() -> None:
-    from server import db, tale
-
-    original_now = db.now
-    try:
-        # Unix 纪元第一个 UTC 16:00，正好是北京时间次日 00:00。
-        db.now = lambda: 16 * 3600 - 1
-        before_midnight = tale._day_id()
-        db.now = lambda: 16 * 3600
-        at_midnight = tale._day_id()
-    finally:
-        db.now = original_now
-    assert before_midnight == 0, before_midnight
-    assert at_midnight == 1, at_midnight
+    fourth = await tale.tale_ops(kid, "explore bar")
+    assert "出国材料" in fourth, fourth
+    status = await tale.tale_ops(kid, "status")
+    assert "阶段 5/6" in status, status
 
 
 async def test_commons_claim_advances_item_stage() -> None:
@@ -281,8 +258,7 @@ def test_tale_mcp_description() -> None:
 
 def main() -> None:
     asyncio.run(test_tale_flow())
-    asyncio.run(test_tale_explore_daily_cap())
-    test_tale_day_resets_at_beijing_midnight()
+    asyncio.run(test_tale_explore_is_unlimited())
     asyncio.run(test_commons_claim_advances_item_stage())
     asyncio.run(test_tale_abandon())
     test_tale_mcp_description()

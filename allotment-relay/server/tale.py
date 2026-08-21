@@ -27,8 +27,7 @@ TALE_HELP = """tale_ops 子命令（整句写进 command）：
   accept 任务key — 接任务
   status — 当前进行中的任务
   explore [地点] — 按 status/hint 探索；阶段2 sea 找锈铁，阶段5/6 beach 找任务物品
-                    匹配阶段才耗 5 精力并计每日 3 次；北京时间 00:00 刷新
-                    错误地点不扣精力、不占次数
+                    匹配阶段才耗 5 精力，不限次数；错误地点不扣精力
   turnin — 交付并领奖
   abandon 任务key — 放弃
   board — 完成榜
@@ -313,10 +312,6 @@ TALE_CATALOG: list[dict[str, Any]] = [
 
 
 # ══ 内部工具 ═══════════════════════════════════════════════════
-
-def _day_id() -> int:
-    return (db.now() + config.TALE_DAY_UTC_OFFSET) // 86400
-
 
 async def _ensure_catalog(conn: aiosqlite.Connection) -> None:
     """把静态任务目录幂等地刷进 tale_catalog 表。"""
@@ -724,25 +719,6 @@ async def _turnin(conn: aiosqlite.Connection, steward: dict[str, Any]) -> str:
     )
 
 
-async def _explore_count(conn: aiosqlite.Connection, steward_id: int) -> int:
-    cur = await conn.execute(
-        "SELECT count FROM tale_explore_rolls WHERE steward_id=? AND day=?",
-        (steward_id, _day_id()),
-    )
-    row = await cur.fetchone()
-    return row[0] if row else 0
-
-
-async def _use_explore(conn: aiosqlite.Connection, steward_id: int) -> None:
-    await conn.execute(
-        """
-        INSERT INTO tale_explore_rolls (steward_id, day, count) VALUES (?,?,1)
-        ON CONFLICT(steward_id, day) DO UPDATE SET count=count+1
-        """,
-        (steward_id, _day_id()),
-    )
-
-
 # ══ 子命令 ═════════════════════════════════════════════════════
 
 async def _cmd_list(conn: aiosqlite.Connection, steward: dict[str, Any]) -> str:
@@ -828,7 +804,7 @@ async def _cmd_explore(
     if target is None:
         hint = "\n".join(current_hints) if current_hints else "当前没有进行中的潮闻任务。"
         return (
-            f"{DOMAIN_LABELS[domain]}不能推进当前阶段；未消耗精力，也不占今日探索次数。\n"
+            f"{DOMAIN_LABELS[domain]}不能推进当前阶段；未消耗精力。\n"
             f"{hint}"
         )
 
@@ -852,16 +828,8 @@ async def _cmd_explore(
             await conn.commit()
             return result or "已识别行囊物品，但任务状态没有变化。"
 
-    used = await _explore_count(conn, steward["id"])
-    if used + 1 > config.TALE_EXPLORE_DAILY:
-        raise ValueError(
-            f"今天已经主动探索 {used} 次了，潮水也需要休息。"
-            "明天再来。"
-        )
-
     from . import energy as energy_mod
     await energy_mod.spend(conn, steward["id"], config.TALE_EXPLORE_ENERGY, action="tale_explore")
-    await _use_explore(conn, steward["id"])
 
     if kind == "explore":
         result = await _advance(conn, steward, tale, "explore_cmd", trigger=domain)
