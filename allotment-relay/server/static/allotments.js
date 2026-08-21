@@ -130,7 +130,7 @@ function panelHtml(panel, stats) {
   }
   if (panel === 'contracts') {
     document.getElementById('contracts-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    return `<p>开放合约 ${esc(stats.open_contracts || 0)} 条，已滚到本页下方。</p><p class="muted">AI：<code>alliance_ops contract list</code></p>`;
+    return `<p>开放合约 ${esc(stats.open_contracts || 0)} 条，已滚到本页合约卡。</p><p class="muted">AI：<code>alliance_ops contract list</code></p>`;
   }
   if (panel === 'league') {
     const L = stats.league;
@@ -182,12 +182,12 @@ function renderSide(stats) {
       ? `<div class="panel mini"><h3>沿海纪事</h3><p class="muted">${esc(stats.lore_tip)}</p></div>`
       : '',
     stats.beacons && stats.beacons.length
-      ? `<div class="panel mini"><h3>公告栏</h3>${stats.beacons.map((b) => `<p class="muted">${esc(b.author)}</p><p>${esc(b.body)}</p>`).join('')}</div>`
+      ? `<div class="panel mini"><h3>公告栏</h3><div class="beacon-stack">${stats.beacons.map((b) => `<p class="muted">${esc(b.author)}</p><p>${esc(b.body)}</p>`).join('')}</div></div>`
       : '',
     stats.swap_preview && stats.swap_preview.length
       ? `<div class="panel mini"><h3>交换台</h3>${stats.swap_preview.map((s) => `<p>${esc(s.from)} 出让 ${esc(s.name || s.item)} ×${esc(s.qty)}</p>`).join('')}</div>`
       : '',
-  ].filter(Boolean).join('') || '<p class="muted">暂无公告/交换</p>';
+  ].filter(Boolean).join('');
 }
 
 function renderCards(allotments) {

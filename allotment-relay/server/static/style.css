@@ -285,11 +285,41 @@ h3 { font-size: 19px; }
   margin: 18px 0;
 }
 
-.world-side {
+.world-band {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+  gap: 14px;
+  align-items: stretch;
   margin: 18px 0;
+}
+
+.world-side {
+  display: contents;
+}
+
+.world-band > .panel,
+.world-side > .panel {
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.world-band .feed {
+  margin-top: 0;
+}
+
+.world-band .panel-head {
+  margin-bottom: 12px;
+}
+
+.world-band .panel.mini h3 {
+  font-size: 19px;
+}
+
+.world-band .beacon-stack,
+.world-band #contracts {
+  flex: 1;
 }
 
 .panel.mini {
