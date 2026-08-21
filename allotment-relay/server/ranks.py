@@ -65,12 +65,15 @@ def progress_line(xp: int) -> str:
 
 
 def attach_level(row: dict[str, Any]) -> dict[str, Any]:
+    from . import progress as progress_mod
+
     xp = int(row.get("xp") or 0)
     lvl = level_from_xp(xp)
     out = dict(row)
     out["xp"] = xp
     out["level"] = lvl
     out["title"] = title_for_level(lvl)
+    out["display_title"] = progress_mod.display_title(out)
     return out
 
 

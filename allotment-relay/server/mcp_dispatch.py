@@ -34,11 +34,16 @@ async def route(
         return help_text
     if verb in table:
         fn, fallback = table[verb]
-        return await fn(key_id, rest if rest else fallback)
+        from . import progress as progress_mod
+        return progress_mod.attach_note(await fn(key_id, rest if rest else fallback))
     if verb in hoist:
         fn, keep_full = hoist[verb]
-        return await fn(key_id, command.strip() if keep_full else rest)
-    return await default(key_id, command.strip())
+        from . import progress as progress_mod
+        return progress_mod.attach_note(
+            await fn(key_id, command.strip() if keep_full else rest)
+        )
+    from . import progress as progress_mod
+    return progress_mod.attach_note(await default(key_id, command.strip()))
 
 
 STEWARD_HELP = """steward_ops 子命令（整句写进 command）：
@@ -49,7 +54,9 @@ STEWARD_HELP = """steward_ops 子命令（整句写进 command）：
   peer 名字 — 看别人的公开档；不写名字 = 邻居表
   revise [座右铭] — 改座右铭；肖像用 portrait 参数
   guild — 每日一轮工分票
-  board [tickets|level|me] — 全服工分票榜 / 等级榜（不是周目标贡献榜）"""
+  board [tickets|level|me] — 全服工分票榜 / 等级榜（不是周目标贡献榜）
+  成就 — 已解锁称呼；称呼 逾篱手 佩戴；称呼 卸 改回等级称号
+  领奖 — 看升级礼（升级时会自动发）"""
 
 PLOT_HELP = """plot_ops 子命令（整句写进 command）：
   status — 各地块作物、把数、还要多久
@@ -192,6 +199,13 @@ async def steward_ops(
     if verb in ("tickets", "票", "票榜", "level", "等级", "等级榜"):
         return await ranks.board_ops(key_id, command.strip())
 
+    if verb in (
+        "成就", "achievements", "titles", "称号", "称呼", "title", "wear",
+        "佩戴", "卸", "卸下", "领奖", "rewards", "升级礼",
+    ):
+        from . import progress as progress_mod
+        return progress_mod.attach_note(await progress_mod.progress_ops(key_id, command.strip()))
+
     raise ValueError(f"未知 steward 指令: {command}\n{STEWARD_HELP}")
 
 
@@ -201,7 +215,8 @@ async def plot_bundle(key_id: int, command: str = "") -> str:
     verb, _ = head(command)
     if not verb:
         base = await game.plot_ops(key_id, "")
-        return base + "\n  shed / commons / incident — 温室、公共物资、意外"
+        from . import progress as progress_mod
+        return progress_mod.attach_note(base + "\n  shed / commons / incident — 温室、公共物资、意外")
     return await route(
         key_id,
         command,

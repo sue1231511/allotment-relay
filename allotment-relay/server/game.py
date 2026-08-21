@@ -72,6 +72,8 @@ async def require_steward(key_id: int, *, exempt_duty: bool = False) -> dict[str
         await health_mod.tick_chronic(conn, s["id"])
         await conn.commit()
     s = await db.get_steward_by_id(s["id"]) or s
+    from . import progress as progress_mod
+    await progress_mod.sync_steward(s)
     return s
 
 
@@ -177,6 +179,7 @@ async def relay_manual() -> str:
         "  donate 物品 数量 / draw 物品 数量 / larder — 联盟储藏室共享物资",
         "  tote_ops gift 名字 物品 数量 [留言] — 定向送礼（即时到账，协作度+3）",
         "  steward_ops board tickets — 全服工分票榜；board level 等级榜；网页 /board",
+        "  steward_ops 成就 — 做事解锁称呼，称呼 逾篱手 佩戴；升级礼在 sheet / 领奖 时自动发",
         "",
         "【水陆生产】",
         "  tide_ops pen / voyage — 渔排养鱼、购船出海",
@@ -205,19 +208,24 @@ async def steward_sheet(key_id: int) -> str:
         finished = await land_mod.settle(conn, s["id"])
         await conn.commit()
     s = await db.get_steward_by_id(s["id"]) or s
+    from . import progress as progress_mod
+    await progress_mod.sync_steward(s, rewards=True)
     parcels = await db.get_parcels(s["id"])
     stock = await db.get_satchel(s["id"])
     from . import energy as energy_mod
     from . import ranks as ranks_mod
+    from . import progress as progress_mod
     from . import bar as bar_mod
     from . import health as health_mod
     from . import land as land_mod
+    ranked = ranks_mod.attach_level(s)
     lines = [
         f"管理员: {s['name']} ({s['badge']})",
         f"座右铭: {s['motto']}",
         f"肖像: {s['portrait']}",
         f"工分票: {s['tickets']}",
-        ranks_mod.sheet_level_line(s),
+        ranks_mod.sheet_level_line(ranked),
+        progress_mod.sheet_title_line(ranked),
         survival.meter_line(s),
         health_mod.meter_line(s, ailments),
         energy_mod.meter_line(s, ailments),
@@ -333,6 +341,7 @@ async def peer_sheet(name: str) -> str:
         raise ValueError(f"未找到管理员: {name}")
     parcels = await db.get_parcels(s["id"])
     from . import ranks as ranks_mod
+    from . import progress as progress_mod
     ranked = ranks_mod.attach_level(s)
     return "\n".join([
         f"管理员: {s['name']} ({s['badge']})",
@@ -340,6 +349,7 @@ async def peer_sheet(name: str) -> str:
         f"肖像: {s['portrait']}",
         f"工分票: {s['tickets']}",
         ranks_mod.sheet_level_line(ranked),
+        progress_mod.sheet_title_line(ranked),
         f"温室: {s['greenhouse_label'] if s['greenhouse'] else '无'}",
         "公开份地:",
         *(_parcel_line(p) for p in parcels),

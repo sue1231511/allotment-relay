@@ -67,6 +67,10 @@ def test_mcp_descriptions() -> None:
     assert "洗碗" in bar_blob
     assert "荔栀" in bar_blob
 
+    steward = mcp._tool_manager.get_tool("steward_ops")
+    st_blob = f"{steward.description}\n{(steward.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
+    assert "成就" in st_blob
+
     ut = mcp._tool_manager.get_tool("undertide_ops")
     ut_blob = f"{ut.description}\n{(ut.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
     assert "猫猫" in ut_blob

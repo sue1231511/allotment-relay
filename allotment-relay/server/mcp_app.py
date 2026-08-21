@@ -82,15 +82,16 @@ async def relay_manual() -> str:
     return await game.relay_manual()
 
 
-@mcp.tool(description="管理员身份与档案。command 写一整句。例子：enroll 安 · sheet · 邻居 · 在线 · guild · board tickets。空 command=看自己的档。新号必须先 enroll。")
+@mcp.tool(description="管理员身份与档案。command 写一整句。例子：enroll 安 · sheet · 邻居 · 成就 · 称呼 逾篱手 · guild · board tickets。空 command=看自己的档。新号必须先 enroll。")
 async def steward_ops(
-    command: Annotated[str, Field(description="子命令整句。enroll 安 / sheet / 邻居 / 在线 / peer 名字 / guild / board tickets|level。空=sheet。邻居=全员名册（找人偷菜/assist 用这个）")] = "sheet",
+    command: Annotated[str, Field(description="子命令整句。enroll 安 / sheet / 邻居 / 成就 / 称呼 逾篱手 / 领奖 / guild / board tickets|level。空=sheet。邻居=全员名册（找人偷菜/assist 用这个）")] = "sheet",
     name: Annotated[str, Field(description="enroll 时的管理员名字，也可写在 command 里")] = "",
     motto: Annotated[str, Field(description="可选座右铭")] = "",
     badge: Annotated[str, Field(description="徽章，默认 naturalist")] = "naturalist",
     portrait: Annotated[str, Field(description="可选肖像描述")] = "",
 ) -> str:
-    return await mux.steward_ops(_kid(), command, name, motto, badge, portrait)
+    from . import progress as progress_mod
+    return progress_mod.attach_note(await mux.steward_ops(_kid(), command, name, motto, badge, portrait))
 
 
 @mcp.tool(description="份地农事。command 写一整句。例子：status · sow 1 甘蓝 · tend · 浇水 1 · 施肥 1 · gather 1 · catalog · 偷菜 安 · 买地。浇水免费、施肥耗堆肥，一茬各一次。空 command 列出常用指令；status 看各地块。偷菜最多 30%，不能摘空。")
@@ -147,7 +148,8 @@ async def bar_ops(
     command: Annotated[str, Field(description="子命令整句。tonight / menu / order 酒名 / work 洗碗 day / work 牛郎 night / chat / cheer 好话 / tip / help。岗位可用中文。空=status。")] = "",
 ) -> str:
     from . import bar
-    return await bar.bar_ops(_kid(), command)
+    from . import progress as progress_mod
+    return progress_mod.attach_note(await bar.bar_ops(_kid(), command))
 
 
 @mcp.tool(description="潮下地下世界。command 写一整句。先 help 看全表。入口：酒吧喝够杯数后 well → descend → enter。cheer 哄猫猫（不是荔栀）。深坑伤 undertide_ops medic。")
@@ -155,7 +157,8 @@ async def undertide_ops(
     command: Annotated[str, Field(description="子命令整句。先 help。入口 well → descend → enter。常用：status / market / bank save 50 / bank take all / jail / medic ring_shock / cheer 好话（哄猫猫）")] = "",
 ) -> str:
     from . import undertide
-    return await undertide.undertide_ops(_kid(), command)
+    from . import progress as progress_mod
+    return progress_mod.attach_note(await undertide.undertide_ops(_kid(), command))
 
 
 def _mcp_transport_security() -> TransportSecuritySettings:

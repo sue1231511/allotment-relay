@@ -939,6 +939,16 @@ async def init_db() -> None:
             "ALTER TABLE steward_ailments ADD COLUMN last_treat_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE parcels ADD COLUMN ready_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN cabinet_extra INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN worn_title TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE stewards ADD COLUMN reward_level INTEGER NOT NULL DEFAULT 0",
+            """
+            CREATE TABLE IF NOT EXISTS steward_achievements (
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                ach_key TEXT NOT NULL,
+                unlocked_at INTEGER NOT NULL,
+                PRIMARY KEY (steward_id, ach_key)
+            )
+            """,
             """
             CREATE TRIGGER IF NOT EXISTS trg_steward_xp_gain
             AFTER UPDATE OF tickets ON stewards
@@ -1126,6 +1136,8 @@ async def enroll_steward(key_id: int, name: str, motto: str, badge: str, portrai
     if len(name) < 2 or len(name) > 24:
         raise ValueError("名字长度需在 2~24 之间")
     ts = now()
+    from . import ranks as ranks_mod
+    start_level = ranks_mod.level_from_xp(START_TICKETS)
     async with connect() as db:
         db.row_factory = aiosqlite.Row
         if await (await db.execute(
@@ -1140,11 +1152,13 @@ async def enroll_steward(key_id: int, name: str, motto: str, badge: str, portrai
             """
             INSERT INTO stewards (
                 key_id, name, motto, badge, portrait, tickets, xp, parcel_count,
-                enrolled, last_active_at, created_at, energy, last_bar_shift_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
+                enrolled, last_active_at, created_at, energy, last_bar_shift_at,
+                reward_level
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)
             """,
             (key_id, name, motto.strip()[:200], badge.strip()[:32], portrait.strip()[:120],
-             START_TICKETS, START_TICKETS, START_PARCELS, ts, ts, START_ENERGY, ts),
+             START_TICKETS, START_TICKETS, START_PARCELS, ts, ts, START_ENERGY, ts,
+             start_level),
         )
         sid = (await (await db.execute("SELECT last_insert_rowid()")).fetchone())[0]
         await ensure_parcels(db, sid, START_PARCELS)
@@ -1172,7 +1186,8 @@ async def public_stats() -> dict[str, Any]:
         online_cut = now() - ONLINE_WINDOW
         online_rows = await (await db.execute(
             """
-            SELECT id, name, badge, tickets, COALESCE(xp, 0) AS xp, last_active_at
+            SELECT id, name, badge, tickets, COALESCE(xp, 0) AS xp, last_active_at,
+                   COALESCE(worn_title, '') AS worn_title
             FROM stewards
             WHERE enrolled = 1 AND last_active_at > ?
             ORDER BY last_active_at DESC LIMIT 40
@@ -1188,7 +1203,7 @@ async def public_stats() -> dict[str, Any]:
                 "badge": ranked["badge"],
                 "tickets": ranked["tickets"],
                 "level": ranked["level"],
-                "title": ranked["title"],
+                "title": ranked.get("display_title") or ranked["title"],
                 "last_active_at": ranked["last_active_at"],
             })
         online = len(online_people)
@@ -1354,7 +1369,7 @@ async def public_allotments() -> list[dict[str, Any]]:
                 "tickets": p["tickets"],
                 "xp": ranked["xp"],
                 "level": ranked["level"],
-                "title": ranked["title"],
+                "title": ranked.get("display_title") or ranked["title"],
                 "parcel_count": p["parcel_count"],
                 "greenhouse": bool(p["greenhouse"]),
                 "greenhouse_label": p["greenhouse_label"],
