@@ -751,7 +751,7 @@ GUIDE_HEAD_INTRO = (
 
 GUIDE_BODY = (
     "「往灯亮的那边走，是**后室铺**——掌柜的货摊，真货假货掺着卖，离柜概不认账。你要出手黑货也找他（sell）。」\n\n"
-    "「挂着蓝幌子的是**恶猫钱庄**——猫猫的铺子。借钱、还钱、挨小八的数落，都在那儿（bank）。手头紧可以先去，但她算利息从不含糊。」\n\n"
+    "「挂着蓝幌子的是**恶猫钱庄**——猫猫的铺子。借钱（bank borrow）、还钱（repay）、存钱（save）、取钱（take），挨小八的数落，都在那儿。手头紧可以先去，但她算利息从不含糊；钱闲着也可以存——利息不高，她数钱倒是很勤。」\n\n"
     "「味道最冲的那条道通**深坑**——想用拳头换票的下那儿（pit / fight）。打伤了回来找**医务间**，晏安的手艺没话说，就是不太温柔（medic）。他那儿还卖药——下坑前来一支，贵的副作用小，便宜的药劲过了会咬人。」\n\n"
     "「听见骰子声就是**死人抽牌**——Silas 坐庄，三个玩法，输了别闹（dice / lantern / draw）。」\n\n"
     "「最里面那面墙是**凯斯酒馆**——荔栀晚上的场子。想买消息找角落里的耳语人（tavern / whisper），恩怨找墙上的纸条（bounty）。」\n\n"
@@ -962,8 +962,10 @@ undertide_ops draw <注> / draw hit / draw stand — 死人抽牌
 undertide_ops hijack <对象> — 劫持（后果自负）
 undertide_ops grudge pay|fight|run — 寻仇应对
 undertide_ops bank borrow <票数> — 恶猫钱庄借票
-undertide_ops bank debt — 查债
+undertide_ops bank debt — 查账（欠单 + 存款）
 undertide_ops bank repay <票数|all> — 还款
+undertide_ops bank save <票数> — 存钱（T+1起息·影信×5为限）
+undertide_ops bank take <票数|all> — 取钱（随时可取）
 undertide_ops jail status/ransom/serve/work — 监牢
 undertide_ops cheer <好话> — 哄猫猫开心（她说了算）
 undertide_ops tavern — 凯斯酒馆（whisper 买消息 / spy 查悬赏雇主 / ai 别人动态）
