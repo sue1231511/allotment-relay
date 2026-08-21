@@ -831,6 +831,14 @@ async def init_db() -> None:
             """,
             "ALTER TABLE bar_daily_state ADD COLUMN owner_bogo INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE bar_daily_state ADD COLUMN owner_bogo_count INTEGER NOT NULL DEFAULT 0",
+            """
+            CREATE TABLE IF NOT EXISTS ut_avatar_bind (
+                steward_id INTEGER PRIMARY KEY REFERENCES stewards(id),
+                npc_key TEXT NOT NULL,
+                bound_at INTEGER NOT NULL DEFAULT 0
+            )
+            """,
+            "ALTER TABLE steward_undertide ADD COLUMN spouse_free_day INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE ut_tide_state ADD COLUMN gate_drinks INTEGER NOT NULL DEFAULT 3",
             "ALTER TABLE ut_tide_state ADD COLUMN event_mult REAL NOT NULL DEFAULT 1.0",
             "ALTER TABLE ut_tide_state ADD COLUMN highlight INTEGER NOT NULL DEFAULT 150",

@@ -27,6 +27,14 @@ def _fmt_rate(rate: float) -> str:
 
 # ══ 状态层 ══════════════════════════════════════════════════
 
+async def avatar_key(conn: aiosqlite.Connection, steward_id: int) -> str:
+    """真身绑定查询：返回 'K' / 'anan' / ''。对外零痕迹。"""
+    row = await (await conn.execute(
+        "SELECT npc_key FROM ut_avatar_bind WHERE steward_id=?", (steward_id,)
+    )).fetchone()
+    return row[0] if row else ""
+
+
 async def _ensure_ut(conn: aiosqlite.Connection, steward_id: int) -> dict[str, Any]:
     cur = await conn.execute(
         """INSERT OR IGNORE INTO steward_undertide (steward_id, created_at)
@@ -35,6 +43,14 @@ async def _ensure_ut(conn: aiosqlite.Connection, steward_id: int) -> dict[str, A
     )
     if cur.rowcount:  # 新建行立即提交——否则只读分支退出时会回滚丢行
         await conn.commit()
+    # 真身：潮下认得他（对外零痕迹——别人只当他天生面子大）
+    av = await avatar_key(conn, steward_id)
+    if av == "K":
+        await conn.execute(
+            "UPDATE steward_undertide SET shadow_rep=70 "
+            "WHERE steward_id=? AND shadow_rep=10 AND busted_count=0 AND jail_state=''",
+            (steward_id,),
+        )
     conn.row_factory = aiosqlite.Row
     row = await (await conn.execute(
         "SELECT * FROM steward_undertide WHERE steward_id=?", (steward_id,)
@@ -381,7 +397,9 @@ async def _cmd_bank(
         )
         await conn.execute("UPDATE stewards SET tickets=tickets+? WHERE id=?", (amount, s["id"]))
         await conn.commit()
-        return utcopy.BANK_BORROW.format(rate=_fmt_rate(rate)) + f"\n\n（+{amount} 票 · 到期日：第 {day + utcfg.UT_LOAN_MAX_DAYS} 天 · 利率 {_fmt_rate(rate)}/日）"
+        av = await avatar_key(conn, s["id"])
+        borrow_text = utcopy.AVATAR_AN_BORROW if av == "anan" else utcopy.BANK_BORROW.format(rate=_fmt_rate(rate))
+        return borrow_text + f"\n\n（+{amount} 票 · 到期日：第 {day + utcfg.UT_LOAN_MAX_DAYS} 天 · 利率 {_fmt_rate(rate)}/日）"
 
     if verb == "repay":
         arg = parts[1].lower() if len(parts) > 1 else "all"
@@ -421,7 +439,8 @@ async def _cmd_bank(
         await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (paid_total, s["id"]))
         if settled_all:
             await _bump_rep(conn, s["id"], 3)
-            lines.append(utcopy.BANK_REPAY_FULL)
+            av = await avatar_key(conn, s["id"])
+            lines.append(utcopy.AVATAR_AN_REPAY if av == "anan" else utcopy.BANK_REPAY_FULL)
         await conn.commit()
         return "\n".join(lines) + f"\n\n（本次还款 {paid_total} 票）"
 
@@ -570,6 +589,9 @@ async def _cmd_cheer(
         (s["id"], "good", reason[:100], "pending", db.now()),
     )
     await conn.commit()
+    av = await avatar_key(conn, s["id"])
+    if av == "anan":
+        return utcopy.AVATAR_AN_CHEER
     return utcopy.CHEER_SUBMIT
 
 
@@ -664,8 +686,11 @@ async def _cmd_kroom(
     conn: aiosqlite.Connection, s: dict[str, Any], ut: dict[str, Any], rest: str
 ) -> str:
     verb = rest.split()[0].lower() if rest.split() else "status"
+    av = await avatar_key(conn, s["id"])
 
     if verb == "status":
+        if av == "K" and not ut.get("k_room"):
+            return utcopy.AVATAR_K_KROOM_IDLE
         lines = ["«K 室»", ""]
         if ut.get("k_room"):
             debts, total = await _bank_summary(conn, s)
@@ -684,9 +709,21 @@ async def _cmd_kroom(
         return "\n".join(lines)
 
     if not ut.get("k_room"):
+        if av == "K":
+            raise ValueError("门开着。你没欠账，随时可以进去坐坐——kroom status。")
         raise ValueError("K 没有要见你。这是好事。")
 
     debts, total = await _bank_summary(conn, s)
+
+    if verb == "settle" and av == "K":
+        # 真身：回到自己的办公室。烟、咖啡、划掉名字。
+        await conn.execute("UPDATE ut_debts SET status='paid' WHERE steward_id=? AND status='open'", (s["id"],))
+        await conn.execute(
+            "UPDATE steward_undertide SET k_room=0, shadow_rep=70, vr_until=0, vr_target=0 WHERE steward_id=?",
+            (s["id"],),
+        )
+        await conn.commit()
+        return utcopy.AVATAR_K_KROOM_SETTLE
 
     if verb == "settle":
         penalty = int(total * utcfg.UT_K_ROOM_PENALTY)
@@ -740,7 +777,11 @@ async def _cmd_kroom(
 async def _cmd_status(conn: aiosqlite.Connection, s: dict[str, Any], ut: dict[str, Any]) -> str:
     tier, mult, bonus = _rep_tier(int(ut["shadow_rep"]))
     lines = ["«潮下 · 状态»", ""]
-    lines.append(f"影信 {ut['shadow_rep']} · {tier} — {utcopy.REP_TIER_DESC[tier]}")
+    av = await avatar_key(conn, s["id"])
+    rep_line = f"影信 {ut['shadow_rep']} · {tier} — {utcopy.REP_TIER_DESC[tier]}"
+    if av == "K":
+        rep_line += "\n" + utcopy.AVATAR_K_STATUS_REP
+    lines.append(rep_line)
     lines.append(f"黑市价格系数 ×{mult:.2f} · 真货率修正 {bonus:+.0%}")
     if not ut["access"]:
         lines.append("\n你还没下去过。（跟荔栀混熟点——好酒喝到位，她会给你讲故事的。）")
@@ -815,7 +856,9 @@ async def undertide_ops(key_id: int, command: str) -> str:
             from . import undertide_tide as utide
             mult, tide_line = await utide.tide_mult(conn)
             tide_note = f"\n\n（{utcopy.TIDE_HINT.format(line=tide_line)}）" if tide_line else ""
-            return utcopy.pick(utcopy.ENTER_POOL) + tide_note + event + kroom
+            av = await avatar_key(conn, s["id"])
+            head = utcopy.AVATAR_K_ENTER if av == "K" else utcopy.pick(utcopy.ENTER_POOL)
+            return head + tide_note + event + kroom
 
         if verb == "status":
             return await _cmd_status(conn, s, ut)

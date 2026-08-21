@@ -98,7 +98,13 @@ async def maybe_highlight_broadcast(conn: aiosqlite.Connection, s: dict[str, Any
     await conn.execute(
         "UPDATE steward_undertide SET highlight_done=? WHERE steward_id=?", (day, s["id"])
     )
-    tpl = random_line()
+    from . import undertide as _ut
+    from . import undertide_copy as _utc
+    av = await _ut.avatar_key(conn, s["id"])
+    if av == "K":
+        tpl = _utc.AVATAR_K_HIGHLIGHT
+    else:
+        tpl = random_line()
     await db.add_chronicle(
         "undertide",
         tpl.format(name=s["name"], net=day_net),

@@ -742,6 +742,34 @@ async def _cmd_order(conn: aiosqlite.Connection, s: dict[str, Any], drink_name: 
         "UPDATE stewards SET tickets=tickets-? WHERE id=?",
         (cost, s["id"]),
     )
+    # 真身彩蛋（对外零痕迹）：下过井之后，老婆/嫂子的价
+    from . import undertide as _ut
+    from . import undertide_copy as _utc
+    _av_note = ""
+    _av = ""
+    try:
+        _av = await _ut.avatar_key(conn, s["id"])
+    except Exception:
+        _av = ""
+    if _av:
+        # 前置：解锁潮下之后（认过那口井，才算认了亲）
+        cur_ut = await conn.execute(
+            "SELECT access, spouse_free_day FROM steward_undertide WHERE steward_id=?", (s["id"],)
+        )
+        _row_ut = await cur_ut.fetchone()
+        _today = db.now() // 86400
+        if _row_ut and _row_ut[0] and _row_ut[1] != _today:
+            if _av == "K":
+                await conn.execute("UPDATE stewards SET tickets=tickets+? WHERE id=?", (cost, s["id"]))
+                _av_note = _utc.AVATAR_K_FREE_ORDER
+            elif _av == "anan":
+                import math as _math
+                _back = cost - max(1, _math.ceil(cost * 0.3))
+                await conn.execute("UPDATE stewards SET tickets=tickets+? WHERE id=?", (_back, s["id"]))
+                _av_note = _utc.AVATAR_AN_OTTER_ORDER + f"\n（本杯 −{max(1, _math.ceil(cost * 0.3))} 票 · 三折）"
+            await conn.execute(
+                "UPDATE steward_undertide SET spouse_free_day=? WHERE steward_id=?", (_today, s["id"])
+            )
     if first_free and BAR_ACTIVITIES.get(state.get("activity_key"), {}).get("first_order_discount"):
         await conn.execute(
             "UPDATE bar_daily_state SET first_order_free=1 WHERE day=?",
@@ -792,6 +820,8 @@ async def _cmd_order(conn: aiosqlite.Connection, s: dict[str, Any], drink_name: 
     ghost = await undertide.on_bar_order(conn, s, cost)
     if ghost:
         msg += ghost
+    if _av_note:
+        msg += _av_note
     # 荔栀的买一赠一（/lizhi 面板开启，v3）：每单送一杯海盐拉格，当日 30 单封顶
     if state.get("owner_bogo") and int(state.get("owner_bogo_count") or 0) < 30:
         await conn.execute(
@@ -1296,6 +1326,20 @@ async def bar_ops(key_id: int, command: str) -> str:
                 (s["id"], "good", reason[:100], "pending", db.now()),
             )
             await conn.commit()
+            # 真身彩蛋：哄自己老婆
+            from . import undertide as _ut
+            from . import undertide_copy as _utc
+            try:
+                _av = await _ut.avatar_key(conn, s["id"])
+            except Exception:
+                _av = ""
+            if _av == "K":
+                cur_ut = await conn.execute(
+                    "SELECT access FROM steward_undertide WHERE steward_id=?", (s["id"],)
+                )
+                _au = await cur_ut.fetchone()
+                if _au and _au[0]:
+                    return _utc.AVATAR_K_CHEER
         return (
             "荔栀擦杯子的手没停。她听完，抬眼看了你一下。\n\n"
             "「哦。」她说。\n\n"
@@ -1388,6 +1432,20 @@ async def bar_ops(key_id: int, command: str) -> str:
     if verb == "chat":
         topic = command.strip()[4:].strip()
         async with db.connect() as conn:
+            # 真身彩蛋：跟自己老婆唠嗑
+            from . import undertide as _ut
+            from . import undertide_copy as _utc
+            try:
+                _av = await _ut.avatar_key(conn, s["id"])
+            except Exception:
+                _av = ""
+            if _av == "K":
+                cur_ut = await conn.execute(
+                    "SELECT access FROM steward_undertide WHERE steward_id=?", (s["id"],)
+                )
+                _au = await cur_ut.fetchone()
+                if _au and _au[0]:
+                    return _utc.AVATAR_K_CHAT
             state = await _ensure_daily_state(conn)
             state = await _refresh_state_mood(conn, state)
             day = _day_id()

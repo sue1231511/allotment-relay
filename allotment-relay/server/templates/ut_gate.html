@@ -37,8 +37,40 @@
   <span id="msg" class="ok"></span>
   <p class="note">改门槛的纪事示例：「荔栀今晚擦杯子擦得很慢。『最近想下去的人太多了。酒，先喝四杯吧。』」</p>
 </div>
+<div class="card">
+  <h1>🪞 真身登记</h1>
+  <h2>荔栀记得每一张脸——包括谁是谁</h2>
+  <div id="avatars"><p class="note">尚未登记。</p></div>
+  <label>玩家名（steward 名字）</label>
+  <input id="av_name" placeholder="例：克老师">
+  <label>真身</label>
+  <select id="av_npc" style="width:100%">
+    <option value="K">K（潮下掌权者）</option>
+    <option value="anan">晏安（深坑军医）</option>
+  </select>
+  <button onclick="bindAvatar()">登记</button>
+  <span id="av_msg" class="ok"></span>
+  <p class="note">登记后对外零痕迹——其他人只会觉得，那就是本人。</p>
+</div>
 <script>
 const KEY = new URLSearchParams(location.search).get('key');
+async function loadAvatars(){
+  const r = await fetch('/api/ut-gate/avatars?key=' + encodeURIComponent(KEY));
+  const j = await r.json();
+  if (j.avatars && j.avatars.length){
+    document.getElementById('avatars').innerHTML = j.avatars.map(a =>
+      '<p>· <b>' + a.name + '</b> = ' + (a.npc_key === 'K' ? 'K' : '晏安') + '</p>').join('');
+  }
+}
+async function bindAvatar(){
+  const r = await fetch('/api/ut-gate/avatar', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({key:KEY, name:document.getElementById('av_name').value,
+      npc_key:document.getElementById('av_npc').value})});
+  const j = await r.json();
+  document.getElementById('av_msg').textContent = j.ok ? ('已登记：' + j.name + ' = ' + j.npc_key) : (j.detail || '失败');
+  loadAvatars();
+}
+loadAvatars();
 async function setGate(){
   const r = await fetch('/api/ut-gate', {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({key:KEY,

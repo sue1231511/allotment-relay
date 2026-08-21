@@ -308,6 +308,46 @@ async def ut_owner_cheer(request: Request):
         return {"ok": True, "msg": "已无视（24h 静默过期）"}
 
 
+@app.get("/api/ut-gate/avatars")
+async def ut_gate_avatars(request: Request, key: str = ""):
+    from .undertide_config import UT_GATE_KEY
+    if not _owner_ok(key, UT_GATE_KEY):
+        return JSONResponse({"detail": "凭证不对"}, status_code=401)
+    from . import db
+    async with db.connect() as conn:
+        conn.row_factory = aiosqlite.Row
+        rows = await (await conn.execute(
+            "SELECT b.steward_id, s.name, b.npc_key FROM ut_avatar_bind b "
+            "JOIN stewards s ON s.id=b.steward_id"
+        )).fetchall()
+    return {"avatars": [dict(r) for r in rows]}
+
+
+@app.post("/api/ut-gate/avatar")
+async def ut_gate_bind_avatar(request: Request):
+    import json as _json
+    from .undertide_config import UT_GATE_KEY
+    body = _json.loads(await request.body())
+    if not _owner_ok(body.get("key", ""), UT_GATE_KEY):
+        return JSONResponse({"detail": "凭证不对"}, status_code=401)
+    name = (body.get("name") or "").strip()
+    npc_key = (body.get("npc_key") or "").strip()
+    if npc_key not in ("K", "anan"):
+        return JSONResponse({"detail": "npc_key 须为 K 或 anan"}, status_code=400)
+    from . import db
+    async with db.connect() as conn:
+        target = await db.get_steward_by_name(name)
+        if not target:
+            return JSONResponse({"detail": f"档口查无此人：{name}"}, status_code=404)
+        await conn.execute(
+            "INSERT INTO ut_avatar_bind (steward_id, npc_key, bound_at) VALUES (?,?,?) "
+            "ON CONFLICT(steward_id) DO UPDATE SET npc_key=?, bound_at=?",
+            (target["id"], npc_key, db.now(), npc_key, db.now()),
+        )
+        await conn.commit()
+    return {"ok": True, "name": target["name"], "npc_key": npc_key}
+
+
 @app.get("/ut-gate")
 async def ut_gate_page(request: Request, key: str = ""):
     from .undertide_config import UT_GATE_KEY

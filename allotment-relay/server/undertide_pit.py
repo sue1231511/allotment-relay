@@ -172,8 +172,17 @@ async def pit_ops(
         return "\n".join(lines)
 
     if verb == "medic":
-        if len(parts) < 2 or parts[1] not in utcfg.UT_PIT_MEDIC:
-            raise ValueError("用法: undertide_ops medic ring_shock|pit_trauma")
+        # 真身：自己的诊室——全病谱开放（地面 12 种 + 深坑 2 种），材料费 ≈ 原价 1/4
+        from . import undertide as _ut
+        from .catalog import AILMENTS as _AILS
+        av = await _ut.avatar_key(conn, s["id"])
+        is_avatar = av == "anan" and True
+        valid_keys = set(_AILS) if is_avatar else set(utcfg.UT_PIT_MEDIC)
+        if len(parts) < 2 or parts[1] not in valid_keys:
+            raise ValueError(
+                "用法: undertide_ops medic ring_shock|pit_trauma"
+                + ("（或任意病症 key——这里是你的诊室）" if is_avatar else "")
+            )
         ailment = parts[1]
         cur = await conn.execute(
             "SELECT 1 FROM steward_ailments WHERE steward_id=? AND ailment_key=?",
@@ -181,7 +190,13 @@ async def pit_ops(
         )
         if not await cur.fetchone():
             raise ValueError("你没有这个伤。别在晏安面前装病——他见过的真伤比你演的都多。")
-        cost = random.randint(*utcfg.UT_PIT_MEDIC[ailment])
+        if is_avatar:
+            import math
+            base = _AILS[ailment]["cost"] if ailment in _AILS else utcfg.UT_PIT_MEDIC.get(
+                ailment, (60, 90))[0]
+            cost = max(2, math.ceil(base * 0.25))
+        else:
+            cost = random.randint(*utcfg.UT_PIT_MEDIC[ailment])
         cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
         wallet = (await cur.fetchone())[0]
         paid_note = ""
@@ -197,7 +212,8 @@ async def pit_ops(
                 (s["id"], cost, _day_id() + 7, "surgery", _day_id()),
             )
             paid_note = f"（手术费 {cost} 票，账已划转恶猫钱庄，按当日利率起息）"
-        heal = {"ring_shock": 30, "pit_trauma": 40}[ailment]
+        heal_map = {"ring_shock": 30, "pit_trauma": 40}
+        heal = heal_map.get(ailment) or _AILS.get(ailment, {}).get("health_restore", 12)
         await conn.execute(
             "DELETE FROM steward_ailments WHERE steward_id=? AND ailment_key=?", (s["id"], ailment)
         )
@@ -205,6 +221,9 @@ async def pit_ops(
             "UPDATE stewards SET health=MIN(100, health+?) WHERE id=?", (heal, s["id"])
         )
         await conn.commit()
+        if is_avatar:
+            ail_name = _AILS.get(ailment, {}).get("name", ailment)
+            return utcopy.AVATAR_AN_MEDIC.format(ail=ail_name, cost=cost, heal=heal)
         if wallet < cost:
             body = utcopy.PIT_MEDIC_BROKE
         else:
