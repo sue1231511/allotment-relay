@@ -898,11 +898,19 @@ async def undertide_ops(key_id: int, command: str) -> str:
         hits_prefix = drug_note + hits_prefix
 
         if verb == "help":
-            return (hits_prefix + utcopy.HELP) if hits_prefix else utcopy.HELP
+            body = utcopy.HELP
+            if ut["access"] and not int(ut.get("guide_seen") or 0):
+                body = utcopy.GUIDE_HELP_TIP + "\n\n" + body
+            return (hits_prefix + body) if hits_prefix else body
 
         if verb == "guide":
             if not ut["access"]:
                 raise ValueError(utcopy.NO_ACCESS_HINT)
+            if not int(ut.get("guide_seen") or 0):
+                await conn.execute(
+                    "UPDATE steward_undertide SET guide_seen=1 WHERE steward_id=?", (s["id"],)
+                )
+                await conn.commit()
             return hits_prefix + utcopy.GUIDE_TEXT
 
         if verb == "well":
@@ -957,7 +965,8 @@ async def undertide_ops(key_id: int, command: str) -> str:
             tide_note = f"\n\n（{utcopy.TIDE_HINT.format(line=tide_line)}）" if tide_line else ""
             av = await avatar_key(conn, s["id"])
             head = utcopy.AVATAR_K_ENTER if av == "K" else utcopy.pick(utcopy.ENTER_POOL)
-            return hits_prefix + head + tide_note + event + kroom
+            guide_tip = "" if int(ut.get("guide_seen") or 0) else utcopy.GUIDE_FIRST_ENTER
+            return hits_prefix + head + tide_note + event + kroom + guide_tip
 
         if verb == "status":
             return hits_prefix + await _cmd_status(conn, s, ut)

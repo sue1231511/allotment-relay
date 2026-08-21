@@ -756,6 +756,14 @@ GUIDE_TEXT = (
 
 GUIDE_NOTE = "（undertide_ops guide — 随时回来问路。他讲第二遍会不耐烦，但还是讲。）"
 
+GUIDE_FIRST_ENTER = (
+    "\n\n井底第一盏灯下面，收门票的人朝你这边扬了扬下巴：\n\n"
+    "「迷路了就喊一声——undertide_ops guide。」\n"
+    "「我只讲一遍。」他顿了顿，「看你是新来的，可以讲第二遍。」"
+)
+
+GUIDE_HELP_TIP = "第一次来？先 undertide_ops guide — 收门票的人会给你指路（他只讲一遍，对新来的例外）。"
+
 # ══ 医务间·卖药 ═════════════════════════════════════════════
 
 MEDIC_SHOP_HEADER = "«医务间·柜子里的货»"
