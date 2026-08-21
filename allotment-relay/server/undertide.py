@@ -461,11 +461,13 @@ async def _cmd_bank(
     verb = parts[0].lower() if parts else "debt"
     day = _day_id()
     rate, reason = await _get_rate(conn, day)
-    # 存款懒结算 + 逾期自动划存款抵债（银行的法定权利）
+    # 存款懒结算 + 逾期自动划存款抵债（银行的法定权利）——K 除外：
+    # 老板的债不过猫猫的手，走办公室流程（荔栀拖人那套）
     savings, gain = await _settle_savings(conn, ut, day)
     interest_note = utcopy.SAVE_INTEREST_NOTE.format(gain=gain) if gain else ""
     debts, total = await _bank_summary(conn, s)
-    if debts and savings > 0:
+    _sweep_av = await avatar_key(conn, s["id"])
+    if debts and savings > 0 and _sweep_av != "K":
         owed = total
         take = min(savings, owed)
         if take > 0:
