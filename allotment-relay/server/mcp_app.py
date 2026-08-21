@@ -152,7 +152,7 @@ async def bar_ops(
 
 @mcp.tool(description="潮下地下世界。command 写一整句。先 help 看全表。入口：酒吧喝够杯数后 well → descend → enter。cheer 哄猫猫（不是荔栀）。深坑伤 undertide_ops medic。")
 async def undertide_ops(
-    command: Annotated[str, Field(description="子命令整句。先 help。入口 well → descend → enter。常用：status / market / bank / jail / medic ring_shock / pit drug list / cheer 好话（哄猫猫）")] = "",
+    command: Annotated[str, Field(description="子命令整句。先 help。入口 well → descend → enter。常用：status / market / bank save 50 / bank take all / jail / medic ring_shock / cheer 好话（哄猫猫）")] = "",
 ) -> str:
     from . import undertide
     return await undertide.undertide_ops(_kid(), command)

@@ -962,6 +962,7 @@ undertide_ops draw <注> / draw hit / draw stand — 死人抽牌
 undertide_ops hijack <对象> — 劫持（后果自负）
 undertide_ops grudge pay|fight|run — 寻仇应对
 undertide_ops bank borrow <票数> — 恶猫钱庄借票
+undertide_ops bank save <票数> / take <票数|all> — 存款（T+1 起息）/ 取款
 undertide_ops bank debt — 查债
 undertide_ops bank repay <票数|all> — 还款
 undertide_ops jail status/ransom/serve/work — 监牢

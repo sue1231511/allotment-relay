@@ -536,7 +536,7 @@ T3 及以上饵/竿/网仍用 `tide_ops gear upgrade`（要票 + 材料）。已
 | 入口 | `well` / `descend` / `enter` | 看井 · 首次下井（3 票）· 进入 |
 | 状态 | `status` | 影信 · 债务 · 案底 |
 | 后室铺 | `market` / `buy 编号` / `sell 物品` | 每日货架 · 买入（真/次/假三档判定，**离柜概不认账**）· 掌柜处出货 |
-| 恶猫钱庄 | `bank borrow/debt/repay` | 借（额度 = 影信×3）· 查债 · 还款 |
+| 恶猫钱庄 | `bank borrow/save/take/debt/repay` | 借（额度 = 影信×3）· 存款（T+1 起息）· 取款 · 查债 · 还款 |
 | 监牢 | `jail status/ransom/serve/work` | 案底 · 赎身（案底×15 票）· 认刑 · 苦力（2 票/趟，每日 6 趟满额减刑 12h） |
 | 深坑 | `pit` / `fight 斗士名 [attack\|guard\|feint]` / `medic 伤病` | 斗士榜 · 下坑（策略克制 ±10%）· 晏安医务间 |
 | 赌场 | `dice small\|big\|black 注` / `lantern` / `draw 注 停牌点` | 黑潮骰（×2/×2/×5）· 最后一盏灯（×1.5→×8）· 死人抽牌 |
