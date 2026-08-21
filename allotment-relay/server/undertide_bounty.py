@@ -121,24 +121,132 @@ async def _maybe_npc_post(conn: aiosqlite.Connection, s: dict[str, Any], reason:
     )
 
 
+async def _ensure_daily_quests(conn: aiosqlite.Connection) -> list[dict[str, Any]]:
+    """NPC 每日委托：UTC 日种子选 2~3 条，写进 ut_bounty（poster='__quest__'）。
+    保证墙上始终有活——恩怨墙不再空。"""
+    import random
+    day = _day_id()
+    conn.row_factory = aiosqlite.Row
+    # 今日委托已生成？
+    cur = await conn.execute(
+        "SELECT COUNT(*) FROM ut_bounty WHERE poster='__quest__' AND created_at > ?",
+        (day * 86400,),
+    )
+    if (await cur.fetchone())[0]:
+        return []
+    rng = random.Random(day * 31337)
+    pool = list(utcopy.NPC_QUESTS.keys())
+    picked = rng.sample(pool, rng.randint(2, 3))
+    out = []
+    for key in picked:
+        q = utcopy.NPC_QUESTS[key]
+        # errand/scare 类可重复接（每人限一次）；fight 类单发单接
+        expires = day * 86400 + 86400 * 2  # 两天有效
+        await conn.execute(
+            """INSERT INTO ut_bounty (poster, poster_id, target_name, target_id, tier, bounty, status, expires_at, created_at)
+               VALUES ('__quest__', NULL, ?, 0, ?, ?, 'open', ?, ?)""",
+            (q["name"], "quest", q["pay"], expires, day * 86400),
+        )
+        out.append(q)
+    if out:
+        await conn.commit()
+    return out
+
+
 async def bounty_ops(
     conn: aiosqlite.Connection, s: dict[str, Any], ut: dict[str, Any], rest: str
 ) -> str:
     await _settle_expired(conn)
     await _maybe_npc_post(conn, s, "overdue")
+    await _ensure_daily_quests(conn)
     parts = rest.split()
     verb = parts[0].lower() if parts else "list"
+
+    if verb == "quest":
+        # 接 NPC 委托：quest 编号
+        if len(parts) < 2 or not parts[1].isdigit():
+            raise ValueError("用法: undertide_ops bounty quest 编号")
+        conn.row_factory = aiosqlite.Row
+        b = await (await conn.execute(
+            "SELECT * FROM ut_bounty WHERE id=? AND status='open' AND poster='__quest__'",
+            (int(parts[1]),),
+        )).fetchone()
+        if not b:
+            raise ValueError("这单不在了。手慢了或看错了编号。")
+        # 查找 quest 定义（target_name 存的是 quest key 的 name）
+        qdef = None
+        for k, v in utcopy.NPC_QUESTS.items():
+            if v["name"] == b["target_name"]:
+                qdef = v; break
+        if not qdef:
+            raise ValueError("委托定义丢失——酒保耸耸肩。")
+        # 影信门槛
+        rep_req = qdef.get("rep_req", 0)
+        if rep_req and int(ut["shadow_rep"]) < rep_req:
+            return utcopy.QUEST_NO_REP.format(req=rep_req)
+        kind = qdef.get("kind", "errand")
+        if kind == "fight":
+            # 战力判定
+            from . import undertide_muscle as um
+            my_power = await um._my_power(conn, s["id"])
+            their_power = qdef.get("power", 30) + random.randint(1, 20)
+            if my_power < their_power:
+                await conn.execute("UPDATE ut_bounty SET status='open' WHERE id=?", (b["id"],))
+                await conn.execute(
+                    "UPDATE stewards SET health=MAX(0,health-?) WHERE id=?",
+                    (random.randint(5, 12), s["id"]),
+                )
+                await conn.commit()
+                return qdef["fail"] + "\n\n（body 大跌 · 无赏 · 纸条回到墙上）"
+        # 跑腿/吓人/打赢 → 完成
+        body_cost = qdef.get("body_cost", 0)
+        if body_cost:
+            await conn.execute(
+                "UPDATE stewards SET health=MAX(0,health-?), energy=MAX(0,energy-?) WHERE id=?",
+                (body_cost, body_cost, s["id"]),
+            )
+        await conn.execute("UPDATE ut_bounty SET status='done' WHERE id=?", (b["id"],))
+        await conn.execute(
+            "UPDATE stewards SET tickets=tickets+? WHERE id=?", (b["bounty"], s["id"])
+        )
+        from . import undertide as utmod
+        await utmod._bump_rep(conn, s["id"], 1)
+        await db.add_chronicle(
+            "undertide", f"{s['name']} 完成了委托「{qdef['name']}」。", s["id"], conn=conn,
+        )
+        await conn.commit()
+        return qdef["done"] + f"\n\n（报酬 +{b['bounty']} 票 · 影信 +1）"
 
     if verb == "list":
         conn.row_factory = aiosqlite.Row
         rows = await (await conn.execute(
             "SELECT * FROM ut_bounty WHERE status='open' ORDER BY created_at DESC LIMIT 12"
         )).fetchall()
-        lines = ["«恩怨墙 — 钉满纸条的墙»",
-                 "纸条上不写挂单人。只有目标、事情、价钱。", ""]
-        if not rows:
+        # 分开显示：NPC 委托 vs 玩家挂单
+        quests = [r for r in rows if r["poster"] == "__quest__"]
+        bounties = [r for r in rows if r["poster"] != "__quest__"]
+        lines = ["«恩怨墙 — 钉满纸条的墙»", ""]
+        if quests:
+            lines.append(utcopy.QUEST_HEADER)
+            lines.append("")
+            for b in quests:
+                qdef = None
+                for k, v in utcopy.NPC_QUESTS.items():
+                    if v["name"] == b["target_name"]:
+                        qdef = v; break
+                if qdef:
+                    kind_tag = "跑腿" if qdef["kind"] == "errand" else ("动手" if qdef["kind"] == "fight" else "立着")
+                    lines.append(f"  #{b['id']} 【{kind_tag}】{qdef['name']} — {qdef['pay']} 票")
+                    lines.append(f"    {qdef['desc']}")
+            lines.append("")
+            lines.append("bounty quest 编号 — 接委托（跑腿稳赚，动手有风险）")
+        if bounties:
+            lines.append("── 恩怨悬赏 ──")
+            lines.append("纸条上不写挂单人。只有目标、事情、价钱。")
+            lines.append("")
+        if not bounties and not quests:
             lines.append("（墙是空的。空墙最罕见，也最不安。）")
-        for b in rows:
+        for b in bounties:
             tier_label = "偷" if b["tier"] == "steal" else "打"
             gilt = " ·烫金" if b["poster"] == "__npc__" else ""
             lines.append(f"  #{b['id']} 【{tier_label}】{b['target_name']} — 赏 {b['bounty']} 票{gilt}")
