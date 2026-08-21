@@ -373,6 +373,45 @@ async def _get_rate(conn: aiosqlite.Connection, day: int) -> tuple[float, str]:
     return utcfg.UT_RATE_BASE, ""
 
 
+async def _get_save_rate(conn: aiosqlite.Connection, day: int) -> float:
+    row = await (await conn.execute("SELECT save_rate, rate_day FROM ut_owner_state WHERE id=1")).fetchone()
+    if row and int(row["rate_day"]) == day and float(row["save_rate"]) > 0:
+        return float(row["save_rate"])
+    return utcfg.UT_SAVE_RATE_BASE
+
+
+def _save_cap(ut: dict[str, Any]) -> int:
+    return min(utcfg.UT_SAVE_CAP, int(ut["shadow_rep"]) * utcfg.UT_SAVE_CAP_PER_REP)
+
+
+async def _settle_savings(
+    conn: aiosqlite.Connection, ut: dict[str, Any], day: int
+) -> tuple[int, int]:
+    """存款懒结算：T+1 起息，复利滚入，到上限停。返回 (结算后余额, 本次利息)。"""
+    bal = int(ut.get("savings") or 0)
+    last_day = int(ut.get("savings_day") or 0)
+    if bal <= 0 or last_day <= 0 or day <= last_day:
+        return bal, 0
+    rate = await _get_save_rate(conn, day)
+    gain = 0
+    for _d in range(last_day, day):
+        if bal >= _save_cap(ut):
+            break
+        step = int(bal * rate)
+        if step < 1:
+            step = 1 if bal >= 50 else 0  # 小额存款每天至少 1 票（本金≥50）
+        bal = min(_save_cap(ut), bal + step)
+        gain += step
+        if step == 0:
+            break
+    if gain or bal != int(ut.get("savings") or 0):
+        await conn.execute(
+            "UPDATE steward_undertide SET savings=?, savings_day=? WHERE steward_id=?",
+            (bal, day, ut["steward_id"]),
+        )
+    return bal, gain
+
+
 def _debt_accrued(principal: int, rate: float, created_day: int, now_day: int) -> int:
     days = max(0, min(utcfg.UT_LOAN_MAX_DAYS, now_day - created_day))
     return int(principal * rate * days)
@@ -422,6 +461,40 @@ async def _cmd_bank(
     verb = parts[0].lower() if parts else "debt"
     day = _day_id()
     rate, reason = await _get_rate(conn, day)
+    # 存款懒结算 + 逾期自动划存款抵债（银行的法定权利）
+    savings, gain = await _settle_savings(conn, ut, day)
+    interest_note = utcopy.SAVE_INTEREST_NOTE.format(gain=gain) if gain else ""
+    debts, total = await _bank_summary(conn, s)
+    if debts and savings > 0:
+        owed = total
+        take = min(savings, owed)
+        if take > 0:
+            await conn.execute(
+                "UPDATE steward_undertide SET savings=? WHERE steward_id=?",
+                (savings - take, s["id"]),
+            )
+            savings -= take
+            # 抵扣：逐单扣，还多少销多少
+            remaining = take
+            for d in sorted(debts, key=lambda x: -(x["accrued"])):
+                if remaining <= 0:
+                    break
+                owe = d["principal"] + d["accrued"]
+                if remaining >= owe:
+                    await conn.execute("UPDATE ut_debts SET status='paid' WHERE id=?", (d["id"],))
+                    remaining -= owe
+                else:
+                    # 部分抵扣：优先冲利息，剩下的减本金（本金可归零）
+                    new_principal = max(0, d["principal"] + d["accrued"] - remaining)
+                    await conn.execute(
+                        "UPDATE ut_debts SET principal=? WHERE id=?",
+                        (new_principal, d["id"]),
+                    )
+                    remaining = 0
+            await conn.commit()
+            interest_note += utcopy.SAVE_REPAY_FROM_SAVINGS
+            # 面板数据刷新：划扣后的真实状态
+            debts, total = await _bank_summary(conn, s)
     # 真身家人价：今天他被猫猫采纳哄开心了 → 当日他的利率打到下限（借/查/还一致）
     _av = await avatar_key(conn, s["id"])
     if _av == "anan":
@@ -437,6 +510,56 @@ async def _cmd_bank(
         )).fetchone()
         if row and int(row[0]) == day:
             rate = max(utcfg.UT_RATE_MIN, rate - 0.02)
+
+    if verb == "save":
+        if len(parts) < 2 or not parts[1].isdigit():
+            raise ValueError("用法: undertide_ops bank save 票数")
+        amount = int(parts[1])
+        if amount <= 0:
+            raise ValueError("猫猫不收零票存款。")
+        cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
+        wallet = (await cur.fetchone())[0]
+        cap = _save_cap(ut)
+        if savings >= cap:
+            return utcopy.SAVE_DEPOSIT_FULL.format(cap=cap)
+        if wallet < amount:
+            if amount <= cap - savings:
+                raise ValueError("你手上没这么多票。")
+            # 想存超过上限：只收能收的部分
+            amount = min(wallet, cap - savings)
+            if amount <= 0:
+                return utcopy.SAVE_DEPOSIT_FULL.format(cap=cap)
+        amount = min(amount, cap - savings)
+        await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (amount, s["id"]))
+        await conn.execute(
+            "UPDATE steward_undertide SET savings=savings+?, savings_day=? WHERE steward_id=?",
+            (amount, day, s["id"]),
+        )
+        await conn.commit()
+        srate = await _get_save_rate(conn, day)
+        av_note = utcopy.AVATAR_K_SAVE if _av == "K" else ""
+        return (
+            utcopy.SAVE_DEPOSIT.format(rate=_fmt_rate(srate))
+            + f"\n\n（存入 {amount} 票 · 明日起息 · 当前存款 {savings + amount}/{cap}）"
+            + av_note
+        )
+
+    if verb == "take":
+        if len(parts) < 2:
+            raise ValueError("用法: undertide_ops bank take 票数|all")
+        arg = parts[1].lower()
+        if arg != "all" and not arg.isdigit():
+            raise ValueError("取多少？票数或 all。")
+        amount = savings if arg == "all" else min(savings, int(arg))
+        if amount <= 0:
+            raise ValueError("你在这儿没有存款。")
+        await conn.execute("UPDATE stewards SET tickets=tickets+? WHERE id=?", (amount, s["id"]))
+        await conn.execute(
+            "UPDATE steward_undertide SET savings=savings-? WHERE steward_id=?",
+            (amount, s["id"]),
+        )
+        await conn.commit()
+        return utcopy.SAVE_WITHDRAW + f"\n\n（取出 {amount} 票 · 剩余 {savings - amount} 票）" + interest_note
 
     if verb == "borrow":
         if len(parts) < 2:
@@ -517,6 +640,9 @@ async def _cmd_bank(
     if reason:
         lines.insert(0, utcopy.RATE_TODAY_HEADER.format(
             rate=_fmt_rate(rate), reason=reason))
+    if savings > 0:
+        srate = await _get_save_rate(conn, day)
+        lines.append(utcopy.SAVE_LINE.format(amount=savings, rate=_fmt_rate(srate), cap=_save_cap(ut)))
     if not debts:
         lines.append("在册欠单：无。小八今天没你的名字可念。")
     else:
@@ -539,7 +665,7 @@ async def _cmd_bank(
         lines.append(utcopy.OVERDUE_DAY5)
     if overdue_days >= 7:
         lines.append(utcopy.OVERDUE_DAY7)
-    return "\n".join(lines)
+    return ("\n".join(lines) + interest_note) if interest_note else "\n".join(lines)
 
 
 # ══ 地下监牢 ═══════════════════════════════════════════════
