@@ -169,6 +169,13 @@ async def _scrump_victim(
             db.now(),
         ),
     )
+    if plot.get("camera"):
+        await conn.execute(
+            "INSERT INTO scrump_theft_log "
+            "(owner_id, thief_id, thief_name, plot_slot, crop_name, qty, caught, created_at) "
+            "VALUES (?,?,?,?,?,?,?,?)",
+            (steward["id"], None, thief, plot["slot"], result["name"], result["taken"], 0, db.now()),
+        )
     return detail, plot["id"], None
 
 
