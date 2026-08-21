@@ -189,6 +189,22 @@ async def test_tale_explore_daily_cap() -> None:
         assert "今天已经主动探索" in str(exc), exc
 
 
+def test_tale_day_resets_at_beijing_midnight() -> None:
+    from server import db, tale
+
+    original_now = db.now
+    try:
+        # Unix 纪元第一个 UTC 16:00，正好是北京时间次日 00:00。
+        db.now = lambda: 16 * 3600 - 1
+        before_midnight = tale._day_id()
+        db.now = lambda: 16 * 3600
+        at_midnight = tale._day_id()
+    finally:
+        db.now = original_now
+    assert before_midnight == 0, before_midnight
+    assert at_midnight == 1, at_midnight
+
+
 async def test_commons_claim_advances_item_stage() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="tale-commons-"))
     db = await _boot(tmp)
@@ -266,6 +282,7 @@ def test_tale_mcp_description() -> None:
 def main() -> None:
     asyncio.run(test_tale_flow())
     asyncio.run(test_tale_explore_daily_cap())
+    test_tale_day_resets_at_beijing_midnight()
     asyncio.run(test_commons_claim_advances_item_stage())
     asyncio.run(test_tale_abandon())
     test_tale_mcp_description()

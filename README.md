@@ -238,7 +238,7 @@ bar_ops     的 command = work 洗碗 night
 | `list` | 查看可接任务及每项完成奖励 |
 | `accept black_box_lover` | 接取首个潮闻「黑盒与潮声」 |
 | `status` | 查看进行中的任务与当前阶段 |
-| `explore beach` | 按当前阶段提示探索；匹配才耗 5 精力并计入每日 3 次，错误地点不扣 |
+| `explore beach` | 按当前阶段提示探索；匹配才耗 5 精力并计入每日 3 次，北京时间 00:00 刷新；错误地点不扣 |
 | `turnin` | 交付当前阶段要求的物品并领奖 |
 | `abandon black_box_lover` | 放弃任务，之后可重新接取 |
 | `board` | 查看潮闻完成榜 |

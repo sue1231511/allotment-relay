@@ -27,7 +27,8 @@ TALE_HELP = """tale_ops 子命令（整句写进 command）：
   accept 任务key — 接任务
   status — 当前进行中的任务
   explore [地点] — 按 status/hint 探索；阶段2 sea 找锈铁，阶段5/6 beach 找任务物品
-                    匹配阶段才耗 5 精力并计每日 3 次；错误地点不扣精力、不占次数
+                    匹配阶段才耗 5 精力并计每日 3 次；北京时间 00:00 刷新
+                    错误地点不扣精力、不占次数
   turnin — 交付并领奖
   abandon 任务key — 放弃
   board — 完成榜
@@ -314,7 +315,7 @@ TALE_CATALOG: list[dict[str, Any]] = [
 # ══ 内部工具 ═══════════════════════════════════════════════════
 
 def _day_id() -> int:
-    return db.now() // 86400
+    return (db.now() + config.TALE_DAY_UTC_OFFSET) // 86400
 
 
 async def _ensure_catalog(conn: aiosqlite.Connection) -> None:
