@@ -360,8 +360,8 @@ HUT_SOFT = {
     "sea_chart": {"name": "手绘海图", "cost": 45, "emoji": "🗺️", "hint": "出海失败率 ×0.86，黑旗战力 +10"},
     "bramble_wreath": {"name": "荆棘莓环", "cost": 30, "emoji": "🌸", "hint": "纯好看，无数值"},
     "glass_float": {"name": "玻璃浮标", "cost": 36, "emoji": "🔮", "hint": "公共物资刷新 ×1.22"},
-    "fridge": {"name": "冰箱", "cost": 120, "emoji": "🧊", "hint": "kitchen store 保鲜；开小馆必需"},
-    "cabinet": {"name": "潮柜", "cost": 58, "emoji": "🗄️", "hint": "hut_ops 柜子 存/取；小偷和斑鸠偷不到行囊外的货"},
+    "fridge": {"name": "冰箱", "cost": 120, "emoji": "🧊", "hint": "hut_ops 冰柜 存/取 熟菜；kitchen_ops fridge；开小馆必需"},
+    "cabinet": {"name": "潮柜", "cost": 58, "emoji": "🗄️", "hint": "hut_ops 冰柜 存/取 生鲜（柜子/潮柜同义）；小偷和斑鸠翻不到行囊外的货"},
 }
 
 TOOLS = {

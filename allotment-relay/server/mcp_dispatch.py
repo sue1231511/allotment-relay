@@ -72,7 +72,8 @@ PLOT_HELP = """plot_ops 子命令（整句写进 command）：
 
 HUT_HELP = """hut_ops 子命令（整句写进 command）：
   status / build / upgrade / catalog / buy / install — 岸畔小屋
-  柜子 存|取 物品 [数量] — 潮柜。例子：柜子 存 甘蓝 3（先 buy cabinet 再 install）
+  冰柜 存|取 物品 [数量] — 小屋存菜（柜子/潮柜/冰箱同义）。例子：冰柜 存 甘蓝 3
+    生鲜进潮柜（buy cabinet → install soft_N cabinet）；熟菜进冰箱（buy fridge → install）
   卖掉 槽位 [确认] — 旧家具按折旧卖。例子：卖掉 soft_1 确认
   barn status|erect|buy|feed|collect|shear|churn — 畜栏
   mascot adopt 名字 scout|lucky|compost / upkeep / train / feed — 吉祥物"""

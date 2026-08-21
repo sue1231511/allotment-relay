@@ -93,6 +93,7 @@ async def test_cabinet_and_scrump() -> None:
 
     listed = await hut.cabinet_command(s, [])
     assert "空" in listed, listed
+    assert "冰柜 存" in listed, listed
     put = await hut.cabinet_command(s, ["存", "甘蓝", "3"])
     assert "入柜" in put, put
     async with db.connect() as conn:
@@ -190,6 +191,79 @@ async def test_cannot_take_last() -> None:
     assert plot[1] == 1
 
 
+async def test_icebox_alias_routes_dishes() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="icebox-"))
+    db = await _boot(tmp)
+    from server import hut, kitchen
+
+    assert hut._resolve_fitting_key("冰柜") == "fridge"
+    assert hut._resolve_fitting_key("冰箱") == "fridge"
+    assert hut._resolve_fitting_key("潮柜") == "cabinet"
+    assert hut._resolve_fitting_key("柜子") == "cabinet"
+
+    sid = await _enroll(db, "ice@example.com", "冰柜人")
+    s = await db.get_steward_by_id(sid)
+    kid = s["key_id"]
+    async with db.connect() as conn:
+        await conn.execute(
+            "UPDATE stewards SET hut_built=1, hut_level=1, tickets=400 WHERE id=?",
+            (sid,),
+        )
+        await conn.execute(
+            """
+            INSERT INTO hut_fittings (steward_id, slot, item_key, installed_at)
+            VALUES (?, 'soft_1', 'cabinet', ?)
+            """,
+            (sid, db.now()),
+        )
+        await db.add_item(conn, sid, "crop_kale", 4)
+        await db.add_item(conn, sid, "dish_salt_crab_s4", 2)
+        await conn.commit()
+
+    put = await hut.hut_ops(kid, "冰柜 存 甘蓝 2")
+    assert "入柜" in put, put
+    listed = await hut.hut_ops(kid, "冰柜")
+    assert "甘蓝" in listed and "潮柜" in listed, listed
+    assert "冰箱" in listed, listed
+
+    try:
+        await hut.hut_ops(kid, "冰柜 存 盐焗沙蟹")
+        raise AssertionError("cooked food needs a fridge installed")
+    except ValueError as exc:
+        assert "冰箱" in str(exc) and "buy fridge" in str(exc), exc
+
+    async with db.connect() as conn:
+        await conn.execute(
+            """
+            INSERT INTO hut_fittings (steward_id, slot, item_key, installed_at)
+            VALUES (?, 'soft_2', 'fridge', ?)
+            """,
+            (sid, db.now()),
+        )
+        await conn.commit()
+    s = await db.get_steward_by_id(sid)
+    dish_put = await hut.hut_ops(kid, "冰柜 存 盐焗沙蟹")
+    assert "冰箱" in dish_put, dish_put
+    async with db.connect() as conn:
+        bag = await (await conn.execute(
+            "SELECT quantity FROM satchel WHERE steward_id=? AND item='dish_salt_crab_s4'",
+            (sid,),
+        )).fetchone()
+        stored = await (await conn.execute(
+            "SELECT dish_key, stars, quantity FROM meal_storage WHERE steward_id=?",
+            (sid,),
+        )).fetchone()
+    assert not bag or bag[0] == 1, bag
+    assert stored and stored[0] == "salt_crab" and stored[1] == 4 and stored[2] == 1, stored
+
+    cn_put = await kitchen.kitchen_ops(kid, "store 盐焗沙蟹")
+    assert "冰箱" in cn_put, cn_put
+    took = await hut.hut_ops(kid, "冰柜 取 盐焗沙蟹 2")
+    assert "取出" in took, took
+    status = await hut.hut_ops(kid, "status")
+    assert "冰柜 存" in status, status
+
+
 async def test_cabinet_dump_on_remove() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="cab-dump-"))
     db = await _boot(tmp)
@@ -232,6 +306,7 @@ def main() -> None:
     asyncio.run(test_cabinet_and_scrump())
     asyncio.run(test_cannot_take_last())
     asyncio.run(test_cabinet_dump_on_remove())
+    asyncio.run(test_icebox_alias_routes_dishes())
     print("cabinet/scrump tests ok")
 
 

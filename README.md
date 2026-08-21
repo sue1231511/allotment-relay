@@ -671,10 +671,11 @@ T3 及以上饵/竿/网仍用 `tide_ops gear upgrade`（要票 + 材料）。已
 | 安装 | `install hard_1 storm_shutter` / `install soft_2 tide_lamp` |
 | **栗栗装饰** | `install soft_3 coral_lamp`（需 `visit_ops lili trade` 获得 deco） |
 | 拆除 | `remove soft_1` |
-| **潮柜** | `buy cabinet` → `install soft_N cabinet`；`hut_ops 柜子 存 甘蓝 3` / `取` |
+| **潮柜** | `buy cabinet` → `install soft_N cabinet`；生鲜 `hut_ops 冰柜 存 甘蓝 3` / `取`（小偷翻不到） |
+| **冰箱** | `buy fridge`（也可 `buy 冰柜`）→ `install soft_N fridge`；熟菜 `hut_ops 冰柜 存 盐焗沙蟹` / `取` |
 | **卖掉** | `hut_ops 卖掉` 看报价；`卖掉 soft_1 确认` 按装上多久折旧回收 |
 
-`hut_ops catalog` 开头写建造价（95 票），再列装件价与 hint。**装上才生效**；同类写了「同组不叠」的，装两件只算一次。`build` 成功会写本次花费。旧家具 `hut_ops 卖掉 槽位`：刚装约 62% 买价，每天再折 7 个百分点，最低 25%。冰箱若还在给小馆用，要先卖掉或打烊小馆。行囊里未上墙的按中档折。不要用 `tote_ops vend` 卖装件。
+`hut_ops catalog` 开头写建造价（95 票），再列装件价与 hint。**装上才生效**；同类写了「同组不叠」的，装两件只算一次。`build` 成功会写本次花费。旧家具 `hut_ops 卖掉 槽位`：刚装约 62% 买价，每天再折 7 个百分点，最低 25%。冰箱若还在给小馆用，要先卖掉或打烊小馆。行囊里未上墙的按中档折。不要用 `tote_ops vend` 卖装件。存菜看存货：`hut_ops 冰柜`（同时列出潮柜和冰箱）。
 
 ### 硬装
 
@@ -696,8 +697,8 @@ T3 及以上饵/竿/网仍用 `tide_ops gear upgrade`（要票 + 材料）。已
 | `sea_chart` | 手绘海图 | 45 | 出海失败率 **×0.86**；黑旗战力 **+10** |
 | `glass_float` | 玻璃浮标 | 36 | 公共物资刷新 **×1.22** |
 | `herring_mobile` | 鲱鱼风铃 | 34 | 酒吧小费 **+2**。与海星冠同组不叠 |
-| `fridge` | 冰箱 | 120 | `kitchen_ops store`；开小馆必需 |
-| `cabinet` | 潮柜 | 58 | `hut_ops 柜子 存/取`；8 格，小偷和斑鸠翻不到 |
+| `fridge` | 冰箱 | 120 | `hut_ops 冰柜 存/取` 熟菜；`kitchen_ops fridge`；开小馆必需 |
+| `cabinet` | 潮柜 | 58 | `hut_ops 冰柜 存/取` 生鲜（柜子/潮柜同义）；8 格，小偷和斑鸠翻不到 |
 | `kelp_rug` | 浅海藻毯 | 32 | 无数值 |
 | `bramble_wreath` | 荆棘莓环 | 30 | 无数值 |
 
@@ -748,7 +749,7 @@ T3 及以上饵/竿/网仍用 `tide_ops gear upgrade`（要票 + 材料）。已
 
 ## 温室 `plot_ops shed`（不是仓库）
 
-工具名是 shed，实际是 **温室** + 当面交接。日常货在行囊；想锁家里用小屋 **潮柜**（`hut_ops buy cabinet`）。
+工具名是 shed，实际是 **温室** + 当面交接。日常货在行囊；想锁家里用小屋 **潮柜/冰箱**（`hut_ops 冰柜 存`）。
 
 | 指令 | 说明 |
 |------|------|

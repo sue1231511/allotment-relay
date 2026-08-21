@@ -29,7 +29,50 @@ def _slots(level: int) -> tuple[list[str], list[str]]:
     return hard, soft
 
 
+FIT_ALIASES = {
+    "冰柜": "fridge",
+    "冰箱": "fridge",
+    "icebox": "fridge",
+    "freezer": "fridge",
+    "潮柜": "cabinet",
+    "柜子": "cabinet",
+    "柜": "cabinet",
+    "locker": "cabinet",
+    "chest": "cabinet",
+}
+
+STORAGE_ALIASES = {
+    "cabinet", "柜子", "chest", "locker", "柜", "潮柜",
+    "冰柜", "冰箱", "icebox", "fridge", "freezer",
+}
+
+STORAGE_USAGE = (
+    "用法：hut_ops 冰柜 存 甘蓝 3｜冰柜 取 甘蓝 2"
+    "（柜子/潮柜/冰箱同义）。生鲜进潮柜，熟菜进冰箱。"
+    "买潮柜：hut_ops buy cabinet → install soft_N cabinet；"
+    "买冰箱：hut_ops buy fridge → install soft_N fridge（也可 buy 冰柜）。"
+)
+
+
+def _resolve_fitting_key(token: str) -> str:
+    raw = (token or "").strip()
+    low = raw.lower()
+    if raw in FIT_ALIASES:
+        return FIT_ALIASES[raw]
+    if low in FIT_ALIASES:
+        return FIT_ALIASES[low]
+    if raw in HUT_HARD or raw in HUT_SOFT:
+        return raw
+    if low in HUT_HARD or low in HUT_SOFT:
+        return low
+    for k, v in {**HUT_HARD, **HUT_SOFT}.items():
+        if v["name"] == raw:
+            return k
+    return low
+
+
 def _catalog_item(key: str) -> tuple[str, dict[str, Any]]:
+    key = _resolve_fitting_key(key)
     if key in HUT_HARD:
         return "hard", HUT_HARD[key]
     if key in HUT_SOFT:
@@ -180,6 +223,14 @@ def _fitting_bare(key: str) -> str:
 async def has_cabinet(conn: aiosqlite.Connection, steward_id: int) -> bool:
     cur = await conn.execute(
         "SELECT 1 FROM hut_fittings WHERE steward_id=? AND item_key='cabinet'",
+        (steward_id,),
+    )
+    return bool(await cur.fetchone())
+
+
+async def has_fridge(conn: aiosqlite.Connection, steward_id: int) -> bool:
+    cur = await conn.execute(
+        "SELECT 1 FROM hut_fittings WHERE steward_id=? AND item_key='fridge'",
         (steward_id,),
     )
     return bool(await cur.fetchone())
@@ -492,7 +543,7 @@ async def furniture_sell_command(s: dict[str, Any], rest: list[str]) -> str:
 
 def _cabinet_forbid(item: str) -> str | None:
     if item.startswith("dish_") or item.startswith("meal_"):
-        return "熟菜放冰箱 kitchen_ops store"
+        return "熟菜放冰箱 — hut_ops 冰柜 存 菜名（先 buy fridge → install）"
     if item.startswith("live_"):
         return "活物走畜栏 hut_ops barn"
     if item.startswith("fit_"):
@@ -500,71 +551,106 @@ def _cabinet_forbid(item: str) -> str | None:
     return None
 
 
-async def cabinet_command(s: dict[str, Any], rest: list[str]) -> str:
-    verb = rest[0].lower() if rest else "status"
+def _parse_storage_item_qty(tokens: list[str]) -> tuple[str, int]:
+    qty = 1
+    name_tokens = list(tokens)
+    if name_tokens and name_tokens[-1].isdigit():
+        qty = max(1, int(name_tokens[-1]))
+        name_tokens = name_tokens[:-1]
+    if not name_tokens:
+        raise ValueError("要写物品名")
+    raw = " ".join(name_tokens)
+    item = resolve_item_key(raw)
+    if not item:
+        from . import cook_mix
+        dish = cook_mix.resolve_dish_key(raw.rstrip("★☆*"))
+        if dish:
+            item = f"dish_{dish}"
+        elif raw.startswith("dish_") or raw.startswith("meal_"):
+            item = raw
+        else:
+            raise ValueError(unknown_item_message(raw))
+    return item, qty
+
+
+def _is_cooked_item(item: str) -> bool:
+    return item.startswith("dish_") or item.startswith("meal_")
+
+
+async def _cabinet_status_text(s: dict[str, Any]) -> str:
+    async with db.connect() as conn:
+        installed = await has_cabinet(conn, s["id"])
+        rows = await _cabinet_rows(conn, s["id"]) if installed else []
+    if not installed:
+        return (
+            "潮柜：未装 — hut_ops buy cabinet → install soft_N cabinet。"
+            "生鲜用 hut_ops 冰柜 存 甘蓝 3（小偷翻不到）"
+        )
+    if not rows:
+        return (
+            f"潮柜空（{config.CABINET_SLOTS} 格，每格最多 {config.CABINET_STACK}）。"
+            "hut_ops 冰柜 存 甘蓝 3"
+        )
+    lines = [f"潮柜 {len(rows)}/{config.CABINET_SLOTS}:"]
+    for item, qty in rows:
+        lines.append(f"  {item_label(item)}（{item}） x{qty}")
+    lines.append("取：hut_ops 冰柜 取 物品 [数量]")
+    return "\n".join(lines)
+
+
+async def storage_status(s: dict[str, Any]) -> str:
+    from . import kitchen
+    cab = await _cabinet_status_text(s)
+    fridge = await kitchen.fridge_status_text(s)
+    return "\n".join([
+        "小屋存菜（生鲜进潮柜，熟菜进冰箱）",
+        STORAGE_USAGE,
+        cab,
+        fridge,
+    ])
+
+
+async def cabinet_put(s: dict[str, Any], item: str, qty: int) -> str:
     async with db.connect() as conn:
         if not await has_cabinet(conn, s["id"]):
             raise ValueError(
-                "先 hut_ops buy cabinet → install soft_N cabinet。"
-                "潮柜在小屋里，小偷和斑鸠翻不到。"
+                "生鲜放潮柜。先 hut_ops buy cabinet → install soft_N cabinet，"
+                "再 hut_ops 冰柜 存 甘蓝 3。潮柜在小屋里，小偷和斑鸠翻不到。"
             )
-        if verb in ("status", "list", "看", "柜子"):
-            rows = await _cabinet_rows(conn, s["id"])
-            if not rows:
-                return (
-                    f"潮柜空（{config.CABINET_SLOTS} 格，每格最多 {config.CABINET_STACK}）。"
-                    "hut_ops 柜子 存 物品 [数量]"
-                )
-            lines = [f"潮柜 {len(rows)}/{config.CABINET_SLOTS}:"]
-            for item, qty in rows:
-                lines.append(f"  {item_label(item)}（{item}） x{qty}")
-            lines.append("取：hut_ops 柜子 取 物品 [数量]")
-            return "\n".join(lines)
-
-        putting = verb in ("put", "store", "存", "放", "入")
-        taking = verb in ("take", "取", "拿")
-        if not (putting or taking) or len(rest) < 2:
-            raise ValueError("用法: hut_ops 柜子 存|取 物品 [数量]")
-
-        tokens = rest[1:]
-        qty = 1
-        name_tokens = tokens
-        if tokens and tokens[-1].isdigit():
-            qty = max(1, int(tokens[-1]))
-            name_tokens = tokens[:-1]
-        if not name_tokens:
-            raise ValueError("要写物品名")
-        item = resolve_item_key(" ".join(name_tokens))
-        if not item:
-            raise ValueError(unknown_item_message(" ".join(name_tokens)))
         blocked = _cabinet_forbid(item)
         if blocked:
             raise ValueError(blocked)
-
-        if putting:
-            rows = await _cabinet_rows(conn, s["id"])
-            have = {k: v for k, v in rows}
-            if item not in have and len(have) >= config.CABINET_SLOTS:
-                raise ValueError(f"柜子满了（{config.CABINET_SLOTS} 种）")
-            stacked = have.get(item, 0)
-            if stacked + qty > config.CABINET_STACK:
-                raise ValueError(
-                    f"{item_label(item)} 这格最多 {config.CABINET_STACK}，已有 {stacked}"
-                )
-            if not await db.take_item(conn, s["id"], item, qty):
-                raise ValueError("行囊没有这么多")
-            await conn.execute(
-                """
-                INSERT INTO hut_cabinet (steward_id, item, quantity, stored_at)
-                VALUES (?,?,?,?)
-                ON CONFLICT(steward_id, item) DO UPDATE SET
-                quantity = quantity + excluded.quantity
-                """,
-                (s["id"], item, qty, db.now()),
+        rows = await _cabinet_rows(conn, s["id"])
+        have = {k: v for k, v in rows}
+        if item not in have and len(have) >= config.CABINET_SLOTS:
+            raise ValueError(f"柜子满了（{config.CABINET_SLOTS} 种）")
+        stacked = have.get(item, 0)
+        if stacked + qty > config.CABINET_STACK:
+            raise ValueError(
+                f"{item_label(item)} 这格最多 {config.CABINET_STACK}，已有 {stacked}"
             )
-            await conn.commit()
-            return f"入柜 {item_label(item)} x{qty}（小偷翻不到）"
+        if not await db.take_item(conn, s["id"], item, qty):
+            raise ValueError("行囊没有这么多")
+        await conn.execute(
+            """
+            INSERT INTO hut_cabinet (steward_id, item, quantity, stored_at)
+            VALUES (?,?,?,?)
+            ON CONFLICT(steward_id, item) DO UPDATE SET
+            quantity = quantity + excluded.quantity
+            """,
+            (s["id"], item, qty, db.now()),
+        )
+        await conn.commit()
+    return f"入柜 {item_label(item)} x{qty}（小偷翻不到）"
 
+
+async def cabinet_take(s: dict[str, Any], item: str, qty: int) -> str:
+    async with db.connect() as conn:
+        if not await has_cabinet(conn, s["id"]):
+            raise ValueError(
+                "还没装潮柜。hut_ops buy cabinet → install soft_N cabinet。"
+                "熟菜走冰箱：hut_ops 冰柜 取 菜名"
+            )
         cur = await conn.execute(
             "SELECT quantity FROM hut_cabinet WHERE steward_id=? AND item=?",
             (s["id"], item),
@@ -586,7 +672,28 @@ async def cabinet_command(s: dict[str, Any], rest: list[str]) -> str:
             )
         await db.add_item(conn, s["id"], item, qty)
         await conn.commit()
-        return f"取出 {item_label(item)} x{qty}，回行囊"
+    return f"取出 {item_label(item)} x{qty}，回行囊"
+
+
+async def cabinet_command(s: dict[str, Any], rest: list[str]) -> str:
+    verb = rest[0].lower() if rest else "status"
+    if verb in ("status", "list", "看", "柜子", "潮柜", "冰柜", "冰箱"):
+        return await storage_status(s)
+
+    putting = verb in ("put", "store", "存", "放", "入")
+    taking = verb in ("take", "取", "拿")
+    if not (putting or taking) or len(rest) < 2:
+        raise ValueError(STORAGE_USAGE)
+
+    item, qty = _parse_storage_item_qty(rest[1:])
+    if _is_cooked_item(item):
+        from . import kitchen
+        if putting:
+            return await kitchen.fridge_put(s, item, qty)
+        return await kitchen.fridge_take(s, item, qty)
+    if putting:
+        return await cabinet_put(s, item, qty)
+    return await cabinet_take(s, item, qty)
 
 
 async def hut_ops(key_id: int, command: str) -> str:
@@ -596,7 +703,7 @@ async def hut_ops(key_id: int, command: str) -> str:
     parts = command.strip().split(maxsplit=2)
     verb = parts[0].lower() if parts else "status"
 
-    if verb in ("cabinet", "柜子", "chest", "locker", "柜"):
+    if verb in STORAGE_ALIASES:
         return await cabinet_command(s, command.strip().split()[1:])
 
     if verb in ("卖掉", "sell", "变卖", "出售"):
@@ -608,7 +715,9 @@ async def hut_ops(key_id: int, command: str) -> str:
         if not s.get("hut_built"):
             return (
                 f"小屋: 未建 — hut_ops build（{config.HUT_BUILD_COST} 票）\n"
-                "建好后可 buy 硬装/软装，install 到 hard_1 soft_1 等槽位"
+                "建好后可 buy 硬装/软装，install 到 hard_1 soft_1 等槽位\n"
+                "存菜：buy cabinet（潮柜·生鲜）或 buy fridge（冰箱·熟菜），"
+                "装好后 hut_ops 冰柜 存 甘蓝 3"
             )
         lvl = s.get("hut_level") or 1
         meta = HUT_LEVELS[lvl]
@@ -630,10 +739,18 @@ async def hut_ops(key_id: int, command: str) -> str:
         active = bonuses_for(fittings.values()).summary()
         if active:
             lines.append(active)
-        if bonuses_for(fittings.values()).has("cabinet"):
+        bonus = bonuses_for(fittings.values())
+        if bonus.has("cabinet"):
             async with db.connect() as conn:
                 n = len(await _cabinet_rows(conn, s["id"]))
-            lines.append(f"潮柜 {n}/{config.CABINET_SLOTS} 种 — hut_ops 柜子 存|取")
+            lines.append(f"潮柜 {n}/{config.CABINET_SLOTS} 种 — hut_ops 冰柜 存|取（生鲜）")
+        if bonus.has("fridge"):
+            lines.append("冰箱 — hut_ops 冰柜 存|取（熟菜）· kitchen_ops fridge")
+        if not bonus.has("cabinet") and not bonus.has("fridge"):
+            lines.append(
+                "存菜：hut_ops buy cabinet（潮柜·生鲜）或 buy fridge（冰箱·熟菜），"
+                "装好后 hut_ops 冰柜 存 甘蓝 3"
+            )
         if fittings:
             lines.append("旧家具按折旧卖：hut_ops 卖掉 槽位")
         return "\n".join(lines)
@@ -652,6 +769,10 @@ async def hut_ops(key_id: int, command: str) -> str:
             lines.append("【软装】")
             for k, v in HUT_SOFT.items():
                 lines.append(f"  {k} — {v['emoji']}{v['name']} {v['cost']} 票 · {v['hint']}")
+            lines.append(
+                "存菜：buy cabinet（潮柜·生鲜）或 buy fridge（冰箱·熟菜，也可 buy 冰柜）；"
+                "装好后 hut_ops 冰柜 存|取"
+            )
             lines.append("【栗栗稀有装饰】deco_* — visit_ops lili 换，install soft_N 键名")
             for k, v in LILI_DECOR.items():
                 lines.append(f"  {k} — {v['emoji']}{v['name']} · {v['hint']}")
@@ -675,7 +796,9 @@ async def hut_ops(key_id: int, command: str) -> str:
         await db.add_chronicle("hut", f"{s['name']} 搭了岸畔棚屋", s["id"])
         return (
             f"棚屋就绪（-{config.HUT_BUILD_COST} 票）。"
-            f"hard_1 / soft_1~2 可装 → catalog / buy / install"
+            f"hard_1 / soft_1~2 可装 → catalog / buy / install。"
+            "存菜：buy cabinet 潮柜（生鲜）或 buy fridge 冰箱（熟菜），"
+            "装好后 hut_ops 冰柜 存 甘蓝 3"
         )
 
     if verb == "upgrade":
@@ -708,7 +831,7 @@ async def hut_ops(key_id: int, command: str) -> str:
         return f"小屋命名为「{label}」"
 
     if verb == "buy" and len(parts) >= 2:
-        key = parts[1].split()[0].lower()
+        key = _resolve_fitting_key(parts[1].split()[0])
         kind, meta = _catalog_item(key)
         fit_item = f"fit_{key}"
         async with db.connect() as conn:
@@ -721,13 +844,21 @@ async def hut_ops(key_id: int, command: str) -> str:
             )
             await db.add_item(conn, s["id"], fit_item, 1)
             await conn.commit()
-        return f"购入 {meta['emoji']}{meta['name']}（-{meta['cost']} 票）→ install {kind}_N {key}"
+        extra = ""
+        if key == "cabinet":
+            extra = "。生鲜：install 后 hut_ops 冰柜 存 甘蓝 3"
+        elif key == "fridge":
+            extra = "。熟菜：install 后 hut_ops 冰柜 存 盐焗沙蟹"
+        return (
+            f"购入 {meta['emoji']}{meta['name']}（-{meta['cost']} 票）"
+            f"→ install {kind}_N {key}{extra}"
+        )
 
     if verb == "install" and len(parts) >= 3:
         if not s.get("hut_built"):
             raise ValueError("先 build 小屋")
         slot = parts[1].lower()
-        key = parts[2].lower()
+        key = _resolve_fitting_key(parts[2])
         lvl = s.get("hut_level") or 1
         hard_slots, soft_slots = _slots(lvl)
         if slot not in hard_slots + soft_slots:
@@ -869,5 +1000,5 @@ async def hut_ops(key_id: int, command: str) -> str:
         return msg
 
     raise ValueError(
-        f"未知 hut 指令: {command}（status/build/upgrade/label/catalog/buy/install/remove/柜子/卖掉）"
+        f"未知 hut 指令: {command}（status/build/upgrade/label/catalog/buy/install/remove/冰柜/柜子/卖掉）"
     )

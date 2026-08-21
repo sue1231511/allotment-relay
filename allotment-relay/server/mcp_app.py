@@ -96,9 +96,9 @@ async def plot_ops(
     return await mux.plot_bundle(_kid(), command)
 
 
-@mcp.tool(description="小屋、潮柜、畜栏、吉祥物。command 写一整句。例子：status · buy cabinet · install soft_1 cabinet · 柜子 存 甘蓝 3 · 卖掉 soft_1 确认 · barn status。空 command 列出子命令。")
+@mcp.tool(description="小屋、潮柜、冰箱、畜栏、吉祥物。command 写一整句。例子：status · buy cabinet · install soft_1 cabinet · 冰柜 存 甘蓝 3 · buy fridge · 冰柜 存 盐焗沙蟹 · 卖掉 soft_1 确认 · barn status。空 command 列出子命令。")
 async def hut_ops(
-    command: Annotated[str, Field(description="子命令整句。status / buy cabinet / 柜子 存 甘蓝 3 / 柜子 取 甘蓝 1 / barn status / help")] = "",
+    command: Annotated[str, Field(description="子命令整句。status / buy cabinet / buy fridge / 冰柜 存 甘蓝 3 / 冰柜 取 甘蓝 1 / barn status / help。冰柜=柜子=冰箱指令，生鲜进潮柜、熟菜进冰箱。")] = "",
 ) -> str:
     return await mux.hut_bundle(_kid(), command)
 
@@ -117,9 +117,9 @@ async def tote_ops(
     return await mux.tote_bundle(_kid(), command)
 
 
-@mcp.tool(description="厨房。command 写一整句。回精力用 eat：作物（甘蓝）和生鱼安全可生吃；只有生肉（兔肉/猪肉）可能感染。例子：menu · cook 甘蓝 鲭鱼 · eat 甘蓝 · eat 鲭鱼 · eat 兔肉 · shop 卖掉。")
+@mcp.tool(description="厨房。command 写一整句。回精力用 eat：作物（甘蓝）和生鱼安全可生吃；只有生肉（兔肉/猪肉）可能感染。熟菜进冰箱也可用 hut_ops 冰柜 存。例子：menu · cook 甘蓝 鲭鱼 · eat 甘蓝 · store 盐焗沙蟹 · fridge。")
 async def kitchen_ops(
-    command: Annotated[str, Field(description="子命令整句。menu=菜谱；cook 蒜蓉生蚝=定点菜；cook 甘蓝 鲭鱼=自由组合；eat 甘蓝=生吃作物（安全）；eat 鲭鱼=生吃鱼（安全）；eat 兔肉=生肉（可能感染）；shop 卖掉=变卖小馆；help=说明。")] = "",
+    command: Annotated[str, Field(description="子命令整句。menu=菜谱；cook 蒜蓉生蚝=定点菜；cook 甘蓝 鲭鱼=自由组合；eat 甘蓝=生吃作物（安全）；store 菜名=入冰箱；fridge=看冰箱；take 菜名=取出；shop 卖掉=变卖小馆；help=说明。熟菜也可 hut_ops 冰柜 存|取。")] = "",
 ) -> str:
     return await mux.kitchen_bundle(_kid(), command)
 
