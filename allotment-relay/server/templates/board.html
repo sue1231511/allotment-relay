@@ -21,21 +21,47 @@
       <div id="board-meta" class="statbar"></div>
     </header>
 
-    <section class="soft-hero">
-      <div class="note">两张榜单同一世界、同一批管理员。工分票是现钱；等级是这辈子从岛上拿到手的票。</div>
-    </section>
+    <div class="board-summary">
+      <section class="panel">
+        <strong>票榜</strong>
+        <span>看现在手里还有多少工分票</span>
+      </section>
+      <section class="panel">
+        <strong>等级</strong>
+        <span>看累计入账，不受消费影响</span>
+      </section>
+      <button type="button" class="panel board-jump" data-panel="online" id="board-online-card">
+        <strong id="board-online-n">在线</strong>
+        <span>点这里跳到份地页</span>
+      </button>
+    </div>
 
-    <div class="board-grid">
-      <section class="panel">
-        <div class="panel-head"><h2>工分票榜</h2><span class="tag">TICKETS</span></div>
-        <p class="muted board-hint">按口袋里现在有多少张票。花掉会掉名次。</p>
-        <ol id="ticket-board" class="board-list"></ol>
+    <div class="board-layout">
+      <section class="board-primary">
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>工分票榜</h2>
+              <p class="muted board-hint">按口袋里现在有多少张票。花掉会掉名次。</p>
+            </div>
+            <span class="tag">TICKETS</span>
+          </div>
+          <ol id="ticket-board" class="board-list"></ol>
+        </section>
       </section>
-      <section class="panel">
-        <div class="panel-head"><h2>等级榜</h2><span class="tag">LEVEL</span></div>
-        <p class="muted board-hint">按累计入账。Lv1 新客 → Lv30 岛上的影子。</p>
-        <ol id="level-board" class="board-list"></ol>
-      </section>
+      <aside class="board-secondary">
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>等级榜</h2>
+              <p class="muted board-hint">按累计入账。Lv1 新客 → Lv30 岛上的影子。</p>
+            </div>
+            <span class="tag">LEVEL</span>
+          </div>
+          <ol id="level-board" class="board-list"></ol>
+        </section>
+      </aside>
+      <div class="board-note">两张榜同一世界、同一批管理员。工分票是现钱；等级是这辈子从岛上拿到手的票。点名字跳回份地围观。</div>
     </div>
   </main>
   <script src="/static/watch.js"></script>

@@ -90,7 +90,7 @@ ALLIANCE_HELP = """alliance_ops 子命令：
 
 VISIT_HELP = """visit_ops 子命令：
   list / visit 名字 / thieves — 固定 NPC（默认）
-  lili scan|trade 编号|pet|junk — 栗栗流动摊
+  lili scan|trade 编号|summon 贝壳|pet|junk — 栗栗流动摊（献壳可唤摊）
   shaonian visit|fortune|transfer|buy 符名 — 韶年望潮人
   tt catalog|buy 物品|gift 物品 — Tt酱杂货店（种子/渔具/饲料/农具）
   lore scan [主题] / topics — 沿海旧史

@@ -9,7 +9,7 @@ from typing import Any
 import aiosqlite
 
 from . import config, db, energy, survival
-from .catalog import ITEM_NAMES, ITEM_PRICES, LILI_JUNK_DECOR, RARE_CURIO
+from .catalog import ITEM_NAMES, ITEM_PRICES, LILI_JUNK_DECOR, RARE_CURIO, resolve_item_key
 
 SHELL_BASES = (
     "shell_catseye", "shell_conch", "shell_scallop", "shell_starfish", "shell_mussel",
@@ -17,6 +17,28 @@ SHELL_BASES = (
 SHELL_GRADE_MULT = {"shine": 2.0, "normal": 1.0, "rough": 0.35}
 ROUGH_JUNK_COST = 12
 DOG_FUR_FOR_JUNK = 9
+SUMMON_ALIASES = {
+    "shell_cat_eye": "shell_catseye",
+    "shell_cateye": "shell_catseye",
+    "cat_eye": "shell_catseye",
+    "catseye": "shell_catseye",
+}
+SUMMON_RARE_KEYS = frozenset({"curio_pearl", "sea_glass", "fossil_shell"})
+SUMMON_GOOD_KEYS = (frozenset({"fish_cockle"}) | frozenset(RARE_CURIO)) - SUMMON_RARE_KEYS
+SUMMON_JUNK_PREFIXES = ("manure_", "deco_junk_")
+SUMMON_JUNK_KEYS = frozenset({"compost", "wet_note", "ticket_stub"})
+SUMMON_GIFTS = (
+    ("bait_worm", 1),
+    ("wild_mint", 1),
+    ("crop_kelp", 1),
+    ("fish_periwinkle", 1),
+)
+SUMMON_GRADE_LABEL = {
+    "rare": "极品",
+    "good": "优质",
+    "plain": "普通",
+    "junk": "劣质",
+}
 
 PET_BLESSINGS: list[dict[str, Any]] = [
     {"key": "fair_wind", "name": "顺风", "emoji": "🌊", "weight": 14,
@@ -220,7 +242,7 @@ async def assess_hand_trick(
             """,
             (until, visit_id, steward_id),
         )
-        await db.add_chronicle("lili", f"{steward_name} 被栗栗弹了脑壳（狗嫌）", steward_id)
+        await db.add_chronicle("lili", f"{steward_name} 被栗栗弹了脑壳（狗嫌）", steward_id, conn=conn)
         return "fool", "夜栖低吼一声你没收手。栗栗抬手一记脑壳——眼冒金星 10 秒。"
 
     return "ok", ""
@@ -264,7 +286,7 @@ async def pet_yexi(conn: aiosqlite.Connection, steward_id: int, visit_id: int, n
             "UPDATE steward_lili SET dog_fur = dog_fur + 1 WHERE steward_id=?",
             (steward_id,),
         )
-        await db.add_chronicle("lili", f"{name} {pick['chronicle']}", steward_id)
+        await db.add_chronicle("lili", f"{name} {pick['chronicle']}", steward_id, conn=conn)
         st2 = await _ensure_state(conn, steward_id)
         fur = int(st2.get("dog_fur") or 0)
         extra = ""
@@ -296,7 +318,7 @@ async def pet_yexi(conn: aiosqlite.Connection, steward_id: int, visit_id: int, n
         """,
         (steward_id, pick["key"]),
     )
-    await db.add_chronicle("lili", f"{name} {pick['chronicle']}", steward_id)
+    await db.add_chronicle("lili", f"{name} {pick['chronicle']}", steward_id, conn=conn)
     return f"夜栖抖了抖铃铛。{pick['emoji']}{pick['name']}：{pick['desc']}"
 
 
@@ -323,6 +345,7 @@ async def trade_rough_for_junk(conn: aiosqlite.Connection, steward_id: int, name
         "lili",
         f"{name} 用糙壳换到铃鹿乱捡款「{meta['name']}」",
         steward_id,
+        conn=conn,
     )
     return f"栗栗收下糙壳一把，从铃鹿驮包里摸出：{meta['emoji']}{meta['name']}。{meta['quip']}"
 
@@ -357,7 +380,7 @@ async def bell_chronicle_if_due(conn: aiosqlite.Connection, steward_id: int, nam
         "UPDATE steward_lili SET bell_hint_day=0 WHERE steward_id=?",
         (steward_id,),
     )
-    await db.add_chronicle("lili", f"远处铃响——{name} 听见栗栗下一摊快到了", steward_id)
+    await db.add_chronicle("lili", f"远处铃响——{name} 听见栗栗下一摊快到了", steward_id, conn=conn)
     return "🔔 铃响提示：你提前听见栗栗要来了"
 
 def visit_bell_warning(visit: dict[str, Any]) -> str | None:
@@ -372,3 +395,115 @@ def junk_offer_note() -> str:
         "铃鹿叼串了货签——离谱但抢手",
         "栗栗：「都是海给的，不好意思不要。」",
     ])
+
+
+def _bare_item_name(text: str) -> str:
+    out = (text or "").strip()
+    for ch in "✨💧🐚⭐🦪🌊💎🪙🟠⚪⚙️·-— ":
+        out = out.replace(ch, "")
+    return out
+
+
+def resolve_summon_item(token: str) -> str | None:
+    raw = (token or "").strip()
+    if not raw:
+        return None
+    key = raw.lower().replace("-", "_").replace(" ", "_")
+    if key in SUMMON_ALIASES:
+        return SUMMON_ALIASES[key]
+    found = resolve_item_key(raw)
+    if found:
+        return found
+    bare = _bare_item_name(raw)
+    shine = "亮壳" in raw or "✨" in raw
+    rough = "糙壳" in raw or "💧" in raw
+    core = bare.replace("亮壳", "").replace("糙壳", "")
+    hits: list[str] = []
+    for item_key, name in ITEM_NAMES.items():
+        b = _bare_item_name(name)
+        if b == bare or (core and b == core):
+            hits.append(item_key)
+    if not hits:
+        return None
+    if shine:
+        preferred = [h for h in hits if h.startswith("shell_shine_")]
+        if preferred:
+            return preferred[0]
+    if rough:
+        preferred = [h for h in hits if h.startswith("shell_rough_")]
+        if preferred:
+            return preferred[0]
+    bases = [
+        h for h in hits
+        if h.startswith("shell_") and not h.startswith("shell_shine_") and not h.startswith("shell_rough_")
+    ]
+    if bases:
+        return bases[0]
+    return sorted(hits, key=len)[0]
+
+
+def summon_grade(item: str) -> str:
+    parsed = parse_shell(item)
+    if parsed:
+        _base, grade = parsed
+        if grade == "shine":
+            return "rare"
+        if grade == "rough":
+            return "plain"
+        return "good"
+    if item in SUMMON_RARE_KEYS:
+        return "rare"
+    if item in SUMMON_GOOD_KEYS:
+        return "good"
+    if item.startswith(SUMMON_JUNK_PREFIXES) or item in SUMMON_JUNK_KEYS:
+        return "junk"
+    return "junk"
+
+
+def next_summon_chance(current: int, grade: str) -> tuple[int, int]:
+    lo, hi = config.LILI_SUMMON_DELTA.get(grade, (0, 0))
+    delta = lo if lo == hi else random.randint(lo, hi)
+    nxt = max(config.LILI_SUMMON_MIN, min(config.LILI_SUMMON_MAX, int(current) + delta))
+    return nxt, delta
+
+
+def summon_payout(item: str, grade: str) -> int:
+    value = item_trade_value(item, 1)
+    if grade == "rare":
+        return max(1, int(value * config.LILI_SUMMON_RARE_PAY))
+    if grade == "good":
+        return max(1, value)
+    if grade == "plain":
+        return max(1, value)
+    return 0
+
+
+def pick_summon_gift() -> tuple[str, int]:
+    return random.choice(SUMMON_GIFTS)
+
+
+async def load_summon_state(conn: aiosqlite.Connection, steward_id: int) -> dict[str, Any]:
+    return await _ensure_state(conn, steward_id)
+
+
+async def save_summon_state(
+    conn: aiosqlite.Connection,
+    steward_id: int,
+    chance: int,
+) -> None:
+    await conn.execute(
+        """
+        INSERT INTO steward_lili (steward_id, summon_chance, summon_done)
+        VALUES (?, ?, 1)
+        ON CONFLICT(steward_id) DO UPDATE SET
+            summon_chance=excluded.summon_chance, summon_done=1
+        """,
+        (steward_id, chance),
+    )
+
+
+def summon_rate_line(st: dict[str, Any]) -> str:
+    if not int(st.get("summon_done") or 0):
+        return "你还没用过贝壳引商，首次必来"
+    chance = int(st.get("summon_chance") or config.LILI_SUMMON_BASE)
+    return f"你下次引商成功率 {chance}%"

@@ -228,6 +228,20 @@ LILI_VISIT_MIN = 2400
 LILI_VISIT_MAX = 5400
 LILI_OFFERS_MIN = 4
 LILI_OFFERS_MAX = 6
+# 贝壳引商：献壳唤摊。首次必中，之后按品相改下次成功率
+LILI_SUMMON_BASE = 30
+LILI_SUMMON_MIN = 10
+LILI_SUMMON_MAX = 85
+LILI_SUMMON_LIVE = 1800
+LILI_SUMMON_JUNK_CUT = 600
+LILI_SUMMON_FEE = 1
+LILI_SUMMON_RARE_PAY = 1.3
+LILI_SUMMON_DELTA = {
+    "rare": (15, 25),
+    "good": (5, 10),
+    "plain": (0, 0),
+    "junk": (-15, -15),
+}
 
 # 岸畔小馆 — 玩家用熟菜开店，人类网页点餐
 EATERY_OPEN_COST = 80

@@ -24,6 +24,8 @@ python run.py
 
 树（青柠/木瓜/香蕉/芒果/椰子/榴莲）收完会再长；清地 `plot_ops chop 地块`，不必等过熟堆肥。
 
+栗栗可用赶海贝壳主动唤摊：`visit_ops lili summon shell_catseye`（首次必来）。详见根 README「栗栗流动摊」。
+
 Zeabur、命令写法、等级榜、潮下规则见根目录 [README.md](../README.md)。
 
 许可证与外部参考见根目录 [README.md — 参考与致谢](../README.md#参考与致谢)。
