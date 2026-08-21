@@ -671,15 +671,36 @@ async def public_undertide():
             out["bank"] = {"rate": int(float(row["rate_today"]) * 100), "reason": row["rate_reason"]}
         else:
             out["bank"] = {"rate": int(uc.UT_RATE_BASE * 100), "reason": ""}
-        # 恩怨墙（匿名：不露雇主）
+        # 恩怨墙（主动生成当日委托——网页端也能看到活）+ 悬赏（匿名不露雇主）
+        from . import undertide_bounty as _ub
+        await _ub._ensure_daily_quests(conn)
+        conn.row_factory = aiosqlite.Row
         rows = await (await conn.execute(
             "SELECT tier, target_name, bounty, poster FROM ut_bounty WHERE status='open' ORDER BY created_at DESC LIMIT 8"
         )).fetchall()
-        out["bounties"] = [
-            {"tier": "偷" if r["tier"] == "steal" else "打", "target": r["target_name"],
-             "bounty": r["bounty"], "gilt": r["poster"] == "__npc__"}
-            for r in rows
-        ]
+        quests = []
+        bounties = []
+        from . import undertide_copy as _utc
+        for r in rows:
+            if r["poster"] == "__quest__":
+                qdef = None
+                for _k, _v in _utc.NPC_QUESTS.items():
+                    if _v["name"] == r["target_name"]:
+                        qdef = _v; break
+                if qdef:
+                    quests.append({
+                        "name": r["target_name"],
+                        "kind": "跑腿" if qdef["kind"] == "errand" else ("动手" if qdef["kind"] == "fight" else "站着"),
+                        "pay": r["bounty"],
+                        "desc": qdef["desc"],
+                    })
+            else:
+                bounties.append({
+                    "tier": "偷" if r["tier"] == "steal" else "打", "target": r["target_name"],
+                    "bounty": r["bounty"], "gilt": r["poster"] == "__npc__",
+                })
+        out["quests"] = quests
+        out["bounties"] = bounties
         # 井下纪事
         rows = await (await conn.execute(
             "SELECT text, created_at FROM chronicle WHERE action='undertide' ORDER BY created_at DESC LIMIT 12"

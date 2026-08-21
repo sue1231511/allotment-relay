@@ -253,6 +253,12 @@
       white-space: nowrap;
       font: 10px/1.7 ui-monospace, SFMono-Regular, Consolas, monospace;
     }
+    .ut-sub {
+      color: #9f7f49;
+      font-size: 12px;
+      letter-spacing: .3em;
+      margin: 14px 0 8px;
+    }
     .ut-empty {
       margin: 0;
       color: #5f5b55;
@@ -342,8 +348,9 @@
       </article>
 
       <article class="ut-card wide">
-        <div class="ut-head"><h2>恩怨墙</h2><span class="ut-idx">03 / BOUNTY WALL</span></div>
-        <div id="bounties" class="ut-papers"><p class="ut-empty">墙是空的。空墙最罕见，也最不安。</p></div>
+        <div class="ut-head"><h2>今日委托 & 恩怨墙</h2><span class="ut-idx">03 / BOUNTY WALL</span></div>
+        <div id="quests" class="ut-papers"></div>
+        <div id="bounties" class="ut-papers"></div>
       </article>
 
       <article class="ut-card">
@@ -385,14 +392,30 @@
             ? "「" + d.bank.reason + "」"
             : "（她今天没解释）";
         }
+        if (d.quests && d.quests.length) {
+          document.getElementById("quests").innerHTML =
+            '<p class="ut-sub">── 今日委托 ──</p>' +
+            d.quests.map(q =>
+              '<div class="ut-paper">' +
+                '<div class="row"><span>【' + esc(q.kind) + "】" + esc(q.name) + "</span>" +
+                '<span class="bounty">' + esc(q.pay) + " 票</span></div>" +
+                '<div class="note">' + esc(q.desc) + "</div>" +
+              "</div>"
+            ).join("");
+        }
         if (d.bounties && d.bounties.length) {
-          document.getElementById("bounties").innerHTML = d.bounties.map(b =>
-            '<div class="ut-paper' + (b.gilt ? " gilt" : "") + '">' +
-              '<div class="row"><span>【' + esc(b.tier) + "】" + esc(b.target) + "</span>" +
-              '<span class="bounty">赏 ' + esc(b.bounty) + " 票</span></div>" +
-              (b.gilt ? '<div class="note">烫金。钱庄的纸条。措辞很客气。</div>' : "") +
-            "</div>"
-          ).join("");
+          document.getElementById("bounties").innerHTML =
+            '<p class="ut-sub">── 恩怨悬赏 ──</p>' +
+            d.bounties.map(b =>
+              '<div class="ut-paper' + (b.gilt ? " gilt" : "") + '">' +
+                '<div class="row"><span>【' + esc(b.tier) + "】" + esc(b.target) + "</span>" +
+                '<span class="bounty">赏 ' + esc(b.bounty) + " 票</span></div>" +
+                (b.gilt ? '<div class="note">烫金。钱庄的纸条。措辞很客气。</div>' : "") +
+              "</div>"
+            ).join("");
+        } else if (!(d.quests && d.quests.length)) {
+          document.getElementById("bounties").innerHTML =
+            '<p class="ut-empty">墙是空的。空墙最罕见，也最不安。</p>';
         }
         if (d.wall) {
           document.getElementById("whites").textContent = d.wall.whites || 0;
