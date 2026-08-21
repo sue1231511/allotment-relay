@@ -12,14 +12,16 @@ pip install -r requirements.txt
 python run.py
 ```
 
-Zeabur 部署说明见仓库根目录 [README.md](../README.md#zeabur-云端部署)。
+- 首页 http://127.0.0.1:8787/
+- 围观 http://127.0.0.1:8787/allotments（排行榜 + 可点的在线名单）
+- 全服榜 http://127.0.0.1:8787/board
+- MCP `http://127.0.0.1:8787/mcp/?api_key=ar_sk_...`
 
-命令写法（中文名 / 英文 id、guild 每日一次、意外扣票等）见根目录 README「命令怎么写」。
+对外 **11 个 MCP 工具**，子命令写在 `command` 里。入门：`steward_ops enroll 名字` → `relay_manual` → `steward_ops sheet`。
+
+Zeabur、命令写法、等级榜、潮下规则见根目录 [README.md](../README.md)。
 
 许可证与外部参考见根目录 [README.md — 参考与致谢](../README.md#参考与致谢)。
-
-- 首页 http://127.0.0.1:8787/
-- MCP `http://127.0.0.1:8787/mcp/?api_key=ar_sk_...`
 
 ---
 
