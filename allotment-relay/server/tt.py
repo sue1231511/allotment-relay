@@ -28,6 +28,7 @@ MOOD_CHANCE = config.TT_MOOD_CHANCE
 MOOD_DISH = 0.20
 MOOD_CROP = 0.40  # 其余为货架商品
 GIFT_DAILY_CAP = config.TT_GIFT_DAILY_CAP
+GIFT_GAIN_CAP = 12  # 一次送礼只记一笔，不按件数叠
 BUMP_CHANCE = config.TT_BUMP_CHANCE
 BUMP_DAILY_MAX = config.TT_BUMP_DAILY_MAX
 BUMP_TRIGGERS = {"sow", "tend", "gather", "forage", "guild"}
@@ -357,7 +358,7 @@ async def tt_ops(key_id: int, command: str) -> str:
             "visit_ops tt — Tt酱杂货店\n"
             "  status / catalog — 货架与好感\n"
             "  buy 物品 [数量] — 种子/饲料/剪毛剪刀/挤奶器\n"
-            "  gift 物品 [数量] — 送礼涨好感（100 满，十心，每两心 -0.5 折）\n"
+            "  gift 物品 [数量] — 送礼涨好感（一次一笔，每日最多 5 次）\n"
             "  visit — 聊天；每日首次进店 10% 她心情好送礼"
         )
 
@@ -462,7 +463,7 @@ async def tt_ops(key_id: int, command: str) -> str:
 async def _gift_tickets(steward: dict[str, Any], qty: int) -> str:
     if qty < 1:
         raise ValueError("票数至少 1")
-    gain = max(1, qty // 8) if qty >= 5 else 1
+    gain = min(GIFT_GAIN_CAP, max(1, qty // 8) if qty >= 5 else 1)
     async with db.connect() as conn:
         daily = await _daily(conn, steward["id"], day_id())
         gift_note = await _maybe_mood_gift(conn, steward, daily)
@@ -491,7 +492,7 @@ async def _gift_item(steward: dict[str, Any], token: str, qty: int) -> str:
         item = await _resolve_owned_item(conn, steward["id"], token)
         if not item:
             raise ValueError("行囊里对不上这件。tote_ops list 看中文名")
-        gain = gift_gain(item) * qty
+        gain = min(GIFT_GAIN_CAP, gift_gain(item))
         daily = await _daily(conn, steward["id"], day_id())
         gift_note = await _maybe_mood_gift(conn, steward, daily)
         used = int(daily.get("gifts") or 0)
@@ -520,8 +521,11 @@ async def _gift_item(steward: dict[str, Any], token: str, qty: int) -> str:
         reaction = "Tt酱眼睛亮了一下：「……行。」"
     else:
         reaction = "她点点头，收下了。"
+    pile = ""
+    if qty > 1:
+        pile = f" 一筐 {qty} 份她收下了，好感只记一笔。"
     return (
-        f"{reaction} {_item_label(item)} x{qty} → 好感 +{new - score}（{score}→{new}） "
+        f"{reaction}{pile} {_item_label(item)} x{qty} → 好感 +{new - score}（{score}→{new}） "
         f"{heart_bar(new)}"
         f"{extra}"
     )
@@ -532,7 +536,7 @@ async def maybe_tt_bump(
     steward: dict[str, Any],
     trigger: str,
 ) -> str | None:
-    """份地操作时可能撞见 Tt酱搬货 / 塞东西 / 讨食。不占意外次数。"""
+    """份地操作时可能撞见 Tt酱：催进店或讨一颗菜。不发货架礼，不占意外次数。"""
     if trigger not in BUMP_TRIGGERS:
         return None
     day = day_id()
@@ -545,59 +549,62 @@ async def maybe_tt_bump(
         "UPDATE tt_daily SET bumps=bumps+1 WHERE steward_id=? AND day=?",
         (steward["id"], day),
     )
-    roll = random.random()
+    used = int(daily.get("gifts") or 0)
     score = await _affinity(conn, steward["id"])
-    if roll < 0.40:
-        _kind, item = pick_mood_gift()
-        await db.add_item(conn, steward["id"], item, 1)
-        label = _item_label(item)
-        detail = flavor.pick([
-            f"巷口撞见 Tt酱搬货。她把 {label} 塞你怀里就走了。",
-            f"Tt酱从筐里捞出 {label}：「拿着。挡路。」",
-        ])
-        await db.add_chronicle(
-            "tt",
-            f"{steward['name']} 路上碰上 Tt酱，得了 {label}",
-            steward["id"],
-            conn=conn,
-        )
-        return flavor.wrap_event("good", "Tt酱路过", detail)
-    if roll < 0.70:
-        crop_row = await (
-            await conn.execute(
-                """
-                SELECT item FROM satchel
-                WHERE steward_id=? AND quantity>0 AND item LIKE 'crop_%'
-                ORDER BY RANDOM() LIMIT 1
-                """,
-                (steward["id"],),
-            )
-        ).fetchone()
-        if crop_row:
-            item = crop_row[0]
-            await db.take_item(conn, steward["id"], item, 1)
-            gain = gift_gain(item)
-            new = await _set_affinity(conn, steward["id"], score + gain)
-            label = _item_label(item)
-            detail = (
-                f"Tt酱盯上你行囊里的 {label}：「这筐我收下了。」"
-                f"好感 {score}→{new} {heart_bar(new)}"
-            )
-            await db.add_chronicle(
-                "tt",
-                f"Tt酱向 {steward['name']} 讨走 {label}",
-                steward["id"],
-                conn=conn,
-            )
-            return flavor.wrap_event("good", "Tt酱讨食", detail)
-        detail = "Tt酱翻你行囊：「连颗熟菜都没有？明天来店里。」"
-        return flavor.wrap_event("neutral", "Tt酱路过", detail)
+
+    if random.random() < 0.5:
+        return await _bump_ask_crop(conn, steward, daily, used, score)
+
     new = await _set_affinity(conn, steward["id"], score + 1)
     detail = flavor.pick([
         "Tt酱来催账：你是不是该来店里转转。好感 +1。",
         "她把新到的调味料种子在你眼前晃了一下：「visit_ops tt catalog。」好感 +1。",
     ])
     return flavor.wrap_event("neutral", "Tt酱路过", detail + f" {heart_bar(new)}")
+
+
+async def _bump_ask_crop(
+    conn: aiosqlite.Connection,
+    steward: dict[str, Any],
+    daily: dict[str, Any],
+    used: int,
+    score: int,
+) -> str:
+    if used >= GIFT_DAILY_CAP:
+        detail = "Tt酱翻你行囊，又把东西放回去：「今日账本满了。进店再说。」"
+        return flavor.wrap_event("neutral", "Tt酱路过", detail)
+    crop_row = await (
+        await conn.execute(
+            """
+            SELECT item FROM satchel
+            WHERE steward_id=? AND quantity>0 AND item LIKE 'crop_%'
+            ORDER BY RANDOM() LIMIT 1
+            """,
+            (steward["id"],),
+        )
+    ).fetchone()
+    if not crop_row:
+        detail = "Tt酱翻你行囊：「连颗熟菜都没有？visit_ops tt 来店里。」"
+        return flavor.wrap_event("neutral", "Tt酱路过", detail)
+    item = crop_row[0]
+    await db.take_item(conn, steward["id"], item, 1)
+    new = await _set_affinity(conn, steward["id"], score + 1)
+    await conn.execute(
+        "UPDATE tt_daily SET gifts=gifts+1 WHERE steward_id=? AND day=?",
+        (steward["id"], daily["day"]),
+    )
+    label = _item_label(item)
+    detail = (
+        f"Tt酱盯上你行囊里的 {label}：「这筐我收下了。」"
+        f"好感 +1（{score}→{new}，计入今日送礼） {heart_bar(new)}"
+    )
+    await db.add_chronicle(
+        "tt",
+        f"Tt酱向 {steward['name']} 讨走 {label}",
+        steward["id"],
+        conn=conn,
+    )
+    return flavor.wrap_event("neutral", "Tt酱讨食", detail)
 
 
 def shopfront_line() -> str:
