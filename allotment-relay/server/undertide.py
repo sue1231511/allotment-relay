@@ -877,11 +877,7 @@ async def _check_k_auto_settle(conn: aiosqlite.Connection, s: dict[str, Any], ut
         "UPDATE steward_undertide SET shadow_rep=?, k_room=0, vr_until=0, vr_target=0 WHERE steward_id=?",
         (new_rep, s["id"]),
     )
-    await db.add_chronicle(
-        "undertide",
-        f"K 室的灯亮了一晚。第二天，账上 {s['name']} 的名字那一页，干干净净。",
-        s["id"], conn=conn,
-    )
+    # 家事不进全服纪事——这一页干干净净，只有当事人知道
     await conn.commit()
     return utcopy.AVATAR_K_AUTO_SETTLE + utcopy.AVATAR_CAT_REVENGE_WARNING
 
