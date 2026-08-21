@@ -356,6 +356,13 @@ async def _bank_summary(
         )).fetchone()
         if row and int(row[0]) == day:
             rate = utcfg.UT_RATE_MIN
+    else:
+        # 普通人的小折扣：本人 -2pp
+        row = await (await conn.execute(
+            "SELECT day FROM ut_cheer_discount WHERE steward_id=?", (s["id"],)
+        )).fetchone()
+        if row and int(row[0]) == day:
+            rate = max(utcfg.UT_RATE_MIN, rate - 0.02)
     if rate_override is not None:
         rate = rate_override
     conn.row_factory = aiosqlite.Row
@@ -388,6 +395,13 @@ async def _cmd_bank(
         )).fetchone()
         if row and int(row[0]) == day:
             rate = utcfg.UT_RATE_MIN
+    else:
+        # 普通人的小折扣：今天他被采纳哄开心了 → 本人 -2pp
+        row = await (await conn.execute(
+            "SELECT day FROM ut_cheer_discount WHERE steward_id=?", (s["id"],)
+        )).fetchone()
+        if row and int(row[0]) == day:
+            rate = max(utcfg.UT_RATE_MIN, rate - 0.02)
 
     if verb == "borrow":
         if len(parts) < 2:
