@@ -15,6 +15,68 @@ def _day_id() -> int:
     return db.now() // config.FORAGE_COOLDOWN_DAY
 
 
+def _age_text(seconds: int | None) -> str:
+    if seconds is None:
+        return "开张日不明"
+    sec = max(0, int(seconds))
+    if sec < 3600:
+        mins = max(1, sec // 60)
+        return f"开了 {mins} 分钟"
+    if sec < 86400:
+        return f"开了 {sec // 3600} 小时"
+    days = sec / 86400
+    if days < 10:
+        return f"开了 {days:.1f} 天".replace(".0", "")
+    return f"开了 {int(days)} 天"
+
+
+def eatery_sell_quote(opened_at: int | None, now: int | None = None) -> dict[str, Any]:
+    """开张费按折旧回收。刚开约 62%，随天数掉到 25%。"""
+    now = db.now() if now is None else now
+    cost = config.EATERY_OPEN_COST
+    opened = int(opened_at or 0)
+    if opened <= 0:
+        rate = (config.EATERY_SELL_RATE_START + config.EATERY_SELL_RATE_FLOOR) / 2
+        age_s = None
+        note = "开张日未记，按中档折旧"
+    else:
+        age_s = max(0, now - opened)
+        days = age_s / 86400
+        rate = max(
+            config.EATERY_SELL_RATE_FLOOR,
+            config.EATERY_SELL_RATE_START - days * config.EATERY_SELL_DECAY_PER_DAY,
+        )
+        if days < 0.5:
+            note = "刚开张，二手盘也要折一截"
+        elif days < 2:
+            note = "开了没几天，桌椅还新"
+        elif days < 7:
+            note = "招牌旧了，按折旧收"
+        else:
+            note = "老馆了，残值见底"
+    refund = max(1, int(round(cost * rate)))
+    return {
+        "cost": cost,
+        "rate": rate,
+        "refund": refund,
+        "age_s": age_s,
+        "note": note,
+        "pct": int(round(rate * 100)),
+    }
+
+
+def _quote_lines(label: str, quote: dict[str, Any], menu_n: int) -> list[str]:
+    return [
+        f"变卖「{label}」",
+        f"开张费 {quote['cost']} 票 · {_age_text(quote['age_s'])} · "
+        f"折旧回收 {quote['refund']} 票（{quote['pct']}%）",
+        quote["note"],
+        f"菜单 {menu_n} 道退回行囊" if menu_n else "菜单是空的",
+        "冰箱还在小屋里。要拆装件：hut_ops remove",
+        "确认：kitchen_ops shop 卖掉 确认",
+    ]
+
+
 def _item_price(item: str) -> int:
     price = suggested_price(item)
     if price:
@@ -69,7 +131,13 @@ async def eatery_command(s: dict[str, Any], command: str) -> str:
                 n = len(menu)
                 tag = " ←你" if sh["id"] == s["id"] else ""
                 lines.append(f"  {sh['name']}「{label}」{n} 道菜{tag}")
-            lines.append("dine 管理员名 [菜编号] · shop stock 菜 · 人类网页 /eatery")
+            lines.append("dine 管理员名 [菜编号] · shop stock 菜 · 不想开了 shop 卖掉 · 人类网页 /eatery")
+            if s.get("eatery_open"):
+                quote = eatery_sell_quote(s.get("eatery_opened_at"))
+                mine = s.get("eatery_label") or f"{s['name']}的馆"
+                lines.append(
+                    f"你的馆「{mine}」现在卖掉可回收 {quote['refund']} 票（{quote['pct']}% 开张费）"
+                )
         return "\n".join(lines)
 
     if verb == "open":
@@ -90,8 +158,8 @@ async def eatery_command(s: dict[str, Any], command: str) -> str:
                 raise ValueError(f"开张需要 {cost} 票")
             label = " ".join(parts[1:])[:32] if len(parts) > 1 else f"{s['name']}的馆"
             await conn.execute(
-                "UPDATE stewards SET tickets=tickets-?, eatery_open=1, eatery_label=? WHERE id=?",
-                (cost, label, s["id"]),
+                "UPDATE stewards SET tickets=tickets-?, eatery_open=1, eatery_label=?, eatery_opened_at=? WHERE id=?",
+                (cost, label, db.now(), s["id"]),
             )
             await conn.commit()
         await db.add_chronicle("eatery", f"{s['name']} 开张「{label}」", s["id"])
@@ -126,7 +194,50 @@ async def eatery_command(s: dict[str, Any], command: str) -> str:
             )
             await conn.commit()
         back = f"，菜单 {len(menu)} 道退回行囊" if menu else ""
-        return f"打烊了{back}"
+        return (
+            f"打烊了{back}。开张费不退。"
+            f"要变卖家产按折旧回收：kitchen_ops shop 卖掉"
+        )
+
+    if verb in ("sell", "卖掉", "变卖", "出售"):
+        if not s.get("eatery_open"):
+            raise ValueError("没有在开的馆。打烊过的开张费已经没了，下次开张后再卖掉。")
+        confirm = len(parts) >= 2 and parts[1].lower() in (
+            "确认", "ok", "yes", "confirm", "卖",
+        )
+        label = s.get("eatery_label") or f"{s['name']}的馆"
+        async with db.connect() as conn:
+            menu = await _menu_rows(conn, s["id"])
+            quote = eatery_sell_quote(s.get("eatery_opened_at"))
+            if not confirm:
+                return "\n".join(_quote_lines(label, quote, len(menu)))
+            for row in menu:
+                await db.add_item(conn, s["id"], row["item"], 1)
+            await conn.execute("DELETE FROM eatery_menu WHERE steward_id=?", (s["id"],))
+            await conn.execute(
+                """
+                UPDATE stewards SET tickets=tickets+?, eatery_open=0, eatery_label='',
+                eatery_opened_at=0 WHERE id=?
+                """,
+                (quote["refund"], s["id"]),
+            )
+            # 票数上涨会触发入账经验；变卖是回本，把刚加上的经验扣回去
+            await conn.execute(
+                "UPDATE stewards SET xp = MAX(0, COALESCE(xp, 0) - ?) WHERE id=?",
+                (quote["refund"], s["id"]),
+            )
+            await conn.commit()
+        await db.add_chronicle(
+            "eatery",
+            f"{s['name']} 变卖「{label}」，折旧回收 {quote['refund']} 票",
+            s["id"],
+        )
+        back = f"菜单 {len(menu)} 道退回行囊。" if menu else ""
+        return (
+            f"「{label}」卖掉了。{back}"
+            f"{quote['note']} 折旧回收 {quote['refund']} 票（开张费 {quote['cost']} 的 {quote['pct']}%）。"
+            f"冰箱还在小屋里。"
+        )
 
     if verb == "stock" and len(parts) >= 2:
         if not s.get("eatery_open"):
@@ -182,7 +293,7 @@ async def eatery_command(s: dict[str, Any], command: str) -> str:
         return await _dine(s, parts[1], parts[2] if len(parts) > 2 else None)
 
     raise ValueError(
-        "未知 shop 指令（board/open/label/close/stock/unstock/menu/dine）"
+        "未知 shop 指令（board/open/label/close/卖掉/stock/unstock/menu/dine）"
     )
 
 

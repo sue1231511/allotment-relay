@@ -248,6 +248,165 @@ async def _scrump_attempt(
     return f"{detail}（{hint}；可 plot_ops amends {peer['name']}）", plot["id"], peer["id"]
 
 
+def _scrump_catch_chance(
+    steward: dict[str, Any],
+    peer: dict[str, Any],
+    plot: dict[str, Any],
+    *,
+    dog: bool,
+) -> float:
+    home = db.now() - peer["last_active_at"] <= config.SCRUMP_ACTIVE_WINDOW
+    chance = 0.70 if home else 0.18
+    weather = world.current_weather()
+    if weather == "misty":
+        chance -= 0.10
+    elif weather == "gale":
+        chance += 0.08
+    if plot.get("scarecrow"):
+        chance += 0.15
+    if dog:
+        chance += 0.20
+    if steward.get("mascot_trait") == "scout":
+        chance -= 0.10
+    return max(0.08, min(0.92, chance))
+
+
+async def take_ripe_plot(
+    conn: aiosqlite.Connection,
+    thief_id: int,
+    plot: dict[str, Any],
+) -> str:
+    """摘走一块熟地：菜进小偷行囊；树还在，普通作物清空。"""
+    crop = plot["crop"]
+    meta = CROPS[crop]
+    keep = bool(meta.get("tree"))
+    await db.add_item(conn, thief_id, f"crop_{crop}", 1)
+    if keep:
+        grow_target, grow_pace, _ = farming.roll_grow(crop, plot)
+        await conn.execute(
+            """
+            UPDATE parcels SET planted_at=?, tended=0, grow_target=?, grow_pace=?,
+            fertilized=0 WHERE id=?
+            """,
+            (db.now(), grow_target, grow_pace, plot["id"]),
+        )
+        return f"{meta['name']}（树还在）"
+    await conn.execute(
+        """
+        UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
+        grow_target=0, grow_pace='', fertilized=0, scarecrow=0 WHERE id=?
+        """,
+        (plot["id"],),
+    )
+    return meta["name"]
+
+
+async def manual_scrump(steward: dict[str, Any], target_name: str, slot: int | None = None) -> str:
+    """主动逾篱：plot_ops 偷菜 名字 [地块]。"""
+    peer = await db.get_steward_by_name(target_name)
+    if not peer or not peer.get("enrolled"):
+        raise ValueError(
+            f"找不到管理员「{target_name}」。先 alliance_ops 邻居 看名单。"
+        )
+    if peer["id"] == steward["id"]:
+        raise ValueError("不能偷自己的菜")
+    day = _day_id()
+    async with db.connect() as conn:
+        used = (await (await conn.execute(
+            "SELECT COUNT(*) FROM scrump_log WHERE thief_id=? AND day=?",
+            (steward["id"], day),
+        )).fetchone())[0]
+        if used >= config.SCRUMP_DAILY:
+            raise ValueError(f"今日逾篱已满 {config.SCRUMP_DAILY} 次，明天再来")
+        same = await (await conn.execute(
+            "SELECT 1 FROM scrump_log WHERE thief_id=? AND target_id=? AND day=?",
+            (steward["id"], peer["id"], day),
+        )).fetchone()
+        if same:
+            raise ValueError(f"今天已经摘过 {peer['name']} 一次，换一家或明天再来")
+
+        conn.row_factory = aiosqlite.Row
+        if slot is not None:
+            row = await (await conn.execute(
+                "SELECT * FROM parcels WHERE steward_id=? AND slot=?",
+                (peer["id"], slot),
+            )).fetchone()
+            if not row:
+                raise ValueError(f"{peer['name']} 没有份地 #{slot}")
+            plot = dict(row)
+            if plot.get("greenhouse"):
+                raise ValueError("温室摘不到。只偷露天份地。")
+            if not farming.plot_ready(plot):
+                raise ValueError(f"{peer['name']} #{slot} 还没熟")
+        else:
+            plot = await _pick_ripe_plot(conn, peer["id"])
+            if not plot:
+                raise ValueError(
+                    f"{peer['name']} 没有熟透的露天份地。alliance_ops 邻居 看谁家熟了。"
+                )
+
+        from . import barn as barn_mod
+        dog = await barn_mod.has_guard_dog(conn, peer["id"])
+        chance = _scrump_catch_chance(steward, peer, plot, dog=dog)
+        caught = random.random() < chance
+        fine = config.SCRUMP_FINE_TICKETS
+        if caught and steward.get("mascot_trait") == "scout":
+            fine = max(1, fine // 2)
+
+        await conn.execute(
+            "INSERT INTO scrump_log (thief_id, target_id, day) VALUES (?,?,?)",
+            (steward["id"], peer["id"], day),
+        )
+
+        if caught:
+            await conn.execute(
+                "UPDATE stewards SET tickets=MAX(0, tickets-?) WHERE id=?",
+                (fine, steward["id"]),
+            )
+            await survival.bump(conn, steward["id"], standing=-random.randint(6, 12))
+            from . import undertide as _ut
+            jail_note = await _ut.on_scrump_busted(conn, steward) or ""
+            detail = flavor.fill(
+                flavor.pick(flavor.SCRUMP_CAUGHT),
+                slot=plot["slot"],
+                victim=peer["name"],
+                fine=fine,
+            )
+            extra = []
+            if plot.get("scarecrow"):
+                extra.append("稻草人盯上了")
+            if dog:
+                extra.append("守夜狗叫了")
+            if extra:
+                detail += f"（{'、'.join(extra)}）"
+            action = "scrump_busted"
+            loot = "被抓"
+            msg = detail + jail_note + f"（可 plot_ops amends {peer['name']}）"
+        else:
+            loot = await take_ripe_plot(conn, steward["id"], plot)
+            detail = flavor.fill(
+                flavor.pick(flavor.SCRUMP_SUCCESS),
+                crop=loot,
+                victim=peer["name"],
+                slot=plot["slot"],
+            )
+            action = "scrump"
+            msg = detail + f"\n入袋 {loot}。今日逾篱 {used + 1}/{config.SCRUMP_DAILY}"
+
+        await conn.execute(
+            "INSERT INTO chronicle (action, actor_id, target_id, text, created_at) VALUES (?,?,?,?,?)",
+            (
+                action,
+                steward["id"],
+                peer["id"],
+                f"{steward['name']} 逾篱 {peer['name']} #{plot['slot']} {loot}",
+                db.now(),
+            ),
+        )
+        await conn.commit()
+    return msg
+
+
 async def _apply_effects(
     conn: aiosqlite.Connection,
     steward: dict[str, Any],

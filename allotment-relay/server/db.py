@@ -117,6 +117,12 @@ CREATE TABLE IF NOT EXISTS assist_log (
     day INTEGER NOT NULL,
     PRIMARY KEY (helper_id, target_id, day)
 );
+CREATE TABLE IF NOT EXISTS scrump_log (
+    thief_id INTEGER NOT NULL REFERENCES stewards(id),
+    target_id INTEGER NOT NULL REFERENCES stewards(id),
+    day INTEGER NOT NULL,
+    PRIMARY KEY (thief_id, target_id, day)
+);
 
 CREATE TABLE IF NOT EXISTS rapport (
     steward_a INTEGER NOT NULL REFERENCES stewards(id),
@@ -652,6 +658,7 @@ async def init_db() -> None:
             "ALTER TABLE stewards ADD COLUMN health INTEGER NOT NULL DEFAULT 100",
             "ALTER TABLE stewards ADD COLUMN eatery_open INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN eatery_label TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE stewards ADD COLUMN eatery_opened_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE voyages ADD COLUMN encounter TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE bar_daily_state ADD COLUMN auto_mood TEXT NOT NULL DEFAULT 'normal'",
             "ALTER TABLE bar_daily_state ADD COLUMN manual_mood_level TEXT NOT NULL DEFAULT ''",

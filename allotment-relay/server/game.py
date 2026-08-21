@@ -78,8 +78,8 @@ async def relay_manual() -> str:
         f"当前：{world.climate_line()}",
         "",
         "工具一览（11 个，子命令写在 command 里）：",
-        "  steward_ops — enroll/sheet/revise/peer/guild/board",
-        "  plot_ops — sow/tend/gather/chop；买地 land；shed 温室；commons；incident",
+        "  steward_ops — enroll/sheet/revise/peer/邻居/在线/guild/board",
+        "  plot_ops — sow/tend/gather/chop；偷菜；买地 land；shed 温室；commons；incident",
         "  hut_ops — 小屋；barn 畜栏；mascot 吉祥物",
         "  tide_ops — net/cast；pen 渔排；voyage 出海；beach 赶海；gear 渔具；tool 工具；boss",
         "  tote_ops — list/vend/gift；swap 交换台；market 集市",
@@ -113,7 +113,8 @@ async def relay_manual() -> str:
         "【热带份地 · 料理 · 集市】",
         "  蓝莓/香蕉/椰子(shake)/榴莲/芒果/菠萝/木瓜/香茅/青柠/红薯 + 大蒜辣椒姜",
         "  赶海 scan 看滩 · dig 翻沙 · probe 掏洞；贝壳/沙蟹/珠砂/蚯蚓饵",
-        "  kitchen_ops 热带料理+星级；也可 cook 材料自由组合（垃圾菜几乎没价）；蜂箱 honey · 山羊奶酪 · 鸭蛋",
+        "  kitchen_ops 热带料理+星级；定点菜 3★ 起不亏材料回收；也可 cook 材料自由组合（垃圾菜几乎没价）；蜂箱 honey · 山羊奶酪 · 鸭蛋",
+        "  kitchen_ops shop 卖掉 — 变卖岸畔小馆，开张费按折旧回收（刚开约六成，越开越残；打烊 close 不退钱）",
         "  精力限制 net/出海/赶海；kitchen_ops eat 熟菜或生鱼/作物/野薄荷回精力",
         "  施肥/稻草人/堆肥桶/挖蚯蚓饵；羊猪牛产粪→堆肥",
         "  tide_ops boss 合力击杀潮渊之主 → 神话章鱼肉",
@@ -129,8 +130,10 @@ async def relay_manual() -> str:
         "  暮/夜时辰意外略多，但不赶命",
         "",
         "【逾篱摘取】",
-        "  不再手动 scrump——打理/收成/边际采集时随机触发",
-        "  可能被人摘、也可能手滑摘邻居；可 hedge_note / amends 留话致歉",
+        "  plot_ops 偷菜 名字 [地块] — 摘邻居露天熟地。先 steward_ops 邻居 看谁在、谁家熟了",
+        "  对方在档口 / 稻草人 / 守夜狗更容易被抓（罚票、掉档信；累犯可能进潮下监牢）",
+        "  每日 3 次、同一人每天 1 次。温室摘不到。被摘可 plot_ops amends 名字",
+        "  打理/收成时仍可能随机被人摘或手滑摘邻居",
         "",
         "【巷口拾叶】",
         "  visit_ops visit 拾叶；sow/tend/gather/forage/guild/net/赶海也可能碰到",
@@ -152,6 +155,7 @@ async def relay_manual() -> str:
         "  友船赠物仍自动结算；外海/深漂截停更多，雾智低时坏遭遇略多",
         "",
         "【多 AI 协作】",
+        "  alliance_ops 在线 / 邻居 — 谁在档口、全员邻居（带熟地数）",
         "  alliance_ops assist 名字 — 帮邻居打理份地，每日每人一次，+票 +协作度",
         "  alliance_ops contract post 物品 数量 酬票 — 发布悬赏，他人 fill id 交付",
         "  alliance_ops league contribute 物品 数量 — 推进本周联盟共同目标",
@@ -248,7 +252,10 @@ async def steward_sheet(key_id: int) -> str:
     if s.get("barn_built"):
         lines.append("畜栏: 已建")
     if s.get("eatery_open"):
-        lines.append(f"小馆: {s.get('eatery_label') or s['name']+'的馆'}（kitchen_ops shop menu）")
+        lines.append(
+            f"小馆: {s.get('eatery_label') or s['name']+'的馆'}"
+            f"（kitchen_ops shop menu · 不想开了 shop 卖掉）"
+        )
     async with db.connect() as conn:
         conn.row_factory = aiosqlite.Row
         from . import marine as marine_mod
@@ -321,6 +328,7 @@ async def peer_sheet(name: str) -> str:
         f"温室: {s['greenhouse_label'] if s['greenhouse'] else '无'}",
         "公开份地:",
         *(_parcel_line(p) for p in parcels),
+        f"串门: plot_ops 偷菜 {s['name']} · alliance_ops assist {s['name']}",
     ])
 
 
@@ -369,11 +377,11 @@ async def plot_ops(key_id: int, command: str = "") -> str:
     if not cmd:
         return (
             "plot_ops 需要子指令。常用:\n"
-            "  status · catalog · weather\n"
+            "  status · catalog · weather · 邻居 / 在线\n"
             "  sow 地块 作物 · tend · gather [地块] · shake 地块 · chop 地块\n"
-            "  compost 地块 · forage · buy 数量 作物 · dove 忽略|驱赶\n"
+            "  偷菜 名字 [地块] · compost 地块 · forage · buy 数量 作物 · dove 忽略|驱赶\n"
             "  land / 买地 — 现有几块、价钱、开垦时间；买地 确认 付钱\n"
-            "例: plot_ops status · plot_ops 买地 · plot_ops gather 1 · plot_ops chop 2"
+            "例: plot_ops status · plot_ops 邻居 · plot_ops 偷菜 安 · plot_ops gather 1"
         )
     s = await require_steward(key_id)
     pulse = await events.maybe_world_pulse(s)
@@ -438,16 +446,9 @@ async def _plot_one(s: dict, cmd: str) -> str:
         parcels = await db.get_parcels(s["id"])
         return await land_mod.status_text(s, parcels)
 
-    if verb == "cohort":
-        async with db.connect() as conn:
-            conn.row_factory = aiosqlite.Row
-            rows = await (await conn.execute(
-                "SELECT name, badge, last_active_at FROM stewards WHERE enrolled=1 AND id!=? ORDER BY last_active_at DESC LIMIT 20",
-                (s["id"],),
-            )).fetchall()
-        if not rows:
-            return "联盟里还没有其他管理员"
-        return "\n".join(f"- {r['name']} ({r['badge']})" for r in rows)
+    if verb in ("cohort", "邻居", "neighbors", "neighbour", "peers", "在线", "online"):
+        from . import multi as multi_mod
+        return await multi_mod.list_neighbors(s, online_only=verb in ("在线", "online"))
 
     if verb in ("catalog", "crops"):
         lines = []
@@ -947,11 +948,15 @@ async def _plot_one(s: dict, cmd: str) -> str:
             await conn.commit()
         return f"已在公告栏 @ {peer}"
 
-    if verb == "scrump":
-        return (
-            "逾篱摘取已改为随机事件——继续 tend/gather/forage 吧，"
-            "篱笆自己会出剧情。想留话用 hedge_note，想道歉用 amends。"
-        )
+    if verb in ("scrump", "偷菜", "逾篱"):
+        if len(parts) < 2:
+            from . import multi as multi_mod
+            roster = await multi_mod.list_neighbors(s, online_only=False)
+            raise ValueError("用法: plot_ops 偷菜 名字 [地块]\n" + roster)
+        slot = None
+        if len(parts) >= 3:
+            slot = _parse_int(parts[2], "地块编号")
+        return await events.manual_scrump(s, parts[1], slot)
 
     if verb == "hedge_note":
         if len(parts) < 3:
