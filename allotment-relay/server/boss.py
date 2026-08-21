@@ -61,7 +61,8 @@ async def boss_ops(key_id: int, command: str) -> str:
             )
         return (
             f"「{WORLD_BOSS['name']}」 HP {boss['hp']}/{boss['max_hp']} ({pct}%)\n"
-            f"boss_ops attack — 消耗 {config.BOSS_ATTACK_ENERGY} 精力\n"
+            f"boss_ops attack — 消耗 {config.BOSS_ATTACK_ENERGY} 精力，无船也能打（岸边围攻），不扣船票不掉血\n"
+            f"伤害每次随机 {config.BOSS_ATTACK_DAMAGE[0]}~{config.BOSS_ATTACK_DAMAGE[1]}，最后一击者拿击杀纪事\n"
             f"击杀全员掉落 {WORLD_BOSS['loot']}"
         )
 

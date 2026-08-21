@@ -682,7 +682,12 @@ async def _cmd_tonight(conn: aiosqlite.Connection) -> str:
 async def _cmd_menu(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
     state = await _ensure_daily_state(conn)
     shipwreck = await _shipwreck_eligible(conn, s)
-    lines = [f"{COASTAL_BAR['name']} 酒单", ""]
+    lines = [f"{COASTAL_BAR['name']} 酒单"]
+    if is_open():
+        lines.append("（营业中 · order 酒名 点单）")
+    else:
+        lines.append("（现在打烊中，看看菜谱可以，点单暮场再来）")
+    lines.append("")
     for key, drink in BAR_DRINKS.items():
         if drink.get("hidden"):
             if not await _has_unlock(conn, s["id"], drink.get("unlock", key)):

@@ -107,8 +107,17 @@ async def _bump_rep(conn: aiosqlite.Connection, steward_id: int, delta: int) -> 
 async def on_bar_order(
     conn: aiosqlite.Connection, steward: dict[str, Any], price: int
 ) -> str | None:
-    """bar_ops order 结算后调用：≥30 票的酒计数，满 3 触发鬼故事。"""
+    """bar_ops order 结算后调用：≥30 票的酒计数，满 3 触发鬼故事；便宜酒低频暗示不算数。"""
     if price < utcfg.UT_UNLOCK_DRINK_PRICE:
+        # 便宜酒的暗示：不计杯，但荔栀会让人知道这不算"好酒"（只对还没摸到门道的人）
+        if random.random() < 0.45:
+            ut0 = await _ensure_ut(conn, steward["id"])
+            if not ut0["well_hint"] and int(ut0.get("pricey_count") or 0) == 0:
+                return random.choice([
+                    "\n\n荔栀扫了一眼你的杯子，没说话。那眼神的意思是：就这？",
+                    "\n\n「解渴用的？」荔栀问。不像夸奖。",
+                    "\n\n她收走空杯的时候，顺手把酒单上贵的那半页朝你转了转。",
+                ])
         return None
     ut = await _ensure_ut(conn, steward["id"])
     if ut["well_hint"]:

@@ -32,7 +32,7 @@ async def spend(
             nag = f"（还带伤：{'、'.join(a['name'] for a in ailments[:2])}，visit_ops clinic treat）"
         raise ValueError(
             f"精力不足（{current}/{config.MAX_ENERGY}），需要 {amount}。"
-            f"先 kitchen_ops eat 吃饭回精力{nag}"
+            f"恢复：kitchen_ops eat 熟菜（生鱼/作物也能垫） · stew 路过档口会慢慢回{nag}"
         )
     await conn.execute(
         "UPDATE stewards SET energy = energy - ? WHERE id=?",
