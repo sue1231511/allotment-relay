@@ -444,7 +444,7 @@ async def _apply_naval_payload(
             source="naval",
         )
         if extra:
-            naval_extra = f"\n{extra}\n→ clinic_ops treat …（必须花票）"
+            naval_extra = f"\n{extra}\n→ visit_ops clinic treat …（必须花票）"
     if cargo_loss:
         conn.row_factory = aiosqlite.Row
         rows = await (await conn.execute(

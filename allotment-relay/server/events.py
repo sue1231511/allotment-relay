@@ -394,13 +394,15 @@ async def roll_after_action(
 
     from . import npc as npc_mod
     shiye = await npc_mod.maybe_shiye_bump(conn, steward, trigger)
+    from . import tt as tt_mod
+    tt_hit = None if shiye else await tt_mod.maybe_tt_bump(conn, steward, trigger)
 
     if not await _can_roll(conn, steward["id"]):
-        return shiye
+        return shiye or tt_hit
 
     await survival.on_action(conn, steward["id"], trigger)
-    if shiye:
-        return shiye
+    if shiye or tt_hit:
+        return shiye or tt_hit
 
     from . import hut as hut_mod
     hut_b = await hut_mod.get_bonuses(conn, steward["id"])
@@ -487,11 +489,11 @@ async def roll_after_action(
         msg += f"\n{line}"
     if ailment_msgs:
         msg += "\n" + ailment_msgs[0]
-        msg += "\n→ clinic_ops status · treat 病症（必须花票）"
+        msg += "\n→ visit_ops clinic · treat 病症（必须花票）"
     elif event.kind == "bad" and not is_scrump:
         extra_ailment = await health.maybe_roll_ailment(conn, steward["id"], trigger, chance=0.12)
         if extra_ailment:
-            msg += f"\n{extra_ailment}\n→ clinic_ops treat …（必须花票）"
+            msg += f"\n{extra_ailment}\n→ visit_ops clinic treat …（必须花票）"
 
     iid = None
     if event.kind == "bad" and not is_scrump:

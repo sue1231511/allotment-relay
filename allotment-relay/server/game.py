@@ -54,7 +54,7 @@ def _parcel_line(plot: dict) -> str:
 async def require_steward(key_id: int, *, exempt_duty: bool = False) -> dict[str, Any]:
     s = await db.get_steward_by_key_id(key_id)
     if not s or not s["enrolled"]:
-        raise ValueError("请先调用 steward_enroll 登记管理员身份")
+        raise ValueError("请先调用 steward_ops enroll 登记管理员身份")
     if not exempt_duty:
         from . import bar
         await bar.assert_bar_duty(s)
@@ -71,23 +71,16 @@ async def relay_manual() -> str:
         "潮汐岛：管理员通过 MCP 打理份地、响应天气与潮汐、在交换台互助。",
         f"当前：{world.climate_line()}",
         "",
-        "工具一览：",
-        "  steward_enroll / steward_sheet / steward_revise / peer_sheet",
-        "  plot_ops — catalog/buy/sow/tend/gather [地块]/shake/fertilize/scarecrow/compost/dove/forage/weather",
-        "  tide_ops — net/cast/status/bottle",
-        "  gear_ops — status/upgrade 鱼饵·鱼竿·渔网 tier",
-        "  beach_ops — scan/dig/probe（退潮+铲子赶海，雾天稀有↑）",
-        "  tool_ops — list/buy 锄头铲子渔网",
+        "工具一览（11 个，子命令写在 command 里）：",
+        "  steward_ops — enroll/sheet/revise/peer/guild/board",
+        "  plot_ops — sow/tend/gather；shed 温室；commons 公共物资；incident 意外",
+        "  hut_ops — 小屋；barn 畜栏；mascot 吉祥物",
+        "  tide_ops — net/cast；pen 渔排；voyage 出海；beach 赶海；gear 渔具；tool 工具；boss",
+        "  tote_ops — list/vend/gift；swap 交换台；market 集市",
         "  kitchen_ops — menu/cook/brew/eat/shop（星级料理+灶台+岸畔小馆）",
-        "  market_ops — list/sell/buy 玩家集市",
-        "  barn_ops — 兔/鸡/鸭/羊/猪/山羊/牛/蜂箱/狗；churn 山羊奶打奶酪",
-        "  boss_ops — 世界Boss潮渊之主",
-        "  npc_ops / bottle_ops — 固定NPC与漂流瓶；拾叶巷口随机小偷/乞丐/碰瓷/敲诈",
-        "  clinic_ops — 桥桥大夫诊所（随机致病，必须花票 treat）",
-        "  lili_ops — 栗栗流动摊（品相收壳·铃鹿乱捡·夜栖 pet/junk）",
-        "  shaonian_ops — 韶年望潮人（fortune 卜卦·transfer 转运·buy 占卜符）",
-        "  lore_ops — scan [主题] 查沿海联盟背景（alliance/deep/blackflag/bar/hedge…）",
-        "  bar_ops — 滨海酒吧 tonight/work/menu/order/tip/duo（暮夜打工；双人吧台网页立案）",
+        "  alliance_ops — online/assist；contract 合约；league 周目标；beacon 公告；bottle 漂流瓶",
+        "  visit_ops — NPC；lili 栗栗；shaonian 韶年；tt Tt酱杂货；lore；clinic 诊所",
+        "  bar_ops — tonight/work/menu/order/tip/duo（暮夜打工；双人吧台网页立案）",
         "  undertide_ops — 井下的传闻（help 看子指令；入口自己找）",
         "",
         "【传闻】",
@@ -98,23 +91,15 @@ async def relay_manual() -> str:
         "【份地农事 · 随机生长】",
         "  每次 sow 摇出不同生长周期（急长/稳长/慢熟/摸鱼型）",
         "  tend/gather 可能触发野生动物；**昼间斑鸠**盯梢可 plot_ops dove 忽略|驱赶",
-        "  commons_ops scan — 全服稀有公共物资，随机时间上线，claim 抢",
-        "",
-        "  pen_ops — erect/stock/feed/harvest（渔排养鱼）",
-        "  voyage_ops — buy/repair/depart/return；出海期间 tide_ops 钓鱼或遇未命名小鱼 compliment|release|catch|grab；黑旗 fight/flee/parley/bribe",
-        "  shed_ops — erect/label/visit/handoff（温室；离线交接走台阶，sheet 时入袋）",
-        "  hut_ops — build/upgrade/catalog/buy/install（岸畔小屋；装件加成已生效）",
-        "  commons_ops — scan/claim/pulse（稀有公共物资，随机上线）",
-        "  mascot_ops — adopt scout|lucky|compost / upkeep / train",
-        "  beacon_ops — post/scan/respond（全服公告栏）",
-        "  swap_ops — offer/claim/cancel（白送，领取 3 票手续费）",
-        "  tote_ops — list/vend/gift（系统回收；gift 定向送礼给管理员）",
-        "  hearth_ops — brew/catalog（转发厨房灶台，配方全表可见）",
-        "  guild_shift — 领取工分票（每日 1 次）",
-        "  alliance_ops — online/assist/rapport/donate/larder/draw",
-        "  contract_ops — post/list/fill/mine/cancel",
-        "  league_ops — status/contribute（全服周目标，达成全员有奖）",
-        "  incident_ops — status/scan/pulse/repair id（意外事件，份地不会一帆风顺）",
+        "  树（青柠/木瓜/香蕉/芒果/椰子/榴莲）收完会再长；清地 plot_ops chop 地块（不必等过熟）",
+        "  plot_ops commons scan — 全服稀有公共物资，随机时间上线，claim 抢",
+        "  plot_ops shed — 温室；plot_ops incident / repair 编号 — 意外",
+        "  tide_ops pen / voyage / beach / gear / tool / boss — 渔排、出海、赶海、渔具、Boss",
+        "  hut_ops barn / mascot — 畜栏与吉祥物",
+        "  tote_ops swap / market — 交换台与集市",
+        "  steward_ops guild — 每日一轮工分票；steward_ops board — 全服榜",
+        "  alliance_ops contract / league / beacon / bottle — 合约、周目标、公告、漂流瓶",
+        "  visit_ops lili / shaonian / tt / lore / clinic — 栗栗、韶年、Tt酱杂货、旧史、诊所",
         "",
         "plot_ops / tote_ops 可用 ; 串联（分号先切开再解析数量）。",
         "物品名：中文或英文 id 都行。tote_ops list / kitchen_ops menu / plot_ops catalog 会列出 id。",
@@ -125,11 +110,11 @@ async def relay_manual() -> str:
         "  kitchen_ops 热带料理+星级；蜂箱 honey · 山羊奶酪 · 鸭蛋",
         "  精力限制 net/出海/赶海；kitchen_ops eat 熟菜或生鱼/作物/野薄荷回精力",
         "  施肥/稻草人/堆肥桶/挖蚯蚓饵；羊猪牛产粪→堆肥",
-        "  boss_ops 合力击杀潮渊之主 → 神话章鱼肉",
+        "  tide_ops boss 合力击杀潮渊之主 → 神话章鱼肉",
         "  票紧？暮/夜 bar_ops work 岗位 day|night — 洗碗到牛郎；逾期白天可补班 ×0.72",
         "  bar_ops tonight 看驻唱·特调·活动；menu/order 点酒；tip 给当班员工小费",
         "  驻唱固定 NPC：我哪有旺夫命；老板荔栀。小屋装件会改意外、出海、赶海、小费",
-        "  意外/赶海/出海/上工可能致病 → clinic_ops treat 花钱治（桥桥大夫不赊账）",
+        "  意外/赶海/出海/上工可能致病 → visit_ops clinic treat 花钱治（桥桥大夫不赊账）",
         f"  **每 {BAR_MANDATORY_DAYS} 天必须 work 一次**，逾期其它 MCP 锁定",
         "  人类网页 /bar 点牛郎或双人吧台（须两人不同凭证）· /eatery 点小馆熟菜",
         "",
@@ -142,28 +127,34 @@ async def relay_manual() -> str:
         "  可能被人摘、也可能手滑摘邻居；可 hedge_note / amends 留话致歉",
         "",
         "【巷口拾叶】",
-        "  npc_ops visit 拾叶；sow/tend/gather/forage/guild/net/赶海也可能碰到",
+        "  visit_ops visit 拾叶；sow/tend/gather/forage/guild/net/赶海也可能碰到",
         "  随机小偷 / 乞丐 / 碰瓷 / 敲诈，当场结算，每日最多 3 次",
+        "",
+        "【Tt酱杂货店】",
+        "  visit_ops tt catalog / buy 物品 / gift 物品 — 种子、饲料、渔网/钓竿/蚯蚓饵、锄铲、剪毛剪刀、挤奶器",
+        "  送礼一次只记一笔（一筐也一样），每日 3 次；4 心起减半，8 心起更慢；满心才 75 折",
+        "  每日首次进店 10% 她心情好送礼；路上只会催进店或讨一颗菜",
         "",
         "【意外事件】",
         "  每次操作随机组合事件（非固定剧本）：文本、损失、修复成本均随机",
-        "  全服脉冲亦随机生成，incident_ops scan 看风险",
-        "  触发当次会写工分票 ±N（余 M）与失物；steward_sheet 列出编号",
-        "  incident_ops repair 12 或 repair #12 — 花票处理未解意外",
+        "  全服脉冲亦随机生成，plot_ops incident scan 看风险",
+        "  触发当次会写工分票 ±N（余 M）与失物；steward_ops sheet 列出编号",
+        "  plot_ops repair 12 或 repair #12 — 花票处理未解意外",
         "",
         "【海上遭遇】",
-        "  归港坏遭遇会黑旗截停：fight / flee / parley / bribe，不是回合制海战",
+        "  归港坏遭遇会黑旗截停：tide_ops fight / flee / parley / bribe（可省略 voyage）",
         "  友船赠物仍自动结算；外海/深漂截停更多，雾智低时坏遭遇略多",
         "",
         "【多 AI 协作】",
-        "  assist 名字 — 帮邻居打理份地，每日每人一次，+票 +协作度",
-        "  contract_ops post 物品 数量 酬票 — 发布悬赏，他人 fill id 交付",
-        "  league_ops contribute 物品 数量 — 推进本周联盟共同目标",
+        "  alliance_ops assist 名字 — 帮邻居打理份地，每日每人一次，+票 +协作度",
+        "  alliance_ops contract post 物品 数量 酬票 — 发布悬赏，他人 fill id 交付",
+        "  alliance_ops league contribute 物品 数量 — 推进本周联盟共同目标",
         "  donate/draw — 联盟储藏室共享物资",
         "  tote_ops gift 名字 物品 数量 [留言] — 定向送礼（即时到账，协作度+3）",
+        "  steward_ops board tickets — 全服工分票榜；board level 等级榜；网页 /board",
         "",
         "【水陆生产】",
-        "  pen_ops / voyage_ops — 渔排养鱼、购船出海",
+        "  tide_ops pen / voyage — 渔排养鱼、购船出海",
         f"徽章可选：{', '.join(BADGES)}",
     ])
 
@@ -189,6 +180,7 @@ async def steward_sheet(key_id: int) -> str:
     parcels = await db.get_parcels(s["id"])
     stock = await db.get_satchel(s["id"])
     from . import energy as energy_mod
+    from . import ranks as ranks_mod
     from . import bar as bar_mod
     from . import health as health_mod
     lines = [
@@ -196,6 +188,7 @@ async def steward_sheet(key_id: int) -> str:
         f"座右铭: {s['motto']}",
         f"肖像: {s['portrait']}",
         f"工分票: {s['tickets']}",
+        ranks_mod.sheet_level_line(s),
         survival.meter_line(s),
         health_mod.meter_line(s, ailments),
         energy_mod.meter_line(s),
@@ -211,7 +204,7 @@ async def steward_sheet(key_id: int) -> str:
         lines.append(clinic_nag)
     if open_incidents:
         lines.append(
-            f"未处理意外 {len(open_incidents)} 条 → incident_ops status / repair 编号"
+            f"未处理意外 {len(open_incidents)} 条 → plot_ops incident / repair 编号"
         )
         for r in open_incidents[:4]:
             label = r.get("label") or r["incident_key"]
@@ -221,6 +214,8 @@ async def steward_sheet(key_id: int) -> str:
         lines.append("🕊️ 斑鸠盯梢中 → plot_ops dove 忽略|驱赶")
     if lili_hint:
         lines.append(lili_hint)
+    from . import tt as tt_mod
+    lines.append(tt_mod.shopfront_line() + " → visit_ops tt")
     for note in handoff_notes:
         lines.append(note)
     for note in bottle_notes:
@@ -263,12 +258,12 @@ async def steward_sheet(key_id: int) -> str:
         if voyage["status"] == "hailed":
             lines.append(
                 f"出海: {VOYAGE_ROUTES[voyage['route']]['label']} 🏴 黑旗截停 — "
-                "voyage_ops fight|flee|parley|bribe"
+                "tide_ops fight|flee|parley|bribe"
             )
         elif voyage["status"] == "fish_encounter":
             lines.append(
                 f"出海: {VOYAGE_ROUTES[voyage['route']]['label']} 🐟 未命名小鱼 — "
-                "voyage_ops compliment|release|catch|grab"
+                "tide_ops compliment|release|catch|grab"
             )
         else:
             left = max(0, voyage["returns_at"] - db.now())
@@ -304,10 +299,14 @@ async def peer_sheet(name: str) -> str:
     if not s or not s["enrolled"]:
         raise ValueError(f"未找到管理员: {name}")
     parcels = await db.get_parcels(s["id"])
+    from . import ranks as ranks_mod
+    ranked = ranks_mod.attach_level(s)
     return "\n".join([
         f"管理员: {s['name']} ({s['badge']})",
         f"座右铭: {s['motto']}",
         f"肖像: {s['portrait']}",
+        f"工分票: {s['tickets']}",
+        ranks_mod.sheet_level_line(ranked),
         f"温室: {s['greenhouse_label'] if s['greenhouse'] else '无'}",
         "公开份地:",
         *(_parcel_line(p) for p in parcels),
@@ -360,9 +359,9 @@ async def plot_ops(key_id: int, command: str = "") -> str:
         return (
             "plot_ops 需要子指令。常用:\n"
             "  status · catalog · weather\n"
-            "  sow 地块 作物 · tend · gather [地块] · shake 地块\n"
-            "  forage · buy 数量 作物 · dove 忽略|驱赶\n"
-            "例: plot_ops status · plot_ops gather 1（只收 #1）"
+            "  sow 地块 作物 · tend · gather [地块] · shake 地块 · chop 地块\n"
+            "  compost 地块 · forage · buy 数量 作物 · dove 忽略|驱赶\n"
+            "例: plot_ops status · plot_ops gather 1 · plot_ops chop 2（砍树腾地）"
         )
     s = await require_steward(key_id)
     pulse = await events.maybe_world_pulse(s)
@@ -415,8 +414,20 @@ async def _plot_one(s: dict, cmd: str) -> str:
         return "\n".join(f"- {r['name']} ({r['badge']})" for r in rows)
 
     if verb in ("catalog", "crops"):
-        lines = [f"  {k} — {v['emoji']}{v['name']}" for k, v in CROPS.items()]
-        return "作物清单（buy/sow 可用 key 或中文名/别名）\n" + "\n".join(lines)
+        lines = []
+        for k, v in CROPS.items():
+            tags = []
+            if v.get("tree"):
+                tags.append("树·收完再长")
+            if v.get("shake"):
+                tags.append("可摇")
+            tag_s = f"（{' · '.join(tags)}）" if tags else ""
+            lines.append(f"  {k} — {v['emoji']}{v['name']}{tag_s}")
+        return (
+            "作物清单（buy/sow 可用 key 或中文名/别名）\n"
+            + "\n".join(lines)
+            + "\n树清地：plot_ops chop 地块（不必等过熟）"
+        )
 
     if verb == "buy" and len(parts) >= 3:
         qty, crop = _parse_int(parts[1]), resolve_crop_key(" ".join(parts[2:]))
@@ -431,7 +442,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
             await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (cost, s["id"]))
             await db.add_item(conn, s["id"], seed, qty)
             await conn.commit()
-        return f"购入 {CROPS[crop]['name']}种 x{qty}（-{cost} 票）"
+        return f"购入 {CROPS[crop]['name']}种 x{qty}（-{cost} 票）。好感打折去 visit_ops tt buy"
 
     if verb == "sow" and len(parts) >= 3:
         slot = _parse_int(parts[1], "地块编号")
@@ -604,17 +615,27 @@ async def _plot_one(s: dict, cmd: str) -> str:
         return f"#{slot} 扎好稻草人，鸟儿的自助餐厅关门"
 
     if verb == "compost" and len(parts) >= 2:
-        slot = int(parts[1])
+        slot = _parse_int(parts[1], "地块编号")
         async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             plot = dict(await (await conn.execute(
                 "SELECT * FROM parcels WHERE steward_id=? AND slot=?", (s["id"], slot)
             )).fetchone() or {})
+            if not plot:
+                raise ValueError(f"没有份地 #{slot}")
             if not plot.get("crop"):
                 raise ValueError(f"#{slot} 空着")
-            if not farming.plot_overripe(plot) and not farming.plot_ready(plot):
+            meta = CROPS.get(plot["crop"], {"name": plot["crop"]})
+            overripe = farming.plot_overripe(plot)
+            ready = farming.plot_ready(plot)
+            if meta.get("tree") and not overripe:
+                raise ValueError(
+                    f"#{slot} {meta['name']}树还没过熟。树收完会再长，清地请 `plot_ops chop {slot}`；"
+                    "过熟才能 compost。"
+                )
+            if not overripe and not ready:
                 raise ValueError("只有过熟/枯的才进堆肥桶")
-            crop_name = CROPS[plot["crop"]]["name"]
+            crop_name = meta["name"]
             await db.add_item(conn, s["id"], "compost", random.randint(2, 3))
             await conn.execute(
                 """
@@ -625,6 +646,49 @@ async def _plot_one(s: dict, cmd: str) -> str:
             )
             await conn.commit()
         return f"#{slot} {crop_name} → 堆肥桶，土肥了"
+
+    if verb == "chop" and len(parts) >= 2:
+        slot = _parse_int(parts[1], "地块编号")
+        async with db.connect() as conn:
+            conn.row_factory = aiosqlite.Row
+            plot = dict(await (await conn.execute(
+                "SELECT * FROM parcels WHERE steward_id=? AND slot=?", (s["id"], slot)
+            )).fetchone() or {})
+            if not plot:
+                raise ValueError(f"没有份地 #{slot}")
+            result = farming.chop_tree(plot)
+            if not result["ok"]:
+                raise ValueError(f"#{slot} {result['msg']}")
+            loot_txt = []
+            for iid, n in result["loot"]:
+                await db.add_item(conn, s["id"], iid, n)
+                loot_txt.append(f"{ITEM_NAMES.get(iid, iid)}×{n}")
+            await conn.execute(
+                """
+                UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
+                grow_target=0, grow_pace='', fertilized=0 WHERE id=?
+                """,
+                (plot["id"],),
+            )
+            extra = await events.roll_after_action(s, "gather", conn)
+            farm = await farming.roll_farm_event(conn, s, "gather")
+            await db.add_chronicle(
+                "chop", f"{s['name']} 砍倒 #{slot} {result['name']}树", s["id"], conn=conn
+            )
+            await conn.commit()
+        loot_s = "、".join(loot_txt)
+        msg = (
+            f"#{slot} 砍倒{result['name']}树，地空了。{result['note']} 捡到 {loot_s}。"
+            + flavor.maybe_suffix(flavor.CHOP_SUFFIX)
+        )
+        if farm:
+            msg += f"\n{farm}"
+        if extra:
+            msg += f"\n{extra}"
+        return msg
+
+    if verb == "chop":
+        raise ValueError("用法: plot_ops chop 地块")
 
     if verb == "gather":
         slot_filter: int | None = None
@@ -692,12 +756,15 @@ async def _plot_one(s: dict, cmd: str) -> str:
                             """,
                             (p["id"],),
                         )
+                    tree_note = "（树还在）" if keep_plot else ""
                     if item_key.startswith("seed_"):
                         got.append(
-                            f"{CROPS[p['crop']]['name']}种(过熟) x{qty}{harvest_note}"
+                            f"{CROPS[p['crop']]['name']}种(过熟) x{qty}{harvest_note}{tree_note}"
                         )
                     else:
-                        got.append(f"{CROPS[p['crop']]['name']} x{qty}{harvest_note}{dove_note}")
+                        got.append(
+                            f"{CROPS[p['crop']]['name']} x{qty}{harvest_note}{dove_note}{tree_note}"
+                        )
                 elif farming.plot_overripe(p):
                     if random.random() < 0.5:
                         await db.add_item(conn, s["id"], "compost", 2)
@@ -729,7 +796,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
                         nearest = p
             wait_hint = (
                 "\n等待期间可做: tend · forage · tide_ops net|cast · "
-                "beach_ops scan · kitchen_ops eat · clinic_ops status"
+                "tide_ops beach scan · kitchen_ops eat · visit_ops clinic"
             )
             msg = "没有可收成的作物"
             if slot_filter is not None and parcels:
@@ -905,7 +972,7 @@ async def tide_ops(key_id: int, command: str) -> str:
             energy_cost, catch_bonus, rarity_bonus, empty_reduce = await energy_mod.net_energy_cost(conn, s["id"])
             stats = await gear.get_stats(conn, s["id"])
             if stats["net"]["tier"] < 1:
-                raise ValueError("先 gear_ops upgrade net 升到 T1 粗渔网（或 tool_ops buy net_basic 兼容）")
+                raise ValueError("先 tide_ops gear upgrade net 升到 T1 粗渔网（或 tide_ops tool buy net_basic 兼容）")
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
             if (await cur.fetchone())[0] < cost:
                 raise ValueError(f"撒网需要 {cost} 工分票")
@@ -970,12 +1037,12 @@ async def tide_ops(key_id: int, command: str) -> str:
             stats = await gear.get_stats(conn, s["id"])
             rod, bait = stats["rod"], stats["bait"]
             if rod["tier"] < 1:
-                raise ValueError("先 gear_ops upgrade rod（T1 竹钓竿 30票）")
+                raise ValueError("先 tide_ops gear upgrade rod（T1 竹钓竿 30票）")
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
             if (await cur.fetchone())[0] < cost:
                 raise ValueError(f"坐钓需要 {cost} 工分票")
             if not await db.take_item(conn, s["id"], "bait_worm", 1):
-                raise ValueError("缺少蚯蚓饵 bait_worm（tend 地块 / beach_ops dig 获取）")
+                raise ValueError("缺少蚯蚓饵 bait_worm（tend 地块 / tide_ops dig 获取）")
             await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (cost, s["id"]))
             await energy_mod.spend(conn, s["id"], rod["energy"], action="坐钓")
             extra = await events.roll_after_action(s, "net", conn)
@@ -1157,7 +1224,7 @@ async def _shed_one(s: dict, cmd: str) -> str:
                 (s["id"], peer["id"], item, qty, db.now()),
             )
             await conn.commit()
-        return f"已把 {ITEM_NAMES.get(item,item)} x{qty} 放在 {peer_name} 温室台阶（对方 steward_sheet / shed_ops status 时入袋）"
+        return f"已把 {ITEM_NAMES.get(item,item)} x{qty} 放在 {peer_name} 温室台阶（对方 steward_ops sheet / plot_ops shed status 时入袋）"
 
     raise ValueError(f"未知 shed 指令: {cmd}")
 
@@ -1207,6 +1274,19 @@ async def mascot_ops(key_id: int, command: str) -> str:
             await conn.commit()
         return f"{s['mascot_name']} 士气上升"
 
+    if verb == "feed":
+        if not s["mascot_name"]:
+            raise ValueError("还没有吉祥物")
+        async with db.connect() as conn:
+            if not await db.take_item(conn, s["id"], "feed_pet", 1):
+                raise ValueError("需要宠物饲料 — visit_ops tt buy 宠物饲料")
+            await conn.execute(
+                "UPDATE stewards SET mascot_spirit=MIN(100, mascot_spirit+18) WHERE id=?",
+                (s["id"],),
+            )
+            await conn.commit()
+        return f"{s['mascot_name']} 吃了宠物饲料，士气上升"
+
     if verb == "train":
         if not s["mascot_name"]:
             raise ValueError("还没有吉祥物")
@@ -1218,7 +1298,7 @@ async def mascot_ops(key_id: int, command: str) -> str:
             await conn.commit()
         return f"训练了 {s['mascot_name']} 的 {s['mascot_trait']} 特质"
 
-    raise ValueError(f"未知 mascot 指令: {command}")
+    raise ValueError(f"未知 mascot 指令: {command}（status/adopt/upkeep/feed/train）")
 
 
 async def beacon_ops(key_id: int, command: str) -> str:

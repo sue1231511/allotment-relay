@@ -18,7 +18,7 @@ CROPS = {
     "bramble":     {"name": "荆棘莓",   "emoji": "🫐", "seed_price": 14, "sell": 32, "grow": 150, "spread": 0.28, "tags": ["berry"]},
     "blueberry":   {"name": "蓝莓",     "emoji": "🫐", "seed_price": 16, "sell": 36, "grow": 160, "spread": 0.26, "tags": ["berry", "tropic"]},
     "pineapple":   {"name": "菠萝",     "emoji": "🍍", "seed_price": 17, "sell": 32, "grow": 180, "spread": 0.26, "tags": ["fruit", "tropic"]},
-    # ── 树类（3~5.5h）──
+    # ── 树类（3~5.5h；收完再长，清地 plot_ops chop）──
     "lime":        {"name": "青柠",     "emoji": "🍋", "seed_price": 14, "sell": 26, "grow": 200, "spread": 0.24, "tags": ["fruit", "tropic"], "tree": True, "shake": True},
     "papaya":      {"name": "木瓜",     "emoji": "🍈", "seed_price": 19, "sell": 34, "grow": 210, "spread": 0.24, "tags": ["fruit", "tropic"], "tree": True},
     "banana":      {"name": "香蕉",     "emoji": "🍌", "seed_price": 18, "sell": 28, "grow": 240, "spread": 0.24, "tags": ["fruit", "tropic"], "tree": True},
@@ -359,7 +359,7 @@ LIVESTOCK = {
     "dog": {"name": "狗", "emoji": "🐕", "buy": 70, "feed": "meat_rabbit", "feed_qty": 1, "grow": 0, "product": "guard", "product_qty": 0, "guard": True},
 }
 
-# 渔具数值 tier — gear_ops status / upgrade bait|rod|net
+# 渔具数值 tier — tide_ops gear status / upgrade bait|rod|net
 GEAR_TIERS = {
     "bait": [
         {"tier": 1, "name": "蚯蚓饵", "catch": 0.00, "rarity": 0, "empty": 0.00, "tickets": 0},
@@ -523,7 +523,7 @@ MYTH_INGREDIENTS = {
     "myth_octopus": {"name": "神话章鱼肉", "emoji": "🐙", "sell": 220, "energy": 40},
 }
 
-# 病症 — 随机事件致病，clinic_ops treat 花钱治（必须花票）
+# 病症 — 随机事件致病，visit_ops clinic treat 花钱治（必须花票）
 AILMENTS = {
     "sprain": {
         "name": "扭伤", "emoji": "🦵", "cost": 18, "health_loss": 10, "health_restore": 14,
@@ -594,7 +594,7 @@ WORLD_BOSS = {
 NPC_FIXED = [
     {"key": "old_salt", "name": "老水手巴顿", "lines": [
         "今天潮线低，适合赶海", "细网比粗网省劲",
-        "beach_ops scan 先看滩面", "雾天滩上容易出珠砂",
+        "tide_ops beach scan 先看滩面", "雾天滩上容易出珠砂",
         "probe 掏洞，dig 翻沙——别搞反",
         "以前叫住在一块儿。后来事情多了，就改叫联盟。",
         "赤潮别贪。风大不可怕，觉得自己比风大才可怕。",
@@ -630,19 +630,19 @@ NPC_FIXED = [
         "随机事件落下的病，找随机事件哭去——诊费照收",
         "扭了脚、着了凉、宿醉——都挂号，都花钱",
         "身体指标低了意外多，别硬撑到票都不够挂号",
-        "npc_ops visit 只能聊天，真治得 clinic_ops treat",
+        "visit_ops visit 只能聊天，真治得 visit_ops clinic treat",
     ]},
     {"key": "lili", "name": "栗栗", "lines": [
         "潮汐游商。滩头喊栗栗，驮包兽铃鹿、护摊犬夜栖。",
         "贝壳按品相收：亮壳硬通货，糙壳凑一把可换乱捡款。",
-        "lili_ops scan 看货架 · trade 编号 · pet 摸夜栖 · junk 糙壳换货",
+        "visit_ops lili scan 看货架 · trade 编号 · pet 摸夜栖 · junk 糙壳换货",
         "路过就换，错过等下回。联盟工分票经济外的另一条线。",
         "糊弄她指名要好货 → 弹脑壳；亮壳献好货 → 揉头顺延 5 分钟。",
     ]},
     {"key": "shaonian", "name": "韶年", "lines": [
         "滩头看潮卜卦的人，通称韶年望潮人",
         "今日卦象挂玩法，符能躲一点坏运气",
-        "shaonian_ops fortune 卜卦 · transfer 转凶运 · buy 买符",
+        "visit_ops shaonian fortune 卜卦 · transfer 转凶运 · buy 买符",
         "坐，我替你卜一卦，看今日这光景，宜不宜下海。",
         "纪事标签：韶年、望潮人、滩头韶年",
     ]},
@@ -658,7 +658,14 @@ NPC_FIXED = [
         "别叫警察，联盟备案：我是NPC，不是你的工友",
         "碰瓷、伸手、顺手、开口要——哪张牌朝上，走着瞧",
         "你档信高我就装可怜，你雾智低我就装摔倒",
-        "npc_ops visit 拾叶，份地上也能撞见。别指望我送礼",
+        "visit_ops visit 拾叶，份地上也能撞见。别指望我送礼",
+    ]},
+    {"key": "tt", "name": "Tt酱", "lines": [
+        "杂货店不讲价。好感另算——自己人价写在脸上。",
+        "种子、饲料、渔网、钓竿、蚯蚓饵，货架上有的都能买。",
+        "送礼可以。别送粪。75 折很难刷，心多了她懒得记账。",
+        "心情好的时候会塞东西。别天天来蹲。",
+        "visit_ops tt catalog 看货架 · buy 物品 · gift 物品",
     ]},
 ]
 
@@ -773,6 +780,11 @@ ITEM_PRICES.update({
     "goat_cheese": 32, "honey": 26, "wool": 22,
     "meat_rabbit": 20, "meat_pork": 28,
     "scarecrow": 35,
+    "feed_animal": 12,
+    "feed_pet": 6,
+    "tool_shears": 45,
+    "tool_milker": 55,
+    "tool_rod": 30,
 })
 ITEM_PRICES.update({k: v["sell"] for k, v in MANURE.items()})
 for k, v in LIVESTOCK.items():
@@ -813,6 +825,11 @@ ITEM_NAMES.update({
     "wool": "🧶羊毛",
     "meat_rabbit": "🍖兔肉", "meat_pork": "🥓猪肉",
     "scarecrow": "🌾稻草人",
+    "feed_animal": "🌾动物饲料",
+    "feed_pet": "🦴宠物饲料",
+    "tool_shears": "✂️剪毛剪刀",
+    "tool_milker": "🥛挤奶器",
+    "tool_rod": "🎣竹钓竿",
 })
 for _shell_base in ("shell_catseye", "shell_conch", "shell_scallop", "shell_starfish", "shell_mussel"):
     _plain = ITEM_NAMES[_shell_base]

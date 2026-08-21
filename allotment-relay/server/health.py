@@ -174,7 +174,7 @@ async def treat_one(
     ailment_key: str,
 ) -> str:
     if ailment_key not in AILMENTS:
-        raise ValueError(f"未知病症，clinic_ops status 查看")
+        raise ValueError(f"未知病症，visit_ops clinic 查看")
     if ailment_key in ("pit_trauma", "ring_shock"):
         raise ValueError(
             "桥桥看了一眼伤势，又看了你一眼。\n"

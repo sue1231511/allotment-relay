@@ -159,7 +159,7 @@ async def lili_ops(key_id: int, command: str) -> str:
                 lines.append(f"✨ {spawned['detail']}")
             if not visit:
                 lines.append("现在不在——多 scan / 赶海 / 看档 碰运气")
-                lines.append("来了全服可见；lili_ops pet 摸夜栖 · junk 糙壳换乱捡款")
+                lines.append("来了全服可见；visit_ops lili pet 摸夜栖 · junk 糙壳换乱捡款")
                 await conn.commit()
                 return "\n".join(lines)
 
@@ -192,11 +192,11 @@ async def lili_ops(key_id: int, command: str) -> str:
 
         if verb in ("trade", "swap", "buy") and len(parts) >= 2:
             if not visit:
-                raise ValueError("栗栗不在，lili_ops scan 蹲点")
+                raise ValueError("栗栗不在，visit_ops lili scan 蹲点")
             try:
                 offer_id = int(parts[1])
             except ValueError:
-                raise ValueError("trade 用法: lili_ops trade 编号")
+                raise ValueError("trade 用法: visit_ops lili trade 编号")
 
             conn.row_factory = aiosqlite.Row
             row = await (await conn.execute(
@@ -270,7 +270,7 @@ async def lili_ops(key_id: int, command: str) -> str:
 
         if verb == "visit":
             if not visit:
-                return "栗栗不在。流动商人随机刷新，lili_ops scan 蹲点——货单每天换"
+                return "栗栗不在。流动商人随机刷新，visit_ops lili scan 蹲点——货单每天换"
             line = random.choice([
                 "栗栗：「贝壳我收，按品相算——亮壳顶大头，糙壳当零头」",
                 "铃鹿把货签叼正了。栗栗：「种地钓鱼捕捞赶海，等级高的票少付点」",
@@ -278,7 +278,7 @@ async def lili_ops(key_id: int, command: str) -> str:
             ])
             left = max(0, (visit["expires_at"] - db.now()) // 60)
             await conn.commit()
-            return f"{line}\n（还剩 {left} 分 · {domain_level_line(levels)} · lili_ops pet/junk）"
+            return f"{line}\n（还剩 {left} 分 · {domain_level_line(levels)} · visit_ops lili pet/junk）"
 
         if verb == "catalog":
             shelf_id = await _shelf_visit_id(conn, today)
@@ -312,5 +312,5 @@ async def active_visit_hint(conn: aiosqlite.Connection) -> str | None:
         return None
     left = max(0, (visit["expires_at"] - db.now()) // 60)
     bell = lili_extras.visit_bell_warning(visit)
-    base = f"栗栗流动摊在（剩 {left} 分，今日货单）→ lili_ops scan"
+    base = f"栗栗流动摊在（剩 {left} 分，今日货单）→ visit_ops lili scan"
     return f"{base} · {bell}" if bell else base

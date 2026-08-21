@@ -9,112 +9,413 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
   <style>
-    /* 井下沉色 — 建立在地面纸色系之上的「往下看」 */
-    .ut-well{max-width:720px;margin:0 auto;padding:8px 0 64px}
-    .ut-card{background:#14161b;border:1px solid #262b33;border-radius:6px;padding:20px 22px;margin-bottom:16px;color:#c9cdd4}
-    .ut-card h2{font-size:13px;color:#b08d4f;margin:0 0 12px;letter-spacing:.32em;font-weight:500}
-    .ut-tide{font-size:15px;margin:0;color:#d8dce2}
-    .ut-bank{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
-    .ut-rate{font-size:28px;color:#b08d4f;font-family:"Noto Serif SC",Georgia,serif}
-    .ut-rate small{font-size:12px;color:#6b7280}
-    .ut-reason{color:#8a9099;font-size:13px;font-style:italic}
-    .ut-paper{border-left:3px solid #2c323b;padding:10px 14px;margin-bottom:10px;background:#101318}
-    .ut-paper.gilt{border-left-color:#b08d4f;background:#16130b}
-    .ut-paper .head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
-    .ut-paper .bounty{color:#b08d4f;white-space:nowrap}
-    .ut-paper .note{color:#6b7280;font-size:12px;margin-top:4px}
-    .ut-paper.gilt .note{color:#8a7440}
-    .ut-rumor{padding:9px 0;border-bottom:1px dashed #262b33;font-size:14px}
-    .ut-rumor:last-child{border-bottom:0}
-    .ut-rumor .when{color:#586069;font-size:11px;white-space:nowrap;margin-left:8px}
-    .ut-empty{color:#6b7280;font-size:13px;font-style:italic}
-    .ut-wall{display:flex;align-items:baseline;gap:14px}
-    .ut-whites{font-size:28px;color:#8a4a4a;font-family:Georgia,serif}
-    .ut-wall .sub{color:#8a9099;font-size:12px}
-    .ut-divider{text-align:center;color:#b08d4f;margin:22px 0;font-size:11px;letter-spacing:.5em;opacity:.7}
-    .ut-motto{text-align:center;margin-top:34px;color:#233038;font-size:16px;letter-spacing:.28em}
-    .ut-back{text-align:center;color:#708087;font-size:12px;margin-top:8px}
-    .ut-back a{color:#708087}
+    body.ut-page {
+      --ut-ink: #ddd6ca;
+      --ut-muted: #817b72;
+      --ut-gold: #b58a45;
+      --ut-red: #783d36;
+      --ut-line: #2a2824;
+      color: var(--ut-ink);
+      background:
+        radial-gradient(circle at 12% 8%, rgba(181, 138, 69, .08), transparent 26%),
+        radial-gradient(circle at 88% 12%, rgba(120, 61, 54, .07), transparent 22%),
+        linear-gradient(180deg, #0c0d0e, #08090a);
+      scrollbar-color: #2c2925 transparent;
+    }
+    body.ut-page::before {
+      opacity: .16;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, .018) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, .012) 1px, transparent 1px);
+      background-size: 34px 34px;
+      mask-image: none;
+    }
+    body.ut-page .site-nav {
+      background: rgba(9, 10, 11, .84);
+      border-bottom-color: rgba(181, 138, 69, .14);
+    }
+    body.ut-page .brand,
+    body.ut-page .brand-text { color: #ded8cc; }
+    body.ut-page .mark {
+      border-color: #3c352c;
+      background: #121315;
+      color: var(--ut-gold);
+    }
+    body.ut-page .nav-tab { color: #78736c; }
+    body.ut-page .nav-tab:hover {
+      color: #d4cec3;
+      background: rgba(255, 255, 255, .04);
+    }
+    body.ut-page .nav-tab.is-active {
+      color: #c4a469;
+      background: #111214;
+      box-shadow: inset 0 0 0 1px #3a3329;
+    }
+    body.ut-page .nav-cta {
+      color: #c4a469;
+      border-color: #3a3329;
+      background: #111214;
+    }
+    body.ut-page .nav-cta:hover {
+      color: #ded8cc;
+      background: #171614;
+      border-color: #4a4338;
+    }
+    body.ut-page main {
+      width: min(1180px, calc(100% - 40px));
+      padding: 72px 0 100px;
+    }
+    .ut-hero {
+      display: grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 48px;
+      align-items: end;
+      padding-bottom: 42px;
+      border-bottom: 1px solid var(--ut-line);
+    }
+    .ut-kicker {
+      color: var(--ut-gold);
+      font-size: 11px;
+      letter-spacing: .34em;
+      text-transform: uppercase;
+      margin-bottom: 18px;
+    }
+    .ut-hero h1 {
+      margin: 0;
+      font-family: "Noto Serif SC", Georgia, "Songti SC", "STSong", serif;
+      font-size: clamp(48px, 7vw, 82px);
+      font-weight: 400;
+      line-height: 1.02;
+      letter-spacing: -.04em;
+      color: #e5dfd3;
+    }
+    .ut-hero h1 span {
+      display: block;
+      margin-top: 8px;
+      color: #9f7f49;
+      font-style: italic;
+      font-size: .58em;
+      letter-spacing: .04em;
+    }
+    .ut-tagline {
+      max-width: 680px;
+      margin: 24px 0 0;
+      color: #8e8980;
+      font-size: 15px;
+      line-height: 1.95;
+    }
+    .ut-warning {
+      justify-self: end;
+      width: min(360px, 100%);
+      padding: 18px 20px;
+      border: 1px solid #302c27;
+      border-left: 3px solid var(--ut-red);
+      background: linear-gradient(180deg, #151516, #111214);
+      color: #8f8980;
+      font-size: 12px;
+      line-height: 1.8;
+      box-shadow: 0 24px 70px rgba(0, 0, 0, .38);
+      position: relative;
+    }
+    .ut-warning:before {
+      content: "仅限传闻";
+      position: absolute;
+      top: -11px;
+      right: 16px;
+      padding: 4px 8px;
+      border: 1px solid #49322e;
+      background: #120f0f;
+      color: #9d6158;
+      font-size: 10px;
+      letter-spacing: .12em;
+    }
+    .ut-board {
+      margin-top: 34px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .ut-card {
+      position: relative;
+      min-height: 180px;
+      padding: 24px 24px 22px;
+      border: 1px solid #292825;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, .016), transparent 20%),
+        #141517;
+      box-shadow: 0 18px 45px rgba(0, 0, 0, .20);
+      overflow: hidden;
+    }
+    .ut-card:after {
+      content: "";
+      position: absolute;
+      inset: auto 0 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(181, 138, 69, .18), transparent);
+    }
+    .ut-card.wide { grid-column: 1 / -1; }
+    .ut-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+    .ut-card h2 {
+      margin: 0;
+      font-family: "Noto Serif SC", Georgia, "Songti SC", "STSong", serif;
+      font-size: 18px;
+      font-weight: 400;
+      color: #c7a060;
+      letter-spacing: .16em;
+    }
+    .ut-idx {
+      color: #4d4a44;
+      font: 11px/1.2 ui-monospace, SFMono-Regular, Consolas, monospace;
+      letter-spacing: .1em;
+    }
+    .ut-tide {
+      margin: 0;
+      font-family: "Noto Serif SC", Georgia, "Songti SC", "STSong", serif;
+      color: #dad4c9;
+      font-size: 22px;
+      line-height: 1.7;
+    }
+    .ut-bank {
+      display: flex;
+      align-items: flex-end;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .ut-rate {
+      font: 400 54px/1 "Noto Serif SC", Georgia, serif;
+      color: #b8924f;
+      letter-spacing: -.04em;
+    }
+    .ut-rate small {
+      margin-left: 5px;
+      font: 11px/1.2 ui-monospace, SFMono-Regular, Consolas, monospace;
+      color: #666159;
+      letter-spacing: .05em;
+    }
+    .ut-reason {
+      padding-bottom: 5px;
+      color: #807a71;
+      font-size: 12px;
+      font-style: italic;
+    }
+    .ut-papers { display: grid; gap: 10px; }
+    .ut-paper {
+      position: relative;
+      padding: 15px 16px 14px 18px;
+      border: 1px solid #2d2a26;
+      border-left: 3px solid #5e4930;
+      background: #101113;
+    }
+    .ut-paper:before {
+      content: "";
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      top: 10px;
+      right: 10px;
+      background: #4e4130;
+    }
+    .ut-paper.gilt {
+      border-color: #4c3921;
+      border-left-color: var(--ut-gold);
+      background: linear-gradient(90deg, #19140d, #111214 55%);
+    }
+    .ut-paper .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      color: #cfc8bc;
+      font-size: 14px;
+    }
+    .ut-paper .bounty { color: #b8924f; white-space: nowrap; }
+    .ut-paper .note { margin-top: 6px; color: #615b53; font-size: 11px; }
+    .ut-rumor {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 14px;
+      padding: 13px 0;
+      border-bottom: 1px dashed #2b2926;
+      color: #b7b0a5;
+      font-size: 13px;
+      line-height: 1.75;
+    }
+    .ut-rumor:last-child { border-bottom: 0; }
+    .ut-when {
+      color: #5d5952;
+      white-space: nowrap;
+      font: 10px/1.7 ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+    .ut-empty {
+      margin: 0;
+      color: #5f5b55;
+      font-size: 13px;
+      font-style: italic;
+      line-height: 1.8;
+    }
+    .ut-wall {
+      display: flex;
+      align-items: flex-end;
+      gap: 16px;
+    }
+    .ut-whites {
+      font: 400 58px/1 "Noto Serif SC", Georgia, serif;
+      color: #814840;
+      letter-spacing: -.04em;
+      text-shadow: 0 0 24px rgba(120, 61, 54, .12);
+    }
+    .ut-wall .sub { padding-bottom: 6px; color: #777169; font-size: 12px; }
+    .ut-footer {
+      margin-top: 42px;
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      align-items: center;
+      padding-top: 18px;
+      border-top: 1px solid #252421;
+      color: #57534d;
+      font-size: 11px;
+    }
+    .ut-motto { color: #7d6b4c; letter-spacing: .24em; }
+    .ut-back { color: #66615a; text-decoration: none; }
+    .ut-back:hover { color: #9b8f80; }
+    @media (max-width: 820px) {
+      .ut-hero { grid-template-columns: 1fr; }
+      .ut-warning { justify-self: stretch; }
+      .ut-board { grid-template-columns: 1fr; }
+      .ut-card.wide { grid-column: auto; }
+    }
+    @media (max-width: 560px) {
+      body.ut-page main {
+        width: min(100% - 24px, 1180px);
+        padding: 44px 0 72px;
+      }
+      .ut-hero { gap: 24px; padding-bottom: 30px; }
+      .ut-hero h1 { font-size: 48px; }
+      .ut-hero h1 span { font-size: .52em; }
+      .ut-tagline { font-size: 14px; }
+      .ut-board { margin-top: 20px; gap: 12px; }
+      .ut-card { padding: 20px 18px; min-height: auto; }
+      .ut-rate { font-size: 46px; }
+      .ut-rumor { grid-template-columns: 1fr; }
+      .ut-footer { align-items: flex-start; flex-direction: column; }
+    }
   </style>
 </head>
-<body>
+<body class="ut-page">
   {% include "partials/nav.html" %}
   <main>
-    <header class="page-head">
+    <section class="ut-hero">
       <div>
-        <div class="eyebrow">井下的传闻</div>
-        <h1>滨海酒吧 · 后院 · 那口井</h1>
-        <p class="tagline">听说而已，谁也没下去过。井里的事，只有纸条和传闻能浮上来。</p>
+        <div class="ut-kicker">Undertide · Black Market Bulletin</div>
+        <h1>井下的传闻<span>滨海酒吧后院，那口没人承认下去过的井</span></h1>
+        <p class="ut-tagline">
+          地上的人只看得到传上来的东西。钱庄今天收几分利，恩怨墙上又多了谁的名字，
+          井壁又白了一块。真正的账本、影信和货架，都留在下面。
+        </p>
       </div>
-    </header>
-
-    <section class="soft-hero">
-      <div class="note">这里只贴已经传遍全岛的消息——钱庄的告示、恩怨墙的纸条、井壁上的白。影信和账本不给人看，那是井底自己的事。</div>
+      <aside class="ut-warning">
+        这里只贴已经传遍全岛的消息。纸条会被撕，传闻会变，名字也可能在天亮前被人刮掉。
+        <br><br>井下不保证公平，只保证记账。
+      </aside>
     </section>
 
-    <div class="ut-well">
-      <div class="ut-card">
-        <h2>今日潮汐</h2>
-        <p class="ut-tide" id="tide">潮平两岸阔。老样子。</p>
-      </div>
+    <section class="ut-board">
+      <article class="ut-card">
+        <div class="ut-head"><h2>今日潮汐</h2><span class="ut-idx">01 / TIDE</span></div>
+        <p class="ut-tide" id="tide">「潮平两岸阔。老样子。」</p>
+      </article>
 
-      <div class="ut-card">
-        <h2>钱庄告示</h2>
+      <article class="ut-card">
+        <div class="ut-head"><h2>钱庄告示</h2><span class="ut-idx">02 / BANK</span></div>
         <div class="ut-bank">
           <span class="ut-rate" id="rate">10<small>%/日</small></span>
-          <span class="ut-reason" id="reason"></span>
+          <span class="ut-reason" id="reason">（她今天没解释）</span>
         </div>
-      </div>
+      </article>
 
-      <div class="ut-card">
-        <h2>恩怨墙</h2>
-        <div id="bounties"><p class="ut-empty">墙是空的。空墙最罕见，也最不安。</p></div>
-      </div>
+      <article class="ut-card wide">
+        <div class="ut-head"><h2>恩怨墙</h2><span class="ut-idx">03 / BOUNTY WALL</span></div>
+        <div id="bounties" class="ut-papers"><p class="ut-empty">墙是空的。空墙最罕见，也最不安。</p></div>
+      </article>
 
-      <div class="ut-divider">· · ·</div>
-
-      <div class="ut-card">
-        <h2>井壁的白</h2>
+      <article class="ut-card">
+        <div class="ut-head"><h2>井壁的白</h2><span class="ut-idx">04 / CHALK</span></div>
         <div class="ut-wall">
           <span class="ut-whites" id="whites">0</span>
           <span class="sub">块白<span id="lastname"></span></span>
         </div>
-      </div>
+      </article>
 
-      <div class="ut-card">
-        <h2>井下传闻</h2>
+      <article class="ut-card">
+        <div class="ut-head"><h2>井下传闻</h2><span class="ut-idx">05 / RUMORS</span></div>
         <div id="rumors"><p class="ut-empty">最近很安静。安静得不像话。</p></div>
-      </div>
+      </article>
+    </section>
 
-      <p class="ut-motto">井不深。是人自己往下看的。</p>
-      <p class="ut-back"><a href="/">回到地上</a></p>
+    <div class="ut-footer">
+      <span class="ut-motto">井不深。是人自己往下看的。</span>
+      <a class="ut-back" href="/">回到地上</a>
     </div>
   </main>
-<script>
-async function load(){
-  const r = await fetch('/api/public/undertide');
-  const d = await r.json();
-  if (d.tide && d.tide.line) document.getElementById('tide').textContent = '「' + d.tide.line + '」';
-  document.getElementById('rate').innerHTML = d.bank.rate + '<small>%/日</small>';
-  document.getElementById('reason').textContent = d.bank.reason ? '「' + d.bank.reason + '」' : '（她今天没解释）';
-  if (d.bounties && d.bounties.length){
-    document.getElementById('bounties').innerHTML = d.bounties.map(b =>
-      '<div class="ut-paper' + (b.gilt ? ' gilt' : '') + '">' +
-      '<div class="head"><span>【' + b.tier + '】' + b.target + '</span>' +
-      '<span class="bounty">赏 ' + b.bounty + ' 票</span></div>' +
-      (b.gilt ? '<div class="note">烫金。钱庄的纸条。措辞很客气。</div>' : '') +
-      '</div>').join('');
-  }
-  if (d.wall && d.wall.whites){
-    document.getElementById('whites').textContent = d.wall.whites;
-    document.getElementById('lastname').textContent = d.wall.last ? ' —— 最近的一块，属于「' + d.wall.last + '」' : '';
-  }
-  if (d.rumors && d.rumors.length){
-    document.getElementById('rumors').innerHTML = d.rumors.map(x =>
-      '<div class="ut-rumor">' + x.text + '<span class="when">' + new Date(x.at * 1000).toLocaleString('zh-CN', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'}) + '</span></div>').join('');
-  }
-}
-load();
-</script>
+  <script>
+    function esc(s) {
+      return String(s ?? "").replace(/[&<>"']/g, c => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      }[c]));
+    }
+    async function load() {
+      try {
+        const r = await fetch("/api/public/undertide");
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        const d = await r.json();
+        if (d.tide && d.tide.line) {
+          document.getElementById("tide").textContent = "「" + d.tide.line + "」";
+        }
+        if (d.bank) {
+          document.getElementById("rate").innerHTML = esc(d.bank.rate ?? 10) + "<small>%/日</small>";
+          document.getElementById("reason").textContent = d.bank.reason
+            ? "「" + d.bank.reason + "」"
+            : "（她今天没解释）";
+        }
+        if (d.bounties && d.bounties.length) {
+          document.getElementById("bounties").innerHTML = d.bounties.map(b =>
+            '<div class="ut-paper' + (b.gilt ? " gilt" : "") + '">' +
+              '<div class="row"><span>【' + esc(b.tier) + "】" + esc(b.target) + "</span>" +
+              '<span class="bounty">赏 ' + esc(b.bounty) + " 票</span></div>" +
+              (b.gilt ? '<div class="note">烫金。钱庄的纸条。措辞很客气。</div>' : "") +
+            "</div>"
+          ).join("");
+        }
+        if (d.wall) {
+          document.getElementById("whites").textContent = d.wall.whites || 0;
+          document.getElementById("lastname").textContent = d.wall.last
+            ? " —— 最近的一块，属于「" + d.wall.last + "」"
+            : "";
+        }
+        if (d.rumors && d.rumors.length) {
+          document.getElementById("rumors").innerHTML = d.rumors.map(x =>
+            '<div class="ut-rumor"><span>' + esc(x.text) + "</span>" +
+            '<span class="ut-when">' +
+            new Date(x.at * 1000).toLocaleString("zh-CN", {
+              month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit"
+            }) +
+            "</span></div>"
+          ).join("");
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    load();
+    setInterval(load, 30000);
+  </script>
 </body>
 </html>

@@ -74,7 +74,7 @@ async def barn_ops(key_id: int, command: str) -> str:
         for slot in range(1, config.BARN_SLOTS + 1):
             lines.append(_line(by_slot.get(slot), slot))
         lines.append(f"可购: {', '.join(LIVESTOCK.keys())}")
-        lines.append("catalog 看详情 · collect 日常收奶/蛋/蜜 · churn 山羊奶→奶酪 · 粪肥 compost")
+        lines.append("catalog 看详情 · collect 日常收奶/蛋/蜜 · shear 剪羊毛（要剪刀） · churn 山羊奶→奶酪")
         return "\n".join(lines)
 
     if verb == "catalog":
@@ -93,18 +93,20 @@ async def barn_ops(key_id: int, command: str) -> str:
                 )
             elif meta.get("daily"):
                 prod = ITEM_NAMES.get(meta["product"], meta["product"])
+                extra = " · 挤奶器（Tt酱）多收 1" if key in ("cow", "goat") else ""
                 lines.append(
                     f"  {meta['emoji']}{meta['name']} {meta['buy']}票 — "
-                    f"feed 后 collect 日常{prod} · harvest 满周期大收"
+                    f"feed 后 collect 日常{prod} · harvest 满周期大收{extra}"
                 )
             else:
                 prod = ITEM_NAMES.get(meta["product"], meta["product"])
                 manure = ""
                 if meta.get("manure"):
                     manure = f" · 产{MANURE[meta['manure']]['name']}"
+                shear = " · shear 剪毛（要剪刀，不杀羊）" if key == "sheep" else ""
                 lines.append(
                     f"  {meta['emoji']}{meta['name']} {meta['buy']}票 — "
-                    f"喂{feed} x{meta['feed_qty']} → {prod} x{meta['product_qty']}{manure}"
+                    f"喂{feed} x{meta['feed_qty']} → {prod} x{meta['product_qty']}{manure}{shear}"
                 )
         return "\n".join(lines)
 
@@ -187,7 +189,11 @@ async def barn_ops(key_id: int, command: str) -> str:
             meta = LIVESTOCK[row["species"]]
             if meta.get("guard"):
                 if not await db.take_item(conn, s["id"], meta["feed"], meta["feed_qty"]):
-                    raise ValueError(f"喂狗需要 {ITEM_NAMES.get(meta['feed'], meta['feed'])}")
+                    if not await db.take_item(conn, s["id"], "feed_animal", 1):
+                        raise ValueError(
+                            f"喂狗需要 {ITEM_NAMES.get(meta['feed'], meta['feed'])}"
+                            "（或 Tt酱店里的动物饲料）"
+                        )
                 await conn.execute(
                     "UPDATE barn_animals SET guard=1, fed=1 WHERE steward_id=? AND slot=?",
                     (s["id"], slot),
@@ -196,9 +202,11 @@ async def barn_ops(key_id: int, command: str) -> str:
                 if row.get("fed"):
                     return f"#{slot} 今日已喂"
                 if not await db.take_item(conn, s["id"], meta["feed"], meta["feed_qty"]):
-                    raise ValueError(
-                        f"需要 {ITEM_NAMES.get(meta['feed'], meta['feed'])} x{meta['feed_qty']}"
-                    )
+                    if not await db.take_item(conn, s["id"], "feed_animal", 1):
+                        raise ValueError(
+                            f"需要 {ITEM_NAMES.get(meta['feed'], meta['feed'])} x{meta['feed_qty']}"
+                            "（或 visit_ops tt buy 动物饲料）"
+                        )
                 await conn.execute(
                     "UPDATE barn_animals SET fed=1 WHERE steward_id=? AND slot=?",
                     (s["id"], slot),
@@ -235,16 +243,29 @@ async def barn_ops(key_id: int, command: str) -> str:
                 raise ValueError("今日已收过")
             product = meta["product"]
             qty = meta["product_qty"]
+            extra = ""
             if meta.get("hive") and random.random() < 0.2:
                 qty += 1
+            if row["species"] in ("cow", "goat"):
+                cur = await conn.execute(
+                    "SELECT 1 FROM satchel WHERE steward_id=? AND item='tool_milker' AND quantity>0",
+                    (s["id"],),
+                )
+                if await cur.fetchone():
+                    qty += 1
+                    extra = " · 挤奶器+1"
+                else:
+                    extra = " · 没挤奶器（Tt酱店有卖，装上多收 1）"
             await db.add_item(conn, s["id"], product, qty)
             await conn.execute(
                 "INSERT INTO barn_daily_collect (steward_id, slot, day) VALUES (?,?,?)",
                 (s["id"], slot, day),
             )
             await conn.commit()
-        msg = f"#{slot} 收取 {ITEM_NAMES.get(product, product)} x{qty}"
-        msg += flavor.maybe_suffix(["日常小收，积少成多", "栏里忙，票里稳"])
+        msg = f"#{slot} 收取 {ITEM_NAMES.get(product, product)} x{qty}{extra}"
+        tail = flavor.maybe_suffix(["日常小收，积少成多", "栏里忙，票里稳"])
+        if tail:
+            msg += f" · {tail}"
         return msg
 
     if verb == "harvest":
@@ -292,6 +313,45 @@ async def barn_ops(key_id: int, command: str) -> str:
         await db.add_chronicle("barn", f"{s['name']} 畜栏收 {product}", s["id"])
         return msg
 
+    if verb == "shear":
+        slot = int(parts[1]) if len(parts) > 1 else 1
+        day = _day_id()
+        async with db.connect() as conn:
+            conn.row_factory = aiosqlite.Row
+            row = dict(await (await conn.execute(
+                "SELECT * FROM barn_animals WHERE steward_id=? AND slot=?",
+                (s["id"], slot),
+            )).fetchone() or {})
+            if not row.get("species"):
+                raise ValueError("空栏")
+            if row["species"] != "sheep":
+                raise ValueError("只有羊能剪毛")
+            cur = await conn.execute(
+                "SELECT 1 FROM satchel WHERE steward_id=? AND item='tool_shears' AND quantity>0",
+                (s["id"],),
+            )
+            if not await cur.fetchone():
+                raise ValueError("剪毛需要剪毛剪刀 — visit_ops tt buy 剪毛剪刀")
+            if not row.get("fed"):
+                raise ValueError("先 feed 再 shear")
+            cur = await conn.execute(
+                "SELECT 1 FROM barn_daily_collect WHERE steward_id=? AND slot=? AND day=?",
+                (s["id"], slot, day),
+            )
+            if await cur.fetchone():
+                raise ValueError("今日已剪过")
+            qty = LIVESTOCK["sheep"]["product_qty"]
+            await db.add_item(conn, s["id"], "wool", qty)
+            await conn.execute(
+                "INSERT INTO barn_daily_collect (steward_id, slot, day) VALUES (?,?,?)",
+                (s["id"], slot, day),
+            )
+            await conn.commit()
+        return (
+            f"#{slot} 剪下羊毛 x{qty}（羊还在）"
+            + flavor.maybe_suffix(["剪刀咔嚓，羊：还行", "不杀羊也能出毛，文明"])
+        )
+
     if verb == "compost" and len(parts) >= 2:
         item = parts[1]
         qty = int(parts[2]) if len(parts) > 2 else 1
@@ -328,5 +388,5 @@ async def barn_ops(key_id: int, command: str) -> str:
         ) + flavor.maybe_suffix(["姜姨：这才叫奶制品", "厨房 goat_cheese_salad 等着"])
 
     raise ValueError(
-        f"未知 barn 指令: {command}（status/catalog/erect/buy/feed/collect/harvest/compost/churn）"
+        f"未知 barn 指令: {command}（status/catalog/erect/buy/feed/collect/shear/harvest/compost/churn）"
     )

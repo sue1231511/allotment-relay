@@ -163,7 +163,7 @@ async def shaonian_ops(key_id: int, command: str) -> str:
             row = await _ensure_row(conn, s["id"], today)
             fortune = row.get("fortune") or ""
             if not fortune:
-                raise ValueError("先 shaonian_ops fortune 卜今日卦象")
+                raise ValueError("先 visit_ops shaonian fortune 卜今日卦象")
             if fortune not in BAD_FORTUNES:
                 raise ValueError(f"当前{fortune_label(fortune)}不是凶卦，无需转运")
             if row["transfer_done"]:
@@ -217,7 +217,7 @@ async def shaonian_ops(key_id: int, command: str) -> str:
     if verb == "buy" and len(parts) >= 2:
         charm_key = _resolve_charm_key(parts[1])
         if not charm_key:
-            raise ValueError(f"未知符：{parts[1]}（shaonian_ops catalog 看符名）")
+            raise ValueError(f"未知符：{parts[1]}（visit_ops shaonian catalog 看符名）")
         meta = CHARMS[charm_key]
         price = meta["price"]
         async with db.connect() as conn:
@@ -282,7 +282,7 @@ async def shaonian_ops(key_id: int, command: str) -> str:
 
     raise ValueError(
         "未知韶年指令: " + command + "\n"
-        "用法: shaonian_ops visit · fortune · transfer · buy 符名 · catalog"
+        "用法: visit_ops shaonian visit · fortune · transfer · buy 符名 · catalog"
     )
 
 

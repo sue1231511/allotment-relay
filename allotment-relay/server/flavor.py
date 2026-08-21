@@ -26,6 +26,13 @@ TEND_SUFFIX = [
     "打理完一看，手比脸干净，算工伤吗？",
 ]
 
+CHOP_SUFFIX = [
+    "树桩还热。",
+    "枝条能当漂绳，海不亏待砍树的人。",
+    "终于腾出这块地。",
+    "树不记仇，地记得空。",
+]
+
 GATHER_SUFFIX = [
     "篮子里多闻到了海咸——免费氛围组。",
     "收成手感像开盲盒，今天没抽到谢谢惠顾。",
@@ -634,7 +641,7 @@ HEALTH_HINT_CLINIC = "去 clinic_ops 挂号"
 
 AILMENT_INFlict_LINES = [
     "身体：{name}（{hint}）——桥桥大夫等着收票",
-    "意外附带 {name}，{hint}，clinic_ops status 看诊费",
+    "意外附带 {name}，{hint}，visit_ops clinic 看诊费",
     "病号 +1：{name}。必须花钱，别装能扛",
 ]
 

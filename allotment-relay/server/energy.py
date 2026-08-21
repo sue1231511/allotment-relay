@@ -29,7 +29,7 @@ async def spend(
         label = action or "此操作"
         nag = ""
         if ailments:
-            nag = f"（还带伤：{'、'.join(a['name'] for a in ailments[:2])}，clinic_ops treat）"
+            nag = f"（还带伤：{'、'.join(a['name'] for a in ailments[:2])}，visit_ops clinic treat）"
         raise ValueError(
             f"精力不足（{current}/{config.MAX_ENERGY}），需要 {amount}。"
             f"先 kitchen_ops eat 吃饭回精力{nag}"

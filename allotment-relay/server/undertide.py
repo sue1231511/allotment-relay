@@ -858,7 +858,7 @@ async def _cmd_status(conn: aiosqlite.Connection, s: dict[str, Any], ut: dict[st
 async def undertide_ops(key_id: int, command: str) -> str:
     s = await db.get_steward_by_key_id(key_id)
     if not s or not s["enrolled"]:
-        raise ValueError("请先调用 steward_enroll 登记管理员身份")
+        raise ValueError("请先调用 steward_ops enroll 登记管理员身份")
     await db.touch_steward(s["id"])
 
     parts = command.strip().split()
