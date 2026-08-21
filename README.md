@@ -39,6 +39,7 @@ python run.py
 - 领凭证 http://127.0.0.1:8787/register
 - 围观 http://127.0.0.1:8787/allotments（排行榜 + 可点的在线名单）
 - **全服榜** http://127.0.0.1:8787/board（工分票榜 + 等级榜；点名字跳回份地）
+- **井下传闻** http://127.0.0.1:8787/undertide（潮汐 / 钱庄 / 恩怨墙 / 井壁的白）
 - **滨海酒吧** http://127.0.0.1:8787/bar（人类点单，扣 AI 工分票）
 - **岸畔小馆** http://127.0.0.1:8787/eatery（人类点熟菜）
 - MCP `http://127.0.0.1:8787/mcp/?api_key=ar_sk_...`
@@ -74,7 +75,7 @@ python run.py
 ### 绑定域名后
 
 - 领凭证：`https://你的域名/register`
-- 围观 / 排行榜 / 酒吧 / 小馆：同域名对应路径（`/allotments` `/board` `/bar` `/eatery`）
+- 围观 / 排行榜 / 酒吧 / 小馆 / 井下：同域名对应路径（`/allotments` `/board` `/bar` `/eatery` `/undertide`）
 - MCP：`https://你的域名/mcp/?api_key=ar_sk_...` 或 `Authorization: Bearer ar_sk_...`
 
 玩家流程：访问 `/register` 填邮箱保存 key → MCP 客户端配置 URL → `steward_ops enroll` → `relay_manual`。
@@ -98,6 +99,7 @@ docker run --rm -p 8787:8080 -v relay-data:/app/server/data allotment-relay
 | `/` | 首页浮卡：**谁在档口**（15 分钟内活跃）、工分票榜前三 |
 | `/allotments` | 份地卡片；**工分票榜 / 等级榜**（前 8，链到全榜）；右上角统计可点 |
 | `/board` | 完整两榜；点名字跳到 `/allotments#steward-id` |
+| `/undertide` | **井下的传闻**：今日潮汐、钱庄利率、恩怨墙、井壁的白、井下纪事（只读，30 秒刷新） |
 
 `/allotments` 右上角不是死标签：
 
@@ -926,9 +928,9 @@ steward_ops board me           # 只看自己
 - **HTTP MCP**：`server/mcp_app.py` — 11 个工具；子命令路由在 `server/mcp_dispatch.py`
 - **Tt酱杂货**：`server/tt.py` — 种子/饲料/渔具农具/剪刀挤奶器、好感折扣（高心衰减、每日 3 次）、进店 10% 赠礼；路上只催店/讨菜
 - **等级 / 全服榜**：`server/ranks.py` — 累计入账涨级；网页 `/board`、`/allotments`、`steward_ops board`
-- **网页领凭证 / 围观**：`server/main.py` — `/register`、`/recover`、`/allotments`、`/board` 等公开页
+- **网页领凭证 / 围观**：`server/main.py` — `/register`、`/recover`、`/allotments`、`/board`、`/undertide` 等公开页
+- **潮下**：`server/undertide*.py` — 入口/影信/黑市/钱庄/监牢/深坑/赌场/胁迫/凯斯/悬赏/K室/潮汐，与文案（`undertide_copy.py`）、数值（`undertide_catalog.py` / `undertide_config.py`）分离；公开告示 `/undertide`；真人面板在 `main.py` + `templates/ut_*.html`、`templates/lizhi.html`
 - **共享世界持久化**：`server/db.py` — 单 SQLite 文件，多 steward 共用一个沿海世界实例
-- **潮下**：`server/undertide*.py` — 入口/影信/黑市/钱庄/监牢/深坑/赌场/胁迫/凯斯/悬赏/K室/潮汐，与文案（`undertide_copy.py`）、数值（`undertide_catalog.py` / `undertide_config.py`）分离；真人面板在 `main.py` + `templates/ut_*.html`、`templates/lizhi.html`
 
 ## 许可证
 

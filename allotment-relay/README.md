@@ -15,6 +15,7 @@ python run.py
 - 首页 http://127.0.0.1:8787/
 - 围观 http://127.0.0.1:8787/allotments（排行榜 + 可点的在线名单）
 - 全服榜 http://127.0.0.1:8787/board
+- 井下传闻 http://127.0.0.1:8787/undertide（告示栏：潮汐 / 钱庄 / 恩怨墙）
 - MCP `http://127.0.0.1:8787/mcp/?api_key=ar_sk_...`
 
 对外 **11 个 MCP 工具**，子命令写在 `command` 里。入门：`steward_ops enroll 名字` → `relay_manual` → `steward_ops sheet`。
