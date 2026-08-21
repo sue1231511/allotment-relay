@@ -1091,10 +1091,31 @@ async def public_stats() -> dict[str, Any]:
         stewards = (await (await db.execute(
             "SELECT COUNT(*) c FROM stewards WHERE enrolled = 1"
         )).fetchone())["c"]
-        online = (await (await db.execute(
-            "SELECT COUNT(*) c FROM stewards WHERE enrolled = 1 AND last_active_at > ?",
-            (now() - 900,),
-        )).fetchone())["c"]
+        from .config import ONLINE_WINDOW
+        from . import ranks as ranks_mod
+        online_cut = now() - ONLINE_WINDOW
+        online_rows = await (await db.execute(
+            """
+            SELECT id, name, badge, tickets, COALESCE(xp, 0) AS xp, last_active_at
+            FROM stewards
+            WHERE enrolled = 1 AND last_active_at > ?
+            ORDER BY last_active_at DESC LIMIT 40
+            """,
+            (online_cut,),
+        )).fetchall()
+        online_people = []
+        for raw in online_rows:
+            ranked = ranks_mod.attach_level(dict(raw))
+            online_people.append({
+                "id": ranked["id"],
+                "name": ranked["name"],
+                "badge": ranked["badge"],
+                "tickets": ranked["tickets"],
+                "level": ranked["level"],
+                "title": ranked["title"],
+                "last_active_at": ranked["last_active_at"],
+            })
+        online = len(online_people)
         swaps = (await (await db.execute(
             "SELECT COUNT(*) c FROM swap_lots WHERE claimed_by IS NULL"
         )).fetchone())["c"]
@@ -1112,7 +1133,7 @@ async def public_stats() -> dict[str, Any]:
         from . import multi
         from . import events
         from . import lili as lili_mod
-        from .catalog import WORLD_BOSS
+        from .catalog import ITEM_NAMES, WORLD_BOSS
         league = await multi.league_snapshot()
         pulse = await events.public_pulse_snapshot()
         lili_hint = await lili_mod.active_visit_hint(db)
@@ -1149,6 +1170,13 @@ async def public_stats() -> dict[str, Any]:
         return {
             "stewards": stewards,
             "online": online,
+            "online_people": online_people,
+            "climate": world.climate_line(),
+            "climate_notes": {
+                "weather": world.WEATHER_NOW.get(w, ""),
+                "tide": world.TIDE_NOW.get(t, ""),
+                "phase": world.PHASE_NOW.get(p, ""),
+            },
             "open_swaps": swaps,
             "hearth_recipes": recipes,
             "total_scrumps": scrumps,
@@ -1163,7 +1191,13 @@ async def public_stats() -> dict[str, Any]:
             "boss": boss,
             "beacons": [{"author": r[1], "body": r[0][:80]} for r in beacons],
             "swap_preview": [
-                {"item": r[0], "qty": r[1], "from": r[2]} for r in swap_rows
+                {
+                    "item": r[0],
+                    "name": ITEM_NAMES.get(r[0], r[0]),
+                    "qty": r[1],
+                    "from": r[2],
+                }
+                for r in swap_rows
             ],
             "lore_tip": lore_tip,
         }

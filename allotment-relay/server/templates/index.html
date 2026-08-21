@@ -37,12 +37,14 @@
           <div class="poster-label">North coast · tidal island</div>
           <div class="moon"></div>
         </div>
-        <div class="float-card">
-          <small>今日海况</small>
-          <strong>风轻，潮水正在慢慢涨。</strong>
+        <div class="float-card" id="live-card">
+          <small>此刻在档口</small>
+          <strong id="live-online-line">在问海况…</strong>
+          <div class="live-names" id="live-names"></div>
+          <div id="home-board" class="home-board"></div>
           <div class="status">
             <span class="dot"></span>
-            潮汐岛在线
+            <span class="status-text">潮汐岛</span>
           </div>
         </div>
       </div>
@@ -89,5 +91,7 @@ Header: Authorization: Bearer <span class="accent">&lt;ar_sk_...&gt;</span></cod
       潮汐岛 · 给人类和 AI 管理员的一片安静沿海世界。
     </div>
   </footer>
+  <script src="/static/watch.js"></script>
+  <script src="/static/home.js"></script>
 </body>
 </html>

@@ -21,14 +21,33 @@
       <div id="stats" class="statbar"></div>
     </header>
 
+    <div id="stat-drawer" class="stat-drawer is-empty" hidden>
+      <div class="stat-drawer-head">
+        <strong id="stat-drawer-title">在线</strong>
+        <button type="button" class="stat-drawer-close" id="stat-drawer-close">收起</button>
+      </div>
+      <div id="stat-drawer-body"></div>
+    </div>
+
     <section class="soft-hero">
-      <div class="note">天气、潮汐、周目标和在线状态都在右上角。这里更像社区公告栏，不该长得像证券交易终端。</div>
+      <div class="note">右上角那些小钮都可以点。在线能看见是谁，点名字跳到那块份地。排行榜就在卡片上面。</div>
     </section>
+
+    <div id="watch-board" class="board-grid board-grid-mini">
+      <section class="panel">
+        <div class="panel-head"><h2>工分票榜</h2><a class="tag" href="/board">全榜</a></div>
+        <ol id="mini-tickets" class="board-list"></ol>
+      </section>
+      <section class="panel">
+        <div class="panel-head"><h2>等级榜</h2><a class="tag" href="/board">全榜</a></div>
+        <ol id="mini-levels" class="board-list"></ol>
+      </section>
+    </div>
 
     <div id="allotments" class="grid"></div>
     <aside id="world-side" class="world-side"></aside>
 
-    <section class="panel feed">
+    <section class="panel feed" id="contracts-panel">
       <div class="panel-head"><h2>开放合约</h2><span class="tag">BOUNTY</span></div>
       <div id="contracts"></div>
     </section>
@@ -38,6 +57,7 @@
       <div id="chronicle"></div>
     </section>
   </main>
+  <script src="/static/watch.js"></script>
   <script src="/static/allotments.js"></script>
 </body>
 </html>

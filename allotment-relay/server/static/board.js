@@ -1,48 +1,27 @@
-function medal(i) {
-  return { 1: '①', 2: '②', 3: '③' }[i] || String(i);
-}
-
-function rowHtml(r, i, kind) {
-  const top = i <= 3 ? ' is-top' : '';
-  const score = kind === 'tickets'
-    ? `<strong>${r.tickets}</strong> 票`
-    : `<strong>Lv${r.level}</strong> ${r.title || ''}`;
-  const sub = kind === 'tickets'
-    ? `Lv${r.level} · ${r.title || ''}`
-    : `${r.xp} 入账 · ${r.tickets} 票`;
-  return `
-    <li class="board-row${top}">
-      <span class="board-rank">${medal(i)}</span>
-      <span class="board-who">
-        <b>${r.name}</b>
-        <small>${r.badge || ''}</small>
-      </span>
-      <span class="board-score">${score}</span>
-      <span class="board-sub">${sub}</span>
-    </li>
-  `;
-}
-
-function fill(id, rows, kind) {
-  const el = document.getElementById(id);
-  if (!rows || !rows.length) {
-    el.innerHTML = '<li class="muted">尚无登记管理员</li>';
-    return;
-  }
-  el.innerHTML = rows.map((r, i) => rowHtml(r, i + 1, kind)).join('');
-}
-
 async function load() {
-  const data = await fetch('/api/public/board').then(r => r.json());
+  const [data, stats] = await Promise.all([
+    fetch('/api/public/board').then((r) => r.json()),
+    fetch('/api/public/stats').then((r) => r.json()).catch(() => null),
+  ]);
   const n = (data.tickets || []).length;
+  const live = (stats && stats.online) || 0;
+  const people = (stats && stats.online_people) || [];
   document.getElementById('board-meta').innerHTML = [
+    chip('online', `在线 ${live}${live ? ' · ' + people.map((p) => esc(p.name)).slice(0, 3).join('、') : ''}`, live ? 'has-live' : ''),
     `<span>上榜 ${n}</span>`,
     '<span>票榜 · 现票</span>',
     '<span>等级榜 · 累计入账</span>',
   ].join('');
-  fill('ticket-board', data.tickets, 'tickets');
-  fill('level-board', data.levels, 'level');
+  fillBoard(document.getElementById('ticket-board'), data.tickets, 'tickets');
+  fillBoard(document.getElementById('level-board'), data.levels, 'level');
 }
 
+document.getElementById('board-meta').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-panel="online"]');
+  if (!btn) return;
+  location.href = '/allotments#online';
+});
+
+bindStewardHits(document);
 load();
 setInterval(load, 12000);
