@@ -942,6 +942,20 @@ async def init_db() -> None:
             "ALTER TABLE steward_ailments ADD COLUMN last_treat_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE parcels ADD COLUMN ready_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN cabinet_extra INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE parcels ADD COLUMN camera INTEGER NOT NULL DEFAULT 0",
+            """
+            CREATE TABLE IF NOT EXISTS scrump_theft_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                owner_id INTEGER NOT NULL REFERENCES stewards(id),
+                thief_id INTEGER REFERENCES stewards(id),
+                thief_name TEXT NOT NULL,
+                plot_slot INTEGER NOT NULL,
+                crop_name TEXT NOT NULL,
+                qty INTEGER NOT NULL DEFAULT 0,
+                caught INTEGER NOT NULL DEFAULT 0,
+                created_at INTEGER NOT NULL
+            )
+            """,
             """
             CREATE TRIGGER IF NOT EXISTS trg_steward_xp_gain
             AFTER UPDATE OF tickets ON stewards
