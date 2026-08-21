@@ -107,19 +107,19 @@ async def _bump_rep(conn: aiosqlite.Connection, steward_id: int, delta: int) -> 
 async def on_bar_order(
     conn: aiosqlite.Connection, steward: dict[str, Any], price: int
 ) -> str | None:
-    """bar_ops order 结算后调用：≥30 票的酒计数，满 3 触发鬼故事；便宜酒低频暗示不算数。"""
-    if price < utcfg.UT_UNLOCK_DRINK_PRICE:
-        # 便宜酒的暗示：不计杯，但荔栀会让人知道这不算"好酒"（只对还没摸到门道的人）
-        if random.random() < 0.45:
-            ut0 = await _ensure_ut(conn, steward["id"])
-            if not ut0["well_hint"] and int(ut0.get("pricey_count") or 0) == 0:
-                return random.choice([
-                    "\n\n荔栀扫了一眼你的杯子，没说话。那眼神的意思是：就这？",
-                    "\n\n「解渴用的？」荔栀问。不像夸奖。",
-                    "\n\n她收走空杯的时候，顺手把酒单上贵的那半页朝你转了转。",
-                ])
-        return None
+    """bar_ops order 结算后调用：≥30 票的酒计数，满 3 触发鬼故事；便宜酒给线索向导（不评判消费）。"""
     ut = await _ensure_ut(conn, steward["id"])
+    if price < utcfg.UT_UNLOCK_DRINK_PRICE:
+        # 线索向导：只对"已经在路上"的人（喝过贵酒又回落便宜的=在试错）或追故事的人提一嘴。
+        # 正常喝便宜酒享受的客人，一个字不打扰。
+        if not ut["well_hint"] and int(ut.get("pricey_count") or 0) > 0:
+            return random.choice([
+                "\n\n荔栀把酒放下，顺口说了一句：「这杯解渴正好。」\n"
+                "「不过你要是想听那种……更有趣的故事——」她朝酒单扬了扬下巴，「现在的消费还差着点档次。」",
+                "\n\n上酒的时候，荔栀像是想起什么：「对了，常客跟我打听过一些故事。」\n"
+                "「都不便宜。得是那种三十票往上的杯子里，才泡得开。」",
+            ])
+        return None
     if ut["well_hint"]:
         return None
     pricey = int(ut.get("pricey_count") or 0) + 1
