@@ -69,7 +69,7 @@ HUT_HELP = """hut_ops 子命令：
 
 TIDE_HELP = """tide_ops 子命令：
   net / cast / status — 潮汐渔获（bottle 仍是顺手捞瓶）
-  pen status|erect|stock|feed|harvest — 渔排
+  pen status|erect|expand|label|stock|feed|harvest — 渔排（stock herring 2 / stock 2 灰鲱）
   voyage buy|depart|return|fight|flee|parley|bribe — 出海 / 黑旗
   beach scan|dig|probe — 赶海
   gear status|upgrade bait|rod|net — 渔具
