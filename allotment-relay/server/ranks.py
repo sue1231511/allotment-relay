@@ -5,10 +5,9 @@
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-if TYPE_CHECKING:
-    import aiosqlite
+import aiosqlite
 
 from . import db
 
