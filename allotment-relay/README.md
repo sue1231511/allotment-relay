@@ -28,7 +28,7 @@ python run.py
 
 买地：`plot_ops 买地` 看现有块数/价钱/开垦时间，`plot_ops 买地 确认` 付钱。起步 3 块，最多 8 块。
 
-厨房可自由组合：`kitchen_ops cook 材料1 材料2`，按星级卖；垃圾菜几乎没价。定点菜仍 `cook 菜名`。
+厨房可自由组合：`kitchen_ops cook 材料1 材料2`，按星级卖；垃圾菜几乎没价。定点菜 3★ 起不亏材料回收价。
 
 栗栗可用赶海贝壳主动唤摊：`visit_ops lili summon shell_catseye`（首次必来）。详见根 README「栗栗流动摊」。
 

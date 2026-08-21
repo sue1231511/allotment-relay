@@ -392,136 +392,139 @@ GEAR_TIERS = {
     ],
 }
 
+# 3★ 卖价相对材料回收价的保底倍率。基价写低了也会抬到这个数，避免做饭倒贴。
+COOK_STAR3_FLOOR = 1.18
+
 KITCHEN_DISHES = {
     "garlic_oyster": {
         "name": "蒜蓉生蚝", "emoji": "🦪",
         "ings": ["fish_seaurchin", "crop_garlic", "crop_chili"],
-        "base_sell": 72, "energy": 22, "tags": ["sea", "spicy"],
+        "base_sell": 84, "energy": 22, "tags": ["sea", "spicy"],
     },
     "blanch_shrimp": {
         "name": "白灼虾", "emoji": "🦐",
         "ings": ["fish_glassshrimp", "crop_ginger"],
-        "base_sell": 65, "energy": 20, "tags": ["sea"],
+        "base_sell": 70, "energy": 20, "tags": ["sea"],
     },
     "steam_fish": {
         "name": "清蒸鱼", "emoji": "🐟",
         "ings": ["fish_seatrout", "crop_ginger", "crop_garlic"],
-        "base_sell": 58, "energy": 18, "tags": ["sea"],
+        "base_sell": 80, "energy": 18, "tags": ["sea"],
     },
     "cheese_lobster": {
         "name": "芝士龙虾", "emoji": "🦞",
         "ings": ["fish_kingcrab", "crop_kale", "milk"],
-        "base_sell": 98, "energy": 28, "tags": ["sea", "rich"],
+        "base_sell": 112, "energy": 28, "tags": ["sea", "rich"],
     },
     "braised_fish": {
         "name": "红烧鱼", "emoji": "🍲",
-        "ings": ["fish_mackerel", "crop_garlic", "crop_chili", "crop_beet"],
-        "base_sell": 62, "energy": 20, "tags": ["sea"],
+        "ings": ["fish_mackerel", "crop_garlic", "crop_chili"],
+        "base_sell": 74, "energy": 20, "tags": ["sea"],
     },
     "sour_fish": {
         "name": "酸汤鱼", "emoji": "🥘",
         "ings": ["fish_streakbass", "crop_chili", "crop_blueberry"],
-        "base_sell": 68, "energy": 22, "tags": ["sea", "sour"],
+        "base_sell": 102, "energy": 22, "tags": ["sea", "sour"],
     },
     "chop_head": {
         "name": "剁椒鱼头", "emoji": "🌶️",
         "ings": ["fish_lingcod", "crop_chili", "crop_garlic"],
-        "base_sell": 88, "energy": 24, "tags": ["sea", "spicy"],
+        "base_sell": 94, "energy": 24, "tags": ["sea", "spicy"],
     },
     "blueberry_tart": {
         "name": "蓝莓派", "emoji": "🥧",
         "ings": ["crop_blueberry", "crop_rye", "milk"],
-        "base_sell": 48, "energy": 16, "tags": ["dessert"],
+        "base_sell": 84, "energy": 16, "tags": ["dessert"],
     },
     "mango_pudding": {
         "name": "芒果椰奶冻", "emoji": "🍮",
         "ings": ["crop_mango", "crop_coconut", "milk"],
-        "base_sell": 55, "energy": 18, "tags": ["dessert", "tropic"],
+        "base_sell": 92, "energy": 18, "tags": ["dessert", "tropic"],
     },
     "pineapple_fried_rice": {
         "name": "菠萝炒饭", "emoji": "🍚",
-        "ings": ["crop_pineapple", "crop_rye", "egg", "crop_garlic"],
-        "base_sell": 52, "energy": 20, "tags": ["tropic"],
+        "ings": ["crop_pineapple", "crop_rye", "egg"],
+        "base_sell": 78, "energy": 20, "tags": ["tropic"],
     },
     "papaya_salad": {
         "name": "青木瓜沙拉", "emoji": "🥗",
-        "ings": ["crop_papaya", "crop_chili", "crop_lime", "crop_lemongrass"],
-        "base_sell": 46, "energy": 14, "tags": ["tropic", "sour"],
+        "ings": ["crop_papaya", "crop_chili", "crop_lime"],
+        "base_sell": 98, "energy": 14, "tags": ["tropic", "sour"],
     },
     "lemongrass_steamed_fish": {
         "name": "香茅蒸鱼", "emoji": "🐟",
-        "ings": ["fish_seatrout", "crop_lemongrass", "crop_ginger", "crop_lime"],
-        "base_sell": 70, "energy": 22, "tags": ["sea", "tropic"],
+        "ings": ["fish_seatrout", "crop_lemongrass", "crop_ginger"],
+        "base_sell": 84, "energy": 22, "tags": ["sea", "tropic"],
     },
     "coconut_curry": {
         "name": "椰香咖喱", "emoji": "🍛",
-        "ings": ["crop_coconut", "crop_chili", "crop_ginger", "crop_sweetpotato"],
-        "base_sell": 58, "energy": 20, "tags": ["tropic", "spicy"],
+        "ings": ["crop_coconut", "crop_chili", "crop_sweetpotato"],
+        "base_sell": 76, "energy": 20, "tags": ["tropic", "spicy"],
     },
     "honey_garlic_prawn": {
         "name": "蜜蒜虾", "emoji": "🦐",
-        "ings": ["fish_glassshrimp", "honey", "crop_garlic", "crop_ginger"],
-        "base_sell": 75, "energy": 24, "tags": ["sea", "sweet"],
+        "ings": ["fish_glassshrimp", "honey", "crop_garlic"],
+        "base_sell": 92, "energy": 24, "tags": ["sea", "sweet"],
     },
     "duck_egg_fried_rice": {
         "name": "鸭蛋炒饭", "emoji": "🍳",
-        "ings": ["duck_egg", "crop_rye", "crop_garlic", "crop_chili"],
-        "base_sell": 50, "energy": 18, "tags": ["rich"],
+        "ings": ["duck_egg", "crop_rye", "crop_garlic"],
+        "base_sell": 66, "energy": 18, "tags": ["rich"],
     },
     "goat_cheese_salad": {
         "name": "山羊奶酪沙拉", "emoji": "🧀",
-        "ings": ["goat_cheese", "crop_kale", "crop_lime", "crop_blueberry"],
-        "base_sell": 54, "energy": 16, "tags": ["tropic"],
+        "ings": ["goat_cheese", "crop_kale", "crop_lime"],
+        "base_sell": 88, "energy": 16, "tags": ["tropic"],
     },
     "durian_mousse": {
         "name": "榴莲慕斯", "emoji": "🍰",
-        "ings": ["crop_durian", "milk", "crop_blueberry"],
-        "base_sell": 92, "energy": 26, "tags": ["dessert", "rich"],
+        "ings": ["crop_durian", "milk"],
+        "base_sell": 132, "energy": 26, "tags": ["dessert", "rich"],
     },
     "lime_coconut_shrimp": {
         "name": "青柠椰香虾", "emoji": "🦐",
-        "ings": ["fish_glassshrimp", "crop_lime", "crop_coconut", "crop_chili"],
-        "base_sell": 72, "energy": 22, "tags": ["sea", "tropic"],
+        "ings": ["fish_glassshrimp", "crop_lime", "crop_coconut"],
+        "base_sell": 100, "energy": 22, "tags": ["sea", "tropic"],
     },
     "scallop_garlic": {
         "name": "蒜蓉粉丝扇贝", "emoji": "🦪",
-        "ings": ["shell_scallop", "crop_garlic", "crop_chili", "crop_ginger"],
-        "base_sell": 68, "energy": 20, "tags": ["sea"],
+        "ings": ["shell_scallop", "crop_garlic", "crop_chili"],
+        "base_sell": 84, "energy": 20, "tags": ["sea"],
     },
     "sweetpotato_pancake": {
         "name": "红薯烙", "emoji": "🥞",
         "ings": ["crop_sweetpotato", "crop_rye", "honey"],
-        "base_sell": 42, "energy": 16, "tags": ["dessert"],
+        "base_sell": 74, "energy": 16, "tags": ["dessert"],
     },
     "salt_crab": {
         "name": "盐焗沙蟹", "emoji": "🦀",
         "ings": ["beach_crab", "crop_garlic", "crop_chili"],
-        "base_sell": 58, "energy": 18, "tags": ["sea", "spicy"],
+        "base_sell": 76, "energy": 18, "tags": ["sea", "spicy"],
     },
     "stir_squid": {
         "name": "姜葱炒小管", "emoji": "🦑",
         "ings": ["beach_squid", "crop_ginger", "crop_garlic"],
-        "base_sell": 62, "energy": 20, "tags": ["sea"],
+        "base_sell": 84, "energy": 20, "tags": ["sea"],
     },
     "pork_sweetpotato": {
         "name": "红薯烧肉", "emoji": "🍖",
         "ings": ["meat_pork", "crop_sweetpotato", "crop_chili"],
-        "base_sell": 64, "energy": 22, "tags": ["rich"],
+        "base_sell": 80, "energy": 22, "tags": ["rich"],
     },
     "rabbit_stew": {
         "name": "姜焖兔", "emoji": "🍲",
         "ings": ["meat_rabbit", "crop_kale", "crop_ginger"],
-        "base_sell": 56, "energy": 20, "tags": ["rich"],
+        "base_sell": 72, "energy": 20, "tags": ["rich"],
     },
     "banana_fritters": {
         "name": "香蕉椰丝饼", "emoji": "🍌",
         "ings": ["crop_banana", "crop_coconut", "honey"],
-        "base_sell": 50, "energy": 16, "tags": ["dessert", "tropic"],
+        "base_sell": 92, "energy": 16, "tags": ["dessert", "tropic"],
     },
     "mussel_garlic": {
         "name": "蒜香青口", "emoji": "🦪",
         "ings": ["shell_mussel", "crop_garlic", "crop_chili"],
-        "base_sell": 48, "energy": 16, "tags": ["sea"],
+        "base_sell": 66, "energy": 16, "tags": ["sea"],
     },
 }
 
@@ -883,7 +886,7 @@ MIX_TITLES: dict[str, list[tuple[str, str]]] = {
     ],
 }
 
-# 垃圾菜封顶几票；正经搭配按星级+材料档
+# 垃圾菜封顶几票；正经搭配按星级+材料档。卖价另有材料价值保底（见 mix_sell_price）。
 MIX_SELL = {
     "j": {1: 2, 2: 4, 3: 5, 4: 6, 5: 7},
     "o": {1: 8, 2: 12, 3: 18, 4: 24, 5: 32},
@@ -915,10 +918,14 @@ def mix_display_name(grade: str, sig: str, stars: int) -> str:
 
 
 def mix_sell_price(grade: str, tier: int, stars: int) -> int:
-    base = MIX_SELL.get(grade, MIX_SELL["o"]).get(stars, 8)
+    listed = MIX_SELL.get(grade, MIX_SELL["o"]).get(stars, 8)
     if grade == "j":
-        return base
-    return base + max(0, int(tier)) * 8
+        return listed
+    star_mult = {1: 0.7, 2: 0.9, 3: 1.15, 4: 1.4, 5: 1.75}.get(stars, 1.15)
+    # tier = food_value // 20，用桶中值估材料回收，3★ 起不倒贴
+    approx_cost = max(0, int(tier)) * 20 + 10
+    floored = max(8, int(approx_cost * star_mult))
+    return max(listed + max(0, int(tier)) * 8, floored)
 
 
 def mix_energy(grade: str, stars: int) -> int:
@@ -970,6 +977,20 @@ def register_dish_item(key: str, stars: int) -> None:
     ITEM_PRICES[item] = dish_sell_price(key, stars)
 
 
+def dish_ingredient_cost(key: str) -> int:
+    meta = KITCHEN_DISHES.get(key)
+    if not meta:
+        return 0
+    return sum(ITEM_PRICES.get(ing, 0) for ing in meta["ings"])
+
+
+def dish_base_sell(key: str) -> int:
+    """3★ 卖价：菜谱基价与材料回收×1.18 取高，避免做饭倒贴。"""
+    listed = int(KITCHEN_DISHES[key]["base_sell"])
+    floor = max(8, int(round(dish_ingredient_cost(key) * COOK_STAR3_FLOOR)))
+    return max(listed, floor)
+
+
 def dish_sell_price(key: str, stars: int) -> int:
     if key.startswith("mix_"):
         parsed = parse_mix_item(dish_item(key, stars))
@@ -977,7 +998,7 @@ def dish_sell_price(key: str, stars: int) -> int:
             grade, tier, _sig, st = parsed
             return mix_sell_price(grade, tier, st)
         return 2
-    base = KITCHEN_DISHES[key]["base_sell"]
+    base = dish_base_sell(key)
     mult = {1: 0.6, 2: 0.85, 3: 1.0, 4: 1.35, 5: 1.8}.get(stars, 1.0)
     return max(8, int(base * mult))
 
@@ -1015,11 +1036,12 @@ def suggested_price(item: str) -> int:
     if key.startswith("dish_"):
         dish_key = key.replace("dish_", "", 1)
         if dish_key in KITCHEN_DISHES:
-            return KITCHEN_DISHES[dish_key]["base_sell"]
+            return dish_base_sell(dish_key)
     return ITEM_PRICES.get(key, 0)
 
 
 for dk in KITCHEN_DISHES:
+    ITEM_PRICES[f"dish_{dk}"] = dish_base_sell(dk)
     for st in range(1, 6):
         register_dish_item(dk, st)
 

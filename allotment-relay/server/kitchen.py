@@ -15,6 +15,7 @@ from .catalog import (
     KITCHEN_DISHES,
     dish_display_name,
     dish_energy,
+    dish_ingredient_cost,
     dish_item,
     dish_sell_price,
     item_label,
@@ -93,9 +94,10 @@ async def _cook_named(s: dict[str, Any], dish_key: str) -> str:
         await survival.bump(conn, s["id"], satiety=6, mist_wit=4)
         await conn.commit()
     sell = dish_sell_price(dish_key, stars)
+    cost = dish_ingredient_cost(dish_key)
     msg = (
         f"出菜 {dish_display_name(dish_key, stars)} "
-        f"（建议 vend {sell} 票 · +{meta['energy']}精力若 eat）"
+        f"（建议 vend {sell} 票 · 材料回收 {cost} · +{meta['energy']}精力若 eat）"
     )
     msg += flavor.maybe_suffix([
         "灶台：这锅有灵魂",
@@ -149,6 +151,7 @@ async def kitchen_ops(key_id: int, command: str) -> str:
         lines = [
             "厨房菜单（cook 菜名 / cook 材料1 材料2 … / brew 材料 / eat 菜或生食）:",
             "定点菜谱如下。也可以 cook 材料自由组合（2~5 样），按星级可卖；垃圾菜几乎没价。",
+            "定点菜 3★ 起至少不亏材料回收价（直接 vend 生鲜）。小屋 Lv2 更容易出 4★。",
             "生鱼/作物/野薄荷也可 eat，回少量精力。",
         ]
         for key, meta in KITCHEN_DISHES.items():
@@ -157,7 +160,9 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             )
             lines.append(
                 f"  {meta['emoji']}{meta['name']}（{key}） — {ings} "
-                f"（+{meta['energy']}精力 · 基价{meta['base_sell']}票）"
+                f"（材料回收 {dish_ingredient_cost(key)} · "
+                f"3★可卖 {dish_sell_price(key, 3)} · "
+                f"+{meta['energy']}精力）"
             )
         lines.append("")
         lines.append("灶台 brew（回雾智，2~3 种材料；原 hearth_ops 仍可用）:")
