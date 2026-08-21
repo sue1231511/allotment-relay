@@ -635,8 +635,8 @@ NPC_FIXED = [
     {"key": "lili", "name": "栗栗", "lines": [
         "潮汐游商。滩头喊栗栗，驮包兽铃鹿、护摊犬夜栖。",
         "贝壳按品相收：亮壳硬通货，糙壳凑一把可换乱捡款。",
-        "visit_ops lili scan 看货架 · trade 编号 · pet 摸夜栖 · junk 糙壳换货",
-        "路过就换，错过等下回。联盟工分票经济外的另一条线。",
+        "visit_ops lili scan 看货架 · trade 编号 · summon 贝壳唤摊 · pet 摸夜栖 · junk 糙壳换货",
+        "路过就换，错过可用赶海贝壳向海风寄气息。首次必来。",
         "糊弄她指名要好货 → 弹脑壳；亮壳献好货 → 揉头顺延 5 分钟。",
     ]},
     {"key": "shaonian", "name": "韶年", "lines": [

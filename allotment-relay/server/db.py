@@ -512,7 +512,9 @@ CREATE TABLE IF NOT EXISTS steward_lili (
     dog_fur INTEGER NOT NULL DEFAULT 0,
     bell_hint_day INTEGER NOT NULL DEFAULT 0,
     blessing_key TEXT NOT NULL DEFAULT '',
-    blessing_uses INTEGER NOT NULL DEFAULT 0
+    blessing_uses INTEGER NOT NULL DEFAULT 0,
+    summon_chance INTEGER NOT NULL DEFAULT 30,
+    summon_done INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS npc_visits (
@@ -680,7 +682,9 @@ async def init_db() -> None:
                 dog_fur INTEGER NOT NULL DEFAULT 0,
                 bell_hint_day INTEGER NOT NULL DEFAULT 0,
                 blessing_key TEXT NOT NULL DEFAULT '',
-                blessing_uses INTEGER NOT NULL DEFAULT 0
+                blessing_uses INTEGER NOT NULL DEFAULT 0,
+                summon_chance INTEGER NOT NULL DEFAULT 30,
+                summon_done INTEGER NOT NULL DEFAULT 0
             )
             """,
             """
@@ -902,6 +906,8 @@ async def init_db() -> None:
                 PRIMARY KEY (steward_id, day)
             )
             """,
+            "ALTER TABLE steward_lili ADD COLUMN summon_chance INTEGER NOT NULL DEFAULT 30",
+            "ALTER TABLE steward_lili ADD COLUMN summon_done INTEGER NOT NULL DEFAULT 0",
             """
             CREATE TRIGGER IF NOT EXISTS trg_steward_xp_gain
             AFTER UPDATE OF tickets ON stewards
