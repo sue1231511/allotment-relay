@@ -51,6 +51,7 @@ STEWARD_HELP = """steward_ops 子命令：
 
 PLOT_HELP = """plot_ops 子命令：
   status / catalog / weather
+  买地 / land — 现有几块、价钱、开垦时间；买地 确认 付钱开垦
   sow 地块 作物 · tend · gather [地块] · forage
   shake 地块 — 摇果（青柠/芒果/椰子）
   chop 地块 — 砍树腾地（树收完会再长；清地不必等过熟）
