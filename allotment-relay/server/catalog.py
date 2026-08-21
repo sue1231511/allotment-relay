@@ -662,7 +662,7 @@ NPC_FIXED = [
     ]},
     {"key": "tt", "name": "Tt酱", "lines": [
         "杂货店不讲价。好感另算——自己人价写在脸上。",
-        "种子、饲料、剪刀、挤奶器，货架上有的都能买。",
+        "种子、饲料、渔网、钓竿、蚯蚓饵，货架上有的都能买。",
         "送礼可以。别送粪。",
         "心情好的时候会塞东西。别天天来蹲。",
         "visit_ops tt catalog 看货架 · buy 物品 · gift 物品",
@@ -784,6 +784,7 @@ ITEM_PRICES.update({
     "feed_pet": 6,
     "tool_shears": 45,
     "tool_milker": 55,
+    "tool_rod": 30,
 })
 ITEM_PRICES.update({k: v["sell"] for k, v in MANURE.items()})
 for k, v in LIVESTOCK.items():
@@ -828,6 +829,7 @@ ITEM_NAMES.update({
     "feed_pet": "🦴宠物饲料",
     "tool_shears": "✂️剪毛剪刀",
     "tool_milker": "🥛挤奶器",
+    "tool_rod": "🎣竹钓竿",
 })
 for _shell_base in ("shell_catseye", "shell_conch", "shell_scallop", "shell_starfish", "shell_mussel"):
     _plain = ITEM_NAMES[_shell_base]

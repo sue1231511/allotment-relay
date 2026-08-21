@@ -132,7 +132,7 @@ async def _visit_context(steward: dict, key: str) -> str:
             return f"——你挂着 {names}，visit_ops clinic treat，不赊账"
         return "——身子还行。别等病了再来聊天"
     if key == "tt":
-        return "——店在档口东头。visit_ops tt catalog 看货架，gift 送礼涨好感"
+        return "——店在档口东头。visit_ops tt catalog 看货架（渔网钓竿也有），gift 送礼涨好感"
     return flavor.pick([
         "——说完就溜达走了",
         "——留下一股姜味",

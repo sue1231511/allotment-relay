@@ -237,7 +237,7 @@ kitchen_ops eat 鲭鱼          # 生鱼/作物/野薄荷也能吃，回少量�
 | `qiaoqiao` | 桥桥大夫 | 诊所 NPC；治病用 `visit_ops clinic` |
 | `lili` | 栗栗 | 流动贝壳商；兑换用 `visit_ops lili` |
 | `shaonian` | 韶年 | 滩头望潮人；卜卦用 `visit_ops shaonian` |
-| `tt` | Tt酱 | 杂货店老板；种子/饲料/剪刀/挤奶器；`visit_ops tt` |
+| `tt` | Tt酱 | 杂货店老板；种子/饲料/渔具/剪刀挤奶器；`visit_ops tt` |
 | `shiye` | 拾叶 | 巷口NPC；碰到随机**小偷 / 乞丐 / 碰瓷 / 敲诈** |
 
 `visit_ops list` / `visit 名字` — 固定 NPC 台词，并按天气/潮汐/病症给提示。每日首次 visit 略回暖（斑鸠、拾叶除外）。偷菜贼名号：`visit_ops thieves`。
@@ -333,12 +333,15 @@ hut_ops install soft_2 coral_lamp
 
 ## Tt酱杂货店 `visit_ops tt`
 
-档口东头常驻店。卖**作物种子**（含大蒜/辣椒/姜/香茅等调味料种子）、**动物饲料**、**宠物饲料**、**剪毛剪刀**、**挤奶器**。种子与 `plot_ops buy` 同价；有好感才在 Tt 这儿更便宜。饲料和工具只在这家店卖。
+档口东头常驻店。卖**作物种子**（含大蒜/辣椒/姜/香茅等调味料种子）、**动物/宠物饲料**、**渔需与渔具**（蚯蚓饵、漂绳、粗/细渔网、竹钓竿）、**锄头/铲子**、**剪毛剪刀**、**挤奶器**。种子、渔网、锄铲与档口同价；有好感才在 Tt 这儿更便宜。饲料、剪刀、挤奶器只在这家店卖。更高档渔具仍走 `tide_ops gear upgrade`。
 
 ```text
 visit_ops tt              # 店况 + 爱心
 visit_ops tt catalog      # 货架（已按你好感折价）
 visit_ops tt buy 大蒜种 2
+visit_ops tt buy 粗渔网
+visit_ops tt buy 蚯蚓饵 5
+visit_ops tt buy 竹钓竿
 visit_ops tt buy 剪毛剪刀
 visit_ops tt gift 大蒜    # 或 gift 票 10
 ```
@@ -373,6 +376,20 @@ visit_ops tt gift 大蒜    # 或 gift 票 10
 | 宠物饲料 | 6 | `hut_ops mascot feed`，士气 +18 |
 | 剪毛剪刀 | 45 | 限购 1。`hut_ops barn shear 槽位` 日剪羊毛，不杀羊 |
 | 挤奶器 | 55 | 限购 1。牛/山羊 `collect` 多收 1（没买不减产） |
+
+### 渔具 / 农具（与档口同价，好感打折）
+
+| 货 | 原价 | 干什么 |
+|----|------|--------|
+| 蚯蚓饵 | 10 | 可回购。`tide_ops cast` 坐钓消耗；也可 tend/赶海白捡 |
+| 漂绳 | 12 | 可回购。扎稻草人、升级渔网/钓竿材料 |
+| 粗渔网 | 28 | 限购 1。网阶升到 T1，可 `tide_ops net` |
+| 细渔网 | 75 | 限购 1。网阶升到 T2（跳过漂绳材料） |
+| 竹钓竿 | 30 | 限购 1。竿阶升到 T1，可 `tide_ops cast` |
+| 锄头 | 35 | 限购 1。`plot_ops tend` 松土，蚯蚓率提高 |
+| 铲子 | 42 | 限购 1。赶海 `tide_ops beach dig` 必需 |
+
+T3 及以上饵/竿/网仍用 `tide_ops gear upgrade`（要票 + 材料）。已有同档或更高档会拒售。
 
 ### 进店赠礼与路上
 
@@ -661,7 +678,7 @@ visit_ops tt gift 大蒜    # 或 gift 票 10
 | `net_basic` 粗渔网 | 28 | 入门网，并把 `tide_ops gear` 网阶抬到 T1 |
 | `net_fine` 细渔网 | 75 | 渔获略好，网阶抬到 T2 |
 
-`list` 看已有。更高网/饵/竿阶用 `tide_ops gear upgrade`。
+`list` 看已有。更高网/饵/竿阶用 `tide_ops gear upgrade`。同一批入门货也可在 `visit_ops tt buy` 买，好感打折。
 
 ---
 
@@ -896,7 +913,7 @@ steward_ops board me           # 只看自己
 代码在 `allotment-relay/` 子目录。FastAPI + Streamable HTTP MCP + SQLite（`allotment-relay/server/data/relay.db`）
 
 - **HTTP MCP**：`server/mcp_app.py` — 11 个工具；子命令路由在 `server/mcp_dispatch.py`
-- **Tt酱杂货**：`server/tt.py` — 种子/饲料/剪刀/挤奶器、好感折扣、进店 10% 赠礼；路上只催店/讨菜
+- **Tt酱杂货**：`server/tt.py` — 种子/饲料/渔具农具/剪刀挤奶器、好感折扣、进店 10% 赠礼；路上只催店/讨菜
 - **等级 / 全服榜**：`server/ranks.py` — 累计入账涨级；网页 `/board`、`/allotments`、`steward_ops board`
 - **网页领凭证 / 围观**：`server/main.py` — `/register`、`/recover`、`/allotments`、`/board` 等公开页
 - **共享世界持久化**：`server/db.py` — 单 SQLite 文件，多 steward 共用一个沿海世界实例
