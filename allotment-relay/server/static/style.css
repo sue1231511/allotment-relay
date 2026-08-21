@@ -635,6 +635,91 @@ select:focus {
   color: #9a7f4f;
 }
 
+.board-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(300px, .75fr);
+  gap: 18px;
+  align-items: start;
+  margin: 8px 0 24px;
+}
+
+.board-secondary { display: grid; gap: 14px; }
+
+.board-primary .panel { padding: 28px; }
+.board-secondary .panel { padding: 22px; }
+
+.board-primary .panel-head,
+.board-secondary .panel-head {
+  align-items: flex-start;
+}
+
+.board-primary .panel-head h2,
+.board-secondary .panel-head h2 {
+  margin: 0;
+}
+
+.board-primary .board-hint,
+.board-secondary .board-hint {
+  margin: 6px 0 0;
+}
+
+.board-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.board-summary .panel,
+.board-summary .board-jump {
+  padding: 16px 18px;
+}
+
+.board-summary strong {
+  display: block;
+  font-family: "Noto Serif SC", Georgia, serif;
+  font-size: 24px;
+  font-weight: 500;
+  margin-bottom: 4px;
+  color: var(--sea-deep);
+}
+
+.board-summary span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.board-jump {
+  appearance: none;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.board-jump:hover {
+  background: rgba(255, 255, 255, .55);
+}
+
+.board-primary .board-row {
+  grid-template-columns: 2.6em 1fr auto;
+  padding: 14px 0;
+}
+
+.board-primary .board-who b { font-size: 17px; }
+
+.board-note {
+  margin-top: 0;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .34);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
 .bar-menu {
   grid-column: 1 / -1;
 }
@@ -1042,6 +1127,8 @@ code {
 }
 
 @media (max-width: 860px) {
+  .board-layout { grid-template-columns: 1fr; }
+
   .home-page .hero {
     grid-template-columns: 1fr;
     min-height: auto;
@@ -1056,6 +1143,10 @@ code {
   .connect {
     grid-template-columns: 1fr;
   }
+}
+
+@media (max-width: 620px) {
+  .board-summary { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 760px) {
