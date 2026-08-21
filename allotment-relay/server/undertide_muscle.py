@@ -247,6 +247,7 @@ async def muscle_ops(
 
 HIJACK_TARGETS = {
     "掌柜": 40, "silas": 45, "Silas": 45, "看门人": 50, "耳语人": 25, "斗士": 70,
+    "jester": 10, "Jester": 10, "jester潮汐博彩": 10,
 }
 
 
@@ -266,6 +267,35 @@ async def hijack_ops(
         raise ValueError("今天干过一票了。潮下不鼓励过劳。")
     if db.now() < int(ut.get("ban_until") or 0):
         return utcopy.HIJACK_BAN_MSG
+
+    # ── 特例：Jester（守机器的闲人，战力 10，但劫他触发机器大爆炸）──
+    if target in ("jester", "Jester"):
+        cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
+        wallet = (await cur.fetchone())[0]
+        # Jester 毫无战力——但机器替他"说话"
+        await conn.execute(
+            "UPDATE stewards SET tickets=MAX(0, tickets-?) WHERE id=?",
+            (min(wallet, random.randint(15, 30)), s["id"]),
+        )
+        await conn.execute(
+            "UPDATE steward_undertide SET hijack_fails=hijack_fails+1 WHERE steward_id=?",
+            (s["id"],),
+        )
+        await utmod._bump_rep(conn, s["id"], -6)
+        await db.add_chronicle(
+            "undertide",
+            f"有人想劫 Jester。机器替他挡了——灯全亮了，嗡嗡响了十秒，那人被弹出去三米远。",
+            None, conn=conn,
+        )
+        await conn.commit()
+        return (
+            "Jester 看都没看你。你把手伸过去——\n\n"
+            "机器猛地亮了。整排灯。嗡嗡嗡嗡。\n\n"
+            "你被一股力气弹出去，后背撞上墙，票袋在半空翻了两个跟头。\n\n"
+            "Jester 终于抬头，像老师看学生：\n\n"
+            "「这台机器护着我。」他说，「三十年了。」\n\n"
+            "（被机器弹飞 · 票散了一地 · 影信 −6 · 你不是第一个试的）"
+        )
 
     # ── 特例：猫猫 ──
     if target in ("猫猫", "猫猫老板娘", "恶猫钱庄老板娘"):
