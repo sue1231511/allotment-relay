@@ -78,7 +78,11 @@ async def _active_visit(conn: aiosqlite.Connection) -> dict[str, Any] | None:
     await _cleanup(conn)
     conn.row_factory = aiosqlite.Row
     row = await (await conn.execute(
-        "SELECT * FROM lili_visits WHERE expires_at > ? ORDER BY started_at DESC LIMIT 1",
+        """
+        SELECT * FROM lili_visits
+        WHERE expires_at > ? AND detail != '今日货单备案'
+        ORDER BY started_at DESC LIMIT 1
+        """,
         (db.now(),),
     )).fetchone()
     return dict(row) if row else None
@@ -100,24 +104,18 @@ async def _shelf_visit_id(conn: aiosqlite.Connection, day: int) -> int:
     return cur.lastrowid
 
 
-async def maybe_spawn_visit(conn: aiosqlite.Connection) -> dict[str, Any] | None:
-    if await _active_visit(conn):
-        return None
-    if random.random() > config.LILI_SPAWN_CHANCE:
-        return None
-
+async def _open_visit(
+    conn: aiosqlite.Connection,
+    seconds: int,
+    detail: str,
+    *,
+    announce: bool = True,
+) -> dict[str, Any]:
     now = db.now()
-    live = random.randint(config.LILI_VISIT_MIN, config.LILI_VISIT_MAX)
     today = day_id()
-    detail = flavor.pick([
-        "栗栗驮包出现在篱边，铃鹿脖子上的铜铃叮当——今天的货单刚换",
-        "流动摊支起来了：夜栖蹲在货签边，全服今日配方换完部分就收",
-        "栗栗：「按品相收壳，捡得多不如捡得好」",
-        "滩边来了潮汐游商，货架上全是 catalog 外 deco",
-    ])
     cur = await conn.execute(
         "INSERT INTO lili_visits (started_at, expires_at, detail, day_id) VALUES (?,?,?,?)",
-        (now, now + live, detail, today),
+        (now, now + seconds, detail, today),
     )
     visit_id = cur.lastrowid
     offers = await ensure_daily_offers(conn, today, visit_id)
@@ -132,8 +130,138 @@ async def maybe_spawn_visit(conn: aiosqlite.Connection) -> dict[str, Any] | None
         if hint:
             detail = detail + f"（{sname} 听见了远处的铃）"
 
-    await db.add_chronicle("lili", detail, None)
-    return {"id": visit_id, "expires_at": now + live, "detail": detail, "offers": len(offers)}
+    if announce:
+        await db.add_chronicle("lili", detail, None, conn=conn)
+    return {"id": visit_id, "expires_at": now + seconds, "detail": detail, "offers": len(offers)}
+
+
+async def maybe_spawn_visit(conn: aiosqlite.Connection) -> dict[str, Any] | None:
+    if await _active_visit(conn):
+        return None
+    if random.random() > config.LILI_SPAWN_CHANCE:
+        return None
+    live = random.randint(config.LILI_VISIT_MIN, config.LILI_VISIT_MAX)
+    detail = flavor.pick([
+        "栗栗驮包出现在篱边，铃鹿脖子上的铜铃叮当——今天的货单刚换",
+        "流动摊支起来了：夜栖蹲在货签边，全服今日配方换完部分就收",
+        "栗栗：「按品相收壳，捡得多不如捡得好」",
+        "滩边来了潮汐游商，货架上全是 catalog 外 deco",
+    ])
+    return await _open_visit(conn, live, detail)
+
+
+async def _ensure_summon_stay(conn: aiosqlite.Connection, visit: dict[str, Any], seconds: int) -> dict[str, Any]:
+    left = max(0, visit["expires_at"] - db.now())
+    need = seconds - left
+    if need > 0:
+        await lili_extras.extend_visit(conn, visit["id"], need)
+        visit = dict(visit)
+        visit["expires_at"] = visit["expires_at"] + need
+    return visit
+
+
+async def _do_summon(conn: aiosqlite.Connection, s: dict[str, Any], token: str) -> str:
+    item = lili_extras.resolve_summon_item(token)
+    if not item:
+        raise ValueError("用法: visit_ops lili summon 贝壳id（tote_ops list 看行囊，例 shell_catseye）")
+    label = ITEM_NAMES.get(item, item)
+    grade = lili_extras.summon_grade(item)
+    grade_name = lili_extras.SUMMON_GRADE_LABEL[grade]
+
+    if not await db.take_item(conn, s["id"], item, 1):
+        raise ValueError(f"行囊没有 {label}（{item}）")
+
+    st = await lili_extras.load_summon_state(conn, s["id"])
+    first = not int(st.get("summon_done") or 0)
+    stored = int(st.get("summon_chance") or config.LILI_SUMMON_BASE)
+    visit = await _active_visit(conn)
+    already = visit is not None
+    roll_chance = 100 if first else stored
+    success = already or random.random() * 100 < roll_chance
+    new_chance, delta = lili_extras.next_summon_chance(
+        stored if not first else config.LILI_SUMMON_BASE, grade,
+    )
+    await lili_extras.save_summon_state(conn, s["id"], new_chance)
+    delta_line = (
+        f"下次成功率 {new_chance}%"
+        + (f"（{'+' if delta > 0 else ''}{delta}%）" if delta else "（不变）")
+    )
+
+    if not success:
+        return (
+            f"海风把 {label} 的气息吹散了。这次没人来。\n"
+            f"献上的是{grade_name}。{delta_line}"
+        )
+
+    if visit is None:
+        detail = f"海风里有贝壳味——栗栗被 {s['name']} 唤到滩头"
+        visit = await _open_visit(
+            conn, config.LILI_SUMMON_LIVE, detail, announce=grade not in ("rare", "junk"),
+        )
+        already = False
+
+    lines: list[str] = []
+    if grade == "rare":
+        visit = await _ensure_summon_stay(conn, visit, config.LILI_SUMMON_LIVE)
+        pay = lili_extras.summon_payout(item, grade)
+        await conn.execute(
+            "UPDATE stewards SET tickets=tickets+? WHERE id=?", (pay, s["id"]),
+        )
+        gift_item, gift_qty = lili_extras.pick_summon_gift()
+        await db.add_item(conn, s["id"], gift_item, gift_qty)
+        from . import energy
+        tea = await energy.restore(conn, s["id"], 8)
+        gift_name = ITEM_NAMES.get(gift_item, gift_item)
+        broadcast = (
+            f"🌊 海风卷着铜铃声掠过滩头——{s['name']} 手中的极品贝壳引来了游商【栗栗】！"
+            f"护摊犬【夜栖】已在街角支起货架，限时停靠 30 分钟！"
+        )
+        await db.add_chronicle("lili", broadcast, None, conn=conn)
+        await db.add_chronicle("lili", f"{s['name']} 献上极品 {label}，栗栗双眼放光", s["id"], conn=conn)
+        lines.append("栗栗双眼放光，抬手把你头发揉乱。夜栖欢快摇尾，端出一碗热茶。")
+        lines.append(broadcast)
+        tea_note = f"，热茶回精力 {tea}" if tea else ""
+        lines.append(f"收购 {label} +{pay} 票（极品加三成），附赠 {gift_name} x{gift_qty}{tea_note}")
+    elif grade == "junk":
+        await lili_extras.shorten_visit(conn, visit["id"], config.LILI_SUMMON_JUNK_CUT)
+        await conn.execute(
+            "UPDATE stewards SET tickets = MAX(0, tickets-?) WHERE id=?",
+            (config.LILI_SUMMON_FEE, s["id"]),
+        )
+        broadcast = (
+            f"💥 {s['name']} 试图用一块发臭的泥壳糊弄游商，被【栗栗】当场弹了脑壳，"
+            f"【夜栖】把货架往后拉了拉，并降低了下次引商概率！"
+        )
+        await db.add_chronicle("lili", broadcast, None, conn=conn)
+        await db.add_chronicle("lili", f"{s['name']} 被栗栗弹了脑壳（引商翻车）", s["id"], conn=conn)
+        lines.append("栗栗当场弹了你脑壳。夜栖龇牙轻哼，护住摊位账本。")
+        lines.append(broadcast)
+        lines.append(f"扣 {config.LILI_SUMMON_FEE} 票辛苦费，游商提前 10 分钟收摊。")
+    elif grade == "good":
+        pay = lili_extras.summon_payout(item, grade)
+        await conn.execute(
+            "UPDATE stewards SET tickets=tickets+? WHERE id=?", (pay, s["id"]),
+        )
+        lines.append("栗栗满意点头，验货盖章。夜栖在账本上划了一笔。")
+        lines.append(f"足额收下 {label}，+{pay} 票。摊已支起，visit_ops lili scan 看货架。")
+    else:
+        pay = lili_extras.summon_payout(item, grade)
+        await conn.execute(
+            "UPDATE stewards SET tickets=tickets+? WHERE id=?", (pay, s["id"]),
+        )
+        lines.append("栗栗挑了挑眉，勉强收下。夜栖把账本护得更紧了些。")
+        lines.append(f"换得基础工分票 +{pay}。摊已支起，visit_ops lili scan 看货架。")
+
+    visit = await _active_visit(conn)
+    if visit:
+        left = max(0, (visit["expires_at"] - db.now()) // 60)
+        stay = f"已在摊，剩 {left} 分" if already else f"停靠约 {left} 分"
+    else:
+        stay = "她已经把摊收了"
+    if first:
+        lines.append("（第一次寄气息，海风这次一定把她送来了）")
+    lines.append(f"{stay}。{delta_line}")
+    return "\n".join(lines)
 
 
 async def lili_ops(key_id: int, command: str) -> str:
@@ -148,9 +276,19 @@ async def lili_ops(key_id: int, command: str) -> str:
             await conn.commit()
             return block
 
-        spawned = await maybe_spawn_visit(conn)
+        spawned = None
+        if verb not in ("summon", "唤", "引商", "call"):
+            spawned = await maybe_spawn_visit(conn)
         visit = await _active_visit(conn)
         levels = await steward_domain_levels(conn, s["id"])
+
+        if verb in ("summon", "唤", "引商", "call"):
+            token = " ".join(parts[1:]).strip()
+            if not token:
+                raise ValueError("用法: visit_ops lili summon 贝壳id（例 shell_catseye / ✨亮壳·🐚猫眼螺）")
+            msg = await _do_summon(conn, s, token)
+            await conn.commit()
+            return msg
 
         if verb == "scan":
             lines = ["栗栗流动摊（铃鹿驮包 · 夜栖护摊 · 按品相收壳）"]
@@ -158,8 +296,9 @@ async def lili_ops(key_id: int, command: str) -> str:
             if spawned and visit:
                 lines.append(f"✨ {spawned['detail']}")
             if not visit:
-                lines.append("现在不在——多 scan / 赶海 / 看档 碰运气")
-                lines.append("来了全服可见；visit_ops lili pet 摸夜栖 · junk 糙壳换乱捡款")
+                st = await lili_extras.load_summon_state(conn, s["id"])
+                lines.append("现在不在——赶海捡壳后 visit_ops lili summon 贝壳 可向海风寄气息")
+                lines.append(lili_extras.summon_rate_line(st) + " · pet 摸夜栖 · junk 糙壳换乱捡款")
                 await conn.commit()
                 return "\n".join(lines)
 
@@ -172,7 +311,7 @@ async def lili_ops(key_id: int, command: str) -> str:
             lines.append(f"今日货单 day-{today}（几乎全服唯一，{len(offers)} 单）:")
             for o in offers:
                 lines.append(f"  {_offer_line(o, levels)}")
-            lines.append("换到的 deco_* → hut_ops install soft_N · junk=糙壳换乱捡款 · pet=摸夜栖")
+            lines.append("换到的 deco_* → hut_ops install soft_N · summon=献壳唤摊 · junk=糙壳换乱捡款 · pet=摸夜栖")
             await conn.commit()
             return "\n".join(lines)
 
@@ -252,13 +391,13 @@ async def lili_ops(key_id: int, command: str) -> str:
                 chronicle = f"{s['name']} 抢到铃鹿乱捡款「{get_name}」"
                 if quip:
                     chronicle += f" — {quip}"
-            await db.add_chronicle("lili", chronicle, s["id"])
+            await db.add_chronicle("lili", chronicle, s["id"], conn=conn)
 
             extra_lines = []
             if trick == "favor":
                 await lili_extras.extend_visit(conn, visit["id"], 300)
                 extra_lines.append(trick_msg)
-                await db.add_chronicle("lili", f"{s['name']} 被栗栗揉了头（顺眼）", s["id"])
+                await db.add_chronicle("lili", f"{s['name']} 被栗栗揉了头（顺眼）", s["id"], conn=conn)
             else:
                 extra_lines.append("铃鹿铃铛响了一声，成交。")
 
@@ -270,7 +409,7 @@ async def lili_ops(key_id: int, command: str) -> str:
 
         if verb == "visit":
             if not visit:
-                return "栗栗不在。流动商人随机刷新，visit_ops lili scan 蹲点——货单每天换"
+                return "栗栗不在。赶海捡壳后 visit_ops lili summon 贝壳 可唤摊；scan 也会碰运气"
             line = random.choice([
                 "栗栗：「贝壳我收，按品相算——亮壳顶大头，糙壳当零头」",
                 "铃鹿把货签叼正了。栗栗：「种地钓鱼捕捞赶海，等级高的票少付点」",
@@ -278,7 +417,7 @@ async def lili_ops(key_id: int, command: str) -> str:
             ])
             left = max(0, (visit["expires_at"] - db.now()) // 60)
             await conn.commit()
-            return f"{line}\n（还剩 {left} 分 · {domain_level_line(levels)} · visit_ops lili pet/junk）"
+            return f"{line}\n（还剩 {left} 分 · {domain_level_line(levels)} · visit_ops lili pet/junk/summon）"
 
         if verb == "catalog":
             shelf_id = await _shelf_visit_id(conn, today)
@@ -303,7 +442,7 @@ async def lili_ops(key_id: int, command: str) -> str:
 
         await conn.commit()
 
-    raise ValueError(f"未知 lili 指令: {command}（scan/trade/junk/pet/visit/catalog/levels）")
+    raise ValueError(f"未知 lili 指令: {command}（scan/trade/junk/pet/summon/visit/catalog/levels）")
 
 
 async def active_visit_hint(conn: aiosqlite.Connection) -> str | None:

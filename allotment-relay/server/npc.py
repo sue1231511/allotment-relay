@@ -39,7 +39,7 @@ async def npc_ops(key_id: int, command: str) -> str:
             elif npc["key"] == "qiaoqiao":
                 tag = " · 诊所 NPC，治病用 visit_ops clinic treat"
             elif npc["key"] == "lili":
-                tag = " · 流动贝壳商，visit_ops lili scan/trade"
+                tag = " · 流动贝壳商，visit_ops lili scan/trade/summon"
             elif npc["key"] == "shaonian":
                 tag = " · 滩头卜卦，visit_ops shaonian fortune/catalog"
             elif npc["key"] == "tt":
@@ -97,7 +97,7 @@ async def _visit_context(steward: dict, key: str) -> str:
             hint = await lili_mod.active_visit_hint(conn)
         if hint:
             return f"——{hint}"
-        return "——驮包叮当远去了，visit_ops lili scan 蹲下一回"
+        return "——驮包叮当远去了。赶海捡到贝壳后 visit_ops lili summon 贝壳，可向海风寄气息"
     if key == "old_salt":
         bits = [
             f"现在 {world.tide_label(tide)} · {world.weather_label(weather)}",

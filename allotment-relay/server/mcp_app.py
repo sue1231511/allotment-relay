@@ -113,7 +113,7 @@ async def alliance_ops(command: str = "") -> str:
     return await mux.alliance_bundle(_kid(), command)
 
 
-@mcp.tool(description="访客：NPC list/visit；栗栗 lili；韶年 shaonian；Tt酱 tt 杂货店；lore；诊所 clinic（treat 可省略前缀）")
+@mcp.tool(description="访客：NPC list/visit；栗栗 lili（scan/trade/summon 贝壳/pet）；韶年 shaonian；Tt酱 tt 杂货店；lore；诊所 clinic（treat 可省略前缀）")
 async def visit_ops(command: str = "") -> str:
     return await mux.visit_bundle(_kid(), command)
 
