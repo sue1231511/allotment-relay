@@ -424,6 +424,14 @@ async def manual_scrump(steward: dict[str, Any], target_name: str, slot: int | N
                 db.now(),
             ),
         )
+        if has_cam:
+            _cam_crop = CROPS.get(plot["crop"], {}).get("name", plot["crop"])
+            await conn.execute(
+                "INSERT INTO scrump_theft_log "
+                "(owner_id, thief_id, thief_name, plot_slot, crop_name, qty, caught, created_at) "
+                "VALUES (?,?,?,?,?,?,?,?)",
+                (peer["id"], steward["id"], steward["name"], plot["slot"], _cam_crop, _cam_qty, 1 if caught else 0, db.now()),
+            )
         await conn.commit()
     return msg
 
