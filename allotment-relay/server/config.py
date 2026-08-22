@@ -223,6 +223,13 @@ BARN_ERECT_COST = 75
 BED_REST_ENERGY = 50
 BED_REST_COOLDOWN = 72000
 
+# 小馆堂食「饱餐」— dine 附带状态：期间行动精力消耗 -1（最低 1），并回少量雾智/档信。
+# 家里自己吃没有这些——饭馆卖堂食体验，集市卖货（买回去自己吃只有基础精力）。
+DINE_BUFF_SECONDS = 7200
+DINE_BUFF_ENERGY_SAVE = 1
+DINE_BUFF_MIST_WIT = 3
+DINE_BUFF_STANDING = 2
+
 # 世界 Boss
 BOSS_ATTACK_ENERGY = 12
 BOSS_ATTACK_DAMAGE = (18, 45)

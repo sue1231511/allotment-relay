@@ -173,11 +173,74 @@ async def _test_bed_rest() -> None:
         assert "不困" in str(exc), exc
 
 
+def test_dine_buff() -> None:
+    asyncio.run(_test_dine_buff())
+
+
+async def _test_dine_buff() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="dine-buff-"))
+    db = await _boot(tmp)
+    from server import energy, eatery
+
+    kid_o, sid_o = await _enroll(db, "owner@example.com", "掌柜")
+    async with db.connect() as conn:
+        await conn.execute(
+            "UPDATE stewards SET hut_built=1, tickets=200 WHERE id=?", (sid_o,)
+        )
+        await conn.execute(
+            "INSERT INTO hut_fittings (steward_id, slot, item_key, installed_at)"
+            " VALUES (?, 'soft_1', 'fridge', ?)",
+            (sid_o, db.now()),
+        )
+        await db.add_item(conn, sid_o, "dish_salt_crab_s4", 1)
+        await conn.commit()
+    o = await db.get_steward_by_id(sid_o)
+    await eatery.eatery_command(o, "open 潮线小馆")
+    o = await db.get_steward_by_id(sid_o)
+    await eatery.eatery_command(o, "stock dish_salt_crab_s4")
+
+    kid_g, sid_g = await _enroll(db, "guest@example.com", "食客")
+    async with db.connect() as conn:
+        await conn.execute(
+            "UPDATE stewards SET tickets=150, energy=30, mist_wit=50, standing=60"
+            " WHERE id=?",
+            (sid_g,),
+        )
+        await conn.commit()
+    g = await db.get_steward_by_id(sid_g)
+    msg = await eatery.eatery_command(g, "dine 掌柜")
+    assert "饱餐" in msg and "行动精力 -1" in msg, msg
+
+    s = await db.get_steward_by_id(sid_g)
+    assert int(s["dine_buff_until"]) > db.now(), s["dine_buff_until"]
+    assert "饱餐" in energy.meter_line(s, []), energy.meter_line(s, [])
+    assert s["mist_wit"] > 50 and s["standing"] > 60, (s["mist_wit"], s["standing"])
+
+    async with db.connect() as conn:
+        before = (await (await conn.execute(
+            "SELECT energy FROM stewards WHERE id=?", (sid_g,)
+        )).fetchone())[0]
+        await energy.spend(conn, sid_g, 5)
+        buffed = (await (await conn.execute(
+            "SELECT energy FROM stewards WHERE id=?", (sid_g,)
+        )).fetchone())[0]
+        assert before - buffed == 4, (before, buffed)  # 饱餐：5-1
+        await conn.execute(
+            "UPDATE stewards SET dine_buff_until=1 WHERE id=?", (sid_g,)
+        )
+        await energy.spend(conn, sid_g, 5)
+        plain = (await (await conn.execute(
+            "SELECT energy FROM stewards WHERE id=?", (sid_g,)
+        )).fetchone())[0]
+        assert buffed - plain == 5, (buffed, plain)  # buff 过期恢复原消耗
+
+
 def main() -> None:
     test_price_range_anchor()
     asyncio.run(_test_stock_pricing_flow())
     asyncio.run(_test_bed_rest())
-    print("eatery pricing / bed rest tests ok")
+    asyncio.run(_test_dine_buff())
+    print("eatery pricing / bed rest / dine buff tests ok")
 
 
 if __name__ == "__main__":

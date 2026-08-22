@@ -465,6 +465,8 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             "  brew 材料 — 灶台（回雾智）\n"
             "  shop board — 全服谁在营业的小馆名单（店名和几道菜），不是流水也不是评价\n"
             "  shop open|stock|dine|卖掉 — 开馆 / 上菜（stock 菜名 [价格]，参考价按星级+精力锚定，区间内自定）/ 去别人家吃 / 关张回收\n"
+            "  dine 别人 = 堂食：回精力按菜价算，还带「饱餐」2 小时（行动精力 -1）+雾智档信小加成。\n"
+            "             集市买的菜回家自己吃只有基础精力——饭馆卖堂食，集市卖货\n"
             f"{EAT_RULES}"
         )
 
@@ -474,7 +476,8 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             EAT_RULES,
             "定点菜谱如下。也可以 cook 材料自由组合（2~5 样），按星级可卖；乱搭也按材料身价兜底 45%。",
             "系统回收压得低（3★≈材料价+10%）：想赚钱 shop stock 上架小馆——参考价按星级+精力锚定，",
-            "在区间内自己定价，食客付的钱明显多于 vend。小屋 Lv2 更容易出 4★。熟菜回精力 22 起，比生吃划算得多。",
+            "在区间内自己定价，食客付的钱明显多于 vend。堂食带「饱餐」buff（集市买回去自己吃没有）。",
+            "小屋 Lv2 更容易出 4★。熟菜回精力 22 起，比生吃划算得多。",
         ]
         for key, meta in KITCHEN_DISHES.items():
             ings = " + ".join(

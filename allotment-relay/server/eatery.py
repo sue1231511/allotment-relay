@@ -373,7 +373,19 @@ async def _dine(guest: dict[str, Any], shop_name: str, item_ref: str | None) -> 
         from . import kitchen as kitchen_mod
         cured_line = await kitchen_mod.ate_cooked_meal(conn, guest["id"])
         restored = await energy.restore(conn, guest["id"], gain)
-        await survival.bump(conn, guest["id"], satiety=min(18, gain // 2 + 6))
+        # 堂食「饱餐」：行动精力 -1 一段时间 + 雾智/档信小加成——家里自己吃没有，
+        # 这是饭馆相对集市（买货回家吃只有基础精力）的溢价来源
+        await conn.execute(
+            "UPDATE stewards SET dine_buff_until=? WHERE id=?",
+            (db.now() + config.DINE_BUFF_SECONDS, guest["id"]),
+        )
+        await survival.bump(
+            conn,
+            guest["id"],
+            satiety=min(18, gain // 2 + 6),
+            mist_wit=config.DINE_BUFF_MIST_WIT,
+            standing=config.DINE_BUFF_STANDING,
+        )
         await conn.execute(
             """
             INSERT INTO eatery_rolls (steward_id, day, count) VALUES (?,?,1)
@@ -398,6 +410,12 @@ async def _dine(guest: dict[str, Any], shop_name: str, item_ref: str | None) -> 
     label = shop.get("eatery_label") or f"{shop['name']}的馆"
     msg = (
         f"在「{label}」吃了 {dish}（-{price} 票，精力 +{restored}）\n{note}"
+    )
+    hours = config.DINE_BUFF_SECONDS // 3600
+    msg += (
+        f"\n堂食「饱餐」{hours} 小时：行动精力 -1（steward_ops sheet 可见剩余）；"
+        f"雾智 +{config.DINE_BUFF_MIST_WIT}、档信 +{config.DINE_BUFF_STANDING}。"
+        "家里自己吃没有这些——下海干活前来一顿才值。"
     )
     if cured_line:
         msg += f"\n{cured_line}"

@@ -145,6 +145,8 @@ def test_relay_manual_covers_systems() -> None:
         "shop open",
         "shop stock 菜名 [价格]",
         "75%~150%",
+        "饱餐",
+        "饭馆卖堂食",
         "hut_ops 睡",
         "buy bed",
         "lodge",
