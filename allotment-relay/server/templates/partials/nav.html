@@ -1,7 +1,7 @@
 <nav class="site-nav">
-  <div class="shell nav-inner">
+  <div class="shell nav-inner nav-inner--top">
     <a class="brand" href="/"><span class="mark">≈</span><span class="brand-text">潮汐岛</span></a>
-    <div class="nav-tabs" role="navigation" aria-label="站点导航">
+    <div class="nav-tabs nav-tabs--desktop" role="navigation" aria-label="站点导航">
       <a class="nav-tab{% if active == 'allotments' %} is-active{% endif %}" href="/allotments"{% if active == 'allotments' %} aria-current="page"{% endif %}>
         <span class="nav-tab-label">份地围观</span>
         <span class="nav-tab-short">份地</span>
@@ -37,4 +37,63 @@
     </div>
     <a class="nav-cta" href="/register">领取凭证</a>
   </div>
+
+  <div class="shell nav-inner nav-inner--mobile" aria-label="手机导航">
+    <a class="mobile-tab{% if active == 'allotments' %} is-active{% endif %}" href="/allotments"{% if active == 'allotments' %} aria-current="page"{% endif %}>
+      <span class="mobile-tab-ico" aria-hidden="true">⌂</span>
+      <span>份地</span>
+    </a>
+    <a class="mobile-tab{% if active == 'board' %} is-active{% endif %}" href="/board"{% if active == 'board' %} aria-current="page"{% endif %}>
+      <span class="mobile-tab-ico" aria-hidden="true">≡</span>
+      <span>排行</span>
+    </a>
+    <a class="mobile-tab{% if active == 'lounge' %} is-active{% endif %}" href="/lounge"{% if active == 'lounge' %} aria-current="page"{% endif %}>
+      <span class="mobile-tab-ico" aria-hidden="true">◌</span>
+      <span>聊天</span>
+    </a>
+    <a class="mobile-tab{% if active == 'steward' %} is-active{% endif %}" href="/steward"{% if active == 'steward' %} aria-current="page"{% endif %}>
+      <span class="mobile-tab-ico" aria-hidden="true">◇</span>
+      <span>管家</span>
+    </a>
+    <button
+      type="button"
+      class="mobile-tab mobile-tab--more{% if active in ['eatery', 'bar', 'star', 'undertide'] %} is-active{% endif %}"
+      id="nav-more-btn"
+      aria-expanded="false"
+      aria-controls="navMoreSheet"
+    >
+      <span class="mobile-tab-ico" aria-hidden="true">···</span>
+      <span>更多</span>
+    </button>
+  </div>
 </nav>
+
+<div class="nav-sheet-backdrop" id="navSheetBackdrop" hidden></div>
+
+<section class="nav-more-sheet" id="navMoreSheet" aria-hidden="true" role="dialog" aria-label="岛上其他地方">
+  <div class="nav-sheet-handle" aria-hidden="true"></div>
+  <div class="nav-sheet-head">
+    <strong>岛上其他地方</strong>
+    <button type="button" class="nav-sheet-close" id="navSheetClose">关闭</button>
+  </div>
+  <div class="nav-more-grid">
+    <a class="nav-more-item{% if active == 'eatery' %} is-active{% endif %}" href="/eatery">
+      <b>岸畔小馆</b>
+      <small>吃点东西</small>
+    </a>
+    <a class="nav-more-item{% if active == 'bar' %} is-active{% endif %}" href="/bar">
+      <b>滨海酒吧</b>
+      <small>夜里再来</small>
+    </a>
+    <a class="nav-more-item{% if active == 'star' %} is-active{% endif %}" href="/star">
+      <b>小橘星光</b>
+      <small>特殊事件</small>
+    </a>
+    <a class="nav-more-item{% if active == 'undertide' %} is-active{% endif %}" href="/undertide">
+      <b>井下的传闻</b>
+      <small>别乱点。真的。</small>
+    </a>
+  </div>
+</section>
+
+<script src="/static/nav.js" defer></script>
