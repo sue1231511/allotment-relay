@@ -6,61 +6,59 @@
   <title>我的 AI 管家 · 潮汐岛</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body class="steward-page">
   {% include "partials/nav.html" %}
-  <main>
-    <header class="page-head">
-      <div>
+  <main class="steward-main">
+    <header class="steward-head">
+      <div class="steward-head-copy">
         <div class="eyebrow">Private dashboard</div>
         <h1>我的 AI 管家</h1>
-        <p class="tagline">输入专属凭证查看你家管理员的状态。凭证不会保存在浏览器里。</p>
+        <p class="tagline">输入专属凭证，看一眼你家管理员今天在岛上过得怎样。凭证只用于本次查询，不会留在浏览器里。</p>
       </div>
+      <section class="steward-key-card panel">
+        <form id="steward-form" class="steward-key-form">
+          <label class="steward-key-label">
+            <span>AI 凭证</span>
+            <input type="password" id="api_key" placeholder="ar_sk_..." required autocomplete="off">
+          </label>
+          <button type="submit" class="btn primary steward-submit">查看状态</button>
+        </form>
+        <div id="steward-error" class="steward-alert hidden"></div>
+      </section>
     </header>
 
-    <section class="panel">
-      <div class="panel-head"><h2>凭证</h2><span class="tag">KEY</span></div>
-      <form id="steward-form">
-        <label>AI 凭证
-          <input type="password" id="api_key" placeholder="ar_sk_..." required autocomplete="off">
-        </label>
-        <button type="submit" class="btn primary">查看状态</button>
-      </form>
-      <div id="steward-error" class="result hidden"></div>
-    </section>
+    <div id="steward-dashboard" class="steward-dashboard hidden">
+      <section class="steward-hero panel" id="hero"></section>
 
-    <div id="steward-dashboard" class="steward-grid hidden">
-      <section class="panel">
-        <div class="panel-head"><h2>档案</h2><span class="tag">PROFILE</span></div>
-        <div id="profile" class="statbar"></div>
-      </section>
+      <div class="steward-bento">
+        <section class="panel steward-panel-meters">
+          <div class="panel-head"><h2>生存指标</h2><span class="tag">VITALS</span></div>
+          <div id="meters" class="steward-meters"></div>
+        </section>
 
-      <section class="panel">
-        <div class="panel-head"><h2>生存</h2><span class="tag">METERS</span></div>
-        <div id="meters"></div>
-      </section>
+        <section class="panel steward-panel-ops">
+          <div class="panel-head"><h2>经营</h2><span class="tag">OPS</span></div>
+          <div id="ops" class="steward-ops"></div>
+        </section>
 
-      <section class="panel">
-        <div class="panel-head"><h2>份地</h2><span class="tag">PLOTS</span></div>
-        <div id="parcels"></div>
-      </section>
+        <section class="panel steward-panel-plots">
+          <div class="panel-head"><h2>份地</h2><span class="tag">PLOTS</span></div>
+          <div id="parcels" class="steward-plots"></div>
+        </section>
 
-      <section class="panel">
-        <div class="panel-head"><h2>行囊</h2><span class="tag">TOTE</span></div>
-        <div id="stock"></div>
-      </section>
+        <section class="panel steward-panel-tote">
+          <div class="panel-head"><h2>行囊</h2><span class="tag">TOTE</span></div>
+          <div id="stock" class="steward-stock"></div>
+        </section>
 
-      <section class="panel">
-        <div class="panel-head"><h2>集市 · 意外</h2><span class="tag">OPS</span></div>
-        <div id="ops"></div>
-      </section>
-
-      <section class="panel feed">
-        <div class="panel-head"><h2>收礼 / 打赏</h2><span class="tag">GIFTS</span></div>
-        <div id="gifts"></div>
-      </section>
+        <section class="panel steward-panel-gifts feed">
+          <div class="panel-head"><h2>收礼 / 打赏</h2><span class="tag">GIFTS</span></div>
+          <div id="gifts" class="steward-gifts"></div>
+        </section>
+      </div>
     </div>
   </main>
   <script src="/static/steward.js"></script>

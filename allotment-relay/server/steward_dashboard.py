@@ -54,18 +54,50 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
             parcel_views.append({
                 "slot": p["slot"],
                 "greenhouse": gh,
+                "state": "clearing",
+                "crop": None,
+                "emoji": "🚧",
+                "name": "开垦中",
+                "detail": farming.format_grow_eta(left),
                 "label": f"开垦中（{farming.format_grow_eta(left)}）",
             })
         elif not p.get("crop"):
-            parcel_views.append({"slot": p["slot"], "greenhouse": gh, "label": "休耕"})
-        else:
-            meta = CROPS.get(p["crop"], {"name": p["crop"], "emoji": "🌱"})
-            state = farming.parcel_status(p)
-            extra_p = farming.parcel_extra(p)
             parcel_views.append({
                 "slot": p["slot"],
                 "greenhouse": gh,
-                "label": f"{meta['emoji']}{meta['name']}（{state}{extra_p}）",
+                "state": "fallow",
+                "crop": None,
+                "emoji": "🟫",
+                "name": "休耕",
+                "detail": "可播种",
+                "label": "休耕",
+            })
+        else:
+            meta = CROPS.get(p["crop"], {"name": p["crop"], "emoji": "🌱"})
+            status = farming.parcel_status(p)
+            extra_p = farming.parcel_extra(p)
+            if status == "过熟":
+                state = "overripe"
+            elif status == "可收":
+                state = "ready"
+            elif status == "生长":
+                state = "growing"
+            else:
+                state = "tending"
+            _, _, grow_left = farming.grow_progress(p)
+            detail = (
+                farming.format_grow_eta(grow_left) if grow_left > 0 and state in ("growing", "tending")
+                else f"{status}{extra_p}"
+            )
+            parcel_views.append({
+                "slot": p["slot"],
+                "greenhouse": gh,
+                "state": state,
+                "crop": p["crop"],
+                "emoji": meta.get("emoji", "🌱"),
+                "name": meta["name"],
+                "detail": detail,
+                "label": f"{meta['emoji']}{meta['name']}（{status}{extra_p}）",
             })
 
     stock_items = [
@@ -114,11 +146,12 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
         "title": ranked.get("title", ""),
         "xp": ranked.get("xp", 0),
         "meters": {
-            "satiety": s.get("satiety"),
-            "mist_wit": s.get("mist_wit"),
-            "standing": s.get("standing"),
-            "health": s.get("health"),
-            "energy": s.get("energy"),
+            "satiety": int(s.get("satiety") or 0),
+            "mist_wit": int(s.get("mist_wit") or 0),
+            "standing": int(s.get("standing") or 0),
+            "health": int(s.get("health") or 0),
+            "energy": int(s.get("energy") or 0),
+            "energy_max": 100,
         },
         "meter_lines": {
             "survival": survival.meter_line(s),
