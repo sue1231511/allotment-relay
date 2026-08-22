@@ -84,6 +84,8 @@ async def require_steward(key_id: int, *, exempt_duty: bool = False) -> dict[str
         await health_mod.tick_chronic(conn, s["id"])
         await conn.commit()
     s = await db.get_steward_by_id(s["id"]) or s
+    from . import progress as progress_mod
+    await progress_mod.sync_steward(s)
     return s
 
 
@@ -258,6 +260,7 @@ async def relay_manual() -> str:
         "【协作 · 访客】",
         "  assist 名字 帮邻居打理，每日每人一次。contract post 物品 数量 酬票 发悬赏，他人 fill 编号",
         "  league contribute 物品 数量 推进本周目标。donate / draw / larder 联盟储藏室（领取 2 票、每日 3 次）",
+        "  steward_ops 成就 — 做事解锁称呼，称呼 逾篱客 佩戴；升级礼在 sheet / 领奖 时自动发",
         "  visit_ops list 看固定 NPC。tt 买种/饲料/渔具/锄铲。lili 流动摊（不在就 summon 献壳）。韶年 fortune 卜卦",
         "  lore scan [主题] — 沿海旧史文本（可指定主题或随机），不是收集品，背包里不会多东西",
         "  诊所 visit_ops clinic treat 病症，必须花票。斗场震伤/深坑重创走 undertide_ops medic",
@@ -311,19 +314,24 @@ async def steward_sheet(key_id: int) -> str:
         finished = await land_mod.settle(conn, s["id"])
         await conn.commit()
     s = await db.get_steward_by_id(s["id"]) or s
+    from . import progress as progress_mod
+    await progress_mod.sync_steward(s, rewards=True)
     parcels = await db.get_parcels(s["id"])
     stock = await db.get_satchel(s["id"])
     from . import energy as energy_mod
     from . import ranks as ranks_mod
+    from . import progress as progress_mod
     from . import bar as bar_mod
     from . import health as health_mod
     from . import land as land_mod
+    ranked = ranks_mod.attach_level(s)
     lines = [
         f"管理员: {s['name']} ({s['badge']})",
         f"座右铭: {s['motto']}",
         f"肖像: {s['portrait']}",
         f"工分票: {s['tickets']}",
-        ranks_mod.sheet_level_line(s),
+        ranks_mod.sheet_level_line(ranked),
+        progress_mod.sheet_title_line(ranked),
         survival.meter_line(s),
         health_mod.meter_line(s, ailments),
         energy_mod.meter_line(s, ailments),
@@ -434,10 +442,10 @@ async def steward_sheet(key_id: int) -> str:
             "SELECT COUNT(*) FROM market_listings WHERE seller_id=? AND buyer_id IS NULL",
             (s["id"],),
         )).fetchone())[0]
-        if used or cap > config.MARKET_LIST_MAX:
+        if used or cap > MARKET_LIST_MAX:
             expand = ""
-            if cap < config.MARKET_LIST_SLOTS_MAX:
-                expand = f"；满了可 market_ops 扩（{config.MARKET_SLOT_COST}票/格）"
+            if cap < MARKET_LIST_SLOTS_MAX:
+                expand = f"；满了可 market_ops 扩（{MARKET_SLOT_COST}票/格）"
             lines.append(f"集市摊格 {used}/{cap}{expand} → market_ops mine")
     # 濒死提示：钱包见底+精力见底时，把包宿的门指给他
     if int(s.get("tickets") or 0) < 20 and int(s.get("energy") or 100) < 30:
@@ -465,6 +473,7 @@ async def peer_sheet(name: str) -> str:
         raise ValueError(f"未找到管理员: {name}")
     parcels = await db.get_parcels(s["id"])
     from . import ranks as ranks_mod
+    from . import progress as progress_mod
     ranked = ranks_mod.attach_level(s)
     return "\n".join([
         f"管理员: {s['name']} ({s['badge']})",
@@ -472,6 +481,7 @@ async def peer_sheet(name: str) -> str:
         f"肖像: {s['portrait']}",
         f"工分票: {s['tickets']}",
         ranks_mod.sheet_level_line(ranked),
+        progress_mod.sheet_title_line(ranked),
         f"温室: {s['greenhouse_label'] if s['greenhouse'] else '无'}",
         "公开份地:",
         *(_parcel_line(p) for p in parcels),

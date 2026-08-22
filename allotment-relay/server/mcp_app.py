@@ -90,15 +90,18 @@ async def relay_manual() -> str:
     return await game.relay_manual()
 
 
-@mcp.tool(description="管理员身份与档案。command 写一整句，不要编造子命令。例子：enroll 安 · sheet · 邻居 · 在线 · guild · board tickets。空 command=看自己的档。新号必须先 enroll。不会就 help。")
+@mcp.tool(description="管理员身份与档案。command 写一整句，不要编造子命令。例子：enroll 安 · sheet · 邻居 · 成就 · 称呼 逾篱客 · guild · board tickets。空 command=看自己的档。新号必须先 enroll。不会就 help。")
 async def steward_ops(
-    command: Annotated[str, Field(description="子命令整句。enroll 安 / sheet / 邻居 / 在线 / peer 名字 / guild / board tickets|level / help。空=sheet。邻居=全员名册（找人偷菜/assist 用这个）。不要发明其它动词。")] = "sheet",
+    command: Annotated[str, Field(description="子命令整句。enroll 安 / sheet / 邻居 / 在线 / 成就 / 称呼 逾篱客 / 领奖 / peer 名字 / guild / board tickets|level / help。空=sheet。邻居=全员名册（找人偷菜/assist 用这个）。不要发明其它动词。")] = "sheet",
     name: Annotated[str, Field(description="enroll 时的管理员名字，也可写在 command 里")] = "",
     motto: Annotated[str, Field(description="可选座右铭")] = "",
     badge: Annotated[str, Field(description="徽章，默认 naturalist")] = "naturalist",
     portrait: Annotated[str, Field(description="可选肖像描述")] = "",
 ) -> str:
-    return await mux._call_ops(mux.steward_ops, _kid(), command, name, motto, badge, portrait)
+    from . import progress as progress_mod
+    return progress_mod.attach_note(
+        await mux._call_ops(mux.steward_ops, _kid(), command, name, motto, badge, portrait)
+    )
 
 
 @mcp.tool(description="份地农事。command 写一整句，不要编造 sow_all/plant/harvest。例子：status · sow 1 甘蓝 · tend · 浇水 1 · 施肥 1 · gather 1 · catalog · 偷菜 安 · 买地 · shed erect · camera install 1。温室 #99 不占 8 块上限。空 command 列出常用指令，不是看地；看地必须 status。偷菜最多 30%。不会就 help。")
@@ -155,7 +158,8 @@ async def bar_ops(
     command: Annotated[str, Field(description="子命令整句。status / tonight / menu / order 酒名 / work 洗碗 night / work 牛郎 night / cheer 好话 / tip 名字 5 / chat / lodge / help。岗位用中文。空=status。不要发明 set_mood/duo。")] = "",
 ) -> str:
     from . import bar
-    return await mux._call_ops(bar.bar_ops, _kid(), command)
+    from . import progress as progress_mod
+    return progress_mod.attach_note(await mux._call_ops(bar.bar_ops, _kid(), command))
 
 
 @mcp.tool(description="潮下地下世界。新手先 command=help，不要猜。入口 well → descend → enter。cheer 哄猫猫（不是荔栀）。后室铺 racket 收账鬼阿标强买强卖。深坑伤 undertide_ops medic。")
@@ -163,7 +167,8 @@ async def undertide_ops(
     command: Annotated[str, Field(description="子命令整句。先 help。入口 well → descend → enter。常用：status / market / racket accept|refuse / bank save 50 / jail / medic ring_shock / cheer 好话（哄猫猫）。不要发明未列出的动词。")] = "",
 ) -> str:
     from . import undertide
-    return await mux._call_ops(undertide.undertide_ops, _kid(), command)
+    from . import progress as progress_mod
+    return progress_mod.attach_note(await mux._call_ops(undertide.undertide_ops, _kid(), command))
 
 
 @mcp.tool(description="小橘（真人扮演女明星）。围观平常回10、好15、极好20；差/极差反噬且不吃加成。平常以上粉丝+10，累计实收打赏每20票再+1。应援须真人在面板点看到才生效。例子：status · 打赏 20 · 围观。空 command=她的档；不会就 help。")
