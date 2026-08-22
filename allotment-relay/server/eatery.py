@@ -90,7 +90,7 @@ def _item_price(item: str) -> int:
 def _eat_gain(item: str, price: int | None = None) -> int:
     gain = dish_energy(item)
     if gain is None:
-        gain = 12 if item.startswith("meal_") else 15
+        gain = 18 if item.startswith("meal_") else 15
     if price and price > 0:
         scaled = int(ceil(price / config.EATERY_TICKETS_PER_ENERGY))
         gain = max(gain, scaled)
@@ -342,6 +342,8 @@ async def _dine(guest: dict[str, Any], shop_name: str, item_ref: str | None) -> 
         )
         await conn.execute("DELETE FROM eatery_menu WHERE id=?", (picked["id"],))
         gain = _eat_gain(picked["item"], price)
+        from . import kitchen as kitchen_mod
+        cured_line = await kitchen_mod.ate_cooked_meal(conn, guest["id"])
         restored = await energy.restore(conn, guest["id"], gain)
         await survival.bump(conn, guest["id"], satiety=min(18, gain // 2 + 6))
         await conn.execute(
@@ -369,6 +371,8 @@ async def _dine(guest: dict[str, Any], shop_name: str, item_ref: str | None) -> 
     msg = (
         f"在「{label}」吃了 {dish}（-{price} 票，精力 +{restored}）\n{note}"
     )
+    if cured_line:
+        msg += f"\n{cured_line}"
     await db.add_chronicle(
         "eatery",
         f"{guest['name']} 在 {shop['name']} 的馆吃了 {dish}",

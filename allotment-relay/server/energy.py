@@ -32,8 +32,8 @@ async def spend(
             nag = f"（还带伤：{'、'.join(a['name'] for a in ailments[:2])}，visit_ops clinic treat）"
         raise ValueError(
             f"精力不足（{current}/{cap}），需要 {amount}。"
-            "恢复：kitchen_ops eat 熟菜，或生吃作物/生鱼/野薄荷（安全，不会感染）；"
-            f"生肉也能垫但可能感染。steward_ops sheet 路过档口会慢慢回{nag}\n"
+            "恢复：kitchen_ops eat 熟菜（回得最多）；生吃水果/生鱼/野薄荷垫一下（回得少）；"
+            f"蔬菜不能生吃。生肉能垫但可能感染。steward_ops sheet 路过档口会慢慢回{nag}\n"
             "实在没钱吃饭、饿得干不动活：bar_ops lodge — 酒馆包宿（管饭+工钱15，干一整天）"
         )
     await conn.execute(

@@ -18,6 +18,8 @@ from .catalog import (
     dish_ingredient_cost,
     dish_item,
     dish_sell_price,
+    is_fruit_item,
+    is_vegetable_item,
     item_label,
     parse_mix_item,
     register_mix_item,
@@ -29,14 +31,71 @@ from .catalog import (
 from .game import require_steward
 
 EAT_RULES = (
-    "eat 可吃：熟菜 dish_/meal_；"
-    "生吃作物 crop_*（甘蓝等）安全；生鱼 fish_* 安全；野薄荷安全。"
-    "只有生肉 meat_*（兔肉/猪肉）可能感染。"
+    "eat 可吃：熟菜 dish_/meal_（回精力大头）；水果可生吃但只回一点、连吃会营养不良；"
+    "生鱼/野薄荷生吃安全；蔬菜不能生吃（cook/brew 下锅）；只有生肉 meat_* 可能感染。"
 )
 
 
 def _day_id() -> int:
     return db.now() // config.FORAGE_COOLDOWN_DAY
+
+
+async def _ate_raw_fruit(conn: aiosqlite.Connection, steward_id: int) -> str | None:
+    """生吃一口水果：连击 +1；攒够阈值落营养不良，连击清零重新数。"""
+    cur = await conn.execute(
+        "SELECT fruit_streak FROM stewards WHERE id=?", (steward_id,)
+    )
+    row = await cur.fetchone()
+    streak = int(row[0] if row else 0) + 1
+    await conn.execute(
+        "UPDATE stewards SET fruit_streak=? WHERE id=?", (streak, steward_id)
+    )
+    if streak < config.FRUIT_EAT_STREAK_LIMIT:
+        left = config.FRUIT_EAT_STREAK_LIMIT - streak
+        return (
+            f"水果当零嘴（连吃第 {streak} 口）。再连吃 {left} 口要营养不良——"
+            "吃顿熟菜就清零。"
+        )
+    await conn.execute(
+        "UPDATE stewards SET fruit_streak=0 WHERE id=?", (steward_id,)
+    )
+    from . import health as health_mod
+    line = await health_mod.inflict(conn, steward_id, "malnutrition", source="fruit")
+    tip = "吃熟菜（dish_/meal_）能压下去，visit_ops clinic treat 营养不良 也能治。"
+    return f"{line}\n{tip}" if line else tip
+
+
+async def ate_cooked_meal(conn: aiosqlite.Connection, steward_id: int) -> str | None:
+    """熟菜下肚：水果连击清零；营养不良吃熟菜压一档，一档一档吃好。"""
+    await conn.execute(
+        "UPDATE stewards SET fruit_streak=0 WHERE id=?", (steward_id,)
+    )
+    cur = await conn.execute(
+        "SELECT stage FROM steward_ailments WHERE steward_id=? AND ailment_key='malnutrition'",
+        (steward_id,),
+    )
+    row = await cur.fetchone()
+    if not row:
+        return None
+    stage = int(row[0] or 2)
+    if stage <= 1:
+        await conn.execute(
+            "DELETE FROM steward_ailments WHERE steward_id=? AND ailment_key='malnutrition'",
+            (steward_id,),
+        )
+        await conn.execute(
+            "UPDATE stewards SET health=MIN(100, health+6) WHERE id=?",
+            (steward_id,),
+        )
+        return "热乎饭下肚，🥗营养不良好利索了（身体 +6）。别再拿水果当饭。"
+    await conn.execute(
+        """
+        UPDATE steward_ailments SET stage=1, last_treat_at=0
+        WHERE steward_id=? AND ailment_key='malnutrition'
+        """,
+        (steward_id,),
+    )
+    return "热乎饭把营养不良压下一档。再吃一顿熟菜就利索了（或 visit_ops clinic treat 营养不良）。"
 
 
 def _roll_stars(steward: dict[str, Any], dish_key: str) -> int:
@@ -370,7 +429,7 @@ async def _cook_mix(s: dict[str, Any], ings: list[str]) -> str:
         await survival.bump(conn, s["id"], satiety=sat, mist_wit=2)
         await conn.commit()
     used = " + ".join(ITEM_NAMES.get(i, i) for i in ings)
-    junk_note = "垃圾菜，卖不了几个钱。" if result.grade == "j" else f"按星级可卖。"
+    junk_note = "乱炖按材料身价兜底 45%，好料不至于白扔。" if result.grade == "j" else f"按星级可卖。"
     msg = (
         f"出菜 {result.display}（{result.item}）\n"
         f"材料 {used}\n"
@@ -397,8 +456,9 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             "  menu — 菜谱与定价\n"
             "  cook 菜名 — 定点菜，例如 cook 蒜蓉生蚝\n"
             "  cook 材料1 材料2 … — 自由组合 2~5 样，例如 cook 甘蓝 鲭鱼\n"
-            "  eat 物品 — 回精力。作物/生鱼/野薄荷生吃安全；只有生肉可能感染\n"
-            "             例子：eat 甘蓝 · eat 鲭鱼 · eat 兔肉 · eat 蒜蓉生蚝\n"
+            "  eat 物品 — 回精力。熟菜回得最多；水果可生吃但只回一点、连吃会营养不良；\n"
+            "             生鱼/野薄荷安全；蔬菜不能生吃；只有生肉可能感染\n"
+            "             例子：eat 鲭鱼 · eat 芒果 · eat 兔肉 · eat 蒜蓉生蚝\n"
             "  vend 菜名 — 卖掉行囊里的熟菜（中文名也行；家具请 hut_ops 卖掉）\n"
             "  store 菜名 [数量] / fridge / take 菜名 — 冰箱熟菜（小屋要先装 fridge）\n"
             "             也可 hut_ops 冰柜 存|取，生鲜进潮柜、熟菜进冰箱\n"
@@ -410,10 +470,10 @@ async def kitchen_ops(key_id: int, command: str) -> str:
 
     if verb in ("menu", "status"):
         lines = [
-            "厨房菜单（command 例子：cook 蒜蓉生蚝 / cook 甘蓝 鲭鱼 / brew 材料 / eat 甘蓝）:",
+            "厨房菜单（command 例子：cook 蒜蓉生蚝 / cook 甘蓝 鲭鱼 / brew 材料 / eat 鲭鱼）:",
             EAT_RULES,
-            "定点菜谱如下。也可以 cook 材料自由组合（2~5 样），按星级可卖；垃圾菜几乎没价。",
-            "定点菜 3★ 起至少不亏材料回收价（直接 vend 生鲜）。小屋 Lv2 更容易出 4★。",
+            "定点菜谱如下。也可以 cook 材料自由组合（2~5 样），按星级可卖；乱搭也按材料身价兜底 45%。",
+            "定点菜 3★ 起至少 1.25 倍材料回收价（直接 vend 生鲜）。小屋 Lv2 更容易出 4★。熟菜回精力 22 起，比生吃划算得多。",
         ]
         for key, meta in KITCHEN_DISHES.items():
             ings = " + ".join(
@@ -463,12 +523,29 @@ async def kitchen_ops(key_id: int, command: str) -> str:
     if verb == "eat" and len(parts) >= 2:
         token = " ".join(parts[1:])
         item = resolve_item_key(token) or token
+        if not is_cooked_item(item):
+            cooked = _resolve_cooked_token(token)
+            if cooked and is_cooked_item(cooked):
+                item = cooked
+        if is_vegetable_item(item):
+            raise ValueError(
+                f"{item_label(item)} 是蔬菜，不能生吃——先 kitchen_ops cook 下锅"
+                f"（例如 cook {ITEM_NAMES.get(item, item)} 鲭鱼）或 brew。"
+                "能生吃的：水果（回得少）、生鱼、野薄荷；熟菜回得最多。"
+            )
         async with db.connect() as conn:
-            if not await db.take_item(conn, s["id"], item, 1):
+            satchel_item = item
+            if is_cooked_item(item):
+                try:
+                    satchel_item = await _pick_cooked_satchel(conn, s["id"], item)
+                except ValueError:
+                    satchel_item = item
+            if not await db.take_item(conn, s["id"], satchel_item, 1):
                 raise ValueError(
                     f"行囊里没有 {ITEM_NAMES.get(item, item)}（{item}）。"
                     "tote_ops list 看有什么；中文名或英文 id 都行。"
                 )
+            item = satchel_item
             gain = 15
             mix_e = dish_energy(item)
             if mix_e is not None:
@@ -478,7 +555,7 @@ async def kitchen_ops(key_id: int, command: str) -> str:
                 dish_key = base.replace("dish_", "", 1)
                 if star_s.isdigit() and dish_key in KITCHEN_DISHES:
                     stars = int(star_s)
-                    gain = KITCHEN_DISHES[dish_key]["energy"] + stars * 2
+                    gain = KITCHEN_DISHES[dish_key]["energy"] + stars * 3
             elif item.startswith("dish_"):
                 dish_key = item.replace("dish_", "", 1)
                 if dish_key in KITCHEN_DISHES:
@@ -486,10 +563,10 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             elif item == "myth_octopus":
                 gain = 40
             elif item.startswith("meal_"):
-                gain = 12
+                gain = 18
                 await survival.bump(conn, s["id"], mist_wit=6)
-            elif item.startswith("crop_"):
-                gain = 8
+            elif is_fruit_item(item):
+                gain = config.FRUIT_RAW_ENERGY
             elif item.startswith("fish_"):
                 gain = 10
             elif item == "wild_mint":
@@ -506,12 +583,27 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             if is_raw_meat(item):
                 from . import health as health_mod
                 infect_line = await health_mod.maybe_infect_raw_meat(conn, s["id"])
+            fruit_line = None
+            cured_line = None
+            if is_cooked_item(item) or item.startswith("meal_"):
+                cured_line = await ate_cooked_meal(conn, s["id"])
+            elif is_fruit_item(item):
+                fruit_line = await _ate_raw_fruit(conn, s["id"])
+            else:
+                # 生鱼/野薄荷/生肉：不算拿水果当饭，连击清零
+                await conn.execute(
+                    "UPDATE stewards SET fruit_streak=0 WHERE id=?", (s["id"],)
+                )
             restored = await energy.restore(conn, s["id"], gain)
             await survival.bump(conn, s["id"], satiety=min(20, gain // 2 + 8))
             await conn.commit()
         msg = f"吃了 {item_label(item)}（{item}），精力 +{restored}"
-        if item.startswith("crop_") or item.startswith("fish_") or item == "wild_mint":
+        if item.startswith("fish_") or item == "wild_mint":
             msg += "（生吃安全，不会感染）"
+        if fruit_line:
+            msg += f"\n{fruit_line}"
+        if cured_line:
+            msg += f"\n{cured_line}"
         if infect_line:
             msg += (
                 f"\n{infect_line}\n"
@@ -596,7 +688,7 @@ async def kitchen_ops(key_id: int, command: str) -> str:
 
     raise ValueError(
         f"未知 kitchen 指令: {command}。先 kitchen_ops help 或 menu。"
-        "常用：cook 菜名 · cook 材料1 材料2 · eat 甘蓝 · eat 鲭鱼 · shop"
+        "常用：cook 菜名 · cook 材料1 材料2 · eat 鲭鱼 · eat 芒果 · shop"
     )
 
 
