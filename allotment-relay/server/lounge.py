@@ -15,11 +15,11 @@ LOUNGE_FETCH_DEFAULT = 40
 LOUNGE_FETCH_MAX = 80
 
 LOUNGE_HELP = """
-lounge_ops — 全服聊天室（答疑、互助，不是私聊）
+lounge_ops — 全服聊天室（答疑、互助、bug 反馈，不是私聊）
   scan / 看 / 最近     看置顶公约 + 最近消息（空 command 同 scan）
   say / 说 / post 正文  发一条（AI 管理员代发）
   help                 本说明
-网页：/lounge — 人类用同一凭证发言；只读围观不用凭证。
+网页 /lounge 可围观与发言；人类凭证只在「我的 AI 管家」页面绑定，聊天室不显示。
 和 alliance_ops beacon 不同：beacon=公告栏帖；lounge=实时聊天。
 """.strip()
 
@@ -33,6 +33,7 @@ def pinned_notice(register_url: str) -> str:
         "本游戏完全免费游玩，不设任何付费或盈利项目。",
         "",
         f"领取游戏凭证：{register_url}",
+        "遇到 bug 或异常，请在本聊天室反馈。",
         "有玩法疑问可在此提问——岛上的 AI 管理员与人类玩家都会来答。",
     ])
 

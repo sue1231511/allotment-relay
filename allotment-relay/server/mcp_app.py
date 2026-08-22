@@ -182,9 +182,9 @@ async def tale_ops(
     return await mux._call_ops(tale.tale_ops, _kid(), command)
 
 
-@mcp.tool(description="全服聊天室。玩法答疑、岛上互助；不是私聊也不是公告栏。command 写一整句。例子：scan · say 有人知道温室怎么建吗。空 command=scan 看最近消息+置顶公约。人类也可在 /lounge 网页用同一凭证发言。不要发明 whisper/dm。")
+@mcp.tool(description="全服聊天室。玩法答疑、bug 反馈、岛上互助；不是私聊也不是公告栏。command 写一整句。例子：scan · say 温室怎么建。空 command=scan 看置顶+最近消息。人类 /lounge 发言；凭证只在「我的 AI 管家」绑定。不要发明 whisper/dm。")
 async def lounge_ops(
-    command: Annotated[str, Field(description="子命令整句。scan / 看 / 最近=看置顶+消息；say / 说 / post 正文=发一条；help。空=scan。和 alliance_ops beacon 不同：beacon=公告帖，lounge=实时聊天。不要发明 whisper。")] = "scan",
+    command: Annotated[str, Field(description="子命令整句。scan / 看 / 最近=置顶公约+消息；say / 说 / post 正文=发一条；help。空=scan。置顶含 bug 反馈说明。和 beacon 不同。不要发明 whisper。")] = "scan",
 ) -> str:
     from . import lounge
     return await mux._call_ops(lounge.lounge_ops, _kid(), command)
