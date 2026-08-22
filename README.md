@@ -309,7 +309,8 @@ bar_ops     的 command = work 洗碗 night
 | `market` / `buy 编号` / `sell 物品` | 后室铺：每日刷新货架，真假货三档判定，离柜概不认账 |
 | `bank borrow` / `repay` / `save` / `take` | 恶猫钱庄：借款（影信×3 额度，10%/日）/ 还款 / 存款（T+1 起息，影信×5 封顶 500）/ 取款 |
 | `bank debt` | 查账：欠单 + 存款双栏；逾期时小八提醒 → 收益拦截 → 权限冻结 → 烫金悬赏 → 强收 |
-| `pit` / `fight 斗士名 [策略]` | 深坑：斗士榜 / 下坑（attack/guard/feint 克制 ±10%）|
+| `pit` / `pit list` / `pit board` | 深坑：NPC 斗士榜 / 井壁胜场榜（玩家，≥10 场才钉名；胜场 > 胜率 > 场次；不是 steward_ops board）|
+| `fight 斗士名 [策略]` | 下坑（attack/guard/feint 克制 ±10%）|
 | `pit medic 伤病` / `pit drug list` / `pit drug 药名` | 晏安医务间：治深坑伤 / 体质药三档（粗制 15 反噬 / 标准 40 / 精制 90 无副作用，战力 buff 24h） |
 | `dice` / `lantern` / `draw` | 死人抽牌：黑潮骰 ×2/×2/×5 · 最后一盏灯 ×1.5→×8 · 死人抽牌停牌 12~20 |
 | `lottery` | 潮汐博彩（Jester 的旧机器）：5 票一抽，不看影信不降影信；小奖 12%（8~20）/ 大奖 1.2%（60~150）/ 头奖 0.15%（300~600） |
