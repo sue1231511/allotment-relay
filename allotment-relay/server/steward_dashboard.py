@@ -6,8 +6,11 @@ import aiosqlite
 from typing import Any
 
 from . import bar, db, energy, events, farming, health, land, ranks, survival, world
+from . import undertide
 from .catalog import CROPS, ITEM_NAMES
+from .config import ONLINE_WINDOW
 from . import market as market_mod
+from .undertide_copy import REP_TIER_DESC
 
 
 async def fetch_dashboard(api_key: str) -> dict[str, Any]:
@@ -33,6 +36,13 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
             """
             SELECT route, returns_at, status FROM voyages
             WHERE steward_id=? AND status IN ('sailing','hailed','fish_encounter')
+            """,
+            (s["id"],),
+        )).fetchone()
+        ut = await (await conn.execute(
+            """
+            SELECT shadow_rep, access, jail_state, jail_until, k_room, busted_count
+            FROM steward_undertide WHERE steward_id=?
             """,
             (s["id"],),
         )).fetchone()
@@ -136,6 +146,37 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
             left = max(0, voyage[1] - db.now())
             voyage_view = f"{route} · {left // 60} 分后归港"
 
+    now = db.now()
+    last_active = int(s.get("last_active_at") or 0)
+    online = last_active > 0 and (now - last_active) <= ONLINE_WINDOW
+    bar_locked = bar.is_shift_overdue(s)
+    ut_row = dict(ut) if ut else {}
+    shadow_rep = int(ut_row.get("shadow_rep") or 10)
+    ut_access = bool(ut_row.get("access"))
+    jail_on = (ut_row.get("jail_state") or "") == "serving"
+    jail_left = max(0, int(ut_row.get("jail_until") or 0) - now) if jail_on else 0
+    k_room = bool(ut_row.get("k_room"))
+    busted_count = int(ut_row.get("busted_count") or 0)
+    tier, _, _ = undertide._rep_tier(shadow_rep)
+
+    ailment_views = [
+        {
+            "name": a.get("name") or a.get("key") or "病症",
+            "emoji": a.get("emoji") or "🩹",
+            "stage_name": a.get("stage_name") or "",
+        }
+        for a in ailments
+    ]
+    status_flags = []
+    if bar_locked:
+        status_flags.append("考勤锁定")
+    if jail_on:
+        status_flags.append("潮下服刑")
+    if k_room:
+        status_flags.append("K室")
+    if ailment_views:
+        status_flags.append(f"病症 {len(ailment_views)}")
+
     return {
         "name": s["name"],
         "badge": s["badge"],
@@ -145,10 +186,31 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
         "level": ranked.get("level", 1),
         "title": ranked.get("title", ""),
         "xp": ranked.get("xp", 0),
+        "status": {
+            "online": online,
+            "label": "在档口" if online else "离线",
+            "last_active_at": last_active,
+            "bar_locked": bar_locked,
+            "flags": status_flags,
+            "ailments": ailment_views,
+            "undertide": {
+                "access": ut_access,
+                "jail": jail_on,
+                "jail_left": jail_left,
+                "k_room": k_room,
+                "busted_count": busted_count,
+            },
+        },
+        "shadow": {
+            "value": shadow_rep,
+            "tier": tier,
+            "desc": REP_TIER_DESC.get(tier, ""),
+        },
         "meters": {
             "satiety": int(s.get("satiety") or 0),
             "mist_wit": int(s.get("mist_wit") or 0),
             "standing": int(s.get("standing") or 0),
+            "shadow_rep": shadow_rep,
             "health": int(s.get("health") or 0),
             "energy": int(s.get("energy") or 0),
             "energy_max": 100,

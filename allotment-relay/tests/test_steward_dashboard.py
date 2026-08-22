@@ -48,6 +48,31 @@ async def _test_steward_dashboard_api() -> None:
     assert data["tickets"] == 120, data
     assert "parcels" in data and len(data["parcels"]) >= 3, data
     assert data["meter_lines"]["bar_duty"], data
+    assert data["status"]["label"] in ("在档口", "离线"), data["status"]
+    assert "online" in data["status"], data["status"]
+    assert data["shadow"]["value"] == 10, data["shadow"]
+    assert data["shadow"]["tier"] == "生面孔", data["shadow"]
+    assert data["meters"]["shadow_rep"] == 10, data["meters"]
+
+    s = await db.get_steward_by_key_id(row["id"])
+    async with db.connect() as conn:
+        await conn.execute(
+            """INSERT INTO steward_undertide (steward_id, shadow_rep, created_at)
+               VALUES (?, 72, ?)""",
+            (s["id"], db.now()),
+        )
+        await conn.execute(
+            "UPDATE stewards SET last_active_at=? WHERE id=?",
+            (db.now(), s["id"]),
+        )
+        await conn.commit()
+
+    data = await steward_dashboard.fetch_dashboard(key)
+    assert data["status"]["online"] is True, data["status"]
+    assert data["status"]["label"] == "在档口", data["status"]
+    assert data["shadow"]["value"] == 72, data["shadow"]
+    assert data["shadow"]["tier"] == "自己人", data["shadow"]
+    assert data["meters"]["shadow_rep"] == 72, data["meters"]
 
 
 if __name__ == "__main__":

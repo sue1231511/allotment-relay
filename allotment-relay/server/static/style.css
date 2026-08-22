@@ -1038,6 +1038,22 @@ select:focus {
   background: rgba(169, 128, 125, .1);
 }
 
+.steward-chip.status-live {
+  color: var(--green);
+  border-color: rgba(117, 143, 123, .35);
+  background: rgba(117, 143, 123, .14);
+}
+
+.steward-chip.status-off {
+  color: var(--muted);
+}
+
+.steward-chip.warn {
+  color: var(--rose);
+  border-color: rgba(169, 128, 125, .3);
+  background: rgba(169, 128, 125, .1);
+}
+
 .steward-hero-stats {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1055,7 +1071,6 @@ select:focus {
 }
 
 .steward-stat-tile.highlight {
-  grid-column: 1 / -1;
   background: linear-gradient(135deg, rgba(81, 119, 125, .12), rgba(127, 167, 171, .08));
   border-color: rgba(81, 119, 125, .25);
 }
@@ -1075,8 +1090,15 @@ select:focus {
 }
 
 .steward-stat-tile.highlight .steward-stat-value {
-  font-size: 36px;
+  font-size: 32px;
   color: var(--sea-deep);
+}
+
+.steward-stat-sub {
+  font-size: 12px;
+  font-style: normal;
+  color: var(--muted);
+  line-height: 1.3;
 }
 
 .steward-bento {
@@ -1134,6 +1156,7 @@ select:focus {
 .steward-meter-fill.tone-green { background: linear-gradient(90deg, #627a68, #758f7b); }
 .steward-meter-fill.tone-rose { background: linear-gradient(90deg, #946f6c, #a9807d); }
 .steward-meter-fill.tone-ink { background: linear-gradient(90deg, #3a4d55, #51777d); }
+.steward-meter-fill.tone-shadow { background: linear-gradient(90deg, #4a3f55, #6b5a7a); }
 
 .steward-meter-fill.is-mid { filter: saturate(1.1); }
 .steward-meter-fill.is-low { background: linear-gradient(90deg, #a9807d, #c49a97) !important; }
