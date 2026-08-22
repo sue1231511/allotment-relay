@@ -201,7 +201,7 @@ async def relay_manual() -> str:
         "  意外 plot_ops incident scan · repair 编号（也可省略 incident：repair 12）",
         "  随机事件整体 +30%：打理/收成/出海等更容易触发意外或惊喜（田间还有潮蟹/夜蛾/石龟等新访客）",
         "  公共物资 plot_ops commons scan · claim 编号 — 全服抢，随机上线",
-        "  昼间 sow/tend 可能斑鸠盯梢：plot_ops dove 忽略|驱赶",
+        "  昼间 sow/tend 约 20% 斑鸠盯梢：plot_ops dove 忽略|驱赶",
         "  稻草人 scarecrow 地块；过熟 compost 地块进堆肥（果树清果后树还在，不想要才 chop）",
         "",
         "【潮闻 · 故事探索任务】",

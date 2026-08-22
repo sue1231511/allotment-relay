@@ -161,8 +161,8 @@ FERTILIZE_GROW_MULT = 0.88
 MIN_GROW_TARGET = 120
 FERTILIZE_COMPOST_CUT = 0.12
 
-# 咕咕斑鸠 — sow/tend 昼间盯梢，可忽略或驱赶
-GUGU_DOVE_STALK_CHANCE = _event_rate(0.10)
+# 咕咕斑鸠 — sow/tend 昼间盯梢，可忽略或驱赶（基础约 20%）
+GUGU_DOVE_STALK_CHANCE = _event_rate(0.15)
 GUGU_DOVE_DRIVE_FAIL_CHANCE = 0.20
 GUGU_DOVE_EAT_YIELD = 0.60
 GUGU_DOVE_HELP_YIELD = 1.50

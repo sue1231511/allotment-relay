@@ -685,7 +685,7 @@ async def maybe_gugu_dove_stalk(
     steward: dict[str, Any],
     plot_id: int,
 ) -> str | None:
-    """20% chance on sow/tend (day only) to start a gugu dove encounter."""
+    """昼间 sow/tend 约 20% 触发斑鸠盯梢（×1.3 事件倍率后）。"""
     if world.current_day_phase() != "day":
         return None
     if await get_gugu_dove_pending(conn, steward["id"]):
