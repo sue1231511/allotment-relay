@@ -997,6 +997,8 @@ async def init_db() -> None:
             "ALTER TABLE parcels ADD COLUMN ready_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN cabinet_extra INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN market_extra INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE steward_undertide ADD COLUMN racket_day INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE steward_undertide ADD COLUMN racket_json TEXT NOT NULL DEFAULT ''",
             # 小橘 — 真人扮演的女明星（酒馆驻场 + 小剧场专场）
             """
             CREATE TABLE IF NOT EXISTS star_state (
@@ -1466,10 +1468,10 @@ async def list_received_gifts(steward_id: int, limit: int = 20) -> list[dict[str
         db.row_factory = aiosqlite.Row
         cur = await db.execute(
             """
-            SELECT c.text, c.created_at, a.name AS actor_name
+            SELECT c.text, c.created_at, c.action, a.name AS actor_name
             FROM chronicle c
             LEFT JOIN stewards a ON a.id = c.actor_id
-            WHERE c.action='gift' AND c.target_id=?
+            WHERE c.action IN ('gift', 'bar_tip') AND c.target_id=?
             ORDER BY c.created_at DESC LIMIT ?
             """,
             (steward_id, limit),

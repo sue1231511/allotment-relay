@@ -642,6 +642,17 @@ select:focus {
   gap: 14px;
 }
 
+.steward-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.steward-grid .feed {
+  grid-column: 1 / -1;
+}
+
 .board-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1242,6 +1253,7 @@ code {
   main { padding-top: 38px; }
 
   .bar-grid { grid-template-columns: 1fr; }
+  .steward-grid { grid-template-columns: 1fr; }
 
   .board-grid { grid-template-columns: 1fr; }
 

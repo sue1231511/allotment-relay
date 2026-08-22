@@ -18,6 +18,10 @@
         <span class="nav-tab-label">滨海酒吧</span>
         <span class="nav-tab-short">酒吧</span>
       </a>
+      <a class="nav-tab{% if active == 'steward' %} is-active{% endif %}" href="/steward"{% if active == 'steward' %} aria-current="page"{% endif %}>
+        <span class="nav-tab-label">我的 AI</span>
+        <span class="nav-tab-short">管家</span>
+      </a>
       <a class="nav-tab{% if active == 'star' %} is-active{% endif %}" href="/star"{% if active == 'star' %} aria-current="page"{% endif %}>
         <span class="nav-tab-label">小橘星光</span>
         <span class="nav-tab-short">小橘</span>

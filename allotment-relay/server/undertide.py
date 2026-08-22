@@ -1214,8 +1214,20 @@ async def undertide_ops(key_id: int, command: str) -> str:
         if verb == "market":
             if not ut["access"]:
                 raise ValueError(utcopy.NO_ACCESS_HINT)
+            from . import undertide_racket as ur
+            deal = await ur.ensure_racket_deal(conn, s["id"])
+            racket_line = ur.format_racket_line(deal)
             keeper_bait = utcopy.pick(utcopy.KEEPER_BAIT) if random.random() < 0.20 else ""
-            return await _cmd_market(conn, s, ut) + keeper_bait + await _maybe_event(conn, s, ut)
+            body = await _cmd_market(conn, s, ut)
+            if racket_line:
+                body = f"{body}\n{racket_line}"
+            return body + keeper_bait + await _maybe_event(conn, s, ut)
+
+        if verb == "racket":
+            if not ut["access"]:
+                raise ValueError(utcopy.NO_ACCESS_HINT)
+            from . import undertide_racket as ur
+            return await ur.racket_ops(conn, s, ut, rest) + await _maybe_event(conn, s, ut)
 
         if verb == "buy":
             if not ut["access"]:

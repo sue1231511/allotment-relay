@@ -743,6 +743,46 @@ async def net_bonus_chance() -> float:
     return 0.0
 
 
+async def net_fog_penalty() -> float:
+    pulse = await active_world_pulse()
+    if pulse and pulse.get("effect_type") == "fog_bank":
+        return 0.10
+    return 0.0
+
+
+async def discovery_chance_bonus() -> float:
+    pulse = await active_world_pulse()
+    if not pulse:
+        return 0.0
+    effect = pulse.get("effect_type")
+    if effect == "loot_surge":
+        return 0.06
+    if effect == "warm_breeze":
+        return 0.04
+    return 0.0
+
+
+async def discovery_chance_penalty() -> float:
+    pulse = await active_world_pulse()
+    if pulse and pulse.get("effect_type") == "fog_bank":
+        return 0.05
+    return 0.0
+
+
+async def guild_pulse_multiplier() -> float:
+    pulse = await active_world_pulse()
+    if pulse and pulse.get("effect_type") == "merchant_caravan":
+        return 1.15
+    return 1.0
+
+
+async def gnat_swarm_revert_tend() -> bool:
+    pulse = await active_world_pulse()
+    if pulse and pulse.get("effect_type") == "gnat_swarm":
+        return random.random() < 0.12
+    return False
+
+
 async def voyage_fail_modifier() -> float:
     pulse = await active_world_pulse()
     if pulse and pulse.get("effect_type") == "calm_sea":

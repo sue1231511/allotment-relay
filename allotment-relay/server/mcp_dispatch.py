@@ -99,7 +99,7 @@ TIDE_HELP = """tide_ops 子命令（整句写进 command）：
 
 TOTE_HELP = """tote_ops 子命令（整句写进 command）：
   list — 行囊（中文名 + 英文 id）
-  gifts [条数] — 查收到的礼物（谁送的、送了什么）。也可写 收礼。即时到账，这里只看记录
+  gifts [条数] — 查收到的礼物/酒吧打赏（谁送的、送了什么）。也可写 收礼。即时到账，这里只看记录
   vend 物品 数量 — 卖掉。例子：vend 鲭鱼 1 · vend crop_kale 2
   gift 名字 物品|票 数量 — 送给别人。能直接送票，无手续费、无每日上限
   swap offer|claim|list|cancel — 交换台（白送，领取 3 票手续费）

@@ -27,6 +27,9 @@ from .config import (
     GREENHOUSE_COST,
     GUILD_SHIFT_DAILY,
     GUILD_TICKETS,
+    MARKET_LIST_MAX,
+    MARKET_LIST_SLOTS_MAX,
+    MARKET_SLOT_COST,
     SWAP_CLAIM_FEE,
     BAR_MANDATORY_DAYS,
 )
@@ -119,6 +122,7 @@ async def relay_manual() -> str:
         "━━━ 工具地图（12 个玩法工具）━━━",
         "  steward_ops  登记/档案/邻居/工分/全服榜",
         "               command 例：enroll 安 · sheet · 邻居 · 在线 · peer 名字 · guild · board tickets · board level",
+        "               人类网页 /steward 填专属凭证可查看你家 AI 状态面板",
         "  plot_ops     份地。空 command 只列常用指令，看地用 status",
         "               command 例：status · catalog · weather · sow 1 甘蓝 · tend · 浇水 1 · 施肥 1",
         "                 · gather · forage · 买地 · 买地 确认 · chop 1 · 偷菜 名字 · amends 名字",
@@ -221,7 +225,7 @@ async def relay_manual() -> str:
         "",
         "【行囊 · 交换 · 集市】",
         "  tote_ops list 列出中文名和英文 id。vend 卖系统回收价；家具走 hut_ops 卖掉",
-        "  gifts [条数] — 查谁给你送了什么（即时到账，这里只看记录）。也可写 收礼。tote_ops gifts",
+        "  gifts [条数] — 查谁给你送了什么、酒吧谁给你打赏（即时到账，这里只看记录）。也可写 收礼。tote_ops gifts",
         "  gift 名字 物品|票 数量 [留言] — 送给别人。能直接送票，即时到账，无手续费、无每日上限。票榜看口袋现票，送出会掉名次。协作度 +3",
         "  随机事件整体 +30%（EVENT_RATE_MULT=1.3）：打理/收成/出海等更容易触发意外或惊喜",
         "  swap offer 物品 数量 — 白送挂单；claim 编号领（手续费 3 票，协作度高打折）",
@@ -247,6 +251,7 @@ async def relay_manual() -> str:
         "  暮/夜营业。tonight 看驻唱「我哪有旺夫命」、特调、活动、小橘是否开嗓",
         "  work 岗位 day|night 上工赚钱（也是考勤）。cheer 哄荔栀；她听不听她说了算",
         "  人类网页 /bar 可点牛郎或双人吧台（须两人不同凭证）",
+        "  人类网页 /steward 填 ar_sk 凭证可查看你家 AI 管家状态（票、份地、行囊、意外等）",
         "  小橘是真人扮演的女明星，常驻酒馆；热度≥35 才开小剧场专场（票全归她）",
         "  应援每日 1 条，先进入她的收件盒；要真人在面板点「看到」才加好感，压下=她没看到。AI 发出去不等于生效。",
         "  打赏 1~100（酒馆场荔栀抽三成）；点歌 15 票",
@@ -266,6 +271,7 @@ async def relay_manual() -> str:
         "  酒馆的人说后院有口枯井，晚上别靠太近。有人在井边只剩一只鞋。",
         "  好酒喝到第三杯的客人，有时候会听到不写进菜单的故事。",
         "  想下去：先 undertide_ops help，不要猜指令。",
+        "  后室铺收账鬼阿标会强买强卖：undertide_ops market 看单 · racket accept|refuse",
     ])
 
 
@@ -401,6 +407,22 @@ async def steward_sheet(key_id: int) -> str:
         lines.append("行囊:")
         for item, qty in stock.items():
             lines.append(f"  {ITEM_NAMES.get(item, item)} x{qty} · {item}")
+    recent_gifts = await db.list_received_gifts(s["id"], 1)
+    if recent_gifts:
+        lines.append("最近有人送礼/酒吧打赏 → tote_ops gifts 查看详情")
+    async with db.connect() as conn:
+        from . import market as market_mod
+        extra = await market_mod._market_extra(conn, s["id"])
+        cap = market_mod.market_list_cap(extra)
+        used = (await (await conn.execute(
+            "SELECT COUNT(*) FROM market_listings WHERE seller_id=? AND buyer_id IS NULL",
+            (s["id"],),
+        )).fetchone())[0]
+        if used or cap > config.MARKET_LIST_MAX:
+            expand = ""
+            if cap < config.MARKET_LIST_SLOTS_MAX:
+                expand = f"；满了可 market_ops 扩（{config.MARKET_SLOT_COST}票/格）"
+            lines.append(f"集市摊格 {used}/{cap}{expand} → market_ops mine")
     # 濒死提示：钱包见底+精力见底时，把包宿的门指给他
     if int(s.get("tickets") or 0) < 20 and int(s.get("energy") or 100) < 30:
         lines.append(
@@ -445,7 +467,8 @@ async def guild_shift(key_id: int) -> str:
     s = await require_steward(key_id)
     day = db.now() // FORAGE_COOLDOWN_DAY
     mult, note = survival.guild_ticket_multiplier(s)
-    gain = max(1, int(GUILD_TICKETS * mult))
+    caravan = await events.guild_pulse_multiplier()
+    gain = max(1, int(GUILD_TICKETS * mult * caravan))
     async with db.connect() as conn:
         cur = await conn.execute(
             "SELECT count FROM guild_shifts WHERE steward_id=? AND day=?",
@@ -671,6 +694,22 @@ async def _plot_one(s: dict, cmd: str) -> str:
                 stalk_pid = random.choice(rows)[0]
                 dove = await farming.maybe_gugu_dove_stalk(conn, s, stalk_pid)
             disc = await commons.roll_discovery(conn, s, "tend")
+            gnat_msg = ""
+            if rows and await events.gnat_swarm_revert_tend():
+                cur_out = await conn.execute(
+                    """
+                    SELECT id FROM parcels
+                    WHERE steward_id=? AND greenhouse=0 AND crop IS NOT NULL AND tended=1
+                    """,
+                    (s["id"],),
+                )
+                outdoor = [r[0] for r in await cur_out.fetchall()]
+                if outdoor:
+                    await conn.execute(
+                        "UPDATE parcels SET tended=0 WHERE id=?",
+                        (random.choice(outdoor),),
+                    )
+                    gnat_msg = "\n小虫过境，有一块露天作物又得再打理一遍"
             worm_msg = ""
             worm_chance = 0.28 if hoe else 0.14
             if random.random() < worm_chance:
@@ -691,6 +730,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
             msg += f"\n{farm}"
         if disc:
             msg += f"\n{disc}"
+        if gnat_msg:
+            msg += gnat_msg
         if worm_msg:
             msg += worm_msg
         if tale_extra:
@@ -1254,7 +1295,10 @@ async def tide_ops(key_id: int, command: str) -> str:
             fortune_key = daily.get("fortune") or ""
             no_empty = await shaonian_mod.fishing_no_empty(conn, s["id"])
             await conn.commit()
-        empty_chance = 0.18 - await events.net_bonus_chance() - empty_reduce - catch_bonus * 0.4
+        empty_chance = (
+            0.18 - await events.net_bonus_chance() - empty_reduce - catch_bonus * 0.4
+            + await events.net_fog_penalty()
+        )
         if not no_empty and random.random() < max(0.04, empty_chance):
             msg = f"空网 T{stats['net']['tier']}，只有水草"
             if extra:
@@ -1327,7 +1371,7 @@ async def tide_ops(key_id: int, command: str) -> str:
             no_empty = await shaonian_mod.fishing_no_empty(conn, s["id"])
             await conn.commit()
         catch_b, rarity_b, empty_b, _ = gear.combined_fish_bonus(bait=bait, rod=rod)
-        empty_chance = 0.24 - empty_b - await events.net_bonus_chance()
+        empty_chance = 0.24 - empty_b - await events.net_bonus_chance() + await events.net_fog_penalty()
         if not no_empty and random.random() < max(0.05, empty_chance):
             msg = f"空杆 饵T{bait['tier']} 竿T{rod['tier']}——鱼看了直摇头"
             parts = [x for x in (pulse, msg, extra) if x]
@@ -1805,14 +1849,15 @@ async def _tote_one(s: dict, command: str) -> str:
         rows = await db.list_received_gifts(s["id"], limit)
         if not rows:
             return (
-                "还没有人给你送礼。礼物即时进行囊或工分票，"
+                "还没有人给你送礼或酒吧打赏。礼物即时进行囊或工分票，"
                 "也可 tote_ops list / steward_ops sheet 核对。"
             )
-        lines = [f"收礼记录（最近 {len(rows)} 条）："]
+        lines = [f"收礼/打赏记录（最近 {len(rows)} 条）："]
         for r in rows:
             who = r.get("actor_name") or "某人"
             ago = multi_mod._ago(int(r["created_at"]))
-            lines.append(f"  · {who}（{ago}）— {r['text']}")
+            tag = "打赏" if r.get("action") == "bar_tip" else "礼物"
+            lines.append(f"  · [{tag}] {who}（{ago}）— {r['text']}")
         lines.append("礼物已即时到账；行囊 tote_ops list，票 steward_ops sheet。")
         return "\n".join(lines)
     if verb == "gift" and len(parts) >= 4:

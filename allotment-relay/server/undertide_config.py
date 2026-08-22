@@ -31,6 +31,12 @@ UT_SHELF = {                # 层: (最少种数, 最多种数, 单种库存min,
     "rare": (0, 1, 1, 1),
 }
 
+# ── 收账鬼阿标（强买强卖）──────────────────────────────────
+UT_RACKET_CHANCE = 0.55       # 每日触发概率（未触发则当日无单）
+UT_RACKET_BUY_MULT = 2.2      # 强卖价 = vend × mult
+UT_RACKET_SELL_MULT = 0.45    # 强收价 = vend × mult
+UT_RACKET_POWER = 42          # 阿标战力底盘（refuse 判定）
+
 # ── 恶猫钱庄 ──────────────────────────────────────────────
 UT_RATE_BASE = 0.10          # 基准日利率（猫猫面板可调 5%~25%）
 UT_RATE_MIN = 0.05

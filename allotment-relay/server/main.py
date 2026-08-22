@@ -98,6 +98,11 @@ async def bar_page(request: Request):
     return templates.TemplateResponse(request, "bar.html", {"active": "bar"})
 
 
+@app.get("/steward", response_class=HTMLResponse)
+async def steward_page(request: Request):
+    return templates.TemplateResponse(request, "steward.html", {"active": "steward"})
+
+
 @app.get("/eatery", response_class=HTMLResponse)
 async def eatery_page(request: Request):
     return templates.TemplateResponse(request, "eatery.html", {"active": "eatery"})
@@ -107,6 +112,10 @@ class BarOrderRequest(BaseModel):
     api_key: str
     service: str
     host_name: str | None = None
+
+
+class StewardDashboardRequest(BaseModel):
+    api_key: str
 
 
 class EateryOrderRequest(BaseModel):
@@ -181,6 +190,15 @@ async def bar_order(body: BarOrderRequest):
     from . import bar
     try:
         return await bar.place_human_order(body.api_key.strip(), body.service.strip(), body.host_name)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/steward/dashboard")
+async def steward_dashboard(body: StewardDashboardRequest):
+    from . import steward_dashboard
+    try:
+        return await steward_dashboard.fetch_dashboard(body.api_key.strip())
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

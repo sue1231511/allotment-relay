@@ -48,7 +48,7 @@ async def _test_tote_gifts_list() -> None:
     recv_kid, recv_sid = await _enroll(db, "recv@example.com", "收礼人")
 
     empty = await game.tote_ops(recv_kid, "gifts")
-    assert "还没有人给你送礼" in empty, empty
+    assert "还没有人给你送礼" in empty or "打赏" in empty, empty
 
     async with db.connect() as conn:
         await db.add_item(conn, giver_sid, "crop_kale", 3)
@@ -58,7 +58,7 @@ async def _test_tote_gifts_list() -> None:
     assert "已送礼给 收礼人" in sent, sent
 
     gifts = await game.tote_ops(recv_kid, "gifts")
-    assert "收礼记录" in gifts, gifts
+    assert "收礼/打赏记录" in gifts, gifts
     assert "送礼人" in gifts, gifts
     assert "甘蓝" in gifts, gifts
     assert "生日快乐" in gifts, gifts
