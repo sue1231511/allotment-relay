@@ -26,7 +26,7 @@ STORY_HELP = """story_ops 人物故事探索（整句写进 command）：
   choose escape|judgment|hunt|rescue — 决定结局：双生逃离/公开审判/猎杀/只救新人
   archive — 查看自己已经抵达的结局
   help — 本帮助
-调查和准备各耗 10 分钟；status/list/archive 不耗时。午夜前只有 60 分钟，时间归零且仍未行动便进入“绝望降临”。"""
+调查和准备各耗 10 分钟；status/list/archive 不耗时。最后 10 分钟仍可完成一次行动；归零后必须立刻选择已解锁结局，再调查会进入“绝望降临”。"""
 
 INTRO = """《灰姑娘》
 
@@ -231,7 +231,7 @@ async def _act(conn: aiosqlite.Connection, row: aiosqlite.Row, command: str) -> 
     missing = set(action.get("requires", set())) - flags
     if missing:
         raise ValueError("当前线索不足，无法执行。用 story_ops status 查看已经解锁的行动。")
-    if row["minutes_left"] <= ACTION_MINUTES:
+    if row["minutes_left"] < ACTION_MINUTES:
         return await _finish(conn, row, "绝望降临", TIMEOUT_TEXT)
     flags.add(action["flag"])
     left = row["minutes_left"] - ACTION_MINUTES

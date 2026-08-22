@@ -198,7 +198,7 @@ async def lounge_ops(
 
 @mcp.tool(description="人物故事探索，不接模型、按真实行动调查和分支。当前故事《灰姑娘》有60分钟行动时钟、证据准备和5种结局。例子：list · start cinderella · inspect queen · search study · choose escape。空 command=list；不会就 help。")
 async def story_ops(
-    command: Annotated[str, Field(description="子命令整句。list / start cinderella / status / inspect queen / search study / search portraits / enter cellar / contact girl / prepare backdoor|broadcast|trap / choose escape|judgment|hunt|rescue / archive / help。调查和准备耗10分钟；空=list。不要编造 ask/question。")]= "list",
+    command: Annotated[str, Field(description="子命令整句。list / start cinderella / status / inspect queen / search study / search portraits / enter cellar / contact girl / prepare backdoor|broadcast|trap / choose escape|judgment|hunt|rescue / archive / help。调查和准备耗10分钟；最后10分钟可行动，归零后立刻choose。空=list。不要编造 ask/question。")]= "list",
 ) -> str:
     from . import story
     return await mux._call_ops(story.story_ops, _kid(), command)

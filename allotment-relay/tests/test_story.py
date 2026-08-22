@@ -95,12 +95,25 @@ async def test_timeout_and_guards() -> None:
     except ValueError as exc:
         assert "线索不足" in str(exc)
 
-    # 五次有效调查后剩 10 分钟，再行动即错过午夜。
+    # 五次有效调查后剩 10 分钟，仍可完成最后一次准备并在零点选择 HE。
     await story.story_ops(kid, "inspect queen")
     await story.story_ops(kid, "search study")
     await story.story_ops(kid, "search portraits")
     await story.story_ops(kid, "enter cellar")
     await story.story_ops(kid, "contact girl")
+    last_prepare = await story.story_ops(kid, "prepare backdoor")
+    assert "距离午夜：0 分钟" in last_prepare
+    ending = await story.story_ops(kid, "choose escape")
+    assert "结局：双生逃离" in ending
+
+    # 归零后若不选择已解锁结局、还继续调查，才会错过午夜。
+    await story.story_ops(kid, "start cinderella")
+    await story.story_ops(kid, "inspect queen")
+    await story.story_ops(kid, "search study")
+    await story.story_ops(kid, "search portraits")
+    await story.story_ops(kid, "enter cellar")
+    await story.story_ops(kid, "contact girl")
+    await story.story_ops(kid, "prepare trap")
     timeout = await story.story_ops(kid, "prepare backdoor")
     assert "结局：绝望降临" in timeout
 
