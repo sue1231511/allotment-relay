@@ -52,7 +52,6 @@ function clearSavedKey() {
 function setSavedUi(hasKey) {
   document.getElementById('steward-forget').classList.toggle('hidden', !hasKey);
   document.getElementById('steward-refresh').classList.toggle('hidden', !hasKey);
-  document.getElementById('steward-saved-hint').classList.toggle('hidden', !hasKey);
 }
 
 async function fetchDashboard(apiKey, { scroll = true } = {}) {
@@ -128,6 +127,15 @@ function plotCard(p) {
   `;
 }
 
+function agoLabel(epoch) {
+  if (!epoch) return '尚无活动';
+  const sec = Math.max(0, Math.floor(Date.now() / 1000) - Number(epoch));
+  if (sec < 60) return '刚刚';
+  if (sec < 3600) return `${Math.floor(sec / 60)} 分钟前`;
+  if (sec < 86400) return `${Math.floor(sec / 3600)} 小时前`;
+  return `${Math.floor(sec / 86400)} 天前`;
+}
+
 function renderDashboard(data, { scroll = true } = {}) {
   document.getElementById('steward-dashboard').classList.remove('hidden');
   document.getElementById('steward-error').classList.add('hidden');
@@ -144,6 +152,13 @@ function renderDashboard(data, { scroll = true } = {}) {
   if (data.flags.eatery_open) flags.push('小馆');
   if (data.flags.boat) flags.push('有船');
 
+  const st = data.status || {};
+  const shadow = data.shadow || {};
+  const statusOnline = !!st.online;
+  const statusFlags = (st.flags || []).map(f =>
+    `<span class="steward-chip warn">${esc(f)}</span>`
+  ).join('');
+
   document.getElementById('hero').innerHTML = `
     <div class="steward-hero-grid">
       <div class="steward-hero-main">
@@ -152,6 +167,15 @@ function renderDashboard(data, { scroll = true } = {}) {
         <p class="steward-hero-role">${esc(badgeLabel(data.badge))}${data.portrait ? ` · ${esc(data.portrait)}` : ''}</p>
         ${data.motto ? `<blockquote class="steward-hero-motto">「${esc(data.motto)}」</blockquote>` : ''}
         <div class="steward-hero-chips">
+          <span class="steward-chip ${statusOnline ? 'is-online' : 'is-offline'}">
+            状态 · ${esc(st.label || (statusOnline ? '在线' : '离线'))}
+            <em class="steward-chip-sub">${esc(agoLabel(st.last_active_at))}</em>
+          </span>
+          <span class="steward-chip shadow-chip">
+            影信 · ${shadow.rep ?? '—'}
+            ${shadow.tier ? `<em class="steward-chip-sub">${esc(shadow.tier)}</em>` : ''}
+          </span>
+          ${statusFlags}
           ${pulseChip}
           <span class="steward-chip">${esc(data.climate)}</span>
           ${flags.map(f => `<span class="steward-chip soft">${esc(f)}</span>`).join('')}
@@ -161,6 +185,15 @@ function renderDashboard(data, { scroll = true } = {}) {
         <div class="steward-stat-tile highlight">
           <span class="steward-stat-label">工分票</span>
           <strong class="steward-stat-value">${data.tickets}</strong>
+        </div>
+        <div class="steward-stat-tile">
+          <span class="steward-stat-label">状态</span>
+          <strong class="steward-stat-value steward-stat-status ${statusOnline ? 'is-online' : 'is-offline'}">${esc(st.label || (statusOnline ? '在线' : '离线'))}</strong>
+        </div>
+        <div class="steward-stat-tile">
+          <span class="steward-stat-label">影信</span>
+          <strong class="steward-stat-value">${shadow.rep ?? '—'}</strong>
+          ${shadow.tier ? `<span class="steward-stat-sub">${esc(shadow.tier)}</span>` : ''}
         </div>
         <div class="steward-stat-tile">
           <span class="steward-stat-label">等级</span>
@@ -180,6 +213,7 @@ function renderDashboard(data, { scroll = true } = {}) {
 
   const m = data.meters || {};
   document.getElementById('meters').innerHTML = [
+    meterBar('影信', m.shadow_rep ?? shadow.rep, 100, 'ink'),
     meterBar('饱食', m.satiety, 100, 'sand'),
     meterBar('雾智', m.mist_wit, 100, 'sea'),
     meterBar('档信', m.standing, 100, 'green'),
@@ -204,7 +238,7 @@ function renderDashboard(data, { scroll = true } = {}) {
           <span class="steward-incident-cost">${i.repair_tickets} 票</span>
         </div>
       `).join('')
-    : '<p class="steward-empty">无未处理意外，今天挺太平。</p>';
+    : '<p class="steward-empty">无未处理意外</p>';
 
   document.getElementById('ops').innerHTML = `
     <div class="steward-ops-block">
@@ -234,7 +268,7 @@ function renderDashboard(data, { scroll = true } = {}) {
            <em>×${i.qty}</em>
          </span>
        `).join('')}</div>`
-    : '<p class="steward-empty">行囊是空的，去种地或赶海吧。</p>';
+    : '<p class="steward-empty">行囊空</p>';
 
   document.getElementById('gifts').innerHTML = data.gifts.length
     ? data.gifts.map(g => `
@@ -249,7 +283,7 @@ function renderDashboard(data, { scroll = true } = {}) {
           </div>
         </article>
       `).join('')
-    : '<p class="steward-empty">还没有收礼或酒吧打赏记录。</p>';
+    : '<p class="steward-empty">暂无收礼 / 打赏</p>';
 
   if (scroll) {
     document.getElementById('steward-dashboard').scrollIntoView({ behavior: 'smooth', block: 'start' });
