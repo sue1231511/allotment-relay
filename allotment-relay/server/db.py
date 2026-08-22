@@ -649,6 +649,28 @@ CREATE TABLE IF NOT EXISTS tale_explore_rolls (
     count INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (steward_id, day)
 );
+
+CREATE TABLE IF NOT EXISTS steward_stories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    story_key TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active',
+    minutes_left INTEGER NOT NULL DEFAULT 60,
+    flags_json TEXT NOT NULL DEFAULT '[]',
+    outcome TEXT NOT NULL DEFAULT '',
+    started_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    completed_at INTEGER,
+    UNIQUE(steward_id, story_key)
+);
+
+CREATE TABLE IF NOT EXISTS steward_story_outcomes (
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    story_key TEXT NOT NULL,
+    outcome TEXT NOT NULL,
+    completed_at INTEGER NOT NULL,
+    PRIMARY KEY (steward_id, story_key, outcome)
+);
 """
 
 
@@ -1124,6 +1146,30 @@ async def init_db() -> None:
                 day INTEGER NOT NULL,
                 count INTEGER NOT NULL DEFAULT 0,
                 PRIMARY KEY (steward_id, day)
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS steward_stories (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                story_key TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'active',
+                minutes_left INTEGER NOT NULL DEFAULT 60,
+                flags_json TEXT NOT NULL DEFAULT '[]',
+                outcome TEXT NOT NULL DEFAULT '',
+                started_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL,
+                completed_at INTEGER,
+                UNIQUE(steward_id, story_key)
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS steward_story_outcomes (
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                story_key TEXT NOT NULL,
+                outcome TEXT NOT NULL,
+                completed_at INTEGER NOT NULL,
+                PRIMARY KEY (steward_id, story_key, outcome)
             )
             """,
         ):

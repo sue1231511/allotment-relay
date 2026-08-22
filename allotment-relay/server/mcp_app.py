@@ -65,13 +65,14 @@ mcp = MCPServer(
     instructions=(
         "潮汐岛是持久多人份地游戏，不是聊天沙盒，禁止发明工具名或子命令。"
         "先调用无参数的 relay_manual 读手册，再按手册里的真实指令操作；不会就对该工具 command=help。"
-        "一共 13 个工具（手册 + 12 个玩法）。每个玩法工具只有一个参数 command，把整条子命令写进去。"
+        "一共 14 个工具（手册 + 13 个玩法）。每个玩法工具只有一个参数 command，把整条子命令写进去。"
         "中文名和英文 id 都能用。没有 sow_all / plant / harvest_all / eat_ops / fish_ops。"
-        "空 command：steward=档案、kitchen=菜谱、bar=酒吧档、star=她的档、tale=可接任务、plot=常用指令（不是看地）、其余=子命令列表。"
+        "空 command：steward=档案、kitchen=菜谱、bar=酒吧档、star=她的档、tale/story=可接内容、plot=常用指令（不是看地）、其余=子命令列表。"
         "新号必须先 steward_ops enroll 名字。"
         "找人用 steward_ops 邻居。全服票榜/等级榜是 steward_ops board；alliance_ops board 是周目标贡献榜。"
         "bar_ops cheer 哄荔栀；undertide_ops cheer 哄潮下猫猫；star_ops 应援 哄小橘，三套互不占用。"
         "潮闻故事任务：tale_ops list / accept black_box_lover / status / explore beach / turnin / souvenirs。"
+        "人物故事探索：story_ops list / start cinderella / status / inspect queen / choose escape。"
         "回精力：kitchen_ops eat。作物/生鱼/野薄荷生吃安全；只有生肉可能感染，visit_ops clinic treat infection。"
     ),
 )
@@ -129,7 +130,7 @@ async def tote_ops(
     return await mux.tote_bundle(_kid(), command)
 
 
-@mcp.tool(description="厨房。command 写一整句，回精力用 eat，不要另造 eat_ops。作物/生鱼生吃安全；只有生肉可能感染。例子：menu · cook 甘蓝 鲭鱼 · eat 甘蓝 · shop board。shop board 是全服在营业小馆名单，不是流水。空 command=菜谱。不会就 help。")
+@mcp.tool(description="厨房。command 写一整句，回精力用 eat，不要另造 eat_ops。作物/生鱼生吃安全；只有兔肉、猪肉等生肉可能感染。例子：menu · cook 甘蓝 鲭鱼 · eat 甘蓝 · shop board。shop board 是全服在营业小馆名单，不是流水。空 command=菜谱。不会就 help。")
 async def kitchen_ops(
     command: Annotated[str, Field(description="子命令整句。menu=菜谱（空也是）；cook 蒜蓉生蚝=定点菜；cook 甘蓝 鲭鱼=自由组合；eat 甘蓝=生吃作物（安全）；vend 菜名；store 菜名；shop board|open|卖掉；help。shop board=谁在营业。不要发明 eat_ops。")] = "",
 ) -> str:
@@ -180,6 +181,14 @@ async def tale_ops(
 ) -> str:
     from . import tale
     return await tale.tale_ops(_kid(), command)
+
+
+@mcp.tool(description="人物故事探索，不接模型、按真实行动调查和分支。当前故事《灰姑娘》有60分钟行动时钟、证据准备和5种结局。例子：list · start cinderella · inspect queen · search study · choose escape。空 command=list；不会就 help。")
+async def story_ops(
+    command: Annotated[str, Field(description="子命令整句。list / start cinderella / status / inspect queen / search study / search portraits / enter cellar / contact girl / prepare backdoor|broadcast|trap / choose escape|judgment|hunt|rescue / archive / help。调查和准备耗10分钟；空=list。不要编造 ask/question。")]= "list",
+) -> str:
+    from . import story
+    return await story.story_ops(_kid(), command)
 
 
 def _mcp_transport_security() -> TransportSecuritySettings:

@@ -154,6 +154,7 @@ def test_relay_manual_covers_systems() -> None:
         "不是流水",
         "真人在面板",
         "tale_ops",
+        "story_ops",
         "accept black_box_lover",
         "souvenirs",
         "永久纪念品",
@@ -162,6 +163,11 @@ def test_relay_manual_covers_systems() -> None:
         "阶段2 explore sea",
         "错误地点不扣",
         "不限次数",
+        "start cinderella",
+        "inspect queen",
+        "prepare backdoor|broadcast|trap",
+        "choose escape|judgment|hunt|rescue",
+        "午夜前共 60 分钟",
         "平常回 10、好回 15、极好回 20",
         "极差额外反噬 10",
         "每满 20 票再回 +1",
@@ -181,9 +187,10 @@ def test_readme_workflow_rules() -> None:
         assert "merge origin/main" in blob
         assert "relay_manual" in blob
         assert "mcp_app.py" in blob
-    assert "13 个工具" in readme
+    assert "14 个工具" in readme
     assert "steward_ops" in readme and "plot_ops" in readme and "bar_ops" in readme
     assert "tale_ops" in readme
+    assert "story_ops" in readme
     assert "空 command" in readme
     assert "禁止" in readme
 

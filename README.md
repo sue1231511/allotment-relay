@@ -33,7 +33,7 @@
 
 ## AI 怎么调用工具
 
-一共 **13 个工具**：手册 `relay_manual` + 12 个玩法工具。
+一共 **14 个工具**：手册 `relay_manual` + 13 个玩法工具。
 
 - 玩法工具只有一个主参数 `command`。把**整条子命令**写进去，不要拆成多个参数。
 - 中文名和英文 id 都能用。`plot_ops` / `tote_ops` 可用分号串联多条。
@@ -54,7 +54,7 @@ bar_ops     的 command = work 洗碗 night
 
 ---
 
-## 13 个工具（给人和 AI 看的说明）
+## 14 个工具（给人和 AI 看的说明）
 
 每个工具在 MCP 里还有更短的 `description`。改玩法后必须同步改：MCP 描述、`command` 字段说明、`relay_manual`、以及本表。详见文末「每次任务之后必须更新工具说明」。
 
@@ -62,7 +62,7 @@ bar_ops     的 command = work 洗碗 night
 
 必读操作手册。**无参数**。进世界先调一次，再动手。
 
-返回：怎么写 `command`、第一次怎么玩、12 个玩法工具的真实子命令、容易猜错的规则。不是聊天背景，不要读完之后自己编指令。
+返回：怎么写 `command`、第一次怎么玩、13 个玩法工具的真实子命令、容易猜错的规则。不是聊天背景，不要读完之后自己编指令。
 
 ### `steward_ops` — 身份与档案
 
@@ -248,6 +248,24 @@ bar_ops     的 command = work 洗碗 night
 首个潮闻共 6 个阶段：每推进一段自动获得 30 工分票（6×30=180）；完整探索再额外获得 50 工分票、档信 +5、雾智 +5、野薄荷×2，以及永久纪念品「停在六月的小猪闹钟」。总票奖励 230。已完成记录会自动解锁对应纪念品，不需要重新做任务。
 
 探索顺序：`explore beach` → `explore sea` 找锈铁 → `explore plot` → `explore bar` → `explore beach` 找海玻璃 → `explore beach` 找化石贝壳 → `turnin`。自然发现或行囊已持有所需物品也会识别推进。
+
+### `story_ops` — 人物故事探索
+
+空 command = 故事列表（`list`）。这是不用问答模型的场景调查与分支故事；当前故事为《灰姑娘》。调查和准备每次消耗剧情内 10 分钟，午夜前共有 60 分钟，`status`、`list`、`archive` 不耗时。
+
+| command | 做什么 |
+|---------|--------|
+| `list` / `start cinderella` | 查看故事 / 开始或重玩《灰姑娘》 |
+| `status` | 查看剩余时间、证据、准备及当前解锁的行动 |
+| `inspect queen` / `search study` | 调查不会行走的王妃 / 王子的舞会名单 |
+| `search portraits` / `enter cellar` | 搜索失踪新娘记录 / 沿暗道进入水晶鞋密室 |
+| `contact girl` | 接触下一名被水晶鞋选中的姑娘 |
+| `prepare backdoor` / `broadcast` / `trap` | 准备逃生后门 / 公开罪证 / 密室陷阱 |
+| `choose escape` / `judgment` / `hunt` / `rescue` | 在证据与准备满足后决定结局 |
+| `archive` | 查看自己抵达的结局 |
+| `help` | 列出真指令；没有 `ask` 或 `question` |
+
+五种结局：双生逃离、公开罪恶、血色密室、绝望降临、循环不息。时间不足会进入绝望降临；只救走新姑娘会进入循环不息。
 
 ### `undertide_ops` — 潮下
 
