@@ -94,6 +94,7 @@ bar_ops     的 command = work 洗碗 night
 | `tend` | 打理所有未 tend 的地 |
 | `浇水 1` / `施肥 1` | 加快成熟；一茬各一次。施肥耗堆肥或粪肥 |
 | `gather` / `gather 1` | 全收 / 只收 1 号 |
+| `shake 1` | 摇果（青柠/芒果/椰子等可摇树种）。果树每茬收果后计一茬，满额枯死清地 |
 | `买地` / `买地 确认` | 看价钱与开垦时间 / 付钱开垦（起步 3 块，最多 8 块） |
 | `shed erect` | 温室 #99，180 票，独立槽不占 8 块上限，偷不到 |
 | `偷菜 名字` | 摘邻居露天熟地，最多 30%，永远留一把 |
@@ -109,13 +110,13 @@ bar_ops     的 command = work 洗碗 night
 
 | command | 做什么 |
 |---------|--------|
-| `status` / `build` / `catalog` | 看屋 / 建棚屋 / 装件目录 |
+| `status` / `build` / `upgrade` / `catalog` | 看屋 / 建棚屋 / 升级（最高 Lv4 临海邸）/ 装件目录 |
 | `buy cabinet` → `install soft_1 cabinet` | 买潮柜并装上（生鲜） |
 | `buy fridge` → `install soft_N fridge` | 买冰箱并装上（熟菜） |
-| `buy bed` → `install hard_N bed` | 买岸柏板床并装上（硬装槽，60 票） |
-| `睡` | 睡一觉回 50 精力（+饱食 8），每天一次（游戏日 UTC 午夜换班刷新）；要装床 |
+| `buy bed` / `bed_rattan` / `bed_canopy` → `install hard_N …` | 岸柏板床 50 精力 / 软藤床 52 / 云纹纱榻 54（主要是好看，精力只略增） |
+| `睡` | 按已装床回 50~54 精力（+饱食 8），每天一次（游戏日 UTC 午夜换班刷新） |
 | `冰柜 存 甘蓝 3` / `冰柜 取 甘蓝 1` | 存取。柜子/潮柜/冰箱是同一条指令 |
-| `潮柜 扩` | 加格（12 票/格，基础 30，顶 60） |
+| `潮柜 扩` | 加格（12 票/格，基础 30 格种货，顶 60）。**每种货单格最多叠 24 份**（防单格囤货，不是 bug） |
 | `卖掉 soft_1 确认` | 旧家具按折旧卖 |
 | `barn status` / `barn erect` / `barn feed` / `barn churn` | 畜栏。churn 只搅山羊奶成奶酪（先买山羊再 collect；牛奶不能搅） |
 | `mascot adopt 名字 scout` / `upkeep` / `train` / `feed` | 吉祥物。upkeep 花 4 票主动喂养（不是每日自动扣）；train 免费练、不换特质；士气不每天掉 |
@@ -174,7 +175,7 @@ bar_ops     的 command = work 洗碗 night
 
 饭馆和集市各卖各的：**饭馆卖堂食体验**（按价回精力 + 饱餐 buff），**集市卖货**（买回家自己 `eat` 只有基础精力，可囤冰箱）。
 
-感染：`visit_ops clinic treat infection`，约三次、间隔 6 小时，不能一次根治。营养不良（水果当饭吃）：每顿熟菜好一档，`visit_ops clinic treat 营养不良` 两次挂号也能治。
+感染：`visit_ops clinic treat infection`，约三次、间隔 6 小时，不能一次根治。营养不良（水果当饭吃）：每顿熟菜好一档，`visit_ops clinic treat 营养不良` 两次挂号也能治。另有脱水、过劳（疗程+慢性扣精力）、失眠（连续多天没睡）、湿气入肺、牙酸等——`clinic status` 看当前，`clinic treat 病名` 治。
 
 ### `alliance_ops` — 协作
 
@@ -314,7 +315,7 @@ bar_ops     的 command = work 洗碗 night
 | `pit medic 伤病` / `pit drug list` / `pit drug 药名` | 晏安医务间：治深坑伤 / 体质药三档（粗制 15 反噬 / 标准 40 / 精制 90 无副作用，战力 buff 24h） |
 | `dice` / `lantern` / `draw` | 死人抽牌：黑潮骰 ×2/×2/×5 · 最后一盏灯 ×1.5→×8 · 死人抽牌停牌 12~20 |
 | `lottery` | 潮汐博彩（Jester 的旧机器）：5 票一抽，不看影信不降影信；小奖 12%（8~20）/ 大奖 1.2%（60~150）/ 头奖 0.15%（300~600） |
-| `street` / `muscle 名号` / `push 名号 物品` | 帘外随机 NPC / 强买 / 强卖（战力判定，可记仇寻仇） |
+| `street` / `muscle 名号` / `push 名号 物品` | 帘外随机 NPC / 强买 / 强卖（各每日 1 次，战力判定，可记仇寻仇） |
 | `hijack 对象` | 劫持 NPC（每日 1 次，影信代价）。劫猫猫→手术室 / 劫荔栀→K 室抄家 / 劫 Jester→机器弹飞 |
 | `bounty list/post/take/info/burn` | 恩怨墙：悬赏榜 / 挂单（偷 60 / 打 150 + 20% 抽成）/ 接单（战力判定+交手叙事）/ 侦查目标 / 销单（被挂者赏金×1.1 烧纸条） |
 | `kroom status/settle/vr` | K 室：触发（影信<5+逾期）/ 清偿（债×1.2 罚金）/ 价值回收（7 天冻结消费） |
