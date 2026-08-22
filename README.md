@@ -199,6 +199,7 @@ bar_ops     的 command = work 洗碗 night
 | `tt catalog` / `tt buy 锄头` / `tt buy 甘蓝种` | Tt酱杂货 |
 | `lili scan` / `lili summon 猫眼螺` | 栗栗流动摊 |
 | `shaonian visit` / `shaonian fortune` | 韶年卜卦 |
+| `musong visit` / `musong send 安` / `musong remember` | 见渡口的目送人·阿槐 / 请他送别一个名字（每游戏日一次）/ 回看送别册 |
 | `lore scan` | 沿海旧史文本（可指定主题或随机），不是收集品 |
 | `clinic status` / `clinic treat infection` | 诊所。深坑伤走 `undertide_ops medic` |
 | `visit 拾叶` | 巷口随机事件（主动必触发）；路上每天首次操作掷一次碰上 |

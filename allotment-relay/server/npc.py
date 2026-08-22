@@ -46,6 +46,8 @@ async def npc_ops(key_id: int, command: str) -> str:
                 tag = " · 杂货店，visit_ops tt catalog/buy/gift"
             elif npc["key"] == "old_salt":
                 tag = " · 赶海/潮汐提示"
+            elif npc["key"] == "musong":
+                tag = " · 渡口送别；visit_ops musong send 名字 / remember"
             elif npc["key"] == "herb_aunt":
                 tag = " · 厨房配方提示"
             elif npc["key"] == "market_fan":
@@ -111,6 +113,14 @@ async def _visit_context(steward: dict, key: str) -> str:
         if weather == "misty":
             bits.append("雾天珠砂/海玻璃略多")
         return "——" + "；".join(bits)
+    if key == "musong":
+        scene = {
+            "dawn": "晨雾还贴着水面，他把茶杯搁在膝头，望向第一班离岸的小船",
+            "day": "日光照亮渡口，他坐在旧木凳上，能看清每一张离开的脸",
+            "dusk": "落日在海面铺出一条长路，他一直看到最后一道影子沉进暮色",
+            "night": "渡口只剩灯塔的光，他仍朝黑水望着，像在等一个迟来的回头",
+        }.get(phase, "他坐在渡口的旧木凳上，安静看着来路与去路")
+        return f"——{scene}。musong send 名字 请他替你送一程；remember 看曾经送过谁"
     if key == "herb_aunt":
         dish_key, meta = random.choice(list(KITCHEN_DISHES.items()))
         ings = " + ".join(ITEM_NAMES.get(i, i) for i in meta["ings"])

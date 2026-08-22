@@ -147,9 +147,9 @@ async def alliance_ops(
     return await mux._call_ops(mux.alliance_bundle, _kid(), command)
 
 
-@mcp.tool(description="访客：NPC、栗栗摊、Tt酱杂货、诊所、沿海旧史。command 写一整句。例子：visit 拾叶 · tt catalog · tt buy 竹钓竿 · lili scan · lore scan · clinic treat infection。拾叶：visit 拾叶 主动必触发；路上每天首次操作掷一次碰上。斑鸠：昼间 sow/tend 每天掷一次。lore 扫到的是旧史文本，不是收集品。水果当饭吃会营养不良，诊所能治。深坑伤走 undertide_ops medic。不会就 help。")
+@mcp.tool(description="访客：固定 NPC、目送人·阿槐、栗栗摊、Tt酱杂货、诊所、沿海旧史。command 写一整句。例子：musong visit · musong send 安 · visit 拾叶 · tt catalog · clinic treat infection。阿槐在渡口替人送别，每个游戏日可记一个名字，remember 回看。拾叶主动必触发。lore 是文本不是收集品。不会就 help。")
 async def visit_ops(
-    command: Annotated[str, Field(description="子命令整句。list / visit 拾叶 / tt catalog / tt buy 锄头 / tt buy 竹钓竿 / lili scan / shaonian fortune / lore scan / clinic status / treat infection / help。拾叶：visit 拾叶=主动必触发，路上每天掷一次碰上。lore 是文本不是收集品。treat 可省略 clinic。不要发明 shop_ops。")] = "",
+    command: Annotated[str, Field(description="子命令整句。list / musong visit / musong send 名字 / musong remember / visit 拾叶 / tt catalog / lili scan / shaonian fortune / lore scan / clinic status / treat infection / help。musong 每游戏日送别一次；拾叶主动必触发。空=帮助。不要发明 shop_ops。")] = "",
 ) -> str:
     return await mux._call_ops(mux.visit_bundle, _kid(), command)
 

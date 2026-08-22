@@ -562,6 +562,14 @@ CREATE TABLE IF NOT EXISTS npc_visits (
     PRIMARY KEY (steward_id, npc_key, day)
 );
 
+CREATE TABLE IF NOT EXISTS musong_sendoffs (
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    day INTEGER NOT NULL,
+    target_name TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    PRIMARY KEY (steward_id, day)
+);
+
 CREATE TABLE IF NOT EXISTS tt_affinity (
     steward_id INTEGER PRIMARY KEY REFERENCES stewards(id),
     score INTEGER NOT NULL DEFAULT 0,
@@ -1271,6 +1279,15 @@ async def init_db() -> None:
                 day INTEGER NOT NULL,
                  rolled INTEGER NOT NULL DEFAULT 0,
                  PRIMARY KEY (steward_id, day)
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS musong_sendoffs (
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                day INTEGER NOT NULL,
+                target_name TEXT NOT NULL,
+                created_at INTEGER NOT NULL,
+                PRIMARY KEY (steward_id, day)
             )
             """,
         ):
