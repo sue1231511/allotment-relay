@@ -179,7 +179,7 @@ async def relay_manual() -> str:
         "  随机事件整体 +30%：打理/收成/出海等更容易触发意外或惊喜（田间还有潮蟹/夜蛾/石龟等新访客）",
         "  公共物资 plot_ops commons scan · claim 编号 — 全服抢，随机上线",
         "  昼间 sow/tend 可能斑鸠盯梢：plot_ops dove 忽略|驱赶",
-        "  稻草人 scarecrow 地块；过熟进堆肥 compost 地块",
+        "  稻草人 scarecrow 地块；过熟 compost 地块进堆肥（果树清果后树还在，不想要才 chop）",
         "",
         "【潮闻 · 故事探索任务】",
         "  tale_ops list — 查看可接任务和阶段/通关奖励；accept 任务key 接取。空 command 和 list 相同",
@@ -898,13 +898,30 @@ async def _plot_one(s: dict, cmd: str) -> str:
             ready = farming.plot_ready(plot)
             if meta.get("tree") and not overripe:
                 raise ValueError(
-                    f"#{slot} {meta['name']}树还没过熟。树收完会再长，清地请 `plot_ops chop {slot}`；"
-                    "过熟才能 compost。"
+                    f"#{slot} {meta['name']}树还没过熟。树收完会再长，不想要了才 `plot_ops chop {slot}`；"
+                    "过熟清果用 gather 或 compost，树会留下。"
                 )
             if not overripe and not ready:
                 raise ValueError("只有过熟/枯的才进堆肥桶")
             crop_name = meta["name"]
-            await db.add_item(conn, s["id"], "compost", random.randint(2, 3))
+            compost_qty = random.randint(2, 3)
+            await db.add_item(conn, s["id"], "compost", compost_qty)
+            if meta.get("tree"):
+                planted_at, grow_target, grow_pace = farming.regrow_tree_after_clear(
+                    plot["crop"], plot
+                )
+                await conn.execute(
+                    """
+                    UPDATE parcels SET planted_at=?, tended=0, grow_target=?, grow_pace=?,
+                    fertilized=0, watered=0, harvest_left=0 WHERE id=?
+                    """,
+                    (planted_at, grow_target, grow_pace, plot["id"]),
+                )
+                await conn.commit()
+                return (
+                    f"#{slot} {crop_name}过熟落果 → 堆肥桶 ×{compost_qty}，"
+                    "树还在，重新结果"
+                )
             await conn.execute(
                 """
                 UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
@@ -1038,16 +1055,31 @@ async def _plot_one(s: dict, cmd: str) -> str:
                             f"{CROPS[p['crop']]['name']} x{qty}{harvest_note}{dove_note}{tree_note}"
                         )
                 elif farming.plot_overripe(p):
+                    meta = CROPS.get(p["crop"], {})
+                    is_tree = bool(meta.get("tree"))
                     if random.random() < 0.5:
                         await db.add_item(conn, s["id"], "compost", 2)
                         got.append(f"{CROPS[p['crop']]['name']}(堆肥)")
-                    await conn.execute(
-                        """
-                        UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
-                        grow_target=0, grow_pace='', fertilized=0, watered=0, harvest_left=0 WHERE id=?
-                        """,
-                        (p["id"],),
-                    )
+                    if is_tree:
+                        planted_at, grow_target, grow_pace = farming.regrow_tree_after_clear(
+                            p["crop"], p
+                        )
+                        await conn.execute(
+                            """
+                            UPDATE parcels SET planted_at=?, tended=0, grow_target=?, grow_pace=?,
+                            fertilized=0, watered=0, harvest_left=0 WHERE id=?
+                            """,
+                            (planted_at, grow_target, grow_pace, p["id"]),
+                        )
+                        got.append(f"{meta['name']}树（还在，重新结果）")
+                    else:
+                        await conn.execute(
+                            """
+                            UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
+                            grow_target=0, grow_pace='', fertilized=0, watered=0, harvest_left=0 WHERE id=?
+                            """,
+                            (p["id"],),
+                        )
             extra = await events.roll_after_action(s, "gather", conn)
             farm = await farming.roll_farm_event(conn, s, "gather")
             found: list[tuple[str, int, str]] = []

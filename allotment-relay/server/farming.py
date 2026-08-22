@@ -317,7 +317,9 @@ def parcel_extra(plot: dict[str, Any]) -> str:
     bits: list[str] = []
     if plot_overripe(plot):
         if is_tree:
-            bits.append("树·chop清地")
+            bits.append("树·gather/compost清果")
+        else:
+            bits.append("可compost")
         if plot.get("scarecrow"):
             bits.append("🌾稻草人")
         return f"·{'·'.join(bits)}" if bits else ""
@@ -603,6 +605,12 @@ async def gather_yield(
             (plot["id"],),
         )
     return item, qty, keep
+
+
+def regrow_tree_after_clear(crop: str, plot: dict[str, Any]) -> tuple[int, int, str]:
+    """过熟清果后让果树重新进入生长周期。"""
+    grow_target, grow_pace, _ = roll_grow(crop, plot)
+    return db.now(), grow_target, grow_pace
 
 
 def chop_tree(plot: dict[str, Any]) -> dict[str, Any]:

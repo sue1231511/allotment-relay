@@ -64,7 +64,7 @@ PLOT_HELP = """plot_ops 子命令（整句写进 command）：
   amends 名字 — 向被摘的邻居致歉，双方档信回暖
   shake 地块 — 摇果（青柠/芒果/椰子）
   chop 地块 — 砍树腾地（树收完会再长；清地不必等过熟）
-  compost 地块 — 过熟进堆肥（未熟的树请 chop）
+  compost 地块 — 过熟进堆肥（果树清果后树还在；不想要树才 chop）
   scarecrow 地块 — 扎稻草人
   shed erect|status|handoff — 温室（#99 独立槽，180票，不占 8 块上限，偷不到）
   commons scan|claim id — 稀有公共物资
