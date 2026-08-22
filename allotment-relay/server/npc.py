@@ -386,7 +386,7 @@ async def maybe_shiye_bump(
         return None
     chance = config.SHIYE_BUMP_CHANCE
     if world.current_day_phase() in ("dusk", "night"):
-        chance += 0.04
+        chance += 0.05
     if steward.get("standing", 50) < 40:
         chance += 0.03
     from . import shaonian as shaonian_mod

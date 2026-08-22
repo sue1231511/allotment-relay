@@ -325,8 +325,8 @@ HAIL_FIGHT_ENERGY = 12
 HAIL_FLEE_ENERGY = 8
 HAIL_THREAT = {"near": 38, "far": 54, "deep": 70}
 
-# 拾叶 — 巷口NPC，碰到随机小偷/乞丐/碰瓷/敲诈
-SHIYE_BUMP_CHANCE = _event_rate(0.05)
+# 拾叶 — 巷口NPC，碰到随机小偷/乞丐/碰瓷/敲诈（基础约 10%，暮夜/低档信更高）
+SHIYE_BUMP_CHANCE = _event_rate(0.08)
 SHIYE_DAILY_MAX = 3
 SHIYE_TRIGGERS = {"sow", "tend", "gather", "forage", "guild", "net", "beach"}
 SHIYE_BEG_TICKETS = (3, 8)

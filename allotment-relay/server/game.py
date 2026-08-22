@@ -274,7 +274,7 @@ async def relay_manual() -> str:
         "  visit_ops list 看固定 NPC。tt 买种/饲料/渔具/锄铲。lili 流动摊（不在就 summon 献壳）。韶年 fortune 卜卦",
         "  lore scan [主题] — 沿海旧史文本（可指定主题或随机），不是收集品，背包里不会多东西",
         "  诊所 visit_ops clinic treat 病症，必须花票。斗场震伤/深坑重创走 undertide_ops medic",
-        "  巷口拾叶：visit_ops visit 拾叶；sow/tend/gather 路上也可能碰到小偷/乞丐/碰瓷/敲诈，每日最多 3 次",
+        "  巷口拾叶：visit_ops visit 拾叶（主动必触发）；sow/tend/gather 等路上约 10% 碰上（暮夜更高），每日最多 3 次",
         "",
         "【酒吧 · 小橘】",
         "  暮/夜营业。tonight 看驻唱「我哪有旺夫命」、特调、活动、小橘是否开嗓",
