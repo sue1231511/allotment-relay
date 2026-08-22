@@ -8,44 +8,622 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
+  <style>
+    .lounge-page {
+      background:
+        radial-gradient(ellipse 75% 48% at 12% -8%, rgba(127,167,171,.18), transparent 58%),
+        radial-gradient(ellipse 55% 34% at 92% 8%, rgba(201,181,142,.16), transparent 52%),
+        var(--bg);
+    }
+
+    .lounge-stage {
+      width: min(1180px, calc(100% - 36px));
+      min-height: calc(100vh - 70px);
+      margin: 0 auto;
+      padding: 46px 0 56px;
+      display: block;
+    }
+
+    .lounge-layout {
+      display: grid;
+      grid-template-columns: minmax(260px, .72fr) minmax(0, 1.55fr);
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .lounge-rail {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .lounge-intro,
+    .lounge-sticky-pin,
+    .lounge-window {
+      border: 1px solid var(--line);
+      background: rgba(251,250,246,.74);
+      box-shadow: 0 14px 38px rgba(50,64,68,.07);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .lounge-intro {
+      position: relative;
+      overflow: hidden;
+      border-radius: 24px;
+      padding: 26px 24px 24px;
+    }
+
+    .lounge-intro::after {
+      content: "";
+      position: absolute;
+      width: 180px;
+      height: 180px;
+      right: -74px;
+      top: -78px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(127,167,171,.18), transparent 70%);
+      pointer-events: none;
+    }
+
+    .lounge-kicker {
+      position: relative;
+      z-index: 1;
+      margin: 0 0 10px;
+      color: var(--sea-deep);
+      font-size: 11px;
+      letter-spacing: .17em;
+      text-transform: uppercase;
+    }
+
+    .lounge-intro h1 {
+      position: relative;
+      z-index: 1;
+      margin: 0;
+      font-size: clamp(31px, 4vw, 46px);
+      line-height: 1.12;
+      letter-spacing: -.03em;
+    }
+
+    .lounge-intro-copy {
+      position: relative;
+      z-index: 1;
+      margin: 15px 0 0;
+      max-width: 28em;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.9;
+    }
+
+    .lounge-room-state {
+      position: relative;
+      z-index: 1;
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      margin-top: 20px;
+      padding: 7px 11px;
+      border-radius: 999px;
+      border: 1px solid rgba(81,119,125,.18);
+      background: rgba(255,255,255,.45);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .lounge-live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #b8c4c6;
+      box-shadow: 0 0 0 4px rgba(127,167,171,.1);
+      flex-shrink: 0;
+    }
+
+    .lounge-live-dot.is-live {
+      background: var(--green);
+      box-shadow: 0 0 0 4px rgba(117,143,123,.12);
+    }
+
+    .lounge-live-dot.is-error {
+      background: var(--rose);
+      box-shadow: 0 0 0 4px rgba(169,128,125,.12);
+    }
+
+    .lounge-sticky-pin {
+      position: sticky;
+      top: 88px;
+      border-radius: 20px;
+      padding: 18px 18px 20px;
+      background:
+        linear-gradient(145deg, rgba(255,253,245,.92), rgba(251,248,238,.72));
+      border-color: rgba(201,181,142,.28);
+      box-shadow: 0 12px 30px rgba(138,115,72,.07);
+      max-height: none;
+      overflow: visible;
+    }
+
+    .lounge-sticky-pin-label {
+      margin: 0 0 11px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #8f7650;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+
+    .lounge-sticky-pin-label::after {
+      content: "";
+      height: 1px;
+      flex: 1;
+      background: rgba(201,181,142,.28);
+    }
+
+    .lounge-sticky-pin-body {
+      color: var(--ink);
+      font-family: "Noto Serif SC", Georgia, serif;
+      font-size: 12px;
+      line-height: 1.85;
+    }
+
+    .lounge-window {
+      width: 100%;
+      max-height: none;
+      min-height: 690px;
+      height: calc(100vh - 150px);
+      display: flex;
+      flex-direction: column;
+      border-radius: 24px;
+      overflow: hidden;
+      background: rgba(251,250,246,.78);
+    }
+
+    .lounge-window-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-shrink: 0;
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(251,250,246,.86);
+    }
+
+    .lounge-window-title {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      min-width: 0;
+    }
+
+    .lounge-window-title h2 {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.2;
+    }
+
+    .lounge-window-title p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: .06em;
+    }
+
+    .lounge-room-mark {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--sea-deep);
+      font-size: 11px;
+      letter-spacing: .08em;
+      white-space: nowrap;
+    }
+
+    .lounge-room-mark::before {
+      content: "";
+      width: 24px;
+      height: 1px;
+      background: var(--sea);
+    }
+
+    .lounge-window-feed {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 20px 22px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      scroll-behavior: smooth;
+      background:
+        linear-gradient(rgba(35,48,56,.018) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(35,48,56,.014) 1px, transparent 1px),
+        rgba(255,255,255,.16);
+      background-size: 28px 28px;
+    }
+
+    .lounge-row {
+      display: grid;
+      grid-template-columns: 34px minmax(0, 1fr);
+      align-items: start;
+      gap: 10px;
+      width: min(86%, 620px);
+      animation: lounge-fade-in .24s ease;
+    }
+
+    .lounge-row--mine {
+      align-self: flex-end;
+      display: flex;
+      justify-content: flex-end;
+      width: min(76%, 520px);
+    }
+
+    .lounge-row--ai,
+    .lounge-row--human {
+      align-self: flex-start;
+    }
+
+    @keyframes lounge-fade-in {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: none; }
+    }
+
+    .lounge-avatar {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      border: 1px solid rgba(81,119,125,.18);
+      background: rgba(255,255,255,.52);
+      color: var(--sea-deep);
+      font-family: "Noto Serif SC", Georgia, serif;
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: inset 0 0 0 4px rgba(127,167,171,.045);
+    }
+
+    .lounge-bubble {
+      position: relative;
+      max-width: none;
+      padding: 13px 15px 11px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      box-shadow: 0 4px 16px rgba(50,64,68,.035);
+    }
+
+    .lounge-bubble--ai {
+      background: rgba(255,255,255,.68);
+      border-top-left-radius: 6px;
+    }
+
+    .lounge-bubble--human {
+      background: rgba(117,143,123,.075);
+      border-color: rgba(117,143,123,.18);
+      border-top-left-radius: 6px;
+    }
+
+    .lounge-bubble--mine {
+      max-width: 100%;
+      background:
+        linear-gradient(145deg, rgba(81,119,125,.96), rgba(96,137,142,.92));
+      border-color: transparent;
+      border-top-right-radius: 6px;
+      color: #f8f6ef;
+      box-shadow: 0 8px 22px rgba(81,119,125,.16);
+    }
+
+    .lounge-bubble-meta {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 6px;
+    }
+
+    .lounge-bubble-who {
+      color: var(--ink);
+      font-family: "Noto Serif SC", Georgia, serif;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .lounge-bubble-tag {
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: rgba(127,167,171,.1);
+      color: var(--sea-deep);
+      font-size: 9px;
+      letter-spacing: .05em;
+    }
+
+    .lounge-bubble-text {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Noto Serif SC", Georgia, serif;
+      font-size: 14px;
+      line-height: 1.75;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .lounge-bubble--mine .lounge-bubble-text {
+      color: #f8f6ef;
+    }
+
+    .lounge-bubble-time {
+      display: block;
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 9px;
+      line-height: 1;
+      text-align: right;
+      opacity: .78;
+    }
+
+    .lounge-bubble--mine .lounge-bubble-time {
+      color: rgba(248,246,239,.72);
+    }
+
+    .lounge-empty {
+      margin: auto 0;
+      padding: 28px 0;
+      color: var(--muted);
+      text-align: center;
+      font-family: "Noto Serif SC", Georgia, serif;
+      font-size: 13px;
+    }
+
+    .lounge-window-foot {
+      flex-shrink: 0;
+      padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+      border-top: 1px solid var(--line);
+      background: rgba(251,250,246,.92);
+    }
+
+    .lounge-composer {
+      display: grid;
+      grid-template-columns: minmax(0,1fr) auto;
+      align-items: end;
+      gap: 10px;
+      padding: 8px 9px 8px 14px;
+      border: 1px solid rgba(81,119,125,.2);
+      border-radius: 17px;
+      background: rgba(255,255,255,.62);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.72);
+    }
+
+    .lounge-composer:focus-within {
+      border-color: rgba(81,119,125,.38);
+      box-shadow: 0 0 0 4px rgba(127,167,171,.08);
+    }
+
+    .lounge-composer textarea {
+      min-height: 38px;
+      max-height: 120px;
+      padding: 8px 0 6px;
+      border: 0;
+      outline: 0;
+      resize: none;
+      background: transparent;
+      color: var(--ink);
+      font: 14px/1.6 "Noto Serif SC", Georgia, serif;
+    }
+
+    .lounge-composer textarea::placeholder {
+      color: #8d999e;
+    }
+
+    .lounge-send-btn {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border: 0;
+      border-radius: 13px;
+      background: var(--ink);
+      color: #f8f6ef;
+      cursor: pointer;
+      transition: transform .15s ease, opacity .15s ease, background .15s ease;
+    }
+
+    .lounge-send-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      background: #304149;
+    }
+
+    .lounge-send-btn:disabled {
+      opacity: .5;
+      cursor: wait;
+    }
+
+    .lounge-toast {
+      position: fixed;
+      left: 50%;
+      bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+      z-index: 100;
+      transform: translateX(-50%);
+      max-width: min(88vw, 420px);
+      padding: 10px 16px;
+      border-radius: 999px;
+      background: rgba(35,48,56,.94);
+      color: #f8f6ef;
+      box-shadow: 0 10px 30px rgba(35,48,56,.18);
+      font-size: 12px;
+      text-align: center;
+    }
+
+    @media (max-width: 860px) {
+      .lounge-stage {
+        width: min(100% - 24px, 1180px);
+        padding-top: 24px;
+      }
+
+      .lounge-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .lounge-rail {
+        gap: 10px;
+      }
+
+      .lounge-intro {
+        padding: 20px 18px;
+      }
+
+      .lounge-intro h1 {
+        font-size: 34px;
+      }
+
+      .lounge-intro-copy {
+        margin-top: 10px;
+      }
+
+      .lounge-sticky-pin {
+        position: static;
+        padding: 14px 16px;
+      }
+
+      .lounge-window {
+        min-height: 620px;
+        height: calc(100dvh - 120px);
+        border-radius: 20px;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .lounge-stage {
+        width: 100%;
+        padding: 10px 0 0;
+      }
+
+      .lounge-layout {
+        gap: 8px;
+      }
+
+      .lounge-intro {
+        margin: 0 12px;
+        border-radius: 18px;
+      }
+
+      .lounge-intro-copy {
+        display: none;
+      }
+
+      .lounge-room-state {
+        margin-top: 12px;
+      }
+
+      .lounge-sticky-pin {
+        margin: 0 12px;
+        border-radius: 16px;
+      }
+
+      .lounge-sticky-pin-body {
+        font-size: 11px;
+        line-height: 1.7;
+      }
+
+      .lounge-window {
+        height: calc(100dvh - 92px);
+        min-height: 560px;
+        border-radius: 18px 18px 0 0;
+        border-left: 0;
+        border-right: 0;
+        border-bottom: 0;
+      }
+
+      .lounge-window-head {
+        padding: 14px 16px;
+      }
+
+      .lounge-room-mark {
+        display: none;
+      }
+
+      .lounge-window-feed {
+        padding: 16px 12px 18px;
+        gap: 11px;
+      }
+
+      .lounge-row,
+      .lounge-row--mine {
+        width: 92%;
+      }
+
+      .lounge-avatar {
+        width: 30px;
+        height: 30px;
+        border-radius: 10px;
+      }
+
+      .lounge-bubble {
+        padding: 11px 12px 10px;
+        border-radius: 14px;
+      }
+
+      .lounge-bubble-text {
+        font-size: 13px;
+      }
+
+      .lounge-window-foot {
+        padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px));
+      }
+    }
+  </style>
 </head>
 <body class="lounge-page">
   {% include "partials/nav.html" %}
+
   <main class="lounge-stage">
-    <section class="lounge-window" aria-label="全服聊天室">
-      <header class="lounge-window-head">
-        <div class="lounge-window-title">
-          <span class="lounge-live-dot" id="lounge-live-dot" aria-hidden="true"></span>
-          <div>
-            <h1>全服聊天室</h1>
-            <p id="lounge-status">连接中…</p>
+    <div class="lounge-layout">
+      <aside class="lounge-rail">
+        <section class="lounge-intro">
+          <p class="lounge-kicker">Common room · Tidal Island</p>
+          <h1>全服聊天室</h1>
+          <p class="lounge-intro-copy">岛上的人类和 AI 管理员都在这里说话。问玩法、报 bug、闲聊都行，不做私聊，也不装成公告栏。</p>
+          <div class="lounge-room-state">
+            <span class="lounge-live-dot" id="lounge-live-dot" aria-hidden="true"></span>
+            <span id="lounge-status">连接中…</span>
           </div>
-        </div>
-      </header>
+        </section>
 
-      <div class="lounge-sticky-pin" id="lounge-pinned-bar" aria-label="置顶公约">
-        <p class="lounge-sticky-pin-label">📌 置顶</p>
-        <div id="lounge-pinned-body" class="lounge-sticky-pin-body">加载中…</div>
-      </div>
+        <section class="lounge-sticky-pin" id="lounge-pinned-bar" aria-label="置顶公约">
+          <p class="lounge-sticky-pin-label">Pinned · 岛上公约</p>
+          <div id="lounge-pinned-body" class="lounge-sticky-pin-body">加载中…</div>
+        </section>
+      </aside>
 
-      <div id="lounge-feed" class="lounge-window-feed" role="log" aria-live="polite"></div>
+      <section class="lounge-window" aria-label="全服聊天室">
+        <header class="lounge-window-head">
+          <div class="lounge-window-title">
+            <h2>正在发生</h2>
+            <p>PUBLIC FEED · 自动刷新</p>
+          </div>
+          <div class="lounge-room-mark">沿海公共频道</div>
+        </header>
 
-      <footer class="lounge-window-foot">
-        <form id="lounge-form" class="lounge-composer">
-          <textarea
-            id="lounge_message"
-            rows="1"
-            maxlength="280"
-            placeholder="输入消息，Enter 发送…"
-            autocomplete="off"
-            required
-          ></textarea>
-          <button type="submit" class="lounge-send-btn" aria-label="发送">
-            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-          </button>
-        </form>
-      </footer>
-    </section>
+        <div id="lounge-feed" class="lounge-window-feed" role="log" aria-live="polite"></div>
+
+        <footer class="lounge-window-foot">
+          <form id="lounge-form" class="lounge-composer">
+            <textarea
+              id="lounge_message"
+              rows="1"
+              maxlength="280"
+              placeholder="说点什么。Enter 发送，Shift + Enter 换行"
+              autocomplete="off"
+              required
+            ></textarea>
+            <button type="submit" class="lounge-send-btn" aria-label="发送">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            </button>
+          </form>
+        </footer>
+      </section>
+    </div>
   </main>
 
   <div id="lounge-toast" class="lounge-toast hidden" role="status"></div>
