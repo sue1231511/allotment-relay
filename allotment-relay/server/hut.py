@@ -759,8 +759,26 @@ async def cabinet_command(s: dict[str, Any], rest: list[str]) -> str:
     return await cabinet_take(s, item, qty)
 
 
+async def _has_fitting(conn: aiosqlite.Connection, steward_id: int, key: str) -> bool:
+    cur = await conn.execute(
+        "SELECT 1 FROM hut_fittings WHERE steward_id=? AND item_key=?",
+        (steward_id, key),
+    )
+    return await cur.fetchone() is not None
+
+
+async def _vanity_note(conn: aiosqlite.Connection, steward_id: int) -> str | None:
+    """贝壳梳妆台：睡醒/泡澡后 +1 档信（出门体面）。返回提示行。"""
+    if not await _has_fitting(conn, steward_id, "vanity"):
+        return None
+    from . import survival
+
+    await survival.bump(conn, steward_id, standing=config.VANITY_STANDING)
+    return f"梳妆台前捯饬了一下，档信 +{config.VANITY_STANDING}。"
+
+
 async def bed_rest(s: dict[str, Any]) -> str:
-    """岸柏板床：一觉回精力。冷却内不给睡；带病上限自动收窄。"""
+    """岸柏板床 / 麻绳吊床：一觉回精力。冷却内不给睡；带病上限自动收窄。"""
     from . import energy as energy_mod
     from . import survival
 
@@ -769,39 +787,238 @@ async def bed_rest(s: dict[str, Any]) -> str:
             "先 hut_ops build 小屋，再 buy bed → install hard_N bed（岸柏板床）"
         )
     async with db.connect() as conn:
-        cur = await conn.execute(
-            "SELECT 1 FROM hut_fittings WHERE steward_id=? AND item_key='bed'",
-            (s["id"],),
-        )
-        if not await cur.fetchone():
+        has_bed = await _has_fitting(conn, s["id"], "bed")
+        has_hammock = await _has_fitting(conn, s["id"], "hammock")
+        if not has_bed and not has_hammock:
             raise ValueError(
-                "小屋里还没有床 — hut_ops buy bed → install hard_N bed"
-                f"（{HUT_HARD['bed']['cost']} 票，硬装槽。睡一觉回 {config.BED_REST_ENERGY} 精力）"
+                "小屋里还没有能睡的地方 — buy bed → install hard_N bed"
+                f"（{HUT_HARD['bed']['cost']} 票，硬装槽，回 {config.BED_REST_ENERGY}）；"
+                f"或 buy hammock → install soft_N hammock"
+                f"（{HUT_SOFT['hammock']['cost']} 票，软装槽，回 {config.HAMMOCK_ENERGY}，不占硬装位）"
             )
+        # 有床按床算（同组不叠）；床和吊床共用同一份休息冷却
+        if has_bed:
+            amount, cooldown = config.BED_REST_ENERGY, config.BED_REST_COOLDOWN
+            where = "床"
+        else:
+            amount, cooldown = config.HAMMOCK_ENERGY, config.HAMMOCK_COOLDOWN
+            where = "吊床"
         row = await (await conn.execute(
             "SELECT bed_rest_at FROM stewards WHERE id=?", (s["id"],)
         )).fetchone()
         last = int(row[0] if row else 0)
-        wait = last + config.BED_REST_COOLDOWN - db.now()
+        wait = last + cooldown - db.now()
         if wait > 0:
             hours = wait // 3600 + 1
             raise ValueError(
                 f"刚睡过没多久，约 {hours} 小时后再来"
-                f"（一觉回 {config.BED_REST_ENERGY} 精力，"
-                f"每 {config.BED_REST_COOLDOWN // 3600} 小时一次）"
+                f"（{where}一觉回 {amount} 精力，每 {cooldown // 3600} 小时一次）"
             )
-        restored = await energy_mod.restore(conn, s["id"], config.BED_REST_ENERGY)
+        restored = await energy_mod.restore(conn, s["id"], amount)
         if restored <= 0:
             raise ValueError("精力是满的，不困。先干活去")
         await conn.execute(
             "UPDATE stewards SET bed_rest_at=? WHERE id=?", (db.now(), s["id"])
         )
         await survival.bump(conn, s["id"], satiety=8)
+        vanity = await _vanity_note(conn, s["id"])
         await conn.commit()
-    nxt = config.BED_REST_COOLDOWN // 3600
-    return (
-        f"一觉睡到潮声换班（精力 +{restored}，饱食 +8）。"
+    nxt = cooldown // 3600
+    msg = (
+        f"在{where}上睡到潮声换班（精力 +{restored}，饱食 +8）。"
         f"下一次能睡：{nxt} 小时后。饿醒不算病，记得正经吃饭。"
+    )
+    if vanity:
+        msg += vanity
+    return msg
+
+
+async def bath_soak(s: dict[str, Any]) -> str:
+    """雪松浴桶：泡一桶回雾智。床管精力，浴桶管雾智。"""
+    from . import survival
+
+    if not s.get("hut_built"):
+        raise ValueError(
+            "先 hut_ops build 小屋，再 buy bath_tub → install hard_N bath_tub（雪松浴桶）"
+        )
+    async with db.connect() as conn:
+        if not await _has_fitting(conn, s["id"], "bath_tub"):
+            raise ValueError(
+                "小屋里还没有浴桶 — hut_ops buy bath_tub → install hard_N bath_tub"
+                f"（{HUT_HARD['bath_tub']['cost']} 票。泡一桶雾智 +{config.BATH_MIST_WIT}，"
+                f"每 {config.BATH_COOLDOWN // 3600} 小时一次）"
+            )
+        row = await (await conn.execute(
+            "SELECT bath_soak_at FROM stewards WHERE id=?", (s["id"],)
+        )).fetchone()
+        last = int(row[0] if row else 0)
+        wait = last + config.BATH_COOLDOWN - db.now()
+        if wait > 0:
+            hours = wait // 3600 + 1
+            raise ValueError(
+                f"刚泡过没多久，约 {hours} 小时后再来"
+                f"（雾智 +{config.BATH_MIST_WIT}，"
+                f"每 {config.BATH_COOLDOWN // 3600} 小时一次）"
+            )
+        await conn.execute(
+            "UPDATE stewards SET bath_soak_at=? WHERE id=?", (db.now(), s["id"])
+        )
+        await survival.bump(conn, s["id"], mist_wit=config.BATH_MIST_WIT, satiety=4)
+        vanity = await _vanity_note(conn, s["id"])
+        await conn.commit()
+    msg = (
+        f"泡在雪松浴桶里听潮（雾智 +{config.BATH_MIST_WIT}，饱食 +4）。"
+        f"下一次能泡：{config.BATH_COOLDOWN // 3600} 小时后。"
+    )
+    if vanity:
+        msg += vanity
+    return msg
+
+
+async def pickle_crops(s: dict[str, Any], rest: list[str]) -> str:
+    """腌菜坛：2 蔬菜 → 1 坛腌菜。接住「蔬菜不能生吃」留下的过剩蔬菜。"""
+    if not s.get("hut_built"):
+        raise ValueError("先 hut_ops build 小屋，再 buy pickle_crock → install hard_N pickle_crock")
+    if not rest:
+        raise ValueError("用法：hut_ops 腌 甘蓝 4（2 蔬菜 → 1 坛腌菜）")
+    from .catalog import (
+        ITEM_NAMES,
+        is_fruit_item,
+        is_vegetable_item,
+        resolve_crop_key,
+        unknown_crop_message,
+    )
+
+    token = rest[0]
+    qty = 1
+    if len(rest) >= 2 and rest[1].isdigit():
+        qty = max(1, int(rest[1]))
+    crop = resolve_crop_key(token)
+    if not crop:
+        raise ValueError(unknown_crop_message(token))
+    item = f"crop_{crop}"
+    if is_fruit_item(item):
+        raise ValueError(
+            f"{ITEM_NAMES.get(item, item)} 是水果，直接吃或做甜品——腌的是蔬菜（甘蓝/姜/红薯等）"
+        )
+    if not is_vegetable_item(item):
+        raise ValueError("只能腌蔬菜 crop_*")
+    async with db.connect() as conn:
+        if not await _has_fitting(conn, s["id"], "pickle_crock"):
+            raise ValueError(
+                "小屋里还没有腌菜坛 — hut_ops buy pickle_crock → "
+                f"install hard_N pickle_crock（{HUT_HARD['pickle_crock']['cost']} 票）"
+            )
+        row = await (await conn.execute(
+            "SELECT quantity FROM satchel WHERE steward_id=? AND item=?",
+            (s["id"], item),
+        )).fetchone()
+        have = row[0] if row else 0
+        if have < config.PICKLE_VEG_PER_JAR:
+            raise ValueError(
+                f"行囊里 {ITEM_NAMES.get(item, item)} 不足——"
+                f"腌一坛要 {config.PICKLE_VEG_PER_JAR} 把"
+            )
+        jars = min(qty, have // config.PICKLE_VEG_PER_JAR)
+        used = jars * config.PICKLE_VEG_PER_JAR
+        if not await db.take_item(conn, s["id"], item, used):
+            raise ValueError("取菜时出了岔子，再试一次")
+        await db.add_item(conn, s["id"], "pickles", jars)
+        await conn.commit()
+    return (
+        f"腌好 🫙腌菜 x{jars}（用掉 {ITEM_NAMES.get(item, item)} x{used}）。"
+        "腌菜可以直接吃（安全，不会感染）、囤潮柜，也能当 cook 的佐料下锅。"
+    )
+
+
+async def dry_fish(s: dict[str, Any], rest: list[str]) -> str:
+    """晾鱼架：2 同种生鱼 → 1 条鱼干。杂鱼集中处理，可囤可吃可下锅。"""
+    if not s.get("hut_built"):
+        raise ValueError("先 hut_ops build 小屋，再 buy fish_rack → install soft_N fish_rack")
+    if not rest:
+        raise ValueError("用法：hut_ops 晾 鲭鱼 4（2 同种生鱼 → 1 条鱼干）")
+    from .catalog import ITEM_NAMES, SEA_CATCH, resolve_item_key, unknown_item_message
+
+    token = rest[0]
+    qty = 1
+    if len(rest) >= 2 and rest[1].isdigit():
+        qty = max(1, int(rest[1]))
+    item = resolve_item_key(token) or token
+    fish_key = None
+    if item.startswith("fish_") and item[5:] in SEA_CATCH:
+        fish_key = item[5:]
+    else:
+        for fk, meta in SEA_CATCH.items():
+            if meta["name"] == token:
+                fish_key = fk
+                break
+    if not fish_key:
+        raise ValueError(
+            f"晾鱼架只收生鱼。{unknown_item_message(token)} 用法：hut_ops 晾 鲭鱼 4"
+        )
+    fish_item = f"fish_{fish_key}"
+    async with db.connect() as conn:
+        if not await _has_fitting(conn, s["id"], "fish_rack"):
+            raise ValueError(
+                "小屋里还没有晾鱼架 — hut_ops buy fish_rack → "
+                f"install soft_N fish_rack（{HUT_SOFT['fish_rack']['cost']} 票）"
+            )
+        row = await (await conn.execute(
+            "SELECT quantity FROM satchel WHERE steward_id=? AND item=?",
+            (s["id"], fish_item),
+        )).fetchone()
+        have = row[0] if row else 0
+        if have < config.DRY_FISH_PER:
+            raise ValueError(
+                f"行囊里 {SEA_CATCH[fish_key]['name']}不足——"
+                f"晾一条要 {config.DRY_FISH_PER} 条同种生鱼"
+            )
+        made = min(qty, have // config.DRY_FISH_PER)
+        used = made * config.DRY_FISH_PER
+        if not await db.take_item(conn, s["id"], fish_item, used):
+            raise ValueError("取鱼时出了岔子，再试一次")
+        await db.add_item(conn, s["id"], f"dried_{fish_key}", made)
+        await conn.commit()
+    return (
+        f"晾好 🥓鱼干·{SEA_CATCH[fish_key]['name']} x{made}"
+        f"（用掉 {SEA_CATCH[fish_key]['name']} x{used}）。"
+        "鱼干可以直接吃（+10 精力，安全）、囤着，也能当 cook 的蛋白下锅。"
+    )
+
+
+async def bookshelf_read(s: dict[str, Any]) -> str:
+    """航海书架：每日读一次，+2 雾智，随机翻一段沿海旧史。"""
+    from . import survival
+    from .lore import LORE_TOPIC_LABELS, LORE_TOPICS
+
+    if not s.get("hut_built"):
+        raise ValueError("先 hut_ops build 小屋，再 buy bookshelf → install soft_N bookshelf")
+    import random as _random
+
+    async with db.connect() as conn:
+        if not await _has_fitting(conn, s["id"], "bookshelf"):
+            raise ValueError(
+                "小屋里还没有书架 — hut_ops buy bookshelf → "
+                f"install soft_N bookshelf（{HUT_SOFT['bookshelf']['cost']} 票。"
+                f"每日读一次，雾智 +{config.BOOKSHELF_MIST_WIT}）"
+            )
+        day = db.now() // config.FORAGE_COOLDOWN_DAY
+        row = await (await conn.execute(
+            "SELECT book_read_day FROM stewards WHERE id=?", (s["id"],)
+        )).fetchone()
+        if row and int(row[0] or 0) == day:
+            raise ValueError("今天翻过书了，明日再读（每日一次，雾智 +2）")
+        await conn.execute(
+            "UPDATE stewards SET book_read_day=? WHERE id=?", (day, s["id"])
+        )
+        await survival.bump(conn, s["id"], mist_wit=config.BOOKSHELF_MIST_WIT)
+        await conn.commit()
+    topic = _random.choice(list(LORE_TOPICS.keys()))
+    text = _random.choice(LORE_TOPICS[topic])
+    label = LORE_TOPIC_LABELS.get(topic, "沿海旧史")
+    return (
+        f"在航海书架前翻了半晌（雾智 +{config.BOOKSHELF_MIST_WIT}）。\n"
+        f"【{label}】{text}"
     )
 
 
@@ -823,6 +1040,18 @@ async def hut_ops(key_id: int, command: str) -> str:
 
     if verb in ("睡", "睡觉", "sleep", "休息", "rest"):
         return await bed_rest(s)
+
+    if verb in ("泡澡", "泡", "沐浴", "bath", "soak"):
+        return await bath_soak(s)
+
+    if verb in ("腌", "泡菜", "pickle"):
+        return await pickle_crops(s, command.strip().split()[1:])
+
+    if verb in ("晾", "晒", "dry"):
+        return await dry_fish(s, command.strip().split()[1:])
+
+    if verb in ("读", "读书", "翻书", "read"):
+        return await bookshelf_read(s)
 
     if verb in ("卖掉", "sell", "变卖", "出售"):
         return await furniture_sell_command(s, command.strip().split()[1:])
@@ -868,19 +1097,59 @@ async def hut_ops(key_id: int, command: str) -> str:
             )
         if bonus.has("fridge"):
             lines.append("冰箱 — hut_ops 冰柜 存|取（熟菜）· kitchen_ops fridge")
-        if bonus.has("bed"):
+        installed = set(fittings.values())
+        sleepables = {"bed", "hammock"} & installed
+        if sleepables:
+            which = "床" if "bed" in sleepables else "吊床"
+            amount = (
+                config.BED_REST_ENERGY if "bed" in sleepables
+                else config.HAMMOCK_ENERGY
+            )
+            cooldown = (
+                config.BED_REST_COOLDOWN if "bed" in sleepables
+                else config.HAMMOCK_COOLDOWN
+            )
             async with db.connect() as conn:
                 row = await (await conn.execute(
                     "SELECT bed_rest_at FROM stewards WHERE id=?", (s["id"],)
                 )).fetchone()
             last = int(row[0] if row else 0)
-            wait = last + config.BED_REST_COOLDOWN - db.now()
+            wait = last + cooldown - db.now()
             if wait > 0:
                 lines.append(
-                    f"床 — 约 {wait // 3600 + 1} 小时后能睡（回 {config.BED_REST_ENERGY} 精力）"
+                    f"{which} — 约 {wait // 3600 + 1} 小时后能睡（回 {amount} 精力）"
                 )
             else:
-                lines.append(f"床 — 现在能睡：hut_ops 睡（回 {config.BED_REST_ENERGY} 精力）")
+                lines.append(f"{which} — 现在能睡：hut_ops 睡（回 {amount} 精力）")
+        if "bath_tub" in installed:
+            async with db.connect() as conn:
+                row = await (await conn.execute(
+                    "SELECT bath_soak_at FROM stewards WHERE id=?", (s["id"],)
+                )).fetchone()
+            last = int(row[0] if row else 0)
+            wait = last + config.BATH_COOLDOWN - db.now()
+            if wait > 0:
+                lines.append(
+                    f"浴桶 — 约 {wait // 3600 + 1} 小时后能泡（雾智 +{config.BATH_MIST_WIT}）"
+                )
+            else:
+                lines.append(
+                    f"浴桶 — 现在能泡：hut_ops 泡澡（雾智 +{config.BATH_MIST_WIT}）"
+                )
+        if "pickle_crock" in installed:
+            lines.append(
+                f"腌菜坛 — hut_ops 腌 甘蓝 {config.PICKLE_VEG_PER_JAR}"
+                f"（{config.PICKLE_VEG_PER_JAR} 蔬菜 → 1 坛腌菜）"
+            )
+        if "fish_rack" in installed:
+            lines.append(
+                f"晾鱼架 — hut_ops 晾 鲭鱼 {config.DRY_FISH_PER}"
+                f"（{config.DRY_FISH_PER} 同种生鱼 → 1 条鱼干）"
+            )
+        if "bookshelf" in installed:
+            lines.append(
+                f"航海书架 — hut_ops 读（每日一次，雾智 +{config.BOOKSHELF_MIST_WIT}）"
+            )
         if not bonus.has("cabinet") and not bonus.has("fridge"):
             lines.append(
                 "存菜：hut_ops buy cabinet（潮柜·生鲜）或 buy fridge（冰箱·熟菜），"
@@ -1140,5 +1409,6 @@ async def hut_ops(key_id: int, command: str) -> str:
         return msg
 
     raise ValueError(
-        f"未知 hut 指令: {command}（status/build/upgrade/label/catalog/buy/install/remove/睡/冰柜/柜子/卖掉）"
+        f"未知 hut 指令: {command}（status/build/upgrade/label/catalog/buy/install/remove/"
+        "睡/泡澡/腌/晾/读/冰柜/柜子/卖掉）"
     )

@@ -32,7 +32,8 @@ from .game import require_steward
 
 EAT_RULES = (
     "eat 可吃：熟菜 dish_/meal_（回精力大头）；水果可生吃但只回一点、连吃会营养不良；"
-    "生鱼/野薄荷生吃安全；蔬菜不能生吃（cook/brew 下锅）；只有生肉 meat_* 可能感染。"
+    "生鱼/野薄荷/腌菜/鱼干生吃安全；蔬菜不能生吃（cook/brew 下锅，或 hut_ops 腌）；"
+    "只有生肉 meat_* 可能感染。"
 )
 
 
@@ -575,6 +576,10 @@ async def kitchen_ops(key_id: int, command: str) -> str:
                 gain = 10
             elif item == "wild_mint":
                 gain = 6
+            elif item == "pickles":
+                gain = config.PICKLE_ENERGY
+            elif item.startswith("dried_"):
+                gain = config.DRIED_FISH_ENERGY
             elif is_raw_meat(item):
                 gain = 12
             else:
@@ -602,7 +607,10 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             await survival.bump(conn, s["id"], satiety=min(20, gain // 2 + 8))
             await conn.commit()
         msg = f"吃了 {item_label(item)}（{item}），精力 +{restored}"
-        if item.startswith("fish_") or item == "wild_mint":
+        if (
+            item.startswith("fish_") or item == "wild_mint"
+            or item == "pickles" or item.startswith("dried_")
+        ):
             msg += "（生吃安全，不会感染）"
         if fruit_line:
             msg += f"\n{fruit_line}"

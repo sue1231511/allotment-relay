@@ -223,6 +223,18 @@ BARN_ERECT_COST = 75
 BED_REST_ENERGY = 50
 BED_REST_COOLDOWN = 72000
 
+# 小屋动作家具：吊床（床的软装弱化版）/ 雪松浴桶（回雾智）/ 腌菜坛 / 晾鱼架 / 梳妆台 / 航海书架
+HAMMOCK_ENERGY = 35
+HAMMOCK_COOLDOWN = 86400       # 吊床 24 小时一次（床 20 小时、回得更多）
+BATH_MIST_WIT = 15
+BATH_COOLDOWN = 72000          # 泡澡 20 小时一次
+VANITY_STANDING = 1            # 梳妆台：睡醒 / 泡澡后档信 +1
+PICKLE_VEG_PER_JAR = 2         # 2 蔬菜 → 1 坛腌菜
+PICKLE_ENERGY = 6              # 腌菜生吃回的精力
+DRY_FISH_PER = 2               # 2 同种生鱼 → 1 条鱼干
+DRIED_FISH_ENERGY = 10         # 鱼干生吃回的精力（卖价 = 生鱼 × 1.6，见 catalog）
+BOOKSHELF_MIST_WIT = 2         # 航海书架：每日读一次
+
 # 小馆堂食「饱餐」— dine 附带状态：期间行动精力消耗 -1（最低 1），并回少量雾智/档信。
 # 家里自己吃没有这些——饭馆卖堂食体验，集市卖货（买回去自己吃只有基础精力）。
 DINE_BUFF_SECONDS = 7200
