@@ -161,7 +161,7 @@ async def _test_bed_rest() -> None:
         await hut.hut_ops(kid, "睡")
         raise AssertionError("cooldown should refuse")
     except ValueError as exc:
-        assert "小时" in str(exc), exc
+        assert "换班" in str(exc) or "今天" in str(exc), exc
 
     async with db.connect() as conn:
         await conn.execute("UPDATE stewards SET bed_rest_at=0, energy=100 WHERE id=?", (sid,))

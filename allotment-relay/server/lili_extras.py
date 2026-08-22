@@ -264,7 +264,7 @@ async def shorten_visit(conn: aiosqlite.Connection, visit_id: int, seconds: int)
 
 async def pet_yexi(conn: aiosqlite.Connection, steward_id: int, visit_id: int, name: str) -> str:
     st = await _ensure_state(conn, steward_id)
-    day = db.now() // config.FORAGE_COOLDOWN_DAY
+    day = db.day_id()
     if int(st.get("pet_day") or 0) == day and int(st.get("pet_visit_id") or 0) == visit_id:
         raise ValueError("这摊已经摸过夜栖了，换个人蹲吧")
 
@@ -373,7 +373,7 @@ async def has_blessing(conn: aiosqlite.Connection, steward_id: int, key: str) ->
 
 async def bell_chronicle_if_due(conn: aiosqlite.Connection, steward_id: int, name: str) -> str | None:
     st = await _ensure_state(conn, steward_id)
-    day = db.now() // config.FORAGE_COOLDOWN_DAY
+    day = db.day_id()
     if int(st.get("bell_hint_day") or 0) != day:
         return None
     await conn.execute(

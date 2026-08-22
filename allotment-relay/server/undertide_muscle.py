@@ -15,7 +15,7 @@ from . import undertide_copy as utcopy
 
 
 def _day_id() -> int:
-    return db.now() // 86400
+    return db.day_id()
 
 
 # ── 街头随机 NPC 池 ─────────────────────────────────────────

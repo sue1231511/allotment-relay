@@ -7,13 +7,13 @@ from typing import Any
 
 import aiosqlite
 
-from . import db
+from . import config, db
 from . import undertide_config as utcfg
 from . import undertide_copy as utcopy
 
 
 def _day_id() -> int:
-    return db.now() // 86400
+    return db.day_id()
 
 
 async def _settle_expired(conn: aiosqlite.Connection) -> int:
@@ -130,7 +130,7 @@ async def _ensure_daily_quests(conn: aiosqlite.Connection) -> list[dict[str, Any
     # 今日委托已生成？（用当日已有条目判断——生成后立即 commit）
     cur = await conn.execute(
         "SELECT COUNT(*) FROM ut_bounty WHERE poster='__quest__' AND created_at >= ?",
-        (day * 86400,),
+        (db.day_start(day),),
     )
     if (await cur.fetchone())[0]:
         return []
@@ -141,11 +141,11 @@ async def _ensure_daily_quests(conn: aiosqlite.Connection) -> list[dict[str, Any
     for key in picked:
         q = utcopy.NPC_QUESTS[key]
         # errand/scare 类可重复接（每人限一次）；fight 类单发单接
-        expires = day * 86400 + 86400 * 2  # 两天有效
+        expires = db.day_start(day) + config.FORAGE_COOLDOWN_DAY * 2  # 两天有效
         await conn.execute(
             """INSERT OR IGNORE INTO ut_bounty (poster, poster_id, target_name, target_id, tier, bounty, status, expires_at, created_at)
                VALUES ('__quest__', NULL, ?, 0, ?, ?, 'open', ?, ?)""",
-            (q["name"], "quest", q["pay"], expires, day * 86400),
+            (q["name"], "quest", q["pay"], expires, db.day_start(day)),
         )
         out.append(q)
     if out:

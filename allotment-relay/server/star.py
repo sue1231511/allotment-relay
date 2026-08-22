@@ -96,7 +96,7 @@ STAGE_NEED_HEAT = "小剧场专场压不住场子——热度得 {need}，现在
 
 
 def _day_id() -> int:
-    return db.now() // 86400
+    return db.day_id()
 
 
 def heat_tier(heat: int) -> str:

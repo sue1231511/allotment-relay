@@ -118,7 +118,7 @@ async def beach_ops(key_id: int, command: str) -> str:
             raise ValueError("需要铲子 tide_ops tool buy shovel")
 
         now = db.now()
-        day = now // config.FORAGE_COOLDOWN_DAY
+        day = db.day_id(now)
         w = world.current_weather()
         async with db.connect() as conn:
             cur = await conn.execute(
@@ -206,7 +206,7 @@ async def beach_ops(key_id: int, command: str) -> str:
             raise ValueError("需要铲子 tide_ops tool buy shovel")
 
         now = db.now()
-        day = now // config.FORAGE_COOLDOWN_DAY
+        day = db.day_id(now)
         w = world.current_weather()
         async with db.connect() as conn:
             cur = await conn.execute(

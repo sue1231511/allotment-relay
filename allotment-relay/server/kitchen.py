@@ -37,7 +37,7 @@ EAT_RULES = (
 
 
 def _day_id() -> int:
-    return db.now() // config.FORAGE_COOLDOWN_DAY
+    return db.day_id()
 
 
 async def _ate_raw_fruit(conn: aiosqlite.Connection, steward_id: int) -> str | None:
@@ -742,7 +742,7 @@ async def _hearth_brew(s: dict[str, Any], ings: list[str]) -> str:
     if sig not in HEARTH_RECIPES:
         raise ValueError("这组材料没有已知配方，kitchen_ops recipes 查看")
     recipe = HEARTH_RECIPES[sig]
-    day = db.now() // 86400
+    day = db.day_id()
     async with db.connect() as conn:
         conn.row_factory = aiosqlite.Row
         row = await (await conn.execute(

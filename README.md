@@ -112,7 +112,7 @@ bar_ops     的 command = work 洗碗 night
 | `buy cabinet` → `install soft_1 cabinet` | 买潮柜并装上（生鲜） |
 | `buy fridge` → `install soft_N fridge` | 买冰箱并装上（熟菜） |
 | `buy bed` → `install hard_N bed` | 买岸柏板床并装上（硬装槽，60 票） |
-| `睡` | 睡一觉回 50 精力（+饱食 8），每 20 小时一次；要装床 |
+| `睡` | 睡一觉回 50 精力（+饱食 8），每天一次（游戏日 UTC 午夜换班刷新）；要装床 |
 | `冰柜 存 甘蓝 3` / `冰柜 取 甘蓝 1` | 存取。柜子/潮柜/冰箱是同一条指令 |
 | `潮柜 扩` | 加格（12 票/格，基础 30，顶 60） |
 | `卖掉 soft_1 确认` | 旧家具按折旧卖 |

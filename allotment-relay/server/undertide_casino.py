@@ -13,7 +13,7 @@ from . import undertide_copy as utcopy
 
 
 def _day_id() -> int:
-    return db.now() // 86400
+    return db.day_id()
 
 
 async def _bet_cap(conn: aiosqlite.Connection, steward_id: int, rep: int) -> int:

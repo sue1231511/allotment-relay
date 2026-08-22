@@ -397,7 +397,7 @@ async def ut_owner_page(request: Request, key: str = ""):
     async with db.connect() as conn:
         conn.row_factory = None
         row = await (await conn.execute("SELECT * FROM ut_owner_state WHERE id=1")).fetchone()
-        day = db.now() // 86400
+        day = db.day_id()
         rate = float(row[1]) if row and int(row[3]) == day else uc.UT_RATE_BASE
         reason = row[2] if row else ""
         save_rate = float(row[6]) if row and len(row) > 6 and row[6] else uc.UT_SAVE_RATE_BASE
@@ -422,7 +422,7 @@ async def ut_owner_save_rate(request: Request):
     from .undertide_config import UT_SAVE_RATE_MIN, UT_SAVE_RATE_MAX
     save_rate = max(int(UT_SAVE_RATE_MIN * 100), min(int(UT_SAVE_RATE_MAX * 100), int(body.get("save_rate", 2))))
     from . import db
-    day = db.now() // 86400
+    day = db.day_id()
     async with db.connect() as conn:
         await conn.execute(
             "INSERT INTO ut_owner_state (id, save_rate, rate_day, updated_at) VALUES (1,?,?,?) "
@@ -448,7 +448,7 @@ async def ut_owner_set(request: Request):
     rate = max(5, min(25, int(body.get("rate", 10))))
     reason = (body.get("reason") or "")[:120]
     from . import db
-    day = db.now() // 86400
+    day = db.day_id()
     async with db.connect() as conn:
         await conn.execute(
             "INSERT INTO ut_owner_state (id, rate_today, rate_reason, rate_day, updated_at) VALUES (1,?,?,?,?) "
@@ -485,7 +485,7 @@ async def ut_owner_cheer(request: Request):
             return JSONResponse({"detail": "这条提议不在了"}, status_code=404)
         if action == "accept":
             await conn.execute("UPDATE ut_mood_proposals SET status='accepted' WHERE id=?", (pid,))
-            day = db.now() // 86400
+            day = db.day_id()
             _av = await _ut.avatar_key(conn, row[1])
             _is_anan = _av == "anan"
             if _is_anan:
@@ -804,7 +804,7 @@ async def public_undertide():
         except Exception:
             out["tide"] = {"mult": 1.0, "line": ""}
         # 钱庄今日利率
-        day = db.now() // 86400
+        day = db.day_id()
         row = await (await conn.execute("SELECT * FROM ut_owner_state WHERE id=1")).fetchone()
         if row and int(row["rate_day"]) == day and (row["rate_reason"] or "").strip():
             out["bank"] = {"rate": int(float(row["rate_today"]) * 100), "reason": row["rate_reason"]}

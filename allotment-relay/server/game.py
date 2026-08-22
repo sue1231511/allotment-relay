@@ -23,7 +23,6 @@ from .catalog import (
 from .config import (
     BADGES,
     BOATS,
-    FORAGE_COOLDOWN_DAY,
     GREENHOUSE_COST,
     GUILD_SHIFT_DAILY,
     GUILD_TICKETS,
@@ -108,6 +107,7 @@ async def relay_manual() -> str:
         "5. 看地必须 plot_ops status。中文名和英文 id 都能用。plot/tote 可用分号串联。",
         "6. 新号必须先 steward_ops enroll 名字（2~24 字，只用一次）。没登记，别的工具会拒绝。",
         "7. 若返回「数据库正忙」：岛上同时操作太多，等 10～30 秒再发同一条指令，不要连点。",
+        "8. 「每天」= 游戏日换班（UTC 午夜）。床、公会轮值、酒吧日报、偷菜次数、栗栗货单等同此时刷新；不是滚动 24 小时。",
         "",
         "━━━ 第一次怎么玩 ━━━",
         "起步：3 块份地、120 票、甘蓝种×2、甜菜种×1、雾豆种×2、堆肥×1。先种手里的种，不必先去买。",
@@ -138,7 +138,7 @@ async def relay_manual() -> str:
         "                 · shed erect · scarecrow 1 · compost 1 · shake 1",
         "  hut_ops      小屋/潮柜/冰箱/床/畜栏/吉祥物",
         "               command 例：status · build · catalog · buy cabinet · install soft_1 cabinet",
-        "                 · buy fridge · buy bed · install hard_1 bed · 睡（回 50 精力，20 小时一次）",
+        "                 · buy fridge · buy bed · install hard_1 bed · 睡（回 50 精力，每天一次，换班刷新）",
         "                 · 冰柜 存 甘蓝 3 · 潮柜 扩 · 卖掉 soft_1 确认",
         "                 · barn status · barn erect · barn buy sheep · barn feed · barn collect",
         "                 · mascot adopt 名字 scout|lucky|compost",
@@ -223,7 +223,7 @@ async def relay_manual() -> str:
         "  存菜：buy cabinet 潮柜（生鲜，小偷翻不到）或 buy fridge 冰箱（熟菜），装好后 冰柜 存|取（柜子/潮柜/冰箱同义）",
         "  潮柜基础 30 格，hut_ops 潮柜 扩（12票/格，顶 60）",
         "  床：buy bed 岸柏板床（60票，硬装槽）→ install hard_N bed → hut_ops 睡",
-        "    一觉回 50 精力+饱食8，每 20 小时一次。精力上限按病症自动收窄（营养不良 −10 等）",
+        "    一觉回 50 精力+饱食8，每天一次（游戏日换班刷新）。精力上限按病症自动收窄（营养不良 −10 等）",
         "  畜栏 hut_ops barn erect → buy 牛|羊|猪|狗|兔|鸡|鸭|山羊|蜂箱 → feed / collect / shear / churn",
         "    churn 只搅山羊奶成奶酪（先买山羊再 collect；牛奶不能搅）",
         "  吉祥物 mascot adopt 名字 scout|lucky|compost · upkeep · train · feed",
@@ -291,7 +291,7 @@ async def relay_manual() -> str:
         "",
         "【生存】",
         "  饱食 / 雾智 / 档信 慢衰减，无硬死亡。低了更容易出意外、档口票打折",
-        "  回暖：gather / net / brew / amends / kitchen_ops eat / star_ops 围观；回精力：吃熟菜（22起）或 hut_ops 睡（床，50/20h）",
+        "  回暖：gather / net / brew / amends / kitchen_ops eat / star_ops 围观；回精力：吃熟菜（22起）或 hut_ops 睡（床，50/天）",
         "  意外/赶海/出海/上工可能致病 → visit_ops clinic treat（桥桥不赊账）",
         "  steward_ops guild 每日一轮工分票。等级跟累计入账走，steward_ops sheet 能看到",
         f"  徽章可选：{', '.join(BADGES)}",
@@ -501,7 +501,7 @@ async def peer_sheet(name: str) -> str:
 
 async def guild_shift(key_id: int) -> str:
     s = await require_steward(key_id)
-    day = db.now() // FORAGE_COOLDOWN_DAY
+    day = db.day_id()
     mult, note = survival.guild_ticket_multiplier(s)
     caravan = await events.guild_pulse_multiplier()
     gain = max(1, int(GUILD_TICKETS * mult * caravan))
@@ -1234,8 +1234,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
         return f"{base}\n{extra}" if extra else base
 
     if verb == "forage":
-        today = db.now() // FORAGE_COOLDOWN_DAY
-        last = s["forage_at"] // FORAGE_COOLDOWN_DAY if s["forage_at"] else 0
+        today = db.day_id()
+        last = db.day_id(s["forage_at"]) if s["forage_at"] else 0
         if today <= last:
             raise ValueError("今日已在边际采过，明天再来")
         roll = random.choices(FORAGE_LOOT, weights=[x[3] for x in FORAGE_LOOT])[0]

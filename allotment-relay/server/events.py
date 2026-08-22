@@ -9,7 +9,7 @@ from .catalog import CROPS, ITEM_NAMES
 
 
 def _day_id() -> int:
-    return db.now() // config.FORAGE_COOLDOWN_DAY
+    return db.day_id()
 
 
 def _roll_multiplier(steward: dict[str, Any], hut_event_mult: float = 1.0) -> float:

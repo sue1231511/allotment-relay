@@ -12,7 +12,7 @@ from .game import require_steward
 
 
 def _day_id() -> int:
-    return db.now() // config.FORAGE_COOLDOWN_DAY
+    return db.day_id()
 
 
 async def has_guard_dog(conn: aiosqlite.Connection, steward_id: int) -> bool:

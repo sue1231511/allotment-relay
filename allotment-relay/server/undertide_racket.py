@@ -19,7 +19,7 @@ RACKET_KINDS = ("buy", "sell")
 
 
 def _day_id() -> int:
-    return db.now() // 86400
+    return db.day_id()
 
 
 def _item_label(item_key: str) -> str:
