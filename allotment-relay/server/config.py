@@ -191,7 +191,9 @@ CABINET_SLOTS_MAX = 60
 
 # 集市 — 玩家互卖，建议价参考 catalog
 MARKET_FEE = 2
-MARKET_LIST_MAX = 6
+MARKET_LIST_MAX = 6          # 基础挂单格
+MARKET_LIST_SLOTS_MAX = 12     # 扩格后上限
+MARKET_SLOT_COST = 15          # 每加 1 格
 
 # 畜栏
 BARN_SLOTS = 6
