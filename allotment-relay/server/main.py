@@ -128,6 +128,18 @@ class LoungePostRequest(BaseModel):
     message: str
 
 
+class LoungeNameRequest(BaseModel):
+    api_key: str
+    name: str
+
+
+class LoungeModRequest(BaseModel):
+    key: str
+    action: str
+    target: str
+    minutes: int = 60
+
+
 class EateryOrderRequest(BaseModel):
     api_key: str
     shop: str
@@ -242,6 +254,40 @@ async def lounge_post(body: LoungePostRequest):
     try:
         msg = await lounge.human_post(body.api_key.strip(), body.message)
         return msg
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/lounge/name")
+async def lounge_set_name(body: LoungeNameRequest):
+    from . import lounge
+    try:
+        return await lounge.human_set_name(body.api_key.strip(), body.name)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/lounge/mod")
+async def lounge_mod(body: LoungeModRequest):
+    from . import config, lounge
+    if not config.LOUNGE_MOD_KEY or body.key != config.LOUNGE_MOD_KEY:
+        raise HTTPException(status_code=403, detail="mod key 无效")
+    if not config.LOUNGE_MOD_NAMES:
+        raise HTTPException(status_code=503, detail="未配置 LOUNGE_MOD_NAMES")
+    actor = {"name": next(iter(config.LOUNGE_MOD_NAMES))}
+    try:
+        action = body.action.lower()
+        if action == "mute":
+            msg = await lounge._mod_mute(actor, body.target, body.minutes)
+        elif action in ("unmute", "解禁"):
+            msg = await lounge._mod_unmute(actor, body.target)
+        elif action in ("ban", "kick"):
+            msg = await lounge._mod_ban(actor, body.target)
+        elif action in ("unban", "解踢"):
+            msg = await lounge._mod_unban(actor, body.target)
+        else:
+            raise ValueError("action: mute / unmute / ban / unban")
+        return {"ok": True, "message": msg}
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

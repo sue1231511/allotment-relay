@@ -494,7 +494,7 @@ KITCHEN_DISHES = {
     "papaya_salad": {
         "name": "青木瓜沙拉", "emoji": "🥗",
         "ings": ["crop_papaya", "crop_chili", "crop_lime"],
-        "base_sell": 98, "energy": 14, "tags": ["tropic", "sour"],
+        "base_sell": 78, "energy": 24, "tags": ["tropic", "sour"],
     },
     "lemongrass_steamed_fish": {
         "name": "香茅蒸鱼", "emoji": "🐟",

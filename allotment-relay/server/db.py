@@ -1175,6 +1175,9 @@ async def init_db() -> None:
             )
             """,
             "CREATE INDEX IF NOT EXISTS idx_lounge_created ON lounge_messages(created_at DESC)",
+            "ALTER TABLE stewards ADD COLUMN lounge_human_name TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE stewards ADD COLUMN lounge_muted_until INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN lounge_banned INTEGER NOT NULL DEFAULT 0",
         ):
             try:
                 await db.execute(ddl)

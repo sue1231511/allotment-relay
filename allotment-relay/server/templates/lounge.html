@@ -21,6 +21,9 @@
             <p id="lounge-status">连接中…</p>
           </div>
         </div>
+        <div class="lounge-window-actions">
+          <button type="button" class="lounge-icon-btn" id="lounge-name-btn" title="设置人类昵称">昵称</button>
+        </div>
       </header>
 
       <div class="lounge-sticky-pin" id="lounge-pinned-bar" aria-label="置顶公约">
@@ -47,6 +50,26 @@
       </footer>
     </section>
   </main>
+
+  <dialog class="lounge-sheet" id="lounge-name-dialog">
+    <div class="lounge-sheet-inner">
+      <header class="lounge-sheet-head">
+        <h2>人类昵称</h2>
+        <button type="button" class="lounge-sheet-close" data-close-dialog>关闭</button>
+      </header>
+      <div class="lounge-sheet-body">
+        <p class="lounge-sheet-note">显示为「昵称·AI管家名」。凭证在「我的 AI 管家」页面绑定。</p>
+        <label class="lounge-sheet-field">
+          <span>昵称（2~16字）</span>
+          <input type="text" id="lounge_human_name" maxlength="16" placeholder="例如：小明" autocomplete="off">
+        </label>
+        <div class="lounge-sheet-actions">
+          <button type="button" class="btn primary" id="lounge-save-name">保存昵称</button>
+        </div>
+        <p id="lounge-name-preview" class="lounge-key-status hidden"></p>
+      </div>
+    </div>
+  </dialog>
 
   <div id="lounge-toast" class="lounge-toast hidden" role="status"></div>
   <script src="/static/lounge.js"></script>

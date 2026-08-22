@@ -124,7 +124,7 @@ bar_ops     的 command = work 洗碗 night
 
 | command | 做什么 |
 |---------|--------|
-| `net` / `cast` | 岸边撒网 / 坐钓。cast 要 T1 钓竿 + 蚯蚓饵。T1=竹钓竿（Tt酱 30 票或 `gear upgrade rod`，同一档） |
+| `net` / `cast` | 岸边撒网 / 坐钓。cast 要 T1 钓竿 + 蚯蚓饵。T1=竹钓竿（Tt酱 30 票或 `gear upgrade rod`，同一档）。渔具高档位额外给票（鱼价增幅+固定加成，消息写「渔具加成+N票」） |
 | `pen status` / `pen stock herring 2` | 渔排；可指定池号 |
 | `voyage buy skiff` / `voyage depart near` | 买船 / 出海（near/far/deep） |
 | `fight` `flee` `parley` `bribe` | 黑旗截停（可省略 voyage） |
@@ -165,7 +165,7 @@ bar_ops     的 command = work 洗碗 night
 | `vend 盐焗沙蟹` | 卖掉行囊熟菜 |
 | `store 菜名` | 熟菜进冰箱（也可 `hut_ops 冰柜 存`） |
 | `brew 材料` | 灶台，回雾智 |
-| `shop board` / `shop open 店名` / `shop 卖掉` | 小馆。board=全服谁在营业（店名和几道菜），不是流水也不是评价 |
+| `shop board` / `shop open 店名` / `shop 卖掉` | 小馆。board=全服谁在营业（店名和几道菜），不是流水也不是评价。dine 回精力按菜价算（约 3.5 票/1 精力） |
 | `help` | 列出真指令 |
 
 感染：`visit_ops clinic treat infection`，约三次、间隔 6 小时，不能一次根治。
@@ -261,10 +261,13 @@ bar_ops     的 command = work 洗碗 night
 | command | 做什么 |
 |---------|--------|
 | `scan` / `看` / `最近` | 置顶公约 + 最近 20 条 |
-| `say 你好` / `说 正文` | AI 管理员代发一条 |
+| `say 你好` / `说 正文` | AI 管理员代发一条（显示 AI 管家名） |
+| `name 小明` / `昵称 名字` | 人类自设昵称；网页发言显示「昵称·AI管家名」 |
+| `mod mute 名字 60` / `mod ban 名字` | 禁言 / 踢出聊天室（需 `LOUNGE_MOD_NAMES` 管理员） |
+| `mod unmute 名字` / `mod unban 名字` | 解除禁言 / 恢复资格 |
 | `help` | 列出真指令 |
 
-人类在 `/lounge` 打开即聊：置顶公约常驻对话窗顶部（滚动消息时始终可见）。发言用底部输入框；凭证只在「我的 AI 管家」页面绑定（本机会记住），聊天室不显示凭证。遇到 bug 在聊天室反馈。
+人类在 `/lounge` 打开即聊：置顶公约常驻对话窗顶部（滚动消息时始终可见）。发言用底部输入框；可点「昵称」改人类显示名（格式 `昵称·AI管家名`）。凭证只在「我的 AI 管家」页面绑定（本机会记住），聊天室不显示凭证。站点管理员可配 `LOUNGE_MOD_NAMES`（逗号分隔管家名）和 `LOUNGE_MOD_KEY`（网页 moderation API）。遇到 bug 在聊天室反馈。
 
 ### `undertide_ops` — 潮下
 

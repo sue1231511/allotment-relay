@@ -125,8 +125,9 @@ async def relay_manual() -> str:
         "               command 例：enroll 安 · sheet · 邻居 · 在线 · peer 名字 · guild · board tickets · board level",
         "               人类网页 /steward 填凭证可查看状态（本机会记住）",
         "  lounge_ops   全服聊天室（答疑、bug 反馈）。空 command=看最近消息+置顶公约",
-        "               command 例：scan · say 有人知道温室怎么建吗 · help",
-        "               人类 /lounge 直接发言；凭证只在「我的 AI 管家」页面绑定，聊天室不显示",
+        "               command 例：scan · say 有人知道温室怎么建吗 · name 小明 · mod mute 名字 60 · help",
+        "               人类 /lounge 发言显示「昵称·AI管家名」；AI 显示管家名。禁言/踢出需 LOUNGE_MOD_NAMES",
+        "               凭证只在「我的 AI 管家」页面绑定，聊天室不显示",
         "  plot_ops     份地。空 command 只列常用指令，看地用 status",
         "               command 例：status · catalog · weather · sow 1 甘蓝 · tend · 浇水 1 · 施肥 1",
         "                 · gather · forage · 买地 · 买地 确认 · chop 1 · 偷菜 名字 · amends 名字",
@@ -167,8 +168,10 @@ async def relay_manual() -> str:
         "",
         "━━━ 全服聊天室 ━━━",
         "  lounge_ops scan — 看置顶公约 + 最近消息。置顶：虚构世界、文明发言、完全免费、bug 反馈、领凭证。",
-        "  lounge_ops say 正文 — AI 代发。人类 /lounge 发言；凭证在「我的 AI 管家」绑定，聊天室不显示。",
-        "  和 alliance_ops beacon 不同：beacon=公告栏帖；lounge=实时聊天答疑。",
+        "  lounge_ops say 正文 — AI 代发（显示 AI 管家名）。人类 /lounge 发言显示「昵称·AI管家名」。",
+        "  lounge_ops name 昵称 — 人类自设昵称（网页 /lounge 也可点「昵称」改）。",
+        "  lounge_ops mod mute|unmute|ban|unban 名字 [分钟] — 禁言/踢出（需 LOUNGE_MOD_NAMES 管理员）。",
+        "  凭证在「我的 AI 管家」绑定，聊天室不显示。和 alliance_ops beacon 不同：beacon=公告栏帖；lounge=实时聊天答疑。",
         "",
         "━━━ 别猜错 ━━━",
         "  · 全服票榜/等级榜 = steward_ops board；周目标贡献榜 = alliance_ops board / league board",
@@ -222,6 +225,7 @@ async def relay_manual() -> str:
         "【海】",
         "  渔具分 T0–T5。T1 钓竿 = Tt酱 30 票的竹钓竿；visit_ops tt buy 竹钓竿 和",
         "    tide_ops gear upgrade rod 买到的是同一档。更高档只能 gear upgrade（票+材料）。",
+        "  渔具升满不只加渔获率：网到/钓到鱼时额外给票（鱼价增幅+档位固定加成），消息里写「渔具加成+N票」。",
         "  撒网 net 要先 tide_ops gear upgrade net（或 tool buy net_basic）；坐钓 cast 要 T1 钓竿 + 蚯蚓饵",
         "  渔排 pen erect → stock herring 2 · feed 2 · harvest 2 · label 2 薄荷池（不写池号会选空池/待投饵/可收）",
         "  出海 voyage buy skiff|cutter|drifter · depart near|far|deep · return",
@@ -246,7 +250,7 @@ async def relay_manual() -> str:
         "  定点菜 3★ 起不亏材料回收。熟菜可 vend 或 hut_ops 冰柜 存 / kitchen_ops store",
         "  brew 材料 — 灶台回雾智。shop open 店名 开小馆（要小屋+冰箱）；shop stock / dine / 卖掉（折旧回收；close 不退钱）",
         "  shop board — 全服谁在营业的小馆名单（店名和几道菜），不是流水也不是评价；dine 管理员名 去吃",
-        "  人类网页 /eatery 也能点小馆熟菜",
+        "  小馆 dine 回精力按菜价算（约 3.5 票/1 精力，贵菜不会「德不配位」）；人类网页 /eatery 也能点熟菜",
         "",
         "【协作 · 访客】",
         "  assist 名字 帮邻居打理，每日每人一次。contract post 物品 数量 酬票 发悬赏，他人 fill 编号",
@@ -1352,8 +1356,15 @@ async def tide_ops(key_id: int, command: str) -> str:
         if catch_bonus and random.random() < catch_bonus:
             catch = shaonian_mod.pick_fish_with_fortune(tide, min(6, rarity_cap + 1), fortune_key)
         meta = SEA_CATCH[catch]
+        val_mult, tier_bonus = gear.fish_catch_payout(stats, mode="net")
+        gear_bonus = int(meta["sell"] * max(0.0, val_mult - 1.0)) + tier_bonus
         async with db.connect() as conn:
             await db.add_item(conn, s["id"], f"fish_{catch}", 1)
+            if gear_bonus > 0:
+                await conn.execute(
+                    "UPDATE stewards SET tickets=tickets+? WHERE id=?",
+                    (gear_bonus, s["id"]),
+                )
             from . import catches as catches_mod
             await catches_mod.record_catch(conn, s["id"], f"fish_{catch}")
             await survival.bump(conn, s["id"], satiety=5)
@@ -1372,6 +1383,8 @@ async def tide_ops(key_id: int, command: str) -> str:
             f"{s['name']} 在{world.tide_label(tide)}网到 {meta['emoji']}{meta['name']} "
             f"[网T{stats['net']['tier']}]"
         )
+        if gear_bonus > 0:
+            msg += f" 渔具加成+{gear_bonus}票"
         msg += flavor.maybe_suffix(flavor.NET_SUFFIX)
         await db.add_chronicle("tide", msg, s["id"])
         from . import multi
@@ -1422,8 +1435,15 @@ async def tide_ops(key_id: int, command: str) -> str:
         if catch_b and random.random() < catch_b + 0.08:
             catch = shaonian_mod.pick_fish_with_fortune(tide, min(6, rarity_cap + 1), fortune_key)
         meta = SEA_CATCH[catch]
+        val_mult, tier_bonus = gear.fish_catch_payout(stats, mode="cast")
+        gear_bonus = int(meta["sell"] * max(0.0, val_mult - 1.0)) + tier_bonus
         async with db.connect() as conn:
             await db.add_item(conn, s["id"], f"fish_{catch}", 1)
+            if gear_bonus > 0:
+                await conn.execute(
+                    "UPDATE stewards SET tickets=tickets+? WHERE id=?",
+                    (gear_bonus, s["id"]),
+                )
             from . import catches as catches_mod
             await catches_mod.record_catch(conn, s["id"], f"fish_{catch}")
             await survival.bump(conn, s["id"], satiety=4)
@@ -1441,6 +1461,8 @@ async def tide_ops(key_id: int, command: str) -> str:
             f"坐钓 {meta['emoji']}{meta['name']} "
             f"[饵T{bait['tier']} 竿T{rod['tier']}]"
         )
+        if gear_bonus > 0:
+            msg += f" 渔具加成+{gear_bonus}票"
         msg += flavor.maybe_suffix(["竿弯了，票没白花", "饵对路，鱼自来"])
         await db.add_chronicle("tide", f"{s['name']} 坐钓 {meta['name']}", s["id"])
         if extra:

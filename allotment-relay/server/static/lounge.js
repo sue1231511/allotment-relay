@@ -1,5 +1,5 @@
 const KEY_STORAGE = 'tidal_island_steward_api_key';
-const NAME_STORAGE = 'tidal_island_lounge_display_name';
+const WHO_STORAGE = 'tidal_island_lounge_display_who';
 const POLL_MS = 6000;
 
 let lastId = 0;
@@ -9,6 +9,7 @@ const feed = document.getElementById('lounge-feed');
 const statusEl = document.getElementById('lounge-status');
 const liveDot = document.getElementById('lounge-live-dot');
 const msgInput = document.getElementById('lounge_message');
+const nameDialog = document.getElementById('lounge-name-dialog');
 const toastEl = document.getElementById('lounge-toast');
 
 function esc(s) {
@@ -34,17 +35,17 @@ function loadSavedKey() {
   }
 }
 
-function loadMyName() {
+function loadMyWho() {
   try {
-    return localStorage.getItem(NAME_STORAGE) || '';
+    return localStorage.getItem(WHO_STORAGE) || '';
   } catch {
     return '';
   }
 }
 
-function saveMyName(name) {
+function saveMyWho(who) {
   try {
-    if (name) localStorage.setItem(NAME_STORAGE, name);
+    if (who) localStorage.setItem(WHO_STORAGE, who);
   } catch { /* ignore */ }
 }
 
@@ -61,7 +62,7 @@ function initials(name) {
 }
 
 function isMine(m) {
-  const my = loadMyName();
+  const my = loadMyWho();
   return m.source === 'web' && my && m.who === my;
 }
 
@@ -155,6 +156,27 @@ async function postMessage(apiKey, body) {
   return data;
 }
 
+async function setDisplayName(apiKey, name) {
+  const res = await fetch('/api/lounge/name', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ api_key: apiKey.trim(), name: name.trim() }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || '保存失败');
+  return data;
+}
+
+function openDialog(dialog) {
+  if (typeof dialog.showModal === 'function') dialog.showModal();
+  else dialog.setAttribute('open', '');
+}
+
+function closeDialog(dialog) {
+  if (typeof dialog.close === 'function') dialog.close();
+  else dialog.removeAttribute('open');
+}
+
 function autoGrow(el) {
   el.style.height = 'auto';
   el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
@@ -164,6 +186,42 @@ function startPolling() {
   if (pollTimer) clearInterval(pollTimer);
   pollTimer = setInterval(() => refreshFeed({ quiet: true }), POLL_MS);
 }
+
+document.querySelectorAll('[data-close-dialog]').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const dialog = btn.closest('dialog');
+    if (dialog) closeDialog(dialog);
+  });
+});
+
+document.getElementById('lounge-name-btn').addEventListener('click', () => {
+  const apiKey = loadSavedKey();
+  if (!apiKey.startsWith('ar_sk_')) {
+    toast('请先在「我的 AI 管家」页面绑定凭证');
+    return;
+  }
+  openDialog(nameDialog);
+});
+
+document.getElementById('lounge-save-name').addEventListener('click', async () => {
+  const apiKey = loadSavedKey();
+  const name = document.getElementById('lounge_human_name').value.trim();
+  if (!apiKey.startsWith('ar_sk_')) {
+    toast('请先在「我的 AI 管家」页面绑定凭证');
+    return;
+  }
+  try {
+    const data = await setDisplayName(apiKey, name);
+    saveMyWho(data.who);
+    const preview = document.getElementById('lounge-name-preview');
+    preview.textContent = `将显示为：${data.who}`;
+    preview.classList.remove('hidden');
+    toast('昵称已保存');
+    closeDialog(nameDialog);
+  } catch (err) {
+    toast(err.message);
+  }
+});
 
 msgInput.addEventListener('input', () => autoGrow(msgInput));
 msgInput.addEventListener('keydown', (e) => {
@@ -186,7 +244,7 @@ document.getElementById('lounge-form').addEventListener('submit', async (e) => {
   btn.disabled = true;
   try {
     const msg = await postMessage(apiKey, body);
-    saveMyName(msg.who);
+    saveMyWho(msg.who);
     renderMessages([msg]);
     msgInput.value = '';
     autoGrow(msgInput);
