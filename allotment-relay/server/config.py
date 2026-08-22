@@ -87,10 +87,19 @@ VOYAGE_ROUTES = {
     "deep": {"label": "深漂", "duration": 2400, "fuel": 35, "min_boat": "drifter", "fail": 0.34},
 }
 
-EVENT_ROLL_CHANCE = 0.08
-EVENT_DAILY_CAP = 4
+# 随机事件整体倍率（+30% 触发与上限）
+EVENT_RATE_MULT = 1.3
+
+
+def _event_rate(x: float) -> float:
+    return round(x * EVENT_RATE_MULT, 4)
+
+
+EVENT_ROLL_CHANCE = _event_rate(0.08)
+EVENT_DAILY_CAP = max(1, round(4 * EVENT_RATE_MULT))
 EVENT_GOOD_SHARE = 0.30
-WORLD_PULSE_CHANCE = 0.05
+SCRUMP_EVENT_CHANCE = _event_rate(0.18)
+WORLD_PULSE_CHANCE = _event_rate(0.05)
 WORLD_PULSE_DURATION = WEATHER_CYCLE
 
 # 休闲生存感 — 慢衰减、无硬死亡
@@ -106,8 +115,8 @@ STANDING_SHUT = 15
 # 身体状况 / 诊所
 START_HEALTH = 100
 HEALTH_LOW = 40
-AILMENT_ROLL_CHANCE = 0.12
-AILMENT_BAD_EVENT_CHANCE = 0.13
+AILMENT_ROLL_CHANCE = _event_rate(0.12)
+AILMENT_BAD_EVENT_CHANCE = _event_rate(0.13)
 # 生肉感染：只有 meat_*（兔肉/猪肉）生吃会滚；作物/生鱼/野薄荷安全
 RAW_MEAT_INFECT_CHANCE = 0.35
 INFECTION_TREAT_COOLDOWN = 21600  # 同一次感染两次治疗至少隔 6 小时
@@ -115,22 +124,28 @@ INFECTION_DRAIN_EVERY = 1800      # 每 30 分钟按档位扣精力
 
 # 海上遭遇 — 归港时随机，非回合制海战
 NAVAL_ENCOUNTER_CHANCE = {
-    "near": 0.22,
-    "far": 0.38,
-    "deep": 0.48,
+    "near": _event_rate(0.22),
+    "far": _event_rate(0.38),
+    "deep": _event_rate(0.48),
 }
 
 # 出海钓鱼 — 未命名小鱼（有腿蓝鱼）随机遭遇
 LEGGED_FISH_CHANCE = {
-    "near": 0.05,
-    "far": 0.07,
-    "deep": 0.10,
+    "near": _event_rate(0.05),
+    "far": _event_rate(0.07),
+    "deep": _event_rate(0.10),
 }
-LEGGED_FISH_RARE_GIFT_CHANCE = 0.14
+LEGGED_FISH_RARE_GIFT_CHANCE = _event_rate(0.14)
 LEGGED_FISH_GRAB_ENERGY = 30
 
 # 份地野生动物 / 田间随机
-FARM_EVENT_DAILY_CAP = 4
+FARM_EVENT_DAILY_CAP = max(1, round(4 * EVENT_RATE_MULT))
+FARM_TRIGGER_CHANCE = {
+    "sow": _event_rate(0.05),
+    "tend": _event_rate(0.08),
+    "gather": _event_rate(0.06),
+}
+FARM_AILMENT_CHANCE = _event_rate(0.14)
 # 浇水/施肥砍生长时间（相对 grow_target）；一茬各一次
 WATER_CUT_RATE = 0.18
 WATER_GROW_MULT = 0.90
@@ -139,14 +154,14 @@ MIN_GROW_TARGET = 120
 FERTILIZE_COMPOST_CUT = 0.12
 
 # 咕咕斑鸠 — sow/tend 昼间盯梢，可忽略或驱赶
-GUGU_DOVE_STALK_CHANCE = 0.10
+GUGU_DOVE_STALK_CHANCE = _event_rate(0.10)
 GUGU_DOVE_DRIVE_FAIL_CHANCE = 0.20
 GUGU_DOVE_EAT_YIELD = 0.60
 GUGU_DOVE_HELP_YIELD = 1.50
 
 # 稀有公共资源 — 随机时间上线，全服争抢
 COMMONS_MAX_ACTIVE = 4
-COMMONS_SPAWN_CHANCE = 0.09
+COMMONS_SPAWN_CHANCE = _event_rate(0.09)
 COMMONS_APPEAR_MIN = 120
 COMMONS_APPEAR_MAX = 2400
 COMMONS_LIVE_MIN = 480
@@ -154,15 +169,15 @@ COMMONS_LIVE_MAX = 3600
 COMMONS_CLAIM_FEE = 2
 
 # 意外发现 — 挖到/钓到/翻出
-DISCOVERY_DAILY_CAP = 5
+DISCOVERY_DAILY_CAP = max(1, round(5 * EVENT_RATE_MULT))
 DISCOVERY_CHANCE = {
-    "tend": 0.11,
-    "forage": 0.14,
-    "net": 0.13,
-    "gather": 0.10,
-    "pen_harvest": 0.09,
-    "voyage_return": 0.08,
-    "beach": 0.12,
+    "tend": _event_rate(0.11),
+    "forage": _event_rate(0.14),
+    "net": _event_rate(0.13),
+    "gather": _event_rate(0.10),
+    "pen_harvest": _event_rate(0.09),
+    "voyage_return": _event_rate(0.08),
+    "beach": _event_rate(0.12),
 }
 
 # 岸畔小屋
@@ -206,7 +221,7 @@ BOSS_DAILY_ATTACKS = 8
 
 # 漂流瓶
 BOTTLE_LEAVE_DAILY = 3
-BOTTLE_FISH_CHANCE = 0.12
+BOTTLE_FISH_CHANCE = _event_rate(0.12)
 
 # 滨海酒吧 — 暮/夜上工，票少补贴厚；每 2 天必须 shift 一次
 BAR_SHIFT_DAILY = 4
@@ -246,7 +261,7 @@ BAR_OOPS_EVENTS = [
 ]
 
 # 栗栗 — 流动贝壳商人（羊驼商人式随机刷新）
-LILI_SPAWN_CHANCE = 0.08
+LILI_SPAWN_CHANCE = _event_rate(0.08)
 LILI_VISIT_MIN = 2400
 LILI_VISIT_MAX = 5400
 LILI_OFFERS_MIN = 4
@@ -283,7 +298,7 @@ HAIL_FLEE_ENERGY = 8
 HAIL_THREAT = {"near": 38, "far": 54, "deep": 70}
 
 # 拾叶 — 巷口NPC，碰到随机小偷/乞丐/碰瓷/敲诈
-SHIYE_BUMP_CHANCE = 0.05
+SHIYE_BUMP_CHANCE = _event_rate(0.05)
 SHIYE_DAILY_MAX = 3
 SHIYE_TRIGGERS = {"sow", "tend", "gather", "forage", "guild", "net", "beach"}
 SHIYE_BEG_TICKETS = (3, 8)
@@ -294,13 +309,13 @@ SHIYE_EXTORT_TICKETS = (12, 22)
 # Tt酱杂货店 — 好感 / 进店赠礼 / 路上随机
 # 满心 7.5 折很狠，送礼故意慢：每日 3 次、高心衰减、票难换点
 TT_AFFINITY_MAX = 100
-TT_MOOD_CHANCE = 0.10
+TT_MOOD_CHANCE = _event_rate(0.10)
 TT_GIFT_DAILY_CAP = 3
 TT_GIFT_GAIN_CAP = 6
 TT_TICKET_GIFT_MIN = 12
 TT_TICKET_PER_POINT = 20
 TT_TICKET_GAIN_CAP = 3
-TT_BUMP_CHANCE = 0.03
+TT_BUMP_CHANCE = _event_rate(0.03)
 TT_BUMP_DAILY_MAX = 1
 
 # 小橘 — 真人扮演的女明星（酒馆驻场 + 小剧场专场）
@@ -331,7 +346,7 @@ STAR_WATCH_GAIN = {"great": 20, "good": 15, "normal": 10, "bad": -5, "awful": -1
 STAR_FAN_WATCH_BONUS = 10
 STAR_TIP_WATCH_STEP = 20
 STAR_STAGE_WATCH_BONUS = 3    # 专场的票房子更值：围观回精力再+3
-STAR_WATCH_GIFT_CHANCE = 0.18   # 观众小概率捡到台下掉的花
+STAR_WATCH_GIFT_CHANCE = _event_rate(0.18)   # 观众小概率捡到台下掉的花
 STAR_SETTLE_GAIN = 2      # 开嗓当晚跨天 +2
 STAR_SETTLE_DECAY = 1     # 每日热度衰减 -1
 STAR_POST_DAILY = 5       # 面板发动态日上限

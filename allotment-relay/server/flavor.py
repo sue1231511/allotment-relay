@@ -128,6 +128,9 @@ WILDLIFE_NAMES = {
     "worm": "蚯蚓",
     "crow": "乌鸦",
     "dove": "斑鸠",
+    "crab": "潮蟹",
+    "moth": "夜蛾",
+    "turtle": "石龟",
 }
 
 WILDLIFE_RABBIT = [
@@ -190,6 +193,30 @@ WILDLIFE_WORM = [
 WILDLIFE_CROW = [
     "乌鸦盯 #{slot} {crop}，没偷成但吓掉一片叶——tend 安抚",
     "#{slot} 乌鸦围观，{crop} 压力 +1，你 tend -1",
+]
+
+WILDLIFE_CRAB = [
+    "潮蟹横爬 #{slot}，钳子试吃 {crop}——tend 收拾",
+    "#{slot} 蟹脚印满地，{crop}：我咸了",
+    "退潮蟹来 #{slot} 串门，{crop} 少了几片叶",
+]
+
+WILDLIFE_MOTH = [
+    "夜蛾扑 #{slot} {crop}，粉落一地——tend 清理",
+    "#{slot} 蛾子开灯派对，{crop}：我招谁了",
+    "蛾翅扫过 #{slot}，{crop} 生长条被拖慢",
+]
+
+WILDLIFE_TURTLE = [
+    "石龟慢爬 #{slot}，顺便帮你 tend 了一圈——{crop}：谢谢",
+    "#{slot} 来了石龟，啃虫不啃苗，你省一次活",
+    "石龟在 #{slot} 边晒背，{crop} 今天安稳",
+]
+
+LAND_SCARECROW_FALL = [
+    "风把 #{slot} 稻草人吹倒了——得重 tend",
+    "#{slot} 稻草人躺平，鸟今天很嚣张",
+    "稻草人罢工倒在 #{slot}，苗：保护没了",
 ]
 
 DOVE_EVENT_LABELS = ["晨间斑鸠", "咕咕访客", "篱笆斑鸠", "份地闹钟"]
@@ -456,6 +483,19 @@ GOOD_TICKETS = [
     "退潮在台阶留 {n} 票，像小费，海偶尔讲武德",
     "联盟今天对你客气，+{n} 票——太阳打西边出来了",
     "风刮来 {n} 票，没追，钱自己落地，少见",
+    "篱笆外有人丢来 {n} 票，喊了句「谢了」就跑",
+]
+
+GOOD_MIST_WIT = [
+    "海雾突然散开，脑子清了一点，雾智 +{n}",
+    "老水手路过讲了句人话，雾智 +{n}——免费",
+    "潮声像白噪音，你突然想通一件事，雾智 +{n}",
+]
+
+GOOD_STANDING = [
+    "档口有人替你说了好话，档信 +{n}",
+    "巡查员今天没挑刺，还夸篱笆齐，档信 +{n}",
+    "邻居在公告栏替你点了个赞，档信 +{n}",
 ]
 
 GOOD_LOOT = [

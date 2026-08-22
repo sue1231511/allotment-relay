@@ -98,7 +98,7 @@ def generate_event(
         return None
 
     # 逾篱摘取 — 纯随机事件，不再靠手动指令
-    if allow_scrump and trigger in SCRUMP_TRIGGERS and not good and random.random() < 0.18:
+    if allow_scrump and trigger in SCRUMP_TRIGGERS and not good and random.random() < config.SCRUMP_EVENT_CHANCE:
         sub = "scrump_victim" if random.random() < 0.55 else "scrump_attempt"
         return GeneratedEvent(
             kind="bad",
@@ -143,6 +143,12 @@ def generate_event(
                 flavor.pick(flavor.LAND_DELAY_DETAIL),
                 slot=slot,
                 reason=flavor.pick(flavor.LAND_DELAY),
+            ))
+        elif domain == "land" and roll < 0.70:
+            effects.append("plot_delay")
+            detail_parts.append(flavor.fill(
+                flavor.pick(flavor.LAND_SCARECROW_FALL),
+                slot=slot,
             ))
         elif domain == "land":
             effects.append("steal_item")
@@ -260,11 +266,19 @@ def generate_event(
             item = ITEM_NAMES.get(f"fish_{fk}", fk)
             effects.append(f"loot:fish_{fk}:{qty}")
             detail_parts.append(flavor.fill(flavor.pick(flavor.GOOD_FISH), item=f"{item} x{qty}"))
-        elif roll < 0.72:
+        elif roll < 0.68:
             item, qty = random.choice(RANDOM_LOOT)
             iname = ITEM_NAMES.get(item, item)
             effects.append(f"loot:{item}:{qty}")
             detail_parts.append(flavor.fill(flavor.pick(flavor.GOOD_LOOT), item=f"{iname} x{qty}"))
+        elif roll < 0.82 and domain in {"land", "guild", "hearth"}:
+            wit = random.randint(4, 10)
+            effects.append(f"mist_wit:{wit}")
+            detail_parts.append(flavor.fill(flavor.pick(flavor.GOOD_MIST_WIT), n=wit))
+        elif roll < 0.90 and domain in {"land", "guild"}:
+            stand = random.randint(3, 8)
+            effects.append(f"standing:{stand}")
+            detail_parts.append(flavor.fill(flavor.pick(flavor.GOOD_STANDING), n=stand))
         else:
             bonus = random.randint(6, 14)
             effects.append(f"ticket_bonus:{bonus}")
@@ -431,6 +445,10 @@ def generate_world_pulse() -> dict[str, Any]:
         ("loot_surge", "good", "交换台台阶像退潮礼包区，捡到的算你眼神好"),
         ("red_tide", "bad", "渔排和网都不太给面子，今天宜躺"),
         ("calm_sea", "good", "出海报废略降，胆小船长也能装勇敢"),
+        ("warm_breeze", "good", "暖风吹过份地，打理时偶尔多捡到一点"),
+        ("fog_bank", "bad", "浓雾缠岸，赶海和撒网都容易空欢喜"),
+        ("merchant_caravan", "good", "流动商贩路过档口，票子像被风捎来"),
+        ("gnat_swarm", "bad", "小虫成团，露天作物得再 tend 一遍"),
     ]
     effect, kind, hint = random.choice(effect_types)
 
@@ -441,6 +459,10 @@ def generate_world_pulse() -> dict[str, Any]:
         "loot_surge": ["玻璃潮", "漂物汛", "宝箱潮", "退潮大清仓"],
         "red_tide": ["赤潮", "藻华", "紫水带", "海的颜色不对"],
         "calm_sea": ["平流", "镜海", "无风带", "海面躺平"],
+        "warm_breeze": ["暖风带", "阳面回温", "软风过境", "晒被天"],
+        "fog_bank": ["雾墙", "贴岸浓雾", "能见度告急", "海雾结账"],
+        "merchant_caravan": ["流动商贩", "驮货驴队", "档口巡游", "票子顺风车"],
+        "gnat_swarm": ["小虫汛", "蚜虫云", "飞虫编队", "嗡嗡编队"],
     }
     verbs = ["掠过", "笼罩", "扫过", "渗入", "降临在", "打卡"]
     label = flavor.pick(subjects.get(effect, ["异象"]))

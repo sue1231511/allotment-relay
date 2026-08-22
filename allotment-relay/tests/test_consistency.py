@@ -153,6 +153,7 @@ def test_relay_manual_covers_systems() -> None:
         "dig 和 probe 都关",
         "能直接送票",
         "tote_ops gifts",
+        "随机事件整体 +30%",
         "旧史文本",
         "不是流水",
         "真人在面板",

@@ -165,13 +165,34 @@ WILDLIFE = [
         "kind": "bad",
         "apply": "crow",
     },
+    {
+        "key": "crab",
+        "weight": 8,
+        "tags": {"sea", "berry", "leaf"},
+        "greenhouse": False,
+        "kind": "bad",
+        "apply": "crab",
+    },
+    {
+        "key": "moth",
+        "weight": 9,
+        "tags": {"leaf", "legume", "berry"},
+        "greenhouse": True,
+        "kind": "bad",
+        "apply": "moth",
+    },
+    {
+        "key": "turtle",
+        "weight": 5,
+        "tags": {"sea", "legume"},
+        "greenhouse": False,
+        "kind": "good",
+        "apply": "turtle",
+        "day_only": True,
+    },
 ]
 
-TRIGGER_CHANCE = {
-    "sow": 0.05,
-    "tend": 0.08,
-    "gather": 0.06,
-}
+TRIGGER_CHANCE = config.FARM_TRIGGER_CHANCE
 
 
 def _day_id() -> int:
@@ -379,7 +400,7 @@ def _wildlife_pool(plot: dict[str, Any]) -> list[dict[str, Any]]:
             continue
         pool.append(w)
     if plot.get("scarecrow"):
-        filtered = [w for w in pool if w["key"] not in ("crow", "gull")]
+        filtered = [w for w in pool if w["key"] not in ("crow", "gull", "moth")]
         if filtered:
             pool = filtered
     return pool or [w for w in WILDLIFE if not w["tags"]]
@@ -468,6 +489,19 @@ async def _apply_wildlife(
     if apply == "crow":
         await conn.execute("UPDATE parcels SET tended=0 WHERE id=?", (plot["id"],))
         return flavor.fill(flavor.pick(flavor.WILDLIFE_CROW), slot=slot, crop=meta["name"])
+    if apply == "crab":
+        await conn.execute("UPDATE parcels SET tended=0 WHERE id=?", (plot["id"],))
+        return flavor.fill(flavor.pick(flavor.WILDLIFE_CRAB), slot=slot, crop=meta["name"])
+    if apply == "moth":
+        delay = random.randint(120, 300)
+        await conn.execute(
+            "UPDATE parcels SET tended=0, grow_target=COALESCE(NULLIF(grow_target,0), ?)+? WHERE id=?",
+            (meta["grow"], delay, plot["id"]),
+        )
+        return flavor.fill(flavor.pick(flavor.WILDLIFE_MOTH), slot=slot, crop=meta["name"])
+    if apply == "turtle":
+        await conn.execute("UPDATE parcels SET tended=1 WHERE id=?", (plot["id"],))
+        return flavor.fill(flavor.pick(flavor.WILDLIFE_TURTLE), slot=slot, crop=meta["name"])
 
     who = flavor.WILDLIFE_NAMES.get(key, "野家伙")
     return f"#{slot} 来了{who}，苗：我看见了"
@@ -528,7 +562,7 @@ async def roll_farm_event(
     farm_ill = None
     if wild["kind"] in ("bad", "neutral") and wild["key"] in ("rabbit", "boar", "slug"):
         farm_ill = await health.maybe_roll_ailment(
-            conn, steward["id"], "farm_wild", chance=0.14, source="farm",
+            conn, steward["id"], "farm_wild", chance=config.FARM_AILMENT_CHANCE, source="farm",
         )
 
     label = flavor.pick(
