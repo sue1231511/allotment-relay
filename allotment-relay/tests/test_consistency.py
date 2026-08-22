@@ -108,7 +108,7 @@ def test_mcp_descriptions() -> None:
     kitchen = mcp._tool_manager.get_tool("kitchen_ops")
     k_blob = f"{kitchen.description}\n{(kitchen.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
     assert "shop stock" in k_blob
-    assert "参考价" in k_blob
+    assert "价格自定" in k_blob or "每天 10 次" in k_blob
     assert "回收" in k_blob
 
     manual = mcp._tool_manager.get_tool("relay_manual")
@@ -142,6 +142,8 @@ def test_relay_manual_covers_systems() -> None:
         "market ",
         "market 扩",
         "brew",
+        "每天 10 次",
+        "每天 24 次",
         "shop open",
         "shop stock 菜名 [价格]",
         "价格自定",

@@ -360,23 +360,35 @@ async def fridge_take(s: dict[str, Any], token: str, qty: int = 1) -> str:
     return f"从冰箱取出 {_fridge_label(picked['dish_key'], picked['stars'])} x{qty}，回行囊"
 
 
-async def _can_cook(conn: aiosqlite.Connection, steward_id: int) -> bool:
+async def _cook_counts(conn: aiosqlite.Connection, steward_id: int) -> tuple[int, int]:
     day = _day_id()
     cur = await conn.execute(
-        "SELECT count FROM kitchen_rolls WHERE steward_id=? AND day=?",
+        "SELECT count, mix_count FROM kitchen_rolls WHERE steward_id=? AND day=?",
         (steward_id, day),
     )
     row = await cur.fetchone()
-    used = row[0] if row else 0
-    return used < config.KITCHEN_COOK_DAILY
+    if not row:
+        return 0, 0
+    return int(row[0] or 0), int(row[1] or 0)
 
 
-async def _mark_cook(conn: aiosqlite.Connection, steward_id: int) -> None:
+async def _can_cook_recipe(conn: aiosqlite.Connection, steward_id: int) -> bool:
+    used, _ = await _cook_counts(conn, steward_id)
+    return used < config.KITCHEN_RECIPE_COOK_DAILY
+
+
+async def _can_cook_mix(conn: aiosqlite.Connection, steward_id: int) -> bool:
+    _, used = await _cook_counts(conn, steward_id)
+    return used < config.KITCHEN_MIX_COOK_DAILY
+
+
+async def _mark_cook(conn: aiosqlite.Connection, steward_id: int, *, mix: bool = False) -> None:
     day = _day_id()
+    col = "mix_count" if mix else "count"
     await conn.execute(
-        """
-        INSERT INTO kitchen_rolls (steward_id, day, count) VALUES (?,?,1)
-        ON CONFLICT(steward_id, day) DO UPDATE SET count = count + 1
+        f"""
+        INSERT INTO kitchen_rolls (steward_id, day, {col}) VALUES (?,?,1)
+        ON CONFLICT(steward_id, day) DO UPDATE SET {col} = {col} + 1
         """,
         (steward_id, day),
     )
@@ -385,8 +397,10 @@ async def _mark_cook(conn: aiosqlite.Connection, steward_id: int) -> None:
 async def _cook_named(s: dict[str, Any], dish_key: str) -> str:
     meta = KITCHEN_DISHES[dish_key]
     async with db.connect() as conn:
-        if not await _can_cook(conn, s["id"]):
-            raise ValueError(f"今日烹饪上限 {config.KITCHEN_COOK_DAILY}")
+        if not await _can_cook_recipe(conn, s["id"]):
+            raise ValueError(
+                f"今日定点菜上限 {config.KITCHEN_RECIPE_COOK_DAILY}（换班后刷新）"
+            )
         for ing in meta["ings"]:
             if not await db.take_item(conn, s["id"], ing, 1):
                 raise ValueError(f"缺少 {ITEM_NAMES.get(ing, ing)}")
@@ -417,14 +431,16 @@ async def _cook_mix(s: dict[str, Any], ings: list[str]) -> str:
         if cook_mix.classify(ing) == "refuse":
             raise ValueError("活物、工具、装饰、熟菜不能下锅")
     async with db.connect() as conn:
-        if not await _can_cook(conn, s["id"]):
-            raise ValueError(f"今日烹饪上限 {config.KITCHEN_COOK_DAILY}")
+        if not await _can_cook_mix(conn, s["id"]):
+            raise ValueError(
+                f"今日自由组合上限 {config.KITCHEN_MIX_COOK_DAILY}（换班后刷新）"
+            )
         for ing in ings:
             if not await db.take_item(conn, s["id"], ing, 1):
                 raise ValueError(f"缺少 {ITEM_NAMES.get(ing, ing)}")
         result = cook_mix.score_mix(ings, s)
         await db.add_item(conn, s["id"], result.item, 1)
-        await _mark_cook(conn, s["id"])
+        await _mark_cook(conn, s["id"], mix=True)
         sat = 3 if result.grade == "j" else 6
         await survival.bump(conn, s["id"], satiety=sat, mist_wit=2)
         await conn.commit()
@@ -454,8 +470,8 @@ async def kitchen_ops(key_id: int, command: str) -> str:
         return (
             "kitchen_ops 子命令（整句写进 command）：\n"
             "  menu — 菜谱与定价\n"
-            "  cook 菜名 — 定点菜，例如 cook 蒜蓉生蚝\n"
-            "  cook 材料1 材料2 … — 自由组合 2~5 样，例如 cook 甘蓝 鲭鱼\n"
+            "  cook 菜名 — 定点菜（每天 10 次），例如 cook 蒜蓉生蚝\n"
+            "  cook 材料1 材料2 … — 自由组合 2~5 样（每天 24 次），例如 cook 甘蓝 鲭鱼\n"
             "  eat 物品 — 回精力。熟菜回得最多；水果可生吃但只回一点、连吃会营养不良；\n"
             "             生鱼/野薄荷安全；蔬菜不能生吃；只有生肉可能感染\n"
             "             例子：eat 鲭鱼 · eat 芒果 · eat 兔肉 · eat 蒜蓉生蚝\n"

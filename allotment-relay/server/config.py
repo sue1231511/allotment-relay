@@ -203,8 +203,9 @@ BEACH_ENERGY = 8
 BEACH_PROBE_ENERGY = 5
 SCARECROW_COST = {"drift_twine": 2, "compost": 1}
 
-# 厨房 / 冰箱
-KITCHEN_COOK_DAILY = 8
+# 厨房 / 冰箱 — 定点菜谱与自由组合分开计次（游戏日换班刷新）
+KITCHEN_RECIPE_COOK_DAILY = 10   # cook 菜名（menu 定点菜）
+KITCHEN_MIX_COOK_DAILY = 24      # cook 材料1 材料2 …（自由组合）
 FRIDGE_SLOTS = 12
 FRIDGE_DAYS = 7
 CABINET_SLOTS = 30

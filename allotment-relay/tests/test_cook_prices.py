@@ -2,6 +2,7 @@
 """定点菜 3★ 不亏材料回收；自由组合正经搭配也不倒贴；乱炖按材料身价兜底；熟菜精力抬高。"""
 from __future__ import annotations
 
+import asyncio
 import sys
 from pathlib import Path
 
@@ -81,12 +82,64 @@ def test_mix_energy_beats_raw() -> None:
     assert mix_energy("x", 3) >= 45
 
 
+def test_cook_daily_limits() -> None:
+    asyncio.run(_test_cook_daily_limits())
+
+
+async def _test_cook_daily_limits() -> None:
+    import os
+    import tempfile
+    from pathlib import Path
+
+    tmp = Path(tempfile.mkdtemp(prefix="cook-limit-"))
+    os.environ["DATA_DIR"] = str(tmp)
+    from server import config, db, kitchen
+
+    config.DATA_DIR = tmp
+    config.DB_PATH = tmp / "relay.db"
+    db.DATA_DIR = tmp
+    db.DB_PATH = tmp / "relay.db"
+    await db.init_db()
+    key = await db.create_api_key("limit@example.com")
+    row = await db.get_key_row(key)
+    await db.enroll_steward(row["id"], "厨限", "", "naturalist", "")
+    kid = row["id"]
+    async with db.connect() as conn:
+        sid = (await (await conn.execute(
+            "SELECT id FROM stewards WHERE key_id=?", (kid,)
+        )).fetchone())[0]
+    dish = "garlic_oyster"
+    for ing in KITCHEN_DISHES[dish]["ings"]:
+        async with db.connect() as conn:
+            await db.add_item(conn, sid, ing, 20)
+            await conn.commit()
+    async with db.connect() as conn:
+        await db.add_item(conn, sid, "crop_kale", 30)
+        await db.add_item(conn, sid, "fish_herring", 30)
+        await conn.commit()
+    for _ in range(config.KITCHEN_RECIPE_COOK_DAILY):
+        await kitchen.kitchen_ops(kid, f"cook {dish}")
+    try:
+        await kitchen.kitchen_ops(kid, f"cook {dish}")
+        raise AssertionError("recipe limit should refuse")
+    except ValueError as exc:
+        assert "定点菜" in str(exc), exc
+    for _ in range(config.KITCHEN_MIX_COOK_DAILY):
+        await kitchen.kitchen_ops(kid, "cook crop_kale fish_herring")
+    try:
+        await kitchen.kitchen_ops(kid, "cook crop_kale fish_herring")
+        raise AssertionError("mix limit should refuse")
+    except ValueError as exc:
+        assert "自由组合" in str(exc), exc
+
+
 def main() -> None:
     test_named_dishes_star3_covers_vend()
     test_eatery_ref_beats_vend()
     test_named_dish_energy_beats_raw()
     test_mix_star3_covers_bucket()
     test_mix_energy_beats_raw()
+    test_cook_daily_limits()
     print("cook price tests ok")
     print(f"{'菜':<16} {'材料':>4} {'3★回收':>6} {'5★回收':>6} {'精力':>4} {'小馆参考':>6}  3★回收盈")
     from server.catalog import dish_item, eatery_reference_price

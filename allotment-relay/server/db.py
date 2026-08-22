@@ -363,6 +363,7 @@ CREATE TABLE IF NOT EXISTS kitchen_rolls (
     steward_id INTEGER NOT NULL REFERENCES stewards(id),
     day INTEGER NOT NULL,
     count INTEGER NOT NULL DEFAULT 0,
+    mix_count INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (steward_id, day)
 );
 
@@ -1208,6 +1209,7 @@ async def init_db() -> None:
             "ALTER TABLE stewards ADD COLUMN lounge_human_name TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE stewards ADD COLUMN lounge_muted_until INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN lounge_banned INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE kitchen_rolls ADD COLUMN mix_count INTEGER NOT NULL DEFAULT 0",
         ):
             try:
                 await db.execute(ddl)
