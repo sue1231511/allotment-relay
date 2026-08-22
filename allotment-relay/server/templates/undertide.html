@@ -482,9 +482,9 @@
       <article class="ut-card wide ut-wall-names">
         <div class="ut-head"><h2>井壁上的名字</h2><span class="ut-idx">06 / PIT WALL</span></div>
         <p class="ut-wall-note" id="pit-board-note">深坑胜场榜 · 十场以上才钉名 · 胜场优先</p>
-        <ol id="pit-board" class="ut-pit-wall">
+        <div id="pit-board" class="ut-pit-wall">
           <p class="ut-empty">看门人还没往墙上钉名字。</p>
-        </ol>
+        </div>
       </article>
 
       <article class="ut-card">
@@ -577,7 +577,7 @@
             pitEl.innerHTML = d.pit_board.map(r => {
               const top = r.rank <= 3 ? " is-" + r.rank : "";
               return (
-                '<li class="ut-pit-row' + top + '">' +
+                '<div class="ut-pit-row' + top + '">' +
                   '<span class="ut-pit-rank">' + pitMedal(r.rank) + "</span>" +
                   '<div class="ut-pit-main">' +
                     '<span class="ut-pit-name">' + esc(r.name) + "</span>" +
@@ -587,7 +587,7 @@
                     '<span class="ut-pit-wl">' + esc(r.wins) + "胜 " + esc(r.losses) + "负</span>" +
                     '<span class="ut-pit-rate">' + esc(r.win_rate) + "%</span>" +
                   "</div>" +
-                "</li>"
+                "</div>"
               );
             }).join("");
           }
