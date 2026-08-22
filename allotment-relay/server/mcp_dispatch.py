@@ -1,9 +1,33 @@
 """把 30 多个 MCP 入口收成少数工具：第一段是子系统，后面仍是原来的子命令。"""
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Awaitable, Callable
 
+import aiosqlite
+import sqlite3
+
+from . import db
+
 OpsFn = Callable[..., Awaitable[str]]
+
+
+async def _call_ops(fn: OpsFn, *args) -> str:
+    """MCP 工具统一入口：遇 SQLite 锁时短暂重试。"""
+    last: BaseException | None = None
+    for attempt in range(5):
+        try:
+            return await fn(*args)
+        except (aiosqlite.OperationalError, sqlite3.OperationalError) as exc:
+            last = exc
+            if not db.is_db_locked_error(exc) or attempt >= 4:
+                break
+            await asyncio.sleep(0.08 * (2 ** attempt))
+    if last and db.is_db_locked_error(last):
+        raise ValueError(db.DB_BUSY_MSG) from last
+    if last:
+        raise last
+    raise RuntimeError("unreachable")
 
 
 def head(command: str) -> tuple[str, str]:
@@ -34,11 +58,11 @@ async def route(
         return help_text
     if verb in table:
         fn, fallback = table[verb]
-        return await fn(key_id, rest if rest else fallback)
+        return await _call_ops(fn, key_id, rest if rest else fallback)
     if verb in hoist:
         fn, keep_full = hoist[verb]
-        return await fn(key_id, command.strip() if keep_full else rest)
-    return await default(key_id, command.strip())
+        return await _call_ops(fn, key_id, command.strip() if keep_full else rest)
+    return await _call_ops(default, key_id, command.strip())
 
 
 STEWARD_HELP = """steward_ops 子命令（整句写进 command）：
@@ -167,38 +191,38 @@ async def steward_ops(
         )
 
     if verb in ("sheet", "档案", "me", "档"):
-        return await game.steward_sheet(key_id)
+        return await _call_ops(game.steward_sheet, key_id)
 
     if verb in ("revise", "修订"):
         new_motto = motto.strip() or rest
-        return await game.steward_revise(key_id, new_motto, portrait)
+        return await _call_ops(game.steward_revise, key_id, new_motto, portrait)
 
     if verb in ("peer", "别人", "公开档"):
         peer = (name or "").strip() or rest.strip()
         if not peer:
             from . import multi
             s = await game.require_steward(key_id)
-            return await multi.list_neighbors(s, online_only=False)
-        return await game.peer_sheet(peer)
+            return await _call_ops(multi.list_neighbors, s, online_only=False)
+        return await _call_ops(game.peer_sheet, peer)
 
     if verb in ("online", "在线"):
         from . import multi
         s = await game.require_steward(key_id)
-        return await multi.list_neighbors(s, online_only=True)
+        return await _call_ops(multi.list_neighbors, s, online_only=True)
 
     if verb in ("neighbors", "邻居", "neighbour", "peers", "邻居们"):
         from . import multi
         s = await game.require_steward(key_id)
-        return await multi.list_neighbors(s, online_only=False)
+        return await _call_ops(multi.list_neighbors, s, online_only=False)
 
     if verb in ("guild", "轮值", "shift"):
-        return await game.guild_shift(key_id)
+        return await _call_ops(game.guild_shift, key_id)
 
     if verb in ("board", "榜", "排行", "排行榜"):
-        return await ranks.board_ops(key_id, rest)
+        return await _call_ops(ranks.board_ops, key_id, rest)
 
     if verb in ("tickets", "票", "票榜", "level", "等级", "等级榜"):
-        return await ranks.board_ops(key_id, command.strip())
+        return await _call_ops(ranks.board_ops, key_id, command.strip())
 
     raise ValueError(f"未知 steward 指令: {command}\n{STEWARD_HELP}")
 
@@ -208,7 +232,7 @@ async def plot_bundle(key_id: int, command: str = "") -> str:
 
     verb, _ = head(command)
     if not verb:
-        base = await game.plot_ops(key_id, "")
+        base = await _call_ops(game.plot_ops, key_id, "")
         return base + "\n  shed / commons / incident / camera — 温室、公共物资、意外、监控"
     return await route(
         key_id,
@@ -383,4 +407,4 @@ async def kitchen_bundle(key_id: int, command: str = "") -> str:
     cmd = (command or "").strip() or "menu"
     if cmd.split()[0].lower() == "catalog":
         cmd = "recipes"
-    return await kitchen.kitchen_ops(key_id, cmd)
+    return await _call_ops(kitchen.kitchen_ops, key_id, cmd)

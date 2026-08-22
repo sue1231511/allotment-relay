@@ -799,11 +799,15 @@ async def active_world_pulse(conn: aiosqlite.Connection | None = None) -> dict[s
             return await active_world_pulse(c)
     conn.row_factory = aiosqlite.Row
     now = db.now()
-    await conn.execute("DELETE FROM world_pulse WHERE expires_at <= ?", (now,))
     row = await (await conn.execute(
-        "SELECT * FROM world_pulse ORDER BY started_at DESC LIMIT 1"
+        "SELECT * FROM world_pulse WHERE expires_at > ? ORDER BY started_at DESC LIMIT 1",
+        (now,),
     )).fetchone()
     return dict(row) if row else None
+
+
+async def purge_expired_pulses(conn: aiosqlite.Connection) -> None:
+    await conn.execute("DELETE FROM world_pulse WHERE expires_at <= ?", (db.now(),))
 
 
 async def maybe_world_pulse(steward: dict[str, Any]) -> str | None:
@@ -813,6 +817,7 @@ async def maybe_world_pulse(steward: dict[str, Any]) -> str | None:
             return None
         if random.random() > config.WORLD_PULSE_CHANCE:
             return None
+        await purge_expired_pulses(conn)
         pulse = event_gen.generate_world_pulse()
         now = db.now()
         key = f"{pulse['effect']}:{uuid.uuid4().hex[:6]}"
@@ -843,7 +848,7 @@ async def maybe_world_pulse(steward: dict[str, Any]) -> str | None:
         barton = lore_mod.barton_season_note(pulse["effect"])
         if barton and random.random() < 0.55:
             msg += f"\n老水手巴顿：「{barton}」"
-        await db.add_chronicle("pulse", msg, steward["id"])
+        await db.add_chronicle("pulse", msg, steward["id"], conn=conn)
         return msg
 
 

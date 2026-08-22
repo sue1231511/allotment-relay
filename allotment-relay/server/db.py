@@ -1,4 +1,7 @@
+import asyncio
+import contextvars
 import secrets
+import sqlite3
 import time
 from contextlib import asynccontextmanager
 from typing import Any, AsyncIterator
@@ -7,6 +10,17 @@ import aiosqlite
 
 from .catalog import STARTER_STOCK
 from .config import DATA_DIR, DB_PATH, KEY_PREFIX, START_ENERGY, START_PARCELS, START_TICKETS
+
+# 单进程内串行化 SQLite 访问，避免多云端 Agent 并发时 database is locked
+_DB_MUTEX = asyncio.Lock()
+_DB_CONN: contextvars.ContextVar[aiosqlite.Connection | None] = contextvars.ContextVar(
+    "_db_conn", default=None,
+)
+_DB_PRAGMAS_READY = False
+
+DB_BUSY_MSG = (
+    "数据库正忙（岛上同时操作的人太多）。等 10～30 秒再发同一条指令，不要连点。"
+)
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS api_keys (
@@ -655,9 +669,30 @@ CREATE TABLE IF NOT EXISTS tale_explore_rolls (
 @asynccontextmanager
 async def connect() -> AsyncIterator[aiosqlite.Connection]:
     """Open DB with busy wait — use as `async with connect() as conn:`."""
-    async with aiosqlite.connect(DB_PATH, timeout=30.0) as conn:
-        await conn.execute("PRAGMA busy_timeout=10000")
-        yield conn
+    global _DB_PRAGMAS_READY
+    existing = _DB_CONN.get()
+    if existing is not None:
+        yield existing
+        return
+    async with _DB_MUTEX:
+        async with aiosqlite.connect(DB_PATH, timeout=60.0) as conn:
+            await conn.execute("PRAGMA busy_timeout=30000")
+            if not _DB_PRAGMAS_READY:
+                await conn.execute("PRAGMA journal_mode=WAL")
+                await conn.execute("PRAGMA synchronous=NORMAL")
+                await conn.execute("PRAGMA wal_autocheckpoint=1000")
+                _DB_PRAGMAS_READY = True
+            token = _DB_CONN.set(conn)
+            try:
+                yield conn
+            finally:
+                _DB_CONN.reset(token)
+
+
+def is_db_locked_error(exc: BaseException) -> bool:
+    if isinstance(exc, (aiosqlite.OperationalError, sqlite3.OperationalError)):
+        return "locked" in str(exc).lower()
+    return False
 
 
 async def init_db() -> None:
