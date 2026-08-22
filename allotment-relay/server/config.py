@@ -161,8 +161,8 @@ FERTILIZE_GROW_MULT = 0.88
 MIN_GROW_TARGET = 120
 FERTILIZE_COMPOST_CUT = 0.12
 
-# 咕咕斑鸠 — sow/tend 昼间盯梢，可忽略或驱赶（基础约 20%）
-GUGU_DOVE_STALK_CHANCE = _event_rate(0.15)
+# 咕咕斑鸠 — 每天首次 sow/tend 掷一次，碰上才盯梢（基础约 23%）
+GUGU_DOVE_DAILY_CHANCE = _event_rate(0.18)
 GUGU_DOVE_DRIVE_FAIL_CHANCE = 0.20
 GUGU_DOVE_EAT_YIELD = 0.60
 GUGU_DOVE_HELP_YIELD = 1.50
@@ -325,8 +325,8 @@ HAIL_FIGHT_ENERGY = 12
 HAIL_FLEE_ENERGY = 8
 HAIL_THREAT = {"near": 38, "far": 54, "deep": 70}
 
-# 拾叶 — 巷口NPC，碰到随机小偷/乞丐/碰瓷/敲诈（基础约 10%，暮夜/低档信更高）
-SHIYE_BUMP_CHANCE = _event_rate(0.08)
+# 拾叶 — 巷口NPC，每天首次路上操作掷一次，碰上才拦（基础约 29%，暮夜/低档信更高）
+SHIYE_DAILY_MEET_CHANCE = _event_rate(0.22)
 SHIYE_DAILY_MAX = 3
 SHIYE_TRIGGERS = {"sow", "tend", "gather", "forage", "guild", "net", "beach"}
 SHIYE_BEG_TICKETS = (3, 8)

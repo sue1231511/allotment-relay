@@ -104,9 +104,9 @@ async def steward_ops(
     )
 
 
-@mcp.tool(description="份地农事。command 写一整句，不要编造 sow_all/plant/harvest。例子：status · sow 1 甘蓝 · tend · 浇水 1 · 施肥 1 · gather 1 · catalog · 偷菜 安 · 买地 · shed erect · camera install 1。温室 #99 不占 8 块上限。空 command 列出常用指令，不是看地；看地必须 status。偷菜最多 30%。不会就 help。")
+@mcp.tool(description="份地农事。command 写一整句，不要编造 sow_all/plant/harvest。例子：status · sow 1 甘蓝 · tend · 浇水 1 · 施肥 1 · gather 1 · catalog · 偷菜 安 · 买地 · shed erect · camera install 1 · dove 忽略。斑鸠：昼间 sow/tend 每天掷一次碰上才盯梢。温室 #99 不占 8 块上限。空 command 列出常用指令，不是看地；看地必须 status。偷菜最多 30%。不会就 help。")
 async def plot_ops(
-    command: Annotated[str, Field(description="子命令整句。status=看地 / catalog / sow 1 甘蓝 / tend / 浇水 1 / 施肥 1 / gather 1 / 偷菜 名字 / 买地 / shed erect / chop 1 / camera install 1 / incident scan / repair 12 / help。温室 #99 独立槽。施肥默认耗堆肥。空=常用指令，不是看地。不要发明 sow_all/plant。")] = "",
+    command: Annotated[str, Field(description="子命令整句。status=看地 / catalog / sow 1 甘蓝 / tend / 浇水 1 / 施肥 1 / gather 1 / 偷菜 名字 / 买地 / shed erect / chop 1 / camera install 1 / incident scan / repair 12 / dove 忽略|驱赶 / help。斑鸠每天掷一次碰上才盯梢。温室 #99 独立槽。施肥默认耗堆肥。空=常用指令，不是看地。不要发明 sow_all/plant。")] = "",
 ) -> str:
     return await mux._call_ops(mux.plot_bundle, _kid(), command)
 
@@ -146,9 +146,9 @@ async def alliance_ops(
     return await mux._call_ops(mux.alliance_bundle, _kid(), command)
 
 
-@mcp.tool(description="访客：NPC、栗栗摊、Tt酱杂货、诊所、沿海旧史。command 写一整句。例子：tt catalog · tt buy 竹钓竿 · lili scan · lore scan · clinic treat infection。lore 扫到的是旧史文本，不是收集品。水果当饭吃会营养不良，诊所能治。深坑伤走 undertide_ops medic。不会就 help。")
+@mcp.tool(description="访客：NPC、栗栗摊、Tt酱杂货、诊所、沿海旧史。command 写一整句。例子：visit 拾叶 · tt catalog · tt buy 竹钓竿 · lili scan · lore scan · clinic treat infection。拾叶：visit 拾叶 主动必触发；路上每天首次操作掷一次碰上。斑鸠：昼间 sow/tend 每天掷一次。lore 扫到的是旧史文本，不是收集品。水果当饭吃会营养不良，诊所能治。深坑伤走 undertide_ops medic。不会就 help。")
 async def visit_ops(
-    command: Annotated[str, Field(description="子命令整句。list / tt catalog / tt buy 锄头 / tt buy 竹钓竿 / lili scan / shaonian fortune / lore scan / clinic status / treat infection / help。lore 是文本不是收集品。treat 可省略 clinic。不要发明 shop_ops。")] = "",
+    command: Annotated[str, Field(description="子命令整句。list / visit 拾叶 / tt catalog / tt buy 锄头 / tt buy 竹钓竿 / lili scan / shaonian fortune / lore scan / clinic status / treat infection / help。拾叶：visit 拾叶=主动必触发，路上每天掷一次碰上。lore 是文本不是收集品。treat 可省略 clinic。不要发明 shop_ops。")] = "",
 ) -> str:
     return await mux._call_ops(mux.visit_bundle, _kid(), command)
 

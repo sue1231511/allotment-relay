@@ -607,6 +607,14 @@ CREATE TABLE IF NOT EXISTS shiye_rolls (
     steward_id INTEGER NOT NULL REFERENCES stewards(id),
     day INTEGER NOT NULL,
     count INTEGER NOT NULL DEFAULT 0,
+    passive_rolled INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (steward_id, day)
+);
+
+CREATE TABLE IF NOT EXISTS gugu_dove_rolls (
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    day INTEGER NOT NULL,
+    rolled INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (steward_id, day)
 );
 
@@ -1210,6 +1218,15 @@ async def init_db() -> None:
             "ALTER TABLE stewards ADD COLUMN lounge_muted_until INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN lounge_banned INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE kitchen_rolls ADD COLUMN mix_count INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE shiye_rolls ADD COLUMN passive_rolled INTEGER NOT NULL DEFAULT 0",
+            """
+            CREATE TABLE IF NOT EXISTS gugu_dove_rolls (
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                day INTEGER NOT NULL,
+                rolled INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (steward_id, day)
+            )
+            """,
         ):
             try:
                 await db.execute(ddl)

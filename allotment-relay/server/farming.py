@@ -680,15 +680,38 @@ def gugu_dove_prompt_text(pending: dict[str, Any]) -> str:
     )
 
 
+async def _gugu_dove_rolled_today(
+    conn: aiosqlite.Connection, steward_id: int,
+) -> bool:
+    cur = await conn.execute(
+        "SELECT rolled FROM gugu_dove_rolls WHERE steward_id=? AND day=?",
+        (steward_id, db.day_id()),
+    )
+    row = await cur.fetchone()
+    return bool(row and row[0])
+
+
+async def _mark_gugu_dove_rolled(conn: aiosqlite.Connection, steward_id: int) -> None:
+    await conn.execute(
+        """
+        INSERT INTO gugu_dove_rolls (steward_id, day, rolled) VALUES (?,?,1)
+        ON CONFLICT(steward_id, day) DO UPDATE SET rolled = 1
+        """,
+        (steward_id, db.day_id()),
+    )
+
+
 async def maybe_gugu_dove_stalk(
     conn: aiosqlite.Connection,
     steward: dict[str, Any],
     plot_id: int,
 ) -> str | None:
-    """昼间 sow/tend 约 20% 触发斑鸠盯梢（×1.3 事件倍率后）。"""
+    """昼间 sow/tend：每天首次操作掷一次，碰上才盯梢。"""
     if world.current_day_phase() != "day":
         return None
     if await get_gugu_dove_pending(conn, steward["id"]):
+        return None
+    if await _gugu_dove_rolled_today(conn, steward["id"]):
         return None
     conn.row_factory = aiosqlite.Row
     plot = dict(await (await conn.execute(
@@ -702,14 +725,20 @@ async def maybe_gugu_dove_stalk(
     from . import lili_extras
     if await lili_extras.has_blessing(conn, steward["id"], "guard_crop"):
         await lili_extras.consume_blessing(conn, steward["id"], "guard_crop")
+        await _mark_gugu_dove_rolled(conn, steward["id"])
         return "夜栖替你瞪了斑鸠一眼。它咕了一声，改去别家。（护苗）"
-    chance = config.GUGU_DOVE_STALK_CHANCE
+    from . import shaonian as shaonian_mod
+    if await shaonian_mod.dove_protected(conn, steward["id"]):
+        await _mark_gugu_dove_rolled(conn, steward["id"])
+        return None
+    chance = config.GUGU_DOVE_DAILY_CHANCE
     from . import hut as hut_mod
     from . import barn as barn_mod
     hut_b = await hut_mod.get_bonuses(conn, steward["id"])
     chance *= hut_b.dove_steal
     if await barn_mod.has_guard_dog(conn, steward["id"]):
         chance *= 0.65
+    await _mark_gugu_dove_rolled(conn, steward["id"])
     if random.random() > chance:
         return None
     await conn.execute(
@@ -737,7 +766,7 @@ async def resolve_gugu_dove(
 ) -> str:
     pending = await get_gugu_dove_pending(conn, steward["id"])
     if not pending:
-        raise ValueError("没有斑鸠盯梢事件。继续 sow/tend 种菜时可能触发")
+        raise ValueError("没有斑鸠盯梢事件。昼间 sow/tend 每天掷一次，碰上才触发")
     plot_id = pending["plot_id"]
     slot = pending["slot"]
     crop = pending["crop"]
