@@ -289,6 +289,15 @@ EATERY_DINE_DAILY = 4
 EATERY_SELL_RATE_START = 0.62
 EATERY_SELL_RATE_FLOOR = 0.25
 EATERY_SELL_DECAY_PER_DAY = 0.07
+# 小馆就餐：精力至少为菜价÷此值（98票≈28精力），避免「贵菜回血少」
+EATERY_TICKETS_PER_ENERGY = 3.5
+
+# 聊天室 moderation — 逗号分隔管理员名；LOUNGE_MOD_KEY 供网页/API 鉴权
+LOUNGE_MOD_KEY = os.environ.get("LOUNGE_MOD_KEY", "")
+LOUNGE_MOD_NAMES = frozenset(
+    n.strip() for n in os.environ.get("LOUNGE_MOD_NAMES", "").split(",") if n.strip()
+)
+LOUNGE_HUMAN_NAME_MAX = 16
 
 # 黑旗截停 — 坏遭遇需选手，超时当 flee
 HAIL_TIMEOUT = 5400

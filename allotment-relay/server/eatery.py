@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import random
+from math import ceil
 from typing import Any
 
 import aiosqlite
@@ -86,13 +87,14 @@ def _item_price(item: str) -> int:
     return ITEM_PRICES.get(item, 0)
 
 
-def _eat_gain(item: str) -> int:
+def _eat_gain(item: str, price: int | None = None) -> int:
     gain = dish_energy(item)
-    if gain is not None:
-        return gain
-    if item.startswith("meal_"):
-        return 12
-    return 15
+    if gain is None:
+        gain = 12 if item.startswith("meal_") else 15
+    if price and price > 0:
+        scaled = int(ceil(price / config.EATERY_TICKETS_PER_ENERGY))
+        gain = max(gain, scaled)
+    return min(50, gain)
 
 
 async def _menu_rows(conn: aiosqlite.Connection, shop_id: int) -> list[dict[str, Any]]:
@@ -339,7 +341,7 @@ async def _dine(guest: dict[str, Any], shop_name: str, item_ref: str | None) -> 
             (price, shop["id"]),
         )
         await conn.execute("DELETE FROM eatery_menu WHERE id=?", (picked["id"],))
-        gain = _eat_gain(picked["item"])
+        gain = _eat_gain(picked["item"], price)
         restored = await energy.restore(conn, guest["id"], gain)
         await survival.bump(conn, guest["id"], satiety=min(18, gain // 2 + 6))
         await conn.execute(
