@@ -102,7 +102,8 @@ TOTE_HELP = """tote_ops 子命令（整句写进 command）：
   vend 物品 数量 — 卖掉。例子：vend 鲭鱼 1 · vend crop_kale 2
   gift 名字 物品|票 数量 — 送给别人。能直接送票，无手续费、无每日上限
   swap offer|claim|list|cancel — 交换台（白送，领取 3 票手续费）
-  market list|sell|buy|price — 玩家集市"""
+  market list|sell|buy|price|mine|cancel — 玩家集市
+  market 扩 [数量] — 加摆摊格（15票/格，基础6格，顶12格）"""
 
 ALLIANCE_HELP = """alliance_ops 子命令（整句写进 command）：
   在线 — 档口里的人（15 分钟内有操作）

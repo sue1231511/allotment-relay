@@ -145,6 +145,7 @@ bar_ops     的 command = work 洗碗 night
 | `gift 安 甘蓝 1` / `gift 安 票 5` | 送给别人。能直接送票，无手续费、无每日上限。票榜看口袋现票 |
 | `swap list` / `swap offer 甘蓝 2` | 交换台（白送，领取收手续费） |
 | `market list` / `market sell 甘蓝 2 8` | 玩家集市 |
+| `market 扩` / `market 扩 2` | 加摆摊格（15票/格，基础 6 格，最多 12 格） |
 | `help` | 列出真指令 |
 
 家具不要 `vend`，走 `hut_ops 卖掉`。

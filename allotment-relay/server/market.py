@@ -9,10 +9,67 @@ from .catalog import ITEM_NAMES, item_vendable, resolve_item_key, suggested_pric
 from .game import require_steward, _parse_int
 
 
+def market_list_cap(extra: int = 0) -> int:
+    return min(config.MARKET_LIST_SLOTS_MAX, config.MARKET_LIST_MAX + max(0, extra))
+
+
+async def _market_extra(conn: aiosqlite.Connection, steward_id: int) -> int:
+    row = await (await conn.execute(
+        "SELECT market_extra FROM stewards WHERE id=?", (steward_id,)
+    )).fetchone()
+    return int(row[0] or 0) if row else 0
+
+
+def _expand_hint(extra: int) -> str:
+    cap = market_list_cap(extra)
+    if cap >= config.MARKET_LIST_SLOTS_MAX:
+        return f"（已扩满 {cap}/{config.MARKET_LIST_SLOTS_MAX} 格）"
+    return (
+        f"（{cap}/{config.MARKET_LIST_SLOTS_MAX} 格；"
+        f"market_ops 扩 [数量] 加格，{config.MARKET_SLOT_COST}票/格）"
+    )
+
+
+async def market_expand(s: dict, n: int = 1) -> str:
+    n = max(1, int(n))
+    async with db.connect() as conn:
+        extra = await _market_extra(conn, s["id"])
+        cap = market_list_cap(extra)
+        room = config.MARKET_LIST_SLOTS_MAX - cap
+        if room <= 0:
+            raise ValueError(
+                f"集市摊格已经扩到顶了（{config.MARKET_LIST_SLOTS_MAX} 格）"
+            )
+        n = min(n, room)
+        cost = n * config.MARKET_SLOT_COST
+        cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
+        have = (await cur.fetchone())[0]
+        if have < cost:
+            raise ValueError(
+                f"加 {n} 格需要 {cost} 票（每格 {config.MARKET_SLOT_COST}）"
+            )
+        await conn.execute(
+            "UPDATE stewards SET tickets=tickets-?, market_extra=market_extra+? WHERE id=?",
+            (cost, n, s["id"]),
+        )
+        await conn.commit()
+        new_cap = market_list_cap(extra + n)
+    return (
+        f"集市摊格 +{n}（-{cost} 票）。现在 {new_cap}/{config.MARKET_LIST_SLOTS_MAX} 格，"
+        f"基础 {config.MARKET_LIST_MAX} 格起。"
+    )
+
+
 async def market_ops(key_id: int, command: str) -> str:
     s = await require_steward(key_id)
     parts = command.strip().split(maxsplit=3)
     verb = parts[0].lower() if parts else "list"
+
+    if verb in ("expand", "扩", "扩容", "加格"):
+        n = 1
+        if len(parts) >= 2:
+            n = max(1, _parse_int(parts[1], "数量"))
+        return await market_expand(s, n)
 
     if verb == "list":
         async with db.connect() as conn:
@@ -47,6 +104,8 @@ async def market_ops(key_id: int, command: str) -> str:
     if verb == "mine":
         async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
+            extra = await _market_extra(conn, s["id"])
+            cap = market_list_cap(extra)
             rows = await (await conn.execute(
                 """
                 SELECT * FROM market_listings
@@ -55,12 +114,14 @@ async def market_ops(key_id: int, command: str) -> str:
                 (s["id"],),
             )).fetchall()
         if not rows:
-            return "你没有在售挂单"
-        return "\n".join(
+            return f"你没有在售挂单 {_expand_hint(extra)}"
+        lines = [f"你的挂单 {len(rows)}/{cap}{_expand_hint(extra)}"]
+        lines.extend(
             f"#{r['id']} {ITEM_NAMES.get(r['item'], r['item'])}（{r['item']}）"
             f" x{r['quantity']} @{r['price']}票"
             for r in rows
         )
+        return "\n".join(lines)
 
     if verb == "sell" and len(parts) >= 4:
         raw_item, qty_s, price_s = parts[1], parts[2], parts[3]
@@ -75,12 +136,21 @@ async def market_ops(key_id: int, command: str) -> str:
             )
         sug = suggested_price(item_key)
         async with db.connect() as conn:
+            extra = await _market_extra(conn, s["id"])
+            cap = market_list_cap(extra)
             cur = await conn.execute(
                 "SELECT COUNT(*) FROM market_listings WHERE seller_id=? AND buyer_id IS NULL",
                 (s["id"],),
             )
-            if (await cur.fetchone())[0] >= config.MARKET_LIST_MAX:
-                raise ValueError(f"挂单上限 {config.MARKET_LIST_MAX}")
+            used = (await cur.fetchone())[0]
+            if used >= cap:
+                hint = ""
+                if cap < config.MARKET_LIST_SLOTS_MAX:
+                    hint = (
+                        f" market_ops 扩 [数量] 加格"
+                        f"（{config.MARKET_SLOT_COST}票/格，顶 {config.MARKET_LIST_SLOTS_MAX}）"
+                    )
+                raise ValueError(f"挂单已满 {used}/{cap}。{hint}")
             if not await db.take_item(conn, s["id"], item_key, qty):
                 raise ValueError(
                     f"行囊数量不足（需要 {item_key} x{qty}）"
@@ -181,5 +251,6 @@ async def market_ops(key_id: int, command: str) -> str:
         return f"{vend}（{item_key}）建议价 {sug} 票/个"
 
     raise ValueError(
-        f"未知 market 指令: {command}（list/sell/buy/mine/cancel/price）"
+        f"未知 market 指令: {command}"
+        f"（list/sell/buy/mine/cancel/price/扩 [数量]）"
     )

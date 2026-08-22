@@ -996,6 +996,7 @@ async def init_db() -> None:
             "ALTER TABLE steward_ailments ADD COLUMN last_treat_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE parcels ADD COLUMN ready_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN cabinet_extra INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN market_extra INTEGER NOT NULL DEFAULT 0",
             # 小橘 — 真人扮演的女明星（酒馆驻场 + 小剧场专场）
             """
             CREATE TABLE IF NOT EXISTS star_state (

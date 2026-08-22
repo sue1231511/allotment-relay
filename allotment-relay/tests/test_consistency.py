@@ -123,6 +123,7 @@ def test_relay_manual_covers_systems() -> None:
         "dove",
         "swap ",
         "market ",
+        "market 扩",
         "brew",
         "shop open",
         "lodge",

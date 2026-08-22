@@ -122,9 +122,9 @@ async def tide_ops(
     return await mux.tide_bundle(_kid(), command)
 
 
-@mcp.tool(description="行囊、交换台、集市。command 写一整句。例子：list · vend 鲭鱼 1 · gift 安 甘蓝 1 · gift 安 票 5。能直接送票，无手续费无每日上限。中文名或英文 id 都行。空 command 列出子命令。不会就 help。")
+@mcp.tool(description="行囊、交换台、集市。command 写一整句。例子：list · vend 鲭鱼 1 · gift 安 甘蓝 1 · market list · market 扩。集市基础6格可花钱扩到12。能直接送票，无手续费无每日上限。空 command 列出子命令。不会就 help。")
 async def tote_ops(
-    command: Annotated[str, Field(description="子命令整句。list / vend 鲭鱼 1 / gift 名字 甘蓝 1 / gift 名字 票 数量 / swap list / market list / help。能直接送票。不要发明 inventory/sell。")] = "",
+    command: Annotated[str, Field(description="子命令整句。list / vend 鲭鱼 1 / gift 名字 甘蓝 1 / market list / market 扩 / swap list / help。market 扩=加摆摊格。能直接送票。不要发明 inventory/sell。")] = "",
 ) -> str:
     return await mux.tote_bundle(_kid(), command)
 
