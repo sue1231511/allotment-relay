@@ -80,6 +80,7 @@ UT_PIT_LADDER = [  # (级, 入场费, 胜奖, 战力底盘, 重伤率)
 UT_PIT_MEDIC = {"ring_shock": (60, 90), "pit_trauma": (80, 120)}
 UT_PIT_WIN_REP = 2
 UT_PIT_DEATH_CHANCE = 0.15   # NPC 惨败死亡概率(差值≥15)
+PIT_BOARD_LIMIT = 12         # 井壁玩家榜（MCP / 网页）
 
 # ── 死人抽牌 ──
 UT_DICE_PAY = {"small": 2, "big": 2, "black": 5}      # 全部 EV 0.833

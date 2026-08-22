@@ -167,6 +167,7 @@ async def relay_manual() -> str:
         "               command 例：status · 应援 好话 · 打赏 20 · 点歌 歌名 · 围观 · 粉丝团 · 应援榜",
         "  undertide_ops 潮下地下世界。新手别一上来乱闯。先 help，再 well → descend → enter",
         "               cheer 哄的是潮下猫猫，不是荔栀。深坑伤 undertide_ops medic，桥桥不收。",
+        "               command 例：help · well · market · pit · pit board · fight 斗士名 · medic ring_shock · cheer 好话",
         "  tale_ops     潮闻故事探索任务。空 command=可接任务列表",
         "               command 例：list · accept black_box_lover · status · explore beach · turnin · souvenirs · reminisce black_box_lover · board · help",
         "  story_ops    人物故事探索。空 command=故事列表；当前故事《灰姑娘》，不使用问答模型",
@@ -315,6 +316,7 @@ async def relay_manual() -> str:
         "  好酒喝到第三杯的客人，有时候会听到不写进菜单的故事。",
         "  想下去：先 undertide_ops help，不要猜指令。",
         "  后室铺收账鬼阿标会强买强卖：undertide_ops market 看单 · racket accept|refuse",
+        "  深坑井壁活人榜：undertide_ops pit board（按深坑胜场；不是 steward_ops board）",
     ])
 
 

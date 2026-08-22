@@ -278,6 +278,27 @@
       text-shadow: 0 0 24px rgba(120, 61, 54, .12);
     }
     .ut-wall .sub { padding-bottom: 6px; color: #777169; font-size: 12px; }
+    .ut-pit-row {
+      display: grid;
+      grid-template-columns: 2.2em 1fr auto;
+      gap: 12px;
+      align-items: baseline;
+      padding: 10px 0;
+      border-bottom: 1px dashed #2b2926;
+      color: #cfc8bc;
+      font-size: 13px;
+    }
+    .ut-pit-row:last-child { border-bottom: 0; }
+    .ut-pit-row .n {
+      color: #9f7f49;
+      font: 11px/1.2 ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+    .ut-pit-row .score { color: #b8924f; white-space: nowrap; }
+    .ut-pit-row .label {
+      margin-top: 4px;
+      color: #615b53;
+      font-size: 11px;
+    }
     .ut-footer {
       margin-top: 42px;
       display: flex;
@@ -324,7 +345,7 @@
         <h1>井下的传闻<span>滨海酒吧后院，那口没人承认下去过的井</span></h1>
         <p class="ut-tagline">
           地上的人只看得到传上来的东西。钱庄今天收几分利，恩怨墙上又多了谁的名字，
-          井壁又白了一块。真正的账本、影信和货架，都留在下面。
+          井壁又白了一块，活人榜上又钉了谁。真正的账本、影信和货架，都留在下面。
         </p>
       </div>
       <aside class="ut-warning">
@@ -361,8 +382,13 @@
         </div>
       </article>
 
+      <article class="ut-card wide">
+        <div class="ut-head"><h2>井壁活人榜</h2><span class="ut-idx">05 / PIT BOARD</span></div>
+        <div id="pit-board"><p class="ut-empty">井壁上还没有活人的名字。</p></div>
+      </article>
+
       <article class="ut-card">
-        <div class="ut-head"><h2>井下传闻</h2><span class="ut-idx">05 / RUMORS</span></div>
+        <div class="ut-head"><h2>井下传闻</h2><span class="ut-idx">06 / RUMORS</span></div>
         <div id="rumors"><p class="ut-empty">最近很安静。安静得不像话。</p></div>
       </article>
     </section>
@@ -422,6 +448,20 @@
           document.getElementById("lastname").textContent = d.wall.last
             ? " —— 最近的一块，属于「" + d.wall.last + "」"
             : "";
+        }
+        if (d.pit_board && d.pit_board.length) {
+          document.getElementById("pit-board").innerHTML = d.pit_board.map((r, i) =>
+            '<div class="ut-pit-row">' +
+              '<span class="n">#' + (i + 1) + "</span>" +
+              '<span><strong>' + esc(r.name) + "</strong>" +
+                '<div class="label">「' + esc(r.rank_label || "") + "」</div></span>" +
+              '<span class="score">' + esc(r.wins) + "胜" + esc(r.losses) + "负 · " +
+                esc(r.fights) + " 场</span>" +
+            "</div>"
+          ).join("");
+        } else {
+          document.getElementById("pit-board").innerHTML =
+            '<p class="ut-empty">井壁上还没有活人的名字。下去打一场再说。</p>';
         }
         if (d.rumors && d.rumors.length) {
           document.getElementById("rumors").innerHTML = d.rumors.map(x =>

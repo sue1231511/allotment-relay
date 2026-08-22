@@ -1080,7 +1080,8 @@ undertide_ops sell <物品> [数量] — 掌柜处出货（销赃）
 undertide_ops street — 帘外的随机人（每日刷新）
 undertide_ops muscle <名号> — 强买（战力判定）
 undertide_ops push <名号> <物品> — 强卖
-undertide_ops pit — 深坑斗士榜
+undertide_ops pit — 今晚斗士名单（NPC）
+undertide_ops pit board — 井壁活人榜（按深坑胜场；也可写 pit 榜 / pit 井壁）
 undertide_ops fight <斗士名> [attack|guard|feint] — 下坑
 undertide_ops medic <ring_shock|pit_trauma> — 晏安医务间
 undertide_ops casino — 赌场

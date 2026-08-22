@@ -862,7 +862,7 @@ async def public_undertide():
             "SELECT text, created_at FROM chronicle WHERE action='undertide' ORDER BY created_at DESC LIMIT 12"
         )).fetchall()
         out["rumors"] = [{"text": r["text"], "at": r["created_at"]} for r in rows]
-        # 井壁的白
+        # 井壁的白（NPC 死位）+ 活人榜
         row = await (await conn.execute(
             "SELECT COUNT(*) c FROM ut_pit_fighters WHERE alive=0"
         )).fetchone()
@@ -870,6 +870,8 @@ async def public_undertide():
             "SELECT name FROM ut_pit_fighters WHERE alive=0 ORDER BY id DESC LIMIT 1"
         )).fetchone()
         out["wall"] = {"whites": row["c"], "last": last["name"] if last else ""}
+        from . import undertide_pit as _upit
+        out["pit_board"] = await _upit.pit_board_rows(conn)
     return out
 
 
