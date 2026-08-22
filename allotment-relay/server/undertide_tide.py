@@ -6,13 +6,13 @@ from typing import Any
 
 import aiosqlite
 
-from . import db
+from . import config, db
 from . import undertide_config as utcfg
 from . import undertide_copy as utcopy
 
 
 def _week_id() -> int:
-    return db.now() // (86400 * 7)
+    return db.week_id()
 
 
 TIDE_LINES = {
@@ -27,9 +27,9 @@ TIDE_LINES = {
 async def _score(conn: aiosqlite.Connection) -> int:
     """景气分 0~100：guild 领取率 30% / 酒吧工班 20% / 市场成交 25% / 票余额增速 25%（简化）。"""
     now = db.now()
-    week_ago = now - 86400 * 7
+    week_ago = now - config.WEEK_SECONDS
     cur = await conn.execute(
-        "SELECT COUNT(*) FROM guild_shifts WHERE day >= ?", (week_ago // 86400,)
+        "SELECT COUNT(*) FROM guild_shifts WHERE day >= ?", (db.day_id(week_ago),)
     )
     guild_n = (await cur.fetchone())[0]
     cur = await conn.execute("SELECT COUNT(*) FROM stewards WHERE enrolled=1")
@@ -92,7 +92,7 @@ async def maybe_highlight_broadcast(conn: aiosqlite.Connection, s: dict[str, Any
     """单日地下净收益 ≥150 → 全服高光纪事（当日一次）。"""
     if day_net < utcfg.UT_HIGHLIGHT_BROADCAST:
         return ""
-    day = db.now() // 86400
+    day = db.day_id()
     if int(ut.get("highlight_done") or 0) == day:
         return ""
     await conn.execute(

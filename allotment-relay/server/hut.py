@@ -759,6 +759,50 @@ async def cabinet_command(s: dict[str, Any], rest: list[str]) -> str:
     return await cabinet_take(s, item, qty)
 
 
+async def bed_rest(s: dict[str, Any]) -> str:
+    """岸柏板床：一觉回精力。每天一次（游戏日换班刷新）；带病上限自动收窄。"""
+    from . import energy as energy_mod
+    from . import survival
+
+    if not s.get("hut_built"):
+        raise ValueError(
+            "先 hut_ops build 小屋，再 buy bed → install hard_N bed（岸柏板床）"
+        )
+    async with db.connect() as conn:
+        cur = await conn.execute(
+            "SELECT 1 FROM hut_fittings WHERE steward_id=? AND item_key='bed'",
+            (s["id"],),
+        )
+        if not await cur.fetchone():
+            raise ValueError(
+                "小屋里还没有床 — hut_ops buy bed → install hard_N bed"
+                f"（{HUT_HARD['bed']['cost']} 票，硬装槽。睡一觉回 {config.BED_REST_ENERGY} 精力）"
+            )
+        row = await (await conn.execute(
+            "SELECT bed_rest_at FROM stewards WHERE id=?", (s["id"],)
+        )).fetchone()
+        last = int(row[0] if row else 0)
+        if last and db.day_id(last) >= db.day_id():
+            wait = db.seconds_until_next_day()
+            hours = wait // 3600 + (1 if wait % 3600 else 0)
+            raise ValueError(
+                f"今天睡过了，潮声换班后再来（约 {hours} 小时后）"
+                f"（一觉回 {config.BED_REST_ENERGY} 精力，每天一次）"
+            )
+        restored = await energy_mod.restore(conn, s["id"], config.BED_REST_ENERGY)
+        if restored <= 0:
+            raise ValueError("精力是满的，不困。先干活去")
+        await conn.execute(
+            "UPDATE stewards SET bed_rest_at=? WHERE id=?", (db.now(), s["id"])
+        )
+        await survival.bump(conn, s["id"], satiety=8)
+        await conn.commit()
+    return (
+        f"一觉睡到潮声换班（精力 +{restored}，饱食 +8）。"
+        "今天先这样；明天换班后还能再睡。饿醒不算病，记得正经吃饭。"
+    )
+
+
 async def hut_ops(key_id: int, command: str) -> str:
     from .game import require_steward
 
@@ -774,6 +818,9 @@ async def hut_ops(key_id: int, command: str) -> str:
         if len(parts) > 1 and parts[1].isdigit():
             n = max(1, int(parts[1]))
         return await cabinet_expand(s, n)
+
+    if verb in ("睡", "睡觉", "sleep", "休息", "rest"):
+        return await bed_rest(s)
 
     if verb in ("卖掉", "sell", "变卖", "出售"):
         return await furniture_sell_command(s, command.strip().split()[1:])
@@ -819,6 +866,20 @@ async def hut_ops(key_id: int, command: str) -> str:
             )
         if bonus.has("fridge"):
             lines.append("冰箱 — hut_ops 冰柜 存|取（熟菜）· kitchen_ops fridge")
+        if bonus.has("bed"):
+            async with db.connect() as conn:
+                row = await (await conn.execute(
+                    "SELECT bed_rest_at FROM stewards WHERE id=?", (s["id"],)
+                )).fetchone()
+            last = int(row[0] if row else 0)
+            if last and db.day_id(last) >= db.day_id():
+                wait = db.seconds_until_next_day()
+                lines.append(
+                    f"床 — 今天睡过了，换班后约 {wait // 3600 + 1} 小时能再睡"
+                    f"（回 {config.BED_REST_ENERGY} 精力）"
+                )
+            else:
+                lines.append(f"床 — 现在能睡：hut_ops 睡（回 {config.BED_REST_ENERGY} 精力）")
         if not bonus.has("cabinet") and not bonus.has("fridge"):
             lines.append(
                 "存菜：hut_ops buy cabinet（潮柜·生鲜）或 buy fridge（冰箱·熟菜），"
@@ -1078,5 +1139,5 @@ async def hut_ops(key_id: int, command: str) -> str:
         return msg
 
     raise ValueError(
-        f"未知 hut 指令: {command}（status/build/upgrade/label/catalog/buy/install/remove/冰柜/柜子/卖掉）"
+        f"未知 hut 指令: {command}（status/build/upgrade/label/catalog/buy/install/remove/睡/冰柜/柜子/卖掉）"
     )

@@ -1,4 +1,7 @@
+import asyncio
+import contextvars
 import secrets
+import sqlite3
 import time
 from contextlib import asynccontextmanager
 from typing import Any, AsyncIterator
@@ -6,7 +9,27 @@ from typing import Any, AsyncIterator
 import aiosqlite
 
 from .catalog import STARTER_STOCK
-from .config import DATA_DIR, DB_PATH, KEY_PREFIX, START_ENERGY, START_PARCELS, START_TICKETS
+from .config import (
+    DATA_DIR,
+    DB_PATH,
+    FORAGE_COOLDOWN_DAY,
+    KEY_PREFIX,
+    START_ENERGY,
+    START_PARCELS,
+    START_TICKETS,
+    WEEK_SECONDS,
+)
+
+# 单进程内串行化 SQLite 访问，避免多云端 Agent 并发时 database is locked
+_DB_MUTEX = asyncio.Lock()
+_DB_CONN: contextvars.ContextVar[aiosqlite.Connection | None] = contextvars.ContextVar(
+    "_db_conn", default=None,
+)
+_DB_PRAGMAS_READY = False
+
+DB_BUSY_MSG = (
+    "数据库正忙（岛上同时操作的人太多）。等 10～30 秒再发同一条指令，不要连点。"
+)
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS api_keys (
@@ -340,6 +363,7 @@ CREATE TABLE IF NOT EXISTS kitchen_rolls (
     steward_id INTEGER NOT NULL REFERENCES stewards(id),
     day INTEGER NOT NULL,
     count INTEGER NOT NULL DEFAULT 0,
+    mix_count INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (steward_id, day)
 );
 
@@ -473,6 +497,10 @@ CREATE TABLE IF NOT EXISTS bar_daily_state (
     special_drink TEXT NOT NULL DEFAULT '',
     activity_key TEXT,
     global_event TEXT NOT NULL DEFAULT '',
+    duo_nudge TEXT NOT NULL DEFAULT '',
+    duo_steward_a INTEGER NOT NULL DEFAULT 0,
+    duo_steward_b INTEGER NOT NULL DEFAULT 0,
+    duo_activated_at INTEGER NOT NULL DEFAULT 0,
     singer_state TEXT NOT NULL DEFAULT '',
     playlist_json TEXT NOT NULL DEFAULT '[]',
     song_queue_json TEXT NOT NULL DEFAULT '[]',
@@ -579,6 +607,14 @@ CREATE TABLE IF NOT EXISTS shiye_rolls (
     steward_id INTEGER NOT NULL REFERENCES stewards(id),
     day INTEGER NOT NULL,
     count INTEGER NOT NULL DEFAULT 0,
+    passive_rolled INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (steward_id, day)
+);
+
+CREATE TABLE IF NOT EXISTS gugu_dove_rolls (
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    day INTEGER NOT NULL,
+    rolled INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (steward_id, day)
 );
 
@@ -677,9 +713,30 @@ CREATE TABLE IF NOT EXISTS steward_story_outcomes (
 @asynccontextmanager
 async def connect() -> AsyncIterator[aiosqlite.Connection]:
     """Open DB with busy wait — use as `async with connect() as conn:`."""
-    async with aiosqlite.connect(DB_PATH, timeout=30.0) as conn:
-        await conn.execute("PRAGMA busy_timeout=10000")
-        yield conn
+    global _DB_PRAGMAS_READY
+    existing = _DB_CONN.get()
+    if existing is not None:
+        yield existing
+        return
+    async with _DB_MUTEX:
+        async with aiosqlite.connect(DB_PATH, timeout=60.0) as conn:
+            await conn.execute("PRAGMA busy_timeout=30000")
+            if not _DB_PRAGMAS_READY:
+                await conn.execute("PRAGMA journal_mode=WAL")
+                await conn.execute("PRAGMA synchronous=NORMAL")
+                await conn.execute("PRAGMA wal_autocheckpoint=1000")
+                _DB_PRAGMAS_READY = True
+            token = _DB_CONN.set(conn)
+            try:
+                yield conn
+            finally:
+                _DB_CONN.reset(token)
+
+
+def is_db_locked_error(exc: BaseException) -> bool:
+    if isinstance(exc, (aiosqlite.OperationalError, sqlite3.OperationalError)):
+        return "locked" in str(exc).lower()
+    return False
 
 
 async def init_db() -> None:
@@ -726,6 +783,9 @@ async def init_db() -> None:
             "ALTER TABLE stewards ADD COLUMN eatery_open INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN eatery_label TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE stewards ADD COLUMN eatery_opened_at INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN fruit_streak INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN bed_rest_at INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN dine_buff_until INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE voyages ADD COLUMN encounter TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE bar_daily_state ADD COLUMN auto_mood TEXT NOT NULL DEFAULT 'normal'",
             "ALTER TABLE bar_daily_state ADD COLUMN manual_mood_level TEXT NOT NULL DEFAULT ''",
@@ -736,6 +796,10 @@ async def init_db() -> None:
             "ALTER TABLE bar_daily_state ADD COLUMN owner_event_date INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE bar_daily_state ADD COLUMN owner_event_enabled INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE bar_daily_state ADD COLUMN first_order_free INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE bar_daily_state ADD COLUMN duo_nudge TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE bar_daily_state ADD COLUMN duo_steward_a INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE bar_daily_state ADD COLUMN duo_steward_b INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE bar_daily_state ADD COLUMN duo_activated_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE drift_bottles ADD COLUMN reply_body TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE drift_bottles ADD COLUMN reply_by INTEGER REFERENCES stewards(id)",
             "ALTER TABLE drift_bottles ADD COLUMN reply_at INTEGER",
@@ -953,6 +1017,7 @@ async def init_db() -> None:
             "ALTER TABLE steward_undertide ADD COLUMN spouse_allow_week INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE steward_undertide ADD COLUMN guide_seen INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE steward_undertide ADD COLUMN last_rep_recover_day INTEGER NOT NULL DEFAULT 0",
+            "DELETE FROM ut_bounty WHERE poster='__quest__' AND id NOT IN (SELECT MIN(id) FROM ut_bounty WHERE poster='__quest__' GROUP BY target_name, created_at)",
             "ALTER TABLE steward_undertide ADD COLUMN savings INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN lodge_until INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN lodge_count INTEGER NOT NULL DEFAULT 0",
@@ -1017,6 +1082,19 @@ async def init_db() -> None:
             "ALTER TABLE steward_ailments ADD COLUMN last_treat_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE parcels ADD COLUMN ready_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN cabinet_extra INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN worn_title TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE stewards ADD COLUMN reward_level INTEGER NOT NULL DEFAULT 0",
+            """
+            CREATE TABLE IF NOT EXISTS steward_achievements (
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                ach_key TEXT NOT NULL,
+                unlocked_at INTEGER NOT NULL,
+                PRIMARY KEY (steward_id, ach_key)
+            )
+            """,
+            "ALTER TABLE stewards ADD COLUMN market_extra INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE steward_undertide ADD COLUMN racket_day INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE steward_undertide ADD COLUMN racket_json TEXT NOT NULL DEFAULT ''",
             # 小橘 — 真人扮演的女明星（酒馆驻场 + 小剧场专场）
             """
             CREATE TABLE IF NOT EXISTS star_state (
@@ -1172,6 +1250,29 @@ async def init_db() -> None:
                 PRIMARY KEY (steward_id, story_key, outcome)
             )
             """,
+            """
+            CREATE TABLE IF NOT EXISTS lounge_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                body TEXT NOT NULL,
+                source TEXT NOT NULL DEFAULT 'mcp',
+                created_at INTEGER NOT NULL
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_lounge_created ON lounge_messages(created_at DESC)",
+            "ALTER TABLE stewards ADD COLUMN lounge_human_name TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE stewards ADD COLUMN lounge_muted_until INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN lounge_banned INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE kitchen_rolls ADD COLUMN mix_count INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE shiye_rolls ADD COLUMN passive_rolled INTEGER NOT NULL DEFAULT 0",
+            """
+            CREATE TABLE IF NOT EXISTS gugu_dove_rolls (
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                day INTEGER NOT NULL,
+                 rolled INTEGER NOT NULL DEFAULT 0,
+                 PRIMARY KEY (steward_id, day)
+            )
+            """,
         ):
             try:
                 await db.execute(ddl)
@@ -1184,6 +1285,36 @@ async def init_db() -> None:
 
 def now() -> int:
     return int(time.time())
+
+
+def day_id(ts: int | None = None) -> int:
+    """游戏日序号（UTC 午夜换班，与 FORAGE_COOLDOWN_DAY 对齐）。"""
+    t = now() if ts is None else ts
+    return t // FORAGE_COOLDOWN_DAY
+
+
+def day_start(day: int | None = None) -> int:
+    """某日 0 点的 Unix 时间戳；默认今天。"""
+    d = day_id() if day is None else day
+    return d * FORAGE_COOLDOWN_DAY
+
+
+def next_day_start(ts: int | None = None) -> int:
+    """下一次游戏日换班的 Unix 时间戳。"""
+    t = now() if ts is None else ts
+    return (t // FORAGE_COOLDOWN_DAY + 1) * FORAGE_COOLDOWN_DAY
+
+
+def seconds_until_next_day(ts: int | None = None) -> int:
+    """距离下一次游戏日换班还剩多少秒。"""
+    t = now() if ts is None else ts
+    return max(0, next_day_start(t) - t)
+
+
+def week_id(ts: int | None = None) -> int:
+    """游戏周序号（与 WEEK_SECONDS 对齐）。"""
+    t = now() if ts is None else ts
+    return t // WEEK_SECONDS
 
 
 def make_key() -> str:
@@ -1349,6 +1480,8 @@ async def enroll_steward(key_id: int, name: str, motto: str, badge: str, portrai
     if len(name) < 2 or len(name) > 24:
         raise ValueError("名字长度需在 2~24 之间")
     ts = now()
+    from . import ranks as ranks_mod
+    start_level = ranks_mod.level_from_xp(START_TICKETS)
     async with connect() as db:
         db.row_factory = aiosqlite.Row
         if await (await db.execute(
@@ -1363,11 +1496,13 @@ async def enroll_steward(key_id: int, name: str, motto: str, badge: str, portrai
             """
             INSERT INTO stewards (
                 key_id, name, motto, badge, portrait, tickets, xp, parcel_count,
-                enrolled, last_active_at, created_at, energy, last_bar_shift_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
+                enrolled, last_active_at, created_at, energy, last_bar_shift_at,
+                reward_level
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)
             """,
             (key_id, name, motto.strip()[:200], badge.strip()[:32], portrait.strip()[:120],
-             START_TICKETS, START_TICKETS, START_PARCELS, ts, ts, START_ENERGY, ts),
+             START_TICKETS, START_TICKETS, START_PARCELS, ts, ts, START_ENERGY, ts,
+             start_level),
         )
         sid = (await (await db.execute("SELECT last_insert_rowid()")).fetchone())[0]
         await ensure_parcels(db, sid, START_PARCELS)
@@ -1395,7 +1530,8 @@ async def public_stats() -> dict[str, Any]:
         online_cut = now() - ONLINE_WINDOW
         online_rows = await (await db.execute(
             """
-            SELECT id, name, badge, tickets, COALESCE(xp, 0) AS xp, last_active_at
+            SELECT id, name, badge, tickets, COALESCE(xp, 0) AS xp, last_active_at,
+                   COALESCE(worn_title, '') AS worn_title
             FROM stewards
             WHERE enrolled = 1 AND last_active_at > ?
             ORDER BY last_active_at DESC LIMIT 40
@@ -1411,7 +1547,7 @@ async def public_stats() -> dict[str, Any]:
                 "badge": ranked["badge"],
                 "tickets": ranked["tickets"],
                 "level": ranked["level"],
-                "title": ranked["title"],
+                "title": ranked.get("display_title") or ranked["title"],
                 "last_active_at": ranked["last_active_at"],
             })
         online = len(online_people)
@@ -1505,6 +1641,22 @@ async def public_stats() -> dict[str, Any]:
         }
 
 
+async def list_received_gifts(steward_id: int, limit: int = 20) -> list[dict[str, Any]]:
+    async with connect() as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute(
+            """
+            SELECT c.text, c.created_at, c.action, a.name AS actor_name
+            FROM chronicle c
+            LEFT JOIN stewards a ON a.id = c.actor_id
+            WHERE c.action IN ('gift', 'bar_tip') AND c.target_id=?
+            ORDER BY c.created_at DESC LIMIT ?
+            """,
+            (steward_id, limit),
+        )
+        return [dict(r) for r in await cur.fetchall()]
+
+
 async def public_chronicle(limit: int = 40) -> list[dict[str, Any]]:
     async with connect() as db:
         db.row_factory = aiosqlite.Row
@@ -1577,7 +1729,7 @@ async def public_allotments() -> list[dict[str, Any]]:
                 "tickets": p["tickets"],
                 "xp": ranked["xp"],
                 "level": ranked["level"],
-                "title": ranked["title"],
+                "title": ranked.get("display_title") or ranked["title"],
                 "parcel_count": p["parcel_count"],
                 "greenhouse": bool(p["greenhouse"]),
                 "greenhouse_label": p["greenhouse_label"],

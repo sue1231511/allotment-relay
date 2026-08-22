@@ -73,13 +73,13 @@ async def test_star_flow() -> None:
     # 打赏 20：酒馆场子荔栀抽三成（int 截断），小橘实收 14，营收 +6
     async with db.connect() as conn:
         before_rev = (await (await conn.execute(
-            "SELECT revenue_tickets FROM bar_daily_state WHERE day=?", (db.now() // 86400,)
+            "SELECT revenue_tickets FROM bar_daily_state WHERE day=?", (db.day_id(),)
         )).fetchone() or [0])[0]
     tip = await star.star_ops(kid, "打赏 20票 唱得值")
     assert "-20 票" in tip and "荔栀抽走 6" in tip, tip
     async with db.connect() as conn:
         after_rev = (await (await conn.execute(
-            "SELECT revenue_tickets FROM bar_daily_state WHERE day=?", (db.now() // 86400,)
+            "SELECT revenue_tickets FROM bar_daily_state WHERE day=?", (db.day_id(),)
         )).fetchone() or [0])[0]
         fans_tip = (await (await conn.execute(
             "SELECT tip_total FROM star_fans WHERE steward_id=?", (sid,)
@@ -196,7 +196,7 @@ async def test_star_stage_and_lazy_settle() -> None:
     # 懒结算：把 last_settle_day 拨回 1 天（昨晚 stage 开嗓）→ heat +2-1 = +1
     async with db.connect() as conn:
         await conn.execute("UPDATE star_state SET last_settle_day=? WHERE id=1",
-                           (db.now() // 86400 - 1,))
+                           (db.day_id() - 1,))
         await conn.commit()
         heat_before = (await (await conn.execute(
             "SELECT heat FROM star_state WHERE id=1"

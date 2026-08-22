@@ -3,16 +3,24 @@
 from __future__ import annotations
 
 import random
+from math import ceil
 from typing import Any
 
 import aiosqlite
 
 from . import config, db, energy, flavor, survival
-from .catalog import ITEM_PRICES, dish_energy, item_label, suggested_price
+from .catalog import (
+    ITEM_PRICES,
+    dish_energy,
+    eatery_reference_price,
+    item_label,
+    resolve_item_key,
+    suggested_price,
+)
 
 
 def _day_id() -> int:
-    return db.now() // config.FORAGE_COOLDOWN_DAY
+    return db.day_id()
 
 
 def _age_text(seconds: int | None) -> str:
@@ -77,22 +85,14 @@ def _quote_lines(label: str, quote: dict[str, Any], menu_n: int) -> list[str]:
     ]
 
 
-def _item_price(item: str) -> int:
-    price = suggested_price(item)
-    if price:
-        return price
-    if item.startswith("meal_"):
-        return ITEM_PRICES.get(item, 18)
-    return ITEM_PRICES.get(item, 0)
-
-
-def _eat_gain(item: str) -> int:
+def _eat_gain(item: str, price: int | None = None) -> int:
     gain = dish_energy(item)
-    if gain is not None:
-        return gain
-    if item.startswith("meal_"):
-        return 12
-    return 15
+    if gain is None:
+        gain = 18 if item.startswith("meal_") else 15
+    if price and price > 0:
+        scaled = int(ceil(price / config.EATERY_TICKETS_PER_ENERGY))
+        gain = max(gain, scaled)
+    return min(50, gain)
 
 
 async def _menu_rows(conn: aiosqlite.Connection, shop_id: int) -> list[dict[str, Any]]:
@@ -105,7 +105,9 @@ async def _menu_rows(conn: aiosqlite.Connection, shop_id: int) -> list[dict[str,
 
 
 def _menu_line(row: dict[str, Any]) -> str:
-    return f"  #{row['id']} {item_label(row['item'])} — {row['price']} 票"
+    energy = dish_energy(row["item"])
+    extra = f" · 精力+{energy}" if energy else ""
+    return f"  #{row['id']} {item_label(row['item'])} — {row['price']} 票{extra}"
 
 
 async def eatery_command(s: dict[str, Any], command: str) -> str:
@@ -242,24 +244,50 @@ async def eatery_command(s: dict[str, Any], command: str) -> str:
     if verb == "stock" and len(parts) >= 2:
         if not s.get("eatery_open"):
             raise ValueError("先 shop open")
-        item = parts[1]
+        token = parts[1]
+        item = resolve_item_key(token) or token
+        if not (item.startswith("dish_") or item.startswith("meal_")):
+            from . import kitchen as kitchen_mod
+            cooked = kitchen_mod._resolve_cooked_token(token)
+            if cooked and (cooked.startswith("dish_") or cooked.startswith("meal_")):
+                item = cooked
         if not (item.startswith("dish_") or item.startswith("meal_")):
             raise ValueError("只能上架熟菜 dish_* / meal_*")
-        price = _item_price(item)
-        if not price:
-            raise ValueError("这道菜卖不出价")
         async with db.connect() as conn:
             menu = await _menu_rows(conn, s["id"])
             if len(menu) >= config.EATERY_MENU_MAX:
                 raise ValueError(f"菜单满了（{config.EATERY_MENU_MAX}）")
+            if item.startswith("dish_"):
+                from . import kitchen as kitchen_mod
+                try:
+                    item = await kitchen_mod._pick_cooked_satchel(conn, s["id"], item)
+                except ValueError:
+                    pass
             if not await db.take_item(conn, s["id"], item, 1):
                 raise ValueError("行囊没有这道菜，先 cook / brew")
+            ref = eatery_reference_price(item)
+            price = ref
+            if len(parts) >= 3:
+                try:
+                    price = int(parts[2])
+                except ValueError:
+                    raise ValueError(
+                        f"价格要写正整数。{item_label(item)} 参考价约 {ref} 票（可自定，不限区间）"
+                    ) from None
+                if price < 1:
+                    raise ValueError("价格至少 1 票")
             await conn.execute(
                 "INSERT INTO eatery_menu (steward_id, item, price, listed_at) VALUES (?,?,?,?)",
                 (s["id"], item, price, db.now()),
             )
             await conn.commit()
-        return f"上架 {item_label(item)} — {price} 票"
+        vend = suggested_price(item)
+        energy = dish_energy(item)
+        energy_note = f" · 精力+{energy}" if energy else ""
+        return (
+            f"上架 {item_label(item)} — {price} 票"
+            f"（参考约 {ref}{energy_note} · 系统回收 {vend}）"
+        )
 
     if verb == "unstock" and len(parts) >= 2:
         try:
@@ -339,9 +367,23 @@ async def _dine(guest: dict[str, Any], shop_name: str, item_ref: str | None) -> 
             (price, shop["id"]),
         )
         await conn.execute("DELETE FROM eatery_menu WHERE id=?", (picked["id"],))
-        gain = _eat_gain(picked["item"])
+        gain = _eat_gain(picked["item"], price)
+        from . import kitchen as kitchen_mod
+        cured_line = await kitchen_mod.ate_cooked_meal(conn, guest["id"])
         restored = await energy.restore(conn, guest["id"], gain)
-        await survival.bump(conn, guest["id"], satiety=min(18, gain // 2 + 6))
+        # 堂食「饱餐」：行动精力 -1 一段时间 + 雾智/档信小加成——家里自己吃没有，
+        # 这是饭馆相对集市（买货回家吃只有基础精力）的溢价来源
+        await conn.execute(
+            "UPDATE stewards SET dine_buff_until=? WHERE id=?",
+            (db.now() + config.DINE_BUFF_SECONDS, guest["id"]),
+        )
+        await survival.bump(
+            conn,
+            guest["id"],
+            satiety=min(18, gain // 2 + 6),
+            mist_wit=config.DINE_BUFF_MIST_WIT,
+            standing=config.DINE_BUFF_STANDING,
+        )
         await conn.execute(
             """
             INSERT INTO eatery_rolls (steward_id, day, count) VALUES (?,?,1)
@@ -367,6 +409,14 @@ async def _dine(guest: dict[str, Any], shop_name: str, item_ref: str | None) -> 
     msg = (
         f"在「{label}」吃了 {dish}（-{price} 票，精力 +{restored}）\n{note}"
     )
+    hours = config.DINE_BUFF_SECONDS // 3600
+    msg += (
+        f"\n堂食「饱餐」{hours} 小时：行动精力 -1（steward_ops sheet 可见剩余）；"
+        f"雾智 +{config.DINE_BUFF_MIST_WIT}、档信 +{config.DINE_BUFF_STANDING}。"
+        "家里自己吃没有这些——下海干活前来一顿才值。"
+    )
+    if cured_line:
+        msg += f"\n{cured_line}"
     await db.add_chronicle(
         "eatery",
         f"{guest['name']} 在 {shop['name']} 的馆吃了 {dish}",

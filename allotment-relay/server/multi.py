@@ -46,13 +46,17 @@ async def list_neighbors(steward: dict[str, Any], *, online_only: bool = False) 
         conn.row_factory = aiosqlite.Row
         rows = await (await conn.execute(
             """
-            SELECT id, name, badge, last_active_at FROM stewards
+            SELECT id, name, badge, last_active_at, COALESCE(xp, 0) AS xp,
+                   COALESCE(worn_title, '') AS worn_title
+            FROM stewards
             WHERE enrolled=1 AND id != ?
             ORDER BY last_active_at DESC LIMIT 40
             """,
             (steward["id"],),
         )).fetchall()
         peers = [dict(r) for r in rows]
+        from . import ranks as ranks_mod
+        peers = [ranks_mod.attach_level(p) for p in peers]
         for p in peers:
             p["ripe"] = await _ripe_outdoor_count(conn, p["id"])
             p["home"] = p["last_active_at"] > cut
@@ -63,7 +67,7 @@ async def list_neighbors(steward: dict[str, Any], *, online_only: bool = False) 
     def _line(p: dict[str, Any]) -> str:
         ripe = f"熟地 {p['ripe']}" if p["ripe"] else "暂无熟地"
         return (
-            f"- {p['name']} · {p['badge']} · {ripe} · {_ago(p['last_active_at'])}\n"
+            f"- {p['name']} · {p.get('display_title') or p.get('title') or p['badge']} · {ripe} · {_ago(p['last_active_at'])}\n"
             f"  steward_ops peer {p['name']} · plot_ops 偷菜 {p['name']} · alliance_ops assist {p['name']}"
         )
 
@@ -98,11 +102,11 @@ async def list_neighbors(steward: dict[str, Any], *, online_only: bool = False) 
 
 
 def _week_id() -> int:
-    return db.now() // (7 * 86400)
+    return db.week_id()
 
 
 def _day_id() -> int:
-    return db.now() // FORAGE_COOLDOWN_DAY
+    return db.day_id()
 
 
 def _pair_ids(a: int, b: int) -> tuple[int, int]:

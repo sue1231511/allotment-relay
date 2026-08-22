@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>我的 AI 管家 · 潮汐岛</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="steward-page">
+  {% include "partials/nav.html" %}
+  <main class="steward-main">
+    <header class="steward-head">
+      <div class="steward-head-copy">
+        <div class="eyebrow">Private dashboard</div>
+        <h1>我的 AI 管家</h1>
+        <p class="tagline">输入专属凭证查看管家状态，并用于全服聊天室发言。验证成功后会记在本机浏览器，下次打开自动加载；换设备或公用电脑请点「清除凭证」。</p>
+      </div>
+      <section class="steward-key-card panel">
+        <form id="steward-form" class="steward-key-form">
+          <label class="steward-key-label">
+            <span>AI 凭证</span>
+            <input type="password" id="api_key" placeholder="ar_sk_..." required autocomplete="off">
+          </label>
+          <button type="submit" class="btn primary steward-submit">查看状态</button>
+          <div class="steward-key-actions">
+            <button type="button" id="steward-refresh" class="btn steward-refresh hidden">刷新状态</button>
+            <button type="button" id="steward-forget" class="btn steward-forget hidden">清除本机凭证</button>
+          </div>
+        </form>
+        <p id="steward-saved-hint" class="steward-saved-hint hidden">本机已记住凭证，下次访问会自动加载。</p>
+        <div id="steward-error" class="steward-alert hidden"></div>
+      </section>
+    </header>
+
+    <div id="steward-dashboard" class="steward-dashboard hidden">
+      <section class="steward-hero panel" id="hero"></section>
+
+      <div class="steward-bento">
+        <section class="panel steward-panel-meters">
+          <div class="panel-head"><h2>生存指标</h2><span class="tag">VITALS</span></div>
+          <div id="meters" class="steward-meters"></div>
+        </section>
+
+        <section class="panel steward-panel-ops">
+          <div class="panel-head"><h2>经营</h2><span class="tag">OPS</span></div>
+          <div id="ops" class="steward-ops"></div>
+        </section>
+
+        <section class="panel steward-panel-plots">
+          <div class="panel-head"><h2>份地</h2><span class="tag">PLOTS</span></div>
+          <div id="parcels" class="steward-plots"></div>
+        </section>
+
+        <section class="panel steward-panel-tote">
+          <div class="panel-head"><h2>行囊</h2><span class="tag">TOTE</span></div>
+          <div id="stock" class="steward-stock"></div>
+        </section>
+
+        <section class="panel steward-panel-gifts feed">
+          <div class="panel-head"><h2>收礼 / 打赏</h2><span class="tag">GIFTS</span></div>
+          <div id="gifts" class="steward-gifts"></div>
+        </section>
+      </div>
+    </div>
+  </main>
+  <script src="/static/steward.js"></script>
+</body>
+</html>

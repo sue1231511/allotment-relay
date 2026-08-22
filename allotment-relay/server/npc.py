@@ -13,7 +13,7 @@ from .game import require_steward
 
 
 def _day_id() -> int:
-    return db.now() // config.FORAGE_COOLDOWN_DAY
+    return db.day_id()
 
 
 def _find_npc(query: str) -> dict[str, Any] | None:
@@ -35,7 +35,7 @@ async def npc_ops(key_id: int, command: str) -> str:
         for npc in NPC_FIXED:
             tag = ""
             if npc["key"] == "gugu_dove":
-                tag = " · 昼间随机偷吃庄稼，不可伤害"
+                tag = " · 昼间每天掷一次盯梢，不可伤害"
             elif npc["key"] == "qiaoqiao":
                 tag = " · 诊所 NPC，治病用 visit_ops clinic treat"
             elif npc["key"] == "lili":
@@ -51,7 +51,7 @@ async def npc_ops(key_id: int, command: str) -> str:
             elif npc["key"] == "market_fan":
                 tag = " · 集市挂单"
             elif npc["key"] == "shiye":
-                tag = " · 巷口碰到：小偷/乞丐/碰瓷/敲诈"
+                tag = " · 路上每天掷一次碰上；visit 拾叶 主动必触发"
             elif npc["key"] == "lizhi":
                 tag = " · 酒吧老板娘，bar_ops tonight/chat"
             elif npc["key"] == "wangfu":
@@ -375,6 +375,26 @@ async def _resolve_shiye_kind(
     return "敲诈档：你既没票也没货。拾叶骂了一句叶子，走了（档信 -3）"
 
 
+async def _shiye_passive_rolled(conn: aiosqlite.Connection, steward_id: int) -> bool:
+    cur = await conn.execute(
+        "SELECT passive_rolled FROM shiye_rolls WHERE steward_id=? AND day=?",
+        (steward_id, _day_id()),
+    )
+    row = await cur.fetchone()
+    return bool(row and row[0])
+
+
+async def _mark_shiye_passive_rolled(conn: aiosqlite.Connection, steward_id: int) -> None:
+    await conn.execute(
+        """
+        INSERT INTO shiye_rolls (steward_id, day, count, passive_rolled)
+        VALUES (?,?,0,1)
+        ON CONFLICT(steward_id, day) DO UPDATE SET passive_rolled = 1
+        """,
+        (steward_id, _day_id()),
+    )
+
+
 async def maybe_shiye_bump(
     conn: aiosqlite.Connection,
     steward: dict[str, Any],
@@ -384,13 +404,16 @@ async def maybe_shiye_bump(
         return None
     if await _shiye_count(conn, steward["id"]) >= config.SHIYE_DAILY_MAX:
         return None
-    chance = config.SHIYE_BUMP_CHANCE
+    if await _shiye_passive_rolled(conn, steward["id"]):
+        return None
+    chance = config.SHIYE_DAILY_MEET_CHANCE
     if world.current_day_phase() in ("dusk", "night"):
-        chance += 0.04
+        chance += 0.05
     if steward.get("standing", 50) < 40:
         chance += 0.03
     from . import shaonian as shaonian_mod
     chance += await shaonian_mod.shiye_bump_bonus(conn, steward["id"])
+    await _mark_shiye_passive_rolled(conn, steward["id"])
     if random.random() > chance:
         return None
     return await _run_shiye_encounter(conn, steward)

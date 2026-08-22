@@ -72,6 +72,7 @@ def test_mcp_descriptions() -> None:
     tote = mcp._tool_manager.get_tool("tote_ops")
     tote_blob = f"{tote.description}\n{(tote.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
     assert "送票" in tote_blob
+    assert "gifts" in tote_blob
 
     star = mcp._tool_manager.get_tool("star_ops")
     star_blob = f"{star.description}\n{(star.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -84,6 +85,10 @@ def test_mcp_descriptions() -> None:
     assert "help" in bar_blob
     assert "duo" not in bar.description.lower() or "不要发明" in bar_blob
 
+    steward = mcp._tool_manager.get_tool("steward_ops")
+    st_blob = f"{steward.description}\n{(steward.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
+    assert "成就" in st_blob
+
     ut = mcp._tool_manager.get_tool("undertide_ops")
     ut_blob = f"{ut.description}\n{(ut.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
     assert "猫猫" in ut_blob
@@ -93,6 +98,18 @@ def test_mcp_descriptions() -> None:
     alliance = mcp._tool_manager.get_tool("alliance_ops")
     al_blob = f"{alliance.description}\n{(alliance.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
     assert "贡献榜" in al_blob
+
+    hut = mcp._tool_manager.get_tool("hut_ops")
+    hut_blob = f"{hut.description}\n{(hut.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
+    assert "床" in hut_blob
+    assert "睡" in hut_blob
+    assert "install hard_1 bed" in hut_blob
+
+    kitchen = mcp._tool_manager.get_tool("kitchen_ops")
+    k_blob = f"{kitchen.description}\n{(kitchen.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
+    assert "shop stock" in k_blob
+    assert "价格自定" in k_blob or "每天 10 次" in k_blob
+    assert "回收" in k_blob
 
     manual = mcp._tool_manager.get_tool("relay_manual")
     man_blob = manual.description or ""
@@ -123,8 +140,18 @@ def test_relay_manual_covers_systems() -> None:
         "dove",
         "swap ",
         "market ",
+        "market 扩",
         "brew",
+        "每天 10 次",
+        "每天 24 次",
         "shop open",
+        "shop stock 菜名 [价格]",
+        "价格自定",
+        "饱餐",
+        "饭馆卖堂食",
+        "hut_ops 睡",
+        "游戏日换班",
+        "buy bed",
         "lodge",
         "shaonian",
         "gear upgrade",
@@ -150,6 +177,8 @@ def test_relay_manual_covers_systems() -> None:
         "compliment 和 release",
         "dig 和 probe 都关",
         "能直接送票",
+        "tote_ops gifts",
+        "随机事件整体 +30%",
         "旧史文本",
         "不是流水",
         "真人在面板",
@@ -187,7 +216,7 @@ def test_readme_workflow_rules() -> None:
         assert "merge origin/main" in blob
         assert "relay_manual" in blob
         assert "mcp_app.py" in blob
-    assert "14 个工具" in readme
+    assert "15 个工具" in readme
     assert "steward_ops" in readme and "plot_ops" in readme and "bar_ops" in readme
     assert "tale_ops" in readme
     assert "story_ops" in readme

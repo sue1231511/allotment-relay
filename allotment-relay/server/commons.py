@@ -13,7 +13,7 @@ from .catalog import COMMONS_TEMPLATES, DISCOVERY_LOOT, ITEM_NAMES
 
 
 def _day_id() -> int:
-    return db.now() // config.FORAGE_COOLDOWN_DAY
+    return db.day_id()
 
 
 async def _active_spawns(conn: aiosqlite.Connection) -> list[dict[str, Any]]:
@@ -243,11 +243,15 @@ async def roll_discovery(
     if not pool_cfg or not await _can_discover(conn, steward["id"]):
         return None
 
-    chance = config.DISCOVERY_CHANCE.get(trigger, 0.08)
+    chance = config.DISCOVERY_CHANCE.get(trigger, 0.08 * config.EVENT_RATE_MULT)
     if steward.get("mascot_trait") == "lucky":
         chance *= 1.25
     if world.current_weather() == "misty":
         chance *= 1.08
+    from . import events as events_mod
+    chance += await events_mod.discovery_chance_bonus()
+    chance -= await events_mod.discovery_chance_penalty()
+    chance = max(0.01, min(0.65, chance))
     if random.random() > chance:
         return None
 

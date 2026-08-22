@@ -306,9 +306,12 @@ def test_event_and_cabinet_knobs() -> None:
     from server import config
     from server.hut import cabinet_capacity
 
-    assert config.EVENT_ROLL_CHANCE == 0.08
+    assert config.EVENT_RATE_MULT == 1.3
+    assert config.EVENT_ROLL_CHANCE == 0.104
+    assert config.EVENT_DAILY_CAP == 5
     assert config.EVENT_GOOD_SHARE == 0.30
-    assert config.AILMENT_BAD_EVENT_CHANCE == 0.13
+    assert config.AILMENT_BAD_EVENT_CHANCE == 0.169
+    assert config.FARM_TRIGGER_CHANCE["tend"] == 0.104
     assert config.CABINET_SLOTS == 30
     assert config.CABINET_SLOT_COST == 12
     assert config.CABINET_SLOTS_MAX == 60

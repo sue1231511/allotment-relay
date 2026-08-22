@@ -149,28 +149,48 @@ function panelHtml(panel, stats) {
   return '';
 }
 
+function statMain(label, value, extraClass = '', panel = '') {
+  const cls = `stat-main stat-chip${extraClass ? ` ${extraClass}` : ''}`;
+  if (panel) {
+    return `<button type="button" class="${cls}" data-panel="${esc(panel)}"><small>${esc(label)}</small><strong>${esc(value)}</strong></button>`;
+  }
+  return `<div class="${cls.replace(' stat-chip', '')}"><small>${esc(label)}</small><strong>${esc(value)}</strong></div>`;
+}
+
+function statPill(label, panel, extraClass = '') {
+  return `<button type="button" class="state-pill stat-chip${extraClass ? ` ${extraClass}` : ''}" data-panel="${esc(panel)}">${label}</button>`;
+}
+
 function renderStats(stats) {
   const liveN = stats.online || 0;
   const L = stats.league;
   const leagueText = L
-    ? `周目标 ${L.label || ''} ${L.progress}/${L.target}${L.completed ? ' ✓' : ''}`
-    : '周目标 —';
-  document.getElementById('stats').innerHTML = [
-    chip('stewards', `管理员 ${stats.stewards}`),
-    chip('online', `在线 ${liveN}${liveN ? ' · 看是谁' : ''}`, liveN ? 'has-live' : ''),
-    chip('climate', WEATHER[stats.weather] || stats.weather),
-    chip('climate', TIDE[stats.tide] || stats.tide),
-    chip('climate', PHASE[stats.day_phase] || stats.day_phase_label || '—'),
+    ? `互助周 ${L.progress}/${L.target}${L.completed ? ' ✓' : ''}`
+    : '互助周 —';
+  const climate = `${WEATHER[stats.weather] || stats.weather} · ${PHASE[stats.day_phase] || stats.day_phase_label || '—'}`;
+
+  const primary = document.getElementById('stats-primary');
+  const secondary = document.getElementById('stats-secondary');
+  if (!primary || !secondary) return;
+
+  primary.innerHTML = [
+    statMain('管理员', String(stats.stewards), '', 'stewards'),
+    statMain('当前在线', `${liveN} 人`, liveN ? 'live' : '', 'online'),
+    statMain('时段', climate, '', 'climate'),
+    statMain('潮汐', TIDE[stats.tide] || stats.tide, '', 'climate'),
+  ].join('');
+
+  secondary.innerHTML = [
     stats.boss && stats.boss.alive
-      ? chip('boss', `Boss ${esc(stats.boss.name)} ${stats.boss.pct}%`)
-      : (stats.boss ? chip('boss', 'Boss 沉寂') : ''),
-    stats.lili ? chip('lili', esc(String(stats.lili).slice(0, 22)), 'pulse-good') : '',
-    chip('tt', 'Tt酱杂货'),
-    chip('swaps', `交换台 ${stats.open_swaps}`),
-    chip('contracts', `合约 ${stats.open_contracts || 0}`),
-    chip('league', leagueText),
-    stats.pulse ? chip('pulse', `脉冲 ${esc(stats.pulse.label)}`, `pulse-${stats.pulse.kind}`) : '',
-    chip('board', '排行榜'),
+      ? statPill(`Boss ${esc(stats.boss.name)} ${stats.boss.pct}%`, 'boss')
+      : (stats.boss ? statPill('Boss 沉寂', 'boss') : ''),
+    stats.lili ? statPill(esc(String(stats.lili).slice(0, 24)), 'lili', 'pulse-good') : '',
+    statPill('Tt酱杂货', 'tt'),
+    statPill(`交换台 ${stats.open_swaps}`, 'swaps'),
+    statPill(`合约 ${stats.open_contracts || 0}`, 'contracts'),
+    statPill(leagueText, 'league'),
+    stats.pulse ? statPill(`脉冲 ${esc(stats.pulse.label)}`, 'pulse', `pulse-${stats.pulse.kind}`) : '',
+    statPill('排行榜', 'board'),
   ].filter(Boolean).join('');
 }
 
@@ -207,8 +227,8 @@ function renderCards(allotments) {
 }
 
 function renderMiniBoard(data) {
-  fillBoard(document.getElementById('mini-tickets'), (data.tickets || []).slice(0, 8), 'tickets');
-  fillBoard(document.getElementById('mini-levels'), (data.levels || []).slice(0, 8), 'level');
+  fillBoard(document.getElementById('mini-tickets'), (data.tickets || []).slice(0, 5), 'tickets');
+  fillBoard(document.getElementById('mini-levels'), (data.levels || []).slice(0, 5), 'level');
 }
 
 async function load() {
@@ -256,7 +276,7 @@ async function load() {
   }
 }
 
-document.getElementById('stats').addEventListener('click', (e) => {
+document.getElementById('stats-shell')?.addEventListener('click', (e) => {
   const btn = e.target.closest('.stat-chip');
   if (!btn || !lastStats) return;
   const panel = btn.dataset.panel;

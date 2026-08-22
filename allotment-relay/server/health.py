@@ -169,10 +169,11 @@ async def inflict(
             (stage, now, source, steward_id, ailment_key),
         )
         stage_name = _stage_name(ailment_key, stage) or "重症"
-        return (
-            f"生肉又下肚，{name}烧回{stage_name}。"
+        re_line = meta.get("re_line") or (
+            "生肉又下肚，{name}烧回{stage_name}。"
             "桥桥一次压不干净，visit_ops clinic treat infection 连看几次。"
         )
+        return re_line.format(name=name, stage_name=stage_name)
     stage = ailment_courses(ailment_key) if is_chronic_ailment(ailment_key) else 0
     last_tick = now if is_chronic_ailment(ailment_key) else 0
     await conn.execute(
@@ -189,7 +190,7 @@ async def inflict(
         hint=meta.get("hint", ""),
     )
     if is_chronic_ailment(ailment_key):
-        line += (
+        line += meta.get("chronic_tip") or (
             " 菌压不干净，visit_ops clinic treat infection 约三次、两次间隔 6 小时；"
             "第一次可以马上挂。"
         )

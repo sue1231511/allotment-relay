@@ -98,6 +98,16 @@ async def bar_page(request: Request):
     return templates.TemplateResponse(request, "bar.html", {"active": "bar"})
 
 
+@app.get("/steward", response_class=HTMLResponse)
+async def steward_page(request: Request):
+    return templates.TemplateResponse(request, "steward.html", {"active": "steward"})
+
+
+@app.get("/lounge", response_class=HTMLResponse)
+async def lounge_page(request: Request):
+    return templates.TemplateResponse(request, "lounge.html", {"active": "lounge"})
+
+
 @app.get("/eatery", response_class=HTMLResponse)
 async def eatery_page(request: Request):
     return templates.TemplateResponse(request, "eatery.html", {"active": "eatery"})
@@ -107,6 +117,38 @@ class BarOrderRequest(BaseModel):
     api_key: str
     service: str
     host_name: str | None = None
+
+
+class BarDuoRequest(BaseModel):
+    api_key_a: str
+    api_key_b: str
+    nudge: str
+
+
+class StewardDashboardRequest(BaseModel):
+    api_key: str
+
+
+class LoungePostRequest(BaseModel):
+    api_key: str
+    message: str
+
+
+class LoungeNameRequest(BaseModel):
+    api_key: str
+    name: str
+
+
+class LoungeKeyRequest(BaseModel):
+    api_key: str
+
+
+class LoungeModRequest(BaseModel):
+    key: str = ""
+    api_key: str = ""
+    action: str
+    target: str
+    minutes: int = 60
 
 
 class EateryOrderRequest(BaseModel):
@@ -185,6 +227,120 @@ async def bar_order(body: BarOrderRequest):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+@app.post("/api/steward/dashboard")
+async def steward_dashboard(body: StewardDashboardRequest):
+    from . import steward_dashboard
+    try:
+        return await steward_dashboard.fetch_dashboard(body.api_key.strip())
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/lounge/meta")
+async def lounge_meta(request: Request):
+    from . import lounge
+    base = public_base_url(request).rstrip("/")
+    register_url = f"{base}/register"
+    return {
+        "pinned": lounge.pinned_notice(register_url),
+        "register_url": register_url,
+        "max_len": lounge.LOUNGE_MAX_LEN,
+        "cooldown_sec": lounge.LOUNGE_COOLDOWN_SEC,
+    }
+
+
+@app.get("/api/lounge/messages")
+async def lounge_messages(since: int = 0, before: int = 0, limit: int = 50):
+    from . import lounge
+    if before:
+        msgs = await lounge.list_messages(limit=limit, before_id=before)
+    else:
+        msgs = await lounge.list_messages(limit=limit, since_id=max(0, since))
+    return {"messages": msgs}
+
+
+@app.post("/api/lounge/post")
+async def lounge_post(body: LoungePostRequest):
+    from . import lounge
+    try:
+        msg = await lounge.human_post(body.api_key.strip(), body.message)
+        return msg
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/lounge/name")
+async def lounge_set_name(body: LoungeNameRequest):
+    from . import lounge
+    try:
+        return await lounge.human_set_name(body.api_key.strip(), body.name)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/lounge/me")
+async def lounge_me(body: LoungeKeyRequest):
+    from . import lounge
+    try:
+        return await lounge.human_profile(body.api_key.strip())
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/lounge/mod")
+async def lounge_mod(body: LoungeModRequest):
+    from . import config, db, lounge
+
+    actor = None
+    api_key = body.api_key.strip()
+    if api_key:
+        row = await db.get_key_row(api_key)
+        if not row:
+            raise HTTPException(status_code=403, detail="凭证无效")
+        s = await db.get_steward_by_key_id(row["id"])
+        if not s or not lounge.is_moderator(s):
+            raise HTTPException(
+                status_code=403,
+                detail="无 moderation 权限（管家名须在 LOUNGE_MOD_NAMES）",
+            )
+        actor = s
+    elif body.key and body.key == config.LOUNGE_MOD_KEY:
+        if not config.LOUNGE_MOD_NAMES:
+            raise HTTPException(status_code=503, detail="未配置 LOUNGE_MOD_NAMES")
+        actor = {"name": next(iter(config.LOUNGE_MOD_NAMES))}
+    else:
+        raise HTTPException(status_code=403, detail="需要 moderation 权限")
+
+    try:
+        action = body.action.lower()
+        if action == "mute":
+            msg = await lounge._mod_mute(actor, body.target, body.minutes)
+        elif action in ("unmute", "解禁"):
+            msg = await lounge._mod_unmute(actor, body.target)
+        elif action in ("ban", "kick"):
+            msg = await lounge._mod_ban(actor, body.target)
+        elif action in ("unban", "解踢"):
+            msg = await lounge._mod_unban(actor, body.target)
+        else:
+            raise ValueError("action: mute / unmute / ban / unban")
+        return {"ok": True, "message": msg}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/bar/duo")
+async def bar_duo_activate(body: BarDuoRequest):
+    from . import bar
+    try:
+        return await bar.place_human_duo(
+            body.api_key_a.strip(),
+            body.api_key_b.strip(),
+            body.nudge.strip(),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 @app.get("/api/public/eatery")
 async def public_eatery():
     from . import eatery
@@ -258,7 +414,7 @@ async def ut_owner_page(request: Request, key: str = ""):
     async with db.connect() as conn:
         conn.row_factory = None
         row = await (await conn.execute("SELECT * FROM ut_owner_state WHERE id=1")).fetchone()
-        day = db.now() // 86400
+        day = db.day_id()
         rate = float(row[1]) if row and int(row[3]) == day else uc.UT_RATE_BASE
         reason = row[2] if row else ""
         save_rate = float(row[6]) if row and len(row) > 6 and row[6] else uc.UT_SAVE_RATE_BASE
@@ -283,7 +439,7 @@ async def ut_owner_save_rate(request: Request):
     from .undertide_config import UT_SAVE_RATE_MIN, UT_SAVE_RATE_MAX
     save_rate = max(int(UT_SAVE_RATE_MIN * 100), min(int(UT_SAVE_RATE_MAX * 100), int(body.get("save_rate", 2))))
     from . import db
-    day = db.now() // 86400
+    day = db.day_id()
     async with db.connect() as conn:
         await conn.execute(
             "INSERT INTO ut_owner_state (id, save_rate, rate_day, updated_at) VALUES (1,?,?,?) "
@@ -309,7 +465,7 @@ async def ut_owner_set(request: Request):
     rate = max(5, min(25, int(body.get("rate", 10))))
     reason = (body.get("reason") or "")[:120]
     from . import db
-    day = db.now() // 86400
+    day = db.day_id()
     async with db.connect() as conn:
         await conn.execute(
             "INSERT INTO ut_owner_state (id, rate_today, rate_reason, rate_day, updated_at) VALUES (1,?,?,?,?) "
@@ -346,7 +502,7 @@ async def ut_owner_cheer(request: Request):
             return JSONResponse({"detail": "这条提议不在了"}, status_code=404)
         if action == "accept":
             await conn.execute("UPDATE ut_mood_proposals SET status='accepted' WHERE id=?", (pid,))
-            day = db.now() // 86400
+            day = db.day_id()
             _av = await _ut.avatar_key(conn, row[1])
             _is_anan = _av == "anan"
             if _is_anan:
@@ -665,21 +821,42 @@ async def public_undertide():
         except Exception:
             out["tide"] = {"mult": 1.0, "line": ""}
         # 钱庄今日利率
-        day = db.now() // 86400
+        day = db.day_id()
         row = await (await conn.execute("SELECT * FROM ut_owner_state WHERE id=1")).fetchone()
         if row and int(row["rate_day"]) == day and (row["rate_reason"] or "").strip():
             out["bank"] = {"rate": int(float(row["rate_today"]) * 100), "reason": row["rate_reason"]}
         else:
             out["bank"] = {"rate": int(uc.UT_RATE_BASE * 100), "reason": ""}
-        # 恩怨墙（匿名：不露雇主）
+        # 恩怨墙（主动生成当日委托——网页端也能看到活）+ 悬赏（匿名不露雇主）
+        from . import undertide_bounty as _ub
+        await _ub._ensure_daily_quests(conn)
+        conn.row_factory = aiosqlite.Row
         rows = await (await conn.execute(
             "SELECT tier, target_name, bounty, poster FROM ut_bounty WHERE status='open' ORDER BY created_at DESC LIMIT 8"
         )).fetchall()
-        out["bounties"] = [
-            {"tier": "偷" if r["tier"] == "steal" else "打", "target": r["target_name"],
-             "bounty": r["bounty"], "gilt": r["poster"] == "__npc__"}
-            for r in rows
-        ]
+        quests = []
+        bounties = []
+        from . import undertide_copy as _utc
+        for r in rows:
+            if r["poster"] == "__quest__":
+                qdef = None
+                for _k, _v in _utc.NPC_QUESTS.items():
+                    if _v["name"] == r["target_name"]:
+                        qdef = _v; break
+                if qdef:
+                    quests.append({
+                        "name": r["target_name"],
+                        "kind": "跑腿" if qdef["kind"] == "errand" else ("动手" if qdef["kind"] == "fight" else "站着"),
+                        "pay": r["bounty"],
+                        "desc": qdef["desc"],
+                    })
+            else:
+                bounties.append({
+                    "tier": "偷" if r["tier"] == "steal" else "打", "target": r["target_name"],
+                    "bounty": r["bounty"], "gilt": r["poster"] == "__npc__",
+                })
+        out["quests"] = quests
+        out["bounties"] = bounties
         # 井下纪事
         rows = await (await conn.execute(
             "SELECT text, created_at FROM chronicle WHERE action='undertide' ORDER BY created_at DESC LIMIT 12"

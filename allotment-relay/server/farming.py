@@ -165,17 +165,38 @@ WILDLIFE = [
         "kind": "bad",
         "apply": "crow",
     },
+    {
+        "key": "crab",
+        "weight": 8,
+        "tags": {"sea", "berry", "leaf"},
+        "greenhouse": False,
+        "kind": "bad",
+        "apply": "crab",
+    },
+    {
+        "key": "moth",
+        "weight": 9,
+        "tags": {"leaf", "legume", "berry"},
+        "greenhouse": True,
+        "kind": "bad",
+        "apply": "moth",
+    },
+    {
+        "key": "turtle",
+        "weight": 5,
+        "tags": {"sea", "legume"},
+        "greenhouse": False,
+        "kind": "good",
+        "apply": "turtle",
+        "day_only": True,
+    },
 ]
 
-TRIGGER_CHANCE = {
-    "sow": 0.05,
-    "tend": 0.08,
-    "gather": 0.06,
-}
+TRIGGER_CHANCE = config.FARM_TRIGGER_CHANCE
 
 
 def _day_id() -> int:
-    return db.now() // config.FORAGE_COOLDOWN_DAY
+    return db.day_id()
 
 
 def base_grow_seconds(crop_key: str) -> int:
@@ -296,7 +317,9 @@ def parcel_extra(plot: dict[str, Any]) -> str:
     bits: list[str] = []
     if plot_overripe(plot):
         if is_tree:
-            bits.append("树·chop清地")
+            bits.append("树·gather/compost清果")
+        else:
+            bits.append("可compost")
         if plot.get("scarecrow"):
             bits.append("🌾稻草人")
         return f"·{'·'.join(bits)}" if bits else ""
@@ -379,7 +402,7 @@ def _wildlife_pool(plot: dict[str, Any]) -> list[dict[str, Any]]:
             continue
         pool.append(w)
     if plot.get("scarecrow"):
-        filtered = [w for w in pool if w["key"] not in ("crow", "gull")]
+        filtered = [w for w in pool if w["key"] not in ("crow", "gull", "moth")]
         if filtered:
             pool = filtered
     return pool or [w for w in WILDLIFE if not w["tags"]]
@@ -468,6 +491,19 @@ async def _apply_wildlife(
     if apply == "crow":
         await conn.execute("UPDATE parcels SET tended=0 WHERE id=?", (plot["id"],))
         return flavor.fill(flavor.pick(flavor.WILDLIFE_CROW), slot=slot, crop=meta["name"])
+    if apply == "crab":
+        await conn.execute("UPDATE parcels SET tended=0 WHERE id=?", (plot["id"],))
+        return flavor.fill(flavor.pick(flavor.WILDLIFE_CRAB), slot=slot, crop=meta["name"])
+    if apply == "moth":
+        delay = random.randint(120, 300)
+        await conn.execute(
+            "UPDATE parcels SET tended=0, grow_target=COALESCE(NULLIF(grow_target,0), ?)+? WHERE id=?",
+            (meta["grow"], delay, plot["id"]),
+        )
+        return flavor.fill(flavor.pick(flavor.WILDLIFE_MOTH), slot=slot, crop=meta["name"])
+    if apply == "turtle":
+        await conn.execute("UPDATE parcels SET tended=1 WHERE id=?", (plot["id"],))
+        return flavor.fill(flavor.pick(flavor.WILDLIFE_TURTLE), slot=slot, crop=meta["name"])
 
     who = flavor.WILDLIFE_NAMES.get(key, "野家伙")
     return f"#{slot} 来了{who}，苗：我看见了"
@@ -528,7 +564,7 @@ async def roll_farm_event(
     farm_ill = None
     if wild["kind"] in ("bad", "neutral") and wild["key"] in ("rabbit", "boar", "slug"):
         farm_ill = await health.maybe_roll_ailment(
-            conn, steward["id"], "farm_wild", chance=0.14, source="farm",
+            conn, steward["id"], "farm_wild", chance=config.FARM_AILMENT_CHANCE, source="farm",
         )
 
     label = flavor.pick(
@@ -569,6 +605,12 @@ async def gather_yield(
             (plot["id"],),
         )
     return item, qty, keep
+
+
+def regrow_tree_after_clear(crop: str, plot: dict[str, Any]) -> tuple[int, int, str]:
+    """过熟清果后让果树重新进入生长周期。"""
+    grow_target, grow_pace, _ = roll_grow(crop, plot)
+    return db.now(), grow_target, grow_pace
 
 
 def chop_tree(plot: dict[str, Any]) -> dict[str, Any]:
@@ -638,15 +680,38 @@ def gugu_dove_prompt_text(pending: dict[str, Any]) -> str:
     )
 
 
+async def _gugu_dove_rolled_today(
+    conn: aiosqlite.Connection, steward_id: int,
+) -> bool:
+    cur = await conn.execute(
+        "SELECT rolled FROM gugu_dove_rolls WHERE steward_id=? AND day=?",
+        (steward_id, db.day_id()),
+    )
+    row = await cur.fetchone()
+    return bool(row and row[0])
+
+
+async def _mark_gugu_dove_rolled(conn: aiosqlite.Connection, steward_id: int) -> None:
+    await conn.execute(
+        """
+        INSERT INTO gugu_dove_rolls (steward_id, day, rolled) VALUES (?,?,1)
+        ON CONFLICT(steward_id, day) DO UPDATE SET rolled = 1
+        """,
+        (steward_id, db.day_id()),
+    )
+
+
 async def maybe_gugu_dove_stalk(
     conn: aiosqlite.Connection,
     steward: dict[str, Any],
     plot_id: int,
 ) -> str | None:
-    """20% chance on sow/tend (day only) to start a gugu dove encounter."""
+    """昼间 sow/tend：每天首次操作掷一次，碰上才盯梢。"""
     if world.current_day_phase() != "day":
         return None
     if await get_gugu_dove_pending(conn, steward["id"]):
+        return None
+    if await _gugu_dove_rolled_today(conn, steward["id"]):
         return None
     conn.row_factory = aiosqlite.Row
     plot = dict(await (await conn.execute(
@@ -660,14 +725,20 @@ async def maybe_gugu_dove_stalk(
     from . import lili_extras
     if await lili_extras.has_blessing(conn, steward["id"], "guard_crop"):
         await lili_extras.consume_blessing(conn, steward["id"], "guard_crop")
+        await _mark_gugu_dove_rolled(conn, steward["id"])
         return "夜栖替你瞪了斑鸠一眼。它咕了一声，改去别家。（护苗）"
-    chance = config.GUGU_DOVE_STALK_CHANCE
+    from . import shaonian as shaonian_mod
+    if await shaonian_mod.dove_protected(conn, steward["id"]):
+        await _mark_gugu_dove_rolled(conn, steward["id"])
+        return None
+    chance = config.GUGU_DOVE_DAILY_CHANCE
     from . import hut as hut_mod
     from . import barn as barn_mod
     hut_b = await hut_mod.get_bonuses(conn, steward["id"])
     chance *= hut_b.dove_steal
     if await barn_mod.has_guard_dog(conn, steward["id"]):
         chance *= 0.65
+    await _mark_gugu_dove_rolled(conn, steward["id"])
     if random.random() > chance:
         return None
     await conn.execute(
@@ -695,7 +766,7 @@ async def resolve_gugu_dove(
 ) -> str:
     pending = await get_gugu_dove_pending(conn, steward["id"])
     if not pending:
-        raise ValueError("没有斑鸠盯梢事件。继续 sow/tend 种菜时可能触发")
+        raise ValueError("没有斑鸠盯梢事件。昼间 sow/tend 每天掷一次，碰上才触发")
     plot_id = pending["plot_id"]
     slot = pending["slot"]
     crop = pending["crop"]

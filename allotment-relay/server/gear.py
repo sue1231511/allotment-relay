@@ -87,6 +87,19 @@ def combined_fish_bonus(
     return catch, rarity, empty, energy
 
 
+def fish_catch_payout(stats: dict[str, dict[str, Any]], *, mode: str) -> tuple[float, int]:
+    """Return (sell value multiplier, flat ticket bonus) for a catch."""
+    if mode == "cast":
+        bait, rod = stats["bait"], stats["rod"]
+        mult = 1.0 + bait["catch"] * 0.65 + rod["catch"] * 1.05
+        bonus = bait["tier"] + rod["tier"] * 2
+        return mult, bonus
+    net = stats["net"]
+    mult = 1.0 + net["catch"] * 1.25 + net["tier"] * 0.05
+    bonus = net["tier"] * 2
+    return mult, bonus
+
+
 def _format_tier(kind: str, tier: int) -> str:
     meta = _tier_meta(kind, tier)
     nxt = _next_tier(kind, tier)
@@ -97,6 +110,8 @@ def _format_tier(kind: str, tier: int) -> str:
     )
     if kind in ("rod", "net") and meta.get("energy"):
         line += f" 精力{meta['energy']}"
+    if meta.get("catch"):
+        line += f" 鱼价增幅"
     if nxt:
         need = ", ".join(
             f"{ITEM_NAMES.get(k, k)}x{v}" for k, v in nxt.get("need", {}).items()

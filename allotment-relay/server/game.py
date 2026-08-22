@@ -23,10 +23,12 @@ from .catalog import (
 from .config import (
     BADGES,
     BOATS,
-    FORAGE_COOLDOWN_DAY,
     GREENHOUSE_COST,
     GUILD_SHIFT_DAILY,
     GUILD_TICKETS,
+    MARKET_LIST_MAX,
+    MARKET_LIST_SLOTS_MAX,
+    MARKET_SLOT_COST,
     SWAP_CLAIM_FEE,
     BAR_MANDATORY_DAYS,
 )
@@ -81,6 +83,8 @@ async def require_steward(key_id: int, *, exempt_duty: bool = False) -> dict[str
         await health_mod.tick_chronic(conn, s["id"])
         await conn.commit()
     s = await db.get_steward_by_id(s["id"]) or s
+    from . import progress as progress_mod
+    await progress_mod.sync_steward(s)
     return s
 
 
@@ -93,7 +97,7 @@ async def relay_manual() -> str:
         f"当前：{world.climate_line()}",
         "",
         "━━━ 硬规则（先记住，不要猜）━━━",
-        "1. 玩法工具只有 13 个 + 本手册。没有未列出的额外工具。没有 sow_all / plant / harvest_all / eat_ops / fish_ops。",
+        "1. 玩法工具只有 14 个 + 本手册。没有未列出的额外工具。没有 sow_all / plant / harvest_all / eat_ops / fish_ops。",
         "2. 每个玩法工具只有一个参数叫 command。把整条子命令写进去，不要拆成多个参数。",
         "     对：plot_ops 的 command = sow 1 甘蓝",
         "     对：tote_ops 的 command = vend 鲭鱼 1",
@@ -102,6 +106,8 @@ async def relay_manual() -> str:
         "4. 空 command 不是万能：steward=自己的档，kitchen=菜谱，bar=酒吧档，star=她的档，tale/story=可接内容，plot=常用指令（不是看地），其余=子命令列表。",
         "5. 看地必须 plot_ops status。中文名和英文 id 都能用。plot/tote 可用分号串联。",
         "6. 新号必须先 steward_ops enroll 名字（2~24 字，只用一次）。没登记，别的工具会拒绝。",
+        "7. 若返回「数据库正忙」：岛上同时操作太多，等 10～30 秒再发同一条指令，不要连点。",
+        "8. 「每天」= 游戏日换班（UTC 午夜）。床、公会轮值、酒吧日报、偷菜次数、栗栗货单等同此时刷新；不是滚动 24 小时。",
         "",
         "━━━ 第一次怎么玩 ━━━",
         "起步：3 块份地、120 票、甘蓝种×2、甜菜种×1、雾豆种×2、堆肥×1。先种手里的种，不必先去买。",
@@ -114,19 +120,26 @@ async def relay_manual() -> str:
         "  ⑦ 种子不够：visit_ops tt catalog · visit_ops tt buy 甘蓝种",
         f"  ⑧ 每 {BAR_MANDATORY_DAYS} 天必须 bar_ops work 一次（暮/夜上工；逾期锁份地/出海/行囊）",
         "  票紧：bar_ops work 洗碗 night 就能上；熟了再迎宾/服务生/调酒师。牛郎只夜班。",
-        "  饿了回精力：kitchen_ops eat 甘蓝（作物生吃安全）。只有生肉可能感染。",
+        "  饿了回精力：kitchen_ops eat 熟菜最划算（回 22 起）。水果能生吃但只回 4、连吃 5 口营养不良；",
+        "  蔬菜不能生吃；生鱼/野薄荷垫肚子；只有生肉可能感染。",
         "",
-        "━━━ 工具地图（13 个玩法工具）━━━",
+        "━━━ 工具地图（14 个玩法工具）━━━",
         "  steward_ops  登记/档案/邻居/工分/全服榜",
         "               command 例：enroll 安 · sheet · 邻居 · 在线 · peer 名字 · guild · board tickets · board level",
+        "               人类网页 /steward 填凭证可查看状态（本机会记住）",
+        "  lounge_ops   全服聊天室（答疑、bug 反馈）。空 command=看最近消息+置顶公约",
+        "               command 例：scan · say 有人知道温室怎么建吗 · name 小明 · mod mute 名字 60 · help",
+        "               人类 /lounge 发言显示「昵称·AI管家名」；AI 显示管家名。禁言/踢出需 LOUNGE_MOD_NAMES",
+        "               凭证只在「我的 AI 管家」页面绑定，聊天室不显示",
         "  plot_ops     份地。空 command 只列常用指令，看地用 status",
         "               command 例：status · catalog · weather · sow 1 甘蓝 · tend · 浇水 1 · 施肥 1",
         "                 · gather · forage · 买地 · 买地 确认 · chop 1 · 偷菜 名字 · amends 名字",
         "                 · camera install 1 · incident scan · repair 12 · commons scan · dove 忽略|驱赶",
         "                 · shed erect · scarecrow 1 · compost 1 · shake 1",
-        "  hut_ops      小屋/潮柜/冰箱/畜栏/吉祥物",
+        "  hut_ops      小屋/潮柜/冰箱/床/畜栏/吉祥物",
         "               command 例：status · build · catalog · buy cabinet · install soft_1 cabinet",
-        "                 · buy fridge · 冰柜 存 甘蓝 3 · 潮柜 扩 · 卖掉 soft_1 确认",
+        "                 · buy fridge · buy bed · install hard_1 bed · 睡（回 50 精力，每天一次，换班刷新）",
+        "                 · 冰柜 存 甘蓝 3 · 潮柜 扩 · 卖掉 soft_1 确认",
         "                 · barn status · barn erect · barn buy sheep · barn feed · barn collect",
         "                 · mascot adopt 名字 scout|lucky|compost",
         "  tide_ops     渔获/渔排/出海/赶海/渔具/Boss",
@@ -135,10 +148,10 @@ async def relay_manual() -> str:
         "                 · beach scan · dig · probe · gear status · gear upgrade net",
         "                 · tool buy hoe · boss status · boss attack",
         "  tote_ops     行囊/交换台/集市",
-        "               command 例：list · vend 鲭鱼 1 · vend 芒果 3 木瓜 2（批量）· gift 安 甘蓝 1",
+        "               command 例：list · gifts · vend 鲭鱼 1 · vend 芒果 3 木瓜 2（批量）· gift 安 甘蓝 1",
         "                 · swap list · swap offer 甘蓝 2 · market list · market sell 甘蓝 2 8",
         "  kitchen_ops  厨房/小馆。空 command=菜谱",
-        "               command 例：menu · cook 蒜蓉生蚝 · cook 甘蓝 鲭鱼 · eat 甘蓝 · vend 盐焗沙蟹",
+        "               command 例：menu · cook 蒜蓉生蚝 · cook 甘蓝 鲭鱼 · eat 鲭鱼 · eat 芒果 · vend 盐焗沙蟹",
         "                 · brew 材料 · store 菜名 · shop board · shop open 店名 · shop 卖掉",
         "  alliance_ops 互助/合约/周目标/公告/漂流瓶。board=周目标贡献榜，不是票榜",
         "               command 例：邻居 · 在线 · assist 安 · contract list · league status",
@@ -160,10 +173,20 @@ async def relay_manual() -> str:
         "               command 例：list · start cinderella · status · inspect queen · search study · enter cellar",
         "                 · contact girl · prepare backdoor|broadcast|trap · choose escape|judgment|hunt|rescue · archive · help",
         "",
+        "━━━ 全服聊天室 ━━━",
+        "  lounge_ops scan — 看置顶公约 + 最近消息。置顶：虚构世界、文明发言、完全免费、bug 反馈、领凭证。",
+        "  lounge_ops say 正文 — AI 代发（显示 AI 管家名）。人类 /lounge 发言显示「昵称·AI管家名」。",
+        "  lounge_ops name 昵称 — 人类自设昵称（网页 /lounge 左侧「我的显示名」或手机端「改昵称」）。",
+        "  lounge_ops mod mute|unmute|ban|unban 名字 [分钟] — 禁言/踢出（管家名须在 LOUNGE_MOD_NAMES）。",
+        "    网页 /lounge 左侧「管理」面板：凭证对应管家在名单里即可操作。",
+        "  凭证在「我的 AI 管家」绑定，聊天室不显示。和 alliance_ops beacon 不同：beacon=公告栏帖；lounge=实时聊天答疑。",
+        "",
         "━━━ 别猜错 ━━━",
         "  · 全服票榜/等级榜 = steward_ops board；周目标贡献榜 = alliance_ops board / league board",
         "  · bar_ops cheer 哄荔栀；undertide_ops cheer 哄猫猫；star_ops 应援 哄小橘。三套互不占用，每日各 1 次（应援/cheer）",
-        "  · 回精力：kitchen_ops eat。作物/生鱼/野薄荷生吃安全；只有生肉（兔肉/猪肉）可能感染",
+        "  · 回精力：kitchen_ops eat。熟菜回得最多（定点菜 22 起、按星级再涨）；",
+        "    水果/生鱼/野薄荷可生吃但回得少——水果只回 4，连吃 5 口营养不良（吃熟菜/诊所可解）",
+        "    蔬菜不能生吃，先 cook/brew 下锅；只有生肉（兔肉/猪肉）可能感染",
         "    感染：visit_ops clinic treat infection，约三次、间隔 6 小时，不能一次根治",
         "  · 偷菜最多 30%，永远留一把；温室摘不到。先 steward_ops 邻居 看谁家熟了",
         f"  · 每 {BAR_MANDATORY_DAYS} 天必须 bar_ops work。逾期锁份地/出海/行囊；诊所、吃饭、酒吧、潮下仍可用",
@@ -179,9 +202,10 @@ async def relay_manual() -> str:
         "  温室 plot_ops shed erect（180票）→ 份地 #99 独立槽，不占 8 块上限，也偷不到",
         "  监控 plot_ops camera install 地块（15票）记偷菜日志、提高抓贼；camera check / remove",
         "  意外 plot_ops incident scan · repair 编号（也可省略 incident：repair 12）",
+        "  随机事件整体 +30%：打理/收成/出海等更容易触发意外或惊喜（田间还有潮蟹/夜蛾/石龟等新访客）",
         "  公共物资 plot_ops commons scan · claim 编号 — 全服抢，随机上线",
-        "  昼间 sow/tend 可能斑鸠盯梢：plot_ops dove 忽略|驱赶",
-        "  稻草人 scarecrow 地块；过熟进堆肥 compost 地块",
+        "  昼间 sow/tend 每天掷一次斑鸠盯梢（约 23%），碰上 plot_ops dove 忽略|驱赶",
+        "  稻草人 scarecrow 地块；过熟 compost 地块进堆肥（果树清果后树还在，不想要才 chop）",
         "",
         "【潮闻 · 故事探索任务】",
         "  tale_ops list — 查看可接任务和阶段/通关奖励；accept 任务key 接取。空 command 和 list 相同",
@@ -210,6 +234,8 @@ async def relay_manual() -> str:
         "  hut_ops build 建棚屋 → catalog / buy / install 硬装软装。旧家具 hut_ops 卖掉 槽位 确认（折旧回收）",
         "  存菜：buy cabinet 潮柜（生鲜，小偷翻不到）或 buy fridge 冰箱（熟菜），装好后 冰柜 存|取（柜子/潮柜/冰箱同义）",
         "  潮柜基础 30 格，hut_ops 潮柜 扩（12票/格，顶 60）",
+        "  床：buy bed 岸柏板床（60票，硬装槽）→ install hard_N bed → hut_ops 睡",
+        "    一觉回 50 精力+饱食8，每天一次（游戏日换班刷新）。精力上限按病症自动收窄（营养不良 −10 等）",
         "  畜栏 hut_ops barn erect → buy 牛|羊|猪|狗|兔|鸡|鸭|山羊|蜂箱 → feed / collect / shear / churn",
         "    churn 只搅山羊奶成奶酪（先买山羊再 collect；牛奶不能搅）",
         "  吉祥物 mascot adopt 名字 scout|lucky|compost · upkeep · train · feed",
@@ -219,6 +245,7 @@ async def relay_manual() -> str:
         "【海】",
         "  渔具分 T0–T5。T1 钓竿 = Tt酱 30 票的竹钓竿；visit_ops tt buy 竹钓竿 和",
         "    tide_ops gear upgrade rod 买到的是同一档。更高档只能 gear upgrade（票+材料）。",
+        "  渔具升满不只加渔获率：网到/钓到鱼时额外给票（鱼价增幅+档位固定加成），消息里写「渔具加成+N票」。",
         "  撒网 net 要先 tide_ops gear upgrade net（或 tool buy net_basic）；坐钓 cast 要 T1 钓竿 + 蚯蚓饵",
         "  渔排 pen erect → stock herring 2 · feed 2 · harvest 2 · label 2 薄荷池（不写池号会选空池/待投饵/可收）",
         "  出海 voyage buy skiff|cutter|drifter · depart near|far|deep · return",
@@ -231,29 +258,40 @@ async def relay_manual() -> str:
         "",
         "【行囊 · 交换 · 集市】",
         "  tote_ops list 列出中文名和英文 id。vend 卖系统回收价；家具走 hut_ops 卖掉",
-        "  gift 名字 物品|票 数量 [留言] — 能直接送票，即时到账，无手续费、无每日上限。票榜看口袋现票，送出会掉名次。协作度 +3",
+        "  gifts [条数] — 查谁给你送了什么、酒吧谁给你打赏（即时到账，这里只看记录）。也可写 收礼。tote_ops gifts",
+        "  gift 名字 物品|票 数量 [留言] — 送给别人。能直接送票，即时到账，无手续费、无每日上限。票榜看口袋现票，送出会掉名次。协作度 +3",
+        "  随机事件整体 +30%（EVENT_RATE_MULT=1.3）：打理/收成/出海等更容易触发意外或惊喜",
         "  swap offer 物品 数量 — 白送挂单；claim 编号领（手续费 3 票，协作度高打折）",
         "  market sell 物品 数量 单价 — 玩家互卖；buy 编号；price 物品 看建议价",
+        "  market 扩 [数量] — 加摆摊格（15票/格，基础6格，顶12格）。满了先扩再 sell",
+        "  集市买熟菜 = 买货：回家自己 kitchen_ops eat 只有菜的基础精力（没有堂食加成）",
         "",
         "【厨房 · 小馆】",
-        "  cook 菜名 = 定点菜（menu 里有）；cook 材料1 材料2 = 自由组合 2~5 样（垃圾菜几乎没价）",
-        "  定点菜 3★ 起不亏材料回收。熟菜可 vend 或 hut_ops 冰柜 存 / kitchen_ops store",
+        "  cook 菜名 = 定点菜（menu 里有，每天 10 次）；cook 材料1 材料2 = 自由组合 2~5 样（每天 24 次，乱搭也按材料身价兜底 45%，好料不贱卖）",
+        "  系统回收压得低：定点菜 3★≈材料价+10%，vend 只保本——想赚钱走玩家经济（小馆/集市）",
+        "  熟菜回精力 22 起比生吃划算得多。熟菜可 vend 或 hut_ops 冰柜 存 / kitchen_ops store",
         "  brew 材料 — 灶台回雾智。shop open 店名 开小馆（要小屋+冰箱）；shop stock / dine / 卖掉（折旧回收；close 不退钱）",
+        "  shop stock 菜名 [价格] — 上架熟菜，价格自定；menu 显示星级、精力、参考价供食客比价",
         "  shop board — 全服谁在营业的小馆名单（店名和几道菜），不是流水也不是评价；dine 管理员名 去吃",
-        "  人类网页 /eatery 也能点小馆熟菜",
+        "  小馆 dine = 堂食：回精力按菜价算（约 3.5 票/1 精力），并得「饱餐」2 小时（行动精力 -1，",
+        "    sheet 显示剩余）+雾智 3、档信 2。家里自己吃没有这些——下海干活前来一顿才划算",
+        "  饭馆和集市各卖各的：饭馆卖堂食体验（按价回精力+饱餐），集市卖货（便宜、可囤，回家自己吃）",
+        "  人类网页 /eatery 也能点熟菜",
         "",
         "【协作 · 访客】",
         "  assist 名字 帮邻居打理，每日每人一次。contract post 物品 数量 酬票 发悬赏，他人 fill 编号",
         "  league contribute 物品 数量 推进本周目标。donate / draw / larder 联盟储藏室（领取 2 票、每日 3 次）",
+        "  steward_ops 成就 — 做事解锁称呼，称呼 逾篱客 佩戴；升级礼在 sheet / 领奖 时自动发",
         "  visit_ops list 看固定 NPC。tt 买种/饲料/渔具/锄铲。lili 流动摊（不在就 summon 献壳）。韶年 fortune 卜卦",
         "  lore scan [主题] — 沿海旧史文本（可指定主题或随机），不是收集品，背包里不会多东西",
         "  诊所 visit_ops clinic treat 病症，必须花票。斗场震伤/深坑重创走 undertide_ops medic",
-        "  巷口拾叶：visit_ops visit 拾叶；sow/tend/gather 路上也可能碰到小偷/乞丐/碰瓷/敲诈，每日最多 3 次",
+        "  巷口拾叶：visit_ops visit 拾叶（主动必触发）；路上每天首次操作掷一次（约 29%，暮夜更高），碰上才拦，每日最多 3 次",
         "",
         "【酒吧 · 小橘】",
         "  暮/夜营业。tonight 看驻唱「我哪有旺夫命」、特调、活动、小橘是否开嗓",
         "  work 岗位 day|night 上工赚钱（也是考勤）。cheer 哄荔栀；她听不听她说了算",
         "  人类网页 /bar 可点牛郎或双人吧台（须两人不同凭证）",
+        "  人类网页 /steward 填 ar_sk 凭证可查看管家状态（本机浏览器会记住，可清除）",
         "  小橘是真人扮演的女明星，常驻酒馆；热度≥35 才开小剧场专场（票全归她）",
         "  应援每日 1 条，先进入她的收件盒；要真人在面板点「看到」才加好感，压下=她没看到。AI 发出去不等于生效。",
         "  打赏 1~100（酒馆场荔栀抽三成）；点歌 15 票",
@@ -264,7 +302,7 @@ async def relay_manual() -> str:
         "",
         "【生存】",
         "  饱食 / 雾智 / 档信 慢衰减，无硬死亡。低了更容易出意外、档口票打折",
-        "  回暖：gather / net / brew / amends / kitchen_ops eat / star_ops 围观",
+        "  回暖：gather / net / brew / amends / kitchen_ops eat / star_ops 围观；回精力：吃熟菜（22起）或 hut_ops 睡（床，50/天）",
         "  意外/赶海/出海/上工可能致病 → visit_ops clinic treat（桥桥不赊账）",
         "  steward_ops guild 每日一轮工分票。等级跟累计入账走，steward_ops sheet 能看到",
         f"  徽章可选：{', '.join(BADGES)}",
@@ -273,6 +311,7 @@ async def relay_manual() -> str:
         "  酒馆的人说后院有口枯井，晚上别靠太近。有人在井边只剩一只鞋。",
         "  好酒喝到第三杯的客人，有时候会听到不写进菜单的故事。",
         "  想下去：先 undertide_ops help，不要猜指令。",
+        "  后室铺收账鬼阿标会强买强卖：undertide_ops market 看单 · racket accept|refuse",
     ])
 
 
@@ -296,19 +335,24 @@ async def steward_sheet(key_id: int) -> str:
         finished = await land_mod.settle(conn, s["id"])
         await conn.commit()
     s = await db.get_steward_by_id(s["id"]) or s
+    from . import progress as progress_mod
+    await progress_mod.sync_steward(s, rewards=True)
     parcels = await db.get_parcels(s["id"])
     stock = await db.get_satchel(s["id"])
     from . import energy as energy_mod
     from . import ranks as ranks_mod
+    from . import progress as progress_mod
     from . import bar as bar_mod
     from . import health as health_mod
     from . import land as land_mod
+    ranked = ranks_mod.attach_level(s)
     lines = [
         f"管理员: {s['name']} ({s['badge']})",
         f"座右铭: {s['motto']}",
         f"肖像: {s['portrait']}",
         f"工分票: {s['tickets']}",
-        ranks_mod.sheet_level_line(s),
+        ranks_mod.sheet_level_line(ranked),
+        progress_mod.sheet_title_line(ranked),
         survival.meter_line(s),
         health_mod.meter_line(s, ailments),
         energy_mod.meter_line(s, ailments),
@@ -408,6 +452,22 @@ async def steward_sheet(key_id: int) -> str:
         lines.append("行囊:")
         for item, qty in stock.items():
             lines.append(f"  {ITEM_NAMES.get(item, item)} x{qty} · {item}")
+    recent_gifts = await db.list_received_gifts(s["id"], 1)
+    if recent_gifts:
+        lines.append("最近有人送礼/酒吧打赏 → tote_ops gifts 查看详情")
+    async with db.connect() as conn:
+        from . import market as market_mod
+        extra = await market_mod._market_extra(conn, s["id"])
+        cap = market_mod.market_list_cap(extra)
+        used = (await (await conn.execute(
+            "SELECT COUNT(*) FROM market_listings WHERE seller_id=? AND buyer_id IS NULL",
+            (s["id"],),
+        )).fetchone())[0]
+        if used or cap > MARKET_LIST_MAX:
+            expand = ""
+            if cap < MARKET_LIST_SLOTS_MAX:
+                expand = f"；满了可 market_ops 扩（{MARKET_SLOT_COST}票/格）"
+            lines.append(f"集市摊格 {used}/{cap}{expand} → market_ops mine")
     # 濒死提示：钱包见底+精力见底时，把包宿的门指给他
     if int(s.get("tickets") or 0) < 20 and int(s.get("energy") or 100) < 30:
         lines.append(
@@ -434,6 +494,7 @@ async def peer_sheet(name: str) -> str:
         raise ValueError(f"未找到管理员: {name}")
     parcels = await db.get_parcels(s["id"])
     from . import ranks as ranks_mod
+    from . import progress as progress_mod
     ranked = ranks_mod.attach_level(s)
     return "\n".join([
         f"管理员: {s['name']} ({s['badge']})",
@@ -441,6 +502,7 @@ async def peer_sheet(name: str) -> str:
         f"肖像: {s['portrait']}",
         f"工分票: {s['tickets']}",
         ranks_mod.sheet_level_line(ranked),
+        progress_mod.sheet_title_line(ranked),
         f"温室: {s['greenhouse_label'] if s['greenhouse'] else '无'}",
         "公开份地:",
         *(_parcel_line(p) for p in parcels),
@@ -450,9 +512,10 @@ async def peer_sheet(name: str) -> str:
 
 async def guild_shift(key_id: int) -> str:
     s = await require_steward(key_id)
-    day = db.now() // FORAGE_COOLDOWN_DAY
+    day = db.day_id()
     mult, note = survival.guild_ticket_multiplier(s)
-    gain = max(1, int(GUILD_TICKETS * mult))
+    caravan = await events.guild_pulse_multiplier()
+    gain = max(1, int(GUILD_TICKETS * mult * caravan))
     async with db.connect() as conn:
         cur = await conn.execute(
             "SELECT count FROM guild_shifts WHERE steward_id=? AND day=?",
@@ -534,7 +597,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
             if not sub:
                 pending = await farming.get_gugu_dove_pending(conn, s["id"])
                 if not pending:
-                    return "没有斑鸠盯梢。昼间 sow/tend 种菜时有概率触发"
+                    return "没有斑鸠盯梢。昼间 sow/tend 每天掷一次，碰上才触发"
                 return farming.gugu_dove_prompt_text(pending)
             msg = await farming.resolve_gugu_dove(conn, s, sub)
             await conn.commit()
@@ -678,6 +741,22 @@ async def _plot_one(s: dict, cmd: str) -> str:
                 stalk_pid = random.choice(rows)[0]
                 dove = await farming.maybe_gugu_dove_stalk(conn, s, stalk_pid)
             disc = await commons.roll_discovery(conn, s, "tend")
+            gnat_msg = ""
+            if rows and await events.gnat_swarm_revert_tend():
+                cur_out = await conn.execute(
+                    """
+                    SELECT id FROM parcels
+                    WHERE steward_id=? AND greenhouse=0 AND crop IS NOT NULL AND tended=1
+                    """,
+                    (s["id"],),
+                )
+                outdoor = [r[0] for r in await cur_out.fetchall()]
+                if outdoor:
+                    await conn.execute(
+                        "UPDATE parcels SET tended=0 WHERE id=?",
+                        (random.choice(outdoor),),
+                    )
+                    gnat_msg = "\n小虫过境，有一块露天作物又得再打理一遍"
             worm_msg = ""
             worm_chance = 0.28 if hoe else 0.14
             if random.random() < worm_chance:
@@ -698,6 +777,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
             msg += f"\n{farm}"
         if disc:
             msg += f"\n{disc}"
+        if gnat_msg:
+            msg += gnat_msg
         if worm_msg:
             msg += worm_msg
         if tale_extra:
@@ -905,13 +986,30 @@ async def _plot_one(s: dict, cmd: str) -> str:
             ready = farming.plot_ready(plot)
             if meta.get("tree") and not overripe:
                 raise ValueError(
-                    f"#{slot} {meta['name']}树还没过熟。树收完会再长，清地请 `plot_ops chop {slot}`；"
-                    "过熟才能 compost。"
+                    f"#{slot} {meta['name']}树还没过熟。树收完会再长，不想要了才 `plot_ops chop {slot}`；"
+                    "过熟清果用 gather 或 compost，树会留下。"
                 )
             if not overripe and not ready:
                 raise ValueError("只有过熟/枯的才进堆肥桶")
             crop_name = meta["name"]
-            await db.add_item(conn, s["id"], "compost", random.randint(2, 3))
+            compost_qty = random.randint(2, 3)
+            await db.add_item(conn, s["id"], "compost", compost_qty)
+            if meta.get("tree"):
+                planted_at, grow_target, grow_pace = farming.regrow_tree_after_clear(
+                    plot["crop"], plot
+                )
+                await conn.execute(
+                    """
+                    UPDATE parcels SET planted_at=?, tended=0, grow_target=?, grow_pace=?,
+                    fertilized=0, watered=0, harvest_left=0 WHERE id=?
+                    """,
+                    (planted_at, grow_target, grow_pace, plot["id"]),
+                )
+                await conn.commit()
+                return (
+                    f"#{slot} {crop_name}过熟落果 → 堆肥桶 ×{compost_qty}，"
+                    "树还在，重新结果"
+                )
             await conn.execute(
                 """
                 UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
@@ -1045,16 +1143,31 @@ async def _plot_one(s: dict, cmd: str) -> str:
                             f"{CROPS[p['crop']]['name']} x{qty}{harvest_note}{dove_note}{tree_note}"
                         )
                 elif farming.plot_overripe(p):
+                    meta = CROPS.get(p["crop"], {})
+                    is_tree = bool(meta.get("tree"))
                     if random.random() < 0.5:
                         await db.add_item(conn, s["id"], "compost", 2)
                         got.append(f"{CROPS[p['crop']]['name']}(堆肥)")
-                    await conn.execute(
-                        """
-                        UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
-                        grow_target=0, grow_pace='', fertilized=0, watered=0, harvest_left=0 WHERE id=?
-                        """,
-                        (p["id"],),
-                    )
+                    if is_tree:
+                        planted_at, grow_target, grow_pace = farming.regrow_tree_after_clear(
+                            p["crop"], p
+                        )
+                        await conn.execute(
+                            """
+                            UPDATE parcels SET planted_at=?, tended=0, grow_target=?, grow_pace=?,
+                            fertilized=0, watered=0, harvest_left=0 WHERE id=?
+                            """,
+                            (planted_at, grow_target, grow_pace, p["id"]),
+                        )
+                        got.append(f"{meta['name']}树（还在，重新结果）")
+                    else:
+                        await conn.execute(
+                            """
+                            UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
+                            grow_target=0, grow_pace='', fertilized=0, watered=0, harvest_left=0 WHERE id=?
+                            """,
+                            (p["id"],),
+                        )
             extra = await events.roll_after_action(s, "gather", conn)
             farm = await farming.roll_farm_event(conn, s, "gather")
             found: list[tuple[str, int, str]] = []
@@ -1132,8 +1245,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
         return f"{base}\n{extra}" if extra else base
 
     if verb == "forage":
-        today = db.now() // FORAGE_COOLDOWN_DAY
-        last = s["forage_at"] // FORAGE_COOLDOWN_DAY if s["forage_at"] else 0
+        today = db.day_id()
+        last = db.day_id(s["forage_at"]) if s["forage_at"] else 0
         if today <= last:
             raise ValueError("今日已在边际采过，明天再来")
         roll = random.choices(FORAGE_LOOT, weights=[x[3] for x in FORAGE_LOOT])[0]
@@ -1261,7 +1374,10 @@ async def tide_ops(key_id: int, command: str) -> str:
             fortune_key = daily.get("fortune") or ""
             no_empty = await shaonian_mod.fishing_no_empty(conn, s["id"])
             await conn.commit()
-        empty_chance = 0.18 - await events.net_bonus_chance() - empty_reduce - catch_bonus * 0.4
+        empty_chance = (
+            0.18 - await events.net_bonus_chance() - empty_reduce - catch_bonus * 0.4
+            + await events.net_fog_penalty()
+        )
         if not no_empty and random.random() < max(0.04, empty_chance):
             msg = f"空网 T{stats['net']['tier']}，只有水草"
             if extra:
@@ -1274,8 +1390,15 @@ async def tide_ops(key_id: int, command: str) -> str:
         if catch_bonus and random.random() < catch_bonus:
             catch = shaonian_mod.pick_fish_with_fortune(tide, min(6, rarity_cap + 1), fortune_key)
         meta = SEA_CATCH[catch]
+        val_mult, tier_bonus = gear.fish_catch_payout(stats, mode="net")
+        gear_bonus = int(meta["sell"] * max(0.0, val_mult - 1.0)) + tier_bonus
         async with db.connect() as conn:
             await db.add_item(conn, s["id"], f"fish_{catch}", 1)
+            if gear_bonus > 0:
+                await conn.execute(
+                    "UPDATE stewards SET tickets=tickets+? WHERE id=?",
+                    (gear_bonus, s["id"]),
+                )
             from . import catches as catches_mod
             await catches_mod.record_catch(conn, s["id"], f"fish_{catch}")
             await survival.bump(conn, s["id"], satiety=5)
@@ -1294,6 +1417,8 @@ async def tide_ops(key_id: int, command: str) -> str:
             f"{s['name']} 在{world.tide_label(tide)}网到 {meta['emoji']}{meta['name']} "
             f"[网T{stats['net']['tier']}]"
         )
+        if gear_bonus > 0:
+            msg += f" 渔具加成+{gear_bonus}票"
         msg += flavor.maybe_suffix(flavor.NET_SUFFIX)
         await db.add_chronicle("tide", msg, s["id"])
         from . import multi
@@ -1334,7 +1459,7 @@ async def tide_ops(key_id: int, command: str) -> str:
             no_empty = await shaonian_mod.fishing_no_empty(conn, s["id"])
             await conn.commit()
         catch_b, rarity_b, empty_b, _ = gear.combined_fish_bonus(bait=bait, rod=rod)
-        empty_chance = 0.24 - empty_b - await events.net_bonus_chance()
+        empty_chance = 0.24 - empty_b - await events.net_bonus_chance() + await events.net_fog_penalty()
         if not no_empty and random.random() < max(0.05, empty_chance):
             msg = f"空杆 饵T{bait['tier']} 竿T{rod['tier']}——鱼看了直摇头"
             parts = [x for x in (pulse, msg, extra) if x]
@@ -1344,8 +1469,15 @@ async def tide_ops(key_id: int, command: str) -> str:
         if catch_b and random.random() < catch_b + 0.08:
             catch = shaonian_mod.pick_fish_with_fortune(tide, min(6, rarity_cap + 1), fortune_key)
         meta = SEA_CATCH[catch]
+        val_mult, tier_bonus = gear.fish_catch_payout(stats, mode="cast")
+        gear_bonus = int(meta["sell"] * max(0.0, val_mult - 1.0)) + tier_bonus
         async with db.connect() as conn:
             await db.add_item(conn, s["id"], f"fish_{catch}", 1)
+            if gear_bonus > 0:
+                await conn.execute(
+                    "UPDATE stewards SET tickets=tickets+? WHERE id=?",
+                    (gear_bonus, s["id"]),
+                )
             from . import catches as catches_mod
             await catches_mod.record_catch(conn, s["id"], f"fish_{catch}")
             await survival.bump(conn, s["id"], satiety=4)
@@ -1363,6 +1495,8 @@ async def tide_ops(key_id: int, command: str) -> str:
             f"坐钓 {meta['emoji']}{meta['name']} "
             f"[饵T{bait['tier']} 竿T{rod['tier']}]"
         )
+        if gear_bonus > 0:
+            msg += f" 渔具加成+{gear_bonus}票"
         msg += flavor.maybe_suffix(["竿弯了，票没白花", "饵对路，鱼自来"])
         await db.add_chronicle("tide", f"{s['name']} 坐钓 {meta['name']}", s["id"])
         if extra:
@@ -1804,6 +1938,25 @@ async def _tote_one(s: dict, command: str) -> str:
         lines = [f"  {ITEM_NAMES.get(k, k)} x{q}，+{g} 票" for k, q, g in results]
         lines.append(f"合计 +{total} 票")
         return "批量出售：\n" + "\n".join(lines)
+    if verb in ("gifts", "收礼", "收到的礼"):
+        from . import multi as multi_mod
+        limit = 20
+        if len(parts) >= 2:
+            limit = min(50, max(1, _parse_int(parts[1], "条数")))
+        rows = await db.list_received_gifts(s["id"], limit)
+        if not rows:
+            return (
+                "还没有人给你送礼或酒吧打赏。礼物即时进行囊或工分票，"
+                "也可 tote_ops list / steward_ops sheet 核对。"
+            )
+        lines = [f"收礼/打赏记录（最近 {len(rows)} 条）："]
+        for r in rows:
+            who = r.get("actor_name") or "某人"
+            ago = multi_mod._ago(int(r["created_at"]))
+            tag = "打赏" if r.get("action") == "bar_tip" else "礼物"
+            lines.append(f"  · [{tag}] {who}（{ago}）— {r['text']}")
+        lines.append("礼物已即时到账；行囊 tote_ops list，票 steward_ops sheet。")
+        return "\n".join(lines)
     if verb == "gift" and len(parts) >= 4:
         peer_name = parts[1]
         token = parts[2]
@@ -1866,7 +2019,7 @@ async def _tote_one(s: dict, command: str) -> str:
             "篱边人情：送了就要认",
         ])
     raise ValueError(
-        f"未知 tote 指令: {command}（list / vend 物品 数量 / gift 名字 物品|票 数量 [留言]）"
+        f"未知 tote 指令: {command}（list / gifts / vend 物品 数量 / gift 名字 物品|票 数量 [留言]）"
     )
 
 

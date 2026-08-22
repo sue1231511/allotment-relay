@@ -1023,6 +1023,49 @@ AVATAR_AN_ALLOWANCE = (
 
 ALLOWANCE_TAKEN = "这周的已经领过了。荔栀头也不抬：「下周再来。我不记账，但我记得。」"
 
+# ── 收账鬼阿标（强买强卖）──────────────────────────────────
+
+RACKET_FORCE_BUY = [
+    "「{name}」把货往你怀里一塞：「{item} x{qty}，{price} 票。今天这单你接。」",
+    "货架阴影里伸出一只手：「别看了，{item}。{price} 票，认栽还是认栽？」",
+    "阿标叼着烟：「强卖清单上有你名字。{item} x{qty}，{price} 票。」",
+]
+
+RACKET_FORCE_SELL = [
+    "「把你行囊里的 {item} x{qty} 交出来。」阿标报价 {price} 票，「低是低了，但你也没得选。」",
+    "「后室铺今天要收账。」{name} 盯着你的包，「{item}，{price} 票，现在。」",
+    "他敲了敲柜台：「强收单。{item} x{qty}，出价 {price}。别跟我讲公平。」",
+]
+
+RACKET_ACCEPT_BUY = [
+    "你认了。{name} 把 {item} 塞进行囊，收走 {price} 票：「乖。」",
+    "票划走，货留下。阿标：「下次记得带够钱，省得我动手。」",
+]
+
+RACKET_ACCEPT_SELL = [
+    "货被拎走，{price} 票拍在柜台上。{name}：「价是低了，总比挨揍强。」",
+    "你交出 {item}。阿标数票：「{price}。今天到此为止。」",
+]
+
+RACKET_ACCEPT_SELL_FAIL = [
+    "你答应卖，行囊里却没有 {item}。{name} 冷笑，罚你 {fine} 票：「耍我？」",
+]
+
+RACKET_REFUSE_WIN = [
+    "你硬扛过去了。{name} 揉了揉手腕：「行，今天算你狠。」额外给你 {bonus} 票当封口费。",
+    "阿标把烟掐了：「滚。别让我再看见你今天来后室铺。」+{bonus} 票。",
+]
+
+RACKET_REFUSE_DRAW = [
+    "打成平手。{name} 没再追，但临走刮走 {fine} 票：「下次带够人。」",
+    "双方都挂了彩。阿标啐了一口：「{fine} 票，当医药费。」",
+]
+
+RACKET_REFUSE_LOSE = [
+    "你输了。{name} 收走 {fine} 票，影信也跌了一截。{extra}",
+    "阿标把你按在货架上：「硬扛？{fine} 票，教训费。」{extra}",
+]
+
 # ══ 通用 ════════════════════════════════════════════════════
 
 HELP = """«潮下 Undertide»
@@ -1031,6 +1074,7 @@ undertide_ops descend — 第一次下去（3 票）
 undertide_ops enter — 进入潮下（已解锁）
 undertide_ops status — 影信 · 债务 · 案底 · 状态
 undertide_ops market — 后室铺货架
+undertide_ops racket [accept|refuse] — 收账鬼阿标强买强卖（每日一单）
 undertide_ops buy <编号> — 买入（真货/次品/假货，离柜概不认账）
 undertide_ops sell <物品> [数量] — 掌柜处出货（销赃）
 undertide_ops street — 帘外的随机人（每日刷新）

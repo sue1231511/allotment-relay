@@ -52,7 +52,7 @@ SKIP_PREFIXES = ("deco_", "fit_", "tool_", "live_", "meal_", "dish_", "seed_")
 
 
 def day_id() -> int:
-    return db.now() // config.FORAGE_COOLDOWN_DAY
+    return db.day_id()
 
 
 def _price_tier(price: int) -> int:

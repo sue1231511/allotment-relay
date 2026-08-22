@@ -6,7 +6,7 @@ from typing import Any
 
 import aiosqlite
 
-from . import config, flavor
+from . import config, db, flavor
 
 
 async def spend(
@@ -23,8 +23,13 @@ async def spend(
     ailments = await health.list_ailments(conn, steward_id)
     amount += health.energy_extra(ailments)
     cap = health.max_energy_cap(ailments)
-    cur = await conn.execute("SELECT energy FROM stewards WHERE id=?", (steward_id,))
+    cur = await conn.execute(
+        "SELECT energy, dine_buff_until FROM stewards WHERE id=?", (steward_id,)
+    )
     row = await cur.fetchone()
+    # 堂食「饱餐」：期间行动精力消耗 -1（最低 1），先于余额判定生效
+    if row and int(row[1] or 0) > db.now():
+        amount = max(1, amount - config.DINE_BUFF_ENERGY_SAVE)
     current = row[0] if row else config.START_ENERGY
     if current < amount:
         nag = ""
@@ -32,8 +37,8 @@ async def spend(
             nag = f"（还带伤：{'、'.join(a['name'] for a in ailments[:2])}，visit_ops clinic treat）"
         raise ValueError(
             f"精力不足（{current}/{cap}），需要 {amount}。"
-            "恢复：kitchen_ops eat 熟菜，或生吃作物/生鱼/野薄荷（安全，不会感染）；"
-            f"生肉也能垫但可能感染。steward_ops sheet 路过档口会慢慢回{nag}\n"
+            "恢复：kitchen_ops eat 熟菜（回得最多）；生吃水果/生鱼/野薄荷垫一下（回得少）；"
+            f"蔬菜不能生吃。生肉能垫但可能感染。steward_ops sheet 路过档口会慢慢回{nag}\n"
             "实在没钱吃饭、饿得干不动活：bar_ops lodge — 酒馆包宿（管饭+工钱15，干一整天）"
         )
     await conn.execute(
@@ -98,6 +103,10 @@ def meter_line(steward: dict[str, Any], ailments: list[dict[str, Any]] | None = 
             "没劲撒网，先整口热乎的",
             "精力见底，别硬撑",
         ])
+    left = int(steward.get("dine_buff_until") or 0) - db.now()
+    if left > 0:
+        fed = f"饱餐中：行动 -1 精力，剩 {left // 60 + 1} 分钟"
+        hint = f"{hint}；{fed}" if hint else fed
     return f"精力 {e}/{cap}" + (f"（{hint}）" if hint else "")
 
 

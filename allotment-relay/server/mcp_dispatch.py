@@ -1,9 +1,33 @@
 """把 30 多个 MCP 入口收成少数工具：第一段是子系统，后面仍是原来的子命令。"""
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Awaitable, Callable
 
+import aiosqlite
+import sqlite3
+
+from . import db
+
 OpsFn = Callable[..., Awaitable[str]]
+
+
+async def _call_ops(fn: OpsFn, *args) -> str:
+    """MCP 工具统一入口：遇 SQLite 锁时短暂重试。"""
+    last: BaseException | None = None
+    for attempt in range(5):
+        try:
+            return await fn(*args)
+        except (aiosqlite.OperationalError, sqlite3.OperationalError) as exc:
+            last = exc
+            if not db.is_db_locked_error(exc) or attempt >= 4:
+                break
+            await asyncio.sleep(0.08 * (2 ** attempt))
+    if last and db.is_db_locked_error(last):
+        raise ValueError(db.DB_BUSY_MSG) from last
+    if last:
+        raise last
+    raise RuntimeError("unreachable")
 
 
 def head(command: str) -> tuple[str, str]:
@@ -34,11 +58,18 @@ async def route(
         return help_text
     if verb in table:
         fn, fallback = table[verb]
-        return await fn(key_id, rest if rest else fallback)
+        from . import progress as progress_mod
+        return progress_mod.attach_note(
+            await _call_ops(fn, key_id, rest if rest else fallback)
+        )
     if verb in hoist:
         fn, keep_full = hoist[verb]
-        return await fn(key_id, command.strip() if keep_full else rest)
-    return await default(key_id, command.strip())
+        from . import progress as progress_mod
+        return progress_mod.attach_note(
+            await _call_ops(fn, key_id, command.strip() if keep_full else rest)
+        )
+    from . import progress as progress_mod
+    return progress_mod.attach_note(await _call_ops(default, key_id, command.strip()))
 
 
 STEWARD_HELP = """steward_ops 子命令（整句写进 command）：
@@ -49,7 +80,9 @@ STEWARD_HELP = """steward_ops 子命令（整句写进 command）：
   peer 名字 — 看别人的公开档；不写名字 = 邻居表
   revise [座右铭] — 改座右铭；肖像用 portrait 参数
   guild — 每日一轮工分票
-  board [tickets|level|me] — 全服工分票榜 / 等级榜（不是周目标贡献榜）"""
+  board [tickets|level|me] — 全服工分票榜 / 等级榜（不是周目标贡献榜）
+  成就 — 已解锁称呼；称呼 逾篱客 佩戴；称呼 卸 改回等级称号
+  领奖 — 看升级礼（升级时会自动发）"""
 
 PLOT_HELP = """plot_ops 子命令（整句写进 command）：
   status — 各地块作物、把数、还要多久
@@ -64,7 +97,7 @@ PLOT_HELP = """plot_ops 子命令（整句写进 command）：
   amends 名字 — 向被摘的邻居致歉，双方档信回暖
   shake 地块 — 摇果（青柠/芒果/椰子）
   chop 地块 — 砍树腾地（树收完会再长；清地不必等过熟）
-  compost 地块 — 过熟进堆肥（未熟的树请 chop）
+  compost 地块 — 过熟进堆肥（果树清果后树还在；不想要树才 chop）
   scarecrow 地块 — 扎稻草人
   shed erect|status|handoff — 温室（#99 独立槽，180票，不占 8 块上限，偷不到）
   commons scan|claim id — 稀有公共物资
@@ -99,10 +132,12 @@ TIDE_HELP = """tide_ops 子命令（整句写进 command）：
 
 TOTE_HELP = """tote_ops 子命令（整句写进 command）：
   list — 行囊（中文名 + 英文 id）
+  gifts [条数] — 查收到的礼物/酒吧打赏（谁送的、送了什么）。也可写 收礼。即时到账，这里只看记录
   vend 物品 数量 — 卖掉。例子：vend 鲭鱼 1 · vend crop_kale 2
   gift 名字 物品|票 数量 — 送给别人。能直接送票，无手续费、无每日上限
   swap offer|claim|list|cancel — 交换台（白送，领取 3 票手续费）
-  market list|sell|buy|price — 玩家集市"""
+  market list|sell|buy|price|mine|cancel — 玩家集市
+  market 扩 [数量] — 加摆摊格（15票/格，基础6格，顶12格）"""
 
 ALLIANCE_HELP = """alliance_ops 子命令（整句写进 command）：
   在线 — 档口里的人（15 分钟内有操作）
@@ -123,7 +158,7 @@ VISIT_HELP = """visit_ops 子命令（整句写进 command）：
   lore scan [主题] / topics — 沿海旧史文本（不是收集品，背包里不会多东西）
   clinic status — 看病症和诊费
   clinic treat 病症 — 花钱治。例子：treat sprain · treat infection · treat all
-  生肉感染约三次、两次间隔 6 小时；作物/生鱼生吃不会感染
+  生肉感染约三次、两次间隔 6 小时；水果/生鱼生吃不会感染（连吃 5 口水果会营养不良，吃熟菜可解）；蔬菜不能生吃
   斗场震伤 / 深坑重创 桥桥不收，走 undertide_ops medic
   treat / fortune 可省略前缀"""
 
@@ -165,38 +200,45 @@ async def steward_ops(
         )
 
     if verb in ("sheet", "档案", "me", "档"):
-        return await game.steward_sheet(key_id)
+        return await _call_ops(game.steward_sheet, key_id)
 
     if verb in ("revise", "修订"):
         new_motto = motto.strip() or rest
-        return await game.steward_revise(key_id, new_motto, portrait)
+        return await _call_ops(game.steward_revise, key_id, new_motto, portrait)
 
     if verb in ("peer", "别人", "公开档"):
         peer = (name or "").strip() or rest.strip()
         if not peer:
             from . import multi
             s = await game.require_steward(key_id)
-            return await multi.list_neighbors(s, online_only=False)
-        return await game.peer_sheet(peer)
+            return await _call_ops(multi.list_neighbors, s, online_only=False)
+        return await _call_ops(game.peer_sheet, peer)
 
     if verb in ("online", "在线"):
         from . import multi
         s = await game.require_steward(key_id)
-        return await multi.list_neighbors(s, online_only=True)
+        return await _call_ops(multi.list_neighbors, s, online_only=True)
 
     if verb in ("neighbors", "邻居", "neighbour", "peers", "邻居们"):
         from . import multi
         s = await game.require_steward(key_id)
-        return await multi.list_neighbors(s, online_only=False)
+        return await _call_ops(multi.list_neighbors, s, online_only=False)
 
     if verb in ("guild", "轮值", "shift"):
-        return await game.guild_shift(key_id)
+        return await _call_ops(game.guild_shift, key_id)
 
     if verb in ("board", "榜", "排行", "排行榜"):
-        return await ranks.board_ops(key_id, rest)
+        return await _call_ops(ranks.board_ops, key_id, rest)
 
     if verb in ("tickets", "票", "票榜", "level", "等级", "等级榜"):
-        return await ranks.board_ops(key_id, command.strip())
+        return await _call_ops(ranks.board_ops, key_id, command.strip())
+
+    if verb in (
+        "成就", "achievements", "titles", "称号", "称呼", "title", "wear",
+        "佩戴", "卸", "卸下", "领奖", "rewards", "升级礼",
+    ):
+        from . import progress as progress_mod
+        return progress_mod.attach_note(await progress_mod.progress_ops(key_id, command.strip()))
 
     raise ValueError(f"未知 steward 指令: {command}\n{STEWARD_HELP}")
 
@@ -206,8 +248,11 @@ async def plot_bundle(key_id: int, command: str = "") -> str:
 
     verb, _ = head(command)
     if not verb:
-        base = await game.plot_ops(key_id, "")
-        return base + "\n  shed / commons / incident / camera — 温室、公共物资、意外、监控"
+        base = await _call_ops(game.plot_ops, key_id, "")
+        from . import progress as progress_mod
+        return progress_mod.attach_note(
+            base + "\n  shed / commons / incident / camera — 温室、公共物资、意外、监控"
+        )
     return await route(
         key_id,
         command,
@@ -381,4 +426,4 @@ async def kitchen_bundle(key_id: int, command: str = "") -> str:
     cmd = (command or "").strip() or "menu"
     if cmd.split()[0].lower() == "catalog":
         cmd = "recipes"
-    return await kitchen.kitchen_ops(key_id, cmd)
+    return await _call_ops(kitchen.kitchen_ops, key_id, cmd)
