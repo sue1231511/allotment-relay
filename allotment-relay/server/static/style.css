@@ -346,11 +346,11 @@ h3 { font-size: 19px; }
 
 .stats-shell {
   margin: 0 0 18px;
-  padding: 16px 18px;
+  padding: 14px 16px;
   border: 1px solid var(--line);
-  border-radius: 20px;
+  border-radius: 10px;
   background: rgba(251, 250, 246, .66);
-  box-shadow: 0 10px 32px rgba(50, 64, 68, .045);
+  box-shadow: 0 6px 20px rgba(50, 64, 68, .04);
   backdrop-filter: blur(10px);
 }
 
@@ -362,11 +362,11 @@ h3 { font-size: 19px; }
 
 .stat-main {
   min-width: 0;
-  padding: 12px 14px;
-  border-radius: 15px;
+  padding: 12px 10px;
+  border-radius: 8px;
   background: rgba(255, 255, 255, .48);
   border: 1px solid rgba(35, 48, 56, .08);
-  text-align: left;
+  text-align: center;
 }
 
 .stat-main small {
@@ -374,6 +374,7 @@ h3 { font-size: 19px; }
   margin-bottom: 5px;
   color: var(--muted);
   font-size: 11px;
+  text-align: center;
 }
 
 .stat-main strong {
@@ -384,6 +385,7 @@ h3 { font-size: 19px; }
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-align: center;
 }
 
 .stat-main.live strong,
@@ -2593,7 +2595,7 @@ code {
 
   .stats-shell {
     padding: 12px;
-    border-radius: 18px;
+    border-radius: 10px;
   }
 
   .stats-primary {

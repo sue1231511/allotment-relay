@@ -227,8 +227,8 @@ function renderCards(allotments) {
 }
 
 function renderMiniBoard(data) {
-  fillBoard(document.getElementById('mini-tickets'), (data.tickets || []).slice(0, 8), 'tickets');
-  fillBoard(document.getElementById('mini-levels'), (data.levels || []).slice(0, 8), 'level');
+  fillBoard(document.getElementById('mini-tickets'), (data.tickets || []).slice(0, 5), 'tickets');
+  fillBoard(document.getElementById('mini-levels'), (data.levels || []).slice(0, 5), 'level');
 }
 
 async function load() {
