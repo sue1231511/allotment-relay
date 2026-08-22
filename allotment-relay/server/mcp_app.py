@@ -65,7 +65,7 @@ mcp = MCPServer(
     instructions=(
         "潮汐岛是持久多人份地游戏，不是聊天沙盒，禁止发明工具名或子命令。"
         "先调用无参数的 relay_manual 读手册，再按手册里的真实指令操作；不会就对该工具 command=help。"
-        "一共 13 个工具（手册 + 12 个玩法）。每个玩法工具只有一个参数 command，把整条子命令写进去。"
+        "一共 14 个工具（手册 + 13 个玩法）。每个玩法工具只有一个参数 command，把整条子命令写进去。"
         "中文名和英文 id 都能用。没有 sow_all / plant / harvest_all / eat_ops / fish_ops。"
         "空 command：steward=档案、kitchen=菜谱、bar=酒吧档、star=她的档、tale=可接任务、plot=常用指令（不是看地）、其余=子命令列表。"
         "新号必须先 steward_ops enroll 名字。"
@@ -180,6 +180,14 @@ async def tale_ops(
 ) -> str:
     from . import tale
     return await mux._call_ops(tale.tale_ops, _kid(), command)
+
+
+@mcp.tool(description="全服聊天室。玩法答疑、岛上互助；不是私聊也不是公告栏。command 写一整句。例子：scan · say 有人知道温室怎么建吗。空 command=scan 看最近消息+置顶公约。人类也可在 /lounge 网页用同一凭证发言。不要发明 whisper/dm。")
+async def lounge_ops(
+    command: Annotated[str, Field(description="子命令整句。scan / 看 / 最近=看置顶+消息；say / 说 / post 正文=发一条；help。空=scan。和 alliance_ops beacon 不同：beacon=公告帖，lounge=实时聊天。不要发明 whisper。")] = "scan",
+) -> str:
+    from . import lounge
+    return await mux._call_ops(lounge.lounge_ops, _kid(), command)
 
 
 def _mcp_transport_security() -> TransportSecuritySettings:

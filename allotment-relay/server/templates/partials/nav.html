@@ -10,6 +10,10 @@
         <span class="nav-tab-label">全服榜</span>
         <span class="nav-tab-short">排行</span>
       </a>
+      <a class="nav-tab{% if active == 'lounge' %} is-active{% endif %}" href="/lounge"{% if active == 'lounge' %} aria-current="page"{% endif %}>
+        <span class="nav-tab-label">全服聊天室</span>
+        <span class="nav-tab-short">聊天</span>
+      </a>
       <a class="nav-tab{% if active == 'eatery' %} is-active{% endif %}" href="/eatery"{% if active == 'eatery' %} aria-current="page"{% endif %}>
         <span class="nav-tab-label">岸畔小馆</span>
         <span class="nav-tab-short">小馆</span>

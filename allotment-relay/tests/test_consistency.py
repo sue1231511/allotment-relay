@@ -185,7 +185,7 @@ def test_readme_workflow_rules() -> None:
         assert "merge origin/main" in blob
         assert "relay_manual" in blob
         assert "mcp_app.py" in blob
-    assert "13 个工具" in readme
+    assert "14 个工具" in readme
     assert "steward_ops" in readme and "plot_ops" in readme and "bar_ops" in readme
     assert "tale_ops" in readme
     assert "空 command" in readme

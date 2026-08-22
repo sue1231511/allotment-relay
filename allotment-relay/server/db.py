@@ -1165,6 +1165,16 @@ async def init_db() -> None:
                 PRIMARY KEY (steward_id, day)
             )
             """,
+            """
+            CREATE TABLE IF NOT EXISTS lounge_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                body TEXT NOT NULL,
+                source TEXT NOT NULL DEFAULT 'mcp',
+                created_at INTEGER NOT NULL
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_lounge_created ON lounge_messages(created_at DESC)",
         ):
             try:
                 await db.execute(ddl)
