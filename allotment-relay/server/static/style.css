@@ -1392,29 +1392,9 @@ select:focus {
 
 .lounge-layout {
   display: grid;
-  grid-template-columns: minmax(440px, 520px) 1fr;
+  grid-template-columns: 300px 1fr;
   gap: 16px;
   align-items: stretch;
-}
-
-.lounge-side-split {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-  align-items: start;
-}
-
-.lounge-side-right {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-width: 0;
-}
-
-.lounge-side-foot {
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(0, 0, 0, .06);
 }
 
 .lounge-side,
@@ -1427,10 +1407,10 @@ select:focus {
 
 .lounge-side {
   border-radius: 24px;
-  padding: 18px;
+  padding: 22px;
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 18px;
 }
 
 .lounge-side h2,
@@ -1449,8 +1429,8 @@ select:focus {
 }
 
 .lounge-identity {
-  padding: 12px 14px;
-  border-radius: 14px;
+  padding: 16px;
+  border-radius: 16px;
   background: linear-gradient(145deg, rgba(238, 245, 246, .95), rgba(255, 255, 255, .88));
   border: 1px solid rgba(127, 167, 171, .28);
 }
@@ -1466,7 +1446,7 @@ select:focus {
 .lounge-identity-who {
   margin: 0;
   font-family: "Noto Serif SC", Georgia, serif;
-  font-size: 17px;
+  font-size: 20px;
   font-weight: 500;
   line-height: 1.4;
   word-break: break-word;
@@ -1560,11 +1540,10 @@ select:focus {
 }
 
 .lounge-pin-side {
-  padding: 14px;
+  padding: 16px;
   border-radius: 16px;
   background: linear-gradient(145deg, rgba(255, 251, 235, .92), rgba(251, 248, 240, .82));
   border: 1px solid rgba(201, 181, 142, .34);
-  min-height: 0;
 }
 
 .lounge-pin-side b {
@@ -1576,10 +1555,8 @@ select:focus {
 
 .lounge-pin-body {
   font-size: 12px;
-  line-height: 1.65;
+  line-height: 1.7;
   color: var(--ink);
-  max-height: 320px;
-  overflow-y: auto;
 }
 
 .lounge-tiny {
