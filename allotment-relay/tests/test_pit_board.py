@@ -65,9 +65,9 @@ async def _test_pit_board() -> None:
     from server import undertide
     from server import undertide_pit as up
 
-    kid_a, sid_a = await _enroll(db, "a@example.com", "安")
-    kid_b, sid_b = await _enroll(db, "b@example.com", "乙")
-    kid_c, sid_c = await _enroll(db, "c@example.com", "丙")
+    kid_a, sid_a = await _enroll(db, "a@example.com", "安安")
+    kid_b, sid_b = await _enroll(db, "b@example.com", "乙乙")
+    kid_c, sid_c = await _enroll(db, "c@example.com", "丙丙")
     await _unlock(db, sid_a)
     await _unlock(db, sid_b)
     await _unlock(db, sid_c)
@@ -88,12 +88,12 @@ async def _test_pit_board() -> None:
 
     board = await undertide.undertide_ops(kid_a, "pit board")
     assert "墙上的位置" in board, board
-    an_pos = board.index("安")
-    yi_pos = board.index("乙")
+    an_pos = board.index("安安")
+    yi_pos = board.index("乙乙")
     assert an_pos < yi_pos, board
     assert "3胜1负" in board, board
     assert "2胜0负" in board, board
-    assert "丙" not in board, board
+    assert "丙丙" not in board, board
     assert "#1/" in board, board
 
     alias = await undertide.undertide_ops(kid_a, "board")
@@ -104,8 +104,8 @@ async def _test_pit_board() -> None:
 
     pub = await up.public_pit_board()
     names = [r["name"] for r in pub]
-    assert names[:2] == ["安", "乙"], pub
-    assert "丙" not in names, pub
+    assert names[:2] == ["安安", "乙乙"], pub
+    assert "丙丙" not in names, pub
     assert pub[0]["wins"] == 3, pub
 
 
