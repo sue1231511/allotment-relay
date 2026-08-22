@@ -201,7 +201,7 @@ bar_ops     的 command = work 洗碗 night
 | `shaonian visit` / `shaonian fortune` | 韶年卜卦 |
 | `lore scan` | 沿海旧史文本（可指定主题或随机），不是收集品 |
 | `clinic status` / `clinic treat infection` | 诊所。深坑伤走 `undertide_ops medic` |
-| `visit 拾叶` | 巷口随机事件 |
+| `visit 拾叶` | 巷口随机事件（主动必触发）；路上每天首次操作掷一次碰上 |
 | `help` | 列出真指令 |
 
 ### `bar_ops` — 酒吧

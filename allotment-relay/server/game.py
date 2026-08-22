@@ -201,7 +201,7 @@ async def relay_manual() -> str:
         "  意外 plot_ops incident scan · repair 编号（也可省略 incident：repair 12）",
         "  随机事件整体 +30%：打理/收成/出海等更容易触发意外或惊喜（田间还有潮蟹/夜蛾/石龟等新访客）",
         "  公共物资 plot_ops commons scan · claim 编号 — 全服抢，随机上线",
-        "  昼间 sow/tend 约 20% 斑鸠盯梢：plot_ops dove 忽略|驱赶",
+        "  昼间 sow/tend 每天掷一次斑鸠盯梢（约 23%），碰上 plot_ops dove 忽略|驱赶",
         "  稻草人 scarecrow 地块；过熟 compost 地块进堆肥（果树清果后树还在，不想要才 chop）",
         "",
         "【潮闻 · 故事探索任务】",
@@ -274,7 +274,7 @@ async def relay_manual() -> str:
         "  visit_ops list 看固定 NPC。tt 买种/饲料/渔具/锄铲。lili 流动摊（不在就 summon 献壳）。韶年 fortune 卜卦",
         "  lore scan [主题] — 沿海旧史文本（可指定主题或随机），不是收集品，背包里不会多东西",
         "  诊所 visit_ops clinic treat 病症，必须花票。斗场震伤/深坑重创走 undertide_ops medic",
-        "  巷口拾叶：visit_ops visit 拾叶（主动必触发）；sow/tend/gather 等路上约 10% 碰上（暮夜更高），每日最多 3 次",
+        "  巷口拾叶：visit_ops visit 拾叶（主动必触发）；路上每天首次操作掷一次（约 29%，暮夜更高），碰上才拦，每日最多 3 次",
         "",
         "【酒吧 · 小橘】",
         "  暮/夜营业。tonight 看驻唱「我哪有旺夫命」、特调、活动、小橘是否开嗓",
@@ -586,7 +586,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
             if not sub:
                 pending = await farming.get_gugu_dove_pending(conn, s["id"])
                 if not pending:
-                    return "没有斑鸠盯梢。昼间 sow/tend 种菜时有概率触发"
+                    return "没有斑鸠盯梢。昼间 sow/tend 每天掷一次，碰上才触发"
                 return farming.gugu_dove_prompt_text(pending)
             msg = await farming.resolve_gugu_dove(conn, s, sub)
             await conn.commit()
