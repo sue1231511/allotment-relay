@@ -22,6 +22,80 @@ function badgeLabel(key) {
   return BADGE_LABELS[key] || key || '—';
 }
 
+const STEWARD_KEY_STORAGE = 'tidal_island_steward_api_key';
+
+function loadSavedKey() {
+  try {
+    const key = localStorage.getItem(STEWARD_KEY_STORAGE);
+    return key && key.startsWith('ar_sk_') ? key : '';
+  } catch {
+    return '';
+  }
+}
+
+function saveKey(key) {
+  try {
+    localStorage.setItem(STEWARD_KEY_STORAGE, key);
+  } catch {
+    /* private mode / quota */
+  }
+}
+
+function clearSavedKey() {
+  try {
+    localStorage.removeItem(STEWARD_KEY_STORAGE);
+  } catch {
+    /* ignore */
+  }
+}
+
+function setSavedUi(hasKey) {
+  document.getElementById('steward-forget').classList.toggle('hidden', !hasKey);
+  document.getElementById('steward-refresh').classList.toggle('hidden', !hasKey);
+  document.getElementById('steward-saved-hint').classList.toggle('hidden', !hasKey);
+}
+
+async function fetchDashboard(apiKey, { scroll = true } = {}) {
+  const btn = document.querySelector('.steward-submit');
+  const refreshBtn = document.getElementById('steward-refresh');
+  const errBox = document.getElementById('steward-error');
+  errBox.classList.add('hidden');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '查询中…';
+  }
+  if (refreshBtn) refreshBtn.disabled = true;
+  try {
+    const res = await fetch('/api/steward/dashboard', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ api_key: apiKey.trim() }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || '查询失败');
+    saveKey(apiKey.trim());
+    document.getElementById('api_key').value = apiKey.trim();
+    setSavedUi(true);
+    renderDashboard(data, { scroll });
+    return data;
+  } catch (err) {
+    errBox.classList.remove('hidden');
+    errBox.textContent = err.message;
+    document.getElementById('steward-dashboard').classList.add('hidden');
+    if (String(err.message).includes('无效')) {
+      clearSavedKey();
+      setSavedUi(false);
+    }
+    throw err;
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '查看状态';
+    }
+    if (refreshBtn) refreshBtn.disabled = false;
+  }
+}
+
 function meterBar(label, value, max = 100, tone = 'sea') {
   const v = Math.max(0, Math.min(max, Number(value) || 0));
   const pct = Math.round((v / max) * 100);
@@ -54,7 +128,7 @@ function plotCard(p) {
   `;
 }
 
-function renderDashboard(data) {
+function renderDashboard(data, { scroll = true } = {}) {
   document.getElementById('steward-dashboard').classList.remove('hidden');
   document.getElementById('steward-error').classList.add('hidden');
 
@@ -177,31 +251,33 @@ function renderDashboard(data) {
       `).join('')
     : '<p class="steward-empty">还没有收礼或酒吧打赏记录。</p>';
 
-  document.getElementById('steward-dashboard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (scroll) {
+    document.getElementById('steward-dashboard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 }
 
 document.getElementById('steward-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const btn = e.target.querySelector('button[type="submit"]');
-  const errBox = document.getElementById('steward-error');
-  errBox.classList.add('hidden');
-  btn.disabled = true;
-  btn.textContent = '查询中…';
-  try {
-    const res = await fetch('/api/steward/dashboard', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ api_key: document.getElementById('api_key').value.trim() }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || '查询失败');
-    renderDashboard(data);
-  } catch (err) {
-    errBox.classList.remove('hidden');
-    errBox.textContent = err.message;
-    document.getElementById('steward-dashboard').classList.add('hidden');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '查看状态';
-  }
+  await fetchDashboard(document.getElementById('api_key').value);
 });
+
+document.getElementById('steward-refresh').addEventListener('click', () => {
+  const key = document.getElementById('api_key').value.trim() || loadSavedKey();
+  if (key) fetchDashboard(key, { scroll: false });
+});
+
+document.getElementById('steward-forget').addEventListener('click', () => {
+  clearSavedKey();
+  document.getElementById('api_key').value = '';
+  document.getElementById('steward-dashboard').classList.add('hidden');
+  document.getElementById('steward-error').classList.add('hidden');
+  setSavedUi(false);
+});
+
+(function initStewardPage() {
+  const saved = loadSavedKey();
+  if (!saved) return;
+  document.getElementById('api_key').value = saved;
+  setSavedUi(true);
+  fetchDashboard(saved, { scroll: false }).catch(() => {});
+})();

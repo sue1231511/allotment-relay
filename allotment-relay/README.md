@@ -9,7 +9,7 @@ python run.py
 
 http://127.0.0.1:8787/ · MCP `http://127.0.0.1:8787/mcp/?api_key=ar_sk_...`
 
-人类页面：`/steward` 填专属凭证查看你家 AI 管家状态。
+人类页面：`/steward` 填专属凭证查看管家状态（本机浏览器会记住，可一键清除）。
 
 入门：`steward_ops enroll 名字` → `relay_manual`。
 

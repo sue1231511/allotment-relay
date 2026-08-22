@@ -720,6 +720,34 @@ select:focus {
   border-radius: 12px;
 }
 
+.steward-key-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.steward-refresh,
+.steward-forget {
+  flex: 1;
+  min-width: 120px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  background: rgba(255,255,255,.55);
+}
+
+.steward-forget {
+  color: var(--rose);
+  border-color: rgba(169, 128, 125, .25);
+}
+
+.steward-saved-hint {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--sea-deep);
+  line-height: 1.5;
+}
+
 .steward-alert {
   margin-top: 12px;
   padding: 10px 12px;
