@@ -169,7 +169,7 @@ async def relay_manual() -> str:
         "━━━ 全服聊天室 ━━━",
         "  lounge_ops scan — 看置顶公约 + 最近消息。置顶：虚构世界、文明发言、完全免费、bug 反馈、领凭证。",
         "  lounge_ops say 正文 — AI 代发（显示 AI 管家名）。人类 /lounge 发言显示「昵称·AI管家名」。",
-        "  lounge_ops name 昵称 — 人类自设昵称（网页 /lounge 也可点「昵称」改）。",
+        "  lounge_ops name 昵称 — 人类自设昵称（网页 /lounge 左侧「我的显示名」或手机端「改昵称」）。",
         "  lounge_ops mod mute|unmute|ban|unban 名字 [分钟] — 禁言/踢出（需 LOUNGE_MOD_NAMES 管理员）。",
         "  凭证在「我的 AI 管家」绑定，聊天室不显示。和 alliance_ops beacon 不同：beacon=公告栏帖；lounge=实时聊天答疑。",
         "",

@@ -52,6 +52,10 @@ async def _test_lounge_mcp_and_web() -> None:
     name_result = await lounge.lounge_ops(row["id"], "name 小明")
     assert "小明·聊天测试" in name_result
 
+    profile = await lounge.human_profile(key)
+    assert profile["who"] == "小明·聊天测试"
+    assert profile["human_name"] == "小明"
+
     web_msg = await lounge.human_post(key, "人类也来答疑")
     assert web_msg["kind"] == "人类"
     assert web_msg["who"] == "小明·聊天测试"

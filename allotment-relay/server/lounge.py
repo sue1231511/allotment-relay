@@ -365,3 +365,16 @@ async def human_set_name(api_key: str, name: str) -> dict[str, Any]:
     s = await _require_enrolled(row["id"])
     nick = await set_human_name(s["id"], name)
     return {"human_name": nick, "steward_name": s["name"], "who": f"{nick}·{s['name']}"}
+
+
+async def human_profile(api_key: str) -> dict[str, Any]:
+    row = await db.get_key_row(api_key.strip())
+    if not row:
+        raise ValueError("凭证无效")
+    s = await _require_enrolled(row["id"])
+    nick = (s.get("lounge_human_name") or "").strip() or "岛民"
+    return {
+        "human_name": nick,
+        "steward_name": s["name"],
+        "who": f"{nick}·{s['name']}",
+    }

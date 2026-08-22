@@ -133,6 +133,10 @@ class LoungeNameRequest(BaseModel):
     name: str
 
 
+class LoungeKeyRequest(BaseModel):
+    api_key: str
+
+
 class LoungeModRequest(BaseModel):
     key: str
     action: str
@@ -263,6 +267,15 @@ async def lounge_set_name(body: LoungeNameRequest):
     from . import lounge
     try:
         return await lounge.human_set_name(body.api_key.strip(), body.name)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/lounge/me")
+async def lounge_me(body: LoungeKeyRequest):
+    from . import lounge
+    try:
+        return await lounge.human_profile(body.api_key.strip())
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

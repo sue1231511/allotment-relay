@@ -1,16 +1,23 @@
 const KEY_STORAGE = 'tidal_island_steward_api_key';
 const WHO_STORAGE = 'tidal_island_lounge_display_who';
+const HUMAN_NAME_STORAGE = 'tidal_island_lounge_human_name';
 const POLL_MS = 6000;
 
 let lastId = 0;
 let pollTimer = null;
+let myProfile = null;
 
 const feed = document.getElementById('lounge-feed');
 const statusEl = document.getElementById('lounge-status');
+const statusBadge = document.getElementById('lounge-status-badge');
 const liveDot = document.getElementById('lounge-live-dot');
 const msgInput = document.getElementById('lounge_message');
 const nameDialog = document.getElementById('lounge-name-dialog');
 const toastEl = document.getElementById('lounge-toast');
+const myWhoEl = document.getElementById('lounge-my-who');
+const composerWhoEl = document.getElementById('lounge-composer-who');
+const bindLinkEl = document.getElementById('lounge-bind-link');
+const nameInput = document.getElementById('lounge_human_name');
 
 function esc(s) {
   const d = document.createElement('div');
@@ -43,9 +50,10 @@ function loadMyWho() {
   }
 }
 
-function saveMyWho(who) {
+function saveMyWho(who, humanName) {
   try {
     if (who) localStorage.setItem(WHO_STORAGE, who);
+    if (humanName) localStorage.setItem(HUMAN_NAME_STORAGE, humanName);
   } catch { /* ignore */ }
 }
 
@@ -66,20 +74,75 @@ function isMine(m) {
   return m.source === 'web' && my && m.who === my;
 }
 
+function kindLabel(kind) {
+  return kind === 'AI' ? 'AI 管理员' : '玩家';
+}
+
 function renderPinned(fullText) {
-  document.getElementById('lounge-pinned-body').innerHTML = esc(fullText).replace(/\n/g, '<br>');
+  const html = esc(fullText).replace(/\n/g, '<br>');
+  document.getElementById('lounge-pinned-body').innerHTML = html;
+  const mobile = document.getElementById('lounge-pinned-mobile');
+  if (mobile) mobile.innerHTML = html;
+}
+
+function updateIdentityUI(profile) {
+  myProfile = profile;
+  const hasKey = Boolean(profile?.who);
+  const whoText = hasKey ? profile.who : '未绑定凭证';
+  const hint = hasKey
+    ? `将以「${profile.who}」发言`
+    : '请先在「我的 AI 管家」绑定凭证';
+
+  myWhoEl.textContent = whoText;
+  composerWhoEl.textContent = hint;
+  bindLinkEl.classList.toggle('hidden', hasKey);
+
+  if (hasKey) {
+    saveMyWho(profile.who, profile.human_name);
+    if (profile.human_name && profile.human_name !== '岛民') {
+      nameInput.value = profile.human_name;
+    }
+  }
+}
+
+async function fetchProfile() {
+  const apiKey = loadSavedKey();
+  if (!apiKey) {
+    updateIdentityUI(null);
+    return null;
+  }
+  try {
+    const res = await fetch('/api/lounge/me', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ api_key: apiKey }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || '加载身份失败');
+    updateIdentityUI(data);
+    return data;
+  } catch (err) {
+    const cached = loadMyWho();
+    if (cached) {
+      updateIdentityUI({ who: cached, human_name: '' });
+    } else {
+      updateIdentityUI(null);
+    }
+    return null;
+  }
 }
 
 function bubbleHtml(m) {
   const mine = isMine(m);
-  const side = mine ? 'mine' : (m.source === 'web' ? 'human' : 'ai');
+  const meta = mine ? '我' : `${m.who} · ${kindLabel(m.kind)}`;
+  const bubbleClass = mine ? 'mine' : 'other';
   return `
-    <article class="lounge-row lounge-row--${side}" data-id="${m.id}">
+    <article class="lounge-row${mine ? ' mine' : ''}" data-id="${m.id}">
       ${mine ? '' : `<div class="lounge-avatar" aria-hidden="true">${esc(initials(m.who))}</div>`}
-      <div class="lounge-bubble lounge-bubble--${side}">
-        ${mine ? '' : `<div class="lounge-bubble-meta"><span class="lounge-bubble-who">${esc(m.who)}</span><span class="lounge-bubble-tag">${esc(m.kind)}</span></div>`}
-        <p class="lounge-bubble-text">${esc(m.body)}</p>
-        <time class="lounge-bubble-time">${esc(fmtClock(m.created_at))}</time>
+      <div class="lounge-bubble ${bubbleClass}">
+        <div class="lounge-meta">${esc(meta)}</div>
+        <div class="lounge-text">${esc(m.body)}</div>
+        <div class="lounge-time">${esc(fmtClock(m.created_at))}</div>
       </div>
     </article>
   `;
@@ -131,15 +194,21 @@ async function fetchMessages({ since = 0 } = {}) {
 }
 
 async function refreshFeed({ quiet = false } = {}) {
-  if (!quiet) statusEl.textContent = '同步中…';
+  if (!quiet) {
+    statusEl.textContent = '同步中…';
+    statusBadge.textContent = '同步中…';
+  }
   try {
     const msgs = await fetchMessages({ since: lastId });
     renderMessages(msgs);
-    statusEl.textContent = `${msgs.length ? '刚刚更新' : '在线'} · ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    const stamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    statusEl.textContent = msgs.length ? `刚刚更新 · ${stamp}` : `连接正常 · ${stamp}`;
+    statusBadge.textContent = `在线 · ${POLL_MS / 1000} 秒刷新`;
     liveDot.classList.remove('is-error');
     liveDot.classList.add('is-live');
   } catch (err) {
     statusEl.textContent = '连接异常';
+    statusBadge.textContent = '连接异常';
     liveDot.classList.add('is-error');
     if (!quiet) console.error(err);
   }
@@ -177,6 +246,33 @@ function closeDialog(dialog) {
   else dialog.removeAttribute('open');
 }
 
+function openNameDialog() {
+  const apiKey = loadSavedKey();
+  if (!apiKey.startsWith('ar_sk_')) {
+    toast('请先在「我的 AI 管家」页面绑定凭证');
+    bindLinkEl.classList.remove('hidden');
+    bindLinkEl.focus();
+    return;
+  }
+  if (myProfile?.human_name && myProfile.human_name !== '岛民') {
+    nameInput.value = myProfile.human_name;
+  } else {
+    try {
+      const cached = localStorage.getItem(HUMAN_NAME_STORAGE);
+      if (cached) nameInput.value = cached;
+    } catch { /* ignore */ }
+  }
+  const preview = document.getElementById('lounge-name-preview');
+  if (myProfile?.who) {
+    preview.textContent = `当前：${myProfile.who}`;
+    preview.classList.remove('hidden');
+  } else {
+    preview.classList.add('hidden');
+  }
+  openDialog(nameDialog);
+  nameInput.focus();
+}
+
 function autoGrow(el) {
   el.style.height = 'auto';
   el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
@@ -194,25 +290,24 @@ document.querySelectorAll('[data-close-dialog]').forEach((btn) => {
   });
 });
 
-document.getElementById('lounge-name-btn').addEventListener('click', () => {
-  const apiKey = loadSavedKey();
-  if (!apiKey.startsWith('ar_sk_')) {
-    toast('请先在「我的 AI 管家」页面绑定凭证');
-    return;
-  }
-  openDialog(nameDialog);
+document.querySelectorAll('.js-lounge-name-btn').forEach((btn) => {
+  btn.addEventListener('click', openNameDialog);
 });
 
 document.getElementById('lounge-save-name').addEventListener('click', async () => {
   const apiKey = loadSavedKey();
-  const name = document.getElementById('lounge_human_name').value.trim();
+  const name = nameInput.value.trim();
   if (!apiKey.startsWith('ar_sk_')) {
     toast('请先在「我的 AI 管家」页面绑定凭证');
     return;
   }
+  if (!name) {
+    toast('昵称不能为空');
+    return;
+  }
   try {
     const data = await setDisplayName(apiKey, name);
-    saveMyWho(data.who);
+    updateIdentityUI(data);
     const preview = document.getElementById('lounge-name-preview');
     preview.textContent = `将显示为：${data.who}`;
     preview.classList.remove('hidden');
@@ -240,11 +335,15 @@ document.getElementById('lounge-form').addEventListener('submit', async (e) => {
     toast('请先在「我的 AI 管家」页面绑定凭证后再发言');
     return;
   }
-  const btn = document.querySelector('.lounge-send-btn');
+  const btn = document.querySelector('.lounge-send');
   btn.disabled = true;
   try {
     const msg = await postMessage(apiKey, body);
-    saveMyWho(msg.who);
+    updateIdentityUI({
+      who: msg.who,
+      human_name: msg.human_name,
+      steward_name: msg.steward_name,
+    });
     renderMessages([msg]);
     msgInput.value = '';
     autoGrow(msgInput);
@@ -258,14 +357,17 @@ document.getElementById('lounge-form').addEventListener('submit', async (e) => {
 
 (async function boot() {
   try {
-    await fetchMeta();
+    await Promise.all([fetchMeta(), fetchProfile()]);
     const msgs = await fetchMessages();
     lastId = 0;
+    feed.innerHTML = '';
     renderMessages(msgs);
-    statusEl.textContent = '在线';
+    statusEl.textContent = '连接正常';
+    statusBadge.textContent = `在线 · ${POLL_MS / 1000} 秒刷新`;
     liveDot.classList.add('is-live');
   } catch (err) {
     statusEl.textContent = '加载失败';
+    statusBadge.textContent = '加载失败';
     liveDot.classList.add('is-error');
     console.error(err);
   }
