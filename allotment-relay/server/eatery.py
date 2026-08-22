@@ -9,7 +9,14 @@ from typing import Any
 import aiosqlite
 
 from . import config, db, energy, flavor, survival
-from .catalog import ITEM_PRICES, dish_energy, item_label, suggested_price
+from .catalog import (
+    ITEM_PRICES,
+    dish_energy,
+    eatery_price_range,
+    item_label,
+    resolve_item_key,
+    suggested_price,
+)
 
 
 def _day_id() -> int:
@@ -76,15 +83,6 @@ def _quote_lines(label: str, quote: dict[str, Any], menu_n: int) -> list[str]:
         "冰箱还在小屋里。要拆装件：hut_ops remove",
         "确认：kitchen_ops shop 卖掉 确认",
     ]
-
-
-def _item_price(item: str) -> int:
-    price = suggested_price(item)
-    if price:
-        return price
-    if item.startswith("meal_"):
-        return ITEM_PRICES.get(item, 18)
-    return ITEM_PRICES.get(item, 0)
 
 
 def _eat_gain(item: str, price: int | None = None) -> int:
@@ -244,24 +242,54 @@ async def eatery_command(s: dict[str, Any], command: str) -> str:
     if verb == "stock" and len(parts) >= 2:
         if not s.get("eatery_open"):
             raise ValueError("先 shop open")
-        item = parts[1]
+        token = parts[1]
+        item = resolve_item_key(token) or token
+        if not (item.startswith("dish_") or item.startswith("meal_")):
+            from . import kitchen as kitchen_mod
+            cooked = kitchen_mod._resolve_cooked_token(token)
+            if cooked and (cooked.startswith("dish_") or cooked.startswith("meal_")):
+                item = cooked
         if not (item.startswith("dish_") or item.startswith("meal_")):
             raise ValueError("只能上架熟菜 dish_* / meal_*")
-        price = _item_price(item)
-        if not price:
-            raise ValueError("这道菜卖不出价")
         async with db.connect() as conn:
             menu = await _menu_rows(conn, s["id"])
             if len(menu) >= config.EATERY_MENU_MAX:
                 raise ValueError(f"菜单满了（{config.EATERY_MENU_MAX}）")
+            if item.startswith("dish_"):
+                from . import kitchen as kitchen_mod
+                try:
+                    item = await kitchen_mod._pick_cooked_satchel(conn, s["id"], item)
+                except ValueError:
+                    pass
             if not await db.take_item(conn, s["id"], item, 1):
                 raise ValueError("行囊没有这道菜，先 cook / brew")
+            # 定价按星级+精力锚定：参考价 = max(系统回收×1.25, 精力×3)，店家在 75%~150% 区间内自定
+            ref, lo, hi = eatery_price_range(item)
+            price = ref
+            if len(parts) >= 3:
+                try:
+                    price = int(parts[2])
+                except ValueError:
+                    raise ValueError(
+                        f"价格要写整数。{item_label(item)} 参考价 {ref} 票，区间 {lo}~{hi}"
+                    ) from None
+                if not (lo <= price <= hi):
+                    vend = suggested_price(item)
+                    raise ValueError(
+                        f"{item_label(item)} 按星级+精力锚定：参考价 {ref} 票，"
+                        f"只能在 {lo}~{hi} 之间定价（你写 {price}）。"
+                        f"提示：系统回收只有 {vend} 票，卖给食客才赚。"
+                    )
             await conn.execute(
                 "INSERT INTO eatery_menu (steward_id, item, price, listed_at) VALUES (?,?,?,?)",
                 (s["id"], item, price, db.now()),
             )
             await conn.commit()
-        return f"上架 {item_label(item)} — {price} 票"
+        vend = suggested_price(item)
+        return (
+            f"上架 {item_label(item)} — {price} 票"
+            f"（参考 {ref} · 区间 {lo}~{hi} · 系统回收只有 {vend}）"
+        )
 
     if verb == "unstock" and len(parts) >= 2:
         try:

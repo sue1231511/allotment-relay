@@ -99,6 +99,18 @@ def test_mcp_descriptions() -> None:
     al_blob = f"{alliance.description}\n{(alliance.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
     assert "贡献榜" in al_blob
 
+    hut = mcp._tool_manager.get_tool("hut_ops")
+    hut_blob = f"{hut.description}\n{(hut.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
+    assert "床" in hut_blob
+    assert "睡" in hut_blob
+    assert "install hard_1 bed" in hut_blob
+
+    kitchen = mcp._tool_manager.get_tool("kitchen_ops")
+    k_blob = f"{kitchen.description}\n{(kitchen.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
+    assert "shop stock" in k_blob
+    assert "参考价" in k_blob
+    assert "回收" in k_blob
+
     manual = mcp._tool_manager.get_tool("relay_manual")
     man_blob = manual.description or ""
     assert "禁止发明" in man_blob or "不要发明" in man_blob or "编指令" in man_blob
@@ -131,6 +143,10 @@ def test_relay_manual_covers_systems() -> None:
         "market 扩",
         "brew",
         "shop open",
+        "shop stock 菜名 [价格]",
+        "75%~150%",
+        "hut_ops 睡",
+        "buy bed",
         "lodge",
         "shaonian",
         "gear upgrade",

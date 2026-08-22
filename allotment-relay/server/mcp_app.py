@@ -111,9 +111,9 @@ async def plot_ops(
     return await mux._call_ops(mux.plot_bundle, _kid(), command)
 
 
-@mcp.tool(description="小屋、潮柜、冰箱、畜栏、吉祥物。command 写一整句，不要编造子命令。例子：status · buy cabinet · 冰柜 存 甘蓝 3 · barn collect · barn churn · mascot upkeep。churn 只搅山羊奶；mascot upkeep 是主动花票喂养，不是每日自动扣。空 command 列出子命令。不会就 help。")
+@mcp.tool(description="小屋、潮柜、冰箱、床、畜栏、吉祥物。command 写一整句，不要编造子命令。例子：status · buy cabinet · 冰柜 存 甘蓝 3 · buy bed · install hard_1 bed · 睡 · barn collect · barn churn · mascot upkeep。睡=床上休息回 50 精力（每 20 小时一次，先 buy bed 并 install）；churn 只搅山羊奶；mascot upkeep 是主动花票喂养，不是每日自动扣。空 command 列出子命令。不会就 help。")
 async def hut_ops(
-    command: Annotated[str, Field(description="子命令整句。status / build / buy cabinet / buy fridge / 冰柜 存 甘蓝 3 / barn status / barn churn / mascot upkeep / help。churn 只搅山羊奶成奶酪。upkeep 花 4 票主动喂养。不要发明其它动词。")] = "",
+    command: Annotated[str, Field(description="子命令整句。status / build / buy cabinet / buy fridge / buy bed / install hard_1 bed / 睡（回 50 精力，20h 一次，要床）/ 冰柜 存 甘蓝 3 / barn status / barn churn / mascot upkeep / help。churn 只搅山羊奶成奶酪。upkeep 花 4 票主动喂养。不要发明其它动词。")] = "",
 ) -> str:
     return await mux._call_ops(mux.hut_bundle, _kid(), command)
 
@@ -132,9 +132,9 @@ async def tote_ops(
     return await mux._call_ops(mux.tote_bundle, _kid(), command)
 
 
-@mcp.tool(description="厨房。command 写一整句，回精力用 eat，不要另造 eat_ops。熟菜回精力最多（22 起）；水果可生吃但只回 4、连吃 5 口营养不良；生鱼/野薄荷可生吃；蔬菜不能生吃；只有生肉（兔肉/猪肉）可能感染。例子：menu · cook 甘蓝 鲭鱼 · eat 鲭鱼 · eat 芒果 · shop board。shop board 是全服在营业小馆名单，不是流水。空 command=菜谱。不会就 help。")
+@mcp.tool(description="厨房。command 写一整句，回精力用 eat，不要另造 eat_ops。熟菜回精力最多（22 起）；水果可生吃但只回 4、连吃 5 口营养不良；生鱼/野薄荷可生吃；蔬菜不能生吃；只有生肉（兔肉/猪肉）可能感染。系统 vend 回收价低（≈材料+10%）——赚钱开小馆：shop stock 菜名 [价格]，定价按星级+精力锚定（menu 给参考价和区间）。例子：menu · cook 甘蓝 鲭鱼 · eat 鲭鱼 · shop stock 盐焗沙蟹 · shop board。空 command=菜谱。不会就 help。")
 async def kitchen_ops(
-    command: Annotated[str, Field(description="子命令整句。menu=菜谱（空也是）；cook 蒜蓉生蚝=定点菜；cook 甘蓝 鲭鱼=自由组合；eat 鲭鱼=生吃（安全）；eat 芒果=生吃水果（只回 4 精力，连吃 5 口营养不良）；蔬菜不能生吃，先 cook/brew；vend 菜名；store 菜名；shop board|open|卖掉；help。shop board=谁在营业。不要发明 eat_ops。")] = "",
+    command: Annotated[str, Field(description="子命令整句。menu=菜谱（空也是）；cook 蒜蓉生蚝=定点菜；cook 甘蓝 鲭鱼=自由组合；eat 鲭鱼=生吃（安全）；eat 芒果=生吃水果（只回 4 精力，连吃 5 口营养不良）；蔬菜不能生吃，先 cook/brew；vend 菜名=系统回收（价低）；store 菜名；shop open 店名；shop stock 菜名 [价格]=上架（参考价=max(系统回收×1.25, 精力×3)，区间 75%~150% 内自定）；shop board=谁在营业；help。不要发明 eat_ops。")] = "",
 ) -> str:
     return await mux._call_ops(mux.kitchen_bundle, _kid(), command)
 

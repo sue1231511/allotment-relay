@@ -219,6 +219,10 @@ MARKET_SLOT_COST = 15          # 每加 1 格
 BARN_SLOTS = 6
 BARN_ERECT_COST = 75
 
+# 岸柏板床 — hut_ops 睡：一觉回精力（回饱食 +8），冷却 20 小时
+BED_REST_ENERGY = 50
+BED_REST_COOLDOWN = 72000
+
 # 世界 Boss
 BOSS_ATTACK_ENERGY = 12
 BOSS_ATTACK_DAMAGE = (18, 45)

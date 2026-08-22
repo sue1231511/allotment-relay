@@ -276,15 +276,15 @@ STARTER_STOCK = {
 }
 
 HEARTH_RECIPES = {
-    "crop_beet|crop_kale": {"name": "赤绿泥汤", "sell": 38, "tags": ["root", "leaf"]},
-    "crop_kale|crop_rye": {"name": "黑麦叶卷", "sell": 42, "tags": ["grain", "leaf"]},
-    "crop_bramble|crop_fogpea": {"name": "雾莓酱", "sell": 45, "tags": ["berry", "legume"]},
-    "crop_kelp|fish_herring": {"name": "潮线锅", "sell": 40, "tags": ["sea"]},
-    "crop_kelp|fish_kelpcrab": {"name": "藻滩煲", "sell": 52, "tags": ["sea"]},
-    "fish_mackerel|wild_mint": {"name": "薄荷熏鲭", "sell": 48, "tags": ["sea", "herb"]},
-    "compost|crop_beet": {"name": "甜菜酵碗", "sell": 36, "tags": ["root", "ferment"]},
-    "fish_seatrout|crop_kelp": {"name": "海鳟卷", "sell": 54, "tags": ["sea"]},
-    "fish_glassshrimp|wild_mint": {"name": "水晶虾盘", "sell": 58, "tags": ["sea"]},
+    "crop_beet|crop_kale": {"name": "赤绿泥汤", "sell": 41, "tags": ["root", "leaf"]},
+    "crop_kale|crop_rye": {"name": "黑麦叶卷", "sell": 39, "tags": ["grain", "leaf"]},
+    "crop_bramble|crop_fogpea": {"name": "雾莓酱", "sell": 61, "tags": ["berry", "legume"]},
+    "crop_kelp|fish_herring": {"name": "潮线锅", "sell": 42, "tags": ["sea"]},
+    "crop_kelp|fish_kelpcrab": {"name": "藻滩煲", "sell": 55, "tags": ["sea"]},
+    "fish_mackerel|wild_mint": {"name": "薄荷熏鲭", "sell": 33, "tags": ["sea", "herb"]},
+    "compost|crop_beet": {"name": "甜菜酵碗", "sell": 30, "tags": ["root", "ferment"]},
+    "fish_seatrout|crop_kelp": {"name": "海鳟卷", "sell": 55, "tags": ["sea"]},
+    "fish_glassshrimp|wild_mint": {"name": "水晶虾盘", "sell": 46, "tags": ["sea"]},
 }
 
 COMMONS_TEMPLATES = [
@@ -360,6 +360,7 @@ HUT_LEVELS = {
 }
 
 HUT_HARD = {
+    "bed": {"name": "岸柏板床", "cost": 60, "emoji": "🛏️", "hint": "hut_ops 睡：一觉回 50 精力，每 20 小时一次（回饱食 +8）"},
     "plank_floor": {"name": "防潮板地", "cost": 48, "emoji": "🪵", "hint": "意外掷骰 ×0.90"},
     "rain_gutter": {"name": "雨水槽", "cost": 55, "emoji": "🌧️", "hint": "阵风生长惩罚 ×0.86，阵风坏事件 ×0.90"},
     "storm_shutter": {"name": "风暴窗板", "cost": 72, "emoji": "🪟", "hint": "坏事件略少、野兽 ×0.82、斑鸠偷包 ×0.70（与渔网捕梦同组不叠）"},
@@ -453,139 +454,140 @@ GEAR_TIERS = {
     ],
 }
 
-# 3★ 卖价相对材料回收价的保底倍率。基价写低了也会抬到这个数，避免做饭倒贴。
-COOK_STAR3_FLOOR = 1.25
+# 3★ 系统回收价相对材料回收价的保底倍率。系统回收故意压得低（≈材料价+10%）：
+# 卖给系统只保本微赚，想赚钱去小馆（eatery_price_range 参考价更高）或玩家集市。
+COOK_STAR3_FLOOR = 1.05
 
 KITCHEN_DISHES = {
     "garlic_oyster": {
         "name": "蒜蓉生蚝", "emoji": "🦪",
         "ings": ["fish_seaurchin", "crop_garlic", "crop_chili"],
-        "base_sell": 84, "energy": 30, "tags": ["sea", "spicy"],
+        "base_sell": 77, "energy": 30, "tags": ["sea", "spicy"],
     },
     "blanch_shrimp": {
         "name": "白灼虾", "emoji": "🦐",
         "ings": ["fish_glassshrimp", "crop_ginger"],
-        "base_sell": 70, "energy": 28, "tags": ["sea"],
+        "base_sell": 64, "energy": 28, "tags": ["sea"],
     },
     "steam_fish": {
         "name": "清蒸鱼", "emoji": "🐟",
         "ings": ["fish_seatrout", "crop_ginger", "crop_garlic"],
-        "base_sell": 80, "energy": 26, "tags": ["sea"],
+        "base_sell": 75, "energy": 26, "tags": ["sea"],
     },
     "cheese_lobster": {
         "name": "芝士龙虾", "emoji": "🦞",
         "ings": ["fish_kingcrab", "crop_kale", "milk"],
-        "base_sell": 112, "energy": 36, "tags": ["sea", "rich"],
+        "base_sell": 103, "energy": 36, "tags": ["sea", "rich"],
     },
     "braised_fish": {
         "name": "红烧鱼", "emoji": "🍲",
         "ings": ["fish_mackerel", "crop_garlic", "crop_chili"],
-        "base_sell": 74, "energy": 28, "tags": ["sea"],
+        "base_sell": 68, "energy": 28, "tags": ["sea"],
     },
     "sour_fish": {
         "name": "酸汤鱼", "emoji": "🥘",
         "ings": ["fish_streakbass", "crop_chili", "crop_blueberry"],
-        "base_sell": 102, "energy": 30, "tags": ["sea", "sour"],
+        "base_sell": 95, "energy": 30, "tags": ["sea", "sour"],
     },
     "chop_head": {
         "name": "剁椒鱼头", "emoji": "🌶️",
         "ings": ["fish_lingcod", "crop_chili", "crop_garlic"],
-        "base_sell": 94, "energy": 32, "tags": ["sea", "spicy"],
+        "base_sell": 86, "energy": 32, "tags": ["sea", "spicy"],
     },
     "blueberry_tart": {
         "name": "蓝莓派", "emoji": "🥧",
         "ings": ["crop_blueberry", "crop_rye", "milk"],
-        "base_sell": 84, "energy": 24, "tags": ["dessert"],
+        "base_sell": 78, "energy": 24, "tags": ["dessert"],
     },
     "mango_pudding": {
         "name": "芒果椰奶冻", "emoji": "🍮",
         "ings": ["crop_mango", "crop_coconut", "milk"],
-        "base_sell": 92, "energy": 26, "tags": ["dessert", "tropic"],
+        "base_sell": 86, "energy": 26, "tags": ["dessert", "tropic"],
     },
     "pineapple_fried_rice": {
         "name": "菠萝炒饭", "emoji": "🍚",
         "ings": ["crop_pineapple", "crop_rye", "egg"],
-        "base_sell": 78, "energy": 28, "tags": ["tropic"],
+        "base_sell": 72, "energy": 28, "tags": ["tropic"],
     },
     "papaya_salad": {
         "name": "青木瓜沙拉", "emoji": "🥗",
         "ings": ["crop_papaya", "crop_chili", "crop_lime"],
-        "base_sell": 78, "energy": 24, "tags": ["tropic", "sour"],
+        "base_sell": 90, "energy": 24, "tags": ["tropic", "sour"],
     },
     "lemongrass_steamed_fish": {
         "name": "香茅蒸鱼", "emoji": "🐟",
         "ings": ["fish_seatrout", "crop_lemongrass", "crop_ginger"],
-        "base_sell": 84, "energy": 30, "tags": ["sea", "tropic"],
+        "base_sell": 77, "energy": 30, "tags": ["sea", "tropic"],
     },
     "coconut_curry": {
         "name": "椰香咖喱", "emoji": "🍛",
         "ings": ["crop_coconut", "crop_chili", "crop_sweetpotato"],
-        "base_sell": 76, "energy": 28, "tags": ["tropic", "spicy"],
+        "base_sell": 69, "energy": 28, "tags": ["tropic", "spicy"],
     },
     "honey_garlic_prawn": {
         "name": "蜜蒜虾", "emoji": "🦐",
         "ings": ["fish_glassshrimp", "honey", "crop_garlic"],
-        "base_sell": 92, "energy": 32, "tags": ["sea", "sweet"],
+        "base_sell": 86, "energy": 32, "tags": ["sea", "sweet"],
     },
     "duck_egg_fried_rice": {
         "name": "鸭蛋炒饭", "emoji": "🍳",
         "ings": ["duck_egg", "crop_rye", "crop_garlic"],
-        "base_sell": 66, "energy": 26, "tags": ["rich"],
+        "base_sell": 61, "energy": 26, "tags": ["rich"],
     },
     "goat_cheese_salad": {
         "name": "山羊奶酪沙拉", "emoji": "🧀",
         "ings": ["goat_cheese", "crop_kale", "crop_lime"],
-        "base_sell": 88, "energy": 24, "tags": ["tropic"],
+        "base_sell": 81, "energy": 24, "tags": ["tropic"],
     },
     "durian_mousse": {
         "name": "榴莲慕斯", "emoji": "🍰",
         "ings": ["crop_durian", "milk"],
-        "base_sell": 132, "energy": 34, "tags": ["dessert", "rich"],
+        "base_sell": 122, "energy": 34, "tags": ["dessert", "rich"],
     },
     "lime_coconut_shrimp": {
         "name": "青柠椰香虾", "emoji": "🦐",
         "ings": ["fish_glassshrimp", "crop_lime", "crop_coconut"],
-        "base_sell": 100, "energy": 30, "tags": ["sea", "tropic"],
+        "base_sell": 92, "energy": 30, "tags": ["sea", "tropic"],
     },
     "scallop_garlic": {
         "name": "蒜蓉粉丝扇贝", "emoji": "🦪",
         "ings": ["shell_scallop", "crop_garlic", "crop_chili"],
-        "base_sell": 84, "energy": 28, "tags": ["sea"],
+        "base_sell": 77, "energy": 28, "tags": ["sea"],
     },
     "sweetpotato_pancake": {
         "name": "红薯烙", "emoji": "🥞",
         "ings": ["crop_sweetpotato", "crop_rye", "honey"],
-        "base_sell": 74, "energy": 24, "tags": ["dessert"],
+        "base_sell": 68, "energy": 24, "tags": ["dessert"],
     },
     "salt_crab": {
         "name": "盐焗沙蟹", "emoji": "🦀",
         "ings": ["beach_crab", "crop_garlic", "crop_chili"],
-        "base_sell": 76, "energy": 26, "tags": ["sea", "spicy"],
+        "base_sell": 70, "energy": 26, "tags": ["sea", "spicy"],
     },
     "stir_squid": {
         "name": "姜葱炒小管", "emoji": "🦑",
         "ings": ["beach_squid", "crop_ginger", "crop_garlic"],
-        "base_sell": 84, "energy": 28, "tags": ["sea"],
+        "base_sell": 77, "energy": 28, "tags": ["sea"],
     },
     "pork_sweetpotato": {
         "name": "红薯烧肉", "emoji": "🍖",
         "ings": ["meat_pork", "crop_sweetpotato", "crop_chili"],
-        "base_sell": 80, "energy": 30, "tags": ["rich"],
+        "base_sell": 74, "energy": 30, "tags": ["rich"],
     },
     "rabbit_stew": {
         "name": "姜焖兔", "emoji": "🍲",
         "ings": ["meat_rabbit", "crop_kale", "crop_ginger"],
-        "base_sell": 72, "energy": 28, "tags": ["rich"],
+        "base_sell": 66, "energy": 28, "tags": ["rich"],
     },
     "banana_fritters": {
         "name": "香蕉椰丝饼", "emoji": "🍌",
         "ings": ["crop_banana", "crop_coconut", "honey"],
-        "base_sell": 92, "energy": 24, "tags": ["dessert", "tropic"],
+        "base_sell": 86, "energy": 24, "tags": ["dessert", "tropic"],
     },
     "mussel_garlic": {
         "name": "蒜香青口", "emoji": "🦪",
         "ings": ["shell_mussel", "crop_garlic", "crop_chili"],
-        "base_sell": 66, "energy": 24, "tags": ["sea"],
+        "base_sell": 62, "energy": 24, "tags": ["sea"],
     },
 }
 
@@ -1041,7 +1043,7 @@ def mix_display_name(grade: str, sig: str, stars: int) -> str:
 
 def mix_sell_price(grade: str, tier: int, stars: int) -> int:
     listed = MIX_SELL.get(grade, MIX_SELL["o"]).get(stars, 8)
-    star_mult = {1: 0.7, 2: 0.9, 3: 1.15, 4: 1.4, 5: 1.75}.get(stars, 1.15)
+    star_mult = {1: 0.7, 2: 0.9, 3: 1.05, 4: 1.3, 5: 1.55}.get(stars, 1.05)
     # tier = food_value // 20，用桶中值估材料回收，3★ 起不倒贴
     approx_cost = max(0, int(tier)) * 20 + 10
     if grade == "j":
@@ -1109,7 +1111,7 @@ def dish_ingredient_cost(key: str) -> int:
 
 
 def dish_base_sell(key: str) -> int:
-    """3★ 卖价：菜谱基价与材料回收×1.18 取高，避免做饭倒贴。"""
+    """3★ 系统回收价：菜谱基价（≈材料×1.1）与材料×保底倍率取高。卖给玩家更赚。"""
     listed = int(KITCHEN_DISHES[key]["base_sell"])
     floor = max(8, int(round(dish_ingredient_cost(key) * COOK_STAR3_FLOOR)))
     return max(listed, floor)
@@ -1123,7 +1125,7 @@ def dish_sell_price(key: str, stars: int) -> int:
             return mix_sell_price(grade, tier, st)
         return 2
     base = dish_base_sell(key)
-    mult = {1: 0.6, 2: 0.85, 3: 1.0, 4: 1.35, 5: 1.8}.get(stars, 1.0)
+    mult = {1: 0.6, 2: 0.85, 3: 1.0, 4: 1.3, 5: 1.7}.get(stars, 1.0)
     return max(8, int(base * mult))
 
 
@@ -1162,6 +1164,30 @@ def suggested_price(item: str) -> int:
         if dish_key in KITCHEN_DISHES:
             return dish_base_sell(dish_key)
     return ITEM_PRICES.get(key, 0)
+
+
+# 小馆上菜定价锚点：参考价 = max(系统回收×1.25, 精力×3)。
+# 店家只能在参考价 75%~150% 区间内自定，防止盲目标价；系统回收压得低，
+# 卖给玩家（小馆/集市）才明显更赚——玩家之间才有优先级。
+EATERY_REF_VENT_MULT = 1.25
+EATERY_REF_ENERGY_TICKETS = 3
+EATERY_PRICE_RANGE = (0.75, 1.5)
+
+
+def eatery_price_range(item: str) -> tuple[int, int, int]:
+    """(参考价, 最低价, 最高价) — 按星级（回收价/精力都含星级）+ 精力锚定。"""
+    vend = suggested_price(item)
+    energy = dish_energy(item)
+    if energy is None and item.startswith("meal_"):
+        energy = 18
+    if vend <= 0:
+        vend = 8
+    if energy is None:
+        energy = 8
+    ref = max(int(vend * EATERY_REF_VENT_MULT), int(energy * EATERY_REF_ENERGY_TICKETS))
+    lo = max(2, int(ref * EATERY_PRICE_RANGE[0]))
+    hi = max(lo + 1, int(ref * EATERY_PRICE_RANGE[1]))
+    return ref, lo, hi
 
 
 for dk in KITCHEN_DISHES:

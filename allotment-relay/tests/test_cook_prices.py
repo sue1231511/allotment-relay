@@ -10,7 +10,6 @@ sys.path.insert(0, str(ROOT))
 
 from server.catalog import (  # noqa: E402
     KITCHEN_DISHES,
-    COOK_STAR3_FLOOR,
     dish_base_sell,
     dish_ingredient_cost,
     dish_sell_price,
@@ -26,8 +25,9 @@ def test_named_dishes_star3_covers_vend() -> None:
         sell3 = dish_sell_price(key, 3)
         sell4 = dish_sell_price(key, 4)
         sell5 = dish_sell_price(key, 5)
-        assert sell3 >= int(cost * COOK_STAR3_FLOOR), f"{key} 3★ {sell3} < 材料 {cost}×{COOK_STAR3_FLOOR}"
         assert sell3 >= cost, f"{key} 3★ {sell3} < 材料 {cost} ({meta['name']})"
+        # 系统回收压得低：3★ 锚定在材料价 +0~20%，想赚钱走小馆/集市
+        assert sell3 <= int(cost * 1.2), f"{key} 3★ {sell3} > 材料×1.2 {cost} ({meta['name']})"
         assert sell4 > sell3
         assert sell5 > sell4
         assert dish_base_sell(key) == sell3
@@ -39,6 +39,21 @@ def test_named_dishes_star3_covers_vend() -> None:
     assert "crop_lemongrass" not in KITCHEN_DISHES["papaya_salad"]["ings"]
     assert len(KITCHEN_DISHES["goat_cheese_salad"]["ings"]) == 3
     assert len(KITCHEN_DISHES["papaya_salad"]["ings"]) == 3
+
+
+def test_eatery_ref_beats_vend() -> None:
+    from server.catalog import dish_energy, dish_item, eatery_price_range
+
+    for key in KITCHEN_DISHES:
+        for stars in (1, 3, 5):
+            item = dish_item(key, stars)
+            ref, lo, hi = eatery_price_range(item)
+            vend = dish_sell_price(key, stars)
+            energy = dish_energy(item)
+            assert lo <= ref <= hi, (key, stars)
+            # 卖给食客的参考价明显高于系统回收；精力是定价锚点之一
+            assert ref >= vend * 1.2, (key, stars, ref, vend)
+            assert ref >= energy * 3 - 1, (key, stars, ref, energy)
 
 
 def test_named_dish_energy_beats_raw() -> None:
@@ -69,18 +84,20 @@ def test_mix_energy_beats_raw() -> None:
 
 def main() -> None:
     test_named_dishes_star3_covers_vend()
+    test_eatery_ref_beats_vend()
     test_named_dish_energy_beats_raw()
     test_mix_star3_covers_bucket()
     test_mix_energy_beats_raw()
     print("cook price tests ok")
-    print(f"{'菜':<16} {'材料':>4} {'3★':>4} {'4★':>4} {'5★':>4} {'精力':>4}  3★盈")
+    print(f"{'菜':<16} {'材料':>4} {'3★回收':>6} {'5★回收':>6} {'精力':>4} {'小馆参考':>6}  3★回收盈")
+    from server.catalog import dish_item, eatery_price_range
     for key, meta in KITCHEN_DISHES.items():
         cost = dish_ingredient_cost(key)
         s3 = dish_sell_price(key, 3)
+        ref, lo, hi = eatery_price_range(dish_item(key, 3))
         print(
-            f"{meta['name']:<16} {cost:4d} {s3:4d} "
-            f"{dish_sell_price(key, 4):4d} {dish_sell_price(key, 5):4d} "
-            f"{meta['energy']:4d}  {s3 - cost:+d}"
+            f"{meta['name']:<16} {cost:4d} {s3:6d} "
+            f"{dish_sell_price(key, 5):6d} {meta['energy']:4d} {ref:6d}  {s3 - cost:+d}"
         )
     print("乱炖兜底示例：j tier5 1★ =", mix_sell_price("j", 5, 1), "票")
 

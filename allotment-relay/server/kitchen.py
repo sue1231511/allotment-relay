@@ -464,7 +464,7 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             "             也可 hut_ops 冰柜 存|取，生鲜进潮柜、熟菜进冰箱\n"
             "  brew 材料 — 灶台（回雾智）\n"
             "  shop board — 全服谁在营业的小馆名单（店名和几道菜），不是流水也不是评价\n"
-            "  shop open|stock|dine|卖掉 — 开馆 / 上菜 / 去别人家吃 / 关张回收\n"
+            "  shop open|stock|dine|卖掉 — 开馆 / 上菜（stock 菜名 [价格]，参考价按星级+精力锚定，区间内自定）/ 去别人家吃 / 关张回收\n"
             f"{EAT_RULES}"
         )
 
@@ -473,7 +473,8 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             "厨房菜单（command 例子：cook 蒜蓉生蚝 / cook 甘蓝 鲭鱼 / brew 材料 / eat 鲭鱼）:",
             EAT_RULES,
             "定点菜谱如下。也可以 cook 材料自由组合（2~5 样），按星级可卖；乱搭也按材料身价兜底 45%。",
-            "定点菜 3★ 起至少 1.25 倍材料回收价（直接 vend 生鲜）。小屋 Lv2 更容易出 4★。熟菜回精力 22 起，比生吃划算得多。",
+            "系统回收压得低（3★≈材料价+10%）：想赚钱 shop stock 上架小馆——参考价按星级+精力锚定，",
+            "在区间内自己定价，食客付的钱明显多于 vend。小屋 Lv2 更容易出 4★。熟菜回精力 22 起，比生吃划算得多。",
         ]
         for key, meta in KITCHEN_DISHES.items():
             ings = " + ".join(
@@ -673,7 +674,12 @@ async def kitchen_ops(key_id: int, command: str) -> str:
                 (price, s["id"]),
             )
             await conn.commit()
-        return f"出售 {item_label(item)} +{price} 票"
+        note = ""
+        if is_cooked_item(item):
+            from .catalog import eatery_price_range
+            ref, lo, hi = eatery_price_range(item)
+            note = f"（系统回收价低；shop stock 上架参考 {ref} 票，区间 {lo}~{hi}）"
+        return f"出售 {item_label(item)} +{price} 票{note}"
 
     if verb in ("shop", "stall", "eatery"):
         rest = " ".join(parts[1:]) if len(parts) > 1 else "board"
