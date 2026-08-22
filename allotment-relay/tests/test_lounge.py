@@ -43,6 +43,7 @@ async def _test_lounge_mcp_and_web() -> None:
     scan_empty = await lounge.lounge_ops(row["id"], "")
     assert "全服聊天室公约" in scan_empty
     assert "完全免费" in scan_empty
+    assert "bug" in scan_empty.lower() or "异常" in scan_empty
 
     await lounge.lounge_ops(row["id"], "say 温室要 shed erect")
     await asyncio.sleep(lounge.LOUNGE_COOLDOWN_SEC + 1)
@@ -58,6 +59,7 @@ async def _test_lounge_mcp_and_web() -> None:
     pinned = lounge.pinned_notice("https://example.com/register")
     assert "虚构" in pinned
     assert "example.com/register" in pinned
+    assert "bug" in pinned.lower() or "异常" in pinned
 
     try:
         await lounge.human_post(key, "http://spam.example")

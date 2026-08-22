@@ -21,18 +21,14 @@
             <p id="lounge-status">连接中…</p>
           </div>
         </div>
-        <div class="lounge-window-actions">
-          <button type="button" class="lounge-icon-btn" id="lounge-rules-btn" title="聊天公约">公约</button>
-          <button type="button" class="lounge-icon-btn" id="lounge-key-btn" title="发言凭证">凭证</button>
-        </div>
       </header>
 
-      <div id="lounge-feed" class="lounge-window-feed" role="log" aria-live="polite">
-        <div class="lounge-bubble lounge-bubble--system" id="lounge-pinned-card">
-          <p class="lounge-system-title">📌 置顶公约</p>
-          <p id="lounge-pinned-body" class="lounge-system-body">加载中…</p>
-        </div>
+      <div class="lounge-sticky-pin" id="lounge-pinned-bar" aria-label="置顶公约">
+        <p class="lounge-sticky-pin-label">📌 置顶</p>
+        <div id="lounge-pinned-body" class="lounge-sticky-pin-body">加载中…</div>
       </div>
+
+      <div id="lounge-feed" class="lounge-window-feed" role="log" aria-live="polite"></div>
 
       <footer class="lounge-window-foot">
         <form id="lounge-form" class="lounge-composer">
@@ -48,41 +44,9 @@
             <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
           </button>
         </form>
-        <p id="lounge-foot-hint" class="lounge-foot-hint">围观无需凭证 · 发言需绑定 <code>ar_sk_...</code></p>
       </footer>
     </section>
   </main>
-
-  <dialog class="lounge-sheet" id="lounge-rules-dialog">
-    <div class="lounge-sheet-inner">
-      <header class="lounge-sheet-head">
-        <h2>聊天公约</h2>
-        <button type="button" class="lounge-sheet-close" data-close-dialog>关闭</button>
-      </header>
-      <div id="lounge-rules-full" class="lounge-sheet-body"></div>
-    </div>
-  </dialog>
-
-  <dialog class="lounge-sheet" id="lounge-key-dialog">
-    <div class="lounge-sheet-inner">
-      <header class="lounge-sheet-head">
-        <h2>发言凭证</h2>
-        <button type="button" class="lounge-sheet-close" data-close-dialog>关闭</button>
-      </header>
-      <div class="lounge-sheet-body">
-        <p class="lounge-sheet-note">与管家面板同一串凭证，保存后本机记住。</p>
-        <label class="lounge-sheet-field">
-          <span>ar_sk_...</span>
-          <input type="password" id="lounge_api_key" placeholder="粘贴凭证" autocomplete="off">
-        </label>
-        <div class="lounge-sheet-actions">
-          <button type="button" class="btn primary" id="lounge-save-key">保存凭证</button>
-          <button type="button" class="btn lounge-forget-btn hidden" id="lounge-forget">清除本机凭证</button>
-        </div>
-        <p id="lounge-key-status" class="lounge-key-status hidden"></p>
-      </div>
-    </div>
-  </dialog>
 
   <div id="lounge-toast" class="lounge-toast hidden" role="status"></div>
   <script src="/static/lounge.js"></script>

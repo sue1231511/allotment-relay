@@ -4,16 +4,11 @@ const POLL_MS = 6000;
 
 let lastId = 0;
 let pollTimer = null;
-let pinnedText = '';
-let registerUrl = '/register';
 
 const feed = document.getElementById('lounge-feed');
 const statusEl = document.getElementById('lounge-status');
 const liveDot = document.getElementById('lounge-live-dot');
 const msgInput = document.getElementById('lounge_message');
-const keyInput = document.getElementById('lounge_api_key');
-const rulesDialog = document.getElementById('lounge-rules-dialog');
-const keyDialog = document.getElementById('lounge-key-dialog');
 const toastEl = document.getElementById('lounge-toast');
 
 function esc(s) {
@@ -47,36 +42,10 @@ function loadMyName() {
   }
 }
 
-function saveKey(key) {
-  try {
-    localStorage.setItem(KEY_STORAGE, key);
-  } catch { /* ignore */ }
-}
-
 function saveMyName(name) {
   try {
     if (name) localStorage.setItem(NAME_STORAGE, name);
   } catch { /* ignore */ }
-}
-
-function clearSavedKey() {
-  try {
-    localStorage.removeItem(KEY_STORAGE);
-    localStorage.removeItem(NAME_STORAGE);
-  } catch { /* ignore */ }
-}
-
-function setKeyUi(hasKey) {
-  document.getElementById('lounge-forget').classList.toggle('hidden', !hasKey);
-  const status = document.getElementById('lounge-key-status');
-  if (hasKey) {
-    status.textContent = '已绑定，可直接在下方输入框发言。';
-    status.classList.remove('hidden');
-  } else {
-    status.classList.add('hidden');
-    status.textContent = '';
-  }
-  document.getElementById('lounge-key-btn').classList.toggle('is-bound', hasKey);
 }
 
 function toast(msg, ms = 3200) {
@@ -96,11 +65,8 @@ function isMine(m) {
   return m.source === 'web' && my && m.who === my;
 }
 
-function renderPinnedShort() {
-  const body = document.getElementById('lounge-pinned-body');
-  const lines = pinnedText.split('\n').filter(Boolean);
-  const short = lines.slice(0, 4).join(' · ').slice(0, 160);
-  body.textContent = short + (pinnedText.length > short.length ? '…' : '');
+function renderPinned(fullText) {
+  document.getElementById('lounge-pinned-body').innerHTML = esc(fullText).replace(/\n/g, '<br>');
 }
 
 function bubbleHtml(m) {
@@ -120,7 +86,6 @@ function bubbleHtml(m) {
 
 function renderMessages(messages) {
   if (!messages.length) return;
-  const pinned = document.getElementById('lounge-pinned-card');
   const frag = document.createDocumentFragment();
   let added = false;
   for (const m of messages) {
@@ -134,11 +99,11 @@ function renderMessages(messages) {
   }
   if (!added) return;
   feed.appendChild(frag);
-  if (!feed.querySelector('.lounge-row') && pinned) {
+  if (!feed.querySelector('.lounge-row')) {
     const empty = document.createElement('p');
     empty.className = 'lounge-empty';
     empty.textContent = '还没有人说话，来发第一条吧。';
-    feed.insertBefore(empty, pinned.nextSibling);
+    feed.appendChild(empty);
   } else {
     const empty = feed.querySelector('.lounge-empty');
     if (empty) empty.remove();
@@ -150,10 +115,7 @@ async function fetchMeta() {
   const res = await fetch('/api/lounge/meta');
   const data = await res.json();
   if (!res.ok) throw new Error(data.detail || '加载失败');
-  pinnedText = data.pinned || '';
-  registerUrl = data.register_url || '/register';
-  renderPinnedShort();
-  document.getElementById('lounge-rules-full').innerHTML = esc(pinnedText).replace(/\n/g, '<br>');
+  renderPinned(data.pinned || '');
   return data;
 }
 
@@ -193,20 +155,6 @@ async function postMessage(apiKey, body) {
   return data;
 }
 
-function getApiKey() {
-  return (keyInput.value.trim() || loadSavedKey()).trim();
-}
-
-function openDialog(dialog) {
-  if (typeof dialog.showModal === 'function') dialog.showModal();
-  else dialog.setAttribute('open', '');
-}
-
-function closeDialog(dialog) {
-  if (typeof dialog.close === 'function') dialog.close();
-  else dialog.removeAttribute('open');
-}
-
 function autoGrow(el) {
   el.style.height = 'auto';
   el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
@@ -216,37 +164,6 @@ function startPolling() {
   if (pollTimer) clearInterval(pollTimer);
   pollTimer = setInterval(() => refreshFeed({ quiet: true }), POLL_MS);
 }
-
-document.querySelectorAll('[data-close-dialog]').forEach((btn) => {
-  btn.addEventListener('click', () => {
-    const dialog = btn.closest('dialog');
-    if (dialog) closeDialog(dialog);
-  });
-});
-
-document.getElementById('lounge-rules-btn').addEventListener('click', () => openDialog(rulesDialog));
-document.getElementById('lounge-pinned-card').addEventListener('click', () => openDialog(rulesDialog));
-document.getElementById('lounge-key-btn').addEventListener('click', () => openDialog(keyDialog));
-
-document.getElementById('lounge-save-key').addEventListener('click', () => {
-  const key = keyInput.value.trim();
-  if (!key.startsWith('ar_sk_')) {
-    toast('请粘贴有效的 ar_sk_ 凭证');
-    return;
-  }
-  saveKey(key);
-  setKeyUi(true);
-  toast('凭证已保存，可以直接发言');
-  closeDialog(keyDialog);
-  msgInput.focus();
-});
-
-document.getElementById('lounge-forget').addEventListener('click', () => {
-  clearSavedKey();
-  keyInput.value = '';
-  setKeyUi(false);
-  toast('已清除本机凭证');
-});
 
 msgInput.addEventListener('input', () => autoGrow(msgInput));
 msgInput.addEventListener('keydown', (e) => {
@@ -260,41 +177,28 @@ document.getElementById('lounge-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const body = msgInput.value.trim();
   if (!body) return;
-  let apiKey = getApiKey();
+  const apiKey = loadSavedKey();
   if (!apiKey.startsWith('ar_sk_')) {
-    openDialog(keyDialog);
-    toast('发言前请先绑定凭证（右上角「凭证」）');
+    toast('请先在「我的 AI 管家」页面绑定凭证后再发言');
     return;
   }
   const btn = document.querySelector('.lounge-send-btn');
   btn.disabled = true;
   try {
     const msg = await postMessage(apiKey, body);
-    saveKey(apiKey);
     saveMyName(msg.who);
-    setKeyUi(true);
     renderMessages([msg]);
     msgInput.value = '';
     autoGrow(msgInput);
     msgInput.focus();
   } catch (err) {
     toast(err.message);
-    if (String(err.message).includes('无效')) {
-      clearSavedKey();
-      setKeyUi(false);
-      openDialog(keyDialog);
-    }
   } finally {
     btn.disabled = false;
   }
 });
 
 (async function boot() {
-  const saved = loadSavedKey();
-  if (saved) {
-    keyInput.value = saved;
-    setKeyUi(true);
-  }
   try {
     await fetchMeta();
     const msgs = await fetchMessages();
