@@ -9,7 +9,16 @@ from typing import Any, AsyncIterator
 import aiosqlite
 
 from .catalog import STARTER_STOCK
-from .config import DATA_DIR, DB_PATH, KEY_PREFIX, START_ENERGY, START_PARCELS, START_TICKETS
+from .config import (
+    DATA_DIR,
+    DB_PATH,
+    FORAGE_COOLDOWN_DAY,
+    KEY_PREFIX,
+    START_ENERGY,
+    START_PARCELS,
+    START_TICKETS,
+    WEEK_SECONDS,
+)
 
 # 单进程内串行化 SQLite 访问，避免多云端 Agent 并发时 database is locked
 _DB_MUTEX = asyncio.Lock()
@@ -1211,6 +1220,36 @@ async def init_db() -> None:
 
 def now() -> int:
     return int(time.time())
+
+
+def day_id(ts: int | None = None) -> int:
+    """游戏日序号（UTC 午夜换班，与 FORAGE_COOLDOWN_DAY 对齐）。"""
+    t = now() if ts is None else ts
+    return t // FORAGE_COOLDOWN_DAY
+
+
+def day_start(day: int | None = None) -> int:
+    """某日 0 点的 Unix 时间戳；默认今天。"""
+    d = day_id() if day is None else day
+    return d * FORAGE_COOLDOWN_DAY
+
+
+def next_day_start(ts: int | None = None) -> int:
+    """下一次游戏日换班的 Unix 时间戳。"""
+    t = now() if ts is None else ts
+    return (t // FORAGE_COOLDOWN_DAY + 1) * FORAGE_COOLDOWN_DAY
+
+
+def seconds_until_next_day(ts: int | None = None) -> int:
+    """距离下一次游戏日换班还剩多少秒。"""
+    t = now() if ts is None else ts
+    return max(0, next_day_start(t) - t)
+
+
+def week_id(ts: int | None = None) -> int:
+    """游戏周序号（与 WEEK_SECONDS 对齐）。"""
+    t = now() if ts is None else ts
+    return t // WEEK_SECONDS
 
 
 def make_key() -> str:

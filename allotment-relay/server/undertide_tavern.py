@@ -13,7 +13,7 @@ from . import undertide_copy as utcopy
 
 
 def _day_id() -> int:
-    return db.now() // 86400
+    return db.day_id()
 
 
 # 情报池：世界情报（真）+ 半真半假
@@ -62,7 +62,7 @@ async def tavern_ops(
     if verb == "chat":
         from . import undertide as utmod
         av = await utmod.avatar_key(conn, s["id"])
-        week = db.now() // (86400 * 7)
+        week = db.week_id()
         cur = await conn.execute(
             "SELECT spouse_allow_week FROM steward_undertide WHERE steward_id=?", (s["id"],)
         )

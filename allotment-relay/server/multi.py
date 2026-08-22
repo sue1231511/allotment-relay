@@ -102,11 +102,11 @@ async def list_neighbors(steward: dict[str, Any], *, online_only: bool = False) 
 
 
 def _week_id() -> int:
-    return db.now() // (7 * 86400)
+    return db.week_id()
 
 
 def _day_id() -> int:
-    return db.now() // FORAGE_COOLDOWN_DAY
+    return db.day_id()
 
 
 def _pair_ids(a: int, b: int) -> tuple[int, int]:

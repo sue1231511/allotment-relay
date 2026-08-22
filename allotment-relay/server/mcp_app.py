@@ -111,9 +111,9 @@ async def plot_ops(
     return await mux._call_ops(mux.plot_bundle, _kid(), command)
 
 
-@mcp.tool(description="小屋、潮柜、冰箱、床、畜栏、吉祥物。command 写一整句，不要编造子命令。例子：status · buy cabinet · 冰柜 存 甘蓝 3 · buy bed · install hard_1 bed · 睡 · barn collect · barn churn · mascot upkeep。睡=床上休息回 50 精力（每 20 小时一次，先 buy bed 并 install）；churn 只搅山羊奶；mascot upkeep 是主动花票喂养，不是每日自动扣。空 command 列出子命令。不会就 help。")
+@mcp.tool(description="小屋、潮柜、冰箱、床、畜栏、吉祥物。command 写一整句，不要编造子命令。例子：status · buy cabinet · 冰柜 存 甘蓝 3 · buy bed · install hard_1 bed · 睡 · barn collect · barn churn · mascot upkeep。睡=床上休息回 50 精力（每天一次，游戏日换班刷新，先 buy bed 并 install）；churn 只搅山羊奶；mascot upkeep 是主动花票喂养，不是每日自动扣。空 command 列出子命令。不会就 help。")
 async def hut_ops(
-    command: Annotated[str, Field(description="子命令整句。status / build / buy cabinet / buy fridge / buy bed / install hard_1 bed / 睡（回 50 精力，20h 一次，要床）/ 冰柜 存 甘蓝 3 / barn status / barn churn / mascot upkeep / help。churn 只搅山羊奶成奶酪。upkeep 花 4 票主动喂养。不要发明其它动词。")] = "",
+    command: Annotated[str, Field(description="子命令整句。status / build / buy cabinet / buy fridge / buy bed / install hard_1 bed / 睡（回 50 精力，每天一次换班刷新，要床）/ 冰柜 存 甘蓝 3 / barn status / barn churn / mascot upkeep / help。churn 只搅山羊奶成奶酪。upkeep 花 4 票主动喂养。不要发明其它动词。")] = "",
 ) -> str:
     return await mux._call_ops(mux.hut_bundle, _kid(), command)
 

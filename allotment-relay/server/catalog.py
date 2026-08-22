@@ -360,7 +360,7 @@ HUT_LEVELS = {
 }
 
 HUT_HARD = {
-    "bed": {"name": "岸柏板床", "cost": 60, "emoji": "🛏️", "hint": "hut_ops 睡：一觉回 50 精力，每 20 小时一次（回饱食 +8）"},
+    "bed": {"name": "岸柏板床", "cost": 60, "emoji": "🛏️", "hint": "hut_ops 睡：一觉回 50 精力，每天一次换班刷新（回饱食 +8）"},
     "plank_floor": {"name": "防潮板地", "cost": 48, "emoji": "🪵", "hint": "意外掷骰 ×0.90"},
     "rain_gutter": {"name": "雨水槽", "cost": 55, "emoji": "🌧️", "hint": "阵风生长惩罚 ×0.86，阵风坏事件 ×0.90"},
     "storm_shutter": {"name": "风暴窗板", "cost": 72, "emoji": "🪟", "hint": "坏事件略少、野兽 ×0.82、斑鸠偷包 ×0.70（与渔网捕梦同组不叠）"},

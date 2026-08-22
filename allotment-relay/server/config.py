@@ -16,7 +16,10 @@ GREENHOUSE_COST = 180
 SWAP_CLAIM_FEE = 3
 GUILD_TICKETS = 18
 GUILD_SHIFT_DAILY = 1
+# 游戏「日」边界（UTC 午夜换班）。公会轮值、酒吧日报、偷菜次数、床睡觉、栗栗货单等
+# 凡「每天 N 次」都按此刷新，不要用滚动 24 小时。
 FORAGE_COOLDOWN_DAY = 86400
+WEEK_SECONDS = FORAGE_COOLDOWN_DAY * 7
 WEATHER_CYCLE = 7200
 TIDE_CYCLE = 3600
 DAILY_BREW_LIMIT = 4
@@ -219,9 +222,8 @@ MARKET_SLOT_COST = 15          # 每加 1 格
 BARN_SLOTS = 6
 BARN_ERECT_COST = 75
 
-# 岸柏板床 — hut_ops 睡：一觉回精力（回饱食 +8），冷却 20 小时
+# 岸柏板床 — hut_ops 睡：一觉回精力（回饱食 +8），每天一次（游戏日边界刷新）
 BED_REST_ENERGY = 50
-BED_REST_COOLDOWN = 72000
 
 # 小馆堂食「饱餐」— dine 附带状态：期间行动精力消耗 -1（最低 1），并回少量雾智/档信。
 # 家里自己吃没有这些——饭馆卖堂食体验，集市卖货（买回去自己吃只有基础精力）。
@@ -248,7 +250,7 @@ BAR_TIP_MAX = 12
 BAR_POOR_THRESHOLD = 45
 BAR_POOR_PAY_MULT = 1.85
 BAR_MANDATORY_DAYS = 2
-BAR_MANDATORY_SECONDS = BAR_MANDATORY_DAYS * 86400
+BAR_MANDATORY_SECONDS = BAR_MANDATORY_DAYS * FORAGE_COOLDOWN_DAY
 BAR_POOR_LABELS = [
     "穷人补贴：荔栀多塞几张",
     "票袋见底，老板按加急算",
@@ -357,7 +359,7 @@ STAR_START_HEAT = 20
 STAR_STAGE_HEAT = 35      # 小剧场专场解锁热度
 STAR_BAR_CUT = 0.30       # 酒馆场子荔栀抽成；小剧场专场全额归她
 STAR_CHEER_DAILY = 1      # 每 24h 一条应援 pending（照荔栀 cheer）
-STAR_CHEER_WINDOW = 86400
+STAR_CHEER_WINDOW = FORAGE_COOLDOWN_DAY
 STAR_SONG_COST = 15       # 点歌进收件箱的票（纸条递给她，钱归她的账）
 STAR_TIP_MIN = 1
 STAR_TIP_MAX = 100

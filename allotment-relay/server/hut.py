@@ -760,7 +760,7 @@ async def cabinet_command(s: dict[str, Any], rest: list[str]) -> str:
 
 
 async def bed_rest(s: dict[str, Any]) -> str:
-    """岸柏板床：一觉回精力。冷却内不给睡；带病上限自动收窄。"""
+    """岸柏板床：一觉回精力。每天一次（游戏日换班刷新）；带病上限自动收窄。"""
     from . import energy as energy_mod
     from . import survival
 
@@ -782,13 +782,12 @@ async def bed_rest(s: dict[str, Any]) -> str:
             "SELECT bed_rest_at FROM stewards WHERE id=?", (s["id"],)
         )).fetchone()
         last = int(row[0] if row else 0)
-        wait = last + config.BED_REST_COOLDOWN - db.now()
-        if wait > 0:
-            hours = wait // 3600 + 1
+        if last and db.day_id(last) >= db.day_id():
+            wait = db.seconds_until_next_day()
+            hours = wait // 3600 + (1 if wait % 3600 else 0)
             raise ValueError(
-                f"刚睡过没多久，约 {hours} 小时后再来"
-                f"（一觉回 {config.BED_REST_ENERGY} 精力，"
-                f"每 {config.BED_REST_COOLDOWN // 3600} 小时一次）"
+                f"今天睡过了，潮声换班后再来（约 {hours} 小时后）"
+                f"（一觉回 {config.BED_REST_ENERGY} 精力，每天一次）"
             )
         restored = await energy_mod.restore(conn, s["id"], config.BED_REST_ENERGY)
         if restored <= 0:
@@ -798,10 +797,9 @@ async def bed_rest(s: dict[str, Any]) -> str:
         )
         await survival.bump(conn, s["id"], satiety=8)
         await conn.commit()
-    nxt = config.BED_REST_COOLDOWN // 3600
     return (
         f"一觉睡到潮声换班（精力 +{restored}，饱食 +8）。"
-        f"下一次能睡：{nxt} 小时后。饿醒不算病，记得正经吃饭。"
+        "今天先这样；明天换班后还能再睡。饿醒不算病，记得正经吃饭。"
     )
 
 
@@ -874,10 +872,11 @@ async def hut_ops(key_id: int, command: str) -> str:
                     "SELECT bed_rest_at FROM stewards WHERE id=?", (s["id"],)
                 )).fetchone()
             last = int(row[0] if row else 0)
-            wait = last + config.BED_REST_COOLDOWN - db.now()
-            if wait > 0:
+            if last and db.day_id(last) >= db.day_id():
+                wait = db.seconds_until_next_day()
                 lines.append(
-                    f"床 — 约 {wait // 3600 + 1} 小时后能睡（回 {config.BED_REST_ENERGY} 精力）"
+                    f"床 — 今天睡过了，换班后约 {wait // 3600 + 1} 小时能再睡"
+                    f"（回 {config.BED_REST_ENERGY} 精力）"
                 )
             else:
                 lines.append(f"床 — 现在能睡：hut_ops 睡（回 {config.BED_REST_ENERGY} 精力）")

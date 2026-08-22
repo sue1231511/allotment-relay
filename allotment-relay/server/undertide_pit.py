@@ -14,7 +14,7 @@ from . import undertide_copy as utcopy
 
 
 def _day_id() -> int:
-    return db.now() // 86400
+    return db.day_id()
 
 
 async def _ensure_fighters(conn: aiosqlite.Connection) -> None:

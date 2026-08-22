@@ -196,7 +196,7 @@ TRIGGER_CHANCE = config.FARM_TRIGGER_CHANCE
 
 
 def _day_id() -> int:
-    return db.now() // config.FORAGE_COOLDOWN_DAY
+    return db.day_id()
 
 
 def base_grow_seconds(crop_key: str) -> int:

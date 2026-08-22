@@ -76,7 +76,7 @@ BAR_HELP = """bar_ops 子命令（整句写进 command）：
 
 
 def _day_id() -> int:
-    return db.now() // config.FORAGE_COOLDOWN_DAY
+    return db.day_id()
 
 
 def _weekday_label() -> str:
@@ -182,7 +182,7 @@ async def _ensure_skills(conn: aiosqlite.Connection, steward_id: int) -> dict[st
 
 
 async def _league_completed(conn: aiosqlite.Connection) -> bool:
-    wid = db.now() // (7 * 86400)
+    wid = db.week_id()
     cur = await conn.execute(
         "SELECT completed FROM league_week WHERE week_id=? AND completed=1", (wid,)
     )
@@ -784,7 +784,7 @@ async def _cmd_order(conn: aiosqlite.Connection, s: dict[str, Any], drink_name: 
             "SELECT access, spouse_free_day FROM steward_undertide WHERE steward_id=?", (s["id"],)
         )
         _row_ut = await cur_ut.fetchone()
-        _today = db.now() // 86400
+        _today = db.day_id()
         if _row_ut and _row_ut[0] and _row_ut[1] != _today:
             if _av == "K":
                 await conn.execute("UPDATE stewards SET tickets=tickets+? WHERE id=?", (cost, s["id"]))

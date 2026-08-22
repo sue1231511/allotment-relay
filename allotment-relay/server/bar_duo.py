@@ -50,7 +50,7 @@ _EVENT_CHANCE_BONUS = 0.07
 
 
 def _day_id() -> int:
-    return db.now() // config.FORAGE_COOLDOWN_DAY
+    return db.day_id()
 
 
 def duo_snapshot(state: dict[str, Any]) -> dict[str, Any] | None:

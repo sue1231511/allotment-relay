@@ -20,7 +20,7 @@ from .catalog import (
 
 
 def _day_id() -> int:
-    return db.now() // config.FORAGE_COOLDOWN_DAY
+    return db.day_id()
 
 
 def _age_text(seconds: int | None) -> str:

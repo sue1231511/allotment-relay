@@ -13,7 +13,7 @@ from .catalog import COMMONS_TEMPLATES, DISCOVERY_LOOT, ITEM_NAMES
 
 
 def _day_id() -> int:
-    return db.now() // config.FORAGE_COOLDOWN_DAY
+    return db.day_id()
 
 
 async def _active_spawns(conn: aiosqlite.Connection) -> list[dict[str, Any]]:

@@ -148,6 +148,7 @@ def test_relay_manual_covers_systems() -> None:
         "饱餐",
         "饭馆卖堂食",
         "hut_ops 睡",
+        "游戏日换班",
         "buy bed",
         "lodge",
         "shaonian",
