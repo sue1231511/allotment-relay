@@ -1482,6 +1482,63 @@ select:focus {
   color: var(--sea-deep);
 }
 
+.lounge-mod-side {
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(120, 72, 72, .18);
+  background: rgba(255, 248, 246, .82);
+}
+
+.lounge-mod-side h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.lounge-mod-field {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+
+.lounge-mod-field span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--muted);
+}
+
+.lounge-mod-field input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: inherit;
+}
+
+.lounge-mod-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.lounge-mod-btn {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .7);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.lounge-mod-btn.warn {
+  color: #8a3b32;
+  border-color: rgba(138, 59, 50, .25);
+}
+
+.lounge-mod-btn:hover {
+  background: #fff;
+}
+
 .lounge-pin-side {
   padding: 16px;
   border-radius: 16px;

@@ -12,7 +12,7 @@ from . import config, db, energy, flavor, survival
 from .catalog import (
     ITEM_PRICES,
     dish_energy,
-    eatery_price_range,
+    eatery_reference_price,
     item_label,
     resolve_item_key,
     suggested_price,
@@ -105,7 +105,9 @@ async def _menu_rows(conn: aiosqlite.Connection, shop_id: int) -> list[dict[str,
 
 
 def _menu_line(row: dict[str, Any]) -> str:
-    return f"  #{row['id']} {item_label(row['item'])} — {row['price']} 票"
+    energy = dish_energy(row["item"])
+    extra = f" · 精力+{energy}" if energy else ""
+    return f"  #{row['id']} {item_label(row['item'])} — {row['price']} 票{extra}"
 
 
 async def eatery_command(s: dict[str, Any], command: str) -> str:
@@ -263,32 +265,28 @@ async def eatery_command(s: dict[str, Any], command: str) -> str:
                     pass
             if not await db.take_item(conn, s["id"], item, 1):
                 raise ValueError("行囊没有这道菜，先 cook / brew")
-            # 定价按星级+精力锚定：参考价 = max(系统回收×1.25, 精力×3)，店家在 75%~150% 区间内自定
-            ref, lo, hi = eatery_price_range(item)
+            ref = eatery_reference_price(item)
             price = ref
             if len(parts) >= 3:
                 try:
                     price = int(parts[2])
                 except ValueError:
                     raise ValueError(
-                        f"价格要写整数。{item_label(item)} 参考价 {ref} 票，区间 {lo}~{hi}"
+                        f"价格要写正整数。{item_label(item)} 参考价约 {ref} 票（可自定，不限区间）"
                     ) from None
-                if not (lo <= price <= hi):
-                    vend = suggested_price(item)
-                    raise ValueError(
-                        f"{item_label(item)} 按星级+精力锚定：参考价 {ref} 票，"
-                        f"只能在 {lo}~{hi} 之间定价（你写 {price}）。"
-                        f"提示：系统回收只有 {vend} 票，卖给食客才赚。"
-                    )
+                if price < 1:
+                    raise ValueError("价格至少 1 票")
             await conn.execute(
                 "INSERT INTO eatery_menu (steward_id, item, price, listed_at) VALUES (?,?,?,?)",
                 (s["id"], item, price, db.now()),
             )
             await conn.commit()
         vend = suggested_price(item)
+        energy = dish_energy(item)
+        energy_note = f" · 精力+{energy}" if energy else ""
         return (
             f"上架 {item_label(item)} — {price} 票"
-            f"（参考 {ref} · 区间 {lo}~{hi} · 系统回收只有 {vend}）"
+            f"（参考约 {ref}{energy_note} · 系统回收 {vend}）"
         )
 
     if verb == "unstock" and len(parts) >= 2:

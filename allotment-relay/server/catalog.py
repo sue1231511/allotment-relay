@@ -1166,16 +1166,14 @@ def suggested_price(item: str) -> int:
     return ITEM_PRICES.get(key, 0)
 
 
-# 小馆上菜定价锚点：参考价 = max(系统回收×1.25, 精力×3)。
-# 店家只能在参考价 75%~150% 区间内自定，防止盲目标价；系统回收压得低，
-# 卖给玩家（小馆/集市）才明显更赚——玩家之间才有优先级。
+# 小馆上菜参考价（仅提示，不限制定价）：max(系统回收×1.25, 精力×3)。
+# 店家自定售价；食客看 menu 里的星级、精力自己比价。
 EATERY_REF_VENT_MULT = 1.25
 EATERY_REF_ENERGY_TICKETS = 3
-EATERY_PRICE_RANGE = (0.75, 1.5)
 
 
-def eatery_price_range(item: str) -> tuple[int, int, int]:
-    """(参考价, 最低价, 最高价) — 按星级（回收价/精力都含星级）+ 精力锚定。"""
+def eatery_reference_price(item: str) -> int:
+    """按星级+精力算的参考价，上架提示用，不强制。"""
     vend = suggested_price(item)
     energy = dish_energy(item)
     if energy is None and item.startswith("meal_"):
@@ -1184,10 +1182,13 @@ def eatery_price_range(item: str) -> tuple[int, int, int]:
         vend = 8
     if energy is None:
         energy = 8
-    ref = max(int(vend * EATERY_REF_VENT_MULT), int(energy * EATERY_REF_ENERGY_TICKETS))
-    lo = max(2, int(ref * EATERY_PRICE_RANGE[0]))
-    hi = max(lo + 1, int(ref * EATERY_PRICE_RANGE[1]))
-    return ref, lo, hi
+    return max(int(vend * EATERY_REF_VENT_MULT), int(energy * EATERY_REF_ENERGY_TICKETS))
+
+
+def eatery_price_range(item: str) -> tuple[int, int, int]:
+    """兼容旧调用；区间已取消，三项均为参考价。"""
+    ref = eatery_reference_price(item)
+    return ref, ref, ref
 
 
 for dk in KITCHEN_DISHES:

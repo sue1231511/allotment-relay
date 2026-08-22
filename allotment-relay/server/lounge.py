@@ -377,4 +377,5 @@ async def human_profile(api_key: str) -> dict[str, Any]:
         "human_name": nick,
         "steward_name": s["name"],
         "who": f"{nick}·{s['name']}",
+        "is_mod": is_moderator(s),
     }

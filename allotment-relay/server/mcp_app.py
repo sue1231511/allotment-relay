@@ -132,9 +132,9 @@ async def tote_ops(
     return await mux._call_ops(mux.tote_bundle, _kid(), command)
 
 
-@mcp.tool(description="厨房。command 写一整句，回精力用 eat，不要另造 eat_ops。熟菜回精力最多（22 起）；水果可生吃但只回 4、连吃 5 口营养不良；生鱼/野薄荷可生吃；蔬菜不能生吃；只有生肉（兔肉/猪肉）可能感染。系统 vend 回收价低（≈材料+10%）——赚钱开小馆：shop stock 菜名 [价格]，定价按星级+精力锚定（menu 给参考价和区间）；dine 别人馆=堂食，带「饱餐」2 小时（行动精力 -1）+雾智档信，集市买回家吃没有。例子：menu · cook 甘蓝 鲭鱼 · eat 鲭鱼 · shop stock 盐焗沙蟹 · shop dine 某人。空 command=菜谱。不会就 help。")
+@mcp.tool(description="厨房。command 写一整句，回精力用 eat，不要另造 eat_ops。熟菜回精力最多（22 起）；水果可生吃但只回 4、连吃 5 口营养不良；生鱼/野薄荷可生吃；蔬菜不能生吃；只有生肉（兔肉/猪肉）可能感染。系统 vend 回收价低（≈材料+10%）——赚钱开小馆：shop stock 菜名 [价格] 价格自定（menu 给参考价+精力供比价）；dine 别人馆=堂食，带「饱餐」2 小时（行动精力 -1）+雾智档信，集市买回家吃没有。例子：menu · cook 甘蓝 鲭鱼 · eat 鲭鱼 · shop stock 盐焗沙蟹 150 · shop dine 某人。空 command=菜谱。不会就 help。")
 async def kitchen_ops(
-    command: Annotated[str, Field(description="子命令整句。menu=菜谱（空也是）；cook 蒜蓉生蚝=定点菜；cook 甘蓝 鲭鱼=自由组合；eat 鲭鱼=生吃（安全）；eat 芒果=生吃水果（只回 4 精力，连吃 5 口营养不良）；蔬菜不能生吃，先 cook/brew；vend 菜名=系统回收（价低）；store 菜名；shop open 店名；shop stock 菜名 [价格]=上架（参考价=max(系统回收×1.25, 精力×3)，区间 75%~150% 内自定）；shop dine 名字=堂食（按价回精力+饱餐 2h 行动精力-1）；shop board=谁在营业；help。不要发明 eat_ops。")] = "",
+    command: Annotated[str, Field(description="子命令整句。menu=菜谱（空也是）；cook 蒜蓉生蚝=定点菜；cook 甘蓝 鲭鱼=自由组合；eat 鲭鱼=生吃（安全）；eat 芒果=生吃水果（只回 4 精力，连吃 5 口营养不良）；蔬菜不能生吃，先 cook/brew；vend 菜名=系统回收（价低）；store 菜名；shop open 店名；shop stock 菜名 [价格]=上架（价格自定，menu 有参考价和精力）；shop dine 名字=堂食（按价回精力+饱餐 2h 行动精力-1）；shop board=谁在营业；help。不要发明 eat_ops。")] = "",
 ) -> str:
     return await mux._call_ops(mux.kitchen_bundle, _kid(), command)
 

@@ -96,6 +96,7 @@ function updateIdentityUI(profile) {
   myWhoEl.textContent = whoText;
   composerWhoEl.textContent = hint;
   bindLinkEl.classList.toggle('hidden', hasKey);
+  document.getElementById('lounge-mod-panel')?.classList.toggle('hidden', !profile?.is_mod);
 
   if (hasKey) {
     saveMyWho(profile.who, profile.human_name);
@@ -324,6 +325,48 @@ msgInput.addEventListener('keydown', (e) => {
     e.preventDefault();
     document.getElementById('lounge-form').requestSubmit();
   }
+});
+
+async function modAction(action) {
+  const apiKey = loadSavedKey();
+  const target = document.getElementById('lounge-mod-target')?.value.trim();
+  const minutes = parseInt(document.getElementById('lounge-mod-minutes')?.value || '60', 10);
+  if (!apiKey.startsWith('ar_sk_')) {
+    toast('请先绑定凭证');
+    return;
+  }
+  if (!target) {
+    toast('请填写管家名');
+    return;
+  }
+  const res = await fetch('/api/lounge/mod', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      api_key: apiKey,
+      action,
+      target,
+      minutes: Number.isFinite(minutes) ? minutes : 60,
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || '操作失败');
+  return data;
+}
+
+document.querySelectorAll('[data-mod-action]').forEach((btn) => {
+  btn.addEventListener('click', async () => {
+    const action = btn.dataset.modAction;
+    btn.disabled = true;
+    try {
+      const data = await modAction(action);
+      toast(data.message || '已执行');
+    } catch (err) {
+      toast(err.message);
+    } finally {
+      btn.disabled = false;
+    }
+  });
 });
 
 document.getElementById('lounge-form').addEventListener('submit', async (e) => {

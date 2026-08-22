@@ -144,7 +144,8 @@ class LoungeKeyRequest(BaseModel):
 
 
 class LoungeModRequest(BaseModel):
-    key: str
+    key: str = ""
+    api_key: str = ""
     action: str
     target: str
     minutes: int = 60
@@ -288,12 +289,28 @@ async def lounge_me(body: LoungeKeyRequest):
 
 @app.post("/api/lounge/mod")
 async def lounge_mod(body: LoungeModRequest):
-    from . import config, lounge
-    if not config.LOUNGE_MOD_KEY or body.key != config.LOUNGE_MOD_KEY:
-        raise HTTPException(status_code=403, detail="mod key 无效")
-    if not config.LOUNGE_MOD_NAMES:
-        raise HTTPException(status_code=503, detail="未配置 LOUNGE_MOD_NAMES")
-    actor = {"name": next(iter(config.LOUNGE_MOD_NAMES))}
+    from . import config, db, lounge
+
+    actor = None
+    api_key = body.api_key.strip()
+    if api_key:
+        row = await db.get_key_row(api_key)
+        if not row:
+            raise HTTPException(status_code=403, detail="凭证无效")
+        s = await db.get_steward_by_key_id(row["id"])
+        if not s or not lounge.is_moderator(s):
+            raise HTTPException(
+                status_code=403,
+                detail="无 moderation 权限（管家名须在 LOUNGE_MOD_NAMES）",
+            )
+        actor = s
+    elif body.key and body.key == config.LOUNGE_MOD_KEY:
+        if not config.LOUNGE_MOD_NAMES:
+            raise HTTPException(status_code=503, detail="未配置 LOUNGE_MOD_NAMES")
+        actor = {"name": next(iter(config.LOUNGE_MOD_NAMES))}
+    else:
+        raise HTTPException(status_code=403, detail="需要 moderation 权限")
+
     try:
         action = body.action.lower()
         if action == "mute":

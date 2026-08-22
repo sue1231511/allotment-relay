@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""小馆上菜按星级+精力锚定区间定价；床（hut_ops 睡）回精力。"""
+"""小馆上菜参考价提示；床（hut_ops 睡）回精力。"""
 from __future__ import annotations
 
 import asyncio
@@ -12,29 +12,27 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 
-def test_price_range_anchor() -> None:
+def test_reference_price_anchor() -> None:
     from server.catalog import (
         KITCHEN_DISHES,
         dish_energy,
         dish_item,
-        eatery_price_range,
+        eatery_reference_price,
         suggested_price,
     )
 
     for key in ("garlic_oyster", "salt_crab", "durian_mousse", "mussel_garlic"):
         for stars in (1, 3, 5):
             item = dish_item(key, stars)
-            ref, lo, hi = eatery_price_range(item)
+            ref = eatery_reference_price(item)
             vend = suggested_price(item)
             energy = dish_energy(item)
-            assert lo <= ref <= hi, (key, stars, ref, lo, hi)
             # 参考价 ≥ 系统回收×1.25 且 ≥ 精力×3 —— 卖食客明显比 vend 赚
             assert ref >= vend * 1.2, (key, stars, ref, vend)
             assert ref >= energy * 3 - 1, (key, stars, ref, energy)
-            # 星级越高（回收/精力都涨）参考价越高
-    r1, _, _ = eatery_price_range(dish_item("garlic_oyster", 1))
-    r3, _, _ = eatery_price_range(dish_item("garlic_oyster", 3))
-    r5, _, _ = eatery_price_range(dish_item("garlic_oyster", 5))
+    r1 = eatery_reference_price(dish_item("garlic_oyster", 1))
+    r3 = eatery_reference_price(dish_item("garlic_oyster", 3))
+    r5 = eatery_reference_price(dish_item("garlic_oyster", 5))
     assert r1 < r3 < r5, (r1, r3, r5)
     # 系统回收压得低：3★ 约材料价 +10%
     from server.catalog import dish_ingredient_cost, dish_sell_price
@@ -92,27 +90,22 @@ async def _test_stock_pricing_flow() -> None:
 
     s = await db.get_steward_by_id(sid)
     default = await eatery.eatery_command(s, "stock dish_salt_crab_s4")
-    assert "参考" in default and "区间" in default, default
+    assert "参考" in default, default
 
-    try:
-        await eatery.eatery_command(s, "stock dish_salt_crab_s4 999")
-        raise AssertionError("out-of-range price should refuse")
-    except ValueError as exc:
-        msg = str(exc)
-        assert "参考价" in msg and "只能" in msg and "系统回收" in msg, msg
-
-    custom = await eatery.eatery_command(s, "stock dish_salt_crab_s4 120")
-    assert "120 票" in custom, custom
+    custom_high = await eatery.eatery_command(s, "stock dish_salt_crab_s4 999")
+    assert "999 票" in custom_high, custom_high
+    custom_low = await eatery.eatery_command(s, "stock dish_salt_crab_s4 5")
+    assert "5 票" in custom_low, custom_low
     async with db.connect() as conn:
         rows = await (await conn.execute(
             "SELECT price FROM eatery_menu WHERE steward_id=? ORDER BY id", (sid,)
         )).fetchall()
     prices = [r[0] for r in rows]
-    assert len(prices) == 2, prices
-    from server.catalog import eatery_price_range
-    ref, lo, hi = eatery_price_range("dish_salt_crab_s4")
-    assert lo <= prices[0] <= hi and prices[0] == ref, (prices, ref, lo, hi)
-    assert prices[1] == 120 and lo <= 120 <= hi, (prices, lo, hi)
+    assert len(prices) == 3, prices
+    from server.catalog import eatery_reference_price
+    ref = eatery_reference_price("dish_salt_crab_s4")
+    assert prices[0] == ref, (prices, ref)
+    assert prices[1] == 999 and prices[2] == 5, prices
 
 
 def test_bed_rest() -> None:
@@ -236,7 +229,7 @@ async def _test_dine_buff() -> None:
 
 
 def main() -> None:
-    test_price_range_anchor()
+    test_reference_price_anchor()
     asyncio.run(_test_stock_pricing_flow())
     asyncio.run(_test_bed_rest())
     asyncio.run(_test_dine_buff())

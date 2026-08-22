@@ -42,15 +42,14 @@ def test_named_dishes_star3_covers_vend() -> None:
 
 
 def test_eatery_ref_beats_vend() -> None:
-    from server.catalog import dish_energy, dish_item, eatery_price_range
+    from server.catalog import dish_energy, dish_item, eatery_reference_price
 
     for key in KITCHEN_DISHES:
         for stars in (1, 3, 5):
             item = dish_item(key, stars)
-            ref, lo, hi = eatery_price_range(item)
+            ref = eatery_reference_price(item)
             vend = dish_sell_price(key, stars)
             energy = dish_energy(item)
-            assert lo <= ref <= hi, (key, stars)
             # 卖给食客的参考价明显高于系统回收；精力是定价锚点之一
             assert ref >= vend * 1.2, (key, stars, ref, vend)
             assert ref >= energy * 3 - 1, (key, stars, ref, energy)
@@ -90,11 +89,11 @@ def main() -> None:
     test_mix_energy_beats_raw()
     print("cook price tests ok")
     print(f"{'菜':<16} {'材料':>4} {'3★回收':>6} {'5★回收':>6} {'精力':>4} {'小馆参考':>6}  3★回收盈")
-    from server.catalog import dish_item, eatery_price_range
+    from server.catalog import dish_item, eatery_reference_price
     for key, meta in KITCHEN_DISHES.items():
         cost = dish_ingredient_cost(key)
         s3 = dish_sell_price(key, 3)
-        ref, lo, hi = eatery_price_range(dish_item(key, 3))
+        ref = eatery_reference_price(dish_item(key, 3))
         print(
             f"{meta['name']:<16} {cost:4d} {s3:6d} "
             f"{dish_sell_price(key, 5):6d} {meta['energy']:4d} {ref:6d}  {s3 - cost:+d}"
