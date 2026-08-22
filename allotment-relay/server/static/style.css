@@ -2962,6 +2962,15 @@ code {
     flex-direction: column;
     gap: 6px;
     flex: 1;
+    /* Reset global `nav` chrome so the drawer body isn't cream-washed */
+    position: static;
+    top: auto;
+    z-index: auto;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-bottom: 0;
+    background: transparent;
+    padding-top: 0;
   }
 
   .nav-sidebar-link {
