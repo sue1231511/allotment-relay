@@ -6,10 +6,19 @@ async function load() {
   const n = (data.tickets || []).length;
   const live = (stats && stats.online) || 0;
   const people = (stats && stats.online_people) || [];
+  const namesHint = people.length
+    ? people.map((p) => p.name).slice(0, 6).join('、')
+    : '';
   document.getElementById('board-meta').innerHTML = [
-    chip('online', `在线 ${live}${live ? ' · ' + people.map((p) => esc(p.name)).slice(0, 3).join('、') : ''}`, live ? 'has-live' : ''),
-    `<span>上榜 ${n}</span>`,
+    chip(
+      'online',
+      `<span class="stat-chip-label">在线</span><span class="stat-chip-value">${live}</span>`,
+      live ? 'has-live' : '',
+    ),
+    `<span class="stat-chip stat-chip--static" title="工分票榜与等级榜上榜人数"><span class="stat-chip-label">上榜</span><span class="stat-chip-value">${n}</span></span>`,
   ].join('');
+  const onlineChip = document.querySelector('#board-meta [data-panel="online"]');
+  if (onlineChip && namesHint) onlineChip.title = namesHint;
   const onlineN = document.getElementById('board-online-n');
   if (onlineN) onlineN.textContent = live ? String(live) : '0';
   fillBoard(document.getElementById('ticket-board'), data.tickets, 'tickets');
