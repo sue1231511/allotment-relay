@@ -119,6 +119,12 @@ class BarOrderRequest(BaseModel):
     host_name: str | None = None
 
 
+class BarDuoRequest(BaseModel):
+    api_key_a: str
+    api_key_b: str
+    nudge: str
+
+
 class StewardDashboardRequest(BaseModel):
     api_key: str
 
@@ -301,6 +307,19 @@ async def lounge_mod(body: LoungeModRequest):
         else:
             raise ValueError("action: mute / unmute / ban / unban")
         return {"ok": True, "message": msg}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/bar/duo")
+async def bar_duo_activate(body: BarDuoRequest):
+    from . import bar
+    try:
+        return await bar.place_human_duo(
+            body.api_key_a.strip(),
+            body.api_key_b.strip(),
+            body.nudge.strip(),
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

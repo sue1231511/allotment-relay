@@ -56,6 +56,7 @@ from .bar_owner import (
     resolve_effective_mood,
 )
 from .catalog import BAR_SERVICES, COASTAL_BAR, ITEM_NAMES, NPC_FIXED
+from .bar_duo import pick_event as duo_pick_event, event_chance_bonus
 from .game import require_steward
 
 BAR_HELP = """bar_ops 子命令（整句写进 command）：
@@ -441,26 +442,8 @@ def _job_eligible(skills: dict[str, Any], job_id: str, period: str) -> tuple[boo
     return True, ""
 
 
-def _pick_event(job_id: str, late: bool) -> dict[str, Any]:
-    if job_id in BAR_EVENTS:
-        job_pool = BAR_EVENTS[job_id]
-    elif job_id == "runner":
-        job_pool = BAR_EVENTS.get("runner", BAR_EVENTS.get("server", []))
-    elif job_id == "greeter":
-        job_pool = BAR_EVENTS.get("greeter", BAR_EVENTS.get("server", []))
-    else:
-        job_pool = BAR_EVENTS.get("server", []) + BAR_EVENTS.get("dishwasher", [])
-
-    roll = random.random()
-    if roll < 0.10 and late:
-        pool = BAR_EVENTS["late_night"]
-    elif roll < 0.40:
-        pool = BAR_EVENTS["common"]
-    elif roll < 0.90 and job_pool:
-        pool = job_pool
-    else:
-        pool = BAR_EVENTS["common"]
-    return random.choice(pool)
+def _pick_event(job_id: str, late: bool, duo_nudge: str | None = None) -> dict[str, Any]:
+    return duo_pick_event(job_id, late, duo_nudge)
 
 
 async def _apply_event(
@@ -577,6 +560,7 @@ async def _run_work(
         event_chance = min(0.85, event_chance * activity["event_mult"])
     mood_mult = mood_event_chance_mult(state.get("effective_mood", "normal"))
     event_chance = min(0.92, event_chance * mood_mult)
+    event_chance = min(0.95, event_chance + event_chance_bonus(state.get("duo_nudge")))
     if late:
         event_chance = min(0.90, event_chance + 0.12)
 
@@ -584,7 +568,7 @@ async def _run_work(
     event_id = None
     extra_tickets = 0
     if random.random() < event_chance:
-        event = _pick_event(job_id, late)
+        event = _pick_event(job_id, late, state.get("duo_nudge"))
         event_id = event["id"]
         extra_tickets, event_line = await _apply_event(conn, s, event, job_meta)
 
@@ -1103,6 +1087,7 @@ async def _cmd_tip(
 
 
 async def public_bar_snapshot() -> dict[str, Any]:
+    from . import bar_duo
     async with db.connect() as conn:
         hosts = await _hosts_on_duty(conn)
         state = await _ensure_daily_state(conn)
@@ -1118,6 +1103,19 @@ async def public_bar_snapshot() -> dict[str, Any]:
             """
         )).fetchall()
         staff = await _staff_today(conn)
+        duo = bar_duo.duo_snapshot(state)
+        duo_names = None
+        if duo:
+            rows = await (await conn.execute(
+                "SELECT id, name FROM stewards WHERE id IN (?,?)",
+                (duo["steward_a"], duo["steward_b"]),
+            )).fetchall()
+            names = {r["id"]: r["name"] for r in rows}
+            duo_names = {
+                **duo,
+                "patron_a": names.get(duo["steward_a"], "?"),
+                "patron_b": names.get(duo["steward_b"], "?"),
+            }
     phase = world.current_day_phase()
     activity = BAR_ACTIVITIES.get(state.get("activity_key") or "", {})
     mood = state.get("effective_mood", "normal")
@@ -1136,6 +1134,10 @@ async def public_bar_snapshot() -> dict[str, Any]:
         "owner_mood_key": mood,
         "owner_event": state.get("owner_event_text") if state.get("owner_event_enabled") else None,
         "revenue_today": state.get("revenue_tickets", 0),
+        "mandatory_days": config.BAR_MANDATORY_DAYS,
+        "duo": duo_names,
+        "duo_nudges": await bar_duo.public_nudges(),
+        "duo_cost_each": bar_duo.BAR_DUO_COST_EACH,
         "services": [
             {
                 "key": k,
@@ -1167,6 +1169,36 @@ async def public_bar_snapshot() -> dict[str, Any]:
             for r in orders
         ],
     }
+
+
+async def place_human_duo(
+    api_key_a: str,
+    api_key_b: str,
+    nudge: str,
+) -> dict[str, Any]:
+    from . import bar_duo
+
+    if api_key_a.strip() == api_key_b.strip():
+        raise ValueError("两名岸上人须使用不同的 AI 凭证，不能是同一个人")
+
+    row_a = await db.get_key_row(api_key_a.strip())
+    row_b = await db.get_key_row(api_key_b.strip())
+    if not row_a or not row_b:
+        raise ValueError("凭证无效")
+    patron_a = await db.get_steward_by_key_id(row_a["id"])
+    patron_b = await db.get_steward_by_key_id(row_b["id"])
+    if not patron_a or not patron_a["enrolled"]:
+        raise ValueError("凭证 A 尚未 steward_enroll")
+    if not patron_b or not patron_b["enrolled"]:
+        raise ValueError("凭证 B 尚未 steward_enroll")
+
+    async with aiosqlite.connect(db.DB_PATH) as conn:
+        await _ensure_daily_state(conn)
+        result = await bar_duo.activate_duo(
+            conn, patron_a, patron_b, nudge.strip().lower(), bar_open=is_open(),
+        )
+        await conn.commit()
+    return result
 
 
 async def place_human_order(
@@ -1607,8 +1639,34 @@ async def bar_ops(key_id: int, command: str) -> str:
             await conn.commit()
         return append_owner_reaction(msg, reaction)
 
+    if verb == "duo":
+        from . import bar_duo
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            state = await _ensure_daily_state(conn)
+            snap = bar_duo.duo_snapshot(state)
+            if not snap:
+                nudges = await bar_duo.public_nudges()
+                lines = [
+                    "双人吧台：今晚尚未立案（须两名岸上人网页同时绑定）",
+                    f"各 {bar_duo.BAR_DUO_COST_EACH} 票 · 可选倾向:",
+                ]
+                for n in nudges:
+                    lines.append(f"  {n['emoji']} {n['key']} — {n['name']}：{n['desc']}")
+                lines.append("网页 /bar → 双人吧台 · 或 bar_ops duo 查状态")
+                return "\n".join(lines)
+            rows = await (await conn.execute(
+                "SELECT id, name FROM stewards WHERE id IN (?,?)",
+                (snap["steward_a"], snap["steward_b"]),
+            )).fetchall()
+            names = {r[0]: r[1] for r in rows}
+        return (
+            f"今晚已立案：{snap['emoji']}{snap['name']} — {snap['desc']}\n"
+            f"绑定：{names.get(snap['steward_a'], '?')} × {names.get(snap['steward_b'], '?')}\n"
+            "当晚 bar_ops work 事件池会朝此方向略偏"
+        )
+
     raise ValueError(
         "未知 bar 指令: "
-        f"{command}（tonight/menu/order/work/status/staff/song/request_song/tip/chat/"
+        f"{command}（tonight/menu/order/work/status/staff/song/request_song/tip/chat/duo/"
         "cheer/lodge/shift）。不会就 bar_ops help。"
     )

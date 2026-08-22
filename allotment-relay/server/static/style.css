@@ -1980,6 +1980,35 @@ select:focus {
   line-height: 1.7;
 }
 
+.bar-duo-panel {
+  grid-column: 1 / -1;
+}
+
+.bar-duo-lead {
+  margin: 0 0 14px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.duo-status {
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(127, 167, 171, .08);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.duo-status.active {
+  background: rgba(117, 143, 123, .12);
+  border-color: rgba(117, 143, 123, .28);
+}
+
+#duo-form label {
+  margin-bottom: 14px;
+}
+
 .bar-menu {
   grid-column: 1 / -1;
 }
