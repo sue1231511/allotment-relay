@@ -139,7 +139,7 @@ async def _test_bed_rest() -> None:
         await hut.hut_ops(kid, "睡")
         raise AssertionError("sleep without bed should refuse")
     except ValueError as exc:
-        assert "床" in str(exc), exc
+        assert "能睡的地方" in str(exc), exc
 
     async with db.connect() as conn:
         await conn.execute(

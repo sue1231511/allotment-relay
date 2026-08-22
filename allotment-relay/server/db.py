@@ -746,6 +746,8 @@ async def init_db() -> None:
             "ALTER TABLE stewards ADD COLUMN fruit_streak INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN bed_rest_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN dine_buff_until INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN bath_soak_at INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN book_read_day INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE voyages ADD COLUMN encounter TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE bar_daily_state ADD COLUMN auto_mood TEXT NOT NULL DEFAULT 'normal'",
             "ALTER TABLE bar_daily_state ADD COLUMN manual_mood_level TEXT NOT NULL DEFAULT ''",
