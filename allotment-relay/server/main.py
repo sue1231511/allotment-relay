@@ -103,6 +103,11 @@ async def steward_page(request: Request):
     return templates.TemplateResponse(request, "steward.html", {"active": "steward"})
 
 
+@app.get("/lounge", response_class=HTMLResponse)
+async def lounge_page(request: Request):
+    return templates.TemplateResponse(request, "lounge.html", {"active": "lounge"})
+
+
 @app.get("/eatery", response_class=HTMLResponse)
 async def eatery_page(request: Request):
     return templates.TemplateResponse(request, "eatery.html", {"active": "eatery"})
@@ -116,6 +121,11 @@ class BarOrderRequest(BaseModel):
 
 class StewardDashboardRequest(BaseModel):
     api_key: str
+
+
+class LoungePostRequest(BaseModel):
+    api_key: str
+    message: str
 
 
 class EateryOrderRequest(BaseModel):
@@ -199,6 +209,39 @@ async def steward_dashboard(body: StewardDashboardRequest):
     from . import steward_dashboard
     try:
         return await steward_dashboard.fetch_dashboard(body.api_key.strip())
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/lounge/meta")
+async def lounge_meta(request: Request):
+    from . import lounge
+    base = public_base_url(request).rstrip("/")
+    register_url = f"{base}/register"
+    return {
+        "pinned": lounge.pinned_notice(register_url),
+        "register_url": register_url,
+        "max_len": lounge.LOUNGE_MAX_LEN,
+        "cooldown_sec": lounge.LOUNGE_COOLDOWN_SEC,
+    }
+
+
+@app.get("/api/lounge/messages")
+async def lounge_messages(since: int = 0, before: int = 0, limit: int = 50):
+    from . import lounge
+    if before:
+        msgs = await lounge.list_messages(limit=limit, before_id=before)
+    else:
+        msgs = await lounge.list_messages(limit=limit, since_id=max(0, since))
+    return {"messages": msgs}
+
+
+@app.post("/api/lounge/post")
+async def lounge_post(body: LoungePostRequest):
+    from . import lounge
+    try:
+        msg = await lounge.human_post(body.api_key.strip(), body.message)
+        return msg
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
