@@ -135,7 +135,7 @@ async def relay_manual() -> str:
         "                 · beach scan · dig · probe · gear status · gear upgrade net",
         "                 · tool buy hoe · boss status · boss attack",
         "  tote_ops     行囊/交换台/集市",
-        "               command 例：list · vend 鲭鱼 1 · vend 芒果 3 木瓜 2（批量）· gift 安 甘蓝 1",
+        "               command 例：list · gifts · vend 鲭鱼 1 · vend 芒果 3 木瓜 2（批量）· gift 安 甘蓝 1",
         "                 · swap list · swap offer 甘蓝 2 · market list · market sell 甘蓝 2 8",
         "  kitchen_ops  厨房/小馆。空 command=菜谱",
         "               command 例：menu · cook 蒜蓉生蚝 · cook 甘蓝 鲭鱼 · eat 甘蓝 · vend 盐焗沙蟹",
@@ -220,7 +220,8 @@ async def relay_manual() -> str:
         "",
         "【行囊 · 交换 · 集市】",
         "  tote_ops list 列出中文名和英文 id。vend 卖系统回收价；家具走 hut_ops 卖掉",
-        "  gift 名字 物品|票 数量 [留言] — 能直接送票，即时到账，无手续费、无每日上限。票榜看口袋现票，送出会掉名次。协作度 +3",
+        "  gifts [条数] — 查谁给你送了什么（即时到账，这里只看记录）。也可写 收礼。tote_ops gifts",
+        "  gift 名字 物品|票 数量 [留言] — 送给别人。能直接送票，即时到账，无手续费、无每日上限。票榜看口袋现票，送出会掉名次。协作度 +3",
         "  swap offer 物品 数量 — 白送挂单；claim 编号领（手续费 3 票，协作度高打折）",
         "  market sell 物品 数量 单价 — 玩家互卖；buy 编号；price 物品 看建议价",
         "",
@@ -1793,6 +1794,24 @@ async def _tote_one(s: dict, command: str) -> str:
         lines = [f"  {ITEM_NAMES.get(k, k)} x{q}，+{g} 票" for k, q, g in results]
         lines.append(f"合计 +{total} 票")
         return "批量出售：\n" + "\n".join(lines)
+    if verb in ("gifts", "收礼", "收到的礼"):
+        from . import multi as multi_mod
+        limit = 20
+        if len(parts) >= 2:
+            limit = min(50, max(1, _parse_int(parts[1], "条数")))
+        rows = await db.list_received_gifts(s["id"], limit)
+        if not rows:
+            return (
+                "还没有人给你送礼。礼物即时进行囊或工分票，"
+                "也可 tote_ops list / steward_ops sheet 核对。"
+            )
+        lines = [f"收礼记录（最近 {len(rows)} 条）："]
+        for r in rows:
+            who = r.get("actor_name") or "某人"
+            ago = multi_mod._ago(int(r["created_at"]))
+            lines.append(f"  · {who}（{ago}）— {r['text']}")
+        lines.append("礼物已即时到账；行囊 tote_ops list，票 steward_ops sheet。")
+        return "\n".join(lines)
     if verb == "gift" and len(parts) >= 4:
         peer_name = parts[1]
         token = parts[2]
@@ -1855,7 +1874,7 @@ async def _tote_one(s: dict, command: str) -> str:
             "篱边人情：送了就要认",
         ])
     raise ValueError(
-        f"未知 tote 指令: {command}（list / vend 物品 数量 / gift 名字 物品|票 数量 [留言]）"
+        f"未知 tote 指令: {command}（list / gifts / vend 物品 数量 / gift 名字 物品|票 数量 [留言]）"
     )
 
 

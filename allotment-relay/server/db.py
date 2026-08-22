@@ -1460,6 +1460,22 @@ async def public_stats() -> dict[str, Any]:
         }
 
 
+async def list_received_gifts(steward_id: int, limit: int = 20) -> list[dict[str, Any]]:
+    async with connect() as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute(
+            """
+            SELECT c.text, c.created_at, a.name AS actor_name
+            FROM chronicle c
+            LEFT JOIN stewards a ON a.id = c.actor_id
+            WHERE c.action='gift' AND c.target_id=?
+            ORDER BY c.created_at DESC LIMIT ?
+            """,
+            (steward_id, limit),
+        )
+        return [dict(r) for r in await cur.fetchall()]
+
+
 async def public_chronicle(limit: int = 40) -> list[dict[str, Any]]:
     async with connect() as db:
         db.row_factory = aiosqlite.Row

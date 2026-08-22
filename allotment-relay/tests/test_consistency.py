@@ -72,6 +72,7 @@ def test_mcp_descriptions() -> None:
     tote = mcp._tool_manager.get_tool("tote_ops")
     tote_blob = f"{tote.description}\n{(tote.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
     assert "送票" in tote_blob
+    assert "gifts" in tote_blob
 
     star = mcp._tool_manager.get_tool("star_ops")
     star_blob = f"{star.description}\n{(star.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -150,6 +151,7 @@ def test_relay_manual_covers_systems() -> None:
         "compliment 和 release",
         "dig 和 probe 都关",
         "能直接送票",
+        "tote_ops gifts",
         "旧史文本",
         "不是流水",
         "真人在面板",
