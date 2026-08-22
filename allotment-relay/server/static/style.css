@@ -1038,6 +1038,23 @@ select:focus {
   background: rgba(169, 128, 125, .1);
 }
 
+.steward-chip.is-online {
+  background: rgba(98, 122, 104, .14);
+  color: #4a6b55;
+  border-color: rgba(98, 122, 104, .28);
+}
+
+.steward-chip.is-offline {
+  background: rgba(58, 77, 85, .08);
+  color: var(--muted);
+}
+
+.steward-chip.warn {
+  background: rgba(169, 128, 125, .14);
+  color: #8f5f5c;
+  border-color: rgba(169, 128, 125, .28);
+}
+
 .steward-hero-stats {
   display: grid;
   grid-template-columns: 1fr 1fr;

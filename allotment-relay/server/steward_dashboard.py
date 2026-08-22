@@ -5,8 +5,10 @@ from __future__ import annotations
 import aiosqlite
 from typing import Any
 
-from . import bar, db, energy, events, farming, health, land, ranks, survival, world
+from . import bar, db, energy, events, farming, land, ranks, world
+from . import undertide as ut_mod
 from .catalog import CROPS, ITEM_NAMES
+from .config import ONLINE_WINDOW
 from . import market as market_mod
 
 
@@ -21,7 +23,6 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
     async with db.connect() as conn:
         conn.row_factory = aiosqlite.Row
         await energy.soft_regen(conn, s["id"])
-        ailments = await health.list_ailments(conn, s["id"])
         open_incidents = await events.list_open_incidents_on(conn, s["id"])
         extra = await market_mod._market_extra(conn, s["id"])
         cap = market_mod.market_list_cap(extra)
@@ -34,6 +35,12 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
             SELECT route, returns_at, status FROM voyages
             WHERE steward_id=? AND status IN ('sailing','hailed','fish_encounter')
             """,
+            (s["id"],),
+        )).fetchone()
+        ut = await ut_mod._ensure_ut(conn, s["id"])
+        ut_tier, _, _ = ut_mod._rep_tier(int(ut["shadow_rep"]))
+        debt_rows = await (await conn.execute(
+            "SELECT COUNT(*), COALESCE(SUM(principal), 0) FROM ut_debts WHERE steward_id=? AND status='open'",
             (s["id"],),
         )).fetchone()
         await conn.commit()
@@ -136,6 +143,10 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
             left = max(0, voyage[1] - db.now())
             voyage_view = f"{route} · {left // 60} 分后归港"
 
+    last_active = int(s.get("last_active_at") or 0)
+    online = db.now() - last_active <= ONLINE_WINDOW
+    bar_left = bar.shift_seconds_left(s)
+
     return {
         "name": s["name"],
         "badge": s["badge"],
@@ -145,6 +156,22 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
         "level": ranked.get("level", 1),
         "title": ranked.get("title", ""),
         "xp": ranked.get("xp", 0),
+        "status": {
+            "online": online,
+            "last_active_at": last_active,
+            "bar_shift_overdue": bar_left < 0,
+            "bar_shift_left_sec": bar_left,
+            "undertide": {
+                "shadow_rep": int(ut["shadow_rep"]),
+                "tier": ut_tier,
+                "access": bool(ut.get("access")),
+                "jail": ut.get("jail_state") == "serving",
+                "k_room": bool(ut.get("k_room")),
+                "debt_count": int(debt_rows[0] or 0),
+                "debt_total": int(debt_rows[1] or 0),
+                "busted_count": int(ut.get("busted_count") or 0),
+            },
+        },
         "meters": {
             "satiety": int(s.get("satiety") or 0),
             "mist_wit": int(s.get("mist_wit") or 0),
@@ -152,12 +179,7 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
             "health": int(s.get("health") or 0),
             "energy": int(s.get("energy") or 0),
             "energy_max": 100,
-        },
-        "meter_lines": {
-            "survival": survival.meter_line(s),
-            "health": health.meter_line(s, ailments),
-            "energy": energy.meter_line(s, ailments),
-            "bar_duty": bar.duty_line(s),
+            "shadow_rep": int(ut["shadow_rep"]),
         },
         "climate": world.climate_line(),
         "pulse": pulse,

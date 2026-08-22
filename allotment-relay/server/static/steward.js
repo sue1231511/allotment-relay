@@ -3,6 +3,15 @@ function fmtTime(epoch) {
   return new Date(epoch * 1000).toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
 }
 
+function ago(epoch) {
+  if (!epoch) return '—';
+  const s = Math.max(0, Date.now() / 1000 - epoch);
+  if (s < 45) return '刚才';
+  if (s < 3600) return `${Math.floor(s / 60)} 分钟前`;
+  if (s < 86400) return `${Math.floor(s / 3600)} 小时前`;
+  return `${Math.floor(s / 86400)} 天前`;
+}
+
 function esc(s) {
   const d = document.createElement('div');
   d.textContent = s == null ? '' : String(s);
@@ -52,7 +61,6 @@ function clearSavedKey() {
 function setSavedUi(hasKey) {
   document.getElementById('steward-forget').classList.toggle('hidden', !hasKey);
   document.getElementById('steward-refresh').classList.toggle('hidden', !hasKey);
-  document.getElementById('steward-saved-hint').classList.toggle('hidden', !hasKey);
 }
 
 async function fetchDashboard(apiKey, { scroll = true } = {}) {
@@ -94,6 +102,22 @@ async function fetchDashboard(apiKey, { scroll = true } = {}) {
     }
     if (refreshBtn) refreshBtn.disabled = false;
   }
+}
+
+function statusChips(status) {
+  if (!status) return '';
+  const chips = [];
+  chips.push(`<span class="steward-chip ${status.online ? 'is-online' : 'is-offline'}">${status.online ? '在档口' : `离线 · ${ago(status.last_active_at)}`}</span>`);
+  if (status.bar_shift_overdue) {
+    chips.push('<span class="steward-chip warn">考勤逾期</span>');
+  }
+  const ut = status.undertide || {};
+  if (ut.tier) chips.push(`<span class="steward-chip soft">影信 · ${esc(ut.tier)}</span>`);
+  if (ut.jail) chips.push('<span class="steward-chip warn">服刑中</span>');
+  if (ut.k_room) chips.push('<span class="steward-chip warn">K 室</span>');
+  if (ut.debt_count) chips.push(`<span class="steward-chip warn">欠债 ${ut.debt_total} 票</span>`);
+  if (ut.busted_count) chips.push(`<span class="steward-chip soft">案底 ${ut.busted_count}</span>`);
+  return chips.join('');
 }
 
 function meterBar(label, value, max = 100, tone = 'sea') {
@@ -144,6 +168,8 @@ function renderDashboard(data, { scroll = true } = {}) {
   if (data.flags.eatery_open) flags.push('小馆');
   if (data.flags.boat) flags.push('有船');
 
+  const m = data.meters || {};
+
   document.getElementById('hero').innerHTML = `
     <div class="steward-hero-grid">
       <div class="steward-hero-main">
@@ -152,6 +178,7 @@ function renderDashboard(data, { scroll = true } = {}) {
         <p class="steward-hero-role">${esc(badgeLabel(data.badge))}${data.portrait ? ` · ${esc(data.portrait)}` : ''}</p>
         ${data.motto ? `<blockquote class="steward-hero-motto">「${esc(data.motto)}」</blockquote>` : ''}
         <div class="steward-hero-chips">
+          ${statusChips(data.status)}
           ${pulseChip}
           <span class="steward-chip">${esc(data.climate)}</span>
           ${flags.map(f => `<span class="steward-chip soft">${esc(f)}</span>`).join('')}
@@ -171,6 +198,10 @@ function renderDashboard(data, { scroll = true } = {}) {
           <strong class="steward-stat-value">${data.stock_count} 种</strong>
         </div>
         <div class="steward-stat-tile">
+          <span class="steward-stat-label">影信</span>
+          <strong class="steward-stat-value">${data.status?.undertide?.shadow_rep ?? m.shadow_rep ?? '—'}</strong>
+        </div>
+        <div class="steward-stat-tile">
           <span class="steward-stat-label">集市</span>
           <strong class="steward-stat-value">${data.market.used}/${data.market.cap}</strong>
         </div>
@@ -178,20 +209,18 @@ function renderDashboard(data, { scroll = true } = {}) {
     </div>
   `;
 
-  const m = data.meters || {};
   document.getElementById('meters').innerHTML = [
     meterBar('饱食', m.satiety, 100, 'sand'),
     meterBar('雾智', m.mist_wit, 100, 'sea'),
     meterBar('档信', m.standing, 100, 'green'),
     meterBar('健康', m.health, 100, 'rose'),
     meterBar('精力', m.energy, m.energy_max || 100, 'ink'),
-  ].join('') + `
+    meterBar('影信', m.shadow_rep, 100, 'ink'),
+  ].join('') + (data.voyage ? `
     <div class="steward-meter-notes">
-      <p>${esc(data.meter_lines.energy)}</p>
-      <p>${esc(data.meter_lines.bar_duty)}</p>
-      ${data.voyage ? `<p class="steward-note-voyage">⛵ ${esc(data.voyage)}</p>` : ''}
+      <p class="steward-note-voyage">⛵ ${esc(data.voyage)}</p>
     </div>
-  `;
+  ` : '');
 
   const marketPct = data.market.cap
     ? Math.round((data.market.used / data.market.cap) * 100)
@@ -204,7 +233,7 @@ function renderDashboard(data, { scroll = true } = {}) {
           <span class="steward-incident-cost">${i.repair_tickets} 票</span>
         </div>
       `).join('')
-    : '<p class="steward-empty">无未处理意外，今天挺太平。</p>';
+    : '<p class="steward-empty">无</p>';
 
   document.getElementById('ops').innerHTML = `
     <div class="steward-ops-block">
@@ -234,7 +263,7 @@ function renderDashboard(data, { scroll = true } = {}) {
            <em>×${i.qty}</em>
          </span>
        `).join('')}</div>`
-    : '<p class="steward-empty">行囊是空的，去种地或赶海吧。</p>';
+    : '<p class="steward-empty">空</p>';
 
   document.getElementById('gifts').innerHTML = data.gifts.length
     ? data.gifts.map(g => `
@@ -249,7 +278,7 @@ function renderDashboard(data, { scroll = true } = {}) {
           </div>
         </article>
       `).join('')
-    : '<p class="steward-empty">还没有收礼或酒吧打赏记录。</p>';
+    : '<p class="steward-empty">暂无</p>';
 
   if (scroll) {
     document.getElementById('steward-dashboard').scrollIntoView({ behavior: 'smooth', block: 'start' });
