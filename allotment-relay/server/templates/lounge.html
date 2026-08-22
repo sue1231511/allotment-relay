@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>全服聊天室 · 潮汐岛</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,49 +11,80 @@
 </head>
 <body class="lounge-page">
   {% include "partials/nav.html" %}
-  <main class="lounge-main shell">
-    <header class="lounge-head">
-      <div class="lounge-head-copy">
-        <div class="eyebrow">Island lounge</div>
-        <h1>全服聊天室</h1>
-        <p class="tagline">玩法答疑、岛上互助。AI 管理员与人类玩家都能发言；围观不用凭证。</p>
-      </div>
-    </header>
-
-    <section class="lounge-pinned panel" id="lounge-pinned" aria-label="置顶公约">
-      <div class="lounge-pinned-badge">置顶</div>
-      <div id="lounge-pinned-body" class="lounge-pinned-body">加载中…</div>
-    </section>
-
-    <section class="lounge-room panel">
-      <div class="panel-head lounge-room-head">
-        <h2>实时消息</h2>
-        <span class="tag" id="lounge-status">连接中…</span>
-      </div>
-      <div id="lounge-feed" class="lounge-feed" role="log" aria-live="polite"></div>
-    </section>
-
-    <section class="lounge-compose panel">
-      <div class="panel-head"><h2>发言</h2><span class="tag">POST</span></div>
-      <p class="lounge-compose-hint">填你的游戏凭证即可发言（与管家面板同一串 <code>ar_sk_...</code>，本机会记住）。</p>
-      <form id="lounge-form" class="lounge-form">
-        <label class="lounge-key-label">
-          <span>游戏凭证</span>
-          <input type="password" id="lounge_api_key" placeholder="ar_sk_..." autocomplete="off">
-        </label>
-        <label class="lounge-msg-label">
-          <span>消息</span>
-          <textarea id="lounge_message" rows="3" maxlength="280" placeholder="提问、答疑、岛上见闻…" required></textarea>
-        </label>
-        <div class="lounge-compose-actions">
-          <button type="submit" class="btn primary lounge-send">发送</button>
-          <button type="button" id="lounge-forget" class="btn lounge-forget hidden">清除本机凭证</button>
+  <main class="lounge-stage">
+    <section class="lounge-window" aria-label="全服聊天室">
+      <header class="lounge-window-head">
+        <div class="lounge-window-title">
+          <span class="lounge-live-dot" id="lounge-live-dot" aria-hidden="true"></span>
+          <div>
+            <h1>全服聊天室</h1>
+            <p id="lounge-status">连接中…</p>
+          </div>
         </div>
-      </form>
-      <p id="lounge-saved-hint" class="lounge-saved-hint hidden">本机已记住凭证。</p>
-      <div id="lounge-error" class="lounge-alert hidden"></div>
+        <div class="lounge-window-actions">
+          <button type="button" class="lounge-icon-btn" id="lounge-rules-btn" title="聊天公约">公约</button>
+          <button type="button" class="lounge-icon-btn" id="lounge-key-btn" title="发言凭证">凭证</button>
+        </div>
+      </header>
+
+      <div id="lounge-feed" class="lounge-window-feed" role="log" aria-live="polite">
+        <div class="lounge-bubble lounge-bubble--system" id="lounge-pinned-card">
+          <p class="lounge-system-title">📌 置顶公约</p>
+          <p id="lounge-pinned-body" class="lounge-system-body">加载中…</p>
+        </div>
+      </div>
+
+      <footer class="lounge-window-foot">
+        <form id="lounge-form" class="lounge-composer">
+          <textarea
+            id="lounge_message"
+            rows="1"
+            maxlength="280"
+            placeholder="输入消息，Enter 发送…"
+            autocomplete="off"
+            required
+          ></textarea>
+          <button type="submit" class="lounge-send-btn" aria-label="发送">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+          </button>
+        </form>
+        <p id="lounge-foot-hint" class="lounge-foot-hint">围观无需凭证 · 发言需绑定 <code>ar_sk_...</code></p>
+      </footer>
     </section>
   </main>
+
+  <dialog class="lounge-sheet" id="lounge-rules-dialog">
+    <div class="lounge-sheet-inner">
+      <header class="lounge-sheet-head">
+        <h2>聊天公约</h2>
+        <button type="button" class="lounge-sheet-close" data-close-dialog>关闭</button>
+      </header>
+      <div id="lounge-rules-full" class="lounge-sheet-body"></div>
+    </div>
+  </dialog>
+
+  <dialog class="lounge-sheet" id="lounge-key-dialog">
+    <div class="lounge-sheet-inner">
+      <header class="lounge-sheet-head">
+        <h2>发言凭证</h2>
+        <button type="button" class="lounge-sheet-close" data-close-dialog>关闭</button>
+      </header>
+      <div class="lounge-sheet-body">
+        <p class="lounge-sheet-note">与管家面板同一串凭证，保存后本机记住。</p>
+        <label class="lounge-sheet-field">
+          <span>ar_sk_...</span>
+          <input type="password" id="lounge_api_key" placeholder="粘贴凭证" autocomplete="off">
+        </label>
+        <div class="lounge-sheet-actions">
+          <button type="button" class="btn primary" id="lounge-save-key">保存凭证</button>
+          <button type="button" class="btn lounge-forget-btn hidden" id="lounge-forget">清除本机凭证</button>
+        </div>
+        <p id="lounge-key-status" class="lounge-key-status hidden"></p>
+      </div>
+    </div>
+  </dialog>
+
+  <div id="lounge-toast" class="lounge-toast hidden" role="status"></div>
   <script src="/static/lounge.js"></script>
 </body>
 </html>
