@@ -264,7 +264,21 @@ PIT_GATEMAN_REJECT = (
     "「回去。」"
 )
 
-PIT_FIGHT_HEADER = "«深坑 — 井壁上的名字»"
+PIT_FIGHT_HEADER = "«深坑 — 今晚的名单»"
+
+PIT_BOARD_HEADER = "«深坑 — 墙上的位置»"
+
+PIT_BOARD_HINT = (
+    "按深坑胜场。巷里的强买强卖、悬赏、劫持不算。"
+    "今晚能打谁看 pit；全服票榜走 steward_ops board。"
+)
+
+PIT_BOARD_EMPTY = (
+    "墙上还是空的。下过坑的人才会上墙。\n"
+    "（undertide_ops fight 斗士名）"
+)
+
+PIT_BOARD_ME_EMPTY = "你还没下过坑。看门人说名字是打上去的。"
 
 PIT_STRATEGY_HINT = (
     "策略可选 attack（压 feint）/ guard（抗 attack）/ feint（绕 guard），"
@@ -800,7 +814,7 @@ GUIDE_HEAD_INTRO = (
 GUIDE_BODY = (
     "「往灯亮的那边走，是**后室铺**——掌柜的货摊，真货假货掺着卖，离柜概不认账。你要出手黑货也找他（sell）。」\n\n"
     "「挂着蓝幌子的是**恶猫钱庄**——猫猫的铺子。借钱（bank borrow）、还钱（repay）、存钱（save）、取钱（take），挨小八的数落，都在那儿。手头紧可以先去，但她算利息从不含糊；钱闲着也可以存——利息不高，她数钱倒是很勤。」\n\n"
-    "「味道最冲的那条道通**深坑**——想用拳头换票的下那儿（pit / fight）。打伤了回来找**医务间**，晏安的手艺没话说，就是不太温柔（medic）。他那儿还卖药——下坑前来一支，贵的副作用小，便宜的药劲过了会咬人。」\n\n"
+    "「味道最冲的那条道通**深坑**——想用拳头换票的下那儿（pit / fight）。谁的名字还钉在墙上，pit board 能看。打伤了回来找**医务间**，晏安的手艺没话说，就是不太温柔（medic）。他那儿还卖药——下坑前来一支，贵的副作用小，便宜的药劲过了会咬人。」\n\n"
     "「听见骰子声就是**死人抽牌**——Silas 坐庄，三个玩法，输了别闹（dice / lantern / draw）。」\n\n"
     "「最里面那面墙是**凯斯酒馆**——荔栀晚上的场子。想买消息找角落里的耳语人（tavern / whisper），恩怨找墙上的纸条（bounty）。」\n\n"
     "「还有人往帘子外面塞货、跟人动手——那不在地图上，在胆子上（street / muscle / hijack）。自己掂量。」\n\n"
@@ -1080,7 +1094,8 @@ undertide_ops sell <物品> [数量] — 掌柜处出货（销赃）
 undertide_ops street — 帘外的随机人（每日刷新）
 undertide_ops muscle <名号> — 强买（战力判定）
 undertide_ops push <名号> <物品> — 强卖
-undertide_ops pit — 深坑斗士榜
+undertide_ops pit — 今晚可打的 NPC 斗士名单
+undertide_ops pit board — 决斗场玩家榜（按深坑胜场；不是票榜，也不是今晚 NPC 名单）
 undertide_ops fight <斗士名> [attack|guard|feint] — 下坑
 undertide_ops medic <ring_shock|pit_trauma> — 晏安医务间
 undertide_ops casino — 赌场

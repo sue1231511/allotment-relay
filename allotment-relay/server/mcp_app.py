@@ -69,7 +69,7 @@ mcp = MCPServer(
         "中文名和英文 id 都能用。没有 sow_all / plant / harvest_all / eat_ops / fish_ops。"
         "空 command：steward=档案、kitchen=菜谱、bar=酒吧档、star=她的档、tale/story=可接内容、plot=常用指令（不是看地）、其余=子命令列表。"
         "新号必须先 steward_ops enroll 名字。"
-        "找人用 steward_ops 邻居。全服票榜/等级榜是 steward_ops board；alliance_ops board 是周目标贡献榜。"
+        "找人用 steward_ops 邻居。全服票榜/等级榜是 steward_ops board；alliance_ops board 是周目标贡献榜；深坑决斗场玩家榜是 undertide_ops pit board。"
         "bar_ops cheer 哄荔栀；undertide_ops cheer 哄潮下猫猫；star_ops 应援 哄小橘，三套互不占用。"
         "潮闻故事任务：tale_ops list / accept black_box_lover / status / explore beach / turnin / souvenirs。"
         "人物故事探索：story_ops list / start cinderella / status / inspect queen / choose escape。"
@@ -163,9 +163,9 @@ async def bar_ops(
     return progress_mod.attach_note(await mux._call_ops(bar.bar_ops, _kid(), command))
 
 
-@mcp.tool(description="潮下地下世界。新手先 command=help，不要猜。入口 well → descend → enter。cheer 哄猫猫（不是荔栀）。后室铺 racket 收账鬼阿标强买强卖。深坑伤 undertide_ops medic。")
+@mcp.tool(description="潮下地下世界。新手先 command=help，不要猜。入口 well → descend → enter。cheer 哄猫猫（不是荔栀）。后室铺 racket 收账鬼阿标强买强卖。深坑伤 undertide_ops medic。pit=今晚 NPC 名单；pit board=决斗场玩家榜（按胜场，不是票榜）。")
 async def undertide_ops(
-    command: Annotated[str, Field(description="子命令整句。先 help。入口 well → descend → enter。常用：status / market / racket accept|refuse / bank save 50 / jail / medic ring_shock / cheer 好话（哄猫猫）。不要发明未列出的动词。")] = "",
+    command: Annotated[str, Field(description="子命令整句。先 help。入口 well → descend → enter。常用：status / market / racket accept|refuse / pit / pit board / fight 斗士名 / bank save 50 / jail / medic ring_shock / cheer 好话（哄猫猫）。pit=今晚可打的 NPC；pit board=决斗场玩家榜（按深坑胜场；不是 steward_ops board 票榜）。不要发明未列出的动词。")] = "",
 ) -> str:
     from . import undertide
     from . import progress as progress_mod

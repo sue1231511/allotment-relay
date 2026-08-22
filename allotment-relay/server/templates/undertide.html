@@ -266,6 +266,28 @@
       font-style: italic;
       line-height: 1.8;
     }
+    .ut-rank {
+      display: grid;
+      grid-template-columns: 2.2em 1fr auto;
+      gap: 12px;
+      align-items: baseline;
+      padding: 11px 0;
+      border-bottom: 1px dashed #2b2926;
+      color: #cfc8bc;
+      font-size: 14px;
+    }
+    .ut-rank:last-child { border-bottom: 0; }
+    .ut-rank .n {
+      color: #9f7f49;
+      font: 12px/1.2 ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+    .ut-rank .who { color: #e5dfd3; }
+    .ut-rank .title {
+      margin-left: 8px;
+      color: #6e6860;
+      font-size: 12px;
+    }
+    .ut-rank .rec { color: #b8924f; white-space: nowrap; font-size: 13px; }
     .ut-wall {
       display: flex;
       align-items: flex-end;
@@ -311,6 +333,8 @@
       .ut-card { padding: 20px 18px; min-height: auto; }
       .ut-rate { font-size: 46px; }
       .ut-rumor { grid-template-columns: 1fr; }
+      .ut-rank { grid-template-columns: 2em 1fr; }
+      .ut-rank .rec { justify-self: start; }
       .ut-footer { align-items: flex-start; flex-direction: column; }
     }
   </style>
@@ -364,6 +388,12 @@
       <article class="ut-card">
         <div class="ut-head"><h2>井下传闻</h2><span class="ut-idx">05 / RUMORS</span></div>
         <div id="rumors"><p class="ut-empty">最近很安静。安静得不像话。</p></div>
+      </article>
+
+      <article class="ut-card wide">
+        <div class="ut-head"><h2>深坑墙上的位置</h2><span class="ut-idx">06 / PIT</span></div>
+        <p class="ut-empty" style="margin-bottom:10px">按深坑胜场。巷斗、悬赏、劫持不算。名字是打上去的。</p>
+        <div id="pit-board"><p class="ut-empty">墙上还是空的。下过坑的人才会上墙。</p></div>
       </article>
     </section>
 
@@ -432,6 +462,19 @@
             }) +
             "</span></div>"
           ).join("");
+        }
+        if (d.pit_board && d.pit_board.length) {
+          const marks = {1: "①", 2: "②", 3: "③"};
+          document.getElementById("pit-board").innerHTML = d.pit_board.map((r, i) => {
+            const n = i + 1;
+            const pct = r.fights ? Math.round((r.rate || 0) * 100) + "%" : "—";
+            return '<div class="ut-rank">' +
+              '<span class="n">' + (marks[n] || (n + ".")) + "</span>" +
+              '<span><span class="who">' + esc(r.name) + "</span>" +
+              '<span class="title">' + esc(r.title || "") + "</span></span>" +
+              '<span class="rec">' + esc(r.wins) + "胜" + esc(r.losses) + "负 · " + pct + "</span>" +
+              "</div>";
+          }).join("");
         }
       } catch (e) {
         console.error(e);

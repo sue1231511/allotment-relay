@@ -870,6 +870,8 @@ async def public_undertide():
             "SELECT name FROM ut_pit_fighters WHERE alive=0 ORDER BY id DESC LIMIT 1"
         )).fetchone()
         out["wall"] = {"whites": row["c"], "last": last["name"] if last else ""}
+        from . import undertide_pit as _upit
+        out["pit_board"] = await _upit.pit_board_rows(conn, limit=_upit.PIT_BOARD_WEB_LIMIT)
     return out
 
 

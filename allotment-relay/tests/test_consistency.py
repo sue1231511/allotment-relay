@@ -94,6 +94,7 @@ def test_mcp_descriptions() -> None:
     assert "猫猫" in ut_blob
     assert "pit medic" not in ut_blob
     assert "medic" in ut_blob
+    assert "pit board" in ut_blob
 
     alliance = mcp._tool_manager.get_tool("alliance_ops")
     al_blob = f"{alliance.description}\n{(alliance.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -164,6 +165,8 @@ def test_relay_manual_covers_systems() -> None:
         "lili summon",
         "clinic treat",
         "undertide_ops help",
+        "pit board",
+        "决斗场玩家榜",
         "star_ops",
         "应援",
         "不要猜",

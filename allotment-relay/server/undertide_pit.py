@@ -57,6 +57,188 @@ async def pit_rank(conn: aiosqlite.Connection, steward_id: int) -> tuple[str, in
     return label, bonus, n
 
 
+PIT_BOARD_LIMIT = 12
+PIT_BOARD_WEB_LIMIT = 20
+
+
+def _pit_board_title(fights: int) -> str:
+    """决斗场榜称号：只看深坑场次，不用巷斗/悬赏凑数。"""
+    label = "刚下过坑的人"
+    for floor, lab, _bonus in utcfg.PIT_RANKS:
+        if fights >= floor:
+            label = lab
+    return label
+
+
+def _pit_board_rate(wins: int, fights: int) -> float:
+    return (wins / fights) if fights else 0.0
+
+
+async def pit_board_rows(
+    conn: aiosqlite.Connection, *, limit: int = PIT_BOARD_LIMIT
+) -> list[dict[str, Any]]:
+    """深坑决斗场玩家榜。只计 kind='pit'，按胜场。"""
+    conn.row_factory = aiosqlite.Row
+    rows = await (
+        await conn.execute(
+            """
+            SELECT
+              s.id AS id,
+              s.name AS name,
+              SUM(CASE WHEN p.outcome='win' THEN 1 ELSE 0 END) AS wins,
+              SUM(CASE WHEN p.outcome='lose' THEN 1 ELSE 0 END) AS losses,
+              COUNT(*) AS fights
+            FROM pit_log p
+            JOIN stewards s ON s.id = p.steward_id
+            WHERE p.kind='pit' AND s.enrolled=1
+            GROUP BY s.id
+            HAVING COUNT(*) > 0
+            ORDER BY wins DESC, (1.0 * wins / fights) DESC, fights DESC, s.id ASC
+            LIMIT ?
+            """,
+            (limit,),
+        )
+    ).fetchall()
+    out: list[dict[str, Any]] = []
+    for r in rows:
+        wins = int(r["wins"] or 0)
+        losses = int(r["losses"] or 0)
+        fights = int(r["fights"] or 0)
+        out.append(
+            {
+                "id": int(r["id"]),
+                "name": r["name"],
+                "wins": wins,
+                "losses": losses,
+                "fights": fights,
+                "rate": _pit_board_rate(wins, fights),
+                "title": _pit_board_title(fights),
+            }
+        )
+    return out
+
+
+async def pit_board_me(
+    conn: aiosqlite.Connection, steward_id: int
+) -> dict[str, Any] | None:
+    """自己的深坑战绩与名次。没下过坑返回 None。"""
+    conn.row_factory = aiosqlite.Row
+    mine = await (
+        await conn.execute(
+            """
+            SELECT
+              SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) AS wins,
+              SUM(CASE WHEN outcome='lose' THEN 1 ELSE 0 END) AS losses,
+              COUNT(*) AS fights
+            FROM pit_log
+            WHERE steward_id=? AND kind='pit'
+            """,
+            (steward_id,),
+        )
+    ).fetchone()
+    wins = int((mine["wins"] if mine else 0) or 0)
+    losses = int((mine["losses"] if mine else 0) or 0)
+    fights = int((mine["fights"] if mine else 0) or 0)
+    if fights <= 0:
+        return None
+    ahead = await (
+        await conn.execute(
+            """
+            SELECT COUNT(*) FROM (
+              SELECT
+                s.id AS id,
+                SUM(CASE WHEN p.outcome='win' THEN 1 ELSE 0 END) AS wins,
+                COUNT(*) AS fights
+              FROM pit_log p
+              JOIN stewards s ON s.id = p.steward_id
+              WHERE p.kind='pit' AND s.enrolled=1
+              GROUP BY s.id
+              HAVING COUNT(*) > 0 AND (
+                wins > ?
+                OR (wins = ? AND (1.0 * wins / fights) > ?)
+                OR (wins = ? AND (1.0 * wins / fights) = ? AND fights > ?)
+                OR (wins = ? AND (1.0 * wins / fights) = ? AND fights = ? AND s.id < ?)
+              )
+            )
+            """,
+            (
+                wins,
+                wins,
+                _pit_board_rate(wins, fights),
+                wins,
+                _pit_board_rate(wins, fights),
+                fights,
+                wins,
+                _pit_board_rate(wins, fights),
+                fights,
+                steward_id,
+            ),
+        )
+    ).fetchone()
+    total = await (
+        await conn.execute(
+            """
+            SELECT COUNT(*) FROM (
+              SELECT p.steward_id
+              FROM pit_log p
+              JOIN stewards s ON s.id = p.steward_id
+              WHERE p.kind='pit' AND s.enrolled=1
+              GROUP BY p.steward_id
+            )
+            """
+        )
+    ).fetchone()
+    return {
+        "wins": wins,
+        "losses": losses,
+        "fights": fights,
+        "rate": _pit_board_rate(wins, fights),
+        "title": _pit_board_title(fights),
+        "rank": int(ahead[0]) + 1,
+        "total": int(total[0]),
+    }
+
+
+def _fmt_pit_board_row(i: int, row: dict[str, Any]) -> str:
+    mark = {1: "①", 2: "②", 3: "③"}.get(i, f"{i:>2}.")
+    pct = f"{row['rate'] * 100:.0f}%"
+    return (
+        f"  {mark} {row['name']}  {row['wins']}胜{row['losses']}负"
+        f"  · {row['title']}  · 胜率 {pct}"
+    )
+
+
+async def format_pit_board(
+    conn: aiosqlite.Connection, steward: dict[str, Any], *, limit: int = PIT_BOARD_LIMIT
+) -> str:
+    rows = await pit_board_rows(conn, limit=limit)
+    lines = [utcopy.PIT_BOARD_HEADER, utcopy.PIT_BOARD_HINT, ""]
+    if not rows:
+        lines.append(utcopy.PIT_BOARD_EMPTY)
+    else:
+        for i, row in enumerate(rows, 1):
+            lines.append(_fmt_pit_board_row(i, row))
+    mine = await pit_board_me(conn, steward["id"])
+    lines.append("")
+    if mine:
+        pct = f"{mine['rate'] * 100:.0f}%"
+        lines.append(
+            f"你：{steward['name']}  {mine['wins']}胜{mine['losses']}负"
+            f"  · {mine['title']}  · 胜率 {pct}"
+            f"  · #{mine['rank']}/{mine['total']}"
+        )
+    else:
+        lines.append(utcopy.PIT_BOARD_ME_EMPTY)
+    lines.append("")
+    lines.append("pit 看今晚 NPC 名单 · fight 斗士名 下坑 · steward_ops board 是票榜不是这张")
+    return "\n".join(lines)
+
+
+async def public_pit_board(limit: int = PIT_BOARD_WEB_LIMIT) -> list[dict[str, Any]]:
+    async with db.connect() as conn:
+        return await pit_board_rows(conn, limit=limit)
+
+
 async def combat_power(conn: aiosqlite.Connection, steward: dict[str, Any]) -> int:
     """玩家战力 = (body+药buff)/100×30 + energy/100×15 + 战绩等级加成 + 1d20。"""
     cur = await conn.execute("SELECT health, energy FROM stewards WHERE id=?", (steward["id"],))
@@ -121,7 +303,11 @@ async def pit_ops(
         lines.append("")
         lines.append(utcopy.PIT_STRATEGY_HINT)
         lines.append("fight 斗士名 [attack|guard|feint] — 下坑")
+        lines.append("pit board — 决斗场玩家榜（按胜场；不是今晚 NPC 名单，也不是票榜）")
         return "\n".join(lines)
+
+    if verb in ("board", "榜", "排行", "排行榜", "wall", "墙"):
+        return await format_pit_board(conn, s)
 
     if verb == "fight":
         if len(parts) < 2:
@@ -315,7 +501,7 @@ async def pit_ops(
             + (f" · 药劲过后反噬 body −{d['crash']}）" if d["crash"] else " · 无副作用）")
         )
 
-    raise ValueError("未知 pit 指令（list/fight/medic）")
+    raise ValueError("未知 pit 指令（list/board/fight/medic）")
 
 
 def _ladder(level: int) -> tuple[int, int, int, float]:

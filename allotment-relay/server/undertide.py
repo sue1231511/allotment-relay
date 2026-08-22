@@ -1073,12 +1073,13 @@ async def undertide_ops(key_id: int, command: str) -> str:
         jailed = ut["jail_state"] == "serving"
         day = _day_id()
 
-        if jailed and verb not in ("jail", "status", "help"):
+        if jailed and verb not in ("jail", "status", "help", "board", "榜", "排行", "排行榜"):
             raise ValueError(utcopy.JAILED_LOCK_MSG)
 
         # 价值回收期：地下消费冻结（只留查看/还款/K室/苦力）
         if await _vr_frozen(ut) and verb not in (
-            "help", "status", "bank", "kroom", "jail", "cheer", "grudge", "well"
+            "help", "status", "bank", "kroom", "jail", "cheer", "grudge", "well",
+            "board", "榜", "排行", "排行榜",
         ):
             raise ValueError(utcopy.VR_FROZEN_MSG)
 
@@ -1296,6 +1297,12 @@ async def undertide_ops(key_id: int, command: str) -> str:
             if verb == "street":
                 return await um.street_ops(conn, s, ut)
             return await um.muscle_ops(conn, s, ut, verb, rest) + await _maybe_event(conn, s, ut)
+
+        if verb in ("board", "榜", "排行", "排行榜"):
+            if not ut["access"]:
+                raise ValueError(utcopy.NO_ACCESS_HINT)
+            from . import undertide_pit as up
+            return await up.pit_ops(conn, s, ut, "pit board")
 
         if verb in ("pit", "fight", "medic"):
             if not ut["access"]:
