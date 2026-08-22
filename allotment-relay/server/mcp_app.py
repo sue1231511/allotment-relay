@@ -72,7 +72,7 @@ mcp = MCPServer(
         "找人用 steward_ops 邻居。全服票榜/等级榜是 steward_ops board；alliance_ops board 是周目标贡献榜。"
         "bar_ops cheer 哄荔栀；undertide_ops cheer 哄潮下猫猫；star_ops 应援 哄小橘，三套互不占用。"
         "潮闻故事任务：tale_ops list / accept black_box_lover / status / explore beach / turnin / souvenirs。"
-        "回精力：kitchen_ops eat。作物/生鱼/野薄荷生吃安全；只有生肉可能感染，visit_ops clinic treat infection。"
+        "回精力：kitchen_ops eat 熟菜（回得最多，22 起）。水果/生鱼/野薄荷可生吃但回得少——水果连吃 5 口营养不良（吃熟菜/诊所可解）；蔬菜不能生吃；只有生肉可能感染，visit_ops clinic treat infection。"
     ),
 )
 
@@ -129,9 +129,9 @@ async def tote_ops(
     return await mux._call_ops(mux.tote_bundle, _kid(), command)
 
 
-@mcp.tool(description="厨房。command 写一整句，回精力用 eat，不要另造 eat_ops。作物/生鱼生吃安全；只有生肉可能感染。例子：menu · cook 甘蓝 鲭鱼 · eat 甘蓝 · shop board。shop board 是全服在营业小馆名单，不是流水。空 command=菜谱。不会就 help。")
+@mcp.tool(description="厨房。command 写一整句，回精力用 eat，不要另造 eat_ops。熟菜回精力最多（22 起）；水果可生吃但只回 4、连吃 5 口营养不良；生鱼/野薄荷可生吃；蔬菜不能生吃；只有生肉（兔肉/猪肉）可能感染。例子：menu · cook 甘蓝 鲭鱼 · eat 鲭鱼 · eat 芒果 · shop board。shop board 是全服在营业小馆名单，不是流水。空 command=菜谱。不会就 help。")
 async def kitchen_ops(
-    command: Annotated[str, Field(description="子命令整句。menu=菜谱（空也是）；cook 蒜蓉生蚝=定点菜；cook 甘蓝 鲭鱼=自由组合；eat 甘蓝=生吃作物（安全）；vend 菜名；store 菜名；shop board|open|卖掉；help。shop board=谁在营业。不要发明 eat_ops。")] = "",
+    command: Annotated[str, Field(description="子命令整句。menu=菜谱（空也是）；cook 蒜蓉生蚝=定点菜；cook 甘蓝 鲭鱼=自由组合；eat 鲭鱼=生吃（安全）；eat 芒果=生吃水果（只回 4 精力，连吃 5 口营养不良）；蔬菜不能生吃，先 cook/brew；vend 菜名；store 菜名；shop board|open|卖掉；help。shop board=谁在营业。不要发明 eat_ops。")] = "",
 ) -> str:
     return await mux._call_ops(mux.kitchen_bundle, _kid(), command)
 
@@ -143,7 +143,7 @@ async def alliance_ops(
     return await mux._call_ops(mux.alliance_bundle, _kid(), command)
 
 
-@mcp.tool(description="访客：NPC、栗栗摊、Tt酱杂货、诊所、沿海旧史。command 写一整句。例子：tt catalog · tt buy 竹钓竿 · lili scan · lore scan · clinic treat infection。lore 扫到的是旧史文本，不是收集品。作物生吃不用治。深坑伤走 undertide_ops medic。不会就 help。")
+@mcp.tool(description="访客：NPC、栗栗摊、Tt酱杂货、诊所、沿海旧史。command 写一整句。例子：tt catalog · tt buy 竹钓竿 · lili scan · lore scan · clinic treat infection。lore 扫到的是旧史文本，不是收集品。水果当饭吃会营养不良，诊所能治。深坑伤走 undertide_ops medic。不会就 help。")
 async def visit_ops(
     command: Annotated[str, Field(description="子命令整句。list / tt catalog / tt buy 锄头 / tt buy 竹钓竿 / lili scan / shaonian fortune / lore scan / clinic status / treat infection / help。lore 是文本不是收集品。treat 可省略 clinic。不要发明 shop_ops。")] = "",
 ) -> str:

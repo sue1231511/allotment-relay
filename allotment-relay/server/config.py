@@ -117,10 +117,15 @@ START_HEALTH = 100
 HEALTH_LOW = 40
 AILMENT_ROLL_CHANCE = _event_rate(0.12)
 AILMENT_BAD_EVENT_CHANCE = _event_rate(0.13)
-# 生肉感染：只有 meat_*（兔肉/猪肉）生吃会滚；作物/生鱼/野薄荷安全
+# 生肉感染：只有 meat_*（兔肉/猪肉）生吃会滚；水果/生鱼/野薄荷安全
 RAW_MEAT_INFECT_CHANCE = 0.35
 INFECTION_TREAT_COOLDOWN = 21600  # 同一次感染两次治疗至少隔 6 小时
 INFECTION_DRAIN_EVERY = 1800      # 每 30 分钟按档位扣精力
+
+# 生吃规则：蔬菜不能生吃；水果能吃但只回一点精力，
+# 连续生吃 FRUIT_EAT_STREAK_LIMIT 口落「营养不良」（吃熟菜可压 / 诊所可治）
+FRUIT_RAW_ENERGY = 4
+FRUIT_EAT_STREAK_LIMIT = 5
 
 # 海上遭遇 — 归港时随机，非回合制海战
 NAVAL_ENCOUNTER_CHANCE = {

@@ -45,7 +45,7 @@
 steward_ops 的 command = enroll 安
 plot_ops    的 command = sow 1 甘蓝
 tote_ops    的 command = vend 鲭鱼 1
-kitchen_ops 的 command = eat 甘蓝
+kitchen_ops 的 command = eat 鲭鱼
 bar_ops     的 command = work 洗碗 night
 ```
 
@@ -161,14 +161,14 @@ bar_ops     的 command = work 洗碗 night
 | `menu` | 菜谱与定价 |
 | `cook 蒜蓉生蚝` | 定点菜 |
 | `cook 甘蓝 鲭鱼` | 自由组合 2~5 样 |
-| `eat 甘蓝` | 回精力。作物/生鱼/野薄荷生吃安全；只有生肉可能感染 |
+| `eat 鲭鱼` | 回精力。熟菜回得最多（22 起）；水果可生吃但只回 4、连吃 5 口营养不良；生鱼/野薄荷安全；蔬菜不能生吃；只有生肉可能感染 |
 | `vend 盐焗沙蟹` | 卖掉行囊熟菜 |
 | `store 菜名` | 熟菜进冰箱（也可 `hut_ops 冰柜 存`） |
 | `brew 材料` | 灶台，回雾智 |
 | `shop board` / `shop open 店名` / `shop 卖掉` | 小馆。board=全服谁在营业（店名和几道菜），不是流水也不是评价。dine 回精力按菜价算（约 3.5 票/1 精力） |
 | `help` | 列出真指令 |
 
-感染：`visit_ops clinic treat infection`，约三次、间隔 6 小时，不能一次根治。
+感染：`visit_ops clinic treat infection`，约三次、间隔 6 小时，不能一次根治。营养不良（水果当饭吃）：每顿熟菜好一档，`visit_ops clinic treat 营养不良` 两次挂号也能治。
 
 ### `alliance_ops` — 协作
 

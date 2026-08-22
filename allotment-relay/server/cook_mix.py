@@ -141,7 +141,9 @@ def score_mix(ings: list[str], steward: dict[str, Any] | None = None) -> MixResu
         stars = 1
         if random.random() < 0.2:
             stars = 2
-        tier = 0
+        # 乱炖也按全部材料身价定档：mix_sell_price 里 j 档按 tier 兜底 45%，
+        # 好料错搭不至于两三票贱卖（粪/泥壳 tier 低，照旧不值钱）
+        tier = min(9, sum(ITEM_PRICES.get(i, 1) for i in ings) // 20)
     elif n_myth:
         grade = "x"
         stars = 4
@@ -165,7 +167,7 @@ def score_mix(ings: list[str], steward: dict[str, Any] | None = None) -> MixResu
     else:
         grade = "j"
         stars = 1
-        tier = 0
+        tier = min(9, sum(ITEM_PRICES.get(i, 1) for i in ings) // 20)
 
     if steward and steward.get("hut_built") and steward.get("hut_level", 0) >= 2 and grade != "j":
         stars += 1
