@@ -48,6 +48,11 @@ async def _test_steward_dashboard_api() -> None:
     assert data["tickets"] == 120, data
     assert "parcels" in data and len(data["parcels"]) >= 3, data
     assert data["meter_lines"]["bar_duty"], data
+    assert "shadow" in data, data
+    assert data["shadow"]["rep"] == 10, data
+    assert data["shadow"]["tier"], data
+    assert "status" in data and data["status"]["flags"], data
+    assert data["meters"]["shadow_rep"] == 10, data
 
 
 if __name__ == "__main__":

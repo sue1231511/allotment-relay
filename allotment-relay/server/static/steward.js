@@ -52,7 +52,6 @@ function clearSavedKey() {
 function setSavedUi(hasKey) {
   document.getElementById('steward-forget').classList.toggle('hidden', !hasKey);
   document.getElementById('steward-refresh').classList.toggle('hidden', !hasKey);
-  document.getElementById('steward-saved-hint').classList.toggle('hidden', !hasKey);
 }
 
 async function fetchDashboard(apiKey, { scroll = true } = {}) {
@@ -144,6 +143,10 @@ function renderDashboard(data, { scroll = true } = {}) {
   if (data.flags.eatery_open) flags.push('小馆');
   if (data.flags.boat) flags.push('有船');
 
+  const shadow = data.shadow || {};
+  const shadowRep = shadow.rep != null ? shadow.rep : (data.meters && data.meters.shadow_rep) || 0;
+  const shadowTier = shadow.tier ? ` · ${esc(shadow.tier)}` : '';
+
   document.getElementById('hero').innerHTML = `
     <div class="steward-hero-grid">
       <div class="steward-hero-main">
@@ -161,6 +164,11 @@ function renderDashboard(data, { scroll = true } = {}) {
         <div class="steward-stat-tile highlight">
           <span class="steward-stat-label">工分票</span>
           <strong class="steward-stat-value">${data.tickets}</strong>
+        </div>
+        <div class="steward-stat-tile">
+          <span class="steward-stat-label">影信</span>
+          <strong class="steward-stat-value">${shadowRep}</strong>
+          <span class="steward-stat-sub">${esc(shadow.tier || '')}</span>
         </div>
         <div class="steward-stat-tile">
           <span class="steward-stat-label">等级</span>
@@ -183,14 +191,33 @@ function renderDashboard(data, { scroll = true } = {}) {
     meterBar('饱食', m.satiety, 100, 'sand'),
     meterBar('雾智', m.mist_wit, 100, 'sea'),
     meterBar('档信', m.standing, 100, 'green'),
+    meterBar('影信', shadowRep, 100, 'ink'),
     meterBar('健康', m.health, 100, 'rose'),
     meterBar('精力', m.energy, m.energy_max || 100, 'ink'),
-  ].join('') + `
+  ].join('');
+
+  const status = data.status || {};
+  const statusFlags = (status.flags || []).map(f =>
+    `<span class="steward-status-flag tone-${esc(f.tone || 'soft')}">${esc(f.label)}</span>`
+  ).join('');
+  const ailmentHtml = (status.ailments || []).length
+    ? `<div class="steward-ailments">${status.ailments.map(a =>
+        `<span class="steward-ailment">${esc(a.emoji || '')}${esc(a.name)}${a.stage ? `·${esc(a.stage)}` : ''}</span>`
+      ).join('')}</div>`
+    : '';
+  const lines = data.meter_lines || {};
+  document.getElementById('status').innerHTML = `
+    <div class="steward-status-flags">${statusFlags || '<span class="steward-status-flag tone-ok">状态正常</span>'}</div>
+    ${status.locked_ops ? '<p class="steward-status-lock">份地 / 出海 / 行囊已锁（酒吧考勤逾期）</p>' : ''}
     <div class="steward-meter-notes">
-      <p>${esc(data.meter_lines.energy)}</p>
-      <p>${esc(data.meter_lines.bar_duty)}</p>
+      ${lines.survival ? `<p>${esc(lines.survival)}</p>` : ''}
+      ${lines.health ? `<p>${esc(lines.health)}</p>` : ''}
+      ${lines.energy ? `<p>${esc(lines.energy)}</p>` : ''}
+      ${lines.bar_duty ? `<p>${esc(lines.bar_duty)}</p>` : ''}
+      ${shadow.tier_desc ? `<p class="steward-shadow-desc">影信 ${shadowRep}${shadowTier} — ${esc(shadow.tier_desc)}</p>` : ''}
       ${data.voyage ? `<p class="steward-note-voyage">⛵ ${esc(data.voyage)}</p>` : ''}
     </div>
+    ${ailmentHtml}
   `;
 
   const marketPct = data.market.cap
@@ -204,7 +231,7 @@ function renderDashboard(data, { scroll = true } = {}) {
           <span class="steward-incident-cost">${i.repair_tickets} 票</span>
         </div>
       `).join('')
-    : '<p class="steward-empty">无未处理意外，今天挺太平。</p>';
+    : '<p class="steward-empty">无未处理意外</p>';
 
   document.getElementById('ops').innerHTML = `
     <div class="steward-ops-block">
@@ -234,7 +261,7 @@ function renderDashboard(data, { scroll = true } = {}) {
            <em>×${i.qty}</em>
          </span>
        `).join('')}</div>`
-    : '<p class="steward-empty">行囊是空的，去种地或赶海吧。</p>';
+    : '<p class="steward-empty">行囊是空的</p>';
 
   document.getElementById('gifts').innerHTML = data.gifts.length
     ? data.gifts.map(g => `
@@ -249,7 +276,7 @@ function renderDashboard(data, { scroll = true } = {}) {
           </div>
         </article>
       `).join('')
-    : '<p class="steward-empty">还没有收礼或酒吧打赏记录。</p>';
+    : '<p class="steward-empty">暂无收礼或打赏</p>';
 
   if (scroll) {
     document.getElementById('steward-dashboard').scrollIntoView({ behavior: 'smooth', block: 'start' });

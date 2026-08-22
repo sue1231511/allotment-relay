@@ -6,8 +6,31 @@ import aiosqlite
 from typing import Any
 
 from . import bar, db, energy, events, farming, health, land, ranks, survival, world
+from . import undertide
+from . import undertide_copy as utcopy
 from .catalog import CROPS, ITEM_NAMES
 from . import market as market_mod
+
+
+def _status_flags(ut: dict[str, Any], debt_total: int, vr_frozen: bool) -> list[dict[str, str]]:
+    """AI 当前状态标签（给网页用，不含操作指引）。"""
+    flags: list[dict[str, str]] = []
+    if ut.get("jail_state") == "serving":
+        flags.append({"key": "jail", "label": "服刑中", "tone": "warn"})
+    if ut.get("k_room"):
+        flags.append({"key": "kroom", "label": "K 室待见", "tone": "warn"})
+    if vr_frozen:
+        flags.append({"key": "vr", "label": "价值回收中", "tone": "warn"})
+    if debt_total > 0:
+        flags.append({"key": "debt", "label": f"欠债 {debt_total} 票", "tone": "mid"})
+    busted = int(ut.get("busted_count") or 0)
+    if busted:
+        flags.append({"key": "busted", "label": f"案底 {busted}", "tone": "mid"})
+    if not ut.get("access"):
+        flags.append({"key": "surface", "label": "未下井", "tone": "soft"})
+    elif not flags:
+        flags.append({"key": "ok", "label": "潮下正常", "tone": "ok"})
+    return flags
 
 
 async def fetch_dashboard(api_key: str) -> dict[str, Any]:
@@ -36,6 +59,8 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
             """,
             (s["id"],),
         )).fetchone()
+        ut = await undertide._ensure_ut(conn, s["id"])
+        _, debt_total = await undertide._bank_summary(conn, s)
         await conn.commit()
 
     gifts = await db.list_received_gifts(s["id"], 8)
@@ -136,6 +161,20 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
             left = max(0, voyage[1] - db.now())
             voyage_view = f"{route} · {left // 60} 分后归港"
 
+    shadow_rep = int(ut.get("shadow_rep") or 0)
+    tier, _, _ = undertide._rep_tier(shadow_rep)
+    vr_frozen = bool(ut.get("vr_until")) and db.now() < int(ut.get("vr_until") or 0)
+    status_flags = _status_flags(ut, debt_total, vr_frozen)
+    ailment_views = [
+        {
+            "key": a.get("key") or a.get("ailment_key") or "",
+            "name": a.get("name") or "",
+            "emoji": a.get("emoji") or "",
+            "stage": a.get("stage_name") or "",
+        }
+        for a in ailments[:8]
+    ]
+
     return {
         "name": s["name"],
         "badge": s["badge"],
@@ -152,12 +191,29 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
             "health": int(s.get("health") or 0),
             "energy": int(s.get("energy") or 0),
             "energy_max": 100,
+            "shadow_rep": shadow_rep,
         },
         "meter_lines": {
             "survival": survival.meter_line(s),
             "health": health.meter_line(s, ailments),
             "energy": energy.meter_line(s, ailments),
             "bar_duty": bar.duty_line(s),
+        },
+        "shadow": {
+            "rep": shadow_rep,
+            "tier": tier,
+            "tier_desc": utcopy.REP_TIER_DESC.get(tier, ""),
+            "access": bool(ut.get("access")),
+            "debt_total": debt_total,
+            "busted_count": int(ut.get("busted_count") or 0),
+            "jail": ut.get("jail_state") == "serving",
+            "k_room": bool(ut.get("k_room")),
+            "vr_frozen": vr_frozen,
+        },
+        "status": {
+            "flags": status_flags,
+            "ailments": ailment_views,
+            "locked_ops": bar.is_shift_overdue(s),
         },
         "climate": world.climate_line(),
         "pulse": pulse,
