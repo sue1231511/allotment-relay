@@ -102,6 +102,16 @@ async def _bump_rep(conn: aiosqlite.Connection, steward_id: int, delta: int) -> 
     )
 
 
+def _is_hijack_banned(ut: dict[str, Any]) -> bool:
+    return db.now() < int(ut.get("ban_until") or 0)
+
+
+_HIJACK_BANNED_VERBS = frozenset({
+    "market", "buy", "sell", "racket", "pit", "fight", "casino", "dice", "lantern", "draw",
+    "lottery", "muscle", "push", "hijack",
+})
+
+
 # ══ 地面 hooks ═════════════════════════════════════════════
 
 async def on_bar_order(
@@ -303,6 +313,7 @@ async def _cmd_buy(
         quality = "fake"
         head = utcopy.BUY_FAKE.get(row["item_key"]) or utcopy.pick(utcopy.BUY_FAKE_GENERIC)
         tail = "\n\n【假货】离柜，概不认账。"
+        await _bump_rep(conn, s["id"], -2)
 
     await conn.execute(
         "INSERT INTO ut_market_log (steward_id, day_id, item_key, quality, price, created_at) VALUES (?,?,?,?,?,?)",
@@ -318,6 +329,8 @@ async def _cmd_sell(
 ) -> str:
     """掌柜处出货（销赃 fence 一期基础版：只收 ut_ 物品）。"""
     key = item_token.strip()
+    if not key.startswith("ut_"):
+        raise ValueError("掌柜只收潮下货（ut_ 开头 key）。地上货走 tote_ops vend。")
     try:
         qty = max(1, int(qty_token))
     except ValueError:
@@ -860,10 +873,11 @@ async def _check_k_room(conn: aiosqlite.Connection, ut: dict[str, Any]) -> str:
     """影信 <5 且有逾期债 → K室触发（返回提示文案，否则空串）。"""
     if int(ut["shadow_rep"]) >= utcfg.UT_K_ROOM_REP or ut.get("k_room"):
         return ""
+    day = _day_id()
     conn.row_factory = aiosqlite.Row
     row = await (await conn.execute(
-        "SELECT COUNT(*) FROM ut_debts WHERE steward_id=? AND status='open'",
-        (ut["steward_id"],),
+        "SELECT COUNT(*) FROM ut_debts WHERE steward_id=? AND status='open' AND ? > due_day",
+        (ut["steward_id"], day),
     )).fetchone()
     if not row[0]:
         return ""
@@ -1075,6 +1089,9 @@ async def undertide_ops(key_id: int, command: str) -> str:
 
         if jailed and verb not in ("jail", "status", "help"):
             raise ValueError(utcopy.JAILED_LOCK_MSG)
+
+        if _is_hijack_banned(ut) and verb in _HIJACK_BANNED_VERBS:
+            raise ValueError(utcopy.HIJACK_BAN_MSG)
 
         # 价值回收期：地下消费冻结（只留查看/还款/K室/苦力）
         if await _vr_frozen(ut) and verb not in (

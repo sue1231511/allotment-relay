@@ -55,6 +55,13 @@ async def casino_ops(
     parts = rest.split()
     rep = int(ut["shadow_rep"])
     cap = await _bet_cap(conn, s["id"], rep)
+    day = _day_id()
+    if int(ut.get("casino_day") or 0) != day:
+        ut = {**ut, "casino_day": day, "casino_net": 0, "casino_lose": 0}
+    if int(ut.get("casino_lose") or 0) >= utcfg.UT_CASINO_LOSE_STREAK:
+        raise ValueError(
+            f"连输 {utcfg.UT_CASINO_LOSE_STREAK} 把了，看门人让你今晚收手。明天再来。"
+        )
 
     async def _take_bet(token: str) -> int:
         try:

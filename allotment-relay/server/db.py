@@ -1290,6 +1290,17 @@ async def init_db() -> None:
                 PRIMARY KEY (steward_id, day)
             )
             """,
+            "ALTER TABLE parcels ADD COLUMN tree_harvests INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE parcels ADD COLUMN tree_harvest_max INTEGER NOT NULL DEFAULT 0",
+            """
+            CREATE TABLE IF NOT EXISTS ut_daily_actions (
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                day_id INTEGER NOT NULL,
+                action TEXT NOT NULL,
+                count INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (steward_id, day_id, action)
+            )
+            """,
         ):
             try:
                 await db.execute(ddl)

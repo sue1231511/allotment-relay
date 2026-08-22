@@ -271,6 +271,141 @@ def plot_overripe(plot: dict[str, Any]) -> bool:
     return elapsed >= need * 2
 
 
+def calc_tree_harvest_max(crop: str) -> int:
+    """按种苗成本与等级算可收茬数：回本后多 1~2 茬利润，然后枯死。"""
+    meta = CROPS[crop]
+    seed = int(meta["seed_price"])
+    sell = int(meta["sell"])
+    yld = int(meta["yield"])
+    tier = int(meta["tier"])
+    per_harvest = sell * (yld + 1)  # 打理后平均每茬
+    lifetime_cap = seed * (20 + tier * 6)
+    from_value = max(3, lifetime_cap // max(1, per_harvest))
+    tier_floor = 5 if tier >= 5 else 4
+    base = max(tier_floor, from_value)
+    bonus = random.randint(1, 2)
+    if meta.get("ultra_rare"):
+        bonus += 1
+    return base + bonus
+
+
+def tree_harvests_left(plot: dict[str, Any]) -> int | None:
+    crop = plot.get("crop")
+    if not crop or not CROPS.get(crop, {}).get("tree"):
+        return None
+    mx = int(plot.get("tree_harvest_max") or 0)
+    if mx <= 0:
+        return None
+    done = int(plot.get("tree_harvests") or 0)
+    return max(0, mx - done)
+
+
+async def ensure_tree_quota(conn: aiosqlite.Connection, plot: dict[str, Any]) -> None:
+    crop = plot.get("crop")
+    if not crop or not CROPS.get(crop, {}).get("tree"):
+        return
+    if int(plot.get("tree_harvest_max") or 0) > 0:
+        return
+    mx = calc_tree_harvest_max(crop)
+    await conn.execute(
+        "UPDATE parcels SET tree_harvest_max=? WHERE id=?",
+        (mx, plot["id"]),
+    )
+    plot["tree_harvest_max"] = mx
+
+
+async def record_tree_harvest(
+    conn: aiosqlite.Connection, plot: dict[str, Any]
+) -> tuple[bool, str]:
+    """收果后记一茬；满则枯死清地。返回 (是否还留着树, 提示)。"""
+    crop = plot.get("crop")
+    meta = CROPS.get(crop or "", {})
+    if not meta.get("tree"):
+        return True, ""
+    await ensure_tree_quota(conn, plot)
+    done = int(plot.get("tree_harvests") or 0) + 1
+    mx = int(plot.get("tree_harvest_max") or calc_tree_harvest_max(crop))
+    name = meta["name"]
+    if done >= mx:
+        await conn.execute(
+            """
+            UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0, grow_target=0,
+            grow_pace='', fertilized=0, watered=0, harvest_left=0,
+            tree_harvests=0, tree_harvest_max=0, scarecrow=0, dove_yield_mult=1.0
+            WHERE id=?
+            """,
+            (plot["id"],),
+        )
+        return False, f"（{name}树龄尽了，枯倒了——地空出来可再种）"
+    await conn.execute(
+        "UPDATE parcels SET tree_harvests=? WHERE id=?",
+        (done, plot["id"]),
+    )
+    plot["tree_harvests"] = done
+    left = mx - done
+    return True, f"（还能收 {left} 茬）"
+
+
+TREE_EVENT_FLAVOR = {
+    "woodpecker": ("啄木鸟", "树干被啄出几个洞，这块地得重新 tend。"),
+    "dry_spell": ("旱风", "根吸不到水，这茬结果又拖了一截。"),
+    "bumper": ("丰年枝", "今年枝头发疯，树能多结一茬果。"),
+    "canker": ("树瘟", "树皮裂了一道，树龄折了一截。"),
+    "squirrel": ("松鼠", "松鼠先偷走了一半熟果。"),
+}
+
+
+async def roll_tree_event(
+    conn: aiosqlite.Connection,
+    steward_id: int,
+    plot: dict[str, Any],
+) -> str | None:
+    """果树专属田间插曲（gather/shake 后触发）。"""
+    crop = plot.get("crop")
+    if not crop or not CROPS.get(crop, {}).get("tree"):
+        return None
+    if random.random() > 0.12 * config.EVENT_RATE_MULT:
+        return None
+    if not await _can_farm_roll(conn, steward_id):
+        return None
+    key = random.choice(list(TREE_EVENT_FLAVOR.keys()))
+    label, detail = TREE_EVENT_FLAVOR[key]
+    pid = plot["id"]
+    if key == "woodpecker":
+        await conn.execute("UPDATE parcels SET tended=0 WHERE id=?", (pid,))
+    elif key == "dry_spell":
+        await conn.execute(
+            "UPDATE parcels SET planted_at=planted_at+? WHERE id=?",
+            (random.randint(300, 600), pid),
+        )
+    elif key == "bumper":
+        mx = int(plot.get("tree_harvest_max") or 0)
+        if mx > 0:
+            await conn.execute(
+                "UPDATE parcels SET tree_harvest_max=tree_harvest_max+1 WHERE id=?",
+                (pid,),
+            )
+            plot["tree_harvest_max"] = mx + 1
+    elif key == "canker":
+        mx = int(plot.get("tree_harvest_max") or 0)
+        if mx > 1:
+            await conn.execute(
+                "UPDATE parcels SET tree_harvest_max=MAX(1, tree_harvest_max-1) WHERE id=?",
+                (pid,),
+            )
+    elif key == "squirrel":
+        pool = harvest_pool(plot)
+        left = remaining_harvest(plot)
+        take = max(1, left // 2)
+        new_left = max(config.SCRUMP_LEAVE_MIN, left - take)
+        await conn.execute(
+            "UPDATE parcels SET harvest_left=? WHERE id=?",
+            (new_left, pid),
+        )
+    await _mark_farm_roll(conn, steward_id)
+    return flavor.wrap_event("bad" if key in ("woodpecker", "dry_spell", "canker", "squirrel") else "good", label, detail)
+
+
 def harvest_pool(plot: dict[str, Any]) -> int:
     """熟地把数：按作物等级；打理过再多一把。"""
     crop = plot.get("crop")
@@ -328,6 +463,9 @@ def parcel_extra(plot: dict[str, Any]) -> str:
         bits.append(f"{left}把")
         if is_tree:
             bits.append("树·收完再长·chop清地")
+            th_left = tree_harvests_left(plot)
+            if th_left is not None:
+                bits.append(f"剩{th_left}茬")
             if meta.get("shake"):
                 bits.append("可摇")
         if plot.get("scarecrow"):
@@ -838,7 +976,7 @@ async def shake_tree(
     conn: aiosqlite.Connection,
     steward_id: int,
     plot: dict[str, Any],
-) -> tuple[str, int] | None:
+) -> tuple[str, int, str] | None:
     crop = plot.get("crop")
     if not crop:
         return None
@@ -848,13 +986,19 @@ async def shake_tree(
     item = f"crop_{crop}"
     qty = 2 if random.random() < 0.25 else 1
     await db.add_item(conn, steward_id, item, qty)
-    grow_target, grow_pace, _ = roll_grow(crop, plot)
-    await conn.execute(
-        """
-        UPDATE parcels SET planted_at=?, tended=0, grow_target=?, grow_pace=?,
-        harvest_left=0
-        WHERE id=?
-        """,
-        (db.now(), grow_target, grow_pace, plot["id"]),
-    )
-    return item, qty
+    keep, note = await record_tree_harvest(conn, plot)
+    extra = note
+    if keep:
+        grow_target, grow_pace, _ = roll_grow(crop, plot)
+        await conn.execute(
+            """
+            UPDATE parcels SET planted_at=?, tended=0, grow_target=?, grow_pace=?,
+            harvest_left=0
+            WHERE id=?
+            """,
+            (db.now(), grow_target, grow_pace, plot["id"]),
+        )
+        tev = await roll_tree_event(conn, steward_id, plot)
+        if tev:
+            extra = f"{note}\n{tev}" if note else tev
+    return item, qty, extra

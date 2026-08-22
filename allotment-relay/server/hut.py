@@ -652,7 +652,8 @@ async def cabinet_put(s: dict[str, Any], item: str, qty: int) -> str:
         stacked = have.get(item, 0)
         if stacked + qty > config.CABINET_STACK:
             raise ValueError(
-                f"{item_label(item)} 这格最多 {config.CABINET_STACK}，已有 {stacked}"
+                f"{item_label(item)} 这格最多叠 {config.CABINET_STACK} 份（同种货栈上限，防单格囤货），"
+                f"已有 {stacked}。多出来的先 vend 或 cook，或换另一种货占新格。"
             )
         if not await db.take_item(conn, s["id"], item, qty):
             raise ValueError("行囊没有这么多")
@@ -760,9 +761,10 @@ async def cabinet_command(s: dict[str, Any], rest: list[str]) -> str:
 
 
 async def bed_rest(s: dict[str, Any]) -> str:
-    """岸柏板床：一觉回精力。每天一次（游戏日换班刷新）；带病上限自动收窄。"""
+    """板床/升级床：一觉回精力（床越好略多，主要是好看）。每天一次换班刷新。"""
     from . import energy as energy_mod
     from . import survival
+    from .catalog import bed_sleep_energy, is_bed_key
 
     if not s.get("hut_built"):
         raise ValueError(
@@ -770,14 +772,19 @@ async def bed_rest(s: dict[str, Any]) -> str:
         )
     async with db.connect() as conn:
         cur = await conn.execute(
-            "SELECT 1 FROM hut_fittings WHERE steward_id=? AND item_key='bed'",
-            (s["id"],),
+            "SELECT item_key FROM hut_fittings WHERE steward_id=?", (s["id"],)
         )
-        if not await cur.fetchone():
+        bed_key = None
+        for (key,) in await cur.fetchall():
+            if is_bed_key(key):
+                bed_key = key
+                break
+        if not bed_key:
             raise ValueError(
                 "小屋里还没有床 — hut_ops buy bed → install hard_N bed"
-                f"（{HUT_HARD['bed']['cost']} 票，硬装槽。睡一觉回 {config.BED_REST_ENERGY} 精力）"
+                f"（{HUT_HARD['bed']['cost']} 票起，硬装槽）"
             )
+        sleep_energy = bed_sleep_energy(bed_key)
         row = await (await conn.execute(
             "SELECT bed_rest_at FROM stewards WHERE id=?", (s["id"],)
         )).fetchone()
@@ -787,9 +794,9 @@ async def bed_rest(s: dict[str, Any]) -> str:
             hours = wait // 3600 + (1 if wait % 3600 else 0)
             raise ValueError(
                 f"今天睡过了，潮声换班后再来（约 {hours} 小时后）"
-                f"（一觉回 {config.BED_REST_ENERGY} 精力，每天一次）"
+                f"（一觉回 {sleep_energy} 精力，每天一次）"
             )
-        restored = await energy_mod.restore(conn, s["id"], config.BED_REST_ENERGY)
+        restored = await energy_mod.restore(conn, s["id"], sleep_energy)
         if restored <= 0:
             raise ValueError("精力是满的，不困。先干活去")
         await conn.execute(
@@ -797,8 +804,9 @@ async def bed_rest(s: dict[str, Any]) -> str:
         )
         await survival.bump(conn, s["id"], satiety=8)
         await conn.commit()
+    bed_name = HUT_HARD.get(bed_key, {}).get("name", "床")
     return (
-        f"一觉睡到潮声换班（精力 +{restored}，饱食 +8）。"
+        f"在{bed_name}上睡到潮声换班（精力 +{restored}，饱食 +8）。"
         "今天先这样；明天换班后还能再睡。饿醒不算病，记得正经吃饭。"
     )
 
@@ -940,8 +948,8 @@ async def hut_ops(key_id: int, command: str) -> str:
         if not s.get("hut_built"):
             raise ValueError("先 build 小屋")
         lvl = s.get("hut_level") or 1
-        if lvl >= 3:
-            return "已是联盟小宅，没法再扩了——换软装吧"
+        if lvl >= max(HUT_LEVELS):
+            return "已是最高档小屋了——换软装或升级床吧"
         nxt = HUT_LEVELS[lvl + 1]
         cost = nxt["upgrade"]
         async with db.connect() as conn:

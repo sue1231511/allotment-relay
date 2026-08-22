@@ -17,22 +17,23 @@ from .catalog import (
 )
 
 TRIGGER_AILMENTS: dict[str, list[str]] = {
-    "tend": ["sprain", "backache", "blister", "cut", "allergy"],
-    "gather": ["sprain", "backache", "blister", "allergy"],
+    "tend": ["sprain", "backache", "blister", "cut", "allergy", "exhaustion", "damp_lung"],
+    "gather": ["sprain", "backache", "blister", "allergy", "exhaustion", "toothache"],
     "sow": ["sprain", "backache", "cut"],
-    "forage": ["allergy", "blister", "cut"],
-    "net": ["jelly_sting", "cold", "shell_scratch"],
+    "forage": ["allergy", "blister", "cut", "dehydration"],
+    "net": ["jelly_sting", "cold", "shell_scratch", "dehydration"],
     "pen_feed": ["cut", "blister"],
     "pen_harvest": ["cut", "crab_pinch"],
     "pen_stock": ["cut"],
-    "voyage_depart": ["cold", "food_poison", "backache"],
+    "voyage_depart": ["cold", "food_poison", "backache", "damp_lung"],
     "voyage_return": ["cold", "food_poison", "backache"],
     "guild": ["blister"],
-    "brew": ["food_poison"],
-    "beach": ["shell_scratch", "sunburn", "crab_pinch"],
+    "brew": ["food_poison", "damp_lung"],
+    "beach": ["shell_scratch", "sunburn", "crab_pinch", "dehydration"],
     "bar_shift": ["hangover"],
     "naval_bad": ["cold", "food_poison", "backache"],
     "farm_wild": ["sprain", "allergy", "blister"],
+    "insomnia": ["insomnia"],
 }
 
 
@@ -208,6 +209,30 @@ async def maybe_infect_raw_meat(
     if force is not True and random.random() >= config.RAW_MEAT_INFECT_CHANCE:
         return None
     return await inflict(conn, steward_id, "infection", source="raw_meat")
+
+
+async def maybe_insomnia(conn: aiosqlite.Connection, steward_id: int) -> str | None:
+    """连续多天没睡床 → 失眠。"""
+    row = await (await conn.execute(
+        "SELECT bed_rest_at FROM stewards WHERE id=?", (steward_id,)
+    )).fetchone()
+    last = int(row[0] if row else 0)
+    if last and db.day_id() - db.day_id(last) < 3:
+        return None
+    return await maybe_roll_ailment(
+        conn, steward_id, "insomnia", pool=["insomnia"], chance=0.16, source="skip_bed",
+    )
+
+
+async def maybe_dehydration(conn: aiosqlite.Connection, steward_id: int) -> str | None:
+    row = await (await conn.execute(
+        "SELECT satiety FROM stewards WHERE id=?", (steward_id,)
+    )).fetchone()
+    if not row or int(row[0]) >= config.SATIETY_LOW:
+        return None
+    return await maybe_roll_ailment(
+        conn, steward_id, "dehydration", pool=["dehydration"], chance=0.14, source="low_satiety",
+    )
 
 
 async def maybe_roll_ailment(
