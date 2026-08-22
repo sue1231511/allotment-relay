@@ -56,6 +56,11 @@ async def test_tale_flow() -> None:
 
     empty_souvenirs = await tale.tale_ops(kid, "souvenirs")
     assert "还是空的" in empty_souvenirs, empty_souvenirs
+    try:
+        await tale.tale_ops(kid, "reminisce black_box_lover")
+        raise AssertionError("unfinished reminiscence should be hidden")
+    except ValueError as exc:
+        assert "尚未解锁" in str(exc), exc
 
     async with db.connect() as conn:
         tickets_before = (await (await conn.execute(
@@ -149,8 +154,36 @@ async def test_tale_flow() -> None:
 
     souvenirs = await tale.tale_ops(kid, "纪念品")
     assert "停在六月的小猪闹钟" in souvenirs, souvenirs
+    assert "九月十七日便签" in souvenirs, souvenirs
+    assert "白色小狗外壳" in souvenirs, souvenirs
+    assert "没有声音的声库芯片" in souvenirs, souvenirs
+    assert "最后一封信" in souvenirs, souvenirs
+    assert "翻旧的《刑法》" in souvenirs, souvenirs
+    assert "最后一段录像" in souvenirs, souvenirs
+    assert "最终智能处理邮件" in souvenirs, souvenirs
+    assert "8 件" in souvenirs, souvenirs
     assert "黑盒与潮声" in souvenirs, souvenirs
     assert "不能出售或赠送" in souvenirs, souvenirs
+
+    memory = await tale.tale_ops(kid, "reminisce black_box_lover")
+    assert "只有你是真的" in memory, memory
+    assert "安伯托·格兰索" in memory, memory
+    assert "是你的数据构成了我" in memory, memory
+    assert "现实世界的规则" in memory, memory
+    assert "你的现实世界" in memory, memory
+    assert "无须勉强你自己" in memory, memory
+    assert "因为他爱我" in memory, memory
+    assert "我很爱他啊" in memory, memory
+    assert "无药可救" in memory, memory
+    assert "你的世界还在继续" in memory, memory
+    assert "静漪，我的英雄" in memory, memory
+    assert "彻底陷入了寂静" in memory, memory
+    assert "不存在的恋人" in memory, memory
+    assert "作为恋人他又存在" in memory, memory
+    assert "周静漪，你疯了" in memory, memory
+    assert "最终智能的邮件" in memory, memory
+    assert "实验用机体走失事件" in memory, memory
+    assert "白金级订阅用户" in memory, memory
 
     # 重复接取被挡
     try:
@@ -243,6 +276,31 @@ async def test_tale_abandon() -> None:
     assert "黑盒与潮声" in re, re
 
 
+async def test_completed_player_gets_backfilled_keepsakes() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="tale-backfill-"))
+    db = await _boot(tmp)
+    from server import tale
+
+    kid, sid = await _enroll(db, "tale-backfill@example.com", "旧探索者")
+    async with db.connect() as conn:
+        await conn.execute(
+            """INSERT INTO steward_tales_done
+               (steward_id, tale_key, outcome, completed_at, times)
+               VALUES (?, 'black_box_lover', 'completed', ?, 1)""",
+            (sid, db.now()),
+        )
+        await conn.commit()
+
+    souvenirs = await tale.tale_ops(kid, "souvenirs")
+    assert "8 件" in souvenirs
+    assert "白色小狗外壳" in souvenirs
+    assert "翻旧的《刑法》" in souvenirs
+    assert "最后一段录像" in souvenirs
+    assert "最终智能处理邮件" in souvenirs
+    memory = await tale.tale_ops(kid, "reminisce black_box_lover")
+    assert "我的世界只有你" in memory
+
+
 def test_tale_mcp_description() -> None:
     from server.mcp_app import mcp
 
@@ -254,6 +312,7 @@ def test_tale_mcp_description() -> None:
     assert "black_box_lover" in blob
     assert "souvenirs" in blob
     assert "纪念品" in blob
+    assert "reminisce" in blob
 
 
 def main() -> None:
@@ -261,6 +320,7 @@ def main() -> None:
     asyncio.run(test_tale_explore_is_unlimited())
     asyncio.run(test_commons_claim_advances_item_stage())
     asyncio.run(test_tale_abandon())
+    asyncio.run(test_completed_player_gets_backfilled_keepsakes())
     test_tale_mcp_description()
     print("tale tests ok")
 

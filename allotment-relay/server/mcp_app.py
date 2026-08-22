@@ -180,9 +180,9 @@ async def star_ops(
     return await mux._call_ops(star.star_ops, _kid(), command)
 
 
-@mcp.tool(description="潮闻 — 故事探索任务。按 status/hint 指定地点探索：阶段2 explore sea 找锈铁，阶段5/6 explore beach 找任务物品。匹配阶段每次耗5精力、不限次数；错误地点不扣。每阶段30票×6，通关额外50票并发永久纪念品。例子：list · accept black_box_lover · explore sea。空 command=list；不会就 help。")
+@mcp.tool(description="潮闻 — 故事探索任务。按 status/hint 指定地点探索。完成《黑盒与潮声》自动解锁8件剧情收藏（永久纪念品），老玩家无需重玩；reminisce 读通关后回忆。例子：list · accept black_box_lover · souvenirs · reminisce black_box_lover。原六阶段和230票不变。空 command=list；不会就 help。")
 async def tale_ops(
-    command: Annotated[str, Field(description="子命令整句。list / accept 任务key / status / explore beach|sea|plot|bar / turnin / abandon 任务key / board / souvenirs / help。阶段2用 explore sea；阶段5/6用 explore beach。匹配阶段每次耗5精力且不限次数；错误地点不扣。空=list。")] = "list",
+    command: Annotated[str, Field(description="子命令整句。list / accept 任务key / status / explore beach|sea|plot|bar / turnin / abandon 任务key / board / souvenirs / reminisce black_box_lover / help。souvenirs=已通关故事收藏；reminisce=通关后补充回忆。原六阶段和230票不变。空=list。")] = "list",
 ) -> str:
     from . import tale
     return await mux._call_ops(tale.tale_ops, _kid(), command)

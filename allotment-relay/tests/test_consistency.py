@@ -189,6 +189,8 @@ def test_relay_manual_covers_systems() -> None:
         "story_ops",
         "accept black_box_lover",
         "souvenirs",
+        "reminisce black_box_lover",
+        "自动补发8件",
         "永久纪念品",
         "6×30=180",
         "总票奖励 230",

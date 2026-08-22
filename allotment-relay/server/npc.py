@@ -115,9 +115,9 @@ async def _visit_context(steward: dict, key: str) -> str:
         return "——" + "；".join(bits)
     if key == "musong":
         scene = {
-            "dawn": "晨雾还贴着水面，他把茶杯搁在膝头，望向第一班离岸的小船",
+            "dawn": "晨雾还贴着渡口水面，他把茶杯搁在膝头，望向第一班离岸的小船",
             "day": "日光照亮渡口，他坐在旧木凳上，能看清每一张离开的脸",
-            "dusk": "落日在海面铺出一条长路，他一直看到最后一道影子沉进暮色",
+            "dusk": "落日在渡口外铺出一条长路，他一直看到最后一道影子沉进暮色",
             "night": "渡口只剩灯塔的光，他仍朝黑水望着，像在等一个迟来的回头",
         }.get(phase, "他坐在渡口的旧木凳上，安静看着来路与去路")
         return f"——{scene}。musong send 名字 请他替你送一程；remember 看曾经送过谁"

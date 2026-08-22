@@ -34,7 +34,7 @@ async def test_musong_flow() -> None:
     listing = await npc.npc_ops(kid, "list")
     assert "目送人·阿槐" in listing and "musong send" in listing
     visit = await musong.musong_ops(kid, "visit")
-    assert "目送人·阿槐" in visit and "渡口" in visit
+    assert "目送人·阿槐" in visit and "渡口" in visit, visit
     sent = await mcp_dispatch.visit_bundle(kid, "musong send 安")
     assert "阿槐把“安”写在渡口的小册上" in sent
     assert "雾智 +2" in sent and "档信 +1" in sent

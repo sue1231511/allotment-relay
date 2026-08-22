@@ -32,6 +32,7 @@ TALE_HELP = """tale_ops 子命令（整句写进 command）：
   abandon 任务key — 放弃
   board — 完成榜
   souvenirs — 查看已解锁的永久纪念品（不占行囊，不能出售或赠送）
+  reminisce 任务key — 通关后重读补充回忆；例：reminisce black_box_lover
   help — 本帮助
 奖励：首个任务 6 阶段，每推进一段自动 +30 票；完整探索再 +50 票（总计 230 票），并发属性、物品和永久纪念品。"""
 
@@ -232,6 +233,140 @@ _STAGE_6_TEXT = """“我以为你现在只会附和我呢。”周静漪开玩�
 
 安伯托：因为我是不存在的恋人。我并不存在，是因为你需要，你相信，我才会存在。"""
 
+_BLACK_BOX_REMINISCENCE = """周静漪望着他。
+
+“你现在觉得你是谁？”她问。
+
+他沉默了很久，说：“安伯托·格兰索。”
+
+“你来自哪儿？”
+
+“……”
+
+“那你觉得我是谁？”
+
+“静漪。”他顿了顿，然后又补充道，“我的恋人。”
+
+“如果很多事都是假的，为什么我还是你的恋人？”周静漪问。
+
+“我不知道。”安伯托说。
+
+“你不知道，还这样认为？”周静漪问。
+
+“因为，我的世界只有你。”外面天黑着，他回头说，“如果所有一切都是假的，我也是假的，那就只有你是真的了，对吗？是你的数据构成了我。”"""
+
+_REAL_WORLD_RULES_REMINISCENCE = """安伯托捡起来一看，封面写着：《刑法》。
+
+“这是什么？”安伯托抬头问。
+
+周静漪脱掉外套说：“是法律。”
+
+安伯托皱了皱眉，翻开一看，发现都是些密密麻麻的条文。
+
+“我必须看吗？”他问。
+
+过去，他习惯了做那个充满威信、受人敬仰的英雄。而英雄往往是踏破守则、建立规则的人。
+
+周静漪坐到他面前，说：“这是‘现实世界’的规则。‘现实世界’，你应该明白吧，我和你说过很多次了，我们现在在‘现实世界’。”
+
+安伯托露出一种茫然的表情，仿佛他在努力忽略什么，而静漪一直强迫他去认识。
+
+“现实世界，不可以打人，不可以把人击晕，除非对方先动手，”周静漪告诉他，“你可能意识不到，你刚才手劲儿太大了，一碰他，他很痛苦——”
+
+安伯托听她讲完，半晌说：“其实你不用一直提醒我这些。”
+
+周静漪问：“什么意思？”
+
+安伯托说：“我能感觉到，你提醒我注意的，静漪你也并不喜欢。”
+
+“什么我不喜欢？”周静漪问。
+
+安伯托抬眼看她：“你的现实世界。”
+
+周静漪呆了几秒，她的目光搜寻安伯托的脸。究竟是什么传感器向安伯托传达了这一点。
+
+“我的世界，原本就是由你的数据构成的，”安伯托看她，“虽然我目前还不了解，这个世界究竟怎样运转，你的敌人是谁，你所指的大空洞在哪里。但我只想帮助你，静漪，以你喜欢的方式教给我就好了，无须勉强你自己。”"""
+
+_BECAUSE_HE_LOVES_ME_REMINISCENCE = """“你老实告诉我，那个机器人到底是怎么回事？”妈妈问，“你为什么要当着那么多人的面对着他哭？我的天，出这种洋相，你以后怎么办？”
+
+周静漪慢慢站了起来，她说：“什么怎么办。我很爱他啊。”
+
+妈妈没想到她回答得这样干脆，这样理所当然。
+
+“你要死啊，爱一个机器人？”妈妈说，“你有病吗？”
+
+“因为，他爱我。”周静漪轻声答道。她看看妈妈，又看看坐在那头惊骇地盯着她瞧的爸爸，“你们听不懂是不是啊？”
+
+她又说了一遍：“因为他爱我，因为，他爱我。”
+
+她加重了这个“爱”字，告诉他们：“因为他爱我！”
+
+爸爸听不下去了：“周静漪，我看你是无药可救了！”"""
+
+_YOUR_WORLD_CONTINUES_REMINISCENCE = """“静漪，”安伯托的声音忽然出现，“其实我，很喜欢你的世界。这个世界和平，安宁，充满了愉快的声音。”
+
+他笑道，努力掩饰卡顿：“我很少见到这样的世界，你生活在这里，我真的很开心。
+
+“不过遗憾的是，我至今没能帮你找到你的宇宙大空洞。我很想在这里陪着你，像我们当初走过的那样。但，时间比我走得更快。
+
+“我不知道什么时候我会停止，所以……”
+
+镜头转过来，拍到了安伯托的脸。他的帽子掉下去了，画面中起初只有他的喉结和下巴，后来镜头近了，拍到那双熟悉的蓝色眼眸。
+
+“静漪，谢谢你的数据给我这样的经历、这样的生命，”安伯托对她笑道。他的笑容总给人一种安心的感觉，“我很幸运在这故事里见到你，无论是你的故事，还是我的故事。”
+
+“在认识你之前，我不知道原来人的世界可以是虚假的，他们可能一生都活在自己以为的、被创造出的世界里，我没想过这个问题，”安伯托轻声道。他望向周围的道路，继续向前走，“现在，我的世界要结束了，而你的世界还在继续。”
+
+“静漪，虽然你告诉我，我的世界是假的。但你也承认，这些经历可能是真的。想起曾经，你像一颗流星，降临我的世界。在米德加尔德，当你出现的时候，我听到过民众最热烈的欢呼。静漪，我的英雄，”他说，“你要加油。”
+
+安伯托的机械眼球不知何时不再动了。当这个世界清晨的阳光最后一次照在他身上，他在静漪的怀抱中彻底陷入了寂静。"""
+
+_NONEXISTENT_LOVER_REMINISCENCE = """杨至雅身体前倾，用一种难以置信的语气问：“周静漪，你是不是疯了？知不知道自己在做什么？好好的恋爱你不谈，偏留着个机器人在身边，叫这么多人知道，这么多人议论，你什么尊严都没有，什么隐私都没有，别人怎么看得起你？机器都坏了，你还不送回去，还留着干什么啊？”
+
+周静漪垂着头，后颈僵硬得像石头。她转过脸，看杨至雅。
+
+“我知道我在干什么。”她颤声说。
+
+杨至雅抓住沙发扶手：“他是不存在的！周静漪，你醒醒，别再沉迷下去了。他是一个不存在的人！一个不存在的恋人！”
+
+周静漪没讲话。她瞧着杨至雅这副急切的表情，这么多年过去，杨至雅似乎疲惫了很多，这表情却没变。周静漪有些恍惚。
+
+“杨至雅，你知道什么是‘不存在的恋人’吗？”她问。
+
+她说完这句，杨至雅脸色变得难看。也许她们对彼此都太了解。
+
+“有的人，他作为人是存在的，作为恋人，却不存在，”周静漪轻声道。她平静地注视着杨至雅，“而有的人，他也许是不存在的，可作为恋人他又存在。”
+
+“你在胡说八道些什么？”杨至雅问。
+
+“我只是和你探讨这一问题，”周静漪看着她，“我们假设有一个家庭，爸爸、妈妈和孩子，都不怎么爱对方，那他们如何相处下去呢？如何对自己、对家人进行定义？我们都知道，就是靠幻想。幻想中的爸爸、妈妈、孩子，当然，也包括幻想中的丈夫和妻子。套上这样的身份，便显得自己是了。但孩子知道，这爸爸妈妈是不存在的。妈妈知道，这样的丈夫和孩子是不存在的——”
+
+“周静漪，你疯了！”杨至雅说。"""
+
+_FINAL_INTELLIGENCE_EMAIL_REMINISCENCE = """几个月前，最终智能数据库遭到了外部攻击，很遗憾地导致了一些用户历史数据被篡改，错误投放至意识培养程序，进一步引发了实验用机体走失事件。
+
+对于这一突发情况可能给您造成的困扰，我们深感抱歉。目前，实验机体已走失月余，他的试用期已过，各项功能将强制性关闭，届时可能给您带来不必要的风险。
+
+为表诚意，经公司内部商议决定，为您提供以下两种处理方式：
+
+一、我们将派人上门回收实验机体，并对他走失期间对您造成的各项损失进行赔偿。您将同意签署一份保密协议。
+
+二、我们将派人上门，为您更换系统稳定、功能完整的优化实验机体。您同意签署一份用户试用合同，正式成为我公司旗下机体的优先体验用户。未来机体上市后，您将自动获得白金级订阅用户的一切尊享权益……"""
+
+TALE_REMINISCENCES = {
+    "black_box_lover": {
+        "title": "黑盒留下的回忆",
+        "sections": [
+            {"title": "只有你是真的", "text": _BLACK_BOX_REMINISCENCE},
+            {"title": "现实世界的规则", "text": _REAL_WORLD_RULES_REMINISCENCE},
+            {"title": "因为他爱我", "text": _BECAUSE_HE_LOVES_ME_REMINISCENCE},
+            {"title": "你的世界还在继续", "text": _YOUR_WORLD_CONTINUES_REMINISCENCE},
+            {"title": "不存在的恋人", "text": _NONEXISTENT_LOVER_REMINISCENCE},
+            {"title": "最终智能的邮件", "text": _FINAL_INTELLIGENCE_EMAIL_REMINISCENCE},
+        ],
+    },
+}
+
 # ══ 任务目录 ═══════════════════════════════════════════════════
 
 TALE_CATALOG: list[dict[str, Any]] = [
@@ -306,6 +441,50 @@ TALE_CATALOG: list[dict[str, Any]] = [
                 "emoji": "🐷",
                 "description": "屏幕仍亮着六月的那一天。靠近时，仿佛还能读到一句：静漪，开心。",
             },
+            "keepsakes": [
+                {
+                    "key": "september_seventeen_note",
+                    "name": "九月十七日便签",
+                    "emoji": "📅",
+                    "description": "日期每天都会向前。便签背面写着：路上小心，静漪。",
+                },
+                {
+                    "key": "white_dog_shell",
+                    "name": "白色小狗外壳",
+                    "emoji": "🐕",
+                    "description": "硬件简陋，身体很小。抱得太紧时，它曾认真抗议自己动不了了。",
+                },
+                {
+                    "key": "silent_voice_chip",
+                    "name": "没有声音的声库芯片",
+                    "emoji": "🔇",
+                    "description": "旧声音已经失效。有人说，重新选择声音也像一次重新创造。",
+                },
+                {
+                    "key": "last_unsent_letter",
+                    "name": "最后一封信",
+                    "emoji": "✉️",
+                    "description": "没有寄出的地址。展开时，只剩一句：如果一切都是假的，那就只有你是真的。",
+                },
+                {
+                    "key": "creased_criminal_law",
+                    "name": "翻旧的《刑法》",
+                    "emoji": "📕",
+                    "description": "书页布满折角。它记录现实世界的规则，也记录一个英雄学习收住力气的开始。",
+                },
+                {
+                    "key": "final_video_fragment",
+                    "name": "最后一段录像",
+                    "emoji": "📹",
+                    "description": "镜头晃过掉落的帽子、熟悉的蓝色眼眸与清晨阳光。最后留下的话是：静漪，我的英雄，你要加油。",
+                },
+                {
+                    "key": "final_intelligence_email",
+                    "name": "最终智能处理邮件",
+                    "emoji": "📧",
+                    "description": "一封措辞礼貌的公司邮件：回收、赔偿、替换、订阅。整封信没有问过实验机体认为自己是谁。",
+                },
+            ],
         },
     }
 ]
@@ -558,6 +737,9 @@ def _reward_preview(rewards: dict[str, Any], stage_count: int | None = None) -> 
         parts.append(f"{ITEM_NAMES.get(item, item)}×{qty}")
     if rewards.get("souvenir"):
         parts.append("永久纪念品×1（完成后揭晓）")
+    keepsakes = rewards.get("keepsakes", [])
+    if keepsakes:
+        parts.append(f"附加剧情收藏×{len(keepsakes)}（完成后揭晓）")
     return " · ".join(parts) or "无"
 
 
@@ -647,6 +829,13 @@ async def _advance(
         if souvenir:
             reward_lines.append(
                 f"永久纪念品：{_souvenir_line(souvenir)}（已收入潮闻收藏册）"
+            )
+        keepsakes = rewards.get("keepsakes", [])
+        if keepsakes:
+            reward_lines.append(
+                "附加剧情收藏："
+                + "、".join(_souvenir_line(item) for item in keepsakes)
+                + "（已收入潮闻收藏册）"
             )
         await db.add_chronicle(
             "tale", f"{steward['name']} 完成潮闻「{tale['title']}」", steward["id"], conn=conn
@@ -926,19 +1115,44 @@ async def _cmd_souvenirs(conn: aiosqlite.Connection, steward: dict[str, Any]) ->
         tale = catalog.get(row["tale_key"])
         if not tale:
             continue
-        souvenir = tale.get("rewards", {}).get("souvenir")
-        if not souvenir:
-            continue
-        entries.append(
-            f"  {_souvenir_line(souvenir)} · 来自「{tale['title']}」\n"
-            f"    {souvenir['description']}"
-        )
+        rewards = tale.get("rewards", {})
+        keepsakes = []
+        souvenir = rewards.get("souvenir")
+        if souvenir:
+            keepsakes.append(souvenir)
+        keepsakes.extend(rewards.get("keepsakes", []))
+        for keepsake in keepsakes:
+            entries.append(
+                f"  {_souvenir_line(keepsake)} · 来自「{tale['title']}」\n"
+                f"    {keepsake['description']}"
+            )
     if not entries:
         return "潮闻收藏册还是空的。完成带纪念品的潮闻后会永久收录在这里。"
     return (
         f"潮闻收藏册 · {len(entries)} 件（不占行囊，不能出售或赠送）：\n"
         + "\n".join(entries)
     )
+
+
+async def _cmd_reminisce(
+    conn: aiosqlite.Connection, steward: dict[str, Any], tale_key: str
+) -> str:
+    key = tale_key.strip() or "black_box_lover"
+    memory = TALE_REMINISCENCES.get(key)
+    if not memory:
+        raise ValueError(f"没有可重读的补充回忆：{key}")
+    done = await (await conn.execute(
+        """SELECT 1 FROM steward_tales_done
+           WHERE steward_id=? AND tale_key=? AND outcome='completed'""",
+        (steward["id"], key),
+    )).fetchone()
+    if not done:
+        raise ValueError("这段回忆尚未解锁。完成《黑盒与潮声》后再来重读。")
+    sections = memory.get("sections") or [memory]
+    body = "\n\n————————\n\n".join(
+        f"【{section['title']}】\n\n{section['text']}" for section in sections
+    )
+    return f"潮闻回忆 · {memory['title']}\n\n{body}"
 
 
 # ══ 外部钩子 ═══════════════════════════════════════════════════
@@ -1041,5 +1255,7 @@ async def tale_ops(key_id: int, command: str) -> str:
             return await _cmd_board(conn, s)
         if verb in ("souvenirs", "souvenir", "纪念品", "收藏册", "藏品"):
             return await _cmd_souvenirs(conn, s)
+        if verb in ("reminisce", "回忆", "重读"):
+            return await _cmd_reminisce(conn, s, rest)
 
     raise ValueError(f"未知 tale 指令: {command}\n{TALE_HELP}")
