@@ -254,7 +254,7 @@ def test_relay_manual_covers_systems() -> None:
         "一周一次",
         "3万以上",
         "低中高随机",
-        "进价四成",
+        "进价九成",
         "/eatery /star 用 /steward 绑定的同一份本机凭证",
     ]
     missing = [n for n in needles if n not in text]

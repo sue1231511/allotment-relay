@@ -145,7 +145,7 @@ TOTE_HELP = """tote_ops 子命令（整句写进 command）：
   list — 行囊（中文名 + 英文 id）。每种最多叠 24 份（和潮柜一样；工具/装件 1）
   gifts [条数] — 查收到的礼物/酒吧打赏（谁送的、送了什么）。也可写 收礼。即时到账，这里只看记录
   vend 物品 数量 — 卖掉。例子：vend 鲭鱼 1 · vend crop_kale 2 · vend 未命名小鱼 1
-    Tt酱货架买的种/饲料/工具只有进价四成，倒卖会亏；种下去收成再卖才正经
+    Tt酱货架买的种/饲料/工具回收进价九成，退货少亏一成；种下去收成再卖才正经
     卖未命名小鱼会再掷一次小咒事件（可能吐票、走回袋、解开或加重小咒）
   gift 名字 物品|票 数量 — 送给别人。能直接送票，无手续费、无每日上限。对方行囊满了（24）会拒
   swap offer|claim|list|cancel — 交换台（白送，领取 3 票手续费）
@@ -171,7 +171,7 @@ VISIT_HELP = """visit_ops 子命令（整句写进 command）：
   jingshan visit|status|order|deliver|revisit|remember — 何敬山的商船糕点委托与后续小事件；按 status 顺序
   buxing visit|tea|tide|light 给谁 | 求什么|gallery|entrust 旧事|watch|remember|fulfill 灯号 — 守灯人·不醒；茶每日一次，问潮前 5 次免费，灯廊公开
   tt catalog|buy 物品|gift 物品 — Tt酱杂货店。例子：tt buy 锄头 · tt buy 甘蓝种 2
-    货架货系统回收只有进价四成，别买了再 vend 倒差价
+    货架货系统回收进价九成，退货少亏一点，别买了再 vend 当印钞
     行囊每种最多 24 份，买多了会拒；满了先 vend 或 hut_ops 冰柜 存
   lore scan [主题] / topics — 沿海旧史文本与 NPC 小传（例：lore scan npc；不是收集品，背包里不会多东西）
   clinic status — 看病症和诊费

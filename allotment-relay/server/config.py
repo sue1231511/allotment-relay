@@ -371,8 +371,8 @@ TT_TICKET_PER_POINT = 20
 TT_TICKET_GAIN_CAP = 3
 TT_BUMP_CHANCE = _event_rate(0.03)
 TT_BUMP_DAILY_MAX = 1
-# 货架商品系统回收 = 进价 × 此倍率。满心 7.5 折买进仍高于回收，堵反复倒卖。
-TT_SHOP_VEND_RATE = 0.40
+# 货架商品系统回收 = 进价 × 此倍率。退货只少一成，不再腰斩；别当印钞反复倒卖。
+TT_SHOP_VEND_RATE = 0.90
 
 # 小橘 — 真人扮演的女明星（酒馆驻场 + 小剧场专场）
 # 场子、曲目和回应都在真人手里；没有热度门槛或涨跌机制。
