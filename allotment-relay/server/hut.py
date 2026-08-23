@@ -895,16 +895,19 @@ async def bed_rest(s: dict[str, Any]) -> str:
             "SELECT item_key FROM hut_fittings WHERE steward_id=?", (s["id"],)
         )
         bed_key = None
+        has_hammock = False
         for (key,) in await cur.fetchall():
             if is_bed_key(key):
                 bed_key = key
                 break
-        if not bed_key:
+            if key == "hammock":
+                has_hammock = True
+        if not bed_key and not has_hammock:
             raise ValueError(
-                "小屋里还没有床 — hut_ops buy bed → install hard_N bed"
-                f"（{HUT_HARD['bed']['cost']} 票起，硬装槽）"
+                "小屋里还没有能睡的地方 — buy bed → install hard_N bed，"
+                "或 buy hammock → install soft_N hammock"
             )
-        sleep_energy = bed_sleep_energy(bed_key)
+        sleep_energy = bed_sleep_energy(bed_key) if bed_key else config.HAMMOCK_ENERGY
         row = await (await conn.execute(
             "SELECT bed_rest_at FROM stewards WHERE id=?", (s["id"],)
         )).fetchone()
