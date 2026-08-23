@@ -819,6 +819,23 @@ async def star_owner_post(request: Request):
         return JSONResponse({"detail": str(exc)}, status_code=400)
 
 
+@app.post("/api/star-owner/welfare")
+async def star_owner_welfare(request: Request):
+    import json as _json
+    from .undertide_config import STAR_KEY
+    body = _json.loads(await request.body())
+    if not _owner_ok(body.get("key", ""), STAR_KEY):
+        return JSONResponse({"detail": "凭证不对"}, status_code=401)
+    from . import star
+    try:
+        return await star.owner_send_welfare(
+            int(body.get("steward_id", 0)), int(body.get("amount", 0)),
+            (body.get("note") or "")[:80],
+        )
+    except ValueError as exc:
+        return JSONResponse({"detail": str(exc)}, status_code=400)
+
+
 @app.get("/undertide")
 async def undertide_page(request: Request):
     return templates.TemplateResponse(request, "undertide.html", {"active": "undertide"})

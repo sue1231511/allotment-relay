@@ -1219,6 +1219,50 @@ async def init_db() -> None:
                 PRIMARY KEY (steward_id, day)
             )
             """,
+            "ALTER TABLE star_state ADD COLUMN welfare_spent INTEGER NOT NULL DEFAULT 0",
+            """
+            CREATE TABLE IF NOT EXISTS star_welfare (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                amount INTEGER NOT NULL,
+                note TEXT NOT NULL DEFAULT '',
+                created_at INTEGER NOT NULL DEFAULT 0
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS star_theater_affinity (
+                steward_id INTEGER PRIMARY KEY REFERENCES stewards(id),
+                score INTEGER NOT NULL DEFAULT 0,
+                updated_at INTEGER NOT NULL DEFAULT 0
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS star_theater_runs (
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                day INTEGER NOT NULL,
+                role_key TEXT NOT NULL DEFAULT '',
+                role_label TEXT NOT NULL DEFAULT '',
+                play_title TEXT NOT NULL DEFAULT '',
+                rehearsed INTEGER NOT NULL DEFAULT 0,
+                rehearsal_affinity INTEGER NOT NULL DEFAULT 0,
+                head_fan INTEGER NOT NULL DEFAULT 0,
+                outcome TEXT NOT NULL DEFAULT '',
+                payout INTEGER NOT NULL DEFAULT 0,
+                standing_gain INTEGER NOT NULL DEFAULT 0,
+                mist_wit_gain INTEGER NOT NULL DEFAULT 0,
+                performance_affinity INTEGER NOT NULL DEFAULT 0,
+                claimed INTEGER NOT NULL DEFAULT 0,
+                created_at INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (steward_id, day)
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS star_theater_weekly (
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                week INTEGER NOT NULL,
+                PRIMARY KEY (steward_id, week)
+            )
+            """,
             # 监控 — 份地装摄像头防偷菜（协作者侧）
             "ALTER TABLE parcels ADD COLUMN camera INTEGER NOT NULL DEFAULT 0",
             """

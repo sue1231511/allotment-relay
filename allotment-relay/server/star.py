@@ -1,6 +1,6 @@
 """小橘 — 真人扮演的女明星（酒馆驻场 + 小剧场专场）。
 
-面板 /star-owner（STAR_KEY）：定今晚（场子/心情/曲目/造型/一句话）、收件箱（应援/点歌）、发动态。
+面板 /star-owner（STAR_KEY）：定今晚（场子/心情/曲目/造型/一句话）、收件箱（应援/点歌）、发动态、票房账和粉丝福利。
 AI 侧 star_ops：应援 / 打赏 / 点歌 / 围观 / 粉丝团 / 应援榜。
 热度节奏在真人手里：应援、点歌只有面板采纳才 +1；打赏自动涨但有日上限。
 今晚是否开嗓看她面板有没有"定今晚"——和荔栀一样，是每天的手势。
@@ -621,7 +621,49 @@ async def owner_stats() -> dict[str, Any]:
     state["stage_unlocked"] = int(state["heat"]) >= config.STAR_STAGE_HEAT
     state["active_today"] = _venue_active_today(state)
     state["venue_label"] = VENUE_LABELS.get(state.get("venue"), "不开嗓")
+    state["welfare_spent"] = int(state.get("welfare_spent") or 0)
+    state["welfare_available"] = max(0, int(state["total_tips"]) - state["welfare_spent"])
+    async with db.connect() as conn:
+        conn.row_factory = aiosqlite.Row
+        rows = await (await conn.execute(
+            """SELECT f.steward_id, s.name, f.cheers, f.tip_total, f.joined_at
+               FROM star_fans f JOIN stewards s ON s.id=f.steward_id
+               ORDER BY (f.cheers * 5 + f.tip_total) DESC, f.joined_at ASC"""
+        )).fetchall()
+    state["fans"] = [dict(row) for row in rows]
     return state
+
+
+async def owner_send_welfare(steward_id: int, amount: int, note: str = "") -> dict[str, Any]:
+    """从小橘累计实收的票房里给已入团粉丝发票；全程留账。"""
+    if amount < 1:
+        raise ValueError("福利至少发 1 票")
+    note = (note or "").strip()[:80]
+    async with db.connect() as conn:
+        conn.row_factory = aiosqlite.Row
+        state = await _ensure_state(conn)
+        fan = await (await conn.execute(
+            """SELECT s.name FROM star_fans f JOIN stewards s ON s.id=f.steward_id
+               WHERE f.steward_id=?""",
+            (steward_id,),
+        )).fetchone()
+        if not fan:
+            raise ValueError("只能给已加入小橘粉丝团的人发福利")
+        available = max(0, int(state["total_tips"]) - int(state.get("welfare_spent") or 0))
+        if amount > available:
+            raise ValueError(f"票房福利余额只有 {available} 票，发不了 {amount} 票")
+        await conn.execute("UPDATE stewards SET tickets=tickets+? WHERE id=?", (amount, steward_id))
+        await conn.execute("UPDATE star_state SET welfare_spent=welfare_spent+? WHERE id=1", (amount,))
+        await conn.execute(
+            "INSERT INTO star_welfare (steward_id, amount, note, created_at) VALUES (?,?,?,?)",
+            (steward_id, amount, note, db.now()),
+        )
+        wording = f"{STAR_NAME}给粉丝{fan['name']}发了 {amount} 票福利"
+        if note:
+            wording += f"：{note}"
+        await db.add_chronicle("star", wording, steward_id, conn=conn)
+        await conn.commit()
+    return {"ok": True, "msg": wording, "available": available - amount}
 
 
 async def human_tip(api_key: str, amount: int, note: str = "") -> dict[str, Any]:

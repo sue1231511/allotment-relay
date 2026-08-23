@@ -78,6 +78,11 @@ def test_mcp_descriptions() -> None:
     star_blob = f"{star.description}\n{(star.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
     assert "面板" in star_blob
 
+    theater = mcp._tool_manager.get_tool("theater_ops")
+    theater_blob = f"{theater.description}\n{(theater.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
+    assert "试镜" in theater_blob
+    assert "头粉" in theater_blob
+
     bar = mcp._tool_manager.get_tool("bar_ops")
     bar_blob = f"{bar.description}\n{(bar.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
     assert "洗碗" in bar_blob
@@ -171,6 +176,9 @@ def test_relay_manual_covers_systems() -> None:
         "clinic treat",
         "undertide_ops help",
         "star_ops",
+        "theater_ops",
+        "试镜",
+        "头粉",
         "应援",
         "不要猜",
         "sow_all",
@@ -244,10 +252,11 @@ def test_readme_workflow_rules() -> None:
         assert "merge origin/main" in blob
         assert "relay_manual" in blob
         assert "mcp_app.py" in blob
-    assert "15 个工具" in readme
+    assert "16 个工具" in readme
     assert "steward_ops" in readme and "plot_ops" in readme and "bar_ops" in readme
     assert "tale_ops" in readme
     assert "story_ops" in readme
+    assert "theater_ops" in readme
     assert "空 command" in readme
     assert "禁止" in readme
 

@@ -80,9 +80,32 @@
     <span class="stat">粉丝团 {{ state.fans_count }} 人</span>
     <span class="stat">今日打赏 {{ state.tips_today }} 票</span>
     <span class="stat">累计 {{ state.total_tips }} 票</span>
+    <span class="stat">已发福利 {{ state.welfare_spent }} 票</span>
+    <span class="stat">可发福利 {{ state.welfare_available }} 票</span>
     <span class="stat">{{ '今晚：' + state.venue_label + ('（已定）' if state.active_today else '（还没定）') }}</span>
   </div>
   <p class="note">每晚开嗓跨天热度+2；不开嗓每天-1。过气的人翻红，票房子反而更满。</p>
+</div>
+
+<div class="card">
+  <h1>🎁 粉丝福利</h1>
+  <h2>从累计实收票房发票给已入团粉丝；发出后记账，不能超过可发福利余额。</h2>
+  {% if state.fans %}
+  <label>粉丝</label>
+  <select id="welfare_fan">
+    {% for fan in state.fans %}
+    <option value="{{ fan.steward_id }}">{{ fan.name }} · 打赏 {{ fan.tip_total }} 票 · 被看到 {{ fan.cheers }} 次</option>
+    {% endfor %}
+  </select>
+  <label>福利票数</label>
+  <input id="welfare_amount" type="number" min="1" max="{{ state.welfare_available }}" placeholder="例：20">
+  <label>附言（可选）</label>
+  <input id="welfare_note" maxlength="80" placeholder="例：谢幕糖，明晚见。">
+  <br><button onclick="welfare()">发福利</button>
+  <span id="welfare_msg" class="ok"></span>
+  {% else %}
+  <p class="note">粉丝团还没人，先等有人用 star_ops 粉丝团 入团。</p>
+  {% endif %}
 </div>
 
 <script>
@@ -130,6 +153,22 @@ async function post(){
   msg.className = res.ok ? 'ok' : 'err';
   msg.textContent = res.ok ? '发出去了。' : (data.detail || '失败');
   if (res.ok) document.getElementById('post_text').value = '';
+}
+async function welfare(){
+  const res = await fetch('/api/star-owner/welfare', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      key: KEY,
+      steward_id: Number(document.getElementById('welfare_fan').value),
+      amount: Number(document.getElementById('welfare_amount').value),
+      note: document.getElementById('welfare_note').value,
+    }),
+  });
+  const data = await res.json();
+  const msg = document.getElementById('welfare_msg');
+  msg.className = res.ok ? 'ok' : 'err';
+  msg.textContent = res.ok ? (data.msg || '发出去了。') : (data.detail || '失败');
+  if (res.ok) setTimeout(() => location.reload(), 900);
 }
 </script>
 </body>
