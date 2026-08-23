@@ -1070,6 +1070,13 @@ for k, v in LILI_DECOR.items():
 for k, v in LILI_JUNK_DECOR.items():
     ITEM_NAMES[f"deco_junk_{k}"] = f"{v['emoji']}{v['name']}"
 
+# 小屋加工品：腌菜与鱼干。
+ITEM_PRICES["pickles"] = 20
+ITEM_NAMES["pickles"] = "🫙腌菜"
+for _fk, _fv in SEA_CATCH.items():
+    ITEM_PRICES[f"dried_{_fk}"] = int(_fv["sell"] * 1.6)
+    ITEM_NAMES[f"dried_{_fk}"] = f"🥓鱼干·{_fv['name']}"
+
 
 def dish_item(key: str, stars: int = 3) -> str:
     return f"dish_{key}_s{max(1, min(5, stars))}"
