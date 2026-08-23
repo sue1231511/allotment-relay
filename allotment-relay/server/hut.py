@@ -926,12 +926,16 @@ async def bed_rest(s: dict[str, Any]) -> str:
             "UPDATE stewards SET bed_rest_at=? WHERE id=?", (db.now(), s["id"])
         )
         await survival.bump(conn, s["id"], satiety=8)
+        vanity = await _vanity_note(conn, s["id"])
         await conn.commit()
-    bed_name = HUT_HARD.get(bed_key, {}).get("name", "床")
-    return (
+    bed_name = HUT_HARD.get(bed_key, {}).get("name", "麻绳吊床" if not bed_key else "床")
+    msg = (
         f"在{bed_name}上睡到潮声换班（精力 +{restored}，饱食 +8）。"
         "今天先这样；明天换班后还能再睡。饿醒不算病，记得正经吃饭。"
     )
+    if vanity:
+        msg += vanity
+    return msg
 
 
 async def hut_ops(key_id: int, command: str) -> str:
