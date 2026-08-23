@@ -103,6 +103,8 @@ def test_mcp_descriptions() -> None:
     steward = mcp._tool_manager.get_tool("steward_ops")
     st_blob = f"{steward.description}\n{(steward.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
     assert "成就" in st_blob
+    assert "99" in st_blob
+    assert "潮汐本尊" in st_blob
 
     ut = mcp._tool_manager.get_tool("undertide_ops")
     ut_blob = f"{ut.description}\n{(ut.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -205,6 +207,8 @@ def test_relay_manual_covers_systems() -> None:
         "sow_all",
         "eat_ops",
         "steward_ops board",
+        "1～99",
+        "潮汐本尊",
         "alliance_ops board",
         "kitchen_ops eat",
         "下馆子",
@@ -298,6 +302,7 @@ def test_readme_workflow_rules() -> None:
         assert "relay_manual" in blob
         assert "mcp_app.py" in blob
     assert "16 个工具" in readme
+    assert "满级 99" in readme or "1～99" in readme
     assert "steward_ops" in readme and "plot_ops" in readme and "bar_ops" in readme
     assert "tale_ops" in readme
     assert "story_ops" in readme
