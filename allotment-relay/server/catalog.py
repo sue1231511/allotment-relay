@@ -381,6 +381,8 @@ def is_bed_key(item_key: str) -> bool:
 HUT_HARD = {
     "bed": {"name": "岸柏板床", "cost": 60, "emoji": "🛏️", "sleep_energy": 50,
             "hint": "hut_ops 睡：一觉回 50 精力，每天一次换班刷新（回饱食 +8）"},
+    "bath_tub": {"name": "雪松浴桶", "cost": 85, "emoji": "🛁", "hint": "hut_ops 泡澡：雾智 +15，每 20 小时一次（床管精力，浴桶管雾智）"},
+    "pickle_crock": {"name": "腌菜坛", "cost": 70, "emoji": "🫙", "hint": "hut_ops 腌 甘蓝 4：2 蔬菜 → 1 坛腌菜（可生吃 +6、可当 cook 佐料、可囤潮柜）"},
     "bed_rattan": {"name": "软藤床", "cost": 95, "emoji": "🛌", "sleep_energy": 52,
                    "hint": "藤编软垫，好看好睡；一觉 +52 精力（每天一次）"},
     "bed_canopy": {"name": "云纹纱榻", "cost": 145, "emoji": "🌙", "sleep_energy": 54,
