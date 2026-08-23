@@ -80,7 +80,10 @@ def classify(item: str) -> str:
         return "junk"
     if item == "myth_octopus":
         return "myth"
-    if item.startswith("fish_") or item.startswith("meat_") or item in PROTEIN_EXTRAS or item in FOOD_SHELLS:
+    if (
+        item.startswith("fish_") or item.startswith("dried_")
+        or item.startswith("meat_") or item in PROTEIN_EXTRAS or item in FOOD_SHELLS
+    ):
         return "protein"
     if item in SEASONING:
         return "season"
