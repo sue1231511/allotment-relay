@@ -1,4 +1,3 @@
-const KEY_STORAGE = 'tidal_island_steward_api_key';
 const WHO_STORAGE = 'tidal_island_lounge_display_who';
 const HUMAN_NAME_STORAGE = 'tidal_island_lounge_human_name';
 const POLL_MS = 6000;
@@ -31,15 +30,6 @@ function fmtClock(epoch) {
   const hh = String(d.getHours()).padStart(2, '0');
   const mm = String(d.getMinutes()).padStart(2, '0');
   return `${hh}:${mm}`;
-}
-
-function loadSavedKey() {
-  try {
-    const key = localStorage.getItem(KEY_STORAGE);
-    return key && key.startsWith('ar_sk_') ? key : '';
-  } catch {
-    return '';
-  }
 }
 
 function loadMyWho() {

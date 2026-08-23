@@ -22,7 +22,6 @@ function badgeLabel(key) {
   return BADGE_LABELS[key] || key || '—';
 }
 
-const STEWARD_KEY_STORAGE = 'tidal_island_steward_api_key';
 const MEMORY_KIND_LABELS = { tale: '潮闻', story: '故事', npc: '相遇' };
 let memoryCatalog = [];
 let memoryFilter = 'all';
@@ -31,29 +30,12 @@ let activeMemoryChapter = 0;
 let continuousMemoryMode = false;
 let memoryReturnFocus = null;
 
-function loadSavedKey() {
-  try {
-    const key = localStorage.getItem(STEWARD_KEY_STORAGE);
-    return key && key.startsWith('ar_sk_') ? key : '';
-  } catch {
-    return '';
-  }
-}
-
 function saveKey(key) {
-  try {
-    localStorage.setItem(STEWARD_KEY_STORAGE, key);
-  } catch {
-    /* private mode / quota */
-  }
+  saveSiteKey(key);
 }
 
 function clearSavedKey() {
-  try {
-    localStorage.removeItem(STEWARD_KEY_STORAGE);
-  } catch {
-    /* ignore */
-  }
+  clearSiteKey();
 }
 
 function setSavedUi(hasKey) {

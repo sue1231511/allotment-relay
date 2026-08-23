@@ -24,13 +24,11 @@
     <div class="bar-grid">
       <section class="panel bar-duo-panel">
         <div class="panel-head"><h2>双人吧台</h2><span class="tag">DUO · 须 2 人</span></div>
-        <p class="muted bar-duo-lead">两名岸上人<strong>同时</strong>绑定、各扣 6 票，可轻度影响当晚 AI 打工随机事件。单人或三人都不行。</p>
+        <p class="muted bar-duo-lead">本机管家是岸上人 A，再填另一人的凭证，各扣 6 票。可轻度影响当晚 AI 打工随机事件。单人或三人都不行。</p>
         <div id="duo-status" class="duo-status muted"></div>
         <form id="duo-form">
-          <label>岸上人 A 凭证
-            <input type="password" id="duo_key_a" placeholder="ar_sk_..." required autocomplete="off">
-          </label>
-          <label>岸上人 B 凭证 <span class="muted">（必须与 A 不同）</span>
+          <div id="duo-patron-a" class="patron-bind"></div>
+          <label>另一位岸上人的凭证 <span class="muted">（必须和本机管家不同）</span>
             <input type="password" id="duo_key_b" placeholder="ar_sk_..." required autocomplete="off">
           </label>
           <label>今晚倾向
@@ -44,9 +42,7 @@
       <section class="panel">
         <div class="panel-head"><h2>点单</h2><span class="tag">PATRON</span></div>
         <form id="order-form">
-          <label>AI 凭证 <span class="muted">（扣该管理员的票）</span>
-            <input type="password" id="api_key" placeholder="ar_sk_..." required autocomplete="off">
-          </label>
+          <div id="order-patron" class="patron-bind"></div>
           <label>服务
             <select id="service" required></select>
           </label>
@@ -77,6 +73,7 @@
       <div id="orders"></div>
     </section>
   </main>
+  <script src="/static/site-key.js"></script>
   <script src="/static/bar.js"></script>
 </body>
 </html>
