@@ -200,7 +200,7 @@ bar_ops     的 command = work 洗碗 night
 | `lili scan` / `lili summon 猫眼螺` | 栗栗流动摊 |
 | `shaonian visit` / `shaonian fortune` | 韶年卜卦 |
 | `musong visit` / `musong send 安` / `musong remember` | 见渡口的目送人·阿槐 / 请他送别一个名字（每游戏日一次）/ 回看送别册 |
-| `lore scan` | 沿海旧史文本（可指定主题或随机），不是收集品 |
+| `lore scan` | 沿海旧史文本与 NPC 小传（`lore scan npc`；也可指定其他主题或随机），不是收集品 |
 | `clinic status` / `clinic treat infection` | 诊所。深坑伤走 `undertide_ops medic` |
 | `visit 拾叶` | 巷口随机事件（主动必触发）；路上每天首次操作掷一次碰上 |
 | `help` | 列出真指令 |
@@ -261,21 +261,26 @@ bar_ops     的 command = work 洗碗 night
 
 ### `story_ops` — 人物故事探索
 
-空 command = 故事列表（`list`）。这是不用问答模型的场景调查与分支故事；当前故事为《灰姑娘》。调查和准备每次消耗剧情内 10 分钟，午夜前共有 60 分钟，`status`、`list`、`archive` 不耗时。
+空 command = 故事列表（`list`）。这是不用问答模型的场景调查故事；当前包含分支故事《灰姑娘》和顺序调查《昨日无凭》。`status`、`list`、`archive`、`souvenirs` 不耗时。
 
 | command | 做什么 |
 |---------|--------|
 | `list` / `start cinderella` | 查看故事 / 开始或重玩《灰姑娘》 |
-| `status` | 查看剩余时间、证据、准备及当前解锁的行动 |
+| `start yesterday_no_proof` | 开始或重读《昨日无凭》 |
+| `status [故事key]` | 查看最近故事的进度及下一步；可指定 `cinderella` / `yesterday_no_proof` |
+| `explore old_wharf` | 《昨日无凭》第一步；后续严格照 `status` 给出的地点继续，共 12 次调查 |
 | `inspect queen` / `search study` | 调查不会行走的王妃 / 王子的舞会名单 |
 | `search portraits` / `enter cellar` | 搜索失踪新娘记录 / 沿暗道进入水晶鞋密室 |
 | `contact girl` | 接触下一名被水晶鞋选中的姑娘 |
 | `prepare backdoor` / `broadcast` / `trap` | 准备逃生后门 / 公开罪证 / 密室陷阱 |
 | `choose escape` / `judgment` / `hunt` / `rescue` | 在证据与准备满足后决定结局 |
 | `archive` | 查看自己抵达的结局 |
+| `souvenirs` | 查看人物故事永久纪念品；不占行囊，不能出售或赠送 |
 | `help` | 列出真指令；没有 `ask` 或 `question` |
 
-五种结局：双生逃离、公开罪恶、血色密室、绝望降临、循环不息。最后 10 分钟仍可完成一次行动；倒计时归零后必须立刻选择已经解锁的结局，再继续调查才会进入绝望降临。只救走新姑娘会进入循环不息。
+五种结局：双生逃离、公开罪恶、血色密室、绝望降临、循环不息。首次完成任一结局自动获得 60 工分票、档信 +5、雾智 +5；之前已经完成的玩家使用 `archive` 或重新 `start cinderella` 时自动补发。重玩可收集其他结局，但不重复领奖。最后 10 分钟仍可完成一次行动；倒计时归零后必须立刻选择已经解锁的结局，再继续调查才会进入绝望降临。只救走新姑娘会进入循环不息。
+
+《昨日无凭》按旧码头、许泊旧屋、陶枝家、公共屋、夏祭、诊所档案等线索顺序推进，不耗精力，也不要求玩家替许泊或林遥作出选择。完成第 12 次调查后自动进入第十三幕。13 幕每幕首次奖励 30 工分票，共 390 票；通关另奖 120 工分票、档信 +6、雾智 +10，并解锁人物称呼「旧事见证人」。同时永久收录「褪色的合照」「旧贝壳坠饰」「被裁掉的半页」「未洗出的底片」4 件纪念品。重读不会重复领取逐幕或通关奖励。
 
 ### `lounge_ops` — 全服聊天室
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""人物故事探索：灰姑娘、时钟、前置证据与五种结局。"""
+"""人物故事探索：灰姑娘分支与《昨日无凭》顺序调查、奖励、纪念品。"""
 from __future__ import annotations
 
 import asyncio
@@ -28,7 +28,7 @@ async def _boot(tmp: Path):
 
 async def test_escape_and_replay() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="story-escape-"))
-    _, kid = await _boot(tmp)
+    db, kid = await _boot(tmp)
     from server import story
 
     assert "灰姑娘" in await story.story_ops(kid, "list")
@@ -47,10 +47,22 @@ async def test_escape_and_replay() -> None:
     assert "逃生通道" in backdoor
     ending = await story.story_ops(kid, "choose escape")
     assert "结局：双生逃离" in ending
+    assert "工分票 +60、档信 +5、雾智 +5" in ending
+    steward = await db.get_steward_by_key_id(kid)
+    assert steward["tickets"] == 180
     assert "双生逃离" in await story.story_ops(kid, "archive")
 
     replay = await story.story_ops(kid, "start cinderella")
     assert "60 分钟" in replay
+
+    await story.story_ops(kid, "inspect queen")
+    await story.story_ops(kid, "search study")
+    await story.story_ops(kid, "contact girl")
+    await story.story_ops(kid, "prepare backdoor")
+    replay_ending = await story.story_ops(kid, "choose escape")
+    assert "首次故事结局奖励" not in replay_ending
+    steward = await db.get_steward_by_key_id(kid)
+    assert steward["tickets"] == 180
 
 
 async def test_truth_and_other_endings() -> None:
@@ -118,6 +130,65 @@ async def test_timeout_and_guards() -> None:
     assert "结局：绝望降临" in timeout
 
 
+async def test_yesterday_story_rewards_and_souvenirs() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="story-yesterday-"))
+    db, kid = await _boot(tmp)
+    from server import story, story_yesterday
+
+    listing = await story.story_ops(kid, "list")
+    assert "昨日无凭" in listing and "yesterday_no_proof" in listing
+    intro = await story.story_ops(kid, "start yesterday_no_proof")
+    assert "explore old_wharf" in intro
+    status = await story.story_ops(kid, "status")
+    assert "调查 0/12" in status and "explore old_wharf" in status
+
+    try:
+        await story.story_ops(kid, "explore west_house")
+        raise AssertionError("yesterday story should be sequential")
+    except ValueError as exc:
+        assert "下一步" in str(exc) and "explore old_wharf" in str(exc)
+
+    for action in story_yesterday.ACTIONS[:-1]:
+        scene = await story.story_ops(kid, action["command"])
+        assert action["title"] in scene
+        assert "本幕探索奖励：工分票 +30" in scene
+    ending = await story.story_ops(kid, story_yesterday.ACTIONS[-1]["command"])
+    assert "探索完成：《昨日无凭》" in ending
+    assert "第十二、十三幕探索奖励：工分票 +60" in ending
+    assert "工分票 +120" in ending
+    assert "旧事见证人" in ending
+    assert "褪色的合照" in ending and "未洗出的底片" in ending
+
+    steward = await db.get_steward_by_key_id(kid)
+    assert steward["tickets"] == 630
+    async with db.connect() as conn:
+        title = await (await conn.execute(
+            "SELECT 1 FROM steward_achievements WHERE steward_id=? AND ach_key='old_story_witness'",
+            (steward["id"],),
+        )).fetchone()
+        assert title
+        stages = await (await conn.execute(
+            """SELECT COUNT(*) FROM steward_story_stage_rewards
+               WHERE steward_id=? AND story_key='yesterday_no_proof'""",
+            (steward["id"],),
+        )).fetchone()
+        assert stages[0] == 13
+
+    souvenirs = await story.story_ops(kid, "souvenirs")
+    assert "4 件" in souvenirs
+    for item in story_yesterday.SOUVENIRS:
+        assert item["name"] in souvenirs
+    assert "不能出售或赠送" in souvenirs
+
+    await story.story_ops(kid, "start yesterday_no_proof")
+    for action in story_yesterday.ACTIONS:
+        replay = await story.story_ops(kid, action["command"])
+    assert "首次人物故事奖励" not in replay
+    assert "探索奖励" not in replay
+    steward = await db.get_steward_by_key_id(kid)
+    assert steward["tickets"] == 630
+
+
 def test_story_mcp_description() -> None:
     from server.mcp_app import mcp
     tool = mcp._tool_manager.get_tool("story_ops")
@@ -128,12 +199,17 @@ def test_story_mcp_description() -> None:
     assert "start cinderella" in blob
     assert "choose escape" in blob
     assert "空 command=list" in blob
+    assert "60票" in blob
+    assert "昨日无凭" in blob
+    assert "start yesterday_no_proof" in blob
+    assert "souvenirs" in blob
 
 
 def main() -> None:
     asyncio.run(test_escape_and_replay())
     asyncio.run(test_truth_and_other_endings())
     asyncio.run(test_timeout_and_guards())
+    asyncio.run(test_yesterday_story_rewards_and_souvenirs())
     test_story_mcp_description()
     print("ok")
 

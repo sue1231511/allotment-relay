@@ -72,7 +72,7 @@ mcp = MCPServer(
         "找人用 steward_ops 邻居。全服票榜/等级榜是 steward_ops board；alliance_ops board 是周目标贡献榜。"
         "bar_ops cheer 哄荔栀；undertide_ops cheer 哄潮下猫猫；star_ops 应援 哄小橘，三套互不占用。"
         "潮闻故事任务：tale_ops list / accept black_box_lover / status / explore beach / turnin / souvenirs。"
-        "人物故事探索：story_ops list / start cinderella / status / inspect queen / choose escape。"
+        "人物故事探索：story_ops list / start cinderella / start yesterday_no_proof / status / souvenirs。"
         "回精力：kitchen_ops eat 熟菜（回得最多，22 起）。水果/生鱼/野薄荷可生吃但回得少——水果连吃 5 口营养不良（吃熟菜/诊所可解）；蔬菜不能生吃；只有生肉可能感染，visit_ops clinic treat infection。"
     ),
 )
@@ -147,9 +147,9 @@ async def alliance_ops(
     return await mux._call_ops(mux.alliance_bundle, _kid(), command)
 
 
-@mcp.tool(description="访客：固定 NPC、目送人·阿槐、栗栗摊、Tt酱杂货、诊所、沿海旧史。command 写一整句。例子：musong visit · musong send 安 · visit 拾叶 · tt catalog · clinic treat infection。阿槐在渡口替人送别，每个游戏日可记一个名字，remember 回看。拾叶主动必触发。lore 是文本不是收集品。不会就 help。")
+@mcp.tool(description="访客：固定 NPC、目送人·阿槐、栗栗摊、Tt酱杂货、诊所、沿海旧史与 NPC 小传。command 写一整句。例子：musong visit · musong send 安 · visit 拾叶 · lore scan npc · clinic treat infection。阿槐在渡口替人送别，每个游戏日可记一个名字，remember 回看。拾叶主动必触发。lore 是文本不是收集品。不会就 help。")
 async def visit_ops(
-    command: Annotated[str, Field(description="子命令整句。list / musong visit / musong send 名字 / musong remember / visit 拾叶 / tt catalog / lili scan / shaonian fortune / lore scan / clinic status / treat infection / help。musong 每游戏日送别一次；拾叶主动必触发。空=帮助。不要发明 shop_ops。")] = "",
+    command: Annotated[str, Field(description="子命令整句。list / musong visit / musong send 名字 / musong remember / visit 拾叶 / tt catalog / lili scan / shaonian fortune / lore scan npc / lore topics / clinic status / treat infection / help。lore scan npc=阿槐、栗栗、桥桥、拾叶、旺夫命的小传；musong 每游戏日送别一次；拾叶主动必触发。空=帮助。不要发明 shop_ops。")] = "",
 ) -> str:
     return await mux._call_ops(mux.visit_bundle, _kid(), command)
 
@@ -196,9 +196,9 @@ async def lounge_ops(
     return await mux._call_ops(lounge.lounge_ops, _kid(), command)
 
 
-@mcp.tool(description="人物故事探索，不接模型、按真实行动调查和分支。当前故事《灰姑娘》有60分钟行动时钟、证据准备和5种结局。例子：list · start cinderella · inspect queen · search study · choose escape。空 command=list；不会就 help。")
+@mcp.tool(description="人物故事探索，不接模型、按真实行动调查。含分支故事《灰姑娘》（首次结局60票、档信+5、雾智+5）和《昨日无凭》（12次顺序调查、自动完成第13幕；每幕首次30票，共390票；通关另奖120票、档信+6、雾智+10、称呼「旧事见证人」及4件永久纪念品）。例子：list · start cinderella · start yesterday_no_proof · status · explore old_wharf · souvenirs。空 command=list；不会就 help。")
 async def story_ops(
-    command: Annotated[str, Field(description="子命令整句。list / start cinderella / status / inspect queen / search study / search portraits / enter cellar / contact girl / prepare backdoor|broadcast|trap / choose escape|judgment|hunt|rescue / archive / help。调查和准备耗10分钟；最后10分钟可行动，归零后立刻choose。空=list。不要编造 ask/question。")]= "list",
+    command: Annotated[str, Field(description="子命令整句。list / start cinderella / start yesterday_no_proof / status [故事key] / explore old_wharf / inspect queen / search study / search portraits / enter cellar / contact girl / prepare backdoor|broadcast|trap / choose escape|judgment|hunt|rescue / archive / souvenirs / help。《昨日无凭》开始后严格按 status 的下一步；13幕每幕首次30票，重读不重复；纪念品不占行囊、不可交易。空=list。不要编造 ask/question。")]= "list",
 ) -> str:
     from . import story
     return await mux._call_ops(story.story_ops, _kid(), command)

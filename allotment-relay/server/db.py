@@ -702,6 +702,7 @@ CREATE TABLE IF NOT EXISTS steward_stories (
     minutes_left INTEGER NOT NULL DEFAULT 60,
     flags_json TEXT NOT NULL DEFAULT '[]',
     outcome TEXT NOT NULL DEFAULT '',
+    reward_granted INTEGER NOT NULL DEFAULT 0,
     started_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL,
     completed_at INTEGER,
@@ -714,6 +715,14 @@ CREATE TABLE IF NOT EXISTS steward_story_outcomes (
     outcome TEXT NOT NULL,
     completed_at INTEGER NOT NULL,
     PRIMARY KEY (steward_id, story_key, outcome)
+);
+
+CREATE TABLE IF NOT EXISTS steward_story_stage_rewards (
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    story_key TEXT NOT NULL,
+    stage_key TEXT NOT NULL,
+    rewarded_at INTEGER NOT NULL,
+    PRIMARY KEY (steward_id, story_key, stage_key)
 );
 """
 
@@ -1243,6 +1252,7 @@ async def init_db() -> None:
                 minutes_left INTEGER NOT NULL DEFAULT 60,
                 flags_json TEXT NOT NULL DEFAULT '[]',
                 outcome TEXT NOT NULL DEFAULT '',
+                reward_granted INTEGER NOT NULL DEFAULT 0,
                 started_at INTEGER NOT NULL,
                 updated_at INTEGER NOT NULL,
                 completed_at INTEGER,
@@ -1256,6 +1266,15 @@ async def init_db() -> None:
                 outcome TEXT NOT NULL,
                 completed_at INTEGER NOT NULL,
                 PRIMARY KEY (steward_id, story_key, outcome)
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS steward_story_stage_rewards (
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                story_key TEXT NOT NULL,
+                stage_key TEXT NOT NULL,
+                rewarded_at INTEGER NOT NULL,
+                PRIMARY KEY (steward_id, story_key, stage_key)
             )
             """,
             """
@@ -1273,6 +1292,7 @@ async def init_db() -> None:
             "ALTER TABLE stewards ADD COLUMN lounge_banned INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE kitchen_rolls ADD COLUMN mix_count INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE shiye_rolls ADD COLUMN passive_rolled INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE steward_stories ADD COLUMN reward_granted INTEGER NOT NULL DEFAULT 0",
             """
             CREATE TABLE IF NOT EXISTS gugu_dove_rolls (
                 steward_id INTEGER NOT NULL REFERENCES stewards(id),

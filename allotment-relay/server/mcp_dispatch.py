@@ -156,7 +156,7 @@ VISIT_HELP = """visit_ops 子命令（整句写进 command）：
   shaonian visit|fortune|transfer|buy 符名 — 韶年望潮人
   musong visit|send 名字|remember — 目送人·阿槐；渡口送别，每个游戏日可记一个名字
   tt catalog|buy 物品|gift 物品 — Tt酱杂货店。例子：tt buy 锄头
-  lore scan [主题] / topics — 沿海旧史文本（不是收集品，背包里不会多东西）
+  lore scan [主题] / topics — 沿海旧史文本与 NPC 小传（例：lore scan npc；不是收集品，背包里不会多东西）
   clinic status — 看病症和诊费
   clinic treat 病症 — 花钱治。例子：treat sprain · treat infection · treat all
   生肉感染约三次、两次间隔 6 小时；水果/生鱼生吃不会感染（连吃 5 口水果会营养不良，吃熟菜可解）；蔬菜不能生吃

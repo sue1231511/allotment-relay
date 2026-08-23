@@ -38,7 +38,7 @@ async def spend(
         raise ValueError(
             f"精力不足（{current}/{cap}），需要 {amount}。"
             "恢复：kitchen_ops eat 熟菜（回得最多）；生吃水果/生鱼/野薄荷垫一下（回得少）；"
-            f"蔬菜不能生吃。生肉能垫但可能感染。steward_ops sheet 路过档口会慢慢回{nag}\n"
+            f"蔬菜不能生吃。生肉能垫但可能感染；有 5 精力且小橘今晚开嗓时，star_ops 围观 也能回精力。steward_ops sheet 路过档口会慢慢回{nag}\n"
             "实在没钱吃饭、饿得干不动活：bar_ops lodge — 酒馆包宿（管饭+工钱15，干一整天）"
         )
     await conn.execute(

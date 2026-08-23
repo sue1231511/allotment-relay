@@ -169,6 +169,15 @@ async def _check_packed(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
     return int(s.get("cabinet_extra") or 0) > 0
 
 
+async def _check_old_story_witness(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
+    return await _exists(
+        conn,
+        """SELECT 1 FROM steward_story_outcomes
+           WHERE steward_id=? AND story_key='yesterday_no_proof' LIMIT 1""",
+        s["id"],
+    )
+
+
 ACHIEVEMENTS: dict[str, dict[str, Any]] = {
     "sower": {
         "name": "播手",
@@ -277,6 +286,12 @@ ACHIEVEMENTS: dict[str, dict[str, Any]] = {
         "hint": "潮柜扩过容",
         "aliases": ("屯货的", "格还不够"),
         "check": _check_packed,
+    },
+    "old_story_witness": {
+        "name": "旧事见证人",
+        "hint": "完成《昨日无凭》",
+        "aliases": ("昨日见证人", "无凭旧事"),
+        "check": _check_old_story_witness,
     },
 }
 
