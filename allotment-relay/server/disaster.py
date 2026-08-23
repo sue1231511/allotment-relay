@@ -1,14 +1,17 @@
-"""天灾：黑潮一次性削超额工分，暴潮脉冲继续冲口袋太鼓的人。"""
+"""天灾：人类日历每周刮一次周潮，低/中/高随机，只冲 3 万以上。"""
 
 from __future__ import annotations
 
-from typing import Any
+import random
+from datetime import datetime, timedelta, timezone
+from typing import Any, Literal
 
 import aiosqlite
 
 from . import config, db
 from .catalog import ITEM_NAMES
 
+Intensity = Literal["low", "mid", "high"]
 
 WORLD_FLAGS_DDL = """
 CREATE TABLE IF NOT EXISTS world_flags (
@@ -18,27 +21,32 @@ CREATE TABLE IF NOT EXISTS world_flags (
 )
 """
 
+CST = timezone(timedelta(hours=8))
 
-def levy_amount(tickets: int, *, bands: tuple[tuple[int, int | None, float], ...] | None = None) -> int:
-    """分段征收。永远不会把人收到安全线以下。"""
-    safe = int(bands[0][0]) if bands else config.WEALTH_SAFE
+
+def human_week_id(ts: int | None = None) -> str:
+    """东八区 ISO 周（周一换班），例如 2026-W34。"""
+    dt = datetime.fromtimestamp(ts if ts is not None else db.now(), CST)
+    iso = dt.isocalendar()
+    return f"{iso.year}-W{iso.week:02d}"
+
+
+def week_flag_key(week_id: str | None = None) -> str:
+    return f"{config.WEEKLY_TIDE_FLAG_PREFIX}{week_id or human_week_id()}"
+
+
+def pick_intensity() -> Intensity:
+    return random.choice(tuple(config.WEEKLY_TIDE_RATES))
+
+
+def levy_amount(tickets: int, intensity: Intensity) -> int:
+    """只冲 3 万以上的超额。永远不会收到安全线以下。"""
+    safe = config.DISASTER_SAFE
     if tickets <= safe:
         return 0
-    taken = 0
-    for lo, hi, rate in (bands or config.WEALTH_LEVY_BANDS):
-        if tickets <= lo:
-            break
-        slice_hi = tickets if hi is None else min(tickets, hi)
-        if slice_hi > lo:
-            taken += int((slice_hi - lo) * rate)
-    return min(max(0, taken), max(0, tickets - safe))
-
-
-def surge_levy_amount(tickets: int) -> int:
-    if tickets <= config.SURGE_SAFE:
-        return 0
-    taken = int((tickets - config.SURGE_SAFE) * config.SURGE_RATE)
-    return min(taken, tickets - config.SURGE_SAFE)
+    rate = config.WEEKLY_TIDE_RATES[intensity]
+    taken = int((tickets - safe) * rate)
+    return min(max(0, taken), tickets - safe)
 
 
 async def _has_storm_shutter(conn: aiosqlite.Connection, steward_id: int) -> bool:
@@ -61,7 +69,7 @@ async def _apply_levy(
     steward: dict[str, Any],
     taken: int,
     *,
-    kind: str,
+    intensity: Intensity,
     wash_fish: bool,
     wreck_boat: bool,
     wipe_crop_chance: float,
@@ -71,8 +79,7 @@ async def _apply_levy(
     if await _has_storm_shutter(conn, steward["id"]):
         taken = max(1, int(taken * config.STORM_SHUTTER_LEVY_MULT))
     have = int(steward.get("tickets") or 0)
-    floor = config.WEALTH_SAFE if kind == "black_tide" else config.SURGE_SAFE
-    taken = min(taken, max(0, have - floor))
+    taken = min(taken, max(0, have - config.DISASTER_SAFE))
     if taken <= 0:
         return None, 0
     remain = have - taken
@@ -95,10 +102,9 @@ async def _apply_levy(
         wiped = await _maybe_wipe_outdoor(conn, steward["id"], wipe_crop_chance)
         if wiped:
             extras.append(f"露天份地被冲 {wiped} 块")
-    if kind == "black_tide":
-        line = f"秋分黑潮冲走 {taken} 工分票（余 {remain}）"
-    else:
-        line = f"暴潮又卷走超额 {taken} 票（余 {remain}）"
+    label = config.WEEKLY_TIDE_LABELS[intensity]
+    grade = config.WEEKLY_TIDE_GRADES[intensity]
+    line = f"{label}（{grade}）冲走 {taken} 工分票（余 {remain}）"
     if extras:
         line += "。" + "；".join(extras)
     await db.add_chronicle("disaster", f"{steward['name']} — {line}", steward["id"], conn=conn)
@@ -132,8 +138,6 @@ async def _maybe_wipe_outdoor(
     steward_id: int,
     chance: float,
 ) -> int:
-    import random
-
     cur = await conn.execute(
         """
         SELECT id FROM parcels
@@ -180,6 +184,7 @@ async def _insert_pulse(
     conn: aiosqlite.Connection,
     *,
     effect: str,
+    pulse_key: str,
     label: str,
     kind: str,
     detail: str,
@@ -193,7 +198,7 @@ async def _insert_pulse(
         ) VALUES (?,?,?,?,?,?,?,?)
         """,
         (
-            f"{effect}:{now}",
+            pulse_key,
             label,
             kind,
             effect,
@@ -205,8 +210,29 @@ async def _insert_pulse(
     )
 
 
-async def apply_black_tide(conn: aiosqlite.Connection) -> dict[str, Any]:
-    """对全员套一次秋分黑潮。调用方须保证尚未打过旗。"""
+def _side_effects(intensity: Intensity, taken: int, tickets: int) -> dict[str, Any]:
+    if intensity == "low":
+        return {"wash_fish": False, "wreck_boat": False, "wipe_crop_chance": 0.0}
+    if intensity == "mid":
+        return {
+            "wash_fish": taken >= 200,
+            "wreck_boat": False,
+            "wipe_crop_chance": 0.08 if tickets > config.DISASTER_SAFE else 0.0,
+        }
+    return {
+        "wash_fish": True,
+        "wreck_boat": taken >= 4000,
+        "wipe_crop_chance": 0.18,
+    }
+
+
+async def apply_weekly_tide(
+    conn: aiosqlite.Connection,
+    *,
+    week_id: str,
+    intensity: Intensity,
+) -> dict[str, Any]:
+    """对全员套一次本周周潮。调用方须保证本周旗尚未打下。"""
     conn.row_factory = aiosqlite.Row
     rows = await (
         await conn.execute("SELECT * FROM stewards WHERE enrolled=1")
@@ -215,87 +241,84 @@ async def apply_black_tide(conn: aiosqlite.Connection) -> dict[str, Any]:
     hit = 0
     drained = 0
     for s in stewards:
-        taken = levy_amount(int(s.get("tickets") or 0))
+        tickets = int(s.get("tickets") or 0)
+        taken = levy_amount(tickets, intensity)
         if taken <= 0:
             continue
+        extras = _side_effects(intensity, taken, tickets)
         line, actual = await _apply_levy(
             conn,
             s,
             taken,
-            kind="black_tide",
-            wash_fish=taken >= 80,
-            wreck_boat=taken >= 2500,
-            wipe_crop_chance=0.18 if int(s.get("tickets") or 0) > 8000 else 0.0,
+            intensity=intensity,
+            **extras,
         )
         if line:
             hit += 1
             drained += actual
     await _untend_outdoor(conn)
+    label = config.WEEKLY_TIDE_LABELS[intensity]
+    grade = config.WEEKLY_TIDE_GRADES[intensity]
+    rate_pct = int(config.WEEKLY_TIDE_RATES[intensity] * 100)
     detail = (
-        "秋分黑潮灌进档口：2000 票以下没事；口袋越鼓冲得越狠。"
-        "风暴窗板能少冲一点。之后若再来暴潮脉冲，8000 以上还会被卷。"
+        f"{week_id} 周潮·{label}（{grade}）灌进档口：3万以上才冲，超额收 {rate_pct}%。"
+        "风暴窗板能少冲一点。"
         f" 此轮 {hit} 人被冲，合计 {drained} 票入海。"
     )
     if hit:
         await _insert_pulse(
             conn,
-            effect="black_tide",
-            label="秋分黑潮",
+            effect="weekly_tide",
+            pulse_key=f"weekly_tide:{week_id}",
+            label=f"周潮·{label}",
             kind="bad",
             detail=detail,
-            duration=config.BLACK_TIDE_DURATION,
+            duration=config.WEEKLY_TIDE_DURATION,
         )
-        await db.add_chronicle("pulse", f"🌊 全服脉冲·秋分黑潮：{detail}", None, conn=conn)
+        await db.add_chronicle("pulse", f"🌊 全服脉冲·周潮·{label}：{detail}", None, conn=conn)
     await conn.execute(
         """
         INSERT INTO world_flags (flag_key, applied_at, detail) VALUES (?,?,?)
         """,
-        (config.BLACK_TIDE_FLAG, db.now(), f"hit={hit} drained={drained}"),
+        (
+            week_flag_key(week_id),
+            db.now(),
+            f"intensity={intensity} hit={hit} drained={drained}",
+        ),
     )
-    return {"hit": hit, "drained": drained, "detail": detail}
+    return {
+        "week_id": week_id,
+        "intensity": intensity,
+        "hit": hit,
+        "drained": drained,
+        "detail": detail,
+    }
 
 
-async def ensure_black_tide(conn: aiosqlite.Connection | None = None) -> dict[str, Any] | None:
-    """幂等：部署后只刮一次。"""
+async def ensure_weekly_tide(
+    conn: aiosqlite.Connection | None = None,
+    *,
+    week_id: str | None = None,
+    intensity: Intensity | None = None,
+) -> dict[str, Any] | None:
+    """幂等：每个东八区自然周最多刮一次。"""
     if conn is None:
         async with db.connect() as owned:
-            result = await ensure_black_tide(owned)
+            result = await ensure_weekly_tide(
+                owned, week_id=week_id, intensity=intensity
+            )
             if result:
                 await owned.commit()
             return result
     await _ensure_flags_table(conn)
-    if await flag_applied(conn, config.BLACK_TIDE_FLAG):
+    wid = week_id or human_week_id()
+    if await flag_applied(conn, week_flag_key(wid)):
         return None
-    return await apply_black_tide(conn)
-
-
-async def apply_surge_levy(conn: aiosqlite.Connection) -> dict[str, Any]:
-    """暴潮脉冲：只冲 8000 以上的超额。"""
-    conn.row_factory = aiosqlite.Row
-    rows = await (
-        await conn.execute("SELECT * FROM stewards WHERE enrolled=1")
-    ).fetchall()
-    hit = 0
-    drained = 0
-    for raw in rows:
-        s = dict(raw)
-        taken = surge_levy_amount(int(s.get("tickets") or 0))
-        if taken <= 0:
-            continue
-        line, actual = await _apply_levy(
-            conn,
-            s,
-            taken,
-            kind="surge",
-            wash_fish=False,
-            wreck_boat=False,
-            wipe_crop_chance=0.0,
-        )
-        if line:
-            hit += 1
-            drained += actual
-    await _untend_outdoor(conn)
-    return {"hit": hit, "drained": drained}
+    return await apply_weekly_tide(
+        conn,
+        week_id=wid,
+        intensity=intensity or pick_intensity(),
+    )
 
 
 async def recent_hit_line(steward_id: int) -> str | None:
