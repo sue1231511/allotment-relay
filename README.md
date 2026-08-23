@@ -204,6 +204,8 @@ bar_ops     的 command = work 洗碗 night
 | `lili scan` / `lili summon 猫眼螺` | 栗栗流动摊 |
 | `shaonian visit` / `shaonian fortune` | 韶年卜卦 |
 | `musong visit` / `musong send 安` / `musong remember` | 见渡口的目送人·阿槐 / 请他送别一个名字（每游戏日一次）/ 回看送别册 |
+| `jingshan visit` / `jingshan order` / `jingshan deliver` | 初识何敬山 / 替他向商船订品牌糕点 / 到货后送去；严格按顺序 |
+| `jingshan status` / `jingshan revisit` / `jingshan remember` | 看下一步 / 送货后的下一个游戏日再访 / 重读短探索记录；苏月琴不单列为固定 NPC |
 | `lore scan` | 沿海旧史文本与 NPC 小传（`lore scan npc`；也可指定其他主题或随机），不是收集品 |
 | `clinic status` / `clinic treat infection` | 诊所。深坑伤走 `undertide_ops medic` |
 | `visit 拾叶` | 巷口随机事件（主动必触发）；路上每天首次操作掷一次碰上 |

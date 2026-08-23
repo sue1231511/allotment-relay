@@ -570,6 +570,14 @@ CREATE TABLE IF NOT EXISTS musong_sendoffs (
     PRIMARY KEY (steward_id, day)
 );
 
+CREATE TABLE IF NOT EXISTS steward_jingshan (
+    steward_id INTEGER PRIMARY KEY REFERENCES stewards(id),
+    stage INTEGER NOT NULL DEFAULT 0,
+    ordered_at INTEGER NOT NULL DEFAULT 0,
+    delivered_day INTEGER NOT NULL DEFAULT -1,
+    updated_at INTEGER NOT NULL DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS tt_affinity (
     steward_id INTEGER PRIMARY KEY REFERENCES stewards(id),
     score INTEGER NOT NULL DEFAULT 0,
@@ -1310,6 +1318,15 @@ async def init_db() -> None:
                 target_name TEXT NOT NULL,
                 created_at INTEGER NOT NULL,
                 PRIMARY KEY (steward_id, day)
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS steward_jingshan (
+                steward_id INTEGER PRIMARY KEY REFERENCES stewards(id),
+                stage INTEGER NOT NULL DEFAULT 0,
+                ordered_at INTEGER NOT NULL DEFAULT 0,
+                delivered_day INTEGER NOT NULL DEFAULT -1,
+                updated_at INTEGER NOT NULL DEFAULT 0
             )
             """,
             "ALTER TABLE parcels ADD COLUMN tree_harvests INTEGER NOT NULL DEFAULT 0",

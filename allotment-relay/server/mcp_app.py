@@ -147,9 +147,9 @@ async def alliance_ops(
     return await mux._call_ops(mux.alliance_bundle, _kid(), command)
 
 
-@mcp.tool(description="访客：固定 NPC、目送人·阿槐、栗栗摊、Tt酱杂货、诊所、沿海旧史与 NPC 小传。command 写一整句。例子：musong visit · musong send 安 · visit 拾叶 · lore scan npc · clinic treat infection。阿槐在渡口替人送别，每个游戏日可记一个名字，remember 回看。拾叶主动必触发。lore 是文本不是收集品。不会就 help。")
+@mcp.tool(description="访客：固定 NPC、何敬山的商船糕点委托、目送人·阿槐、栗栗摊、Tt酱杂货、诊所、沿海旧史与 NPC 小传。command 写一整句。何敬山按 jingshan visit → order → deliver → 换游戏日 revisit 推进，remember 重读记录；第一次见面不会提前交代旧事。例子：jingshan visit · musong send 安 · clinic treat infection。拾叶主动必触发；lore 是文本不是收集品。空 command=help。")
 async def visit_ops(
-    command: Annotated[str, Field(description="子命令整句。list / musong visit / musong send 名字 / musong remember / visit 拾叶 / tt catalog / lili scan / shaonian fortune / lore scan npc / lore topics / clinic status / treat infection / help。lore scan npc=阿槐、栗栗、桥桥、拾叶、旺夫命的小传；musong 每游戏日送别一次；拾叶主动必触发。空=帮助。不要发明 shop_ops。")] = "",
+    command: Annotated[str, Field(description="子命令整句。list / jingshan visit|status|order|deliver|revisit|remember / musong visit|send 名字|remember / visit 拾叶 / tt catalog / lili scan / shaonian fortune / lore scan npc / clinic status / treat infection / help。何敬山事件严格按顺序，deliver 后换一个游戏日才能 revisit；苏月琴不是单独 NPC。空=帮助。不要发明 shop_ops。")] = "",
 ) -> str:
     return await mux._call_ops(mux.visit_bundle, _kid(), command)
 

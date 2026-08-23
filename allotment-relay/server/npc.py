@@ -48,6 +48,8 @@ async def npc_ops(key_id: int, command: str) -> str:
                 tag = " · 赶海/潮汐提示"
             elif npc["key"] == "musong":
                 tag = " · 渡口送别；visit_ops musong send 名字 / remember"
+            elif npc["key"] == "jingshan":
+                tag = " · 商船糕点委托；visit_ops jingshan visit / order / deliver"
             elif npc["key"] == "herb_aunt":
                 tag = " · 厨房配方提示"
             elif npc["key"] == "market_fan":
@@ -60,7 +62,7 @@ async def npc_ops(key_id: int, command: str) -> str:
                 tag = " · 固定驻唱，bar_ops song"
             lines.append(f"  {npc['key']} — {npc['name']}{tag}")
         lines.append(f"偷菜贼名号: {', '.join(NPC_THIEVES[:3])}…")
-        lines.append("每日首次 visit 略回暖雾智/档信（斑鸠、拾叶除外）")
+        lines.append("每日首次 visit 略回暖雾智/档信（斑鸠、拾叶、何敬山事件除外）")
         return "\n".join(lines)
 
     if verb == "visit" and len(parts) >= 2:
@@ -69,6 +71,9 @@ async def npc_ops(key_id: int, command: str) -> str:
             raise ValueError("未知 NPC，list 查看")
         if npc["key"] == "shiye":
             return await _visit_shiye(s)
+        if npc["key"] == "jingshan":
+            from . import jingshan as jingshan_mod
+            return await jingshan_mod.jingshan_ops(key_id, "visit")
         if npc["key"] == "tt":
             from . import tt as tt_mod
             return await tt_mod.tt_ops(key_id, "visit")

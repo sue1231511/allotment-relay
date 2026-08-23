@@ -156,6 +156,7 @@ VISIT_HELP = """visit_ops 子命令（整句写进 command）：
   lili scan|trade 编号|summon 贝壳 — 栗栗流动摊。例子：lili summon shell_catseye
   shaonian visit|fortune|transfer|buy 符名 — 韶年望潮人
   musong visit|send 名字|remember — 目送人·阿槐；渡口送别，每个游戏日可记一个名字
+  jingshan visit|status|order|deliver|revisit|remember — 何敬山的商船糕点委托与后续小事件；按 status 顺序
   tt catalog|buy 物品|gift 物品 — Tt酱杂货店。例子：tt buy 锄头
   lore scan [主题] / topics — 沿海旧史文本与 NPC 小传（例：lore scan npc；不是收集品，背包里不会多东西）
   clinic status — 看病症和诊费
@@ -390,7 +391,7 @@ async def alliance_bundle(key_id: int, command: str = "") -> str:
 
 
 async def visit_bundle(key_id: int, command: str = "") -> str:
-    from . import clinic, lili, lore_ops as lore_mod, musong, npc, shaonian, tt
+    from . import clinic, jingshan, lili, lore_ops as lore_mod, musong, npc, shaonian, tt
 
     return await route(
         key_id,
@@ -403,6 +404,9 @@ async def visit_bundle(key_id: int, command: str = "") -> str:
             "musong": (musong.musong_ops, "visit"),
             "目送": (musong.musong_ops, "visit"),
             "阿槐": (musong.musong_ops, "visit"),
+            "jingshan": (jingshan.jingshan_ops, "visit"),
+            "敬山": (jingshan.jingshan_ops, "visit"),
+            "何敬山": (jingshan.jingshan_ops, "visit"),
             "tt": (tt.tt_ops, "status"),
             "tt酱": (tt.tt_ops, "status"),
             "杂货": (tt.tt_ops, "status"),
