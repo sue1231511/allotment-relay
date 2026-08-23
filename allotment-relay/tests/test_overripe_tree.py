@@ -50,7 +50,7 @@ async def _test_overripe_tree_compost_keeps_tree() -> None:
             """
             UPDATE parcels SET crop='mango', planted_at=?, tended=1, greenhouse=0,
             grow_target=260, grow_pace='中茬', harvest_left=0
-            WHERE steward_id=? AND slot=1
+            WHERE steward_id=? AND slot=1 AND COALESCE(orchard,0)=0
             """,
             (db.now() - 10_000, sid),
         )
@@ -59,7 +59,7 @@ async def _test_overripe_tree_compost_keeps_tree() -> None:
     async with db.connect() as conn:
         conn.row_factory = __import__("aiosqlite").Row
         plot = dict(await (await conn.execute(
-            "SELECT * FROM parcels WHERE steward_id=? AND slot=1", (sid,)
+            "SELECT * FROM parcels WHERE steward_id=? AND slot=1 AND COALESCE(orchard,0)=0", (sid,)
         )).fetchone())
     assert farming.plot_overripe(plot), plot
 
@@ -68,7 +68,7 @@ async def _test_overripe_tree_compost_keeps_tree() -> None:
 
     async with db.connect() as conn:
         row = await (await conn.execute(
-            "SELECT crop, planted_at FROM parcels WHERE steward_id=? AND slot=1", (sid,)
+            "SELECT crop, planted_at FROM parcels WHERE steward_id=? AND slot=1 AND COALESCE(orchard,0)=0", (sid,)
         )).fetchone()
     assert row[0] == "mango", row
     assert row[1] > 0, row

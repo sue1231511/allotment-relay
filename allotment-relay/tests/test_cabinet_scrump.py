@@ -134,7 +134,7 @@ async def test_cabinet_and_scrump() -> None:
         await conn.execute(
             """
             UPDATE parcels SET crop='kale', planted_at=?, tended=1, greenhouse=0,
-            grow_target=120, harvest_left=0 WHERE steward_id=? AND slot=1
+            grow_target=120, harvest_left=0 WHERE steward_id=? AND slot=1 AND COALESCE(orchard,0)=0
             """,
             (db.now() - 10_000, vic),
         )
@@ -149,7 +149,7 @@ async def test_cabinet_and_scrump() -> None:
     assert "还剩" in msg, msg
     async with db.connect() as conn:
         plot = await (await conn.execute(
-            "SELECT crop, harvest_left FROM parcels WHERE steward_id=? AND slot=1",
+            "SELECT crop, harvest_left FROM parcels WHERE steward_id=? AND slot=1 AND COALESCE(orchard,0)=0",
             (vic,),
         )).fetchone()
     assert plot[0] == "kale"
@@ -167,7 +167,7 @@ async def test_cannot_take_last() -> None:
         await conn.execute(
             """
             UPDATE parcels SET crop='kale', planted_at=?, tended=1, greenhouse=0,
-            grow_target=120, harvest_left=1 WHERE steward_id=? AND slot=1
+            grow_target=120, harvest_left=1 WHERE steward_id=? AND slot=1 AND COALESCE(orchard,0)=0
             """,
             (db.now() - 10_000, vic),
         )
@@ -185,7 +185,7 @@ async def test_cannot_take_last() -> None:
         assert "摘空" in str(exc)
     async with db.connect() as conn:
         plot = await (await conn.execute(
-            "SELECT crop, harvest_left FROM parcels WHERE steward_id=? AND slot=1",
+            "SELECT crop, harvest_left FROM parcels WHERE steward_id=? AND slot=1 AND COALESCE(orchard,0)=0",
             (vic,),
         )).fetchone()
     assert plot[0] == "kale"

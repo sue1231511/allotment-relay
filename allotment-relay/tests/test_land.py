@@ -107,7 +107,7 @@ async def test_buy_beyond_eight() -> None:
             "SELECT parcel_count, tickets FROM stewards WHERE id=?", (sid,)
         )).fetchone()
         plot = await (await conn.execute(
-            "SELECT slot, ready_at FROM parcels WHERE steward_id=? AND slot=9",
+            "SELECT slot, ready_at FROM parcels WHERE steward_id=? AND slot=9 AND COALESCE(orchard,0)=0",
             (sid,),
         )).fetchone()
     assert row[0] == 9
@@ -140,11 +140,11 @@ async def test_buy_skips_greenhouse_slot() -> None:
     assert "#100" in bought, bought
     async with db.connect() as conn:
         gh = await (await conn.execute(
-            "SELECT greenhouse FROM parcels WHERE steward_id=? AND slot=99",
+            "SELECT greenhouse FROM parcels WHERE steward_id=? AND slot=99 AND COALESCE(orchard,0)=0",
             (sid,),
         )).fetchone()
         outdoor = await (await conn.execute(
-            "SELECT greenhouse, ready_at FROM parcels WHERE steward_id=? AND slot=100",
+            "SELECT greenhouse, ready_at FROM parcels WHERE steward_id=? AND slot=100 AND COALESCE(orchard,0)=0",
             (sid,),
         )).fetchone()
         count = (await (await conn.execute(

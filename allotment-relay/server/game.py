@@ -47,17 +47,30 @@ def _parse_int(token: str, label: str = "数量") -> int:
 
 def _parcel_line(plot: dict) -> str:
     from . import land as land_mod
-    slot = plot["slot"]
+    label = land_mod.slot_label(plot)
     gh = "🪴" if plot.get("greenhouse") else ""
     left = land_mod.clear_left(plot)
     if left > 0:
-        return f"  #{slot}{gh}: 开垦中（{farming.format_grow_eta(left)}）"
+        return f"  {label}{gh}: 开垦中（{farming.format_grow_eta(left)}）"
     if not plot.get("crop"):
-        return f"  #{slot}{gh}: 休耕"
+        return f"  {label}{gh}: 休耕"
     meta = CROPS.get(plot["crop"], {"name": plot["crop"], "emoji": "🌱"})
     state = farming.parcel_status(plot)
     extra = farming.parcel_extra(plot)
-    return f"  #{slot}{gh}: {meta['emoji']}{meta['name']}（{state}{extra}）"
+    return f"  {label}{gh}: {meta['emoji']}{meta['name']}（{state}{extra}）"
+
+
+async def _load_named_plot(
+    conn, steward_id: int, token: str, *, orchard_ctx: bool = False, fallback_other: bool = False
+) -> dict:
+    from . import land as land_mod
+    slot, orchard_flag = land_mod.parse_slot_ref(token, orchard_ctx=orchard_ctx)
+    plot = await land_mod.fetch_plot(conn, steward_id, slot, orchard_flag)
+    if not plot and fallback_other:
+        plot = await land_mod.fetch_plot(conn, steward_id, slot, 0 if orchard_flag else 1)
+    if not plot:
+        raise ValueError(land_mod.missing_slot_msg(slot, orchard_flag))
+    return plot
 
 
 async def require_steward(key_id: int, *, exempt_duty: bool = False) -> dict[str, Any]:
@@ -138,7 +151,7 @@ async def relay_manual() -> str:
         "               command 例：status · catalog · weather · sow 1 甘蓝 · tend · 浇水 1 · 施肥 1",
         "                 · gather · forage · 买地 · 买地 确认 · chop 1 · 偷菜 名字 · amends 名字",
         "                 · camera install 1 · incident scan · repair 12 · commons scan · dove 忽略|驱赶",
-        "                 · shed erect · scarecrow 1 · compost 1 · shake 1",
+        "                 · 果园 · 买园 · 买园 确认 · 果园 sow 1 芒果 · shake 园1 · shed erect · scarecrow 1 · compost 1",
         "  hut_ops      小屋/潮柜/冰箱/堆肥桶/床/畜栏/吉祥物",
         "               command 例：status · build · catalog · buy cabinet · install soft_1 cabinet",
         "                 · buy fridge · buy compost_bin · install soft_2 compost_bin",
@@ -207,10 +220,11 @@ async def relay_manual() -> str:
         "【份地】",
         "  每次 sow 摇出不同生长周期。短茬约1时5把、中茬1.5~2时4把、长茬2.5~3时3把、果树3.5~4.5时3把、稀有约5时2把；tend 再 +1",
         "  浇水免费、施肥耗堆肥或羊粪/猪粪/牛粪，一茬各一次。例子：浇水 1 · 施肥 1 · 施肥 1 羊粪",
-        "  树（青柠/木瓜/香蕉/芒果/椰子/榴莲）按种苗成本有收茬上限，收满枯死；status 看「剩N茬」。椰子等可 shake",
+        "  树（青柠/木瓜/香蕉/芒果/椰子/榴莲）只种果园，按种苗成本有收茬上限，收满枯死；status 看「剩N茬」。椰子等可 shake 园1",
         "  树田间偶发啄木鸟/旱风/丰年枝/树瘟/松鼠等插曲",
-        "  清地 plot_ops chop 地块（不必等过熟）。过熟 compost 清果（还有茬则继续长）",
-        "  买地：起步 3 块，露天无上限。plot_ops 买地 看价钱和开垦时间；买地 确认 付钱。第 4 块起 80/120/180/260/360 票（差额每次多 20），开垦 30/45/60/90/120 分钟，之后以此类推",
+        "  清树 plot_ops chop 园1（不必等过熟）。过熟 compost 园1 清果（还有茬则继续长）",
+        "  买地：起步 3 块，露天无上限。plot_ops 买地 看价钱和开垦时间；买地 确认 付钱。第 4 块起 80/120/180/260/360 票（差额每次多 20），开垦 30/45/60/90/120 分钟，之后以此类推。份地不种果树",
+        "  果园：起步 3 个树位，无上限，价表和份地一样。plot_ops 果园 / 买园 看价；买园 确认 付钱。只种果树：sow 园1 芒果 · 果园 sow 1 芒果。收：果园 gather · gather 园1 · shake 园1",
         "  温室 plot_ops shed erect（180票）→ 份地 #99 独立槽，不占露天份地，也偷不到",
         "  监控 plot_ops camera install 地块（15票）记偷菜日志、提高抓贼；camera check / remove",
         "  意外 plot_ops incident scan · repair 编号（也可省略 incident：repair 12）",
@@ -423,7 +437,8 @@ async def steward_sheet(key_id: int) -> str:
         health_mod.meter_line(s, ailments),
         energy_mod.meter_line(s, ailments),
         bar_mod.duty_line(s),
-        land_mod.sheet_note(s, parcels),
+        land_mod.sheet_note(s, parcels, orchard=False),
+        land_mod.sheet_note(s, parcels, orchard=True),
         world.climate_line(),
     ]
     pulse_snap = await events.public_pulse_snapshot()
@@ -525,8 +540,12 @@ async def steward_sheet(key_id: int) -> str:
             lines.append(mhint)
     if tale_line:
         lines.append(tale_line)
+    plots = [p for p in parcels if not p.get("orchard")]
+    trees = [p for p in parcels if p.get("orchard")]
     lines.append("份地状态:")
-    lines.extend(_parcel_line(p) for p in parcels)
+    lines.extend(_parcel_line(p) for p in plots)
+    lines.append("果园:")
+    lines.extend(_parcel_line(p) for p in trees)
     if stock:
         lines.append("行囊:")
         for item, qty in stock.items():
@@ -584,7 +603,9 @@ async def peer_sheet(name: str) -> str:
         progress_mod.sheet_title_line(ranked),
         f"温室: {s['greenhouse_label'] if s['greenhouse'] else '无'}",
         "公开份地:",
-        *(_parcel_line(p) for p in parcels),
+        *(_parcel_line(p) for p in parcels if not p.get("orchard")),
+        "公开果园:",
+        *(_parcel_line(p) for p in parcels if p.get("orchard")),
         f"串门: plot_ops 偷菜 {s['name']} · alliance_ops assist {s['name']}",
     ])
 
@@ -638,9 +659,10 @@ async def plot_ops(key_id: int, command: str = "") -> str:
             "  status · catalog · weather · 邻居 / 在线\n"
             "  sow 地块 作物 · tend · 浇水 [地块] · 施肥 地块 · gather [地块] · chop 地块\n"
             "  偷菜 名字 [地块] · compost 地块 · forage · buy 数量 作物（行囊每格 24） · dove 忽略|驱赶\n"
-            "  land / 买地 — 现有几块、价钱、开垦时间（露天无上限）；买地 确认 付钱\n"
+            "  land / 买地 — 份地价钱与开垦（无上限）；买地 确认 付钱。份地不种果树\n"
+            "  果园 / 买园 — 树位价钱与开垦（无上限，和份地同一价表）；买园 确认 付钱\n"
             "  camera install 地块 · incident scan · repair 编号 · commons scan\n"
-            "例: plot_ops status · plot_ops 浇水 1 · plot_ops 施肥 1 · plot_ops 偷菜 安"
+            "例: plot_ops status · plot_ops sow 1 甘蓝 · plot_ops 果园 sow 1 芒果 · plot_ops 买园 确认"
         )
     s = await require_steward(key_id)
     pulse = await events.maybe_world_pulse(s)
@@ -665,6 +687,14 @@ async def plot_ops(key_id: int, command: str = "") -> str:
 
 async def _plot_one(s: dict, cmd: str) -> str:
     parts = cmd.split()
+    orchard_ctx = False
+    if parts and parts[0].lower() in ("果园", "orchard", "grove"):
+        orchard_ctx = True
+        parts = parts[1:]
+        if not parts:
+            from . import land as land_mod
+            parcels = await db.get_parcels(s["id"], orchard=1)
+            return await land_mod.status_text(s, parcels, orchard=True)
     verb = parts[0].lower() if parts else ""
 
     if verb == "weather":
@@ -684,8 +714,40 @@ async def _plot_one(s: dict, cmd: str) -> str:
 
     if verb == "status":
         from . import land as land_mod
+        if orchard_ctx:
+            parcels = await db.get_parcels(s["id"], orchard=1)
+            return await land_mod.status_text(s, parcels, orchard=True)
         parcels = await db.get_parcels(s["id"])
-        return land_mod.sheet_note(s, parcels) + "\n" + "\n".join(_parcel_line(p) for p in parcels)
+        plots = [p for p in parcels if not p.get("orchard")]
+        trees = [p for p in parcels if p.get("orchard")]
+        return "\n".join(
+            [
+                land_mod.sheet_note(s, parcels, orchard=False),
+                *(_parcel_line(p) for p in plots),
+                land_mod.sheet_note(s, parcels, orchard=True),
+                *(_parcel_line(p) for p in trees),
+            ]
+        )
+
+    if verb in ("买园",) or (
+        orchard_ctx and verb in ("land", "买地", "地契", "expand", "买", "扩")
+    ):
+        from . import land as land_mod
+        sub = parts[1].lower() if len(parts) > 1 else ""
+        buying = verb == "expand" or sub in ("buy", "确认", "ok", "yes", "买", "扩")
+        if buying:
+            async with db.connect() as conn:
+                msg = await land_mod.buy(conn, s, orchard=True)
+                await db.add_chronicle(
+                    "plot",
+                    f"{s['name']} 买园至 {s.get('orchard_count')} 树位",
+                    s["id"],
+                    conn=conn,
+                )
+                await conn.commit()
+            return msg
+        parcels = await db.get_parcels(s["id"], orchard=1)
+        return await land_mod.status_text(s, parcels, orchard=True)
 
     if verb in ("land", "买地", "地契", "expand"):
         from . import land as land_mod
@@ -702,7 +764,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
                 )
                 await conn.commit()
             return msg
-        parcels = await db.get_parcels(s["id"])
+        parcels = await db.get_parcels(s["id"], orchard=0)
         return await land_mod.status_text(s, parcels)
 
     if verb in ("cohort", "邻居", "neighbors", "neighbour", "peers", "在线", "online"):
@@ -714,8 +776,9 @@ async def _plot_one(s: dict, cmd: str) -> str:
         lines = [crop_catalog_line(k) for k in CROPS]
         return (
             "作物清单（短茬快、把数多；稀有慢、把数少。偷菜最多 30%，不能摘空）\n"
+            "果树只能种在果园（sow 园1 芒果 / 果园 sow 1 芒果）；份地只种菜。\n"
             + "\n".join(lines)
-            + "\n树清地：plot_ops chop 地块（不必等过熟）"
+            + "\n树清地：plot_ops chop 园1（不必等过熟）"
         )
 
     if verb == "buy" and len(parts) >= 2 and parts[1] in ("地", "land", "份地"):
@@ -725,6 +788,19 @@ async def _plot_one(s: dict, cmd: str) -> str:
             await db.add_chronicle(
                 "plot",
                 f"{s['name']} 买地至 {s.get('parcel_count')} 块",
+                s["id"],
+                conn=conn,
+            )
+            await conn.commit()
+        return msg
+
+    if verb == "buy" and len(parts) >= 2 and parts[1] in ("园", "orchard", "果园"):
+        from . import land as land_mod
+        async with db.connect() as conn:
+            msg = await land_mod.buy(conn, s, orchard=True)
+            await db.add_chronicle(
+                "plot",
+                f"{s['name']} 买园至 {s.get('orchard_count')} 树位",
                 s["id"],
                 conn=conn,
             )
@@ -750,26 +826,34 @@ async def _plot_one(s: dict, cmd: str) -> str:
         )
 
     if verb == "sow" and len(parts) >= 3:
-        slot = _parse_int(parts[1], "地块编号")
+        from . import land as land_mod
         crop = resolve_crop_key(" ".join(parts[2:]))
         if not crop:
             raise ValueError(unknown_crop_message(" ".join(parts[2:])))
+        slot, orchard_flag = land_mod.parse_slot_ref(parts[1], orchard_ctx=orchard_ctx)
+        is_tree = bool(CROPS[crop].get("tree"))
+        if is_tree:
+            orchard_flag = 1
+        elif orchard_flag:
+            raise ValueError(
+                "果园只种果树（青柠/木瓜/香蕉/芒果/椰子/榴莲）。"
+                "蔬菜走 plot_ops sow 1 甘蓝"
+            )
         seed = f"seed_{crop}"
         async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
-            plot = dict(await (await conn.execute(
-                "SELECT * FROM parcels WHERE steward_id=? AND slot=?", (s["id"], slot)
-            )).fetchone() or {})
+            plot = await land_mod.fetch_plot(conn, s["id"], slot, orchard_flag)
             if not plot:
-                raise ValueError(f"没有份地 #{slot}")
-            from . import land as land_mod
+                raise ValueError(land_mod.missing_slot_msg(slot, orchard_flag))
             land_mod.assert_ready(plot)
+            if plot.get("greenhouse") and is_tree:
+                raise ValueError("温室不种果树。果树走 plot_ops 果园 sow 1 芒果")
             if plot.get("crop"):
-                raise ValueError(f"#{slot} 已在种植")
+                raise ValueError(f"{land_mod.slot_label(plot)} 已在种植")
             if not await db.take_item(conn, s["id"], seed, 1):
                 raise ValueError(f"缺少 {CROPS[crop]['name']}种")
             grow_target, grow_pace, sow_flavor = farming.roll_grow(crop, plot)
-            tree_max = farming.calc_tree_harvest_max(crop) if CROPS[crop].get("tree") else 0
+            tree_max = farming.calc_tree_harvest_max(crop) if is_tree else 0
             await conn.execute(
                 """
                 UPDATE parcels SET crop=?, planted_at=?, tended=0, grow_target=?, grow_pace=?,
@@ -784,7 +868,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
             farm = await farming.roll_farm_event(conn, s, "sow")
             dove = await farming.maybe_gugu_dove_stalk(conn, s, plot["id"])
             await conn.commit()
-        msg = f"#{slot} 播下 {CROPS[crop]['emoji']}{CROPS[crop]['name']}\n{sow_flavor}"
+        msg = f"{land_mod.slot_label(plot)} 播下 {CROPS[crop]['emoji']}{CROPS[crop]['name']}\n{sow_flavor}"
         if dove:
             msg += f"\n{dove}"
         elif farm:
@@ -793,10 +877,12 @@ async def _plot_one(s: dict, cmd: str) -> str:
 
     if verb == "tend":
         async with db.connect() as conn:
-            cur = await conn.execute(
-                "SELECT id FROM parcels WHERE steward_id=? AND crop IS NOT NULL AND tended=0",
-                (s["id"],),
+            tend_sql = (
+                "SELECT id FROM parcels WHERE steward_id=? AND crop IS NOT NULL AND tended=0"
             )
+            if orchard_ctx:
+                tend_sql += " AND COALESCE(orchard,0)=1"
+            cur = await conn.execute(tend_sql, (s["id"],))
             rows = await cur.fetchall()
             hoe = await (await conn.execute(
                 "SELECT quantity FROM satchel WHERE steward_id=? AND item='tool_hoe' AND quantity>0",
@@ -851,7 +937,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
             tale_extra = await tale_mod.check_action_progress(conn, s["id"], "plot")
             ill_note = await health.maybe_insomnia(conn, s["id"])
             await conn.commit()
-        msg = f"打理了 {len(rows)} 块份地" if rows else "没有待打理的份地——苗都乖，或你还没种"
+        noun = "树位" if orchard_ctx else "份地"
+        msg = f"打理了 {len(rows)} 块{noun}" if rows else f"没有待打理的{noun}——苗都乖，或你还没种"
         if hoe and rows:
             msg += " · 锄头松土"
         msg += flavor.maybe_suffix(flavor.TEND_SUFFIX)
@@ -872,18 +959,15 @@ async def _plot_one(s: dict, cmd: str) -> str:
         return f"{msg}\n{extra}" if extra else msg
 
     if verb == "shake" and len(parts) >= 2:
-        slot = int(parts[1])
+        from . import land as land_mod
         async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
-            plot = dict(await (await conn.execute(
-                "SELECT * FROM parcels WHERE steward_id=? AND slot=?", (s["id"], slot)
-            )).fetchone() or {})
-            if not plot:
-                raise ValueError(f"没有份地 #{slot}")
-            from . import land as land_mod
+            plot = await _load_named_plot(
+                conn, s["id"], parts[1], orchard_ctx=True, fallback_other=True
+            )
             land_mod.assert_ready(plot)
             if not plot.get("crop"):
-                raise ValueError(f"#{slot} 没有可摇的树")
+                raise ValueError(f"{land_mod.slot_label(plot)} 没有可摇的树")
             meta = CROPS.get(plot["crop"], {})
             if not meta.get("shake"):
                 raise ValueError(f"{meta.get('name', plot['crop'])} 不能摇，只能 gather")
@@ -893,45 +977,40 @@ async def _plot_one(s: dict, cmd: str) -> str:
             item, qty, tree_note = result
             await conn.commit()
         name = ITEM_NAMES.get(item, item)
-        msg = f"#{slot} 摇下 {name} x{qty}" + flavor.maybe_suffix(["椰子：重力赞助", "树：今天也配合"])
+        msg = f"{land_mod.slot_label(plot)} 摇下 {name} x{qty}" + flavor.maybe_suffix(["椰子：重力赞助", "树：今天也配合"])
         if tree_note:
             msg += f"\n{tree_note}"
         return msg
 
     if verb in ("water", "浇水", "浇"):
-        slot_filter: int | None = None
-        if len(parts) >= 2:
-            slot_filter = _parse_int(parts[1], "地块编号")
+        from . import land as land_mod
+        slot_token = parts[1] if len(parts) >= 2 else None
         async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
-            if slot_filter is not None:
-                plot = dict(await (await conn.execute(
-                    "SELECT * FROM parcels WHERE steward_id=? AND slot=?",
-                    (s["id"], slot_filter),
-                )).fetchone() or {})
-                if not plot:
-                    raise ValueError(f"没有份地 #{slot_filter}")
-                plots = [plot]
+            if slot_token:
+                plots = [await _load_named_plot(conn, s["id"], slot_token, orchard_ctx=orchard_ctx)]
             else:
+                water_sql = "SELECT * FROM parcels WHERE steward_id=? AND crop IS NOT NULL"
+                if orchard_ctx:
+                    water_sql += " AND COALESCE(orchard,0)=1"
                 plots = [dict(r) for r in await (await conn.execute(
-                    "SELECT * FROM parcels WHERE steward_id=? AND crop IS NOT NULL",
-                    (s["id"],),
+                    water_sql, (s["id"],),
                 )).fetchall()]
-            from . import land as land_mod
             from . import config as cfg
             lines = []
             for plot in plots:
                 land_mod.assert_ready(plot)
+                label = land_mod.slot_label(plot)
                 if not plot.get("crop"):
-                    if slot_filter is not None:
-                        raise ValueError(f"#{plot['slot']} 没种东西")
+                    if slot_token:
+                        raise ValueError(f"{label} 没种东西")
                     continue
                 if farming.plot_ready(plot) or farming.plot_overripe(plot):
-                    if slot_filter is not None:
-                        raise ValueError(f"#{plot['slot']} 已经熟了，浇水赶不上了。gather 收")
+                    if slot_token:
+                        raise ValueError(f"{label} 已经熟了，浇水赶不上了。gather 收")
                     continue
                 if plot.get("watered"):
-                    lines.append(f"#{plot['slot']} 已经浇过水")
+                    lines.append(f"{label} 已经浇过水")
                     continue
                 new_target, saved = farming.apply_grow_cut(plot, cfg.WATER_CUT_RATE)
                 await conn.execute(
@@ -944,23 +1023,25 @@ async def _plot_one(s: dict, cmd: str) -> str:
                 eta = farming.format_grow_eta(left) or "马上熟"
                 if saved:
                     lines.append(
-                        f"#{plot['slot']} 浇了水，成熟提前 {farming.format_grow_eta(saved)}"
+                        f"{label} 浇了水，成熟提前 {farming.format_grow_eta(saved)}"
                         f"（还需 {eta}）"
                     )
                 else:
-                    lines.append(f"#{plot['slot']} 浇了水，地更润，生长略快（还需 {eta}）")
+                    lines.append(f"{label} 浇了水，地更润，生长略快（还需 {eta}）")
             await conn.commit()
         if not lines:
             return "没有能浇的地——先 sow，或已经浇过/熟了"
         return "\n".join(lines)
 
     if verb in ("fertilize", "施肥"):
-        slot_filter: int | None = None
+        from . import land as land_mod
+        slot_token = None
         fert_token = "compost"
         rest = parts[1:]
         if rest:
             try:
-                slot_filter = _parse_int(rest[0], "地块编号")
+                land_mod.parse_slot_ref(rest[0], orchard_ctx=orchard_ctx)
+                slot_token = rest[0]
                 fert_token = rest[1] if len(rest) > 1 else "compost"
             except ValueError:
                 fert_token = rest[0]
@@ -970,34 +1051,32 @@ async def _plot_one(s: dict, cmd: str) -> str:
             raise ValueError("施肥用堆肥或羊粪/猪粪/牛粪。例子：施肥 1 · 施肥 1 羊粪")
         async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
-            if slot_filter is not None:
-                plot = dict(await (await conn.execute(
-                    "SELECT * FROM parcels WHERE steward_id=? AND slot=?",
-                    (s["id"], slot_filter),
-                )).fetchone() or {})
-                if not plot:
-                    raise ValueError(f"没有份地 #{slot_filter}")
-                plots = [plot]
+            if slot_token:
+                plots = [await _load_named_plot(conn, s["id"], slot_token, orchard_ctx=orchard_ctx)]
             else:
+                fert_sql = (
+                    "SELECT * FROM parcels WHERE steward_id=? AND crop IS NOT NULL AND fertilized=0"
+                )
+                if orchard_ctx:
+                    fert_sql += " AND COALESCE(orchard,0)=1"
                 plots = [dict(r) for r in await (await conn.execute(
-                    "SELECT * FROM parcels WHERE steward_id=? AND crop IS NOT NULL AND fertilized=0",
-                    (s["id"],),
+                    fert_sql, (s["id"],),
                 )).fetchall()]
-            from . import land as land_mod
             lines = []
             mascot = s.get("mascot_trait") == "compost"
             for plot in plots:
                 land_mod.assert_ready(plot)
+                plabel = land_mod.slot_label(plot)
                 if not plot.get("crop"):
-                    if slot_filter is not None:
-                        raise ValueError(f"#{plot['slot']} 没种东西")
+                    if slot_token:
+                        raise ValueError(f"{plabel} 没种东西")
                     continue
                 if farming.plot_ready(plot) or farming.plot_overripe(plot):
-                    if slot_filter is not None:
-                        raise ValueError(f"#{plot['slot']} 已经熟了，肥料留给下一茬")
+                    if slot_token:
+                        raise ValueError(f"{plabel} 已经熟了，肥料留给下一茬")
                     continue
                 if plot.get("fertilized"):
-                    lines.append(f"#{plot['slot']} 已经施过肥")
+                    lines.append(f"{plabel} 已经施过肥")
                     continue
                 if not await db.take_item(conn, s["id"], fert_item, 1):
                     need = farming.fertilizer_label(fert_item)
@@ -1005,7 +1084,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
                         raise ValueError(
                             f"施肥需要 {need} x1（forage / hut_ops 堆肥桶 存 粪便 可攒）"
                         )
-                    lines.append(f"{need} 不够了，施到 #{plot['slot']} 前停手")
+                    lines.append(f"{need} 不够了，施到 {plabel} 前停手")
                     break
                 rate = farming.fertilizer_cut_rate(fert_item, compost_mascot=mascot)
                 new_target, saved = farming.apply_grow_cut(plot, rate)
@@ -1021,12 +1100,12 @@ async def _plot_one(s: dict, cmd: str) -> str:
                 extra = " · 吉祥物堆肥加持" if mascot else ""
                 if saved:
                     lines.append(
-                        f"#{plot['slot']} 已施{label}，成熟提前 {farming.format_grow_eta(saved)}"
+                        f"{plabel} 已施{label}，成熟提前 {farming.format_grow_eta(saved)}"
                         f"（还需 {eta}）{extra}"
                     )
                 else:
                     lines.append(
-                        f"#{plot['slot']} 已施{label}，生长略快（还需 {eta}）{extra}"
+                        f"{plabel} 已施{label}，生长略快（还需 {eta}）{extra}"
                     )
             await conn.commit()
         if not lines:
@@ -1034,18 +1113,14 @@ async def _plot_one(s: dict, cmd: str) -> str:
         return "\n".join(lines)
 
     if verb == "scarecrow" and len(parts) >= 2:
-        slot = int(parts[1])
+        from . import land as land_mod
         async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
-            plot = dict(await (await conn.execute(
-                "SELECT * FROM parcels WHERE steward_id=? AND slot=?", (s["id"], slot)
-            )).fetchone() or {})
-            if not plot:
-                raise ValueError(f"没有份地 #{slot}")
-            from . import land as land_mod
+            plot = await _load_named_plot(conn, s["id"], parts[1], orchard_ctx=orchard_ctx)
             land_mod.assert_ready(plot)
+            slot = plot["slot"]
             if plot.get("scarecrow"):
-                return f"#{slot} 已有稻草人"
+                return f"{land_mod.slot_label(plot)} 已有稻草人"
             if await db.take_item(conn, s["id"], "scarecrow", 1):
                 pass
             else:
@@ -1055,27 +1130,25 @@ async def _plot_one(s: dict, cmd: str) -> str:
                         raise ValueError(f"扎稻草人需要 scarecrow 或 漂绳x2+堆肥x1")
             await conn.execute("UPDATE parcels SET scarecrow=1 WHERE id=?", (plot["id"],))
             await conn.commit()
-        return f"#{slot} 扎好稻草人，鸟儿的自助餐厅关门"
+        return f"{land_mod.slot_label(plot)} 扎好稻草人，鸟儿的自助餐厅关门"
 
     if verb == "compost" and len(parts) >= 2:
-        slot = _parse_int(parts[1], "地块编号")
+        from . import land as land_mod
         async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
-            plot = dict(await (await conn.execute(
-                "SELECT * FROM parcels WHERE steward_id=? AND slot=?", (s["id"], slot)
-            )).fetchone() or {})
-            if not plot:
-                raise ValueError(f"没有份地 #{slot}")
-            from . import land as land_mod
+            plot = await _load_named_plot(
+                conn, s["id"], parts[1], orchard_ctx=orchard_ctx, fallback_other=True
+            )
+            slot = land_mod.slot_label(plot)
             land_mod.assert_ready(plot)
             if not plot.get("crop"):
-                raise ValueError(f"#{slot} 空着")
+                raise ValueError(f"{slot} 空着")
             meta = CROPS.get(plot["crop"], {"name": plot["crop"]})
             overripe = farming.plot_overripe(plot)
             ready = farming.plot_ready(plot)
             if meta.get("tree") and not overripe:
                 raise ValueError(
-                    f"#{slot} {meta['name']}树还没过熟。树收完会再长，不想要了才 `plot_ops chop {slot}`；"
+                    f"{slot} {meta['name']}树还没过熟。树收完会再长，不想要了才 `plot_ops chop {slot}`；"
                     "过熟清果用 gather 或 compost，树会留下。"
                 )
             if not overripe and not ready:
@@ -1096,7 +1169,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
                 )
                 await conn.commit()
                 return (
-                    f"#{slot} {crop_name}过熟落果 → 堆肥桶 ×{compost_qty}，"
+                    f"{slot} {crop_name}过熟落果 → 堆肥桶 ×{compost_qty}，"
                     "树还在，重新结果"
                 )
             await conn.execute(
@@ -1107,22 +1180,20 @@ async def _plot_one(s: dict, cmd: str) -> str:
                 (plot["id"],),
             )
             await conn.commit()
-        return f"#{slot} {crop_name} → 堆肥桶，土肥了"
+        return f"{slot} {crop_name} → 堆肥桶，土肥了"
 
     if verb == "chop" and len(parts) >= 2:
-        slot = _parse_int(parts[1], "地块编号")
+        from . import land as land_mod
         async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
-            plot = dict(await (await conn.execute(
-                "SELECT * FROM parcels WHERE steward_id=? AND slot=?", (s["id"], slot)
-            )).fetchone() or {})
-            if not plot:
-                raise ValueError(f"没有份地 #{slot}")
-            from . import land as land_mod
+            plot = await _load_named_plot(
+                conn, s["id"], parts[1], orchard_ctx=orchard_ctx, fallback_other=True
+            )
+            slot = land_mod.slot_label(plot)
             land_mod.assert_ready(plot)
             result = farming.chop_tree(plot)
             if not result["ok"]:
-                raise ValueError(f"#{slot} {result['msg']}")
+                raise ValueError(f"{slot} {result['msg']}")
             loot_txt = []
             for iid, n in result["loot"]:
                 await db.add_item(conn, s["id"], iid, n)
@@ -1137,12 +1208,12 @@ async def _plot_one(s: dict, cmd: str) -> str:
             extra = await events.roll_after_action(s, "gather", conn)
             farm = await farming.roll_farm_event(conn, s, "gather")
             await db.add_chronicle(
-                "chop", f"{s['name']} 砍倒 #{slot} {result['name']}树", s["id"], conn=conn
+                "chop", f"{s['name']} 砍倒 {slot} {result['name']}树", s["id"], conn=conn
             )
             await conn.commit()
         loot_s = "、".join(loot_txt)
         msg = (
-            f"#{slot} 砍倒{result['name']}树，地空了。{result['note']} 捡到 {loot_s}。"
+            f"{slot} 砍倒{result['name']}树，地空了。{result['note']} 捡到 {loot_s}。"
             + flavor.maybe_suffix(flavor.CHOP_SUFFIX)
         )
         if farm:
@@ -1152,23 +1223,29 @@ async def _plot_one(s: dict, cmd: str) -> str:
         return msg
 
     if verb == "chop":
-        raise ValueError("用法: plot_ops chop 地块")
+        raise ValueError("用法: plot_ops chop 地块或园1")
 
     if verb == "gather":
-        slot_filter: int | None = None
-        if len(parts) >= 2:
-            slot_filter = _parse_int(parts[1], "地块编号")
+        from . import land as land_mod
+        slot_token = parts[1] if len(parts) >= 2 else None
         got = []
         async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
+            gather_sql = "SELECT * FROM parcels WHERE steward_id=?"
+            if orchard_ctx and not slot_token:
+                gather_sql += " AND COALESCE(orchard,0)=1"
             parcels = [dict(r) for r in await (await conn.execute(
-                "SELECT * FROM parcels WHERE steward_id=?", (s["id"],)
+                gather_sql, (s["id"],)
             )).fetchall()]
-            if slot_filter is not None:
-                parcels = [p for p in parcels if p.get("slot") == slot_filter]
+            if slot_token:
+                target = await _load_named_plot(
+                    conn, s["id"], slot_token, orchard_ctx=orchard_ctx, fallback_other=True
+                )
+                parcels = [p for p in parcels if p.get("id") == target["id"]]
                 if not parcels:
-                    raise ValueError(f"没有份地 #{slot_filter}")
-                from . import land as land_mod
+                    raise ValueError(land_mod.missing_slot_msg(
+                        *land_mod.parse_slot_ref(slot_token, orchard_ctx=orchard_ctx)
+                    ))
                 land_mod.assert_ready(parcels[0])
             for p in parcels:
                 if farming.plot_ready(p):
@@ -1293,20 +1370,20 @@ async def _plot_one(s: dict, cmd: str) -> str:
                 "tide_ops beach scan · kitchen_ops eat · visit_ops clinic"
             )
             msg = "没有可收成的作物"
-            if slot_filter is not None and parcels:
+            if slot_token is not None and parcels:
                 p = parcels[0]
+                plabel = land_mod.slot_label(p)
                 if not p.get("crop"):
-                    msg = f"#{slot_filter} 休耕，无可收"
+                    msg = f"{plabel} 休耕，无可收"
                 elif not farming.plot_ready(p) and not farming.plot_overripe(p):
                     cname = CROPS[p["crop"]]["name"]
                     _, _, left = farming.grow_progress(p)
-                    msg = f"#{slot_filter} {cname} 还需 {farming.format_grow_eta(left)}{wait_hint}"
+                    msg = f"{plabel} {cname} 还需 {farming.format_grow_eta(left)}{wait_hint}"
                 else:
-                    msg = f"#{slot_filter} 暂无可收（plot_ops status 查看详情）"
+                    msg = f"{plabel} 暂无可收（plot_ops status 查看详情）"
             elif nearest is not None and min_left is not None:
                 cname = CROPS[nearest["crop"]]["name"]
-                slot = nearest.get("slot", "?")
-                msg += f"（#{slot} {cname} 还需 {farming.format_grow_eta(min_left)}）{wait_hint}"
+                msg += f"（{land_mod.slot_label(nearest)} {cname} 还需 {farming.format_grow_eta(min_left)}）{wait_hint}"
             if tale_extra:
                 msg += f"\n\n{tale_extra}"
             return f"{msg}\n{extra}" if extra else msg
@@ -1391,10 +1468,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
             from . import multi as multi_mod
             roster = await multi_mod.list_neighbors(s, online_only=False)
             raise ValueError("用法: plot_ops 偷菜 名字 [地块]\n" + roster)
-        slot = None
-        if len(parts) >= 3:
-            slot = _parse_int(parts[2], "地块编号")
-        return await events.manual_scrump(s, parts[1], slot)
+        slot_token = parts[2] if len(parts) >= 3 else None
+        return await events.manual_scrump(s, parts[1], slot_token)
 
     if verb == "hedge_note":
         if len(parts) < 3:
@@ -1706,7 +1781,7 @@ async def _shed_one(s: dict, cmd: str) -> str:
                 (GREENHOUSE_COST, s["id"]),
             )
             await conn.execute(
-                "INSERT INTO parcels (steward_id, slot, greenhouse, tended) VALUES (?, 99, 1, 0)",
+                "INSERT INTO parcels (steward_id, slot, orchard, greenhouse, tended) VALUES (?, 99, 0, 1, 0)",
                 (s["id"],),
             )
             await conn.commit()

@@ -61,7 +61,7 @@ async def test_water_and_fertilize() -> None:
             """
             UPDATE parcels SET crop='kale', planted_at=?, tended=0, greenhouse=0,
             grow_target=3600, harvest_left=0, fertilized=0, watered=0
-            WHERE steward_id=? AND slot=1
+            WHERE steward_id=? AND slot=1 AND COALESCE(orchard,0)=0
             """,
             (planted, sid),
         )
@@ -75,7 +75,7 @@ async def test_water_and_fertilize() -> None:
 
     async with db.connect() as conn:
         row = await (await conn.execute(
-            "SELECT watered, grow_target FROM parcels WHERE steward_id=? AND slot=1",
+            "SELECT watered, grow_target FROM parcels WHERE steward_id=? AND slot=1 AND COALESCE(orchard,0)=0",
             (sid,),
         )).fetchone()
         compost_before = (await (await conn.execute(
@@ -90,7 +90,7 @@ async def test_water_and_fertilize() -> None:
     assert "已施堆肥" in fert and "提前" in fert, fert
     async with db.connect() as conn:
         row = await (await conn.execute(
-            "SELECT fertilized, grow_target, watered FROM parcels WHERE steward_id=? AND slot=1",
+            "SELECT fertilized, grow_target, watered FROM parcels WHERE steward_id=? AND slot=1 AND COALESCE(orchard,0)=0",
             (sid,),
         )).fetchone()
         compost_after = (await (await conn.execute(

@@ -88,6 +88,7 @@ async def seed_xp(conn: aiosqlite.Connection) -> None:
         UPDATE stewards SET xp =
             tickets
             + parcel_count * 20
+            + COALESCE(orchard_count, 0) * 20
             + COALESCE(hut_level, 0) * 40
             + CASE WHEN greenhouse = 1 THEN 50 ELSE 0 END
             + CASE WHEN COALESCE(barn_built, 0) = 1 THEN 50 ELSE 0 END

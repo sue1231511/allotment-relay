@@ -64,6 +64,8 @@ def test_mcp_descriptions() -> None:
     assert "sow_all" in blob or "plant" in blob
     assert "shed erect" in blob or "#99" in blob
     assert "无上限" in blob or "露天无上限" in blob
+    assert "果园" in blob
+    assert "买园" in blob
 
     tide = mcp._tool_manager.get_tool("tide_ops")
     tide_blob = f"{tide.description}\n{(tide.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -203,6 +205,9 @@ def test_relay_manual_covers_systems() -> None:
         "甘蓝种×2",
         "不占露天份地",
         "露天无上限",
+        "份地不种果树",
+        "买园",
+        "sow 园1 芒果",
         "只搅山羊奶",
         "不是每日自动扣",
         "compliment 和 release",
@@ -344,7 +349,7 @@ async def test_scrump_victim_chronicle() -> None:
         await conn.execute(
             """
             UPDATE parcels SET crop='kale', planted_at=?, tended=1, greenhouse=0,
-            grow_target=120 WHERE steward_id=? AND slot=1
+            grow_target=120 WHERE steward_id=? AND slot=1 AND COALESCE(orchard,0)=0
             """,
             (db.now() - 10_000, vic_sid),
         )

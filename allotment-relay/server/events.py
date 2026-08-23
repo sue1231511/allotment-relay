@@ -311,7 +311,7 @@ async def take_ripe_plot(
     return result["label"]
 
 
-async def manual_scrump(steward: dict[str, Any], target_name: str, slot: int | None = None) -> str:
+async def manual_scrump(steward: dict[str, Any], target_name: str, slot: str | int | None = None) -> str:
     """主动逾篱：plot_ops 偷菜 名字 [地块]。"""
     peer = await db.get_steward_by_name(target_name)
     if not peer or not peer.get("enrolled"):
@@ -337,17 +337,18 @@ async def manual_scrump(steward: dict[str, Any], target_name: str, slot: int | N
 
         conn.row_factory = aiosqlite.Row
         if slot is not None:
-            row = await (await conn.execute(
-                "SELECT * FROM parcels WHERE steward_id=? AND slot=?",
-                (peer["id"], slot),
-            )).fetchone()
-            if not row:
-                raise ValueError(f"{peer['name']} 没有份地 #{slot}")
-            plot = dict(row)
+            from . import land as land_mod
+            token = str(slot)
+            n, orchard_flag = land_mod.parse_slot_ref(token)
+            plot = await land_mod.fetch_plot(conn, peer["id"], n, orchard_flag)
+            if not plot and not orchard_flag:
+                plot = await land_mod.fetch_plot(conn, peer["id"], n, 1)
+            if not plot:
+                raise ValueError(f"{peer['name']} 没有 {land_mod.slot_label(n, orchard_flag)}")
             if plot.get("greenhouse"):
                 raise ValueError("温室摘不到。只偷露天份地。")
             if not farming.plot_ready(plot):
-                raise ValueError(f"{peer['name']} #{slot} 还没熟")
+                raise ValueError(f"{peer['name']} {land_mod.slot_label(plot)} 还没熟")
         else:
             plot = await _pick_ripe_plot(conn, peer["id"])
             if not plot:
@@ -1002,48 +1003,49 @@ async def camera_ops(key_id: int, command: str) -> str:
         conn.row_factory = aiosqlite.Row
 
         if verb in ("install", "装", "安装"):
-            if not slot_arg or not slot_arg.lstrip("#").isdigit():
-                raise ValueError("用法: camera install 地块编号（例: camera install 1）")
-            slot = int(slot_arg.lstrip("#"))
-            row = await (await conn.execute(
-                "SELECT * FROM parcels WHERE steward_id=? AND slot=?", (s["id"], slot)
-            )).fetchone()
-            if not row:
-                raise ValueError(f"没有份地 #{slot}")
-            plot = dict(row)
+            from . import land as land_mod
+            if not slot_arg:
+                raise ValueError("用法: camera install 地块编号（例: camera install 1 · camera install 园1）")
+            n, orchard_flag = land_mod.parse_slot_ref(slot_arg)
+            plot = await land_mod.fetch_plot(conn, s["id"], n, orchard_flag)
+            if not plot:
+                raise ValueError(land_mod.missing_slot_msg(n, orchard_flag))
+            slot_txt = land_mod.slot_label(plot)
             if plot.get("camera"):
-                raise ValueError(f"#{slot} 已经装了监控。camera check {slot} 查日志。")
+                raise ValueError(f"{slot_txt} 已经装了监控。camera check {slot_arg} 查日志。")
             if s["tickets"] < CAMERA_COST:
                 raise ValueError(f"装监控需要 {CAMERA_COST} 票（当前 {s['tickets']}）")
             await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (CAMERA_COST, s["id"]))
-            await conn.execute("UPDATE parcels SET camera=1 WHERE steward_id=? AND slot=?", (s["id"], slot))
+            await conn.execute("UPDATE parcels SET camera=1 WHERE id=?", (plot["id"],))
             await conn.commit()
             return (
-                f"监控已装在 #{slot}。（−{CAMERA_COST} 票）\n\n"
+                f"监控已装在 {slot_txt}。（−{CAMERA_COST} 票）\n\n"
                 "从现在起，有人来偷菜——不管抓没抓住——都会留下记录。\n"
                 "装了监控，对方被抓概率也会提高。\n\n"
-                f"camera check {slot} 查日志 · camera remove {slot} 拆除"
+                f"camera check {slot_arg} 查日志 · camera remove {slot_arg} 拆除"
             )
 
         if verb in ("check", "查", "看", "日志", "log"):
+            from . import land as land_mod
             cam_rows = await (await conn.execute(
-                "SELECT slot FROM parcels WHERE steward_id=? AND camera=1 ORDER BY slot",
+                "SELECT slot, COALESCE(orchard,0) AS orchard FROM parcels WHERE steward_id=? AND camera=1 ORDER BY orchard, slot",
                 (s["id"],),
             )).fetchall()
-            cam_slots = [r["slot"] for r in cam_rows]
+            cam_slots = [land_mod.slot_label(r["slot"], r["orchard"]) for r in cam_rows]
             if not cam_slots:
                 return (
                     "你还没在任何份地装过监控。\n\n"
                     "camera install 地块编号 装上（15 票），记录偷菜日志，顺带提高抓贼概率。"
                 )
-            cam_note = f"已装监控：{'、'.join(f'#{sl}' for sl in cam_slots)}\n\n"
-            if slot_arg and slot_arg.lstrip("#").isdigit():
-                slot_filter = int(slot_arg.lstrip("#"))
+            cam_note = f"已装监控：{'、'.join(cam_slots)}\n\n"
+            if slot_arg:
+                n, orchard_flag = land_mod.parse_slot_ref(slot_arg)
+                slot_filter = n
                 log_rows = await (await conn.execute(
                     "SELECT * FROM scrump_theft_log WHERE owner_id=? AND plot_slot=? ORDER BY created_at DESC LIMIT 20",
                     (s["id"], slot_filter),
                 )).fetchall()
-                header = f"«监控日志 · #{slot_filter}»\n\n"
+                header = f"«监控日志 · {land_mod.slot_label(n, orchard_flag)}»\n\n"
             else:
                 log_rows = await (await conn.execute(
                     "SELECT * FROM scrump_theft_log WHERE owner_id=? ORDER BY created_at DESC LIMIT 20",
@@ -1065,18 +1067,18 @@ async def camera_ops(key_id: int, command: str) -> str:
             return "\n".join(lines)
 
         if verb in ("remove", "拆", "撤", "卸"):
-            if not slot_arg or not slot_arg.lstrip("#").isdigit():
+            from . import land as land_mod
+            if not slot_arg:
                 raise ValueError("用法: camera remove 地块编号（例: camera remove 1）")
-            slot = int(slot_arg.lstrip("#"))
-            row = await (await conn.execute(
-                "SELECT * FROM parcels WHERE steward_id=? AND slot=?", (s["id"], slot)
-            )).fetchone()
-            if not row:
-                raise ValueError(f"没有份地 #{slot}")
-            if not dict(row).get("camera"):
-                raise ValueError(f"#{slot} 没装监控。")
-            await conn.execute("UPDATE parcels SET camera=0 WHERE steward_id=? AND slot=?", (s["id"], slot))
+            n, orchard_flag = land_mod.parse_slot_ref(slot_arg)
+            plot = await land_mod.fetch_plot(conn, s["id"], n, orchard_flag)
+            if not plot:
+                raise ValueError(land_mod.missing_slot_msg(n, orchard_flag))
+            slot_txt = land_mod.slot_label(plot)
+            if not plot.get("camera"):
+                raise ValueError(f"{slot_txt} 没装监控。")
+            await conn.execute("UPDATE parcels SET camera=0 WHERE id=?", (plot["id"],))
             await conn.commit()
-            return f"#{slot} 监控已拆除。历史日志还在，camera check {slot} 还能查。"
+            return f"{slot_txt} 监控已拆除。历史日志还在，camera check {slot_arg} 还能查。"
 
     raise ValueError("用法: camera install 地块 / camera check [地块] / camera remove 地块")

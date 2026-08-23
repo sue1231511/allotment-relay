@@ -15,6 +15,7 @@ from .config import (
     FORAGE_COOLDOWN_DAY,
     KEY_PREFIX,
     START_ENERGY,
+    START_ORCHARDS,
     START_PARCELS,
     START_TICKETS,
     WEEK_SECONDS,
@@ -50,6 +51,7 @@ CREATE TABLE IF NOT EXISTS stewards (
     tickets INTEGER NOT NULL DEFAULT 0,
     xp INTEGER NOT NULL DEFAULT 0,
     parcel_count INTEGER NOT NULL DEFAULT 3,
+    orchard_count INTEGER NOT NULL DEFAULT 3,
     greenhouse INTEGER NOT NULL DEFAULT 0,
     greenhouse_label TEXT NOT NULL DEFAULT '',
     mascot_name TEXT NOT NULL DEFAULT '',
@@ -72,7 +74,8 @@ CREATE TABLE IF NOT EXISTS parcels (
     tended INTEGER NOT NULL DEFAULT 0,
     greenhouse INTEGER NOT NULL DEFAULT 0,
     ready_at INTEGER NOT NULL DEFAULT 0,
-    UNIQUE(steward_id, slot)
+    orchard INTEGER NOT NULL DEFAULT 0,
+    UNIQUE(steward_id, slot, orchard)
 );
 
 CREATE TABLE IF NOT EXISTS satchel (
@@ -1502,16 +1505,97 @@ async def init_db() -> None:
                 ready INTEGER NOT NULL DEFAULT 0
             )
             """,
+            "ALTER TABLE parcels ADD COLUMN orchard INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN orchard_count INTEGER NOT NULL DEFAULT 0",
         ):
             try:
                 await db.execute(ddl)
             except aiosqlite.OperationalError:
                 pass
+        await _rebuild_parcels_orchard_unique(db)
+        await _grant_starting_orchards(db)
         from . import ranks as ranks_mod
         from . import disaster as disaster_mod
         await ranks_mod.seed_xp(db)
         await disaster_mod.ensure_weekly_tide(db)
         await db.commit()
+
+
+async def _parcels_has_orchard_unique(db: aiosqlite.Connection) -> bool:
+    indexes = await (await db.execute("PRAGMA index_list(parcels)")).fetchall()
+    for idx in indexes:
+        if not idx[2]:
+            continue
+        cols = await (await db.execute(f"PRAGMA index_info('{idx[1]}')")).fetchall()
+        names = [c[2] for c in cols]
+        if names == ["steward_id", "slot", "orchard"]:
+            return True
+    return False
+
+
+async def _rebuild_parcels_orchard_unique(db: aiosqlite.Connection) -> None:
+    """份地和果园可以同号：UNIQUE(steward_id, slot, orchard)。"""
+    if await _parcels_has_orchard_unique(db):
+        return
+    info = await (await db.execute("PRAGMA table_info(parcels)")).fetchall()
+    if not info:
+        return
+    await db.execute("PRAGMA foreign_keys=OFF")
+    await db.execute(
+        """
+        CREATE TABLE parcels__orchard_u (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            steward_id INTEGER NOT NULL REFERENCES stewards(id),
+            slot INTEGER NOT NULL,
+            crop TEXT,
+            planted_at INTEGER,
+            tended INTEGER NOT NULL DEFAULT 0,
+            greenhouse INTEGER NOT NULL DEFAULT 0,
+            ready_at INTEGER NOT NULL DEFAULT 0,
+            grow_target INTEGER NOT NULL DEFAULT 0,
+            grow_pace TEXT NOT NULL DEFAULT '',
+            fertilized INTEGER NOT NULL DEFAULT 0,
+            scarecrow INTEGER NOT NULL DEFAULT 0,
+            dove_yield_mult REAL NOT NULL DEFAULT 1.0,
+            harvest_left INTEGER NOT NULL DEFAULT 0,
+            watered INTEGER NOT NULL DEFAULT 0,
+            camera INTEGER NOT NULL DEFAULT 0,
+            tree_harvests INTEGER NOT NULL DEFAULT 0,
+            tree_harvest_max INTEGER NOT NULL DEFAULT 0,
+            orchard INTEGER NOT NULL DEFAULT 0,
+            UNIQUE(steward_id, slot, orchard)
+        )
+        """
+    )
+    src_cols = {r[1] for r in info}
+    dest = [
+        "id", "steward_id", "slot", "crop", "planted_at", "tended", "greenhouse",
+        "ready_at", "grow_target", "grow_pace", "fertilized", "scarecrow",
+        "dove_yield_mult", "harvest_left", "watered", "camera",
+        "tree_harvests", "tree_harvest_max", "orchard",
+    ]
+    select_bits = [c if c in src_cols else "0" for c in dest]
+    await db.execute(
+        f"INSERT INTO parcels__orchard_u ({', '.join(dest)}) "
+        f"SELECT {', '.join(select_bits)} FROM parcels"
+    )
+    await db.execute("DROP TABLE parcels")
+    await db.execute("ALTER TABLE parcels__orchard_u RENAME TO parcels")
+    await db.execute("PRAGMA foreign_keys=ON")
+
+
+async def _grant_starting_orchards(db: aiosqlite.Connection) -> None:
+    rows = await (await db.execute(
+        "SELECT id, COALESCE(orchard_count, 0) FROM stewards"
+    )).fetchall()
+    for sid, count in rows:
+        n = int(count or 0)
+        if n < START_ORCHARDS:
+            n = START_ORCHARDS
+            await db.execute(
+                "UPDATE stewards SET orchard_count=? WHERE id=?", (n, sid),
+            )
+        await ensure_orchard_parcels(db, sid, n)
 
 
 def now() -> int:
@@ -1704,20 +1788,44 @@ async def take_item(db: aiosqlite.Connection, steward_id: int, item: str, qty: i
     return True
 
 
-async def get_parcels(steward_id: int) -> list[dict[str, Any]]:
+async def get_parcels(steward_id: int, *, orchard: int | None = None) -> list[dict[str, Any]]:
     async with connect() as db:
         db.row_factory = aiosqlite.Row
-        cur = await db.execute(
-            "SELECT * FROM parcels WHERE steward_id = ? ORDER BY slot",
-            (steward_id,),
-        )
+        if orchard is None:
+            cur = await db.execute(
+                "SELECT * FROM parcels WHERE steward_id = ? ORDER BY orchard, slot",
+                (steward_id,),
+            )
+        else:
+            cur = await db.execute(
+                """
+                SELECT * FROM parcels
+                WHERE steward_id = ? AND COALESCE(orchard,0) = ?
+                ORDER BY slot
+                """,
+                (steward_id, int(orchard)),
+            )
         return [dict(r) for r in await cur.fetchall()]
 
 
 async def ensure_parcels(db: aiosqlite.Connection, steward_id: int, count: int) -> None:
     for slot in range(1, count + 1):
         await db.execute(
-            "INSERT OR IGNORE INTO parcels (steward_id, slot, crop, planted_at, tended) VALUES (?, ?, NULL, NULL, 0)",
+            """
+            INSERT OR IGNORE INTO parcels (steward_id, slot, orchard, crop, planted_at, tended)
+            VALUES (?, ?, 0, NULL, NULL, 0)
+            """,
+            (steward_id, slot),
+        )
+
+
+async def ensure_orchard_parcels(db: aiosqlite.Connection, steward_id: int, count: int) -> None:
+    for slot in range(1, count + 1):
+        await db.execute(
+            """
+            INSERT OR IGNORE INTO parcels (steward_id, slot, orchard, crop, planted_at, tended)
+            VALUES (?, ?, 1, NULL, NULL, 0)
+            """,
             (steward_id, slot),
         )
 
@@ -1747,16 +1855,18 @@ async def enroll_steward(key_id: int, name: str, motto: str, badge: str, portrai
             """
             INSERT INTO stewards (
                 key_id, name, motto, badge, portrait, tickets, xp, parcel_count,
+                orchard_count,
                 enrolled, last_active_at, created_at, energy, last_bar_shift_at,
                 reward_level
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)
             """,
             (key_id, name, motto.strip()[:200], badge.strip()[:32], portrait.strip()[:120],
-             START_TICKETS, START_TICKETS, START_PARCELS, ts, ts, START_ENERGY, ts,
+             START_TICKETS, START_TICKETS, START_PARCELS, START_ORCHARDS, ts, ts, START_ENERGY, ts,
              start_level),
         )
         sid = (await (await db.execute("SELECT last_insert_rowid()")).fetchone())[0]
         await ensure_parcels(db, sid, START_PARCELS)
+        await ensure_orchard_parcels(db, sid, START_ORCHARDS)
         for item, qty in STARTER_STOCK.items():
             await add_item(db, sid, item, qty)
         await db.execute(
@@ -1951,9 +2061,15 @@ async def public_allotments() -> list[dict[str, Any]]:
             parcel_views = []
             for pl in parcels:
                 if land_mod.clear_left(pl) > 0:
-                    parcel_views.append({"slot": pl["slot"], "crop": None, "state": "开垦中"})
+                    parcel_views.append({
+                        "slot": pl["slot"], "crop": None, "state": "开垦中",
+                        "orchard": bool(pl.get("orchard")),
+                    })
                 elif not pl.get("crop"):
-                    parcel_views.append({"slot": pl["slot"], "crop": None, "state": "休耕"})
+                    parcel_views.append({
+                        "slot": pl["slot"], "crop": None, "state": "休耕",
+                        "orchard": bool(pl.get("orchard")),
+                    })
                 else:
                     meta = CROPS.get(pl["crop"], {"name": pl["crop"], "emoji": "🌱"})
                     parcel_views.append({
@@ -1961,6 +2077,7 @@ async def public_allotments() -> list[dict[str, Any]]:
                         "crop": pl["crop"],
                         "emoji": meta.get("emoji", "🌱"),
                         "state": farming.parcel_status(pl),
+                        "orchard": bool(pl.get("orchard")),
                     })
             summary = " · ".join(
                 f"#{v['slot']}{v.get('emoji', '')}{v['state'][:2] if v.get('state') else '休'}"
@@ -1982,6 +2099,7 @@ async def public_allotments() -> list[dict[str, Any]]:
                 "level": ranked["level"],
                 "title": ranked.get("display_title") or ranked["title"],
                 "parcel_count": p["parcel_count"],
+                "orchard_count": p.get("orchard_count") or 0,
                 "greenhouse": bool(p["greenhouse"]),
                 "greenhouse_label": p["greenhouse_label"],
                 "mascot_name": p["mascot_name"],

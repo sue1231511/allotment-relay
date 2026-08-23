@@ -106,7 +106,7 @@ function plotCard(p) {
   return `
     <article class="plot-card state-${p.state || 'fallow'}">
       <div class="plot-card-top">
-        <span class="plot-slot">#${p.slot}</span>
+        <span class="plot-slot">${p.orchard ? '园' : '#'}${p.slot}</span>
         ${gh}
         <span class="plot-emoji">${p.emoji || '🌱'}</span>
       </div>

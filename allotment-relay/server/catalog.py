@@ -111,6 +111,7 @@ def crop_catalog_line(key: str) -> str:
     tags.append(crop_grow_label(int(meta["grow"])))
     tags.append(f"{int(meta.get('yield') or 3)}把")
     if meta.get("tree"):
+        tags.append("果园专种")
         tags.append("收完再长")
     if meta.get("shake"):
         tags.append("可摇")

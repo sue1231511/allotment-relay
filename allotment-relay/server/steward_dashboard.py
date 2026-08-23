@@ -72,6 +72,7 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
             parcel_views.append({
                 "slot": p["slot"],
                 "greenhouse": gh,
+                "orchard": bool(p.get("orchard")),
                 "state": "clearing",
                 "crop": None,
                 "emoji": "🚧",
@@ -83,6 +84,7 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
             parcel_views.append({
                 "slot": p["slot"],
                 "greenhouse": gh,
+                "orchard": bool(p.get("orchard")),
                 "state": "fallow",
                 "crop": None,
                 "emoji": "🟫",
@@ -110,6 +112,7 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
             parcel_views.append({
                 "slot": p["slot"],
                 "greenhouse": gh,
+                "orchard": bool(p.get("orchard")),
                 "state": state,
                 "crop": p["crop"],
                 "emoji": meta.get("emoji", "🌱"),

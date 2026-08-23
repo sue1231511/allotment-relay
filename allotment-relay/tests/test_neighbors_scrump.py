@@ -51,7 +51,7 @@ async def test_neighbors_and_scrump() -> None:
         await conn.execute(
             """
             UPDATE parcels SET crop='kale', planted_at=?, tended=1, greenhouse=0,
-            grow_target=120 WHERE steward_id=? AND slot=1
+            grow_target=120 WHERE steward_id=? AND slot=1 AND COALESCE(orchard,0)=0
             """,
             (db.now() - 10_000, vic_sid),
         )
@@ -78,7 +78,7 @@ async def test_neighbors_and_scrump() -> None:
         )).fetchone())
         assert qty and qty[0] >= 1, qty
         row = (await (await conn.execute(
-            "SELECT crop, harvest_left FROM parcels WHERE steward_id=? AND slot=1",
+            "SELECT crop, harvest_left FROM parcels WHERE steward_id=? AND slot=1 AND COALESCE(orchard,0)=0",
             (vic_sid,),
         )).fetchone())
         assert row and row[0] == "kale", row
