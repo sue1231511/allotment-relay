@@ -198,6 +198,90 @@ async def test_tale_flow() -> None:
     assert "完成 1 个" in board, board
 
 
+async def test_memory_tide_flow() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="memory-tide-"))
+    db = await _boot(tmp)
+    from server import progress, tale, tale_memory_tide
+
+    kid, sid = await _enroll(db, "memory-tide@example.com", "岛上探索者")
+
+    lst = await tale.tale_ops(kid, "list")
+    assert "memory_tide" in lst and "回忆生潮" in lst, lst
+    assert "每阶段工分票+30×11" in lst, lst
+    assert "完整探索工分票+120" in lst, lst
+    assert "陪坐的人" in lst, lst
+
+    async with db.connect() as conn:
+        tickets_before = (await (await conn.execute(
+            "SELECT tickets FROM stewards WHERE id=?", (sid,)
+        )).fetchone())[0]
+
+    accepted = await tale.tale_ops(kid, "accept memory_tide")
+    assert "回忆生潮" in accepted, accepted
+    assert "岛上的探索者" in accepted, accepted
+    assert "不属于梁家" in accepted and "不会替梁知微" in accepted, accepted
+    assert "tale_ops explore south_lane" in accepted, accepted
+    assert "死亡" not in accepted and "去世" not in accepted, accepted
+
+    # 未到第九幕时不能跳去档案室，且错误地点不扣精力。
+    async with db.connect() as conn:
+        energy_before_wrong = (await (await conn.execute(
+            "SELECT energy FROM stewards WHERE id=?", (sid,)
+        )).fetchone())[0]
+    wrong = await tale.tale_ops(kid, "explore clinic_archive")
+    assert "未消耗精力" in wrong and "explore south_lane" in wrong, wrong
+    assert "死亡" not in wrong and "去世" not in wrong, wrong
+    async with db.connect() as conn:
+        energy_after_wrong = (await (await conn.execute(
+            "SELECT energy FROM stewards WHERE id=?", (sid,)
+        )).fetchone())[0]
+    assert energy_after_wrong == energy_before_wrong
+
+    outputs: list[str] = []
+    for index, stage in enumerate(tale_memory_tide.TALE_STAGES, 1):
+        result = await tale.tale_ops(kid, f"explore {stage['domain']}")
+        outputs.append(result)
+        assert f"第 {index}/11 阶段奖励" in result, result
+        assert "工分票 +30" in result, result
+        if index <= 8:
+            assert "死亡" not in result and "去世" not in result, result
+
+    assert "死亡事实" in outputs[8], outputs[8]
+    finish = outputs[-1]
+    assert "«回忆生潮» 已完成" in finish, finish
+    assert "【探索完成：《回忆生潮》】" in finish, finish
+    assert "完整探索额外奖励" in finish and "工分票 +120" in finish, finish
+    assert "档信 +6" in finish and "雾智 +10" in finish, finish
+    assert "人物称呼「陪坐的人」" in finish, finish
+    for name in ("还在放戏的旧收音机", "总是空着的碗筷", "没有交出去的围巾", "院门旁的一杯茶"):
+        assert name in finish, finish
+
+    async with db.connect() as conn:
+        row = await (await conn.execute(
+            "SELECT tickets, energy FROM stewards WHERE id=?", (sid,)
+        )).fetchone()
+        unlocked = await (await conn.execute(
+            "SELECT 1 FROM steward_achievements WHERE steward_id=? AND ach_key='sat_beside_him'",
+            (sid,),
+        )).fetchone()
+    assert row[0] - tickets_before == 11 * 30 + 120, row
+    assert row[1] == energy_before_wrong - 11 * 5, row
+    assert unlocked, "completion title was not recorded"
+    assert progress.resolve_achievement("陪坐的人") == "sat_beside_him"
+
+    souvenirs = await tale.tale_ops(kid, "souvenirs")
+    assert "潮闻收藏册 · 4 件" in souvenirs, souvenirs
+    assert "回忆生潮" in souvenirs, souvenirs
+    for name in ("还在放戏的旧收音机", "总是空着的碗筷", "没有交出去的围巾", "院门旁的一杯茶"):
+        assert name in souvenirs, souvenirs
+
+    try:
+        await tale.tale_ops(kid, "accept memory_tide")
+        raise AssertionError("non-repeatable memory_tide should block")
+    except ValueError as exc:
+        assert "已经完成" in str(exc), exc
+
+
 async def test_tale_explore_is_unlimited() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="tale-unlimited-"))
     db = await _boot(tmp)
@@ -313,10 +397,13 @@ def test_tale_mcp_description() -> None:
     assert "souvenirs" in blob
     assert "纪念品" in blob
     assert "reminisce" in blob
+    assert "memory_tide" in blob
+    assert "回忆生潮" in blob
 
 
 def main() -> None:
     asyncio.run(test_tale_flow())
+    asyncio.run(test_memory_tide_flow())
     asyncio.run(test_tale_explore_is_unlimited())
     asyncio.run(test_commons_claim_advances_item_stage())
     asyncio.run(test_tale_abandon())

@@ -18,15 +18,16 @@ from typing import Any
 
 import aiosqlite
 
-from . import config, db
+from . import config, db, tale_memory_tide
 from .catalog import ITEM_NAMES
 from .game import require_steward
 
 TALE_HELP = """tale_ops 子命令（整句写进 command）：
   list — 可接任务
-  accept 任务key — 接任务
+  accept 任务key — 接任务；例：accept black_box_lover、accept memory_tide
   status — 当前进行中的任务
-  explore [地点] — 按 status/hint 探索；阶段2 sea 找锈铁，阶段5/6 beach 找任务物品
+  explore [地点] — 按 status/hint 探索；黑盒阶段2 sea 找锈铁，阶段5/6 beach 找任务物品
+                    回忆生潮从 south_lane 开始，之后严格照 status 的地点继续
                     匹配阶段才耗 5 精力，不限次数；错误地点不扣精力
   turnin — 交付并领奖
   abandon 任务key — 放弃
@@ -34,7 +35,8 @@ TALE_HELP = """tale_ops 子命令（整句写进 command）：
   souvenirs — 查看已解锁的永久纪念品（不占行囊，不能出售或赠送）
   reminisce 任务key — 通关后重读补充回忆；例：reminisce black_box_lover
   help — 本帮助
-奖励：首个任务 6 阶段，每推进一段自动 +30 票；完整探索再 +50 票（总计 230 票），并发属性、物品和永久纪念品。"""
+奖励：《黑盒与潮声》6 阶段，每推进一段自动 +30 票；完整探索再 +50 票（总计 230 票）。
+《回忆生潮》11 幕，每幕 +30 票（330 票）；完整探索再 +120 票（总计 450 票），并发称呼「陪坐的人」与 4 件永久纪念品。"""
 
 DOMAIN_LABELS = {
     "shore": "海岸",
@@ -46,6 +48,11 @@ DOMAIN_LABELS = {
     "clinic": "诊所",
     "tt": "Tt酱杂货",
     "lili": "栗栗摊",
+    "south_lane": "岛南小路",
+    "liang_home": "梁家旧屋",
+    "taozhi_shop": "陶枝的旧柜台",
+    "liang_album": "梁家的旧相册",
+    "clinic_archive": "旧诊所档案室",
 }
 
 # ══ 剧本原文 ═══════════════════════════════════════════════════
@@ -489,6 +496,32 @@ TALE_CATALOG: list[dict[str, Any]] = [
     }
 ]
 
+TALE_CATALOG.append(
+    {
+        "key": tale_memory_tide.STORY_KEY,
+        "title": tale_memory_tide.STORY_TITLE,
+        "intro": tale_memory_tide.INTRO,
+        "min_level": 1,
+        "min_standing": 0,
+        "domain": "shore",
+        "repeatable": 0,
+        "sort_order": 2,
+        "stages": tale_memory_tide.TALE_STAGES,
+        "rewards": {
+            "stage_tickets": tale_memory_tide.STAGE_REWARD_TICKETS,
+            "tickets": tale_memory_tide.REWARD_TICKETS,
+            "standing": tale_memory_tide.REWARD_STANDING,
+            "mist_wit": tale_memory_tide.REWARD_MIST_WIT,
+            "achievement": {
+                "key": tale_memory_tide.REWARD_TITLE_KEY,
+                "name": tale_memory_tide.REWARD_TITLE,
+            },
+            "souvenir": tale_memory_tide.SOUVENIRS[0],
+            "keepsakes": tale_memory_tide.SOUVENIRS[1:],
+        },
+    }
+)
+
 
 # ══ 内部工具 ═══════════════════════════════════════════════════
 
@@ -714,6 +747,20 @@ async def _grant_rewards(
         await db.add_item(conn, sid, item, qty)
         lines.append(f"{ITEM_NAMES.get(item, item)} x{qty}")
 
+    achievement = rewards.get("achievement") or {}
+    if achievement.get("key"):
+        cur = await conn.execute(
+            """INSERT OR IGNORE INTO steward_achievements
+               (steward_id, ach_key, unlocked_at) VALUES (?,?,?)""",
+            (sid, achievement["key"], db.now()),
+        )
+        if cur.rowcount == 1:
+            name = achievement.get("name") or achievement["key"]
+            lines.append(f"人物称呼「{name}」（steward_ops 称呼 {name} 佩戴）")
+            await db.add_chronicle(
+                "title", f"{steward['name']} 解锁称呼「{name}」", sid, conn=conn
+            )
+
     return lines
 
 
@@ -735,6 +782,9 @@ def _reward_preview(rewards: dict[str, Any], stage_count: int | None = None) -> 
             parts.append(f"{label}+{value}")
     for item, qty in rewards.get("items", {}).items():
         parts.append(f"{ITEM_NAMES.get(item, item)}×{qty}")
+    achievement = rewards.get("achievement") or {}
+    if achievement.get("name"):
+        parts.append(f"人物称呼「{achievement['name']}」")
     if rewards.get("souvenir"):
         parts.append("永久纪念品×1（完成后揭晓）")
     keepsakes = rewards.get("keepsakes", [])

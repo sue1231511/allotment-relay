@@ -71,7 +71,7 @@ mcp = MCPServer(
         "新号必须先 steward_ops enroll 名字。"
         "找人用 steward_ops 邻居。全服票榜/等级榜是 steward_ops board；alliance_ops board 是周目标贡献榜。"
         "bar_ops cheer 哄荔栀；undertide_ops cheer 哄潮下猫猫；star_ops 应援 哄小橘，三套互不占用。"
-        "潮闻故事任务：tale_ops list / accept black_box_lover / status / explore beach / turnin / souvenirs。"
+        "潮闻故事任务：tale_ops list / accept black_box_lover|memory_tide / status / explore 地点 / turnin / souvenirs。"
         "人物故事探索：story_ops list / start cinderella / start yesterday_no_proof / status / souvenirs。"
         "回精力：kitchen_ops eat 熟菜（回得最多，22 起）。水果/生鱼/野薄荷可生吃但回得少——水果连吃 5 口营养不良（吃熟菜/诊所可解）；蔬菜不能生吃；只有生肉可能感染，visit_ops clinic treat infection。"
     ),
@@ -180,9 +180,9 @@ async def star_ops(
     return await mux._call_ops(star.star_ops, _kid(), command)
 
 
-@mcp.tool(description="潮闻 — 故事探索任务。按 status/hint 指定地点探索。完成《黑盒与潮声》自动解锁8件剧情收藏（永久纪念品），老玩家无需重玩；reminisce 读通关后回忆。例子：list · accept black_box_lover · souvenirs · reminisce black_box_lover。原六阶段和230票不变。空 command=list；不会就 help。")
+@mcp.tool(description="潮闻 — 分阶段故事探索任务。按 status/hint 指定地点探索，匹配阶段耗5精力，错误地点不扣。《黑盒与潮声》六阶段共230票；《回忆生潮》用 accept memory_tide 接取，严格11幕、每幕30票，完整探索总计450票并解锁称呼与4件永久纪念品。玩家只是岛上探索者，不替代故事人物。例子：list · accept memory_tide · status · explore south_lane · souvenirs。空 command=list；不会就 help。")
 async def tale_ops(
-    command: Annotated[str, Field(description="子命令整句。list / accept 任务key / status / explore beach|sea|plot|bar / turnin / abandon 任务key / board / souvenirs / reminisce black_box_lover / help。souvenirs=已通关故事收藏；reminisce=通关后补充回忆。原六阶段和230票不变。空=list。")] = "list",
+    command: Annotated[str, Field(description="子命令整句。list / accept black_box_lover|memory_tide / status / explore beach|sea|plot|bar|south_lane|liang_home|taozhi_shop|liang_album|clinic_archive / turnin / abandon 任务key / board / souvenirs / reminisce black_box_lover / help。回忆生潮从 explore south_lane 开始，后续严格照 status；每幕30票。souvenirs=已通关故事收藏；reminisce=黑盒通关后补充回忆。空=list。")] = "list",
 ) -> str:
     from . import tale
     return await mux._call_ops(tale.tale_ops, _kid(), command)
