@@ -134,5 +134,6 @@ def test_fishing_gear_payout_bonus() -> None:
 
     net_low_mult, net_low_bonus = fish_catch_payout(low, mode="net")
     net_high_mult, net_high_bonus = fish_catch_payout(high, mode="net")
-    assert net_high_mult > net_low_mult
+    assert net_low_mult == 1.0
+    assert net_high_mult == 1.0
     assert net_high_bonus > net_low_bonus

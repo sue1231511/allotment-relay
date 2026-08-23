@@ -440,7 +440,7 @@ def generate_naval_encounter(
 def generate_world_pulse() -> dict[str, Any]:
     effect_types = [
         ("storm_front", "bad", "户外份地得重打理，苗盘：这班我不上了"),
-        ("fish_run", "good", "撒网手气上调，渔获更愿意上钩——海偶尔做个人"),
+        ("fish_run", "good", "撒网空网略少一点，别指望靠岸边网一夜暴富"),
         ("blight_whisper", "bad", "收成偶尔会「蒸发」一点点，别问去哪了"),
         ("loot_surge", "good", "交换台台阶像退潮礼包区，捡到的算你眼神好"),
         ("red_tide", "bad", "渔排和网都不太给面子，今天宜躺"),
@@ -449,6 +449,7 @@ def generate_world_pulse() -> dict[str, Any]:
         ("fog_bank", "bad", "浓雾缠岸，赶海和撒网都容易空欢喜"),
         ("merchant_caravan", "good", "流动商贩路过档口，票子像被风捎来"),
         ("gnat_swarm", "bad", "小虫成团，露天作物得再 tend 一遍"),
+        ("storm_surge", "bad", "暴潮冲档口：8000 票以上的超额会被卷走一截，露天得重打理"),
     ]
     effect, kind, hint = random.choice(effect_types)
 
@@ -463,6 +464,8 @@ def generate_world_pulse() -> dict[str, Any]:
         "fog_bank": ["雾墙", "贴岸浓雾", "能见度告急", "海雾结账"],
         "merchant_caravan": ["流动商贩", "驮货驴队", "档口巡游", "票子顺风车"],
         "gnat_swarm": ["小虫汛", "蚜虫云", "飞虫编队", "嗡嗡编队"],
+        "storm_surge": ["暴潮", "黑水扑岸", "秋分浪", "潮头拍门"],
+        "black_tide": ["秋分黑潮", "倒灌潮", "灌仓潮"],
     }
     verbs = ["掠过", "笼罩", "扫过", "渗入", "降临在", "打卡"]
     label = flavor.pick(subjects.get(effect, ["异象"]))

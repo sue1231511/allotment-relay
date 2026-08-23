@@ -229,7 +229,7 @@ async def fridge_status_text(s: dict[str, Any]) -> str:
         )
     if not rows:
         return (
-            f"冰箱空（{config.FRIDGE_SLOTS} 格）。"
+            f"冰箱空（{config.FRIDGE_SLOTS} 格，每格最多 {config.FRIDGE_STACK}）。"
             "hut_ops 冰柜 存 盐焗沙蟹 · kitchen_ops store 菜名"
         )
     lines = [f"冰箱 {len(rows)}/{config.FRIDGE_SLOTS}:"]
@@ -278,6 +278,11 @@ async def fridge_put(s: dict[str, Any], token: str, qty: int = 1) -> str:
             )
             if (await cur.fetchone())[0] >= config.FRIDGE_SLOTS:
                 raise ValueError(f"冰箱满了（{config.FRIDGE_SLOTS} 格）")
+        elif int(existing[1] or 0) + qty > config.FRIDGE_STACK:
+            raise ValueError(
+                f"冰箱这格最多叠 {config.FRIDGE_STACK} 份（和行囊/潮柜同上限），"
+                f"已有 {int(existing[1] or 0)}。多出来的先 eat 或 vend。"
+            )
         if not await db.take_item(conn, s["id"], item, qty):
             raise ValueError("行囊里没有这么多熟菜")
         if existing:
@@ -474,7 +479,8 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             "  cook 材料1 材料2 … — 自由组合 2~5 样（每天 24 次），例如 cook 甘蓝 鲭鱼\n"
             "  eat 物品 — 回精力。熟菜回得最多；水果可生吃但只回一点、连吃会营养不良；\n"
             "             生鱼/野薄荷安全；蔬菜不能生吃；只有生肉可能感染\n"
-            "             例子：eat 鲭鱼 · eat 芒果 · eat 兔肉 · eat 蒜蓉生蚝\n"
+            "             未命名小鱼可生吃（不感染）但会再掷小咒事件\n"
+            "             例子：eat 鲭鱼 · eat 芒果 · eat 兔肉 · eat 未命名小鱼 · eat 蒜蓉生蚝\n"
             "  vend 菜名 — 卖掉行囊里的熟菜（中文名也行；家具请 hut_ops 卖掉）\n"
             "  store 菜名 [数量] / fridge / take 菜名 — 冰箱熟菜（小屋要先装 fridge）\n"
             "             也可 hut_ops 冰柜 存|取，生鲜进潮柜、熟菜进冰箱\n"
@@ -620,10 +626,18 @@ async def kitchen_ops(key_id: int, command: str) -> str:
                 )
             restored = await energy.restore(conn, s["id"], gain)
             await survival.bump(conn, s["id"], satiety=min(20, gain // 2 + 8))
+            walkblue_line = None
+            if item == "fish_walkblue":
+                from . import marine as marine_mod
+                walkblue_line = await marine_mod.walkblue_fate_event(
+                    conn, s["id"], kind="eat", qty=1
+                )
             await conn.commit()
         msg = f"吃了 {item_label(item)}（{item}），精力 +{restored}"
         if item.startswith("fish_") or item == "wild_mint":
             msg += "（生吃安全，不会感染）"
+            if item == "fish_walkblue":
+                msg += "——未命名小鱼不感染，但吃了会再掷一次小咒事件"
         if fruit_line:
             msg += f"\n{fruit_line}"
         if cured_line:
@@ -633,6 +647,8 @@ async def kitchen_ops(key_id: int, command: str) -> str:
                 f"\n{infect_line}\n"
                 "→ visit_ops clinic treat infection（约三次、间隔 6 小时；第一次可以马上挂）"
             )
+        if walkblue_line:
+            msg += f"\n{walkblue_line}"
         return msg
 
     if verb == "store" and len(parts) >= 2:
@@ -696,13 +712,22 @@ async def kitchen_ops(key_id: int, command: str) -> str:
                 "UPDATE stewards SET tickets=tickets+? WHERE id=?",
                 (price, s["id"]),
             )
+            walkblue_line = None
+            if item == "fish_walkblue":
+                from . import marine as marine_mod
+                walkblue_line = await marine_mod.walkblue_fate_event(
+                    conn, s["id"], kind="sell", qty=1, tickets=price
+                )
             await conn.commit()
         note = ""
         if is_cooked_item(item):
             from .catalog import eatery_reference_price
             ref = eatery_reference_price(item)
             note = f"（系统回收价低；shop stock 上架参考约 {ref} 票，价格自定）"
-        return f"出售 {item_label(item)} +{price} 票{note}"
+        msg = f"出售 {item_label(item)} +{price} 票{note}"
+        if walkblue_line:
+            msg += f"\n{walkblue_line}"
+        return msg
 
     if verb in ("shop", "stall", "eatery"):
         rest = " ".join(parts[1:]) if len(parts) > 1 else "board"

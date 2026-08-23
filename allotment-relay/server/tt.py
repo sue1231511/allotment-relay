@@ -130,6 +130,7 @@ VISIT_LINES = [
     "心情好的时候会塞东西。别天天来蹲，概率就那一点。",
     "调味料种子在左边。大蒜辣椒姜香茅，厨房没这几样别来跟我哭。",
     "渔具入门在这儿买。更高档带着漂绳去 tide_ops gear upgrade。",
+    "货架买的种、饲料、工具，系统回收只有进价四成。别想买了再 vend 赚差价。",
 ]
 
 
@@ -181,6 +182,14 @@ def sku_base_price(item: str) -> int | None:
         if key == item:
             return price
     return None
+
+
+def recycle_price(item: str) -> int | None:
+    """系统回收价。货架货按进价四成，满心打折买进也倒不过来。"""
+    base = sku_base_price(item)
+    if base is None:
+        return None
+    return max(1, int(base * config.TT_SHOP_VEND_RATE))
 
 
 def resolve_shop_item(token: str) -> str | None:
@@ -491,6 +500,8 @@ def _catalog_text(score: int) -> str:
         lines.extend(groups[key])
         lines.append("")
     lines.append("buy 物品 [数量] · gift 物品 [数量] · 中文名或 id 都行")
+    lines.append("系统回收只有进价四成（满心打折买进也倒不过来），别反复买卖")
+    lines.append("行囊每种最多 24 份（和潮柜一样），买多了会拒")
     lines.append("送礼一次一笔，件数不叠；4 心起减半，8 心起更慢")
     return "\n".join(lines).rstrip()
 
@@ -505,6 +516,8 @@ async def tt_ops(key_id: int, command: str) -> str:
             "visit_ops tt — Tt酱杂货店\n"
             "  status / catalog — 货架与好感\n"
             "  buy 物品 [数量] — 种子/饲料/渔网钓竿/蚯蚓饵/锄铲/剪刀挤奶器\n"
+            "  货架货系统回收只有进价四成，别买了再 tote_ops vend 倒差价\n"
+            "    行囊每种最多 24 份，买多了会拒；满了先 vend 或 hut_ops 冰柜 存\n"
             "  gift 物品 [数量] — 送礼（一次一笔，每日最多 3 次；4 心减半，8 心更慢）\n"
             "  visit — 聊天；每日首次进店 10% 她心情好送礼"
         )

@@ -32,11 +32,13 @@ async def fish_catalog(conn: aiosqlite.Connection, steward_id: int) -> str:
     lines = [f"渔获图鉴 {len([k for k in all_keys if k in caught])}/{len(all_keys)}", ""]
     for key, meta in SEA_CATCH.items():
         item = f"fish_{key}"
+        extra = "（仅坐钓，带小咒）" if key == "walkblue" else ""
         if item in caught:
             c = caught[item]["catch_count"]
-            lines.append(f"  ✓ {meta['emoji']}{meta['name']} ×{c}")
+            lines.append(f"  ✓ {meta['emoji']}{meta['name']} ×{c}{extra}")
         else:
-            lines.append(f"  · {meta['name']}（未钓到）")
+            ungot = "（未钓到）" if key != "walkblue" else "（未钓到，不能网）"
+            lines.append(f"  · {meta['name']}{extra or ungot}")
     return "\n".join(lines)
 
 

@@ -74,7 +74,7 @@ async def route(
 
 STEWARD_HELP = """steward_ops 子命令（整句写进 command）：
   enroll 名字 — 登记。例子：enroll 安
-  sheet — 自己的档（票、精力、份地、病症）。空 command 也是这个
+  sheet — 自己的档（票、精力、份地、病症）。有全服脉冲/天灾冲票时写在档上。空 command 也是这个
   邻居 — 全员邻居（谁在档口、谁家有熟地）。找人优先用这个
   在线 — 只看档口里的人
   peer 名字 — 看别人的公开档；不写名字 = 邻居表
@@ -92,6 +92,7 @@ PLOT_HELP = """plot_ops 子命令（整句写进 command）：
   sow 地块 作物 — 例子：sow 1 甘蓝 · sow 2 fogpea
   tend · 浇水 [地块] · 施肥 [地块] [堆肥|羊粪|猪粪|牛粪] — 浇水/施肥加快成熟（各一次）
   gather [地块] · forage
+  buy 数量 作物 — 例子：buy 2 甘蓝。行囊每种最多 24 份，买多了会拒
   偷菜 名字 [地块] — 最多掐走 30%，永远留一把。先 steward_ops 邻居 看谁熟了
   邻居 / 在线 — 同 steward_ops 邻居（这里也能用）
   amends 名字 — 向被摘的邻居致歉，双方档信回暖
@@ -111,7 +112,11 @@ HUT_HELP = """hut_ops 子命令（整句写进 command）：
   status / build / upgrade / catalog / buy / install — 岸畔小屋
   冰柜 存|取 物品 [数量] — 小屋存菜（柜子/潮柜/冰箱是同一条指令）。例子：冰柜 存 甘蓝 3
     生鲜自动进潮柜（buy cabinet → install）；熟菜自动进冰箱（buy fridge → install）
-    潮柜基础 30 种货，每种最多叠 24 份（栈上限）；满了 hut_ops 潮柜 扩 [数量]（12票/格，顶 60）
+    潮柜基础 30 种货，每种最多叠 24 份（栈上限，和行囊一样）；满了 hut_ops 潮柜 扩 [数量]（12票/格，顶 60）
+    粪便不能进潮柜
+  堆肥桶 存|取 — 跟 MC 堆肥桶差不多。例子：堆肥桶 存 羊粪 3 · 堆肥桶 取 堆肥 2
+    买：buy compost_bin → install soft_N compost_bin。丢粪便涨层，满 7 层结 1 份堆肥
+    羊粪+2 / 猪粪+3 / 牛粪+4。barn compost 羊粪 2 还认，但必须先装桶
   睡 / 休息 — 床一觉回精力（岸柏 50 / 软藤 52 / 云纹 54，每天一次）。buy bed|bed_rattan|bed_canopy → install hard_N
   卖掉 槽位 [确认] — 旧家具按折旧卖。例子：卖掉 soft_1 确认
     小馆开着时冰箱不能卖（先 kitchen_ops shop 卖掉 或 shop close）
@@ -121,10 +126,15 @@ HUT_HELP = """hut_ops 子命令（整句写进 command）：
 
 TIDE_HELP = """tide_ops 子命令（整句写进 command）：
   net / cast / status — 岸边撒网 / 坐钓（cast 要 T1 钓竿 + 蚯蚓饵）
+    net 8 票，空网常见，稀有封顶 3（近岸常见鱼）；渔网只加档位固定票，不按鱼价抽成
+    想捞贵货走 cast / 出海，不要岸边死刷网
     T1 钓竿 = 竹钓竿：visit_ops tt buy 竹钓竿 或 tide_ops gear upgrade rod，同一档
+    未命名小鱼不能网，只能坐钓：net 网不到、也不触发遭遇；出海期间 cast 才可能碰上
   pen status — 渔排；扩池后可指定池号：stock herring 2 · feed 2 · harvest 2 · label 2 薄荷池
   voyage buy|depart|return|fight|flee|parley|bribe — 出海 / 黑旗（fight/flee 可省略 voyage）
-  compliment|release|catch|grab — 未命名小鱼（可省略 voyage）。compliment=release 礼遇；catch=grab 动手
+  compliment|release|catch|grab — 未命名小鱼（可省略 voyage）。compliment=release 礼遇回赠普通鱼；
+    catch=grab 动手：抓住这尾进袋，落下腿鱼小咒，其它鱼和精力会出事
+    吃或卖再掷事件：kitchen_ops eat 未命名小鱼 · tote_ops vend 未命名小鱼 1
   beach scan|dig|probe — 赶海（dig 要铲子）。涨潮时 dig 和 probe 都关，scan 还能看
   gear status|upgrade bait|rod|net — 渔具（T0–T5；更高档要票+材料）
   tool list|buy hoe|shovel — 锄头铲子
@@ -132,12 +142,14 @@ TIDE_HELP = """tide_ops 子命令（整句写进 command）：
   fight/flee/dig/probe/compliment 可省略前缀"""
 
 TOTE_HELP = """tote_ops 子命令（整句写进 command）：
-  list — 行囊（中文名 + 英文 id）
+  list — 行囊（中文名 + 英文 id）。每种最多叠 24 份（和潮柜一样；工具/装件 1）
   gifts [条数] — 查收到的礼物/酒吧打赏（谁送的、送了什么）。也可写 收礼。即时到账，这里只看记录
-  vend 物品 数量 — 卖掉。例子：vend 鲭鱼 1 · vend crop_kale 2
-  gift 名字 物品|票 数量 — 送给别人。能直接送票，无手续费、无每日上限
+  vend 物品 数量 — 卖掉。例子：vend 鲭鱼 1 · vend crop_kale 2 · vend 未命名小鱼 1
+    Tt酱货架买的种/饲料/工具只有进价四成，倒卖会亏；种下去收成再卖才正经
+    卖未命名小鱼会再掷一次小咒事件（可能吐票、走回袋、解开或加重小咒）
+  gift 名字 物品|票 数量 — 送给别人。能直接送票，无手续费、无每日上限。对方行囊满了（24）会拒
   swap offer|claim|list|cancel — 交换台（白送，领取 3 票手续费）
-  market list|sell|buy|price|mine|cancel — 玩家集市
+  market list|sell|buy|price|mine|cancel — 玩家集市。买也不能超过行囊每格 24
   market 扩 [数量] — 加摆摊格（15票/格，基础6格，顶12格）"""
 
 ALLIANCE_HELP = """alliance_ops 子命令（整句写进 command）：
@@ -158,10 +170,12 @@ VISIT_HELP = """visit_ops 子命令（整句写进 command）：
   musong visit|send 名字|remember — 目送人·阿槐；渡口送别，每个游戏日可记一个名字
   jingshan visit|status|order|deliver|revisit|remember — 何敬山的商船糕点委托与后续小事件；按 status 顺序
   buxing visit|tea|tide|light 给谁 | 求什么|gallery|entrust 旧事|watch|remember|fulfill 灯号 — 守灯人·不醒；茶每日一次，问潮前 5 次免费，灯廊公开
-  tt catalog|buy 物品|gift 物品 — Tt酱杂货店。例子：tt buy 锄头
+  tt catalog|buy 物品|gift 物品 — Tt酱杂货店。例子：tt buy 锄头 · tt buy 甘蓝种 2
+    货架货系统回收只有进价四成，别买了再 vend 倒差价
+    行囊每种最多 24 份，买多了会拒；满了先 vend 或 hut_ops 冰柜 存
   lore scan [主题] / topics — 沿海旧史文本与 NPC 小传（例：lore scan npc；不是收集品，背包里不会多东西）
   clinic status — 看病症和诊费
-  clinic treat 病症 — 花钱治。例子：treat sprain · treat infection · treat all
+  clinic treat 病症 — 花钱治。例子：treat sprain · treat infection · treat 腿鱼小咒 · treat all
   生肉感染约三次、两次间隔 6 小时；水果/生鱼生吃不会感染（连吃 5 口水果会营养不良，吃熟菜可解）；蔬菜不能生吃
   斗场震伤 / 深坑重创 桥桥不收，走 undertide_ops medic
   treat / fortune 可省略前缀"""

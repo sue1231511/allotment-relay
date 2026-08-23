@@ -359,11 +359,17 @@ def pick_fish_with_fortune(
     tide: str,
     rarity_cap: int,
     fortune_key: str | None,
+    *,
+    allow_cast_only: bool = False,
 ) -> str:
     if fortune_key != "fish_catch":
-        return weighted_fish_pick(tide=tide, rarity_cap=rarity_cap)
+        return weighted_fish_pick(
+            tide=tide, rarity_cap=rarity_cap, allow_cast_only=allow_cast_only
+        )
     pool: list[tuple[str, int]] = []
     for key, meta in SEA_CATCH.items():
+        if meta.get("cast_only") and not allow_cast_only:
+            continue
         if tide and tide not in meta.get("tides", []):
             continue
         if rarity_cap and meta.get("rarity", 1) > rarity_cap:
@@ -374,6 +380,8 @@ def pick_fish_with_fortune(
             weight *= 2
         pool.append((key, weight))
     if not pool:
-        return weighted_fish_pick(tide=tide, rarity_cap=rarity_cap)
+        return weighted_fish_pick(
+            tide=tide, rarity_cap=rarity_cap, allow_cast_only=allow_cast_only
+        )
     keys, weights = zip(*pool)
     return random.choices(keys, weights=weights, k=1)[0]

@@ -105,6 +105,30 @@ SCRUMP_EVENT_CHANCE = _event_rate(0.18)
 WORLD_PULSE_CHANCE = _event_rate(0.05)
 WORLD_PULSE_DURATION = WEATHER_CYCLE
 
+# 撒网 — 旧版 T5 一网期望约 45 票 / 5 精力（≈9 票/精力），坐钓还要饵。
+# 网改成「量大常见鱼」：票价更高、空网更多、稀有封顶、不再按鱼价抽成。
+NET_TICKET_COST = 8
+NET_EMPTY_BASE = 0.30
+NET_EMPTY_MIN = 0.10
+NET_RARITY_BASE = 2
+NET_RARITY_HARD_CAP = 3
+NET_FISH_RUN_BONUS = 0.10
+
+# 天灾 / 超额工分 — 一次黑潮削存量，之后暴潮脉冲继续冲超额。
+BLACK_TIDE_FLAG = "black_tide_2026_08"
+BLACK_TIDE_DURATION = 6 * 3600
+WEALTH_SAFE = 2000
+# (下限含, 上限不含或 None, 该段征收比例)
+WEALTH_LEVY_BANDS = (
+    (2000, 6000, 0.15),
+    (6000, 12000, 0.45),
+    (12000, None, 0.92),
+)
+SURGE_SAFE = 8000
+SURGE_RATE = 0.22
+STORM_SHUTTER_LEVY_MULT = 0.85
+DISASTER_NOTICE_DAYS = 3
+
 # 休闲生存感 — 慢衰减、无硬死亡
 DAY_PHASE_CYCLE = 2400
 START_SATIETY = 72
@@ -137,7 +161,7 @@ NAVAL_ENCOUNTER_CHANCE = {
     "deep": _event_rate(0.48),
 }
 
-# 出海钓鱼 — 未命名小鱼（有腿蓝鱼）随机遭遇
+# 出海坐钓 — 未命名小鱼（有腿蓝鱼）随机遭遇；撒网不会碰上、也网不到这尾
 LEGGED_FISH_CHANCE = {
     "near": _event_rate(0.05),
     "far": _event_rate(0.07),
@@ -212,6 +236,12 @@ CABINET_SLOTS = 30
 CABINET_STACK = 24
 CABINET_SLOT_COST = 12
 CABINET_SLOTS_MAX = 60
+# 行囊 / 潮柜 / 冰箱每格同一上限；买货也不能超过
+SATCHEL_STACK = CABINET_STACK
+FRIDGE_STACK = CABINET_STACK
+# 堆肥桶：MC 式 7 层结一块堆肥；桶里结好的堆肥最多囤一格
+COMPOST_BIN_LAYERS = 7
+COMPOST_BIN_READY_MAX = CABINET_STACK
 
 # 集市 — 玩家互卖，建议价参考 catalog
 MARKET_FEE = 2
@@ -354,6 +384,8 @@ TT_TICKET_PER_POINT = 20
 TT_TICKET_GAIN_CAP = 3
 TT_BUMP_CHANCE = _event_rate(0.03)
 TT_BUMP_DAILY_MAX = 1
+# 货架商品系统回收 = 进价 × 此倍率。满心 7.5 折买进仍高于回收，堵反复倒卖。
+TT_SHOP_VEND_RATE = 0.40
 
 # 小橘 — 真人扮演的女明星（酒馆驻场 + 小剧场专场）
 # 场子、曲目和回应都在真人手里；没有热度门槛或涨跌机制。

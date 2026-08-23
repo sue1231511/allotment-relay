@@ -255,8 +255,21 @@ SEA_CATCH = {
         "zones": ["far", "deep"],
         "rarity": 5,
         "pen": False,
+        "cast_only": True,
     },
 }
+
+WALKBLUE_SPECIES = "walkblue"
+WALKBLUE_ITEM = "fish_walkblue"
+WALKBLUE_HEX = "legfish_hex"
+
+
+def is_walkblue_item(item: str) -> bool:
+    return item == WALKBLUE_ITEM
+
+
+def is_cast_only_fish(species: str) -> bool:
+    return bool(SEA_CATCH.get(species, {}).get("cast_only"))
 
 RANDOM_LOOT = [
     ("compost", 1),
@@ -412,6 +425,8 @@ HUT_SOFT = {
     "quilt_patch": {"name": "拼布薄被", "cost": 36, "emoji": "🧵", "hint": "guild_shift 档信 +1"},
     "cabinet": {"name": "潮柜", "cost": 58, "emoji": "🗄️",
                "hint": "hut_ops 冰柜 存/取 生鲜；基础 30 种各最多叠 24 份，满了 hut_ops 潮柜 扩（12票/格，顶 60）"},
+    "compost_bin": {"name": "堆肥桶", "cost": 46, "emoji": "🪣",
+                    "hint": "hut_ops 堆肥桶 存 羊粪 3｜取 堆肥 2。粪便不能进潮柜；丢进去按层沤，满 7 层结 1 份堆肥"},
 }
 
 TOOLS = {
@@ -479,11 +494,11 @@ GEAR_TIERS = {
     ],
     "net": [
         {"tier": 0, "name": "无网", "catch": 0.00, "rarity": 0, "empty": 0.00, "energy": 14},
-        {"tier": 1, "name": "粗渔网", "catch": 0.00, "rarity": 0, "empty": 0.02, "energy": 10, "tickets": 28},
-        {"tier": 2, "name": "细渔网", "catch": 0.10, "rarity": 0, "empty": 0.06, "energy": 8, "tickets": 52, "need": {"drift_twine": 5}},
-        {"tier": 3, "name": "染网", "catch": 0.18, "rarity": 1, "empty": 0.10, "energy": 7, "tickets": 82, "need": {"crop_kelp": 5, "compost": 3}},
-        {"tier": 4, "name": "银丝网", "catch": 0.26, "rarity": 1, "empty": 0.14, "energy": 6, "tickets": 118, "need": {"curio_pearl": 1, "fish_kelpcrab": 1}},
-        {"tier": 5, "name": "潮纹网", "catch": 0.34, "rarity": 2, "empty": 0.18, "energy": 5, "tickets": 168, "need": {"fish_kingcrab": 1, "drift_twine": 6}},
+        {"tier": 1, "name": "粗渔网", "catch": 0.00, "rarity": 0, "empty": 0.02, "energy": 12, "tickets": 28},
+        {"tier": 2, "name": "细渔网", "catch": 0.10, "rarity": 0, "empty": 0.06, "energy": 10, "tickets": 52, "need": {"drift_twine": 5}},
+        {"tier": 3, "name": "染网", "catch": 0.18, "rarity": 1, "empty": 0.10, "energy": 9, "tickets": 82, "need": {"crop_kelp": 5, "compost": 3}},
+        {"tier": 4, "name": "银丝网", "catch": 0.26, "rarity": 1, "empty": 0.14, "energy": 8, "tickets": 118, "need": {"curio_pearl": 1, "fish_kelpcrab": 1}},
+        {"tier": 5, "name": "潮纹网", "catch": 0.34, "rarity": 2, "empty": 0.18, "energy": 7, "tickets": 168, "need": {"fish_kingcrab": 1, "drift_twine": 6}},
     ],
 }
 
@@ -750,6 +765,11 @@ AILMENTS = {
         "name": "牙酸", "emoji": "🦷", "cost": 13, "health_loss": 5, "health_restore": 8,
         "hint": "酸果、冷饮吃多了", "energy_extra": 1,
     },
+    "legfish_hex": {
+        "name": "腿鱼小咒", "emoji": "🐟", "cost": 10, "health_loss": 4, "health_restore": 6,
+        "hint": "2D蓝鱼在行囊里跺脚，步子发飘。clinic treat 腿鱼小咒 一次就好",
+        "energy_extra": 1,
+    },
 }
 
 PIT_AILMENTS = frozenset({"ring_shock", "pit_trauma"})
@@ -758,6 +778,9 @@ AILMENT_ALIASES = {
     "生肉感染": "infection",
     "生肉": "infection",
     "营养不良": "malnutrition",
+    "腿鱼小咒": "legfish_hex",
+    "小咒": "legfish_hex",
+    "腿鱼": "legfish_hex",
 }
 
 
@@ -1187,6 +1210,30 @@ def item_label(item: str) -> str:
     return item
 
 
+def item_stack_cap(item: str) -> int:
+    """行囊每格上限。潮柜同数；工具 / 装件 / 活物只能 1。"""
+    from . import config
+    if item.startswith(("fit_", "deco_", "live_", "tool_")):
+        return 1
+    if item in TOOLS:
+        return 1
+    return int(config.SATCHEL_STACK)
+
+
+def satchel_full_message(item: str, have: int, want: int, cap: int) -> str:
+    label = item_label(item)
+    if item.startswith("manure_"):
+        extra = "粪便请 hut_ops 堆肥桶 存，别囤兜里。"
+    elif item.startswith(("dish_", "meal_")):
+        extra = "熟菜可 hut_ops 冰柜 存 进冰箱。"
+    else:
+        extra = "先 tote_ops vend，或 hut_ops 冰柜 存 进潮柜。"
+    return (
+        f"行囊里 {label} 已有 {have}，再来 {want} 会超过每格 {cap} 份"
+        f"（行囊和潮柜同上限）。{extra}"
+    )
+
+
 def dish_display_name(key: str, stars: int) -> str:
     if key.startswith("mix_"):
         dummy = dish_item(key, stars)
@@ -1252,6 +1299,10 @@ def dish_energy(item: str) -> int | None:
 
 def suggested_price(item: str) -> int:
     key = resolve_item_key(item) or item
+    from . import tt as tt_mod
+    shop = tt_mod.recycle_price(key)
+    if shop is not None:
+        return shop
     parsed = parse_mix_item(key)
     if parsed:
         grade, tier, _sig, stars = parsed
@@ -1317,11 +1368,14 @@ def weighted_fish_pick(
     tide: str | None = None,
     zones: set[str] | None = None,
     rarity_cap: int | None = None,
+    allow_cast_only: bool = False,
 ) -> str:
     import random
 
     pool: list[tuple[str, int]] = []
     for key, meta in SEA_CATCH.items():
+        if meta.get("cast_only") and not allow_cast_only:
+            continue
         if tide and tide not in meta.get("tides", []):
             continue
         if zones and not zones.intersection(meta.get("zones", [])):
@@ -1331,7 +1385,11 @@ def weighted_fish_pick(
         weight = max(1, 7 - meta.get("rarity", 1))
         pool.append((key, weight))
     if not pool:
-        return random.choice(list(SEA_CATCH.keys()))
+        fallback = [
+            k for k, m in SEA_CATCH.items()
+            if allow_cast_only or not m.get("cast_only")
+        ]
+        return random.choice(fallback or ["herring"])
     keys, weights = zip(*pool)
     return random.choices(keys, weights=weights, k=1)[0]
 

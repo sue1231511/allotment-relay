@@ -95,9 +95,8 @@ def fish_catch_payout(stats: dict[str, dict[str, Any]], *, mode: str) -> tuple[f
         bonus = bait["tier"] + rod["tier"] * 2
         return mult, bonus
     net = stats["net"]
-    mult = 1.0 + net["catch"] * 1.25 + net["tier"] * 0.05
-    bonus = net["tier"] * 2
-    return mult, bonus
+    # 网不再按鱼价抽成，只留档位固定票，避免「一网比种地还肥」。
+    return 1.0, int(net["tier"])
 
 
 def _format_tier(kind: str, tier: int) -> str:
@@ -110,7 +109,9 @@ def _format_tier(kind: str, tier: int) -> str:
     )
     if kind in ("rod", "net") and meta.get("energy"):
         line += f" 精力{meta['energy']}"
-    if meta.get("catch"):
+    if kind == "net" and meta.get("tier"):
+        line += f" 网到+{meta['tier']}票（不按鱼价抽成）"
+    elif meta.get("catch"):
         line += f" 鱼价增幅"
     if nxt:
         need = ", ".join(

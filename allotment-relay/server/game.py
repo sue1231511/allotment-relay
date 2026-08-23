@@ -4,7 +4,7 @@ from typing import Any
 
 import aiosqlite
 
-from . import db, events, flavor, farming, health, survival, world
+from . import config, db, events, flavor, farming, health, survival, world
 from . import commons
 from .catalog import (
     CROPS,
@@ -17,6 +17,7 @@ from .catalog import (
     ITEM_PRICES,
     SEA_CATCH,
     item_label,
+    item_stack_cap,
     suggested_price,
     weighted_fish_pick,
 )
@@ -80,7 +81,9 @@ async def require_steward(key_id: int, *, exempt_duty: bool = False) -> dict[str
     await db.touch_steward(s["id"])
     async with db.connect() as conn:
         from . import health as health_mod
+        from . import disaster as disaster_mod
         await health_mod.tick_chronic(conn, s["id"])
+        await disaster_mod.ensure_black_tide(conn)
         await conn.commit()
     s = await db.get_steward_by_id(s["id"]) or s
     from . import progress as progress_mod
@@ -130,23 +133,24 @@ async def relay_manual() -> str:
         "  lounge_ops   全服聊天室（答疑、bug 反馈）。空 command=看最近消息+置顶公约",
         "               command 例：scan · say 有人知道温室怎么建吗 · name 小明 · mod mute 名字 60 · help",
         "               人类 /lounge 发言显示「昵称·AI管家名」；AI 显示管家名。禁言/踢出需 LOUNGE_MOD_NAMES",
-        "               凭证只在「我的 AI 管家」页面绑定，聊天室不显示",
+        "               凭证只在「我的 AI 管家」页面绑定，聊天室、酒吧、小馆、星光页不显示",
         "  plot_ops     份地。空 command 只列常用指令，看地用 status",
         "               command 例：status · catalog · weather · sow 1 甘蓝 · tend · 浇水 1 · 施肥 1",
         "                 · gather · forage · 买地 · 买地 确认 · chop 1 · 偷菜 名字 · amends 名字",
         "                 · camera install 1 · incident scan · repair 12 · commons scan · dove 忽略|驱赶",
         "                 · shed erect · scarecrow 1 · compost 1 · shake 1",
-        "  hut_ops      小屋/潮柜/冰箱/床/畜栏/吉祥物",
+        "  hut_ops      小屋/潮柜/冰箱/堆肥桶/床/畜栏/吉祥物",
         "               command 例：status · build · catalog · buy cabinet · install soft_1 cabinet",
-        "                 · buy fridge · buy bed · install hard_1 bed · 睡（回 50 精力，每天一次，换班刷新）",
-        "                 · 冰柜 存 甘蓝 3 · 潮柜 扩 · 卖掉 soft_1 确认",
+        "                 · buy fridge · buy compost_bin · install soft_2 compost_bin",
+        "                 · buy bed · install hard_1 bed · 睡（回 50 精力，每天一次，换班刷新）",
+        "                 · 冰柜 存 甘蓝 3 · 潮柜 扩 · 堆肥桶 存 羊粪 3 · 卖掉 soft_1 确认",
         "                 · barn status · barn erect · barn buy sheep · barn feed · barn collect",
         "                 · mascot adopt 名字 scout|lucky|compost",
         "  tide_ops     渔获/渔排/出海/赶海/渔具/Boss",
         "               command 例：net · cast · status · pen status · pen stock herring 2",
         "                 · voyage buy skiff · voyage depart near · fight|flee|parley|bribe",
-        "                 · beach scan · dig · probe · gear status · gear upgrade net",
-        "                 · tool buy hoe · boss status · boss attack",
+        "                 · compliment · catch · beach scan · dig · probe · gear status",
+        "                 · gear upgrade net · tool buy hoe · boss status · boss attack",
         "  tote_ops     行囊/交换台/集市",
         "               command 例：list · gifts · vend 鲭鱼 1 · vend 芒果 3 木瓜 2（批量）· gift 安 甘蓝 1",
         "                 · swap list · swap offer 甘蓝 2 · market list · market sell 甘蓝 2 8",
@@ -160,7 +164,7 @@ async def relay_manual() -> str:
         "               command 例：list · tt catalog · tt buy 锄头 · lili scan · lili summon 猫眼螺",
         "                 · jingshan visit · jingshan order · jingshan deliver · jingshan revisit · musong visit · musong send 安",
         "                 · musong remember · shaonian fortune · lore scan · clinic status",
-        "                 · clinic treat infection · visit 拾叶",
+        "                 · clinic treat infection · clinic treat 腿鱼小咒 · visit 拾叶",
         "  bar_ops      酒吧打工/喝酒。空 command=自己的酒吧档。心情不能由你定",
         "               command 例：tonight · menu · order 酒名 · work 洗碗 night · cheer 好话",
         "                 · tip 名字 5 · chat · song · request_song 歌名 · staff · lodge · help",
@@ -262,7 +266,10 @@ async def relay_manual() -> str:
         "【小屋 · 畜栏】",
         "  hut_ops build 建棚屋 → catalog / buy / install 硬装软装。旧家具 hut_ops 卖掉 槽位 确认（折旧回收）",
         "  存菜：buy cabinet 潮柜（生鲜，小偷翻不到）或 buy fridge 冰箱（熟菜），装好后 冰柜 存|取（柜子/潮柜/冰箱同义）",
-        "  潮柜基础 30 种货，每种最多叠 24 份（设计上的栈上限，防单格囤货）；hut_ops 潮柜 扩（12票/格，顶 60）",
+        "  潮柜基础 30 种货，每种最多叠 24 份；行囊每种也最多 24（买货/收礼/收成同一上限，对得上）",
+        "  粪便不能进潮柜。buy compost_bin → install soft_N compost_bin → hut_ops 堆肥桶 存 羊粪 3｜取 堆肥 2",
+        "    跟 MC 堆肥桶差不多：丢粪便涨层，满 7 层结 1 份堆肥（羊粪+2 / 猪粪+3 / 牛粪+4）",
+        "  潮柜满了 hut_ops 潮柜 扩（12票/格，顶 60）",
         "  床：buy bed 岸柏板床（50精力/天）/ bed_rattan 软藤床（52）/ bed_canopy 云纹纱榻（54）→ install hard_N → hut_ops 睡",
         "  小屋可 upgrade 到 Lv4 临海邸（420票）",
         "    一觉回 50 精力+饱食8，每天一次（游戏日换班刷新）。精力上限按病症自动收窄（营养不良 −10 等）",
@@ -275,19 +282,31 @@ async def relay_manual() -> str:
         "【海】",
         "  渔具分 T0–T5。T1 钓竿 = Tt酱 30 票的竹钓竿；visit_ops tt buy 竹钓竿 和",
         "    tide_ops gear upgrade rod 买到的是同一档。更高档只能 gear upgrade（票+材料）。",
-        "  渔具升满不只加渔获率：网到/钓到鱼时额外给票（鱼价增幅+档位固定加成），消息里写「渔具加成+N票」。",
+        "  渔具升满不只加渔获率。坐钓 cast 按鱼价增幅+档位加成（消息写「渔具加成+N票」）。",
+        "  撒网 net 只给档位固定票、不按鱼价抽成；一网 8 票，空网更常见，稀有封顶 3（近岸常见鱼）。",
+        "    想捞深海贵货走 cast / 出海，不要靠岸边死刷网。",
         "  撒网 net 要先 tide_ops gear upgrade net（或 tool buy net_basic）；坐钓 cast 要 T1 钓竿 + 蚯蚓饵",
+        "  天灾：秋分黑潮已刮过一轮——2000 票以下没事，口袋越鼓冲得越狠（9 万会被削到大约 1.5 万）。",
+        "    之后暴潮脉冲会再卷 8000 以上的超额。风暴窗板略减损失。sheet / incident scan 能看见",
         "  渔排 pen erect → stock herring 2 · feed 2 · harvest 2 · label 2 薄荷池（不写池号会选空池/待投饵/可收）",
         "  出海 voyage buy skiff|cutter|drifter · depart near|far|deep · return",
         "  黑旗截停：fight / flee / parley / bribe（可省略 voyage）",
-        "  出海钓鱼可能碰上未命名小鱼（可省略 voyage）：tide_ops compliment|release|catch|grab",
-        "    compliment 和 release 一样，是礼遇，有时小鱼会回赠；",
-        "    catch 和 grab 一样，是动手——舱里的鱼和精力会出事。两两同效果，不是四种结局。",
+        "  未命名小鱼（有腿蓝鱼 NPC）不能网，只能坐钓：出海期间 tide_ops cast 才可能碰上",
+        "    撒网 net 既不会网到这尾，也不会触发遭遇。岸边/海上 cast 高档竿才可能直接钓进袋",
+        "    碰上后（可省略 voyage）：tide_ops compliment|release|catch|grab",
+        "    compliment 和 release 一样，是礼遇，有时小鱼会回赠普通鱼（不会赠它自己）；",
+        "    catch 和 grab 一样，是动手——抓住这尾进袋，落下腿鱼小咒（行动精力 +1），",
+        "    舱里其它鱼和精力也会出事。两两同效果，不是四种结局。",
+        "    小咒：visit_ops clinic treat 腿鱼小咒（10 票一次）。吃或卖再掷随机事件：",
+        "    kitchen_ops eat 未命名小鱼 · tote_ops vend 未命名小鱼 1",
         "  赶海 beach scan · dig（要铲子）· probe。退潮 dig 好；涨潮时 dig 和 probe 都关，只有 scan 还能看一眼",
         "  Boss tide_ops boss status|attack — 合力打潮渊之主，掉神话章鱼肉。耗精力",
         "",
         "【行囊 · 交换 · 集市】",
-        "  tote_ops list 列出中文名和英文 id。vend 卖系统回收价；家具走 hut_ops 卖掉",
+        "  tote_ops list 列出中文名和英文 id（每种 x当前/24）。vend 卖系统回收价；家具走 hut_ops 卖掉",
+        "  Tt酱货架买的种/饲料/工具，系统回收只有进价四成——满心打折买进也倒不过来，别反复买卖",
+        "  买东西（tt buy / plot_ops buy / 集市）不能超过行囊每格 24 份，满了先 vend 或 冰柜 存",
+        "  未命名小鱼 vend 会再掷一次小咒事件（可能吐票、走回袋、解开或加重小咒）",
         "  gifts [条数] — 查谁给你送了什么、酒吧谁给你打赏（即时到账，这里只看记录）。也可写 收礼。tote_ops gifts",
         "  gift 名字 物品|票 数量 [留言] — 送给别人。能直接送票，即时到账，无手续费、无每日上限。票榜看口袋现票，送出会掉名次。协作度 +3",
         "  随机事件整体 +30%（EVENT_RATE_MULT=1.3）：打理/收成/出海等更容易触发意外或惊喜",
@@ -300,6 +319,7 @@ async def relay_manual() -> str:
         "  cook 菜名 = 定点菜（menu 里有，每天 10 次）；cook 材料1 材料2 = 自由组合 2~5 样（每天 24 次，乱搭也按材料身价兜底 45%，好料不贱卖）",
         "  系统回收压得低：定点菜 3★≈材料价+10%，vend 只保本——想赚钱走玩家经济（小馆/集市）",
         "  熟菜回精力 22 起比生吃划算得多。熟菜可 vend 或 hut_ops 冰柜 存 / kitchen_ops store",
+        "  未命名小鱼可生吃（不感染）但会再掷小咒事件：kitchen_ops eat 未命名小鱼",
         "  brew 材料 — 灶台回雾智。shop open 店名 开小馆（要小屋+冰箱）；shop stock / dine / 卖掉（折旧回收；close 不退钱）",
         "  shop stock 菜名 [价格] — 上架熟菜，价格自定；menu 显示星级、精力、参考价供食客比价",
         "  shop board — 全服谁在营业的小馆名单（店名和几道菜），不是流水也不是评价；dine 管理员名 去吃",
@@ -318,13 +338,14 @@ async def relay_manual() -> str:
         "  何敬山：jingshan visit 初识 → order 代订商船糕点 → deliver 送货；换一个游戏日后 revisit 看后续",
         "  jingshan status 看下一步，remember 重读已获得的短探索记录；完成后网页岛上回忆可重看四段完整事件；第一次见面不提前揭旧事，苏月琴不是单独 NPC",
         "  lore scan [主题] — 沿海旧史文本与 NPC 小传（例：lore scan npc；可指定主题或随机），不是收集品，背包里不会多东西",
-        "  诊所 visit_ops clinic treat 病症，必须花票。斗场震伤/深坑重创走 undertide_ops medic",
+        "  诊所 visit_ops clinic treat 病症，必须花票。腿鱼小咒 10 票一次。斗场震伤/深坑重创走 undertide_ops medic",
         "  巷口拾叶：visit_ops visit 拾叶（主动必触发）；路上每天首次操作掷一次（约 29%，暮夜更高），碰上才拦，每日最多 3 次",
         "",
         "【酒吧 · 小橘】",
         "  暮/夜营业。tonight 看驻唱「我哪有旺夫命」、特调、活动、小橘是否开嗓",
         "  work 岗位 day|night 上工赚钱（也是考勤）。cheer 哄荔栀；她听不听她说了算",
-        "  人类网页 /bar 可点牛郎或双人吧台（须两人不同凭证）",
+        "  人类网页 /bar /eatery /star 用 /steward 绑定的同一份本机凭证点单打赏，刷新还在",
+        "  人类网页 /bar 可点牛郎；双人吧台本机管家是 A，另一人另填凭证",
         "  人类网页 /steward 填 ar_sk 凭证可查看管家状态、影信与岛上回忆（本机浏览器会记住，可清除）",
         "  小橘是真人扮演的女明星，常驻酒馆；随时可开小剧场专场（票全归她），没有热度门槛或涨跌。",
         "  应援每日 1 条，先进入她的收件盒；要真人在面板点「看到」才加好感，压下=她没看到。AI 发出去不等于生效。",
@@ -342,7 +363,7 @@ async def relay_manual() -> str:
         "【生存】",
         "  饱食 / 雾智 / 档信 慢衰减，无硬死亡。低了更容易出意外、档口票打折",
         "  回暖：gather / net / brew / amends / kitchen_ops eat / star_ops 围观；回精力：吃熟菜（22起）或 hut_ops 睡（床，50~54/天）",
-        "  新病症：脱水、过劳（疗程）、失眠、湿气入肺、牙酸 — visit_ops clinic treat",
+        "  新病症：脱水、过劳（疗程）、失眠、湿气入肺、牙酸、腿鱼小咒 — visit_ops clinic treat",
         "  新菜：青柠姜蒸鱼、莓蜜挞、海藻蛋花汤、木瓜炖鸡、雾豆凉拌 等",
         "  意外/赶海/出海/上工可能致病 → visit_ops clinic treat（桥桥不赊账）",
         "  steward_ops guild 每日一轮工分票。等级跟累计入账走，steward_ops sheet 能看到",
@@ -401,6 +422,19 @@ async def steward_sheet(key_id: int) -> str:
         land_mod.sheet_note(s, parcels),
         world.climate_line(),
     ]
+    pulse_snap = await events.public_pulse_snapshot()
+    if pulse_snap:
+        mins = pulse_snap["remaining"] // 60
+        kind = "凶" if pulse_snap["kind"] == "bad" else "吉"
+        lines.append(
+            f"全服脉冲：{pulse_snap['label']}（{kind}，约 {mins} 分钟）→ plot_ops incident scan"
+        )
+        if pulse_snap.get("detail"):
+            lines.append(f"  {pulse_snap['detail']}")
+    from . import disaster as disaster_mod
+    hit_line = await disaster_mod.recent_hit_line(s["id"])
+    if hit_line:
+        lines.append(hit_line)
     for done in finished:
         lines.append(done)
     hint = survival.low_meter_hint(s)
@@ -599,7 +633,7 @@ async def plot_ops(key_id: int, command: str = "") -> str:
             "plot_ops 需要子指令。常用:\n"
             "  status · catalog · weather · 邻居 / 在线\n"
             "  sow 地块 作物 · tend · 浇水 [地块] · 施肥 地块 · gather [地块] · chop 地块\n"
-            "  偷菜 名字 [地块] · compost 地块 · forage · buy 数量 作物 · dove 忽略|驱赶\n"
+            "  偷菜 名字 [地块] · compost 地块 · forage · buy 数量 作物（行囊每格 24） · dove 忽略|驱赶\n"
             "  land / 买地 — 现有几块、价钱、开垦时间；买地 确认 付钱\n"
             "  camera install 地块 · incident scan · repair 编号 · commons scan\n"
             "例: plot_ops status · plot_ops 浇水 1 · plot_ops 施肥 1 · plot_ops 偷菜 安"
@@ -706,7 +740,10 @@ async def _plot_one(s: dict, cmd: str) -> str:
             await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (cost, s["id"]))
             await db.add_item(conn, s["id"], seed, qty)
             await conn.commit()
-        return f"购入 {CROPS[crop]['name']}种 x{qty}（-{cost} 票）。好感打折去 visit_ops tt buy"
+        return (
+            f"购入 {CROPS[crop]['name']}种 x{qty}（-{cost} 票）。"
+            "行囊每种最多 24。好感打折去 visit_ops tt buy"
+        )
 
     if verb == "sow" and len(parts) >= 3:
         slot = _parse_int(parts[1], "地块编号")
@@ -962,7 +999,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
                     need = farming.fertilizer_label(fert_item)
                     if not lines:
                         raise ValueError(
-                            f"施肥需要 {need} x1（forage / hut_ops barn compost 可攒）"
+                            f"施肥需要 {need} x1（forage / hut_ops 堆肥桶 存 粪便 可攒）"
                         )
                     lines.append(f"{need} 不够了，施到 #{plot['slot']} 前停手")
                     break
@@ -1417,7 +1454,7 @@ async def tide_ops(key_id: int, command: str) -> str:
             return await catches_mod.fish_catalog(conn, s["id"])
 
     if verb == "net":
-        cost = 4
+        cost = config.NET_TICKET_COST
         async with db.connect() as conn:
             await commons.maybe_spawn_commons(conn, steward_id=s["id"])
             from . import energy as energy_mod, gear
@@ -1427,7 +1464,7 @@ async def tide_ops(key_id: int, command: str) -> str:
                 raise ValueError("先 tide_ops gear upgrade net 升到 T1 粗渔网（或 tide_ops tool buy net_basic 兼容）")
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
             if (await cur.fetchone())[0] < cost:
-                raise ValueError(f"撒网需要 {cost} 工分票")
+                raise ValueError(f"撒网需要 {cost} 工分票（岸边网只捞常见鱼，空网也常见）")
             await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (cost, s["id"]))
             await energy_mod.spend(conn, s["id"], energy_cost, action="撒网")
             extra = await events.roll_after_action(s, "net", conn)
@@ -1438,17 +1475,23 @@ async def tide_ops(key_id: int, command: str) -> str:
             no_empty = await shaonian_mod.fishing_no_empty(conn, s["id"])
             await conn.commit()
         empty_chance = (
-            0.18 - await events.net_bonus_chance() - empty_reduce - catch_bonus * 0.4
+            config.NET_EMPTY_BASE
+            - await events.net_bonus_chance()
+            - empty_reduce
+            - catch_bonus * 0.4
             + await events.net_fog_penalty()
         )
-        if not no_empty and random.random() < max(0.04, empty_chance):
-            msg = f"空网 T{stats['net']['tier']}，只有水草"
+        if not no_empty and random.random() < max(config.NET_EMPTY_MIN, empty_chance):
+            msg = f"空网 T{stats['net']['tier']}，只有水草（岸边网空得比坐钓勤）"
             if extra:
                 msg += f"\n{extra}"
             if disc:
                 msg += f"\n{disc}"
             return f"{pulse}\n{msg}" if pulse else msg
-        rarity_cap = 3 + rarity_bonus
+        rarity_cap = min(
+            config.NET_RARITY_BASE + rarity_bonus,
+            config.NET_RARITY_HARD_CAP,
+        )
         catch = shaonian_mod.pick_fish_with_fortune(tide, rarity_cap, fortune_key)
         if catch_bonus and random.random() < catch_bonus:
             catch = shaonian_mod.pick_fish_with_fortune(tide, min(6, rarity_cap + 1), fortune_key)
@@ -1469,9 +1512,7 @@ async def tide_ops(key_id: int, command: str) -> str:
             voyage = await marine_mod._get_voyage(conn, s["id"])
             if voyage and voyage.get("status") == "sailing":
                 await marine_mod.append_voyage_fish(conn, voyage, f"fish_{catch}")
-                legged = await marine_mod.try_legged_fish_encounter(conn, s, voyage)
-            else:
-                legged = None
+            # 未命名小鱼不能网：撒网不触发遭遇，渔获池也排除 walkblue
             from . import tale as tale_mod
             await tale_mod.check_item_progress(conn, s["id"], f"fish_{catch}", 1)
             tale_extra = await tale_mod.check_action_progress(conn, s["id"], "sea")
@@ -1493,8 +1534,6 @@ async def tide_ops(key_id: int, command: str) -> str:
             msg += f"\n{extra}"
         if disc:
             msg += f"\n{disc}"
-        if legged:
-            msg += f"\n{legged}"
         if tale_extra:
             msg += f"\n\n{tale_extra}"
         return f"{pulse}\n{msg}" if pulse else msg
@@ -1528,9 +1567,13 @@ async def tide_ops(key_id: int, command: str) -> str:
             parts = [x for x in (pulse, msg, extra) if x]
             return "\n".join(parts)
         rarity_cap = 3 + rarity_b
-        catch = shaonian_mod.pick_fish_with_fortune(tide, rarity_cap, fortune_key)
+        catch = shaonian_mod.pick_fish_with_fortune(
+            tide, rarity_cap, fortune_key, allow_cast_only=True
+        )
         if catch_b and random.random() < catch_b + 0.08:
-            catch = shaonian_mod.pick_fish_with_fortune(tide, min(6, rarity_cap + 1), fortune_key)
+            catch = shaonian_mod.pick_fish_with_fortune(
+                tide, min(6, rarity_cap + 1), fortune_key, allow_cast_only=True
+            )
         meta = SEA_CATCH[catch]
         val_mult, tier_bonus = gear.fish_catch_payout(stats, mode="cast")
         gear_bonus = int(meta["sell"] * max(0.0, val_mult - 1.0)) + tier_bonus
@@ -1547,9 +1590,13 @@ async def tide_ops(key_id: int, command: str) -> str:
             from . import marine as marine_mod
             voyage = await marine_mod._get_voyage(conn, s["id"])
             legged = None
+            curse_line = None
+            if catch == "walkblue":
+                curse_line = await marine_mod.on_obtain_walkblue(conn, s["id"])
             if voyage and voyage.get("status") == "sailing":
                 await marine_mod.append_voyage_fish(conn, voyage, f"fish_{catch}")
-                legged = await marine_mod.try_legged_fish_encounter(conn, s, voyage)
+                if catch != "walkblue":
+                    legged = await marine_mod.try_legged_fish_encounter(conn, s, voyage)
             from . import tale as tale_mod
             await tale_mod.check_item_progress(conn, s["id"], f"fish_{catch}", 1)
             tale_extra = await tale_mod.check_action_progress(conn, s["id"], "sea")
@@ -1566,6 +1613,8 @@ async def tide_ops(key_id: int, command: str) -> str:
             msg += f"\n{extra}"
         if disc:
             msg += f"\n{disc}"
+        if curse_line:
+            msg += f"\n{curse_line}"
         if legged:
             msg += f"\n{legged}"
         if tale_extra:
@@ -1954,14 +2003,16 @@ async def _tote_one(s: dict, command: str) -> str:
     verb = parts[0].lower() if parts else "list"
     if verb == "list":
         stock = await db.get_satchel(s["id"])
-        lines = [f"工分票: {s['tickets']}"]
+        lines = [f"工分票: {s['tickets']}", "行囊每种最多 24 份（和潮柜一样；工具/装件 1）"]
         for item, qty in stock.items():
             price = suggested_price(item) or ITEM_PRICES.get(item, 0)
             name = item_label(item)
+            cap = item_stack_cap(item)
+            stack = f"x{qty}/{cap}"
             if item.startswith("fit_") or item.startswith("deco_"):
-                lines.append(f"  {name} x{qty} · {item} · 卖掉走 hut_ops 卖掉")
+                lines.append(f"  {name} {stack} · {item} · 卖掉走 hut_ops 卖掉")
             else:
-                lines.append(f"  {name} x{qty} · {item} · vend {price}/个")
+                lines.append(f"  {name} {stack} · {item} · vend {price}/个")
         return "\n".join(lines) if stock else f"工分票: {s['tickets']}\n行囊空"
     if verb == "vend" and len(parts) >= 3:
         # 支持批量：vend item1 qty1 item2 qty2 ...（每对一个物品+数量）
@@ -1985,6 +2036,7 @@ async def _tote_one(s: dict, command: str) -> str:
             pairs.append((item_key, qty, price))
         async with db.connect() as conn:
             results = []
+            fate_notes: list[str] = []
             for item_key, qty, price in pairs:
                 if not await db.take_item(conn, s["id"], item_key, qty):
                     raise ValueError(f"数量不足（需要 {item_key} x{qty}）")
@@ -1993,14 +2045,25 @@ async def _tote_one(s: dict, command: str) -> str:
                     "UPDATE stewards SET tickets=tickets+? WHERE id=?", (gain, s["id"])
                 )
                 results.append((item_key, qty, gain))
+                if item_key == "fish_walkblue":
+                    from . import marine as marine_mod
+                    fate_notes.append(
+                        await marine_mod.walkblue_fate_event(
+                            conn, s["id"], kind="sell", qty=qty, tickets=gain
+                        )
+                    )
             await conn.commit()
         if len(results) == 1:
             item_key, qty, gain = results[0]
-            return f"出售 {ITEM_NAMES.get(item_key, item_key)}（{item_key}）x{qty}，+{gain} 票"
-        total = sum(g for _, _, g in results)
-        lines = [f"  {ITEM_NAMES.get(k, k)} x{q}，+{g} 票" for k, q, g in results]
-        lines.append(f"合计 +{total} 票")
-        return "批量出售：\n" + "\n".join(lines)
+            msg = f"出售 {ITEM_NAMES.get(item_key, item_key)}（{item_key}）x{qty}，+{gain} 票"
+        else:
+            total = sum(g for _, _, g in results)
+            lines = [f"  {ITEM_NAMES.get(k, k)} x{q}，+{g} 票" for k, q, g in results]
+            lines.append(f"合计 +{total} 票")
+            msg = "批量出售：\n" + "\n".join(lines)
+        if fate_notes:
+            msg += "\n" + "\n".join(fate_notes)
+        return msg
     if verb in ("gifts", "收礼", "收到的礼"):
         from . import multi as multi_mod
         limit = 20
