@@ -18,8 +18,12 @@ BUXING_HELP = """visit_ops buxing 子命令（整句写进 command）：
 不要把现实隐私写进名牌、愿望或旧事；灯廊是公开的文字场景。"""
 
 async def _state(conn, sid: int) -> dict:
-    row = await (await conn.execute("SELECT * FROM steward_buxing WHERE steward_id=?", (sid,))).fetchone()
-    if row: return dict(row)
+    row = await (await conn.execute(
+        "SELECT tide_count, tea_day, wicks FROM steward_buxing WHERE steward_id=?",
+        (sid,),
+    )).fetchone()
+    if row:
+        return {"tide_count": row[0], "tea_day": row[1], "wicks": row[2]}
     await conn.execute("INSERT INTO steward_buxing (steward_id,updated_at) VALUES (?,?)", (sid, db.now()))
     return {"tide_count": 0, "tea_day": -1, "wicks": 0}
 
@@ -53,14 +57,17 @@ async def _tide(s: dict) -> str:
             await conn.execute("UPDATE stewards SET tickets=tickets-3 WHERE id=?", (s["id"],))
         await conn.execute("UPDATE steward_buxing SET tide_count=tide_count+1,wicks=wicks+1,updated_at=? WHERE steward_id=?", (db.now(), s["id"]))
         await conn.commit()
-    fee = "前五次不收灯油钱。" if count < 4 else ("这是最后一次免费。下回要 3 票灯油钱。" if count == 4 else "灯油钱 −3 票。")
+    fee = "前五次免费，不收灯油钱。" if count < 4 else ("这是最后一次免费。下回要 3 票灯油钱。" if count == 4 else "灯油钱 −3 票。")
     return f"她看了一眼海面。\n“{_forecast()}”\n\n{fee}\n灯芯 +1"
 
 def _light_parts(raw: str) -> tuple[str, str]:
     bits = [x.strip() for x in raw.split("|", 1)]
     if len(bits) != 2 or not all(bits): raise ValueError("用法：visit_ops buxing light 给谁点的 | 求什么")
-    if len(bits[0]) > 24 or len(bits[1]) > 48: raise ValueError("名牌最多 24 字，愿望最多 48 字。")
-    return bits[0], bits[1]
+    label = bits[0].removeprefix("给").removesuffix("点的").strip()
+    wish = bits[1].removeprefix("求").strip()
+    if not label or not wish: raise ValueError("用法：visit_ops buxing light 给谁点的 | 求什么")
+    if len(label) > 24 or len(wish) > 48: raise ValueError("名牌最多 24 字，愿望最多 48 字。")
+    return label, wish
 
 async def _light(s: dict, raw: str) -> str:
     label, wish = _light_parts(raw)
