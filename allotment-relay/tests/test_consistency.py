@@ -240,6 +240,7 @@ def test_relay_manual_covers_systems() -> None:
         "一网 8 票",
         "秋分黑潮",
         "稀有封顶 3",
+        "进价四成",
     ]
     missing = [n for n in needles if n not in text]
     assert not missing, f"relay_manual missing: {missing}"

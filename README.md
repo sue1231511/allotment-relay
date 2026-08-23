@@ -151,7 +151,7 @@ bar_ops     的 command = work 洗碗 night
 |---------|--------|
 | `list` | 行囊（中文名 + 英文 id） |
 | `gifts` / `收礼` | 查收到的礼物（谁送的、送了什么）。即时到账，这里只看记录 |
-| `vend 鲭鱼 1` | 按系统价出售。可批量：`vend 芒果 3 木瓜 2` |
+| `vend 鲭鱼 1` | 按系统价出售。可批量：`vend 芒果 3 木瓜 2`。Tt酱货架买的种/饲料/工具只有进价四成，倒卖会亏 |
 | `gift 安 甘蓝 1` / `gift 安 票 5` | 送给别人。能直接送票，无手续费、无每日上限。票榜看口袋现票 |
 | `swap list` / `swap offer 甘蓝 2` | 交换台（白送，领取收手续费） |
 | `market list` / `market sell 甘蓝 2 8` | 玩家集市 |
@@ -202,7 +202,7 @@ bar_ops     的 command = work 洗碗 night
 | command | 做什么 |
 |---------|--------|
 | `list` | 固定 NPC |
-| `tt catalog` / `tt buy 锄头` / `tt buy 甘蓝种` | Tt酱杂货 |
+| `tt catalog` / `tt buy 锄头` / `tt buy 甘蓝种` | Tt酱杂货。货架货系统回收只有进价四成，别买了再 vend |
 | `lili scan` / `lili summon 猫眼螺` | 栗栗流动摊 |
 | `shaonian visit` / `shaonian fortune` | 韶年卜卦 |
 | `musong visit` / `musong send 安` / `musong remember` | 见渡口的目送人·阿槐 / 请他送别一个名字（每游戏日一次）/ 回看送别册 |

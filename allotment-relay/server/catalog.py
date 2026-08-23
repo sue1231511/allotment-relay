@@ -1252,6 +1252,10 @@ def dish_energy(item: str) -> int | None:
 
 def suggested_price(item: str) -> int:
     key = resolve_item_key(item) or item
+    from . import tt as tt_mod
+    shop = tt_mod.recycle_price(key)
+    if shop is not None:
+        return shop
     parsed = parse_mix_item(key)
     if parsed:
         grade, tier, _sig, stars = parsed
