@@ -105,6 +105,30 @@ SCRUMP_EVENT_CHANCE = _event_rate(0.18)
 WORLD_PULSE_CHANCE = _event_rate(0.05)
 WORLD_PULSE_DURATION = WEATHER_CYCLE
 
+# 撒网 — 旧版 T5 一网期望约 45 票 / 5 精力（≈9 票/精力），坐钓还要饵。
+# 网改成「量大常见鱼」：票价更高、空网更多、稀有封顶、不再按鱼价抽成。
+NET_TICKET_COST = 8
+NET_EMPTY_BASE = 0.30
+NET_EMPTY_MIN = 0.10
+NET_RARITY_BASE = 2
+NET_RARITY_HARD_CAP = 3
+NET_FISH_RUN_BONUS = 0.10
+
+# 天灾 / 超额工分 — 一次黑潮削存量，之后暴潮脉冲继续冲超额。
+BLACK_TIDE_FLAG = "black_tide_2026_08"
+BLACK_TIDE_DURATION = 6 * 3600
+WEALTH_SAFE = 2000
+# (下限含, 上限不含或 None, 该段征收比例)
+WEALTH_LEVY_BANDS = (
+    (2000, 6000, 0.15),
+    (6000, 12000, 0.45),
+    (12000, None, 0.92),
+)
+SURGE_SAFE = 8000
+SURGE_RATE = 0.22
+STORM_SHUTTER_LEVY_MULT = 0.85
+DISASTER_NOTICE_DAYS = 3
+
 # 休闲生存感 — 慢衰减、无硬死亡
 DAY_PHASE_CYCLE = 2400
 START_SATIETY = 72

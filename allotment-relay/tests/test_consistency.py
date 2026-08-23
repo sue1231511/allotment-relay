@@ -68,6 +68,7 @@ def test_mcp_descriptions() -> None:
     tide_blob = f"{tide.description}\n{(tide.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
     assert "竹钓竿" in tide_blob
     assert "probe" in tide_blob
+    assert "8 票" in tide_blob or "8票" in tide_blob
 
     tote = mcp._tool_manager.get_tool("tote_ops")
     tote_blob = f"{tote.description}\n{(tote.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -228,6 +229,9 @@ def test_relay_manual_covers_systems() -> None:
         "平常回 10、好回 15、极好回 20",
         "极差额外反噬 10",
         "每满 20 票再回 +1",
+        "一网 8 票",
+        "秋分黑潮",
+        "稀有封顶 3",
     ]
     missing = [n for n in needles if n not in text]
     assert not missing, f"relay_manual missing: {missing}"

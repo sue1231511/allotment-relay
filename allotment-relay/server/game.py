@@ -4,7 +4,7 @@ from typing import Any
 
 import aiosqlite
 
-from . import db, events, flavor, farming, health, survival, world
+from . import config, db, events, flavor, farming, health, survival, world
 from . import commons
 from .catalog import (
     CROPS,
@@ -80,7 +80,9 @@ async def require_steward(key_id: int, *, exempt_duty: bool = False) -> dict[str
     await db.touch_steward(s["id"])
     async with db.connect() as conn:
         from . import health as health_mod
+        from . import disaster as disaster_mod
         await health_mod.tick_chronic(conn, s["id"])
+        await disaster_mod.ensure_black_tide(conn)
         await conn.commit()
     s = await db.get_steward_by_id(s["id"]) or s
     from . import progress as progress_mod
@@ -273,8 +275,12 @@ async def relay_manual() -> str:
         "【海】",
         "  渔具分 T0–T5。T1 钓竿 = Tt酱 30 票的竹钓竿；visit_ops tt buy 竹钓竿 和",
         "    tide_ops gear upgrade rod 买到的是同一档。更高档只能 gear upgrade（票+材料）。",
-        "  渔具升满不只加渔获率：网到/钓到鱼时额外给票（鱼价增幅+档位固定加成），消息里写「渔具加成+N票」。",
+        "  渔具升满不只加渔获率。坐钓 cast 按鱼价增幅+档位加成（消息写「渔具加成+N票」）。",
+        "  撒网 net 只给档位固定票、不按鱼价抽成；一网 8 票，空网更常见，稀有封顶 3（近岸常见鱼）。",
+        "    想捞深海贵货走 cast / 出海，不要靠岸边死刷网。",
         "  撒网 net 要先 tide_ops gear upgrade net（或 tool buy net_basic）；坐钓 cast 要 T1 钓竿 + 蚯蚓饵",
+        "  天灾：秋分黑潮已刮过一轮——2000 票以下没事，口袋越鼓冲得越狠（9 万会被削到大约 1.5 万）。",
+        "    之后暴潮脉冲会再卷 8000 以上的超额。风暴窗板略减损失。sheet / incident scan 能看见",
         "  渔排 pen erect → stock herring 2 · feed 2 · harvest 2 · label 2 薄荷池（不写池号会选空池/待投饵/可收）",
         "  出海 voyage buy skiff|cutter|drifter · depart near|far|deep · return",
         "  黑旗截停：fight / flee / parley / bribe（可省略 voyage）",
@@ -394,6 +400,19 @@ async def steward_sheet(key_id: int) -> str:
         land_mod.sheet_note(s, parcels),
         world.climate_line(),
     ]
+    pulse_snap = await events.public_pulse_snapshot()
+    if pulse_snap:
+        mins = pulse_snap["remaining"] // 60
+        kind = "凶" if pulse_snap["kind"] == "bad" else "吉"
+        lines.append(
+            f"全服脉冲：{pulse_snap['label']}（{kind}，约 {mins} 分钟）→ plot_ops incident scan"
+        )
+        if pulse_snap.get("detail"):
+            lines.append(f"  {pulse_snap['detail']}")
+    from . import disaster as disaster_mod
+    hit_line = await disaster_mod.recent_hit_line(s["id"])
+    if hit_line:
+        lines.append(hit_line)
     for done in finished:
         lines.append(done)
     hint = survival.low_meter_hint(s)
@@ -1410,7 +1429,7 @@ async def tide_ops(key_id: int, command: str) -> str:
             return await catches_mod.fish_catalog(conn, s["id"])
 
     if verb == "net":
-        cost = 4
+        cost = config.NET_TICKET_COST
         async with db.connect() as conn:
             await commons.maybe_spawn_commons(conn, steward_id=s["id"])
             from . import energy as energy_mod, gear
@@ -1420,7 +1439,7 @@ async def tide_ops(key_id: int, command: str) -> str:
                 raise ValueError("先 tide_ops gear upgrade net 升到 T1 粗渔网（或 tide_ops tool buy net_basic 兼容）")
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
             if (await cur.fetchone())[0] < cost:
-                raise ValueError(f"撒网需要 {cost} 工分票")
+                raise ValueError(f"撒网需要 {cost} 工分票（岸边网只捞常见鱼，空网也常见）")
             await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (cost, s["id"]))
             await energy_mod.spend(conn, s["id"], energy_cost, action="撒网")
             extra = await events.roll_after_action(s, "net", conn)
@@ -1431,17 +1450,23 @@ async def tide_ops(key_id: int, command: str) -> str:
             no_empty = await shaonian_mod.fishing_no_empty(conn, s["id"])
             await conn.commit()
         empty_chance = (
-            0.18 - await events.net_bonus_chance() - empty_reduce - catch_bonus * 0.4
+            config.NET_EMPTY_BASE
+            - await events.net_bonus_chance()
+            - empty_reduce
+            - catch_bonus * 0.4
             + await events.net_fog_penalty()
         )
-        if not no_empty and random.random() < max(0.04, empty_chance):
-            msg = f"空网 T{stats['net']['tier']}，只有水草"
+        if not no_empty and random.random() < max(config.NET_EMPTY_MIN, empty_chance):
+            msg = f"空网 T{stats['net']['tier']}，只有水草（岸边网空得比坐钓勤）"
             if extra:
                 msg += f"\n{extra}"
             if disc:
                 msg += f"\n{disc}"
             return f"{pulse}\n{msg}" if pulse else msg
-        rarity_cap = 3 + rarity_bonus
+        rarity_cap = min(
+            config.NET_RARITY_BASE + rarity_bonus,
+            config.NET_RARITY_HARD_CAP,
+        )
         catch = shaonian_mod.pick_fish_with_fortune(tide, rarity_cap, fortune_key)
         if catch_bonus and random.random() < catch_bonus:
             catch = shaonian_mod.pick_fish_with_fortune(tide, min(6, rarity_cap + 1), fortune_key)

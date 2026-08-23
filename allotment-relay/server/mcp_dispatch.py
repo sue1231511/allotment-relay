@@ -74,7 +74,7 @@ async def route(
 
 STEWARD_HELP = """steward_ops 子命令（整句写进 command）：
   enroll 名字 — 登记。例子：enroll 安
-  sheet — 自己的档（票、精力、份地、病症）。空 command 也是这个
+  sheet — 自己的档（票、精力、份地、病症）。有全服脉冲/天灾冲票时写在档上。空 command 也是这个
   邻居 — 全员邻居（谁在档口、谁家有熟地）。找人优先用这个
   在线 — 只看档口里的人
   peer 名字 — 看别人的公开档；不写名字 = 邻居表
@@ -121,6 +121,8 @@ HUT_HELP = """hut_ops 子命令（整句写进 command）：
 
 TIDE_HELP = """tide_ops 子命令（整句写进 command）：
   net / cast / status — 岸边撒网 / 坐钓（cast 要 T1 钓竿 + 蚯蚓饵）
+    net 8 票，空网常见，稀有封顶 3（近岸常见鱼）；渔网只加档位固定票，不按鱼价抽成
+    想捞贵货走 cast / 出海，不要岸边死刷网
     T1 钓竿 = 竹钓竿：visit_ops tt buy 竹钓竿 或 tide_ops gear upgrade rod，同一档
   pen status — 渔排；扩池后可指定池号：stock herring 2 · feed 2 · harvest 2 · label 2 薄荷池
   voyage buy|depart|return|fight|flee|parley|bribe — 出海 / 黑旗（fight/flee 可省略 voyage）

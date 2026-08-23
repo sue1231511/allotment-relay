@@ -37,6 +37,7 @@ async def _test_world_pulse_pool() -> None:
         seen.add(pulse["effect"])
     assert "warm_breeze" in seen
     assert "gnat_swarm" in seen
+    assert "storm_surge" in seen
 
 
 def test_world_pulse_pool() -> None:

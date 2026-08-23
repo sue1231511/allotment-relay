@@ -225,6 +225,12 @@ CREATE TABLE IF NOT EXISTS world_pulse (
     expires_at INTEGER NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS world_flags (
+    flag_key TEXT PRIMARY KEY,
+    applied_at INTEGER NOT NULL,
+    detail TEXT NOT NULL DEFAULT ''
+);
+
 CREATE TABLE IF NOT EXISTS fish_pens (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     steward_id INTEGER NOT NULL REFERENCES stewards(id),
@@ -1432,13 +1438,22 @@ async def init_db() -> None:
                 PRIMARY KEY (steward_id, day_id, action)
             )
             """,
+            """
+            CREATE TABLE IF NOT EXISTS world_flags (
+                flag_key TEXT PRIMARY KEY,
+                applied_at INTEGER NOT NULL,
+                detail TEXT NOT NULL DEFAULT ''
+            )
+            """,
         ):
             try:
                 await db.execute(ddl)
             except aiosqlite.OperationalError:
                 pass
         from . import ranks as ranks_mod
+        from . import disaster as disaster_mod
         await ranks_mod.seed_xp(db)
+        await disaster_mod.ensure_black_tide(db)
         await db.commit()
 
 

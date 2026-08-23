@@ -91,9 +91,9 @@ async def relay_manual() -> str:
     return await game.relay_manual()
 
 
-@mcp.tool(description="管理员身份与档案。command 写一整句，不要编造子命令。例子：enroll 安 · sheet · 邻居 · 成就 · 称呼 逾篱客 · guild · board tickets。空 command=看自己的档。新号必须先 enroll。不会就 help。")
+@mcp.tool(description="管理员身份与档案。command 写一整句，不要编造子命令。例子：enroll 安 · sheet · 邻居 · 成就 · 称呼 逾篱客 · guild · board tickets。空 command=看自己的档（含全服脉冲/天灾冲票）。新号必须先 enroll。不会就 help。")
 async def steward_ops(
-    command: Annotated[str, Field(description="子命令整句。enroll 安 / sheet / 邻居 / 在线 / 成就 / 称呼 逾篱客 / 领奖 / peer 名字 / guild / board tickets|level / help。空=sheet。邻居=全员名册（找人偷菜/assist 用这个）。不要发明其它动词。")] = "sheet",
+    command: Annotated[str, Field(description="子命令整句。enroll 安 / sheet / 邻居 / 在线 / 成就 / 称呼 逾篱客 / 领奖 / peer 名字 / guild / board tickets|level / help。空=sheet（会显示脉冲和天灾）。邻居=全员名册（找人偷菜/assist 用这个）。不要发明其它动词。")] = "sheet",
     name: Annotated[str, Field(description="enroll 时的管理员名字，也可写在 command 里")] = "",
     motto: Annotated[str, Field(description="可选座右铭")] = "",
     badge: Annotated[str, Field(description="徽章，默认 naturalist")] = "naturalist",
@@ -119,9 +119,9 @@ async def hut_ops(
     return await mux._call_ops(mux.hut_bundle, _kid(), command)
 
 
-@mcp.tool(description="渔获、渔排、出海、赶海、渔具、Boss。command 写一整句，不要编造 fish_ops。例子：net · cast · pen status · voyage depart near · beach scan · gear upgrade rod · boss attack。cast 要 T1 竹钓竿（Tt酱买或 gear upgrade rod）+蚯蚓饵。涨潮时 dig 和 probe 都关。空 command 列出子命令。不会就 help。")
+@mcp.tool(description="渔获、渔排、出海、赶海、渔具、Boss。command 写一整句，不要编造 fish_ops。例子：net · cast · pen status · voyage depart near · beach scan · gear upgrade rod · boss attack。撒网 net 8 票、空网常见、只捞稀有≤3 的近岸鱼，渔网不加鱼价抽成。cast 要 T1 竹钓竿（Tt酱买或 gear upgrade rod）+蚯蚓饵，按鱼价增幅给票。涨潮时 dig 和 probe 都关。空 command 列出子命令。不会就 help。")
 async def tide_ops(
-    command: Annotated[str, Field(description="子命令整句。net / cast / pen status / voyage depart near / fight / compliment|release|catch|grab / beach scan / dig / probe / gear upgrade rod / boss status / help。T1 钓竿=竹钓竿。涨潮 dig 和 probe 都关。不要发明 fish/sail。")] = "",
+    command: Annotated[str, Field(description="子命令整句。net / cast / pen status / voyage depart near / fight / compliment|release|catch|grab / beach scan / dig / probe / gear upgrade rod / boss status / help。net=8 票岸边网（常见鱼，空网多）；cast=坐钓精细活。T1 钓竿=竹钓竿。涨潮 dig 和 probe 都关。不要发明 fish/sail。")] = "",
 ) -> str:
     return await mux._call_ops(mux.tide_bundle, _kid(), command)
 
