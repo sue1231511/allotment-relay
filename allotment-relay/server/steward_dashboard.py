@@ -5,7 +5,7 @@ from __future__ import annotations
 import aiosqlite
 from typing import Any
 
-from . import bar, db, energy, events, farming, health, land, ranks, survival, world
+from . import bar, db, energy, events, farming, health, land, memory_archive, ranks, survival, world
 from . import undertide as undertide_mod
 from . import undertide_config as utcfg
 from .catalog import CROPS, ITEM_NAMES
@@ -40,6 +40,7 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
             (s["id"],),
         )).fetchone()
         ut = await undertide_mod._ensure_ut(conn, s["id"])
+        memories = await memory_archive.list_memories(conn, s["id"])
         await conn.commit()
 
     gifts = await db.list_received_gifts(s["id"], 8)
@@ -196,6 +197,7 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
         "gifts": gift_views,
         "market": {"used": used, "cap": cap},
         "voyage": voyage_view,
+        "memories": memories,
         "flags": {
             "greenhouse": bool(s.get("greenhouse")),
             "hut_built": bool(s.get("hut_built")),

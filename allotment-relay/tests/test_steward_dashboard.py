@@ -54,6 +54,7 @@ async def _test_steward_dashboard_api() -> None:
     assert isinstance(data["shadow"]["rep"], int), data["shadow"]
     assert data["meters"]["shadow_rep"] == data["shadow"]["rep"], data
     assert data["shadow"]["tier"], data["shadow"]
+    assert data["memories"] == [], data["memories"]
 
 
 if __name__ == "__main__":

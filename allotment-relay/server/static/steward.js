@@ -23,6 +23,13 @@ function badgeLabel(key) {
 }
 
 const STEWARD_KEY_STORAGE = 'tidal_island_steward_api_key';
+const MEMORY_KIND_LABELS = { tale: '潮闻', story: '故事', npc: '相遇' };
+let memoryCatalog = [];
+let memoryFilter = 'all';
+let activeMemory = null;
+let activeMemoryChapter = 0;
+let continuousMemoryMode = false;
+let memoryReturnFocus = null;
 
 function loadSavedKey() {
   try {
@@ -134,6 +141,168 @@ function agoLabel(epoch) {
   if (sec < 3600) return `${Math.floor(sec / 60)} 分钟前`;
   if (sec < 86400) return `${Math.floor(sec / 3600)} 小时前`;
   return `${Math.floor(sec / 86400)} 天前`;
+}
+
+function fmtMemoryDate(epoch) {
+  if (!epoch) return '已收录';
+  return new Date(Number(epoch) * 1000).toLocaleDateString('zh-CN', {
+    year: 'numeric', month: 'long', day: 'numeric',
+  });
+}
+
+function multiline(value) {
+  return esc(value).replace(/\n/g, '<br>');
+}
+
+function renderMemories(memories) {
+  memoryCatalog = Array.isArray(memories) ? memories : [];
+  const root = document.getElementById('memories');
+  const visible = memoryFilter === 'all'
+    ? memoryCatalog
+    : memoryCatalog.filter(item => item.kind === memoryFilter);
+  if (!visible.length) {
+    root.innerHTML = `<div class="memory-empty">
+      <span>〰</span>
+      <strong>${memoryCatalog.length ? '这个分类还没有回忆' : '岛上回忆册还是空的'}</strong>
+      <p>只有真正完成的潮闻、人物故事和 NPC 小事件才会出现在这里，未完成内容不会提前剧透。</p>
+    </div>`;
+    return;
+  }
+  root.innerHTML = visible.map(item => {
+    const index = memoryCatalog.indexOf(item);
+    const keepsakes = (item.souvenirs || []).slice(0, 4).map(s =>
+      `<span class="memory-keepsake" title="${esc(s.description || s.name)}">${esc(s.emoji || '◌')} ${esc(s.name)}</span>`
+    ).join('');
+    const variants = item.variants || [];
+    const chooser = variants.length > 1 ? `
+      <label class="memory-variant-label">
+        <span>选择结局</span>
+        <select data-memory-variant-select="${index}">
+          ${variants.map((v, i) => `<option value="${i}">${esc(v.label)}</option>`).join('')}
+        </select>
+      </label>` : '';
+    const count = Number(item.chapter_count) > 0 ? `${item.chapter_count} 幕` : '旧档案';
+    return `
+      <article class="memory-card kind-${esc(item.kind)}" data-memory-card="${index}">
+        <div class="memory-card-top">
+          <span class="memory-kind">${esc(MEMORY_KIND_LABELS[item.kind] || item.kind)}</span>
+          <time>${esc(fmtMemoryDate(item.completed_at))}</time>
+        </div>
+        <h3>《${esc(item.title)}》</h3>
+        <p class="memory-blurb">${esc(item.blurb)}</p>
+        <div class="memory-card-meta">
+          <span>${esc(count)}</span>
+          ${item.ending ? `<span>${esc(item.ending)}</span>` : ''}
+        </div>
+        ${keepsakes ? `<div class="memory-keepsakes">${keepsakes}</div>` : ''}
+        <div class="memory-card-action">
+          ${chooser}
+          <button type="button" class="btn primary memory-watch" data-memory-watch="${index}">再次观看</button>
+        </div>
+      </article>`;
+  }).join('');
+}
+
+function memorySouvenirs(items) {
+  if (!items || !items.length) return '';
+  return `<section class="memory-reader-souvenirs">
+    <h4>一同留下的纪念</h4>
+    <div>${items.map(item => `
+      <span title="${esc(item.description || '')}">${esc(item.emoji || '◌')} ${esc(item.name)}</span>
+    `).join('')}</div>
+  </section>`;
+}
+
+function renderMemoryReader() {
+  if (!activeMemory) return;
+  const chapters = activeMemory.chapters || [];
+  const toc = document.getElementById('memory-reader-toc');
+  const page = document.getElementById('memory-reader-page');
+  document.getElementById('memory-reader-title').textContent = `《${activeMemory.title}》`;
+  document.getElementById('memory-reader-kicker').textContent = `${MEMORY_KIND_LABELS[activeMemory.kind] || '岛上'} · 回忆重映`;
+  document.getElementById('memory-reader-meta').textContent = [
+    fmtMemoryDate(activeMemory.completed_at),
+    activeMemory.ending ? `留下：${activeMemory.ending}` : '',
+  ].filter(Boolean).join(' · ');
+  document.getElementById('memory-reader-notice').textContent = activeMemory.notice || '';
+  toc.innerHTML = chapters.map((chapter, i) => `
+    <button type="button" class="memory-toc-item${!continuousMemoryMode && i === activeMemoryChapter ? ' is-active' : ''}" data-memory-chapter="${i}">
+      <span>${String(i + 1).padStart(2, '0')}</span>${esc(chapter.title)}
+    </button>
+  `).join('');
+  if (continuousMemoryMode) {
+    page.innerHTML = chapters.map((chapter, i) => `
+      <section class="memory-chapter" id="memory-chapter-${i}">
+        <span class="memory-chapter-count">${i + 1} / ${chapters.length}</span>
+        <h3>${esc(chapter.title)}</h3>
+        <div class="memory-prose">${multiline(chapter.text)}</div>
+      </section>
+    `).join('') + memorySouvenirs(activeMemory.souvenirs);
+  } else {
+    const chapter = chapters[activeMemoryChapter] || { title: '回忆', text: '' };
+    page.innerHTML = `
+      <section class="memory-chapter">
+        <span class="memory-chapter-count">${activeMemoryChapter + 1} / ${chapters.length}</span>
+        <h3>${esc(chapter.title)}</h3>
+        <div class="memory-prose">${multiline(chapter.text)}</div>
+      </section>
+      ${activeMemoryChapter === chapters.length - 1 ? memorySouvenirs(activeMemory.souvenirs) : ''}`;
+  }
+  document.getElementById('memory-reader-progress').textContent = continuousMemoryMode
+    ? `共 ${chapters.length} 幕`
+    : `${activeMemoryChapter + 1} / ${chapters.length}`;
+  document.getElementById('memory-reader-prev').disabled = continuousMemoryMode || activeMemoryChapter <= 0;
+  document.getElementById('memory-reader-next').disabled = continuousMemoryMode || activeMemoryChapter >= chapters.length - 1;
+  document.getElementById('memory-reader-mode').textContent = continuousMemoryMode ? '按幕阅读' : '连续阅读';
+}
+
+async function openMemory(index, trigger) {
+  const item = memoryCatalog[index];
+  if (!item) return;
+  const card = trigger.closest('[data-memory-card]');
+  const select = card ? card.querySelector('[data-memory-variant-select]') : null;
+  const variantIndex = select ? Number(select.value) : 0;
+  const variant = (item.variants || [])[variantIndex];
+  trigger.disabled = true;
+  trigger.textContent = '取回中…';
+  try {
+    const apiKey = document.getElementById('api_key').value.trim() || loadSavedKey();
+    const res = await fetch('/api/steward/memory', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        api_key: apiKey,
+        kind: item.kind,
+        key: item.key,
+        variant: variant ? String(variant.id) : '',
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || '回忆暂时无法打开');
+    activeMemory = data;
+    activeMemoryChapter = 0;
+    continuousMemoryMode = false;
+    memoryReturnFocus = trigger;
+    renderMemoryReader();
+    document.getElementById('memory-modal').classList.remove('hidden');
+    document.body.classList.add('memory-open');
+    document.querySelector('.memory-reader-close').focus();
+  } catch (err) {
+    const errBox = document.getElementById('steward-error');
+    errBox.textContent = err.message;
+    errBox.classList.remove('hidden');
+  } finally {
+    trigger.disabled = false;
+    trigger.textContent = '再次观看';
+  }
+}
+
+function closeMemory() {
+  document.getElementById('memory-modal').classList.add('hidden');
+  document.body.classList.remove('memory-open');
+  activeMemory = null;
+  if (memoryReturnFocus) memoryReturnFocus.focus();
+  memoryReturnFocus = null;
 }
 
 function renderDashboard(data, { scroll = true } = {}) {
@@ -285,6 +454,8 @@ function renderDashboard(data, { scroll = true } = {}) {
       `).join('')
     : '<p class="steward-empty">暂无收礼 / 打赏</p>';
 
+  renderMemories(data.memories || []);
+
   if (scroll) {
     document.getElementById('steward-dashboard').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -301,11 +472,71 @@ document.getElementById('steward-refresh').addEventListener('click', () => {
 });
 
 document.getElementById('steward-forget').addEventListener('click', () => {
+  closeMemory();
   clearSavedKey();
   document.getElementById('api_key').value = '';
   document.getElementById('steward-dashboard').classList.add('hidden');
   document.getElementById('steward-error').classList.add('hidden');
   setSavedUi(false);
+});
+
+document.getElementById('memory-filters').addEventListener('click', (e) => {
+  const button = e.target.closest('[data-memory-filter]');
+  if (!button) return;
+  memoryFilter = button.dataset.memoryFilter;
+  document.querySelectorAll('[data-memory-filter]').forEach(item => {
+    item.classList.toggle('is-active', item === button);
+  });
+  renderMemories(memoryCatalog);
+});
+
+document.getElementById('memories').addEventListener('click', (e) => {
+  const button = e.target.closest('[data-memory-watch]');
+  if (!button) return;
+  openMemory(Number(button.dataset.memoryWatch), button);
+});
+
+document.getElementById('memory-reader-toc').addEventListener('click', (e) => {
+  const button = e.target.closest('[data-memory-chapter]');
+  if (!button || !activeMemory) return;
+  const index = Number(button.dataset.memoryChapter);
+  if (continuousMemoryMode) {
+    document.getElementById(`memory-chapter-${index}`)?.scrollIntoView({ behavior: 'smooth' });
+    return;
+  }
+  activeMemoryChapter = index;
+  renderMemoryReader();
+  document.getElementById('memory-reader-page').scrollTop = 0;
+});
+
+document.getElementById('memory-reader-prev').addEventListener('click', () => {
+  if (!activeMemory || activeMemoryChapter <= 0) return;
+  activeMemoryChapter -= 1;
+  renderMemoryReader();
+  document.getElementById('memory-reader-page').scrollTop = 0;
+});
+
+document.getElementById('memory-reader-next').addEventListener('click', () => {
+  if (!activeMemory || activeMemoryChapter >= activeMemory.chapters.length - 1) return;
+  activeMemoryChapter += 1;
+  renderMemoryReader();
+  document.getElementById('memory-reader-page').scrollTop = 0;
+});
+
+document.getElementById('memory-reader-mode').addEventListener('click', () => {
+  continuousMemoryMode = !continuousMemoryMode;
+  renderMemoryReader();
+  document.getElementById('memory-reader-page').scrollTop = 0;
+});
+
+document.querySelectorAll('[data-memory-close]').forEach(button => {
+  button.addEventListener('click', closeMemory);
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !document.getElementById('memory-modal').classList.contains('hidden')) {
+    closeMemory();
+  }
 });
 
 (function initStewardPage() {

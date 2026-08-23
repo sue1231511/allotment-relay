@@ -732,6 +732,18 @@ CREATE TABLE IF NOT EXISTS steward_story_stage_rewards (
     rewarded_at INTEGER NOT NULL,
     PRIMARY KEY (steward_id, story_key, stage_key)
 );
+
+CREATE TABLE IF NOT EXISTS steward_story_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    story_key TEXT NOT NULL,
+    outcome TEXT NOT NULL,
+    flags_json TEXT NOT NULL DEFAULT '[]',
+    completed_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_story_runs_steward
+ON steward_story_runs(steward_id, story_key, completed_at DESC);
 """
 
 
@@ -1286,6 +1298,33 @@ async def init_db() -> None:
                 rewarded_at INTEGER NOT NULL,
                 PRIMARY KEY (steward_id, story_key, stage_key)
             )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS steward_story_runs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                story_key TEXT NOT NULL,
+                outcome TEXT NOT NULL,
+                flags_json TEXT NOT NULL DEFAULT '[]',
+                completed_at INTEGER NOT NULL
+            )
+            """,
+            """CREATE INDEX IF NOT EXISTS idx_story_runs_steward
+               ON steward_story_runs(steward_id, story_key, completed_at DESC)""",
+            """
+            INSERT INTO steward_story_runs
+                (steward_id, story_key, outcome, flags_json, completed_at)
+            SELECT s.steward_id, s.story_key, s.outcome, s.flags_json,
+                   COALESCE(s.completed_at, s.updated_at)
+            FROM steward_stories s
+            WHERE s.status='completed'
+              AND NOT EXISTS (
+                  SELECT 1 FROM steward_story_runs r
+                  WHERE r.steward_id=s.steward_id
+                    AND r.story_key=s.story_key
+                    AND r.outcome=s.outcome
+                    AND r.completed_at=COALESCE(s.completed_at, s.updated_at)
+              )
             """,
             """
             CREATE TABLE IF NOT EXISTS lounge_messages (

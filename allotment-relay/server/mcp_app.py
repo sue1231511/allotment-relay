@@ -147,7 +147,7 @@ async def alliance_ops(
     return await mux._call_ops(mux.alliance_bundle, _kid(), command)
 
 
-@mcp.tool(description="访客：固定 NPC、何敬山的商船糕点委托、目送人·阿槐、栗栗摊、Tt酱杂货、诊所、沿海旧史与 NPC 小传。command 写一整句。何敬山按 jingshan visit → order → deliver → 换游戏日 revisit 推进，remember 重读记录；第一次见面不会提前交代旧事。例子：jingshan visit · musong send 安 · clinic treat infection。拾叶主动必触发；lore 是文本不是收集品。空 command=help。")
+@mcp.tool(description="访客：固定 NPC、何敬山的商船糕点委托、目送人·阿槐、栗栗摊、Tt酱杂货、诊所、沿海旧史与 NPC 小传。command 写一整句。何敬山按 jingshan visit → order → deliver → 换游戏日 revisit 推进，remember 重读记录；第一次见面不会提前交代旧事，完整事件会收入网页「我的 AI」岛上回忆。例子：jingshan visit · musong send 安 · clinic treat infection。拾叶主动必触发；lore 是文本不是收集品。空 command=help。")
 async def visit_ops(
     command: Annotated[str, Field(description="子命令整句。list / jingshan visit|status|order|deliver|revisit|remember / musong visit|send 名字|remember / visit 拾叶 / tt catalog / lili scan / shaonian fortune / lore scan npc / clinic status / treat infection / help。何敬山事件严格按顺序，deliver 后换一个游戏日才能 revisit；苏月琴不是单独 NPC。空=帮助。不要发明 shop_ops。")] = "",
 ) -> str:
@@ -180,7 +180,7 @@ async def star_ops(
     return await mux._call_ops(star.star_ops, _kid(), command)
 
 
-@mcp.tool(description="潮闻 — 分阶段故事探索任务，含《黑盒与潮声》《回忆生潮》《春山之外》，完成后可获永久纪念品。按 status/hint 探索，匹配阶段耗5精力，错误地点不扣。通关后用 review 任务key 一次读取从第一幕到结尾的完整正文，未通关不展示，且不重复发奖励；review 空参数列出可回顾目录。reminisce 仍是《黑盒与潮声》的额外回忆。例子：accept spring_beyond_mountain · explore shenzhi_home · review spring_beyond_mountain。空 command=list；不会就 help。")
+@mcp.tool(description="潮闻 — 分阶段故事探索任务，含《黑盒与潮声》《回忆生潮》《春山之外》，完成后可获永久纪念品，并收入网页「我的 AI」岛上回忆。按 status/hint 探索，匹配阶段耗5精力，错误地点不扣。通关后用 review 任务key 一次读取从第一幕到结尾的完整正文，未通关不展示，且不重复发奖励；review 空参数列出可回顾目录。reminisce 仍是《黑盒与潮声》的额外回忆。例子：accept spring_beyond_mountain · explore shenzhi_home · review spring_beyond_mountain。空 command=list；不会就 help。")
 async def tale_ops(
     command: Annotated[str, Field(description="子命令整句。list / accept black_box_lover|memory_tide|spring_beyond_mountain / status / explore 地点 / turnin / abandon 任务key / board / souvenirs（纪念品） / review [任务key] / reminisce black_box_lover / help。review key=通关后全篇重读主线正文，空 review=可回顾目录，未通关拒绝；reminisce=黑盒额外回忆。例子：review memory_tide · review spring_beyond_mountain。空 command=list。")] = "list",
 ) -> str:
@@ -196,7 +196,7 @@ async def lounge_ops(
     return await mux._call_ops(lounge.lounge_ops, _kid(), command)
 
 
-@mcp.tool(description="人物故事探索，不接模型、按真实行动调查。含分支故事《灰姑娘》（首次结局60票、档信+5、雾智+5）和《昨日无凭》（12次顺序调查、自动完成第13幕；每幕首次30票，共390票；通关另奖120票、档信+6、雾智+10、称呼「旧事见证人」及4件永久纪念品）。通关后用 review 故事key 让 AI 一次回顾完整人物故事；未通关不剧透、回顾不重复发奖励，空 review 列已解锁故事。例子：list · start cinderella · start yesterday_no_proof · status · review yesterday_no_proof · souvenirs。空 command=list；不会就 help。")
+@mcp.tool(description="人物故事探索，不接模型、按真实行动调查。含分支故事《灰姑娘》（首次结局60票、档信+5、雾智+5）和《昨日无凭》（12次顺序调查、自动完成第13幕；每幕首次30票，共390票；通关另奖120票、档信+6、雾智+10、称呼「旧事见证人」及4件永久纪念品）。通关后用 review 故事key 让 AI 一次回顾完整人物故事；未通关不剧透、回顾不重复发奖励，空 review 列已解锁故事。完成记录也收入网页「我的 AI」岛上回忆，《灰姑娘》保存每次实际完成路线。例子：list · start cinderella · start yesterday_no_proof · status · review yesterday_no_proof · souvenirs。空 command=list；不会就 help。")
 async def story_ops(
     command: Annotated[str, Field(description="子命令整句。list / start cinderella / start yesterday_no_proof / status [故事key] / explore old_wharf / inspect queen / search study / search portraits / enter cellar / contact girl / prepare backdoor|broadcast|trap / choose escape|judgment|hunt|rescue / archive / review [故事key] / souvenirs / help。review cinderella 或 review yesterday_no_proof 仅在通关后返回完整正文，不重复发工分票、属性、称呼或纪念品；review 不带 key 列出已解锁回顾。《昨日无凭》开始后严格按 status 的下一步；13幕每幕首次30票，重读不重复；纪念品不占行囊、不可交易。空=list。不要编造 ask/question。")]= "list",
 ) -> str:

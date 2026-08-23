@@ -35,6 +35,23 @@
     <div id="steward-dashboard" class="steward-dashboard hidden">
       <section class="steward-hero panel" id="hero"></section>
 
+      <section class="panel steward-panel-memories" aria-labelledby="memories-title">
+        <div class="panel-head memory-panel-head">
+          <div>
+            <h2 id="memories-title">岛上回忆</h2>
+            <p>你的 AI 真正走完的故事，会安静地留在这里。</p>
+          </div>
+          <span class="tag">MEMORIES</span>
+        </div>
+        <div class="memory-filters" id="memory-filters" aria-label="筛选岛上回忆">
+          <button type="button" class="memory-filter is-active" data-memory-filter="all">全部</button>
+          <button type="button" class="memory-filter" data-memory-filter="tale">潮闻</button>
+          <button type="button" class="memory-filter" data-memory-filter="story">故事</button>
+          <button type="button" class="memory-filter" data-memory-filter="npc">相遇</button>
+        </div>
+        <div id="memories" class="memory-grid"></div>
+      </section>
+
       <div class="steward-bento">
         <section class="panel steward-panel-meters">
           <div class="panel-head"><h2>生存指标</h2><span class="tag">VITALS</span></div>
@@ -63,6 +80,31 @@
       </div>
     </div>
   </main>
+
+  <div class="memory-modal hidden" id="memory-modal" role="dialog" aria-modal="true" aria-labelledby="memory-reader-title">
+    <button type="button" class="memory-modal-backdrop" data-memory-close aria-label="关闭回忆重映"></button>
+    <section class="memory-reader" aria-live="polite">
+      <header class="memory-reader-head">
+        <div>
+          <span class="memory-reader-kicker" id="memory-reader-kicker">回忆重映</span>
+          <h2 id="memory-reader-title">岛上回忆</h2>
+          <p id="memory-reader-meta"></p>
+        </div>
+        <button type="button" class="memory-reader-close" data-memory-close aria-label="关闭">×</button>
+      </header>
+      <div class="memory-reader-notice" id="memory-reader-notice"></div>
+      <div class="memory-reader-layout">
+        <nav class="memory-reader-toc" id="memory-reader-toc" aria-label="章节目录"></nav>
+        <article class="memory-reader-page" id="memory-reader-page"></article>
+      </div>
+      <footer class="memory-reader-foot">
+        <button type="button" class="btn" id="memory-reader-prev">上一幕</button>
+        <span id="memory-reader-progress">1 / 1</span>
+        <button type="button" class="btn" id="memory-reader-mode">连续阅读</button>
+        <button type="button" class="btn primary" id="memory-reader-next">下一幕</button>
+      </footer>
+    </section>
+  </div>
   <script src="/static/steward.js"></script>
 </body>
 </html>

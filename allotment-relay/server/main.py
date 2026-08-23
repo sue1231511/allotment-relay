@@ -129,6 +129,13 @@ class StewardDashboardRequest(BaseModel):
     api_key: str
 
 
+class StewardMemoryRequest(BaseModel):
+    api_key: str
+    kind: str
+    key: str
+    variant: str = ""
+
+
 class LoungePostRequest(BaseModel):
     api_key: str
     message: str
@@ -232,6 +239,17 @@ async def steward_dashboard(body: StewardDashboardRequest):
     from . import steward_dashboard
     try:
         return await steward_dashboard.fetch_dashboard(body.api_key.strip())
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/steward/memory")
+async def steward_memory(body: StewardMemoryRequest):
+    from . import memory_archive
+    try:
+        return await memory_archive.fetch_review(
+            body.api_key.strip(), body.kind, body.key, body.variant
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

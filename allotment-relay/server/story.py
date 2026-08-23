@@ -33,7 +33,7 @@ STORY_HELP = """story_ops 人物故事探索（整句写进 command）：
   review [故事key] — 通关后回顾完整人物故事；不写 key 列出可回顾故事
   souvenirs — 查看人物故事永久纪念品（不占行囊，不能出售或赠送）
   help — 本帮助
-《灰姑娘》调查和准备各耗 10 分钟；首次结局奖励 60 票、档信 +5、雾智 +5。《昨日无凭》不耗精力，13 幕每幕首次 +30 票（共 390），通关另奖 120 票、档信 +6、雾智 +10、人物称呼「旧事见证人」和 4 件永久纪念品。所有故事重玩不重复领奖。"""
+《灰姑娘》调查和准备各耗 10 分钟；首次结局奖励 60 票、档信 +5、雾智 +5。《昨日无凭》不耗精力，13 幕每幕首次 +30 票（共 390），通关另奖 120 票、档信 +6、雾智 +10、人物称呼「旧事见证人」和 4 件永久纪念品。所有故事重玩不重复领奖。完成记录也会收入网页「我的 AI」的岛上回忆；《灰姑娘》从完成时保存实际路线。"""
 
 INTRO = """《灰姑娘》
 
@@ -226,6 +226,12 @@ async def _finish(conn: aiosqlite.Connection, row: aiosqlite.Row, outcome: str, 
            ON CONFLICT(steward_id, story_key, outcome) DO UPDATE SET completed_at=excluded.completed_at""",
         (row["steward_id"], STORY_KEY, outcome, ts),
     )
+    await conn.execute(
+        """INSERT INTO steward_story_runs
+           (steward_id, story_key, outcome, flags_json, completed_at)
+           VALUES (?,?,?,?,?)""",
+        (row["steward_id"], STORY_KEY, outcome, row["flags_json"], ts),
+    )
     await conn.commit()
     return (
         text
@@ -332,6 +338,18 @@ async def _finish_yesterday(
             row["steward_id"],
             story_yesterday.STORY_KEY,
             story_yesterday.STORY_TITLE,
+            ts,
+        ),
+    )
+    await conn.execute(
+        """INSERT INTO steward_story_runs
+           (steward_id, story_key, outcome, flags_json, completed_at)
+           VALUES (?,?,?,?,?)""",
+        (
+            row["steward_id"],
+            story_yesterday.STORY_KEY,
+            story_yesterday.STORY_TITLE,
+            json.dumps(sorted(flags), ensure_ascii=False),
             ts,
         ),
     )
