@@ -475,12 +475,12 @@ async def kitchen_ops(key_id: int, command: str) -> str:
         return (
             "kitchen_ops 子命令（整句写进 command）：\n"
             "  menu — 菜谱与定价\n"
-            "  cook 菜名 — 定点菜（每天 10 次），例如 cook 蒜蓉生蚝\n"
+            "  cook 菜名 — 定点菜（每天 10 次），例如 cook 蒜蓉生蚝 · cook 糖渍橘子\n"
             "  cook 材料1 材料2 … — 自由组合 2~5 样（每天 24 次），例如 cook 甘蓝 鲭鱼\n"
             "  eat 物品 — 回精力。熟菜回得最多；水果可生吃但只回一点、连吃会营养不良；\n"
             "             生鱼/野薄荷安全；蔬菜不能生吃；只有生肉可能感染\n"
             "             未命名小鱼可生吃（不感染）但会再掷小咒事件\n"
-            "             例子：eat 鲭鱼 · eat 芒果 · eat 兔肉 · eat 未命名小鱼 · eat 蒜蓉生蚝\n"
+            "             例子：eat 鲭鱼 · eat 芒果 · eat 橘子 · eat 兔肉 · eat 未命名小鱼 · eat 蒜蓉生蚝\n"
             "  vend 菜名 — 卖掉行囊里的熟菜（中文名也行；家具请 hut_ops 卖掉）\n"
             "  store 菜名 [数量] / fridge / take 菜名 — 冰箱熟菜（小屋要先装 fridge）\n"
             "             也可 hut_ops 冰柜 存|取，生鲜进潮柜、熟菜进冰箱\n"
@@ -494,7 +494,7 @@ async def kitchen_ops(key_id: int, command: str) -> str:
 
     if verb in ("menu", "status"):
         lines = [
-            "厨房菜单（command 例子：cook 蒜蓉生蚝 / cook 甘蓝 鲭鱼 / brew 材料 / eat 鲭鱼）:",
+            "厨房菜单（command 例子：cook 蒜蓉生蚝 / cook 糖渍橘子 / cook 甘蓝 鲭鱼 / brew 材料 / eat 鲭鱼 / eat 橘子）:",
             EAT_RULES,
             "定点菜谱如下。也可以 cook 材料自由组合（2~5 样），按星级可卖；乱搭也按材料身价兜底 45%。",
             "系统回收压得低（3★≈材料价+10%）：想赚钱 shop stock 上架小馆——menu 给参考价和精力，",
@@ -742,7 +742,7 @@ async def kitchen_ops(key_id: int, command: str) -> str:
 
     raise ValueError(
         f"未知 kitchen 指令: {command}。先 kitchen_ops help 或 menu。"
-        "常用：cook 菜名 · cook 材料1 材料2 · eat 鲭鱼 · eat 芒果 · shop"
+        "常用：cook 菜名 · cook 糖渍橘子 · cook 材料1 材料2 · eat 鲭鱼 · eat 芒果 · eat 橘子 · shop"
     )
 
 

@@ -25,6 +25,7 @@ CROPS = {
     "pineapple":   {"name": "菠萝",     "emoji": "🍍", "seed_price": 17, "sell": 32, "grow": 180, "yield": 3, "tier": 3, "spread": 0.26, "tags": ["fruit", "tropic"], "months": (5, 6, 7, 8, 9)},
     # ── 果树（约 3.5~4.5 时；按种苗成本有收茬上限，枯死后 chop 或再种）──
     "lime":        {"name": "青柠",     "emoji": "🍋", "seed_price": 14, "sell": 26, "grow": 200, "yield": 3, "tier": 4, "spread": 0.24, "tags": ["fruit", "tropic"], "tree": True, "shake": True, "months": (11, 12, 1, 2, 3)},
+    "orange":      {"name": "橘子",     "emoji": "🍊", "seed_price": 16, "sell": 30, "grow": 220, "yield": 3, "tier": 4, "spread": 0.24, "tags": ["fruit"], "aliases": ["橙子", "柑橘", "桔子"], "tree": True, "shake": True, "months": (11, 12, 1, 2, 3, 4)},
     "papaya":      {"name": "木瓜",     "emoji": "🍈", "seed_price": 19, "sell": 34, "grow": 210, "yield": 3, "tier": 4, "spread": 0.24, "tags": ["fruit", "tropic"], "tree": True, "months": (3, 4, 5, 6)},
     "banana":      {"name": "香蕉",     "emoji": "🍌", "seed_price": 18, "sell": 28, "grow": 240, "yield": 3, "tier": 4, "spread": 0.24, "tags": ["fruit", "tropic"], "tree": True, "months": (4, 5, 6, 7, 8)},
     "mango":       {"name": "芒果",     "emoji": "🥭", "seed_price": 20, "sell": 38, "grow": 260, "yield": 3, "tier": 4, "spread": 0.24, "tags": ["fruit", "tropic"], "tree": True, "shake": True, "months": (5, 6, 7, 8)},
@@ -352,6 +353,7 @@ DISCOVERY_LOOT = {
         ("crop_kelp", 1, 9, "土里有浅海藻——谁种的"),
         ("seed_mango", 1, 5, "熟果掉出芒果种"),
         ("seed_papaya", 1, 5, "木瓜藤间藏着种"),
+        ("seed_orange", 1, 5, "树下滚出一颗橘子种"),
         ("seed_lemongrass", 1, 6, "香茅根旁多一撮种"),
     ],
     "beach": [
@@ -557,6 +559,11 @@ KITCHEN_DISHES = {
         "name": "芒果椰奶冻", "emoji": "🍮",
         "ings": ["crop_mango", "crop_coconut", "milk"],
         "base_sell": 86, "energy": 26, "tags": ["dessert", "tropic"],
+    },
+    "orange_preserve": {
+        "name": "糖渍橘子", "emoji": "🍊",
+        "ings": ["crop_orange", "honey", "crop_ginger"],
+        "base_sell": 88, "energy": 24, "tags": ["dessert"],
     },
     "pineapple_fried_rice": {
         "name": "菠萝炒饭", "emoji": "🍚",
@@ -859,6 +866,7 @@ NPC_FIXED = [
         "酸汤鱼要够辣", "种点姜，厨房才像样",
         "香茅蒸鱼别省柠檬", "蜜蒜虾——蜂蜜别用假的",
         "青木瓜沙拉要够生，够辣",
+        "糖渍橘子要薄皮、蜂蜜别糊锅",
         "生啃蔬菜像羊，下锅才是饭。水果解个馋行，当饭要吃出病。",
         "赤潮周不新鲜的别往我厨房拿。",
         "神话章鱼肉处理不好会腥——第一次吃别一个人吃。",

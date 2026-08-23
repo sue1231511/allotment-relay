@@ -48,6 +48,7 @@ def test_year_round_and_windows() -> None:
         assert not season.crop_in_season("garlic")
         assert not season.crop_in_season("blueberry")
         assert not season.crop_in_season("lime")
+        assert not season.crop_in_season("orange")
         assert season.next_in_season_month("garlic") == 11
         assert "当月可种" in season.season_tag("kale")
         assert "休市" in season.season_tag("garlic")
@@ -56,8 +57,12 @@ def test_year_round_and_windows() -> None:
     with season.pinned_month(1):
         assert season.crop_in_season("garlic")
         assert season.crop_in_season("lime")
+        assert season.crop_in_season("orange")
         assert not season.crop_in_season("mango")
         assert not season.crop_in_season("chili")
+    with season.pinned_month(4):
+        assert season.crop_in_season("orange")
+        assert not season.crop_in_season("lime")
 
 
 def test_catalog_marks_month() -> None:

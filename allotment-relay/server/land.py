@@ -341,7 +341,7 @@ async def status_text(
     if greenhouse:
         lines.append("种菜：plot_ops sow 棚1 甘蓝 · 或 sow 99 甘蓝（99=棚1）。过季也能种。")
     elif orchard:
-        lines.append("种树：plot_ops 果园 sow 1 芒果 · 或 sow 园1 芒果。份地 sow 只收蔬菜。")
+        lines.append("种树：plot_ops 果园 sow 1 芒果 · 或 sow 园1 橘子。份地 sow 只收蔬菜。")
     else:
         lines.append("种菜：plot_ops sow 1 甘蓝。果树走果园。过季走温室。")
     return "\n".join(lines)

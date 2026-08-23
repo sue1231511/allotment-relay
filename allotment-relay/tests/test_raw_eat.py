@@ -32,7 +32,7 @@ def test_meat_aliases_and_flags() -> None:
     assert not is_raw_meat("dish_garlic_oyster_s3")
     # 水果 = tags 带 fruit/berry；其余作物一律蔬菜
     for fruit in ("crop_mango", "crop_blueberry", "crop_bramble", "crop_coconut",
-                  "crop_papaya", "crop_banana", "crop_lime", "crop_pineapple", "crop_durian"):
+                  "crop_papaya", "crop_banana", "crop_lime", "crop_orange", "crop_pineapple", "crop_durian"):
         assert is_fruit_item(fruit), fruit
     for veg in ("crop_kale", "crop_ginger", "crop_sweetpotato", "crop_kelp",
                 "crop_beet", "crop_rye", "crop_garlic", "crop_chili", "crop_fogpea",
