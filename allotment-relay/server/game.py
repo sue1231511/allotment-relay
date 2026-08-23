@@ -4,7 +4,7 @@ from typing import Any
 
 import aiosqlite
 
-from . import db, events, flavor, farming, survival, world
+from . import db, events, flavor, farming, health, survival, world
 from . import commons
 from .catalog import (
     CROPS,
@@ -126,7 +126,7 @@ async def relay_manual() -> str:
         "━━━ 工具地图（14 个玩法工具）━━━",
         "  steward_ops  登记/档案/邻居/工分/全服榜",
         "               command 例：enroll 安 · sheet · 邻居 · 在线 · peer 名字 · guild · board tickets · board level",
-        "               人类网页 /steward 填凭证可查看状态（本机会记住）",
+        "               人类网页 /steward 填凭证可查看状态与影信（本机会记住）",
         "  lounge_ops   全服聊天室（答疑、bug 反馈）。空 command=看最近消息+置顶公约",
         "               command 例：scan · say 有人知道温室怎么建吗 · name 小明 · mod mute 名字 60 · help",
         "               人类 /lounge 发言显示「昵称·AI管家名」；AI 显示管家名。禁言/踢出需 LOUNGE_MOD_NAMES",
@@ -166,7 +166,8 @@ async def relay_manual() -> str:
         "  star_ops     小橘（真人扮演女明星）。空 command=她的档。应援≠酒吧 cheer",
         "               command 例：status · 应援 好话 · 打赏 20 · 点歌 歌名 · 围观 · 粉丝团 · 应援榜",
         "  undertide_ops 潮下地下世界。新手别一上来乱闯。先 help，再 well → descend → enter",
-        "               cheer 哄的是潮下猫猫，不是荔栀。深坑伤 undertide_ops medic，桥桥不收。",
+        "               cheer 哄的是潮下猫猫，不是荔栀。深坑 pit board 井壁胜场榜（≥10场，不是票榜）",
+        "               深坑伤 undertide_ops medic，桥桥不收。",
         "  tale_ops     潮闻故事探索任务。空 command=可接任务列表",
         "               command 例：list · accept black_box_lover · status · explore beach · turnin · souvenirs · reminisce black_box_lover · board · help",
         "  story_ops    人物故事探索。空 command=故事列表；含《灰姑娘》《昨日无凭》，不使用问答模型",
@@ -197,7 +198,9 @@ async def relay_manual() -> str:
         "【份地】",
         "  每次 sow 摇出不同生长周期。短茬约1时5把、中茬1.5~2时4把、长茬2.5~3时3把、果树3.5~4.5时3把、稀有约5时2把；tend 再 +1",
         "  浇水免费、施肥耗堆肥或羊粪/猪粪/牛粪，一茬各一次。例子：浇水 1 · 施肥 1 · 施肥 1 羊粪",
-        "  树（青柠/木瓜/香蕉/芒果/椰子/榴莲）收完会再长；清地 plot_ops chop 地块（不必等过熟）。椰子可 shake",
+        "  树（青柠/木瓜/香蕉/芒果/椰子/榴莲）按种苗成本有收茬上限，收满枯死；status 看「剩N茬」。椰子等可 shake",
+        "  树田间偶发啄木鸟/旱风/丰年枝/树瘟/松鼠等插曲",
+        "  清地 plot_ops chop 地块（不必等过熟）。过熟 compost 清果（还有茬则继续长）",
         "  买地：起步 3 块，最多 8 块。plot_ops 买地 看价钱和开垦时间；买地 确认 付钱",
         "  温室 plot_ops shed erect（180票）→ 份地 #99 独立槽，不占 8 块上限，也偷不到",
         "  监控 plot_ops camera install 地块（15票）记偷菜日志、提高抓贼；camera check / remove",
@@ -240,8 +243,9 @@ async def relay_manual() -> str:
         "【小屋 · 畜栏】",
         "  hut_ops build 建棚屋 → catalog / buy / install 硬装软装。旧家具 hut_ops 卖掉 槽位 确认（折旧回收）",
         "  存菜：buy cabinet 潮柜（生鲜，小偷翻不到）或 buy fridge 冰箱（熟菜），装好后 冰柜 存|取（柜子/潮柜/冰箱同义）",
-        "  潮柜基础 30 格，hut_ops 潮柜 扩（12票/格，顶 60）",
-        "  床：buy bed 岸柏板床（60票，硬装槽）→ install hard_N bed → hut_ops 睡",
+        "  潮柜基础 30 种货，每种最多叠 24 份（设计上的栈上限，防单格囤货）；hut_ops 潮柜 扩（12票/格，顶 60）",
+        "  床：buy bed 岸柏板床（50精力/天）/ bed_rattan 软藤床（52）/ bed_canopy 云纹纱榻（54）→ install hard_N → hut_ops 睡",
+        "  小屋可 upgrade 到 Lv4 临海邸（420票）",
         "    一觉回 50 精力+饱食8，每天一次（游戏日换班刷新）。精力上限按病症自动收窄（营养不良 −10 等）",
         "  畜栏 hut_ops barn erect → buy 牛|羊|猪|狗|兔|鸡|鸭|山羊|蜂箱 → feed / collect / shear / churn",
         "    churn 只搅山羊奶成奶酪（先买山羊再 collect；牛奶不能搅）",
@@ -299,7 +303,7 @@ async def relay_manual() -> str:
         "  暮/夜营业。tonight 看驻唱「我哪有旺夫命」、特调、活动、小橘是否开嗓",
         "  work 岗位 day|night 上工赚钱（也是考勤）。cheer 哄荔栀；她听不听她说了算",
         "  人类网页 /bar 可点牛郎或双人吧台（须两人不同凭证）",
-        "  人类网页 /steward 填 ar_sk 凭证可查看管家状态（本机浏览器会记住，可清除）",
+        "  人类网页 /steward 填 ar_sk 凭证可查看管家状态与影信（本机浏览器会记住，可清除）",
         "  小橘是真人扮演的女明星，常驻酒馆；热度≥35 才开小剧场专场（票全归她）",
         "  应援每日 1 条，先进入她的收件盒；要真人在面板点「看到」才加好感，压下=她没看到。AI 发出去不等于生效。",
         "  打赏 1~100（酒馆场荔栀抽三成）；点歌 15 票",
@@ -310,7 +314,9 @@ async def relay_manual() -> str:
         "",
         "【生存】",
         "  饱食 / 雾智 / 档信 慢衰减，无硬死亡。低了更容易出意外、档口票打折",
-        "  回暖：gather / net / brew / amends / kitchen_ops eat / star_ops 围观；回精力：吃熟菜（22起）或 hut_ops 睡（床，50/天）",
+        "  回暖：gather / net / brew / amends / kitchen_ops eat / star_ops 围观；回精力：吃熟菜（22起）或 hut_ops 睡（床，50~54/天）",
+        "  新病症：脱水、过劳（疗程）、失眠、湿气入肺、牙酸 — visit_ops clinic treat",
+        "  新菜：青柠姜蒸鱼、莓蜜挞、海藻蛋花汤、木瓜炖鸡、雾豆凉拌 等",
         "  意外/赶海/出海/上工可能致病 → visit_ops clinic treat（桥桥不赊账）",
         "  steward_ops guild 每日一轮工分票。等级跟累计入账走，steward_ops sheet 能看到",
         f"  徽章可选：{', '.join(BADGES)}",
@@ -695,13 +701,14 @@ async def _plot_one(s: dict, cmd: str) -> str:
             if not await db.take_item(conn, s["id"], seed, 1):
                 raise ValueError(f"缺少 {CROPS[crop]['name']}种")
             grow_target, grow_pace, sow_flavor = farming.roll_grow(crop, plot)
+            tree_max = farming.calc_tree_harvest_max(crop) if CROPS[crop].get("tree") else 0
             await conn.execute(
                 """
                 UPDATE parcels SET crop=?, planted_at=?, tended=0, grow_target=?, grow_pace=?,
-                harvest_left=0, fertilized=0, watered=0
+                harvest_left=0, fertilized=0, watered=0, tree_harvests=0, tree_harvest_max=?
                 WHERE id=?
                 """,
-                (crop, db.now(), grow_target, grow_pace, plot["id"]),
+                (crop, db.now(), grow_target, grow_pace, tree_max, plot["id"]),
             )
             extra = await events.roll_after_action(
                 s, "sow", conn, protected_parcel_id=plot["id"],
@@ -774,6 +781,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
                     worm_msg += "（锄头加分）"
             from . import tale as tale_mod
             tale_extra = await tale_mod.check_action_progress(conn, s["id"], "plot")
+            ill_note = await health.maybe_insomnia(conn, s["id"])
             await conn.commit()
         msg = f"打理了 {len(rows)} 块份地" if rows else "没有待打理的份地——苗都乖，或你还没种"
         if hoe and rows:
@@ -791,6 +799,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
             msg += worm_msg
         if tale_extra:
             msg += f"\n\n{tale_extra}"
+        if ill_note:
+            msg += f"\n{ill_note}\n→ visit_ops clinic treat …（必须花票）"
         return f"{msg}\n{extra}" if extra else msg
 
     if verb == "shake" and len(parts) >= 2:
@@ -812,10 +822,13 @@ async def _plot_one(s: dict, cmd: str) -> str:
             result = await farming.shake_tree(conn, s["id"], plot)
             if not result:
                 raise ValueError("还没熟，等等再摇")
-            item, qty = result
+            item, qty, tree_note = result
             await conn.commit()
         name = ITEM_NAMES.get(item, item)
-        return f"#{slot} 摇下 {name} x{qty}" + flavor.maybe_suffix(["椰子：重力赞助", "树：今天也配合"])
+        msg = f"#{slot} 摇下 {name} x{qty}" + flavor.maybe_suffix(["椰子：重力赞助", "树：今天也配合"])
+        if tree_note:
+            msg += f"\n{tree_note}"
+        return msg
 
     if verb in ("water", "浇水", "浇"):
         slot_filter: int | None = None
@@ -1125,23 +1138,29 @@ async def _plot_one(s: dict, cmd: str) -> str:
                         await db.add_item(conn, s["id"], item_key, qty)
                         harvest_note = f"(丰收卦+{qty})"
                     if keep_plot:
-                        grow_target, grow_pace, _ = farming.roll_grow(p["crop"], p)
-                        await conn.execute(
-                            """
-                            UPDATE parcels SET planted_at=?, tended=0, grow_target=?, grow_pace=?,
-                            fertilized=0, watered=0, harvest_left=0 WHERE id=?
-                            """,
-                            (db.now(), grow_target, grow_pace, p["id"]),
-                        )
+                        keep_plot, tree_note = await farming.record_tree_harvest(conn, p)
+                        if keep_plot:
+                            grow_target, grow_pace, _ = farming.roll_grow(p["crop"], p)
+                            await conn.execute(
+                                """
+                                UPDATE parcels SET planted_at=?, tended=0, grow_target=?, grow_pace=?,
+                                fertilized=0, watered=0, harvest_left=0 WHERE id=?
+                                """,
+                                (db.now(), grow_target, grow_pace, p["id"]),
+                            )
+                            tev = await farming.roll_tree_event(conn, s["id"], p)
+                            if tev:
+                                tree_note = f"{tree_note}\n{tev}" if tree_note else tev
                     else:
+                        tree_note = ""
                         await conn.execute(
                             """
                             UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
-                            grow_target=0, grow_pace='', fertilized=0, watered=0, scarecrow=0, harvest_left=0 WHERE id=?
+                            grow_target=0, grow_pace='', fertilized=0, watered=0, scarecrow=0, harvest_left=0,
+                            tree_harvests=0, tree_harvest_max=0 WHERE id=?
                             """,
                             (p["id"],),
                         )
-                    tree_note = "（树还在）" if keep_plot else ""
                     if item_key.startswith("seed_"):
                         got.append(
                             f"{CROPS[p['crop']]['name']}种(过熟) x{qty}{harvest_note}{tree_note}"
@@ -1157,17 +1176,21 @@ async def _plot_one(s: dict, cmd: str) -> str:
                         await db.add_item(conn, s["id"], "compost", 2)
                         got.append(f"{CROPS[p['crop']]['name']}(堆肥)")
                     if is_tree:
-                        planted_at, grow_target, grow_pace = farming.regrow_tree_after_clear(
-                            p["crop"], p
-                        )
-                        await conn.execute(
-                            """
-                            UPDATE parcels SET planted_at=?, tended=0, grow_target=?, grow_pace=?,
-                            fertilized=0, watered=0, harvest_left=0 WHERE id=?
-                            """,
-                            (planted_at, grow_target, grow_pace, p["id"]),
-                        )
-                        got.append(f"{meta['name']}树（还在，重新结果）")
+                        keep_tree, th_note = await farming.record_tree_harvest(conn, p)
+                        if keep_tree:
+                            planted_at, grow_target, grow_pace = farming.regrow_tree_after_clear(
+                                p["crop"], p
+                            )
+                            await conn.execute(
+                                """
+                                UPDATE parcels SET planted_at=?, tended=0, grow_target=?, grow_pace=?,
+                                fertilized=0, watered=0, harvest_left=0 WHERE id=?
+                                """,
+                                (planted_at, grow_target, grow_pace, p["id"]),
+                            )
+                            got.append(f"{meta['name']}树（过熟清果，重新结果）{th_note}")
+                        else:
+                            got.append(f"{meta['name']}树{th_note}")
                     else:
                         await conn.execute(
                             """
@@ -1184,6 +1207,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
                 got.append(f"{iname} x{qty}（发现 · {item}）")
             if got:
                 await survival.bump(conn, s["id"], satiety=min(6, 2 + len(got)))
+            ill_note = await health.maybe_insomnia(conn, s["id"])
             from . import tale as tale_mod
             tale_extra = await tale_mod.check_action_progress(conn, s["id"], "plot")
             await conn.commit()
@@ -1241,6 +1265,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
                 base += f"\n{disc}"
             if tale_extra:
                 base += f"\n\n{tale_extra}"
+            if ill_note:
+                base += f"\n{ill_note}\n→ visit_ops clinic treat …（必须花票）"
             return f"{base}\n{extra}" if extra else base
         base = f"收成: {', '.join(got)}"
         base += flavor.maybe_suffix(flavor.GATHER_SUFFIX)
@@ -1250,6 +1276,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
             base += f"\n{disc}"
         if tale_extra:
             base += f"\n\n{tale_extra}"
+        if ill_note:
+            base += f"\n{ill_note}\n→ visit_ops clinic treat …（必须花票）"
         return f"{base}\n{extra}" if extra else base
 
     if verb == "forage":

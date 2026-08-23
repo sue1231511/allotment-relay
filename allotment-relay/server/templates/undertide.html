@@ -61,6 +61,30 @@
       background: #171614;
       border-color: #4a4338;
     }
+    body.ut-page .nav-hamburger {
+      background: #111214;
+      box-shadow: inset 0 0 0 1px #3a3329;
+      color: #b8a88f;
+    }
+    body.ut-page .nav-hamburger:hover {
+      color: #ded8cc;
+      background: #171614;
+      box-shadow: inset 0 0 0 1px #4a4338;
+    }
+    body.ut-page .nav-hamburger[aria-expanded="true"] {
+      color: #e5dfd3;
+      background: #1a1816;
+      box-shadow: inset 0 0 0 1px #5a4a38;
+    }
+    @media (max-width: 760px) {
+      body.ut-page .nav-sidebar {
+        background: linear-gradient(180deg, #0c0d0e 0%, #08090a 100%) !important;
+      }
+      body.ut-page .nav-sidebar-head,
+      body.ut-page .nav-sidebar-links {
+        background: #0c0d0e !important;
+      }
+    }
     body.ut-page main {
       width: min(1180px, calc(100% - 40px));
       padding: 72px 0 100px;
@@ -278,6 +302,123 @@
       text-shadow: 0 0 24px rgba(120, 61, 54, .12);
     }
     .ut-wall .sub { padding-bottom: 6px; color: #777169; font-size: 12px; }
+    .ut-wall-note {
+      margin: -4px 0 16px;
+      color: #6f6a62;
+      font-size: 11px;
+      letter-spacing: .18em;
+      line-height: 1.6;
+    }
+    .ut-wall-names {
+      background:
+        radial-gradient(circle at 14% 18%, rgba(181, 138, 69, .09), transparent 38%),
+        radial-gradient(circle at 92% 80%, rgba(120, 61, 54, .06), transparent 32%),
+        linear-gradient(165deg, #171614 0%, #121315 48%, #0f1011 100%);
+    }
+    .ut-wall-names::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        180deg,
+        transparent 0,
+        transparent 31px,
+        rgba(255, 255, 255, .018) 31px,
+        rgba(255, 255, 255, .018) 32px
+      );
+      pointer-events: none;
+      opacity: .85;
+    }
+    .ut-pit-wall {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 9px;
+      position: relative;
+      z-index: 1;
+    }
+    .ut-pit-row {
+      display: grid;
+      grid-template-columns: 48px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 12px 16px;
+      padding: 13px 14px 12px 12px;
+      border: 1px solid #2c2924;
+      background: linear-gradient(90deg, rgba(0, 0, 0, .34), transparent 72%);
+      transition: border-color .2s ease, background .2s ease;
+    }
+    .ut-pit-row:hover {
+      border-color: #3a352c;
+      background: linear-gradient(90deg, rgba(255, 255, 255, .03), transparent 72%);
+    }
+    .ut-pit-row.is-1 {
+      border-color: #5c4528;
+      background: linear-gradient(90deg, rgba(181, 138, 69, .14), transparent 70%);
+      box-shadow: inset 0 0 0 1px rgba(181, 138, 69, .1);
+    }
+    .ut-pit-row.is-2 {
+      border-color: #454038;
+      background: linear-gradient(90deg, rgba(160, 150, 130, .1), transparent 70%);
+    }
+    .ut-pit-row.is-3 {
+      border-color: #4a3d32;
+      background: linear-gradient(90deg, rgba(140, 100, 70, .09), transparent 70%);
+    }
+    .ut-pit-rank {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border: 1px solid #3a3329;
+      border-radius: 50%;
+      color: #9a8f7f;
+      font: 400 15px/1 "Noto Serif SC", Georgia, serif;
+      background: radial-gradient(circle at 30% 25%, #1c1a18, #101113);
+      box-shadow: inset 0 -2px 6px rgba(0, 0, 0, .35);
+    }
+    .ut-pit-row.is-1 .ut-pit-rank {
+      color: #d4b06a;
+      border-color: #6b5230;
+      background: radial-gradient(circle at 30% 25%, #2a2218, #141214);
+    }
+    .ut-pit-main {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+    }
+    .ut-pit-name {
+      color: #e3dbd0;
+      font-family: "Noto Serif SC", Georgia, "Songti SC", "STSong", serif;
+      font-size: 17px;
+      letter-spacing: .04em;
+      line-height: 1.3;
+    }
+    .ut-pit-label {
+      color: #7a746b;
+      font-size: 11px;
+      font-style: italic;
+      letter-spacing: .06em;
+    }
+    .ut-pit-stats {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 3px;
+      text-align: right;
+      white-space: nowrap;
+    }
+    .ut-pit-wl {
+      color: #b8b0a4;
+      font-size: 12px;
+      letter-spacing: .04em;
+    }
+    .ut-pit-rate {
+      color: #b8924f;
+      font: 500 14px/1 ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
     .ut-footer {
       margin-top: 42px;
       display: flex;
@@ -311,6 +452,15 @@
       .ut-card { padding: 20px 18px; min-height: auto; }
       .ut-rate { font-size: 46px; }
       .ut-rumor { grid-template-columns: 1fr; }
+      .ut-pit-row { grid-template-columns: 40px 1fr; }
+      .ut-pit-stats {
+        grid-column: 2;
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 10px;
+        margin-top: 2px;
+      }
       .ut-footer { align-items: flex-start; flex-direction: column; }
     }
   </style>
@@ -324,7 +474,7 @@
         <h1>井下的传闻<span>滨海酒吧后院，那口没人承认下去过的井</span></h1>
         <p class="ut-tagline">
           地上的人只看得到传上来的东西。钱庄今天收几分利，恩怨墙上又多了谁的名字，
-          井壁又白了一块。真正的账本、影信和货架，都留在下面。
+          井壁又白了一块——或者多钉了一个。真正的账本、影信和货架，都留在下面。
         </p>
       </div>
       <aside class="ut-warning">
@@ -353,6 +503,14 @@
         <div id="bounties" class="ut-papers"></div>
       </article>
 
+      <article class="ut-card wide ut-wall-names">
+        <div class="ut-head"><h2>井壁上的名字</h2><span class="ut-idx">06 / PIT WALL</span></div>
+        <p class="ut-wall-note" id="pit-board-note">深坑胜场榜 · 十场以上才钉名 · 胜场优先</p>
+        <div id="pit-board" class="ut-pit-wall">
+          <p class="ut-empty">看门人还没往墙上钉名字。</p>
+        </div>
+      </article>
+
       <article class="ut-card">
         <div class="ut-head"><h2>井壁的白</h2><span class="ut-idx">04 / CHALK</span></div>
         <div class="ut-wall">
@@ -377,6 +535,12 @@
       return String(s ?? "").replace(/[&<>"']/g, c => ({
         "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
       }[c]));
+    }
+    function pitMedal(i) {
+      if (i === 1) return "①";
+      if (i === 2) return "②";
+      if (i === 3) return "③";
+      return String(i).padStart(2, "0");
     }
     async function load() {
       try {
@@ -422,6 +586,35 @@
           document.getElementById("lastname").textContent = d.wall.last
             ? " —— 最近的一块，属于「" + d.wall.last + "」"
             : "";
+        }
+        const pitNote = document.getElementById("pit-board-note");
+        if (pitNote && d.pit_board_min) {
+          pitNote.textContent =
+            "深坑胜场榜 · ≥" + d.pit_board_min + " 场才钉名 · 胜场 > 胜率 > 场次";
+        }
+        const pitEl = document.getElementById("pit-board");
+        if (pitEl && d.pit_board) {
+          if (!d.pit_board.length) {
+            pitEl.innerHTML =
+              '<p class="ut-empty">墙还是空的。看门人说：打过十场，才值得钉名字。</p>';
+          } else {
+            pitEl.innerHTML = d.pit_board.map(r => {
+              const top = r.rank <= 3 ? " is-" + r.rank : "";
+              return (
+                '<div class="ut-pit-row' + top + '">' +
+                  '<span class="ut-pit-rank">' + pitMedal(r.rank) + "</span>" +
+                  '<div class="ut-pit-main">' +
+                    '<span class="ut-pit-name">' + esc(r.name) + "</span>" +
+                    '<span class="ut-pit-label">「' + esc(r.rank_label) + "」</span>" +
+                  "</div>" +
+                  '<div class="ut-pit-stats">' +
+                    '<span class="ut-pit-wl">' + esc(r.wins) + "胜 " + esc(r.losses) + "负</span>" +
+                    '<span class="ut-pit-rate">' + esc(r.win_rate) + "%</span>" +
+                  "</div>" +
+                "</div>"
+              );
+            }).join("");
+          }
         }
         if (d.rumors && d.rumors.length) {
           document.getElementById("rumors").innerHTML = d.rumors.map(x =>

@@ -266,6 +266,8 @@ PIT_GATEMAN_REJECT = (
 
 PIT_FIGHT_HEADER = "«深坑 — 井壁上的名字»"
 
+PIT_WALL_BOARD_HEADER = "«深坑 — 井壁上的赢家»"
+
 PIT_STRATEGY_HINT = (
     "策略可选 attack（压 feint）/ guard（抗 attack）/ feint（绕 guard），"
     "不给就随机。克制 ±10% 战力。"
@@ -1080,7 +1082,8 @@ undertide_ops sell <物品> [数量] — 掌柜处出货（销赃）
 undertide_ops street — 帘外的随机人（每日刷新）
 undertide_ops muscle <名号> — 强买（战力判定）
 undertide_ops push <名号> <物品> — 强卖
-undertide_ops pit — 深坑斗士榜
+undertide_ops pit — 深坑 NPC 斗士榜（pit list）
+undertide_ops pit board — 井壁胜场榜（玩家，≥10 场才钉名）
 undertide_ops fight <斗士名> [attack|guard|feint] — 下坑
 undertide_ops medic <ring_shock|pit_trauma> — 晏安医务间
 undertide_ops casino — 赌场

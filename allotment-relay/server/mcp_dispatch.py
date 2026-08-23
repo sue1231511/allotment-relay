@@ -96,8 +96,8 @@ PLOT_HELP = """plot_ops 子命令（整句写进 command）：
   邻居 / 在线 — 同 steward_ops 邻居（这里也能用）
   amends 名字 — 向被摘的邻居致歉，双方档信回暖
   shake 地块 — 摇果（青柠/芒果/椰子）
-  chop 地块 — 砍树腾地（树收完会再长；清地不必等过熟）
-  compost 地块 — 过熟进堆肥（果树清果后树还在；不想要树才 chop）
+  chop 地块 — 砍树腾地（树龄尽了会自己枯；想提前清地不必等过熟）
+  compost 地块 — 过熟进堆肥（果树清果后若还有茬则继续长；枯了或不要了才 chop）
   scarecrow 地块 — 扎稻草人
   shed erect|status|handoff — 温室（#99 独立槽，180票，不占 8 块上限，偷不到）
   commons scan|claim id — 稀有公共物资
@@ -111,7 +111,8 @@ HUT_HELP = """hut_ops 子命令（整句写进 command）：
   status / build / upgrade / catalog / buy / install — 岸畔小屋
   冰柜 存|取 物品 [数量] — 小屋存菜（柜子/潮柜/冰箱是同一条指令）。例子：冰柜 存 甘蓝 3
     生鲜自动进潮柜（buy cabinet → install）；熟菜自动进冰箱（buy fridge → install）
-    潮柜基础 30 格，满了 hut_ops 潮柜 扩 [数量]（12票/格，顶 60）
+    潮柜基础 30 种货，每种最多叠 24 份（栈上限）；满了 hut_ops 潮柜 扩 [数量]（12票/格，顶 60）
+  睡 / 休息 — 床一觉回精力（岸柏 50 / 软藤 52 / 云纹 54，每天一次）。buy bed|bed_rattan|bed_canopy → install hard_N
   卖掉 槽位 [确认] — 旧家具按折旧卖。例子：卖掉 soft_1 确认
     小馆开着时冰箱不能卖（先 kitchen_ops shop 卖掉 或 shop close）
   barn status|erect|buy|feed|collect|shear|churn — 畜栏。churn 只搅山羊奶成奶酪（先买山羊再 collect；牛奶不能搅）

@@ -591,6 +591,10 @@ async def kitchen_ops(key_id: int, command: str) -> str:
                 gain = 10
             elif item == "wild_mint":
                 gain = 6
+            elif item == "pickles":
+                gain = config.PICKLE_ENERGY
+            elif item.startswith("dried_"):
+                gain = config.DRIED_FISH_ENERGY
             elif is_raw_meat(item):
                 gain = 12
             else:

@@ -20,6 +20,29 @@ def _day_id() -> int:
 
 # ── 街头随机 NPC 池 ─────────────────────────────────────────
 
+
+async def _daily_action_used(
+    conn: aiosqlite.Connection, steward_id: int, action: str, limit: int
+) -> bool:
+    day = _day_id()
+    row = await (await conn.execute(
+        "SELECT count FROM ut_daily_actions WHERE steward_id=? AND day_id=? AND action=?",
+        (steward_id, day, action),
+    )).fetchone()
+    return int(row[0] if row else 0) >= limit
+
+
+async def _mark_daily_action(conn: aiosqlite.Connection, steward_id: int, action: str) -> None:
+    day = _day_id()
+    await conn.execute(
+        """
+        INSERT INTO ut_daily_actions (steward_id, day_id, action, count) VALUES (?,?,?,1)
+        ON CONFLICT(steward_id, day_id, action) DO UPDATE SET count = count + 1
+        """,
+        (steward_id, day, action),
+    )
+
+
 async def _ensure_street(conn: aiosqlite.Connection, day: int) -> list[dict[str, Any]]:
     conn.row_factory = aiosqlite.Row
     rows = await (await conn.execute(
@@ -64,7 +87,7 @@ def _stock_value(stock: list[list[str, int]]) -> int:
     total = 0
     for key, qty in stock:
         base_key = key[3:]
-        meta = cat.RARE_GOODS.get(base_key) or cat.COMMON_GOODS.get(base_key) or {"vend": 10}
+        meta = cat.RARE_GOODS.get(base_key) or cat.COMMON_GOODS.get(base_key) or cat.LINKED_GOODS.get(base_key) or {"vend": 10}
         total += int(meta.get("vend", 10)) * qty
     return total
 
@@ -121,6 +144,8 @@ async def muscle_ops(
     from . import undertide as utmod
 
     if verb == "muscle":
+        if await _daily_action_used(conn, s["id"], "muscle", utcfg.UT_MUSCLE_DAILY):
+            raise ValueError(f"今天帘外强买次数用完了（每日 {utcfg.UT_MUSCLE_DAILY} 次）。")
         if not parts:
             raise ValueError("用法: undertide_ops muscle 名号（street 查看）")
         npc = _find_npc(npcs, " ".join(parts[:2]) if parts[0].isdigit() else parts[0])
@@ -180,10 +205,13 @@ async def muscle_ops(
             lines.append(f"\n（没拿到货 · 被反抢 {steal} 票 · 影信 −5）")
         from . import undertide_pit as _upt
         await _upt.pit_record(conn, s["id"], "muscle", "win" if margin >= 0 else "lose", npc["name"])
+        await _mark_daily_action(conn, s["id"], "muscle")
         await conn.commit()
         return "\n".join(lines)
 
     if verb == "push":
+        if await _daily_action_used(conn, s["id"], "push", utcfg.UT_PUSH_DAILY):
+            raise ValueError(f"今天帘外强卖次数用完了（每日 {utcfg.UT_PUSH_DAILY} 次）。")
         if len(parts) < 2:
             raise ValueError("用法: undertide_ops push 名号 物品key")
         npc = _find_npc(npcs, parts[0])
@@ -237,6 +265,7 @@ async def muscle_ops(
             lines.append("\n（货还在你手里 · 影信 −4）")
         from . import undertide_pit as _upt2
         await _upt2.pit_record(conn, s["id"], "push", "win" if win else "lose", npc["name"])
+        await _mark_daily_action(conn, s["id"], "push")
         await conn.commit()
         return "\n".join(lines)
 
@@ -525,9 +554,11 @@ async def grudge_ops(
     )
     full_pool = (await cur.fetchone())[0] >= utcfg.UT_GRUDGE_MAX
 
-    def _clear() -> None:
-        conn.execute("UPDATE ut_grudge SET status='done' WHERE id=?", (gid,))
-        conn.execute("UPDATE steward_undertide SET pending_grudge=0 WHERE steward_id=?", (s["id"],))
+    async def _clear() -> None:
+        await conn.execute("UPDATE ut_grudge SET status='done' WHERE id=?", (gid,))
+        await conn.execute(
+            "UPDATE steward_undertide SET pending_grudge=0 WHERE steward_id=?", (s["id"],)
+        )
 
     if action == "pay" and not full_pool:
         cost = int(row["item_value"] * utcfg.UT_GRUDGE_PAYOFF)
@@ -535,7 +566,7 @@ async def grudge_ops(
         if (await cur2.fetchone())[0] < cost:
             raise ValueError(f"消灾费 {cost} 票。付不起就只能打了（grudge fight）或跑（grudge run）。")
         await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (cost, s["id"]))
-        _clear()
+        await _clear()
         await conn.commit()
         return utcopy.GRUDGE_PAY + f"\n（−{cost} 票 · 此单了结）"
 
@@ -547,7 +578,7 @@ async def grudge_ops(
         if my_power >= their_power:
             loot = random.randint(10, 25)
             await conn.execute("UPDATE stewards SET tickets=tickets+? WHERE id=?", (loot, s["id"]))
-            _clear()
+            await _clear()
             await utmod._bump_rep(conn, s["id"], 1)
             await conn.commit()
             head = utcopy.GRUDGE_FULL_POOL if full_pool else ""
@@ -556,20 +587,20 @@ async def grudge_ops(
             "UPDATE stewards SET tickets=MAX(0,tickets-?), health=MAX(0,health-?) WHERE id=?",
             (random.randint(10, 20), random.randint(10, 15), s["id"]),
         )
-        _clear()
+        await _clear()
         await conn.commit()
         return utcopy.GRUDGE_FIGHT_LOSE + "\n（被抢走一些票 · body 大跌）"
 
     if action == "run":
         if random.random() < 0.60:
-            _clear()
+            await _clear()
             await conn.commit()
             return utcopy.GRUDGE_RUN_OK + "\n（这一单，他们不想再追了）"
         await conn.execute(
             "UPDATE stewards SET tickets=MAX(0,tickets-?), health=MAX(0,health-?) WHERE id=?",
             (random.randint(5, 15), random.randint(10, 15), s["id"]),
         )
-        _clear()
+        await _clear()
         await conn.commit()
         return utcopy.GRUDGE_RUN_FAIL
 

@@ -166,6 +166,11 @@ LODGE_ENERGY = 65           # 管饭回的精力
 LODGE_MAX_STREAK = 3        # 连续3次后荔栀翻脸
 LODGE_COOLDOWN_H = 24       # 翻脸冷却
 
+# ── 井壁胜场榜（公开榜，≥门槛才上榜）──
+PIT_BOARD_MIN_FIGHTS = 10
+PIT_BOARD_LIMIT = 15
+PIT_BOARD_MCP_LIMIT = 12
+
 # ── 深坑战绩等级（长期成长轴，小加成不碾压）──
 PIT_RANKS = [
     (10, "打过几场的人", 3),

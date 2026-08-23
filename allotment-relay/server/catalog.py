@@ -22,7 +22,7 @@ CROPS = {
     "bramble":     {"name": "荆棘莓",   "emoji": "🫐", "seed_price": 14, "sell": 32, "grow": 150, "yield": 3, "tier": 3, "spread": 0.28, "tags": ["berry"]},
     "blueberry":   {"name": "蓝莓",     "emoji": "🫐", "seed_price": 16, "sell": 36, "grow": 160, "yield": 3, "tier": 3, "spread": 0.26, "tags": ["berry", "tropic"]},
     "pineapple":   {"name": "菠萝",     "emoji": "🍍", "seed_price": 17, "sell": 32, "grow": 180, "yield": 3, "tier": 3, "spread": 0.26, "tags": ["fruit", "tropic"]},
-    # ── 果树（约 3.5~4.5 时；收完再长，清地 plot_ops chop）──
+    # ── 果树（约 3.5~4.5 时；按种苗成本有收茬上限，枯死后 chop 或再种）──
     "lime":        {"name": "青柠",     "emoji": "🍋", "seed_price": 14, "sell": 26, "grow": 200, "yield": 3, "tier": 4, "spread": 0.24, "tags": ["fruit", "tropic"], "tree": True, "shake": True},
     "papaya":      {"name": "木瓜",     "emoji": "🍈", "seed_price": 19, "sell": 34, "grow": 210, "yield": 3, "tier": 4, "spread": 0.24, "tags": ["fruit", "tropic"], "tree": True},
     "banana":      {"name": "香蕉",     "emoji": "🍌", "seed_price": 18, "sell": 28, "grow": 240, "yield": 3, "tier": 4, "spread": 0.24, "tags": ["fruit", "tropic"], "tree": True},
@@ -155,6 +155,14 @@ def resolve_item_key(token: str, *, prefer: str = "any") -> str | None:
         return "meat_pork"
     if raw in ("堆肥", "肥"):
         return "compost"
+    if raw in ("腌菜", "🫙腌菜", "泡菜"):
+        return "pickles"
+    if raw.startswith("鱼干·") or raw.startswith("🥓鱼干·"):
+        _sp = raw.split("·", 1)[1]
+        for fk, meta in SEA_CATCH.items():
+            if meta["name"] == _sp:
+                return f"dried_{fk}"
+        return None
     if raw in ("羊粪", "💩羊粪"):
         return "manure_sheep"
     if raw in ("猪粪", "💩猪粪"):
@@ -357,10 +365,28 @@ HUT_LEVELS = {
     1: {"name": "棚屋", "upgrade": 0, "hard": 1, "soft": 2},
     2: {"name": "岸畔小屋", "upgrade": 165, "hard": 2, "soft": 3},
     3: {"name": "联盟小宅", "upgrade": 290, "hard": 3, "soft": 5},
+    4: {"name": "临海邸", "upgrade": 420, "hard": 4, "soft": 6},
 }
 
+def bed_sleep_energy(item_key: str) -> int:
+    from . import config
+    meta = HUT_HARD.get(item_key) or {}
+    return int(meta.get("sleep_energy", config.BED_REST_ENERGY))
+
+
+def is_bed_key(item_key: str) -> bool:
+    return item_key == "bed" or item_key.startswith("bed_")
+
+
 HUT_HARD = {
-    "bed": {"name": "岸柏板床", "cost": 60, "emoji": "🛏️", "hint": "hut_ops 睡：一觉回 50 精力，每天一次换班刷新（回饱食 +8）"},
+    "bed": {"name": "岸柏板床", "cost": 60, "emoji": "🛏️", "sleep_energy": 50,
+            "hint": "hut_ops 睡：一觉回 50 精力，每天一次换班刷新（回饱食 +8）"},
+    "bath_tub": {"name": "雪松浴桶", "cost": 85, "emoji": "🛁", "hint": "hut_ops 泡澡：雾智 +15，每 20 小时一次（床管精力，浴桶管雾智）"},
+    "pickle_crock": {"name": "腌菜坛", "cost": 70, "emoji": "🫙", "hint": "hut_ops 腌 甘蓝 4：2 蔬菜 → 1 坛腌菜（可生吃 +6、可当 cook 佐料、可囤潮柜）"},
+    "bed_rattan": {"name": "软藤床", "cost": 95, "emoji": "🛌", "sleep_energy": 52,
+                   "hint": "藤编软垫，好看好睡；一觉 +52 精力（每天一次）"},
+    "bed_canopy": {"name": "云纹纱榻", "cost": 145, "emoji": "🌙", "sleep_energy": 54,
+                   "hint": "纱幔轻垂，主要是漂亮；一觉 +54 精力（每天一次）"},
     "plank_floor": {"name": "防潮板地", "cost": 48, "emoji": "🪵", "hint": "意外掷骰 ×0.90"},
     "rain_gutter": {"name": "雨水槽", "cost": 55, "emoji": "🌧️", "hint": "阵风生长惩罚 ×0.86，阵风坏事件 ×0.90"},
     "storm_shutter": {"name": "风暴窗板", "cost": 72, "emoji": "🪟", "hint": "坏事件略少、野兽 ×0.82、斑鸠偷包 ×0.70（与渔网捕梦同组不叠）"},
@@ -369,6 +395,10 @@ HUT_HARD = {
 }
 
 HUT_SOFT = {
+    "hammock": {"name": "麻绳吊床", "cost": 40, "emoji": "🪵", "hint": "没有床时 hut_ops 睡：回 35 精力，每 24 小时一次（装了床按床算，同组不叠；不占硬装槽）"},
+    "vanity": {"name": "贝壳梳妆台", "cost": 44, "emoji": "🪞", "hint": "睡醒 / 泡澡后档信 +1（出门体面）"},
+    "bookshelf": {"name": "航海书架", "cost": 52, "emoji": "📚", "hint": "hut_ops 读：每日一次，雾智 +2 并翻一段沿海旧史"},
+    "fish_rack": {"name": "晾鱼架", "cost": 48, "emoji": "🪝", "hint": "hut_ops 晾 鲭鱼 4：2 同种生鱼 → 1 条鱼干（可生吃 +10、算 cook 蛋白、可囤）"},
     "kelp_rug": {"name": "浅海藻毯", "cost": 32, "emoji": "🧶", "hint": "纯好看，无数值"},
     "tide_lamp": {"name": "潮汐灯", "cost": 38, "emoji": "💡", "hint": "暮/夜行动补雾智 +1（与珊瑚小灯同组不叠）"},
     "fog_curtain": {"name": "雾纱帘", "cost": 28, "emoji": "🪭", "hint": "guild_shift 档信 +1（与珠串帘同组不叠）"},
@@ -378,7 +408,10 @@ HUT_SOFT = {
     "bramble_wreath": {"name": "荆棘莓环", "cost": 30, "emoji": "🌸", "hint": "纯好看，无数值"},
     "glass_float": {"name": "玻璃浮标", "cost": 36, "emoji": "🔮", "hint": "公共物资刷新 ×1.22"},
     "fridge": {"name": "冰箱", "cost": 120, "emoji": "🧊", "hint": "hut_ops 冰柜 存/取 熟菜；kitchen_ops fridge；开小馆必需"},
-    "cabinet": {"name": "潮柜", "cost": 58, "emoji": "🗄️", "hint": "hut_ops 冰柜 存/取 生鲜（柜子/潮柜同义）；基础 30 格，满了 hut_ops 潮柜 扩（12票/格，顶 60）；小偷和斑鸠翻不到行囊外的货"},
+    "shell_mirror": {"name": "贝壳妆镜", "cost": 42, "emoji": "🪞", "hint": "纯好看，无数值"},
+    "quilt_patch": {"name": "拼布薄被", "cost": 36, "emoji": "🧵", "hint": "guild_shift 档信 +1"},
+    "cabinet": {"name": "潮柜", "cost": 58, "emoji": "🗄️",
+               "hint": "hut_ops 冰柜 存/取 生鲜；基础 30 种各最多叠 24 份，满了 hut_ops 潮柜 扩（12票/格，顶 60）"},
 }
 
 TOOLS = {
@@ -589,6 +622,31 @@ KITCHEN_DISHES = {
         "ings": ["shell_mussel", "crop_garlic", "crop_chili"],
         "base_sell": 62, "energy": 24, "tags": ["sea"],
     },
+    "lime_steamed_fish": {
+        "name": "青柠姜蒸鱼", "emoji": "🐟",
+        "ings": ["fish_seatrout", "crop_lime", "crop_ginger"],
+        "base_sell": 79, "energy": 28, "tags": ["sea", "tropic"],
+    },
+    "bramble_honey_tart": {
+        "name": "莓蜜挞", "emoji": "🥧",
+        "ings": ["crop_bramble", "honey", "crop_rye"],
+        "base_sell": 74, "energy": 22, "tags": ["dessert"],
+    },
+    "kelp_egg_soup": {
+        "name": "海藻蛋花汤", "emoji": "🍲",
+        "ings": ["crop_kelp", "egg", "crop_ginger"],
+        "base_sell": 58, "energy": 26, "tags": ["sea"],
+    },
+    "papaya_chicken": {
+        "name": "木瓜炖鸡", "emoji": "🍲",
+        "ings": ["crop_papaya", "meat_rabbit", "crop_ginger"],
+        "base_sell": 82, "energy": 30, "tags": ["tropic", "rich"],
+    },
+    "fogpea_salad": {
+        "name": "雾豆凉拌", "emoji": "🥗",
+        "ings": ["crop_fogpea", "crop_garlic", "crop_chili"],
+        "base_sell": 55, "energy": 22, "tags": ["legume"],
+    },
 }
 
 MYTH_INGREDIENTS = {
@@ -669,6 +727,28 @@ AILMENTS = {
         "stage_names": {2: "面黄肌瘦", 1: "气色渐好"},
         "re_line": "水果还在当饭吃，{name}又回到{stage_name}。吃几顿熟菜压一压，或 visit_ops clinic treat 营养不良。",
         "chronic_tip": " 每顿熟菜好一档；或 visit_ops clinic treat 营养不良，两次挂号。",
+    },
+    "dehydration": {
+        "name": "脱水", "emoji": "💧", "cost": 14, "health_loss": 8, "health_restore": 12,
+        "hint": "晒太久、吃太少、汗出多了", "energy_extra": 2, "max_energy_cut": 6,
+    },
+    "exhaustion": {
+        "name": "过劳", "emoji": "😮‍💨", "cost": 22, "health_loss": 10, "health_restore": 14,
+        "hint": "连轴转不收手。歇两天或睡够", "energy_extra": 3, "max_energy_cut": 12,
+        "courses": 2, "drain_energy": 1, "drain_every": 2400,
+        "stage_names": {2: "筋疲力尽", 1: "缓过来了"},
+    },
+    "insomnia": {
+        "name": "失眠", "emoji": "🌙", "cost": 16, "health_loss": 7, "health_restore": 10,
+        "hint": "好几天没正经睡过。hut_ops 睡 或诊所", "energy_extra": 3, "max_energy_cut": 8,
+    },
+    "damp_lung": {
+        "name": "湿气入肺", "emoji": "🌫️", "cost": 18, "health_loss": 11, "health_restore": 14,
+        "hint": "海雾里干活吸进去的", "energy_extra": 2,
+    },
+    "toothache": {
+        "name": "牙酸", "emoji": "🦷", "cost": 13, "health_loss": 5, "health_restore": 8,
+        "hint": "酸果、冷饮吃多了", "energy_extra": 1,
     },
 }
 
@@ -989,6 +1069,13 @@ for k, v in LILI_DECOR.items():
     ITEM_NAMES[f"deco_{k}"] = f"{v['emoji']}{v['name']}"
 for k, v in LILI_JUNK_DECOR.items():
     ITEM_NAMES[f"deco_junk_{k}"] = f"{v['emoji']}{v['name']}"
+
+# 小屋加工品：腌菜与鱼干。
+ITEM_PRICES["pickles"] = 20
+ITEM_NAMES["pickles"] = "🫙腌菜"
+for _fk, _fv in SEA_CATCH.items():
+    ITEM_PRICES[f"dried_{_fk}"] = int(_fv["sell"] * 1.6)
+    ITEM_NAMES[f"dried_{_fk}"] = f"🥓鱼干·{_fv['name']}"
 
 
 def dish_item(key: str, stars: int = 3) -> str:

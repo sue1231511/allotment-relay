@@ -803,6 +803,8 @@ async def init_db() -> None:
             "ALTER TABLE stewards ADD COLUMN fruit_streak INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN bed_rest_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN dine_buff_until INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN bath_soak_at INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN book_read_day INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE voyages ADD COLUMN encounter TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE bar_daily_state ADD COLUMN auto_mood TEXT NOT NULL DEFAULT 'normal'",
             "ALTER TABLE bar_daily_state ADD COLUMN manual_mood_level TEXT NOT NULL DEFAULT ''",
@@ -1308,6 +1310,17 @@ async def init_db() -> None:
                 target_name TEXT NOT NULL,
                 created_at INTEGER NOT NULL,
                 PRIMARY KEY (steward_id, day)
+            )
+            """,
+            "ALTER TABLE parcels ADD COLUMN tree_harvests INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE parcels ADD COLUMN tree_harvest_max INTEGER NOT NULL DEFAULT 0",
+            """
+            CREATE TABLE IF NOT EXISTS ut_daily_actions (
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                day_id INTEGER NOT NULL,
+                action TEXT NOT NULL,
+                count INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (steward_id, day_id, action)
             )
             """,
         ):

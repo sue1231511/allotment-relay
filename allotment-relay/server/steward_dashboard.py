@@ -6,8 +6,11 @@ import aiosqlite
 from typing import Any
 
 from . import bar, db, energy, events, farming, health, land, ranks, survival, world
+from . import undertide as undertide_mod
+from . import undertide_config as utcfg
 from .catalog import CROPS, ITEM_NAMES
 from . import market as market_mod
+from .config import ONLINE_WINDOW
 
 
 async def fetch_dashboard(api_key: str) -> dict[str, Any]:
@@ -36,6 +39,7 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
             """,
             (s["id"],),
         )).fetchone()
+        ut = await undertide_mod._ensure_ut(conn, s["id"])
         await conn.commit()
 
     gifts = await db.list_received_gifts(s["id"], 8)
@@ -43,6 +47,19 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
 
     s = await db.get_steward_by_id(s["id"]) or s
     ranked = ranks.attach_level(s)
+    last_active = int(s.get("last_active_at") or 0)
+    online = bool(last_active and (db.now() - last_active) <= ONLINE_WINDOW)
+    shadow_rep = int(ut.get("shadow_rep") or utcfg.UT_START_SHADOW_REP)
+    rep_tier, _, _ = undertide_mod._rep_tier(shadow_rep)
+    status_flags: list[str] = []
+    if ut.get("jail_state") == "serving":
+        status_flags.append("服刑中")
+    if ut.get("k_room"):
+        status_flags.append("K 室待见")
+    if int(ut.get("busted_count") or 0):
+        status_flags.append(f"案底 {ut['busted_count']}")
+    if not ut.get("access"):
+        status_flags.append("未入潮下")
     parcels = await db.get_parcels(s["id"])
     stock = await db.get_satchel(s["id"])
 
@@ -152,12 +169,23 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
             "health": int(s.get("health") or 0),
             "energy": int(s.get("energy") or 0),
             "energy_max": 100,
+            "shadow_rep": shadow_rep,
         },
         "meter_lines": {
             "survival": survival.meter_line(s),
             "health": health.meter_line(s, ailments),
             "energy": energy.meter_line(s, ailments),
             "bar_duty": bar.duty_line(s),
+        },
+        "status": {
+            "online": online,
+            "label": "在线" if online else "离线",
+            "last_active_at": last_active,
+            "flags": status_flags,
+        },
+        "shadow": {
+            "rep": shadow_rep,
+            "tier": rep_tier,
         },
         "climate": world.climate_line(),
         "pulse": pulse,
