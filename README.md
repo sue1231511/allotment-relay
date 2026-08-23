@@ -253,9 +253,11 @@ bar_ops     的 command = work 洗碗 night
 | `list` | 查看可接任务及每项完成奖励 |
 | `accept black_box_lover` | 接取首个潮闻「黑盒与潮声」 |
 | `accept memory_tide` | 接取顺序探索潮闻《回忆生潮》 |
+| `accept spring_beyond_mountain` | 接取顺序探索潮闻《春山之外》 |
 | `status` | 查看进行中的任务与当前阶段 |
 | `explore beach` | 按当前阶段提示探索；匹配阶段每次耗 5 精力、不限次数，错误地点不扣 |
 | `explore south_lane` | 《回忆生潮》第一幕；后续严格照 `status` 给出的地点继续 |
+| `explore shenzhi_home` | 《春山之外》第一幕；后续严格照 `status` 给出的地点继续 |
 | `turnin` | 交付当前阶段要求的物品并领奖 |
 | `abandon black_box_lover` | 放弃任务，之后可重新接取 |
 | `board` | 查看潮闻完成榜 |
@@ -268,6 +270,8 @@ bar_ops     的 command = work 洗碗 night
 探索顺序：`explore beach` → `explore sea` 找锈铁 → `explore plot` → `explore bar` → `explore beach` 找海玻璃 → `explore beach` 找化石贝壳 → `turnin`。自然发现或行囊已持有所需物品也会识别推进。
 
 第二个潮闻《回忆生潮》用 `accept memory_tide` 接取。玩家只是岛上的探索者，不属于梁家，也不会替梁知微说话或行动；11 幕必须严格按 `status` 给出的地点依次推进，第一步是 `explore south_lane`。故事信息按探索顺序出现，不在任务说明中提前揭示后段线索。每幕自动获得 30 工分票（11×30=330），完整探索再获得 120 工分票、档信 +6、雾智 +10，总票奖励 450；同时解锁称呼「陪坐的人」及「还在放戏的旧收音机」「总是空着的碗筷」「没有交出去的围巾」「院门旁的一杯茶」4 件永久纪念品。本故事不新增 `visit_ops` 常驻 NPC 入口。
+
+第三个潮闻《春山之外》用 `accept spring_beyond_mountain` 接取。玩家只旁观沈青禾与沈栀的故事，不替任何人物作决定，也不新增固定 NPC；11 幕严格按 `status` 推进，第一步是 `explore shenzhi_home`。每幕自动获得 30 工分票（11×30=330），完整探索再获得 120 工分票、档信 +6、雾智 +10，总票奖励 450；同时解锁称呼「山外见春人」与 4 件完成后才揭晓的永久纪念品。
 
 ### `story_ops` — 人物故事探索
 

@@ -188,6 +188,18 @@ async def _check_sat_beside_him(conn: aiosqlite.Connection, s: dict[str, Any]) -
     )
 
 
+async def _check_spring_beyond_mountain(
+    conn: aiosqlite.Connection, s: dict[str, Any]
+) -> bool:
+    return await _exists(
+        conn,
+        """SELECT 1 FROM steward_tales_done
+           WHERE steward_id=? AND tale_key='spring_beyond_mountain'
+             AND outcome='completed' LIMIT 1""",
+        s["id"],
+    )
+
+
 ACHIEVEMENTS: dict[str, dict[str, Any]] = {
     "sower": {
         "name": "播手",
@@ -308,6 +320,12 @@ ACHIEVEMENTS: dict[str, dict[str, Any]] = {
         "hint": "完成潮闻《回忆生潮》",
         "aliases": ("院门陪坐者", "潮忆见证人"),
         "check": _check_sat_beside_him,
+    },
+    "spring_beyond_mountain_witness": {
+        "name": "山外见春人",
+        "hint": "完成潮闻《春山之外》",
+        "aliases": ("见春人", "山外看春人"),
+        "check": _check_spring_beyond_mountain,
     },
 }
 

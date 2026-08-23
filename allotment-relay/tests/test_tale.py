@@ -282,6 +282,85 @@ async def test_memory_tide_flow() -> None:
         assert "已经完成" in str(exc), exc
 
 
+async def test_spring_beyond_mountain_flow() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="spring-mountain-"))
+    db = await _boot(tmp)
+    from server import npc, progress, tale, tale_spring_mountain
+
+    kid, sid = await _enroll(db, "spring-mountain@example.com", "山外探索者")
+
+    listing = await tale.tale_ops(kid, "list")
+    assert "spring_beyond_mountain" in listing and "春山之外" in listing, listing
+    assert "每阶段工分票+30×11" in listing, listing
+    assert "完整探索工分票+120" in listing, listing
+    assert "山外见春人" in listing, listing
+
+    npc_listing = await npc.npc_ops(kid, "list")
+    for name in ("沈青禾", "沈栀", "陆承安", "冯素琴"):
+        assert name not in npc_listing, npc_listing
+
+    async with db.connect() as conn:
+        before = await (await conn.execute(
+            "SELECT tickets, energy FROM stewards WHERE id=?", (sid,)
+        )).fetchone()
+
+    accepted = await tale.tale_ops(kid, "accept spring_beyond_mountain")
+    assert "春山之外" in accepted, accepted
+    assert "只是岛上的探索者" in accepted, accepted
+    assert "不替沈青禾、沈栀" in accepted, accepted
+    assert "tale_ops explore shenzhi_home" in accepted, accepted
+    assert "把我姐的春天挡住了" not in accepted, accepted
+
+    wrong = await tale.tale_ops(kid, "explore mountain_window")
+    assert "未消耗精力" in wrong and "explore shenzhi_home" in wrong, wrong
+
+    outputs: list[str] = []
+    for index, stage in enumerate(tale_spring_mountain.TALE_STAGES, 1):
+        result = await tale.tale_ops(kid, f"explore {stage['domain']}")
+        outputs.append(result)
+        assert f"第 {index}/11 阶段奖励" in result, result
+        assert "工分票 +30" in result, result
+        if index <= 9:
+            assert "把我姐的春天挡住了" not in result, result
+
+    assert "把我姐的春天挡住了" in outputs[9], outputs[9]
+    finish = outputs[-1]
+    assert "«春山之外» 已完成" in finish, finish
+    assert "【探索完成：《春山之外》】" in finish, finish
+    assert "山外已经是春天了" in finish, finish
+    assert "完整探索额外奖励" in finish and "工分票 +120" in finish, finish
+    assert "档信 +6" in finish and "雾智 +10" in finish, finish
+    assert "人物称呼「山外见春人」" in finish, finish
+    for name in ("干涸的甲油铁盒", "翻软的《长汀》", "描金首饰木盒", "银燕手链"):
+        assert name in finish, finish
+
+    async with db.connect() as conn:
+        after = await (await conn.execute(
+            "SELECT tickets, energy FROM stewards WHERE id=?", (sid,)
+        )).fetchone()
+        unlocked = await (await conn.execute(
+            """SELECT 1 FROM steward_achievements
+               WHERE steward_id=? AND ach_key='spring_beyond_mountain_witness'""",
+            (sid,),
+        )).fetchone()
+    assert after[0] - before[0] == 11 * 30 + 120, (before, after)
+    assert after[1] == before[1] - 11 * 5, (before, after)
+    assert unlocked, "spring title was not recorded"
+    assert progress.resolve_achievement("山外见春人") == "spring_beyond_mountain_witness"
+
+    souvenirs = await tale.tale_ops(kid, "souvenirs")
+    assert "潮闻收藏册 · 4 件" in souvenirs, souvenirs
+    assert "春山之外" in souvenirs, souvenirs
+    for name in ("干涸的甲油铁盒", "翻软的《长汀》", "描金首饰木盒", "银燕手链"):
+        assert name in souvenirs, souvenirs
+
+    try:
+        await tale.tale_ops(kid, "accept spring_beyond_mountain")
+        raise AssertionError("non-repeatable spring tale should block")
+    except ValueError as exc:
+        assert "已经完成" in str(exc), exc
+
+
 async def test_tale_explore_is_unlimited() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="tale-unlimited-"))
     db = await _boot(tmp)
@@ -399,11 +478,14 @@ def test_tale_mcp_description() -> None:
     assert "reminisce" in blob
     assert "memory_tide" in blob
     assert "回忆生潮" in blob
+    assert "spring_beyond_mountain" in blob
+    assert "春山之外" in blob
 
 
 def main() -> None:
     asyncio.run(test_tale_flow())
     asyncio.run(test_memory_tide_flow())
+    asyncio.run(test_spring_beyond_mountain_flow())
     asyncio.run(test_tale_explore_is_unlimited())
     asyncio.run(test_commons_claim_advances_item_stage())
     asyncio.run(test_tale_abandon())

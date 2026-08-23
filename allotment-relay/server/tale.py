@@ -18,16 +18,17 @@ from typing import Any
 
 import aiosqlite
 
-from . import config, db, tale_memory_tide
+from . import config, db, tale_memory_tide, tale_spring_mountain
 from .catalog import ITEM_NAMES
 from .game import require_steward
 
 TALE_HELP = """tale_ops 子命令（整句写进 command）：
   list — 可接任务
-  accept 任务key — 接任务；例：accept black_box_lover、accept memory_tide
+  accept 任务key — 接任务；例：accept black_box_lover、accept memory_tide、accept spring_beyond_mountain
   status — 当前进行中的任务
   explore [地点] — 按 status/hint 探索；黑盒阶段2 sea 找锈铁，阶段5/6 beach 找任务物品
                     回忆生潮从 south_lane 开始，之后严格照 status 的地点继续
+                    春山之外从 shenzhi_home 开始，之后严格照 status 的地点继续
                     匹配阶段才耗 5 精力，不限次数；错误地点不扣精力
   turnin — 交付并领奖
   abandon 任务key — 放弃
@@ -36,7 +37,8 @@ TALE_HELP = """tale_ops 子命令（整句写进 command）：
   reminisce 任务key — 通关后重读补充回忆；例：reminisce black_box_lover
   help — 本帮助
 奖励：《黑盒与潮声》6 阶段，每推进一段自动 +30 票；完整探索再 +50 票（总计 230 票）。
-《回忆生潮》11 幕，每幕 +30 票（330 票）；完整探索再 +120 票（总计 450 票），并发称呼「陪坐的人」与 4 件永久纪念品。"""
+《回忆生潮》11 幕，每幕 +30 票（330 票）；完整探索再 +120 票（总计 450 票），并发称呼「陪坐的人」与 4 件永久纪念品。
+《春山之外》11 幕同样总计 450 票，并发称呼「山外见春人」与 4 件永久纪念品。"""
 
 DOMAIN_LABELS = {
     "shore": "海岸",
@@ -53,6 +55,14 @@ DOMAIN_LABELS = {
     "taozhi_shop": "陶枝的旧柜台",
     "liang_album": "梁家的旧相册",
     "clinic_archive": "旧诊所档案室",
+    "shenzhi_home": "沈栀家",
+    "old_balcony": "旧阳台",
+    "old_album": "旧相册",
+    "changting_book": "《长汀》旧书",
+    "qinghe_home": "沈青禾家",
+    "gilt_box": "描金木盒",
+    "shenzhi_bedroom": "沈栀卧室",
+    "mountain_window": "望山的窗边",
 }
 
 # ══ 剧本原文 ═══════════════════════════════════════════════════
@@ -518,6 +528,32 @@ TALE_CATALOG.append(
             },
             "souvenir": tale_memory_tide.SOUVENIRS[0],
             "keepsakes": tale_memory_tide.SOUVENIRS[1:],
+        },
+    }
+)
+
+TALE_CATALOG.append(
+    {
+        "key": tale_spring_mountain.STORY_KEY,
+        "title": tale_spring_mountain.STORY_TITLE,
+        "intro": tale_spring_mountain.INTRO,
+        "min_level": 1,
+        "min_standing": 0,
+        "domain": "shore",
+        "repeatable": 0,
+        "sort_order": 3,
+        "stages": tale_spring_mountain.TALE_STAGES,
+        "rewards": {
+            "stage_tickets": tale_spring_mountain.STAGE_REWARD_TICKETS,
+            "tickets": tale_spring_mountain.REWARD_TICKETS,
+            "standing": tale_spring_mountain.REWARD_STANDING,
+            "mist_wit": tale_spring_mountain.REWARD_MIST_WIT,
+            "achievement": {
+                "key": tale_spring_mountain.REWARD_TITLE_KEY,
+                "name": tale_spring_mountain.REWARD_TITLE,
+            },
+            "souvenir": tale_spring_mountain.SOUVENIRS[0],
+            "keepsakes": tale_spring_mountain.SOUVENIRS[1:],
         },
     }
 )
