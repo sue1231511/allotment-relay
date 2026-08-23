@@ -103,7 +103,8 @@ PLOT_HELP = """plot_ops 子命令（整句写进 command）：
   chop 地块 — 砍树腾地（树龄尽了会自己枯；想提前清地不必等过熟）
   compost 地块 — 过熟进堆肥（果树清果后若还有茬则继续长；枯了或不要了才 chop）
   scarecrow 地块 — 扎稻草人
-  shed erect|status|handoff — 温室（#99 独立槽，180票，不占露天份地，偷不到；种菜不受月令，果树不能进）
+  买棚 / 温室 — 看价；买棚 确认 / shed erect — 加盖（无上限。第1座 180票马上能种，之后 310/500/750… 比份地更贵）
+  sow 棚1 甘蓝 · sow 99 甘蓝 — 99=第一座。种菜不受月令，偷不到，果树不能进
   commons scan|claim id — 稀有公共物资
   incident status|scan|repair 编号 — 意外（scan 看风险；repair 也可省略 incident）
   repair 12 — 同上，可省略 incident
@@ -279,8 +280,6 @@ async def plot_bundle(key_id: int, command: str = "") -> str:
         command,
         table={
             "shed": (game.shed_ops, "status"),
-            "greenhouse": (game.shed_ops, "status"),
-            "温室": (game.shed_ops, "status"),
             "commons": (commons.commons_ops, "scan"),
             "公共": (commons.commons_ops, "scan"),
             "incident": (events.incident_ops, "status"),

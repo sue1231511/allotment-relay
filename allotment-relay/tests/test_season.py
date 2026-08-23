@@ -147,14 +147,18 @@ async def test_greenhouse_ignores_month() -> None:
         await db.add_item(conn, sid, "seed_garlic", 2)
         await conn.execute("UPDATE stewards SET tickets=tickets+400, greenhouse=1 WHERE id=?", (sid,))
         await conn.execute(
-            "INSERT INTO parcels (steward_id, slot, orchard, greenhouse, tended) VALUES (?, 99, 0, 1, 0)",
+            "INSERT INTO parcels (steward_id, slot, orchard, greenhouse, tended) VALUES (?, 1, 0, 1, 0)",
             (sid,),
+        )
+        await conn.execute(
+            "UPDATE stewards SET greenhouse_count=1 WHERE id=?", (sid,)
         )
         await conn.commit()
 
     with season.pinned_month(8):
         planted = await game.plot_ops(kid, "sow 99 大蒜")
-        assert "#99" in planted and "大蒜" in planted and "⚠" not in planted, planted
+        assert "棚1" in planted and "大蒜" in planted, planted
+        assert "不在当月" not in planted, planted
         outdoor = await game.plot_ops(kid, "sow 1 大蒜")
         assert "⚠" in outdoor or "不在当月" in outdoor, outdoor
 

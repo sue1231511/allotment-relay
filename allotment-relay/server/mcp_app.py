@@ -106,9 +106,9 @@ async def steward_ops(
     )
 
 
-@mcp.tool(description="份地与果园农事。command 写一整句，不要编造 sow_all/plant/harvest。例子：status · sow 1 甘蓝 · 果园 sow 1 芒果 · sow 园1 芒果 · tend · 浇水 1 · 施肥 1 · gather 1 · gather 园1 · catalog · weather · 偷菜 安 · 买地 · 买地 确认 · 买园 · 买园 确认 · buy 2 甘蓝 · shed erect · camera install 1 · dove 忽略。份地只种菜；果树只能种果园（起步 3 树位，无上限，价表同买地）。作物按 UTC 日历月轮换：买种+露天/果园 sow 须当月（甘蓝/甜菜/雾豆/浅海藻全年）；catalog/weather 看当月可种。已种的继续长。温室 #99 种菜不受月令，果树不能进温室。果树按种苗成本有收茬上限，收满枯死（status 看剩N茬）。斑鸠：昼间 sow/tend 每天掷一次碰上才盯梢。买地露天无上限，票价按 80/120/180/260/360… 递推。buy 种子受行囊每格 24 份限制。空 command 列出常用指令，不是看地；看地必须 status。偷菜最多 30%。不会就 help。")
+@mcp.tool(description="份地与果园农事。command 写一整句，不要编造 sow_all/plant/harvest。例子：status · sow 1 甘蓝 · 果园 sow 1 芒果 · sow 园1 芒果 · sow 棚1 甘蓝 · sow 99 甘蓝 · tend · 浇水 1 · 施肥 1 · gather 1 · gather 园1 · catalog · weather · 偷菜 安 · 买地 · 买地 确认 · 买园 · 买园 确认 · 买棚 · 买棚 确认 · buy 2 甘蓝 · shed erect · camera install 1 · dove 忽略。份地只种菜；果树只能种果园（起步 3 树位，无上限，价表同买地）。作物按 UTC 日历月轮换：买种+露天/果园 sow 须当月（甘蓝/甜菜/雾豆/浅海藻全年）；catalog/weather 看当月可种。已种的继续长。温室无上限，第1座 180 票即用，之后 310/500/750… 比份地更贵；棚N 种菜不受月令（sow 99=棚1），果树不能进。果树按种苗成本有收茬上限，收满枯死（status 看剩N茬）。斑鸠：昼间 sow/tend 每天掷一次碰上才盯梢。买地露天无上限，票价按 80/120/180/260/360… 递推。buy 种子受行囊每格 24 份限制。空 command 列出常用指令，不是看地；看地必须 status。偷菜最多 30%。不会就 help。")
 async def plot_ops(
-    command: Annotated[str, Field(description="子命令整句。status=看地和果园 / 果园=只看果园 / catalog / weather / sow 1 甘蓝 / 果园 sow 1 芒果 / sow 园1 芒果 / tend / 浇水 1 / 施肥 1 / gather 1 / gather 园1 / 偷菜 名字 / 买地 / 买地 确认 / 买园 / 买园 确认 / buy 2 甘蓝 / shed erect / chop 园1 / shake 园1 / camera install 1 / incident scan / repair 12 / dove 忽略|驱赶 / help。份地不种果树。买地/买园都无上限，价钱按同一表递推。月令：买种+露天/果园 sow 须当月，过季会拒；温室 #99 种菜不受月令。斑鸠每天掷一次碰上才盯梢。施肥默认耗堆肥。buy 不能超过行囊每格 24。空=常用指令，不是看地。不要发明 sow_all/plant。")] = "",
+    command: Annotated[str, Field(description="子命令整句。status=看地和果园和温室 / 果园=只看果园 / 买棚=看温室价 / catalog / weather / sow 1 甘蓝 / 果园 sow 1 芒果 / sow 园1 芒果 / sow 棚1 甘蓝 / sow 99 甘蓝 / tend / 浇水 1 / 施肥 1 / gather 1 / gather 园1 / 偷菜 名字 / 买地 / 买地 确认 / 买园 / 买园 确认 / 买棚 / 买棚 确认 / buy 2 甘蓝 / shed erect / chop 园1 / shake 园1 / camera install 1 / incident scan / repair 12 / dove 忽略|驱赶 / help。份地不种果树。买地/买园都无上限；买棚也无上限但更贵。月令：买种+露天/果园 sow 须当月，过季会拒；温室种菜不受月令。斑鸠每天掷一次碰上才盯梢。施肥默认耗堆肥。buy 不能超过行囊每格 24。空=常用指令，不是看地。不要发明 sow_all/plant。")] = "",
 ) -> str:
     return await mux._call_ops(mux.plot_bundle, _kid(), command)
 

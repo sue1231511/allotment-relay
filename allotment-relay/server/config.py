@@ -14,6 +14,8 @@ START_TICKETS = 120
 START_PARCELS = 3
 START_ORCHARDS = 3
 GREENHOUSE_COST = 180
+# 温室无上限。第 1 座 180 票即用；之后比份地更陡：310、500、750、1060…
+GREENHOUSE_EXPAND_BASE = 180
 SWAP_CLAIM_FEE = 3
 GUILD_TICKETS = 18
 GUILD_SHIFT_DAILY = 1
@@ -74,8 +76,9 @@ TIDE_LABELS = {
 PEN_ERECT_COST = 140
 PEN_EXPAND_COST = 120
 MAX_FISH_PENS = 2
-# 温室独占槽，露天买地跳过这个号
+# 第一座温室历史上占 #99；现已迁到 棚1。露天买地仍跳过 99，sow 99 仍当 棚1
 GREENHOUSE_SLOT = 99
+GREENHOUSE_ALIAS_SLOT = 99
 # 露天份地无上限。第 4 块起票价 80、120、180、260、360…（差额每次多 20）
 # 开垦时长 30、45、60、90、120 分钟…（每两档多加 15 分钟）
 PARCEL_EXPAND_BASE = 80
@@ -101,6 +104,24 @@ def parcel_clear_seconds(idx: int) -> int:
 # 前 5 档（第 4～8 块）与旧表一致，便于对照
 PARCEL_EXPAND_COSTS = [parcel_expand_cost(i) for i in range(5)]
 PARCEL_CLEAR_SECONDS = [parcel_clear_seconds(i) for i in range(5)]
+
+
+def greenhouse_expand_cost(idx: int) -> int:
+    """第 (idx+1) 座票价：180 + 100n + 30n²，比份地更陡。"""
+    n = max(0, int(idx))
+    return GREENHOUSE_EXPAND_BASE + 100 * n + 30 * n * n
+
+
+def greenhouse_clear_seconds(idx: int) -> int:
+    """第 1 座马上可用；之后比同档份地多 15 分钟。"""
+    n = max(0, int(idx))
+    if n <= 0:
+        return 0
+    return parcel_clear_seconds(n) + 15 * 60
+
+
+GREENHOUSE_EXPAND_COSTS = [greenhouse_expand_cost(i) for i in range(5)]
+GREENHOUSE_CLEAR_SECONDS = [greenhouse_clear_seconds(i) for i in range(5)]
 
 BOATS = {
     "skiff": {"name": "小舢板", "cost": 85, "rank": 1, "repair": 12, "cargo": 2},

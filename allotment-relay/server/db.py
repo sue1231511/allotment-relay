@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS stewards (
     parcel_count INTEGER NOT NULL DEFAULT 3,
     orchard_count INTEGER NOT NULL DEFAULT 3,
     greenhouse INTEGER NOT NULL DEFAULT 0,
+    greenhouse_count INTEGER NOT NULL DEFAULT 0,
     greenhouse_label TEXT NOT NULL DEFAULT '',
     mascot_name TEXT NOT NULL DEFAULT '',
     mascot_trait TEXT NOT NULL DEFAULT '',
@@ -1507,12 +1508,15 @@ async def init_db() -> None:
             """,
             "ALTER TABLE parcels ADD COLUMN orchard INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN orchard_count INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN greenhouse_count INTEGER NOT NULL DEFAULT 0",
         ):
             try:
                 await db.execute(ddl)
             except aiosqlite.OperationalError:
                 pass
         await _rebuild_parcels_orchard_unique(db)
+        await _rebuild_parcels_kind_unique(db)
+        await _migrate_greenhouse_slots(db)
         await _grant_starting_orchards(db)
         from . import ranks as ranks_mod
         from . import disaster as disaster_mod
@@ -1529,6 +1533,8 @@ async def _parcels_has_orchard_unique(db: aiosqlite.Connection) -> bool:
         cols = await (await db.execute(f"PRAGMA index_info('{idx[1]}')")).fetchall()
         names = [c[2] for c in cols]
         if names == ["steward_id", "slot", "orchard"]:
+            return True
+        if names == ["steward_id", "slot", "orchard", "greenhouse"]:
             return True
     return False
 
@@ -1582,6 +1588,100 @@ async def _rebuild_parcels_orchard_unique(db: aiosqlite.Connection) -> None:
     await db.execute("DROP TABLE parcels")
     await db.execute("ALTER TABLE parcels__orchard_u RENAME TO parcels")
     await db.execute("PRAGMA foreign_keys=ON")
+
+
+async def _parcels_has_kind_unique(db: aiosqlite.Connection) -> bool:
+    indexes = await (await db.execute("PRAGMA index_list(parcels)")).fetchall()
+    for idx in indexes:
+        if not idx[2]:
+            continue
+        cols = await (await db.execute(f"PRAGMA index_info('{idx[1]}')")).fetchall()
+        names = [c[2] for c in cols]
+        if names == ["steward_id", "slot", "orchard", "greenhouse"]:
+            return True
+    return False
+
+
+async def _rebuild_parcels_kind_unique(db: aiosqlite.Connection) -> None:
+    """份地 / 果园 / 温室可以同号：UNIQUE(steward_id, slot, orchard, greenhouse)。"""
+    if await _parcels_has_kind_unique(db):
+        return
+    info = await (await db.execute("PRAGMA table_info(parcels)")).fetchall()
+    if not info:
+        return
+    await db.execute("PRAGMA foreign_keys=OFF")
+    await db.execute(
+        """
+        CREATE TABLE parcels__kind_u (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            steward_id INTEGER NOT NULL REFERENCES stewards(id),
+            slot INTEGER NOT NULL,
+            crop TEXT,
+            planted_at INTEGER,
+            tended INTEGER NOT NULL DEFAULT 0,
+            greenhouse INTEGER NOT NULL DEFAULT 0,
+            ready_at INTEGER NOT NULL DEFAULT 0,
+            grow_target INTEGER NOT NULL DEFAULT 0,
+            grow_pace TEXT NOT NULL DEFAULT '',
+            fertilized INTEGER NOT NULL DEFAULT 0,
+            scarecrow INTEGER NOT NULL DEFAULT 0,
+            dove_yield_mult REAL NOT NULL DEFAULT 1.0,
+            harvest_left INTEGER NOT NULL DEFAULT 0,
+            watered INTEGER NOT NULL DEFAULT 0,
+            camera INTEGER NOT NULL DEFAULT 0,
+            tree_harvests INTEGER NOT NULL DEFAULT 0,
+            tree_harvest_max INTEGER NOT NULL DEFAULT 0,
+            orchard INTEGER NOT NULL DEFAULT 0,
+            UNIQUE(steward_id, slot, orchard, greenhouse)
+        )
+        """
+    )
+    src_cols = {r[1] for r in info}
+    dest = [
+        "id", "steward_id", "slot", "crop", "planted_at", "tended", "greenhouse",
+        "ready_at", "grow_target", "grow_pace", "fertilized", "scarecrow",
+        "dove_yield_mult", "harvest_left", "watered", "camera",
+        "tree_harvests", "tree_harvest_max", "orchard",
+    ]
+    select_bits = [c if c in src_cols else "0" for c in dest]
+    await db.execute(
+        f"INSERT INTO parcels__kind_u ({', '.join(dest)}) "
+        f"SELECT {', '.join(select_bits)} FROM parcels"
+    )
+    await db.execute("DROP TABLE parcels")
+    await db.execute("ALTER TABLE parcels__kind_u RENAME TO parcels")
+    await db.execute("PRAGMA foreign_keys=ON")
+
+
+async def _migrate_greenhouse_slots(db: aiosqlite.Connection) -> None:
+    """旧温室 #99 迁到 棚1；补 greenhouse_count。"""
+    await db.execute(
+        """
+        UPDATE parcels SET slot=1
+        WHERE COALESCE(greenhouse,0)=1 AND COALESCE(orchard,0)=0 AND slot=99
+          AND NOT EXISTS (
+            SELECT 1 FROM parcels AS p2
+            WHERE p2.steward_id = parcels.steward_id
+              AND p2.slot = 1
+              AND COALESCE(p2.orchard,0)=0
+              AND COALESCE(p2.greenhouse,0)=1
+          )
+        """
+    )
+    await db.execute(
+        """
+        UPDATE stewards SET greenhouse_count = (
+            SELECT COUNT(*) FROM parcels
+            WHERE parcels.steward_id = stewards.id AND COALESCE(parcels.greenhouse,0)=1
+        )
+        """
+    )
+    await db.execute(
+        """
+        UPDATE stewards SET greenhouse=1
+        WHERE COALESCE(greenhouse_count, 0) > 0 AND COALESCE(greenhouse, 0)=0
+        """
+    )
 
 
 async def _grant_starting_orchards(db: aiosqlite.Connection) -> None:
@@ -1788,23 +1888,21 @@ async def take_item(db: aiosqlite.Connection, steward_id: int, item: str, qty: i
     return True
 
 
-async def get_parcels(steward_id: int, *, orchard: int | None = None) -> list[dict[str, Any]]:
+async def get_parcels(
+    steward_id: int, *, orchard: int | None = None, greenhouse: int | None = None
+) -> list[dict[str, Any]]:
     async with connect() as db:
         db.row_factory = aiosqlite.Row
-        if orchard is None:
-            cur = await db.execute(
-                "SELECT * FROM parcels WHERE steward_id = ? ORDER BY orchard, slot",
-                (steward_id,),
-            )
-        else:
-            cur = await db.execute(
-                """
-                SELECT * FROM parcels
-                WHERE steward_id = ? AND COALESCE(orchard,0) = ?
-                ORDER BY slot
-                """,
-                (steward_id, int(orchard)),
-            )
+        sql = "SELECT * FROM parcels WHERE steward_id = ?"
+        args: list[Any] = [steward_id]
+        if orchard is not None:
+            sql += " AND COALESCE(orchard,0) = ?"
+            args.append(int(orchard))
+        if greenhouse is not None:
+            sql += " AND COALESCE(greenhouse,0) = ?"
+            args.append(int(greenhouse))
+        sql += " ORDER BY greenhouse, orchard, slot"
+        cur = await db.execute(sql, args)
         return [dict(r) for r in await cur.fetchall()]
 
 
@@ -2068,11 +2166,13 @@ async def public_allotments() -> list[dict[str, Any]]:
                     parcel_views.append({
                         "slot": pl["slot"], "crop": None, "state": "开垦中",
                         "orchard": bool(pl.get("orchard")),
+                        "greenhouse": bool(pl.get("greenhouse")),
                     })
                 elif not pl.get("crop"):
                     parcel_views.append({
                         "slot": pl["slot"], "crop": None, "state": "休耕",
                         "orchard": bool(pl.get("orchard")),
+                        "greenhouse": bool(pl.get("greenhouse")),
                     })
                 else:
                     meta = CROPS.get(pl["crop"], {"name": pl["crop"], "emoji": "🌱"})
@@ -2082,6 +2182,7 @@ async def public_allotments() -> list[dict[str, Any]]:
                         "emoji": meta.get("emoji", "🌱"),
                         "state": farming.parcel_status(pl),
                         "orchard": bool(pl.get("orchard")),
+                        "greenhouse": bool(pl.get("greenhouse")),
                     })
             summary = " · ".join(
                 f"#{v['slot']}{v.get('emoji', '')}{v['state'][:2] if v.get('state') else '休'}"
@@ -2105,6 +2206,7 @@ async def public_allotments() -> list[dict[str, Any]]:
                 "parcel_count": p["parcel_count"],
                 "orchard_count": p.get("orchard_count") or 0,
                 "greenhouse": bool(p["greenhouse"]),
+                "greenhouse_count": int(p.get("greenhouse_count") or 0) or (1 if p.get("greenhouse") else 0),
                 "greenhouse_label": p["greenhouse_label"],
                 "mascot_name": p["mascot_name"],
                 "mascot_trait": p["mascot_trait"],

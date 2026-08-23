@@ -339,12 +339,14 @@ async def manual_scrump(steward: dict[str, Any], target_name: str, slot: str | i
         if slot is not None:
             from . import land as land_mod
             token = str(slot)
-            n, orchard_flag = land_mod.parse_slot_ref(token)
-            plot = await land_mod.fetch_plot(conn, peer["id"], n, orchard_flag)
-            if not plot and not orchard_flag:
-                plot = await land_mod.fetch_plot(conn, peer["id"], n, 1)
+            n, orchard_flag, gh_flag = land_mod.parse_slot_ref(token)
+            plot = await land_mod.fetch_plot(conn, peer["id"], n, orchard_flag, gh_flag)
+            if not plot and not orchard_flag and not gh_flag:
+                plot = await land_mod.fetch_plot(conn, peer["id"], n, 1, 0)
             if not plot:
-                raise ValueError(f"{peer['name']} 没有 {land_mod.slot_label(n, orchard_flag)}")
+                raise ValueError(
+                    f"{peer['name']} 没有 {land_mod.slot_label(n, orchard_flag, gh_flag)}"
+                )
             if plot.get("greenhouse"):
                 raise ValueError("温室摘不到。只偷露天份地。")
             if not farming.plot_ready(plot):
@@ -1006,10 +1008,10 @@ async def camera_ops(key_id: int, command: str) -> str:
             from . import land as land_mod
             if not slot_arg:
                 raise ValueError("用法: camera install 地块编号（例: camera install 1 · camera install 园1）")
-            n, orchard_flag = land_mod.parse_slot_ref(slot_arg)
-            plot = await land_mod.fetch_plot(conn, s["id"], n, orchard_flag)
+            n, orchard_flag, gh_flag = land_mod.parse_slot_ref(slot_arg)
+            plot = await land_mod.fetch_plot(conn, s["id"], n, orchard_flag, gh_flag)
             if not plot:
-                raise ValueError(land_mod.missing_slot_msg(n, orchard_flag))
+                raise ValueError(land_mod.missing_slot_msg(n, orchard_flag, gh_flag))
             slot_txt = land_mod.slot_label(plot)
             if plot.get("camera"):
                 raise ValueError(f"{slot_txt} 已经装了监控。camera check {slot_arg} 查日志。")
@@ -1028,10 +1030,10 @@ async def camera_ops(key_id: int, command: str) -> str:
         if verb in ("check", "查", "看", "日志", "log"):
             from . import land as land_mod
             cam_rows = await (await conn.execute(
-                "SELECT slot, COALESCE(orchard,0) AS orchard FROM parcels WHERE steward_id=? AND camera=1 ORDER BY orchard, slot",
+                "SELECT slot, COALESCE(orchard,0) AS orchard, COALESCE(greenhouse,0) AS greenhouse FROM parcels WHERE steward_id=? AND camera=1 ORDER BY greenhouse, orchard, slot",
                 (s["id"],),
             )).fetchall()
-            cam_slots = [land_mod.slot_label(r["slot"], r["orchard"]) for r in cam_rows]
+            cam_slots = [land_mod.slot_label(dict(r)) for r in cam_rows]
             if not cam_slots:
                 return (
                     "你还没在任何份地装过监控。\n\n"
@@ -1039,13 +1041,13 @@ async def camera_ops(key_id: int, command: str) -> str:
                 )
             cam_note = f"已装监控：{'、'.join(cam_slots)}\n\n"
             if slot_arg:
-                n, orchard_flag = land_mod.parse_slot_ref(slot_arg)
+                n, orchard_flag, gh_flag = land_mod.parse_slot_ref(slot_arg)
                 slot_filter = n
                 log_rows = await (await conn.execute(
                     "SELECT * FROM scrump_theft_log WHERE owner_id=? AND plot_slot=? ORDER BY created_at DESC LIMIT 20",
                     (s["id"], slot_filter),
                 )).fetchall()
-                header = f"«监控日志 · {land_mod.slot_label(n, orchard_flag)}»\n\n"
+                header = f"«监控日志 · {land_mod.slot_label(n, orchard_flag, gh_flag)}»\n\n"
             else:
                 log_rows = await (await conn.execute(
                     "SELECT * FROM scrump_theft_log WHERE owner_id=? ORDER BY created_at DESC LIMIT 20",
@@ -1070,10 +1072,10 @@ async def camera_ops(key_id: int, command: str) -> str:
             from . import land as land_mod
             if not slot_arg:
                 raise ValueError("用法: camera remove 地块编号（例: camera remove 1）")
-            n, orchard_flag = land_mod.parse_slot_ref(slot_arg)
-            plot = await land_mod.fetch_plot(conn, s["id"], n, orchard_flag)
+            n, orchard_flag, gh_flag = land_mod.parse_slot_ref(slot_arg)
+            plot = await land_mod.fetch_plot(conn, s["id"], n, orchard_flag, gh_flag)
             if not plot:
-                raise ValueError(land_mod.missing_slot_msg(n, orchard_flag))
+                raise ValueError(land_mod.missing_slot_msg(n, orchard_flag, gh_flag))
             slot_txt = land_mod.slot_label(plot)
             if not plot.get("camera"):
                 raise ValueError(f"{slot_txt} 没装监控。")

@@ -90,7 +90,8 @@ async def seed_xp(conn: aiosqlite.Connection) -> None:
             + parcel_count * 20
             + COALESCE(orchard_count, 0) * 20
             + COALESCE(hut_level, 0) * 40
-            + CASE WHEN greenhouse = 1 THEN 50 ELSE 0 END
+            + COALESCE(greenhouse_count, 0) * 50
+            + CASE WHEN greenhouse = 1 AND COALESCE(greenhouse_count, 0) = 0 THEN 50 ELSE 0 END
             + CASE WHEN COALESCE(barn_built, 0) = 1 THEN 50 ELSE 0 END
             + CASE WHEN COALESCE(eatery_open, 0) = 1 THEN 40 ELSE 0 END
         WHERE enrolled = 1 AND COALESCE(xp, 0) = 0

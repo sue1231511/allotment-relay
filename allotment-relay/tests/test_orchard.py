@@ -38,9 +38,11 @@ async def _enroll(db, email: str, name: str) -> tuple[int, int]:
 def test_slot_labels() -> None:
     from server import land as land_mod
 
-    assert land_mod.parse_slot_ref("园3") == (3, 1)
-    assert land_mod.parse_slot_ref("1", orchard_ctx=True) == (1, 1)
-    assert land_mod.parse_slot_ref("1") == (1, 0)
+    assert land_mod.parse_slot_ref("园3") == (3, 1, 0)
+    assert land_mod.parse_slot_ref("1", orchard_ctx=True) == (1, 1, 0)
+    assert land_mod.parse_slot_ref("1") == (1, 0, 0)
+    assert land_mod.parse_slot_ref("棚2") == (2, 0, 1)
+    assert land_mod.parse_slot_ref("99") == (1, 0, 1)
     assert land_mod.slot_label(4, 1) == "园4"
     assert land_mod.slot_label({"slot": 2, "orchard": 1}) == "园2"
     fourth = land_mod.next_offer(3, orchard=True)

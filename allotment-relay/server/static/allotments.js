@@ -5,7 +5,7 @@ const PHASE = { day: '昼', dusk: '暮', night: '夜' };
 function parcelSummary(parcels) {
   if (!parcels || !parcels.length) return '休耕';
   return parcels.slice(0, 4).map(p => {
-    const mark = p.orchard ? '园' : '#';
+    const mark = p.greenhouse ? '棚' : (p.orchard ? '园' : '#');
     if (!p.crop) return `${mark}${p.slot}休`;
     const st = p.state || '生长';
     return `${mark}${p.slot}${p.emoji || '🌱'}${st}`;
@@ -219,7 +219,7 @@ function renderCards(allotments) {
       ${live.has(a.id) ? '<span class="live-pill">在档口</span>' : ''}
       <h3>${esc(a.name)} · ${esc(a.badge)}</h3>
       <p class="muted">${esc(a.motto || '无座右铭')}</p>
-      <p>${esc(a.tickets)} 票 · Lv${esc(a.level || 1)} ${esc(a.title || '')} · ${esc(a.parcel_count)} 份地 · ${esc(a.orchard_count || 0)} 果园 · ${a.greenhouse ? '温室「' + esc(a.greenhouse_label) + '」' : '无温室'}</p>
+      <p>${esc(a.tickets)} 票 · Lv${esc(a.level || 1)} ${esc(a.title || '')} · ${esc(a.parcel_count)} 份地 · ${esc(a.orchard_count || 0)} 果园 · ${a.greenhouse_count || (a.greenhouse ? 1 : 0)} 温室${a.greenhouse_label ? '「' + esc(a.greenhouse_label) + '」' : ''}</p>
       <p class="muted">${esc(a.parcel_summary || parcelSummary(a.parcels))}</p>
       ${a.mascot_name ? `<p>吉祥物 ${esc(a.mascot_name)} (${esc(a.mascot_trait)})</p>` : ''}
       <p class="muted">${live.has(a.id) ? '刚才还在动' : '上次活跃 ' + ago(a.last_active_at)}</p>
