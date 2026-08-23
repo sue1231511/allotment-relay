@@ -225,6 +225,15 @@ BARN_ERECT_COST = 75
 
 # 岸柏板床 — hut_ops 睡：一觉回精力（回饱食 +8），每天一次（游戏日边界刷新）
 BED_REST_ENERGY = 50
+HAMMOCK_ENERGY = 35
+BATH_MIST_WIT = 15
+BATH_COOLDOWN = 72000
+VANITY_STANDING = 1
+PICKLE_VEG_PER_JAR = 2
+PICKLE_ENERGY = 6
+DRY_FISH_PER = 2
+DRIED_FISH_ENERGY = 10
+BOOKSHELF_MIST_WIT = 2
 
 # 小馆堂食「饱餐」— dine 附带状态：期间行动精力消耗 -1（最低 1），并回少量雾智/档信。
 # 家里自己吃没有这些——饭馆卖堂食体验，集市卖货（买回去自己吃只有基础精力）。
