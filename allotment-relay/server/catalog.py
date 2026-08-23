@@ -155,6 +155,14 @@ def resolve_item_key(token: str, *, prefer: str = "any") -> str | None:
         return "meat_pork"
     if raw in ("堆肥", "肥"):
         return "compost"
+    if raw in ("腌菜", "🫙腌菜", "泡菜"):
+        return "pickles"
+    if raw.startswith("鱼干·") or raw.startswith("🥓鱼干·"):
+        _sp = raw.split("·", 1)[1]
+        for fk, meta in SEA_CATCH.items():
+            if meta["name"] == _sp:
+                return f"dried_{fk}"
+        return None
     if raw in ("羊粪", "💩羊粪"):
         return "manure_sheep"
     if raw in ("猪粪", "💩猪粪"):
