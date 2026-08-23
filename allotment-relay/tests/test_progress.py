@@ -39,7 +39,7 @@ def test_knobs() -> None:
     from server.progress import (
         ACHIEVEMENTS, LEVEL_REWARDS, display_title, format_reward, resolve_achievement,
     )
-    from server.ranks import level_from_xp, xp_to_reach
+    from server.ranks import MAX_LEVEL, level_from_xp, title_for_level, xp_to_reach
 
     assert "scrump" in ACHIEVEMENTS
     assert ACHIEVEMENTS["scrump"]["name"] == "逾篱客"
@@ -48,11 +48,24 @@ def test_knobs() -> None:
     assert resolve_achievement("逾篱客") == "scrump"
     assert resolve_achievement("有屋的") == "hut"
     assert 5 in LEVEL_REWARDS and 8 in LEVEL_REWARDS
+    assert 99 in LEVEL_REWARDS and LEVEL_REWARDS[99]["label"] == "满级"
+    assert LEVEL_REWARDS[30]["label"] != "满级"
     assert "潮柜" in format_reward(8)
     assert level_from_xp(120) == 3
     assert xp_to_reach(4) == 216
+    assert MAX_LEVEL == 99
+    assert title_for_level(1) == "新客"
+    assert title_for_level(30) == "潮声旧人"
+    assert title_for_level(99) == "潮汐本尊"
+    assert level_from_xp(xp_to_reach(99)) == 99
+    assert level_from_xp(xp_to_reach(99) + 99999) == 99
     assert display_title({"xp": 120, "worn_title": ""}) == "岸民"
     assert display_title({"xp": 120, "worn_title": "scrump"}) == "逾篱客"
+    # 旧满级 30 之上的入账现在能继续升
+    old_cap_xp = xp_to_reach(30)
+    assert level_from_xp(old_cap_xp) == 30
+    assert level_from_xp(old_cap_xp + 1) >= 30
+    assert level_from_xp(xp_to_reach(40)) == 40
 
 
 def test_level_gifts_and_titles() -> None:
@@ -117,6 +130,26 @@ async def _test_level_gifts_and_titles() -> None:
     s = await db.get_steward_by_id(sid)
     assert int(s["reward_level"]) == ranks.level_from_xp(s["xp"])
     assert int(s.get("cabinet_extra") or 0) == extra0
+
+    # 旧满级 30 之上继续涨：reward_level=30 的人到 40 会领到新档
+    async with db.connect() as conn:
+        await conn.execute(
+            "UPDATE stewards SET reward_level=30, xp=? WHERE id=?",
+            (ranks.xp_to_reach(40), sid),
+        )
+        await conn.commit()
+    s = await db.get_steward_by_id(sid)
+    tickets_mid = int(s["tickets"])
+    extra_mid = int(s.get("cabinet_extra") or 0)
+    async with db.connect() as conn:
+        conn.row_factory = __import__("aiosqlite").Row
+        n = await progress.grant_level_rewards(conn, dict(s))
+        await conn.commit()
+    assert n >= 1, n
+    s = await db.get_steward_by_id(sid)
+    assert int(s["reward_level"]) >= 40
+    assert int(s["tickets"]) > tickets_mid
+    assert int(s.get("cabinet_extra") or 0) > extra_mid
 
 
 def main() -> None:

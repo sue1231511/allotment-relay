@@ -339,7 +339,14 @@ LEVEL_REWARDS: dict[int, dict[str, Any]] = {
     16: {"tickets": 64, "label": "盟里有名"},
     20: {"tickets": 88, "items": [("seed_fogpea", 2)], "label": "潮汐老人"},
     25: {"tickets": 120, "label": "岛上的影子"},
-    30: {"tickets": 180, "items": [("compost", 4)], "label": "满级"},
+    30: {"tickets": 180, "items": [("compost", 4)], "label": "潮声旧人"},
+    40: {"tickets": 240, "cabinet": 1, "label": "潮痕"},
+    50: {"tickets": 320, "items": [("compost", 4)], "label": "岸上的根"},
+    60: {"tickets": 420, "label": "半个岛"},
+    70: {"tickets": 540, "cabinet": 1, "label": "潮渊老人"},
+    80: {"tickets": 680, "items": [("seed_fogpea", 3)], "label": "百年岸人"},
+    90: {"tickets": 840, "items": [("compost", 6)], "label": "岛上的传说"},
+    99: {"tickets": 1200, "items": [("compost", 8)], "cabinet": 1, "label": "满级"},
 }
 
 
