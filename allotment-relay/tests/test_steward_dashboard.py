@@ -55,6 +55,7 @@ async def _test_steward_dashboard_api() -> None:
     assert data["meters"]["shadow_rep"] == data["shadow"]["rep"], data
     assert data["shadow"]["tier"], data["shadow"]
     assert data["memories"] == [], data["memories"]
+    assert "月令" in (data.get("climate") or ""), data.get("climate")
 
 
 if __name__ == "__main__":

@@ -1926,6 +1926,7 @@ async def public_stats() -> dict[str, Any]:
         )).fetchone())["c"]
         w, t = world.current_weather(), world.current_tide()
         p = world.current_day_phase()
+        from . import season as season_mod
         from . import multi
         from . import events
         from . import lili as lili_mod
@@ -1974,7 +1975,10 @@ async def public_stats() -> dict[str, Any]:
                 "weather": world.WEATHER_NOW.get(w, ""),
                 "tide": world.TIDE_NOW.get(t, ""),
                 "phase": world.PHASE_NOW.get(p, ""),
+                "season": season_mod.month_line(),
             },
+            "month": season_mod.current_month(),
+            "month_label": season_mod.month_name(),
             "open_swaps": swaps,
             "hearth_recipes": recipes,
             "total_scrumps": scrumps,

@@ -1,6 +1,7 @@
 # 份地作物 — 偏北欧/沿海/湿地，与常见农场游戏区分
 # grow=基准分钟（farming.py base_grow_seconds 内 ×60 转秒）；spread 控制播种时随机生长窗口
 # yield=熟地把数（打理再 +1）；偷菜最多掐走 30%，且不能摘空
+# months=可种的 UTC 日历月；缺省或空=全年。买种+露天/果园 sow 看当月；已种的继续长
 # 梯度：短茬 ~1h 5把 → 中茬 1.5~2h 4把 → 长茬 2.5~3h 3把 → 果树 3.5~4.5h 3把 → 稀有 ~5h 2把
 from __future__ import annotations
 
@@ -8,28 +9,28 @@ import re
 CROPS = {
     # ── 短茬（约 1 时，把数多）──
     "kale":        {"name": "羽衣甘蓝", "emoji": "🥬", "seed_price": 7,  "sell": 16, "grow":  60, "yield": 5, "tier": 1, "spread": 0.30, "tags": ["leaf"], "aliases": ["甘蓝", "羽衣"]},
-    "garlic":      {"name": "大蒜",     "emoji": "🧄", "seed_price": 9,  "sell": 18, "grow":  65, "yield": 5, "tier": 1, "spread": 0.22, "tags": ["seasoning"]},
-    "lemongrass":  {"name": "香茅",     "emoji": "🌿", "seed_price": 10, "sell": 20, "grow":  70, "yield": 5, "tier": 1, "spread": 0.22, "tags": ["seasoning", "tropic", "herb"]},
-    "chili":       {"name": "辣椒",     "emoji": "🌶️", "seed_price": 11, "sell": 22, "grow":  70, "yield": 5, "tier": 1, "spread": 0.24, "tags": ["seasoning"]},
-    "sweetpotato": {"name": "红薯",     "emoji": "🍠", "seed_price": 8,  "sell": 17, "grow":  80, "yield": 5, "tier": 1, "spread": 0.24, "tags": ["root", "tropic"], "aliases": ["番薯", "地瓜"]},
-    "ginger":      {"name": "姜",       "emoji": "🫚", "seed_price": 12, "sell": 24, "grow":  80, "yield": 5, "tier": 1, "spread": 0.22, "tags": ["seasoning", "tropic"]},
+    "garlic":      {"name": "大蒜",     "emoji": "🧄", "seed_price": 9,  "sell": 18, "grow":  65, "yield": 5, "tier": 1, "spread": 0.22, "tags": ["seasoning"], "months": (11, 12, 1, 2)},
+    "lemongrass":  {"name": "香茅",     "emoji": "🌿", "seed_price": 10, "sell": 20, "grow":  70, "yield": 5, "tier": 1, "spread": 0.22, "tags": ["seasoning", "tropic", "herb"], "months": (5, 6, 7, 8)},
+    "chili":       {"name": "辣椒",     "emoji": "🌶️", "seed_price": 11, "sell": 22, "grow":  70, "yield": 5, "tier": 1, "spread": 0.24, "tags": ["seasoning"], "months": (4, 5, 6, 7, 8)},
+    "sweetpotato": {"name": "红薯",     "emoji": "🍠", "seed_price": 8,  "sell": 17, "grow":  80, "yield": 5, "tier": 1, "spread": 0.24, "tags": ["root", "tropic"], "aliases": ["番薯", "地瓜"], "months": (6, 7, 8, 9, 10)},
+    "ginger":      {"name": "姜",       "emoji": "🫚", "seed_price": 12, "sell": 24, "grow":  80, "yield": 5, "tier": 1, "spread": 0.22, "tags": ["seasoning", "tropic"], "months": (3, 4, 8, 9, 10)},
     # ── 中茬（约 1.5~2 时）──
     "kelp":        {"name": "浅海藻",   "emoji": "🌿", "seed_price": 11, "sell": 24, "grow":  85, "yield": 4, "tier": 2, "spread": 0.30, "tags": ["sea"]},
     "fogpea":      {"name": "雾豌豆",   "emoji": "🫛", "seed_price": 10, "sell": 23, "grow":  90, "yield": 4, "tier": 2, "spread": 0.28, "tags": ["legume"]},
     "beet":        {"name": "甜菜",     "emoji": "🫘", "seed_price": 9,  "sell": 21, "grow": 100, "yield": 4, "tier": 2, "spread": 0.26, "tags": ["root"]},
-    "rye":         {"name": "黑麦",     "emoji": "🌾", "seed_price": 8,  "sell": 19, "grow": 120, "yield": 4, "tier": 2, "spread": 0.28, "tags": ["grain"]},
+    "rye":         {"name": "黑麦",     "emoji": "🌾", "seed_price": 8,  "sell": 19, "grow": 120, "yield": 4, "tier": 2, "spread": 0.28, "tags": ["grain"], "months": (10, 11, 12, 1, 2)},
     # ── 长茬（约 2.5~3 时）──
-    "bramble":     {"name": "荆棘莓",   "emoji": "🫐", "seed_price": 14, "sell": 32, "grow": 150, "yield": 3, "tier": 3, "spread": 0.28, "tags": ["berry"]},
-    "blueberry":   {"name": "蓝莓",     "emoji": "🫐", "seed_price": 16, "sell": 36, "grow": 160, "yield": 3, "tier": 3, "spread": 0.26, "tags": ["berry", "tropic"]},
-    "pineapple":   {"name": "菠萝",     "emoji": "🍍", "seed_price": 17, "sell": 32, "grow": 180, "yield": 3, "tier": 3, "spread": 0.26, "tags": ["fruit", "tropic"]},
+    "bramble":     {"name": "荆棘莓",   "emoji": "🫐", "seed_price": 14, "sell": 32, "grow": 150, "yield": 3, "tier": 3, "spread": 0.28, "tags": ["berry"], "months": (5, 6, 7, 8, 9)},
+    "blueberry":   {"name": "蓝莓",     "emoji": "🫐", "seed_price": 16, "sell": 36, "grow": 160, "yield": 3, "tier": 3, "spread": 0.26, "tags": ["berry", "tropic"], "months": (4, 5, 6, 7)},
+    "pineapple":   {"name": "菠萝",     "emoji": "🍍", "seed_price": 17, "sell": 32, "grow": 180, "yield": 3, "tier": 3, "spread": 0.26, "tags": ["fruit", "tropic"], "months": (5, 6, 7, 8, 9)},
     # ── 果树（约 3.5~4.5 时；按种苗成本有收茬上限，枯死后 chop 或再种）──
-    "lime":        {"name": "青柠",     "emoji": "🍋", "seed_price": 14, "sell": 26, "grow": 200, "yield": 3, "tier": 4, "spread": 0.24, "tags": ["fruit", "tropic"], "tree": True, "shake": True},
-    "papaya":      {"name": "木瓜",     "emoji": "🍈", "seed_price": 19, "sell": 34, "grow": 210, "yield": 3, "tier": 4, "spread": 0.24, "tags": ["fruit", "tropic"], "tree": True},
-    "banana":      {"name": "香蕉",     "emoji": "🍌", "seed_price": 18, "sell": 28, "grow": 240, "yield": 3, "tier": 4, "spread": 0.24, "tags": ["fruit", "tropic"], "tree": True},
-    "mango":       {"name": "芒果",     "emoji": "🥭", "seed_price": 20, "sell": 38, "grow": 260, "yield": 3, "tier": 4, "spread": 0.24, "tags": ["fruit", "tropic"], "tree": True, "shake": True},
+    "lime":        {"name": "青柠",     "emoji": "🍋", "seed_price": 14, "sell": 26, "grow": 200, "yield": 3, "tier": 4, "spread": 0.24, "tags": ["fruit", "tropic"], "tree": True, "shake": True, "months": (11, 12, 1, 2, 3)},
+    "papaya":      {"name": "木瓜",     "emoji": "🍈", "seed_price": 19, "sell": 34, "grow": 210, "yield": 3, "tier": 4, "spread": 0.24, "tags": ["fruit", "tropic"], "tree": True, "months": (3, 4, 5, 6)},
+    "banana":      {"name": "香蕉",     "emoji": "🍌", "seed_price": 18, "sell": 28, "grow": 240, "yield": 3, "tier": 4, "spread": 0.24, "tags": ["fruit", "tropic"], "tree": True, "months": (4, 5, 6, 7, 8)},
+    "mango":       {"name": "芒果",     "emoji": "🥭", "seed_price": 20, "sell": 38, "grow": 260, "yield": 3, "tier": 4, "spread": 0.24, "tags": ["fruit", "tropic"], "tree": True, "shake": True, "months": (5, 6, 7, 8)},
     # ── 稀有树（约 4.5~5 时）──
-    "coconut":     {"name": "椰子",     "emoji": "🥥", "seed_price": 22, "sell": 24, "grow": 270, "yield": 2, "tier": 5, "spread": 0.20, "tags": ["fruit", "tropic"], "tree": True, "shake": True},
-    "durian":      {"name": "榴莲",     "emoji": "🍈", "seed_price": 48, "sell": 95, "grow": 300, "yield": 2, "tier": 5, "spread": 0.20, "tags": ["fruit", "tropic"], "tree": True, "ultra_rare": True},
+    "coconut":     {"name": "椰子",     "emoji": "🥥", "seed_price": 22, "sell": 24, "grow": 270, "yield": 2, "tier": 5, "spread": 0.20, "tags": ["fruit", "tropic"], "tree": True, "shake": True, "months": (6, 7, 8, 9)},
+    "durian":      {"name": "榴莲",     "emoji": "🍈", "seed_price": 48, "sell": 95, "grow": 300, "yield": 2, "tier": 5, "spread": 0.20, "tags": ["fruit", "tropic"], "tree": True, "ultra_rare": True, "months": (6, 7, 8)},
 }
 
 # 生吃规则：水果（tags 带 fruit/berry）可以生吃，但只回一点精力、连吃会营养不良；
@@ -106,10 +107,14 @@ def crop_grow_label(minutes: int) -> str:
 
 
 def crop_catalog_line(key: str) -> str:
+    from . import season as season_mod
+
     meta = CROPS[key]
     tags = [CROP_TIER_LABELS.get(int(meta.get("tier") or 2), "中茬")]
     tags.append(crop_grow_label(int(meta["grow"])))
     tags.append(f"{int(meta.get('yield') or 3)}把")
+    tags.append(season_mod.months_label(key))
+    tags.append(season_mod.season_tag(key))
     if meta.get("tree"):
         tags.append("果园专种")
         tags.append("收完再长")

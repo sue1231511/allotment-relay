@@ -87,15 +87,15 @@ STEWARD_HELP = """steward_ops 子命令（整句写进 command）：
 
 PLOT_HELP = """plot_ops 子命令（整句写进 command）：
   status — 各地块作物、把数、还要多久
-  catalog — 作物全表（档/时间/把数）
-  weather — 天气潮汐时辰
+  catalog — 作物全表（档/时间/把数/月令：当月可种或休市）
+  weather — 天气潮汐时辰 + 当月月令
   买地 / land — 现有几块、价钱、开垦时间（起步 3 块，露天无上限，票价 80/120/180/260/360…）；买地 确认 付钱开垦。份地不种果树
   果园 / orchard — 树位状态；买园 / 买园 确认 — 扩树位（起步 3，无上限，价表同份地）
   果园 sow 1 芒果 · sow 园1 芒果 — 果树只能种果园；shake 园1 / 果园 gather
-  sow 地块 作物 — 例子：sow 1 甘蓝 · sow 2 fogpea
+  sow 地块 作物 — 例子：sow 1 甘蓝 · sow 2 fogpea。露天/果园须当月或全年；过季会拒并写下次开窗
   tend · 浇水 [地块] · 施肥 [地块] [堆肥|羊粪|猪粪|牛粪] — 浇水/施肥加快成熟（各一次）
   gather [地块] · forage
-  buy 数量 作物 — 例子：buy 2 甘蓝。行囊每种最多 24 份，买多了会拒
+  buy 数量 作物 — 例子：buy 2 甘蓝。当月/全年才能买种；行囊每种最多 24 份，买多了会拒
   偷菜 名字 [地块] — 最多掐走 30%，永远留一把。先 steward_ops 邻居 看谁熟了
   邻居 / 在线 — 同 steward_ops 邻居（这里也能用）
   amends 名字 — 向被摘的邻居致歉，双方档信回暖
@@ -103,7 +103,7 @@ PLOT_HELP = """plot_ops 子命令（整句写进 command）：
   chop 地块 — 砍树腾地（树龄尽了会自己枯；想提前清地不必等过熟）
   compost 地块 — 过熟进堆肥（果树清果后若还有茬则继续长；枯了或不要了才 chop）
   scarecrow 地块 — 扎稻草人
-  shed erect|status|handoff — 温室（#99 独立槽，180票，不占露天份地，偷不到）
+  shed erect|status|handoff — 温室（#99 独立槽，180票，不占露天份地，偷不到；种菜不受月令，果树不能进）
   commons scan|claim id — 稀有公共物资
   incident status|scan|repair 编号 — 意外（scan 看风险；repair 也可省略 incident）
   repair 12 — 同上，可省略 incident
@@ -159,7 +159,7 @@ ALLIANCE_HELP = """alliance_ops 子命令（整句写进 command）：
   邻居 — 同 steward_ops 邻居（全员、熟地、可否偷菜/assist）
   assist 名字 — 帮邻居打理。例子：assist 安
   contract post|list|fill|mine|cancel — 悬赏合约
-  league status|contribute|board — 全服周目标；league board 是贡献榜
+  league status|contribute|board — 全服周目标；抽作物目标时跳过当月休市的种，回落到甘蓝。league board 是贡献榜
   board — 周目标贡献榜（全服票榜请用 steward_ops board）
   donate 物品 数量 / larder / draw 物品 数量 — 联盟储藏室（领取 2 票、每日 3 次）
   beacon post|scan|respond — 公告栏
@@ -173,6 +173,7 @@ VISIT_HELP = """visit_ops 子命令（整句写进 command）：
   jingshan visit|status|order|deliver|revisit|remember — 何敬山的商船糕点委托与后续小事件；按 status 顺序
   buxing visit|tea|tide|light 给谁 | 求什么|gallery|entrust 旧事|watch|remember|fulfill 灯号 — 守灯人·不醒；茶每日一次，问潮前 5 次免费，灯廊公开
   tt catalog|buy 物品|gift 物品 — Tt酱杂货店。例子：tt buy 锄头 · tt buy 甘蓝种 2
+    货架种子标当月/休市；过季种子买不了，等到开窗或温室 #99 种菜
     货架货系统回收进价九成，退货少亏一点，别买了再 vend 当印钞
     行囊每种最多 24 份，买多了会拒；满了先 vend 或 hut_ops 冰柜 存
   lore scan [主题] / topics — 沿海旧史文本与 NPC 小传（例：lore scan npc；不是收集品，背包里不会多东西）

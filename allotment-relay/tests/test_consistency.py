@@ -66,6 +66,7 @@ def test_mcp_descriptions() -> None:
     assert "无上限" in blob or "露天无上限" in blob
     assert "果园" in blob
     assert "买园" in blob
+    assert "月令" in blob or "当月" in blob
 
     tide = mcp._tool_manager.get_tool("tide_ops")
     tide_blob = f"{tide.description}\n{(tide.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -208,6 +209,9 @@ def test_relay_manual_covers_systems() -> None:
         "份地不种果树",
         "买园",
         "sow 园1 芒果",
+        "月令",
+        "当月可种",
+        "温室 #99 种菜不受月令",
         "只搅山羊奶",
         "不是每日自动扣",
         "compliment 和 release",

@@ -225,7 +225,9 @@ async def relay_manual() -> str:
         "  清树 plot_ops chop 园1（不必等过熟）。过熟 compost 园1 清果（还有茬则继续长）",
         "  买地：起步 3 块，露天无上限。plot_ops 买地 看价钱和开垦时间；买地 确认 付钱。第 4 块起 80/120/180/260/360 票（差额每次多 20），开垦 30/45/60/90/120 分钟，之后以此类推。份地不种果树",
         "  果园：起步 3 个树位，无上限，价表和份地一样。plot_ops 果园 / 买园 看价；买园 确认 付钱。只种果树：sow 园1 芒果 · 果园 sow 1 芒果。收：果园 gather · gather 园1 · shake 园1",
-        "  温室 plot_ops shed erect（180票）→ 份地 #99 独立槽，不占露天份地，也偷不到",
+        "  月令：按 UTC 日历月轮换作物。买种 + 露天/果园 sow 须当月；已种的继续长、继续收。行囊过季种子等到开窗",
+        "  甘蓝/甜菜/雾豆/浅海藻 全年可种。plot_ops catalog / weather 看当月可种；过季 sow/buy/tt buy 种子会拒，并写下次开窗月份",
+        "  温室 plot_ops shed erect（180票）→ 份地 #99 独立槽，不占露天份地，也偷不到；温室 #99 种菜不受月令（果树仍不能进温室）",
         "  监控 plot_ops camera install 地块（15票）记偷菜日志、提高抓贼；camera check / remove",
         "  意外 plot_ops incident scan · repair 编号（也可省略 incident：repair 12）",
         "  随机事件整体 +30%：打理/收成/出海等更容易触发意外或惊喜（田间还有潮蟹/夜蛾/石龟等新访客）",
@@ -348,7 +350,7 @@ async def relay_manual() -> str:
         "",
         "【协作 · 访客】",
         "  assist 名字 帮邻居打理，每日每人一次。contract post 物品 数量 酬票 发悬赏，他人 fill 编号",
-        "  league contribute 物品 数量 推进本周目标。donate / draw / larder 联盟储藏室（领取 2 票、每日 3 次）",
+        "  league contribute 物品 数量 推进本周目标（抽作物目标时跳过当月休市的种）。donate / draw / larder 联盟储藏室（领取 2 票、每日 3 次）",
         "  steward_ops 成就 — 做事解锁称呼，称呼 逾篱客 佩戴；升级礼在 sheet / 领奖 时自动发",
         "  visit_ops list 看固定 NPC。tt 买种/饲料/渔具/锄铲。lili 流动摊（不在就 summon 献壳）。韶年 fortune 卜卦",
         "  目送人·阿槐：musong visit 去渡口；musong send 名字 每游戏日送别一次；musong remember 回看名字",
@@ -657,8 +659,8 @@ async def plot_ops(key_id: int, command: str = "") -> str:
         return (
             "plot_ops 需要子指令。常用:\n"
             "  status · catalog · weather · 邻居 / 在线\n"
-            "  sow 地块 作物 · tend · 浇水 [地块] · 施肥 地块 · gather [地块] · chop 地块\n"
-            "  偷菜 名字 [地块] · compost 地块 · forage · buy 数量 作物（行囊每格 24） · dove 忽略|驱赶\n"
+            "  sow 地块 作物（当月/全年；过季会拒） · tend · 浇水 [地块] · 施肥 地块 · gather [地块] · chop 地块\n"
+            "  偷菜 名字 [地块] · compost 地块 · forage · buy 数量 作物（当月才能买种；行囊每格 24） · dove 忽略|驱赶\n"
             "  land / 买地 — 份地价钱与开垦（无上限）；买地 确认 付钱。份地不种果树\n"
             "  果园 / 买园 — 树位价钱与开垦（无上限，和份地同一价表）；买园 确认 付钱\n"
             "  camera install 地块 · incident scan · repair 编号 · commons scan\n"
@@ -773,9 +775,12 @@ async def _plot_one(s: dict, cmd: str) -> str:
 
     if verb in ("catalog", "crops"):
         from .catalog import crop_catalog_line
+        from . import season as season_mod
         lines = [crop_catalog_line(k) for k in CROPS]
         return (
             "作物清单（短茬快、把数多；稀有慢、把数少。偷菜最多 30%，不能摘空）\n"
+            f"{season_mod.month_line()}\n"
+            "买种 + 露天/果园 sow 须当月或全年；已种的继续长。温室 #99 种菜不受月令。\n"
             "果树只能种在果园（sow 园1 芒果 / 果园 sow 1 芒果）；份地只种菜。\n"
             + "\n".join(lines)
             + "\n树清地：plot_ops chop 园1（不必等过熟）"
@@ -811,6 +816,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
         qty, crop = _parse_int(parts[1]), resolve_crop_key(" ".join(parts[2:]))
         if not crop:
             raise ValueError(unknown_crop_message(" ".join(parts[2:])))
+        from . import season as season_mod
+        season_mod.assert_crop_in_season(crop)
         seed = f"seed_{crop}"
         cost = CROPS[crop]["seed_price"] * qty
         async with db.connect() as conn:
@@ -850,6 +857,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
                 raise ValueError("温室不种果树。果树走 plot_ops 果园 sow 1 芒果")
             if plot.get("crop"):
                 raise ValueError(f"{land_mod.slot_label(plot)} 已在种植")
+            from . import season as season_mod
+            season_mod.assert_crop_in_season(crop, greenhouse=bool(plot.get("greenhouse")))
             if not await db.take_item(conn, s["id"], seed, 1):
                 raise ValueError(f"缺少 {CROPS[crop]['name']}种")
             grow_target, grow_pace, sow_flavor = farming.roll_grow(crop, plot)
@@ -1764,7 +1773,7 @@ async def _shed_one(s: dict, cmd: str) -> str:
             await conn.commit()
         base = f"温室: {s['greenhouse_label']}" if s["greenhouse"] else "尚未搭建温室"
         if s["greenhouse"]:
-            base += " · 份地 #99 为温室内槽，plot_ops sow 99 …"
+            base += " · 份地 #99 为温室内槽，plot_ops sow 99 …（种菜不受月令）"
         if notes:
             return base + "\n" + "\n".join(notes)
         return base

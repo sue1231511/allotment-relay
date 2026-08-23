@@ -492,10 +492,15 @@ def _catalog_text(score: int) -> str:
         tag = ""
         if price != base:
             tag = f"（原 {base}）"
+        season_mark = ""
+        if item.startswith("seed_"):
+            from . import season as season_mod
+            season_mark = f" · {season_mod.season_tag(item[5:])}"
         groups.setdefault(kind, [f"【{kind}】"]).append(
-            f"  {_item_label(item)} · {item} · {price}票{tag}"
+            f"  {_item_label(item)} · {item} · {price}票{tag}{season_mark}"
         )
-    lines = [_status_block(score), ""]
+    from . import season as season_mod
+    lines = [_status_block(score), season_mod.month_line(), "休市种子买不了；过季种子等到开窗，或温室 #99 种菜。", ""]
     for key in order:
         lines.extend(groups[key])
         lines.append("")
@@ -516,6 +521,7 @@ async def tt_ops(key_id: int, command: str) -> str:
             "visit_ops tt — Tt酱杂货店\n"
             "  status / catalog — 货架与好感\n"
             "  buy 物品 [数量] — 种子/饲料/渔网钓竿/蚯蚓饵/锄铲/剪刀挤奶器\n"
+            "  种子看月令：catalog 标当月/休市；过季买不了，等到开窗或温室 #99 种菜\n"
             "  货架货系统回收进价九成，退货少亏一点，别买了再 tote_ops vend 当印钞\n"
             "    行囊每种最多 24 份，买多了会拒；满了先 vend 或 hut_ops 冰柜 存\n"
             "  gift 物品 [数量] — 送礼（一次一笔，每日最多 3 次；4 心减半，8 心更慢）\n"
@@ -570,6 +576,9 @@ async def tt_ops(key_id: int, command: str) -> str:
         item = resolve_shop_item(" ".join(name_toks))
         if not item:
             raise ValueError("货架上没有这件。catalog 看种子/饲料/渔具/工具")
+        if item.startswith("seed_"):
+            from . import season as season_mod
+            season_mod.assert_crop_in_season(item[5:])
         base = sku_base_price(item)
         if base is None:
             raise ValueError("货架上没有这件")

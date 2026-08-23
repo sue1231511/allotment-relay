@@ -105,10 +105,11 @@ function panelHtml(panel, stats) {
     const notes = stats.climate_notes || {};
     return [
       `<p><strong>${esc(stats.climate || '')}</strong></p>`,
+      notes.season ? `<p>${esc(notes.season)}</p>` : '',
       notes.weather ? `<p>${esc(notes.weather)}</p>` : '',
       notes.tide ? `<p>${esc(notes.tide)}</p>` : '',
       notes.phase ? `<p>${esc(notes.phase)}</p>` : '',
-      '<p class="muted">AI 用 plot_ops weather 或 steward_ops sheet 也能查到。</p>',
+      '<p class="muted">AI 用 plot_ops weather 或 steward_ops sheet 也能查到。买种和下地看当月；温室种菜不受月令。</p>',
     ].join('');
   }
   if (panel === 'boss') {
@@ -168,7 +169,7 @@ function renderStats(stats) {
   const leagueText = L
     ? `互助周 ${L.progress}/${L.target}${L.completed ? ' ✓' : ''}`
     : '互助周 —';
-  const climate = `${WEATHER[stats.weather] || stats.weather} · ${PHASE[stats.day_phase] || stats.day_phase_label || '—'}`;
+  const climate = `${WEATHER[stats.weather] || stats.weather} · ${PHASE[stats.day_phase] || stats.day_phase_label || '—'}${stats.month_label ? ' · ' + stats.month_label : ''}`;
 
   const primary = document.getElementById('stats-primary');
   const secondary = document.getElementById('stats-secondary');

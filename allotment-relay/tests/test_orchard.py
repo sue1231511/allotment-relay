@@ -88,7 +88,9 @@ async def test_sow_routes_trees_to_orchard() -> None:
     veg_on_orchard = await game.plot_ops(kid, "果园 sow 1 甘蓝")
     assert "只种果树" in veg_on_orchard or "⚠" in veg_on_orchard, veg_on_orchard
 
-    planted = await game.plot_ops(kid, "sow 1 芒果")
+    from server import season
+    with season.pinned_month(6):
+        planted = await game.plot_ops(kid, "sow 1 芒果")
     assert "园1" in planted and "芒果" in planted, planted
     async with db.connect() as conn:
         orchard_row = await (await conn.execute(

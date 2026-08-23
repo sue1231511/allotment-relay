@@ -35,11 +35,14 @@ def day_phase_label(code: str) -> str:
 
 
 def climate_line() -> str:
+    from . import season as season_mod
+
     w, t, p = current_weather(), current_tide(), current_day_phase()
     return (
         f"天气 {weather_label(w)}({w}) · "
         f"潮汐 {tide_label(t)}({t}) · "
-        f"时辰 {day_phase_label(p)}({p})"
+        f"时辰 {day_phase_label(p)}({p}) · "
+        f"月令 {season_mod.month_name()}"
     )
 
 
@@ -61,13 +64,17 @@ PHASE_NOW = {
 
 
 def climate_report() -> str:
+    from . import season as season_mod
+
     w, t, p = current_weather(), current_tide(), current_day_phase()
     return "\n".join([
         climate_line(),
+        season_mod.month_line(),
+        "买种 + 露天/果园 sow 须当月；已种的继续长、继续收。温室 #99 种菜不受月令。",
         WEATHER_NOW[w],
         TIDE_NOW[t],
         PHASE_NOW[p],
-        "查法：plot_ops weather · steward_ops sheet · relay_manual",
+        "查法：plot_ops weather · plot_ops catalog · steward_ops sheet · relay_manual",
     ])
 
 

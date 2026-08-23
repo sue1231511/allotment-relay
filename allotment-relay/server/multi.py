@@ -139,6 +139,20 @@ async def _get_rapport(a: int, b: int) -> int:
         return row[0] if row else 0
 
 
+def _pick_league_goal(wid: int) -> dict[str, Any]:
+    """抽周目标时跳过当月不能种的作物；没有合季作物就回落到甘蓝。"""
+    from . import season as season_mod
+
+    n = len(LEAGUE_GOALS)
+    for i in range(n):
+        goal = LEAGUE_GOALS[(wid + i) % n]
+        item = goal.get("item") or ""
+        if item.startswith("crop_") and not season_mod.crop_in_season(item[5:]):
+            continue
+        return goal
+    return next(g for g in LEAGUE_GOALS if g["key"] == "crop_kale")
+
+
 async def _ensure_league_week(conn: aiosqlite.Connection) -> dict[str, Any]:
     conn.row_factory = aiosqlite.Row
     wid = _week_id()
@@ -146,7 +160,7 @@ async def _ensure_league_week(conn: aiosqlite.Connection) -> dict[str, Any]:
     row = await cur.fetchone()
     if row:
         return dict(row)
-    goal = LEAGUE_GOALS[wid % len(LEAGUE_GOALS)]
+    goal = _pick_league_goal(wid)
     await conn.execute(
         "INSERT INTO league_week (week_id, goal_key, target, progress, completed) VALUES (?,?,?,0,0)",
         (wid, goal["key"], goal["target"]),
