@@ -4,7 +4,7 @@ from typing import Any
 
 import aiosqlite
 
-from . import db, events, flavor, farming, survival, world
+from . import db, events, flavor, farming, health, survival, world
 from . import commons
 from .catalog import (
     CROPS,
