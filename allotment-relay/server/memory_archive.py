@@ -13,6 +13,7 @@ TALE_BLURBS = {
     "black_box_lover": "海边的黑盒、被留下的声音与一段跨过潮声的陪伴。",
     "memory_tide": "一个等待女儿回家的老人，以及记忆深处没有消失的人。",
     "spring_beyond_mountain": "两个姐妹、一双总在忙碌的手，和终于走到山外的春天。",
+    "missing_pages": "一位岛上医生不曾写下的八年，和后来人终于放下的追问。",
 }
 
 

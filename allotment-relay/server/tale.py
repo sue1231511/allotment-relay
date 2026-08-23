@@ -18,17 +18,18 @@ from typing import Any
 
 import aiosqlite
 
-from . import config, db, tale_memory_tide, tale_spring_mountain
+from . import config, db, tale_memory_tide, tale_missing_pages, tale_spring_mountain
 from .catalog import ITEM_NAMES
 from .game import require_steward
 
 TALE_HELP = """tale_ops 子命令（整句写进 command）：
   list — 可接任务
-  accept 任务key — 接任务；例：accept black_box_lover、accept memory_tide、accept spring_beyond_mountain
+  accept 任务key — 接任务；例：accept black_box_lover、accept memory_tide、accept spring_beyond_mountain、accept missing_pages
   status — 当前进行中的任务
   explore [地点] — 按 status/hint 探索；黑盒阶段2 sea 找锈铁，阶段5/6 beach 找任务物品
                     回忆生潮从 south_lane 开始，之后严格照 status 的地点继续
                     春山之外从 shenzhi_home 开始，之后严格照 status 的地点继续
+                    缺页从 cheng_home 开始，之后严格照 status 的地点继续
                     匹配阶段才耗 5 精力，不限次数；错误地点不扣精力
   turnin — 交付并领奖
   abandon 任务key — 放弃
@@ -39,7 +40,9 @@ TALE_HELP = """tale_ops 子命令（整句写进 command）：
   help — 本帮助
 奖励：《黑盒与潮声》6 阶段，每推进一段自动 +30 票；完整探索再 +50 票（总计 230 票）。
 《回忆生潮》11 幕，每幕 +30 票（330 票）；完整探索再 +120 票（总计 450 票），并发称呼「陪坐的人」与 4 件永久纪念品。
-《春山之外》11 幕同样总计 450 票，并发称呼「山外见春人」与 4 件永久纪念品。完成记录也会收入网页「我的 AI」的岛上回忆，可按幕再次观看；《黑盒与潮声》的 6 篇补充回忆也接在主线正文之后。"""
+《春山之外》11 幕同样总计 450 票，并发称呼「山外见春人」与 4 件永久纪念品。
+《缺页》10 幕，每幕 +30 票（300 票）；完整探索再 +120 票（总计 420 票），并发 4 件永久纪念品。
+完成记录也会收入网页「我的 AI」的岛上回忆，可按幕再次观看；《黑盒与潮声》的 6 篇补充回忆也接在主线正文之后。"""
 
 DOMAIN_LABELS = {
     "shore": "海岸",
@@ -64,6 +67,11 @@ DOMAIN_LABELS = {
     "gilt_box": "描金木盒",
     "shenzhi_bedroom": "沈栀卧室",
     "mountain_window": "望山的窗边",
+    "cheng_home": "程家",
+    "registry_archive": "旧档案室",
+    "cheng_album": "程家的旧相册",
+    "cheng_attic": "程家阁楼",
+    "old_clinic": "旧诊所",
 }
 
 # ══ 剧本原文 ═══════════════════════════════════════════════════
@@ -529,6 +537,28 @@ TALE_CATALOG.append(
             },
             "souvenir": tale_memory_tide.SOUVENIRS[0],
             "keepsakes": tale_memory_tide.SOUVENIRS[1:],
+        },
+    }
+)
+
+TALE_CATALOG.append(
+    {
+        "key": tale_missing_pages.STORY_KEY,
+        "title": tale_missing_pages.STORY_TITLE,
+        "intro": tale_missing_pages.INTRO,
+        "min_level": 1,
+        "min_standing": 0,
+        "domain": "shore",
+        "repeatable": 0,
+        "sort_order": 4,
+        "stages": tale_missing_pages.TALE_STAGES,
+        "rewards": {
+            "stage_tickets": tale_missing_pages.STAGE_REWARD_TICKETS,
+            "tickets": tale_missing_pages.REWARD_TICKETS,
+            "standing": tale_missing_pages.REWARD_STANDING,
+            "mist_wit": tale_missing_pages.REWARD_MIST_WIT,
+            "souvenir": tale_missing_pages.SOUVENIRS[0],
+            "keepsakes": tale_missing_pages.SOUVENIRS[1:],
         },
     }
 )

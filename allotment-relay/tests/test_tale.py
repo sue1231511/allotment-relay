@@ -384,6 +384,51 @@ async def test_spring_beyond_mountain_flow() -> None:
         assert "已经完成" in str(exc), exc
 
 
+async def test_missing_pages_flow() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="missing-pages-"))
+    db = await _boot(tmp)
+    from server import tale, tale_missing_pages
+
+    kid, sid = await _enroll(db, "missing-pages@example.com", "缺页探索者")
+    listing = await tale.tale_ops(kid, "list")
+    assert "missing_pages" in listing and "缺页" in listing, listing
+    assert "每阶段工分票+30×10" in listing, listing
+    assert "完整探索工分票+120" in listing, listing
+
+    accepted = await tale.tale_ops(kid, "accept missing_pages")
+    assert "只是岛上的探索者" in accepted, accepted
+    assert "不替程家任何人作决定" in accepted, accepted
+    assert "tale_ops explore cheng_home" in accepted, accepted
+
+    wrong = await tale.tale_ops(kid, "explore old_clinic")
+    assert "未消耗精力" in wrong and "explore cheng_home" in wrong, wrong
+
+    async with db.connect() as conn:
+        before = await (await conn.execute(
+            "SELECT tickets, energy FROM stewards WHERE id=?", (sid,)
+        )).fetchone()
+    for index, stage in enumerate(tale_missing_pages.TALE_STAGES, 1):
+        result = await tale.tale_ops(kid, f"explore {stage['domain']}")
+        assert f"第 {index}/10 阶段奖励" in result, result
+    assert "【探索完成：《缺页》】" in result, result
+    assert "完整探索额外奖励" in result and "工分票 +120" in result, result
+    assert "档信 +6" in result and "雾智 +10" in result, result
+
+    async with db.connect() as conn:
+        after = await (await conn.execute(
+            "SELECT tickets, energy FROM stewards WHERE id=?", (sid,)
+        )).fetchone()
+    assert after[0] - before[0] == 10 * 30 + 120, (before, after)
+    assert after[1] == before[1] - 10 * 5, (before, after)
+
+    review = await tale.tale_ops(kid, "review missing_pages")
+    assert "潮闻全篇回顾 · 《缺页》" in review, review
+    assert "档案里没有缺页" in review, review
+    souvenirs = await tale.tale_ops(kid, "souvenirs")
+    for name in ("十九岁的照片", "发黄的婚姻登记簿", "空的旧皮箱", "空白的相册页"):
+        assert name in souvenirs, souvenirs
+
+
 async def test_tale_explore_is_unlimited() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="tale-unlimited-"))
     db = await _boot(tmp)
@@ -503,6 +548,8 @@ def test_tale_mcp_description() -> None:
     assert "回忆生潮" in blob
     assert "spring_beyond_mountain" in blob
     assert "春山之外" in blob
+    assert "missing_pages" in blob
+    assert "缺页" in blob
     assert "review" in blob
     assert "完整正文" in blob
 
@@ -511,6 +558,7 @@ def main() -> None:
     asyncio.run(test_tale_flow())
     asyncio.run(test_memory_tide_flow())
     asyncio.run(test_spring_beyond_mountain_flow())
+    asyncio.run(test_missing_pages_flow())
     asyncio.run(test_tale_explore_is_unlimited())
     asyncio.run(test_commons_claim_advances_item_stage())
     asyncio.run(test_tale_abandon())

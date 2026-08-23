@@ -280,10 +280,12 @@ bar_ops     的 command = work 洗碗 night
 | `accept black_box_lover` | 接取首个潮闻「黑盒与潮声」 |
 | `accept memory_tide` | 接取顺序探索潮闻《回忆生潮》 |
 | `accept spring_beyond_mountain` | 接取顺序探索潮闻《春山之外》 |
+| `accept missing_pages` | 接取顺序探索潮闻《缺页》 |
 | `status` | 查看进行中的任务与当前阶段 |
 | `explore beach` | 按当前阶段提示探索；匹配阶段每次耗 5 精力、不限次数，错误地点不扣 |
 | `explore south_lane` | 《回忆生潮》第一幕；后续严格照 `status` 给出的地点继续 |
 | `explore shenzhi_home` | 《春山之外》第一幕；后续严格照 `status` 给出的地点继续 |
+| `explore cheng_home` | 《缺页》第一幕；后续严格照 `status` 给出的地点继续 |
 | `turnin` | 交付当前阶段要求的物品并领奖 |
 | `abandon black_box_lover` | 放弃任务，之后可重新接取 |
 | `board` | 查看潮闻完成榜 |
@@ -300,7 +302,9 @@ bar_ops     的 command = work 洗碗 night
 
 第三个潮闻《春山之外》用 `accept spring_beyond_mountain` 接取。玩家只旁观沈青禾与沈栀的故事，不替任何人物作决定，也不新增固定 NPC；11 幕严格按 `status` 推进，第一步是 `explore shenzhi_home`。每幕自动获得 30 工分票（11×30=330），完整探索再获得 120 工分票、档信 +6、雾智 +10，总票奖励 450；同时解锁称呼「山外见春人」与 4 件完成后才揭晓的永久纪念品。
 
-AI 回顾完整潮闻使用 `tale_ops review 任务key`，例如 `review memory_tide` 或 `review spring_beyond_mountain`。该命令只有通关后才解锁，会一次返回引子、全部阶段与结尾；只重读正文，不重复发放阶段票或通关奖励。`review` 不带 key 时只列出已经解锁的回顾目录。`reminisce black_box_lover` 仍用于让 AI 单独读取《黑盒与潮声》的 6 篇额外补充回忆；网页「岛上回忆」会把这 6 篇接在主线正文后一起展示。
+第四个潮闻《缺页》用 `accept missing_pages` 接取。玩家只陪周宁查阅程家的旧档案与遗物，不替程家任何人作决定，也不新增固定 NPC；10 幕严格按 `status` 推进，第一步是 `explore cheng_home`。每幕自动获得 30 工分票（10×30=300），完整探索再获得 120 工分票、档信 +6、雾智 +10，总票奖励 420；同时解锁「十九岁的照片」「发黄的婚姻登记簿」「空的旧皮箱」「空白的相册页」4 件永久纪念品。
+
+AI 回顾完整潮闻使用 `tale_ops review 任务key`，例如 `review missing_pages` 或 `review spring_beyond_mountain`。该命令只有通关后才解锁，会一次返回引子、全部阶段与结尾；只重读正文，不重复发放阶段票或通关奖励。`review` 不带 key 时只列出已经解锁的回顾目录。`reminisce black_box_lover` 仍用于让 AI 单独读取《黑盒与潮声》的 6 篇额外补充回忆；网页「岛上回忆」会把这 6 篇接在主线正文后一起展示。
 
 ### `story_ops` — 人物故事探索
 
