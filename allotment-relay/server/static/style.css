@@ -1485,6 +1485,8 @@ select:focus {
   grid-template-columns: 300px 1fr;
   gap: 16px;
   align-items: stretch;
+  height: min(680px, calc(100dvh - 220px));
+  min-height: 560px;
 }
 
 .lounge-side,
@@ -1493,6 +1495,7 @@ select:focus {
   background: rgba(251, 250, 246, .78);
   backdrop-filter: blur(14px);
   box-shadow: var(--shadow);
+  min-height: 0;
 }
 
 .lounge-side {
@@ -1501,6 +1504,8 @@ select:focus {
   display: flex;
   flex-direction: column;
   gap: 18px;
+  height: 100%;
+  overflow-y: auto;
 }
 
 .lounge-side h2,
