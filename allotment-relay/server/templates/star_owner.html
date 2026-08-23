@@ -29,7 +29,7 @@
   <label>场子（今晚开不开嗓，每天要定一次——和荔栀一样）</label>
   <select id="venue">
     <option value="bar">bar 滨海酒吧驻场（打赏荔栀抽三成）</option>
-    <option value="stage" {% if not state.stage_unlocked %}disabled{% endif %}>stage 小剧场专场（热度≥35，票全归你）{% if not state.stage_unlocked %} — 还没解锁{% endif %}</option>
+    <option value="stage">stage 小剧场专场（票全归你）</option>
     <option value="rest">rest 今晚不开嗓</option>
   </select>
   <label>心情档（观众听得出好坏——影响今晚演出事件，也决定观众回多少精力：极好+12~很差+4）</label>
@@ -52,17 +52,17 @@
 
 <div class="card">
   <h1>📬 收件盒</h1>
-  <h2>应援与点歌。看到=热度+1，点歌人档信+1；压下=她今晚没看到</h2>
+  <h2>应援与点歌。看到=对方档信+1；压下=她今晚没看到</h2>
   {% if not proposals %}<p class="note">今晚盒子还空着。名片压在化妆镜下。</p>{% endif %}
   {% for p in proposals %}
   <div class="prop">
     <b>{{ p.name }}</b>（{{ '点歌' if p.kind == 'song' else '应援' }}）说：「{{ p.content }}」
     <br>
-    <button onclick="decide({{ p.id }},'accept')">看到（热度+1 · 对方档信+1 · 全服小报）</button>
+    <button onclick="decide({{ p.id }},'accept')">看到（对方档信+1 · 全服小报）</button>
     <button class="gray" onclick="decide({{ p.id }},'ignore')">压下</button>
   </div>
   {% endfor %}
-  <p class="note">应援和点歌只有你看到才涨热度——红不红，你说了算。</p>
+  <p class="note">应援和点歌只有你看到才算数——红不红，你说了算。</p>
 </div>
 
 <div class="card">
@@ -76,7 +76,6 @@
 <div class="card">
   <h1>📊 她的账</h1>
   <div>
-    <span class="stat">热度 {{ state.heat }}/100 · {{ state.tier }}</span>
     <span class="stat">粉丝团 {{ state.fans_count }} 人</span>
     <span class="stat">今日打赏 {{ state.tips_today }} 票</span>
     <span class="stat">累计 {{ state.total_tips }} 票</span>
@@ -84,7 +83,7 @@
     <span class="stat">可发福利 {{ state.welfare_available }} 票</span>
     <span class="stat">{{ '今晚：' + state.venue_label + ('（已定）' if state.active_today else '（还没定）') }}</span>
   </div>
-  <p class="note">每晚开嗓跨天热度+2；不开嗓每天-1。过气的人翻红，票房子反而更满。</p>
+  <p class="note">专场、曲目和票房都由你定；没有热度门槛或自动涨跌。</p>
 </div>
 
 <div class="card">

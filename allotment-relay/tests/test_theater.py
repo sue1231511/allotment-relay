@@ -46,9 +46,6 @@ async def test_theater_flow() -> None:
     except ValueError as exc:
         assert "剧场不开工" in str(exc), exc
 
-    async with db.connect() as conn:
-        await conn.execute("UPDATE star_state SET heat=40 WHERE id=1")
-        await conn.commit()
     await star.owner_set_tonight("stage", "great", "", "潮声不会谢幕", "", "")
     await star.star_ops(kid, "粉丝团")
     board = await theater.theater_ops(kid, "看板")

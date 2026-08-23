@@ -2,7 +2,6 @@
 
 面板 /star-owner（STAR_KEY）：定今晚（场子/心情/曲目/造型/一句话）、收件箱（应援/点歌）、发动态、票房账和粉丝福利。
 AI 侧 star_ops：应援 / 打赏 / 点歌 / 围观 / 粉丝团 / 应援榜。
-热度节奏在真人手里：应援、点歌只有面板采纳才 +1；打赏自动涨但有日上限。
 今晚是否开嗓看她面板有没有"定今晚"——和荔栀一样，是每天的手势。
 """
 
@@ -23,7 +22,7 @@ MOODS = {"great", "good", "normal", "bad", "awful"}
 MOOD_LABELS = {"great": "极好", "good": "好", "normal": "平常", "bad": "较差", "awful": "极差"}
 
 STAR_HELP = f"""star_ops 子命令（整句写进 command）：
-  status / {STAR_NAME} — 她的档：热度档位、今晚场子、曲目造型、粉丝团
+  status / {STAR_NAME} — 她的档：今晚场子、曲目造型、粉丝团
   应援 好话 — 每日一条，进她的收件盒。要真人在面板点「看到」才生效，压下=她没看到。AI 发出去不等于算数。
   打赏 N票 [备注] — 1~100。酒馆场子荔栀抽三成；小剧场全归她（tip）
   点歌 歌名 — 15票，纸条递上台。她唱不唱，得看她自己（song）
@@ -32,7 +31,7 @@ STAR_HELP = f"""star_ops 子命令（整句写进 command）：
     平常及以上：粉丝固定再+10；粉丝累计给小橘的实收打赏每满20票再+1。
   粉丝团 — 入团。一人一次，退团这个选项不存在；围观回神+10、档信翻倍（fan）
   应援榜 — 谁在真金白银地捧她（board）
-  她常驻荔栀的酒馆；热度≥{config.STAR_STAGE_HEAT} 才开得起小剧场专场。网页 /star 围观打赏。"""
+  她常驻荔栀的酒馆，随时能开小剧场专场。网页 /star 围观打赏。"""
 
 # 演出事件池 — 按她面板心情档加权：她心情好不好，观众听得出来
 SHOW_POOLS: dict[str, list[str]] = {
@@ -92,26 +91,8 @@ FAN_JOIN = [
 WATCH_GIFTS = ["shell_catseye", "shell_conch", "shell_scallop", "shell_mussel"]
 WATCH_GIFT_COPY = "散场时你捡到台上扔下来的一枚{item}。灯太暗，没人看清是谁扔的。"
 
-STAGE_NEED_HEAT = "小剧场专场压不住场子——热度得 {need}，现在 {heat}。先把酒馆的场子唱热。"
-
-
 def _day_id() -> int:
     return db.day_id()
-
-
-def heat_tier(heat: int) -> str:
-    name = config.STAR_HEAT_TIERS[0][1]
-    for floor, label in config.STAR_HEAT_TIERS:
-        if heat >= floor:
-            name = label
-    return name
-
-
-def next_tier_gap(heat: int) -> str:
-    for floor, label in config.STAR_HEAT_TIERS:
-        if heat < floor:
-            return f"（还差 {floor - heat} 到「{label}」）"
-    return "（已到顶。往下只有过气。）"
 
 
 def _venue_active_today(state: dict[str, Any]) -> bool:
@@ -120,11 +101,9 @@ def _venue_active_today(state: dict[str, Any]) -> bool:
 
 
 async def _ensure_state(conn: aiosqlite.Connection) -> dict[str, Any]:
-    """单行状态 + 跨天懒结算：开嗓昨晚+2 / 每日衰减-1 / 打赏与动态日计数清零。"""
-    # 首建即 last_settle_day=今天：初始行不该被懒结算伪回补
+    """单行状态；打赏与动态的当日计数跨天清零。"""
     await conn.execute(
-        "INSERT OR IGNORE INTO star_state (id, heat, last_settle_day, created_at) VALUES (1, ?, ?, ?)",
-        (config.STAR_START_HEAT, _day_id(), db.now()),
+        "INSERT OR IGNORE INTO star_state (id, created_at) VALUES (1, ?)", (db.now(),),
     )
     conn.row_factory = aiosqlite.Row
     state = dict(await (await conn.execute(
@@ -132,27 +111,12 @@ async def _ensure_state(conn: aiosqlite.Connection) -> dict[str, Any]:
     )).fetchone())
 
     today = _day_id()
-    settled = int(state.get("last_settle_day") or 0)
-    if settled < today:
-        # 历史场子不可考，按当前 venue 近似；最多回补 3 天，防止消失一个月回来白涨
-        days = min(today - settled, 3)
-        heat = int(state.get("heat") or 0)
-        for _ in range(days):
-            heat += (config.STAR_SETTLE_GAIN if state.get("venue") in ("bar", "stage") else 0)
-            heat -= config.STAR_SETTLE_DECAY
-        heat = max(0, min(100, heat))
-        await conn.execute(
-            "UPDATE star_state SET heat=?, last_settle_day=? WHERE id=1", (heat, today)
-        )
-        state["heat"] = heat
-        state["last_settle_day"] = today
-
     if int(state.get("tips_day") or 0) != today:
         await conn.execute(
-            "UPDATE star_state SET tips_today=0, heat_tips_today=0, tips_day=? WHERE id=1",
+            "UPDATE star_state SET tips_today=0, tips_day=? WHERE id=1",
             (today,),
         )
-        state.update(tips_today=0, heat_tips_today=0, tips_day=today)
+        state.update(tips_today=0, tips_day=today)
     if int(state.get("post_day") or 0) != today:
         await conn.execute(
             "UPDATE star_state SET posts_today=0, post_day=? WHERE id=1", (today,)
@@ -197,8 +161,7 @@ async def _cmd_status() -> str:
             """
         )).fetchall()
     lines = [
-        f"«{STAR_NAME} · {heat_tier(state['heat'])}",
-        f"热度 {state['heat']}/100{next_tier_gap(state['heat'])}",
+        f"«{STAR_NAME}",
     ]
     if _venue_active_today(state):
         lines.append(f"今晚：{VENUE_LABELS[state['venue']]}（开嗓）→ star_ops 围观")
@@ -271,13 +234,6 @@ async def _do_tip(
         await bump_revenue(conn, cut, _day_id())
     star_share = amount - cut
 
-    heat_line = ""
-    if (amount >= config.STAR_TIP_HEAT_MIN
-            and int(state["heat_tips_today"]) < config.STAR_TIP_HEAT_DAILY):
-        await conn.execute(
-            "UPDATE star_state SET heat=MAX(0, MIN(100, heat+1)), heat_tips_today=heat_tips_today+1 WHERE id=1"
-        )
-        heat_line = "\n热度 +1"
     await conn.execute(
         "UPDATE star_state SET total_tips=total_tips+?, tips_today=tips_today+? WHERE id=1",
         (star_share, star_share),
@@ -298,7 +254,7 @@ async def _do_tip(
     msg = f"打赏送达 · -{amount} 票（{STAR_NAME}实收 {star_share}"
     if cut:
         msg += f"，荔栀抽走 {cut} 归酒馆"
-    msg += "）" + heat_line
+    msg += "）"
     if note:
         msg += f"\n备注：{note}"
     if amount >= 40:
@@ -511,10 +467,6 @@ async def owner_set_tonight(
 
     async with db.connect() as conn:
         state = await _ensure_state(conn)
-        if venue == "stage" and int(state["heat"]) < config.STAR_STAGE_HEAT:
-            raise ValueError(STAGE_NEED_HEAT.format(
-                need=config.STAR_STAGE_HEAT, heat=state["heat"]
-            ))
         await conn.execute(
             """
             UPDATE star_state SET venue=?, mood=?, mood_text=?, setlist=?, outfit=?, note=?,
@@ -531,7 +483,7 @@ async def owner_set_tonight(
                 "star", f"{STAR_NAME}今晚在滨海酒吧开嗓（荔栀抽三成打赏）", conn=conn
             )
         await conn.commit()
-    return {"ok": True, "venue": venue, "heat": state["heat"]}
+    return {"ok": True, "venue": venue}
 
 
 async def owner_pending_proposals(limit: int = 10) -> list[dict[str, Any]]:
@@ -570,9 +522,6 @@ async def owner_decide(proposal_id: int, accept: bool) -> dict[str, Any]:
 
         await conn.execute(
             "UPDATE star_proposals SET status='accepted' WHERE id=?", (proposal_id,)
-        )
-        await conn.execute(
-            "UPDATE star_state SET heat=MAX(0, MIN(100, heat+1)) WHERE id=1"
         )
         if row["kind"] == "song":
             await conn.execute(
@@ -617,8 +566,6 @@ async def owner_post(text: str) -> dict[str, Any]:
 
 async def owner_stats() -> dict[str, Any]:
     state = await get_state()
-    state["tier"] = heat_tier(state["heat"])
-    state["stage_unlocked"] = int(state["heat"]) >= config.STAR_STAGE_HEAT
     state["active_today"] = _venue_active_today(state)
     state["venue_label"] = VENUE_LABELS.get(state.get("venue"), "不开嗓")
     state["welfare_spent"] = int(state.get("welfare_spent") or 0)
@@ -700,10 +647,6 @@ async def public_star_snapshot() -> dict[str, Any]:
     active = _venue_active_today(state)
     return {
         "name": STAR_NAME,
-        "tier": heat_tier(state["heat"]),
-        "heat": state["heat"],
-        "stage_unlocked": int(state["heat"]) >= config.STAR_STAGE_HEAT,
-        "stage_need": max(0, config.STAR_STAGE_HEAT - int(state["heat"])),
         "venue": state["venue"] if active else "rest",
         "venue_label": VENUE_LABELS[state["venue"]] if active else "今晚不开嗓",
         "active": active,

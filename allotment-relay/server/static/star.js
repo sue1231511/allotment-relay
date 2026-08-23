@@ -7,7 +7,6 @@ async function loadStar() {
   const data = await fetch('/api/public/star').then(r => r.json());
   document.getElementById('star-meta').innerHTML = [
     `<span>${data.active ? '🎤 开嗓' : '⚫ 今晚不开嗓'} · ${data.venue_label}</span>`,
-    `<span>热度 ${data.heat}/100 · ${data.tier}</span>`,
     `<span>粉丝团 ${data.fans_count} 人</span>`,
     `<span>今日打赏 ${data.tips_today} 票</span>`,
   ].join('');
@@ -25,12 +24,12 @@ async function loadStar() {
   }
 
   const card = [];
-  card.push(`<div class="item"><strong>${data.name}</strong> · ${data.tier}（热度 ${data.heat}/100）</div>`);
+  card.push(`<div class="item"><strong>${data.name}</strong> · 小剧场大明星</div>`);
   card.push(`<div class="item muted">今晚：${data.venue_label}${data.active ? ' · 心情 ' + data.mood_label : ''}</div>`);
   if (data.setlist) card.push(`<div class="item">曲目：${data.setlist}</div>`);
   if (data.outfit) card.push(`<div class="item">造型：${data.outfit}</div>`);
   if (data.note) card.push(`<div class="item muted">她留了句话：${data.note}</div>`);
-  card.push(`<div class="item muted">常驻荔栀的酒馆${data.stage_unlocked ? ' · 小剧场专场已解锁' : ` · 专场还差 ${data.stage_need} 点热度`}</div>`);
+  card.push('<div class="item muted">常驻荔栀的酒馆 · 随时可开小剧场专场</div>');
   document.getElementById('star-card').innerHTML = card.join('');
 
   document.getElementById('star-board').innerHTML = data.board.length

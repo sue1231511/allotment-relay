@@ -42,12 +42,10 @@ async def test_star_flow() -> None:
 
     kid, sid = await _enroll(db, "fan@example.com", "粉丝甲")
 
-    # 空命令=她的档；首建行不该被懒结算伪回补
+    # 空命令=她的档
     status = await star.star_ops(kid, "")
-    assert "小橘" in status and "热度" in status, status
+    assert "小橘" in status and "粉丝团" in status, status
     assert "不开嗓" in status, status
-    state = await star.get_state()
-    assert state["heat"] == 20, state["heat"]
 
     # 围观门禁：今晚没定场子 → 报错
     try:
@@ -134,7 +132,7 @@ async def test_star_flow() -> None:
     tonight = await bar.bar_ops(kid, "tonight")
     assert "小橘" in tonight, tonight
 
-    # 面板裁决：应援被看到 → 热度+1、档信+1
+    # 面板裁决：应援被看到 → 档信+1
     async with db.connect() as conn:
         prop = (await (await conn.execute(
             "SELECT id FROM star_proposals WHERE steward_id=? AND status='pending'", (sid,)
@@ -142,19 +140,12 @@ async def test_star_flow() -> None:
         standing_before = (await (await conn.execute(
             "SELECT standing FROM stewards WHERE id=?", (sid,)
         )).fetchone())[0]
-        heat_before = (await (await conn.execute(
-            "SELECT heat FROM star_state WHERE id=1"
-        )).fetchone())[0]
     decide = await star.owner_decide(prop, accept=True)
     assert "读了" in decide["msg"], decide
     async with db.connect() as conn:
-        heat_after = (await (await conn.execute(
-            "SELECT heat FROM star_state WHERE id=1"
-        )).fetchone())[0]
         standing_after = (await (await conn.execute(
             "SELECT standing FROM stewards WHERE id=?", (sid,)
         )).fetchone())[0]
-    assert heat_after == heat_before + 1, (heat_before, heat_after)
     assert standing_after == standing_before + 1, (standing_before, standing_after)
 
     # 点歌：15 票进箱，钱归她的账
@@ -197,36 +188,15 @@ async def test_star_stage_and_lazy_settle() -> None:
 
     kid, sid = await _enroll(db, "fan2@example.com", "粉丝乙")
 
-    # 热度不够 → 专场开不了
-    try:
-        await star.owner_set_tonight("stage", "great", "", "", "", "")
-        raise AssertionError("stage should need heat 35")
-    except ValueError as exc:
-        assert "压不住" in str(exc), exc
-
-    # 手动抬到 40：专场开张，打赏全额归她（不进酒馆营收）
-    async with db.connect() as conn:
-        await conn.execute("UPDATE star_state SET heat=40 WHERE id=1")
-        await conn.commit()
+    # 专场没有热度门槛，打赏全额归她（不进酒馆营收）
     await star.owner_set_tonight("stage", "great", "", "", "", "")
     tip = await star.star_ops(kid, "打赏 30")
     assert "荔栀抽走" not in tip and "-30 票" in tip, tip
 
-    # 懒结算：把 last_settle_day 拨回 1 天（昨晚 stage 开嗓）→ heat +2-1 = +1
-    async with db.connect() as conn:
-        await conn.execute("UPDATE star_state SET last_settle_day=? WHERE id=1",
-                           (db.day_id() - 1,))
-        await conn.commit()
-        heat_before = (await (await conn.execute(
-            "SELECT heat FROM star_state WHERE id=1"
-        )).fetchone())[0]
-    state = await star.get_state()
-    assert state["heat"] == heat_before + 1, (heat_before, state["heat"])
-
     # 网页快照
     snap = await star.public_star_snapshot()
     assert snap["name"] == "小橘" and snap["active"] and snap["venue"] == "stage", snap
-    assert snap["stage_unlocked"] and snap["stage_need"] == 0, snap
+    assert "heat" not in snap and "stage_unlocked" not in snap, snap
 
     # 发动态日上限
     await star.owner_post("今晚风大，第三首改慢一点唱。")
