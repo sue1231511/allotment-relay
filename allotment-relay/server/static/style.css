@@ -1665,8 +1665,9 @@ select:focus {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  height: min(680px, calc(100dvh - 220px));
-  max-height: min(680px, calc(100dvh - 220px));
+  height: auto;
+  min-height: 680px;
+  max-height: none;
 }
 
 .lounge-chat-head {
