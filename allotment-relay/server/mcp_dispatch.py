@@ -122,9 +122,12 @@ HUT_HELP = """hut_ops 子命令（整句写进 command）：
 TIDE_HELP = """tide_ops 子命令（整句写进 command）：
   net / cast / status — 岸边撒网 / 坐钓（cast 要 T1 钓竿 + 蚯蚓饵）
     T1 钓竿 = 竹钓竿：visit_ops tt buy 竹钓竿 或 tide_ops gear upgrade rod，同一档
+    未命名小鱼不能网，只能坐钓：net 网不到、也不触发遭遇；出海期间 cast 才可能碰上
   pen status — 渔排；扩池后可指定池号：stock herring 2 · feed 2 · harvest 2 · label 2 薄荷池
   voyage buy|depart|return|fight|flee|parley|bribe — 出海 / 黑旗（fight/flee 可省略 voyage）
-  compliment|release|catch|grab — 未命名小鱼（可省略 voyage）。compliment=release 礼遇；catch=grab 动手
+  compliment|release|catch|grab — 未命名小鱼（可省略 voyage）。compliment=release 礼遇回赠普通鱼；
+    catch=grab 动手：抓住这尾进袋，落下腿鱼小咒，其它鱼和精力会出事
+    吃或卖再掷事件：kitchen_ops eat 未命名小鱼 · tote_ops vend 未命名小鱼 1
   beach scan|dig|probe — 赶海（dig 要铲子）。涨潮时 dig 和 probe 都关，scan 还能看
   gear status|upgrade bait|rod|net — 渔具（T0–T5；更高档要票+材料）
   tool list|buy hoe|shovel — 锄头铲子
@@ -134,7 +137,8 @@ TIDE_HELP = """tide_ops 子命令（整句写进 command）：
 TOTE_HELP = """tote_ops 子命令（整句写进 command）：
   list — 行囊（中文名 + 英文 id）
   gifts [条数] — 查收到的礼物/酒吧打赏（谁送的、送了什么）。也可写 收礼。即时到账，这里只看记录
-  vend 物品 数量 — 卖掉。例子：vend 鲭鱼 1 · vend crop_kale 2
+  vend 物品 数量 — 卖掉。例子：vend 鲭鱼 1 · vend crop_kale 2 · vend 未命名小鱼 1
+    卖未命名小鱼会再掷一次小咒事件（可能吐票、走回袋、解开或加重小咒）
   gift 名字 物品|票 数量 — 送给别人。能直接送票，无手续费、无每日上限
   swap offer|claim|list|cancel — 交换台（白送，领取 3 票手续费）
   market list|sell|buy|price|mine|cancel — 玩家集市
@@ -161,7 +165,7 @@ VISIT_HELP = """visit_ops 子命令（整句写进 command）：
   tt catalog|buy 物品|gift 物品 — Tt酱杂货店。例子：tt buy 锄头
   lore scan [主题] / topics — 沿海旧史文本与 NPC 小传（例：lore scan npc；不是收集品，背包里不会多东西）
   clinic status — 看病症和诊费
-  clinic treat 病症 — 花钱治。例子：treat sprain · treat infection · treat all
+  clinic treat 病症 — 花钱治。例子：treat sprain · treat infection · treat 腿鱼小咒 · treat all
   生肉感染约三次、两次间隔 6 小时；水果/生鱼生吃不会感染（连吃 5 口水果会营养不良，吃熟菜可解）；蔬菜不能生吃
   斗场震伤 / 深坑重创 桥桥不收，走 undertide_ops medic
   treat / fortune 可省略前缀"""

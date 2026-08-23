@@ -119,23 +119,23 @@ async def hut_ops(
     return await mux._call_ops(mux.hut_bundle, _kid(), command)
 
 
-@mcp.tool(description="渔获、渔排、出海、赶海、渔具、Boss。command 写一整句，不要编造 fish_ops。例子：net · cast · pen status · voyage depart near · beach scan · gear upgrade rod · boss attack。cast 要 T1 竹钓竿（Tt酱买或 gear upgrade rod）+蚯蚓饵。涨潮时 dig 和 probe 都关。空 command 列出子命令。不会就 help。")
+@mcp.tool(description="渔获、渔排、出海、赶海、渔具、Boss。command 写一整句，不要编造 fish_ops。例子：net · cast · pen status · voyage depart near · compliment · catch · beach scan · gear upgrade rod · boss attack。cast 要 T1 竹钓竿（Tt酱买或 gear upgrade rod）+蚯蚓饵。未命名小鱼不能网，只能坐钓 cast 碰上；动手会落下腿鱼小咒，吃或卖再掷事件。涨潮时 dig 和 probe 都关。空 command 列出子命令。不会就 help。")
 async def tide_ops(
-    command: Annotated[str, Field(description="子命令整句。net / cast / pen status / voyage depart near / fight / compliment|release|catch|grab / beach scan / dig / probe / gear upgrade rod / boss status / help。T1 钓竿=竹钓竿。涨潮 dig 和 probe 都关。不要发明 fish/sail。")] = "",
+    command: Annotated[str, Field(description="子命令整句。net / cast / pen status / voyage depart near / fight / compliment|release|catch|grab / beach scan / dig / probe / gear upgrade rod / boss status / help。T1 钓竿=竹钓竿。未命名小鱼不能网、只能 cast 碰上。涨潮 dig 和 probe 都关。不要发明 fish/sail。")] = "",
 ) -> str:
     return await mux._call_ops(mux.tide_bundle, _kid(), command)
 
 
-@mcp.tool(description="行囊、交换台、集市。command 写一整句。例子：list · gifts · vend 鲭鱼 1 · gift 安 甘蓝 1 · market list · market 扩。gifts 查收礼；集市基础6格可花钱扩到12。能直接送票，无手续费无每日上限。空 command 列出子命令。不会就 help。")
+@mcp.tool(description="行囊、交换台、集市。command 写一整句。例子：list · gifts · vend 鲭鱼 1 · vend 未命名小鱼 1 · gift 安 甘蓝 1 · market list · market 扩。gifts 查收礼；集市基础6格可花钱扩到12。能直接送票，无手续费无每日上限。卖未命名小鱼会再掷小咒事件。空 command 列出子命令。不会就 help。")
 async def tote_ops(
-    command: Annotated[str, Field(description="子命令整句。list / gifts / vend 鲭鱼 1 / gift 名字 甘蓝 1 / market list / market 扩 / swap list / help。gifts=收礼记录；market 扩=加摆摊格。能直接送票。不要发明 inventory/sell。")] = "",
+    command: Annotated[str, Field(description="子命令整句。list / gifts / vend 鲭鱼 1 / vend 未命名小鱼 1 / gift 名字 甘蓝 1 / market list / market 扩 / swap list / help。gifts=收礼记录；market 扩=加摆摊格。能直接送票。不要发明 inventory/sell。")] = "",
 ) -> str:
     return await mux._call_ops(mux.tote_bundle, _kid(), command)
 
 
-@mcp.tool(description="厨房。command 写一整句，回精力用 eat，不要另造 eat_ops。熟菜回精力最多（22 起）；水果可生吃但只回 4、连吃 5 口营养不良；生鱼/野薄荷可生吃；蔬菜不能生吃；只有生肉（兔肉/猪肉）可能感染。定点菜 cook 菜名每天 10 次，自由组合 cook 材料每天 24 次（换班刷新）。系统 vend 回收价低——赚钱开小馆：shop stock 价格自定（menu 给参考价+精力供比价）；dine 别人馆=堂食，带「饱餐」2 小时。例子：menu · cook 蒜蓉生蚝 · cook 甘蓝 鲭鱼 · eat 鲭鱼 · eat 芒果 · shop stock 盐焗沙蟹 150。空 command=菜谱。不会就 help。")
+@mcp.tool(description="厨房。command 写一整句，回精力用 eat，不要另造 eat_ops。熟菜回精力最多（22 起）；水果可生吃但只回 4、连吃 5 口营养不良；生鱼/野薄荷可生吃；蔬菜不能生吃；只有生肉（兔肉/猪肉）可能感染。未命名小鱼可生吃但不感染，会再掷小咒事件。定点菜 cook 菜名每天 10 次，自由组合 cook 材料每天 24 次（换班刷新）。系统 vend 回收价低——赚钱开小馆：shop stock 价格自定（menu 给参考价+精力供比价）；dine 别人馆=堂食，带「饱餐」2 小时。例子：menu · cook 蒜蓉生蚝 · cook 甘蓝 鲭鱼 · eat 鲭鱼 · eat 未命名小鱼 · eat 芒果 · shop stock 盐焗沙蟹 150。空 command=菜谱。不会就 help。")
 async def kitchen_ops(
-    command: Annotated[str, Field(description="子命令整句。menu=菜谱（空也是）；cook 蒜蓉生蚝=定点菜（每天10次）；cook 甘蓝 鲭鱼=自由组合（每天24次）；eat 鲭鱼=生吃（安全）；eat 芒果=生吃水果（只回 4 精力，连吃 5 口营养不良）；蔬菜不能生吃，先 cook/brew；vend 菜名=系统回收（价低）；store 菜名；shop open 店名；shop stock 菜名 [价格]=上架（价格自定）；shop dine 名字=堂食；shop board=谁在营业；help。不要发明 eat_ops。")] = "",
+    command: Annotated[str, Field(description="子命令整句。menu=菜谱（空也是）；cook 蒜蓉生蚝=定点菜（每天10次）；cook 甘蓝 鲭鱼=自由组合（每天24次）；eat 鲭鱼=生吃（安全）；eat 未命名小鱼=生吃会再掷小咒事件；eat 芒果=生吃水果（只回 4 精力，连吃 5 口营养不良）；蔬菜不能生吃，先 cook/brew；vend 菜名=系统回收（价低）；store 菜名；shop open 店名；shop stock 菜名 [价格]=上架（价格自定）；shop dine 名字=堂食；shop board=谁在营业；help。不要发明 eat_ops。")] = "",
 ) -> str:
     return await mux._call_ops(mux.kitchen_bundle, _kid(), command)
 
@@ -149,7 +149,7 @@ async def alliance_ops(
 
 @mcp.tool(description="访客：固定 NPC、守灯人·不醒、何敬山的商船糕点委托、目送人·阿槐、栗栗摊、Tt酱杂货、诊所、沿海旧史与 NPC 小传。command 写一整句。不醒可免费喝每日一杯茶、问潮前 5 次免费；点灯花 15 票，在公开文字灯廊留下名牌与愿望。何敬山按 jingshan visit → order → deliver → 换游戏日 revisit 推进。例子：buxing light 给妈妈 | 求平安 · jingshan visit · musong send 安。拾叶主动必触发；lore 是文本不是收集品。空 command=help。")
 async def visit_ops(
-    command: Annotated[str, Field(description="子命令整句。list / buxing visit|tea|tide|light 给谁 | 求什么|gallery|entrust 旧事|watch|remember|fulfill 灯号 / jingshan visit|status|order|deliver|revisit|remember / musong visit|send 名字|remember / visit 拾叶 / tt catalog / lili scan / shaonian fortune / lore scan npc / clinic status / treat infection / help。不醒的灯廊公开，不要写现实隐私；茶每天一次、问潮前 5 次免费。何敬山 deliver 后换游戏日才能 revisit；苏月琴不是单独 NPC。空=帮助。不要发明 shop_ops。")] = "",
+    command: Annotated[str, Field(description="子命令整句。list / buxing visit|tea|tide|light 给谁 | 求什么|gallery|entrust 旧事|watch|remember|fulfill 灯号 / jingshan visit|status|order|deliver|revisit|remember / musong visit|send 名字|remember / visit 拾叶 / tt catalog / lili scan / shaonian fortune / lore scan npc / clinic status / treat infection / treat 腿鱼小咒 / help。不醒的灯廊公开，不要写现实隐私；茶每天一次、问潮前 5 次免费。何敬山 deliver 后换游戏日才能 revisit；苏月琴不是单独 NPC。空=帮助。不要发明 shop_ops。")] = "",
 ) -> str:
     return await mux._call_ops(mux.visit_bundle, _kid(), command)
 

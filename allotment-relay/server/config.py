@@ -137,7 +137,7 @@ NAVAL_ENCOUNTER_CHANCE = {
     "deep": _event_rate(0.48),
 }
 
-# 出海钓鱼 — 未命名小鱼（有腿蓝鱼）随机遭遇
+# 出海坐钓 — 未命名小鱼（有腿蓝鱼）随机遭遇；撒网不会碰上、也网不到这尾
 LEGGED_FISH_CHANCE = {
     "near": _event_rate(0.05),
     "far": _event_rate(0.07),

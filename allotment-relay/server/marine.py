@@ -7,7 +7,17 @@ import aiosqlite
 
 from . import db, events, event_gen, flavor, shaonian as shaonian_mod, world
 from . import commons
-from .catalog import ITEM_NAMES, SEA_CATCH, pen_species_keys, resolve_item_key, voyage_loot_table
+from .catalog import (
+    ITEM_NAMES,
+    SEA_CATCH,
+    WALKBLUE_HEX,
+    WALKBLUE_ITEM,
+    WALKBLUE_SPECIES,
+    is_walkblue_item,
+    pen_species_keys,
+    resolve_item_key,
+    voyage_loot_table,
+)
 from .config import (
     BOATS,
     HAIL_BRIBE,
@@ -239,7 +249,7 @@ def _legged_fish_prompt(payload: dict[str, Any]) -> str:
 async def try_legged_fish_encounter(
     conn: aiosqlite.Connection, s: dict[str, Any], voyage: dict[str, Any]
 ) -> str | None:
-    """出海期间 tide_ops 钓鱼后判定未命名小鱼遭遇。"""
+    """出海期间 tide_ops cast 坐钓后判定未命名小鱼遭遇。撒网不会碰上。"""
     if voyage.get("status") != "sailing":
         return None
     chance = await _legged_fish_roll_chance_async(conn, voyage["route"])
@@ -256,6 +266,113 @@ async def try_legged_fish_encounter(
     voyage["status"] = "fish_encounter"
     voyage["encounter"] = json.dumps(payload, ensure_ascii=False)
     return _legged_fish_prompt(payload)
+
+
+async def _adjust_tickets(conn: aiosqlite.Connection, steward_id: int, delta: int) -> None:
+    if not delta:
+        return
+    if delta > 0:
+        await conn.execute(
+            "UPDATE stewards SET tickets=tickets+? WHERE id=?",
+            (delta, steward_id),
+        )
+        return
+    await conn.execute(
+        "UPDATE stewards SET tickets=MAX(0, tickets+?) WHERE id=?",
+        (delta, steward_id),
+    )
+
+
+async def on_obtain_walkblue(conn: aiosqlite.Connection, steward_id: int) -> str:
+    """钓到或抓住未命名小鱼：落下腿鱼小咒。"""
+    from . import health as health_mod
+
+    msg = flavor.pick(flavor.WALKBLUE_CATCH_CURSE)
+    hex_line = await health_mod.inflict(conn, steward_id, WALKBLUE_HEX, source="walkblue")
+    if hex_line:
+        msg += f"\n{hex_line}"
+    return msg
+
+
+async def apply_walkblue_fate(
+    conn: aiosqlite.Connection,
+    steward_id: int,
+    event_key: str,
+    *,
+    kind: str,
+    qty: int = 1,
+    tickets: int = 0,
+) -> str:
+    """吃/卖未命名小鱼后的单次随机事件。"""
+    from . import energy as energy_mod, health as health_mod
+
+    pool = flavor.WALKBLUE_FATE_EAT if kind == "eat" else flavor.WALKBLUE_FATE_SELL
+    texts = pool.get(event_key) or pool.get("stomach_steps") or ["未命名小鱼翻了个身。"]
+    msg = flavor.pick(texts)
+
+    if event_key == "whisper":
+        await survival_bump_safe(conn, steward_id, mist_wit=2)
+    elif event_key == "ticket_tooth":
+        await _adjust_tickets(conn, steward_id, 3)
+    elif event_key == "curse_again":
+        hex_line = await health_mod.inflict(conn, steward_id, WALKBLUE_HEX, source="walkblue")
+        if hex_line:
+            msg += f"\n{hex_line}"
+    elif event_key == "curse_lift":
+        await conn.execute(
+            "DELETE FROM steward_ailments WHERE steward_id=? AND ailment_key=?",
+            (steward_id, WALKBLUE_HEX),
+        )
+    elif event_key == "pay_up":
+        await _adjust_tickets(conn, steward_id, -2)
+    elif event_key == "extra_fill":
+        gained = await energy_mod.restore(conn, steward_id, 4)
+        if gained:
+            msg += f"（精力 +{gained}）"
+    elif event_key == "standing_down":
+        await survival_bump_safe(conn, steward_id, standing=-1)
+    elif event_key == "standing_up":
+        await survival_bump_safe(conn, steward_id, standing=1)
+    elif event_key == "minnow":
+        gift = random.choice(("fish_sandeel", "fish_herring"))
+        await db.add_item(conn, steward_id, gift, 1)
+        msg += f"\n获得 {ITEM_NAMES.get(gift, gift)} x1"
+    elif event_key == "coins_hop":
+        hop = min(4, max(1, tickets // 8 or 2))
+        await _adjust_tickets(conn, steward_id, -hop)
+        msg += f"（票 -{hop}）"
+    elif event_key == "buyer_tip":
+        await _adjust_tickets(conn, steward_id, 4)
+        msg += "（票 +4）"
+    elif event_key == "walks_back":
+        back = max(1, min(qty, 1))
+        unit = tickets // max(1, qty) if tickets else SEA_CATCH[WALKBLUE_SPECIES]["sell"]
+        await db.add_item(conn, steward_id, WALKBLUE_ITEM, back)
+        await _adjust_tickets(conn, steward_id, -unit * back)
+        msg += f"\n{ITEM_NAMES[WALKBLUE_ITEM]} x{back} 回袋，票 -{unit * back}"
+    elif event_key == "bait_gift":
+        await db.add_item(conn, steward_id, "bait_worm", 1)
+        msg += "\n获得 蚯蚓饵 x1"
+    elif event_key == "price_glitch":
+        delta = random.choice((-1, 1))
+        await _adjust_tickets(conn, steward_id, delta)
+        msg += f"（票 {delta:+d}）"
+    return msg
+
+
+async def walkblue_fate_event(
+    conn: aiosqlite.Connection,
+    steward_id: int,
+    *,
+    kind: str,
+    qty: int = 1,
+    tickets: int = 0,
+) -> str:
+    pool = flavor.WALKBLUE_FATE_EAT if kind == "eat" else flavor.WALKBLUE_FATE_SELL
+    event_key = random.choice(list(pool))
+    return await apply_walkblue_fate(
+        conn, steward_id, event_key, kind=kind, qty=qty, tickets=tickets
+    )
 
 
 async def _resolve_legged_fish(
@@ -313,7 +430,10 @@ async def _resolve_legged_fish(
                 remaining.remove(item)
         else:
             stock = await db.get_satchel(s["id"])
-            fish_items = [k for k, v in stock.items() if k.startswith("fish_") and v > 0]
+            fish_items = [
+                k for k, v in stock.items()
+                if k.startswith("fish_") and v > 0 and not is_walkblue_item(k)
+            ]
             for _ in range(min(2, len(fish_items))):
                 if not fish_items:
                     break
@@ -331,7 +451,12 @@ async def _resolve_legged_fish(
                     "UPDATE stewards SET energy=0 WHERE id=?",
                     (s["id"],),
                 )
+        await db.add_item(conn, s["id"], WALKBLUE_ITEM, 1)
+        await catches_mod.record_catch(conn, s["id"], WALKBLUE_ITEM)
+        curse = await on_obtain_walkblue(conn, s["id"])
         msg = flavor.pick(flavor.LEGGED_FISH_GRAB)
+        msg += f"\n抓住 {SEA_CATCH[WALKBLUE_SPECIES]['emoji']}{SEA_CATCH[WALKBLUE_SPECIES]['name']} x1"
+        msg += f"\n{curse}"
         if lost:
             names = [ITEM_NAMES.get(x, x) for x in lost]
             msg += f"\n失去：{', '.join(names)}"
@@ -923,7 +1048,7 @@ async def _finish_voyage(steward_id: int, voyage: dict[str, Any], choice: str | 
                 return prefix + await _finish_voyage(steward_id, voyage, choice)
             if voyage.get("status") == "sailing" and db.now() >= voyage["returns_at"]:
                 return prefix + await _finish_voyage(steward_id, voyage)
-            return prefix + "航程继续。可用 tide_ops net|cast 钓鱼，或等归港 voyage_ops return"
+            return prefix + "航程继续。可用 tide_ops cast 坐钓（未命名小鱼只认钓竿），或等归港 voyage_ops return"
         if voyage.get("status") == "hailed":
             if choice is None and not _hail_expired(voyage):
                 raw = voyage.get("encounter") or "{}"
@@ -1004,7 +1129,7 @@ async def voyage_ops(key_id: int, command: str) -> str:
             left = max(0, voyage["returns_at"] - db.now())
             route = VOYAGE_ROUTES[voyage["route"]]["label"]
             lines.append(f"出海中: {route}，约 {left // 60} 分 {left % 60} 秒后归港")
-            lines.append("海上钓鱼: tide_ops net|cast（出海期间随机遇未命名小鱼）")
+            lines.append("海上坐钓: tide_ops cast（只有坐钓才可能遇未命名小鱼；撒网网不到）")
         else:
             lines.append("出海: 无 — depart near|far|deep")
         lines.append(world.climate_line())
@@ -1157,7 +1282,7 @@ async def voyage_ops(key_id: int, command: str) -> str:
         async with db.connect() as conn:
             voyage = await _get_voyage(conn, s["id"])
             if not voyage or voyage.get("status") != "fish_encounter":
-                raise ValueError("没有未命名小鱼遭遇 — 出海期间 tide_ops net|cast 钓鱼才可能碰上")
+                raise ValueError("没有未命名小鱼遭遇 — 出海期间 tide_ops cast 坐钓才可能碰上（不能网）")
             msg = await _resolve_legged_fish(conn, s, voyage, verb)
             await conn.commit()
         prefix = f"{pulse}\n" if pulse else ""
