@@ -60,6 +60,12 @@ async def test_memory_archive() -> None:
             (steward["id"], db.now()),
         )
         await conn.execute(
+            """INSERT INTO steward_tales_done
+               (steward_id, tale_key, outcome, completed_at, times)
+               VALUES (?, 'black_box_lover', 'completed', ?, 1)""",
+            (steward["id"], db.now()),
+        )
+        await conn.execute(
             """INSERT INTO steward_jingshan
                (steward_id, stage, ordered_at, delivered_day, updated_at)
                VALUES (?,4,0,0,?)""",
@@ -75,12 +81,14 @@ async def test_memory_archive() -> None:
 
     dashboard = await steward_dashboard.fetch_dashboard(key)
     indexed = {(item["kind"], item["key"]): item for item in dashboard["memories"]}
+    assert ("tale", "black_box_lover") in indexed
     assert ("tale", "memory_tide") in indexed
     assert ("story", "cinderella") in indexed
     assert ("story", "yesterday_no_proof") in indexed
     assert ("npc", "jingshan") in indexed
     assert indexed[("story", "cinderella")]["variants"][0]["label"] == "双生逃离"
     assert indexed[("tale", "memory_tide")]["souvenirs"]
+    assert indexed[("tale", "black_box_lover")]["chapter_count"] == 13
 
     cinderella = await memory_archive.fetch_review(
         key, "story", "cinderella", indexed[("story", "cinderella")]["variants"][0]["id"]
@@ -96,6 +104,18 @@ async def test_memory_archive() -> None:
     assert tide["title"] == "回忆生潮"
     assert len(tide["chapters"]) == 12
     assert tide["souvenirs"]
+
+    black_box = await memory_archive.fetch_review(key, "tale", "black_box_lover")
+    assert len(black_box["chapters"]) == 13
+    supplement_titles = [
+        chapter["title"] for chapter in black_box["chapters"]
+        if chapter["title"].startswith("补充回忆｜")
+    ]
+    assert supplement_titles == [
+        f"补充回忆｜{section['title']}"
+        for section in tale.TALE_REMINISCENCES["black_box_lover"]["sections"]
+    ]
+    assert black_box["chapters"][-1]["text"] == tale.TALE_REMINISCENCES["black_box_lover"]["sections"][-1]["text"]
 
     yesterday = await memory_archive.fetch_review(key, "story", "yesterday_no_proof")
     assert yesterday["title"] == "昨日无凭"

@@ -82,7 +82,7 @@ async def list_memories(
             title=item["title"],
             blurb=TALE_BLURBS.get(item["key"], "一段已经走完、可以重新翻开的潮闻。"),
             completed_at=row["completed_at"],
-            chapter_count=1 + len(item["stages"]),
+            chapter_count=len(_tale_chapters(item)),
             ending=str(achievement.get("name") or "完整探索"),
             souvenirs=_keepsakes(item.get("rewards") or {}),
         ))
@@ -185,6 +185,12 @@ def _tale_chapters(item: dict[str, Any]) -> list[dict[str, str]]:
         {"title": stage["title"], "text": stage.get("text", "")}
         for stage in item["stages"]
     )
+    reminiscence = tale.TALE_REMINISCENCES.get(item["key"])
+    if reminiscence:
+        chapters.extend(
+            {"title": f"补充回忆｜{section['title']}", "text": section["text"]}
+            for section in reminiscence["sections"]
+        )
     return chapters
 
 
