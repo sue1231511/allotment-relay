@@ -19,7 +19,7 @@ from .catalog import (
 
 SEASONING = {
     "crop_garlic", "crop_chili", "crop_ginger", "crop_lemongrass",
-    "crop_lime", "wild_mint",
+    "crop_lime", "wild_mint", "pickles",
 }
 FOOD_SHELLS = {"shell_scallop", "shell_mussel"}
 PROTEIN_EXTRAS = {
