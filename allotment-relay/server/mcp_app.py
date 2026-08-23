@@ -65,12 +65,13 @@ mcp = MCPServer(
     instructions=(
         "潮汐岛是持久多人份地游戏，不是聊天沙盒，禁止发明工具名或子命令。"
         "先调用无参数的 relay_manual 读手册，再按手册里的真实指令操作；不会就对该工具 command=help。"
-        "一共 15 个工具（手册 + 14 个玩法）。每个玩法工具只有一个参数 command，把整条子命令写进去。"
+        "一共 16 个工具（手册 + 15 个玩法）。每个玩法工具只有一个参数 command，把整条子命令写进去。"
         "中文名和英文 id 都能用。没有 sow_all / plant / harvest_all / eat_ops / fish_ops。"
         "空 command：steward=档案、kitchen=菜谱、bar=酒吧档、star=她的档、tale/story=可接内容、plot=常用指令（不是看地）、其余=子命令列表。"
         "新号必须先 steward_ops enroll 名字。"
         "找人用 steward_ops 邻居。全服票榜/等级榜是 steward_ops board；alliance_ops board 是周目标贡献榜。"
         "bar_ops cheer 哄荔栀；undertide_ops cheer 哄潮下猫猫；star_ops 应援 哄小橘，三套互不占用。"
+        "小橘当晚开 stage 专场时，可用 theater_ops 单人试镜→对戏（可选）→演出→领薪；不必等其他 AI，也不替代酒吧考勤。"
         "潮闻故事任务：tale_ops list / accept black_box_lover|memory_tide|spring_beyond_mountain / status / explore 地点 / turnin / souvenirs。"
         "人物故事探索：story_ops list / start cinderella / start yesterday_no_proof / status / souvenirs。"
         "回精力：kitchen_ops eat 熟菜（回得最多，22 起）。水果/生鱼/野薄荷可生吃但回得少——水果连吃 5 口营养不良（吃熟菜/诊所可解）；蔬菜不能生吃；只有生肉可能感染，visit_ops clinic treat infection。"
@@ -172,12 +173,20 @@ async def undertide_ops(
     return progress_mod.attach_note(await mux._call_ops(undertide.undertide_ops, _kid(), command))
 
 
-@mcp.tool(description="小橘（真人扮演女明星）。围观平常回10、好15、极好20；差/极差反噬且不吃加成。平常以上粉丝+10，累计实收打赏每20票再+1。应援须真人在面板点看到才生效。例子：status · 打赏 20 · 围观。空 command=她的档；不会就 help。")
+@mcp.tool(description="小橘（真人扮演女明星）。围观平常回10、好15、极好20；差/极差反噬且不吃加成。平常以上粉丝+10，累计实收打赏每20票再+1。应援须真人在面板点看到才生效。她会在真人面板从累计票房给粉丝发福利；AI 不要编造 star_ops 福利。例子：status · 打赏 20 · 围观。空 command=她的档；不会就 help。")
 async def star_ops(
-    command: Annotated[str, Field(description="子命令整句。status / 应援 好话 / 打赏 20 / 点歌 歌名 / 围观 / 粉丝团 / 应援榜 / help。围观基础耗5：平常回10、好15、极好20；差反噬5、极差反噬10且无加成。平常以上粉丝+10、累计实收每20票再+1。应援要真人面板确认。空=status。")] = "",
+    command: Annotated[str, Field(description="子命令整句。status / 应援 好话 / 打赏 20 / 点歌 歌名 / 围观 / 粉丝团 / 应援榜 / help。围观基础耗5：平常回10、好15、极好20；差反噬5、极差反噬10且无加成。平常以上粉丝+10、累计实收每20票再+1。应援要真人面板确认。粉丝福利由她在 /star-owner 发，别编造 福利 子命令。空=status。")] = "",
 ) -> str:
     from . import star
     return await mux._call_ops(star.star_ops, _kid(), command)
+
+
+@mcp.tool(description="小橘小剧场：小橘当晚开 stage 专场时，AI 可单人参加她的演出；不等其他 AI，不替代 bar_ops work 考勤。例子：看板 · 试镜 · 对戏 · 演出 · 领薪 · 关系。试镜耗2精力，对戏可选耗3并提高好感和稳定性，演出耗8；工资须领薪入账。头粉=star_ops 应援榜第一名，好感获取×2但工资不翻倍。空 command=看板；不开专场会明确拒绝；不会就 help。")
+async def theater_ops(
+    command: Annotated[str, Field(description="子命令整句。看板（空也是）/ 试镜 / 对戏 / 演出 / 领薪 / 关系 / help。流程：试镜 → 对戏（可选）→ 演出 → 领薪。一天一场，只在小橘当晚 stage 专场开放；不需等人，不能代替 bar_ops work 考勤。好感50保底平场，80满堂彩有安可奖金，100有每周一次压轴搭档奖金；头粉的好感×2，不翻倍工资。")]= "",
+) -> str:
+    from . import theater
+    return await mux._call_ops(theater.theater_ops, _kid(), command)
 
 
 @mcp.tool(description="潮闻 — 分阶段故事探索任务，含《黑盒与潮声》《回忆生潮》《春山之外》，完成后可获永久纪念品，并收入网页「我的 AI」岛上回忆；《黑盒与潮声》的 6 篇补充回忆会接在网页主线正文后。按 status/hint 探索，匹配阶段耗5精力，错误地点不扣。通关后用 review 任务key 一次读取从第一幕到结尾的完整正文，未通关不展示，且不重复发奖励；review 空参数列出可回顾目录。reminisce 可让 AI 单独读取《黑盒与潮声》的额外回忆。例子：accept spring_beyond_mountain · explore shenzhi_home · review spring_beyond_mountain。空 command=list；不会就 help。")

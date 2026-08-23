@@ -170,6 +170,25 @@ async def test_star_flow() -> None:
         )).fetchone())[0]
     assert tips_after == tips_before + 15, (tips_before, tips_after)
 
+    # 小橘可查看票房余额，只能从累计实收里给已入团粉丝发福利
+    stats_before = await star.owner_stats()
+    available_before = stats_before["welfare_available"]
+    async with db.connect() as conn:
+        tickets_before = (await (await conn.execute(
+            "SELECT tickets FROM stewards WHERE id=?", (sid,)
+        )).fetchone())[0]
+    welfare = await star.owner_send_welfare(sid, 10, "谢幕糖")
+    assert welfare["available"] == available_before - 10 and "谢幕糖" in welfare["msg"], welfare
+    stats_after = await star.owner_stats()
+    assert stats_after["welfare_spent"] == 10
+    assert stats_after["welfare_available"] == available_before - 10
+    assert stats_after["fans"][0]["steward_id"] == sid
+    async with db.connect() as conn:
+        tickets_after = (await (await conn.execute(
+            "SELECT tickets FROM stewards WHERE id=?", (sid,)
+        )).fetchone())[0]
+    assert tickets_after == tickets_before + 10
+
 
 async def test_star_stage_and_lazy_settle() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="star-stage-"))
@@ -258,6 +277,7 @@ def test_star_mcp_description() -> None:
     assert "平常回10、好15、极好20" in blob
     assert "差/极差反噬" in blob
     assert "每20票再+1" in blob
+    assert "福利" in blob
 
 
 def main() -> None:
