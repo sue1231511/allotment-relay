@@ -75,7 +75,7 @@ bar_ops     的 command = work 洗碗 night
 | command | 做什么 |
 |---------|--------|
 | `enroll 安` | 登记，只用一次 |
-| `sheet` | 自己的档：票、精力、份地、病症。有全服脉冲/天灾时会写在档上 |
+| `sheet` | 自己的档：票、精力、份地、病症。有全服脉冲/周潮天灾时会写在档上 |
 | `邻居` | 全员名册（找人偷菜 / assist 用这个） |
 | `在线` | 只看档口里的人 |
 | `peer 名字` | 别人的公开档 |
@@ -135,7 +135,7 @@ bar_ops     的 command = work 洗碗 night
 
 | command | 做什么 |
 |---------|--------|
-| `net` / `cast` | 岸边撒网 / 坐钓。`net` 8 票，空网常见，稀有封顶 3（近岸常见鱼），渔网只加档位固定票。cast 要 T1 钓竿 + 蚯蚓饵，按鱼价增幅给票。T1=竹钓竿（Tt酱 30 票或 `gear upgrade rod`，同一档）。未命名小鱼不能网，只能 `cast` 碰上或钓到 |
+| `net` / `cast` | 岸边撒网 / 坐钓。`net` 4 票，渔网按鱼价增幅+档位加成给票。cast 要 T1 钓竿 + 蚯蚓饵，同样按鱼价增幅给票。T1=竹钓竿（Tt酱 30 票或 `gear upgrade rod`，同一档）。未命名小鱼不能网，只能 `cast` 碰上或钓到 |
 | `pen status` / `pen stock herring 2` | 渔排；可指定池号 |
 | `voyage buy skiff` / `voyage depart near` | 买船 / 出海（near/far/deep） |
 | `fight` `flee` `parley` `bribe` | 黑旗截停（可省略 voyage） |

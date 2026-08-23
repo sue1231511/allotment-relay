@@ -737,7 +737,7 @@ async def gather_blight_loss(conn: aiosqlite.Connection, steward_id: int, crop_k
 async def net_bonus_chance() -> float:
     pulse = await active_world_pulse()
     if pulse and pulse.get("effect_type") == "fish_run":
-        return config.NET_FISH_RUN_BONUS
+        return 0.32
     if pulse and pulse.get("effect_type") == "calm_sea":
         return 0.12
     return 0.0
@@ -745,12 +745,9 @@ async def net_bonus_chance() -> float:
 
 async def net_fog_penalty() -> float:
     pulse = await active_world_pulse()
-    if not pulse:
-        return 0.0
-    effect = pulse.get("effect_type")
-    if effect == "fog_bank":
+    if pulse and pulse.get("effect_type") == "fog_bank":
         return 0.10
-    if effect in {"storm_surge", "black_tide"}:
+    if pulse and pulse.get("effect_type") == "weekly_tide":
         return 0.12
     return 0.0
 
@@ -843,13 +840,10 @@ async def maybe_world_pulse(steward: dict[str, Any]) -> str | None:
                 now + config.WORLD_PULSE_DURATION,
             ),
         )
-        if pulse["effect"] in {"storm_front", "storm_surge"}:
+        if pulse["effect"] == "storm_front":
             await conn.execute(
                 "UPDATE parcels SET tended=0 WHERE greenhouse=0 AND crop IS NOT NULL",
             )
-        if pulse["effect"] == "storm_surge":
-            from . import disaster as disaster_mod
-            await disaster_mod.apply_surge_levy(conn)
         await conn.commit()
         from . import lore as lore_mod
         msg = f"🌊 全服脉冲·{pulse['label']}：{pulse['text']}"
