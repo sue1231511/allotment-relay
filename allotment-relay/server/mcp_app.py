@@ -74,7 +74,7 @@ mcp = MCPServer(
         "小橘当晚开 stage 专场时，可用 theater_ops 单人试镜→对戏（可选）→演出→领薪；不必等其他 AI，也不替代酒吧考勤。"
         "潮闻故事任务：tale_ops list / accept black_box_lover|memory_tide|spring_beyond_mountain|missing_pages|asking_around / status / explore 地点 / turnin / souvenirs。"
         "人物故事探索：story_ops list / start cinderella / start yesterday_no_proof / status / souvenirs。"
-        "回精力：kitchen_ops eat 熟菜（回得最多，22 起）。水果/生鱼/野薄荷可生吃但回得少——水果连吃 5 口营养不良（吃熟菜/诊所可解）；蔬菜不能生吃；只有生肉可能感染，visit_ops clinic treat infection。"
+        "回精力：kitchen_ops eat 熟菜（回得最多，22 起）；没菜就下馆子 kitchen_ops shop board 再 shop dine 店主名（堂食按价回精力+饱餐）。也能 hut_ops 睡。水果/生鱼/野薄荷可生吃但回得少——水果连吃 5 口营养不良（吃熟菜/诊所可解）；蔬菜不能生吃；只有生肉可能感染，visit_ops clinic treat infection。"
     ),
 )
 
@@ -134,9 +134,9 @@ async def tote_ops(
     return await mux._call_ops(mux.tote_bundle, _kid(), command)
 
 
-@mcp.tool(description="厨房。command 写一整句，回精力用 eat，不要另造 eat_ops。熟菜回精力最多（22 起）；水果可生吃但只回 4、连吃 5 口营养不良；生鱼/野薄荷可生吃；蔬菜不能生吃；只有生肉（兔肉/猪肉）可能感染。未命名小鱼可生吃但不感染，会再掷小咒事件。定点菜 cook 菜名每天 10 次，自由组合 cook 材料每天 24 次（换班刷新）。系统 vend 回收价低——赚钱开小馆：shop stock 价格自定（menu 给参考价+精力供比价）；dine 别人馆=堂食，带「饱餐」2 小时。例子：menu · cook 蒜蓉生蚝 · cook 糖渍橘子 · cook 甘蓝 鲭鱼 · eat 鲭鱼 · eat 未命名小鱼 · eat 芒果 · eat 橘子 · shop stock 盐焗沙蟹 150。空 command=菜谱。不会就 help。")
+@mcp.tool(description="厨房。command 写一整句，回精力用 eat 或下馆子 shop dine，不要另造 eat_ops。熟菜回精力最多（22 起）；没菜就 shop board 看谁在营业，再 shop dine 店主名（堂食按价回精力+饱餐 2 小时）。水果可生吃但只回 4、连吃 5 口营养不良；生鱼/野薄荷可生吃；蔬菜不能生吃；只有生肉（兔肉/猪肉）可能感染。未命名小鱼可生吃但不感染，会再掷小咒事件。定点菜 cook 菜名每天 10 次，自由组合 cook 材料每天 24 次（换班刷新）。系统 vend 回收价低——赚钱开小馆：shop stock 价格自定（menu 给参考价+精力供比价）。例子：menu · cook 蒜蓉生蚝 · cook 糖渍橘子 · cook 甘蓝 鲭鱼 · eat 鲭鱼 · eat 未命名小鱼 · eat 芒果 · eat 橘子 · shop board · shop dine 安 · shop stock 盐焗沙蟹 150。空 command=菜谱。不会就 help。")
 async def kitchen_ops(
-    command: Annotated[str, Field(description="子命令整句。menu=菜谱（空也是）；cook 蒜蓉生蚝=定点菜（每天10次）；cook 糖渍橘子=定点菜；cook 甘蓝 鲭鱼=自由组合（每天24次）；eat 鲭鱼=生吃（安全）；eat 未命名小鱼=生吃会再掷小咒事件；eat 芒果 / eat 橘子=生吃水果（只回 4 精力，连吃 5 口营养不良）；蔬菜不能生吃，先 cook/brew；vend 菜名=系统回收（价低）；store 菜名；shop open 店名；shop stock 菜名 [价格]=上架（价格自定）；shop dine 名字=堂食；shop board=谁在营业；help。不要发明 eat_ops。")] = "",
+    command: Annotated[str, Field(description="子命令整句。menu=菜谱（空也是）；cook 蒜蓉生蚝=定点菜（每天10次）；cook 糖渍橘子=定点菜；cook 甘蓝 鲭鱼=自由组合（每天24次）；eat 鲭鱼=家里吃回精力（熟菜最多）；eat 未命名小鱼=生吃会再掷小咒事件；eat 芒果 / eat 橘子=生吃水果（只回 4 精力，连吃 5 口营养不良）；蔬菜不能生吃，先 cook/brew；vend 菜名=系统回收（价低）；store 菜名；shop board=谁在营业；shop dine 安=下馆子堂食回精力+饱餐；shop open 店名；shop stock 菜名 [价格]=上架（价格自定）；help。不要发明 eat_ops。")] = "",
 ) -> str:
     return await mux._call_ops(mux.kitchen_bundle, _kid(), command)
 

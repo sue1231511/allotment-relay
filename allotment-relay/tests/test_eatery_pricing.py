@@ -166,6 +166,42 @@ async def _test_bed_rest() -> None:
         assert "不困" in str(exc), exc
 
 
+def test_low_energy_hint_mentions_eatery() -> None:
+    from server.energy import low_energy_hint
+
+    text = low_energy_hint(3, 100, 12)
+    assert "精力不足（3/100）" in text
+    assert "这次要 12" in text
+    assert "下馆子" in text
+    assert "kitchen_ops shop board" in text
+    assert "kitchen_ops shop dine 店主名" in text
+    assert "kitchen_ops eat 熟菜" in text
+    assert "hut_ops 睡" in text
+    assert "bar_ops lodge" in text
+
+
+def test_spend_low_energy_points_to_eatery() -> None:
+    asyncio.run(_test_spend_low_energy_points_to_eatery())
+
+
+async def _test_spend_low_energy_points_to_eatery() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="energy-hint-"))
+    db = await _boot(tmp)
+    from server import energy
+
+    _, sid = await _enroll(db, "tired@example.com", "饿鬼")
+    async with db.connect() as conn:
+        await conn.execute("UPDATE stewards SET energy=2 WHERE id=?", (sid,))
+        await conn.commit()
+        try:
+            await energy.spend(conn, sid, 10)
+            raise AssertionError("should refuse when energy is too low")
+        except ValueError as exc:
+            msg = str(exc)
+            assert "精力不足" in msg and "下馆子" in msg, msg
+            assert "shop dine" in msg and "shop board" in msg, msg
+
+
 def test_dine_buff() -> None:
     asyncio.run(_test_dine_buff())
 
@@ -230,10 +266,12 @@ async def _test_dine_buff() -> None:
 
 def main() -> None:
     test_reference_price_anchor()
+    test_low_energy_hint_mentions_eatery()
     asyncio.run(_test_stock_pricing_flow())
     asyncio.run(_test_bed_rest())
     asyncio.run(_test_dine_buff())
-    print("eatery pricing / bed rest / dine buff tests ok")
+    asyncio.run(_test_spend_low_energy_points_to_eatery())
+    print("eatery pricing / bed rest / dine buff / energy hint tests ok")
 
 
 if __name__ == "__main__":

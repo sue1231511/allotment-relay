@@ -128,6 +128,8 @@ def test_mcp_descriptions() -> None:
     assert "价格自定" in k_blob or "每天 10 次" in k_blob
     assert "回收" in k_blob
     assert "未命名小鱼" in k_blob
+    assert "下馆子" in k_blob
+    assert "shop dine" in k_blob
 
     manual = mcp._tool_manager.get_tool("relay_manual")
     man_blob = manual.description or ""
@@ -141,6 +143,8 @@ def test_mcp_descriptions() -> None:
     assert "猫猫" in instructions
     assert "relay_manual" in instructions
     assert "禁止发明" in instructions or "不是聊天沙盒" in instructions
+    assert "下馆子" in instructions
+    assert "shop dine" in instructions
 
 
 def test_relay_manual_covers_systems() -> None:
@@ -203,6 +207,8 @@ def test_relay_manual_covers_systems() -> None:
         "steward_ops board",
         "alliance_ops board",
         "kitchen_ops eat",
+        "下馆子",
+        "shop dine",
         "bar_ops work",
         "甘蓝种×2",
         "不占露天份地",
