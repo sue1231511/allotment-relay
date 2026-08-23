@@ -184,6 +184,7 @@ async def _insert_pulse(
     conn: aiosqlite.Connection,
     *,
     effect: str,
+    pulse_key: str,
     label: str,
     kind: str,
     detail: str,
@@ -197,7 +198,7 @@ async def _insert_pulse(
         ) VALUES (?,?,?,?,?,?,?,?)
         """,
         (
-            f"{effect}:{now}",
+            pulse_key,
             label,
             kind,
             effect,
@@ -268,6 +269,7 @@ async def apply_weekly_tide(
         await _insert_pulse(
             conn,
             effect="weekly_tide",
+            pulse_key=f"weekly_tide:{week_id}",
             label=f"周潮·{label}",
             kind="bad",
             detail=detail,
