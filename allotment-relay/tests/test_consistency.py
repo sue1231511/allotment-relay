@@ -69,12 +69,15 @@ def test_mcp_descriptions() -> None:
     assert "竹钓竿" in tide_blob
     assert "probe" in tide_blob
     assert "8 票" in tide_blob or "8票" in tide_blob
+    assert "不能网" in tide_blob or "坐钓" in tide_blob
+    assert "未命名小鱼" in tide_blob
 
     tote = mcp._tool_manager.get_tool("tote_ops")
     tote_blob = f"{tote.description}\n{(tote.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
     assert "送票" in tote_blob
     assert "gifts" in tote_blob
     assert "24" in tote_blob
+    assert "未命名小鱼" in tote_blob
 
     star = mcp._tool_manager.get_tool("star_ops")
     star_blob = f"{star.description}\n{(star.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -119,6 +122,7 @@ def test_mcp_descriptions() -> None:
     assert "shop stock" in k_blob
     assert "价格自定" in k_blob or "每天 10 次" in k_blob
     assert "回收" in k_blob
+    assert "未命名小鱼" in k_blob
 
     manual = mcp._tool_manager.get_tool("relay_manual")
     man_blob = manual.description or ""
@@ -199,6 +203,10 @@ def test_relay_manual_covers_systems() -> None:
         "只搅山羊奶",
         "不是每日自动扣",
         "compliment 和 release",
+        "不能网",
+        "腿鱼小咒",
+        "eat 未命名小鱼",
+        "vend 未命名小鱼",
         "dig 和 probe 都关",
         "能直接送票",
         "tote_ops gifts",

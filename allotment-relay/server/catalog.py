@@ -255,8 +255,21 @@ SEA_CATCH = {
         "zones": ["far", "deep"],
         "rarity": 5,
         "pen": False,
+        "cast_only": True,
     },
 }
+
+WALKBLUE_SPECIES = "walkblue"
+WALKBLUE_ITEM = "fish_walkblue"
+WALKBLUE_HEX = "legfish_hex"
+
+
+def is_walkblue_item(item: str) -> bool:
+    return item == WALKBLUE_ITEM
+
+
+def is_cast_only_fish(species: str) -> bool:
+    return bool(SEA_CATCH.get(species, {}).get("cast_only"))
 
 RANDOM_LOOT = [
     ("compost", 1),
@@ -752,6 +765,11 @@ AILMENTS = {
         "name": "牙酸", "emoji": "🦷", "cost": 13, "health_loss": 5, "health_restore": 8,
         "hint": "酸果、冷饮吃多了", "energy_extra": 1,
     },
+    "legfish_hex": {
+        "name": "腿鱼小咒", "emoji": "🐟", "cost": 10, "health_loss": 4, "health_restore": 6,
+        "hint": "2D蓝鱼在行囊里跺脚，步子发飘。clinic treat 腿鱼小咒 一次就好",
+        "energy_extra": 1,
+    },
 }
 
 PIT_AILMENTS = frozenset({"ring_shock", "pit_trauma"})
@@ -760,6 +778,9 @@ AILMENT_ALIASES = {
     "生肉感染": "infection",
     "生肉": "infection",
     "营养不良": "malnutrition",
+    "腿鱼小咒": "legfish_hex",
+    "小咒": "legfish_hex",
+    "腿鱼": "legfish_hex",
 }
 
 
@@ -1347,11 +1368,14 @@ def weighted_fish_pick(
     tide: str | None = None,
     zones: set[str] | None = None,
     rarity_cap: int | None = None,
+    allow_cast_only: bool = False,
 ) -> str:
     import random
 
     pool: list[tuple[str, int]] = []
     for key, meta in SEA_CATCH.items():
+        if meta.get("cast_only") and not allow_cast_only:
+            continue
         if tide and tide not in meta.get("tides", []):
             continue
         if zones and not zones.intersection(meta.get("zones", [])):
@@ -1361,7 +1385,11 @@ def weighted_fish_pick(
         weight = max(1, 7 - meta.get("rarity", 1))
         pool.append((key, weight))
     if not pool:
-        return random.choice(list(SEA_CATCH.keys()))
+        fallback = [
+            k for k, m in SEA_CATCH.items()
+            if allow_cast_only or not m.get("cast_only")
+        ]
+        return random.choice(fallback or ["herring"])
     keys, weights = zip(*pool)
     return random.choices(keys, weights=weights, k=1)[0]
 

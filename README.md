@@ -135,11 +135,11 @@ bar_ops     的 command = work 洗碗 night
 
 | command | 做什么 |
 |---------|--------|
-| `net` / `cast` | 岸边撒网 / 坐钓。`net` 8 票，空网常见，稀有封顶 3（近岸常见鱼），渔网只加档位固定票。cast 要 T1 钓竿 + 蚯蚓饵，按鱼价增幅给票。T1=竹钓竿（Tt酱 30 票或 `gear upgrade rod`，同一档） |
+| `net` / `cast` | 岸边撒网 / 坐钓。`net` 8 票，空网常见，稀有封顶 3（近岸常见鱼），渔网只加档位固定票。cast 要 T1 钓竿 + 蚯蚓饵，按鱼价增幅给票。T1=竹钓竿（Tt酱 30 票或 `gear upgrade rod`，同一档）。未命名小鱼不能网，只能 `cast` 碰上或钓到 |
 | `pen status` / `pen stock herring 2` | 渔排；可指定池号 |
 | `voyage buy skiff` / `voyage depart near` | 买船 / 出海（near/far/deep） |
 | `fight` `flee` `parley` `bribe` | 黑旗截停（可省略 voyage） |
-| `compliment` `release` `catch` `grab` | 未命名小鱼（可省略 voyage）。compliment=release 礼遇；catch=grab 动手 |
+| `compliment` `release` `catch` `grab` | 未命名小鱼（可省略 voyage）。compliment=release 礼遇，回赠普通鱼；catch=grab 动手：抓住这尾进袋，落下腿鱼小咒，其它鱼和精力会出事。吃或卖再掷事件：`kitchen_ops eat 未命名小鱼` / `tote_ops vend 未命名小鱼 1` |
 | `beach scan` / `dig` / `probe` | 赶海（dig 要铲子）。涨潮时 dig 和 probe 都关，scan 还能看 |
 | `gear status` / `gear upgrade net` | 渔具 |
 | `tool buy hoe` | 锄头铲子 |
@@ -154,7 +154,7 @@ bar_ops     的 command = work 洗碗 night
 |---------|--------|
 | `list` | 行囊（中文名 + 英文 id）。每种最多 24 份，和潮柜一样；买货超了会拒 |
 | `gifts` / `收礼` | 查收到的礼物（谁送的、送了什么）。即时到账，这里只看记录 |
-| `vend 鲭鱼 1` | 按系统价出售。可批量：`vend 芒果 3 木瓜 2`。Tt酱货架买的种/饲料/工具只有进价四成，倒卖会亏 |
+| `vend 鲭鱼 1` | 按系统价出售。可批量：`vend 芒果 3 木瓜 2`。Tt酱货架买的种/饲料/工具只有进价四成，倒卖会亏。`vend 未命名小鱼 1` 会再掷一次小咒事件 |
 | `gift 安 甘蓝 1` / `gift 安 票 5` | 送给别人。能直接送票，无手续费、无每日上限。票榜看口袋现票 |
 | `swap list` / `swap offer 甘蓝 2` | 交换台（白送，领取收手续费） |
 | `market list` / `market sell 甘蓝 2 8` | 玩家集市 |
@@ -172,7 +172,7 @@ bar_ops     的 command = work 洗碗 night
 | `menu` | 菜谱与定价 |
 | `cook 蒜蓉生蚝` | 定点菜（每天 10 次，换班刷新） |
 | `cook 甘蓝 鲭鱼` | 自由组合 2~5 样（每天 24 次） |
-| `eat 鲭鱼` | 回精力。熟菜回得最多（22 起）；水果可生吃但只回 4、连吃 5 口营养不良；生鱼/野薄荷安全；蔬菜不能生吃；只有生肉可能感染 |
+| `eat 鲭鱼` | 回精力。熟菜回得最多（22 起）；水果可生吃但只回 4、连吃 5 口营养不良；生鱼/野薄荷安全；蔬菜不能生吃；只有生肉可能感染。`eat 未命名小鱼` 不感染，但会再掷一次小咒事件 |
 | `vend 盐焗沙蟹` | 系统回收熟菜。回收价压得低（3★≈材料价+10%），想赚钱走小馆/集市 |
 | `store 菜名` | 熟菜进冰箱（也可 `hut_ops 冰柜 存`） |
 | `brew 材料` | 灶台，回雾智 |
@@ -215,7 +215,7 @@ bar_ops     的 command = work 洗碗 night
 | `buxing light 给谁 \| 求什么` / `buxing gallery` / `buxing entrust 旧事` | 花 15 票点公开守夜灯（回 4 精力）/ 看文字灯廊 / 托付旧事；名牌和愿望公开，勿写现实隐私 |
 | `buxing watch` / `buxing remember` / `buxing fulfill 灯号` | 60 票守夜 / 看潮汐簿与灯芯 / 免费还愿，在自己的灯旁记“成了” |
 | `lore scan` | 沿海旧史文本与 NPC 小传（`lore scan npc`；也可指定其他主题或随机），不是收集品 |
-| `clinic status` / `clinic treat infection` | 诊所。深坑伤走 `undertide_ops medic` |
+| `clinic status` / `clinic treat infection` | 诊所。`treat 腿鱼小咒` 解未命名小鱼的小咒（10 票）。深坑伤走 `undertide_ops medic` |
 | `visit 拾叶` | 巷口随机事件（主动必触发）；路上每天首次操作掷一次碰上 |
 | `help` | 列出真指令 |
 
