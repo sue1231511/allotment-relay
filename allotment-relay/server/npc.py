@@ -46,6 +46,8 @@ async def npc_ops(key_id: int, command: str) -> str:
                 tag = " · 杂货店，visit_ops tt catalog/buy/gift"
             elif npc["key"] == "old_salt":
                 tag = " · 赶海/潮汐提示"
+            elif npc["key"] == "buxing":
+                tag = " · 灯塔问潮、茶、点灯与守夜；visit_ops buxing help"
             elif npc["key"] == "musong":
                 tag = " · 渡口送别；visit_ops musong send 名字 / remember"
             elif npc["key"] == "jingshan":
@@ -74,6 +76,9 @@ async def npc_ops(key_id: int, command: str) -> str:
         if npc["key"] == "jingshan":
             from . import jingshan as jingshan_mod
             return await jingshan_mod.jingshan_ops(key_id, "visit")
+        if npc["key"] == "buxing":
+            from . import buxing as buxing_mod
+            return await buxing_mod.buxing_ops(key_id, "visit")
         if npc["key"] == "tt":
             from . import tt as tt_mod
             return await tt_mod.tt_ops(key_id, "visit")

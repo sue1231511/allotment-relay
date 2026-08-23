@@ -578,6 +578,31 @@ CREATE TABLE IF NOT EXISTS steward_jingshan (
     updated_at INTEGER NOT NULL DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS steward_buxing (
+    steward_id INTEGER PRIMARY KEY REFERENCES stewards(id),
+    tide_count INTEGER NOT NULL DEFAULT 0,
+    tea_day INTEGER NOT NULL DEFAULT -1,
+    wicks INTEGER NOT NULL DEFAULT 0,
+    updated_at INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS buxing_lights (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    label TEXT NOT NULL,
+    wish TEXT NOT NULL,
+    fulfilled INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS buxing_entries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    kind TEXT NOT NULL,
+    body TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS tt_affinity (
     steward_id INTEGER PRIMARY KEY REFERENCES stewards(id),
     score INTEGER NOT NULL DEFAULT 0,
@@ -1366,6 +1391,34 @@ async def init_db() -> None:
                 ordered_at INTEGER NOT NULL DEFAULT 0,
                 delivered_day INTEGER NOT NULL DEFAULT -1,
                 updated_at INTEGER NOT NULL DEFAULT 0
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS steward_buxing (
+                steward_id INTEGER PRIMARY KEY REFERENCES stewards(id),
+                tide_count INTEGER NOT NULL DEFAULT 0,
+                tea_day INTEGER NOT NULL DEFAULT -1,
+                wicks INTEGER NOT NULL DEFAULT 0,
+                updated_at INTEGER NOT NULL DEFAULT 0
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS buxing_lights (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                label TEXT NOT NULL,
+                wish TEXT NOT NULL,
+                fulfilled INTEGER NOT NULL DEFAULT 0,
+                created_at INTEGER NOT NULL
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS buxing_entries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                kind TEXT NOT NULL,
+                body TEXT NOT NULL,
+                created_at INTEGER NOT NULL
             )
             """,
             "ALTER TABLE parcels ADD COLUMN tree_harvests INTEGER NOT NULL DEFAULT 0",

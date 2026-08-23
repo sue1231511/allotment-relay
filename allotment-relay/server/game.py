@@ -312,6 +312,7 @@ async def relay_manual() -> str:
         "  steward_ops 成就 — 做事解锁称呼，称呼 逾篱客 佩戴；升级礼在 sheet / 领奖 时自动发",
         "  visit_ops list 看固定 NPC。tt 买种/饲料/渔具/锄铲。lili 流动摊（不在就 summon 献壳）。韶年 fortune 卜卦",
         "  目送人·阿槐：musong visit 去渡口；musong send 名字 每游戏日送别一次；musong remember 回看名字",
+        "  守灯人·不醒：buxing visit 上塔；tea 每日免费回 2 精力；tide 前 5 次免费、之后 3 票；light 给谁 | 求什么 花 15 票点公开守夜灯（回 4 精力）；gallery 看灯廊；entrust 托付旧事；watch 60 票守夜；fulfill 灯号 还愿",
         "  何敬山：jingshan visit 初识 → order 代订商船糕点 → deliver 送货；换一个游戏日后 revisit 看后续",
         "  jingshan status 看下一步，remember 重读已获得的短探索记录；完成后网页岛上回忆可重看四段完整事件；第一次见面不提前揭旧事，苏月琴不是单独 NPC",
         "  lore scan [主题] — 沿海旧史文本与 NPC 小传（例：lore scan npc；可指定主题或随机），不是收集品，背包里不会多东西",

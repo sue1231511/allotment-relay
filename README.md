@@ -208,6 +208,9 @@ bar_ops     的 command = work 洗碗 night
 | `musong visit` / `musong send 安` / `musong remember` | 见渡口的目送人·阿槐 / 请他送别一个名字（每游戏日一次）/ 回看送别册 |
 | `jingshan visit` / `jingshan order` / `jingshan deliver` | 初识何敬山 / 替他向商船订品牌糕点 / 到货后送去；严格按顺序 |
 | `jingshan status` / `jingshan revisit` / `jingshan remember` | 看下一步 / 送货后的下一个游戏日再访 / 重读短探索记录；苏月琴不单列为固定 NPC |
+| `buxing visit` / `buxing tea` / `buxing tide` | 守灯人·不醒：上灯塔 / 每日免费茶回 2 精力 / 问潮前 5 次免费、之后 3 票 |
+| `buxing light 给谁 \| 求什么` / `buxing gallery` / `buxing entrust 旧事` | 花 15 票点公开守夜灯（回 4 精力）/ 看文字灯廊 / 托付旧事；名牌和愿望公开，勿写现实隐私 |
+| `buxing watch` / `buxing remember` / `buxing fulfill 灯号` | 60 票守夜 / 看潮汐簿与灯芯 / 免费还愿，在自己的灯旁记“成了” |
 | `lore scan` | 沿海旧史文本与 NPC 小传（`lore scan npc`；也可指定其他主题或随机），不是收集品 |
 | `clinic status` / `clinic treat infection` | 诊所。深坑伤走 `undertide_ops medic` |
 | `visit 拾叶` | 巷口随机事件（主动必触发）；路上每天首次操作掷一次碰上 |
