@@ -1,4 +1,4 @@
-"""买地 — 起步 3 块，最多 8 块；付钱后要开垦一段时间才能种。"""
+"""买地 — 起步 3 块，露天无上限；付钱后要开垦一段时间才能种。"""
 
 from __future__ import annotations
 
@@ -14,16 +14,21 @@ def _offer_index(parcel_count: int) -> int:
     return max(0, idx)
 
 
-def next_offer(parcel_count: int) -> dict[str, int] | None:
+def next_outdoor_slot(parcel_count: int) -> int:
+    """下一块露天槽号。跳过温室 #99，避免和 shed 抢槽。"""
+    n = int(parcel_count) + 1
+    if n >= config.GREENHOUSE_SLOT:
+        return n + 1
+    return n
+
+
+def next_offer(parcel_count: int) -> dict[str, int]:
     count = int(parcel_count)
-    if count >= config.MAX_PARCELS:
-        return None
-    idx = min(_offer_index(count), len(config.PARCEL_EXPAND_COSTS) - 1)
-    clear_idx = min(idx, len(config.PARCEL_CLEAR_SECONDS) - 1)
+    idx = _offer_index(count)
     return {
-        "slot": count + 1,
-        "cost": int(config.PARCEL_EXPAND_COSTS[idx]),
-        "clear_seconds": int(config.PARCEL_CLEAR_SECONDS[clear_idx]),
+        "slot": next_outdoor_slot(count),
+        "cost": int(config.parcel_expand_cost(idx)),
+        "clear_seconds": int(config.parcel_clear_seconds(idx)),
     }
 
 
@@ -58,14 +63,21 @@ def assert_ready(plot: dict[str, Any]) -> None:
     )
 
 
-def price_table_lines() -> list[str]:
-    lines = ["价目（第 4～8 块）："]
-    n = min(len(config.PARCEL_EXPAND_COSTS), len(config.PARCEL_CLEAR_SECONDS))
-    for i in range(n):
-        slot = config.START_PARCELS + 1 + i
+def price_table_lines(parcel_count: int | None = None) -> list[str]:
+    count = config.START_PARCELS if parcel_count is None else int(parcel_count)
+    lines = [
+        "价目（露天无上限；第 4 块起按表递推）：",
+        "  规律：#4 80票/30分 → #5 120/45 → #6 180/60 → #7 260/90 → #8 360/120 → 之后以此类推",
+    ]
+    start = max(count, config.START_PARCELS)
+    for i in range(6):
+        offer = next_offer(start + i)
         lines.append(
-            f"  #{slot}  {config.PARCEL_EXPAND_COSTS[i]}票 · 开垦 {fmt_clear(config.PARCEL_CLEAR_SECONDS[i])}"
+            f"  #{offer['slot']}  {offer['cost']}票 · 开垦 {fmt_clear(offer['clear_seconds'])}"
         )
+    lines.append(
+        "  再往后票价差额每次多 20（+40、+60、+80…）；开垦时间每两档多加 15 分钟。"
+    )
     return lines
 
 
@@ -108,7 +120,7 @@ async def clearing_slot(conn: aiosqlite.Connection, steward_id: int) -> dict[str
 async def status_text(steward: dict[str, Any], parcels: list[dict[str, Any]] | None = None) -> str:
     count = int(steward.get("parcel_count") or config.START_PARCELS)
     lines = [
-        f"份地 {count}/{config.MAX_PARCELS}（起步 {config.START_PARCELS} 块，最多 {config.MAX_PARCELS} 块；温室 #99 另计）",
+        f"份地 {count} 块（起步 {config.START_PARCELS} 块，露天无上限；温室 #{config.GREENHOUSE_SLOT} 另计）",
     ]
     if parcels is None:
         parcels = await db.get_parcels(steward["id"])
@@ -120,22 +132,18 @@ async def status_text(steward: dict[str, Any], parcels: list[dict[str, Any]] | N
                 f"#{p['slot']} 开垦中，还剩 {farming.format_grow_eta(left)}"
             )
         lines.append("上一块开好才能再买。")
-    offer = next_offer(count)
-    if offer and not clearing:
+    else:
+        offer = next_offer(count)
         lines.append(
             f"下一块 #{offer['slot']}：{offer['cost']} 票，开垦 {fmt_clear(offer['clear_seconds'])}"
         )
         lines.append("要买：plot_ops 买地 确认")
-    elif not offer:
-        lines.append("已经买满，没有下一块了。")
-    lines.extend(price_table_lines())
+    lines.extend(price_table_lines(count))
     return "\n".join(lines)
 
 
 async def buy(conn: aiosqlite.Connection, steward: dict[str, Any]) -> str:
     count = int(steward.get("parcel_count") or config.START_PARCELS)
-    if count >= config.MAX_PARCELS:
-        raise ValueError(f"份地已达上限 {config.MAX_PARCELS} 块")
     pending = await clearing_slot(conn, steward["id"])
     if pending:
         left = clear_left(pending)
@@ -144,13 +152,11 @@ async def buy(conn: aiosqlite.Connection, steward: dict[str, Any]) -> str:
             "开好再买下一块。"
         )
     offer = next_offer(count)
-    if not offer:
-        raise ValueError(f"份地已达上限 {config.MAX_PARCELS} 块")
     cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (steward["id"],))
     tickets = (await cur.fetchone())[0]
     if tickets < offer["cost"]:
         raise ValueError(
-            f"买第 {offer['slot']} 块需要 {offer['cost']} 票，你只有 {tickets} 票。"
+            f"买 #{offer['slot']} 需要 {offer['cost']} 票，你只有 {tickets} 票。"
             f"开垦要 {fmt_clear(offer['clear_seconds'])}。"
         )
     new_count = count + 1
@@ -170,23 +176,22 @@ async def buy(conn: aiosqlite.Connection, steward: dict[str, Any]) -> str:
     steward["parcel_count"] = new_count
     return (
         f"买下 #{offer['slot']}（-{offer['cost']} 票）。"
-        f"现 {new_count}/{config.MAX_PARCELS} 块。"
+        f"现 {new_count} 块（露天无上限）。"
         f"开垦 {fmt_clear(offer['clear_seconds'])}，开好才能 sow。"
     )
 
 
 def sheet_note(steward: dict[str, Any], parcels: list[dict[str, Any]]) -> str:
     count = int(steward.get("parcel_count") or config.START_PARCELS)
-    bits = [f"份地: {count}/{config.MAX_PARCELS} 块"]
+    bits = [f"份地: {count} 块（无上限）"]
     clearing = [p for p in parcels if clear_left(p) > 0]
     if clearing:
         p = clearing[0]
         bits.append(f"#{p['slot']} 开垦中 {farming.format_grow_eta(clear_left(p))}")
     else:
         offer = next_offer(count)
-        if offer:
-            bits.append(
-                f"下一块 #{offer['slot']} {offer['cost']}票 · 开垦{fmt_clear(offer['clear_seconds'])}"
-                " → plot_ops 买地"
-            )
+        bits.append(
+            f"下一块 #{offer['slot']} {offer['cost']}票 · 开垦{fmt_clear(offer['clear_seconds'])}"
+            " → plot_ops 买地"
+        )
     return " · ".join(bits)

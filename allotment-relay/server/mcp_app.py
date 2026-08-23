@@ -106,9 +106,9 @@ async def steward_ops(
     )
 
 
-@mcp.tool(description="份地农事。command 写一整句，不要编造 sow_all/plant/harvest。例子：status · sow 1 甘蓝 · tend · 浇水 1 · 施肥 1 · gather 1 · catalog · 偷菜 安 · 买地 · buy 2 甘蓝 · shed erect · camera install 1 · dove 忽略。果树按种苗成本有收茬上限，收满枯死（status 看剩N茬）。斑鸠：昼间 sow/tend 每天掷一次碰上才盯梢。温室 #99 不占 8 块上限。buy 种子受行囊每格 24 份限制。空 command 列出常用指令，不是看地；看地必须 status。偷菜最多 30%。不会就 help。")
+@mcp.tool(description="份地农事。command 写一整句，不要编造 sow_all/plant/harvest。例子：status · sow 1 甘蓝 · tend · 浇水 1 · 施肥 1 · gather 1 · catalog · 偷菜 安 · 买地 · 买地 确认 · buy 2 甘蓝 · shed erect · camera install 1 · dove 忽略。果树按种苗成本有收茬上限，收满枯死（status 看剩N茬）。斑鸠：昼间 sow/tend 每天掷一次碰上才盯梢。买地露天无上限，票价按 80/120/180/260/360… 递推。温室 #99 独立槽，不占露天份地。buy 种子受行囊每格 24 份限制。空 command 列出常用指令，不是看地；看地必须 status。偷菜最多 30%。不会就 help。")
 async def plot_ops(
-    command: Annotated[str, Field(description="子命令整句。status=看地 / catalog / sow 1 甘蓝 / tend / 浇水 1 / 施肥 1 / gather 1 / 偷菜 名字 / 买地 / buy 2 甘蓝 / shed erect / chop 1 / shake 1 / camera install 1 / incident scan / repair 12 / dove 忽略|驱赶 / help。果树有收茬上限收满枯死。斑鸠每天掷一次碰上才盯梢。温室 #99 独立槽。施肥默认耗堆肥。buy 不能超过行囊每格 24。空=常用指令，不是看地。不要发明 sow_all/plant。")] = "",
+    command: Annotated[str, Field(description="子命令整句。status=看地 / catalog / sow 1 甘蓝 / tend / 浇水 1 / 施肥 1 / gather 1 / 偷菜 名字 / 买地 / 买地 确认 / buy 2 甘蓝 / shed erect / chop 1 / shake 1 / camera install 1 / incident scan / repair 12 / dove 忽略|驱赶 / help。果树有收茬上限收满枯死。买地露天无上限，价钱按表递推。斑鸠每天掷一次碰上才盯梢。温室 #99 独立槽不占露天份地。施肥默认耗堆肥。buy 不能超过行囊每格 24。空=常用指令，不是看地。不要发明 sow_all/plant。")] = "",
 ) -> str:
     return await mux._call_ops(mux.plot_bundle, _kid(), command)
 

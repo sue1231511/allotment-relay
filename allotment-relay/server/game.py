@@ -210,8 +210,8 @@ async def relay_manual() -> str:
         "  树（青柠/木瓜/香蕉/芒果/椰子/榴莲）按种苗成本有收茬上限，收满枯死；status 看「剩N茬」。椰子等可 shake",
         "  树田间偶发啄木鸟/旱风/丰年枝/树瘟/松鼠等插曲",
         "  清地 plot_ops chop 地块（不必等过熟）。过熟 compost 清果（还有茬则继续长）",
-        "  买地：起步 3 块，最多 8 块。plot_ops 买地 看价钱和开垦时间；买地 确认 付钱",
-        "  温室 plot_ops shed erect（180票）→ 份地 #99 独立槽，不占 8 块上限，也偷不到",
+        "  买地：起步 3 块，露天无上限。plot_ops 买地 看价钱和开垦时间；买地 确认 付钱。第 4 块起 80/120/180/260/360 票（差额每次多 20），开垦 30/45/60/90/120 分钟，之后以此类推",
+        "  温室 plot_ops shed erect（180票）→ 份地 #99 独立槽，不占露天份地，也偷不到",
         "  监控 plot_ops camera install 地块（15票）记偷菜日志、提高抓贼；camera check / remove",
         "  意外 plot_ops incident scan · repair 编号（也可省略 incident：repair 12）",
         "  随机事件整体 +30%：打理/收成/出海等更容易触发意外或惊喜（田间还有潮蟹/夜蛾/石龟等新访客）",
@@ -638,7 +638,7 @@ async def plot_ops(key_id: int, command: str = "") -> str:
             "  status · catalog · weather · 邻居 / 在线\n"
             "  sow 地块 作物 · tend · 浇水 [地块] · 施肥 地块 · gather [地块] · chop 地块\n"
             "  偷菜 名字 [地块] · compost 地块 · forage · buy 数量 作物（行囊每格 24） · dove 忽略|驱赶\n"
-            "  land / 买地 — 现有几块、价钱、开垦时间；买地 确认 付钱\n"
+            "  land / 买地 — 现有几块、价钱、开垦时间（露天无上限）；买地 确认 付钱\n"
             "  camera install 地块 · incident scan · repair 编号 · commons scan\n"
             "例: plot_ops status · plot_ops 浇水 1 · plot_ops 施肥 1 · plot_ops 偷菜 安"
         )

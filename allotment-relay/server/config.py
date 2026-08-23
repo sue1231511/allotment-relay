@@ -73,10 +73,33 @@ TIDE_LABELS = {
 PEN_ERECT_COST = 140
 PEN_EXPAND_COST = 120
 MAX_FISH_PENS = 2
-MAX_PARCELS = 8
-# 第 4～8 块：票价；开垦时长（秒）30 / 45 / 60 / 90 / 120 分钟
-PARCEL_EXPAND_COSTS = [80, 120, 180, 260, 360]
-PARCEL_CLEAR_SECONDS = [1800, 2700, 3600, 5400, 7200]
+# 温室独占槽，露天买地跳过这个号
+GREENHOUSE_SLOT = 99
+# 露天份地无上限。第 4 块起票价 80、120、180、260、360…（差额每次多 20）
+# 开垦时长 30、45、60、90、120 分钟…（每两档多加 15 分钟）
+PARCEL_EXPAND_BASE = 80
+PARCEL_CLEAR_BASE_MINUTES = 30
+
+
+def parcel_expand_cost(idx: int) -> int:
+    """第 (START_PARCELS+1+idx) 块票价：80 + 30n + 10n²。"""
+    n = max(0, int(idx))
+    return PARCEL_EXPAND_BASE + 30 * n + 10 * n * n
+
+
+def parcel_clear_seconds(idx: int) -> int:
+    """第 (START_PARCELS+1+idx) 块开垦秒数。30、45、60、90、120 分钟…"""
+    n = max(0, int(idx))
+    pairs, rem = divmod(n, 2)
+    minutes = PARCEL_CLEAR_BASE_MINUTES + 15 * pairs * (pairs + 1)
+    if rem:
+        minutes += 15 * (pairs + 1)
+    return minutes * 60
+
+
+# 前 5 档（第 4～8 块）与旧表一致，便于对照
+PARCEL_EXPAND_COSTS = [parcel_expand_cost(i) for i in range(5)]
+PARCEL_CLEAR_SECONDS = [parcel_clear_seconds(i) for i in range(5)]
 
 BOATS = {
     "skiff": {"name": "小舢板", "cost": 85, "rank": 1, "repair": 12, "cargo": 2},

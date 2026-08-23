@@ -63,6 +63,7 @@ def test_mcp_descriptions() -> None:
     assert "30%" in blob
     assert "sow_all" in blob or "plant" in blob
     assert "shed erect" in blob or "#99" in blob
+    assert "无上限" in blob or "露天无上限" in blob
 
     tide = mcp._tool_manager.get_tool("tide_ops")
     tide_blob = f"{tide.description}\n{(tide.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -200,7 +201,8 @@ def test_relay_manual_covers_systems() -> None:
         "kitchen_ops eat",
         "bar_ops work",
         "甘蓝种×2",
-        "不占 8 块上限",
+        "不占露天份地",
+        "露天无上限",
         "只搅山羊奶",
         "不是每日自动扣",
         "compliment 和 release",

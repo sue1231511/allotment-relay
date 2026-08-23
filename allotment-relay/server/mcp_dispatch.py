@@ -89,7 +89,7 @@ PLOT_HELP = """plot_ops 子命令（整句写进 command）：
   status — 各地块作物、把数、还要多久
   catalog — 作物全表（档/时间/把数）
   weather — 天气潮汐时辰
-  买地 / land — 现有几块、价钱、开垦时间；买地 确认 付钱开垦
+  买地 / land — 现有几块、价钱、开垦时间（起步 3 块，露天无上限，票价 80/120/180/260/360…）；买地 确认 付钱开垦
   sow 地块 作物 — 例子：sow 1 甘蓝 · sow 2 fogpea
   tend · 浇水 [地块] · 施肥 [地块] [堆肥|羊粪|猪粪|牛粪] — 浇水/施肥加快成熟（各一次）
   gather [地块] · forage
@@ -101,7 +101,7 @@ PLOT_HELP = """plot_ops 子命令（整句写进 command）：
   chop 地块 — 砍树腾地（树龄尽了会自己枯；想提前清地不必等过熟）
   compost 地块 — 过熟进堆肥（果树清果后若还有茬则继续长；枯了或不要了才 chop）
   scarecrow 地块 — 扎稻草人
-  shed erect|status|handoff — 温室（#99 独立槽，180票，不占 8 块上限，偷不到）
+  shed erect|status|handoff — 温室（#99 独立槽，180票，不占露天份地，偷不到）
   commons scan|claim id — 稀有公共物资
   incident status|scan|repair 编号 — 意外（scan 看风险；repair 也可省略 incident）
   repair 12 — 同上，可省略 incident
