@@ -34,6 +34,7 @@ TALE_HELP = """tale_ops 子命令（整句写进 command）：
   abandon 任务key — 放弃
   board — 完成榜
   souvenirs — 查看已解锁的永久纪念品（不占行囊，不能出售或赠送）
+  review [任务key] — 通关后一次重读该潮闻从第一幕到结尾的完整正文；不写 key 列出可回顾任务
   reminisce 任务key — 通关后重读补充回忆；例：reminisce black_box_lover
   help — 本帮助
 奖励：《黑盒与潮声》6 阶段，每推进一段自动 +30 票；完整探索再 +50 票（总计 230 票）。
@@ -1241,6 +1242,45 @@ async def _cmd_reminisce(
     return f"潮闻回忆 · {memory['title']}\n\n{body}"
 
 
+async def _cmd_review(
+    conn: aiosqlite.Connection, steward: dict[str, Any], tale_key: str
+) -> str:
+    """通关后返回潮闻主线完整正文；不带 key 时仅列出已解锁目录。"""
+    catalog = await _catalog(conn)
+    done = await _done_keys(conn, steward["id"])
+    key = tale_key.strip()
+    if not key:
+        reviewable = [tale for tale in catalog.values() if tale["key"] in done]
+        if not reviewable:
+            return "还没有可全篇回顾的潮闻。完成一项后再用 tale_ops review 任务key。"
+        lines = ["已解锁的潮闻全篇回顾："]
+        lines.extend(
+            f"  · {tale['key']} — 《{tale['title']}》\n"
+            f"    tale_ops review {tale['key']}"
+            for tale in reviewable
+        )
+        return "\n".join(lines)
+    tale = catalog.get(key)
+    if not tale:
+        raise ValueError(f"没有名为 {key} 的潮闻任务")
+    if key not in done:
+        raise ValueError(
+            f"《{tale['title']}》的全篇回顾尚未解锁。先完成这项潮闻，避免提前看到后续。"
+        )
+    sections = [f"【引子】\n{tale['intro']}"]
+    total = len(tale["stages"])
+    sections.extend(
+        f"【{index}/{total} · {stage['title']}】\n{stage.get('text', '')}"
+        for index, stage in enumerate(tale["stages"], 1)
+    )
+    return (
+        f"潮闻全篇回顾 · 《{tale['title']}》\n"
+        "（仅重读正文，不重复发放阶段或通关奖励）\n\n"
+        + "\n\n————————\n\n".join(sections)
+        + "\n\n—— 全篇完 ——"
+    )
+
+
 # ══ 外部钩子 ═══════════════════════════════════════════════════
 
 async def check_item_progress(
@@ -1341,6 +1381,8 @@ async def tale_ops(key_id: int, command: str) -> str:
             return await _cmd_board(conn, s)
         if verb in ("souvenirs", "souvenir", "纪念品", "收藏册", "藏品"):
             return await _cmd_souvenirs(conn, s)
+        if verb in ("review", "recap", "回顾", "全篇"):
+            return await _cmd_review(conn, s, rest)
         if verb in ("reminisce", "回忆", "重读"):
             return await _cmd_reminisce(conn, s, rest)
 

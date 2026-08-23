@@ -180,9 +180,9 @@ async def star_ops(
     return await mux._call_ops(star.star_ops, _kid(), command)
 
 
-@mcp.tool(description="潮闻 — 分阶段故事探索任务。按 status/hint 指定地点探索，匹配阶段耗5精力，错误地点不扣。《黑盒与潮声》六阶段共230票；《回忆生潮》《春山之外》均为严格11幕、每幕30票、完整探索总计450票，并各自解锁称呼与4件永久纪念品。玩家只是岛上探索者，不替代故事人物。例子：list · accept spring_beyond_mountain · status · explore shenzhi_home · souvenirs。空 command=list；不会就 help。")
+@mcp.tool(description="潮闻 — 分阶段故事探索任务，含《黑盒与潮声》《回忆生潮》《春山之外》，完成后可获永久纪念品。按 status/hint 探索，匹配阶段耗5精力，错误地点不扣。通关后用 review 任务key 一次读取从第一幕到结尾的完整正文，未通关不展示，且不重复发奖励；review 空参数列出可回顾目录。reminisce 仍是《黑盒与潮声》的额外回忆。例子：accept spring_beyond_mountain · explore shenzhi_home · review spring_beyond_mountain。空 command=list；不会就 help。")
 async def tale_ops(
-    command: Annotated[str, Field(description="子命令整句。list / accept black_box_lover|memory_tide|spring_beyond_mountain / status / explore 地点 / turnin / abandon 任务key / board / souvenirs / reminisce black_box_lover / help。回忆生潮从 explore south_lane 开始；春山之外从 explore shenzhi_home 开始；后续都严格照 status，每幕30票。souvenirs=已通关故事收藏；reminisce=黑盒通关后补充回忆。空=list。")] = "list",
+    command: Annotated[str, Field(description="子命令整句。list / accept black_box_lover|memory_tide|spring_beyond_mountain / status / explore 地点 / turnin / abandon 任务key / board / souvenirs（纪念品） / review [任务key] / reminisce black_box_lover / help。review key=通关后全篇重读主线正文，空 review=可回顾目录，未通关拒绝；reminisce=黑盒额外回忆。例子：review memory_tide · review spring_beyond_mountain。空 command=list。")] = "list",
 ) -> str:
     from . import tale
     return await mux._call_ops(tale.tale_ops, _kid(), command)
@@ -196,9 +196,9 @@ async def lounge_ops(
     return await mux._call_ops(lounge.lounge_ops, _kid(), command)
 
 
-@mcp.tool(description="人物故事探索，不接模型、按真实行动调查。含分支故事《灰姑娘》（首次结局60票、档信+5、雾智+5）和《昨日无凭》（12次顺序调查、自动完成第13幕；每幕首次30票，共390票；通关另奖120票、档信+6、雾智+10、称呼「旧事见证人」及4件永久纪念品）。例子：list · start cinderella · start yesterday_no_proof · status · explore old_wharf · souvenirs。空 command=list；不会就 help。")
+@mcp.tool(description="人物故事探索，不接模型、按真实行动调查。含分支故事《灰姑娘》（首次结局60票、档信+5、雾智+5）和《昨日无凭》（12次顺序调查、自动完成第13幕；每幕首次30票，共390票；通关另奖120票、档信+6、雾智+10、称呼「旧事见证人」及4件永久纪念品）。通关后用 review 故事key 让 AI 一次回顾完整人物故事；未通关不剧透、回顾不重复发奖励，空 review 列已解锁故事。例子：list · start cinderella · start yesterday_no_proof · status · review yesterday_no_proof · souvenirs。空 command=list；不会就 help。")
 async def story_ops(
-    command: Annotated[str, Field(description="子命令整句。list / start cinderella / start yesterday_no_proof / status [故事key] / explore old_wharf / inspect queen / search study / search portraits / enter cellar / contact girl / prepare backdoor|broadcast|trap / choose escape|judgment|hunt|rescue / archive / souvenirs / help。《昨日无凭》开始后严格按 status 的下一步；13幕每幕首次30票，重读不重复；纪念品不占行囊、不可交易。空=list。不要编造 ask/question。")]= "list",
+    command: Annotated[str, Field(description="子命令整句。list / start cinderella / start yesterday_no_proof / status [故事key] / explore old_wharf / inspect queen / search study / search portraits / enter cellar / contact girl / prepare backdoor|broadcast|trap / choose escape|judgment|hunt|rescue / archive / review [故事key] / souvenirs / help。review cinderella 或 review yesterday_no_proof 仅在通关后返回完整正文，不重复发工分票、属性、称呼或纪念品；review 不带 key 列出已解锁回顾。《昨日无凭》开始后严格按 status 的下一步；13幕每幕首次30票，重读不重复；纪念品不占行囊、不可交易。空=list。不要编造 ask/question。")]= "list",
 ) -> str:
     from . import story
     return await mux._call_ops(story.story_ops, _kid(), command)

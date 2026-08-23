@@ -34,6 +34,11 @@ async def test_escape_and_replay() -> None:
     assert "灰姑娘" in await story.story_ops(kid, "list")
     intro = await story.story_ops(kid, "start cinderella")
     assert "距离午夜只剩 60 分钟" in intro
+    try:
+        await story.story_ops(kid, "review cinderella")
+        raise AssertionError("unfinished story review should not reveal later text")
+    except ValueError as exc:
+        assert "尚未解锁" in str(exc) and "避免剧透" in str(exc)
     status = await story.story_ops(kid, "status")
     assert "inspect queen" in status and "enter cellar" not in status
 
@@ -51,6 +56,19 @@ async def test_escape_and_replay() -> None:
     steward = await db.get_steward_by_key_id(kid)
     assert steward["tickets"] == 180
     assert "双生逃离" in await story.story_ops(kid, "archive")
+    review_list = await story.story_ops(kid, "review")
+    assert "review cinderella" in review_list
+    review = await story.story_ops(kid, "review cinderella")
+    assert "人物故事全篇回顾 · 《灰姑娘》" in review
+    assert "仅重读已经解锁的完整正文" in review
+    assert "第一幕：不会行走的王妃" in review
+    assert "第二幕：重新开启的舞会" in review
+    assert "第五幕：下一位辛德瑞拉" in review
+    assert "准备：森林后门" in review
+    assert "结局｜双生逃离" in review and "—— 全篇完 ——" in review
+    assert "第三幕：消失的新娘" not in review
+    steward_after_review = await db.get_steward_by_key_id(kid)
+    assert steward_after_review["tickets"] == 180
 
     replay = await story.story_ops(kid, "start cinderella")
     assert "60 分钟" in replay
@@ -139,6 +157,11 @@ async def test_yesterday_story_rewards_and_souvenirs() -> None:
     assert "昨日无凭" in listing and "yesterday_no_proof" in listing
     intro = await story.story_ops(kid, "start yesterday_no_proof")
     assert "explore old_wharf" in intro
+    try:
+        await story.story_ops(kid, "review yesterday_no_proof")
+        raise AssertionError("unfinished linear story review should not reveal later text")
+    except ValueError as exc:
+        assert "尚未解锁" in str(exc) and "避免剧透" in str(exc)
     status = await story.story_ops(kid, "status")
     assert "调查 0/12" in status and "explore old_wharf" in status
 
@@ -161,6 +184,18 @@ async def test_yesterday_story_rewards_and_souvenirs() -> None:
 
     steward = await db.get_steward_by_key_id(kid)
     assert steward["tickets"] == 630
+    review_list = await story.story_ops(kid, "review")
+    assert "review yesterday_no_proof" in review_list
+    review = await story.story_ops(kid, "review yesterday_no_proof")
+    assert "人物故事全篇回顾 · 《昨日无凭》" in review
+    assert story_yesterday.INTRO in review
+    for action in story_yesterday.ACTIONS:
+        assert action["title"] in review
+        assert action["text"] in review
+    assert story_yesterday.ACTIONS[-1]["ending"] in review
+    assert "—— 全篇完 ——" in review
+    steward_after_review = await db.get_steward_by_key_id(kid)
+    assert steward_after_review["tickets"] == 630
     async with db.connect() as conn:
         title = await (await conn.execute(
             "SELECT 1 FROM steward_achievements WHERE steward_id=? AND ach_key='old_story_witness'",
@@ -203,6 +238,9 @@ def test_story_mcp_description() -> None:
     assert "昨日无凭" in blob
     assert "start yesterday_no_proof" in blob
     assert "souvenirs" in blob
+    assert "review [故事key]" in blob
+    assert "完整人物故事" in blob
+    assert "不重复发" in blob
 
 
 def main() -> None:

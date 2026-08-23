@@ -311,6 +311,12 @@ async def test_spring_beyond_mountain_flow() -> None:
     assert "tale_ops explore shenzhi_home" in accepted, accepted
     assert "把我姐的春天挡住了" not in accepted, accepted
 
+    try:
+        await tale.tale_ops(kid, "review spring_beyond_mountain")
+        raise AssertionError("unfinished full review should be hidden")
+    except ValueError as exc:
+        assert "尚未解锁" in str(exc) and "避免提前看到后续" in str(exc), exc
+
     wrong = await tale.tale_ops(kid, "explore mountain_window")
     assert "未消耗精力" in wrong and "explore shenzhi_home" in wrong, wrong
 
@@ -347,6 +353,23 @@ async def test_spring_beyond_mountain_flow() -> None:
     assert after[1] == before[1] - 11 * 5, (before, after)
     assert unlocked, "spring title was not recorded"
     assert progress.resolve_achievement("山外见春人") == "spring_beyond_mountain_witness"
+
+    review_list = await tale.tale_ops(kid, "review")
+    assert "spring_beyond_mountain" in review_list, review_list
+    assert "tale_ops review spring_beyond_mountain" in review_list, review_list
+    full_review = await tale.tale_ops(kid, "review spring_beyond_mountain")
+    assert "潮闻全篇回顾 · 《春山之外》" in full_review, full_review
+    assert "仅重读正文，不重复发放" in full_review, full_review
+    assert "【引子】" in full_review and "—— 全篇完 ——" in full_review, full_review
+    for index, action in enumerate(tale_spring_mountain.ACTIONS, 1):
+        assert f"【{index}/11 · {action['title']}】" in full_review, action["title"]
+    assert "你第一次见到沈青禾" in full_review, full_review
+    assert "山外已经是春天了" in full_review, full_review
+    async with db.connect() as conn:
+        after_review = await (await conn.execute(
+            "SELECT tickets, energy FROM stewards WHERE id=?", (sid,)
+        )).fetchone()
+    assert tuple(after_review) == tuple(after), (after, after_review)
 
     souvenirs = await tale.tale_ops(kid, "souvenirs")
     assert "潮闻收藏册 · 4 件" in souvenirs, souvenirs
@@ -480,6 +503,8 @@ def test_tale_mcp_description() -> None:
     assert "回忆生潮" in blob
     assert "spring_beyond_mountain" in blob
     assert "春山之外" in blob
+    assert "review" in blob
+    assert "完整正文" in blob
 
 
 def main() -> None:

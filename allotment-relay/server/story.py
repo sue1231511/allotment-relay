@@ -30,6 +30,7 @@ STORY_HELP = """story_ops 人物故事探索（整句写进 command）：
   prepare backdoor|broadcast|trap — 准备后门、广播或密室陷阱
   choose escape|judgment|hunt|rescue — 决定结局：双生逃离/公开审判/猎杀/只救新人
   archive — 查看自己已经抵达的结局
+  review [故事key] — 通关后回顾完整人物故事；不写 key 列出可回顾故事
   souvenirs — 查看人物故事永久纪念品（不占行囊，不能出售或赠送）
   help — 本帮助
 《灰姑娘》调查和准备各耗 10 分钟；首次结局奖励 60 票、档信 +5、雾智 +5。《昨日无凭》不耗精力，13 幕每幕首次 +30 票（共 390），通关另奖 120 票、档信 +6、雾智 +10、人物称呼「旧事见证人」和 4 件永久纪念品。所有故事重玩不重复领奖。"""
@@ -226,7 +227,12 @@ async def _finish(conn: aiosqlite.Connection, row: aiosqlite.Row, outcome: str, 
         (row["steward_id"], STORY_KEY, outcome, ts),
     )
     await conn.commit()
-    return text + reward_text + "\n\n重玩：story_ops start cinderella · 查看记录：story_ops archive"
+    return (
+        text
+        + reward_text
+        + "\n\n完整回顾：story_ops review cinderella · "
+        "重玩：story_ops start cinderella · 查看记录：story_ops archive"
+    )
 
 
 async def _claim_pending_reward(conn: aiosqlite.Connection, row: aiosqlite.Row) -> str:
@@ -333,7 +339,8 @@ async def _finish_yesterday(
     return (
         ending
         + _yesterday_reward_text(first)
-        + "\n\n重读：story_ops start yesterday_no_proof · 收藏：story_ops souvenirs"
+        + "\n\n完整回顾：story_ops review yesterday_no_proof · "
+        "重玩：story_ops start yesterday_no_proof · 收藏：story_ops souvenirs"
     )
 
 
@@ -343,7 +350,8 @@ async def _status_yesterday(row: aiosqlite.Row) -> str:
     if row["status"] == "completed":
         return (
             f"《{story_yesterday.STORY_TITLE}》已经完成（{done}/{len(story_yesterday.ACTIONS)}）。\n"
-            "重读：story_ops start yesterday_no_proof · 收藏：story_ops souvenirs"
+            "完整回顾：story_ops review yesterday_no_proof · "
+            "重玩：story_ops start yesterday_no_proof · 收藏：story_ops souvenirs"
         )
     action = story_yesterday.next_action(flags)
     if action is None:
@@ -450,7 +458,11 @@ def _available(flags: set[str]) -> list[str]:
 
 async def _status(row: aiosqlite.Row) -> str:
     if row["status"] == "completed":
-        return f"《灰姑娘》已经结束：{row['outcome']}。\n重玩：story_ops start cinderella · 记录：story_ops archive"
+        return (
+            f"《灰姑娘》已经结束：{row['outcome']}。\n"
+            "完整回顾：story_ops review cinderella · "
+            "重玩：story_ops start cinderella · 记录：story_ops archive"
+        )
     flags = _flags(row)
     labels = {
         "queen": "空荡的裙摆", "study": "足部尺寸名单", "portraits": "失踪新娘日志",
@@ -511,9 +523,94 @@ async def _archive(conn: aiosqlite.Connection, steward_id: int) -> str:
     )
     return (
         f"人物故事档案\n{endings}\n\n"
-        "重玩：story_ops start cinderella · 重读：story_ops start yesterday_no_proof · "
-        "纪念品：story_ops souvenirs"
+        "完整回顾：story_ops review · 重玩：story_ops start cinderella · "
+        "story_ops start yesterday_no_proof · 纪念品：story_ops souvenirs"
     )
+
+
+def _full_review(title: str, sections: list[tuple[str, str]]) -> str:
+    body = [
+        f"人物故事全篇回顾 · 《{title}》",
+        "（仅重读已经解锁的完整正文，不重复发放工分票、属性、称呼或纪念品。）",
+    ]
+    total = len(sections)
+    for index, (section_title, text) in enumerate(sections, 1):
+        body.append(f"[{index}/{total} · {section_title}]\n{text}")
+    body.append("—— 全篇完 ——")
+    return "\n\n".join(body)
+
+
+def _cinderella_ending(outcome_title: str) -> str:
+    if outcome_title == "绝望降临":
+        return TIMEOUT_TEXT
+    for title, _, text in OUTCOMES.values():
+        if title == outcome_title:
+            return text
+    raise ValueError("这次《灰姑娘》的结局正文已经无法识别，请重新完成一轮后再回顾。")
+
+
+async def _review(conn: aiosqlite.Connection, steward_id: int, story_key: str) -> str:
+    aliases = {
+        "cinderella": STORY_KEY,
+        "灰姑娘": STORY_KEY,
+        "yesterday_no_proof": story_yesterday.STORY_KEY,
+        "yesterday": story_yesterday.STORY_KEY,
+        "昨日无凭": story_yesterday.STORY_KEY,
+    }
+    if not story_key:
+        lines = ["已解锁的人物故事全篇回顾"]
+        cinderella = await _progress(conn, steward_id, STORY_KEY)
+        if cinderella and cinderella["status"] == "completed":
+            lines.append(f"  《{STORY_TITLE}》— story_ops review {STORY_KEY}")
+        yesterday = await (await conn.execute(
+            """SELECT 1 FROM steward_story_outcomes
+               WHERE steward_id=? AND story_key=? LIMIT 1""",
+            (steward_id, story_yesterday.STORY_KEY),
+        )).fetchone()
+        if yesterday:
+            lines.append(
+                f"  《{story_yesterday.STORY_TITLE}》— "
+                f"story_ops review {story_yesterday.STORY_KEY}"
+            )
+        if len(lines) == 1:
+            lines.append("  暂无。完成人物故事后即可回顾；未通关内容不会提前剧透。")
+        return "\n".join(lines)
+
+    key = aliases.get(story_key)
+    if not key:
+        raise ValueError("未知故事。可用：cinderella / yesterday_no_proof")
+
+    if key == story_yesterday.STORY_KEY:
+        completed = await (await conn.execute(
+            """SELECT 1 FROM steward_story_outcomes
+               WHERE steward_id=? AND story_key=? LIMIT 1""",
+            (steward_id, key),
+        )).fetchone()
+        if not completed:
+            raise ValueError(
+                "《昨日无凭》尚未解锁全篇回顾。请先完成故事；为避免剧透，未通关时不展示后续正文。"
+            )
+        sections = [("引子", story_yesterday.INTRO)]
+        for action in story_yesterday.ACTIONS:
+            sections.append((action["title"], action["text"]))
+            if action.get("ending"):
+                sections.append(("第十三幕｜昨日无凭", action["ending"]))
+        return _full_review(story_yesterday.STORY_TITLE, sections)
+
+    row = await _progress(conn, steward_id, STORY_KEY)
+    if not row or row["status"] != "completed":
+        raise ValueError(
+            "《灰姑娘》尚未解锁本轮全篇回顾。请先完成当前故事；为避免剧透，未通关时不展示后续正文。"
+        )
+    flags = _flags(row)
+    sections = [("引子", INTRO)]
+    sections.extend(
+        (action["title"], action["text"])
+        for action in ACTIONS.values()
+        if action["flag"] in flags
+    )
+    sections.append((f"结局｜{row['outcome']}", _cinderella_ending(row["outcome"])))
+    return _full_review(STORY_TITLE, sections)
 
 
 async def story_ops(key_id: int, command: str = "list") -> str:
@@ -527,6 +624,7 @@ async def story_ops(key_id: int, command: str = "list") -> str:
             "  cinderella — 灰姑娘：水晶鞋、失踪的新娘与午夜前的抉择\n"
             "  yesterday_no_proof — 昨日无凭：旧照片、两枚贝壳与一段被共同遗忘的往事\n\n"
             "开始：story_ops start cinderella · story_ops start yesterday_no_proof\n"
+            "回顾：story_ops review [故事key]（仅限已通关）\n"
             "收藏：story_ops souvenirs"
         )
     async with db.connect() as conn:
@@ -542,6 +640,10 @@ async def story_ops(key_id: int, command: str = "list") -> str:
             previous = await _progress(conn, steward["id"])
             pending_reward = await _claim_pending_reward(conn, previous) if previous else ""
             return await _archive(conn, steward["id"]) + pending_reward
+        if cmd == "review" or cmd == "回顾":
+            return await _review(conn, steward["id"], "")
+        if cmd.startswith("review ") or cmd.startswith("回顾 "):
+            return await _review(conn, steward["id"], cmd.split(" ", 1)[1])
         if cmd in {"souvenirs", "souvenir", "纪念品", "收藏册", "藏品"}:
             return await _story_souvenirs(conn, steward["id"])
         if cmd.startswith("status") or cmd.startswith("状态"):
