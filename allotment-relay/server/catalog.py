@@ -395,6 +395,10 @@ HUT_HARD = {
 }
 
 HUT_SOFT = {
+    "hammock": {"name": "麻绳吊床", "cost": 40, "emoji": "🪵", "hint": "没有床时 hut_ops 睡：回 35 精力，每 24 小时一次（装了床按床算，同组不叠；不占硬装槽）"},
+    "vanity": {"name": "贝壳梳妆台", "cost": 44, "emoji": "🪞", "hint": "睡醒 / 泡澡后档信 +1（出门体面）"},
+    "bookshelf": {"name": "航海书架", "cost": 52, "emoji": "📚", "hint": "hut_ops 读：每日一次，雾智 +2 并翻一段沿海旧史"},
+    "fish_rack": {"name": "晾鱼架", "cost": 48, "emoji": "🪝", "hint": "hut_ops 晾 鲭鱼 4：2 同种生鱼 → 1 条鱼干（可生吃 +10、算 cook 蛋白、可囤）"},
     "kelp_rug": {"name": "浅海藻毯", "cost": 32, "emoji": "🧶", "hint": "纯好看，无数值"},
     "tide_lamp": {"name": "潮汐灯", "cost": 38, "emoji": "💡", "hint": "暮/夜行动补雾智 +1（与珊瑚小灯同组不叠）"},
     "fog_curtain": {"name": "雾纱帘", "cost": 28, "emoji": "🪭", "hint": "guild_shift 档信 +1（与珠串帘同组不叠）"},
