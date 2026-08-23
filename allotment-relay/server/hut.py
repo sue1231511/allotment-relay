@@ -950,6 +950,18 @@ async def hut_ops(key_id: int, command: str) -> str:
     if verb in ("睡", "睡觉", "sleep", "休息", "rest"):
         return await bed_rest(s)
 
+    if verb in ("泡澡", "泡", "沐浴", "bath", "soak"):
+        return await bath_soak(s)
+
+    if verb in ("腌", "泡菜", "pickle"):
+        return await pickle_crops(s, command.strip().split()[1:])
+
+    if verb in ("晾", "晒", "dry"):
+        return await dry_fish(s, command.strip().split()[1:])
+
+    if verb in ("读", "读书", "翻书", "read"):
+        return await bookshelf_read(s)
+
     if verb in ("卖掉", "sell", "变卖", "出售"):
         return await furniture_sell_command(s, command.strip().split()[1:])
 
