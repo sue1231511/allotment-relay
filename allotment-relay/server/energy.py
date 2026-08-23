@@ -9,6 +9,24 @@ import aiosqlite
 from . import config, db, flavor
 
 
+def low_energy_hint(current: int, cap: int, amount: int, nag: str = "") -> str:
+    """精力不够时给 AI 的完整回复路径，能直接复制 command。"""
+    return (
+        f"精力不足（{current}/{cap}），这次要 {amount}。先回精力再干活：\n"
+        "· 家里吃：kitchen_ops eat 熟菜（回得最多，22 起）。"
+        "生吃水果/生鱼/野薄荷只能垫一下（水果只回 4、连吃 5 口营养不良）；"
+        "蔬菜不能生吃；生肉能垫但可能感染。\n"
+        "· 下馆子：kitchen_ops shop board 看谁在营业，再 kitchen_ops shop dine 店主名"
+        " —— 堂食按菜价回精力（约 3.5 票/1 精力），还带「饱餐」2 小时（行动精力 -1）。"
+        "没菜就换一家，不要自己编馆名。\n"
+        "· 睡觉：hut_ops 睡（装了床每天一次，回 50~54）。\n"
+        "· 路过：steward_ops sheet 档口会慢慢回。\n"
+        "· 有 5 精力且小橘今晚开嗓：star_ops 围观 也能回。"
+        f"{nag}\n"
+        "实在没钱吃饭、饿得干不动活：bar_ops lodge — 酒馆包宿（管饭+工钱15，干一整天）"
+    )
+
+
 async def spend(
     conn: aiosqlite.Connection,
     steward_id: int,
@@ -35,12 +53,7 @@ async def spend(
         nag = ""
         if ailments:
             nag = f"（还带伤：{'、'.join(a['name'] for a in ailments[:2])}，visit_ops clinic treat）"
-        raise ValueError(
-            f"精力不足（{current}/{cap}），需要 {amount}。"
-            "恢复：kitchen_ops eat 熟菜（回得最多）；生吃水果/生鱼/野薄荷垫一下（回得少）；"
-            f"蔬菜不能生吃。生肉能垫但可能感染；有 5 精力且小橘今晚开嗓时，star_ops 围观 也能回精力。steward_ops sheet 路过档口会慢慢回{nag}\n"
-            "实在没钱吃饭、饿得干不动活：bar_ops lodge — 酒馆包宿（管饭+工钱15，干一整天）"
-        )
+        raise ValueError(low_energy_hint(current, cap, amount, nag))
     await conn.execute(
         "UPDATE stewards SET energy = energy - ? WHERE id=?",
         (amount, steward_id),

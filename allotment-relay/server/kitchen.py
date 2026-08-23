@@ -486,8 +486,9 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             "             也可 hut_ops 冰柜 存|取，生鲜进潮柜、熟菜进冰箱\n"
             "  brew 材料 — 灶台（回雾智）\n"
             "  shop board — 全服谁在营业的小馆名单（店名和几道菜），不是流水也不是评价\n"
-            "  shop open|stock|dine|卖掉 — 开馆 / 上菜（stock 菜名 [价格]，参考价提示但不限区间）/ 去别人家吃 / 关张回收\n"
-            "  dine 别人 = 堂食：回精力按菜价算，还带「饱餐」2 小时（行动精力 -1）+雾智档信小加成。\n"
+            "  shop dine 店主名 — 下馆子堂食，也能回精力（按菜价，约 3.5 票/1 精力）+「饱餐」2 小时（行动精力 -1）\n"
+            "             例子：shop board · shop dine 安。没菜就换一家，不要自己编馆名\n"
+            "  shop open|stock|卖掉 — 开馆 / 上菜（stock 菜名 [价格]，参考价提示但不限区间）/ 关张回收\n"
             "             集市买的菜回家自己吃只有基础精力——饭馆卖堂食，集市卖货\n"
             f"{EAT_RULES}"
         )
@@ -517,7 +518,7 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             keys = sig.split("|")
             ings = " + ".join(f"{ITEM_NAMES.get(i, i)}（{i}）" for i in keys)
             lines.append(f"  {recipe['name']} — brew {' '.join(keys)}  · {ings}")
-        lines.append("小馆: kitchen_ops shop board|open|stock|dine|卖掉")
+        lines.append("小馆: kitchen_ops shop board 看谁在营业 · shop dine 店主名 下馆子回精力 · shop open|stock|卖掉")
         lines.append("冰箱: hut_ops 冰柜 存|取 熟菜（先装 fridge）· kitchen_ops store/fridge/take")
         return "\n".join(lines)
 

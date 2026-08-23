@@ -169,7 +169,7 @@ bar_ops     的 command = work 洗碗 night
 
 ### `kitchen_ops` — 厨房 / 小馆
 
-空 command = 菜谱。回精力用 `eat`，不要另造 `eat_ops`。
+空 command = 菜谱。回精力用 `eat` 或下馆子 `shop dine`，不要另造 `eat_ops`。
 
 | command | 做什么 |
 |---------|--------|
@@ -180,7 +180,7 @@ bar_ops     的 command = work 洗碗 night
 | `vend 盐焗沙蟹` | 系统回收熟菜。回收价压得低（3★≈材料价+10%），想赚钱走小馆/集市 |
 | `store 菜名` | 熟菜进冰箱（也可 `hut_ops 冰柜 存`） |
 | `brew 材料` | 灶台，回雾智 |
-| `shop board` / `shop open 店名` / `shop 卖掉` | 小馆。board=全服谁在营业（店名和几道菜），不是流水也不是评价。dine 别人馆=堂食：回精力按菜价算（约 3.5 票/1 精力），并得「饱餐」2 小时（行动精力 -1）+雾智 3、档信 2 |
+| `shop board` / `shop dine 安` / `shop open 店名` / `shop 卖掉` | 小馆。board=全服谁在营业（店名和几道菜），不是流水也不是评价。**下馆子** `shop dine 店主名`=堂食：回精力按菜价算（约 3.5 票/1 精力），并得「饱餐」2 小时（行动精力 -1）+雾智 3、档信 2。精力不够时也可以走这条，不必只 `eat` |
 | `shop stock 菜名 [价格]` | 上架熟菜，**价格自定**（不写价=参考价）。menu 显示星级、精力供食客自己比价 |
 | `help` | 列出真指令 |
 

@@ -56,6 +56,8 @@ def test_mcp_tool_copy() -> None:
     assert "营养不良" in blob
     assert "兔肉" in blob
     assert "感染" in blob
+    assert "下馆子" in blob
+    assert "shop dine" in blob
 
 
 async def _boot(tmp: Path):
@@ -180,6 +182,8 @@ async def _test_meat_infects() -> None:
     assert "eat 芒果" in help_msg
     assert "只有生肉" in help_msg
     assert "不能生吃" in help_msg
+    assert "下馆子" in help_msg
+    assert "shop dine 店主名" in help_msg
 
 
 def main() -> None:
