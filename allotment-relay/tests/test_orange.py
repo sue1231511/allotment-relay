@@ -124,7 +124,7 @@ async def test_shake_orange() -> None:
     assert "橘子" in shaken and "⚠" not in shaken, shaken
     async with db.connect() as conn:
         qty = (await (await conn.execute(
-            "SELECT quantity FROM inventory WHERE steward_id=? AND item='crop_orange'",
+            "SELECT quantity FROM satchel WHERE steward_id=? AND item='crop_orange'",
             (sid,),
         )).fetchone())
     assert qty is not None and qty[0] >= 1
