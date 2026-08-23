@@ -129,17 +129,14 @@ async def test_buy_respects_satchel_stack() -> None:
     except ValueError as exc:
         assert "24" in str(exc) and "行囊" in str(exc), exc
 
-    try:
-        await game.plot_ops(kid, "buy 1 甘蓝")
-        raise AssertionError("plot buy should refuse over-stack")
-    except ValueError as exc:
-        assert "24" in str(exc), exc
+    plot = await game.plot_ops(kid, "buy 1 甘蓝")
+    assert "24" in plot and "行囊" in plot, plot
 
     listed = await game.tote_ops(kid, "list")
     assert "x24/24" in listed, listed
 
 
-async def test_help_copy() -> None:
+def test_help_copy() -> None:
     from server import game
     from server.mcp_dispatch import HUT_HELP, TOTE_HELP, VISIT_HELP
 
