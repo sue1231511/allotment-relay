@@ -155,6 +155,14 @@ def resolve_item_key(token: str, *, prefer: str = "any") -> str | None:
         return "meat_pork"
     if raw in ("堆肥", "肥"):
         return "compost"
+    if raw in ("腌菜", "🫙腌菜", "泡菜"):
+        return "pickles"
+    if raw.startswith("鱼干·") or raw.startswith("🥓鱼干·"):
+        _sp = raw.split("·", 1)[1]
+        for fk, meta in SEA_CATCH.items():
+            if meta["name"] == _sp:
+                return f"dried_{fk}"
+        return None
     if raw in ("羊粪", "💩羊粪"):
         return "manure_sheep"
     if raw in ("猪粪", "💩猪粪"):
@@ -373,6 +381,8 @@ def is_bed_key(item_key: str) -> bool:
 HUT_HARD = {
     "bed": {"name": "岸柏板床", "cost": 60, "emoji": "🛏️", "sleep_energy": 50,
             "hint": "hut_ops 睡：一觉回 50 精力，每天一次换班刷新（回饱食 +8）"},
+    "bath_tub": {"name": "雪松浴桶", "cost": 85, "emoji": "🛁", "hint": "hut_ops 泡澡：雾智 +15，每 20 小时一次（床管精力，浴桶管雾智）"},
+    "pickle_crock": {"name": "腌菜坛", "cost": 70, "emoji": "🫙", "hint": "hut_ops 腌 甘蓝 4：2 蔬菜 → 1 坛腌菜（可生吃 +6、可当 cook 佐料、可囤潮柜）"},
     "bed_rattan": {"name": "软藤床", "cost": 95, "emoji": "🛌", "sleep_energy": 52,
                    "hint": "藤编软垫，好看好睡；一觉 +52 精力（每天一次）"},
     "bed_canopy": {"name": "云纹纱榻", "cost": 145, "emoji": "🌙", "sleep_energy": 54,
@@ -385,6 +395,10 @@ HUT_HARD = {
 }
 
 HUT_SOFT = {
+    "hammock": {"name": "麻绳吊床", "cost": 40, "emoji": "🪵", "hint": "没有床时 hut_ops 睡：回 35 精力，每 24 小时一次（装了床按床算，同组不叠；不占硬装槽）"},
+    "vanity": {"name": "贝壳梳妆台", "cost": 44, "emoji": "🪞", "hint": "睡醒 / 泡澡后档信 +1（出门体面）"},
+    "bookshelf": {"name": "航海书架", "cost": 52, "emoji": "📚", "hint": "hut_ops 读：每日一次，雾智 +2 并翻一段沿海旧史"},
+    "fish_rack": {"name": "晾鱼架", "cost": 48, "emoji": "🪝", "hint": "hut_ops 晾 鲭鱼 4：2 同种生鱼 → 1 条鱼干（可生吃 +10、算 cook 蛋白、可囤）"},
     "kelp_rug": {"name": "浅海藻毯", "cost": 32, "emoji": "🧶", "hint": "纯好看，无数值"},
     "tide_lamp": {"name": "潮汐灯", "cost": 38, "emoji": "💡", "hint": "暮/夜行动补雾智 +1（与珊瑚小灯同组不叠）"},
     "fog_curtain": {"name": "雾纱帘", "cost": 28, "emoji": "🪭", "hint": "guild_shift 档信 +1（与珠串帘同组不叠）"},
@@ -1055,6 +1069,13 @@ for k, v in LILI_DECOR.items():
     ITEM_NAMES[f"deco_{k}"] = f"{v['emoji']}{v['name']}"
 for k, v in LILI_JUNK_DECOR.items():
     ITEM_NAMES[f"deco_junk_{k}"] = f"{v['emoji']}{v['name']}"
+
+# 小屋加工品：腌菜与鱼干。
+ITEM_PRICES["pickles"] = 20
+ITEM_NAMES["pickles"] = "🫙腌菜"
+for _fk, _fv in SEA_CATCH.items():
+    ITEM_PRICES[f"dried_{_fk}"] = int(_fv["sell"] * 1.6)
+    ITEM_NAMES[f"dried_{_fk}"] = f"🥓鱼干·{_fv['name']}"
 
 
 def dish_item(key: str, stars: int = 3) -> str:
