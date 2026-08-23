@@ -83,7 +83,7 @@ async def require_steward(key_id: int, *, exempt_duty: bool = False) -> dict[str
         from . import health as health_mod
         from . import disaster as disaster_mod
         await health_mod.tick_chronic(conn, s["id"])
-        await disaster_mod.ensure_black_tide(conn)
+        await disaster_mod.ensure_weekly_tide(conn)
         await conn.commit()
     s = await db.get_steward_by_id(s["id"]) or s
     from . import progress as progress_mod
@@ -282,12 +282,10 @@ async def relay_manual() -> str:
         "【海】",
         "  渔具分 T0–T5。T1 钓竿 = Tt酱 30 票的竹钓竿；visit_ops tt buy 竹钓竿 和",
         "    tide_ops gear upgrade rod 买到的是同一档。更高档只能 gear upgrade（票+材料）。",
-        "  渔具升满不只加渔获率。坐钓 cast 按鱼价增幅+档位加成（消息写「渔具加成+N票」）。",
-        "  撒网 net 只给档位固定票、不按鱼价抽成；一网 8 票，空网更常见，稀有封顶 3（近岸常见鱼）。",
-        "    想捞深海贵货走 cast / 出海，不要靠岸边死刷网。",
+        "  渔具升满不只加渔获率。撒网 net / 坐钓 cast 都按鱼价增幅+档位加成（消息写「渔具加成+N票」）。",
         "  撒网 net 要先 tide_ops gear upgrade net（或 tool buy net_basic）；坐钓 cast 要 T1 钓竿 + 蚯蚓饵",
-        "  天灾：秋分黑潮已刮过一轮——2000 票以下没事，口袋越鼓冲得越狠（9 万会被削到大约 1.5 万）。",
-        "    之后暴潮脉冲会再卷 8000 以上的超额。风暴窗板略减损失。sheet / incident scan 能看见",
+        "  天灾：人类日历一周一次（东八区周一换班），低中高随机。3万以上才冲超额，3万及以下没事。",
+        "    低=浅潮收超额两成，中=灌仓潮近一半，高=黑潮收七成五。风暴窗板略减损失。sheet 能看见",
         "  渔排 pen erect → stock herring 2 · feed 2 · harvest 2 · label 2 薄荷池（不写池号会选空池/待投饵/可收）",
         "  出海 voyage buy skiff|cutter|drifter · depart near|far|deep · return",
         "  黑旗截停：fight / flee / parley / bribe（可省略 voyage）",
@@ -304,7 +302,7 @@ async def relay_manual() -> str:
         "",
         "【行囊 · 交换 · 集市】",
         "  tote_ops list 列出中文名和英文 id（每种 x当前/24）。vend 卖系统回收价；家具走 hut_ops 卖掉",
-        "  Tt酱货架买的种/饲料/工具，系统回收只有进价四成——满心打折买进也倒不过来，别反复买卖",
+        "  Tt酱货架买的种/饲料/工具，系统回收进价九成——退货少亏一成，别反复倒卖当印钞",
         "  买东西（tt buy / plot_ops buy / 集市）不能超过行囊每格 24 份，满了先 vend 或 冰柜 存",
         "  未命名小鱼 vend 会再掷一次小咒事件（可能吐票、走回袋、解开或加重小咒）",
         "  gifts [条数] — 查谁给你送了什么、酒吧谁给你打赏（即时到账，这里只看记录）。也可写 收礼。tote_ops gifts",
@@ -1454,7 +1452,7 @@ async def tide_ops(key_id: int, command: str) -> str:
             return await catches_mod.fish_catalog(conn, s["id"])
 
     if verb == "net":
-        cost = config.NET_TICKET_COST
+        cost = 4
         async with db.connect() as conn:
             await commons.maybe_spawn_commons(conn, steward_id=s["id"])
             from . import energy as energy_mod, gear
@@ -1464,7 +1462,7 @@ async def tide_ops(key_id: int, command: str) -> str:
                 raise ValueError("先 tide_ops gear upgrade net 升到 T1 粗渔网（或 tide_ops tool buy net_basic 兼容）")
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
             if (await cur.fetchone())[0] < cost:
-                raise ValueError(f"撒网需要 {cost} 工分票（岸边网只捞常见鱼，空网也常见）")
+                raise ValueError(f"撒网需要 {cost} 工分票")
             await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (cost, s["id"]))
             await energy_mod.spend(conn, s["id"], energy_cost, action="撒网")
             extra = await events.roll_after_action(s, "net", conn)
@@ -1475,23 +1473,17 @@ async def tide_ops(key_id: int, command: str) -> str:
             no_empty = await shaonian_mod.fishing_no_empty(conn, s["id"])
             await conn.commit()
         empty_chance = (
-            config.NET_EMPTY_BASE
-            - await events.net_bonus_chance()
-            - empty_reduce
-            - catch_bonus * 0.4
+            0.18 - await events.net_bonus_chance() - empty_reduce - catch_bonus * 0.4
             + await events.net_fog_penalty()
         )
-        if not no_empty and random.random() < max(config.NET_EMPTY_MIN, empty_chance):
-            msg = f"空网 T{stats['net']['tier']}，只有水草（岸边网空得比坐钓勤）"
+        if not no_empty and random.random() < max(0.04, empty_chance):
+            msg = f"空网 T{stats['net']['tier']}，只有水草"
             if extra:
                 msg += f"\n{extra}"
             if disc:
                 msg += f"\n{disc}"
             return f"{pulse}\n{msg}" if pulse else msg
-        rarity_cap = min(
-            config.NET_RARITY_BASE + rarity_bonus,
-            config.NET_RARITY_HARD_CAP,
-        )
+        rarity_cap = 3 + rarity_bonus
         catch = shaonian_mod.pick_fish_with_fortune(tide, rarity_cap, fortune_key)
         if catch_bonus and random.random() < catch_bonus:
             catch = shaonian_mod.pick_fish_with_fortune(tide, min(6, rarity_cap + 1), fortune_key)

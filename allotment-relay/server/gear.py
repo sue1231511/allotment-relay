@@ -95,8 +95,9 @@ def fish_catch_payout(stats: dict[str, dict[str, Any]], *, mode: str) -> tuple[f
         bonus = bait["tier"] + rod["tier"] * 2
         return mult, bonus
     net = stats["net"]
-    # 网不再按鱼价抽成，只留档位固定票，避免「一网比种地还肥」。
-    return 1.0, int(net["tier"])
+    mult = 1.0 + net["catch"] * 1.25 + net["tier"] * 0.05
+    bonus = net["tier"] * 2
+    return mult, bonus
 
 
 def _format_tier(kind: str, tier: int) -> str:

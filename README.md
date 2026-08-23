@@ -75,7 +75,7 @@ bar_ops     的 command = work 洗碗 night
 | command | 做什么 |
 |---------|--------|
 | `enroll 安` | 登记，只用一次 |
-| `sheet` | 自己的档：票、精力、份地、病症。有全服脉冲/天灾时会写在档上 |
+| `sheet` | 自己的档：票、精力、份地、病症。有全服脉冲/周潮天灾时会写在档上 |
 | `邻居` | 全员名册（找人偷菜 / assist 用这个） |
 | `在线` | 只看档口里的人 |
 | `peer 名字` | 别人的公开档 |
@@ -135,7 +135,7 @@ bar_ops     的 command = work 洗碗 night
 
 | command | 做什么 |
 |---------|--------|
-| `net` / `cast` | 岸边撒网 / 坐钓。`net` 8 票，空网常见，稀有封顶 3（近岸常见鱼），渔网只加档位固定票。cast 要 T1 钓竿 + 蚯蚓饵，按鱼价增幅给票。T1=竹钓竿（Tt酱 30 票或 `gear upgrade rod`，同一档）。未命名小鱼不能网，只能 `cast` 碰上或钓到 |
+| `net` / `cast` | 岸边撒网 / 坐钓。`net` 4 票，渔网按鱼价增幅+档位加成给票。cast 要 T1 钓竿 + 蚯蚓饵，同样按鱼价增幅给票。T1=竹钓竿（Tt酱 30 票或 `gear upgrade rod`，同一档）。未命名小鱼不能网，只能 `cast` 碰上或钓到 |
 | `pen status` / `pen stock herring 2` | 渔排；可指定池号 |
 | `voyage buy skiff` / `voyage depart near` | 买船 / 出海（near/far/deep） |
 | `fight` `flee` `parley` `bribe` | 黑旗截停（可省略 voyage） |
@@ -154,7 +154,7 @@ bar_ops     的 command = work 洗碗 night
 |---------|--------|
 | `list` | 行囊（中文名 + 英文 id）。每种最多 24 份，和潮柜一样；买货超了会拒 |
 | `gifts` / `收礼` | 查收到的礼物（谁送的、送了什么）。即时到账，这里只看记录 |
-| `vend 鲭鱼 1` | 按系统价出售。可批量：`vend 芒果 3 木瓜 2`。Tt酱货架买的种/饲料/工具只有进价四成，倒卖会亏。`vend 未命名小鱼 1` 会再掷一次小咒事件 |
+| `vend 鲭鱼 1` | 按系统价出售。可批量：`vend 芒果 3 木瓜 2`。Tt酱货架买的种/饲料/工具回收进价九成，退货少亏一成。`vend 未命名小鱼 1` 会再掷一次小咒事件 |
 | `gift 安 甘蓝 1` / `gift 安 票 5` | 送给别人。能直接送票，无手续费、无每日上限。票榜看口袋现票 |
 | `swap list` / `swap offer 甘蓝 2` | 交换台（白送，领取收手续费） |
 | `market list` / `market sell 甘蓝 2 8` | 玩家集市 |
@@ -205,7 +205,7 @@ bar_ops     的 command = work 洗碗 night
 | command | 做什么 |
 |---------|--------|
 | `list` | 固定 NPC |
-| `tt catalog` / `tt buy 锄头` / `tt buy 甘蓝种` | Tt酱杂货。货架货系统回收只有进价四成，别买了再 vend |
+| `tt catalog` / `tt buy 锄头` / `tt buy 甘蓝种` | Tt酱杂货。货架货系统回收进价九成，退货少亏一点，别买了再 vend 当印钞 |
 | `lili scan` / `lili summon 猫眼螺` | 栗栗流动摊 |
 | `shaonian visit` / `shaonian fortune` | 韶年卜卦 |
 | `musong visit` / `musong send 安` / `musong remember` | 见渡口的目送人·阿槐 / 请他送别一个名字（每游戏日一次）/ 回看送别册 |

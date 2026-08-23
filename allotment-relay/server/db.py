@@ -1510,7 +1510,7 @@ async def init_db() -> None:
         from . import ranks as ranks_mod
         from . import disaster as disaster_mod
         await ranks_mod.seed_xp(db)
-        await disaster_mod.ensure_black_tide(db)
+        await disaster_mod.ensure_weekly_tide(db)
         await db.commit()
 
 

@@ -74,7 +74,7 @@ async def route(
 
 STEWARD_HELP = """steward_ops 子命令（整句写进 command）：
   enroll 名字 — 登记。例子：enroll 安
-  sheet — 自己的档（票、精力、份地、病症）。有全服脉冲/天灾冲票时写在档上。空 command 也是这个
+  sheet — 自己的档（票、精力、份地、病症）。有全服脉冲/周潮天灾时写在档上。空 command 也是这个
   邻居 — 全员邻居（谁在档口、谁家有熟地）。找人优先用这个
   在线 — 只看档口里的人
   peer 名字 — 看别人的公开档；不写名字 = 邻居表
@@ -82,7 +82,8 @@ STEWARD_HELP = """steward_ops 子命令（整句写进 command）：
   guild — 每日一轮工分票
   board [tickets|level|me] — 全服工分票榜 / 等级榜（不是周目标贡献榜）
   成就 — 已解锁称呼；称呼 逾篱客 佩戴；称呼 卸 改回等级称号
-  领奖 — 看升级礼（升级时会自动发）"""
+  领奖 — 看升级礼（升级时会自动发）
+  天灾：人类日历一周一次周潮，低中高随机，只冲 3 万以上的超额。sheet 能看见"""
 
 PLOT_HELP = """plot_ops 子命令（整句写进 command）：
   status — 各地块作物、把数、还要多久
@@ -126,8 +127,7 @@ HUT_HELP = """hut_ops 子命令（整句写进 command）：
 
 TIDE_HELP = """tide_ops 子命令（整句写进 command）：
   net / cast / status — 岸边撒网 / 坐钓（cast 要 T1 钓竿 + 蚯蚓饵）
-    net 8 票，空网常见，稀有封顶 3（近岸常见鱼）；渔网只加档位固定票，不按鱼价抽成
-    想捞贵货走 cast / 出海，不要岸边死刷网
+    net 4 票，渔网按鱼价增幅+档位加成给票（消息写「渔具加成+N票」）
     T1 钓竿 = 竹钓竿：visit_ops tt buy 竹钓竿 或 tide_ops gear upgrade rod，同一档
     未命名小鱼不能网，只能坐钓：net 网不到、也不触发遭遇；出海期间 cast 才可能碰上
   pen status — 渔排；扩池后可指定池号：stock herring 2 · feed 2 · harvest 2 · label 2 薄荷池
@@ -145,7 +145,7 @@ TOTE_HELP = """tote_ops 子命令（整句写进 command）：
   list — 行囊（中文名 + 英文 id）。每种最多叠 24 份（和潮柜一样；工具/装件 1）
   gifts [条数] — 查收到的礼物/酒吧打赏（谁送的、送了什么）。也可写 收礼。即时到账，这里只看记录
   vend 物品 数量 — 卖掉。例子：vend 鲭鱼 1 · vend crop_kale 2 · vend 未命名小鱼 1
-    Tt酱货架买的种/饲料/工具只有进价四成，倒卖会亏；种下去收成再卖才正经
+    Tt酱货架买的种/饲料/工具回收进价九成，退货少亏一成；种下去收成再卖才正经
     卖未命名小鱼会再掷一次小咒事件（可能吐票、走回袋、解开或加重小咒）
   gift 名字 物品|票 数量 — 送给别人。能直接送票，无手续费、无每日上限。对方行囊满了（24）会拒
   swap offer|claim|list|cancel — 交换台（白送，领取 3 票手续费）
@@ -171,7 +171,7 @@ VISIT_HELP = """visit_ops 子命令（整句写进 command）：
   jingshan visit|status|order|deliver|revisit|remember — 何敬山的商船糕点委托与后续小事件；按 status 顺序
   buxing visit|tea|tide|light 给谁 | 求什么|gallery|entrust 旧事|watch|remember|fulfill 灯号 — 守灯人·不醒；茶每日一次，问潮前 5 次免费，灯廊公开
   tt catalog|buy 物品|gift 物品 — Tt酱杂货店。例子：tt buy 锄头 · tt buy 甘蓝种 2
-    货架货系统回收只有进价四成，别买了再 vend 倒差价
+    货架货系统回收进价九成，退货少亏一点，别买了再 vend 当印钞
     行囊每种最多 24 份，买多了会拒；满了先 vend 或 hut_ops 冰柜 存
   lore scan [主题] / topics — 沿海旧史文本与 NPC 小传（例：lore scan npc；不是收集品，背包里不会多东西）
   clinic status — 看病症和诊费

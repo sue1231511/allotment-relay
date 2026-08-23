@@ -68,7 +68,7 @@ def test_mcp_descriptions() -> None:
     tide_blob = f"{tide.description}\n{(tide.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
     assert "竹钓竿" in tide_blob
     assert "probe" in tide_blob
-    assert "8 票" in tide_blob or "8票" in tide_blob
+    assert "4 票" in tide_blob or "4票" in tide_blob
     assert "不能网" in tide_blob or "坐钓" in tide_blob
     assert "未命名小鱼" in tide_blob
 
@@ -252,10 +252,10 @@ def test_relay_manual_covers_systems() -> None:
         "平常回 10、好回 15、极好回 20",
         "极差额外反噬 10",
         "每满 20 票再回 +1",
-        "一网 8 票",
-        "秋分黑潮",
-        "稀有封顶 3",
-        "进价四成",
+        "一周一次",
+        "3万以上",
+        "低中高随机",
+        "进价九成",
         "/eatery /star 用 /steward 绑定的同一份本机凭证",
     ]
     missing = [n for n in needles if n not in text]
