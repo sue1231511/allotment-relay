@@ -74,6 +74,7 @@ def test_mcp_descriptions() -> None:
     tote_blob = f"{tote.description}\n{(tote.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
     assert "送票" in tote_blob
     assert "gifts" in tote_blob
+    assert "24" in tote_blob
 
     star = mcp._tool_manager.get_tool("star_ops")
     star_blob = f"{star.description}\n{(star.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -110,6 +111,8 @@ def test_mcp_descriptions() -> None:
     assert "床" in hut_blob
     assert "睡" in hut_blob
     assert "install hard_1 bed" in hut_blob
+    assert "堆肥桶" in hut_blob
+    assert "compost_bin" in hut_blob
 
     kitchen = mcp._tool_manager.get_tool("kitchen_ops")
     k_blob = f"{kitchen.description}\n{(kitchen.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -172,6 +175,9 @@ def test_relay_manual_covers_systems() -> None:
         "gear upgrade",
         "boss attack",
         "barn erect",
+        "堆肥桶",
+        "buy compost_bin",
+        "行囊每种也最多 24",
         "mascot adopt",
         "lili summon",
         "clinic treat",

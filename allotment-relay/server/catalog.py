@@ -412,6 +412,8 @@ HUT_SOFT = {
     "quilt_patch": {"name": "拼布薄被", "cost": 36, "emoji": "🧵", "hint": "guild_shift 档信 +1"},
     "cabinet": {"name": "潮柜", "cost": 58, "emoji": "🗄️",
                "hint": "hut_ops 冰柜 存/取 生鲜；基础 30 种各最多叠 24 份，满了 hut_ops 潮柜 扩（12票/格，顶 60）"},
+    "compost_bin": {"name": "堆肥桶", "cost": 46, "emoji": "🪣",
+                    "hint": "hut_ops 堆肥桶 存 羊粪 3｜取 堆肥 2。粪便不能进潮柜；丢进去按层沤，满 7 层结 1 份堆肥"},
 }
 
 TOOLS = {
@@ -1185,6 +1187,30 @@ def item_label(item: str) -> str:
         grade, _tier, sig, stars = parsed
         return mix_display_name(grade, sig, stars)
     return item
+
+
+def item_stack_cap(item: str) -> int:
+    """行囊每格上限。潮柜同数；工具 / 装件 / 活物只能 1。"""
+    from . import config
+    if item.startswith(("fit_", "deco_", "live_", "tool_")):
+        return 1
+    if item in TOOLS:
+        return 1
+    return int(config.SATCHEL_STACK)
+
+
+def satchel_full_message(item: str, have: int, want: int, cap: int) -> str:
+    label = item_label(item)
+    if item.startswith("manure_"):
+        extra = "粪便请 hut_ops 堆肥桶 存，别囤兜里。"
+    elif item.startswith(("dish_", "meal_")):
+        extra = "熟菜可 hut_ops 冰柜 存 进冰箱。"
+    else:
+        extra = "先 tote_ops vend，或 hut_ops 冰柜 存 进潮柜。"
+    return (
+        f"行囊里 {label} 已有 {have}，再来 {want} 会超过每格 {cap} 份"
+        f"（行囊和潮柜同上限）。{extra}"
+    )
 
 
 def dish_display_name(key: str, stars: int) -> str:

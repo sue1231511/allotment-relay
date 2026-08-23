@@ -114,8 +114,8 @@ async def _test_cook_daily_limits() -> None:
             await db.add_item(conn, sid, ing, 20)
             await conn.commit()
     async with db.connect() as conn:
-        await db.add_item(conn, sid, "crop_kale", 30)
-        await db.add_item(conn, sid, "fish_herring", 30)
+        await db.add_item(conn, sid, "crop_kale", 24)
+        await db.add_item(conn, sid, "fish_herring", 24)
         await conn.commit()
     for _ in range(config.KITCHEN_RECIPE_COOK_DAILY):
         await kitchen.kitchen_ops(kid, f"cook {dish}")

@@ -17,6 +17,7 @@ from .catalog import (
     ITEM_PRICES,
     SEA_CATCH,
     item_label,
+    item_stack_cap,
     suggested_price,
     weighted_fish_pick,
 )
@@ -138,10 +139,11 @@ async def relay_manual() -> str:
         "                 · gather · forage · 买地 · 买地 确认 · chop 1 · 偷菜 名字 · amends 名字",
         "                 · camera install 1 · incident scan · repair 12 · commons scan · dove 忽略|驱赶",
         "                 · shed erect · scarecrow 1 · compost 1 · shake 1",
-        "  hut_ops      小屋/潮柜/冰箱/床/畜栏/吉祥物",
+        "  hut_ops      小屋/潮柜/冰箱/堆肥桶/床/畜栏/吉祥物",
         "               command 例：status · build · catalog · buy cabinet · install soft_1 cabinet",
-        "                 · buy fridge · buy bed · install hard_1 bed · 睡（回 50 精力，每天一次，换班刷新）",
-        "                 · 冰柜 存 甘蓝 3 · 潮柜 扩 · 卖掉 soft_1 确认",
+        "                 · buy fridge · buy compost_bin · install soft_2 compost_bin",
+        "                 · buy bed · install hard_1 bed · 睡（回 50 精力，每天一次，换班刷新）",
+        "                 · 冰柜 存 甘蓝 3 · 潮柜 扩 · 堆肥桶 存 羊粪 3 · 卖掉 soft_1 确认",
         "                 · barn status · barn erect · barn buy sheep · barn feed · barn collect",
         "                 · mascot adopt 名字 scout|lucky|compost",
         "  tide_ops     渔获/渔排/出海/赶海/渔具/Boss",
@@ -264,7 +266,10 @@ async def relay_manual() -> str:
         "【小屋 · 畜栏】",
         "  hut_ops build 建棚屋 → catalog / buy / install 硬装软装。旧家具 hut_ops 卖掉 槽位 确认（折旧回收）",
         "  存菜：buy cabinet 潮柜（生鲜，小偷翻不到）或 buy fridge 冰箱（熟菜），装好后 冰柜 存|取（柜子/潮柜/冰箱同义）",
-        "  潮柜基础 30 种货，每种最多叠 24 份（设计上的栈上限，防单格囤货）；hut_ops 潮柜 扩（12票/格，顶 60）",
+        "  潮柜基础 30 种货，每种最多叠 24 份；行囊每种也最多 24（买货/收礼/收成同一上限，对得上）",
+        "  粪便不能进潮柜。buy compost_bin → install soft_N compost_bin → hut_ops 堆肥桶 存 羊粪 3｜取 堆肥 2",
+        "    跟 MC 堆肥桶差不多：丢粪便涨层，满 7 层结 1 份堆肥（羊粪+2 / 猪粪+3 / 牛粪+4）",
+        "  潮柜满了 hut_ops 潮柜 扩（12票/格，顶 60）",
         "  床：buy bed 岸柏板床（50精力/天）/ bed_rattan 软藤床（52）/ bed_canopy 云纹纱榻（54）→ install hard_N → hut_ops 睡",
         "  小屋可 upgrade 到 Lv4 临海邸（420票）",
         "    一觉回 50 精力+饱食8，每天一次（游戏日换班刷新）。精力上限按病症自动收窄（营养不良 −10 等）",
@@ -293,8 +298,9 @@ async def relay_manual() -> str:
         "  Boss tide_ops boss status|attack — 合力打潮渊之主，掉神话章鱼肉。耗精力",
         "",
         "【行囊 · 交换 · 集市】",
-        "  tote_ops list 列出中文名和英文 id。vend 卖系统回收价；家具走 hut_ops 卖掉",
+        "  tote_ops list 列出中文名和英文 id（每种 x当前/24）。vend 卖系统回收价；家具走 hut_ops 卖掉",
         "  Tt酱货架买的种/饲料/工具，系统回收只有进价四成——满心打折买进也倒不过来，别反复买卖",
+        "  买东西（tt buy / plot_ops buy / 集市）不能超过行囊每格 24 份，满了先 vend 或 冰柜 存",
         "  gifts [条数] — 查谁给你送了什么、酒吧谁给你打赏（即时到账，这里只看记录）。也可写 收礼。tote_ops gifts",
         "  gift 名字 物品|票 数量 [留言] — 送给别人。能直接送票，即时到账，无手续费、无每日上限。票榜看口袋现票，送出会掉名次。协作度 +3",
         "  随机事件整体 +30%（EVENT_RATE_MULT=1.3）：打理/收成/出海等更容易触发意外或惊喜",
@@ -619,7 +625,7 @@ async def plot_ops(key_id: int, command: str = "") -> str:
             "plot_ops 需要子指令。常用:\n"
             "  status · catalog · weather · 邻居 / 在线\n"
             "  sow 地块 作物 · tend · 浇水 [地块] · 施肥 地块 · gather [地块] · chop 地块\n"
-            "  偷菜 名字 [地块] · compost 地块 · forage · buy 数量 作物 · dove 忽略|驱赶\n"
+            "  偷菜 名字 [地块] · compost 地块 · forage · buy 数量 作物（行囊每格 24） · dove 忽略|驱赶\n"
             "  land / 买地 — 现有几块、价钱、开垦时间；买地 确认 付钱\n"
             "  camera install 地块 · incident scan · repair 编号 · commons scan\n"
             "例: plot_ops status · plot_ops 浇水 1 · plot_ops 施肥 1 · plot_ops 偷菜 安"
@@ -726,7 +732,10 @@ async def _plot_one(s: dict, cmd: str) -> str:
             await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (cost, s["id"]))
             await db.add_item(conn, s["id"], seed, qty)
             await conn.commit()
-        return f"购入 {CROPS[crop]['name']}种 x{qty}（-{cost} 票）。好感打折去 visit_ops tt buy"
+        return (
+            f"购入 {CROPS[crop]['name']}种 x{qty}（-{cost} 票）。"
+            "行囊每种最多 24。好感打折去 visit_ops tt buy"
+        )
 
     if verb == "sow" and len(parts) >= 3:
         slot = _parse_int(parts[1], "地块编号")
@@ -982,7 +991,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
                     need = farming.fertilizer_label(fert_item)
                     if not lines:
                         raise ValueError(
-                            f"施肥需要 {need} x1（forage / hut_ops barn compost 可攒）"
+                            f"施肥需要 {need} x1（forage / hut_ops 堆肥桶 存 粪便 可攒）"
                         )
                     lines.append(f"{need} 不够了，施到 #{plot['slot']} 前停手")
                     break
@@ -1980,14 +1989,16 @@ async def _tote_one(s: dict, command: str) -> str:
     verb = parts[0].lower() if parts else "list"
     if verb == "list":
         stock = await db.get_satchel(s["id"])
-        lines = [f"工分票: {s['tickets']}"]
+        lines = [f"工分票: {s['tickets']}", "行囊每种最多 24 份（和潮柜一样；工具/装件 1）"]
         for item, qty in stock.items():
             price = suggested_price(item) or ITEM_PRICES.get(item, 0)
             name = item_label(item)
+            cap = item_stack_cap(item)
+            stack = f"x{qty}/{cap}"
             if item.startswith("fit_") or item.startswith("deco_"):
-                lines.append(f"  {name} x{qty} · {item} · 卖掉走 hut_ops 卖掉")
+                lines.append(f"  {name} {stack} · {item} · 卖掉走 hut_ops 卖掉")
             else:
-                lines.append(f"  {name} x{qty} · {item} · vend {price}/个")
+                lines.append(f"  {name} {stack} · {item} · vend {price}/个")
         return "\n".join(lines) if stock else f"工分票: {s['tickets']}\n行囊空"
     if verb == "vend" and len(parts) >= 3:
         # 支持批量：vend item1 qty1 item2 qty2 ...（每对一个物品+数量）
