@@ -429,6 +429,38 @@ async def test_missing_pages_flow() -> None:
         assert name in souvenirs, souvenirs
 
 
+async def test_asking_around_flow() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="asking-around-"))
+    db = await _boot(tmp)
+    from server import tale, tale_asking_around
+
+    kid, sid = await _enroll(db, "asking-around@example.com", "打听探索者")
+    listing = await tale.tale_ops(kid, "list")
+    assert "asking_around" in listing and "打听" in listing, listing
+    assert "每阶段工分票+30×11" in listing, listing
+    accepted = await tale.tale_ops(kid, "accept asking_around")
+    assert "不替陈家任何人作决定" in accepted, accepted
+    assert "tale_ops explore west_market" in accepted, accepted
+    wrong = await tale.tale_ops(kid, "explore chen_home")
+    assert "未消耗精力" in wrong and "explore west_market" in wrong, wrong
+    async with db.connect() as conn:
+        before = await (await conn.execute(
+            "SELECT tickets, energy FROM stewards WHERE id=?", (sid,)
+        )).fetchone()
+    for index, stage in enumerate(tale_asking_around.TALE_STAGES, 1):
+        result = await tale.tale_ops(kid, f"explore {stage['domain']}")
+        assert f"第 {index}/11 阶段奖励" in result, result
+    assert "【探索完成：《打听》】" in result, result
+    async with db.connect() as conn:
+        after = await (await conn.execute(
+            "SELECT tickets, energy FROM stewards WHERE id=?", (sid,)
+        )).fetchone()
+    assert after[0] - before[0] == 11 * 30 + 120, (before, after)
+    assert after[1] == before[1] - 11 * 5, (before, after)
+    review = await tale.tale_ops(kid, "review asking_around")
+    assert "潮闻全篇回顾 · 《打听》" in review and "她有没有问过我" in review
+
+
 async def test_tale_explore_is_unlimited() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="tale-unlimited-"))
     db = await _boot(tmp)
@@ -550,6 +582,8 @@ def test_tale_mcp_description() -> None:
     assert "春山之外" in blob
     assert "missing_pages" in blob
     assert "缺页" in blob
+    assert "asking_around" in blob
+    assert "打听" in blob
     assert "review" in blob
     assert "完整正文" in blob
 
@@ -559,6 +593,7 @@ def main() -> None:
     asyncio.run(test_memory_tide_flow())
     asyncio.run(test_spring_beyond_mountain_flow())
     asyncio.run(test_missing_pages_flow())
+    asyncio.run(test_asking_around_flow())
     asyncio.run(test_tale_explore_is_unlimited())
     asyncio.run(test_commons_claim_advances_item_stage())
     asyncio.run(test_tale_abandon())
