@@ -140,7 +140,7 @@ async def _get_rapport(a: int, b: int) -> int:
 
 
 def _pick_league_goal(wid: int) -> dict[str, Any]:
-    """抽周目标时跳过当月不能种的作物；没有合季作物就回落到甘蓝。"""
+    """抽周目标时跳过当季不能种的作物；没有合季作物就回落到甘蓝。"""
     from . import season as season_mod
 
     n = len(LEAGUE_GOALS)

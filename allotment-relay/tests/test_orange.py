@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""橘子树：解析、月令、只进果园、可摇。"""
+"""橘子树：解析、季节、果园或温室、可摇。"""
 from __future__ import annotations
 
 import asyncio
@@ -55,11 +55,11 @@ def test_resolve_and_catalog() -> None:
     assert ITEM_PRICES["seed_orange"] == 16
     assert ITEM_PRICES["crop_orange"] == 30
 
-    with season.pinned_month(12):
+    with season.pinned_season("冬"):
         line = crop_catalog_line("orange")
-        assert "橘子" in line and "果园专种" in line and "可摇" in line
-        assert "当月可种" in line
-    with season.pinned_month(8):
+        assert "橘子" in line and "果园或温室" in line and "可摇" in line
+        assert "当季可种" in line
+    with season.pinned_season("夏"):
         line = crop_catalog_line("orange")
         assert "休市" in line
 
@@ -80,14 +80,14 @@ async def test_sow_routes_and_month() -> None:
         await conn.execute("UPDATE stewards SET greenhouse_count=1 WHERE id=?", (sid,))
         await conn.commit()
 
-    with season.pinned_month(8):
+    with season.pinned_season("夏"):
         blocked = await game.plot_ops(kid, "sow 园1 橘子")
-        assert "不在当月" in blocked or "休市" in blocked or "⚠" in blocked, blocked
-
-    with season.pinned_month(12):
+        assert "不在当季" in blocked or "休市" in blocked or "⚠" in blocked, blocked
         gh = await game.plot_ops(kid, "sow 99 橘子")
-        assert "温室不种果树" in gh or "⚠" in gh, gh
+        assert "棚1" in gh and "橘子" in gh, gh
+        assert "温室不种" not in gh and "不在当季" not in gh, gh
 
+    with season.pinned_season("冬"):
         planted = await game.plot_ops(kid, "sow 1 橘子")
         assert "园1" in planted and "橘子" in planted, planted
         async with db.connect() as conn:
@@ -96,7 +96,7 @@ async def test_sow_routes_and_month() -> None:
                 (sid,),
             )).fetchone()
             plot_row = await (await conn.execute(
-                "SELECT crop FROM parcels WHERE steward_id=? AND slot=1 AND COALESCE(orchard,0)=0",
+                "SELECT crop FROM parcels WHERE steward_id=? AND slot=1 AND COALESCE(orchard,0)=0 AND COALESCE(greenhouse,0)=0",
                 (sid,),
             )).fetchone()
         assert orchard_row[0] == "orange"

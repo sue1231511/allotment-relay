@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""作物月令：买种/下地看当月，温室种菜豁免，已种继续长。"""
+"""作物季节：买种/下地看当季（一周一季），温室种菜种树豁免，已种继续长。"""
 from __future__ import annotations
 
 import asyncio
@@ -35,68 +35,88 @@ async def _enroll(db, email: str, name: str) -> tuple[int, int]:
     return row["id"], sid
 
 
+def test_week_maps_to_season() -> None:
+    from server import season
+
+    epoch = season.SEASON_EPOCH
+    assert season.current_season(epoch) == "春"
+    week = 7 * 24 * 3600
+    from datetime import timedelta
+
+    assert season.current_season(epoch + timedelta(days=7)) == "夏"
+    assert season.current_season(epoch + timedelta(days=14)) == "秋"
+    assert season.current_season(epoch + timedelta(days=21)) == "冬"
+    assert season.current_season(epoch + timedelta(days=28)) == "春"
+    assert 1 <= season.season_remaining_days(epoch) <= 7
+
+
 def test_year_round_and_windows() -> None:
     from server import season
     from server.catalog import CROPS
 
-    with season.pinned_month(8):
+    with season.pinned_season("夏"):
         for key in ("kale", "beet", "fogpea", "kelp"):
             assert season.crop_in_season(key), key
-            assert CROPS[key].get("months") in (None, (), [])
+            assert CROPS[key].get("seasons") in (None, (), [])
         assert season.crop_in_season("mango")
         assert season.crop_in_season("chili")
+        assert season.crop_in_season("blueberry")
         assert not season.crop_in_season("garlic")
-        assert not season.crop_in_season("blueberry")
         assert not season.crop_in_season("lime")
         assert not season.crop_in_season("orange")
-        assert season.next_in_season_month("garlic") == 11
-        assert "当月可种" in season.season_tag("kale")
+        assert season.next_in_season("garlic") == "秋"
+        assert "当季可种" in season.season_tag("kale")
         assert "休市" in season.season_tag("garlic")
-        assert "十一月" in season.season_tag("garlic")
+        assert "秋" in season.season_tag("garlic")
 
-    with season.pinned_month(1):
+    with season.pinned_season("冬"):
         assert season.crop_in_season("garlic")
         assert season.crop_in_season("lime")
         assert season.crop_in_season("orange")
         assert not season.crop_in_season("mango")
         assert not season.crop_in_season("chili")
-    with season.pinned_month(4):
+    with season.pinned_season("春"):
         assert season.crop_in_season("orange")
-        assert not season.crop_in_season("lime")
+        assert season.crop_in_season("lime")
+        assert not season.crop_in_season("durian")
 
 
-def test_catalog_marks_month() -> None:
+def test_catalog_marks_season() -> None:
     from server import season
     from server.catalog import crop_catalog_line
 
-    with season.pinned_month(8):
+    with season.pinned_season("夏"):
         kale = crop_catalog_line("kale")
         garlic = crop_catalog_line("garlic")
-        assert "全年" in kale and "当月可种" in kale
-        assert "休市" in garlic and "十一月" in garlic
+        orange = crop_catalog_line("orange")
+        assert "全年" in kale and "当季可种" in kale
+        assert "休市" in garlic and "秋" in garlic
+        assert "果园或温室" in orange
 
 
-async def test_public_stats_include_month() -> None:
+async def test_public_stats_include_season() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="season-stats-"))
     await _boot(tmp)
     from server import db, season
 
-    with season.pinned_month(8):
+    with season.pinned_season("夏"):
         stats = await db.public_stats()
-    assert stats["month"] == 8
-    assert stats["month_label"] == "八月"
-    assert "月令" in stats["climate"]
-    assert "八月" in (stats.get("climate_notes") or {}).get("season", "")
+    assert stats["season"] == "夏"
+    assert stats["season_label"] == "夏"
+    assert stats["month_label"] == "夏"
+    assert "季节" in stats["climate"] or "一周一季" in stats["climate"]
+    assert "夏" in (stats.get("climate_notes") or {}).get("season", "")
+    assert "一周一季" in (stats.get("climate_notes") or {}).get("season", "")
 
 
 def test_league_skips_off_season_crop() -> None:
     from server import season
     from server.multi import _pick_league_goal
 
-    with season.pinned_month(8):
+    with season.pinned_season("冬"):
         assert _pick_league_goal(4)["key"] == "honey"
         assert _pick_league_goal(2)["key"] == "crop_kale"
-    with season.pinned_month(5):
+    with season.pinned_season("春"):
         assert _pick_league_goal(4)["key"] == "crop_blueberry"
 
 
@@ -105,44 +125,44 @@ async def test_sow_and_buy_lock() -> None:
     db = await _boot(tmp)
     from server import game, season
 
-    kid, sid = await _enroll(db, "sz@example.com", "月令人")
+    kid, sid = await _enroll(db, "sz@example.com", "季节人")
     async with db.connect() as conn:
         await db.add_item(conn, sid, "seed_garlic", 3)
         await db.add_item(conn, sid, "seed_kale", 2)
         await conn.execute("UPDATE stewards SET tickets=tickets+400 WHERE id=?", (sid,))
         await conn.commit()
 
-    with season.pinned_month(8):
+    with season.pinned_season("夏"):
         blocked = await game.plot_ops(kid, "sow 1 大蒜")
-        assert "不在当月" in blocked or "休市" in blocked or "⚠" in blocked, blocked
+        assert "不在当季" in blocked or "休市" in blocked or "⚠" in blocked, blocked
 
         kale = await game.plot_ops(kid, "sow 2 甘蓝")
         assert "甘蓝" in kale and "⚠" not in kale, kale
 
         buy_off = await game.plot_ops(kid, "buy 1 大蒜")
-        assert "不在当月" in buy_off or "⚠" in buy_off, buy_off
+        assert "不在当季" in buy_off or "⚠" in buy_off, buy_off
 
         buy_ok = await game.plot_ops(kid, "buy 1 甘蓝")
         assert "购入" in buy_ok and "⚠" not in buy_ok, buy_ok
 
         weather = await game.plot_ops(kid, "weather")
-        assert "月令" in weather and "八月" in weather, weather
+        assert "季节" in weather and "夏" in weather and "一周一季" in weather, weather
         catalog = await game.plot_ops(kid, "catalog")
-        assert "当月可种" in catalog and "休市" in catalog, catalog
+        assert "当季可种" in catalog and "休市" in catalog, catalog
 
         from server import tt
         try:
             await tt.tt_ops(kid, "buy 大蒜种 1")
             raise AssertionError("tt should refuse off-season garlic seed")
         except ValueError as exc:
-            assert "不在当月" in str(exc), exc
+            assert "不在当季" in str(exc), exc
         tt_ok = await tt.tt_ops(kid, "buy 甘蓝种 1")
         assert "购入" in tt_ok, tt_ok
         tt_cat = await tt.tt_ops(kid, "catalog")
-        assert "当月可种" in tt_cat and "休市" in tt_cat, tt_cat
+        assert "当季可种" in tt_cat and "休市" in tt_cat, tt_cat
 
 
-async def test_greenhouse_ignores_month() -> None:
+async def test_greenhouse_ignores_season() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="season-gh-"))
     db = await _boot(tmp)
     from server import game, season
@@ -150,6 +170,7 @@ async def test_greenhouse_ignores_month() -> None:
     kid, sid = await _enroll(db, "gh@example.com", "温室人")
     async with db.connect() as conn:
         await db.add_item(conn, sid, "seed_garlic", 2)
+        await db.add_item(conn, sid, "seed_orange", 1)
         await conn.execute("UPDATE stewards SET tickets=tickets+400, greenhouse=1 WHERE id=?", (sid,))
         await conn.execute(
             "INSERT INTO parcels (steward_id, slot, orchard, greenhouse, tended) VALUES (?, 1, 0, 1, 0)",
@@ -160,12 +181,42 @@ async def test_greenhouse_ignores_month() -> None:
         )
         await conn.commit()
 
-    with season.pinned_month(8):
+    with season.pinned_season("夏"):
         planted = await game.plot_ops(kid, "sow 99 大蒜")
         assert "棚1" in planted and "大蒜" in planted, planted
-        assert "不在当月" not in planted, planted
+        assert "不在当季" not in planted, planted
         outdoor = await game.plot_ops(kid, "sow 1 大蒜")
-        assert "⚠" in outdoor or "不在当月" in outdoor, outdoor
+        assert "⚠" in outdoor or "不在当季" in outdoor, outdoor
+
+
+async def test_greenhouse_trees_ignore_season() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="season-gh-tree-"))
+    db = await _boot(tmp)
+    from server import game, season
+
+    kid, sid = await _enroll(db, "ghtree@example.com", "棚橘人")
+    async with db.connect() as conn:
+        await db.add_item(conn, sid, "seed_orange", 2)
+        await conn.execute("UPDATE stewards SET tickets=tickets+400, greenhouse=1 WHERE id=?", (sid,))
+        await conn.execute(
+            "INSERT INTO parcels (steward_id, slot, orchard, greenhouse, tended) VALUES (?, 1, 0, 1, 0)",
+            (sid,),
+        )
+        await conn.execute("UPDATE stewards SET greenhouse_count=1 WHERE id=?", (sid,))
+        await conn.commit()
+
+    with season.pinned_season("夏"):
+        orchard_block = await game.plot_ops(kid, "sow 园1 橘子")
+        assert "不在当季" in orchard_block or "⚠" in orchard_block, orchard_block
+        planted = await game.plot_ops(kid, "sow 棚1 橘子")
+        assert "棚1" in planted and "橘子" in planted, planted
+        assert "不在当季" not in planted and "温室不种" not in planted, planted
+        async with db.connect() as conn:
+            row = await (await conn.execute(
+                "SELECT crop FROM parcels WHERE steward_id=? AND COALESCE(greenhouse,0)=1 AND slot=1",
+                (sid,),
+            )).fetchone()
+        assert row[0] == "orange"
 
 
 async def test_planted_off_season_keeps_growing() -> None:
@@ -185,7 +236,7 @@ async def test_planted_off_season_keeps_growing() -> None:
         )
         await conn.commit()
 
-    with season.pinned_month(8):
+    with season.pinned_season("夏"):
         status = await game.plot_ops(kid, "status")
         assert "大蒜" in status, status
         gathered = await game.plot_ops(kid, "gather 1")
@@ -193,12 +244,14 @@ async def test_planted_off_season_keeps_growing() -> None:
 
 
 def main() -> None:
+    test_week_maps_to_season()
     test_year_round_and_windows()
-    test_catalog_marks_month()
+    test_catalog_marks_season()
     test_league_skips_off_season_crop()
-    asyncio.run(test_public_stats_include_month())
+    asyncio.run(test_public_stats_include_season())
     asyncio.run(test_sow_and_buy_lock())
-    asyncio.run(test_greenhouse_ignores_month())
+    asyncio.run(test_greenhouse_ignores_season())
+    asyncio.run(test_greenhouse_trees_ignore_season())
     asyncio.run(test_planted_off_season_keeps_growing())
     print("season tests ok")
 

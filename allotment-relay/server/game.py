@@ -167,7 +167,7 @@ async def relay_manual() -> str:
         "               command 例：status · catalog · weather · sow 1 甘蓝 · tend · 浇水 1 · 施肥 1",
         "                 · gather · forage · 买地 · 买地 确认 · chop 1 · 偷菜 名字 · amends 名字",
         "                 · camera install 1 · incident scan · repair 12 · commons scan · dove 忽略|驱赶",
-        "                 · 果园 · 买园 · 买园 确认 · 果园 sow 1 芒果 · sow 园1 橘子 · sow 园1 芒果 · shake 园1 · 买棚 · 买棚 确认 · shed erect · scarecrow 1 · compost 1",
+        "                 · 果园 · 买园 · 买园 确认 · 果园 sow 1 芒果 · sow 园1 橘子 · sow 园1 芒果 · sow 棚1 橘子 · shake 园1 · 买棚 · 买棚 确认 · shed erect · scarecrow 1 · compost 1",
         "  hut_ops      小屋/潮柜/冰箱/堆肥桶/床/畜栏/吉祥物",
         "               command 例：status · build · catalog · buy cabinet · install soft_1 cabinet",
         "                 · buy fridge · buy compost_bin · install soft_2 compost_bin",
@@ -241,10 +241,10 @@ async def relay_manual() -> str:
         "  清树 plot_ops chop 园1（不必等过熟）。过熟 compost 园1 清果（还有茬则继续长）",
         "  买地：起步 3 块，露天无上限。plot_ops 买地 看价钱和开垦时间；买地 确认 付钱。第 4 块起 80/120/180/260/360 票（差额每次多 20），开垦 30/45/60/90/120 分钟，之后以此类推。份地不种果树",
         "  果园：起步 3 个树位，无上限，价表和份地一样。plot_ops 果园 / 买园 看价；买园 确认 付钱。只种果树：sow 园1 橘子 · sow 园1 芒果 · 果园 sow 1 芒果。收：果园 gather · gather 园1 · shake 园1",
-        "  月令：按 UTC 日历月轮换作物。买种 + 露天/果园 sow 须当月；已种的继续长、继续收。行囊过季种子等到开窗",
-        "  甘蓝/甜菜/雾豆/浅海藻 全年可种。plot_ops catalog / weather 看当月可种；过季 sow/buy/tt buy 种子会拒，并写下次开窗月份",
+        "  季节：一周一季（春→夏→秋→冬循环，现实 7 天换一季）。买种 + 露天/果园 sow 须当季；已种的继续长、继续收。行囊过季种子等到开窗",
+        "  甘蓝/甜菜/雾豆/浅海藻 全年可种。plot_ops catalog / weather 看当季可种；过季 sow/buy/tt buy 种子会拒，并写下一开窗季节",
         "  温室无上限：plot_ops 买棚 看价；买棚 确认 / shed erect 付钱。第 1 座 180 票马上能种，之后 310/500/750/1060… 比份地更陡，要开垦",
-        "  槽位 棚1、棚2…；sow 99 仍是第一座。不占露天份地，偷不到；温室 #99 种菜不受月令（果树不能进）",
+        "  槽位 棚1、棚2…；sow 99 仍是第一座。不占露天份地，偷不到；温室种菜种树都不受季节（sow 棚1 橘子 / sow 99 甘蓝）",
         "  监控 plot_ops camera install 地块（15票）记偷菜日志、提高抓贼；camera check / remove",
         "  意外 plot_ops incident scan · repair 编号（也可省略 incident：repair 12）",
         "  随机事件整体 +30%：打理/收成/出海等更容易触发意外或惊喜（田间还有潮蟹/夜蛾/石龟等新访客）",
@@ -367,7 +367,7 @@ async def relay_manual() -> str:
         "",
         "【协作 · 访客】",
         "  assist 名字 帮邻居打理，每日每人一次。contract post 物品 数量 酬票 发悬赏，他人 fill 编号",
-        "  league contribute 物品 数量 推进本周目标（抽作物目标时跳过当月休市的种）。donate / draw / larder 联盟储藏室（领取 2 票、每日 3 次）",
+        "  league contribute 物品 数量 推进本周目标（抽作物目标时跳过当季休市的种）。donate / draw / larder 联盟储藏室（领取 2 票、每日 3 次）",
         "  steward_ops 成就 — 做事解锁称呼，称呼 逾篱客 佩戴；升级礼在 sheet / 领奖 时自动发",
         "  visit_ops list 看固定 NPC。tt 买种/饲料/渔具/锄铲。lili 流动摊（不在就 summon 献壳）。韶年 fortune 卜卦",
         "  目送人·阿槐：musong visit 去渡口；musong send 名字 每游戏日送别一次；musong remember 回看名字",
@@ -682,13 +682,13 @@ async def plot_ops(key_id: int, command: str = "") -> str:
         return (
             "plot_ops 需要子指令。常用:\n"
             "  status · catalog · weather · 邻居 / 在线\n"
-            "  sow 地块 作物（当月/全年；过季会拒） · tend · 浇水 [地块] · 施肥 地块 · gather [地块] · chop 地块\n"
-            "  偷菜 名字 [地块] · compost 地块 · forage · buy 数量 作物（当月才能买种；行囊每格 24） · dove 忽略|驱赶\n"
+            "  sow 地块 作物（当季/全年；过季会拒） · tend · 浇水 [地块] · 施肥 地块 · gather [地块] · chop 地块\n"
+            "  偷菜 名字 [地块] · compost 地块 · forage · buy 数量 作物（当季才能买种；行囊每格 24） · dove 忽略|驱赶\n"
             "  land / 买地 — 份地价钱与开垦（无上限）；买地 确认 付钱。份地不种果树\n"
             "  果园 / 买园 — 树位价钱与开垦（无上限，和份地同一价表）；买园 确认 付钱\n"
             "  买棚 / shed erect — 温室无上限，第1座 180 票即用，之后更贵；买棚 确认 付钱\n"
             "  camera install 地块 · incident scan · repair 编号 · commons scan\n"
-            "例: plot_ops status · plot_ops sow 1 甘蓝 · plot_ops 果园 sow 1 芒果 · plot_ops sow 园1 橘子 · plot_ops 买园 确认"
+            "例: plot_ops status · plot_ops sow 1 甘蓝 · plot_ops sow 园1 橘子 · plot_ops sow 棚1 橘子 · plot_ops 买园 确认"
         )
     s = await require_steward(key_id)
     pulse = await events.maybe_world_pulse(s)
@@ -845,8 +845,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
         return (
             "作物清单（短茬快、把数多；稀有慢、把数少。偷菜最多 30%，不能摘空）\n"
             f"{season_mod.month_line()}\n"
-            "买种 + 露天/果园 sow 须当月或全年；已种的继续长。温室 棚N 种菜不受月令（sow 99=棚1）。\n"
-            "果树只能种在果园（sow 园1 橘子 / 果园 sow 1 芒果）；份地只种菜。\n"
+            "买种 + 露天/果园 sow 须当季或全年（一周一季）；已种的继续长。温室 棚N 种菜种树都不受季节（sow 99=棚1）。\n"
+            "果树进果园或温室（sow 园1 橘子 / sow 棚1 橘子 / 果园 sow 1 芒果）；份地只种菜。\n"
             + "\n".join(lines)
             + "\n树清地：plot_ops chop 园1（不必等过熟）"
         )
@@ -921,13 +921,15 @@ async def _plot_one(s: dict, cmd: str) -> str:
         is_tree = bool(CROPS[crop].get("tree"))
         if is_tree:
             if gh_flag or greenhouse_ctx:
-                raise ValueError("温室不种果树。果树走 plot_ops 果园 sow 1 橘子")
-            orchard_flag = 1
-            gh_flag = 0
+                orchard_flag = 0
+                gh_flag = 1
+            else:
+                orchard_flag = 1
+                gh_flag = 0
         elif orchard_flag:
             raise ValueError(
                 "果园只种果树（青柠/橘子/木瓜/香蕉/芒果/椰子/榴莲）。"
-                "蔬菜走 plot_ops sow 1 甘蓝"
+                "蔬菜走 plot_ops sow 1 甘蓝 或 sow 棚1 甘蓝"
             )
         elif greenhouse_ctx:
             gh_flag = 1
@@ -938,8 +940,6 @@ async def _plot_one(s: dict, cmd: str) -> str:
             if not plot:
                 raise ValueError(land_mod.missing_slot_msg(slot, orchard_flag, gh_flag))
             land_mod.assert_ready(plot)
-            if plot.get("greenhouse") and is_tree:
-                raise ValueError("温室不种果树。果树走 plot_ops 果园 sow 1 橘子")
             if plot.get("crop"):
                 raise ValueError(f"{land_mod.slot_label(plot)} 已在种植")
             from . import season as season_mod

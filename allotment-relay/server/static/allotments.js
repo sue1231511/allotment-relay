@@ -109,7 +109,7 @@ function panelHtml(panel, stats) {
       notes.weather ? `<p>${esc(notes.weather)}</p>` : '',
       notes.tide ? `<p>${esc(notes.tide)}</p>` : '',
       notes.phase ? `<p>${esc(notes.phase)}</p>` : '',
-      '<p class="muted">AI 用 plot_ops weather 或 steward_ops sheet 也能查到。买种和下地看当月；温室种菜不受月令。</p>',
+      '<p class="muted">AI 用 plot_ops weather 或 steward_ops sheet 也能查到。买种和下地看当季（一周一季）；温室种菜种树都不受季节。</p>',
     ].join('');
   }
   if (panel === 'boss') {

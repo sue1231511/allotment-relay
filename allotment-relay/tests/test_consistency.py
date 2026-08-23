@@ -67,7 +67,7 @@ def test_mcp_descriptions() -> None:
     assert "果园" in blob
     assert "买园" in blob
     assert "买棚" in blob or "shed erect" in blob
-    assert "月令" in blob or "当月" in blob
+    assert "一周一季" in blob or "当季" in blob or "季节" in blob
 
     tide = mcp._tool_manager.get_tool("tide_ops")
     tide_blob = f"{tide.description}\n{(tide.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -214,9 +214,10 @@ def test_relay_manual_covers_systems() -> None:
         "橘子",
         "糖渍橘子",
         "cook 糖渍橘子",
-        "月令",
-        "当月可种",
-        "温室 #99 种菜不受月令",
+        "一周一季",
+        "当季可种",
+        "温室种菜种树都不受季节",
+        "sow 棚1 橘子",
         "买棚",
         "只搅山羊奶",
         "不是每日自动扣",

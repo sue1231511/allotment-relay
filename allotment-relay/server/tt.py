@@ -500,7 +500,7 @@ def _catalog_text(score: int) -> str:
             f"  {_item_label(item)} · {item} · {price}票{tag}{season_mark}"
         )
     from . import season as season_mod
-    lines = [_status_block(score), season_mod.month_line(), "休市种子买不了；过季种子等到开窗，或温室 #99 种菜。", ""]
+    lines = [_status_block(score), season_mod.month_line(), "休市种子买不了；过季种子等到开窗，或 sow 棚1（温室种菜种树都不受季节）。", ""]
     for key in order:
         lines.extend(groups[key])
         lines.append("")
@@ -521,7 +521,7 @@ async def tt_ops(key_id: int, command: str) -> str:
             "visit_ops tt — Tt酱杂货店\n"
             "  status / catalog — 货架与好感\n"
             "  buy 物品 [数量] — 种子/饲料/渔网钓竿/蚯蚓饵/锄铲/剪刀挤奶器\n"
-            "  种子看月令：catalog 标当月/休市；过季买不了，等到开窗或温室 #99 种菜\n"
+            "  种子看季节（一周一季）：catalog 标当季/休市；过季买不了，等到开窗或 sow 棚1\n"
             "  货架货系统回收进价九成，退货少亏一点，别买了再 tote_ops vend 当印钞\n"
             "    行囊每种最多 24 份，买多了会拒；满了先 vend 或 hut_ops 冰柜 存\n"
             "  gift 物品 [数量] — 送礼（一次一笔，每日最多 3 次；4 心减半，8 心更慢）\n"

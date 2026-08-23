@@ -106,9 +106,9 @@ async def steward_ops(
     )
 
 
-@mcp.tool(description="份地与果园农事。command 写一整句，不要编造 sow_all/plant/harvest。例子：status · sow 1 甘蓝 · 果园 sow 1 芒果 · sow 园1 橘子 · sow 棚1 甘蓝 · sow 99 甘蓝 · tend · 浇水 1 · 施肥 1 · gather 1 · gather 园1 · catalog · weather · 偷菜 安 · 买地 · 买地 确认 · 买园 · 买园 确认 · 买棚 · 买棚 确认 · buy 2 甘蓝 · shed erect · camera install 1 · dove 忽略。份地只种菜；果树只能种果园（起步 3 树位，无上限，价表同买地）。作物按 UTC 日历月轮换：买种+露天/果园 sow 须当月（甘蓝/甜菜/雾豆/浅海藻全年）；catalog/weather 看当月可种。已种的继续长。温室无上限，第1座 180 票即用，之后 310/500/750… 比份地更贵；棚N 种菜不受月令（sow 99=棚1），果树不能进。果树按种苗成本有收茬上限，收满枯死（status 看剩N茬）。斑鸠：昼间 sow/tend 每天掷一次碰上才盯梢。买地露天无上限，票价按 80/120/180/260/360… 递推。buy 种子受行囊每格 24 份限制。空 command 列出常用指令，不是看地；看地必须 status。偷菜最多 30%。不会就 help。")
+@mcp.tool(description="份地与果园农事。command 写一整句，不要编造 sow_all/plant/harvest。例子：status · sow 1 甘蓝 · 果园 sow 1 芒果 · sow 园1 橘子 · sow 棚1 橘子 · sow 棚1 甘蓝 · sow 99 甘蓝 · tend · 浇水 1 · 施肥 1 · gather 1 · gather 园1 · catalog · weather · 偷菜 安 · 买地 · 买地 确认 · 买园 · 买园 确认 · 买棚 · 买棚 确认 · buy 2 甘蓝 · shed erect · camera install 1 · dove 忽略。份地只种菜；果树进果园或温室（起步 3 树位，无上限，价表同买地）。季节一周一季（春夏秋冬循环）：买种+露天/果园 sow 须当季（甘蓝/甜菜/雾豆/浅海藻全年）；catalog/weather 看当季可种。已种的继续长。温室无上限，第1座 180 票即用，之后 310/500/750… 比份地更贵；棚N 种菜种树都不受季节（sow 99=棚1）。果树按种苗成本有收茬上限，收满枯死（status 看剩N茬）。斑鸠：昼间 sow/tend 每天掷一次碰上才盯梢。买地露天无上限，票价按 80/120/180/260/360… 递推。buy 种子受行囊每格 24 份限制。空 command 列出常用指令，不是看地；看地必须 status。偷菜最多 30%。不会就 help。")
 async def plot_ops(
-    command: Annotated[str, Field(description="子命令整句。status=看地和果园和温室 / 果园=只看果园 / 买棚=看温室价 / catalog / weather / sow 1 甘蓝 / 果园 sow 1 芒果 / sow 园1 橘子 / sow 棚1 甘蓝 / sow 99 甘蓝 / tend / 浇水 1 / 施肥 1 / gather 1 / gather 园1 / 偷菜 名字 / 买地 / 买地 确认 / 买园 / 买园 确认 / 买棚 / 买棚 确认 / buy 2 甘蓝 / shed erect / chop 园1 / shake 园1 / camera install 1 / incident scan / repair 12 / dove 忽略|驱赶 / help。份地不种果树。买地/买园都无上限；买棚也无上限但更贵。月令：买种+露天/果园 sow 须当月，过季会拒；温室种菜不受月令。斑鸠每天掷一次碰上才盯梢。施肥默认耗堆肥。buy 不能超过行囊每格 24。空=常用指令，不是看地。不要发明 sow_all/plant。")] = "",
+    command: Annotated[str, Field(description="子命令整句。status=看地和果园和温室 / 果园=只看果园 / 买棚=看温室价 / catalog / weather / sow 1 甘蓝 / 果园 sow 1 芒果 / sow 园1 橘子 / sow 棚1 橘子 / sow 棚1 甘蓝 / sow 99 甘蓝 / tend / 浇水 1 / 施肥 1 / gather 1 / gather 园1 / 偷菜 名字 / 买地 / 买地 确认 / 买园 / 买园 确认 / 买棚 / 买棚 确认 / buy 2 甘蓝 / shed erect / chop 园1 / shake 园1 / camera install 1 / incident scan / repair 12 / dove 忽略|驱赶 / help。份地不种果树。买地/买园都无上限；买棚也无上限但更贵。季节一周一季：买种+露天/果园 sow 须当季，过季会拒；温室种菜种树都不受季节。斑鸠每天掷一次碰上才盯梢。施肥默认耗堆肥。buy 不能超过行囊每格 24。空=常用指令，不是看地。不要发明 sow_all/plant。")] = "",
 ) -> str:
     return await mux._call_ops(mux.plot_bundle, _kid(), command)
 
@@ -148,7 +148,7 @@ async def alliance_ops(
     return await mux._call_ops(mux.alliance_bundle, _kid(), command)
 
 
-@mcp.tool(description="访客：固定 NPC、守灯人·不醒、何敬山的商船糕点委托、目送人·阿槐、栗栗摊、Tt酱杂货、诊所、沿海旧史与 NPC 小传。command 写一整句。Tt酱买货受行囊每格 24 份限制；货架回收进价九成，退货少亏一成；过季种子买不了（catalog 标当月/休市）。不醒可免费喝每日一杯茶、问潮前 5 次免费；点灯花 15 票，在公开文字灯廊留下名牌与愿望。何敬山按 jingshan visit → order → deliver → 换游戏日 revisit 推进。例子：buxing light 给妈妈 | 求平安 · jingshan visit · musong send 安 · tt buy 甘蓝种 2。拾叶主动必触发；lore 是文本不是收集品。空 command=help。")
+@mcp.tool(description="访客：固定 NPC、守灯人·不醒、何敬山的商船糕点委托、目送人·阿槐、栗栗摊、Tt酱杂货、诊所、沿海旧史与 NPC 小传。command 写一整句。Tt酱买货受行囊每格 24 份限制；货架回收进价九成，退货少亏一成；过季种子买不了（catalog 标当季/休市）。不醒可免费喝每日一杯茶、问潮前 5 次免费；点灯花 15 票，在公开文字灯廊留下名牌与愿望。何敬山按 jingshan visit → order → deliver → 换游戏日 revisit 推进。例子：buxing light 给妈妈 | 求平安 · jingshan visit · musong send 安 · tt buy 甘蓝种 2。拾叶主动必触发；lore 是文本不是收集品。空 command=help。")
 async def visit_ops(
     command: Annotated[str, Field(description="子命令整句。list / buxing visit|tea|tide|light 给谁 | 求什么|gallery|entrust 旧事|watch|remember|fulfill 灯号 / jingshan visit|status|order|deliver|revisit|remember / musong visit|send 名字|remember / visit 拾叶 / tt catalog / tt buy 甘蓝种 2 / lili scan / shaonian fortune / lore scan npc / clinic status / treat infection / treat 腿鱼小咒 / help。tt buy 不能超过行囊每格 24；过季种子拒。Tt酱货架回收进价九成，别当印钞倒卖。不醒的灯廊公开，不要写现实隐私；茶每天一次、问潮前 5 次免费。何敬山 deliver 后换游戏日才能 revisit；苏月琴不是单独 NPC。空=帮助。不要发明 shop_ops。")] = "",
 ) -> str:

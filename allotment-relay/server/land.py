@@ -208,7 +208,7 @@ def price_table_lines(
                 f"  {slot_label(offer['slot'], 0, 1)}  "
                 f"{offer['cost']}票 · 开垦 {fmt_clear(offer['clear_seconds'])}"
             )
-        lines.append("  再往后票价 180+100n+30n²；开垦比同档份地多 15 分钟。种菜不受月令，果树不能进。")
+        lines.append("  再往后票价 180+100n+30n²；开垦比同档份地多 15 分钟。种菜种树都不受季节。")
         return lines
     start = start_count(orchard)
     have = start if count is None else int(count)
@@ -300,7 +300,7 @@ async def status_text(
     count = count_of(steward, orchard, greenhouse=greenhouse)
     start = start_count(orchard)
     if greenhouse:
-        head = f"温室 {count} 座（无上限；种菜不受月令，果树不能进）"
+        head = f"温室 {count} 座（无上限；种菜种树都不受季节）"
         buy_cmd = "plot_ops 买棚 确认"
         next_word = "下一座"
     elif orchard:
@@ -339,11 +339,11 @@ async def status_text(
         lines.append(f"要买：{buy_cmd}")
     lines.extend(price_table_lines(count, orchard=orchard, greenhouse=greenhouse))
     if greenhouse:
-        lines.append("种菜：plot_ops sow 棚1 甘蓝 · 或 sow 99 甘蓝（99=棚1）。过季也能种。")
+        lines.append("种菜种树：plot_ops sow 棚1 甘蓝 · sow 棚1 橘子 · 或 sow 99（99=棚1）。不受季节。")
     elif orchard:
         lines.append("种树：plot_ops 果园 sow 1 芒果 · 或 sow 园1 橘子。份地 sow 只收蔬菜。")
     else:
-        lines.append("种菜：plot_ops sow 1 甘蓝。果树走果园。过季走温室。")
+        lines.append("种菜：plot_ops sow 1 甘蓝。果树走果园或温室。过季走温室。")
     return "\n".join(lines)
 
 

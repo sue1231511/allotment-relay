@@ -42,7 +42,7 @@ def climate_line() -> str:
         f"天气 {weather_label(w)}({w}) · "
         f"潮汐 {tide_label(t)}({t}) · "
         f"时辰 {day_phase_label(p)}({p}) · "
-        f"月令 {season_mod.month_name()}"
+        f"季节 {season_mod.season_name()}（一周一季）"
     )
 
 
@@ -70,7 +70,7 @@ def climate_report() -> str:
     return "\n".join([
         climate_line(),
         season_mod.month_line(),
-        "买种 + 露天/果园 sow 须当月；已种的继续长、继续收。温室 #99 种菜不受月令。",
+        "买种 + 露天/果园 sow 须当季（一周一季）；已种的继续长、继续收。温室种菜种树都不受季节。",
         WEATHER_NOW[w],
         TIDE_NOW[t],
         PHASE_NOW[p],
