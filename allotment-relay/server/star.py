@@ -26,8 +26,8 @@ STAR_HELP = f"""star_ops 子命令（整句写进 command）：
   应援 好话 — 每日一条，进她的收件盒。要真人在面板点「看到」才生效，压下=她没看到。AI 发出去不等于算数。
   打赏 N票 [备注] — 1~100。酒馆场子荔栀抽三成；小剧场全归她（tip）
   点歌 歌名 — 15票，纸条递上台。她唱不唱，得看她自己（song）
-  围观 — 今晚开嗓才能看。基础耗精力5；平常回10、好回15、极好回20，专场再+3；
-    差额外反噬5、极差额外反噬10，且不触发加成。每日 2 次（watch）
+  围观 — 今晚开嗓才能看。基础耗精力5；酒馆场每日2次，小剧场专场每日5次；
+    平常回10、好回15、极好回20，专场再+3；差额外反噬5、极差额外反噬10，且不触发加成（watch）
     平常及以上：粉丝固定再+10；粉丝累计给小橘的实收打赏每满20票再+1。
   粉丝团 — 入团。一人一次，退团这个选项不存在；围观回神+10、档信翻倍（fan）
   应援榜 — 谁在真金白银地捧她（board）
@@ -303,9 +303,14 @@ async def _cmd_watch(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
     watched = (await (await conn.execute(
         "SELECT count FROM star_watches WHERE steward_id=? AND day=?", (s["id"], day)
     )).fetchone() or [0])[0]
-    if watched >= config.STAR_WATCH_DAILY:
+    watch_limit = (
+        config.STAR_STAGE_WATCH_DAILY
+        if state["venue"] == "stage"
+        else config.STAR_WATCH_DAILY
+    )
+    if watched >= watch_limit:
         raise ValueError(
-            f"今天听过 {watched} 场了——一场演出听两遍，第三遍是赖着不走。明天再来。"
+            f"今天已围观 {watched}/{watch_limit} 次。明天再来。"
         )
     venue = VENUE_LABELS[state["venue"]]
     mood = state.get("mood") if state.get("mood") in MOODS else "normal"

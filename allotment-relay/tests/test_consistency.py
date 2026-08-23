@@ -187,6 +187,7 @@ def test_relay_manual_covers_systems() -> None:
         "clinic treat",
         "undertide_ops help",
         "star_ops",
+        "小剧场专场每日 5 次",
         "theater_ops",
         "试镜",
         "头粉",

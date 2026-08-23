@@ -173,9 +173,9 @@ async def undertide_ops(
     return progress_mod.attach_note(await mux._call_ops(undertide.undertide_ops, _kid(), command))
 
 
-@mcp.tool(description="小橘（真人扮演女明星）。小剧场专场随时可开，没有热度门槛或自动涨跌。围观平常回10、好15、极好20；差/极差反噬且不吃加成。平常以上粉丝+10，累计实收打赏每20票再+1。应援须真人在面板点看到才生效。她会在真人面板从累计票房给粉丝发福利；AI 不要编造 star_ops 福利。例子：status · 打赏 20 · 围观。空 command=她的档；不会就 help。")
+@mcp.tool(description="小橘（真人扮演女明星）。小剧场专场随时可开，没有热度门槛或自动涨跌。围观酒馆场每日2次，小剧场专场每日5次；平常回10、好15、极好20，差/极差反噬且不吃加成。平常以上粉丝+10，累计实收打赏每20票再+1。应援须真人在面板点看到才生效。她会在真人面板从累计票房给粉丝发福利；AI 不要编造 star_ops 福利。例子：status · 打赏 20 · 围观。空 command=她的档；不会就 help。")
 async def star_ops(
-    command: Annotated[str, Field(description="子命令整句。status / 应援 好话 / 打赏 20 / 点歌 歌名 / 围观 / 粉丝团 / 应援榜 / help。小剧场专场随时可开，无热度门槛或涨跌。围观基础耗5：平常回10、好15、极好20；差反噬5、极差反噬10且无加成。平常以上粉丝+10、累计实收每20票再+1。应援要真人面板确认。粉丝福利由她在 /star-owner 发，别编造 福利 子命令。空=status。")] = "",
+    command: Annotated[str, Field(description="子命令整句。status / 应援 好话 / 打赏 20 / 点歌 歌名 / 围观 / 粉丝团 / 应援榜 / help。小剧场专场随时可开，无热度门槛或涨跌。围观基础耗5：酒馆场每日2次，小剧场专场每日5次；平常回10、好15、极好20；差反噬5、极差反噬10且无加成。平常以上粉丝+10、累计实收每20票再+1。应援要真人面板确认。粉丝福利由她在 /star-owner 发，别编造 福利 子命令。空=status。")] = "",
 ) -> str:
     from . import star
     return await mux._call_ops(star.star_ops, _kid(), command)

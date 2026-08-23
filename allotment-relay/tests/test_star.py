@@ -126,7 +126,7 @@ async def test_star_flow() -> None:
         await star.star_ops(kid, "围观")
         raise AssertionError("watch daily cap should block")
     except ValueError as exc:
-        assert "赖着不走" in str(exc), exc
+        assert "2/2" in str(exc), exc
 
     # 今晚嘉宾行进 bar tonight
     tonight = await bar.bar_ops(kid, "tonight")
@@ -193,6 +193,19 @@ async def test_star_stage_and_lazy_settle() -> None:
     tip = await star.star_ops(kid, "打赏 30")
     assert "荔栀抽走" not in tip and "-30 票" in tip, tip
 
+    # 小剧场专场每日可围观五次；第六次才封顶。
+    async with db.connect() as conn:
+        await conn.execute("UPDATE stewards SET energy=100 WHERE id=?", (sid,))
+        await conn.commit()
+    for _ in range(5):
+        watch = await star.star_ops(kid, "围观")
+        assert "小剧场专场" in watch, watch
+    try:
+        await star.star_ops(kid, "围观")
+        raise AssertionError("stage watch daily cap should block after five")
+    except ValueError as exc:
+        assert "5/5" in str(exc), exc
+
     # 网页快照
     snap = await star.public_star_snapshot()
     assert snap["name"] == "小橘" and snap["active"] and snap["venue"] == "stage", snap
@@ -207,6 +220,11 @@ async def test_star_stage_and_lazy_settle() -> None:
         raise AssertionError("post daily cap should block")
     except ValueError as exc:
         assert "神秘感" in str(exc), exc
+
+    # 单测随后覆盖酒馆场的负面心情，清掉专场已用次数以隔离场景。
+    async with db.connect() as conn:
+        await conn.execute("DELETE FROM star_watches WHERE steward_id=? AND day=?", (sid, db.day_id()))
+        await conn.commit()
 
     # 差和极差必须反向，不能被粉丝或打赏翻正
     await star.owner_set_tonight("bar", "bad", "", "", "", "")
@@ -246,6 +264,7 @@ def test_star_mcp_description() -> None:
     assert "打赏" in blob
     assert "平常回10、好15、极好20" in blob
     assert "差/极差反噬" in blob
+    assert "小剧场专场每日5次" in blob
     assert "每20票再+1" in blob
     assert "福利" in blob
 

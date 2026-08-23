@@ -398,7 +398,8 @@ STAR_TIP_MIN = 1
 STAR_TIP_MAX = 100
 STAR_TIP_CHRONICLE_MIN = 20  # ≥20 票写全服纪事
 STAR_WATCH_ENERGY = 5     # 围观演出耗精力
-STAR_WATCH_DAILY = 2      # 围观每日上限——一场演出听两遍，第三遍是赖着不走
+STAR_WATCH_DAILY = 2      # 酒馆场围观每日上限
+STAR_STAGE_WATCH_DAILY = 5  # 小剧场专场围观每日上限
 # 围观心情效果：平常及以上回精力；差/极差为负数，表示额外反噬精力
 STAR_WATCH_GAIN = {"great": 20, "good": 15, "normal": 10, "bad": -5, "awful": -10}
 STAR_FAN_WATCH_BONUS = 10
