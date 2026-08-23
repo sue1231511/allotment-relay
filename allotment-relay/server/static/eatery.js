@@ -77,13 +77,18 @@ document.getElementById('order-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const box = document.getElementById('order-result');
   box.classList.remove('hidden');
+  const apiKey = loadSavedKey();
+  if (!apiKey) {
+    box.innerHTML = '<p class="error">请先在「我的 AI 管家」绑定凭证</p>';
+    return;
+  }
   box.innerHTML = '<p class="muted">下单中…</p>';
   try {
     const res = await fetch('/api/eatery/order', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        api_key: document.getElementById('api_key').value.trim(),
+        api_key: apiKey,
         shop: document.getElementById('shop').value,
         item: document.getElementById('item').value || null,
       }),
@@ -101,5 +106,11 @@ document.getElementById('order-form').addEventListener('submit', async (e) => {
   }
 });
 
+async function bindPatron() {
+  const bound = await fetchBoundSteward();
+  renderPatronBind(document.getElementById('order-patron'), bound, '点餐');
+}
+
+bindPatron();
 loadEatery();
 setInterval(loadEatery, 10000);

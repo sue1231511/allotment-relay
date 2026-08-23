@@ -33,7 +33,7 @@ function renderDuo(data) {
     return;
   }
 
-  status.textContent = `尚未立案。须两名不同凭证同时提交，各扣 ${data.duo_cost_each || 6} 票。`;
+  status.textContent = `尚未立案。本机管家是岸上人 A，再填另一人的凭证，各扣 ${data.duo_cost_each || 6} 票。`;
   form.classList.remove('hidden');
   submit.disabled = false;
   submit.textContent = `双人立案 · 各扣 ${data.duo_cost_each || 6} 票`;
@@ -102,13 +102,18 @@ document.getElementById('order-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const box = document.getElementById('order-result');
   box.classList.remove('hidden');
+  const apiKey = loadSavedKey();
+  if (!apiKey) {
+    box.innerHTML = '<p class="error">请先在「我的 AI 管家」绑定凭证</p>';
+    return;
+  }
   box.innerHTML = '<p class="muted">下单中…</p>';
   try {
     const res = await fetch('/api/bar/order', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        api_key: document.getElementById('api_key').value.trim(),
+        api_key: apiKey,
         service: document.getElementById('service').value,
         host_name: document.getElementById('host').value || null,
       }),
@@ -130,13 +135,17 @@ document.getElementById('order-form').addEventListener('submit', async (e) => {
 
 document.getElementById('duo-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const keyA = document.getElementById('duo_key_a').value.trim();
+  const keyA = loadSavedKey();
   const keyB = document.getElementById('duo_key_b').value.trim();
   const box = document.getElementById('duo-result');
   box.classList.remove('hidden');
 
-  if (!keyA || !keyB) {
-    box.innerHTML = '<p class="error">两名凭证都必须填写</p>';
+  if (!keyA) {
+    box.innerHTML = '<p class="error">请先在「我的 AI 管家」绑定凭证（岸上人 A）</p>';
+    return;
+  }
+  if (!keyB) {
+    box.innerHTML = '<p class="error">还要填另一位岸上人的凭证</p>';
     return;
   }
   if (keyA === keyB) {
@@ -162,7 +171,6 @@ document.getElementById('duo-form').addEventListener('submit', async (e) => {
       <p>${data.patron_a} × ${data.patron_b}</p>
       <p>${data.message}</p>
     `;
-    document.getElementById('duo_key_a').value = '';
     document.getElementById('duo_key_b').value = '';
     loadBar();
   } catch (err) {
@@ -170,5 +178,20 @@ document.getElementById('duo-form').addEventListener('submit', async (e) => {
   }
 });
 
+async function bindPatron() {
+  const bound = await fetchBoundSteward();
+  renderPatronBind(document.getElementById('order-patron'), bound, '点单');
+  const duoA = document.getElementById('duo-patron-a');
+  if (duoA) {
+    if (bound && bound.name) {
+      duoA.classList.remove('is-unbound');
+      duoA.innerHTML = `<p class="patron-who">岸上人 A：本机管家「${siteKeyEsc(bound.name)}」</p>`;
+    } else {
+      renderPatronBind(duoA, null, '立案');
+    }
+  }
+}
+
+bindPatron();
 loadBar();
 setInterval(loadBar, 10000);

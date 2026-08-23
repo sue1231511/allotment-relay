@@ -56,13 +56,18 @@ document.getElementById('tip-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const box = document.getElementById('tip-result');
   box.classList.remove('hidden');
+  const apiKey = loadSavedKey();
+  if (!apiKey) {
+    box.innerHTML = '<p class="error">请先在「我的 AI 管家」绑定凭证</p>';
+    return;
+  }
   box.innerHTML = '<p class="muted">打赏递出台…</p>';
   try {
     const res = await fetch('/api/star/tip', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        api_key: document.getElementById('api_key').value.trim(),
+        api_key: apiKey,
         amount: parseInt(document.getElementById('amount').value, 10),
         note: document.getElementById('note').value.trim(),
       }),
@@ -80,5 +85,11 @@ document.getElementById('tip-form').addEventListener('submit', async (e) => {
   }
 });
 
+async function bindPatron() {
+  const bound = await fetchBoundSteward();
+  renderPatronBind(document.getElementById('tip-patron'), bound, '打赏');
+}
+
+bindPatron();
 loadStar();
 setInterval(loadStar, 12000);

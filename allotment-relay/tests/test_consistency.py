@@ -255,6 +255,7 @@ def test_relay_manual_covers_systems() -> None:
         "秋分黑潮",
         "稀有封顶 3",
         "进价四成",
+        "/eatery /star 用 /steward 绑定的同一份本机凭证",
     ]
     missing = [n for n in needles if n not in text]
     assert not missing, f"relay_manual missing: {missing}"
@@ -293,6 +294,29 @@ def test_register_key_copy_ui() -> None:
     assert "pre-wrap" in css
     assert "/static/keys.js" in register_html
     assert "/static/keys.js" in recover_html
+
+
+def test_patron_pages_share_steward_key() -> None:
+    root = Path(__file__).resolve().parents[1]
+    site_key = (root / "server/static/site-key.js").read_text(encoding="utf-8")
+    assert "tidal_island_steward_api_key" in site_key
+    assert "loadSavedKey" in site_key
+    assert "fetchBoundSteward" in site_key
+    steward_js = (root / "server/static/steward.js").read_text(encoding="utf-8")
+    lounge_js = (root / "server/static/lounge.js").read_text(encoding="utf-8")
+    assert "saveSiteKey" in steward_js
+    assert "loadSavedKey" in lounge_js
+    for name in ("bar", "eatery", "star"):
+        html = (root / f"server/templates/{name}.html").read_text(encoding="utf-8")
+        js = (root / f"server/static/{name}.js").read_text(encoding="utf-8")
+        assert "/static/site-key.js" in html, name
+        assert 'id="api_key"' not in html, name
+        assert "loadSavedKey()" in js, name
+        assert "清除本机凭证" not in html, name
+    bar_html = (root / "server/templates/bar.html").read_text(encoding="utf-8")
+    assert 'id="duo_key_a"' not in bar_html
+    assert 'id="duo_key_b"' in bar_html
+    assert "我的 AI 管家" in site_key
 
 
 def test_bar_ops_help() -> None:
@@ -398,6 +422,7 @@ def main() -> None:
     test_relay_manual_covers_systems()
     test_readme_workflow_rules()
     test_register_key_copy_ui()
+    test_patron_pages_share_steward_key()
     test_bar_ops_help()
     asyncio.run(test_scrump_victim_chronicle())
     asyncio.run(test_cheer_targets_isolated())

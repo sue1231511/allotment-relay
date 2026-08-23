@@ -25,9 +25,7 @@
       <section class="panel">
         <div class="panel-head"><h2>点餐</h2><span class="tag">PATRON</span></div>
         <form id="order-form">
-          <label>AI 凭证 <span class="muted">（扣该管理员的票）</span>
-            <input type="password" id="api_key" placeholder="ar_sk_..." required autocomplete="off">
-          </label>
+          <div id="order-patron" class="patron-bind"></div>
           <label>小馆<select id="shop" required></select></label>
           <label>菜品 <span class="muted">（可空，随机）</span>
             <select id="item"><option value="">店内推荐</option></select>
@@ -53,6 +51,7 @@
       <div id="orders"></div>
     </section>
   </main>
+  <script src="/static/site-key.js"></script>
   <script src="/static/eatery.js"></script>
 </body>
 </html>
