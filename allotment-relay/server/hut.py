@@ -15,6 +15,7 @@ from .catalog import (
     ITEM_NAMES,
     LILI_DECOR,
     LILI_JUNK_DECOR,
+    MANURE,
     dish_item,
     item_label,
     resolve_item_key,
@@ -39,6 +40,10 @@ FIT_ALIASES = {
     "柜": "cabinet",
     "locker": "cabinet",
     "chest": "cabinet",
+    "堆肥桶": "compost_bin",
+    "肥桶": "compost_bin",
+    "堆肥箱": "compost_bin",
+    "composter": "compost_bin",
 }
 
 STORAGE_ALIASES = {
@@ -52,6 +57,18 @@ STORAGE_USAGE = (
     "买潮柜：hut_ops buy cabinet → install soft_N cabinet；"
     "买冰箱：hut_ops buy fridge → install soft_N fridge（也可 buy 冰柜）。"
     f"潮柜基础 {config.CABINET_SLOTS} 格，满了 hut_ops 潮柜 扩（{config.CABINET_SLOT_COST}票/格，顶 {config.CABINET_SLOTS_MAX}）。"
+    "粪便不能进潮柜，走 hut_ops 堆肥桶。"
+)
+
+COMPOST_BIN_ALIASES = {
+    "堆肥桶", "肥桶", "堆肥箱", "compost_bin", "composter", "compostbin",
+}
+
+COMPOST_BIN_USAGE = (
+    "用法：hut_ops 堆肥桶 存 羊粪 3｜堆肥桶 取 堆肥 2"
+    "（肥桶/compost_bin 同义）。买：hut_ops buy compost_bin → install soft_N compost_bin。"
+    "粪便不能进潮柜。丢进桶按层沤，满 7 层结 1 份堆肥（羊粪+2 / 猪粪+3 / 牛粪+4）。"
+    f"桶里结好的堆肥最多囤 {config.COMPOST_BIN_READY_MAX}，先取再丢。"
 )
 
 
@@ -156,6 +173,8 @@ class HutBonus:
             bits.append("冰箱")
         if self.has("cabinet"):
             bits.append("潮柜")
+        if self.has("compost_bin"):
+            bits.append("堆肥桶")
         if not bits:
             return None
         return "装件生效：" + " · ".join(bits)
@@ -267,7 +286,7 @@ async def dump_cabinet(conn: aiosqlite.Connection, steward_id: int) -> int:
     rows = await _cabinet_rows(conn, steward_id)
     moved = 0
     for item, qty in rows:
-        await db.add_item(conn, steward_id, item, qty)
+        await db.add_item(conn, steward_id, item, qty, over_cap=True)
         moved += qty
     await conn.execute("DELETE FROM hut_cabinet WHERE steward_id=?", (steward_id,))
     return moved
@@ -375,6 +394,70 @@ def _is_cabinet_key(key: str) -> bool:
     return _fitting_bare(key) == "cabinet"
 
 
+def _is_compost_bin_key(key: str) -> bool:
+    return _fitting_bare(key) == "compost_bin"
+
+
+async def has_compost_bin(conn: aiosqlite.Connection, steward_id: int) -> bool:
+    cur = await conn.execute(
+        "SELECT 1 FROM hut_fittings WHERE steward_id=? AND item_key='compost_bin'",
+        (steward_id,),
+    )
+    return bool(await cur.fetchone())
+
+
+async def _compost_bin_row(conn: aiosqlite.Connection, steward_id: int) -> tuple[int, int]:
+    cur = await conn.execute(
+        "SELECT fill, ready FROM hut_compost_bin WHERE steward_id=?",
+        (steward_id,),
+    )
+    row = await cur.fetchone()
+    if not row:
+        return 0, 0
+    return int(row[0] or 0), int(row[1] or 0)
+
+
+async def _compost_bin_save(
+    conn: aiosqlite.Connection, steward_id: int, fill: int, ready: int,
+) -> None:
+    await conn.execute(
+        """
+        INSERT INTO hut_compost_bin (steward_id, fill, ready)
+        VALUES (?,?,?)
+        ON CONFLICT(steward_id) DO UPDATE SET fill=excluded.fill, ready=excluded.ready
+        """,
+        (steward_id, fill, ready),
+    )
+
+
+async def dump_compost_bin(conn: aiosqlite.Connection, steward_id: int) -> int:
+    _fill, ready = await _compost_bin_row(conn, steward_id)
+    if ready:
+        await db.add_item(conn, steward_id, "compost", ready, over_cap=True)
+    await conn.execute("DELETE FROM hut_compost_bin WHERE steward_id=?", (steward_id,))
+    return ready
+
+
+async def _maybe_dump_compost_bin(
+    conn: aiosqlite.Connection,
+    steward_id: int,
+    old_key: str | None,
+    *,
+    except_slot: str | None = None,
+) -> int:
+    if _fitting_bare(old_key or "") != "compost_bin":
+        return 0
+    sql = "SELECT 1 FROM hut_fittings WHERE steward_id=? AND item_key='compost_bin'"
+    args: list[Any] = [steward_id]
+    if except_slot:
+        sql += " AND slot!=?"
+        args.append(except_slot)
+    still = await (await conn.execute(sql, args)).fetchone()
+    if still:
+        return 0
+    return await dump_compost_bin(conn, steward_id)
+
+
 async def _fitting_rows(conn: aiosqlite.Connection, steward_id: int) -> list[dict[str, Any]]:
     prev = conn.row_factory
     conn.row_factory = aiosqlite.Row
@@ -404,7 +487,9 @@ async def _dump_meals(conn: aiosqlite.Connection, steward_id: int) -> int:
     moved = 0
     for r in rows:
         qty = int(r["quantity"] or 1)
-        await db.add_item(conn, steward_id, dish_item(r["dish_key"], r["stars"]), qty)
+        await db.add_item(
+            conn, steward_id, dish_item(r["dish_key"], r["stars"]), qty, over_cap=True,
+        )
         moved += qty
     if moved:
         await conn.execute("DELETE FROM meal_storage WHERE steward_id=?", (steward_id,))
@@ -496,6 +581,8 @@ async def furniture_sell_command(s: dict[str, Any], rest: list[str]) -> str:
                 extras.append("冰箱里的熟菜退回行囊")
             if _is_cabinet_key(target["item_key"]):
                 extras.append("潮柜里的货退回行囊")
+            if _is_compost_bin_key(target["item_key"]):
+                extras.append("桶里结好的堆肥退回行囊（未满的层数会散掉）")
         if not confirm:
             lines = [
                 f"变卖{_fit_name(target['item_key']) if target['where']=='slot' else item_label(target['item'])}",
@@ -518,6 +605,12 @@ async def furniture_sell_command(s: dict[str, Any], rest: list[str]) -> str:
                 )
                 if dumped:
                     notes.append(f"潮柜货回行囊 x{dumped}")
+            if _is_compost_bin_key(key):
+                ready = await _maybe_dump_compost_bin(
+                    conn, s["id"], key, except_slot=target["slot"],
+                )
+                if ready:
+                    notes.append(f"堆肥桶结肥回行囊 x{ready}")
             if _is_fridge_key(key):
                 meals = await _dump_meals(conn, s["id"])
                 if meals:
@@ -556,6 +649,11 @@ async def furniture_sell_command(s: dict[str, Any], rest: list[str]) -> str:
 
 
 def _cabinet_forbid(item: str) -> str | None:
+    if item.startswith("manure_"):
+        return (
+            "粪便别进潮柜，恶心。装堆肥桶：hut_ops buy compost_bin → install soft_N compost_bin，"
+            "再 hut_ops 堆肥桶 存 羊粪 3"
+        )
     if item.startswith("dish_") or item.startswith("meal_"):
         return "熟菜放冰箱 — hut_ops 冰柜 存 菜名（先 buy fridge → install）"
     if item.startswith("live_"):
@@ -760,6 +858,115 @@ async def cabinet_command(s: dict[str, Any], rest: list[str]) -> str:
     return await cabinet_take(s, item, qty)
 
 
+def _compost_bin_need_msg() -> str:
+    return (
+        "还没装堆肥桶。粪便别进潮柜。"
+        "hut_ops buy compost_bin → install soft_N compost_bin，"
+        "再 hut_ops 堆肥桶 存 羊粪 3"
+    )
+
+
+async def compost_bin_status_text(s: dict[str, Any]) -> str:
+    async with db.connect() as conn:
+        installed = await has_compost_bin(conn, s["id"])
+        fill, ready = await _compost_bin_row(conn, s["id"]) if installed else (0, 0)
+    layers = config.COMPOST_BIN_LAYERS
+    if not installed:
+        return _compost_bin_need_msg()
+    return "\n".join([
+        f"堆肥桶 {fill}/{layers} 层，可取堆肥 x{ready}（桶里最多囤 {config.COMPOST_BIN_READY_MAX}）",
+        COMPOST_BIN_USAGE,
+        "搅一搅不会涨层——跟 MC 一样，丢粪便才沤，满了再取。",
+    ])
+
+
+async def compost_bin_put(s: dict[str, Any], item: str, qty: int) -> str:
+    qty = max(1, int(qty))
+    if item not in MANURE:
+        raise ValueError(f"堆肥桶只收粪便：羊粪 / 猪粪 / 牛粪。{COMPOST_BIN_USAGE}")
+    meta = MANURE[item]
+    layers = config.COMPOST_BIN_LAYERS
+    add = int(meta["compost_yield"]) * qty
+    mascot = ""
+    if s.get("mascot_trait") == "compost":
+        add += qty
+        mascot = "，吉祥物多沤一层"
+    async with db.connect() as conn:
+        if not await has_compost_bin(conn, s["id"]):
+            raise ValueError(_compost_bin_need_msg())
+        fill, ready = await _compost_bin_row(conn, s["id"])
+        produced = (fill + add) // layers
+        leftover = (fill + add) % layers
+        new_ready = ready + produced
+        if new_ready > config.COMPOST_BIN_READY_MAX:
+            raise ValueError(
+                f"桶里堆肥已结 {ready}/{config.COMPOST_BIN_READY_MAX}，再沤会溢出来。"
+                "先 hut_ops 堆肥桶 取 堆肥"
+            )
+        if not await db.take_item(conn, s["id"], item, qty):
+            raise ValueError(f"行囊没有 {meta['name']} x{qty}")
+        await _compost_bin_save(conn, s["id"], leftover, new_ready)
+        await conn.commit()
+    made = f"，结出堆肥 x{produced}" if produced else ""
+    return (
+        f"{meta['name']} x{qty} 丢进堆肥桶（+{add} 层{mascot}）。"
+        f"现在 {leftover}/{layers} 层，可取堆肥 x{new_ready}{made}"
+    ) + flavor.maybe_suffix([
+        "木盖一扣，味儿留给桶",
+        "跟 MC 那只绿桶一个道理：丢进去，满了再取",
+        "粪进桶，柜里干净",
+    ])
+
+
+async def compost_bin_take(s: dict[str, Any], qty: int | None) -> str:
+    layers = config.COMPOST_BIN_LAYERS
+    async with db.connect() as conn:
+        if not await has_compost_bin(conn, s["id"]):
+            raise ValueError(_compost_bin_need_msg())
+        fill, ready = await _compost_bin_row(conn, s["id"])
+        if ready <= 0:
+            raise ValueError(
+                f"桶里还没结出堆肥（{fill}/{layers} 层）。再 hut_ops 堆肥桶 存 羊粪"
+            )
+        n = ready if qty is None else max(1, int(qty))
+        if n > ready:
+            raise ValueError(f"桶里只有堆肥 x{ready}")
+        await db.add_item(conn, s["id"], "compost", n)
+        await _compost_bin_save(conn, s["id"], fill, ready - n)
+        await conn.commit()
+    return f"从堆肥桶取出堆肥 x{n}，回行囊"
+
+
+async def compost_bin_command(s: dict[str, Any], rest: list[str]) -> str:
+    verb = rest[0].lower() if rest else "status"
+    if verb in ("status", "list", "看", "搅", "stir", "compost"):
+        text = await compost_bin_status_text(s)
+        if verb in ("搅", "stir"):
+            return text + "\n木棍搅了搅。层数没变：丢粪便才涨。"
+        return text
+
+    putting = verb in ("put", "store", "存", "放", "入", "丢", "扔", "add")
+    taking = verb in ("take", "取", "拿", "收", "harvest")
+    if putting:
+        if len(rest) < 2:
+            raise ValueError(COMPOST_BIN_USAGE)
+        item, qty = _parse_storage_item_qty(rest[1:])
+        return await compost_bin_put(s, item, qty)
+    if taking:
+        qty = None
+        tokens = list(rest[1:])
+        if tokens and tokens[-1].isdigit():
+            qty = max(1, int(tokens[-1]))
+            tokens = tokens[:-1]
+        if tokens:
+            raw = " ".join(tokens)
+            item = resolve_item_key(raw) or raw
+            if item != "compost":
+                raise ValueError("堆肥桶只能取堆肥：hut_ops 堆肥桶 取 堆肥 2")
+        return await compost_bin_take(s, qty)
+    raise ValueError(COMPOST_BIN_USAGE)
+
+
 async def _has_fitting(conn: aiosqlite.Connection, steward_id: int, key: str) -> bool:
     cur = await conn.execute(
         "SELECT 1 FROM hut_fittings WHERE steward_id=? AND item_key=?",
@@ -948,6 +1155,9 @@ async def hut_ops(key_id: int, command: str) -> str:
     if verb in STORAGE_ALIASES:
         return await cabinet_command(s, command.strip().split()[1:])
 
+    if verb in COMPOST_BIN_ALIASES:
+        return await compost_bin_command(s, command.strip().split()[1:])
+
     if verb in ("扩柜", "加格"):
         n = 1
         if len(parts) > 1 and parts[1].isdigit():
@@ -980,7 +1190,8 @@ async def hut_ops(key_id: int, command: str) -> str:
                 f"小屋: 未建 — hut_ops build（{config.HUT_BUILD_COST} 票）\n"
                 "建好后可 buy 硬装/软装，install 到 hard_1 soft_1 等槽位\n"
                 "存菜：buy cabinet（潮柜·生鲜）或 buy fridge（冰箱·熟菜），"
-                "装好后 hut_ops 冰柜 存 甘蓝 3"
+                "装好后 hut_ops 冰柜 存 甘蓝 3。"
+                "粪便走 buy compost_bin → install → 堆肥桶 存"
             )
         lvl = s.get("hut_level") or 1
         meta = HUT_LEVELS[lvl]
@@ -1013,6 +1224,13 @@ async def hut_ops(key_id: int, command: str) -> str:
             )
         if bonus.has("fridge"):
             lines.append("冰箱 — hut_ops 冰柜 存|取（熟菜）· kitchen_ops fridge")
+        if bonus.has("compost_bin"):
+            async with db.connect() as conn:
+                fill, ready = await _compost_bin_row(conn, s["id"])
+            lines.append(
+                f"堆肥桶 {fill}/{config.COMPOST_BIN_LAYERS} 层，可取堆肥 x{ready}"
+                " — hut_ops 堆肥桶 存 羊粪 3｜取 堆肥"
+            )
         if bonus.has("bed"):
             async with db.connect() as conn:
                 row = await (await conn.execute(
@@ -1031,6 +1249,11 @@ async def hut_ops(key_id: int, command: str) -> str:
             lines.append(
                 "存菜：hut_ops buy cabinet（潮柜·生鲜）或 buy fridge（冰箱·熟菜），"
                 "装好后 hut_ops 冰柜 存 甘蓝 3"
+            )
+        if not bonus.has("compost_bin"):
+            lines.append(
+                "粪便：hut_ops buy compost_bin → install soft_N compost_bin，"
+                "再 hut_ops 堆肥桶 存 羊粪 3（别进潮柜）"
             )
         if fittings:
             lines.append("旧家具按折旧卖：hut_ops 卖掉 槽位")
@@ -1053,7 +1276,8 @@ async def hut_ops(key_id: int, command: str) -> str:
             lines.append(
                 "存菜：buy cabinet（潮柜·生鲜）或 buy fridge（冰箱·熟菜，也可 buy 冰柜）；"
                 f"装好后 hut_ops 冰柜 存|取。潮柜基础 {config.CABINET_SLOTS} 格，"
-                f"hut_ops 潮柜 扩 加格（{config.CABINET_SLOT_COST}票/格，顶 {config.CABINET_SLOTS_MAX}）"
+                f"hut_ops 潮柜 扩 加格（{config.CABINET_SLOT_COST}票/格，顶 {config.CABINET_SLOTS_MAX}）。"
+                "粪便：buy compost_bin → install soft_N compost_bin → 堆肥桶 存 羊粪 3"
             )
             lines.append("【栗栗稀有装饰】deco_* — visit_ops lili 换，install soft_N 键名")
             for k, v in LILI_DECOR.items():
@@ -1080,7 +1304,8 @@ async def hut_ops(key_id: int, command: str) -> str:
             f"棚屋就绪（-{config.HUT_BUILD_COST} 票）。"
             f"hard_1 / soft_1~2 可装 → catalog / buy / install。"
             "存菜：buy cabinet 潮柜（生鲜）或 buy fridge 冰箱（熟菜），"
-            "装好后 hut_ops 冰柜 存 甘蓝 3"
+            "装好后 hut_ops 冰柜 存 甘蓝 3。"
+            "粪便：buy compost_bin → install soft_N compost_bin → 堆肥桶 存"
         )
 
     if verb == "upgrade":
@@ -1135,6 +1360,8 @@ async def hut_ops(key_id: int, command: str) -> str:
             )
         elif key == "fridge":
             extra = "。熟菜：install 后 hut_ops 冰柜 存 盐焗沙蟹"
+        elif key == "compost_bin":
+            extra = "。粪便：install 后 hut_ops 堆肥桶 存 羊粪 3｜取 堆肥 2（别进潮柜）"
         return (
             f"购入 {meta['emoji']}{meta['name']}（-{meta['cost']} 票）"
             f"→ install {kind}_N {key}{extra}"
@@ -1165,10 +1392,13 @@ async def hut_ops(key_id: int, command: str) -> str:
                     dumped = await _maybe_dump_cabinet(
                         conn, s["id"], old_key, except_slot=slot,
                     )
+                    await _maybe_dump_compost_bin(
+                        conn, s["id"], old_key, except_slot=slot,
+                    )
                     if old_key.startswith("deco_"):
-                        await db.add_item(conn, s["id"], old_key, 1)
+                        await db.add_item(conn, s["id"], old_key, 1, over_cap=True)
                     else:
-                        await db.add_item(conn, s["id"], f"fit_{old_key}", 1)
+                        await db.add_item(conn, s["id"], f"fit_{old_key}", 1, over_cap=True)
                 await conn.execute(
                     """
                     INSERT INTO hut_fittings (steward_id, slot, item_key, installed_at)
@@ -1201,11 +1431,14 @@ async def hut_ops(key_id: int, command: str) -> str:
                     dumped = await _maybe_dump_cabinet(
                         conn, s["id"], old[slot], except_slot=slot,
                     )
+                    await _maybe_dump_compost_bin(
+                        conn, s["id"], old[slot], except_slot=slot,
+                    )
                     old_key = old[slot]
                     if old_key.startswith("deco_"):
-                        await db.add_item(conn, s["id"], old_key, 1)
+                        await db.add_item(conn, s["id"], old_key, 1, over_cap=True)
                     else:
-                        await db.add_item(conn, s["id"], f"fit_{old_key}", 1)
+                        await db.add_item(conn, s["id"], f"fit_{old_key}", 1, over_cap=True)
                 await conn.execute(
                     """
                     INSERT INTO hut_fittings (steward_id, slot, item_key, installed_at)
@@ -1233,6 +1466,7 @@ async def hut_ops(key_id: int, command: str) -> str:
             raise ValueError("软装槽只能装 soft 类")
         fit_item = f"fit_{key}"
         dumped = 0
+        compost_dumped = 0
         async with db.connect() as conn:
             if not await db.take_item(conn, s["id"], fit_item, 1):
                 raise ValueError(f"行囊没有 {meta['name']}，先 buy {key}")
@@ -1241,7 +1475,10 @@ async def hut_ops(key_id: int, command: str) -> str:
                 dumped = await _maybe_dump_cabinet(
                     conn, s["id"], old[slot], except_slot=slot,
                 )
-                await db.add_item(conn, s["id"], f"fit_{old[slot]}", 1)
+                compost_dumped = await _maybe_dump_compost_bin(
+                    conn, s["id"], old[slot], except_slot=slot,
+                )
+                await db.add_item(conn, s["id"], f"fit_{old[slot]}", 1, over_cap=True)
             await conn.execute(
                 """
                 INSERT INTO hut_fittings (steward_id, slot, item_key, installed_at)
@@ -1260,6 +1497,8 @@ async def hut_ops(key_id: int, command: str) -> str:
         )
         if dumped:
             msg += f" 潮柜货回行囊 x{dumped}"
+        if compost_dumped:
+            msg += f" 堆肥桶结肥回行囊 x{compost_dumped}"
         return msg
 
     if verb == "remove" and len(parts) >= 2:
@@ -1270,21 +1509,26 @@ async def hut_ops(key_id: int, command: str) -> str:
                 raise ValueError("该槽位是空的")
             key = fittings[slot]
             dumped = await _maybe_dump_cabinet(conn, s["id"], key, except_slot=slot)
+            compost_dumped = await _maybe_dump_compost_bin(
+                conn, s["id"], key, except_slot=slot,
+            )
             await conn.execute(
                 "DELETE FROM hut_fittings WHERE steward_id=? AND slot=?",
                 (s["id"], slot),
             )
             if key.startswith("deco_"):
-                await db.add_item(conn, s["id"], key, 1)
+                await db.add_item(conn, s["id"], key, 1, over_cap=True)
             else:
-                await db.add_item(conn, s["id"], f"fit_{key}", 1)
+                await db.add_item(conn, s["id"], f"fit_{key}", 1, over_cap=True)
             await conn.commit()
         msg = f"已拆下 {slot} 的 {_fit_name(key)}，装件回行囊"
         if dumped:
             msg += f"；潮柜货回行囊 x{dumped}"
+        if compost_dumped:
+            msg += f"；堆肥桶结肥回行囊 x{compost_dumped}"
         msg += "。要按折旧卖掉：hut_ops 卖掉 槽位"
         return msg
 
     raise ValueError(
-        f"未知 hut 指令: {command}（status/build/upgrade/label/catalog/buy/install/remove/睡/冰柜/柜子/卖掉）"
+        f"未知 hut 指令: {command}（status/build/upgrade/label/catalog/buy/install/remove/睡/冰柜/柜子/堆肥桶/卖掉）"
     )

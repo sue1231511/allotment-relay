@@ -105,16 +105,16 @@ async def steward_ops(
     )
 
 
-@mcp.tool(description="份地农事。command 写一整句，不要编造 sow_all/plant/harvest。例子：status · sow 1 甘蓝 · tend · 浇水 1 · 施肥 1 · gather 1 · catalog · 偷菜 安 · 买地 · shed erect · camera install 1 · dove 忽略。果树按种苗成本有收茬上限，收满枯死（status 看剩N茬）。斑鸠：昼间 sow/tend 每天掷一次碰上才盯梢。温室 #99 不占 8 块上限。空 command 列出常用指令，不是看地；看地必须 status。偷菜最多 30%。不会就 help。")
+@mcp.tool(description="份地农事。command 写一整句，不要编造 sow_all/plant/harvest。例子：status · sow 1 甘蓝 · tend · 浇水 1 · 施肥 1 · gather 1 · catalog · 偷菜 安 · 买地 · buy 2 甘蓝 · shed erect · camera install 1 · dove 忽略。果树按种苗成本有收茬上限，收满枯死（status 看剩N茬）。斑鸠：昼间 sow/tend 每天掷一次碰上才盯梢。温室 #99 不占 8 块上限。buy 种子受行囊每格 24 份限制。空 command 列出常用指令，不是看地；看地必须 status。偷菜最多 30%。不会就 help。")
 async def plot_ops(
-    command: Annotated[str, Field(description="子命令整句。status=看地 / catalog / sow 1 甘蓝 / tend / 浇水 1 / 施肥 1 / gather 1 / 偷菜 名字 / 买地 / shed erect / chop 1 / shake 1 / camera install 1 / incident scan / repair 12 / dove 忽略|驱赶 / help。果树有收茬上限收满枯死。斑鸠每天掷一次碰上才盯梢。温室 #99 独立槽。施肥默认耗堆肥。空=常用指令，不是看地。不要发明 sow_all/plant。")] = "",
+    command: Annotated[str, Field(description="子命令整句。status=看地 / catalog / sow 1 甘蓝 / tend / 浇水 1 / 施肥 1 / gather 1 / 偷菜 名字 / 买地 / buy 2 甘蓝 / shed erect / chop 1 / shake 1 / camera install 1 / incident scan / repair 12 / dove 忽略|驱赶 / help。果树有收茬上限收满枯死。斑鸠每天掷一次碰上才盯梢。温室 #99 独立槽。施肥默认耗堆肥。buy 不能超过行囊每格 24。空=常用指令，不是看地。不要发明 sow_all/plant。")] = "",
 ) -> str:
     return await mux._call_ops(mux.plot_bundle, _kid(), command)
 
 
-@mcp.tool(description="小屋、潮柜、冰箱、床、畜栏、吉祥物。command 写一整句，不要编造子命令。例子：status · buy cabinet · 冰柜 存 甘蓝 3 · buy bed_rattan · install hard_1 bed_rattan · 睡 · barn collect · barn churn · mascot upkeep。睡=床上休息回 50~54 精力（床越好略多，主要是好看；每天一次换班刷新）；潮柜每种货最多叠 24 份。churn 只搅山羊奶；mascot upkeep 是主动花票喂养。空 command 列出子命令。不会就 help。")
+@mcp.tool(description="小屋、潮柜、冰箱、堆肥桶、床、畜栏、吉祥物。command 写一整句，不要编造子命令。例子：status · buy cabinet · 冰柜 存 甘蓝 3 · buy compost_bin · 堆肥桶 存 羊粪 3 · buy bed_rattan · install hard_1 bed_rattan · 睡 · barn collect · barn churn · mascot upkeep。睡=床上休息回 50~54 精力（床越好略多，主要是好看；每天一次换班刷新）；潮柜/行囊每种最多叠 24 份。粪便不能进潮柜，走堆肥桶。churn 只搅山羊奶；mascot upkeep 是主动花票喂养。空 command 列出子命令。不会就 help。")
 async def hut_ops(
-    command: Annotated[str, Field(description="子命令整句。status / build / upgrade / buy cabinet / buy fridge / buy bed|bed_rattan|bed_canopy / install hard_1 bed / 睡（岸柏50/软藤52/云纹54，每天一次）/ 冰柜 存 甘蓝 3 / 潮柜 扩 / barn status / barn churn / mascot upkeep / help。churn 只搅山羊奶成奶酪。upkeep 花 4 票主动喂养。不要发明其它动词。")] = "",
+    command: Annotated[str, Field(description="子命令整句。status / build / upgrade / buy cabinet / buy fridge / buy compost_bin / install soft_N compost_bin / 堆肥桶 存 羊粪 3 / 堆肥桶 取 堆肥 2 / buy bed|bed_rattan|bed_canopy / install hard_1 bed / 睡（岸柏50/软藤52/云纹54，每天一次）/ 冰柜 存 甘蓝 3 / 潮柜 扩 / barn status / barn churn / mascot upkeep / help。粪便不能进潮柜。churn 只搅山羊奶成奶酪。upkeep 花 4 票主动喂养。不要发明其它动词。")] = "",
 ) -> str:
     return await mux._call_ops(mux.hut_bundle, _kid(), command)
 
@@ -126,9 +126,9 @@ async def tide_ops(
     return await mux._call_ops(mux.tide_bundle, _kid(), command)
 
 
-@mcp.tool(description="行囊、交换台、集市。command 写一整句。例子：list · gifts · vend 鲭鱼 1 · gift 安 甘蓝 1 · market list · market 扩。gifts 查收礼；集市基础6格可花钱扩到12。能直接送票，无手续费无每日上限。空 command 列出子命令。不会就 help。")
+@mcp.tool(description="行囊、交换台、集市。command 写一整句。例子：list · gifts · vend 鲭鱼 1 · gift 安 甘蓝 1 · market list · market 扩。gifts 查收礼；集市基础6格可花钱扩到12。行囊每种最多 24 份（和潮柜一样），买货/收礼超了会拒。能直接送票，无手续费无每日上限。空 command 列出子命令。不会就 help。")
 async def tote_ops(
-    command: Annotated[str, Field(description="子命令整句。list / gifts / vend 鲭鱼 1 / gift 名字 甘蓝 1 / market list / market 扩 / swap list / help。gifts=收礼记录；market 扩=加摆摊格。能直接送票。不要发明 inventory/sell。")] = "",
+    command: Annotated[str, Field(description="子命令整句。list / gifts / vend 鲭鱼 1 / gift 名字 甘蓝 1 / market list / market 扩 / swap list / help。gifts=收礼记录；market 扩=加摆摊格。行囊每种最多 24。能直接送票。不要发明 inventory/sell。")] = "",
 ) -> str:
     return await mux._call_ops(mux.tote_bundle, _kid(), command)
 
@@ -147,9 +147,9 @@ async def alliance_ops(
     return await mux._call_ops(mux.alliance_bundle, _kid(), command)
 
 
-@mcp.tool(description="访客：固定 NPC、守灯人·不醒、何敬山的商船糕点委托、目送人·阿槐、栗栗摊、Tt酱杂货、诊所、沿海旧史与 NPC 小传。command 写一整句。不醒可免费喝每日一杯茶、问潮前 5 次免费；点灯花 15 票，在公开文字灯廊留下名牌与愿望。何敬山按 jingshan visit → order → deliver → 换游戏日 revisit 推进。例子：buxing light 给妈妈 | 求平安 · jingshan visit · musong send 安。拾叶主动必触发；lore 是文本不是收集品。空 command=help。")
+@mcp.tool(description="访客：固定 NPC、守灯人·不醒、何敬山的商船糕点委托、目送人·阿槐、栗栗摊、Tt酱杂货、诊所、沿海旧史与 NPC 小传。command 写一整句。Tt酱买货受行囊每格 24 份限制。不醒可免费喝每日一杯茶、问潮前 5 次免费；点灯花 15 票，在公开文字灯廊留下名牌与愿望。何敬山按 jingshan visit → order → deliver → 换游戏日 revisit 推进。例子：buxing light 给妈妈 | 求平安 · jingshan visit · musong send 安 · tt buy 甘蓝种 2。拾叶主动必触发；lore 是文本不是收集品。空 command=help。")
 async def visit_ops(
-    command: Annotated[str, Field(description="子命令整句。list / buxing visit|tea|tide|light 给谁 | 求什么|gallery|entrust 旧事|watch|remember|fulfill 灯号 / jingshan visit|status|order|deliver|revisit|remember / musong visit|send 名字|remember / visit 拾叶 / tt catalog / lili scan / shaonian fortune / lore scan npc / clinic status / treat infection / help。不醒的灯廊公开，不要写现实隐私；茶每天一次、问潮前 5 次免费。何敬山 deliver 后换游戏日才能 revisit；苏月琴不是单独 NPC。空=帮助。不要发明 shop_ops。")] = "",
+    command: Annotated[str, Field(description="子命令整句。list / buxing visit|tea|tide|light 给谁 | 求什么|gallery|entrust 旧事|watch|remember|fulfill 灯号 / jingshan visit|status|order|deliver|revisit|remember / musong visit|send 名字|remember / visit 拾叶 / tt catalog / tt buy 甘蓝种 2 / lili scan / shaonian fortune / lore scan npc / clinic status / treat infection / help。tt buy 不能超过行囊每格 24。不醒的灯廊公开，不要写现实隐私；茶每天一次、问潮前 5 次免费。何敬山 deliver 后换游戏日才能 revisit；苏月琴不是单独 NPC。空=帮助。不要发明 shop_ops。")] = "",
 ) -> str:
     return await mux._call_ops(mux.visit_bundle, _kid(), command)
 

@@ -75,6 +75,7 @@ async def barn_ops(key_id: int, command: str) -> str:
             lines.append(_line(by_slot.get(slot), slot))
         lines.append(f"可购: {', '.join(LIVESTOCK.keys())}")
         lines.append("catalog 看详情 · collect 日常收奶/蛋/蜜 · shear 剪羊毛（要剪刀） · churn 山羊奶→奶酪")
+        lines.append("粪便进堆肥桶：hut_ops 堆肥桶 存 羊粪 3（先 buy compost_bin → install）")
         return "\n".join(lines)
 
     if verb == "catalog":
@@ -108,6 +109,7 @@ async def barn_ops(key_id: int, command: str) -> str:
                     f"  {meta['emoji']}{meta['name']} {meta['buy']}票 — "
                     f"喂{feed} x{meta['feed_qty']} → {prod} x{meta['product_qty']}{manure}{shear}"
                 )
+        lines.append("粪便进堆肥桶 hut_ops 堆肥桶 存，不能进潮柜")
         return "\n".join(lines)
 
     if verb == "erect":
@@ -353,24 +355,8 @@ async def barn_ops(key_id: int, command: str) -> str:
         )
 
     if verb == "compost" and len(parts) >= 2:
-        item = parts[1]
-        qty = int(parts[2]) if len(parts) > 2 else 1
-        if item not in MANURE:
-            raise ValueError(f"可堆肥: {', '.join(MANURE.keys())}")
-        yield_each = MANURE[item]["compost_yield"]
-        async with db.connect() as conn:
-            if not await db.take_item(conn, s["id"], item, qty):
-                raise ValueError(f"缺少 {MANURE[item]['name']} x{qty}")
-            total = yield_each * qty
-            if s.get("mascot_trait") == "compost":
-                total += qty
-            await db.add_item(conn, s["id"], "compost", total)
-            extra = f"+吉祥物堆肥" if s.get("mascot_trait") == "compost" else ""
-            await conn.commit()
-        return (
-            f"{MANURE[item]['name']} x{qty} → 堆肥 x{total} "
-            f"（每份{yield_each}{extra}）"
-        ) + flavor.maybe_suffix(["粪肥到位，土力拉满", "大型动物回馈，堆肥桶笑纳"])
+        from . import hut
+        return await hut.compost_bin_command(s, ["存", *parts[1:]])
 
     if verb == "churn":
         qty = int(parts[1]) if len(parts) > 1 else 2
@@ -388,5 +374,6 @@ async def barn_ops(key_id: int, command: str) -> str:
         ) + flavor.maybe_suffix(["姜姨：这才叫奶制品", "厨房 goat_cheese_salad 等着"])
 
     raise ValueError(
-        f"未知 barn 指令: {command}（status/catalog/erect/buy/feed/collect/shear/harvest/compost/churn）"
+        f"未知 barn 指令: {command}（status/catalog/erect/buy/feed/collect/shear/harvest/compost/churn）。"
+        "粪便进堆肥桶：hut_ops 堆肥桶 存 羊粪 3（barn compost 还认，但要先装桶）"
     )

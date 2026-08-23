@@ -229,7 +229,7 @@ async def fridge_status_text(s: dict[str, Any]) -> str:
         )
     if not rows:
         return (
-            f"冰箱空（{config.FRIDGE_SLOTS} 格）。"
+            f"冰箱空（{config.FRIDGE_SLOTS} 格，每格最多 {config.FRIDGE_STACK}）。"
             "hut_ops 冰柜 存 盐焗沙蟹 · kitchen_ops store 菜名"
         )
     lines = [f"冰箱 {len(rows)}/{config.FRIDGE_SLOTS}:"]
@@ -278,6 +278,11 @@ async def fridge_put(s: dict[str, Any], token: str, qty: int = 1) -> str:
             )
             if (await cur.fetchone())[0] >= config.FRIDGE_SLOTS:
                 raise ValueError(f"冰箱满了（{config.FRIDGE_SLOTS} 格）")
+        elif int(existing[1] or 0) + qty > config.FRIDGE_STACK:
+            raise ValueError(
+                f"冰箱这格最多叠 {config.FRIDGE_STACK} 份（和行囊/潮柜同上限），"
+                f"已有 {int(existing[1] or 0)}。多出来的先 eat 或 vend。"
+            )
         if not await db.take_item(conn, s["id"], item, qty):
             raise ValueError("行囊里没有这么多熟菜")
         if existing:

@@ -491,6 +491,7 @@ def _catalog_text(score: int) -> str:
         lines.extend(groups[key])
         lines.append("")
     lines.append("buy 物品 [数量] · gift 物品 [数量] · 中文名或 id 都行")
+    lines.append("行囊每种最多 24 份（和潮柜一样），买多了会拒")
     lines.append("送礼一次一笔，件数不叠；4 心起减半，8 心起更慢")
     return "\n".join(lines).rstrip()
 
@@ -505,6 +506,7 @@ async def tt_ops(key_id: int, command: str) -> str:
             "visit_ops tt — Tt酱杂货店\n"
             "  status / catalog — 货架与好感\n"
             "  buy 物品 [数量] — 种子/饲料/渔网钓竿/蚯蚓饵/锄铲/剪刀挤奶器\n"
+            "    行囊每种最多 24 份，买多了会拒；满了先 vend 或 hut_ops 冰柜 存\n"
             "  gift 物品 [数量] — 送礼（一次一笔，每日最多 3 次；4 心减半，8 心更慢）\n"
             "  visit — 聊天；每日首次进店 10% 她心情好送礼"
         )

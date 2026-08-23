@@ -1432,6 +1432,13 @@ async def init_db() -> None:
                 PRIMARY KEY (steward_id, day_id, action)
             )
             """,
+            """
+            CREATE TABLE IF NOT EXISTS hut_compost_bin (
+                steward_id INTEGER PRIMARY KEY REFERENCES stewards(id),
+                fill INTEGER NOT NULL DEFAULT 0,
+                ready INTEGER NOT NULL DEFAULT 0
+            )
+            """,
         ):
             try:
                 await db.execute(ddl)
@@ -1580,7 +1587,27 @@ async def get_satchel(steward_id: int) -> dict[str, int]:
         return {r["item"]: r["quantity"] for r in await cur.fetchall()}
 
 
-async def add_item(db: aiosqlite.Connection, steward_id: int, item: str, qty: int) -> None:
+async def add_item(
+    db: aiosqlite.Connection,
+    steward_id: int,
+    item: str,
+    qty: int,
+    *,
+    over_cap: bool = False,
+) -> None:
+    if qty <= 0:
+        return
+    if not over_cap:
+        from .catalog import item_stack_cap, satchel_full_message
+        cap = item_stack_cap(item)
+        cur = await db.execute(
+            "SELECT quantity FROM satchel WHERE steward_id = ? AND item = ?",
+            (steward_id, item),
+        )
+        row = await cur.fetchone()
+        have = int(row[0] if row else 0)
+        if have + qty > cap:
+            raise ValueError(satchel_full_message(item, have, qty, cap))
     await db.execute(
         """
         INSERT INTO satchel (steward_id, item, quantity) VALUES (?, ?, ?)
