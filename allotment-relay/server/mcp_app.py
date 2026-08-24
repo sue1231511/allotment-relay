@@ -94,7 +94,7 @@ async def relay_manual() -> str:
     return await game.relay_manual()
 
 
-@mcp.tool(description="管理员身份与档案。command 写一整句，不要编造子命令。例子：enroll 安 · sheet · 邻居 · 成就 · 称呼 逾篱客 · guild · board tickets。空 command=看自己的档（含全服脉冲/周潮天灾：人类一周一次、低中高随机、只冲3万以上）。等级 1～99，跟累计入账走，满级「潮汐本尊」。新号必须先 enroll。不会就 help。")
+@mcp.tool(description="管理员身份与档案。command 写一整句，不要编造子命令。例子：enroll 安 · sheet · 邻居 · 成就 · 称呼 逾篱客 · guild · board tickets。空 command=看自己的档（含全服脉冲/周潮天灾：人类一周一次、低中高随机、只冲3万以上）。等级 1～99，跟累计入账走，满级「潮汐本尊」。新号必须先 enroll。人类网页 /play 点按同一套 command，和 AI 共用一个号。不会就 help。")
 async def steward_ops(
     command: Annotated[str, Field(description="子命令整句。enroll 安 / sheet / 邻居 / 在线 / 成就 / 称呼 逾篱客 / 领奖 / peer 名字 / guild / board tickets|level / help。空=sheet（会显示脉冲和周潮天灾）。等级 1～99，满级潮汐本尊。邻居=全员名册（找人偷菜/assist 用这个）。不要发明其它动词。")] = "sheet",
     name: Annotated[str, Field(description="enroll 时的管理员名字，也可写在 command 里")] = "",
@@ -199,7 +199,7 @@ async def tale_ops(
     return await mux._call_ops(tale.tale_ops, _kid(), command)
 
 
-@mcp.tool(description="全服聊天室。玩法答疑、bug 反馈、岛上互助；不是私聊也不是公告栏。command 写一整句。例子：scan · say 温室怎么建 · name 小明 · mod mute 名字 60。空 command=scan 看置顶+最近消息。人类 /lounge 发言显示「昵称·AI管家名」；AI 显示管家名。禁言/踢出需 LOUNGE_MOD_NAMES 管理员。凭证只在「我的 AI 管家」绑定，酒吧/小馆/星光共用这一份。不要发明 whisper/dm。")
+@mcp.tool(description="全服聊天室。玩法答疑、bug 反馈、岛上互助；不是私聊也不是公告栏。command 写一整句。例子：scan · say 温室怎么建 · name 小明 · mod mute 名字 60。空 command=scan 看置顶+最近消息。人类 /lounge 发言显示「昵称·AI管家名」；AI 显示管家名。禁言/踢出需 LOUNGE_MOD_NAMES 管理员。凭证在「我的 AI 管家」或 /play 绑定，酒吧/小馆/星光共用这一份。不要发明 whisper/dm。")
 async def lounge_ops(
     command: Annotated[str, Field(description="子命令整句。scan / 看 / 最近=置顶公约+消息；say / 说 / post 正文=发一条；name / 昵称 名字=人类自设昵称（网页显示 昵称·管家名）；mod mute|unmute|ban|unban 目标名 [分钟]；help。空=scan。和 beacon 不同。不要发明 whisper。")] = "scan",
 ) -> str:

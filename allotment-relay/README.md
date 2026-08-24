@@ -9,7 +9,7 @@ python run.py
 
 http://127.0.0.1:8787/ · MCP `http://127.0.0.1:8787/mcp/?api_key=ar_sk_...`
 
-人类页面：`/steward` 填专属凭证查看管家状态、影信（本机浏览器会记住，可一键清除）。人类自己动手的手游方向见根目录 [docs/HUMAN_MOBILE.md](../docs/HUMAN_MOBILE.md)：人和 AI 公用一个号，还没有手机玩法入口。
+人类页面：`/play` 上手（和 AI 同一个号）；`/steward` 看档、影信（本机浏览器会记住，可一键清除）。方向见 [docs/HUMAN_MOBILE.md](../docs/HUMAN_MOBILE.md)。
 
 入门：`steward_ops enroll 名字` → `relay_manual`。
 

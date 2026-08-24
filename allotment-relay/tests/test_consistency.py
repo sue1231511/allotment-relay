@@ -336,7 +336,9 @@ def test_relay_manual_covers_systems() -> None:
         "3万以上",
         "低中高随机",
         "进价九成",
-        "/eatery /star 用 /steward 绑定的同一份本机凭证",
+        "/play 点按同一套指令",
+        "共用一个号",
+        "/eatery /star 用同一份本机凭证",
     ]
     missing = [n for n in needles if n not in text]
     assert not missing, f"relay_manual missing: {missing}"
@@ -376,6 +378,7 @@ def test_readme_workflow_rules() -> None:
     assert "tote_ops market" in market_html
     assert "/api/public/market" in market_js
     assert 'href="/workshop"' in nav
+    assert 'href="/play"' in nav
     assert 'href="/tide"' in nav
     assert 'href="/huts"' in nav
     assert 'href="/market"' in nav

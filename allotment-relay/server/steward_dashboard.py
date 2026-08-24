@@ -71,12 +71,27 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
     parcel_views = []
     for p in parcels:
         gh = bool(p.get("greenhouse"))
+        orchard = bool(p.get("orchard"))
+        if gh:
+            token = f"棚{p['slot']}"
+        elif orchard:
+            token = f"园{p['slot']}"
+        else:
+            token = str(p["slot"])
+        base = {
+            "slot": p["slot"],
+            "greenhouse": gh,
+            "orchard": orchard,
+            "token": token,
+            "watered": bool(p.get("watered")),
+            "fertilized": bool(p.get("fertilized")),
+            "tended": bool(p.get("tended")),
+            "shake": False,
+        }
         left = land.clear_left(p)
         if left > 0:
             parcel_views.append({
-                "slot": p["slot"],
-                "greenhouse": gh,
-                "orchard": bool(p.get("orchard")),
+                **base,
                 "state": "clearing",
                 "crop": None,
                 "emoji": "🚧",
@@ -86,9 +101,7 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
             })
         elif not p.get("crop"):
             parcel_views.append({
-                "slot": p["slot"],
-                "greenhouse": gh,
-                "orchard": bool(p.get("orchard")),
+                **base,
                 "state": "fallow",
                 "crop": None,
                 "emoji": "🟫",
@@ -114,15 +127,14 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
                 else f"{status}{extra_p}"
             )
             parcel_views.append({
-                "slot": p["slot"],
-                "greenhouse": gh,
-                "orchard": bool(p.get("orchard")),
+                **base,
                 "state": state,
                 "crop": p["crop"],
                 "emoji": meta.get("emoji", "🌱"),
                 "name": meta["name"],
                 "detail": detail,
                 "label": f"{meta['emoji']}{meta['name']}（{status}{extra_p}）",
+                "shake": bool(meta.get("shake")) and state == "ready",
             })
 
     stock_items = [

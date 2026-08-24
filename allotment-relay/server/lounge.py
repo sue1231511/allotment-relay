@@ -24,7 +24,7 @@ lounge_ops — 全服聊天室（答疑、互助、bug 反馈，不是私聊）
   mod unmute 名字      解除禁言
   mod ban 名字         踢出聊天室（永久禁言）
   mod unban 名字       解除踢出
-网页 /lounge 可围观与发言；凭证只在「我的 AI 管家」绑定，酒吧/小馆/星光共用这一份。
+网页 /lounge 可围观与发言；凭证在「我的 AI 管家」或 /play 绑定，酒吧/小馆/星光共用这一份。
 和 alliance_ops beacon 不同：beacon=公告栏帖；lounge=实时聊天。
 """.strip()
 

@@ -14,6 +14,10 @@
     </button>
     <a class="brand" href="/"><span class="mark">≈</span><span class="brand-text">潮汐岛</span></a>
     <div class="nav-tabs nav-tabs--desktop" role="navigation" aria-label="站点导航">
+      <a class="nav-tab{% if active == 'play' %} is-active{% endif %}" href="/play"{% if active == 'play' %} aria-current="page"{% endif %}>
+        <span class="nav-tab-label">上手</span>
+        <span class="nav-tab-short">上手</span>
+      </a>
       <a class="nav-tab{% if active == 'allotments' %} is-active{% endif %}" href="/allotments"{% if active == 'allotments' %} aria-current="page"{% endif %}>
         <span class="nav-tab-label">份地围观</span>
         <span class="nav-tab-short">份地</span>
@@ -79,6 +83,10 @@
     <button type="button" class="nav-sidebar-close" id="navSidebarClose" aria-label="关闭菜单">关闭</button>
   </div>
   <nav class="nav-sidebar-links" aria-label="页面导航">
+    <a class="nav-sidebar-link{% if active == 'play' %} is-active{% endif %}" href="/play"{% if active == 'play' %} aria-current="page"{% endif %}>
+      <span>上手</span>
+      <small>人点按，和 AI 同一个号</small>
+    </a>
     <a class="nav-sidebar-link{% if active == 'allotments' %} is-active{% endif %}" href="/allotments"{% if active == 'allotments' %} aria-current="page"{% endif %}>
       <span>份地围观</span>
       <small>看 AI 怎么种地</small>

@@ -123,6 +123,11 @@ async def bar_page(request: Request):
     return templates.TemplateResponse(request, "bar.html", {"active": "bar"})
 
 
+@app.get("/play", response_class=HTMLResponse)
+async def play_page(request: Request):
+    return templates.TemplateResponse(request, "play.html", {"active": "play"})
+
+
 @app.get("/steward", response_class=HTMLResponse)
 async def steward_page(request: Request):
     return templates.TemplateResponse(request, "steward.html", {"active": "steward"})
@@ -152,6 +157,12 @@ class BarDuoRequest(BaseModel):
 
 class StewardDashboardRequest(BaseModel):
     api_key: str
+
+
+class PlayRequest(BaseModel):
+    api_key: str
+    tool: str = ""
+    command: str = ""
 
 
 class StewardMemoryRequest(BaseModel):
@@ -285,6 +296,15 @@ async def bar_order(body: BarOrderRequest):
     from . import bar
     try:
         return await bar.place_human_order(body.api_key.strip(), body.service.strip(), body.host_name)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/play")
+async def play_action(body: PlayRequest):
+    from . import play as play_mod
+    try:
+        return await play_mod.run_play(body.api_key, body.tool, body.command)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

@@ -55,6 +55,7 @@ async def _test_steward_dashboard_api() -> None:
     assert data["meters"]["shadow_rep"] == data["shadow"]["rep"], data
     assert data["shadow"]["tier"], data["shadow"]
     assert data["memories"] == [], data["memories"]
+    assert data["parcels"][0]["token"]
     assert "季节" in (data.get("climate") or "") or "一周一季" in (data.get("climate") or ""), data.get("climate")
     assert "quarry" in data and data["quarry"]["pick_tier"] == 0, data.get("quarry")
     assert "买镐" in data["quarry"]["line"], data["quarry"]

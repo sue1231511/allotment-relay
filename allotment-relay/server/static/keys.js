@@ -70,6 +70,9 @@ function renderKeyResult(el, { apiKey, mcpUrl, once = false }) {
       类型选 Streamable HTTP / HTTP。MCP URL 末尾必须有 /。
       分开填时 URL 用 <code class="secret-inline">${escapeHtml(mcpPath)}</code>
     </p>
+    <p class="muted secret-note">
+      人要自己玩：先把凭证存好，打开 <a href="/play">上手</a>。和 AI 同一个号。
+    </p>
   `;
   el.querySelectorAll(".secret-copy").forEach((btn) => {
     btn.addEventListener("click", () => copyText(btn.getAttribute("data-copy") || "", btn));
