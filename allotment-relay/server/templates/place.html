@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{ place.name }} · 潮汐岛</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="promo-page">
+  {% include "partials/nav.html" %}
+  <main>
+    <header class="page-head">
+      <div>
+        <div class="eyebrow">{{ place.eyebrow }}</div>
+        <h1>{{ place.name }}</h1>
+        <p class="tagline">{{ place.lead }}</p>
+      </div>
+    </header>
+
+    <section class="panel promo-poster">
+      {% for para in place.body %}
+      <p>{{ para }}</p>
+      {% endfor %}
+      <p class="muted">{{ place.aside }}</p>
+      <p class="promo-cta-row">
+        <a class="btn primary" href="{{ play_href }}">{{ place.cta }}</a>
+        <a class="btn" href="/">回岛上</a>
+      </p>
+    </section>
+  </main>
+</body>
+</html>

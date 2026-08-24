@@ -93,8 +93,10 @@ function renderAll() {
   renderPlaces();
   renderTide();
   renderTote();
+  renderGifts();
   renderMemories();
   if (state.placeId) renderPlace(state.placeId);
+  consumeGo();
 }
 
 function plotButtons(p) {
@@ -167,19 +169,78 @@ function renderTote() {
   `).join('');
 }
 
-function renderMemories() {
-  const mem = (state.dash && state.dash.memories) || [];
-  if (!mem.length) {
-    $('play-memory-row').innerHTML = '<p class="muted">还没走完的故事不会出现。</p>';
+function renderGifts() {
+  const gifts = (state.dash && state.dash.gifts) || [];
+  if (!gifts.length) {
+    $('play-gifts').innerHTML = '<p class="muted">暂无收礼 / 打赏</p>';
     return;
   }
-  $('play-memory-row').innerHTML = mem.slice(0, 6).map((m) => `
-    <article class="card play-memory">
-      <small>${esc(m.kind === 'tale' ? '潮闻' : (m.kind === 'story' ? '故事' : '相遇'))}</small>
-      <strong>${esc(m.title || m.key)}</strong>
-      <p class="muted">${esc(m.blurb || '')}</p>
-    </article>
+  $('play-gifts').innerHTML = gifts.slice(0, 6).map((g) => `
+    <div class="item">
+      <span class="muted">${esc(g.kind)}</span>
+      <strong>${esc(g.who)}</strong>
+      <p class="muted">${esc(g.text)}</p>
+    </div>
   `).join('');
+}
+
+const MEMORY_KIND_LABELS = { tale: '潮闻', story: '故事', npc: '相遇' };
+let memoryCatalog = [];
+let memoryFilter = 'all';
+let activeMemory = null;
+let activeMemoryChapter = 0;
+let continuousMemoryMode = false;
+
+function fmtMemoryDate(epoch) {
+  if (!epoch) return '已收录';
+  return new Date(Number(epoch) * 1000).toLocaleDateString('zh-CN', {
+    year: 'numeric', month: 'long', day: 'numeric',
+  });
+}
+
+function multiline(value) {
+  return esc(value).replace(/\n/g, '<br>');
+}
+
+function renderMemories() {
+  memoryCatalog = (state.dash && state.dash.memories) || [];
+  const root = $('memories');
+  const visible = memoryFilter === 'all'
+    ? memoryCatalog
+    : memoryCatalog.filter((item) => item.kind === memoryFilter);
+  if (!visible.length) {
+    root.innerHTML = '<p class="muted">还没走完的故事不会出现。</p>';
+    return;
+  }
+  root.innerHTML = visible.map((item) => {
+    const index = memoryCatalog.indexOf(item);
+    const variants = item.variants || [];
+    const chooser = variants.length > 1 ? `
+      <label class="memory-variant-label">
+        <span>选择结局</span>
+        <select data-memory-variant-select="${index}">
+          ${variants.map((v, i) => `<option value="${i}">${esc(v.label)}</option>`).join('')}
+        </select>
+      </label>` : '';
+    const count = Number(item.chapter_count) > 0 ? `${item.chapter_count} 幕` : '旧档案';
+    return `
+      <article class="memory-card kind-${esc(item.kind)}" data-memory-card="${index}">
+        <div class="memory-card-top">
+          <span class="memory-kind">${esc(MEMORY_KIND_LABELS[item.kind] || item.kind)}</span>
+          <time>${esc(fmtMemoryDate(item.completed_at))}</time>
+        </div>
+        <h3>《${esc(item.title)}》</h3>
+        <p class="memory-blurb">${esc(item.blurb)}</p>
+        <div class="memory-card-meta">
+          <span>${esc(count)}</span>
+          ${item.ending ? `<span>${esc(item.ending)}</span>` : ''}
+        </div>
+        <div class="memory-card-action">
+          ${chooser}
+          <button type="button" class="btn primary memory-watch" data-memory-watch="${index}">再次观看</button>
+        </div>
+      </article>`;
+  }).join('');
 }
 
 function extraPlaceActions(place) {
@@ -221,6 +282,12 @@ function renderPlace(id) {
     );
   }
   hidePatron();
+  if (window.playLounge) window.playLounge.stop();
+  show($('play-lounge'), false);
+  if (id === 'lounge') {
+    show($('play-lounge'), true);
+    if (window.playLounge) window.playLounge.start();
+  }
   if (id === 'bar' || id === 'eatery' || id === 'star') {
     show($('play-patron'), true);
     show($(`play-patron-${id}`), true);
@@ -235,7 +302,128 @@ function goHome() {
   show($('play-place'), false);
   show($('play-home'), true);
   hidePatron();
+  show($('play-lounge'), false);
+  if (window.playLounge) window.playLounge.stop();
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+let goApplied = false;
+function consumeGo() {
+  if (goApplied || !state.enrolled) return;
+  const go = new URLSearchParams(location.search).get('go') || '';
+  if (!go) return;
+  goApplied = true;
+  if (go === 'me') openMe();
+  else renderPlace(go);
+}
+
+function openMe() {
+  const d = state.dash;
+  if (!d) return;
+  const m = d.meters || {};
+  const lines = d.meter_lines || {};
+  $('play-me-body').innerHTML = `
+    <p><strong>${esc(d.name)}</strong> · 等级 ${d.level || 1} · ${esc(d.title || '')}</p>
+    ${d.motto ? `<p>「${esc(d.motto)}」</p>` : ''}
+    <p>精力 ${m.energy || 0}/${m.energy_max || 100} · 工分票 ${d.tickets}</p>
+    <p>饱食 ${m.satiety ?? '—'} · 雾智 ${m.mist_wit ?? '—'} · 档信 ${m.standing ?? '—'}</p>
+    <p class="muted">${esc(lines.energy || '')}</p>
+    <p class="muted">${esc(lines.bar_duty || '')}</p>
+    ${d.voyage ? `<p class="muted">${esc(d.voyage)}</p>` : ''}
+  `;
+  show($('play-me'), true);
+}
+
+function closeMe() {
+  show($('play-me'), false);
+}
+
+function memorySouvenirs(items) {
+  if (!items || !items.length) return '';
+  return `<section class="memory-reader-souvenirs">
+    <h4>一同留下的纪念</h4>
+    <div>${items.map((item) => `
+      <span title="${esc(item.description || '')}">${esc(item.emoji || '◌')} ${esc(item.name)}</span>
+    `).join('')}</div>
+  </section>`;
+}
+
+function renderMemoryReader() {
+  if (!activeMemory) return;
+  const chapters = activeMemory.chapters || [];
+  $('memory-reader-title').textContent = `《${activeMemory.title}》`;
+  $('memory-reader-kicker').textContent = `${MEMORY_KIND_LABELS[activeMemory.kind] || '岛上'} · 回忆重映`;
+  $('memory-reader-meta').textContent = [
+    fmtMemoryDate(activeMemory.completed_at),
+    activeMemory.ending ? `留下：${activeMemory.ending}` : '',
+  ].filter(Boolean).join(' · ');
+  $('memory-reader-notice').textContent = activeMemory.notice || '';
+  $('memory-reader-toc').innerHTML = chapters.map((chapter, i) => `
+    <button type="button" class="memory-toc-item${!continuousMemoryMode && i === activeMemoryChapter ? ' is-active' : ''}" data-memory-chapter="${i}">
+      <span>${String(i + 1).padStart(2, '0')}</span>${esc(chapter.title)}
+    </button>
+  `).join('');
+  const page = $('memory-reader-page');
+  if (continuousMemoryMode) {
+    page.innerHTML = chapters.map((chapter, i) => `
+      <section class="memory-chapter" id="memory-chapter-${i}">
+        <span class="memory-chapter-count">${i + 1} / ${chapters.length}</span>
+        <h3>${esc(chapter.title)}</h3>
+        <div class="memory-prose">${multiline(chapter.text)}</div>
+      </section>
+    `).join('') + memorySouvenirs(activeMemory.souvenirs);
+  } else {
+    const chapter = chapters[activeMemoryChapter] || { title: '回忆', text: '' };
+    page.innerHTML = `
+      <section class="memory-chapter">
+        <span class="memory-chapter-count">${activeMemoryChapter + 1} / ${chapters.length}</span>
+        <h3>${esc(chapter.title)}</h3>
+        <div class="memory-prose">${multiline(chapter.text)}</div>
+      </section>
+      ${activeMemoryChapter === chapters.length - 1 ? memorySouvenirs(activeMemory.souvenirs) : ''}`;
+  }
+  $('memory-reader-progress').textContent = continuousMemoryMode
+    ? `共 ${chapters.length} 幕`
+    : `${activeMemoryChapter + 1} / ${chapters.length}`;
+  $('memory-reader-prev').disabled = continuousMemoryMode || activeMemoryChapter <= 0;
+  $('memory-reader-next').disabled = continuousMemoryMode || activeMemoryChapter >= chapters.length - 1;
+  $('memory-reader-mode').textContent = continuousMemoryMode ? '按幕阅读' : '连续阅读';
+}
+
+async function openMemory(index, trigger) {
+  const item = memoryCatalog[index];
+  if (!item) return;
+  const card = trigger.closest('[data-memory-card]');
+  const select = card ? card.querySelector('[data-memory-variant-select]') : null;
+  const variantIndex = select ? Number(select.value) : 0;
+  const variant = (item.variants || [])[variantIndex];
+  trigger.disabled = true;
+  trigger.textContent = '取回中…';
+  try {
+    const data = await postJson('/api/steward/memory', {
+      api_key: state.key,
+      kind: item.kind,
+      key: item.key,
+      variant: variant ? String(variant.id) : '',
+    });
+    activeMemory = data;
+    activeMemoryChapter = 0;
+    continuousMemoryMode = false;
+    renderMemoryReader();
+    $('memory-modal').classList.remove('hidden');
+    document.body.classList.add('memory-open');
+  } catch (err) {
+    setLog(err.message);
+  } finally {
+    trigger.disabled = false;
+    trigger.textContent = '再次观看';
+  }
+}
+
+function closeMemory() {
+  $('memory-modal').classList.add('hidden');
+  document.body.classList.remove('memory-open');
+  activeMemory = null;
 }
 
 function openSheet(title, html) {
@@ -432,15 +620,21 @@ $('play-enroll-form').addEventListener('submit', async (e) => {
 });
 
 $('play-who-btn').addEventListener('click', () => {
-  if (!state.key) {
+  if (!state.enrolled) {
     show($('play-main'), false);
     show($('play-gate'), true);
     return;
   }
-  if (confirm('清除本机凭证？管家页和上手页是同一份。')) {
+  openMe();
+});
+
+$('play-me-close').addEventListener('click', closeMe);
+$('play-me-bg').addEventListener('click', closeMe);
+$('play-me-forget').addEventListener('click', () => {
+  if (confirm('清除本机凭证？')) {
     clearSiteKey();
     state.key = '';
-    location.reload();
+    location.href = '/play';
   }
 });
 
@@ -561,6 +755,50 @@ document.body.addEventListener('click', (e) => {
     return;
   }
   act(payload.tool, payload.command);
+});
+
+$('memory-filters').addEventListener('click', (e) => {
+  const button = e.target.closest('[data-memory-filter]');
+  if (!button) return;
+  memoryFilter = button.dataset.memoryFilter;
+  document.querySelectorAll('[data-memory-filter]').forEach((item) => {
+    item.classList.toggle('is-active', item === button);
+  });
+  renderMemories();
+});
+
+$('memories').addEventListener('click', (e) => {
+  const button = e.target.closest('[data-memory-watch]');
+  if (!button) return;
+  openMemory(Number(button.dataset.memoryWatch), button);
+});
+
+$('memory-reader-toc').addEventListener('click', (e) => {
+  const item = e.target.closest('[data-memory-chapter]');
+  if (!item || continuousMemoryMode) return;
+  activeMemoryChapter = Number(item.dataset.memoryChapter);
+  renderMemoryReader();
+});
+
+$('memory-reader-prev').addEventListener('click', () => {
+  if (activeMemoryChapter > 0) {
+    activeMemoryChapter -= 1;
+    renderMemoryReader();
+  }
+});
+$('memory-reader-next').addEventListener('click', () => {
+  const chapters = (activeMemory && activeMemory.chapters) || [];
+  if (activeMemoryChapter < chapters.length - 1) {
+    activeMemoryChapter += 1;
+    renderMemoryReader();
+  }
+});
+$('memory-reader-mode').addEventListener('click', () => {
+  continuousMemoryMode = !continuousMemoryMode;
+  renderMemoryReader();
+});
+document.querySelectorAll('[data-memory-close]').forEach((btn) => {
+  btn.addEventListener('click', closeMemory);
 });
 
 (async function boot() {

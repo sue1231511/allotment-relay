@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, field_validator
@@ -70,7 +70,10 @@ class KeyRequest(BaseModel):
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    return templates.TemplateResponse(request, "index.html", {"active": None})
+    from . import promo
+    return templates.TemplateResponse(
+        request, "index.html", {"active": None, "places": promo.PLACES}
+    )
 
 
 @app.get("/register", response_class=HTMLResponse)
@@ -83,44 +86,49 @@ async def recover_page(request: Request):
     return templates.TemplateResponse(request, "recover.html", {"active": None})
 
 
+def _place_page(request: Request, slug: str):
+    from . import promo
+    return templates.TemplateResponse(request, "place.html", promo.page_context(slug))
+
+
 @app.get("/allotments", response_class=HTMLResponse)
 async def allotments_page(request: Request):
-    return templates.TemplateResponse(request, "allotments.html", {"active": "allotments"})
+    return _place_page(request, "allotments")
 
 
 @app.get("/quarry", response_class=HTMLResponse)
 async def quarry_page(request: Request):
-    return templates.TemplateResponse(request, "quarry.html", {"active": "quarry"})
+    return _place_page(request, "quarry")
 
 
 @app.get("/workshop", response_class=HTMLResponse)
 async def workshop_page(request: Request):
-    return templates.TemplateResponse(request, "workshop.html", {"active": "workshop"})
+    return _place_page(request, "workshop")
 
 
 @app.get("/tide", response_class=HTMLResponse)
 async def tide_page(request: Request):
-    return templates.TemplateResponse(request, "tide.html", {"active": "tide"})
+    return _place_page(request, "tide")
 
 
 @app.get("/huts", response_class=HTMLResponse)
 async def huts_page(request: Request):
-    return templates.TemplateResponse(request, "huts.html", {"active": "huts"})
+    return _place_page(request, "huts")
 
 
 @app.get("/market", response_class=HTMLResponse)
 async def market_page(request: Request):
-    return templates.TemplateResponse(request, "market.html", {"active": "market"})
+    return _place_page(request, "market")
 
 
-@app.get("/board", response_class=HTMLResponse)
-async def board_page(request: Request):
-    return templates.TemplateResponse(request, "board.html", {"active": "board"})
+@app.get("/board")
+async def board_page():
+    return RedirectResponse("/play?go=me", status_code=302)
 
 
 @app.get("/bar", response_class=HTMLResponse)
 async def bar_page(request: Request):
-    return templates.TemplateResponse(request, "bar.html", {"active": "bar"})
+    return _place_page(request, "bar")
 
 
 @app.get("/play", response_class=HTMLResponse)
@@ -128,19 +136,19 @@ async def play_page(request: Request):
     return templates.TemplateResponse(request, "play.html", {"active": "play"})
 
 
-@app.get("/steward", response_class=HTMLResponse)
-async def steward_page(request: Request):
-    return templates.TemplateResponse(request, "steward.html", {"active": "steward"})
+@app.get("/steward")
+async def steward_page():
+    return RedirectResponse("/play?go=me", status_code=302)
 
 
-@app.get("/lounge", response_class=HTMLResponse)
-async def lounge_page(request: Request):
-    return templates.TemplateResponse(request, "lounge.html", {"active": "lounge"})
+@app.get("/lounge")
+async def lounge_page():
+    return RedirectResponse("/play?go=lounge", status_code=302)
 
 
 @app.get("/eatery", response_class=HTMLResponse)
 async def eatery_page(request: Request):
-    return templates.TemplateResponse(request, "eatery.html", {"active": "eatery"})
+    return _place_page(request, "eatery")
 
 
 class BarOrderRequest(BaseModel):
@@ -455,7 +463,7 @@ async def eatery_order(body: EateryOrderRequest):
 
 @app.get("/star")
 async def star_page(request: Request):
-    return templates.TemplateResponse(request, "star.html", {"active": "star"})
+    return _place_page(request, "star")
 
 
 @app.get("/api/public/star")

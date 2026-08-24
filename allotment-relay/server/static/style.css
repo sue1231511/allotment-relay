@@ -3707,9 +3707,25 @@ code {
 
 }
 
-@media (max-width: 390px) {
-  h1 { font-size: 40px; }
+.promo-poster p { line-height: 1.8; max-width: 42em; }
+.promo-cta-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+.island-map { margin: 8px 0 48px; }
+.island-map h2 { margin: 8px 0 18px; }
+.island-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+  gap: 12px;
 }
+.island-card {
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 148px;
+}
+.island-card .eyebrow { margin-bottom: 0; }
+.island-card strong { font-family: "Noto Serif SC", serif; font-size: 22px; }
+.island-card p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
 
 @media (max-width: 560px) {
   .shell,

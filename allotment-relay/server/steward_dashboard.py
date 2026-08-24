@@ -1,4 +1,4 @@
-"""管家私有状态面板 — 供 /steward 网页用 API key 查询。"""
+"""管家私有状态面板 — 供 /play 上手页用 API key 查询。"""
 
 from __future__ import annotations
 

@@ -31,7 +31,7 @@ STAR_HELP = f"""star_ops 子命令（整句写进 command）：
     平常及以上：粉丝固定再+10；粉丝累计给小橘的实收打赏每满20票再+1。
   粉丝团 — 入团。一人一次，退团这个选项不存在；围观回神+10、档信翻倍（fan）
   应援榜 — 谁在真金白银地捧她（board）
-  她常驻荔栀的酒馆，随时能开小剧场专场。人类打赏在 /play；/star 只围观。"""
+  她常驻荔栀的酒馆，随时能开小剧场专场。人类打赏在 /play。/star 是地点海报。"""
 
 # 演出事件池 — 按她面板心情档加权：她心情好不好，观众听得出来
 SHOW_POOLS: dict[str, list[str]] = {
@@ -143,7 +143,7 @@ async def tonight_guest_line() -> str | None:
     if not _venue_active_today(state):
         return None
     if state["venue"] == "bar":
-        return f"嘉宾：{STAR_NAME}（开嗓）— star_ops 围观 · 网页 /star"
+        return f"嘉宾：{STAR_NAME}（开嗓）— star_ops 围观 · 网页 /play?go=star"
     return f"今晚{STAR_NAME}在小剧场开专场，酒馆里少了些人 — /star"
 
 
@@ -296,7 +296,7 @@ async def _cmd_watch(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
     if not _venue_active_today(state):
         raise ValueError(
             f"{STAR_NAME}今晚不开嗓。场子不是天天有的——star_ops status 看她的档，"
-            "网页 /star 也能围观。"
+            "上手页 /play 也能听她唱。"
         )
     day = _day_id()
     conn.row_factory = aiosqlite.Row
