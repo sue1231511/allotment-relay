@@ -228,7 +228,8 @@ def test_relay_manual_covers_systems() -> None:
         "barn erect",
         "堆肥桶",
         "buy compost_bin",
-        "行囊每种也最多 24",
+        "基础每格 24",
+        "tote_ops 扩栈",
         "mascot adopt",
         "lili summon",
         "clinic treat",
@@ -496,7 +497,8 @@ def test_patron_pages_share_steward_key() -> None:
     assert '"go": "eatery"' in promo
     assert '"go": "star"' in promo
     assert 'RedirectResponse("/play?go=me"' in main_py
-    assert 'RedirectResponse("/play?go=lounge"' in main_py
+    assert 'lounge.html"' in main_py
+    assert 'RedirectResponse("/play?go=lounge"' not in main_py
     assert "place.html" in main_py
     assert "_place_page" in main_py
     assert 'tide.html"' in main_py
@@ -507,6 +509,11 @@ def test_patron_pages_share_steward_key() -> None:
     assert 'huts.html"' in main_py
     assert 'star.html"' in main_py
     assert 'allotments.html"' in main_py
+    lounge_html = (root / "server/templates/lounge.html").read_text(encoding="utf-8")
+    assert "/static/site-key.js" in lounge_html
+    assert "lounge-page" in lounge_html
+    assert "playLounge.start" in lounge_js
+    assert "lounge-page" in lounge_js
     board_html = (root / "server/templates/board.html").read_text(encoding="utf-8")
     board_js = (root / "server/static/board.js").read_text(encoding="utf-8")
     board_css = (root / "server/static/board.css").read_text(encoding="utf-8")
@@ -564,6 +571,8 @@ def test_patron_pages_share_steward_key() -> None:
     assert 'href="/huts"' in nav
     assert 'href="/star"' in nav
     assert 'href="/allotments"' in nav
+    assert 'href="/lounge"' in nav
+    assert "聊天室" in nav
     assert "全服榜" in nav
     assert "岸畔小屋" in nav
     assert "小橘星光" in nav

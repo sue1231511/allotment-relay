@@ -154,9 +154,10 @@ async def steward_page():
     return RedirectResponse("/play?go=me", status_code=302)
 
 
-@app.get("/lounge")
-async def lounge_page():
-    return RedirectResponse("/play?go=lounge", status_code=302)
+@app.get("/lounge", response_class=HTMLResponse)
+async def lounge_page(request: Request):
+    """全服聊天室；凭证仍在上手页绑定。"""
+    return _html(request, "lounge.html", active="lounge")
 
 
 @app.get("/eatery", response_class=HTMLResponse)

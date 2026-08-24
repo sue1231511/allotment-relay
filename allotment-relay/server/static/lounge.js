@@ -416,3 +416,8 @@ window.playLounge = {
     }
   },
 };
+
+// 独立 /lounge 页直接启动；上手页由 play.js 调 playLounge.start()
+if (document.body.classList.contains('lounge-page')) {
+  window.playLounge.start();
+}
