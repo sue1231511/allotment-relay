@@ -378,6 +378,9 @@ def test_readme_workflow_rules() -> None:
     css = (root / "allotment-relay/server/static/style.css").read_text(encoding="utf-8")
     assert "@media (max-width: 980px)" in css
     assert ".nav-tab-short" in css
+    island_grid = css.split(".island-grid", 1)[1].split(".island-card", 1)[0]
+    assert "auto-fit" not in island_grid
+    assert "grid-template-columns: 1fr" in island_grid
     assert "nav-tab-short" in nav
     assert "forage" in readme
     assert "amends" in readme
