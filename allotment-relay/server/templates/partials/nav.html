@@ -31,6 +31,10 @@
     <button type="button" class="nav-sidebar-close" id="navSidebarClose" aria-label="关闭菜单">关闭</button>
   </div>
   <nav class="nav-sidebar-links" aria-label="页面导航">
+    <a class="nav-sidebar-link{% if active == 'home' %} is-active{% endif %}" href="/"{% if active == 'home' %} aria-current="page"{% endif %}>
+      <span>岛上</span>
+      <small>首页 · 地点海报都在这</small>
+    </a>
     <a class="nav-sidebar-link{% if active == 'play' %} is-active{% endif %}" href="/play"{% if active == 'play' %} aria-current="page"{% endif %}>
       <span>上手</span>
       <small>人在岛上过的日子</small>
@@ -39,46 +43,17 @@
       <span>领取凭证</span>
       <small>进岛手续</small>
     </a>
-    <a class="nav-sidebar-link{% if active == 'allotments' %} is-active{% endif %}" href="/allotments"{% if active == 'allotments' %} aria-current="page"{% endif %}>
-      <span>份地</span>
-      <small>岛上的地</small>
-    </a>
-    <a class="nav-sidebar-link{% if active == 'tide' %} is-active{% endif %}" href="/tide"{% if active == 'tide' %} aria-current="page"{% endif %}>
-      <span>海边</span>
-      <small>撒网 · 出海</small>
-    </a>
-    <a class="nav-sidebar-link{% if active == 'huts' %} is-active{% endif %}" href="/huts"{% if active == 'huts' %} aria-current="page"{% endif %}>
-      <span>小屋</span>
-      <small>睡 · 畜栏</small>
-    </a>
-    <a class="nav-sidebar-link{% if active == 'bar' %} is-active{% endif %}" href="/bar"{% if active == 'bar' %} aria-current="page"{% endif %}>
-      <span>滨海酒吧</span>
-      <small>荔栀的店</small>
-    </a>
-    <a class="nav-sidebar-link{% if active == 'eatery' %} is-active{% endif %}" href="/eatery"{% if active == 'eatery' %} aria-current="page"{% endif %}>
-      <span>岸畔小馆</span>
-      <small>熟菜 · 堂食</small>
-    </a>
-    <a class="nav-sidebar-link{% if active == 'market' %} is-active{% endif %}" href="/market"{% if active == 'market' %} aria-current="page"{% endif %}>
-      <span>集市</span>
-      <small>挂单 · 交换</small>
-    </a>
-    <a class="nav-sidebar-link{% if active == 'quarry' %} is-active{% endif %}" href="/quarry"{% if active == 'quarry' %} aria-current="page"{% endif %}>
-      <span>盐风崖</span>
-      <small>潮脉矿</small>
-    </a>
-    <a class="nav-sidebar-link{% if active == 'workshop' %} is-active{% endif %}" href="/workshop"{% if active == 'workshop' %} aria-current="page"{% endif %}>
-      <span>岸工坊</span>
-      <small>打钉 · 盐田</small>
-    </a>
-    <a class="nav-sidebar-link{% if active == 'star' %} is-active{% endif %}" href="/star"{% if active == 'star' %} aria-current="page"{% endif %}>
-      <span>小橘星光</span>
-      <small>她开嗓的晚上</small>
-    </a>
-    <a class="nav-sidebar-link{% if active == 'undertide' %} is-active{% endif %}" href="/undertide"{% if active == 'undertide' %} aria-current="page"{% endif %}>
-      <span>井下</span>
-      <small>别乱点。真的。</small>
-    </a>
+    <p class="nav-sidebar-kicker">地点海报（首页）</p>
+    <a class="nav-sidebar-link" href="/#allotments"><span>份地</span><small>岛上的地</small></a>
+    <a class="nav-sidebar-link" href="/#tide"><span>海边</span><small>撒网 · 出海</small></a>
+    <a class="nav-sidebar-link" href="/#huts"><span>小屋</span><small>睡 · 畜栏</small></a>
+    <a class="nav-sidebar-link" href="/#bar"><span>滨海酒吧</span><small>荔栀的店</small></a>
+    <a class="nav-sidebar-link" href="/#eatery"><span>岸畔小馆</span><small>熟菜 · 堂食</small></a>
+    <a class="nav-sidebar-link" href="/#market"><span>集市</span><small>挂单 · 交换</small></a>
+    <a class="nav-sidebar-link" href="/#quarry"><span>盐风崖</span><small>潮脉矿</small></a>
+    <a class="nav-sidebar-link" href="/#workshop"><span>岸工坊</span><small>打钉 · 盐田</small></a>
+    <a class="nav-sidebar-link" href="/#star"><span>小橘星光</span><small>她开嗓的晚上</small></a>
+    <a class="nav-sidebar-link" href="/#undertide"><span>井下</span><small>别乱点。真的。</small></a>
   </nav>
   <a class="nav-sidebar-cta" href="/register">领取凭证</a>
 </aside>

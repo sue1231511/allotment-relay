@@ -280,10 +280,10 @@ def test_relay_manual_covers_systems() -> None:
         "打 潮纹秤锤",
         "捐 砧上全套",
         "雾铅网坠",
-        "/workshop",
-        "/tide",
-        "/huts",
-        "/market",
+        "/#workshop",
+        "/#tide",
+        "/#huts",
+        "/#market",
         "能直接送票",
         "tote_ops gifts",
         "随机事件整体 +30%",
@@ -359,8 +359,9 @@ def test_readme_workflow_rules() -> None:
     assert "18 个工具" in readme
     assert "quarry_ops" in readme
     assert "craft_ops" in readme
-    assert "/workshop" in readme
+    assert "/#workshop" in readme or "/workshop" in readme
     assert "盐风崖" in readme
+    index_html = (root / "allotment-relay/server/templates/index.html").read_text(encoding="utf-8")
     place_html = (root / "allotment-relay/server/templates/place.html").read_text(encoding="utf-8")
     promo = (root / "allotment-relay/server/promo.py").read_text(encoding="utf-8")
     nav = (root / "allotment-relay/server/templates/partials/nav.html").read_text(encoding="utf-8")
@@ -369,19 +370,25 @@ def test_readme_workflow_rules() -> None:
     assert "hut_ops" in promo
     assert "tote_ops market" in promo
     assert "/play" in promo
+    assert '"/#workshop"' in promo
+    assert "island-posters" in index_html
+    assert "play_href" in index_html
+    assert "promo-poster" in index_html or "island-poster" in index_html
     assert "play_href" in place_html
     assert "promo-poster" in place_html
-    assert 'href="/workshop"' in nav
+    assert 'href="/#workshop"' in nav
     assert 'href="/play"' in nav
-    assert 'href="/tide"' in nav
-    assert 'href="/huts"' in nav
-    assert 'href="/market"' in nav
+    assert 'href="/#tide"' in nav
+    assert 'href="/#huts"' in nav
+    assert 'href="/#market"' in nav
+    assert "地点海报（首页）" in nav
     css = (root / "allotment-relay/server/static/style.css").read_text(encoding="utf-8")
     assert "@media (max-width: 980px)" in css
     assert ".nav-tab-short" in css
     island_grid = css.split(".island-grid", 1)[1].split(".island-card", 1)[0]
     assert "auto-fit" not in island_grid
     assert "grid-template-columns: 1fr" in island_grid
+    assert ".island-posters" in css
     assert "nav-tab-short" in nav
     assert "forage" in readme
     assert "amends" in readme
@@ -412,7 +419,7 @@ def test_register_key_copy_ui() -> None:
 
 
 def test_patron_pages_share_steward_key() -> None:
-    """点单打赏、聊天、看档都只在 /play；地点页是海报。凭证只在上手页绑定。"""
+    """点单打赏、聊天、看档都只在 /play；地点海报合在首页。凭证只在上手页绑定。"""
     root = Path(__file__).resolve().parents[1]
     site_key = (root / "server/static/site-key.js").read_text(encoding="utf-8")
     assert "tidal_island_steward_api_key" in site_key
@@ -421,6 +428,7 @@ def test_patron_pages_share_steward_key() -> None:
     lounge_js = (root / "server/static/lounge.js").read_text(encoding="utf-8")
     play_html = (root / "server/templates/play.html").read_text(encoding="utf-8")
     play_js = (root / "server/static/play.js").read_text(encoding="utf-8")
+    index_html = (root / "server/templates/index.html").read_text(encoding="utf-8")
     place_html = (root / "server/templates/place.html").read_text(encoding="utf-8")
     promo = (root / "server/promo.py").read_text(encoding="utf-8")
     main_py = (root / "server/main.py").read_text(encoding="utf-8")
@@ -447,17 +455,20 @@ def test_patron_pages_share_steward_key() -> None:
     assert "/api/steward/memory" in play_js
     assert "data-memory-filter" in play_js
     assert "连续阅读" in play_js
+    assert "/static/site-key.js" not in index_html
     assert "/static/site-key.js" not in place_html
-    assert 'id="order-form"' not in place_html
-    assert 'id="duo-form"' not in place_html
-    assert 'id="tip-form"' not in place_html
-    assert "/play" in place_html or "play_href" in place_html
+    assert 'id="order-form"' not in index_html
+    assert 'id="duo-form"' not in index_html
+    assert 'id="tip-form"' not in index_html
+    assert "island-posters" in index_html
+    assert "/play" in index_html or "play_href" in index_html
     assert '"go": "bar"' in promo
     assert '"go": "eatery"' in promo
     assert '"go": "star"' in promo
     assert 'RedirectResponse("/play?go=me"' in main_py
     assert 'RedirectResponse("/play?go=lounge"' in main_py
-    assert "place.html" in main_py
+    assert "_legacy_place_redirect" in main_py
+    assert 'place=allotments' in main_py or 'f"/?place={slug}"' in main_py
     assert "上手页" in site_key
 
 
@@ -465,16 +476,21 @@ def test_promo_place_pages() -> None:
     from server import promo
 
     slugs = {p["slug"] for p in promo.PLACES}
-    for slug in ("allotments", "tide", "huts", "bar", "eatery", "market", "quarry", "workshop", "star"):
+    for slug in ("allotments", "tide", "huts", "bar", "eatery", "market", "quarry", "workshop", "star", "undertide"):
         assert slug in slugs, slug
         ctx = promo.page_context(slug)
         assert ctx["play_href"].startswith("/play")
         assert ctx["place"]["aside"]
+        assert ctx["place"]["path"] == f"/#{slug}"
         assert "围观" not in ctx["place"]["lead"]
         assert "只围观" not in " ".join(ctx["place"]["body"])
+    home = promo.home_places()
+    assert all("play_href" in p for p in home)
     assert promo.play_href(promo.get("allotments")) == "/play"
     assert promo.play_href(promo.get("bar")) == "/play?go=bar"
     assert promo.play_href(promo.get("workshop")) == "/play?go=craft"
+    assert "/allotments" in promo.LEGACY_PLACE_PATHS
+    assert "/undertide" in promo.LEGACY_PLACE_PATHS
 
 
 def test_bar_ops_help() -> None:

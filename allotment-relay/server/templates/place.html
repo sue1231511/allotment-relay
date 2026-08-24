@@ -4,9 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>{{ place.name }} · 潮汐岛</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500&display=swap" rel="stylesheet">
+  <meta http-equiv="refresh" content="0;url=/?place={{ place.slug }}">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body class="promo-page">
@@ -27,7 +25,7 @@
       <p class="muted">{{ place.aside }}</p>
       <p class="promo-cta-row">
         <a class="btn primary" href="{{ play_href }}">{{ place.cta }}</a>
-        <a class="btn" href="/">回岛上</a>
+        <a class="btn" href="/?place={{ place.slug }}">回岛上海报</a>
       </p>
     </section>
   </main>

@@ -1,13 +1,13 @@
-"""岛上地点宣传页 — 海报，不是围观台，也不是上手台。"""
+"""岛上地点宣传 — 海报合在首页 /，不是单独 UI，也不是上手台。"""
 from __future__ import annotations
 
 from typing import Any
 
-# slug = 现有 URL。go = 上手页 ?go=
+# slug = 首页锚点 id。go = 上手页 ?go=
 PLACES: list[dict[str, Any]] = [
     {
         "slug": "allotments",
-        "path": "/allotments",
+        "path": "/#allotments",
         "go": "",
         "eyebrow": "Plots",
         "name": "份地",
@@ -22,7 +22,7 @@ PLACES: list[dict[str, Any]] = [
     },
     {
         "slug": "huts",
-        "path": "/huts",
+        "path": "/#huts",
         "go": "hut",
         "eyebrow": "Hut",
         "name": "小屋",
@@ -37,7 +37,7 @@ PLACES: list[dict[str, Any]] = [
     },
     {
         "slug": "tide",
-        "path": "/tide",
+        "path": "/#tide",
         "go": "tide",
         "eyebrow": "Tide",
         "name": "海边",
@@ -52,7 +52,7 @@ PLACES: list[dict[str, Any]] = [
     },
     {
         "slug": "bar",
-        "path": "/bar",
+        "path": "/#bar",
         "go": "bar",
         "eyebrow": "Coastal bar",
         "name": "滨海酒吧",
@@ -68,7 +68,7 @@ PLACES: list[dict[str, Any]] = [
     },
     {
         "slug": "eatery",
-        "path": "/eatery",
+        "path": "/#eatery",
         "go": "eatery",
         "eyebrow": "Seaside kitchen",
         "name": "岸畔小馆",
@@ -83,7 +83,7 @@ PLACES: list[dict[str, Any]] = [
     },
     {
         "slug": "market",
-        "path": "/market",
+        "path": "/#market",
         "go": "market",
         "eyebrow": "Market",
         "name": "集市",
@@ -97,7 +97,7 @@ PLACES: list[dict[str, Any]] = [
     },
     {
         "slug": "quarry",
-        "path": "/quarry",
+        "path": "/#quarry",
         "go": "quarry",
         "eyebrow": "Quarry",
         "name": "盐风崖",
@@ -111,7 +111,7 @@ PLACES: list[dict[str, Any]] = [
     },
     {
         "slug": "workshop",
-        "path": "/workshop",
+        "path": "/#workshop",
         "go": "craft",
         "eyebrow": "Workshop",
         "name": "岸工坊",
@@ -125,7 +125,7 @@ PLACES: list[dict[str, Any]] = [
     },
     {
         "slug": "star",
-        "path": "/star",
+        "path": "/#star",
         "go": "star",
         "eyebrow": "Starlight",
         "name": "小橘星光",
@@ -140,9 +140,8 @@ PLACES: list[dict[str, Any]] = [
     },
     {
         "slug": "undertide",
-        "path": "/undertide",
+        "path": "/#undertide",
         "go": "undertide",
-        "custom": True,
         "eyebrow": "Undertide",
         "name": "井下",
         "lead": "别乱点。真的。",
@@ -152,6 +151,9 @@ PLACES: list[dict[str, Any]] = [
         "note": "井下",
     },
 ]
+
+# 旧独立海报路径 → 首页锚点（外链与书签仍可用）
+LEGACY_PLACE_PATHS: tuple[str, ...] = tuple(f"/{p['slug']}" for p in PLACES)
 
 
 def get(slug: str) -> dict[str, Any]:
@@ -173,3 +175,13 @@ def page_context(slug: str) -> dict[str, Any]:
         "place": place,
         "play_href": play_href(place),
     }
+
+
+def home_places() -> list[dict[str, Any]]:
+    """首页用：每处海报带 play_href。"""
+    out: list[dict[str, Any]] = []
+    for p in PLACES:
+        row = dict(p)
+        row["play_href"] = play_href(p)
+        out.append(row)
+    return out

@@ -3709,7 +3709,7 @@ code {
 
 .promo-poster p { line-height: 1.8; max-width: 42em; }
 .promo-cta-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
-.island-map { margin: 8px 0 48px; }
+.island-map { margin: 8px 0 48px; scroll-margin-top: 88px; }
 .island-map h2 { margin: 8px 0 18px; }
 .island-grid {
   display: grid;
@@ -3733,6 +3733,37 @@ code {
 .island-card .eyebrow { margin-bottom: 0; }
 .island-card strong { font-family: "Noto Serif SC", serif; font-size: 22px; }
 .island-card p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
+
+.island-posters {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  margin: 0 0 56px;
+}
+.island-poster {
+  scroll-margin-top: 88px;
+  padding: 28px 0 8px;
+  border-top: 1px solid color-mix(in srgb, var(--line, #d8d0c4) 88%, transparent);
+}
+.island-poster:first-child { border-top: 0; padding-top: 8px; }
+.island-poster h3 {
+  margin: 6px 0 10px;
+  font-family: "Noto Serif SC", serif;
+  font-size: 28px;
+  font-weight: 500;
+}
+.island-poster-lead {
+  font-size: 16px;
+  line-height: 1.7;
+  max-width: 40em;
+}
+.nav-sidebar-kicker {
+  margin: 18px 14px 6px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted, #8a8378);
+}
 
 @media (min-width: 640px) {
   .island-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }

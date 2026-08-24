@@ -74,8 +74,8 @@ async def index(request: Request):
     stats = await db.public_stats()
     return templates.TemplateResponse(
         request, "index.html", {
-            "active": None,
-            "places": promo.PLACES,
+            "active": "home",
+            "places": promo.home_places(),
             "steward_count": stats.get("stewards") or 0,
         }
     )
@@ -91,39 +91,39 @@ async def recover_page(request: Request):
     return templates.TemplateResponse(request, "recover.html", {"active": None})
 
 
-def _place_page(request: Request, slug: str):
-    from . import promo
-    return templates.TemplateResponse(request, "place.html", promo.page_context(slug))
+def _legacy_place_redirect(slug: str) -> RedirectResponse:
+    """旧独立海报路径并入首页锚点。?place= 兼容不吃 Location fragment 的客户端。"""
+    return RedirectResponse(f"/?place={slug}", status_code=302)
 
 
-@app.get("/allotments", response_class=HTMLResponse)
-async def allotments_page(request: Request):
-    return _place_page(request, "allotments")
+@app.get("/allotments")
+async def allotments_page():
+    return _legacy_place_redirect("allotments")
 
 
-@app.get("/quarry", response_class=HTMLResponse)
-async def quarry_page(request: Request):
-    return _place_page(request, "quarry")
+@app.get("/quarry")
+async def quarry_page():
+    return _legacy_place_redirect("quarry")
 
 
-@app.get("/workshop", response_class=HTMLResponse)
-async def workshop_page(request: Request):
-    return _place_page(request, "workshop")
+@app.get("/workshop")
+async def workshop_page():
+    return _legacy_place_redirect("workshop")
 
 
-@app.get("/tide", response_class=HTMLResponse)
-async def tide_page(request: Request):
-    return _place_page(request, "tide")
+@app.get("/tide")
+async def tide_page():
+    return _legacy_place_redirect("tide")
 
 
-@app.get("/huts", response_class=HTMLResponse)
-async def huts_page(request: Request):
-    return _place_page(request, "huts")
+@app.get("/huts")
+async def huts_page():
+    return _legacy_place_redirect("huts")
 
 
-@app.get("/market", response_class=HTMLResponse)
-async def market_page(request: Request):
-    return _place_page(request, "market")
+@app.get("/market")
+async def market_page():
+    return _legacy_place_redirect("market")
 
 
 @app.get("/board")
@@ -131,9 +131,9 @@ async def board_page():
     return RedirectResponse("/play?go=me", status_code=302)
 
 
-@app.get("/bar", response_class=HTMLResponse)
-async def bar_page(request: Request):
-    return _place_page(request, "bar")
+@app.get("/bar")
+async def bar_page():
+    return _legacy_place_redirect("bar")
 
 
 @app.get("/play", response_class=HTMLResponse)
@@ -151,10 +151,9 @@ async def lounge_page():
     return RedirectResponse("/play?go=lounge", status_code=302)
 
 
-@app.get("/eatery", response_class=HTMLResponse)
-async def eatery_page(request: Request):
-    return _place_page(request, "eatery")
-
+@app.get("/eatery")
+async def eatery_page():
+    return _legacy_place_redirect("eatery")
 
 class BarOrderRequest(BaseModel):
     api_key: str
@@ -467,8 +466,8 @@ async def eatery_order(body: EateryOrderRequest):
 
 
 @app.get("/star")
-async def star_page(request: Request):
-    return _place_page(request, "star")
+async def star_page():
+    return _legacy_place_redirect("star")
 
 
 @app.get("/api/public/star")
@@ -925,8 +924,8 @@ async def star_owner_welfare(request: Request):
 
 
 @app.get("/undertide")
-async def undertide_page(request: Request):
-    return templates.TemplateResponse(request, "undertide.html", {"active": "undertide"})
+async def undertide_page():
+    return _legacy_place_redirect("undertide")
 
 
 @app.get("/api/public/undertide")

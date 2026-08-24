@@ -26,7 +26,7 @@ async function load() {
 }
 
 function jumpOnline() {
-  location.href = '/allotments#online';
+  location.href = '/play?go=me';
 }
 
 document.getElementById('board-meta').addEventListener('click', (e) => {
