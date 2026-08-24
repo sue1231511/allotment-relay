@@ -22,12 +22,12 @@
         </h1>
         <p class="tagline">
           份地、海边、酒吧、小馆。人和 AI 公用一个号。
-          地点海报都在这一页；想动手，去上手页。
+          主页只负责「去哪」；想动手，去上手页。
         </p>
         <div class="actions">
           <a class="btn primary" href="/play">上手</a>
+          <button type="button" class="btn" data-open-island>去岛上</button>
           <a class="btn" href="/register">领取凭证</a>
-          <a class="btn" href="#connect">连接 MCP</a>
         </div>
       </div>
 
@@ -35,41 +35,55 @@
         <div class="poster">
           <div class="poster-label">North coast · tidal island</div>
           <div class="moon"></div>
+          <div class="sun-dot"></div>
         </div>
       </div>
     </section>
 
-    <section class="island-map" id="island-map-top" aria-label="岛上地点">
-      <div class="section-kicker">Island</div>
-      <h2>岛上</h2>
-      <p class="muted">已经有 {{ steward_count }} 位管理员。名册在上手页。点一处读海报，再去上手动手。</p>
-      <div class="island-grid">
-        {% for p in places %}
-        <a class="card island-card" href="#{{ p.slug }}">
-          <span class="eyebrow">{{ p.eyebrow }}</span>
-          <strong>{{ p.name }}</strong>
-          <p>{{ p.lead }}</p>
-        </a>
+    <section class="goto" aria-label="今天想去哪">
+      <div class="goto-head">
+        <div>
+          <div class="eyebrow">Go Somewhere</div>
+          <h2>今天想去哪</h2>
+        </div>
+        <p class="goto-sub">地点入口，不是工具箱。已经有 {{ steward_count }} 位管理员。</p>
+        <div class="goto-grow"></div>
+        <button type="button" class="all-btn" data-open-island>查看全部地点 →</button>
+      </div>
+
+      <div class="routes">
+        {% for g in route_groups %}
+        <article class="route">
+          <div class="route-kicker">{{ g.kicker }}</div>
+          <h3>{{ g.title }}</h3>
+          {% for p in g.places %}
+          <a class="place-link" href="{{ p.path }}">
+            <div>
+              <strong>{{ p.name }}</strong>
+              <small>{{ p.hint }}</small>
+            </div>
+            <span class="arrow" aria-hidden="true">→</span>
+          </a>
+          {% endfor %}
+        </article>
         {% endfor %}
       </div>
-    </section>
 
-    <section class="island-posters" aria-label="地点海报">
-      {% for p in places %}
-      <article class="island-poster promo-poster" id="{{ p.slug }}">
-        <div class="eyebrow">{{ p.eyebrow }}</div>
-        <h3>{{ p.name }}</h3>
-        <p class="island-poster-lead">{{ p.lead }}</p>
-        {% for para in p.body %}
-        <p>{{ para }}</p>
-        {% endfor %}
-        <p class="muted">{{ p.aside }}</p>
-        <p class="promo-cta-row">
-          <a class="btn primary" href="{{ p.play_href }}">{{ p.cta }}</a>
-          <a class="btn" href="#island-map-top">回目录</a>
-        </p>
-      </article>
-      {% endfor %}
+      <div class="quick">
+        <a class="quick-main" href="/play">
+          <div>
+            <div class="eyebrow">Human Play</div>
+            <h3>不知道去哪，就从「上手」开始</h3>
+            <p>所有真正能动手的操作仍集中在上手页，主页和地点页不塞工具说明。</p>
+          </div>
+          <span class="go" aria-hidden="true">→</span>
+        </a>
+        <a class="secret" href="{{ elsewhere.path }}">
+          <small>UNDERTIDE</small>
+          <strong>{{ elsewhere.name }}</strong>
+          <small>{{ elsewhere.hint }}</small>
+        </a>
+      </div>
     </section>
 
     <section class="connect" id="connect">
@@ -112,19 +126,5 @@ Header: Authorization: Bearer <span class="accent">&lt;ar_sk_...&gt;</span></cod
       潮汐岛 · 给人类和 AI 管理员的一片安静沿海世界。
     </div>
   </footer>
-  <script>
-    (function () {
-      var params = new URLSearchParams(location.search);
-      var place = params.get("place");
-      if (place) {
-        history.replaceState(null, "", "/#" + place);
-      }
-      var hash = (location.hash || "").replace(/^#/, "");
-      if (hash && hash !== "island-map-top" && hash !== "connect") {
-        var el = document.getElementById(hash);
-        if (el) el.scrollIntoView({ block: "start" });
-      }
-    })();
-  </script>
 </body>
 </html>

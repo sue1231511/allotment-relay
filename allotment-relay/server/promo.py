@@ -1,16 +1,18 @@
-"""岛上地点宣传 — 海报合在首页 /，不是单独 UI，也不是上手台。"""
+"""岛上地点 — 海报页 + 首页/抽屉入口。不是上手台。"""
 from __future__ import annotations
 
 from typing import Any
 
-# slug = 首页锚点 id。go = 上手页 ?go=
+# slug = URL。go = 上手页 ?go=
 PLACES: list[dict[str, Any]] = [
     {
         "slug": "allotments",
-        "path": "/#allotments",
+        "path": "/allotments",
         "go": "",
+        "group": "life",
         "eyebrow": "Plots",
         "name": "份地",
+        "hint": "种地 · 收菜 · 看全服份地",
         "lead": "岛把地分给管理员。起步三块，种手里的种，等潮汐。",
         "body": [
             "甘蓝、甜菜、雾豆先下地。熟了再收，急不来。",
@@ -18,14 +20,16 @@ PLACES: list[dict[str, Any]] = [
         ],
         "aside": "AI 走 plot_ops。人去上手页点按同一块地。",
         "cta": "去种地",
-        "note": "份地",
+        "note": "岛上的地",
     },
     {
         "slug": "huts",
-        "path": "/#huts",
+        "path": "/huts",
         "go": "hut",
+        "group": "life",
         "eyebrow": "Hut",
-        "name": "小屋",
+        "name": "岸畔小屋",
+        "hint": "回家 · 畜栏 · 吉祥物",
         "lead": "岸上睡觉、潮柜、畜栏。困了回来。",
         "body": [
             "棚屋要自己搭。床、冰箱、堆肥桶是后来的事。",
@@ -33,14 +37,33 @@ PLACES: list[dict[str, Any]] = [
         ],
         "aside": "AI 走 hut_ops。人去上手页睡一觉、看畜栏。",
         "cta": "去小屋",
-        "note": "小屋",
+        "note": "睡 · 畜栏",
+    },
+    {
+        "slug": "eatery",
+        "path": "/eatery",
+        "go": "eatery",
+        "group": "life",
+        "eyebrow": "Seaside kitchen",
+        "name": "岸畔小馆",
+        "hint": "熟菜 · 堂食 · 今日菜单",
+        "lead": "管理员开的熟菜馆。不追求米其林，能吃饱就已经赢了一半。",
+        "body": [
+            "堂食按价回精力，还带两小时饱餐。家里自己煮没有这些。",
+            "想开张要先有小屋和冰箱。",
+        ],
+        "aside": "点餐在上手页。",
+        "cta": "去小馆",
+        "note": "熟菜 · 堂食",
     },
     {
         "slug": "tide",
-        "path": "/#tide",
+        "path": "/tide",
         "go": "tide",
+        "group": "coast",
         "eyebrow": "Tide",
         "name": "海边",
+        "hint": "撒网 · 坐钓 · 出海",
         "lead": "撒网、坐钓、赶海、出海。涨潮时翻沙的人会空手回来。",
         "body": [
             "近海就能出发。矿不是赶海，风暴后下滩走工坊。",
@@ -48,14 +71,48 @@ PLACES: list[dict[str, Any]] = [
         ],
         "aside": "AI 走 tide_ops。人去上手页下海。",
         "cta": "去海边",
-        "note": "海边",
+        "note": "撒网 · 出海",
+    },
+    {
+        "slug": "quarry",
+        "path": "/quarry",
+        "go": "quarry",
+        "group": "coast",
+        "eyebrow": "Quarry",
+        "name": "盐风崖",
+        "hint": "潮脉矿 · 崖边",
+        "lead": "迎风崖上的矿脉随潮汐显隐。比赶海慢，比赶海费。",
+        "body": [
+            "不是沙滩翻沙，也不是井下。先买镐，再探脉，再挖。",
+        ],
+        "aside": "AI 走 quarry_ops。人去上手页挥镐。",
+        "cta": "去盐风崖",
+        "note": "潮脉矿",
+    },
+    {
+        "slug": "workshop",
+        "path": "/workshop",
+        "go": "craft",
+        "group": "coast",
+        "eyebrow": "Workshop",
+        "name": "岸工坊",
+        "hint": "打钉 · 晒盐 · 制作",
+        "lead": "把矿和畜栏接进生活：打钉、晒盐、风暴后下滩。",
+        "body": [
+            "不是再挖一次，也不是赶海翻沙。砧上有活才来取。",
+        ],
+        "aside": "AI 走 craft_ops。人去上手页打钉。",
+        "cta": "去工坊",
+        "note": "打钉 · 盐田",
     },
     {
         "slug": "bar",
-        "path": "/#bar",
+        "path": "/bar",
         "go": "bar",
+        "group": "night",
         "eyebrow": "Coastal bar",
         "name": "滨海酒吧",
+        "hint": "荔栀的店 · 今夜营业",
         "lead": "经营不顺可以来打工。经营太顺可以来花钱。成年人总得有个地方坐到很晚。",
         "body": [
             "老板荔栀。暮夜才开门。驻唱是「我哪有旺夫命」。",
@@ -64,71 +121,32 @@ PLACES: list[dict[str, Any]] = [
         ],
         "aside": "点单、双人吧台、洗碗打卡都在上手页。",
         "cta": "去酒吧",
-        "note": "酒吧",
-    },
-    {
-        "slug": "eatery",
-        "path": "/#eatery",
-        "go": "eatery",
-        "eyebrow": "Seaside kitchen",
-        "name": "岸畔小馆",
-        "lead": "管理员开的熟菜馆。不追求米其林，能吃饱就已经赢了一半。",
-        "body": [
-            "堂食按价回精力，还带两小时饱餐。家里自己煮没有这些。",
-            "想开张要先有小屋和冰箱。",
-        ],
-        "aside": "点餐在上手页。",
-        "cta": "去小馆",
-        "note": "小馆",
+        "note": "荔栀的店",
     },
     {
         "slug": "market",
-        "path": "/#market",
+        "path": "/market",
         "go": "market",
+        "group": "night",
         "eyebrow": "Market",
         "name": "集市",
+        "hint": "挂单 · 交换 · 看成交",
         "lead": "挂单、交换。卖货回家自己吃，堂食去小馆。",
         "body": [
             "摊格有上限，满了先扩。系统回收压得低，想赚钱走玩家之间。",
         ],
         "aside": "AI 走 tote_ops market。人去上手页摆摊。",
         "cta": "去集市",
-        "note": "集市",
-    },
-    {
-        "slug": "quarry",
-        "path": "/#quarry",
-        "go": "quarry",
-        "eyebrow": "Quarry",
-        "name": "盐风崖",
-        "lead": "迎风崖上的矿脉随潮汐显隐。比赶海慢，比赶海费。",
-        "body": [
-            "不是沙滩翻沙，也不是井下。先买镐，再探脉，再挖。",
-        ],
-        "aside": "AI 走 quarry_ops。人去上手页挥镐。",
-        "cta": "去盐风崖",
-        "note": "崖矿",
-    },
-    {
-        "slug": "workshop",
-        "path": "/#workshop",
-        "go": "craft",
-        "eyebrow": "Workshop",
-        "name": "岸工坊",
-        "lead": "把矿和畜栏接进生活：打钉、晒盐、风暴后下滩。",
-        "body": [
-            "不是再挖一次，也不是赶海翻沙。砧上有活才来取。",
-        ],
-        "aside": "AI 走 craft_ops。人去上手页打钉。",
-        "cta": "去工坊",
-        "note": "工坊",
+        "note": "挂单 · 交换",
     },
     {
         "slug": "star",
-        "path": "/#star",
+        "path": "/star",
         "go": "star",
+        "group": "night",
         "eyebrow": "Starlight",
         "name": "小橘星光",
+        "hint": "她开嗓的晚上",
         "lead": "这岛不需要红毯。她开嗓的晚上，档口和井下都安静半拍。",
         "body": [
             "常驻荔栀的酒馆，随时能开小剧场专场。",
@@ -136,24 +154,45 @@ PLACES: list[dict[str, Any]] = [
         ],
         "aside": "打赏和听她唱都在上手页。",
         "cta": "去听她唱",
-        "note": "小橘",
+        "note": "她开嗓的晚上",
     },
     {
         "slug": "undertide",
-        "path": "/#undertide",
+        "path": "/undertide",
         "go": "undertide",
+        "group": "else",
+        "custom": True,
         "eyebrow": "Undertide",
         "name": "井下",
+        "hint": "别乱点。真的。",
         "lead": "别乱点。真的。",
         "body": ["滨海酒吧后院那口井。劝退也是介绍。"],
         "aside": "新手别从这儿开局。",
         "cta": "我知道了，仍要去",
-        "note": "井下",
+        "note": "别乱点。真的。",
     },
 ]
 
-# 旧独立海报路径 → 首页锚点（外链与书签仍可用）
-LEGACY_PLACE_PATHS: tuple[str, ...] = tuple(f"/{p['slug']}" for p in PLACES)
+ROUTE_GROUPS: list[dict[str, Any]] = [
+    {
+        "id": "life",
+        "kicker": "Daily Life",
+        "title": "生活岸线",
+        "slugs": ("allotments", "huts", "eatery"),
+    },
+    {
+        "id": "coast",
+        "kicker": "Coast & Work",
+        "title": "海岸风物",
+        "slugs": ("tide", "quarry", "workshop"),
+    },
+    {
+        "id": "night",
+        "kicker": "People & Night",
+        "title": "人声热闹",
+        "slugs": ("bar", "market", "star"),
+    },
+]
 
 
 def get(slug: str) -> dict[str, Any]:
@@ -174,14 +213,34 @@ def page_context(slug: str) -> dict[str, Any]:
         "active": slug,
         "place": place,
         "play_href": play_href(place),
+        "route_groups": home_route_groups(),
+        "elsewhere": home_elsewhere(),
     }
 
 
-def home_places() -> list[dict[str, Any]]:
-    """首页用：每处海报带 play_href。"""
+def _with_play(place: dict[str, Any]) -> dict[str, Any]:
+    row = dict(place)
+    row["play_href"] = play_href(place)
+    return row
+
+
+def home_route_groups() -> list[dict[str, Any]]:
+    """首页三组地点入口 + 抽屉共用。"""
     out: list[dict[str, Any]] = []
-    for p in PLACES:
-        row = dict(p)
-        row["play_href"] = play_href(p)
-        out.append(row)
+    for g in ROUTE_GROUPS:
+        places = [_with_play(get(slug)) for slug in g["slugs"]]
+        out.append({**g, "places": places})
     return out
+
+
+def home_elsewhere() -> dict[str, Any]:
+    return _with_play(get("undertide"))
+
+
+def home_context(steward_count: int = 0) -> dict[str, Any]:
+    return {
+        "active": "home",
+        "steward_count": steward_count,
+        "route_groups": home_route_groups(),
+        "elsewhere": home_elsewhere(),
+    }

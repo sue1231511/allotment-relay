@@ -1,40 +1,42 @@
 (function () {
-  const hamburgerBtn = document.getElementById('navHamburgerBtn');
-  const sidebar = document.getElementById('navSidebar');
-  const backdrop = document.getElementById('navSidebarBackdrop');
-  const closeBtn = document.getElementById('navSidebarClose');
+  const drawer = document.getElementById('islandDrawer');
+  const backdrop = document.getElementById('islandBackdrop');
+  const closeBtn = document.getElementById('islandDrawerClose');
+  const openBtns = document.querySelectorAll('[data-open-island]');
 
-  if (!hamburgerBtn || !sidebar || !backdrop) return;
+  if (!drawer || !backdrop || !openBtns.length) return;
 
-  function openSidebar() {
-    sidebar.classList.add('is-open');
+  function openDrawer() {
+    drawer.classList.add('is-open');
     backdrop.hidden = false;
-    sidebar.setAttribute('aria-hidden', 'false');
-    hamburgerBtn.setAttribute('aria-expanded', 'true');
-    document.body.classList.add('nav-sidebar-open');
+    drawer.setAttribute('aria-hidden', 'false');
+    openBtns.forEach((btn) => btn.setAttribute('aria-expanded', 'true'));
+    document.body.classList.add('island-drawer-open');
   }
 
-  function closeSidebar() {
-    sidebar.classList.remove('is-open');
+  function closeDrawer() {
+    drawer.classList.remove('is-open');
     backdrop.hidden = true;
-    sidebar.setAttribute('aria-hidden', 'true');
-    hamburgerBtn.setAttribute('aria-expanded', 'false');
-    document.body.classList.remove('nav-sidebar-open');
+    drawer.setAttribute('aria-hidden', 'true');
+    openBtns.forEach((btn) => btn.setAttribute('aria-expanded', 'false'));
+    document.body.classList.remove('island-drawer-open');
   }
 
-  hamburgerBtn.addEventListener('click', () => {
-    if (sidebar.classList.contains('is-open')) closeSidebar();
-    else openSidebar();
+  openBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (drawer.classList.contains('is-open')) closeDrawer();
+      else openDrawer();
+    });
   });
 
-  closeBtn?.addEventListener('click', closeSidebar);
-  backdrop.addEventListener('click', closeSidebar);
+  closeBtn?.addEventListener('click', closeDrawer);
+  backdrop.addEventListener('click', closeDrawer);
 
-  sidebar.querySelectorAll('a').forEach((link) => {
-    link.addEventListener('click', closeSidebar);
+  drawer.querySelectorAll('a').forEach((link) => {
+    link.addEventListener('click', closeDrawer);
   });
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeSidebar();
+    if (e.key === 'Escape') closeDrawer();
   });
 })();

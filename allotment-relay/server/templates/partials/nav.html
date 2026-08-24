@@ -1,61 +1,84 @@
 <nav class="site-nav">
   <div class="shell nav-inner nav-inner--top">
+    <a class="brand" href="/"><span class="mark">≈</span><span class="brand-text">潮汐岛</span></a>
+    <div class="nav-spacer"></div>
+    <a class="nav-link{% if active == 'play' %} is-active{% endif %}" href="/play"{% if active == 'play' %} aria-current="page"{% endif %}>上手</a>
     <button
       type="button"
-      class="nav-hamburger"
-      id="navHamburgerBtn"
+      class="nav-island"
+      id="islandDrawerBtn"
+      data-open-island
       aria-expanded="false"
-      aria-controls="navSidebar"
-      aria-label="打开菜单"
+      aria-controls="islandDrawer"
     >
-      <span class="nav-hamburger-box" aria-hidden="true">
-        <span></span><span></span><span></span>
-      </span>
+      岛上 <span aria-hidden="true">▾</span>
     </button>
-    <a class="brand" href="/"><span class="mark">≈</span><span class="brand-text">潮汐岛</span></a>
-    <div class="nav-tabs nav-tabs--desktop" role="navigation" aria-label="站点导航">
-      <a class="nav-tab{% if active == 'play' %} is-active{% endif %}" href="/play"{% if active == 'play' %} aria-current="page"{% endif %}>
-        <span class="nav-tab-label">上手</span>
-        <span class="nav-tab-short">上手</span>
-      </a>
-    </div>
-    <a class="nav-cta" href="/register">领取凭证</a>
+    <a class="nav-pill" href="/register">领取凭证</a>
   </div>
 </nav>
 
-<div class="nav-sidebar-backdrop" id="navSidebarBackdrop" hidden></div>
+<button type="button" class="mobile-island" data-open-island aria-label="打开岛上地点">岛上</button>
 
-<aside class="nav-sidebar" id="navSidebar" aria-hidden="true" role="dialog" aria-label="站点导航">
-  <div class="nav-sidebar-head">
-    <strong>潮汐岛</strong>
-    <button type="button" class="nav-sidebar-close" id="navSidebarClose" aria-label="关闭菜单">关闭</button>
+<div class="island-backdrop" id="islandBackdrop" hidden></div>
+<aside class="island-drawer" id="islandDrawer" aria-hidden="true" role="dialog" aria-label="岛上地点">
+  <div class="island-drawer-head">
+    <strong>岛上地点</strong>
+    <button type="button" class="island-drawer-close" id="islandDrawerClose" aria-label="关闭">关闭</button>
   </div>
-  <nav class="nav-sidebar-links" aria-label="页面导航">
-    <a class="nav-sidebar-link{% if active == 'home' %} is-active{% endif %}" href="/"{% if active == 'home' %} aria-current="page"{% endif %}>
-      <span>岛上</span>
-      <small>首页 · 地点海报都在这</small>
-    </a>
-    <a class="nav-sidebar-link{% if active == 'play' %} is-active{% endif %}" href="/play"{% if active == 'play' %} aria-current="page"{% endif %}>
-      <span>上手</span>
-      <small>人在岛上过的日子</small>
-    </a>
-    <a class="nav-sidebar-link" href="/register">
-      <span>领取凭证</span>
-      <small>进岛手续</small>
-    </a>
-    <p class="nav-sidebar-kicker">地点海报（首页）</p>
-    <a class="nav-sidebar-link" href="/#allotments"><span>份地</span><small>岛上的地</small></a>
-    <a class="nav-sidebar-link" href="/#tide"><span>海边</span><small>撒网 · 出海</small></a>
-    <a class="nav-sidebar-link" href="/#huts"><span>小屋</span><small>睡 · 畜栏</small></a>
-    <a class="nav-sidebar-link" href="/#bar"><span>滨海酒吧</span><small>荔栀的店</small></a>
-    <a class="nav-sidebar-link" href="/#eatery"><span>岸畔小馆</span><small>熟菜 · 堂食</small></a>
-    <a class="nav-sidebar-link" href="/#market"><span>集市</span><small>挂单 · 交换</small></a>
-    <a class="nav-sidebar-link" href="/#quarry"><span>盐风崖</span><small>潮脉矿</small></a>
-    <a class="nav-sidebar-link" href="/#workshop"><span>岸工坊</span><small>打钉 · 盐田</small></a>
-    <a class="nav-sidebar-link" href="/#star"><span>小橘星光</span><small>她开嗓的晚上</small></a>
-    <a class="nav-sidebar-link" href="/#undertide"><span>井下</span><small>别乱点。真的。</small></a>
+  <nav class="island-drawer-body" aria-label="地点入口">
+    {% set groups = route_groups if route_groups is defined else none %}
+    {% if groups %}
+      {% for g in groups %}
+      <div class="island-drawer-group">
+        <h4>{{ g.title }}</h4>
+        {% for p in g.places %}
+        <a class="island-drawer-link{% if active == p.slug %} is-active{% endif %}" href="{{ p.path }}"{% if active == p.slug %} aria-current="page"{% endif %}>
+          <div>
+            <strong>{{ p.name }}</strong>
+            <small>{{ p.note }}</small>
+          </div>
+          <span aria-hidden="true">→</span>
+        </a>
+        {% endfor %}
+      </div>
+      {% endfor %}
+      {% if elsewhere is defined and elsewhere %}
+      <div class="island-drawer-group">
+        <h4>别处</h4>
+        <a class="island-drawer-link{% if active == elsewhere.slug %} is-active{% endif %}" href="{{ elsewhere.path }}"{% if active == elsewhere.slug %} aria-current="page"{% endif %}>
+          <div>
+            <strong>{{ elsewhere.name }}</strong>
+            <small>{{ elsewhere.note }}</small>
+          </div>
+          <span aria-hidden="true">→</span>
+        </a>
+      </div>
+      {% endif %}
+    {% else %}
+      <div class="island-drawer-group">
+        <h4>生活岸线</h4>
+        <a class="island-drawer-link" href="/allotments"><div><strong>份地</strong><small>岛上的地</small></div><span>→</span></a>
+        <a class="island-drawer-link" href="/huts"><div><strong>岸畔小屋</strong><small>睡 · 畜栏</small></div><span>→</span></a>
+        <a class="island-drawer-link" href="/eatery"><div><strong>岸畔小馆</strong><small>熟菜 · 堂食</small></div><span>→</span></a>
+      </div>
+      <div class="island-drawer-group">
+        <h4>海岸风物</h4>
+        <a class="island-drawer-link" href="/tide"><div><strong>海边</strong><small>撒网 · 出海</small></div><span>→</span></a>
+        <a class="island-drawer-link" href="/quarry"><div><strong>盐风崖</strong><small>潮脉矿</small></div><span>→</span></a>
+        <a class="island-drawer-link" href="/workshop"><div><strong>岸工坊</strong><small>打钉 · 盐田</small></div><span>→</span></a>
+      </div>
+      <div class="island-drawer-group">
+        <h4>人声热闹</h4>
+        <a class="island-drawer-link" href="/bar"><div><strong>滨海酒吧</strong><small>荔栀的店</small></div><span>→</span></a>
+        <a class="island-drawer-link" href="/market"><div><strong>集市</strong><small>挂单 · 交换</small></div><span>→</span></a>
+        <a class="island-drawer-link" href="/star"><div><strong>小橘星光</strong><small>她开嗓的晚上</small></div><span>→</span></a>
+      </div>
+      <div class="island-drawer-group">
+        <h4>别处</h4>
+        <a class="island-drawer-link" href="/undertide"><div><strong>井下</strong><small>别乱点。真的。</small></div><span>→</span></a>
+      </div>
+    {% endif %}
   </nav>
-  <a class="nav-sidebar-cta" href="/register">领取凭证</a>
 </aside>
 
 <script src="/static/nav.js" defer></script>
