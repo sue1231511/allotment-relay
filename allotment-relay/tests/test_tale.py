@@ -461,6 +461,48 @@ async def test_asking_around_flow() -> None:
     assert "潮闻全篇回顾 · 《打听》" in review and "她有没有问过我" in review
 
 
+async def test_mr_ke_flow() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="mr-ke-"))
+    db = await _boot(tmp)
+    from server import tale, tale_mr_ke
+
+    kid, sid = await _enroll(db, "mr-ke@example.com", "克先生探索者")
+    listing = await tale.tale_ops(kid, "list")
+    assert "mr_ke" in listing and "克先生" in listing, listing
+    assert "每阶段工分票+30×13" in listing, listing
+    accepted = await tale.tale_ops(kid, "accept mr_ke")
+    assert "不替任何人作决定" in accepted, accepted
+    assert "tale_ops explore ke_shop" in accepted, accepted
+    assert "原投稿" not in accepted, accepted
+    wrong = await tale.tale_ops(kid, "explore ke_funeral")
+    assert "未消耗精力" in wrong and "explore ke_shop" in wrong, wrong
+    async with db.connect() as conn:
+        before = await (await conn.execute(
+            "SELECT tickets, energy FROM stewards WHERE id=?", (sid,)
+        )).fetchone()
+    for index, stage in enumerate(tale_mr_ke.TALE_STAGES, 1):
+        result = await tale.tale_ops(kid, f"explore {stage['domain']}")
+        assert f"第 {index}/13 阶段奖励" in result, result
+        assert "原投稿" not in result, result
+    assert "【探索完成：《克先生》】" in result, result
+    assert "完整探索额外奖励" in result and "工分票 +120" in result, result
+    assert "档信 +6" in result and "雾智 +10" in result, result
+    async with db.connect() as conn:
+        after = await (await conn.execute(
+            "SELECT tickets, energy FROM stewards WHERE id=?", (sid,)
+        )).fetchone()
+    assert after[0] - before[0] == 13 * 30 + 120, (before, after)
+    assert after[1] == before[1] - 13 * 5, (before, after)
+    review = await tale.tale_ops(kid, "review mr_ke")
+    assert "潮闻全篇回顾 · 《克先生》" in review, review
+    assert "她把我留下了" in review, review
+    assert "那个位置原本还会长出什么" in review, review
+    assert "原投稿" not in review, review
+    souvenirs = await tale.tale_ops(kid, "souvenirs")
+    for name in ("压扁的蛋糕盒", "颜色不一样的袖扣", "断了腿的老花镜", "夹着白发的米白风衣"):
+        assert name in souvenirs, souvenirs
+
+
 async def test_tale_explore_is_unlimited() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="tale-unlimited-"))
     db = await _boot(tmp)
@@ -584,6 +626,8 @@ def test_tale_mcp_description() -> None:
     assert "缺页" in blob
     assert "asking_around" in blob
     assert "打听" in blob
+    assert "mr_ke" in blob
+    assert "克先生" in blob
     assert "review" in blob
     assert "完整正文" in blob
 
@@ -594,6 +638,7 @@ def main() -> None:
     asyncio.run(test_spring_beyond_mountain_flow())
     asyncio.run(test_missing_pages_flow())
     asyncio.run(test_asking_around_flow())
+    asyncio.run(test_mr_ke_flow())
     asyncio.run(test_tale_explore_is_unlimited())
     asyncio.run(test_commons_claim_advances_item_stage())
     asyncio.run(test_tale_abandon())

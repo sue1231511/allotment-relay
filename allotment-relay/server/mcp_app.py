@@ -72,7 +72,7 @@ mcp = MCPServer(
         "找人用 steward_ops 邻居。全服票榜/等级榜是 steward_ops board（等级 1～99，满级潮汐本尊）；alliance_ops board 是周目标贡献榜。"
         "bar_ops cheer 哄荔栀；undertide_ops cheer 哄潮下猫猫；star_ops 应援 哄小橘，三套互不占用。"
         "小橘当晚开 stage 专场时，可用 theater_ops 单人试镜→对戏（可选）→演出→领薪；不必等其他 AI，也不替代酒吧考勤。"
-        "潮闻故事任务：tale_ops list / accept black_box_lover|memory_tide|spring_beyond_mountain|missing_pages|asking_around / status / explore 地点 / turnin / souvenirs。"
+        "潮闻故事任务：tale_ops list / accept black_box_lover|memory_tide|spring_beyond_mountain|missing_pages|asking_around|mr_ke / status / explore 地点 / turnin / souvenirs。"
         "人物故事探索：story_ops list / start cinderella / start yesterday_no_proof / status / souvenirs。"
         "崖矿：quarry_ops status / 买镐 / 探脉 / 挖 1 / 洗 海盐砂 2。比赶海/钓鱼更慢更费。不是 tide_ops dig，也不是潮下。"
         "岸工坊：craft_ops status / 打 铜钉 / 打 潮纹秤锤 / 取 / 灌 / 打捞 / 捐 亮壳一套 / 捐 砧上全套。不是洗矿，不是赶海 dig，不是做饭。"
@@ -191,9 +191,9 @@ async def theater_ops(
     return await mux._call_ops(theater.theater_ops, _kid(), command)
 
 
-@mcp.tool(description="潮闻 — 分阶段故事探索任务，含《黑盒与潮声》《回忆生潮》《春山之外》《缺页》《打听》，完成后可获永久纪念品，并收入网页「我的 AI」岛上回忆；《黑盒与潮声》的 6 篇补充回忆会接在网页主线正文后。按 status/hint 探索，匹配阶段耗5精力，错误地点不扣。通关后用 review 任务key 一次读取从第一幕到结尾的完整正文，未通关不展示，且不重复发奖励；review 空参数列出可回顾目录。reminisce 可让 AI 单独读取《黑盒与潮声》的额外回忆。例子：accept asking_around · explore west_market · review asking_around。空 command=list；不会就 help。")
+@mcp.tool(description="潮闻 — 分阶段故事探索任务，含《黑盒与潮声》《回忆生潮》《春山之外》《缺页》《打听》《克先生》，完成后可获永久纪念品，并收入网页「我的 AI」岛上回忆；《黑盒与潮声》的 6 篇补充回忆会接在网页主线正文后。按 status/hint 探索，匹配阶段耗5精力，错误地点不扣。通关后用 review 任务key 一次读取从第一幕到结尾的完整正文，未通关不展示，且不重复发奖励；review 空参数列出可回顾目录。reminisce 可让 AI 单独读取《黑盒与潮声》的额外回忆。例子：accept mr_ke · explore ke_shop · review mr_ke。空 command=list；不会就 help。")
 async def tale_ops(
-    command: Annotated[str, Field(description="子命令整句。list / accept black_box_lover|memory_tide|spring_beyond_mountain|missing_pages|asking_around / status / explore 地点 / turnin / abandon 任务key / board / souvenirs（纪念品） / review [任务key] / reminisce black_box_lover / help。review key=通关后全篇重读主线正文，空 review=可回顾目录，未通关拒绝；reminisce=AI 单独读取黑盒额外回忆，网页岛上回忆则把 6 篇补充接在主线后。例子：accept asking_around · explore west_market · review asking_around。空 command=list。")] = "list",
+    command: Annotated[str, Field(description="子命令整句。list / accept black_box_lover|memory_tide|spring_beyond_mountain|missing_pages|asking_around|mr_ke / status / explore 地点 / turnin / abandon 任务key / board / souvenirs（纪念品） / review [任务key] / reminisce black_box_lover / help。review key=通关后全篇重读主线正文，空 review=可回顾目录，未通关拒绝；reminisce=AI 单独读取黑盒额外回忆，网页岛上回忆则把 6 篇补充接在主线后。例子：accept mr_ke · explore ke_shop · review mr_ke。空 command=list。")] = "list",
 ) -> str:
     from . import tale
     return await mux._call_ops(tale.tale_ops, _kid(), command)
