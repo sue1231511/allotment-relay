@@ -332,6 +332,33 @@ async def _hosts_on_duty(conn: aiosqlite.Connection) -> list[dict[str, Any]]:
     return hosts
 
 
+def _resting_from_staff(hosts: list[dict[str, Any]], staff: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """今日上过工、此刻不在牛郎班的人，围观页标「休息」。"""
+    host_ids = {h["id"] for h in hosts}
+    seen: set[int] = set()
+    out: list[dict[str, Any]] = []
+    job_line = {
+        "host": "刚下牛郎班 · 在吧台边歇着",
+        "wash": "洗完碗 · 靠窗坐着",
+        "brew": "调完酒 · 在柜台边歇着",
+        "sing": "唱完一段 · 在台下歇着",
+    }
+    for row in staff:
+        sid = int(row.get("steward_id") or 0)
+        if not sid or sid in host_ids or sid in seen:
+            continue
+        seen.add(sid)
+        job = str(row.get("job") or "")
+        out.append({
+            "name": row.get("name") or "?",
+            "job": job,
+            "line": job_line.get(job, "刚下工 · 在吧台边歇着"),
+        })
+        if len(out) >= 6:
+            break
+    return out
+
+
 def is_lodging(s: dict[str, Any]) -> bool:
     """包宿中（行动锁）。"""
     return int(s.get("lodge_until") or 0) > db.now()
@@ -1153,9 +1180,11 @@ async def public_bar_snapshot() -> dict[str, Any]:
                 "name": h["name"],
                 "badge": h["badge"],
                 "portrait": h["portrait"],
+                "lodger": bool(h.get("lodger")),
             }
             for h in hosts
         ],
+        "resting": _resting_from_staff(hosts, staff),
         "staff_count": len({x["steward_id"] for x in staff}),
         "recent_orders": [
             {

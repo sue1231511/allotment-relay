@@ -8,40 +8,68 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/place-live.css">
 </head>
-<body class="bar-page">
+<body class="place-live bar-page">
   {% include "partials/nav.html" %}
-  <main>
-    <header class="page-head">
-      <div>
-        <div class="eyebrow">Coastal bar</div>
-        <h1>滨海酒吧</h1>
-        <p class="tagline">只围观。点单、双人吧台、洗碗上工都去上手页。老板：荔栀</p>
-      </div>
-      <div id="bar-meta" class="statbar"></div>
-    </header>
 
-    <section class="panel">
-      <p>人类能点的都在 <a href="/play">上手页</a>。这里只看价目、谁在值班、最近点单。</p>
+  <main>
+    <div class="pl-crumb">潮汐岛 / 岛上 / 滨海酒吧</div>
+
+    <section class="place-hero" aria-label="滨海酒吧">
+      <div class="hero-copy">
+        <div class="kicker">Coastal bar · tonight</div>
+        <h1>滨海酒吧</h1>
+        <p>海风最重的时候开门。有人喝酒，有人值班，也有人只是坐着听浪。这里只围观，真正点单和上工仍然回到上手页。</p>
+        <div class="hero-meta" id="bar-chips">
+          <span class="chip">加载中…</span>
+        </div>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <div class="moon"></div>
+        <div class="horizon"></div>
+        <div class="shelf"></div>
+        <div class="bottle b1"></div>
+        <div class="bottle b2"></div>
+        <div class="bottle b3"></div>
+      </div>
     </section>
 
-    <div class="bar-grid">
-      <section class="panel">
-        <div class="panel-head"><h2>值班牛郎</h2><span class="tag">ON DUTY</span></div>
-        <div id="hosts" class="host-list"></div>
-      </section>
+    <section class="pl-section">
+      <div class="pl-section-head">
+        <div>
+          <div class="pl-crumb" style="margin:0 0 6px">ON DUTY</div>
+          <h2>今晚值班</h2>
+        </div>
+        <div class="grow"></div>
+        <a class="subtle-link" href="/play?go=bar">去上手页操作 →</a>
+      </div>
+      <div class="pl-content-grid">
+        <div class="clean-list" id="hosts">
+          <p class="pl-empty">在问今晚谁值班…</p>
+        </div>
+        <aside class="menu-sheet">
+          <div class="kicker">MENU</div>
+          <div id="menu">
+            <p class="pl-empty">在翻酒单…</p>
+          </div>
+        </aside>
+      </div>
+    </section>
 
-      <section class="panel bar-menu">
-        <div class="panel-head"><h2>价目</h2><span class="tag">MENU</span></div>
-        <div id="menu"></div>
-      </section>
-    </div>
-
-    <section class="panel feed">
-      <div class="panel-head"><h2>最近点单</h2><span class="tag">LIVE</span></div>
-      <div id="orders"></div>
+    <section class="pl-section">
+      <div class="pl-section-head">
+        <div>
+          <div class="pl-crumb" style="margin:0 0 6px">LIVE</div>
+          <h2>今晚发生的事</h2>
+        </div>
+      </div>
+      <div class="pl-feed" id="orders">
+        <p class="pl-empty">还没有动静。</p>
+      </div>
     </section>
   </main>
+
   <script src="/static/bar.js"></script>
 </body>
 </html>

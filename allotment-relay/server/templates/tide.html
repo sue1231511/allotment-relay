@@ -3,43 +3,67 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>海边围观 · 潮汐岛</title>
+  <title>海边 · 潮汐岛</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/place-live.css">
 </head>
-<body>
+<body class="place-live tide-page">
   {% include "partials/nav.html" %}
+
   <main>
-    <header class="page-head">
-      <div>
-        <div class="eyebrow">海边围观</div>
+    <div class="pl-crumb">潮汐岛 / 岛上 / 海边</div>
+
+    <section class="place-hero tide-hero" aria-label="海边">
+      <div class="hero-copy">
+        <div class="kicker">Tide · north coast</div>
         <h1>海边</h1>
-        <p class="tagline">
-          撒网、坐钓、渔排、出海。看热闹。要自己下海去上手页 <a href="/play">/play</a>（<code>tide_ops</code>）。
-          赶海翻沙不是崖矿，风暴打捞走工坊。
-        </p>
+        <p>撒网、坐钓、渔排和出海。把海况摆在最前面，纪事退到后面，不再一进门先看两块数据框。</p>
+        <div class="hero-meta" id="tide-chips">
+          <span class="chip">加载中…</span>
+        </div>
       </div>
-    </header>
-
-    <section class="stats-shell" id="tide-stats">
-      <div class="stats-primary" id="tide-primary"></div>
+      <div class="hero-art" aria-hidden="true">
+        <div class="moon"></div>
+        <div class="horizon"></div>
+      </div>
     </section>
-    <p class="soft-note" id="tide-climate">在问海况…</p>
-    <p class="soft-note" id="tide-hints"></p>
 
-    <div class="board-strip board-grid board-grid-mini">
-      <section class="panel">
-        <div class="panel-head"><h2>这会儿在海上</h2><span class="tag">SEA</span></div>
-        <ol id="tide-sea" class="board-list"></ol>
-      </section>
-      <section class="panel feed">
-        <div class="panel-head"><h2>潮声纪事</h2><span class="tag">LIVE</span></div>
-        <div id="tide-feed"></div>
-      </section>
-    </div>
+    <section class="pl-section">
+      <div class="pl-section-head">
+        <div>
+          <div class="pl-crumb" style="margin:0 0 6px">SEA NOW</div>
+          <h2>这会儿在海上</h2>
+        </div>
+        <div class="grow"></div>
+        <a class="subtle-link" href="/play?go=tide">去上手页下海 →</a>
+      </div>
+      <div class="pl-stat-row" id="tide-stats">
+        <div class="pl-stat"><small>潮位</small><strong>—</strong></div>
+        <div class="pl-stat"><small>海况</small><strong>—</strong></div>
+        <div class="pl-stat"><small>近海人数</small><strong>—</strong></div>
+        <div class="pl-stat"><small>下一次潮变</small><strong>—</strong></div>
+      </div>
+      <div class="clean-list" id="tide-sea">
+        <p class="pl-empty">在看码头…</p>
+      </div>
+    </section>
+
+    <section class="pl-section">
+      <div class="pl-section-head">
+        <div>
+          <div class="pl-crumb" style="margin:0 0 6px">LIVE</div>
+          <h2>潮声纪事</h2>
+        </div>
+      </div>
+      <div class="pl-feed" id="tide-feed">
+        <p class="pl-empty">潮还没响。</p>
+      </div>
+    </section>
   </main>
+
   <script src="/static/tide.js"></script>
 </body>
 </html>

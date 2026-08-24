@@ -418,7 +418,7 @@ def test_register_key_copy_ui() -> None:
 
 
 def test_patron_pages_share_steward_key() -> None:
-    """点单打赏、聊天、看档都只在 /play；地点页是海报。凭证只在上手页绑定。"""
+    """点单打赏、聊天、看档都只在 /play；/bar /tide 围观实况，其余地点页是海报。凭证只在上手页绑定。"""
     root = Path(__file__).resolve().parents[1]
     site_key = (root / "server/static/site-key.js").read_text(encoding="utf-8")
     assert "tidal_island_steward_api_key" in site_key
@@ -429,6 +429,10 @@ def test_patron_pages_share_steward_key() -> None:
     play_js = (root / "server/static/play.js").read_text(encoding="utf-8")
     index_html = (root / "server/templates/index.html").read_text(encoding="utf-8")
     place_html = (root / "server/templates/place.html").read_text(encoding="utf-8")
+    bar_html = (root / "server/templates/bar.html").read_text(encoding="utf-8")
+    tide_html = (root / "server/templates/tide.html").read_text(encoding="utf-8")
+    bar_js = (root / "server/static/bar.js").read_text(encoding="utf-8")
+    tide_js = (root / "server/static/tide.js").read_text(encoding="utf-8")
     promo = (root / "server/promo.py").read_text(encoding="utf-8")
     main_py = (root / "server/main.py").read_text(encoding="utf-8")
     assert "saveSiteKey" in play_js
@@ -459,6 +463,8 @@ def test_patron_pages_share_steward_key() -> None:
     assert "连续阅读" in play_js
     assert "/static/site-key.js" not in index_html
     assert "/static/site-key.js" not in place_html
+    assert "/static/site-key.js" not in bar_html
+    assert "/static/site-key.js" not in tide_html
     assert 'id="order-form"' not in index_html
     assert 'id="duo-form"' not in index_html
     assert 'id="tip-form"' not in index_html
@@ -472,6 +478,16 @@ def test_patron_pages_share_steward_key() -> None:
     assert 'RedirectResponse("/play?go=lounge"' in main_py
     assert "place.html" in main_py
     assert "_place_page" in main_py
+    assert 'tide.html"' in main_py
+    assert 'bar.html"' in main_py
+    assert "/api/public/bar" in bar_js
+    assert "/api/public/tide" in tide_js
+    assert "place-live.css" in bar_html
+    assert "place-live.css" in tide_html
+    assert "place-hero" in bar_html
+    assert "tide-hero" in tide_html
+    assert "/play?go=bar" in bar_html
+    assert "/play?go=tide" in tide_html
     assert "上手页" in site_key
 
 

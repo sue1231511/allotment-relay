@@ -1,6 +1,7 @@
 import json
 import random
 import re
+import time
 from typing import Any
 
 import aiosqlite
@@ -1302,8 +1303,18 @@ async def voyage_ops(key_id: int, command: str) -> str:
 
 async def public_snapshot() -> dict[str, Any]:
     from .catalog import WORLD_BOSS
+    from .config import TIDE_CYCLE
 
     day0 = db.day_start()
+    now = db.now()
+    tide_code = world.current_tide()
+    weather_code = world.current_weather()
+    phase_code = world.current_day_phase()
+    tide_idx = now // TIDE_CYCLE
+    next_tide_at = (tide_idx + 1) * TIDE_CYCLE
+    next_tide_code = ["ebb", "slack", "flood"][(tide_idx + 1) % 3]
+    next_tide_clock = time.strftime("%H:%M", time.localtime(next_tide_at))
+
     async with db.connect() as conn:
         conn.row_factory = aiosqlite.Row
         nets = (await (await conn.execute(
@@ -1324,6 +1335,14 @@ async def public_snapshot() -> dict[str, Any]:
         )).fetchone())[0]
         boats = (await (await conn.execute(
             "SELECT COUNT(*) FROM stewards WHERE enrolled=1 AND boat_key != ''"
+        )).fetchone())[0]
+        # 今日海边动作人数（撒网/坐钓等 chronicle），不算已出航
+        shore = (await (await conn.execute(
+            """
+            SELECT COUNT(DISTINCT actor_id) FROM chronicle
+            WHERE action='tide' AND created_at>=? AND actor_id IS NOT NULL
+            """,
+            (day0,),
         )).fetchone())[0]
         at_sea = await (await conn.execute(
             """
@@ -1357,10 +1376,29 @@ async def public_snapshot() -> dict[str, Any]:
             "pct": int(hp / max_hp * 100) if max_hp else 0,
             "alive": hp > 0,
         }
+    out_n = int(out or 0)
+    if weather_code == "gale":
+        sailing_hint = "阵风 · 出航慎"
+    elif out_n > 0:
+        sailing_hint = f"近海 {out_n} 船在航"
+    else:
+        sailing_hint = "近海可出航"
     return {
         "climate": world.climate_line(),
+        "tide": tide_code,
+        "tide_label": world.tide_label(tide_code),
+        "weather": weather_code,
+        "weather_label": world.weather_label(weather_code),
+        "phase": phase_code,
+        "phase_label": world.day_phase_label(phase_code),
+        "next_tide_at": next_tide_at,
+        "next_tide": next_tide_code,
+        "next_tide_label": world.tide_label(next_tide_code),
+        "next_tide_clock": next_tide_clock,
+        "sailing_hint": sailing_hint,
         "nets_today": int(nets or 0),
-        "voyages_out": int(out or 0),
+        "voyages_out": out_n,
+        "shore_active": int(shore or 0),
         "pens": int(pens or 0),
         "boats": int(boats or 0),
         "at_sea": [

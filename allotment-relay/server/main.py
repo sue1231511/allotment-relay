@@ -115,7 +115,8 @@ async def workshop_page(request: Request):
 
 @app.get("/tide", response_class=HTMLResponse)
 async def tide_page(request: Request):
-    return _place_page(request, "tide")
+    """海边围观实况；动手仍回上手页。"""
+    return _html(request, "tide.html", active="tide")
 
 
 @app.get("/huts", response_class=HTMLResponse)
@@ -135,7 +136,8 @@ async def board_page():
 
 @app.get("/bar", response_class=HTMLResponse)
 async def bar_page(request: Request):
-    return _place_page(request, "bar")
+    """滨海酒吧围观实况；点单上工仍回上手页。"""
+    return _html(request, "bar.html", active="bar")
 
 
 @app.get("/play", response_class=HTMLResponse)
