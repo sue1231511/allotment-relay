@@ -13,7 +13,7 @@
 }
 
 .allo-page .allo-shell {
-  width: min(1280px, calc(100% - 32px));
+  width: min(1320px, calc(100% - 28px));
   margin: auto;
   padding: 28px 0 54px;
 }
@@ -73,8 +73,8 @@
 
 .allo-registry {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 310px;
-  gap: 24px;
+  grid-template-columns: minmax(0, 1fr) minmax(380px, 420px);
+  gap: 40px;
   margin-top: 22px;
   min-height: 670px;
 }
@@ -92,8 +92,8 @@
 
 .allo-atlas-head {
   display: grid;
-  grid-template-columns: 110px 1fr auto;
-  gap: 18px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 16px;
   align-items: end;
   padding: 14px 0 12px;
   border-bottom: 1px solid var(--allo-line);
@@ -141,8 +141,8 @@
 .allo-field-row {
   position: relative;
   display: grid;
-  grid-template-columns: 92px minmax(0, 1fr) 86px;
-  gap: 14px;
+  grid-template-columns: 40px minmax(0, 1fr) 72px;
+  gap: 12px;
   align-items: center;
   min-height: 62px;
   width: 100%;
@@ -154,7 +154,7 @@
   font-family: inherit;
   color: inherit;
   transition: .2s ease;
-  padding: 0;
+  padding: 0 6px 0 0;
 }
 
 .allo-field-row:hover { background: rgba(255, 255, 255, .20); }
@@ -164,7 +164,7 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 10px;
   color: #9ba29d;
-  padding-left: 4px;
+  padding-left: 0;
 }
 
 .allo-field-main { min-width: 0; }
@@ -232,7 +232,7 @@
 
 .allo-online-dot {
   position: absolute;
-  left: 80px;
+  left: 34px;
   top: 16px;
   width: 6px;
   height: 6px;
@@ -246,6 +246,8 @@
   display: flex;
   flex-direction: column;
   min-height: 670px;
+  min-width: 0;
+  padding-left: 4px;
 }
 
 .allo-detail-head {
@@ -485,15 +487,12 @@
   }
 
   .allo-field-row {
-    grid-template-columns: 54px minmax(0, 1fr) 70px;
+    grid-template-columns: 32px minmax(0, 1fr) 64px;
     gap: 8px;
+    padding-right: 0;
   }
 
   .allo-online-dot {
-    left: 44px;
-  }
-
-  .allo-rankno {
-    padding-left: 0;
+    left: 28px;
   }
 }
