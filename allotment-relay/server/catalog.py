@@ -1591,6 +1591,68 @@ def mix_display_name(grade: str, sig: str, stars: int) -> str:
     return f"{emoji}{name}{'★' * stars}"
 
 
+def cook_name_key(token: str) -> str:
+    """Strip emoji / stars so '🍽️即兴好菜★★★' and '即兴好菜' compare equal."""
+    t = (token or "").strip().replace("★", "").replace("☆", "").replace("*", "")
+    return re.sub(r"[^\w\u4e00-\u9fff·\-]+", "", t, flags=re.UNICODE)
+
+
+def cooked_display_aliases(item: str) -> set[str]:
+    """Tokens that should find this cooked satchel item (id + Chinese labels)."""
+    out = {item}
+    parsed = parse_mix_item(item)
+    if parsed:
+        grade, _tier, sig, stars = parsed
+        emoji, name = mix_title(grade, sig)
+        display = mix_display_name(grade, sig, stars)
+        out.update({
+            display,
+            name,
+            f"{emoji}{name}",
+            f"{name}{'★' * stars}",
+            cook_name_key(display),
+            cook_name_key(name),
+        })
+        return {x for x in out if x}
+    label = item_label(item)
+    out.add(label)
+    out.add(cook_name_key(label))
+    if item.startswith("dish_"):
+        body = item[5:]
+        key, stars_s = body, ""
+        if "_s" in body:
+            maybe_key, maybe_stars = body.rsplit("_s", 1)
+            if maybe_stars.isdigit():
+                key, stars_s = maybe_key, maybe_stars
+        if key in KITCHEN_DISHES:
+            meta = KITCHEN_DISHES[key]
+            out.update({key, meta["name"], f"{meta['emoji']}{meta['name']}"})
+            if stars_s:
+                out.add(f"{meta['name']}{'★' * int(stars_s)}")
+    return {x for x in out if x}
+
+
+def cooked_token_matches(item: str, token: str) -> bool:
+    raw = (token or "").strip()
+    if not raw or not item:
+        return False
+    norm = raw.lower().replace(" ", "_")
+    if raw == item or norm == item:
+        return True
+    aliases = cooked_display_aliases(item)
+    needles = {raw, raw.rstrip("★☆*"), cook_name_key(raw), norm}
+    needles.discard("")
+    if needles & aliases:
+        return True
+    # A specific mix/dish id must not fuzzy-match another dish that shares a Chinese title.
+    if parse_mix_item(norm) or norm.startswith("dish_") or norm.startswith("meal_"):
+        return False
+    want = cook_name_key(raw)
+    if not want:
+        return False
+    return want in {cook_name_key(a) for a in aliases}
+
+
 def mix_sell_price(grade: str, tier: int, stars: int) -> int:
     listed = MIX_SELL.get(grade, MIX_SELL["o"]).get(stars, 8)
     star_mult = {1: 0.7, 2: 0.9, 3: 1.05, 4: 1.3, 5: 1.55}.get(stars, 1.05)

@@ -13,6 +13,9 @@ from .catalog import (
     ITEM_NAMES,
     ITEM_PRICES,
     KITCHEN_DISHES,
+    MIX_TITLES,
+    cook_name_key,
+    cooked_token_matches,
     dish_display_name,
     dish_energy,
     dish_ingredient_cost,
@@ -168,7 +171,10 @@ def _fridge_parts(item: str) -> tuple[str, int]:
 def _fridge_satchel_item(dish_key: str, stars: int) -> str:
     if dish_key.startswith("meal_"):
         return dish_key
-    return dish_item(dish_key, stars)
+    item = dish_item(dish_key, stars)
+    if parse_mix_item(item):
+        register_mix_item(item)
+    return item
 
 
 def _fridge_label(dish_key: str, stars: int) -> str:
@@ -178,6 +184,17 @@ def _fridge_label(dish_key: str, stars: int) -> str:
         return dish_display_name(dish_key, stars)
     except KeyError:
         return item_label(_fridge_satchel_item(dish_key, stars))
+
+
+def _looks_like_mix_title(token: str) -> bool:
+    want = cook_name_key(token)
+    if not want:
+        return False
+    for titles in MIX_TITLES.values():
+        for _emoji, name in titles:
+            if name == want or cook_name_key(name) == want:
+                return True
+    return False
 
 
 async def _pick_cooked_satchel(
@@ -202,6 +219,30 @@ async def _pick_cooked_satchel(
             if item.startswith(resolved + "_s") and _has_star_suffix(item):
                 return item
     raise ValueError("行囊里没有这道菜")
+
+
+async def _find_cooked_in_satchel(
+    conn: aiosqlite.Connection, steward_id: int, token: str
+) -> str | None:
+    resolved = _resolve_cooked_token(token)
+    if resolved:
+        try:
+            return await _pick_cooked_satchel(conn, steward_id, resolved)
+        except ValueError:
+            pass
+    cur = await conn.execute(
+        """
+        SELECT item FROM satchel
+        WHERE steward_id=? AND quantity>0
+          AND (item LIKE 'dish_%' OR item LIKE 'meal_%')
+        ORDER BY item
+        """,
+        (steward_id,),
+    )
+    for (item,) in await cur.fetchall():
+        if cooked_token_matches(item, token):
+            return item
+    return None
 
 
 def _fridge_need_msg() -> str:
@@ -237,22 +278,31 @@ async def fridge_status_text(s: dict[str, Any]) -> str:
     for r in rows:
         age = db.now() - r["stored_at"]
         stale = " ⚠快过期" if age > expire * 0.85 else ""
-        lines.append(f"  {_fridge_label(r['dish_key'], r['stars'])} x{r['quantity']}{stale}")
-    lines.append("取：hut_ops 冰柜 取 菜名 · kitchen_ops take 菜名")
+        item = _fridge_satchel_item(r["dish_key"], r["stars"])
+        lines.append(
+            f"  {_fridge_label(r['dish_key'], r['stars'])}（{item}）"
+            f" x{r['quantity']}{stale}"
+        )
+    lines.append(
+        "取：hut_ops 冰柜 取 菜名 · kitchen_ops take 菜名"
+        "（自由组合菜写中文名或 id 都行）"
+    )
     return "\n".join(lines)
 
 
 async def fridge_put(s: dict[str, Any], token: str, qty: int = 1) -> str:
     qty = max(1, int(qty))
-    resolved = _resolve_cooked_token(token)
-    if not resolved or not is_cooked_item(resolved):
-        raise ValueError(
-            f"{token} 不是熟菜。生鲜请 hut_ops 冰柜 存（进潮柜）；熟菜才进冰箱。"
-        )
     async with db.connect() as conn:
         if not await _has_fridge(conn, s["id"]):
             raise ValueError(_fridge_need_msg())
-        item = await _pick_cooked_satchel(conn, s["id"], resolved)
+        item = await _find_cooked_in_satchel(conn, s["id"], token)
+        if not item:
+            resolved = _resolve_cooked_token(token)
+            if (resolved and is_cooked_item(resolved)) or _looks_like_mix_title(token):
+                raise ValueError("行囊里没有这道菜")
+            raise ValueError(
+                f"{token} 不是熟菜。生鲜请 hut_ops 冰柜 存（进潮柜）；熟菜才进冰箱。"
+            )
         cur = await conn.execute(
             "SELECT quantity FROM satchel WHERE steward_id=? AND item=?",
             (s["id"], item),
@@ -306,9 +356,11 @@ def _fridge_row_matches(row: dict[str, Any], token: str) -> bool:
     dish_key = row["dish_key"]
     stars = int(row["stars"])
     item = _fridge_satchel_item(dish_key, stars)
+    if cooked_token_matches(item, token):
+        return True
     raw = (token or "").strip()
     bare = raw.rstrip("★☆*")
-    needles: set[str] = {raw, bare}
+    needles: set[str] = {raw, bare, cook_name_key(raw)}
     resolved = _resolve_cooked_token(raw)
     if resolved:
         needles.add(resolved)
@@ -329,7 +381,11 @@ def _fridge_row_matches(row: dict[str, Any], token: str) -> bool:
         f"{dish_key}_s{stars}",
         f"dish_{dish_key}",
         f"dish_{dish_key}_s{stars}",
+        _fridge_label(dish_key, stars),
+        cook_name_key(_fridge_label(dish_key, stars)),
     }
+    needles.discard("")
+    haystack.discard("")
     return bool(needles & haystack)
 
 
@@ -347,7 +403,10 @@ async def fridge_take(s: dict[str, Any], token: str, qty: int = 1) -> str:
                 picked = r
                 break
         if not picked:
-            raise ValueError("冰箱里没有这道菜")
+            raise ValueError(
+                "冰箱里没有这道菜。hut_ops 冰柜 看列表"
+                "（自由组合菜显示中文名和 id，两个都能取）"
+            )
         have = int(picked["quantity"] or 1)
         if have < qty:
             raise ValueError("冰箱里没有这么多")
@@ -484,6 +543,7 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             "  vend 菜名 — 卖掉行囊里的熟菜（中文名也行；家具请 hut_ops 卖掉）\n"
             "  store 菜名 [数量] / fridge / take 菜名 — 冰箱熟菜（小屋要先装 fridge）\n"
             "             也可 hut_ops 冰柜 存|取，生鲜进潮柜、熟菜进冰箱\n"
+            "             自由组合菜 fridge 列表带中文名和 id；take 即兴好菜 或 take 那串 id 都能取\n"
             "  brew 材料 — 灶台（回雾智）\n"
             "  shop board — 全服谁在营业的小馆名单（店名和几道菜），不是流水也不是评价\n"
             "  shop dine 店主名 — 下馆子堂食，也能回精力（按菜价，约 3.5 票/1 精力）+「饱餐」2 小时（行动精力 -1）\n"
@@ -519,7 +579,10 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             ings = " + ".join(f"{ITEM_NAMES.get(i, i)}（{i}）" for i in keys)
             lines.append(f"  {recipe['name']} — brew {' '.join(keys)}  · {ings}")
         lines.append("小馆: kitchen_ops shop board 看谁在营业 · shop dine 店主名 下馆子回精力 · shop open|stock|卖掉")
-        lines.append("冰箱: hut_ops 冰柜 存|取 熟菜（先装 fridge）· kitchen_ops store/fridge/take")
+        lines.append(
+            "冰箱: hut_ops 冰柜 存|取 熟菜（先装 fridge）· kitchen_ops store/fridge/take"
+            "（自由组合菜中文名或 id 都行）"
+        )
         return "\n".join(lines)
 
     if verb == "cook" and len(parts) >= 2:

@@ -52,8 +52,9 @@ STORAGE_ALIASES = {
 }
 
 STORAGE_USAGE = (
-    "用法：hut_ops 冰柜 存 甘蓝 3｜冰柜 取 甘蓝 2"
+    "用法：hut_ops 冰柜 存 甘蓝 3｜冰柜 取 甘蓝 2｜冰柜 取 即兴好菜"
     "（柜子/潮柜/冰箱同义）。生鲜进潮柜，熟菜进冰箱。"
+    "自由组合熟菜列表带中文名和 id，两个都能取。"
     "买潮柜：hut_ops buy cabinet → install soft_N cabinet；"
     "买冰箱：hut_ops buy fridge → install soft_N fridge（也可 buy 冰柜）。"
     f"潮柜基础 {config.CABINET_SLOTS} 格，满了 hut_ops 潮柜 扩（{config.CABINET_SLOT_COST}票/格，顶 {config.CABINET_SLOTS_MAX}）。"
@@ -697,7 +698,7 @@ def _cabinet_forbid(item: str) -> str | None:
     return None
 
 
-def _parse_storage_item_qty(tokens: list[str]) -> tuple[str, int]:
+def _split_storage_qty(tokens: list[str]) -> tuple[str, int]:
     qty = 1
     name_tokens = list(tokens)
     if name_tokens and name_tokens[-1].isdigit():
@@ -705,22 +706,28 @@ def _parse_storage_item_qty(tokens: list[str]) -> tuple[str, int]:
         name_tokens = name_tokens[:-1]
     if not name_tokens:
         raise ValueError("要写物品名")
-    raw = " ".join(name_tokens)
+    return " ".join(name_tokens), qty
+
+
+def _resolve_storage_item(raw: str) -> str | None:
     item = resolve_item_key(raw)
+    if item:
+        return item
+    from . import cook_mix
+    dish = cook_mix.resolve_dish_key(raw.rstrip("★☆*"))
+    if dish:
+        return f"dish_{dish}"
+    if raw.startswith("dish_") or raw.startswith("meal_"):
+        return raw
+    return None
+
+
+def _parse_storage_item_qty(tokens: list[str]) -> tuple[str, int]:
+    raw, qty = _split_storage_qty(tokens)
+    item = _resolve_storage_item(raw)
     if not item:
-        from . import cook_mix
-        dish = cook_mix.resolve_dish_key(raw.rstrip("★☆*"))
-        if dish:
-            item = f"dish_{dish}"
-        elif raw.startswith("dish_") or raw.startswith("meal_"):
-            item = raw
-        else:
-            raise ValueError(unknown_item_message(raw))
+        raise ValueError(unknown_item_message(raw))
     return item, qty
-
-
-def _is_cooked_item(item: str) -> bool:
-    return item.startswith("dish_") or item.startswith("meal_")
 
 
 async def _cabinet_status_text(s: dict[str, Any]) -> str:
@@ -881,15 +888,16 @@ async def cabinet_command(s: dict[str, Any], rest: list[str]) -> str:
     if not (putting or taking) or len(rest) < 2:
         raise ValueError(STORAGE_USAGE)
 
-    item, qty = _parse_storage_item_qty(rest[1:])
-    if _is_cooked_item(item):
-        from . import kitchen
+    raw, qty = _split_storage_qty(rest[1:])
+    item = _resolve_storage_item(raw)
+    from . import kitchen
+    if item and not kitchen.is_cooked_item(item):
         if putting:
-            return await kitchen.fridge_put(s, item, qty)
-        return await kitchen.fridge_take(s, item, qty)
+            return await cabinet_put(s, item, qty)
+        return await cabinet_take(s, item, qty)
     if putting:
-        return await cabinet_put(s, item, qty)
-    return await cabinet_take(s, item, qty)
+        return await kitchen.fridge_put(s, raw, qty)
+    return await kitchen.fridge_take(s, raw, qty)
 
 
 def _compost_bin_need_msg() -> str:
