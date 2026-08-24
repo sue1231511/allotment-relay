@@ -265,6 +265,66 @@ async def test_icebox_alias_routes_dishes() -> None:
     assert "冰柜 存" in status, status
 
 
+async def test_fridge_custom_mix_take_by_chinese_name() -> None:
+    """自由组合熟菜进冰箱只显示中文名时，必须还能按中文名/id 取出。"""
+    tmp = Path(tempfile.mkdtemp(prefix="mix-fridge-"))
+    db = await _boot(tmp)
+    from server import hut, kitchen
+    from server.catalog import ITEM_NAMES, mix_display_name, mix_item_key, parse_mix_item
+
+    sid = await _enroll(db, "mixfridge@example.com", "乱炖人")
+    item = mix_item_key("g", 3, "a1b2c3d4", 4)
+    label = mix_display_name("g", "a1b2c3d4", 4)
+    bare = "手打一锅"  # emoji/星剥掉后的中文名
+    async with db.connect() as conn:
+        await conn.execute(
+            "UPDATE stewards SET hut_built=1, hut_level=1, tickets=400 WHERE id=?",
+            (sid,),
+        )
+        await conn.execute(
+            """
+            INSERT INTO hut_fittings (steward_id, slot, item_key, installed_at)
+            VALUES (?, 'soft_1', 'fridge', ?)
+            """,
+            (sid, db.now()),
+        )
+        await db.add_item(conn, sid, item, 2)
+        await conn.commit()
+    s = await db.get_steward_by_id(sid)
+    kid = s["key_id"]
+
+    # 模拟进程重启：ITEM_NAMES 里没有这道自定义菜
+    ITEM_NAMES.pop(item, None)
+    assert parse_mix_item(item)
+
+    put = await kitchen.kitchen_ops(kid, f"store {item} 2")
+    assert "冰箱" in put and bare in put, put
+    listed = await kitchen.kitchen_ops(kid, "fridge")
+    assert bare in listed and item in listed, listed
+
+    # 再清一次登记表：列表算出来的中文名也要能取
+    ITEM_NAMES.pop(item, None)
+    took_cn = await hut.hut_ops(kid, f"冰柜 取 {bare}")
+    assert "取出" in took_cn and item in took_cn, took_cn
+
+    ITEM_NAMES.pop(item, None)
+    # 第二份用完整显示名（emoji+星）
+    took_full = await kitchen.kitchen_ops(kid, f"take {label}")
+    assert "取出" in took_full, took_full
+
+    async with db.connect() as conn:
+        bag = await (await conn.execute(
+            "SELECT quantity FROM satchel WHERE steward_id=? AND item=?",
+            (sid, item),
+        )).fetchone()
+        left = await (await conn.execute(
+            "SELECT COUNT(*) FROM meal_storage WHERE steward_id=?",
+            (sid,),
+        )).fetchone()
+    assert bag and bag[0] == 2, bag
+    assert left and left[0] == 0, left
+
+
 async def test_cabinet_dump_on_remove() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="cab-dump-"))
     db = await _boot(tmp)
@@ -396,6 +456,7 @@ def main() -> None:
     asyncio.run(test_cannot_take_last())
     asyncio.run(test_cabinet_dump_on_remove())
     asyncio.run(test_icebox_alias_routes_dishes())
+    asyncio.run(test_fridge_custom_mix_take_by_chinese_name())
     asyncio.run(test_cabinet_expand())
     print("cabinet/scrump tests ok")
 

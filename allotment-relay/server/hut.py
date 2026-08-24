@@ -54,6 +54,8 @@ STORAGE_ALIASES = {
 STORAGE_USAGE = (
     "用法：hut_ops 冰柜 存 甘蓝 3｜冰柜 取 甘蓝 2"
     "（柜子/潮柜/冰箱同义）。生鲜进潮柜，熟菜进冰箱。"
+    "自由组合熟菜：fridge 列表带 dish_mix_… id，中文名或 id 都能取"
+    "（例：冰柜 取 手打一锅 · 冰柜 取 dish_mix_g3_a1b2c3d4_s4）。"
     "买潮柜：hut_ops buy cabinet → install soft_N cabinet；"
     "买冰箱：hut_ops buy fridge → install soft_N fridge（也可 buy 冰柜）。"
     f"潮柜基础 {config.CABINET_SLOTS} 格，满了 hut_ops 潮柜 扩（{config.CABINET_SLOT_COST}票/格，顶 {config.CABINET_SLOTS_MAX}）。"
@@ -881,7 +883,34 @@ async def cabinet_command(s: dict[str, Any], rest: list[str]) -> str:
     if not (putting or taking) or len(rest) < 2:
         raise ValueError(STORAGE_USAGE)
 
-    item, qty = _parse_storage_item_qty(rest[1:])
+    tokens = rest[1:]
+    qty_hint = 1
+    name_tokens = list(tokens)
+    if name_tokens and name_tokens[-1].isdigit():
+        qty_hint = max(1, int(name_tokens[-1]))
+        name_tokens = name_tokens[:-1]
+    raw_name = " ".join(name_tokens)
+
+    try:
+        item, qty = _parse_storage_item_qty(tokens)
+    except ValueError as exc:
+        # 自由组合熟菜重启后 ITEM_NAMES 可能还没登记；中文名对不上 resolve。
+        # 取：直接按冰箱里的显示名/id 匹配；存：也走 fridge_put 的熟菜解析。
+        if not raw_name:
+            raise
+        from . import kitchen
+        if taking:
+            try:
+                return await kitchen.fridge_take(s, raw_name, qty_hint)
+            except ValueError:
+                raise exc from None
+        if putting:
+            try:
+                return await kitchen.fridge_put(s, raw_name, qty_hint)
+            except ValueError:
+                raise exc from None
+        raise
+
     if _is_cooked_item(item):
         from . import kitchen
         if putting:
