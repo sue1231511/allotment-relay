@@ -472,6 +472,16 @@ def test_patron_pages_share_steward_key() -> None:
     assert "/api/bar/duo" in play_js
     assert "/api/eatery/order" in play_js
     assert "/api/star/tip" in play_js
+    assert 'id="play-place"' in play_html
+    assert 'id="play-place-actions"' in play_html
+    assert "place-workspace" in play_html
+    assert "place-toolrail" in play_html
+    assert "place-workarea" in play_html
+    assert "play-place-live" in play_html
+    assert "place-tool" in play_js
+    assert "selectPlaceTool" in play_js
+    assert '"href": "/quarry"' in (root / "server/play.py").read_text(encoding="utf-8")
+    assert '"href": "/workshop"' in (root / "server/play.py").read_text(encoding="utf-8")
     assert 'id="play-duo-key-b"' in play_html
     assert 'id="play-bar-order"' in play_html
     assert 'id="play-eatery-order"' in play_html

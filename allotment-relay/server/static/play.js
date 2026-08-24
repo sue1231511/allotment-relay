@@ -7,6 +7,7 @@ const state = {
   neighbors: { total: 0, listed: 0, online: 0, people: [] },
   climate: null,
   placeId: '',
+  placeResult: '',
   eaterySnap: { shops: [] },
 };
 
@@ -72,12 +73,156 @@ function setLog(text) {
   const log = $('play-log');
   if (!text) {
     show(log, false);
+    clearPlaceResult();
     return;
   }
   log.textContent = text;
   show(log, true);
-  const placeResult = $('play-place-result');
-  if (state.placeId) placeResult.textContent = text;
+  showPlaceResult(text);
+}
+
+function clearPlaceResult() {
+  state.placeResult = '';
+  const empty = $('play-place-empty');
+  const result = $('play-place-result');
+  if (empty) show(empty, true);
+  if (result) {
+    result.textContent = '';
+    show(result, false);
+  }
+}
+
+function showPlaceResult(text) {
+  if (!state.placeId) return;
+  state.placeResult = text || '';
+  const empty = $('play-place-empty');
+  const result = $('play-place-result');
+  if (!text) {
+    if (empty) show(empty, true);
+    if (result) show(result, false);
+    return;
+  }
+  if (empty) show(empty, false);
+  if (result) {
+    result.textContent = text;
+    show(result, true);
+  }
+}
+
+function stockPreview(limit = 3) {
+  const stock = ((state.dash && state.dash.stock) || []).filter((it) => Number(it.qty) > 0);
+  if (!stock.length) return '空';
+  return stock.slice(0, limit).map((it) => `${it.name || it.label || it.item} ×${it.qty}`).join(' · ');
+}
+
+function placeContextRows(place) {
+  const d = state.dash || {};
+  const m = d.meters || {};
+  const now = [];
+  now.push(`<div class="place-context-row"><span>精力</span><b>${m.energy ?? '—'} / ${m.energy_max || 100}</b></div>`);
+  now.push(`<div class="place-context-row"><span>工分票</span><b>${d.tickets ?? '—'}</b></div>`);
+  now.push(`<div class="place-context-row"><span>行囊</span><b>${esc(stockPreview())}</b></div>`);
+
+  const memo = [];
+  if (place.id === 'quarry' && d.quarry && d.quarry.line) {
+    memo.push(`<div class="place-context-row"><span>崖况</span><b>${esc(d.quarry.line)}</b></div>`);
+  } else if (place.id === 'craft' && d.craft && d.craft.line) {
+    memo.push(`<div class="place-context-row"><span>砧况</span><b>${esc(d.craft.line)}</b></div>`);
+  } else if (place.id === 'tide' && d.voyage) {
+    memo.push(`<div class="place-context-row"><span>航程</span><b>${esc(d.voyage)}</b></div>`);
+  } else if (d.meter_lines && d.meter_lines.bar_duty) {
+    memo.push(`<div class="place-context-row"><span>考勤</span><b>${esc(d.meter_lines.bar_duty)}</b></div>`);
+  }
+  const c = state.climate || {};
+  if (c.tide || c.weather) {
+    memo.push(`<div class="place-context-row"><span>海况</span><b>${esc([c.tide, c.weather, c.phase].filter(Boolean).join(' · '))}</b></div>`);
+  }
+  if (!memo.length) {
+    memo.push(`<div class="place-context-row"><span>备忘</span><b>${esc(place.blurb || '先选一个动作')}</b></div>`);
+  }
+  return { now: now.join(''), memo: memo.join('') };
+}
+
+function selectPlaceTool(btn) {
+  if (!btn) return;
+  document.querySelectorAll('#play-place-actions .place-tool').forEach((el) => el.classList.remove('is-active'));
+  btn.classList.add('is-active');
+  const label = btn.getAttribute('data-label') || '动作';
+  const note = btn.getAttribute('data-note') || '操作结果会留在这里。';
+  if ($('play-work-title')) $('play-work-title').textContent = label;
+  if ($('play-work-sub')) $('play-work-sub').textContent = note;
+}
+
+function renderPlace(id) {
+  const place = (state.places || []).find((p) => p.id === id);
+  if (!place) return;
+  const switching = state.placeId !== id;
+  state.placeId = id;
+  show($('play-home'), false);
+  show($('play-place'), true);
+  $('play-place-title').textContent = place.name;
+  $('play-place-blurb').textContent = place.blurb + (place.caution ? ' 新手别从这儿开局。' : '');
+  if ($('play-place-rail-title')) {
+    $('play-place-rail-title').textContent = place.rail || `今天在${place.name}做什么`;
+  }
+
+  const c = state.climate || {};
+  const m = (state.dash && state.dash.meters) || {};
+  const chips = [
+    c.tide,
+    c.weather,
+    c.phase,
+    (m.energy != null) ? `精力 ${m.energy} / ${m.energy_max || 100}` : '',
+  ].filter(Boolean);
+  $('play-place-meta').innerHTML = chips.map((x) => `<span>${esc(x)}</span>`).join('');
+
+  const live = $('play-place-live');
+  if (place.href) {
+    live.href = place.href;
+    live.textContent = place.live || `打开${place.name}现场 →`;
+    show(live, true);
+  } else {
+    show(live, false);
+  }
+
+  const acts = (place.actions || []).concat(extraPlaceActions(place));
+  $('play-place-actions').innerHTML = acts.map((a, i) => {
+    const idx = String(i + 1).padStart(2, '0');
+    const note = a.note || a.command || '';
+    const primary = i === acts.length - 1 ? ' is-primary' : '';
+    return `<button type="button" class="place-tool${primary}" data-label="${esc(a.label)}" data-note="${esc(note)}" data-act='${JSON.stringify({ tool: a.tool, command: a.command })}'>
+      <span class="place-tool-index">${idx}</span>
+      <span><strong>${esc(a.label)}</strong><small>${esc(note)}</small></span>
+      <span class="arrow">→</span>
+    </button>`;
+  }).join('');
+
+  const ctx = placeContextRows(place);
+  if ($('play-place-now')) $('play-place-now').innerHTML = ctx.now;
+  if ($('play-place-memo')) $('play-place-memo').innerHTML = ctx.memo;
+
+  if (switching) {
+    if ($('play-work-title')) $('play-work-title').textContent = '选一个动作';
+    if ($('play-work-sub')) $('play-work-sub').textContent = '操作结果会直接留在这里。';
+    clearPlaceResult();
+  } else if (state.placeResult) {
+    showPlaceResult(state.placeResult);
+  }
+
+  hidePatron();
+  if (window.playLounge) window.playLounge.stop();
+  show($('play-lounge'), false);
+  if (id === 'lounge') {
+    show($('play-lounge'), true);
+    if (window.playLounge) window.playLounge.start();
+  }
+  if (id === 'bar' || id === 'eatery' || id === 'star') {
+    show($('play-patron'), true);
+    show($(`play-patron-${id}`), true);
+    bindPatronPanels();
+    if (id === 'bar') loadBarPatron();
+    if (id === 'eatery') loadEateryPatron();
+  }
 }
 
 function plotStateLabel(stateName) {
@@ -342,42 +487,9 @@ function hidePatron() {
   ['play-patron-bar', 'play-patron-eatery', 'play-patron-star'].forEach((id) => show($(id), false));
 }
 
-function renderPlace(id) {
-  const place = (state.places || []).find((p) => p.id === id);
-  if (!place) return;
-  state.placeId = id;
-  show($('play-home'), false);
-  show($('play-place'), true);
-  $('play-place-title').textContent = place.name;
-  $('play-place-blurb').textContent = place.blurb + (place.caution ? ' 新手别从这儿开局。' : '');
-  const acts = (place.actions || []).concat(extraPlaceActions(place));
-  $('play-place-actions').innerHTML = acts.map((a) => (
-    `<button type="button" class="play-mini-btn" data-act='${JSON.stringify({ tool: a.tool, command: a.command })}'>${esc(a.label)}</button>`
-  )).join('');
-  if (place.href) {
-    $('play-place-actions').insertAdjacentHTML(
-      'beforeend',
-      `<a class="play-mini-btn" href="${place.href}">打开网页</a>`
-    );
-  }
-  hidePatron();
-  if (window.playLounge) window.playLounge.stop();
-  show($('play-lounge'), false);
-  if (id === 'lounge') {
-    show($('play-lounge'), true);
-    if (window.playLounge) window.playLounge.start();
-  }
-  if (id === 'bar' || id === 'eatery' || id === 'star') {
-    show($('play-patron'), true);
-    show($(`play-patron-${id}`), true);
-    bindPatronPanels();
-    if (id === 'bar') loadBarPatron();
-    if (id === 'eatery') loadEateryPatron();
-  }
-}
-
 function goHome() {
   state.placeId = '';
+  state.placeResult = '';
   show($('play-place'), false);
   show($('play-home'), true);
   hidePatron();
@@ -548,7 +660,7 @@ function itemSheet(name) {
 
 async function act(tool, command) {
   try {
-    document.querySelectorAll('.play-page button.btn, .play-page .play-mini-btn, .play-go').forEach((b) => { b.disabled = true; });
+    document.querySelectorAll('.play-page button.btn, .play-page .play-mini-btn, .play-page .place-tool, .play-go').forEach((b) => { b.disabled = true; });
     const data = await api(tool, command);
     applySnap(data, data.text || '');
     closeSheet();
@@ -862,6 +974,7 @@ document.body.addEventListener('click', (e) => {
   } catch {
     return;
   }
+  if (btn.classList.contains('place-tool')) selectPlaceTool(btn);
   act(payload.tool, payload.command);
 });
 

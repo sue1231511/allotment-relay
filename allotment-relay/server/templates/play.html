@@ -156,12 +156,58 @@
       </div>
 
       <section class="play-place hidden" id="play-place">
-        <div class="play-place-head">
-          <button type="button" class="play-mini-btn" id="play-place-back">← 回首页</button>
-          <h2 id="play-place-title">地点</h2>
+        <div class="place-top">
+          <div>
+            <div class="place-title-row">
+              <button type="button" class="place-back" id="play-place-back">← 回首页</button>
+              <h2 class="place-title" id="play-place-title">地点</h2>
+            </div>
+            <p class="place-copy" id="play-place-blurb"></p>
+            <div class="place-meta" id="play-place-meta"></div>
+          </div>
+          <a class="place-live hidden" id="play-place-live" href="#">打开现场 →</a>
         </div>
-        <p class="muted" id="play-place-blurb"></p>
-        <div class="play-actions" id="play-place-actions"></div>
+
+        <div class="place-workspace" id="play-place-workspace">
+          <aside class="place-toolrail">
+            <div class="place-kicker">Actions</div>
+            <h3 id="play-place-rail-title">今天做什么</h3>
+            <div id="play-place-actions"></div>
+          </aside>
+
+          <section class="place-workarea">
+            <div class="place-work-head">
+              <div>
+                <div class="place-kicker">Work Area</div>
+                <h3 id="play-work-title">选一个动作</h3>
+              </div>
+              <p id="play-work-sub">操作结果会直接留在这里。</p>
+              <div class="place-grow"></div>
+              <span class="place-status-pill" id="play-work-status">可操作</span>
+            </div>
+            <div class="place-result-shell">
+              <div class="place-result-empty" id="play-place-empty">
+                <div>
+                  <strong>选一个动作</strong>
+                  <p>操作结果会直接留在这里，不再丢进下面那个大白框。</p>
+                </div>
+              </div>
+              <pre class="play-result place-result-live hidden" id="play-place-result"></pre>
+            </div>
+          </section>
+        </div>
+
+        <div class="place-context" id="play-place-context">
+          <div class="place-context-block">
+            <div class="place-context-title">你现在</div>
+            <div id="play-place-now"></div>
+          </div>
+          <div class="place-context-block">
+            <div class="place-context-title">地点备忘</div>
+            <div id="play-place-memo"></div>
+          </div>
+        </div>
+
         <div id="play-lounge" class="play-lounge hidden">
           <span id="lounge-status-badge" class="hidden"></span>
           <span id="lounge-live-dot" class="hidden"></span>
@@ -262,8 +308,6 @@
             <div id="play-star-tip-result" class="result hidden"></div>
           </div>
         </div>
-
-        <pre class="play-result" id="play-place-result"></pre>
       </section>
     </div>
   </main>
