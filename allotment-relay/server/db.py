@@ -1163,6 +1163,8 @@ async def init_db() -> None:
             "ALTER TABLE parcels ADD COLUMN ready_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN cabinet_extra INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN satchel_stack_extra INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN clinic_dove_day INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN clinic_dove_affinity INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN worn_title TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE stewards ADD COLUMN reward_level INTEGER NOT NULL DEFAULT 0",
             """

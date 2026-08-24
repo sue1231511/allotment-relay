@@ -332,7 +332,9 @@ async def pit_ops(
                     if ailment == "pit_trauma"
                     else "人还能站，只是整个世界像慢了半拍。"
                 )
-                lines.append(f"\n{meta_line}\n（{ailment} — undertide_ops medic {ailment}）")
+                lines.append(
+                    f"\n{meta_line}\n（{ailment} — visit_ops clinic treat 或 undertide_ops medic {ailment}）"
+                )
             elif random.random() < 0.35:
                 from . import health
                 await health.inflict(conn, s["id"], random.choice(["sprain", "backache"]), source="pit")

@@ -374,10 +374,13 @@ def clinic_hint(ailments: list[dict[str, Any]]) -> str | None:
 def _pit_refuse() -> str:
     return (
         "桥桥看了一眼伤势，又看了你一眼。\n"
-        "「这不是摔的。哪儿弄的，回哪儿治。」\n"
-        "「别把地下那套账算我头上。」\n"
-        "（深坑专属重伤 — undertide_ops medic 处理）"
+        "「深坑那套伤地上也能治——visit_ops clinic treat 斗场震伤 / 深坑重创，"
+        "或回地下 undertide_ops medic。」"
     )
+
+
+def _bill_cost(base: int, *, cost_mult: float = 1.0, cost_add: int = 0) -> int:
+    return max(1, int(round(base * cost_mult)) + int(cost_add))
 
 
 async def _pay_and_heal(
@@ -401,18 +404,35 @@ async def _apply_chronic_course(
     conn: aiosqlite.Connection,
     steward_id: int,
     ailment: dict[str, Any],
+    *,
+    cost_mult: float = 1.0,
+    cost_add: int = 0,
+    wait_halve: bool = False,
+    free: bool = False,
 ) -> str:
     key = ailment["key"]
     meta = AILMENTS[key]
     wait = int(ailment.get("treat_wait") or 0)
+    if wait_halve and wait > 0:
+        now = db.now()
+        last = int(ailment.get("last_treat_at") or 0)
+        half_ready = last + int(config.INFECTION_TREAT_COOLDOWN) // 2
+        if now >= half_ready:
+            wait = 0
     if wait > 0:
         raise ValueError(
             f"桥桥大夫摇头：「菌还压着，{fmt_wait(wait)}后再来。"
             "一次清不干净，别连号。」"
         )
-    cost = meta["cost"]
+    cost = 0 if free else _bill_cost(meta["cost"], cost_mult=cost_mult, cost_add=cost_add)
     heal = meta.get("health_restore", 8)
-    await _pay_and_heal(conn, steward_id, cost, heal)
+    if not free:
+        await _pay_and_heal(conn, steward_id, cost, heal)
+    else:
+        await conn.execute(
+            "UPDATE stewards SET health=MIN(100, health+?) WHERE id=?",
+            (heal, steward_id),
+        )
     now = db.now()
     stage = int(ailment.get("stage") or 1)
     name = f"{meta['emoji']}{meta['name']}"
@@ -422,8 +442,9 @@ async def _apply_chronic_course(
             (steward_id, key),
         )
         return (
-            f"桥桥大夫收 {cost} 票，把{name}余菌压住了（身体 +{heal}）。"
-            "这次算清了——别再生吃。"
+            (f"桥桥大夫把{name}余菌压住了（身体 +{heal}）。" if free else
+             f"桥桥大夫收 {cost} 票，把{name}余菌压住了（身体 +{heal}）。")
+            + "这次算清了——别再生吃。"
         )
     new_stage = stage - 1
     await conn.execute(
@@ -436,9 +457,9 @@ async def _apply_chronic_course(
     )
     left_name = _stage_name(key, new_stage) or f"还剩{new_stage}档"
     return (
-        f"桥桥大夫收 {cost} 票，给{name}压了一档"
-        f"（现为{left_name}，疗程还剩 {new_stage} 次，身体 +{heal}）。"
-        "菌没清干净，隔几小时再来，别指望一次根治。"
+        (f"桥桥大夫给{name}压了一档" if free else f"桥桥大夫收 {cost} 票，给{name}压了一档")
+        + f"（现为{left_name}，疗程还剩 {new_stage} 次，身体 +{heal}）。"
+        + "菌没清干净，隔几小时再来，别指望一次根治。"
     ) + flavor.maybe_suffix(flavor.CLINIC_TREAT_LINES)
 
 
@@ -446,20 +467,27 @@ async def treat_one(
     conn: aiosqlite.Connection,
     steward_id: int,
     ailment_key: str,
+    *,
+    cost_mult: float = 1.0,
+    cost_add: int = 0,
+    allow_pit: bool = False,
 ) -> str:
     resolved = resolve_ailment_key(ailment_key) or ailment_key
     if resolved not in AILMENTS:
         raise ValueError("未知病症，visit_ops clinic 查看")
-    if resolved in PIT_AILMENTS:
+    if resolved in PIT_AILMENTS and not allow_pit:
         raise ValueError(_pit_refuse())
     ailments = await list_ailments(conn, steward_id)
     hit = next((a for a in ailments if a["key"] == resolved), None)
     if not hit:
         raise ValueError(f"你没有 {AILMENTS[resolved]['name']}")
     if hit["chronic"]:
-        return await _apply_chronic_course(conn, steward_id, hit)
+        return await _apply_chronic_course(
+            conn, steward_id, hit,
+            cost_mult=cost_mult, cost_add=cost_add,
+        )
     meta = AILMENTS[resolved]
-    cost = meta["cost"]
+    cost = _bill_cost(meta["cost"], cost_mult=cost_mult, cost_add=cost_add)
     heal = meta.get("health_restore", 12)
     await _pay_and_heal(conn, steward_id, cost, heal)
     await conn.execute(
@@ -472,11 +500,18 @@ async def treat_one(
     ) + flavor.maybe_suffix(flavor.CLINIC_TREAT_LINES)
 
 
-async def treat_all(conn: aiosqlite.Connection, steward_id: int) -> str:
+async def treat_all(
+    conn: aiosqlite.Connection,
+    steward_id: int,
+    *,
+    cost_mult: float = 1.0,
+    cost_add: int = 0,
+    allow_pit: bool = True,
+) -> str:
     ailments = await list_ailments(conn, steward_id)
     if not ailments:
         return "身体倍儿棒——没病别占桥桥大夫的号"
-    simple = [a for a in ailments if not a["chronic"] and not a["pit"]]
+    simple = [a for a in ailments if not a["chronic"] and (allow_pit or not a["pit"])]
     chronic = [a for a in ailments if a["chronic"]]
     pit = [a for a in ailments if a["pit"]]
     course_target = None
@@ -496,13 +531,17 @@ async def treat_all(conn: aiosqlite.Connection, steward_id: int) -> str:
                 f"{fmt_wait(wait)}后再来。一次清不干净，别连号。」"
             )
         if pit:
-            raise ValueError(_pit_refuse())
+            raise ValueError(
+                "深坑伤要单独挂号：visit_ops clinic treat 斗场震伤 / 深坑重创"
+            )
         return "身体倍儿棒——没病别占桥桥大夫的号"
 
-    cost = sum(a["cost"] for a in simple)
+    cost = sum(_bill_cost(AILMENTS[a["key"]]["cost"], cost_mult=cost_mult, cost_add=0) for a in simple)
+    if cost_add and simple:
+        cost += cost_add * len(simple)
     heal_total = sum(AILMENTS[a["key"]].get("health_restore", 12) for a in simple)
     if course_target is not None:
-        cost += course_target["cost"]
+        cost += _bill_cost(course_target["cost"], cost_mult=cost_mult, cost_add=cost_add)
         heal_total += AILMENTS[course_target["key"]].get("health_restore", 8)
     await _pay_and_heal(conn, steward_id, cost, heal_total)
 
@@ -551,7 +590,7 @@ async def treat_all(conn: aiosqlite.Connection, steward_id: int) -> str:
             "打包清不掉。"
         )
     if pit:
-        extra += " 深坑伤桥桥不接。"
+        extra += " 深坑伤请单独 treat 斗场震伤 / 深坑重创。"
 
     cleared = "、".join(names) if names else "（普通伤已空）"
     return (

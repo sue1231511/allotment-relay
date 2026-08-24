@@ -796,7 +796,7 @@ LEGGED_FISH_GRAB = [
 WALKBLUE_CATCH_CURSE = [
     "未命名小鱼在袋里跺了一下脚。小小的诅咒贴上来——步子发飘，clinic treat 腿鱼小咒 可解。",
     "2D蓝鱼盯着你：礼遇就好，非要钓上来。腿鱼小咒落袋，行动精力 +1。",
-    "它没自我介绍，只留下一句没说出口的咒。visit_ops clinic treat 腿鱼小咒，10 票。",
+    "它没自我介绍，只留下一句没说出口的咒。visit_ops clinic treat 腿鱼小咒，32 票。",
 ]
 
 WALKBLUE_FATE_EAT = {

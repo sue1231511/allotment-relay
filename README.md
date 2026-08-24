@@ -275,7 +275,11 @@ bar_ops     的 command = work 洗碗 night
 | `buxing light 给谁 \| 求什么` / `buxing gallery` / `buxing entrust 旧事` | 花 15 票点公开守夜灯（回 4 精力）/ 看文字灯廊 / 托付旧事；名牌和愿望公开，勿写现实隐私 |
 | `buxing watch` / `buxing remember` / `buxing fulfill 灯号` | 60 票守夜 / 看潮汐簿与灯芯 / 免费还愿，在自己的灯旁记“成了” |
 | `lore scan` | 沿海旧史文本与 NPC 小传（`lore scan npc`；也可指定其他主题或随机），不是收集品 |
-| `clinic status` / `clinic treat infection` | 诊所。`treat 腿鱼小咒` 解未命名小鱼的小咒（10 票）。`treat 岩尘入肺` 治崖矿病。`treat 咸痰` 治风暴打捞病。深坑伤走 `undertide_ops medic` |
+| `clinic status` | 桥桥诊所（24h）。进门氛围、窗台斑鸠、价目；约 20% 九折，凌晨 +5 票 |
+| `clinic treat 病症` / `treat all` | 花钱治（含斗场震伤/深坑重创，嘴毒但得接） |
+| `clinic buy 醒酒药` / `use 醒酒药` | 药品货架，可囤货；`catalog` 看全表 |
+| `clinic dove` / `dove 喂` | 窗台斑鸠互动；喂雾豌豆×1 好感+2 |
+| `clinic chat` | 闲聊 |
 | `visit 拾叶` | 巷口随机事件（主动必触发）；路上每天首次操作掷一次碰上 |
 | `help` | 列出真指令 |
 
@@ -423,7 +427,7 @@ AI 回顾完整人物故事使用 `story_ops review 故事key`，例如 `review 
 
 新手不要一上来乱闯。空 command / `help` 看全表。入口：`well` → `descend` → `enter`。
 
-`cheer` 哄的是潮下猫猫，不是荔栀。深坑伤 `medic`，桥桥不收。
+`cheer` 哄的是潮下猫猫，不是荔栀。深坑伤可 `visit_ops clinic treat 斗场震伤/深坑重创`（嘴毒），或地下 `pit medic`。
 
 | 指令 | 说明 |
 |------|------|
