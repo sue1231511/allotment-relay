@@ -194,13 +194,24 @@ async def snapshot(api_key: str) -> dict[str, Any]:
     enrolled = bool(s and s.get("enrolled"))
     dash = None
     seeds: list[dict[str, Any]] = []
+    neighbors: dict[str, Any] = {"total": 0, "listed": 0, "online": 0, "window_min": 0, "people": []}
     if enrolled:
         dash = await steward_dashboard.fetch_dashboard(key)
         seeds = seed_options(dash.get("stock") or [])
+        from . import multi
+        roster = await multi.neighbor_roster(s, online_only=False)
+        neighbors = {
+            "total": roster["total"],
+            "listed": roster["listed"],
+            "online": roster["online"],
+            "window_min": roster["window_min"],
+            "people": roster["people"],
+        }
     return {
         "enrolled": enrolled,
         "dashboard": dash,
         "seeds": seeds,
+        "neighbors": neighbors,
         "places": PLACES,
         "climate": climate_bits(),
     }

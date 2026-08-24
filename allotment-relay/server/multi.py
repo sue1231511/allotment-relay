@@ -39,11 +39,14 @@ async def _ripe_outdoor_count(conn: aiosqlite.Connection, steward_id: int) -> in
     return sum(1 for r in rows if farming.plot_ready(dict(r)))
 
 
-async def list_neighbors(steward: dict[str, Any], *, online_only: bool = False) -> str:
-    """在线管理员 + 邻居名册。peer / 偷菜 / assist 都要先有名字。"""
+async def neighbor_roster(steward: dict[str, Any], *, online_only: bool = False) -> dict[str, Any]:
+    """全岛管理员人数 + 邻居名册（不含自己）。peer / 偷菜 / assist 都要先有名字。"""
     cut = db.now() - ONLINE_WINDOW
     async with db.connect() as conn:
         conn.row_factory = aiosqlite.Row
+        total = int((await (await conn.execute(
+            "SELECT COUNT(*) FROM stewards WHERE enrolled=1"
+        )).fetchone())[0])
         rows = await (await conn.execute(
             """
             SELECT id, name, badge, last_active_at, COALESCE(xp, 0) AS xp,
@@ -59,9 +62,36 @@ async def list_neighbors(steward: dict[str, Any], *, online_only: bool = False) 
         peers = [ranks_mod.attach_level(p) for p in peers]
         for p in peers:
             p["ripe"] = await _ripe_outdoor_count(conn, p["id"])
-            p["home"] = p["last_active_at"] > cut
+            p["home"] = bool(p["last_active_at"] and p["last_active_at"] > cut)
 
-    if not peers:
+    if online_only:
+        peers = [p for p in peers if p["home"]]
+    people = [
+        {
+            "name": p["name"],
+            "title": p.get("display_title") or p.get("title") or p["badge"],
+            "ripe": int(p.get("ripe") or 0),
+            "home": bool(p.get("home")),
+            "ago": _ago(p["last_active_at"]),
+        }
+        for p in peers
+    ]
+    return {
+        "total": total,
+        "listed": len(people),
+        "online": sum(1 for p in people if p["home"]),
+        "window_min": ONLINE_WINDOW // 60,
+        "people": people,
+        "_peers": peers,
+    }
+
+
+async def list_neighbors(steward: dict[str, Any], *, online_only: bool = False) -> str:
+    """在线管理员 + 邻居名册。peer / 偷菜 / assist 都要先有名字。"""
+    roster = await neighbor_roster(steward, online_only=online_only)
+    peers = roster["_peers"]
+
+    if not peers and not online_only:
         return "联盟里还没有其他管理员。有人 enroll 之后才能串门、偷菜、assist。"
 
     def _line(p: dict[str, Any]) -> str:
@@ -75,7 +105,7 @@ async def list_neighbors(steward: dict[str, Any], *, online_only: bool = False) 
     away = [p for p in peers if not p["home"]]
     lines: list[str] = []
     if online_only:
-        lines.append(f"在档口（{ONLINE_WINDOW // 60} 分钟内有操作）:")
+        lines.append(f"在档口（{roster['window_min']} 分钟内有操作）:")
         if home:
             lines.extend(_line(p) for p in home)
         else:
@@ -83,7 +113,10 @@ async def list_neighbors(steward: dict[str, Any], *, online_only: bool = False) 
             lines.append("全员邻居：alliance_ops 邻居  或  steward_ops 邻居")
         return "\n".join(lines)
 
-    lines.append(f"邻居 {len(peers)} 人（{ONLINE_WINDOW // 60} 分钟内算在档口）:")
+    lines.append(
+        f"邻居 {roster['listed']} 人 / 全岛 {roster['total']} 位管理员"
+        f"（{roster['window_min']} 分钟内算在档口）:"
+    )
     if home:
         lines.append("")
         lines.append("在档口:")

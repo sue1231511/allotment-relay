@@ -70,9 +70,14 @@ class KeyRequest(BaseModel):
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    from . import promo
+    from . import db, promo
+    stats = await db.public_stats()
     return templates.TemplateResponse(
-        request, "index.html", {"active": None, "places": promo.PLACES}
+        request, "index.html", {
+            "active": None,
+            "places": promo.PLACES,
+            "steward_count": stats.get("stewards") or 0,
+        }
     )
 
 

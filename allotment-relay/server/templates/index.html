@@ -42,6 +42,7 @@
     <section class="island-map" aria-label="岛上地点">
       <div class="section-kicker">Island</div>
       <h2>岛上</h2>
+      <p class="muted">已经有 {{ steward_count }} 位管理员。名册在上手页。</p>
       <div class="island-grid">
         {% for p in places %}
         <a class="card island-card" href="{{ p.path }}">

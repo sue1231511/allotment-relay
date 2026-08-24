@@ -4,6 +4,7 @@ const state = {
   dash: null,
   seeds: [],
   places: [],
+  neighbors: { total: 0, listed: 0, online: 0, people: [] },
   climate: null,
   placeId: '',
   eaterySnap: { shops: [] },
@@ -47,6 +48,7 @@ function applySnap(data, text) {
   state.dash = data.dashboard || null;
   state.seeds = data.seeds || [];
   state.places = data.places || [];
+  state.neighbors = data.neighbors || { total: 0, listed: 0, online: 0, people: [] };
   state.climate = data.climate || null;
   if (text) setLog(text);
   if (!state.enrolled) {
@@ -91,6 +93,7 @@ function renderAll() {
   show(dutyEl, Boolean(duty && (dutyUrgent(d) || duty.includes('内须'))));
   renderPlots();
   renderPlaces();
+  renderNeighbors();
   renderTide();
   renderTote();
   renderGifts();
@@ -144,6 +147,31 @@ function renderPlaces() {
       <button type="button" class="btn primary play-go" data-place="${esc(pl.id)}">前往</button>
     </article>
   `).join('');
+}
+
+function renderNeighbors() {
+  const n = state.neighbors || {};
+  const people = n.people || [];
+  const total = n.total || 0;
+  const online = n.online || 0;
+  $('play-neighbors-count').textContent = online
+    ? `${total} 人 · 档口 ${online}`
+    : `${total} 人`;
+  if (!people.length) {
+    $('play-neighbors-list').innerHTML = total <= 1
+      ? '<p class="muted">岛上暂时就你一位。有人 enroll 之后会出现在这儿。</p>'
+      : '<p class="muted">名册是空的。</p>';
+    return;
+  }
+  $('play-neighbors-list').innerHTML = people.map((p) => {
+    const ripe = p.ripe ? `熟地 ${p.ripe}` : '暂无熟地';
+    const where = p.home ? '在档口' : (p.ago || '');
+    const cmd = JSON.stringify({ tool: 'steward_ops', command: `peer ${p.name}` });
+    return `<button type="button" class="play-neighbor" data-act='${cmd}'>
+      <strong>${esc(p.name)}</strong>
+      <span>${esc(p.title || '')} · ${esc(where)} · ${esc(ripe)}</span>
+    </button>`;
+  }).join('');
 }
 
 function renderTide() {
@@ -314,6 +342,10 @@ function consumeGo() {
   if (!go) return;
   goApplied = true;
   if (go === 'me') openMe();
+  else if (go === 'neighbors') {
+    const el = $('play-neighbors');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
   else renderPlace(go);
 }
 

@@ -49,6 +49,15 @@ async def _test_play_api() -> None:
     assert enrolled["enrolled"] is True, enrolled
     assert enrolled["dashboard"]["name"] == "岸边的人", enrolled
     assert "欢迎" in (enrolled.get("text") or ""), enrolled
+    assert enrolled["neighbors"]["total"] == 1, enrolled["neighbors"]
+    assert enrolled["neighbors"]["people"] == [], enrolled["neighbors"]
+
+    other = await db.create_api_key("play-b@example.com")
+    await play_mod.run_play(other, "steward_ops", "enroll 对岸的人")
+    seen = await play_mod.run_play(key, "", "")
+    assert seen["neighbors"]["total"] == 2, seen["neighbors"]
+    names = [p["name"] for p in seen["neighbors"]["people"]]
+    assert "对岸的人" in names, seen["neighbors"]
 
     sown = await play_mod.run_play(key, "plot_ops", "sow 1 甘蓝")
     assert sown["ok"] is True, sown
