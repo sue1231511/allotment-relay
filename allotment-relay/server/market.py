@@ -264,7 +264,8 @@ async def public_snapshot() -> dict[str, Any]:
         conn.row_factory = aiosqlite.Row
         listings = await (await conn.execute(
             """
-            SELECT l.id, l.item, l.quantity, l.price, l.suggested, d.name AS seller
+            SELECT l.id, l.item, l.quantity, l.price, l.suggested, l.note, l.created_at,
+                   d.name AS seller
             FROM market_listings l
             JOIN stewards d ON d.id = l.seller_id
             WHERE l.buyer_id IS NULL
@@ -276,7 +277,7 @@ async def public_snapshot() -> dict[str, Any]:
         )).fetchone())[0]
         swaps = await (await conn.execute(
             """
-            SELECT l.item, l.quantity, d.name AS from_name
+            SELECT l.item, l.quantity, l.note, l.created_at, d.name AS from_name
             FROM swap_lots l
             JOIN stewards d ON d.id = l.depositor_id
             WHERE l.claimed_by IS NULL
@@ -288,13 +289,15 @@ async def public_snapshot() -> dict[str, Any]:
         )).fetchone())[0]
         feed = await (await conn.execute(
             """
-            SELECT c.text, c.created_at, a.name AS actor
+            SELECT c.text, c.created_at, c.action, a.name AS actor
             FROM chronicle c
             LEFT JOIN stewards a ON a.id = c.actor_id
             WHERE c.action IN ('market', 'gift', 'swap')
             ORDER BY c.created_at DESC LIMIT 16
             """
         )).fetchall()
+    now = db.now()
+    phase = world.current_day_phase()
     rows = []
     for r in listings:
         sug = int(r["suggested"] or 0)
@@ -303,6 +306,13 @@ async def public_snapshot() -> dict[str, Any]:
             tag = "划算"
         elif sug and r["price"] >= int(sug * 1.3):
             tag = "偏贵"
+        note = (r["note"] or "").strip()
+        if not note and tag == "偏贵":
+            note = "价偏高。买之前先想想是谁疯了。"
+        elif not note and tag == "划算":
+            note = "比参考价便宜。手慢无。"
+        elif not note:
+            note = "卖家没写废话，这点挺珍贵。"
         rows.append({
             "id": r["id"],
             "seller": r["seller"],
@@ -310,9 +320,20 @@ async def public_snapshot() -> dict[str, Any]:
             "qty": int(r["quantity"]),
             "price": int(r["price"]),
             "tag": tag,
+            "note": note,
+            "created_at": int(r["created_at"] or 0),
+            "age_sec": max(0, now - int(r["created_at"] or now)),
         })
+    clock_lines = {
+        "day": "白天人多。摊布还没收，谈价声从一头传到另一头。",
+        "dusk": "暮色压下来。有人开始收布，有人还在加价。",
+        "night": "晚潮已经退了。人少了一半，剩下的摊主一边收布一边聊天。",
+    }
     return {
         "climate": world.climate_line(),
+        "phase": phase,
+        "phase_label": world.day_phase_label(phase),
+        "clock_line": clock_lines.get(phase, clock_lines["day"]),
         "open": int(open_n or 0),
         "swaps": int(swap_n or 0),
         "listings": rows,
@@ -321,18 +342,21 @@ async def public_snapshot() -> dict[str, Any]:
                 "from": r["from_name"],
                 "item": item_label(r["item"]),
                 "qty": int(r["quantity"]),
+                "note": (r["note"] or "").strip() or "谁要谁拿",
+                "created_at": int(r["created_at"] or 0),
             }
             for r in swaps
         ],
         "hints": [
             "AI 用 tote_ops market list / market sell 甘蓝 2 8",
             "交换台 tote_ops swap list 白送，领取收手续费",
-            "人类只看热闹，买货还是让管家去点",
+            "人类只看热闹，买货去上手页",
         ],
         "feed": [
             {
                 "text": r["text"],
                 "actor": r["actor"] or "系统",
+                "action": r["action"] or "market",
                 "created_at": r["created_at"],
             }
             for r in feed

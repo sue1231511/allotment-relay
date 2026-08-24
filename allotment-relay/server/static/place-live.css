@@ -1,4 +1,4 @@
-/* 滨海酒吧 / 海边 — 围观实况页（点单与下海仍回上手页） */
+/* 滨海酒吧 / 海边 / 玩家集市 — 围观实况页（动手仍回上手页） */
 
 .place-live main {
   width: min(1180px, calc(100% - 48px));
@@ -336,4 +336,369 @@
     grid-template-columns: 72px 1fr;
     gap: 12px;
   }
+}
+
+/* ── 玩家集市 ── */
+.market-head {
+  position: relative;
+  overflow: hidden;
+  border-radius: 30px;
+  background: #7d826e;
+  color: #f7f3e8;
+  min-height: 290px;
+  box-shadow: var(--shadow);
+  display: grid;
+  grid-template-columns: 1.1fr .9fr;
+}
+
+.market-head::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, .05), transparent 36%),
+    linear-gradient(180deg, transparent 62%, rgba(29, 45, 49, .14));
+}
+
+.market-head .awning {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 38px;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  z-index: 3;
+}
+
+.market-head .awning span:nth-child(odd) { background: #d9c9a7; }
+.market-head .awning span:nth-child(even) { background: #68756c; }
+
+.market-head .hero-copy {
+  padding: 76px 46px 38px;
+  position: relative;
+  z-index: 2;
+  align-self: end;
+}
+
+.market-head .kicker {
+  font-size: 10px;
+  letter-spacing: .21em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .68);
+}
+
+.market-head h1 {
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 48px;
+  font-weight: 500;
+  margin: 9px 0 14px;
+  color: #f7f3e8;
+}
+
+.market-head .hero-copy p {
+  margin: 0;
+  max-width: 590px;
+  color: rgba(255, 255, 255, .78);
+  line-height: 1.8;
+  font-size: 14px;
+}
+
+.market-head .hero-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 22px;
+}
+
+.market-head .hero-tag {
+  font-size: 11px;
+  padding: 7px 9px;
+  border: 1px solid rgba(255, 255, 255, .28);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .07);
+}
+
+.market-signs {
+  padding: 76px 36px 34px 8px;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  align-items: flex-start;
+  position: relative;
+  z-index: 2;
+}
+
+.market-signs .sign {
+  width: 120px;
+  min-height: 128px;
+  background: #e9dfc6;
+  color: #314045;
+  border-radius: 7px 7px 18px 7px;
+  padding: 18px 14px 14px;
+  box-shadow: 0 13px 25px rgba(31, 47, 52, .12);
+  transform: rotate(-2deg);
+  border: 1px solid rgba(38, 52, 58, .08);
+}
+
+.market-signs .sign:nth-child(2) {
+  transform: rotate(2deg);
+  margin-top: 18px;
+  background: #f3ead7;
+}
+
+.market-signs .sign small {
+  font-size: 9px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: #7d8887;
+}
+
+.market-signs .sign strong {
+  display: block;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 30px;
+  font-weight: 500;
+  margin-top: 8px;
+}
+
+.market-signs .sign span {
+  display: block;
+  font-size: 10px;
+  color: #7f8988;
+  margin-top: 5px;
+}
+
+.notice-strip {
+  margin-top: 14px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  overflow: auto;
+  scrollbar-width: none;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 10px 0;
+}
+
+.notice-strip::-webkit-scrollbar { display: none; }
+
+.notice-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #889c87;
+  flex: 0 0 auto;
+}
+
+.notice-text {
+  font-size: 11px;
+  color: #7d8989;
+  white-space: nowrap;
+}
+
+.notice-sep {
+  width: 1px;
+  height: 14px;
+  background: var(--line);
+  flex: 0 0 auto;
+}
+
+.market-layout {
+  margin-top: 28px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(300px, .7fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.stall-street {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.stall {
+  position: relative;
+  min-height: 166px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(249, 247, 239, .82);
+  padding: 18px 18px 16px;
+  overflow: hidden;
+}
+
+.stall::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 8px;
+  background: repeating-linear-gradient(90deg, #918f79 0 32px, #d6c7a4 32px 64px);
+}
+
+.stall:nth-child(2n)::before,
+.stall:nth-child(5n)::before {
+  background: repeating-linear-gradient(90deg, #6f7c76 0 32px, #c4b58f 32px 64px);
+}
+
+.stall-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 5px;
+}
+
+.stall h3 {
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-weight: 500;
+  font-size: 19px;
+  margin: 0;
+}
+
+.stall .price {
+  white-space: nowrap;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 17px;
+  color: #6f776c;
+}
+
+.stall-meta {
+  font-size: 10px;
+  color: #8a9594;
+  margin-top: 8px;
+}
+
+.stall-note {
+  font-size: 11px;
+  line-height: 1.65;
+  color: #768283;
+  margin-top: 15px;
+}
+
+.stall-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 13px;
+}
+
+.stall .seller {
+  font-size: 11px;
+  color: #5d7073;
+}
+
+.paper-pin {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #9b765e;
+  box-shadow: 0 0 0 3px rgba(155, 118, 94, .12);
+}
+
+.side-stack { display: grid; gap: 14px; }
+
+.exchange {
+  background: #ddd7c8;
+  border-radius: 24px;
+  padding: 22px;
+  border: 1px solid rgba(38, 52, 58, .07);
+}
+
+.exchange h3 {
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 21px;
+  font-weight: 500;
+  margin: 5px 0 14px;
+}
+
+.exchange-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  padding: 13px 0;
+  border-top: 1px solid rgba(38, 52, 58, .10);
+}
+
+.exchange-row strong { font-size: 13px; }
+
+.exchange-row small {
+  display: block;
+  color: #7e8988;
+  font-size: 10px;
+  margin-top: 4px;
+}
+
+.exchange .free {
+  font-size: 11px;
+  border: 1px solid rgba(38, 52, 58, .12);
+  border-radius: 999px;
+  padding: 6px 8px;
+  height: max-content;
+  white-space: nowrap;
+}
+
+.market-clock {
+  background: #24353a;
+  color: #f5f1e6;
+  border-radius: 24px;
+  padding: 22px;
+}
+
+.market-clock .mini-kicker { color: #90a7a9; }
+
+.market-clock strong {
+  display: block;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 28px;
+  font-weight: 500;
+  margin: 7px 0;
+}
+
+.market-clock p {
+  margin: 0;
+  color: #9dafb0;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.place-live .mini-kicker {
+  font-size: 9px;
+  letter-spacing: .17em;
+  color: #8a9695;
+  text-transform: uppercase;
+}
+
+.place-live .tape {
+  display: inline-block;
+  margin-left: 7px;
+  font-size: 9px;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: #e7e0cf;
+  color: #7b8178;
+}
+
+@media (max-width: 800px) {
+  .market-head {
+    grid-template-columns: 1fr;
+    min-height: 410px;
+  }
+
+  .market-head .hero-copy { padding: 76px 26px 28px; }
+
+  .market-signs {
+    padding: 0 24px 26px;
+    justify-content: flex-start;
+  }
+
+  .market-signs .sign {
+    width: 106px;
+    min-height: 110px;
+  }
+
+  .market-layout { grid-template-columns: 1fr; }
+
+  .stall-street { grid-template-columns: 1fr; }
 }

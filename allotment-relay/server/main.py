@@ -126,7 +126,8 @@ async def huts_page(request: Request):
 
 @app.get("/market", response_class=HTMLResponse)
 async def market_page(request: Request):
-    return _place_page(request, "market")
+    """玩家集市围观实况；摆摊买货仍回上手页。"""
+    return _html(request, "market.html", active="market")
 
 
 @app.get("/board")

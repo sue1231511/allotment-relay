@@ -3,43 +3,100 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>集市围观 · 潮汐岛</title>
+  <title>玩家集市 · 潮汐岛</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/place-live.css">
 </head>
-<body>
+<body class="place-live market-page">
   {% include "partials/nav.html" %}
+
   <main>
-    <header class="page-head">
-      <div>
-        <div class="eyebrow">集市围观</div>
-        <h1>玩家集市</h1>
-        <p class="tagline">
-          挂单、交换台。看热闹。要自己摆摊去上手页 <a href="/play">/play</a>（<code>tote_ops market</code>）。
-          堂食也在上手页，买货回家自己吃走这里看。
-        </p>
+    <div class="pl-crumb">潮汐岛 / 岛上 / 玩家集市</div>
+
+    <section class="market-head" aria-label="玩家集市">
+      <div class="awning" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span><span></span>
       </div>
-    </header>
-
-    <section class="stats-shell" id="market-stats">
-      <div class="stats-primary" id="market-primary"></div>
+      <div class="hero-copy">
+        <div class="kicker">Market · stall street</div>
+        <h1>玩家集市</h1>
+        <p>这里不是后台交易表。它应该像一条摊位街：谁刚摆上东西，谁在白送，谁刚成交，一眼就能看懂。</p>
+        <div class="hero-meta">
+          <span class="hero-tag">挂单 · 交换</span>
+          <span class="hero-tag">只读围观</span>
+          <span class="hero-tag">操作去上手页</span>
+        </div>
+      </div>
+      <div class="market-signs">
+        <div class="sign">
+          <small>OPEN STALLS</small>
+          <strong id="openCount">—</strong>
+          <span>在售挂单</span>
+        </div>
+        <div class="sign">
+          <small>SWAP TABLE</small>
+          <strong id="swapCount">—</strong>
+          <span>交换台</span>
+        </div>
+      </div>
     </section>
-    <p class="soft-note" id="market-climate">在问海况…</p>
-    <p class="soft-note" id="market-hints"></p>
 
-    <div class="board-strip board-grid board-grid-mini">
-      <section class="panel">
-        <div class="panel-head"><h2>在售</h2><span class="tag">STALL</span></div>
-        <ol id="market-listings" class="board-list"></ol>
-      </section>
-      <section class="panel feed">
-        <div class="panel-head"><h2>成交纪事</h2><span class="tag">LIVE</span></div>
-        <div id="market-feed"></div>
-      </section>
+    <div class="notice-strip" id="notice-strip">
+      <span class="notice-dot"></span>
+      <span class="notice-text" id="climate">在问摊况…</span>
+      <span class="notice-sep"></span>
+      <span class="notice-text" id="hints"></span>
     </div>
+
+    <div class="market-layout">
+      <section>
+        <div class="pl-section-head">
+          <div>
+            <div class="mini-kicker">STALL STREET</div>
+            <h2>今天的摊</h2>
+          </div>
+          <div class="grow"></div>
+          <a class="subtle-link" href="/play?go=market">去上手页摆摊 →</a>
+        </div>
+        <div class="stall-street" id="market-listings">
+          <p class="pl-empty">在看摊位…</p>
+        </div>
+      </section>
+
+      <aside class="side-stack">
+        <section class="exchange">
+          <div class="mini-kicker">SWAP TABLE</div>
+          <h3>交换台</h3>
+          <div id="swap-table">
+            <p class="pl-empty">交换台空着。</p>
+          </div>
+        </section>
+
+        <section class="market-clock">
+          <div class="mini-kicker">MARKET NOW</div>
+          <strong id="market-clock-time">—:—</strong>
+          <p id="market-clock-line">在听风声…</p>
+        </section>
+      </aside>
+    </div>
+
+    <section class="pl-section feed-wrap">
+      <div class="pl-section-head">
+        <div>
+          <div class="mini-kicker">LIVE TAPE</div>
+          <h2>成交纪事</h2>
+        </div>
+      </div>
+      <div class="pl-feed" id="market-feed">
+        <p class="pl-empty">还没人成交。</p>
+      </div>
+    </section>
   </main>
+
   <script src="/static/market.js"></script>
 </body>
 </html>
