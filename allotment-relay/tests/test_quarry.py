@@ -267,6 +267,9 @@ async def test_public_snapshot() -> None:
     snap = await quarry.public_snapshot()
     assert "climate" in snap and "hints" in snap
     assert "hews_today" in snap and "feed" in snap
+    assert "chips" in snap and len(snap["chips"]) >= 1
+    for v in snap.get("veins") or []:
+        assert "note" in v
 
 
 async def _expect_error(coro) -> str:

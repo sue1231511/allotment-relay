@@ -171,6 +171,9 @@ def test_mcp_descriptions() -> None:
     assert "买镐" in q_blob
     assert "mine_ops" in q_blob
     assert "tide_ops dig" in q_blob or "赶海" in q_blob
+    assert "/quarry" in q_blob
+    assert "围观" in q_blob
+    assert "地点海报" not in q_blob
 
     cr = mcp._tool_manager.get_tool("craft_ops")
     c_blob = f"{cr.description}\n{(cr.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -369,6 +372,8 @@ def test_readme_workflow_rules() -> None:
     assert "craft_ops" in readme
     assert "/workshop" in readme
     assert "盐风崖" in readme
+    assert "/quarry" in readme
+    assert "围观" in readme.split("/quarry", 1)[1][:80]
     index_html = (root / "allotment-relay/server/templates/index.html").read_text(encoding="utf-8")
     place_html = (root / "allotment-relay/server/templates/place.html").read_text(encoding="utf-8")
     promo = (root / "allotment-relay/server/promo.py").read_text(encoding="utf-8")
@@ -509,6 +514,7 @@ def test_patron_pages_share_steward_key() -> None:
     assert 'huts.html"' in main_py
     assert 'star.html"' in main_py
     assert 'allotments.html"' in main_py
+    assert 'quarry.html"' in main_py
     lounge_html = (root / "server/templates/lounge.html").read_text(encoding="utf-8")
     assert "/static/site-key.js" in lounge_html
     assert "lounge-page" in lounge_html
@@ -523,6 +529,9 @@ def test_patron_pages_share_steward_key() -> None:
     star_css = (root / "server/static/star.css").read_text(encoding="utf-8")
     allo_js = (root / "server/static/allotments.js").read_text(encoding="utf-8")
     allo_css = (root / "server/static/allotments.css").read_text(encoding="utf-8")
+    quarry_html = (root / "server/templates/quarry.html").read_text(encoding="utf-8")
+    quarry_js = (root / "server/static/quarry.js").read_text(encoding="utf-8")
+    quarry_css = (root / "server/static/quarry.css").read_text(encoding="utf-8")
     nav = (root / "server/templates/partials/nav.html").read_text(encoding="utf-8")
     assert "/api/public/bar" in bar_js
     assert "/api/public/tide" in tide_js
@@ -532,6 +541,7 @@ def test_patron_pages_share_steward_key() -> None:
     assert "/api/public/huts" in huts_js
     assert "/api/public/star" in star_js
     assert "/api/public/allotments" in allo_js
+    assert "/api/public/quarry" in quarry_js
     assert "/api/public/stats" in allo_js
     assert "place-live.css" in bar_html
     assert "place-live.css" in tide_html
@@ -541,6 +551,8 @@ def test_patron_pages_share_steward_key() -> None:
     assert "huts.css" in huts_html
     assert "star.css" in star_html
     assert "allotments.css" in allo_html
+    assert "quarry.css" in quarry_html
+    assert "/static/site-key.js" not in quarry_html
     assert "ranking-stage" in board_html
     assert "dual-board" in board_html
     assert "ticketsBoard" in board_html
@@ -567,6 +579,11 @@ def test_patron_pages_share_steward_key() -> None:
     assert "allo-detail" in allo_html
     assert "allo-node" in allo_js
     assert ".allo-stage" in allo_css
+    assert "q-hero" in quarry_html
+    assert "quarry-veins" in quarry_html
+    assert "quarry-feed" in quarry_html
+    assert "q-vein" in quarry_js
+    assert ".q-hero" in quarry_css
     assert 'href="/board"' in nav
     assert 'href="/huts"' in nav
     assert 'href="/star"' in nav
@@ -590,6 +607,7 @@ def test_patron_pages_share_steward_key() -> None:
     assert "/play?go=eatery" in eatery_html
     assert "/play?go=hut" in huts_html
     assert "/play?go=star" in star_html
+    assert "/play?go=quarry" in quarry_html
     assert 'href="/play"' in allo_html
     assert "上手页" in site_key
 

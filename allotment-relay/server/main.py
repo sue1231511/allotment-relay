@@ -106,7 +106,8 @@ async def allotments_page(request: Request):
 
 @app.get("/quarry", response_class=HTMLResponse)
 async def quarry_page(request: Request):
-    return _place_page(request, "quarry")
+    """盐风崖围观实况；挥镐仍回上手页。"""
+    return _html(request, "quarry.html", active="quarry")
 
 
 @app.get("/workshop", response_class=HTMLResponse)

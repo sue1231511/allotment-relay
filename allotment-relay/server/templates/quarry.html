@@ -6,40 +6,48 @@
   <title>盐风崖 · 潮汐岛</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/quarry.css">
 </head>
-<body>
+<body class="quarry-page">
   {% include "partials/nav.html" %}
-  <main>
-    <header class="page-head">
-      <div>
-        <div class="eyebrow">崖矿围观</div>
+
+  <main class="quarry-shell">
+    <section class="q-hero" aria-label="盐风崖">
+      <div class="q-hero-copy">
+        <div class="q-eyebrow">saltwind cliff · observation</div>
         <h1>盐风崖</h1>
-        <p class="tagline">
-          迎风崖上的矿脉随潮汐显隐。看热闹。要自己挥镐去上手页 <a href="/play">/play</a>（<code>quarry_ops</code>）。
-          比赶海和钓鱼更慢更费：不是赶海沙滩，也不是井下。
-        </p>
+        <p>海风把崖面吹得发白。潮退以后，岩层里的脉才肯露出来一点。看热闹；挥镐去上手页。</p>
+        <div class="q-weather" id="quarry-chips">
+          <span>在问崖况…</span>
+        </div>
       </div>
-    </header>
-
-    <section class="stats-shell" id="quarry-stats">
-      <div class="stats-primary" id="quarry-primary"></div>
+      <div class="q-stats" id="quarry-stats">
+        <div class="q-stat"><small>今日挥镐</small><strong id="quarry-hews">—</strong></div>
+        <div class="q-stat"><small>今日上崖</small><strong id="quarry-miners">—</strong></div>
+        <div class="q-stat"><small>矿坑</small><strong id="quarry-claims">—</strong></div>
+      </div>
     </section>
-    <p class="soft-note" id="quarry-climate">在问海况…</p>
-    <p class="soft-note" id="quarry-hints"></p>
 
-    <div class="board-strip board-grid board-grid-mini">
-      <section class="panel">
-        <div class="panel-head"><h2>此刻露着的脉</h2><span class="tag">VEIN</span></div>
-        <ol id="quarry-veins" class="board-list"></ol>
-      </section>
-      <section class="panel feed">
-        <div class="panel-head"><h2>崖上纪事</h2><span class="tag">LIVE</span></div>
-        <div id="quarry-feed"></div>
-      </section>
-    </div>
+    <section class="q-content">
+      <div class="q-panel">
+        <div class="q-panel-head"><h2>此刻露着的脉</h2><span>VEIN MAP</span></div>
+        <div class="q-strata" id="quarry-veins">
+          <p class="q-empty">在看裂层…</p>
+        </div>
+        <div class="q-action"><a href="/play?go=quarry">去上手页挥镐 →</a></div>
+      </div>
+
+      <aside class="q-panel">
+        <div class="q-panel-head"><h2>崖上纪事</h2><span>LIVE</span></div>
+        <div class="q-feed" id="quarry-feed">
+          <p class="q-empty">还没人挥镐。</p>
+        </div>
+      </aside>
+    </section>
   </main>
+
   <script src="/static/quarry.js"></script>
 </body>
 </html>

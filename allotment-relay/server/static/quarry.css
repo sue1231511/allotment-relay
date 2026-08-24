@@ -1,0 +1,327 @@
+/* 盐风崖 — 围观实况（独立前缀，避开全局地点海报样式） */
+
+.quarry-page {
+  --q-ink: #263033;
+  --q-muted: #6f7b7d;
+  --q-line: #c9cfca;
+  --q-rock: #7b807a;
+  --q-deep: #4f5d60;
+  --q-rust: #9a725d;
+  --q-salt: #faf8f0;
+  color: var(--q-ink);
+  background:
+    radial-gradient(circle at 20% 0%, rgba(255, 255, 255, .8), transparent 28%),
+    linear-gradient(180deg, #dfe5e3 0%, #eef0eb 45%, #e7e4dc 100%);
+  min-height: 100vh;
+}
+
+.quarry-page main.quarry-shell {
+  max-width: 1180px;
+  margin: auto;
+  padding: 28px 24px 60px;
+  width: auto;
+}
+
+.quarry-page .q-hero {
+  min-height: 245px;
+  border-radius: 28px;
+  overflow: hidden;
+  position: relative;
+  background:
+    linear-gradient(90deg, rgba(234, 236, 231, .96) 0%, rgba(234, 236, 231, .78) 40%, rgba(234, 236, 231, .14) 72%),
+    linear-gradient(180deg, #8ea0a0 0%, #657476 42%, #4f5958 43%, #6c6c64 100%);
+  border: 1px solid rgba(69, 78, 76, .18);
+}
+
+.quarry-page .q-hero::before {
+  content: "";
+  position: absolute;
+  right: -4%;
+  bottom: -28px;
+  width: 58%;
+  height: 185px;
+  background:
+    linear-gradient(160deg, transparent 0 18%, #71746d 19% 34%, #5d625e 35% 47%, #7d776b 48% 58%, #555b58 59% 70%, #77766d 71%);
+  clip-path: polygon(3% 92%, 18% 40%, 30% 56%, 42% 19%, 57% 40%, 70% 8%, 87% 32%, 100% 20%, 100% 100%, 0 100%);
+  opacity: .95;
+}
+
+.quarry-page .q-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    115deg,
+    transparent 0 18px,
+    rgba(255, 255, 255, .08) 19px 20px,
+    transparent 21px 34px
+  );
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+.quarry-page .q-hero-copy {
+  position: relative;
+  z-index: 2;
+  padding: 36px 38px;
+  width: min(62%, 680px);
+}
+
+.quarry-page .q-eyebrow {
+  font-size: 12px;
+  letter-spacing: .22em;
+  color: #7f8a89;
+  text-transform: uppercase;
+}
+
+.quarry-page .q-hero h1 {
+  font-family: "Noto Serif SC", "Songti SC", "STSong", serif;
+  font-size: 42px;
+  line-height: 1.1;
+  margin: 10px 0 13px;
+  font-weight: 600;
+  letter-spacing: .05em;
+  color: var(--q-ink);
+}
+
+.quarry-page .q-hero-copy > p {
+  margin: 0;
+  color: #5f696b;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.quarry-page .q-weather {
+  margin-top: 28px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.quarry-page .q-weather span {
+  padding: 8px 11px;
+  border: 1px solid rgba(79, 93, 96, .14);
+  border-radius: 999px;
+  background: rgba(250, 249, 244, .72);
+  font-size: 12px;
+  color: #607072;
+}
+
+.quarry-page .q-stats {
+  position: absolute;
+  right: 24px;
+  top: 24px;
+  z-index: 3;
+  width: 255px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.quarry-page .q-stat {
+  background: rgba(239, 241, 236, .76);
+  backdrop-filter: blur(9px);
+  border: 1px solid rgba(255, 255, 255, .52);
+  border-radius: 16px;
+  padding: 13px 10px;
+  text-align: center;
+}
+
+.quarry-page .q-stat small {
+  display: block;
+  color: #6f7978;
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+
+.quarry-page .q-stat strong {
+  font-size: 22px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--q-ink);
+  font-weight: 600;
+}
+
+.quarry-page .q-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(290px, .75fr);
+  gap: 22px;
+  margin-top: 22px;
+}
+
+.quarry-page .q-panel {
+  background: rgba(247, 246, 240, .8);
+  border: 1px solid rgba(74, 82, 79, .14);
+  border-radius: 24px;
+  padding: 22px;
+  box-shadow: 0 16px 35px rgba(80, 84, 80, .06);
+}
+
+.quarry-page .q-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  margin-bottom: 20px;
+  gap: 12px;
+}
+
+.quarry-page .q-panel h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  font-family: "Noto Serif SC", "Songti SC", "STSong", serif;
+  color: var(--q-ink);
+}
+
+.quarry-page .q-panel-head span {
+  font-size: 11px;
+  letter-spacing: .18em;
+  color: #8a918e;
+}
+
+.quarry-page .q-strata {
+  display: grid;
+  gap: 12px;
+}
+
+.quarry-page .q-vein {
+  position: relative;
+  min-height: 72px;
+  border-radius: 16px;
+  padding: 13px 16px 13px 18px;
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(90deg, #e5e1d8, #f3f0e8 72%, #ece7dc);
+  overflow: hidden;
+  border: 1px solid rgba(83, 81, 75, .08);
+}
+
+.quarry-page .q-vein::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: var(--w, 20%);
+  background: linear-gradient(90deg, rgba(101, 113, 111, .24), rgba(154, 114, 93, .15));
+  clip-path: polygon(0 7%, 86% 0, 100% 17%, 88% 37%, 96% 61%, 78% 81%, 100% 100%, 0 92%);
+}
+
+.quarry-page .q-vein > * {
+  position: relative;
+  z-index: 2;
+}
+
+.quarry-page .q-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, .7);
+  font-size: 20px;
+}
+
+.quarry-page .q-vein strong {
+  display: block;
+  font-size: 15px;
+  color: var(--q-ink);
+}
+
+.quarry-page .q-vein small {
+  display: block;
+  color: #7c8480;
+  margin-top: 4px;
+  font-size: 11px;
+}
+
+.quarry-page .q-qty {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--q-deep);
+  font-size: 15px;
+}
+
+.quarry-page .q-feed {
+  display: grid;
+  gap: 12px;
+}
+
+.quarry-page .q-note {
+  padding: 14px 0;
+  border-bottom: 1px dashed #c8ccc6;
+}
+
+.quarry-page .q-note:last-child {
+  border-bottom: none;
+}
+
+.quarry-page .q-note p {
+  margin: 0 0 5px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--q-ink);
+}
+
+.quarry-page .q-note small {
+  color: #8b928e;
+}
+
+.quarry-page .q-empty {
+  margin: 0;
+  color: var(--q-muted);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.quarry-page .q-action {
+  margin-top: 18px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.quarry-page .q-action a {
+  border: 1px solid #8e9996;
+  background: #f4f2eb;
+  color: #425153;
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-family: inherit;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.quarry-page .q-action a:hover {
+  background: #ebe8df;
+}
+
+@media (max-width: 800px) {
+  .quarry-page main.quarry-shell {
+    padding: 18px 14px 38px;
+  }
+
+  .quarry-page .q-hero {
+    min-height: 350px;
+  }
+
+  .quarry-page .q-hero-copy {
+    width: 100%;
+    padding: 24px 22px 115px;
+  }
+
+  .quarry-page .q-hero h1 {
+    font-size: 34px;
+  }
+
+  .quarry-page .q-stats {
+    left: 18px;
+    right: 18px;
+    top: auto;
+    bottom: 18px;
+    width: auto;
+  }
+
+  .quarry-page .q-content {
+    grid-template-columns: 1fr;
+  }
+}

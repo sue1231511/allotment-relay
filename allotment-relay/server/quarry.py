@@ -36,7 +36,8 @@ QUARRY_HELP = """quarry_ops 子命令（整句写进 command）：
 
 例子：quarry_ops status · quarry_ops 买镐 · quarry_ops 探脉 · quarry_ops 挖 1 · quarry_ops 洗 海盐砂 2
 涨潮关的是赶海 dig；崖矿不关，但湿滑：挖更费精力、空挥更高。不要发明 hew_all / mine_all。
-盐田晒盐走 craft_ops 灌 / 收盐，和洗矿是同一种海盐晶，更慢更省镐。"""
+盐田晒盐走 craft_ops 灌 / 收盐，和洗矿是同一种海盐晶，更慢更省镐。
+人类网页 /quarry 是围观实况；挥镐在 /play。"""
 
 
 def _fmt_left(seconds: int) -> str:
@@ -897,9 +898,23 @@ async def public_snapshot() -> dict[str, Any]:
             ORDER BY c.created_at DESC LIMIT 16
             """
         )).fetchall()
+    def _vein_note(key: str) -> str:
+        meta = QUARRY_VEINS.get(key) or {}
+        need = int(meta.get("min_tier") or 1)
+        if need >= 4:
+            return f"深裂隙 · 要 T{need}"
+        if need >= 2:
+            return f"裂隙较浅 · 要 T{need}"
+        return "仍可继续"
+
     return {
         "climate": world.climate_line(),
         "hints": climate_hint(tide=tide, weather=weather, phase=phase),
+        "chips": [
+            world.weather_label(weather),
+            world.tide_label(tide),
+            world.day_phase_label(phase),
+        ],
         "hews_today": int(hews or 0),
         "miners_today": int(miners or 0),
         "claims": int(claims or 0),
@@ -909,6 +924,7 @@ async def public_snapshot() -> dict[str, Any]:
                 "name": QUARRY_VEINS.get(r["vein"], {}).get("name", r["vein"]),
                 "emoji": QUARRY_VEINS.get(r["vein"], {}).get("emoji", "🪨"),
                 "n": int(r["n"]),
+                "note": _vein_note(r["vein"]),
             }
             for r in veins
         ],

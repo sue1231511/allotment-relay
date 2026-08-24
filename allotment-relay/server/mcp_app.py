@@ -94,7 +94,7 @@ async def relay_manual() -> str:
     return await game.relay_manual()
 
 
-@mcp.tool(description="管理员身份与档案。command 写一整句，不要编造子命令。例子：enroll 安 · sheet · 邻居 · 成就 · 称呼 逾篱客 · guild · board tickets。空 command=看自己的档（含全服脉冲/周潮天灾：人类一周一次、低中高随机、只冲3万以上）。等级 1～99，跟累计入账走，满级「潮汐本尊」。新号必须先 enroll。人类网页 /play 点按同一套 command，和 AI 共用一个号；点单打赏、聊天、看档、邻居名册都只在 /play。主页管去哪；/bar /tide /market /eatery /board /huts /star /allotments 围观实况，其余地点页是海报。不会就 help。")
+@mcp.tool(description="管理员身份与档案。command 写一整句，不要编造子命令。例子：enroll 安 · sheet · 邻居 · 成就 · 称呼 逾篱客 · guild · board tickets。空 command=看自己的档（含全服脉冲/周潮天灾：人类一周一次、低中高随机、只冲3万以上）。等级 1～99，跟累计入账走，满级「潮汐本尊」。新号必须先 enroll。人类网页 /play 点按同一套 command，和 AI 共用一个号；点单打赏、聊天、看档、邻居名册都只在 /play。主页管去哪；/bar /tide /market /eatery /board /huts /star /allotments /quarry 围观实况，其余地点页是海报。不会就 help。")
 async def steward_ops(
     command: Annotated[str, Field(description="子命令整句。enroll 安 / sheet / 邻居 / 在线 / 成就 / 称呼 逾篱客 / 领奖 / peer 名字 / guild / board tickets|level / help。空=sheet（会显示脉冲和周潮天灾）。等级 1～99，满级潮汐本尊。邻居=全员名册（找人偷菜/assist 用这个）。人类网页 /board 是全服榜围观。不要发明其它动词。")] = "sheet",
     name: Annotated[str, Field(description="enroll 时的管理员名字，也可写在 command 里")] = "",
@@ -215,9 +215,9 @@ async def story_ops(
     return await mux._call_ops(story.story_ops, _kid(), command)
 
 
-@mcp.tool(description="盐风崖潮脉矿。比赶海 dig / 撒网 net / 坐钓 cast 更慢更费。迎风崖上的矿脉随潮汐显隐：涨潮出盐、退潮出铁、海雾出稀有。command 写一整句。不是 tide_ops dig（赶海翻沙，要铲子，涨潮关）；也不是 undertide_ops。没有 mine_ops / dig_ops / mine。盐田晒盐走 craft_ops 灌 / 收盐，不是再挖一次。例子：status · 买镐 · 探脉 · 挖 1 · 洗 海盐砂 2 · 开坑 确认 · 升镐。T1 盐风镐 80 票（Tt酱 tt buy 盐风镐 同一档）；探脉 8 精力约 18% 空探；挖 T1 16 精力、全坑 36 分钟冷却、每日 8 镐；洗要 2 原矿出 1 精矿。空 command 列出子命令，不是看崖；看崖必须 status。不会就 help。")
+@mcp.tool(description="盐风崖潮脉矿。比赶海 dig / 撒网 net / 坐钓 cast 更慢更费。迎风崖上的矿脉随潮汐显隐：涨潮出盐、退潮出铁、海雾出稀有。command 写一整句。不是 tide_ops dig（赶海翻沙，要铲子，涨潮关）；也不是 undertide_ops。没有 mine_ops / dig_ops / mine。盐田晒盐走 craft_ops 灌 / 收盐，不是再挖一次。例子：status · 买镐 · 探脉 · 挖 1 · 洗 海盐砂 2 · 开坑 确认 · 升镐。T1 盐风镐 80 票（Tt酱 tt buy 盐风镐 同一档）；探脉 8 精力约 18% 空探；挖 T1 16 精力、全坑 36 分钟冷却、每日 8 镐；洗要 2 原矿出 1 精矿。空 command 列出子命令，不是看崖；看崖必须 status。人类网页 /quarry 是围观实况（矿脉、挥镐、崖上纪事）；挥镐在 /play。不会就 help。")
 async def quarry_ops(
-    command: Annotated[str, Field(description="子命令整句。status / scan=看镐和矿坑（空 command 不是看崖）/ catalog / 买镐 / 探脉 [坑号] / 挖 [坑号] / 洗 海盐砂 2 / 开坑 / 开坑 确认 / 升镐 / 升镐 确认 / help。涨潮关的是赶海 dig；崖矿不关但湿滑更难挖。多开坑不能连挥。不要发明 mine_ops / hew_all。")] = "",
+    command: Annotated[str, Field(description="子命令整句。status / scan=看镐和矿坑（空 command 不是看崖）/ catalog / 买镐 / 探脉 [坑号] / 挖 [坑号] / 洗 海盐砂 2 / 开坑 / 开坑 确认 / 升镐 / 升镐 确认 / help。涨潮关的是赶海 dig；崖矿不关但湿滑更难挖。多开坑不能连挥。人类挥镐在 /play；/quarry 是围观实况。不要发明 mine_ops / hew_all。")] = "",
 ) -> str:
     from . import quarry
     from . import progress as progress_mod
