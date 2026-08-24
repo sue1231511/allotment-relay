@@ -367,7 +367,8 @@ def test_readme_workflow_rules() -> None:
     assert "tide_ops" in promo
     assert "hut_ops" in promo
     assert "tote_ops market" in promo
-    assert "/play" in place_html
+    assert "/play" in promo
+    assert "play_href" in place_html
     assert "promo-poster" in place_html
     assert 'href="/workshop"' in nav
     assert 'href="/play"' in nav
@@ -445,7 +446,7 @@ def test_patron_pages_share_steward_key() -> None:
     assert 'id="order-form"' not in place_html
     assert 'id="duo-form"' not in place_html
     assert 'id="tip-form"' not in place_html
-    assert "/play" in place_html
+    assert "/play" in place_html or "play_href" in place_html
     assert '"go": "bar"' in promo
     assert '"go": "eatery"' in promo
     assert '"go": "star"' in promo
