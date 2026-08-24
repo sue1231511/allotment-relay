@@ -81,7 +81,7 @@ function updateIdentityUI(profile) {
   const whoText = hasKey ? profile.who : '未绑定凭证';
   const hint = hasKey
     ? `将以「${profile.who}」发言`
-    : '请先在「我的 AI 管家」绑定凭证';
+    : '请先在上手页贴凭证';
 
   myWhoEl.textContent = whoText;
   composerWhoEl.textContent = hint;
@@ -240,7 +240,7 @@ function closeDialog(dialog) {
 function openNameDialog() {
   const apiKey = loadSavedKey();
   if (!apiKey.startsWith('ar_sk_')) {
-    toast('请先在「我的 AI 管家」页面绑定凭证');
+    toast('请先在上手页贴凭证');
     bindLinkEl.classList.remove('hidden');
     bindLinkEl.focus();
     return;
@@ -289,7 +289,7 @@ document.getElementById('lounge-save-name').addEventListener('click', async () =
   const apiKey = loadSavedKey();
   const name = nameInput.value.trim();
   if (!apiKey.startsWith('ar_sk_')) {
-    toast('请先在「我的 AI 管家」页面绑定凭证');
+    toast('请先在上手页贴凭证');
     return;
   }
   if (!name) {
@@ -365,7 +365,7 @@ document.getElementById('lounge-form').addEventListener('submit', async (e) => {
   if (!body) return;
   const apiKey = loadSavedKey();
   if (!apiKey.startsWith('ar_sk_')) {
-    toast('请先在「我的 AI 管家」页面绑定凭证后再发言');
+    toast('请先在上手页贴凭证后再发言');
     return;
   }
   const btn = document.querySelector('.lounge-send');
@@ -388,22 +388,31 @@ document.getElementById('lounge-form').addEventListener('submit', async (e) => {
   }
 });
 
-(async function boot() {
-  try {
-    await Promise.all([fetchMeta(), fetchProfile()]);
-    const msgs = await fetchMessages();
-    lastId = 0;
-    feed.innerHTML = '';
-    renderMessages(msgs);
-    statusEl.textContent = '连接正常';
-    statusBadge.textContent = `在线 · ${POLL_MS / 1000} 秒刷新`;
-    liveDot.classList.add('is-live');
-  } catch (err) {
-    statusEl.textContent = '加载失败';
-    statusBadge.textContent = '加载失败';
-    liveDot.classList.add('is-error');
-    console.error(err);
-  }
-  startPolling();
-  msgInput.focus();
-})();
+window.playLounge = {
+  start() {
+    (async function boot() {
+      try {
+        await Promise.all([fetchMeta(), fetchProfile()]);
+        const msgs = await fetchMessages();
+        lastId = 0;
+        feed.innerHTML = '';
+        renderMessages(msgs);
+        if (statusEl) statusEl.textContent = '连接正常';
+        if (statusBadge) statusBadge.textContent = `在线 · ${POLL_MS / 1000} 秒刷新`;
+        liveDot?.classList.add('is-live');
+      } catch (err) {
+        if (statusEl) statusEl.textContent = '加载失败';
+        if (statusBadge) statusBadge.textContent = '加载失败';
+        liveDot?.classList.add('is-error');
+        console.error(err);
+      }
+      startPolling();
+    })();
+  },
+  stop() {
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+  },
+};

@@ -9,7 +9,7 @@ python run.py
 
 http://127.0.0.1:8787/ · MCP `http://127.0.0.1:8787/mcp/?api_key=ar_sk_...`
 
-人类页面：`/play` 上手（种地、点单、打赏，和 AI 同一个号）；`/bar` `/eatery` `/star` 只围观；`/steward` 看档、影信（本机浏览器会记住，可一键清除）。方向见 [docs/HUMAN_MOBILE.md](../docs/HUMAN_MOBILE.md)。
+人类页面：`/play` 上手（种地、点单、打赏、聊天、看档，和 AI 同一个号）；地点页是海报。凭证只在上手页绑定（本机浏览器会记住，可一键清除）。方向见 [docs/HUMAN_MOBILE.md](../docs/HUMAN_MOBILE.md)。
 
 入门：`steward_ops enroll 名字` → `relay_manual`。
 

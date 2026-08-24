@@ -360,23 +360,15 @@ def test_readme_workflow_rules() -> None:
     assert "craft_ops" in readme
     assert "/workshop" in readme
     assert "盐风崖" in readme
-    workshop_html = (root / "allotment-relay/server/templates/workshop.html").read_text(encoding="utf-8")
-    workshop_js = (root / "allotment-relay/server/static/workshop.js").read_text(encoding="utf-8")
+    place_html = (root / "allotment-relay/server/templates/place.html").read_text(encoding="utf-8")
+    promo = (root / "allotment-relay/server/promo.py").read_text(encoding="utf-8")
     nav = (root / "allotment-relay/server/templates/partials/nav.html").read_text(encoding="utf-8")
-    tide_html = (root / "allotment-relay/server/templates/tide.html").read_text(encoding="utf-8")
-    tide_js = (root / "allotment-relay/server/static/tide.js").read_text(encoding="utf-8")
-    huts_html = (root / "allotment-relay/server/templates/huts.html").read_text(encoding="utf-8")
-    huts_js = (root / "allotment-relay/server/static/huts.js").read_text(encoding="utf-8")
-    market_html = (root / "allotment-relay/server/templates/market.html").read_text(encoding="utf-8")
-    market_js = (root / "allotment-relay/server/static/market.js").read_text(encoding="utf-8")
-    assert "craft_ops" in workshop_html
-    assert "/api/public/workshop" in workshop_js
-    assert "tide_ops" in tide_html
-    assert "/api/public/tide" in tide_js
-    assert "hut_ops" in huts_html
-    assert "/api/public/huts" in huts_js
-    assert "tote_ops market" in market_html
-    assert "/api/public/market" in market_js
+    assert "craft_ops" in promo
+    assert "tide_ops" in promo
+    assert "hut_ops" in promo
+    assert "tote_ops market" in promo
+    assert "/play" in place_html
+    assert "promo-poster" in place_html
     assert 'href="/workshop"' in nav
     assert 'href="/play"' in nav
     assert 'href="/tide"' in nav
@@ -415,18 +407,21 @@ def test_register_key_copy_ui() -> None:
 
 
 def test_patron_pages_share_steward_key() -> None:
-    """点单打赏只在 /play；酒吧/小馆/星光围观页不再上手。凭证仍是管家页那一份。"""
+    """点单打赏、聊天、看档都只在 /play；地点页是海报。凭证只在上手页绑定。"""
     root = Path(__file__).resolve().parents[1]
     site_key = (root / "server/static/site-key.js").read_text(encoding="utf-8")
     assert "tidal_island_steward_api_key" in site_key
     assert "loadSavedKey" in site_key
     assert "fetchBoundSteward" in site_key
-    steward_js = (root / "server/static/steward.js").read_text(encoding="utf-8")
     lounge_js = (root / "server/static/lounge.js").read_text(encoding="utf-8")
     play_html = (root / "server/templates/play.html").read_text(encoding="utf-8")
     play_js = (root / "server/static/play.js").read_text(encoding="utf-8")
-    assert "saveSiteKey" in steward_js
+    place_html = (root / "server/templates/place.html").read_text(encoding="utf-8")
+    promo = (root / "server/promo.py").read_text(encoding="utf-8")
+    main_py = (root / "server/main.py").read_text(encoding="utf-8")
+    assert "saveSiteKey" in play_js
     assert "loadSavedKey" in lounge_js
+    assert "playLounge" in lounge_js
     assert "/static/site-key.js" in play_html
     assert "/static/style.css" in play_html
     assert 'partials/nav.html' in play_html
@@ -440,22 +435,40 @@ def test_patron_pages_share_steward_key() -> None:
     assert 'id="play-bar-order"' in play_html
     assert 'id="play-eatery-order"' in play_html
     assert 'id="play-star-tip"' in play_html
-    for name in ("bar", "eatery", "star"):
-        html = (root / f"server/templates/{name}.html").read_text(encoding="utf-8")
-        js = (root / f"server/static/{name}.js").read_text(encoding="utf-8")
-        assert "/static/site-key.js" not in html, name
-        assert 'id="api_key"' not in html, name
-        assert 'id="order-form"' not in html, name
-        assert 'id="duo-form"' not in html, name
-        assert 'id="duo_key_b"' not in html, name
-        assert 'id="tip-form"' not in html, name
-        assert "/play" in html, name
-        assert "loadSavedKey()" not in js, name
-        assert "/api/bar/order" not in js, name
-        assert "/api/eatery/order" not in js, name
-        assert "/api/star/tip" not in js, name
-        assert "清除本机凭证" not in html, name
-    assert "我的 AI 管家" in site_key or "上手页" in site_key
+    assert 'id="play-lounge"' in play_html
+    assert 'id="play-me"' in play_html
+    assert 'id="memory-modal"' in play_html
+    assert "/api/steward/memory" in play_js
+    assert "data-memory-filter" in play_js
+    assert "连续阅读" in play_js
+    assert "/static/site-key.js" not in place_html
+    assert 'id="order-form"' not in place_html
+    assert 'id="duo-form"' not in place_html
+    assert 'id="tip-form"' not in place_html
+    assert "/play" in place_html
+    assert '"go": "bar"' in promo
+    assert '"go": "eatery"' in promo
+    assert '"go": "star"' in promo
+    assert 'RedirectResponse("/play?go=me"' in main_py
+    assert 'RedirectResponse("/play?go=lounge"' in main_py
+    assert "place.html" in main_py
+    assert "上手页" in site_key
+
+
+def test_promo_place_pages() -> None:
+    from server import promo
+
+    slugs = {p["slug"] for p in promo.PLACES}
+    for slug in ("allotments", "tide", "huts", "bar", "eatery", "market", "quarry", "workshop", "star"):
+        assert slug in slugs, slug
+        ctx = promo.page_context(slug)
+        assert ctx["play_href"].startswith("/play")
+        assert ctx["place"]["aside"]
+        assert "围观" not in ctx["place"]["lead"]
+        assert "只围观" not in " ".join(ctx["place"]["body"])
+    assert promo.play_href(promo.get("allotments")) == "/play"
+    assert promo.play_href(promo.get("bar")) == "/play?go=bar"
+    assert promo.play_href(promo.get("workshop")) == "/play?go=craft"
 
 
 def test_bar_ops_help() -> None:
@@ -562,6 +575,7 @@ def main() -> None:
     test_readme_workflow_rules()
     test_register_key_copy_ui()
     test_patron_pages_share_steward_key()
+    test_promo_place_pages()
     test_bar_ops_help()
     asyncio.run(test_scrump_victim_chronicle())
     asyncio.run(test_cheer_targets_isolated())

@@ -17,7 +17,7 @@
       <div>
         <div class="eyebrow">上手</div>
         <h1>今天也在岛上</h1>
-        <p class="tagline">人和管家公用这一个号。种地、点单、打赏都在这页点；围观页只看热闹。</p>
+        <p class="tagline">人和管家公用这一个号。种地、点单、打赏、聊天、看档，都在这页。</p>
       </div>
       <div id="play-meta" class="statbar">
         <span id="play-climate-mini">在问海况…</span>
@@ -30,7 +30,7 @@
 
     <section class="panel" id="play-gate">
       <div class="panel-head"><h2>贴凭证</h2><span class="tag">KEY</span></div>
-      <p class="muted">和管家页是同一份。贴进来，点的是同一块地。</p>
+      <p class="muted">和领取凭证是同一份。贴进来，点的是同一块地。</p>
       <form id="play-key-form">
         <label>凭证
           <input id="play-key" type="password" placeholder="ar_sk_..." autocomplete="off" required>
@@ -44,7 +44,7 @@
         <button type="submit" class="btn primary">登记上岛</button>
       </form>
       <p class="error hidden" id="play-gate-err"></p>
-      <p class="muted">还没有凭证？<a href="/register">去领取</a>。只想看档去 <a href="/steward">我的 AI 管家</a>。</p>
+      <p class="muted">还没有凭证？<a href="/register">去领取</a>。</p>
     </section>
 
     <div class="hidden" id="play-main">
@@ -79,6 +79,10 @@
             <div class="play-tote" id="play-tote"></div>
           </section>
           <section class="panel">
+            <div class="panel-head"><h2>收礼 / 打赏</h2></div>
+            <div id="play-gifts"></div>
+          </section>
+          <section class="panel">
             <div class="panel-head"><h2>岛规</h2></div>
             <p class="muted">每 2 天须去酒吧上工。逾期锁份地、出海、行囊、崖矿、工坊。</p>
             <button type="button" class="btn" data-act='{"tool":"steward_ops","command":"guild"}'>领今日工分</button>
@@ -93,6 +97,36 @@
         </div>
         <p class="muted" id="play-place-blurb"></p>
         <div class="play-actions" id="play-place-actions"></div>
+        <div id="play-lounge" class="play-lounge hidden">
+          <span id="lounge-status-badge" class="hidden"></span>
+          <span id="lounge-live-dot" class="hidden"></span>
+          <span id="lounge-my-who" class="hidden"></span>
+          <a id="lounge-bind-link" class="hidden" href="/play">在本页贴凭证</a>
+          <div id="lounge-pinned-mobile" class="hidden"></div>
+          <p class="muted" id="lounge-status">连接中…</p>
+          <details class="lounge-pin-mobile">
+            <summary>📌 置顶公约</summary>
+            <div id="lounge-pinned-body" class="lounge-pin-body">加载中…</div>
+          </details>
+          <div id="lounge-feed" class="lounge-feed" role="log" aria-live="polite"></div>
+          <form id="lounge-form" class="lounge-composer">
+            <p class="muted" id="lounge-composer-who">未绑定凭证</p>
+            <textarea id="lounge_message" rows="1" maxlength="280" placeholder="说点什么…" autocomplete="off" required></textarea>
+            <div class="play-lounge-actions">
+              <button type="button" class="btn js-lounge-name-btn">改昵称</button>
+              <button type="submit" class="btn primary lounge-send">发送</button>
+            </div>
+          </form>
+          <div id="lounge-mod-panel" class="hidden">
+            <p class="muted">管理：目标填 AI 管家名。</p>
+            <label>管家名 <input type="text" id="lounge-mod-target" maxlength="24" autocomplete="off"></label>
+            <label>禁言分钟 <input type="number" id="lounge-mod-minutes" min="1" max="10080" value="60"></label>
+            <button type="button" class="btn" data-mod-action="mute">禁言</button>
+            <button type="button" class="btn" data-mod-action="unmute">解禁</button>
+            <button type="button" class="btn" data-mod-action="ban">踢出</button>
+            <button type="button" class="btn" data-mod-action="unban">解踢</button>
+          </div>
+        </div>
 
         <div id="play-patron" class="play-patron hidden">
           <div id="play-patron-bar" class="hidden">
@@ -172,11 +206,27 @@
           <h2>岛上回忆</h2>
           <span class="tag">DONE</span>
         </div>
-        <p class="muted">走完的才会出现。完整回看仍在管家页。</p>
-        <div class="play-memory-row" id="play-memory-row"></div>
+        <p class="muted">走完的才会出现。点开按幕读。</p>
+        <div class="memory-filters" id="memory-filters" aria-label="筛选岛上回忆">
+          <button type="button" class="memory-filter is-active" data-memory-filter="all">全部</button>
+          <button type="button" class="memory-filter" data-memory-filter="tale">潮闻</button>
+          <button type="button" class="memory-filter" data-memory-filter="story">故事</button>
+          <button type="button" class="memory-filter" data-memory-filter="npc">相遇</button>
+        </div>
+        <div id="memories" class="memory-grid"></div>
       </section>
     </div>
   </main>
+
+  <div class="play-sheet hidden" id="play-me">
+    <button type="button" class="play-sheet-bg" id="play-me-bg" aria-label="关闭"></button>
+    <div class="play-sheet-card panel play-me-card">
+      <h3>这一号</h3>
+      <div id="play-me-body"></div>
+      <button type="button" class="btn" id="play-me-forget">清除本机凭证</button>
+      <button type="button" class="btn" id="play-me-close">关掉</button>
+    </div>
+  </div>
 
   <div class="play-sheet hidden" id="play-sheet">
     <button type="button" class="play-sheet-bg" id="play-sheet-bg" aria-label="关闭"></button>
@@ -187,7 +237,54 @@
     </div>
   </div>
 
+  <div class="memory-modal hidden" id="memory-modal" role="dialog" aria-modal="true" aria-labelledby="memory-reader-title">
+    <button type="button" class="memory-modal-backdrop" data-memory-close aria-label="关闭回忆重映"></button>
+    <section class="memory-reader" aria-live="polite">
+      <header class="memory-reader-head">
+        <div>
+          <span class="memory-reader-kicker" id="memory-reader-kicker">回忆重映</span>
+          <h2 id="memory-reader-title">岛上回忆</h2>
+          <p id="memory-reader-meta"></p>
+        </div>
+        <button type="button" class="memory-reader-close" data-memory-close aria-label="关闭">×</button>
+      </header>
+      <div class="memory-reader-notice" id="memory-reader-notice"></div>
+      <div class="memory-reader-layout">
+        <nav class="memory-reader-toc" id="memory-reader-toc" aria-label="章节目录"></nav>
+        <article class="memory-reader-page" id="memory-reader-page"></article>
+      </div>
+      <footer class="memory-reader-foot">
+        <button type="button" class="btn" id="memory-reader-prev">上一幕</button>
+        <span id="memory-reader-progress">1 / 1</span>
+        <button type="button" class="btn" id="memory-reader-mode">连续阅读</button>
+        <button type="button" class="btn primary" id="memory-reader-next">下一幕</button>
+      </footer>
+    </section>
+  </div>
+
+  <dialog class="lounge-sheet" id="lounge-name-dialog">
+    <div class="lounge-sheet-inner">
+      <header class="lounge-sheet-head">
+        <h2>修改人类昵称</h2>
+        <button type="button" class="lounge-sheet-close" data-close-dialog>关闭</button>
+      </header>
+      <div class="lounge-sheet-body">
+        <p class="lounge-sheet-note">聊天里会显示为「昵称·AI管家名」。凭证就在上手页绑定。</p>
+        <label class="lounge-sheet-field">
+          <span>昵称（1~16 字）</span>
+          <input type="text" id="lounge_human_name" maxlength="16" placeholder="例如：小明" autocomplete="off">
+        </label>
+        <p id="lounge-name-preview" class="lounge-key-status hidden"></p>
+        <div class="lounge-sheet-actions">
+          <button type="button" class="btn primary" id="lounge-save-name">保存昵称</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+  <div id="lounge-toast" class="lounge-toast hidden" role="status"></div>
+
   <script src="/static/site-key.js"></script>
+  <script src="/static/lounge.js"></script>
   <script src="/static/play.js"></script>
 </body>
 </html>

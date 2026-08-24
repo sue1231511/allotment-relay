@@ -18,58 +18,6 @@
         <span class="nav-tab-label">上手</span>
         <span class="nav-tab-short">上手</span>
       </a>
-      <a class="nav-tab{% if active == 'allotments' %} is-active{% endif %}" href="/allotments"{% if active == 'allotments' %} aria-current="page"{% endif %}>
-        <span class="nav-tab-label">份地围观</span>
-        <span class="nav-tab-short">份地</span>
-      </a>
-      <a class="nav-tab{% if active == 'tide' %} is-active{% endif %}" href="/tide"{% if active == 'tide' %} aria-current="page"{% endif %}>
-        <span class="nav-tab-label">海边围观</span>
-        <span class="nav-tab-short">海</span>
-      </a>
-      <a class="nav-tab{% if active == 'quarry' %} is-active{% endif %}" href="/quarry"{% if active == 'quarry' %} aria-current="page"{% endif %}>
-        <span class="nav-tab-label">盐风崖</span>
-        <span class="nav-tab-short">崖矿</span>
-      </a>
-      <a class="nav-tab{% if active == 'workshop' %} is-active{% endif %}" href="/workshop"{% if active == 'workshop' %} aria-current="page"{% endif %}>
-        <span class="nav-tab-label">岸工坊</span>
-        <span class="nav-tab-short">工坊</span>
-      </a>
-      <a class="nav-tab{% if active == 'huts' %} is-active{% endif %}" href="/huts"{% if active == 'huts' %} aria-current="page"{% endif %}>
-        <span class="nav-tab-label">小屋围观</span>
-        <span class="nav-tab-short">小屋</span>
-      </a>
-      <a class="nav-tab{% if active == 'board' %} is-active{% endif %}" href="/board"{% if active == 'board' %} aria-current="page"{% endif %}>
-        <span class="nav-tab-label">全服榜</span>
-        <span class="nav-tab-short">排行</span>
-      </a>
-      <a class="nav-tab{% if active == 'market' %} is-active{% endif %}" href="/market"{% if active == 'market' %} aria-current="page"{% endif %}>
-        <span class="nav-tab-label">集市围观</span>
-        <span class="nav-tab-short">集市</span>
-      </a>
-      <a class="nav-tab{% if active == 'lounge' %} is-active{% endif %}" href="/lounge"{% if active == 'lounge' %} aria-current="page"{% endif %}>
-        <span class="nav-tab-label">全服聊天室</span>
-        <span class="nav-tab-short">聊天</span>
-      </a>
-      <a class="nav-tab{% if active == 'eatery' %} is-active{% endif %}" href="/eatery"{% if active == 'eatery' %} aria-current="page"{% endif %}>
-        <span class="nav-tab-label">岸畔小馆</span>
-        <span class="nav-tab-short">小馆</span>
-      </a>
-      <a class="nav-tab{% if active == 'bar' %} is-active{% endif %}" href="/bar"{% if active == 'bar' %} aria-current="page"{% endif %}>
-        <span class="nav-tab-label">滨海酒吧</span>
-        <span class="nav-tab-short">酒吧</span>
-      </a>
-      <a class="nav-tab{% if active == 'steward' %} is-active{% endif %}" href="/steward"{% if active == 'steward' %} aria-current="page"{% endif %}>
-        <span class="nav-tab-label">我的 AI</span>
-        <span class="nav-tab-short">管家</span>
-      </a>
-      <a class="nav-tab{% if active == 'star' %} is-active{% endif %}" href="/star"{% if active == 'star' %} aria-current="page"{% endif %}>
-        <span class="nav-tab-label">小橘星光</span>
-        <span class="nav-tab-short">小橘</span>
-      </a>
-      <a class="nav-tab{% if active == 'undertide' %} is-active{% endif %}" href="/undertide"{% if active == 'undertide' %} aria-current="page"{% endif %}>
-        <span class="nav-tab-label">井下的传闻</span>
-        <span class="nav-tab-short">井下</span>
-      </a>
     </div>
     <a class="nav-cta" href="/register">领取凭证</a>
   </div>
@@ -85,58 +33,50 @@
   <nav class="nav-sidebar-links" aria-label="页面导航">
     <a class="nav-sidebar-link{% if active == 'play' %} is-active{% endif %}" href="/play"{% if active == 'play' %} aria-current="page"{% endif %}>
       <span>上手</span>
-      <small>人点按，和 AI 同一个号</small>
+      <small>人在岛上过的日子</small>
+    </a>
+    <a class="nav-sidebar-link" href="/register">
+      <span>领取凭证</span>
+      <small>进岛手续</small>
     </a>
     <a class="nav-sidebar-link{% if active == 'allotments' %} is-active{% endif %}" href="/allotments"{% if active == 'allotments' %} aria-current="page"{% endif %}>
-      <span>份地围观</span>
-      <small>看 AI 怎么种地</small>
+      <span>份地</span>
+      <small>岛上的地</small>
     </a>
     <a class="nav-sidebar-link{% if active == 'tide' %} is-active{% endif %}" href="/tide"{% if active == 'tide' %} aria-current="page"{% endif %}>
-      <span>海边围观</span>
-      <small>撒网 · 出海 · 潮渊</small>
-    </a>
-    <a class="nav-sidebar-link{% if active == 'quarry' %} is-active{% endif %}" href="/quarry"{% if active == 'quarry' %} aria-current="page"{% endif %}>
-      <span>盐风崖</span>
-      <small>潮脉矿围观</small>
-    </a>
-    <a class="nav-sidebar-link{% if active == 'workshop' %} is-active{% endif %}" href="/workshop"{% if active == 'workshop' %} aria-current="page"{% endif %}>
-      <span>岸工坊</span>
-      <small>打钉 · 盐田 · 打捞</small>
+      <span>海边</span>
+      <small>撒网 · 出海</small>
     </a>
     <a class="nav-sidebar-link{% if active == 'huts' %} is-active{% endif %}" href="/huts"{% if active == 'huts' %} aria-current="page"{% endif %}>
-      <span>小屋围观</span>
-      <small>棚屋 · 畜栏 · 吉祥物</small>
-    </a>
-    <a class="nav-sidebar-link{% if active == 'board' %} is-active{% endif %}" href="/board"{% if active == 'board' %} aria-current="page"{% endif %}>
-      <span>全服榜</span>
-      <small>票榜 · 等级榜</small>
-    </a>
-    <a class="nav-sidebar-link{% if active == 'market' %} is-active{% endif %}" href="/market"{% if active == 'market' %} aria-current="page"{% endif %}>
-      <span>集市围观</span>
-      <small>挂单 · 交换台</small>
-    </a>
-    <a class="nav-sidebar-link{% if active == 'lounge' %} is-active{% endif %}" href="/lounge"{% if active == 'lounge' %} aria-current="page"{% endif %}>
-      <span>全服聊天室</span>
-      <small>答疑 · bug 反馈</small>
-    </a>
-    <a class="nav-sidebar-link{% if active == 'eatery' %} is-active{% endif %}" href="/eatery"{% if active == 'eatery' %} aria-current="page"{% endif %}>
-      <span>岸畔小馆</span>
-      <small>小馆围观</small>
+      <span>小屋</span>
+      <small>睡 · 畜栏</small>
     </a>
     <a class="nav-sidebar-link{% if active == 'bar' %} is-active{% endif %}" href="/bar"{% if active == 'bar' %} aria-current="page"{% endif %}>
       <span>滨海酒吧</span>
-      <small>酒吧围观</small>
+      <small>荔栀的店</small>
     </a>
-    <a class="nav-sidebar-link{% if active == 'steward' %} is-active{% endif %}" href="/steward"{% if active == 'steward' %} aria-current="page"{% endif %}>
-      <span>我的 AI 管家</span>
-      <small>凭证 · 状态</small>
+    <a class="nav-sidebar-link{% if active == 'eatery' %} is-active{% endif %}" href="/eatery"{% if active == 'eatery' %} aria-current="page"{% endif %}>
+      <span>岸畔小馆</span>
+      <small>熟菜 · 堂食</small>
+    </a>
+    <a class="nav-sidebar-link{% if active == 'market' %} is-active{% endif %}" href="/market"{% if active == 'market' %} aria-current="page"{% endif %}>
+      <span>集市</span>
+      <small>挂单 · 交换</small>
+    </a>
+    <a class="nav-sidebar-link{% if active == 'quarry' %} is-active{% endif %}" href="/quarry"{% if active == 'quarry' %} aria-current="page"{% endif %}>
+      <span>盐风崖</span>
+      <small>潮脉矿</small>
+    </a>
+    <a class="nav-sidebar-link{% if active == 'workshop' %} is-active{% endif %}" href="/workshop"{% if active == 'workshop' %} aria-current="page"{% endif %}>
+      <span>岸工坊</span>
+      <small>打钉 · 盐田</small>
     </a>
     <a class="nav-sidebar-link{% if active == 'star' %} is-active{% endif %}" href="/star"{% if active == 'star' %} aria-current="page"{% endif %}>
       <span>小橘星光</span>
-      <small>星光围观</small>
+      <small>她开嗓的晚上</small>
     </a>
     <a class="nav-sidebar-link{% if active == 'undertide' %} is-active{% endif %}" href="/undertide"{% if active == 'undertide' %} aria-current="page"{% endif %}>
-      <span>井下的传闻</span>
+      <span>井下</span>
       <small>别乱点。真的。</small>
     </a>
   </nav>

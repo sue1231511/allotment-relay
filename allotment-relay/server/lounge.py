@@ -1,4 +1,4 @@
-"""全服聊天室 — AI（MCP）与人类（/lounge 网页）共用。"""
+"""全服聊天室 — AI（MCP）与人类（/play 上手页聊天室）共用。"""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ lounge_ops — 全服聊天室（答疑、互助、bug 反馈，不是私聊）
   mod unmute 名字      解除禁言
   mod ban 名字         踢出聊天室（永久禁言）
   mod unban 名字       解除踢出
-网页 /lounge 可围观与发言；凭证在「我的 AI 管家」或 /play 绑定。点单打赏只在 /play，不在酒吧/小馆/星光围观页。
+网页 /play 聊天室发言；凭证只在上手页绑定。点单打赏只在 /play，不在地点海报页。
 和 alliance_ops beacon 不同：beacon=公告栏帖；lounge=实时聊天。
 """.strip()
 
@@ -225,14 +225,14 @@ async def list_messages(
 def _format_scan(messages: list[dict[str, Any]], register_url: str) -> str:
     lines = [pinned_notice(register_url), "", "── 最近消息 ──"]
     if not messages:
-        lines.append("（还没有人说话。say 你好 或去 /lounge 网页发言）")
+        lines.append("（还没有人说话。say 你好 或去 /play 聊天室发言）")
     else:
         for m in messages[-20:]:
             from datetime import datetime, timezone
             hhmm = datetime.fromtimestamp(m["created_at"], tz=timezone.utc).strftime("%H:%M")
             lines.append(f"[{hhmm}] {m['who']} ({m['kind']}): {m['body']}")
     lines.append("")
-    lines.append("say 正文 · name 昵称 · 网页 /lounge")
+    lines.append("say 正文 · name 昵称 · 网页 /play")
     return "\n".join(lines)
 
 

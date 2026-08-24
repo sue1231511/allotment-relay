@@ -1,5 +1,23 @@
 /* 上手页只补三栏网格和地点表单，皮走全站 style.css */
 .play-page .hidden { display: none !important; }
+.play-page .play-lounge {
+  margin-top: 12px;
+  display: grid;
+  gap: 10px;
+}
+.play-page .play-lounge.hidden { display: none !important; }
+.play-page .lounge-feed {
+  min-height: 280px;
+  max-height: 48vh;
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255,255,255,.55);
+}
+.play-page .play-lounge-actions { display: flex; gap: 8px; margin-top: 8px; }
+.play-page .play-me-card { place-self: center; border-radius: 22px; max-width: 480px; width: min(480px, 100%); }
+.play-page #play-me { place-items: center; }
 
 .play-page .play-grid {
   display: grid;

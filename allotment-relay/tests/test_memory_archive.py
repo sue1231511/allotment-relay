@@ -143,8 +143,8 @@ async def test_memory_archive() -> None:
 
 
 def test_steward_memory_frontend_hooks() -> None:
-    template = (ROOT / "server/templates/steward.html").read_text(encoding="utf-8")
-    script = (ROOT / "server/static/steward.js").read_text(encoding="utf-8")
+    template = (ROOT / "server/templates/play.html").read_text(encoding="utf-8")
+    script = (ROOT / "server/static/play.js").read_text(encoding="utf-8")
     css = (ROOT / "server/static/style.css").read_text(encoding="utf-8")
     assert "岛上回忆" in template and "memory-modal" in template
     assert "/api/steward/memory" in script

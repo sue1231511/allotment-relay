@@ -121,7 +121,6 @@ PLACES: list[dict[str, Any]] = [
         "name": "聊天室",
         "blurb": "答疑、岛上说话",
         "week1": True,
-        "href": "/lounge",
         "actions": [
             {"label": "看最近", "tool": "lounge_ops", "command": "scan"},
         ],
@@ -129,7 +128,7 @@ PLACES: list[dict[str, Any]] = [
     {
         "id": "star",
         "name": "小橘",
-        "blurb": "围观开嗓、打赏",
+        "blurb": "听她唱、打赏",
         "week1": False,
         "actions": [
             {"label": "她的档", "tool": "star_ops", "command": "status"},

@@ -133,7 +133,7 @@ async def eatery_command(s: dict[str, Any], command: str) -> str:
                 n = len(menu)
                 tag = " ←你" if sh["id"] == s["id"] else ""
                 lines.append(f"  {sh['name']}「{label}」{n} 道菜{tag}")
-            lines.append("dine 管理员名 [菜编号] · shop stock 菜 · 不想开了 shop 卖掉 · 人类网页 /play 点餐，/eatery 只围观")
+            lines.append("dine 管理员名 [菜编号] · shop stock 菜 · 不想开了 shop 卖掉 · 人类网页 /play 点餐")
             if s.get("eatery_open"):
                 quote = eatery_sell_quote(s.get("eatery_opened_at"))
                 mine = s.get("eatery_label") or f"{s['name']}的馆"
