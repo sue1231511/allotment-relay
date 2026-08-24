@@ -404,6 +404,9 @@ def test_readme_workflow_rules() -> None:
     css = (root / "allotment-relay/server/static/style.css").read_text(encoding="utf-8")
     assert "@media (max-width: 980px)" in css
     assert ".island-drawer" in css
+    assert "min(430px, 92vw)" in css
+    assert "min-height: 72px" in css
+    assert ".island-drawer-group + .island-drawer-group" in css
     assert ".routes" in css
     assert "repeat(3" in css
     assert "mobile-island" in css
