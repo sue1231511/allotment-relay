@@ -135,7 +135,7 @@ def duty_line(steward: dict[str, Any]) -> str:
     left = shift_seconds_left(steward)
     if left < 0:
         overdue_h = abs(left) // 3600
-        return f"⚠ 酒吧考勤逾期 {overdue_h}h — 必须 bar_ops work。份地/出海/行囊/崖矿/工坊已锁；诊所、吃饭、酒吧、潮下仍可用
+        return f"⚠ 酒吧考勤逾期 {overdue_h}h — 必须 bar_ops work。份地/出海/行囊/崖矿/工坊已锁；诊所、吃饭、酒吧、潮下仍可用"
     if left < 86400:
         return f"酒吧考勤：{left // 3600}h 内须 bar_ops work（每 {config.BAR_MANDATORY_DAYS} 天一次）"
     days = left // 86400
