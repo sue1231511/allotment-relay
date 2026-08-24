@@ -126,7 +126,8 @@ HUT_HELP = """hut_ops 子命令（整句写进 command）：
     小馆开着时冰箱不能卖（先 kitchen_ops shop 卖掉 或 shop close）
   barn status|erect|buy|feed|collect|shear|churn — 畜栏。churn 只搅山羊奶成奶酪（先买山羊再 collect；牛奶不能搅）
   mascot adopt 名字 scout|lucky|compost / upkeep / train / feed — 吉祥物
-    upkeep 花 4 票主动喂养，不是每日自动扣；train 免费练、不换特质；feed 耗宠物饲料。士气不每天掉。"""
+    upkeep 花 4 票主动喂养，不是每日自动扣；train 免费练、不换特质；feed 耗宠物饲料。士气不每天掉。
+  buy miner_lamp → install soft_N miner_lamp — 盐风矿灯，崖矿挖精力 -1"""
 
 TIDE_HELP = """tide_ops 子命令（整句写进 command）：
   net / cast / status — 岸边撒网 / 坐钓（cast 要 T1 钓竿 + 蚯蚓饵）
@@ -138,7 +139,7 @@ TIDE_HELP = """tide_ops 子命令（整句写进 command）：
   compliment|release|catch|grab — 未命名小鱼（可省略 voyage）。compliment=release 礼遇回赠普通鱼；
     catch=grab 动手：抓住这尾进袋，落下腿鱼小咒，其它鱼和精力会出事
     吃或卖再掷事件：kitchen_ops eat 未命名小鱼 · tote_ops vend 未命名小鱼 1
-  beach scan|dig|probe — 赶海（dig 要铲子）。涨潮时 dig 和 probe 都关，scan 还能看
+  beach scan|dig|probe — 赶海（dig 要铲子）。涨潮时 dig 和 probe 都关，scan 还能看。dig 不是崖矿，矿石走 quarry_ops 挖
   gear status|upgrade bait|rod|net — 渔具（T0–T5；更高档要票+材料）
   tool list|buy hoe|shovel — 锄头铲子
   boss status|attack — 潮渊之主（无船也能岸边围攻）
@@ -154,6 +155,24 @@ TOTE_HELP = """tote_ops 子命令（整句写进 command）：
   swap offer|claim|list|cancel — 交换台（白送，领取 3 票手续费）
   market list|sell|buy|price|mine|cancel — 玩家集市。买也不能超过行囊每格 24
   market 扩 [数量] — 加摆摊格（15票/格，基础6格，顶12格）"""
+
+QUARRY_HELP = """quarry_ops 子命令（整句写进 command）：
+  盐风崖潮脉矿。迎风崖上的矿脉随潮汐显隐：涨潮出盐、退潮出铁、海雾出稀有。
+  不是 tide_ops dig（赶海翻沙，要铲子，涨潮关）。不是 undertide_ops（潮下社交）。
+  没有 mine_ops / dig_ops / mine / 采矿 这种工具。空 command 列出本表，不是看崖。
+
+  status / scan / 看 — 镐、矿坑、当前矿脉。看崖必须 status，不是空 command
+  catalog / 图鉴 — 矿脉、矿石、镐档
+  买镐 — 48 票买 T1 盐风镐（Tt酱 tt buy 盐风镐 同一档）
+  探脉 [坑号] — 给空坑找矿脉（4 精力，10 分钟冷却）
+  挖 [坑号] — 挥镐（要 T1；精力 9→5；每坑 4 分钟冷却）
+  洗 海盐砂 [数量] — 原矿洗成精矿（3 精力/份），卖价约翻倍
+  开坑 / 开坑 确认 — 看价 / 付钱加坑（起步 1，无上限）
+  升镐 / 升镐 确认 — 票+精矿升一档
+  help — 本表
+
+例子：status · 买镐 · 探脉 · 挖 1 · 洗 海盐砂 2
+涨潮关的是赶海 dig，崖矿反而盐脉更肥。不要发明 hew_all / mine_all。"""
 
 ALLIANCE_HELP = """alliance_ops 子命令（整句写进 command）：
   在线 — 档口里的人（15 分钟内有操作）
@@ -173,13 +192,14 @@ VISIT_HELP = """visit_ops 子命令（整句写进 command）：
   musong visit|send 名字|remember — 目送人·阿槐；渡口送别，每个游戏日可记一个名字
   jingshan visit|status|order|deliver|revisit|remember — 何敬山的商船糕点委托与后续小事件；按 status 顺序
   buxing visit|tea|tide|light 给谁 | 求什么|gallery|entrust 旧事|watch|remember|fulfill 灯号 — 守灯人·不醒；茶每日一次，问潮前 5 次免费，灯廊公开
-  tt catalog|buy 物品|gift 物品 — Tt酱杂货店。例子：tt buy 锄头 · tt buy 甘蓝种 2
+  tt catalog|buy 物品|gift 物品 — Tt酱杂货店。例子：tt buy 锄头 · tt buy 甘蓝种 2 · tt buy 盐风镐
     货架种子标当季/休市；过季种子买不了，等到开窗或 sow 棚1（温室种菜种树都不受季节）
     货架货系统回收进价九成，退货少亏一点，别买了再 vend 当印钞
+    盐风镐 48 票，和 quarry_ops 买镐 同一档；更高档只能 quarry_ops 升镐
     行囊每种最多 24 份，买多了会拒；满了先 vend 或 hut_ops 冰柜 存
   lore scan [主题] / topics — 沿海旧史文本与 NPC 小传（例：lore scan npc；不是收集品，背包里不会多东西）
   clinic status — 看病症和诊费
-  clinic treat 病症 — 花钱治。例子：treat sprain · treat infection · treat 腿鱼小咒 · treat all
+  clinic treat 病症 — 花钱治。例子：treat sprain · treat infection · treat 腿鱼小咒 · treat 岩尘入肺 · treat all
   生肉感染约三次、两次间隔 6 小时；水果/生鱼生吃不会感染（连吃 5 口水果会营养不良，吃熟菜可解）；蔬菜不能生吃
   斗场震伤 / 深坑重创 桥桥不收，走 undertide_ops medic
   treat / fortune 可省略前缀"""

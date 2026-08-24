@@ -55,6 +55,7 @@ LEAGUE_GOALS = [
     {"key": "honey", "item": "honey", "target": 8, "label": "蜂糖周"},
     {"key": "shell_catseye", "item": "shell_catseye", "target": 10, "label": "猫眼螺周"},
     {"key": "egg", "item": "egg", "target": 16, "label": "鲜蛋周"},
+    {"key": "quarry_salt", "item": "quarry_salt", "target": 8, "label": "盐晶周"},
 ]
 
 BADGES = [
@@ -258,6 +259,28 @@ BEACH_PROBE_COOLDOWN = 900
 BEACH_ENERGY = 8
 BEACH_PROBE_ENERGY = 5
 SCARECROW_COST = {"drift_twine": 2, "compost": 1}
+
+# 盐风崖 — 潮脉矿。涨潮关的是赶海 dig，不是崖矿
+QUARRY_START_CLAIMS = 1
+QUARRY_PROSPECT_ENERGY = 4
+QUARRY_PROSPECT_COOLDOWN = 600
+QUARRY_HEW_COOLDOWN = 240
+QUARRY_WASH_ENERGY = 3
+QUARRY_HAZARD_CHANCE = 0.10
+QUARRY_CLAIM_BASE = 50
+QUARRY_PICK_T1_COST = 48
+
+
+def quarry_claim_cost(idx: int) -> int:
+    """第 (START+1+idx) 个矿坑票价：50 + 30n + 8n²。"""
+    n = max(0, int(idx))
+    return QUARRY_CLAIM_BASE + 30 * n + 8 * n * n
+
+
+def quarry_claim_clear_seconds(idx: int) -> int:
+    """第 (START+1+idx) 个矿坑开凿秒数：8、12、16、20 分钟…"""
+    n = max(0, int(idx))
+    return (8 + 4 * n) * 60
 
 # 厨房 / 冰箱 — 定点菜谱与自由组合分开计次（游戏日换班刷新）
 KITCHEN_RECIPE_COOK_DAILY = 10   # cook 菜名（menu 定点菜）

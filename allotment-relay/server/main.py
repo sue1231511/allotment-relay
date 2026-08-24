@@ -88,6 +88,11 @@ async def allotments_page(request: Request):
     return templates.TemplateResponse(request, "allotments.html", {"active": "allotments"})
 
 
+@app.get("/quarry", response_class=HTMLResponse)
+async def quarry_page(request: Request):
+    return templates.TemplateResponse(request, "quarry.html", {"active": "quarry"})
+
+
 @app.get("/board", response_class=HTMLResponse)
 async def board_page(request: Request):
     return templates.TemplateResponse(request, "board.html", {"active": "board"})
@@ -205,6 +210,12 @@ async def public_chronicle():
 @app.get("/api/public/allotments")
 async def public_allotments():
     return await db.public_allotments()
+
+
+@app.get("/api/public/quarry")
+async def public_quarry():
+    from . import quarry
+    return await quarry.public_snapshot()
 
 
 @app.get("/api/public/board")

@@ -30,6 +30,7 @@ TRIGGER_AILMENTS: dict[str, list[str]] = {
     "guild": ["blister"],
     "brew": ["food_poison", "damp_lung"],
     "beach": ["shell_scratch", "sunburn", "crab_pinch", "dehydration"],
+    "quarry": ["rock_dust", "sprain", "backache", "blister", "cut"],
     "bar_shift": ["hangover"],
     "naval_bad": ["cold", "food_poison", "backache"],
     "farm_wild": ["sprain", "allergy", "blister"],

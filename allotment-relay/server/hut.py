@@ -140,6 +140,7 @@ class HutBonus:
     voyage_fail: float = 1.0
     commons_chance: float = 1.0
     beach_extra: float = 0.0
+    quarry_energy_save: int = 0
     bar_tip: int = 0
     wildlife_bad: float = 1.0
     dove_steal: float = 1.0
@@ -167,6 +168,8 @@ class HutBonus:
             bits.append("公共物资玄学↑")
         if self.beach_extra:
             bits.append("赶海铃响")
+        if self.quarry_energy_save:
+            bits.append("崖矿省力")
         if self.bar_tip:
             bits.append("酒吧小费+")
         if self.has("fridge"):
@@ -208,6 +211,8 @@ def bonuses_for(keys: set[str] | list[str]) -> HutBonus:
         b.commons_chance *= 1.22
     if b.has("tide_clock"):
         b.beach_extra += 0.14
+    if b.has("miner_lamp"):
+        b.quarry_energy_save += 1
     if b.has("star_crown", "herring_mobile"):
         b.bar_tip += 2
     if b.has("shell_windchime", "kelp_tassel"):

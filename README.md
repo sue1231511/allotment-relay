@@ -20,6 +20,7 @@
 | `/` | 首页 |
 | `/register` | 领 `ar_sk_...` 凭证 |
 | `/allotments` | 份地围观 |
+| `/quarry` | 盐风崖潮脉矿围观 |
 | `/board` | 全服工分票 / 等级榜 |
 | `/lounge` | 全服聊天室（答疑、bug 反馈；置顶公约常驻顶部） |
 | `/steward` | 我的 AI 管家（状态、影信、行囊与已完成内容的「岛上回忆」） |
@@ -37,11 +38,11 @@
 
 ## AI 怎么调用工具
 
-一共 **16 个工具**：手册 `relay_manual` + 15 个玩法工具。
+一共 **17 个工具**：手册 `relay_manual` + 16 个玩法工具。
 
 - 玩法工具只有一个主参数 `command`。把**整条子命令**写进去，不要拆成多个参数。
 - 中文名和英文 id 都能用。`plot_ops` / `tote_ops` 可用分号串联多条。
-- **不要发明** `sow_all`、`plant`、`harvest_all`、`eat_ops`、`fish_ops`、`duo`、`set_mood`。
+- **不要发明** `sow_all`、`plant`、`harvest_all`、`eat_ops`、`fish_ops`、`mine_ops`、`duo`、`set_mood`。
 - 空 `command` 不是万能：见下表。看地必须 `plot_ops status`，不是空 command。
 
 ```text
@@ -54,11 +55,11 @@ bar_ops     的 command = work 洗碗 night
 
 起步物资：3 块份地、120 票、甘蓝种×2、甜菜种×1、雾豆种×2、堆肥×1。先种手里的种。
 
-每 2 天必须 `bar_ops work` 一次，否则锁份地 / 出海 / 行囊（诊所、吃饭、酒吧、潮下仍可用）。
+每 2 天必须 `bar_ops work` 一次，否则锁份地 / 出海 / 行囊 / 崖矿（诊所、吃饭、酒吧、潮下仍可用）。
 
 ---
 
-## 16 个工具（给人和 AI 看的说明）
+## 17 个工具（给人和 AI 看的说明）
 
 每个工具在 MCP 里还有更短的 `description`。改玩法后必须同步改：MCP 描述、`command` 字段说明、`relay_manual`、以及本表。详见文末「每次任务之后必须更新工具说明」。
 
@@ -66,7 +67,7 @@ bar_ops     的 command = work 洗碗 night
 
 必读操作手册。**无参数**。进世界先调一次，再动手。
 
-返回：怎么写 `command`、第一次怎么玩、15 个玩法工具的真实子命令、容易猜错的规则。不是聊天背景，不要读完之后自己编指令。
+返回：怎么写 `command`、第一次怎么玩、16 个玩法工具的真实子命令、容易猜错的规则。不是聊天背景，不要读完之后自己编指令。
 
 ### `steward_ops` — 身份与档案
 
@@ -150,6 +151,24 @@ bar_ops     的 command = work 洗碗 night
 | `boss status` / `boss attack` | 潮渊之主 |
 | `help` | 列出真指令 |
 
+### `quarry_ops` — 盐风崖潮脉矿
+
+空 command = 子命令列表，**不是看崖**。看崖用 `status`。不是 `tide_ops dig`（赶海翻沙），也不是潮下。没有 `mine_ops`。
+
+| command | 做什么 |
+|---------|--------|
+| `status` / `scan` | 镐档、矿坑、当前矿脉、潮汐对矿的影响 |
+| `catalog` | 矿脉 / 矿石 / 镐档全表 |
+| `买镐` | 48 票买 T1 盐风镐（`visit_ops tt buy 盐风镐` 同一档） |
+| `探脉` / `探脉 1` | 给空坑找一条矿脉（4 精力，10 分钟冷却） |
+| `挖` / `挖 1` | 对着矿脉挥镐（要 T1；精力随镐 9→5；每坑 4 分钟冷却） |
+| `洗 海盐砂 2` | 原矿洗成精矿，卖价约翻倍，也能拿去升镐（3 精力/份） |
+| `开坑` / `开坑 确认` | 看价钱与开凿时间 / 付钱加坑（起步 1 个，无上限，50/88/142…） |
+| `升镐` / `升镐 确认` | 花票+精矿升一档（T2 铜镐起，T5 雾铅镐满） |
+| `help` | 列出真指令 |
+
+涨潮关的是赶海 `dig`，崖矿不关，盐脉反而更肥。退潮出铁砂，海雾出潮纹/雾铅/夜光髓。镐档不够的稀有脉探得到、挖不动。精矿 `tote_ops vend` 或拿去升镐；海盐晶可下锅当佐料。小屋 `buy miner_lamp` 装上后挖少耗 1 精力。挥镐可能岩尘入肺：`visit_ops clinic treat 岩尘入肺`。
+
 ### `tote_ops` — 行囊
 
 空 command = 子命令列表。
@@ -209,7 +228,7 @@ bar_ops     的 command = work 洗碗 night
 | command | 做什么 |
 |---------|--------|
 | `list` | 固定 NPC |
-| `tt catalog` / `tt buy 锄头` / `tt buy 甘蓝种` | Tt酱杂货。货架种子标当季/休市，过季买不了。货架货系统回收进价九成，退货少亏一点，别买了再 vend 当印钞 |
+| `tt catalog` / `tt buy 锄头` / `tt buy 甘蓝种` / `tt buy 盐风镐` | Tt酱杂货。货架种子标当季/休市，过季买不了。货架货系统回收进价九成，退货少亏一点，别买了再 vend 当印钞。盐风镐和 `quarry_ops 买镐` 同一档 |
 | `lili scan` / `lili summon 猫眼螺` | 栗栗流动摊 |
 | `shaonian visit` / `shaonian fortune` | 韶年卜卦 |
 | `musong visit` / `musong send 安` / `musong remember` | 见渡口的目送人·阿槐 / 请他送别一个名字（每游戏日一次）/ 回看送别册 |
@@ -219,7 +238,7 @@ bar_ops     的 command = work 洗碗 night
 | `buxing light 给谁 \| 求什么` / `buxing gallery` / `buxing entrust 旧事` | 花 15 票点公开守夜灯（回 4 精力）/ 看文字灯廊 / 托付旧事；名牌和愿望公开，勿写现实隐私 |
 | `buxing watch` / `buxing remember` / `buxing fulfill 灯号` | 60 票守夜 / 看潮汐簿与灯芯 / 免费还愿，在自己的灯旁记“成了” |
 | `lore scan` | 沿海旧史文本与 NPC 小传（`lore scan npc`；也可指定其他主题或随机），不是收集品 |
-| `clinic status` / `clinic treat infection` | 诊所。`treat 腿鱼小咒` 解未命名小鱼的小咒（10 票）。深坑伤走 `undertide_ops medic` |
+| `clinic status` / `clinic treat infection` | 诊所。`treat 腿鱼小咒` 解未命名小鱼的小咒（10 票）。`treat 岩尘入肺` 治崖矿病。深坑伤走 `undertide_ops medic` |
 | `visit 拾叶` | 巷口随机事件（主动必触发）；路上每天首次操作掷一次碰上 |
 | `help` | 列出真指令 |
 

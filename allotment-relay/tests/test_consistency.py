@@ -147,6 +147,17 @@ def test_mcp_descriptions() -> None:
     assert "禁止发明" in instructions or "不是聊天沙盒" in instructions
     assert "下馆子" in instructions
     assert "shop dine" in instructions
+    assert "quarry_ops" in instructions
+    assert "mine_ops" in instructions
+
+    quarry = mcp._tool_manager.get_tool("quarry_ops")
+    q_blob = f"{quarry.description}\n{(quarry.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
+    assert "status" in q_blob
+    assert "探脉" in q_blob
+    assert "挖" in q_blob
+    assert "买镐" in q_blob
+    assert "mine_ops" in q_blob
+    assert "tide_ops dig" in q_blob or "赶海" in q_blob
 
 
 def test_relay_manual_covers_systems() -> None:
@@ -237,6 +248,13 @@ def test_relay_manual_covers_systems() -> None:
         "eat 未命名小鱼",
         "vend 未命名小鱼",
         "dig 和 probe 都关",
+        "quarry_ops",
+        "买镐",
+        "探脉",
+        "洗 海盐砂",
+        "开坑 确认",
+        "mine_ops",
+        "岩尘入肺",
         "能直接送票",
         "tote_ops gifts",
         "随机事件整体 +30%",
@@ -301,9 +319,12 @@ def test_readme_workflow_rules() -> None:
         assert "merge origin/main" in blob
         assert "relay_manual" in blob
         assert "mcp_app.py" in blob
-    assert "16 个工具" in readme
+    assert "17 个工具" in readme
+    assert "quarry_ops" in readme
+    assert "盐风崖" in readme
     assert "满级 99" in readme or "1～99" in readme
     assert "steward_ops" in readme and "plot_ops" in readme and "bar_ops" in readme
+    assert "quarry_ops" in readme
     assert "tale_ops" in readme
     assert "story_ops" in readme
     assert "theater_ops" in readme

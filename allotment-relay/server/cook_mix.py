@@ -19,7 +19,7 @@ from .catalog import (
 
 SEASONING = {
     "crop_garlic", "crop_chili", "crop_ginger", "crop_lemongrass",
-    "crop_lime", "wild_mint", "pickles",
+    "crop_lime", "wild_mint", "pickles", "quarry_salt",
 }
 FOOD_SHELLS = {"shell_scallop", "shell_mussel"}
 PROTEIN_EXTRAS = {
@@ -77,6 +77,8 @@ def classify(item: str) -> str:
     if item.startswith("shell_") and item not in FOOD_SHELLS:
         return "junk"
     if item.startswith("ut_"):
+        return "junk"
+    if item.startswith("quarry_") and item != "quarry_salt":
         return "junk"
     if item == "myth_octopus":
         return "myth"
