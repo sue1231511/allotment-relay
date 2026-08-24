@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>份地全景 · 潮汐岛</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,58 +14,82 @@
   {% include "partials/nav.html" %}
 
   <main class="allo-shell">
-    <section class="allo-stage">
-      <div class="allo-stage-title">
-        <div class="eyebrow">Allotment Panorama</div>
+    <header class="allo-hero">
+      <div>
+        <div class="allo-kicker">Allotment Registry</div>
         <h1>份地全景</h1>
-        <p>这页不看菜地，也不看表格。看岛上的人、经营规模、在线状态和最近动静。点名字，下面只切换一条共用详情。下地去上手页。</p>
+        <p>不是菜地图鉴，也不是一张大海报。看岛上的人把多少地铺开、谁还在线、最近谁在动土，以及联盟这一片现在活不活。</p>
       </div>
-
-      <div class="allo-world">
-        <div><small>天气</small><strong id="weather">—</strong></div>
-        <div><small>潮汐</small><strong id="tide">—</strong></div>
-        <div><small>在线</small><strong id="online">—</strong></div>
-        <div><small>合约</small><strong id="contractsN">—</strong></div>
-        <div><small>交换台</small><strong id="swapsN">—</strong></div>
-        <div><small>联盟目标</small><strong id="leagueTop">—</strong></div>
+      <div class="allo-hero-stats">
+        <div class="allo-hero-stat"><small>管理员</small><strong id="stewards">—</strong></div>
+        <div class="allo-hero-stat"><small>在线</small><strong id="online">—</strong></div>
+        <div class="allo-hero-stat"><small>总份地</small><strong id="parcelsTotal">—</strong></div>
+        <div class="allo-hero-stat"><small>成熟</small><strong id="readyTotal">—</strong></div>
       </div>
+    </header>
 
-      <div class="allo-core" aria-hidden="true">
-        <div class="allo-core-inner">
-          <small>ISLAND STEWARDS</small>
-          <strong id="stewards">—</strong>
-          <span>登记管理员</span>
+    <section class="allo-registry">
+      <section class="allo-atlas">
+        <div class="allo-atlas-head">
+          <div>
+            <div class="allo-kicker">Land Register</div>
+            <h2>岛上地籍</h2>
+          </div>
+          <p>长度代表经营规模。在线的人会亮一点。点任意一户，右侧切换详情。</p>
+          <div class="allo-legend">
+            <span><i class="on"></i>在线</span>
+            <span><i class="off"></i>离线</span>
+          </div>
         </div>
-      </div>
+        <div class="allo-field-list" id="fieldList">
+          <div class="allo-empty">在看地籍…</div>
+        </div>
+      </section>
 
-      <div class="allo-nodes" id="nodes"></div>
-      <div class="allo-detail" id="detail"></div>
+      <aside class="allo-detail" id="detail">
+        <div class="allo-detail-head">
+          <small>SELECTED STEWARD</small>
+          <h2 id="d-name">—</h2>
+          <p id="d-motto">点左边一户看详情。</p>
+        </div>
+        <div class="allo-detail-block allo-detail-grid">
+          <div class="allo-detail-item"><small>等级</small><strong id="d-level">—</strong></div>
+          <div class="allo-detail-item"><small>工分票</small><strong id="d-ticket">—</strong></div>
+          <div class="allo-detail-item"><small>份地</small><strong id="d-plots">—</strong></div>
+          <div class="allo-detail-item"><small>状态</small><strong id="d-online">—</strong></div>
+        </div>
+        <div class="allo-detail-block">
+          <div class="allo-kicker" style="margin-bottom:8px">Recent</div>
+          <div class="allo-detail-activity" id="d-recent">
+            <div class="allo-empty">还没有动静。</div>
+          </div>
+        </div>
+        <div class="allo-detail-block">
+          <div class="allo-kicker" style="margin-bottom:8px">Reading</div>
+          <div class="allo-detail-note" id="d-note">这块不是玩家资料卡，而是「这一户在岛上最近是什么状态」。只放会帮助围观的信息。</div>
+        </div>
+        <div class="allo-detail-foot">
+          <a href="/play?go=neighbors">去上手页看邻居 →</a>
+        </div>
+      </aside>
     </section>
 
     <section class="allo-lower">
       <div class="allo-lower-sec">
-        <div class="eyebrow">Online</div>
+        <div class="allo-kicker">Online</div>
         <h3>现在谁在岛上</h3>
         <div id="onlineList"></div>
       </div>
       <div class="allo-lower-sec">
-        <div class="eyebrow">Board</div>
-        <h3>工分票摘要</h3>
-        <div id="ticketRank"></div>
+        <div class="allo-kicker">Alliance</div>
+        <h3>联盟今天</h3>
+        <div id="chronicle"></div>
       </div>
       <div class="allo-lower-sec">
-        <div class="eyebrow">Bounty</div>
-        <h3>开放合约</h3>
-        <div id="contracts"></div>
+        <div class="allo-kicker">Goals</div>
+        <h3>共同目标</h3>
+        <div id="goals"></div>
       </div>
-    </section>
-
-    <section class="allo-chronicle">
-      <div class="allo-ch-label">
-        <div class="eyebrow">Alliance Chronicle</div>
-        <h2>联盟纪事</h2>
-      </div>
-      <div class="allo-events" id="chronicle"></div>
     </section>
 
     <p class="allo-cta"><a href="/play">种地 / 买地 / 偷菜去上手页 →</a></p>

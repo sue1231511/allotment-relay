@@ -2270,11 +2270,19 @@ async def public_allotments() -> list[dict[str, Any]]:
                 f"#{v['slot']}{v.get('emoji', '')}{v['state'][:2] if v.get('state') else '休'}"
                 for v in parcel_views[:5]
             )
-            latest = await (await db.execute(
-                "SELECT text FROM chronicle WHERE actor_id = ? OR target_id = ? ORDER BY created_at DESC LIMIT 1",
+            latest_rows = await (await db.execute(
+                """
+                SELECT text, created_at FROM chronicle
+                WHERE actor_id = ? OR target_id = ?
+                ORDER BY created_at DESC LIMIT 3
+                """,
                 (p["id"], p["id"]),
-            )).fetchone()
+            )).fetchall()
             ranked = ranks_mod.attach_level(p)
+            ready_count = sum(
+                1 for v in parcel_views
+                if str(v.get("state") or "") in ("可收", "过熟", "ready", "overripe")
+            )
             result.append({
                 "id": p["id"],
                 "name": p["name"],
@@ -2286,6 +2294,7 @@ async def public_allotments() -> list[dict[str, Any]]:
                 "level": ranked["level"],
                 "title": ranked.get("display_title") or ranked["title"],
                 "parcel_count": p["parcel_count"],
+                "ready_count": ready_count,
                 "orchard_count": p.get("orchard_count") or 0,
                 "greenhouse": bool(p["greenhouse"]),
                 "greenhouse_count": int(p.get("greenhouse_count") or 0) or (1 if p.get("greenhouse") else 0),
@@ -2296,6 +2305,11 @@ async def public_allotments() -> list[dict[str, Any]]:
                 "parcels": parcel_views,
                 "parcel_summary": summary,
                 "stock": [{"item": k, "name": ITEM_NAMES.get(k, k), "quantity": v} for k, v in list(inv.items())[:10]],
-                "latest": latest[0] if latest else "",
+                "latest": latest_rows[0]["text"] if latest_rows else "",
+                "recent": [
+                    {"text": r["text"], "created_at": r["created_at"]}
+                    for r in latest_rows
+                ],
             })
+        result.sort(key=lambda row: (-int(row.get("parcel_count") or 0), -int(row.get("tickets") or 0)))
         return result

@@ -597,11 +597,14 @@ def test_patron_pages_share_steward_key() -> None:
     assert ".star-poster" in star_css
     assert "position: relative" in star_css
     assert "inset: auto" in star_css
-    assert "allo-stage" in allo_html
-    assert "allo-nodes" in allo_html
+    assert "allo-registry" in allo_html
+    assert "allo-atlas" in allo_html
     assert "allo-detail" in allo_html
-    assert "allo-node" in allo_js
-    assert ".allo-stage" in allo_css
+    assert "fieldList" in allo_html
+    assert "allo-field-row" in allo_js
+    assert "ready_count" in allo_js
+    assert ".allo-registry" in allo_css
+    assert ".allo-field-row" in allo_css
     assert "q-hero" in quarry_html
     assert "quarry-veins" in quarry_html
     assert "quarry-feed" in quarry_html
