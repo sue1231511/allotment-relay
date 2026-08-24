@@ -43,7 +43,7 @@ async def _test_play_api() -> None:
     snap = await play_mod.run_play(key, "", "")
     assert snap["ok"] is True, snap
     assert snap["enrolled"] is False, snap
-    assert snap["places"] and snap["places"][0]["name"] == "海边", snap["places"]
+    assert snap["places"] and snap["places"][0]["name"] == "滨海酒吧", snap["places"]
 
     enrolled = await play_mod.run_play(key, "steward_ops", "enroll 岸边的人")
     assert enrolled["enrolled"] is True, enrolled

@@ -451,6 +451,9 @@ def test_patron_pages_share_steward_key() -> None:
     assert 'id="play-neighbors"' in play_html
     assert 'id="play-me"' in play_html
     assert 'id="memory-modal"' in play_html
+    assert 'id="play-today"' in play_html
+    assert "play-dock" in play_html
+    assert "今天也在岛上" in play_html
     assert "/api/steward/memory" in play_js
     assert "data-memory-filter" in play_js
     assert "连续阅读" in play_js

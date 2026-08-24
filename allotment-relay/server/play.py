@@ -34,9 +34,35 @@ def _tools() -> dict[str, Any]:
 
 PLACES: list[dict[str, Any]] = [
     {
+        "id": "bar",
+        "name": "滨海酒吧",
+        "kicker": "Tonight",
+        "blurb": "荔栀的店。点单、双人吧台、上工。",
+        "week1": True,
+        "duty": True,
+        "actions": [
+            {"label": "洗碗上工", "tool": "bar_ops", "command": "work 洗碗 night"},
+            {"label": "今晚", "tool": "bar_ops", "command": "tonight"},
+            {"label": "酒单", "tool": "bar_ops", "command": "menu"},
+            {"label": "我的酒吧档", "tool": "bar_ops", "command": "status"},
+        ],
+    },
+    {
+        "id": "market",
+        "name": "玩家集市",
+        "kicker": "Market",
+        "blurb": "挂单、交换、看看今天谁在卖东西。",
+        "week1": False,
+        "actions": [
+            {"label": "看集市", "tool": "tote_ops", "command": "market list"},
+            {"label": "交换台", "tool": "tote_ops", "command": "swap list"},
+        ],
+    },
+    {
         "id": "tide",
         "name": "海边",
-        "blurb": "撒网、赶海、出海",
+        "kicker": "Tide",
+        "blurb": "撒网、赶海、出海。",
         "week1": True,
         "actions": [
             {"label": "撒网", "tool": "tide_ops", "command": "net"},
@@ -48,34 +74,10 @@ PLACES: list[dict[str, Any]] = [
         ],
     },
     {
-        "id": "hut",
-        "name": "小屋",
-        "blurb": "睡一觉、潮柜、畜栏",
-        "week1": True,
-        "actions": [
-            {"label": "看屋", "tool": "hut_ops", "command": "status"},
-            {"label": "睡", "tool": "hut_ops", "command": "睡"},
-            {"label": "建棚屋", "tool": "hut_ops", "command": "build"},
-            {"label": "畜栏", "tool": "hut_ops", "command": "barn status"},
-        ],
-    },
-    {
-        "id": "bar",
-        "name": "滨海酒吧",
-        "blurb": "上工打卡、点单、双人吧台",
-        "week1": True,
-        "duty": True,
-        "actions": [
-            {"label": "洗碗上工", "tool": "bar_ops", "command": "work 洗碗 night"},
-            {"label": "今晚", "tool": "bar_ops", "command": "tonight"},
-            {"label": "酒单", "tool": "bar_ops", "command": "menu"},
-            {"label": "我的酒吧档", "tool": "bar_ops", "command": "status"},
-        ],
-    },
-    {
         "id": "eatery",
         "name": "岸畔小馆",
-        "blurb": "点餐、看谁在营业",
+        "kicker": "Kitchen",
+        "blurb": "点餐、看谁在营业。",
         "week1": True,
         "actions": [
             {"label": "谁在营业", "tool": "kitchen_ops", "command": "shop board"},
@@ -83,21 +85,10 @@ PLACES: list[dict[str, Any]] = [
         ],
     },
     {
-        "id": "quarry",
-        "name": "盐风崖",
-        "blurb": "潮脉矿，比赶海慢",
-        "week1": False,
-        "actions": [
-            {"label": "看崖", "tool": "quarry_ops", "command": "status"},
-            {"label": "买镐", "tool": "quarry_ops", "command": "买镐"},
-            {"label": "探脉", "tool": "quarry_ops", "command": "探脉"},
-            {"label": "挖", "tool": "quarry_ops", "command": "挖"},
-        ],
-    },
-    {
         "id": "craft",
         "name": "岸工坊",
-        "blurb": "打钉、盐田、打捞",
+        "kicker": "Workshop",
+        "blurb": "打钉、盐田、打捞。",
         "week1": False,
         "actions": [
             {"label": "看砧", "tool": "craft_ops", "command": "status"},
@@ -107,28 +98,10 @@ PLACES: list[dict[str, Any]] = [
         ],
     },
     {
-        "id": "market",
-        "name": "集市",
-        "blurb": "挂单、交换",
-        "week1": False,
-        "actions": [
-            {"label": "看集市", "tool": "tote_ops", "command": "market list"},
-            {"label": "交换台", "tool": "tote_ops", "command": "swap list"},
-        ],
-    },
-    {
-        "id": "lounge",
-        "name": "聊天室",
-        "blurb": "答疑、岛上说话",
-        "week1": True,
-        "actions": [
-            {"label": "看最近", "tool": "lounge_ops", "command": "scan"},
-        ],
-    },
-    {
         "id": "star",
-        "name": "小橘",
-        "blurb": "听她唱、打赏",
+        "name": "小橘星光",
+        "kicker": "Starlight",
+        "blurb": "听她唱、打赏。",
         "week1": False,
         "actions": [
             {"label": "她的档", "tool": "star_ops", "command": "status"},
@@ -136,8 +109,45 @@ PLACES: list[dict[str, Any]] = [
         ],
     },
     {
+        "id": "hut",
+        "name": "岸畔小屋",
+        "kicker": "Hut",
+        "blurb": "睡一觉、潮柜、畜栏。",
+        "week1": True,
+        "actions": [
+            {"label": "看屋", "tool": "hut_ops", "command": "status"},
+            {"label": "睡", "tool": "hut_ops", "command": "睡"},
+            {"label": "建棚屋", "tool": "hut_ops", "command": "build"},
+            {"label": "畜栏", "tool": "hut_ops", "command": "barn status"},
+        ],
+    },
+    {
+        "id": "lounge",
+        "name": "聊天室",
+        "kicker": "Lounge",
+        "blurb": "答疑、岛上说话。",
+        "week1": True,
+        "actions": [
+            {"label": "看最近", "tool": "lounge_ops", "command": "scan"},
+        ],
+    },
+    {
+        "id": "quarry",
+        "name": "盐风崖",
+        "kicker": "Quarry",
+        "blurb": "潮脉矿，比赶海慢。",
+        "week1": False,
+        "actions": [
+            {"label": "看崖", "tool": "quarry_ops", "command": "status"},
+            {"label": "买镐", "tool": "quarry_ops", "command": "买镐"},
+            {"label": "探脉", "tool": "quarry_ops", "command": "探脉"},
+            {"label": "挖", "tool": "quarry_ops", "command": "挖"},
+        ],
+    },
+    {
         "id": "undertide",
         "name": "井下",
+        "kicker": "Undertide",
         "blurb": "别乱点。真的。",
         "week1": False,
         "caution": True,
