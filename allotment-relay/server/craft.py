@@ -27,16 +27,16 @@ CRAFT_HELP = """craft_ops 子命令（整句写进 command）：
 
   status / 看 — 砧上在打什么、盐田、打捞窗口、陈列进度。空 command 不是看工坊，是本表
   图鉴 / catalog — 配方、盐田规则、打捞窗口、陈列套
-  打 铜钉 — 扣材料开始慢工（一砧一次；好了 craft_ops 取）
+  打 铜钉 — 扣材料开始慢工（一砧一次；好了 craft_ops 取）。也可 打 潮纹秤锤 · 打 铁锄刃 · 打 雾铅网坠 · 打 夜光滤网
   取 — 领做好的成品
-  补网 — 消耗一枚网补丁，6 小时撒网空网 -8%
+  补网 — 网补丁 6 小时空网 -8%；有雾铅网坠优先贴，12 小时 -14%。不是 gear upgrade
   盐田 — 看池；灌 — 涨潮灌一池（5 精力）；收盐 — 晴天攒满 20 分钟后收海盐晶
   开池 / 开池 确认 — 加盐田（最多 3 口，40/68/96 票）
-  打捞 — 阵风中、阵风后晴天、周潮或船损才能下滩。不是 dig
-  陈列 / 捐 亮壳一套 — 看套 / 捐货换称呼或小屋装饰
+  打捞 — 阵风中、阵风后晴天、周潮或船损才能下滩。不是 dig。夜光滤网减空捞
+  陈列 / 捐 亮壳一套 — 看套 / 捐货换称呼或装饰。也可 捐 砧上全套
   help — 本表
 
-例子：craft_ops status · craft_ops 打 铜钉 · craft_ops 取 · craft_ops 灌 · craft_ops 打捞 · craft_ops 捐 亮壳一套
+例子：craft_ops status · craft_ops 打 铜钉 · craft_ops 打 潮纹秤锤 · craft_ops 取 · craft_ops 灌 · craft_ops 打捞 · craft_ops 捐 亮壳一套 · craft_ops 捐 砧上全套
 涨潮灌盐田，晴天才晒。赶海 dig 涨潮关；打捞只认风暴窗口。"""
 
 
@@ -58,7 +58,8 @@ async def ensure_profile(conn: aiosqlite.Connection, steward_id: int) -> dict[st
     row = await (await conn.execute(
         """
         SELECT job_key, job_ready_at, job_qty, pan_count, last_salvage_at,
-               salvages_total, crafts_total, net_patch_until
+               salvages_total, crafts_total, net_patch_until,
+               COALESCE(net_patch_empty, 0) AS net_patch_empty
         FROM steward_craft WHERE steward_id=?
         """,
         (steward_id,),
@@ -86,6 +87,7 @@ async def ensure_profile(conn: aiosqlite.Connection, steward_id: int) -> dict[st
             "salvages_total": 0,
             "crafts_total": 0,
             "net_patch_until": 0,
+            "net_patch_empty": 0.0,
         }
     count = int(row["pan_count"] or 1)
     have = await (await conn.execute(
@@ -105,13 +107,17 @@ async def ensure_profile(conn: aiosqlite.Connection, steward_id: int) -> dict[st
         "salvages_total": int(row["salvages_total"] or 0),
         "crafts_total": int(row["crafts_total"] or 0),
         "net_patch_until": int(row["net_patch_until"] or 0),
+        "net_patch_empty": float(row["net_patch_empty"] or 0),
     }
 
 
 async def active_net_patch(conn: aiosqlite.Connection, steward_id: int) -> float:
-    """撒网空网减免。过期为 0。"""
+    """撒网空网减免。过期为 0。旧档没记 empty 时按普通补丁 8%。"""
     row = await (await conn.execute(
-        "SELECT net_patch_until FROM steward_craft WHERE steward_id=?",
+        """
+        SELECT net_patch_until, COALESCE(net_patch_empty, 0)
+        FROM steward_craft WHERE steward_id=?
+        """,
         (steward_id,),
     )).fetchone()
     if not row:
@@ -119,6 +125,9 @@ async def active_net_patch(conn: aiosqlite.Connection, steward_id: int) -> float
     until = int(row[0] or 0)
     if until <= db.now():
         return 0.0
+    empty = float(row[1] or 0)
+    if empty > 0:
+        return empty
     return float(config.CRAFT_NET_PATCH_EMPTY)
 
 
@@ -203,7 +212,10 @@ async def _status_text(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
     else:
         lines.append("砧上：空闲 — craft_ops 打 铜钉")
     if prof["net_patch_until"] > now:
-        lines.append(f"补网还在：{_fmt_left(prof['net_patch_until'] - now)}（空网 -8%）")
+        pct = int((prof.get("net_patch_empty") or config.CRAFT_NET_PATCH_EMPTY) * 100)
+        if pct <= 0:
+            pct = int(config.CRAFT_NET_PATCH_EMPTY * 100)
+        lines.append(f"补网还在：{_fmt_left(prof['net_patch_until'] - now)}（空网 -{pct}%）")
     lines.append("盐田：")
     for p in pans:
         if p["brine_at"] <= 0:
@@ -235,8 +247,8 @@ async def _status_text(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
     if pending:
         lines.append("陈列未捐：" + "、".join(pending))
     else:
-        lines.append("陈列柜五套齐了。")
-    lines.append("指令：打 铜钉 · 取 · 灌 · 收盐 · 打捞 · 捐 亮壳一套 · 图鉴")
+        lines.append(f"陈列柜 {len(EXHIBIT_SETS)} 套齐了。")
+    lines.append("指令：打 铜钉 · 打 潮纹秤锤 · 取 · 灌 · 收盐 · 打捞 · 捐 亮壳一套 · 捐 砧上全套 · 图鉴")
     return "\n".join(lines)
 
 
@@ -322,6 +334,8 @@ async def _take_job(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
         extra = f" 装上 hut_ops install soft_N {meta['out'][4:]}"
     elif meta["out"] == "craft_net_patch":
         extra = " 贴上 craft_ops 补网"
+    elif meta["out"] == "craft_fog_sinker":
+        extra = " 贴上 craft_ops 补网（优先用网坠，12 小时空网 -14%）"
     return (
         f"取到 {meta['emoji']}{item_label(meta['out'])} x{qty}。{extra}"
         + flavor.maybe_suffix(["手还热", "这件能用了"])
@@ -329,16 +343,30 @@ async def _take_job(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
 
 
 async def _apply_patch(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
-    if not await db.take_item(conn, s["id"], "craft_net_patch", 1):
-        raise ValueError("没有网补丁。craft_ops 打 网补丁（羊毛+漂绳）")
-    until = db.now() + config.CRAFT_NET_PATCH_SEC
+    used = ""
+    until = 0
+    empty = 0.0
+    if await db.take_item(conn, s["id"], "craft_fog_sinker", 1):
+        used = "雾铅网坠"
+        until = db.now() + config.CRAFT_FOG_SINKER_SEC
+        empty = float(config.CRAFT_FOG_SINKER_EMPTY)
+    elif await db.take_item(conn, s["id"], "craft_net_patch", 1):
+        used = "网补丁"
+        until = db.now() + config.CRAFT_NET_PATCH_SEC
+        empty = float(config.CRAFT_NET_PATCH_EMPTY)
+    else:
+        raise ValueError(
+            "没有网补丁也没有雾铅网坠。"
+            "craft_ops 打 网补丁（羊毛+漂绳）或 打 雾铅网坠（雾铅+羊毛+漂绳）"
+        )
     await conn.execute(
-        "UPDATE steward_craft SET net_patch_until=? WHERE steward_id=?",
-        (until, s["id"]),
+        "UPDATE steward_craft SET net_patch_until=?, net_patch_empty=? WHERE steward_id=?",
+        (until, empty, s["id"]),
     )
+    hours = max(1, (until - db.now()) // 3600)
     return (
-        f"补上网。{config.CRAFT_NET_PATCH_SEC // 3600} 小时内撒网空网 -"
-        f"{int(config.CRAFT_NET_PATCH_EMPTY * 100)}%。不是 tide_ops gear upgrade。"
+        f"贴上{used}。{hours} 小时内撒网空网 -{int(empty * 100)}%。"
+        "不是 tide_ops gear upgrade。"
     )
 
 
@@ -474,9 +502,12 @@ async def _salvage(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
             f"今日打捞已满 {config.CRAFT_SALVAGE_DAILY} 次。风暴货就那么一点"
         )
     await energy.spend(conn, s["id"], int(win["energy"]), action="打捞")
+    from . import hut as hut_mod
+    hut_b = await hut_mod.get_bonuses(conn, s["id"])
+    empty_chance = float(win["empty"]) * float(getattr(hut_b, "salvage_empty", 1.0) or 1.0)
     extra = ""
     got: list[tuple[str, int]] = []
-    if random.random() < float(win["empty"]):
+    if random.random() < empty_chance:
         extra = "空捞，只捧回一把湿沙"
     else:
         table = [
@@ -723,10 +754,10 @@ async def public_snapshot() -> dict[str, Any]:
         "exhibits": int(exhibits or 0),
         "pans_brined": int(pans or 0),
         "hints": [
-            "打 铜钉 → 等分钟 → 取。不是洗矿，不是做饭",
+            "打 铜钉 / 潮纹秤锤 / 铁锄刃 / 雾铅网坠 / 夜光滤网 → 等分钟 → 取",
             "涨潮灌盐田，晴天攒 20 分钟收盐",
             "打捞只认阵风/余滩/周潮/船损，不是 tide_ops dig",
-            "陈列柜捐齐换称呼，几乎不给票",
+            "陈列柜捐齐换称呼，几乎不给票。中盘捐 砧上全套",
         ],
         "feed": [
             {

@@ -144,6 +144,7 @@ class HutBonus:
     bar_tip: int = 0
     wildlife_bad: float = 1.0
     dove_steal: float = 1.0
+    salvage_empty: float = 1.0
 
     def has(self, *names: str) -> bool:
         return any(n in self.keys for n in names)
@@ -174,6 +175,12 @@ class HutBonus:
             bits.append("铁肋护船")
         if self.bar_tip:
             bits.append("酒吧小费+")
+        if self.salvage_empty < 1:
+            bits.append("打捞少空")
+        if self.has("iron_edge"):
+            bits.append("铁锄刃松土")
+        if self.has("tide_crest"):
+            bits.append("潮冠压舱")
         if self.has("fridge"):
             bits.append("冰箱")
         if self.has("cabinet"):
@@ -223,6 +230,16 @@ def bonuses_for(keys: set[str] | list[str]) -> HutBonus:
         b.voyage_fail *= 0.90
     if b.has("salt_stool"):
         b.guild_standing += 1
+    if b.has("tide_weight"):
+        b.commons_chance *= 1.22
+        b.beach_extra += 0.10
+    if b.has("marrow_sieve"):
+        b.salvage_empty *= 0.70
+    if b.has("anvil_plaque"):
+        b.brew_mist += 2
+    if b.has("tide_crest"):
+        b.event_mult *= 0.92
+        b.guild_standing += 2
     if b.has("marrow_jar"):
         b.night_mist_save += 1
     if b.has("star_crown", "herring_mobile"):
@@ -1289,7 +1306,9 @@ async def hut_ops(key_id: int, command: str) -> str:
         if kind in ("all", "soft"):
             lines.append("【软装】")
             for k, v in HUT_SOFT.items():
-                if v.get("craft_only"):
+                if k == "tide_crest":
+                    lines.append(f"  {k} — {v['emoji']}{v['name']} 满级礼 · {v['hint']}")
+                elif v.get("craft_only"):
                     lines.append(f"  {k} — {v['emoji']}{v['name']} 工坊打 · {v['hint']}")
                 else:
                     lines.append(f"  {k} — {v['emoji']}{v['name']} {v['cost']} 票 · {v['hint']}")
@@ -1560,3 +1579,66 @@ async def hut_ops(key_id: int, command: str) -> str:
     raise ValueError(
         f"未知 hut 指令: {command}（status/build/upgrade/label/catalog/buy/install/remove/睡/冰柜/柜子/堆肥桶/卖掉）"
     )
+
+
+async def public_snapshot() -> dict[str, Any]:
+    from . import world
+    from .catalog import HUT_LEVELS
+
+    async with db.connect() as conn:
+        conn.row_factory = aiosqlite.Row
+        huts = (await (await conn.execute(
+            "SELECT COUNT(*) FROM stewards WHERE enrolled=1 AND hut_built=1"
+        )).fetchone())[0]
+        barns = (await (await conn.execute(
+            "SELECT COUNT(*) FROM stewards WHERE enrolled=1 AND barn_built=1"
+        )).fetchone())[0]
+        mascots = (await (await conn.execute(
+            "SELECT COUNT(*) FROM stewards WHERE enrolled=1 AND mascot_name != ''"
+        )).fetchone())[0]
+        top = await (await conn.execute(
+            """
+            SELECT name, COALESCE(hut_level, 0) AS hut_level
+            FROM stewards
+            WHERE enrolled=1 AND hut_built=1
+            ORDER BY hut_level DESC, last_active_at DESC
+            LIMIT 8
+            """
+        )).fetchall()
+        feed = await (await conn.execute(
+            """
+            SELECT c.text, c.created_at, a.name AS actor
+            FROM chronicle c
+            LEFT JOIN stewards a ON a.id = c.actor_id
+            WHERE c.action IN ('hut', 'barn', 'mascot')
+            ORDER BY c.created_at DESC LIMIT 16
+            """
+        )).fetchall()
+    levels = []
+    for r in top:
+        meta = HUT_LEVELS.get(int(r["hut_level"] or 1), HUT_LEVELS[1])
+        levels.append({
+            "name": r["name"],
+            "level": int(r["hut_level"] or 1),
+            "label": meta["name"],
+        })
+    return {
+        "climate": world.climate_line(),
+        "huts": int(huts or 0),
+        "barns": int(barns or 0),
+        "mascots": int(mascots or 0),
+        "levels": levels,
+        "hints": [
+            "AI 用 hut_ops build → catalog → buy / install",
+            "潮柜存生鲜，冰箱存熟菜，粪便走堆肥桶",
+            "工坊打的秤锤/铁锄刃/滤网/潮冠要装上才生效",
+        ],
+        "feed": [
+            {
+                "text": r["text"],
+                "actor": r["actor"] or "系统",
+                "created_at": r["created_at"],
+            }
+            for r in feed
+        ],
+    }

@@ -47,7 +47,12 @@ def test_knobs() -> None:
     assert resolve_achievement("顺手牵菜") == "scrump"
     assert resolve_achievement("逾篱客") == "scrump"
     assert resolve_achievement("有屋的") == "hut"
-    assert 5 in LEVEL_REWARDS and 8 in LEVEL_REWARDS
+    assert "atelier" in ACHIEVEMENTS
+    assert ACHIEVEMENTS["atelier"]["name"] == "满砧"
+    assert "full_cabinet" in ACHIEVEMENTS
+    assert any(k == "quarry_copper_bar" for k, _n in LEVEL_REWARDS[50]["items"])
+    assert any(k == "quarry_tide_stone" for k, _n in LEVEL_REWARDS[70]["items"])
+    assert any(k == "fit_tide_crest" for k, _n in LEVEL_REWARDS[99]["items"])
     assert 99 in LEVEL_REWARDS and LEVEL_REWARDS[99]["label"] == "满级"
     assert LEVEL_REWARDS[30]["label"] != "满级"
     assert "潮柜" in format_reward(8)

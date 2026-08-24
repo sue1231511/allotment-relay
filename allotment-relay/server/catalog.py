@@ -459,6 +459,16 @@ HUT_SOFT = {
                    "hint": "陈列柜捐齐潮纹/雾铅/夜光髓后发。暮夜雾智少掉 +1。hut_ops buy 买不了"},
     "fish_plinth": {"name": "标本座", "cost": 0, "emoji": "🐟", "craft_only": True,
                     "hint": "陈列柜捐未命名小鱼后发。纯好看。hut_ops buy 买不了"},
+    "tide_weight": {"name": "潮纹秤锤", "cost": 0, "emoji": "⚖️", "craft_only": True,
+                    "hint": "工坊打。公共物资刷新 ×1.22，赶海铃响 +10%。hut_ops buy 买不了"},
+    "iron_edge": {"name": "铁锄刃", "cost": 0, "emoji": "🪓", "craft_only": True,
+                  "hint": "工坊打。tend 当更好的锄：成熟提前 70、蚯蚓约 34%。有刃不必再带锄头。hut_ops buy 买不了"},
+    "marrow_sieve": {"name": "夜光滤网", "cost": 0, "emoji": "🕸️", "craft_only": True,
+                     "hint": "工坊打。风暴打捞空捞 ×0.70。hut_ops buy 买不了"},
+    "anvil_plaque": {"name": "砧铭牌", "cost": 0, "emoji": "🪧", "craft_only": True,
+                     "hint": "陈列柜捐齐砧上全套后发。brew 雾智 +2。hut_ops buy 买不了"},
+    "tide_crest": {"name": "潮冠", "cost": 0, "emoji": "👑", "craft_only": True,
+                   "hint": "满级升级礼。意外 ×0.92，guild 档信 +2。不能打、不能买"},
 }
 
 TOOLS = {
@@ -640,6 +650,10 @@ CRAFT_ITEMS = {
         "name": "锈钉", "emoji": "🧲", "sell": 3,
         "aliases": ("锈铁钉", "rusty"),
     },
+    "craft_fog_sinker": {
+        "name": "雾铅网坠", "emoji": "🪙", "sell": 36,
+        "aliases": ("网坠", "铅坠", "fog_sinker"),
+    },
 }
 
 # 打 物名：扣材料，等分钟，取 领成品。不是 quarry_ops 洗，也不是 kitchen_ops cook
@@ -692,6 +706,30 @@ CRAFT_RECIPES = {
         "seconds": 720, "energy": 4,
         "hint": "小屋软装，纯好看",
     },
+    "tide_weight": {
+        "name": "潮纹秤锤", "emoji": "⚖️", "out": "fit_tide_weight", "qty": 1,
+        "need": {"quarry_tide_stone": 1, "craft_timber": 1},
+        "seconds": 1080, "energy": 7,
+        "hint": "hut_ops install soft_N tide_weight。公共物资 ×1.22，赶海铃响 +10%",
+    },
+    "iron_edge": {
+        "name": "铁锄刃", "emoji": "🪓", "out": "fit_iron_edge", "qty": 1,
+        "need": {"quarry_iron_bar": 2, "craft_timber": 1},
+        "seconds": 960, "energy": 7,
+        "hint": "hut_ops install soft_N iron_edge。tend 当更好的锄，不必再带锄头",
+    },
+    "fog_sinker": {
+        "name": "雾铅网坠", "emoji": "🪙", "out": "craft_fog_sinker", "qty": 1,
+        "need": {"quarry_fog_lead": 1, "wool": 1, "drift_twine": 1},
+        "seconds": 1200, "energy": 8,
+        "hint": "craft_ops 补网 会优先贴这个：12 小时空网 -14%，盖过普通网补丁",
+    },
+    "marrow_sieve": {
+        "name": "夜光滤网", "emoji": "🕸️", "out": "fit_marrow_sieve", "qty": 1,
+        "need": {"quarry_marrow": 1, "quarry_fog_lead": 1, "drift_twine": 1},
+        "seconds": 1500, "energy": 9,
+        "hint": "hut_ops install soft_N marrow_sieve。风暴打捞空捞 ×0.70",
+    },
 }
 
 # 陈列柜：捐出指定货，换称呼和/或小屋装饰。不印钞
@@ -741,6 +779,17 @@ EXHIBIT_SETS = {
         "gift": "",
         "hint": "图鉴里记过 10 种不同的鱼（不扣行囊）",
         "aliases": ("渔获", "十种鱼", "十鱼"),
+    },
+    "workshop": {
+        "name": "砧上全套", "emoji": "🔨",
+        "need": {
+            "craft_copper_nails": 3, "craft_net_patch": 1,
+            "quarry_salt": 1, "craft_timber": 2,
+        },
+        "title": "atelier",
+        "gift": "fit_anvil_plaque",
+        "hint": "铜钉×3 + 网补丁 + 海盐晶 + 岸木×2。中盘工坊目标",
+        "aliases": ("工坊", "砧套", "全套", "砧上"),
     },
 }
 

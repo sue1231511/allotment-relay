@@ -98,6 +98,21 @@ async def workshop_page(request: Request):
     return templates.TemplateResponse(request, "workshop.html", {"active": "workshop"})
 
 
+@app.get("/tide", response_class=HTMLResponse)
+async def tide_page(request: Request):
+    return templates.TemplateResponse(request, "tide.html", {"active": "tide"})
+
+
+@app.get("/huts", response_class=HTMLResponse)
+async def huts_page(request: Request):
+    return templates.TemplateResponse(request, "huts.html", {"active": "huts"})
+
+
+@app.get("/market", response_class=HTMLResponse)
+async def market_page(request: Request):
+    return templates.TemplateResponse(request, "market.html", {"active": "market"})
+
+
 @app.get("/board", response_class=HTMLResponse)
 async def board_page(request: Request):
     return templates.TemplateResponse(request, "board.html", {"active": "board"})
@@ -227,6 +242,24 @@ async def public_quarry():
 async def public_workshop():
     from . import craft
     return await craft.public_snapshot()
+
+
+@app.get("/api/public/tide")
+async def public_tide():
+    from . import marine
+    return await marine.public_snapshot()
+
+
+@app.get("/api/public/huts")
+async def public_huts():
+    from . import hut
+    return await hut.public_snapshot()
+
+
+@app.get("/api/public/market")
+async def public_market():
+    from . import market
+    return await market.public_snapshot()
 
 
 @app.get("/api/public/board")

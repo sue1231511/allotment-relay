@@ -1551,9 +1551,11 @@ async def init_db() -> None:
                 last_salvage_at INTEGER NOT NULL DEFAULT 0,
                 salvages_total INTEGER NOT NULL DEFAULT 0,
                 crafts_total INTEGER NOT NULL DEFAULT 0,
-                net_patch_until INTEGER NOT NULL DEFAULT 0
+                net_patch_until INTEGER NOT NULL DEFAULT 0,
+                net_patch_empty REAL NOT NULL DEFAULT 0
             )
             """,
+            "ALTER TABLE steward_craft ADD COLUMN net_patch_empty REAL NOT NULL DEFAULT 0",
             """
             CREATE TABLE IF NOT EXISTS craft_pans (
                 steward_id INTEGER NOT NULL REFERENCES stewards(id),

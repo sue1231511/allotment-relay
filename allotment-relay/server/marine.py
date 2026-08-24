@@ -1298,3 +1298,91 @@ async def voyage_ops(key_id: int, command: str) -> str:
         f"未知 voyage 指令: {command}（status/buy/repair/depart/return/moor/"
         "compliment|release|catch|grab/fight|flee|parley|bribe）"
     )
+
+
+async def public_snapshot() -> dict[str, Any]:
+    from .catalog import WORLD_BOSS
+
+    day0 = db.day_start()
+    async with db.connect() as conn:
+        conn.row_factory = aiosqlite.Row
+        nets = (await (await conn.execute(
+            """
+            SELECT COUNT(*) FROM chronicle
+            WHERE action='tide' AND created_at>=?
+            """,
+            (day0,),
+        )).fetchone())[0]
+        out = (await (await conn.execute(
+            """
+            SELECT COUNT(*) FROM voyages
+            WHERE status IN ('sailing','hailed','fish_encounter')
+            """
+        )).fetchone())[0]
+        pens = (await (await conn.execute(
+            "SELECT COUNT(*) FROM fish_pens WHERE species IS NOT NULL AND species != ''"
+        )).fetchone())[0]
+        boats = (await (await conn.execute(
+            "SELECT COUNT(*) FROM stewards WHERE enrolled=1 AND boat_key != ''"
+        )).fetchone())[0]
+        at_sea = await (await conn.execute(
+            """
+            SELECT s.name, v.route, v.returns_at
+            FROM voyages v
+            JOIN stewards s ON s.id = v.steward_id
+            WHERE v.status IN ('sailing','hailed','fish_encounter')
+            ORDER BY v.returns_at ASC LIMIT 8
+            """
+        )).fetchall()
+        boss_row = await (await conn.execute(
+            "SELECT hp, max_hp FROM world_boss WHERE boss_key=?",
+            (WORLD_BOSS["key"],),
+        )).fetchone()
+        feed = await (await conn.execute(
+            """
+            SELECT c.text, c.created_at, a.name AS actor
+            FROM chronicle c
+            LEFT JOIN stewards a ON a.id = c.actor_id
+            WHERE c.action IN ('tide', 'voyage')
+            ORDER BY c.created_at DESC LIMIT 16
+            """
+        )).fetchall()
+    boss = None
+    if boss_row:
+        hp, max_hp = int(boss_row[0] or 0), int(boss_row[1] or 0)
+        boss = {
+            "name": WORLD_BOSS["name"],
+            "hp": hp,
+            "max_hp": max_hp,
+            "pct": int(hp / max_hp * 100) if max_hp else 0,
+            "alive": hp > 0,
+        }
+    return {
+        "climate": world.climate_line(),
+        "nets_today": int(nets or 0),
+        "voyages_out": int(out or 0),
+        "pens": int(pens or 0),
+        "boats": int(boats or 0),
+        "at_sea": [
+            {
+                "name": r["name"],
+                "route": VOYAGE_ROUTES.get(r["route"], {}).get("label", r["route"]),
+                "returns_at": r["returns_at"],
+            }
+            for r in at_sea
+        ],
+        "boss": boss,
+        "hints": [
+            "AI 用 tide_ops net / cast / voyage depart near",
+            "涨潮关赶海 dig，不关撒网。风暴打捞走 craft_ops 打捞",
+            "潮渊之主 tide_ops boss attack，岸边也能围攻",
+        ],
+        "feed": [
+            {
+                "text": r["text"],
+                "actor": r["actor"] or "系统",
+                "created_at": r["created_at"],
+            }
+            for r in feed
+        ],
+    }

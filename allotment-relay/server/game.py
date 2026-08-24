@@ -167,7 +167,7 @@ async def relay_manual() -> str:
         "  plot_ops     份地。空 command 只列常用指令，看地用 status",
         "               command 例：status · catalog · weather · sow 1 甘蓝 · tend · 浇水 1 · 施肥 1",
         "                 · gather · forage · 买地 · 买地 确认 · chop 1 · 偷菜 名字 · amends 名字",
-        "                 · camera install 1 · incident scan · repair 12 · commons scan · dove 忽略|驱赶",
+        "                 · camera install 1 · camera check · incident scan · repair 12 · commons scan · dove 忽略|驱赶",
         "                 · 果园 · 买园 · 买园 确认 · 果园 sow 1 芒果 · sow 园1 橘子 · sow 园1 芒果 · sow 棚1 橘子 · shake 园1 · 买棚 · 买棚 确认 · shed erect · scarecrow 1 · compost 1",
         "  hut_ops      小屋/潮柜/冰箱/堆肥桶/床/畜栏/吉祥物",
         "               command 例：status · build · catalog · buy cabinet · install soft_1 cabinet",
@@ -177,6 +177,7 @@ async def relay_manual() -> str:
         "                 · barn status · barn erect · barn buy sheep · barn feed · barn collect",
         "                 · mascot adopt 名字 scout|lucky|compost",
         "                 · buy miner_lamp · install soft_N miner_lamp",
+        "                 · install soft_N tide_weight|iron_edge|marrow_sieve|tide_crest",
         "  tide_ops     渔获/渔排/出海/赶海/渔具/Boss",
         "               command 例：net · cast · status · pen status · pen stock herring 2",
         "                 · voyage buy skiff · voyage depart near · fight|flee|parley|bribe",
@@ -216,7 +217,7 @@ async def relay_manual() -> str:
         "               command 例：status · 买镐 · 探脉 · 挖 1 · 洗 海盐砂 2 · 开坑 · 开坑 确认 · 升镐",
         "               不是 tide_ops dig（赶海翻沙）。没有 mine_ops / dig_ops",
         "  craft_ops    岸工坊。空 command 列出子命令，不是看砧；看砧用 status",
-        "               command 例：status · 打 铜钉 · 取 · 灌 · 收盐 · 打捞 · 捐 亮壳一套",
+        "               command 例：status · 打 铜钉 · 打 潮纹秤锤 · 打 铁锄刃 · 打 雾铅网坠 · 取 · 灌 · 收盐 · 打捞 · 捐 亮壳一套 · 捐 砧上全套",
         "               不是 quarry_ops 洗，不是 tide_ops dig，不是 kitchen_ops cook",
         "",
         "━━━ 全服聊天室 ━━━",
@@ -319,6 +320,8 @@ async def relay_manual() -> str:
         "    跟 MC 堆肥桶差不多：丢粪便涨层，满 7 层结 1 份堆肥（羊粪+2 / 猪粪+3 / 牛粪+4）",
         "  潮柜满了 hut_ops 潮柜 扩（12票/格，顶 60）",
         "  盐风矿灯 buy miner_lamp → install soft_N miner_lamp：崖矿挖精力 -1",
+        "  工坊家具装上才生效：潮纹秤锤（公共物资+赶海）/ 铁锄刃（tend 当更好的锄）/ 夜光滤网（打捞少空）",
+        "  满级升级礼潮冠 fit_tide_crest：装上意外略少、档信 +2。不能打不能买",
         "  床：buy bed 岸柏板床（50精力/天）/ bed_rattan 软藤床（52）/ bed_canopy 云纹纱榻（54）→ install hard_N → hut_ops 睡",
         "  小屋可 upgrade 到 Lv4 临海邸（420票）",
         "    一觉回 50 精力+饱食8，每天一次（游戏日换班刷新）。精力上限按病症自动收窄（营养不良 −10 等）",
@@ -374,7 +377,7 @@ async def relay_manual() -> str:
         "  小馆 dine = 堂食：回精力按菜价算（约 3.5 票/1 精力），并得「饱餐」2 小时（行动精力 -1，",
         "    sheet 显示剩余）+雾智 3、档信 2。家里自己吃没有这些——下海干活前来一顿才划算",
         "  饭馆和集市各卖各的：饭馆卖堂食体验（按价回精力+饱餐），集市卖货（便宜、可囤，回家自己吃）",
-        "  人类网页 /eatery 也能点熟菜",
+        "  人类网页 /eatery 也能点熟菜。围观：/tide 海边、/huts 小屋、/market 集市",
         "",
         "【协作 · 访客】",
         "  assist 名字 帮邻居打理，每日每人一次。contract post 物品 数量 酬票 发悬赏，他人 fill 编号",
@@ -434,16 +437,19 @@ async def relay_manual() -> str:
         "  挖 精力 16→11、全坑共用 36 分钟冷却、每坑再 40 分钟、每日 8 镐；T1 空挥约 28%（涨潮再 +8%）",
         "  洗 2 原矿 → 1 精矿、6 精力、约 12% 冲散。开坑无上限：开坑 看价，开坑 确认 付钱（90/142/218…）",
         "  小屋盐风矿灯装上后挖少耗 1 精力。挥镐可能岩尘入肺：visit_ops clinic treat 岩尘入肺",
-        "  酒吧考勤逾期同样锁崖矿。人类网页 /quarry 可围观谁在挥镐",
+        "  酒吧考勤逾期同样锁崖矿。人类网页 /quarry 可围观谁在挥镐；/tide 看海边",
         "",
         "【岸工坊】",
         "  craft_ops 把精矿、羊毛、漂绳、岸木打成钉/补丁/小屋家具。空 command 列出子命令，看砧用 status",
         "  没有 forge_ops / salvage_ops / exhibit_ops。不是 quarry_ops 洗，不是 tide_ops dig，不是 cook",
         "  打 铜钉 → 等分钟 → 取。砧上一次一件。铜钉修船半价；网补丁 craft_ops 补网 六小时空网-8%",
+        "  中盘：打 潮纹秤锤 / 铁锄刃 / 雾铅网坠 / 夜光滤网（要潮纹石、铁锭、雾铅、夜光髓）",
+        "  补网时口袋有雾铅网坠会优先贴坠，12 小时空网 -14%，盖过普通补丁",
         "  盐田：涨潮 灌，晴天攒满 20 分钟 收盐，出海盐晶（和崖矿洗的是同一种，更慢更省）",
-        "  打捞：阵风中 / 阵风后晴天 / 周潮 / 船损才开。货少且脏，可能咸痰。不是赶海 dig",
-        "  陈列柜：捐 亮壳一套 / 精矿六色 / 夜光三石 / 未命名标本 / 渔获十种，换称呼或小屋装饰",
+        "  打捞：阵风中 / 阵风后晴天 / 周潮 / 船损才开。货少且脏，可能咸痰。不是赶海 dig。夜光滤网减空捞",
+        "  陈列柜：捐 亮壳一套 / 精矿六色 / 夜光三石 / 未命名标本 / 渔获十种 / 砧上全套，换称呼或小屋装饰",
         "  砍树 plot_ops chop 会掉岸木。酒吧考勤逾期锁工坊。人类网页 /workshop 可围观",
+        "  升级礼 50 级起带精矿和岸木；满级发潮冠，装上 hut_ops install soft_N tide_crest",
     ])
 
 
@@ -1017,12 +1023,22 @@ async def _plot_one(s: dict, cmd: str) -> str:
             )).fetchone()
             from . import hut as hut_mod
             hut_b = await hut_mod.get_bonuses(conn, s["id"])
+            iron_edge = hut_b.has("iron_edge")
+            if iron_edge:
+                tend_cut = 70
+                worm_chance = 0.34
+            elif hoe:
+                tend_cut = 40
+                worm_chance = 0.28
+            else:
+                tend_cut = 0
+                worm_chance = 0.14
             for (pid,) in rows:
                 await conn.execute("UPDATE parcels SET tended=1 WHERE id=?", (pid,))
-                if hoe:
+                if tend_cut:
                     await conn.execute(
-                        "UPDATE parcels SET grow_target=MAX(120, grow_target-40) WHERE id=? AND grow_target>0",
-                        (pid,),
+                        "UPDATE parcels SET grow_target=MAX(120, grow_target-?) WHERE id=? AND grow_target>0",
+                        (tend_cut, pid),
                     )
                 if world.current_weather() == "gale" and hut_b.gale_grow < 1:
                     cut = int(80 * (1 - hut_b.gale_grow))
@@ -1054,11 +1070,12 @@ async def _plot_one(s: dict, cmd: str) -> str:
                     )
                     gnat_msg = "\n小虫过境，有一块露天作物又得再打理一遍"
             worm_msg = ""
-            worm_chance = 0.28 if hoe else 0.14
             if random.random() < worm_chance:
                 await db.add_item(conn, s["id"], "bait_worm", random.randint(1, 2))
                 worm_msg = "\n翻出蚯蚓饵，钓鱼佬狂喜"
-                if hoe:
+                if iron_edge:
+                    worm_msg += "（铁锄刃加分）"
+                elif hoe:
                     worm_msg += "（锄头加分）"
             from . import tale as tale_mod
             tale_extra = await tale_mod.check_action_progress(conn, s["id"], "plot")
@@ -1066,7 +1083,9 @@ async def _plot_one(s: dict, cmd: str) -> str:
             await conn.commit()
         noun = "树位" if orchard_ctx else "份地"
         msg = f"打理了 {len(rows)} 块{noun}" if rows else f"没有待打理的{noun}——苗都乖，或你还没种"
-        if hoe and rows:
+        if iron_edge and rows:
+            msg += " · 铁锄刃松土"
+        elif hoe and rows:
             msg += " · 锄头松土"
         msg += flavor.maybe_suffix(flavor.TEND_SUFFIX)
         if dove:
