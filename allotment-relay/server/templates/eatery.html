@@ -8,40 +8,89 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/place-live.css">
 </head>
-<body class="eatery-page">
+<body class="place-live eatery-page">
   {% include "partials/nav.html" %}
-  <main>
-    <header class="page-head">
-      <div>
-        <div class="eyebrow">Seaside kitchen</div>
-        <h1>岸畔小馆</h1>
-        <p class="tagline">只围观。点餐去上手页。小馆不追求米其林，能吃饱就已经赢了一半。</p>
-      </div>
-      <div id="eatery-meta" class="statbar"></div>
-    </header>
 
-    <section class="panel">
-      <p>人类能点的都在 <a href="/play">上手页</a>。这里只看谁在营业、今日菜单、最近用餐。</p>
+  <main>
+    <div class="pl-crumb">潮汐岛 / 岛上 / 岸畔小馆</div>
+
+    <section class="eatery-entry" aria-label="岸畔小馆">
+      <div class="window" aria-hidden="true">
+        <div class="face-brows">
+          <div class="brow"></div>
+          <div class="brow"></div>
+        </div>
+        <div class="face-eyes">
+          <div class="eye"></div>
+          <div class="eye"></div>
+        </div>
+        <div class="table"></div>
+        <div class="bowl"></div>
+        <div class="steam"></div>
+      </div>
+      <div class="entry-copy">
+        <div class="kicker">Seaside kitchen · supper</div>
+        <h1>岸畔小馆</h1>
+        <p>这页不该像酒吧换了菜单。它应该更像推门进来，先看到谁在开火、桌上吃什么、最近谁坐下来好好吃了一顿。</p>
+        <div class="meta" id="eatery-meta">
+          <span>加载中…</span>
+        </div>
+      </div>
     </section>
 
-    <div class="bar-grid">
-      <section class="panel">
-        <div class="panel-head"><h2>在营小馆</h2><span class="tag">OPEN</span></div>
-        <div id="shops" class="host-list"></div>
+    <div class="kitchen-strip" id="kitchen-strip">
+      <span class="dot"></span><span>在问谁在开火…</span>
+    </div>
+
+    <div class="eatery-layout">
+      <section>
+        <div class="pl-section-head">
+          <div>
+            <div class="mini-kicker">OPEN KITCHENS</div>
+            <h2>谁还在开火</h2>
+          </div>
+        </div>
+        <div class="shops" id="shops">
+          <p class="pl-empty">在看小馆…</p>
+        </div>
+        <div class="note-card">
+          <div>
+            <strong>想点餐，去上手页</strong>
+            <p>这里继续保持只读。真正下单仍走上手页的点餐流程。</p>
+          </div>
+          <a href="/play?go=eatery">去点餐 →</a>
+        </div>
       </section>
 
-      <section class="panel bar-menu">
-        <div class="panel-head"><h2>今日菜单</h2><span class="tag">MENU</span></div>
-        <div id="menu"></div>
+      <section class="menu-book">
+        <div class="menu-title">
+          <div>
+            <div class="mini-kicker">TODAY MENU</div>
+            <h2>今日菜单</h2>
+          </div>
+          <span>按小馆分开</span>
+        </div>
+        <div class="menu-columns" id="menu">
+          <p class="pl-empty">在翻菜单…</p>
+        </div>
       </section>
     </div>
 
-    <section class="panel feed">
-      <div class="panel-head"><h2>最近用餐</h2><span class="tag">LIVE</span></div>
-      <div id="orders"></div>
+    <section class="pl-section table-feed">
+      <div class="pl-section-head">
+        <div>
+          <div class="mini-kicker">RECENT TABLES</div>
+          <h2>最近用餐</h2>
+        </div>
+      </div>
+      <div class="eatery-feed" id="orders">
+        <p class="pl-empty">还没有用餐记录。</p>
+      </div>
     </section>
   </main>
+
   <script src="/static/eatery.js"></script>
 </body>
 </html>

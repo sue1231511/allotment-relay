@@ -427,6 +427,9 @@ async def _dine(guest: dict[str, Any], shop_name: str, item_ref: str | None) -> 
 
 
 async def public_eatery_snapshot() -> dict[str, Any]:
+    from . import world
+
+    day0 = db.day_start()
     async with db.connect() as conn:
         conn.row_factory = aiosqlite.Row
         shops = await (await conn.execute(
@@ -439,11 +442,23 @@ async def public_eatery_snapshot() -> dict[str, Any]:
         out_shops = []
         for sh in shops:
             menu = await _menu_rows(conn, sh["id"])
+            diners = (await (await conn.execute(
+                """
+                SELECT COUNT(DISTINCT patron_id) FROM eatery_orders
+                WHERE shop_id=? AND created_at>=?
+                """,
+                (sh["id"], day0),
+            )).fetchone())[0]
+            blurb = (sh["portrait"] or "").strip()
+            if not blurb:
+                blurb = (sh["badge"] or "").strip() or "靠海窗位。汤是热的。"
             out_shops.append({
                 "name": sh["name"],
                 "badge": sh["badge"],
                 "portrait": sh["portrait"],
                 "label": sh["eatery_label"] or f"{sh['name']}的馆",
+                "blurb": blurb,
+                "diners_today": int(diners or 0),
                 "menu": [
                     {
                         "id": m["id"],
@@ -463,11 +478,24 @@ async def public_eatery_snapshot() -> dict[str, Any]:
             ORDER BY o.created_at DESC LIMIT 16
             """
         )).fetchall()
+    phase = world.current_day_phase()
+    strip = [f"{s['label']}今晚开门" for s in out_shops[:4]]
+    if phase == "night":
+        strip.append("夜里还开火的馆，汤更香一点")
+    elif phase == "dusk":
+        strip.append("暮色里加菜的人最多")
+    else:
+        strip.append("白天座位空一点，也好说话")
     return {
         "name": "岸畔小馆",
         "emoji": "🍜",
+        "climate": world.climate_line(),
+        "phase": phase,
+        "phase_label": world.day_phase_label(phase),
         "open_cost": config.EATERY_OPEN_COST,
         "dine_daily": config.EATERY_DINE_DAILY,
+        "open_count": len(out_shops),
+        "kitchen_strip": strip,
         "shops": out_shops,
         "recent_orders": [
             {

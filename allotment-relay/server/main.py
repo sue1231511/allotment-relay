@@ -158,7 +158,8 @@ async def lounge_page():
 
 @app.get("/eatery", response_class=HTMLResponse)
 async def eatery_page(request: Request):
-    return _place_page(request, "eatery")
+    """岸畔小馆围观实况；点餐仍回上手页。"""
+    return _html(request, "eatery.html", active="eatery")
 
 class BarOrderRequest(BaseModel):
     api_key: str
