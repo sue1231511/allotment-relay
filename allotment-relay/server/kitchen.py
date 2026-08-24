@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import random
+import re
 from typing import Any
 
 import aiosqlite
@@ -127,6 +128,25 @@ def is_cooked_item(item: str) -> bool:
     return item.startswith("dish_") or item.startswith("meal_")
 
 
+def _meal_core_name(label: str) -> str:
+    """熟菜展示名去掉 emoji 前缀和星级后缀，便于「手打一锅」对上「🦐手打一锅★★★★」。"""
+    text = (label or "").strip().rstrip("★☆*").strip()
+    m = re.search(r"[\u4e00-\u9fff].*", text)
+    return m.group(0).rstrip("★☆*").strip() if m else text
+
+
+def meal_token_matches_label(token: str, label: str) -> bool:
+    raw = (token or "").strip()
+    if not raw:
+        return False
+    bare = raw.rstrip("★☆*").strip()
+    label_bare = (label or "").strip().rstrip("★☆*").strip()
+    if raw == label or bare == label_bare:
+        return True
+    tc, lc = _meal_core_name(bare), _meal_core_name(label_bare)
+    return bool(tc and lc and tc == lc)
+
+
 def _has_star_suffix(item: str) -> bool:
     if "_s" not in item:
         return False
@@ -147,6 +167,13 @@ def _resolve_cooked_token(token: str) -> str | None:
     dish = cook_mix.resolve_dish_key(raw.rstrip("★☆*"))
     if dish:
         return f"dish_{dish}"
+    bare = raw.rstrip("★☆*").strip()
+    fuzzy: list[str] = []
+    for item, name in ITEM_NAMES.items():
+        if is_cooked_item(item) and meal_token_matches_label(raw, name):
+            fuzzy.append(item)
+    if len(fuzzy) == 1:
+        return fuzzy[0]
     return resolved
 
 
@@ -181,8 +208,9 @@ def _fridge_label(dish_key: str, stars: int) -> str:
 
 
 async def _pick_cooked_satchel(
-    conn: aiosqlite.Connection, steward_id: int, resolved: str
+    conn: aiosqlite.Connection, steward_id: int, token: str
 ) -> str:
+    resolved = _resolve_cooked_token(token) or token
     cur = await conn.execute(
         "SELECT quantity FROM satchel WHERE steward_id=? AND item=? AND quantity>0",
         (steward_id, resolved),
@@ -201,6 +229,23 @@ async def _pick_cooked_satchel(
         for (item,) in await cur.fetchall():
             if item.startswith(resolved + "_s") and _has_star_suffix(item):
                 return item
+    cur = await conn.execute(
+        """
+        SELECT item FROM satchel
+        WHERE steward_id=? AND quantity>0
+          AND (item LIKE 'dish_%' OR item LIKE 'meal_%')
+        """,
+        (steward_id,),
+    )
+    label_hits: list[str] = []
+    for (item,) in await cur.fetchall():
+        if meal_token_matches_label(token, item_label(item)):
+            label_hits.append(item)
+    if len(label_hits) == 1:
+        return label_hits[0]
+    if len(label_hits) > 1:
+        shown = "、".join(item_label(i) for i in label_hits[:3])
+        raise ValueError(f"行囊里有多道类似熟菜（{shown}），请写全名或英文 id")
     raise ValueError("行囊里没有这道菜")
 
 
@@ -244,15 +289,19 @@ async def fridge_status_text(s: dict[str, Any]) -> str:
 
 async def fridge_put(s: dict[str, Any], token: str, qty: int = 1) -> str:
     qty = max(1, int(qty))
-    resolved = _resolve_cooked_token(token)
-    if not resolved or not is_cooked_item(resolved):
-        raise ValueError(
-            f"{token} 不是熟菜。生鲜请 hut_ops 冰柜 存（进潮柜）；熟菜才进冰箱。"
-        )
     async with db.connect() as conn:
         if not await _has_fridge(conn, s["id"]):
             raise ValueError(_fridge_need_msg())
-        item = await _pick_cooked_satchel(conn, s["id"], resolved)
+        try:
+            item = await _pick_cooked_satchel(conn, s["id"], token)
+        except ValueError:
+            raise ValueError(
+                f"{token} 不是熟菜。生鲜请 hut_ops 冰柜 存（进潮柜）；熟菜才进冰箱。"
+            ) from None
+        if not is_cooked_item(item):
+            raise ValueError(
+                f"{token} 不是熟菜。生鲜请 hut_ops 冰柜 存（进潮柜）；熟菜才进冰箱。"
+            )
         cur = await conn.execute(
             "SELECT quantity FROM satchel WHERE steward_id=? AND item=?",
             (s["id"], item),
@@ -307,6 +356,8 @@ def _fridge_row_matches(row: dict[str, Any], token: str) -> bool:
     stars = int(row["stars"])
     item = _fridge_satchel_item(dish_key, stars)
     raw = (token or "").strip()
+    if meal_token_matches_label(raw, _fridge_label(dish_key, stars)):
+        return True
     bare = raw.rstrip("★☆*")
     needles: set[str] = {raw, bare}
     resolved = _resolve_cooked_token(raw)

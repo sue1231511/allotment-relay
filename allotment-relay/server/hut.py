@@ -697,7 +697,7 @@ def _cabinet_forbid(item: str) -> str | None:
     return None
 
 
-def _parse_storage_item_qty(tokens: list[str]) -> tuple[str, int]:
+def _parse_storage_name_qty(tokens: list[str]) -> tuple[str, int]:
     qty = 1
     name_tokens = list(tokens)
     if name_tokens and name_tokens[-1].isdigit():
@@ -705,7 +705,11 @@ def _parse_storage_item_qty(tokens: list[str]) -> tuple[str, int]:
         name_tokens = name_tokens[:-1]
     if not name_tokens:
         raise ValueError("要写物品名")
-    raw = " ".join(name_tokens)
+    return " ".join(name_tokens), qty
+
+
+def _parse_storage_item_qty(tokens: list[str]) -> tuple[str, int]:
+    raw, qty = _parse_storage_name_qty(tokens)
     item = resolve_item_key(raw)
     if not item:
         from . import cook_mix
@@ -881,15 +885,30 @@ async def cabinet_command(s: dict[str, Any], rest: list[str]) -> str:
     if not (putting or taking) or len(rest) < 2:
         raise ValueError(STORAGE_USAGE)
 
-    item, qty = _parse_storage_item_qty(rest[1:])
-    if _is_cooked_item(item):
-        from . import kitchen
-        if putting:
-            return await kitchen.fridge_put(s, item, qty)
-        return await kitchen.fridge_take(s, item, qty)
-    if putting:
-        return await cabinet_put(s, item, qty)
-    return await cabinet_take(s, item, qty)
+    raw_name, qty = _parse_storage_name_qty(rest[1:])
+    from . import kitchen
+    if taking:
+        try:
+            return await kitchen.fridge_take(s, raw_name, qty)
+        except ValueError as exc:
+            if "冰箱里没有" not in str(exc):
+                raise
+        item, _ = _parse_storage_item_qty(rest[1:])
+        return await cabinet_take(s, item, qty)
+
+    cooked_token = kitchen._resolve_cooked_token(raw_name)
+    if cooked_token and kitchen.is_cooked_item(cooked_token):
+        return await kitchen.fridge_put(s, raw_name, qty)
+    async with db.connect() as conn:
+        try:
+            satchel_item = await kitchen._pick_cooked_satchel(conn, s["id"], raw_name)
+        except ValueError:
+            satchel_item = None
+        else:
+            if kitchen.is_cooked_item(satchel_item):
+                return await kitchen.fridge_put(s, raw_name, qty)
+    item, _ = _parse_storage_item_qty(rest[1:])
+    return await cabinet_put(s, item, qty)
 
 
 def _compost_bin_need_msg() -> str:
