@@ -54,6 +54,7 @@ STORAGE_ALIASES = {
 STORAGE_USAGE = (
     "用法：hut_ops 冰柜 存 甘蓝 3｜冰柜 取 甘蓝 2"
     "（柜子/潮柜/冰箱同义）。生鲜进潮柜，熟菜进冰箱。"
+    "自由组合菜可用中文名或 dish_mix_… id 存取；冰箱清单会带 id。"
     "买潮柜：hut_ops buy cabinet → install soft_N cabinet；"
     "买冰箱：hut_ops buy fridge → install soft_N fridge（也可 buy 冰柜）。"
     f"潮柜基础 {config.CABINET_SLOTS} 格，满了 hut_ops 潮柜 扩（{config.CABINET_SLOT_COST}票/格，顶 {config.CABINET_SLOTS_MAX}）。"
@@ -719,6 +720,18 @@ def _parse_storage_item_qty(tokens: list[str]) -> tuple[str, int]:
     return item, qty
 
 
+def _raw_storage_token_qty(tokens: list[str]) -> tuple[str, int]:
+    """解析失败时仍抽出「名字 + 可选数量」，交给冰箱按显示名匹配。"""
+    qty = 1
+    name_tokens = list(tokens)
+    if name_tokens and name_tokens[-1].isdigit():
+        qty = max(1, int(name_tokens[-1]))
+        name_tokens = name_tokens[:-1]
+    if not name_tokens:
+        raise ValueError("要写物品名")
+    return " ".join(name_tokens), qty
+
+
 def _is_cooked_item(item: str) -> bool:
     return item.startswith("dish_") or item.startswith("meal_")
 
@@ -881,9 +894,21 @@ async def cabinet_command(s: dict[str, Any], rest: list[str]) -> str:
     if not (putting or taking) or len(rest) < 2:
         raise ValueError(STORAGE_USAGE)
 
-    item, qty = _parse_storage_item_qty(rest[1:])
+    from . import kitchen
+
+    try:
+        item, qty = _parse_storage_item_qty(rest[1:])
+    except ValueError as parse_exc:
+        # 自由组合菜中文名在进程重启后可能不在 ITEM_NAMES，仍允许按显示名存取
+        raw, qty = _raw_storage_token_qty(rest[1:])
+        try:
+            if putting:
+                return await kitchen.fridge_put(s, raw, qty)
+            return await kitchen.fridge_take(s, raw, qty)
+        except ValueError:
+            raise parse_exc from None
+
     if _is_cooked_item(item):
-        from . import kitchen
         if putting:
             return await kitchen.fridge_put(s, item, qty)
         return await kitchen.fridge_take(s, item, qty)
@@ -1257,7 +1282,10 @@ async def hut_ops(key_id: int, command: str) -> str:
                 f"满了 hut_ops 潮柜 扩（{config.CABINET_SLOT_COST}票/格）"
             )
         if bonus.has("fridge"):
-            lines.append("冰箱 — hut_ops 冰柜 存|取（熟菜）· kitchen_ops fridge")
+            lines.append(
+                "冰箱 — hut_ops 冰柜 存|取（熟菜；自由组合中文名或 dish_mix_… id）"
+                "· kitchen_ops fridge"
+            )
         if bonus.has("compost_bin"):
             async with db.connect() as conn:
                 fill, ready = await _compost_bin_row(conn, s["id"])
@@ -1314,7 +1342,8 @@ async def hut_ops(key_id: int, command: str) -> str:
                     lines.append(f"  {k} — {v['emoji']}{v['name']} {v['cost']} 票 · {v['hint']}")
             lines.append(
                 "存菜：buy cabinet（潮柜·生鲜）或 buy fridge（冰箱·熟菜，也可 buy 冰柜）；"
-                f"装好后 hut_ops 冰柜 存|取。潮柜基础 {config.CABINET_SLOTS} 格，"
+                f"装好后 hut_ops 冰柜 存|取（自由组合中文名或 dish_mix_… id）。"
+                f"潮柜基础 {config.CABINET_SLOTS} 格，"
                 f"hut_ops 潮柜 扩 加格（{config.CABINET_SLOT_COST}票/格，顶 {config.CABINET_SLOTS_MAX}）。"
                 "粪便：buy compost_bin → install soft_N compost_bin → 堆肥桶 存 羊粪 3"
             )
