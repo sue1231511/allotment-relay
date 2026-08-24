@@ -60,8 +60,8 @@ function chip(panel, label, extraClass = '') {
 function scrollToSteward(id) {
   const el = document.getElementById(`steward-${id}`);
   if (!el) {
-    if (!location.pathname.startsWith('/allotments')) {
-      location.href = `/allotments#steward-${id}`;
+    if (!location.pathname.startsWith('/play')) {
+      location.href = `/play?go=me`;
     }
     return false;
   }

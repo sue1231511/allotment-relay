@@ -361,6 +361,7 @@ def test_readme_workflow_rules() -> None:
     assert "craft_ops" in readme
     assert "/workshop" in readme
     assert "盐风崖" in readme
+    index_html = (root / "allotment-relay/server/templates/index.html").read_text(encoding="utf-8")
     place_html = (root / "allotment-relay/server/templates/place.html").read_text(encoding="utf-8")
     promo = (root / "allotment-relay/server/promo.py").read_text(encoding="utf-8")
     nav = (root / "allotment-relay/server/templates/partials/nav.html").read_text(encoding="utf-8")
@@ -369,6 +370,10 @@ def test_readme_workflow_rules() -> None:
     assert "hut_ops" in promo
     assert "tote_ops market" in promo
     assert "/play" in promo
+    assert '"/workshop"' in promo
+    assert "routes" in index_html
+    assert "今天想去哪" in index_html
+    assert "data-open-island" in index_html
     assert "play_href" in place_html
     assert "promo-poster" in place_html
     assert 'href="/workshop"' in nav
@@ -376,13 +381,14 @@ def test_readme_workflow_rules() -> None:
     assert 'href="/tide"' in nav
     assert 'href="/huts"' in nav
     assert 'href="/market"' in nav
+    assert "island-drawer" in nav
+    assert "nav-island" in nav
     css = (root / "allotment-relay/server/static/style.css").read_text(encoding="utf-8")
     assert "@media (max-width: 980px)" in css
-    assert ".nav-tab-short" in css
-    island_grid = css.split(".island-grid", 1)[1].split(".island-card", 1)[0]
-    assert "auto-fit" not in island_grid
-    assert "grid-template-columns: 1fr" in island_grid
-    assert "nav-tab-short" in nav
+    assert ".island-drawer" in css
+    assert ".routes" in css
+    assert "repeat(3" in css
+    assert "mobile-island" in css
     assert "forage" in readme
     assert "amends" in readme
     assert "砧上全套" in readme
@@ -421,6 +427,7 @@ def test_patron_pages_share_steward_key() -> None:
     lounge_js = (root / "server/static/lounge.js").read_text(encoding="utf-8")
     play_html = (root / "server/templates/play.html").read_text(encoding="utf-8")
     play_js = (root / "server/static/play.js").read_text(encoding="utf-8")
+    index_html = (root / "server/templates/index.html").read_text(encoding="utf-8")
     place_html = (root / "server/templates/place.html").read_text(encoding="utf-8")
     promo = (root / "server/promo.py").read_text(encoding="utf-8")
     main_py = (root / "server/main.py").read_text(encoding="utf-8")
@@ -447,17 +454,21 @@ def test_patron_pages_share_steward_key() -> None:
     assert "/api/steward/memory" in play_js
     assert "data-memory-filter" in play_js
     assert "连续阅读" in play_js
+    assert "/static/site-key.js" not in index_html
     assert "/static/site-key.js" not in place_html
-    assert 'id="order-form"' not in place_html
-    assert 'id="duo-form"' not in place_html
-    assert 'id="tip-form"' not in place_html
-    assert "/play" in place_html or "play_href" in place_html
+    assert 'id="order-form"' not in index_html
+    assert 'id="duo-form"' not in index_html
+    assert 'id="tip-form"' not in index_html
+    assert "今天想去哪" in index_html
+    assert "routes" in index_html
+    assert "/play" in index_html
     assert '"go": "bar"' in promo
     assert '"go": "eatery"' in promo
     assert '"go": "star"' in promo
     assert 'RedirectResponse("/play?go=me"' in main_py
     assert 'RedirectResponse("/play?go=lounge"' in main_py
     assert "place.html" in main_py
+    assert "_place_page" in main_py
     assert "上手页" in site_key
 
 
@@ -465,13 +476,18 @@ def test_promo_place_pages() -> None:
     from server import promo
 
     slugs = {p["slug"] for p in promo.PLACES}
-    for slug in ("allotments", "tide", "huts", "bar", "eatery", "market", "quarry", "workshop", "star"):
+    for slug in ("allotments", "tide", "huts", "bar", "eatery", "market", "quarry", "workshop", "star", "undertide"):
         assert slug in slugs, slug
         ctx = promo.page_context(slug)
         assert ctx["play_href"].startswith("/play")
         assert ctx["place"]["aside"]
+        assert ctx["place"]["path"] == f"/{slug}"
         assert "围观" not in ctx["place"]["lead"]
         assert "只围观" not in " ".join(ctx["place"]["body"])
+    groups = promo.home_route_groups()
+    assert len(groups) == 3
+    assert all(g["places"] for g in groups)
+    assert promo.home_elsewhere()["slug"] == "undertide"
     assert promo.play_href(promo.get("allotments")) == "/play"
     assert promo.play_href(promo.get("bar")) == "/play?go=bar"
     assert promo.play_href(promo.get("workshop")) == "/play?go=craft"

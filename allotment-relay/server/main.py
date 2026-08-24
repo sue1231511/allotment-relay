@@ -56,6 +56,14 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 app.mount("/mcp", mcp_starlette)
 
 
+def _html(request: Request, name: str, **ctx):
+    """公共页模板：自动带上岛上抽屉用的地点分组。"""
+    from . import promo
+    ctx.setdefault("route_groups", promo.home_route_groups())
+    ctx.setdefault("elsewhere", promo.home_elsewhere())
+    return templates.TemplateResponse(request, name, ctx)
+
+
 class KeyRequest(BaseModel):
     email: str
 
@@ -72,28 +80,22 @@ class KeyRequest(BaseModel):
 async def index(request: Request):
     from . import db, promo
     stats = await db.public_stats()
-    return templates.TemplateResponse(
-        request, "index.html", {
-            "active": None,
-            "places": promo.PLACES,
-            "steward_count": stats.get("stewards") or 0,
-        }
-    )
+    return _html(request, "index.html", **promo.home_context(stats.get("stewards") or 0))
 
 
 @app.get("/register", response_class=HTMLResponse)
 async def register_page(request: Request):
-    return templates.TemplateResponse(request, "register.html", {"active": None})
+    return _html(request, "register.html", active=None)
 
 
 @app.get("/recover", response_class=HTMLResponse)
 async def recover_page(request: Request):
-    return templates.TemplateResponse(request, "recover.html", {"active": None})
+    return _html(request, "recover.html", active=None)
 
 
 def _place_page(request: Request, slug: str):
     from . import promo
-    return templates.TemplateResponse(request, "place.html", promo.page_context(slug))
+    return _html(request, "place.html", **promo.page_context(slug))
 
 
 @app.get("/allotments", response_class=HTMLResponse)
@@ -138,7 +140,7 @@ async def bar_page(request: Request):
 
 @app.get("/play", response_class=HTMLResponse)
 async def play_page(request: Request):
-    return templates.TemplateResponse(request, "play.html", {"active": "play"})
+    return _html(request, "play.html", active="play")
 
 
 @app.get("/steward")
@@ -154,7 +156,6 @@ async def lounge_page():
 @app.get("/eatery", response_class=HTMLResponse)
 async def eatery_page(request: Request):
     return _place_page(request, "eatery")
-
 
 class BarOrderRequest(BaseModel):
     api_key: str
@@ -926,7 +927,7 @@ async def star_owner_welfare(request: Request):
 
 @app.get("/undertide")
 async def undertide_page(request: Request):
-    return templates.TemplateResponse(request, "undertide.html", {"active": "undertide"})
+    return _html(request, "undertide.html", active="undertide")
 
 
 @app.get("/api/public/undertide")

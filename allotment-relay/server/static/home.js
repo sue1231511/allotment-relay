@@ -17,9 +17,9 @@ async function loadHome() {
     }
     names.innerHTML = people.length
       ? people.slice(0, 6).map((p) => (
-        `<a class="live-name" href="/allotments#steward-${esc(p.id)}">${esc(p.name)}</a>`
+        `<a class="live-name" href="/play?go=me">${esc(p.name)}</a>`
       )).join('')
-      : '<span class="muted">去份地围观看谁留下过</span>';
+      : '<span class="muted">去上手页看谁在岛上</span>';
     const status = card.querySelector('.status-text');
     if (status) {
       status.textContent = [
@@ -32,11 +32,11 @@ async function loadHome() {
       const top = (data.tickets || []).slice(0, 3);
       board.innerHTML = top.length
         ? '<p class="home-board-kicker">工分票榜</p>' + top.map((r, i) => (
-          `<a class="home-board-row" href="/allotments#steward-${esc(r.id)}">` +
+          `<a class="home-board-row" href="/play?go=me">` +
             `<span>${medal(i + 1)} ${esc(r.name)}</span>` +
             `<span>${esc(r.tickets)} 票</span>` +
           '</a>'
-        )).join('') + '<a class="home-board-more" href="/board">看全榜</a>'
+        )).join('') + '<a class="home-board-more" href="/play?go=me">看全榜</a>'
         : '';
     }
   } catch (err) {
