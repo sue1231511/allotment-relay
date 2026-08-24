@@ -52,13 +52,17 @@ function applySnap(data, text) {
   state.climate = data.climate || null;
   if (text) setLog(text);
   if (!state.enrolled) {
+    document.body.classList.remove('play-bound');
     show($('play-main'), false);
     show($('play-gate'), true);
     show($('play-key-form'), false);
     show($('play-enroll-form'), true);
-    $('play-who-btn').textContent = '未登记';
+    $('play-who-name').textContent = '未登记';
+    $('play-who-sub').textContent = '先起一个岛上的名字';
+    $('play-avatar').textContent = '≈';
     return;
   }
+  document.body.classList.add('play-bound');
   show($('play-gate'), false);
   show($('play-main'), true);
   renderAll();
@@ -76,17 +80,49 @@ function setLog(text) {
   if (state.placeId) placeResult.textContent = text;
 }
 
+function plotStateLabel(stateName) {
+  return ({
+    ready: '可收',
+    growing: '生长中',
+    tending: '生长中',
+    fallow: '休耕',
+    overripe: '过熟',
+    clearing: '开垦中',
+  })[stateName] || stateName || '';
+}
+
+function todayBlurb(d, c) {
+  const parcels = (d && d.parcels) || [];
+  const ready = parcels.filter((p) => p.state === 'ready').length;
+  const bits = [];
+  if (c.tide || c.weather) bits.push(`${c.tide || ''}${c.weather ? ' · ' + c.weather : ''}`.replace(/^ · /, ''));
+  if (ready) bits.push(`份地有 ${ready} 块已经成熟`);
+  const duty = (d && d.meter_lines && d.meter_lines.bar_duty) || '';
+  if (dutyUrgent(d)) bits.push('酒吧值班快到期了');
+  else if (duty && duty.includes('内须')) bits.push(duty.replace(/^⚠\s*/, ''));
+  if (d && d.voyage) bits.push(d.voyage);
+  if (bits.length) return bits.join('。') + '。';
+  return d && d.motto ? d.motto : '先看份地，或去岛上晃一圈。';
+}
+
 function renderAll() {
   const d = state.dash;
   const c = state.climate || {};
-  $('play-climate-mini').textContent = `${c.season || ''} · ${c.tide || ''} · ${c.weather || ''}`;
-  $('play-who-btn').textContent = d.name || '已绑定';
-  $('play-motto').textContent = d.motto || '人和管家公用这一个号。';
+  const name = (d && d.name) || '已绑定';
+  const level = (d && d.level) || 1;
+  const title = (d && d.title) || '';
+  $('play-climate-mini').textContent = [c.season, c.phase].filter(Boolean).join(' · ') || '潮汐岛';
+  $('play-who-name').textContent = name;
+  $('play-who-sub').textContent = `管理员 · ${title || ('LV ' + level)}`;
+  $('play-avatar').textContent = String(name).slice(0, 1) || '≈';
+  $('play-today-title').textContent = (d && d.climate) || c.line || `${c.tide || '潮汐'} · ${c.phase || ''}`.trim();
+  $('play-motto').textContent = todayBlurb(d, c);
   const energy = (d.meters && d.meters.energy) || 0;
   const emax = (d.meters && d.meters.energy_max) || 100;
-  $('play-energy').textContent = `精力 ${energy} / ${emax}`;
-  $('play-tickets').textContent = `工分票 ${d.tickets}`;
-  $('play-level').textContent = `等级 ${d.level || 1} · ${d.title || ''}`;
+  $('play-meter-climate').textContent = [c.tide, c.weather].filter(Boolean).join(' · ') || '—';
+  $('play-energy').textContent = `${energy} / ${emax}`;
+  $('play-tickets').textContent = String(d.tickets ?? '—');
+  $('play-level').textContent = `LV ${level}${title ? ' · ' + title : ''}`;
   const duty = (d.meter_lines && d.meter_lines.bar_duty) || '';
   const dutyEl = $('play-duty');
   dutyEl.textContent = duty;
@@ -106,20 +142,20 @@ function plotButtons(p) {
   const token = p.token || String(p.slot);
   const acts = [];
   if (p.state === 'fallow') {
-    acts.push(`<button type="button" class="btn" data-sow="${esc(token)}">播种</button>`);
+    acts.push(`<button type="button" class="play-mini-btn" data-sow="${esc(token)}">播种</button>`);
   }
   if (p.state === 'growing' || p.state === 'tending') {
-    if (!p.tended) acts.push(`<button type="button" class="btn" data-act='{"tool":"plot_ops","command":"tend"}'>打理</button>`);
-    if (!p.watered) acts.push(`<button type="button" class="btn" data-act='{"tool":"plot_ops","command":"浇水 ${token}"}'>浇水</button>`);
-    if (!p.fertilized) acts.push(`<button type="button" class="btn" data-act='{"tool":"plot_ops","command":"施肥 ${token}"}'>施肥</button>`);
+    if (!p.tended) acts.push(`<button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"tend"}'>打理</button>`);
+    if (!p.watered) acts.push(`<button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"浇水 ${token}"}'>浇水</button>`);
+    if (!p.fertilized) acts.push(`<button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"施肥 ${token}"}'>施肥</button>`);
   }
   if (p.state === 'ready') {
-    acts.push(`<button type="button" class="btn" data-act='{"tool":"plot_ops","command":"gather ${token}"}'>收</button>`);
-    if (p.shake) acts.push(`<button type="button" class="btn" data-act='{"tool":"plot_ops","command":"shake ${token}"}'>摇</button>`);
+    acts.push(`<button type="button" class="play-mini-btn primary" data-act='{"tool":"plot_ops","command":"gather ${token}"}'>收菜</button>`);
+    if (p.shake) acts.push(`<button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"shake ${token}"}'>摇一摇</button>`);
   }
   if (p.state === 'overripe') {
-    acts.push(`<button type="button" class="btn" data-act='{"tool":"plot_ops","command":"compost ${token}"}'>堆肥</button>`);
-    acts.push(`<button type="button" class="btn" data-act='{"tool":"plot_ops","command":"gather ${token}"}'>清果</button>`);
+    acts.push(`<button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"compost ${token}"}'>堆肥</button>`);
+    acts.push(`<button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"gather ${token}"}'>清果</button>`);
   }
   return acts.join('');
 }
@@ -127,26 +163,42 @@ function plotButtons(p) {
 function renderPlots() {
   const parcels = (state.dash && state.dash.parcels) || [];
   const shown = parcels.slice(0, 6);
-  $('play-plots').innerHTML = shown.map((p) => `
-    <article class="card play-card ${p.state === 'ready' ? 'is-ready' : ''}">
-      <span class="slot">${p.greenhouse ? '棚' : (p.orchard ? '园' : '份地')} ${esc(p.token || p.slot)}</span>
-      <strong>${p.emoji || ''} ${esc(p.name)}</strong>
-      <span class="detail">${esc(p.detail || '')}</span>
+  $('play-plots').innerHTML = shown.map((p) => {
+    const kind = p.greenhouse ? '棚' : (p.orchard ? '园' : '份地');
+    const token = p.token || p.slot;
+    return `
+    <article class="play-plot ${p.state === 'ready' ? 'is-ready' : ''}">
+      <div class="play-plot-top">
+        <span class="play-plot-slot">${kind} ${esc(token)}</span>
+        <span class="play-state">${esc(plotStateLabel(p.state))}</span>
+      </div>
+      <div class="play-crop">${p.emoji ? esc(p.emoji) + ' ' : ''}${esc(p.name)}</div>
+      <div class="play-detail">${esc(p.detail || '')}</div>
       <div class="acts">${plotButtons(p)}</div>
-    </article>
-  `).join('') || '<p class="muted">还没有地。</p>';
+    </article>`;
+  }).join('') || '<p class="muted">还没有地。</p>';
+}
+
+function placeCardHtml(pl, urgent) {
+  return `
+    <article class="play-place-card ${pl.duty && urgent ? 'is-duty' : ''}">
+      <small>${esc(pl.kicker || (pl.week1 ? 'Often' : 'Later'))}</small>
+      <strong>${esc(pl.name)}</strong>
+      <p>${esc(pl.blurb)}</p>
+      <button type="button" class="play-mini-btn ${pl.duty && urgent ? 'primary' : ''} go" data-place="${esc(pl.id)}">前往</button>
+    </article>`;
 }
 
 function renderPlaces() {
   const urgent = dutyUrgent(state.dash);
-  $('play-places').innerHTML = (state.places || []).map((pl) => `
-    <article class="card play-card ${pl.duty && urgent ? 'is-duty' : ''}">
-      <span class="slot">${pl.week1 ? '常去' : '出门'}</span>
-      <strong>${esc(pl.name)}</strong>
-      <span class="detail">${esc(pl.blurb)}</span>
-      <button type="button" class="btn primary play-go" data-place="${esc(pl.id)}">前往</button>
-    </article>
-  `).join('');
+  const places = state.places || [];
+  const home = places.slice(0, 6);
+  $('play-places').innerHTML = home.map((pl) => placeCardHtml(pl, urgent)).join('');
+}
+
+function openAllPlaces() {
+  const urgent = dutyUrgent(state.dash);
+  openSheet('岛上全部地点', `<div class="play-places">${(state.places || []).map((pl) => placeCardHtml(pl, urgent)).join('')}</div>`);
 }
 
 function renderNeighbors() {
@@ -155,11 +207,11 @@ function renderNeighbors() {
   const total = n.total || 0;
   const online = n.online || 0;
   $('play-neighbors-count').textContent = online
-    ? `${total} 人 · 档口 ${online}`
-    : `${total} 人`;
+    ? `${total} · 档口 ${online}`
+    : `${total}`;
   if (!people.length) {
     $('play-neighbors-list').innerHTML = total <= 1
-      ? '<p class="muted">岛上暂时就你一位。有人 enroll 之后会出现在这儿。</p>'
+      ? '<p class="muted">岛上暂时就你一位。</p>'
       : '<p class="muted">名册是空的。</p>';
     return;
   }
@@ -168,8 +220,8 @@ function renderNeighbors() {
     const where = p.home ? '在档口' : (p.ago || '');
     const cmd = JSON.stringify({ tool: 'steward_ops', command: `peer ${p.name}` });
     return `<button type="button" class="play-neighbor" data-act='${cmd}'>
-      <strong>${esc(p.name)}</strong>
-      <span>${esc(p.title || '')} · ${esc(where)} · ${esc(ripe)}</span>
+      <span class="play-neighbor-dot ${p.home ? '' : 'is-away'}" aria-hidden="true"></span>
+      <span><strong>${esc(p.name)}</strong><small>${esc(where)} · ${esc(ripe)}</small></span>
     </button>`;
   }).join('');
 }
@@ -179,8 +231,8 @@ function renderTide() {
   const voyage = (state.dash && state.dash.voyage) || '';
   $('play-tide-box').innerHTML = `
     <div class="play-tide-line">${esc(c.tide || '—')} · ${esc(c.phase || '')}</div>
-    <p class="muted">${esc(c.season || '')} · ${esc(c.weather || '')}</p>
-    ${voyage ? `<p class="muted">${esc(voyage)}</p>` : ''}
+    <p>${esc(c.season || '')} · ${esc(c.weather || '')}</p>
+    ${voyage ? `<p style="margin-top:7px">${esc(voyage)}</p>` : ''}
   `;
 }
 
@@ -200,14 +252,13 @@ function renderTote() {
 function renderGifts() {
   const gifts = (state.dash && state.dash.gifts) || [];
   if (!gifts.length) {
-    $('play-gifts').innerHTML = '<p class="muted">暂无收礼 / 打赏</p>';
+    $('play-gifts').innerHTML = '<p>暂无收礼 / 打赏</p>';
     return;
   }
   $('play-gifts').innerHTML = gifts.slice(0, 6).map((g) => `
     <div class="item">
-      <span class="muted">${esc(g.kind)}</span>
       <strong>${esc(g.who)}</strong>
-      <p class="muted">${esc(g.text)}</p>
+      <p style="margin-top:4px">${esc(g.kind)} · ${esc(g.text)}</p>
     </div>
   `).join('');
 }
@@ -301,12 +352,12 @@ function renderPlace(id) {
   $('play-place-blurb').textContent = place.blurb + (place.caution ? ' 新手别从这儿开局。' : '');
   const acts = (place.actions || []).concat(extraPlaceActions(place));
   $('play-place-actions').innerHTML = acts.map((a) => (
-    `<button type="button" class="btn" data-act='${JSON.stringify({ tool: a.tool, command: a.command })}'>${esc(a.label)}</button>`
+    `<button type="button" class="play-mini-btn" data-act='${JSON.stringify({ tool: a.tool, command: a.command })}'>${esc(a.label)}</button>`
   )).join('');
   if (place.href) {
     $('play-place-actions').insertAdjacentHTML(
       'beforeend',
-      `<a class="btn" href="${place.href}">打开网页</a>`
+      `<a class="play-mini-btn" href="${place.href}">打开网页</a>`
     );
   }
   hidePatron();
@@ -354,14 +405,17 @@ function openMe() {
   if (!d) return;
   const m = d.meters || {};
   const lines = d.meter_lines || {};
+  const name = d.name || '';
   $('play-me-body').innerHTML = `
-    <p><strong>${esc(d.name)}</strong> · 等级 ${d.level || 1} · ${esc(d.title || '')}</p>
-    ${d.motto ? `<p>「${esc(d.motto)}」</p>` : ''}
+    <div class="play-identity" style="margin-bottom:14px;width:100%;cursor:default">
+      <span class="play-avatar">${esc(String(name).slice(0, 1) || '≈')}</span>
+      <span><strong>${esc(name)}</strong><small>管理员 · ${esc(d.title || ('LV ' + (d.level || 1)))}</small></span>
+    </div>
     <p>精力 ${m.energy || 0}/${m.energy_max || 100} · 工分票 ${d.tickets}</p>
-    <p>饱食 ${m.satiety ?? '—'} · 雾智 ${m.mist_wit ?? '—'} · 档信 ${m.standing ?? '—'}</p>
-    <p class="muted">${esc(lines.energy || '')}</p>
-    <p class="muted">${esc(lines.bar_duty || '')}</p>
-    ${d.voyage ? `<p class="muted">${esc(d.voyage)}</p>` : ''}
+    <p style="margin-top:6px">饱食 ${m.satiety ?? '—'} · 雾智 ${m.mist_wit ?? '—'} · 档信 ${m.standing ?? '—'}</p>
+    ${d.motto ? `<p style="margin-top:8px">「${esc(d.motto)}」</p>` : ''}
+    <div class="play-rule">${esc(lines.bar_duty || '每 2 天须去酒吧上工。')}</div>
+    ${d.voyage ? `<p class="muted" style="margin-top:8px">${esc(d.voyage)}</p>` : ''}
   `;
   show($('play-me'), true);
 }
@@ -481,20 +535,20 @@ function sowSheet(token) {
     return;
   }
   openSheet(`种到 ${token}`, seeds.map((s) => (
-    `<button type="button" class="btn" data-act='{"tool":"plot_ops","command":"sow ${token} ${s.name}"}'>${s.emoji} ${s.name} ×${s.qty}</button> `
+    `<button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"sow ${token} ${s.name}"}'>${s.emoji || ''} ${s.name} ×${s.qty}</button>`
   )).join(''));
 }
 
 function itemSheet(name) {
   openSheet(name, `
-    <button type="button" class="btn" data-act='{"tool":"kitchen_ops","command":"eat ${name}"}'>吃</button>
-    <button type="button" class="btn" data-act='{"tool":"tote_ops","command":"vend ${name} 1"}'>卖 1</button>
+    <button type="button" class="play-mini-btn primary" data-act='{"tool":"kitchen_ops","command":"eat ${name}"}'>吃</button>
+    <button type="button" class="play-mini-btn" data-act='{"tool":"tote_ops","command":"vend ${name} 1"}'>卖 1</button>
   `);
 }
 
 async function act(tool, command) {
   try {
-    document.querySelectorAll('.play-page button.btn, .play-go').forEach((b) => { b.disabled = true; });
+    document.querySelectorAll('.play-page button.btn, .play-page .play-mini-btn, .play-go').forEach((b) => { b.disabled = true; });
     const data = await api(tool, command);
     applySnap(data, data.text || '');
     closeSheet();
@@ -653,11 +707,32 @@ $('play-enroll-form').addEventListener('submit', async (e) => {
 
 $('play-who-btn').addEventListener('click', () => {
   if (!state.enrolled) {
+    document.body.classList.remove('play-bound');
     show($('play-main'), false);
     show($('play-gate'), true);
     return;
   }
   openMe();
+});
+
+$('play-dock-me')?.addEventListener('click', () => {
+  if (!state.enrolled) {
+    show($('play-gate'), true);
+    return;
+  }
+  openMe();
+});
+
+$('play-all-places')?.addEventListener('click', openAllPlaces);
+
+document.querySelectorAll('[data-scroll]').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.play-dock button').forEach((b) => b.classList.remove('is-active'));
+    btn.classList.add('is-active');
+    if (state.placeId) goHome();
+    const el = $(btn.dataset.scroll);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
 });
 
 $('play-me-close').addEventListener('click', closeMe);
@@ -770,6 +845,7 @@ document.body.addEventListener('click', (e) => {
   }
   const place = e.target.closest('[data-place]');
   if (place) {
+    closeSheet();
     renderPlace(place.getAttribute('data-place'));
     return;
   }
