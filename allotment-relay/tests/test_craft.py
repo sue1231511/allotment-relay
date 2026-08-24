@@ -287,6 +287,8 @@ async def test_public_snapshot() -> None:
     assert "climate" in snap and "feed" in snap
     assert "jobs" in snap and "salvages_today" in snap
     assert "exhibits" in snap and "pans_brined" in snap
+    assert "done_today" in snap and "active_jobs" in snap
+    assert isinstance(snap["active_jobs"], list)
     assert snap.get("hints")
 
 

@@ -1,0 +1,713 @@
+/* 岸工坊 — 围观实况（独立前缀，避开全局地点海报样式） */
+
+.workshop-page {
+  --w-ink: #302c27;
+  --w-muted: #7a7168;
+  color: var(--w-ink);
+  background: #e9e2d8;
+  min-height: 100vh;
+}
+
+.workshop-page main.ws-shell {
+  max-width: 1180px;
+  margin: auto;
+  padding: 28px 24px 52px;
+  width: auto;
+}
+
+.workshop-page .ws-intro {
+  display: flex;
+  justify-content: space-between;
+  gap: 28px;
+  align-items: end;
+  padding: 0 4px 18px;
+}
+
+.workshop-page .ws-eyebrow {
+  font-size: 11px;
+  letter-spacing: .22em;
+  color: #978b7e;
+  text-transform: uppercase;
+}
+
+.workshop-page .ws-intro h1 {
+  font-family: "Noto Serif SC", "Songti SC", "STSong", serif;
+  font-size: 42px;
+  line-height: 1.08;
+  margin: 7px 0 9px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: var(--w-ink);
+}
+
+.workshop-page .ws-intro > div > p {
+  margin: 0;
+  color: #746c64;
+  font-size: 14px;
+  line-height: 1.7;
+  max-width: 620px;
+}
+
+.workshop-page .ws-intro-side {
+  display: flex;
+  gap: 18px;
+  color: #766d63;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.workshop-page .ws-intro-side b {
+  display: block;
+  color: #3d3832;
+  font-size: 18px;
+  font-weight: 600;
+  margin-top: 3px;
+}
+
+.workshop-page .ws-scene {
+  position: relative;
+  height: 690px;
+  overflow: hidden;
+  border: 1px solid rgba(68, 55, 43, .16);
+  border-radius: 30px;
+  background: linear-gradient(180deg, #ddd3c4 0 64%, #b58f6d 64% 65%, #947153 65% 100%);
+  box-shadow: 0 24px 54px rgba(74, 55, 38, .10);
+}
+
+.workshop-page .ws-scene::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 35% 0;
+  background:
+    radial-gradient(circle at 12% 12%, rgba(255, 255, 255, .22), transparent 15%),
+    radial-gradient(circle at 72% 22%, rgba(115, 92, 69, .05), transparent 18%),
+    linear-gradient(90deg, rgba(255, 255, 255, .08), transparent 30%, rgba(255, 255, 255, .06));
+  pointer-events: none;
+}
+
+.workshop-page .ws-scene::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 35%;
+  background: repeating-linear-gradient(90deg, rgba(64, 42, 27, .10) 0 1px, transparent 1px 95px);
+  pointer-events: none;
+}
+
+.workshop-page .ws-window {
+  position: absolute;
+  right: 7%;
+  top: 7%;
+  width: 29%;
+  height: 31%;
+  border: 10px solid #80634b;
+  border-bottom-width: 14px;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .25), 0 10px 20px rgba(61, 45, 31, .10);
+  background: linear-gradient(180deg, #b7c8c5 0 48%, #8ea6a5 49% 64%, #778f90 65% 100%);
+}
+
+.workshop-page .ws-window::before,
+.workshop-page .ws-window::after {
+  content: "";
+  position: absolute;
+  background: #80634b;
+  z-index: 2;
+}
+
+.workshop-page .ws-window::before {
+  width: 6px;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.workshop-page .ws-window::after {
+  height: 6px;
+  left: 0;
+  right: 0;
+  top: 52%;
+}
+
+.workshop-page .ws-sea-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 31%;
+  height: 2px;
+  background: rgba(255, 255, 255, .55);
+}
+
+.workshop-page .ws-gull {
+  position: absolute;
+  color: rgba(56, 71, 72, .65);
+  font-family: serif;
+  font-size: 20px;
+  transform: scaleX(1.4);
+}
+
+.workshop-page .ws-g1 { left: 18%; top: 19%; }
+.workshop-page .ws-g2 { left: 67%; top: 34%; font-size: 16px; }
+
+.workshop-page .ws-sign {
+  position: absolute;
+  left: 5%;
+  top: 6%;
+  padding: 10px 18px 11px;
+  background: #725842;
+  color: #efe6d9;
+  border-radius: 4px 4px 10px 10px;
+  box-shadow: 0 8px 16px rgba(55, 39, 27, .12);
+  transform: rotate(-1deg);
+  z-index: 2;
+}
+
+.workshop-page .ws-sign strong {
+  font-size: 19px;
+  letter-spacing: .08em;
+  font-weight: 600;
+}
+
+.workshop-page .ws-sign small {
+  display: block;
+  color: #cdbca9;
+  font-size: 10px;
+  margin-top: 3px;
+  letter-spacing: .12em;
+}
+
+.workshop-page .ws-pegboard {
+  position: absolute;
+  left: 5%;
+  top: 22%;
+  width: 29%;
+  height: 28%;
+  border: 1px solid rgba(76, 60, 46, .16);
+  background:
+    radial-gradient(circle, rgba(91, 73, 57, .22) 1.1px, transparent 1.2px) 0 0 / 18px 18px,
+    #d2c3af;
+  box-shadow: inset 0 0 28px rgba(79, 59, 43, .05);
+  z-index: 2;
+}
+
+.workshop-page .ws-tool {
+  position: absolute;
+  background: #596260;
+  border-radius: 3px;
+  box-shadow: 0 3px 5px rgba(51, 41, 33, .14);
+}
+
+.workshop-page .ws-hammer-head {
+  left: 17%;
+  top: 19%;
+  width: 62px;
+  height: 13px;
+  transform: rotate(-10deg);
+}
+
+.workshop-page .ws-hammer-handle {
+  left: 35%;
+  top: 24%;
+  width: 9px;
+  height: 85px;
+  background: #7d6047;
+  transform: rotate(-10deg);
+  transform-origin: top;
+}
+
+.workshop-page .ws-tongs-a,
+.workshop-page .ws-tongs-b {
+  top: 21%;
+  width: 7px;
+  height: 92px;
+  background: #66706e;
+  transform-origin: top;
+}
+
+.workshop-page .ws-tongs-a { right: 28%; transform: rotate(12deg); }
+.workshop-page .ws-tongs-b { right: 22%; transform: rotate(-12deg); }
+
+.workshop-page .ws-hook {
+  right: 8%;
+  top: 17%;
+  width: 26px;
+  height: 55px;
+  border: 6px solid #626c69;
+  border-top-color: transparent;
+  border-left-color: transparent;
+  background: transparent;
+  border-radius: 50%;
+}
+
+.workshop-page .ws-peg-label {
+  position: absolute;
+  left: 8px;
+  bottom: 7px;
+  font-size: 10px;
+  color: #817363;
+  letter-spacing: .12em;
+}
+
+.workshop-page .ws-bench {
+  position: absolute;
+  left: 7%;
+  right: 31%;
+  bottom: 11%;
+  height: 26%;
+  background: linear-gradient(180deg, #a98463 0 16%, #8d6b50 17% 100%);
+  border-radius: 8px 8px 3px 3px;
+  box-shadow: 0 14px 18px rgba(65, 46, 32, .15);
+  z-index: 3;
+}
+
+.workshop-page .ws-bench::before {
+  content: "";
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  top: -18px;
+  height: 28px;
+  background: #b28e6c;
+  border-radius: 7px;
+  box-shadow: inset 0 -4px 0 rgba(82, 57, 40, .10);
+}
+
+.workshop-page .ws-leg {
+  position: absolute;
+  bottom: -120px;
+  width: 22px;
+  height: 120px;
+  background: #775840;
+}
+
+.workshop-page .ws-leg.l { left: 7%; }
+.workshop-page .ws-leg.r { right: 7%; }
+
+.workshop-page .ws-anvil {
+  position: absolute;
+  left: 12%;
+  top: -52px;
+  width: 126px;
+  height: 50px;
+  background: #636b69;
+  clip-path: polygon(4% 36%, 35% 36%, 43% 0, 89% 0, 100% 20%, 72% 34%, 65% 54%, 74% 100%, 31% 100%, 39% 53%, 5% 53%);
+  filter: drop-shadow(0 7px 5px rgba(39, 36, 32, .22));
+}
+
+.workshop-page .ws-spark {
+  position: absolute;
+  font-size: 14px;
+  color: #c49b68;
+}
+
+.workshop-page .ws-s1 { left: 26%; top: -68px; }
+.workshop-page .ws-s2 { left: 30%; top: -80px; font-size: 10px; }
+
+.workshop-page .ws-jobs {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+}
+
+.workshop-page .ws-jobtag {
+  position: absolute;
+  top: 27px;
+  width: 128px;
+  min-height: 78px;
+  padding: 10px 11px;
+  background: #eee5d7;
+  box-shadow: 0 5px 9px rgba(56, 41, 30, .10);
+  font-size: 11px;
+  line-height: 1.45;
+  transform: rotate(-1deg);
+}
+
+.workshop-page .ws-jobtag b {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.workshop-page .ws-jobtag small {
+  color: #8a7c6f;
+}
+
+.workshop-page .ws-j1 { left: 36%; }
+.workshop-page .ws-j2 { left: 58%; transform: rotate(1.5deg); }
+
+.workshop-page .ws-nailpile {
+  position: absolute;
+  right: 6%;
+  top: 25px;
+  width: 68px;
+  height: 50px;
+}
+
+.workshop-page .ws-nailpile i {
+  position: absolute;
+  width: 3px;
+  height: 33px;
+  background: #5f6866;
+  border-radius: 2px;
+  transform-origin: center;
+}
+
+.workshop-page .ws-nailpile i:nth-child(1) { left: 9px; transform: rotate(70deg); }
+.workshop-page .ws-nailpile i:nth-child(2) { left: 21px; transform: rotate(80deg); }
+.workshop-page .ws-nailpile i:nth-child(3) { left: 34px; transform: rotate(63deg); }
+.workshop-page .ws-nailpile i:nth-child(4) { left: 47px; transform: rotate(94deg); }
+
+.workshop-page .ws-salt-shelf {
+  position: absolute;
+  right: 5.5%;
+  top: 45%;
+  width: 23%;
+  height: 26%;
+  z-index: 2;
+}
+
+.workshop-page .ws-shelf {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 12px;
+  background: #82634b;
+  border-radius: 3px;
+  box-shadow: 0 5px 8px rgba(63, 45, 31, .11);
+}
+
+.workshop-page .ws-sh1 { top: 8%; }
+.workshop-page .ws-sh2 { top: 49%; }
+.workshop-page .ws-sh3 { bottom: 0; }
+
+.workshop-page .ws-pan {
+  position: absolute;
+  width: 72px;
+  height: 31px;
+  border-radius: 4px 4px 12px 12px;
+  border: 3px solid #8d938e;
+  border-top-width: 5px;
+  background: #e8e4dc;
+  box-shadow: 0 5px 8px rgba(63, 45, 31, .08);
+}
+
+.workshop-page .ws-p1 { left: 8%; top: -5%; }
+.workshop-page .ws-p2 { right: 5%; top: -5%; }
+.workshop-page .ws-p3 { left: 14%; top: 36%; }
+.workshop-page .ws-p4 { right: 10%; top: 36%; }
+
+.workshop-page .ws-salt-crust {
+  position: absolute;
+  left: 9px;
+  right: 9px;
+  top: 8px;
+  height: 7px;
+  background: #faf8f1;
+  border-radius: 50%;
+  opacity: .95;
+}
+
+.workshop-page .ws-pan.is-empty .ws-salt-crust {
+  opacity: .15;
+}
+
+.workshop-page .ws-salt-label {
+  position: absolute;
+  left: 8px;
+  bottom: -28px;
+  font-size: 11px;
+  color: #6f655d;
+}
+
+.workshop-page .ws-rack {
+  position: absolute;
+  right: 5%;
+  bottom: 9%;
+  width: 23%;
+  height: 18%;
+  border-left: 8px solid #73543d;
+  border-right: 8px solid #73543d;
+  z-index: 2;
+}
+
+.workshop-page .ws-rack::before,
+.workshop-page .ws-rack::after {
+  content: "";
+  position: absolute;
+  left: -8px;
+  right: -8px;
+  height: 9px;
+  background: #806047;
+}
+
+.workshop-page .ws-rack::before { top: 18px; }
+.workshop-page .ws-rack::after { bottom: 21px; }
+
+.workshop-page .ws-driftwood {
+  position: absolute;
+  left: 8%;
+  top: 2px;
+  width: 76%;
+  height: 17px;
+  background: #a47f5f;
+  border-radius: 40% 10% 40% 10%;
+  transform: rotate(-5deg);
+}
+
+.workshop-page .ws-rope {
+  position: absolute;
+  right: 16%;
+  top: 34px;
+  width: 42px;
+  height: 42px;
+  border: 5px solid #a48d6b;
+  border-radius: 50%;
+}
+
+.workshop-page .ws-salvage-box {
+  position: absolute;
+  left: 8%;
+  bottom: 28px;
+  width: 58px;
+  height: 42px;
+  background: #8b684e;
+  border: 2px solid #664b38;
+}
+
+.workshop-page .ws-cabinet {
+  position: absolute;
+  left: 38%;
+  top: 16%;
+  width: 22%;
+  height: 31%;
+  border: 7px solid #87684f;
+  background: #cbb9a4;
+  box-shadow: 0 10px 20px rgba(58, 43, 31, .10);
+  z-index: 2;
+}
+
+.workshop-page .ws-cabinet::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: #87684f;
+}
+
+.workshop-page .ws-cabinet::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 3px;
+  background: #87684f;
+}
+
+.workshop-page .ws-item {
+  position: absolute;
+  border-radius: 4px;
+  background: #6d7b76;
+}
+
+.workshop-page .ws-it1 { left: 15%; top: 16%; width: 28px; height: 18px; }
+.workshop-page .ws-it2 { right: 15%; top: 16%; width: 18px; height: 27px; background: #9b735d; }
+.workshop-page .ws-it3 { left: 14%; bottom: 14%; width: 36px; height: 11px; background: #b1946c; }
+.workshop-page .ws-it4 { right: 12%; bottom: 13%; width: 30px; height: 22px; background: #7b7770; }
+
+.workshop-page .ws-hot {
+  position: absolute;
+  background: rgba(247, 242, 233, .88);
+  border: 1px solid rgba(77, 62, 49, .15);
+  backdrop-filter: blur(7px);
+  box-shadow: 0 7px 18px rgba(61, 45, 32, .09);
+  border-radius: 999px;
+  padding: 8px 11px;
+  font-size: 11px;
+  color: #5f574f;
+  z-index: 5;
+}
+
+.workshop-page .ws-hot b {
+  font-size: 14px;
+  color: #37332f;
+  margin-left: 4px;
+}
+
+.workshop-page .ws-h-anvil { left: 11%; bottom: 34%; }
+.workshop-page .ws-h-cab { left: 42%; top: 49%; }
+.workshop-page .ws-h-salt { right: 8%; top: 39%; }
+.workshop-page .ws-h-salvage { right: 8%; bottom: 4.5%; }
+
+.workshop-page .ws-log {
+  position: absolute;
+  left: 4.8%;
+  bottom: 3%;
+  width: 27%;
+  height: 25%;
+  padding: 16px 17px 14px 23px;
+  background: #eee5d7;
+  box-shadow: 0 9px 18px rgba(61, 45, 32, .11);
+  transform: rotate(.8deg);
+  z-index: 4;
+  overflow: hidden;
+}
+
+.workshop-page .ws-log::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 13px;
+  width: 1px;
+  background: #c5a58f;
+}
+
+.workshop-page .ws-log h3 {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.workshop-page .ws-log p {
+  margin: 0 0 8px;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: #6f655d;
+}
+
+.workshop-page .ws-log time {
+  color: #a09386;
+  font-size: 9px;
+  margin-right: 5px;
+}
+
+.workshop-page .ws-log .ws-empty {
+  margin: 0;
+  font-size: 11px;
+  color: #8a7c6f;
+  line-height: 1.5;
+}
+
+.workshop-page .ws-go {
+  position: absolute;
+  right: 4%;
+  top: 3.5%;
+  z-index: 6;
+  border: 1px solid rgba(83, 68, 55, .22);
+  background: rgba(248, 244, 237, .88);
+  backdrop-filter: blur(8px);
+  border-radius: 999px;
+  padding: 9px 14px;
+  color: #5f554d;
+  box-shadow: 0 5px 12px rgba(56, 41, 30, .08);
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.workshop-page .ws-go:hover {
+  background: rgba(255, 252, 246, .95);
+}
+
+@media (max-width: 850px) {
+  .workshop-page main.ws-shell {
+    padding: 18px 12px 35px;
+  }
+
+  .workshop-page .ws-intro {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .workshop-page .ws-intro h1 {
+    font-size: 34px;
+  }
+
+  .workshop-page .ws-intro-side {
+    gap: 14px;
+  }
+
+  .workshop-page .ws-scene {
+    height: 760px;
+    border-radius: 24px;
+  }
+
+  .workshop-page .ws-window {
+    right: 5%;
+    top: 8%;
+    width: 38%;
+    height: 23%;
+  }
+
+  .workshop-page .ws-sign {
+    left: 4%;
+    top: 5%;
+  }
+
+  .workshop-page .ws-pegboard {
+    left: 4%;
+    top: 21%;
+    width: 40%;
+    height: 24%;
+  }
+
+  .workshop-page .ws-cabinet {
+    left: 48%;
+    top: 34%;
+    width: 43%;
+    height: 22%;
+  }
+
+  .workshop-page .ws-bench {
+    left: 5%;
+    right: 5%;
+    bottom: 24%;
+    height: 21%;
+  }
+
+  .workshop-page .ws-salt-shelf {
+    right: 5%;
+    top: 59%;
+    width: 36%;
+    height: 17%;
+  }
+
+  .workshop-page .ws-rack {
+    right: 5%;
+    bottom: 4%;
+    width: 34%;
+    height: 14%;
+  }
+
+  .workshop-page .ws-log {
+    left: 5%;
+    bottom: 3%;
+    width: 50%;
+    height: 17%;
+  }
+
+  .workshop-page .ws-h-anvil {
+    left: 8%;
+    bottom: 47%;
+  }
+
+  .workshop-page .ws-h-cab {
+    left: 55%;
+    top: 57%;
+  }
+
+  .workshop-page .ws-h-salt {
+    right: 7%;
+    top: 56%;
+  }
+
+  .workshop-page .ws-h-salvage {
+    display: none;
+  }
+}

@@ -37,7 +37,8 @@ CRAFT_HELP = """craft_ops 子命令（整句写进 command）：
   help — 本表
 
 例子：craft_ops status · craft_ops 打 铜钉 · craft_ops 打 潮纹秤锤 · craft_ops 取 · craft_ops 灌 · craft_ops 打捞 · craft_ops 捐 亮壳一套 · craft_ops 捐 砧上全套
-涨潮灌盐田，晴天才晒。赶海 dig 涨潮关；打捞只认风暴窗口。"""
+涨潮灌盐田，晴天才晒。赶海 dig 涨潮关；打捞只认风暴窗口。
+人类网页 /workshop 是围观实况；打钉在 /play。"""
 
 
 def _fmt_left(seconds: int) -> str:
@@ -722,6 +723,8 @@ async def craft_ops(key_id: int, command: str = "") -> str:
 async def public_snapshot() -> dict[str, Any]:
     day = db.day_id()
     win = world.salvage_window()
+    now = db.now()
+    day_start = db.day_start(day)
     async with db.connect() as conn:
         conn.row_factory = aiosqlite.Row
         jobs = (await (await conn.execute(
@@ -736,6 +739,23 @@ async def public_snapshot() -> dict[str, Any]:
         pans = (await (await conn.execute(
             "SELECT COUNT(*) FROM craft_pans WHERE brine_at > 0"
         )).fetchone())[0]
+        done = (await (await conn.execute(
+            """
+            SELECT COUNT(*) FROM chronicle
+            WHERE action='craft' AND created_at >= ?
+            """,
+            (day_start,),
+        )).fetchone())[0]
+        active = await (await conn.execute(
+            """
+            SELECT c.job_key, c.job_qty, c.job_ready_at, a.name AS actor
+            FROM steward_craft c
+            LEFT JOIN stewards a ON a.id = c.steward_id
+            WHERE c.job_key != ''
+            ORDER BY c.job_ready_at ASC
+            LIMIT 2
+            """
+        )).fetchall()
         feed = await (await conn.execute(
             """
             SELECT c.text, c.created_at, a.name AS actor
@@ -745,14 +765,27 @@ async def public_snapshot() -> dict[str, Any]:
             ORDER BY c.created_at DESC LIMIT 16
             """
         )).fetchall()
+    job_cards = []
+    for row in active:
+        meta = CRAFT_RECIPES.get(row["job_key"], {})
+        ready = int(row["job_ready_at"] or 0) <= now
+        job_cards.append({
+            "name": meta.get("name", row["job_key"]),
+            "emoji": meta.get("emoji", "🔨"),
+            "qty": int(row["job_qty"] or meta.get("qty") or 1),
+            "actor": row["actor"] or "有人",
+            "note": "快好了" if ready else "制作中",
+        })
     return {
         "climate": world.climate_line(),
         "salvage": win["label"] if win["open"] else "打捞关着",
         "salvage_open": bool(win["open"]),
         "jobs": int(jobs or 0),
+        "done_today": int(done or 0),
         "salvages_today": int(salv or 0),
         "exhibits": int(exhibits or 0),
         "pans_brined": int(pans or 0),
+        "active_jobs": job_cards,
         "hints": [
             "打 铜钉 / 潮纹秤锤 / 铁锄刃 / 雾铅网坠 / 夜光滤网 → 等分钟 → 取",
             "涨潮灌盐田，晴天攒 20 分钟收盐",

@@ -6,41 +6,97 @@
   <title>岸工坊 · 潮汐岛</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/workshop.css">
 </head>
-<body>
+<body class="workshop-page">
   {% include "partials/nav.html" %}
-  <main>
-    <header class="page-head">
+
+  <main class="ws-shell">
+    <header class="ws-intro">
       <div>
-        <div class="eyebrow">工坊围观</div>
+        <div class="ws-eyebrow">shore workshop · 潮汐岛</div>
         <h1>岸工坊</h1>
-        <p class="tagline">
-          把矿和畜栏接进生活：打钉、晒盐、风暴后下滩、捐齐陈列柜。
-          看热闹。要自己动手去上手页 <a href="/play">/play</a>（<code>craft_ops</code>）。
-          不是再挖一次，也不是赶海翻沙。
-        </p>
+        <p>打钉、晒盐、收拾风暴后的破烂。东西都在屋里，不用再看一排后台卡片。看热闹；动手去上手页。</p>
+      </div>
+      <div class="ws-intro-side">
+        <div>今日完成<b id="ws-done">—</b></div>
+        <div>砧上在打<b id="ws-jobs">—</b></div>
+        <div>打捞状态<b id="ws-salvage">—</b></div>
       </div>
     </header>
 
-    <section class="stats-shell" id="workshop-stats">
-      <div class="stats-primary" id="workshop-primary"></div>
-    </section>
-    <p class="soft-note" id="workshop-climate">在问海况…</p>
-    <p class="soft-note" id="workshop-hints"></p>
+    <section class="ws-scene" aria-label="岸工坊">
+      <a class="ws-go" href="/play?go=craft">去上手页干活 →</a>
 
-    <div class="board-strip board-grid board-grid-mini">
-      <section class="panel">
-        <div class="panel-head"><h2>此刻四柜</h2><span class="tag">BENCH</span></div>
-        <ol id="workshop-cabinets" class="board-list"></ol>
-      </section>
-      <section class="panel feed">
-        <div class="panel-head"><h2>岸上纪事</h2><span class="tag">LIVE</span></div>
-        <div id="workshop-feed"></div>
-      </section>
-    </div>
+      <div class="ws-sign">
+        <strong>岸工坊</strong>
+        <small>SHORE WORKSHOP</small>
+      </div>
+
+      <div class="ws-window">
+        <div class="ws-sea-line"></div>
+        <span class="ws-gull ws-g1">⌁</span>
+        <span class="ws-gull ws-g2">⌁</span>
+      </div>
+
+      <div class="ws-pegboard">
+        <span class="ws-tool ws-hammer-head"></span>
+        <span class="ws-tool ws-hammer-handle"></span>
+        <span class="ws-tool ws-tongs-a"></span>
+        <span class="ws-tool ws-tongs-b"></span>
+        <span class="ws-tool ws-hook"></span>
+        <span class="ws-peg-label">借完记得挂回来</span>
+      </div>
+
+      <div class="ws-cabinet">
+        <i class="ws-item ws-it1"></i>
+        <i class="ws-item ws-it2"></i>
+        <i class="ws-item ws-it3"></i>
+        <i class="ws-item ws-it4"></i>
+      </div>
+      <div class="ws-hot ws-h-cab">陈列柜 <b id="ws-exhibits">—</b></div>
+
+      <div class="ws-bench">
+        <div class="ws-anvil"></div>
+        <span class="ws-spark ws-s1">✦</span>
+        <span class="ws-spark ws-s2">·</span>
+        <div class="ws-jobs" id="ws-jobtags"></div>
+        <div class="ws-nailpile"><i></i><i></i><i></i><i></i></div>
+        <span class="ws-leg l"></span>
+        <span class="ws-leg r"></span>
+      </div>
+      <div class="ws-hot ws-h-anvil">铁砧 <b id="ws-anvil">—</b></div>
+
+      <div class="ws-salt-shelf">
+        <div class="ws-shelf ws-sh1"></div>
+        <div class="ws-shelf ws-sh2"></div>
+        <div class="ws-shelf ws-sh3"></div>
+        <div class="ws-pan ws-p1" data-pan="0"><span class="ws-salt-crust"></span></div>
+        <div class="ws-pan ws-p2" data-pan="1"><span class="ws-salt-crust"></span></div>
+        <div class="ws-pan ws-p3" data-pan="2"><span class="ws-salt-crust"></span></div>
+        <div class="ws-pan ws-p4" data-pan="3"><span class="ws-salt-crust"></span></div>
+        <div class="ws-salt-label" id="ws-salt-label">盐盘…</div>
+      </div>
+      <div class="ws-hot ws-h-salt">晒盐 <b id="ws-pans">—</b></div>
+
+      <div class="ws-rack">
+        <div class="ws-driftwood"></div>
+        <div class="ws-rope"></div>
+        <div class="ws-salvage-box"></div>
+      </div>
+      <div class="ws-hot ws-h-salvage">打捞 <b id="ws-salvage-hot">—</b></div>
+
+      <div class="ws-log">
+        <h3>岸上纪事</h3>
+        <div id="ws-feed">
+          <p class="ws-empty">砧还是凉的。</p>
+        </div>
+      </div>
+    </section>
   </main>
+
   <script src="/static/workshop.js"></script>
 </body>
 </html>

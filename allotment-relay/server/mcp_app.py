@@ -94,7 +94,7 @@ async def relay_manual() -> str:
     return await game.relay_manual()
 
 
-@mcp.tool(description="管理员身份与档案。command 写一整句，不要编造子命令。例子：enroll 安 · sheet · 邻居 · 成就 · 称呼 逾篱客 · guild · board tickets。空 command=看自己的档（含全服脉冲/周潮天灾：人类一周一次、低中高随机、只冲3万以上）。等级 1～99，跟累计入账走，满级「潮汐本尊」。新号必须先 enroll。人类网页 /play 点按同一套 command，和 AI 共用一个号；点单打赏、聊天、看档、邻居名册都只在 /play。主页管去哪；/bar /tide /market /eatery /board /huts /star /allotments /quarry 围观实况，其余地点页是海报。不会就 help。")
+@mcp.tool(description="管理员身份与档案。command 写一整句，不要编造子命令。例子：enroll 安 · sheet · 邻居 · 成就 · 称呼 逾篱客 · guild · board tickets。空 command=看自己的档（含全服脉冲/周潮天灾：人类一周一次、低中高随机、只冲3万以上）。等级 1～99，跟累计入账走，满级「潮汐本尊」。新号必须先 enroll。人类网页 /play 点按同一套 command，和 AI 共用一个号；点单打赏、聊天、看档、邻居名册都只在 /play。主页管去哪；/bar /tide /market /eatery /board /huts /star /allotments /quarry /workshop 围观实况，其余地点页是海报。不会就 help。")
 async def steward_ops(
     command: Annotated[str, Field(description="子命令整句。enroll 安 / sheet / 邻居 / 在线 / 成就 / 称呼 逾篱客 / 领奖 / peer 名字 / guild / board tickets|level / help。空=sheet（会显示脉冲和周潮天灾）。等级 1～99，满级潮汐本尊。邻居=全员名册（找人偷菜/assist 用这个）。人类网页 /board 是全服榜围观。不要发明其它动词。")] = "sheet",
     name: Annotated[str, Field(description="enroll 时的管理员名字，也可写在 command 里")] = "",
@@ -224,9 +224,9 @@ async def quarry_ops(
     return progress_mod.attach_note(await mux._call_ops(quarry.quarry_ops, _kid(), command))
 
 
-@mcp.tool(description="岸工坊。把崖矿精矿、羊毛、漂绳、岸木打成钉、补丁、小屋家具；中盘可打潮纹秤锤、铁锄刃、雾铅网坠、夜光滤网。附带盐田晒盐、风暴打捞、潮汐陈列柜。command 写一整句。不是 quarry_ops 洗矿，不是 tide_ops dig（赶海翻沙），不是 kitchen_ops cook。没有 forge_ops / salvage_ops / exhibit_ops。例子：status · 打 铜钉 · 打 潮纹秤锤 · 取 · 灌 · 收盐 · 打捞 · 捐 亮壳一套 · 捐 砧上全套。空 command 列出子命令，不是看砧；看砧必须 status。不会就 help。")
+@mcp.tool(description="岸工坊。把崖矿精矿、羊毛、漂绳、岸木打成钉、补丁、小屋家具；中盘可打潮纹秤锤、铁锄刃、雾铅网坠、夜光滤网。附带盐田晒盐、风暴打捞、潮汐陈列柜。command 写一整句。不是 quarry_ops 洗矿，不是 tide_ops dig（赶海翻沙），不是 kitchen_ops cook。没有 forge_ops / salvage_ops / exhibit_ops。例子：status · 打 铜钉 · 打 潮纹秤锤 · 取 · 灌 · 收盐 · 打捞 · 捐 亮壳一套 · 捐 砧上全套。空 command 列出子命令，不是看砧；看砧必须 status。人类网页 /workshop 是围观实况（砧上、盐田、打捞、陈列柜）；打钉在 /play。不会就 help。")
 async def craft_ops(
-    command: Annotated[str, Field(description="子命令整句。status / scan=看砧和盐田（空 command 不是看砧）/ 图鉴 / 打 铜钉 / 打 潮纹秤锤 / 打 铁锄刃 / 打 雾铅网坠 / 打 夜光滤网 / 取 / 补网 / 灌 / 收盐 / 开池 确认 / 打捞 / 陈列 / 捐 亮壳一套 / 捐 砧上全套 / help。涨潮才能灌盐田。打捞只认阵风/余滩/周潮/船损，不是 dig。补网有雾铅网坠优先贴。不要发明 forge_ops / hew_all。")] = "",
+    command: Annotated[str, Field(description="子命令整句。status / scan=看砧和盐田（空 command 不是看砧）/ 图鉴 / 打 铜钉 / 打 潮纹秤锤 / 打 铁锄刃 / 打 雾铅网坠 / 打 夜光滤网 / 取 / 补网 / 灌 / 收盐 / 开池 确认 / 打捞 / 陈列 / 捐 亮壳一套 / 捐 砧上全套 / help。涨潮才能灌盐田。打捞只认阵风/余滩/周潮/船损，不是 dig。补网有雾铅网坠优先贴。人类打钉在 /play；/workshop 是围观实况。不要发明 forge_ops / hew_all。")] = "",
 ) -> str:
     from . import craft
     from . import progress as progress_mod

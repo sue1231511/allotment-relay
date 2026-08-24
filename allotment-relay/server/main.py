@@ -112,7 +112,8 @@ async def quarry_page(request: Request):
 
 @app.get("/workshop", response_class=HTMLResponse)
 async def workshop_page(request: Request):
-    return _place_page(request, "workshop")
+    """岸工坊围观实况；打钉仍回上手页。"""
+    return _html(request, "workshop.html", active="workshop")
 
 
 @app.get("/tide", response_class=HTMLResponse)

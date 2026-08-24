@@ -180,6 +180,9 @@ def test_mcp_descriptions() -> None:
     assert "status" in c_blob
     assert "打 铜钉" in c_blob
     assert "取" in c_blob
+    assert "/workshop" in c_blob
+    assert "围观" in c_blob
+    assert "地点海报" not in c_blob
     assert "打捞" in c_blob
     assert "潮纹秤锤" in c_blob
     assert "砧上全套" in c_blob
@@ -515,6 +518,7 @@ def test_patron_pages_share_steward_key() -> None:
     assert 'star.html"' in main_py
     assert 'allotments.html"' in main_py
     assert 'quarry.html"' in main_py
+    assert 'workshop.html"' in main_py
     lounge_html = (root / "server/templates/lounge.html").read_text(encoding="utf-8")
     assert "/static/site-key.js" in lounge_html
     assert "lounge-page" in lounge_html
@@ -532,6 +536,9 @@ def test_patron_pages_share_steward_key() -> None:
     quarry_html = (root / "server/templates/quarry.html").read_text(encoding="utf-8")
     quarry_js = (root / "server/static/quarry.js").read_text(encoding="utf-8")
     quarry_css = (root / "server/static/quarry.css").read_text(encoding="utf-8")
+    workshop_html = (root / "server/templates/workshop.html").read_text(encoding="utf-8")
+    workshop_js = (root / "server/static/workshop.js").read_text(encoding="utf-8")
+    workshop_css = (root / "server/static/workshop.css").read_text(encoding="utf-8")
     nav = (root / "server/templates/partials/nav.html").read_text(encoding="utf-8")
     assert "/api/public/bar" in bar_js
     assert "/api/public/tide" in tide_js
@@ -542,6 +549,7 @@ def test_patron_pages_share_steward_key() -> None:
     assert "/api/public/star" in star_js
     assert "/api/public/allotments" in allo_js
     assert "/api/public/quarry" in quarry_js
+    assert "/api/public/workshop" in workshop_js
     assert "/api/public/stats" in allo_js
     assert "place-live.css" in bar_html
     assert "place-live.css" in tide_html
@@ -552,7 +560,9 @@ def test_patron_pages_share_steward_key() -> None:
     assert "star.css" in star_html
     assert "allotments.css" in allo_html
     assert "quarry.css" in quarry_html
+    assert "workshop.css" in workshop_html
     assert "/static/site-key.js" not in quarry_html
+    assert "/static/site-key.js" not in workshop_html
     assert "ranking-stage" in board_html
     assert "dual-board" in board_html
     assert "ticketsBoard" in board_html
@@ -584,6 +594,11 @@ def test_patron_pages_share_steward_key() -> None:
     assert "quarry-feed" in quarry_html
     assert "q-vein" in quarry_js
     assert ".q-hero" in quarry_css
+    assert "ws-scene" in workshop_html
+    assert "ws-feed" in workshop_html
+    assert "ws-jobtags" in workshop_html
+    assert "active_jobs" in workshop_js
+    assert ".ws-scene" in workshop_css
     assert 'href="/board"' in nav
     assert 'href="/huts"' in nav
     assert 'href="/star"' in nav
@@ -608,6 +623,7 @@ def test_patron_pages_share_steward_key() -> None:
     assert "/play?go=hut" in huts_html
     assert "/play?go=star" in star_html
     assert "/play?go=quarry" in quarry_html
+    assert "/play?go=craft" in workshop_html
     assert 'href="/play"' in allo_html
     assert "上手页" in site_key
 
