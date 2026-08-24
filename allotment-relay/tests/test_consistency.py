@@ -62,6 +62,10 @@ def test_mcp_descriptions() -> None:
     assert "status" in blob
     assert "30%" in blob
     assert "sow_all" in blob or "plant" in blob
+    assert "forage" in blob
+    assert "amends" in blob
+    assert "scarecrow" in blob
+    assert "compost" in blob
     assert "shed erect" in blob or "#99" in blob
     assert "无上限" in blob or "露天无上限" in blob
     assert "果园" in blob
@@ -123,6 +127,8 @@ def test_mcp_descriptions() -> None:
     assert "install hard_1 bed" in hut_blob
     assert "堆肥桶" in hut_blob
     assert "compost_bin" in hut_blob
+    assert "tide_weight" in hut_blob
+    assert "iron_edge" in hut_blob
 
     kitchen = mcp._tool_manager.get_tool("kitchen_ops")
     k_blob = f"{kitchen.description}\n{(kitchen.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -167,6 +173,9 @@ def test_mcp_descriptions() -> None:
     assert "打 铜钉" in c_blob
     assert "取" in c_blob
     assert "打捞" in c_blob
+    assert "潮纹秤锤" in c_blob
+    assert "砧上全套" in c_blob
+    assert "雾铅网坠" in c_blob
     assert "forge_ops" in c_blob
     assert "tide_ops dig" in c_blob or "赶海" in c_blob
 
@@ -268,9 +277,13 @@ def test_relay_manual_covers_systems() -> None:
         "岩尘入肺",
         "craft_ops",
         "打 铜钉",
-        "forge_ops",
-        "咸痰",
+        "打 潮纹秤锤",
+        "捐 砧上全套",
+        "雾铅网坠",
         "/workshop",
+        "/tide",
+        "/huts",
+        "/market",
         "能直接送票",
         "tote_ops gifts",
         "随机事件整体 +30%",
@@ -343,9 +356,27 @@ def test_readme_workflow_rules() -> None:
     workshop_html = (root / "allotment-relay/server/templates/workshop.html").read_text(encoding="utf-8")
     workshop_js = (root / "allotment-relay/server/static/workshop.js").read_text(encoding="utf-8")
     nav = (root / "allotment-relay/server/templates/partials/nav.html").read_text(encoding="utf-8")
+    tide_html = (root / "allotment-relay/server/templates/tide.html").read_text(encoding="utf-8")
+    tide_js = (root / "allotment-relay/server/static/tide.js").read_text(encoding="utf-8")
+    huts_html = (root / "allotment-relay/server/templates/huts.html").read_text(encoding="utf-8")
+    huts_js = (root / "allotment-relay/server/static/huts.js").read_text(encoding="utf-8")
+    market_html = (root / "allotment-relay/server/templates/market.html").read_text(encoding="utf-8")
+    market_js = (root / "allotment-relay/server/static/market.js").read_text(encoding="utf-8")
     assert "craft_ops" in workshop_html
     assert "/api/public/workshop" in workshop_js
+    assert "tide_ops" in tide_html
+    assert "/api/public/tide" in tide_js
+    assert "hut_ops" in huts_html
+    assert "/api/public/huts" in huts_js
+    assert "tote_ops market" in market_html
+    assert "/api/public/market" in market_js
     assert 'href="/workshop"' in nav
+    assert 'href="/tide"' in nav
+    assert 'href="/huts"' in nav
+    assert 'href="/market"' in nav
+    assert "forage" in readme
+    assert "amends" in readme
+    assert "砧上全套" in readme
     assert "满级 99" in readme or "1～99" in readme
     assert "steward_ops" in readme and "plot_ops" in readme and "bar_ops" in readme
     assert "quarry_ops" in readme

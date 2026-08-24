@@ -304,6 +304,8 @@ CRAFT_SALVAGE_COOLDOWN = 1500         # 25 分钟；赶海 dig 30 分钟
 CRAFT_SALVAGE_DAILY = 4
 CRAFT_NET_PATCH_SEC = 6 * 3600        # 补网 6 小时空网 -8%
 CRAFT_NET_PATCH_EMPTY = 0.08
+CRAFT_FOG_SINKER_SEC = 12 * 3600      # 雾铅网坠 12 小时空网 -14%
+CRAFT_FOG_SINKER_EMPTY = 0.14
 
 
 def craft_pan_cost(idx: int) -> int:

@@ -67,6 +67,8 @@ async def test_help_and_empty_clean() -> None:
     assert "砧" in status and "盐田" in status, status
     catalog = await craft.craft_ops(kid, "图鉴")
     assert "铜钉" in catalog and "亮壳一套" in catalog, catalog
+    assert "潮纹秤锤" in catalog and "雾铅网坠" in catalog, catalog
+    assert "砧上全套" in catalog, catalog
 
 
 async def test_craft_loop() -> None:
@@ -204,6 +206,60 @@ async def test_exhibit_donate() -> None:
     assert "已经捐过" in again, again
 
 
+async def test_workshop_exhibit_and_fog_sinker() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="craft-mid-"))
+    db = await _boot(tmp)
+    kid, sid = await _enroll(db, "mid@example.com", "满砧测")
+    from server import craft, config
+    from server.catalog import resolve_exhibit_key, resolve_recipe_key
+
+    assert resolve_recipe_key("潮纹秤锤") == "tide_weight"
+    assert resolve_recipe_key("雾铅网坠") == "fog_sinker"
+    assert resolve_exhibit_key("砧上全套") == "workshop"
+    assert resolve_exhibit_key("工坊") == "workshop"
+
+    async with db.connect() as conn:
+        await db.add_item(conn, sid, "craft_copper_nails", 3)
+        await db.add_item(conn, sid, "craft_net_patch", 1)
+        await db.add_item(conn, sid, "quarry_salt", 1)
+        await db.add_item(conn, sid, "craft_timber", 2)
+        await conn.commit()
+    donated = await craft.craft_ops(kid, "捐 砧上全套")
+    assert "砧上" in donated or "陈列" in donated, donated
+    assert await _qty(db, sid, "fit_anvil_plaque") == 1
+
+    missing = await _expect_error(craft.craft_ops(kid, "补网"))
+    assert "网补丁" in missing or "网坠" in missing, missing
+
+    async with db.connect() as conn:
+        await db.add_item(conn, sid, "craft_fog_sinker", 1)
+        await db.add_item(conn, sid, "craft_net_patch", 1)
+        await conn.commit()
+    patched = await craft.craft_ops(kid, "补网")
+    assert "雾铅" in patched or "网坠" in patched, patched
+    assert "14" in patched, patched
+    async with db.connect() as conn:
+        reduce = await craft.active_net_patch(conn, sid)
+    assert abs(reduce - config.CRAFT_FOG_SINKER_EMPTY) < 1e-6, reduce
+    assert await _qty(db, sid, "craft_fog_sinker") == 0
+    assert await _qty(db, sid, "craft_net_patch") == 1
+
+
+async def test_public_pages() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="spec-pub-"))
+    await _boot(tmp)
+    from server import craft, hut, marine, market
+
+    tide = await marine.public_snapshot()
+    assert "nets_today" in tide and "voyages_out" in tide and "feed" in tide
+    huts = await hut.public_snapshot()
+    assert "huts" in huts and "barns" in huts and "mascots" in huts
+    mk = await market.public_snapshot()
+    assert "open" in mk and "listings" in mk
+    ws = await craft.public_snapshot()
+    assert "jobs" in ws
+
+
 async def test_chop_drops_timber() -> None:
     from server import farming
 
@@ -254,6 +310,10 @@ def test_craft_exhibit() -> None:
     asyncio.run(test_exhibit_donate())
 
 
+def test_craft_midgame() -> None:
+    asyncio.run(test_workshop_exhibit_and_fog_sinker())
+
+
 def test_craft_chop() -> None:
     asyncio.run(test_chop_drops_timber())
 
@@ -262,12 +322,18 @@ def test_craft_public() -> None:
     asyncio.run(test_public_snapshot())
 
 
+def test_spectator_public() -> None:
+    asyncio.run(test_public_pages())
+
+
 if __name__ == "__main__":
     test_craft_help_and_empty()
     test_craft_job()
     test_craft_salt()
     test_craft_salvage()
     test_craft_exhibit()
+    test_craft_midgame()
     test_craft_chop()
     test_craft_public()
+    test_spectator_public()
     print("craft tests ok")

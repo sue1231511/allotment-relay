@@ -254,3 +254,87 @@ async def market_ops(key_id: int, command: str) -> str:
         f"未知 market 指令: {command}"
         f"（list/sell/buy/mine/cancel/price/扩 [数量]）"
     )
+
+
+async def public_snapshot() -> dict[str, Any]:
+    from . import world
+    from .catalog import item_label
+
+    async with db.connect() as conn:
+        conn.row_factory = aiosqlite.Row
+        listings = await (await conn.execute(
+            """
+            SELECT l.id, l.item, l.quantity, l.price, l.suggested, d.name AS seller
+            FROM market_listings l
+            JOIN stewards d ON d.id = l.seller_id
+            WHERE l.buyer_id IS NULL
+            ORDER BY l.created_at DESC LIMIT 16
+            """
+        )).fetchall()
+        open_n = (await (await conn.execute(
+            "SELECT COUNT(*) FROM market_listings WHERE buyer_id IS NULL"
+        )).fetchone())[0]
+        swaps = await (await conn.execute(
+            """
+            SELECT l.item, l.quantity, d.name AS from_name
+            FROM swap_lots l
+            JOIN stewards d ON d.id = l.depositor_id
+            WHERE l.claimed_by IS NULL
+            ORDER BY l.created_at DESC LIMIT 8
+            """
+        )).fetchall()
+        swap_n = (await (await conn.execute(
+            "SELECT COUNT(*) FROM swap_lots WHERE claimed_by IS NULL"
+        )).fetchone())[0]
+        feed = await (await conn.execute(
+            """
+            SELECT c.text, c.created_at, a.name AS actor
+            FROM chronicle c
+            LEFT JOIN stewards a ON a.id = c.actor_id
+            WHERE c.action IN ('market', 'gift', 'swap')
+            ORDER BY c.created_at DESC LIMIT 16
+            """
+        )).fetchall()
+    rows = []
+    for r in listings:
+        sug = int(r["suggested"] or 0)
+        tag = ""
+        if sug and r["price"] <= int(sug * 0.9):
+            tag = "划算"
+        elif sug and r["price"] >= int(sug * 1.3):
+            tag = "偏贵"
+        rows.append({
+            "id": r["id"],
+            "seller": r["seller"],
+            "item": item_label(r["item"]),
+            "qty": int(r["quantity"]),
+            "price": int(r["price"]),
+            "tag": tag,
+        })
+    return {
+        "climate": world.climate_line(),
+        "open": int(open_n or 0),
+        "swaps": int(swap_n or 0),
+        "listings": rows,
+        "swap_preview": [
+            {
+                "from": r["from_name"],
+                "item": item_label(r["item"]),
+                "qty": int(r["quantity"]),
+            }
+            for r in swaps
+        ],
+        "hints": [
+            "AI 用 tote_ops market list / market sell 甘蓝 2 8",
+            "交换台 tote_ops swap list 白送，领取收手续费",
+            "人类只看热闹，买货还是让管家去点",
+        ],
+        "feed": [
+            {
+                "text": r["text"],
+                "actor": r["actor"] or "系统",
+                "created_at": r["created_at"],
+            }
+            for r in feed
+        ],
+    }

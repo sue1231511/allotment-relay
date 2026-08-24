@@ -239,6 +239,20 @@ async def _check_ichthyologist(conn: aiosqlite.Connection, s: dict[str, Any]) ->
     return await _check_exhibit_set(conn, s, "ten_fish")
 
 
+async def _check_atelier(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
+    return await _check_exhibit_set(conn, s, "workshop")
+
+
+async def _check_full_cabinet(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
+    from .catalog import EXHIBIT_SETS
+
+    row = await (await conn.execute(
+        "SELECT COUNT(*) FROM steward_exhibits WHERE steward_id=?",
+        (s["id"],),
+    )).fetchone()
+    return int(row[0] or 0) >= len(EXHIBIT_SETS)
+
+
 async def _check_spring_beyond_mountain(
     conn: aiosqlite.Connection, s: dict[str, Any]
 ) -> bool:
@@ -420,6 +434,18 @@ ACHIEVEMENTS: dict[str, dict[str, Any]] = {
         "aliases": ("十种鱼", "渔获柜"),
         "check": _check_ichthyologist,
     },
+    "atelier": {
+        "name": "满砧",
+        "hint": "陈列柜捐齐砧上全套",
+        "aliases": ("砧上人", "工坊全套"),
+        "check": _check_atelier,
+    },
+    "full_cabinet": {
+        "name": "柜中岛",
+        "hint": "陈列柜六套都捐过",
+        "aliases": ("满柜", "六套齐"),
+        "check": _check_full_cabinet,
+    },
 }
 
 # 里程碑才发，不对每一级。新客起步约 Lv3，从 Lv4 开始。
@@ -434,12 +460,12 @@ LEVEL_REWARDS: dict[int, dict[str, Any]] = {
     25: {"tickets": 120, "label": "岛上的影子"},
     30: {"tickets": 180, "items": [("compost", 4)], "label": "潮声旧人"},
     40: {"tickets": 240, "cabinet": 1, "label": "潮痕"},
-    50: {"tickets": 320, "items": [("compost", 4)], "label": "岸上的根"},
-    60: {"tickets": 420, "label": "半个岛"},
-    70: {"tickets": 540, "cabinet": 1, "label": "潮渊老人"},
-    80: {"tickets": 680, "items": [("seed_fogpea", 3)], "label": "百年岸人"},
-    90: {"tickets": 840, "items": [("compost", 6)], "label": "岛上的传说"},
-    99: {"tickets": 1200, "items": [("compost", 8)], "cabinet": 1, "label": "满级"},
+    50: {"tickets": 320, "items": [("compost", 2), ("quarry_copper_bar", 1)], "label": "岸上的根"},
+    60: {"tickets": 420, "items": [("quarry_iron_bar", 1), ("craft_timber", 3)], "label": "半个岛"},
+    70: {"tickets": 540, "cabinet": 1, "items": [("quarry_tide_stone", 1)], "label": "潮渊老人"},
+    80: {"tickets": 680, "items": [("quarry_fog_lead", 1), ("seed_fogpea", 2)], "label": "百年岸人"},
+    90: {"tickets": 840, "items": [("quarry_marrow", 1)], "label": "岛上的传说"},
+    99: {"tickets": 1200, "items": [("compost", 4), ("fit_tide_crest", 1)], "cabinet": 1, "label": "满级"},
 }
 
 

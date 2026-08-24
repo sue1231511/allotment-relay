@@ -127,7 +127,9 @@ HUT_HELP = """hut_ops 子命令（整句写进 command）：
   barn status|erect|buy|feed|collect|shear|churn — 畜栏。churn 只搅山羊奶成奶酪（先买山羊再 collect；牛奶不能搅）
   mascot adopt 名字 scout|lucky|compost / upkeep / train / feed — 吉祥物
     upkeep 花 4 票主动喂养，不是每日自动扣；train 免费练、不换特质；feed 耗宠物饲料。士气不每天掉。
-  buy miner_lamp → install soft_N miner_lamp — 盐风矿灯，崖矿挖精力 -1"""
+  buy miner_lamp → install soft_N miner_lamp — 盐风矿灯，崖矿挖精力 -1
+  install soft_N tide_weight|iron_edge|marrow_sieve — 工坊家具，装上才生效（秤锤/铁锄刃/滤网）
+  install soft_N tide_crest — 满级潮冠，意外略少、档信 +2。不能打不能买"""
 
 TIDE_HELP = """tide_ops 子命令（整句写进 command）：
   net / cast / status — 岸边撒网 / 坐钓（cast 要 T1 钓竿 + 蚯蚓饵）
@@ -184,16 +186,16 @@ CRAFT_HELP = """craft_ops 子命令（整句写进 command）：
 
   status / 看 — 砧上在打什么、盐田、打捞窗口、陈列进度
   图鉴 / catalog — 配方、盐田规则、打捞窗口、陈列套
-  打 铜钉 — 扣材料开始慢工（一砧一次；好了 craft_ops 取）
+  打 铜钉 — 扣材料开始慢工（一砧一次；好了 craft_ops 取）。也可 打 潮纹秤锤 · 打 铁锄刃 · 打 雾铅网坠 · 打 夜光滤网
   取 — 领做好的成品
-  补网 — 消耗一枚网补丁，6 小时撒网空网 -8%
+  补网 — 网补丁 6 小时空网 -8%；有雾铅网坠优先贴，12 小时 -14%。不是 gear upgrade
   盐田 — 看池；灌 — 涨潮灌一池（5 精力）；收盐 — 晴天攒满 20 分钟后收海盐晶
   开池 / 开池 确认 — 加盐田（最多 3 口，40/68/96 票）
-  打捞 — 阵风中、阵风后晴天、周潮或船损才能下滩。不是 dig
-  陈列 / 捐 亮壳一套 — 看套 / 捐货换称呼或小屋装饰。也可 捐 亮壳 · 捐 矿石 · 捐 夜光
+  打捞 — 阵风中、阵风后晴天、周潮或船损才能下滩。不是 dig。夜光滤网减空捞
+  陈列 / 捐 亮壳一套 — 看套 / 捐货换称呼或小屋装饰。也可 捐 亮壳 · 捐 矿石 · 捐 夜光 · 捐 砧上全套
   help — 本表
 
-例子：status · 打 铜钉 · 取 · 灌 · 收盐 · 打捞 · 捐 亮壳一套
+例子：status · 打 铜钉 · 打 潮纹秤锤 · 取 · 灌 · 收盐 · 打捞 · 捐 亮壳一套 · 捐 砧上全套
 涨潮灌盐田，晴天才晒。赶海 dig 涨潮关；打捞只认风暴窗口。"""
 
 ALLIANCE_HELP = """alliance_ops 子命令（整句写进 command）：
