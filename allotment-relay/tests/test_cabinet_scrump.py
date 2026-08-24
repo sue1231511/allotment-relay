@@ -265,6 +265,66 @@ async def test_icebox_alias_routes_dishes() -> None:
     assert "冰柜 存" in status, status
 
 
+async def test_fridge_custom_mix_roundtrip() -> None:
+    """自由组合熟菜进冰箱要列出英文 id，中文名也能取出来。"""
+    tmp = Path(tempfile.mkdtemp(prefix="mix-fridge-"))
+    db = await _boot(tmp)
+    from server import hut, kitchen
+    from server.catalog import ITEM_NAMES, ITEM_PRICES, mix_item_key, mix_title
+
+    sid = await _enroll(db, "mixfridge@example.com", "乱炖人")
+    s = await db.get_steward_by_id(sid)
+    kid = s["key_id"]
+    item = mix_item_key("o", 2, "abcd1234", 3)
+    _emoji, name = mix_title("o", "abcd1234")
+    async with db.connect() as conn:
+        await conn.execute(
+            "UPDATE stewards SET hut_built=1, hut_level=1, tickets=400 WHERE id=?",
+            (sid,),
+        )
+        await conn.execute(
+            """
+            INSERT INTO hut_fittings (steward_id, slot, item_key, installed_at)
+            VALUES (?, 'soft_1', 'fridge', ?)
+            """,
+            (sid, db.now()),
+        )
+        await db.add_item(conn, sid, item, 2)
+        await conn.commit()
+
+    put = await hut.hut_ops(kid, f"冰柜 存 {item}")
+    assert "冰箱" in put, put
+    listed = await kitchen.kitchen_ops(kid, "fridge")
+    assert name in listed, listed
+    assert item in listed, listed
+
+    ITEM_NAMES.pop(item, None)
+    ITEM_PRICES.pop(item, None)
+
+    took = await hut.hut_ops(kid, f"冰柜 取 {name}")
+    assert "取出" in took, took
+    async with db.connect() as conn:
+        bag = await (await conn.execute(
+            "SELECT quantity FROM satchel WHERE steward_id=? AND item=?",
+            (sid, item),
+        )).fetchone()
+        left = await (await conn.execute(
+            "SELECT quantity FROM meal_storage WHERE steward_id=?",
+            (sid,),
+        )).fetchone()
+    assert bag and bag[0] == 2, bag
+    assert not left, left
+
+    put_cn = await hut.hut_ops(kid, f"冰柜 存 {name}")
+    assert "冰箱" in put_cn, put_cn
+    took_id = await kitchen.kitchen_ops(kid, f"take {item}")
+    assert "取出" in took_id, took_id
+    put_again = await kitchen.kitchen_ops(kid, f"store {name}")
+    assert "冰箱" in put_again, put_again
+    took_cn = await kitchen.kitchen_ops(kid, f"take {name}")
+    assert "取出" in took_cn, took_cn
+
+
 async def test_cabinet_dump_on_remove() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="cab-dump-"))
     db = await _boot(tmp)
@@ -396,6 +456,7 @@ def main() -> None:
     asyncio.run(test_cannot_take_last())
     asyncio.run(test_cabinet_dump_on_remove())
     asyncio.run(test_icebox_alias_routes_dishes())
+    asyncio.run(test_fridge_custom_mix_roundtrip())
     asyncio.run(test_cabinet_expand())
     print("cabinet/scrump tests ok")
 

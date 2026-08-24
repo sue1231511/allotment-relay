@@ -134,6 +134,8 @@ def test_mcp_descriptions() -> None:
     assert "compost_bin" in hut_blob
     assert "tide_weight" in hut_blob
     assert "iron_edge" in hut_blob
+    assert "dish_mix_" in hut_blob
+    assert "冰柜 取" in hut_blob
 
     kitchen = mcp._tool_manager.get_tool("kitchen_ops")
     k_blob = f"{kitchen.description}\n{(kitchen.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -143,6 +145,9 @@ def test_mcp_descriptions() -> None:
     assert "未命名小鱼" in k_blob
     assert "下馆子" in k_blob
     assert "shop dine" in k_blob
+    assert "store 菜名" in k_blob
+    assert "take 菜名" in k_blob
+    assert "dish_mix_" in k_blob
 
     manual = mcp._tool_manager.get_tool("relay_manual")
     man_blob = manual.description or ""
@@ -347,6 +352,8 @@ def test_relay_manual_covers_systems() -> None:
         "共用一个号",
         "点单打赏只在 /play",
         "邻居名册",
+        "dish_mix_",
+        "冰柜 取",
     ]
     missing = [n for n in needles if n not in text]
     assert not missing, f"relay_manual missing: {missing}"

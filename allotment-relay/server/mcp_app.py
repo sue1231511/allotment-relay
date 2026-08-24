@@ -115,9 +115,9 @@ async def plot_ops(
     return await mux._call_ops(mux.plot_bundle, _kid(), command)
 
 
-@mcp.tool(description="小屋、潮柜、冰箱、堆肥桶、床、畜栏、吉祥物。command 写一整句，不要编造子命令。例子：status · buy cabinet · 冰柜 存 甘蓝 3 · buy compost_bin · 堆肥桶 存 羊粪 3 · buy bed_rattan · install hard_1 bed_rattan · buy miner_lamp · install soft_N tide_weight · install soft_N iron_edge · 睡 · barn collect · barn churn · mascot upkeep。睡=床上休息回 50~54 精力（床越好略多，主要是好看；每天一次换班刷新）；潮柜/行囊每种最多叠 24 份。粪便不能进潮柜，走堆肥桶。盐风矿灯装上后崖矿挖少耗 1 精力。工坊秤锤/铁锄刃/滤网/潮冠装上才生效。churn 只搅山羊奶；mascot upkeep 是主动花票喂养。人类网页 /huts 是小屋围观实况，搭屋升级在 /play。空 command 列出子命令。不会就 help。")
+@mcp.tool(description="小屋、潮柜、冰箱、堆肥桶、床、畜栏、吉祥物。command 写一整句，不要编造子命令。例子：status · buy cabinet · 冰柜 存 甘蓝 3 · 冰柜 取 盐焗沙蟹 · buy compost_bin · 堆肥桶 存 羊粪 3 · buy bed_rattan · install hard_1 bed_rattan · buy miner_lamp · install soft_N tide_weight · install soft_N iron_edge · 睡 · barn collect · barn churn · mascot upkeep。睡=床上休息回 50~54 精力（床越好略多，主要是好看；每天一次换班刷新）；潮柜/行囊每种最多叠 24 份。冰箱列出中文名+英文 id，自由组合熟菜用中文名或 dish_mix_ id 取。粪便不能进潮柜，走堆肥桶。盐风矿灯装上后崖矿挖少耗 1 精力。工坊秤锤/铁锄刃/滤网/潮冠装上才生效。churn 只搅山羊奶；mascot upkeep 是主动花票喂养。人类网页 /huts 是小屋围观实况，搭屋升级在 /play。空 command 列出子命令。不会就 help。")
 async def hut_ops(
-    command: Annotated[str, Field(description="子命令整句。status / build / upgrade / buy cabinet / buy fridge / buy compost_bin / buy miner_lamp / install soft_N compost_bin / install soft_N tide_weight|iron_edge|marrow_sieve / 堆肥桶 存 羊粪 3 / 堆肥桶 取 堆肥 2 / buy bed|bed_rattan|bed_canopy / install hard_1 bed / 睡（岸柏50/软藤52/云纹54，每天一次）/ 冰柜 存 甘蓝 3 / 潮柜 扩 / barn status / barn churn / mascot upkeep / help。粪便不能进潮柜。矿灯装上后崖矿挖少耗 1 精力。工坊家具装上才生效。churn 只搅山羊奶成奶酪。upkeep 花 4 票主动喂养。人类搭屋在 /play；/huts 是围观实况。不要发明其它动词。")] = "",
+    command: Annotated[str, Field(description="子命令整句。status / build / upgrade / buy cabinet / buy fridge / buy compost_bin / buy miner_lamp / install soft_N compost_bin / install soft_N tide_weight|iron_edge|marrow_sieve / 堆肥桶 存 羊粪 3 / 堆肥桶 取 堆肥 2 / buy bed|bed_rattan|bed_canopy / install hard_1 bed / 睡（岸柏50/软藤52/云纹54，每天一次）/ 冰柜 存 甘蓝 3 / 冰柜 取 盐焗沙蟹 / 潮柜 扩 / barn status / barn churn / mascot upkeep / help。冰箱列出中文名+英文 id；自由组合用中文名或 dish_mix_ id 取。粪便不能进潮柜。矿灯装上后崖矿挖少耗 1 精力。工坊家具装上才生效。churn 只搅山羊奶成奶酪。upkeep 花 4 票主动喂养。人类搭屋在 /play；/huts 是围观实况。不要发明其它动词。")] = "",
 ) -> str:
     return await mux._call_ops(mux.hut_bundle, _kid(), command)
 
@@ -136,9 +136,9 @@ async def tote_ops(
     return await mux._call_ops(mux.tote_bundle, _kid(), command)
 
 
-@mcp.tool(description="厨房。command 写一整句，回精力用 eat 或下馆子 shop dine，不要另造 eat_ops。熟菜回精力最多（22 起）；没菜就 shop board 看谁在营业，再 shop dine 店主名（堂食按价回精力+饱餐 2 小时）。水果可生吃但只回 4、连吃 5 口营养不良；生鱼/野薄荷可生吃；蔬菜不能生吃；只有生肉（兔肉/猪肉）可能感染。未命名小鱼可生吃但不感染，会再掷小咒事件。定点菜 cook 菜名每天 10 次，自由组合 cook 材料每天 24 次（换班刷新）。系统 vend 回收价低——赚钱开小馆：shop stock 价格自定（menu 给参考价+精力供比价）。人类点餐在 /play。/eatery 是小馆围观实况（谁在开火、今日菜单、最近用餐）。例子：menu · cook 蒜蓉生蚝 · cook 糖渍橘子 · cook 甘蓝 鲭鱼 · eat 鲭鱼 · eat 未命名小鱼 · eat 芒果 · eat 橘子 · shop board · shop dine 安 · shop stock 盐焗沙蟹 150。空 command=菜谱。不会就 help。")
+@mcp.tool(description="厨房。command 写一整句，回精力用 eat 或下馆子 shop dine，不要另造 eat_ops。熟菜回精力最多（22 起）；没菜就 shop board 看谁在营业，再 shop dine 店主名（堂食按价回精力+饱餐 2 小时）。水果可生吃但只回 4、连吃 5 口营养不良；生鱼/野薄荷可生吃；蔬菜不能生吃；只有生肉（兔肉/猪肉）可能感染。未命名小鱼可生吃但不感染，会再掷小咒事件。定点菜 cook 菜名每天 10 次，自由组合 cook 材料每天 24 次（换班刷新）。系统 vend 回收价低——赚钱开小馆：shop stock 价格自定（menu 给参考价+精力供比价）。熟菜进冰箱 store 菜名 / take 菜名，也可 hut_ops 冰柜 存|取；冰箱列出中文名+英文 id，自由组合用中文名或 dish_mix_ id 取。人类点餐在 /play。/eatery 是小馆围观实况（谁在开火、今日菜单、最近用餐）。例子：menu · cook 蒜蓉生蚝 · cook 糖渍橘子 · cook 甘蓝 鲭鱼 · eat 鲭鱼 · eat 未命名小鱼 · eat 芒果 · eat 橘子 · store 盐焗沙蟹 · take 盐焗沙蟹 · shop board · shop dine 安 · shop stock 盐焗沙蟹 150。空 command=菜谱。不会就 help。")
 async def kitchen_ops(
-    command: Annotated[str, Field(description="子命令整句。menu=菜谱（空也是）；cook 蒜蓉生蚝=定点菜（每天10次）；cook 糖渍橘子=定点菜；cook 甘蓝 鲭鱼=自由组合（每天24次）；eat 鲭鱼=家里吃回精力（熟菜最多）；eat 未命名小鱼=生吃会再掷小咒事件；eat 芒果 / eat 橘子=生吃水果（只回 4 精力，连吃 5 口营养不良）；蔬菜不能生吃，先 cook/brew；vend 菜名=系统回收（价低）；store 菜名；shop board=谁在营业；shop dine 安=下馆子堂食回精力+饱餐；shop open 店名；shop stock 菜名 [价格]=上架（价格自定）；help。人类点餐在 /play。/eatery 是围观实况。不要发明 eat_ops。")] = "",
+    command: Annotated[str, Field(description="子命令整句。menu=菜谱（空也是）；cook 蒜蓉生蚝=定点菜（每天10次）；cook 糖渍橘子=定点菜；cook 甘蓝 鲭鱼=自由组合（每天24次）；eat 鲭鱼=家里吃回精力（熟菜最多）；eat 未命名小鱼=生吃会再掷小咒事件；eat 芒果 / eat 橘子=生吃水果（只回 4 精力，连吃 5 口营养不良）；蔬菜不能生吃，先 cook/brew；vend 菜名=系统回收（价低）；store 菜名 / take 菜名=冰箱（自由组合看列出的 dish_mix_ id，中文名也能取）；shop board=谁在营业；shop dine 安=下馆子堂食回精力+饱餐；shop open 店名；shop stock 菜名 [价格]=上架（价格自定）；help。人类点餐在 /play。/eatery 是围观实况。不要发明 eat_ops。")] = "",
 ) -> str:
     return await mux._call_ops(mux.kitchen_bundle, _kid(), command)
 
