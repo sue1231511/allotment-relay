@@ -376,6 +376,7 @@ function renderDashboard(data, { scroll = true } = {}) {
       <p>${esc(data.meter_lines.bar_duty)}</p>
       ${data.voyage ? `<p class="steward-note-voyage">⛵ ${esc(data.voyage)}</p>` : ''}
       ${data.quarry && data.quarry.line ? `<p class="steward-note-voyage">⚒️ ${esc(data.quarry.line)}</p>` : ''}
+      ${data.craft && data.craft.line ? `<p class="steward-note-voyage">🔨 ${esc(data.craft.line)}</p>` : ''}
     </div>
   `;
 

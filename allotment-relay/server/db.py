@@ -1541,6 +1541,44 @@ async def init_db() -> None:
             )
             """,
             "ALTER TABLE steward_quarry ADD COLUMN last_hew_at INTEGER NOT NULL DEFAULT 0",
+            """
+            CREATE TABLE IF NOT EXISTS steward_craft (
+                steward_id INTEGER PRIMARY KEY REFERENCES stewards(id),
+                job_key TEXT NOT NULL DEFAULT '',
+                job_ready_at INTEGER NOT NULL DEFAULT 0,
+                job_qty INTEGER NOT NULL DEFAULT 0,
+                pan_count INTEGER NOT NULL DEFAULT 1,
+                last_salvage_at INTEGER NOT NULL DEFAULT 0,
+                salvages_total INTEGER NOT NULL DEFAULT 0,
+                crafts_total INTEGER NOT NULL DEFAULT 0,
+                net_patch_until INTEGER NOT NULL DEFAULT 0
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS craft_pans (
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                slot INTEGER NOT NULL,
+                brine_at INTEGER NOT NULL DEFAULT 0,
+                UNIQUE(steward_id, slot)
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS craft_rolls (
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                day INTEGER NOT NULL,
+                last_at INTEGER NOT NULL,
+                count INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (steward_id, day)
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS steward_exhibits (
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                set_key TEXT NOT NULL,
+                done_at INTEGER NOT NULL,
+                PRIMARY KEY (steward_id, set_key)
+            )
+            """,
         ):
             try:
                 await db.execute(ddl)

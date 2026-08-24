@@ -35,7 +35,8 @@ QUARRY_HELP = """quarry_ops 子命令（整句写进 command）：
   help — 本表
 
 例子：quarry_ops status · quarry_ops 买镐 · quarry_ops 探脉 · quarry_ops 挖 1 · quarry_ops 洗 海盐砂 2
-涨潮关的是赶海 dig；崖矿不关，但湿滑：挖更费精力、空挥更高。不要发明 hew_all / mine_all。"""
+涨潮关的是赶海 dig；崖矿不关，但湿滑：挖更费精力、空挥更高。不要发明 hew_all / mine_all。
+盐田晒盐走 craft_ops 灌 / 收盐，和洗矿是同一种海盐晶，更慢更省镐。"""
 
 
 def _fmt_left(seconds: int) -> str:
@@ -307,7 +308,10 @@ def _catalog_text(*, pick_tier: int) -> str:
             f" 双份+{int(row['yield']*100)}% 空挥{int(row['empty']*100)}% {cost}{mark}"
         )
     lines.append("")
-    lines.append("洗完的精矿：tote_ops vend 卖掉，或 quarry_ops 升镐。海盐晶可下锅当佐料。")
+    lines.append(
+        "洗完的精矿：tote_ops vend 卖掉，或 quarry_ops 升镐。海盐晶可下锅当佐料。"
+        "盐田晒盐走 craft_ops 灌 / 收盐，和洗的是同一种，更慢更省镐。"
+    )
     return "\n".join(lines)
 
 

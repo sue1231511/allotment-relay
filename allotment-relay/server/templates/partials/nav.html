@@ -22,6 +22,10 @@
         <span class="nav-tab-label">盐风崖</span>
         <span class="nav-tab-short">崖矿</span>
       </a>
+      <a class="nav-tab{% if active == 'workshop' %} is-active{% endif %}" href="/workshop"{% if active == 'workshop' %} aria-current="page"{% endif %}>
+        <span class="nav-tab-label">岸工坊</span>
+        <span class="nav-tab-short">工坊</span>
+      </a>
       <a class="nav-tab{% if active == 'board' %} is-active{% endif %}" href="/board"{% if active == 'board' %} aria-current="page"{% endif %}>
         <span class="nav-tab-label">全服榜</span>
         <span class="nav-tab-short">排行</span>
@@ -70,6 +74,10 @@
     <a class="nav-sidebar-link{% if active == 'quarry' %} is-active{% endif %}" href="/quarry"{% if active == 'quarry' %} aria-current="page"{% endif %}>
       <span>盐风崖</span>
       <small>潮脉矿围观</small>
+    </a>
+    <a class="nav-sidebar-link{% if active == 'workshop' %} is-active{% endif %}" href="/workshop"{% if active == 'workshop' %} aria-current="page"{% endif %}>
+      <span>岸工坊</span>
+      <small>打钉 · 盐田 · 打捞</small>
     </a>
     <a class="nav-sidebar-link{% if active == 'board' %} is-active{% endif %}" href="/board"{% if active == 'board' %} aria-current="page"{% endif %}>
       <span>全服榜</span>

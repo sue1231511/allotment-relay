@@ -292,6 +292,25 @@ def quarry_claim_clear_seconds(idx: int) -> int:
     n = max(0, int(idx))
     return (35 + 15 * n) * 60
 
+
+# 岸工坊 — 慢工，不是再挖一次。打/取、盐田、风暴打捞、陈列柜都走 craft_ops
+CRAFT_SALT_CLEAR_NEED = 1200          # 盐田要累计 20 分钟晴天
+CRAFT_SALT_FILL_ENERGY = 5
+CRAFT_SALT_HARVEST_ENERGY = 3
+CRAFT_SALT_PAN_BASE = 40
+CRAFT_SALT_PAN_MAX = 3
+CRAFT_SALVAGE_AFTER = WEATHER_CYCLE   # 阵风结束后一整段晴天可打捞
+CRAFT_SALVAGE_COOLDOWN = 1500         # 25 分钟；赶海 dig 30 分钟
+CRAFT_SALVAGE_DAILY = 4
+CRAFT_NET_PATCH_SEC = 6 * 3600        # 补网 6 小时空网 -8%
+CRAFT_NET_PATCH_EMPTY = 0.08
+
+
+def craft_pan_cost(idx: int) -> int:
+    """第 (1+idx) 口盐田票价：40 + 28n。"""
+    n = max(0, int(idx))
+    return CRAFT_SALT_PAN_BASE + 28 * n
+
 # 厨房 / 冰箱 — 定点菜谱与自由组合分开计次（游戏日换班刷新）
 KITCHEN_RECIPE_COOK_DAILY = 10   # cook 菜名（menu 定点菜）
 KITCHEN_MIX_COOK_DAILY = 24      # cook 材料1 材料2 …（自由组合）

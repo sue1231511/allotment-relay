@@ -196,6 +196,49 @@ async def _check_quarrier(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool
     )
 
 
+async def _check_crafter(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
+    return await _exists(
+        conn,
+        "SELECT 1 FROM steward_craft WHERE steward_id=? AND crafts_total>=1 LIMIT 1",
+        s["id"],
+    )
+
+
+async def _check_salvager(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
+    return await _exists(
+        conn,
+        "SELECT 1 FROM steward_craft WHERE steward_id=? AND salvages_total>=1 LIMIT 1",
+        s["id"],
+    )
+
+
+async def _check_exhibit_set(
+    conn: aiosqlite.Connection, s: dict[str, Any], set_key: str
+) -> bool:
+    return await _exists(
+        conn,
+        "SELECT 1 FROM steward_exhibits WHERE steward_id=? AND set_key=? LIMIT 1",
+        s["id"],
+        set_key,
+    )
+
+
+async def _check_shine_curator(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
+    return await _check_exhibit_set(conn, s, "shine_shells")
+
+
+async def _check_ore_curator(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
+    return await _check_exhibit_set(conn, s, "ores")
+
+
+async def _check_specimen(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
+    return await _check_exhibit_set(conn, s, "walkblue")
+
+
+async def _check_ichthyologist(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
+    return await _check_exhibit_set(conn, s, "ten_fish")
+
+
 async def _check_spring_beyond_mountain(
     conn: aiosqlite.Connection, s: dict[str, Any]
 ) -> bool:
@@ -340,6 +383,42 @@ ACHIEVEMENTS: dict[str, dict[str, Any]] = {
         "hint": "在盐风崖挥过镐",
         "aliases": ("崖矿手", "挥镐的"),
         "check": _check_quarrier,
+    },
+    "crafter": {
+        "name": "砧手",
+        "hint": "岸工坊取过一件成品",
+        "aliases": ("打过铁的", "砧边人"),
+        "check": _check_crafter,
+    },
+    "salvager": {
+        "name": "余滩客",
+        "hint": "风暴过后下滩打捞过",
+        "aliases": ("捞过的", "余浪手"),
+        "check": _check_salvager,
+    },
+    "shine_curator": {
+        "name": "亮壳客",
+        "hint": "陈列柜捐齐五种亮壳",
+        "aliases": ("亮壳一套", "贝壳柜"),
+        "check": _check_shine_curator,
+    },
+    "ore_curator": {
+        "name": "柜中矿",
+        "hint": "陈列柜捐齐六色精矿",
+        "aliases": ("矿柜", "六色矿"),
+        "check": _check_ore_curator,
+    },
+    "specimen": {
+        "name": "标本师",
+        "hint": "陈列柜捐过未命名小鱼",
+        "aliases": ("标本座", "柜中鱼"),
+        "check": _check_specimen,
+    },
+    "ichthyologist": {
+        "name": "十鱼客",
+        "hint": "图鉴满 10 种鱼并捐了渔获十种",
+        "aliases": ("十种鱼", "渔获柜"),
+        "check": _check_ichthyologist,
     },
 }
 

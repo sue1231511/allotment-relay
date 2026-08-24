@@ -441,6 +441,24 @@ HUT_SOFT = {
                     "hint": "hut_ops 堆肥桶 存 羊粪 3｜取 堆肥 2。粪便不能进潮柜；丢进去按层沤，满 7 层结 1 份堆肥"},
     "miner_lamp": {"name": "盐风矿灯", "cost": 42, "emoji": "🪔",
                    "hint": "崖矿 hew / 挖 精力 -1（T1 仍约 16，比赶海/撒网费）。不是赶海灯"},
+    "lamp_wick": {"name": "矿灯芯", "cost": 0, "emoji": "🕯️", "craft_only": True,
+                  "hint": "工坊打。叠在矿灯上再 -1 精力（两件都装才 -2）。hut_ops buy 买不了"},
+    "shale_shelf": {"name": "页岩搁板", "cost": 0, "emoji": "🪵", "craft_only": True,
+                    "hint": "工坊打。纯好看的石搁板。hut_ops buy 买不了"},
+    "copper_chime": {"name": "铜风铃", "cost": 0, "emoji": "🔔", "craft_only": True,
+                     "hint": "工坊打。酒吧小费 +1。hut_ops buy 买不了"},
+    "boat_rib": {"name": "铁肋", "cost": 0, "emoji": "⚓", "craft_only": True,
+                 "hint": "工坊打。出海失败率 ×0.90（与海图可叠）。hut_ops buy 买不了"},
+    "salt_stool": {"name": "盐风凳", "cost": 0, "emoji": "🪑", "craft_only": True,
+                   "hint": "工坊打。guild_shift 档信 +1。hut_ops buy 买不了"},
+    "wool_rug": {"name": "羊毛毯", "cost": 0, "emoji": "🧶", "craft_only": True,
+                 "hint": "工坊打。纯好看。hut_ops buy 买不了"},
+    "shine_rail": {"name": "亮壳轨", "cost": 0, "emoji": "✨", "craft_only": True,
+                   "hint": "陈列柜捐齐亮壳后发。纯好看。hut_ops buy 买不了"},
+    "marrow_jar": {"name": "夜光髓瓶", "cost": 0, "emoji": "🌟", "craft_only": True,
+                   "hint": "陈列柜捐齐潮纹/雾铅/夜光髓后发。暮夜雾智少掉 +1。hut_ops buy 买不了"},
+    "fish_plinth": {"name": "标本座", "cost": 0, "emoji": "🐟", "craft_only": True,
+                    "hint": "陈列柜捐未命名小鱼后发。纯好看。hut_ops buy 买不了"},
 }
 
 TOOLS = {
@@ -596,6 +614,173 @@ def resolve_ore_key(token: str) -> str | None:
         for alias in meta.get("aliases", ()):
             if alias == raw or alias.lower() == low:
                 return key
+    return None
+
+
+# 岸工坊产物。fit_* 家具在 HUT_SOFT 且 craft_only；这里是行囊耗材
+CRAFT_ITEMS = {
+    "craft_timber": {
+        "name": "岸木", "emoji": "🪵", "sell": 4,
+        "aliases": ("木材", "木料", "timber"),
+    },
+    "craft_copper_nails": {
+        "name": "铜钉", "emoji": "🔩", "sell": 8,
+        "aliases": ("钉子", "铜钉子", "nails"),
+    },
+    "craft_net_patch": {
+        "name": "网补丁", "emoji": "🩹", "sell": 18,
+        "aliases": ("补丁", "渔网补丁", "net_patch"),
+    },
+    "craft_lamp_wick": {
+        "name": "矿灯芯", "emoji": "🕯️", "sell": 22,
+        "aliases": ("灯芯", "lamp_wick"),
+        "fitting": "lamp_wick",
+    },
+    "craft_rusty_nail": {
+        "name": "锈钉", "emoji": "🧲", "sell": 3,
+        "aliases": ("锈铁钉", "rusty"),
+    },
+}
+
+# 打 物名：扣材料，等分钟，取 领成品。不是 quarry_ops 洗，也不是 kitchen_ops cook
+CRAFT_RECIPES = {
+    "copper_nails": {
+        "name": "铜钉", "emoji": "🔩", "out": "craft_copper_nails", "qty": 3,
+        "need": {"quarry_copper_bar": 1, "drift_twine": 1},
+        "seconds": 480, "energy": 4,
+        "hint": "修船半价：voyage repair 时口袋有铜钉会自动钉上一颗",
+    },
+    "net_patch": {
+        "name": "网补丁", "emoji": "🩹", "out": "craft_net_patch", "qty": 1,
+        "need": {"wool": 2, "drift_twine": 2},
+        "seconds": 720, "energy": 5,
+        "hint": "craft_ops 补网 贴上，6 小时撒网空网 -8%。不是 gear upgrade",
+    },
+    "lamp_wick": {
+        "name": "矿灯芯", "emoji": "🕯️", "out": "fit_lamp_wick", "qty": 1,
+        "need": {"quarry_copper_bar": 1, "quarry_salt": 1},
+        "seconds": 900, "energy": 6,
+        "hint": "hut_ops install soft_N lamp_wick。叠矿灯再少 1 精力",
+    },
+    "shale_shelf": {
+        "name": "页岩搁板", "emoji": "🪵", "out": "fit_shale_shelf", "qty": 1,
+        "need": {"quarry_brick": 3, "craft_timber": 1},
+        "seconds": 1080, "energy": 6,
+        "hint": "小屋软装，纯好看",
+    },
+    "copper_chime": {
+        "name": "铜风铃", "emoji": "🔔", "out": "fit_copper_chime", "qty": 1,
+        "need": {"quarry_copper_bar": 2, "drift_twine": 1},
+        "seconds": 840, "energy": 5,
+        "hint": "小屋软装，酒吧小费 +1",
+    },
+    "boat_rib": {
+        "name": "铁肋", "emoji": "⚓", "out": "fit_boat_rib", "qty": 1,
+        "need": {"quarry_iron_bar": 2, "quarry_brick": 1, "craft_timber": 1},
+        "seconds": 1500, "energy": 8,
+        "hint": "小屋软装，出海失败率 ×0.90",
+    },
+    "salt_stool": {
+        "name": "盐风凳", "emoji": "🪑", "out": "fit_salt_stool", "qty": 1,
+        "need": {"quarry_brick": 2, "wool": 2},
+        "seconds": 960, "energy": 5,
+        "hint": "小屋软装，档信 +1",
+    },
+    "wool_rug": {
+        "name": "羊毛毯", "emoji": "🧶", "out": "fit_wool_rug", "qty": 1,
+        "need": {"wool": 3, "drift_twine": 1},
+        "seconds": 720, "energy": 4,
+        "hint": "小屋软装，纯好看",
+    },
+}
+
+# 陈列柜：捐出指定货，换称呼和/或小屋装饰。不印钞
+EXHIBIT_SETS = {
+    "shine_shells": {
+        "name": "亮壳一套", "emoji": "✨",
+        "need": {
+            "shell_shine_catseye": 1, "shell_shine_conch": 1, "shell_shine_scallop": 1,
+            "shell_shine_starfish": 1, "shell_shine_mussel": 1,
+        },
+        "title": "shine_curator",
+        "gift": "fit_shine_rail",
+        "hint": "赶海捡到的 ✨亮壳，五种各一",
+        "aliases": ("亮壳", "亮壳套", "贝壳"),
+    },
+    "ores": {
+        "name": "精矿六色", "emoji": "💎",
+        "need": {
+            "quarry_salt": 1, "quarry_brick": 1, "quarry_copper_bar": 1,
+            "quarry_iron_bar": 1, "quarry_tide_stone": 1, "quarry_fog_lead": 1,
+        },
+        "title": "ore_curator",
+        "gift": "",
+        "hint": "崖矿洗完的六种精矿各一（不要夜光髓）",
+        "aliases": ("矿石", "精矿", "六色", "六色矿"),
+    },
+    "glow": {
+        "name": "夜光三石", "emoji": "🌟",
+        "need": {"quarry_tide_stone": 1, "quarry_fog_lead": 1, "quarry_marrow": 1},
+        "title": "",
+        "gift": "fit_marrow_jar",
+        "hint": "潮纹石 + 雾铅 + 夜光髓",
+        "aliases": ("夜光", "夜光石", "三石"),
+    },
+    "walkblue": {
+        "name": "未命名标本", "emoji": "🐟",
+        "need": {"fish_walkblue": 1},
+        "title": "specimen",
+        "gift": "fit_fish_plinth",
+        "hint": "捐一尾未命名小鱼做标本。会再掷小咒事件",
+        "aliases": ("未命名小鱼", "未命名小鱼标本", "标本"),
+    },
+    "ten_fish": {
+        "name": "渔获十种", "emoji": "🎣",
+        "need_catches": 10,
+        "title": "ichthyologist",
+        "gift": "",
+        "hint": "图鉴里记过 10 种不同的鱼（不扣行囊）",
+        "aliases": ("渔获", "十种鱼", "十鱼"),
+    },
+}
+
+
+def resolve_recipe_key(token: str) -> str | None:
+    raw = (token or "").strip()
+    if not raw:
+        return None
+    if raw in CRAFT_RECIPES:
+        return raw
+    low = raw.lower().replace(" ", "_")
+    if low in CRAFT_RECIPES:
+        return low
+    for key, meta in CRAFT_RECIPES.items():
+        if meta["name"] == raw or f"{meta['emoji']}{meta['name']}" == raw:
+            return key
+        if meta["out"] == raw or meta["out"] == low:
+            return key
+    item = resolve_item_key(raw) if raw else None
+    if item:
+        for key, meta in CRAFT_RECIPES.items():
+            if meta["out"] == item:
+                return key
+    return None
+
+
+def resolve_exhibit_key(token: str) -> str | None:
+    raw = (token or "").strip()
+    if not raw:
+        return None
+    if raw in EXHIBIT_SETS:
+        return raw
+    low = raw.lower().replace(" ", "_")
+    if low in EXHIBIT_SETS:
+        return low
+    for key, meta in EXHIBIT_SETS.items():
+        if meta["name"] == raw or f"{meta['emoji']}{meta['name']}" == raw:
+            return key
+        if raw in (meta.get("aliases") or ()):
+            return key
     return None
 
 # (item, label, qty, weight, price) — weight 越高越常见
@@ -942,6 +1127,11 @@ AILMENTS = {
         "hint": "盐风崖挥镐吸进去的。clinic treat 岩尘入肺",
         "energy_extra": 2,
     },
+    "wreck_cough": {
+        "name": "咸痰", "emoji": "🌊", "cost": 14, "health_loss": 7, "health_restore": 10,
+        "hint": "风暴滩上吸进去的。clinic treat 咸痰。不是岩尘入肺",
+        "energy_extra": 2,
+    },
 }
 
 PIT_AILMENTS = frozenset({"ring_shock", "pit_trauma"})
@@ -956,6 +1146,9 @@ AILMENT_ALIASES = {
     "岩尘入肺": "rock_dust",
     "岩尘": "rock_dust",
     "矿尘": "rock_dust",
+    "咸痰": "wreck_cough",
+    "湿咳": "wreck_cough",
+    "风暴咳": "wreck_cough",
 }
 
 
@@ -1216,6 +1409,7 @@ ITEM_PRICES.update({
     "tool_pick": 48,
 })
 ITEM_PRICES.update({k: v["sell"] for k, v in QUARRY_ORES.items()})
+ITEM_PRICES.update({k: v["sell"] for k, v in CRAFT_ITEMS.items()})
 ITEM_PRICES.update({k: v["sell"] for k, v in MANURE.items()})
 for k, v in LIVESTOCK.items():
     ITEM_PRICES[f"live_{k}"] = v["buy"]
@@ -1263,6 +1457,7 @@ ITEM_NAMES.update({
     "tool_pick": "⚒️盐风镐",
 })
 ITEM_NAMES.update({k: f"{v['emoji']}{v['name']}" for k, v in QUARRY_ORES.items()})
+ITEM_NAMES.update({k: f"{v['emoji']}{v['name']}" for k, v in CRAFT_ITEMS.items()})
 for _shell_base in ("shell_catseye", "shell_conch", "shell_scallop", "shell_starfish", "shell_mussel"):
     _plain = ITEM_NAMES[_shell_base]
     _suffix = _shell_base.replace("shell_", "")

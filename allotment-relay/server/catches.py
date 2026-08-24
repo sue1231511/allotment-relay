@@ -21,6 +21,14 @@ async def record_catch(conn: aiosqlite.Connection, steward_id: int, item_key: st
     )
 
 
+async def species_count(conn: aiosqlite.Connection, steward_id: int) -> int:
+    row = await (await conn.execute(
+        "SELECT COUNT(*) FROM steward_catches WHERE steward_id=? AND catch_key LIKE 'fish_%'",
+        (steward_id,),
+    )).fetchone()
+    return int(row[0] or 0)
+
+
 async def fish_catalog(conn: aiosqlite.Connection, steward_id: int) -> str:
     conn.row_factory = aiosqlite.Row
     rows = await (await conn.execute(
