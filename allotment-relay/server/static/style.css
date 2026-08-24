@@ -135,7 +135,7 @@ nav,
   align-items: center;
   flex-wrap: nowrap;
   justify-content: flex-end;
-  gap: 2px;
+  gap: 4px;
   flex: 1;
   min-width: 0;
 }
@@ -144,7 +144,7 @@ nav,
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 6px 9px;
+  padding: 6px 10px;
   border-radius: 999px;
   text-decoration: none;
   font-size: 13px;
