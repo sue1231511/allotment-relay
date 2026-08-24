@@ -219,10 +219,61 @@ def _fmt_board(title: str, rows: list[dict[str, Any]], *, kind: str) -> list[str
 async def public_board(limit: int = BOARD_LIMIT) -> dict[str, Any]:
     tickets = await ticket_board(limit)
     levels = await level_board(limit)
+
+    ticket_lead = None
+    if tickets:
+        top = tickets[0]
+        gap = int(top["tickets"]) - int(tickets[1]["tickets"]) if len(tickets) > 1 else 0
+        ticket_lead = {
+            "name": top["name"],
+            "tickets": int(top["tickets"]),
+            "level": int(top["level"]),
+            "title": top.get("display_title") or top.get("title") or "",
+            "gap_second": gap,
+        }
+
+    level_lead = None
+    if levels:
+        top = levels[0]
+        xp = int(top["xp"])
+        lvl = int(top["level"])
+        cur = xp_to_reach(lvl)
+        nxt = xp_to_reach(lvl + 1) if lvl < MAX_LEVEL else cur
+        need = max(1, nxt - cur)
+        have = max(0, xp - cur)
+        pct = 100 if lvl >= MAX_LEVEL else min(100, int(have / need * 100))
+        level_lead = {
+            "name": top["name"],
+            "level": lvl,
+            "xp": xp,
+            "title": top.get("display_title") or top.get("title") or "",
+            "xp_cur": cur,
+            "xp_next": nxt,
+            "xp_have": have,
+            "xp_need": need if lvl < MAX_LEVEL else 0,
+            "progress_pct": pct,
+            "to_next": max(0, nxt - xp) if lvl < MAX_LEVEL else 0,
+        }
+
+    avg_level = 0.0
+    if levels:
+        avg_level = round(sum(int(r["level"]) for r in levels) / len(levels), 1)
+    top10_floor = int(levels[9]["level"]) if len(levels) >= 10 else (int(levels[-1]["level"]) if levels else 0)
+
     return {
         "tickets": tickets,
         "levels": levels,
         "limit": limit,
+        "count": max(len(tickets), len(levels)),
+        "ticket_lead": ticket_lead,
+        "level_lead": level_lead,
+        "notes": {
+            "avg_level": avg_level,
+            "top10_level_floor": top10_floor,
+            "ticket_top_name": ticket_lead["name"] if ticket_lead else "",
+            "level_top_name": level_lead["name"] if level_lead else "",
+            "level_top": level_lead["level"] if level_lead else 0,
+        },
     }
 
 

@@ -159,6 +159,7 @@ async def relay_manual() -> str:
         "━━━ 工具地图（17 个玩法工具）━━━",
         "  steward_ops  登记/档案/邻居/工分/全服榜",
         "               command 例：enroll 安 · sheet · 邻居 · 在线 · peer 名字 · guild · board tickets · board level",
+        "               人类网页 /board 是全服榜围观（票榜·等级榜）；点名字去 /play 看邻居",
         "               人类网页 /play 点名字看档、读岛上回忆、看邻居名册（本机会记住）",
         "               人类网页 /play 可点按同一套指令，和 AI 共用一个号（凭证只在上手页绑定）",
         "  lounge_ops   全服聊天室（答疑、bug 反馈）。空 command=看最近消息+置顶公约",

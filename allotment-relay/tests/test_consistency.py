@@ -381,6 +381,8 @@ def test_readme_workflow_rules() -> None:
     assert 'href="/tide"' in nav
     assert 'href="/huts"' in nav
     assert 'href="/market"' in nav
+    assert 'href="/board"' in nav
+    assert "全服榜" in nav
     assert "island-drawer" in nav
     assert "nav-island" in nav
     css = (root / "allotment-relay/server/static/style.css").read_text(encoding="utf-8")
@@ -418,7 +420,7 @@ def test_register_key_copy_ui() -> None:
 
 
 def test_patron_pages_share_steward_key() -> None:
-    """点单打赏、聊天、看档都只在 /play；/bar /tide /market /eatery 围观实况，其余地点页是海报。凭证只在上手页绑定。"""
+    """点单打赏、聊天、看档都只在 /play；地点围观页只读。凭证只在上手页绑定。"""
     root = Path(__file__).resolve().parents[1]
     site_key = (root / "server/static/site-key.js").read_text(encoding="utf-8")
     assert "tidal_island_steward_api_key" in site_key
@@ -488,14 +490,29 @@ def test_patron_pages_share_steward_key() -> None:
     assert 'bar.html"' in main_py
     assert 'market.html"' in main_py
     assert 'eatery.html"' in main_py
+    assert 'board.html"' in main_py
+    board_html = (root / "server/templates/board.html").read_text(encoding="utf-8")
+    board_js = (root / "server/static/board.js").read_text(encoding="utf-8")
+    board_css = (root / "server/static/board.css").read_text(encoding="utf-8")
+    nav = (root / "server/templates/partials/nav.html").read_text(encoding="utf-8")
     assert "/api/public/bar" in bar_js
     assert "/api/public/tide" in tide_js
     assert "/api/public/market" in market_js
     assert "/api/public/eatery" in eatery_js
+    assert "/api/public/board" in board_js
     assert "place-live.css" in bar_html
     assert "place-live.css" in tide_html
     assert "place-live.css" in market_html
     assert "place-live.css" in eatery_html
+    assert "board.css" in board_html
+    assert "ranking-stage" in board_html
+    assert "dual-board" in board_html
+    assert "ticketsBoard" in board_html
+    assert "levelBoard" in board_html
+    assert "ticket_lead" in board_js or "ticket-lead" in board_js
+    assert ".dual-board" in board_css
+    assert 'href="/board"' in nav
+    assert "全服榜" in nav
     assert "place-hero" in bar_html
     assert "tide-hero" in tide_html
     assert "market-head" in market_html

@@ -3,6 +3,7 @@
     <a class="brand" href="/"><span class="mark">≈</span><span class="brand-text">潮汐岛</span></a>
     <div class="nav-spacer"></div>
     <a class="nav-link{% if active == 'play' %} is-active{% endif %}" href="/play"{% if active == 'play' %} aria-current="page"{% endif %}>上手</a>
+    <a class="nav-link{% if active == 'board' %} is-active{% endif %}" href="/board"{% if active == 'board' %} aria-current="page"{% endif %}>全服榜</a>
     <button
       type="button"
       class="nav-island"
@@ -45,6 +46,13 @@
       {% if elsewhere is defined and elsewhere %}
       <div class="island-drawer-group">
         <h4>别处</h4>
+        <a class="island-drawer-link{% if active == 'board' %} is-active{% endif %}" href="/board"{% if active == 'board' %} aria-current="page"{% endif %}>
+          <div>
+            <strong>全服榜</strong>
+            <small>工分票 · 等级</small>
+          </div>
+          <span aria-hidden="true">→</span>
+        </a>
         <a class="island-drawer-link{% if active == elsewhere.slug %} is-active{% endif %}" href="{{ elsewhere.path }}"{% if active == elsewhere.slug %} aria-current="page"{% endif %}>
           <div>
             <strong>{{ elsewhere.name }}</strong>
@@ -75,6 +83,7 @@
       </div>
       <div class="island-drawer-group">
         <h4>别处</h4>
+        <a class="island-drawer-link" href="/board"><div><strong>全服榜</strong><small>工分票 · 等级</small></div><span>→</span></a>
         <a class="island-drawer-link" href="/undertide"><div><strong>井下</strong><small>别乱点。真的。</small></div><span>→</span></a>
       </div>
     {% endif %}

@@ -130,9 +130,10 @@ async def market_page(request: Request):
     return _html(request, "market.html", active="market")
 
 
-@app.get("/board")
-async def board_page():
-    return RedirectResponse("/play?go=me", status_code=302)
+@app.get("/board", response_class=HTMLResponse)
+async def board_page(request: Request):
+    """全服排行榜围观；点名字去上手页看邻居。"""
+    return _html(request, "board.html", active="board")
 
 
 @app.get("/bar", response_class=HTMLResponse)

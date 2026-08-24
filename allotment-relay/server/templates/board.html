@@ -8,63 +8,160 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/board.css">
 </head>
-<body>
+<body class="board-page">
   {% include "partials/nav.html" %}
-  <main>
-    <header class="page-head">
+
+  <main class="board-shell">
+    <header class="board-head">
       <div>
-        <div class="eyebrow">Server board</div>
+        <div class="eyebrow">Server Board</div>
         <h1>全服排行榜</h1>
-        <p class="tagline">票榜看口袋。等级看累计入账，花掉的票不会让人掉级。点名字会跳到份地围观里那个人的卡片。</p>
+        <p>不做领奖台，也不堆卡片。工分票榜看口袋，等级榜看累计入账。点名字去上手页看邻居。</p>
       </div>
-      <div id="board-meta" class="statbar statbar--board"></div>
+      <div class="board-meta-pills">
+        <span id="pill-online">在线 —</span>
+        <span id="pill-count">上榜 —</span>
+      </div>
     </header>
 
-    <div class="board-summary">
-      <section class="panel">
-        <strong>票榜</strong>
-        <span>看现在手里还有多少工分票</span>
-      </section>
-      <section class="panel">
-        <strong>等级</strong>
-        <span>看累计入账，不受消费影响</span>
-      </section>
-      <button type="button" class="panel board-jump" data-panel="online" id="board-online-card">
-        <strong id="board-online-n">在线</strong>
-        <span>点这里跳到份地页</span>
-      </button>
+    <section class="top-strip" aria-label="榜单概览">
+      <div class="strip-item">
+        <small>在线</small>
+        <strong id="strip-online">—</strong>
+        <span>位管理员</span>
+      </div>
+      <div class="strip-divider"></div>
+      <div class="strip-item">
+        <small>你的票榜</small>
+        <strong id="strip-ticket-rank">—</strong>
+        <span id="strip-ticket-val">贴凭证后显示</span>
+      </div>
+      <div class="strip-divider"></div>
+      <div class="strip-item">
+        <small>你的等级榜</small>
+        <strong id="strip-level-rank">—</strong>
+        <span id="strip-level-val">贴凭证后显示</span>
+      </div>
+      <div class="strip-divider"></div>
+      <div class="strip-item">
+        <small>刷新</small>
+        <strong>12s</strong>
+        <span>自动更新</span>
+      </div>
+    </section>
+
+    <div class="tide-intro-line" aria-hidden="true">
+      <span></span><i></i><span></span>
     </div>
 
-    <div class="board-layout">
-      <section class="board-primary">
-        <section class="panel">
-          <div class="panel-head">
-            <div>
-              <h2>工分票榜</h2>
-              <p class="muted board-hint">按口袋里现在有多少张票。花掉会掉名次。</p>
-            </div>
-            <span class="tag">TICKETS</span>
-          </div>
-          <ol id="ticket-board" class="board-list"></ol>
-        </section>
-      </section>
-      <aside class="board-secondary">
-        <section class="panel">
-          <div class="panel-head">
-            <div>
-              <h2>等级榜</h2>
-              <p class="muted board-hint">按累计入账。Lv1 新客 → Lv99 潮汐本尊。</p>
-            </div>
-            <span class="tag">LEVEL</span>
-          </div>
-          <ol id="level-board" class="board-list"></ol>
-        </section>
+    <section class="ranking-stage">
+      <aside class="wing left">
+        <div>
+          <div class="wing-kicker">Tickets</div>
+          <div class="big-number" id="ticket-lead-n">—</div>
+          <div class="big-label">当前榜首持有工分票</div>
+          <div class="hero-detail" id="ticket-lead-gap">领先第二名 <strong>—</strong></div>
+        </div>
+
+        <div class="mini-panel">
+          <div class="mini-title"><b>票榜前七</b><span id="ticket-spark-label">分布</span></div>
+          <div class="spark" id="ticket-spark" aria-hidden="true"></div>
+          <div class="spark-foot"><span>第 7</span><span>榜首</span></div>
+        </div>
+
+        <div class="wing-block">
+          <b>工分票榜</b>
+          <small>看口袋里现有多少票。花掉以后，榜上位置会跟着变。</small>
+          <div class="wing-stat"><span>你的票</span><span id="wing-my-tickets">—</span></div>
+          <div class="wing-stat"><span>你的名次</span><span id="wing-my-ticket-rank">—</span></div>
+        </div>
+
+        <div class="side-fill">
+          <div class="wing-kicker">Gap Ladder</div>
+          <div class="ladder" id="ticket-ladder"></div>
+        </div>
+
+        <div class="wing-block">
+          <div class="wing-kicker" style="margin-bottom:10px">Island Notes</div>
+          <div class="island-records" id="ticket-notes"></div>
+        </div>
       </aside>
-      <div class="board-note">两张榜同一世界、同一批管理员。工分票是现钱；等级是这辈子从岛上拿到手的票。点名字跳回份地围观。</div>
+
+      <section class="center">
+        <div class="tide-haze" aria-hidden="true"></div>
+        <div class="dual-board">
+          <section class="board-col">
+            <div class="board-head-col">
+              <div>
+                <div class="wing-kicker">Tickets Ranking</div>
+                <h3>工分票榜</h3>
+              </div>
+              <span class="board-meta">实时</span>
+            </div>
+            <div id="ticketsBoard" class="tide-list"></div>
+            <div id="ticketsMe" class="board-me"></div>
+          </section>
+
+          <section class="board-col">
+            <div class="board-head-col">
+              <div>
+                <div class="wing-kicker">Level Ranking</div>
+                <h3>等级榜</h3>
+              </div>
+              <span class="board-meta">累计</span>
+            </div>
+            <div id="levelBoard" class="tide-list"></div>
+            <div id="levelMe" class="board-me"></div>
+          </section>
+        </div>
+      </section>
+
+      <aside class="wing right">
+        <div>
+          <div class="wing-kicker">Level</div>
+          <div class="big-number" id="level-lead-n">—</div>
+          <div class="big-label">当前榜首等级</div>
+          <div class="hero-detail" id="level-lead-next">距下一等级 <strong>—</strong></div>
+        </div>
+
+        <div class="mini-panel">
+          <div class="mini-title"><b>等级进度</b><span id="level-progress-label">—</span></div>
+          <div class="progress-track" aria-hidden="true"><span id="level-progress-bar" style="width:0%"></span></div>
+          <div class="progress-meta">
+            <span id="level-progress-cur">—</span>
+            <strong id="level-progress-pct">—</strong>
+            <span id="level-progress-next">—</span>
+          </div>
+        </div>
+
+        <div class="wing-block">
+          <b>等级榜</b>
+          <small>看累计入账。票可以花掉，等级不会因此倒退。</small>
+          <div class="wing-stat"><span>你的等级</span><span id="wing-my-level">—</span></div>
+          <div class="wing-stat"><span>累计入账</span><span id="wing-my-xp">—</span></div>
+        </div>
+
+        <div class="side-fill">
+          <div class="wing-kicker">Level Curve</div>
+          <div class="ladder" id="level-ladder"></div>
+        </div>
+
+        <div class="wing-block">
+          <div class="wing-kicker" style="margin-bottom:10px">Island Notes</div>
+          <div class="island-records" id="level-notes"></div>
+        </div>
+      </aside>
+    </section>
+
+    <div class="board-legend">
+      <div><b>前三名</b> 只通过潮点大小、字号和色差做区分，不搞奖杯金冠。</div>
+      <div><b>交互</b> 点名字去上手页看邻居。票榜与等级榜同一批管理员；贴凭证后这里会标出你的名次。</div>
     </div>
   </main>
-  <script src="/static/watch.js"></script>
+
+  <script src="/static/site-key.js"></script>
   <script src="/static/board.js"></script>
 </body>
 </html>
