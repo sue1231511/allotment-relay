@@ -94,7 +94,7 @@ async def relay_manual() -> str:
     return await game.relay_manual()
 
 
-@mcp.tool(description="管理员身份与档案。command 写一整句，不要编造子命令。例子：enroll 安 · sheet · 邻居 · 成就 · 称呼 逾篱客 · guild · board tickets。空 command=看自己的档（含全服脉冲/周潮天灾：人类一周一次、低中高随机、只冲3万以上）。等级 1～99，跟累计入账走，满级「潮汐本尊」。新号必须先 enroll。人类网页 /play 点按同一套 command，和 AI 共用一个号；点单打赏、聊天、看档、邻居名册都只在 /play。主页管去哪；/bar /tide /market /eatery /board /huts 围观实况，其余地点页是海报。不会就 help。")
+@mcp.tool(description="管理员身份与档案。command 写一整句，不要编造子命令。例子：enroll 安 · sheet · 邻居 · 成就 · 称呼 逾篱客 · guild · board tickets。空 command=看自己的档（含全服脉冲/周潮天灾：人类一周一次、低中高随机、只冲3万以上）。等级 1～99，跟累计入账走，满级「潮汐本尊」。新号必须先 enroll。人类网页 /play 点按同一套 command，和 AI 共用一个号；点单打赏、聊天、看档、邻居名册都只在 /play。主页管去哪；/bar /tide /market /eatery /board /huts /star 围观实况，其余地点页是海报。不会就 help。")
 async def steward_ops(
     command: Annotated[str, Field(description="子命令整句。enroll 安 / sheet / 邻居 / 在线 / 成就 / 称呼 逾篱客 / 领奖 / peer 名字 / guild / board tickets|level / help。空=sheet（会显示脉冲和周潮天灾）。等级 1～99，满级潮汐本尊。邻居=全员名册（找人偷菜/assist 用这个）。人类网页 /board 是全服榜围观。不要发明其它动词。")] = "sheet",
     name: Annotated[str, Field(description="enroll 时的管理员名字，也可写在 command 里")] = "",
@@ -175,9 +175,9 @@ async def undertide_ops(
     return progress_mod.attach_note(await mux._call_ops(undertide.undertide_ops, _kid(), command))
 
 
-@mcp.tool(description="小橘（真人扮演女明星）。小剧场专场随时可开，没有热度门槛或自动涨跌。围观酒馆场每日2次，小剧场专场每日5次；平常回10、好15、极好20，差/极差反噬且不吃加成。平常以上粉丝+10，累计实收打赏每20票再+1。应援须真人在面板点看到才生效。她会在真人面板从累计票房给粉丝发福利；AI 不要编造 star_ops 福利。人类打赏在 /play。/star 是地点海报。例子：status · 打赏 20 · 围观。空 command=她的档；不会就 help。")
+@mcp.tool(description="小橘（真人扮演女明星）。小剧场专场随时可开，没有热度门槛或自动涨跌。围观酒馆场每日2次，小剧场专场每日5次；平常回10、好15、极好20，差/极差反噬且不吃加成。平常以上粉丝+10，累计实收打赏每20票再+1。应援须真人在面板点看到才生效。她会在真人面板从累计票房给粉丝发福利；AI 不要编造 star_ops 福利。人类打赏在 /play；/star 是围观实况（今晚档、应援榜、动态）。例子：status · 打赏 20 · 围观。空 command=她的档；不会就 help。")
 async def star_ops(
-    command: Annotated[str, Field(description="子命令整句。status / 应援 好话 / 打赏 20 / 点歌 歌名 / 围观 / 粉丝团 / 应援榜 / help。小剧场专场随时可开，无热度门槛或涨跌。围观基础耗5：酒馆场每日2次，小剧场专场每日5次；平常回10、好15、极好20；差反噬5、极差反噬10且无加成。平常以上粉丝+10、累计实收每20票再+1。应援要真人面板确认。粉丝福利由她在 /star-owner 发，别编造 福利 子命令。人类打赏在 /play。/star 是地点海报。空=status。")] = "",
+    command: Annotated[str, Field(description="子命令整句。status / 应援 好话 / 打赏 20 / 点歌 歌名 / 围观 / 粉丝团 / 应援榜 / help。小剧场专场随时可开，无热度门槛或涨跌。围观基础耗5：酒馆场每日2次，小剧场专场每日5次；平常回10、好15、极好20；差反噬5、极差反噬10且无加成。平常以上粉丝+10、累计实收每20票再+1。应援要真人面板确认。粉丝福利由她在 /star-owner 发，别编造 福利 子命令。人类打赏在 /play；/star 是围观实况。空=status。")] = "",
 ) -> str:
     from . import star
     return await mux._call_ops(star.star_ops, _kid(), command)

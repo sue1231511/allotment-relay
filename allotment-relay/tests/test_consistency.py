@@ -91,6 +91,9 @@ def test_mcp_descriptions() -> None:
     star = mcp._tool_manager.get_tool("star_ops")
     star_blob = f"{star.description}\n{(star.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
     assert "面板" in star_blob
+    assert "/star" in star_blob
+    assert "围观" in star_blob
+    assert "地点海报" not in star_blob
 
     theater = mcp._tool_manager.get_tool("theater_ops")
     theater_blob = f"{theater.description}\n{(theater.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -283,6 +286,7 @@ def test_relay_manual_covers_systems() -> None:
         "/workshop",
         "/tide",
         "/huts",
+        "/star",
         "/market",
         "能直接送票",
         "tote_ops gifts",
@@ -475,6 +479,8 @@ def test_patron_pages_share_steward_key() -> None:
     assert "/static/site-key.js" not in eatery_html
     huts_html = (root / "server/templates/huts.html").read_text(encoding="utf-8")
     assert "/static/site-key.js" not in huts_html
+    star_html = (root / "server/templates/star.html").read_text(encoding="utf-8")
+    assert "/static/site-key.js" not in star_html
     assert 'id="order-form"' not in index_html
     assert 'id="duo-form"' not in index_html
     assert 'id="tip-form"' not in index_html
@@ -494,11 +500,14 @@ def test_patron_pages_share_steward_key() -> None:
     assert 'eatery.html"' in main_py
     assert 'board.html"' in main_py
     assert 'huts.html"' in main_py
+    assert 'star.html"' in main_py
     board_html = (root / "server/templates/board.html").read_text(encoding="utf-8")
     board_js = (root / "server/static/board.js").read_text(encoding="utf-8")
     board_css = (root / "server/static/board.css").read_text(encoding="utf-8")
     huts_js = (root / "server/static/huts.js").read_text(encoding="utf-8")
     huts_css = (root / "server/static/huts.css").read_text(encoding="utf-8")
+    star_js = (root / "server/static/star.js").read_text(encoding="utf-8")
+    star_css = (root / "server/static/star.css").read_text(encoding="utf-8")
     nav = (root / "server/templates/partials/nav.html").read_text(encoding="utf-8")
     assert "/api/public/bar" in bar_js
     assert "/api/public/tide" in tide_js
@@ -506,12 +515,14 @@ def test_patron_pages_share_steward_key() -> None:
     assert "/api/public/eatery" in eatery_js
     assert "/api/public/board" in board_js
     assert "/api/public/huts" in huts_js
+    assert "/api/public/star" in star_js
     assert "place-live.css" in bar_html
     assert "place-live.css" in tide_html
     assert "place-live.css" in market_html
     assert "place-live.css" in eatery_html
     assert "board.css" in board_html
     assert "huts.css" in huts_html
+    assert "star.css" in star_html
     assert "ranking-stage" in board_html
     assert "dual-board" in board_html
     assert "ticketsBoard" in board_html
@@ -523,10 +534,17 @@ def test_patron_pages_share_steward_key() -> None:
     assert "featureLevel" in huts_html
     assert "shore_blurb" in huts_js
     assert "resident-list" in huts_css
+    assert "hero-grid" in star_html
+    assert "fanBoard" in star_html
+    assert "orange-fruit" in star_html
+    assert "stageBanner" in star_js or "stage-banner" in star_css
+    assert "fan-ticket" in star_css
     assert 'href="/board"' in nav
     assert 'href="/huts"' in nav
+    assert 'href="/star"' in nav
     assert "全服榜" in nav
     assert "岸畔小屋" in nav
+    assert "小橘星光" in nav
     assert "place-hero" in bar_html
     assert "tide-hero" in tide_html
     assert "market-head" in market_html
@@ -539,6 +557,7 @@ def test_patron_pages_share_steward_key() -> None:
     assert "/play?go=market" in market_html
     assert "/play?go=eatery" in eatery_html
     assert "/play?go=hut" in huts_html
+    assert "/play?go=star" in star_html
     assert "上手页" in site_key
 
 

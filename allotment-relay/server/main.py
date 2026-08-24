@@ -473,9 +473,10 @@ async def eatery_order(body: EateryOrderRequest):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@app.get("/star")
+@app.get("/star", response_class=HTMLResponse)
 async def star_page(request: Request):
-    return _place_page(request, "star")
+    """小橘星光围观实况；打赏应援仍回上手页。"""
+    return _html(request, "star.html", active="star")
 
 
 @app.get("/api/public/star")

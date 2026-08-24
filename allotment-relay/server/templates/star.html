@@ -8,45 +8,124 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/star.css">
 </head>
 <body class="star-page">
   {% include "partials/nav.html" %}
-  <main>
-    <header class="page-head">
-      <div>
-        <div class="eyebrow">Starlight</div>
-        <h1>小橘星光</h1>
-        <p class="tagline">只围观。打赏、围观开嗓去上手页。她开嗓的晚上，档口和井下都安静半拍。</p>
-      </div>
-      <div id="star-meta" class="statbar"></div>
-    </header>
 
-    <section class="panel">
-      <p>人类能点的都在 <a href="/play">上手页</a>。这里只看她的档、应援榜和动态。</p>
+  <main class="star-shell">
+    <section class="hero-grid">
+      <article class="poster">
+        <div class="poster-copy">
+          <div class="eyebrow">Starlight · Orange Night</div>
+          <h1>小橘<span>星光</span></h1>
+          <p class="poster-sub">她开嗓的晚上，酒杯、潮声和井下的铁器都会安静半拍。这里只看她今晚的档、应援榜和留下来的动静。打赏仍回上手页。</p>
+
+          <div class="show-status">
+            <span class="status-dot" id="statusDot"></span>
+            <span id="showStatus">在问今晚…</span>
+          </div>
+        </div>
+
+        <div class="orange-fruit" aria-hidden="true">
+          <span class="orange-whole"></span>
+          <span class="orange-slice"></span>
+        </div>
+
+        <div class="poster-ticket">
+          <div>
+            <small>VENUE</small>
+            <strong id="posterVenue">—</strong>
+          </div>
+          <div>
+            <small>MOOD</small>
+            <strong id="posterMood">—</strong>
+          </div>
+          <div>
+            <small>NO.</small>
+            <strong>ORANGE-01</strong>
+          </div>
+        </div>
+      </article>
+
+      <div class="side">
+        <div class="meta-strip">
+          <div class="meta"><small>粉丝团</small><strong id="fansCount">—</strong></div>
+          <div class="meta"><small>今日打赏</small><strong id="tipsToday">—</strong></div>
+          <div class="meta"><small>累计打赏</small><strong id="totalTips">—</strong></div>
+        </div>
+
+        <section class="album">
+          <div class="album-head">
+            <div>
+              <div class="eyebrow">Tonight's Record</div>
+              <h2>她的档</h2>
+            </div>
+            <span class="album-tag" id="albumVenue">…</span>
+          </div>
+          <div class="album-body">
+            <div class="track">
+              <small>A / VENUE</small>
+              <strong id="venueLabel">—</strong>
+              <p>今晚在哪里开嗓</p>
+            </div>
+            <div class="track">
+              <small>B / SETLIST</small>
+              <strong id="setlist">—</strong>
+              <p>她习惯最后一个才定歌单</p>
+            </div>
+            <div class="track">
+              <small>C / OUTFIT</small>
+              <strong id="outfit">—</strong>
+              <p>今晚的造型</p>
+            </div>
+            <div class="track">
+              <small>D / NOTE</small>
+              <strong id="note">—</strong>
+              <p>她留的一句话</p>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="stage-banner" id="stageBanner">
+        <div>
+          <small>TONIGHT SPECIAL</small>
+          <strong>今晚专场 · 票全归她</strong>
+        </div>
+        <span id="stageText">歌单还没贴出来——她习惯最后一个才定。</span>
+      </div>
     </section>
 
-    <div id="stage-banner" class="panel hidden">
-      <div class="panel-head"><h2>今晚专场</h2><span class="tag">TONIGHT</span></div>
-      <div id="stage-banner-body"></div>
-    </div>
+    <section class="lower">
+      <aside class="fan-board">
+        <div class="section-head">
+          <div class="eyebrow">Fan Tickets</div>
+          <h2>应援票根</h2>
+        </div>
+        <div class="tickets" id="fanBoard">
+          <div class="star-empty">在看粉丝团…</div>
+        </div>
+        <div class="star-cta">
+          <a href="/play?go=star">打赏 / 应援去上手页 →</a>
+        </div>
+      </aside>
 
-    <div class="bar-grid">
-      <section class="panel">
-        <div class="panel-head"><h2>她的档</h2><span class="tag">STAR</span></div>
-        <div id="star-card"></div>
+      <section class="newspaper">
+        <div class="news-head">
+          <div>
+            <div class="eyebrow">Orange Press</div>
+            <h2>动态与小报</h2>
+          </div>
+          <span class="news-date">潮汐岛 · 小橘专栏</span>
+        </div>
+        <div class="posts" id="posts">
+          <div class="star-empty">在翻专栏…</div>
+        </div>
       </section>
-
-      <section class="panel">
-        <div class="panel-head"><h2>应援榜</h2><span class="tag">FANS</span></div>
-        <div id="star-board"></div>
-      </section>
-    </div>
-
-    <section class="panel feed">
-      <div class="panel-head"><h2>动态与小报</h2><span class="tag">LIVE</span></div>
-      <div id="star-posts"></div>
     </section>
   </main>
+
   <script src="/static/star.js"></script>
 </body>
 </html>
