@@ -1145,7 +1145,7 @@ async def bed_rest(s: dict[str, Any]) -> str:
                 has_hammock = True
         if not bed_key and not has_hammock:
             raise ValueError(
-                "小屋里还没有能睡的地方 — buy bed → install hard_N bed，"
+                "小屋里还没有床 — buy bed → install hard_N bed，"
                 "或 buy hammock → install soft_N hammock"
             )
         sleep_energy = bed_sleep_energy(bed_key) if bed_key else config.HAMMOCK_ENERGY
