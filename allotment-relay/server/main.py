@@ -121,7 +121,8 @@ async def tide_page(request: Request):
 
 @app.get("/huts", response_class=HTMLResponse)
 async def huts_page(request: Request):
-    return _place_page(request, "huts")
+    """岸畔小屋围观实况；搭建装件仍回上手页。"""
+    return _html(request, "huts.html", active="huts")
 
 
 @app.get("/market", response_class=HTMLResponse)

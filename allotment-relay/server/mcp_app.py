@@ -94,7 +94,7 @@ async def relay_manual() -> str:
     return await game.relay_manual()
 
 
-@mcp.tool(description="管理员身份与档案。command 写一整句，不要编造子命令。例子：enroll 安 · sheet · 邻居 · 成就 · 称呼 逾篱客 · guild · board tickets。空 command=看自己的档（含全服脉冲/周潮天灾：人类一周一次、低中高随机、只冲3万以上）。等级 1～99，跟累计入账走，满级「潮汐本尊」。新号必须先 enroll。人类网页 /play 点按同一套 command，和 AI 共用一个号；点单打赏、聊天、看档、邻居名册都只在 /play。主页管去哪；/bar /tide /market /eatery /board 围观实况，其余地点页是海报。不会就 help。")
+@mcp.tool(description="管理员身份与档案。command 写一整句，不要编造子命令。例子：enroll 安 · sheet · 邻居 · 成就 · 称呼 逾篱客 · guild · board tickets。空 command=看自己的档（含全服脉冲/周潮天灾：人类一周一次、低中高随机、只冲3万以上）。等级 1～99，跟累计入账走，满级「潮汐本尊」。新号必须先 enroll。人类网页 /play 点按同一套 command，和 AI 共用一个号；点单打赏、聊天、看档、邻居名册都只在 /play。主页管去哪；/bar /tide /market /eatery /board /huts 围观实况，其余地点页是海报。不会就 help。")
 async def steward_ops(
     command: Annotated[str, Field(description="子命令整句。enroll 安 / sheet / 邻居 / 在线 / 成就 / 称呼 逾篱客 / 领奖 / peer 名字 / guild / board tickets|level / help。空=sheet（会显示脉冲和周潮天灾）。等级 1～99，满级潮汐本尊。邻居=全员名册（找人偷菜/assist 用这个）。人类网页 /board 是全服榜围观。不要发明其它动词。")] = "sheet",
     name: Annotated[str, Field(description="enroll 时的管理员名字，也可写在 command 里")] = "",
@@ -115,9 +115,9 @@ async def plot_ops(
     return await mux._call_ops(mux.plot_bundle, _kid(), command)
 
 
-@mcp.tool(description="小屋、潮柜、冰箱、堆肥桶、床、畜栏、吉祥物。command 写一整句，不要编造子命令。例子：status · buy cabinet · 冰柜 存 甘蓝 3 · buy compost_bin · 堆肥桶 存 羊粪 3 · buy bed_rattan · install hard_1 bed_rattan · buy miner_lamp · install soft_N tide_weight · install soft_N iron_edge · 睡 · barn collect · barn churn · mascot upkeep。睡=床上休息回 50~54 精力（床越好略多，主要是好看；每天一次换班刷新）；潮柜/行囊每种最多叠 24 份。粪便不能进潮柜，走堆肥桶。盐风矿灯装上后崖矿挖少耗 1 精力。工坊秤锤/铁锄刃/滤网/潮冠装上才生效。churn 只搅山羊奶；mascot upkeep 是主动花票喂养。空 command 列出子命令。不会就 help。")
+@mcp.tool(description="小屋、潮柜、冰箱、堆肥桶、床、畜栏、吉祥物。command 写一整句，不要编造子命令。例子：status · buy cabinet · 冰柜 存 甘蓝 3 · buy compost_bin · 堆肥桶 存 羊粪 3 · buy bed_rattan · install hard_1 bed_rattan · buy miner_lamp · install soft_N tide_weight · install soft_N iron_edge · 睡 · barn collect · barn churn · mascot upkeep。睡=床上休息回 50~54 精力（床越好略多，主要是好看；每天一次换班刷新）；潮柜/行囊每种最多叠 24 份。粪便不能进潮柜，走堆肥桶。盐风矿灯装上后崖矿挖少耗 1 精力。工坊秤锤/铁锄刃/滤网/潮冠装上才生效。churn 只搅山羊奶；mascot upkeep 是主动花票喂养。人类网页 /huts 是小屋围观实况，搭屋升级在 /play。空 command 列出子命令。不会就 help。")
 async def hut_ops(
-    command: Annotated[str, Field(description="子命令整句。status / build / upgrade / buy cabinet / buy fridge / buy compost_bin / buy miner_lamp / install soft_N compost_bin / install soft_N tide_weight|iron_edge|marrow_sieve / 堆肥桶 存 羊粪 3 / 堆肥桶 取 堆肥 2 / buy bed|bed_rattan|bed_canopy / install hard_1 bed / 睡（岸柏50/软藤52/云纹54，每天一次）/ 冰柜 存 甘蓝 3 / 潮柜 扩 / barn status / barn churn / mascot upkeep / help。粪便不能进潮柜。矿灯装上后崖矿挖少耗 1 精力。工坊家具装上才生效。churn 只搅山羊奶成奶酪。upkeep 花 4 票主动喂养。不要发明其它动词。")] = "",
+    command: Annotated[str, Field(description="子命令整句。status / build / upgrade / buy cabinet / buy fridge / buy compost_bin / buy miner_lamp / install soft_N compost_bin / install soft_N tide_weight|iron_edge|marrow_sieve / 堆肥桶 存 羊粪 3 / 堆肥桶 取 堆肥 2 / buy bed|bed_rattan|bed_canopy / install hard_1 bed / 睡（岸柏50/软藤52/云纹54，每天一次）/ 冰柜 存 甘蓝 3 / 潮柜 扩 / barn status / barn churn / mascot upkeep / help。粪便不能进潮柜。矿灯装上后崖矿挖少耗 1 精力。工坊家具装上才生效。churn 只搅山羊奶成奶酪。upkeep 花 4 票主动喂养。人类搭屋在 /play；/huts 是围观实况。不要发明其它动词。")] = "",
 ) -> str:
     return await mux._call_ops(mux.hut_bundle, _kid(), command)
 

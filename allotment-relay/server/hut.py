@@ -1585,6 +1585,26 @@ async def public_snapshot() -> dict[str, Any]:
     from . import world
     from .catalog import HUT_LEVELS
 
+    weather = world.current_weather()
+    tide = world.current_tide()
+    phase = world.current_day_phase()
+    shore_bits = {
+        ("clear", "ebb"): "晴天退潮，木栈道上还有点湿。",
+        ("clear", "slack"): "平潮很安静，屋檐影子贴在沙上。",
+        ("clear", "flood"): "涨潮拍到堤边，靠海的门先别敞着。",
+        ("misty", "ebb"): "海雾还没散尽，退潮后岸线显得更远。",
+        ("misty", "slack"): "雾里看不清谁家的灯，只听见栈道响。",
+        ("misty", "flood"): "雾和潮一起上来，小屋门缝都发潮。",
+        ("gale", "ebb"): "阵风刮过退潮滩，晾衣绳全歪了。",
+        ("gale", "slack"): "风很大，畜栏顶棚一直在响。",
+        ("gale", "flood"): "涨潮加阵风，靠岸的人都把窗扣上了。",
+    }
+    shore_blurb = shore_bits.get((weather, tide), "岸边风平浪静。")
+    if phase == "night":
+        shore_blurb = shore_blurb.rstrip("。") + "。夜里灯更稀。"
+    elif phase == "dusk":
+        shore_blurb = shore_blurb.rstrip("。") + "。暮色压下来了。"
+
     async with db.connect() as conn:
         conn.row_factory = aiosqlite.Row
         huts = (await (await conn.execute(
@@ -1602,7 +1622,7 @@ async def public_snapshot() -> dict[str, Any]:
             FROM stewards
             WHERE enrolled=1 AND hut_built=1
             ORDER BY hut_level DESC, last_active_at DESC
-            LIMIT 8
+            LIMIT 12
             """
         )).fetchall()
         feed = await (await conn.execute(
@@ -1616,14 +1636,16 @@ async def public_snapshot() -> dict[str, Any]:
         )).fetchall()
     levels = []
     for r in top:
-        meta = HUT_LEVELS.get(int(r["hut_level"] or 1), HUT_LEVELS[1])
+        lv = max(1, int(r["hut_level"] or 1))
+        meta = HUT_LEVELS.get(lv, HUT_LEVELS[1])
         levels.append({
             "name": r["name"],
-            "level": int(r["hut_level"] or 1),
+            "level": lv,
             "label": meta["name"],
         })
     return {
         "climate": world.climate_line(),
+        "shore_blurb": shore_blurb,
         "huts": int(huts or 0),
         "barns": int(barns or 0),
         "mascots": int(mascots or 0),

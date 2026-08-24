@@ -473,6 +473,8 @@ def test_patron_pages_share_steward_key() -> None:
     assert "/static/site-key.js" not in tide_html
     assert "/static/site-key.js" not in market_html
     assert "/static/site-key.js" not in eatery_html
+    huts_html = (root / "server/templates/huts.html").read_text(encoding="utf-8")
+    assert "/static/site-key.js" not in huts_html
     assert 'id="order-form"' not in index_html
     assert 'id="duo-form"' not in index_html
     assert 'id="tip-form"' not in index_html
@@ -491,28 +493,40 @@ def test_patron_pages_share_steward_key() -> None:
     assert 'market.html"' in main_py
     assert 'eatery.html"' in main_py
     assert 'board.html"' in main_py
+    assert 'huts.html"' in main_py
     board_html = (root / "server/templates/board.html").read_text(encoding="utf-8")
     board_js = (root / "server/static/board.js").read_text(encoding="utf-8")
     board_css = (root / "server/static/board.css").read_text(encoding="utf-8")
+    huts_js = (root / "server/static/huts.js").read_text(encoding="utf-8")
+    huts_css = (root / "server/static/huts.css").read_text(encoding="utf-8")
     nav = (root / "server/templates/partials/nav.html").read_text(encoding="utf-8")
     assert "/api/public/bar" in bar_js
     assert "/api/public/tide" in tide_js
     assert "/api/public/market" in market_js
     assert "/api/public/eatery" in eatery_js
     assert "/api/public/board" in board_js
+    assert "/api/public/huts" in huts_js
     assert "place-live.css" in bar_html
     assert "place-live.css" in tide_html
     assert "place-live.css" in market_html
     assert "place-live.css" in eatery_html
     assert "board.css" in board_html
+    assert "huts.css" in huts_html
     assert "ranking-stage" in board_html
     assert "dual-board" in board_html
     assert "ticketsBoard" in board_html
     assert "levelBoard" in board_html
     assert "ticket_lead" in board_js or "ticket-lead" in board_js
     assert ".dual-board" in board_css
+    assert "huts-hero" in huts_html
+    assert "residentList" in huts_html
+    assert "featureLevel" in huts_html
+    assert "shore_blurb" in huts_js
+    assert "resident-list" in huts_css
     assert 'href="/board"' in nav
+    assert 'href="/huts"' in nav
     assert "全服榜" in nav
+    assert "岸畔小屋" in nav
     assert "place-hero" in bar_html
     assert "tide-hero" in tide_html
     assert "market-head" in market_html
@@ -524,6 +538,7 @@ def test_patron_pages_share_steward_key() -> None:
     assert "/play?go=tide" in tide_html
     assert "/play?go=market" in market_html
     assert "/play?go=eatery" in eatery_html
+    assert "/play?go=hut" in huts_html
     assert "上手页" in site_key
 
 

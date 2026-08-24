@@ -3,43 +3,119 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>小屋围观 · 潮汐岛</title>
+  <title>岸畔小屋 · 潮汐岛</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/huts.css">
 </head>
-<body>
+<body class="huts-page">
   {% include "partials/nav.html" %}
-  <main>
-    <header class="page-head">
+
+  <main class="huts-shell">
+    <header class="huts-hero">
       <div>
-        <div class="eyebrow">小屋围观</div>
+        <div class="eyebrow">Coastal Dwellings</div>
         <h1>岸畔小屋</h1>
-        <p class="tagline">
-          棚屋、畜栏、吉祥物。看热闹。要自己搭屋去上手页 <a href="/play">/play</a>（<code>hut_ops</code>）。
-          工坊打的秤锤、铁锄刃、滤网要装上才生效。
-        </p>
+        <p>这里不画房子。直接看岸边住着谁、住到什么等级、最近又折腾了什么。门牌、等级和岸上纪事放在一页里，别让一整屏空气替玩家占位置。</p>
+      </div>
+      <div class="climate">
+        <small>今日岸线</small>
+        <strong id="climate">在问岸边…</strong>
+        <span>围观住户 · 搭建和装件仍回上手页</span>
       </div>
     </header>
 
-    <section class="stats-shell" id="huts-stats">
-      <div class="stats-primary" id="huts-primary"></div>
+    <section class="huts-stats">
+      <div class="huts-stat"><small>已搭小屋</small><strong id="hutCount">—</strong></div>
+      <div class="huts-stat"><small>畜栏</small><strong id="barnCount">—</strong></div>
+      <div class="huts-stat"><small>吉祥物</small><strong id="mascotCount">—</strong></div>
     </section>
-    <p class="soft-note" id="huts-climate">在问海况…</p>
-    <p class="soft-note" id="huts-hints"></p>
 
-    <div class="board-strip board-grid board-grid-mini">
-      <section class="panel">
-        <div class="panel-head"><h2>临海几座</h2><span class="tag">HUT</span></div>
-        <ol id="huts-levels" class="board-list"></ol>
+    <section class="huts-grid">
+      <aside class="huts-panel">
+        <div class="huts-panel-head">
+          <div class="eyebrow">Residents</div>
+          <h2>岸线住户</h2>
+          <p>点名字切换中间详情</p>
+        </div>
+        <div class="resident-list" id="residentList">
+          <div class="huts-empty">在看岸边…</div>
+        </div>
+      </aside>
+
+      <section class="huts-panel feature">
+        <div class="feature-top">
+          <div>
+            <div class="eyebrow">Selected Dwelling</div>
+            <h2 id="featureName">—</h2>
+          </div>
+          <div class="feature-code" id="featureCode">—</div>
+        </div>
+
+        <div class="feature-body">
+          <div class="feature-card primary">
+            <div class="big-level" id="featureLevel">—<small>LEVEL</small></div>
+            <div class="feature-note" id="featureNote">点左边住户看详情。</div>
+            <div class="meta-grid">
+              <div class="meta-box"><small>门牌</small><strong id="featureShore">—</strong></div>
+              <div class="meta-box"><small>状态</small><strong>已入住</strong></div>
+              <div class="meta-box"><small>屋型</small><strong id="featureLabel">—</strong></div>
+              <div class="meta-box"><small>档位</small><strong id="featureTier">—</strong></div>
+            </div>
+          </div>
+
+          <div class="feature-card secondary">
+            <h3>聚落等级分布</h3>
+            <div class="rank-bars" id="rankBars"></div>
+          </div>
+        </div>
+
+        <div class="feature-foot">
+          <span>公开围观页</span>
+          <a href="/play?go=hut">搭屋 / 升级 / 装件去上手页 →</a>
+        </div>
       </section>
-      <section class="panel feed">
-        <div class="panel-head"><h2>岸上纪事</h2><span class="tag">LIVE</span></div>
-        <div id="huts-feed"></div>
-      </section>
-    </div>
+
+      <div class="side-stack">
+        <section class="huts-panel level-dist">
+          <div class="eyebrow">Settlement Mix</div>
+          <h3>住户层级</h3>
+          <div class="dist-grid" id="distGrid"></div>
+        </section>
+
+        <section class="huts-panel chronicle">
+          <div class="huts-panel-head">
+            <div class="eyebrow">Shore Chronicle</div>
+            <h3>岸上纪事</h3>
+          </div>
+          <div class="feed" id="feed">
+            <div class="huts-empty">岸上还安静。</div>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section class="huts-bottom">
+      <div class="info-card">
+        <small>STORAGE</small>
+        <strong>小屋里的存放</strong>
+        <p>潮柜放生鲜，冰箱放熟菜。粪便别往柜里塞，走堆肥桶。</p>
+      </div>
+      <div class="info-card">
+        <small>FITTINGS</small>
+        <strong>装件要真的装上</strong>
+        <p>工坊打出来的秤锤、铁锄刃、滤网和潮冠，install 后才会生效。</p>
+      </div>
+      <div class="info-card">
+        <small>VISIT</small>
+        <strong>这里负责围观</strong>
+        <p>搭屋、升级、买装件都回上手页。这里就看岸边现在住成什么样。</p>
+      </div>
+    </section>
   </main>
+
   <script src="/static/huts.js"></script>
 </body>
 </html>
