@@ -333,12 +333,15 @@ async def pit_ops(
                     else "人还能站，只是整个世界像慢了半拍。"
                 )
                 lines.append(
-                    f"\n{meta_line}\n（{ailment} — visit_ops clinic treat 或 undertide_ops medic {ailment}）"
+                    f"\n{meta_line}\n（{ailment} — undertide_ops medic {ailment}，晏安医务间）"
                 )
             elif random.random() < 0.35:
                 from . import health
-                await health.inflict(conn, s["id"], random.choice(["sprain", "backache"]), source="pit")
-                lines.append("\n（挂了普通伤 — 桥桥那儿能治：visit_ops clinic treat）")
+                minor = random.choice(["sprain", "backache"])
+                await health.inflict(conn, s["id"], minor, source="pit")
+                lines.append(
+                    f"\n（挂了轻伤 — undertide_ops medic {minor}，晏安医务间；桥桥不接井下伤）"
+                )
         await db.add_chronicle(
             "undertide", f"{s['name']} 在深坑{'胜' if diff >= 0 else '败'}于 {row['name']}",
             s["id"], conn=conn,
@@ -348,24 +351,34 @@ async def pit_ops(
         return "\n".join(lines)
 
     if verb == "medic":
-        # 真身：自己的诊室——全病谱开放（地面 12 种 + 深坑 2 种），材料费 ≈ 原价 1/4
+        # 晏安医务间：深坑专伤 + 井下落下的轻伤（扭伤/腰肌劳损）
         from . import undertide as _ut
         from .catalog import AILMENTS as _AILS
         av = await _ut.avatar_key(conn, s["id"])
         is_avatar = av == "anan" and True
-        valid_keys = set(_AILS) if is_avatar else set(utcfg.UT_PIT_MEDIC)
-        if len(parts) < 2 or parts[1] not in valid_keys:
-            raise ValueError(
-                "用法: undertide_ops medic ring_shock|pit_trauma"
-                + ("（或任意病症 key——这里是你的诊室）" if is_avatar else "")
-            )
+        medic_usage = (
+            "用法: undertide_ops medic ring_shock|pit_trauma|sprain|backache"
+            + ("（或任意病症 key——这里是你的诊室）" if is_avatar else "")
+        )
+        if len(parts) < 2:
+            raise ValueError(medic_usage)
         ailment = parts[1]
+        if is_avatar:
+            if ailment not in _AILS:
+                raise ValueError(medic_usage)
+        elif ailment not in utcfg.UT_PIT_MEDIC:
+            raise ValueError(medic_usage)
         cur = await conn.execute(
-            "SELECT 1 FROM steward_ailments WHERE steward_id=? AND ailment_key=?",
+            "SELECT source FROM steward_ailments WHERE steward_id=? AND ailment_key=?",
             (s["id"], ailment),
         )
-        if not await cur.fetchone():
+        row = await cur.fetchone()
+        if not row:
             raise ValueError("你没有这个伤。别在晏安面前装病——他见过的真伤比你演的都多。")
+        if not is_avatar and ailment in ("sprain", "backache") and row[0] != "pit":
+            raise ValueError(
+                "这儿只收井下落下的伤。地上毛病去 visit_ops clinic treat。"
+            )
         if is_avatar:
             import math
             base = _AILS[ailment]["cost"] if ailment in _AILS else utcfg.UT_PIT_MEDIC.get(
@@ -388,7 +401,7 @@ async def pit_ops(
                 (s["id"], cost, _day_id() + 7, "surgery", _day_id()),
             )
             paid_note = f"（手术费 {cost} 票，账已划转恶猫钱庄，按当日利率起息）"
-        heal_map = {"ring_shock": 30, "pit_trauma": 40}
+        heal_map = {"ring_shock": 30, "pit_trauma": 40, "sprain": 14, "backache": 15}
         heal = heal_map.get(ailment) or _AILS.get(ailment, {}).get("health_restore", 12)
         await conn.execute(
             "DELETE FROM steward_ailments WHERE steward_id=? AND ailment_key=?", (s["id"], ailment)

@@ -120,6 +120,9 @@ async def _use_medicine(conn: aiosqlite.Connection, s: dict[str, Any], med_key: 
     if not hit:
         await db.add_item(conn, s["id"], med_key, 1)
         raise ValueError(f"你现在没有 {AILMENTS[ailment]['name']}，药先留着")
+    if health.bridge_refuses(hit):
+        await db.add_item(conn, s["id"], med_key, 1)
+        raise ValueError(health._pit_refuse())  # noqa: SLF001
     wait_halve = bool(meta.get("infection_wait_halve"))
     if hit["chronic"]:
         msg = await health._apply_chronic_course(  # noqa: SLF001
@@ -199,8 +202,10 @@ async def clinic_ops(key_id: int, command: str) -> str:
             lines.append("目前没挂号项——别装病")
             return "\n".join(lines)
         lines.append("待治:")
+        bridge_ailments = [a for a in ailments if not health.bridge_refuses(a)]
+        pit_ailments = [a for a in ailments if health.bridge_refuses(a)]
         total = 0
-        for a in ailments:
+        for a in bridge_ailments:
             billed = health._bill_cost(a["cost"], cost_mult=mult, cost_add=add)  # noqa: SLF001
             total += billed
             extra = f"{a['hint']} · 诊费约 {billed} 票"
@@ -212,7 +217,14 @@ async def clinic_ops(key_id: int, command: str) -> str:
                 else:
                     extra += f" · 还需歇 {health.fmt_wait(a['treat_wait'])}"
             lines.append(f"  {a['key']} — {a['emoji']}{a['name']} （{extra}）")
-        lines.append(f"全套约 {total} 票 · visit_ops clinic treat all")
+        if pit_ailments:
+            lines.append("井下伤（桥桥不接，找晏安医务间）:")
+            for a in pit_ailments:
+                lines.append(f"  {a['key']} — {a['emoji']}{a['name']} （{a['hint']}）")
+        if bridge_ailments:
+            lines.append(f"地上病全套约 {total} 票 · visit_ops clinic treat all")
+        elif pit_ailments:
+            lines.append("只有井下伤 — undertide_ops medic …（晏安医务间）")
         return "\n".join(lines)
 
     if verb in ("visit", "chat", "闲聊"):
@@ -224,11 +236,15 @@ async def clinic_ops(key_id: int, command: str) -> str:
         async with db.connect() as conn:
             ailments = await health.list_ailments(conn, s["id"])
         if ailments:
+            bridge = [a for a in ailments if not health.bridge_refuses(a)]
             total = sum(
                 health._bill_cost(a["cost"], cost_mult=mult, cost_add=add)  # noqa: SLF001
-                for a in ailments
+                for a in bridge
             )
-            msg += f"\n当前 {len(ailments)} 项待治，合计约 {total} 票。"
+            if bridge:
+                msg += f"\n当前 {len(bridge)} 项地上病待治，合计约 {total} 票。"
+            if len(ailments) > len(bridge):
+                msg += f"\n另有 {len(ailments) - len(bridge)} 项井下伤，桥桥不接，找晏安医务间。"
         else:
             msg += "\n你看上去暂时不用破费。"
         return msg
@@ -288,7 +304,7 @@ async def clinic_ops(key_id: int, command: str) -> str:
                 resolved = resolve_ailment_key(target) or target
                 msg = await health.treat_one(
                     conn, s["id"], target,
-                    cost_mult=mult, cost_add=add, allow_pit=True,
+                    cost_mult=mult, cost_add=add, allow_pit=False,
                 )
                 line = pick_treat_line(resolved)
                 if line:

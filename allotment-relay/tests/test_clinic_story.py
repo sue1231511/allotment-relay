@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""桥桥诊所：氛围进门、买药用药、治病、窗台斑鸠。"""
+"""桥桥诊所：氛围进门、买药用药、治病、窗台斑鸠；井下伤归晏安。"""
 from __future__ import annotations
 
 import asyncio
@@ -40,7 +40,7 @@ async def test_clinic_status_scene() -> None:
     from server import health, mcp_dispatch
 
     async with db.connect() as conn:
-        await health.inflict(conn, sid, "sprain", source="test")
+        await health.inflict(conn, sid, "sprain", source="event")
         await conn.commit()
 
     status = await mcp_dispatch.visit_bundle(kid, "clinic status")
@@ -55,7 +55,7 @@ async def test_clinic_treat_and_buy_use() -> None:
     from server import health, mcp_dispatch
 
     async with db.connect() as conn:
-        await health.inflict(conn, sid, "hangover", source="test")
+        await health.inflict(conn, sid, "hangover", source="event")
         await conn.commit()
 
     with patch("server.clinic.random.random", return_value=0.99):
@@ -74,15 +74,15 @@ async def test_clinic_treat_and_buy_use() -> None:
     assert "醒酒药" in bought, bought
 
     async with db.connect() as conn:
-        await health.inflict(conn, sid, "hangover", source="test")
+        await health.inflict(conn, sid, "hangover", source="event")
         await conn.commit()
 
     used = await mcp_dispatch.visit_bundle(kid, "clinic use 醒酒药")
     assert "醒酒药" in used or "宿醉" in used, used
 
 
-async def test_clinic_pit_treat() -> None:
-    tmp = Path(tempfile.mkdtemp(prefix="clinic-pit-"))
+async def test_clinic_refuses_pit_injuries() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="clinic-pit-refuse-"))
     db, kid, sid = await _boot(tmp)
     from server import health, mcp_dispatch
 
@@ -90,16 +90,35 @@ async def test_clinic_pit_treat() -> None:
         await health.inflict(conn, sid, "ring_shock", source="pit")
         await conn.commit()
 
-    msg = await mcp_dispatch.visit_bundle(kid, "clinic treat 斗场震伤")
-    assert "斗场震伤" in msg or "ring_shock" in msg, msg
-    assert "桥桥大夫" in msg, msg
+    try:
+        await mcp_dispatch.visit_bundle(kid, "clinic treat 斗场震伤")
+        raise AssertionError("expected pit injury refusal")
+    except ValueError as e:
+        assert "找晏安去" in str(e), e
+
+    status = await mcp_dispatch.visit_bundle(kid, "clinic status")
+    assert "井下伤" in status or "晏安" in status, status
+    assert "干农活" not in status, status
+
+
+async def test_clinic_refuses_pit_sourced_sprain() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="clinic-pit-sprain-"))
+    db, kid, sid = await _boot(tmp)
+    from server import health, mcp_dispatch
 
     async with db.connect() as conn:
-        cur = await conn.execute(
-            "SELECT 1 FROM steward_ailments WHERE steward_id=? AND ailment_key='ring_shock'",
-            (sid,),
-        )
-        assert await cur.fetchone() is None
+        await health.inflict(conn, sid, "sprain", source="pit")
+        await conn.commit()
+
+    status = await mcp_dispatch.visit_bundle(kid, "clinic status")
+    assert "深坑打架" in status, status
+    assert "干农活" not in status, status
+
+    try:
+        await mcp_dispatch.visit_bundle(kid, "clinic treat sprain")
+        raise AssertionError("expected pit-sourced sprain refusal")
+    except ValueError as e:
+        assert "找晏安去" in str(e), e
 
 
 async def test_clinic_dove_feed() -> None:
@@ -125,14 +144,16 @@ async def test_clinic_catalog() -> None:
     from server import mcp_dispatch
 
     cat = await mcp_dispatch.visit_bundle(kid, "clinic catalog")
-    for name in ("醒酒药", "净血针剂", "祛咒香", "急救包"):
+    for name in ("醒酒药", "净血针剂", "祛咒香"):
         assert name in cat, cat
+    assert "急救包" not in cat, cat
 
 
 if __name__ == "__main__":
     asyncio.run(test_clinic_status_scene())
     asyncio.run(test_clinic_treat_and_buy_use())
-    asyncio.run(test_clinic_pit_treat())
+    asyncio.run(test_clinic_refuses_pit_injuries())
+    asyncio.run(test_clinic_refuses_pit_sourced_sprain())
     asyncio.run(test_clinic_dove_feed())
     asyncio.run(test_clinic_catalog())
     print("ok")

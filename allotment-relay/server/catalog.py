@@ -1121,11 +1121,11 @@ AILMENTS = {
     },
     "ring_shock": {
         "name": "斗场震伤", "emoji": "💫", "cost": 35, "health_loss": 25, "health_restore": 30,
-        "hint": "深坑打架落下的。桥桥嘴毒但得接", "energy_extra": 4,
+        "hint": "深坑打架落下的。晏安医务间 undertide_ops medic ring_shock", "energy_extra": 4,
     },
     "pit_trauma": {
         "name": "深坑重创", "emoji": "🩸", "cost": 45, "health_loss": 35, "health_restore": 40,
-        "hint": "深坑重伤。桥桥加收全款，地下 medic 也能治", "energy_extra": 6,
+        "hint": "深坑重伤。晏安医务间 undertide_ops medic pit_trauma", "energy_extra": 6,
     },
     "infection": {
         "name": "生肉感染", "emoji": "🦠", "cost": 22, "health_loss": 12, "health_restore": 8,
@@ -1297,7 +1297,7 @@ NPC_FIXED = [
     {"key": "qiaoqiao", "name": "桥桥大夫", "lines": [
         "诊所规矩：必须花钱，不赊账，不还价。窗台咕咕斑鸠是吉祥物，别碰窝",
         "随机事件落下的病，找随机事件哭去——诊费照收",
-        "扭了脚、着了凉、宿醉——都挂号，都花钱。斗场震伤/深坑重创也接，嘴毒",
+        "斗场震伤/深坑重创/井下落下的扭伤 — 晏安医务间 undertide_ops medic；桥桥不接井下伤",
         "生肉生吃容易感染。蔬菜别生啃，水果别当饭——当饭吃出营养不良也归我管。约三次挂号，两次间隔 6 小时，一次压不干净",
         "clinic buy 醒酒药 / use 醒酒药 可囤货；进门可能有九折，凌晨 +5 票",
         "clinic dove 喂 斑鸠（雾豌豆×1）；clinic chat 闲聊；clinic catalog 价目",

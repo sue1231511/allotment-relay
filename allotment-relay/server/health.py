@@ -81,6 +81,15 @@ def config_now(now: int | None = None) -> int:
 def _enrich(row: Any, now: int) -> dict[str, Any]:
     key = row["ailment_key"]
     meta = AILMENTS.get(key, {})
+    source = row["source"]
+    pit_sourced = key in PIT_AILMENTS or source == "pit"
+    hint = meta.get("hint", "")
+    if source == "pit":
+        hint = (
+            f"深坑打架落下的 — undertide_ops medic {key}"
+            if key in PIT_AILMENTS
+            else f"深坑打架轻伤 — undertide_ops medic {key}"
+        )
     stage = _effective_stage(key, int(row["stage"] or 0) if "stage" in row.keys() else 0)
     last_treat = int(row["last_treat_at"] or 0) if "last_treat_at" in row.keys() else 0
     wait = _treat_wait(last_treat, now) if is_chronic_ailment(key) else 0
@@ -91,8 +100,9 @@ def _enrich(row: Any, now: int) -> dict[str, Any]:
         "name": meta.get("name", key),
         "emoji": meta.get("emoji", "🩹"),
         "cost": meta.get("cost", 0),
-        "hint": meta.get("hint", ""),
-        "source": row["source"],
+        "hint": hint,
+        "source": source,
+        "pit_sourced": pit_sourced,
         "inflicted_at": row["inflicted_at"],
         "stage": stage,
         "stage_name": _stage_name(key, stage),
@@ -105,6 +115,19 @@ def _enrich(row: Any, now: int) -> dict[str, Any]:
         "chronic": is_chronic_ailment(key),
         "pit": key in PIT_AILMENTS,
     }
+
+
+def bridge_refuses(ailment: dict[str, Any]) -> bool:
+    """桥桥诊所不接井下/斗场伤（含深坑落下的普通扭伤）。"""
+    return bool(ailment.get("pit_sourced"))
+
+
+def _pit_refuse() -> str:
+    return (
+        "桥桥大夫：「井下打的？找晏安去。"
+        "我不收拾你们自己找揍留下的东西。」\n"
+        "（undertide_ops medic ring_shock|pit_trauma|sprain|backache — 晏安医务间）"
+    )
 
 
 async def list_ailments(conn: aiosqlite.Connection, steward_id: int) -> list[dict[str, Any]]:
@@ -371,14 +394,6 @@ def clinic_hint(ailments: list[dict[str, Any]]) -> str | None:
     return line
 
 
-def _pit_refuse() -> str:
-    return (
-        "桥桥看了一眼伤势，又看了你一眼。\n"
-        "「深坑那套伤地上也能治——visit_ops clinic treat 斗场震伤 / 深坑重创，"
-        "或回地下 undertide_ops medic。」"
-    )
-
-
 def _bill_cost(base: int, *, cost_mult: float = 1.0, cost_add: int = 0) -> int:
     return max(1, int(round(base * cost_mult)) + int(cost_add))
 
@@ -475,12 +490,12 @@ async def treat_one(
     resolved = resolve_ailment_key(ailment_key) or ailment_key
     if resolved not in AILMENTS:
         raise ValueError("未知病症，visit_ops clinic 查看")
-    if resolved in PIT_AILMENTS and not allow_pit:
-        raise ValueError(_pit_refuse())
     ailments = await list_ailments(conn, steward_id)
     hit = next((a for a in ailments if a["key"] == resolved), None)
     if not hit:
         raise ValueError(f"你没有 {AILMENTS[resolved]['name']}")
+    if bridge_refuses(hit) and not allow_pit:
+        raise ValueError(_pit_refuse())
     if hit["chronic"]:
         return await _apply_chronic_course(
             conn, steward_id, hit,
@@ -506,14 +521,17 @@ async def treat_all(
     *,
     cost_mult: float = 1.0,
     cost_add: int = 0,
-    allow_pit: bool = True,
+    allow_pit: bool = False,
 ) -> str:
     ailments = await list_ailments(conn, steward_id)
     if not ailments:
         return "身体倍儿棒——没病别占桥桥大夫的号"
-    simple = [a for a in ailments if not a["chronic"] and (allow_pit or not a["pit"])]
+    simple = [
+        a for a in ailments
+        if not a["chronic"] and not bridge_refuses(a) and (allow_pit or not a["pit"])
+    ]
     chronic = [a for a in ailments if a["chronic"]]
-    pit = [a for a in ailments if a["pit"]]
+    pit = [a for a in ailments if bridge_refuses(a)]
     course_target = None
     skipped_wait = None
     for a in chronic:
@@ -531,9 +549,7 @@ async def treat_all(
                 f"{fmt_wait(wait)}后再来。一次清不干净，别连号。」"
             )
         if pit:
-            raise ValueError(
-                "深坑伤要单独挂号：visit_ops clinic treat 斗场震伤 / 深坑重创"
-            )
+            raise ValueError(_pit_refuse())
         return "身体倍儿棒——没病别占桥桥大夫的号"
 
     cost = sum(_bill_cost(AILMENTS[a["key"]]["cost"], cost_mult=cost_mult, cost_add=0) for a in simple)
@@ -590,7 +606,7 @@ async def treat_all(
             "打包清不掉。"
         )
     if pit:
-        extra += " 深坑伤请单独 treat 斗场震伤 / 深坑重创。"
+        extra += " 井下伤请回 undertide_ops medic（晏安医务间），桥桥不接。"
 
     cleared = "、".join(names) if names else "（普通伤已空）"
     return (

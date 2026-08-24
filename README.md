@@ -276,7 +276,7 @@ bar_ops     的 command = work 洗碗 night
 | `buxing watch` / `buxing remember` / `buxing fulfill 灯号` | 60 票守夜 / 看潮汐簿与灯芯 / 免费还愿，在自己的灯旁记“成了” |
 | `lore scan` | 沿海旧史文本与 NPC 小传（`lore scan npc`；也可指定其他主题或随机），不是收集品 |
 | `clinic status` | 桥桥诊所（24h）。进门氛围、窗台斑鸠、价目；约 20% 九折，凌晨 +5 票 |
-| `clinic treat 病症` / `treat all` | 花钱治（含斗场震伤/深坑重创，嘴毒但得接） |
+| `clinic treat 病症` / `treat all` | 花钱治地上病（井下伤归晏安医务间，桥桥不接） |
 | `clinic buy 醒酒药` / `use 醒酒药` | 药品货架，可囤货；`catalog` 看全表 |
 | `clinic dove` / `dove 喂` | 窗台斑鸠互动；喂雾豌豆×1 好感+2 |
 | `clinic chat` | 闲聊 |
@@ -427,7 +427,7 @@ AI 回顾完整人物故事使用 `story_ops review 故事key`，例如 `review 
 
 新手不要一上来乱闯。空 command / `help` 看全表。入口：`well` → `descend` → `enter`。
 
-`cheer` 哄的是潮下猫猫，不是荔栀。深坑伤可 `visit_ops clinic treat 斗场震伤/深坑重创`（嘴毒），或地下 `pit medic`。
+`cheer` 哄的是潮下猫猫，不是荔栀。深坑伤 `undertide_ops medic`（晏安医务间），桥桥不收。
 
 | 指令 | 说明 |
 |------|------|
@@ -437,7 +437,7 @@ AI 回顾完整人物故事使用 `story_ops review 故事key`，例如 `review 
 | `bank debt` | 查账：欠单 + 存款双栏；逾期时小八提醒 → 收益拦截 → 权限冻结 → 烫金悬赏 → 强收 |
 | `pit` / `pit list` / `pit board` | 深坑：NPC 斗士榜 / 井壁胜场榜（玩家，≥10 场才钉名；胜场 > 胜率 > 场次；不是 steward_ops board）|
 | `fight 斗士名 [策略]` | 下坑（attack/guard/feint 克制 ±10%）|
-| `pit medic 伤病` / `pit drug list` / `pit drug 药名` | 晏安医务间：治深坑伤 / 体质药三档（粗制 15 反噬 / 标准 40 / 精制 90 无副作用，战力 buff 24h） |
+| `pit medic 伤病` / `pit drug list` / `pit drug 药名` | 晏安医务间：治深坑伤（`ring_shock`/`pit_trauma`）及井下落下的 `sprain`/`backache` / 体质药三档 |
 | `dice` / `lantern` / `draw` | 死人抽牌：黑潮骰 ×2/×2/×5 · 最后一盏灯 ×1.5→×8 · 死人抽牌停牌 12~20 |
 | `lottery` | 潮汐博彩（Jester 的旧机器）：5 票一抽，不看影信不降影信；小奖 12%（8~20）/ 大奖 1.2%（60~150）/ 头奖 0.15%（300~600） |
 | `street` / `muscle 名号` / `push 名号 物品` | 帘外随机 NPC / 强买 / 强卖（各每日 1 次，战力判定，可记仇寻仇） |

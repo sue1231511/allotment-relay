@@ -398,7 +398,7 @@ async def relay_manual() -> str:
         "  jingshan status 看下一步，remember 重读已获得的短探索记录；完成后网页岛上回忆可重看四段完整事件；第一次见面不提前揭旧事，苏月琴不是单独 NPC",
         "  lore scan [主题] — 沿海旧史文本与 NPC 小传（例：lore scan npc；可指定主题或随机），不是收集品，背包里不会多东西",
         "  诊所 visit_ops clinic — 24 小时。status 进门有氛围/窗台斑鸠；treat 治病；buy/use 药品货架；dove 喂斑鸠；chat 闲聊",
-        "    腿鱼小咒 32 票；斗场震伤/深坑重创桥桥也接（嘴毒）。约 20% 九折，凌晨 +5 票",
+        "    约 20% 九折，凌晨 +5 票。腿鱼小咒 32 票。井下伤归晏安医务间 undertide_ops medic，桥桥不接",
         "  巷口拾叶：visit_ops visit 拾叶（主动必触发）；路上每天首次操作掷一次（约 29%，暮夜更高），碰上才拦，每日最多 3 次",
         "",
         "【酒吧 · 小橘】",

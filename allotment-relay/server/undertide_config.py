@@ -77,7 +77,12 @@ UT_PIT_LADDER = [  # (级, 入场费, 胜奖, 战力底盘, 重伤率)
     (1, 20, 60, 30, 0.05), (2, 35, 110, 45, 0.15), (3, 60, 200, 60, 0.30),
     (4, 90, 320, 78, 0.45), (5, 140, 520, 100, 0.60),
 ]
-UT_PIT_MEDIC = {"ring_shock": (60, 90), "pit_trauma": (80, 120)}
+UT_PIT_MEDIC = {
+    "ring_shock": (60, 90),
+    "pit_trauma": (80, 120),
+    "sprain": (25, 40),
+    "backache": (30, 45),
+}
 UT_PIT_WIN_REP = 2
 UT_PIT_DEATH_CHANCE = 0.15   # NPC 惨败死亡概率(差值≥15)
 

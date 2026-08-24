@@ -225,13 +225,13 @@ VISIT_HELP = """visit_ops 子命令（整句写进 command）：
     行囊每种最多 24 份，买多了会拒；满了先 vend 或 hut_ops 冰柜 存
   lore scan [主题] / topics — 沿海旧史文本与 NPC 小传（例：lore scan npc；不是收集品，背包里不会多东西）
   clinic status — 桥桥诊所（24h）。进门氛围+窗台斑鸠（每日最多1次）+价目
-  clinic treat 病症 — 花钱治。例子：treat sprain · treat infection · treat 腿鱼小咒 · treat 斗场震伤 · treat all
+  clinic treat 病症 — 花钱治地上病。例子：treat sprain · treat infection · treat 腿鱼小咒 · treat all
   clinic buy 醒酒药 / use 醒酒药 — 药品货架，可囤货备用（与 treat 同效）
   clinic dove 喂 — 喂窗台斑鸠雾豌豆×1（好感+2）
   clinic chat — 闲聊
   clinic catalog — 药品价目
   生肉感染约三次、两次间隔 6 小时；创可贴可缩短等待
-  斗场震伤/深坑重创 桥桥也治（嘴毒）；地下 undertide_ops medic 仍可用
+  斗场震伤/深坑重创/井下落下的扭伤 — 晏安医务间 undertide_ops medic；桥桥不接井下伤
   treat / fortune 可省略前缀"""
 
 

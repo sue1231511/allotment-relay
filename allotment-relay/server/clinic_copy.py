@@ -125,14 +125,6 @@ CLINIC_MEDICINES: dict[str, dict[str, Any]] = {
         "name": "祛咒香", "emoji": "🪔", "price": 32, "ailment": "legfish_hex",
         "aliases": ["祛咒香", "祛咒"],
     },
-    "med_pitwine": {
-        "name": "跌打酒", "emoji": "🍶", "price": 35, "ailment": "ring_shock",
-        "aliases": ["跌打酒"],
-    },
-    "med_trauma": {
-        "name": "急救包", "emoji": "🧰", "price": 45, "ailment": "pit_trauma",
-        "aliases": ["急救包"],
-    },
 }
 
 TREAT_LINES: dict[str, list[str]] = {
