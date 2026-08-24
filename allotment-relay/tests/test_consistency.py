@@ -338,7 +338,7 @@ def test_relay_manual_covers_systems() -> None:
         "进价九成",
         "/play 点按同一套指令",
         "共用一个号",
-        "/eatery /star 用同一份本机凭证",
+        "点单打赏只在 /play",
     ]
     missing = [n for n in needles if n not in text]
     assert not missing, f"relay_manual missing: {missing}"
@@ -415,6 +415,7 @@ def test_register_key_copy_ui() -> None:
 
 
 def test_patron_pages_share_steward_key() -> None:
+    """点单打赏只在 /play；酒吧/小馆/星光围观页不再上手。凭证仍是管家页那一份。"""
     root = Path(__file__).resolve().parents[1]
     site_key = (root / "server/static/site-key.js").read_text(encoding="utf-8")
     assert "tidal_island_steward_api_key" in site_key
@@ -422,19 +423,39 @@ def test_patron_pages_share_steward_key() -> None:
     assert "fetchBoundSteward" in site_key
     steward_js = (root / "server/static/steward.js").read_text(encoding="utf-8")
     lounge_js = (root / "server/static/lounge.js").read_text(encoding="utf-8")
+    play_html = (root / "server/templates/play.html").read_text(encoding="utf-8")
+    play_js = (root / "server/static/play.js").read_text(encoding="utf-8")
     assert "saveSiteKey" in steward_js
     assert "loadSavedKey" in lounge_js
+    assert "/static/site-key.js" in play_html
+    assert "/static/style.css" in play_html
+    assert 'partials/nav.html' in play_html
+    assert "play-top" not in play_html
+    assert "loadSavedKey" in play_js
+    assert "/api/bar/order" in play_js
+    assert "/api/bar/duo" in play_js
+    assert "/api/eatery/order" in play_js
+    assert "/api/star/tip" in play_js
+    assert 'id="play-duo-key-b"' in play_html
+    assert 'id="play-bar-order"' in play_html
+    assert 'id="play-eatery-order"' in play_html
+    assert 'id="play-star-tip"' in play_html
     for name in ("bar", "eatery", "star"):
         html = (root / f"server/templates/{name}.html").read_text(encoding="utf-8")
         js = (root / f"server/static/{name}.js").read_text(encoding="utf-8")
-        assert "/static/site-key.js" in html, name
+        assert "/static/site-key.js" not in html, name
         assert 'id="api_key"' not in html, name
-        assert "loadSavedKey()" in js, name
+        assert 'id="order-form"' not in html, name
+        assert 'id="duo-form"' not in html, name
+        assert 'id="duo_key_b"' not in html, name
+        assert 'id="tip-form"' not in html, name
+        assert "/play" in html, name
+        assert "loadSavedKey()" not in js, name
+        assert "/api/bar/order" not in js, name
+        assert "/api/eatery/order" not in js, name
+        assert "/api/star/tip" not in js, name
         assert "清除本机凭证" not in html, name
-    bar_html = (root / "server/templates/bar.html").read_text(encoding="utf-8")
-    assert 'id="duo_key_a"' not in bar_html
-    assert 'id="duo_key_b"' in bar_html
-    assert "我的 AI 管家" in site_key
+    assert "我的 AI 管家" in site_key or "上手页" in site_key
 
 
 def test_bar_ops_help() -> None:

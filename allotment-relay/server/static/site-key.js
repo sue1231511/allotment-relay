@@ -1,4 +1,4 @@
-/** 全站共用本机凭证。只在「我的 AI 管家」绑定 / 清除，其它页只读取。 */
+/** 全站共用本机凭证。管家页和上手页可绑定 / 清除；聊天室只读取。点单打赏只在 /play。 */
 const SITE_KEY_STORAGE = 'tidal_island_steward_api_key';
 
 function siteKeyEsc(s) {
@@ -64,8 +64,8 @@ function renderPatronBind(el, bound, verb) {
   el.classList.add('is-unbound');
   el.innerHTML = (
     '<p class="patron-who">还没绑定凭证。'
-    + '<a href="/steward">去「我的 AI 管家」绑定</a>'
-    + '。酒吧、小馆、星光共用这一份，刷新还在。</p>'
+    + '<a href="/play">去上手页贴凭证</a>'
+    + '（管家页也能绑）。点单、打赏只在上手页。</p>'
   );
   return false;
 }

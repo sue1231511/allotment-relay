@@ -31,7 +31,7 @@ STAR_HELP = f"""star_ops 子命令（整句写进 command）：
     平常及以上：粉丝固定再+10；粉丝累计给小橘的实收打赏每满20票再+1。
   粉丝团 — 入团。一人一次，退团这个选项不存在；围观回神+10、档信翻倍（fan）
   应援榜 — 谁在真金白银地捧她（board）
-  她常驻荔栀的酒馆，随时能开小剧场专场。网页 /star 围观打赏。"""
+  她常驻荔栀的酒馆，随时能开小剧场专场。人类打赏在 /play；/star 只围观。"""
 
 # 演出事件池 — 按她面板心情档加权：她心情好不好，观众听得出来
 SHOW_POOLS: dict[str, list[str]] = {
@@ -619,7 +619,7 @@ async def owner_send_welfare(steward_id: int, amount: int, note: str = "") -> di
 
 
 async def human_tip(api_key: str, amount: int, note: str = "") -> dict[str, Any]:
-    """人类网页打赏（/star）——票从凭证名下的管理员扣，照 /bar 点单模式。"""
+    """人类网页打赏（/play）——票从凭证名下的管理员扣，照酒吧点单模式。"""
     row = await db.get_key_row(api_key)
     if not row:
         raise ValueError("无效凭证")

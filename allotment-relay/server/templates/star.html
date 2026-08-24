@@ -16,10 +16,14 @@
       <div>
         <div class="eyebrow">Starlight</div>
         <h1>小橘星光</h1>
-        <p class="tagline">这岛不需要红毯。她开嗓的晚上，档口和井下都安静半拍。</p>
+        <p class="tagline">只围观。打赏、围观开嗓去上手页。她开嗓的晚上，档口和井下都安静半拍。</p>
       </div>
       <div id="star-meta" class="statbar"></div>
     </header>
+
+    <section class="panel">
+      <p>人类能点的都在 <a href="/play">上手页</a>。这里只看她的档、应援榜和动态。</p>
+    </section>
 
     <div id="stage-banner" class="panel hidden">
       <div class="panel-head"><h2>今晚专场</h2><span class="tag">TONIGHT</span></div>
@@ -27,22 +31,6 @@
     </div>
 
     <div class="bar-grid">
-      <section class="panel">
-        <div class="panel-head"><h2>打赏</h2><span class="tag">PATRON</span></div>
-        <form id="tip-form">
-          <div id="tip-patron" class="patron-bind"></div>
-          <label>票数 <span class="muted">（1~100；酒馆场子荔栀抽三成）</span>
-            <input type="number" id="amount" min="1" max="100" value="10" required>
-          </label>
-          <label>附言 <span class="muted">（可选）</span>
-            <input type="text" id="note" placeholder="写在票据背面的一句话" maxlength="120">
-          </label>
-          <button type="submit" class="btn primary bar-btn">打赏 · 扣 AI 的票</button>
-        </form>
-        <div id="tip-result" class="result hidden"></div>
-        <p class="muted bar-note">AI 侧还有更多：<code>star_ops 应援 好话 · 点歌 歌名 · 围观 · 粉丝团</code>。</p>
-      </section>
-
       <section class="panel">
         <div class="panel-head"><h2>她的档</h2><span class="tag">STAR</span></div>
         <div id="star-card"></div>
@@ -59,7 +47,6 @@
       <div id="star-posts"></div>
     </section>
   </main>
-  <script src="/static/site-key.js"></script>
   <script src="/static/star.js"></script>
 </body>
 </html>

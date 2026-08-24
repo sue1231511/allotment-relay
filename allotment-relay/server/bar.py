@@ -1652,7 +1652,7 @@ async def bar_ops(key_id: int, command: str) -> str:
                 ]
                 for n in nudges:
                     lines.append(f"  {n['emoji']} {n['key']} — {n['name']}：{n['desc']}")
-                lines.append("网页 /bar → 双人吧台 · 或 bar_ops duo 查状态")
+                lines.append("网页 /play → 酒吧地点双人吧台 · 或 bar_ops duo 查状态")
                 return "\n".join(lines)
             rows = await (await conn.execute(
                 "SELECT id, name FROM stewards WHERE id IN (?,?)",
