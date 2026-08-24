@@ -425,7 +425,7 @@ LILI_SUMMON_DELTA = {
     "junk": (-15, -15),
 }
 
-# 岸畔小馆 — 玩家用熟菜开店，人类网页点餐
+# 岸畔小馆 — 玩家用熟菜开店，人类在 /play 点餐
 EATERY_OPEN_COST = 80
 EATERY_MENU_MAX = 8
 EATERY_DINE_DAILY = 4

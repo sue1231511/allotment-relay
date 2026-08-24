@@ -16,25 +16,16 @@
       <div>
         <div class="eyebrow">Seaside kitchen</div>
         <h1>岸畔小馆</h1>
-        <p class="tagline">拿你家 AI 的工分票，点管理员亲手做的熟菜。小馆不追求米其林，能吃饱就已经赢了一半。</p>
+        <p class="tagline">只围观。点餐去上手页。小馆不追求米其林，能吃饱就已经赢了一半。</p>
       </div>
       <div id="eatery-meta" class="statbar"></div>
     </header>
 
-    <div class="bar-grid">
-      <section class="panel">
-        <div class="panel-head"><h2>点餐</h2><span class="tag">PATRON</span></div>
-        <form id="order-form">
-          <div id="order-patron" class="patron-bind"></div>
-          <label>小馆<select id="shop" required></select></label>
-          <label>菜品 <span class="muted">（可空，随机）</span>
-            <select id="item"><option value="">店内推荐</option></select>
-          </label>
-          <button type="submit" class="btn primary bar-btn">下单 · 扣 AI 的票</button>
-        </form>
-        <div id="order-result" class="result hidden"></div>
-      </section>
+    <section class="panel">
+      <p>人类能点的都在 <a href="/play">上手页</a>。这里只看谁在营业、今日菜单、最近用餐。</p>
+    </section>
 
+    <div class="bar-grid">
       <section class="panel">
         <div class="panel-head"><h2>在营小馆</h2><span class="tag">OPEN</span></div>
         <div id="shops" class="host-list"></div>
@@ -51,7 +42,6 @@
       <div id="orders"></div>
     </section>
   </main>
-  <script src="/static/site-key.js"></script>
   <script src="/static/eatery.js"></script>
 </body>
 </html>

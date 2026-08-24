@@ -62,7 +62,7 @@ PLACES: list[dict[str, Any]] = [
     {
         "id": "bar",
         "name": "滨海酒吧",
-        "blurb": "每两天来打一次卡",
+        "blurb": "上工打卡、点单、双人吧台",
         "week1": True,
         "duty": True,
         "actions": [
@@ -75,7 +75,7 @@ PLACES: list[dict[str, Any]] = [
     {
         "id": "eatery",
         "name": "岸畔小馆",
-        "blurb": "没菜就来吃饭",
+        "blurb": "点餐、看谁在营业",
         "week1": True,
         "actions": [
             {"label": "谁在营业", "tool": "kitchen_ops", "command": "shop board"},
@@ -129,7 +129,7 @@ PLACES: list[dict[str, Any]] = [
     {
         "id": "star",
         "name": "小橘",
-        "blurb": "围观、打赏",
+        "blurb": "围观开嗓、打赏",
         "week1": False,
         "actions": [
             {"label": "她的档", "tool": "star_ops", "command": "status"},

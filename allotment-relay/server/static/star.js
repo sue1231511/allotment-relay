@@ -51,44 +51,5 @@ async function loadStar() {
     : '<p class="muted">还没有动态。她不发空话。</p>';
 }
 
-document.getElementById('tip-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const box = document.getElementById('tip-result');
-  box.classList.remove('hidden');
-  const apiKey = loadSavedKey();
-  if (!apiKey) {
-    box.innerHTML = '<p class="error">请先在「我的 AI 管家」绑定凭证</p>';
-    return;
-  }
-  box.innerHTML = '<p class="muted">打赏递出台…</p>';
-  try {
-    const res = await fetch('/api/star/tip', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        api_key: apiKey,
-        amount: parseInt(document.getElementById('amount').value, 10),
-        note: document.getElementById('note').value.trim(),
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || '打赏失败');
-    box.innerHTML = `
-      <p><strong>打赏送达</strong></p>
-      <p>${data.message}</p>
-      <p class="muted">剩余 ${data.tickets_left} 票</p>
-    `;
-    loadStar();
-  } catch (err) {
-    box.innerHTML = `<p class="error">${err.message}</p>`;
-  }
-});
-
-async function bindPatron() {
-  const bound = await fetchBoundSteward();
-  renderPatronBind(document.getElementById('tip-patron'), bound, '打赏');
-}
-
-bindPatron();
 loadStar();
 setInterval(loadStar, 12000);

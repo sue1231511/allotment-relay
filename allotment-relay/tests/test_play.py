@@ -56,6 +56,11 @@ async def _test_play_api() -> None:
     one = next(p for p in plots if p.get("token") == "1" and not p.get("orchard") and not p.get("greenhouse"))
     assert one["state"] != "fallow", one
 
+    ids = {p["id"] for p in sown["places"]}
+    assert {"bar", "eatery", "star"} <= ids, ids
+    bar = next(p for p in sown["places"] if p["id"] == "bar")
+    assert "点单" in bar["blurb"], bar
+
     try:
         await play_mod.run_play(key, "not_a_tool", "status")
         raise AssertionError("unknown tool should fail")

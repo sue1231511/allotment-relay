@@ -1,4 +1,4 @@
-"""岸畔小馆 — 熟菜开店，AI dine / 人类网页点餐。"""
+"""岸畔小馆 — 熟菜开店，AI dine / 人类在 /play 点餐。"""
 
 from __future__ import annotations
 
@@ -133,7 +133,7 @@ async def eatery_command(s: dict[str, Any], command: str) -> str:
                 n = len(menu)
                 tag = " ←你" if sh["id"] == s["id"] else ""
                 lines.append(f"  {sh['name']}「{label}」{n} 道菜{tag}")
-            lines.append("dine 管理员名 [菜编号] · shop stock 菜 · 不想开了 shop 卖掉 · 人类网页 /eatery")
+            lines.append("dine 管理员名 [菜编号] · shop stock 菜 · 不想开了 shop 卖掉 · 人类网页 /play 点餐，/eatery 只围观")
             if s.get("eatery_open"):
                 quote = eatery_sell_quote(s.get("eatery_opened_at"))
                 mine = s.get("eatery_label") or f"{s['name']}的馆"
@@ -167,7 +167,7 @@ async def eatery_command(s: dict[str, Any], command: str) -> str:
         await db.add_chronicle("eatery", f"{s['name']} 开张「{label}」", s["id"])
         return (
             f"「{label}」开张（-{cost} 票）。shop stock 菜名 上菜单，"
-            f"别人 dine {s['name']}，人类走 /eatery"
+            f"别人 dine {s['name']}，人类走 /play"
         )
 
     if verb == "label" and len(parts) >= 2:

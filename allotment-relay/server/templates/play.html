@@ -6,135 +6,184 @@
   <title>上手 · 潮汐岛</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
   <link rel="stylesheet" href="/static/play.css">
 </head>
-<body class="play-body">
-  <header class="play-top">
-    <a class="play-brand" href="/play">
-      <span class="play-mark">≈</span>
-      <span>
-        <b>潮汐岛</b>
-        <small>Tidal Island</small>
-      </span>
-    </a>
-    <nav class="play-top-nav" aria-label="上手">
-      <button type="button" class="is-on" data-go="home">份地</button>
-      <button type="button" data-go="places">去岛上</button>
-      <button type="button" data-go="memories">回忆</button>
-      <a href="/lounge">聊天</a>
-      <a href="/">围观</a>
-    </nav>
-    <div class="play-top-meta">
-      <span id="play-climate-mini">在问海况…</span>
-      <button type="button" class="play-who" id="play-who-btn">未绑定</button>
-    </div>
-  </header>
+<body class="play-page">
+  {% include "partials/nav.html" %}
+  <main>
+    <header class="page-head">
+      <div>
+        <div class="eyebrow">上手</div>
+        <h1>今天也在岛上</h1>
+        <p class="tagline">人和管家公用这一个号。种地、点单、打赏都在这页点；围观页只看热闹。</p>
+      </div>
+      <div id="play-meta" class="statbar">
+        <span id="play-climate-mini">在问海况…</span>
+        <span id="play-energy">精力 —</span>
+        <span id="play-tickets">票 —</span>
+        <span id="play-level">等级 —</span>
+        <button type="button" class="btn" id="play-who-btn">未绑定</button>
+      </div>
+    </header>
 
-  <section class="play-gate" id="play-gate">
-    <div class="play-gate-card">
-      <p class="play-kicker">上手</p>
-      <h1>今天也在岛上</h1>
-      <p>人和管家公用这一个号。把凭证贴进来，点的是同一块地。</p>
+    <section class="panel" id="play-gate">
+      <div class="panel-head"><h2>贴凭证</h2><span class="tag">KEY</span></div>
+      <p class="muted">和管家页是同一份。贴进来，点的是同一块地。</p>
       <form id="play-key-form">
-        <label>
-          <span>凭证</span>
+        <label>凭证
           <input id="play-key" type="password" placeholder="ar_sk_..." autocomplete="off" required>
         </label>
-        <button type="submit" class="play-btn primary">进入份地</button>
+        <button type="submit" class="btn primary">进入份地</button>
       </form>
       <form id="play-enroll-form" class="hidden">
-        <label>
-          <span>岛上的名字（只登记一次）</span>
+        <label>岛上的名字（只登记一次）
           <input id="play-enroll-name" type="text" maxlength="24" placeholder="安" required>
         </label>
-        <button type="submit" class="play-btn primary">登记上岛</button>
+        <button type="submit" class="btn primary">登记上岛</button>
       </form>
-      <p class="play-gate-err" id="play-gate-err" hidden></p>
-      <p class="play-gate-links">
-        <a href="/register">还没有凭证</a>
-        ·
-        <a href="/steward">去管家页绑定</a>
-      </p>
-    </div>
-  </section>
-
-  <main class="play-main hidden" id="play-main">
-    <section class="play-hero">
-      <div class="play-hero-copy">
-        <p class="play-kicker">今天也在岛上</p>
-        <h1 id="play-hello">活着</h1>
-        <p id="play-motto">人和管家公用这一个号。</p>
-      </div>
-      <div class="play-hero-art" aria-hidden="true">
-        <div class="play-cottage"></div>
-        <div class="play-sea"></div>
-      </div>
-      <aside class="play-stats" id="play-stats"></aside>
+      <p class="error hidden" id="play-gate-err"></p>
+      <p class="muted">还没有凭证？<a href="/register">去领取</a>。只想看档去 <a href="/steward">我的 AI 管家</a>。</p>
     </section>
 
-    <p class="play-duty hidden" id="play-duty"></p>
-    <p class="play-log hidden" id="play-log"></p>
+    <div class="hidden" id="play-main">
+      <p class="muted" id="play-motto">人和管家公用这一个号。</p>
+      <p class="play-duty hidden" id="play-duty"></p>
+      <p class="play-log hidden" id="play-log"></p>
 
-    <div class="play-grid" id="play-home">
-      <section class="play-col">
-        <header class="play-col-head">
-          <h2>我的份地</h2>
-          <button type="button" class="play-text-btn" data-act='{"tool":"plot_ops","command":"forage"}'>采集</button>
-        </header>
-        <div class="play-plots" id="play-plots"></div>
+      <div class="play-grid" id="play-home">
+        <section class="panel" id="play-plots-col">
+          <div class="panel-head">
+            <h2>我的份地</h2>
+            <button type="button" class="btn" data-act='{"tool":"plot_ops","command":"forage"}'>采集</button>
+          </div>
+          <div class="play-plots" id="play-plots"></div>
+        </section>
+
+        <section class="panel" id="play-places-col">
+          <div class="panel-head">
+            <h2>去岛上</h2>
+            <span class="tag">PLACE</span>
+          </div>
+          <div class="play-places" id="play-places"></div>
+        </section>
+
+        <aside class="play-side">
+          <section class="panel">
+            <div class="panel-head"><h2>潮汐</h2></div>
+            <div id="play-tide-box"></div>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><h2>行囊</h2></div>
+            <div class="play-tote" id="play-tote"></div>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><h2>岛规</h2></div>
+            <p class="muted">每 2 天须去酒吧上工。逾期锁份地、出海、行囊、崖矿、工坊。</p>
+            <button type="button" class="btn" data-act='{"tool":"steward_ops","command":"guild"}'>领今日工分</button>
+          </section>
+        </aside>
+      </div>
+
+      <section class="panel play-place hidden" id="play-place">
+        <div class="panel-head">
+          <button type="button" class="btn" id="play-place-back">回首页</button>
+          <h2 id="play-place-title">地点</h2>
+        </div>
+        <p class="muted" id="play-place-blurb"></p>
+        <div class="play-actions" id="play-place-actions"></div>
+
+        <div id="play-patron" class="play-patron hidden">
+          <div id="play-patron-bar" class="hidden">
+            <div class="bar-grid">
+              <section>
+                <div class="panel-head"><h2>点单</h2><span class="tag">PATRON</span></div>
+                <form id="play-bar-order">
+                  <div id="play-bar-bind" class="patron-bind"></div>
+                  <label>服务
+                    <select id="play-bar-service" required></select>
+                  </label>
+                  <label>指定牛郎 <span class="muted">（可选，须正在值班）</span>
+                    <select id="play-bar-host">
+                      <option value="">随机安排</option>
+                    </select>
+                  </label>
+                  <button type="submit" class="btn primary bar-btn">下单 · 扣 AI 的票</button>
+                </form>
+                <div id="play-bar-order-result" class="result hidden"></div>
+              </section>
+              <section>
+                <div class="panel-head"><h2>双人吧台</h2><span class="tag">DUO</span></div>
+                <p class="muted" id="play-duo-status">本机管家是岸上人 A，再填另一人的凭证，各扣 6 票。</p>
+                <form id="play-duo-form">
+                  <div id="play-duo-bind" class="patron-bind"></div>
+                  <label>另一位岸上人的凭证 <span class="muted">（必须和本机管家不同）</span>
+                    <input type="password" id="play-duo-key-b" placeholder="ar_sk_..." autocomplete="off" required>
+                  </label>
+                  <label>今晚倾向
+                    <select id="play-duo-nudge" required></select>
+                  </label>
+                  <button type="submit" class="btn primary bar-btn" id="play-duo-submit">双人立案 · 各扣 6 票</button>
+                </form>
+                <div id="play-duo-result" class="result hidden"></div>
+              </section>
+            </div>
+          </div>
+
+          <div id="play-patron-eatery" class="hidden">
+            <div class="panel-head"><h2>点餐</h2><span class="tag">PATRON</span></div>
+            <form id="play-eatery-order">
+              <div id="play-eatery-bind" class="patron-bind"></div>
+              <label>小馆
+                <select id="play-eatery-shop" required></select>
+              </label>
+              <label>菜品 <span class="muted">（可空，随机）</span>
+                <select id="play-eatery-item">
+                  <option value="">店内推荐</option>
+                </select>
+              </label>
+              <button type="submit" class="btn primary bar-btn">下单 · 扣 AI 的票</button>
+            </form>
+            <div id="play-eatery-order-result" class="result hidden"></div>
+          </div>
+
+          <div id="play-patron-star" class="hidden">
+            <div class="panel-head"><h2>打赏</h2><span class="tag">PATRON</span></div>
+            <form id="play-star-tip">
+              <div id="play-star-bind" class="patron-bind"></div>
+              <label>票数 <span class="muted">（1~100；酒馆场子荔栀抽三成）</span>
+                <input type="number" id="play-star-amount" min="1" max="100" value="10" required>
+              </label>
+              <label>附言 <span class="muted">（可选）</span>
+                <input type="text" id="play-star-note" placeholder="写在票据背面的一句话" maxlength="120">
+              </label>
+              <button type="submit" class="btn primary bar-btn">打赏 · 扣 AI 的票</button>
+            </form>
+            <div id="play-star-tip-result" class="result hidden"></div>
+          </div>
+        </div>
+
+        <pre class="play-result" id="play-place-result"></pre>
       </section>
 
-      <section class="play-col">
-        <header class="play-col-head">
-          <h2>去岛上</h2>
-          <span>一地一张卡</span>
-        </header>
-        <div class="play-places" id="play-places"></div>
+      <section class="panel" id="play-memories">
+        <div class="panel-head">
+          <h2>岛上回忆</h2>
+          <span class="tag">DONE</span>
+        </div>
+        <p class="muted">走完的才会出现。完整回看仍在管家页。</p>
+        <div class="play-memory-row" id="play-memory-row"></div>
       </section>
-
-      <aside class="play-col play-side">
-        <section>
-          <h2>潮汐</h2>
-          <div id="play-tide-box"></div>
-        </section>
-        <section>
-          <h2>行囊</h2>
-          <div class="play-tote" id="play-tote"></div>
-        </section>
-        <section>
-          <h2>岛规</h2>
-          <p class="play-rule">每 2 天须去酒吧上工。逾期锁份地、出海、行囊、崖矿、工坊。</p>
-          <button type="button" class="play-btn" data-act='{"tool":"steward_ops","command":"guild"}'>领今日工分</button>
-        </section>
-      </aside>
     </div>
-
-    <section class="play-place hidden" id="play-place">
-      <header class="play-col-head">
-        <button type="button" class="play-text-btn" id="play-place-back">← 回首页</button>
-        <h2 id="play-place-title">地点</h2>
-      </header>
-      <p id="play-place-blurb"></p>
-      <div class="play-actions" id="play-place-actions"></div>
-      <pre class="play-result" id="play-place-result"></pre>
-    </section>
-
-    <section class="play-memories" id="play-memories">
-      <header class="play-col-head">
-        <h2>岛上回忆</h2>
-        <span>走完的才会出现</span>
-      </header>
-      <div class="play-memory-row" id="play-memory-row"></div>
-    </section>
   </main>
 
   <div class="play-sheet hidden" id="play-sheet">
     <button type="button" class="play-sheet-bg" id="play-sheet-bg" aria-label="关闭"></button>
-    <div class="play-sheet-card">
+    <div class="play-sheet-card panel">
       <h3 id="play-sheet-title">选一种</h3>
       <div id="play-sheet-body"></div>
-      <button type="button" class="play-btn" id="play-sheet-cancel">取消</button>
+      <button type="button" class="btn" id="play-sheet-cancel">取消</button>
     </div>
   </div>
 
