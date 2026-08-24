@@ -1,0 +1,515 @@
+/* 份地全景 — 围观实况（独立前缀，避开全局地点海报样式） */
+
+.allo-page {
+  --allo-green: #5f755f;
+  --allo-ink: #27312c;
+  --allo-muted: #6f7973;
+  --allo-line: rgba(39, 49, 44, .13);
+  --allo-paper: #f7f3eb;
+  background:
+    radial-gradient(circle at 8% -4%, rgba(95, 117, 95, .10), transparent 28%),
+    #eeeae1;
+  color: var(--allo-ink);
+}
+
+.allo-page main.allo-shell {
+  width: min(1260px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 48px;
+}
+
+.allo-page .eyebrow {
+  font-size: 9px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--allo-green);
+  margin-bottom: 0;
+}
+
+.allo-page .allo-stage {
+  position: relative;
+  min-height: 760px;
+  margin: 0 0 14px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 49%, rgba(255, 255, 255, .08), transparent 22%),
+    linear-gradient(145deg, #667d67 0%, #768a73 48%, #667a65 100%);
+  color: #f7f4ea;
+  border-radius: 34px;
+  box-shadow: 0 22px 60px rgba(47, 61, 51, .10);
+}
+
+.allo-page .allo-stage::before {
+  content: "";
+  position: absolute;
+  inset: -6% -4%;
+  background:
+    radial-gradient(ellipse at 50% 52%, transparent 0 28%, rgba(255, 255, 255, .08) 28.3% 28.6%, transparent 29% 38%, rgba(255, 255, 255, .06) 38.2% 38.5%, transparent 39% 50%, rgba(255, 255, 255, .045) 50.2% 50.5%, transparent 51%);
+  transform: rotate(-4deg);
+  animation: allo-rings 14s ease-in-out infinite;
+}
+
+.allo-page .allo-stage::after {
+  content: "";
+  position: absolute;
+  left: 9%;
+  right: 9%;
+  bottom: 98px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .20), transparent);
+}
+
+.allo-page .allo-stage-title {
+  position: absolute;
+  left: 34px;
+  top: 30px;
+  z-index: 4;
+  max-width: 430px;
+}
+
+.allo-page .allo-stage-title .eyebrow {
+  color: rgba(255, 255, 255, .60);
+}
+
+.allo-page .allo-stage-title h1 {
+  margin: 7px 0 0;
+  font-family: "Noto Serif SC", "Songti SC", Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(48px, 6vw, 72px);
+  line-height: .95;
+  letter-spacing: -.05em;
+  color: #f7f4ea;
+}
+
+.allo-page .allo-stage-title p {
+  max-width: 430px;
+  margin: 12px 0 0;
+  color: rgba(255, 255, 255, .70);
+  font-size: 11px;
+  line-height: 1.75;
+}
+
+.allo-page .allo-world {
+  position: absolute;
+  right: 28px;
+  top: 28px;
+  z-index: 4;
+  display: grid;
+  grid-template-columns: repeat(2, 128px);
+  border-top: 1px solid rgba(255, 255, 255, .27);
+  border-left: 1px solid rgba(255, 255, 255, .16);
+}
+
+.allo-page .allo-world div {
+  padding: 10px 11px;
+  border-right: 1px solid rgba(255, 255, 255, .16);
+  border-bottom: 1px solid rgba(255, 255, 255, .16);
+}
+
+.allo-page .allo-world small {
+  display: block;
+  color: rgba(255, 255, 255, .50);
+  font-size: 7px;
+  margin-bottom: 4px;
+}
+
+.allo-page .allo-world strong {
+  display: block;
+  color: #fffaf0;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.allo-page .allo-core {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -48%);
+  width: 350px;
+  height: 350px;
+  border-radius: 50%;
+  z-index: 2;
+}
+
+.allo-page .allo-core::before,
+.allo-page .allo-core::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  inset: 0;
+  border: 1px solid rgba(255, 255, 255, .17);
+}
+
+.allo-page .allo-core::after {
+  inset: 36px;
+  border-color: rgba(255, 255, 255, .10);
+}
+
+.allo-page .allo-core-inner {
+  position: absolute;
+  inset: 76px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .055);
+  border: 1px solid rgba(255, 255, 255, .13);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  animation: allo-core-pulse 5.5s ease-in-out infinite;
+}
+
+.allo-page .allo-core-inner small {
+  color: rgba(255, 255, 255, .50);
+  font-size: 8px;
+  letter-spacing: .13em;
+}
+
+.allo-page .allo-core-inner strong {
+  margin-top: 5px;
+  font-family: "Noto Serif SC", Georgia, serif;
+  font-size: 42px;
+  font-weight: 500;
+  color: #fffaf0;
+}
+
+.allo-page .allo-core-inner span {
+  margin-top: 5px;
+  color: rgba(255, 255, 255, .58);
+  font-size: 8px;
+}
+
+.allo-page .allo-nodes {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+}
+
+.allo-page .allo-node {
+  position: absolute;
+  width: 150px;
+  border: 0;
+  background: none;
+  text-align: left;
+  padding: 0;
+  cursor: pointer;
+  color: #fffaf0;
+  font: inherit;
+}
+
+.allo-page .allo-node::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .88);
+  transform: translateY(-50%);
+  box-shadow: 0 0 0 5px rgba(255, 255, 255, .08);
+}
+
+.allo-page .allo-node-copy {
+  padding-left: 18px;
+  display: block;
+}
+
+.allo-page .allo-node-name {
+  display: block;
+  font-family: "Noto Serif SC", Georgia, serif;
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.allo-page .allo-node-meta {
+  display: block;
+  margin-top: 3px;
+  color: rgba(255, 255, 255, .54);
+  font-size: 8px;
+}
+
+.allo-page .allo-node.is-active .allo-node-name { color: #fff; }
+
+.allo-page .allo-node.is-active::before {
+  background: #fff;
+  box-shadow: 0 0 0 7px rgba(255, 255, 255, .13);
+}
+
+.allo-page .allo-node.is-online .allo-node-meta::after {
+  content: " · 在线";
+  color: rgba(255, 255, 255, .80);
+}
+
+.allo-page .allo-node:nth-child(1) { left: 10%; top: 31%; }
+.allo-page .allo-node:nth-child(2) { left: 8%; top: 50%; }
+.allo-page .allo-node:nth-child(3) { left: 17%; top: 70%; }
+.allo-page .allo-node:nth-child(4) { right: 12%; top: 29%; left: auto; }
+.allo-page .allo-node:nth-child(5) { right: 7%; top: 49%; left: auto; }
+.allo-page .allo-node:nth-child(6) { right: 16%; top: 69%; left: auto; }
+.allo-page .allo-node:nth-child(7) { left: 39%; top: 19%; }
+.allo-page .allo-node:nth-child(8) { left: 42%; top: 75%; }
+
+.allo-page .allo-detail {
+  position: absolute;
+  left: 28px;
+  right: 28px;
+  bottom: 22px;
+  z-index: 7;
+  min-height: 100px;
+  display: grid;
+  grid-template-columns: 1.4fr repeat(5, .55fr);
+  background: rgba(247, 243, 235, .94);
+  color: var(--allo-ink);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 14px 34px rgba(42, 54, 46, .15);
+}
+
+.allo-page .allo-detail-main {
+  padding: 15px 18px;
+  border-right: 1px solid var(--allo-line);
+}
+
+.allo-page .allo-detail-main small {
+  display: block;
+  color: var(--allo-green);
+  font-size: 8px;
+  letter-spacing: .13em;
+}
+
+.allo-page .allo-detail-main h2 {
+  margin: 4px 0 3px;
+  font-family: "Noto Serif SC", Georgia, serif;
+  font-weight: 500;
+  font-size: 23px;
+  color: var(--allo-ink);
+}
+
+.allo-page .allo-detail-main p {
+  margin: 0;
+  color: var(--allo-muted);
+  font-size: 9px;
+}
+
+.allo-page .allo-detail-stat {
+  padding: 14px 12px;
+  border-right: 1px solid var(--allo-line);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.allo-page .allo-detail-stat:last-child { border-right: 0; }
+
+.allo-page .allo-detail-stat small {
+  display: block;
+  color: var(--allo-muted);
+  font-size: 7px;
+  margin-bottom: 4px;
+}
+
+.allo-page .allo-detail-stat strong {
+  display: block;
+  color: var(--allo-green);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.allo-page .allo-lower {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  border-top: 2px solid var(--allo-green);
+  border-bottom: 1px solid var(--allo-line);
+}
+
+.allo-page .allo-lower-sec {
+  min-height: 178px;
+  padding: 14px 18px 14px 0;
+  border-right: 1px solid var(--allo-line);
+}
+
+.allo-page .allo-lower-sec:nth-child(2) { padding-left: 18px; }
+.allo-page .allo-lower-sec:nth-child(3) {
+  padding-left: 18px;
+  border-right: 0;
+}
+
+.allo-page .allo-lower-sec h3 {
+  margin: 5px 0 10px;
+  font-family: "Noto Serif SC", Georgia, serif;
+  font-weight: 500;
+  font-size: 18px;
+}
+
+.allo-page .allo-live,
+.allo-page .allo-rank {
+  display: grid;
+  gap: 8px;
+  align-items: center;
+  padding: 5px 0;
+  border-bottom: 1px solid #e1e4e0;
+  font-size: 9px;
+}
+
+.allo-page .allo-live { grid-template-columns: 7px 1fr auto; }
+.allo-page .allo-live i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--allo-green);
+}
+
+.allo-page .allo-live b,
+.allo-page .allo-rank b { font-weight: 500; }
+
+.allo-page .allo-live span,
+.allo-page .allo-rank span:last-child { color: var(--allo-muted); }
+
+.allo-page .allo-rank { grid-template-columns: 18px 1fr auto; }
+.allo-page .allo-rank span:first-child { color: var(--allo-green); }
+
+.allo-page .allo-contract {
+  padding: 7px 0;
+  border-bottom: 1px solid #e1e4e0;
+}
+
+.allo-page .allo-contract b {
+  font-size: 9px;
+  font-weight: 500;
+}
+
+.allo-page .allo-contract p {
+  margin: 3px 0 0;
+  color: var(--allo-muted);
+  font-size: 8px;
+}
+
+.allo-page .allo-empty {
+  font-size: 9px;
+  color: var(--allo-muted);
+  padding: 6px 0;
+}
+
+.allo-page .allo-chronicle {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 0;
+  padding: 18px 0 18px;
+}
+
+.allo-page .allo-ch-label {
+  border-top: 2px solid var(--allo-green);
+  padding-top: 11px;
+}
+
+.allo-page .allo-ch-label h2 {
+  margin: 5px 0 0;
+  font-family: "Noto Serif SC", Georgia, serif;
+  font-weight: 500;
+  font-size: 19px;
+}
+
+.allo-page .allo-events {
+  border-top: 2px solid var(--allo-green);
+  padding-left: 18px;
+}
+
+.allo-page .allo-event {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid #e1e4e0;
+}
+
+.allo-page .allo-event time {
+  color: var(--allo-muted);
+  font-size: 8px;
+}
+
+.allo-page .allo-event div {
+  font-family: "Noto Serif SC", Georgia, serif;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.allo-page .allo-cta {
+  margin: 8px 0 0;
+  font-size: 11px;
+}
+
+.allo-page .allo-cta a {
+  color: var(--allo-green);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(95, 117, 95, .28);
+}
+
+@keyframes allo-rings {
+  0%, 100% { opacity: .85; transform: rotate(-4deg) scale(1); }
+  50% { opacity: 1; transform: rotate(-2deg) scale(1.02); }
+}
+
+@keyframes allo-core-pulse {
+  0%, 100% { background: rgba(255, 255, 255, .055); }
+  50% { background: rgba(255, 255, 255, .09); }
+}
+
+@media (max-width: 900px) {
+  .allo-page .allo-stage { min-height: 900px; }
+  .allo-page .allo-world { grid-template-columns: repeat(2, 110px); }
+  .allo-page .allo-node:nth-child(n) {
+    position: static;
+    width: auto;
+    left: auto;
+    right: auto;
+    top: auto;
+  }
+  .allo-page .allo-nodes {
+    top: 220px;
+    left: 24px;
+    right: 24px;
+    bottom: 160px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 28px;
+    align-content: center;
+  }
+  .allo-page .allo-core { opacity: .45; }
+  .allo-page .allo-detail {
+    grid-template-columns: 1.2fr repeat(2, .6fr);
+  }
+  .allo-page .allo-detail-stat:nth-last-child(-n+3) { display: none; }
+}
+
+@media (max-width: 620px) {
+  .allo-page main.allo-shell { width: min(100% - 20px, 1260px); }
+  .allo-page .allo-stage-title { left: 22px; top: 22px; }
+  .allo-page .allo-world { display: none; }
+  .allo-page .allo-nodes { grid-template-columns: 1fr; }
+  .allo-page .allo-detail {
+    left: 12px;
+    right: 12px;
+    grid-template-columns: 1fr 1fr;
+  }
+  .allo-page .allo-detail-main { grid-column: 1 / 3; }
+  .allo-page .allo-lower { grid-template-columns: 1fr; }
+  .allo-page .allo-lower-sec,
+  .allo-page .allo-lower-sec:nth-child(2),
+  .allo-page .allo-lower-sec:nth-child(3) {
+    padding: 14px 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--allo-line);
+  }
+  .allo-page .allo-chronicle { grid-template-columns: 1fr; }
+  .allo-page .allo-events { padding-left: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .allo-page .allo-stage::before,
+  .allo-page .allo-core-inner {
+    animation: none;
+  }
+}

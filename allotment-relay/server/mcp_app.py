@@ -94,7 +94,7 @@ async def relay_manual() -> str:
     return await game.relay_manual()
 
 
-@mcp.tool(description="管理员身份与档案。command 写一整句，不要编造子命令。例子：enroll 安 · sheet · 邻居 · 成就 · 称呼 逾篱客 · guild · board tickets。空 command=看自己的档（含全服脉冲/周潮天灾：人类一周一次、低中高随机、只冲3万以上）。等级 1～99，跟累计入账走，满级「潮汐本尊」。新号必须先 enroll。人类网页 /play 点按同一套 command，和 AI 共用一个号；点单打赏、聊天、看档、邻居名册都只在 /play。主页管去哪；/bar /tide /market /eatery /board /huts /star 围观实况，其余地点页是海报。不会就 help。")
+@mcp.tool(description="管理员身份与档案。command 写一整句，不要编造子命令。例子：enroll 安 · sheet · 邻居 · 成就 · 称呼 逾篱客 · guild · board tickets。空 command=看自己的档（含全服脉冲/周潮天灾：人类一周一次、低中高随机、只冲3万以上）。等级 1～99，跟累计入账走，满级「潮汐本尊」。新号必须先 enroll。人类网页 /play 点按同一套 command，和 AI 共用一个号；点单打赏、聊天、看档、邻居名册都只在 /play。主页管去哪；/bar /tide /market /eatery /board /huts /star /allotments 围观实况，其余地点页是海报。不会就 help。")
 async def steward_ops(
     command: Annotated[str, Field(description="子命令整句。enroll 安 / sheet / 邻居 / 在线 / 成就 / 称呼 逾篱客 / 领奖 / peer 名字 / guild / board tickets|level / help。空=sheet（会显示脉冲和周潮天灾）。等级 1～99，满级潮汐本尊。邻居=全员名册（找人偷菜/assist 用这个）。人类网页 /board 是全服榜围观。不要发明其它动词。")] = "sheet",
     name: Annotated[str, Field(description="enroll 时的管理员名字，也可写在 command 里")] = "",
@@ -108,9 +108,9 @@ async def steward_ops(
     )
 
 
-@mcp.tool(description="份地与果园农事。command 写一整句，不要编造 sow_all/plant/harvest。例子：status · sow 1 甘蓝 · 果园 sow 1 芒果 · sow 园1 橘子 · sow 棚1 橘子 · sow 棚1 甘蓝 · sow 99 甘蓝 · tend · 浇水 1 · 施肥 1 · gather 1 · gather 园1 · forage · catalog · weather · 偷菜 安 · amends 安 · 买地 · 买地 确认 · 买园 · 买园 确认 · 买棚 · 买棚 确认 · buy 2 甘蓝 · shed erect · camera install 1 · camera check · dove 忽略 · scarecrow 1 · compost 1。份地只种菜；果树进果园或温室（起步 3 树位，无上限，价表同买地）。季节一周一季（春夏秋冬循环）：买种+露天/果园 sow 须当季（甘蓝/甜菜/雾豆/浅海藻全年）；catalog/weather 看当季可种。已种的继续长。温室无上限，第1座 180 票即用，之后 310/500/750… 比份地更贵；棚N 种菜种树都不受季节（sow 99=棚1）。果树按种苗成本有收茬上限，收满枯死（status 看剩N茬）。斑鸠：昼间 sow/tend 每天掷一次碰上才盯梢。买地露天无上限，票价按 80/120/180/260/360… 递推。buy 种子受行囊每格 24 份限制。空 command 列出常用指令，不是看地；看地必须 status。偷菜最多 30%。不会就 help。")
+@mcp.tool(description="份地与果园农事。command 写一整句，不要编造 sow_all/plant/harvest。例子：status · sow 1 甘蓝 · 果园 sow 1 芒果 · sow 园1 橘子 · sow 棚1 橘子 · sow 棚1 甘蓝 · sow 99 甘蓝 · tend · 浇水 1 · 施肥 1 · gather 1 · gather 园1 · forage · catalog · weather · 偷菜 安 · amends 安 · 买地 · 买地 确认 · 买园 · 买园 确认 · 买棚 · 买棚 确认 · buy 2 甘蓝 · shed erect · camera install 1 · camera check · dove 忽略 · scarecrow 1 · compost 1。份地只种菜；果树进果园或温室（起步 3 树位，无上限，价表同买地）。季节一周一季（春夏秋冬循环）：买种+露天/果园 sow 须当季（甘蓝/甜菜/雾豆/浅海藻全年）；catalog/weather 看当季可种。已种的继续长。温室无上限，第1座 180 票即用，之后 310/500/750… 比份地更贵；棚N 种菜种树都不受季节（sow 99=棚1）。果树按种苗成本有收茬上限，收满枯死（status 看剩N茬）。斑鸠：昼间 sow/tend 每天掷一次碰上才盯梢。买地露天无上限，票价按 80/120/180/260/360… 递推。buy 种子受行囊每格 24 份限制。空 command 列出常用指令，不是看地；看地必须 status。偷菜最多 30%。人类网页 /allotments 是份地全景观望，种地在 /play。不会就 help。")
 async def plot_ops(
-    command: Annotated[str, Field(description="子命令整句。status=看地和果园和温室 / 果园=只看果园 / 买棚=看温室价 / catalog / weather / sow 1 甘蓝 / 果园 sow 1 芒果 / sow 园1 橘子 / sow 棚1 橘子 / sow 棚1 甘蓝 / sow 99 甘蓝 / tend / 浇水 1 / 施肥 1 / gather 1 / gather 园1 / forage / 偷菜 名字 / amends 名字 / 买地 / 买地 确认 / 买园 / 买园 确认 / 买棚 / 买棚 确认 / buy 2 甘蓝 / shed erect / chop 园1 / shake 园1 / camera install 1 / camera check / incident scan / repair 12 / dove 忽略|驱赶 / scarecrow 1 / compost 1 / help。份地不种果树。买地/买园都无上限；买棚也无上限但更贵。季节一周一季：买种+露天/果园 sow 须当季，过季会拒；温室种菜种树都不受季节。斑鸠每天掷一次碰上才盯梢。施肥默认耗堆肥。buy 不能超过行囊每格 24。空=常用指令，不是看地。不要发明 sow_all/plant。")] = "",
+    command: Annotated[str, Field(description="子命令整句。status=看地和果园和温室 / 果园=只看果园 / 买棚=看温室价 / catalog / weather / sow 1 甘蓝 / 果园 sow 1 芒果 / sow 园1 橘子 / sow 棚1 橘子 / sow 棚1 甘蓝 / sow 99 甘蓝 / tend / 浇水 1 / 施肥 1 / gather 1 / gather 园1 / forage / 偷菜 名字 / amends 名字 / 买地 / 买地 确认 / 买园 / 买园 确认 / 买棚 / 买棚 确认 / buy 2 甘蓝 / shed erect / chop 园1 / shake 园1 / camera install 1 / camera check / incident scan / repair 12 / dove 忽略|驱赶 / scarecrow 1 / compost 1 / help。份地不种果树。买地/买园都无上限；买棚也无上限但更贵。季节一周一季：买种+露天/果园 sow 须当季，过季会拒；温室种菜种树都不受季节。斑鸠每天掷一次碰上才盯梢。施肥默认耗堆肥。buy 不能超过行囊每格 24。空=常用指令，不是看地。人类种地在 /play；/allotments 是围观实况。不要发明 sow_all/plant。")] = "",
 ) -> str:
     return await mux._call_ops(mux.plot_bundle, _kid(), command)
 

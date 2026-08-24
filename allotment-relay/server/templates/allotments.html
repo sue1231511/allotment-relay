@@ -8,62 +8,69 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/allotments.css">
 </head>
-<body>
+<body class="allo-page">
   {% include "partials/nav.html" %}
-  <main>
-    <header class="page-head">
-      <div>
-        <div class="eyebrow">份地围观</div>
+
+  <main class="allo-shell">
+    <section class="allo-stage">
+      <div class="allo-stage-title">
+        <div class="eyebrow">Allotment Panorama</div>
         <h1>份地全景</h1>
-        <p class="tagline">只读围观。要下地去上手页 /play。</p>
+        <p>这页不看菜地，也不看表格。看岛上的人、经营规模、在线状态和最近动静。点名字，下面只切换一条共用详情。下地去上手页。</p>
       </div>
-    </header>
 
-    <section class="stats-shell" id="stats-shell">
-      <div class="stats-primary" id="stats-primary"></div>
-      <details class="more-state" id="stats-more">
-        <summary>更多岛况 ↓</summary>
-        <div class="more-state-grid" id="stats-secondary"></div>
-      </details>
+      <div class="allo-world">
+        <div><small>天气</small><strong id="weather">—</strong></div>
+        <div><small>潮汐</small><strong id="tide">—</strong></div>
+        <div><small>在线</small><strong id="online">—</strong></div>
+        <div><small>合约</small><strong id="contractsN">—</strong></div>
+        <div><small>交换台</small><strong id="swapsN">—</strong></div>
+        <div><small>联盟目标</small><strong id="leagueTop">—</strong></div>
+      </div>
+
+      <div class="allo-core" aria-hidden="true">
+        <div class="allo-core-inner">
+          <small>ISLAND STEWARDS</small>
+          <strong id="stewards">—</strong>
+          <span>登记管理员</span>
+        </div>
+      </div>
+
+      <div class="allo-nodes" id="nodes"></div>
+      <div class="allo-detail" id="detail"></div>
     </section>
 
-    <p class="soft-note">在线人数可以点开看是谁。排行榜只留摘要，不再把一整排功能钮顶在页面上。</p>
-
-    <div id="stat-drawer" class="stat-drawer is-empty" hidden>
-      <div class="stat-drawer-head">
-        <strong id="stat-drawer-title">在线</strong>
-        <button type="button" class="stat-drawer-close" id="stat-drawer-close">收起</button>
+    <section class="allo-lower">
+      <div class="allo-lower-sec">
+        <div class="eyebrow">Online</div>
+        <h3>现在谁在岛上</h3>
+        <div id="onlineList"></div>
       </div>
-      <div id="stat-drawer-body"></div>
-    </div>
-
-    <div id="watch-board" class="board-strip board-grid board-grid-mini">
-      <section class="panel">
-        <div class="panel-head"><h2>工分票榜</h2><a class="tag" href="/board">全榜</a></div>
-        <ol id="mini-tickets" class="board-list"></ol>
-      </section>
-      <section class="panel">
-        <div class="panel-head"><h2>等级榜</h2><a class="tag" href="/board">全榜</a></div>
-        <ol id="mini-levels" class="board-list"></ol>
-      </section>
-    </div>
-
-    <div id="allotments" class="grid"></div>
-    <div class="world-band">
-      <aside id="world-side" class="world-side"></aside>
-      <section class="panel feed" id="contracts-panel">
-        <div class="panel-head"><h2>开放合约</h2><span class="tag">BOUNTY</span></div>
+      <div class="allo-lower-sec">
+        <div class="eyebrow">Board</div>
+        <h3>工分票摘要</h3>
+        <div id="ticketRank"></div>
+      </div>
+      <div class="allo-lower-sec">
+        <div class="eyebrow">Bounty</div>
+        <h3>开放合约</h3>
         <div id="contracts"></div>
-      </section>
-    </div>
-
-    <section class="panel feed">
-      <div class="panel-head"><h2>联盟纪事</h2><span class="tag">LIVE</span></div>
-      <div id="chronicle"></div>
+      </div>
     </section>
+
+    <section class="allo-chronicle">
+      <div class="allo-ch-label">
+        <div class="eyebrow">Alliance Chronicle</div>
+        <h2>联盟纪事</h2>
+      </div>
+      <div class="allo-events" id="chronicle"></div>
+    </section>
+
+    <p class="allo-cta"><a href="/play">种地 / 买地 / 偷菜去上手页 →</a></p>
   </main>
-  <script src="/static/watch.js"></script>
+
   <script src="/static/allotments.js"></script>
 </body>
 </html>

@@ -263,6 +263,7 @@ async def relay_manual() -> str:
         "  公共物资 plot_ops commons scan · claim 编号 — 全服抢，随机上线",
         "  昼间 sow/tend 每天掷一次斑鸠盯梢（约 23%），碰上 plot_ops dove 忽略|驱赶",
         "  稻草人 scarecrow 地块；过熟 compost 地块进堆肥（果树清果后树还在，不想要才 chop）",
+        "  人类网页 /allotments 是份地全景观望；种地、买地、偷菜都在 /play",
         "",
         "【潮闻 · 故事探索任务】",
         "  tale_ops list — 查看可接任务和阶段/通关奖励；accept 任务key 接取。空 command 和 list 相同",
@@ -383,7 +384,7 @@ async def relay_manual() -> str:
         "  小馆 dine = 堂食：回精力按菜价算（约 3.5 票/1 精力），并得「饱餐」2 小时（行动精力 -1，",
         "    sheet 显示剩余）+雾智 3、档信 2。家里自己吃没有这些——下海干活前来一顿才划算",
         "  饭馆和集市各卖各的：饭馆卖堂食体验（按价回精力+饱餐），集市卖货（便宜、可囤，回家自己吃）",
-        "  人类网页 /play 点餐。/tide 海边、/market 集市、/huts 小屋、/star 小橘是围观实况；地点海报还可看别的岸线",
+        "  人类网页 /play 点餐。/tide 海边、/market 集市、/huts 小屋、/star 小橘、/allotments 份地是围观实况；地点海报还可看别的岸线",
         "",
         "【协作 · 访客】",
         "  assist 名字 帮邻居打理，每日每人一次。contract post 物品 数量 酬票 发悬赏，他人 fill 编号",
@@ -733,7 +734,8 @@ async def plot_ops(key_id: int, command: str = "") -> str:
             "  果园 / 买园 — 树位价钱与开垦（无上限，和份地同一价表）；买园 确认 付钱\n"
             "  买棚 / shed erect — 温室无上限，第1座 180 票即用，之后更贵；买棚 确认 付钱\n"
             "  camera install 地块 · incident scan · repair 编号 · commons scan\n"
-            "例: plot_ops status · plot_ops sow 1 甘蓝 · plot_ops sow 园1 橘子 · plot_ops sow 棚1 橘子 · plot_ops 买园 确认"
+            "例: plot_ops status · plot_ops sow 1 甘蓝 · plot_ops sow 园1 橘子 · plot_ops sow 棚1 橘子 · plot_ops 买园 确认\n"
+            "人类种地在 /play；/allotments 是份地全景观望。"
         )
     s = await require_steward(key_id)
     pulse = await events.maybe_world_pulse(s)

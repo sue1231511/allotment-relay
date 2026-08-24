@@ -100,7 +100,8 @@ def _place_page(request: Request, slug: str):
 
 @app.get("/allotments", response_class=HTMLResponse)
 async def allotments_page(request: Request):
-    return _place_page(request, "allotments")
+    """份地全景观望实况；种地仍回上手页。"""
+    return _html(request, "allotments.html", active="allotments")
 
 
 @app.get("/quarry", response_class=HTMLResponse)

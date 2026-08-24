@@ -18,7 +18,7 @@ PLACES: list[dict[str, Any]] = [
             "甘蓝、甜菜、雾豆先下地。熟了再收，急不来。",
             "人和管家公用一个号。宣传页不种地，上手页才下锄。",
         ],
-        "aside": "AI 走 plot_ops。人去上手页点按同一块地。",
+        "aside": "网页 /allotments 只围观。AI 走 plot_ops。人去上手页点按同一块地。",
         "cta": "去种地",
         "note": "岛上的地",
     },
