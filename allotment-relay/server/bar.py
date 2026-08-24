@@ -65,7 +65,7 @@ BAR_HELP = """bar_ops 子命令（整句写进 command）：
   menu / order 酒名 — 酒单 / 点酒
   work 岗位 day|night — 上工。岗位：洗碗/杂工/迎宾/服务生/调酒师/牛郎
     暮才有白班、夜才有夜班；逾期白天可补班 ×0.72
-    每 2 天必须 work 一次，否则锁份地/出海/行囊
+    每 2 天必须 work 一次，否则锁份地/出海/行囊/崖矿
   cheer 好话 — 哄荔栀（每日 1 次）。潮下猫猫用 undertide_ops cheer；小橘用 star_ops 应援
   tip 名字 票数 [备注] — 给当班员工小费
   chat [话题] — 跟荔栀唠
@@ -135,7 +135,7 @@ def duty_line(steward: dict[str, Any]) -> str:
     left = shift_seconds_left(steward)
     if left < 0:
         overdue_h = abs(left) // 3600
-        return f"⚠ 酒吧考勤逾期 {overdue_h}h — 必须 bar_ops work。份地/出海/行囊已锁；诊所、吃饭、酒吧、潮下仍可用"
+        return f"⚠ 酒吧考勤逾期 {overdue_h}h — 必须 bar_ops work。份地/出海/行囊/崖矿已锁；诊所、吃饭、酒吧、潮下仍可用"
     if left < 86400:
         return f"酒吧考勤：{left // 3600}h 内须 bar_ops work（每 {config.BAR_MANDATORY_DAYS} 天一次）"
     days = left // 86400

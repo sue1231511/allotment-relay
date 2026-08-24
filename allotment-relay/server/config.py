@@ -55,6 +55,7 @@ LEAGUE_GOALS = [
     {"key": "honey", "item": "honey", "target": 8, "label": "蜂糖周"},
     {"key": "shell_catseye", "item": "shell_catseye", "target": 10, "label": "猫眼螺周"},
     {"key": "egg", "item": "egg", "target": 16, "label": "鲜蛋周"},
+    {"key": "quarry_salt", "item": "quarry_salt", "target": 8, "label": "盐晶周"},
 ]
 
 BADGES = [
@@ -258,6 +259,38 @@ BEACH_PROBE_COOLDOWN = 900
 BEACH_ENERGY = 8
 BEACH_PROBE_ENERGY = 5
 SCARECROW_COST = {"drift_twine": 2, "compost": 1}
+
+# 盐风崖 — 潮脉矿。比赶海 / 钓鱼更慢更费：镐更贵、冷却更长、空挥更高、洗矿亏份。
+# 涨潮关的是赶海 dig，崖矿不关，但湿滑更难挖。
+QUARRY_START_CLAIMS = 1
+QUARRY_PROSPECT_ENERGY = 8          # 同赶海 dig，另加 18% 空探
+QUARRY_PROSPECT_COOLDOWN = 1200     # 20 分钟；赶海 probe 15 分钟
+QUARRY_PROSPECT_EMPTY = 0.18
+QUARRY_HEW_COOLDOWN = 2400          # 每坑 40 分钟
+QUARRY_HEW_GLOBAL_COOLDOWN = 2160   # 全坑共用 36 分钟；赶海 dig 30 分钟且无全局锁
+QUARRY_HEW_DAILY_CAP = 8            # 钓鱼无日限
+QUARRY_WASH_RAW_PER = 2             # 2 原矿 → 1 精矿
+QUARRY_WASH_ENERGY = 6              # 每出 1 份精矿
+QUARRY_WASH_FAIL = 0.12
+QUARRY_HAZARD_CHANCE = 0.16         # 赶海致病 10%
+QUARRY_FLOOD_EMPTY = 0.08
+QUARRY_FLOOD_ENERGY = 2
+QUARRY_GALE_EMPTY = 0.06
+QUARRY_NIGHT_ENERGY = 1
+QUARRY_CLAIM_BASE = 90              # 比第 4 块份地 80 票更贵
+QUARRY_PICK_T1_COST = 80            # 铲子 42 / 粗网 28 / 竹竿 30
+
+
+def quarry_claim_cost(idx: int) -> int:
+    """第 (START+1+idx) 个矿坑票价：90 + 40n + 12n²。"""
+    n = max(0, int(idx))
+    return QUARRY_CLAIM_BASE + 40 * n + 12 * n * n
+
+
+def quarry_claim_clear_seconds(idx: int) -> int:
+    """第 (START+1+idx) 个矿坑开凿秒数：35、50、65、80 分钟…"""
+    n = max(0, int(idx))
+    return (35 + 15 * n) * 60
 
 # 厨房 / 冰箱 — 定点菜谱与自由组合分开计次（游戏日换班刷新）
 KITCHEN_RECIPE_COOK_DAILY = 10   # cook 菜名（menu 定点菜）

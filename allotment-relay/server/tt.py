@@ -47,6 +47,7 @@ TOOL_SHOVEL = "tool_shovel"
 TOOL_NET_BASIC = "tool_net_basic"
 TOOL_NET_FINE = "tool_net_fine"
 TOOL_ROD = "tool_rod"
+TOOL_PICK = "tool_pick"
 
 SHOP_EXTRAS: dict[str, dict[str, Any]] = {
     FEED_ANIMAL: {"name": "动物饲料", "emoji": "🌾", "price": 12, "kind": "feed"},
@@ -67,6 +68,10 @@ SHOP_EXTRAS: dict[str, dict[str, Any]] = {
     },
     TOOL_HOE: {"name": "锄头", "emoji": "⛏️", "price": 35, "kind": "tool", "unique": True},
     TOOL_SHOVEL: {"name": "铲子", "emoji": "🪏", "price": 42, "kind": "tool", "unique": True},
+    TOOL_PICK: {
+        "name": "盐风镐", "emoji": "⚒️", "price": config.QUARRY_PICK_T1_COST, "kind": "tool",
+        "unique": True, "gear": ("pick", 1),
+    },
     TOOL_SHEARS: {"name": "剪毛剪刀", "emoji": "✂️", "price": 45, "kind": "tool", "unique": True},
     TOOL_MILKER: {"name": "挤奶器", "emoji": "🥛", "price": 55, "kind": "tool", "unique": True},
 }
@@ -116,6 +121,12 @@ SHOP_ALIASES = {
     "铲": TOOL_SHOVEL,
     "锹": TOOL_SHOVEL,
     "shovel": TOOL_SHOVEL,
+    "盐风镐": TOOL_PICK,
+    "镐": TOOL_PICK,
+    "矿镐": TOOL_PICK,
+    "pick": TOOL_PICK,
+    "pickaxe": TOOL_PICK,
+    "tool_pick": TOOL_PICK,
 }
 
 LOVED_CROPS = {"garlic", "chili", "ginger", "durian"}
@@ -124,12 +135,13 @@ DISLIKED_PREFIXES = ("manure_", "ticket_stub", "wet_note", "deco_junk_")
 
 VISIT_LINES = [
     "杂货店不讲价。好感另算——自己人价写在脸上。",
-    "种子、饲料、渔网、钓竿、蚯蚓饵、锄头铲子，货架上有的都能买。",
+    "种子、饲料、渔网、钓竿、蚯蚓饵、锄头铲子、盐风镐，货架上有的都能买。",
     "送礼可以。别送粪。粪我自己畜栏里有。",
     "75 折是自己人价。别想两天送熟菜刷满——心多了她懒得记账。",
     "心情好的时候会塞东西。别天天来蹲，概率就那一点。",
     "调味料种子在左边。大蒜辣椒姜香茅，厨房没这几样别来跟我哭。",
     "渔具入门在这儿买。更高档带着漂绳去 tide_ops gear upgrade。",
+    "盐风镐是崖矿入门，比铲子和渔网贵。买了就能 quarry_ops 探脉 / 挖。更高档 quarry_ops 升镐。",
     "货架买的种、饲料、工具，系统回收进价九成。退货少亏一点，别当印钞反复倒卖。",
 ]
 
@@ -356,6 +368,15 @@ async def _unique_blocked(
     grant = meta.get("gear")
     if grant:
         kind, tier = grant
+        if kind == "pick":
+            from . import quarry as quarry_mod
+            prof = await quarry_mod.ensure_profile(conn, steward_id)
+            if int(prof["pick_tier"]) >= int(tier):
+                return (
+                    f"{_item_label(item)}这档已经有了（镐 T{prof['pick_tier']}）。"
+                    "更高档 `quarry_ops 升镐`"
+                )
+            return None
         from . import gear as gear_mod
         g = await gear_mod.get_gear(conn, steward_id)
         if g[kind] >= tier:
@@ -374,6 +395,10 @@ async def _grant_shop_gear(
     if not grant:
         return ""
     kind, tier = grant
+    if kind == "pick":
+        from . import quarry as quarry_mod
+        got = await quarry_mod.set_min_pick_tier(conn, steward_id, int(tier))
+        return f" · 镐升至 T{got}（quarry_ops 探脉 / 挖）"
     if kind not in ("net", "rod", "bait"):
         return ""
     from . import gear as gear_mod

@@ -52,9 +52,9 @@ WEATHER_NOW = {
     "gale": "阵风：生长未 tend ×1.60 / 已 tend ×1.35（放任长得快，但虫害/野兽/被薅也专挑没人看的地）；意外 ×1.45；出海失败 +0.12；黑旗战力 −8",
 }
 TIDE_NOW = {
-    "ebb": "退潮：赶海 dig 贝壳/渔获权重↑",
-    "slack": "平潮：probe 掏洞（权重略补）",
-    "flood": "涨潮：dig 和 probe 都不可用，只有 beach scan 还能看一眼",
+    "ebb": "退潮：赶海 dig 贝壳/渔获权重↑；崖矿铁砂床/页岩层更肥",
+    "slack": "平潮：probe 掏洞（权重略补）；崖矿铜绿缝略肥",
+    "flood": "涨潮：dig 和 probe 都不可用，只有 beach scan 还能看一眼；崖矿不关，盐脉更肥",
 }
 PHASE_NOW = {
     "day": "昼：斑鸠只在这时出现；酒吧默认打烊（逾期补班票 ×0.72）",
@@ -74,7 +74,7 @@ def climate_report() -> str:
         WEATHER_NOW[w],
         TIDE_NOW[t],
         PHASE_NOW[p],
-        "查法：plot_ops weather · plot_ops catalog · steward_ops sheet · relay_manual",
+        "查法：plot_ops weather · plot_ops catalog · quarry_ops status · steward_ops sheet · relay_manual",
     ])
 
 

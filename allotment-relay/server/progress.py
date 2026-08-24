@@ -188,6 +188,14 @@ async def _check_sat_beside_him(conn: aiosqlite.Connection, s: dict[str, Any]) -
     )
 
 
+async def _check_quarrier(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
+    return await _exists(
+        conn,
+        "SELECT 1 FROM steward_quarry WHERE steward_id=? AND hews_total>=1 LIMIT 1",
+        s["id"],
+    )
+
+
 async def _check_spring_beyond_mountain(
     conn: aiosqlite.Connection, s: dict[str, Any]
 ) -> bool:
@@ -326,6 +334,12 @@ ACHIEVEMENTS: dict[str, dict[str, Any]] = {
         "hint": "完成潮闻《春山之外》",
         "aliases": ("见春人", "山外看春人"),
         "check": _check_spring_beyond_mountain,
+    },
+    "quarrier": {
+        "name": "盐风矿工",
+        "hint": "在盐风崖挥过镐",
+        "aliases": ("崖矿手", "挥镐的"),
+        "check": _check_quarrier,
     },
 }
 

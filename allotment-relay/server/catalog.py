@@ -177,6 +177,10 @@ def resolve_item_key(token: str, *, prefer: str = "any") -> str | None:
     if raw in ("牛粪", "💩牛粪"):
         return "manure_cow"
 
+    ore = resolve_ore_key(raw)
+    if ore:
+        return ore
+
     for fk, meta in SEA_CATCH.items():
         if meta["name"] == raw:
             return f"fish_{fk}"
@@ -435,6 +439,8 @@ HUT_SOFT = {
                "hint": "hut_ops 冰柜 存/取 生鲜；基础 30 种各最多叠 24 份，满了 hut_ops 潮柜 扩（12票/格，顶 60）"},
     "compost_bin": {"name": "堆肥桶", "cost": 46, "emoji": "🪣",
                     "hint": "hut_ops 堆肥桶 存 羊粪 3｜取 堆肥 2。粪便不能进潮柜；丢进去按层沤，满 7 层结 1 份堆肥"},
+    "miner_lamp": {"name": "盐风矿灯", "cost": 42, "emoji": "🪔",
+                   "hint": "崖矿 hew / 挖 精力 -1（T1 仍约 16，比赶海/撒网费）。不是赶海灯"},
 }
 
 TOOLS = {
@@ -443,6 +449,154 @@ TOOLS = {
     "net_basic": {"name": "粗渔网", "cost": 28, "emoji": "🕸️", "fish_bonus": 0.0, "energy": 10},
     "net_fine": {"name": "细渔网", "cost": 75, "emoji": "🎣", "fish_bonus": 0.18, "energy": 7},
 }
+
+# 盐风崖矿石。raw 可 quarry_ops 洗 成 refined（2 原矿 → 1 精矿，卖价约翻倍，也能拿去升镐）
+QUARRY_ORES = {
+    "quarry_salt_sand": {
+        "name": "海盐砂", "emoji": "🧂", "sell": 8, "kind": "raw",
+        "refined": "quarry_salt", "aliases": ("盐砂", "海盐沙", "salt_sand"),
+    },
+    "quarry_salt": {
+        "name": "海盐晶", "emoji": "💎", "sell": 16, "kind": "refined",
+        "raw": "quarry_salt_sand", "aliases": ("盐晶", "海盐", "salt_crystal"),
+    },
+    "quarry_shale": {
+        "name": "页岩块", "emoji": "🪨", "sell": 6, "kind": "raw",
+        "refined": "quarry_brick", "aliases": ("页岩", "shale"),
+    },
+    "quarry_brick": {
+        "name": "页岩砖", "emoji": "🧱", "sell": 14, "kind": "refined",
+        "raw": "quarry_shale", "aliases": ("岩砖", "shale_brick"),
+    },
+    "quarry_copper": {
+        "name": "铜锈矿", "emoji": "🟠", "sell": 12, "kind": "raw",
+        "refined": "quarry_copper_bar", "aliases": ("铜矿", "铜锈", "copper_ore"),
+    },
+    "quarry_copper_bar": {
+        "name": "铜锭", "emoji": "🔶", "sell": 24, "kind": "refined",
+        "raw": "quarry_copper", "aliases": ("铜条", "copper_ingot"),
+    },
+    "quarry_iron": {
+        "name": "铁砂", "emoji": "⚫", "sell": 14, "kind": "raw",
+        "refined": "quarry_iron_bar", "aliases": ("铁矿", "iron_sand"),
+    },
+    "quarry_iron_bar": {
+        "name": "铁锭", "emoji": "⛓️", "sell": 28, "kind": "refined",
+        "raw": "quarry_iron", "aliases": ("铁条", "iron_bar"),
+    },
+    "quarry_tide": {
+        "name": "潮纹矿", "emoji": "🌀", "sell": 22, "kind": "raw",
+        "refined": "quarry_tide_stone", "aliases": ("潮矿", "tide_ore"),
+    },
+    "quarry_tide_stone": {
+        "name": "潮纹石", "emoji": "💠", "sell": 48, "kind": "refined",
+        "raw": "quarry_tide", "aliases": ("潮石", "tide_stone"),
+    },
+    "quarry_fog": {
+        "name": "雾铅砂", "emoji": "🌫️", "sell": 26, "kind": "raw",
+        "refined": "quarry_fog_lead", "aliases": ("雾铅矿", "fog_sand"),
+    },
+    "quarry_fog_lead": {
+        "name": "雾铅", "emoji": "🪙", "sell": 56, "kind": "refined",
+        "raw": "quarry_fog", "aliases": ("铅锭", "fog_lead"),
+    },
+    "quarry_marrow_raw": {
+        "name": "夜光髓原", "emoji": "✨", "sell": 40, "kind": "raw",
+        "refined": "quarry_marrow", "aliases": ("髓原", "marrow_raw"),
+    },
+    "quarry_marrow": {
+        "name": "夜光髓", "emoji": "🌟", "sell": 90, "kind": "refined",
+        "raw": "quarry_marrow_raw", "aliases": ("夜髓", "marrow"),
+    },
+}
+
+# 矿脉：潮汐/天气改权重。涨潮出盐，退潮出铁，海雾出稀有。不是赶海沙滩。
+QUARRY_VEINS = {
+    "salt": {
+        "name": "盐脉", "emoji": "🧂", "raw": "quarry_salt_sand",
+        "min_tier": 1, "weight": 28, "strikes": (3, 5),
+        "tide_bonus": {"flood": 16, "slack": 4, "ebb": -8},
+        "weather_bonus": {"clear": 6, "misty": 0, "gale": -2},
+    },
+    "shale": {
+        "name": "页岩层", "emoji": "🪨", "raw": "quarry_shale",
+        "min_tier": 1, "weight": 26, "strikes": (3, 5),
+        "tide_bonus": {"flood": -4, "slack": 4, "ebb": 8},
+        "weather_bonus": {"clear": 8, "misty": -2, "gale": 2},
+    },
+    "copper": {
+        "name": "铜绿缝", "emoji": "🟠", "raw": "quarry_copper",
+        "min_tier": 1, "weight": 16, "strikes": (3, 4),
+        "tide_bonus": {"flood": 0, "slack": 12, "ebb": 2},
+        "weather_bonus": {"clear": 0, "misty": 6, "gale": -2},
+    },
+    "iron": {
+        "name": "铁砂床", "emoji": "⚫", "raw": "quarry_iron",
+        "min_tier": 2, "weight": 12, "strikes": (3, 4),
+        "tide_bonus": {"flood": -8, "slack": 2, "ebb": 14},
+        "weather_bonus": {"clear": 0, "misty": -2, "gale": 10},
+    },
+    "tide": {
+        "name": "潮纹脉", "emoji": "🌀", "raw": "quarry_tide",
+        "min_tier": 3, "weight": 6, "strikes": (2, 3),
+        "tide_bonus": {"flood": 10, "slack": 2, "ebb": -4},
+        "weather_bonus": {"clear": -4, "misty": 12, "gale": 0},
+    },
+    "fog": {
+        "name": "雾铅窝", "emoji": "🌫️", "raw": "quarry_fog",
+        "min_tier": 4, "weight": 4, "strikes": (2, 3),
+        "tide_bonus": {"flood": 0, "slack": 8, "ebb": 2},
+        "weather_bonus": {"clear": -6, "misty": 14, "gale": -2},
+        "phase_bonus": {"night": 6},
+    },
+    "marrow": {
+        "name": "夜光髓窝", "emoji": "✨", "raw": "quarry_marrow_raw",
+        "min_tier": 4, "weight": 2, "strikes": (1, 2),
+        "tide_bonus": {"flood": -4, "slack": 2, "ebb": 6},
+        "weather_bonus": {"clear": -8, "misty": 10, "gale": 0},
+        "phase_bonus": {"night": 10, "dusk": 3, "day": -6},
+    },
+}
+
+# 镐 T0–T5。T1 用 quarry_ops 买镐 或 visit_ops tt buy 盐风镐；更高档只能 quarry_ops 升镐
+PICK_TIERS = [
+    {"tier": 0, "name": "无镐", "energy": 0, "yield": 0.00, "empty": 0.28},
+    {"tier": 1, "name": "盐风镐", "energy": 16, "yield": 0.00, "empty": 0.28, "tickets": 80},
+    {"tier": 2, "name": "铜镐", "energy": 14, "yield": 0.04, "empty": 0.24, "tickets": 95,
+     "need": {"quarry_copper_bar": 3, "quarry_brick": 4}},
+    {"tier": 3, "name": "铁镐", "energy": 13, "yield": 0.08, "empty": 0.20, "tickets": 150,
+     "need": {"quarry_iron_bar": 3, "quarry_copper_bar": 2}},
+    {"tier": 4, "name": "潮纹镐", "energy": 12, "yield": 0.12, "empty": 0.18, "tickets": 210,
+     "need": {"quarry_tide_stone": 2, "quarry_iron_bar": 3}},
+    {"tier": 5, "name": "雾铅镐", "energy": 11, "yield": 0.16, "empty": 0.16, "tickets": 280,
+     "need": {"quarry_fog_lead": 2, "quarry_tide_stone": 1, "quarry_marrow": 1}},
+]
+
+
+def pick_tier_meta(tier: int) -> dict:
+    for row in PICK_TIERS:
+        if row["tier"] == int(tier):
+            return row
+    return PICK_TIERS[0]
+
+
+def resolve_ore_key(token: str) -> str | None:
+    """中文名 / 别名 / 英文 key → 矿石 item id。"""
+    raw = (token or "").strip()
+    if not raw:
+        return None
+    if raw in QUARRY_ORES:
+        return raw
+    low = raw.lower().replace(" ", "_")
+    if low in QUARRY_ORES:
+        return low
+    for key, meta in QUARRY_ORES.items():
+        if meta["name"] == raw or f"{meta['emoji']}{meta['name']}" == raw:
+            return key
+        for alias in meta.get("aliases", ()):
+            if alias == raw or alias.lower() == low:
+                return key
+    return None
 
 # (item, label, qty, weight, price) — weight 越高越常见
 BEACH_LOOT = [
@@ -783,6 +937,11 @@ AILMENTS = {
         "hint": "2D蓝鱼在行囊里跺脚，步子发飘。clinic treat 腿鱼小咒 一次就好",
         "energy_extra": 1,
     },
+    "rock_dust": {
+        "name": "岩尘入肺", "emoji": "🪨", "cost": 16, "health_loss": 9, "health_restore": 12,
+        "hint": "盐风崖挥镐吸进去的。clinic treat 岩尘入肺",
+        "energy_extra": 2,
+    },
 }
 
 PIT_AILMENTS = frozenset({"ring_shock", "pit_trauma"})
@@ -794,6 +953,9 @@ AILMENT_ALIASES = {
     "腿鱼小咒": "legfish_hex",
     "小咒": "legfish_hex",
     "腿鱼": "legfish_hex",
+    "岩尘入肺": "rock_dust",
+    "岩尘": "rock_dust",
+    "矿尘": "rock_dust",
 }
 
 
@@ -1051,7 +1213,9 @@ ITEM_PRICES.update({
     "tool_shears": 45,
     "tool_milker": 55,
     "tool_rod": 30,
+    "tool_pick": 48,
 })
+ITEM_PRICES.update({k: v["sell"] for k, v in QUARRY_ORES.items()})
 ITEM_PRICES.update({k: v["sell"] for k, v in MANURE.items()})
 for k, v in LIVESTOCK.items():
     ITEM_PRICES[f"live_{k}"] = v["buy"]
@@ -1096,7 +1260,9 @@ ITEM_NAMES.update({
     "tool_shears": "✂️剪毛剪刀",
     "tool_milker": "🥛挤奶器",
     "tool_rod": "🎣竹钓竿",
+    "tool_pick": "⚒️盐风镐",
 })
+ITEM_NAMES.update({k: f"{v['emoji']}{v['name']}" for k, v in QUARRY_ORES.items()})
 for _shell_base in ("shell_catseye", "shell_conch", "shell_scallop", "shell_starfish", "shell_mussel"):
     _plain = ITEM_NAMES[_shell_base]
     _suffix = _shell_base.replace("shell_", "")
@@ -1240,6 +1406,8 @@ def satchel_full_message(item: str, have: int, want: int, cap: int) -> str:
         extra = "粪便请 hut_ops 堆肥桶 存，别囤兜里。"
     elif item.startswith(("dish_", "meal_")):
         extra = "熟菜可 hut_ops 冰柜 存 进冰箱。"
+    elif item.startswith("quarry_"):
+        extra = "原矿可 quarry_ops 洗 再卖，或 tote_ops vend。"
     else:
         extra = "先 tote_ops vend，或 hut_ops 冰柜 存 进潮柜。"
     return (

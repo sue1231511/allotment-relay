@@ -1509,6 +1509,38 @@ async def init_db() -> None:
             "ALTER TABLE parcels ADD COLUMN orchard INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN orchard_count INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN greenhouse_count INTEGER NOT NULL DEFAULT 0",
+            """
+            CREATE TABLE IF NOT EXISTS steward_quarry (
+                steward_id INTEGER PRIMARY KEY REFERENCES stewards(id),
+                pick_tier INTEGER NOT NULL DEFAULT 0,
+                claim_count INTEGER NOT NULL DEFAULT 1,
+                last_prospect_at INTEGER NOT NULL DEFAULT 0,
+                last_hew_at INTEGER NOT NULL DEFAULT 0,
+                hews_total INTEGER NOT NULL DEFAULT 0
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS quarry_claims (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                slot INTEGER NOT NULL,
+                vein TEXT NOT NULL DEFAULT '',
+                strikes_left INTEGER NOT NULL DEFAULT 0,
+                ready_at INTEGER NOT NULL DEFAULT 0,
+                last_hew_at INTEGER NOT NULL DEFAULT 0,
+                UNIQUE(steward_id, slot)
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS quarry_rolls (
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                day INTEGER NOT NULL,
+                last_at INTEGER NOT NULL,
+                count INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (steward_id, day)
+            )
+            """,
+            "ALTER TABLE steward_quarry ADD COLUMN last_hew_at INTEGER NOT NULL DEFAULT 0",
         ):
             try:
                 await db.execute(ddl)
