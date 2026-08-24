@@ -54,6 +54,7 @@ STORAGE_ALIASES = {
 STORAGE_USAGE = (
     "用法：hut_ops 冰柜 存 甘蓝 3｜冰柜 取 甘蓝 2"
     "（柜子/潮柜/冰箱同义）。生鲜进潮柜，熟菜进冰箱。"
+    "自由组合熟菜列表会带 dish_mix_… id；取可用中文名或 id（kitchen_ops take 同）。"
     "买潮柜：hut_ops buy cabinet → install soft_N cabinet；"
     "买冰箱：hut_ops buy fridge → install soft_N fridge（也可 buy 冰柜）。"
     f"潮柜基础 {config.CABINET_SLOTS} 格，满了 hut_ops 潮柜 扩（{config.CABINET_SLOT_COST}票/格，顶 {config.CABINET_SLOTS_MAX}）。"
@@ -715,12 +716,68 @@ def _parse_storage_item_qty(tokens: list[str]) -> tuple[str, int]:
         elif raw.startswith("dish_") or raw.startswith("meal_"):
             item = raw
         else:
-            raise ValueError(unknown_item_message(raw))
+            # 留给冰箱按自由组合中文名匹配；cabinet_command 再决定走潮柜还是冰箱
+            item = raw
     return item, qty
 
 
 def _is_cooked_item(item: str) -> bool:
     return item.startswith("dish_") or item.startswith("meal_")
+
+
+def _is_known_bag_item(item: str) -> bool:
+    """已解析成行囊 id（不是裸中文名）。"""
+    if not item:
+        return False
+    if item.startswith(("dish_", "meal_", "crop_", "seed_", "fish_", "meat_",
+                        "shell_", "manure_", "live_", "fit_", "deco_", "tool_",
+                        "quarry_", "dried_", "ut_")):
+        return True
+    from .catalog import ITEM_NAMES, ITEM_PRICES, parse_mix_item
+    if item in ITEM_PRICES or item in ITEM_NAMES:
+        return True
+    return parse_mix_item(item) is not None
+
+
+async def cabinet_command(s: dict[str, Any], rest: list[str]) -> str:
+    verb = rest[0].lower() if rest else "status"
+    if verb in ("status", "list", "看", "柜子", "潮柜", "冰柜", "冰箱"):
+        return await storage_status(s)
+
+    if verb in ("扩", "扩容", "加格", "买格", "expand"):
+        n = 1
+        if len(rest) > 1 and rest[1].isdigit():
+            n = max(1, int(rest[1]))
+        return await cabinet_expand(s, n)
+
+    putting = verb in ("put", "store", "存", "放", "入")
+    taking = verb in ("take", "取", "拿")
+    if not (putting or taking) or len(rest) < 2:
+        raise ValueError(STORAGE_USAGE)
+
+    item, qty = _parse_storage_item_qty(rest[1:])
+    if _is_cooked_item(item):
+        from . import kitchen
+        if putting:
+            return await kitchen.fridge_put(s, item, qty)
+        return await kitchen.fridge_take(s, item, qty)
+
+    # 未解析的中文名：先试冰箱（自由组合熟菜只显示中文名），再走潮柜
+    if not _is_known_bag_item(item):
+        from . import kitchen
+        try:
+            if putting:
+                return await kitchen.fridge_put(s, item, qty)
+            return await kitchen.fridge_take(s, item, qty)
+        except ValueError as exc:
+            msg = str(exc)
+            if "不是熟菜" in msg or "冰箱里没有" in msg or "行囊里没有这道菜" in msg:
+                raise ValueError(unknown_item_message(item)) from None
+            raise
+
+    if putting:
+        return await cabinet_put(s, item, qty)
+    return await cabinet_take(s, item, qty)
 
 
 async def _cabinet_status_text(s: dict[str, Any]) -> str:
@@ -863,33 +920,6 @@ async def cabinet_expand(s: dict[str, Any], n: int = 1) -> str:
         f"潮柜加了 {n} 格（-{cost} 票）。现在 {new_cap}/{config.CABINET_SLOTS_MAX} 格，"
         f"每格最多 {config.CABINET_STACK}。格子跟着人走，卸了柜子再装还在。"
     )
-
-
-async def cabinet_command(s: dict[str, Any], rest: list[str]) -> str:
-    verb = rest[0].lower() if rest else "status"
-    if verb in ("status", "list", "看", "柜子", "潮柜", "冰柜", "冰箱"):
-        return await storage_status(s)
-
-    if verb in ("扩", "扩容", "加格", "买格", "expand"):
-        n = 1
-        if len(rest) > 1 and rest[1].isdigit():
-            n = max(1, int(rest[1]))
-        return await cabinet_expand(s, n)
-
-    putting = verb in ("put", "store", "存", "放", "入")
-    taking = verb in ("take", "取", "拿")
-    if not (putting or taking) or len(rest) < 2:
-        raise ValueError(STORAGE_USAGE)
-
-    item, qty = _parse_storage_item_qty(rest[1:])
-    if _is_cooked_item(item):
-        from . import kitchen
-        if putting:
-            return await kitchen.fridge_put(s, item, qty)
-        return await kitchen.fridge_take(s, item, qty)
-    if putting:
-        return await cabinet_put(s, item, qty)
-    return await cabinet_take(s, item, qty)
 
 
 def _compost_bin_need_msg() -> str:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import random
+import re
 from typing import Any
 
 import aiosqlite
@@ -21,6 +22,7 @@ from .catalog import (
     is_fruit_item,
     is_vegetable_item,
     item_label,
+    mix_item_key,
     parse_mix_item,
     register_mix_item,
     resolve_item_key,
@@ -28,6 +30,9 @@ from .catalog import (
     unknown_item_message,
     is_raw_meat,
 )
+
+# 冰箱/行囊对菜名做宽松匹配：去星标、去 emoji/符号，只留字
+_DISH_NAME_KEEP = re.compile(r"[\w\u4e00-\u9fff]+", re.UNICODE)
 from .game import require_steward
 
 EAT_RULES = (
@@ -180,6 +185,49 @@ def _fridge_label(dish_key: str, stars: int) -> str:
         return item_label(_fridge_satchel_item(dish_key, stars))
 
 
+def _dish_name_norm(token: str) -> str:
+    """中文名/带星/带 emoji → 可比对的纯字串。"""
+    raw = (token or "").strip().replace("★", "").replace("☆", "").replace("*", "")
+    parts = _DISH_NAME_KEEP.findall(raw)
+    return "".join(parts).lower()
+
+
+def _fridge_name_needles(token: str) -> set[str]:
+    raw = (token or "").strip()
+    bare = raw.rstrip("★☆*")
+    out: set[str] = {raw, bare}
+    norm = _dish_name_norm(raw)
+    if norm:
+        out.add(norm)
+    return {x for x in out if x}
+
+
+def _fridge_row_aliases(dish_key: str, stars: int) -> set[str]:
+    """冰箱一格可被匹配的名字：id、中文全名、去星/去 emoji。"""
+    item = _fridge_satchel_item(dish_key, stars)
+    label = _fridge_label(dish_key, stars)
+    aliases = {
+        item,
+        dish_key,
+        label,
+        f"{dish_key}_s{stars}",
+        f"dish_{dish_key}",
+        f"dish_{dish_key}_s{stars}",
+    }
+    bare_label = label.rstrip("★☆*")
+    aliases.add(bare_label)
+    norm = _dish_name_norm(label)
+    if norm:
+        aliases.add(norm)
+    # 自由组合：dish_key 已是 mix_g3_sig，item 是 dish_mix_...
+    mix = parse_mix_item(item)
+    if mix:
+        grade, tier, sig, st = mix
+        aliases.add(f"mix_{grade}{tier}_{sig}")
+        aliases.add(mix_item_key(grade, tier, sig, st))
+    return {x for x in aliases if x}
+
+
 async def _pick_cooked_satchel(
     conn: aiosqlite.Connection, steward_id: int, resolved: str
 ) -> str:
@@ -200,6 +248,25 @@ async def _pick_cooked_satchel(
         )
         for (item,) in await cur.fetchall():
             if item.startswith(resolved + "_s") and _has_star_suffix(item):
+                return item
+    # 自由组合中文名：扫行囊熟菜，按显示名宽松匹配
+    needles = _fridge_name_needles(resolved)
+    if needles:
+        cur = await conn.execute(
+            """
+            SELECT item FROM satchel
+            WHERE steward_id=? AND quantity>0
+              AND (item LIKE 'dish_%' OR item LIKE 'meal_%')
+            ORDER BY item
+            """,
+            (steward_id,),
+        )
+        for (item,) in await cur.fetchall():
+            if parse_mix_item(item):
+                register_mix_item(item)
+            label = item_label(item)
+            hay = {item, label, label.rstrip("★☆*"), _dish_name_norm(label)}
+            if needles & {x for x in hay if x}:
                 return item
     raise ValueError("行囊里没有这道菜")
 
@@ -237,22 +304,37 @@ async def fridge_status_text(s: dict[str, Any]) -> str:
     for r in rows:
         age = db.now() - r["stored_at"]
         stale = " ⚠快过期" if age > expire * 0.85 else ""
-        lines.append(f"  {_fridge_label(r['dish_key'], r['stars'])} x{r['quantity']}{stale}")
-    lines.append("取：hut_ops 冰柜 取 菜名 · kitchen_ops take 菜名")
+        item = _fridge_satchel_item(r["dish_key"], r["stars"])
+        label = _fridge_label(r["dish_key"], r["stars"])
+        # 自由组合只显示中文名会撞名，括号里给可复制的 id（和潮柜一致）
+        lines.append(f"  {label}（{item}） x{r['quantity']}{stale}")
+    lines.append(
+        "取：hut_ops 冰柜 取 菜名或id · kitchen_ops take 菜名"
+        "（自由组合可用中文名或括号里的 dish_mix_…）"
+    )
     return "\n".join(lines)
 
 
 async def fridge_put(s: dict[str, Any], token: str, qty: int = 1) -> str:
     qty = max(1, int(qty))
     resolved = _resolve_cooked_token(token)
-    if not resolved or not is_cooked_item(resolved):
+    # 自由组合中文名解析不到 id 时，仍用原 token 去行囊按显示名找
+    probe = resolved if (resolved and is_cooked_item(resolved)) else (token or "").strip()
+    if not probe:
         raise ValueError(
             f"{token} 不是熟菜。生鲜请 hut_ops 冰柜 存（进潮柜）；熟菜才进冰箱。"
         )
     async with db.connect() as conn:
         if not await _has_fridge(conn, s["id"]):
             raise ValueError(_fridge_need_msg())
-        item = await _pick_cooked_satchel(conn, s["id"], resolved)
+        try:
+            item = await _pick_cooked_satchel(conn, s["id"], probe)
+        except ValueError:
+            if not resolved or not is_cooked_item(resolved):
+                raise ValueError(
+                    f"{token} 不是熟菜。生鲜请 hut_ops 冰柜 存（进潮柜）；熟菜才进冰箱。"
+                ) from None
+            raise
         cur = await conn.execute(
             "SELECT quantity FROM satchel WHERE steward_id=? AND item=?",
             (s["id"], item),
@@ -305,10 +387,9 @@ async def fridge_put(s: dict[str, Any], token: str, qty: int = 1) -> str:
 def _fridge_row_matches(row: dict[str, Any], token: str) -> bool:
     dish_key = row["dish_key"]
     stars = int(row["stars"])
-    item = _fridge_satchel_item(dish_key, stars)
     raw = (token or "").strip()
     bare = raw.rstrip("★☆*")
-    needles: set[str] = {raw, bare}
+    needles = _fridge_name_needles(raw)
     resolved = _resolve_cooked_token(raw)
     if resolved:
         needles.add(resolved)
@@ -323,13 +404,7 @@ def _fridge_row_matches(row: dict[str, Any], token: str) -> bool:
         needles.add(f"dish_{dish}")
         if dish == dish_key:
             return True
-    haystack = {
-        item,
-        dish_key,
-        f"{dish_key}_s{stars}",
-        f"dish_{dish_key}",
-        f"dish_{dish_key}_s{stars}",
-    }
+    haystack = _fridge_row_aliases(dish_key, stars)
     return bool(needles & haystack)
 
 
@@ -484,6 +559,7 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             "  vend 菜名 — 卖掉行囊里的熟菜（中文名也行；家具请 hut_ops 卖掉）\n"
             "  store 菜名 [数量] / fridge / take 菜名 — 冰箱熟菜（小屋要先装 fridge）\n"
             "             也可 hut_ops 冰柜 存|取，生鲜进潮柜、熟菜进冰箱\n"
+            "             自由组合列表带 dish_mix_… id；取可用中文名或 id\n"
             "  brew 材料 — 灶台（回雾智）\n"
             "  shop board — 全服谁在营业的小馆名单（店名和几道菜），不是流水也不是评价\n"
             "  shop dine 店主名 — 下馆子堂食，也能回精力（按菜价，约 3.5 票/1 精力）+「饱餐」2 小时（行动精力 -1）\n"
