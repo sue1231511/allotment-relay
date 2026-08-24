@@ -1162,6 +1162,7 @@ async def init_db() -> None:
             "ALTER TABLE steward_ailments ADD COLUMN last_treat_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE parcels ADD COLUMN ready_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN cabinet_extra INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN satchel_stack_extra INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN worn_title TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE stewards ADD COLUMN reward_level INTEGER NOT NULL DEFAULT 0",
             """
@@ -1920,7 +1921,12 @@ async def add_item(
         return
     if not over_cap:
         from .catalog import item_stack_cap, satchel_full_message
-        cap = item_stack_cap(item)
+        cur = await db.execute(
+            "SELECT satchel_stack_extra FROM stewards WHERE id=?", (steward_id,)
+        )
+        tier_row = await cur.fetchone()
+        stack_tier = int(tier_row[0] or 0) if tier_row else 0
+        cap = item_stack_cap(item, stack_tier=stack_tier)
         cur = await db.execute(
             "SELECT quantity FROM satchel WHERE steward_id = ? AND item = ?",
             (steward_id, item),

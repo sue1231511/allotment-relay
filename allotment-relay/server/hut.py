@@ -18,6 +18,7 @@ from .catalog import (
     MANURE,
     dish_item,
     item_label,
+    item_stack_cap,
     resolve_item_key,
     unknown_item_message,
 )
@@ -728,6 +729,7 @@ def _is_cooked_item(item: str) -> bool:
 
 
 async def _cabinet_status_text(s: dict[str, Any]) -> str:
+    stack_cap = item_stack_cap("crop_kale", stack_tier=int(s.get("satchel_stack_extra") or 0))
     async with db.connect() as conn:
         installed = await has_cabinet(conn, s["id"])
         extra = await _cabinet_extra(conn, s["id"]) if installed else 0
@@ -743,7 +745,7 @@ async def _cabinet_status_text(s: dict[str, Any]) -> str:
     )
     if not rows:
         return (
-            f"潮柜空（{cap} 格，每格最多 {config.CABINET_STACK}）。"
+            f"潮柜空（{cap} 格，每格最多 {stack_cap}）。"
             f"hut_ops 冰柜 存 甘蓝 3。{expand_hint}"
         )
     lines = [f"潮柜 {len(rows)}/{cap}:"]
@@ -786,10 +788,11 @@ async def cabinet_put(s: dict[str, Any], item: str, qty: int) -> str:
                 f"（{config.CABINET_SLOT_COST}票，顶 {config.CABINET_SLOTS_MAX}）"
             )
         stacked = have.get(item, 0)
-        if stacked + qty > config.CABINET_STACK:
+        stack_cap = item_stack_cap(item, stack_tier=int(s.get("satchel_stack_extra") or 0))
+        if stacked + qty > stack_cap:
             raise ValueError(
-                f"{item_label(item)} 这格最多叠 {config.CABINET_STACK} 份（同种货栈上限，防单格囤货），"
-                f"已有 {stacked}。多出来的先 vend 或 cook，或换另一种货占新格。"
+                f"{item_label(item)} 这格最多叠 {stack_cap} 份（同种货栈上限，防单格囤货），"
+                f"已有 {stacked}。多出来的先 vend、cook，或 tote_ops 扩栈。"
             )
         if not await db.take_item(conn, s["id"], item, qty):
             raise ValueError("行囊没有这么多")
@@ -865,7 +868,7 @@ async def cabinet_expand(s: dict[str, Any], n: int = 1) -> str:
         new_cap = cabinet_capacity(extra + n)
     return (
         f"潮柜加了 {n} 格（-{cost} 票）。现在 {new_cap}/{config.CABINET_SLOTS_MAX} 格，"
-        f"每格最多 {config.CABINET_STACK}。格子跟着人走，卸了柜子再装还在。"
+        f"每格最多 {item_stack_cap('crop_kale', stack_tier=int(s.get('satchel_stack_extra') or 0))}。格子跟着人走，卸了柜子再装还在。"
     )
 
 

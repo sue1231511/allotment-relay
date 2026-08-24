@@ -149,14 +149,15 @@ TIDE_HELP = """tide_ops 子命令（整句写进 command）：
   fight/flee/dig/probe/compliment 可省略前缀"""
 
 TOTE_HELP = """tote_ops 子命令（整句写进 command）：
-  list — 行囊（中文名 + 英文 id）。每种最多叠 24 份（和潮柜一样；工具/装件 1）
+  list — 行囊（中文名 + 英文 id）。同种货自动叠放，基础每格 24 份（和潮柜一样；工具/装件 1）
+  扩栈 [数量] — 加每格叠放上限（15票/级，每级+8份，顶 64；行囊/潮柜/冰箱同步）
   gifts [条数] — 查收到的礼物/酒吧打赏（谁送的、送了什么）。也可写 收礼。即时到账，这里只看记录
   vend 物品 数量 — 卖掉。例子：vend 鲭鱼 1 · vend crop_kale 2 · vend 未命名小鱼 1
     Tt酱货架买的种/饲料/工具回收进价九成，退货少亏一成；种下去收成再卖才正经
     卖未命名小鱼会再掷一次小咒事件（可能吐票、走回袋、解开或加重小咒）
-  gift 名字 物品|票 数量 — 送给别人。能直接送票，无手续费、无每日上限。对方行囊满了（24）会拒
+  gift 名字 物品|票 数量 — 送给别人。能直接送票，无手续费、无每日上限。对方行囊满了会拒
   swap offer|claim|list|cancel — 交换台（白送，领取 3 票手续费）
-  market list|sell|buy|price|mine|cancel — 玩家集市。买也不能超过行囊每格 24
+  market list|sell|buy|price|mine|cancel — 玩家集市。买也不能超过行囊每格上限
   market 扩 [数量] — 加摆摊格（15票/格，基础6格，顶12格）"""
 
 QUARRY_HELP = """quarry_ops 子命令（整句写进 command）：

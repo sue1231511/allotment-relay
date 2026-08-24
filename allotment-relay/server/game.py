@@ -321,7 +321,8 @@ async def relay_manual() -> str:
         "【小屋 · 畜栏】",
         "  hut_ops build 建棚屋 → catalog / buy / install 硬装软装。旧家具 hut_ops 卖掉 槽位 确认（折旧回收）",
         "  存菜：buy cabinet 潮柜（生鲜，小偷翻不到）或 buy fridge 冰箱（熟菜），装好后 冰柜 存|取（柜子/潮柜/冰箱同义）",
-        "  潮柜基础 30 种货，每种最多叠 24 份；行囊每种也最多 24（买货/收礼/收成同一上限，对得上）",
+        "  潮柜基础 30 种货；行囊/潮柜/冰箱同种货自动叠放，基础每格 24 份，"
+        "tote_ops 扩栈 花钱加栈（15票/级+8份，顶 64）；潮柜 扩 加货种格数",
         "  粪便不能进潮柜。buy compost_bin → install soft_N compost_bin → hut_ops 堆肥桶 存 羊粪 3｜取 堆肥 2",
         "    跟 MC 堆肥桶差不多：丢粪便涨层，满 7 层结 1 份堆肥（羊粪+2 / 猪粪+3 / 牛粪+4）",
         "  潮柜满了 hut_ops 潮柜 扩（12票/格，顶 60）",
@@ -360,13 +361,13 @@ async def relay_manual() -> str:
         "  Boss tide_ops boss status|attack — 合力打潮渊之主，掉神话章鱼肉。耗精力",
         "",
         "【行囊 · 交换 · 集市】",
-        "  tote_ops list 列出中文名和英文 id（每种 x当前/24）。vend 卖系统回收价；家具走 hut_ops 卖掉",
+        "  tote_ops list 列出中文名和英文 id（每种 x当前/上限）。vend 卖系统回收价；家具走 hut_ops 卖掉",
         "  Tt酱货架买的种/饲料/工具，系统回收进价九成——退货少亏一成，别反复倒卖当印钞",
-        "  买东西（tt buy / plot_ops buy / 集市）不能超过行囊每格 24 份，满了先 vend 或 冰柜 存",
+        "  买东西不能超过行囊每格上限；满了 vend / 冰柜 存 / tote_ops 扩栈",
         "  未命名小鱼 vend 会再掷一次小咒事件（可能吐票、走回袋、解开或加重小咒）",
         "  gifts [条数] — 查谁给你送了什么、酒吧谁给你打赏（即时到账，这里只看记录）。也可写 收礼。tote_ops gifts",
         "  gift 名字 物品|票 数量 [留言] — 送给别人。能直接送票，即时到账，无手续费、无每日上限。票榜看口袋现票，送出会掉名次。协作度 +3",
-        "  随机事件整体 +30%（EVENT_RATE_MULT=1.3）：打理/收成/出海等更容易触发意外或惊喜",
+        "  随机事件整体 +30%（EVENT_RATE_MULT=1.3）：打理/收成/出海等更容易触发意外或惊喜；好事件也可能回一点身体",
         "  swap offer 物品 数量 — 白送挂单；claim 编号领（手续费 3 票，协作度高打折）",
         "  market sell 物品 数量 单价 — 玩家互卖；buy 编号；price 物品 看建议价",
         "  market 扩 [数量] — 加摆摊格（15票/格，基础6格，顶12格）。满了先扩再 sell",
@@ -2221,17 +2222,57 @@ async def swap_ops(key_id: int, command: str) -> str:
     raise ValueError(f"未知 swap 指令: {command}（list/offer/claim/cancel）")
 
 
+async def _satchel_stack_expand(s: dict, n: int = 1) -> str:
+    extra = int(s.get("satchel_stack_extra") or 0)
+    room = config.SATCHEL_STACK_TIERS_MAX - extra
+    if room <= 0:
+        cap = item_stack_cap("crop_kale", stack_tier=config.SATCHEL_STACK_TIERS_MAX)
+        raise ValueError(f"行囊栈已经扩到顶了（每种货最多叠 {cap} 份）")
+    n = max(1, min(int(n), room))
+    cost = n * config.SATCHEL_STACK_COST
+    async with db.connect() as conn:
+        cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
+        tickets = (await cur.fetchone())[0]
+        if tickets < cost:
+            raise ValueError(
+                f"扩栈需要 {cost} 票（每级 {config.SATCHEL_STACK_COST} 票，+{config.SATCHEL_STACK_STEP} 份/格），"
+                f"你只有 {tickets} 票"
+            )
+        await conn.execute(
+            "UPDATE stewards SET tickets=tickets-?, satchel_stack_extra=? WHERE id=?",
+            (cost, extra + n, s["id"]),
+        )
+        await conn.commit()
+    new_tier = extra + n
+    cap = item_stack_cap("crop_kale", stack_tier=new_tier)
+    left = config.SATCHEL_STACK_TIERS_MAX - new_tier
+    hint = f"还能扩 {left} 级" if left else "已到顶"
+    return (
+        f"行囊/潮柜/冰箱每格栈 +{n * config.SATCHEL_STACK_STEP}（-{cost} 票）。"
+        f"同种货自动叠放，现在最多 {cap} 份/格（{hint}）。"
+    )
+
+
 async def _tote_one(s: dict, command: str) -> str:
     parts = command.strip().split()
     verb = parts[0].lower() if parts else "list"
     if verb == "list":
         stock = await db.get_satchel(s["id"])
-        lines = [f"工分票: {s['tickets']}", "行囊每种最多 24 份（和潮柜一样；工具/装件 1）"]
+        tier = int(s.get("satchel_stack_extra") or 0)
+        cap = item_stack_cap("crop_kale", stack_tier=tier)
+        stack_note = (
+            f"行囊同种货自动叠放，每格最多 {cap} 份"
+            f"（基础 {config.SATCHEL_STACK}"
+        )
+        if tier < config.SATCHEL_STACK_TIERS_MAX:
+            stack_note += f"，满了 tote_ops 扩栈，{config.SATCHEL_STACK_COST}票/级+{config.SATCHEL_STACK_STEP}"
+        stack_note += "；工具/装件 1）"
+        lines = [f"工分票: {s['tickets']}", stack_note]
         for item, qty in stock.items():
             price = suggested_price(item) or ITEM_PRICES.get(item, 0)
             name = item_label(item)
-            cap = item_stack_cap(item)
-            stack = f"x{qty}/{cap}"
+            item_cap = item_stack_cap(item, stack_tier=tier)
+            stack = f"x{qty}/{item_cap}"
             if item.startswith("fit_") or item.startswith("deco_"):
                 lines.append(f"  {name} {stack} · {item} · 卖掉走 hut_ops 卖掉")
             else:
@@ -2367,8 +2408,11 @@ async def _tote_one(s: dict, command: str) -> str:
             "礼轻情意重，联盟记一笔",
             "篱边人情：送了就要认",
         ])
+    if verb in ("扩栈", "expand_stack", "stack_expand"):
+        n = _parse_int(parts[1], "数量") if len(parts) >= 2 else 1
+        return await _satchel_stack_expand(s, n)
     raise ValueError(
-        f"未知 tote 指令: {command}（list / gifts / vend 物品 数量 / gift 名字 物品|票 数量 [留言]）"
+        f"未知 tote 指令: {command}（list / gifts / vend 物品 数量 / gift 名字 物品|票 数量 / 扩栈 [数量]）"
     )
 
 

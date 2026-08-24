@@ -28,6 +28,7 @@ from .catalog import (
     suggested_price,
     unknown_item_message,
     is_raw_meat,
+    item_stack_cap,
 )
 from .game import require_steward
 
@@ -257,6 +258,7 @@ def _fridge_need_msg() -> str:
 
 
 async def fridge_status_text(s: dict[str, Any]) -> str:
+    stack_cap = item_stack_cap("dish_salt_crab_s4", stack_tier=int(s.get("satchel_stack_extra") or 0))
     async with db.connect() as conn:
         installed = await _has_fridge(conn, s["id"])
         conn.row_factory = aiosqlite.Row
@@ -274,7 +276,7 @@ async def fridge_status_text(s: dict[str, Any]) -> str:
         )
     if not rows:
         return (
-            f"冰箱空（{config.FRIDGE_SLOTS} 格，每格最多 {config.FRIDGE_STACK}）。"
+            f"冰箱空（{config.FRIDGE_SLOTS} 格，每格最多 {stack_cap}）。"
             "hut_ops 冰柜 存 盐焗沙蟹 · kitchen_ops store 菜名"
         )
     lines = [f"冰箱 {len(rows)}/{config.FRIDGE_SLOTS}:"]
@@ -327,9 +329,12 @@ async def fridge_put(s: dict[str, Any], token: str, qty: int = 1) -> str:
             )
             if (await cur.fetchone())[0] >= config.FRIDGE_SLOTS:
                 raise ValueError(f"冰箱满了（{config.FRIDGE_SLOTS} 格）")
-        elif int(existing[1] or 0) + qty > config.FRIDGE_STACK:
+        elif int(existing[1] or 0) + qty > item_stack_cap(
+            item, stack_tier=int(s.get("satchel_stack_extra") or 0)
+        ):
+            stack_cap = item_stack_cap(item, stack_tier=int(s.get("satchel_stack_extra") or 0))
             raise ValueError(
-                f"冰箱这格最多叠 {config.FRIDGE_STACK} 份（和行囊/潮柜同上限），"
+                f"冰箱这格最多叠 {stack_cap} 份（和行囊/潮柜同上限），"
                 f"已有 {int(existing[1] or 0)}。多出来的先 eat 或 vend。"
             )
         if not await db.take_item(conn, s["id"], item, qty):

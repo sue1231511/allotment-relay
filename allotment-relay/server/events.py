@@ -513,6 +513,13 @@ async def _apply_effects(
             await survival.bump(conn, steward["id"], standing=int(eff.split(":")[1]))
         elif eff.startswith("mist_wit:"):
             await survival.bump(conn, steward["id"], mist_wit=int(eff.split(":")[1]))
+        elif eff.startswith("health:"):
+            amt = int(eff.split(":")[1])
+            await conn.execute(
+                "UPDATE stewards SET health=MIN(100, health+?) WHERE id=?",
+                (amt, steward["id"]),
+            )
+            ledger["health_delta"] = int(ledger.get("health_delta") or 0) + amt
         elif eff.startswith("satiety:"):
             await survival.bump(conn, steward["id"], satiety=int(eff.split(":")[1]))
         elif eff.startswith("voyage_delay:"):
@@ -551,6 +558,11 @@ async def _ledger_lines(
         left = (await cur.fetchone())[0]
         sign = f"+{delta}" if delta > 0 else str(delta)
         lines.append(f"工分票 {sign}（余 {left}）")
+    health_delta = int(ledger.get("health_delta") or 0)
+    if health_delta:
+        cur = await conn.execute("SELECT health FROM stewards WHERE id=?", (steward_id,))
+        body = (await cur.fetchone())[0]
+        lines.append(f"身体 +{health_delta}（现 {body}）")
     return lines
 
 

@@ -279,6 +279,10 @@ def generate_event(
             stand = random.randint(3, 8)
             effects.append(f"standing:{stand}")
             detail_parts.append(flavor.fill(flavor.pick(flavor.GOOD_STANDING), n=stand))
+        elif roll < 0.96 and int(steward.get("health") or 100) < 100:
+            heal = random.randint(3, 8)
+            effects.append(f"health:{heal}")
+            detail_parts.append(flavor.fill(flavor.pick(flavor.GOOD_HEALTH), n=heal))
         else:
             bonus = random.randint(6, 14)
             effects.append(f"ticket_bonus:{bonus}")

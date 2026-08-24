@@ -1634,14 +1634,16 @@ def item_label(item: str) -> str:
     return item
 
 
-def item_stack_cap(item: str) -> int:
-    """行囊每格上限。潮柜同数；工具 / 装件 / 活物只能 1。"""
+def item_stack_cap(item: str, *, stack_tier: int = 0) -> int:
+    """行囊每格上限。潮柜/冰箱同数；同种货自动叠放。工具 / 装件 / 活物只能 1。"""
     from . import config
     if item.startswith(("fit_", "deco_", "live_", "tool_")):
         return 1
     if item in TOOLS:
         return 1
-    return int(config.SATCHEL_STACK)
+    tier = max(0, min(int(config.SATCHEL_STACK_TIERS_MAX), int(stack_tier)))
+    cap = int(config.SATCHEL_STACK) + tier * int(config.SATCHEL_STACK_STEP)
+    return min(int(config.SATCHEL_STACK_MAX), cap)
 
 
 def satchel_full_message(item: str, have: int, want: int, cap: int) -> str:
@@ -1653,10 +1655,10 @@ def satchel_full_message(item: str, have: int, want: int, cap: int) -> str:
     elif item.startswith("quarry_"):
         extra = "原矿可 quarry_ops 洗 再卖，或 tote_ops vend。"
     else:
-        extra = "先 tote_ops vend，或 hut_ops 冰柜 存 进潮柜。"
+        extra = "先 tote_ops vend，或 hut_ops 冰柜 存 进潮柜；也能 tote_ops 扩栈 加每格上限。"
     return (
         f"行囊里 {label} 已有 {have}，再来 {want} 会超过每格 {cap} 份"
-        f"（行囊和潮柜同上限）。{extra}"
+        f"（同种货自动叠放，行囊/潮柜/冰箱同上限）。{extra}"
     )
 
 
