@@ -99,6 +99,13 @@ async def test_buy_prospect_hew_wash() -> None:
 
     item, qty = raw[0]
     from server.catalog import QUARRY_ORES, item_label
+    from server import config
+    need = config.QUARRY_WASH_RAW_PER
+    if qty < need:
+        async with db.connect() as conn:
+            await db.add_item(conn, sid, item, need - qty)
+            await conn.commit()
+        qty = need
     washed = await quarry.quarry_ops(kid, f"洗 {item_label(item)} {qty}")
     assert "洗净" in washed, washed
     refined = QUARRY_ORES[item]["refined"]
@@ -107,7 +114,7 @@ async def test_buy_prospect_hew_wash() -> None:
             "SELECT quantity FROM satchel WHERE steward_id=? AND item=?",
             (sid, refined),
         )).fetchone())
-    assert have and have[0] == qty, have
+    assert have and have[0] == qty // need, have
 
 
 async def test_claim_and_upgrade_gate() -> None:
@@ -116,8 +123,11 @@ async def test_claim_and_upgrade_gate() -> None:
     kid, sid = await _enroll(db, "qc@example.com", "开坑人")
     from server import quarry
 
+    async with db.connect() as conn:
+        await conn.execute("UPDATE stewards SET tickets=tickets+200 WHERE id=?", (sid,))
+        await conn.commit()
     preview = await quarry.quarry_ops(kid, "开坑")
-    assert "50" in preview and "确认" in preview, preview
+    assert "90" in preview and "确认" in preview, preview
     bought = await quarry.quarry_ops(kid, "开坑 确认")
     assert "坑2" in bought, bought
     async with db.connect() as conn:
@@ -185,6 +195,71 @@ async def test_flood_does_not_block_hew() -> None:
     assert hews >= 1
 
 
+async def test_harder_than_beach_and_fish() -> None:
+    from server import config
+    from server.catalog import PICK_TIERS, QUARRY_VEINS
+
+    assert config.QUARRY_PICK_T1_COST > 42
+    assert config.QUARRY_PROSPECT_ENERGY >= config.BEACH_ENERGY
+    assert config.QUARRY_PROSPECT_COOLDOWN > config.BEACH_PROBE_COOLDOWN
+    assert config.QUARRY_HEW_GLOBAL_COOLDOWN > config.BEACH_COOLDOWN
+    assert config.QUARRY_WASH_RAW_PER == 2
+    assert config.QUARRY_HEW_DAILY_CAP == 8
+    assert QUARRY_VEINS["marrow"]["min_tier"] == 4
+    t1 = next(r for r in PICK_TIERS if r["tier"] == 1)
+    t5 = next(r for r in PICK_TIERS if r["tier"] == 5)
+    assert t1["energy"] > 10 and t1["empty"] >= 0.24
+    assert t5["energy"] > config.BEACH_ENERGY
+    assert "quarry_marrow" in (t5.get("need") or {})
+
+
+async def test_prospect_miss_and_daily_cap() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="quarry-hard-"))
+    db = await _boot(tmp)
+    kid, sid = await _enroll(db, "qh2@example.com", "空探人")
+    from server import health, quarry
+
+    no_pick = await _expect_error(quarry.quarry_ops(kid, "探脉"))
+    assert "买镐" in no_pick, no_pick
+
+    await quarry.quarry_ops(kid, "买镐")
+    quarry.random.random = lambda: 0.0  # type: ignore[method-assign]
+    miss = await quarry.quarry_ops(kid, "探脉")
+    assert "空探" in miss, miss
+    async with db.connect() as conn:
+        vein = (await (await conn.execute(
+            "SELECT vein FROM quarry_claims WHERE steward_id=? AND slot=1", (sid,)
+        )).fetchone())[0]
+    assert not vein
+
+    _quiet_random(quarry)
+    _quiet_random(health)
+    async with db.connect() as conn:
+        await conn.execute(
+            "UPDATE steward_quarry SET last_prospect_at=0 WHERE steward_id=?", (sid,)
+        )
+        await conn.commit()
+    found = await quarry.quarry_ops(kid, "探脉")
+    assert "探脉" in found, found
+    await quarry.quarry_ops(kid, "挖 1")
+    async with db.connect() as conn:
+        await conn.execute(
+            "UPDATE steward_quarry SET last_hew_at=0 WHERE steward_id=?", (sid,)
+        )
+        await conn.execute(
+            "UPDATE quarry_claims SET last_hew_at=0 WHERE steward_id=?", (sid,)
+        )
+        await conn.execute(
+            "UPDATE quarry_rolls SET count=8 WHERE steward_id=?", (sid,)
+        )
+        await conn.commit()
+    capped = await _expect_error(quarry.quarry_ops(kid, "挖 1"))
+    assert "挥满" in capped or "8 镐" in capped, capped
+
+    odd = await _expect_error(quarry.quarry_ops(kid, "洗 海盐砂 1"))
+    assert "成对" in odd, odd
+
+
 async def test_public_snapshot() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="quarry-pub-"))
     await _boot(tmp)
@@ -226,6 +301,14 @@ def test_quarry_public() -> None:
     asyncio.run(test_public_snapshot())
 
 
+def test_quarry_harder_numbers() -> None:
+    asyncio.run(test_harder_than_beach_and_fish())
+
+
+def test_quarry_miss_and_cap() -> None:
+    asyncio.run(test_prospect_miss_and_daily_cap())
+
+
 if __name__ == "__main__":
     test_quarry_help_and_empty()
     test_quarry_loop()
@@ -233,4 +316,6 @@ if __name__ == "__main__":
     test_quarry_tt_and_names()
     test_quarry_flood()
     test_quarry_public()
+    test_quarry_harder_numbers()
+    test_quarry_miss_and_cap()
     print("ok")

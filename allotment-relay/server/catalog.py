@@ -440,7 +440,7 @@ HUT_SOFT = {
     "compost_bin": {"name": "堆肥桶", "cost": 46, "emoji": "🪣",
                     "hint": "hut_ops 堆肥桶 存 羊粪 3｜取 堆肥 2。粪便不能进潮柜；丢进去按层沤，满 7 层结 1 份堆肥"},
     "miner_lamp": {"name": "盐风矿灯", "cost": 42, "emoji": "🪔",
-                   "hint": "崖矿 hew / 挖 精力 -1（最低 1）。不是赶海灯"},
+                   "hint": "崖矿 hew / 挖 精力 -1（T1 仍约 16，比赶海/撒网费）。不是赶海灯"},
 }
 
 TOOLS = {
@@ -450,7 +450,7 @@ TOOLS = {
     "net_fine": {"name": "细渔网", "cost": 75, "emoji": "🎣", "fish_bonus": 0.18, "energy": 7},
 }
 
-# 盐风崖矿石。raw 可 quarry_ops 洗 成 refined（卖价约翻倍，也能拿去升镐）
+# 盐风崖矿石。raw 可 quarry_ops 洗 成 refined（2 原矿 → 1 精矿，卖价约翻倍，也能拿去升镐）
 QUARRY_ORES = {
     "quarry_salt_sand": {
         "name": "海盐砂", "emoji": "🧂", "sell": 8, "kind": "raw",
@@ -514,44 +514,44 @@ QUARRY_ORES = {
 QUARRY_VEINS = {
     "salt": {
         "name": "盐脉", "emoji": "🧂", "raw": "quarry_salt_sand",
-        "min_tier": 1, "weight": 28, "strikes": (5, 7),
+        "min_tier": 1, "weight": 28, "strikes": (3, 5),
         "tide_bonus": {"flood": 16, "slack": 4, "ebb": -8},
         "weather_bonus": {"clear": 6, "misty": 0, "gale": -2},
     },
     "shale": {
         "name": "页岩层", "emoji": "🪨", "raw": "quarry_shale",
-        "min_tier": 1, "weight": 26, "strikes": (5, 7),
+        "min_tier": 1, "weight": 26, "strikes": (3, 5),
         "tide_bonus": {"flood": -4, "slack": 4, "ebb": 8},
         "weather_bonus": {"clear": 8, "misty": -2, "gale": 2},
     },
     "copper": {
         "name": "铜绿缝", "emoji": "🟠", "raw": "quarry_copper",
-        "min_tier": 1, "weight": 16, "strikes": (4, 6),
+        "min_tier": 1, "weight": 16, "strikes": (3, 4),
         "tide_bonus": {"flood": 0, "slack": 12, "ebb": 2},
         "weather_bonus": {"clear": 0, "misty": 6, "gale": -2},
     },
     "iron": {
         "name": "铁砂床", "emoji": "⚫", "raw": "quarry_iron",
-        "min_tier": 2, "weight": 12, "strikes": (4, 5),
+        "min_tier": 2, "weight": 12, "strikes": (3, 4),
         "tide_bonus": {"flood": -8, "slack": 2, "ebb": 14},
         "weather_bonus": {"clear": 0, "misty": -2, "gale": 10},
     },
     "tide": {
         "name": "潮纹脉", "emoji": "🌀", "raw": "quarry_tide",
-        "min_tier": 3, "weight": 6, "strikes": (3, 4),
+        "min_tier": 3, "weight": 6, "strikes": (2, 3),
         "tide_bonus": {"flood": 10, "slack": 2, "ebb": -4},
         "weather_bonus": {"clear": -4, "misty": 12, "gale": 0},
     },
     "fog": {
         "name": "雾铅窝", "emoji": "🌫️", "raw": "quarry_fog",
-        "min_tier": 4, "weight": 4, "strikes": (3, 4),
+        "min_tier": 4, "weight": 4, "strikes": (2, 3),
         "tide_bonus": {"flood": 0, "slack": 8, "ebb": 2},
         "weather_bonus": {"clear": -6, "misty": 14, "gale": -2},
         "phase_bonus": {"night": 6},
     },
     "marrow": {
         "name": "夜光髓窝", "emoji": "✨", "raw": "quarry_marrow_raw",
-        "min_tier": 5, "weight": 2, "strikes": (2, 3),
+        "min_tier": 4, "weight": 2, "strikes": (1, 2),
         "tide_bonus": {"flood": -4, "slack": 2, "ebb": 6},
         "weather_bonus": {"clear": -8, "misty": 10, "gale": 0},
         "phase_bonus": {"night": 10, "dusk": 3, "day": -6},
@@ -560,16 +560,16 @@ QUARRY_VEINS = {
 
 # 镐 T0–T5。T1 用 quarry_ops 买镐 或 visit_ops tt buy 盐风镐；更高档只能 quarry_ops 升镐
 PICK_TIERS = [
-    {"tier": 0, "name": "无镐", "energy": 0, "yield": 0.00, "empty": 0.20},
-    {"tier": 1, "name": "盐风镐", "energy": 9, "yield": 0.00, "empty": 0.12, "tickets": 48},
-    {"tier": 2, "name": "铜镐", "energy": 8, "yield": 0.10, "empty": 0.08, "tickets": 70,
-     "need": {"quarry_copper_bar": 2, "quarry_brick": 3}},
-    {"tier": 3, "name": "铁镐", "energy": 7, "yield": 0.18, "empty": 0.05, "tickets": 110,
-     "need": {"quarry_iron_bar": 2, "quarry_copper_bar": 1}},
-    {"tier": 4, "name": "潮纹镐", "energy": 6, "yield": 0.26, "empty": 0.03, "tickets": 160,
-     "need": {"quarry_tide_stone": 1, "quarry_iron_bar": 2}},
-    {"tier": 5, "name": "雾铅镐", "energy": 5, "yield": 0.36, "empty": 0.01, "tickets": 220,
-     "need": {"quarry_fog_lead": 1, "quarry_tide_stone": 1, "quarry_marrow": 1}},
+    {"tier": 0, "name": "无镐", "energy": 0, "yield": 0.00, "empty": 0.28},
+    {"tier": 1, "name": "盐风镐", "energy": 16, "yield": 0.00, "empty": 0.28, "tickets": 80},
+    {"tier": 2, "name": "铜镐", "energy": 14, "yield": 0.04, "empty": 0.24, "tickets": 95,
+     "need": {"quarry_copper_bar": 3, "quarry_brick": 4}},
+    {"tier": 3, "name": "铁镐", "energy": 13, "yield": 0.08, "empty": 0.20, "tickets": 150,
+     "need": {"quarry_iron_bar": 3, "quarry_copper_bar": 2}},
+    {"tier": 4, "name": "潮纹镐", "energy": 12, "yield": 0.12, "empty": 0.18, "tickets": 210,
+     "need": {"quarry_tide_stone": 2, "quarry_iron_bar": 3}},
+    {"tier": 5, "name": "雾铅镐", "energy": 11, "yield": 0.16, "empty": 0.16, "tickets": 280,
+     "need": {"quarry_fog_lead": 2, "quarry_tide_stone": 1, "quarry_marrow": 1}},
 ]
 
 

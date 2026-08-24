@@ -20,21 +20,22 @@ from .game import require_steward
 
 QUARRY_HELP = """quarry_ops 子命令（整句写进 command）：
   盐风崖潮脉矿。迎风崖上的矿脉随潮汐显隐：涨潮出盐、退潮出铁、海雾出稀有。
+  比 tide_ops dig / net / cast 更慢更费：镐更贵、冷却更长、空挥更高、洗矿亏份。
   不是 tide_ops dig（赶海翻沙，要铲子，涨潮关）。不是 undertide_ops（潮下社交）。
   没有 mine_ops / dig_ops / mine / 采矿 这种工具。
 
   status / scan / 看 — 看镐、矿坑、当前矿脉、潮汐对矿的影响。空 command 不是看崖，是本表
   catalog / 图鉴 — 矿脉、矿石、镐档
-  买镐 — 48 票买 T1 盐风镐（Tt酱 tt buy 盐风镐 同一档）
-  探脉 [坑号] — 给空坑找一条矿脉（4 精力，10 分钟冷却）
-  挖 [坑号] — 对着矿脉挥镐（要 T1 镐；精力随镐档 9→5；每坑 4 分钟冷却）
-  洗 海盐砂 [数量] — 原矿洗成精矿，卖价约翻倍，也能拿去升镐（3 精力/份）
-  开坑 / 开坑 确认 — 看价与开凿时间 / 付钱加坑（起步 1 个，无上限，50/88/142…）
+  买镐 — 80 票买 T1 盐风镐（Tt酱 tt buy 盐风镐 同一档；铲子 42 / 粗网 28）
+  探脉 [坑号] — 给空坑找一条矿脉（要镐；8 精力，20 分钟冷却，约 18% 空探）
+  挖 [坑号] — 对着矿脉挥镐（要 T1 镐；精力 16→11；全坑共用 36 分钟冷却；每坑再 40 分钟；每日 8 镐）
+  洗 海盐砂 [数量] — 2 份原矿出 1 份精矿（6 精力/份精矿，约 12% 冲散）。数量是原矿，须成对
+  开坑 / 开坑 确认 — 看价与开凿时间 / 付钱加坑（起步 1 个，无上限，90/142/218…）
   升镐 / 升镐 确认 — 花票+精矿升一档（T2 铜镐起；T5 雾铅镐满）
   help — 本表
 
 例子：quarry_ops status · quarry_ops 买镐 · quarry_ops 探脉 · quarry_ops 挖 1 · quarry_ops 洗 海盐砂 2
-涨潮关的是赶海 dig，崖矿反而盐脉更肥。不要发明 hew_all / mine_all。"""
+涨潮关的是赶海 dig；崖矿不关，但湿滑：挖更费精力、空挥更高。不要发明 hew_all / mine_all。"""
 
 
 def _fmt_left(seconds: int) -> str:
@@ -101,7 +102,10 @@ def vein_strikes(key: str) -> int:
 def climate_hint(*, tide: str, weather: str, phase: str) -> list[str]:
     lines = []
     if tide == "flood":
-        lines.append("涨潮：盐脉权重↑。赶海 dig 这时关，崖矿不关")
+        lines.append(
+            "涨潮：盐脉权重↑，但崖壁湿滑——挖 +2 精力、空挥 +8%。"
+            "赶海 dig 这时关，崖矿不关"
+        )
     elif tide == "ebb":
         lines.append("退潮：铁砂床 / 页岩层权重↑")
     else:
@@ -109,25 +113,34 @@ def climate_hint(*, tide: str, weather: str, phase: str) -> list[str]:
     if weather == "misty":
         lines.append("海雾：潮纹 / 雾铅 / 夜光髓权重↑")
     elif weather == "gale":
-        lines.append("阵风：铁砂床权重↑")
+        lines.append("阵风：铁砂床权重↑，空挥 +6%")
     elif weather == "clear":
         lines.append("晴朗：页岩 / 盐脉更稳")
     if phase == "night":
-        lines.append("夜里：雾铅窝、夜光髓窝略亮")
+        lines.append("夜里：雾铅窝、夜光髓窝略亮，挖 +1 精力")
     return lines
+
+
+def _hew_empty_chance(pick_tier: int, *, tide: str, weather: str) -> float:
+    empty = float(pick_tier_meta(pick_tier).get("empty") or 0.28)
+    if tide == "flood":
+        empty += config.QUARRY_FLOOD_EMPTY
+    if weather == "gale":
+        empty += config.QUARRY_GALE_EMPTY
+    return min(0.60, empty)
 
 
 async def ensure_profile(conn: aiosqlite.Connection, steward_id: int) -> dict[str, Any]:
     conn.row_factory = aiosqlite.Row
     row = await (await conn.execute(
-        "SELECT pick_tier, claim_count, last_prospect_at, hews_total FROM steward_quarry WHERE steward_id=?",
+        "SELECT pick_tier, claim_count, last_prospect_at, last_hew_at, hews_total FROM steward_quarry WHERE steward_id=?",
         (steward_id,),
     )).fetchone()
     if not row:
         await conn.execute(
             """
-            INSERT INTO steward_quarry (steward_id, pick_tier, claim_count, last_prospect_at, hews_total)
-            VALUES (?, 0, ?, 0, 0)
+            INSERT INTO steward_quarry (steward_id, pick_tier, claim_count, last_prospect_at, last_hew_at, hews_total)
+            VALUES (?, 0, ?, 0, 0, 0)
             """,
             (steward_id, config.QUARRY_START_CLAIMS),
         )
@@ -142,6 +155,7 @@ async def ensure_profile(conn: aiosqlite.Connection, steward_id: int) -> dict[st
             "pick_tier": 0,
             "claim_count": config.QUARRY_START_CLAIMS,
             "last_prospect_at": 0,
+            "last_hew_at": 0,
             "hews_total": 0,
         }
     count = int(row["claim_count"] or config.QUARRY_START_CLAIMS)
@@ -160,6 +174,7 @@ async def ensure_profile(conn: aiosqlite.Connection, steward_id: int) -> dict[st
         "pick_tier": int(row["pick_tier"] or 0),
         "claim_count": count,
         "last_prospect_at": int(row["last_prospect_at"] or 0),
+        "last_hew_at": int(row["last_hew_at"] or 0),
         "hews_total": int(row["hews_total"] or 0),
     }
 
@@ -234,7 +249,11 @@ def _next_claim_offer(claim_count: int) -> dict[str, int]:
 
 async def _hew_energy(conn: aiosqlite.Connection, steward_id: int, pick_tier: int) -> int:
     meta = pick_tier_meta(pick_tier)
-    cost = int(meta.get("energy") or 9)
+    cost = int(meta.get("energy") or 16)
+    if world.current_tide() == "flood":
+        cost += config.QUARRY_FLOOD_ENERGY
+    if world.current_day_phase() == "night":
+        cost += config.QUARRY_NIGHT_ENERGY
     from . import hut as hut_mod
     bonus = await hut_mod.get_bonuses(conn, steward_id)
     save = int(getattr(bonus, "quarry_energy_save", 0) or 0)
@@ -259,7 +278,10 @@ def _catalog_text(*, pick_tier: int) -> str:
             f"（此刻权重 {w}{lock}）"
         )
     lines.append("")
-    lines.append("矿石（洗 1 份原矿 = 1 份精矿，3 精力）：")
+    lines.append(
+        f"矿石（洗 {config.QUARRY_WASH_RAW_PER} 份原矿 = 1 份精矿，"
+        f"{config.QUARRY_WASH_ENERGY} 精力；约 {int(config.QUARRY_WASH_FAIL*100)}% 被潮水冲散）："
+    )
     for key, meta in QUARRY_ORES.items():
         if meta["kind"] != "raw":
             continue
@@ -301,21 +323,36 @@ async def _status_text(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
         world.climate_line(),
         *climate_hint(tide=tide, weather=weather, phase=phase),
         f"镐：T{pick['tier']} {pick['name']}"
-        + ("" if pick["tier"] else " — quarry_ops 买镐（48票）或 visit_ops tt buy 盐风镐"),
+        + ("" if pick["tier"] else f" — quarry_ops 买镐（{config.QUARRY_PICK_T1_COST}票）或 visit_ops tt buy 盐风镐"),
         f"矿坑 {prof['claim_count']} 个（下一坑 {_claim_label(offer['slot'])} {offer['cost']}票 / 开凿 {offer['clear_seconds']//60} 分）",
         f"累计挥镐 {prof['hews_total']}",
     ]
+    day = db.day_id(now)
+    used = await (await conn.execute(
+        "SELECT count FROM quarry_rolls WHERE steward_id=? AND day=?",
+        (s["id"], day),
+    )).fetchone()
+    lines.append(f"今日挥镐 {int(used[0] if used else 0)}/{config.QUARRY_HEW_DAILY_CAP}")
     if prof["last_prospect_at"]:
         left = prof["last_prospect_at"] + config.QUARRY_PROSPECT_COOLDOWN - now
         if left > 0:
             lines.append(f"探脉冷却：{_fmt_left(left)}")
+    gleft = int(prof["last_hew_at"] or 0) + config.QUARRY_HEW_GLOBAL_COOLDOWN - now
+    if pick["tier"] >= 1 and gleft > 0:
+        lines.append(f"挥镐冷却（全坑共用）：{_fmt_left(gleft)}")
     lines.append("矿坑：")
     for c in claims:
         lines.append(_claim_line(c, now=now, pick_tier=prof["pick_tier"]))
     if pick["tier"] >= 1:
         hew_e = await _hew_energy(conn, s["id"], pick["tier"])
-        lines.append(f"下一镐约 {hew_e} 精力（装了盐风矿灯会少 1）")
-    lines.append("指令：探脉 · 挖 [坑号] · 洗 海盐砂 · 开坑 · 升镐 · catalog")
+        empty_pct = int(_hew_empty_chance(
+            pick["tier"], tide=tide, weather=weather,
+        ) * 100)
+        lines.append(
+            f"下一镐约 {hew_e} 精力、空挥约 {empty_pct}%"
+            f"（装了盐风矿灯会少 1；多开坑不能连挥）"
+        )
+    lines.append("指令：探脉 · 挖 [坑号] · 洗 海盐砂 2 · 开坑 · 升镐 · catalog")
     return "\n".join(lines)
 
 
@@ -352,6 +389,11 @@ async def _buy_pick(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
 
 async def _prospect(conn: aiosqlite.Connection, s: dict[str, Any], token: str) -> str:
     prof = await ensure_profile(conn, s["id"])
+    if int(prof["pick_tier"]) < 1:
+        raise ValueError(
+            f"没有镐探不出脉。quarry_ops 买镐（{config.QUARRY_PICK_T1_COST}票），"
+            "或 visit_ops tt buy 盐风镐"
+        )
     claims = await _claims(conn, s["id"])
     now = db.now()
     left = int(prof["last_prospect_at"] or 0) + config.QUARRY_PROSPECT_COOLDOWN - now
@@ -393,6 +435,23 @@ async def _prospect(conn: aiosqlite.Connection, s: dict[str, Any], token: str) -
             f"剩 {target['strikes_left']} 镐。先 quarry_ops 挖 {target['slot']}"
         )
     await energy.spend(conn, s["id"], config.QUARRY_PROSPECT_ENERGY, action="探脉")
+    await conn.execute(
+        "UPDATE steward_quarry SET last_prospect_at=? WHERE steward_id=?",
+        (now, s["id"]),
+    )
+    if random.random() < config.QUARRY_PROSPECT_EMPTY:
+        await db.add_chronicle(
+            "quarry",
+            f"{s['name']} 在{_claim_label(target['slot'])}空探",
+            s["id"],
+            conn=conn,
+        )
+        return (
+            f"空探：{_claim_label(target['slot'])}潮线糊了，没咬到脉"
+            f"（-{config.QUARRY_PROSPECT_ENERGY} 精力）。"
+            f"{_fmt_left(config.QUARRY_PROSPECT_COOLDOWN)}后再 quarry_ops 探脉。"
+            + flavor.maybe_suffix(["盐风把粉尘吹回去了", "崖壁回了一声空的"])
+        )
     pick_tier = max(1, int(prof["pick_tier"]))
     vein = roll_vein(
         tide=world.current_tide(),
@@ -407,10 +466,6 @@ async def _prospect(conn: aiosqlite.Connection, s: dict[str, Any], token: str) -
         WHERE steward_id=? AND slot=?
         """,
         (vein, strikes, s["id"], target["slot"]),
-    )
-    await conn.execute(
-        "UPDATE steward_quarry SET last_prospect_at=? WHERE steward_id=?",
-        (now, s["id"]),
     )
     meta = QUARRY_VEINS[vein]
     raw = QUARRY_ORES[meta["raw"]]
@@ -440,7 +495,9 @@ async def _prospect(conn: aiosqlite.Connection, s: dict[str, Any], token: str) -
 async def _hew(conn: aiosqlite.Connection, s: dict[str, Any], token: str) -> str:
     prof = await ensure_profile(conn, s["id"])
     if int(prof["pick_tier"]) < 1:
-        raise ValueError("没有镐。quarry_ops 买镐（48票），或 visit_ops tt buy 盐风镐")
+        raise ValueError(
+            f"没有镐。quarry_ops 买镐（{config.QUARRY_PICK_T1_COST}票），或 visit_ops tt buy 盐风镐"
+        )
     claims = await _claims(conn, s["id"])
     now = db.now()
     slot = _parse_slot(token, prof["claim_count"])
@@ -476,6 +533,23 @@ async def _hew(conn: aiosqlite.Connection, s: dict[str, Any], token: str) -> str
     cd = target["last_hew_at"] + config.QUARRY_HEW_COOLDOWN - now
     if cd > 0:
         raise ValueError(f"{_claim_label(target['slot'])}刚挥过，{_fmt_left(cd)}后再挖")
+    gleft = int(prof["last_hew_at"] or 0) + config.QUARRY_HEW_GLOBAL_COOLDOWN - now
+    if gleft > 0:
+        raise ValueError(
+            f"刚挥过，腕还酸，{_fmt_left(gleft)}后再挖。"
+            "多开坑不能连挥——冷却全坑共用。"
+        )
+    day = db.day_id(now)
+    used_row = await (await conn.execute(
+        "SELECT count FROM quarry_rolls WHERE steward_id=? AND day=?",
+        (s["id"], day),
+    )).fetchone()
+    used = int(used_row[0] if used_row else 0)
+    if used >= config.QUARRY_HEW_DAILY_CAP:
+        raise ValueError(
+            f"今日已经挥满 {config.QUARRY_HEW_DAILY_CAP} 镐。"
+            "赶海一天能翻很多次，崖矿故意卡死。明天再来。"
+        )
     vein_meta = QUARRY_VEINS.get(target["vein"])
     if not vein_meta:
         raise ValueError("这条脉看不清了。quarry_ops 探脉 重探")
@@ -487,7 +561,9 @@ async def _hew(conn: aiosqlite.Connection, s: dict[str, Any], token: str) -> str
     pick = pick_tier_meta(prof["pick_tier"])
     cost = await _hew_energy(conn, s["id"], pick["tier"])
     await energy.spend(conn, s["id"], cost, action="崖矿")
-    empty = float(pick.get("empty") or 0.12)
+    empty = _hew_empty_chance(
+        pick["tier"], tide=world.current_tide(), weather=world.current_weather(),
+    )
     extra_msg = ""
     got: list[tuple[str, int]] = []
     if random.random() < empty:
@@ -517,10 +593,9 @@ async def _hew(conn: aiosqlite.Connection, s: dict[str, Any], token: str) -> str
         (left, vein, now, s["id"], target["slot"]),
     )
     await conn.execute(
-        "UPDATE steward_quarry SET hews_total=hews_total+1 WHERE steward_id=?",
-        (s["id"],),
+        "UPDATE steward_quarry SET hews_total=hews_total+1, last_hew_at=? WHERE steward_id=?",
+        (now, s["id"]),
     )
-    day = db.day_id(now)
     await conn.execute(
         """
         INSERT INTO quarry_rolls (steward_id, day, last_at, count)
@@ -562,7 +637,7 @@ async def _wash(conn: aiosqlite.Connection, s: dict[str, Any], rest: str) -> str
     parts = (rest or "").split()
     if not parts:
         raise ValueError("用法：quarry_ops 洗 海盐砂 [数量]。catalog 看哪些是原矿")
-    qty = 1
+    qty = config.QUARRY_WASH_RAW_PER
     name_toks = parts
     if name_toks[-1].isdigit():
         qty = max(1, int(name_toks[-1]))
@@ -576,27 +651,47 @@ async def _wash(conn: aiosqlite.Connection, s: dict[str, Any], rest: str) -> str
         raw = meta.get("raw")
         hint = f"这已经是精矿。要洗的是 {item_label(raw)}。" if raw else "这已经是精矿。"
         raise ValueError(hint)
+    ratio = config.QUARRY_WASH_RAW_PER
+    if qty % ratio != 0:
+        raise ValueError(
+            f"要成对洗，{ratio} 份原矿出 1 份精矿。"
+            f"例如 quarry_ops 洗 海盐砂 {ratio}"
+        )
     refined = meta["refined"]
     if not await db.take_item(conn, s["id"], item, qty):
         raise ValueError(f"行囊里没有 {item_label(item)} x{qty}。先 quarry_ops 挖")
-    cost = config.QUARRY_WASH_ENERGY * qty
+    batches = qty // ratio
+    cost = config.QUARRY_WASH_ENERGY * batches
     try:
         await energy.spend(conn, s["id"], cost, action="洗矿")
     except ValueError:
         await db.add_item(conn, s["id"], item, qty)
         raise
-    await db.add_item(conn, s["id"], refined, qty)
+    kept = 0
+    for _ in range(batches):
+        if random.random() >= config.QUARRY_WASH_FAIL:
+            kept += 1
+    if kept:
+        await db.add_item(conn, s["id"], refined, kept)
     await db.add_chronicle(
         "quarry",
-        f"{s['name']} 洗净 {item_label(item)} x{qty}",
+        f"{s['name']} 洗净 {item_label(item)} x{qty} → {kept}",
         s["id"],
         conn=conn,
     )
     ref_meta = QUARRY_ORES[refined]
+    if kept <= 0:
+        return (
+            f"洗 {item_label(item)} x{qty}：潮水把砂冲散了，精矿没留下"
+            f"（-{cost} 精力）。再 quarry_ops 挖。"
+            + flavor.maybe_suffix(["洗手时什么也没留下", "潮水比人贪"])
+        )
+    lost = batches - kept
+    lost_s = f"，冲散 {lost} 批" if lost else ""
     return (
-        f"洗净 {item_label(item)} x{qty} → {ref_meta['emoji']}{ref_meta['name']} x{qty}"
-        f"（-{cost} 精力，系统价 {ref_meta['sell']}票/份）。"
-        f"卖掉 tote_ops vend {ref_meta['name']} {qty}，升镐 quarry_ops 升镐。"
+        f"洗净 {item_label(item)} x{qty} → {ref_meta['emoji']}{ref_meta['name']} x{kept}"
+        f"（-{cost} 精力{lost_s}，系统价 {ref_meta['sell']}票/份）。"
+        f"卖掉 tote_ops vend {ref_meta['name']} {kept}，升镐 quarry_ops 升镐。"
         + flavor.maybe_suffix(["潮水把砂冲走，剩下能用的", "洗手时盐粒还亮"])
     )
 
@@ -654,7 +749,7 @@ async def _upgrade_preview(conn: aiosqlite.Connection, s: dict[str, Any]) -> str
     current = pick_tier_meta(prof["pick_tier"])
     nxt = next((r for r in PICK_TIERS if r["tier"] == current["tier"] + 1), None)
     if current["tier"] < 1:
-        return "还没镐。先 quarry_ops 买镐（48票），再谈升级。"
+        return f"还没镐。先 quarry_ops 买镐（{config.QUARRY_PICK_T1_COST}票），再谈升级。"
     if not nxt:
         return f"T{current['tier']} {current['name']} 已经是满级。"
     need = nxt.get("need") or {}

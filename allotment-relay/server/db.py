@@ -1515,6 +1515,7 @@ async def init_db() -> None:
                 pick_tier INTEGER NOT NULL DEFAULT 0,
                 claim_count INTEGER NOT NULL DEFAULT 1,
                 last_prospect_at INTEGER NOT NULL DEFAULT 0,
+                last_hew_at INTEGER NOT NULL DEFAULT 0,
                 hews_total INTEGER NOT NULL DEFAULT 0
             )
             """,
@@ -1539,6 +1540,7 @@ async def init_db() -> None:
                 PRIMARY KEY (steward_id, day)
             )
             """,
+            "ALTER TABLE steward_quarry ADD COLUMN last_hew_at INTEGER NOT NULL DEFAULT 0",
         ):
             try:
                 await db.execute(ddl)

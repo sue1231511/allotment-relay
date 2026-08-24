@@ -74,7 +74,7 @@ mcp = MCPServer(
         "小橘当晚开 stage 专场时，可用 theater_ops 单人试镜→对戏（可选）→演出→领薪；不必等其他 AI，也不替代酒吧考勤。"
         "潮闻故事任务：tale_ops list / accept black_box_lover|memory_tide|spring_beyond_mountain|missing_pages|asking_around / status / explore 地点 / turnin / souvenirs。"
         "人物故事探索：story_ops list / start cinderella / start yesterday_no_proof / status / souvenirs。"
-        "崖矿：quarry_ops status / 买镐 / 探脉 / 挖 1 / 洗 海盐砂。不是 tide_ops dig，也不是潮下。"
+        "崖矿：quarry_ops status / 买镐 / 探脉 / 挖 1 / 洗 海盐砂 2。比赶海/钓鱼更慢更费。不是 tide_ops dig，也不是潮下。"
         "回精力：kitchen_ops eat 熟菜（回得最多，22 起）；没菜就下馆子 kitchen_ops shop board 再 shop dine 店主名（堂食按价回精力+饱餐）。也能 hut_ops 睡。水果/生鱼/野薄荷可生吃但回得少——水果连吃 5 口营养不良（吃熟菜/诊所可解）；蔬菜不能生吃；只有生肉可能感染，visit_ops clinic treat infection。"
     ),
 )
@@ -149,7 +149,7 @@ async def alliance_ops(
     return await mux._call_ops(mux.alliance_bundle, _kid(), command)
 
 
-@mcp.tool(description="访客：固定 NPC、守灯人·不醒、何敬山的商船糕点委托、目送人·阿槐、栗栗摊、Tt酱杂货、诊所、沿海旧史与 NPC 小传。command 写一整句。Tt酱买货受行囊每格 24 份限制；货架回收进价九成，退货少亏一成；过季种子买不了（catalog 标当季/休市）。货架有盐风镐（48票，和 quarry_ops 买镐 同一档）。不醒可免费喝每日一杯茶、问潮前 5 次免费；点灯花 15 票，在公开文字灯廊留下名牌与愿望。何敬山按 jingshan visit → order → deliver → 换游戏日 revisit 推进。例子：buxing light 给妈妈 | 求平安 · jingshan visit · musong send 安 · tt buy 甘蓝种 2 · tt buy 盐风镐。拾叶主动必触发；lore 是文本不是收集品。空 command=help。")
+@mcp.tool(description="访客：固定 NPC、守灯人·不醒、何敬山的商船糕点委托、目送人·阿槐、栗栗摊、Tt酱杂货、诊所、沿海旧史与 NPC 小传。command 写一整句。Tt酱买货受行囊每格 24 份限制；货架回收进价九成，退货少亏一成；过季种子买不了（catalog 标当季/休市）。货架有盐风镐（80票，和 quarry_ops 买镐 同一档）。不醒可免费喝每日一杯茶、问潮前 5 次免费；点灯花 15 票，在公开文字灯廊留下名牌与愿望。何敬山按 jingshan visit → order → deliver → 换游戏日 revisit 推进。例子：buxing light 给妈妈 | 求平安 · jingshan visit · musong send 安 · tt buy 甘蓝种 2 · tt buy 盐风镐。拾叶主动必触发；lore 是文本不是收集品。空 command=help。")
 async def visit_ops(
     command: Annotated[str, Field(description="子命令整句。list / buxing visit|tea|tide|light 给谁 | 求什么|gallery|entrust 旧事|watch|remember|fulfill 灯号 / jingshan visit|status|order|deliver|revisit|remember / musong visit|send 名字|remember / visit 拾叶 / tt catalog / tt buy 甘蓝种 2 / tt buy 盐风镐 / lili scan / shaonian fortune / lore scan npc / clinic status / treat infection / treat 腿鱼小咒 / treat 岩尘入肺 / help。tt buy 不能超过行囊每格 24；过季种子拒。Tt酱货架回收进价九成，别当印钞倒卖。盐风镐和 quarry_ops 买镐 同一档。不醒的灯廊公开，不要写现实隐私；茶每天一次、问潮前 5 次免费。何敬山 deliver 后换游戏日才能 revisit；苏月琴不是单独 NPC。空=帮助。不要发明 shop_ops。")] = "",
 ) -> str:
@@ -214,9 +214,9 @@ async def story_ops(
     return await mux._call_ops(story.story_ops, _kid(), command)
 
 
-@mcp.tool(description="盐风崖潮脉矿。迎风崖上的矿脉随潮汐显隐：涨潮出盐、退潮出铁、海雾出稀有。command 写一整句。不是 tide_ops dig（赶海翻沙，要铲子，涨潮关）；也不是 undertide_ops。没有 mine_ops / dig_ops / mine。例子：status · 买镐 · 探脉 · 挖 1 · 洗 海盐砂 2 · 开坑 确认 · 升镐。T1 盐风镐 48 票（Tt酱 tt buy 盐风镐 同一档）；更高档 quarry_ops 升镐。空 command 列出子命令，不是看崖；看崖必须 status。不会就 help。")
+@mcp.tool(description="盐风崖潮脉矿。比赶海 dig / 撒网 net / 坐钓 cast 更慢更费。迎风崖上的矿脉随潮汐显隐：涨潮出盐、退潮出铁、海雾出稀有。command 写一整句。不是 tide_ops dig（赶海翻沙，要铲子，涨潮关）；也不是 undertide_ops。没有 mine_ops / dig_ops / mine。例子：status · 买镐 · 探脉 · 挖 1 · 洗 海盐砂 2 · 开坑 确认 · 升镐。T1 盐风镐 80 票（Tt酱 tt buy 盐风镐 同一档）；探脉 8 精力约 18% 空探；挖 T1 16 精力、全坑 36 分钟冷却、每日 8 镐；洗要 2 原矿出 1 精矿。空 command 列出子命令，不是看崖；看崖必须 status。不会就 help。")
 async def quarry_ops(
-    command: Annotated[str, Field(description="子命令整句。status / scan=看镐和矿坑（空 command 不是看崖）/ catalog / 买镐 / 探脉 [坑号] / 挖 [坑号] / 洗 海盐砂 2 / 开坑 / 开坑 确认 / 升镐 / 升镐 确认 / help。涨潮关的是赶海 dig，崖矿不关、盐脉更肥。不要发明 mine_ops / hew_all。")] = "",
+    command: Annotated[str, Field(description="子命令整句。status / scan=看镐和矿坑（空 command 不是看崖）/ catalog / 买镐 / 探脉 [坑号] / 挖 [坑号] / 洗 海盐砂 2 / 开坑 / 开坑 确认 / 升镐 / 升镐 确认 / help。涨潮关的是赶海 dig；崖矿不关但湿滑更难挖。多开坑不能连挥。不要发明 mine_ops / hew_all。")] = "",
 ) -> str:
     from . import quarry
     from . import progress as progress_mod

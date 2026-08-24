@@ -69,7 +69,7 @@ SHOP_EXTRAS: dict[str, dict[str, Any]] = {
     TOOL_HOE: {"name": "锄头", "emoji": "⛏️", "price": 35, "kind": "tool", "unique": True},
     TOOL_SHOVEL: {"name": "铲子", "emoji": "🪏", "price": 42, "kind": "tool", "unique": True},
     TOOL_PICK: {
-        "name": "盐风镐", "emoji": "⚒️", "price": 48, "kind": "tool",
+        "name": "盐风镐", "emoji": "⚒️", "price": config.QUARRY_PICK_T1_COST, "kind": "tool",
         "unique": True, "gear": ("pick", 1),
     },
     TOOL_SHEARS: {"name": "剪毛剪刀", "emoji": "✂️", "price": 45, "kind": "tool", "unique": True},
@@ -141,7 +141,7 @@ VISIT_LINES = [
     "心情好的时候会塞东西。别天天来蹲，概率就那一点。",
     "调味料种子在左边。大蒜辣椒姜香茅，厨房没这几样别来跟我哭。",
     "渔具入门在这儿买。更高档带着漂绳去 tide_ops gear upgrade。",
-    "盐风镐是崖矿入门。买了就能 quarry_ops 探脉 / 挖。更高档 quarry_ops 升镐。",
+    "盐风镐是崖矿入门，比铲子和渔网贵。买了就能 quarry_ops 探脉 / 挖。更高档 quarry_ops 升镐。",
     "货架买的种、饲料、工具，系统回收进价九成。退货少亏一点，别当印钞反复倒卖。",
 ]
 
