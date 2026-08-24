@@ -339,6 +339,7 @@ def test_relay_manual_covers_systems() -> None:
         "/play 点按同一套指令",
         "共用一个号",
         "点单打赏只在 /play",
+        "邻居名册",
     ]
     missing = [n for n in needles if n not in text]
     assert not missing, f"relay_manual missing: {missing}"
@@ -440,6 +441,7 @@ def test_patron_pages_share_steward_key() -> None:
     assert 'id="play-eatery-order"' in play_html
     assert 'id="play-star-tip"' in play_html
     assert 'id="play-lounge"' in play_html
+    assert 'id="play-neighbors"' in play_html
     assert 'id="play-me"' in play_html
     assert 'id="memory-modal"' in play_html
     assert "/api/steward/memory" in play_js
