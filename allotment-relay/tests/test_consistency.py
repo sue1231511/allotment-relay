@@ -374,6 +374,10 @@ def test_readme_workflow_rules() -> None:
     assert 'href="/tide"' in nav
     assert 'href="/huts"' in nav
     assert 'href="/market"' in nav
+    css = (root / "allotment-relay/server/static/style.css").read_text(encoding="utf-8")
+    assert "@media (max-width: 980px)" in css
+    assert ".nav-tab-short" in css
+    assert "nav-tab-short" in nav
     assert "forage" in readme
     assert "amends" in readme
     assert "砧上全套" in readme
