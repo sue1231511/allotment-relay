@@ -21,6 +21,8 @@ from .catalog import (
     is_fruit_item,
     is_vegetable_item,
     item_label,
+    mix_display_name,
+    mix_title,
     parse_mix_item,
     register_mix_item,
     resolve_item_key,
@@ -180,6 +182,48 @@ def _fridge_label(dish_key: str, stars: int) -> str:
         return item_label(_fridge_satchel_item(dish_key, stars))
 
 
+def _strip_dish_decor(token: str) -> str:
+    """去掉星标，方便用冰箱列表上的中文名取菜。"""
+    return (token or "").strip().rstrip("★☆*").strip()
+
+
+def _fridge_name_aliases(dish_key: str, stars: int) -> set[str]:
+    """冰箱格对应的可匹配名字：中文名、带 emoji、星级、item id。"""
+    item = _fridge_satchel_item(dish_key, stars)
+    label = _fridge_label(dish_key, stars)
+    out: set[str] = {
+        item,
+        dish_key,
+        f"{dish_key}_s{stars}",
+        f"dish_{dish_key}",
+        f"dish_{dish_key}_s{stars}",
+        label,
+        _strip_dish_decor(label),
+    }
+    if dish_key.startswith("mix_"):
+        parsed = parse_mix_item(item)
+        if parsed:
+            grade, _tier, sig, st = parsed
+            emoji, name = mix_title(grade, sig)
+            out.update({
+                name,
+                f"{emoji}{name}",
+                mix_display_name(grade, sig, st),
+                _strip_dish_decor(mix_display_name(grade, sig, st)),
+            })
+    elif dish_key.startswith("meal_"):
+        out.add(item_label(dish_key))
+    elif dish_key in KITCHEN_DISHES:
+        meta = KITCHEN_DISHES[dish_key]
+        out.update({
+            meta["name"],
+            f"{meta['emoji']}{meta['name']}",
+            dish_display_name(dish_key, stars),
+            _strip_dish_decor(dish_display_name(dish_key, stars)),
+        })
+    return {a for a in out if a}
+
+
 async def _pick_cooked_satchel(
     conn: aiosqlite.Connection, steward_id: int, resolved: str
 ) -> str:
@@ -237,8 +281,16 @@ async def fridge_status_text(s: dict[str, Any]) -> str:
     for r in rows:
         age = db.now() - r["stored_at"]
         stale = " ⚠快过期" if age > expire * 0.85 else ""
-        lines.append(f"  {_fridge_label(r['dish_key'], r['stars'])} x{r['quantity']}{stale}")
-    lines.append("取：hut_ops 冰柜 取 菜名 · kitchen_ops take 菜名")
+        dish_key = r["dish_key"]
+        stars = int(r["stars"])
+        label = _fridge_label(dish_key, stars)
+        item_id = _fridge_satchel_item(dish_key, stars)
+        # 自定义熟菜中文名会撞名，列表带上 item id，取菜用中文名或 id 都行
+        lines.append(f"  {label}（{item_id}） x{r['quantity']}{stale}")
+    lines.append(
+        "取：hut_ops 冰柜 取 菜名｜kitchen_ops take 菜名"
+        "（中文名或括号里的 id；自定义菜建议用 id）"
+    )
     return "\n".join(lines)
 
 
@@ -305,9 +357,10 @@ async def fridge_put(s: dict[str, Any], token: str, qty: int = 1) -> str:
 def _fridge_row_matches(row: dict[str, Any], token: str) -> bool:
     dish_key = row["dish_key"]
     stars = int(row["stars"])
-    item = _fridge_satchel_item(dish_key, stars)
     raw = (token or "").strip()
-    bare = raw.rstrip("★☆*")
+    if not raw:
+        return False
+    bare = _strip_dish_decor(raw)
     needles: set[str] = {raw, bare}
     resolved = _resolve_cooked_token(raw)
     if resolved:
@@ -323,14 +376,13 @@ def _fridge_row_matches(row: dict[str, Any], token: str) -> bool:
         needles.add(f"dish_{dish}")
         if dish == dish_key:
             return True
-    haystack = {
-        item,
-        dish_key,
-        f"{dish_key}_s{stars}",
-        f"dish_{dish_key}",
-        f"dish_{dish_key}_s{stars}",
-    }
-    return bool(needles & haystack)
+    haystack = _fridge_name_aliases(dish_key, stars)
+    if needles & haystack:
+        return True
+    # 忽略星标后再比一次（列表上复制带★、指令里不写★）
+    bare_needles = {_strip_dish_decor(n) for n in needles if n}
+    bare_hay = {_strip_dish_decor(h) for h in haystack if h}
+    return bool(bare_needles & bare_hay)
 
 
 async def fridge_take(s: dict[str, Any], token: str, qty: int = 1) -> str:
@@ -352,6 +404,8 @@ async def fridge_take(s: dict[str, Any], token: str, qty: int = 1) -> str:
         if have < qty:
             raise ValueError("冰箱里没有这么多")
         item = _fridge_satchel_item(picked["dish_key"], picked["stars"])
+        if parse_mix_item(item):
+            register_mix_item(item)
         await db.add_item(conn, s["id"], item, qty)
         left = have - qty
         if left <= 0:
@@ -484,6 +538,7 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             "  vend 菜名 — 卖掉行囊里的熟菜（中文名也行；家具请 hut_ops 卖掉）\n"
             "  store 菜名 [数量] / fridge / take 菜名 — 冰箱熟菜（小屋要先装 fridge）\n"
             "             也可 hut_ops 冰柜 存|取，生鲜进潮柜、熟菜进冰箱\n"
+            "             fridge 列表带中文名和 item id；自定义菜可用中文名或 id 取\n"
             "  brew 材料 — 灶台（回雾智）\n"
             "  shop board — 全服谁在营业的小馆名单（店名和几道菜），不是流水也不是评价\n"
             "  shop dine 店主名 — 下馆子堂食，也能回精力（按菜价，约 3.5 票/1 精力）+「饱餐」2 小时（行动精力 -1）\n"
