@@ -535,10 +535,15 @@ def test_patron_pages_share_steward_key() -> None:
     assert "shore_blurb" in huts_js
     assert "resident-list" in huts_css
     assert "hero-grid" in star_html
+    assert "star-poster" in star_html
+    assert 'class="poster"' not in star_html
     assert "fanBoard" in star_html
     assert "orange-fruit" in star_html
     assert "stageBanner" in star_js or "stage-banner" in star_css
     assert "fan-ticket" in star_css
+    assert ".star-poster" in star_css
+    assert "position: relative" in star_css
+    assert "inset: auto" in star_css
     assert 'href="/board"' in nav
     assert 'href="/huts"' in nav
     assert 'href="/star"' in nav

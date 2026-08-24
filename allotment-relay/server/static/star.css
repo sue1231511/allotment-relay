@@ -12,7 +12,7 @@
     linear-gradient(#f5efe5, #efe8dc);
 }
 
-.star-page .star-shell {
+.star-page main.star-shell {
   width: min(1220px, calc(100% - 36px));
   margin: 0 auto;
   padding: 28px 0 56px;
@@ -23,40 +23,57 @@
   font-size: 10px;
   letter-spacing: .18em;
   text-transform: uppercase;
+  margin-bottom: 0;
 }
 
 .star-page .hero-grid {
   display: grid;
   grid-template-columns: 1.08fr .92fr;
   gap: 18px;
+  align-items: stretch;
   padding: 6px 0 18px;
 }
 
-.star-page .poster {
+/* 不用全局 .poster（地点海报 absolute + 海色底），单独命名避免盖掉 */
+.star-page .star-poster {
   position: relative;
+  inset: auto;
+  align-self: stretch;
   min-height: 470px;
+  height: 100%;
   overflow: hidden;
   border-radius: 28px;
-  padding: 34px 34px 28px;
+  padding: 34px 34px 92px;
   background:
     radial-gradient(circle at 82% 16%, rgba(255, 190, 91, .13), transparent 28%),
     linear-gradient(145deg, rgba(255, 250, 241, .98), rgba(255, 227, 184, .78));
   border: 1px solid rgba(186, 110, 41, .15);
+  box-shadow: none;
 }
 
-.star-page .poster::before {
+.star-page .star-poster::before {
   content: "";
   position: absolute;
+  inset: auto;
   width: 265px;
   height: 265px;
   right: -82px;
   top: -74px;
+  left: auto;
+  bottom: auto;
   border-radius: 50%;
   border: 1px solid rgba(242, 154, 46, .12);
+  background: none;
   box-shadow:
     0 0 0 34px rgba(242, 154, 46, .035),
     0 0 0 68px rgba(242, 154, 46, .025);
+  transform: none;
   animation: star-ring 9s ease-in-out infinite;
+}
+
+.star-page .star-poster::after {
+  content: none;
+  display: none;
 }
 
 .star-page .orange-fruit {
@@ -134,13 +151,13 @@
   box-shadow: 0 8px 18px rgba(200, 111, 24, .08);
 }
 
-.star-page .poster-copy {
+.star-page .star-poster-copy {
   position: relative;
   z-index: 2;
   max-width: 610px;
 }
 
-.star-page .poster h1 {
+.star-page .star-poster h1 {
   margin: 14px 0 0;
   font-family: "Noto Serif SC", "Songti SC", Georgia, serif;
   font-weight: 500;
@@ -149,12 +166,12 @@
   line-height: .92;
 }
 
-.star-page .poster h1 span {
+.star-page .star-poster h1 span {
   display: block;
   color: var(--orange-deep);
 }
 
-.star-page .poster-sub {
+.star-page .star-poster-sub {
   max-width: 520px;
   margin: 20px 0 0;
   color: var(--muted);
@@ -189,7 +206,7 @@
   animation: none;
 }
 
-.star-page .poster-ticket {
+.star-page .star-poster-ticket {
   position: absolute;
   left: 34px;
   bottom: 28px;
@@ -199,17 +216,17 @@
   align-items: flex-end;
   padding-top: 15px;
   border-top: 1px dashed rgba(186, 110, 41, .28);
-  width: min(390px, calc(100% - 68px));
+  width: min(390px, calc(100% - 200px));
 }
 
-.star-page .poster-ticket small {
+.star-page .star-poster-ticket small {
   display: block;
   color: var(--muted);
   font-size: 9px;
   margin-bottom: 3px;
 }
 
-.star-page .poster-ticket strong {
+.star-page .star-poster-ticket strong {
   font-size: 12px;
   font-weight: 500;
 }
@@ -575,8 +592,8 @@
 
 @media (max-width: 620px) {
   .star-page .star-shell { width: min(100% - 24px, 1220px); }
-  .star-page .poster { min-height: 500px; padding: 26px; }
-  .star-page .poster-ticket {
+  .star-page .star-poster { min-height: 500px; padding: 26px 26px 88px; }
+  .star-page .star-poster-ticket {
     left: 26px;
     bottom: 24px;
     width: calc(100% - 52px);
@@ -601,7 +618,7 @@
 @media (prefers-reduced-motion: reduce) {
   .star-page .status-dot,
   .star-page .orange-fruit,
-  .star-page .poster::before {
+  .star-page .star-poster::before {
     animation: none;
   }
 }
