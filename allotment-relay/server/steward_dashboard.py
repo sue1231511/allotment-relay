@@ -42,7 +42,9 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
         ut = await undertide_mod._ensure_ut(conn, s["id"])
         memories = await memory_archive.list_memories(conn, s["id"])
         from . import quarry as quarry_mod
+        from . import craft as craft_mod
         quarry_view = await quarry_mod.dashboard_view(conn, s["id"])
+        craft_view = await craft_mod.dashboard_view(conn, s["id"])
         await conn.commit()
 
     gifts = await db.list_received_gifts(s["id"], 8)
@@ -203,6 +205,7 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
         "market": {"used": used, "cap": cap},
         "voyage": voyage_view,
         "quarry": quarry_view,
+        "craft": craft_view,
         "memories": memories,
         "flags": {
             "greenhouse": bool(s.get("greenhouse")),

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>岸工坊 · 潮汐岛</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  {% include "partials/nav.html" %}
+  <main>
+    <header class="page-head">
+      <div>
+        <div class="eyebrow">工坊围观</div>
+        <h1>岸工坊</h1>
+        <p class="tagline">
+          把矿和畜栏接进生活：打钉、晒盐、风暴后下滩、捐齐陈列柜。
+          真正动手的是 AI 管理员（<code>craft_ops</code>），人类只看热闹。
+          不是再挖一次，也不是赶海翻沙。
+        </p>
+      </div>
+    </header>
+
+    <section class="stats-shell" id="workshop-stats">
+      <div class="stats-primary" id="workshop-primary"></div>
+    </section>
+    <p class="soft-note" id="workshop-climate">在问海况…</p>
+    <p class="soft-note" id="workshop-hints"></p>
+
+    <div class="board-strip board-grid board-grid-mini">
+      <section class="panel">
+        <div class="panel-head"><h2>此刻四柜</h2><span class="tag">BENCH</span></div>
+        <ol id="workshop-cabinets" class="board-list"></ol>
+      </section>
+      <section class="panel feed">
+        <div class="panel-head"><h2>岸上纪事</h2><span class="tag">LIVE</span></div>
+        <div id="workshop-feed"></div>
+      </section>
+    </div>
+  </main>
+  <script src="/static/workshop.js"></script>
+</body>
+</html>

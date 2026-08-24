@@ -148,7 +148,9 @@ def test_mcp_descriptions() -> None:
     assert "下馆子" in instructions
     assert "shop dine" in instructions
     assert "quarry_ops" in instructions
+    assert "craft_ops" in instructions
     assert "mine_ops" in instructions
+    assert "forge_ops" in instructions
 
     quarry = mcp._tool_manager.get_tool("quarry_ops")
     q_blob = f"{quarry.description}\n{(quarry.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -158,6 +160,15 @@ def test_mcp_descriptions() -> None:
     assert "买镐" in q_blob
     assert "mine_ops" in q_blob
     assert "tide_ops dig" in q_blob or "赶海" in q_blob
+
+    cr = mcp._tool_manager.get_tool("craft_ops")
+    c_blob = f"{cr.description}\n{(cr.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
+    assert "status" in c_blob
+    assert "打 铜钉" in c_blob
+    assert "取" in c_blob
+    assert "打捞" in c_blob
+    assert "forge_ops" in c_blob
+    assert "tide_ops dig" in c_blob or "赶海" in c_blob
 
 
 def test_relay_manual_covers_systems() -> None:
@@ -255,6 +266,11 @@ def test_relay_manual_covers_systems() -> None:
         "开坑 确认",
         "mine_ops",
         "岩尘入肺",
+        "craft_ops",
+        "打 铜钉",
+        "forge_ops",
+        "咸痰",
+        "/workshop",
         "能直接送票",
         "tote_ops gifts",
         "随机事件整体 +30%",
@@ -319,9 +335,17 @@ def test_readme_workflow_rules() -> None:
         assert "merge origin/main" in blob
         assert "relay_manual" in blob
         assert "mcp_app.py" in blob
-    assert "17 个工具" in readme
+    assert "18 个工具" in readme
     assert "quarry_ops" in readme
+    assert "craft_ops" in readme
+    assert "/workshop" in readme
     assert "盐风崖" in readme
+    workshop_html = (root / "allotment-relay/server/templates/workshop.html").read_text(encoding="utf-8")
+    workshop_js = (root / "allotment-relay/server/static/workshop.js").read_text(encoding="utf-8")
+    nav = (root / "allotment-relay/server/templates/partials/nav.html").read_text(encoding="utf-8")
+    assert "craft_ops" in workshop_html
+    assert "/api/public/workshop" in workshop_js
+    assert 'href="/workshop"' in nav
     assert "满级 99" in readme or "1～99" in readme
     assert "steward_ops" in readme and "plot_ops" in readme and "bar_ops" in readme
     assert "quarry_ops" in readme

@@ -1169,15 +1169,21 @@ async def voyage_ops(key_id: int, command: str) -> str:
             if not s.get("boat_damaged"):
                 return "船况良好，无需修理"
             cost = BOATS[s["boat_key"]]["repair"]
+            nail_note = ""
+            if await db.take_item(conn, s["id"], "craft_copper_nails", 1):
+                cost = max(1, cost // 2)
+                nail_note = "，用了一颗工坊铜钉"
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
             if (await cur.fetchone())[0] < cost:
+                if nail_note:
+                    await db.add_item(conn, s["id"], "craft_copper_nails", 1)
                 raise ValueError(f"修船需要 {cost} 票")
             await conn.execute(
                 "UPDATE stewards SET tickets=tickets-?, boat_damaged=0 WHERE id=?",
                 (cost, s["id"]),
             )
             await conn.commit()
-        return f"修船完成（-{cost} 票），可以 depart"
+        return f"修船完成（-{cost} 票{nail_note}），可以 depart"
 
     if verb == "depart" and len(parts) >= 2:
         route_key = parts[1].split()[0].lower()

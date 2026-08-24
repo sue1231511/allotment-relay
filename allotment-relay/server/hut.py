@@ -170,6 +170,8 @@ class HutBonus:
             bits.append("赶海铃响")
         if self.quarry_energy_save:
             bits.append("崖矿省力")
+        if self.has("boat_rib"):
+            bits.append("铁肋护船")
         if self.bar_tip:
             bits.append("酒吧小费+")
         if self.has("fridge"):
@@ -213,6 +215,16 @@ def bonuses_for(keys: set[str] | list[str]) -> HutBonus:
         b.beach_extra += 0.14
     if b.has("miner_lamp"):
         b.quarry_energy_save += 1
+    if b.has("lamp_wick"):
+        b.quarry_energy_save += 1
+    if b.has("copper_chime"):
+        b.bar_tip += 1
+    if b.has("boat_rib"):
+        b.voyage_fail *= 0.90
+    if b.has("salt_stool"):
+        b.guild_standing += 1
+    if b.has("marrow_jar"):
+        b.night_mist_save += 1
     if b.has("star_crown", "herring_mobile"):
         b.bar_tip += 2
     if b.has("shell_windchime", "kelp_tassel"):
@@ -1277,7 +1289,10 @@ async def hut_ops(key_id: int, command: str) -> str:
         if kind in ("all", "soft"):
             lines.append("【软装】")
             for k, v in HUT_SOFT.items():
-                lines.append(f"  {k} — {v['emoji']}{v['name']} {v['cost']} 票 · {v['hint']}")
+                if v.get("craft_only"):
+                    lines.append(f"  {k} — {v['emoji']}{v['name']} 工坊打 · {v['hint']}")
+                else:
+                    lines.append(f"  {k} — {v['emoji']}{v['name']} {v['cost']} 票 · {v['hint']}")
             lines.append(
                 "存菜：buy cabinet（潮柜·生鲜）或 buy fridge（冰箱·熟菜，也可 buy 冰柜）；"
                 f"装好后 hut_ops 冰柜 存|取。潮柜基础 {config.CABINET_SLOTS} 格，"
@@ -1345,6 +1360,10 @@ async def hut_ops(key_id: int, command: str) -> str:
     if verb == "buy" and len(parts) >= 2:
         key = _resolve_fitting_key(parts[1].split()[0])
         kind, meta = _catalog_item(key)
+        if meta.get("craft_only"):
+            raise ValueError(
+                f"{meta['name']}是岸工坊出品，craft_ops 打 {meta['name']}，不能 hut_ops buy"
+            )
         fit_item = f"fit_{key}"
         async with db.connect() as conn:
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
@@ -1474,6 +1493,10 @@ async def hut_ops(key_id: int, command: str) -> str:
         compost_dumped = 0
         async with db.connect() as conn:
             if not await db.take_item(conn, s["id"], fit_item, 1):
+                if meta.get("craft_only"):
+                    raise ValueError(
+                        f"行囊没有 {meta['name']}，先 craft_ops 打 {meta['name']}"
+                    )
                 raise ValueError(f"行囊没有 {meta['name']}，先 buy {key}")
             old = await _fittings(conn, s["id"])
             if slot in old:

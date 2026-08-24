@@ -139,7 +139,7 @@ TIDE_HELP = """tide_ops 子命令（整句写进 command）：
   compliment|release|catch|grab — 未命名小鱼（可省略 voyage）。compliment=release 礼遇回赠普通鱼；
     catch=grab 动手：抓住这尾进袋，落下腿鱼小咒，其它鱼和精力会出事
     吃或卖再掷事件：kitchen_ops eat 未命名小鱼 · tote_ops vend 未命名小鱼 1
-  beach scan|dig|probe — 赶海（dig 要铲子）。涨潮时 dig 和 probe 都关，scan 还能看。dig 不是崖矿，矿石走 quarry_ops 挖
+  beach scan|dig|probe — 赶海（dig 要铲子）。涨潮时 dig 和 probe 都关，scan 还能看。dig 不是崖矿，矿石走 quarry_ops 挖。风暴打捞不是 dig，走 craft_ops 打捞
   gear status|upgrade bait|rod|net — 渔具（T0–T5；更高档要票+材料）
   tool list|buy hoe|shovel — 锄头铲子
   boss status|attack — 潮渊之主（无船也能岸边围攻）
@@ -173,7 +173,28 @@ QUARRY_HELP = """quarry_ops 子命令（整句写进 command）：
   help — 本表
 
 例子：status · 买镐 · 探脉 · 挖 1 · 洗 海盐砂 2
-涨潮关的是赶海 dig；崖矿不关，但湿滑更难挖。不要发明 hew_all / mine_all。"""
+涨潮关的是赶海 dig；崖矿不关，但湿滑更难挖。不要发明 hew_all / mine_all。
+盐田晒盐走 craft_ops 灌 / 收盐，不是再挖一次。"""
+
+CRAFT_HELP = """craft_ops 子命令（整句写进 command）：
+  岸工坊。把崖矿精矿、羊毛、漂绳、岸木做成东西；附带盐田、风暴打捞、陈列柜。
+  不是 quarry_ops（崖上挥镐洗矿）。不是 tide_ops dig（赶海翻沙，要铲子）。
+  不是 kitchen_ops cook。没有 forge_ops / salvage_ops / exhibit_ops。
+  空 command 列出本表，不是看砧。看砧必须 status。
+
+  status / 看 — 砧上在打什么、盐田、打捞窗口、陈列进度
+  图鉴 / catalog — 配方、盐田规则、打捞窗口、陈列套
+  打 铜钉 — 扣材料开始慢工（一砧一次；好了 craft_ops 取）
+  取 — 领做好的成品
+  补网 — 消耗一枚网补丁，6 小时撒网空网 -8%
+  盐田 — 看池；灌 — 涨潮灌一池（5 精力）；收盐 — 晴天攒满 20 分钟后收海盐晶
+  开池 / 开池 确认 — 加盐田（最多 3 口，40/68/96 票）
+  打捞 — 阵风中、阵风后晴天、周潮或船损才能下滩。不是 dig
+  陈列 / 捐 亮壳一套 — 看套 / 捐货换称呼或小屋装饰。也可 捐 亮壳 · 捐 矿石 · 捐 夜光
+  help — 本表
+
+例子：status · 打 铜钉 · 取 · 灌 · 收盐 · 打捞 · 捐 亮壳一套
+涨潮灌盐田，晴天才晒。赶海 dig 涨潮关；打捞只认风暴窗口。"""
 
 ALLIANCE_HELP = """alliance_ops 子命令（整句写进 command）：
   在线 — 档口里的人（15 分钟内有操作）
@@ -200,7 +221,7 @@ VISIT_HELP = """visit_ops 子命令（整句写进 command）：
     行囊每种最多 24 份，买多了会拒；满了先 vend 或 hut_ops 冰柜 存
   lore scan [主题] / topics — 沿海旧史文本与 NPC 小传（例：lore scan npc；不是收集品，背包里不会多东西）
   clinic status — 看病症和诊费
-  clinic treat 病症 — 花钱治。例子：treat sprain · treat infection · treat 腿鱼小咒 · treat 岩尘入肺 · treat all
+  clinic treat 病症 — 花钱治。例子：treat sprain · treat infection · treat 腿鱼小咒 · treat 岩尘入肺 · treat 咸痰 · treat all
   生肉感染约三次、两次间隔 6 小时；水果/生鱼生吃不会感染（连吃 5 口水果会营养不良，吃熟菜可解）；蔬菜不能生吃
   斗场震伤 / 深坑重创 桥桥不收，走 undertide_ops medic
   treat / fortune 可省略前缀"""

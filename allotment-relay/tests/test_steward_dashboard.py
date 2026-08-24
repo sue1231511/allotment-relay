@@ -58,6 +58,7 @@ async def _test_steward_dashboard_api() -> None:
     assert "季节" in (data.get("climate") or "") or "一周一季" in (data.get("climate") or ""), data.get("climate")
     assert "quarry" in data and data["quarry"]["pick_tier"] == 0, data.get("quarry")
     assert "买镐" in data["quarry"]["line"], data["quarry"]
+    assert "craft" in data and "砧" in data["craft"]["line"], data.get("craft")
 
 
 if __name__ == "__main__":

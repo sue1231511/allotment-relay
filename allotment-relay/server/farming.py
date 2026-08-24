@@ -763,6 +763,7 @@ def chop_tree(plot: dict[str, Any]) -> dict[str, Any]:
     loot: list[tuple[str, int]] = []
     twine = random.randint(1, 2)
     loot.append(("drift_twine", twine))
+    loot.append(("craft_timber", random.randint(1, 2)))
     if plot_overripe(plot):
         n = random.randint(2, 3)
         loot.append(("compost", n))

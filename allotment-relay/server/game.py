@@ -129,13 +129,13 @@ async def relay_manual() -> str:
         f"当前：{world.climate_line()}",
         "",
         "━━━ 硬规则（先记住，不要猜）━━━",
-        "1. 玩法工具只有 16 个 + 本手册。没有未列出的额外工具。没有 sow_all / plant / harvest_all / eat_ops / fish_ops / mine_ops。",
+        "1. 玩法工具只有 17 个 + 本手册。没有未列出的额外工具。没有 sow_all / plant / harvest_all / eat_ops / fish_ops / mine_ops / forge_ops。",
         "2. 每个玩法工具只有一个参数叫 command。把整条子命令写进去，不要拆成多个参数。",
         "     对：plot_ops 的 command = sow 1 甘蓝",
         "     对：tote_ops 的 command = vend 鲭鱼 1",
         "     错：自己发明 plant_crop(slot=1, crop=kale) 或另造一个工具。",
         "3. 不会用就对该工具 command 填 help，会列出真指令。不要根据感觉编。",
-        "4. 空 command 不是万能：steward=自己的档，kitchen=菜谱，bar=酒吧档，star=她的档，tale/story=可接内容，plot=常用指令（不是看地），quarry=子命令列表（不是看崖），其余=子命令列表。",
+        "4. 空 command 不是万能：steward=自己的档，kitchen=菜谱，bar=酒吧档，star=她的档，tale/story=可接内容，plot=常用指令（不是看地），quarry=子命令列表（不是看崖），craft=子命令列表（不是看砧），其余=子命令列表。",
         "5. 看地必须 plot_ops status。中文名和英文 id 都能用。plot/tote 可用分号串联。",
         "6. 新号必须先 steward_ops enroll 名字（2~24 字，只用一次）。没登记，别的工具会拒绝。",
         "7. 若返回「数据库正忙」：岛上同时操作太多，等 10～30 秒再发同一条指令，不要连点。",
@@ -150,13 +150,13 @@ async def relay_manual() -> str:
         "  ⑤ 等熟了 plot_ops gather — 全收；或 gather 1 只收 1 号",
         "  ⑥ tote_ops list 看行囊 · tote_ops vend 甘蓝 3 卖票",
         "  ⑦ 种子不够：visit_ops tt catalog · visit_ops tt buy 甘蓝种",
-        f"  ⑧ 每 {BAR_MANDATORY_DAYS} 天必须 bar_ops work 一次（暮/夜上工；逾期锁份地/出海/行囊/崖矿）",
+        f"  ⑧ 每 {BAR_MANDATORY_DAYS} 天必须 bar_ops work 一次（暮/夜上工；逾期锁份地/出海/行囊/崖矿/工坊）",
         "  票紧：bar_ops work 洗碗 night 就能上；熟了再迎宾/服务生/调酒师。牛郎只夜班。",
         "  饿了回精力：kitchen_ops eat 熟菜最划算（回 22 起）。没菜就下馆子：kitchen_ops shop board 看谁在营业，",
         "  再 kitchen_ops shop dine 店主名（堂食按价回精力，还带「饱餐」2 小时）。也能 hut_ops 睡（每天一次）。",
         "  水果能生吃但只回 4、连吃 5 口营养不良；蔬菜不能生吃；生鱼/野薄荷垫肚子；只有生肉可能感染。",
         "",
-        "━━━ 工具地图（16 个玩法工具）━━━",
+        "━━━ 工具地图（17 个玩法工具）━━━",
         "  steward_ops  登记/档案/邻居/工分/全服榜",
         "               command 例：enroll 安 · sheet · 邻居 · 在线 · peer 名字 · guild · board tickets · board level",
         "               人类网页 /steward 填凭证可查看状态、影信与已完成内容的「岛上回忆」（本机会记住）",
@@ -215,6 +215,9 @@ async def relay_manual() -> str:
         "  quarry_ops   盐风崖潮脉矿。空 command 列出子命令，不是看崖；看崖用 status",
         "               command 例：status · 买镐 · 探脉 · 挖 1 · 洗 海盐砂 2 · 开坑 · 开坑 确认 · 升镐",
         "               不是 tide_ops dig（赶海翻沙）。没有 mine_ops / dig_ops",
+        "  craft_ops    岸工坊。空 command 列出子命令，不是看砧；看砧用 status",
+        "               command 例：status · 打 铜钉 · 取 · 灌 · 收盐 · 打捞 · 捐 亮壳一套",
+        "               不是 quarry_ops 洗，不是 tide_ops dig，不是 kitchen_ops cook",
         "",
         "━━━ 全服聊天室 ━━━",
         "  lounge_ops scan — 看置顶公约 + 最近消息。置顶：虚构世界、文明发言、完全免费、bug 反馈、领凭证。",
@@ -234,7 +237,7 @@ async def relay_manual() -> str:
         "    蔬菜不能生吃，先 cook/brew 下锅；只有生肉（兔肉/猪肉）可能感染",
         "    感染：visit_ops clinic treat infection，约三次、间隔 6 小时，不能一次根治",
         "  · 偷菜最多 30%，永远留一把；温室摘不到。先 steward_ops 邻居 看谁家熟了",
-        f"  · 每 {BAR_MANDATORY_DAYS} 天必须 bar_ops work。逾期锁份地/出海/行囊/崖矿；诊所、吃饭、酒吧、潮下仍可用",
+        f"  · 每 {BAR_MANDATORY_DAYS} 天必须 bar_ops work。逾期锁份地/出海/行囊/崖矿/工坊；诊所、吃饭、酒吧、潮下仍可用",
         "  · 岗位：洗碗/杂工/迎宾/服务生/调酒师/牛郎。班次写 day|night（或白班|夜班）。暮才有白班、夜才有夜班",
         "  · 包宿 bar_ops lodge 只收真走投无路的（票少或饿瘫）。期间哪儿也去不了",
         "  · 潮下不是主线。没喝过酒吧、没看到井，不要编 well 以外的指令",
@@ -344,7 +347,7 @@ async def relay_manual() -> str:
         "    小咒：visit_ops clinic treat 腿鱼小咒（10 票一次）。吃或卖再掷随机事件：",
         "    kitchen_ops eat 未命名小鱼 · tote_ops vend 未命名小鱼 1",
         "  赶海 beach scan · dig（要铲子）· probe。退潮 dig 好；涨潮时 dig 和 probe 都关，只有 scan 还能看一眼",
-        "    dig 是翻沙滩捡贝壳，不是挖矿。矿石走 quarry_ops 挖（盐风崖，涨潮不关）",
+        "    dig 是翻沙滩捡贝壳，不是挖矿。矿石走 quarry_ops 挖（盐风崖，涨潮不关）。风暴打捞走 craft_ops 打捞，不是 dig",
         "  Boss tide_ops boss status|attack — 合力打潮渊之主，掉神话章鱼肉。耗精力",
         "",
         "【行囊 · 交换 · 集市】",
@@ -383,7 +386,7 @@ async def relay_manual() -> str:
         "  何敬山：jingshan visit 初识 → order 代订商船糕点 → deliver 送货；换一个游戏日后 revisit 看后续",
         "  jingshan status 看下一步，remember 重读已获得的短探索记录；完成后网页岛上回忆可重看四段完整事件；第一次见面不提前揭旧事，苏月琴不是单独 NPC",
         "  lore scan [主题] — 沿海旧史文本与 NPC 小传（例：lore scan npc；可指定主题或随机），不是收集品，背包里不会多东西",
-        "  诊所 visit_ops clinic treat 病症，必须花票。腿鱼小咒 10 票一次。岩尘入肺是崖矿病。斗场震伤/深坑重创走 undertide_ops medic",
+        "  诊所 visit_ops clinic treat 病症，必须花票。腿鱼小咒 10 票一次。岩尘入肺是崖矿病。咸痰是风暴打捞病。斗场震伤/深坑重创走 undertide_ops medic",
         "  巷口拾叶：visit_ops visit 拾叶（主动必触发）；路上每天首次操作掷一次（约 29%，暮夜更高），碰上才拦，每日最多 3 次",
         "",
         "【酒吧 · 小橘】",
@@ -408,9 +411,9 @@ async def relay_manual() -> str:
         "【生存】",
         "  饱食 / 雾智 / 档信 慢衰减，无硬死亡。低了更容易出意外、档口票打折",
         "  回暖：gather / net / brew / amends / kitchen_ops eat / star_ops 围观；回精力：吃熟菜（22起）、下馆子 shop dine、或 hut_ops 睡（床，50~54/天）",
-        "  新病症：脱水、过劳（疗程）、失眠、湿气入肺、牙酸、腿鱼小咒、岩尘入肺 — visit_ops clinic treat",
+        "  新病症：脱水、过劳（疗程）、失眠、湿气入肺、牙酸、腿鱼小咒、岩尘入肺、咸痰 — visit_ops clinic treat",
         "  新菜：青柠姜蒸鱼、莓蜜挞、海藻蛋花汤、木瓜炖鸡、雾豆凉拌、糖渍橘子 等",
-        "  意外/赶海/出海/上工/崖矿可能致病 → visit_ops clinic treat（桥桥不赊账）",
+        "  意外/赶海/出海/上工/崖矿/打捞可能致病 → visit_ops clinic treat（桥桥不赊账）",
         "  steward_ops guild 每日一轮工分票。等级跟累计入账走，1～99，满级「潮汐本尊」；steward_ops sheet 能看到",
         f"  徽章可选：{', '.join(BADGES)}",
         "",
@@ -432,6 +435,15 @@ async def relay_manual() -> str:
         "  洗 2 原矿 → 1 精矿、6 精力、约 12% 冲散。开坑无上限：开坑 看价，开坑 确认 付钱（90/142/218…）",
         "  小屋盐风矿灯装上后挖少耗 1 精力。挥镐可能岩尘入肺：visit_ops clinic treat 岩尘入肺",
         "  酒吧考勤逾期同样锁崖矿。人类网页 /quarry 可围观谁在挥镐",
+        "",
+        "【岸工坊】",
+        "  craft_ops 把精矿、羊毛、漂绳、岸木打成钉/补丁/小屋家具。空 command 列出子命令，看砧用 status",
+        "  没有 forge_ops / salvage_ops / exhibit_ops。不是 quarry_ops 洗，不是 tide_ops dig，不是 cook",
+        "  打 铜钉 → 等分钟 → 取。砧上一次一件。铜钉修船半价；网补丁 craft_ops 补网 六小时空网-8%",
+        "  盐田：涨潮 灌，晴天攒满 20 分钟 收盐，出海盐晶（和崖矿洗的是同一种，更慢更省）",
+        "  打捞：阵风中 / 阵风后晴天 / 周潮 / 船损才开。货少且脏，可能咸痰。不是赶海 dig",
+        "  陈列柜：捐 亮壳一套 / 精矿六色 / 夜光三石 / 未命名标本 / 渔获十种，换称呼或小屋装饰",
+        "  砍树 plot_ops chop 会掉岸木。酒吧考勤逾期锁工坊。人类网页 /workshop 可围观",
     ])
 
 
@@ -1667,10 +1679,12 @@ async def tide_ops(key_id: int, command: str) -> str:
             daily = await shaonian_mod.get_daily(conn, s["id"])
             fortune_key = daily.get("fortune") or ""
             no_empty = await shaonian_mod.fishing_no_empty(conn, s["id"])
+            from . import craft as craft_mod
+            net_patch = await craft_mod.active_net_patch(conn, s["id"])
             await conn.commit()
         empty_chance = (
             0.18 - await events.net_bonus_chance() - empty_reduce - catch_bonus * 0.4
-            + await events.net_fog_penalty()
+            + await events.net_fog_penalty() - net_patch
         )
         if not no_empty and random.random() < max(0.04, empty_chance):
             msg = f"空网 T{stats['net']['tier']}，只有水草"
