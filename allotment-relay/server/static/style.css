@@ -298,10 +298,14 @@ nav,
   top: 0;
   right: 0;
   z-index: 100;
-  width: min(430px, 100vw);
+  width: min(430px, 100%);
   height: 100%;
-  padding: 24px;
-  overflow: auto;
+  max-height: 100dvh;
+  padding: 0;
+  padding-right: env(safe-area-inset-right, 0px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: #f4f1e8;
   box-shadow: -20px 0 60px rgba(31, 47, 52, .18);
   transform: translateX(105%);
@@ -316,7 +320,8 @@ nav,
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 18px;
+  flex: 0 0 auto;
+  padding: 24px 24px 18px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -332,6 +337,29 @@ nav,
   color: var(--muted);
   cursor: pointer;
   font-size: 14px;
+}
+
+.island-drawer-body {
+  flex: 1 1 auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 24px 28px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(127, 167, 171, .28) transparent;
+}
+
+.island-drawer-body::-webkit-scrollbar {
+  width: 4px;
+}
+
+.island-drawer-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.island-drawer-body::-webkit-scrollbar-thumb {
+  background: rgba(127, 167, 171, .28);
+  border-radius: 999px;
 }
 
 .island-drawer-group {
