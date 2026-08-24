@@ -30,10 +30,10 @@ from .catalog import (
     unknown_item_message,
     is_raw_meat,
 )
+from .game import require_steward
 
 # 冰箱/行囊对菜名做宽松匹配：去星标、去 emoji/符号，只留字
 _DISH_NAME_KEEP = re.compile(r"[\w\u4e00-\u9fff]+", re.UNICODE)
-from .game import require_steward
 
 EAT_RULES = (
     "eat 可吃：熟菜 dish_/meal_（回精力大头）；水果可生吃但只回一点、连吃会营养不良；"
