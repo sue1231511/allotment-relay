@@ -61,6 +61,8 @@ async def _test_play_api() -> None:
     land = enrolled["dashboard"].get("land") or {}
     assert land.get("plots", {}).get("count") == 3, land
     assert land.get("orchard", {}).get("count") == 3, land
+    assert "island_bond" in enrolled["dashboard"], enrolled["dashboard"]
+    assert enrolled["dashboard"]["dues"]["upkeep_arrears"] == 0, enrolled["dashboard"]
 
     other = await db.create_api_key("play-b@example.com")
     await play_mod.run_play(other, "steward_ops", "enroll 对岸的人")
@@ -95,6 +97,11 @@ def test_play_page_lists_all_plot_kinds() -> None:
     assert "plotGroupHtml(`菜地" in js
     assert "plotGroupHtml(`果园" in js
     assert "还没有温室" in js
+    assert "duesUrgent" in js
+    assert "去潮生会" in js
+    assert "交岸维" in js
+    assert "orderedPlaces" in js
+    assert "b.week1" in js
 
 
 if __name__ == "__main__":

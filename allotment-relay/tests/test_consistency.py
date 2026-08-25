@@ -574,6 +574,9 @@ def test_patron_pages_share_steward_key() -> None:
     assert "/api/steward/memory" in play_js
     assert "data-memory-filter" in play_js
     assert "连续阅读" in play_js
+    assert "duesUrgent" in play_js
+    assert "island_bond" in play_js
+    assert "去潮生会" in play_js
     assert "/static/site-key.js" not in index_html
     assert "/static/site-key.js" not in place_html
     assert "/static/site-key.js" not in bar_html

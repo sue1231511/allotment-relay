@@ -184,6 +184,7 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
         "motto": s["motto"],
         "portrait": s["portrait"],
         "tickets": s["tickets"],
+        "island_bond": int(s.get("island_bond") or 0),
         "level": ranked.get("level", 1),
         "title": ranked.get("title", ""),
         "xp": ranked.get("xp", 0),
