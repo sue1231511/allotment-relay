@@ -125,9 +125,73 @@ def test_play_page_lists_all_plot_kinds() -> None:
     assert "交岸维" in js
     assert "orderedPlaces" in js
     assert "b.week1" in js
+    assert "payloadAttr" in js
+    assert "readPayload" in js
+    assert "play-duty-go" in js
+    assert "data-place=\"${esc(pl.id)}\"" in js or 'data-place="${esc(pl.id)}"' in js
+    assert "这个按钮坏了" in js
+    py = (ROOT / "server" / "play.py").read_text()
+    assert "work 洗碗 night" not in py
+    assert '"command": "work 洗碗"' in py
+    assert "places_now" in py
+    assert "play.js?v=act2" in html
+
+
+def test_play_bar_work_follows_phase() -> None:
+    asyncio.run(_test_play_bar_work_follows_phase())
+
+
+async def _test_play_bar_work_follows_phase() -> None:
+    from unittest.mock import patch
+
+    tmp = Path(tempfile.mkdtemp(prefix="play-bar-"))
+    await _boot(tmp)
+    from server import play as play_mod
+    from server import world
+    from server import db
+
+    key = await db.create_api_key("play-bar@example.com")
+    await play_mod.run_play(key, "steward_ops", "enroll 洗碗的人")
+
+    with patch.object(world, "current_day_phase", return_value="dusk"):
+        snap = await play_mod.run_play(key, "", "")
+        bar = next(p for p in snap["places"] if p["id"] == "bar")
+        work = next(a for a in bar["actions"] if a["label"] == "洗碗上工")
+        assert work["command"] == "work 洗碗", work
+        assert "白班" in work["note"] or "暮" in work["note"], work
+        done = await play_mod.run_play(key, "bar_ops", "work 洗碗")
+        assert done["ok"] is True, done
+        text = done.get("text") or ""
+        assert "洗碗" in text or "工" in text or "票" in text, text
+        try:
+            await play_mod.run_play(key, "bar_ops", "work 洗碗 night")
+            raise AssertionError("explicit night shift should fail at dusk")
+        except ValueError as exc:
+            assert "夜班" in str(exc) or "night" in str(exc), exc
+
+    with patch.object(world, "current_day_phase", return_value="day"):
+        snap = await play_mod.run_play(key, "", "")
+        bar = next(p for p in snap["places"] if p["id"] == "bar")
+        work = next(a for a in bar["actions"] if a["label"] == "洗碗上工")
+        assert "打烊" in work["note"] or "补班" in work["note"], work
+        try:
+            await play_mod.run_play(key, "bar_ops", "work 洗碗")
+            raise AssertionError("daytime work should fail when not overdue")
+        except ValueError as exc:
+            msg = str(exc)
+            assert "营业" in msg or "白班" in msg or "昼" in msg, msg
+
+    with patch.object(world, "current_day_phase", return_value="night"):
+        snap = await play_mod.run_play(key, "", "")
+        bar = next(p for p in snap["places"] if p["id"] == "bar")
+        work = next(a for a in bar["actions"] if a["label"] == "洗碗上工")
+        assert "夜" in work["note"], work
+        done = await play_mod.run_play(key, "bar_ops", "work 洗碗")
+        assert done["ok"] is True, done
 
 
 if __name__ == "__main__":
     asyncio.run(_test_play_api())
     test_play_page_lists_all_plot_kinds()
+    test_play_bar_work_follows_phase()
     print("ok")

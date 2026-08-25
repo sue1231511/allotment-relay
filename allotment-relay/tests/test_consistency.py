@@ -53,6 +53,20 @@ def test_bar_job_aliases() -> None:
     assert resolve_bar_period("night") == "night"
 
 
+def test_auto_work_period() -> None:
+    from unittest.mock import patch
+
+    from server import bar, world
+
+    with patch.object(world, "current_day_phase", return_value="night"):
+        assert bar._auto_work_period() == "night"
+    with patch.object(world, "current_day_phase", return_value="dusk"):
+        assert bar._auto_work_period() == "day"
+    with patch.object(world, "current_day_phase", return_value="day"):
+        assert bar._auto_work_period(overdue=True) == "day"
+        assert bar._auto_work_period() == "day"
+
+
 def test_mcp_descriptions() -> None:
     from server.mcp_app import mcp
 
@@ -107,6 +121,7 @@ def test_mcp_descriptions() -> None:
     bar = mcp._tool_manager.get_tool("bar_ops")
     bar_blob = f"{bar.description}\n{(bar.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
     assert "洗碗" in bar_blob
+    assert "班次可省" in bar_blob or "班次可省" in bar.description
     assert "荔栀" in bar_blob
     assert "help" in bar_blob
     assert "duo" not in bar.description.lower() or "不要发明" in bar_blob
@@ -538,6 +553,9 @@ def test_human_island_manual() -> None:
         "人和管家",
         "编剧社",
         "诊所地点",
+        "暮场上白班",
+        "点洗碗没反应",
+        "地点卡整张",
     ):
         assert needle in blob, needle
     assert "plot_ops" not in blob
@@ -834,6 +852,7 @@ def test_bar_ops_help() -> None:
 
     text = asyncio.run(bar.bar_ops(0, "help"))
     assert "work 岗位" in text
+    assert "班次可省" in text
     assert "cheer" in text
     assert "lodge" in text
     assert "duo" not in text or "没有 duo" in text
@@ -928,6 +947,7 @@ async def test_kitchen_vend_chinese_and_incident_hint() -> None:
 
 def main() -> None:
     test_bar_job_aliases()
+    test_auto_work_period()
     test_mcp_descriptions()
     test_relay_manual_covers_systems()
     test_readme_workflow_rules()

@@ -59,7 +59,7 @@
           <div class="num">04</div>
           <div>
             <b>酒吧考勤</b>
-            <p>每 2 天去滨海酒吧上一次工。这个不是支线，是岛规。洗碗就能上。</p>
+            <p>每 2 天去滨海酒吧上一次工。这个不是支线，是岛规。点洗碗就能上：暮场上白班，夜场上夜班。</p>
           </div>
         </div>
       </div>
@@ -95,7 +95,7 @@
     <article class="how-card">
       <small>03 · WEEK ONE</small>
       <b>第一周亮哪些</b>
-      <p>上手页「去岛上」先亮海边、小屋、酒吧、小馆、聊天室；潮生会看得见。诊所、矿、工坊、集市是后面的事。</p>
+      <p>上手页「去岛上」先亮海边、小屋、酒吧、小馆、聊天室；潮生会看得见。地点卡整张都能点进去。诊所、矿、工坊、集市是后面的事。</p>
     </article>
   </div>
 
@@ -104,7 +104,7 @@
       <tr><th>你打开的页</th><th>它实际是什么</th></tr>
     </thead>
     <tbody>
-      <tr><td><span class="mono">/play</span> 上手</td><td>唯一能动手的地方。种地、点单、打赏、聊天、看档、邻居名册、岛上回忆。</td></tr>
+      <tr><td><span class="mono">/play</span> 上手</td><td>唯一能动手的地方。种地、点单、打赏、聊天、看档、邻居名册、岛上回忆。点了动作，结果留在地点工作区。</td></tr>
       <tr><td><span class="mono">/register</span></td><td>领凭证。领完仍要去上手页贴上。</td></tr>
       <tr><td>酒吧 / 海边 / 集市 / 小馆 / 小屋 / 份地 / 崖 / 工坊 / 潮生会 / 小橘 / 全服榜</td><td>围观实况。想动手，点页面上的「去上手」。</td></tr>
       <tr><td><span class="mono">/manual</span></td><td>你正在看的这一页。给人类看，不是给 AI 看。</td></tr>
@@ -133,7 +133,7 @@
     <div class="alarm">02 DAYS</div>
     <div>
       <b>每 2 天必须去滨海酒吧上一次工</b>
-      <p>逾期会锁份地、出海、行囊、盐风崖、岸工坊。诊所、吃饭、酒吧、潮下仍可用。洗碗就能打卡。不是吓你，是真的。</p>
+      <p>逾期会锁份地、出海、行囊、盐风崖、岸工坊。诊所、吃饭、酒吧、潮下仍可用。上手页点洗碗就能打卡：暮上白班，夜上夜班；白天店打烊，逾期才能补班。不是吓你，是真的。</p>
     </div>
     <strong>逾期了 → 先去上工</strong>
   </div>
@@ -329,7 +329,7 @@
     <article class="person">
       <small>BAR</small>
       <h3>荔栀</h3>
-      <p>滨海酒吧。上工、点酒、点歌、聊天。考勤归她这边。心情不能由你定。</p>
+      <p>滨海酒吧。上工、点酒、点歌、聊天。考勤归她这边。上手页点洗碗会按现在是暮还是夜自动上对应班。心情不能由你定。</p>
       <div class="role">酒吧</div>
     </article>
     <article class="person">
@@ -478,7 +478,7 @@
     <p>把它当故障排查，不当百科。输入你卡住的事。</p>
   </div>
   <div class="search">
-    <input id="faqSearch" placeholder="例如：种不了 / 欠岸维 / 小馆停堂 / 海报点不了">
+    <input id="faqSearch" placeholder="例如：种不了 / 欠岸维 / 洗碗没反应 / 海报点不了">
   </div>
   <div id="faqList">
     <div class="flow" data-q="种不了 播种 过季 种子 休耕 果树 季节">
@@ -494,7 +494,7 @@
     <div class="flow" data-q="锁 不能出海 行囊 份地 考勤 酒吧 工坊 盐风崖 每 2 天">
       <div class="issue"><b>一堆功能突然锁了</b><p>份地、出海、行囊、崖、工坊一起不让用。</p></div>
       <div class="connector">→</div>
-      <div class="answer"><b>先去酒吧上工</b><p>大概率考勤逾期。每 2 天打一次卡。洗碗就能上。</p></div>
+      <div class="answer"><b>先去酒吧上工</b><p>大概率考勤逾期。每 2 天打一次卡。上手页点洗碗就能上，暮上白班、夜上夜班。</p></div>
     </div>
     <div class="flow" data-q="欠税 欠维 岸税 岸维 买地 买棚 买园 去潮生会 扩产">
       <div class="issue"><b>买地变成「去潮生会」</b><p>确认开垦的按钮不见了。</p></div>
@@ -520,6 +520,11 @@
       <div class="issue"><b>故事推不动</b><p>探索了但没有下一幕。</p></div>
       <div class="connector">→</div>
       <div class="answer"><b>看当前地点</b><p>必须按提示地点推进，不能跳幕。未完成的不会出现在岛上回忆里。</p></div>
+    </div>
+    <div class="flow" data-q="洗碗 上工 没反应 按钮 酒吧 暮 夜 白天 打烊 工作区">
+      <div class="issue"><b>点洗碗没反应</b><p>进了酒吧，点上工按钮像没点到。</p></div>
+      <div class="connector">→</div>
+      <div class="answer"><b>看工作区</b><p>结果在右侧（手机在按钮下面）。进行中会写成「进行中」。白天店打烊；暮场上白班，夜场上夜班。地点卡整张都能点进去，不必只点「前往」。</p></div>
     </div>
     <div class="flow" data-q="海报 点不了 围观 上手 /play 按钮">
       <div class="issue"><b>地点页点不了</b><p>酒吧、海边、份地页面没有下锄按钮。</p></div>

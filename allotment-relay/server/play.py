@@ -79,7 +79,7 @@ PLACES: list[dict[str, Any]] = [
         "week1": True,
         "duty": True,
         "actions": [
-            {"label": "洗碗上工", "note": "每两天须来一次", "tool": "bar_ops", "command": "work 洗碗 night"},
+            {"label": "洗碗上工", "note": "每两天须来一次；暮上白班、夜上夜班", "tool": "bar_ops", "command": "work 洗碗"},
             {"label": "今晚", "note": "看看今晚开不开门", "tool": "bar_ops", "command": "tonight"},
             {"label": "酒单", "note": "价目与今晚出品", "tool": "bar_ops", "command": "menu"},
             {"label": "我的酒吧档", "note": "考勤与上工记录", "tool": "bar_ops", "command": "status"},
@@ -223,6 +223,36 @@ PLACES: list[dict[str, Any]] = [
 ]
 
 
+def _adapt_place_action(place_id: str, action: dict[str, Any]) -> dict[str, Any]:
+    """按当前时辰/潮汐改按钮说明，避免上手页点了注定失败还像没反应。"""
+    act = dict(action)
+    cmd = str(act.get("command") or "")
+    phase = world.current_day_phase()
+    tide = world.current_tide()
+    if place_id == "bar" and cmd.startswith("work 洗碗"):
+        act["command"] = "work 洗碗"
+        if phase == "night":
+            act["note"] = "现在夜班。每两天须来一次"
+        elif phase == "dusk":
+            act["note"] = "现在暮场白班。每两天须来一次"
+        else:
+            act["note"] = "白天打烊；逾期可点此补班"
+    elif place_id == "tide" and cmd == "dig" and tide == "flood":
+        act["note"] = "涨潮关，现在翻不了"
+    elif place_id == "craft" and cmd == "灌" and tide != "flood":
+        act["note"] = "涨潮才能灌，现在还没到"
+    return act
+
+
+def places_now() -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for raw in PLACES:
+        place = dict(raw)
+        place["actions"] = [_adapt_place_action(place["id"], a) for a in (raw.get("actions") or [])]
+        out.append(place)
+    return out
+
+
 def climate_bits() -> dict[str, str]:
     from . import season as season_mod
 
@@ -286,7 +316,7 @@ async def snapshot(api_key: str) -> dict[str, Any]:
         "dashboard": dash,
         "seeds": seeds,
         "neighbors": neighbors,
-        "places": PLACES,
+        "places": places_now(),
         "climate": climate_bits(),
     }
 

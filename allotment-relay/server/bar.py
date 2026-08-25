@@ -63,8 +63,9 @@ BAR_HELP = """bar_ops 子命令（整句写进 command）：
   status — 自己的酒吧档（熟练度、可应聘岗位、考勤）。空 command 也是这个
   tonight — 今晚驻唱·特调·活动·小橘是否开嗓
   menu / order 酒名 — 酒单 / 点酒
-  work 岗位 day|night — 上工。岗位：洗碗/杂工/迎宾/服务生/调酒师/牛郎
-    暮才有白班、夜才有夜班；逾期白天可补班 ×0.72
+  work 岗位 [day|night] — 上工。岗位：洗碗/杂工/迎宾/服务生/调酒师/牛郎
+    班次可省：暮自动白班、夜自动夜班；白天打烊，逾期补班自动 day（票 ×0.72）
+    写了班次仍须对上时辰（暮才有白班、夜才有夜班）
     每 2 天必须 work 一次，否则锁份地/出海/行囊/崖矿/工坊
   cheer 好话 — 哄荔栀（每日 1 次）。潮下猫猫用 undertide_ops cheer；小橘用 star_ops 应援
   tip 名字 票数 [备注] — 给当班员工小费
@@ -103,6 +104,14 @@ def _work_period(period: str, *, overdue: bool = False) -> str:
     if p == "night" and phase != "night":
         raise ValueError("夜班仅夜（night）时段可上；当前 " + world.day_phase_label(phase))
     return p
+
+
+def _auto_work_period(*, overdue: bool = False) -> str:
+    """班次省略时按当前时辰：夜→夜班，暮→白班，白天逾期→补班。"""
+    phase = world.current_day_phase()
+    if phase == "night":
+        return "night"
+    return "day"
 
 
 def _owner_lines() -> list[str]:
@@ -1402,20 +1411,25 @@ async def bar_ops(key_id: int, command: str) -> str:
     if verb == "work":
         rest = command.strip()[4:].strip()
         wp = rest.split()
-        if len(wp) < 2:
+        if not wp:
             raise ValueError(
-                "用法: bar_ops work 岗位 day|night"
-                "（岗位: 洗碗/杂工/迎宾/服务生/调酒师/牛郎，或 dishwasher/runner/greeter/server/bartender/host）"
+                "用法: bar_ops work 岗位 [day|night]"
+                "（岗位: 洗碗/杂工/迎宾/服务生/调酒师/牛郎，或 dishwasher/runner/greeter/server/bartender/host。"
+                "班次可省：暮=白班，夜=夜班，白天逾期=补班）"
             )
         job_id = resolve_bar_job(wp[0])
-        period = resolve_bar_period(wp[1])
         if not job_id:
             raise ValueError(
                 f"未知岗位「{wp[0]}」，可选: 洗碗/杂工/迎宾/服务生/调酒师/牛郎"
             )
-        if not period:
-            raise ValueError("班次写 day/dusk/白班 或 night/夜班")
-        period = _work_period(period, overdue=is_shift_overdue(s))
+        overdue = is_shift_overdue(s)
+        if len(wp) >= 2:
+            period = resolve_bar_period(wp[1])
+            if not period:
+                raise ValueError("班次写 day/dusk/白班 或 night/夜班；不写则按当前时辰")
+        else:
+            period = _auto_work_period(overdue=overdue)
+        period = _work_period(period, overdue=overdue)
         async with db.connect() as conn:
             msg = await _run_work(conn, s, job_id, period)
             from . import tale as tale_mod
