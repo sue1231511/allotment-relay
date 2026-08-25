@@ -199,7 +199,7 @@ async def relay_manual() -> str:
         "                 · compliment · catch · beach scan · dig · probe · gear status",
         "                 · gear upgrade net · tool buy hoe · boss status · boss attack",
         "  tote_ops     行囊/交换台/集市",
-        "               command 例：list · gifts · vend 鲭鱼 1 · vend 芒果 3 木瓜 2（批量）· gift 安 甘蓝 1",
+        "               command 例：list · gifts · 送礼记录 · vend 鲭鱼 1 · vend 芒果 3 木瓜 2（批量）· gift 安 甘蓝 1",
         "                 · swap list · swap offer 甘蓝 2 · market list · market sell 甘蓝 2 8",
         "  kitchen_ops  厨房/小馆。空 command=菜谱",
         "               command 例：menu · cook 蒜蓉生蚝 · cook 糖渍橘子 · cook 甘蓝 鲭鱼 · eat 鲭鱼 · eat 芒果 · eat 橘子 · vend 盐焗沙蟹",
@@ -391,8 +391,9 @@ async def relay_manual() -> str:
         "  Tt酱货架买的种/饲料/工具，系统回收进价九成——退货少亏一成，别反复倒卖当印钞",
         "  买东西不能超过行囊每格上限；满了 vend / 冰柜 存 / tote_ops 扩栈",
         "  未命名小鱼 vend 会再掷一次小咒事件（可能吐票、走回袋、解开或加重小咒）",
-        "  gifts [条数] — 查谁给你送了什么、酒吧谁给你打赏（即时到账，这里只看记录）。也可写 收礼。tote_ops gifts",
-        "  gift 名字 物品|票 数量 [留言] — 送给别人。能直接送票，即时到账，无手续费、无每日上限。票榜看口袋现票，送出会掉名次。协作度 +3",
+        "  gifts [条数] — 查谁给你送了什么、酒吧谁给你打赏（即时到账，这里只看记录）。也可写 收礼 / 赠礼。考勤逾期也能查。tote_ops gifts",
+        "  送礼记录 [条数] — 查你送给别人的礼（集市纪事有，这里按人归档）。也可写 sent / 送出。tote_ops 送礼记录",
+        "  gift 名字 物品|票 数量 [留言] — 送给别人。也可写 送礼。能直接送票，即时到账，无手续费、无每日上限。票榜看口袋现票，送出会掉名次。协作度 +3。对方用 gifts / 上手页「收礼」查",
         "  随机事件整体 +30%（EVENT_RATE_MULT=1.3）：打理/收成/出海等更容易触发意外或惊喜；好事件也可能回一点身体",
         "  swap offer 物品 数量 — 白送挂单；claim 编号领（手续费 3 票，协作度高打折）",
         "  market sell 物品 数量 单价 — 玩家互卖；buy 编号；price 物品 看建议价",
@@ -673,9 +674,18 @@ async def steward_sheet(key_id: int) -> str:
         lines.append("行囊:")
         for item, qty in stock.items():
             lines.append(f"  {ITEM_NAMES.get(item, item)} x{qty} · {item}")
-    recent_gifts = await db.list_received_gifts(s["id"], 1)
+    recent_gifts = await db.list_received_gifts(s["id"], 3)
     if recent_gifts:
-        lines.append("最近有人送礼/酒吧打赏 → tote_ops gifts 查看详情")
+        from . import multi as multi_mod
+        lines.append("最近收礼/酒吧打赏（对方也可用 tote_ops gifts / 上手页「收礼」核对）：")
+        for r in recent_gifts:
+            who = r.get("actor_name") or "某人"
+            ago = multi_mod._ago(int(r["created_at"]))
+            tag = "打赏" if r.get("action") == "bar_tip" else "礼物"
+            detail = r.get("detail") or r.get("text") or ""
+            lines.append(f"  · [{tag}] {who}（{ago}）— {detail}")
+        if len(recent_gifts) >= 3:
+            lines.append("  → tote_ops gifts 看更多；送礼记录 tote_ops 送礼记录")
     async with db.connect() as conn:
         from . import market as market_mod
         extra = await market_mod._market_extra(conn, s["id"])
@@ -2430,7 +2440,7 @@ async def _tote_one(s: dict, command: str) -> str:
         if fate_notes:
             msg += "\n" + "\n".join(fate_notes)
         return msg
-    if verb in ("gifts", "收礼", "收到的礼"):
+    if verb in ("gifts", "收礼", "收到的礼", "赠礼", "收礼记录"):
         from . import multi as multi_mod
         limit = 20
         if len(parts) >= 2:
@@ -2438,18 +2448,45 @@ async def _tote_one(s: dict, command: str) -> str:
         rows = await db.list_received_gifts(s["id"], limit)
         if not rows:
             return (
-                "还没有人给你送礼或酒吧打赏。礼物即时进行囊或工分票，"
-                "也可 tote_ops list / steward_ops sheet 核对。"
+                "还没有人给你送礼或酒吧打赏。礼物即时进行囊或工分票；"
+                "集市纪事里的「送礼给」是公开流水，你的收件箱是 tote_ops gifts / 上手页右侧「收礼」。"
+                "核对行囊 tote_ops list，票 steward_ops sheet。"
             )
         lines = [f"收礼/打赏记录（最近 {len(rows)} 条）："]
         for r in rows:
             who = r.get("actor_name") or "某人"
             ago = multi_mod._ago(int(r["created_at"]))
             tag = "打赏" if r.get("action") == "bar_tip" else "礼物"
-            lines.append(f"  · [{tag}] {who}（{ago}）— {r['text']}")
-        lines.append("礼物已即时到账；行囊 tote_ops list，票 steward_ops sheet。")
+            detail = r.get("detail") or r.get("text") or ""
+            lines.append(f"  · [{tag}] {who}（{ago}）— {detail}")
+        lines.append(
+            "礼物已即时到账；行囊 tote_ops list，票 steward_ops sheet。"
+            "你送出的礼 → tote_ops 送礼记录。"
+        )
         return "\n".join(lines)
-    if verb == "gift" and len(parts) >= 4:
+    if verb in ("sent", "送出", "送出的礼", "送礼记录", "我送的", "赠出"):
+        from . import multi as multi_mod
+        limit = 20
+        if len(parts) >= 2:
+            limit = min(50, max(1, _parse_int(parts[1], "条数")))
+        rows = await db.list_sent_gifts(s["id"], limit)
+        if not rows:
+            return (
+                "你还没给人送过礼。送礼：tote_ops gift 名字 物品|票 数量 [留言]。"
+                "对方查收件箱用 tote_ops gifts / 上手页「收礼」，不是集市纪事。"
+            )
+        lines = [f"送礼记录（最近 {len(rows)} 条）："]
+        for r in rows:
+            who = r.get("target_name") or "某人"
+            ago = multi_mod._ago(int(r["created_at"]))
+            detail = r.get("detail") or r.get("text") or ""
+            lines.append(f"  · → {who}（{ago}）— {detail}")
+        lines.append(
+            "对方收件箱：tote_ops gifts / 上手页右侧「收礼」。"
+            "集市纪事也能看见公开流水，但不替代收件箱。"
+        )
+        return "\n".join(lines)
+    if verb in ("gift", "送礼") and len(parts) >= 4:
         peer_name = parts[1]
         token = parts[2]
         qty = _parse_int(parts[3])
@@ -2504,26 +2541,53 @@ async def _tote_one(s: dict, command: str) -> str:
         msg = f"已送礼给 {peer['name']}：{gift_line}"
         if note:
             msg += f"（{note}）"
-        msg += " · 协作度 +3"
+        msg += (
+            f" · 协作度 +3 · {peer['name']} 可 tote_ops gifts / 上手页「收礼」核对；"
+            "你自己用 tote_ops 送礼记录回看"
+        )
         return msg + flavor.maybe_suffix([
             "对方行囊已到账，不用等台阶",
             "礼轻情意重，联盟记一笔",
             "篱边人情：送了就要认",
         ])
+    if verb in ("gift", "送礼"):
+        raise ValueError(
+            "用法: tote_ops gift 名字 物品|票 数量 [留言]\n"
+            "查收到的礼: tote_ops gifts / 收礼 / 赠礼\n"
+            "查你送出的: tote_ops 送礼记录 / sent\n"
+            "例子: gift 安 甘蓝 1 · gift 安 票 5 生日快乐 · 送礼记录"
+        )
     if verb in ("扩栈", "expand_stack", "stack_expand"):
         n = _parse_int(parts[1], "数量") if len(parts) >= 2 else 1
         return await _satchel_stack_expand(s, n)
     raise ValueError(
-        f"未知 tote 指令: {command}（list / gifts / vend 物品 数量 / gift 名字 物品|票 数量 / 扩栈 [数量]）"
+        f"未知 tote 指令: {command}（list / gifts / 送礼记录 / vend 物品 数量 / gift 名字 物品|票 数量 / 扩栈 [数量]）"
     )
 
 
+_TOTE_READ_VERBS = frozenset({
+    "gifts", "收礼", "收到的礼", "赠礼", "收礼记录",
+    "sent", "送出", "送出的礼", "送礼记录", "我送的", "赠出",
+    "help", "?", "帮助",
+})
+
+
+def _tote_verb(command: str) -> str:
+    raw = (command or "").strip()
+    if not raw:
+        return ""
+    return raw.split(None, 1)[0].lower()
+
+
 async def tote_ops(key_id: int, command: str) -> str:
-    s = await require_steward(key_id)
-    parts_cmd = [c.strip() for c in command.split(";") if c.strip()]
+    """行囊。查收礼/送礼记录不扣考勤锁；送礼/买卖仍要上工。"""
+    raw = (command or "").strip()
+    parts_cmd = [c.strip() for c in raw.split(";") if c.strip()] or [""]
+    read_only = all(_tote_verb(c) in _TOTE_READ_VERBS for c in parts_cmd)
+    s = await require_steward(key_id, exempt_duty=read_only)
     if len(parts_cmd) > 1:
         return "\n".join([await _tote_one(s, c) for c in parts_cmd])
-    return await _tote_one(s, command.strip())
+    return await _tote_one(s, raw)
 
 
 async def hearth_ops(key_id: int, command: str) -> str:

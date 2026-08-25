@@ -2380,20 +2380,80 @@ async def public_stats() -> dict[str, Any]:
         }
 
 
+def _gift_detail_from_text(text: str, *, sent: bool = False) -> str:
+    """从纪事原文抽出「送了什么」，避免收礼列表重复整句「A 送礼给 B」。"""
+    raw = (text or "").strip()
+    if "：" in raw:
+        detail = raw.split("：", 1)[1].strip()
+        if detail:
+            return detail
+    if sent and "送礼给 " in raw:
+        return raw.split("送礼给 ", 1)[1].strip()
+    return raw
+
+
 async def list_received_gifts(steward_id: int, limit: int = 20) -> list[dict[str, Any]]:
+    """查谁送给你的礼 / 酒吧小费。优先 target_id；旧纪事无 target 时用正文兜底。"""
     async with connect() as db:
         db.row_factory = aiosqlite.Row
+        name_row = await (
+            await db.execute("SELECT name FROM stewards WHERE id=?", (steward_id,))
+        ).fetchone()
+        my_name = (name_row["name"] if name_row else "") or ""
         cur = await db.execute(
             """
             SELECT c.text, c.created_at, c.action, a.name AS actor_name
             FROM chronicle c
             LEFT JOIN stewards a ON a.id = c.actor_id
-            WHERE c.action IN ('gift', 'bar_tip') AND c.target_id=?
+            WHERE c.action IN ('gift', 'bar_tip')
+              AND (
+                c.target_id = ?
+                OR (
+                  c.action = 'gift'
+                  AND (c.target_id IS NULL OR c.target_id = 0)
+                  AND ? != ''
+                  AND c.text LIKE '%送礼给 ' || ? || '：%'
+                )
+              )
+            ORDER BY c.created_at DESC LIMIT ?
+            """,
+            (steward_id, my_name, my_name, limit),
+        )
+        rows = []
+        for r in await cur.fetchall():
+            d = dict(r)
+            d["detail"] = _gift_detail_from_text(d.get("text") or "", sent=False)
+            rows.append(d)
+        return rows
+
+
+async def list_sent_gifts(steward_id: int, limit: int = 20) -> list[dict[str, Any]]:
+    """查你送给别人的礼（不含酒吧 tip；tip 是 bar_ops tip）。"""
+    async with connect() as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute(
+            """
+            SELECT c.text, c.created_at, c.action, t.name AS target_name
+            FROM chronicle c
+            LEFT JOIN stewards t ON t.id = c.target_id
+            WHERE c.action = 'gift' AND c.actor_id = ?
             ORDER BY c.created_at DESC LIMIT ?
             """,
             (steward_id, limit),
         )
-        return [dict(r) for r in await cur.fetchall()]
+        rows = []
+        for r in await cur.fetchall():
+            d = dict(r)
+            detail = _gift_detail_from_text(d.get("text") or "", sent=True)
+            # 正文兜底：无 target 名时从「送礼给 X：」抠
+            who = d.get("target_name") or ""
+            if not who and "送礼给 " in (d.get("text") or ""):
+                tail = (d["text"] or "").split("送礼给 ", 1)[1]
+                who = tail.split("：", 1)[0].strip()
+            d["target_name"] = who or "某人"
+            d["detail"] = detail
+            rows.append(d)
+        return rows
 
 
 async def public_chronicle(limit: int = 40) -> list[dict[str, Any]]:

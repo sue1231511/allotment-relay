@@ -155,6 +155,8 @@ PLACES: list[dict[str, Any]] = [
         "actions": [
             {"label": "看集市", "note": "先看谁挂了什么", "tool": "tote_ops", "command": "market list"},
             {"label": "交换台", "note": "白送与领取", "tool": "tote_ops", "command": "swap list"},
+            {"label": "查收礼", "note": "谁送给你的礼；上手页右侧也能看", "tool": "tote_ops", "command": "gifts"},
+            {"label": "送礼记录", "note": "你送给别人的礼", "tool": "tote_ops", "command": "送礼记录"},
         ],
     },
     {
