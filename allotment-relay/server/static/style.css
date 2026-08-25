@@ -2985,7 +2985,7 @@ body.memory-open {
   }
 
   .lounge-mobile-name-btn {
-    display: inline-block;
+    display: none;
   }
 
   .lounge-pin-mobile {
@@ -2994,12 +2994,7 @@ body.memory-open {
   }
 
   .lounge-booth-bar {
-    padding: 8px 16px 10px;
-  }
-
-  .lounge-booth-row .lounge-mod-btn {
-    min-height: 40px;
-    padding: 8px 14px;
+    display: none;
   }
 
   .lounge-composer-identity {
@@ -3008,7 +3003,267 @@ body.memory-open {
 
   .lounge-composer-wrap {
     flex-shrink: 0;
-    padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+    padding: 9px 12px calc(68px + env(safe-area-inset-bottom, 0px));
+    background: linear-gradient(180deg, rgba(255,255,255,.4), rgba(255,255,255,.82));
+  }
+
+  .lounge-composer {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    align-items: end;
+    gap: 8px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .lounge-composer textarea {
+    min-width: 0;
+    min-height: 44px;
+    padding: 10px 13px;
+    border: 1px solid rgba(127, 167, 171, .22);
+    border-radius: 17px;
+    background: rgba(255, 255, 255, .78);
+  }
+
+  .lounge-tool-plus,
+  .lounge-send {
+    width: 44px;
+    height: 44px;
+    border-radius: 15px;
+  }
+
+  .lounge-tool-plus {
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(127, 167, 171, .22);
+    background: rgba(255, 255, 255, .78);
+    color: #496762;
+    font: 300 25px/1 Arial, sans-serif;
+    cursor: pointer;
+  }
+
+  .lounge-hint {
+    display: none;
+  }
+
+  .lounge-tool-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    display: block;
+    background: rgba(30, 45, 48, .24);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+  }
+
+  .lounge-tool-backdrop[hidden] {
+    display: none;
+  }
+
+  .lounge-tool-sheet {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    z-index: 90;
+    display: block;
+    padding: 10px 10px calc(12px + env(safe-area-inset-bottom, 0px));
+    border: 1px solid rgba(35, 48, 56, .1);
+    border-radius: 26px;
+    background: #f8f6ef;
+    box-shadow: 0 28px 80px rgba(24, 38, 40, .24);
+    transform: translateY(115%);
+    transition: transform .22s ease;
+  }
+
+  .lounge-tool-sheet.is-open {
+    transform: translateY(0);
+  }
+
+  .lounge-tool-handle {
+    width: 34px;
+    height: 4px;
+    margin: 2px auto 12px;
+    border-radius: 999px;
+    background: #d4d2cb;
+  }
+
+  .lounge-tool-sheet-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 7px 10px;
+  }
+
+  .lounge-tool-sheet-head strong {
+    font-family: "Noto Serif SC", Georgia, serif;
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .lounge-tool-sheet-head button {
+    border: 0;
+    background: transparent;
+    color: #8d9693;
+    font: inherit;
+    font-size: 12px;
+  }
+
+  .lounge-tool-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+  }
+
+  .lounge-tool-item {
+    min-height: 62px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid rgba(36, 51, 54, .09);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, .72);
+    color: #435754;
+    text-align: left;
+  }
+
+  .lounge-tool-item > span,
+  .lounge-admin-entry > span:first-child {
+    width: 30px;
+    height: 30px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    border-radius: 11px;
+    background: #edf1ed;
+    font-size: 14px;
+  }
+
+  .lounge-tool-item b {
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .lounge-admin-entry {
+    width: 100%;
+    min-height: 58px;
+    margin-top: 9px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid rgba(36, 51, 54, .09);
+    border-radius: 18px;
+    background: rgba(232, 238, 234, .72);
+    color: #435754;
+    text-align: left;
+  }
+
+  .lounge-admin-entry.hidden {
+    display: none;
+  }
+
+  .lounge-admin-copy {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .lounge-admin-copy b,
+  .lounge-admin-copy small {
+    display: block;
+  }
+
+  .lounge-admin-copy b {
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .lounge-admin-copy small {
+    margin-top: 2px;
+    color: #8b9591;
+    font-size: 9px;
+  }
+
+  .lounge-admin-entry i {
+    color: #78908b;
+    font-size: 15px;
+    font-style: normal;
+  }
+
+  .lounge-tool-subpanel {
+    margin-top: 9px;
+    padding: 12px;
+    border: 1px solid rgba(36, 51, 54, .08);
+    border-radius: 18px;
+    background: #f2f0e9;
+  }
+
+  .lounge-tool-subpanel.hidden {
+    display: none;
+  }
+
+  .lounge-tool-subpanel label {
+    margin: 0 0 7px;
+    font-size: 10px;
+    color: #7f8986;
+  }
+
+  .lounge-tool-booth-row,
+  .lounge-tool-admin-fields {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+
+  .lounge-tool-subpanel input {
+    min-width: 0;
+    width: 100%;
+    margin: 0;
+    padding: 10px 11px;
+    border: 1px solid rgba(36, 51, 54, .1);
+    border-radius: 14px;
+    background: #fff;
+  }
+
+  #lounge-tool-mod-minutes {
+    width: 92px;
+  }
+
+  .lounge-tool-booth-row button {
+    border: 0;
+    border-radius: 14px;
+    background: var(--ink);
+    color: #fff;
+    padding: 0 14px;
+    font: inherit;
+    font-size: 12px;
+  }
+
+  .lounge-tool-subpanel > small {
+    display: block;
+    margin-top: 8px;
+    color: #9aa19f;
+    font-size: 10px;
+  }
+
+  .lounge-tool-admin-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    margin-top: 8px;
+  }
+
+  .lounge-tool-admin-actions button {
+    min-height: 44px;
+    border: 1px solid rgba(36, 51, 54, .09);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, .8);
+    color: var(--ink);
+    font: inherit;
+    font-size: 12px;
   }
 }
 
