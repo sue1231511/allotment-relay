@@ -110,6 +110,20 @@ PARCEL_EXPAND_COSTS = [parcel_expand_cost(i) for i in range(5)]
 PARCEL_CLEAR_SECONDS = [parcel_clear_seconds(i) for i in range(5)]
 
 
+def orchard_expand_cost(idx: int) -> int:
+    """第 (START_ORCHARDS+1+idx) 树位票价：份地两倍。树种一次连摘多茬。"""
+    return 2 * parcel_expand_cost(idx)
+
+
+def orchard_clear_seconds(idx: int) -> int:
+    """果园开垦比同档份地多 15 分钟。"""
+    return parcel_clear_seconds(idx) + 15 * 60
+
+
+ORCHARD_EXPAND_COSTS = [orchard_expand_cost(i) for i in range(5)]
+ORCHARD_CLEAR_SECONDS = [orchard_clear_seconds(i) for i in range(5)]
+
+
 def greenhouse_expand_cost(idx: int) -> int:
     """第 (idx+1) 座票价：180 + 100n + 30n²，比份地更陡。"""
     n = max(0, int(idx))

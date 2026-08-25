@@ -46,10 +46,15 @@ def test_slot_labels() -> None:
     assert land_mod.slot_label(4, 1) == "园4"
     assert land_mod.slot_label({"slot": 2, "orchard": 1}) == "园2"
     fourth = land_mod.next_offer(3, orchard=True)
-    assert fourth == {"slot": 4, "cost": 80, "clear_seconds": 1800}
+    assert fourth == {"slot": 4, "cost": 160, "clear_seconds": 45 * 60}
     ninth = land_mod.next_offer(8, orchard=True)
     assert ninth["slot"] == 9
-    assert ninth["cost"] == 480
+    assert ninth["cost"] == 960
+    from server import config
+    for i in range(8):
+        assert config.orchard_expand_cost(i) == 2 * config.parcel_expand_cost(i)
+        assert config.orchard_expand_cost(i) > config.parcel_expand_cost(i)
+        assert config.orchard_clear_seconds(i) == config.parcel_clear_seconds(i) + 15 * 60
 
 
 async def test_enroll_has_orchard_slots() -> None:
@@ -73,7 +78,7 @@ async def test_enroll_has_orchard_slots() -> None:
     assert plots == 3
     from server import game
     status = await game.plot_ops(kid, "果园")
-    assert "无上限" in status and "树位" in status, status
+    assert "无上限" in status and "树位" in status and "比份地贵" in status, status
 
 
 async def test_sow_routes_trees_to_orchard() -> None:
@@ -118,7 +123,7 @@ async def test_buy_orchard_beyond_eight() -> None:
     kid, sid = await _enroll(db, "buyorch@example.com", "扩园人")
     async with db.connect() as conn:
         await conn.execute(
-            "UPDATE stewards SET tickets=2000, orchard_count=8 WHERE id=?",
+            "UPDATE stewards SET tickets=3000, orchard_count=8 WHERE id=?",
             (sid,),
         )
         for slot in range(4, 9):
@@ -133,9 +138,9 @@ async def test_buy_orchard_beyond_eight() -> None:
         await conn.commit()
 
     quote = await game.plot_ops(kid, "买园")
-    assert "480" in quote and "无上限" in quote, quote
+    assert "960" in quote and "无上限" in quote and "比份地贵" in quote, quote
     bought = await game.plot_ops(kid, "买园 确认")
-    assert "园9" in bought and "480" in bought, bought
+    assert "园9" in bought and "960" in bought, bought
     async with db.connect() as conn:
         row = await (await conn.execute(
             "SELECT orchard_count, tickets FROM stewards WHERE id=?", (sid,)
@@ -145,7 +150,7 @@ async def test_buy_orchard_beyond_eight() -> None:
             (sid,),
         )).fetchone()
     assert row[0] == 9
-    assert row[1] == 2000 - 480
+    assert row[1] == 3000 - 960
     assert plot is not None and plot[0] > 0
 
 
