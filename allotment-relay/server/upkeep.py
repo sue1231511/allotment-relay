@@ -16,18 +16,18 @@ FLAG_PREFIX = "shore_upkeep:"
 COLLECT_FLOOR = TAX_COLLECT_FLOOR
 _CST = timezone(timedelta(hours=8))
 
-# 每天单价。起步产业免，扩出来的才计。产业单价至少 10。
-PLOT_EXTRA = 10
-ORCHARD_EXTRA = 10
-GREENHOUSE = 10
-BARN_BASE = 10
-BARN_STOCKED = 10
-EATERY = 12
-HUT_BY_LEVEL = {0: 0, 1: 0, 2: 10, 3: 15, 4: 20}
-PEN = 10
-SALT_EXTRA = 10
-QUARRY_EXTRA = 10
-BOAT_FEE = {"skiff": 10, "cutter": 15, "drifter": 20}
+# 每天单价。按原每周价约 ÷7 取整，日单价 2 起。不要把周价直接当日付。
+PLOT_EXTRA = 2
+ORCHARD_EXTRA = 2
+GREENHOUSE = 2
+BARN_BASE = 2
+BARN_STOCKED = 2
+EATERY = 2
+HUT_BY_LEVEL = {0: 0, 1: 0, 2: 2, 3: 2, 4: 3}
+PEN = 2
+SALT_EXTRA = 2
+QUARRY_EXTRA = 2
+BOAT_FEE = {"skiff": 2, "cutter": 2, "drifter": 3}
 
 UPKEEP_HELP = f"""visit_ops 潮生会 维（整句写进 command）：
   维 / 岸维 / 维修 — 看档：哪些产业要交、今日应/已划/欠
@@ -36,7 +36,7 @@ UPKEEP_HELP = f"""visit_ops 潮生会 维（整句写进 command）：
   田间意外一次性处理是 plot_ops repair 编号，也不是这条。
 {UPKEEP_NAME}按产业每天收，东八区换班后第一次有人动手时自动划入潮汐基金。不是岸税（岸税仍周一划）。
 岸税看口袋现票；岸维看份地/果园/温室/畜栏/小馆/小屋/渔排/盐田/矿坑/船。
-起步 3 块份地、3 树位、棚屋 Lv1、第 1 口盐田、第 1 个矿坑免征。产业单价至少 10 票（超出份地/果园 10，温室 10，畜栏 10+在栏 10，开馆 12，小屋/船 10/15/20，渔排/盐田/矿坑 10）。今日新号免征到明天。
+起步 3 块份地、3 树位、棚屋 Lv1、第 1 口盐田、第 1 个矿坑免征。日单价 2 起（超出份地/果园 2，温室 2，畜栏 2+在栏 2，开馆 2，小屋/船 2/2/3，渔排/盐田/矿坑 2）。今日新号免征到明天。
 欠{UPKEEP_NAME}时不能{EXPAND_LOCK}；开着的小馆会暂停堂食。
 例子：潮生会 维 · 潮生会 维 交 · 潮生会 维 交 50
 容易搞混：税=强制岸税（富人按口袋交，周一划）。维=产业维修费（产业越大越交，每天划）。

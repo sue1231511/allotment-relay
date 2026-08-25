@@ -1734,6 +1734,24 @@ async def init_db() -> None:
                 PRIMARY KEY (steward_id, week_id)
             )
             """,
+            # 小橘小剧场编剧社：玩家投稿潮闻/故事，后台采纳发稿费
+            """
+            CREATE TABLE IF NOT EXISTS star_scripts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                title TEXT NOT NULL,
+                body TEXT NOT NULL,
+                pitch TEXT NOT NULL DEFAULT '',
+                status TEXT NOT NULL DEFAULT 'pending',
+                accepted_as TEXT NOT NULL DEFAULT '',
+                payout INTEGER NOT NULL DEFAULT 0,
+                note TEXT NOT NULL DEFAULT '',
+                created_at INTEGER NOT NULL DEFAULT 0,
+                decided_at INTEGER NOT NULL DEFAULT 0
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_star_scripts_status ON star_scripts(status, created_at)",
+            "CREATE INDEX IF NOT EXISTS idx_star_scripts_steward ON star_scripts(steward_id, created_at)",
         ):
             try:
                 await db.execute(ddl)

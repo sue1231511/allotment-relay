@@ -29,11 +29,10 @@
   margin: 7px 0;
 }
 
-.play-intro-copy {
-  margin: 0;
-  color: var(--muted);
-  font-size: 13px;
-  max-width: 36em;
+.play-intro-copy a {
+  color: #536d71;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .play-identity {
@@ -195,7 +194,7 @@ body.play-bound .play-gate { display: none !important; }
 
 .play-meters {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 8px;
   margin-top: 24px;
   max-width: 720px;
@@ -895,6 +894,18 @@ body.play-bound .play-gate { display: none !important; }
 .play-hui-donate input[type="number"] {
   width: 100%;
   max-width: 12em;
+}
+
+#play-star-script {
+  display: grid;
+  gap: 10px;
+}
+
+#play-star-script textarea {
+  width: 100%;
+  min-height: 140px;
+  resize: vertical;
+  box-sizing: border-box;
 }
 
 .play-lounge {

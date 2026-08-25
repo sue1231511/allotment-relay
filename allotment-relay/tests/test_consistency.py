@@ -101,6 +101,8 @@ def test_mcp_descriptions() -> None:
     theater_blob = f"{theater.description}\n{(theater.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
     assert "试镜" in theater_blob
     assert "头粉" in theater_blob
+    assert "编剧社" in theater_blob
+    assert "投稿" in theater_blob
 
     bar = mcp._tool_manager.get_tool("bar_ops")
     bar_blob = f"{bar.description}\n{(bar.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -146,8 +148,8 @@ def test_mcp_descriptions() -> None:
     assert "潮生会 维 交" in v_blob
     assert "岸税" in v_blob
     assert "岸维" in v_blob
-    assert "10 票/块" in v_blob
-    assert "产业单价至少 10" in v_blob
+    assert "2 票/块" in v_blob
+    assert "日单价 2" in v_blob
     assert "每天收" in v_blob or "每天划" in v_blob
     assert "tax_ops" in v_blob
     assert "upkeep_ops" in v_blob
@@ -286,6 +288,10 @@ def test_relay_manual_covers_systems() -> None:
         "theater_ops",
         "试镜",
         "头粉",
+        "编剧社",
+        "投稿 岸上旧收音机",
+        "故事稿费 500",
+        "潮闻",
         "应援",
         "不要猜",
         "sow_all",
@@ -314,7 +320,7 @@ def test_relay_manual_covers_systems() -> None:
         "潮生会 维 交",
         "岸税",
         "岸维",
-        "产业单价至少 10 票",
+        "日单价 2 起",
         "每天收",
         "超额累进",
         "没有 tax_ops",
@@ -422,6 +428,7 @@ def test_relay_manual_covers_systems() -> None:
         "共用一个号",
         "点单打赏只在 /play",
         "邻居名册",
+        "/manual",
     ]
     missing = [n for n in needles if n not in text]
     assert not missing, f"relay_manual missing: {missing}"
@@ -441,6 +448,7 @@ def test_readme_workflow_rules() -> None:
         assert "merge origin/main" in blob
         assert "relay_manual" in blob
         assert "mcp_app.py" in blob
+        assert "island-manual.html" in blob
     assert "18 个工具" in readme
     assert "quarry_ops" in readme
     assert "craft_ops" in readme
@@ -465,6 +473,8 @@ def test_readme_workflow_rules() -> None:
     assert "promo-poster" in place_html
     assert 'href="/workshop"' in nav
     assert 'href="/play"' in nav
+    assert 'href="/manual"' in nav
+    assert "岛民手册" in nav
     assert 'href="/tide"' in nav
     assert 'href="/huts"' in nav
     assert 'href="/market"' in nav
@@ -498,6 +508,44 @@ def test_readme_workflow_rules() -> None:
     assert "INVITE_ADMIN_KEY" in readme
 
 
+def test_human_island_manual() -> None:
+    """给人类看的使用手册必须跟现行玩法对齐，且不把 MCP 当操作步骤。"""
+    pkg = Path(__file__).resolve().parents[1]
+    repo = pkg.parent
+    html = (pkg / "docs/island-manual.html").read_text(encoding="utf-8")
+    pointer = (repo / "docs/island-manual.md").read_text(encoding="utf-8")
+    main_py = (pkg / "server/main.py").read_text(encoding="utf-8")
+    config_py = (pkg / "server/config.py").read_text(encoding="utf-8")
+    for needle in (
+        "岸维",
+        "岸税",
+        "岛缘",
+        "/play",
+        "每 2 天",
+        "日单价 2",
+        "引航",
+        "欠岸维",
+        "去潮生会",
+        "一周一季",
+        "上手页",
+        "潮生会",
+        "海报",
+        "有效岛民",
+        "小馆停堂",
+        "人和管家",
+        "编剧社",
+        "诊所地点",
+    ):
+        assert needle in html, needle
+    assert "plot_ops" not in html
+    assert "sow_all" not in html
+    assert "/manual" in pointer
+    assert "island-manual.html" in pointer
+    assert '@app.get("/manual")' in main_py
+    assert "ISLAND_MANUAL" in config_py
+    assert "ISLAND_MANUAL" in main_py
+
+
 def test_register_key_copy_ui() -> None:
     root = Path(__file__).resolve().parents[1]
     keys_js = (root / "server/static/keys.js").read_text(encoding="utf-8")
@@ -511,7 +559,7 @@ def test_register_key_copy_ui() -> None:
     assert "pre-wrap" in css
     assert "/static/keys.js" in register_html
     assert "/static/device.js" in register_html
-    assert "invite-code" in register_html
+    assert "/manual" in register_html
     assert "/static/keys.js" in recover_html
     assert "/static/device.js" in recover_html
 
@@ -582,6 +630,9 @@ def test_patron_pages_share_steward_key() -> None:
     assert "/api/steward/memory" in play_js
     assert "data-memory-filter" in play_js
     assert "连续阅读" in play_js
+    assert "duesUrgent" in play_js
+    assert "island_bond" in play_js
+    assert "去潮生会" in play_js
     assert "/static/site-key.js" not in index_html
     assert "/static/site-key.js" not in place_html
     assert "/static/site-key.js" not in bar_html
@@ -599,7 +650,9 @@ def test_patron_pages_share_steward_key() -> None:
     assert 'id="tip-form"' not in index_html
     assert "今天想去哪" in index_html
     assert "routes" in index_html
-    assert "/play" in index_html
+    assert 'href="/manual"' in play_html
+    assert 'href="/manual"' in index_html
+    assert '@app.get("/manual")' in main_py
     assert '"go": "bar"' in promo
     assert '"go": "eatery"' in promo
     assert '"go": "star"' in promo
@@ -879,6 +932,7 @@ def main() -> None:
     test_mcp_descriptions()
     test_relay_manual_covers_systems()
     test_readme_workflow_rules()
+    test_human_island_manual()
     test_register_key_copy_ui()
     test_patron_pages_share_steward_key()
     test_promo_place_pages()

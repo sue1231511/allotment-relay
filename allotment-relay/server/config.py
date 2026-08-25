@@ -7,6 +7,8 @@ DATA_DIR = Path(_data_dir) if _data_dir else BASE_DIR / "data"
 DB_PATH = DATA_DIR / "relay.db"
 STATIC_DIR = BASE_DIR / "static"
 TEMPLATES_DIR = BASE_DIR / "templates"
+# 人类使用手册。Docker 上下文是 allotment-relay/，所以放在本包 docs/ 里。
+ISLAND_MANUAL = BASE_DIR.parent / "docs" / "island-manual.html"
 
 # 潮汐岛 — 沿海份地 federation
 KEY_PREFIX = "ar_sk_"
@@ -506,6 +508,14 @@ THEATER_AFFINITY_DAILY = 8
 THEATER_HEAD_FAN_AFFINITY_DAILY = 16
 THEATER_FIXED_CAST_AFFINITY = 80
 THEATER_PARTNER_AFFINITY = 100
+# 编剧社 — 侧厅收稿，不看今晚有没有专场；稿费由小橘后台采纳时系统发放
+THEATER_SCRIPT_STORY_PAY = 500
+THEATER_SCRIPT_TALE_PAY = 750
+THEATER_SCRIPT_TITLE_MIN = 2
+THEATER_SCRIPT_TITLE_MAX = 48
+THEATER_SCRIPT_BODY_MIN = 40
+THEATER_SCRIPT_BODY_MAX = 12000
+THEATER_SCRIPT_PENDING_MAX = 3
 
 # 潮闻 — 故事探索任务
 TALE_EXPLORE_ENERGY = 5          # 主动探索耗精力

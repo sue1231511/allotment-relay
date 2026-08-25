@@ -44,7 +44,7 @@ async def _test_play_api() -> None:
     snap = await play_mod.run_play(key, "", "")
     assert snap["ok"] is True, snap
     assert snap["enrolled"] is False, snap
-    assert snap["places"] and snap["places"][0]["name"] == "滨海酒吧", snap["places"]
+    assert snap["places"] and snap["places"][0]["name"] == "海边", snap["places"]
 
     enrolled = await play_mod.run_play(key, "steward_ops", "enroll 岸边的人")
     assert enrolled["enrolled"] is True, enrolled
@@ -61,6 +61,8 @@ async def _test_play_api() -> None:
     land = enrolled["dashboard"].get("land") or {}
     assert land.get("plots", {}).get("count") == 3, land
     assert land.get("orchard", {}).get("count") == 3, land
+    assert "island_bond" in enrolled["dashboard"], enrolled["dashboard"]
+    assert enrolled["dashboard"]["dues"]["upkeep_arrears"] == 0, enrolled["dashboard"]
 
     other = await db.create_api_key("play-b@example.com")
     await play_mod.run_play(other, "steward_ops", "enroll 对岸的人")
@@ -103,9 +105,27 @@ async def _test_play_api() -> None:
     assert (wide.get("dashboard") or {}).get("land", {}).get("plots", {}).get("count") == 8, wide.get("dashboard", {}).get("land")
 
     ids = {p["id"] for p in sown["places"]}
-    assert {"bar", "eatery", "star"} <= ids, ids
+    assert {"bar", "eatery", "star", "clinic", "hut", "hui"} <= ids, ids
+    week1 = [p["id"] for p in sown["places"] if p.get("week1")]
+    assert week1 == ["tide", "hut", "bar", "eatery", "lounge", "hui"], week1
+    clinic = next(p for p in sown["places"] if p["id"] == "clinic")
+    assert clinic["week1"] is False, clinic
+    assert any(a["command"] == "clinic treat all" for a in clinic["actions"]), clinic
     bar = next(p for p in sown["places"] if p["id"] == "bar")
     assert "点单" in bar["blurb"], bar
+    well = next(p for p in sown["places"] if p["id"] == "undertide")
+    assert "岛缘" in well["blurb"], well
+    assert sown["dashboard"]["island_bond"] is not None, sown["dashboard"]
+    assert "bond_flavor" in sown["dashboard"], sown["dashboard"]
+
+    bought = await play_mod.run_play(key, "plot_ops", "buy 1 甘蓝")
+    assert bought["ok"] is True, bought
+    assert "甘蓝" in (bought.get("text") or ""), bought.get("text")
+
+    clinic_hit = await play_mod.run_play(key, "visit_ops", "clinic status")
+    assert clinic_hit["ok"] is True, clinic_hit
+    clinic_text = clinic_hit.get("text") or ""
+    assert "桥桥" in clinic_text or "诊所" in clinic_text, clinic_text
 
     try:
         await play_mod.run_play(key, "not_a_tool", "status")
@@ -119,11 +139,21 @@ def test_play_page_lists_all_plot_kinds() -> None:
     js = (ROOT / "server" / "static" / "play.js").read_text()
     assert "最多展示 6 块" not in html
     assert "parcels.slice(0, 6)" not in js
+    assert "places.slice(0, 6)" not in js
+    assert ".filter((pl) => pl.week1)" in js
     assert "plotGroupHtml(`菜地" in js
     assert "plotGroupHtml(`果园" in js
     assert "还没有温室" in js
     assert 'command":"tend"' in html
     assert 'command":"gather"' in html
+    assert 'data-buy-seed' in html
+    assert "seedBuyHtml" in js
+    assert 'id="play-bond"' in html
+    assert "duesUrgent" in js
+    assert "去潮生会" in js
+    assert "交岸维" in js
+    assert "orderedPlaces" in js
+    assert "b.week1" in js
 
 
 if __name__ == "__main__":

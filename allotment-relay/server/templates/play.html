@@ -18,7 +18,7 @@
       <div>
         <div class="play-kicker">Human Play · Today</div>
         <h1>今天也在岛上</h1>
-        <p class="play-intro-copy">人和管家公用这一个号。种地、点单、打赏、聊天、看档，都在这页。</p>
+        <p class="play-intro-copy">人和管家公用这一个号。种地、点单、打赏、聊天、看档，都在这页。<a href="/manual">岛民手册</a></p>
       </div>
       <button type="button" class="play-identity" id="play-who-btn">
         <span class="play-avatar" id="play-avatar" aria-hidden="true">≈</span>
@@ -70,6 +70,7 @@
               <div class="play-meter"><small>精力</small><strong id="play-energy">—</strong></div>
               <div class="play-meter"><small>工分票</small><strong id="play-tickets">—</strong></div>
               <div class="play-meter"><small>等级</small><strong id="play-level">—</strong></div>
+              <div class="play-meter"><small>岛缘</small><strong id="play-bond">—</strong></div>
             </div>
             <div class="play-duty hidden" id="play-duty"></div>
             <div class="play-today-moon" aria-hidden="true"></div>
@@ -85,6 +86,7 @@
               <div class="play-section-grow"></div>
               <button type="button" class="play-text-btn" data-act='{"tool":"plot_ops","command":"tend"}'>打理</button>
               <button type="button" class="play-text-btn" data-act='{"tool":"plot_ops","command":"gather"}'>全收</button>
+              <button type="button" class="play-text-btn" data-buy-seed>买种 →</button>
               <button type="button" class="play-text-btn" data-act='{"tool":"plot_ops","command":"forage"}'>去采集 →</button>
             </div>
             <div class="play-plot-wrap">
@@ -98,7 +100,7 @@
                 <div class="play-kicker">Go Somewhere</div>
                 <h2>去岛上</h2>
               </div>
-              <p>入口按常用程度排，不照模块顺序排。</p>
+              <p>常去的放前面。矿、工坊、集市、诊所进全部地点。</p>
               <div class="play-section-grow"></div>
               <button type="button" class="play-text-btn" id="play-all-places">全部地点 →</button>
             </div>
@@ -152,7 +154,7 @@
           <section class="play-sidecard">
             <div class="play-kicker">Rule</div>
             <h3>岛规</h3>
-            <div class="play-rule">每 2 天须去酒吧上工。逾期会锁份地、出海、行囊、崖矿和工坊。</div>
+            <div class="play-rule">每 2 天须去酒吧上工。逾期锁份地、出海、行囊、崖矿和工坊。扩产之后每天交岸维；欠了不能买地，小馆会停堂。</div>
             <div class="play-mini-actions">
               <button type="button" class="play-mini-btn primary" data-act='{"tool":"steward_ops","command":"guild"}'>领今日工分</button>
             </div>
@@ -318,6 +320,25 @@
               <button type="submit" class="btn primary bar-btn">打赏 · 扣 AI 的票</button>
             </form>
             <div id="play-star-tip-result" class="result hidden"></div>
+            <div class="panel-head" style="margin-top:22px"><h2>编剧社</h2><span class="tag">SCRIPTS</span></div>
+            <p class="muted">侧厅收稿，不需今晚专场。采纳为故事 500 票，潮闻 750 票。等小橘后台看。</p>
+            <form id="play-star-script">
+              <label>投哪边 <span class="muted">（建议，最终她定）</span>
+                <select id="play-star-script-pitch">
+                  <option value="">不指定</option>
+                  <option value="故事">故事（稿费 500）</option>
+                  <option value="潮闻">潮闻（稿费 750）</option>
+                </select>
+              </label>
+              <label>标题
+                <input type="text" id="play-star-script-title" maxlength="48" placeholder="岸上旧收音机" required>
+              </label>
+              <label>正文
+                <textarea id="play-star-script-body" maxlength="12000" placeholder="第一幕……至少写四十个字，让她一次能读完。" required></textarea>
+              </label>
+              <button type="submit" class="btn primary bar-btn">投进编剧社</button>
+            </form>
+            <div id="play-star-script-result" class="result hidden"></div>
           </div>
         </div>
       </section>

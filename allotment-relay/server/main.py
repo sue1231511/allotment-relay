@@ -1,14 +1,14 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, field_validator
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from . import db
-from .config import STATIC_DIR, TEMPLATES_DIR
+from .config import ISLAND_MANUAL, STATIC_DIR, TEMPLATES_DIR
 from .mcp_app import build_mcp_app
 
 import aiosqlite
@@ -162,6 +162,19 @@ async def bar_page(request: Request):
 @app.get("/play", response_class=HTMLResponse)
 async def play_page(request: Request):
     return _html(request, "play.html", active="play")
+
+
+@app.get("/manual")
+async def island_manual_page():
+    """人类使用手册。独立页，不套站点壳。"""
+    if not ISLAND_MANUAL.is_file():
+        raise HTTPException(404, "手册还没放到这台机器上")
+    return FileResponse(ISLAND_MANUAL, media_type="text/html; charset=utf-8")
+
+
+@app.get("/island-manual")
+async def island_manual_alias():
+    return RedirectResponse("/manual", status_code=302)
 
 
 @app.get("/steward")
@@ -923,11 +936,16 @@ async def star_owner_page(request: Request, key: str = ""):
         return JSONResponse({"detail": _PANEL_DISABLED_HINT}, status_code=503)
     if not _owner_ok(key, STAR_KEY):
         return JSONResponse({"detail": "凭证不对。她不认识你。"}, status_code=401)
-    from . import star
+    from . import config, star, theater
     state = await star.owner_stats()
     props = await star.owner_pending_proposals()
+    scripts = await theater.owner_pending_scripts()
+    recent_scripts = await theater.owner_recent_scripts()
     return templates.TemplateResponse(request, "star_owner.html", {
         "key": key, "state": state, "proposals": props,
+        "scripts": scripts, "recent_scripts": recent_scripts,
+        "story_pay": config.THEATER_SCRIPT_STORY_PAY,
+        "tale_pay": config.THEATER_SCRIPT_TALE_PAY,
     })
 
 
@@ -991,6 +1009,24 @@ async def star_owner_welfare(request: Request):
     try:
         return await star.owner_send_welfare(
             int(body.get("steward_id", 0)), int(body.get("amount", 0)),
+            (body.get("note") or "")[:80],
+        )
+    except ValueError as exc:
+        return JSONResponse({"detail": str(exc)}, status_code=400)
+
+
+@app.post("/api/star-owner/script")
+async def star_owner_script(request: Request):
+    import json as _json
+    from .undertide_config import STAR_KEY
+    body = _json.loads(await request.body())
+    if not _owner_ok(body.get("key", ""), STAR_KEY):
+        return JSONResponse({"detail": "凭证不对"}, status_code=401)
+    from . import theater
+    try:
+        return await theater.owner_decide_script(
+            int(body.get("id", 0)),
+            body.get("action") or "",
             (body.get("note") or "")[:80],
         )
     except ValueError as exc:

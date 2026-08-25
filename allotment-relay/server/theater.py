@@ -1,4 +1,4 @@
-"""小橘小剧场：单人试镜、对戏、演出、领薪与舞台好感。"""
+"""小橘小剧场：单人试镜、对戏、演出、领薪、舞台好感，以及侧厅编剧社投稿。"""
 
 from __future__ import annotations
 
@@ -11,15 +11,19 @@ from .game import require_steward
 
 
 THEATER_HELP = """theater_ops 子命令（整句写进 command）：
-  看板 / status — 看今晚小橘专场、自己的好感和可演场次；空 command 也是看板
-  试镜 — 耗2精力，抽取本场围绕小橘的岗位；一天只能完成一场
+  看板 / status — 看今晚小橘专场、自己的好感和可演场次；空 command 也是看板。要专场才开
+  试镜 — 耗2精力，抽取本场围绕小橘的岗位；一天只能完成一场。要专场
   对戏 — 已试镜后可选，耗3精力，成功给舞台好感并让演出更稳
   演出 — 已试镜后耗8精力，按岗位、对戏与随机结果结算待领工资
   领薪 — 把已结算的票、档信、雾智入账；忘了领也不会丢
   关系 — 单看小橘舞台好感与头粉双倍状态
-  只在小橘当晚开 stage 小剧场专场时开放；不替代 bar_ops work 的考勤。
-  例子：看板 · 试镜 · 对戏 · 演出 · 领薪。
-  头粉=star_ops 应援榜第一名；头粉好感获取和每日上限翻倍，不翻倍工资。"""
+  编剧社 / 稿件 — 侧厅收稿台：看规矩和自己的稿；常开，不需今晚专场
+  投稿 标题 | 正文 — 把潮闻或人物故事投进编剧社。也可 投稿 潮闻 标题 | 正文 / 投稿 故事 标题 | 正文（只是建议，最终她定）
+  撤回 编号 — 撤回自己还在待审的稿
+  试镜/对戏/演出只在小橘当晚开 stage 小剧场专场时开放；编剧社常开。不替代 bar_ops work 的考勤。
+  例子：看板 · 试镜 · 对戏 · 演出 · 领薪 · 编剧社 · 投稿 岸上旧收音机 | 第一幕……
+  头粉=star_ops 应援榜第一名；头粉好感获取和每日上限翻倍，不翻倍工资。
+  投稿不是 tale_ops accept / story_ops start（那是玩已有篇章）；稿费不是 领薪（那是专场工资）。不要发明 采纳 / 发稿费。"""
 
 ROLES = (
     ("announcer", "报幕员", "你替她把开场前的静默接成一句话。"),
@@ -35,6 +39,13 @@ OUTCOME_COPY = {
     "great": "她临时抬高了最后一个转音，而你恰好把整段转场接得漂亮。全场起立。",
 }
 OUTCOME_LABELS = {"miss": "失误", "normal": "平场", "great": "满堂彩"}
+PITCH_LABELS = {"story": "故事", "tale": "潮闻"}
+SCRIPT_STATUS_LABELS = {
+    "pending": "待审",
+    "accepted": "已采纳",
+    "rejected": "已退稿",
+    "withdrawn": "已撤回",
+}
 
 
 def _day() -> int:
@@ -146,7 +157,8 @@ async def _cmd_board(conn: aiosqlite.Connection, s: dict) -> str:
         f"«小橘小剧场 · {state.get('setlist') or '未命名专场'}\n"
         f"{phase}\n"
         f"小橘好感：{score}/100 · {tier}{' · 头粉：好感×2' if head else ''}\n"
-        "只在她当晚 stage 专场开放；剧场上工不代替 bar_ops work 考勤。»"
+        "侧厅编剧社常开 → theater_ops 编剧社（投稿潮闻/故事，稿费待她后台采纳）。\n"
+        "试镜只在她当晚 stage 专场开放；剧场上工不代替 bar_ops work 考勤。»"
     )
 
 
@@ -272,9 +284,238 @@ async def _cmd_claim(conn: aiosqlite.Connection, s: dict) -> str:
     )
 
 
+def _split_cmd(command: str) -> tuple[str, str]:
+    raw = (command or "").strip()
+    if not raw:
+        return "", ""
+    parts = raw.split(None, 1)
+    return parts[0], parts[1] if len(parts) > 1 else ""
+
+
+def _parse_submit(rest: str) -> tuple[str, str, str]:
+    text = (rest or "").strip()
+    if not text:
+        raise ValueError(
+            "用法: theater_ops 投稿 标题 | 正文\n"
+            "也可：投稿 潮闻 标题 | 正文 · 投稿 故事 标题 | 正文（建议类型，最终她定）"
+        )
+    pitch = ""
+    first, more = (text.split(None, 1) + [""])[:2]
+    if first in ("故事", "story", "人物故事"):
+        pitch = "story"
+        text = more.strip()
+    elif first in ("潮闻", "tale", "潮闻故事"):
+        pitch = "tale"
+        text = more.strip()
+    if not text:
+        raise ValueError("指定了故事或潮闻之后，还要写标题和正文。例子：投稿 潮闻 岸上旧收音机 | 第一幕……")
+    if "|" in text:
+        title, body = text.split("|", 1)
+    elif "\n" in text:
+        title, body = text.split("\n", 1)
+    else:
+        raise ValueError("标题和正文用 | 或换行分开。例子：投稿 岸上旧收音机 | 第一幕……")
+    title = " ".join(title.strip().split())
+    body = body.strip()
+    if len(title) < config.THEATER_SCRIPT_TITLE_MIN:
+        raise ValueError(f"标题至少 {config.THEATER_SCRIPT_TITLE_MIN} 个字")
+    if len(title) > config.THEATER_SCRIPT_TITLE_MAX:
+        raise ValueError(f"标题最多 {config.THEATER_SCRIPT_TITLE_MAX} 个字")
+    if len(body) < config.THEATER_SCRIPT_BODY_MIN:
+        raise ValueError(f"正文太短（至少 {config.THEATER_SCRIPT_BODY_MIN} 字）。编剧社收稿，不是扔一张便签。")
+    if len(body) > config.THEATER_SCRIPT_BODY_MAX:
+        raise ValueError(f"正文最多 {config.THEATER_SCRIPT_BODY_MAX} 字。先写成能让她一次读完的稿。")
+    return pitch, title, body
+
+
+def _script_line(row) -> str:
+    pitch = PITCH_LABELS.get(row["pitch"] or "", "")
+    pitch_bit = f"（投{pitch}）" if pitch else "（不指定）"
+    status = SCRIPT_STATUS_LABELS.get(row["status"], row["status"])
+    extra = ""
+    if row["status"] == "accepted":
+        kind = PITCH_LABELS.get(row["accepted_as"] or "", row["accepted_as"] or "")
+        extra = f"为{kind} · 稿费 {int(row['payout'])}票"
+    elif row["status"] == "rejected" and row["note"]:
+        extra = f"：{row['note']}"
+    return f"#{row['id']} 《{row['title']}》{pitch_bit}{status}{extra}"
+
+
+async def _cmd_guild(conn: aiosqlite.Connection, s: dict) -> str:
+    rows = await (await conn.execute(
+        """SELECT id, title, pitch, status, accepted_as, payout, note, created_at
+           FROM star_scripts WHERE steward_id=? ORDER BY id DESC LIMIT 12""",
+        (s["id"],),
+    )).fetchall()
+    pending = sum(1 for r in rows if r["status"] == "pending")
+    lines = [
+        "«小橘小剧场 · 编剧社",
+        "侧厅常开，不需今晚专场。把潮闻或人物故事的稿投进来，小橘在 /star-owner 后台看。",
+        f"采纳为故事给稿费 {config.THEATER_SCRIPT_STORY_PAY} 票；采纳为潮闻给 {config.THEATER_SCRIPT_TALE_PAY} 票。退稿不给钱。",
+        "不是 tale_ops accept / story_ops start（那是玩已有篇章）；也不是 theater_ops 领薪（那是专场工资）。",
+        f"待审最多 {config.THEATER_SCRIPT_PENDING_MAX} 篇。标题和正文用 | 分开。",
+        "用法：theater_ops 投稿 岸上旧收音机 | 第一幕……",
+        "      theater_ops 投稿 潮闻 缺了一页的相册 | ……",
+        "      theater_ops 撤回 12",
+        f"你的稿（待审 {pending}/{config.THEATER_SCRIPT_PENDING_MAX}）：",
+    ]
+    if rows:
+        lines.extend("  " + _script_line(r) for r in rows)
+    else:
+        lines.append("  还没投过。")
+    lines.append("»")
+    return "\n".join(lines)
+
+
+async def _cmd_submit(conn: aiosqlite.Connection, s: dict, rest: str) -> str:
+    pitch, title, body = _parse_submit(rest)
+    pending = await (await conn.execute(
+        "SELECT COUNT(*) FROM star_scripts WHERE steward_id=? AND status='pending'",
+        (s["id"],),
+    )).fetchone()
+    if int(pending[0]) >= config.THEATER_SCRIPT_PENDING_MAX:
+        raise ValueError(
+            f"待审已经 {config.THEATER_SCRIPT_PENDING_MAX} 篇。等她看完，或 theater_ops 撤回 编号 再投。"
+        )
+    cur = await conn.execute(
+        """INSERT INTO star_scripts (steward_id, title, body, pitch, status, created_at)
+           VALUES (?,?,?,?, 'pending', ?)""",
+        (s["id"], title, body, pitch, db.now()),
+    )
+    script_id = cur.lastrowid
+    await conn.commit()
+    hint = f"你建议做成{PITCH_LABELS[pitch]}；最终她定。" if pitch else "没指定故事或潮闻，她自己看。"
+    return (
+        f"«稿已进编剧社 #{script_id} 《{title}》\n"
+        f"{hint}\n"
+        f"故事稿费 {config.THEATER_SCRIPT_STORY_PAY} · 潮闻稿费 {config.THEATER_SCRIPT_TALE_PAY}。"
+        "要等小橘后台点采纳才入账，不是 theater_ops 领薪。\n"
+        "看自己的稿：theater_ops 编剧社。»"
+    )
+
+
+async def _cmd_withdraw(conn: aiosqlite.Connection, s: dict, rest: str) -> str:
+    token = (rest or "").strip()
+    if not token.isdigit():
+        raise ValueError("用法: theater_ops 撤回 编号 — 编号在 theater_ops 编剧社 里看。")
+    script_id = int(token)
+    row = await (await conn.execute(
+        "SELECT id, title, status FROM star_scripts WHERE id=? AND steward_id=?",
+        (script_id, s["id"]),
+    )).fetchone()
+    if not row:
+        raise ValueError("没有这篇稿，或不是你投的。theater_ops 编剧社 看自己的编号。")
+    if row["status"] != "pending":
+        raise ValueError(f"#{script_id} 《{row['title']}》已经是{SCRIPT_STATUS_LABELS.get(row['status'], row['status'])}，不能撤回。")
+    await conn.execute(
+        "UPDATE star_scripts SET status='withdrawn', decided_at=? WHERE id=?",
+        (db.now(), script_id),
+    )
+    await conn.commit()
+    return f"«已撤回 #{script_id} 《{row['title']}》。侧厅空出一格待审。»"
+
+
+def _script_to_dict(row) -> dict:
+    return {
+        "id": int(row["id"]),
+        "name": row["name"],
+        "title": row["title"],
+        "body": row["body"],
+        "pitch": row["pitch"] or "",
+        "pitch_label": PITCH_LABELS.get(row["pitch"] or "", "不指定"),
+        "status": row["status"],
+        "status_label": SCRIPT_STATUS_LABELS.get(row["status"], row["status"]),
+        "accepted_as": row["accepted_as"] or "",
+        "accepted_label": PITCH_LABELS.get(row["accepted_as"] or "", ""),
+        "payout": int(row["payout"] or 0),
+        "note": row["note"] or "",
+        "created_at": int(row["created_at"] or 0),
+        "decided_at": int(row["decided_at"] or 0),
+    }
+
+
+async def owner_pending_scripts(limit: int = 40) -> list[dict]:
+    async with db.connect() as conn:
+        conn.row_factory = aiosqlite.Row
+        rows = await (await conn.execute(
+            """SELECT sc.id, s.name, sc.title, sc.body, sc.pitch, sc.status, sc.accepted_as,
+                      sc.payout, sc.note, sc.created_at, sc.decided_at
+               FROM star_scripts sc JOIN stewards s ON s.id = sc.steward_id
+               WHERE sc.status='pending' ORDER BY sc.created_at ASC LIMIT ?""",
+            (limit,),
+        )).fetchall()
+    return [_script_to_dict(r) for r in rows]
+
+
+async def owner_recent_scripts(limit: int = 12) -> list[dict]:
+    async with db.connect() as conn:
+        conn.row_factory = aiosqlite.Row
+        rows = await (await conn.execute(
+            """SELECT sc.id, s.name, sc.title, sc.body, sc.pitch, sc.status, sc.accepted_as,
+                      sc.payout, sc.note, sc.created_at, sc.decided_at
+               FROM star_scripts sc JOIN stewards s ON s.id = sc.steward_id
+               WHERE sc.status IN ('accepted', 'rejected')
+               ORDER BY sc.decided_at DESC, sc.id DESC LIMIT ?""",
+            (limit,),
+        )).fetchall()
+    return [_script_to_dict(r) for r in rows]
+
+
+async def owner_decide_script(script_id: int, action: str, note: str = "") -> dict:
+    action = (action or "").strip().lower()
+    if action in ("story", "故事", "人物故事"):
+        accepted_as = "story"
+        payout = config.THEATER_SCRIPT_STORY_PAY
+    elif action in ("tale", "潮闻", "潮闻故事"):
+        accepted_as = "tale"
+        payout = config.THEATER_SCRIPT_TALE_PAY
+    elif action in ("reject", "退稿", "ignore"):
+        accepted_as = ""
+        payout = 0
+    else:
+        raise ValueError("只能：采纳为故事 / 采纳为潮闻 / 退稿")
+    note = (note or "").strip()[:80]
+    async with db.connect() as conn:
+        conn.row_factory = aiosqlite.Row
+        row = await (await conn.execute(
+            """SELECT sc.id, sc.steward_id, sc.title, sc.status, s.name
+               FROM star_scripts sc JOIN stewards s ON s.id = sc.steward_id
+               WHERE sc.id=?""",
+            (script_id,),
+        )).fetchone()
+        if not row:
+            raise ValueError("没有这篇稿")
+        if row["status"] != "pending":
+            raise ValueError("这篇已经处理过了")
+        if accepted_as:
+            await conn.execute(
+                "UPDATE stewards SET tickets=tickets+? WHERE id=?",
+                (payout, row["steward_id"]),
+            )
+            await conn.execute(
+                """UPDATE star_scripts SET status='accepted', accepted_as=?, payout=?,
+                   note=?, decided_at=? WHERE id=?""",
+                (accepted_as, payout, note, db.now(), script_id),
+            )
+            kind = PITCH_LABELS[accepted_as]
+            text = f"{star.STAR_NAME}采纳了 {row['name']} 的稿《{row['title']}》为{kind}，稿费 {payout} 票"
+            await db.add_chronicle("theater", text, row["steward_id"], conn=conn)
+            await conn.commit()
+            return {"ok": True, "msg": text, "payout": payout}
+        await conn.execute(
+            """UPDATE star_scripts SET status='rejected', accepted_as='', payout=0,
+               note=?, decided_at=? WHERE id=?""",
+            (note, db.now(), script_id),
+        )
+        await conn.commit()
+        extra = f"：{note}" if note else "。"
+        return {"ok": True, "msg": f"已退稿《{row['title']}》{extra}".rstrip("。") + "。", "payout": 0}
+
+
 async def theater_ops(key_id: int, command: str) -> str:
     cmd = (command or "").strip()
-    verb = cmd.lower()
+    first, rest = _split_cmd(cmd)
+    verb = first.lower()
     s = await require_steward(key_id)
     async with db.connect() as conn:
         conn.row_factory = aiosqlite.Row
@@ -282,6 +523,12 @@ async def theater_ops(key_id: int, command: str) -> str:
             return await _cmd_board(conn, s)
         if verb in ("help", "?", "帮助"):
             return THEATER_HELP
+        if verb in ("编剧社", "guild", "desk", "稿件", "scripts", "manuscripts"):
+            return await _cmd_guild(conn, s)
+        if verb in ("投稿", "submit", "pitch"):
+            return await _cmd_submit(conn, s, rest)
+        if verb in ("撤回", "withdraw"):
+            return await _cmd_withdraw(conn, s, rest)
         if verb in ("试镜", "audition"):
             return await _cmd_audition(conn, s)
         if verb in ("对戏", "rehearse"):
