@@ -43,6 +43,7 @@ def test_price_steeper_than_land() -> None:
     assert config.GREENHOUSE_CLEAR_SECONDS[1] == 60 * 60
     for i in range(1, 5):
         assert config.greenhouse_expand_cost(i) > config.parcel_expand_cost(i)
+        assert config.greenhouse_expand_cost(i) > config.orchard_expand_cost(i)
         assert config.greenhouse_clear_seconds(i) > config.parcel_clear_seconds(i)
 
 

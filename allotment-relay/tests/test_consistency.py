@@ -378,6 +378,8 @@ def test_relay_manual_covers_systems() -> None:
         "露天无上限",
         "份地不种果树",
         "买园",
+        "比份地贵",
+        "160/240/360",
         "sow 园1 芒果",
         "sow 园1 橘子",
         "橘子",
