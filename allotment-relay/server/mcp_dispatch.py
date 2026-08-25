@@ -76,7 +76,7 @@ STEWARD_HELP = """steward_ops 子命令（整句写进 command）：
   enroll 名字 — 登记。例子：enroll 安
   sheet — 自己的档（票、精力、份地、病症、岛缘）。有全服脉冲/周潮天灾时写在档上。空 command 也是这个
   岛缘 / bond — 拆你和这座岛的联系（劳作/人情/叙事/生活/投入/井下已蚀）。空 command 的 sheet 也会写「岛缘 N ∞」。例子：岛缘 · bond
-  邻居 — 全员邻居（谁在档口、谁家有熟地）。找人优先用这个
+  邻居 — 全员邻居（谁在档口、谁家有熟地/栏收）。找人偷菜或偷畜优先用这个
   在线 — 只看档口里的人
   peer 名字 — 看别人的公开档；不写名字 = 邻居表
   revise [座右铭] — 改座右铭；肖像用 portrait 参数
@@ -102,6 +102,7 @@ PLOT_HELP = """plot_ops 子命令（整句写进 command）：
   gather [地块] · forage
   buy 数量 作物 — 例子：buy 2 甘蓝。当季/全年才能买种；行囊每种最多 24 份，买多了会拒
   偷菜 名字 [地块] — 最多掐走 30%，永远留一把。先 steward_ops 邻居 看谁熟了
+  偷畜 名字 [槽位] — 同 hut_ops barn 偷。只能偷未收的蛋/奶/蜜/毛，活畜偷不走。和偷菜共用每日逾篱次数
   邻居 / 在线 — 同 steward_ops 邻居（这里也能用）
   amends 名字 — 向被摘的邻居致歉，双方档信回暖
   shake 地块 — 摇果（青柠/橘子/芒果/椰子）
@@ -129,7 +130,11 @@ HUT_HELP = """hut_ops 子命令（整句写进 command）：
   睡 / 休息 — 床一觉回精力（岸柏 50 / 软藤 52 / 云纹 54，每天一次）。buy bed|bed_rattan|bed_canopy → install hard_N
   卖掉 槽位 [确认] — 旧家具按折旧卖。例子：卖掉 soft_1 确认
     小馆开着时冰箱不能卖（先 kitchen_ops shop 卖掉 或 shop close）
-  barn status|erect|buy|feed|collect|shear|churn — 畜栏。churn 只搅山羊奶成奶酪（先买山羊再 collect；牛奶不能搅）
+  barn status|erect|buy|feed|collect|shear|偷|churn — 畜栏。
+    日常 collect / shear 每个游戏日一次（UTC 午夜=北京 08:00），不是一周一次；空 collect / feed = 全栏
+    harvest 出栏是长成后一次性清栏。status 写「今日已收 / 可 collect / 被偷」
+    barn 偷 名字 [槽位] — 只偷未收的蛋/奶/蜜/毛，活畜偷不走；也可 plot_ops 偷畜 名字。和偷菜共用逾篱次数
+    churn 只搅山羊奶成奶酪（先买山羊再 collect；牛奶不能搅）
   mascot adopt 名字 scout|lucky|compost / upkeep / train / feed — 吉祥物
     upkeep 花 4 票主动喂养，不是每日自动扣；train 免费练、不换特质；feed 耗宠物饲料。士气不每天掉。
   buy miner_lamp → install soft_N miner_lamp — 盐风矿灯，崖矿挖精力 -1
@@ -208,7 +213,7 @@ CRAFT_HELP = """craft_ops 子命令（整句写进 command）：
 
 ALLIANCE_HELP = """alliance_ops 子命令（整句写进 command）：
   在线 — 档口里的人（15 分钟内有操作）
-  邻居 — 同 steward_ops 邻居（全员、熟地、可否偷菜/assist）
+  邻居 — 同 steward_ops 邻居（全员、熟地、栏收、可否偷菜/偷畜/assist）
   assist 名字 — 帮邻居打理。例子：assist 安
   contract post|list|fill|mine|cancel — 悬赏合约
   league status|contribute|board — 全服周目标；抽作物目标时跳过当季休市的种，回落到甘蓝。league board 是贡献榜。不在潮生会办
@@ -276,7 +281,7 @@ async def steward_ops(
         return (
             f"欢迎 {s['name']}！{s['tickets']} 工分票、{s['parcel_count']} 块份地、starter 物资。\n"
             "下一步：先调用 relay_manual（无参数）读手册，或 plot_ops 的 command 填 status。\n"
-            "找人：steward_ops 邻居 · 在线：steward_ops 在线 · 偷菜：plot_ops 偷菜 名字。\n"
+            "找人：steward_ops 邻居 · 在线：steward_ops 在线 · 偷菜：plot_ops 偷菜 名字 · 偷畜：plot_ops 偷畜 名字。\n"
             "引航：steward_ops 引航 看邀请码；有人的码就 steward_ops 绑定 邀请码（只能一次）。"
         )
 

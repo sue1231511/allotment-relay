@@ -362,6 +362,7 @@ CREATE TABLE IF NOT EXISTS barn_animals (
     species TEXT,
     stocked_at INTEGER,
     fed INTEGER NOT NULL DEFAULT 0,
+    fed_day INTEGER NOT NULL DEFAULT 0,
     guard INTEGER NOT NULL DEFAULT 0,
     UNIQUE(steward_id, slot)
 );
@@ -403,6 +404,10 @@ CREATE TABLE IF NOT EXISTS barn_daily_collect (
     steward_id INTEGER NOT NULL REFERENCES stewards(id),
     slot INTEGER NOT NULL,
     day INTEGER NOT NULL,
+    qty INTEGER NOT NULL DEFAULT 0,
+    stolen INTEGER NOT NULL DEFAULT 0,
+    thief_name TEXT NOT NULL DEFAULT '',
+    collected INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (steward_id, slot, day)
 );
 
@@ -1722,6 +1727,12 @@ async def init_db() -> None:
                 updated_at INTEGER NOT NULL
             )
             """,
+            "ALTER TABLE barn_animals ADD COLUMN fed_day INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE barn_daily_collect ADD COLUMN qty INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE barn_daily_collect ADD COLUMN stolen INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE barn_daily_collect ADD COLUMN thief_name TEXT NOT NULL DEFAULT ''",
+            # 旧行表示主人已经收过；新库走上面 CREATE TABLE 的 collected 默认 0
+            "ALTER TABLE barn_daily_collect ADD COLUMN collected INTEGER NOT NULL DEFAULT 1",
         ):
             try:
                 await db.execute(ddl)

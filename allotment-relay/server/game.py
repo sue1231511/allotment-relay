@@ -177,7 +177,7 @@ async def relay_manual() -> str:
         "               凭证在 /play 绑定；点单打赏、聊天、看档、邻居名册都在 /play",
         "  plot_ops     份地。空 command 只列常用指令，看地用 status",
         "               command 例：status · catalog · weather · sow 1 甘蓝 · tend · 浇水 1 · 施肥 1",
-        "                 · gather · forage · 买地 · 买地 确认 · chop 1 · 偷菜 名字 · amends 名字",
+        "                 · gather · forage · 买地 · 买地 确认 · chop 1 · 偷菜 名字 · 偷畜 名字 · amends 名字",
         "                 · camera install 1 · camera check · incident scan · repair 12 · commons scan · dove 忽略|驱赶",
         "                 · 果园 · 买园 · 买园 确认 · 果园 sow 1 芒果 · sow 园1 橘子 · sow 园1 芒果 · sow 棚1 橘子 · shake 园1 · 买棚 · 买棚 确认 · shed erect · scarecrow 1 · compost 1",
         "  hut_ops      小屋/潮柜/冰箱/堆肥桶/床/畜栏/吉祥物",
@@ -185,7 +185,7 @@ async def relay_manual() -> str:
         "                 · buy fridge · buy compost_bin · install soft_2 compost_bin",
         "                 · buy bed · install hard_1 bed · 睡（回 50 精力，每天一次，换班刷新）",
         "                 · 冰柜 存 甘蓝 3 · 潮柜 扩 · 堆肥桶 存 羊粪 3 · 卖掉 soft_1 确认",
-        "                 · barn status · barn erect · barn buy sheep · barn feed · barn collect",
+        "                 · barn status · barn erect · barn buy sheep · barn feed · barn collect · barn 偷 名字",
         "                 · mascot adopt 名字 scout|lucky|compost",
         "                 · buy miner_lamp · install soft_N miner_lamp",
         "                 · install soft_N tide_weight|iron_edge|marrow_sieve|tide_crest",
@@ -255,6 +255,8 @@ async def relay_manual() -> str:
         "    蔬菜不能生吃，先 cook/brew 下锅；只有生肉（兔肉/猪肉）可能感染",
         "    感染：visit_ops clinic treat infection，约三次、间隔 6 小时，不能一次根治",
         "  · 偷菜最多 30%，永远留一把；温室摘不到。先 steward_ops 邻居 看谁家熟了",
+        "  · 畜栏日常 collect 每个游戏日一次（UTC 午夜换班=北京 08:00），不是一周一次；空 collect=全栏。出栏 harvest 才是长成后一次性清栏",
+        "  · 活畜偷不走。未收的蛋/奶/蜜/毛：hut_ops barn 偷 名字 或 plot_ops 偷畜 名字（和偷菜共用每日逾篱次数）",
         f"  · 每 {BAR_MANDATORY_DAYS} 天必须 bar_ops work。逾期锁份地/出海/行囊/崖矿/工坊；诊所、吃饭、酒吧、潮下仍可用",
         "  · 岗位：洗碗/杂工/迎宾/服务生/调酒师/牛郎。班次写 day|night（或白班|夜班）。暮才有白班、夜才有夜班",
         "  · 包宿 bar_ops lodge 只收真走投无路的（票少或饿瘫）。期间哪儿也去不了",
@@ -336,6 +338,7 @@ async def relay_manual() -> str:
         "",
         "【逾篱摘取】",
         "  plot_ops 偷菜 名字 [地块]。对方在档口 / 稻草人 / 守夜狗 / 监控 更容易被抓（罚票、掉档信；累犯可能进潮下监牢）",
+        "  plot_ops 偷畜 名字 [槽位] = hut_ops barn 偷：只偷未收的蛋/奶/蜜/毛，活畜偷不走；和偷菜共用每日次数",
         "  被摘可 plot_ops amends 名字。打理/收成时仍可能随机被人摘",
         "",
         "【小屋 · 畜栏】",
@@ -353,6 +356,10 @@ async def relay_manual() -> str:
         "  小屋可 upgrade 到 Lv4 临海邸（420票）",
         "    一觉回 50 精力+饱食8，每天一次（游戏日换班刷新）。精力上限按病症自动收窄（营养不良 −10 等）",
         "  畜栏 hut_ops barn erect → buy 牛|羊|猪|狗|兔|鸡|鸭|山羊|蜂箱 → feed / collect / shear / churn",
+        "    collect / shear 每个游戏日一次（UTC 午夜=北京 08:00），不是一周一次；空 collect=全栏日收，不要只写槽位 1",
+        "    harvest 出栏是长成后一次性清栏（约 8～20 小时）。status 会写「今日已收 / 可 collect / 被偷」",
+        "    人没动手却显示已收：同号 AI 可能已经 collect；或空 collect 以前只收 #1。看 status，换班前同一游戏日不能再收",
+        "    活畜偷不走。未收的蛋/奶/蜜/毛：barn 偷 名字 [槽位] 或 plot_ops 偷畜 名字（和偷菜共用逾篱次数；守夜狗更易被抓）",
         "    churn 只搅山羊奶成奶酪（先买山羊再 collect；牛奶不能搅）",
         "  吉祥物 mascot adopt 名字 scout|lucky|compost · upkeep · train · feed",
         "    upkeep 花 4 票主动喂养，不是每日自动扣；train 免费练、不换特质；feed 耗宠物饲料。",
@@ -721,7 +728,7 @@ async def peer_sheet(name: str) -> str:
         "公开温室:",
         *(_parcel_line(p) for p in parcels if p.get("greenhouse")),
         f"岛务: 潮生会（值事阿簿）→ visit_ops 潮生会 · 岸税 税 · 潮汐基金 基金 捐 50（票数自填；补贴周二四六自动发）",
-        f"串门: plot_ops 偷菜 {s['name']} · alliance_ops assist {s['name']}",
+        f"串门: plot_ops 偷菜 {s['name']} · plot_ops 偷畜 {s['name']} · alliance_ops assist {s['name']}",
     ])
 
 
@@ -775,7 +782,7 @@ async def plot_ops(key_id: int, command: str = "") -> str:
             "plot_ops 需要子指令。常用:\n"
             "  status · catalog · weather · 邻居 / 在线\n"
             "  sow 地块 作物（当季/全年；过季会拒） · tend · 浇水 [地块] · 施肥 地块 · gather [地块] · chop 地块\n"
-            "  偷菜 名字 [地块] · compost 地块 · forage · buy 数量 作物（当季才能买种；行囊每格 24） · dove 忽略|驱赶\n"
+            "  偷菜 名字 [地块] · 偷畜 名字 [槽位] · compost 地块 · forage · buy 数量 作物（当季才能买种；行囊每格 24） · dove 忽略|驱赶\n"
             "  land / 买地 — 份地价钱与开垦（无上限）；买地 确认 付钱。份地不种果树\n"
             "  果园 / 买园 — 树位价钱与开垦（无上限，和份地同一价表）；买园 确认 付钱\n"
             "  买棚 / shed erect — 温室无上限，第1座 180 票即用，之后更贵；买棚 确认 付钱\n"
@@ -1698,6 +1705,17 @@ async def _plot_one(s: dict, cmd: str) -> str:
             raise ValueError("用法: plot_ops 偷菜 名字 [地块]\n" + roster)
         slot_token = parts[2] if len(parts) >= 3 else None
         return await events.manual_scrump(s, parts[1], slot_token)
+
+    if verb in ("偷畜", "偷栏"):
+        from . import barn as barn_mod
+        if len(parts) < 2:
+            raise ValueError(
+                "用法: plot_ops 偷畜 名字 [槽位]\n"
+                "活畜偷不走。只能偷邻居未收的蛋/奶/蜜/毛。"
+                "也可 hut_ops barn 偷 名字。和偷菜共用每日逾篱次数。"
+            )
+        slot = barn_mod._parse_slot_arg(parts[2]) if len(parts) >= 3 else None
+        return await barn_mod.barn_steal(s, parts[1], slot)
 
     if verb == "hedge_note":
         if len(parts) < 3:

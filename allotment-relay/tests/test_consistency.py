@@ -74,6 +74,7 @@ def test_mcp_descriptions() -> None:
     assert "一周一季" in blob or "当季" in blob or "季节" in blob
     assert "/allotments" in blob
     assert "围观" in blob
+    assert "偷畜" in blob
 
     tide = mcp._tool_manager.get_tool("tide_ops")
     tide_blob = f"{tide.description}\n{(tide.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -156,6 +157,9 @@ def test_mcp_descriptions() -> None:
     assert "compost_bin" in hut_blob
     assert "tide_weight" in hut_blob
     assert "iron_edge" in hut_blob
+    assert "barn collect" in hut_blob
+    assert "barn 偷" in hut_blob
+    assert "游戏日" in hut_blob or "一天" in hut_blob or "每日" in hut_blob or "不是一周" in hut_blob
 
     kitchen = mcp._tool_manager.get_tool("kitchen_ops")
     k_blob = f"{kitchen.description}\n{(kitchen.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -261,6 +265,9 @@ def test_relay_manual_covers_systems() -> None:
         "gear upgrade",
         "boss attack",
         "barn erect",
+        "barn collect",
+        "barn 偷",
+        "不是一周一次",
         "堆肥桶",
         "buy compost_bin",
         "基础每格 24",

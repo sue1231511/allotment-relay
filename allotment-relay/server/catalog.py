@@ -871,6 +871,36 @@ LIVESTOCK = {
     "dog": {"name": "狗", "emoji": "🐕", "buy": 70, "feed": "meat_rabbit", "feed_qty": 1, "grow": 0, "product": "guard", "product_qty": 0, "guard": True},
 }
 
+_LIVESTOCK_ALIASES = {
+    "兔": "rabbit", "兔子": "rabbit",
+    "鸡": "chicken", "小鸡": "chicken",
+    "鸭": "duck", "鸭子": "duck",
+    "绵羊": "sheep", "羊": "sheep",
+    "猪": "pig",
+    "山羊": "goat",
+    "牛": "cow", "奶牛": "cow",
+    "蜂箱": "bee", "蜂": "bee", "蜜蜂": "bee",
+    "狗": "dog", "犬": "dog",
+}
+
+
+def resolve_livestock(token: str) -> str | None:
+    """英文 key 或中文名 → LIVESTOCK key。羊=绵羊，山羊要写山羊。"""
+    raw = (token or "").strip()
+    if not raw:
+        return None
+    key = raw.lower()
+    if key in LIVESTOCK:
+        return key
+    if raw in _LIVESTOCK_ALIASES:
+        return _LIVESTOCK_ALIASES[raw]
+    if key in _LIVESTOCK_ALIASES:
+        return _LIVESTOCK_ALIASES[key]
+    for lk, meta in LIVESTOCK.items():
+        if meta["name"] == raw:
+            return lk
+    return None
+
 # 渔具数值 tier — tide_ops gear status / upgrade bait|rod|net
 GEAR_TIERS = {
     "bait": [

@@ -59,9 +59,11 @@ async def neighbor_roster(steward: dict[str, Any], *, online_only: bool = False)
         )).fetchall()
         peers = [dict(r) for r in rows]
         from . import ranks as ranks_mod
+        from . import barn as barn_mod
         peers = [ranks_mod.attach_level(p) for p in peers]
         for p in peers:
             p["ripe"] = await _ripe_outdoor_count(conn, p["id"])
+            p["barn"] = await barn_mod.stealable_count(conn, p["id"])
             p["home"] = bool(p["last_active_at"] and p["last_active_at"] > cut)
 
     if online_only:
@@ -71,6 +73,7 @@ async def neighbor_roster(steward: dict[str, Any], *, online_only: bool = False)
             "name": p["name"],
             "title": p.get("display_title") or p.get("title") or p["badge"],
             "ripe": int(p.get("ripe") or 0),
+            "barn": int(p.get("barn") or 0),
             "home": bool(p.get("home")),
             "ago": _ago(p["last_active_at"]),
         }
@@ -96,9 +99,13 @@ async def list_neighbors(steward: dict[str, Any], *, online_only: bool = False) 
 
     def _line(p: dict[str, Any]) -> str:
         ripe = f"熟地 {p['ripe']}" if p["ripe"] else "暂无熟地"
+        barn = f" · 栏收 {p.get('barn') or 0}" if p.get("barn") else ""
+        steal_barn = (
+            f" · hut_ops barn 偷 {p['name']}" if p.get("barn") else ""
+        )
         return (
-            f"- {p['name']} · {p.get('display_title') or p.get('title') or p['badge']} · {ripe} · {_ago(p['last_active_at'])}\n"
-            f"  steward_ops peer {p['name']} · plot_ops 偷菜 {p['name']} · alliance_ops assist {p['name']}"
+            f"- {p['name']} · {p.get('display_title') or p.get('title') or p['badge']} · {ripe}{barn} · {_ago(p['last_active_at'])}\n"
+            f"  steward_ops peer {p['name']} · plot_ops 偷菜 {p['name']} · plot_ops 偷畜 {p['name']} · alliance_ops assist {p['name']}{steal_barn}"
         )
 
     home = [p for p in peers if p["home"]]
@@ -130,6 +137,7 @@ async def list_neighbors(steward: dict[str, Any], *, online_only: bool = False) 
         f"偷菜：plot_ops 偷菜 名字。最多掐走三成，永远留一把。"
         f"对方在档口、稻草人、守夜狗更容易被抓。"
         f"每日 {SCRUMP_DAILY} 次、同一人每天 1 次。温室摘不到。"
+        f"畜栏蛋奶：hut_ops barn 偷 名字 或 plot_ops 偷畜 名字。活畜偷不走，已收进袋的也偷不走。和偷菜共用次数。"
     )
     return "\n".join(lines)
 
