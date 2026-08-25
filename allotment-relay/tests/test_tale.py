@@ -503,6 +503,112 @@ async def test_mr_ke_flow() -> None:
         assert name in souvenirs, souvenirs
 
 
+async def test_tonight_damp_flow() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="tonight-damp-"))
+    db = await _boot(tmp)
+    from server import npc, progress, tale, tale_tonight_damp
+
+    kid, sid = await _enroll(db, "tonight-damp@example.com", "湿夜探索者")
+    listing = await tale.tale_ops(kid, "list")
+    assert "tonight_damp" in listing and "今夜潮湿" in listing, listing
+    assert "每阶段工分票+30×5" in listing, listing
+    assert "完整探索工分票+120" in listing, listing
+    assert "湿夜旁听人" in listing, listing
+
+    npc_listing = await npc.npc_ops(kid, "list")
+    for name in ("周砚声", "沈栀"):
+        assert name not in npc_listing, npc_listing
+
+    async with db.connect() as conn:
+        before = await (await conn.execute(
+            "SELECT tickets, energy FROM stewards WHERE id=?", (sid,)
+        )).fetchone()
+
+    accepted = await tale.tale_ops(kid, "accept tonight_damp")
+    assert "今夜潮湿" in accepted, accepted
+    assert "只是岛上的探索者" in accepted, accepted
+    assert "不替他或沈栀" in accepted, accepted
+    assert "tale_ops explore rain_woods" in accepted, accepted
+    assert "他的手穿过了石面" not in accepted, accepted
+    assert "原来不是她不理他" not in accepted, accepted
+
+    try:
+        await tale.tale_ops(kid, "review tonight_damp")
+        raise AssertionError("unfinished full review should be hidden")
+    except ValueError as exc:
+        assert "尚未解锁" in str(exc) and "避免提前看到后续" in str(exc), exc
+
+    wrong = await tale.tale_ops(kid, "explore hillside_stone")
+    assert "未消耗精力" in wrong and "explore rain_woods" in wrong, wrong
+
+    outputs: list[str] = []
+    for index, stage in enumerate(tale_tonight_damp.TALE_STAGES, 1):
+        result = await tale.tale_ops(kid, f"explore {stage['domain']}")
+        outputs.append(result)
+        assert f"第 {index}/5 阶段奖励" in result, result
+        assert "工分票 +30" in result, result
+        if index < 3:
+            assert "他的手穿过了石面" not in result, result
+        if index < 4:
+            assert "原来不是她不理他" not in result, result
+
+    assert "他的手穿过了石面" in outputs[2], outputs[2]
+    assert "原来不是她不理他" in outputs[3], outputs[3]
+    finish = outputs[-1]
+    assert "«今夜潮湿» 已完成" in finish, finish
+    assert "【探索完成：《今夜潮湿》】" in finish, finish
+    assert "他再等等" in finish, finish
+    assert "完整探索额外奖励" in finish and "工分票 +120" in finish, finish
+    assert "档信 +6" in finish and "雾智 +10" in finish, finish
+    assert "人物称呼「湿夜旁听人」" in finish, finish
+    for name in ("掉漆的蘸水钢笔", "未拆的回程信", "圈着十七号的旧日历", "旧红绳"):
+        assert name in finish, finish
+
+    async with db.connect() as conn:
+        after = await (await conn.execute(
+            "SELECT tickets, energy FROM stewards WHERE id=?", (sid,)
+        )).fetchone()
+        unlocked = await (await conn.execute(
+            """SELECT 1 FROM steward_achievements
+               WHERE steward_id=? AND ach_key='tonight_damp_witness'""",
+            (sid,),
+        )).fetchone()
+    assert after[0] - before[0] == 5 * 30 + 120, (before, after)
+    assert after[1] == before[1] - 5 * 5, (before, after)
+    assert unlocked, "tonight_damp title was not recorded"
+    assert progress.resolve_achievement("湿夜旁听人") == "tonight_damp_witness"
+
+    review_list = await tale.tale_ops(kid, "review")
+    assert "tonight_damp" in review_list, review_list
+    assert "tale_ops review tonight_damp" in review_list, review_list
+    full_review = await tale.tale_ops(kid, "review tonight_damp")
+    assert "潮闻全篇回顾 · 《今夜潮湿》" in full_review, full_review
+    assert "仅重读正文，不重复发放" in full_review, full_review
+    assert "【引子】" in full_review and "—— 全篇完 ——" in full_review, full_review
+    for index, action in enumerate(tale_tonight_damp.ACTIONS, 1):
+        assert f"【{index}/5 · {action['title']}】" in full_review, action["title"]
+    assert "你在林子里遇见周砚声" in full_review, full_review
+    assert "他再等等" in full_review, full_review
+    assert "原稿里" not in full_review, full_review
+    async with db.connect() as conn:
+        after_review = await (await conn.execute(
+            "SELECT tickets, energy FROM stewards WHERE id=?", (sid,)
+        )).fetchone()
+    assert tuple(after_review) == tuple(after), (after, after_review)
+
+    souvenirs = await tale.tale_ops(kid, "souvenirs")
+    assert "潮闻收藏册 · 4 件" in souvenirs, souvenirs
+    assert "今夜潮湿" in souvenirs, souvenirs
+    for name in ("掉漆的蘸水钢笔", "未拆的回程信", "圈着十七号的旧日历", "旧红绳"):
+        assert name in souvenirs, souvenirs
+
+    try:
+        await tale.tale_ops(kid, "accept tonight_damp")
+        raise AssertionError("non-repeatable tonight_damp tale should block")
+    except ValueError as exc:
+        assert "已经完成" in str(exc), exc
+
+
 async def test_tale_explore_is_unlimited() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="tale-unlimited-"))
     db = await _boot(tmp)
@@ -628,6 +734,8 @@ def test_tale_mcp_description() -> None:
     assert "打听" in blob
     assert "mr_ke" in blob
     assert "克先生" in blob
+    assert "tonight_damp" in blob
+    assert "今夜潮湿" in blob
     assert "review" in blob
     assert "完整正文" in blob
 
@@ -639,6 +747,7 @@ def main() -> None:
     asyncio.run(test_missing_pages_flow())
     asyncio.run(test_asking_around_flow())
     asyncio.run(test_mr_ke_flow())
+    asyncio.run(test_tonight_damp_flow())
     asyncio.run(test_tale_explore_is_unlimited())
     asyncio.run(test_commons_claim_advances_item_stage())
     asyncio.run(test_tale_abandon())

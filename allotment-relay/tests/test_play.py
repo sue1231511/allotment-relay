@@ -26,6 +26,7 @@ async def _boot(tmp: Path):
 
 def test_play_api() -> None:
     asyncio.run(_test_play_api())
+    test_bar_place_actions_match_phase()
     test_play_page_lists_all_plot_kinds()
 
 
@@ -113,6 +114,10 @@ async def _test_play_api() -> None:
     assert any(a["command"] == "clinic treat all" for a in clinic["actions"]), clinic
     bar = next(p for p in sown["places"] if p["id"] == "bar")
     assert "点单" in bar["blurb"], bar
+    dish = next(a for a in bar["actions"] if a["label"] == "洗碗上工")
+    phase = sown["climate"].get("phase_code") or ""
+    expected_shift = "night" if phase == "night" else "day"
+    assert dish["command"] == f"work 洗碗 {expected_shift}", dish
     well = next(p for p in sown["places"] if p["id"] == "undertide")
     assert "岛缘" in well["blurb"], well
     assert sown["dashboard"]["island_bond"] is not None, sown["dashboard"]
@@ -132,6 +137,27 @@ async def _test_play_api() -> None:
         raise AssertionError("unknown tool should fail")
     except ValueError as exc:
         assert "未知工具" in str(exc), exc
+
+
+def test_bar_place_actions_match_phase() -> None:
+    from server import play as play_mod, world
+
+    shift, note = play_mod.bar_work_slot()
+    phase = world.current_day_phase()
+    if phase == "night":
+        assert shift == "night"
+        assert note == "夜班"
+    elif phase == "dusk":
+        assert shift == "day"
+        assert note == "白班"
+    else:
+        assert shift == "day"
+        assert "暮" in note
+
+    actions = play_mod.bar_place_actions()
+    dish = next(a for a in actions if a["label"] == "洗碗上工")
+    assert dish["command"] == f"work 洗碗 {shift}", dish
+    assert note in dish["note"], dish
 
 
 def test_play_page_lists_all_plot_kinds() -> None:
@@ -154,9 +180,13 @@ def test_play_page_lists_all_plot_kinds() -> None:
     assert "交岸维" in js
     assert "orderedPlaces" in js
     assert "b.week1" in js
+    assert "parseActPayload" in js
+    assert "setWorkStatus" in js
+    assert "bar_place_actions" in (ROOT / "server" / "play.py").read_text()
 
 
 if __name__ == "__main__":
     asyncio.run(_test_play_api())
+    test_bar_place_actions_match_phase()
     test_play_page_lists_all_plot_kinds()
     print("ok")

@@ -365,6 +365,7 @@ bar_ops     的 command = work 洗碗 night
 | `accept missing_pages` | 接取顺序探索潮闻《缺页》 |
 | `accept asking_around` | 接取顺序探索潮闻《打听》 |
 | `accept mr_ke` | 接取顺序探索潮闻《克先生》 |
+| `accept tonight_damp` | 接取顺序探索潮闻《今夜潮湿》 |
 | `status` | 查看进行中的任务与当前阶段 |
 | `explore beach` | 按当前阶段提示探索；匹配阶段每次耗 5 精力、不限次数，错误地点不扣 |
 | `explore south_lane` | 《回忆生潮》第一幕；后续严格照 `status` 给出的地点继续 |
@@ -372,6 +373,7 @@ bar_ops     的 command = work 洗碗 night
 | `explore cheng_home` | 《缺页》第一幕；后续严格照 `status` 给出的地点继续 |
 | `explore west_market` | 《打听》第一幕；后续严格照 `status` 给出的地点继续 |
 | `explore ke_shop` | 《克先生》第一幕；后续严格照 `status` 给出的地点继续 |
+| `explore rain_woods` | 《今夜潮湿》第一幕；后续严格照 `status` 给出的地点继续 |
 | `turnin` | 交付当前阶段要求的物品并领奖 |
 | `abandon black_box_lover` | 放弃任务，之后可重新接取 |
 | `board` | 查看潮闻完成榜 |
@@ -394,7 +396,9 @@ bar_ops     的 command = work 洗碗 night
 
 第六个潮闻《克先生》用 `accept mr_ke` 接取。玩家只旁观克太太与克先生的日子，不替任何人作决定，也不新增固定 NPC；13 幕严格按 `status` 推进，第一步是 `explore ke_shop`。故事信息按探索顺序出现，不在任务说明中提前揭示后段线索。每幕自动获得 30 工分票（13×30=390），完整探索再获得 120 工分票、档信 +6、雾智 +10，总票奖励 510；同时解锁「压扁的蛋糕盒」「颜色不一样的袖扣」「断了腿的老花镜」「夹着白发的米白风衣」4 件永久纪念品。
 
-AI 回顾完整潮闻使用 `tale_ops review 任务key`，例如 `review mr_ke`、`review asking_around` 或 `review spring_beyond_mountain`。该命令只有通关后才解锁，会一次返回引子、全部阶段与结尾；只重读正文，不重复发放阶段票或通关奖励。`review` 不带 key 时只列出已经解锁的回顾目录。`reminisce black_box_lover` 仍用于让 AI 单独读取《黑盒与潮声》的 6 篇额外补充回忆；网页「岛上回忆」会把这 6 篇接在主线正文后一起展示。
+第七个潮闻《今夜潮湿》用 `accept tonight_damp` 接取。玩家只旁观周砚声回家以后的日子，不替他或沈栀作决定，也不新增固定 NPC；5 幕严格按 `status` 推进，第一步是 `explore rain_woods`。故事信息按探索顺序出现，不在任务说明中提前揭示后段线索。每幕自动获得 30 工分票（5×30=150），完整探索再获得 120 工分票、档信 +6、雾智 +10，总票奖励 270；同时解锁称呼「湿夜旁听人」与 4 件完成后才揭晓的永久纪念品。
+
+AI 回顾完整潮闻使用 `tale_ops review 任务key`，例如 `review tonight_damp`、`review mr_ke`、`review asking_around` 或 `review spring_beyond_mountain`。该命令只有通关后才解锁，会一次返回引子、全部阶段与结尾；只重读正文，不重复发放阶段票或通关奖励。`review` 不带 key 时只列出已经解锁的回顾目录。`reminisce black_box_lover` 仍用于让 AI 单独读取《黑盒与潮声》的 6 篇额外补充回忆；网页「岛上回忆」会把这 6 篇接在主线正文后一起展示。
 
 ### `story_ops` — 人物故事探索
 
