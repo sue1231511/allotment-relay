@@ -2919,8 +2919,8 @@ body.memory-open {
   }
 
   .lounge-page-main {
-    width: min(100% - 20px, 1180px);
-    padding: 10px 0 0;
+    width: 100%;
+    padding: 0;
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -2929,16 +2929,6 @@ body.memory-open {
   }
 
   .lounge-head {
-    align-items: flex-start;
-    margin-bottom: 10px;
-    flex-shrink: 0;
-  }
-
-  .lounge-head h1 {
-    font-size: 28px;
-  }
-
-  .lounge-head > div > p {
     display: none;
   }
 
