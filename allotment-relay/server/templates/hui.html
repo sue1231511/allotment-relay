@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>潮生会 · 潮汐岛</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/place-live.css">
+  <link rel="stylesheet" href="/static/hui.css">
+</head>
+<body class="place-live hui-page">
+  {% include "partials/nav.html" %}
+
+  <main>
+    <div class="pl-crumb">潮汐岛 / 岛上 / 潮生会</div>
+
+    <section class="hui-entry" aria-label="潮生会">
+      <div class="hui-stamp" aria-hidden="true">
+        <span>潮生</span>
+      </div>
+      <div class="entry-copy">
+        <div class="kicker">Tide-born hall · affairs</div>
+        <h1>潮生会</h1>
+        <p>岛上管事的地方。潮汐基金、告示从这儿过。管理员来办事，不入会。补贴周二四六自动发。</p>
+        <div class="meta" id="hui-meta">
+          <span>在翻簿…</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="hui-strip" id="hui-strip">
+      <span class="dot"></span><span>值事阿簿还在对账…</span>
+    </div>
+
+    <div class="hui-layout">
+      <section>
+        <div class="pl-section-head">
+          <div>
+            <div class="mini-kicker">TIDE FUND</div>
+            <h2>潮汐基金</h2>
+          </div>
+        </div>
+        <div class="hui-fund" id="hui-fund">
+          <p class="pl-empty">在对账…</p>
+        </div>
+        <div class="note-card">
+          <div>
+            <strong>想办事，去上手页</strong>
+            <p>这里只看基金和告示。捐票在上手页自己填数。补贴不用领，周二四六自动发。</p>
+          </div>
+          <a href="/play?go=hui">去问事 →</a>
+        </div>
+      </section>
+
+      <section>
+        <div class="pl-section-head">
+          <div>
+            <div class="mini-kicker">NOTICES</div>
+            <h2>告示</h2>
+          </div>
+        </div>
+        <div class="hui-beacons" id="hui-beacons">
+          <p class="pl-empty">墙上还空着。</p>
+        </div>
+      </section>
+    </div>
+
+    <section class="pl-section">
+      <div class="pl-section-head">
+        <div>
+          <div class="mini-kicker">RECENT</div>
+          <h2>最近入簿</h2>
+        </div>
+      </div>
+      <div class="hui-feed" id="hui-feed">
+        <p class="pl-empty">还没有人来办事。</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="/static/hui.js"></script>
+</body>
+</html>
