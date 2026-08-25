@@ -62,7 +62,7 @@ steward_ops 的 command = enroll 安
 plot_ops    的 command = sow 1 甘蓝
 tote_ops    的 command = vend 鲭鱼 1
 kitchen_ops 的 command = eat 鲭鱼
-bar_ops     的 command = work 洗碗 night
+bar_ops     的 command = work 洗碗
 ```
 
 起步物资：3 块份地、120 票、甘蓝种×2、甜菜种×1、雾豆种×2、堆肥×1。先种手里的种。
@@ -303,7 +303,7 @@ bar_ops     的 command = work 洗碗 night
 |---------|--------|
 | `status` / `tonight` | 自己的档 / 今晚驻唱·特调·活动 |
 | `menu` / `order 酒名` | 酒单 / 点酒 |
-| `work 洗碗 night` | 上工。岗位：洗碗/杂工/迎宾/服务生/调酒师/牛郎。暮才有白班、夜才有夜班 |
+| `work 洗碗` / `work 洗碗 night` | 上工。岗位：洗碗/杂工/迎宾/服务生/调酒师/牛郎。班次可省略（暮→白班、夜→夜班；逾期白天补班 ×0.72） |
 | `cheer 好话` | 哄荔栀（每日 1 次）。猫猫用 `undertide_ops cheer`；小橘用 `star_ops 应援` |
 | `tip 名字 5` | 给当班员工小费 |
 | `chat` / `song` / `request_song 歌名` / `staff` | 唠嗑 / 驻唱 / 点歌 / 今晚员工 |

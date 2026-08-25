@@ -27,6 +27,7 @@ async def _boot(tmp: Path):
 def test_play_api() -> None:
     asyncio.run(_test_play_api())
     test_play_page_lists_all_plot_kinds()
+    test_bar_work_auto_period()
 
 
 async def _test_play_api() -> None:
@@ -86,6 +87,11 @@ async def _test_play_api() -> None:
     assert any(a["command"] == "clinic treat all" for a in clinic["actions"]), clinic
     bar = next(p for p in sown["places"] if p["id"] == "bar")
     assert "点单" in bar["blurb"], bar
+    work = next(a for a in bar["actions"] if str(a.get("command") or "").startswith("work "))
+    assert work["command"] == "work 洗碗", work
+    assert "night" not in work["command"], work
+    assert sown["climate"].get("phase_code") in ("day", "dusk", "night"), sown["climate"]
+    assert "bar_open" in sown["climate"], sown["climate"]
     well = next(p for p in sown["places"] if p["id"] == "undertide")
     assert "岛缘" in well["blurb"], well
     assert sown["dashboard"]["island_bond"] is not None, sown["dashboard"]
@@ -125,9 +131,60 @@ def test_play_page_lists_all_plot_kinds() -> None:
     assert "交岸维" in js
     assert "orderedPlaces" in js
     assert "b.week1" in js
+    assert "actPayloadAttr" in js
+    assert "goBarBtn" in js
+    assert "renderForageBtn" in js
+    assert "setWorkStatus" in js
+    assert 'command": "work 洗碗"' in (ROOT / "server" / "play.py").read_text() or (
+        'command":"work 洗碗"' in (ROOT / "server" / "play.py").read_text()
+    ) or 'command": "work 洗碗"' in js or "work 洗碗" in (ROOT / "server" / "play.py").read_text()
+    assert "work 洗碗 night" not in (ROOT / "server" / "play.py").read_text()
+    assert "suggest_work_period" in (ROOT / "server" / "bar.py").read_text()
+    assert "places_for" in (ROOT / "server" / "play.py").read_text()
+
+
+def test_bar_work_auto_period() -> None:
+    asyncio.run(_test_bar_work_auto_period())
+
+
+async def _test_bar_work_auto_period() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="bar-auto-"))
+    db = await _boot(tmp)
+    from server import bar, play as play_mod, world
+
+    key = await db.create_api_key("auto-bar@example.com")
+    await play_mod.run_play(key, "steward_ops", "enroll 自动班次")
+    phase = world.current_day_phase()
+    suggested = bar.suggest_work_period(overdue=False)
+    if phase == "dusk":
+        assert suggested == "day", suggested
+    elif phase == "night":
+        assert suggested == "night", suggested
+    elif phase == "day":
+        assert suggested is None, suggested
+
+    if suggested:
+        ok = await play_mod.run_play(key, "bar_ops", "work 洗碗")
+        assert ok["ok"] is True, ok
+        assert "夜班仅夜" not in (ok.get("text") or "")
+    else:
+        try:
+            await play_mod.run_play(key, "bar_ops", "work 洗碗")
+            raise AssertionError("daytime without overdue should fail")
+        except ValueError as exc:
+            assert "营业" in str(exc) or "暮" in str(exc) or "夜" in str(exc), exc
+
+    # 硬编码 night 在暮时必须失败（回归：上手页曾经写死 night）
+    if phase == "dusk":
+        try:
+            await play_mod.run_play(key, "bar_ops", "work 洗碗 night")
+            raise AssertionError("night shift at dusk should fail")
+        except ValueError as exc:
+            assert "夜" in str(exc), exc
 
 
 if __name__ == "__main__":
     asyncio.run(_test_play_api())
     test_play_page_lists_all_plot_kinds()
+    test_bar_work_auto_period()
     print("ok")

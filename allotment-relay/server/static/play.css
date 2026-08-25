@@ -795,6 +795,30 @@ body.play-bound .play-gate { display: none !important; }
   background: rgba(115, 141, 121, .08);
 }
 
+.place-status-pill.is-busy {
+  color: #7a6a4a;
+  border-color: rgba(122, 106, 74, .28);
+  background: rgba(122, 106, 74, .08);
+}
+
+.place-status-pill.is-ok {
+  color: #5a7a62;
+  border-color: rgba(90, 122, 98, .28);
+  background: rgba(90, 122, 98, .1);
+}
+
+.place-status-pill.is-error {
+  color: #8a4f4f;
+  border-color: rgba(138, 79, 79, .3);
+  background: rgba(138, 79, 79, .1);
+}
+
+.place-tool[disabled],
+.place-tool[aria-disabled="true"] {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
 .place-result-shell {
   min-height: 190px;
   padding: 20px 0;

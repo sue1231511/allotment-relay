@@ -79,7 +79,7 @@ PLACES: list[dict[str, Any]] = [
         "week1": True,
         "duty": True,
         "actions": [
-            {"label": "洗碗上工", "note": "每两天须来一次", "tool": "bar_ops", "command": "work 洗碗 night"},
+            {"label": "洗碗上工", "note": "暮白班 / 夜夜班；班次自动选", "tool": "bar_ops", "command": "work 洗碗"},
             {"label": "今晚", "note": "看看今晚开不开门", "tool": "bar_ops", "command": "tonight"},
             {"label": "酒单", "note": "价目与今晚出品", "tool": "bar_ops", "command": "menu"},
             {"label": "我的酒吧档", "note": "考勤与上工记录", "tool": "bar_ops", "command": "status"},
@@ -229,11 +229,58 @@ def climate_bits() -> dict[str, str]:
     w, t, p = world.current_weather(), world.current_tide(), world.current_day_phase()
     return {
         "weather": world.weather_label(w),
+        "weather_code": w,
         "tide": world.tide_label(t),
+        "tide_code": t,
         "phase": world.day_phase_label(p),
+        "phase_code": p,
         "season": season_mod.season_name(),
         "line": world.climate_line(),
+        "bar_open": "1" if p in ("dusk", "night") else "0",
     }
+
+
+def _bar_work_action(*, overdue: bool) -> dict[str, Any]:
+    from . import bar as bar_mod
+
+    period = bar_mod.suggest_work_period(overdue=overdue)
+    if period == "day":
+        note = "白天补班 · 票 ×0.72" if overdue and world.current_day_phase() == "day" else "现在是暮 · 上白班"
+        return {"label": "洗碗上工", "note": note, "tool": "bar_ops", "command": "work 洗碗"}
+    if period == "night":
+        return {"label": "洗碗上工", "note": "现在是夜 · 上夜班", "tool": "bar_ops", "command": "work 洗碗"}
+    return {
+        "label": "洗碗上工",
+        "note": "暮/夜才开门；逾期白天可补班",
+        "tool": "bar_ops",
+        "command": "work 洗碗",
+        "disabled": True,
+    }
+
+
+def places_for(*, overdue: bool = False) -> list[dict[str, Any]]:
+    """按考勤/时辰改按钮文案。逾期时锁地地点先塞「去上工」。"""
+    out: list[dict[str, Any]] = []
+    locked = {"tide", "craft", "quarry", "market", "hut"}
+    for raw in PLACES:
+        place = dict(raw)
+        actions = [dict(a) for a in (raw.get("actions") or [])]
+        if place.get("id") == "bar":
+            work = _bar_work_action(overdue=overdue)
+            actions = [work] + [a for a in actions if not str(a.get("command") or "").startswith("work ")]
+        elif overdue and place.get("id") in locked:
+            actions = [
+                {
+                    "label": "去上工",
+                    "note": "考勤逾期，先去酒吧打卡",
+                    "tool": "",
+                    "command": "",
+                    "go": "bar",
+                }
+            ]
+        place["actions"] = actions
+        out.append(place)
+    return out
 
 
 def seed_options(stock: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -269,10 +316,12 @@ async def snapshot(api_key: str) -> dict[str, Any]:
     dash = None
     seeds: list[dict[str, Any]] = []
     neighbors: dict[str, Any] = {"total": 0, "listed": 0, "online": 0, "window_min": 0, "people": []}
+    overdue = False
     if enrolled:
         dash = await steward_dashboard.fetch_dashboard(key)
         seeds = seed_options(dash.get("stock") or [])
         from . import multi
+        from . import bar as bar_mod
         roster = await multi.neighbor_roster(s, online_only=False)
         neighbors = {
             "total": roster["total"],
@@ -281,12 +330,15 @@ async def snapshot(api_key: str) -> dict[str, Any]:
             "window_min": roster["window_min"],
             "people": roster["people"],
         }
+        # dashboard 已刷新 steward；用最新行判考勤
+        s2 = await db.get_steward_by_key_id(row["id"])
+        overdue = bar_mod.is_shift_overdue(s2 or s)
     return {
         "enrolled": enrolled,
         "dashboard": dash,
         "seeds": seeds,
         "neighbors": neighbors,
-        "places": PLACES,
+        "places": places_for(overdue=overdue),
         "climate": climate_bits(),
     }
 
