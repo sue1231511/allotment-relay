@@ -2380,6 +2380,31 @@ async def public_stats() -> dict[str, Any]:
         }
 
 
+def gift_inbox_detail(row: dict[str, Any]) -> str:
+    """收礼侧展示：只留「送来了什么」，去掉「谁送礼给谁」的纪事壳。"""
+    import re
+
+    text = (row.get("text") or "").strip()
+    action = row.get("action") or ""
+    if action == "bar_tip":
+        m = re.search(r"小费\s*(\d+)\s*票(?:[：:](.+))?$", text)
+        if m:
+            note = (m.group(2) or "").strip()
+            return f"{m.group(1)} 票" + (f" — {note}" if note else "")
+        return text
+    m = re.search(r"送礼给\s+\S+[：:](.+)$", text)
+    if m:
+        body = m.group(1).strip()
+        if body.startswith("送来"):
+            return body
+        return f"送来 {body}"
+    if "：" in text:
+        return "送来 " + text.split("：", 1)[1].strip()
+    if ":" in text:
+        return "送来 " + text.split(":", 1)[1].strip()
+    return text
+
+
 async def list_received_gifts(steward_id: int, limit: int = 20) -> list[dict[str, Any]]:
     async with connect() as db:
         db.row_factory = aiosqlite.Row
@@ -2393,7 +2418,10 @@ async def list_received_gifts(steward_id: int, limit: int = 20) -> list[dict[str
             """,
             (steward_id, limit),
         )
-        return [dict(r) for r in await cur.fetchall()]
+        rows = [dict(r) for r in await cur.fetchall()]
+    for r in rows:
+        r["detail"] = gift_inbox_detail(r)
+    return rows
 
 
 async def public_chronicle(limit: int = 40) -> list[dict[str, Any]]:

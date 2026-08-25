@@ -160,7 +160,8 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
         {
             "who": g.get("actor_name") or "某人",
             "kind": "打赏" if g.get("action") == "bar_tip" else "礼物",
-            "text": g["text"],
+            "text": g.get("detail") or g["text"],
+            "raw": g["text"],
             "created_at": g["created_at"],
         }
         for g in gifts
