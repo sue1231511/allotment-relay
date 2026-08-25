@@ -156,8 +156,14 @@ def next_offer(
             "clear_seconds": int(config.greenhouse_clear_seconds(idx)),
         }
     idx = _offer_index(count, orchard)
+    if orchard:
+        return {
+            "slot": next_slot(count, orchard=True),
+            "cost": int(config.orchard_expand_cost(idx)),
+            "clear_seconds": int(config.orchard_clear_seconds(idx)),
+        }
     return {
-        "slot": next_slot(count, orchard=orchard),
+        "slot": next_slot(count, orchard=False),
         "cost": int(config.parcel_expand_cost(idx)),
         "clear_seconds": int(config.parcel_clear_seconds(idx)),
     }
@@ -277,11 +283,17 @@ def price_table_lines(
     have = start if count is None else int(count)
     noun = "树位" if orchard else "块"
     mark = "园" if orchard else "#"
-    lines = [
-        f"价目（{'果园' if orchard else '露天份地'}无上限；第 {start + 1} {noun}起按表递推）：",
-        f"  规律：{mark}{start + 1} 80票/30分 → {mark}{start + 2} 120/45 → "
-        f"{mark}{start + 3} 180/60 → {mark}{start + 4} 260/90 → {mark}{start + 5} 360/120 → 之后以此类推",
-    ]
+    if orchard:
+        lines = [
+            "价目（果园无上限，比份地贵：树种一次能连摘；第 4 树位起按表递推）：",
+            "  规律：园4 160票/45分 → 园5 240/60 → 园6 360/75 → 园7 520/105 → 园8 720/135 → 之后以此类推",
+        ]
+    else:
+        lines = [
+            f"价目（露天份地无上限；第 {start + 1} {noun}起按表递推）：",
+            f"  规律：{mark}{start + 1} 80票/30分 → {mark}{start + 2} 120/45 → "
+            f"{mark}{start + 3} 180/60 → {mark}{start + 4} 260/90 → {mark}{start + 5} 360/120 → 之后以此类推",
+        ]
     base = max(have, start)
     for i in range(6):
         offer = next_offer(base + i, orchard=orchard)
@@ -289,9 +301,12 @@ def price_table_lines(
             f"  {slot_label(offer['slot'], 1 if orchard else 0)}  "
             f"{offer['cost']}票 · 开垦 {fmt_clear(offer['clear_seconds'])}"
         )
-    lines.append(
-        "  再往后票价差额每次多 20（+40、+60、+80…）；开垦时间每两档多加 15 分钟。"
-    )
+    if orchard:
+        lines.append("  再往后票价是同档份地两倍；开垦比同档份地多 15 分钟。")
+    else:
+        lines.append(
+            "  再往后票价差额每次多 20（+40、+60、+80…）；开垦时间每两档多加 15 分钟。"
+        )
     return lines
 
 
@@ -367,7 +382,7 @@ async def status_text(
         buy_cmd = "plot_ops 买棚 确认"
         next_word = "下一座"
     elif orchard:
-        head = f"果园 {count} 个树位（起步 {start}，无上限；只种果树）"
+        head = f"果园 {count} 个树位（起步 {start}，无上限，比份地贵；只种果树）"
         buy_cmd = "plot_ops 买园 确认"
         next_word = "下一树位"
     else:

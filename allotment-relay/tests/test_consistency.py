@@ -72,6 +72,8 @@ def test_mcp_descriptions() -> None:
     assert "买园" in blob
     assert "买棚" in blob or "shed erect" in blob
     assert "一周一季" in blob or "当季" in blob or "季节" in blob
+    assert "20 票/树位" in blob
+    assert "温室每座 30" in blob
     assert "/allotments" in blob
     assert "围观" in blob
 
@@ -149,6 +151,8 @@ def test_mcp_descriptions() -> None:
     assert "岸税" in v_blob
     assert "岸维" in v_blob
     assert "10 票/块" in v_blob
+    assert "20 票/树位" in v_blob
+    assert "30 票/座" in v_blob
     assert "产业单价至少 10" in v_blob
     assert "每天收" in v_blob or "每天划" in v_blob
     assert "tax_ops" in v_blob
@@ -363,6 +367,8 @@ def test_relay_manual_covers_systems() -> None:
         "岸税",
         "岸维",
         "产业单价至少 10 票",
+        "超出起步每天岸维 20",
+        "每座每天岸维 30",
         "每天收",
         "超额累进",
         "没有 tax_ops",
@@ -378,6 +384,8 @@ def test_relay_manual_covers_systems() -> None:
         "露天无上限",
         "份地不种果树",
         "买园",
+        "比份地贵",
+        "160/240/360",
         "sow 园1 芒果",
         "sow 园1 橘子",
         "橘子",
@@ -581,6 +589,8 @@ def test_human_island_manual() -> None:
         "/play",
         "每 2 天",
         "产业单价至少 10",
+        "果园 20",
+        "温室 30",
         "引航",
         "欠岸维",
         "去潮生会",
