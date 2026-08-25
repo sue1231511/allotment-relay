@@ -1009,15 +1009,14 @@ async def public_undertide():
             "SELECT text, created_at FROM chronicle WHERE action='undertide' ORDER BY created_at DESC LIMIT 12"
         )).fetchall()
         out["rumors"] = [{"text": r["text"], "at": r["created_at"]} for r in rows]
-        # 井壁的白
-        row = await (await conn.execute(
-            "SELECT COUNT(*) c FROM ut_pit_fighters WHERE alive=0"
-        )).fetchone()
-        last = await (await conn.execute(
-            "SELECT name FROM ut_pit_fighters WHERE alive=0 ORDER BY id DESC LIMIT 1"
-        )).fetchone()
-        out["wall"] = {"whites": row["c"], "last": last["name"] if last else ""}
+        # 死人墙（原「井壁的白」）—— 历史死人 + 真噶的 NPC，倒序
         from . import undertide_pit as _upit
+        await _upit._ensure_dead_wall(conn)
+        conn.row_factory = aiosqlite.Row
+        rows = await (await conn.execute(
+            "SELECT name, cause FROM ut_dead_wall ORDER BY id DESC LIMIT 12"
+        )).fetchall()
+        out["wall"] = [{"name": r["name"], "cause": r["cause"]} for r in rows]
         rows = await _upit.pit_board_rows(conn, limit=uc.PIT_BOARD_LIMIT)
         out["pit_board"] = [
             {

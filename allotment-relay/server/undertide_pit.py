@@ -28,6 +28,26 @@ async def _ensure_fighters(conn: aiosqlite.Connection) -> None:
         await conn.commit()
 
 
+async def _ensure_dead_wall(conn: aiosqlite.Connection) -> None:
+    """死人墙：首次访问时挂几块陈年老白（历史死人），之后真噶 NPC 才往上写。"""
+    cur = await conn.execute("SELECT COUNT(*) FROM ut_dead_wall")
+    if (await cur.fetchone())[0] == 0:
+        for d in cat.DEAD_WALL_SEED:
+            await conn.execute(
+                "INSERT INTO ut_dead_wall (name, cause, created_at) VALUES (?,?,?)",
+                (d["name"], d["cause"], db.now()),
+            )
+        await conn.commit()
+
+
+async def _write_dead_wall(conn: aiosqlite.Connection, name: str) -> None:
+    """NPC 斗士真死，往死人墙上记一笔（随机死因）。"""
+    await conn.execute(
+        "INSERT INTO ut_dead_wall (name, cause, created_at) VALUES (?,?,?)",
+        (name, random.choice(cat.DEAD_WALL_CAUSES), db.now()),
+    )
+
+
 async def pit_record(
     conn: aiosqlite.Connection, steward_id: int, kind: str, outcome: str, opponent: str = ""
 ) -> None:
@@ -153,7 +173,7 @@ async def pit_board_text(
         "",
     ]
     if not rows:
-        lines.append("  墙上还是空的。看门人说：打过十场，才值得钉名字。")
+        lines.append(f"  墙上还是空的。看门人说：打过{utcfg.PIT_BOARD_MIN_FIGHTS}场，才值得钉名字。")
     else:
         for i, row in enumerate(rows, 1):
             lines.append(_fmt_board_row(i, row))
@@ -272,7 +292,7 @@ async def pit_ops(
         lines.append("")
         lines.append(utcopy.PIT_STRATEGY_HINT)
         lines.append("fight 斗士名 [attack|guard|feint] — 下坑")
-        lines.append("pit board — 井壁胜场榜（≥10 场才钉名）")
+        lines.append(f"pit board — 井壁胜场榜（≥{utcfg.PIT_BOARD_MIN_FIGHTS} 场才钉名）")
         lines.append("pit drug — 晏安的体质药（越贵副作用越小，下坑前用）")
         return "\n".join(lines)
 
@@ -350,6 +370,7 @@ async def pit_ops(
             if diff >= 15 and random.random() < utcfg.UT_PIT_DEATH_CHANCE:
                 await conn.execute("UPDATE ut_pit_fighters SET alive=0 WHERE id=?", (row["id"],))
                 await _spawn_replacement(conn, level)
+                await _write_dead_wall(conn, row["name"])
                 lines.append("\n" + utcopy.PIT_NPC_DEATH)
         else:
             lose_msg = utcopy.pick(utcopy.PIT_LOSE_LINES)

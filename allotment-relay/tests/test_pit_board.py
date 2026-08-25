@@ -74,7 +74,7 @@ async def _test_pit_board_ranking_and_threshold() -> None:
             )
         await _seed_pit_logs(conn, sid_a, 12, 8)
         await _seed_pit_logs(conn, sid_b, 10, 0)
-        await _seed_pit_logs(conn, sid_c, 3, 2)
+        await _seed_pit_logs(conn, sid_c, 2, 2)
         await conn.commit()
 
     rows = await up.public_pit_board()

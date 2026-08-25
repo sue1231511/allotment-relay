@@ -1003,6 +1003,14 @@ async def init_db() -> None:
             )
             """,
             """
+            CREATE TABLE IF NOT EXISTS ut_dead_wall (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                cause TEXT NOT NULL DEFAULT '',
+                created_at INTEGER NOT NULL
+            )
+            """,
+            """
             CREATE TABLE IF NOT EXISTS ut_lantern (
                 steward_id INTEGER PRIMARY KEY,
                 bet INTEGER NOT NULL,

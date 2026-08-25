@@ -206,7 +206,7 @@ LODGE_MAX_STREAK = 3        # 连续3次后荔栀翻脸
 LODGE_COOLDOWN_H = 24       # 翻脸冷却
 
 # ── 井壁胜场榜（公开榜，≥门槛才上榜）──
-PIT_BOARD_MIN_FIGHTS = 10
+PIT_BOARD_MIN_FIGHTS = 5
 PIT_BOARD_LIMIT = 15
 PIT_BOARD_MCP_LIMIT = 12
 

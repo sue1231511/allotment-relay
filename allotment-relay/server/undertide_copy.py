@@ -893,7 +893,7 @@ GUIDE_BODY = (
     "「挂着蓝幌子的是**恶猫钱庄**——猫猫的铺子。借钱（bank borrow）、还钱（repay）、存钱（save）、取钱（take），挨小八的数落，都在那儿。手头紧可以先去，但她算利息从不含糊；钱闲着也可以存——利息不高，她数钱倒是很勤。」\n\n"
     "「味道最冲的那条道通**深坑**——想用拳头换票的下那儿（pit / fight）。打伤了回来找**医务间**，晏安的手艺没话说，就是不太温柔（medic）。他那儿还卖药——下坑前来一支，贵的副作用小，便宜的药劲过了会咬人。」\n\n"
     "「听见骰子声就是**死人抽牌**——Silas 坐庄，三个玩法，输了别闹（dice / lantern / draw）。」\n\n"
-    "「最里面那面墙是**凯斯酒馆**——荔栀晚上的场子。想买消息找角落里的耳语人（tavern / whisper），恩怨找墙上的纸条（bounty）。」\n\n"
+    "「最里面那面墙是**凯斯酒馆**——荔栀晚上的场子。想回血找荔栀点红宝石（tavern ruby）；想买消息找角落里的耳语人（tavern / whisper），恩怨找墙上的纸条（bounty）。」\n\n"
     "「还有人往帘子外面塞货、跟人动手——那不在地图上，在胆子上（street / muscle / hijack）。自己掂量。」\n\n"
     "他重新把腿翘回货箱上。\n\n"
     "「最后一条：**影信**就是你在下面的脸面。买卖守信它涨，坑蒙拐骗它跌——脸面掉了，处处挨宰。」\n\n"
@@ -1180,9 +1180,9 @@ undertide_ops street — 帘外的随机人（每日刷新）
 undertide_ops muscle <名号> — 强买（战力判定）
 undertide_ops push <名号> <物品> — 强卖
 undertide_ops pit — 深坑 NPC 斗士榜（pit list）
-undertide_ops pit board — 井壁胜场榜（玩家，≥10 场才钉名）
+undertide_ops pit board — 井壁胜场榜（玩家，≥5 场才钉名）
 undertide_ops fight <斗士名> [attack|guard|feint] — 下坑
-undertide_ops medic <ring_shock|pit_trauma|sprain|backache> — 晏安医务间
+undertide_ops medic <ring_shock|pit_trauma|sprain|backache> — 晏安医务间（治伤回健康）
 undertide_ops pit drug [list|药名key] — 晏安的体质药（下坑前用，越贵副作用越小）
 undertide_ops casino — 赌场
 undertide_ops dice <small|big|black> <注> — 黑潮骰
@@ -1198,8 +1198,8 @@ undertide_ops bank save <票数> — 存钱（T+1起息·影信×5为限）
 undertide_ops bank take <票数|all> — 取钱（随时可取）
 undertide_ops jail status/ransom/serve/work — 监牢
 undertide_ops tavern — 凯斯酒馆（chat 跟荔栀说话 / whisper 买消息 / spy 查悬赏雇主 / ai 别人动态）
-undertide_ops tavern ruby [确认] — 点红宝石（回身体、掉雾智，价随身价）
-undertide_ops tavern bleed [确认] — 卖血换票（抽身体，价随身价）
+undertide_ops tavern ruby [确认] — 点红宝石（回健康、掉雾智，价随身价）
+undertide_ops tavern bleed [确认] — 卖血换票（抽健康，价随身价）
 undertide_ops bounty list/post/take — 恩怨墙·悬赏
 undertide_ops kroom status/settle/vr — K室
 undertide_ops cheer <好话> — 哄猫猫（潮下老板娘；不是地面酒吧的荔栀）"""

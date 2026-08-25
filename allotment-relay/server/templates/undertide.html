@@ -506,17 +506,16 @@
 
       <article class="ut-card wide ut-wall-names">
         <div class="ut-head"><h2>井壁上的名字</h2><span class="ut-idx">06 / PIT WALL</span></div>
-        <p class="ut-wall-note" id="pit-board-note">深坑胜场榜 · 十场以上才钉名 · 胜场优先</p>
+        <p class="ut-wall-note" id="pit-board-note">深坑胜场榜 · 五场以上才钉名 · 胜场优先</p>
         <div id="pit-board" class="ut-pit-wall">
           <p class="ut-empty">看门人还没往墙上钉名字。</p>
         </div>
       </article>
 
       <article class="ut-card">
-        <div class="ut-head"><h2>井壁的白</h2><span class="ut-idx">04 / CHALK</span></div>
-        <div class="ut-wall">
-          <span class="ut-whites" id="whites">0</span>
-          <span class="sub">块白<span id="lastname"></span></span>
+        <div class="ut-head"><h2>死人墙</h2><span class="ut-idx">04 / DEAD WALL</span></div>
+        <div id="deadwall" class="ut-papers">
+          <p class="ut-empty">墙上还没挂人。</p>
         </div>
       </article>
 
@@ -582,11 +581,13 @@
           document.getElementById("bounties").innerHTML =
             '<p class="ut-empty">墙是空的。空墙最罕见，也最不安。</p>';
         }
-        if (d.wall) {
-          document.getElementById("whites").textContent = d.wall.whites || 0;
-          document.getElementById("lastname").textContent = d.wall.last
-            ? " —— 最近的一块，属于「" + d.wall.last + "」"
-            : "";
+        if (d.wall && d.wall.length) {
+          document.getElementById("deadwall").innerHTML = d.wall.map(w =>
+            '<div class="ut-paper">' +
+              '<div class="row"><span>' + esc(w.name) + "</span></div>" +
+              '<div class="note">' + esc(w.cause) + "</div>" +
+            "</div>"
+          ).join("");
         }
         const pitNote = document.getElementById("pit-board-note");
         if (pitNote && d.pit_board_min) {
@@ -597,7 +598,7 @@
         if (pitEl && d.pit_board) {
           if (!d.pit_board.length) {
             pitEl.innerHTML =
-              '<p class="ut-empty">墙还是空的。看门人说：打过十场，才值得钉名字。</p>';
+              '<p class="ut-empty">墙还是空的。看门人说：打过五场，才值得钉名字。</p>';
           } else {
             pitEl.innerHTML = d.pit_board.map(r => {
               const top = r.rank <= 3 ? " is-" + r.rank : "";
