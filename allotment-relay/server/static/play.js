@@ -169,6 +169,7 @@ function renderPlace(id) {
   state.placeId = id;
   show($('play-home'), false);
   show($('play-place'), true);
+  $('play-place').classList.toggle('is-lounge', id === 'lounge');
   $('play-place-title').textContent = place.name;
   $('play-place-blurb').textContent = place.blurb + (place.caution ? ' 新手别从这儿开局。' : '');
   if ($('play-place-rail-title')) {
@@ -251,7 +252,7 @@ function todayBlurb(d, c) {
   const ready = parcels.filter((p) => p.state === 'ready').length;
   const bits = [];
   if (c.tide || c.weather) bits.push(`${c.tide || ''}${c.weather ? ' · ' + c.weather : ''}`.replace(/^ · /, ''));
-  if (ready) bits.push(`份地有 ${ready} 块已经成熟`);
+  if (ready) bits.push(`有 ${ready} 块已经成熟`);
   const duty = (d && d.meter_lines && d.meter_lines.bar_duty) || '';
   if (dutyUrgent(d)) bits.push('酒吧值班快到期了');
   else if (duty && duty.includes('内须')) bits.push(duty.replace(/^⚠\s*/, ''));
@@ -296,7 +297,6 @@ function renderAll() {
 function plotButtons(p) {
   const token = p.token || String(p.slot);
   const acts = [];
-  const harvestLabel = p.orchard ? '收果' : '收菜';
   if (p.state === 'fallow') {
     acts.push(`<button type="button" class="play-mini-btn" data-sow="${esc(token)}">播种</button>`);
   }
@@ -306,7 +306,8 @@ function plotButtons(p) {
     if (!p.fertilized) acts.push(`<button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"施肥 ${token}"}'>施肥</button>`);
   }
   if (p.state === 'ready') {
-    acts.push(`<button type="button" class="play-mini-btn primary" data-act='{"tool":"plot_ops","command":"gather ${token}"}'>${harvestLabel}</button>`);
+    const harvest = (p.orchard || p.shake) ? '收果' : '收菜';
+    acts.push(`<button type="button" class="play-mini-btn primary" data-act='{"tool":"plot_ops","command":"gather ${token}"}'>${harvest}</button>`);
     if (p.shake) acts.push(`<button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"shake ${token}"}'>摇一摇</button>`);
   }
   if (p.state === 'overripe') {
@@ -316,14 +317,13 @@ function plotButtons(p) {
   return acts.join('');
 }
 
-function plotCard(p) {
+function plotCardHtml(p) {
   const token = p.token || String(p.slot);
-  const label = (p.greenhouse || p.orchard) ? token : `份地 ${token}`;
-  const tone = p.greenhouse ? 'is-shed' : (p.orchard ? 'is-orchard' : '');
+  const slotLabel = p.greenhouse || p.orchard ? token : `份地 ${token}`;
   return `
-    <article class="play-plot ${p.state === 'ready' ? 'is-ready' : ''} ${tone}">
+    <article class="play-plot ${p.state === 'ready' ? 'is-ready' : ''} ${p.orchard ? 'is-orchard' : ''} ${p.greenhouse ? 'is-shed' : ''}">
       <div class="play-plot-top">
-        <span class="play-plot-slot">${esc(label)}</span>
+        <span class="play-plot-slot">${esc(slotLabel)}</span>
         <span class="play-state">${esc(plotStateLabel(p.state))}</span>
       </div>
       <div class="play-crop">${p.emoji ? esc(p.emoji) + ' ' : ''}${esc(p.name)}</div>
@@ -332,66 +332,63 @@ function plotCard(p) {
     </article>`;
 }
 
-const PLOT_KINDS = [
-  {
-    key: 'plot',
-    kicker: 'Open Ground',
-    title: '菜地',
-    unit: '块',
-    empty: '还没有菜地。',
-    quote: '买地',
-    buy: '买地 确认',
-    buyLabel: '买一块',
-    match: (p) => !p.orchard && !p.greenhouse,
-  },
-  {
-    key: 'orchard',
-    kicker: 'Orchard',
-    title: '果园',
-    unit: '树位',
-    empty: '还没有树位。果树只能种在这里。',
-    quote: '买园',
-    buy: '买园 确认',
-    buyLabel: '买一树位',
-    match: (p) => Boolean(p.orchard) && !p.greenhouse,
-  },
-  {
-    key: 'greenhouse',
-    kicker: 'Greenhouse',
-    title: '温室',
-    unit: '座',
-    empty: '还没有温室。种菜种树都不受季节。',
-    quote: '买棚',
-    buy: '买棚 确认',
-    buyLabel: '买一座',
-    match: (p) => Boolean(p.greenhouse),
-  },
-];
+function landExpandHtml(snap) {
+  if (!snap) return '';
+  if (snap.clearing) {
+    return `<div class="play-land-expand is-busy">
+      <span>${esc(snap.clearing_label || '')} 开垦中 · ${esc(snap.clearing_eta || '')}</span>
+    </div>`;
+  }
+  const offer = snap.offer;
+  if (!offer) return '';
+  const confirm = JSON.stringify({ tool: 'plot_ops', command: snap.confirm_cmd });
+  const quote = JSON.stringify({ tool: 'plot_ops', command: snap.quote_cmd });
+  return `<div class="play-land-expand">
+    <span>${esc(snap.next_word || '下一块')} ${esc(offer.token)} · ${offer.cost} 票 · 开垦 ${esc(offer.clear_eta)}</span>
+    <button type="button" class="play-mini-btn" data-act='${quote}'>看价</button>
+    <button type="button" class="play-mini-btn primary" data-act='${confirm}'>确认开垦</button>
+  </div>`;
+}
 
-function plotKindSection(spec, parcels) {
-  const list = parcels.filter(spec.match);
+function plotGroupHtml(title, blurb, list, expandSnap, emptyText) {
   const cards = list.length
-    ? `<div class="play-plots">${list.map(plotCard).join('')}</div>`
-    : `<p class="muted play-plot-empty">${esc(spec.empty)}</p>`;
-  return `
-    <section class="play-plot-kind" data-kind="${spec.key}">
-      <div class="play-plot-kind-head">
-        <div>
-          <div class="play-kicker">${spec.kicker}</div>
-          <h3>${spec.title} · ${list.length} ${spec.unit}</h3>
-        </div>
-        <div class="play-plot-kind-acts">
-          <button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"${spec.quote}"}'>看价</button>
-          <button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"${spec.buy}"}'>${spec.buyLabel}</button>
-        </div>
-      </div>
-      ${cards}
-    </section>`;
+    ? `<div class="play-plots">${list.map(plotCardHtml).join('')}</div>`
+    : `<p class="muted play-plot-empty">${esc(emptyText || '还没有地。')}</p>`;
+  return `<div class="play-plot-group">
+    <div class="play-plot-group-head">
+      <strong>${esc(title)}</strong>
+      <span>${esc(blurb)}</span>
+    </div>
+    ${cards}
+    ${landExpandHtml(expandSnap)}
+  </div>`;
 }
 
 function renderPlots() {
   const parcels = (state.dash && state.dash.parcels) || [];
-  $('play-plots').innerHTML = PLOT_KINDS.map((kind) => plotKindSection(kind, parcels)).join('');
+  const land = (state.dash && state.dash.land) || {};
+  const plots = parcels.filter((p) => !p.orchard && !p.greenhouse);
+  const trees = parcels.filter((p) => p.orchard && !p.greenhouse);
+  const sheds = parcels.filter((p) => p.greenhouse);
+  const plotCount = (land.plots && land.plots.count) || plots.length;
+  const treeCount = (land.orchard && land.orchard.count) || trees.length;
+  const shedCount = (land.greenhouse && land.greenhouse.count) || sheds.length;
+  const parts = [
+    plotGroupHtml(`菜地 ${plotCount}`, '露天种菜', plots, land.plots),
+    plotGroupHtml(`果园 ${treeCount}`, '只种果树', trees, land.orchard),
+    plotGroupHtml(
+      shedCount ? `温室 ${shedCount}` : '温室',
+      shedCount ? '种菜种树都不受季节' : '买棚后四季可种',
+      sheds,
+      land.greenhouse,
+      '还没有温室。',
+    ),
+  ];
+  $('play-plots').innerHTML = parts.join('') || '<p class="muted">还没有地。</p>';
+  const sub = $('play-plots-sub');
+  if (sub) {
+    sub.textContent = `菜地 ${plotCount} · 果园 ${treeCount}${shedCount ? ` · 温室 ${shedCount}` : ''} · 全部展示`;
+  }
 }
 
 function placeCardHtml(pl, urgent) {
@@ -561,6 +558,7 @@ function goHome() {
   state.placeId = '';
   state.placeResult = '';
   show($('play-place'), false);
+  $('play-place').classList.remove('is-lounge');
   show($('play-home'), true);
   hidePatron();
   show($('play-lounge'), false);

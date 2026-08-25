@@ -123,8 +123,9 @@ HUT_HELP = """hut_ops 子命令（整句写进 command）：
     生鲜自动进潮柜（buy cabinet → install）；熟菜自动进冰箱（buy fridge → install）
     潮柜基础 30 种货，每种最多叠 24 份（栈上限，和行囊一样）；满了 hut_ops 潮柜 扩 [数量]（12票/格，顶 60）
     粪便不能进潮柜
-  堆肥桶 存|取 — 跟 MC 堆肥桶差不多。例子：堆肥桶 存 羊粪 3 · 堆肥桶 取 堆肥 2
-    买：buy compost_bin → install soft_N compost_bin。丢粪便涨层，满 7 层结 1 份堆肥
+  堆肥桶 存|取 — 跟 MC 堆肥桶差不多。例子：堆肥桶 存 羊粪 3 · 堆肥桶 转化 羊粪 3 · 堆肥桶 取 堆肥 2
+    买：buy compost_bin → install soft_1 compost_bin（空槽也能装；装完 status 槽位上要能看见）
+    桶不是柜子：粪便丢进去沤层，满 7 层结 1 份堆肥，只能取堆肥，不能当货存
     羊粪+2 / 猪粪+3 / 牛粪+4。barn compost 羊粪 2 还认，但必须先装桶
   睡 / 休息 — 床一觉回精力（岸柏 50 / 软藤 52 / 云纹 54，每天一次）。buy bed|bed_rattan|bed_canopy → install hard_N
   卖掉 槽位 [确认] — 旧家具按折旧卖。例子：卖掉 soft_1 确认

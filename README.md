@@ -145,8 +145,8 @@ bar_ops     的 command = work 洗碗 night
 | `status` / `build` / `upgrade` / `catalog` | 看屋 / 建棚屋 / 升级（最高 Lv4 临海邸）/ 装件目录 |
 | `buy cabinet` → `install soft_1 cabinet` | 买潮柜并装上（生鲜） |
 | `buy fridge` → `install soft_N fridge` | 买冰箱并装上（熟菜） |
-| `buy compost_bin` → `install soft_N compost_bin` | 买堆肥桶。粪便不能进潮柜 |
-| `堆肥桶 存 羊粪 3` / `堆肥桶 取 堆肥 2` | 跟 MC 堆肥桶差不多：丢粪便涨层，满 7 层结 1 份堆肥（羊粪+2 / 猪粪+3 / 牛粪+4） |
+| `buy compost_bin` → `install soft_1 compost_bin` | 买堆肥桶并装到空的 soft 槽。装完 `status` 槽位上要能看见。粪便不能进潮柜 |
+| `堆肥桶 存 羊粪 3` / `堆肥桶 转化 羊粪 3` / `堆肥桶 取 堆肥 2` | 桶不是柜子：丢粪便涨层，满 7 层结 1 份堆肥（羊粪+2 / 猪粪+3 / 牛粪+4），只能取堆肥 |
 | `buy bed` / `bed_rattan` / `bed_canopy` → `install hard_N …` | 岸柏板床 50 精力 / 软藤床 52 / 云纹纱榻 54（主要是好看，精力只略增） |
 | `睡` | 按已装床回 50~54 精力（+饱食 8），每天一次（游戏日 UTC 午夜换班刷新） |
 | `冰柜 存 甘蓝 3` / `冰柜 取 甘蓝 1` | 存取。柜子/潮柜/冰箱是同一条指令。粪便不能进潮柜 |

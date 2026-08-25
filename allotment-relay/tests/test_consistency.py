@@ -158,8 +158,9 @@ def test_mcp_descriptions() -> None:
     assert "床" in hut_blob
     assert "睡" in hut_blob
     assert "install hard_1 bed" in hut_blob
-    assert "堆肥桶" in hut_blob
+    assert "堆肥桶 存 羊粪 3" in hut_blob
     assert "compost_bin" in hut_blob
+    assert "桶不是柜子" in hut_blob
     assert "tide_weight" in hut_blob
     assert "iron_edge" in hut_blob
     assert "潮生会 维" in hut_blob
@@ -271,6 +272,8 @@ def test_relay_manual_covers_systems() -> None:
         "barn erect",
         "堆肥桶",
         "buy compost_bin",
+        "桶不是柜子",
+        "空槽也能装",
         "基础每格 24",
         "tote_ops 扩栈",
         "mascot adopt",
@@ -543,10 +546,10 @@ def test_patron_pages_share_steward_key() -> None:
     assert "loadSavedKey" in play_js
     assert "parcels.slice(0, 6)" not in play_js
     assert "最多展示 6 块" not in play_html
-    assert "plotKindSection" in play_js
-    assert "key: 'orchard'" in play_js
-    assert "买园 确认" in play_js
-    assert "菜地、果园、温室" in play_html
+    assert "plotGroupHtml(`菜地" in play_js
+    assert "plotGroupHtml(`果园" in play_js
+    assert "confirm_cmd" in play_js
+    assert "菜地 · 果园 · 温室" in play_html
     assert "/api/bar/order" in play_js
     assert "/api/bar/duo" in play_js
     assert "/api/eatery/order" in play_js
