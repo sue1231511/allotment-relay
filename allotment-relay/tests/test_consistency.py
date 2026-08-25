@@ -146,8 +146,8 @@ def test_mcp_descriptions() -> None:
     assert "潮生会 维 交" in v_blob
     assert "岸税" in v_blob
     assert "岸维" in v_blob
-    assert "10 票/块" in v_blob
-    assert "产业单价至少 10" in v_blob
+    assert "2 票/块" in v_blob
+    assert "日单价 2" in v_blob
     assert "每天收" in v_blob or "每天划" in v_blob
     assert "tax_ops" in v_blob
     assert "upkeep_ops" in v_blob
@@ -314,7 +314,7 @@ def test_relay_manual_covers_systems() -> None:
         "潮生会 维 交",
         "岸税",
         "岸维",
-        "产业单价至少 10 票",
+        "日单价 2 起",
         "每天收",
         "超额累进",
         "没有 tax_ops",
@@ -576,6 +576,9 @@ def test_patron_pages_share_steward_key() -> None:
     assert "/api/steward/memory" in play_js
     assert "data-memory-filter" in play_js
     assert "连续阅读" in play_js
+    assert "duesUrgent" in play_js
+    assert "island_bond" in play_js
+    assert "去潮生会" in play_js
     assert "/static/site-key.js" not in index_html
     assert "/static/site-key.js" not in place_html
     assert "/static/site-key.js" not in bar_html

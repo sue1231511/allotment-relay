@@ -29,6 +29,23 @@ function dutyUrgent(dash) {
   return line.startsWith('⚠');
 }
 
+function duesOf(dash) {
+  return (dash && dash.dues) || {};
+}
+
+function duesUrgent(dash) {
+  const dues = duesOf(dash);
+  return Number(dues.tax_arrears || 0) > 0 || Number(dues.upkeep_arrears || 0) > 0;
+}
+
+function duesLine(dash) {
+  const dues = duesOf(dash);
+  const bits = [];
+  if (dues.tax_arrears) bits.push(`岸税欠 ${dues.tax_arrears}`);
+  if (dues.upkeep_arrears) bits.push(`岸维欠 ${dues.upkeep_arrears}`);
+  return bits.join(' · ');
+}
+
 async function api(tool, command) {
   const res = await fetch('/api/play', {
     method: 'POST',
@@ -202,7 +219,7 @@ function renderPlace(id) {
     show(live, false);
   }
 
-  const acts = (place.actions || []).concat(extraPlaceActions(place));
+  const acts = extraPlaceActions(place).concat(place.actions || []);
   $('play-place-actions').innerHTML = acts.map((a, i) => {
     const idx = String(i + 1).padStart(2, '0');
     const note = a.note || a.command || '';
@@ -265,9 +282,8 @@ function todayBlurb(d, c) {
   else if (duty && duty.includes('内须')) bits.push(duty.replace(/^⚠\s*/, ''));
   const health = d && d.meter_lines && d.meter_lines.health;
   if (health && health.includes('（')) bits.push(health.replace(/^⚠\s*/, ''));
-  const dues = (d && d.dues) || {};
-  if (dues.tax_arrears) bits.push(`岸税欠 ${dues.tax_arrears}`);
-  if (dues.upkeep_arrears) bits.push(`岸维欠 ${dues.upkeep_arrears}`);
+  const dues = duesLine(d);
+  if (dues) bits.push(dues);
   if (d && d.voyage) bits.push(d.voyage);
   if (bits.length) return bits.join('。') + '。';
   return d && d.motto ? d.motto : '先看份地，或去岛上晃一圈。';
@@ -299,8 +315,12 @@ function renderAll() {
   }
   const duty = (d.meter_lines && d.meter_lines.bar_duty) || '';
   const dutyEl = $('play-duty');
-  dutyEl.textContent = duty;
-  show(dutyEl, Boolean(duty && (dutyUrgent(d) || duty.includes('内须'))));
+  const dutyBits = [];
+  if (duty && (dutyUrgent(d) || duty.includes('内须'))) dutyBits.push(duty.replace(/^⚠\s*/, ''));
+  const dues = duesLine(d);
+  if (dues) dutyBits.push(`${dues}。去潮生会交。`);
+  dutyEl.textContent = dutyBits.join(' · ');
+  show(dutyEl, dutyBits.length > 0);
   renderPlots();
   renderPlaces();
   renderNeighbors();
@@ -361,6 +381,13 @@ function landExpandHtml(snap) {
   if (!offer) return '';
   const confirm = JSON.stringify({ tool: 'plot_ops', command: snap.confirm_cmd });
   const quote = JSON.stringify({ tool: 'plot_ops', command: snap.quote_cmd });
+  if (duesUrgent(state.dash)) {
+    return `<div class="play-land-expand is-busy">
+      <span>欠岸税或岸维，交清才能开垦</span>
+      <button type="button" class="play-mini-btn" data-act='${quote}'>看价</button>
+      <button type="button" class="play-mini-btn primary" data-place="hui">去潮生会</button>
+    </div>`;
+  }
   return `<div class="play-land-expand">
     <span>${esc(snap.next_word || '下一块')} ${esc(offer.token)} · ${offer.cost} 票 · 开垦 ${esc(offer.clear_eta)}</span>
     <button type="button" class="play-mini-btn" data-act='${quote}'>看价</button>
@@ -410,25 +437,30 @@ function renderPlots() {
 }
 
 function placeCardHtml(pl, urgent) {
+  const huiUrgent = pl.id === 'hui' && duesUrgent(state.dash);
+  const hot = (pl.duty && urgent) || huiUrgent;
   return `
-    <article class="play-place-card ${pl.duty && urgent ? 'is-duty' : ''}">
+    <article class="play-place-card ${hot ? 'is-duty' : ''}">
       <small>${esc(pl.kicker || (pl.week1 ? 'Often' : 'Later'))}</small>
       <strong>${esc(pl.name)}</strong>
       <p>${esc(pl.blurb)}</p>
-      <button type="button" class="play-mini-btn ${pl.duty && urgent ? 'primary' : ''} go" data-place="${esc(pl.id)}">前往</button>
+      <button type="button" class="play-mini-btn ${hot ? 'primary' : ''} go" data-place="${esc(pl.id)}">前往</button>
     </article>`;
+}
+
+function orderedPlaces(places) {
+  return (places || []).slice().sort((a, b) => Number(Boolean(b.week1)) - Number(Boolean(a.week1)));
 }
 
 function renderPlaces() {
   const urgent = dutyUrgent(state.dash);
-  const places = state.places || [];
-  const home = places.filter((pl) => pl.week1);
+  const home = (state.places || []).filter((pl) => pl.week1);
   $('play-places').innerHTML = home.map((pl) => placeCardHtml(pl, urgent)).join('');
 }
 
 function openAllPlaces() {
   const urgent = dutyUrgent(state.dash);
-  openSheet('岛上全部地点', `<div class="play-places">${(state.places || []).map((pl) => placeCardHtml(pl, urgent)).join('')}</div>`);
+  openSheet('岛上全部地点', `<div class="play-places">${orderedPlaces(state.places).map((pl) => placeCardHtml(pl, urgent)).join('')}</div>`);
 }
 
 function renderNeighbors() {
@@ -555,6 +587,15 @@ function renderMemories() {
 function extraPlaceActions(place) {
   const extra = [];
   const voyage = (state.dash && state.dash.voyage) || '';
+  if (place.id === 'hui') {
+    const dues = duesOf(state.dash);
+    if (Number(dues.tax_arrears || 0) > 0) {
+      extra.push({ label: '交岸税', note: `欠 ${dues.tax_arrears}`, tool: 'visit_ops', command: '潮生会 税 交' });
+    }
+    if (Number(dues.upkeep_arrears || 0) > 0) {
+      extra.push({ label: '交岸维', note: `欠 ${dues.upkeep_arrears}`, tool: 'visit_ops', command: '潮生会 维 交' });
+    }
+  }
   if (place.id === 'tide' && voyage.includes('黑旗')) {
     extra.push({ label: '打', tool: 'tide_ops', command: 'fight' });
     extra.push({ label: '逃', tool: 'tide_ops', command: 'flee' });
@@ -598,15 +639,6 @@ function consumeGo() {
   else renderPlace(go);
 }
 
-function duesLine(d) {
-  const dues = (d && d.dues) || {};
-  const bits = [];
-  if (dues.tax_arrears) bits.push(`岸税欠 ${dues.tax_arrears}`);
-  if (dues.upkeep_arrears) bits.push(`岸维欠 ${dues.upkeep_arrears}`);
-  if (!bits.length) return '';
-  return `<p class="muted" style="margin-top:8px">${esc(bits.join(' · '))}。去潮生会交。</p>`;
-}
-
 function openMe() {
   const d = state.dash;
   if (!d) return;
@@ -631,7 +663,7 @@ function openMe() {
     ${d.motto ? `<p style="margin-top:8px">「${esc(d.motto)}」</p>` : ''}
     ${lines.health && lines.health.includes('（') ? `<p class="muted" style="margin-top:8px">${esc(lines.health)}</p>` : ''}
     <div class="play-rule">${esc(lines.bar_duty || '每 2 天须去酒吧上工。')}</div>
-    ${duesLine(d)}
+    ${duesLine(d) ? `<div class="play-rule">${esc(duesLine(d))}。去潮生会交。</div>` : ''}
     ${d.voyage ? `<p class="muted" style="margin-top:8px">${esc(d.voyage)}</p>` : ''}
     <section class="play-invite">
       <div class="play-kicker">Pilot</div>

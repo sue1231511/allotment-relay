@@ -48,6 +48,8 @@ async def _test_steward_dashboard_api() -> None:
     assert data["tickets"] == 120, data
     assert data["island_bond"] >= 0, data
     assert data["bond_flavor"], data
+    assert data["dues"]["tax_arrears"] == 0, data
+    assert data["dues"]["upkeep_arrears"] == 0, data
     assert "parcels" in data and len(data["parcels"]) >= 3, data
     assert data["meter_lines"]["bar_duty"], data
     assert "status" in data, data
