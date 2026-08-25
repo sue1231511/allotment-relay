@@ -152,7 +152,8 @@ def test_help_copy() -> None:
     assert "buy compost_bin" in manual
     assert "空槽也能装" in manual
     assert "桶不是柜子" in manual
-    assert "行囊每种也最多 24" in manual
+    assert "行囊/潮柜/冰箱同种货自动叠放" in manual
+    assert "基础每格 24 份" in manual
 
 
 async def test_buy_install_empty_slot_then_put() -> None:
