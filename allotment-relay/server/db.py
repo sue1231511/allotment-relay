@@ -1,5 +1,6 @@
 import asyncio
 import contextvars
+import re
 import secrets
 import sqlite3
 import time
@@ -2042,14 +2043,50 @@ async def get_steward_by_key_id(key_id: int) -> dict[str, Any] | None:
         return dict(row) if row else None
 
 
+def normalize_player_name(name: str) -> str:
+    """去掉首尾空白、全角空格、包裹引号。聊天室显示名「昵称·管家名」只留管家名。"""
+    text = (name or "").replace("\u3000", " ").replace("\u00a0", " ").strip()
+    text = re.sub(r"\s+", " ", text).strip()
+    if len(text) >= 2 and text[0] in "\"'「『“‘" and text[-1] in "\"'」』”’":
+        text = text[1:-1].strip()
+        text = re.sub(r"\s+", " ", text).strip()
+    if "·" in text:
+        suffix = text.rsplit("·", 1)[-1].strip()
+        if suffix:
+            text = suffix
+    if text.startswith("@"):
+        text = text[1:].strip()
+    return text
+
+
 async def get_steward_by_name(name: str) -> dict[str, Any] | None:
+    """按管家名找人。认聊天室「昵称·管家名」、唯一的人类昵称。"""
+    raw = (name or "").strip()
+    candidates: list[str] = []
+    for token in (raw, normalize_player_name(raw)):
+        if token and token not in candidates:
+            candidates.append(token)
     async with connect() as db:
         db.row_factory = aiosqlite.Row
-        cur = await db.execute(
-            "SELECT * FROM stewards WHERE name = ? COLLATE NOCASE", (name.strip(),)
-        )
-        row = await cur.fetchone()
-        return dict(row) if row else None
+        for token in candidates:
+            cur = await db.execute(
+                "SELECT * FROM stewards WHERE name = ? COLLATE NOCASE", (token,)
+            )
+            row = await cur.fetchone()
+            if row:
+                return dict(row)
+        for token in candidates:
+            cur = await db.execute(
+                """
+                SELECT * FROM stewards
+                WHERE enrolled=1 AND lounge_human_name = ? COLLATE NOCASE
+                """,
+                (token,),
+            )
+            rows = await cur.fetchall()
+            if len(rows) == 1:
+                return dict(rows[0])
+        return None
 
 
 async def get_steward_by_id(steward_id: int) -> dict[str, Any] | None:
@@ -2381,17 +2418,61 @@ async def public_stats() -> dict[str, Any]:
 
 
 async def list_received_gifts(steward_id: int, limit: int = 20) -> list[dict[str, Any]]:
+    return await list_gift_records(steward_id, limit, direction="received")
+
+
+async def list_gift_records(
+    steward_id: int,
+    limit: int = 20,
+    *,
+    direction: str = "received",
+    peer_name: str | None = None,
+) -> list[dict[str, Any]]:
+    """查送礼/收礼纪事。direction=received|sent|both。
+
+    收礼同时认 target_id，以及旧数据里 target_id 为空、正文写着「送礼给 我的名字」的行。
+    """
+    limit = max(1, min(50, int(limit or 20)))
+    me = await get_steward_by_id(steward_id)
+    my_name = (me or {}).get("name") or ""
+    peer = normalize_player_name(peer_name) if peer_name else ""
+    clauses = ["c.action IN ('gift', 'bar_tip')"]
+    args: list[Any] = []
+    recv = (
+        "(c.target_id = ? OR (c.target_id IS NULL AND ("
+        "c.text LIKE '%送礼给 ' || ? || '%' OR c.text LIKE '%给 ' || ? || ' 小费%'"
+        ")))"
+    )
+    sent = "c.actor_id = ?"
+    if direction == "sent":
+        clauses.append(sent)
+        args.append(steward_id)
+    elif direction == "both":
+        clauses.append(f"({recv} OR {sent})")
+        args.extend([steward_id, my_name, my_name, steward_id])
+    else:
+        clauses.append(recv)
+        args.extend([steward_id, my_name, my_name])
+    if peer:
+        clauses.append(
+            "(a.name = ? COLLATE NOCASE OR t.name = ? COLLATE NOCASE "
+            "OR c.text LIKE '%' || ? || '%')"
+        )
+        args.extend([peer, peer, peer])
+    args.append(limit)
     async with connect() as db:
         db.row_factory = aiosqlite.Row
         cur = await db.execute(
-            """
-            SELECT c.text, c.created_at, c.action, a.name AS actor_name
+            f"""
+            SELECT c.text, c.created_at, c.action, c.actor_id, c.target_id,
+                   a.name AS actor_name, t.name AS target_name
             FROM chronicle c
             LEFT JOIN stewards a ON a.id = c.actor_id
-            WHERE c.action IN ('gift', 'bar_tip') AND c.target_id=?
+            LEFT JOIN stewards t ON t.id = c.target_id
+            WHERE {' AND '.join(clauses)}
             ORDER BY c.created_at DESC LIMIT ?
             """,
-            (steward_id, limit),
+            args,
         )
         return [dict(r) for r in await cur.fetchall()]
 

@@ -71,6 +71,12 @@ async def _test_play_api() -> None:
     names = [p["name"] for p in seen["neighbors"]["people"]]
     assert "对岸的人" in names, seen["neighbors"]
 
+    gifted = await play_mod.run_play(key, "tote_ops", "gift 对岸的人 票 3")
+    assert "已送礼给 对岸的人" in (gifted.get("text") or ""), gifted.get("text")
+    other_dash = await play_mod.run_play(other, "tote_ops", "赠礼")
+    assert "工分票" in (other_dash.get("text") or ""), other_dash.get("text")
+    assert (other_dash.get("dashboard") or {}).get("gifts"), other_dash.get("dashboard")
+
     sown = await play_mod.run_play(key, "plot_ops", "sow 1 甘蓝")
     assert sown["ok"] is True, sown
     plots = sown["dashboard"]["parcels"]
@@ -116,7 +122,9 @@ def test_play_page_lists_all_plot_kinds() -> None:
     assert ".filter((pl) => pl.week1)" in js
     assert "plotGroupHtml(`菜地" in js
     assert "plotGroupHtml(`果园" in js
-    assert "还没有温室" in js
+    assert "data-neighbor" in js
+    assert "play-gift-form" in js
+    assert "收礼 / 打赏" in js
     assert 'data-buy-seed' in html
     assert "seedBuyHtml" in js
     assert 'id="play-bond"' in html

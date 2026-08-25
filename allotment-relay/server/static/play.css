@@ -592,6 +592,28 @@ body.play-bound .play-gate { display: none !important; }
 
 #play-gifts .item:first-child { border-top: 0; padding-top: 0; }
 
+.play-gift-form {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.play-gift-form label {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.play-gift-form input,
+.play-gift-form select {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font: inherit;
+  background: #faf9f4;
+}
+
 .play-log,
 .play-result {
   margin: 0 0 16px;

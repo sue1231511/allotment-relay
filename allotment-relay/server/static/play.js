@@ -480,8 +480,7 @@ function renderNeighbors() {
   $('play-neighbors-list').innerHTML = people.map((p) => {
     const ripe = p.ripe ? `熟地 ${p.ripe}` : '暂无熟地';
     const where = p.home ? '在档口' : (p.ago || '');
-    const cmd = JSON.stringify({ tool: 'steward_ops', command: `peer ${p.name}` });
-    return `<button type="button" class="play-neighbor" data-act='${cmd}'>
+    return `<button type="button" class="play-neighbor" data-neighbor="${esc(p.name)}">
       <span class="play-neighbor-dot ${p.home ? '' : 'is-away'}" aria-hidden="true"></span>
       <span><strong>${esc(p.name)}</strong><small>${esc(where)} · ${esc(ripe)}</small></span>
     </button>`;
@@ -516,15 +515,60 @@ function renderTote() {
 function renderGifts() {
   const gifts = (state.dash && state.dash.gifts) || [];
   if (!gifts.length) {
-    $('play-gifts').innerHTML = '<p>暂无收礼 / 打赏</p>';
+    $('play-gifts').innerHTML = '<p>还没有人给你送礼。别人送来的会出现在这里，点右侧邻居名字可以回礼。</p>';
     return;
   }
-  $('play-gifts').innerHTML = gifts.slice(0, 6).map((g) => `
+  $('play-gifts').innerHTML = gifts.slice(0, 12).map((g) => `
     <div class="item">
       <strong>${esc(g.who)}</strong>
       <p style="margin-top:4px">${esc(g.kind)} · ${esc(g.text)}</p>
     </div>
   `).join('');
+}
+
+function neighborSheet(name) {
+  const stock = ((state.dash && state.dash.stock) || []).filter((it) => Number(it.qty) > 0);
+  const options = ['<option value="票">工分票</option>'].concat(
+    stock.map((it) => `<option value="${esc(it.name)}">${esc(it.name)} ×${it.qty}</option>`),
+  ).join('');
+  const peerCmd = JSON.stringify({ tool: 'steward_ops', command: `peer ${name}` });
+  const assistCmd = JSON.stringify({ tool: 'alliance_ops', command: `assist ${name}` });
+  openSheet(name, `
+    <div class="play-mini-actions">
+      <button type="button" class="play-mini-btn" data-act='${peerCmd}'>看档</button>
+      <button type="button" class="play-mini-btn" data-act='${assistCmd}'>帮忙打理</button>
+    </div>
+    <form id="play-gift-form" class="play-gift-form">
+      <p class="muted">送礼即时进对方口袋。对方在上手页右侧「收礼 / 打赏」能看见，不是看你的档。</p>
+      <label>送什么
+        <select id="play-gift-item">${options}</select>
+      </label>
+      <label>数量
+        <input type="number" id="play-gift-qty" min="1" value="1" required>
+      </label>
+      <label>留言 <span class="muted">（可选）</span>
+        <input type="text" id="play-gift-note" maxlength="80" placeholder="一句话">
+      </label>
+      <input type="hidden" id="play-gift-peer" value="${esc(name)}">
+      <button type="submit" class="play-mini-btn primary">送出</button>
+    </form>
+  `);
+  const form = $('play-gift-form');
+  if (form) form.addEventListener('submit', onGiftSubmit);
+}
+
+async function onGiftSubmit(e) {
+  e.preventDefault();
+  const peer = ($('play-gift-peer') && $('play-gift-peer').value || '').trim();
+  const item = ($('play-gift-item') && $('play-gift-item').value || '').trim();
+  const qty = parseInt($('play-gift-qty') && $('play-gift-qty').value, 10);
+  const note = ($('play-gift-note') && $('play-gift-note').value || '').trim();
+  if (!peer || !item || !Number.isFinite(qty) || qty < 1) {
+    setLog('送礼要选人和数量。');
+    return;
+  }
+  const cmd = note ? `gift ${peer} ${item} ${qty} ${note}` : `gift ${peer} ${item} ${qty}`;
+  await act('tote_ops', cmd);
 }
 
 const MEMORY_KIND_LABELS = { tale: '潮闻', story: '故事', npc: '相遇' };
@@ -1226,6 +1270,11 @@ document.body.addEventListener('click', (e) => {
   if (place) {
     closeSheet();
     renderPlace(place.getAttribute('data-place'));
+    return;
+  }
+  const neighbor = e.target.closest('[data-neighbor]');
+  if (neighbor) {
+    neighborSheet(neighbor.getAttribute('data-neighbor') || '');
     return;
   }
   const item = e.target.closest('#play-tote [data-item]');
