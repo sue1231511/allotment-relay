@@ -138,19 +138,91 @@ async def test_manual_and_visit_no_old_windows() -> None:
 
     text = await game.relay_manual()
     assert "岛缘" in text
+    assert "岛缘榜" in text
     assert "steward_ops 岛缘" in text
+    assert "board 岛缘" in text
     assert "潮生会 周" not in text
     help_text = mcp_dispatch.STEWARD_HELP
     assert "岛缘" in help_text
+    assert "岛缘榜" in help_text
+    assert "board 岛缘" in help_text
     assert "潮生会 周" not in mcp_dispatch.VISIT_HELP
+
+
+def test_flavor_progress() -> None:
+    from server import bond
+    assert bond.next_flavor(0) == (100, "沾了潮气")
+    assert bond.next_flavor(100) == (500, "认得路")
+    assert bond.next_flavor(60000) is None
+    p = bond.flavor_progress(50)
+    assert p["to_next"] == 50
+    assert p["next_label"] == "沾了潮气"
+    assert p["pct"] == 50
+    top = bond.flavor_progress(60000)
+    assert top["to_next"] == 0
+    assert top["pct"] == 100
+    assert top["next_label"] is None
+
+
+async def test_bond_board_not_xp() -> None:
+    """全服第二栏按岛缘排，不是累计入账。board level 仍指向岛缘榜。"""
+    tmp = Path(tempfile.mkdtemp(prefix="bond-board-"))
+    db = await _boot(tmp)
+    kid_hi, sid_hi = await _enroll(db, "hi@example.com", "高缘")
+    kid_lo, sid_lo = await _enroll(db, "lo@example.com", "低缘")
+    from server import bond, mcp_dispatch, ranks
+
+    async with db.connect() as conn:
+        await bond.grant(conn, sid_hi, 500, "labor")
+        await bond.grant(conn, sid_lo, 40, "labor")
+        await conn.execute("UPDATE stewards SET xp=1 WHERE id=?", (sid_hi,))
+        await conn.execute("UPDATE stewards SET xp=9999 WHERE id=?", (sid_lo,))
+        await conn.commit()
+
+    rows = await ranks.bond_board(10)
+    names = [r["name"] for r in rows]
+    assert names[0] == "高缘", names
+    assert names[1] == "低缘", names
+    assert int(rows[0]["island_bond"]) == 500
+    assert rows[0]["bond_flavor"]
+
+    alias_rows = await ranks.level_board(10)
+    assert [r["name"] for r in alias_rows] == names
+
+    pub = await ranks.public_board()
+    assert pub["bonds"][0]["name"] == "高缘"
+    assert pub["levels"][0]["name"] == "高缘"
+    assert int(pub["bond_lead"]["bond"]) == 500
+    assert pub["bond_lead"]["flavor"]
+    assert pub["level_lead"]["bond"] == pub["bond_lead"]["bond"]
+
+    text = await mcp_dispatch.steward_ops(kid_hi, "board 岛缘")
+    assert "全服岛缘榜" in text, text
+    assert "高缘" in text and "低缘" in text
+    assert text.index("高缘") < text.index("低缘")
+    assert "500" in text.replace(",", "")
+
+    alias = await mcp_dispatch.steward_ops(kid_hi, "board level")
+    assert "全服岛缘榜" in alias, alias
+    assert alias.index("高缘") < alias.index("低缘")
+
+    me = await mcp_dispatch.steward_ops(kid_hi, "board me")
+    assert "岛缘榜 #" in me, me
+    assert "等级榜" not in me
+
+    inspect = await mcp_dispatch.steward_ops(kid_hi, "岛缘")
+    assert "劳作" in inspect
+    assert "全服岛缘榜" not in inspect
 
 
 def test_bond() -> None:
     asyncio.run(test_story_complete_once())
     asyncio.run(test_well_floor_zero())
     test_donate_sqrt()
+    test_flavor_progress()
     asyncio.run(test_sheet_and_inspect())
     asyncio.run(test_backfill_once())
+    asyncio.run(test_bond_board_not_xp())
     asyncio.run(test_manual_and_visit_no_old_windows())
 
 
