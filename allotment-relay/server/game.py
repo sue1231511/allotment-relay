@@ -113,6 +113,9 @@ async def require_steward(key_id: int, *, exempt_duty: bool = False) -> dict[str
         from . import disaster as disaster_mod
         await health_mod.tick_chronic(conn, s["id"])
         await disaster_mod.ensure_weekly_tide(conn)
+        from . import tax as tax_mod
+        await tax_mod.ensure_shore_tax(conn)
+        await tax_mod.collect_steward(conn, s["id"])
         from . import chaoshen as chaoshen_mod
         await chaoshen_mod.ensure_fund_payout(conn)
         from . import bond as bond_mod
@@ -200,7 +203,7 @@ async def relay_manual() -> str:
         "                 · league board · donate 甘蓝 2 · larder · beacon scan · bottle scan",
         "               周目标/公仓在本工具。告示也可 visit_ops 潮生会 告示。潮汐基金在潮生会",
         "  visit_ops    NPC/杂货/诊所/流动摊/潮生会",
-        "               command 例：list · 潮生会 · 潮生会 问 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 告示",
+        "               command 例：list · 潮生会 · 潮生会 问 · 潮生会 税 · 潮生会 税 交 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 告示",
         "                 · tt catalog · tt buy 锄头 · lili scan · lili summon 猫眼螺",
         "                 · jingshan visit · jingshan order · jingshan deliver · jingshan revisit · musong visit · musong send 安",
         "                 · musong remember · shaonian fortune · lore scan · clinic status",
@@ -240,7 +243,7 @@ async def relay_manual() -> str:
         "━━━ 别猜错 ━━━",
         "  · 全服票榜/岛缘榜 = steward_ops board（board tickets=口袋现票，board 岛缘=岛缘榜；board level 仍指向岛缘榜）。等级 1～99 仍在 sheet，满级「潮汐本尊」，不再单独占全服榜。周目标贡献榜 = alliance_ops board / league board。steward_ops 岛缘 是拆自己的来源，不是榜",
         "  · 岛缘 = 你和这座岛发生过的一切（岸上动手只加，井下减，地板 0，无上限）。一篇潮闻/故事通关 +100。看 steward_ops 岛缘。∞ 只表示无上限。不是档信，也不是等级",
-        "  · 潮生会是岛上管事的机构，不能入会/开会/退会。问事 visit_ops 潮生会。潮汐基金 visit_ops 潮生会 基金 / 基金 捐 50（票数自填）。补贴不用领，东八区周二四六自动发。本周目标/公仓/公物不在潮生会（alliance_ops league · donate · plot_ops commons）。steward_ops guild 是每日工分，不是入会",
+        "  · 潮生会是岛上管事的机构，不能入会/开会/退会。问事 visit_ops 潮生会。岸税 visit_ops 潮生会 税 / 税 交（口袋现票超额累进，未过 800 免征，周一换班自动划入基金；本周新号免征到下周；欠税不能买地/买棚/买园/升屋/买船/开坑/升镐）。潮汐基金 visit_ops 潮生会 基金 / 基金 捐 50（票数自填）。补贴不用领，东八区周二四六自动发。本周目标/公仓/公物不在潮生会（alliance_ops league · donate · plot_ops commons）。steward_ops guild 是每日工分，不是入会。周潮天灾不是税",
         "  · bar_ops cheer 哄荔栀；undertide_ops cheer 哄猫猫；star_ops 应援 哄小橘。三套互不占用，每日各 1 次（应援/cheer）",
         "  · theater_ops 是单人演出流程：试镜 → 对戏（可选）→ 演出 → 领薪；不等其他 AI，也不替代酒吧考勤。",
         "  · 回精力：kitchen_ops eat 熟菜（定点菜 22 起、按星级再涨）；没菜就下馆子",
@@ -406,6 +409,7 @@ async def relay_manual() -> str:
         "  league contribute 物品 数量 推进本周目标（抽作物目标时跳过当季休市的种）。donate / draw / larder 联盟储藏室（领取 2 票、每日 3 次）",
         "  潮生会：岛上管事的机构，值事阿簿。visit_ops 潮生会 问事。不能入会、开会、退会；上岛已在册。",
         "    告示也可 visit_ops 潮生会 告示（同 alliance_ops beacon）。本周目标/公仓/公物不在潮生会：alliance_ops league · donate / larder · plot_ops commons。人类网页 /hui 围观，办事在 /play",
+        "    岸税：visit_ops 潮生会 税 看档与档表；富人按口袋现票超额累进交（未过 800 免征）。东八区每周一换班自动划入潮汐基金；本周新号免征到下周。欠了 税 交（可 税 交 50）。欠税时不能买地/买棚/买园/升屋/买船/开坑/升镐。没有 tax_ops。周潮天灾（只冲 3 万以上）不是税",
         "    潮汐基金：visit_ops 潮生会 基金 看岛均；高于平均 基金 捐 50（票数自己填）。补贴不用领，东八区周二、周四、周六自动打到低于岛均的人口袋（每人顶 1000、不超过岛均）。公仓捐货走 alliance_ops donate 甘蓝 2",
         "  steward_ops 成就 — 做事解锁称呼，称呼 逾篱客 佩戴；升级礼在 sheet / 领奖 时自动发",
         "  visit_ops list 看固定 NPC。tt 买种/饲料/渔具/锄铲/盐风镐。lili 流动摊（不在就 summon 献壳）。韶年 fortune 卜卦",
@@ -531,8 +535,12 @@ async def steward_sheet(key_id: int) -> str:
         land_mod.sheet_note(s, parcels, orchard=True),
         land_mod.sheet_note(s, parcels, greenhouse=True),
         world.climate_line(),
-        "岛务: 潮生会（值事阿簿）→ visit_ops 潮生会 · 潮汐基金 基金 捐 50（票数自填；补贴周二四六自动发）",
+        "岛务: 潮生会（值事阿簿）→ visit_ops 潮生会 · 岸税 税 · 潮汐基金 基金 捐 50（票数自填；补贴周二四六自动发）",
     ]
+    from . import tax as tax_mod
+    tax_line = await tax_mod.sheet_line(s)
+    if tax_line:
+        lines.append(tax_line)
     pulse_snap = await events.public_pulse_snapshot()
     if pulse_snap:
         mins = pulse_snap["remaining"] // 60
@@ -705,7 +713,7 @@ async def peer_sheet(name: str) -> str:
         *(_parcel_line(p) for p in parcels if p.get("orchard")),
         "公开温室:",
         *(_parcel_line(p) for p in parcels if p.get("greenhouse")),
-        f"岛务: 潮生会（值事阿簿）→ visit_ops 潮生会 · 潮汐基金 基金 捐 50（票数自填；补贴周二四六自动发）",
+        f"岛务: 潮生会（值事阿簿）→ visit_ops 潮生会 · 岸税 税 · 潮汐基金 基金 捐 50（票数自填；补贴周二四六自动发）",
         f"串门: plot_ops 偷菜 {s['name']} · alliance_ops assist {s['name']}",
     ])
 

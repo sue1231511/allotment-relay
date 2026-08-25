@@ -30,7 +30,7 @@ QUARRY_HELP = """quarry_ops 子命令（整句写进 command）：
   探脉 [坑号] — 给空坑找一条矿脉（要镐；8 精力，20 分钟冷却，约 18% 空探）
   挖 [坑号] — 对着矿脉挥镐（要 T1 镐；精力 16→11；全坑共用 36 分钟冷却；每坑再 40 分钟；每日 8 镐）
   洗 海盐砂 [数量] — 2 份原矿出 1 份精矿（6 精力/份精矿，约 12% 冲散）。数量是原矿，须成对
-  开坑 / 开坑 确认 — 看价与开凿时间 / 付钱加坑（起步 1 个，无上限，90/142/218…）
+  开坑 / 开坑 确认 — 看价与开凿时间 / 付钱加坑（起步 1 个，无上限，90/142/218…）。欠岸税时不能开坑/升镐
   升镐 / 升镐 确认 — 花票+精矿升一档（T2 铜镐起；T5 雾铅镐满）
   help — 本表
 
@@ -713,6 +713,8 @@ async def _claim_preview(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
 
 
 async def _claim_buy(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
+    from . import tax as tax_mod
+    tax_mod.assert_clear(s)
     prof = await ensure_profile(conn, s["id"])
     offer = _next_claim_offer(prof["claim_count"])
     cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
@@ -769,6 +771,8 @@ async def _upgrade_preview(conn: aiosqlite.Connection, s: dict[str, Any]) -> str
 
 
 async def _upgrade_do(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
+    from . import tax as tax_mod
+    tax_mod.assert_clear(s)
     prof = await ensure_profile(conn, s["id"])
     current = pick_tier_meta(prof["pick_tier"])
     if current["tier"] < 1:

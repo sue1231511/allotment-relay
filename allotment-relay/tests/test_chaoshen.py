@@ -80,6 +80,8 @@ async def test_chaoshen_desk_and_refuse() -> None:
     assert "没有入会" in help_text and "基金 捐 50" in help_text, help_text
     assert "guild" in help_text, help_text
     assert "基金 捐 8" in help_text, help_text
+    assert "税 交" in help_text, help_text
+    assert "tax_ops" in help_text, help_text
     assert "不用领" in help_text and "周二" in help_text, help_text
     assert "alliance_ops league" in help_text, help_text
     assert "plot_ops commons" in help_text, help_text

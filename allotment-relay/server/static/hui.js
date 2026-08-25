@@ -20,6 +20,7 @@ async function loadHui() {
     `<span>值事 ${esc(data.clerk || '阿簿')}</span>`,
     `<span>告示 ${esc((data.beacons || []).length)} 条</span>`,
     `<span>基金 ${esc(fund.pool ?? 0)} 票</span>`,
+    `<span>岸税本周 ${esc((data.tax || {}).collected ?? 0)}</span>`,
   ].join('');
 
   document.getElementById('hui-strip').innerHTML =
@@ -36,6 +37,28 @@ async function loadHui() {
           ? `岛均口袋 ${esc(fund.avg ?? 0)} 票 · 在册 ${esc(fund.n ?? 0)} 人。有余的人自己填数捐。补贴不用领，${esc(fund.weekdays || '周二四六')}自动发。`
           : '在册还不够两人，算不出岛均。'}</p>
         <small>${esc(fund.next_pay || '')}</small>
+      </div>
+    `;
+  }
+
+  const tax = data.tax || {};
+  const taxEl = document.getElementById('hui-tax');
+  if (taxEl) {
+    const brackets = tax.brackets || [];
+    const rows = [
+      `<div class="hui-bracket"><span>≤${esc(tax.free ?? 800)}</span><small>免征</small></div>`,
+      ...brackets.map((b) => {
+        const span = b.hi == null ? `${esc(b.lo)}+` : `${esc(b.lo)}–${esc(b.hi)}`;
+        return `<div class="hui-bracket"><span>${span}</span><small>${esc(b.name)} ${esc(b.rate)}%</small></div>`;
+      }),
+    ].join('');
+    taxEl.innerHTML = `
+      <div class="hui-card">
+        <small>本周已入池</small>
+        <strong>${esc(tax.collected ?? 0)} 票</strong>
+        <p>口袋现票超额累进。未过 ${esc(tax.free ?? 800)} 免征。东八区每周一换班自动划进潮汐基金。欠税时不能扩地扩产。</p>
+        <small>${esc(tax.next || '')} · 本周应 ${esc(tax.assessed ?? 0)}</small>
+        <div class="hui-brackets">${rows}</div>
       </div>
     `;
   }

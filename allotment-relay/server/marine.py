@@ -1144,6 +1144,8 @@ async def voyage_ops(key_id: int, command: str) -> str:
         meta = BOATS[key]
         async with db.connect() as conn:
             s = await _refresh_steward(conn, s["id"])
+            from . import tax as tax_mod
+            tax_mod.assert_clear(s)
             if s.get("boat_key"):
                 cur_rank = _boat_rank(s["boat_key"])
                 if _boat_rank(key) <= cur_rank:

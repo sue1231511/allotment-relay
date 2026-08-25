@@ -81,11 +81,30 @@
 
 .hui-week,
 .hui-fund,
+.hui-tax,
 .hui-larder,
 .hui-beacons,
 .hui-feed {
   display: grid;
   gap: 10px;
+}
+
+.hui-tax-head {
+  margin-top: 28px;
+}
+
+.hui-brackets {
+  margin-top: 12px;
+  display: grid;
+  gap: 4px;
+}
+
+.hui-bracket {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  color: #5f6e6e;
 }
 
 .hui-fund-head {
