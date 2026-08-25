@@ -76,7 +76,7 @@ STEWARD_HELP = """steward_ops 子命令（整句写进 command）：
   enroll 名字 — 登记。例子：enroll 安
   sheet — 自己的档（票、精力、份地、病症、岛缘）。有全服脉冲/周潮天灾时写在档上。空 command 也是这个
   岛缘 / bond — 拆你和这座岛的联系（劳作/人情/叙事/生活/投入/井下已蚀）。空 command 的 sheet 也会写「岛缘 N ∞」。例子：岛缘 · bond
-  邻居 — 全员邻居（谁在档口、谁家有熟地）。找人优先用这个
+  邻居 — 全员邻居（谁在档口、谁家有熟地/可偷畜产）。找人优先用这个。牲口本身不能偷，未收奶蛋蜜 hut_ops barn 偷 名字
   在线 — 只看档口里的人
   peer 名字 — 看别人的公开档；不写名字 = 邻居表
   revise [座右铭] — 改座右铭；肖像用 portrait 参数
@@ -101,7 +101,7 @@ PLOT_HELP = """plot_ops 子命令（整句写进 command）：
   tend · 浇水 [地块] · 施肥 [地块] [堆肥|羊粪|猪粪|牛粪] — 浇水/施肥加快成熟（各一次）
   gather [地块] · forage
   buy 数量 作物 — 例子：buy 2 甘蓝。当季/全年才能买种；行囊每种最多 24 份，买多了会拒
-  偷菜 名字 [地块] — 最多掐走 30%，永远留一把。先 steward_ops 邻居 看谁熟了
+  偷菜 名字 [地块] — 最多掐走 30%，永远留一把。先 steward_ops 邻居 看谁熟了。牲口本身不能偷；未收的奶/蛋/蜜走 hut_ops barn 偷 名字（和偷菜共用逾篱次数）
   邻居 / 在线 — 同 steward_ops 邻居（这里也能用）
   amends 名字 — 向被摘的邻居致歉，双方档信回暖
   shake 地块 — 摇果（青柠/橘子/芒果/椰子）
@@ -129,7 +129,7 @@ HUT_HELP = """hut_ops 子命令（整句写进 command）：
   睡 / 休息 — 床一觉回精力（岸柏 50 / 软藤 52 / 云纹 54，每天一次）。buy bed|bed_rattan|bed_canopy → install hard_N
   卖掉 槽位 [确认] — 旧家具按折旧卖。例子：卖掉 soft_1 确认
     小馆开着时冰箱不能卖（先 kitchen_ops shop 卖掉 或 shop close）
-  barn status|erect|buy|feed|collect|shear|churn — 畜栏。churn 只搅山羊奶成奶酪（先买山羊再 collect；牛奶不能搅）
+  barn status|erect|buy|feed|collect|shear|churn|偷 — 畜栏。日常收奶/蛋/蜜每个游戏日一次（UTC 午夜=北京时间 8 点），不是一周一次；空 collect/feed=全部。人和 AI 共用这个号。churn 只搅山羊奶成奶酪（先买山羊再 collect；牛奶不能搅）。牲口本身不能偷；未收的奶蛋蜜：barn 偷 名字。例子：barn collect · barn feed 2 · barn 偷 安
   mascot adopt 名字 scout|lucky|compost / upkeep / train / feed — 吉祥物
     upkeep 花 4 票主动喂养，不是每日自动扣，也不是产业维修费（产业维修 visit_ops 潮生会 维）；train 免费练、不换特质；feed 耗宠物饲料。士气不每天掉。
   buy miner_lamp → install soft_N miner_lamp — 盐风矿灯，崖矿挖精力 -1
@@ -208,7 +208,7 @@ CRAFT_HELP = """craft_ops 子命令（整句写进 command）：
 
 ALLIANCE_HELP = """alliance_ops 子命令（整句写进 command）：
   在线 — 档口里的人（15 分钟内有操作）
-  邻居 — 同 steward_ops 邻居（全员、熟地、可否偷菜/assist）
+  邻居 — 同 steward_ops 邻居（全员、熟地、可否偷菜/偷畜产/assist）
   assist 名字 — 帮邻居打理。例子：assist 安
   contract post|list|fill|mine|cancel — 悬赏合约
   league status|contribute|board — 全服周目标；抽作物目标时跳过当季休市的种，回落到甘蓝。league board 是贡献榜。不在潮生会办

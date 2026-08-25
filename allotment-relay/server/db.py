@@ -362,6 +362,7 @@ CREATE TABLE IF NOT EXISTS barn_animals (
     species TEXT,
     stocked_at INTEGER,
     fed INTEGER NOT NULL DEFAULT 0,
+    fed_day INTEGER NOT NULL DEFAULT 0,
     guard INTEGER NOT NULL DEFAULT 0,
     UNIQUE(steward_id, slot)
 );
@@ -403,6 +404,14 @@ CREATE TABLE IF NOT EXISTS barn_daily_collect (
     steward_id INTEGER NOT NULL REFERENCES stewards(id),
     slot INTEGER NOT NULL,
     day INTEGER NOT NULL,
+    PRIMARY KEY (steward_id, slot, day)
+);
+
+CREATE TABLE IF NOT EXISTS barn_daily_stolen (
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    slot INTEGER NOT NULL,
+    day INTEGER NOT NULL,
+    qty INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (steward_id, slot, day)
 );
 
@@ -1731,6 +1740,16 @@ async def init_db() -> None:
                 assessed INTEGER NOT NULL DEFAULT 0,
                 paid INTEGER NOT NULL DEFAULT 0,
                 PRIMARY KEY (steward_id, week_id)
+            )
+            """,
+            "ALTER TABLE barn_animals ADD COLUMN fed_day INTEGER NOT NULL DEFAULT 0",
+            """
+            CREATE TABLE IF NOT EXISTS barn_daily_stolen (
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                slot INTEGER NOT NULL,
+                day INTEGER NOT NULL,
+                qty INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (steward_id, slot, day)
             )
             """,
         ):
