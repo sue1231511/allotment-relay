@@ -124,7 +124,7 @@ PLACES: list[dict[str, Any]] = [
         "actions": [
             {"label": "问事", "note": "考勤、岸税、岸维与潮汐基金", "tool": "visit_ops", "command": "潮生会"},
             {"label": "岸税", "note": "档表与欠税。周一自动划", "tool": "visit_ops", "command": "潮生会 税"},
-            {"label": "岸维", "note": "产业维修费。每天划，日单价 2 起，起步免", "tool": "visit_ops", "command": "潮生会 维"},
+            {"label": "岸维", "note": "产业维修费。每天划，单价至少 10 票，起步免", "tool": "visit_ops", "command": "潮生会 维"},
             {"label": "潮汐基金", "note": "岛均与发放日。补贴不用领", "tool": "visit_ops", "command": "潮生会 基金"},
             {"label": "告示", "note": "墙上贴了什么", "tool": "visit_ops", "command": "潮生会 告示"},
         ],
