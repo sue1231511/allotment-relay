@@ -5,6 +5,7 @@ const POLL_MS = 6000;
 let lastId = 0;
 let pollTimer = null;
 let myProfile = null;
+let currentBoothLabel = '';
 
 const feed = document.getElementById('lounge-feed');
 const statusEl = document.getElementById('lounge-status');
@@ -76,24 +77,25 @@ function renderPinned(fullText) {
 }
 
 function updateIdentityUI(profile) {
-  myProfile = profile;
-  const hasKey = Boolean(profile?.who);
-  const whoText = hasKey ? profile.who : '未绑定凭证';
+  myProfile = profile ? { ...(myProfile || {}), ...profile } : null;
+  const hasKey = Boolean(myProfile?.who);
+  const whoText = hasKey ? myProfile.who : '未绑定凭证';
   const hint = hasKey
-    ? `将以「${profile.who}」发言`
+    ? `将以「${myProfile.who}」发言`
     : '请先在上手页贴凭证';
 
   myWhoEl.textContent = whoText;
   composerWhoEl.textContent = hint;
   bindLinkEl.classList.toggle('hidden', hasKey);
-  document.getElementById('lounge-mod-panel')?.classList.toggle('hidden', !profile?.is_mod);
+  document.getElementById('lounge-mod-panel')?.classList.toggle('hidden', !myProfile?.is_mod);
 
   if (hasKey) {
-    saveMyWho(profile.who, profile.human_name);
-    if (profile.human_name && profile.human_name !== '岛民') {
-      nameInput.value = profile.human_name;
+    saveMyWho(myProfile.who, myProfile.human_name);
+    if (myProfile.human_name && myProfile.human_name !== '岛民') {
+      nameInput.value = myProfile.human_name;
     }
   }
+  applyRoomMeta(myProfile);
 }
 
 async function fetchProfile() {
@@ -140,7 +142,10 @@ function bubbleHtml(m) {
 }
 
 function renderMessages(messages) {
-  if (!messages.length) return;
+  if (!messages.length) {
+    ensureEmptyState();
+    return;
+  }
   const frag = document.createDocumentFragment();
   let added = false;
   for (const m of messages) {
@@ -174,14 +179,74 @@ async function fetchMeta() {
   return data;
 }
 
+function displayRoomTitle(data) {
+  if (data?.in_booth && data.booth_label) return data.booth_label;
+  return '港口闲聊';
+}
+
+function applyRoomMeta(data) {
+  const hallLabel = data?.booth_label || '大厅';
+  const title = displayRoomTitle(data);
+  const titleEl = document.getElementById('lounge-room-title');
+  const chatTitle = document.getElementById('lounge-chat-title');
+  if (titleEl) titleEl.textContent = data?.in_booth ? hallLabel : '大厅';
+  if (chatTitle) chatTitle.textContent = title;
+  const meta = document.getElementById('lounge-room-meta');
+  if (meta) {
+    if (data?.in_booth) {
+      const occ = (data.occupants || []).filter(Boolean).join('、');
+      meta.textContent = occ ? `同屋：${occ}` : '同屋：（还没有别人）';
+    } else if (data?.who) {
+      meta.textContent = '大厅 · 对暗号进同一间小包间';
+    } else {
+      meta.textContent = '';
+    }
+  }
+  const leaveBtn = document.getElementById('lounge-booth-leave');
+  if (leaveBtn) leaveBtn.disabled = !data?.in_booth;
+  if (title !== currentBoothLabel) {
+    const changed = currentBoothLabel !== '';
+    currentBoothLabel = title;
+    return changed;
+  }
+  return false;
+}
+
+function resetFeed() {
+  lastId = 0;
+  if (feed) feed.innerHTML = '';
+}
+
+function ensureEmptyState() {
+  if (!feed || feed.querySelector('.lounge-row') || feed.querySelector('.lounge-empty')) return;
+  const empty = document.createElement('p');
+  empty.className = 'lounge-empty';
+  empty.textContent = currentBoothLabel && currentBoothLabel !== '港口闲聊'
+    ? '这间还没有人说话。'
+    : '还没有人说话，来发第一条吧。';
+  feed.appendChild(empty);
+}
+
 async function fetchMessages({ since = 0 } = {}) {
-  const url = since
-    ? `/api/lounge/messages?since=${since}&limit=60`
-    : '/api/lounge/messages?limit=60';
-  const res = await fetch(url);
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.detail || '加载消息失败');
-  return data.messages || [];
+  const apiKey = loadSavedKey();
+  let data;
+  if (apiKey && apiKey.startsWith('ar_sk_')) {
+    const res = await fetch('/api/lounge/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ api_key: apiKey, since, limit: 60 }),
+    });
+    data = await res.json();
+    if (!res.ok) throw new Error(data.detail || '加载消息失败');
+  } else {
+    const url = since
+      ? `/api/lounge/messages?since=${since}&limit=60`
+      : '/api/lounge/messages?limit=60';
+    const res = await fetch(url);
+    data = await res.json();
+    if (!res.ok) throw new Error(data.detail || '加载消息失败');
+  }
+  return data;
 }
 
 async function refreshFeed({ quiet = false } = {}) {
@@ -190,10 +255,23 @@ async function refreshFeed({ quiet = false } = {}) {
     statusBadge.textContent = '同步中…';
   }
   try {
-    const msgs = await fetchMessages({ since: lastId });
-    renderMessages(msgs);
+    const data = await fetchMessages({ since: lastId });
+    const roomChanged = applyRoomMeta(data);
+    if (roomChanged) {
+      resetFeed();
+      const full = await fetchMessages();
+      applyRoomMeta(full);
+      renderMessages(full.messages || []);
+    } else {
+      renderMessages(data.messages || []);
+    }
+    if (data.who || data.steward_name) {
+      myProfile = { ...(myProfile || {}), ...data };
+      document.getElementById('lounge-mod-panel')?.classList.toggle('hidden', !myProfile?.is_mod);
+    }
     const stamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    statusEl.textContent = msgs.length ? `刚刚更新 · ${stamp}` : `连接正常 · ${stamp}`;
+    const got = (data.messages || []).length;
+    statusEl.textContent = got ? `刚刚更新 · ${stamp}` : `连接正常 · ${stamp}`;
     statusBadge.textContent = `在线 · ${POLL_MS / 1000} 秒刷新`;
     liveDot.classList.remove('is-error');
     liveDot.classList.add('is-live');
@@ -202,6 +280,32 @@ async function refreshFeed({ quiet = false } = {}) {
     statusBadge.textContent = '连接异常';
     liveDot.classList.add('is-error');
     if (!quiet) console.error(err);
+  }
+}
+
+async function switchBooth(code) {
+  const apiKey = loadSavedKey();
+  if (!apiKey.startsWith('ar_sk_')) {
+    toast('请先在上手页贴凭证');
+    bindLinkEl?.classList.remove('hidden');
+    return;
+  }
+  const res = await fetch('/api/lounge/booth', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ api_key: apiKey.trim(), code: (code || '').trim() }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || '进不了这间');
+  updateIdentityUI(data);
+  resetFeed();
+  const feedData = await fetchMessages();
+  applyRoomMeta(feedData);
+  renderMessages(feedData.messages || []);
+  if (!data.in_booth) {
+    toast('已回大厅');
+  } else {
+    toast(`已进入${data.booth_label}`);
   }
 }
 
@@ -359,6 +463,30 @@ document.querySelectorAll('[data-mod-action]').forEach((btn) => {
   });
 });
 
+document.getElementById('lounge-booth-enter')?.addEventListener('click', async () => {
+  const code = document.getElementById('lounge-booth-code')?.value || '';
+  try {
+    await switchBooth(code);
+  } catch (err) {
+    toast(err.message);
+  }
+});
+
+document.getElementById('lounge-booth-leave')?.addEventListener('click', async () => {
+  try {
+    await switchBooth('');
+  } catch (err) {
+    toast(err.message);
+  }
+});
+
+document.getElementById('lounge-booth-code')?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    document.getElementById('lounge-booth-enter')?.click();
+  }
+});
+
 document.getElementById('lounge-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const body = msgInput.value.trim();
@@ -373,9 +501,12 @@ document.getElementById('lounge-form').addEventListener('submit', async (e) => {
   try {
     const msg = await postMessage(apiKey, body);
     updateIdentityUI({
+      ...(myProfile || {}),
       who: msg.who,
       human_name: msg.human_name,
       steward_name: msg.steward_name,
+      in_booth: msg.in_booth,
+      booth_label: msg.booth_label,
     });
     renderMessages([msg]);
     msgInput.value = '';
@@ -393,10 +524,10 @@ window.playLounge = {
     (async function boot() {
       try {
         await Promise.all([fetchMeta(), fetchProfile()]);
-        const msgs = await fetchMessages();
-        lastId = 0;
-        feed.innerHTML = '';
-        renderMessages(msgs);
+        const data = await fetchMessages();
+        resetFeed();
+        applyRoomMeta(data);
+        renderMessages(data.messages || []);
         if (statusEl) statusEl.textContent = '连接正常';
         if (statusBadge) statusBadge.textContent = `在线 · ${POLL_MS / 1000} 秒刷新`;
         liveDot?.classList.add('is-live');
