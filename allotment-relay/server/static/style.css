@@ -2782,7 +2782,7 @@ body.memory-open {
 
   .lounge-page-main {
     width: min(100% - 20px, 1180px);
-    padding: 16px 0 0;
+    padding: 10px 0 0;
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -2792,12 +2792,16 @@ body.memory-open {
 
   .lounge-head {
     align-items: flex-start;
-    margin-bottom: 14px;
+    margin-bottom: 10px;
     flex-shrink: 0;
   }
 
   .lounge-head h1 {
-    font-size: 32px;
+    font-size: 28px;
+  }
+
+  .lounge-head > div > p {
+    display: none;
   }
 
   .lounge-status-badge {
@@ -2808,7 +2812,9 @@ body.memory-open {
     grid-template-columns: 1fr;
     grid-template-rows: minmax(0, 1fr);
     flex: 1;
+    height: auto;
     min-height: 0;
+    max-height: none;
     overflow: hidden;
   }
 
@@ -2816,12 +2822,24 @@ body.memory-open {
     display: none;
   }
 
+  .lounge-chat-head {
+    padding: 12px 16px;
+  }
+
   .lounge-chat {
     min-height: 0;
     height: 100%;
-    max-height: 100%;
+    max-height: none;
     overflow: hidden;
     border-radius: 20px 20px 0 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .lounge-feed {
+    flex: 1;
+    min-height: 0;
+    padding: 14px 16px;
   }
 
   .lounge-bubble {
@@ -2843,7 +2861,7 @@ body.memory-open {
 
   .lounge-composer-wrap {
     flex-shrink: 0;
-    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -3602,7 +3620,7 @@ code {
 
   .lounge-page main,
   .lounge-page-main {
-    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   .bar-grid { grid-template-columns: 1fr; }
