@@ -63,9 +63,9 @@ BAR_HELP = """bar_ops 子命令（整句写进 command）：
   status — 自己的酒吧档（熟练度、可应聘岗位、考勤）。空 command 也是这个
   tonight — 今晚驻唱·特调·活动·小橘是否开嗓
   menu / order 酒名 — 酒单 / 点酒
-  work 岗位 day|night — 上工。岗位：洗碗/杂工/迎宾/服务生/调酒师/牛郎
-    暮才有白班、夜才有夜班；逾期白天可补班 ×0.72
-    每 2 天必须 work 一次，否则锁份地/出海/行囊/崖矿/工坊
+  work 岗位 [day|night] — 上工。岗位：洗碗/杂工/迎宾/服务生/调酒师/牛郎
+    班次可省：暮=白班、夜=夜班。写了 day|night（或白班|夜班）则按当时辰校验。
+    逾期白天可补班 ×0.72。每 2 天必须 work 一次，否则锁份地/出海/行囊/崖矿/工坊
   cheer 好话 — 哄荔栀（每日 1 次）。潮下猫猫用 undertide_ops cheer；小橘用 star_ops 应援
   tip 名字 票数 [备注] — 给当班员工小费
   chat [话题] — 跟荔栀唠
@@ -103,6 +103,21 @@ def _work_period(period: str, *, overdue: bool = False) -> str:
     if p == "night" and phase != "night":
         raise ValueError("夜班仅夜（night）时段可上；当前 " + world.day_phase_label(phase))
     return p
+
+
+def _auto_work_period(*, overdue: bool = False) -> str:
+    """人类上手和不写班次时：按当时辰选班。暮白班、夜夜班、逾期白天补班。"""
+    phase = world.current_day_phase()
+    if phase == "night":
+        return "night"
+    if phase == "dusk":
+        return "day"
+    if overdue:
+        return "day"
+    raise ValueError(
+        f"{COASTAL_BAR['name']} 暮/夜才营业，现在 {world.day_phase_label(phase)}。"
+        "等到暮或夜再来；考勤逾期时白天也可补班。"
+    )
 
 
 def _owner_lines() -> list[str]:
@@ -930,7 +945,7 @@ async def _cmd_status(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
     lines.extend([
         "",
         f"今日已上工 {used}/{config.BAR_SHIFT_DAILY} · 耗能 {config.BAR_SHIFT_ENERGY}/班",
-        "指令: tonight / menu / order / work 岗位 day|night / cheer 好话 / lodge / tip / chat / song / staff",
+        "指令: tonight / menu / order / work 岗位 [day|night] / cheer 好话 / lodge / tip / chat / song / staff",
         "help 列出全部。心情只有荔栀自己定，想哄她用 cheer。",
     ])
     if is_shift_overdue(s):
@@ -942,7 +957,7 @@ async def _cmd_status(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
 async def _cmd_staff(conn: aiosqlite.Connection) -> str:
     staff = await _staff_today(conn)
     if not staff:
-        return "今晚暂无当班记录 — bar_ops work 岗位 day|night 上工"
+        return "今晚暂无当班记录 — bar_ops work 洗碗 上工（班次可省）"
     seen: set[int] = set()
     lines = ["«今晚员工", ""]
     for row in staff:
@@ -1400,22 +1415,27 @@ async def bar_ops(key_id: int, command: str) -> str:
         return msg
 
     if verb == "work":
-        rest = command.strip()[4:].strip()
+        rest = command.strip()[len("work"):].strip()
         wp = rest.split()
-        if len(wp) < 2:
+        if not wp:
             raise ValueError(
-                "用法: bar_ops work 岗位 day|night"
-                "（岗位: 洗碗/杂工/迎宾/服务生/调酒师/牛郎，或 dishwasher/runner/greeter/server/bartender/host）"
+                "用法: bar_ops work 岗位 [day|night]"
+                "（岗位: 洗碗/杂工/迎宾/服务生/调酒师/牛郎，或 dishwasher/runner/greeter/server/bartender/host。"
+                "班次可省，按当时辰：暮=白班、夜=夜班、逾期白天=补班）"
             )
         job_id = resolve_bar_job(wp[0])
-        period = resolve_bar_period(wp[1])
         if not job_id:
             raise ValueError(
                 f"未知岗位「{wp[0]}」，可选: 洗碗/杂工/迎宾/服务生/调酒师/牛郎"
             )
-        if not period:
-            raise ValueError("班次写 day/dusk/白班 或 night/夜班")
-        period = _work_period(period, overdue=is_shift_overdue(s))
+        overdue = is_shift_overdue(s)
+        if len(wp) >= 2:
+            period = resolve_bar_period(wp[1])
+            if not period:
+                raise ValueError("班次写 day/dusk/白班 或 night/夜班；不写则按当时辰")
+            period = _work_period(period, overdue=overdue)
+        else:
+            period = _auto_work_period(overdue=overdue)
         async with db.connect() as conn:
             msg = await _run_work(conn, s, job_id, period)
             from . import tale as tale_mod
@@ -1431,22 +1451,18 @@ async def bar_ops(key_id: int, command: str) -> str:
         return msg
 
     if verb == "shift":
-        phase = world.current_day_phase()
-        period = "night" if phase == "night" else "day"
+        overdue = is_shift_overdue(s)
+        period = _auto_work_period(overdue=overdue)
         job = "host" if period == "night" else "runner"
         async with db.connect() as conn:
             skills = await _ensure_skills(conn, s["id"])
             ok, _ = _job_eligible(skills, job, period)
             if not ok:
                 job = "runner" if period == "day" else "dishwasher"
-            try:
-                _work_period(period, overdue=is_shift_overdue(s))
-            except ValueError as e:
-                raise ValueError(f"shift 已并入 work：{e} · 试试 bar_ops work runner night")
             msg = await _run_work(conn, s, job, period)
             await conn.commit()
         await db.add_chronicle("bar", f"{s['name']} 在{COASTAL_BAR['name']}上工（shift→{job}）", s["id"])
-        return msg + "\n（shift 兼容旧指令，推荐 bar_ops work 岗位 day|night）"
+        return msg + "\n（shift 兼容旧指令，推荐 bar_ops work 洗碗；班次可省）"
 
     if verb in ("set_mood", "set_owner_event"):
         # v3 起废弃：荔栀的心情只有她本人（/lizhi 面板）能定。AI 想哄她，用 cheer。

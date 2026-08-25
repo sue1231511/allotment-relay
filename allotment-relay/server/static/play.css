@@ -756,7 +756,14 @@ body.play-bound .play-gate { display: none !important; }
 
 .place-tool .arrow { color: #55777d; }
 
-.place-tool.is-primary strong { color: #3f6268; }
+.place-tool.is-active {
+  background: rgba(85, 119, 125, .06);
+}
+
+.place-tool:disabled {
+  opacity: .55;
+  cursor: wait;
+}
 
 .place-workarea {
   padding: 22px 0 24px 28px;
@@ -795,11 +802,18 @@ body.play-bound .play-gate { display: none !important; }
   background: rgba(115, 141, 121, .08);
 }
 
+.place-status-pill.is-busy {
+  color: #8a6b4a;
+  border-color: rgba(138, 107, 74, .28);
+  background: rgba(138, 107, 74, .08);
+}
+
 .place-result-shell {
   min-height: 190px;
   padding: 20px 0;
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
+  scroll-margin-bottom: 88px;
 }
 
 .place-result-empty {

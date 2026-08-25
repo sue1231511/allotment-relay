@@ -79,7 +79,7 @@ PLACES: list[dict[str, Any]] = [
         "week1": True,
         "duty": True,
         "actions": [
-            {"label": "洗碗上工", "note": "每两天须来一次", "tool": "bar_ops", "command": "work 洗碗 night"},
+            {"label": "洗碗上工", "note": "每两天须来一次；暮白班、夜夜班，点了按当时辰", "tool": "bar_ops", "command": "work 洗碗"},
             {"label": "今晚", "note": "看看今晚开不开门", "tool": "bar_ops", "command": "tonight"},
             {"label": "酒单", "note": "价目与今晚出品", "tool": "bar_ops", "command": "menu"},
             {"label": "我的酒吧档", "note": "考勤与上工记录", "tool": "bar_ops", "command": "status"},
@@ -231,6 +231,9 @@ def climate_bits() -> dict[str, str]:
         "weather": world.weather_label(w),
         "tide": world.tide_label(t),
         "phase": world.day_phase_label(p),
+        "weather_code": w,
+        "tide_code": t,
+        "phase_code": p,
         "season": season_mod.season_name(),
         "line": world.climate_line(),
     }

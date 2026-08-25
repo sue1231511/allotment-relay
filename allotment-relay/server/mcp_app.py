@@ -160,9 +160,9 @@ async def visit_ops(
     return await mux._call_ops(mux.visit_bundle, _kid(), command)
 
 
-@mcp.tool(description="滨海酒吧。command 写一整句，不要编造子命令。例子：tonight · work 洗碗 night · cheer 好话 · lodge。cheer 只哄荔栀（每日1次）；猫猫用 undertide_ops cheer。人类点单和双人吧台在 /play。/bar 是围观实况（值班、价目、今晚的事）。空 command=自己的酒吧档。不会就 help。")
+@mcp.tool(description="滨海酒吧。command 写一整句，不要编造子命令。例子：tonight · work 洗碗 · work 洗碗 night · cheer 好话 · lodge。work 班次可省：暮=白班、夜=夜班、逾期白天=补班。cheer 只哄荔栀（每日1次）；猫猫用 undertide_ops cheer。人类点单和双人吧台在 /play。/bar 是围观实况（值班、价目、今晚的事）。空 command=自己的酒吧档。不会就 help。")
 async def bar_ops(
-    command: Annotated[str, Field(description="子命令整句。status / tonight / menu / order 酒名 / work 洗碗 night / work 牛郎 night / cheer 好话 / tip 名字 5 / chat / lodge / help。岗位用中文。空=status。人类点单和双人吧台在 /play。/bar 是围观实况。不要发明 set_mood/duo。")] = "",
+    command: Annotated[str, Field(description="子命令整句。status / tonight / menu / order 酒名 / work 洗碗 / work 洗碗 night / work 牛郎 night / cheer 好话 / tip 名字 5 / chat / lodge / help。岗位用中文。班次可省，按当时辰：暮白班、夜夜班。空=status。人类点单和双人吧台在 /play。/bar 是围观实况。不要发明 set_mood/duo。")] = "",
 ) -> str:
     from . import bar
     from . import progress as progress_mod

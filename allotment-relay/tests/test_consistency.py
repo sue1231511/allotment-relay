@@ -109,6 +109,8 @@ def test_mcp_descriptions() -> None:
     assert "洗碗" in bar_blob
     assert "荔栀" in bar_blob
     assert "help" in bar_blob
+    assert "班次可省" in bar_blob
+    assert "work 洗碗" in bar_blob
     assert "duo" not in bar.description.lower() or "不要发明" in bar_blob
 
     steward = mcp._tool_manager.get_tool("steward_ops")
@@ -538,6 +540,8 @@ def test_human_island_manual() -> None:
         "人和管家",
         "编剧社",
         "诊所地点",
+        "洗碗上工",
+        "暮上白班",
     ):
         assert needle in blob, needle
     assert "plot_ops" not in blob
@@ -611,6 +615,11 @@ def test_patron_pages_share_steward_key() -> None:
     assert "play-place-live" in play_html
     assert "place-tool" in play_js
     assert "selectPlaceTool" in play_js
+    assert "actData" in play_js
+    assert "parseAct" in play_js
+    assert "decorateActions" in play_js
+    assert "revealPlaceResult" in play_js
+    assert "data-act='${JSON.stringify" not in play_js
     assert '"href": "/quarry"' in (root / "server/play.py").read_text(encoding="utf-8")
     assert '"href": "/workshop"' in (root / "server/play.py").read_text(encoding="utf-8")
     assert 'id="play-duo-key-b"' in play_html
@@ -651,7 +660,7 @@ def test_patron_pages_share_steward_key() -> None:
     assert "routes" in index_html
     assert 'href="/manual"' in play_html
     assert 'href="/manual"' in index_html
-    assert '@app.get("/manual")' in main_py
+    assert '@app.get("/manual"' in main_py
     assert '"go": "bar"' in promo
     assert '"go": "eatery"' in promo
     assert '"go": "star"' in promo
@@ -834,6 +843,7 @@ def test_bar_ops_help() -> None:
 
     text = asyncio.run(bar.bar_ops(0, "help"))
     assert "work 岗位" in text
+    assert "班次可省" in text
     assert "cheer" in text
     assert "lodge" in text
     assert "duo" not in text or "没有 duo" in text

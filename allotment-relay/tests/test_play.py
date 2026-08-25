@@ -27,6 +27,8 @@ async def _boot(tmp: Path):
 def test_play_api() -> None:
     asyncio.run(_test_play_api())
     test_play_page_lists_all_plot_kinds()
+    test_bar_work_auto_period()
+    asyncio.run(_test_play_bar_work_follows_phase())
 
 
 async def _test_play_api() -> None:
@@ -86,6 +88,11 @@ async def _test_play_api() -> None:
     assert any(a["command"] == "clinic treat all" for a in clinic["actions"]), clinic
     bar = next(p for p in sown["places"] if p["id"] == "bar")
     assert "点单" in bar["blurb"], bar
+    assert any(a["command"] == "work 洗碗" for a in bar["actions"]), bar
+    assert not any(a["command"] == "work 洗碗 night" for a in bar["actions"]), bar
+    climate = sown["climate"]
+    assert climate["phase_code"] in ("day", "dusk", "night"), climate
+    assert climate["tide_code"] in ("ebb", "slack", "flood"), climate
     well = next(p for p in sown["places"] if p["id"] == "undertide")
     assert "岛缘" in well["blurb"], well
     assert sown["dashboard"]["island_bond"] is not None, sown["dashboard"]
@@ -125,9 +132,68 @@ def test_play_page_lists_all_plot_kinds() -> None:
     assert "交岸维" in js
     assert "orderedPlaces" in js
     assert "b.week1" in js
+    assert "actData" in js
+    assert "decorateActions" in js
+    assert "parseAct" in js
+    assert "data-act='${JSON.stringify" not in js
+
+
+def test_bar_work_auto_period() -> None:
+    from unittest.mock import patch
+    from server.bar import _auto_work_period, _work_period
+
+    with patch("server.world.current_day_phase", return_value="night"):
+        assert _auto_work_period() == "night"
+        assert _work_period("night") == "night"
+    with patch("server.world.current_day_phase", return_value="dusk"):
+        assert _auto_work_period() == "day"
+        assert _work_period("day") == "day"
+        try:
+            _work_period("night")
+            raise AssertionError("dusk should reject hardcoded night")
+        except ValueError as exc:
+            assert "夜班" in str(exc), exc
+    with patch("server.world.current_day_phase", return_value="day"):
+        try:
+            _auto_work_period(overdue=False)
+            raise AssertionError("day should refuse unless overdue")
+        except ValueError as exc:
+            assert "营业" in str(exc) or "暮" in str(exc), exc
+        assert _auto_work_period(overdue=True) == "day"
+
+
+async def _test_play_bar_work_follows_phase() -> None:
+    from unittest.mock import patch
+
+    tmp = Path(tempfile.mkdtemp(prefix="play-bar-"))
+    db = await _boot(tmp)
+    from server import play as play_mod
+
+    key = await db.create_api_key("play-bar@example.com")
+    await play_mod.run_play(key, "steward_ops", "enroll 洗碗的人")
+
+    with patch("server.world.current_day_phase", return_value="dusk"):
+        hit = await play_mod.run_play(key, "bar_ops", "work 洗碗")
+        text = hit.get("text") or ""
+        assert hit["ok"] is True, hit
+        assert "洗碗" in text or "上工" in text or "班" in text or "票" in text, text
+        try:
+            await play_mod.run_play(key, "bar_ops", "work 洗碗 night")
+            raise AssertionError("dusk should reject night shift")
+        except ValueError as exc:
+            assert "夜班" in str(exc), exc
+
+    with patch("server.world.current_day_phase", return_value="day"):
+        try:
+            await play_mod.run_play(key, "bar_ops", "work 洗碗")
+            raise AssertionError("day should refuse work unless overdue")
+        except ValueError as exc:
+            assert "营业" in str(exc) or "暮" in str(exc), exc
 
 
 if __name__ == "__main__":
     asyncio.run(_test_play_api())
     test_play_page_lists_all_plot_kinds()
+    test_bar_work_auto_period()
+    asyncio.run(_test_play_bar_work_follows_phase())
     print("ok")
