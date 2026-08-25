@@ -15,6 +15,7 @@ function clock(epoch) {
 function splitMenuColumns(shops) {
   const dishes = [];
   for (const shop of shops) {
+    if (shop.paused) continue;
     for (const m of shop.menu || []) {
       dishes.push({
         shop: shop.label,
@@ -49,7 +50,7 @@ async function loadEatery() {
         <article class="shop">
           <div class="shop-top">
             <h3>${esc(s.label)}</h3>
-            <span class="shop-badge">营业</span>
+            <span class="shop-badge">${s.paused ? '暂停堂食' : '营业'}</span>
           </div>
           <p>${esc(s.blurb || s.portrait || '汤是热的。')}</p>
           <div class="shop-foot">

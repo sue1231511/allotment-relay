@@ -1733,6 +1733,17 @@ async def init_db() -> None:
             "ALTER TABLE barn_daily_collect ADD COLUMN thief_name TEXT NOT NULL DEFAULT ''",
             # 旧行表示主人已经收过；新库走上面 CREATE TABLE 的 collected 默认 0
             "ALTER TABLE barn_daily_collect ADD COLUMN collected INTEGER NOT NULL DEFAULT 1",
+            "ALTER TABLE stewards ADD COLUMN upkeep_arrears INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE tide_fund ADD COLUMN upkeep_total INTEGER NOT NULL DEFAULT 0",
+            """
+            CREATE TABLE IF NOT EXISTS shore_upkeep_bills (
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                week_id TEXT NOT NULL,
+                assessed INTEGER NOT NULL DEFAULT 0,
+                paid INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (steward_id, week_id)
+            )
+            """,
         ):
             try:
                 await db.execute(ddl)
@@ -1750,6 +1761,8 @@ async def init_db() -> None:
         await ranks_mod.seed_xp(db)
         await disaster_mod.ensure_weekly_tide(db)
         await tax_mod.ensure_shore_tax(db)
+        from . import upkeep as upkeep_mod
+        await upkeep_mod.ensure_shore_upkeep(db)
         await chaoshen_mod.ensure_fund_payout(db)
         await bond_mod.backfill_all(db)
         from . import invite as invite_mod
