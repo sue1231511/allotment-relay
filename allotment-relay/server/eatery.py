@@ -129,7 +129,7 @@ async def eatery_command(s: dict[str, Any], command: str) -> str:
             from . import upkeep as upkeep_mod
             if not shops:
                 lines.append(
-                    f"  还没人开张 — shop open 店名（需小屋+冰箱，80 票；开馆后每周岸维 {upkeep_mod.EATERY} 票）"
+                    f"  还没人开张 — shop open 店名（需小屋+冰箱，80 票；开馆后每天岸维 {upkeep_mod.EATERY} 票）"
                 )
             paused_n = 0
             for sh in shops:
@@ -186,7 +186,7 @@ async def eatery_command(s: dict[str, Any], command: str) -> str:
         return (
             f"「{label}」开张（-{cost} 票）。shop stock 菜名 上菜单，"
             f"别人 dine {s['name']}，人类走 /play。"
-            f"开馆后每周岸维 {upkeep_mod.EATERY} 票 → visit_ops 潮生会 维"
+            f"开馆后每天岸维 {upkeep_mod.EATERY} 票 → visit_ops 潮生会 维"
         )
 
     if verb == "label" and len(parts) >= 2:

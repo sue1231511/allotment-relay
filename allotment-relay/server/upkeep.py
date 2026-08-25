@@ -5,17 +5,18 @@
 """
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from . import config, db, land
-from .disaster import human_week_id
-from .tax import EXPAND_LOCK, TAX_COLLECT_FLOOR, _in_first_week, next_levy_line
+from .tax import EXPAND_LOCK, TAX_COLLECT_FLOOR
 
 UPKEEP_NAME = "岸维"
 FLAG_PREFIX = "shore_upkeep:"
 COLLECT_FLOOR = TAX_COLLECT_FLOOR
+_CST = timezone(timedelta(hours=8))
 
-# 每周单价。起步产业免，扩出来的才计。产业单价至少 10。
+# 每天单价。起步产业免，扩出来的才计。产业单价至少 10。
 PLOT_EXTRA = 10
 ORCHARD_EXTRA = 10
 GREENHOUSE = 10
@@ -29,21 +30,39 @@ QUARRY_EXTRA = 10
 BOAT_FEE = {"skiff": 10, "cutter": 15, "drifter": 20}
 
 UPKEEP_HELP = f"""visit_ops 潮生会 维（整句写进 command）：
-  维 / 岸维 / 维修 — 看档：哪些产业要交、本周应/已划/欠
-  维 交 — 把欠的维修费（含本周未划完的）能交的交清。也可 维 交 50 交一部分
+  维 / 岸维 / 维修 — 看档：哪些产业要交、今日应/已划/欠
+  维 交 — 把欠的维修费（含今日未划完的）能交的交清。也可 维 交 50 交一部分
   没有 upkeep_ops。吉祥物喂养是 hut_ops mascot upkeep，不是这条。
   田间意外一次性处理是 plot_ops repair 编号，也不是这条。
-{UPKEEP_NAME}按产业每周收，和岸税同一天（东八区周一换班）自动划入潮汐基金。
+{UPKEEP_NAME}按产业每天收，东八区换班后第一次有人动手时自动划入潮汐基金。不是岸税（岸税仍周一划）。
 岸税看口袋现票；岸维看份地/果园/温室/畜栏/小馆/小屋/渔排/盐田/矿坑/船。
-起步 3 块份地、3 树位、棚屋 Lv1、第 1 口盐田、第 1 个矿坑免征。产业单价至少 10 票（超出份地/果园 10，温室 10，畜栏 10+在栏 10，开馆 12，小屋/船 10/15/20，渔排/盐田/矿坑 10）。本周新号免征到下周。
+起步 3 块份地、3 树位、棚屋 Lv1、第 1 口盐田、第 1 个矿坑免征。产业单价至少 10 票（超出份地/果园 10，温室 10，畜栏 10+在栏 10，开馆 12，小屋/船 10/15/20，渔排/盐田/矿坑 10）。今日新号免征到明天。
 欠{UPKEEP_NAME}时不能{EXPAND_LOCK}；开着的小馆会暂停堂食。
 例子：潮生会 维 · 潮生会 维 交 · 潮生会 维 交 50
-容易搞混：税=强制岸税（富人按口袋交）。维=产业维修费（产业越大越交）。
+容易搞混：税=强制岸税（富人按口袋交，周一划）。维=产业维修费（产业越大越交，每天划）。
 mascot upkeep=吉祥物花 4 票主动喂养。plot_ops repair=处理田间意外。voyage repair=修船。"""
 
 
-def week_flag_key(week_id: str | None = None, ts: int | None = None) -> str:
-    return f"{FLAG_PREFIX}{week_id or human_week_id(ts)}"
+def human_day_id(ts: int | None = None) -> str:
+    """东八区日历日，例如 2026-08-25。"""
+    dt = datetime.fromtimestamp(ts if ts is not None else db.now(), _CST)
+    return dt.strftime("%Y-%m-%d")
+
+
+def day_flag_key(day_id: str | None = None, ts: int | None = None) -> str:
+    return f"{FLAG_PREFIX}{day_id or human_day_id(ts)}"
+
+
+def _in_first_day(created_at: int, ts: int | None = None) -> bool:
+    return human_day_id(int(created_at or 0)) == human_day_id(ts)
+
+
+def next_levy_line(ts: int | None = None, *, done: bool = False) -> str:
+    day_id = human_day_id(ts)
+    if done:
+        nxt = datetime.strptime(day_id, "%Y-%m-%d") + timedelta(days=1)
+        return f"今日（{day_id}）已入簿 · 下次 {nxt.strftime('%m-%d')}"
+    return f"今天（{day_id}）会自动划维修费"
 
 
 def hut_fee(level: int, built: bool) -> int:
@@ -63,7 +82,7 @@ def boat_fee(boat_key: str) -> int:
 
 
 def due_from_holdings(h: dict[str, Any]) -> tuple[int, list[dict[str, Any]]]:
-    """按当前产业算本周应缴。返回 (总额, 分项)。"""
+    """按当前产业算今日应缴。返回 (总额, 分项)。"""
     items: list[dict[str, Any]] = []
 
     def add(key: str, label: str, qty: int, rate: int) -> None:
@@ -182,18 +201,18 @@ async def _ensure_fund(conn) -> None:
     )
 
 
-async def _this_week_bill(conn, steward_id: int, week_id: str) -> dict[str, int]:
+async def _this_day_bill(conn, steward_id: int, day_id: str) -> dict[str, int]:
     row = await (await conn.execute(
         "SELECT assessed, paid FROM shore_upkeep_bills "
         "WHERE steward_id=? AND week_id=?",
-        (steward_id, week_id),
+        (steward_id, day_id),
     )).fetchone()
     if not row:
         return {"assessed": 0, "paid": 0, "exists": 0}
     return {"assessed": int(row[0] or 0), "paid": int(row[1] or 0), "exists": 1}
 
 
-async def _bump_bill_paid(conn, steward_id: int, week_id: str, amount: int) -> None:
+async def _bump_bill_paid(conn, steward_id: int, day_id: str, amount: int) -> None:
     if amount <= 0:
         return
     await conn.execute(
@@ -202,7 +221,7 @@ async def _bump_bill_paid(conn, steward_id: int, week_id: str, amount: int) -> N
         VALUES (?, ?, 0, ?)
         ON CONFLICT(steward_id, week_id) DO UPDATE SET paid = paid + excluded.paid
         """,
-        (steward_id, week_id, amount),
+        (steward_id, day_id, amount),
     )
 
 
@@ -251,8 +270,8 @@ async def collect_steward(
         (left, owed, steward_id),
     )
     await _deposit_fund(conn, take)
-    week_id = human_week_id(ts)
-    await _bump_bill_paid(conn, steward_id, week_id, take)
+    day_id = human_day_id(ts)
+    await _bump_bill_paid(conn, steward_id, day_id, take)
     await db.add_chronicle(
         "upkeep",
         f"{name} 交{UPKEEP_NAME} {take} 票（欠余 {owed}，口袋 {left}）",
@@ -286,7 +305,7 @@ async def ensure_shore_upkeep(
     *,
     ts: int | None = None,
 ) -> dict[str, Any] | None:
-    """每个东八区 ISO 周第一次有人动手时，按当时产业给在册的人开维修单并尽量划走。"""
+    """每个东八区日历日第一次有人动手时，按当时产业给在册的人开维修单并尽量划走。"""
     if conn is None:
         async with db.connect() as owned:
             result = await ensure_shore_upkeep(owned, ts=ts)
@@ -294,8 +313,8 @@ async def ensure_shore_upkeep(
                 await owned.commit()
             return result
     moment = ts if ts is not None else db.now()
-    week_id = human_week_id(moment)
-    flag_key = week_flag_key(week_id)
+    day_id = human_day_id(moment)
+    flag_key = day_flag_key(day_id)
     existing = await (await conn.execute(
         "SELECT 1 FROM world_flags WHERE flag_key=?", (flag_key,)
     )).fetchone()
@@ -319,19 +338,19 @@ async def ensure_shore_upkeep(
     skipped_new = 0
     for row in rows:
         s = await _steward_row_as_dict(row)
-        if _in_first_week(s["created_at"], moment):
+        if _in_first_day(s["created_at"], moment):
             skipped_new += 1
             continue
         holdings = await holdings_for(conn, s)
         assessed, _items = due_from_holdings(holdings)
-        existing_bill = await _this_week_bill(conn, s["id"], week_id)
+        existing_bill = await _this_day_bill(conn, s["id"], day_id)
         if not existing_bill["exists"]:
             await conn.execute(
                 """
                 INSERT INTO shore_upkeep_bills (steward_id, week_id, assessed, paid)
                 VALUES (?, ?, ?, 0)
                 """,
-                (s["id"], week_id, assessed),
+                (s["id"], day_id, assessed),
             )
             if assessed > 0:
                 await conn.execute(
@@ -342,7 +361,7 @@ async def ensure_shore_upkeep(
                 assessed_tickets += assessed
                 await db.add_chronicle(
                     "upkeep",
-                    f"{s['name']} 本周{UPKEEP_NAME}应 {assessed} 票",
+                    f"{s['name']} 今日{UPKEEP_NAME}应 {assessed} 票",
                     s["id"],
                     conn=conn,
                 )
@@ -352,7 +371,7 @@ async def ensure_shore_upkeep(
         paid = await collect_steward(conn, s["id"], ts=moment)
         collected += int(paid.get("taken") or 0)
     detail = (
-        f"{week_id} {UPKEEP_NAME}：{assessed_n} 人应 {assessed_tickets} 票，"
+        f"{day_id} {UPKEEP_NAME}：{assessed_n} 人应 {assessed_tickets} 票，"
         f"已划 {collected}"
         + (f"，新号免征 {skipped_new}" if skipped_new else "")
     )
@@ -361,9 +380,10 @@ async def ensure_shore_upkeep(
         (flag_key, moment, detail),
     )
     if assessed_n or collected:
-        await db.add_chronicle("upkeep", f"{UPKEEP_NAME}本周开征：{detail}", None, conn=conn)
+        await db.add_chronicle("upkeep", f"{UPKEEP_NAME}今日开征：{detail}", None, conn=conn)
     return {
-        "week": week_id,
+        "day": day_id,
+        "week": day_id,
         "assessed_n": assessed_n,
         "assessed": assessed_tickets,
         "collected": collected,
@@ -373,16 +393,16 @@ async def ensure_shore_upkeep(
 
 
 async def snapshot(conn, steward_id: int | None = None, ts: int | None = None) -> dict[str, Any]:
-    week_id = human_week_id(ts)
+    day_id = human_day_id(ts)
     flag = await (await conn.execute(
-        "SELECT 1 FROM world_flags WHERE flag_key=?", (week_flag_key(week_id),)
+        "SELECT 1 FROM world_flags WHERE flag_key=?", (day_flag_key(day_id),)
     )).fetchone()
     totals = await (await conn.execute(
         """
         SELECT COALESCE(SUM(assessed), 0), COALESCE(SUM(paid), 0)
         FROM shore_upkeep_bills WHERE week_id=?
         """,
-        (week_id,),
+        (day_id,),
     )).fetchone()
     mine = None
     if steward_id:
@@ -402,7 +422,8 @@ async def snapshot(conn, steward_id: int | None = None, ts: int | None = None) -
             s = await _steward_row_as_dict(row)
             holdings = await holdings_for(conn, s)
             due_now, items = due_from_holdings(holdings)
-            bill = await _this_week_bill(conn, steward_id, week_id)
+            bill = await _this_day_bill(conn, steward_id, day_id)
+            first_day = _in_first_day(s["created_at"], ts)
             mine = {
                 "tickets": s["tickets"],
                 "arrears": s["upkeep_arrears"],
@@ -411,12 +432,14 @@ async def snapshot(conn, steward_id: int | None = None, ts: int | None = None) -
                 "holdings": holdings,
                 "assessed": bill["assessed"],
                 "paid": bill["paid"],
-                "first_week": _in_first_week(s["created_at"], ts),
+                "first_day": first_day,
+                "first_week": first_day,
                 "shop_paused": shop_paused(s),
             }
     return {
         "name": UPKEEP_NAME,
-        "week_id": week_id,
+        "day_id": day_id,
+        "week_id": day_id,
         "floor": COLLECT_FLOOR,
         "done": bool(flag),
         "next": next_levy_line(ts, done=bool(flag)),
@@ -448,25 +471,25 @@ def _status_text(snap: dict[str, Any]) -> str:
     lines = [
         f"潮生会 · {UPKEEP_NAME}",
         "阿簿：产业越大越要修。起步那几块地免，扩出去的、开了馆的、盖了棚的才交。",
-        "岸税看口袋；岸维看产业。同一天划，入同一本潮汐基金。",
+        "岸税看口袋；岸维看产业。岸维每天划，岸税周一划，入同一本潮汐基金。",
         "",
-        f"本周 {snap['week_id']} · {snap['next']}",
-        f"全岛本周应 {snap['assessed']} / 已入池 {snap['collected']}",
+        f"今日 {snap.get('day_id') or snap['week_id']} · {snap['next']}",
+        f"全岛今日应 {snap['assessed']} / 已入池 {snap['collected']}",
         "",
-        "价目（每周）：",
+        "价目（每天）：",
         *rate_table_lines(),
-        f"自动划不会收到 {COLLECT_FLOOR} 以下。本周新号免征到下周。",
+        f"自动划不会收到 {COLLECT_FLOOR} 以下。今日新号免征到明天。",
     ]
     if mine:
         lines.append("")
         items = mine.get("items") or []
-        if mine["first_week"]:
+        if mine.get("first_day") or mine.get("first_week"):
             lines.append(
-                f"你本周产业应约 {mine['due_now']} 票 · 本周新号，免征到下周"
+                f"你今日产业应约 {mine['due_now']} 票 · 今日新号，免征到明天"
             )
         elif mine["assessed"] or mine["paid"] or mine["arrears"] or mine["due_now"]:
             lines.append(
-                f"你本周应 {mine['assessed']} · 已划 {mine['paid']}"
+                f"你今日应 {mine['assessed']} · 已划 {mine['paid']}"
                 + (f" · 欠 {mine['arrears']}" if mine["arrears"] else " · 已结清")
             )
         else:
@@ -593,4 +616,4 @@ async def sheet_line(s: dict[str, Any]) -> str | None:
 
 def tax_week_overlap_note() -> str:
     """给岸税文案用的一句对照。"""
-    return f"{UPKEEP_NAME}按产业另算，同一天划：visit_ops 潮生会 维"
+    return f"{UPKEEP_NAME}按产业另算，每天划：visit_ops 潮生会 维"
