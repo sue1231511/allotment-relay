@@ -259,6 +259,9 @@ def test_mcp_descriptions() -> None:
     assert "/atelier" in cloth_blob
     assert "不绝版" in cloth_blob
     assert "craft_ops" in cloth_blob
+    assert "forage" in cloth_blob or "边际" in cloth_blob
+    assert "tale_ops" in cloth_blob
+    assert "NPC/潮闻" not in cloth_blob
 
 
 def test_relay_manual_covers_systems() -> None:
@@ -328,6 +331,8 @@ def test_relay_manual_covers_systems() -> None:
         "不绝版",
         "tailor_ops",
         "/atelier",
+        "tale_ops 潮闻不给旧衣料",
+        "plot_ops forage",
         "潮闻",
         "应援",
         "不要猜",

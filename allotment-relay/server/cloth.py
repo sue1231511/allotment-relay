@@ -195,12 +195,14 @@ CLOTH_HELP = f"""cloth_ops 子命令（整句写进 command）：
   衣橱 — 自己裁出来的衣服（不占行囊，不能卖）
   穿 1 / 穿 灯塔守夜人的旧呢衣 — 换上；同时只能穿一件
   脱 — 脱下
-  故事 — 已经触发过的衣物来历与潮闻
-  漾漾 / visit — 见主理人。今日首次可能给旧衣料
+  故事 — 已经触发过的衣物来历。不是 tale_ops 潮闻任务，也不给布
+  漾漾 / visit — 见主理人。今日首次约三成机会给旧衣料，不是必给；同一天再访没有第二匹
   help — 本表
 
 例子：status · 图鉴 · 委托 短褂 海色 · 委托 呢衣 墨色 灯塔 · 取 · 衣橱 · 穿 1 · 漾漾
-衣料：海边拾漂布、份地种潮棉/岸麻、NPC/潮闻送旧衣料、活动掉限定染料。不要 invent buy 成衣。
+衣料主来源：海边拾漂布、份地种潮棉/岸麻、份地边际 forage / 公共旧布堆捡旧衣料。羊毛也能当呢料。
+旧衣料不是 tale_ops 奖励。不要为了布去跑潮闻。灯塔不醒拜访时小概率夹一匹，不是正路。
+委托第三段「灯塔」是纹样，不是去灯塔找不醒。不要 invent buy 成衣。
 季节：梅雨/盛夏/台风季/冬潮各有布和染料；错过不绝版，来年同一季再遇。
 当季合身精力 -1，盛夏穿呢衣/冬潮穿裙会 +1。没有 shop_ops / tailor_ops / 买衣服。
 人类网页 /atelier 是海报；裁衣在 /play。visit_ops 漾漾 也能进门。"""
@@ -447,15 +449,17 @@ def _catalog_text() -> str:
     lines.append("衣料来源：不是买成衣。")
     lines.append("  海边拾：漂布；当季还可能拾到梅雨纱/盛夏葛/台风绸/冬潮呢")
     lines.append("  份地种：潮棉（春夏）· 岸麻（秋冬）。温室也能种")
-    lines.append(f"  {NPC_NAME}/灯塔/潮闻：旧衣料。羊毛也能当呢料")
+    lines.append("  份地捡：边际 forage、公共旧布堆会出旧衣料。羊毛也能当呢料")
+    lines.append(f"  {NPC_NAME}今日首次约三成机会给一匹，不是必给，别连刷")
+    lines.append("  灯塔不醒拜访时小概率夹一匹。tale_ops 潮闻不给旧衣料")
     lines.append("  活动：星光染料（小剧场/围观）· 灯塔染料（守夜）。限定但不绝版")
     lines.append("")
-    lines.append("衣物故事：有的组合自带来历。穿去对应地点会多一句、一段小剧情，甚至一篇短潮闻。")
-    lines.append("  呢衣+旧衣料+墨色 → 灯塔守夜人的旧呢衣（去灯塔）")
+    lines.append("衣物故事：有的组合自带来历。穿去对应地点会多一句。这不是 tale_ops 潮闻任务。")
+    lines.append("  呢衣+旧衣料+墨色 → 灯塔守夜人的旧呢衣（裁好穿上再去灯塔，不是先去找布）")
     lines.append("  裙+漂布+海色/沙色 → 被海水漂白的裙子（去海边）")
     lines.append("  斗篷+梅雨纱 → 梅雨里收过的斗篷（去份地）")
     lines.append("  斗篷+旧衣料+星光 → 侧厅旧斗篷（去小剧场）")
-    lines.append("用法：cloth_ops 委托 短褂 海色 · 委托 呢衣 墨色 灯塔")
+    lines.append("用法：cloth_ops 委托 短褂 海色 · 委托 呢衣 墨色 灯塔（灯塔=纹样）")
     return "\n".join(lines)
 
 
@@ -563,8 +567,8 @@ async def _cmd_sew(conn: aiosqlite.Connection, s: dict[str, Any], rest: str) -> 
         fabric = _auto_fabric(stock, current_cloth_season())
         if not fabric:
             raise ValueError(
-                f"行囊里没有够用的衣料。海边拾漂布、份地种潮棉/岸麻，或来见{NPC_NAME}要旧衣料。"
-                "不要 invent 买成衣。"
+                f"行囊里没有够用的衣料。海边拾漂布、份地种潮棉/岸麻，或 plot_ops forage 捡旧衣料。"
+                "不要 invent 买成衣，也不要为了布去跑潮闻。"
             )
     if fabric not in FABRICS:
         raise ValueError(f"{item_label(fabric)} 不能拿来裁衣。")
@@ -746,7 +750,7 @@ async def _cmd_stories(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
             "还没有触发过衣物故事。部分衣服自带来历；穿着去灯塔、海边、份地或小剧场，"
             f"{NPC_NAME}说会多一句。"
         )
-    lines = ["衣物故事 / 短潮闻（只收录已经遇见的）"]
+    lines = ["衣物故事（只收录已经遇见的来历，不是 tale_ops）"]
     for row in rows:
         meta = STORIES.get(row["story_key"] or "", {})
         title = meta.get("name") or row["story_key"] or "无题"
@@ -839,7 +843,7 @@ async def try_echo(
         "cloth", f"{s['name']} 穿着「{g['name']}」在{place}听见旧事", s["id"], conn=conn,
     )
     return (
-        f"{meta['echo']}\n\n短潮闻已记下。cloth_ops 故事 可再读。"
+        f"{meta['echo']}\n\n衣物来历已记下。cloth_ops 故事 可再读。"
         f"工分票 +{config.CLOTH_ECHO_TICKETS} · 档信 +2 · 雾智 +3"
     )
 
