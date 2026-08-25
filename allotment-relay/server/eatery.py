@@ -126,8 +126,11 @@ async def eatery_command(s: dict[str, Any], command: str) -> str:
                 """
             )).fetchall()
             lines = ["岸畔小馆（kitchen_ops shop …）:"]
+            from . import upkeep as upkeep_mod
             if not shops:
-                lines.append("  还没人开张 — shop open 店名（需小屋+冰箱，80 票；开馆后每周岸维 12 票）")
+                lines.append(
+                    f"  还没人开张 — shop open 店名（需小屋+冰箱，80 票；开馆后每周岸维 {upkeep_mod.EATERY} 票）"
+                )
             paused_n = 0
             for sh in shops:
                 if int(sh["upkeep_arrears"] or 0) > 0:

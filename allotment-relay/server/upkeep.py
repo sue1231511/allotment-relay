@@ -15,18 +15,18 @@ UPKEEP_NAME = "岸维"
 FLAG_PREFIX = "shore_upkeep:"
 COLLECT_FLOOR = TAX_COLLECT_FLOOR
 
-# 每周单价。起步产业免，扩出来的才计。
+# 每周单价。起步产业免，扩出来的才计。产业单价至少 10。
 PLOT_EXTRA = 10
-ORCHARD_EXTRA = 3
-GREENHOUSE = 8
-BARN_BASE = 5
-BARN_STOCKED = 2
+ORCHARD_EXTRA = 10
+GREENHOUSE = 10
+BARN_BASE = 10
+BARN_STOCKED = 10
 EATERY = 12
-HUT_BY_LEVEL = {0: 0, 1: 0, 2: 3, 3: 6, 4: 10}
-PEN = 5
-SALT_EXTRA = 3
-QUARRY_EXTRA = 4
-BOAT_FEE = {"skiff": 3, "cutter": 6, "drifter": 10}
+HUT_BY_LEVEL = {0: 0, 1: 0, 2: 10, 3: 15, 4: 20}
+PEN = 10
+SALT_EXTRA = 10
+QUARRY_EXTRA = 10
+BOAT_FEE = {"skiff": 10, "cutter": 15, "drifter": 20}
 
 UPKEEP_HELP = f"""visit_ops 潮生会 维（整句写进 command）：
   维 / 岸维 / 维修 — 看档：哪些产业要交、本周应/已划/欠
@@ -35,7 +35,7 @@ UPKEEP_HELP = f"""visit_ops 潮生会 维（整句写进 command）：
   田间意外一次性处理是 plot_ops repair 编号，也不是这条。
 {UPKEEP_NAME}按产业每周收，和岸税同一天（东八区周一换班）自动划入潮汐基金。
 岸税看口袋现票；岸维看份地/果园/温室/畜栏/小馆/小屋/渔排/盐田/矿坑/船。
-起步 3 块份地、3 树位、棚屋 Lv1、第 1 口盐田、第 1 个矿坑免征。超出份地每块每周 10 票。本周新号免征到下周。
+起步 3 块份地、3 树位、棚屋 Lv1、第 1 口盐田、第 1 个矿坑免征。产业单价至少 10 票（超出份地/果园 10，温室 10，畜栏 10+在栏 10，开馆 12，小屋/船 10/15/20，渔排/盐田/矿坑 10）。本周新号免征到下周。
 欠{UPKEEP_NAME}时不能{EXPAND_LOCK}；开着的小馆会暂停堂食。
 例子：潮生会 维 · 潮生会 维 交 · 潮生会 维 交 50
 容易搞混：税=强制岸税（富人按口袋交）。维=产业维修费（产业越大越交）。
@@ -59,7 +59,7 @@ def boat_fee(boat_key: str) -> int:
     key = (boat_key or "").strip()
     if not key:
         return 0
-    return int(BOAT_FEE.get(key, 3))
+    return int(BOAT_FEE.get(key, BOAT_FEE["skiff"]))
 
 
 def due_from_holdings(h: dict[str, Any]) -> tuple[int, list[dict[str, Any]]]:
@@ -104,11 +104,11 @@ def rate_table_lines() -> list[str]:
         f"  温室                      {GREENHOUSE} 票/座",
         f"  畜栏已建                  {BARN_BASE} 票 + 在栏 {BARN_STOCKED} 票/槽",
         f"  开馆小馆                  {EATERY} 票",
-        "  小屋 Lv1 免；Lv2/3/4      3/6/10 票",
+        f"  小屋 Lv1 免；Lv2/3/4      {HUT_BY_LEVEL[2]}/{HUT_BY_LEVEL[3]}/{HUT_BY_LEVEL[4]} 票",
         f"  渔排                      {PEN} 票/座",
         f"  盐田超出第 1 口           {SALT_EXTRA} 票/口",
         f"  矿坑超出第 1 个           {QUARRY_EXTRA} 票/坑",
-        "  船 舢板/切波艇/漂航船     3/6/10 票",
+        f"  船 舢板/切波艇/漂航船     {BOAT_FEE['skiff']}/{BOAT_FEE['cutter']}/{BOAT_FEE['drifter']} 票",
     ]
 
 
@@ -430,11 +430,11 @@ async def snapshot(conn, steward_id: int | None = None, ts: int | None = None) -
             {"label": "畜栏", "rate": BARN_BASE, "unit": "座"},
             {"label": "在栏牲口", "rate": BARN_STOCKED, "unit": "槽"},
             {"label": "开馆", "rate": EATERY, "unit": "馆"},
-            {"label": "小屋 Lv2", "rate": 3, "unit": "座"},
+            {"label": "小屋 Lv2", "rate": HUT_BY_LEVEL[2], "unit": "座"},
             {"label": "渔排", "rate": PEN, "unit": "座"},
             {"label": "盐田超出第1口", "rate": SALT_EXTRA, "unit": "口"},
             {"label": "矿坑超出第1个", "rate": QUARRY_EXTRA, "unit": "坑"},
-            {"label": "泊船舢板", "rate": 3, "unit": "艘"},
+            {"label": "泊船舢板", "rate": BOAT_FEE["skiff"], "unit": "艘"},
         ],
     }
 

@@ -8,7 +8,7 @@ from typing import Any
 
 import aiosqlite
 
-from . import config, db, energy, flavor, social, survival
+from . import config, db, energy, flavor, social, survival, upkeep
 from .catalog import (
     HEARTH_RECIPES,
     ITEM_NAMES,
@@ -549,7 +549,7 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             "  shop dine 店主名 — 下馆子堂食，也能回精力（按菜价，约 3.5 票/1 精力）+「饱餐」2 小时（行动精力 -1）\n"
             "             例子：shop board · shop dine 安。没菜就换一家，不要自己编馆名\n"
             "  shop open|stock|卖掉 — 开馆 / 上菜（stock 菜名 [价格]，参考价提示但不限区间）/ 关张回收\n"
-            "             开馆后每周岸维 12 票（visit_ops 潮生会 维）；欠维修费会暂停堂食\n"
+            f"             开馆后每周岸维 {upkeep.EATERY} 票（visit_ops 潮生会 维）；欠维修费会暂停堂食\n"
             "             集市买的菜回家自己吃只有基础精力——饭馆卖堂食，集市卖货\n"
             f"{EAT_RULES}"
         )

@@ -72,6 +72,15 @@ def test_due_from_holdings() -> None:
     from server import config, upkeep
 
     assert upkeep.PLOT_EXTRA == 10
+    assert upkeep.ORCHARD_EXTRA == 10
+    assert upkeep.GREENHOUSE == 10
+    assert upkeep.BARN_BASE == 10
+    assert upkeep.BARN_STOCKED == 10
+    assert upkeep.PEN == 10
+    assert upkeep.SALT_EXTRA == 10
+    assert upkeep.QUARRY_EXTRA == 10
+    assert upkeep.HUT_BY_LEVEL[2] == 10
+    assert upkeep.BOAT_FEE["skiff"] == 10
 
     due, items = upkeep.due_from_holdings({
         "plots": config.START_PARCELS,
@@ -103,9 +112,9 @@ def test_due_from_holdings() -> None:
         "pits": 3,
         "boat_key": "skiff",
     })
-    # 2*10 plots + 1*3 orchard + 8 gh + 5 barn + 3*2 stocked + 12 shop
-    # + 3 hut2 + 5 pen + 3 salt extra + 2*4 pits + 3 boat
-    assert due == 20 + 3 + 8 + 5 + 6 + 12 + 3 + 5 + 3 + 8 + 3, (due, items)
+    # 2*10 plots + 1*10 orchard + 10 gh + 10 barn + 3*10 stocked + 12 shop
+    # + 10 hut2 + 10 pen + 10 salt extra + 2*10 pits + 10 boat
+    assert due == 20 + 10 + 10 + 10 + 30 + 12 + 10 + 10 + 10 + 20 + 10, (due, items)
     keys = {it["key"] for it in items}
     assert "plot" in keys and "eatery" in keys and "greenhouse" in keys
 
@@ -157,10 +166,10 @@ async def test_weekly_levy_and_lock() -> None:
         text = await mcp_dispatch.visit_bundle(kid, "潮生会 维")
         assert "岸维" in text, text
         tickets, arrears = await _row(db, sid)
-        # extra 2 plots=20, gh=8, barn=5, shop=12 → 45. auto-collect (500-200=300 cap)
+        # extra 2 plots=20, gh=10, barn=10, shop=12 → 52. auto-collect (500-200=300 cap)
         assert arrears == 0, (arrears, tickets, text)
-        assert tickets == 500 - 45, (tickets, text)
-        assert "45" in text or "已划" in text or "已结清" in text, text
+        assert tickets == 500 - 52, (tickets, text)
+        assert "52" in text or "已划" in text or "已结清" in text, text
 
         await _set(db, sid, tickets=180, upkeep_arrears=12, last_bar_shift_at=NEXT_MON)
         locked = await game.plot_ops(kid, "买地 确认")
