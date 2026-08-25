@@ -138,6 +138,49 @@ def flavor(n: int) -> str:
     return "新上岸"
 
 
+def next_flavor(n: int) -> tuple[int, str] | None:
+    """下一档口感（门槛, 词）。已到最高档则 None。"""
+    v = max(0, int(n or 0))
+    for need, label in reversed(FLAVORS):
+        if need > v:
+            return need, label
+    return None
+
+
+def flavor_progress(n: int) -> dict[str, Any]:
+    """当前岛缘走到下一档口感的进度。无上限，没有满级。"""
+    v = max(0, int(n or 0))
+    cur_need = 0
+    for need, _label in reversed(FLAVORS):
+        if need <= v:
+            cur_need = need
+    nxt = next_flavor(v)
+    if nxt is None:
+        return {
+            "cur": v,
+            "cur_need": cur_need,
+            "next_need": None,
+            "next_label": None,
+            "have": max(0, v - cur_need),
+            "need": 0,
+            "pct": 100,
+            "to_next": 0,
+        }
+    next_need, next_label = nxt
+    span = max(1, next_need - cur_need)
+    have = max(0, v - cur_need)
+    return {
+        "cur": v,
+        "cur_need": cur_need,
+        "next_need": next_need,
+        "next_label": next_label,
+        "have": have,
+        "need": span,
+        "pct": min(100, int(have / span * 100)),
+        "to_next": max(0, next_need - v),
+    }
+
+
 def donate_amount(tickets: int) -> int:
     n = max(0, int(tickets))
     if n <= 0:

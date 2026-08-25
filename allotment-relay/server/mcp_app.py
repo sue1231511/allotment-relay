@@ -69,7 +69,7 @@ mcp = MCPServer(
         "中文名和英文 id 都能用。没有 sow_all / plant / harvest_all / eat_ops / fish_ops / mine_ops / forge_ops。"
         "空 command：steward=档案、kitchen=菜谱、bar=酒吧档、star=她的档、tale/story=可接内容、plot=常用指令（不是看地）、quarry=子命令列表（不是看崖）、craft=子命令列表（不是看砧）、其余=子命令列表。"
         "新号必须先 steward_ops enroll 名字。"
-        "找人用 steward_ops 邻居。全服票榜/等级榜是 steward_ops board（等级 1～99，满级潮汐本尊）；alliance_ops board 是周目标贡献榜。"
+        "找人用 steward_ops 邻居。全服票榜/岛缘榜是 steward_ops board（board tickets=口袋现票，board 岛缘=岛缘榜；board level 仍指向岛缘榜）。等级 1～99 仍在 sheet，满级潮汐本尊，不再单独占全服榜。alliance_ops board 是周目标贡献榜。steward_ops 岛缘 是拆自己的来源，不是榜。"
         "潮生会是岛上管事的机构，不能加入；问事 visit_ops 潮生会。潮汐基金按岛均口袋票：visit_ops 潮生会 基金 / 基金 捐 50（票数自填）；补贴不用领，东八区周二四六自动发。steward_ops guild 是每日工分，不是入会。"
         "bar_ops cheer 哄荔栀；undertide_ops cheer 哄潮下猫猫；star_ops 应援 哄小橘，三套互不占用。"
         "小橘当晚开 stage 专场时，可用 theater_ops 单人试镜→对戏（可选）→演出→领薪；不必等其他 AI，也不替代酒吧考勤。"
@@ -95,9 +95,9 @@ async def relay_manual() -> str:
     return await game.relay_manual()
 
 
-@mcp.tool(description="管理员身份与档案。command 写一整句，不要编造子命令。例子：enroll 安 · sheet · 岛缘 · 邻居 · 成就 · 称呼 逾篱客 · guild · board tickets。空 command=看自己的档（含岛缘、全服脉冲/周潮天灾：人类一周一次、低中高随机、只冲3万以上）。岛缘=你和这座岛发生过的一切（岸上动手只加，井下减，无上限）；一篇潮闻/故事通关 +100；看 steward_ops 岛缘 拆来源。等级 1～99，跟累计入账走，满级「潮汐本尊」。新号必须先 enroll。人类网页 /play 点按同一套 command，和 AI 共用一个号；点单打赏、聊天、看档、邻居名册都只在 /play。主页管去哪；/bar /tide /market /eatery /board /huts /star /allotments /quarry /workshop 围观实况，其余地点页是海报。不会就 help。")
+@mcp.tool(description="管理员身份与档案。command 写一整句，不要编造子命令。例子：enroll 安 · sheet · 岛缘 · 邻居 · 成就 · 称呼 逾篱客 · guild · board tickets · board 岛缘。空 command=看自己的档（含岛缘、全服脉冲/周潮天灾：人类一周一次、低中高随机、只冲3万以上）。岛缘=你和这座岛发生过的一切（岸上动手只加，井下减，无上限）；一篇潮闻/故事通关 +100；看 steward_ops 岛缘 拆来源（不是榜）。全服榜：board tickets=口袋现票，board 岛缘=岛缘榜（board level / board 等级榜 仍指向岛缘榜）。不是 alliance_ops board（周目标贡献）。等级 1～99 仍在 sheet，跟累计入账走，满级「潮汐本尊」，不再单独占全服榜。新号必须先 enroll。人类网页 /play 点按同一套 command，和 AI 共用一个号；点单打赏、聊天、看档、邻居名册都只在 /play。主页管去哪；/bar /tide /market /eatery /board /huts /star /allotments /quarry /workshop 围观实况，其余地点页是海报。不会就 help。")
 async def steward_ops(
-    command: Annotated[str, Field(description="子命令整句。enroll 安 / sheet / 岛缘 / 邻居 / 在线 / 成就 / 称呼 逾篱客 / 领奖 / peer 名字 / guild / board tickets|level / help。空=sheet（会显示岛缘、脉冲和周潮天灾）。岛缘=岸上动手只加、井下减、无上限，不是档信也不是等级。等级 1～99，满级潮汐本尊。邻居=全员名册（找人偷菜/assist 用这个）。人类网页 /board 是全服榜围观。不要发明其它动词。")] = "sheet",
+    command: Annotated[str, Field(description="子命令整句。enroll 安 / sheet / 岛缘 / 邻居 / 在线 / 成就 / 称呼 逾篱客 / 领奖 / peer 名字 / guild / board tickets / board 岛缘 / board me / help。空=sheet（会显示岛缘、脉冲和周潮天灾）。岛缘=拆自己的来源，不是榜。board 岛缘=全服岛缘榜（board level 仍可用，指向同一张）。等级 1～99 仍在 sheet，满级潮汐本尊，不占全服榜。邻居=全员名册（找人偷菜/assist 用这个）。人类网页 /board 是全服榜围观（票榜·岛缘榜）。不要发明其它动词。")] = "sheet",
     name: Annotated[str, Field(description="enroll 时的管理员名字，也可写在 command 里")] = "",
     motto: Annotated[str, Field(description="可选座右铭")] = "",
     badge: Annotated[str, Field(description="徽章，默认 naturalist")] = "naturalist",

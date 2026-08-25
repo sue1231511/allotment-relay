@@ -272,6 +272,8 @@ def test_relay_manual_covers_systems() -> None:
         "1～99",
         "潮汐本尊",
         "岛缘",
+        "岛缘榜",
+        "board 岛缘",
         "steward_ops 岛缘",
         "alliance_ops board",
         "visit_ops 潮生会",
@@ -446,6 +448,7 @@ def test_readme_workflow_rules() -> None:
     assert "amends" in readme
     assert "砧上全套" in readme
     assert "满级 99" in readme or "1～99" in readme
+    assert "岛缘榜" in readme
     assert "steward_ops" in readme and "plot_ops" in readme and "bar_ops" in readme
     assert "quarry_ops" in readme
     assert "tale_ops" in readme
@@ -623,6 +626,8 @@ def test_patron_pages_share_steward_key() -> None:
     assert "dual-board" in board_html
     assert "ticketsBoard" in board_html
     assert "levelBoard" in board_html
+    assert "岛缘榜" in board_html
+    assert "工分票 · 岛缘" in nav
     assert "ticket_lead" in board_js or "ticket-lead" in board_js
     assert ".dual-board" in board_css
     assert "huts-hero" in huts_html

@@ -1,6 +1,7 @@
-"""全服排行榜 — 管理员等级 + 工分票榜。
+"""全服排行榜 — 工分票榜 + 岛缘榜。
 
-等级跟累计入账（赚到的票，花掉不降级）。票榜看口袋里现在有多少张。
+票榜看口袋里现在有多少张。岛缘榜看账号总养成（岸上动手只加，井下减，无上限）。
+等级（1～99、累计入账）仍在 sheet 上，不再单独占一栏全服榜。
 """
 from __future__ import annotations
 
@@ -73,15 +74,19 @@ def progress_line(xp: int) -> str:
 
 
 def attach_level(row: dict[str, Any]) -> dict[str, Any]:
+    from . import bond as bond_mod
     from . import progress as progress_mod
 
     xp = int(row.get("xp") or 0)
     lvl = level_from_xp(xp)
+    n = int(row.get("island_bond") or 0)
     out = dict(row)
     out["xp"] = xp
     out["level"] = lvl
     out["title"] = title_for_level(lvl)
     out["display_title"] = progress_mod.display_title(out)
+    out["island_bond"] = n
+    out["bond_flavor"] = bond_mod.flavor(n)
     return out
 
 
@@ -116,7 +121,10 @@ async def _board_rows(
     conn.row_factory = aiosqlite.Row
     cur = await conn.execute(
         f"""
-        SELECT id, name, badge, tickets, COALESCE(xp, 0) AS xp, last_active_at
+        SELECT id, name, badge, tickets,
+               COALESCE(xp, 0) AS xp,
+               COALESCE(island_bond, 0) AS island_bond,
+               last_active_at
         FROM stewards
         WHERE enrolled = 1
         ORDER BY {order}
@@ -134,11 +142,16 @@ async def ticket_board(limit: int = BOARD_LIMIT) -> list[dict[str, Any]]:
         )
 
 
-async def level_board(limit: int = BOARD_LIMIT) -> list[dict[str, Any]]:
+async def bond_board(limit: int = BOARD_LIMIT) -> list[dict[str, Any]]:
     async with db.connect() as conn:
         return await _board_rows(
-            conn, order="xp DESC, tickets DESC, id ASC", limit=limit
+            conn, order="island_bond DESC, tickets DESC, id ASC", limit=limit
         )
+
+
+async def level_board(limit: int = BOARD_LIMIT) -> list[dict[str, Any]]:
+    """旧名。全服第二栏已改成岛缘榜，数据源是 island_bond。"""
+    return await bond_board(limit)
 
 
 async def _rank_of(
@@ -150,6 +163,7 @@ async def _rank_of(
     sid = steward["id"]
     tickets = int(steward.get("tickets") or 0)
     xp = int(steward.get("xp") or 0)
+    bond = int(steward.get("island_bond") or 0)
     if kind == "tickets":
         cur = await conn.execute(
             """
@@ -167,12 +181,12 @@ async def _rank_of(
             """
             SELECT COUNT(*) FROM stewards
             WHERE enrolled = 1 AND (
-                COALESCE(xp, 0) > ?
-                OR (COALESCE(xp, 0) = ? AND tickets > ?)
-                OR (COALESCE(xp, 0) = ? AND tickets = ? AND id < ?)
+                COALESCE(island_bond, 0) > ?
+                OR (COALESCE(island_bond, 0) = ? AND tickets > ?)
+                OR (COALESCE(island_bond, 0) = ? AND tickets = ? AND id < ?)
             )
             """,
-            (xp, xp, tickets, xp, tickets, sid),
+            (bond, bond, tickets, bond, tickets, sid),
         )
     ahead = (await cur.fetchone())[0]
     return int(ahead) + 1
@@ -186,23 +200,27 @@ async def my_ranks(steward: dict[str, Any]) -> dict[str, Any]:
             "SELECT COUNT(*) FROM stewards WHERE enrolled = 1"
         )).fetchone())[0]
         ticket_rank = await _rank_of(conn, s, kind="tickets")
-        level_rank = await _rank_of(conn, s, kind="level")
+        bond_rank = await _rank_of(conn, s, kind="bond")
     s["ticket_rank"] = ticket_rank
-    s["level_rank"] = level_rank
+    s["bond_rank"] = bond_rank
+    s["level_rank"] = bond_rank
     s["total"] = int(total)
     return s
 
 
 def _fmt_row(i: int, row: dict[str, Any], *, kind: str) -> str:
+    from . import bond as bond_mod
+
     mark = {1: "①", 2: "②", 3: "③"}.get(i, f"{i:>2}.")
     if kind == "tickets":
         return (
             f"  {mark} {row['name']}  {row['tickets']} 票"
             f"  · Lv{row['level']} {row['title']}"
         )
+    n = int(row.get("island_bond") or 0)
     return (
-        f"  {mark} {row['name']}  Lv{row['level']} {row['title']}"
-        f"  · {row['xp']} 入账 · {row['tickets']} 票"
+        f"  {mark} {row['name']}  {bond_mod.fmt(n)} ∞"
+        f" · {row.get('bond_flavor') or bond_mod.flavor(n)}"
     )
 
 
@@ -217,8 +235,10 @@ def _fmt_board(title: str, rows: list[dict[str, Any]], *, kind: str) -> list[str
 
 
 async def public_board(limit: int = BOARD_LIMIT) -> dict[str, Any]:
+    from . import bond as bond_mod
+
     tickets = await ticket_board(limit)
-    levels = await level_board(limit)
+    bonds = await bond_board(limit)
 
     ticket_lead = None
     if tickets:
@@ -232,52 +252,56 @@ async def public_board(limit: int = BOARD_LIMIT) -> dict[str, Any]:
             "gap_second": gap,
         }
 
-    level_lead = None
-    if levels:
-        top = levels[0]
-        xp = int(top["xp"])
-        lvl = int(top["level"])
-        cur = xp_to_reach(lvl)
-        nxt = xp_to_reach(lvl + 1) if lvl < MAX_LEVEL else cur
-        need = max(1, nxt - cur)
-        have = max(0, xp - cur)
-        pct = 100 if lvl >= MAX_LEVEL else min(100, int(have / need * 100))
-        level_lead = {
+    bond_lead = None
+    if bonds:
+        top = bonds[0]
+        n = int(top["island_bond"])
+        prog = bond_mod.flavor_progress(n)
+        gap = n - int(bonds[1]["island_bond"]) if len(bonds) > 1 else 0
+        bond_lead = {
             "name": top["name"],
-            "level": lvl,
-            "xp": xp,
-            "title": top.get("display_title") or top.get("title") or "",
-            "xp_cur": cur,
-            "xp_next": nxt,
-            "xp_have": have,
-            "xp_need": need if lvl < MAX_LEVEL else 0,
-            "progress_pct": pct,
-            "to_next": max(0, nxt - xp) if lvl < MAX_LEVEL else 0,
+            "bond": n,
+            "flavor": top.get("bond_flavor") or bond_mod.flavor(n),
+            "gap_second": gap,
+            "next_need": prog["next_need"],
+            "next_label": prog["next_label"],
+            "to_next": prog["to_next"],
+            "progress_pct": prog["pct"],
+            "cur_need": prog["cur_need"],
         }
 
-    avg_level = 0.0
-    if levels:
-        avg_level = round(sum(int(r["level"]) for r in levels) / len(levels), 1)
-    top10_floor = int(levels[9]["level"]) if len(levels) >= 10 else (int(levels[-1]["level"]) if levels else 0)
+    avg_bond = 0.0
+    if bonds:
+        avg_bond = round(sum(int(r["island_bond"]) for r in bonds) / len(bonds), 1)
+    top10_floor = (
+        int(bonds[9]["island_bond"]) if len(bonds) >= 10
+        else (int(bonds[-1]["island_bond"]) if bonds else 0)
+    )
 
     return {
         "tickets": tickets,
-        "levels": levels,
+        "bonds": bonds,
+        "levels": bonds,
         "limit": limit,
-        "count": max(len(tickets), len(levels)),
+        "count": max(len(tickets), len(bonds)),
         "ticket_lead": ticket_lead,
-        "level_lead": level_lead,
+        "bond_lead": bond_lead,
+        "level_lead": bond_lead,
         "notes": {
-            "avg_level": avg_level,
-            "top10_level_floor": top10_floor,
+            "avg_bond": avg_bond,
+            "top10_bond_floor": top10_floor,
             "ticket_top_name": ticket_lead["name"] if ticket_lead else "",
-            "level_top_name": level_lead["name"] if level_lead else "",
-            "level_top": level_lead["level"] if level_lead else 0,
+            "bond_top_name": bond_lead["name"] if bond_lead else "",
+            "bond_top": bond_lead["bond"] if bond_lead else 0,
         },
     }
 
 
+BOND_BOARD_TITLE = "全服岛缘榜（岸上动手只加，井下减，无上限）"
+
+
 async def board_ops(key_id: int, command: str = "") -> str:
+    from . import bond as bond_mod
     from .game import require_steward
     s = await require_steward(key_id, exempt_duty=True)
     s = await db.get_steward_by_id(s["id"]) or s
@@ -286,13 +310,16 @@ async def board_ops(key_id: int, command: str = "") -> str:
     mine = await my_ranks(s)
     you = (
         f"你：{mine['name']}  {mine['tickets']} 票"
-        f" · {progress_line(mine['xp'])}"
+        f" · 岛缘 {bond_mod.fmt(mine['island_bond'])} ∞ · {mine['bond_flavor']}"
         f" · 票榜 #{mine['ticket_rank']}/{mine['total']}"
-        f" · 等级榜 #{mine['level_rank']}/{mine['total']}"
+        f" · 岛缘榜 #{mine['bond_rank']}/{mine['total']}"
     )
 
     aliases_tickets = {"tickets", "ticket", "票", "票榜", "工分票", "钱"}
-    aliases_level = {"level", "levels", "xp", "等级", "等级榜", "经验"}
+    aliases_bond = {
+        "level", "levels", "xp", "等级", "等级榜", "经验",
+        "岛缘", "bond", "缘", "岛缘榜", "bonds",
+    }
     aliases_me = {"me", "mine", "我", "自己"}
     aliases_status = {"", "status", "board", "help", "榜", "排行", "排行榜"}
 
@@ -303,20 +330,24 @@ async def board_ops(key_id: int, command: str = "") -> str:
         rows = await ticket_board(MCP_LIMIT)
         return "\n".join(_fmt_board("全服工分票榜（口袋现票）", rows, kind="tickets") + ["", you])
 
-    if verb in aliases_level:
-        rows = await level_board(MCP_LIMIT)
-        return "\n".join(_fmt_board("全服等级榜（累计入账，花掉不降级）", rows, kind="level") + ["", you])
+    if verb in aliases_bond:
+        rows = await bond_board(MCP_LIMIT)
+        return "\n".join(_fmt_board(BOND_BOARD_TITLE, rows, kind="bond") + ["", you])
 
     if verb in aliases_status:
         t_rows = await ticket_board(MCP_LIMIT)
-        l_rows = await level_board(MCP_LIMIT)
+        b_rows = await bond_board(MCP_LIMIT)
         return "\n".join([
             *_fmt_board("全服工分票榜（口袋现票）", t_rows, kind="tickets"),
             "",
-            *_fmt_board("全服等级榜（累计入账，花掉不降级）", l_rows, kind="level"),
+            *_fmt_board(BOND_BOARD_TITLE, b_rows, kind="bond"),
             "",
             you,
-            "steward_ops board tickets · steward_ops board level · steward_ops board me",
+            "steward_ops board tickets · steward_ops board 岛缘 · steward_ops board me",
+            "board level / board 等级榜 仍可用，指向同一张岛缘榜。不是周目标贡献榜。",
         ])
 
-    raise ValueError("未知 board 指令（tickets/level/me/status）")
+    raise ValueError(
+        "未知 board 指令（tickets / 岛缘 / me / status）。"
+        "board level、board 等级榜 仍可用，指向岛缘榜。"
+    )

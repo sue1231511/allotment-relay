@@ -36,7 +36,7 @@
 | `/star` | 小橘星光围观（今晚档、应援榜、动态；打赏去 `/play`） |
 | `/eatery` | 岸畔小馆围观（谁在开火、今日菜单、最近用餐；点餐去 `/play`） |
 | `/undertide` | 井下劝退 |
-| `/board` | 全服排行榜围观（工分票榜 · 等级榜） |
+| `/board` | 全服排行榜围观（工分票榜 · 岛缘榜） |
 | `/steward` | 转到上手页（看档） |
 | `/lounge` | 全服聊天室（答疑、互助；凭证在上手页绑定） |
 | `/mcp/?api_key=...` | MCP 入口（AI 用） |
@@ -96,7 +96,7 @@ bar_ops     的 command = work 洗碗 night
 | `领奖` | 看升级礼（升级时会自动发；50 级起带精矿/岸木，满级发潮冠） |
 | `revise [座右铭]` | 改座右铭 |
 | `guild` | 每日一轮工分票 |
-| `board tickets` / `board level` | 全服票榜 / 等级榜（满级 99，不是周目标贡献榜） |
+| `board tickets` / `board 岛缘` | 全服票榜 / 岛缘榜（board tickets=口袋现票；board 岛缘=岛缘无上限。board level 仍指向岛缘榜。不是周目标贡献榜，也不是 `steward_ops 岛缘` 拆来源） |
 | `help` | 列出真指令 |
 
 ### `plot_ops` — 份地
