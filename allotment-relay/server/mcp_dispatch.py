@@ -102,6 +102,7 @@ PLOT_HELP = """plot_ops 子命令（整句写进 command）：
   gather [地块] · forage
   buy 数量 作物 — 例子：buy 2 甘蓝。当季/全年才能买种；行囊每种最多 24 份，买多了会拒
   偷菜 名字 [地块] — 最多掐走 30%，永远留一把。先 steward_ops 邻居 看谁熟了
+    不是 hut_ops barn 偷（那是顺邻居畜栏未收的蛋奶蜜毛，活畜牵不走）
   邻居 / 在线 — 同 steward_ops 邻居（这里也能用）
   amends 名字 — 向被摘的邻居致歉，双方档信回暖
   shake 地块 — 摇果（青柠/橘子/芒果/椰子）
@@ -129,7 +130,12 @@ HUT_HELP = """hut_ops 子命令（整句写进 command）：
   睡 / 休息 — 床一觉回精力（岸柏 50 / 软藤 52 / 云纹 54，每天一次）。buy bed|bed_rattan|bed_canopy → install hard_N
   卖掉 槽位 [确认] — 旧家具按折旧卖。例子：卖掉 soft_1 确认
     小馆开着时冰箱不能卖（先 kitchen_ops shop 卖掉 或 shop close）
-  barn status|erect|buy|feed|collect|shear|churn — 畜栏。churn 只搅山羊奶成奶酪（先买山羊再 collect；牛奶不能搅）
+  barn status|erect|buy|feed|collect|shear|churn|偷 — 畜栏。例子：barn collect · barn feed · barn 偷 安
+    collect/feed/shear 每个槽每天一次（游戏日 UTC 午夜换班），不是一周一次。空 collect/feed=全栏
+    status 写「今日已收」就是收过了（人和 AI 共用一个号，管家可能已收）
+    harvest 才是出栏（动物离开）。日常蛋奶不要 harvest
+    活畜牵不走；今日未收的蛋/奶/蜜/毛可 barn 偷 名字（最多三成，留一把；不是 plot_ops 偷菜）
+    churn 只搅山羊奶成奶酪（先买山羊再 collect；牛奶不能搅）
   mascot adopt 名字 scout|lucky|compost / upkeep / train / feed — 吉祥物
     upkeep 花 4 票主动喂养，不是每日自动扣；train 免费练、不换特质；feed 耗宠物饲料。士气不每天掉。
   buy miner_lamp → install soft_N miner_lamp — 盐风矿灯，崖矿挖精力 -1

@@ -121,7 +121,7 @@ bar_ops     的 command = work 洗碗 night
 | `果园` / `买园` / `买园 确认` | 看树位 / 看价 / 付钱开垦（起步 3 树位，无上限，价表同买地）。只种果树 |
 | `果园 sow 1 芒果` / `sow 园1 橘子` | 果园播种。收：`果园 gather` · `gather 园1` · `shake 园1` |
 | `买棚` / `买棚 确认` / `shed erect` | 温室无上限。第 1 座 180 票马上能种；之后 310/500/750/1060… 比份地更陡，要开垦。槽位 棚1、棚2…；`sow 99`=棚1。偷不到，种菜种树都不受季节（`sow 棚1 橘子`） |
-| `偷菜 名字` | 摘邻居露天熟地，最多 30%，永远留一把 |
+| `偷菜 名字` | 摘邻居露天熟地，最多 30%，永远留一把。不是 `hut_ops barn 偷`（那是畜栏蛋奶蜜毛，活畜牵不走） |
 | `amends 名字` | 向被摘的邻居致歉，双方档信回暖 |
 | `dove 忽略` / `dove 驱赶` | 昼间 sow/tend 每天掷一次斑鸠盯梢，碰上才用这条 |
 | `scarecrow 1` | 扎稻草人（要稻草人或漂绳×2+堆肥×1） |
@@ -152,7 +152,7 @@ bar_ops     的 command = work 洗碗 night
 | `冰柜 存 甘蓝 3` / `冰柜 取 甘蓝 1` | 存取。柜子/潮柜/冰箱是同一条指令。粪便不能进潮柜 |
 | `潮柜 扩` | 加**货种**格数（12 票/格，基础 30 格种货，顶 60）。**每种货单格**基础叠 24 份（同种自动叠放）；满了 `tote_ops 扩栈` 加栈 |
 | `卖掉 soft_1 确认` | 旧家具按折旧卖 |
-| `barn status` / `barn erect` / `barn feed` / `barn churn` | 畜栏。churn 只搅山羊奶成奶酪（先买山羊再 collect；牛奶不能搅） |
+| `barn status` / `barn erect` / `barn feed` / `barn collect` / `barn 偷 安` / `barn churn` | 畜栏。collect/feed/shear 每个槽每天一次（游戏日 UTC 午夜换班），不是一周一次；空 collect/feed=全栏。status 写「今日已收」就是收过了（人和 AI 共用一个号）。活畜牵不走；未收的蛋奶蜜毛可 `barn 偷 名字`（最多三成，留一把；不是 `plot_ops 偷菜`）。churn 只搅山羊奶成奶酪（先买山羊再 collect；牛奶不能搅） |
 | `mascot adopt 名字 scout` / `upkeep` / `train` / `feed` | 吉祥物。upkeep 花 4 票主动喂养（不是每日自动扣）；train 免费练、不换特质；士气不每天掉 |
 | `help` | 列出真指令 |
 

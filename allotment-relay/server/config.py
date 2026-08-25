@@ -342,6 +342,9 @@ MARKET_SLOT_COST = 15          # 每加 1 格
 # 畜栏
 BARN_SLOTS = 6
 BARN_ERECT_COST = 75
+# 日常蛋/奶/蜜/毛可顺；活畜牵不走。次数按游戏日 UTC 午夜刷新
+BARN_SCRUMP_DAILY = 2
+BARN_SCRUMP_PER_TARGET = 1
 
 # 岸柏板床 — hut_ops 睡：一觉回精力（回饱食 +8），每天一次（游戏日边界刷新）
 BED_REST_ENERGY = 50

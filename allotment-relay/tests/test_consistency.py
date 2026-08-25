@@ -156,6 +156,10 @@ def test_mcp_descriptions() -> None:
     assert "compost_bin" in hut_blob
     assert "tide_weight" in hut_blob
     assert "iron_edge" in hut_blob
+    assert "barn collect" in hut_blob
+    assert "barn 偷" in hut_blob
+    assert "不是一周" in hut_blob
+    assert "偷菜" in hut_blob
 
     kitchen = mcp._tool_manager.get_tool("kitchen_ops")
     k_blob = f"{kitchen.description}\n{(kitchen.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -261,6 +265,12 @@ def test_relay_manual_covers_systems() -> None:
         "gear upgrade",
         "boss attack",
         "barn erect",
+        "barn collect",
+        "barn 偷",
+        "不是一周一次",
+        "活畜牵不走",
+        "空 collect",
+        "plot_ops 偷菜",
         "堆肥桶",
         "buy compost_bin",
         "基础每格 24",

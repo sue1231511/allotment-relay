@@ -403,7 +403,17 @@ CREATE TABLE IF NOT EXISTS barn_daily_collect (
     steward_id INTEGER NOT NULL REFERENCES stewards(id),
     slot INTEGER NOT NULL,
     day INTEGER NOT NULL,
+    stolen_qty INTEGER NOT NULL DEFAULT 0,
+    thief_name TEXT NOT NULL DEFAULT '',
+    owner_done INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (steward_id, slot, day)
+);
+
+CREATE TABLE IF NOT EXISTS barn_scrump_log (
+    thief_id INTEGER NOT NULL REFERENCES stewards(id),
+    target_id INTEGER NOT NULL REFERENCES stewards(id),
+    day INTEGER NOT NULL,
+    PRIMARY KEY (thief_id, target_id, day)
 );
 
 CREATE TABLE IF NOT EXISTS steward_ailments (
@@ -1634,6 +1644,17 @@ async def init_db() -> None:
                 day INTEGER NOT NULL,
                 amount INTEGER NOT NULL DEFAULT 0,
                 PRIMARY KEY (steward_id, day)
+            )
+            """,
+            "ALTER TABLE barn_daily_collect ADD COLUMN stolen_qty INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE barn_daily_collect ADD COLUMN thief_name TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE barn_daily_collect ADD COLUMN owner_done INTEGER NOT NULL DEFAULT 0",
+            """
+            CREATE TABLE IF NOT EXISTS barn_scrump_log (
+                thief_id INTEGER NOT NULL REFERENCES stewards(id),
+                target_id INTEGER NOT NULL REFERENCES stewards(id),
+                day INTEGER NOT NULL,
+                PRIMARY KEY (thief_id, target_id, day)
             )
             """,
             "ALTER TABLE stewards ADD COLUMN tax_arrears INTEGER NOT NULL DEFAULT 0",
