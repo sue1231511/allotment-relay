@@ -57,7 +57,9 @@ async def test_chaoshen_desk_and_refuse() -> None:
     assert "visit_ops 潮生会" in desk, desk
 
     asked = await mcp_dispatch.visit_bundle(kid, "潮生会 问")
-    assert "本周岛务" in asked, asked
+    assert "考勤" in asked, asked
+    assert "潮汐基金" in asked, asked
+    assert "alliance_ops league" in asked, asked
 
     via_npc = await npc.npc_ops(kid, "visit 阿簿")
     assert "潮生会" in via_npc, via_npc
@@ -75,17 +77,19 @@ async def test_chaoshen_desk_and_refuse() -> None:
             raise AssertionError(f"{bad} should refuse")
 
     help_text = await mcp_dispatch.visit_bundle(kid, "潮生会 help")
-    assert "没有入会" in help_text and "捐 甘蓝 2" in help_text, help_text
+    assert "没有入会" in help_text and "基金 捐 50" in help_text, help_text
     assert "guild" in help_text, help_text
-    assert "基金 捐 50" in help_text and "基金 捐 8" in help_text, help_text
+    assert "基金 捐 8" in help_text, help_text
     assert "不用领" in help_text and "周二" in help_text, help_text
+    assert "alliance_ops league" in help_text, help_text
+    assert "plot_ops commons" in help_text, help_text
     assert "潮汐基金" in desk, desk
 
 
-async def test_chaoshen_same_larder() -> None:
-    tmp = Path(tempfile.mkdtemp(prefix="chaoshen-larder-"))
+async def test_chaoshen_old_windows_refuse() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="chaoshen-refuse-"))
     db = await _boot(tmp)
-    kid = await _enroll(db, "larder@example.com", "仓客")
+    kid = await _enroll(db, "oldwin@example.com", "旧客")
     from server import mcp_dispatch
 
     async with db.connect() as conn:
@@ -95,14 +99,47 @@ async def test_chaoshen_same_larder() -> None:
         await db.add_item(conn, sid, "crop_kale", 4)
         await conn.commit()
 
-    donated = await mcp_dispatch.visit_bundle(kid, "潮生会 捐 甘蓝 2")
-    assert "捐赠" in donated or "储藏室" in donated, donated
+    try:
+        await mcp_dispatch.visit_bundle(kid, "潮生会 捐 甘蓝 2")
+    except ValueError as exc:
+        msg = str(exc)
+        assert "公仓不在潮生会" in msg, msg
+        assert "alliance_ops donate" in msg, msg
+    else:
+        raise AssertionError("捐货 should refuse")
 
-    larder = await mcp_dispatch.visit_bundle(kid, "潮生会 仓")
-    assert "甘蓝" in larder, larder
+    try:
+        await mcp_dispatch.visit_bundle(kid, "潮生会 仓")
+    except ValueError as exc:
+        assert "alliance_ops larder" in str(exc), str(exc)
+    else:
+        raise AssertionError("仓 should refuse")
+
+    try:
+        await mcp_dispatch.visit_bundle(kid, "潮生会 周")
+    except ValueError as exc:
+        msg = str(exc)
+        assert "本周目标不在潮生会" in msg, msg
+        assert "alliance_ops league" in msg, msg
+    else:
+        raise AssertionError("周 should refuse")
+
+    try:
+        await mcp_dispatch.visit_bundle(kid, "潮生会 公物")
+    except ValueError as exc:
+        assert "plot_ops commons" in str(exc), str(exc)
+    else:
+        raise AssertionError("公物 should refuse")
+
+    try:
+        await mcp_dispatch.visit_bundle(kid, "潮生会 领 12")
+    except ValueError as exc:
+        assert "plot_ops commons claim" in str(exc), str(exc)
+    else:
+        raise AssertionError("领 编号 should refuse")
 
     via_alliance = await mcp_dispatch.alliance_bundle(kid, "larder")
-    assert "甘蓝" in via_alliance, via_alliance
+    assert "储藏室" in via_alliance or "空" in via_alliance or "仓" in via_alliance, via_alliance
 
 
 async def test_chaoshen_public_snapshot() -> None:
@@ -114,7 +151,9 @@ async def test_chaoshen_public_snapshot() -> None:
     assert snap["org"] == "潮生会"
     assert snap["clerk"] == "阿簿"
     assert "不收人" in snap["note"] or "不能" in snap["note"]
-    assert "league" in snap
+    assert "league" not in snap
+    assert "larder" not in snap
+    assert "commons_live" not in snap
     assert snap["fund"]["name"] == "潮汐基金"
     assert snap["fund"]["pool"] == 0
 
@@ -249,7 +288,7 @@ async def test_tide_fund_need_peers() -> None:
 
 def test_chaoshen() -> None:
     asyncio.run(test_chaoshen_desk_and_refuse())
-    asyncio.run(test_chaoshen_same_larder())
+    asyncio.run(test_chaoshen_old_windows_refuse())
     asyncio.run(test_chaoshen_public_snapshot())
     asyncio.run(test_tide_fund_average())
     asyncio.run(test_tide_fund_need_peers())

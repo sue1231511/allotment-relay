@@ -144,16 +144,16 @@ async def kitchen_ops(
     return await mux._call_ops(mux.kitchen_bundle, _kid(), command)
 
 
-@mcp.tool(description="多人协作。command 写一整句。例子：邻居 · assist 安 · contract list · league status。board 是周目标贡献榜，不是全服票榜。周目标/公仓/告示也可去潮生会办事（visit_ops 潮生会），是同一套账。潮汐基金在潮生会：visit_ops 潮生会 基金 / 基金 捐 50（票数自填）；补贴不用领，东八区周二四六自动发。潮生会不能加入。不会就 help。")
+@mcp.tool(description="多人协作。command 写一整句。例子：邻居 · assist 安 · contract list · league status。board 是周目标贡献榜，不是全服票榜。周目标/公仓在本工具：league / donate / larder。告示也可 visit_ops 潮生会 告示。潮汐基金在潮生会：visit_ops 潮生会 基金 / 基金 捐 50（票数自填）；补贴不用领，东八区周二四六自动发。潮生会不能加入。不会就 help。")
 async def alliance_ops(
-    command: Annotated[str, Field(description="子命令整句。邻居 / 在线 / assist 名字 / contract list / league status / league board / donate 物品 数量 / larder / help。board 单独写=周目标贡献榜。周目标/公仓/告示与 visit_ops 潮生会 同一套。")] = "",
+    command: Annotated[str, Field(description="子命令整句。邻居 / 在线 / assist 名字 / contract list / league status / league board / donate 物品 数量 / larder / help。board 单独写=周目标贡献榜。周目标/公仓在本工具，不在潮生会。告示也可 visit_ops 潮生会 告示。")] = "",
 ) -> str:
     return await mux._call_ops(mux.alliance_bundle, _kid(), command)
 
 
-@mcp.tool(description="访客：固定 NPC、潮生会（岛上管事，值事阿簿，不能加入；潮汐基金按岛均口袋票）、守灯人·不醒、何敬山的商船糕点委托、目送人·阿槐、栗栗摊、Tt酱杂货、诊所、沿海旧史与 NPC 小传。command 写一整句。潮生会问事：潮生会 · 潮生会 问 · 潮生会 周 · 潮生会 捐 甘蓝 2 · 潮生会 基金 · 潮生会 基金 捐 50；没有入会/开会/退会。补贴不用领，东八区周二四六自动发。Tt酱买货受行囊每格 24 份限制；货架回收进价九成，退货少亏一成；过季种子买不了（catalog 标当季/休市）。货架有盐风镐（80票，和 quarry_ops 买镐 同一档）。不醒可免费喝每日一杯茶、问潮前 5 次免费；点灯花 15 票，在公开文字灯廊留下名牌与愿望。何敬山按 jingshan visit → order → deliver → 换游戏日 revisit 推进。例子：潮生会 问 · 潮生会 基金 捐 50 · buxing light 给妈妈 | 求平安 · jingshan visit · musong send 安 · tt buy 甘蓝种 2 · tt buy 盐风镐。拾叶主动必触发；lore 是文本不是收集品。空 command=help。")
+@mcp.tool(description="访客：固定 NPC、潮生会（岛上管事，值事阿簿，不能加入；潮汐基金按岛均口袋票）、守灯人·不醒、何敬山的商船糕点委托、目送人·阿槐、栗栗摊、Tt酱杂货、诊所、沿海旧史与 NPC 小传。command 写一整句。潮生会问事：潮生会 · 潮生会 问 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 告示；没有入会/开会/退会。补贴不用领，东八区周二四六自动发。本周目标/公仓/公物不在潮生会（alliance_ops league · donate · plot_ops commons）。Tt酱买货受行囊每格 24 份限制；货架回收进价九成，退货少亏一成；过季种子买不了（catalog 标当季/休市）。货架有盐风镐（80票，和 quarry_ops 买镐 同一档）。不醒可免费喝每日一杯茶、问潮前 5 次免费；点灯花 15 票，在公开文字灯廊留下名牌与愿望。何敬山按 jingshan visit → order → deliver → 换游戏日 revisit 推进。例子：潮生会 问 · 潮生会 基金 捐 50 · buxing light 给妈妈 | 求平安 · jingshan visit · musong send 安 · tt buy 甘蓝种 2 · tt buy 盐风镐。拾叶主动必触发；lore 是文本不是收集品。空 command=help。")
 async def visit_ops(
-    command: Annotated[str, Field(description="子命令整句。list / 潮生会 / 潮生会 问 / 潮生会 周 / 潮生会 捐 甘蓝 2 / 潮生会 基金 / 潮生会 基金 捐 50 / buxing visit|tea|tide|light 给谁 | 求什么|gallery|entrust 旧事|watch|remember|fulfill 灯号 / jingshan visit|status|order|deliver|revisit|remember / musong visit|send 名字|remember / visit 拾叶 / tt catalog / tt buy 甘蓝种 2 / tt buy 盐风镐 / lili scan / shaonian fortune / lore scan npc / clinic status / treat infection / treat 腿鱼小咒 / clinic buy 醒酒药 / clinic dove 喂 / clinic chat / help。潮生会是岛上管事机构，不能加入。潮汐基金按岛均口袋票：高于平均才能捐票（票数自填）；补贴不用领，东八区周二四六自动打到低于岛均的人口袋（每人顶 1000、不超过岛均）；捐 甘蓝是公仓货物。诊所 24h，进门有斑鸠事件；buy/use 药品货架。井下伤（斗场震伤/深坑重创/井下落下的扭伤）归 undertide_ops medic 晏安医务间，桥桥不接。tt buy 不能超过行囊每格上限；过季种子拒。Tt酱货架回收进价九成，别当印钞倒卖。盐风镐和 quarry_ops 买镐 同一档。不醒的灯廊公开，不要写现实隐私；茶每天一次、问潮前 5 次免费。何敬山 deliver 后换游戏日才能 revisit；苏月琴不是单独 NPC。空=帮助。不要发明 shop_ops。")] = "",
+    command: Annotated[str, Field(description="子命令整句。list / 潮生会 / 潮生会 问 / 潮生会 基金 / 潮生会 基金 捐 50 / 潮生会 告示 / buxing visit|tea|tide|light 给谁 | 求什么|gallery|entrust 旧事|watch|remember|fulfill 灯号 / jingshan visit|status|order|deliver|revisit|remember / musong visit|send 名字|remember / visit 拾叶 / tt catalog / tt buy 甘蓝种 2 / tt buy 盐风镐 / lili scan / shaonian fortune / lore scan npc / clinic status / treat infection / treat 腿鱼小咒 / clinic buy 醒酒药 / clinic dove 喂 / clinic chat / help。潮生会是岛上管事机构，不能加入。潮汐基金按岛均口袋票：高于平均才能捐票（票数自填）；补贴不用领，东八区周二四六自动打到低于岛均的人口袋（每人顶 1000、不超过岛均）。本周目标/公仓/公物不在潮生会。诊所 24h，进门有斑鸠事件；buy/use 药品货架。井下伤（斗场震伤/深坑重创/井下落下的扭伤）归 undertide_ops medic 晏安医务间，桥桥不接。tt buy 不能超过行囊每格上限；过季种子拒。Tt酱货架回收进价九成，别当印钞倒卖。盐风镐和 quarry_ops 买镐 同一档。不醒的灯廊公开，不要写现实隐私；茶每天一次、问潮前 5 次免费。何敬山 deliver 后换游戏日才能 revisit；苏月琴不是单独 NPC。空=帮助。不要发明 shop_ops。")] = "",
 ) -> str:
     return await mux._call_ops(mux.visit_bundle, _kid(), command)
 

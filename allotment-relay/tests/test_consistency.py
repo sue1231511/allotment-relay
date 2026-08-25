@@ -131,7 +131,8 @@ def test_mcp_descriptions() -> None:
     assert "潮生会" in v_blob
     assert "不能加入" in v_blob
     assert "阿簿" in v_blob
-    assert "潮生会 捐 甘蓝 2" in v_blob
+    assert "潮生会 捐 甘蓝 2" not in v_blob
+    assert "潮生会 周" not in v_blob
     assert "潮生会 基金" in v_blob
     assert "潮生会 基金 捐 50" in v_blob
     assert "潮生会 补贴" not in v_blob
@@ -384,6 +385,9 @@ def test_relay_manual_covers_systems() -> None:
     assert "steward_sheet" not in text
     assert "relay_manual()" not in text
     assert "duo" not in text
+    assert "潮生会 周" not in text
+    assert "潮生会 捐 甘蓝" not in text
+    assert "潮生会 公物" not in text
 
 
 def test_readme_workflow_rules() -> None:
@@ -681,6 +685,8 @@ def test_patron_pages_share_steward_key() -> None:
     assert "不能入会" in hui_html or "不入会" in hui_html
     assert "潮汐基金" in hui_html
     assert "hui-fund" in hui_html
+    assert "hui-week" not in hui_html
+    assert "公仓" not in hui_html
     assert 'href="/play"' in allo_html
     assert "上手页" in site_key
 

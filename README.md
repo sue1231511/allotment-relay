@@ -29,7 +29,7 @@
 | `/tide` | 海边围观（海况、出海、潮声纪事；下海去 `/play`） |
 | `/quarry` | 盐风崖围观（矿脉、挥镐、崖上纪事；挥镐去 `/play`） |
 | `/workshop` | 岸工坊围观（砧上、盐田、打捞、陈列柜、岸上纪事；打钉去 `/play`） |
-| `/hui` | 潮生会围观（本周岛务、潮汐基金、公仓、告示；问事去 `/play`） |
+| `/hui` | 潮生会围观（潮汐基金、告示；问事去 `/play`） |
 | `/huts` | 岸畔小屋围观（住户、等级、岸上纪事；搭屋去 `/play`） |
 | `/market` | 玩家集市围观（挂单、交换台、成交纪事；摆摊去 `/play`） |
 | `/bar` | 滨海酒吧围观（值班、价目、今晚的事；点单上工去 `/play`） |
@@ -255,9 +255,9 @@ bar_ops     的 command = work 洗碗 night
 | `邻居` / `在线` | 全员 / 档口里的人 |
 | `assist 安` | 帮邻居打理，每日每人一次 |
 | `contract list` / `contract post 甘蓝 3 20` | 悬赏 |
-| `league status` / `league board` | 本周目标 / 贡献榜（也可 `visit_ops 潮生会 周`） |
-| `donate 甘蓝 2` / `larder` / `draw 甘蓝 1` | 联盟储藏室（也可 `visit_ops 潮生会 捐/仓`，同一仓） |
-| `beacon scan` / `bottle scan` | 公告栏 / 漂流瓶 |
+| `league status` / `league board` | 本周目标 / 贡献榜 |
+| `donate 甘蓝 2` / `larder` / `draw 甘蓝 1` | 联盟储藏室 |
+| `beacon scan` / `bottle scan` | 公告栏 / 漂流瓶（告示也可 `visit_ops 潮生会 告示`） |
 | `help` | 列出真指令 |
 
 ### `visit_ops` — 访客 / 杂货 / 诊所 / 潮生会
@@ -284,8 +284,8 @@ bar_ops     的 command = work 洗碗 night
 | `clinic chat` | 闲聊 |
 | `visit 拾叶` | 巷口随机事件（主动必触发）；路上每天首次操作掷一次碰上 |
 | `潮生会` / `潮生会 问` | 进潮生会问事（值事阿簿）。岛上管事的机构，**不能加入** |
-| `潮生会 周` / `潮生会 捐 甘蓝 2` | 本周目标 / 公仓捐货（和 `alliance_ops` 同一套） |
 | `潮生会 基金` / `潮生会 基金 捐 50` | 潮汐基金：看岛均 / 有余捐票（票数自己填）。补贴不用领，东八区周二四六自动发（每人顶 1000、不超过岛均） |
+| `潮生会 告示` | 看告示（同 `alliance_ops beacon`）。本周目标/公仓/公物不在潮生会 |
 | `help` | 列出真指令 |
 
 ### `bar_ops` — 酒吧

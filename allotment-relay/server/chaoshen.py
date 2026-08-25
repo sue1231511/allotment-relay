@@ -4,8 +4,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from . import bar, db, events, flavor, multi, world
-from .catalog import ITEM_NAMES, resolve_item_key, unknown_item_message
+from . import bar, db, events, flavor, world
 from .game import require_steward, _parse_int
 
 FUND_NAME = "潮汐基金"
@@ -41,23 +40,20 @@ JOIN_REFUSE = (
 )
 
 CHAOSHEN_HELP = f"""visit_ops 潮生会 子命令（整句写进 command）：
-  空 / 问 — 进门问事：本周岛务、考勤、公仓、告示摘要、潮汐基金。不是入会。
-  周 — 本周目标；周 交 甘蓝 2 推进（和 alliance_ops league contribute 同一目标）
-  仓 — 公仓；捐 甘蓝 2 / 取 甘蓝 1（领取 2 票、每日 3 次；和 alliance_ops donate/larder 同一仓）
+  空 / 问 — 进门问事：考勤、告示摘要、潮汐基金。不是入会。
   基金 — 潮汐基金：岛均口袋票。有余的人自己填票数捐进来
   基金 捐 50 — 捐票，票数自己填（最少 {FUND_MIN_DONATE}）；口袋须高于岛均，捐完仍须不低于岛均
   告示 — 看告示；贴 标签 正文 发告示；回 编号 正文 回复（同 alliance_ops beacon）
-  公物 — 稀有公共物资；领 编号 领取（同 plot_ops commons）。不是领补贴
   补贴不用领、没有 MCP 指令。东八区{FUND_PAY_WEEKDAY_LABEL}自动打到低于岛均的人口袋（每人顶 {FUND_PAY_CAP} 票，不超过岛均）
   没有入会 / 开会 / 退会。{ORG_NAME}是岛上管事的机构，上岛时已经在册。
-例子：潮生会 · 潮生会 问 · 潮生会 周 · 潮生会 捐 甘蓝 2 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 基金 捐 8
-容易搞混：捐 甘蓝=公仓货物；基金 捐 50=给潮汐基金捐票（票数自定义）。不要写潮生会 补贴。steward_ops guild=每日工分轮值，不是入会；alliance_ops board=周目标贡献榜。"""
+  本周目标 / 公仓 / 公物不在这儿：alliance_ops league · alliance_ops donate / larder · plot_ops commons
+例子：潮生会 · 潮生会 问 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 基金 捐 8 · 潮生会 告示
+容易搞混：基金 捐 50=给潮汐基金捐票（票数自定义）。公仓捐货走 alliance_ops donate 甘蓝 2。不要写潮生会 补贴。steward_ops guild=每日工分轮值，不是入会；alliance_ops board=周目标贡献榜。"""
 
 _DOOR_LINES = (
     "坐。先报名字。入会？没有这回事。",
-    "牌子上写着这周岛上要什么。交到这边，记到簿上。",
     "欠工去酒吧打卡。我这儿只记账，不替荔栀收碗。",
-    "公仓进出、告示上墙，都是潮生会的事。你来办事就行。",
+    "告示上墙，潮汐基金入簿。你来办事就行。",
     "潮汐基金按岛均口袋票算。有余就填个数捐。补贴不用领，周二四六自动发。",
 )
 
@@ -75,42 +71,52 @@ def _join_refuse(verb: str) -> str:
     return JOIN_REFUSE + f"\n（你写的是「{verb}」。没有这条指令。）"
 
 
+def _league_refuse(verb: str = "周") -> str:
+    return (
+        "本周目标不在潮生会办。"
+        "看：alliance_ops league status · 交：alliance_ops league contribute 甘蓝 2"
+        " · 榜：alliance_ops league board"
+        f"\n（你写的是「{verb}」。）"
+    )
+
+
+def _larder_refuse() -> str:
+    return (
+        "公仓不在潮生会办。"
+        "看：alliance_ops larder · 捐货：alliance_ops donate 甘蓝 2 · 取：alliance_ops draw 甘蓝 1"
+        "\n捐票进潮汐基金仍是：visit_ops 潮生会 基金 捐 50"
+    )
+
+
+def _commons_refuse() -> str:
+    return (
+        "公物不在潮生会办。"
+        "看：plot_ops commons scan · 领：plot_ops commons claim 编号"
+        f"\n潮汐基金补贴不用领，东八区{FUND_PAY_WEEKDAY_LABEL}自动发"
+    )
+
+
 async def _front_desk(key_id: int) -> str:
     s = await require_steward(key_id, exempt_duty=True)
-    league = await multi.league_snapshot()
     duty = bar.duty_line(s)
     pulse = await events.public_pulse_snapshot()
     async with db.connect() as conn:
         conn.row_factory = None
-        larder_n = (await (await conn.execute(
-            "SELECT COUNT(*) FROM larder WHERE quantity > 0"
-        )).fetchone())[0]
-        larder_sum = (await (await conn.execute(
-            "SELECT COALESCE(SUM(quantity), 0) FROM larder WHERE quantity > 0"
-        )).fetchone())[0]
         beacon_n = (await (await conn.execute(
             "SELECT COUNT(*) FROM beacons"
         )).fetchone())[0]
-        from . import commons as commons_mod
-        commons_rows = await commons_mod._active_spawns(conn)
-        now = db.now()
-        commons_live = sum(1 for r in commons_rows if r["appears_at"] <= now)
         fund_line = _fund_brief(await fund_snapshot(conn, s["id"]))
 
     from . import npc as npc_mod
     gift = await npc_mod._daily_visit_gift(s["id"], CLERK_KEY)
 
-    done = "已达成" if league.get("completed") else f"{league['progress']}/{league['target']}"
     door = flavor.pick(_DOOR_LINES)
     lines = [
         f"{ORG_NAME} · 值事{CLERK_NAME}",
         f"{CLERK_NAME}：「{door}」",
         "",
-        f"本周岛务：「{league['label']}」{done}",
         f"考勤：{duty}",
-        f"公仓：{int(larder_n)} 种货、共 {int(larder_sum)} 份",
         f"告示：{int(beacon_n)} 条",
-        f"公物：在架 {commons_live} 件",
         fund_line,
     ]
     if pulse:
@@ -120,20 +126,13 @@ async def _front_desk(key_id: int) -> str:
     lines.extend([
         "",
         f"潮汐 {world.tide_label(world.current_tide())} · {world.weather_label(world.current_weather())}",
-        "办事：visit_ops 潮生会 周 · 潮生会 仓 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 告示 · 潮生会 公物",
-        "周目标/公仓/告示与 alliance_ops 是同一套，不是第二本账。",
+        "办事：visit_ops 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 告示",
+        "本周目标走 alliance_ops league。公仓走 alliance_ops donate / larder。公物走 plot_ops commons。",
         f"潮汐基金：捐票自己填数。补贴不用领，东八区{FUND_PAY_WEEKDAY_LABEL}自动发。不能加入。上岛已在册。",
     ])
     if gift:
         lines.append(gift.strip())
     return "\n".join(lines)
-
-
-def _resolve_item(token: str) -> str:
-    item = resolve_item_key(token)
-    if not item:
-        raise ValueError(unknown_item_message(token))
-    return item
 
 
 async def _ensure_fund(conn) -> None:
@@ -299,7 +298,7 @@ def _fund_status_text(snap: dict[str, Any]) -> str:
         "",
         "捐：visit_ops 潮生会 基金 捐 50（票数自己填；捐完仍须不低于岛均）",
         f"补贴不用领。东八区{FUND_PAY_WEEKDAY_LABEL}自动发，每人顶 {FUND_PAY_CAP} 票、不超过岛均。",
-        "不是公仓：公仓捐的是货（潮生会 捐 甘蓝 2），基金捐的是票。",
+        "不是公仓：公仓捐货走 alliance_ops donate 甘蓝 2，基金捐的是票。",
     ])
     return "\n".join(lines)
 
@@ -526,46 +525,23 @@ async def chaoshen_ops(key_id: int, command: str = "") -> str:
         return await fund_donate(key_id, _parse_int(parts[1], "票数"))
 
     if verb_l in ("周", "league", "目标", "周目标"):
-        rest = parts[1:]
-        if not rest:
-            return await multi.league_ops(key_id, "status")
-        head = rest[0].lower()
-        if head in ("交", "缴", "献", "contribute"):
-            if len(rest) < 3:
-                raise ValueError("用法：visit_ops 潮生会 周 交 甘蓝 2")
-            item = _resolve_item(rest[1])
-            qty = _parse_int(rest[2], "数量")
-            return await multi.league_ops(key_id, f"contribute {item} {qty}")
-        if head in ("board", "榜", "贡献榜"):
-            return await multi.league_ops(key_id, "board")
-        if head == "status":
-            return await multi.league_ops(key_id, "status")
-        return await multi.league_ops(key_id, " ".join(rest))
+        raise ValueError(_league_refuse(verb))
 
     if verb_l in ("仓", "larder", "公仓", "库"):
-        return await multi.alliance_ops(key_id, "larder")
+        raise ValueError(_larder_refuse())
 
     if verb_l in ("捐", "donate"):
-        if len(parts) < 3:
-            raise ValueError(
-                "捐货：visit_ops 潮生会 捐 甘蓝 2\n"
-                "捐票进潮汐基金：visit_ops 潮生会 基金 捐 50"
-            )
-        if parts[1].isdigit() or parts[1] in ("票", "工分票"):
-            raise ValueError(
-                "捐票请走潮汐基金：visit_ops 潮生会 基金 捐 50\n"
-                "捐货进公仓仍是：visit_ops 潮生会 捐 甘蓝 2"
-            )
-        item = _resolve_item(parts[1])
-        qty = _parse_int(parts[2], "数量")
-        return await multi.alliance_ops(key_id, f"donate {item} {qty}")
+        if len(parts) >= 2 and (parts[1].isdigit() or parts[1] in ("票", "工分票")):
+            raise ValueError("捐票请走潮汐基金：visit_ops 潮生会 基金 捐 50")
+        if len(parts) >= 2:
+            raise ValueError(_larder_refuse())
+        raise ValueError(
+            "捐票进潮汐基金：visit_ops 潮生会 基金 捐 50\n"
+            "公仓捐货：alliance_ops donate 甘蓝 2"
+        )
 
     if verb_l in ("取", "draw", "领货"):
-        if len(parts) < 3:
-            raise ValueError("用法：visit_ops 潮生会 取 甘蓝 1")
-        item = _resolve_item(parts[1])
-        qty = _parse_int(parts[2], "数量")
-        return await multi.alliance_ops(key_id, f"draw {item} {qty}")
+        raise ValueError(_larder_refuse())
 
     if verb_l in ("告示", "beacon", "公告"):
         rest = " ".join(parts[1:]) if len(parts) > 1 else "scan"
@@ -587,35 +563,21 @@ async def chaoshen_ops(key_id: int, command: str = "") -> str:
         return await game_mod.beacon_ops(key_id, "respond " + " ".join(parts[1:]))
 
     if verb_l in ("公物", "commons", "公共"):
-        from . import commons as commons_mod
-        rest = " ".join(parts[1:]) if len(parts) > 1 else "scan"
-        if not rest or rest.lower() in ("scan", "看"):
-            rest = "scan"
-        return await commons_mod.commons_ops(key_id, rest)
+        raise ValueError(_commons_refuse())
 
     if verb_l in ("领", "claim"):
         if len(parts) >= 2 and parts[1] in ("补贴", "基金"):
             raise ValueError(subsidy_refuse())
-        if len(parts) < 2:
-            raise ValueError(
-                "领公物：visit_ops 潮生会 领 编号\n"
-                f"潮汐基金补贴不用领，东八区{FUND_PAY_WEEKDAY_LABEL}自动发"
-            )
-        from . import commons as commons_mod
-        return await commons_mod.commons_ops(key_id, f"claim {parts[1]}")
+        raise ValueError(_commons_refuse())
 
     raise ValueError(f"未知潮生会指令: {command}\n{CHAOSHEN_HELP}")
 
 
 async def public_snapshot() -> dict[str, Any]:
-    league = await multi.league_snapshot()
     pulse = await events.public_pulse_snapshot()
     async with db.connect() as conn:
         conn.row_factory = None
         await ensure_fund_payout(conn)
-        larder_rows = await (await conn.execute(
-            "SELECT item, quantity FROM larder WHERE quantity > 0 ORDER BY quantity DESC, item LIMIT 8"
-        )).fetchall()
         beacons = await (await conn.execute(
             """
             SELECT b.body, a.name, b.created_at FROM beacons b
@@ -626,17 +588,10 @@ async def public_snapshot() -> dict[str, Any]:
         recent = await (await conn.execute(
             """
             SELECT text, created_at FROM chronicle
-            WHERE action IN ('donate', 'league', 'commons', 'fund')
+            WHERE action = 'fund'
             ORDER BY created_at DESC LIMIT 8
             """
         )).fetchall()
-        from . import commons as commons_mod
-        commons_rows = await commons_mod._active_spawns(conn)
-        now = db.now()
-        commons_live = sum(1 for r in commons_rows if r["appears_at"] <= now)
-        larder_kinds = (await (await conn.execute(
-            "SELECT COUNT(*) FROM larder WHERE quantity > 0"
-        )).fetchone())[0]
         fund = await fund_snapshot(conn)
         await conn.commit()
 
@@ -645,12 +600,6 @@ async def public_snapshot() -> dict[str, Any]:
         "clerk": CLERK_NAME,
         "line": flavor.pick(_DOOR_LINES),
         "climate": world.climate_line(),
-        "league": {
-            "label": league.get("label") or "",
-            "progress": int(league.get("progress") or 0),
-            "target": int(league.get("target") or 0),
-            "completed": bool(league.get("completed")),
-        },
         "pulse": pulse,
         "fund": {
             "name": FUND_NAME,
@@ -665,20 +614,10 @@ async def public_snapshot() -> dict[str, Any]:
             "payout_done": fund["payout_done"],
             "weekdays": FUND_PAY_WEEKDAY_LABEL,
         },
-        "larder": [
-            {
-                "item": r[0],
-                "name": ITEM_NAMES.get(r[0], r[0]),
-                "qty": int(r[1]),
-            }
-            for r in larder_rows
-        ],
-        "larder_kinds": int(larder_kinds),
         "beacons": [
             {"author": r[1], "body": (r[0] or "")[:80], "created_at": r[2]}
             for r in beacons
         ],
-        "commons_live": int(commons_live),
         "recent": [
             {"text": r[0], "created_at": r[1]}
             for r in recent
