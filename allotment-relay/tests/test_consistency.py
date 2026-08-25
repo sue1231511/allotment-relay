@@ -567,10 +567,23 @@ def test_register_key_copy_ui() -> None:
     assert "break-all" in css
     assert "pre-wrap" in css
     assert "/static/keys.js" in register_html
-    assert "/static/device.js" in register_html
+    assert '{% include "partials/nav.html" %}' in register_html
+    assert "/static/device.js" not in register_html
     assert "/manual" in register_html
     assert "/static/keys.js" in recover_html
-    assert "/static/device.js" in recover_html
+    assert '{% include "partials/nav.html" %}' in recover_html
+    assert "/static/device.js" not in recover_html
+    nav_html = (root / "server/templates/partials/nav.html").read_text(encoding="utf-8")
+    assert "/static/device.js" in nav_html
+    device_js = (root / "server/static/device.js").read_text(encoding="utf-8")
+    assert "if (window.getOrCreateDeviceId) return" in device_js
+    play_html = (root / "server/templates/play.html").read_text(encoding="utf-8")
+    assert "/static/device.js" not in play_html
+    templates = (root / "server/templates").rglob("*.html")
+    for path in templates:
+      text = path.read_text(encoding="utf-8")
+      if '{% include "partials/nav.html" %}' in text or "{% include 'partials/nav.html' %}" in text:
+        assert "/static/device.js" not in text, path
 
 
 def test_patron_pages_share_steward_key() -> None:
