@@ -77,7 +77,7 @@ async function loadHui() {
       <div class="hui-card">
         <small>今日已入池</small>
         <strong>${esc(upkeep.collected ?? 0)} 票</strong>
-        <p>按产业每天收。起步 3 块份地、3 树位免征；超出份地/果园、温室、畜栏、渔排、盐田、矿坑日单价 2 起。开馆 2；小屋/船 2/2/3。东八区换班后自动划，不是岸税。欠维修费时不能扩产，开着的小馆暂停堂食。</p>
+        <p>按产业每天收。起步 3 块份地、3 树位免征；超出份地/果园、温室、畜栏、渔排、盐田、矿坑产业单价至少 10 票。开馆 12；小屋/船 10/15/20。东八区换班后自动划，不是岸税。欠维修费时不能扩产，开着的小馆暂停堂食。</p>
         <small>${esc(upkeep.next || '')} · 今日应 ${esc(upkeep.assessed ?? 0)}</small>
         <div class="hui-brackets">${rows}</div>
       </div>
