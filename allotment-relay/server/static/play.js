@@ -169,6 +169,7 @@ function renderPlace(id) {
   state.placeId = id;
   show($('play-home'), false);
   show($('play-place'), true);
+  $('play-place').classList.toggle('is-lounge', id === 'lounge');
   $('play-place-title').textContent = place.name;
   $('play-place-blurb').textContent = place.blurb + (place.caution ? ' 新手别从这儿开局。' : '');
   if ($('play-place-rail-title')) {
@@ -557,6 +558,7 @@ function goHome() {
   state.placeId = '';
   state.placeResult = '';
   show($('play-place'), false);
+  $('play-place').classList.remove('is-lounge');
   show($('play-home'), true);
   hidePatron();
   show($('play-lounge'), false);

@@ -908,7 +908,9 @@ body.play-bound .play-gate { display: none !important; }
 .play-page .lounge-feed {
   min-height: 280px;
   max-height: 48vh;
-  overflow: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -955,6 +957,25 @@ body.play-bound .play-gate { display: none !important; }
   .place-context-block + .place-context-block {
     padding-left: 0;
     border-top: 1px solid var(--line);
+  }
+
+  .play-place.is-lounge .place-workspace,
+  .play-place.is-lounge .place-context {
+    display: none;
+  }
+
+  .play-place.is-lounge .play-lounge {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 0;
+    max-height: calc(100dvh - 240px);
+  }
+
+  .play-place.is-lounge .lounge-feed {
+    flex: 1;
+    min-height: 220px;
+    max-height: none;
   }
 }
 
