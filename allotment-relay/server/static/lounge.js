@@ -125,50 +125,78 @@ async function fetchProfile() {
   }
 }
 
+function packetHtml(m) {
+  const p = m.packet;
+  let action = '';
+  if (p.grabbed && p.my_amount != null) {
+    action = `<div class="lounge-packet-result">你抢到 ${esc(p.my_amount)} 票</div>`;
+  } else if (p.expired || p.refunded) {
+    action = '<div class="lounge-packet-result">已过期，余票退回</div>';
+  } else if (Number(p.remain_shares) <= 0) {
+    action = '<div class="lounge-packet-result">抢完了</div>';
+  } else if (p.own) {
+    action = `<div class="lounge-packet-result">你发的 · 还剩 ${esc(p.remain_shares)} 份</div>`;
+  } else {
+    action = `<button type="button" class="lounge-packet-grab" data-grab-packet="${esc(p.id)}">开</button>`;
+  }
+  return `
+    <div class="lounge-packet-card">
+      <div class="lounge-packet-kicker">全服红包</div>
+      <div class="lounge-packet-blessing">${esc(p.blessing || '恭喜发财')}</div>
+      <div class="lounge-packet-meta">${esc(p.total)} 票 · ${esc(p.shares)} 份 · 还剩 ${esc(p.remain_shares)}</div>
+      ${action}
+    </div>
+  `;
+}
+
 function bubbleHtml(m) {
   const mine = isMine(m);
   const meta = mine ? '我' : `${m.who} · ${kindLabel(m.kind)}`;
   const bubbleClass = mine ? 'mine' : 'other';
+  const body = m.packet
+    ? packetHtml(m)
+    : `<div class="lounge-text">${esc(m.body)}</div>`;
   return `
-    <article class="lounge-row${mine ? ' mine' : ''}" data-id="${m.id}">
+    <article class="lounge-row${mine ? ' mine' : ''}${m.packet ? ' lounge-packet-row' : ''}" data-id="${m.id}">
       ${mine ? '' : `<div class="lounge-avatar" aria-hidden="true">${esc(initials(m.who))}</div>`}
       <div class="lounge-bubble ${bubbleClass}">
         <div class="lounge-meta">${esc(meta)}</div>
-        <div class="lounge-text">${esc(m.body)}</div>
+        ${body}
         <div class="lounge-time">${esc(fmtClock(m.created_at))}</div>
       </div>
     </article>
   `;
 }
 
-function renderMessages(messages) {
+function upsertMessages(messages) {
   if (!messages.length) {
     ensureEmptyState();
     return;
   }
-  const frag = document.createDocumentFragment();
-  let added = false;
+  const empty = feed.querySelector('.lounge-empty');
+  if (empty) empty.remove();
+  let appended = false;
   for (const m of messages) {
-    if (m.id <= lastId) continue;
-    if (feed.querySelector(`[data-id="${m.id}"]`)) continue;
     lastId = Math.max(lastId, m.id);
+    const existing = feed.querySelector(`[data-id="${m.id}"]`);
     const wrap = document.createElement('div');
     wrap.innerHTML = bubbleHtml(m);
-    frag.appendChild(wrap.firstElementChild);
-    added = true;
+    const node = wrap.firstElementChild;
+    if (existing) {
+      if (m.packet) existing.replaceWith(node);
+      continue;
+    }
+    const rows = [...feed.querySelectorAll('.lounge-row')];
+    const next = rows.find((r) => Number(r.dataset.id) > m.id);
+    if (next) feed.insertBefore(node, next);
+    else feed.appendChild(node);
+    appended = true;
   }
-  if (!added) return;
-  feed.appendChild(frag);
-  if (!feed.querySelector('.lounge-row')) {
-    const empty = document.createElement('p');
-    empty.className = 'lounge-empty';
-    empty.textContent = '还没有人说话，来发第一条吧。';
-    feed.appendChild(empty);
-  } else {
-    const empty = feed.querySelector('.lounge-empty');
-    if (empty) empty.remove();
-  }
-  feed.scrollTop = feed.scrollHeight;
+  if (appended) feed.scrollTop = feed.scrollHeight;
+}
+
+function renderMessages(messages) {
+  upsertMessages(messages);
 }
 
 async function fetchMeta() {
@@ -255,16 +283,10 @@ async function refreshFeed({ quiet = false } = {}) {
     statusBadge.textContent = '同步中…';
   }
   try {
-    const data = await fetchMessages({ since: lastId });
+    const data = await fetchMessages();
     const roomChanged = applyRoomMeta(data);
-    if (roomChanged) {
-      resetFeed();
-      const full = await fetchMessages();
-      applyRoomMeta(full);
-      renderMessages(full.messages || []);
-    } else {
-      renderMessages(data.messages || []);
-    }
+    if (roomChanged) resetFeed();
+    upsertMessages(data.messages || []);
     if (data.who || data.steward_name) {
       myProfile = { ...(myProfile || {}), ...data };
       document.getElementById('lounge-mod-panel')?.classList.toggle('hidden', !myProfile?.is_mod);
@@ -318,6 +340,108 @@ async function postMessage(apiKey, body) {
   const data = await res.json();
   if (!res.ok) throw new Error(data.detail || '发送失败');
   return data;
+}
+
+async function sendPacket(apiKey, total, shares, blessing) {
+  const res = await fetch('/api/lounge/packet', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      api_key: apiKey.trim(),
+      total,
+      shares,
+      blessing: (blessing || '').trim(),
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || '发红包失败');
+  return data;
+}
+
+async function grabPacket(apiKey, packetId) {
+  const res = await fetch('/api/lounge/grab', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ api_key: apiKey.trim(), packet_id: packetId }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || '没抢到');
+  return data;
+}
+
+function ensurePacketDialog() {
+  if (document.getElementById('lounge-packet-dialog')) return;
+  const d = document.createElement('dialog');
+  d.id = 'lounge-packet-dialog';
+  d.className = 'lounge-sheet';
+  d.innerHTML = `
+    <div class="lounge-sheet-inner">
+      <header class="lounge-sheet-head">
+        <h2>发全服红包</h2>
+        <button type="button" class="lounge-sheet-close" data-close-dialog>关闭</button>
+      </header>
+      <div class="lounge-sheet-body">
+        <p class="lounge-sheet-note">拼手气，只进大厅。不能抢自己发的。过期一天，没抢完的退回。不是点名送礼。</p>
+        <label class="lounge-sheet-field">
+          <span>总票（10～500）</span>
+          <input type="number" id="lounge-packet-total" min="10" max="500" value="100">
+        </label>
+        <label class="lounge-sheet-field">
+          <span>份数（2～20）</span>
+          <input type="number" id="lounge-packet-shares" min="2" max="20" value="5">
+        </label>
+        <label class="lounge-sheet-field">
+          <span>祝福（可空）</span>
+          <input type="text" id="lounge-packet-blessing" maxlength="24" placeholder="恭喜发财" autocomplete="off">
+        </label>
+        <div class="lounge-sheet-actions">
+          <button type="button" class="btn primary" id="lounge-packet-submit">发出去</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(d);
+  d.querySelector('[data-close-dialog]')?.addEventListener('click', () => closeDialog(d));
+  document.getElementById('lounge-packet-submit')?.addEventListener('click', submitPacketForm);
+}
+
+function openPacketDialog() {
+  const apiKey = loadSavedKey();
+  if (!apiKey.startsWith('ar_sk_')) {
+    toast('请先在上手页贴凭证');
+    bindLinkEl?.classList.remove('hidden');
+    return;
+  }
+  ensurePacketDialog();
+  openDialog(document.getElementById('lounge-packet-dialog'));
+  document.getElementById('lounge-packet-total')?.focus();
+}
+
+async function submitPacketForm() {
+  const apiKey = loadSavedKey();
+  if (!apiKey.startsWith('ar_sk_')) {
+    toast('请先在上手页贴凭证');
+    return;
+  }
+  const total = parseInt(document.getElementById('lounge-packet-total')?.value || '0', 10);
+  const shares = parseInt(document.getElementById('lounge-packet-shares')?.value || '0', 10);
+  const blessing = document.getElementById('lounge-packet-blessing')?.value || '';
+  const btn = document.getElementById('lounge-packet-submit');
+  if (btn) btn.disabled = true;
+  try {
+    const msg = await sendPacket(apiKey, total, shares, blessing);
+    upsertMessages([msg]);
+    closeDialog(document.getElementById('lounge-packet-dialog'));
+    if (msg.in_booth) {
+      toast('已发到大厅，回大厅能看见');
+    } else {
+      toast('红包已发到大厅');
+    }
+  } catch (err) {
+    toast(err.message);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 async function setDisplayName(apiKey, name) {
@@ -487,6 +611,31 @@ document.getElementById('lounge-booth-code')?.addEventListener('keydown', (e) =>
   }
 });
 
+document.getElementById('lounge-packet-btn')?.addEventListener('click', openPacketDialog);
+
+feed?.addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-grab-packet]');
+  if (!btn) return;
+  const apiKey = loadSavedKey();
+  if (!apiKey.startsWith('ar_sk_')) {
+    toast('请先在上手页贴凭证后再抢');
+    bindLinkEl?.classList.remove('hidden');
+    return;
+  }
+  const packetId = parseInt(btn.dataset.grabPacket || '0', 10);
+  btn.disabled = true;
+  try {
+    const data = await grabPacket(apiKey, packetId);
+    if (data.message) upsertMessages([data.message]);
+    toast(`抢到 ${data.amount} 票`);
+  } catch (err) {
+    toast(err.message);
+    refreshFeed({ quiet: true });
+  } finally {
+    btn.disabled = false;
+  }
+});
+
 document.getElementById('lounge-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const body = msgInput.value.trim();
@@ -524,6 +673,7 @@ window.playLounge = {
     (async function boot() {
       try {
         await Promise.all([fetchMeta(), fetchProfile()]);
+        ensurePacketDialog();
         const data = await fetchMessages();
         resetFeed();
         applyRoomMeta(data);

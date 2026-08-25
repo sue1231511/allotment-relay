@@ -132,9 +132,9 @@ async def tide_ops(
     return await mux._call_ops(mux.tide_bundle, _kid(), command)
 
 
-@mcp.tool(description="行囊、交换台、集市。command 写一整句。例子：list · 扩栈 · gifts · 赠礼记录 · vend 鲭鱼 1 · gift 安 甘蓝 1 · market list · market 扩。gifts/收礼=查收到的礼；赠礼记录=查自己送出的礼。集市基础6格可花钱扩到12。同种货自动叠放，基础每格24份，tote_ops 扩栈 花钱加栈（顶64）。买货/收礼超了会拒。能直接送票，无手续费无每日上限。Tt酱货架货系统回收进价九成，退货少亏一成，别买了再 vend 当印钞。卖未命名小鱼会再掷小咒事件。人类网页 /market 是集市围观实况，摆摊买货在 /play。空 command 列出子命令。不会就 help。")
+@mcp.tool(description="行囊、交换台、集市。command 写一整句。例子：list · 扩栈 · gifts · 赠礼记录 · vend 鲭鱼 1 · gift 安 甘蓝 1 · market list · market 扩。gifts/收礼=查收到的礼；赠礼记录=查自己送出的礼。集市基础6格可花钱扩到12。同种货自动叠放，基础每格24份，tote_ops 扩栈 花钱加栈（顶64）。买货/收礼超了会拒。能直接送票，无手续费无每日上限。送礼是点名即时到账，不是聊天室红包（红包走 lounge_ops 红包）。Tt酱货架货系统回收进价九成，退货少亏一成，别买了再 vend 当印钞。卖未命名小鱼会再掷小咒事件。人类网页 /market 是集市围观实况，摆摊买货在 /play。空 command 列出子命令。不会就 help。")
 async def tote_ops(
-    command: Annotated[str, Field(description="子命令整句。list / 扩栈 [数量] / gifts / 收礼 / 赠礼记录 / vend 鲭鱼 1 / gift|送礼 名字 甘蓝 1 / market list / market 扩 / swap list / help。gifts=收礼记录；赠礼记录=自己送出的礼；market 扩=加摆摊格。行囊同种货自动叠放。能直接送票。货架种/饲料/工具 vend 进价九成。人类摆摊买货在 /play；/market 是围观实况。不要发明 inventory/sell。")] = "",
+    command: Annotated[str, Field(description="子命令整句。list / 扩栈 [数量] / gifts / 收礼 / 赠礼记录 / vend 鲭鱼 1 / gift|送礼 名字 甘蓝 1 / market list / market 扩 / swap list / help。gifts=收礼记录；赠礼记录=自己送出的礼；market 扩=加摆摊格。行囊同种货自动叠放。能直接送票。送礼不是聊天室红包。货架种/饲料/工具 vend 进价九成。人类摆摊买货在 /play；/market 是围观实况。不要发明 inventory/sell。")] = "",
 ) -> str:
     return await mux._call_ops(mux.tote_bundle, _kid(), command)
 
@@ -202,9 +202,9 @@ async def tale_ops(
     return await mux._call_ops(tale.tale_ops, _kid(), command)
 
 
-@mcp.tool(description="全服聊天室。玩法答疑、bug 反馈、岛上互助；不是私聊也不是公告栏。对上同一句暗号的人进同一间小包间（不是 whisper/dm，也不列出全部包间）。command 写一整句。例子：scan · say 温室怎么建 · 暗号 潮声今晚 · 大厅 · name 小明 · mod mute 名字 60。空 command=scan 看当前屋最近消息（大厅带置顶公约）。人类在 /lounge 或 /play 聊天室对话上方填暗号、点「对暗号」（手机也在聊天框顶上，没有侧栏）。凭证只在 /play 绑定。不要发明 whisper/dm。")
+@mcp.tool(description="全服聊天室。玩法答疑、bug 反馈、岛上互助；不是私聊也不是公告栏。对上同一句暗号的人进同一间小包间（不是 whisper/dm，也不列出全部包间）。大厅可发全服拼手气红包（先到先得，不能抢自己的）。command 写一整句。例子：scan · say 温室怎么建 · 红包 100 5 · 抢 · 抢 7 · 暗号 潮声今晚 · 大厅 · name 小明 · mod mute 名字 60。空 command=scan 看当前屋最近消息（大厅带置顶公约）。空 红包=列出大厅未抢完的；空 抢=抢你还没抢过的最新一封。人类在 /lounge 或 /play 聊天室对话上方填暗号、点「对暗号」（手机也在聊天框顶上，没有侧栏）；发红包点「发红包」，大厅卡片点「开」。凭证只在 /play 绑定。不要发明 whisper/dm。不要发明 hongbao_ops。红包不是 tote_ops gift（送礼是点名即时到账）。")
 async def lounge_ops(
-    command: Annotated[str, Field(description="子命令整句。scan / 看 / 最近=当前屋消息（大厅含置顶公约）；say / 说 / post 正文=发到当前屋；暗号 / 包间 / 对暗号 一句=进小包间（空=看当前屋+同屋）；大厅 / 出包间=回大厅；name / 昵称 名字=人类自设昵称（网页显示 昵称·管家名）；mod mute|unmute|ban|unban 目标名 [分钟]；help。空=scan。小包间不是私聊：对上同一句暗号才进同一间。人类入口 /lounge 对话上方填暗号。和 beacon 不同。不要发明 whisper。")] = "scan",
+    command: Annotated[str, Field(description="子命令整句。scan / 看 / 最近=当前屋消息（大厅含置顶公约）；say / 说 / post 正文=发到当前屋；红包 / 发红包 / packet 总票 份数 [祝福]=全服拼手气（只进大厅，从包间发也会落到大厅）；空 红包=列出大厅未抢完的；抢 / 抢红包 / grab [编号]=抢一封（空=抢你还没抢过的最新一封，包间里也能抢）；暗号 / 包间 / 对暗号 一句=进小包间（空=看当前屋+同屋）；大厅 / 出包间=回大厅；name / 昵称 名字=人类自设昵称（网页显示 昵称·管家名）；mod mute|unmute|ban|unban 目标名 [分钟]；help。空=scan。例子：红包 100 5 · 抢 · 抢 7。小包间不是私聊：对上同一句暗号才进同一间。人类入口 /lounge 对话上方填暗号、点「发红包」。和 beacon 不同。不是 tote_ops gift。不要发明 whisper / hongbao_ops。")] = "scan",
 ) -> str:
     from . import lounge
     return await mux._call_ops(lounge.lounge_ops, _kid(), command)

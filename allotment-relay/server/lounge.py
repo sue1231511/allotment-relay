@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import hashlib
+import random
 import re
+import sqlite3
 from typing import Any
 
 import aiosqlite
@@ -17,11 +19,24 @@ LOUNGE_FETCH_MAX = 80
 BOOTH_CODE_MIN = 2
 BOOTH_CODE_MAX = 24
 HALL_KEY = ""
+PACKET_MIN_TOTAL = 10
+PACKET_MAX_TOTAL = 500
+PACKET_MIN_SHARES = 2
+PACKET_MAX_SHARES = 20
+PACKET_EXPIRE_SEC = 86400
+PACKET_DAILY_MAX = 5
+PACKET_BLESSING_MAX = 24
+PACKET_DEFAULT_BLESSING = "恭喜发财"
 
 LOUNGE_HELP = """
 lounge_ops — 全服聊天室（答疑、互助、bug 反馈；小包间不是私聊/whisper）
   scan / 看 / 最近     看当前屋最近消息（大厅含置顶公约；空 command 同 scan）
   say / 说 / post 正文  发到当前屋（AI 管理员代发，显示 AI 名）
+  红包 / 发红包 / packet 总票 份数 [祝福]
+                       全服拼手气红包（只进大厅；从包间发也会落到大厅）
+  红包 / 发红包        空=列出大厅未抢完的
+  抢 / 抢红包 / grab [编号]
+                       抢一封（空=抢你还没抢过的最新一封；包间里也能抢）
   暗号 / 包间 / 对暗号 一句  对暗号进小包间（对上同一句的人进同一间）
   暗号 / 包间          空=看当前屋 + 同屋（不列出全部包间）
   大厅 / 出包间 / leave  回大厅
@@ -31,9 +46,10 @@ lounge_ops — 全服聊天室（答疑、互助、bug 反馈；小包间不是�
   mod unmute 名字      解除禁言
   mod ban 名字         踢出聊天室（永久禁言）
   mod unban 名字       解除踢出
-例子：scan · say 温室怎么建 · 暗号 潮声今晚 · 大厅
-网页 /lounge 或 /play 对话上方填暗号、点「对暗号」（手机也在聊天框顶上）；凭证只在上手页绑定。
+例子：scan · say 温室怎么建 · 红包 100 5 · 抢 · 抢 7 · 暗号 潮声今晚 · 大厅
+网页 /lounge 或 /play 对话上方填暗号、点「对暗号」（手机也在聊天框顶上）；发红包点「发红包」，大厅卡片点「开」。凭证只在上手页绑定。
 和 alliance_ops beacon 不同：beacon=公告栏帖；lounge=实时聊天。
+和 tote_ops gift 不同：送礼是点名即时到账；红包是聊天室全服拼手气。不要发明 hongbao_ops。
 不要发明 whisper / dm：小包间靠同一句暗号，不是点名私聊。
 """.strip()
 
@@ -61,6 +77,72 @@ def _validate_body(body: str) -> str:
     if re.search(r"https?://|www\.", text, re.I):
         raise ValueError("聊天室禁止发链接/广告")
     return text
+
+
+def _validate_blessing(raw: str) -> str:
+    text = " ".join((raw or "").split())
+    if not text:
+        return PACKET_DEFAULT_BLESSING
+    if len(text) > PACKET_BLESSING_MAX:
+        raise ValueError(f"祝福最多 {PACKET_BLESSING_MAX} 字")
+    if re.search(r"https?://|www\.", text, re.I):
+        raise ValueError("祝福不能含链接")
+    return text
+
+
+def lucky_next_amount(
+    remain_tickets: int,
+    remain_shares: int,
+    rng: random.Random | None = None,
+) -> int:
+    """拼手气：还剩 1 份时全给；否则 1～min(留给后面每人 1 票, 2×均分)。"""
+    if remain_shares < 1 or remain_tickets < remain_shares:
+        raise ValueError("红包已抢完")
+    if remain_shares == 1:
+        return remain_tickets
+    max_keep = remain_tickets - (remain_shares - 1)
+    avg = remain_tickets / remain_shares
+    upper = min(max_keep, max(1, int(2 * avg)))
+    pick = rng or random.Random()
+    return pick.randint(1, max(1, upper))
+
+
+def _validate_packet_amounts(total: int, shares: int) -> tuple[int, int]:
+    try:
+        total_n = int(total)
+        shares_n = int(shares)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("总票和份数必须是整数") from exc
+    if total_n < PACKET_MIN_TOTAL:
+        raise ValueError(f"红包至少 {PACKET_MIN_TOTAL} 票")
+    if total_n > PACKET_MAX_TOTAL:
+        raise ValueError(f"红包最多 {PACKET_MAX_TOTAL} 票")
+    if shares_n < PACKET_MIN_SHARES or shares_n > PACKET_MAX_SHARES:
+        raise ValueError(f"份数 {PACKET_MIN_SHARES}～{PACKET_MAX_SHARES}")
+    if total_n < shares_n:
+        raise ValueError("总票不能少于份数（每份至少 1 票）")
+    return total_n, shares_n
+
+
+def _parse_packet_args(rest: str) -> tuple[int, int, str]:
+    bits = (rest or "").split()
+    if len(bits) < 2:
+        raise ValueError("用法: lounge_ops 红包 总票 份数 [祝福]  例：红包 100 5 恭喜发财")
+    total, shares = _validate_packet_amounts(bits[0], bits[1])
+    blessing = _validate_blessing(" ".join(bits[2:]))
+    return total, shares, blessing
+
+
+def packet_limits() -> dict[str, int]:
+    return {
+        "packet_min_total": PACKET_MIN_TOTAL,
+        "packet_max_total": PACKET_MAX_TOTAL,
+        "packet_min_shares": PACKET_MIN_SHARES,
+        "packet_max_shares": PACKET_MAX_SHARES,
+        "packet_expire_sec": PACKET_EXPIRE_SEC,
+        "packet_daily_max": PACKET_DAILY_MAX,
+        "packet_blessing_max": PACKET_BLESSING_MAX,
+    }
 
 
 def normalize_booth_code(raw: str) -> str:
@@ -134,9 +216,19 @@ async def _assert_can_speak(conn: aiosqlite.Connection, steward: dict[str, Any])
         raise ValueError(f"禁言中，{left // 60 + 1} 分钟后再试")
 
 
+async def _assert_not_kicked(steward: dict[str, Any], *, action: str = "抢红包") -> None:
+    if int(steward.get("lounge_banned") or 0):
+        raise ValueError(f"你已被移出聊天室，无法{action}")
+
+
 async def _check_cooldown(conn: aiosqlite.Connection, steward_id: int) -> None:
     row = await (await conn.execute(
-        "SELECT created_at FROM lounge_messages WHERE steward_id=? ORDER BY created_at DESC LIMIT 1",
+        """
+        SELECT m.created_at FROM lounge_messages m
+        LEFT JOIN lounge_packets p ON p.message_id = m.id
+        WHERE m.steward_id=? AND p.id IS NULL
+        ORDER BY m.created_at DESC LIMIT 1
+        """,
         (steward_id,),
     )).fetchone()
     if not row:
@@ -182,12 +274,115 @@ async def post_message(steward_id: int, body: str, *, source: str) -> dict[str, 
         )
         await conn.commit()
         mid = cur.lastrowid
-    return await get_message(mid)
+    return await get_message(mid, viewer_id=steward_id)
 
 
-async def get_message(msg_id: int) -> dict[str, Any]:
+async def _settle_expired_packets(conn: aiosqlite.Connection) -> None:
+    now = db.now()
+    rows = await (await conn.execute(
+        """
+        SELECT id, steward_id, remain_tickets, remain_shares
+        FROM lounge_packets
+        WHERE refunded=0 AND (expires_at <= ? OR remain_shares <= 0)
+        """,
+        (now,),
+    )).fetchall()
+    for r in rows:
+        leftover = int(r["remain_tickets"] or 0)
+        remain_shares = int(r["remain_shares"] or 0)
+        if leftover > 0 and remain_shares > 0:
+            await conn.execute(
+                "UPDATE stewards SET tickets=tickets+? WHERE id=?",
+                (leftover, r["steward_id"]),
+            )
+        await conn.execute(
+            """
+            UPDATE lounge_packets
+            SET refunded=1, remain_tickets=0
+            WHERE id=? AND refunded=0
+            """,
+            (r["id"],),
+        )
+
+
+def _packet_public_view(
+    row: dict[str, Any],
+    *,
+    grab: dict[str, Any] | None = None,
+    viewer_id: int | None = None,
+    now: int | None = None,
+) -> dict[str, Any]:
+    ts = now if now is not None else db.now()
+    expired = int(row["expires_at"]) <= ts or int(row.get("refunded") or 0) == 1
+    remain_shares = int(row["remain_shares"] or 0)
+    own = viewer_id is not None and int(row["steward_id"]) == int(viewer_id)
+    grabbed = grab is not None
+    my_amount = int(grab["amount"]) if grab else None
+    return {
+        "id": int(row["id"]),
+        "total": int(row["total"]),
+        "shares": int(row["shares"]),
+        "remain_shares": remain_shares,
+        "blessing": (row.get("blessing") or PACKET_DEFAULT_BLESSING),
+        "expired": expired,
+        "refunded": bool(int(row.get("refunded") or 0)),
+        "grabbed": grabbed,
+        "my_amount": my_amount,
+        "own": own,
+        "can_grab": (
+            viewer_id is not None
+            and not expired
+            and remain_shares > 0
+            and not grabbed
+            and not own
+        ),
+    }
+
+
+async def _hydrate_packets(
+    conn: aiosqlite.Connection,
+    views: list[dict[str, Any]],
+    viewer_id: int | None = None,
+) -> list[dict[str, Any]]:
+    if not views:
+        return views
+    ids = [int(v["id"]) for v in views]
+    placeholders = ",".join("?" * len(ids))
+    rows = await (await conn.execute(
+        f"SELECT * FROM lounge_packets WHERE message_id IN ({placeholders})",
+        ids,
+    )).fetchall()
+    by_msg = {int(r["message_id"]): dict(r) for r in rows}
+    grab_by_pid: dict[int, dict[str, Any]] = {}
+    if viewer_id and by_msg:
+        pids = [int(p["id"]) for p in by_msg.values()]
+        ph = ",".join("?" * len(pids))
+        grabs = await (await conn.execute(
+            f"""
+            SELECT packet_id, amount FROM lounge_packet_grabs
+            WHERE steward_id=? AND packet_id IN ({ph})
+            """,
+            [viewer_id, *pids],
+        )).fetchall()
+        grab_by_pid = {int(g["packet_id"]): dict(g) for g in grabs}
+    now = db.now()
+    for view in views:
+        packet = by_msg.get(int(view["id"]))
+        if packet:
+            view["packet"] = _packet_public_view(
+                packet,
+                grab=grab_by_pid.get(int(packet["id"])),
+                viewer_id=viewer_id,
+                now=now,
+            )
+    return views
+
+
+async def get_message(msg_id: int, viewer_id: int | None = None) -> dict[str, Any]:
     async with db.connect() as conn:
         conn.row_factory = aiosqlite.Row
+        await _settle_expired_packets(conn)
+        await conn.commit()
         row = await (await conn.execute(
             """
             SELECT m.id, m.body, m.source, m.created_at, s.name, s.badge,
@@ -198,9 +393,11 @@ async def get_message(msg_id: int) -> dict[str, Any]:
             """,
             (msg_id,),
         )).fetchone()
-    if not row:
-        raise ValueError("消息不存在")
-    return _row_to_view(dict(row))
+        if not row:
+            raise ValueError("消息不存在")
+        views = [_row_to_view(dict(row))]
+        await _hydrate_packets(conn, views, viewer_id)
+    return views[0]
 
 
 def _row_to_view(row: dict[str, Any]) -> dict[str, Any]:
@@ -221,6 +418,252 @@ def _row_to_view(row: dict[str, Any]) -> dict[str, Any]:
         "kind": "AI" if src == "mcp" else "人类",
         "created_at": row["created_at"],
     }
+
+
+async def send_packet(
+    steward_id: int,
+    total: int,
+    shares: int,
+    blessing: str = "",
+    *,
+    source: str,
+) -> dict[str, Any]:
+    if source not in ("mcp", "web"):
+        raise ValueError("invalid source")
+    total_n, shares_n = _validate_packet_amounts(total, shares)
+    text_blessing = _validate_blessing(blessing)
+    body = f"【红包】{text_blessing}"
+    async with db.connect() as conn:
+        conn.row_factory = aiosqlite.Row
+        row = await (await conn.execute(
+            "SELECT * FROM stewards WHERE id=?", (steward_id,),
+        )).fetchone()
+        if not row:
+            raise ValueError("管理员不存在")
+        steward = dict(row)
+        await _assert_can_speak(conn, steward)
+        await _settle_expired_packets(conn)
+        fresh = await (await conn.execute(
+            "SELECT tickets FROM stewards WHERE id=?", (steward_id,),
+        )).fetchone()
+        tickets = int(fresh[0] if fresh else steward.get("tickets") or 0)
+        day_from = db.day_start()
+        sent_today = (await (await conn.execute(
+            """
+            SELECT COUNT(*) FROM lounge_packets
+            WHERE steward_id=? AND created_at>=?
+            """,
+            (steward_id, day_from),
+        )).fetchone())[0]
+        if int(sent_today) >= PACKET_DAILY_MAX:
+            raise ValueError(f"今天已经发了 {PACKET_DAILY_MAX} 封红包，换班后再发")
+        if tickets < total_n:
+            raise ValueError(f"工分票不足，需要 {total_n} 票（你有 {tickets}）")
+        now = db.now()
+        await conn.execute(
+            "UPDATE stewards SET tickets=tickets-? WHERE id=?",
+            (total_n, steward_id),
+        )
+        cur = await conn.execute(
+            """
+            INSERT INTO lounge_messages (steward_id, body, source, created_at, booth_key)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (steward_id, body, source, now, HALL_KEY),
+        )
+        mid = cur.lastrowid
+        pkt = await conn.execute(
+            """
+            INSERT INTO lounge_packets (
+                steward_id, message_id, total, shares, remain_tickets, remain_shares,
+                blessing, booth_key, created_at, expires_at, refunded
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+            """,
+            (
+                steward_id, mid, total_n, shares_n, total_n, shares_n,
+                text_blessing, HALL_KEY, now, now + PACKET_EXPIRE_SEC,
+            ),
+        )
+        await conn.commit()
+        packet_id = pkt.lastrowid
+    view = await get_message(mid, viewer_id=steward_id)
+    view["in_booth"] = bool(_current_booth_key(steward))
+    view["booth_label"] = booth_label(_current_booth_key(steward))
+    view["posted_to_hall"] = True
+    view["packet_id"] = packet_id
+    return view
+
+
+async def grab_packet(steward_id: int, packet_id: int | None = None) -> dict[str, Any]:
+    async with db.connect() as conn:
+        conn.row_factory = aiosqlite.Row
+        row = await (await conn.execute(
+            "SELECT * FROM stewards WHERE id=?", (steward_id,),
+        )).fetchone()
+        if not row:
+            raise ValueError("管理员不存在")
+        steward = dict(row)
+        await _assert_not_kicked(steward, action="抢红包")
+        await _settle_expired_packets(conn)
+        now = db.now()
+        packet_row = None
+        if packet_id:
+            packet_row = await (await conn.execute(
+                "SELECT * FROM lounge_packets WHERE id=?",
+                (int(packet_id),),
+            )).fetchone()
+            if not packet_row:
+                raise ValueError("找不到这封红包")
+        else:
+            packet_row = await (await conn.execute(
+                """
+                SELECT p.* FROM lounge_packets p
+                LEFT JOIN lounge_packet_grabs g
+                  ON g.packet_id = p.id AND g.steward_id = ?
+                WHERE p.booth_key = '' AND p.refunded = 0
+                  AND p.remain_shares > 0 AND p.expires_at > ?
+                  AND p.steward_id != ? AND g.packet_id IS NULL
+                ORDER BY p.id DESC
+                LIMIT 1
+                """,
+                (steward_id, now, steward_id),
+            )).fetchone()
+            if not packet_row:
+                raise ValueError("现在没有你能抢的红包（空 抢=抢你还没抢过的最新一封）")
+        packet = dict(packet_row)
+        pid = int(packet["id"])
+        if int(packet["steward_id"]) == steward_id:
+            raise ValueError("不能抢自己发的红包")
+        if int(packet.get("refunded") or 0) or int(packet["expires_at"]) <= now:
+            raise ValueError("这封红包已过期，余票已退回")
+        if int(packet["remain_shares"]) <= 0:
+            raise ValueError("手慢了，红包已被抢完")
+        already = await (await conn.execute(
+            "SELECT amount FROM lounge_packet_grabs WHERE packet_id=? AND steward_id=?",
+            (pid, steward_id),
+        )).fetchone()
+        if already:
+            raise ValueError(f"这封你已经抢过了（抢到 {int(already['amount'])} 票）")
+        amount = lucky_next_amount(int(packet["remain_tickets"]), int(packet["remain_shares"]))
+        cur = await conn.execute(
+            """
+            UPDATE lounge_packets
+            SET remain_tickets = remain_tickets - ?,
+                remain_shares = remain_shares - 1
+            WHERE id=? AND refunded=0 AND remain_shares > 0 AND remain_tickets >= ?
+              AND expires_at > ?
+            """,
+            (amount, pid, amount, now),
+        )
+        if cur.rowcount != 1:
+            raise ValueError("手慢了，红包已被抢完")
+        try:
+            await conn.execute(
+                """
+                INSERT INTO lounge_packet_grabs (packet_id, steward_id, amount, created_at)
+                VALUES (?, ?, ?, ?)
+                """,
+                (pid, steward_id, amount, now),
+            )
+        except (aiosqlite.IntegrityError, sqlite3.IntegrityError) as exc:
+            raise ValueError("这封你已经抢过了") from exc
+        await conn.execute(
+            "UPDATE stewards SET tickets=tickets+? WHERE id=?",
+            (amount, steward_id),
+        )
+        remain_shares = int(packet["remain_shares"]) - 1
+        await conn.commit()
+        mid = int(packet["message_id"])
+    msg = await get_message(mid, viewer_id=steward_id)
+    return {
+        "amount": amount,
+        "remain_shares": remain_shares,
+        "message": msg,
+        "packet_id": pid,
+    }
+
+
+async def list_open_packets(viewer_id: int | None = None) -> list[dict[str, Any]]:
+    async with db.connect() as conn:
+        conn.row_factory = aiosqlite.Row
+        await _settle_expired_packets(conn)
+        await conn.commit()
+        now = db.now()
+        rows = await (await conn.execute(
+            """
+            SELECT p.*, s.name AS sender_name
+            FROM lounge_packets p
+            JOIN stewards s ON s.id = p.steward_id
+            WHERE p.booth_key = '' AND p.refunded = 0
+              AND p.remain_shares > 0 AND p.expires_at > ?
+            ORDER BY p.id DESC
+            LIMIT 20
+            """,
+            (now,),
+        )).fetchall()
+        packets = [dict(r) for r in rows]
+        grab_by_pid: dict[int, dict[str, Any]] = {}
+        if viewer_id and packets:
+            pids = [int(p["id"]) for p in packets]
+            ph = ",".join("?" * len(pids))
+            grabs = await (await conn.execute(
+                f"""
+                SELECT packet_id, amount FROM lounge_packet_grabs
+                WHERE steward_id=? AND packet_id IN ({ph})
+                """,
+                [viewer_id, *pids],
+            )).fetchall()
+            grab_by_pid = {int(g["packet_id"]): dict(g) for g in grabs}
+    views = []
+    for p in packets:
+        view = _packet_public_view(
+            p,
+            grab=grab_by_pid.get(int(p["id"])),
+            viewer_id=viewer_id,
+            now=now,
+        )
+        view["sender_name"] = p.get("sender_name") or ""
+        views.append(view)
+    return views
+
+
+def _format_open_packets(packets: list[dict[str, Any]]) -> str:
+    if not packets:
+        return (
+            "大厅现在没有能抢的红包。发：红包 100 5 恭喜发财\n"
+            "红包只进大厅，不是 tote_ops gift（送礼是点名即时到账）。"
+        )
+    lines = ["大厅未抢完的红包（只进大厅，拼手气）："]
+    for p in packets:
+        mine = ""
+        if p.get("grabbed") and p.get("my_amount") is not None:
+            mine = f" · 你已抢到 {p['my_amount']} 票"
+        elif p.get("own"):
+            mine = " · 你发的"
+        lines.append(
+            f"  #{p['id']} {p.get('sender_name') or ''} · {p['total']}票/{p['shares']}份"
+            f" · 还剩 {p['remain_shares']} · 「{p['blessing']}」{mine}"
+        )
+    lines.append("抢：抢 编号   空 抢=抢你还没抢过的最新一封")
+    return "\n".join(lines)
+
+
+def _format_packet_line(m: dict[str, Any], hhmm: str) -> str:
+    pkt = m.get("packet") or {}
+    status = f"还剩 {pkt.get('remain_shares', 0)} 份"
+    if pkt.get("grabbed") and pkt.get("my_amount") is not None:
+        status = f"你抢到 {pkt['my_amount']} 票 · {status}"
+    elif pkt.get("own"):
+        status = f"你发的 · {status}"
+    elif pkt.get("expired") or pkt.get("refunded"):
+        status = "已过期"
+    elif int(pkt.get("remain_shares") or 0) <= 0:
+        status = "抢完了"
+    return (
+        f"[{hhmm}] {m['who']} ({m['kind']}): "
+        f"【红包#{pkt.get('id')}】{pkt.get('blessing') or PACKET_DEFAULT_BLESSING}"
+        f" · {pkt.get('total')}票/{pkt.get('shares')}份 · {status}"
+    )
 
 
 def _current_booth_key(steward: dict[str, Any]) -> str:
@@ -260,6 +703,7 @@ async def list_messages(
     before_id: int | None = None,
     since_id: int = 0,
     booth_key: str = HALL_KEY,
+    viewer_id: int | None = None,
 ) -> list[dict[str, Any]]:
     limit = max(1, min(limit, LOUNGE_FETCH_MAX))
     key = (booth_key or HALL_KEY).strip()
@@ -271,6 +715,8 @@ async def list_messages(
     """
     async with db.connect() as conn:
         conn.row_factory = aiosqlite.Row
+        await _settle_expired_packets(conn)
+        await conn.commit()
         if before_id:
             rows = await (await conn.execute(
                 f"{sql_select} WHERE m.booth_key = ? AND m.id < ? ORDER BY m.id DESC LIMIT ?",
@@ -281,14 +727,17 @@ async def list_messages(
                 f"{sql_select} WHERE m.booth_key = ? AND m.id > ? ORDER BY m.id ASC LIMIT ?",
                 (key, since_id, limit),
             )).fetchall()
-            return [_row_to_view(dict(r)) for r in rows]
+            views = [_row_to_view(dict(r)) for r in rows]
+            await _hydrate_packets(conn, views, viewer_id)
+            return views
         else:
             rows = await (await conn.execute(
                 f"{sql_select} WHERE m.booth_key = ? ORDER BY m.id DESC LIMIT ?",
                 (key, limit),
             )).fetchall()
-    views = [_row_to_view(dict(r)) for r in rows]
-    views.reverse()
+        views = [_row_to_view(dict(r)) for r in rows]
+        views.reverse()
+        await _hydrate_packets(conn, views, viewer_id)
     return views
 
 
@@ -321,18 +770,21 @@ def _format_scan(
         for m in messages[-20:]:
             from datetime import datetime, timezone
             hhmm = datetime.fromtimestamp(m["created_at"], tz=timezone.utc).strftime("%H:%M")
-            lines.append(f"[{hhmm}] {m['who']} ({m['kind']}): {m['body']}")
+            if m.get("packet"):
+                lines.append(_format_packet_line(m, hhmm))
+            else:
+                lines.append(f"[{hhmm}] {m['who']} ({m['kind']}): {m['body']}")
     lines.append("")
     if key:
-        lines.append("大厅 · say 正文 · 网页 /play 点「回大厅」")
+        lines.append("大厅 · say 正文 · 红包只进大厅 · 网页 /play 点「回大厅」")
     else:
-        lines.append("say 正文 · 暗号 一句 · name 昵称 · 网页 /play")
+        lines.append("say 正文 · 红包 100 5 · 抢 · 暗号 一句 · name 昵称 · 网页 /play")
     return "\n".join(lines)
 
 
 async def _scan_current(steward: dict[str, Any], register_url: str) -> str:
     key = _current_booth_key(steward)
-    msgs = await list_messages(limit=20, booth_key=key)
+    msgs = await list_messages(limit=20, booth_key=key, viewer_id=steward["id"])
     occupants = await list_occupant_names(key)
     return _format_scan(msgs, register_url, booth_key=key, occupants=occupants)
 
@@ -481,6 +933,36 @@ async def lounge_ops(key_id: int, command: str, *, register_url: str = "/registe
             return await _mod_unban(s, target)
         raise ValueError("mod 子命令：mute / unmute / ban / unban")
 
+    if verb in ("红包", "发红包", "packet"):
+        if not rest:
+            packets = await list_open_packets(viewer_id=s["id"])
+            return _format_open_packets(packets)
+        total, shares, blessing = _parse_packet_args(rest)
+        view = await send_packet(s["id"], total, shares, blessing, source="mcp")
+        pkt = view.get("packet") or {}
+        note = (
+            f"已发全服红包 #{pkt.get('id')}：{pkt.get('total')} 票 / {pkt.get('shares')} 份"
+            f" · {pkt.get('blessing') or PACKET_DEFAULT_BLESSING}"
+        )
+        if view.get("in_booth"):
+            note += "\n已发到大厅（包间看不见红包卡片）。回大厅：大厅"
+        return note
+
+    if verb in ("抢", "抢红包", "grab"):
+        packet_id = None
+        if rest:
+            try:
+                packet_id = int(rest.split()[0])
+            except ValueError as exc:
+                raise ValueError("用法: lounge_ops 抢 7   空 抢=抢你还没抢过的最新一封") from exc
+        result = await grab_packet(s["id"], packet_id)
+        pkt = (result.get("message") or {}).get("packet") or {}
+        return (
+            f"抢到 {result['amount']} 票（红包 #{result['packet_id']}"
+            f" · {pkt.get('blessing') or PACKET_DEFAULT_BLESSING}）。"
+            f"还剩 {result['remain_shares']} 份。"
+        )
+
     if verb in ("say", "说", "post", "send", "发"):
         if not rest:
             raise ValueError("用法: lounge_ops say 你好")
@@ -489,7 +971,7 @@ async def lounge_ops(key_id: int, command: str, *, register_url: str = "/registe
         return f"已发送到{label}：{rest[:80]}"
 
     raise ValueError(
-        f"未知 lounge 指令: {command}（scan / say / 暗号 / 大厅 / name / mod / help）"
+        f"未知 lounge 指令: {command}（scan / say / 红包 / 抢 / 暗号 / 大厅 / name / mod / help）"
     )
 
 
@@ -504,6 +986,33 @@ async def human_post(api_key: str, body: str) -> dict[str, Any]:
         "booth_label": booth_label(_current_booth_key(s)),
     })
     return msg
+
+
+async def human_send_packet(
+    api_key: str,
+    total: int,
+    shares: int,
+    blessing: str = "",
+) -> dict[str, Any]:
+    row = await db.get_key_row(api_key.strip())
+    if not row:
+        raise ValueError("凭证无效")
+    s = await _require_enrolled(row["id"])
+    return await send_packet(s["id"], total, shares, blessing, source="web")
+
+
+async def human_grab_packet(api_key: str, packet_id: int = 0) -> dict[str, Any]:
+    row = await db.get_key_row(api_key.strip())
+    if not row:
+        raise ValueError("凭证无效")
+    s = await _require_enrolled(row["id"])
+    pid = int(packet_id or 0) or None
+    result = await grab_packet(s["id"], pid)
+    result.update({
+        "in_booth": bool(_current_booth_key(s)),
+        "booth_label": booth_label(_current_booth_key(s)),
+    })
+    return result
 
 
 async def human_set_name(api_key: str, name: str) -> dict[str, Any]:
@@ -554,6 +1063,7 @@ async def human_list_messages(
     key = _current_booth_key(s)
     msgs = await list_messages(
         limit=limit, since_id=since_id, before_id=before_id, booth_key=key,
+        viewer_id=s["id"],
     )
     occupants = await list_occupant_names(key)
     view = _identity_view(s, occupants=occupants)

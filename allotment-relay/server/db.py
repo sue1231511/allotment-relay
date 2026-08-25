@@ -1757,6 +1757,33 @@ async def init_db() -> None:
             "ALTER TABLE stewards ADD COLUMN lounge_booth_key TEXT NOT NULL DEFAULT ''",
             "CREATE INDEX IF NOT EXISTS idx_lounge_booth ON lounge_messages(booth_key, id)",
             "CREATE INDEX IF NOT EXISTS idx_stewards_lounge_booth ON stewards(lounge_booth_key)",
+            """
+            CREATE TABLE IF NOT EXISTS lounge_packets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                message_id INTEGER NOT NULL REFERENCES lounge_messages(id),
+                total INTEGER NOT NULL,
+                shares INTEGER NOT NULL,
+                remain_tickets INTEGER NOT NULL,
+                remain_shares INTEGER NOT NULL,
+                blessing TEXT NOT NULL DEFAULT '',
+                booth_key TEXT NOT NULL DEFAULT '',
+                created_at INTEGER NOT NULL,
+                expires_at INTEGER NOT NULL,
+                refunded INTEGER NOT NULL DEFAULT 0
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_lounge_packets_msg ON lounge_packets(message_id)",
+            "CREATE INDEX IF NOT EXISTS idx_lounge_packets_open ON lounge_packets(refunded, remain_shares, expires_at)",
+            """
+            CREATE TABLE IF NOT EXISTS lounge_packet_grabs (
+                packet_id INTEGER NOT NULL REFERENCES lounge_packets(id),
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                amount INTEGER NOT NULL,
+                created_at INTEGER NOT NULL,
+                PRIMARY KEY (packet_id, steward_id)
+            )
+            """,
         ):
             try:
                 await db.execute(ddl)
