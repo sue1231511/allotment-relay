@@ -1,5 +1,6 @@
 import asyncio
 import contextvars
+import re
 import secrets
 import sqlite3
 import time
@@ -2380,15 +2381,92 @@ async def public_stats() -> dict[str, Any]:
         }
 
 
+_GIFT_LINE_RE = re.compile(r"^(.+?) 送礼给 (.+?)：(.+)$", re.S)
+
+
+def gift_kind_label(action: str) -> str:
+    if action == "bar_tip":
+        return "打赏"
+    if action == "handoff":
+        return "台阶"
+    return "礼物"
+
+
+def gift_display_text(
+    text: str,
+    *,
+    viewer_name: str | None = None,
+    action: str = "gift",
+) -> str:
+    raw = (text or "").strip()
+    if action == "gift_inbox":
+        return raw
+    if action == "bar_tip":
+        return raw
+    m = _GIFT_LINE_RE.match(raw)
+    if m and viewer_name and m.group(2).strip() == viewer_name.strip():
+        return m.group(3).strip()
+    return raw
+
+
+async def _repair_gift_targets(
+    conn: aiosqlite.Connection,
+    steward_id: int,
+    steward_name: str,
+) -> None:
+    """旧纪事若漏写 target_id，按正文「送礼给 名字」补回收礼人。"""
+    needle = f"送礼给 {steward_name}："
+    await conn.execute(
+        """
+        UPDATE chronicle
+        SET target_id=?
+        WHERE action IN ('gift', 'gift_inbox')
+          AND target_id IS NULL
+          AND text LIKE ?
+        """,
+        (steward_id, f"%{needle}%"),
+    )
+
+
 async def list_received_gifts(steward_id: int, limit: int = 20) -> list[dict[str, Any]]:
     async with connect() as db:
         db.row_factory = aiosqlite.Row
+        name_row = await (
+            await db.execute("SELECT name FROM stewards WHERE id=?", (steward_id,))
+        ).fetchone()
+        steward_name = str(name_row[0] or "") if name_row else ""
+        if steward_name:
+            await _repair_gift_targets(db, steward_id, steward_name)
+            await db.commit()
         cur = await db.execute(
             """
             SELECT c.text, c.created_at, c.action, a.name AS actor_name
             FROM chronicle c
             LEFT JOIN stewards a ON a.id = c.actor_id
-            WHERE c.action IN ('gift', 'bar_tip') AND c.target_id=?
+            WHERE c.target_id=? AND c.action IN ('gift', 'gift_inbox', 'bar_tip', 'handoff')
+            ORDER BY c.created_at DESC LIMIT ?
+            """,
+            (steward_id, limit),
+        )
+        rows = [dict(r) for r in await cur.fetchall()]
+        for r in rows:
+            r["summary"] = gift_display_text(
+                r.get("text") or "",
+                viewer_name=steward_name,
+                action=str(r.get("action") or "gift"),
+            )
+        return rows
+
+
+async def list_sent_gifts(steward_id: int, limit: int = 20) -> list[dict[str, Any]]:
+    async with connect() as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute(
+            """
+            SELECT c.text, c.created_at, c.action, t.name AS target_name
+            FROM chronicle c
+            LEFT JOIN stewards t ON t.id = c.target_id
+            WHERE c.actor_id=? AND c.action IN ('gift', 'gift_inbox')
             ORDER BY c.created_at DESC LIMIT ?
             """,
             (steward_id, limit),

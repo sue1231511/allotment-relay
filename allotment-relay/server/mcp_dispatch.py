@@ -86,6 +86,7 @@ STEWARD_HELP = """steward_ops 子命令（整句写进 command）：
   领奖 — 看升级礼（升级时会自动发）
   引航 / invite / 邀请 — 看自己的邀请码、邀请链接、已引来的岛民。空 command 的 sheet 也会写一行引航码。例子：引航 · invite
   绑定 邀请码 — 首次绑定引航人，只能一次，不能改绑，不能自己引自己。例子：绑定 AB12CD34。对方成为有效岛民后，邀请人自动得 100 工分票和 20 岛缘，不要发明领邀请奖
+  收礼 / gifts / 收礼记录 — 查谁给你送了礼或酒吧打赏（同 tote_ops gifts）
   天灾：人类日历一周一次周潮，低中高随机，只冲 3 万以上的超额。sheet 能看见
   人类网页 /play 点按同一套指令，和 AI 共用一个号。点单打赏、邻居名册都在 /play
   容易搞混：引航是请人上岛；alliance_ops assist 是帮邻居打理；tote_ops gift 是送礼。没有 invite_ops，不要发明 领邀请奖"""
@@ -156,11 +157,12 @@ TIDE_HELP = """tide_ops 子命令（整句写进 command）：
 TOTE_HELP = """tote_ops 子命令（整句写进 command）：
   list — 行囊（中文名 + 英文 id）。同种货自动叠放，基础每格 24 份（和潮柜一样；工具/装件 1）
   扩栈 [数量] — 加每格叠放上限（15票/级，每级+8份，顶 64；行囊/潮柜/冰箱同步）
-  gifts [条数] — 查收到的礼物/酒吧打赏（谁送的、送了什么）。也可写 收礼。即时到账，这里只看记录
+  gifts [条数] — 查收到的礼物/酒吧打赏（谁送的、送了什么）。也可写 收礼 / 收礼记录。即时到账，这里只看记录
+  赠礼记录 [条数] — 查你送出的礼（对方收礼看 gifts / 上手页右侧收礼）
   vend 物品 数量 — 卖掉。例子：vend 鲭鱼 1 · vend crop_kale 2 · vend 未命名小鱼 1
     Tt酱货架买的种/饲料/工具回收进价九成，退货少亏一成；种下去收成再卖才正经
     卖未命名小鱼会再掷一次小咒事件（可能吐票、走回袋、解开或加重小咒）
-  gift 名字 物品|票 数量 — 送给别人。能直接送票，无手续费、无每日上限。对方行囊满了会拒
+  gift|送礼|赠礼 名字 物品|票 数量 — 送给别人。能直接送票，无手续费、无每日上限。对方行囊满了会拒
   swap offer|claim|list|cancel — 交换台（白送，领取 3 票手续费）
   market list|sell|buy|price|mine|cancel — 玩家集市。买也不能超过行囊每格上限
   market 扩 [数量] — 加摆摊格（15票/格，基础6格，顶12格）"""
@@ -330,6 +332,9 @@ async def steward_ops(
     if verb in ("引航", "invite", "邀请", "绑定", "bind", "结引"):
         from . import invite as invite_mod
         return await invite_mod.invite_ops(key_id, command.strip())
+
+    if verb in ("gifts", "收礼", "收到的礼", "收礼记录"):
+        return await game.tote_ops(key_id, command.strip())
 
     raise ValueError(f"未知 steward 指令: {command}\n{STEWARD_HELP}")
 
