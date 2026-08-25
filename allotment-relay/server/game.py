@@ -215,7 +215,7 @@ async def relay_manual() -> str:
         "  theater_ops  小橘小剧场。空 command=今晚看板；仅她开 stage 专场时开放",
         "               command 例：status · 应援 好话 · 打赏 20 · 点歌 歌名 · 围观 · 粉丝团 · 应援榜",
         "  undertide_ops 潮下地下世界。新手别一上来乱闯。先 help，再 well → descend → enter",
-        "               cheer 哄的是潮下猫猫，不是荔栀。深坑 pit board 井壁胜场榜（≥10场，不是票榜）",
+        "               cheer 哄的是潮下猫猫，不是荔栀。深坑 pit board 井壁胜场榜（≥5场，不是票榜）",
         "               深坑伤可 visit_ops clinic treat 斗场震伤/深坑重创，或 undertide_ops medic。",
         "               井下减岛缘（第一次 descend −25，之后 enter −12）；well 看一眼不算。",
         "  tale_ops     潮闻故事探索任务。空 command=可接任务列表",
