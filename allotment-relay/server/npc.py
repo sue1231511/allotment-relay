@@ -44,6 +44,8 @@ async def npc_ops(key_id: int, command: str) -> str:
                 tag = " · 滩头卜卦，visit_ops shaonian fortune/catalog"
             elif npc["key"] == "tt":
                 tag = " · 杂货店，visit_ops tt catalog/buy/gift"
+            elif npc["key"] == "yangyang":
+                tag = " · 衣泊坊主理人；不卖成衣，cloth_ops 委托 / visit_ops 漾漾"
             elif npc["key"] == "old_salt":
                 tag = " · 赶海/潮汐提示"
             elif npc["key"] == "buxing":
@@ -90,6 +92,9 @@ async def npc_ops(key_id: int, command: str) -> str:
         if npc["key"] == "tt":
             from . import tt as tt_mod
             return await tt_mod.tt_ops(key_id, "visit")
+        if npc["key"] == "yangyang":
+            from . import cloth as cloth_mod
+            return await cloth_mod.cloth_ops(key_id, "visit")
         line = random.choice(npc["lines"])
         extra = await _visit_context(s, npc["key"])
         gift = await _daily_visit_gift(s["id"], npc["key"])

@@ -358,6 +358,13 @@ async def _cmd_watch(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
     note_line = ""
     if state.get("note"):
         note_line = f"\n她留了句话：{state['note']}"
+    from . import cloth as cloth_mod
+    dye = await cloth_mod.maybe_event_dye(conn, s["id"], "star")
+    echo = await cloth_mod.try_echo(conn, s, "star")
+    if dye:
+        gift_line = (gift_line or "") + "\n" + dye
+    if echo:
+        gift_line = (gift_line or "") + "\n" + echo
     await conn.commit()
     if backlash:
         energy_line = (
