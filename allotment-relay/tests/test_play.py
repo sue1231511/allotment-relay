@@ -86,6 +86,40 @@ async def _test_play_api() -> None:
     assert any(a["command"] == "clinic treat all" for a in clinic["actions"]), clinic
     bar = next(p for p in sown["places"] if p["id"] == "bar")
     assert "点单" in bar["blurb"], bar
+    work = next(a for a in bar["actions"] if "洗碗" in a["label"])
+    from server import world as world_mod
+    phase = world_mod.current_day_phase()
+    if phase == "night":
+        assert work["command"] == "work 洗碗 night", (phase, work)
+    elif phase == "dusk":
+        assert work["command"] == "work 洗碗 day", (phase, work)
+    else:
+        # 昼间未逾期：不能再写死 night，否则点下去必失败
+        assert work["command"] != "work 洗碗 night", (phase, work)
+        assert work["command"] in ("tonight", "work 洗碗 day"), (phase, work)
+
+    from server import play as play_check
+    dusk_work = play_check._bar_work_action(overdue=False)
+    # 直接测解析：夜→night，暮→day，昼→tonight，逾期昼→day
+    assert "洗碗" in dusk_work["label"], dusk_work
+    overdue_day = play_check._bar_work_action(overdue=True)
+    if phase == "day":
+        assert overdue_day["command"] == "work 洗碗 day", overdue_day
+
+    tide_place = next(p for p in sown["places"] if p["id"] == "tide")
+    dig = next(a for a in tide_place["actions"] if a["label"] == "翻沙")
+    tide = world_mod.current_tide()
+    if tide == "flood":
+        assert dig["command"] == "beach scan", dig
+    else:
+        assert dig["command"] == "dig", dig
+
+    craft = next(p for p in sown["places"] if p["id"] == "craft")
+    salt = next(a for a in craft["actions"] if "盐" in a["label"])
+    if tide == "flood":
+        assert salt["command"] == "灌", salt
+    else:
+        assert salt["command"] == "盐田", salt
     well = next(p for p in sown["places"] if p["id"] == "undertide")
     assert "岛缘" in well["blurb"], well
     assert sown["dashboard"]["island_bond"] is not None, sown["dashboard"]
@@ -125,6 +159,16 @@ def test_play_page_lists_all_plot_kinds() -> None:
     assert "交岸维" in js
     assert "orderedPlaces" in js
     assert "b.week1" in js
+    assert 'data-place="bar"' in js
+    assert "payload.go" in js
+    assert "setWorkStatus" in js
+    play_py = (ROOT / "server" / "play.py").read_text()
+    assert "live_places" in play_py
+    assert "_bar_work_action" in play_py
+    # PLACES 静态表不得再写死夜班上工；班次由 live_places / _bar_work_action 填
+    places_chunk = play_py.split("PLACES:")[1].split("def live_places")[0]
+    assert '"command": "work 洗碗 night"' not in places_chunk
+    assert '"command": "work 洗碗 day"' not in places_chunk
 
 
 if __name__ == "__main__":

@@ -607,6 +607,17 @@ body.play-bound .play-gate { display: none !important; }
 
 .play-log { max-height: 160px; overflow: auto; }
 
+.play-log.is-fail,
+.place-result-live.is-fail {
+  border-color: rgba(156, 74, 62, .35);
+  background: rgba(156, 74, 62, .08);
+  color: #6d342c;
+}
+
+.place-status-pill.is-busy { color: #6a5a3a; }
+.place-status-pill.is-fail { color: #8a3d34; }
+.place-status-pill.is-ok { color: #3f6268; }
+
 /* Place detail — 干活子页（不是围观海报） */
 .play-place {
   border-top: 1px solid var(--line);

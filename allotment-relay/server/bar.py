@@ -66,6 +66,8 @@ BAR_HELP = """bar_ops 子命令（整句写进 command）：
   work 岗位 day|night — 上工。岗位：洗碗/杂工/迎宾/服务生/调酒师/牛郎
     暮才有白班、夜才有夜班；逾期白天可补班 ×0.72
     每 2 天必须 work 一次，否则锁份地/出海/行囊/崖矿/工坊
+    例：work 洗碗 day（暮场）· work 洗碗 night（夜场）· work 洗碗 day（昼间补班）
+    人类上手页洗碗按钮会按时辰换成对的班，不要写死 night
   cheer 好话 — 哄荔栀（每日 1 次）。潮下猫猫用 undertide_ops cheer；小橘用 star_ops 应援
   tip 名字 票数 [备注] — 给当班员工小费
   chat [话题] — 跟荔栀唠

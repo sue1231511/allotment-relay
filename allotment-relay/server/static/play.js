@@ -87,7 +87,7 @@ function applySnap(data, text) {
   renderAll();
 }
 
-function setLog(text) {
+function setLog(text, kind) {
   const log = $('play-log');
   if (!text) {
     show(log, false);
@@ -95,36 +95,56 @@ function setLog(text) {
     return;
   }
   log.textContent = text;
+  log.classList.toggle('is-fail', kind === 'fail');
   show(log, true);
-  showPlaceResult(text);
+  showPlaceResult(text, kind);
+}
+
+function setWorkStatus(text, kind) {
+  const el = $('play-work-status');
+  if (!el) return;
+  el.textContent = text || '可操作';
+  el.classList.toggle('is-busy', kind === 'busy');
+  el.classList.toggle('is-fail', kind === 'fail');
+  el.classList.toggle('is-ok', kind === 'ok');
 }
 
 function clearPlaceResult() {
   state.placeResult = '';
+  state.placeResultKind = '';
   const empty = $('play-place-empty');
   const result = $('play-place-result');
   if (empty) show(empty, true);
   if (result) {
     result.textContent = '';
+    result.classList.remove('is-fail');
     show(result, false);
   }
+  setWorkStatus('可操作');
 }
 
-function showPlaceResult(text) {
+function showPlaceResult(text, kind) {
   if (!state.placeId) return;
   state.placeResult = text || '';
+  state.placeResultKind = kind || '';
   const empty = $('play-place-empty');
   const result = $('play-place-result');
   if (!text) {
     if (empty) show(empty, true);
-    if (result) show(result, false);
+    if (result) {
+      result.classList.remove('is-fail');
+      show(result, false);
+    }
+    setWorkStatus('可操作');
     return;
   }
   if (empty) show(empty, false);
   if (result) {
     result.textContent = text;
+    result.classList.toggle('is-fail', kind === 'fail');
     show(result, true);
   }
+  setWorkStatus(kind === 'fail' ? '没做成' : '已完成', kind === 'fail' ? 'fail' : 'ok');
 }
 
 function stockPreview(limit = 3) {
@@ -223,8 +243,11 @@ function renderPlace(id) {
   $('play-place-actions').innerHTML = acts.map((a, i) => {
     const idx = String(i + 1).padStart(2, '0');
     const note = a.note || a.command || '';
-    const primary = i === acts.length - 1 ? ' is-primary' : '';
-    return `<button type="button" class="place-tool${primary}" data-label="${esc(a.label)}" data-note="${esc(note)}" data-act='${JSON.stringify({ tool: a.tool, command: a.command })}'>
+    const primary = (a.primary || (place.duty && i === 0)) ? ' is-primary' : '';
+    const payload = a.go
+      ? { go: a.go }
+      : { tool: a.tool, command: a.command };
+    return `<button type="button" class="place-tool${primary}" data-label="${esc(a.label)}" data-note="${esc(note)}" data-act='${JSON.stringify(payload)}'>
       <span class="place-tool-index">${idx}</span>
       <span><strong>${esc(a.label)}</strong><small>${esc(note)}</small></span>
       <span class="arrow">→</span>
@@ -240,7 +263,7 @@ function renderPlace(id) {
     if ($('play-work-sub')) $('play-work-sub').textContent = '操作结果会直接留在这里。';
     clearPlaceResult();
   } else if (state.placeResult) {
-    showPlaceResult(state.placeResult);
+    showPlaceResult(state.placeResult, state.placeResultKind);
   }
 
   hidePatron();
@@ -333,6 +356,9 @@ function renderAll() {
 }
 
 function plotButtons(p) {
+  if (dutyUrgent(state.dash)) {
+    return `<button type="button" class="play-mini-btn primary" data-place="bar">去上工</button>`;
+  }
   const token = p.token || String(p.slot);
   const acts = [];
   if (p.state === 'fallow') {
@@ -901,11 +927,13 @@ function itemSheet(name) {
 async function act(tool, command) {
   try {
     document.querySelectorAll('.play-page button.btn, .play-page .play-mini-btn, .play-page .place-tool, .play-go').forEach((b) => { b.disabled = true; });
+    setWorkStatus('处理中…', 'busy');
     const data = await api(tool, command);
     applySnap(data, data.text || '');
+    if (data.text) setWorkStatus('已完成', 'ok');
     closeSheet();
   } catch (err) {
-    setLog(err.message || String(err));
+    setLog(err.message || String(err), 'fail');
   } finally {
     document.querySelectorAll('button[disabled]').forEach((b) => { b.disabled = false; });
   }
@@ -1274,10 +1302,20 @@ document.body.addEventListener('click', (e) => {
   try {
     payload = JSON.parse(btn.getAttribute('data-act'));
   } catch {
+    setLog('这个按钮坏了，刷新再试。', 'fail');
     return;
   }
   if (btn.classList.contains('place-tool')) selectPlaceTool(btn);
-  act(payload.tool, payload.command);
+  if (payload.go) {
+    closeSheet();
+    renderPlace(payload.go);
+    return;
+  }
+  if (!payload.tool) {
+    setLog('这个动作还没接上。', 'fail');
+    return;
+  }
+  act(payload.tool, payload.command || '');
 });
 
 $('memory-filters').addEventListener('click', (e) => {

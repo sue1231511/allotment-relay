@@ -1,11 +1,15 @@
 """人类上手页 — 同一张凭证、同一套 command，只是换成点按。"""
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import Any
 
 from . import db, steward_dashboard, world
 from . import mcp_dispatch as mux
 from .catalog import CROPS
+
+# 考勤逾期时，这些地点的动手按钮先换成「去上工」
+_DUTY_LOCK_PLACE_IDS = frozenset({"tide", "craft", "quarry", "market"})
 
 
 def _tools() -> dict[str, Any]:
@@ -32,6 +36,151 @@ def _tools() -> dict[str, Any]:
     }
 
 
+def _act(
+    label: str,
+    note: str,
+    tool: str,
+    command: str,
+    *,
+    primary: bool = False,
+    go: str | None = None,
+) -> dict[str, Any]:
+    row: dict[str, Any] = {
+        "label": label,
+        "note": note,
+        "tool": tool,
+        "command": command,
+    }
+    if primary:
+        row["primary"] = True
+    if go:
+        row["go"] = go
+    return row
+
+
+def _bar_work_action(*, overdue: bool) -> dict[str, Any]:
+    """按当前时辰给出此刻能点的洗碗班，禁止写死 night。"""
+    phase = world.current_day_phase()
+    if phase == "night":
+        return _act(
+            "洗碗上工",
+            "夜班 · 每两天须来一次",
+            "bar_ops",
+            "work 洗碗 night",
+            primary=True,
+        )
+    if phase == "dusk":
+        return _act(
+            "洗碗上工",
+            "暮场白班 · 每两天须来一次",
+            "bar_ops",
+            "work 洗碗 day",
+            primary=True,
+        )
+    if overdue:
+        return _act(
+            "洗碗补班",
+            "昼间补班 · 票 ×0.72 · 考勤逾期",
+            "bar_ops",
+            "work 洗碗 day",
+            primary=True,
+        )
+    return _act(
+        "洗碗上工",
+        "现在昼间打烊，暮/夜再来",
+        "bar_ops",
+        "tonight",
+    )
+
+
+def _go_bar_duty() -> dict[str, Any]:
+    return _act(
+        "去上工",
+        "酒吧考勤逾期，份地/出海/行囊/崖矿/工坊已锁",
+        "",
+        "",
+        primary=True,
+        go="bar",
+    )
+
+
+def _tide_actions(*, overdue: bool) -> list[dict[str, Any]]:
+    if overdue:
+        return [
+            _go_bar_duty(),
+            _act("看船", "船况与航程（只看不走）", "tide_ops", "voyage status"),
+        ]
+    tide = world.current_tide()
+    dig = (
+        _act("翻沙", "退潮/平潮 · 要铲子", "tide_ops", "dig")
+        if tide in ("ebb", "slack")
+        else _act("翻沙", "涨潮翻不了 · 先扫一眼沙滩", "tide_ops", "beach scan")
+    )
+    return [
+        _act("撒网", "花票换渔获", "tide_ops", "net"),
+        _act("坐钓", "要钓竿和饵", "tide_ops", "cast"),
+        _act("赶海看看", "先扫一眼沙滩", "tide_ops", "beach scan"),
+        dig,
+        _act("近海出发", "开船出海", "tide_ops", "voyage depart near"),
+        _act("看船", "船况与航程", "tide_ops", "voyage status"),
+    ]
+
+
+def _craft_actions(*, overdue: bool) -> list[dict[str, Any]]:
+    if overdue:
+        return [
+            _go_bar_duty(),
+            _act("看砧", "只看不打", "craft_ops", "status"),
+        ]
+    tide = world.current_tide()
+    salt = (
+        _act("灌盐田", "涨潮灌一池", "craft_ops", "灌")
+        if tide == "flood"
+        else _act("看盐田", "涨潮才能灌 · 先看池", "craft_ops", "盐田")
+    )
+    return [
+        _act("看砧", "先看砧上有没有活", "craft_ops", "status"),
+        _act("取成品", "好了才能取", "craft_ops", "取"),
+        salt,
+        _act("打捞", "只认风暴窗口", "craft_ops", "打捞"),
+    ]
+
+
+def _quarry_actions(*, overdue: bool) -> list[dict[str, Any]]:
+    if overdue:
+        return [
+            _go_bar_duty(),
+            _act("看崖", "只看不挖", "quarry_ops", "status"),
+        ]
+    return [
+        _act("看崖", "先看看今天露了什么", "quarry_ops", "status"),
+        _act("买镐", "没有工具先补一把", "quarry_ops", "买镐"),
+        _act("探脉", "找今天值得下手的位置", "quarry_ops", "探脉"),
+        _act("挖", "真正挥镐", "quarry_ops", "挖"),
+    ]
+
+
+def _market_actions(*, overdue: bool) -> list[dict[str, Any]]:
+    if overdue:
+        return [
+            _go_bar_duty(),
+            _act("看集市", "只看挂单", "tote_ops", "market list"),
+        ]
+    return [
+        _act("看集市", "先看谁挂了什么", "tote_ops", "market list"),
+        _act("交换台", "白送与领取", "tote_ops", "swap list"),
+    ]
+
+
+def _bar_actions(*, overdue: bool) -> list[dict[str, Any]]:
+    return [
+        _bar_work_action(overdue=overdue),
+        _act("今晚", "看看今晚开不开门", "bar_ops", "tonight"),
+        _act("酒单", "价目与今晚出品", "bar_ops", "menu"),
+        _act("我的酒吧档", "考勤与上工记录", "bar_ops", "status"),
+    ]
+
+
 PLACES: list[dict[str, Any]] = [
     {
         "id": "tide",
@@ -42,14 +191,7 @@ PLACES: list[dict[str, Any]] = [
         "live": "打开海边现场 →",
         "rail": "今天在海边做什么",
         "week1": True,
-        "actions": [
-            {"label": "撒网", "note": "花票换渔获", "tool": "tide_ops", "command": "net"},
-            {"label": "坐钓", "note": "要钓竿和饵", "tool": "tide_ops", "command": "cast"},
-            {"label": "赶海看看", "note": "先扫一眼沙滩", "tool": "tide_ops", "command": "beach scan"},
-            {"label": "翻沙", "note": "要铲子；涨潮关", "tool": "tide_ops", "command": "dig"},
-            {"label": "近海出发", "note": "开船出海", "tool": "tide_ops", "command": "voyage depart near"},
-            {"label": "看船", "note": "船况与航程", "tool": "tide_ops", "command": "voyage status"},
-        ],
+        "actions": [],  # live_places 按潮汐/考勤填
     },
     {
         "id": "hut",
@@ -78,12 +220,7 @@ PLACES: list[dict[str, Any]] = [
         "rail": "今晚在酒吧做什么",
         "week1": True,
         "duty": True,
-        "actions": [
-            {"label": "洗碗上工", "note": "每两天须来一次", "tool": "bar_ops", "command": "work 洗碗 night"},
-            {"label": "今晚", "note": "看看今晚开不开门", "tool": "bar_ops", "command": "tonight"},
-            {"label": "酒单", "note": "价目与今晚出品", "tool": "bar_ops", "command": "menu"},
-            {"label": "我的酒吧档", "note": "考勤与上工记录", "tool": "bar_ops", "command": "status"},
-        ],
+        "actions": [],  # live_places 按时辰填洗碗班
     },
     {
         "id": "eatery",
@@ -152,10 +289,7 @@ PLACES: list[dict[str, Any]] = [
         "live": "打开集市现场 →",
         "rail": "今天在集市做什么",
         "week1": False,
-        "actions": [
-            {"label": "看集市", "note": "先看谁挂了什么", "tool": "tote_ops", "command": "market list"},
-            {"label": "交换台", "note": "白送与领取", "tool": "tote_ops", "command": "swap list"},
-        ],
+        "actions": [],  # live_places 按考勤填
     },
     {
         "id": "craft",
@@ -166,12 +300,7 @@ PLACES: list[dict[str, Any]] = [
         "live": "打开岸工坊现场 →",
         "rail": "今天在工坊做什么",
         "week1": False,
-        "actions": [
-            {"label": "看砧", "note": "先看砧上有没有活", "tool": "craft_ops", "command": "status"},
-            {"label": "取成品", "note": "好了才能取", "tool": "craft_ops", "command": "取"},
-            {"label": "灌盐田", "note": "涨潮才能灌", "tool": "craft_ops", "command": "灌"},
-            {"label": "打捞", "note": "只认风暴窗口", "tool": "craft_ops", "command": "打捞"},
-        ],
+        "actions": [],  # live_places 按潮汐/考勤填
     },
     {
         "id": "star",
@@ -198,12 +327,7 @@ PLACES: list[dict[str, Any]] = [
         "live": "打开盐风崖现场 →",
         "rail": "今天在崖上做什么",
         "week1": False,
-        "actions": [
-            {"label": "看崖", "note": "先看看今天露了什么", "tool": "quarry_ops", "command": "status"},
-            {"label": "买镐", "note": "没有工具先补一把", "tool": "quarry_ops", "command": "买镐"},
-            {"label": "探脉", "note": "找今天值得下手的位置", "tool": "quarry_ops", "command": "探脉"},
-            {"label": "挖", "note": "真正挥镐", "tool": "quarry_ops", "command": "挖"},
-        ],
+        "actions": [],  # live_places 按考勤填
     },
     {
         "id": "undertide",
@@ -221,6 +345,28 @@ PLACES: list[dict[str, Any]] = [
         ],
     },
 ]
+
+
+def live_places(*, overdue: bool = False) -> list[dict[str, Any]]:
+    """按此刻时辰 / 潮汐 / 考勤给出可点的动作，避免写死 night 班或涨潮关的翻沙。"""
+    out: list[dict[str, Any]] = []
+    for raw in PLACES:
+        place = deepcopy(raw)
+        pid = place["id"]
+        if pid == "bar":
+            place["actions"] = _bar_actions(overdue=overdue)
+        elif pid == "tide":
+            place["actions"] = _tide_actions(overdue=overdue)
+        elif pid == "craft":
+            place["actions"] = _craft_actions(overdue=overdue)
+        elif pid == "quarry":
+            place["actions"] = _quarry_actions(overdue=overdue)
+        elif pid == "market":
+            place["actions"] = _market_actions(overdue=overdue)
+        elif overdue and pid in _DUTY_LOCK_PLACE_IDS:
+            place["actions"] = [_go_bar_duty(), *place.get("actions", [])]
+        out.append(place)
+    return out
 
 
 def climate_bits() -> dict[str, str]:
@@ -269,7 +415,11 @@ async def snapshot(api_key: str) -> dict[str, Any]:
     dash = None
     seeds: list[dict[str, Any]] = []
     neighbors: dict[str, Any] = {"total": 0, "listed": 0, "online": 0, "window_min": 0, "people": []}
+    overdue = False
     if enrolled:
+        from . import bar as bar_mod
+
+        overdue = bar_mod.is_shift_overdue(s)
         dash = await steward_dashboard.fetch_dashboard(key)
         seeds = seed_options(dash.get("stock") or [])
         from . import multi
@@ -286,7 +436,7 @@ async def snapshot(api_key: str) -> dict[str, Any]:
         "dashboard": dash,
         "seeds": seeds,
         "neighbors": neighbors,
-        "places": PLACES,
+        "places": live_places(overdue=overdue),
         "climate": climate_bits(),
     }
 
