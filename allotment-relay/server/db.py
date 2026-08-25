@@ -1,5 +1,6 @@
 import asyncio
 import contextvars
+import re
 import secrets
 import sqlite3
 import time
@@ -2394,6 +2395,9 @@ async def public_stats() -> dict[str, Any]:
         }
 
 
+_GIFT_LINE_RE = re.compile(r"^(.+?) 送礼给 (.+?)：(.+)$", re.S)
+
+
 def _gift_target_name_from_text(action: str, text: str) -> str:
     raw = text or ""
     if action == "gift":
@@ -2415,6 +2419,31 @@ def _gift_target_name_from_text(action: str, text: str) -> str:
         cut = rest.find(" 小费")
         return rest[:cut].strip() if cut >= 0 else ""
     return ""
+
+
+def gift_kind_label(action: str) -> str:
+    if action == "bar_tip":
+        return "打赏"
+    if action == "handoff":
+        return "台阶"
+    return "礼物"
+
+
+def gift_display_text(
+    text: str,
+    *,
+    viewer_name: str | None = None,
+    action: str = "gift",
+) -> str:
+    raw = (text or "").strip()
+    if action == "gift_inbox":
+        return raw
+    if action == "bar_tip":
+        return raw
+    m = _GIFT_LINE_RE.match(raw)
+    if m and viewer_name and m.group(2).strip() == viewer_name.strip():
+        return m.group(3).strip()
+    return raw
 
 
 async def backfill_gift_chronicle_targets(db: aiosqlite.Connection) -> None:
@@ -2442,6 +2471,62 @@ async def backfill_gift_chronicle_targets(db: aiosqlite.Connection) -> None:
                 "UPDATE chronicle SET target_id=? WHERE id=?",
                 (int(peer[0]), r["id"]),
             )
+    inbox_rows = await (
+        await db.execute(
+            """
+            SELECT id, actor_id, created_at FROM chronicle
+            WHERE action='gift_inbox' AND (target_id IS NULL OR target_id = 0)
+            """
+        )
+    ).fetchall()
+    for r in inbox_rows:
+        peer = await (
+            await db.execute(
+                """
+                SELECT target_id FROM chronicle
+                WHERE action='gift' AND actor_id=?
+                  AND target_id IS NOT NULL AND target_id != 0
+                  AND abs(created_at - ?) <= 2
+                ORDER BY abs(created_at - ?) ASC LIMIT 1
+                """,
+                (r["actor_id"], r["created_at"], r["created_at"]),
+            )
+        ).fetchone()
+        if peer:
+            await db.execute(
+                "UPDATE chronicle SET target_id=? WHERE id=?",
+                (int(peer[0]), r["id"]),
+            )
+
+
+async def _repair_gift_targets(
+    conn: aiosqlite.Connection,
+    steward_id: int,
+    steward_name: str,
+) -> None:
+    """旧纪事若漏写 target_id，按正文「送礼给 名字」补回收礼人。"""
+    needle = f"送礼给 {steward_name}："
+    await conn.execute(
+        """
+        UPDATE chronicle
+        SET target_id=?
+        WHERE action IN ('gift', 'gift_inbox')
+          AND (target_id IS NULL OR target_id = 0)
+          AND text LIKE ?
+        """,
+        (steward_id, f"%{needle}%"),
+    )
+    tip_needle = f"给 {steward_name} 小费"
+    await conn.execute(
+        """
+        UPDATE chronicle
+        SET target_id=?
+        WHERE action='bar_tip'
+          AND (target_id IS NULL OR target_id = 0)
+          AND text LIKE ?
+        """,
+        (steward_id, f"%{tip_needle}%"),
+    )
 
 
 async def list_gift_records(
@@ -2460,7 +2545,13 @@ async def list_gift_records(
     if direction not in ("received", "sent", "both"):
         direction = "received"
 
-    clauses = ["c.action IN ('gift', 'bar_tip')"]
+    async with connect() as db:
+        db.row_factory = aiosqlite.Row
+        if my_name:
+            await _repair_gift_targets(db, steward_id, my_name)
+            await db.commit()
+
+    clauses = ["c.action IN ('gift', 'gift_inbox', 'bar_tip', 'handoff')"]
     args: list[Any] = []
     dir_bits: list[str] = []
     if direction in ("received", "both") and my_name:
@@ -2490,6 +2581,7 @@ async def list_gift_records(
             f"{peer_name} 送礼给 %",
         ])
 
+    fetch_limit = min(150, max(limit * 3, limit))
     sql = f"""
         SELECT c.id, c.text, c.created_at, c.action,
                c.actor_id, c.target_id,
@@ -2501,7 +2593,7 @@ async def list_gift_records(
         ORDER BY c.created_at DESC, c.id DESC
         LIMIT ?
     """
-    args.append(limit)
+    args.append(fetch_limit)
     async with connect() as db:
         db.row_factory = aiosqlite.Row
         cur = await db.execute(sql, tuple(args))
@@ -2514,17 +2606,40 @@ async def list_gift_records(
             continue
         if cid:
             seen.add(cid)
+        text = str(r.get("text") or "")
+        action = str(r.get("action") or "gift")
         r["incoming"] = int(r.get("target_id") or 0) == int(steward_id) or (
-            my_name and f"送礼给 {my_name}：" in str(r.get("text") or "")
+            my_name and f"送礼给 {my_name}：" in text
         ) or (
-            my_name and f"给 {my_name} 小费" in str(r.get("text") or "")
+            my_name and f"给 {my_name} 小费" in text
+        )
+        r["summary"] = gift_display_text(
+            text, viewer_name=my_name, action=action,
         )
         out.append(r)
-    return out
+
+    gifts = [r for r in out if r.get("action") == "gift"]
+    skip_inbox: set[int] = set()
+    for inbox in [r for r in out if r.get("action") == "gift_inbox"]:
+        for g in gifts:
+            if int(g.get("actor_id") or 0) != int(inbox.get("actor_id") or 0):
+                continue
+            if abs(int(g.get("created_at") or 0) - int(inbox.get("created_at") or 0)) <= 2:
+                skip_inbox.add(int(inbox.get("id") or 0))
+                break
+    kept = [
+        r for r in out
+        if not (r.get("action") == "gift_inbox" and int(r.get("id") or 0) in skip_inbox)
+    ]
+    return kept[:limit]
 
 
 async def list_received_gifts(steward_id: int, limit: int = 20) -> list[dict[str, Any]]:
     return await list_gift_records(steward_id, direction="received", limit=limit)
+
+
+async def list_sent_gifts(steward_id: int, limit: int = 20) -> list[dict[str, Any]]:
+    return await list_gift_records(steward_id, direction="sent", limit=limit)
 
 
 async def public_chronicle(limit: int = 40) -> list[dict[str, Any]]:

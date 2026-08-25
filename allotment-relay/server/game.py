@@ -170,7 +170,7 @@ async def relay_manual() -> str:
         "",
         "━━━ 工具地图（17 个玩法工具）━━━",
         "  steward_ops  登记/档案/邻居/工分/全服榜/岛缘/引航",
-        "               command 例：enroll 安 · sheet · 岛缘 · 邻居 · 在线 · peer 名字 · guild · board tickets · board 岛缘 · 引航 · 绑定 AB12CD34",
+        "               command 例：enroll 安 · sheet · 岛缘 · 邻居 · 在线 · peer 名字 · 收礼 · guild · board tickets · board 岛缘 · 引航 · 绑定 AB12CD34",
         "               人类网页 /board 是全服榜围观（票榜·岛缘榜）；点名字去 /play 看邻居",
         "               人类网页 /play 点名字看档、读岛上回忆、看邻居名册（本机会记住）",
         "               人类网页 /play 可点按同一套指令，和 AI 共用一个号（凭证只在上手页绑定）",
@@ -199,7 +199,7 @@ async def relay_manual() -> str:
         "                 · compliment · catch · beach scan · dig · probe · gear status",
         "                 · gear upgrade net · tool buy hoe · boss status · boss attack",
         "  tote_ops     行囊/交换台/集市",
-        "               command 例：list · gifts · gifts 送出 · vend 鲭鱼 1 · vend 芒果 3 木瓜 2（批量）· gift 安 甘蓝 1",
+        "               command 例：list · gifts · gifts 送出 · 赠礼记录 · vend 鲭鱼 1 · vend 芒果 3 木瓜 2（批量）· gift 安 甘蓝 1",
         "                 · swap list · swap offer 甘蓝 2 · market list · market sell 甘蓝 2 8",
         "  kitchen_ops  厨房/小馆。空 command=菜谱",
         "               command 例：menu · cook 蒜蓉生蚝 · cook 糖渍橘子 · cook 甘蓝 鲭鱼 · eat 鲭鱼 · eat 芒果 · eat 橘子 · vend 盐焗沙蟹",
@@ -391,9 +391,9 @@ async def relay_manual() -> str:
         "  Tt酱货架买的种/饲料/工具，系统回收进价九成——退货少亏一成，别反复倒卖当印钞",
         "  买东西不能超过行囊每格上限；满了 vend / 冰柜 存 / tote_ops 扩栈",
         "  未命名小鱼 vend 会再掷一次小咒事件（可能吐票、走回袋、解开或加重小咒）",
-        "  gifts [条数] — 查谁给你送了什么、酒吧谁给你打赏（即时到账，这里只看记录）。也可写 收礼 / gift（空）。对方查不到时用这条，不要去翻集市纪事。tote_ops gifts",
-        "  gifts 送出 — 看你送给别人的记录。gifts 名字 只看和某人的来往。集市围观里的「礼物」是全服流水，不是收件箱",
-        "  gift 名字 物品|票 数量 [留言] — 送给别人。也可写 送礼。数量可省=1。能直接送票，即时到账，无手续费、无每日上限。票榜看口袋现票，送出会掉名次。协作度 +3。对方用 gifts / 上手页右侧「收礼」查看",
+        "  gifts [条数] — 查谁给你送了什么、酒吧谁给你打赏（即时到账，这里只看记录）。也可写 收礼 / 收礼记录 / gift（空）。对方查不到时用这条，不要去翻集市纪事。tote_ops gifts 或 steward_ops 收礼",
+        "  gifts 送出 / 赠礼记录 [条数] — 看你送给别人的记录。gifts 名字 只看和某人的来往。集市围观里的「礼物」是全服流水，不是收件箱",
+        "  gift|送礼|赠礼 名字 物品|票 数量 [留言] — 送给别人。数量可省=1。能直接送票，即时到账，无手续费、无每日上限。票榜看口袋现票，送出会掉名次。协作度 +3。对方用 gifts / 上手页右侧「收礼」查看",
         "  随机事件整体 +30%（EVENT_RATE_MULT=1.3）：打理/收成/出海等更容易触发意外或惊喜；好事件也可能回一点身体",
         "  swap offer 物品 数量 — 白送挂单；claim 编号领（手续费 3 票，协作度高打折）",
         "  market sell 物品 数量 单价 — 玩家互卖；buy 编号；price 物品 看建议价",
@@ -679,7 +679,7 @@ async def steward_sheet(key_id: int) -> str:
         who = recent_gifts[0].get("actor_name") or "某人"
         lines.append(f"最近收礼：{who} → tote_ops gifts 查看（不要去翻集市纪事）")
     else:
-        lines.append("收礼记录：tote_ops gifts · 自己送出的：tote_ops gifts 送出")
+        lines.append("收礼记录：tote_ops gifts · 自己送出的：tote_ops gifts 送出 / 赠礼记录")
     async with db.connect() as conn:
         from . import market as market_mod
         extra = await market_mod._market_extra(conn, s["id"])
@@ -2359,9 +2359,10 @@ async def _satchel_stack_expand(s: dict, n: int = 1) -> str:
     )
 
 
-_GIFT_LIST_VERBS = {"gifts", "收礼", "收到的礼", "赠礼", "送礼记录"}
-_GIFT_SEND_VERBS = {"gift", "送礼"}
-_GIFT_SENT_TOKS = {"送出", "sent", "已送", "发出", "outbox"}
+_GIFT_LIST_VERBS = {"gifts", "收礼", "收到的礼", "赠礼", "送礼记录", "收礼记录"}
+_GIFT_SEND_VERBS = {"gift", "送礼", "赠礼"}
+_GIFT_SENT_VERBS = {"sent", "赠礼记录", "sent_gifts", "送出"}
+_GIFT_SENT_TOKS = {"送出", "sent", "已送", "发出", "outbox", "赠礼记录"}
 _GIFT_BOTH_TOKS = {"全部", "both", "收发", "来往"}
 
 
@@ -2394,7 +2395,7 @@ async def _gift_list(s: dict, tokens: list[str]) -> str:
     )
     hint = (
         "礼物即时进行囊或工分票。查自己的收件箱用 tote_ops gifts；"
-        "自己送出的用 tote_ops gifts 送出。"
+        "自己送出的用 tote_ops gifts 送出 或 赠礼记录。"
         "集市纪事里的「礼物」是全服围观，不是对方的收件箱。"
     )
     if not rows:
@@ -2407,7 +2408,7 @@ async def _gift_list(s: dict, tokens: list[str]) -> str:
             "也可 tote_ops list / steward_ops sheet 核对。\n" + hint
         )
     if direction == "sent":
-        title = f"送出记录（最近 {len(rows)} 条）"
+        title = f"赠礼记录（最近 {len(rows)} 条）"
     elif direction == "both":
         title = f"收礼/送出（最近 {len(rows)} 条）"
     else:
@@ -2417,21 +2418,22 @@ async def _gift_list(s: dict, tokens: list[str]) -> str:
     lines = [title + "："]
     for r in rows:
         ago = multi_mod._ago(int(r["created_at"]))
-        tag = "打赏" if r.get("action") == "bar_tip" else "礼物"
+        tag = db.gift_kind_label(str(r.get("action") or "gift"))
+        detail = r.get("summary") or r.get("text") or ""
         if direction == "sent" or (direction == "both" and not r.get("incoming")):
             who = r.get("target_name") or "某人"
             arrow = "→"
         else:
             who = r.get("actor_name") or "某人"
             arrow = "←"
-        lines.append(f"  · [{tag}] {arrow} {who}（{ago}）— {r['text']}")
+        lines.append(f"  · [{tag}] {arrow} {who}（{ago}）— {detail}")
     if direction != "sent":
         lines.append("礼物已即时到账；行囊 tote_ops list，票 steward_ops sheet。")
         lines.append("对方若说查不到：让对方 tote_ops gifts，不要去翻集市纪事。")
     else:
         lines.append("对方查记录：tote_ops gifts / 上手页右侧「收礼 / 打赏」。")
     if direction == "received":
-        lines.append("自己送出的：tote_ops gifts 送出")
+        lines.append("自己送出的：tote_ops gifts 送出 / 赠礼记录")
     return "\n".join(lines)
 
 
@@ -2505,6 +2507,10 @@ async def _gift_send(s: dict, peer: dict, rest: list[str]) -> str:
         if note:
             chronicle += f" — {note}"
         await db.add_chronicle("gift", chronicle, int(s["id"]), int(peer["id"]), conn=conn)
+        inbox = gift_line
+        if note:
+            inbox += f" — {note}"
+        await db.add_chronicle("gift_inbox", inbox, int(s["id"]), int(peer["id"]), conn=conn)
         await conn.commit()
     msg = f"已送礼给 {peer['name']}：{gift_line}"
     if note:
@@ -2593,6 +2599,8 @@ async def _tote_one(s: dict, command: str) -> str:
         if fate_notes:
             msg += "\n" + "\n".join(fate_notes)
         return msg
+    if verb in _GIFT_SENT_VERBS:
+        return await _gift_list(s, ["送出", *parts[1:]])
     if verb in _GIFT_SEND_VERBS:
         sent = await _try_gift_send(s, parts[1:])
         if sent is not None:
@@ -2603,7 +2611,7 @@ async def _tote_one(s: dict, command: str) -> str:
         n = _parse_int(parts[1], "数量") if len(parts) >= 2 else 1
         return await _satchel_stack_expand(s, n)
     raise ValueError(
-        f"未知 tote 指令: {command}（list / gifts / gifts 送出 / vend 物品 数量 / gift 名字 物品|票 数量 / 扩栈 [数量]）"
+        f"未知 tote 指令: {command}（list / gifts / gifts 送出 / 赠礼记录 / vend 物品 数量 / gift|送礼|赠礼 名字 物品|票 数量 / 扩栈 [数量]）"
     )
 
 

@@ -97,9 +97,9 @@ async def relay_manual() -> str:
     return await game.relay_manual()
 
 
-@mcp.tool(description="管理员身份与档案。command 写一整句，不要编造子命令。例子：enroll 安 · sheet · 岛缘 · 邻居 · 成就 · 称呼 逾篱客 · 引航 · 绑定 AB12CD34 · guild · board tickets · board 岛缘。空 command=看自己的档（含岛缘、引航码、全服脉冲/周潮天灾：人类一周一次、低中高随机、只冲3万以上）。岛缘=你和这座岛发生过的一切（岸上动手只加，井下减，无上限）；一篇潮闻/故事通关 +100；看 steward_ops 岛缘 拆来源（不是榜）。引航=请人上岛（邀请码/链接）；绑定只能一次，不能自己引自己，注册当时不算有效邀请。对方成为有效岛民后，邀请人自动得 100 工分票和 20 岛缘。没有 invite_ops，不要发明领邀请奖。全服榜：board tickets=口袋现票，board 岛缘=岛缘榜（board level / board 等级榜 仍指向岛缘榜）。不是 alliance_ops board（周目标贡献）。等级 1～99 仍在 sheet，跟累计入账走，满级「潮汐本尊」，不再单独占全服榜。新号必须先 enroll。人类网页 /play 点按同一套 command，和 AI 共用一个号；点单打赏、聊天、看档、邻居名册都只在 /play。人类使用手册 /manual，给点按的人看，不要把 MCP 子命令当人类操作步骤。主页管去哪；/bar /tide /market /eatery /board /huts /star /allotments /quarry /workshop 围观实况，其余地点页是海报。不会就 help。")
+@mcp.tool(description="管理员身份与档案。command 写一整句，不要编造子命令。例子：enroll 安 · sheet · 岛缘 · 邻居 · 收礼 · 成就 · 称呼 逾篱客 · 引航 · 绑定 AB12CD34 · guild · board tickets · board 岛缘。空 command=看自己的档（含岛缘、引航码、全服脉冲/周潮天灾：人类一周一次、低中高随机、只冲3万以上）。岛缘=你和这座岛发生过的一切（岸上动手只加，井下减，无上限）；一篇潮闻/故事通关 +100；看 steward_ops 岛缘 拆来源（不是榜）。引航=请人上岛（邀请码/链接）；绑定只能一次，不能自己引自己，注册当时不算有效邀请。对方成为有效岛民后，邀请人自动得 100 工分票和 20 岛缘。没有 invite_ops，不要发明领邀请奖。收礼=谁给你送了礼（同 tote_ops gifts），不是集市纪事。全服榜：board tickets=口袋现票，board 岛缘=岛缘榜（board level / board 等级榜 仍指向岛缘榜）。不是 alliance_ops board（周目标贡献）。等级 1～99 仍在 sheet，跟累计入账走，满级「潮汐本尊」，不再单独占全服榜。新号必须先 enroll。人类网页 /play 点按同一套 command，和 AI 共用一个号；点单打赏、聊天、看档、邻居名册都只在 /play。人类使用手册 /manual，给点按的人看，不要把 MCP 子命令当人类操作步骤。主页管去哪；/bar /tide /market /eatery /board /huts /star /allotments /quarry /workshop 围观实况，其余地点页是海报。不会就 help。")
 async def steward_ops(
-    command: Annotated[str, Field(description="子命令整句。enroll 安 / sheet / 岛缘 / 邻居 / 在线 / 成就 / 称呼 逾篱客 / 领奖 / 引航 / 绑定 AB12CD34 / peer 名字 / guild / board tickets / board 岛缘 / board me / help。空=sheet（会显示岛缘、引航码、脉冲和周潮天灾）。引航=看邀请码和已引来的岛民；绑定=首次结引航关系，只能一次，不能自己引自己。对方成为有效岛民后，邀请人自动得 100 工分票和 20 岛缘。岛缘=拆自己的来源，不是榜。board 岛缘=全服岛缘榜（board level 仍可用，指向同一张）。等级 1～99 仍在 sheet，满级潮汐本尊，不占全服榜。邻居=全员名册（找人偷菜/assist 用这个）。人类网页 /board 是全服榜围观（票榜·岛缘榜）。不要发明 invite_ops / 领邀请奖。")] = "sheet",
+    command: Annotated[str, Field(description="子命令整句。enroll 安 / sheet / 岛缘 / 邻居 / 在线 / 收礼 / 成就 / 称呼 逾篱客 / 领奖 / 引航 / 绑定 AB12CD34 / peer 名字 / guild / board tickets / board 岛缘 / board me / help。空=sheet（会显示岛缘、引航码、脉冲和周潮天灾）。引航=看邀请码和已引来的岛民；绑定=首次结引航关系，只能一次，不能自己引自己。对方成为有效岛民后，邀请人自动得 100 工分票和 20 岛缘。收礼=同 tote_ops gifts，不是集市纪事。岛缘=拆自己的来源，不是榜。board 岛缘=全服岛缘榜（board level 仍可用，指向同一张）。等级 1～99 仍在 sheet，满级潮汐本尊，不占全服榜。邻居=全员名册（找人偷菜/assist 用这个）。人类网页 /board 是全服榜围观（票榜·岛缘榜）。不要发明 invite_ops / 领邀请奖。")] = "sheet",
     name: Annotated[str, Field(description="enroll 时的管理员名字，也可写在 command 里")] = "",
     motto: Annotated[str, Field(description="可选座右铭")] = "",
     badge: Annotated[str, Field(description="徽章，默认 naturalist")] = "naturalist",
@@ -132,9 +132,9 @@ async def tide_ops(
     return await mux._call_ops(mux.tide_bundle, _kid(), command)
 
 
-@mcp.tool(description="行囊、交换台、集市。command 写一整句。例子：list · 扩栈 · gifts · gifts 送出 · vend 鲭鱼 1 · vend 未命名小鱼 1 · gift 安 甘蓝 1 · market list · market 扩。gifts 查收礼（空 gift 也是查记录）；gifts 送出看自己送过的。集市纪事不是收件箱。集市基础6格可花钱扩到12。同种货自动叠放，基础每格24份，tote_ops 扩栈 花钱加栈（顶64）。买货/收礼超了会拒。能直接送票，无手续费无每日上限。Tt酱货架货系统回收进价九成，退货少亏一成，别买了再 vend 当印钞。卖未命名小鱼会再掷小咒事件。人类网页 /market 是集市围观实况，摆摊买货在 /play。空 command 列出子命令。不会就 help。")
+@mcp.tool(description="行囊、交换台、集市。command 写一整句。例子：list · 扩栈 · gifts · gifts 送出 · 赠礼记录 · vend 鲭鱼 1 · vend 未命名小鱼 1 · gift 安 甘蓝 1 · market list · market 扩。gifts/收礼/收礼记录/空 gift=查收到的礼；gifts 送出 / 赠礼记录=查自己送出的。集市纪事不是收件箱。集市基础6格可花钱扩到12。同种货自动叠放，基础每格24份，tote_ops 扩栈 花钱加栈（顶64）。买货/收礼超了会拒。能直接送票，无手续费无每日上限。Tt酱货架货系统回收进价九成，退货少亏一成，别买了再 vend 当印钞。卖未命名小鱼会再掷小咒事件。人类网页 /market 是集市围观实况，摆摊买货在 /play。空 command 列出子命令。不会就 help。")
 async def tote_ops(
-    command: Annotated[str, Field(description="子命令整句。list / 扩栈 [数量] / gifts / gifts 送出 / vend 鲭鱼 1 / vend 未命名小鱼 1 / gift 名字 甘蓝 1 / 送礼 名字 甘蓝 1 / market list / market 扩 / swap list / help。扩栈=加每格叠放上限（15票/级+8份，顶64）。gifts=收礼记录（空 gift 也是查）；gifts 送出=自己送过的；market 扩=加摆摊格。行囊同种货自动叠放。能直接送票。对方查记录用 gifts，不要翻集市纪事。货架种/饲料/工具 vend 进价九成。人类摆摊买货在 /play；/market 是围观实况。不要发明 inventory/sell。")] = "",
+    command: Annotated[str, Field(description="子命令整句。list / 扩栈 [数量] / gifts / 收礼 / 收礼记录 / gifts 送出 / 赠礼记录 / vend 鲭鱼 1 / vend 未命名小鱼 1 / gift|送礼|赠礼 名字 甘蓝 1 / market list / market 扩 / swap list / help。扩栈=加每格叠放上限（15票/级+8份，顶64）。gifts=收礼记录（空 gift 也是查）；gifts 送出 / 赠礼记录=自己送过的；market 扩=加摆摊格。行囊同种货自动叠放。能直接送票。对方查记录用 gifts，不要翻集市纪事。货架种/饲料/工具 vend 进价九成。人类摆摊买货在 /play；/market 是围观实况。不要发明 inventory/sell。")] = "",
 ) -> str:
     return await mux._call_ops(mux.tote_bundle, _kid(), command)
 

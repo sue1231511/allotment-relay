@@ -88,6 +88,7 @@ def test_mcp_descriptions() -> None:
     assert "送票" in tote_blob
     assert "gifts" in tote_blob
     assert "送出" in tote_blob
+    assert "赠礼记录" in tote_blob
     assert "24" in tote_blob
     assert "未命名小鱼" in tote_blob
 
@@ -121,6 +122,7 @@ def test_mcp_descriptions() -> None:
     assert "引航" in st_blob
     assert "绑定" in st_blob
     assert "invite_ops" in st_blob
+    assert "收礼" in st_blob
 
     ut = mcp._tool_manager.get_tool("undertide_ops")
     ut_blob = f"{ut.description}\n{(ut.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -376,6 +378,7 @@ def test_relay_manual_covers_systems() -> None:
         "能直接送票",
         "tote_ops gifts",
         "gifts 送出",
+        "赠礼记录",
         "随机事件整体 +30%",
         "旧史文本",
         "不是流水",

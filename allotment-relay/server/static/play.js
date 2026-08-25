@@ -523,11 +523,12 @@ function giftAgo(epoch) {
 
 function renderGifts() {
   const gifts = (state.dash && state.dash.gifts) || [];
+  const head = `<div style="margin-bottom:8px"><button type="button" class="play-text-btn" data-act='{"tool":"tote_ops","command":"gifts"}'>刷新收礼记录</button></div>`;
   if (!gifts.length) {
-    $('play-gifts').innerHTML = '<p>暂无收礼 / 打赏。别人送你的会即时进袋，记录在这里，不是集市纪事。</p>';
+    $('play-gifts').innerHTML = `${head}<p>暂无收礼 / 打赏。别人送你的会即时进袋，记录在这里，不是集市纪事。</p>`;
     return;
   }
-  $('play-gifts').innerHTML = gifts.slice(0, 12).map((g) => {
+  $('play-gifts').innerHTML = head + gifts.slice(0, 12).map((g) => {
     const when = giftAgo(g.created_at);
     return `
     <div class="item">
@@ -907,6 +908,7 @@ function neighborSheet(name) {
     <button type="button" class="play-mini-btn primary" data-act='${peerCmd}'>看档</button>
     <button type="button" class="play-mini-btn" data-act='${assistCmd}'>帮忙打理</button>
     <button type="button" class="play-mini-btn" data-act='${scrumpCmd}'>偷菜</button>
+    <button type="button" class="play-mini-btn" data-act='${JSON.stringify({ tool: 'plot_ops', command: `amends ${name}` })}'>致歉</button>
     <p class="muted" style="margin-top:10px">送礼即时到账。对方看右侧「收礼 / 打赏」，不是集市纪事。</p>
     <button type="button" class="play-mini-btn" data-act='${tip1}'>送 1 票</button>
     <button type="button" class="play-mini-btn" data-act='${tip5}'>送 5 票</button>

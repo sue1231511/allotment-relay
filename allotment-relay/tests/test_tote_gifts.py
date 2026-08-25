@@ -58,6 +58,10 @@ async def _test_tote_gifts_list() -> None:
     assert "已送礼给 收礼人" in sent, sent
     assert "tote_ops gifts" in sent, sent
 
+    sent_log = await game.tote_ops(giver_kid, "赠礼记录")
+    assert "赠礼记录" in sent_log, sent_log
+    assert "收礼人" in sent_log, sent_log
+
     gifts = await game.tote_ops(recv_kid, "gifts")
     assert "收礼/打赏记录" in gifts, gifts
     assert "送礼人" in gifts, gifts
@@ -69,6 +73,8 @@ async def _test_tote_gifts_list() -> None:
     assert "送礼人" in via_gift and "甘蓝" in via_gift, via_gift
     via_cn = await game.tote_ops(recv_kid, "赠礼")
     assert "送礼人" in via_cn, via_cn
+    gifts_cn = await game.tote_ops(recv_kid, "收礼记录")
+    assert "收礼/打赏记录" in gifts_cn, gifts_cn
 
     ticket_gift = await game.tote_ops(giver_kid, "送礼 收礼人 票 5")
     assert "工分票" in ticket_gift, ticket_gift
@@ -77,7 +83,7 @@ async def _test_tote_gifts_list() -> None:
     assert "5 工分票" in gifts2 or "工分票" in gifts2, gifts2
 
     sent_log = await game.tote_ops(giver_kid, "gifts 送出")
-    assert "送出记录" in sent_log, sent_log
+    assert "赠礼记录" in sent_log, sent_log
     assert "收礼人" in sent_log, sent_log
     assert "甘蓝" in sent_log, sent_log
 
@@ -92,7 +98,7 @@ async def _test_tote_gifts_list() -> None:
     await game.tote_ops(giver_kid, "gift 收礼人 甘蓝 1")
     async with db.connect() as conn:
         await conn.execute(
-            "UPDATE chronicle SET target_id=NULL WHERE action='gift' AND target_id=?",
+            "UPDATE chronicle SET target_id=NULL WHERE action IN ('gift', 'gift_inbox') AND target_id=?",
             (recv_sid,),
         )
         await conn.commit()
@@ -117,9 +123,22 @@ async def _test_tote_gifts_list() -> None:
     qty_default = await game.tote_ops(giver_kid, "gift 收礼人 甘蓝")
     assert "已送礼给 收礼人" in qty_default, qty_default
 
+    from server.mcp_dispatch import steward_ops
+    steward_gifts = await steward_ops(recv_kid, "收礼")
+    assert "收礼/打赏记录" in steward_gifts, steward_gifts
+
+    async with db.connect() as conn:
+        cur = await conn.execute(
+            "SELECT COUNT(*) FROM chronicle WHERE action='gift_inbox' AND target_id=?",
+            (recv_sid,),
+        )
+        inbox = (await cur.fetchone())[0]
+    assert inbox >= 2, inbox
+
     from server.mcp_dispatch import TOTE_HELP
     assert "gifts" in TOTE_HELP, TOTE_HELP
     assert "送出" in TOTE_HELP, TOTE_HELP
+    assert "赠礼记录" in TOTE_HELP, TOTE_HELP
     assert "收礼" in TOTE_HELP or "收件箱" in TOTE_HELP, TOTE_HELP
 
 
