@@ -518,6 +518,9 @@ body.play-bound .play-gate { display: none !important; }
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 7px;
+  max-height: 320px;
+  overflow: auto;
+  padding-right: 2px;
 }
 
 .play-tote button {

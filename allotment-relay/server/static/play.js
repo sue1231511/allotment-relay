@@ -499,7 +499,9 @@ function renderTide() {
 }
 
 function renderTote() {
-  const stock = ((state.dash && state.dash.stock) || []).slice(0, 8);
+  const stock = ((state.dash && state.dash.stock) || []).filter((it) => Number(it.qty) > 0);
+  const countEl = $('play-tote-count');
+  if (countEl) countEl.textContent = stock.length ? `${stock.length} 种` : '—';
   if (!stock.length) {
     $('play-tote').innerHTML = '<p class="muted">口袋空着。</p>';
     return;
