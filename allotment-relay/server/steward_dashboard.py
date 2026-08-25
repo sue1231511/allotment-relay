@@ -13,6 +13,16 @@ from . import market as market_mod
 from .config import ONLINE_WINDOW
 
 
+def _gift_inbox_body(g: dict[str, Any]) -> str:
+    """收件箱已标明送礼人，正文去掉「甲 送礼给 乙：」前缀。"""
+    body = str(g.get("text") or "").strip()
+    if g.get("action") == "bar_tip" and "小费" in body:
+        return body[body.find("小费"):].strip() or body
+    if "：" in body:
+        return body.split("：", 1)[1].strip() or body
+    return body
+
+
 async def fetch_dashboard(api_key: str) -> dict[str, Any]:
     row = await db.get_key_row(api_key.strip())
     if not row:
@@ -160,7 +170,7 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
         {
             "who": g.get("actor_name") or "某人",
             "kind": "打赏" if g.get("action") == "bar_tip" else "礼物",
-            "text": g["text"],
+            "text": _gift_inbox_body(g),
             "created_at": g["created_at"],
         }
         for g in gifts

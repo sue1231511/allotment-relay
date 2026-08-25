@@ -87,6 +87,7 @@ def test_mcp_descriptions() -> None:
     tote_blob = f"{tote.description}\n{(tote.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
     assert "送票" in tote_blob
     assert "gifts" in tote_blob
+    assert "考勤逾期也能查" in tote_blob
     assert "24" in tote_blob
     assert "未命名小鱼" in tote_blob
 
