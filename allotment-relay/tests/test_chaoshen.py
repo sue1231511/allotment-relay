@@ -1,0 +1,114 @@
+#!/usr/bin/env python3
+"""潮生会：岛上管事机构，不能加入。"""
+from __future__ import annotations
+
+import asyncio
+import os
+import sys
+import tempfile
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+
+async def _boot(tmp: Path):
+    os.environ["DATA_DIR"] = str(tmp)
+    from server import config, db
+
+    config.DATA_DIR = tmp
+    config.DB_PATH = tmp / "relay.db"
+    db.DATA_DIR = tmp
+    db.DB_PATH = tmp / "relay.db"
+    await db.init_db()
+    return db
+
+
+async def _enroll(db, email: str, name: str) -> int:
+    key = await db.create_api_key(email)
+    row = await db.get_key_row(key)
+    await db.enroll_steward(row["id"], name, "", "naturalist", "")
+    return row["id"]
+
+
+async def test_chaoshen_desk_and_refuse() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="chaoshen-"))
+    db = await _boot(tmp)
+    kid = await _enroll(db, "hui@example.com", "簿客")
+    from server import mcp_dispatch, npc
+
+    listing = await mcp_dispatch.visit_bundle(kid, "list")
+    assert "阿簿" in listing and "潮生会" in listing and "不能加入" in listing, listing
+
+    desk = await mcp_dispatch.visit_bundle(kid, "潮生会")
+    assert "潮生会" in desk and "阿簿" in desk, desk
+    assert "不能加入" in desk or "已经在册" in desk, desk
+    assert "visit_ops 潮生会" in desk, desk
+
+    asked = await mcp_dispatch.visit_bundle(kid, "潮生会 问")
+    assert "本周岛务" in asked, asked
+
+    via_npc = await npc.npc_ops(kid, "visit 阿簿")
+    assert "潮生会" in via_npc, via_npc
+
+    via_alias = await npc.npc_ops(kid, "visit 潮生会")
+    assert "值事" in via_alias or "阿簿" in via_alias, via_alias
+
+    for bad in ("入会", "开会", "退会", "加入", "join"):
+        try:
+            await mcp_dispatch.visit_bundle(kid, f"潮生会 {bad}")
+        except ValueError as exc:
+            msg = str(exc)
+            assert "不是给管理员加入" in msg, msg
+        else:
+            raise AssertionError(f"{bad} should refuse")
+
+    help_text = await mcp_dispatch.visit_bundle(kid, "潮生会 help")
+    assert "没有入会" in help_text and "捐 甘蓝 2" in help_text, help_text
+    assert "guild" in help_text, help_text
+
+
+async def test_chaoshen_same_larder() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="chaoshen-larder-"))
+    db = await _boot(tmp)
+    kid = await _enroll(db, "larder@example.com", "仓客")
+    from server import mcp_dispatch
+
+    async with db.connect() as conn:
+        sid = (await (await conn.execute(
+            "SELECT id FROM stewards WHERE key_id=?", (kid,)
+        )).fetchone())[0]
+        await db.add_item(conn, sid, "crop_kale", 4)
+        await conn.commit()
+
+    donated = await mcp_dispatch.visit_bundle(kid, "潮生会 捐 甘蓝 2")
+    assert "捐赠" in donated or "储藏室" in donated, donated
+
+    larder = await mcp_dispatch.visit_bundle(kid, "潮生会 仓")
+    assert "甘蓝" in larder, larder
+
+    via_alliance = await mcp_dispatch.alliance_bundle(kid, "larder")
+    assert "甘蓝" in via_alliance, via_alliance
+
+
+async def test_chaoshen_public_snapshot() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="chaoshen-pub-"))
+    await _boot(tmp)
+    from server import chaoshen
+
+    snap = await chaoshen.public_snapshot()
+    assert snap["org"] == "潮生会"
+    assert snap["clerk"] == "阿簿"
+    assert "不收人" in snap["note"] or "不能" in snap["note"]
+    assert "league" in snap
+
+
+def test_chaoshen() -> None:
+    asyncio.run(test_chaoshen_desk_and_refuse())
+    asyncio.run(test_chaoshen_same_larder())
+    asyncio.run(test_chaoshen_public_snapshot())
+
+
+if __name__ == "__main__":
+    test_chaoshen()
+    print("ok")

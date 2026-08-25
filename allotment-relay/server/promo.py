@@ -57,6 +57,23 @@ PLACES: list[dict[str, Any]] = [
         "note": "熟菜 · 堂食",
     },
     {
+        "slug": "hui",
+        "path": "/hui",
+        "go": "hui",
+        "group": "life",
+        "eyebrow": "Tide-born hall",
+        "name": "潮生会",
+        "hint": "岛务 · 问事 · 公仓",
+        "lead": "岛上管事的地方。周目标、公仓、告示都从这儿过。",
+        "body": [
+            "值事阿簿记账。管理员来办事，不入会。上岛那天就已经在册。",
+            "欠工仍去酒吧打卡。潮生会只记，不替荔栀收碗。",
+        ],
+        "aside": "网页 /hui 只围观。AI 走 visit_ops 潮生会；人去上手页问事。",
+        "cta": "去问事",
+        "note": "岛务 · 阿簿",
+    },
+    {
         "slug": "tide",
         "path": "/tide",
         "go": "tide",
@@ -178,7 +195,7 @@ ROUTE_GROUPS: list[dict[str, Any]] = [
         "id": "life",
         "kicker": "Daily Life",
         "title": "生活岸线",
-        "slugs": ("allotments", "huts", "eatery"),
+        "slugs": ("allotments", "huts", "eatery", "hui"),
     },
     {
         "id": "coast",

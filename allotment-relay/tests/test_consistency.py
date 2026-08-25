@@ -124,6 +124,14 @@ def test_mcp_descriptions() -> None:
     alliance = mcp._tool_manager.get_tool("alliance_ops")
     al_blob = f"{alliance.description}\n{(alliance.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
     assert "贡献榜" in al_blob
+    assert "潮生会" in al_blob
+
+    visit = mcp._tool_manager.get_tool("visit_ops")
+    v_blob = f"{visit.description}\n{(visit.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
+    assert "潮生会" in v_blob
+    assert "不能加入" in v_blob
+    assert "阿簿" in v_blob
+    assert "潮生会 捐 甘蓝 2" in v_blob
 
     hut = mcp._tool_manager.get_tool("hut_ops")
     hut_blob = f"{hut.description}\n{(hut.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -156,6 +164,8 @@ def test_mcp_descriptions() -> None:
     assert "猫猫" in instructions
     assert "relay_manual" in instructions
     assert "禁止发明" in instructions or "不是聊天沙盒" in instructions
+    assert "潮生会" in instructions
+    assert "不能加入" in instructions
     assert "下馆子" in instructions
     assert "shop dine" in instructions
     assert "quarry_ops" in instructions
@@ -253,6 +263,9 @@ def test_relay_manual_covers_systems() -> None:
         "1～99",
         "潮汐本尊",
         "alliance_ops board",
+        "visit_ops 潮生会",
+        "不能入会",
+        "阿簿",
         "kitchen_ops eat",
         "下馆子",
         "shop dine",
@@ -517,6 +530,7 @@ def test_patron_pages_share_steward_key() -> None:
     assert '"go": "bar"' in promo
     assert '"go": "eatery"' in promo
     assert '"go": "star"' in promo
+    assert '"go": "hui"' in promo
     assert 'RedirectResponse("/play?go=me"' in main_py
     assert 'lounge.html"' in main_py
     assert 'RedirectResponse("/play?go=lounge"' not in main_py
@@ -532,6 +546,7 @@ def test_patron_pages_share_steward_key() -> None:
     assert 'allotments.html"' in main_py
     assert 'quarry.html"' in main_py
     assert 'workshop.html"' in main_py
+    assert 'hui.html"' in main_py
     lounge_html = (root / "server/templates/lounge.html").read_text(encoding="utf-8")
     assert "/static/site-key.js" in lounge_html
     assert "lounge-page" in lounge_html
@@ -552,6 +567,9 @@ def test_patron_pages_share_steward_key() -> None:
     workshop_html = (root / "server/templates/workshop.html").read_text(encoding="utf-8")
     workshop_js = (root / "server/static/workshop.js").read_text(encoding="utf-8")
     workshop_css = (root / "server/static/workshop.css").read_text(encoding="utf-8")
+    hui_html = (root / "server/templates/hui.html").read_text(encoding="utf-8")
+    hui_js = (root / "server/static/hui.js").read_text(encoding="utf-8")
+    hui_css = (root / "server/static/hui.css").read_text(encoding="utf-8")
     nav = (root / "server/templates/partials/nav.html").read_text(encoding="utf-8")
     assert "/api/public/bar" in bar_js
     assert "/api/public/tide" in tide_js
@@ -563,6 +581,7 @@ def test_patron_pages_share_steward_key() -> None:
     assert "/api/public/allotments" in allo_js
     assert "/api/public/quarry" in quarry_js
     assert "/api/public/workshop" in workshop_js
+    assert "/api/public/hui" in hui_js
     assert "/api/public/stats" in allo_js
     assert "place-live.css" in bar_html
     assert "place-live.css" in tide_html
@@ -574,6 +593,8 @@ def test_patron_pages_share_steward_key() -> None:
     assert "allotments.css" in allo_html
     assert "quarry.css" in quarry_html
     assert "workshop.css" in workshop_html
+    assert "hui.css" in hui_html
+    assert "place-live.css" in hui_html
     assert "/static/site-key.js" not in quarry_html
     assert "/static/site-key.js" not in workshop_html
     assert "ranking-stage" in board_html
@@ -619,6 +640,8 @@ def test_patron_pages_share_steward_key() -> None:
     assert 'href="/huts"' in nav
     assert 'href="/star"' in nav
     assert 'href="/allotments"' in nav
+    assert 'href="/hui"' in nav
+    assert "潮生会" in nav
     assert 'href="/lounge"' in nav
     assert "聊天室" in nav
     assert "全服榜" in nav
@@ -640,6 +663,8 @@ def test_patron_pages_share_steward_key() -> None:
     assert "/play?go=star" in star_html
     assert "/play?go=quarry" in quarry_html
     assert "/play?go=craft" in workshop_html
+    assert "/play?go=hui" in hui_html
+    assert "不能入会" in hui_html or "不入会" in hui_html
     assert 'href="/play"' in allo_html
     assert "上手页" in site_key
 
@@ -648,7 +673,7 @@ def test_promo_place_pages() -> None:
     from server import promo
 
     slugs = {p["slug"] for p in promo.PLACES}
-    for slug in ("allotments", "tide", "huts", "bar", "eatery", "market", "quarry", "workshop", "star", "undertide"):
+    for slug in ("allotments", "tide", "huts", "bar", "eatery", "market", "quarry", "workshop", "star", "undertide", "hui"):
         assert slug in slugs, slug
         ctx = promo.page_context(slug)
         assert ctx["play_href"].startswith("/play")
@@ -663,6 +688,7 @@ def test_promo_place_pages() -> None:
     assert promo.play_href(promo.get("allotments")) == "/play"
     assert promo.play_href(promo.get("bar")) == "/play?go=bar"
     assert promo.play_href(promo.get("workshop")) == "/play?go=craft"
+    assert promo.play_href(promo.get("hui")) == "/play?go=hui"
 
 
 def test_bar_ops_help() -> None:

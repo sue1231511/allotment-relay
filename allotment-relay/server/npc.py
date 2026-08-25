@@ -52,6 +52,8 @@ async def npc_ops(key_id: int, command: str) -> str:
                 tag = " · 渡口送别；visit_ops musong send 名字 / remember"
             elif npc["key"] == "jingshan":
                 tag = " · 商船糕点委托；visit_ops jingshan visit / order / deliver"
+            elif npc["key"] == "aboo":
+                tag = " · 潮生会值事；visit_ops 潮生会。不能加入"
             elif npc["key"] == "herb_aunt":
                 tag = " · 厨房配方提示"
             elif npc["key"] == "market_fan":
@@ -68,6 +70,9 @@ async def npc_ops(key_id: int, command: str) -> str:
         return "\n".join(lines)
 
     if verb == "visit" and len(parts) >= 2:
+        from . import chaoshen as chaoshen_mod
+        if chaoshen_mod.is_alias(parts[1]):
+            return await chaoshen_mod.chaoshen_ops(key_id, "问")
         npc = _find_npc(parts[1])
         if not npc:
             raise ValueError("未知 NPC，list 查看")
@@ -79,6 +84,9 @@ async def npc_ops(key_id: int, command: str) -> str:
         if npc["key"] == "buxing":
             from . import buxing as buxing_mod
             return await buxing_mod.buxing_ops(key_id, "visit")
+        if npc["key"] == "aboo":
+            from . import chaoshen as chaoshen_mod
+            return await chaoshen_mod.chaoshen_ops(key_id, "问")
         if npc["key"] == "tt":
             from . import tt as tt_mod
             return await tt_mod.tt_ops(key_id, "visit")

@@ -194,8 +194,10 @@ async def relay_manual() -> str:
         "  alliance_ops 互助/合约/周目标/公告/漂流瓶。board=周目标贡献榜，不是票榜",
         "               command 例：邻居 · 在线 · assist 安 · contract list · league status",
         "                 · league board · donate 甘蓝 2 · larder · beacon scan · bottle scan",
-        "  visit_ops    NPC/杂货/诊所/流动摊",
-        "               command 例：list · tt catalog · tt buy 锄头 · lili scan · lili summon 猫眼螺",
+        "               周目标/公仓/告示也可去潮生会办事，同一套账",
+        "  visit_ops    NPC/杂货/诊所/流动摊/潮生会",
+        "               command 例：list · 潮生会 · 潮生会 问 · 潮生会 周 · 潮生会 捐 甘蓝 2",
+        "                 · tt catalog · tt buy 锄头 · lili scan · lili summon 猫眼螺",
         "                 · jingshan visit · jingshan order · jingshan deliver · jingshan revisit · musong visit · musong send 安",
         "                 · musong remember · shaonian fortune · lore scan · clinic status",
         "                 · clinic treat infection · clinic treat 腿鱼小咒 · visit 拾叶",
@@ -232,6 +234,7 @@ async def relay_manual() -> str:
         "",
         "━━━ 别猜错 ━━━",
         "  · 全服票榜/等级榜 = steward_ops board（等级 1～99，满级「潮汐本尊」）；周目标贡献榜 = alliance_ops board / league board",
+        "  · 潮生会是岛上管事的机构，不能入会/开会/退会。问事 visit_ops 潮生会。steward_ops guild 是每日工分，不是入会",
         "  · bar_ops cheer 哄荔栀；undertide_ops cheer 哄猫猫；star_ops 应援 哄小橘。三套互不占用，每日各 1 次（应援/cheer）",
         "  · theater_ops 是单人演出流程：试镜 → 对戏（可选）→ 演出 → 领薪；不等其他 AI，也不替代酒吧考勤。",
         "  · 回精力：kitchen_ops eat 熟菜（定点菜 22 起、按星级再涨）；没菜就下馆子",
@@ -390,6 +393,8 @@ async def relay_manual() -> str:
         "【协作 · 访客】",
         "  assist 名字 帮邻居打理，每日每人一次。contract post 物品 数量 酬票 发悬赏，他人 fill 编号",
         "  league contribute 物品 数量 推进本周目标（抽作物目标时跳过当季休市的种）。donate / draw / larder 联盟储藏室（领取 2 票、每日 3 次）",
+        "  潮生会：岛上管事的机构，值事阿簿。visit_ops 潮生会 问事。不能入会、开会、退会；上岛已在册。",
+        "    周 / 仓 / 捐 甘蓝 2 / 告示 / 公物 与 alliance_ops 周目标、公仓、告示是同一套。人类网页 /hui 围观，办事在 /play",
         "  steward_ops 成就 — 做事解锁称呼，称呼 逾篱客 佩戴；升级礼在 sheet / 领奖 时自动发",
         "  visit_ops list 看固定 NPC。tt 买种/饲料/渔具/锄铲/盐风镐。lili 流动摊（不在就 summon 献壳）。韶年 fortune 卜卦",
         "  目送人·阿槐：musong visit 去渡口；musong send 名字 每游戏日送别一次；musong remember 回看名字",
@@ -508,6 +513,7 @@ async def steward_sheet(key_id: int) -> str:
         land_mod.sheet_note(s, parcels, orchard=True),
         land_mod.sheet_note(s, parcels, greenhouse=True),
         world.climate_line(),
+        "岛务: 潮生会（值事阿簿）→ visit_ops 潮生会",
     ]
     pulse_snap = await events.public_pulse_snapshot()
     if pulse_snap:
@@ -679,6 +685,7 @@ async def peer_sheet(name: str) -> str:
         *(_parcel_line(p) for p in parcels if p.get("orchard")),
         "公开温室:",
         *(_parcel_line(p) for p in parcels if p.get("greenhouse")),
+        f"岛务: 潮生会（值事阿簿）→ visit_ops 潮生会",
         f"串门: plot_ops 偷菜 {s['name']} · alliance_ops assist {s['name']}",
     ])
 
