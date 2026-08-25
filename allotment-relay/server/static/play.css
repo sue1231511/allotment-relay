@@ -931,7 +931,39 @@ body.play-bound .play-gate { display: none !important; }
   background: rgba(255, 255, 255, .55);
 }
 
-.play-lounge-actions { display: flex; gap: 8px; margin-top: 8px; }
+.play-lounge-actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+
+.play-lounge-booth {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .45);
+}
+
+.play-lounge-room {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+  margin: 0;
+}
+
+.play-lounge-code {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.play-lounge-code input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font: inherit;
+}
 
 @media (max-width: 760px) {
   .place-top {

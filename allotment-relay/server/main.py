@@ -238,6 +238,18 @@ class LoungeNameRequest(BaseModel):
     name: str
 
 
+class LoungeBoothRequest(BaseModel):
+    api_key: str
+    code: str = ""
+
+
+class LoungeMessagesRequest(BaseModel):
+    api_key: str
+    since: int = 0
+    before: int = 0
+    limit: int = 50
+
+
 class LoungeKeyRequest(BaseModel):
     api_key: str
     device_id: str = ""
@@ -432,13 +444,39 @@ async def lounge_meta(request: Request):
 
 
 @app.get("/api/lounge/messages")
-async def lounge_messages(since: int = 0, before: int = 0, limit: int = 50):
+async def lounge_messages_public(since: int = 0, before: int = 0, limit: int = 50):
+    """未登录围观：只返回大厅。小包间必须带凭证 POST。"""
     from . import lounge
-    if before:
-        msgs = await lounge.list_messages(limit=limit, before_id=before)
-    else:
-        msgs = await lounge.list_messages(limit=limit, since_id=max(0, since))
-    return {"messages": msgs}
+    before_id = before or None
+    return await lounge.list_hall_messages(
+        since_id=max(0, since) if not before_id else 0,
+        before_id=before_id,
+        limit=limit,
+    )
+
+
+@app.post("/api/lounge/messages")
+async def lounge_messages_mine(body: LoungeMessagesRequest):
+    from . import lounge
+    try:
+        before_id = body.before or None
+        return await lounge.human_list_messages(
+            body.api_key.strip(),
+            since_id=max(0, body.since) if not before_id else 0,
+            before_id=before_id,
+            limit=body.limit,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/lounge/booth")
+async def lounge_booth(body: LoungeBoothRequest):
+    from . import lounge
+    try:
+        return await lounge.human_enter_booth(body.api_key.strip(), body.code)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.post("/api/lounge/post")

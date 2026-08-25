@@ -1753,6 +1753,10 @@ async def init_db() -> None:
             """,
             "CREATE INDEX IF NOT EXISTS idx_star_scripts_status ON star_scripts(status, created_at)",
             "CREATE INDEX IF NOT EXISTS idx_star_scripts_steward ON star_scripts(steward_id, created_at)",
+            "ALTER TABLE lounge_messages ADD COLUMN booth_key TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE stewards ADD COLUMN lounge_booth_key TEXT NOT NULL DEFAULT ''",
+            "CREATE INDEX IF NOT EXISTS idx_lounge_booth ON lounge_messages(booth_key, id)",
+            "CREATE INDEX IF NOT EXISTS idx_stewards_lounge_booth ON stewards(lounge_booth_key)",
         ):
             try:
                 await db.execute(ddl)
