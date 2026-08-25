@@ -327,6 +327,9 @@ async def pit_ops(
         if (await cur.fetchone())[0] < entry:
             raise ValueError(f"入场费 {entry} 票。看门人不赊账，也不负责你的尊严。")
 
+        # 麻醉咬木：下坑前咬住，本场 body 惩罚 -5（自动消耗）
+        bite_reduce = 5 if await db.take_item(conn, s["id"], "ut_bite_block", 1) else 0
+
         their_strat = random.choice(list(STRATEGY_BEATS))
         my_power = int(await combat_power(conn, s) * strategy_mod(my_strat, their_strat))
         their_power = int(row["power"] * strategy_mod(their_strat, my_strat))
@@ -364,7 +367,7 @@ async def pit_ops(
             lines.append(f"\n（入场 −{entry} · 胜奖 +{prize} · 影信 +{utcfg.UT_PIT_WIN_REP}）{entry_discount_note}")
             # 胜者也可能挂彩
             if random.random() < 0.30:
-                loss = random.randint(5, 10)
+                loss = max(0, random.randint(5, 10) - bite_reduce)
                 await conn.execute(
                     "UPDATE stewards SET health=MAX(0,health-?) WHERE id=?", (loss, s["id"])
                 )
@@ -382,7 +385,7 @@ async def pit_ops(
             )
             lines.append(lose_msg)
             await bond_mod.well(conn, s["id"], bond_mod.WELL_LOSE)
-            loss = random.randint(10, 15)
+            loss = max(0, random.randint(10, 15) - bite_reduce)
             await conn.execute(
                 "UPDATE stewards SET health=MAX(0,health-?) WHERE id=?", (loss, s["id"])
             )

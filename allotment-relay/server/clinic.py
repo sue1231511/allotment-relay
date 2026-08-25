@@ -296,9 +296,15 @@ async def clinic_ops(key_id: int, command: str) -> str:
     if verb == "treat" and len(parts) >= 2:
         target = " ".join(parts[1:]).strip().lower()
         async with db.connect() as conn:
+            # 无标药盒：就医自动抵扣一次，本次治疗费减半（消耗）
+            treat_mult = mult
+            pill_note = ""
+            if await db.take_item(conn, s["id"], "ut_unmarked_pillbox", 1):
+                treat_mult = mult * 0.5
+                pill_note = "（无标药盒抵扣，诊费减半）"
             if target in ("all", "全部", "打包"):
                 msg = await health.treat_all(
-                    conn, s["id"], cost_mult=mult, cost_add=add, allow_pit=False,
+                    conn, s["id"], cost_mult=treat_mult, cost_add=add, allow_pit=False,
                 )
             else:
                 from .catalog import resolve_ailment_key
@@ -306,11 +312,13 @@ async def clinic_ops(key_id: int, command: str) -> str:
                 resolved = resolve_ailment_key(target) or target
                 msg = await health.treat_one(
                     conn, s["id"], target,
-                    cost_mult=mult, cost_add=add, allow_pit=False,
+                    cost_mult=treat_mult, cost_add=add, allow_pit=False,
                 )
                 line = pick_treat_line(resolved)
                 if line:
                     msg = line + "\n" + msg
+            if pill_note:
+                msg += f"\n{pill_note}"
             await db.add_chronicle("clinic", f"{s['name']} {msg}", s["id"], conn=conn)
             await conn.commit()
         if price_note:

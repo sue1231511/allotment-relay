@@ -242,6 +242,29 @@ def _item_meta(item_key: str) -> dict[str, Any]:
     return cat.COMMON_GOODS[item_key]
 
 
+def _resolve_sell_key(token: str) -> str | None:
+    """把中文名/原 key/完整 ut_ key 归一成行囊里的销赃 key（ut_ 或 ut_.._s）。"""
+    t = (token or "").strip()
+    if not t:
+        return None
+    if t.startswith("ut_"):
+        return t
+    goods_all = (cat.COMMON_GOODS, cat.LINKED_GOODS, cat.RARE_GOODS, cat.UT_GEAR_GOODS)
+    # 原 key（可带 _s 次品后缀）
+    base = t[:-2] if t.endswith("_s") else t
+    for goods in goods_all:
+        if base in goods:
+            return f"ut_{t}"
+    # 中文名（真货 / 次品）
+    for goods in goods_all:
+        for k, v in goods.items():
+            if t == v["name"]:
+                return f"ut_{k}"
+            if t == f"{v['name']}（次品）" or (t.endswith("次品") and t.startswith(v["name"])):
+                return f"ut_{k}_s"
+    return None
+
+
 def _shelf_price(meta: dict[str, Any], layer: str, rep: int) -> int:
     _, rep_mult, _ = _rep_tier(rep)
     if layer == "gear":
@@ -366,8 +389,8 @@ async def _cmd_sell(
     item_token: str, qty_token: str = "1",
 ) -> str:
     """掌柜处出货（销赃 fence 一期基础版：只收 ut_ 物品）。"""
-    key = item_token.strip()
-    if not key.startswith("ut_"):
+    key = _resolve_sell_key(item_token)
+    if not key:
         raise ValueError("掌柜只收潮下货（ut_ 开头 key）。地上货走 tote_ops vend。")
     try:
         qty = max(1, int(qty_token))

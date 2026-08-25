@@ -892,7 +892,7 @@ async def _resolve_hail(
             (bonus, s["id"]),
         )
         if random.random() < 0.45:
-            table = voyage_loot_table(route)
+            table = voyage_loot_table(route, rarity_bonus=await _hook_rarity_bonus(conn, s["id"]))
             extra_fish = random.choice(table)
             await db.add_item(conn, s["id"], extra_fish, 1)
             if extra_fish.startswith("fish_"):
@@ -911,6 +911,15 @@ async def _resolve_hail(
     msg = flavor.fill(flavor.pick(flavor.HAIL_FIGHT_LOSE), who=who)
     naval = await _apply_naval_payload(conn, s, voyage, loot_lines, fish_loot, payload)
     return msg + "\n" + naval
+
+
+async def _hook_rarity_bonus(conn: aiosqlite.Connection, steward_id: int) -> int:
+    """旧制 T5 鱼钩：持有即渔获稀有 +1（rarity_cap 上调）。"""
+    row = await (await conn.execute(
+        "SELECT 1 FROM satchel WHERE steward_id=? AND item='ut_old_hook_t5' AND quantity>0",
+        (steward_id,),
+    )).fetchone()
+    return 1 if row else 0
 
 
 async def survival_bump_safe(conn, steward_id: int, **kwargs) -> None:
@@ -947,7 +956,7 @@ async def _resolve_voyage(
     boat = BOATS.get(s.get("boat_key") or "", {})
     cargo = boat.get("cargo", 2)
     fish_loot: list[str] = []
-    loot_table = voyage_loot_table(voyage["route"])
+    loot_table = voyage_loot_table(voyage["route"], rarity_bonus=await _hook_rarity_bonus(conn, s["id"]))
 
     if failed:
         await conn.execute("UPDATE stewards SET boat_damaged=1 WHERE id=?", (s["id"],))
