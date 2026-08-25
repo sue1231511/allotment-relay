@@ -651,7 +651,7 @@ def test_patron_pages_share_steward_key() -> None:
     assert "routes" in index_html
     assert 'href="/manual"' in play_html
     assert 'href="/manual"' in index_html
-    assert '@app.get("/manual")' in main_py
+    assert '@app.get("/manual"' in main_py
     assert '"go": "bar"' in promo
     assert '"go": "eatery"' in promo
     assert '"go": "star"' in promo
