@@ -114,12 +114,14 @@ def test_mcp_descriptions() -> None:
     assert "成就" in st_blob
     assert "99" in st_blob
     assert "潮汐本尊" in st_blob
+    assert "岛缘" in st_blob
 
     ut = mcp._tool_manager.get_tool("undertide_ops")
     ut_blob = f"{ut.description}\n{(ut.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
     assert "猫猫" in ut_blob
     assert "pit medic" not in ut_blob
     assert "medic" in ut_blob
+    assert "岛缘" in ut_blob
 
     alliance = mcp._tool_manager.get_tool("alliance_ops")
     al_blob = f"{alliance.description}\n{(alliance.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -269,6 +271,8 @@ def test_relay_manual_covers_systems() -> None:
         "steward_ops board",
         "1～99",
         "潮汐本尊",
+        "岛缘",
+        "steward_ops 岛缘",
         "alliance_ops board",
         "visit_ops 潮生会",
         "不能入会",

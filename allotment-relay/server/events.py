@@ -416,6 +416,8 @@ async def manual_scrump(steward: dict[str, Any], target_name: str, slot: str | i
                 f"{detail}\n入袋 {loot}，{nibble['note']}。"
                 f"今日逾篱 {used + 1}/{config.SCRUMP_DAILY}"
             )
+            from . import bond as bond_mod
+            await bond_mod.grant(conn, steward["id"], bond_mod.SCRUMP, "labor")
 
         await conn.execute(
             "INSERT INTO chronicle (action, actor_id, target_id, text, created_at) VALUES (?,?,?,?,?)",
@@ -739,6 +741,13 @@ async def roll_after_action(
             "INSERT INTO chronicle (action, actor_id, target_id, text, created_at) VALUES (?, ?, ?, ?, ?)",
             ("incident", steward["id"], None, f"{steward['name']} — {event.detail}", db.now()),
         )
+    from . import bond as bond_mod
+    await bond_mod.grant(
+        conn,
+        steward["id"],
+        bond_mod.EVENT_GOOD if event.kind == "good" else bond_mod.EVENT_BAD,
+        "life",
+    )
     return msg
 
 
@@ -1031,6 +1040,8 @@ async def camera_ops(key_id: int, command: str) -> str:
                 raise ValueError(f"装监控需要 {CAMERA_COST} 票（当前 {s['tickets']}）")
             await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (CAMERA_COST, s["id"]))
             await conn.execute("UPDATE parcels SET camera=1 WHERE id=?", (plot["id"],))
+            from . import bond as bond_mod
+            await bond_mod.grant(conn, s["id"], bond_mod.CAMERA, "labor")
             await conn.commit()
             return (
                 f"监控已装在 {slot_txt}。（−{CAMERA_COST} 票）\n\n"

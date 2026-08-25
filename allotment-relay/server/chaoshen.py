@@ -351,10 +351,16 @@ async def fund_donate(key_id: int, amount: int) -> str:
             (amount, amount),
         )
         left = mine - amount
+        from . import bond as bond_mod
+        gained = await bond_mod.grant(
+            conn, s["id"], bond_mod.donate_amount(amount), "give"
+        )
         msg = (
             f"{s['name']} 向{FUND_NAME}捐了 {amount} 票"
             f"（岛均 {avg}，捐后口袋 {left}）"
         )
+        if gained:
+            msg += f" · 岛缘 +{gained}"
         await db.add_chronicle("fund", msg, s["id"], conn=conn)
         paid = await ensure_fund_payout(conn)
         await conn.commit()

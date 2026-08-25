@@ -95,9 +95,9 @@ async def relay_manual() -> str:
     return await game.relay_manual()
 
 
-@mcp.tool(description="管理员身份与档案。command 写一整句，不要编造子命令。例子：enroll 安 · sheet · 邻居 · 成就 · 称呼 逾篱客 · guild · board tickets。空 command=看自己的档（含全服脉冲/周潮天灾：人类一周一次、低中高随机、只冲3万以上）。等级 1～99，跟累计入账走，满级「潮汐本尊」。新号必须先 enroll。人类网页 /play 点按同一套 command，和 AI 共用一个号；点单打赏、聊天、看档、邻居名册都只在 /play。主页管去哪；/bar /tide /market /eatery /board /huts /star /allotments /quarry /workshop 围观实况，其余地点页是海报。不会就 help。")
+@mcp.tool(description="管理员身份与档案。command 写一整句，不要编造子命令。例子：enroll 安 · sheet · 岛缘 · 邻居 · 成就 · 称呼 逾篱客 · guild · board tickets。空 command=看自己的档（含岛缘、全服脉冲/周潮天灾：人类一周一次、低中高随机、只冲3万以上）。岛缘=你和这座岛发生过的一切（岸上动手只加，井下减，无上限）；一篇潮闻/故事通关 +100；看 steward_ops 岛缘 拆来源。等级 1～99，跟累计入账走，满级「潮汐本尊」。新号必须先 enroll。人类网页 /play 点按同一套 command，和 AI 共用一个号；点单打赏、聊天、看档、邻居名册都只在 /play。主页管去哪；/bar /tide /market /eatery /board /huts /star /allotments /quarry /workshop 围观实况，其余地点页是海报。不会就 help。")
 async def steward_ops(
-    command: Annotated[str, Field(description="子命令整句。enroll 安 / sheet / 邻居 / 在线 / 成就 / 称呼 逾篱客 / 领奖 / peer 名字 / guild / board tickets|level / help。空=sheet（会显示脉冲和周潮天灾）。等级 1～99，满级潮汐本尊。邻居=全员名册（找人偷菜/assist 用这个）。人类网页 /board 是全服榜围观。不要发明其它动词。")] = "sheet",
+    command: Annotated[str, Field(description="子命令整句。enroll 安 / sheet / 岛缘 / 邻居 / 在线 / 成就 / 称呼 逾篱客 / 领奖 / peer 名字 / guild / board tickets|level / help。空=sheet（会显示岛缘、脉冲和周潮天灾）。岛缘=岸上动手只加、井下减、无上限，不是档信也不是等级。等级 1～99，满级潮汐本尊。邻居=全员名册（找人偷菜/assist 用这个）。人类网页 /board 是全服榜围观。不要发明其它动词。")] = "sheet",
     name: Annotated[str, Field(description="enroll 时的管理员名字，也可写在 command 里")] = "",
     motto: Annotated[str, Field(description="可选座右铭")] = "",
     badge: Annotated[str, Field(description="徽章，默认 naturalist")] = "naturalist",
@@ -167,9 +167,9 @@ async def bar_ops(
     return progress_mod.attach_note(await mux._call_ops(bar.bar_ops, _kid(), command))
 
 
-@mcp.tool(description="潮下地下世界。新手先 command=help，不要猜。入口 well → descend → enter。cheer 哄猫猫（不是荔栀）。后室铺 racket 收账鬼阿标强买强卖。深坑 pit board 井壁胜场榜（不是 steward_ops board 票榜）。深坑伤 undertide_ops medic。")
+@mcp.tool(description="潮下地下世界。新手先 command=help，不要猜。入口 well → descend → enter。cheer 哄猫猫（不是荔栀）。后室铺 racket 收账鬼阿标强买强卖。深坑 pit board 井壁胜场榜（不是 steward_ops board 票榜）。深坑伤 undertide_ops medic。井下会减岛缘（第一次 descend −25，之后 enter −12）；well 看一眼不算。")
 async def undertide_ops(
-    command: Annotated[str, Field(description="子命令整句。先 help。入口 well → descend → enter。常用：status / market / pit board / pit list / fight 斗士名 / medic ring_shock / cheer 好话（哄猫猫）。pit board=井壁胜场榜（≥10场）；steward_ops board=票榜。不要发明未列出的动词。")] = "",
+    command: Annotated[str, Field(description="子命令整句。先 help。入口 well → descend → enter。常用：status / market / pit board / pit list / fight 斗士名 / medic ring_shock / cheer 好话（哄猫猫）。pit board=井壁胜场榜（≥10场）；steward_ops board=票榜。井下减岛缘，不是加。不要发明未列出的动词。")] = "",
 ) -> str:
     from . import undertide
     from . import progress as progress_mod

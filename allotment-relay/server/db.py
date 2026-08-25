@@ -1512,6 +1512,30 @@ async def init_db() -> None:
             "ALTER TABLE parcels ADD COLUMN orchard INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN orchard_count INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN greenhouse_count INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN island_bond INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN island_bond_labor INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN island_bond_people INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN island_bond_story INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN island_bond_life INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN island_bond_give INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN island_bond_well INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN island_bond_backfill INTEGER NOT NULL DEFAULT 0",
+            """
+            CREATE TABLE IF NOT EXISTS island_bond_flags (
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                flag_key TEXT NOT NULL,
+                PRIMARY KEY (steward_id, flag_key)
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS island_bond_daily (
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                day INTEGER NOT NULL,
+                flag_key TEXT NOT NULL,
+                count INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (steward_id, day, flag_key)
+            )
+            """,
             """
             CREATE TABLE IF NOT EXISTS steward_quarry (
                 steward_id INTEGER PRIMARY KEY REFERENCES stewards(id),
@@ -1612,9 +1636,11 @@ async def init_db() -> None:
         from . import ranks as ranks_mod
         from . import disaster as disaster_mod
         from . import chaoshen as chaoshen_mod
+        from . import bond as bond_mod
         await ranks_mod.seed_xp(db)
         await disaster_mod.ensure_weekly_tide(db)
         await chaoshen_mod.ensure_fund_payout(db)
+        await bond_mod.backfill_all(db)
         await db.commit()
 
 

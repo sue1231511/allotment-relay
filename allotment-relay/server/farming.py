@@ -891,6 +891,8 @@ async def maybe_gugu_dove_stalk(
     pending = await get_gugu_dove_pending(conn, steward["id"])
     if not pending:
         return None
+    from . import bond as bond_mod
+    await bond_mod.grant(conn, steward["id"], bond_mod.DOVE_STALK, "life")
     return flavor.wrap_event(
         "neutral",
         flavor.pick(flavor.DOVE_EVENT_LABELS),

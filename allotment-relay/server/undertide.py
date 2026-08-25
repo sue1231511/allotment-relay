@@ -178,6 +178,8 @@ async def on_scrump_busted(
         steward["id"],
         conn=conn,
     )
+    from . import bond as bond_mod
+    await bond_mod.well(conn, steward["id"], bond_mod.WELL_CRIME)
     return "\n\n" + utcopy.JAIL_ARREST
 
 
@@ -319,6 +321,8 @@ async def _cmd_buy(
         "INSERT INTO ut_market_log (steward_id, day_id, item_key, quality, price, created_at) VALUES (?,?,?,?,?,?)",
         (s["id"], day, row["item_key"], quality, price, db.now()),
     )
+    from . import bond as bond_mod
+    await bond_mod.well(conn, s["id"], bond_mod.WELL_MARKET)
     await conn.commit()
     return f"掌柜报价 {price} 票。\n{head}{tail}"
 
@@ -365,6 +369,8 @@ async def _cmd_sell(
         (s["id"], key),
     )
     await conn.execute("UPDATE stewards SET tickets=tickets+? WHERE id=?", (total, s["id"]))
+    from . import bond as bond_mod
+    await bond_mod.well(conn, s["id"], bond_mod.WELL_MARKET)
     await conn.commit()
 
     if lucky:
@@ -798,6 +804,8 @@ async def _cmd_cheer(
         "VALUES (?,?,?,?,?, 'cat')",
         (s["id"], "good", reason[:100], "pending", db.now()),
     )
+    from . import bond as bond_mod
+    await bond_mod.well(conn, s["id"], bond_mod.WELL_CHEER)
     await conn.commit()
     av = await avatar_key(conn, s["id"])
     if av == "anan":
@@ -1173,6 +1181,8 @@ async def undertide_ops(key_id: int, command: str) -> str:
                 "UPDATE stewards SET tickets=tickets-? WHERE id=?", (utcfg.UT_DESCEND_COST, s["id"])
             )
             await conn.execute("UPDATE steward_undertide SET access=1 WHERE steward_id=?", (s["id"],))
+            from . import bond as bond_mod
+            await bond_mod.well(conn, s["id"], bond_mod.WELL_FIRST, once="well_first")
             av = await avatar_key(conn, s["id"])
             if av == "K":
                 chron = f"井底的人收了一张新门票。{s['name']} 下去了。\n下面安静了半秒——然后所有人继续忙自己的。"
@@ -1223,6 +1233,9 @@ async def undertide_ops(key_id: int, command: str) -> str:
                 _gav = await avatar_key(conn, s["id"])
                 guide_tip = {"K": utcopy.AVATAR_K_GUIDE_ENTER, "anan": utcopy.AVATAR_AN_GUIDE_ENTER}.get(
                     _gav, utcopy.GUIDE_FIRST_ENTER)
+            from . import bond as bond_mod
+            await bond_mod.well(conn, s["id"], bond_mod.WELL_ENTER)
+            await conn.commit()
             return hits_prefix + head + tide_note + event + kroom + hype_note + guide_tip
 
         if verb == "status":

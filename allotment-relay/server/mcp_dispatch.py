@@ -74,7 +74,8 @@ async def route(
 
 STEWARD_HELP = """steward_ops 子命令（整句写进 command）：
   enroll 名字 — 登记。例子：enroll 安
-  sheet — 自己的档（票、精力、份地、病症）。有全服脉冲/周潮天灾时写在档上。空 command 也是这个
+  sheet — 自己的档（票、精力、份地、病症、岛缘）。有全服脉冲/周潮天灾时写在档上。空 command 也是这个
+  岛缘 / bond — 拆你和这座岛的联系（劳作/人情/叙事/生活/投入/井下已蚀）。空 command 的 sheet 也会写「岛缘 N ∞」。例子：岛缘 · bond
   邻居 — 全员邻居（谁在档口、谁家有熟地）。找人优先用这个
   在线 — 只看档口里的人
   peer 名字 — 看别人的公开档；不写名字 = 邻居表
@@ -277,6 +278,11 @@ async def steward_ops(
 
     if verb in ("sheet", "档案", "me", "档"):
         return await _call_ops(game.steward_sheet, key_id)
+
+    if verb in ("岛缘", "bond", "缘"):
+        from . import bond as bond_mod
+        s = await game.require_steward(key_id, exempt_duty=True)
+        return bond_mod.inspect_text(s)
 
     if verb in ("revise", "修订"):
         new_motto = motto.strip() or rest

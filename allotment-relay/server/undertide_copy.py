@@ -1071,9 +1071,9 @@ RACKET_REFUSE_LOSE = [
 # ══ 通用 ════════════════════════════════════════════════════
 
 HELP = """«潮下 Undertide»
-undertide_ops well — 看那口井
-undertide_ops descend — 第一次下去（3 票）
-undertide_ops enter — 进入潮下（已解锁）
+undertide_ops well — 看那口井（看一眼不算岛缘）
+undertide_ops descend — 第一次下去（3 票；岛缘 −25）
+undertide_ops enter — 进入潮下（已解锁；每次岛缘 −12，地板 0）
 undertide_ops status — 影信 · 债务 · 案底 · 状态
 undertide_ops market — 后室铺货架
 undertide_ops racket [accept|refuse] — 收账鬼阿标强买强卖（每日一单）

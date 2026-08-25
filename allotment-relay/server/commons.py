@@ -187,6 +187,8 @@ async def commons_ops(key_id: int, command: str) -> str:
                 "UPDATE commons_spawns SET claimed_by=?, claimed_at=? WHERE id=?",
                 (s["id"], now, sid),
             )
+            from . import bond as bond_mod
+            await bond_mod.grant(conn, s["id"], bond_mod.COMMONS_CLAIM, "life")
             await conn.commit()
             loot = "，".join(loot_parts) or row["label"]
             msg = flavor.fill(
@@ -266,6 +268,8 @@ async def roll_discovery(
     hint = labels[idx]
     await db.add_item(conn, steward["id"], item, qty)
     await _mark_discover(conn, steward["id"])
+    from . import bond as bond_mod
+    await bond_mod.grant(conn, steward["id"], bond_mod.DISCOVERY, "life")
 
     from . import tale as tale_mod
     tale_extra = await tale_mod.check_item_progress(conn, steward["id"], item, qty)
