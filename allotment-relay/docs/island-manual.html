@@ -39,10 +39,43 @@
 .how-in,.col-two,.duty-mini{grid-template-columns:1fr}
 .duty-mini strong{justify-self:start}
 }
+.mast-bar{
+  position:sticky;top:0;z-index:50;
+  background:rgba(243,239,229,.96);
+  backdrop-filter:blur(14px);
+}
+.mast{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  min-height:58px;
+}
+.mast-mid{flex:1;text-align:center}
+.mast-right{display:flex;align-items:center;gap:10px;justify-content:flex-end;flex-shrink:0}
+.chapter-pick{display:flex;align-items:center;gap:8px}
+.chapter-pick>span{font-size:9px;letter-spacing:.16em;color:#879597;text-transform:uppercase;white-space:nowrap}
+.chapter-select{
+  appearance:none;-webkit-appearance:none;
+  border:1px solid #9db0ae;border-radius:999px;
+  background:var(--paper) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='none' stroke='%2367888c' stroke-width='1.4' d='M1.5 1.5 L6 6 L10.5 1.5'/%3E%3C/svg%3E") no-repeat right 12px center;
+  padding:8px 34px 8px 14px;font-size:13px;color:var(--deep);
+  min-width:168px;max-width:min(240px,58vw);cursor:pointer;
+}
+.chapter-select:focus{outline:none;border-color:#6d8f94;box-shadow:0 0 0 3px rgba(109,143,148,.18)}
+.back-link{font-size:11px;color:#687b7e;white-space:nowrap}
+.back-link:hover{border-bottom:1px solid #9db0ae}
+.chapter-nav{position:static;background:transparent;backdrop-filter:none}
+.chapter-pager{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:28px;padding-top:16px;border-top:1px solid var(--line)}
+.chapter-pager button{border:1px solid #9db0ae;background:var(--paper);border-radius:999px;padding:8px 16px;font-size:12px;color:var(--deep)}
+.chapter-pager button:disabled{opacity:.35;cursor:not-allowed}
+.chapter-pager .pos{font-size:11px;letter-spacing:.14em;color:var(--muted);font-variant-numeric:tabular-nums}
+@media(max-width:680px){
+  .chapter-pick>span,.back-link{display:none}
+  .chapter-select{min-width:0;width:min(210px,62vw)}
+}
 </style>
 </head>
 <body>
 <div class="wrap">
+<div class="mast-bar">
 <header class="mast">
   <div class="logo">
     <div class="logo-symbol">≈</div>
@@ -52,9 +85,25 @@
     </div>
   </div>
   <div class="mast-mid">Human Field Manual · 2026</div>
-  <div class="back"><a href="/play">← 回到上手页</a></div>
+  <div class="mast-right">
+    <label class="chapter-pick">
+      <span>章节</span>
+      <select id="chapterSelect" class="chapter-select" aria-label="切换手册章节">
+        <option value="start">01 登岛</option>
+        <option value="daily">02 过一天</option>
+        <option value="home">03 土地与家</option>
+        <option value="sea">04 靠海吃饭</option>
+        <option value="money">05 挣钱</option>
+        <option value="people">06 岛上的人</option>
+        <option value="stories">07 故事</option>
+        <option value="growth">08 成长</option>
+        <option value="undertide">09 潮下</option>
+        <option value="faq">10 做不了时</option>
+      </select>
+    </label>
+    <a class="back-link" href="/play">上手页</a>
+  </div>
 </header>
-
 <nav class="chapter-nav" id="nav">
   <button class="is-active" data-tab="start">登岛</button>
   <button data-tab="daily">过一天</button>
@@ -67,6 +116,7 @@
   <button data-tab="undertide">潮下</button>
   <button data-tab="faq">做不了时</button>
 </nav>
+</div>
 
 <section class="chapter is-active" id="start">
   <div class="boarding">
@@ -602,21 +652,60 @@
   </div>
 </section>
 
+<nav class="chapter-pager" aria-label="翻章节">
+  <button type="button" id="prevChapter">← 上一章</button>
+  <span class="pos" id="chapterPos">01 / 10</span>
+  <button type="button" id="nextChapter">下一章 →</button>
+</nav>
 <p class="manual-foot">校对 2026-08-25 · 和上手页同一套规则。改了玩法，这一页也要改。</p>
 </div>
 <script>
-const ids=["start","daily","home","sea","money","people","stories","growth","undertide","faq"];
-function activate(id){
+const chapters=[
+  {id:"start",label:"01 登岛"},
+  {id:"daily",label:"02 过一天"},
+  {id:"home",label:"03 土地与家"},
+  {id:"sea",label:"04 靠海吃饭"},
+  {id:"money",label:"05 挣钱"},
+  {id:"people",label:"06 岛上的人"},
+  {id:"stories",label:"07 故事"},
+  {id:"growth",label:"08 成长"},
+  {id:"undertide",label:"09 潮下"},
+  {id:"faq",label:"10 做不了时"}
+];
+const ids=chapters.map(c=>c.id);
+const select=document.getElementById("chapterSelect");
+const pos=document.getElementById("chapterPos");
+const prevBtn=document.getElementById("prevChapter");
+const nextBtn=document.getElementById("nextChapter");
+function activate(id, opts){
+  if(!ids.includes(id)) id=ids[0];
+  const silent=opts && opts.silent;
   document.querySelectorAll(".chapter").forEach(s=>s.classList.toggle("is-active",s.id===id));
   document.querySelectorAll("[data-tab]").forEach(b=>b.classList.toggle("is-active",b.dataset.tab===id));
+  if(select && select.value!==id) select.value=id;
+  const i=ids.indexOf(id);
+  if(pos) pos.textContent=`${String(i+1).padStart(2,"0")} / ${String(ids.length).padStart(2,"0")}`;
+  if(prevBtn) prevBtn.disabled=i<=0;
+  if(nextBtn) nextBtn.disabled=i>=ids.length-1;
+  const tab=document.querySelector(`[data-tab="${id}"]`);
+  if(tab) tab.scrollIntoView({inline:"center",block:"nearest",behavior:silent?"auto":"smooth"});
   history.replaceState(null,"","#"+id);
-  window.scrollTo({top:0,behavior:"smooth"});
+  if(!silent) window.scrollTo({top:0,behavior:"smooth"});
 }
 document.addEventListener("click",e=>{
   const tab=e.target.closest("[data-tab]");
   if(tab) activate(tab.dataset.tab);
 });
-if(location.hash && ids.includes(location.hash.slice(1))) activate(location.hash.slice(1));
+select.addEventListener("change",()=>activate(select.value));
+prevBtn.addEventListener("click",()=>{const i=ids.indexOf(select.value); if(i>0) activate(ids[i-1]);});
+nextBtn.addEventListener("click",()=>{const i=ids.indexOf(select.value); if(i<ids.length-1) activate(ids[i+1]);});
+document.addEventListener("keydown",e=>{
+  if(e.target.matches("input,textarea,select")) return;
+  if(e.key==="ArrowLeft") prevBtn.click();
+  if(e.key==="ArrowRight") nextBtn.click();
+});
+if(location.hash && ids.includes(location.hash.slice(1))) activate(location.hash.slice(1), {silent:true});
+else activate(select.value||ids[0], {silent:true});
 const fileData={
   tale:{
     kicker:"FILE 01 · TALE",
