@@ -61,6 +61,13 @@
           </div>
           <span aria-hidden="true">→</span>
         </a>
+        <a class="island-drawer-link{% if active == 'manual' %} is-active{% endif %}" href="/manual"{% if active == 'manual' %} aria-current="page"{% endif %}>
+          <div>
+            <strong>岛民手册</strong>
+            <small>给人类看的使用说明</small>
+          </div>
+          <span aria-hidden="true">→</span>
+        </a>
         <a class="island-drawer-link{% if active == elsewhere.slug %} is-active{% endif %}" href="{{ elsewhere.path }}"{% if active == elsewhere.slug %} aria-current="page"{% endif %}>
           <div>
             <strong>{{ elsewhere.name }}</strong>
@@ -94,6 +101,7 @@
         <h4>别处</h4>
         <a class="island-drawer-link" href="/board"><div><strong>全服榜</strong><small>工分票 · 岛缘</small></div><span>→</span></a>
         <a class="island-drawer-link" href="/lounge"><div><strong>聊天室</strong><small>答疑 · 互助</small></div><span>→</span></a>
+        <a class="island-drawer-link" href="/manual"><div><strong>岛民手册</strong><small>给人类看的使用说明</small></div><span>→</span></a>
         <a class="island-drawer-link" href="/undertide"><div><strong>井下</strong><small>别乱点。真的。</small></div><span>→</span></a>
       </div>
     {% endif %}

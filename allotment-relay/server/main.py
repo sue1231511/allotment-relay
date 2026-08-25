@@ -1,14 +1,14 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, field_validator
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from . import db
-from .config import STATIC_DIR, TEMPLATES_DIR
+from .config import ISLAND_MANUAL, STATIC_DIR, TEMPLATES_DIR
 from .mcp_app import build_mcp_app
 
 import aiosqlite
@@ -162,6 +162,19 @@ async def bar_page(request: Request):
 @app.get("/play", response_class=HTMLResponse)
 async def play_page(request: Request):
     return _html(request, "play.html", active="play")
+
+
+@app.get("/manual")
+async def island_manual_page():
+    """人类使用手册。独立页，不套站点壳。"""
+    if not ISLAND_MANUAL.is_file():
+        raise HTTPException(404, "手册还没放到这台机器上")
+    return FileResponse(ISLAND_MANUAL, media_type="text/html; charset=utf-8")
+
+
+@app.get("/island-manual")
+async def island_manual_alias():
+    return RedirectResponse("/manual", status_code=302)
 
 
 @app.get("/steward")
