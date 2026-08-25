@@ -210,7 +210,7 @@ async def test_tide_fund_auto_payout() -> None:
         donated = await mcp_dispatch.visit_bundle(rich, "潮生会 基金 捐 50")
         assert "50 票" in donated, donated
         assert await _tickets(db, rich) == 350
-        assert await _tickets(db, poor) == 80 + chaoshen.FUND_PAY_CAP
+        assert await _tickets(db, poor) == 130  # 池里 50 全补出去，不到顶 1000
         assert "发放" in donated or "补" in donated, donated
 
         try:
@@ -224,7 +224,8 @@ async def test_tide_fund_auto_payout() -> None:
             again = await chaoshen.ensure_fund_payout(conn, ts=TUE)
             await conn.commit()
         assert again is None
-        assert await _tickets(db, poor) == 80 + chaoshen.FUND_PAY_CAP
+        assert await _tickets(db, poor) == 130
+        assert chaoshen.FUND_PAY_CAP == 1000
     finally:
         db.now = real_now
 

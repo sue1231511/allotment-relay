@@ -276,6 +276,7 @@ def test_relay_manual_covers_systems() -> None:
         "票数自己填",
         "潮生会 基金 捐 50",
         "周二",
+        "顶 1000",
         "kitchen_ops eat",
         "下馆子",
         "shop dine",

@@ -10,7 +10,7 @@ from .game import require_steward, _parse_int
 
 FUND_NAME = "潮汐基金"
 FUND_MIN_DONATE = 1
-FUND_PAY_CAP = 30
+FUND_PAY_CAP = 1000
 FUND_DAILY_CAP = FUND_PAY_CAP
 FUND_MIN_PEERS = 2
 # 东八区星期：周二、周四、周六自动发放补贴
