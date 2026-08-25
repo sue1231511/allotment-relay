@@ -395,6 +395,12 @@ def test_relay_manual_covers_systems() -> None:
         "explore ke_shop",
         "13×30=390",
         "总票奖励 510",
+        "accept tonight_damp",
+        "今夜潮湿",
+        "explore rain_woods",
+        "湿夜旁听人",
+        "5×30=150",
+        "总票奖励 270",
         "review [任务key]",
         "一次回顾该潮闻从第一幕到结尾",
         "只重读、不重发",
@@ -538,6 +544,7 @@ def test_human_island_manual() -> None:
         "人和管家",
         "编剧社",
         "诊所地点",
+        "今夜潮湿",
     ):
         assert needle in blob, needle
     assert "plot_ops" not in blob
