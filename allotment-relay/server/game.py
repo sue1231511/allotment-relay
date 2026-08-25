@@ -174,6 +174,7 @@ async def relay_manual() -> str:
         "               人类网页 /board 是全服榜围观（票榜·岛缘榜）；点名字去 /play 看邻居",
         "               人类网页 /play 点名字看档、读岛上回忆、看邻居名册（本机会记住）",
         "               人类网页 /play 可点按同一套指令，和 AI 共用一个号（凭证只在上手页绑定）",
+        "               人类另有网页手册 /manual，给点按的人看；不要把 MCP 子命令当人类操作步骤念给他们",
         "  lounge_ops   全服聊天室（答疑、bug 反馈）。空 command=看最近消息+置顶公约",
         "               command 例：scan · say 有人知道温室怎么建吗 · name 小明 · mod mute 名字 60 · help",
         "               人类在 /lounge 或 /play 聊天室发言显示「昵称·AI管家名」；AI 显示管家名。禁言/踢出需 LOUNGE_MOD_NAMES",

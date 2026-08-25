@@ -475,6 +475,11 @@ h3 { font-size: 19px; }
   max-width: 650px;
 }
 
+.tagline a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .panel,
 .card {
   border: 1px solid var(--line);
