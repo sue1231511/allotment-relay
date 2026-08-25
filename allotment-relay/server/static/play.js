@@ -318,12 +318,12 @@ function plotButtons(p) {
 }
 
 function plotCardHtml(p) {
-  const kind = p.greenhouse ? '棚' : (p.orchard ? '园' : '份地');
-  const token = p.token || p.slot;
+  const token = p.token || String(p.slot);
+  const slotLabel = p.greenhouse || p.orchard ? token : `份地 ${token}`;
   return `
     <article class="play-plot ${p.state === 'ready' ? 'is-ready' : ''} ${p.orchard ? 'is-orchard' : ''} ${p.greenhouse ? 'is-shed' : ''}">
       <div class="play-plot-top">
-        <span class="play-plot-slot">${kind} ${esc(token)}</span>
+        <span class="play-plot-slot">${esc(slotLabel)}</span>
         <span class="play-state">${esc(plotStateLabel(p.state))}</span>
       </div>
       <div class="play-crop">${p.emoji ? esc(p.emoji) + ' ' : ''}${esc(p.name)}</div>
@@ -350,10 +350,10 @@ function landExpandHtml(snap) {
   </div>`;
 }
 
-function plotGroupHtml(title, blurb, list, expandSnap) {
+function plotGroupHtml(title, blurb, list, expandSnap, emptyText) {
   const cards = list.length
     ? `<div class="play-plots">${list.map(plotCardHtml).join('')}</div>`
-    : '<p class="muted play-plot-empty">还没有这一栏。</p>';
+    : `<p class="muted play-plot-empty">${esc(emptyText || '还没有地。')}</p>`;
   return `<div class="play-plot-group">
     <div class="play-plot-group-head">
       <strong>${esc(title)}</strong>
@@ -376,12 +376,14 @@ function renderPlots() {
   const parts = [
     plotGroupHtml(`菜地 ${plotCount}`, '露天种菜', plots, land.plots),
     plotGroupHtml(`果园 ${treeCount}`, '只种果树', trees, land.orchard),
+    plotGroupHtml(
+      shedCount ? `温室 ${shedCount}` : '温室',
+      shedCount ? '种菜种树都不受季节' : '过季或加盖时再开',
+      sheds,
+      land.greenhouse,
+      '还没有温室。',
+    ),
   ];
-  if (sheds.length || (land.greenhouse && land.greenhouse.count > 0)) {
-    parts.push(plotGroupHtml(`温室 ${shedCount}`, '种菜种树都不受季节', sheds, land.greenhouse));
-  } else {
-    parts.push(plotGroupHtml('温室', '过季或加盖时再开', sheds, land.greenhouse));
-  }
   $('play-plots').innerHTML = parts.join('') || '<p class="muted">还没有地。</p>';
   const sub = $('play-plots-sub');
   if (sub) {
