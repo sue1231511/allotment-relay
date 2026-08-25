@@ -1185,3 +1185,283 @@ body.play-bound .play-gate { display: none !important; }
 .play-invite h3 { margin: 4px 0 8px; font-size: 16px; font-weight: 500; }
 .play-invite-list { margin: 6px 0 0; padding-left: 1.2em; color: var(--muted); font-size: 13px; }
 .play-invite form { margin: 8px 0; display: grid; gap: 8px; }
+
+/* 完整 AI 管家主页 */
+.play-steward-page {
+  margin-top: 4px;
+}
+
+.play-steward-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.play-steward-head h2 {
+  margin: 4px 0 0;
+  font-family: "Noto Serif SC", serif;
+  font-size: 28px;
+  font-weight: 500;
+}
+
+.play-steward-error {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(158, 111, 94, .10);
+  color: #835f54;
+  font-size: 12px;
+}
+
+.play-steward-hero {
+  min-height: 210px;
+  border-radius: 30px;
+  padding: 20px;
+  overflow: hidden;
+  position: relative;
+  background:
+    radial-gradient(circle at 84% 15%, rgba(255,255,255,.55), transparent 20%),
+    linear-gradient(145deg, #dfd1b8, #cbb898);
+  box-shadow: 0 16px 34px rgba(76, 64, 48, .08);
+}
+
+.play-steward-hero::after {
+  content: "潮汐岛";
+  position: absolute;
+  right: -8px;
+  bottom: 18px;
+  transform: rotate(-90deg);
+  font-size: 9px;
+  letter-spacing: .24em;
+  color: rgba(80, 67, 49, .12);
+}
+
+.play-steward-id {
+  display: grid;
+  grid-template-columns: 62px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+.play-steward-avatar {
+  width: 62px;
+  height: 62px;
+  border-radius: 20px;
+  display: grid;
+  place-items: center;
+  background: #f8f3e9;
+  color: #5d5346;
+  font-size: 21px;
+}
+
+.play-steward-id strong {
+  display: block;
+  font-family: "Noto Serif SC", serif;
+  font-size: 26px;
+  font-weight: 500;
+}
+
+.play-steward-id small {
+  display: block;
+  margin-top: 4px;
+  color: #7d715f;
+  font-size: 10px;
+}
+
+.play-steward-id em {
+  align-self: start;
+  padding-top: 4px;
+  font-style: normal;
+  color: #6f6a55;
+  font-size: 10px;
+}
+
+.play-steward-motto {
+  margin: 15px 0 0;
+  max-width: 78%;
+  color: #6f6353;
+  font-size: 12px;
+  line-height: 1.7;
+  position: relative;
+  z-index: 1;
+}
+
+.play-steward-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 15px;
+  position: relative;
+  z-index: 1;
+}
+
+.play-steward-chips span {
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: rgba(248, 243, 233, .58);
+  color: #6f6658;
+  font-size: 10px;
+}
+
+.play-steward-stat-band {
+  display: grid;
+  grid-template-columns: 1.2fr .8fr .8fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.play-steward-stat {
+  min-height: 82px;
+  border-radius: 20px;
+  padding: 13px;
+  background: #e8dfd0;
+}
+
+.play-steward-stat:nth-child(2) { background: #e1e6dc; }
+.play-steward-stat.major { background: #263b3f; color: #fff; }
+.play-steward-stat small { display: block; font-size: 9px; opacity: .65; }
+.play-steward-stat strong { display: block; margin-top: 8px; font-size: 15px; font-weight: 500; }
+.play-steward-stat.major strong { font-size: 26px; }
+
+.play-steward-panel {
+  margin-top: 12px;
+  border-radius: 26px;
+  padding: 17px;
+  background: #eee8de;
+}
+
+.play-steward-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  margin-bottom: 13px;
+}
+
+.play-steward-panel-head h3 { margin: 0; font-size: 18px; font-weight: 500; }
+.play-steward-panel-head span { font-size: 9px; color: #939991; letter-spacing: .12em; }
+
+.play-steward-meters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 11px 14px;
+}
+
+.play-steward-meter > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 10px;
+  color: #78827e;
+}
+
+.play-steward-meter > div strong { color: #596662; }
+
+.play-steward-meter > i {
+  display: block;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 999px;
+  background: #ddd7cb;
+  overflow: hidden;
+}
+
+.play-steward-meter > i > b { display: block; height: 100%; border-radius: 999px; }
+.play-steward-meter .tone-sea { background: #6f9191; }
+.play-steward-meter .tone-green { background: #8c997c; }
+.play-steward-meter .tone-sand { background: #c5ad82; }
+.play-steward-meter .tone-rose { background: #a77b6c; }
+.play-steward-meter .tone-ink { background: #465d60; }
+
+.play-steward-note {
+  margin-top: 13px;
+  padding: 10px 11px;
+  border-radius: 14px;
+  background: #e3ddd1;
+  color: #777f7a;
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.play-steward-ops-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.play-steward-ops-card {
+  min-height: 132px;
+  border-radius: 24px;
+  padding: 15px;
+}
+
+.play-steward-ops-card.market { background: #dfe7e2; }
+.play-steward-ops-card.incidents { background: #eadfd6; }
+.play-steward-ops-card small { font-size: 9px; color: #87908a; }
+.play-steward-ops-card strong { display: block; margin-top: 7px; font-size: 16px; }
+.play-steward-ops-card p { margin: 7px 0 0; font-size: 10px; line-height: 1.5; color: #858e89; }
+.play-steward-ops-card.incidents span { display: flex; justify-content: space-between; gap: 8px; margin-top: 7px; padding: 7px 8px; border-radius: 11px; background: rgba(255,255,255,.44); font-size: 9px; }
+
+.play-steward-plots {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.play-steward-plots::-webkit-scrollbar { display: none; }
+.play-steward-plots article {
+  flex: 0 0 142px;
+  min-height: 112px;
+  border-radius: 19px;
+  padding: 12px;
+  background: #f5f1e8;
+}
+.play-steward-plots small { font-size: 9px; color: #8d958f; }
+.play-steward-plots strong { display: block; margin-top: 7px; font-size: 13px; }
+.play-steward-plots p { margin: 5px 0 0; font-size: 9px; color: #8c948e; line-height: 1.5; }
+
+.play-steward-stock { display: flex; flex-wrap: wrap; gap: 7px; }
+.play-steward-stock span { padding: 7px 9px; border-radius: 12px; background: #f8f4ec; font-size: 10px; }
+.play-steward-stock b { font-weight: 500; }
+.play-steward-stock em { margin-left: 4px; color: #939993; font-style: normal; }
+
+.play-steward-gifts article {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 10px;
+  padding: 10px 0;
+}
+.play-steward-gifts time { color: #969b96; font-size: 9px; padding-top: 2px; }
+.play-steward-gifts strong { font-size: 11px; }
+.play-steward-gifts p { margin: 3px 0 0; font-size: 10px; color: #8a918d; line-height: 1.45; }
+
+.play-steward-memory {
+  margin-top: 12px;
+  min-height: 150px;
+  border-radius: 26px;
+  padding: 16px;
+  color: #fff;
+  background: linear-gradient(145deg, #5f7e80, #8e7b6d);
+  position: relative;
+  overflow: hidden;
+}
+.play-steward-memory::after { content: ""; position: absolute; width: 120px; height: 120px; right: -35px; top: -35px; border-radius: 50%; background: rgba(255,255,255,.07); }
+.play-steward-memory small { font-size: 9px; color: rgba(255,255,255,.62); }
+.play-steward-memory h3 { margin: 8px 0 5px; font-size: 20px; font-weight: 500; }
+.play-steward-memory p { margin: 0; font-size: 10px; color: rgba(255,255,255,.72); }
+.play-steward-memory button { margin-top: 13px; border: 0; border-radius: 10px; padding: 7px 9px; background: rgba(255,255,255,.14); color: #fff; font-size: 10px; }
+
+@media (max-width: 680px) {
+  .play-steward-page { padding-bottom: 12px; }
+  .play-steward-head h2 { font-size: 25px; }
+  .play-steward-id { grid-template-columns: 58px 1fr auto; }
+  .play-steward-avatar { width: 58px; height: 58px; }
+  .play-steward-id strong { font-size: 24px; }
+  .play-steward-stat-band { grid-template-columns: 1.2fr .9fr .9fr; }
+  .play-steward-meters { grid-template-columns: 1fr 1fr; }
+  .play-steward-ops-grid { grid-template-columns: 1fr 1fr; }
+}
