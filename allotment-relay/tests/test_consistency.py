@@ -148,8 +148,8 @@ def test_mcp_descriptions() -> None:
     assert "潮生会 维 交" in v_blob
     assert "岸税" in v_blob
     assert "岸维" in v_blob
-    assert "2 票/块" in v_blob
-    assert "日单价 2" in v_blob
+    assert "10 票/块" in v_blob
+    assert "产业单价至少 10" in v_blob
     assert "每天收" in v_blob or "每天划" in v_blob
     assert "tax_ops" in v_blob
     assert "upkeep_ops" in v_blob
@@ -320,7 +320,7 @@ def test_relay_manual_covers_systems() -> None:
         "潮生会 维 交",
         "岸税",
         "岸维",
-        "日单价 2 起",
+        "产业单价至少 10 票",
         "每天收",
         "超额累进",
         "没有 tax_ops",
@@ -448,7 +448,7 @@ def test_readme_workflow_rules() -> None:
         assert "merge origin/main" in blob
         assert "relay_manual" in blob
         assert "mcp_app.py" in blob
-        assert "island-manual.html" in blob
+        assert "island-manual-content.html" in blob or "island-manual.html" in blob
     assert "18 个工具" in readme
     assert "quarry_ops" in readme
     assert "craft_ops" in readme
@@ -512,17 +512,20 @@ def test_human_island_manual() -> None:
     """给人类看的使用手册必须跟现行玩法对齐，且不把 MCP 当操作步骤。"""
     pkg = Path(__file__).resolve().parents[1]
     repo = pkg.parent
-    html = (pkg / "docs/island-manual.html").read_text(encoding="utf-8")
+    content = (pkg / "server/templates/partials/island-manual-content.html").read_text(encoding="utf-8")
+    css = (pkg / "server/static/island-manual.css").read_text(encoding="utf-8")
+    manual_html = (pkg / "server/templates/manual.html").read_text(encoding="utf-8")
     pointer = (repo / "docs/island-manual.md").read_text(encoding="utf-8")
     main_py = (pkg / "server/main.py").read_text(encoding="utf-8")
     config_py = (pkg / "server/config.py").read_text(encoding="utf-8")
+    blob = content + css
     for needle in (
         "岸维",
         "岸税",
         "岛缘",
         "/play",
         "每 2 天",
-        "日单价 2",
+        "产业单价至少 10",
         "引航",
         "欠岸维",
         "去潮生会",
@@ -536,14 +539,16 @@ def test_human_island_manual() -> None:
         "编剧社",
         "诊所地点",
     ):
-        assert needle in html, needle
-    assert "plot_ops" not in html
-    assert "sow_all" not in html
+        assert needle in blob, needle
+    assert "plot_ops" not in blob
+    assert "sow_all" not in blob
+    assert "chapter-jump" not in content
+    assert 'include "partials/nav.html"' in manual_html
     assert "/manual" in pointer
-    assert "island-manual.html" in pointer
-    assert '@app.get("/manual")' in main_py
-    assert "ISLAND_MANUAL" in config_py
-    assert "ISLAND_MANUAL" in main_py
+    assert "island-manual-content.html" in pointer
+    assert '"/manual"' in main_py
+    assert "manual.html" in main_py
+    assert "ISLAND_MANUAL_CONTENT" in config_py
 
 
 def test_register_key_copy_ui() -> None:
@@ -652,7 +657,7 @@ def test_patron_pages_share_steward_key() -> None:
     assert "routes" in index_html
     assert 'href="/manual"' in play_html
     assert 'href="/manual"' in index_html
-    assert '@app.get("/manual")' in main_py
+    assert '@app.get("/manual"' in main_py
     assert '"go": "bar"' in promo
     assert '"go": "eatery"' in promo
     assert '"go": "star"' in promo

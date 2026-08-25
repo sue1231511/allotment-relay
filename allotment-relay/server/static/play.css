@@ -518,6 +518,9 @@ body.play-bound .play-gate { display: none !important; }
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 7px;
+  max-height: 320px;
+  overflow: auto;
+  padding-right: 2px;
 }
 
 .play-tote button {
@@ -917,8 +920,8 @@ body.play-bound .play-gate { display: none !important; }
 .play-lounge.hidden { display: none !important; }
 
 .play-page .lounge-feed {
-  min-height: 280px;
-  max-height: 48vh;
+  min-height: 320px;
+  max-height: min(72vh, calc(100dvh - 168px));
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
@@ -980,12 +983,12 @@ body.play-bound .play-gate { display: none !important; }
     flex-direction: column;
     gap: 10px;
     min-height: 0;
-    max-height: calc(100dvh - 240px);
+    max-height: calc(100dvh - 148px);
   }
 
   .play-place.is-lounge .lounge-feed {
     flex: 1;
-    min-height: 220px;
+    min-height: 280px;
     max-height: none;
   }
 }

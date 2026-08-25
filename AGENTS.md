@@ -41,11 +41,11 @@ AI 玩家只看 MCP `description`、`relay_manual`、各工具 `help`。写糊�
 
 ## 3. 改玩法后必须同步人类使用手册
 
-人类玩家不读 MCP。他们看站点 `/manual`，源文件是 `allotment-relay/docs/island-manual.html`（根目录 `docs/island-manual.md` 只是指路）。
+人类玩家不读 MCP。他们看站点 `/manual`，源文件是 `allotment-relay/server/templates/partials/island-manual-content.html` + `server/static/island-manual.css`（外壳 `templates/manual.html` 含全站导航；根目录 `docs/island-manual.md` 指路）。
 
 改了任何玩法 / 地点 / 税 / 维 / 考勤 / 上手页按钮 / 入口之后，必须把人类手册改到和游戏一致：
 
-- `allotment-relay/docs/island-manual.html` — 给点按的人看。写清干什么、去哪点、和别的系统容易搞混的地方
+- `allotment-relay/server/templates/partials/island-manual-content.html` + `server/static/island-manual.css` — 给点按的人看。写清干什么、去哪点、和别的系统容易搞混的地方
 - 必要时根目录 README「人类怎么进」的路径表
 
 口吻给人类：写「去上手页点」，不要把 MCP 子命令当操作步骤。新规则四处都要出现；删掉的玩法四处都要删。

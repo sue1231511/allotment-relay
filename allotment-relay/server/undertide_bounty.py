@@ -199,12 +199,16 @@ async def bounty_ops(
             their_power = qdef.get("power", 30)
             if random.random() >= _uptq.win_prob(my_power - their_power):
                 await conn.execute("UPDATE ut_bounty SET status='open' WHERE id=?", (b["id"],))
+                loss = random.randint(5, 12)
                 await conn.execute(
                     "UPDATE stewards SET health=MAX(0,health-?) WHERE id=?",
-                    (random.randint(5, 12), s["id"]),
+                    (loss, s["id"]),
                 )
+                from . import health as _h
+                ail = random.choice(["sprain", "backache"])
+                await _h.inflict(conn, s["id"], ail, source="pit")
                 await conn.commit()
-                return qdef["fail"] + "\n\n（body 大跌 · 无赏 · 纸条回到墙上）"
+                return qdef["fail"] + f"\n\n（body −{loss} · 挂了轻伤 · undertide_ops medic {ail} 治 · 无赏 · 纸条回到墙上）"
         # 跑腿/吓人/打赢 → 完成
         body_cost = qdef.get("body_cost", 0)
         if body_cost:
@@ -441,16 +445,20 @@ async def bounty_ops(
             )
         # 打手失败
         await conn.execute("UPDATE ut_bounty SET status='open' WHERE id=?", (b["id"],))
+        loss = random.randint(10, 15)
         await conn.execute(
             "UPDATE stewards SET health=MAX(0,health-?) WHERE id=?",
-            (random.randint(10, 15), s["id"]),
+            (loss, s["id"]),
         )
+        from . import health as _h
+        ail = random.choice(["ring_shock", "pit_trauma", "sprain", "backache"])
+        await _h.inflict(conn, s["id"], ail, source="pit")
         from . import undertide_pit as _upt4
         await _upt4.pit_record(conn, s["id"], "bounty", "lose", b["target_name"])
         await conn.commit()
         return (
             "你找错了人。练家子不好打——这句话你现在用身体理解了。\n\n"
-            "（body 大跌 · 无赏 · 纸条回到墙上，等下一个人）"
+            f"（body −{loss} · 挂了伤 · undertide_ops medic {ail} 治 · 无赏 · 纸条回到墙上，等下一个人）"
         )
 
     raise ValueError("未知 bounty 指令（list/post/take）")

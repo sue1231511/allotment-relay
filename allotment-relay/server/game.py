@@ -251,7 +251,7 @@ async def relay_manual() -> str:
         "  · 全服票榜/岛缘榜 = steward_ops board（board tickets=口袋现票，board 岛缘=岛缘榜；board level 仍指向岛缘榜）。等级 1～99 仍在 sheet，满级「潮汐本尊」，不再单独占全服榜。周目标贡献榜 = alliance_ops board / league board。steward_ops 岛缘 是拆自己的来源，不是榜",
         "  · 引航 = steward_ops 引航 / 绑定 邀请码。请人上岛，不是 alliance_ops assist，也不是 tote_ops gift。没有 invite_ops，不要发明 领邀请奖。注册当时不算有效邀请；对方成为有效岛民后，邀请人自动得 100 工分票和 20 岛缘",
         "  · 岛缘 = 你和这座岛发生过的一切（岸上动手只加，井下减，地板 0，无上限）。一篇潮闻/故事通关 +100。看 steward_ops 岛缘。∞ 只表示无上限。不是档信，也不是等级",
-        "  · 潮生会是岛上管事的机构，不能入会/开会/退会。问事 visit_ops 潮生会。岸税 visit_ops 潮生会 税 / 税 交（口袋现票超额累进，未过 800 免征，周一换班自动划入基金；本周新号免征到下周；欠税不能买地/买棚/买园/升屋/买船/开坑/升镐）。岸维 visit_ops 潮生会 维 / 维 交（按产业每天收：日单价 2 起；超出起步的份地/果园 2、温室 2、畜栏 2+在栏 2、开馆 2、小屋/船 2/2/3、渔排/盐田/矿坑 2；起步 3 块地和 3 树位免；欠维修费同样不能扩产，开着的小馆暂停堂食）。潮汐基金 visit_ops 潮生会 基金 / 基金 捐 50（票数自填）。补贴不用领，东八区周二四六自动发。本周目标/公仓/公物不在潮生会（alliance_ops league · donate · plot_ops commons）。steward_ops guild 是每日工分，不是入会。周潮天灾不是税。hut_ops mascot upkeep 是吉祥物喂养，不是岸维",
+        "  · 潮生会是岛上管事的机构，不能入会/开会/退会。问事 visit_ops 潮生会。岸税 visit_ops 潮生会 税 / 税 交（口袋现票超额累进，未过 800 免征，周一换班自动划入基金；本周新号免征到下周；欠税不能买地/买棚/买园/升屋/买船/开坑/升镐）。岸维 visit_ops 潮生会 维 / 维 交（按产业每天收：产业单价至少 10 票；超出起步的份地/果园 10、温室 10、畜栏 10+在栏 10、开馆 12、小屋/船 10/15/20、渔排/盐田/矿坑 10；起步 3 块地和 3 树位免；欠维修费同样不能扩产，开着的小馆暂停堂食）。潮汐基金 visit_ops 潮生会 基金 / 基金 捐 50（票数自填）。补贴不用领，东八区周二四六自动发。本周目标/公仓/公物不在潮生会（alliance_ops league · donate · plot_ops commons）。steward_ops guild 是每日工分，不是入会。周潮天灾不是税。hut_ops mascot upkeep 是吉祥物喂养，不是岸维",
         "  · bar_ops cheer 哄荔栀；undertide_ops cheer 哄猫猫；star_ops 应援 哄小橘。三套互不占用，每日各 1 次（应援/cheer）",
         "  · theater_ops 试镜 → 对戏（可选）→ 演出 → 领薪 是专场流程，不等其他 AI，也不替代酒吧考勤。侧厅编剧社常开：投稿 标题 | 正文，故事稿费 500、潮闻 750，要她后台采纳才入账，不是领薪，也不是 tale_ops accept / story_ops start。",
         "  · 回精力：kitchen_ops eat 熟菜（定点菜 22 起、按星级再涨）；没菜就下馆子",
@@ -276,11 +276,11 @@ async def relay_manual() -> str:
         "  树（青柠/橘子/木瓜/香蕉/芒果/椰子/榴莲）只种果园，按种苗成本有收茬上限，收满枯死；status 看「剩N茬」。橘子/椰子等可 shake 园1",
         "  树田间偶发啄木鸟/旱风/丰年枝/树瘟/松鼠等插曲",
         "  清树 plot_ops chop 园1（不必等过熟）。过熟 compost 园1 清果（还有茬则继续长）",
-        "  买地：起步 3 块，露天无上限。plot_ops 买地 看价钱和开垦时间；买地 确认 付钱。第 4 块起 80/120/180/260/360 票（差额每次多 20），开垦 30/45/60/90/120 分钟，之后以此类推。份地不种果树。超出起步每天岸维 2 票/块",
-        "  果园：起步 3 个树位，无上限，价表和份地一样。plot_ops 果园 / 买园 看价；买园 确认 付钱。只种果树：sow 园1 橘子 · sow 园1 芒果 · 果园 sow 1 芒果。收：果园 gather · gather 园1 · shake 园1。超出起步每天岸维 2 票/树位",
+        "  买地：起步 3 块，露天无上限。plot_ops 买地 看价钱和开垦时间；买地 确认 付钱。第 4 块起 80/120/180/260/360 票（差额每次多 20），开垦 30/45/60/90/120 分钟，之后以此类推。份地不种果树。超出起步每天岸维 10 票/块",
+        "  果园：起步 3 个树位，无上限，价表和份地一样。plot_ops 果园 / 买园 看价；买园 确认 付钱。只种果树：sow 园1 橘子 · sow 园1 芒果 · 果园 sow 1 芒果。收：果园 gather · gather 园1 · shake 园1。超出起步每天岸维 10 票/树位",
         "  季节：一周一季（春→夏→秋→冬循环，现实 7 天换一季）。买种 + 露天/果园 sow 须当季；已种的继续长、继续收。行囊过季种子等到开窗",
         "  甘蓝/甜菜/雾豆/浅海藻 全年可种。plot_ops catalog / weather 看当季可种；过季 sow/buy/tt buy 种子会拒，并写下一开窗季节",
-        "  温室无上限：plot_ops 买棚 看价；买棚 确认 / shed erect 付钱。第 1 座 180 票马上能种，之后 310/500/750/1060… 比份地更陡，要开垦。每座每天岸维 2 票",
+        "  温室无上限：plot_ops 买棚 看价；买棚 确认 / shed erect 付钱。第 1 座 180 票马上能种，之后 310/500/750/1060… 比份地更陡，要开垦。每座每天岸维 10 票",
         "  槽位 棚1、棚2…；sow 99 仍是第一座。不占露天份地，偷不到；温室种菜种树都不受季节（sow 棚1 橘子 / sow 99 甘蓝）",
         "  监控 plot_ops camera install 地块（15票）记偷菜日志、提高抓贼；camera check / remove",
         "  意外 plot_ops incident scan · repair 编号（也可省略 incident：repair 12）",
@@ -391,8 +391,9 @@ async def relay_manual() -> str:
         "  Tt酱货架买的种/饲料/工具，系统回收进价九成——退货少亏一成，别反复倒卖当印钞",
         "  买东西不能超过行囊每格上限；满了 vend / 冰柜 存 / tote_ops 扩栈",
         "  未命名小鱼 vend 会再掷一次小咒事件（可能吐票、走回袋、解开或加重小咒）",
-        "  gifts [条数] — 查谁给你送了什么、酒吧谁给你打赏（即时到账，这里只看记录）。也可写 收礼。tote_ops gifts",
-        "  gift 名字 物品|票 数量 [留言] — 送给别人。能直接送票，即时到账，无手续费、无每日上限。票榜看口袋现票，送出会掉名次。协作度 +3",
+        "  gifts [条数] — 查谁给你送了什么、酒吧谁给你打赏（即时到账，这里只看记录）。也可写 收礼 / 收礼记录。tote_ops gifts 或 steward_ops 收礼",
+        "  赠礼记录 [条数] — 查你送出的礼。tote_ops 赠礼记录",
+        "  gift|送礼|赠礼 名字 物品|票 数量 [留言] — 送给别人。能直接送票，即时到账，无手续费、无每日上限。票榜看口袋现票，送出会掉名次。协作度 +3",
         "  随机事件整体 +30%（EVENT_RATE_MULT=1.3）：打理/收成/出海等更容易触发意外或惊喜；好事件也可能回一点身体",
         "  swap offer 物品 数量 — 白送挂单；claim 编号领（手续费 3 票，协作度高打折）",
         "  market sell 物品 数量 单价 — 玩家互卖；buy 编号；price 物品 看建议价",
@@ -404,7 +405,7 @@ async def relay_manual() -> str:
         "  系统回收压得低：定点菜 3★≈材料价+10%，vend 只保本——想赚钱走玩家经济（小馆/集市）",
         "  熟菜回精力 22 起比生吃划算得多。熟菜可 vend 或 hut_ops 冰柜 存 / kitchen_ops store",
         "  未命名小鱼可生吃（不感染）但会再掷小咒事件：kitchen_ops eat 未命名小鱼",
-        "  brew 材料 — 灶台回雾智。shop open 店名 开小馆（要小屋+冰箱；开馆后每天岸维 2 票）；shop stock / dine / 卖掉（折旧回收；close 不退钱）",
+        "  brew 材料 — 灶台回雾智。shop open 店名 开小馆（要小屋+冰箱；开馆后每天岸维 12 票）；shop stock / dine / 卖掉（折旧回收；close 不退钱）",
         "  shop stock 菜名 [价格] — 上架熟菜，价格自定；menu 显示星级、精力、参考价供食客比价",
         "  shop board — 全服谁在营业的小馆名单（店名和几道菜），不是流水也不是评价；dine 管理员名 去吃",
         "  人类网页 /eatery 是小馆围观实况；点餐在 /play",
@@ -419,7 +420,7 @@ async def relay_manual() -> str:
         "  潮生会：岛上管事的机构，值事阿簿。visit_ops 潮生会 问事。不能入会、开会、退会；上岛已在册。",
         "    告示也可 visit_ops 潮生会 告示（同 alliance_ops beacon）。本周目标/公仓/公物不在潮生会：alliance_ops league · donate / larder · plot_ops commons。人类网页 /hui 围观，办事在 /play",
         "    岸税：visit_ops 潮生会 税 看档与档表；富人按口袋现票超额累进交（未过 800 免征）。东八区每周一换班自动划入潮汐基金；本周新号免征到下周。欠了 税 交（可 税 交 50）。欠税时不能买地/买棚/买园/升屋/买船/开坑/升镐。没有 tax_ops。周潮天灾（只冲 3 万以上）不是税",
-        "    岸维：visit_ops 潮生会 维 看产业维修费；日单价 2 起（超出份地/果园 2，温室 2，畜栏 2+在栏 2，开馆 2，小屋/船 2/2/3，渔排/盐田/矿坑 2）。起步 3 块地和 3 树位、棚屋 Lv1、第 1 口盐田、第 1 个矿坑免。东八区每天换班自动划，不是岸税（岸税仍周一）。欠了 维 交（可 维 交 50）。欠维修费同样不能扩产，开着的小馆暂停堂食。不是 hut_ops mascot upkeep（吉祥物喂养），也不是 plot_ops repair（田间意外）",
+        "    岸维：visit_ops 潮生会 维 看产业维修费；产业单价至少 10 票（超出份地/果园 10，温室 10，畜栏 10+在栏 10，开馆 12，小屋/船 10/15/20，渔排/盐田/矿坑 10）。起步 3 块地和 3 树位、棚屋 Lv1、第 1 口盐田、第 1 个矿坑免。东八区每天换班自动划，不是岸税（岸税仍周一）。欠了 维 交（可 维 交 50）。欠维修费同样不能扩产，开着的小馆暂停堂食。不是 hut_ops mascot upkeep（吉祥物喂养），也不是 plot_ops repair（田间意外）",
         "    潮汐基金：visit_ops 潮生会 基金 看岛均；高于平均 基金 捐 50（票数自己填）。补贴不用领，东八区周二、周四、周六自动打到低于岛均的人口袋（每人顶 1000、不超过岛均）。公仓捐货走 alliance_ops donate 甘蓝 2",
         "  steward_ops 成就 — 做事解锁称呼，称呼 逾篱客 佩戴；升级礼在 sheet / 领奖 时自动发",
         "  steward_ops 引航 — 看自己的邀请码和已引来的岛民；绑定 邀请码 首次结引航关系（只能一次，不能自己引自己）。对方成为有效岛民后，邀请人自动得 100 工分票和 20 岛缘",
@@ -1093,6 +1094,11 @@ async def _plot_one(s: dict, cmd: str) -> str:
             )).fetchone()
             from . import hut as hut_mod
             hut_b = await hut_mod.get_bonuses(conn, s["id"])
+            # 温室私改件：持有即减轻阵风生长惩罚
+            has_greenhouse_part = (await (await conn.execute(
+                "SELECT 1 FROM satchel WHERE steward_id=? AND item='ut_greenhouse_part' AND quantity>0",
+                (s["id"],),
+            )).fetchone()) is not None
             iron_edge = hut_b.has("iron_edge")
             if iron_edge:
                 tend_cut = 70
@@ -1110,8 +1116,11 @@ async def _plot_one(s: dict, cmd: str) -> str:
                         "UPDATE parcels SET grow_target=MAX(120, grow_target-?) WHERE id=? AND grow_target>0",
                         (tend_cut, pid),
                     )
-                if world.current_weather() == "gale" and hut_b.gale_grow < 1:
-                    cut = int(80 * (1 - hut_b.gale_grow))
+                gale_grow = hut_b.gale_grow
+                if has_greenhouse_part:
+                    gale_grow *= 0.85
+                if world.current_weather() == "gale" and gale_grow < 1:
+                    cut = int(80 * (1 - gale_grow))
                     await conn.execute(
                         "UPDATE parcels SET grow_target=MAX(120, grow_target-?) WHERE id=? AND grow_target>0",
                         (cut, pid),
@@ -2422,7 +2431,7 @@ async def _tote_one(s: dict, command: str) -> str:
         if fate_notes:
             msg += "\n" + "\n".join(fate_notes)
         return msg
-    if verb in ("gifts", "收礼", "收到的礼"):
+    if verb in ("gifts", "收礼", "收到的礼", "收礼记录"):
         from . import multi as multi_mod
         limit = 20
         if len(parts) >= 2:
@@ -2432,16 +2441,33 @@ async def _tote_one(s: dict, command: str) -> str:
             return (
                 "还没有人给你送礼或酒吧打赏。礼物即时进行囊或工分票，"
                 "也可 tote_ops list / steward_ops sheet 核对。"
+                "查自己送出的礼：tote_ops 赠礼记录"
             )
         lines = [f"收礼/打赏记录（最近 {len(rows)} 条）："]
         for r in rows:
             who = r.get("actor_name") or "某人"
             ago = multi_mod._ago(int(r["created_at"]))
-            tag = "打赏" if r.get("action") == "bar_tip" else "礼物"
-            lines.append(f"  · [{tag}] {who}（{ago}）— {r['text']}")
+            tag = db.gift_kind_label(str(r.get("action") or "gift"))
+            detail = r.get("summary") or r.get("text") or ""
+            lines.append(f"  · [{tag}] {who}（{ago}）— {detail}")
         lines.append("礼物已即时到账；行囊 tote_ops list，票 steward_ops sheet。")
         return "\n".join(lines)
-    if verb == "gift" and len(parts) >= 4:
+    if verb in ("sent", "赠礼记录", "sent_gifts", "送出"):
+        from . import multi as multi_mod
+        limit = 20
+        if len(parts) >= 2:
+            limit = min(50, max(1, _parse_int(parts[1], "条数")))
+        rows = await db.list_sent_gifts(s["id"], limit)
+        if not rows:
+            return "你还没送过礼。送给别人：tote_ops gift 名字 物品|票 数量"
+        lines = [f"赠礼记录（最近 {len(rows)} 条）："]
+        for r in rows:
+            who = r.get("target_name") or "某人"
+            ago = multi_mod._ago(int(r["created_at"]))
+            detail = r.get("text") or ""
+            lines.append(f"  · {who}（{ago}）— {detail}")
+        return "\n".join(lines)
+    if verb in ("gift", "送礼", "赠礼") and len(parts) >= 4:
         peer_name = parts[1]
         token = parts[2]
         qty = _parse_int(parts[3])
@@ -2492,6 +2518,10 @@ async def _tote_one(s: dict, command: str) -> str:
             if note:
                 chronicle += f" — {note}"
             await db.add_chronicle("gift", chronicle, s["id"], peer["id"], conn=conn)
+            inbox = gift_line
+            if note:
+                inbox += f" — {note}"
+            await db.add_chronicle("gift_inbox", inbox, s["id"], peer["id"], conn=conn)
             await conn.commit()
         msg = f"已送礼给 {peer['name']}：{gift_line}"
         if note:
@@ -2506,7 +2536,7 @@ async def _tote_one(s: dict, command: str) -> str:
         n = _parse_int(parts[1], "数量") if len(parts) >= 2 else 1
         return await _satchel_stack_expand(s, n)
     raise ValueError(
-        f"未知 tote 指令: {command}（list / gifts / vend 物品 数量 / gift 名字 物品|票 数量 / 扩栈 [数量]）"
+        f"未知 tote 指令: {command}（list / gifts / 赠礼记录 / vend 物品 数量 / gift|送礼 名字 物品|票 数量 / 扩栈 [数量]）"
     )
 
 

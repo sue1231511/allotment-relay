@@ -57,20 +57,40 @@ async def _test_tote_gifts_list() -> None:
     sent = await game.tote_ops(giver_kid, "gift 收礼人 甘蓝 1 生日快乐")
     assert "已送礼给 收礼人" in sent, sent
 
+    sent_log = await game.tote_ops(giver_kid, "赠礼记录")
+    assert "赠礼记录" in sent_log, sent_log
+    assert "收礼人" in sent_log, sent_log
+
     gifts = await game.tote_ops(recv_kid, "gifts")
     assert "收礼/打赏记录" in gifts, gifts
     assert "送礼人" in gifts, gifts
     assert "甘蓝" in gifts, gifts
     assert "生日快乐" in gifts, gifts
 
-    ticket_gift = await game.tote_ops(giver_kid, "gift 收礼人 票 5")
+    gifts_cn = await game.tote_ops(recv_kid, "收礼记录")
+    assert "收礼/打赏记录" in gifts_cn, gifts_cn
+
+    ticket_gift = await game.tote_ops(giver_kid, "送礼 收礼人 票 5")
     assert "工分票" in ticket_gift, ticket_gift
 
     gifts2 = await game.tote_ops(recv_kid, "收礼")
     assert "5 工分票" in gifts2 or "工分票" in gifts2, gifts2
 
+    from server.mcp_dispatch import steward_ops
+    steward_gifts = await steward_ops(recv_kid, "收礼")
+    assert "收礼/打赏记录" in steward_gifts, steward_gifts
+
+    async with db.connect() as conn:
+        cur = await conn.execute(
+            "SELECT COUNT(*) FROM chronicle WHERE action='gift_inbox' AND target_id=?",
+            (recv_sid,),
+        )
+        inbox = (await cur.fetchone())[0]
+    assert inbox >= 2, inbox
+
     from server.mcp_dispatch import TOTE_HELP
     assert "gifts" in TOTE_HELP, TOTE_HELP
+    assert "赠礼记录" in TOTE_HELP, TOTE_HELP
 
 
 if __name__ == "__main__":

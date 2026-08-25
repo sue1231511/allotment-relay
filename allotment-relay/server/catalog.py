@@ -1540,6 +1540,13 @@ for _fk, _fv in SEA_CATCH.items():
     ITEM_PRICES[f"dried_{_fk}"] = int(_fv["sell"] * 1.6)
     ITEM_NAMES[f"dried_{_fk}"] = f"🥓鱼干·{_fv['name']}"
 
+# 潮下黑市货也进行囊（真货 ut_xxx / 次品 ut_xxx_s），注册中文名，避免行囊显示英文 key。
+from . import undertide_catalog as _utc
+for _goods in (_utc.COMMON_GOODS, _utc.LINKED_GOODS, _utc.RARE_GOODS, _utc.UT_GEAR_GOODS):
+    for _k, _v in _goods.items():
+        ITEM_NAMES[f"ut_{_k}"] = f"{_v['emoji']}{_v['name']}"
+        ITEM_NAMES[f"ut_{_k}_s"] = f"{_v['emoji']}{_v['name']}（次品）"
+
 
 def dish_item(key: str, stars: int = 3) -> str:
     return f"dish_{key}_s{max(1, min(5, stars))}"
@@ -1839,7 +1846,7 @@ def random_fish_item(
     return f"fish_{key}", qty
 
 
-def voyage_loot_table(route_key: str) -> list[str]:
+def voyage_loot_table(route_key: str, rarity_bonus: int = 0) -> list[str]:
     """Weighted loot ids for a voyage route — built from zones + misc."""
     import random
 
@@ -1849,7 +1856,7 @@ def voyage_loot_table(route_key: str) -> list[str]:
         "deep": {"far", "deep"},
     }
     zones = zone_map.get(route_key, {"near"})
-    rarity_cap = {"near": 3, "far": 4, "deep": 6}.get(route_key, 3)
+    rarity_cap = {"near": 3, "far": 4, "deep": 6}.get(route_key, 3) + rarity_bonus
     table: list[str] = []
     for _ in range(8):
         fk = weighted_fish_pick(zones=zones, rarity_cap=rarity_cap)
