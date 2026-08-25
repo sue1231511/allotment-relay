@@ -665,7 +665,7 @@ function consumeGo() {
   const go = new URLSearchParams(location.search).get('go') || '';
   if (!go) return;
   goApplied = true;
-  if (go === 'me') openMe();
+  if (go === 'me') openStewardPage();
   else if (go === 'neighbors') {
     const el = $('play-neighbors');
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
