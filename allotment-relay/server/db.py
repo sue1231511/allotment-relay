@@ -2396,6 +2396,20 @@ async def list_received_gifts(steward_id: int, limit: int = 20) -> list[dict[str
         return [dict(r) for r in await cur.fetchall()]
 
 
+def gift_body(text: str, *, who: str = "") -> str:
+    """纪事全文常带『甲 送礼给 乙：货』；收礼列表已有 who，去掉重复前缀。"""
+    body = (text or "").strip()
+    if "：" in body:
+        left, right = body.split("：", 1)
+        if "送礼给" in left:
+            return right.strip() or body
+    if who and body.startswith(who):
+        rest = body[len(who):].lstrip(" ：:")
+        if rest:
+            return rest
+    return body
+
+
 async def public_chronicle(limit: int = 40) -> list[dict[str, Any]]:
     async with connect() as db:
         db.row_factory = aiosqlite.Row

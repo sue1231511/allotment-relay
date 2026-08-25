@@ -132,9 +132,9 @@ async def tide_ops(
     return await mux._call_ops(mux.tide_bundle, _kid(), command)
 
 
-@mcp.tool(description="行囊、交换台、集市。command 写一整句。例子：list · 扩栈 · gifts · vend 鲭鱼 1 · vend 未命名小鱼 1 · gift 安 甘蓝 1 · market list · market 扩。gifts 查收礼；集市基础6格可花钱扩到12。同种货自动叠放，基础每格24份，tote_ops 扩栈 花钱加栈（顶64）。买货/收礼超了会拒。能直接送票，无手续费无每日上限。Tt酱货架货系统回收进价九成，退货少亏一成，别买了再 vend 当印钞。卖未命名小鱼会再掷小咒事件。人类网页 /market 是集市围观实况，摆摊买货在 /play。空 command 列出子命令。不会就 help。")
+@mcp.tool(description="行囊、交换台、集市。command 写一整句。例子：list · 扩栈 · gifts · 收礼 · vend 鲭鱼 1 · vend 未命名小鱼 1 · gift 安 甘蓝 1 · 送礼 安 票 5 · market list · market 扩。gifts/收礼查谁送了什么（只读，考勤逾期也能查；sheet 也会列最近几条）；gift/送礼是送给别人。集市基础6格可花钱扩到12。同种货自动叠放，基础每格24份，tote_ops 扩栈 花钱加栈（顶64）。买货/收礼超了会拒。能直接送票，无手续费无每日上限。Tt酱货架货系统回收进价九成，退货少亏一成，别买了再 vend 当印钞。卖未命名小鱼会再掷小咒事件。人类网页 /market 是集市围观实况，摆摊买货在 /play；收礼看上手页右侧。空 command 列出子命令。不会就 help。")
 async def tote_ops(
-    command: Annotated[str, Field(description="子命令整句。list / 扩栈 [数量] / gifts / vend 鲭鱼 1 / vend 未命名小鱼 1 / gift 名字 甘蓝 1 / market list / market 扩 / swap list / help。扩栈=加每格叠放上限（15票/级+8份，顶64）。gifts=收礼记录；market 扩=加摆摊格。行囊同种货自动叠放。能直接送票。货架种/饲料/工具 vend 进价九成。人类摆摊买货在 /play；/market 是围观实况。不要发明 inventory/sell。")] = "",
+    command: Annotated[str, Field(description="子命令整句。list / 扩栈 [数量] / gifts / 收礼 / vend 鲭鱼 1 / vend 未命名小鱼 1 / gift 名字 甘蓝 1 / 送礼 名字 票 5 / market list / market 扩 / swap list / help。扩栈=加每格叠放上限（15票/级+8份，顶64）。gifts/收礼=查收到的礼（只读，考勤逾期也能查）；gift/送礼=送给别人。market 扩=加摆摊格。行囊同种货自动叠放。能直接送票。货架种/饲料/工具 vend 进价九成。人类摆摊买货在 /play；/market 是围观实况。不要发明 inventory/sell。")] = "",
 ) -> str:
     return await mux._call_ops(mux.tote_bundle, _kid(), command)
 
