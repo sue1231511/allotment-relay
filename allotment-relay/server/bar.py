@@ -123,7 +123,7 @@ def suggest_work_period(steward: dict[str, Any] | None = None) -> str:
 
 
 def work_button_for(steward: dict[str, Any] | None = None) -> dict[str, Any]:
-    """上手页「洗碗上工」按钮：班次跟时辰走，关着的时候标 disabled。"""
+    """上手页「洗碗上工」按钮：说明跟时辰走，command 不写死班次（点按时服务端再选）。"""
     phase = world.current_day_phase()
     try:
         period = suggest_work_period(steward)
@@ -135,26 +135,26 @@ def work_button_for(steward: dict[str, Any] | None = None) -> dict[str, Any]:
             "command": "work 洗碗",
             "disabled": True,
         }
+    # command 固定不写班次，避免页面开着时辰切过去还点成过期班次
     if phase == "night":
         return {
             "label": "洗碗上工",
             "note": "夜班 · 每两天须来一次",
             "tool": "bar_ops",
-            "command": f"work 洗碗 {period}",
+            "command": "work 洗碗",
         }
     if phase == "dusk":
         return {
             "label": "洗碗上工",
             "note": "暮场白班 · 每两天须来一次",
             "tool": "bar_ops",
-            "command": f"work 洗碗 {period}",
+            "command": "work 洗碗",
         }
-    # day + overdue makeup
     return {
         "label": "白天补班",
         "note": "逾期可补 · 票 ×0.72",
         "tool": "bar_ops",
-        "command": f"work 洗碗 {period}",
+        "command": "work 洗碗",
         "primary": True,
     }
 

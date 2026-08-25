@@ -55,10 +55,10 @@ def test_bar_job_aliases() -> None:
 
     btn = bar.work_button_for(None)
     phase = world.current_day_phase()
+    assert btn["command"] == "work 洗碗", btn
     if phase in ("dusk", "night"):
         assert not btn.get("disabled"), btn
-        assert btn["command"].startswith("work 洗碗 "), btn
-        assert btn["command"].endswith("day" if phase == "dusk" else "night"), btn
+        assert ("白班" in btn["note"]) if phase == "dusk" else ("夜" in btn["note"]), btn
     else:
         assert btn.get("disabled") is True, btn
     assert "班次可省" in bar.BAR_HELP

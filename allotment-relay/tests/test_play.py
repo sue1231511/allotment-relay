@@ -89,11 +89,12 @@ async def _test_play_api() -> None:
     work = next(a for a in bar["actions"] if str(a.get("command") or "").startswith("work "))
     from server import world
     phase = world.current_day_phase()
+    assert work["command"] == "work 洗碗", work
     if phase == "night":
-        assert work["command"] == "work 洗碗 night", work
+        assert "夜" in (work.get("note") or ""), work
         assert not work.get("disabled"), work
     elif phase == "dusk":
-        assert work["command"] == "work 洗碗 day", work
+        assert "暮" in (work.get("note") or "") or "白班" in (work.get("note") or ""), work
         assert not work.get("disabled"), work
     else:
         assert work.get("disabled") is True, work

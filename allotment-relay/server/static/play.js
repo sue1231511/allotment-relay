@@ -976,11 +976,19 @@ async function act(tool, command) {
     setWorkStatus(data.text ? '完成' : '可操作', data.text ? 'ok' : '');
     closeSheet();
   } catch (err) {
-    setLog(err.message || String(err));
+    const msg = err.message || String(err);
+    setLog(msg);
     setWorkStatus('没做成', 'err');
+    try {
+      const snap = await api('', '');
+      // 刷新时辰/按钮，但别清掉刚写上的失败原因
+      applySnap(snap, '');
+      if (msg) showPlaceResult(msg);
+    } catch {
+      /* ignore refresh failure */
+    }
   } finally {
     document.querySelectorAll('button[disabled]').forEach((b) => { b.disabled = false; });
-    // 关着的地点按钮要保持 disabled（重新渲染会修正；错误路径未重渲）
     document.querySelectorAll('#play-place-actions .place-tool.is-disabled').forEach((b) => {
       b.disabled = true;
     });
