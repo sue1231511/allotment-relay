@@ -1052,6 +1052,9 @@ async def init_db() -> None:
             "ALTER TABLE steward_undertide ADD COLUMN vr_until INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE steward_undertide ADD COLUMN vr_target INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE steward_undertide ADD COLUMN highlight_done INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE steward_undertide ADD COLUMN gear_key TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE steward_undertide ADD COLUMN gear_durability INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE steward_undertide ADD COLUMN gear_max INTEGER NOT NULL DEFAULT 0",
 
             "ALTER TABLE ut_market_log ADD COLUMN net INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE ut_debts ADD COLUMN penalty INTEGER NOT NULL DEFAULT 0",

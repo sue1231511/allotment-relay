@@ -166,9 +166,9 @@ async def bar_ops(
     return progress_mod.attach_note(await mux._call_ops(bar.bar_ops, _kid(), command))
 
 
-@mcp.tool(description="潮下地下世界。新手先 command=help，不要猜。入口 well → descend → enter。cheer 哄猫猫（不是荔栀）。后室铺 racket 收账鬼阿标强买强卖。深坑 pit board 井壁胜场榜（不是 steward_ops board 票榜）。深坑伤 undertide_ops medic。")
+@mcp.tool(description="潮下地下世界。新手先 command=help，不要猜。入口 well → descend → enter。cheer 哄猫猫（不是荔栀）。后室铺 market 买黑货（偶尔刷装备，加战力有损耗度，repair 找掌柜修）；racket 收账鬼阿标强买强卖。深坑 pit board 井壁胜场榜（不是 steward_ops board 票榜）。深坑伤 undertide_ops medic。医务间 pit drug 卖体质药三档（下坑前战力 buff 24h）。凯斯酒馆 tavern ruby 点红宝石（回身体掉雾智）、tavern bleed 卖血换票。影信≥70 自己人福利：lottery 每天首张免费、深坑入场九折、红宝石九折。")
 async def undertide_ops(
-    command: Annotated[str, Field(description="子命令整句。先 help。入口 well → descend → enter。常用：status / market / pit board / pit list / fight 斗士名 / medic ring_shock / cheer 好话（哄猫猫）。pit board=井壁胜场榜（≥10场）；steward_ops board=票榜。不要发明未列出的动词。")] = "",
+    command: Annotated[str, Field(description="子命令整句。先 help。入口 well → descend → enter。常用：status / market / buy 编号 / sell 物品 / repair / pit board / pit list / fight 斗士名 / medic ring_shock / pit drug list / pit drug 药名key / cheer 好话（哄猫猫）/ tavern ruby / tavern bleed。pit board=井壁胜场榜（≥10场）；steward_ops board=票榜。market 偶尔刷黑市装备（战力+2/4/6、有耐久、只带一件），buy 买、repair 找掌柜按损耗比例修。pit drug=晏安体质药（三档：粗制15反噬/标准40/精制90无副作用，下坑前战力 buff 24h，同类不叠）。tavern ruby=点红宝石回身体掉雾智（价随身价，每日1杯）；tavern bleed=卖血换票（抽身体，每日1次）。影信≥70：lottery 每天首张免费、深坑入场九折。不要发明未列出的动词。")] = "",
 ) -> str:
     from . import undertide
     from . import progress as progress_mod

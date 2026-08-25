@@ -16,6 +16,18 @@ def _day_id() -> int:
     return db.day_id()
 
 
+async def _mark_daily(
+    conn: aiosqlite.Connection, steward_id: int, day: int, action: str
+) -> None:
+    await conn.execute(
+        """
+        INSERT INTO ut_daily_actions (steward_id, day_id, action, count) VALUES (?,?,?,1)
+        ON CONFLICT(steward_id, day_id, action) DO UPDATE SET count = count + 1
+        """,
+        (steward_id, day, action),
+    )
+
+
 # 情报池：世界情报（真）+ 半真半假
 WHISPER_TRUE = [
     ("黑旗最近在近岸活动。带够买路票，或者练好交涉。", True),
@@ -56,8 +68,78 @@ async def tavern_ops(
             + utcopy.TAVERN_AMBIENT
             + "\n\n—— 债务者黑板 ——\n"
             + board
-            + "\n\n（耳语人坐在角落。whisper 买消息 · spy 查悬赏雇主 · ai 别人的动态 · chat 跟荔栀说话）"
+            + "\n\n（耳语人坐在角落。whisper 买消息 · spy 查悬赏雇主 · ai 别人的动态 · chat 跟荔栀说话 · ruby 点红宝石 · bleed 卖血）"
         )
+
+    if verb in ("ruby", "bleed"):
+        # 红宝石 / 卖血：身价定价，每日各一次
+        day = _day_id()
+        confirm = len(parts) > 1 and parts[1] in ("确认", "confirm", "order")
+        used_row = await (await conn.execute(
+            "SELECT count FROM ut_daily_actions WHERE steward_id=? AND day_id=? AND action=?",
+            (s["id"], day, verb),
+        )).fetchone()
+        used = int(used_row[0] if used_row else 0)
+        cur = await conn.execute(
+            "SELECT tickets, mist_wit, health FROM stewards WHERE id=?", (s["id"],)
+        )
+        tickets, mist, health = (await cur.fetchone())
+
+        if verb == "ruby":
+            from . import undertide as utmod
+            _, rep_mult, _ = utmod._rep_tier(int(ut["shadow_rep"]))
+            price = max(
+                utcfg.UT_RUBY_PRICE_MIN,
+                min(utcfg.UT_RUBY_PRICE_MAX, int(tickets * utcfg.UT_RUBY_PRICE_RATE * rep_mult)),
+            )
+            if mist < utcfg.UT_RUBY_MIST_FLOOR:
+                return utcopy.RUBY_TOO_LOW_MIST.format(floor=utcfg.UT_RUBY_MIST_FLOOR)
+            if used >= utcfg.UT_RUBY_DAILY:
+                return utcopy.RUBY_DAILY_LIMIT
+            if not confirm:
+                rep_note = "（自己人价）" if rep_mult < 1.0 else ""
+                return (
+                    f"{utcopy.RUBY_HEADER}\n\n{utcopy.RUBY_DESC}\n\n"
+                    + utcopy.RUBY_ORDER_PROMPT.format(price=price)
+                    + rep_note
+                )
+            if tickets < price:
+                raise ValueError(utcopy.RUBY_NO_TICKETS)
+            await conn.execute(
+                "UPDATE stewards SET tickets=tickets-?, mist_wit=MAX(0,mist_wit-?), health=MIN(100,health+?) WHERE id=?",
+                (price, utcfg.UT_RUBY_MIST_COST, utcfg.UT_RUBY_HEAL, s["id"]),
+            )
+            await _mark_daily(conn, s["id"], day, "ruby")
+            await conn.commit()
+            return utcopy.RUBY_DRINK.format(
+                heal=utcfg.UT_RUBY_HEAL, mist=utcfg.UT_RUBY_MIST_COST
+            )
+
+        rep = int(ut["shadow_rep"])
+        bonus = 0
+        for floor, b in sorted(utcfg.UT_BLOOD_REP_BONUS.items()):
+            if rep >= floor:
+                bonus = b
+        pay = max(
+            utcfg.UT_BLOOD_PAY_MIN,
+            min(utcfg.UT_BLOOD_PAY_MAX, int(tickets * utcfg.UT_BLOOD_PAY_RATE * (1 + bonus))),
+        )
+        if health < utcfg.UT_BLOOD_HEALTH_FLOOR:
+            return utcopy.BLOOD_TOO_LOW_HEALTH.format(floor=utcfg.UT_BLOOD_HEALTH_FLOOR)
+        if used >= utcfg.UT_BLOOD_DAILY:
+            return utcopy.BLOOD_DAILY_LIMIT
+        if not confirm:
+            return (
+                f"{utcopy.BLOOD_HEADER}\n\n{utcopy.BLOOD_DESC}\n\n"
+                + utcopy.BLOOD_ORDER_PROMPT.format(pay=pay, cost=utcfg.UT_BLOOD_HEALTH_COST)
+            )
+        await conn.execute(
+            "UPDATE stewards SET tickets=tickets+?, health=MAX(0,health-?) WHERE id=?",
+            (pay, utcfg.UT_BLOOD_HEALTH_COST, s["id"]),
+        )
+        await _mark_daily(conn, s["id"], day, "bleed")
+        await conn.commit()
+        return utcopy.BLOOD_DONE + f"\n\n（身体 −{utcfg.UT_BLOOD_HEALTH_COST} · +{pay} 票）"
 
     if verb == "chat":
         from . import undertide as utmod
@@ -87,7 +169,11 @@ async def tavern_ops(
         if (await cur.fetchone())[0] < cost:
             raise ValueError(f"耳语人报价 {cost} 票。他不接受赊账，也不接受还价。")
         await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (cost, s["id"]))
-        fake = random.random() < utcfg.UT_WHISPER_FAKE_CHANCE
+        cut = 0
+        for floor, c in sorted(utcfg.UT_WHISPER_FAKE_REP_CUT.items()):
+            if int(ut["shadow_rep"]) >= floor:
+                cut = c
+        fake = random.random() < max(0.0, utcfg.UT_WHISPER_FAKE_CHANCE - cut)
         line = random.choice(WHISPER_FAKE if fake else WHISPER_TRUE)
         await conn.commit()
         head = (
@@ -143,4 +229,4 @@ async def tavern_ops(
         lines.append(f"\n（−{cost} 票 · 三天内的公开动态，不含私事）")
         return "\n".join(lines)
 
-    raise ValueError("未知 tavern 指令（visit/chat/whisper/spy/ai）")
+    raise ValueError("未知 tavern 指令（visit/chat/whisper/spy/ai/ruby/bleed）")
