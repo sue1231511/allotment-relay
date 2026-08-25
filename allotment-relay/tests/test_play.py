@@ -133,6 +133,7 @@ def test_play_page_lists_all_plot_kinds() -> None:
     assert "orderedPlaces" in js
     assert "b.week1" in js
     assert "actData" in js
+    assert "attrEsc" in js
     assert "decorateActions" in js
     assert "parseAct" in js
     assert "data-act='${JSON.stringify" not in js

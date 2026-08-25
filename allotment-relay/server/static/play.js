@@ -20,8 +20,15 @@ function esc(s) {
   return siteKeyEsc(s);
 }
 
+function attrEsc(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;');
+}
+
 function actData(tool, command) {
-  return esc(JSON.stringify({ tool, command }));
+  return attrEsc(JSON.stringify({ tool, command }));
 }
 
 function parseAct(el) {

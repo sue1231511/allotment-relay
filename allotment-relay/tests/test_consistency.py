@@ -616,6 +616,7 @@ def test_patron_pages_share_steward_key() -> None:
     assert "place-tool" in play_js
     assert "selectPlaceTool" in play_js
     assert "actData" in play_js
+    assert "attrEsc" in play_js
     assert "parseAct" in play_js
     assert "decorateActions" in play_js
     assert "revealPlaceResult" in play_js
