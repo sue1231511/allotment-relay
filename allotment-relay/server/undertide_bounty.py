@@ -122,7 +122,7 @@ async def _maybe_npc_post(conn: aiosqlite.Connection, s: dict[str, Any], reason:
 
 
 async def _ensure_daily_quests(conn: aiosqlite.Connection) -> list[dict[str, Any]]:
-    """NPC 每日委托：UTC 日种子选 2~3 条，写进 ut_bounty（poster='__quest__'）。
+    """NPC 每日委托：UTC 日种子选 4~5 条，写进 ut_bounty（poster='__quest__'）。
     保证墙上始终有活——恩怨墙不再空。"""
     import random
     day = _day_id()
@@ -136,12 +136,12 @@ async def _ensure_daily_quests(conn: aiosqlite.Connection) -> list[dict[str, Any
         return []
     rng = random.Random(day * 31337)
     pool = list(utcopy.NPC_QUESTS.keys())
-    picked = rng.sample(pool, rng.randint(2, 3))
+    picked = rng.sample(pool, rng.randint(4, 5))
     out = []
     for key in picked:
         q = utcopy.NPC_QUESTS[key]
         # errand/scare 类可重复接（每人限一次）；fight 类单发单接
-        expires = db.day_start(day) + config.FORAGE_COOLDOWN_DAY * 2  # 两天有效
+        expires = db.day_start(day) + config.FORAGE_COOLDOWN_DAY  # 一天有效
         await conn.execute(
             """INSERT OR IGNORE INTO ut_bounty (poster, poster_id, target_name, target_id, tier, bounty, status, expires_at, created_at)
                VALUES ('__quest__', NULL, ?, 0, ?, ?, 'open', ?, ?)""",
