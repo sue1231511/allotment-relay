@@ -265,6 +265,18 @@ async def _check_spring_beyond_mountain(
     )
 
 
+async def _check_tonight_damp(
+    conn: aiosqlite.Connection, s: dict[str, Any]
+) -> bool:
+    return await _exists(
+        conn,
+        """SELECT 1 FROM steward_tales_done
+           WHERE steward_id=? AND tale_key='tonight_damp'
+             AND outcome='completed' LIMIT 1""",
+        s["id"],
+    )
+
+
 async def _check_navigator(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
     return await _exists(
         conn,
@@ -409,6 +421,12 @@ ACHIEVEMENTS: dict[str, dict[str, Any]] = {
         "hint": "完成潮闻《春山之外》",
         "aliases": ("见春人", "山外看春人"),
         "check": _check_spring_beyond_mountain,
+    },
+    "tonight_damp_witness": {
+        "name": "湿夜旁听人",
+        "hint": "完成潮闻《今夜潮湿》",
+        "aliases": ("今夜潮湿的人", "湿夜听潮人", "今夜旁听人"),
+        "check": _check_tonight_damp,
     },
     "quarrier": {
         "name": "盐风矿工",
