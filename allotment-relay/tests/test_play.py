@@ -51,6 +51,12 @@ async def _test_play_api() -> None:
     assert "欢迎" in (enrolled.get("text") or ""), enrolled
     assert enrolled["neighbors"]["total"] == 1, enrolled["neighbors"]
     assert enrolled["neighbors"]["people"] == [], enrolled["neighbors"]
+    start_plots = enrolled["dashboard"]["parcels"]
+    veg = [p for p in start_plots if not p.get("orchard") and not p.get("greenhouse")]
+    orch = [p for p in start_plots if p.get("orchard") and not p.get("greenhouse")]
+    assert len(veg) >= 3, start_plots
+    assert len(orch) >= 3, start_plots
+    assert {p.get("token") for p in orch} >= {"园1", "园2", "园3"}, orch
 
     other = await db.create_api_key("play-b@example.com")
     await play_mod.run_play(other, "steward_ops", "enroll 对岸的人")
@@ -64,6 +70,32 @@ async def _test_play_api() -> None:
     plots = sown["dashboard"]["parcels"]
     one = next(p for p in plots if p.get("token") == "1" and not p.get("orchard") and not p.get("greenhouse"))
     assert one["state"] != "fallow", one
+    assert any(p.get("token") == "园1" for p in plots), plots
+
+    row = await db.get_key_row(key)
+    steward = await db.get_steward_by_key_id(row["id"])
+    async with db.connect() as conn:
+        await conn.execute(
+            "UPDATE stewards SET parcel_count=8 WHERE id=?", (steward["id"],)
+        )
+        for slot in range(4, 9):
+            await conn.execute(
+                """
+                INSERT INTO parcels (steward_id, slot, orchard, greenhouse, tended)
+                VALUES (?, ?, 0, 0, 0)
+                """,
+                (steward["id"], slot),
+            )
+        await conn.commit()
+    wide = await play_mod.run_play(key, "", "")
+    wide_plots = wide["dashboard"]["parcels"]
+    wide_veg = [
+        p for p in wide_plots if not p.get("orchard") and not p.get("greenhouse")
+    ]
+    wide_orch = [p for p in wide_plots if p.get("orchard") and not p.get("greenhouse")]
+    assert len(wide_veg) == 8, wide_veg
+    assert len(wide_orch) >= 3, wide_orch
+    assert {p.get("token") for p in wide_orch} >= {"园1", "园2", "园3"}, wide_orch
 
     ids = {p["id"] for p in sown["places"]}
     assert {"bar", "eatery", "star"} <= ids, ids

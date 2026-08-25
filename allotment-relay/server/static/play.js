@@ -291,6 +291,7 @@ function renderAll() {
 function plotButtons(p) {
   const token = p.token || String(p.slot);
   const acts = [];
+  const harvestLabel = p.orchard ? '收果' : '收菜';
   if (p.state === 'fallow') {
     acts.push(`<button type="button" class="play-mini-btn" data-sow="${esc(token)}">播种</button>`);
   }
@@ -300,7 +301,7 @@ function plotButtons(p) {
     if (!p.fertilized) acts.push(`<button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"施肥 ${token}"}'>施肥</button>`);
   }
   if (p.state === 'ready') {
-    acts.push(`<button type="button" class="play-mini-btn primary" data-act='{"tool":"plot_ops","command":"gather ${token}"}'>收菜</button>`);
+    acts.push(`<button type="button" class="play-mini-btn primary" data-act='{"tool":"plot_ops","command":"gather ${token}"}'>${harvestLabel}</button>`);
     if (p.shake) acts.push(`<button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"shake ${token}"}'>摇一摇</button>`);
   }
   if (p.state === 'overripe') {
@@ -310,14 +311,12 @@ function plotButtons(p) {
   return acts.join('');
 }
 
-function renderPlots() {
-  const parcels = (state.dash && state.dash.parcels) || [];
-  const shown = parcels.slice(0, 6);
-  $('play-plots').innerHTML = shown.map((p) => {
-    const kind = p.greenhouse ? '棚' : (p.orchard ? '园' : '份地');
-    const token = p.token || p.slot;
-    return `
-    <article class="play-plot ${p.state === 'ready' ? 'is-ready' : ''}">
+function plotCard(p) {
+  const kind = p.greenhouse ? '棚' : (p.orchard ? '园' : '份地');
+  const token = p.token || p.slot;
+  const tone = p.greenhouse ? 'is-shed' : (p.orchard ? 'is-orchard' : '');
+  return `
+    <article class="play-plot ${p.state === 'ready' ? 'is-ready' : ''} ${tone}">
       <div class="play-plot-top">
         <span class="play-plot-slot">${kind} ${esc(token)}</span>
         <span class="play-state">${esc(plotStateLabel(p.state))}</span>
@@ -326,7 +325,68 @@ function renderPlots() {
       <div class="play-detail">${esc(p.detail || '')}</div>
       <div class="acts">${plotButtons(p)}</div>
     </article>`;
-  }).join('') || '<p class="muted">还没有地。</p>';
+}
+
+const PLOT_KINDS = [
+  {
+    key: 'plot',
+    kicker: 'Open Ground',
+    title: '菜地',
+    unit: '块',
+    empty: '还没有菜地。',
+    quote: '买地',
+    buy: '买地 确认',
+    buyLabel: '买一块',
+    match: (p) => !p.orchard && !p.greenhouse,
+  },
+  {
+    key: 'orchard',
+    kicker: 'Orchard',
+    title: '果园',
+    unit: '树位',
+    empty: '还没有树位。果树只能种在这里。',
+    quote: '买园',
+    buy: '买园 确认',
+    buyLabel: '买一树位',
+    match: (p) => Boolean(p.orchard) && !p.greenhouse,
+  },
+  {
+    key: 'greenhouse',
+    kicker: 'Greenhouse',
+    title: '温室',
+    unit: '座',
+    empty: '还没有温室。种菜种树都不受季节。',
+    quote: '买棚',
+    buy: '买棚 确认',
+    buyLabel: '买一座',
+    match: (p) => Boolean(p.greenhouse),
+  },
+];
+
+function plotKindSection(spec, parcels) {
+  const list = parcels.filter(spec.match);
+  const cards = list.length
+    ? `<div class="play-plots">${list.map(plotCard).join('')}</div>`
+    : `<p class="muted play-plot-empty">${esc(spec.empty)}</p>`;
+  return `
+    <section class="play-plot-kind" data-kind="${spec.key}">
+      <div class="play-plot-kind-head">
+        <div>
+          <div class="play-kicker">${spec.kicker}</div>
+          <h3>${spec.title} · ${list.length} ${spec.unit}</h3>
+        </div>
+        <div class="play-plot-kind-acts">
+          <button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"${spec.quote}"}'>看价</button>
+          <button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"${spec.buy}"}'>${spec.buyLabel}</button>
+        </div>
+      </div>
+      ${cards}
+    </section>`;
+}
+
+function renderPlots() {
+  const parcels = (state.dash && state.dash.parcels) || [];
+  $('play-plots').innerHTML = PLOT_KINDS.map((kind) => plotKindSection(kind, parcels)).join('');
 }
 
 function placeCardHtml(pl, urgent) {

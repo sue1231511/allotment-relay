@@ -528,6 +528,12 @@ def test_patron_pages_share_steward_key() -> None:
     assert 'partials/nav.html' in play_html
     assert "play-top" not in play_html
     assert "loadSavedKey" in play_js
+    assert "parcels.slice(0, 6)" not in play_js
+    assert "最多展示 6 块" not in play_html
+    assert "plotKindSection" in play_js
+    assert 'data-kind="orchard"' in play_js
+    assert "买园 确认" in play_js
+    assert "菜地、果园、温室" in play_html
     assert "/api/bar/order" in play_js
     assert "/api/bar/duo" in play_js
     assert "/api/eatery/order" in play_js

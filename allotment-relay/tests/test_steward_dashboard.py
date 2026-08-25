@@ -56,6 +56,11 @@ async def _test_steward_dashboard_api() -> None:
     assert data["shadow"]["tier"], data["shadow"]
     assert data["memories"] == [], data["memories"]
     assert data["parcels"][0]["token"]
+    veg = [p for p in data["parcels"] if not p.get("orchard") and not p.get("greenhouse")]
+    orch = [p for p in data["parcels"] if p.get("orchard") and not p.get("greenhouse")]
+    assert len(veg) >= 3, data["parcels"]
+    assert len(orch) >= 3, data["parcels"]
+    assert any(p.get("token") == "园1" for p in orch), orch
     assert "季节" in (data.get("climate") or "") or "一周一季" in (data.get("climate") or ""), data.get("climate")
     assert "quarry" in data and data["quarry"]["pick_tier"] == 0, data.get("quarry")
     assert "买镐" in data["quarry"]["line"], data["quarry"]
