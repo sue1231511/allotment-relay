@@ -533,6 +533,8 @@ def test_human_island_manual() -> None:
         "有效岛民",
         "小馆停堂",
         "人和管家",
+        "编剧社",
+        "诊所地点",
     ):
         assert needle in html, needle
     assert "plot_ops" not in html

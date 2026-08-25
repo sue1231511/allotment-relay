@@ -46,7 +46,8 @@ async def _test_steward_dashboard_api() -> None:
     data = await steward_dashboard.fetch_dashboard(key)
     assert data["name"] == "我家AI", data
     assert data["tickets"] == 120, data
-    assert "island_bond" in data, data
+    assert data["island_bond"] >= 0, data
+    assert data["bond_flavor"], data
     assert data["dues"]["tax_arrears"] == 0, data
     assert data["dues"]["upkeep_arrears"] == 0, data
     assert "parcels" in data and len(data["parcels"]) >= 3, data
