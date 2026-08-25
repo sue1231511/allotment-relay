@@ -37,6 +37,7 @@ async def _enroll(db, email: str, name: str) -> tuple[int, int]:
 
 def test_bar_job_aliases() -> None:
     from server.bar_catalog import resolve_bar_job, resolve_bar_period
+    from server import bar, world
 
     assert resolve_bar_job("洗碗") == "dishwasher"
     assert resolve_bar_job("洗碗工") == "dishwasher"
@@ -51,6 +52,16 @@ def test_bar_job_aliases() -> None:
     assert resolve_bar_period("dusk") == "day"
     assert resolve_bar_period("夜班") == "night"
     assert resolve_bar_period("night") == "night"
+
+    btn = bar.work_button_for(None)
+    phase = world.current_day_phase()
+    if phase in ("dusk", "night"):
+        assert not btn.get("disabled"), btn
+        assert btn["command"].startswith("work 洗碗 "), btn
+        assert btn["command"].endswith("day" if phase == "dusk" else "night"), btn
+    else:
+        assert btn.get("disabled") is True, btn
+    assert "班次可省" in bar.BAR_HELP
 
 
 def test_mcp_descriptions() -> None:
@@ -109,6 +120,7 @@ def test_mcp_descriptions() -> None:
     assert "洗碗" in bar_blob
     assert "荔栀" in bar_blob
     assert "help" in bar_blob
+    assert "班次可省" in bar_blob or "自动" in bar_blob
     assert "duo" not in bar.description.lower() or "不要发明" in bar_blob
 
     steward = mcp._tool_manager.get_tool("steward_ops")
@@ -538,6 +550,8 @@ def test_human_island_manual() -> None:
         "人和管家",
         "编剧社",
         "诊所地点",
+        "洗碗点了没反应",
+        "暮场或夜场",
     ):
         assert needle in blob, needle
     assert "plot_ops" not in blob
@@ -611,6 +625,14 @@ def test_patron_pages_share_steward_key() -> None:
     assert "play-place-live" in play_html
     assert "place-tool" in play_js
     assert "selectPlaceTool" in play_js
+    assert "focusPlaceResult" in play_js
+    assert "setWorkStatus" in play_js
+    assert "is-disabled" in play_js
+    assert "去上工" in play_js
+    assert "dutyUrgent(state.dash)" in play_js
+    assert "places_for" in (root / "server/play.py").read_text(encoding="utf-8")
+    assert "work_button_for" in (root / "server/bar.py").read_text(encoding="utf-8")
+    assert "suggest_work_period" in (root / "server/bar.py").read_text(encoding="utf-8")
     assert '"href": "/quarry"' in (root / "server/play.py").read_text(encoding="utf-8")
     assert '"href": "/workshop"' in (root / "server/play.py").read_text(encoding="utf-8")
     assert 'id="play-duo-key-b"' in play_html
@@ -651,7 +673,7 @@ def test_patron_pages_share_steward_key() -> None:
     assert "routes" in index_html
     assert 'href="/manual"' in play_html
     assert 'href="/manual"' in index_html
-    assert '@app.get("/manual")' in main_py
+    assert '@app.get("/manual"' in main_py
     assert '"go": "bar"' in promo
     assert '"go": "eatery"' in promo
     assert '"go": "star"' in promo

@@ -756,7 +756,36 @@ body.play-bound .play-gate { display: none !important; }
 
 .place-tool .arrow { color: #55777d; }
 
-.place-tool.is-primary strong { color: #3f6268; }
+.place-tool.is-disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.place-tool.is-disabled strong {
+  color: #8a9699;
+}
+
+.place-tool.is-disabled .arrow {
+  color: #b0b8ba;
+}
+
+.place-status-pill.is-busy {
+  color: #8a7040;
+  border-color: rgba(138, 112, 64, .28);
+  background: rgba(138, 112, 64, .08);
+}
+
+.place-status-pill.is-err {
+  color: #8f4e4e;
+  border-color: rgba(143, 78, 78, .28);
+  background: rgba(143, 78, 78, .08);
+}
+
+.place-status-pill.is-ok {
+  color: #5a7a62;
+  border-color: rgba(90, 122, 98, .28);
+  background: rgba(90, 122, 98, .1);
+}
 
 .place-workarea {
   padding: 22px 0 24px 28px;

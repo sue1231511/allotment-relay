@@ -99,6 +99,24 @@ function setLog(text) {
   showPlaceResult(text);
 }
 
+function setWorkStatus(text, kind) {
+  const el = $('play-work-status');
+  if (!el) return;
+  el.textContent = text || '可操作';
+  el.classList.remove('is-busy', 'is-err', 'is-ok');
+  if (kind) el.classList.add(`is-${kind}`);
+}
+
+function focusPlaceResult() {
+  const target = $('play-place-result') || $('play-work-title') || $('play-place-workspace');
+  if (!target || !state.placeId) return;
+  try {
+    target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } catch {
+    /* ignore */
+  }
+}
+
 function clearPlaceResult() {
   state.placeResult = '';
   const empty = $('play-place-empty');
@@ -108,6 +126,7 @@ function clearPlaceResult() {
     result.textContent = '';
     show(result, false);
   }
+  setWorkStatus('可操作');
 }
 
 function showPlaceResult(text) {
@@ -125,6 +144,7 @@ function showPlaceResult(text) {
     result.textContent = text;
     show(result, true);
   }
+  focusPlaceResult();
 }
 
 function stockPreview(limit = 3) {
@@ -219,15 +239,30 @@ function renderPlace(id) {
     show(live, false);
   }
 
-  const acts = extraPlaceActions(place).concat(place.actions || []);
+  let acts = extraPlaceActions(place).concat(place.actions || []);
+  if (dutyUrgent(state.dash) && ['tide', 'hut', 'quarry', 'craft', 'market'].includes(place.id)) {
+    acts = [{
+      label: '去上工',
+      note: '考勤逾期 · 这里先锁着，洗碗打卡后再来',
+      tool: 'go',
+      command: 'bar',
+      primary: true,
+    }];
+  }
   $('play-place-actions').innerHTML = acts.map((a, i) => {
     const idx = String(i + 1).padStart(2, '0');
     const note = a.note || a.command || '';
-    const primary = i === acts.length - 1 ? ' is-primary' : '';
-    return `<button type="button" class="place-tool${primary}" data-label="${esc(a.label)}" data-note="${esc(note)}" data-act='${JSON.stringify({ tool: a.tool, command: a.command })}'>
+    const disabled = Boolean(a.disabled);
+    const primary = (!disabled && (a.primary || i === 0)) ? ' is-primary' : '';
+    const dead = disabled ? ' is-disabled' : '';
+    const payload = JSON.stringify({ tool: a.tool, command: a.command || '' });
+    const attrs = disabled
+      ? 'disabled aria-disabled="true"'
+      : `data-act='${payload}'`;
+    return `<button type="button" class="place-tool${primary}${dead}" data-label="${esc(a.label)}" data-note="${esc(note)}" ${attrs}>
       <span class="place-tool-index">${idx}</span>
       <span><strong>${esc(a.label)}</strong><small>${esc(note)}</small></span>
-      <span class="arrow">→</span>
+      <span class="arrow">${disabled ? '·' : '→'}</span>
     </button>`;
   }).join('');
 
@@ -322,6 +357,7 @@ function renderAll() {
   dutyEl.textContent = dutyBits.join(' · ');
   show(dutyEl, dutyBits.length > 0);
   renderPlots();
+  renderPlotExtras();
   renderPlaces();
   renderNeighbors();
   renderTide();
@@ -332,7 +368,34 @@ function renderAll() {
   consumeGo();
 }
 
+function renderPlotExtras() {
+  const head = document.querySelector('#plotsSection .play-section-head');
+  if (!head) return;
+  const buy = head.querySelector('[data-buy-seed]');
+  const forage = head.querySelector('[data-act*="forage"]');
+  const goBar = head.querySelector('[data-place="bar"].play-text-btn');
+  if (dutyUrgent(state.dash)) {
+    if (buy) show(buy, false);
+    if (forage) show(forage, false);
+    if (!goBar) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'play-text-btn';
+      btn.setAttribute('data-place', 'bar');
+      btn.textContent = '去上工 →';
+      head.appendChild(btn);
+    }
+  } else {
+    if (buy) show(buy, true);
+    if (forage) show(forage, true);
+    if (goBar) goBar.remove();
+  }
+}
+
 function plotButtons(p) {
+  if (dutyUrgent(state.dash)) {
+    return `<button type="button" class="play-mini-btn primary" data-place="bar">去上工</button>`;
+  }
   const token = p.token || String(p.slot);
   const acts = [];
   if (p.state === 'fallow') {
@@ -899,15 +962,28 @@ function itemSheet(name) {
 }
 
 async function act(tool, command) {
+  if (tool === 'go') {
+    closeSheet();
+    renderPlace(command);
+    return;
+  }
   try {
     document.querySelectorAll('.play-page button.btn, .play-page .play-mini-btn, .play-page .place-tool, .play-go').forEach((b) => { b.disabled = true; });
+    setWorkStatus('进行中…', 'busy');
+    focusPlaceResult();
     const data = await api(tool, command);
     applySnap(data, data.text || '');
+    setWorkStatus(data.text ? '完成' : '可操作', data.text ? 'ok' : '');
     closeSheet();
   } catch (err) {
     setLog(err.message || String(err));
+    setWorkStatus('没做成', 'err');
   } finally {
     document.querySelectorAll('button[disabled]').forEach((b) => { b.disabled = false; });
+    // 关着的地点按钮要保持 disabled（重新渲染会修正；错误路径未重渲）
+    document.querySelectorAll('#play-place-actions .place-tool.is-disabled').forEach((b) => {
+      b.disabled = true;
+    });
   }
 }
 
@@ -1269,15 +1345,16 @@ document.body.addEventListener('click', (e) => {
     return;
   }
   const btn = e.target.closest('[data-act]');
-  if (!btn) return;
+  if (!btn || btn.disabled || btn.getAttribute('aria-disabled') === 'true') return;
   let payload;
   try {
     payload = JSON.parse(btn.getAttribute('data-act'));
   } catch {
     return;
   }
+  if (!payload || !payload.tool) return;
   if (btn.classList.contains('place-tool')) selectPlaceTool(btn);
-  act(payload.tool, payload.command);
+  act(payload.tool, payload.command || '');
 });
 
 $('memory-filters').addEventListener('click', (e) => {

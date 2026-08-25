@@ -1,6 +1,7 @@
 """人类上手页 — 同一张凭证、同一套 command，只是换成点按。"""
 from __future__ import annotations
 
+import copy
 from typing import Any
 
 from . import db, steward_dashboard, world
@@ -79,7 +80,8 @@ PLACES: list[dict[str, Any]] = [
         "week1": True,
         "duty": True,
         "actions": [
-            {"label": "洗碗上工", "note": "每两天须来一次", "tool": "bar_ops", "command": "work 洗碗 night"},
+            # 班次由 places_for() 按当前时辰改写；这里只是占位
+            {"label": "洗碗上工", "note": "每两天须来一次", "tool": "bar_ops", "command": "work 洗碗"},
             {"label": "今晚", "note": "看看今晚开不开门", "tool": "bar_ops", "command": "tonight"},
             {"label": "酒单", "note": "价目与今晚出品", "tool": "bar_ops", "command": "menu"},
             {"label": "我的酒吧档", "note": "考勤与上工记录", "tool": "bar_ops", "command": "status"},
@@ -231,9 +233,38 @@ def climate_bits() -> dict[str, str]:
         "weather": world.weather_label(w),
         "tide": world.tide_label(t),
         "phase": world.day_phase_label(p),
+        "weather_code": w,
+        "tide_code": t,
+        "phase_code": p,
         "season": season_mod.season_name(),
         "line": world.climate_line(),
     }
+
+
+def places_for(steward: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    """按当前时辰 / 潮汐改写地点按钮，避免点了没反应。"""
+    from . import bar
+
+    places = copy.deepcopy(PLACES)
+    tide = world.current_tide()
+    for place in places:
+        if place["id"] == "bar":
+            work = bar.work_button_for(steward)
+            actions = [work] + [
+                a for a in (place.get("actions") or [])
+                if not str(a.get("command") or "").startswith("work ")
+            ]
+            place["actions"] = actions
+            continue
+        for a in place.get("actions") or []:
+            cmd = str(a.get("command") or "")
+            if place["id"] == "tide" and cmd == "dig" and tide == "flood":
+                a["disabled"] = True
+                a["note"] = "涨潮关 · 等退潮再翻"
+            if place["id"] == "craft" and cmd == "灌" and tide != "flood":
+                a["disabled"] = True
+                a["note"] = f"涨潮才能灌 · 现在是{world.tide_label(tide)}"
+    return places
 
 
 def seed_options(stock: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -286,7 +317,7 @@ async def snapshot(api_key: str) -> dict[str, Any]:
         "dashboard": dash,
         "seeds": seeds,
         "neighbors": neighbors,
-        "places": PLACES,
+        "places": places_for(s if enrolled else None),
         "climate": climate_bits(),
     }
 

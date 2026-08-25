@@ -86,6 +86,26 @@ async def _test_play_api() -> None:
     assert any(a["command"] == "clinic treat all" for a in clinic["actions"]), clinic
     bar = next(p for p in sown["places"] if p["id"] == "bar")
     assert "点单" in bar["blurb"], bar
+    work = next(a for a in bar["actions"] if str(a.get("command") or "").startswith("work "))
+    from server import world
+    phase = world.current_day_phase()
+    if phase == "night":
+        assert work["command"] == "work 洗碗 night", work
+        assert not work.get("disabled"), work
+    elif phase == "dusk":
+        assert work["command"] == "work 洗碗 day", work
+        assert not work.get("disabled"), work
+    else:
+        assert work.get("disabled") is True, work
+        assert "开门" in (work.get("note") or ""), work
+    assert sown["climate"].get("phase_code") in ("day", "dusk", "night"), sown["climate"]
+    assert sown["climate"].get("tide_code") in ("ebb", "slack", "flood"), sown["climate"]
+    tide_place = next(p for p in sown["places"] if p["id"] == "tide")
+    dig = next(a for a in tide_place["actions"] if a.get("command") == "dig")
+    if sown["climate"]["tide_code"] == "flood":
+        assert dig.get("disabled") is True, dig
+    else:
+        assert not dig.get("disabled"), dig
     well = next(p for p in sown["places"] if p["id"] == "undertide")
     assert "岛缘" in well["blurb"], well
     assert sown["dashboard"]["island_bond"] is not None, sown["dashboard"]

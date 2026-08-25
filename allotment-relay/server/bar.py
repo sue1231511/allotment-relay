@@ -63,8 +63,9 @@ BAR_HELP = """bar_ops 子命令（整句写进 command）：
   status — 自己的酒吧档（熟练度、可应聘岗位、考勤）。空 command 也是这个
   tonight — 今晚驻唱·特调·活动·小橘是否开嗓
   menu / order 酒名 — 酒单 / 点酒
-  work 岗位 day|night — 上工。岗位：洗碗/杂工/迎宾/服务生/调酒师/牛郎
-    暮才有白班、夜才有夜班；逾期白天可补班 ×0.72
+  work 岗位 [day|night] — 上工。岗位：洗碗/杂工/迎宾/服务生/调酒师/牛郎
+    班次可省：按当前时辰自动选（暮=白班 day，夜=夜班 night；逾期白天补班 day ×0.72）
+    写了班次也行：暮才有白班、夜才有夜班；逾期白天只能 day
     每 2 天必须 work 一次，否则锁份地/出海/行囊/崖矿/工坊
   cheer 好话 — 哄荔栀（每日 1 次）。潮下猫猫用 undertide_ops cheer；小橘用 star_ops 应援
   tip 名字 票数 [备注] — 给当班员工小费
@@ -103,6 +104,59 @@ def _work_period(period: str, *, overdue: bool = False) -> str:
     if p == "night" and phase != "night":
         raise ValueError("夜班仅夜（night）时段可上；当前 " + world.day_phase_label(phase))
     return p
+
+
+def suggest_work_period(steward: dict[str, Any] | None = None) -> str:
+    """按当前时辰给出该上的班次。昼且未逾期则不可上。"""
+    phase = world.current_day_phase()
+    overdue = bool(steward and is_shift_overdue(steward))
+    if phase == "night":
+        return "night"
+    if phase == "dusk":
+        return "day"
+    if overdue:
+        return "day"
+    raise ValueError(
+        f"{COASTAL_BAR['name']} 暮/夜才营业，现在 {world.day_phase_label(phase)}。"
+        "等到暮上白班、夜上夜班；逾期白天可补班 work 岗位 day。"
+    )
+
+
+def work_button_for(steward: dict[str, Any] | None = None) -> dict[str, Any]:
+    """上手页「洗碗上工」按钮：班次跟时辰走，关着的时候标 disabled。"""
+    phase = world.current_day_phase()
+    try:
+        period = suggest_work_period(steward)
+    except ValueError:
+        return {
+            "label": "洗碗上工",
+            "note": f"暮/夜才开门 · 现在是{world.day_phase_label(phase)}",
+            "tool": "bar_ops",
+            "command": "work 洗碗",
+            "disabled": True,
+        }
+    if phase == "night":
+        return {
+            "label": "洗碗上工",
+            "note": "夜班 · 每两天须来一次",
+            "tool": "bar_ops",
+            "command": f"work 洗碗 {period}",
+        }
+    if phase == "dusk":
+        return {
+            "label": "洗碗上工",
+            "note": "暮场白班 · 每两天须来一次",
+            "tool": "bar_ops",
+            "command": f"work 洗碗 {period}",
+        }
+    # day + overdue makeup
+    return {
+        "label": "白天补班",
+        "note": "逾期可补 · 票 ×0.72",
+        "tool": "bar_ops",
+        "command": f"work 洗碗 {period}",
+        "primary": True,
+    }
 
 
 def _owner_lines() -> list[str]:
@@ -1402,19 +1456,23 @@ async def bar_ops(key_id: int, command: str) -> str:
     if verb == "work":
         rest = command.strip()[4:].strip()
         wp = rest.split()
-        if len(wp) < 2:
+        if len(wp) < 1:
             raise ValueError(
-                "用法: bar_ops work 岗位 day|night"
-                "（岗位: 洗碗/杂工/迎宾/服务生/调酒师/牛郎，或 dishwasher/runner/greeter/server/bartender/host）"
+                "用法: bar_ops work 岗位 [day|night]"
+                "（岗位: 洗碗/杂工/迎宾/服务生/调酒师/牛郎，或 dishwasher/runner/greeter/server/bartender/host；"
+                "班次可省，按当前时辰自动选）"
             )
         job_id = resolve_bar_job(wp[0])
-        period = resolve_bar_period(wp[1])
         if not job_id:
             raise ValueError(
                 f"未知岗位「{wp[0]}」，可选: 洗碗/杂工/迎宾/服务生/调酒师/牛郎"
             )
-        if not period:
-            raise ValueError("班次写 day/dusk/白班 或 night/夜班")
+        if len(wp) >= 2:
+            period = resolve_bar_period(wp[1])
+            if not period:
+                raise ValueError("班次写 day/dusk/白班 或 night/夜班；也可省掉班次自动选")
+        else:
+            period = suggest_work_period(s)
         period = _work_period(period, overdue=is_shift_overdue(s))
         async with db.connect() as conn:
             msg = await _run_work(conn, s, job_id, period)
