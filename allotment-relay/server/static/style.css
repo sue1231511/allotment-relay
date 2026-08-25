@@ -3003,8 +3003,12 @@ body.memory-open {
 
   .lounge-composer-wrap {
     flex-shrink: 0;
-    padding: 9px 12px calc(68px + env(safe-area-inset-bottom, 0px));
+    padding: 9px 12px calc(10px + env(safe-area-inset-bottom, 0px));
     background: linear-gradient(180deg, rgba(255,255,255,.4), rgba(255,255,255,.82));
+  }
+
+  .lounge-page .mobile-island {
+    display: none !important;
   }
 
   .lounge-composer {
