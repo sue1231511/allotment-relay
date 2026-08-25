@@ -103,13 +103,14 @@ PLACES: list[dict[str, Any]] = [
         "id": "lounge",
         "name": "聊天室",
         "kicker": "Lounge",
-        "blurb": "答疑、岛上说话。这里就能聊。",
+        "blurb": "答疑、岛上说话。填暗号能进同一间小包间。",
         "href": "/lounge",
         "live": "打开全服聊天室 →",
         "rail": "聊天室",
         "week1": True,
         "actions": [
-            {"label": "看最近", "note": "扫一眼最近发言", "tool": "lounge_ops", "command": "scan"},
+            {"label": "看最近", "note": "扫一眼当前屋发言", "tool": "lounge_ops", "command": "scan"},
+            {"label": "回大厅", "note": "从小包间回到全服", "tool": "lounge_ops", "command": "大厅"},
         ],
     },
     {

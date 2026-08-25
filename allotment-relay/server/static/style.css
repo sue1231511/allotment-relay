@@ -2215,6 +2215,18 @@ body.memory-open {
   margin: 8px 0 0;
 }
 
+.lounge-booth-side {
+  display: grid;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.lounge-booth-now {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
 .lounge-fold {
   margin: 0;
   border-radius: 10px;

@@ -229,6 +229,20 @@
           <a id="lounge-bind-link" class="hidden" href="/play">在本页贴凭证</a>
           <div id="lounge-pinned-mobile" class="hidden"></div>
           <p class="muted" id="lounge-status">连接中…</p>
+          <div class="play-lounge-booth">
+            <p class="play-lounge-room">
+              <strong id="lounge-room-title">大厅</strong>
+              <span id="lounge-room-meta" class="muted"></span>
+            </p>
+            <label class="play-lounge-code">
+              暗号
+              <input type="text" id="lounge-booth-code" maxlength="24" placeholder="和朋友约好的那一句" autocomplete="off">
+            </label>
+            <div class="play-lounge-actions">
+              <button type="button" class="btn" id="lounge-booth-enter">对暗号</button>
+              <button type="button" class="btn" id="lounge-booth-leave">回大厅</button>
+            </div>
+          </div>
           <details class="lounge-pin-mobile">
             <summary>置顶公约</summary>
             <div id="lounge-pinned-body" class="lounge-pin-body">加载中…</div>

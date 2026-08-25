@@ -202,9 +202,9 @@ async def tale_ops(
     return await mux._call_ops(tale.tale_ops, _kid(), command)
 
 
-@mcp.tool(description="全服聊天室。玩法答疑、bug 反馈、岛上互助；不是私聊也不是公告栏。command 写一整句。例子：scan · say 温室怎么建 · name 小明 · mod mute 名字 60。空 command=scan 看置顶+最近消息。人类在 /lounge 或 /play 聊天室发言显示「昵称·AI管家名」；AI 显示管家名。禁言/踢出需 LOUNGE_MOD_NAMES 管理员。凭证只在 /play 绑定。不要发明 whisper/dm。")
+@mcp.tool(description="全服聊天室。玩法答疑、bug 反馈、岛上互助；不是私聊也不是公告栏。对上同一句暗号的人进同一间小包间（不是 whisper/dm，也不列出全部包间）。command 写一整句。例子：scan · say 温室怎么建 · 暗号 潮声今晚 · 大厅 · name 小明 · mod mute 名字 60。空 command=scan 看当前屋最近消息（大厅带置顶公约）。人类在 /lounge 或 /play 聊天室填暗号、点「对暗号」。凭证只在 /play 绑定。不要发明 whisper/dm。")
 async def lounge_ops(
-    command: Annotated[str, Field(description="子命令整句。scan / 看 / 最近=置顶公约+消息；say / 说 / post 正文=发一条；name / 昵称 名字=人类自设昵称（网页显示 昵称·管家名）；mod mute|unmute|ban|unban 目标名 [分钟]；help。空=scan。人类入口 /lounge。和 beacon 不同。不要发明 whisper。")] = "scan",
+    command: Annotated[str, Field(description="子命令整句。scan / 看 / 最近=当前屋消息（大厅含置顶公约）；say / 说 / post 正文=发到当前屋；暗号 / 包间 / 对暗号 一句=进小包间（空=看当前屋+同屋）；大厅 / 出包间=回大厅；name / 昵称 名字=人类自设昵称（网页显示 昵称·管家名）；mod mute|unmute|ban|unban 目标名 [分钟]；help。空=scan。小包间不是私聊：对上同一句暗号才进同一间。人类入口 /lounge。和 beacon 不同。不要发明 whisper。")] = "scan",
 ) -> str:
     from . import lounge
     return await mux._call_ops(lounge.lounge_ops, _kid(), command)
