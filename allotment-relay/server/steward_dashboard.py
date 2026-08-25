@@ -67,6 +67,11 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
         status_flags.append("未入潮下")
     parcels = await db.get_parcels(s["id"])
     stock = await db.get_satchel(s["id"])
+    async with db.connect() as land_conn:
+        land_conn.row_factory = aiosqlite.Row
+        land_plots = await land.expansion_snapshot(land_conn, s, orchard=False)
+        land_orchard = await land.expansion_snapshot(land_conn, s, orchard=True)
+        land_shed = await land.expansion_snapshot(land_conn, s, greenhouse=True)
 
     parcel_views = []
     for p in parcels:
@@ -210,6 +215,11 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
         "climate": world.climate_line(),
         "pulse": pulse,
         "parcels": parcel_views,
+        "land": {
+            "plots": land_plots,
+            "orchard": land_orchard,
+            "greenhouse": land_shed,
+        },
         "stock_count": len(stock),
         "stock": stock_items,
         "incidents": incident_views,

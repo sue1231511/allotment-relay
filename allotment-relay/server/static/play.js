@@ -295,6 +295,7 @@ function renderAll() {
 
 function plotButtons(p) {
   const token = p.token || String(p.slot);
+  const orchard = Boolean(p.orchard);
   const acts = [];
   if (p.state === 'fallow') {
     acts.push(`<button type="button" class="play-mini-btn" data-sow="${esc(token)}">播种</button>`);
@@ -305,7 +306,8 @@ function plotButtons(p) {
     if (!p.fertilized) acts.push(`<button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"施肥 ${token}"}'>施肥</button>`);
   }
   if (p.state === 'ready') {
-    acts.push(`<button type="button" class="play-mini-btn primary" data-act='{"tool":"plot_ops","command":"gather ${token}"}'>收菜</button>`);
+    const gatherLabel = orchard ? '收果' : '收菜';
+    acts.push(`<button type="button" class="play-mini-btn primary" data-act='{"tool":"plot_ops","command":"gather ${token}"}'>${gatherLabel}</button>`);
     if (p.shake) acts.push(`<button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"shake ${token}"}'>摇一摇</button>`);
   }
   if (p.state === 'overripe') {
@@ -315,14 +317,11 @@ function plotButtons(p) {
   return acts.join('');
 }
 
-function renderPlots() {
-  const parcels = (state.dash && state.dash.parcels) || [];
-  const shown = parcels.slice(0, 6);
-  $('play-plots').innerHTML = shown.map((p) => {
-    const kind = p.greenhouse ? '棚' : (p.orchard ? '园' : '份地');
-    const token = p.token || p.slot;
-    return `
-    <article class="play-plot ${p.state === 'ready' ? 'is-ready' : ''}">
+function plotCardHtml(p) {
+  const kind = p.greenhouse ? '棚' : (p.orchard ? '园' : '份地');
+  const token = p.token || p.slot;
+  return `
+    <article class="play-plot ${p.state === 'ready' ? 'is-ready' : ''} ${p.orchard ? 'is-orchard' : ''} ${p.greenhouse ? 'is-shed' : ''}">
       <div class="play-plot-top">
         <span class="play-plot-slot">${kind} ${esc(token)}</span>
         <span class="play-state">${esc(plotStateLabel(p.state))}</span>
@@ -331,7 +330,63 @@ function renderPlots() {
       <div class="play-detail">${esc(p.detail || '')}</div>
       <div class="acts">${plotButtons(p)}</div>
     </article>`;
-  }).join('') || '<p class="muted">还没有地。</p>';
+}
+
+function landExpandHtml(snap) {
+  if (!snap) return '';
+  if (snap.clearing) {
+    return `<div class="play-land-expand is-busy">
+      <span>${esc(snap.clearing_label || '')} 开垦中 · ${esc(snap.clearing_eta || '')}</span>
+    </div>`;
+  }
+  const offer = snap.offer;
+  if (!offer) return '';
+  const confirm = JSON.stringify({ tool: 'plot_ops', command: snap.confirm_cmd });
+  const quote = JSON.stringify({ tool: 'plot_ops', command: snap.quote_cmd });
+  return `<div class="play-land-expand">
+    <span>${esc(snap.next_word || '下一块')} ${esc(offer.token)} · ${offer.cost} 票 · 开垦 ${esc(offer.clear_eta)}</span>
+    <button type="button" class="play-mini-btn" data-act='${quote}'>看价</button>
+    <button type="button" class="play-mini-btn primary" data-act='${confirm}'>确认开垦</button>
+  </div>`;
+}
+
+function plotGroupHtml(title, blurb, list, expandSnap) {
+  const cards = list.length
+    ? `<div class="play-plots">${list.map(plotCardHtml).join('')}</div>`
+    : '<p class="muted play-plot-empty">还没有这一栏。</p>';
+  return `<div class="play-plot-group">
+    <div class="play-plot-group-head">
+      <strong>${esc(title)}</strong>
+      <span>${esc(blurb)}</span>
+    </div>
+    ${cards}
+    ${landExpandHtml(expandSnap)}
+  </div>`;
+}
+
+function renderPlots() {
+  const parcels = (state.dash && state.dash.parcels) || [];
+  const land = (state.dash && state.dash.land) || {};
+  const plots = parcels.filter((p) => !p.orchard && !p.greenhouse);
+  const trees = parcels.filter((p) => p.orchard && !p.greenhouse);
+  const sheds = parcels.filter((p) => p.greenhouse);
+  const plotCount = (land.plots && land.plots.count) || plots.length;
+  const treeCount = (land.orchard && land.orchard.count) || trees.length;
+  const shedCount = (land.greenhouse && land.greenhouse.count) || sheds.length;
+  const parts = [
+    plotGroupHtml(`菜地 ${plotCount}`, '露天种菜', plots, land.plots),
+    plotGroupHtml(`果园 ${treeCount}`, '只种果树', trees, land.orchard),
+  ];
+  if (sheds.length || (land.greenhouse && land.greenhouse.count > 0)) {
+    parts.push(plotGroupHtml(`温室 ${shedCount}`, '种菜种树都不受季节', sheds, land.greenhouse));
+  } else {
+    parts.push(plotGroupHtml('温室', '过季或加盖时再开', sheds, land.greenhouse));
+  }
+  $('play-plots').innerHTML = parts.join('') || '<p class="muted">还没有地。</p>';
+  const sub = $('play-plots-sub');
+  if (sub) {
+    sub.textContent = `菜地 ${plotCount} · 果园 ${treeCount}${shedCount ? ` · 温室 ${shedCount}` : ''} · 全部展示`;
+  }
 }
 
 function placeCardHtml(pl, urgent) {
