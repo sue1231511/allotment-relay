@@ -26,6 +26,7 @@ async def _boot(tmp: Path):
 
 def test_play_api() -> None:
     asyncio.run(_test_play_api())
+    asyncio.run(_test_bar_work_current_shift())
     test_play_page_lists_all_plot_kinds()
 
 
@@ -86,6 +87,10 @@ async def _test_play_api() -> None:
     assert any(a["command"] == "clinic treat all" for a in clinic["actions"]), clinic
     bar = next(p for p in sown["places"] if p["id"] == "bar")
     assert "点单" in bar["blurb"], bar
+    dish = next(a for a in bar["actions"] if "洗碗" in a["label"])
+    assert dish["command"] == "work 洗碗", dish
+    assert "night" not in dish["command"], dish
+    assert dish.get("primary") is True, dish
     well = next(p for p in sown["places"] if p["id"] == "undertide")
     assert "岛缘" in well["blurb"], well
     assert sown["dashboard"]["island_bond"] is not None, sown["dashboard"]
@@ -107,6 +112,47 @@ async def _test_play_api() -> None:
         assert "未知工具" in str(exc), exc
 
 
+async def _test_bar_work_current_shift() -> None:
+    from unittest.mock import patch
+
+    tmp = Path(tempfile.mkdtemp(prefix="play-bar-"))
+    db = await _boot(tmp)
+    from server import bar, play as play_mod
+
+    key = await db.create_api_key("play-bar@example.com")
+    enrolled = await play_mod.run_play(key, "steward_ops", "enroll 洗碗的人")
+    kid = (await db.get_key_row(key))["id"]
+    assert enrolled["enrolled"] is True
+
+    with patch("server.bar.world.current_day_phase", return_value="dusk"):
+        dish = next(
+            a for a in (await play_mod.snapshot(key))["places"]
+            if a["id"] == "bar"
+        )
+        work = next(x for x in dish["actions"] if "洗碗" in x["label"])
+        assert work["command"] == "work 洗碗", work
+        assert "白班" in work["note"], work
+        msg = await bar.bar_ops(kid, "work 洗碗")
+        assert "票" in msg or "洗碗" in msg or "班" in msg, msg
+        try:
+            await bar.bar_ops(kid, "work 洗碗 night")
+            raise AssertionError("dusk should refuse hardcoded night")
+        except ValueError as exc:
+            assert "夜" in str(exc) or "暮" in str(exc), exc
+
+    with patch("server.bar.world.current_day_phase", return_value="day"):
+        try:
+            await bar.bar_ops(kid, "work 洗碗")
+            raise AssertionError("day should refuse unless overdue")
+        except ValueError as exc:
+            assert "暮" in str(exc) or "昼" in str(exc), exc
+        try:
+            await bar.bar_ops(kid, "work 洗碗 night")
+            raise AssertionError("day should refuse hardcoded night")
+        except ValueError as exc:
+            assert "夜" in str(exc) or "昼" in str(exc), exc
+
+
 def test_play_page_lists_all_plot_kinds() -> None:
     html = (ROOT / "server" / "templates" / "play.html").read_text()
     js = (ROOT / "server" / "static" / "play.js").read_text()
@@ -125,9 +171,18 @@ def test_play_page_lists_all_plot_kinds() -> None:
     assert "交岸维" in js
     assert "orderedPlaces" in js
     assert "b.week1" in js
+    assert "actData" in js
+    assert "escAttr" in js
+    assert "data-tool=" in js
+    assert 'data-act=\'{"tool"' not in js
+    assert "actBusy" in js
+    assert 'data-tool="plot_ops"' in html
+    assert 'data-command="forage"' in html
+    assert "data-act=" not in html
 
 
 if __name__ == "__main__":
     asyncio.run(_test_play_api())
+    asyncio.run(_test_bar_work_current_shift())
     test_play_page_lists_all_plot_kinds()
     print("ok")

@@ -109,6 +109,7 @@ def test_mcp_descriptions() -> None:
     assert "洗碗" in bar_blob
     assert "荔栀" in bar_blob
     assert "help" in bar_blob
+    assert "不写班次" in bar_blob or "暮上白班" in bar_blob or "暮白班" in bar_blob
     assert "duo" not in bar.description.lower() or "不要发明" in bar_blob
 
     steward = mcp._tool_manager.get_tool("steward_ops")
@@ -331,6 +332,7 @@ def test_relay_manual_covers_systems() -> None:
         "下馆子",
         "shop dine",
         "bar_ops work",
+        "不写班次",
         "甘蓝种×2",
         "不占露天份地",
         "露天无上限",
@@ -538,6 +540,8 @@ def test_human_island_manual() -> None:
         "人和管家",
         "编剧社",
         "诊所地点",
+        "洗碗上工",
+        "不用自己选",
     ):
         assert needle in blob, needle
     assert "plot_ops" not in blob
@@ -611,8 +615,13 @@ def test_patron_pages_share_steward_key() -> None:
     assert "play-place-live" in play_html
     assert "place-tool" in play_js
     assert "selectPlaceTool" in play_js
-    assert '"href": "/quarry"' in (root / "server/play.py").read_text(encoding="utf-8")
-    assert '"href": "/workshop"' in (root / "server/play.py").read_text(encoding="utf-8")
+    assert "actData" in play_js
+    play_py = (root / "server/play.py").read_text(encoding="utf-8")
+    assert '"href": "/quarry"' in play_py
+    assert '"href": "/workshop"' in play_py
+    assert "live_places" in play_py
+    assert "work 洗碗 night" not in play_py
+    assert '"command": "work 洗碗"' in play_py
     assert 'id="play-duo-key-b"' in play_html
     assert 'id="play-bar-order"' in play_html
     assert 'id="play-eatery-order"' in play_html
@@ -651,7 +660,7 @@ def test_patron_pages_share_steward_key() -> None:
     assert "routes" in index_html
     assert 'href="/manual"' in play_html
     assert 'href="/manual"' in index_html
-    assert '@app.get("/manual")' in main_py
+    assert '@app.get("/manual"' in main_py
     assert '"go": "bar"' in promo
     assert '"go": "eatery"' in promo
     assert '"go": "star"' in promo
@@ -834,6 +843,7 @@ def test_bar_ops_help() -> None:
 
     text = asyncio.run(bar.bar_ops(0, "help"))
     assert "work 岗位" in text
+    assert "班次可省略" in text or "不写班次" in text or "暮上白班" in text
     assert "cheer" in text
     assert "lodge" in text
     assert "duo" not in text or "没有 duo" in text

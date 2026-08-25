@@ -758,6 +758,16 @@ body.play-bound .play-gate { display: none !important; }
 
 .place-tool.is-primary strong { color: #3f6268; }
 
+.place-tool.is-active {
+  background: rgba(85, 119, 125, .06);
+}
+
+.place-tool.is-busy,
+.place-tool:disabled {
+  opacity: .55;
+  cursor: wait;
+}
+
 .place-workarea {
   padding: 22px 0 24px 28px;
   min-width: 0;
@@ -793,6 +803,18 @@ body.play-bound .play-gate { display: none !important; }
   border: 1px solid rgba(115, 141, 121, .22);
   color: #738d79;
   background: rgba(115, 141, 121, .08);
+}
+
+.place-status-pill.is-busy {
+  color: #6d5c3a;
+  border-color: rgba(176, 148, 86, .35);
+  background: rgba(216, 201, 170, .28);
+}
+
+.place-status-pill.is-error {
+  color: #8f6b61;
+  border-color: rgba(143, 107, 97, .28);
+  background: rgba(143, 107, 97, .1);
 }
 
 .place-result-shell {

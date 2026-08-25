@@ -8,6 +8,7 @@ const state = {
   climate: null,
   placeId: '',
   placeResult: '',
+  lastToolLabel: '',
   eaterySnap: { shops: [] },
 };
 
@@ -17,6 +18,33 @@ function $(id) {
 
 function esc(s) {
   return siteKeyEsc(s);
+}
+
+function escAttr(s) {
+  return esc(s).replaceAll('"', '&quot;').replaceAll("'", '&#39;');
+}
+
+function actData(tool, command) {
+  return `data-tool="${escAttr(tool)}" data-command="${escAttr(command || '')}"`;
+}
+
+let actBusy = false;
+
+function setWorkStatus(label, kind) {
+  const pill = $('play-work-status');
+  if (!pill) return;
+  pill.textContent = label;
+  pill.classList.toggle('is-busy', kind === 'busy');
+  pill.classList.toggle('is-error', kind === 'error');
+  pill.classList.toggle('is-done', kind === 'done');
+}
+
+function revealPlaceResult() {
+  const result = $('play-place-result');
+  if (!result || result.classList.contains('hidden')) return;
+  if (window.matchMedia && window.matchMedia('(max-width: 760px)').matches) {
+    result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
 }
 
 function show(el, on) {
@@ -58,7 +86,13 @@ async function api(tool, command) {
     }),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(typeof data.detail === 'string' ? data.detail : '做不成');
+  if (!res.ok) {
+    const detail = data && data.detail;
+    const msg = typeof detail === 'string'
+      ? detail
+      : (Array.isArray(detail) ? detail.map((d) => d.msg || JSON.stringify(d)).join('；') : '做不成');
+    throw new Error(msg);
+  }
   return data;
 }
 
@@ -94,9 +128,14 @@ function setLog(text) {
     clearPlaceResult();
     return;
   }
+  if (state.placeId) {
+    show(log, false);
+    showPlaceResult(text);
+    revealPlaceResult();
+    return;
+  }
   log.textContent = text;
   show(log, true);
-  showPlaceResult(text);
 }
 
 function clearPlaceResult() {
@@ -190,6 +229,7 @@ function renderPlace(id) {
   const place = (state.places || []).find((p) => p.id === id);
   if (!place) return;
   const switching = state.placeId !== id;
+  if (switching) state.lastToolLabel = '';
   state.placeId = id;
   show($('play-home'), false);
   show($('play-place'), true);
@@ -220,11 +260,13 @@ function renderPlace(id) {
   }
 
   const acts = extraPlaceActions(place).concat(place.actions || []);
+  const hasPrimary = acts.some((a) => a.primary);
   $('play-place-actions').innerHTML = acts.map((a, i) => {
     const idx = String(i + 1).padStart(2, '0');
     const note = a.note || a.command || '';
-    const primary = i === acts.length - 1 ? ' is-primary' : '';
-    return `<button type="button" class="place-tool${primary}" data-label="${esc(a.label)}" data-note="${esc(note)}" data-act='${JSON.stringify({ tool: a.tool, command: a.command })}'>
+    const primary = (a.primary || (!hasPrimary && i === 0)) ? ' is-primary' : '';
+    const active = (state.lastToolLabel && state.lastToolLabel === a.label) ? ' is-active' : '';
+    return `<button type="button" class="place-tool${primary}${active}" data-label="${escAttr(a.label)}" data-note="${escAttr(note)}" ${actData(a.tool, a.command)}>
       <span class="place-tool-index">${idx}</span>
       <span><strong>${esc(a.label)}</strong><small>${esc(note)}</small></span>
       <span class="arrow">→</span>
@@ -236,6 +278,7 @@ function renderPlace(id) {
   if ($('play-place-memo')) $('play-place-memo').innerHTML = ctx.memo;
 
   if (switching) {
+    setWorkStatus('可操作', '');
     if ($('play-work-title')) $('play-work-title').textContent = '选一个动作';
     if ($('play-work-sub')) $('play-work-sub').textContent = '操作结果会直接留在这里。';
     clearPlaceResult();
@@ -336,21 +379,21 @@ function plotButtons(p) {
   const token = p.token || String(p.slot);
   const acts = [];
   if (p.state === 'fallow') {
-    acts.push(`<button type="button" class="play-mini-btn" data-sow="${esc(token)}">播种</button>`);
+    acts.push(`<button type="button" class="play-mini-btn" data-sow="${escAttr(token)}">播种</button>`);
   }
   if (p.state === 'growing' || p.state === 'tending') {
-    if (!p.tended) acts.push(`<button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"tend"}'>打理</button>`);
-    if (!p.watered) acts.push(`<button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"浇水 ${token}"}'>浇水</button>`);
-    if (!p.fertilized) acts.push(`<button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"施肥 ${token}"}'>施肥</button>`);
+    if (!p.tended) acts.push(`<button type="button" class="play-mini-btn" ${actData('plot_ops', 'tend')}>打理</button>`);
+    if (!p.watered) acts.push(`<button type="button" class="play-mini-btn" ${actData('plot_ops', `浇水 ${token}`)}>浇水</button>`);
+    if (!p.fertilized) acts.push(`<button type="button" class="play-mini-btn" ${actData('plot_ops', `施肥 ${token}`)}>施肥</button>`);
   }
   if (p.state === 'ready') {
     const harvest = (p.orchard || p.shake) ? '收果' : '收菜';
-    acts.push(`<button type="button" class="play-mini-btn primary" data-act='{"tool":"plot_ops","command":"gather ${token}"}'>${harvest}</button>`);
-    if (p.shake) acts.push(`<button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"shake ${token}"}'>摇一摇</button>`);
+    acts.push(`<button type="button" class="play-mini-btn primary" ${actData('plot_ops', `gather ${token}`)}>${harvest}</button>`);
+    if (p.shake) acts.push(`<button type="button" class="play-mini-btn" ${actData('plot_ops', `shake ${token}`)}>摇一摇</button>`);
   }
   if (p.state === 'overripe') {
-    acts.push(`<button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"compost ${token}"}'>堆肥</button>`);
-    acts.push(`<button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"gather ${token}"}'>清果</button>`);
+    acts.push(`<button type="button" class="play-mini-btn" ${actData('plot_ops', `compost ${token}`)}>堆肥</button>`);
+    acts.push(`<button type="button" class="play-mini-btn" ${actData('plot_ops', `gather ${token}`)}>清果</button>`);
   }
   return acts.join('');
 }
@@ -379,19 +422,19 @@ function landExpandHtml(snap) {
   }
   const offer = snap.offer;
   if (!offer) return '';
-  const confirm = JSON.stringify({ tool: 'plot_ops', command: snap.confirm_cmd });
-  const quote = JSON.stringify({ tool: 'plot_ops', command: snap.quote_cmd });
+  const confirm = actData('plot_ops', snap.confirm_cmd);
+  const quote = actData('plot_ops', snap.quote_cmd);
   if (duesUrgent(state.dash)) {
     return `<div class="play-land-expand is-busy">
       <span>欠岸税或岸维，交清才能开垦</span>
-      <button type="button" class="play-mini-btn" data-act='${quote}'>看价</button>
+      <button type="button" class="play-mini-btn" ${quote}>看价</button>
       <button type="button" class="play-mini-btn primary" data-place="hui">去潮生会</button>
     </div>`;
   }
   return `<div class="play-land-expand">
     <span>${esc(snap.next_word || '下一块')} ${esc(offer.token)} · ${offer.cost} 票 · 开垦 ${esc(offer.clear_eta)}</span>
-    <button type="button" class="play-mini-btn" data-act='${quote}'>看价</button>
-    <button type="button" class="play-mini-btn primary" data-act='${confirm}'>确认开垦</button>
+    <button type="button" class="play-mini-btn" ${quote}>看价</button>
+    <button type="button" class="play-mini-btn primary" ${confirm}>确认开垦</button>
   </div>`;
 }
 
@@ -493,19 +536,18 @@ function neighborSheet(person) {
     .filter((it) => Number(it.qty) > 0)
     .slice(0, 8);
   const giftBtns = stock.map((it) => {
-    const cmd = JSON.stringify({ tool: 'tote_ops', command: `gift ${name} ${it.name} 1` });
-    return `<button type="button" class="play-mini-btn" data-act='${cmd}'>送 ${esc(it.name)}</button>`;
+    return `<button type="button" class="play-mini-btn" ${actData('tote_ops', `gift ${name} ${it.name} 1`)}>送 ${esc(it.name)}</button>`;
   }).join('');
-  const ticketBtn = `<button type="button" class="play-mini-btn" data-act='${JSON.stringify({ tool: 'tote_ops', command: `gift ${name} 票 5` })}'>送 5 票</button>`;
+  const ticketBtn = `<button type="button" class="play-mini-btn" ${actData('tote_ops', `gift ${name} 票 5`)}>送 5 票</button>`;
   const ripe = person.ripe ? `熟地 ${person.ripe}` : '暂无熟地';
   const where = person.home ? '在档口' : (person.ago || '不在');
   openSheet(name, `
     <p class="muted">${esc(where)} · ${esc(ripe)}</p>
     <div class="play-mini-actions" style="margin-top:10px;flex-wrap:wrap">
-      <button type="button" class="play-mini-btn" data-act='${JSON.stringify({ tool: 'steward_ops', command: `peer ${name}` })}'>看档</button>
-      <button type="button" class="play-mini-btn" data-act='${JSON.stringify({ tool: 'alliance_ops', command: `assist ${name}` })}'>帮忙打理</button>
-      <button type="button" class="play-mini-btn" data-act='${JSON.stringify({ tool: 'plot_ops', command: `偷菜 ${name}` })}'>偷菜</button>
-      <button type="button" class="play-mini-btn" data-act='${JSON.stringify({ tool: 'plot_ops', command: `amends ${name}` })}'>致歉</button>
+      <button type="button" class="play-mini-btn" ${actData('steward_ops', `peer ${name}`)}>看档</button>
+      <button type="button" class="play-mini-btn" ${actData('alliance_ops', `assist ${name}`)}>帮忙打理</button>
+      <button type="button" class="play-mini-btn" ${actData('plot_ops', `偷菜 ${name}`)}>偷菜</button>
+      <button type="button" class="play-mini-btn" ${actData('plot_ops', `amends ${name}`)}>致歉</button>
     </div>
     ${giftBtns
       ? `<div style="margin-top:12px"><p class="muted">送礼即时到账，对方在右侧「收礼 / 打赏」可见。</p>
@@ -541,7 +583,7 @@ function renderTote() {
 
 function renderGifts() {
   const gifts = (state.dash && state.dash.gifts) || [];
-  const head = `<div style="margin-bottom:8px"><button type="button" class="play-text-btn" data-act='{"tool":"tote_ops","command":"gifts"}'>刷新收礼记录</button></div>`;
+  const head = `<div style="margin-bottom:8px"><button type="button" class="play-text-btn" ${actData('tote_ops', 'gifts')}>刷新收礼记录</button></div>`;
   if (!gifts.length) {
     $('play-gifts').innerHTML = `${head}<p>暂无收礼 / 打赏</p><p class="muted">别人送你礼或酒吧打赏会列在这里；也可 tote_ops gifts 或 steward_ops 收礼。</p>`;
     return;
@@ -645,6 +687,7 @@ function hidePatron() {
 function goHome() {
   state.placeId = '';
   state.placeResult = '';
+  state.lastToolLabel = '';
   show($('play-place'), false);
   $('play-place').classList.remove('is-lounge');
   show($('play-home'), true);
@@ -868,7 +911,7 @@ function sowSheet(token) {
     return !s.tree;
   });
   const sowBtns = seeds.map((s) => (
-    `<button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"sow ${token} ${s.name}"}'>${s.emoji || ''} ${s.name} ×${s.qty}</button>`
+    `<button type="button" class="play-mini-btn" ${actData('plot_ops', `sow ${token} ${s.name}`)}>${s.emoji || ''} ${s.name} ×${s.qty}</button>`
   )).join('');
   if (!seeds.length) {
     openSheet(`种到 ${token}`, `<p class="muted">口袋里没有能种在这儿的种。买当季或全年的，过季会拒。</p>${seedBuyHtml()}`);
@@ -879,11 +922,11 @@ function sowSheet(token) {
 
 function seedBuyHtml() {
   return `
-    <button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"catalog"}'>看当季</button>
-    <button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"buy 1 甘蓝"}'>买甘蓝种</button>
-    <button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"buy 1 甜菜"}'>买甜菜种</button>
-    <button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"buy 1 雾豌豆"}'>买雾豆种</button>
-    <button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"buy 1 浅海藻"}'>买浅海藻种</button>
+    <button type="button" class="play-mini-btn" ${actData('plot_ops', 'catalog')}>看当季</button>
+    <button type="button" class="play-mini-btn" ${actData('plot_ops', 'buy 1 甘蓝')}>买甘蓝种</button>
+    <button type="button" class="play-mini-btn" ${actData('plot_ops', 'buy 1 甜菜')}>买甜菜种</button>
+    <button type="button" class="play-mini-btn" ${actData('plot_ops', 'buy 1 雾豌豆')}>买雾豆种</button>
+    <button type="button" class="play-mini-btn" ${actData('plot_ops', 'buy 1 浅海藻')}>买浅海藻种</button>
   `;
 }
 
@@ -893,21 +936,31 @@ function buySeedSheet() {
 
 function itemSheet(name) {
   openSheet(name, `
-    <button type="button" class="play-mini-btn primary" data-act='{"tool":"kitchen_ops","command":"eat ${name}"}'>吃</button>
-    <button type="button" class="play-mini-btn" data-act='{"tool":"tote_ops","command":"vend ${name} 1"}'>卖 1</button>
+    <button type="button" class="play-mini-btn primary" ${actData('kitchen_ops', `eat ${name}`)}>吃</button>
+    <button type="button" class="play-mini-btn" ${actData('tote_ops', `vend ${name} 1`)}>卖 1</button>
   `);
 }
 
 async function act(tool, command) {
+  if (actBusy) return;
+  actBusy = true;
+  setWorkStatus('进行中…', 'busy');
+  document.querySelectorAll('#play-place-actions .place-tool.is-active').forEach((el) => el.classList.add('is-busy'));
+  if (state.placeId) showPlaceResult('正在做…');
   try {
-    document.querySelectorAll('.play-page button.btn, .play-page .play-mini-btn, .play-page .place-tool, .play-go').forEach((b) => { b.disabled = true; });
     const data = await api(tool, command);
-    applySnap(data, data.text || '');
+    applySnap(data, data.text || '做成了。');
     closeSheet();
+    setWorkStatus('完成', 'done');
+    revealPlaceResult();
   } catch (err) {
-    setLog(err.message || String(err));
+    const msg = err.message || String(err);
+    setLog(msg);
+    setWorkStatus('没做成', 'error');
+    revealPlaceResult();
   } finally {
-    document.querySelectorAll('button[disabled]').forEach((b) => { b.disabled = false; });
+    actBusy = false;
+    document.querySelectorAll('#play-place-actions .place-tool.is-busy').forEach((el) => el.classList.remove('is-busy'));
   }
 }
 
@@ -1268,16 +1321,29 @@ document.body.addEventListener('click', (e) => {
     if (person) neighborSheet(person);
     return;
   }
-  const btn = e.target.closest('[data-act]');
+  const btn = e.target.closest('[data-tool], [data-act]');
   if (!btn) return;
-  let payload;
-  try {
-    payload = JSON.parse(btn.getAttribute('data-act'));
-  } catch {
+  let tool = (btn.getAttribute('data-tool') || '').trim();
+  let command = btn.getAttribute('data-command') || '';
+  if (!tool) {
+    try {
+      const payload = JSON.parse(btn.getAttribute('data-act') || '');
+      tool = payload.tool;
+      command = payload.command || '';
+    } catch {
+      setLog('这个按钮坏了，刷新再试。');
+      return;
+    }
+  }
+  if (!tool) {
+    setLog('这个按钮没有动作。');
     return;
   }
-  if (btn.classList.contains('place-tool')) selectPlaceTool(btn);
-  act(payload.tool, payload.command);
+  if (btn.classList.contains('place-tool')) {
+    state.lastToolLabel = btn.getAttribute('data-label') || '';
+    selectPlaceTool(btn);
+  }
+  act(tool, command);
 });
 
 $('memory-filters').addEventListener('click', (e) => {

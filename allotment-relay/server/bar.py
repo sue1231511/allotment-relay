@@ -63,8 +63,8 @@ BAR_HELP = """bar_ops 子命令（整句写进 command）：
   status — 自己的酒吧档（熟练度、可应聘岗位、考勤）。空 command 也是这个
   tonight — 今晚驻唱·特调·活动·小橘是否开嗓
   menu / order 酒名 — 酒单 / 点酒
-  work 岗位 day|night — 上工。岗位：洗碗/杂工/迎宾/服务生/调酒师/牛郎
-    暮才有白班、夜才有夜班；逾期白天可补班 ×0.72
+  work 岗位 [day|night] — 上工。岗位：洗碗/杂工/迎宾/服务生/调酒师/牛郎
+    班次可省略：暮上白班、夜上夜班。写死 night 在暮/昼会拒。逾期白天可补班 ×0.72
     每 2 天必须 work 一次，否则锁份地/出海/行囊/崖矿/工坊
   cheer 好话 — 哄荔栀（每日 1 次）。潮下猫猫用 undertide_ops cheer；小橘用 star_ops 应援
   tip 名字 票数 [备注] — 给当班员工小费
@@ -87,6 +87,28 @@ def _weekday_label() -> str:
 def _is_late_night() -> bool:
     hour = datetime.utcfromtimestamp(db.now()).hour
     return hour < 5
+
+
+def current_work_period(*, overdue: bool = False, phase: str | None = None) -> str | None:
+    """当前能上的班次。暮=白班 day，夜=夜班 night，逾期白天=补班 day，否则 None。"""
+    phase = phase or world.current_day_phase()
+    if phase == "night":
+        return "night"
+    if phase == "dusk":
+        return "day"
+    if overdue and phase == "day":
+        return "day"
+    return None
+
+
+def current_work_shift_label(*, overdue: bool = False, phase: str | None = None) -> str:
+    phase = phase or world.current_day_phase()
+    period = current_work_period(overdue=overdue, phase=phase)
+    if period is None:
+        return "现在是昼，暮/夜才开门"
+    if phase == "day":
+        return "白天补班"
+    return "白班" if period == "day" else "夜班"
 
 
 def _work_period(period: str, *, overdue: bool = False) -> str:
@@ -930,7 +952,7 @@ async def _cmd_status(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
     lines.extend([
         "",
         f"今日已上工 {used}/{config.BAR_SHIFT_DAILY} · 耗能 {config.BAR_SHIFT_ENERGY}/班",
-        "指令: tonight / menu / order / work 岗位 day|night / cheer 好话 / lodge / tip / chat / song / staff",
+        "指令: tonight / menu / order / work 岗位 [day|night] / cheer 好话 / lodge / tip / chat / song / staff",
         "help 列出全部。心情只有荔栀自己定，想哄她用 cheer。",
     ])
     if is_shift_overdue(s):
@@ -1402,20 +1424,31 @@ async def bar_ops(key_id: int, command: str) -> str:
     if verb == "work":
         rest = command.strip()[4:].strip()
         wp = rest.split()
-        if len(wp) < 2:
+        if not wp:
             raise ValueError(
-                "用法: bar_ops work 岗位 day|night"
-                "（岗位: 洗碗/杂工/迎宾/服务生/调酒师/牛郎，或 dishwasher/runner/greeter/server/bartender/host）"
+                "用法: bar_ops work 岗位 [day|night]"
+                "（岗位: 洗碗/杂工/迎宾/服务生/调酒师/牛郎。"
+                "班次可省略：暮上白班、夜上夜班；逾期白天补班。"
+                "写死 night 在暮/昼会拒）"
             )
         job_id = resolve_bar_job(wp[0])
-        period = resolve_bar_period(wp[1])
         if not job_id:
             raise ValueError(
                 f"未知岗位「{wp[0]}」，可选: 洗碗/杂工/迎宾/服务生/调酒师/牛郎"
             )
-        if not period:
-            raise ValueError("班次写 day/dusk/白班 或 night/夜班")
-        period = _work_period(period, overdue=is_shift_overdue(s))
+        overdue = is_shift_overdue(s)
+        if len(wp) >= 2:
+            period = resolve_bar_period(wp[1])
+            if not period:
+                raise ValueError("班次写 day/dusk/白班 或 night/夜班；也可以不写，按现在时辰上")
+            period = _work_period(period, overdue=overdue)
+        else:
+            period = current_work_period(overdue=overdue)
+            if not period:
+                raise ValueError(
+                    f"{COASTAL_BAR['name']} 暮/夜才营业，现在 {world.day_phase_label(world.current_day_phase())}。"
+                    "逾期白天可 work 岗位 day 补班。"
+                )
         async with db.connect() as conn:
             msg = await _run_work(conn, s, job_id, period)
             from . import tale as tale_mod

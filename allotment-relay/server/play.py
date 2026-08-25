@@ -1,6 +1,7 @@
 """人类上手页 — 同一张凭证、同一套 command，只是换成点按。"""
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import Any
 
 from . import db, steward_dashboard, world
@@ -46,7 +47,7 @@ PLACES: list[dict[str, Any]] = [
             {"label": "撒网", "note": "花票换渔获", "tool": "tide_ops", "command": "net"},
             {"label": "坐钓", "note": "要钓竿和饵", "tool": "tide_ops", "command": "cast"},
             {"label": "赶海看看", "note": "先扫一眼沙滩", "tool": "tide_ops", "command": "beach scan"},
-            {"label": "翻沙", "note": "要铲子；涨潮关", "tool": "tide_ops", "command": "dig"},
+            {"label": "翻沙", "note": "要铲子；涨潮关", "tool": "tide_ops", "command": "dig", "gate": "dig"},
             {"label": "近海出发", "note": "开船出海", "tool": "tide_ops", "command": "voyage depart near"},
             {"label": "看船", "note": "船况与航程", "tool": "tide_ops", "command": "voyage status"},
         ],
@@ -79,7 +80,7 @@ PLACES: list[dict[str, Any]] = [
         "week1": True,
         "duty": True,
         "actions": [
-            {"label": "洗碗上工", "note": "每两天须来一次", "tool": "bar_ops", "command": "work 洗碗 night"},
+            {"label": "洗碗上工", "note": "每两天须来一次", "tool": "bar_ops", "command": "work 洗碗", "primary": True},
             {"label": "今晚", "note": "看看今晚开不开门", "tool": "bar_ops", "command": "tonight"},
             {"label": "酒单", "note": "价目与今晚出品", "tool": "bar_ops", "command": "menu"},
             {"label": "我的酒吧档", "note": "考勤与上工记录", "tool": "bar_ops", "command": "status"},
@@ -169,7 +170,7 @@ PLACES: list[dict[str, Any]] = [
         "actions": [
             {"label": "看砧", "note": "先看砧上有没有活", "tool": "craft_ops", "command": "status"},
             {"label": "取成品", "note": "好了才能取", "tool": "craft_ops", "command": "取"},
-            {"label": "灌盐田", "note": "涨潮才能灌", "tool": "craft_ops", "command": "灌"},
+            {"label": "灌盐田", "note": "涨潮才能灌", "tool": "craft_ops", "command": "灌", "gate": "flood"},
             {"label": "打捞", "note": "只认风暴窗口", "tool": "craft_ops", "command": "打捞"},
         ],
     },
@@ -223,6 +224,29 @@ PLACES: list[dict[str, Any]] = [
 ]
 
 
+def live_places(*, overdue: bool = False) -> list[dict[str, Any]]:
+    """按当前时辰/潮汐改地点按钮的 command 和备忘，避免写死夜班这种点了必拒。"""
+    from . import bar
+
+    places = deepcopy(PLACES)
+    phase = world.current_day_phase()
+    tide = world.current_tide()
+    period = bar.current_work_period(overdue=overdue, phase=phase)
+    shift = bar.current_work_shift_label(overdue=overdue, phase=phase)
+    for place in places:
+        for act in place.get("actions") or []:
+            cmd = str(act.get("command") or "")
+            if place["id"] == "bar" and cmd.startswith("work 洗碗"):
+                act["command"] = "work 洗碗"
+                act["primary"] = True
+                act["note"] = f"{shift} · 每两天须来一次" if period else shift
+            if act.get("gate") == "dig" and tide == "flood":
+                act["note"] = "涨潮关翻沙，退了再来"
+            if act.get("gate") == "flood" and tide != "flood":
+                act["note"] = "现在不是涨潮，灌不了"
+    return places
+
+
 def climate_bits() -> dict[str, str]:
     from . import season as season_mod
 
@@ -269,9 +293,12 @@ async def snapshot(api_key: str) -> dict[str, Any]:
     dash = None
     seeds: list[dict[str, Any]] = []
     neighbors: dict[str, Any] = {"total": 0, "listed": 0, "online": 0, "window_min": 0, "people": []}
+    overdue = False
     if enrolled:
         dash = await steward_dashboard.fetch_dashboard(key)
         seeds = seed_options(dash.get("stock") or [])
+        duty = ((dash.get("meter_lines") or {}).get("bar_duty") or "")
+        overdue = duty.startswith("⚠")
         from . import multi
         roster = await multi.neighbor_roster(s, online_only=False)
         neighbors = {
@@ -286,7 +313,7 @@ async def snapshot(api_key: str) -> dict[str, Any]:
         "dashboard": dash,
         "seeds": seeds,
         "neighbors": neighbors,
-        "places": PLACES,
+        "places": live_places(overdue=overdue),
         "climate": climate_bits(),
     }
 
