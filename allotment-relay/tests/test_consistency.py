@@ -452,6 +452,7 @@ def test_relay_manual_covers_systems() -> None:
         "对话上方",
         "红包 100 5",
         "hongbao_ops",
+    ]
     missing = [n for n in needles if n not in text]
     assert not missing, f"relay_manual missing: {missing}"
     assert "steward_sheet" not in text
@@ -566,7 +567,8 @@ def test_human_island_manual() -> None:
         "聊天框顶上",
         "红包",
         "抢红包",
-        "发红包",:
+        "发红包",
+    ):
         assert needle in blob, needle
     assert "plot_ops" not in blob
     assert "sow_all" not in blob
