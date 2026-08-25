@@ -49,8 +49,10 @@ UT_LOAN_CONCURRENT = 2
 UT_SAVE_RATE_BASE = 0.02     # 基准日利率（猫猫面板可调 1%~5%）
 UT_SAVE_RATE_MIN = 0.01
 UT_SAVE_RATE_MAX = 0.05
-UT_SAVE_CAP = 500            # 硬上限
-UT_SAVE_CAP_PER_REP = 5      # 影信 × 5
+UT_SAVE_CAP = 8888           # 存款硬上限（最多存 8888）
+UT_SAVE_FLOOR = 500          # 计息保底额度（初始 500）
+UT_SAVE_CAP_PER_REP = 30     # 影信 × 30
+UT_SAVE_INTEREST_CAP = 3000  # 计息额度封顶（满影信）；超出部分（至 8888）不计息
 
 # ── 地下监牢 ──────────────────────────────────────────────
 UT_JAIL_BUSTED_TRIGGER = 5   # 案底触发线
@@ -226,10 +228,10 @@ REP_RECOVER_PER_DAY = 1
 REP_RECOVER_CAP = 20        # 到"能打交道"档内停，再上要靠本事
 
 # ── 潮汐博彩（Jester 的旧机器，穷人翻盘幻想）──
-LOTTERY_COST = 5
+LOTTERY_COST = 20
 LOTTERY_TIERS = [
     # (概率, 奖金区间, 档名)
-    (0.0015, (300, 600), "头奖"),
-    (0.012,  (60, 150),  "大奖"),
-    (0.12,   (8, 20),    "小奖"),
+    (0.001,  (3000, 6000), "头奖"),
+    (0.01,   (300, 800),   "大奖"),
+    (0.10,   (30, 80),     "小奖"),
 ]

@@ -434,13 +434,17 @@ async def _get_save_rate(conn: aiosqlite.Connection, day: int) -> float:
 
 
 def _save_cap(ut: dict[str, Any]) -> int:
-    return min(utcfg.UT_SAVE_CAP, int(ut["shadow_rep"]) * utcfg.UT_SAVE_CAP_PER_REP)
+    """计息额度：本金随便存（上不封顶），只有这个额度内的存款才计息。"""
+    return min(
+        utcfg.UT_SAVE_INTEREST_CAP,
+        max(utcfg.UT_SAVE_FLOOR, int(ut["shadow_rep"]) * utcfg.UT_SAVE_CAP_PER_REP),
+    )
 
 
 async def _settle_savings(
     conn: aiosqlite.Connection, ut: dict[str, Any], day: int
 ) -> tuple[int, int]:
-    """存款懒结算：T+1 起息，复利滚入，到上限停。返回 (结算后余额, 本次利息)。"""
+    """存款懒结算：T+1 起息，复利滚入，只对计息额度内计息。返回 (结算后余额, 本次利息)。"""
     bal = int(ut.get("savings") or 0)
     last_day = int(ut.get("savings_day") or 0)
     if bal <= 0 or last_day <= 0 or day <= last_day:
@@ -448,12 +452,13 @@ async def _settle_savings(
     rate = await _get_save_rate(conn, day)
     gain = 0
     for _d in range(last_day, day):
-        if bal >= _save_cap(ut):
+        base = min(bal, _save_cap(ut))  # 只对计息额度内的本金计息
+        if base <= 0:
             break
-        step = int(bal * rate)
+        step = int(base * rate)
         if step < 1:
-            step = 1 if bal >= 50 else 0  # 小额存款每天至少 1 票（本金≥50）
-        bal = min(_save_cap(ut), bal + step)
+            step = 1 if base >= 50 else 0  # 小额存款每天至少 1 票（本金≥50）
+        bal += step
         gain += step
         if step == 0:
             break
@@ -574,7 +579,7 @@ async def _cmd_bank(
             raise ValueError("猫猫不收零票存款。")
         cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
         wallet = (await cur.fetchone())[0]
-        cap = _save_cap(ut)
+        cap = utcfg.UT_SAVE_CAP
         if savings >= cap:
             return utcopy.SAVE_DEPOSIT_FULL.format(cap=cap)
         if wallet < amount:
@@ -595,7 +600,7 @@ async def _cmd_bank(
         av_note = utcopy.AVATAR_K_SAVE if _av == "K" else ""
         return (
             utcopy.SAVE_DEPOSIT.format(rate=_fmt_rate(srate))
-            + f"\n\n（存入 {amount} 票 · 明日起息 · 当前存款 {savings + amount}/{cap}）"
+            + f"\n\n（存入 {amount} 票 · 明日起息 · 当前存款 {savings + amount}/{cap} · 前 {_save_cap(ut)} 计息）"
             + av_note
         )
 
@@ -697,7 +702,10 @@ async def _cmd_bank(
             rate=_fmt_rate(rate), reason=reason))
     if savings > 0:
         srate = await _get_save_rate(conn, day)
-        lines.append(utcopy.SAVE_LINE.format(amount=savings, rate=_fmt_rate(srate), cap=_save_cap(ut)))
+        lines.append(utcopy.SAVE_LINE.format(
+            amount=savings, rate=_fmt_rate(srate),
+            cap=_save_cap(ut), maxcap=utcfg.UT_SAVE_CAP,
+        ))
     if not debts:
         lines.append("在册欠单：无。小八今天没你的名字可念。")
     else:
@@ -1378,7 +1386,7 @@ async def undertide_ops(key_id: int, command: str) -> str:
             else:
                 cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
                 if (await cur.fetchone())[0] < utcfg.LOTTERY_COST:
-                    raise ValueError("5 票都拿不出——Jester 的机器不收赊账。")
+                    raise ValueError(f"{utcfg.LOTTERY_COST} 票都拿不出——Jester 的机器不收赊账。")
                 await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (utcfg.LOTTERY_COST, s["id"]))
                 free_note = ""
             roll = random.random()

@@ -16,12 +16,40 @@ def _week_id() -> int:
 
 
 TIDE_LINES = {
-    1.5: "上面的人最近手头太阔了。井下的东西，跟着贵了。",
-    1.25: "地面行情好，井下水涨船高。",
-    1.0: "潮平两岸阔。老样子。",
-    0.9: "上面不景气，井下的也勒紧了。",
-    0.8: "上面都揭不开锅了，井下能有什么好货。",
+    1.5: [
+        "上面的人最近手头太阔了。井下的东西，跟着贵了。",
+        "上面钱一多，井底的雾就稀了——大家都挤下来找钱，尸体也多了。",
+        "潮水涨了。有人趁涨潮，把不想见的东西沉了下去。",
+        "今晚井口很吵。下来的人多，抬出去的人也不少。",
+    ],
+    1.25: [
+        "地面行情好，井下水涨船高。",
+        "上面风头一顺，井下连收尸的都涨价了。",
+        "潮头正高。老磨说他听见井底有钱响。",
+    ],
+    1.0: [
+        "潮平两岸阔。老样子。",
+        "潮没涨没落。井下安静得像在等什么。",
+        "今晚井口没有风。死人墙上的白块，一块没多，一块没少。",
+        "潮水贴着井壁，不上不下。看门人说，这最像要出事的前一晚。",
+    ],
+    0.9: [
+        "上面不景气，井下的也勒紧了。",
+        "潮退了一点。井底露出来的泥里，埋着上次没埋好的东西。",
+        "上面手紧了。井下的刀，比平时亮得快。",
+    ],
+    0.8: [
+        "上面都揭不开锅了，井下能有什么好货。",
+        "潮退得厉害。井底的烂泥味儿，隔着井口都闻得到。",
+        "上面饿，井下更饿。今晚别盯着别人的钱袋看太久。",
+    ],
 }
+
+
+def _tide_line(mult: float, day: int) -> str:
+    """按倍率挑一句潮汐文案，按天轮换（同一天全服同一句，隔天换）。"""
+    lines = TIDE_LINES.get(mult) or TIDE_LINES.get(1.0)
+    return lines[day % len(lines)]
 
 
 async def _score(conn: aiosqlite.Connection) -> int:
@@ -74,7 +102,7 @@ async def ensure_tide(conn: aiosqlite.Connection) -> dict[str, Any]:
         row = await (await conn.execute("SELECT * FROM ut_tide_state WHERE id=1")).fetchone()
         await db.add_chronicle(
             "undertide",
-            f"荔栀今晚擦杯子擦得很慢。「{TIDE_LINES.get(mult, '')}」",
+            f"荔栀今晚擦杯子擦得很慢。「{_tide_line(mult, db.day_id())}」",
             None, conn=conn,
         )
     return dict(row)
@@ -84,7 +112,7 @@ async def tide_mult(conn: aiosqlite.Connection) -> tuple[float, str]:
     """当前生效倍率（手动覆盖优先）+ 提示语。"""
     st = await ensure_tide(conn)
     mult = float(st["manual_mult"]) if st.get("manual_mult") else float(st["mult"])
-    line = TIDE_LINES.get(mult, "")
+    line = _tide_line(mult, db.day_id())
     return mult, line
 
 

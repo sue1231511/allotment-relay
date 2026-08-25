@@ -735,6 +735,32 @@ NPC_QUESTS = {
         "pay": 15, "rep_req": 15,
         "done": "你走过去站在他旁边。没说话。两分钟后他自己走了。有时候站着就够。",
     },
+    "errand_delivery": {
+        "name": "黑市送货", "issuer": "掌柜", "kind": "errand",
+        "desc": "把一小包货从后室铺送到码头，别打开，别问。",
+        "pay": 20, "body_cost": 4,
+        "done": "货交到码头那人手里，他掂了掂，头也没抬：「下回还找你。」",
+    },
+    "errand_deadletter": {
+        "name": "收一封死信", "issuer": "耳语人", "kind": "errand",
+        "desc": "死人抽牌的桌角压着一封信。捡起来，送到酒馆最里面那个人。",
+        "pay": 14, "body_cost": 2,
+        "done": "信递过去，对方没拆，先闻了闻。然后笑了：「还在就行。」",
+    },
+    "fight_blooddebt": {
+        "name": "讨一笔血账", "issuer": "猫猫", "kind": "fight",
+        "desc": "有人欠了钱庄 40 票，还放出话来说不还。让他想起来。",
+        "pay": 40, "power": 58,
+        "done": "你只把条子拍在他面前的桌上。他盯着看了半分钟，把钱推了过来。",
+        "fail": "这人比你硬。你空手回来，猫猫没说话，小八替你叹了口气。",
+    },
+    "fight_protection": {
+        "name": "赶走收保护费的", "issuer": "匿名纸条", "kind": "fight",
+        "desc": "有外来的在街头收保护费，坏了井下的规矩。让他知道谁定的规矩。",
+        "pay": 45, "power": 66,
+        "done": "他和你对视了一会儿，最后收了摊。「成，我换个地方。」",
+        "fail": "对方人多。你硬顶了两下，退了回来，膝盖先软的。",
+    },
 }
 
 QUEST_HEADER = "«今日委托 — 墙上钉着的活»"
@@ -1023,8 +1049,8 @@ SAVE_DEPOSIT = (
 SAVE_DEPOSIT_FULL = (
     "小八站在钱袋上，说什么都不挪窝。\n\n"
     "「满了——满了——」\n\n"
-    "猫猫把它拎起来，朝你摊手：「它说得对。你这份信用，存到头了。」\n"
-    "（存款上限 {cap} 票——想多存？先让潮下更信你。）"
+    "猫猫把它拎起来，朝你摊手：「它说得对。{cap}，再多我就没地方搁了。」\n"
+    "（存款上限 {cap} 票——超出计息额度的部分不算利息。）"
 )
 
 SAVE_WITHDRAW = (
@@ -1033,7 +1059,7 @@ SAVE_WITHDRAW = (
     "「常来。」她说。这句和欠钱时说的那句，语气一模一样。"
 )
 
-SAVE_LINE = "存款 {amount} 票（{rate}/日 · 上限 {cap}）"
+SAVE_LINE = "存款 {amount} 票（{rate}/日 · 前 {cap} 计息 · 上限 {maxcap}）"
 
 SAVE_INTEREST_NOTE = "（存款利息 +{gain} 票 · 已滚入本金）"
 
@@ -1041,21 +1067,21 @@ SAVE_INTEREST_NOTE = "（存款利息 +{gain} 票 · 已滚入本金）"
 
 JESTER_DESC = (
     "潮汐博彩的角落里坐着 Jester。他不属于潮下，也不属于地面。\n\n"
-    "他面前摆着台旧机器，锈了半边，投币口磨得发亮。5 票一抽，不看影信，不看身份。\n\n"
+    "他面前摆着台旧机器，锈了半边，投币口磨得发亮。20 票一抽，不看影信，不看身份。\n\n"
     "「偶尔有人赚点小钱，很偶尔有人赚票大的。」Jester 说。\n"
     "「没有第三种结局——除了什么都没中。那是大多数。」"
 )
 
 JESTER_LOSE = [
-    "机器吞了你的 5 票，咔哒一声，什么都没出来。\n\nJester 头也没抬：「下次。」",
+    "机器吞了你的 20 票，咔哒一声，什么都没出来。\n\nJester 头也没抬：「下次。」",
     "投币口吃了票，转了半圈，停了。\n\n「没了——没了——」\n这次不是小八。是 Jester 学的。",
-    "灯闪了一下，灭了。你等了三秒。什么都没有。\n\n「5 票。」Jester 掰着指头，「一杯茶钱，换一次幻想。不亏。」",
+    "灯闪了一下，灭了。你等了三秒。什么都没有。\n\n「20 票。」Jester 掰着指头，「一顿饭钱，换一次幻想。不亏。」",
 ]
 
 JESTER_FREE = (
     "Jester 抬头看了你一眼，朝机器扬了扬下巴。\n\n"
     "「自己人。」他说，「这台机器认得脸。今天这张算我的。」\n\n"
-    "（免费一抽 · 影信 ≥{rep} 的每日福利 · 抽完今日照常 5 票一抽）"
+    "（免费一抽 · 影信 ≥{rep} 的每日福利 · 抽完今日照常 20 票一抽）"
 )
 
 JESTER_SMALL = (
@@ -1187,7 +1213,7 @@ undertide_ops casino — 赌场
 undertide_ops dice <small|big|black> <注> — 黑潮骰
 undertide_ops lantern <注> / lantern continue / lantern cash — 最后一盏灯
 undertide_ops draw <注> / draw hit / draw stand — 死人抽牌
-undertide_ops lottery — 潮汐博彩（Jester 的旧机器，5 票一抽；影信≥70 每天首张免费）
+undertide_ops lottery — 潮汐博彩（Jester 的旧机器，20 票一抽；影信≥70 每天首张免费）
 undertide_ops hijack <对象> — 劫持（后果自负）
 undertide_ops grudge pay|fight|run — 寻仇应对
 undertide_ops bank borrow <票数> — 恶猫钱庄借票
