@@ -32,6 +32,9 @@ def _tools() -> dict[str, Any]:
     }
 
 
+# 考勤逾期时锁住的地点（与 bar / game 规则一致：份地·出海·行囊·崖矿·工坊）
+_DUTY_LOCKED_PLACE_IDS = frozenset({"tide", "market", "craft", "quarry"})
+
 PLACES: list[dict[str, Any]] = [
     {
         "id": "tide",
@@ -78,8 +81,8 @@ PLACES: list[dict[str, Any]] = [
         "rail": "今晚在酒吧做什么",
         "week1": True,
         "duty": True,
+        # 上工按钮由 adapt_places 按时辰写入；模板里不硬编码 night
         "actions": [
-            {"label": "洗碗上工", "note": "每两天须来一次", "tool": "bar_ops", "command": "work 洗碗 night"},
             {"label": "今晚", "note": "看看今晚开不开门", "tool": "bar_ops", "command": "tonight"},
             {"label": "酒单", "note": "价目与今晚出品", "tool": "bar_ops", "command": "menu"},
             {"label": "我的酒吧档", "note": "考勤与上工记录", "tool": "bar_ops", "command": "status"},
@@ -229,11 +232,108 @@ def climate_bits() -> dict[str, str]:
     w, t, p = world.current_weather(), world.current_tide(), world.current_day_phase()
     return {
         "weather": world.weather_label(w),
+        "weather_code": w,
         "tide": world.tide_label(t),
+        "tide_code": t,
         "phase": world.day_phase_label(p),
+        "phase_code": p,
         "season": season_mod.season_name(),
         "line": world.climate_line(),
     }
+
+
+def bar_work_action(phase: str, *, overdue: bool) -> dict[str, str] | None:
+    """按时辰给出此刻能按的洗碗上工。昼且未逾期则没有上工键。"""
+    if phase == "night":
+        return {
+            "label": "洗碗上工",
+            "note": "夜班 · 每两天须来一次",
+            "tool": "bar_ops",
+            "command": "work 洗碗 night",
+        }
+    if phase == "dusk":
+        return {
+            "label": "洗碗上工",
+            "note": "白班 · 每两天须来一次",
+            "tool": "bar_ops",
+            "command": "work 洗碗 day",
+        }
+    if overdue:
+        return {
+            "label": "白天补班",
+            "note": "逾期补签 · 票 ×0.72",
+            "tool": "bar_ops",
+            "command": "work 洗碗 day",
+        }
+    return None
+
+
+def adapt_places(
+    climate: dict[str, Any] | None = None,
+    dash: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
+    """按此刻海况 / 考勤裁剪地点按钮，避免上手页点了没反应或必拒。"""
+    import copy
+
+    climate = climate or climate_bits()
+    phase = str(climate.get("phase_code") or world.current_day_phase())
+    tide = str(climate.get("tide_code") or world.current_tide())
+    duty_line = ""
+    if dash and isinstance(dash.get("meter_lines"), dict):
+        duty_line = str(dash["meter_lines"].get("bar_duty") or "")
+    overdue = duty_line.startswith("⚠")
+    craft = (dash or {}).get("craft") or {}
+    craft_line = str(craft.get("line") or "")
+    salvage_open = bool(craft.get("salvage_open"))
+
+    out: list[dict[str, Any]] = []
+    for raw in PLACES:
+        place = copy.deepcopy(raw)
+        pid = place["id"]
+        actions = list(place.get("actions") or [])
+
+        if pid == "bar":
+            work = bar_work_action(phase, overdue=overdue)
+            if work:
+                actions = [work] + actions
+            elif phase == "day":
+                place["blurb"] = (
+                    str(place.get("blurb") or "")
+                    + " 现在是昼，酒吧打烊；暮/夜再来洗碗。逾期白天也能补班。"
+                ).strip()
+
+        if pid == "tide" and tide == "flood":
+            actions = [a for a in actions if a.get("command") != "dig"]
+
+        if pid == "craft":
+            filtered = []
+            for a in actions:
+                cmd = a.get("command") or ""
+                if cmd == "灌" and tide != "flood":
+                    continue
+                if cmd == "取" and "好了" not in craft_line:
+                    continue
+                if cmd == "打捞" and not salvage_open:
+                    continue
+                filtered.append(a)
+            actions = filtered
+
+        if overdue and pid in _DUTY_LOCKED_PLACE_IDS:
+            place["blurb"] = (
+                str(place.get("blurb") or "")
+                + " 酒吧考勤逾期：这里先锁着，去上工后再来。"
+            ).strip()
+            actions = [
+                {
+                    "label": "去上工",
+                    "note": "考勤逾期，先回酒吧打卡",
+                    "go": "bar",
+                }
+            ]
+
+        place["actions"] = actions
+        out.append(place)
+    return out
 
 
 def seed_options(stock: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -281,13 +381,14 @@ async def snapshot(api_key: str) -> dict[str, Any]:
             "window_min": roster["window_min"],
             "people": roster["people"],
         }
+    climate = climate_bits()
     return {
         "enrolled": enrolled,
         "dashboard": dash,
         "seeds": seeds,
         "neighbors": neighbors,
-        "places": PLACES,
-        "climate": climate_bits(),
+        "places": adapt_places(climate, dash),
+        "climate": climate,
     }
 
 

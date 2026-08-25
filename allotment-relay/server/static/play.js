@@ -87,7 +87,7 @@ function applySnap(data, text) {
   renderAll();
 }
 
-function setLog(text) {
+function setLog(text, isError) {
   const log = $('play-log');
   if (!text) {
     show(log, false);
@@ -95,8 +95,9 @@ function setLog(text) {
     return;
   }
   log.textContent = text;
+  log.classList.toggle('is-error', Boolean(isError));
   show(log, true);
-  showPlaceResult(text);
+  showPlaceResult(text, isError);
 }
 
 function clearPlaceResult() {
@@ -106,11 +107,20 @@ function clearPlaceResult() {
   if (empty) show(empty, true);
   if (result) {
     result.textContent = '';
+    result.classList.remove('is-error');
     show(result, false);
   }
+  setWorkStatus('可操作', false);
 }
 
-function showPlaceResult(text) {
+function setWorkStatus(label, isError) {
+  const pill = $('play-work-status');
+  if (!pill) return;
+  pill.textContent = label || '可操作';
+  pill.classList.toggle('is-error', Boolean(isError));
+}
+
+function showPlaceResult(text, isError) {
   if (!state.placeId) return;
   state.placeResult = text || '';
   const empty = $('play-place-empty');
@@ -118,12 +128,19 @@ function showPlaceResult(text) {
   if (!text) {
     if (empty) show(empty, true);
     if (result) show(result, false);
+    setWorkStatus('可操作', false);
     return;
   }
   if (empty) show(empty, false);
   if (result) {
     result.textContent = text;
+    result.classList.toggle('is-error', Boolean(isError));
     show(result, true);
+  }
+  setWorkStatus(isError ? '没做成' : '已完成', Boolean(isError));
+  const area = $('play-place-workspace') || result;
+  if (area && typeof area.scrollIntoView === 'function') {
+    area.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 }
 
@@ -220,16 +237,25 @@ function renderPlace(id) {
   }
 
   const acts = extraPlaceActions(place).concat(place.actions || []);
+  const primaryIdx = acts.findIndex((a) => a.go || (a.command || '').startsWith('work ') || a.label === '去上工');
   $('play-place-actions').innerHTML = acts.map((a, i) => {
     const idx = String(i + 1).padStart(2, '0');
     const note = a.note || a.command || '';
-    const primary = i === acts.length - 1 ? ' is-primary' : '';
+    const primary = i === (primaryIdx >= 0 ? primaryIdx : 0) ? ' is-primary' : '';
+    if (a.go) {
+      return `<button type="button" class="place-tool${primary}" data-label="${esc(a.label)}" data-note="${esc(note)}" data-place="${esc(a.go)}">
+      <span class="place-tool-index">${idx}</span>
+      <span><strong>${esc(a.label)}</strong><small>${esc(note)}</small></span>
+      <span class="arrow">→</span>
+    </button>`;
+    }
     return `<button type="button" class="place-tool${primary}" data-label="${esc(a.label)}" data-note="${esc(note)}" data-act='${JSON.stringify({ tool: a.tool, command: a.command })}'>
       <span class="place-tool-index">${idx}</span>
       <span><strong>${esc(a.label)}</strong><small>${esc(note)}</small></span>
       <span class="arrow">→</span>
     </button>`;
   }).join('');
+  setWorkStatus('可操作', false);
 
   const ctx = placeContextRows(place);
   if ($('play-place-now')) $('play-place-now').innerHTML = ctx.now;
@@ -333,6 +359,9 @@ function renderAll() {
 }
 
 function plotButtons(p) {
+  if (dutyUrgent(state.dash)) {
+    return `<button type="button" class="play-mini-btn primary" data-place="bar">去上工</button>`;
+  }
   const token = p.token || String(p.slot);
   const acts = [];
   if (p.state === 'fallow') {
@@ -892,6 +921,10 @@ function buySeedSheet() {
 }
 
 function itemSheet(name) {
+  if (dutyUrgent(state.dash)) {
+    openSheet(name, `<p class="muted">酒吧考勤逾期，行囊先锁着。</p><button type="button" class="play-mini-btn primary" data-place="bar">去上工</button>`);
+    return;
+  }
   openSheet(name, `
     <button type="button" class="play-mini-btn primary" data-act='{"tool":"kitchen_ops","command":"eat ${name}"}'>吃</button>
     <button type="button" class="play-mini-btn" data-act='{"tool":"tote_ops","command":"vend ${name} 1"}'>卖 1</button>
@@ -899,15 +932,20 @@ function itemSheet(name) {
 }
 
 async function act(tool, command) {
+  if (!tool || !command) {
+    setLog('这个按钮现在不能用。', true);
+    return;
+  }
   try {
-    document.querySelectorAll('.play-page button.btn, .play-page .play-mini-btn, .play-page .place-tool, .play-go').forEach((b) => { b.disabled = true; });
+    setWorkStatus('进行中…', false);
+    document.querySelectorAll('.play-page button.btn, .play-page .play-mini-btn, .play-page .place-tool, .play-page .play-go').forEach((b) => { b.disabled = true; });
     const data = await api(tool, command);
     applySnap(data, data.text || '');
     closeSheet();
   } catch (err) {
-    setLog(err.message || String(err));
+    setLog(err.message || String(err), true);
   } finally {
-    document.querySelectorAll('button[disabled]').forEach((b) => { b.disabled = false; });
+    document.querySelectorAll('.play-page button.btn[disabled], .play-page .play-mini-btn[disabled], .play-page .place-tool[disabled], .play-page .play-go[disabled]').forEach((b) => { b.disabled = false; });
   }
 }
 

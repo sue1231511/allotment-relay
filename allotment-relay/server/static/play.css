@@ -795,6 +795,17 @@ body.play-bound .play-gate { display: none !important; }
   background: rgba(115, 141, 121, .08);
 }
 
+.place-status-pill.is-error {
+  color: #8a4b3c;
+  border-color: rgba(138, 75, 60, .28);
+  background: rgba(138, 75, 60, .08);
+}
+
+.place-result-live.is-error,
+.play-log.is-error {
+  color: #8a4b3c;
+}
+
 .place-result-shell {
   min-height: 190px;
   padding: 20px 0;

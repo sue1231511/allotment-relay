@@ -815,8 +815,10 @@ async def dashboard_view(conn: aiosqlite.Connection, steward_id: int) -> dict[st
             line = f"岸工坊：正在打 {name}"
     else:
         line = "岸工坊：砧空闲 · craft_ops 打 铜钉"
+    win = world.salvage_window()
     return {
         "line": line,
+        "salvage_open": bool(win.get("open")),
         "crafts_total": prof["crafts_total"],
         "salvages_total": prof["salvages_total"],
     }

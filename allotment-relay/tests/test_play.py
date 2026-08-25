@@ -27,6 +27,7 @@ async def _boot(tmp: Path):
 def test_play_api() -> None:
     asyncio.run(_test_play_api())
     test_play_page_lists_all_plot_kinds()
+    test_adapt_places_bar_work_by_phase()
 
 
 async def _test_play_api() -> None:
@@ -86,6 +87,16 @@ async def _test_play_api() -> None:
     assert any(a["command"] == "clinic treat all" for a in clinic["actions"]), clinic
     bar = next(p for p in sown["places"] if p["id"] == "bar")
     assert "点单" in bar["blurb"], bar
+    work_cmds = [a["command"] for a in bar["actions"] if str(a.get("command") or "").startswith("work ")]
+    from server import world
+    phase = world.current_day_phase()
+    if phase == "night":
+        assert work_cmds == ["work 洗碗 night"], (phase, work_cmds, bar)
+    elif phase == "dusk":
+        assert work_cmds == ["work 洗碗 day"], (phase, work_cmds, bar)
+    else:
+        # 昼且未逾期：不应硬塞 night，否则点了必拒
+        assert work_cmds == [], (phase, work_cmds, bar)
     well = next(p for p in sown["places"] if p["id"] == "undertide")
     assert "岛缘" in well["blurb"], well
     assert sown["dashboard"]["island_bond"] is not None, sown["dashboard"]
@@ -125,9 +136,53 @@ def test_play_page_lists_all_plot_kinds() -> None:
     assert "交岸维" in js
     assert "orderedPlaces" in js
     assert "b.week1" in js
+    assert "dutyUrgent(state.dash)" in js
+    assert 'data-place="bar"' in js
+    assert "setWorkStatus" in js
+    assert "work 洗碗 night" not in js
+
+
+def test_adapt_places_bar_work_by_phase() -> None:
+    from server import play as play_mod
+
+    night = play_mod.adapt_places({"phase_code": "night", "tide_code": "ebb"}, None)
+    bar_n = next(p for p in night if p["id"] == "bar")
+    assert any(a.get("command") == "work 洗碗 night" for a in bar_n["actions"]), bar_n
+
+    dusk = play_mod.adapt_places({"phase_code": "dusk", "tide_code": "ebb"}, None)
+    bar_d = next(p for p in dusk if p["id"] == "bar")
+    assert any(a.get("command") == "work 洗碗 day" for a in bar_d["actions"]), bar_d
+    assert not any(a.get("command") == "work 洗碗 night" for a in bar_d["actions"]), bar_d
+
+    day = play_mod.adapt_places({"phase_code": "day", "tide_code": "ebb"}, None)
+    bar_day = next(p for p in day if p["id"] == "bar")
+    assert not any(str(a.get("command") or "").startswith("work ") for a in bar_day["actions"]), bar_day
+
+    overdue_dash = {"meter_lines": {"bar_duty": "⚠ 酒吧考勤逾期 3h — 必须 bar_ops work"}}
+    day_od = play_mod.adapt_places({"phase_code": "day", "tide_code": "ebb"}, overdue_dash)
+    bar_od = next(p for p in day_od if p["id"] == "bar")
+    assert any(a.get("command") == "work 洗碗 day" for a in bar_od["actions"]), bar_od
+    tide_od = next(p for p in day_od if p["id"] == "tide")
+    assert tide_od["actions"] == [{"label": "去上工", "note": "考勤逾期，先回酒吧打卡", "go": "bar"}], tide_od
+
+    flood = play_mod.adapt_places({"phase_code": "dusk", "tide_code": "flood"}, None)
+    tide_f = next(p for p in flood if p["id"] == "tide")
+    assert not any(a.get("command") == "dig" for a in tide_f["actions"]), tide_f
+    craft_f = next(p for p in flood if p["id"] == "craft")
+    assert any(a.get("command") == "灌" for a in craft_f["actions"]), craft_f
+
+    ebb = play_mod.adapt_places(
+        {"phase_code": "dusk", "tide_code": "ebb"},
+        {"craft": {"line": "岸工坊：砧空闲", "salvage_open": False}},
+    )
+    craft_e = next(p for p in ebb if p["id"] == "craft")
+    cmds = {a.get("command") for a in craft_e["actions"]}
+    assert "灌" not in cmds and "取" not in cmds and "打捞" not in cmds, craft_e
+    assert "status" in cmds, craft_e
 
 
 if __name__ == "__main__":
     asyncio.run(_test_play_api())
     test_play_page_lists_all_plot_kinds()
+    test_adapt_places_bar_work_by_phase()
     print("ok")
