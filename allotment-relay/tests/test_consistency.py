@@ -535,12 +535,20 @@ def test_human_island_manual() -> None:
         "人和管家",
         "编剧社",
         "诊所地点",
+        "右上角下拉",
+        "切换手册章节",
     ):
         assert needle in html, needle
+    assert 'id="chapterPick"' in html
+    for tab in ("start", "daily", "home", "sea", "money", "people", "stories", "growth", "undertide", "faq"):
+        assert f'value="{tab}"' in html, tab
+        assert f'data-tab="{tab}"' in html, tab
+    assert ".back{display:none}" not in html
     assert "plot_ops" not in html
     assert "sow_all" not in html
     assert "/manual" in pointer
     assert "island-manual.html" in pointer
+    assert "右上角下拉" in pointer
     assert '@app.get("/manual")' in main_py
     assert "ISLAND_MANUAL" in config_py
     assert "ISLAND_MANUAL" in main_py
