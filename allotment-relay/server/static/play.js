@@ -673,6 +673,122 @@ function consumeGo() {
   else renderPlace(go);
 }
 
+async function openStewardPage() {
+  if (!state.enrolled || !state.key) {
+    show($('play-gate'), true);
+    return;
+  }
+  state.placeId = '';
+  show($('play-place'), false);
+  show($('play-home'), false);
+  show($('play-steward-page'), true);
+  document.querySelectorAll('.play-dock button').forEach((b) => b.classList.remove('is-active'));
+  $('play-dock-steward')?.classList.add('is-active');
+  if (window.playLounge) window.playLounge.stop();
+  const err = $('play-steward-error');
+  if (err) show(err, false);
+  try {
+    const res = await fetch('/api/steward/dashboard', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ api_key: state.key }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || '管家档案暂时打不开');
+    renderStewardPage(data);
+  } catch (ex) {
+    if (err) {
+      err.textContent = ex.message || String(ex);
+      show(err, true);
+    }
+  }
+  $('play-steward-page')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function stewardMeter(label, value, max = 100, tone = 'sea') {
+  const v = Math.max(0, Math.min(Number(max) || 100, Number(value) || 0));
+  const pct = Math.round((v / (Number(max) || 100)) * 100);
+  return `<div class="play-steward-meter"><div><span>${esc(label)}</span><strong>${v}</strong></div><i><b class="tone-${tone}" style="width:${pct}%"></b></i></div>`;
+}
+
+function renderStewardPage(data) {
+  const st = data.status || {};
+  const shadow = data.shadow || {};
+  const flags = [];
+  if (data.flags?.greenhouse) flags.push('温室');
+  if (data.flags?.hut_built) flags.push('小屋');
+  if (data.flags?.barn_built) flags.push('畜栏');
+  if (data.flags?.eatery_open) flags.push('小馆');
+  if (data.flags?.boat) flags.push('有船');
+  const pulse = data.pulse ? `脉冲 · ${data.pulse.label}${data.pulse.remaining ? ` · ${Math.floor(data.pulse.remaining / 60)}分` : ''}` : '';
+  const badges = [
+    `影信 · ${shadow.rep ?? '—'}`,
+    pulse,
+    data.climate || '',
+    ...flags,
+    ...(st.flags || []),
+  ].filter(Boolean);
+  const badgeLabelMap = { naturalist: '博物家', mariner: '航海家', cook: '厨子', host: '掌柜', scout: '斥候', poet: '诗人' };
+  $('play-steward-hero').innerHTML = `
+    <div class="play-steward-id">
+      <span class="play-steward-avatar">${esc(String(data.name || '≈').slice(0, 1))}</span>
+      <span><strong>${esc(data.name || '未命名')}</strong><small>Lv ${data.level || 1} · ${esc(data.title || '')}${data.badge ? ` · ${esc(badgeLabelMap[data.badge] || data.badge)}` : ''}</small></span>
+      <em>${esc(st.label || (st.online ? '在线' : '离线'))}</em>
+    </div>
+    ${data.motto ? `<p class="play-steward-motto">「${esc(data.motto)}」</p>` : ''}
+    <div class="play-steward-chips">${badges.map((x) => `<span>${esc(x)}</span>`).join('')}</div>`;
+
+  $('play-steward-stat-band').innerHTML = `
+    <div class="play-steward-stat major"><small>工分票</small><strong>${data.tickets ?? '—'}</strong></div>
+    <div class="play-steward-stat"><small>行囊</small><strong>${data.stock_count ?? (data.stock || []).length} 种</strong></div>
+    <div class="play-steward-stat"><small>集市</small><strong>${data.market?.used ?? 0} / ${data.market?.cap ?? 0}</strong></div>`;
+
+  const m = data.meters || {};
+  $('play-steward-meters').innerHTML = [
+    stewardMeter('影信', m.shadow_rep ?? shadow.rep, 100, 'ink'),
+    stewardMeter('饱食', m.satiety, 100, 'sand'),
+    stewardMeter('雾智', m.mist_wit, 100, 'sea'),
+    stewardMeter('档信', m.standing, 100, 'green'),
+    stewardMeter('健康', m.health, 100, 'rose'),
+    stewardMeter('精力', m.energy, m.energy_max || 100, 'ink'),
+  ].join('');
+  $('play-steward-note').textContent = [
+    data.meter_lines?.energy,
+    data.meter_lines?.bar_duty,
+    data.voyage ? `⛵ ${data.voyage}` : '',
+    data.quarry?.line ? `⚒️ ${data.quarry.line}` : '',
+    data.craft?.line ? `🔨 ${data.craft.line}` : '',
+  ].filter(Boolean).join(' · ');
+
+  const incidents = data.incidents || [];
+  $('play-steward-ops').innerHTML = `
+    <section class="play-steward-ops-card market"><small>OPS · 集市</small><strong>${data.market?.used ?? 0} / ${data.market?.cap ?? 0} 摊格</strong><p>当前摊格使用情况。</p></section>
+    <section class="play-steward-ops-card incidents"><small>OPS · 意外</small><strong>${incidents.length} 件待处理</strong><div>${incidents.length ? incidents.map((i) => `<span>#${i.id} ${esc(i.label)} <b>${i.repair_tickets}票</b></span>`).join('') : '<p>无未处理意外</p>'}</div></section>`;
+
+  const parcels = data.parcels || [];
+  $('play-steward-plots').innerHTML = parcels.length ? parcels.map((p) => `<article><small>${p.greenhouse ? '棚' : (p.orchard ? '园' : '#')}${p.slot} · ${esc(p.state || '')}</small><strong>${esc(p.emoji || '🌱')} ${esc(p.name || p.label || '')}</strong><p>${esc(p.detail || '')}</p></article>`).join('') : '<p class="muted">暂无份地</p>';
+
+  const stock = data.stock || [];
+  $('play-steward-stock-count').textContent = `TOTE · ${data.stock_count ?? stock.length} 种`;
+  $('play-steward-stock').innerHTML = stock.length ? stock.map((it) => `<span><b>${esc(it.name || it.item || '')}</b><em>×${it.qty}</em></span>`).join('') : '<p class="muted">行囊空</p>';
+
+  const gifts = data.gifts || [];
+  $('play-steward-gifts').innerHTML = gifts.length ? gifts.slice(0, 6).map((g) => `<article><time>${fmtMemoryDate(g.created_at)}</time><div><strong>${esc(g.who || '')} · ${esc(g.kind || '')}</strong><p>${esc(g.text || '')}</p></div></article>`).join('') : '<p class="muted">暂无收礼 / 打赏</p>';
+
+  const memories = data.memories || [];
+  const latest = memories[0];
+  $('play-steward-memory').innerHTML = latest ? `<small>MEMORIES · 最近完成</small><h3>${esc(latest.title || '')}</h3><p>${esc([MEMORY_KIND_LABELS[latest.kind] || latest.kind, latest.chapter_count ? `${latest.chapter_count} 幕` : '', latest.ending || ''].filter(Boolean).join(' · '))}</p><button type="button" class="play-steward-memory-go">去回忆页查看</button>` : '<small>MEMORIES</small><h3>还没有岛上回忆</h3>';
+  $('.play-steward-memory-go')?.addEventListener?.('click', () => {});
+  const goMemory = document.querySelector('.play-steward-memory-go');
+  if (goMemory) goMemory.addEventListener('click', () => {
+    show($('play-steward-page'), false);
+    show($('play-home'), true);
+    document.querySelectorAll('.play-dock button').forEach((b) => b.classList.remove('is-active'));
+    document.querySelector('[data-scroll="memoriesSection"]')?.classList.add('is-active');
+    $('memoriesSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+
 function openMe() {
   const d = state.dash;
   if (!d) return;
