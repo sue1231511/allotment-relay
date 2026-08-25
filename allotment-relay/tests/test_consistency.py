@@ -158,8 +158,9 @@ def test_mcp_descriptions() -> None:
     assert "床" in hut_blob
     assert "睡" in hut_blob
     assert "install hard_1 bed" in hut_blob
-    assert "堆肥桶" in hut_blob
+    assert "堆肥桶 存 羊粪 3" in hut_blob
     assert "compost_bin" in hut_blob
+    assert "桶不是柜子" in hut_blob
     assert "tide_weight" in hut_blob
     assert "iron_edge" in hut_blob
     assert "潮生会 维" in hut_blob
@@ -271,6 +272,8 @@ def test_relay_manual_covers_systems() -> None:
         "barn erect",
         "堆肥桶",
         "buy compost_bin",
+        "桶不是柜子",
+        "空槽也能装",
         "基础每格 24",
         "tote_ops 扩栈",
         "mascot adopt",

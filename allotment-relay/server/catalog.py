@@ -438,7 +438,7 @@ HUT_SOFT = {
     "cabinet": {"name": "潮柜", "cost": 58, "emoji": "🗄️",
                "hint": "hut_ops 冰柜 存/取 生鲜；基础 30 种各最多叠 24 份，满了 hut_ops 潮柜 扩（12票/格，顶 60）"},
     "compost_bin": {"name": "堆肥桶", "cost": 46, "emoji": "🪣",
-                    "hint": "hut_ops 堆肥桶 存 羊粪 3｜取 堆肥 2。粪便不能进潮柜；丢进去按层沤，满 7 层结 1 份堆肥"},
+                    "hint": "空槽也能装：install soft_1 compost_bin。装完 status 看见桶后 hut_ops 堆肥桶 存 羊粪 3｜取 堆肥 2。桶不是柜子；粪便丢进去沤层，满 7 层结 1 份堆肥"},
     "miner_lamp": {"name": "盐风矿灯", "cost": 42, "emoji": "🪔",
                    "hint": "崖矿 hew / 挖 精力 -1（T1 仍约 16，比赶海/撒网费）。不是赶海灯"},
     "lamp_wick": {"name": "矿灯芯", "cost": 0, "emoji": "🕯️", "craft_only": True,

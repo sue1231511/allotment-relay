@@ -143,18 +143,95 @@ def test_help_copy() -> None:
     assert "堆肥桶 存 羊粪 3" in HUT_HELP
     assert "buy compost_bin" in HUT_HELP
     assert "粪便不能进潮柜" in HUT_HELP
+    assert "空槽也能装" in HUT_HELP
+    assert "桶不是柜子" in HUT_HELP
     assert "24" in TOTE_HELP
     assert "24" in VISIT_HELP
     manual = asyncio.run(game.relay_manual())
     assert "堆肥桶 存 羊粪 3" in manual
     assert "buy compost_bin" in manual
+    assert "空槽也能装" in manual
+    assert "桶不是柜子" in manual
     assert "行囊每种也最多 24" in manual
+
+
+async def test_buy_install_empty_slot_then_put() -> None:
+    """空槽 install 必须真正写入 hut_fittings，否则会报还没装。"""
+    tmp = Path(tempfile.mkdtemp(prefix="compost-empty-"))
+    db = await _boot(tmp)
+    from server import hut
+
+    kid, sid = await _enroll(db, "empty-slot@example.com", "空槽沤肥")
+    bought = await hut.hut_ops(kid, "buy compost_bin")
+    assert "堆肥桶" in bought, bought
+
+    installed = await hut.hut_ops(kid, "install soft_1 compost_bin")
+    assert "堆肥桶" in installed, installed
+
+    async with db.connect() as conn:
+        row = await (await conn.execute(
+            "SELECT item_key FROM hut_fittings WHERE steward_id=? AND slot='soft_1'",
+            (sid,),
+        )).fetchone()
+        sat = await (await conn.execute(
+            "SELECT quantity FROM satchel WHERE steward_id=? AND item='fit_compost_bin'",
+            (sid,),
+        )).fetchone()
+    assert row and row[0] == "compost_bin", row
+    assert not sat or int(sat[0] or 0) == 0, sat
+
+    status = await hut.hut_ops(kid, "status")
+    assert "堆肥桶" in status, status
+
+    async with db.connect() as conn:
+        await db.add_item(conn, sid, "manure_sheep", 4)
+        await conn.commit()
+
+    put = await hut.hut_ops(kid, "堆肥桶 存 羊粪 3")
+    assert "堆肥桶" in put and "+6 层" in put, put
+    put2 = await hut.hut_ops(kid, "堆肥桶 存 羊粪 1")
+    assert "结出堆肥 x1" in put2, put2
+    took = await hut.hut_ops(kid, "堆肥桶 取 堆肥 1")
+    assert "取出堆肥 x1" in took, took
+
+
+async def test_install_replaces_occupied_slot() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="compost-swap-"))
+    db = await _boot(tmp)
+    from server import hut
+
+    kid, sid = await _enroll(db, "swap-slot@example.com", "换槽沤肥")
+    await hut.hut_ops(kid, "buy cabinet")
+    cab = await hut.hut_ops(kid, "install soft_1 cabinet")
+    assert "潮柜" in cab or "柜" in cab, cab
+    await hut.hut_ops(kid, "buy compost_bin")
+    swapped = await hut.hut_ops(kid, "install soft_1 compost_bin")
+    assert "堆肥桶" in swapped, swapped
+
+    async with db.connect() as conn:
+        fit = await (await conn.execute(
+            "SELECT item_key FROM hut_fittings WHERE steward_id=? AND slot='soft_1'",
+            (sid,),
+        )).fetchone()
+        cab_row = await (await conn.execute(
+            "SELECT quantity FROM satchel WHERE steward_id=? AND item='fit_cabinet'",
+            (sid,),
+        )).fetchone()
+        await db.add_item(conn, sid, "manure_sheep", 1)
+        await conn.commit()
+    assert fit and fit[0] == "compost_bin", fit
+    assert cab_row and int(cab_row[0]) >= 1, cab_row
+
+    put = await hut.hut_ops(kid, "堆肥桶 存 羊粪 1")
+    assert "+2 层" in put, put
 
 
 def main() -> None:
     test_help_copy()
     asyncio.run(test_cabinet_rejects_manure())
     asyncio.run(test_compost_bin_layers_and_take())
+    asyncio.run(test_buy_install_empty_slot_then_put())
+    asyncio.run(test_install_replaces_occupied_slot())
     asyncio.run(test_buy_respects_satchel_stack())
     print("compost bin / stack cap tests ok")
 

@@ -346,8 +346,9 @@ async def relay_manual() -> str:
         "  存菜：buy cabinet 潮柜（生鲜，小偷翻不到）或 buy fridge 冰箱（熟菜），装好后 冰柜 存|取（柜子/潮柜/冰箱同义）",
         "  潮柜基础 30 种货；行囊/潮柜/冰箱同种货自动叠放，基础每格 24 份，"
         "tote_ops 扩栈 花钱加栈（15票/级+8份，顶 64）；潮柜 扩 加货种格数",
-        "  粪便不能进潮柜。buy compost_bin → install soft_N compost_bin → hut_ops 堆肥桶 存 羊粪 3｜取 堆肥 2",
-        "    跟 MC 堆肥桶差不多：丢粪便涨层，满 7 层结 1 份堆肥（羊粪+2 / 猪粪+3 / 牛粪+4）",
+        "  粪便不能进潮柜。buy compost_bin → install soft_1 compost_bin → hut_ops 堆肥桶 存 羊粪 3｜取 堆肥 2",
+        "    空槽也能装；装完 hut_ops status 槽位上要能看见堆肥桶才算装上",
+        "    桶不是柜子：丢粪便涨层，满 7 层结 1 份堆肥（羊粪+2 / 猪粪+3 / 牛粪+4），只能取堆肥",
         "  潮柜满了 hut_ops 潮柜 扩（12票/格，顶 60）",
         "  盐风矿灯 buy miner_lamp → install soft_N miner_lamp：崖矿挖精力 -1",
         "  工坊家具装上才生效：潮纹秤锤（公共物资+赶海）/ 铁锄刃（tend 当更好的锄）/ 夜光滤网（打捞少空）",
