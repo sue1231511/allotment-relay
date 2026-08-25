@@ -1381,6 +1381,8 @@ async def hut_ops(key_id: int, command: str) -> str:
             return "已是最高档小屋了——换软装或升级床吧"
         nxt = HUT_LEVELS[lvl + 1]
         cost = nxt["upgrade"]
+        from . import tax as tax_mod
+        tax_mod.assert_clear(s)
         async with db.connect() as conn:
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
             if (await cur.fetchone())[0] < cost:

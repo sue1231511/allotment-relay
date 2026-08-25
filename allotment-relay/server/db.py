@@ -1616,7 +1616,8 @@ async def init_db() -> None:
                 id INTEGER PRIMARY KEY CHECK (id=1),
                 tickets INTEGER NOT NULL DEFAULT 0,
                 donated_total INTEGER NOT NULL DEFAULT 0,
-                paid_total INTEGER NOT NULL DEFAULT 0
+                paid_total INTEGER NOT NULL DEFAULT 0,
+                taxed_total INTEGER NOT NULL DEFAULT 0
             )
             """,
             """
@@ -1625,6 +1626,18 @@ async def init_db() -> None:
                 day INTEGER NOT NULL,
                 amount INTEGER NOT NULL DEFAULT 0,
                 PRIMARY KEY (steward_id, day)
+            )
+            """,
+            "ALTER TABLE stewards ADD COLUMN tax_arrears INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE tide_fund ADD COLUMN taxed_total INTEGER NOT NULL DEFAULT 0",
+            """
+            CREATE TABLE IF NOT EXISTS shore_tax_bills (
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                week_id TEXT NOT NULL,
+                assessed INTEGER NOT NULL DEFAULT 0,
+                paid INTEGER NOT NULL DEFAULT 0,
+                tickets_at INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (steward_id, week_id)
             )
             """,
         ):
@@ -1639,9 +1652,11 @@ async def init_db() -> None:
         from . import ranks as ranks_mod
         from . import disaster as disaster_mod
         from . import chaoshen as chaoshen_mod
+        from . import tax as tax_mod
         from . import bond as bond_mod
         await ranks_mod.seed_xp(db)
         await disaster_mod.ensure_weekly_tide(db)
+        await tax_mod.ensure_shore_tax(db)
         await chaoshen_mod.ensure_fund_payout(db)
         await bond_mod.backfill_all(db)
         await db.commit()

@@ -365,6 +365,8 @@ async def buy(
             f"{slot_label(pending)} 还在开垦（{farming.format_grow_eta(left)}）。开好再买{more}。"
         )
     offer = next_offer(count, orchard=orchard, greenhouse=greenhouse)
+    from . import tax as tax_mod
+    tax_mod.assert_clear(steward)
     cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (steward["id"],))
     tickets = (await cur.fetchone())[0]
     label = slot_label(offer["slot"], 1 if orchard else 0, 1 if greenhouse else 0)
