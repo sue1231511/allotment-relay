@@ -470,6 +470,8 @@ async def _cook_named(s: dict[str, Any], dish_key: str) -> str:
         await db.add_item(conn, s["id"], item, 1)
         await _mark_cook(conn, s["id"])
         await survival.bump(conn, s["id"], satiety=6, mist_wit=4)
+        from . import bond as bond_mod
+        await bond_mod.grant(conn, s["id"], bond_mod.COOK, "life")
         await conn.commit()
     sell = dish_sell_price(dish_key, stars)
     cost = dish_ingredient_cost(dish_key)
@@ -504,6 +506,8 @@ async def _cook_mix(s: dict[str, Any], ings: list[str]) -> str:
         await _mark_cook(conn, s["id"], mix=True)
         sat = 3 if result.grade == "j" else 6
         await survival.bump(conn, s["id"], satiety=sat, mist_wit=2)
+        from . import bond as bond_mod
+        await bond_mod.grant(conn, s["id"], bond_mod.COOK, "life")
         await conn.commit()
     used = " + ".join(ITEM_NAMES.get(i, i) for i in ings)
     junk_note = "乱炖按材料身价兜底 45%，好料不至于白扔。" if result.grade == "j" else f"按星级可卖。"
@@ -689,6 +693,8 @@ async def kitchen_ops(key_id: int, command: str) -> str:
                 walkblue_line = await marine_mod.walkblue_fate_event(
                     conn, s["id"], kind="eat", qty=1
                 )
+            from . import bond as bond_mod
+            await bond_mod.grant(conn, s["id"], bond_mod.EAT, "life")
             await conn.commit()
         msg = f"吃了 {item_label(item)}（{item}），精力 +{restored}"
         if item.startswith("fish_") or item == "wild_mint":

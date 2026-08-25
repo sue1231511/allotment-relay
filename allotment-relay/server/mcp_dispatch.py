@@ -74,13 +74,14 @@ async def route(
 
 STEWARD_HELP = """steward_ops 子命令（整句写进 command）：
   enroll 名字 — 登记。例子：enroll 安
-  sheet — 自己的档（票、精力、份地、病症）。有全服脉冲/周潮天灾时写在档上。空 command 也是这个
+  sheet — 自己的档（票、精力、份地、病症、岛缘）。有全服脉冲/周潮天灾时写在档上。空 command 也是这个
+  岛缘 / bond — 拆你和这座岛的联系（劳作/人情/叙事/生活/投入/井下已蚀）。空 command 的 sheet 也会写「岛缘 N ∞」。例子：岛缘 · bond
   邻居 — 全员邻居（谁在档口、谁家有熟地）。找人优先用这个
   在线 — 只看档口里的人
   peer 名字 — 看别人的公开档；不写名字 = 邻居表
   revise [座右铭] — 改座右铭；肖像用 portrait 参数
   guild — 每日一轮工分票
-  board [tickets|level|me] — 全服工分票榜 / 等级榜（满级 99，不是周目标贡献榜）
+  board [tickets|岛缘|me] — 全服工分票榜 / 岛缘榜。空 board=两张都看。例子：board tickets · board 岛缘 · board me。board level / board 等级榜 仍可用，指向同一张岛缘榜。不是周目标贡献榜，也不是 steward_ops 岛缘（那是拆自己的来源）
   成就 — 已解锁称呼；称呼 逾篱客 佩戴；称呼 卸 改回等级称号
   领奖 — 看升级礼（升级时会自动发）
   天灾：人类日历一周一次周潮，低中高随机，只冲 3 万以上的超额。sheet 能看见
@@ -90,8 +91,8 @@ PLOT_HELP = """plot_ops 子命令（整句写进 command）：
   status — 各地块作物、把数、还要多久
   catalog — 作物全表（档/时间/把数/季节：当季可种或休市；一周一季）
   weather — 天气潮汐时辰 + 当季（一周一季）
-  买地 / land — 现有几块、价钱、开垦时间（起步 3 块，露天无上限，票价 80/120/180/260/360…）；买地 确认 付钱开垦。份地不种果树
-  果园 / orchard — 树位状态；买园 / 买园 确认 — 扩树位（起步 3，无上限，价表同份地）
+  买地 / land — 现有几块、价钱、开垦时间（起步 3 块，露天无上限，票价 80/120/180/260/360…）；买地 确认 付钱开垦。份地不种果树。欠岸税时不能买地，先 visit_ops 潮生会 税 交
+  果园 / orchard — 树位状态；买园 / 买园 确认 — 扩树位（起步 3，无上限，价表同份地）。欠岸税时不能买园
   果园 sow 1 芒果 · sow 园1 橘子 · sow 园1 芒果 — 果树进果园或温室；shake 园1 / 果园 gather
   sow 地块 作物 — 例子：sow 1 甘蓝 · sow 2 fogpea · sow 棚1 橘子。露天/果园须当季或全年；过季会拒并写下一开窗季节
   tend · 浇水 [地块] · 施肥 [地块] [堆肥|羊粪|猪粪|牛粪] — 浇水/施肥加快成熟（各一次）
@@ -104,7 +105,7 @@ PLOT_HELP = """plot_ops 子命令（整句写进 command）：
   chop 地块 — 砍树腾地（树龄尽了会自己枯；想提前清地不必等过熟）
   compost 地块 — 过熟进堆肥（果树清果后若还有茬则继续长；枯了或不要了才 chop）
   scarecrow 地块 — 扎稻草人
-  买棚 / 温室 — 看价；买棚 确认 / shed erect — 加盖（无上限。第1座 180票马上能种，之后 310/500/750… 比份地更贵）
+  买棚 / 温室 — 看价；买棚 确认 / shed erect — 加盖（无上限。第1座 180票马上能种，之后 310/500/750… 比份地更贵）。欠岸税时不能买棚
   sow 棚1 甘蓝 · sow 棚1 橘子 · sow 99 甘蓝 — 99=第一座。种菜种树都不受季节，偷不到
   commons scan|claim id — 稀有公共物资。不在潮生会办
   incident status|scan|repair 编号 — 意外（scan 看风险；repair 也可省略 incident）
@@ -114,7 +115,7 @@ PLOT_HELP = """plot_ops 子命令（整句写进 command）：
   camera remove 地块 — 拆监控"""
 
 HUT_HELP = """hut_ops 子命令（整句写进 command）：
-  status / build / upgrade / catalog / buy / install — 岸畔小屋
+  status / build / upgrade / catalog / buy / install — 岸畔小屋。欠岸税时不能 upgrade，先 visit_ops 潮生会 税 交
   冰柜 存|取 物品 [数量] — 小屋存菜（柜子/潮柜/冰箱是同一条指令）。例子：冰柜 存 甘蓝 3
     生鲜自动进潮柜（buy cabinet → install）；熟菜自动进冰箱（buy fridge → install）
     潮柜基础 30 种货，每种最多叠 24 份（栈上限，和行囊一样）；满了 hut_ops 潮柜 扩 [数量]（12票/格，顶 60）
@@ -138,7 +139,7 @@ TIDE_HELP = """tide_ops 子命令（整句写进 command）：
     T1 钓竿 = 竹钓竿：visit_ops tt buy 竹钓竿 或 tide_ops gear upgrade rod，同一档
     未命名小鱼不能网，只能坐钓：net 网不到、也不触发遭遇；出海期间 cast 才可能碰上
   pen status — 渔排；扩池后可指定池号：stock herring 2 · feed 2 · harvest 2 · label 2 薄荷池
-  voyage buy|depart|return|fight|flee|parley|bribe — 出海 / 黑旗（fight/flee 可省略 voyage）
+  voyage buy|depart|return|fight|flee|parley|bribe — 出海 / 黑旗（fight/flee 可省略 voyage）。欠岸税时不能买船
   compliment|release|catch|grab — 未命名小鱼（可省略 voyage）。compliment=release 礼遇回赠普通鱼；
     catch=grab 动手：抓住这尾进袋，落下腿鱼小咒，其它鱼和精力会出事
     吃或卖再掷事件：kitchen_ops eat 未命名小鱼 · tote_ops vend 未命名小鱼 1
@@ -172,7 +173,7 @@ QUARRY_HELP = """quarry_ops 子命令（整句写进 command）：
   探脉 [坑号] — 给空坑找矿脉（要镐；8 精力，20 分钟冷却，约 18% 空探）
   挖 [坑号] — 挥镐（要 T1；精力 16→11；全坑共用 36 分钟；每坑 40 分钟；每日 8 镐）
   洗 海盐砂 [数量] — 2 原矿出 1 精矿（6 精力/份精矿，约 12% 冲散）。数量是原矿，须成对
-  开坑 / 开坑 确认 — 看价 / 付钱加坑（起步 1，无上限，90/142/218…）
+  开坑 / 开坑 确认 — 看价 / 付钱加坑（起步 1，无上限，90/142/218…）。欠岸税时不能开坑/升镐
   升镐 / 升镐 确认 — 票+精矿升一档
   help — 本表
 
@@ -210,7 +211,7 @@ ALLIANCE_HELP = """alliance_ops 子命令（整句写进 command）：
   league status|contribute|board — 全服周目标；抽作物目标时跳过当季休市的种，回落到甘蓝。league board 是贡献榜。不在潮生会办
   board — 周目标贡献榜（全服票榜请用 steward_ops board）
   donate 物品 数量 / larder / draw 物品 数量 — 联盟储藏室（领取 2 票、每日 3 次）。不在潮生会办
-  捐票进潮汐基金不是这里：visit_ops 潮生会 基金 捐 50（票数自填）。补贴不用领，东八区周二四六自动发
+  捐票进潮汐基金不是这里：visit_ops 潮生会 基金 捐 50（票数自填）。岸税 visit_ops 潮生会 税 / 税 交。补贴不用领，东八区周二四六自动发
   beacon post|scan|respond — 公告栏。也可 visit_ops 潮生会 告示
   bottle leave|fish|scan|read — 漂流瓶"""
 
@@ -220,7 +221,7 @@ VISIT_HELP = """visit_ops 子命令（整句写进 command）：
   shaonian visit|fortune|transfer|buy 符名 — 韶年望潮人
   musong visit|send 名字|remember — 目送人·阿槐；渡口送别，每个游戏日可记一个名字
   jingshan visit|status|order|deliver|revisit|remember — 何敬山的商船糕点委托与后续小事件；按 status 顺序
-  潮生会 / 问 / 基金 / 基金 捐 50 / 告示 — 潮生会是岛上管事的机构，值事阿簿。不能加入、开会、退会；上岛已在册。本周目标/公仓/公物不在这儿（alliance_ops league · donate / larder · plot_ops commons）。潮汐基金按岛均口袋票：有余的人自己填票数捐；补贴不用领，东八区周二、周四、周六自动打到低于岛均的人口袋（每人顶 1000、不超过岛均）。例子：潮生会 · 潮生会 问 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 基金 捐 8 · 潮生会 告示
+  潮生会 / 问 / 税 / 税 交 / 基金 / 基金 捐 50 / 告示 — 潮生会是岛上管事的机构，值事阿簿。不能加入、开会、退会；上岛已在册。本周目标/公仓/公物不在这儿（alliance_ops league · donate / larder · plot_ops commons）。岸税按口袋现票超额累进：未过 800 免征；visit_ops 潮生会 税 看档，税 交 交欠税（可 税 交 50）。东八区每周一换班自动划入基金；本周新号免征到下周；欠税不能买地/买棚/买园/升屋/买船/开坑/升镐。没有 tax_ops。周潮天灾不是税。潮汐基金按岛均口袋票：有余的人自己填票数捐；补贴不用领，东八区周二、周四、周六自动打到低于岛均的人口袋（每人顶 1000、不超过岛均）。例子：潮生会 · 潮生会 问 · 潮生会 税 · 潮生会 税 交 · 潮生会 税 交 50 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 基金 捐 8 · 潮生会 告示
   buxing visit|tea|tide|light 给谁 | 求什么|gallery|entrust 旧事|watch|remember|fulfill 灯号 — 守灯人·不醒；茶每日一次，问潮前 5 次免费，灯廊公开
   tt catalog|buy 物品|gift 物品 — Tt酱杂货店。例子：tt buy 锄头 · tt buy 甘蓝种 2 · tt buy 盐风镐
     货架种子标当季/休市；过季种子买不了，等到开窗或 sow 棚1（温室种菜种树都不受季节）
@@ -278,6 +279,11 @@ async def steward_ops(
     if verb in ("sheet", "档案", "me", "档"):
         return await _call_ops(game.steward_sheet, key_id)
 
+    if verb in ("岛缘", "bond", "缘"):
+        from . import bond as bond_mod
+        s = await game.require_steward(key_id, exempt_duty=True)
+        return bond_mod.inspect_text(s)
+
     if verb in ("revise", "修订"):
         new_motto = motto.strip() or rest
         return await _call_ops(game.steward_revise, key_id, new_motto, portrait)
@@ -306,7 +312,7 @@ async def steward_ops(
     if verb in ("board", "榜", "排行", "排行榜"):
         return await _call_ops(ranks.board_ops, key_id, rest)
 
-    if verb in ("tickets", "票", "票榜", "level", "等级", "等级榜"):
+    if verb in ("tickets", "票", "票榜", "level", "等级", "等级榜", "岛缘榜"):
         return await _call_ops(ranks.board_ops, key_id, command.strip())
 
     if verb in (
@@ -501,6 +507,8 @@ async def visit_bundle(key_id: int, command: str = "") -> str:
         hoist={
             "treat": (clinic.clinic_ops, True),
             "fortune": (shaonian.shaonian_ops, True),
+            "税": (chaoshen.chaoshen_ops, True),
+            "岸税": (chaoshen.chaoshen_ops, True),
             "transfer": (shaonian.shaonian_ops, True),
         },
         default=npc.npc_ops,

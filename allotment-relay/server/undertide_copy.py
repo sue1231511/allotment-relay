@@ -1166,16 +1166,15 @@ RACKET_REFUSE_LOSE = [
 # ══ 通用 ════════════════════════════════════════════════════
 
 HELP = """«潮下 Undertide»
-undertide_ops well — 看那口井
-undertide_ops descend — 第一次下去（3 票）
-undertide_ops enter — 进入潮下（已解锁）
+undertide_ops well — 看那口井（看一眼不算岛缘）
+undertide_ops descend — 第一次下去（3 票；岛缘 −25）
+undertide_ops enter — 进入潮下（已解锁；每次岛缘 −12，地板 0）
 undertide_ops status — 影信 · 债务 · 案底 · 状态
 undertide_ops market — 后室铺货架
 undertide_ops buy <编号> — 买入（真货/次品/假货，离柜概不认账；偶尔刷装备）
 undertide_ops repair — 找掌柜修身上的装备（按损耗比例收费）
-undertide_ops racket [accept|refuse] — 收账鬼阿标强买强卖（每日一单）
-undertide_ops buy <编号> — 买入（真货/次品/假货，离柜概不认账）
 undertide_ops sell <物品> [数量] — 掌柜处出货（销赃）
+undertide_ops racket [accept|refuse] — 收账鬼阿标强买强卖（每日一单）
 undertide_ops street — 帘外的随机人（每日刷新）
 undertide_ops muscle <名号> — 强买（战力判定）
 undertide_ops push <名号> <物品> — 强卖

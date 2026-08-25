@@ -53,7 +53,7 @@ async def npc_ops(key_id: int, command: str) -> str:
             elif npc["key"] == "jingshan":
                 tag = " · 商船糕点委托；visit_ops jingshan visit / order / deliver"
             elif npc["key"] == "aboo":
-                tag = " · 潮生会值事；visit_ops 潮生会 / 基金。补贴周二四六自动发。不能加入"
+                tag = " · 潮生会值事；visit_ops 潮生会 / 税 / 基金。岸税周一划。补贴周二四六自动发。不能加入"
             elif npc["key"] == "herb_aunt":
                 tag = " · 厨房配方提示"
             elif npc["key"] == "market_fan":
@@ -198,6 +198,10 @@ async def _daily_visit_gift(steward_id: int, npc_key: str) -> str:
         else:
             await survival.bump(conn, steward_id, mist_wit=2)
             note = "雾智 +2（今日首次拜访）"
+        from . import bond as bond_mod
+        gained = await bond_mod.note_visit(conn, steward_id, npc_key)
+        if gained:
+            note += f" · 岛缘 +{gained}"
         await conn.commit()
     return f"\n{note}"
 
@@ -307,6 +311,8 @@ async def _run_shiye_encounter(conn: aiosqlite.Connection, steward: dict[str, An
         "INSERT INTO chronicle (action, actor_id, target_id, text, created_at) VALUES (?,?,?,?,?)",
         ("shiye", s["id"], None, f"{s['name']} 碰上拾叶（{kind}）", db.now()),
     )
+    from . import bond as bond_mod
+    await bond_mod.grant(conn, s["id"], bond_mod.SHIYE, "life")
     delta = after - before
     if delta:
         sign = f"+{delta}" if delta > 0 else str(delta)

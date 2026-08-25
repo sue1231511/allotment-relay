@@ -58,6 +58,9 @@ async def spend(
         "UPDATE stewards SET energy = energy - ? WHERE id=?",
         (amount, steward_id),
     )
+    if action:
+        from . import bond
+        await bond.from_energy(conn, steward_id, action, spent=amount)
 
 
 async def _energy_cap(conn: aiosqlite.Connection, steward_id: int) -> int:

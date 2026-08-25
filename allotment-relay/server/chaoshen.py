@@ -40,21 +40,24 @@ JOIN_REFUSE = (
 )
 
 CHAOSHEN_HELP = f"""visit_ops 潮生会 子命令（整句写进 command）：
-  空 / 问 — 进门问事：考勤、告示摘要、潮汐基金。不是入会。
+  空 / 问 — 进门问事：考勤、告示摘要、潮汐基金、岸税。不是入会。
+  税 / 岸税 — 岸税：口袋现票超额累进。未过 800 免征。看档、档表、本周应/欠
+  税 交 / 税 交 50 — 交欠税（可填票数）。没有 tax_ops。欠税时不能买地/买棚/买园/升屋/买船/开坑/升镐
   基金 — 潮汐基金：岛均口袋票。有余的人自己填票数捐进来
   基金 捐 50 — 捐票，票数自己填（最少 {FUND_MIN_DONATE}）；口袋须高于岛均，捐完仍须不低于岛均
   告示 — 看告示；贴 标签 正文 发告示；回 编号 正文 回复（同 alliance_ops beacon）
-  补贴不用领、没有 MCP 指令。东八区{FUND_PAY_WEEKDAY_LABEL}自动打到低于岛均的人口袋（每人顶 {FUND_PAY_CAP} 票，不超过岛均）
+  岸税东八区每周一换班自动划入基金；本周新号免征到下周。补贴不用领、没有 MCP 指令。东八区{FUND_PAY_WEEKDAY_LABEL}自动打到低于岛均的人口袋（每人顶 {FUND_PAY_CAP} 票，不超过岛均）
   没有入会 / 开会 / 退会。{ORG_NAME}是岛上管事的机构，上岛时已经在册。
   本周目标 / 公仓 / 公物不在这儿：alliance_ops league · alliance_ops donate / larder · plot_ops commons
-例子：潮生会 · 潮生会 问 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 基金 捐 8 · 潮生会 告示
-容易搞混：基金 捐 50=给潮汐基金捐票（票数自定义）。公仓捐货走 alliance_ops donate 甘蓝 2。不要写潮生会 补贴。steward_ops guild=每日工分轮值，不是入会；alliance_ops board=周目标贡献榜。"""
+例子：潮生会 · 潮生会 问 · 潮生会 税 · 潮生会 税 交 · 潮生会 税 交 50 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 基金 捐 8 · 潮生会 告示
+容易搞混：税=强制岸税（富人按档交，税入基金）。基金 捐 50=自愿捐票（须高于岛均）。周潮天灾=只冲 3 万以上，不是税。公仓捐货走 alliance_ops donate 甘蓝 2。不要写潮生会 补贴。steward_ops guild=每日工分轮值，不是入会；alliance_ops board=周目标贡献榜。没有 tax_ops。"""
 
 _DOOR_LINES = (
     "坐。先报名字。入会？没有这回事。",
     "欠工去酒吧打卡。我这儿只记账，不替荔栀收碗。",
-    "告示上墙，潮汐基金入簿。你来办事就行。",
+    "告示上墙，潮汐基金入簿。岸税也在这儿划。",
     "潮汐基金按岛均口袋票算。有余就填个数捐。补贴不用领，周二四六自动发。",
+    "口袋过了八百，岸税按档交。超额累进，周一换班自动划。欠税别来买地。",
 )
 
 
@@ -106,6 +109,8 @@ async def _front_desk(key_id: int) -> str:
             "SELECT COUNT(*) FROM beacons"
         )).fetchone())[0]
         fund_line = _fund_brief(await fund_snapshot(conn, s["id"]))
+        from . import tax as tax_mod
+        tax_snap = await tax_mod.snapshot(conn, s["id"])
 
     from . import npc as npc_mod
     gift = await npc_mod._daily_visit_gift(s["id"], CLERK_KEY)
@@ -118,6 +123,7 @@ async def _front_desk(key_id: int) -> str:
         f"考勤：{duty}",
         f"告示：{int(beacon_n)} 条",
         fund_line,
+        _tax_brief(tax_snap),
     ]
     if pulse:
         kind = "凶" if pulse.get("kind") == "bad" else "吉"
@@ -126,9 +132,9 @@ async def _front_desk(key_id: int) -> str:
     lines.extend([
         "",
         f"潮汐 {world.tide_label(world.current_tide())} · {world.weather_label(world.current_weather())}",
-        "办事：visit_ops 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 告示",
+        "办事：visit_ops 潮生会 税 · 潮生会 税 交 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 告示",
         "本周目标走 alliance_ops league。公仓走 alliance_ops donate / larder。公物走 plot_ops commons。",
-        f"潮汐基金：捐票自己填数。补贴不用领，东八区{FUND_PAY_WEEKDAY_LABEL}自动发。不能加入。上岛已在册。",
+        f"岸税按档交，周一换班自动划。潮汐基金：捐票自己填数。补贴不用领，东八区{FUND_PAY_WEEKDAY_LABEL}自动发。不能加入。上岛已在册。",
     ])
     if gift:
         lines.append(gift.strip())
@@ -137,7 +143,8 @@ async def _front_desk(key_id: int) -> str:
 
 async def _ensure_fund(conn) -> None:
     await conn.execute(
-        "INSERT OR IGNORE INTO tide_fund (id, tickets, donated_total, paid_total) VALUES (1, 0, 0, 0)"
+        "INSERT OR IGNORE INTO tide_fund "
+        "(id, tickets, donated_total, paid_total, taxed_total) VALUES (1, 0, 0, 0, 0)"
     )
 
 
@@ -243,6 +250,19 @@ async def fund_snapshot(conn, steward_id: int | None = None) -> dict[str, Any]:
     }
 
 
+def _tax_brief(snap: dict[str, Any]) -> str:
+    mine = snap.get("mine") or {}
+    if mine.get("arrears"):
+        return f"{snap['name']}：欠 {mine['arrears']} · 先 visit_ops 潮生会 税 交"
+    if mine.get("first_week"):
+        return f"{snap['name']}：本周新号免征 · 看档 visit_ops 潮生会 税"
+    band = mine.get("band") or "免征"
+    due = int(mine.get("due_now") or 0)
+    if due:
+        return f"{snap['name']}：{band}档 · 周应约 {due} · {snap['next']}"
+    return f"{snap['name']}：未过免税额 · {snap['next']}"
+
+
 def _fund_brief(snap: dict[str, Any]) -> str:
     if not snap["ready"]:
         return f"{FUND_NAME}：在册还不够 {FUND_MIN_PEERS} 人，算不出岛均"
@@ -313,6 +333,12 @@ async def fund_status(key_id: int) -> str:
 
 async def fund_donate(key_id: int, amount: int) -> str:
     s = await require_steward(key_id, exempt_duty=True)
+    from . import tax as tax_mod
+    owed = int(s.get("tax_arrears") or 0)
+    if owed > 0:
+        raise ValueError(
+            f"还欠岸税 {owed} 票。先 visit_ops 潮生会 税 交，再捐基金。"
+        )
     if amount < FUND_MIN_DONATE:
         raise ValueError(f"票数自己填，至少 {FUND_MIN_DONATE}。用法：visit_ops 潮生会 基金 捐 50")
     async with db.connect() as conn:
@@ -351,10 +377,16 @@ async def fund_donate(key_id: int, amount: int) -> str:
             (amount, amount),
         )
         left = mine - amount
+        from . import bond as bond_mod
+        gained = await bond_mod.grant(
+            conn, s["id"], bond_mod.donate_amount(amount), "give"
+        )
         msg = (
             f"{s['name']} 向{FUND_NAME}捐了 {amount} 票"
             f"（岛均 {avg}，捐后口袋 {left}）"
         )
+        if gained:
+            msg += f" · 岛缘 +{gained}"
         await db.add_chronicle("fund", msg, s["id"], conn=conn)
         paid = await ensure_fund_payout(conn)
         await conn.commit()
@@ -513,6 +545,10 @@ async def chaoshen_ops(key_id: int, command: str = "") -> str:
     if verb_l in ("", "问", "看", "visit", "status", "事", "问事", "desk"):
         return await _front_desk(key_id)
 
+    if verb in ("税", "岸税", "交税") or verb_l in ("tax", "levy", "shoretax"):
+        from . import tax as tax_mod
+        return await tax_mod.tax_command(key_id, raw)
+
     if verb in ("基金", "潮汐基金") or verb_l in ("fund", "tidefund"):
         return await _fund_command(key_id, parts)
 
@@ -577,6 +613,8 @@ async def public_snapshot() -> dict[str, Any]:
     pulse = await events.public_pulse_snapshot()
     async with db.connect() as conn:
         conn.row_factory = None
+        from . import tax as tax_mod
+        await tax_mod.ensure_shore_tax(conn)
         await ensure_fund_payout(conn)
         beacons = await (await conn.execute(
             """
@@ -588,11 +626,12 @@ async def public_snapshot() -> dict[str, Any]:
         recent = await (await conn.execute(
             """
             SELECT text, created_at FROM chronicle
-            WHERE action = 'fund'
+            WHERE action IN ('fund', 'tax')
             ORDER BY created_at DESC LIMIT 8
             """
         )).fetchall()
         fund = await fund_snapshot(conn)
+        tax = await tax_mod.snapshot(conn)
         await conn.commit()
 
     return {
@@ -613,6 +652,17 @@ async def public_snapshot() -> dict[str, Any]:
             "payout_today": fund["payout_today"],
             "payout_done": fund["payout_done"],
             "weekdays": FUND_PAY_WEEKDAY_LABEL,
+        },
+        "tax": {
+            "name": tax["name"],
+            "week_id": tax["week_id"],
+            "free": tax["free"],
+            "floor": tax["floor"],
+            "done": tax["done"],
+            "next": tax["next"],
+            "assessed": tax["assessed"],
+            "collected": tax["collected"],
+            "brackets": tax["brackets"],
         },
         "beacons": [
             {"author": r[1], "body": (r[0] or "")[:80], "created_at": r[2]}

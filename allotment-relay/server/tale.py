@@ -1022,13 +1022,16 @@ async def _advance(
         await db.add_chronicle(
             "tale", f"{steward['name']} 完成潮闻「{tale['title']}」", steward["id"], conn=conn
         )
+        from . import bond as bond_mod
+        gained = await bond_mod.story_complete(conn, steward["id"], f"tale:{tale['key']}")
         stage_reward_text = "\n".join(stage_reward_lines) if stage_reward_lines else "无"
         reward_text = "\n".join(reward_lines) if reward_lines else "无"
+        extra = f"\n岛缘 +{gained}" if gained else ""
         return (
             f"«{tale['title']}» 已完成\n\n"
             f"—— {title} ——\n\n{text}\n\n"
             f"第 {new_idx}/{len(stages)} 阶段奖励：\n{stage_reward_text}\n\n"
-            f"完整探索额外奖励：\n{reward_text}"
+            f"完整探索额外奖励：\n{reward_text}{extra}"
         )
 
     next_stage = stages[new_idx]

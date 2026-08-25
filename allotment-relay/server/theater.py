@@ -108,6 +108,8 @@ async def _add_affinity(
                score=excluded.score, updated_at=excluded.updated_at""",
             (steward_id, score + actual, db.now()),
         )
+        from . import bond as bond_mod
+        await bond_mod.affinity_gain(conn, steward_id, actual)
     return actual
 
 

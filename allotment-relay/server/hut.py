@@ -1190,6 +1190,8 @@ async def bed_rest(s: dict[str, Any]) -> str:
         )
         await survival.bump(conn, s["id"], satiety=8)
         vanity = await _vanity_note(conn, s["id"])
+        from . import bond as bond_mod
+        await bond_mod.grant(conn, s["id"], bond_mod.SLEEP, "labor")
         await conn.commit()
     bed_name = HUT_HARD.get(bed_key, {}).get("name", "麻绳吊床" if not bed_key else "床")
     msg = (
@@ -1359,6 +1361,8 @@ async def hut_ops(key_id: int, command: str) -> str:
                 """,
                 (config.HUT_BUILD_COST, s["id"]),
             )
+            from . import bond as bond_mod
+            await bond_mod.grant(conn, s["id"], bond_mod.HUT_UPGRADE, "life", once="hut_build")
             await conn.commit()
         await db.add_chronicle("hut", f"{s['name']} 搭了岸畔棚屋", s["id"])
         return (
@@ -1377,6 +1381,8 @@ async def hut_ops(key_id: int, command: str) -> str:
             return "已是最高档小屋了——换软装或升级床吧"
         nxt = HUT_LEVELS[lvl + 1]
         cost = nxt["upgrade"]
+        from . import tax as tax_mod
+        tax_mod.assert_clear(s)
         async with db.connect() as conn:
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
             if (await cur.fetchone())[0] < cost:
@@ -1385,6 +1391,8 @@ async def hut_ops(key_id: int, command: str) -> str:
                 "UPDATE stewards SET tickets=tickets-?, hut_level=? WHERE id=?",
                 (cost, lvl + 1, s["id"]),
             )
+            from . import bond as bond_mod
+            await bond_mod.grant(conn, s["id"], bond_mod.HUT_UPGRADE, "life")
             await conn.commit()
         await db.add_chronicle("hut", f"{s['name']} 扩建至 {nxt['name']}", s["id"])
         return f"升级至 Lv{lvl + 1} {nxt['name']}（-{cost} 票），新槽位已开"
@@ -1548,15 +1556,17 @@ async def hut_ops(key_id: int, command: str) -> str:
                     conn, s["id"], old[slot], except_slot=slot,
                 )
                 await db.add_item(conn, s["id"], f"fit_{old[slot]}", 1, over_cap=True)
-            await conn.execute(
-                """
-                INSERT INTO hut_fittings (steward_id, slot, item_key, installed_at)
-                VALUES (?,?,?,?)
-                ON CONFLICT(steward_id, slot) DO UPDATE SET item_key=excluded.item_key,
-                installed_at=excluded.installed_at
-                """,
-                (s["id"], slot, key, db.now()),
-            )
+                await conn.execute(
+                    """
+                    INSERT INTO hut_fittings (steward_id, slot, item_key, installed_at)
+                    VALUES (?,?,?,?)
+                    ON CONFLICT(steward_id, slot) DO UPDATE SET item_key=excluded.item_key,
+                    installed_at=excluded.installed_at
+                    """,
+                    (s["id"], slot, key, db.now()),
+                )
+            from . import bond as bond_mod
+            await bond_mod.grant(conn, s["id"], bond_mod.HUT_INSTALL, "life")
             await conn.commit()
         msg = flavor.fill(
             flavor.pick(flavor.HUT_INSTALL_LINES),

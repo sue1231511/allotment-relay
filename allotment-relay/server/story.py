@@ -216,6 +216,10 @@ async def _finish(conn: aiosqlite.Connection, row: aiosqlite.Row, outcome: str, 
             f"工分票 +{STORY_REWARD_TICKETS}、档信 +{STORY_REWARD_STANDING}、"
             f"雾智 +{STORY_REWARD_MIST_WIT}"
         )
+        from . import bond as bond_mod
+        gained = await bond_mod.story_complete(conn, row["steward_id"], f"story:{STORY_KEY}")
+        if gained:
+            reward_text += f"、岛缘 +{gained}"
     await conn.execute(
         "UPDATE steward_stories SET status='completed', outcome=?, reward_granted=1, updated_at=?, completed_at=? WHERE id=?",
         (outcome, ts, ts, row["id"]),
@@ -301,6 +305,7 @@ async def _finish_yesterday(
 ) -> str:
     ts = db.now()
     first = not bool(row["reward_granted"])
+    gained = 0
     if first:
         await conn.execute(
             "UPDATE stewards SET tickets=tickets+? WHERE id=?",
@@ -311,6 +316,10 @@ async def _finish_yesterday(
             row["steward_id"],
             standing=story_yesterday.REWARD_STANDING,
             mist_wit=story_yesterday.REWARD_MIST_WIT,
+        )
+        from . import bond as bond_mod
+        gained = await bond_mod.story_complete(
+            conn, row["steward_id"], f"story:{story_yesterday.STORY_KEY}"
         )
         await conn.execute(
             """INSERT OR IGNORE INTO steward_achievements
@@ -354,9 +363,11 @@ async def _finish_yesterday(
         ),
     )
     await conn.commit()
+    extra = f"、岛缘 +{gained}" if gained else ""
     return (
         ending
         + _yesterday_reward_text(first)
+        + extra
         + "\n\n完整回顾：story_ops review yesterday_no_proof · "
         "重玩：story_ops start yesterday_no_proof · 收藏：story_ops souvenirs"
     )

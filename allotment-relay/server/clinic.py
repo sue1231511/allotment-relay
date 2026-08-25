@@ -165,6 +165,8 @@ async def _dove_feed(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
         (favor, s["id"]),
     )
     await survival.bump(conn, s["id"], standing=1)
+    from . import bond as bond_mod
+    await bond_mod.grant(conn, s["id"], bond_mod.DOVE_FEED, "people")
     return (
         "斑鸠啄了你递过去的雾豌豆，满意地咕了一声。\n"
         f"窗台斑鸠好感 +2（现 {favor}）· 档信 +1"
