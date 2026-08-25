@@ -1238,12 +1238,12 @@ $('play-who-btn').addEventListener('click', () => {
   openMe();
 });
 
-$('play-dock-me')?.addEventListener('click', () => {
-  if (!state.enrolled) {
-    show($('play-gate'), true);
-    return;
-  }
-  openMe();
+$('play-dock-steward')?.addEventListener('click', () => {
+  openStewardPage();
+});
+
+$('play-steward-refresh')?.addEventListener('click', () => {
+  openStewardPage();
 });
 
 $('play-all-places')?.addEventListener('click', openAllPlaces);
