@@ -26,6 +26,7 @@ async def _boot(tmp: Path):
 
 def test_play_api() -> None:
     asyncio.run(_test_play_api())
+    test_play_page_lists_all_plot_kinds()
 
 
 async def _test_play_api() -> None:
@@ -51,6 +52,15 @@ async def _test_play_api() -> None:
     assert "欢迎" in (enrolled.get("text") or ""), enrolled
     assert enrolled["neighbors"]["total"] == 1, enrolled["neighbors"]
     assert enrolled["neighbors"]["people"] == [], enrolled["neighbors"]
+    start_plots = enrolled["dashboard"]["parcels"]
+    start_veg = [p for p in start_plots if not p.get("orchard") and not p.get("greenhouse")]
+    start_orch = [p for p in start_plots if p.get("orchard") and not p.get("greenhouse")]
+    assert len(start_veg) == 3, start_plots
+    assert len(start_orch) == 3, start_plots
+    assert {p["token"] for p in start_orch} == {"园1", "园2", "园3"}, start_orch
+    land = enrolled["dashboard"].get("land") or {}
+    assert land.get("plots", {}).get("count") == 3, land
+    assert land.get("orchard", {}).get("count") == 3, land
 
     other = await db.create_api_key("play-b@example.com")
     await play_mod.run_play(other, "steward_ops", "enroll 对岸的人")
@@ -77,6 +87,17 @@ async def _test_play_api() -> None:
         assert "未知工具" in str(exc), exc
 
 
+def test_play_page_lists_all_plot_kinds() -> None:
+    html = (ROOT / "server" / "templates" / "play.html").read_text()
+    js = (ROOT / "server" / "static" / "play.js").read_text()
+    assert "最多展示 6 块" not in html
+    assert "parcels.slice(0, 6)" not in js
+    assert "plotGroupHtml(`菜地" in js
+    assert "plotGroupHtml(`果园" in js
+    assert "还没有温室" in js
+
+
 if __name__ == "__main__":
     asyncio.run(_test_play_api())
+    test_play_page_lists_all_plot_kinds()
     print("ok")

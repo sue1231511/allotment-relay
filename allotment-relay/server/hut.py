@@ -66,9 +66,10 @@ COMPOST_BIN_ALIASES = {
 }
 
 COMPOST_BIN_USAGE = (
-    "用法：hut_ops 堆肥桶 存 羊粪 3｜堆肥桶 取 堆肥 2"
-    "（肥桶/compost_bin 同义）。买：hut_ops buy compost_bin → install soft_N compost_bin。"
-    "空槽也能装；装完 hut_ops status 槽位上要能看见堆肥桶。"
+    "用法：hut_ops 堆肥桶 存 羊粪 3｜堆肥桶 转化 羊粪 3｜堆肥桶 取 堆肥 2"
+    "（肥桶/compost_bin 同义；转化/沤 也是存）。"
+    "买：hut_ops buy compost_bin → install soft_1 compost_bin（空槽也能装）。"
+    "装完 hut_ops status 槽位上要能看见堆肥桶。"
     "桶不是柜子：粪便丢进去沤层，不能当货存着。满 7 层结 1 份堆肥（羊粪+2 / 猪粪+3 / 牛粪+4），只能取堆肥。"
     f"桶里结好的堆肥最多囤 {config.COMPOST_BIN_READY_MAX}，先取再丢。"
 )
@@ -1012,18 +1013,29 @@ async def compost_bin_take(s: dict[str, Any], qty: int | None) -> str:
 
 async def compost_bin_command(s: dict[str, Any], rest: list[str]) -> str:
     verb = rest[0].lower() if rest else "status"
-    if verb in ("status", "list", "看", "搅", "stir", "compost"):
+    if verb in ("status", "list", "看"):
+        return await compost_bin_status_text(s)
+    if verb in ("搅", "stir"):
         text = await compost_bin_status_text(s)
-        if verb in ("搅", "stir"):
-            return text + "\n木棍搅了搅。层数没变：丢粪便才涨。"
-        return text
+        return text + "\n木棍搅了搅。层数没变：丢粪便才涨。"
+    if verb == "compost" and len(rest) < 2:
+        return await compost_bin_status_text(s)
 
-    putting = verb in ("put", "store", "存", "放", "入", "丢", "扔", "add")
+    putting_verbs = {
+        "put", "store", "存", "放", "入", "丢", "扔", "add",
+        "转化", "沤", "沤肥", "compost",
+    }
+    first_item = resolve_item_key(verb) or verb
+    putting = verb in putting_verbs or first_item in MANURE
     taking = verb in ("take", "取", "拿", "收", "harvest")
     if putting:
-        if len(rest) < 2:
+        if first_item in MANURE and verb not in putting_verbs:
+            tokens = rest
+        else:
+            tokens = rest[1:]
+        if not tokens:
             raise ValueError(COMPOST_BIN_USAGE)
-        item, qty = _parse_storage_item_qty(rest[1:])
+        item, qty = _parse_storage_item_qty(tokens)
         return await compost_bin_put(s, item, qty)
     if taking:
         qty = None
@@ -1329,7 +1341,7 @@ async def hut_ops(key_id: int, command: str) -> str:
             )
         if not bonus.has("compost_bin"):
             lines.append(
-                "粪便：hut_ops buy compost_bin → install soft_N compost_bin，"
+                "粪便：hut_ops buy compost_bin → install soft_1 compost_bin（空槽也能装），"
                 "再 hut_ops 堆肥桶 存 羊粪 3（别进潮柜）"
             )
         if fittings:
@@ -1359,7 +1371,7 @@ async def hut_ops(key_id: int, command: str) -> str:
                 "存菜：buy cabinet（潮柜·生鲜）或 buy fridge（冰箱·熟菜，也可 buy 冰柜）；"
                 f"装好后 hut_ops 冰柜 存|取。潮柜基础 {config.CABINET_SLOTS} 格，"
                 f"hut_ops 潮柜 扩 加格（{config.CABINET_SLOT_COST}票/格，顶 {config.CABINET_SLOTS_MAX}）。"
-                "粪便：buy compost_bin → install soft_N compost_bin → 堆肥桶 存 羊粪 3"
+                "粪便：buy compost_bin → install soft_1 compost_bin（空槽也能装）→ 堆肥桶 存 羊粪 3"
             )
             lines.append("【栗栗稀有装饰】deco_* — visit_ops lili 换，install soft_N 键名")
             for k, v in LILI_DECOR.items():
@@ -1389,7 +1401,7 @@ async def hut_ops(key_id: int, command: str) -> str:
             f"hard_1 / soft_1~2 可装 → catalog / buy / install。"
             "存菜：buy cabinet 潮柜（生鲜）或 buy fridge 冰箱（熟菜），"
             "装好后 hut_ops 冰柜 存 甘蓝 3。"
-            "粪便：buy compost_bin → install soft_N compost_bin → 堆肥桶 存"
+            "粪便：buy compost_bin → install soft_1 compost_bin（空槽也能装）→ 堆肥桶 存 羊粪 3"
         )
 
     if verb == "upgrade":

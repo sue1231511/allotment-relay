@@ -156,6 +156,7 @@ PLACES: list[dict[str, Any]] = [
             {"label": "看屋", "note": "门牌与装件", "tool": "hut_ops", "command": "status"},
             {"label": "睡", "note": "回精力，每天一次", "tool": "hut_ops", "command": "睡"},
             {"label": "建棚屋", "note": "还没屋就先搭", "tool": "hut_ops", "command": "build"},
+            {"label": "堆肥桶", "note": "先买再装空槽，丢粪便沤肥", "tool": "hut_ops", "command": "堆肥桶"},
             {"label": "畜栏", "note": "喂养与收奶", "tool": "hut_ops", "command": "barn status"},
         ],
     },

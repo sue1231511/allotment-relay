@@ -76,7 +76,7 @@ async def barn_ops(key_id: int, command: str) -> str:
             lines.append(_line(by_slot.get(slot), slot))
         lines.append(f"可购: {', '.join(LIVESTOCK.keys())}")
         lines.append("catalog 看详情 · collect 日常收奶/蛋/蜜 · shear 剪羊毛（要剪刀） · churn 山羊奶→奶酪")
-        lines.append("粪便进堆肥桶：hut_ops 堆肥桶 存 羊粪 3（先 buy compost_bin → install）")
+        lines.append("粪便进堆肥桶：hut_ops 堆肥桶 存 羊粪 3（先 buy compost_bin → install soft_1，空槽也能装）")
         if built:
             lines.append(
                 f"岸维：畜栏每周 {upkeep_mod.BARN_BASE} 票 + 在栏 {upkeep_mod.BARN_STOCKED} 票/槽"

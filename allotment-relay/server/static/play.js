@@ -251,7 +251,7 @@ function todayBlurb(d, c) {
   const ready = parcels.filter((p) => p.state === 'ready').length;
   const bits = [];
   if (c.tide || c.weather) bits.push(`${c.tide || ''}${c.weather ? ' · ' + c.weather : ''}`.replace(/^ · /, ''));
-  if (ready) bits.push(`份地有 ${ready} 块已经成熟`);
+  if (ready) bits.push(`有 ${ready} 块已经成熟`);
   const duty = (d && d.meter_lines && d.meter_lines.bar_duty) || '';
   if (dutyUrgent(d)) bits.push('酒吧值班快到期了');
   else if (duty && duty.includes('内须')) bits.push(duty.replace(/^⚠\s*/, ''));
@@ -295,7 +295,6 @@ function renderAll() {
 
 function plotButtons(p) {
   const token = p.token || String(p.slot);
-  const orchard = Boolean(p.orchard);
   const acts = [];
   if (p.state === 'fallow') {
     acts.push(`<button type="button" class="play-mini-btn" data-sow="${esc(token)}">播种</button>`);
@@ -306,8 +305,8 @@ function plotButtons(p) {
     if (!p.fertilized) acts.push(`<button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"施肥 ${token}"}'>施肥</button>`);
   }
   if (p.state === 'ready') {
-    const gatherLabel = orchard ? '收果' : '收菜';
-    acts.push(`<button type="button" class="play-mini-btn primary" data-act='{"tool":"plot_ops","command":"gather ${token}"}'>${gatherLabel}</button>`);
+    const harvest = (p.orchard || p.shake) ? '收果' : '收菜';
+    acts.push(`<button type="button" class="play-mini-btn primary" data-act='{"tool":"plot_ops","command":"gather ${token}"}'>${harvest}</button>`);
     if (p.shake) acts.push(`<button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"shake ${token}"}'>摇一摇</button>`);
   }
   if (p.state === 'overripe') {
@@ -378,7 +377,7 @@ function renderPlots() {
     plotGroupHtml(`果园 ${treeCount}`, '只种果树', trees, land.orchard),
     plotGroupHtml(
       shedCount ? `温室 ${shedCount}` : '温室',
-      shedCount ? '种菜种树都不受季节' : '过季或加盖时再开',
+      shedCount ? '种菜种树都不受季节' : '买棚后四季可种',
       sheds,
       land.greenhouse,
       '还没有温室。',

@@ -188,7 +188,7 @@ async def test_buy_install_empty_slot_then_put() -> None:
         await db.add_item(conn, sid, "manure_sheep", 4)
         await conn.commit()
 
-    put = await hut.hut_ops(kid, "堆肥桶 存 羊粪 3")
+    put = await hut.hut_ops(kid, "堆肥桶 转化 羊粪 3")
     assert "堆肥桶" in put and "+6 层" in put, put
     put2 = await hut.hut_ops(kid, "堆肥桶 存 羊粪 1")
     assert "结出堆肥 x1" in put2, put2
