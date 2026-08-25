@@ -291,6 +291,7 @@ async function refreshFeed({ quiet = false } = {}) {
     if (data.who || data.steward_name) {
       myProfile = { ...(myProfile || {}), ...data };
       document.getElementById('lounge-mod-panel')?.classList.toggle('hidden', !myProfile?.is_mod);
+      document.getElementById('lounge-admin-entry')?.classList.toggle('hidden', !myProfile?.is_mod);
     }
     const stamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const got = (data.messages || []).length;
