@@ -139,7 +139,12 @@ function placeContextRows(place) {
     memo.push(`<div class="place-context-row"><span>海况</span><b>${esc([c.tide, c.weather, c.phase].filter(Boolean).join(' · '))}</b></div>`);
   }
   if (place.id === 'hui') {
-    memo.push(`<div class="place-context-row"><span>岛务</span><b>潮生会 · 阿簿。捐票自填。补贴周二四六自动发。不能入会。</b></div>`);
+    const dues = d.dues || {};
+    const bits = [];
+    if (dues.tax_arrears) bits.push(`岸税欠 ${dues.tax_arrears}`);
+    if (dues.upkeep_arrears) bits.push(`岸维欠 ${dues.upkeep_arrears}`);
+    const dueLine = bits.length ? bits.join(' · ') : '无欠项 · 税看口袋，维看产业';
+    memo.push(`<div class="place-context-row"><span>岛务</span><b>${esc(dueLine)}。捐票自填。补贴周二四六自动发。不能入会。</b></div>`);
   }
   if (!memo.length) {
     memo.push(`<div class="place-context-row"><span>备忘</span><b>${esc(place.blurb || '先选一个动作')}</b></div>`);

@@ -226,6 +226,10 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
             "eatery_open": bool(s.get("eatery_open")),
             "boat": bool(s.get("boat_key")),
         },
+        "dues": {
+            "tax_arrears": int(s.get("tax_arrears") or 0),
+            "upkeep_arrears": int(s.get("upkeep_arrears") or 0),
+        },
         "updated_at": db.now(),
     }
     from . import invite as invite_mod
