@@ -3,19 +3,32 @@
 from __future__ import annotations
 
 from .game import require_steward
-from .lore import LORE_TOPIC_LABELS, lore_scan_random, lore_topic_text
+from .lore import LORE_TOPIC_LABELS, LORE_TOPICS, lore_topic_text
 
 
 async def lore_ops(key_id: int, command: str) -> str:
-    await require_steward(key_id, exempt_duty=True)
+    s = await require_steward(key_id, exempt_duty=True)
     parts = command.strip().split(maxsplit=1)
     verb = parts[0].lower() if parts else "scan"
     arg = parts[1].strip() if len(parts) > 1 else ""
 
     if verb in ("scan", "read", "topic"):
-        if arg:
-            return lore_topic_text(arg)
-        return lore_scan_random()
+        import random
+        topic = (arg or "").strip().lower()
+        if not topic:
+            topic = random.choice(list(LORE_TOPICS.keys()))
+        text = lore_topic_text(topic)
+        if topic in LORE_TOPICS:
+            from . import bond as bond_mod
+            from . import db
+            async with db.connect() as conn:
+                gained = await bond_mod.grant(
+                    conn, s["id"], bond_mod.LORE_TOPIC, "story", once=f"lore:{topic}"
+                )
+                await conn.commit()
+            if gained:
+                text += f"\n岛缘 +{gained}"
+        return text
 
     if verb in ("topics", "list", "help"):
         return lore_topic_text("topics")

@@ -322,6 +322,8 @@ async def pit_ops(
             "UPDATE stewards SET tickets=tickets-?, energy=MAX(0,energy-15) WHERE id=?",
             (entry, s["id"]),
         )
+        from . import bond as bond_mod
+        await bond_mod.well(conn, s["id"], bond_mod.WELL_FIGHT)
 
         lines = [f"«深坑 · {s['name']} vs {row['name']}»",
                  f"你的策略：{my_strat} / 对方：{their_strat}",
@@ -337,6 +339,7 @@ async def pit_ops(
                 "UPDATE ut_pit_fighters SET losses=losses+1 WHERE id=?", (row["id"],)
             )
             await utmod._bump_rep(conn, s["id"], utcfg.UT_PIT_WIN_REP)
+            await bond_mod.well(conn, s["id"], bond_mod.WELL_WIN)
             lines.append(win_msg)
             lines.append(f"\n（入场 −{entry} · 胜奖 +{prize} · 影信 +{utcfg.UT_PIT_WIN_REP}）{entry_discount_note}")
             # 胜者也可能挂彩
@@ -357,6 +360,7 @@ async def pit_ops(
                 "UPDATE ut_pit_fighters SET wins=wins+1 WHERE id=?", (row["id"],)
             )
             lines.append(lose_msg)
+            await bond_mod.well(conn, s["id"], bond_mod.WELL_LOSE)
             loss = random.randint(10, 15)
             await conn.execute(
                 "UPDATE stewards SET health=MAX(0,health-?) WHERE id=?", (loss, s["id"])
@@ -451,6 +455,8 @@ async def pit_ops(
         await conn.execute(
             "UPDATE stewards SET health=MIN(100, health+?) WHERE id=?", (heal, s["id"])
         )
+        from . import bond as bond_mod
+        await bond_mod.well(conn, s["id"], bond_mod.WELL_MEDIC)
         await conn.commit()
         if is_avatar:
             ail_name = _AILS.get(ailment, {}).get("name", ailment)

@@ -401,6 +401,8 @@ async def buy(
             if offer["clear_seconds"] <= 0
             else f"开垦 {fmt_clear(offer['clear_seconds'])}，开好才能 {sow_hint}。"
         )
+        from . import bond as bond_mod
+        await bond_mod.grant(conn, steward["id"], bond_mod.BUY_LAND, "labor")
         return (
             f"买下 {label}（-{offer['cost']} 票）。现 {new_count} 座温室（无上限）。{ready_txt}"
         )
@@ -420,6 +422,8 @@ async def buy(
     steward[col] = new_count
     kind = "树位" if orchard else "块"
     sow_hint = "果园 sow" if orchard else "sow"
+    from . import bond as bond_mod
+    await bond_mod.grant(conn, steward["id"], bond_mod.BUY_LAND, "labor")
     return (
         f"买下 {label}（-{offer['cost']} 票）。"
         f"现 {new_count} {kind}（无上限）。"

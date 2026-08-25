@@ -163,6 +163,8 @@ async def eatery_command(s: dict[str, Any], command: str) -> str:
                 "UPDATE stewards SET tickets=tickets-?, eatery_open=1, eatery_label=?, eatery_opened_at=? WHERE id=?",
                 (cost, label, db.now(), s["id"]),
             )
+            from . import bond as bond_mod
+            await bond_mod.grant(conn, s["id"], bond_mod.EATERY_OPEN, "life", once="eatery_open")
             await conn.commit()
         await db.add_chronicle("eatery", f"{s['name']} 开张「{label}」", s["id"])
         return (
@@ -403,6 +405,9 @@ async def _dine(guest: dict[str, Any], shop_name: str, item_ref: str | None) -> 
             """,
             (shop["id"], guest["id"], picked["item"], price, note, db.now()),
         )
+        from . import bond as bond_mod
+        await bond_mod.grant(conn, guest["id"], bond_mod.DINE_GUEST, "life")
+        await bond_mod.grant(conn, shop["id"], bond_mod.DINE_HOST, "life")
         await conn.commit()
     dish = item_label(picked["item"])
     label = shop.get("eatery_label") or f"{shop['name']}的馆"

@@ -34,6 +34,8 @@ def _forecast() -> str:
 
 async def _visit(s: dict) -> str:
     async with db.connect() as conn:
+        from . import bond as bond_mod
+        await bond_mod.note_visit(conn, s["id"], "buxing")
         state = await _state(conn, s["id"])
         await conn.execute("UPDATE steward_buxing SET wicks=wicks+1,updated_at=? WHERE steward_id=?", (db.now(), s["id"]))
         await conn.commit()
@@ -78,6 +80,8 @@ async def _light(s: dict, raw: str) -> str:
         cur = await conn.execute("INSERT INTO buxing_lights (steward_id,label,wish,created_at) VALUES (?,?,?,?)", (s["id"], label, wish, db.now()))
         got = await energy.restore(conn, s["id"], 4)
         await conn.execute("UPDATE steward_buxing SET wicks=wicks+3,updated_at=? WHERE steward_id=?", (db.now(), s["id"]))
+        from . import bond as bond_mod
+        await bond_mod.grant(conn, s["id"], bond_mod.BUXING_LIGHT, "people", once="buxing_light")
         await db.add_chronicle("buxing", f"{s['name']} 在灯塔点了一盏守夜灯", s["id"], conn=conn)
         await conn.commit()
     return f"她写好名牌，挂到东墙。\n“灯不睡，你睡。”\n\n第 {cur.lastrowid} 盏：给{label}，求{wish}。灯油钱 −15 票 · 精力 +{got} · 灯芯 +3"
@@ -102,7 +106,10 @@ async def _watch(s: dict) -> str:
         tickets = (await (await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))).fetchone())[0]
         if tickets < 60: raise ValueError("守夜的灯油钱 60 票，票不够。")
         await conn.execute("UPDATE stewards SET tickets=tickets-60 WHERE id=?", (s["id"],)); await _state(conn, s["id"])
-        await conn.execute("UPDATE steward_buxing SET wicks=wicks+10,updated_at=? WHERE steward_id=?", (db.now(), s["id"])); await conn.commit()
+        await conn.execute("UPDATE steward_buxing SET wicks=wicks+10,updated_at=? WHERE steward_id=?", (db.now(), s["id"]))
+        from . import bond as bond_mod
+        await bond_mod.grant(conn, s["id"], bond_mod.BUXING_WATCH, "people", once="buxing_watch")
+        await conn.commit()
     return "她把灯芯剪短一点。\n“今晚风好。上来吧。”\n\n你们在塔上坐到潮声变轻。她只说：\n“阿桐看南边，我看航道。不是一回事。”\n\n灯油钱 −60 票 · 灯芯 +10"
 
 async def _remember(sid: int) -> str:

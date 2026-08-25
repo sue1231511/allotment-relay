@@ -110,6 +110,8 @@ async def tavern_ops(
                 (price, utcfg.UT_RUBY_MIST_COST, utcfg.UT_RUBY_HEAL, s["id"]),
             )
             await _mark_daily(conn, s["id"], day, "ruby")
+            from . import bond as bond_mod
+            await bond_mod.well(conn, s["id"], bond_mod.WELL_MARKET)
             await conn.commit()
             return utcopy.RUBY_DRINK.format(
                 heal=utcfg.UT_RUBY_HEAL, mist=utcfg.UT_RUBY_MIST_COST
@@ -138,6 +140,8 @@ async def tavern_ops(
             (pay, utcfg.UT_BLOOD_HEALTH_COST, s["id"]),
         )
         await _mark_daily(conn, s["id"], day, "bleed")
+        from . import bond as bond_mod
+        await bond_mod.well(conn, s["id"], bond_mod.WELL_CRIME)
         await conn.commit()
         return utcopy.BLOOD_DONE + f"\n\n（身体 −{utcfg.UT_BLOOD_HEALTH_COST} · +{pay} 票）"
 

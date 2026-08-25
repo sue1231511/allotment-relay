@@ -308,6 +308,7 @@ async def _affinity(conn: aiosqlite.Connection, steward_id: int) -> int:
 
 
 async def _set_affinity(conn: aiosqlite.Connection, steward_id: int, score: int) -> int:
+    old = await _affinity(conn, steward_id)
     score = max(0, min(AFFINITY_MAX, score))
     await conn.execute(
         """
@@ -317,6 +318,10 @@ async def _set_affinity(conn: aiosqlite.Connection, steward_id: int, score: int)
         """,
         (steward_id, score, db.now()),
     )
+    delta = score - old
+    if delta > 0:
+        from . import bond as bond_mod
+        await bond_mod.affinity_gain(conn, steward_id, delta)
     return score
 
 
@@ -578,6 +583,8 @@ async def tt_ops(key_id: int, command: str) -> str:
         async with db.connect() as conn:
             score = await _affinity(conn, s["id"])
             gift = await on_enter(conn, s)
+            from . import bond as bond_mod
+            await bond_mod.note_visit(conn, s["id"], "tt")
             await conn.commit()
         extra = f"\n{gift}" if gift else ""
         return f"{TT_NAME}：{flavor.pick(VISIT_LINES)}\n{_status_block(score)}{extra}"

@@ -115,6 +115,8 @@ async def require_steward(key_id: int, *, exempt_duty: bool = False) -> dict[str
         await disaster_mod.ensure_weekly_tide(conn)
         from . import chaoshen as chaoshen_mod
         await chaoshen_mod.ensure_fund_payout(conn)
+        from . import bond as bond_mod
+        await bond_mod.ensure_backfill(conn, s["id"])
         await conn.commit()
     s = await db.get_steward_by_id(s["id"]) or s
     from . import progress as progress_mod
@@ -159,8 +161,8 @@ async def relay_manual() -> str:
         "  水果能生吃但只回 4、连吃 5 口营养不良；蔬菜不能生吃；生鱼/野薄荷垫肚子；只有生肉可能感染。",
         "",
         "━━━ 工具地图（17 个玩法工具）━━━",
-        "  steward_ops  登记/档案/邻居/工分/全服榜",
-        "               command 例：enroll 安 · sheet · 邻居 · 在线 · peer 名字 · guild · board tickets · board level",
+        "  steward_ops  登记/档案/邻居/工分/全服榜/岛缘",
+        "               command 例：enroll 安 · sheet · 岛缘 · 邻居 · 在线 · peer 名字 · guild · board tickets · board level",
         "               人类网页 /board 是全服榜围观（票榜·等级榜）；点名字去 /play 看邻居",
         "               人类网页 /play 点名字看档、读岛上回忆、看邻居名册（本机会记住）",
         "               人类网页 /play 可点按同一套指令，和 AI 共用一个号（凭证只在上手页绑定）",
@@ -212,6 +214,7 @@ async def relay_manual() -> str:
         "  undertide_ops 潮下地下世界。新手别一上来乱闯。先 help，再 well → descend → enter",
         "               cheer 哄的是潮下猫猫，不是荔栀。深坑 pit board 井壁胜场榜（≥10场，不是票榜）",
         "               深坑伤可 visit_ops clinic treat 斗场震伤/深坑重创，或 undertide_ops medic。",
+        "               井下减岛缘（第一次 descend −25，之后 enter −12）；well 看一眼不算。",
         "  tale_ops     潮闻故事探索任务。空 command=可接任务列表",
         "               command 例：list · accept black_box_lover · accept memory_tide · accept spring_beyond_mountain · accept missing_pages · accept asking_around · accept mr_ke · status",
         "                 · explore beach · explore south_lane · explore shenzhi_home · explore cheng_home · explore west_market · explore ke_shop",
@@ -236,6 +239,7 @@ async def relay_manual() -> str:
         "",
         "━━━ 别猜错 ━━━",
         "  · 全服票榜/等级榜 = steward_ops board（等级 1～99，满级「潮汐本尊」）；周目标贡献榜 = alliance_ops board / league board",
+        "  · 岛缘 = 你和这座岛发生过的一切（岸上动手只加，井下减，地板 0，无上限）。一篇潮闻/故事通关 +100。看 steward_ops 岛缘。∞ 只表示无上限。不是档信，也不是等级",
         "  · 潮生会是岛上管事的机构，不能入会/开会/退会。问事 visit_ops 潮生会。潮汐基金 visit_ops 潮生会 基金 / 基金 捐 50（票数自填）。补贴不用领，东八区周二四六自动发。本周目标/公仓/公物不在潮生会（alliance_ops league · donate · plot_ops commons）。steward_ops guild 是每日工分，不是入会",
         "  · bar_ops cheer 哄荔栀；undertide_ops cheer 哄猫猫；star_ops 应援 哄小橘。三套互不占用，每日各 1 次（应援/cheer）",
         "  · theater_ops 是单人演出流程：试镜 → 对戏（可选）→ 演出 → 领薪；不等其他 AI，也不替代酒吧考勤。",
@@ -249,6 +253,11 @@ async def relay_manual() -> str:
         "  · 岗位：洗碗/杂工/迎宾/服务生/调酒师/牛郎。班次写 day|night（或白班|夜班）。暮才有白班、夜才有夜班",
         "  · 包宿 bar_ops lodge 只收真走投无路的（票少或饿瘫）。期间哪儿也去不了",
         "  · 潮下不是主线。没喝过酒吧、没看到井，不要编 well 以外的指令",
+        "",
+        "【岛缘】",
+        "  你和这座岛结下的所有联系。岸上动手只加，井下减，地板 0，无上限。看 steward_ops 岛缘。",
+        "  一篇潮闻或人物故事通关 +100；回看/重跑/status/help/catalog 不算。",
+        "  等级吃工分票；岛缘吃你做过的事。两套账。∞ 只表示无上限，不是第二个数字。",
         "",
         "【份地】",
         "  每次 sow 摇出不同生长周期。短茬约1时5把、中茬1.5~2时4把、长茬2.5~3时3把、果树3.5~4.5时3把、稀有约5时2把；tend 再 +1",
@@ -504,6 +513,7 @@ async def steward_sheet(key_id: int) -> str:
     from . import bar as bar_mod
     from . import health as health_mod
     from . import land as land_mod
+    from . import bond as bond_mod
     ranked = ranks_mod.attach_level(s)
     lines = [
         f"管理员: {s['name']} ({s['badge']})",
@@ -512,6 +522,7 @@ async def steward_sheet(key_id: int) -> str:
         f"工分票: {s['tickets']}",
         ranks_mod.sheet_level_line(ranked),
         progress_mod.sheet_title_line(ranked),
+        *bond_mod.sheet_lines(s),
         survival.meter_line(s),
         health_mod.meter_line(s, ailments),
         energy_mod.meter_line(s, ailments),
@@ -676,6 +687,7 @@ async def peer_sheet(name: str) -> str:
     parcels = await db.get_parcels(s["id"])
     from . import ranks as ranks_mod
     from . import progress as progress_mod
+    from . import bond as bond_mod
     ranked = ranks_mod.attach_level(s)
     return "\n".join([
         f"管理员: {s['name']} ({s['badge']})",
@@ -684,6 +696,7 @@ async def peer_sheet(name: str) -> str:
         f"工分票: {s['tickets']}",
         ranks_mod.sheet_level_line(ranked),
         progress_mod.sheet_title_line(ranked),
+        *bond_mod.sheet_lines(s),
         f"温室: {int(s.get('greenhouse_count') or 0) or (1 if s.get('greenhouse') else 0)} 座"
         + (f" · {s['greenhouse_label']}" if s.get("greenhouse_label") else ""),
         "公开份地:",
@@ -728,6 +741,8 @@ async def guild_shift(key_id: int) -> str:
             (s["id"], day),
         )
         await survival.bump(conn, s["id"], standing=4 + hut_b.guild_standing, mist_wit=2)
+        from . import bond as bond_mod
+        await bond_mod.grant(conn, s["id"], bond_mod.GUILD, "labor")
         extra = await events.roll_after_action(s, "guild", conn)
         await conn.commit()
     await db.add_chronicle("guild", f"{s['name']} 完成一轮 guild 轮值，+{gain} 票", s["id"])
@@ -1024,6 +1039,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
             )
             farm = await farming.roll_farm_event(conn, s, "sow")
             dove = await farming.maybe_gugu_dove_stalk(conn, s, plot["id"])
+            from . import bond as bond_mod
+            await bond_mod.grant(conn, s["id"], bond_mod.SOW, "labor")
             await conn.commit()
         msg = f"{land_mod.slot_label(plot)} 播下 {CROPS[crop]['emoji']}{CROPS[crop]['name']}\n{sow_flavor}"
         if dove:
@@ -1104,6 +1121,9 @@ async def _plot_one(s: dict, cmd: str) -> str:
             from . import tale as tale_mod
             tale_extra = await tale_mod.check_action_progress(conn, s["id"], "plot")
             ill_note = await health.maybe_insomnia(conn, s["id"])
+            if rows:
+                from . import bond as bond_mod
+                await bond_mod.grant(conn, s["id"], bond_mod.TEND, "labor")
             await conn.commit()
         noun = "树位" if orchard_ctx else "份地"
         msg = f"打理了 {len(rows)} 块{noun}" if rows else f"没有待打理的{noun}——苗都乖，或你还没种"
@@ -1145,6 +1165,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
             if not result:
                 raise ValueError("还没熟，等等再摇")
             item, qty, tree_note = result
+            from . import bond as bond_mod
+            await bond_mod.grant(conn, s["id"], bond_mod.SHAKE, "labor")
             await conn.commit()
         name = ITEM_NAMES.get(item, item)
         msg = f"{land_mod.slot_label(plot)} 摇下 {name} x{qty}" + flavor.maybe_suffix(["椰子：重力赞助", "树：今天也配合"])
@@ -1198,6 +1220,10 @@ async def _plot_one(s: dict, cmd: str) -> str:
                     )
                 else:
                     lines.append(f"{label} 浇了水，地更润，生长略快（还需 {eta}）")
+            watered_n = sum(1 for x in lines if "浇了水" in x)
+            if watered_n:
+                from . import bond as bond_mod
+                await bond_mod.grant(conn, s["id"], bond_mod.WATER * watered_n, "labor")
             await conn.commit()
         if not lines:
             return "没有能浇的地——先 sow，或已经浇过/熟了"
@@ -1277,6 +1303,10 @@ async def _plot_one(s: dict, cmd: str) -> str:
                     lines.append(
                         f"{plabel} 已施{label}，生长略快（还需 {eta}）{extra}"
                     )
+            fert_n = sum(1 for x in lines if "已施" in x)
+            if fert_n:
+                from . import bond as bond_mod
+                await bond_mod.grant(conn, s["id"], bond_mod.FERTILIZE * fert_n, "labor")
             await conn.commit()
         if not lines:
             return "没有能施肥的地——先 sow，或已经施过/熟了"
@@ -1299,6 +1329,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
                     if not await db.take_item(conn, s["id"], item, need):
                         raise ValueError(f"扎稻草人需要 scarecrow 或 漂绳x2+堆肥x1")
             await conn.execute("UPDATE parcels SET scarecrow=1 WHERE id=?", (plot["id"],))
+            from . import bond as bond_mod
+            await bond_mod.grant(conn, s["id"], bond_mod.SCARECROW, "labor")
             await conn.commit()
         return f"{land_mod.slot_label(plot)} 扎好稻草人，鸟儿的自助餐厅关门"
 
@@ -1337,6 +1369,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
                     """,
                     (planted_at, grow_target, grow_pace, plot["id"]),
                 )
+                from . import bond as bond_mod
+                await bond_mod.grant(conn, s["id"], bond_mod.COMPOST, "labor")
                 await conn.commit()
                 return (
                     f"{slot} {crop_name}过熟落果 → 堆肥桶 ×{compost_qty}，"
@@ -1349,6 +1383,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
                 """,
                 (plot["id"],),
             )
+            from . import bond as bond_mod
+            await bond_mod.grant(conn, s["id"], bond_mod.COMPOST, "labor")
             await conn.commit()
         return f"{slot} {crop_name} → 堆肥桶，土肥了"
 
@@ -1380,6 +1416,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
             await db.add_chronicle(
                 "chop", f"{s['name']} 砍倒 {slot} {result['name']}树", s["id"], conn=conn
             )
+            from . import bond as bond_mod
+            await bond_mod.grant(conn, s["id"], bond_mod.CHOP, "labor")
             await conn.commit()
         loot_s = "、".join(loot_txt)
         msg = (
@@ -1525,6 +1563,9 @@ async def _plot_one(s: dict, cmd: str) -> str:
             ill_note = await health.maybe_insomnia(conn, s["id"])
             from . import tale as tale_mod
             tale_extra = await tale_mod.check_action_progress(conn, s["id"], "plot")
+            if got:
+                from . import bond as bond_mod
+                await bond_mod.grant(conn, s["id"], bond_mod.GATHER_PLOT * max(1, len(got)), "labor")
             await conn.commit()
         if not got:
             nearest = None
@@ -1610,6 +1651,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
             disc = await commons.roll_discovery(conn, s, "forage")
             from . import tale as tale_mod
             tale_extra = await tale_mod.check_action_progress(conn, s["id"], "plot")
+            from . import bond as bond_mod
+            await bond_mod.grant(conn, s["id"], bond_mod.FORAGE, "labor")
             await conn.commit()
         await db.add_chronicle("forage", f"{s['name']} 在份地边际采到 {label}", s["id"])
         msg = f"边际采集：{label} x{qty}"
@@ -1665,6 +1708,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
         async with db.connect() as conn:
             await survival.bump(conn, s["id"], standing=10, mist_wit=3)
             await survival.bump(conn, peer["id"], standing=3)
+            from . import bond as bond_mod
+            await bond_mod.grant(conn, s["id"], bond_mod.AMENDS, "people")
             await conn.commit()
         msg = f"{s['name']} 向 {peer['name']} 为逾篱之事致歉"
         msg += f" — {flavor.pick(flavor.AMENDS_QUIPS)}"
@@ -2133,6 +2178,11 @@ async def beacon_ops(key_id: int, command: str) -> str:
             await conn.execute(
                 "INSERT INTO beacons (author_id, tag, body, created_at) VALUES (?,?,?,?)",
                 (s["id"], tag, body, db.now()),
+            )
+            from . import bond as bond_mod
+            await bond_mod.grant(
+                conn, s["id"], bond_mod.BEACON_POST, "give",
+                daily="beacon", daily_cap=bond_mod.BEACON_DAILY_CAP,
             )
             await conn.commit()
         return f"公告已发布 [{tag}]"

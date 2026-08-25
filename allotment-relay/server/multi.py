@@ -240,6 +240,8 @@ async def _league_add_progress(conn: aiosqlite.Connection, steward_id: int, amou
     )
     cur = await conn.execute("SELECT progress, target FROM league_week WHERE week_id=?", (wid,))
     prog, target = await cur.fetchone()
+    from . import bond as bond_mod
+    await bond_mod.grant(conn, steward_id, bond_mod.LEAGUE_STEP, "give")
     if prog >= target:
         await conn.execute(
             "UPDATE league_week SET completed=1, completed_at=? WHERE week_id=?",
@@ -251,6 +253,7 @@ async def _league_add_progress(conn: aiosqlite.Connection, steward_id: int, amou
                 "UPDATE stewards SET tickets = tickets + ? WHERE id=?",
                 (LEAGUE_BONUS_TICKETS, sid),
             )
+            await bond_mod.grant(conn, int(sid), bond_mod.LEAGUE_DONE, "give")
         meta = _goal_meta(row["goal_key"])
         return f"联盟周目标「{meta['label']}」达成！参与者各 +{LEAGUE_BONUS_TICKETS} 票"
     return None
@@ -370,6 +373,8 @@ async def alliance_ops(key_id: int, command: str) -> str:
                     (extra_tickets, s["id"]),
                 )
             bonus = await _league_on_assist(conn, s["id"])
+            from . import bond as bond_mod
+            await bond_mod.grant(conn, s["id"], bond_mod.ASSIST, "give")
             await conn.commit()
         ticket_gain = ASSIST_TICKETS + extra_tickets
         msg = f"{s['name']} 帮 {peer['name']} 打理了 {len(rows)} 块份地，+{ticket_gain} 票"
@@ -542,6 +547,8 @@ async def contract_ops(key_id: int, command: str) -> str:
             )
             poster = await db.get_steward_by_id(c["poster_id"])
             await _bump_rapport(conn, s["id"], c["poster_id"], ASSIST_RAPPORT * 2)
+            from . import bond as bond_mod
+            await bond_mod.grant(conn, s["id"], bond_mod.CONTRACT_FILL, "give")
             await conn.commit()
         pname = poster["name"] if poster else "?"
         msg = f"{s['name']} 完成 {pname} 的合约 #{cid}，+{c['reward_tickets']} 票"

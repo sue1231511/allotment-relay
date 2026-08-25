@@ -174,6 +174,8 @@ def _next_line(state: dict[str, Any]) -> str:
 
 async def _visit(steward: dict[str, Any]) -> str:
     async with db.connect() as conn:
+        from . import bond as bond_mod
+        await bond_mod.note_visit(conn, steward["id"], "jingshan")
         state = await _state(conn, steward["id"])
         stage = int(state["stage"])
         if stage == 0:
@@ -186,10 +188,12 @@ async def _visit(steward: dict[str, Any]) -> str:
         if stage == 3 and db.day_id() > int(state["delivered_day"]):
             return await _revisit_in_conn(steward, conn, state)
         if stage >= 4:
+            await conn.commit()
             return (
                 "何敬山正在院里给苏月琴续茶。小碟已经收走，两个人又为窗子该不该关拌了两句嘴。\n\n"
                 + _next_line(state)
             )
+        await conn.commit()
         return (
             "何敬山朝你点点头，照旧给你倒了杯不甜的茶。\n"
             + _next_line(state)
@@ -243,6 +247,8 @@ async def _revisit_in_conn(
     await db.add_chronicle(
         "jingshan", f"{steward['name']} 看见苏月琴尝了那一小口糕点", steward["id"], conn=conn
     )
+    from . import bond as bond_mod
+    await bond_mod.grant(conn, steward["id"], bond_mod.JINGSHAN_DONE, "story", once="jingshan_done")
     await conn.commit()
     return REVISIT_SCENE + "\n\n" + EXPLORE_RECORD
 
