@@ -263,6 +263,18 @@ class LoungeModRequest(BaseModel):
     minutes: int = 60
 
 
+class LoungePacketRequest(BaseModel):
+    api_key: str
+    total: int
+    shares: int
+    blessing: str = ""
+
+
+class LoungeGrabRequest(BaseModel):
+    api_key: str
+    packet_id: int = 0
+
+
 class EateryOrderRequest(BaseModel):
     api_key: str
     shop: str
@@ -440,6 +452,7 @@ async def lounge_meta(request: Request):
         "register_url": register_url,
         "max_len": lounge.LOUNGE_MAX_LEN,
         "cooldown_sec": lounge.LOUNGE_COOLDOWN_SEC,
+        **lounge.packet_limits(),
     }
 
 
@@ -485,6 +498,26 @@ async def lounge_post(body: LoungePostRequest):
     try:
         msg = await lounge.human_post(body.api_key.strip(), body.message)
         return msg
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/lounge/packet")
+async def lounge_packet(body: LoungePacketRequest):
+    from . import lounge
+    try:
+        return await lounge.human_send_packet(
+            body.api_key.strip(), body.total, body.shares, body.blessing,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/lounge/grab")
+async def lounge_grab(body: LoungeGrabRequest):
+    from . import lounge
+    try:
+        return await lounge.human_grab_packet(body.api_key.strip(), body.packet_id)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

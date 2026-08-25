@@ -42,6 +42,9 @@ async def _test_lounge_mcp_and_web() -> None:
     assert "name" in help_text and "mod mute" in help_text
     assert "暗号" in help_text and "小包间" in help_text
     assert "大厅" in help_text
+    assert "红包" in help_text and "抢" in help_text
+    assert "tote_ops gift" in help_text
+    assert "hongbao_ops" in help_text
 
     scan_empty = await lounge.lounge_ops(row["id"], "")
     assert "全服聊天室公约" in scan_empty
@@ -213,6 +216,155 @@ async def _test_lounge_booth_code() -> None:
     assert lounge.booth_key_from_code("HelloBooth") == lounge.booth_key_from_code("hellobooth")
 
 
+def test_lounge_hongbao() -> None:
+    asyncio.run(_test_lounge_hongbao())
+
+
+async def _test_lounge_hongbao() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="lounge-hb-"))
+    db = await _boot(tmp)
+    from server import config, lounge
+
+    async def enroll(email: str, name: str) -> tuple[str, int]:
+        key = await db.create_api_key(email)
+        row = await db.get_key_row(key)
+        await db.enroll_steward(row["id"], name, "", "naturalist", "")
+        return key, row["id"]
+
+    key_a, id_a = await enroll("hb-a@example.com", "红包甲")
+    key_b, id_b = await enroll("hb-b@example.com", "红包乙")
+    key_c, id_c = await enroll("hb-c@example.com", "红包丙")
+
+    for _ in range(80):
+        remain_t, remain_s = 100, 5
+        amounts = []
+        rng = __import__("random").Random(remain_t + remain_s + _)
+        while remain_s:
+            amt = lounge.lucky_next_amount(remain_t, remain_s, rng)
+            assert amt >= 1
+            remain_t -= amt
+            remain_s -= 1
+            amounts.append(amt)
+        assert remain_t == 0
+        assert sum(amounts) == 100
+
+    sheet_a = await db.get_steward_by_id(id_a)
+    start_a = int(sheet_a["tickets"])
+    sent = await lounge.lounge_ops(id_a, "红包 10 2 恭喜发财")
+    assert "已发全服红包" in sent
+    assert "10 票" in sent and "2 份" in sent
+    after_send = await db.get_steward_by_id(id_a)
+    assert int(after_send["tickets"]) == start_a - 10
+
+    listed = await lounge.lounge_ops(id_a, "红包")
+    assert "还剩 2" in listed
+    assert "恭喜发财" in listed
+    open_pkts = await lounge.list_open_packets(id_a)
+    assert open_pkts
+    pid = int(open_pkts[0]["id"])
+
+    try:
+        await lounge.lounge_ops(id_a, f"抢 {pid}")
+        raise AssertionError("sender should not grab own packet")
+    except ValueError as exc:
+        assert "自己" in str(exc)
+
+    grab_b = await lounge.lounge_ops(id_b, f"抢 {pid}")
+    assert "抢到" in grab_b and "票" in grab_b
+    try:
+        await lounge.lounge_ops(id_b, f"抢 {pid}")
+        raise AssertionError("second grab by same person should fail")
+    except ValueError as exc:
+        assert "已经抢过" in str(exc)
+
+    grab_c = await lounge.lounge_ops(id_c, f"抢 {pid}")
+    assert "抢到" in grab_c
+    async with db.connect() as conn:
+        rows = await (await conn.execute(
+            "SELECT amount FROM lounge_packet_grabs WHERE packet_id=?",
+            (pid,),
+        )).fetchall()
+        grabbed_sum = sum(int(r[0]) for r in rows)
+    assert grabbed_sum == 10
+
+    hall = await lounge.list_hall_messages()
+    pkt_msgs = [m for m in hall["messages"] if m.get("packet")]
+    assert pkt_msgs
+    public_pkt = pkt_msgs[-1]["packet"]
+    assert public_pkt["my_amount"] is None
+    assert public_pkt["grabbed"] is False
+
+    mine = await lounge.human_list_messages(key_b)
+    mine_pkt = [m for m in mine["messages"] if m.get("packet")][-1]["packet"]
+    assert mine_pkt["grabbed"] is True
+    assert mine_pkt["my_amount"] >= 1
+
+    try:
+        await lounge.human_grab_packet("not-a-key", public_pkt["id"])
+        raise AssertionError("invalid key should not grab")
+    except ValueError as exc:
+        assert "凭证" in str(exc)
+
+    try:
+        await lounge.lounge_ops(id_a, "红包 9 2")
+        raise AssertionError("below min total should fail")
+    except ValueError as exc:
+        assert "至少" in str(exc)
+
+    poor_key, poor_id = await enroll("hb-poor@example.com", "红包穷")
+    async with db.connect() as conn:
+        await conn.execute("UPDATE stewards SET tickets=5 WHERE id=?", (poor_id,))
+        await conn.commit()
+    try:
+        await lounge.lounge_ops(poor_id, "红包 10 2")
+        raise AssertionError("not enough tickets should fail")
+    except ValueError as exc:
+        assert "不足" in str(exc)
+
+    await lounge.lounge_ops(id_a, "暗号 潮声今晚")
+    from_booth = await lounge.lounge_ops(id_a, "红包 10 2")
+    assert "已发到大厅" in from_booth or "已发全服红包" in from_booth
+    booth_scan = await lounge.lounge_ops(id_a, "scan")
+    assert "【红包#" not in booth_scan
+    assert "红包只进大厅" in booth_scan
+    hall_after = await lounge.list_messages()
+    assert any(m.get("packet") for m in hall_after)
+
+    expire_view = await lounge.send_packet(id_a, 10, 2, "过期退", source="mcp")
+    pid = expire_view["packet"]["id"]
+    before_refund = int((await db.get_steward_by_id(id_a))["tickets"])
+    async with db.connect() as conn:
+        await conn.execute("UPDATE lounge_packets SET expires_at=1 WHERE id=?", (pid,))
+        await conn.commit()
+    await lounge.list_messages()
+    after_refund = int((await db.get_steward_by_id(id_a))["tickets"])
+    assert after_refund == before_refund + 10
+
+    old_mods = config.LOUNGE_MOD_NAMES
+    config.LOUNGE_MOD_NAMES = frozenset(["红包甲"])
+    try:
+        muted_key, muted_id = await enroll("hb-mute@example.com", "红包禁")
+        await lounge.lounge_ops(id_a, "mod mute 红包禁 5")
+        try:
+            await lounge.lounge_ops(muted_id, "红包 10 2")
+            raise AssertionError("muted user should not send packet")
+        except ValueError as exc:
+            assert "禁言" in str(exc)
+        open_one = await lounge.send_packet(id_b, 10, 2, "给禁言的人", source="mcp")
+        grabbed_mute = await lounge.grab_packet(muted_id, open_one["packet"]["id"])
+        assert grabbed_mute["amount"] >= 1
+
+        banned_key, banned_id = await enroll("hb-ban@example.com", "红包踢")
+        await lounge.lounge_ops(id_a, "mod ban 红包踢")
+        try:
+            await lounge.grab_packet(banned_id, open_one["packet"]["id"])
+            raise AssertionError("banned user should not grab")
+        except ValueError as exc:
+            assert "移出" in str(exc)
+    finally:
+        config.LOUNGE_MOD_NAMES = old_mods
+
+
 def test_eatery_dine_energy_scales_with_price() -> None:
     from server import config
     from server.eatery import _eat_gain
@@ -249,6 +401,7 @@ def test_fishing_gear_payout_bonus() -> None:
 def main() -> None:
     test_lounge_mcp_and_web()
     test_lounge_booth_code()
+    test_lounge_hongbao()
     print("lounge tests ok")
 
 
