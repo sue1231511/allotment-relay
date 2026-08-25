@@ -29,6 +29,23 @@ function dutyUrgent(dash) {
   return line.startsWith('⚠');
 }
 
+function duesOf(dash) {
+  return (dash && dash.dues) || {};
+}
+
+function duesUrgent(dash) {
+  const dues = duesOf(dash);
+  return Number(dues.tax_arrears || 0) > 0 || Number(dues.upkeep_arrears || 0) > 0;
+}
+
+function duesLine(dash) {
+  const dues = duesOf(dash);
+  const bits = [];
+  if (dues.tax_arrears) bits.push(`岸税欠 ${dues.tax_arrears}`);
+  if (dues.upkeep_arrears) bits.push(`岸维欠 ${dues.upkeep_arrears}`);
+  return bits.join(' · ');
+}
+
 async function api(tool, command) {
   const res = await fetch('/api/play', {
     method: 'POST',
@@ -37,6 +54,7 @@ async function api(tool, command) {
       api_key: state.key,
       tool: tool || '',
       command: command || '',
+      device_id: (typeof getOrCreateDeviceId === 'function' ? getOrCreateDeviceId() : ''),
     }),
   });
   const data = await res.json();
@@ -138,7 +156,19 @@ function placeContextRows(place) {
     memo.push(`<div class="place-context-row"><span>海况</span><b>${esc([c.tide, c.weather, c.phase].filter(Boolean).join(' · '))}</b></div>`);
   }
   if (place.id === 'hui') {
-    memo.push(`<div class="place-context-row"><span>岛务</span><b>潮生会 · 阿簿。捐票自填。补贴周二四六自动发。不能入会。</b></div>`);
+    const dues = d.dues || {};
+    const bits = [];
+    if (dues.tax_arrears) bits.push(`岸税欠 ${dues.tax_arrears}`);
+    if (dues.upkeep_arrears) bits.push(`岸维欠 ${dues.upkeep_arrears}`);
+    const dueLine = bits.length ? bits.join(' · ') : '无欠项 · 税看口袋，维看产业';
+    memo.push(`<div class="place-context-row"><span>岛务</span><b>${esc(dueLine)}。捐票自填。补贴周二四六自动发。不能入会。</b></div>`);
+  }
+  if (place.id === 'clinic' && d.meter_lines && d.meter_lines.health) {
+    memo.push(`<div class="place-context-row"><span>身子</span><b>${esc(d.meter_lines.health)}</b></div>`);
+  }
+  if (place.id === 'undertide' && (d.island_bond != null || (d.meters && d.meters.island_bond != null))) {
+    const bond = d.island_bond ?? d.meters.island_bond;
+    memo.push(`<div class="place-context-row"><span>岛缘</span><b>${esc(String(bond))} · 下去会蚀</b></div>`);
   }
   if (!memo.length) {
     memo.push(`<div class="place-context-row"><span>备忘</span><b>${esc(place.blurb || '先选一个动作')}</b></div>`);
@@ -163,6 +193,7 @@ function renderPlace(id) {
   state.placeId = id;
   show($('play-home'), false);
   show($('play-place'), true);
+  $('play-place').classList.toggle('is-lounge', id === 'lounge');
   $('play-place-title').textContent = place.name;
   $('play-place-blurb').textContent = place.blurb + (place.caution ? ' 新手别从这儿开局。' : '');
   if ($('play-place-rail-title')) {
@@ -188,7 +219,7 @@ function renderPlace(id) {
     show(live, false);
   }
 
-  const acts = (place.actions || []).concat(extraPlaceActions(place));
+  const acts = extraPlaceActions(place).concat(place.actions || []);
   $('play-place-actions').innerHTML = acts.map((a, i) => {
     const idx = String(i + 1).padStart(2, '0');
     const note = a.note || a.command || '';
@@ -245,10 +276,14 @@ function todayBlurb(d, c) {
   const ready = parcels.filter((p) => p.state === 'ready').length;
   const bits = [];
   if (c.tide || c.weather) bits.push(`${c.tide || ''}${c.weather ? ' · ' + c.weather : ''}`.replace(/^ · /, ''));
-  if (ready) bits.push(`份地有 ${ready} 块已经成熟`);
+  if (ready) bits.push(`有 ${ready} 块已经成熟`);
   const duty = (d && d.meter_lines && d.meter_lines.bar_duty) || '';
   if (dutyUrgent(d)) bits.push('酒吧值班快到期了');
   else if (duty && duty.includes('内须')) bits.push(duty.replace(/^⚠\s*/, ''));
+  const health = d && d.meter_lines && d.meter_lines.health;
+  if (health && health.includes('（')) bits.push(health.replace(/^⚠\s*/, ''));
+  const dues = duesLine(d);
+  if (dues) bits.push(dues);
   if (d && d.voyage) bits.push(d.voyage);
   if (bits.length) return bits.join('。') + '。';
   return d && d.motto ? d.motto : '先看份地，或去岛上晃一圈。';
@@ -272,10 +307,20 @@ function renderAll() {
   $('play-energy').textContent = `${energy} / ${emax}`;
   $('play-tickets').textContent = String(d.tickets ?? '—');
   $('play-level').textContent = `LV ${level}${title ? ' · ' + title : ''}`;
+  const bondEl = $('play-bond');
+  if (bondEl) {
+    const bond = d.island_bond ?? (d.meters && d.meters.island_bond);
+    const flavor = d.bond_flavor || '';
+    bondEl.textContent = bond == null ? '—' : `${bond}${flavor ? ' · ' + flavor : ''}`;
+  }
   const duty = (d.meter_lines && d.meter_lines.bar_duty) || '';
   const dutyEl = $('play-duty');
-  dutyEl.textContent = duty;
-  show(dutyEl, Boolean(duty && (dutyUrgent(d) || duty.includes('内须'))));
+  const dutyBits = [];
+  if (duty && (dutyUrgent(d) || duty.includes('内须'))) dutyBits.push(duty.replace(/^⚠\s*/, ''));
+  const dues = duesLine(d);
+  if (dues) dutyBits.push(`${dues}。去潮生会交。`);
+  dutyEl.textContent = dutyBits.join(' · ');
+  show(dutyEl, dutyBits.length > 0);
   renderPlots();
   renderPlaces();
   renderNeighbors();
@@ -299,7 +344,8 @@ function plotButtons(p) {
     if (!p.fertilized) acts.push(`<button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"施肥 ${token}"}'>施肥</button>`);
   }
   if (p.state === 'ready') {
-    acts.push(`<button type="button" class="play-mini-btn primary" data-act='{"tool":"plot_ops","command":"gather ${token}"}'>收菜</button>`);
+    const harvest = (p.orchard || p.shake) ? '收果' : '收菜';
+    acts.push(`<button type="button" class="play-mini-btn primary" data-act='{"tool":"plot_ops","command":"gather ${token}"}'>${harvest}</button>`);
     if (p.shake) acts.push(`<button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"shake ${token}"}'>摇一摇</button>`);
   }
   if (p.state === 'overripe') {
@@ -309,45 +355,112 @@ function plotButtons(p) {
   return acts.join('');
 }
 
-function renderPlots() {
-  const parcels = (state.dash && state.dash.parcels) || [];
-  const shown = parcels.slice(0, 6);
-  $('play-plots').innerHTML = shown.map((p) => {
-    const kind = p.greenhouse ? '棚' : (p.orchard ? '园' : '份地');
-    const token = p.token || p.slot;
-    return `
-    <article class="play-plot ${p.state === 'ready' ? 'is-ready' : ''}">
+function plotCardHtml(p) {
+  const token = p.token || String(p.slot);
+  const slotLabel = p.greenhouse || p.orchard ? token : `份地 ${token}`;
+  return `
+    <article class="play-plot ${p.state === 'ready' ? 'is-ready' : ''} ${p.orchard ? 'is-orchard' : ''} ${p.greenhouse ? 'is-shed' : ''}">
       <div class="play-plot-top">
-        <span class="play-plot-slot">${kind} ${esc(token)}</span>
+        <span class="play-plot-slot">${esc(slotLabel)}</span>
         <span class="play-state">${esc(plotStateLabel(p.state))}</span>
       </div>
       <div class="play-crop">${p.emoji ? esc(p.emoji) + ' ' : ''}${esc(p.name)}</div>
       <div class="play-detail">${esc(p.detail || '')}</div>
       <div class="acts">${plotButtons(p)}</div>
     </article>`;
-  }).join('') || '<p class="muted">还没有地。</p>';
+}
+
+function landExpandHtml(snap) {
+  if (!snap) return '';
+  if (snap.clearing) {
+    return `<div class="play-land-expand is-busy">
+      <span>${esc(snap.clearing_label || '')} 开垦中 · ${esc(snap.clearing_eta || '')}</span>
+    </div>`;
+  }
+  const offer = snap.offer;
+  if (!offer) return '';
+  const confirm = JSON.stringify({ tool: 'plot_ops', command: snap.confirm_cmd });
+  const quote = JSON.stringify({ tool: 'plot_ops', command: snap.quote_cmd });
+  if (duesUrgent(state.dash)) {
+    return `<div class="play-land-expand is-busy">
+      <span>欠岸税或岸维，交清才能开垦</span>
+      <button type="button" class="play-mini-btn" data-act='${quote}'>看价</button>
+      <button type="button" class="play-mini-btn primary" data-place="hui">去潮生会</button>
+    </div>`;
+  }
+  return `<div class="play-land-expand">
+    <span>${esc(snap.next_word || '下一块')} ${esc(offer.token)} · ${offer.cost} 票 · 开垦 ${esc(offer.clear_eta)}</span>
+    <button type="button" class="play-mini-btn" data-act='${quote}'>看价</button>
+    <button type="button" class="play-mini-btn primary" data-act='${confirm}'>确认开垦</button>
+  </div>`;
+}
+
+function plotGroupHtml(title, blurb, list, expandSnap, emptyText) {
+  const cards = list.length
+    ? `<div class="play-plots">${list.map(plotCardHtml).join('')}</div>`
+    : `<p class="muted play-plot-empty">${esc(emptyText || '还没有地。')}</p>`;
+  return `<div class="play-plot-group">
+    <div class="play-plot-group-head">
+      <strong>${esc(title)}</strong>
+      <span>${esc(blurb)}</span>
+    </div>
+    ${cards}
+    ${landExpandHtml(expandSnap)}
+  </div>`;
+}
+
+function renderPlots() {
+  const parcels = (state.dash && state.dash.parcels) || [];
+  const land = (state.dash && state.dash.land) || {};
+  const plots = parcels.filter((p) => !p.orchard && !p.greenhouse);
+  const trees = parcels.filter((p) => p.orchard && !p.greenhouse);
+  const sheds = parcels.filter((p) => p.greenhouse);
+  const plotCount = (land.plots && land.plots.count) || plots.length;
+  const treeCount = (land.orchard && land.orchard.count) || trees.length;
+  const shedCount = (land.greenhouse && land.greenhouse.count) || sheds.length;
+  const parts = [
+    plotGroupHtml(`菜地 ${plotCount}`, '露天种菜', plots, land.plots),
+    plotGroupHtml(`果园 ${treeCount}`, '只种果树', trees, land.orchard),
+    plotGroupHtml(
+      shedCount ? `温室 ${shedCount}` : '温室',
+      shedCount ? '种菜种树都不受季节' : '买棚后四季可种',
+      sheds,
+      land.greenhouse,
+      '还没有温室。',
+    ),
+  ];
+  $('play-plots').innerHTML = parts.join('') || '<p class="muted">还没有地。</p>';
+  const sub = $('play-plots-sub');
+  if (sub) {
+    sub.textContent = `菜地 ${plotCount} · 果园 ${treeCount}${shedCount ? ` · 温室 ${shedCount}` : ''} · 全部展示`;
+  }
 }
 
 function placeCardHtml(pl, urgent) {
+  const huiUrgent = pl.id === 'hui' && duesUrgent(state.dash);
+  const hot = (pl.duty && urgent) || huiUrgent;
   return `
-    <article class="play-place-card ${pl.duty && urgent ? 'is-duty' : ''}">
+    <article class="play-place-card ${hot ? 'is-duty' : ''}">
       <small>${esc(pl.kicker || (pl.week1 ? 'Often' : 'Later'))}</small>
       <strong>${esc(pl.name)}</strong>
       <p>${esc(pl.blurb)}</p>
-      <button type="button" class="play-mini-btn ${pl.duty && urgent ? 'primary' : ''} go" data-place="${esc(pl.id)}">前往</button>
+      <button type="button" class="play-mini-btn ${hot ? 'primary' : ''} go" data-place="${esc(pl.id)}">前往</button>
     </article>`;
+}
+
+function orderedPlaces(places) {
+  return (places || []).slice().sort((a, b) => Number(Boolean(b.week1)) - Number(Boolean(a.week1)));
 }
 
 function renderPlaces() {
   const urgent = dutyUrgent(state.dash);
-  const places = state.places || [];
-  const home = places.slice(0, 6);
+  const home = (state.places || []).filter((pl) => pl.week1);
   $('play-places').innerHTML = home.map((pl) => placeCardHtml(pl, urgent)).join('');
 }
 
 function openAllPlaces() {
   const urgent = dutyUrgent(state.dash);
-  openSheet('岛上全部地点', `<div class="play-places">${(state.places || []).map((pl) => placeCardHtml(pl, urgent)).join('')}</div>`);
+  openSheet('岛上全部地点', `<div class="play-places">${orderedPlaces(state.places).map((pl) => placeCardHtml(pl, urgent)).join('')}</div>`);
 }
 
 function renderNeighbors() {
@@ -474,6 +587,15 @@ function renderMemories() {
 function extraPlaceActions(place) {
   const extra = [];
   const voyage = (state.dash && state.dash.voyage) || '';
+  if (place.id === 'hui') {
+    const dues = duesOf(state.dash);
+    if (Number(dues.tax_arrears || 0) > 0) {
+      extra.push({ label: '交岸税', note: `欠 ${dues.tax_arrears}`, tool: 'visit_ops', command: '潮生会 税 交' });
+    }
+    if (Number(dues.upkeep_arrears || 0) > 0) {
+      extra.push({ label: '交岸维', note: `欠 ${dues.upkeep_arrears}`, tool: 'visit_ops', command: '潮生会 维 交' });
+    }
+  }
   if (place.id === 'tide' && voyage.includes('黑旗')) {
     extra.push({ label: '打', tool: 'tide_ops', command: 'fight' });
     extra.push({ label: '逃', tool: 'tide_ops', command: 'flee' });
@@ -495,6 +617,7 @@ function goHome() {
   state.placeId = '';
   state.placeResult = '';
   show($('play-place'), false);
+  $('play-place').classList.remove('is-lounge');
   show($('play-home'), true);
   hidePatron();
   show($('play-lounge'), false);
@@ -522,17 +645,86 @@ function openMe() {
   const m = d.meters || {};
   const lines = d.meter_lines || {};
   const name = d.name || '';
+  const inv = d.invite || {};
+  const guests = (inv.invited || []).slice(0, 8).map((g) =>
+    `<li>${esc(g.name)} · ${esc(g.status)}</li>`
+  ).join('');
+  const keeps = (inv.keepsakes || []).map((k) =>
+    `${esc(k.emoji || '')}${esc(k.name)}`
+  ).join(' · ');
   $('play-me-body').innerHTML = `
     <div class="play-identity" style="margin-bottom:14px;width:100%;cursor:default">
       <span class="play-avatar">${esc(String(name).slice(0, 1) || '≈')}</span>
       <span><strong>${esc(name)}</strong><small>管理员 · ${esc(d.title || ('LV ' + (d.level || 1)))}</small></span>
     </div>
     <p>精力 ${m.energy || 0}/${m.energy_max || 100} · 工分票 ${d.tickets}</p>
+    <p style="margin-top:6px">岛缘 ${d.island_bond ?? m.island_bond ?? 0} ∞${d.bond_flavor ? ' · ' + esc(d.bond_flavor) : ''}</p>
     <p style="margin-top:6px">饱食 ${m.satiety ?? '—'} · 雾智 ${m.mist_wit ?? '—'} · 档信 ${m.standing ?? '—'}</p>
     ${d.motto ? `<p style="margin-top:8px">「${esc(d.motto)}」</p>` : ''}
+    ${lines.health && lines.health.includes('（') ? `<p class="muted" style="margin-top:8px">${esc(lines.health)}</p>` : ''}
     <div class="play-rule">${esc(lines.bar_duty || '每 2 天须去酒吧上工。')}</div>
+    ${duesLine(d) ? `<div class="play-rule">${esc(duesLine(d))}。去潮生会交。</div>` : ''}
     ${d.voyage ? `<p class="muted" style="margin-top:8px">${esc(d.voyage)}</p>` : ''}
+    <section class="play-invite">
+      <div class="play-kicker">Pilot</div>
+      <h3>引航</h3>
+      <p>邀请码 <strong id="play-invite-code">${esc(inv.code || '—')}</strong>
+        <button type="button" class="btn secret-copy" id="play-invite-copy">复制链接</button>
+      </p>
+      ${inv.inviter ? `<p class="muted">由「${esc(inv.inviter.name)}」引来 · ${esc(inv.my_status || '')}</p>` : ''}
+      ${inv.can_bind ? `
+        <form id="play-invite-bind">
+          <label>绑定邀请码（只能一次）
+            <input id="play-invite-bind-code" type="text" maxlength="16" placeholder="邀请码" autocomplete="off">
+          </label>
+          <button type="submit" class="btn">绑定</button>
+        </form>
+        <p class="error hidden" id="play-invite-bind-err"></p>
+      ` : ''}
+      <p class="muted">已引来 ${Number(inv.invited && inv.invited.length) || 0} 人，计入有效 ${Number(inv.valid_count) || 0} 人。</p>
+      <p class="muted">对方成为有效岛民后，你会收到 ${Number(inv.official_reward_tickets) || 100} 工分票和 ${Number(inv.official_reward_bond) || 20} 岛缘。</p>
+      ${guests ? `<ul class="play-invite-list">${guests}</ul>` : ''}
+      ${keeps ? `<p class="muted">收藏 ${keeps}</p>` : ''}
+      ${inv.lantern ? `<p class="muted">岸灯已在小屋亮着。</p>` : ''}
+    </section>
   `;
+  const copyBtn = $('play-invite-copy');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', () => {
+      const url = inv.link && inv.link.startsWith('http')
+        ? inv.link
+        : `${location.origin}${inv.link || '/register'}`;
+      if (typeof copyText === 'function') copyText(url, copyBtn);
+      else navigator.clipboard.writeText(url);
+    });
+  }
+  const bindForm = $('play-invite-bind');
+  if (bindForm) {
+    bindForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const err = $('play-invite-bind-err');
+      err.classList.add('hidden');
+      try {
+        const res = await fetch('/api/invite/bind', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            api_key: state.key,
+            code: $('play-invite-bind-code').value.trim(),
+            device_id: typeof getOrCreateDeviceId === 'function' ? getOrCreateDeviceId() : '',
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(typeof data.detail === 'string' ? data.detail : '绑不上');
+        if (data.invite) state.dash = { ...state.dash, invite: data.invite };
+        openMe();
+        setLog(data.text || '引航关系已结。');
+      } catch (ex) {
+        err.classList.remove('hidden');
+        err.textContent = ex.message;
+      }
+    });
+  }
   show($('play-me'), true);
 }
 
@@ -646,13 +838,28 @@ function sowSheet(token) {
     if (shed) return true;
     return !s.tree;
   });
+  const sowBtns = seeds.map((s) => (
+    `<button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"sow ${token} ${s.name}"}'>${s.emoji || ''} ${s.name} ×${s.qty}</button>`
+  )).join('');
   if (!seeds.length) {
-    setLog('口袋里没有能种在这儿的种。去份地边上的采集，或以后去杂货买。');
+    openSheet(`种到 ${token}`, `<p class="muted">口袋里没有能种在这儿的种。买当季或全年的，过季会拒。</p>${seedBuyHtml()}`);
     return;
   }
-  openSheet(`种到 ${token}`, seeds.map((s) => (
-    `<button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"sow ${token} ${s.name}"}'>${s.emoji || ''} ${s.name} ×${s.qty}</button>`
-  )).join(''));
+  openSheet(`种到 ${token}`, `${sowBtns}<p class="muted" style="margin-top:10px">没有想要的就买一份。</p>${seedBuyHtml()}`);
+}
+
+function seedBuyHtml() {
+  return `
+    <button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"catalog"}'>看当季</button>
+    <button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"buy 1 甘蓝"}'>买甘蓝种</button>
+    <button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"buy 1 甜菜"}'>买甜菜种</button>
+    <button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"buy 1 雾豌豆"}'>买雾豆种</button>
+    <button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"buy 1 浅海藻"}'>买浅海藻种</button>
+  `;
+}
+
+function buySeedSheet() {
+  openSheet('买种', `<p class="muted">买当季或全年种。甘蓝 / 甜菜 / 雾豆 / 浅海藻全年可种。过季会拒。</p>${seedBuyHtml()}`);
 }
 
 function itemSheet(name) {
@@ -810,11 +1017,30 @@ $('play-key-form').addEventListener('submit', async (e) => {
 $('play-enroll-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const name = $('play-enroll-name').value.trim();
+  const invite = ($('play-enroll-invite') && $('play-enroll-invite').value.trim())
+    || (typeof peekInviteCode === 'function' ? peekInviteCode() : '');
   const err = $('play-gate-err');
   err.classList.add('hidden');
   try {
     const data = await api('steward_ops', `enroll ${name}`);
     applySnap(data, data.text || '');
+    if (invite && data.enrolled && data.dashboard && data.dashboard.invite && data.dashboard.invite.can_bind) {
+      const res = await fetch('/api/invite/bind', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          api_key: state.key,
+          code: invite,
+          device_id: typeof getOrCreateDeviceId === 'function' ? getOrCreateDeviceId() : '',
+        }),
+      });
+      const bound = await res.json();
+      if (res.ok && bound.invite) {
+        state.dash = { ...state.dash, invite: bound.invite };
+        setLog(`${data.text || ''}\n${bound.text || ''}`.trim());
+        if (typeof clearStoredInvite === 'function') clearStoredInvite();
+      }
+    }
   } catch (ex) {
     err.classList.remove('hidden');
     err.textContent = ex.message;
@@ -953,6 +1179,27 @@ $('play-star-tip').addEventListener('submit', async (e) => {
   }
 });
 
+$('play-star-script')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const pitch = $('play-star-script-pitch').value.trim();
+  const title = $('play-star-script-title').value.trim().replaceAll('|', '·');
+  const body = $('play-star-script-body').value.trim();
+  if (!title || !body) {
+    showResult('play-star-script-result', '<p class="error">标题和正文都要写。</p>');
+    return;
+  }
+  const head = pitch ? `投稿 ${pitch} ${title}` : `投稿 ${title}`;
+  try {
+    const data = await api('theater_ops', `${head} | ${body}`);
+    applySnap(data, data.text || '');
+    showResult('play-star-script-result', `<p>${esc(data.text || '').replaceAll('\n', '<br>')}</p>`);
+    $('play-star-script-title').value = '';
+    $('play-star-script-body').value = '';
+  } catch (err) {
+    showResult('play-star-script-result', `<p class="error">${esc(err.message)}</p>`);
+  }
+});
+
 $('play-hui-donate')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const amount = parseInt($('play-hui-donate-amount').value, 10);
@@ -967,6 +1214,10 @@ document.body.addEventListener('click', (e) => {
   const sow = e.target.closest('[data-sow]');
   if (sow) {
     sowSheet(sow.getAttribute('data-sow'));
+    return;
+  }
+  if (e.target.closest('[data-buy-seed]')) {
+    buySeedSheet();
     return;
   }
   const place = e.target.closest('[data-place]');
@@ -1037,6 +1288,10 @@ document.querySelectorAll('[data-memory-close]').forEach((btn) => {
 });
 
 (async function boot() {
+  const enrollInvite = $('play-enroll-invite');
+  if (enrollInvite && typeof peekInviteCode === 'function') {
+    enrollInvite.value = peekInviteCode();
+  }
   const saved = loadSavedKey();
   if (!saved) return;
   $('play-key').value = saved;

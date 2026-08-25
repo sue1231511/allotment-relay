@@ -475,6 +475,11 @@ h3 { font-size: 19px; }
   max-width: 650px;
 }
 
+.tagline a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .panel,
 .card {
   border: 1px solid var(--line);
@@ -2494,7 +2499,9 @@ body.memory-open {
   flex: 1;
   min-height: 0;
   padding: 20px;
-  overflow: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -2766,6 +2773,9 @@ body.memory-open {
 @media (max-width: 860px) {
   .lounge-page {
     min-height: 100dvh;
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
   }
@@ -2777,6 +2787,7 @@ body.memory-open {
     display: flex;
     flex-direction: column;
     min-height: 0;
+    overflow: hidden;
   }
 
   .lounge-head {
@@ -2795,8 +2806,10 @@ body.memory-open {
 
   .lounge-layout {
     grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr);
     flex: 1;
     min-height: 0;
+    overflow: hidden;
   }
 
   .lounge-side {
@@ -2804,10 +2817,10 @@ body.memory-open {
   }
 
   .lounge-chat {
-    flex: 1;
     min-height: 0;
-    height: auto;
-    max-height: none;
+    height: 100%;
+    max-height: 100%;
+    overflow: hidden;
     border-radius: 20px 20px 0 0;
   }
 
@@ -2830,6 +2843,7 @@ body.memory-open {
 
   .lounge-composer-wrap {
     flex-shrink: 0;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -3588,7 +3602,7 @@ code {
 
   .lounge-page main,
   .lounge-page-main {
-    padding-bottom: 12px;
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
   }
 
   .bar-grid { grid-template-columns: 1fr; }

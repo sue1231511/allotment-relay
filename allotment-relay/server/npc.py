@@ -53,7 +53,7 @@ async def npc_ops(key_id: int, command: str) -> str:
             elif npc["key"] == "jingshan":
                 tag = " · 商船糕点委托；visit_ops jingshan visit / order / deliver"
             elif npc["key"] == "aboo":
-                tag = " · 潮生会值事；visit_ops 潮生会 / 税 / 基金。岸税周一划。补贴周二四六自动发。不能加入"
+                tag = " · 潮生会值事；visit_ops 潮生会 / 税 / 维 / 基金。岸税周一划，岸维每天划。补贴周二四六自动发。不能加入"
             elif npc["key"] == "herb_aunt":
                 tag = " · 厨房配方提示"
             elif npc["key"] == "market_fan":

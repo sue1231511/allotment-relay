@@ -34,7 +34,7 @@ TAX_HELP = f"""visit_ops 潮生会 税（整句写进 command）：
 {TAX_NAME}按口袋现票超额累进，只算口袋，不算行囊/井下存款。未过 {TAX_FREE} 免征。
 东八区每周一换班自动划入潮汐基金（本周新号免征到下周）。自动划不会收到 {TAX_COLLECT_FLOOR} 以下；欠税时不能{EXPAND_LOCK}。
 例子：潮生会 税 · 潮生会 税 交 · 潮生会 税 交 50
-容易搞混：税=强制岸税（富人按档交）。基金 捐 50=自愿捐票（须高于岛均）。周潮天灾=只冲 3 万以上，不是税。"""
+容易搞混：税=强制岸税（富人按档交）。维=产业维修费（visit_ops 潮生会 维，每天划）。基金 捐 50=自愿捐票（须高于岛均）。周潮天灾=只冲 3 万以上，不是税。"""
 
 
 def _cst_dt(ts: int | None = None) -> datetime:
@@ -103,12 +103,13 @@ def next_levy_line(ts: int | None = None, *, done: bool = False) -> str:
 
 def assert_clear(steward: dict[str, Any]) -> None:
     owed = int(steward.get("tax_arrears") or 0)
-    if owed <= 0:
-        return
-    raise ValueError(
-        f"欠{TAX_NAME} {owed} 票。先 visit_ops 潮生会 税 交。"
-        f"欠税时不能{EXPAND_LOCK}。"
-    )
+    if owed > 0:
+        raise ValueError(
+            f"欠{TAX_NAME} {owed} 票。先 visit_ops 潮生会 税 交。"
+            f"欠税时不能{EXPAND_LOCK}。"
+        )
+    from . import upkeep as upkeep_mod
+    upkeep_mod.assert_upkeep_clear(steward)
 
 
 def _in_first_week(created_at: int, ts: int | None = None) -> bool:
@@ -385,7 +386,7 @@ def _status_text(snap: dict[str, Any]) -> str:
     lines.extend([
         "",
         "交：visit_ops 潮生会 税 交（可 税 交 50 交一部分）",
-        "不是自愿捐：有余捐票走 潮生会 基金 捐 50。周潮天灾不是税。",
+        "不是自愿捐：有余捐票走 潮生会 基金 捐 50。产业维修走 潮生会 维。周潮天灾不是税。",
     ])
     return "\n".join(lines)
 

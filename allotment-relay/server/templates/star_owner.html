@@ -15,6 +15,8 @@
   .note{color:#8a7fa0;font-size:12px} .ok{color:#9fd8a8} .err{color:#e88a8a}
   .stat{display:inline-block;margin:2px 6px 2px 0;padding:4px 10px;background:#2a2338;border:1px solid #453a5c;border-radius:6px;font-size:13px}
   .preset{margin:4px 2px;padding:6px 10px;background:#2a2338;border:1px solid #453a5c;border-radius:6px;cursor:pointer;display:inline-block;font-size:13px}
+  .script-body{white-space:pre-wrap;font-size:13px;line-height:1.55;max-height:280px;overflow:auto;background:#14101c;padding:10px;border-radius:6px;border:1px solid #453a5c;margin:8px 0}
+  button.ok{background:#5a8a6a} button.gold{background:#8a6a3e}
 </style>
 </head>
 <body>
@@ -63,6 +65,32 @@
   </div>
   {% endfor %}
   <p class="note">应援和点歌只有你看到才算数——红不红，你说了算。</p>
+</div>
+
+<div class="card">
+  <h1>🖋 编剧社</h1>
+  <h2>侧厅来稿。采纳为故事 {{ story_pay }} 票 · 采纳为潮闻 {{ tale_pay }} 票 · 退稿不给。稿费当时入账，不走票房福利。</h2>
+  {% if not scripts %}<p class="note">侧厅还空着。有人 theater_ops 投稿 之后会出现在这里。</p>{% endif %}
+  {% for s in scripts %}
+  <div class="prop">
+    <b>#{{ s.id }} 《{{ s.title }}》</b> · {{ s.name }}
+    <span class="note">（建议：{{ s.pitch_label }}）</span>
+    <div class="script-body">{{ s.body }}</div>
+    <button class="ok" onclick="decideScript({{ s.id }},'story')">采纳为故事 · {{ story_pay }}</button>
+    <button class="gold" onclick="decideScript({{ s.id }},'tale')">采纳为潮闻 · {{ tale_pay }}</button>
+    <input id="script-note-{{ s.id }}" placeholder="退稿附言（可选）" maxlength="80">
+    <button class="gray" onclick="decideScript({{ s.id }},'reject')">退稿</button>
+  </div>
+  {% endfor %}
+  {% if recent_scripts %}
+  <p class="note" style="margin-top:16px">最近处理</p>
+  {% for s in recent_scripts %}
+  <div class="prop">
+    <b>#{{ s.id }} 《{{ s.title }}》</b> · {{ s.name }} · {{ s.status_label }}{% if s.accepted_label %}为{{ s.accepted_label }} · {{ s.payout }}票{% endif %}{% if s.note %} · {{ s.note }}{% endif %}
+  </div>
+  {% endfor %}
+  {% endif %}
+  <p class="note">采纳只发稿费，不会自动变成岛上可玩的潮闻/故事；真要上架还得另写进游戏。</p>
 </div>
 
 <div class="card">
@@ -168,6 +196,16 @@ async function welfare(){
   msg.className = res.ok ? 'ok' : 'err';
   msg.textContent = res.ok ? (data.msg || '发出去了。') : (data.detail || '失败');
   if (res.ok) setTimeout(() => location.reload(), 900);
+}
+async function decideScript(id, action){
+  const noteEl = document.getElementById('script-note-' + id);
+  const res = await fetch('/api/star-owner/script', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({key: KEY, id: id, action: action, note: noteEl ? noteEl.value : ''}),
+  });
+  const data = await res.json();
+  alert(res.ok ? (data.msg || '已处理') : (data.detail || '失败'));
+  location.reload();
 }
 </script>
 </body>

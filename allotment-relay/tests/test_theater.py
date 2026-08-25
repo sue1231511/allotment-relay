@@ -84,16 +84,108 @@ async def test_theater_flow() -> None:
     assert "14/100" in relation and "头粉" in relation, relation
 
 
+SCRIPT_BODY = (
+    "第一幕：南巷口还在放戏。旧收音机里有人叫了一声，碗筷却是空的。"
+    "院门旁那杯茶已经凉了，谁也没有再添。"
+)
+
+
+async def test_theater_scripts() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="theater-script-"))
+    db = await _boot(tmp)
+    from server import config, theater
+
+    kid, sid = await _enroll(db, "script@example.com", "编剧甲")
+    guild = await theater.theater_ops(kid, "编剧社")
+    assert "常开" in guild and "500" in guild and "750" in guild, guild
+    assert "还没投过" in guild, guild
+
+    try:
+        await theater.theater_ops(kid, "看板")
+        raise AssertionError("board still requires a stage show")
+    except ValueError as exc:
+        assert "剧场不开工" in str(exc), exc
+
+    posted = await theater.theater_ops(
+        kid, f"投稿 潮闻 岸上旧收音机 | {SCRIPT_BODY}"
+    )
+    assert "#1" in posted and "岸上旧收音机" in posted and "潮闻" in posted, posted
+
+    desk = await theater.theater_ops(kid, "稿件")
+    assert "#1 《岸上旧收音机》（投潮闻）待审" in desk, desk
+
+    pending = await theater.owner_pending_scripts()
+    assert len(pending) == 1 and pending[0]["title"] == "岸上旧收音机", pending
+    assert pending[0]["pitch"] == "tale" and pending[0]["body"] == SCRIPT_BODY
+
+    async with db.connect() as conn:
+        tickets_before = (await (await conn.execute(
+            "SELECT tickets FROM stewards WHERE id=?", (sid,)
+        )).fetchone())[0]
+    decided = await theater.owner_decide_script(1, "tale")
+    assert "潮闻" in decided["msg"] and decided["payout"] == config.THEATER_SCRIPT_TALE_PAY, decided
+    async with db.connect() as conn:
+        tickets_after = (await (await conn.execute(
+            "SELECT tickets FROM stewards WHERE id=?", (sid,)
+        )).fetchone())[0]
+    assert tickets_after == tickets_before + 750, (tickets_before, tickets_after)
+
+    try:
+        await theater.owner_decide_script(1, "story")
+        raise AssertionError("already decided script should block")
+    except ValueError as exc:
+        assert "处理过" in str(exc), exc
+
+    story = await theater.theater_ops(kid, f"投稿 故事 灰了的裙摆 | {SCRIPT_BODY}")
+    assert "故事" in story, story
+    paid = await theater.owner_decide_script(2, "story")
+    assert paid["payout"] == 500, paid
+    async with db.connect() as conn:
+        tickets_story = (await (await conn.execute(
+            "SELECT tickets FROM stewards WHERE id=?", (sid,)
+        )).fetchone())[0]
+    assert tickets_story == tickets_after + 500, (tickets_after, tickets_story)
+
+    rejected = await theater.theater_ops(kid, f"投稿 空的旧皮箱 | {SCRIPT_BODY}")
+    assert "#3" in rejected, rejected
+    bounce = await theater.owner_decide_script(3, "reject", "还缺一场能站住的结尾")
+    assert bounce["payout"] == 0 and "退稿" in bounce["msg"], bounce
+    async with db.connect() as conn:
+        tickets_same = (await (await conn.execute(
+            "SELECT tickets FROM stewards WHERE id=?", (sid,)
+        )).fetchone())[0]
+    assert tickets_same == tickets_story, (tickets_story, tickets_same)
+
+    for i in range(3):
+        await theater.theater_ops(kid, f"投稿 待审{i} | {SCRIPT_BODY}")
+    try:
+        await theater.theater_ops(kid, f"投稿 第四篇 | {SCRIPT_BODY}")
+        raise AssertionError("pending cap should block")
+    except ValueError as exc:
+        assert "待审已经 3" in str(exc), exc
+    pulled = await theater.theater_ops(kid, "撤回 4")
+    assert "已撤回 #4" in pulled, pulled
+    again = await theater.theater_ops(kid, f"投稿 第四篇改投 | {SCRIPT_BODY}")
+    assert "第四篇改投" in again, again
+
+    try:
+        await theater.theater_ops(kid, "投稿 太短 | 还不够")
+        raise AssertionError("short body should block")
+    except ValueError as exc:
+        assert "太短" in str(exc), exc
+
+
 def test_theater_mcp_description() -> None:
     from server.mcp_app import mcp
     tool = mcp._tool_manager.get_tool("theater_ops")
     blob = f"{tool.description}\n{(tool.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
-    for word in ("试镜", "对戏", "演出", "领薪", "头粉", "不替代"):
+    for word in ("试镜", "对戏", "演出", "领薪", "头粉", "不替代", "编剧社", "投稿"):
         assert word in blob, word
 
 
 def main() -> None:
     asyncio.run(test_theater_flow())
+    asyncio.run(test_theater_scripts())
     test_theater_mcp_description()
     print("theater tests ok")
 

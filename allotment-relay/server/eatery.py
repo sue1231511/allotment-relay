@@ -119,21 +119,36 @@ async def eatery_command(s: dict[str, Any], command: str) -> str:
             conn.row_factory = aiosqlite.Row
             shops = await (await conn.execute(
                 """
-                SELECT id, name, eatery_label FROM stewards
+                SELECT id, name, eatery_label, COALESCE(upkeep_arrears, 0) AS upkeep_arrears
+                FROM stewards
                 WHERE enrolled=1 AND eatery_open=1
                 ORDER BY last_active_at DESC LIMIT 20
                 """
             )).fetchall()
             lines = ["岸畔小馆（kitchen_ops shop …）:"]
+            from . import upkeep as upkeep_mod
             if not shops:
-                lines.append("  还没人开张 — shop open 店名（需小屋+冰箱，80 票）")
+                lines.append(
+                    f"  还没人开张 — shop open 店名（需小屋+冰箱，80 票；开馆后每天岸维 {upkeep_mod.EATERY} 票）"
+                )
+            paused_n = 0
             for sh in shops:
+                if int(sh["upkeep_arrears"] or 0) > 0:
+                    paused_n += 1
+                    tag = " ←你" if sh["id"] == s["id"] else ""
+                    label = sh["eatery_label"] or f"{sh['name']}的馆"
+                    lines.append(
+                        f"  {sh['name']}「{label}」暂停堂食（欠岸维 {sh['upkeep_arrears']}）{tag}"
+                    )
+                    continue
                 menu = await _menu_rows(conn, sh["id"])
                 label = sh["eatery_label"] or f"{sh['name']}的馆"
                 n = len(menu)
                 tag = " ←你" if sh["id"] == s["id"] else ""
                 lines.append(f"  {sh['name']}「{label}」{n} 道菜{tag}")
             lines.append("dine 管理员名 [菜编号] · shop stock 菜 · 不想开了 shop 卖掉 · 人类网页 /play 点餐")
+            if paused_n:
+                lines.append(f"{paused_n} 家欠岸维暂停堂食；店主要 visit_ops 潮生会 维 交")
             if s.get("eatery_open"):
                 quote = eatery_sell_quote(s.get("eatery_opened_at"))
                 mine = s.get("eatery_label") or f"{s['name']}的馆"
@@ -167,9 +182,11 @@ async def eatery_command(s: dict[str, Any], command: str) -> str:
             await bond_mod.grant(conn, s["id"], bond_mod.EATERY_OPEN, "life", once="eatery_open")
             await conn.commit()
         await db.add_chronicle("eatery", f"{s['name']} 开张「{label}」", s["id"])
+        from . import upkeep as upkeep_mod
         return (
             f"「{label}」开张（-{cost} 票）。shop stock 菜名 上菜单，"
-            f"别人 dine {s['name']}，人类走 /play"
+            f"别人 dine {s['name']}，人类走 /play。"
+            f"开馆后每天岸维 {upkeep_mod.EATERY} 票 → visit_ops 潮生会 维"
         )
 
     if verb == "label" and len(parts) >= 2:
@@ -331,6 +348,8 @@ async def _dine(guest: dict[str, Any], shop_name: str, item_ref: str | None) -> 
     shop = await db.get_steward_by_name(shop_name)
     if not shop or not shop.get("eatery_open"):
         raise ValueError(f"「{shop_name}」没有在营业的小馆")
+    from . import upkeep as upkeep_mod
+    upkeep_mod.assert_shop_serving(shop)
     if shop["id"] == guest["id"]:
         raise ValueError("别在自己馆里刷单，dine 别人的店")
     day = _day_id()
@@ -439,7 +458,8 @@ async def public_eatery_snapshot() -> dict[str, Any]:
         conn.row_factory = aiosqlite.Row
         shops = await (await conn.execute(
             """
-            SELECT id, name, badge, portrait, eatery_label
+            SELECT id, name, badge, portrait, eatery_label,
+                   COALESCE(upkeep_arrears, 0) AS upkeep_arrears
             FROM stewards WHERE enrolled=1 AND eatery_open=1
             ORDER BY last_active_at DESC LIMIT 24
             """
@@ -457,12 +477,16 @@ async def public_eatery_snapshot() -> dict[str, Any]:
             blurb = (sh["portrait"] or "").strip()
             if not blurb:
                 blurb = (sh["badge"] or "").strip() or "靠海窗位。汤是热的。"
+            paused = int(sh["upkeep_arrears"] or 0) > 0
+            if paused:
+                blurb = "欠岸维，暂停堂食。"
             out_shops.append({
                 "name": sh["name"],
                 "badge": sh["badge"],
                 "portrait": sh["portrait"],
                 "label": sh["eatery_label"] or f"{sh['name']}的馆",
                 "blurb": blurb,
+                "paused": paused,
                 "diners_today": int(diners or 0),
                 "menu": [
                     {
@@ -484,7 +508,11 @@ async def public_eatery_snapshot() -> dict[str, Any]:
             """
         )).fetchall()
     phase = world.current_day_phase()
-    strip = [f"{s['label']}今晚开门" for s in out_shops[:4]]
+    strip = [
+        f"{s['label']}今晚开门" for s in out_shops[:4] if not s.get("paused")
+    ]
+    if any(s.get("paused") for s in out_shops):
+        strip.append("有馆欠岸维停堂，交了维修费才开")
     if phase == "night":
         strip.append("夜里还开火的馆，汤更香一点")
     elif phase == "dusk":
@@ -499,7 +527,7 @@ async def public_eatery_snapshot() -> dict[str, Any]:
         "phase_label": world.day_phase_label(phase),
         "open_cost": config.EATERY_OPEN_COST,
         "dine_daily": config.EATERY_DINE_DAILY,
-        "open_count": len(out_shops),
+        "open_count": sum(1 for s in out_shops if not s.get("paused")),
         "kitchen_strip": strip,
         "shops": out_shops,
         "recent_orders": [

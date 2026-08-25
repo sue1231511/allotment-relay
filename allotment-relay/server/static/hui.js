@@ -21,6 +21,7 @@ async function loadHui() {
     `<span>告示 ${esc((data.beacons || []).length)} 条</span>`,
     `<span>基金 ${esc(fund.pool ?? 0)} 票</span>`,
     `<span>岸税本周 ${esc((data.tax || {}).collected ?? 0)}</span>`,
+    `<span>岸维今日 ${esc((data.upkeep || {}).collected ?? 0)}</span>`,
   ].join('');
 
   document.getElementById('hui-strip').innerHTML =
@@ -58,6 +59,26 @@ async function loadHui() {
         <strong>${esc(tax.collected ?? 0)} 票</strong>
         <p>口袋现票超额累进。未过 ${esc(tax.free ?? 800)} 免征。东八区每周一换班自动划进潮汐基金。欠税时不能扩地扩产。</p>
         <small>${esc(tax.next || '')} · 本周应 ${esc(tax.assessed ?? 0)}</small>
+        <div class="hui-brackets">${rows}</div>
+      </div>
+    `;
+  }
+
+  const upkeep = data.upkeep || {};
+  const upkeepEl = document.getElementById('hui-upkeep');
+  if (upkeepEl) {
+    const rates = upkeep.rates || [];
+    const rows = rates.length
+      ? rates.map((r) => (
+        `<div class="hui-bracket"><span>${esc(r.label)}</span><small>${esc(r.rate)} 票/${esc(r.unit || '')}</small></div>`
+      )).join('')
+      : '<div class="hui-bracket"><span>起步份地/果园免</span><small>扩了才交</small></div>';
+    upkeepEl.innerHTML = `
+      <div class="hui-card">
+        <small>今日已入池</small>
+        <strong>${esc(upkeep.collected ?? 0)} 票</strong>
+        <p>按产业每天收。起步 3 块份地、3 树位免征；超出份地/果园、温室、畜栏、渔排、盐田、矿坑日单价 2 起。开馆 2；小屋/船 2/2/3。东八区换班后自动划，不是岸税。欠维修费时不能扩产，开着的小馆暂停堂食。</p>
+        <small>${esc(upkeep.next || '')} · 今日应 ${esc(upkeep.assessed ?? 0)}</small>
         <div class="hui-brackets">${rows}</div>
       </div>
     `;

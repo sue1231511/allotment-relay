@@ -67,6 +67,11 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
         status_flags.append("未入潮下")
     parcels = await db.get_parcels(s["id"])
     stock = await db.get_satchel(s["id"])
+    async with db.connect() as land_conn:
+        land_conn.row_factory = aiosqlite.Row
+        land_plots = await land.expansion_snapshot(land_conn, s, orchard=False)
+        land_orchard = await land.expansion_snapshot(land_conn, s, orchard=True)
+        land_shed = await land.expansion_snapshot(land_conn, s, greenhouse=True)
 
     parcel_views = []
     for p in parcels:
@@ -173,7 +178,7 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
             left = max(0, voyage[1] - db.now())
             voyage_view = f"{route} · {left // 60} 分后归港"
 
-    return {
+    result = {
         "name": s["name"],
         "badge": s["badge"],
         "motto": s["motto"],
@@ -182,6 +187,8 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
         "level": ranked.get("level", 1),
         "title": ranked.get("title", ""),
         "xp": ranked.get("xp", 0),
+        "island_bond": int(ranked.get("island_bond") or 0),
+        "bond_flavor": ranked.get("bond_flavor") or "",
         "meters": {
             "satiety": int(s.get("satiety") or 0),
             "mist_wit": int(s.get("mist_wit") or 0),
@@ -190,6 +197,7 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
             "energy": int(s.get("energy") or 0),
             "energy_max": 100,
             "shadow_rep": shadow_rep,
+            "island_bond": int(ranked.get("island_bond") or 0),
         },
         "meter_lines": {
             "survival": survival.meter_line(s),
@@ -210,6 +218,11 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
         "climate": world.climate_line(),
         "pulse": pulse,
         "parcels": parcel_views,
+        "land": {
+            "plots": land_plots,
+            "orchard": land_orchard,
+            "greenhouse": land_shed,
+        },
         "stock_count": len(stock),
         "stock": stock_items,
         "incidents": incident_views,
@@ -226,5 +239,12 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
             "eatery_open": bool(s.get("eatery_open")),
             "boat": bool(s.get("boat_key")),
         },
+        "dues": {
+            "tax_arrears": int(s.get("tax_arrears") or 0),
+            "upkeep_arrears": int(s.get("upkeep_arrears") or 0),
+        },
         "updated_at": db.now(),
     }
+    from . import invite as invite_mod
+    result["invite"] = await invite_mod.player_view(s)
+    return result

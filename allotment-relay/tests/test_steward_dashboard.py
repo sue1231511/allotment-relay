@@ -46,6 +46,10 @@ async def _test_steward_dashboard_api() -> None:
     data = await steward_dashboard.fetch_dashboard(key)
     assert data["name"] == "我家AI", data
     assert data["tickets"] == 120, data
+    assert data["island_bond"] >= 0, data
+    assert data["bond_flavor"], data
+    assert data["dues"]["tax_arrears"] == 0, data
+    assert data["dues"]["upkeep_arrears"] == 0, data
     assert "parcels" in data and len(data["parcels"]) >= 3, data
     assert data["meter_lines"]["bar_duty"], data
     assert "status" in data, data
@@ -56,6 +60,15 @@ async def _test_steward_dashboard_api() -> None:
     assert data["shadow"]["tier"], data["shadow"]
     assert data["memories"] == [], data["memories"]
     assert data["parcels"][0]["token"]
+    plots = [p for p in data["parcels"] if not p.get("orchard") and not p.get("greenhouse")]
+    trees = [p for p in data["parcels"] if p.get("orchard")]
+    assert len(plots) >= 3, data["parcels"]
+    assert len(trees) >= 3, data["parcels"]
+    land = data.get("land") or {}
+    assert land.get("plots", {}).get("count") >= 3, land
+    assert land.get("orchard", {}).get("count") >= 3, land
+    assert land["plots"].get("offer") and land["plots"]["offer"]["cost"] > 0, land
+    assert land["orchard"].get("confirm_cmd") == "买园 确认", land
     assert "季节" in (data.get("climate") or "") or "一周一季" in (data.get("climate") or ""), data.get("climate")
     assert "quarry" in data and data["quarry"]["pick_tier"] == 0, data.get("quarry")
     assert "买镐" in data["quarry"]["line"], data["quarry"]

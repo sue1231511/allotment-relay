@@ -29,11 +29,10 @@
   margin: 7px 0;
 }
 
-.play-intro-copy {
-  margin: 0;
-  color: var(--muted);
-  font-size: 13px;
-  max-width: 36em;
+.play-intro-copy a {
+  color: #536d71;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .play-identity {
@@ -195,7 +194,7 @@ body.play-bound .play-gate { display: none !important; }
 
 .play-meters {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 8px;
   margin-top: 24px;
   max-width: 720px;
@@ -268,10 +267,54 @@ body.play-bound .play-gate { display: none !important; }
   overflow: hidden;
 }
 
+.play-plot-board {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.play-plot-group-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.play-plot-group-head strong {
+  font-family: "Noto Serif SC", serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: #2f3d42;
+}
+
+.play-plot-group-head span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.play-plot-empty {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+
 .play-plots {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
+}
+
+.play-land-expand {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.play-land-expand.is-busy {
+  color: #8a7a5c;
 }
 
 .play-plot {
@@ -282,6 +325,14 @@ body.play-bound .play-gate { display: none !important; }
   min-height: 154px;
   display: flex;
   flex-direction: column;
+}
+
+.play-plot.is-orchard {
+  background: rgba(244, 248, 242, .88);
+}
+
+.play-plot.is-shed {
+  background: rgba(246, 249, 251, .9);
 }
 
 .play-plot-top {
@@ -845,6 +896,18 @@ body.play-bound .play-gate { display: none !important; }
   max-width: 12em;
 }
 
+#play-star-script {
+  display: grid;
+  gap: 10px;
+}
+
+#play-star-script textarea {
+  width: 100%;
+  min-height: 140px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
 .play-lounge {
   margin-top: 12px;
   display: grid;
@@ -856,7 +919,9 @@ body.play-bound .play-gate { display: none !important; }
 .play-page .lounge-feed {
   min-height: 280px;
   max-height: 48vh;
-  overflow: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -903,6 +968,25 @@ body.play-bound .play-gate { display: none !important; }
   .place-context-block + .place-context-block {
     padding-left: 0;
     border-top: 1px solid var(--line);
+  }
+
+  .play-place.is-lounge .place-workspace,
+  .play-place.is-lounge .place-context {
+    display: none;
+  }
+
+  .play-place.is-lounge .play-lounge {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 0;
+    max-height: calc(100dvh - 240px);
+  }
+
+  .play-place.is-lounge .lounge-feed {
+    flex: 1;
+    min-height: 220px;
+    max-height: none;
   }
 }
 
@@ -998,12 +1082,16 @@ body.play-bound .play-gate { display: none !important; }
   .play-page .memory-grid,
   .play-sidecol { grid-template-columns: 1fr; }
 
-  .play-plot-wrap { overflow: auto; }
+  .play-plot-wrap { overflow: visible; }
   .play-plots {
     display: flex;
-    min-width: max-content;
+    overflow-x: auto;
+    gap: 12px;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
   }
   .play-plot { width: 235px; flex-shrink: 0; }
+  .play-land-expand { flex-direction: column; align-items: flex-start; }
 
   .play-dock {
     position: fixed;
@@ -1039,3 +1127,12 @@ body.play-bound .play-gate { display: none !important; }
 
   body.play-page .mobile-island { bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
 }
+
+.play-invite {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(35, 48, 56, .12);
+}
+.play-invite h3 { margin: 4px 0 8px; font-size: 16px; font-weight: 500; }
+.play-invite-list { margin: 6px 0 0; padding-left: 1.2em; color: var(--muted); font-size: 13px; }
+.play-invite form { margin: 8px 0; display: grid; gap: 8px; }

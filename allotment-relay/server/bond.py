@@ -282,6 +282,7 @@ async def grant(
     once: str | None = None,
     daily: str | None = None,
     daily_cap: int = 1,
+    activity: str | None = None,
 ) -> int:
     if not steward_id or not amount:
         return 0
@@ -314,10 +315,17 @@ async def grant(
             f"UPDATE stewards SET island_bond=?, {col}={col}+? WHERE id=?",
             (new_total, applied, steward_id),
         )
+    if applied > 0:
+        from . import invite as invite_mod
+        await invite_mod.note_from_bond(
+            conn, steward_id, cat, once=once, daily=daily, activity=activity,
+        )
+        await invite_mod.evaluate_and_settle(conn, steward_id)
     return applied
 
 
 async def from_energy(conn: aiosqlite.Connection, steward_id: int, action: str, spent: int = 0) -> int:
+    from . import invite as invite_mod
     act = (action or "").strip()
     if act == "出海":
         if spent >= 35:
@@ -326,12 +334,13 @@ async def from_energy(conn: aiosqlite.Connection, steward_id: int, action: str, 
             n = 20
         else:
             n = 12
-        return await grant(conn, steward_id, n, "labor")
+        return await grant(conn, steward_id, n, "labor", activity="explore")
     hit = ENERGY_MAP.get(act)
     if not hit:
         return 0
     n, cat = hit
-    return await grant(conn, steward_id, n, cat)
+    kind = invite_mod.ENERGY_ACTIVITY.get(act) or ""
+    return await grant(conn, steward_id, n, cat, activity=kind or None)
 
 
 async def note_visit(conn: aiosqlite.Connection, steward_id: int, npc_key: str) -> int:

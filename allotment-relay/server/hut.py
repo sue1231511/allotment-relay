@@ -66,9 +66,11 @@ COMPOST_BIN_ALIASES = {
 }
 
 COMPOST_BIN_USAGE = (
-    "用法：hut_ops 堆肥桶 存 羊粪 3｜堆肥桶 取 堆肥 2"
-    "（肥桶/compost_bin 同义）。买：hut_ops buy compost_bin → install soft_N compost_bin。"
-    "粪便不能进潮柜。丢进桶按层沤，满 7 层结 1 份堆肥（羊粪+2 / 猪粪+3 / 牛粪+4）。"
+    "用法：hut_ops 堆肥桶 存 羊粪 3｜堆肥桶 转化 羊粪 3｜堆肥桶 取 堆肥 2"
+    "（肥桶/compost_bin 同义；转化/沤 也是存）。"
+    "买：hut_ops buy compost_bin → install soft_1 compost_bin（空槽也能装）。"
+    "装完 hut_ops status 槽位上要能看见堆肥桶。"
+    "桶不是柜子：粪便丢进去沤层，不能当货存着。满 7 层结 1 份堆肥（羊粪+2 / 猪粪+3 / 牛粪+4），只能取堆肥。"
     f"桶里结好的堆肥最多囤 {config.COMPOST_BIN_READY_MAX}，先取再丢。"
 )
 
@@ -275,6 +277,43 @@ def _fitting_bare(key: str) -> str:
     return key
 
 
+async def _has_named_fitting(
+    conn: aiosqlite.Connection,
+    steward_id: int,
+    name: str,
+    *,
+    except_slot: str | None = None,
+) -> bool:
+    fittings = await _fittings(conn, steward_id)
+    return any(
+        _fitting_bare(key) == name and slot != except_slot
+        for slot, key in fittings.items()
+    )
+
+
+async def _return_displaced_fitting(
+    conn: aiosqlite.Connection, steward_id: int, item_key: str,
+) -> None:
+    if item_key.startswith("deco_"):
+        await db.add_item(conn, steward_id, item_key, 1, over_cap=True)
+        return
+    await db.add_item(conn, steward_id, f"fit_{_fitting_bare(item_key)}", 1, over_cap=True)
+
+
+async def _upsert_fitting(
+    conn: aiosqlite.Connection, steward_id: int, slot: str, item_key: str,
+) -> None:
+    await conn.execute(
+        """
+        INSERT INTO hut_fittings (steward_id, slot, item_key, installed_at)
+        VALUES (?,?,?,?)
+        ON CONFLICT(steward_id, slot) DO UPDATE SET item_key=excluded.item_key,
+        installed_at=excluded.installed_at
+        """,
+        (steward_id, slot, item_key, db.now()),
+    )
+
+
 def cabinet_capacity(extra: int | None) -> int:
     extra_n = max(0, int(extra or 0))
     return min(config.CABINET_SLOTS_MAX, config.CABINET_SLOTS + extra_n)
@@ -289,19 +328,11 @@ async def _cabinet_extra(conn: aiosqlite.Connection, steward_id: int) -> int:
 
 
 async def has_cabinet(conn: aiosqlite.Connection, steward_id: int) -> bool:
-    cur = await conn.execute(
-        "SELECT 1 FROM hut_fittings WHERE steward_id=? AND item_key='cabinet'",
-        (steward_id,),
-    )
-    return bool(await cur.fetchone())
+    return await _has_named_fitting(conn, steward_id, "cabinet")
 
 
 async def has_fridge(conn: aiosqlite.Connection, steward_id: int) -> bool:
-    cur = await conn.execute(
-        "SELECT 1 FROM hut_fittings WHERE steward_id=? AND item_key='fridge'",
-        (steward_id,),
-    )
-    return bool(await cur.fetchone())
+    return await _has_named_fitting(conn, steward_id, "fridge")
 
 
 async def _cabinet_rows(conn: aiosqlite.Connection, steward_id: int) -> list[tuple[str, int]]:
@@ -336,13 +367,7 @@ async def _maybe_dump_cabinet(
 ) -> int:
     if _fitting_bare(old_key or "") != "cabinet":
         return 0
-    sql = "SELECT 1 FROM hut_fittings WHERE steward_id=? AND item_key='cabinet'"
-    args: list[Any] = [steward_id]
-    if except_slot:
-        sql += " AND slot!=?"
-        args.append(except_slot)
-    still = await (await conn.execute(sql, args)).fetchone()
-    if still:
+    if await _has_named_fitting(conn, steward_id, "cabinet", except_slot=except_slot):
         return 0
     return await dump_cabinet(conn, steward_id)
 
@@ -434,11 +459,7 @@ def _is_compost_bin_key(key: str) -> bool:
 
 
 async def has_compost_bin(conn: aiosqlite.Connection, steward_id: int) -> bool:
-    cur = await conn.execute(
-        "SELECT 1 FROM hut_fittings WHERE steward_id=? AND item_key='compost_bin'",
-        (steward_id,),
-    )
-    return bool(await cur.fetchone())
+    return await _has_named_fitting(conn, steward_id, "compost_bin")
 
 
 async def _compost_bin_row(conn: aiosqlite.Connection, steward_id: int) -> tuple[int, int]:
@@ -482,13 +503,9 @@ async def _maybe_dump_compost_bin(
 ) -> int:
     if _fitting_bare(old_key or "") != "compost_bin":
         return 0
-    sql = "SELECT 1 FROM hut_fittings WHERE steward_id=? AND item_key='compost_bin'"
-    args: list[Any] = [steward_id]
-    if except_slot:
-        sql += " AND slot!=?"
-        args.append(except_slot)
-    still = await (await conn.execute(sql, args)).fetchone()
-    if still:
+    if await _has_named_fitting(
+        conn, steward_id, "compost_bin", except_slot=except_slot,
+    ):
         return 0
     return await dump_compost_bin(conn, steward_id)
 
@@ -686,8 +703,8 @@ async def furniture_sell_command(s: dict[str, Any], rest: list[str]) -> str:
 def _cabinet_forbid(item: str) -> str | None:
     if item.startswith("manure_"):
         return (
-            "粪便别进潮柜，恶心。装堆肥桶：hut_ops buy compost_bin → install soft_N compost_bin，"
-            "再 hut_ops 堆肥桶 存 羊粪 3"
+            "粪便别进潮柜，恶心。装堆肥桶：hut_ops buy compost_bin → install soft_1 compost_bin（空槽也能装），"
+            "status 看见桶后再 hut_ops 堆肥桶 存 羊粪 3"
         )
     if item.startswith("dish_") or item.startswith("meal_"):
         return "熟菜放冰箱 — hut_ops 冰柜 存 菜名（先 buy fridge → install）"
@@ -917,8 +934,9 @@ async def cabinet_command(s: dict[str, Any], rest: list[str]) -> str:
 def _compost_bin_need_msg() -> str:
     return (
         "还没装堆肥桶。粪便别进潮柜。"
-        "hut_ops buy compost_bin → install soft_N compost_bin，"
-        "再 hut_ops 堆肥桶 存 羊粪 3"
+        "hut_ops buy compost_bin → install soft_1 compost_bin（空槽也能装），"
+        "再用 hut_ops status 确认槽位上有堆肥桶，然后 堆肥桶 存 羊粪 3。"
+        "桶不是柜子，只能丢粪便沤层、取堆肥。"
     )
 
 
@@ -995,18 +1013,29 @@ async def compost_bin_take(s: dict[str, Any], qty: int | None) -> str:
 
 async def compost_bin_command(s: dict[str, Any], rest: list[str]) -> str:
     verb = rest[0].lower() if rest else "status"
-    if verb in ("status", "list", "看", "搅", "stir", "compost"):
+    if verb in ("status", "list", "看"):
+        return await compost_bin_status_text(s)
+    if verb in ("搅", "stir"):
         text = await compost_bin_status_text(s)
-        if verb in ("搅", "stir"):
-            return text + "\n木棍搅了搅。层数没变：丢粪便才涨。"
-        return text
+        return text + "\n木棍搅了搅。层数没变：丢粪便才涨。"
+    if verb == "compost" and len(rest) < 2:
+        return await compost_bin_status_text(s)
 
-    putting = verb in ("put", "store", "存", "放", "入", "丢", "扔", "add")
+    putting_verbs = {
+        "put", "store", "存", "放", "入", "丢", "扔", "add",
+        "转化", "沤", "沤肥", "compost",
+    }
+    first_item = resolve_item_key(verb) or verb
+    putting = verb in putting_verbs or first_item in MANURE
     taking = verb in ("take", "取", "拿", "收", "harvest")
     if putting:
-        if len(rest) < 2:
+        if first_item in MANURE and verb not in putting_verbs:
+            tokens = rest
+        else:
+            tokens = rest[1:]
+        if not tokens:
             raise ValueError(COMPOST_BIN_USAGE)
-        item, qty = _parse_storage_item_qty(rest[1:])
+        item, qty = _parse_storage_item_qty(tokens)
         return await compost_bin_put(s, item, qty)
     if taking:
         qty = None
@@ -1271,6 +1300,8 @@ async def hut_ops(key_id: int, command: str) -> str:
         active = bonuses_for(fittings.values()).summary()
         if active:
             lines.append(active)
+        if int(s.get("invite_lantern") or 0):
+            lines.append("岸灯（引航纪念）亮着。")
         bonus = bonuses_for(fittings.values())
         if bonus.has("cabinet"):
             async with db.connect() as conn:
@@ -1310,7 +1341,7 @@ async def hut_ops(key_id: int, command: str) -> str:
             )
         if not bonus.has("compost_bin"):
             lines.append(
-                "粪便：hut_ops buy compost_bin → install soft_N compost_bin，"
+                "粪便：hut_ops buy compost_bin → install soft_1 compost_bin（空槽也能装），"
                 "再 hut_ops 堆肥桶 存 羊粪 3（别进潮柜）"
             )
         if fittings:
@@ -1340,7 +1371,7 @@ async def hut_ops(key_id: int, command: str) -> str:
                 "存菜：buy cabinet（潮柜·生鲜）或 buy fridge（冰箱·熟菜，也可 buy 冰柜）；"
                 f"装好后 hut_ops 冰柜 存|取。潮柜基础 {config.CABINET_SLOTS} 格，"
                 f"hut_ops 潮柜 扩 加格（{config.CABINET_SLOT_COST}票/格，顶 {config.CABINET_SLOTS_MAX}）。"
-                "粪便：buy compost_bin → install soft_N compost_bin → 堆肥桶 存 羊粪 3"
+                "粪便：buy compost_bin → install soft_1 compost_bin（空槽也能装）→ 堆肥桶 存 羊粪 3"
             )
             lines.append("【栗栗稀有装饰】deco_* — visit_ops lili 换，install soft_N 键名")
             for k, v in LILI_DECOR.items():
@@ -1370,7 +1401,7 @@ async def hut_ops(key_id: int, command: str) -> str:
             f"hard_1 / soft_1~2 可装 → catalog / buy / install。"
             "存菜：buy cabinet 潮柜（生鲜）或 buy fridge 冰箱（熟菜），"
             "装好后 hut_ops 冰柜 存 甘蓝 3。"
-            "粪便：buy compost_bin → install soft_N compost_bin → 堆肥桶 存"
+            "粪便：buy compost_bin → install soft_1 compost_bin（空槽也能装）→ 堆肥桶 存 羊粪 3"
         )
 
     if verb == "upgrade":
@@ -1434,7 +1465,11 @@ async def hut_ops(key_id: int, command: str) -> str:
         elif key == "fridge":
             extra = "。熟菜：install 后 hut_ops 冰柜 存 盐焗沙蟹"
         elif key == "compost_bin":
-            extra = "。粪便：install 后 hut_ops 堆肥桶 存 羊粪 3｜取 堆肥 2（别进潮柜）"
+            extra = (
+                "。空槽也能装：install soft_1 compost_bin。"
+                "装完 status 看见桶后 hut_ops 堆肥桶 存 羊粪 3｜取 堆肥 2。"
+                "桶不是柜子，粪便丢进去沤层（别进潮柜）"
+            )
         return (
             f"购入 {meta['emoji']}{meta['name']}（-{meta['cost']} 票）"
             f"→ install {kind}_N {key}{extra}"
@@ -1555,16 +1590,8 @@ async def hut_ops(key_id: int, command: str) -> str:
                 compost_dumped = await _maybe_dump_compost_bin(
                     conn, s["id"], old[slot], except_slot=slot,
                 )
-                await db.add_item(conn, s["id"], f"fit_{old[slot]}", 1, over_cap=True)
-                await conn.execute(
-                    """
-                    INSERT INTO hut_fittings (steward_id, slot, item_key, installed_at)
-                    VALUES (?,?,?,?)
-                    ON CONFLICT(steward_id, slot) DO UPDATE SET item_key=excluded.item_key,
-                    installed_at=excluded.installed_at
-                    """,
-                    (s["id"], slot, key, db.now()),
-                )
+                await _return_displaced_fitting(conn, s["id"], old[slot])
+            await _upsert_fitting(conn, s["id"], slot, key)
             from . import bond as bond_mod
             await bond_mod.grant(conn, s["id"], bond_mod.HUT_INSTALL, "life")
             await conn.commit()

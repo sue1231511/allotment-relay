@@ -174,6 +174,69 @@ def fmt_clear(seconds: int) -> str:
     return farming.format_grow_eta(seconds)
 
 
+async def expansion_snapshot(
+    conn: aiosqlite.Connection,
+    steward: dict[str, Any],
+    *,
+    orchard: bool = False,
+    greenhouse: bool = False,
+) -> dict[str, Any]:
+    """上手页扩地条：当前块数 + 下一块价钱 / 开垦中。"""
+    count = count_of(steward, orchard, greenhouse=greenhouse)
+    if greenhouse:
+        kind = "greenhouse"
+        quote_cmd = "买棚"
+        confirm_cmd = "买棚 确认"
+        next_word = "下一座"
+    elif orchard:
+        kind = "orchard"
+        quote_cmd = "买园"
+        confirm_cmd = "买园 确认"
+        next_word = "下一树位"
+    else:
+        kind = "plots"
+        quote_cmd = "买地"
+        confirm_cmd = "买地 确认"
+        next_word = "下一块"
+    pending = await clearing_slot(
+        conn, steward["id"], orchard=orchard, greenhouse=greenhouse
+    )
+    if pending:
+        return {
+            "kind": kind,
+            "count": count,
+            "clearing": True,
+            "clearing_label": slot_label(pending),
+            "clearing_eta": farming.format_grow_eta(clear_left(pending)),
+            "next_word": next_word,
+            "quote_cmd": quote_cmd,
+            "confirm_cmd": confirm_cmd,
+            "offer": None,
+        }
+    offer = next_offer(count, orchard=orchard, greenhouse=greenhouse)
+    mark_orch = 0 if greenhouse else (1 if orchard else 0)
+    token = slot_label(offer["slot"], mark_orch, 1 if greenhouse else 0)
+    # 份地 token 给上手页用纯数字（和 sow 一致）
+    if not orchard and not greenhouse:
+        token = str(offer["slot"])
+    return {
+        "kind": kind,
+        "count": count,
+        "clearing": False,
+        "clearing_label": None,
+        "clearing_eta": None,
+        "next_word": next_word,
+        "quote_cmd": quote_cmd,
+        "confirm_cmd": confirm_cmd,
+        "offer": {
+            "slot": offer["slot"],
+            "token": token,
+            "cost": offer["cost"],
+            "clear_eta": fmt_clear(offer["clear_seconds"]),
+        },
+    }
+
+
 def clear_left(plot: dict[str, Any], now: int | None = None) -> int:
     ready_at = int(plot.get("ready_at") or 0)
     if ready_at <= 0:
@@ -344,6 +407,19 @@ async def status_text(
         lines.append("种树：plot_ops 果园 sow 1 芒果 · 或 sow 园1 橘子。份地 sow 只收蔬菜。")
     else:
         lines.append("种菜：plot_ops sow 1 甘蓝。果树走果园或温室。过季走温室。")
+    from . import upkeep as upkeep_mod
+    if greenhouse:
+        lines.append(
+            f"岸维：每座温室每天 {upkeep_mod.GREENHOUSE} 票 → visit_ops 潮生会 维"
+        )
+    elif orchard:
+        lines.append(
+            f"岸维：起步 {start} 树位免，超出每天 {upkeep_mod.ORCHARD_EXTRA} 票/树位 → visit_ops 潮生会 维"
+        )
+    else:
+        lines.append(
+            f"岸维：起步 {start} 块免，超出每天 {upkeep_mod.PLOT_EXTRA} 票/块 → visit_ops 潮生会 维"
+        )
     return "\n".join(lines)
 
 

@@ -265,6 +265,24 @@ async def _check_spring_beyond_mountain(
     )
 
 
+async def _check_navigator(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
+    return await _exists(
+        conn,
+        """SELECT 1 FROM invite_rewards r
+           JOIN stewards e ON e.id=r.invitee_id
+           WHERE e.invited_by=? AND r.tier='qualified' LIMIT 1""",
+        s["id"],
+    )
+
+
+async def _check_same_tide(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
+    return await _exists(
+        conn,
+        "SELECT 1 FROM invite_rewards WHERE invitee_id=? AND tier='qualified' LIMIT 1",
+        s["id"],
+    )
+
+
 ACHIEVEMENTS: dict[str, dict[str, Any]] = {
     "sower": {
         "name": "播手",
@@ -446,6 +464,18 @@ ACHIEVEMENTS: dict[str, dict[str, Any]] = {
         "aliases": ("满柜", "六套齐"),
         "check": _check_full_cabinet,
     },
+    "navigator": {
+        "name": "引航人",
+        "hint": "引来一位真正上岛的岛民",
+        "aliases": ("领路人", "引航"),
+        "check": _check_navigator,
+    },
+    "same_tide": {
+        "name": "同潮客",
+        "hint": "由岛民引来并在岛上结缘",
+        "aliases": ("同潮", "被引来的"),
+        "check": _check_same_tide,
+    },
 }
 
 # 里程碑才发，不对每一级。新客起步约 Lv3，从 Lv4 开始。
@@ -557,6 +587,19 @@ async def _unlock(
         "title", f"{steward['name']} 解锁称呼「{name}」", steward["id"], conn=conn
     )
     _push_note(f"称呼解锁：{name}（steward_ops 称呼 {name} 佩戴）")
+
+
+async def grant_title(
+    conn: aiosqlite.Connection, steward: dict[str, Any], key: str
+) -> bool:
+    """直接授予称呼（引航等）。已有则跳过。"""
+    if key not in ACHIEVEMENTS:
+        return False
+    have = await _unlocked_keys(conn, steward["id"])
+    if key in have:
+        return False
+    await _unlock(conn, steward, key)
+    return True
 
 
 async def scan_achievements(conn: aiosqlite.Connection, steward: dict[str, Any]) -> int:

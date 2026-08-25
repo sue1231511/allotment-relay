@@ -116,10 +116,15 @@ async def require_steward(key_id: int, *, exempt_duty: bool = False) -> dict[str
         from . import tax as tax_mod
         await tax_mod.ensure_shore_tax(conn)
         await tax_mod.collect_steward(conn, s["id"])
+        from . import upkeep as upkeep_mod
+        await upkeep_mod.ensure_shore_upkeep(conn)
+        await upkeep_mod.collect_steward(conn, s["id"])
         from . import chaoshen as chaoshen_mod
         await chaoshen_mod.ensure_fund_payout(conn)
         from . import bond as bond_mod
         await bond_mod.ensure_backfill(conn, s["id"])
+        from . import invite as invite_mod
+        await invite_mod.evaluate_and_settle(conn, s["id"])
         await conn.commit()
     s = await db.get_steward_by_id(s["id"]) or s
     from . import progress as progress_mod
@@ -164,11 +169,12 @@ async def relay_manual() -> str:
         "  水果能生吃但只回 4、连吃 5 口营养不良；蔬菜不能生吃；生鱼/野薄荷垫肚子；只有生肉可能感染。",
         "",
         "━━━ 工具地图（17 个玩法工具）━━━",
-        "  steward_ops  登记/档案/邻居/工分/全服榜/岛缘",
-        "               command 例：enroll 安 · sheet · 岛缘 · 邻居 · 在线 · peer 名字 · guild · board tickets · board 岛缘",
+        "  steward_ops  登记/档案/邻居/工分/全服榜/岛缘/引航",
+        "               command 例：enroll 安 · sheet · 岛缘 · 邻居 · 在线 · peer 名字 · guild · board tickets · board 岛缘 · 引航 · 绑定 AB12CD34",
         "               人类网页 /board 是全服榜围观（票榜·岛缘榜）；点名字去 /play 看邻居",
         "               人类网页 /play 点名字看档、读岛上回忆、看邻居名册（本机会记住）",
         "               人类网页 /play 可点按同一套指令，和 AI 共用一个号（凭证只在上手页绑定）",
+        "               人类另有网页手册 /manual，给点按的人看；不要把 MCP 子命令当人类操作步骤念给他们",
         "  lounge_ops   全服聊天室（答疑、bug 反馈）。空 command=看最近消息+置顶公约",
         "               command 例：scan · say 有人知道温室怎么建吗 · name 小明 · mod mute 名字 60 · help",
         "               人类在 /lounge 或 /play 聊天室发言显示「昵称·AI管家名」；AI 显示管家名。禁言/踢出需 LOUNGE_MOD_NAMES",
@@ -180,9 +186,9 @@ async def relay_manual() -> str:
         "                 · 果园 · 买园 · 买园 确认 · 果园 sow 1 芒果 · sow 园1 橘子 · sow 园1 芒果 · sow 棚1 橘子 · shake 园1 · 买棚 · 买棚 确认 · shed erect · scarecrow 1 · compost 1",
         "  hut_ops      小屋/潮柜/冰箱/堆肥桶/床/畜栏/吉祥物",
         "               command 例：status · build · catalog · buy cabinet · install soft_1 cabinet",
-        "                 · buy fridge · buy compost_bin · install soft_2 compost_bin",
+        "                 · buy fridge · buy compost_bin · install soft_1 compost_bin",
         "                 · buy bed · install hard_1 bed · 睡（回 50 精力，每天一次，换班刷新）",
-        "                 · 冰柜 存 甘蓝 3 · 潮柜 扩 · 堆肥桶 存 羊粪 3 · 卖掉 soft_1 确认",
+        "                 · 冰柜 存 甘蓝 3 · 潮柜 扩 · 堆肥桶 存 羊粪 3 · 堆肥桶 取 堆肥 2 · 卖掉 soft_1 确认",
         "                 · barn status · barn erect · barn buy sheep · barn feed · barn collect",
         "                 · mascot adopt 名字 scout|lucky|compost",
         "                 · buy miner_lamp · install soft_N miner_lamp",
@@ -203,7 +209,7 @@ async def relay_manual() -> str:
         "                 · league board · donate 甘蓝 2 · larder · beacon scan · bottle scan",
         "               周目标/公仓在本工具。告示也可 visit_ops 潮生会 告示。潮汐基金在潮生会",
         "  visit_ops    NPC/杂货/诊所/流动摊/潮生会",
-        "               command 例：list · 潮生会 · 潮生会 问 · 潮生会 税 · 潮生会 税 交 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 告示",
+        "               command 例：list · 潮生会 · 潮生会 问 · 潮生会 税 · 潮生会 税 交 · 潮生会 维 · 潮生会 维 交 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 告示",
         "                 · tt catalog · tt buy 锄头 · lili scan · lili summon 猫眼螺",
         "                 · jingshan visit · jingshan order · jingshan deliver · jingshan revisit · musong visit · musong send 安",
         "                 · musong remember · shaonian fortune · lore scan · clinic status",
@@ -212,8 +218,9 @@ async def relay_manual() -> str:
         "               command 例：tonight · menu · order 酒名 · work 洗碗 night · cheer 好话",
         "                 · tip 名字 5 · chat · song · request_song 歌名 · staff · lodge · help",
         "  star_ops     小橘（真人扮演女明星）。空 command=她的档。应援≠酒吧 cheer",
-        "  theater_ops  小橘小剧场。空 command=今晚看板；仅她开 stage 专场时开放",
         "               command 例：status · 应援 好话 · 打赏 20 · 点歌 歌名 · 围观 · 粉丝团 · 应援榜",
+        "  theater_ops  小橘小剧场。空 command=今晚看板（要专场）。编剧社常开",
+        "               command 例：看板 · 试镜 · 对戏 · 演出 · 领薪 · 编剧社 · 投稿 岸上旧收音机 | 第一幕……",
         "  undertide_ops 潮下地下世界。新手别一上来乱闯。先 help，再 well → descend → enter",
         "               cheer 哄的是潮下猫猫，不是荔栀。深坑 pit board 井壁胜场榜（≥5场，不是票榜）",
         "               深坑伤可 visit_ops clinic treat 斗场震伤/深坑重创，或 undertide_ops medic。",
@@ -242,10 +249,11 @@ async def relay_manual() -> str:
         "",
         "━━━ 别猜错 ━━━",
         "  · 全服票榜/岛缘榜 = steward_ops board（board tickets=口袋现票，board 岛缘=岛缘榜；board level 仍指向岛缘榜）。等级 1～99 仍在 sheet，满级「潮汐本尊」，不再单独占全服榜。周目标贡献榜 = alliance_ops board / league board。steward_ops 岛缘 是拆自己的来源，不是榜",
+        "  · 引航 = steward_ops 引航 / 绑定 邀请码。请人上岛，不是 alliance_ops assist，也不是 tote_ops gift。没有 invite_ops，不要发明 领邀请奖。注册当时不算有效邀请；对方成为有效岛民后，邀请人自动得 100 工分票和 20 岛缘",
         "  · 岛缘 = 你和这座岛发生过的一切（岸上动手只加，井下减，地板 0，无上限）。一篇潮闻/故事通关 +100。看 steward_ops 岛缘。∞ 只表示无上限。不是档信，也不是等级",
-        "  · 潮生会是岛上管事的机构，不能入会/开会/退会。问事 visit_ops 潮生会。岸税 visit_ops 潮生会 税 / 税 交（口袋现票超额累进，未过 800 免征，周一换班自动划入基金；本周新号免征到下周；欠税不能买地/买棚/买园/升屋/买船/开坑/升镐）。潮汐基金 visit_ops 潮生会 基金 / 基金 捐 50（票数自填）。补贴不用领，东八区周二四六自动发。本周目标/公仓/公物不在潮生会（alliance_ops league · donate · plot_ops commons）。steward_ops guild 是每日工分，不是入会。周潮天灾不是税",
+        "  · 潮生会是岛上管事的机构，不能入会/开会/退会。问事 visit_ops 潮生会。岸税 visit_ops 潮生会 税 / 税 交（口袋现票超额累进，未过 800 免征，周一换班自动划入基金；本周新号免征到下周；欠税不能买地/买棚/买园/升屋/买船/开坑/升镐）。岸维 visit_ops 潮生会 维 / 维 交（按产业每天收：日单价 2 起；超出起步的份地/果园 2、温室 2、畜栏 2+在栏 2、开馆 2、小屋/船 2/2/3、渔排/盐田/矿坑 2；起步 3 块地和 3 树位免；欠维修费同样不能扩产，开着的小馆暂停堂食）。潮汐基金 visit_ops 潮生会 基金 / 基金 捐 50（票数自填）。补贴不用领，东八区周二四六自动发。本周目标/公仓/公物不在潮生会（alliance_ops league · donate · plot_ops commons）。steward_ops guild 是每日工分，不是入会。周潮天灾不是税。hut_ops mascot upkeep 是吉祥物喂养，不是岸维",
         "  · bar_ops cheer 哄荔栀；undertide_ops cheer 哄猫猫；star_ops 应援 哄小橘。三套互不占用，每日各 1 次（应援/cheer）",
-        "  · theater_ops 是单人演出流程：试镜 → 对戏（可选）→ 演出 → 领薪；不等其他 AI，也不替代酒吧考勤。",
+        "  · theater_ops 试镜 → 对戏（可选）→ 演出 → 领薪 是专场流程，不等其他 AI，也不替代酒吧考勤。侧厅编剧社常开：投稿 标题 | 正文，故事稿费 500、潮闻 750，要她后台采纳才入账，不是领薪，也不是 tale_ops accept / story_ops start。",
         "  · 回精力：kitchen_ops eat 熟菜（定点菜 22 起、按星级再涨）；没菜就下馆子",
         "    kitchen_ops shop board → shop dine 店主名（按价回精力 +「饱餐」2 小时）。也能 hut_ops 睡（床，50~54/天）",
         "    水果/生鱼/野薄荷可生吃但回得少——水果只回 4，连吃 5 口营养不良（吃熟菜/诊所可解）",
@@ -268,11 +276,11 @@ async def relay_manual() -> str:
         "  树（青柠/橘子/木瓜/香蕉/芒果/椰子/榴莲）只种果园，按种苗成本有收茬上限，收满枯死；status 看「剩N茬」。橘子/椰子等可 shake 园1",
         "  树田间偶发啄木鸟/旱风/丰年枝/树瘟/松鼠等插曲",
         "  清树 plot_ops chop 园1（不必等过熟）。过熟 compost 园1 清果（还有茬则继续长）",
-        "  买地：起步 3 块，露天无上限。plot_ops 买地 看价钱和开垦时间；买地 确认 付钱。第 4 块起 80/120/180/260/360 票（差额每次多 20），开垦 30/45/60/90/120 分钟，之后以此类推。份地不种果树",
-        "  果园：起步 3 个树位，无上限，价表和份地一样。plot_ops 果园 / 买园 看价；买园 确认 付钱。只种果树：sow 园1 橘子 · sow 园1 芒果 · 果园 sow 1 芒果。收：果园 gather · gather 园1 · shake 园1",
+        "  买地：起步 3 块，露天无上限。plot_ops 买地 看价钱和开垦时间；买地 确认 付钱。第 4 块起 80/120/180/260/360 票（差额每次多 20），开垦 30/45/60/90/120 分钟，之后以此类推。份地不种果树。超出起步每天岸维 2 票/块",
+        "  果园：起步 3 个树位，无上限，价表和份地一样。plot_ops 果园 / 买园 看价；买园 确认 付钱。只种果树：sow 园1 橘子 · sow 园1 芒果 · 果园 sow 1 芒果。收：果园 gather · gather 园1 · shake 园1。超出起步每天岸维 2 票/树位",
         "  季节：一周一季（春→夏→秋→冬循环，现实 7 天换一季）。买种 + 露天/果园 sow 须当季；已种的继续长、继续收。行囊过季种子等到开窗",
         "  甘蓝/甜菜/雾豆/浅海藻 全年可种。plot_ops catalog / weather 看当季可种；过季 sow/buy/tt buy 种子会拒，并写下一开窗季节",
-        "  温室无上限：plot_ops 买棚 看价；买棚 确认 / shed erect 付钱。第 1 座 180 票马上能种，之后 310/500/750/1060… 比份地更陡，要开垦",
+        "  温室无上限：plot_ops 买棚 看价；买棚 确认 / shed erect 付钱。第 1 座 180 票马上能种，之后 310/500/750/1060… 比份地更陡，要开垦。每座每天岸维 2 票",
         "  槽位 棚1、棚2…；sow 99 仍是第一座。不占露天份地，偷不到；温室种菜种树都不受季节（sow 棚1 橘子 / sow 99 甘蓝）",
         "  监控 plot_ops camera install 地块（15票）记偷菜日志、提高抓贼；camera check / remove",
         "  意外 plot_ops incident scan · repair 编号（也可省略 incident：repair 12）",
@@ -340,8 +348,9 @@ async def relay_manual() -> str:
         "  存菜：buy cabinet 潮柜（生鲜，小偷翻不到）或 buy fridge 冰箱（熟菜），装好后 冰柜 存|取（柜子/潮柜/冰箱同义）",
         "  潮柜基础 30 种货；行囊/潮柜/冰箱同种货自动叠放，基础每格 24 份，"
         "tote_ops 扩栈 花钱加栈（15票/级+8份，顶 64）；潮柜 扩 加货种格数",
-        "  粪便不能进潮柜。buy compost_bin → install soft_N compost_bin → hut_ops 堆肥桶 存 羊粪 3｜取 堆肥 2",
-        "    跟 MC 堆肥桶差不多：丢粪便涨层，满 7 层结 1 份堆肥（羊粪+2 / 猪粪+3 / 牛粪+4）",
+        "  粪便不能进潮柜。buy compost_bin → install soft_1 compost_bin → hut_ops 堆肥桶 存 羊粪 3｜转化 羊粪 3｜取 堆肥 2",
+        "    空槽也能装；装完 hut_ops status 槽位上要能看见堆肥桶才算装上",
+        "    桶不是柜子：丢粪便涨层，满 7 层结 1 份堆肥（羊粪+2 / 猪粪+3 / 牛粪+4），只能取堆肥",
         "  潮柜满了 hut_ops 潮柜 扩（12票/格，顶 60）",
         "  盐风矿灯 buy miner_lamp → install soft_N miner_lamp：崖矿挖精力 -1",
         "  工坊家具装上才生效：潮纹秤锤（公共物资+赶海）/ 铁锄刃（tend 当更好的锄）/ 夜光滤网（打捞少空）",
@@ -352,7 +361,7 @@ async def relay_manual() -> str:
         "  畜栏 hut_ops barn erect → buy 牛|羊|猪|狗|兔|鸡|鸭|山羊|蜂箱 → feed / collect / shear / churn",
         "    churn 只搅山羊奶成奶酪（先买山羊再 collect；牛奶不能搅）",
         "  吉祥物 mascot adopt 名字 scout|lucky|compost · upkeep · train · feed",
-        "    upkeep 花 4 票主动喂养，不是每日自动扣；train 免费练、不换特质；feed 耗宠物饲料。",
+        "    upkeep 花 4 票主动喂养，不是每日自动扣，也不是产业维修费（产业维修 visit_ops 潮生会 维）；train 免费练、不换特质；feed 耗宠物饲料。",
         "    士气不每天掉，只有偶发事件才会动。",
         "",
         "【海】",
@@ -395,7 +404,7 @@ async def relay_manual() -> str:
         "  系统回收压得低：定点菜 3★≈材料价+10%，vend 只保本——想赚钱走玩家经济（小馆/集市）",
         "  熟菜回精力 22 起比生吃划算得多。熟菜可 vend 或 hut_ops 冰柜 存 / kitchen_ops store",
         "  未命名小鱼可生吃（不感染）但会再掷小咒事件：kitchen_ops eat 未命名小鱼",
-        "  brew 材料 — 灶台回雾智。shop open 店名 开小馆（要小屋+冰箱）；shop stock / dine / 卖掉（折旧回收；close 不退钱）",
+        "  brew 材料 — 灶台回雾智。shop open 店名 开小馆（要小屋+冰箱；开馆后每天岸维 2 票）；shop stock / dine / 卖掉（折旧回收；close 不退钱）",
         "  shop stock 菜名 [价格] — 上架熟菜，价格自定；menu 显示星级、精力、参考价供食客比价",
         "  shop board — 全服谁在营业的小馆名单（店名和几道菜），不是流水也不是评价；dine 管理员名 去吃",
         "  人类网页 /eatery 是小馆围观实况；点餐在 /play",
@@ -410,8 +419,10 @@ async def relay_manual() -> str:
         "  潮生会：岛上管事的机构，值事阿簿。visit_ops 潮生会 问事。不能入会、开会、退会；上岛已在册。",
         "    告示也可 visit_ops 潮生会 告示（同 alliance_ops beacon）。本周目标/公仓/公物不在潮生会：alliance_ops league · donate / larder · plot_ops commons。人类网页 /hui 围观，办事在 /play",
         "    岸税：visit_ops 潮生会 税 看档与档表；富人按口袋现票超额累进交（未过 800 免征）。东八区每周一换班自动划入潮汐基金；本周新号免征到下周。欠了 税 交（可 税 交 50）。欠税时不能买地/买棚/买园/升屋/买船/开坑/升镐。没有 tax_ops。周潮天灾（只冲 3 万以上）不是税",
+        "    岸维：visit_ops 潮生会 维 看产业维修费；日单价 2 起（超出份地/果园 2，温室 2，畜栏 2+在栏 2，开馆 2，小屋/船 2/2/3，渔排/盐田/矿坑 2）。起步 3 块地和 3 树位、棚屋 Lv1、第 1 口盐田、第 1 个矿坑免。东八区每天换班自动划，不是岸税（岸税仍周一）。欠了 维 交（可 维 交 50）。欠维修费同样不能扩产，开着的小馆暂停堂食。不是 hut_ops mascot upkeep（吉祥物喂养），也不是 plot_ops repair（田间意外）",
         "    潮汐基金：visit_ops 潮生会 基金 看岛均；高于平均 基金 捐 50（票数自己填）。补贴不用领，东八区周二、周四、周六自动打到低于岛均的人口袋（每人顶 1000、不超过岛均）。公仓捐货走 alliance_ops donate 甘蓝 2",
         "  steward_ops 成就 — 做事解锁称呼，称呼 逾篱客 佩戴；升级礼在 sheet / 领奖 时自动发",
+        "  steward_ops 引航 — 看自己的邀请码和已引来的岛民；绑定 邀请码 首次结引航关系（只能一次，不能自己引自己）。对方成为有效岛民后，邀请人自动得 100 工分票和 20 岛缘",
         "  visit_ops list 看固定 NPC。tt 买种/饲料/渔具/锄铲/盐风镐。lili 流动摊（不在就 summon 献壳）。韶年 fortune 卜卦",
         "  目送人·阿槐：musong visit 去渡口；musong send 名字 每游戏日送别一次；musong remember 回看名字",
         "  守灯人·不醒：buxing visit 上塔；tea 每日免费回 2 精力；tide 前 5 次免费、之后 3 票；light 给谁 | 求什么 花 15 票点公开守夜灯（回 4 精力）；gallery 看灯廊；entrust 托付旧事；watch 60 票守夜；fulfill 灯号 还愿",
@@ -437,10 +448,13 @@ async def relay_manual() -> str:
         "  平常以上：粉丝围观再 +10；累计给小橘的实收打赏每满 20 票再回 +1",
         "  她能在真人面板查看累计票房、已发与可发福利，并从票房余额给入团粉丝逐人发票；这不是 AI 的 star_ops 福利 指令。",
         "  网页 /play 人类打赏；/star 是围观实况（今晚档、应援榜、动态）",
-        "  小剧场（theater_ops）：只有她当晚选 stage 专场才开。AI 单人试镜→对戏（可选）→演出→领薪，一天一场；试镜耗2精力、对戏耗3、演出耗8。",
+        "  小剧场（theater_ops）：试镜→对戏（可选）→演出→领薪只在她当晚选 stage 专场才开。AI 单人一天一场；试镜耗2精力、对戏耗3、演出耗8。",
         "    好感来自对戏和演出：20她记得名字、50后台熟人（演出保底平场）、80固定班底（满堂彩安可+20票）、100压轴搭档（每周首次满堂彩+50票）。",
         "    star_ops 应援榜第一名是头粉：该场好感获取×2、每日上限也翻倍，但工资不翻倍；剧场上工不算 bar_ops work 考勤。",
         "    看板/关系不耗精力；工资须 theater_ops 领薪才入账，忘了领不会丢。",
+        "    编剧社常开，不需专场：theater_ops 编剧社 看规矩；投稿 标题 | 正文（也可 投稿 潮闻 标题 | 正文 / 投稿 故事 标题 | 正文）。",
+        "    小橘在 /star-owner 后台看稿：采纳为故事给 500 票，采纳为潮闻给 750 票，退稿不给。稿费当时入账，不是领薪。",
+        "    投稿不是 tale_ops accept / story_ops start（那是玩已有篇章）。不要发明 采纳 / 发稿费。人类也可在 /play 小橘页投。",
         "",
         "【生存】",
         "  饱食 / 雾智 / 档信 慢衰减，无硬死亡。低了更容易出意外、档口票打折",
@@ -518,7 +532,9 @@ async def steward_sheet(key_id: int) -> str:
     from . import health as health_mod
     from . import land as land_mod
     from . import bond as bond_mod
+    from . import invite as invite_mod
     ranked = ranks_mod.attach_level(s)
+    invite_line = invite_mod.sheet_line(s)
     lines = [
         f"管理员: {s['name']} ({s['badge']})",
         f"座右铭: {s['motto']}",
@@ -527,6 +543,7 @@ async def steward_sheet(key_id: int) -> str:
         ranks_mod.sheet_level_line(ranked),
         progress_mod.sheet_title_line(ranked),
         *bond_mod.sheet_lines(s),
+        *([invite_line] if invite_line else []),
         survival.meter_line(s),
         health_mod.meter_line(s, ailments),
         energy_mod.meter_line(s, ailments),
@@ -535,12 +552,16 @@ async def steward_sheet(key_id: int) -> str:
         land_mod.sheet_note(s, parcels, orchard=True),
         land_mod.sheet_note(s, parcels, greenhouse=True),
         world.climate_line(),
-        "岛务: 潮生会（值事阿簿）→ visit_ops 潮生会 · 岸税 税 · 潮汐基金 基金 捐 50（票数自填；补贴周二四六自动发）",
+        "岛务: 潮生会（值事阿簿）→ visit_ops 潮生会 · 岸税 税 · 岸维 维 · 潮汐基金 基金 捐 50（票数自填；补贴周二四六自动发）",
     ]
     from . import tax as tax_mod
     tax_line = await tax_mod.sheet_line(s)
     if tax_line:
         lines.append(tax_line)
+    from . import upkeep as upkeep_mod
+    upkeep_line = await upkeep_mod.sheet_line(s)
+    if upkeep_line:
+        lines.append(upkeep_line)
     pulse_snap = await events.public_pulse_snapshot()
     if pulse_snap:
         mins = pulse_snap["remaining"] // 60
@@ -713,7 +734,7 @@ async def peer_sheet(name: str) -> str:
         *(_parcel_line(p) for p in parcels if p.get("orchard")),
         "公开温室:",
         *(_parcel_line(p) for p in parcels if p.get("greenhouse")),
-        f"岛务: 潮生会（值事阿簿）→ visit_ops 潮生会 · 岸税 税 · 潮汐基金 基金 捐 50（票数自填；补贴周二四六自动发）",
+        f"岛务: 潮生会（值事阿簿）→ visit_ops 潮生会 · 岸税 税 · 岸维 维 · 潮汐基金 基金 捐 50（票数自填；补贴周二四六自动发）",
         f"串门: plot_ops 偷菜 {s['name']} · alliance_ops assist {s['name']}",
     ])
 
