@@ -124,7 +124,7 @@ PLACES: list[dict[str, Any]] = [
         "actions": [
             {"label": "问事", "note": "考勤、岸税、岸维与潮汐基金", "tool": "visit_ops", "command": "潮生会"},
             {"label": "岸税", "note": "档表与欠税。周一自动划", "tool": "visit_ops", "command": "潮生会 税"},
-            {"label": "岸维", "note": "产业维修费。每天划，日单价 2 起，起步免", "tool": "visit_ops", "command": "潮生会 维"},
+            {"label": "岸维", "note": "产业维修费。每天划，单价至少 10 票，起步免", "tool": "visit_ops", "command": "潮生会 维"},
             {"label": "潮汐基金", "note": "岛均与发放日。补贴不用领", "tool": "visit_ops", "command": "潮生会 基金"},
             {"label": "告示", "note": "墙上贴了什么", "tool": "visit_ops", "command": "潮生会 告示"},
         ],
@@ -239,6 +239,42 @@ def climate_bits() -> dict[str, str]:
     }
 
 
+def bar_work_slot() -> tuple[str, str]:
+    """上手页洗碗上工：暮白班、夜夜班；歇业时仍发 day（逾期可补白班）。"""
+    phase = world.current_day_phase()
+    if phase == "night":
+        return "night", "夜班"
+    if phase == "dusk":
+        return "day", "白班"
+    return "day", "暮/夜开门；白班仅暮可上"
+
+
+def bar_place_actions() -> list[dict[str, Any]]:
+    _shift, shift_note = bar_work_slot()
+    actions = next(p for p in PLACES if p["id"] == "bar")["actions"]
+    out: list[dict[str, Any]] = []
+    for act in actions:
+        row = dict(act)
+        if row.get("label") == "洗碗上工":
+            row = {
+                **row,
+                "note": f"每两天须来一次 · {shift_note}",
+                "command": "work 洗碗",
+            }
+        out.append(row)
+    return out
+
+
+def places_for_client() -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for place in PLACES:
+        row = dict(place)
+        if row.get("id") == "bar":
+            row["actions"] = bar_place_actions()
+        out.append(row)
+    return out
+
+
 def seed_options(stock: list[dict[str, Any]]) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     for it in stock:
@@ -289,7 +325,7 @@ async def snapshot(api_key: str) -> dict[str, Any]:
         "dashboard": dash,
         "seeds": seeds,
         "neighbors": neighbors,
-        "places": PLACES,
+        "places": places_for_client(),
         "climate": climate_bits(),
     }
 

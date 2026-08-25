@@ -26,6 +26,7 @@ async def _boot(tmp: Path):
 
 def test_play_api() -> None:
     asyncio.run(_test_play_api())
+    test_bar_place_actions_match_phase()
     test_play_page_lists_all_plot_kinds()
     test_bar_work_auto_period()
     asyncio.run(_test_play_bar_work_follows_phase())
@@ -89,10 +90,11 @@ async def _test_play_api() -> None:
     bar = next(p for p in sown["places"] if p["id"] == "bar")
     assert "点单" in bar["blurb"], bar
     assert any(a["command"] == "work 洗碗" for a in bar["actions"]), bar
-    assert not any(a["command"] == "work 洗碗 night" for a in bar["actions"]), bar
+    assert not any("night" in a["command"] for a in bar["actions"] if a["label"] == "洗碗上工"), bar
     climate = sown["climate"]
     assert climate["phase_code"] in ("day", "dusk", "night"), climate
     assert climate["tide_code"] in ("ebb", "slack", "flood"), climate
+    assert climate["weather_code"], climate
     well = next(p for p in sown["places"] if p["id"] == "undertide")
     assert "岛缘" in well["blurb"], well
     assert sown["dashboard"]["island_bond"] is not None, sown["dashboard"]
@@ -112,6 +114,27 @@ async def _test_play_api() -> None:
         raise AssertionError("unknown tool should fail")
     except ValueError as exc:
         assert "未知工具" in str(exc), exc
+
+
+def test_bar_place_actions_match_phase() -> None:
+    from server import play as play_mod, world
+
+    shift, note = play_mod.bar_work_slot()
+    phase = world.current_day_phase()
+    if phase == "night":
+        assert shift == "night"
+        assert note == "夜班"
+    elif phase == "dusk":
+        assert shift == "day"
+        assert note == "白班"
+    else:
+        assert shift == "day"
+        assert "暮" in note
+
+    actions = play_mod.bar_place_actions()
+    dish = next(a for a in actions if a["label"] == "洗碗上工")
+    assert dish["command"] == "work 洗碗", dish
+    assert note in dish["note"], dish
 
 
 def test_play_page_lists_all_plot_kinds() -> None:
@@ -134,9 +157,85 @@ def test_play_page_lists_all_plot_kinds() -> None:
     assert "b.week1" in js
     assert "actData" in js
     assert "attrEsc" in js
+    assert "function attr(" in js
     assert "decorateActions" in js
     assert "parseAct" in js
+    assert "parseActPayload" in js
+    assert "setWorkStatus" in js
+    assert "bar_place_actions" in (ROOT / "server" / "play.py").read_text()
     assert "data-act='${JSON.stringify" not in js
+    assert 'data-act="${JSON.stringify' not in js
+    assert 'data-label="${esc(' not in js
+    assert 'data-note="${esc(' not in js
+    assert 'data-place="${esc(' not in js
+    assert 'data-neighbor="${esc(' not in js
+    assert 'data-item="${esc(' not in js
+    assert 'data-sow="${esc(' not in js
+    assert "attr('data-label'" in js
+    assert "attr('data-note'" in js
+    assert "attr('data-place'" in js
+    assert "attr('data-neighbor'" in js
+    assert "play.js?v=act4" in html
+    test_act_payload_survives_html_attribute()
+
+
+def _first_double_quoted_attr(html: str, name: str) -> str | None:
+    """浏览器解析 data-act=\"...\" 时，遇到未转义的 \" 会截断。"""
+    needle = f'{name}="'
+    start = html.find(needle)
+    if start < 0:
+        return None
+    start += len(needle)
+    end = html.find('"', start)
+    if end < 0:
+        return html[start:]
+    return html[start:end]
+
+
+def test_act_payload_survives_html_attribute() -> None:
+    import html as html_mod
+    import json
+    from html.parser import HTMLParser
+
+    class AttrCatcher(HTMLParser):
+        def __init__(self) -> None:
+            super().__init__()
+            self.value = None
+
+        def handle_starttag(self, tag, attrs):
+            if tag == "button":
+                self.value = dict(attrs).get("data-act")
+
+    payload = {"tool": "bar_ops", "command": "work 洗碗"}
+    raw = json.dumps(payload, ensure_ascii=False)
+
+    broken = f'<button type="button" data-act="{raw}">洗碗上工</button>'
+    truncated = _first_double_quoted_attr(broken, "data-act")
+    assert truncated == "{", truncated
+
+    escaped = (
+        raw.replace("&", "&amp;")
+        .replace('"', "&quot;")
+        .replace("<", "&lt;")
+    )
+    ok_html = f'<button type="button" data-act="{escaped}">洗碗上工</button>'
+    parser = AttrCatcher()
+    parser.feed(ok_html)
+    assert parser.value == raw, parser.value
+    assert json.loads(parser.value) == payload
+    assert json.loads(html_mod.unescape(escaped)) == payload
+
+    from server import play as play_mod
+
+    for place in play_mod.PLACES:
+        for act in place["actions"]:
+            blob = json.dumps({"tool": act["tool"], "command": act["command"]}, ensure_ascii=False)
+            esc = blob.replace("&", "&amp;").replace('"', "&quot;").replace("<", "&lt;")
+            markup = f'<button data-act="{esc}"></button>'
+            catcher = AttrCatcher()
+            catcher.feed(markup)
+            assert json.loads(catcher.value) == {"tool": act["tool"], "command": act["command"]}, act
+            assert not str(act["command"]).endswith((" day", " night")), act
 
 
 def test_bar_work_auto_period() -> None:
@@ -194,7 +293,9 @@ async def _test_play_bar_work_follows_phase() -> None:
 
 if __name__ == "__main__":
     asyncio.run(_test_play_api())
+    test_bar_place_actions_match_phase()
     test_play_page_lists_all_plot_kinds()
     test_bar_work_auto_period()
+    test_act_payload_survives_html_attribute()
     asyncio.run(_test_play_bar_work_follows_phase())
     print("ok")

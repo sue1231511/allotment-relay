@@ -27,20 +27,12 @@ function attrEsc(s) {
     .replace(/</g, '&lt;');
 }
 
-function actData(tool, command) {
-  return attrEsc(JSON.stringify({ tool, command }));
+function attr(name, value) {
+  return `${name}="${attrEsc(value)}"`;
 }
 
-function parseAct(el) {
-  const raw = el && el.getAttribute('data-act');
-  if (!raw) return null;
-  try {
-    const payload = JSON.parse(raw);
-    if (!payload || !payload.tool) return null;
-    return payload;
-  } catch {
-    return null;
-  }
+function actData(tool, command) {
+  return attrEsc(JSON.stringify({ tool, command }));
 }
 
 function show(el, on) {
@@ -259,7 +251,7 @@ function renderPlace(id) {
     const idx = String(i + 1).padStart(2, '0');
     const note = a.note || a.command || '';
     const primary = i === acts.length - 1 ? ' is-primary' : '';
-    return `<button type="button" class="place-tool${primary}" data-label="${esc(a.label)}" data-note="${esc(note)}" data-act="${actData(a.tool, a.command)}">
+    return `<button type="button" class="place-tool${primary}" ${attr('data-label', a.label)} ${attr('data-note', note)} data-act="${actData(a.tool, a.command)}">
       <span class="place-tool-index">${idx}</span>
       <span><strong>${esc(a.label)}</strong><small>${esc(note)}</small></span>
       <span class="arrow">→</span>
@@ -286,6 +278,7 @@ function renderPlace(id) {
   if (switching) {
     if ($('play-work-title')) $('play-work-title').textContent = '选一个动作';
     if ($('play-work-sub')) $('play-work-sub').textContent = '操作结果会直接留在这里。';
+    setWorkStatus('可操作');
     clearPlaceResult();
   } else if (state.placeResult) {
     showPlaceResult(state.placeResult);
@@ -384,7 +377,7 @@ function plotButtons(p) {
   const token = p.token || String(p.slot);
   const acts = [];
   if (p.state === 'fallow') {
-    acts.push(`<button type="button" class="play-mini-btn" data-sow="${esc(token)}">播种</button>`);
+    acts.push(`<button type="button" class="play-mini-btn" ${attr('data-sow', token)}>播种</button>`);
   }
   if (p.state === 'growing' || p.state === 'tending') {
     if (!p.tended) acts.push(`<button type="button" class="play-mini-btn" data-act="${actData('plot_ops', 'tend')}">打理</button>`);
@@ -492,7 +485,7 @@ function placeCardHtml(pl, urgent) {
       <small>${esc(pl.kicker || (pl.week1 ? 'Often' : 'Later'))}</small>
       <strong>${esc(pl.name)}</strong>
       <p>${esc(pl.blurb)}</p>
-      <button type="button" class="play-mini-btn ${hot ? 'primary' : ''} go" data-place="${esc(pl.id)}">前往</button>
+      <button type="button" class="play-mini-btn ${hot ? 'primary' : ''} go" ${attr('data-place', pl.id)}>前往</button>
     </article>`;
 }
 
@@ -528,7 +521,7 @@ function renderNeighbors() {
   $('play-neighbors-list').innerHTML = people.map((p) => {
     const ripe = p.ripe ? `熟地 ${p.ripe}` : '暂无熟地';
     const where = p.home ? '在档口' : (p.ago || '');
-    return `<button type="button" class="play-neighbor" data-neighbor="${esc(p.name)}">
+    return `<button type="button" class="play-neighbor" ${attr('data-neighbor', p.name)}>
       <span class="play-neighbor-dot ${p.home ? '' : 'is-away'}" aria-hidden="true"></span>
       <span><strong>${esc(p.name)}</strong><small>${esc(where)} · ${esc(ripe)}</small></span>
     </button>`;
@@ -581,7 +574,7 @@ function renderTote() {
     return;
   }
   $('play-tote').innerHTML = stock.map((it) => `
-    <button type="button" data-item="${esc(it.name)}" data-qty="${it.qty}">
+    <button type="button" ${attr('data-item', it.name)} ${attr('data-qty', it.qty)}>
       ${esc(it.name)} ×${it.qty}
     </button>
   `).join('');
@@ -973,33 +966,50 @@ function itemSheet(name) {
 
 function revealPlaceResult() {
   if (!state.placeId) return;
-  const shell = document.querySelector('.place-result-shell');
+  const shell = document.querySelector('.place-result-shell') || $('play-place-workspace');
   if (shell) shell.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-function setActBusy(on) {
-  const status = $('play-work-status');
-  if (status) {
-    status.textContent = on ? '进行中' : '可操作';
-    status.classList.toggle('is-busy', Boolean(on));
+function setWorkStatus(text) {
+  const pill = $('play-work-status');
+  if (!pill) return;
+  pill.textContent = text || '可操作';
+  pill.classList.toggle('is-busy', text === '进行中' || text === '处理中…');
+}
+
+function parseActPayload(raw) {
+  if (!raw) return null;
+  try {
+    const payload = JSON.parse(raw);
+    if (!payload || typeof payload.tool !== 'string' || typeof payload.command !== 'string') {
+      return null;
+    }
+    return payload;
+  } catch {
+    return null;
   }
+}
+
+function parseAct(el) {
+  return parseActPayload(el && el.getAttribute('data-act'));
 }
 
 async function act(tool, command) {
   const busyBits = document.querySelectorAll('.play-page button.btn, .play-page .play-mini-btn, .play-page .place-tool, .play-page .play-text-btn, .play-page .play-go');
   try {
     busyBits.forEach((b) => { b.disabled = true; });
-    setActBusy(true);
+    setWorkStatus('进行中');
     const data = await api(tool, command);
     applySnap(data, data.text || '这一下做完了。');
+    setWorkStatus('完成');
     closeSheet();
     revealPlaceResult();
   } catch (err) {
     setLog(err.message || String(err));
+    setWorkStatus('未做成');
     revealPlaceResult();
   } finally {
     busyBits.forEach((b) => { b.disabled = false; });
-    setActBusy(false);
   }
 }
 
@@ -1365,6 +1375,7 @@ document.body.addEventListener('click', (e) => {
   const payload = parseAct(btn);
   if (!payload) {
     setLog('这一下没点上。刷新后再试。');
+    setWorkStatus('未做成');
     revealPlaceResult();
     return;
   }
