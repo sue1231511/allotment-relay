@@ -45,6 +45,9 @@
           <label>岛上的名字（只登记一次）
             <input id="play-enroll-name" type="text" maxlength="24" placeholder="安" required>
           </label>
+          <label>邀请码（选填，只能绑一次）
+            <input id="play-enroll-invite" type="text" maxlength="16" placeholder="有人引你来就填" autocomplete="off">
+          </label>
           <div class="play-gate-actions">
             <button type="submit" class="btn primary">登记上岛</button>
           </div>
@@ -395,8 +398,9 @@
   </dialog>
   <div id="lounge-toast" class="lounge-toast hidden" role="status"></div>
 
+  <script src="/static/device.js?v=invite1"></script>
   <script src="/static/site-key.js"></script>
   <script src="/static/lounge.js"></script>
-  <script src="/static/play.js"></script>
+  <script src="/static/play.js?v=invite1"></script>
 </body>
 </html>

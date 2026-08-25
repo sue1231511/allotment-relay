@@ -37,6 +37,7 @@ async function api(tool, command) {
       api_key: state.key,
       tool: tool || '',
       command: command || '',
+      device_id: (typeof getOrCreateDeviceId === 'function' ? getOrCreateDeviceId() : ''),
     }),
   });
   const data = await res.json();
@@ -522,6 +523,13 @@ function openMe() {
   const m = d.meters || {};
   const lines = d.meter_lines || {};
   const name = d.name || '';
+  const inv = d.invite || {};
+  const guests = (inv.invited || []).slice(0, 8).map((g) =>
+    `<li>${esc(g.name)} · ${esc(g.status)}</li>`
+  ).join('');
+  const keeps = (inv.keepsakes || []).map((k) =>
+    `${esc(k.emoji || '')}${esc(k.name)}`
+  ).join(' · ');
   $('play-me-body').innerHTML = `
     <div class="play-identity" style="margin-bottom:14px;width:100%;cursor:default">
       <span class="play-avatar">${esc(String(name).slice(0, 1) || '≈')}</span>
@@ -532,7 +540,66 @@ function openMe() {
     ${d.motto ? `<p style="margin-top:8px">「${esc(d.motto)}」</p>` : ''}
     <div class="play-rule">${esc(lines.bar_duty || '每 2 天须去酒吧上工。')}</div>
     ${d.voyage ? `<p class="muted" style="margin-top:8px">${esc(d.voyage)}</p>` : ''}
+    <section class="play-invite">
+      <div class="play-kicker">Pilot</div>
+      <h3>引航</h3>
+      <p>邀请码 <strong id="play-invite-code">${esc(inv.code || '—')}</strong>
+        <button type="button" class="btn secret-copy" id="play-invite-copy">复制链接</button>
+      </p>
+      ${inv.inviter ? `<p class="muted">由「${esc(inv.inviter.name)}」引来 · ${esc(inv.my_status || '')}</p>` : ''}
+      ${inv.can_bind ? `
+        <form id="play-invite-bind">
+          <label>绑定邀请码（只能一次）
+            <input id="play-invite-bind-code" type="text" maxlength="16" placeholder="邀请码" autocomplete="off">
+          </label>
+          <button type="submit" class="btn">绑定</button>
+        </form>
+        <p class="error hidden" id="play-invite-bind-err"></p>
+      ` : ''}
+      <p class="muted">已引来 ${Number(inv.invited && inv.invited.length) || 0} 人，计入有效 ${Number(inv.valid_count) || 0} 人。</p>
+      <p class="muted">对方成为有效岛民后，你会收到 ${Number(inv.official_reward_tickets) || 100} 工分票和 ${Number(inv.official_reward_bond) || 20} 岛缘。</p>
+      ${guests ? `<ul class="play-invite-list">${guests}</ul>` : ''}
+      ${keeps ? `<p class="muted">收藏 ${keeps}</p>` : ''}
+      ${inv.lantern ? `<p class="muted">岸灯已在小屋亮着。</p>` : ''}
+    </section>
   `;
+  const copyBtn = $('play-invite-copy');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', () => {
+      const url = inv.link && inv.link.startsWith('http')
+        ? inv.link
+        : `${location.origin}${inv.link || '/register'}`;
+      if (typeof copyText === 'function') copyText(url, copyBtn);
+      else navigator.clipboard.writeText(url);
+    });
+  }
+  const bindForm = $('play-invite-bind');
+  if (bindForm) {
+    bindForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const err = $('play-invite-bind-err');
+      err.classList.add('hidden');
+      try {
+        const res = await fetch('/api/invite/bind', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            api_key: state.key,
+            code: $('play-invite-bind-code').value.trim(),
+            device_id: typeof getOrCreateDeviceId === 'function' ? getOrCreateDeviceId() : '',
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(typeof data.detail === 'string' ? data.detail : '绑不上');
+        if (data.invite) state.dash = { ...state.dash, invite: data.invite };
+        openMe();
+        setLog(data.text || '引航关系已结。');
+      } catch (ex) {
+        err.classList.remove('hidden');
+        err.textContent = ex.message;
+      }
+    });
+  }
   show($('play-me'), true);
 }
 
@@ -810,11 +877,30 @@ $('play-key-form').addEventListener('submit', async (e) => {
 $('play-enroll-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const name = $('play-enroll-name').value.trim();
+  const invite = ($('play-enroll-invite') && $('play-enroll-invite').value.trim())
+    || (typeof peekInviteCode === 'function' ? peekInviteCode() : '');
   const err = $('play-gate-err');
   err.classList.add('hidden');
   try {
     const data = await api('steward_ops', `enroll ${name}`);
     applySnap(data, data.text || '');
+    if (invite && data.enrolled && data.dashboard && data.dashboard.invite && data.dashboard.invite.can_bind) {
+      const res = await fetch('/api/invite/bind', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          api_key: state.key,
+          code: invite,
+          device_id: typeof getOrCreateDeviceId === 'function' ? getOrCreateDeviceId() : '',
+        }),
+      });
+      const bound = await res.json();
+      if (res.ok && bound.invite) {
+        state.dash = { ...state.dash, invite: bound.invite };
+        setLog(`${data.text || ''}\n${bound.text || ''}`.trim());
+        if (typeof clearStoredInvite === 'function') clearStoredInvite();
+      }
+    }
   } catch (ex) {
     err.classList.remove('hidden');
     err.textContent = ex.message;
@@ -1037,6 +1123,10 @@ document.querySelectorAll('[data-memory-close]').forEach((btn) => {
 });
 
 (async function boot() {
+  const enrollInvite = $('play-enroll-invite');
+  if (enrollInvite && typeof peekInviteCode === 'function') {
+    enrollInvite.value = peekInviteCode();
+  }
   const saved = loadSavedKey();
   if (!saved) return;
   $('play-key').value = saved;

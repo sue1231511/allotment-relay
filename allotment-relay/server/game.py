@@ -120,6 +120,8 @@ async def require_steward(key_id: int, *, exempt_duty: bool = False) -> dict[str
         await chaoshen_mod.ensure_fund_payout(conn)
         from . import bond as bond_mod
         await bond_mod.ensure_backfill(conn, s["id"])
+        from . import invite as invite_mod
+        await invite_mod.evaluate_and_settle(conn, s["id"])
         await conn.commit()
     s = await db.get_steward_by_id(s["id"]) or s
     from . import progress as progress_mod
@@ -164,8 +166,8 @@ async def relay_manual() -> str:
         "  水果能生吃但只回 4、连吃 5 口营养不良；蔬菜不能生吃；生鱼/野薄荷垫肚子；只有生肉可能感染。",
         "",
         "━━━ 工具地图（17 个玩法工具）━━━",
-        "  steward_ops  登记/档案/邻居/工分/全服榜/岛缘",
-        "               command 例：enroll 安 · sheet · 岛缘 · 邻居 · 在线 · peer 名字 · guild · board tickets · board 岛缘",
+        "  steward_ops  登记/档案/邻居/工分/全服榜/岛缘/引航",
+        "               command 例：enroll 安 · sheet · 岛缘 · 邻居 · 在线 · peer 名字 · guild · board tickets · board 岛缘 · 引航 · 绑定 AB12CD34",
         "               人类网页 /board 是全服榜围观（票榜·岛缘榜）；点名字去 /play 看邻居",
         "               人类网页 /play 点名字看档、读岛上回忆、看邻居名册（本机会记住）",
         "               人类网页 /play 可点按同一套指令，和 AI 共用一个号（凭证只在上手页绑定）",
@@ -242,6 +244,7 @@ async def relay_manual() -> str:
         "",
         "━━━ 别猜错 ━━━",
         "  · 全服票榜/岛缘榜 = steward_ops board（board tickets=口袋现票，board 岛缘=岛缘榜；board level 仍指向岛缘榜）。等级 1～99 仍在 sheet，满级「潮汐本尊」，不再单独占全服榜。周目标贡献榜 = alliance_ops board / league board。steward_ops 岛缘 是拆自己的来源，不是榜",
+        "  · 引航 = steward_ops 引航 / 绑定 邀请码。请人上岛，不是 alliance_ops assist，也不是 tote_ops gift。没有 invite_ops，不要发明 领邀请奖。注册当时不算有效邀请；对方成为有效岛民后，邀请人自动得 100 工分票和 20 岛缘",
         "  · 岛缘 = 你和这座岛发生过的一切（岸上动手只加，井下减，地板 0，无上限）。一篇潮闻/故事通关 +100。看 steward_ops 岛缘。∞ 只表示无上限。不是档信，也不是等级",
         "  · 潮生会是岛上管事的机构，不能入会/开会/退会。问事 visit_ops 潮生会。岸税 visit_ops 潮生会 税 / 税 交（口袋现票超额累进，未过 800 免征，周一换班自动划入基金；本周新号免征到下周；欠税不能买地/买棚/买园/升屋/买船/开坑/升镐）。潮汐基金 visit_ops 潮生会 基金 / 基金 捐 50（票数自填）。补贴不用领，东八区周二四六自动发。本周目标/公仓/公物不在潮生会（alliance_ops league · donate · plot_ops commons）。steward_ops guild 是每日工分，不是入会。周潮天灾不是税",
         "  · bar_ops cheer 哄荔栀；undertide_ops cheer 哄猫猫；star_ops 应援 哄小橘。三套互不占用，每日各 1 次（应援/cheer）",
@@ -412,6 +415,7 @@ async def relay_manual() -> str:
         "    岸税：visit_ops 潮生会 税 看档与档表；富人按口袋现票超额累进交（未过 800 免征）。东八区每周一换班自动划入潮汐基金；本周新号免征到下周。欠了 税 交（可 税 交 50）。欠税时不能买地/买棚/买园/升屋/买船/开坑/升镐。没有 tax_ops。周潮天灾（只冲 3 万以上）不是税",
         "    潮汐基金：visit_ops 潮生会 基金 看岛均；高于平均 基金 捐 50（票数自己填）。补贴不用领，东八区周二、周四、周六自动打到低于岛均的人口袋（每人顶 1000、不超过岛均）。公仓捐货走 alliance_ops donate 甘蓝 2",
         "  steward_ops 成就 — 做事解锁称呼，称呼 逾篱客 佩戴；升级礼在 sheet / 领奖 时自动发",
+        "  steward_ops 引航 — 看自己的邀请码和已引来的岛民；绑定 邀请码 首次结引航关系（只能一次，不能自己引自己）。对方成为有效岛民后，邀请人自动得 100 工分票和 20 岛缘",
         "  visit_ops list 看固定 NPC。tt 买种/饲料/渔具/锄铲/盐风镐。lili 流动摊（不在就 summon 献壳）。韶年 fortune 卜卦",
         "  目送人·阿槐：musong visit 去渡口；musong send 名字 每游戏日送别一次；musong remember 回看名字",
         "  守灯人·不醒：buxing visit 上塔；tea 每日免费回 2 精力；tide 前 5 次免费、之后 3 票；light 给谁 | 求什么 花 15 票点公开守夜灯（回 4 精力）；gallery 看灯廊；entrust 托付旧事；watch 60 票守夜；fulfill 灯号 还愿",
@@ -518,7 +522,9 @@ async def steward_sheet(key_id: int) -> str:
     from . import health as health_mod
     from . import land as land_mod
     from . import bond as bond_mod
+    from . import invite as invite_mod
     ranked = ranks_mod.attach_level(s)
+    invite_line = invite_mod.sheet_line(s)
     lines = [
         f"管理员: {s['name']} ({s['badge']})",
         f"座右铭: {s['motto']}",
@@ -527,6 +533,7 @@ async def steward_sheet(key_id: int) -> str:
         ranks_mod.sheet_level_line(ranked),
         progress_mod.sheet_title_line(ranked),
         *bond_mod.sheet_lines(s),
+        *([invite_line] if invite_line else []),
         survival.meter_line(s),
         health_mod.meter_line(s, ailments),
         energy_mod.meter_line(s, ailments),

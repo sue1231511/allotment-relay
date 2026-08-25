@@ -173,7 +173,7 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
             left = max(0, voyage[1] - db.now())
             voyage_view = f"{route} · {left // 60} 分后归港"
 
-    return {
+    result = {
         "name": s["name"],
         "badge": s["badge"],
         "motto": s["motto"],
@@ -228,3 +228,6 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
         },
         "updated_at": db.now(),
     }
+    from . import invite as invite_mod
+    result["invite"] = await invite_mod.player_view(s)
+    return result

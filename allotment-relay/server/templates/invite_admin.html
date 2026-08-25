@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>引航风控 · 潮汐岛</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    .invite-admin { max-width: 1100px; margin: 24px auto; padding: 0 16px 48px; }
+    .invite-admin table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .invite-admin th, .invite-admin td { border-bottom: 1px solid var(--line); padding: 8px 6px; text-align: left; vertical-align: top; }
+    .invite-admin .band-high { color: #a45; }
+    .invite-admin .band-mid { color: #a80; }
+    .invite-admin .band-low { color: #587; }
+    .invite-admin button { margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <main class="invite-admin">
+    <h1>引航风控</h1>
+    <p class="muted">不封号。人工解除后会按现况重算进度。</p>
+    <p id="err" class="error"></p>
+    <div id="table"></div>
+  </main>
+  <script>
+    const KEY = {{ admin_key|tojson }};
+    async function load() {
+      const res = await fetch('/api/invite/admin/list', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: KEY }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        document.getElementById('err').textContent = data.detail || '读不出来';
+        return;
+      }
+      const rows = data.rows || [];
+      if (!rows.length) {
+        document.getElementById('table').innerHTML = '<p>还没有引航记录。</p>';
+        return;
+      }
+      document.getElementById('table').innerHTML = `
+        <table>
+          <thead><tr>
+            <th>邀请人</th><th>被邀请人</th><th>绑定</th><th>岛缘</th>
+            <th>天数</th><th>玩法数</th><th>设备账号</th><th>风险分</th>
+            <th>规则</th><th>状态</th><th>奖励</th><th></th>
+          </tr></thead>
+          <tbody>
+            ${rows.map((r) => `
+              <tr>
+                <td>${esc(r.inviter_name)}</td>
+                <td>${esc(r.invitee_name)}</td>
+                <td>${fmt(r.bound_at)}</td>
+                <td>${r.island_bond}</td>
+                <td>${r.active_days}</td>
+                <td>${r.activity_types}</td>
+                <td>${r.device_account_count}</td>
+                <td class="band-${esc(r.risk_band)}">${r.risk_score} · ${esc(r.risk_band)}</td>
+                <td>${esc((r.hit_rules || []).join(', '))}</td>
+                <td>${esc(r.invite_status)}</td>
+                <td>${esc((r.rewards || []).join(', '))}${r.note ? `<div class="muted">${esc(r.note)}</div>` : ''}</td>
+                <td>${r.invite_status === 'risk_review' || r.invite_status === 'invalid'
+                  ? `<button type="button" data-id="${r.invitee_id}">解除风险</button>` : ''}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+      document.querySelectorAll('button[data-id]').forEach((btn) => {
+        btn.addEventListener('click', () => clearOne(btn.getAttribute('data-id')));
+      });
+    }
+    function esc(s) {
+      const d = document.createElement('div');
+      d.textContent = s == null ? '' : String(s);
+      return d.innerHTML;
+    }
+    function fmt(ts) {
+      if (!ts) return '—';
+      return new Date(Number(ts) * 1000).toLocaleString('zh-CN');
+    }
+    async function clearOne(id) {
+      const res = await fetch('/api/invite/admin/clear', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: KEY, invitee_id: Number(id), note: '人工解除风险' }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        document.getElementById('err').textContent = data.detail || '解不了';
+        return;
+      }
+      load();
+    }
+    load();
+  </script>
+</body>
+</html>

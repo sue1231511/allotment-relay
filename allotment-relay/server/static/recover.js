@@ -8,7 +8,7 @@ document.getElementById("recover-form").addEventListener("submit", async (e) => 
     const res = await fetch("/api/keys/recover", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, device_id: (typeof getOrCreateDeviceId === 'function' ? getOrCreateDeviceId() : '') }),
     });
     const text = await res.text();
     let data;
