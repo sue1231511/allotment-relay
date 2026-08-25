@@ -50,6 +50,9 @@ async def _grant_loot(
     qty: int,
 ) -> tuple[str, int]:
     """发放赶海掉落；贝壳带品相。"""
+    from . import cloth as cloth_mod
+    from .catalog import item_label
+    item = cloth_mod.maybe_upgrade_beach_fabric(item)
     if item.startswith("shell_"):
         from . import lili_extras
         from collections import Counter
@@ -63,7 +66,7 @@ async def _grant_loot(
             label += "（💧糙壳）"
         return label, qty
     await db.add_item(conn, steward_id, item, qty)
-    label = next(x[1] for x in BEACH_LOOT if x[0] == item)
+    label = next((x[1] for x in BEACH_LOOT if x[0] == item), item_label(item))
     return label, qty
 
 
@@ -134,6 +137,15 @@ async def beach_ops(key_id: int, command: str) -> str:
             item, label, qty = _roll_loot(tide, w, probe=False)
             label, qty = await _grant_loot(conn, s["id"], item, qty)
             extra_msg = ""
+            from . import cloth as cloth_mod
+            from .catalog import item_label as cloth_label
+            extra_fab = cloth_mod.beach_loot_item()
+            if extra_fab:
+                await db.add_item(conn, s["id"], extra_fab, 1)
+                extra_msg += f"，又拾到 {cloth_label(extra_fab)}"
+            season_dye = await cloth_mod.maybe_event_dye(conn, s["id"], "season")
+            if season_dye:
+                extra_msg += f"，{season_dye}"
             from . import lili_extras
             if await lili_extras.has_blessing(conn, s["id"], "fair_wind"):
                 await lili_extras.consume_blessing(conn, s["id"], "fair_wind")
@@ -148,7 +160,7 @@ async def beach_ops(key_id: int, command: str) -> str:
             if tide == "ebb" and random.random() < 0.14:
                 bait = random.choice([x for x in BEACH_LOOT if x[0].startswith("bait_")])
                 await db.add_item(conn, s["id"], bait[0], 1)
-                extra_msg = f"，顺手 {bait[1]}"
+                extra_msg += f"，顺手 {bait[1]}"
             from . import hut as hut_mod
             hut_b = await hut_mod.get_bonuses(conn, s["id"])
             if hut_b.beach_extra and random.random() < hut_b.beach_extra:
@@ -175,6 +187,8 @@ async def beach_ops(key_id: int, command: str) -> str:
             shiye = await npc_mod.maybe_shiye_bump(conn, s, "beach")
             from . import tale as tale_mod
             tale_extra = await tale_mod.check_action_progress(conn, s["id"], "beach")
+            from . import cloth as cloth_mod
+            cloth_echo = await cloth_mod.try_echo(conn, s, "beach")
             await conn.commit()
 
         msg = f"赶海：{label} x{qty}{extra_msg}"
@@ -194,6 +208,8 @@ async def beach_ops(key_id: int, command: str) -> str:
             msg += f"\n{disc}"
         if tale_extra:
             msg += f"\n\n{tale_extra}"
+        if cloth_echo:
+            msg += f"\n\n{cloth_echo}"
         await db.add_chronicle("beach", f"{s['name']} 赶海得 {label}", s["id"])
         return msg
 
@@ -251,6 +267,8 @@ async def beach_ops(key_id: int, command: str) -> str:
             shiye = await npc_mod.maybe_shiye_bump(conn, s, "beach")
             from . import tale as tale_mod
             tale_extra = await tale_mod.check_action_progress(conn, s["id"], "beach")
+            from . import cloth as cloth_mod
+            cloth_echo = await cloth_mod.try_echo(conn, s, "beach")
             await conn.commit()
 
         msg = f"掏洞：{label} x{qty}{charm_msg}{clock_msg}"
@@ -265,6 +283,8 @@ async def beach_ops(key_id: int, command: str) -> str:
             msg += f"\n{shiye}"
         if tale_extra:
             msg += f"\n\n{tale_extra}"
+        if cloth_echo:
+            msg += f"\n\n{cloth_echo}"
         await db.add_chronicle("beach", f"{s['name']} 掏洞得 {label}", s["id"])
         return msg
 

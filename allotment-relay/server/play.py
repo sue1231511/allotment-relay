@@ -9,7 +9,7 @@ from .catalog import CROPS
 
 
 def _tools() -> dict[str, Any]:
-    from . import bar, craft, lounge, quarry, star, story, tale, theater, undertide
+    from . import bar, cloth, craft, lounge, quarry, star, story, tale, theater, undertide
 
     return {
         "steward_ops": mux.steward_ops,
@@ -29,6 +29,7 @@ def _tools() -> dict[str, Any]:
         "undertide_ops": undertide.undertide_ops,
         "quarry_ops": quarry.quarry_ops,
         "craft_ops": craft.craft_ops,
+        "cloth_ops": cloth.cloth_ops,
     }
 
 
@@ -190,6 +191,24 @@ PLACES: list[dict[str, Any]] = [
             {"label": "围观", "note": "听一场，回精力", "tool": "star_ops", "command": "围观"},
             {"label": "编剧社", "note": "投稿潮闻或故事", "tool": "theater_ops", "command": "编剧社"},
             {"label": "剧场看板", "note": "今晚专场才开", "tool": "theater_ops", "command": "看板"},
+        ],
+    },
+    {
+        "id": "atelier",
+        "name": "衣泊坊",
+        "kicker": "Atelier",
+        "blurb": "剧院侧厅。漾漾不卖成衣，只接裁衣委托。",
+        "href": "/atelier",
+        "live": "打开衣泊坊海报 →",
+        "rail": "今天把什么布交给她",
+        "week1": False,
+        "actions": [
+            {"label": "看坊", "note": "台上和当季衣料", "tool": "cloth_ops", "command": "status"},
+            {"label": "图鉴", "note": "版型、颜色、衣料来源", "tool": "cloth_ops", "command": "图鉴"},
+            {"label": "取衣", "note": "做好了才领", "tool": "cloth_ops", "command": "取"},
+            {"label": "衣橱", "note": "裁出来的衣服", "tool": "cloth_ops", "command": "衣橱"},
+            {"label": "脱下", "note": "换下来，衣橱还在", "tool": "cloth_ops", "command": "脱"},
+            {"label": "见漾漾", "note": "主理人，不卖成衣", "tool": "cloth_ops", "command": "漾漾"},
         ],
     },
     {

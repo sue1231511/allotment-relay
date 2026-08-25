@@ -92,6 +92,7 @@ ENERGY_ACTIVITY = {
     "小剧场试镜": "encounter",
     "小剧场对戏": "encounter",
     "小剧场演出": "encounter",
+    "衣泊坊裁衣": "explore",
     "star_watch": "encounter",
     "tale_explore": "tale",
     "讨伐": "explore",

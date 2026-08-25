@@ -155,6 +155,8 @@ def test_mcp_descriptions() -> None:
     assert "upkeep_ops" in v_blob
     assert "潮生会 补贴" not in v_blob
     assert "周二" in v_blob or "票数" in v_blob
+    assert "漾漾" in v_blob
+    assert "衣泊坊" in v_blob
 
     hut = mcp._tool_manager.get_tool("hut_ops")
     hut_blob = f"{hut.description}\n{(hut.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -215,6 +217,9 @@ def test_mcp_descriptions() -> None:
     assert "craft_ops" in instructions
     assert "mine_ops" in instructions
     assert "forge_ops" in instructions
+    assert "衣泊坊" in instructions
+    assert "19 个工具" in instructions
+    assert "cloth_ops" in instructions
 
     quarry = mcp._tool_manager.get_tool("quarry_ops")
     q_blob = f"{quarry.description}\n{(quarry.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -242,6 +247,18 @@ def test_mcp_descriptions() -> None:
     assert "雾铅网坠" in c_blob
     assert "forge_ops" in c_blob
     assert "tide_ops dig" in c_blob or "赶海" in c_blob
+
+    cloth_tool = mcp._tool_manager.get_tool("cloth_ops")
+    cloth_blob = f"{cloth_tool.description}\n{(cloth_tool.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
+    assert "漾漾" in cloth_blob
+    assert "不卖成衣" in cloth_blob
+    assert "委托 短褂 海色" in cloth_blob
+    assert "空 command" in cloth_blob
+    assert "看坊" in cloth_blob
+    assert "tailor_ops" in cloth_blob
+    assert "/atelier" in cloth_blob
+    assert "不绝版" in cloth_blob
+    assert "craft_ops" in cloth_blob
 
 
 def test_relay_manual_covers_systems() -> None:
@@ -303,6 +320,14 @@ def test_relay_manual_covers_systems() -> None:
         "编剧社",
         "投稿 岸上旧收音机",
         "故事稿费 500",
+        "cloth_ops",
+        "衣泊坊",
+        "漾漾",
+        "委托 短褂 海色",
+        "不卖成衣",
+        "不绝版",
+        "tailor_ops",
+        "/atelier",
         "潮闻",
         "应援",
         "不要猜",
@@ -472,7 +497,7 @@ def test_readme_workflow_rules() -> None:
         assert "relay_manual" in blob
         assert "mcp_app.py" in blob
         assert "island-manual-content.html" in blob or "island-manual.html" in blob
-    assert "18 个工具" in readme
+    assert "19 个工具" in readme
     assert "quarry_ops" in readme
     assert "craft_ops" in readme
     assert "/workshop" in readme
@@ -524,6 +549,8 @@ def test_readme_workflow_rules() -> None:
     assert "tale_ops" in readme
     assert "story_ops" in readme
     assert "theater_ops" in readme
+    assert "cloth_ops" in readme
+    assert "/atelier" in readme
     assert "空 command" in readme
     assert "禁止" in readme
     assert "引航" in readme
@@ -568,6 +595,10 @@ def test_human_island_manual() -> None:
         "红包",
         "抢红包",
         "发红包",
+        "衣泊坊",
+        "漾漾",
+        "不卖成衣",
+        "不绝版",
     ):
         assert needle in blob, needle
     assert "plot_ops" not in blob
@@ -649,6 +680,9 @@ def test_patron_pages_share_steward_key() -> None:
     assert "selectPlaceTool" in play_js
     assert '"href": "/quarry"' in (root / "server/play.py").read_text(encoding="utf-8")
     assert '"href": "/workshop"' in (root / "server/play.py").read_text(encoding="utf-8")
+    assert '"href": "/atelier"' in (root / "server/play.py").read_text(encoding="utf-8")
+    assert 'id="play-cloth-sew"' in play_html
+    assert 'id="play-cloth-wear-btn"' in play_html
     assert 'id="play-duo-key-b"' in play_html
     assert 'id="play-bar-order"' in play_html
     assert 'id="play-eatery-order"' in play_html
@@ -708,6 +742,7 @@ def test_patron_pages_share_steward_key() -> None:
     assert 'quarry.html"' in main_py
     assert 'workshop.html"' in main_py
     assert 'hui.html"' in main_py
+    assert '@app.get("/atelier"' in main_py
     lounge_html = (root / "server/templates/lounge.html").read_text(encoding="utf-8")
     assert "/static/site-key.js" in lounge_html
     assert "lounge-page" in lounge_html
@@ -866,7 +901,7 @@ def test_promo_place_pages() -> None:
     from server import promo
 
     slugs = {p["slug"] for p in promo.PLACES}
-    for slug in ("allotments", "tide", "huts", "bar", "eatery", "market", "quarry", "workshop", "star", "undertide", "hui"):
+    for slug in ("allotments", "tide", "huts", "bar", "eatery", "market", "quarry", "workshop", "star", "atelier", "undertide", "hui"):
         assert slug in slugs, slug
         ctx = promo.page_context(slug)
         assert ctx["play_href"].startswith("/play")
@@ -882,6 +917,7 @@ def test_promo_place_pages() -> None:
     assert promo.play_href(promo.get("bar")) == "/play?go=bar"
     assert promo.play_href(promo.get("workshop")) == "/play?go=craft"
     assert promo.play_href(promo.get("hui")) == "/play?go=hui"
+    assert promo.play_href(promo.get("atelier")) == "/play?go=atelier"
 
 
 def test_bar_ops_help() -> None:

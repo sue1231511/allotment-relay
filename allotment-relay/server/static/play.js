@@ -146,6 +146,9 @@ function placeContextRows(place) {
     memo.push(`<div class="place-context-row"><span>崖况</span><b>${esc(d.quarry.line)}</b></div>`);
   } else if (place.id === 'craft' && d.craft && d.craft.line) {
     memo.push(`<div class="place-context-row"><span>砧况</span><b>${esc(d.craft.line)}</b></div>`);
+  } else if (place.id === 'atelier' && d.cloth && d.cloth.line) {
+    memo.push(`<div class="place-context-row"><span>坊况</span><b>${esc(d.cloth.line)}</b></div>`);
+    if (d.cloth.worn) memo.push(`<div class="place-context-row"><span>衣着</span><b>${esc(d.cloth.worn)} · ${esc(d.cloth.season || '')}</b></div>`);
   } else if (place.id === 'tide' && d.voyage) {
     memo.push(`<div class="place-context-row"><span>航程</span><b>${esc(d.voyage)}</b></div>`);
   } else if (d.meter_lines && d.meter_lines.bar_duty) {
@@ -259,6 +262,7 @@ function renderPlace(id) {
     if (id === 'eatery') loadEateryPatron();
   }
   show($('play-hui-donate'), id === 'hui');
+  show($('play-cloth-sew'), id === 'atelier');
 }
 
 function plotStateLabel(stateName) {
@@ -1269,6 +1273,27 @@ $('play-hui-donate')?.addEventListener('submit', async (e) => {
     return;
   }
   await act('visit_ops', `潮生会 基金 捐 ${amount}`);
+});
+
+$('play-cloth-sew')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const cut = $('play-cloth-cut')?.value || '短褂';
+  const color = $('play-cloth-color')?.value || '海色';
+  const motif = $('play-cloth-motif')?.value || '素';
+  await act('cloth_ops', `委托 ${cut} ${color} ${motif}`);
+});
+
+$('play-cloth-wear-btn')?.addEventListener('click', async () => {
+  const gid = parseInt($('play-cloth-wear')?.value, 10);
+  if (!Number.isFinite(gid) || gid < 1) {
+    setLog('先看衣橱编号，再填要穿的那件。');
+    return;
+  }
+  await act('cloth_ops', `穿 ${gid}`);
+});
+
+$('play-cloth-off-btn')?.addEventListener('click', async () => {
+  await act('cloth_ops', '脱');
 });
 
 document.body.addEventListener('click', (e) => {

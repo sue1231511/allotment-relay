@@ -129,6 +129,12 @@ async def workshop_page(request: Request):
     return _html(request, "workshop.html", active="workshop")
 
 
+@app.get("/atelier", response_class=HTMLResponse)
+async def atelier_page(request: Request):
+    """衣泊坊海报；裁衣仍回上手页。"""
+    return _place_page(request, "atelier")
+
+
 @app.get("/tide", response_class=HTMLResponse)
 async def tide_page(request: Request):
     """海边围观实况；动手仍回上手页。"""

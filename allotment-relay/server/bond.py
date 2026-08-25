@@ -67,6 +67,8 @@ PEN_HARVEST = 8
 VOYAGE_RETURN = 10
 THEATER_PAY = 4
 STAR_CHEER_SEEN = 8
+CLOTH_SEW = 6
+CLOTH_ECHO = 12
 
 WELL_FIRST = -25
 WELL_ENTER = -12
@@ -96,6 +98,7 @@ ENERGY_MAP: dict[str, tuple[int, str]] = {
     "小剧场试镜": (4, "labor"),
     "小剧场对戏": (6, "labor"),
     "小剧场演出": (12, "labor"),
+    "衣泊坊裁衣": (6, "labor"),
     "star_watch": (4, "labor"),
     "tale_explore": (4, "labor"),
     "讨伐": (10, "labor"),

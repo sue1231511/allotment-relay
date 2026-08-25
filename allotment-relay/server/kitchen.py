@@ -19,6 +19,7 @@ from .catalog import (
     dish_ingredient_cost,
     dish_item,
     dish_sell_price,
+    is_fiber_item,
     is_fruit_item,
     is_vegetable_item,
     item_label,
@@ -34,7 +35,8 @@ from .game import require_steward
 
 EAT_RULES = (
     "eat 可吃：熟菜 dish_/meal_（回精力大头）；水果可生吃但只回一点、连吃会营养不良；"
-    "生鱼/野薄荷生吃安全；蔬菜不能生吃（cook/brew 下锅）；只有生肉 meat_* 可能感染。"
+    "生鱼/野薄荷生吃安全；蔬菜不能生吃（cook/brew 下锅）；潮棉/岸麻/漂布是衣料，去衣泊坊 cloth_ops 委托，别下锅；"
+    "只有生肉 meat_* 可能感染。"
 )
 
 
@@ -538,7 +540,7 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             "  cook 菜名 — 定点菜（每天 10 次），例如 cook 蒜蓉生蚝 · cook 糖渍橘子\n"
             "  cook 材料1 材料2 … — 自由组合 2~5 样（每天 24 次），例如 cook 甘蓝 鲭鱼\n"
             "  eat 物品 — 回精力。熟菜回得最多；水果可生吃但只回一点、连吃会营养不良；\n"
-            "             生鱼/野薄荷安全；蔬菜不能生吃；只有生肉可能感染\n"
+            "             生鱼/野薄荷安全；蔬菜不能生吃；潮棉/岸麻/漂布是衣料，去衣泊坊委托，别下锅；只有生肉可能感染\n"
             "             未命名小鱼可生吃（不感染）但会再掷小咒事件\n"
             "             例子：eat 鲭鱼 · eat 芒果 · eat 橘子 · eat 兔肉 · eat 未命名小鱼 · eat 蒜蓉生蚝\n"
             "  vend 菜名 — 卖掉行囊里的熟菜（中文名也行；家具请 hut_ops 卖掉）\n"
@@ -597,6 +599,10 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             item = resolve_item_key(tok)
             if not item:
                 raise ValueError(unknown_item_message(tok))
+            if is_fiber_item(item):
+                raise ValueError(
+                    f"{item_label(item)} 是衣料，去衣泊坊 cloth_ops 委托，别下锅。"
+                )
             ings.append(item)
         if len(ings) < 2:
             raise ValueError(
@@ -611,6 +617,11 @@ async def kitchen_ops(key_id: int, command: str) -> str:
     if verb == "eat" and len(parts) >= 2:
         token = " ".join(parts[1:])
         item = resolve_item_key(token) or token
+        if is_fiber_item(item):
+            raise ValueError(
+                f"{item_label(item)} 是衣料，拿去衣泊坊裁，别生吃。"
+                "cloth_ops 委托 短褂 海色；潮棉/岸麻/漂布都不是菜。"
+            )
         if not is_cooked_item(item):
             cooked = _resolve_cooked_token(token)
             if cooked and is_cooked_item(cooked):

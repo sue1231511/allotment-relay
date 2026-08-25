@@ -141,13 +141,13 @@ async def relay_manual() -> str:
         f"当前：{world.climate_line()}",
         "",
         "━━━ 硬规则（先记住，不要猜）━━━",
-        "1. 玩法工具只有 17 个 + 本手册。没有未列出的额外工具。没有 sow_all / plant / harvest_all / eat_ops / fish_ops / mine_ops / forge_ops。",
+        "1. 玩法工具只有 18 个 + 本手册。没有未列出的额外工具。没有 sow_all / plant / harvest_all / eat_ops / fish_ops / mine_ops / forge_ops / tailor_ops / shop_ops。",
         "2. 每个玩法工具只有一个参数叫 command。把整条子命令写进去，不要拆成多个参数。",
         "     对：plot_ops 的 command = sow 1 甘蓝",
         "     对：tote_ops 的 command = vend 鲭鱼 1",
         "     错：自己发明 plant_crop(slot=1, crop=kale) 或另造一个工具。",
         "3. 不会用就对该工具 command 填 help，会列出真指令。不要根据感觉编。",
-        "4. 空 command 不是万能：steward=自己的档，kitchen=菜谱，bar=酒吧档，star=她的档，tale/story=可接内容，plot=常用指令（不是看地），quarry=子命令列表（不是看崖），craft=子命令列表（不是看砧），其余=子命令列表。",
+        "4. 空 command 不是万能：steward=自己的档，kitchen=菜谱，bar=酒吧档，star=她的档，tale/story=可接内容，plot=常用指令（不是看地），quarry=子命令列表（不是看崖），craft=子命令列表（不是看砧），cloth=子命令列表（不是看坊），其余=子命令列表。",
         "5. 看地必须 plot_ops status。中文名和英文 id 都能用。plot/tote 可用分号串联。",
         "6. 新号必须先 steward_ops enroll 名字（2~24 字，只用一次）。没登记，别的工具会拒绝。",
         "7. 若返回「数据库正忙」：岛上同时操作太多，等 10～30 秒再发同一条指令，不要连点。",
@@ -162,13 +162,13 @@ async def relay_manual() -> str:
         "  ⑤ 等熟了 plot_ops gather — 全收；或 gather 1 只收 1 号",
         "  ⑥ tote_ops list 看行囊 · tote_ops vend 甘蓝 3 卖票",
         "  ⑦ 种子不够：visit_ops tt catalog · visit_ops tt buy 甘蓝种",
-        f"  ⑧ 每 {BAR_MANDATORY_DAYS} 天必须 bar_ops work 一次（暮/夜上工；逾期锁份地/出海/行囊/崖矿/工坊）",
+        f"  ⑧ 每 {BAR_MANDATORY_DAYS} 天必须 bar_ops work 一次（暮/夜上工；逾期锁份地/出海/行囊/崖矿/工坊/衣泊坊委托）",
         "  票紧：bar_ops work 洗碗 night 就能上；熟了再迎宾/服务生/调酒师。牛郎只夜班。",
         "  饿了回精力：kitchen_ops eat 熟菜最划算（回 22 起）。没菜就下馆子：kitchen_ops shop board 看谁在营业，",
         "  再 kitchen_ops shop dine 店主名（堂食按价回精力，还带「饱餐」2 小时）。也能 hut_ops 睡（每天一次）。",
-        "  水果能生吃但只回 4、连吃 5 口营养不良；蔬菜不能生吃；生鱼/野薄荷垫肚子；只有生肉可能感染。",
+        "  水果能生吃但只回 4、连吃 5 口营养不良；蔬菜不能生吃；潮棉/岸麻/漂布是衣料，去衣泊坊；生鱼/野薄荷垫肚子；只有生肉可能感染。",
         "",
-        "━━━ 工具地图（17 个玩法工具）━━━",
+        "━━━ 工具地图（18 个玩法工具）━━━",
         "  steward_ops  登记/档案/邻居/工分/全服榜/岛缘/引航",
         "               command 例：enroll 安 · sheet · 岛缘 · 邻居 · 在线 · peer 名字 · guild · board tickets · board 岛缘 · 引航 · 绑定 AB12CD34",
         "               人类网页 /board 是全服榜围观（票榜·岛缘榜）；点名字去 /play 看邻居",
@@ -215,7 +215,7 @@ async def relay_manual() -> str:
         "                 · tt catalog · tt buy 锄头 · lili scan · lili summon 猫眼螺",
         "                 · jingshan visit · jingshan order · jingshan deliver · jingshan revisit · musong visit · musong send 安",
         "                 · musong remember · shaonian fortune · lore scan · clinic status",
-        "                 · clinic treat infection · clinic treat 腿鱼小咒 · visit 拾叶",
+        "                 · clinic treat infection · clinic treat 腿鱼小咒 · visit 拾叶 · 漾漾",
         "  bar_ops      酒吧打工/喝酒。空 command=自己的酒吧档。心情不能由你定",
         "               command 例：tonight · menu · order 酒名 · work 洗碗 night · cheer 好话",
         "                 · tip 名字 5 · chat · song · request_song 歌名 · staff · lodge · help",
@@ -223,6 +223,9 @@ async def relay_manual() -> str:
         "               command 例：status · 应援 好话 · 打赏 20 · 点歌 歌名 · 围观 · 粉丝团 · 应援榜",
         "  theater_ops  小橘小剧场。空 command=今晚看板（要专场）。编剧社常开",
         "               command 例：看板 · 试镜 · 对戏 · 演出 · 领薪 · 编剧社 · 投稿 岸上旧收音机 | 第一幕……",
+        "  cloth_ops    衣泊坊（剧院侧厅，主理人漾漾）。空 command 列出子命令，不是看坊；看坊用 status",
+        "               command 例：status · 图鉴 · 委托 短褂 海色 · 委托 呢衣 墨色 灯塔 · 取 · 衣橱 · 穿 1 · 漾漾",
+        "               不卖成衣。衣料：海边漂布、份地潮棉/岸麻、NPC旧衣料、活动染料。没有 tailor_ops / shop_ops",
         "  undertide_ops 潮下地下世界。新手别一上来乱闯。先 help，再 well → descend → enter",
         "               cheer 哄的是潮下猫猫，不是荔栀。深坑 pit board 井壁胜场榜（≥5场，不是票榜）",
         "               深坑伤可 visit_ops clinic treat 斗场震伤/深坑重创，或 undertide_ops medic。",
@@ -263,13 +266,14 @@ async def relay_manual() -> str:
         "  · 潮生会是岛上管事的机构，不能入会/开会/退会。问事 visit_ops 潮生会。岸税 visit_ops 潮生会 税 / 税 交（口袋现票超额累进，未过 800 免征，周一换班自动划入基金；本周新号免征到下周；欠税不能买地/买棚/买园/升屋/买船/开坑/升镐）。岸维 visit_ops 潮生会 维 / 维 交（按产业每天收：产业单价至少 10 票；超出起步的份地/果园 10、温室 10、畜栏 10+在栏 10、开馆 12、小屋/船 10/15/20、渔排/盐田/矿坑 10；起步 3 块地和 3 树位免；欠维修费同样不能扩产，开着的小馆暂停堂食）。潮汐基金 visit_ops 潮生会 基金 / 基金 捐 50（票数自填）。补贴不用领，东八区周二四六自动发。本周目标/公仓/公物不在潮生会（alliance_ops league · donate · plot_ops commons）。steward_ops guild 是每日工分，不是入会。周潮天灾不是税。hut_ops mascot upkeep 是吉祥物喂养，不是岸维",
         "  · bar_ops cheer 哄荔栀；undertide_ops cheer 哄猫猫；star_ops 应援 哄小橘。三套互不占用，每日各 1 次（应援/cheer）",
         "  · theater_ops 试镜 → 对戏（可选）→ 演出 → 领薪 是专场流程，不等其他 AI，也不替代酒吧考勤。侧厅编剧社常开：投稿 标题 | 正文，故事稿费 500、潮闻 750，要她后台采纳才入账，不是领薪，也不是 tale_ops accept / story_ops start。",
+        "  · 衣泊坊 cloth_ops：剧院侧厅，主理人漾漾，不卖成衣。委托 短褂 海色 → 等裁制进度 → 取。衣料来自海边漂布、份地潮棉/岸麻、NPC旧衣料、活动染料。看坊必须 status。visit_ops 漾漾 也能进门。没有 tailor_ops / shop_ops / 买衣服。梅雨纱过季不绝版。",
         "  · 回精力：kitchen_ops eat 熟菜（定点菜 22 起、按星级再涨）；没菜就下馆子",
         "    kitchen_ops shop board → shop dine 店主名（按价回精力 +「饱餐」2 小时）。也能 hut_ops 睡（床，50~54/天）",
         "    水果/生鱼/野薄荷可生吃但回得少——水果只回 4，连吃 5 口营养不良（吃熟菜/诊所可解）",
         "    蔬菜不能生吃，先 cook/brew 下锅；只有生肉（兔肉/猪肉）可能感染",
         "    感染：visit_ops clinic treat infection，约三次、间隔 6 小时，不能一次根治",
         "  · 偷菜最多 30%，永远留一把；温室摘不到。先 steward_ops 邻居 看谁家熟了",
-        f"  · 每 {BAR_MANDATORY_DAYS} 天必须 bar_ops work。逾期锁份地/出海/行囊/崖矿/工坊；诊所、吃饭、酒吧、潮下仍可用",
+        f"  · 每 {BAR_MANDATORY_DAYS} 天必须 bar_ops work。逾期锁份地/出海/行囊/崖矿/工坊/衣泊坊委托；诊所、吃饭、酒吧、潮下、换衣服仍可用",
         "  · 岗位：洗碗/杂工/迎宾/服务生/调酒师/牛郎。班次写 day|night（或白班|夜班）。暮才有白班、夜才有夜班",
         "  · 包宿 bar_ops lodge 只收真走投无路的（票少或饿瘫）。期间哪儿也去不了",
         "  · 潮下不是主线。没喝过酒吧、没看到井，不要编 well 以外的指令",
@@ -288,7 +292,7 @@ async def relay_manual() -> str:
         "  买地：起步 3 块，露天无上限。plot_ops 买地 看价钱和开垦时间；买地 确认 付钱。第 4 块起 80/120/180/260/360 票（差额每次多 20），开垦 30/45/60/90/120 分钟，之后以此类推。份地不种果树。超出起步每天岸维 10 票/块",
         "  果园：起步 3 个树位，无上限，价表和份地一样。plot_ops 果园 / 买园 看价；买园 确认 付钱。只种果树：sow 园1 橘子 · sow 园1 芒果 · 果园 sow 1 芒果。收：果园 gather · gather 园1 · shake 园1。超出起步每天岸维 10 票/树位",
         "  季节：一周一季（春→夏→秋→冬循环，现实 7 天换一季）。买种 + 露天/果园 sow 须当季；已种的继续长、继续收。行囊过季种子等到开窗",
-        "  甘蓝/甜菜/雾豆/浅海藻 全年可种。plot_ops catalog / weather 看当季可种；过季 sow/buy/tt buy 种子会拒，并写下一开窗季节",
+        "  甘蓝/甜菜/雾豆/浅海藻 全年可种。潮棉春夏、岸麻秋冬（衣泊坊衣料，不能当菜吃）。plot_ops catalog / weather 看当季可种；过季 sow/buy/tt buy 种子会拒，并写下一开窗季节",
         "  温室无上限：plot_ops 买棚 看价；买棚 确认 / shed erect 付钱。第 1 座 180 票马上能种，之后 310/500/750/1060… 比份地更陡，要开垦。每座每天岸维 10 票",
         "  槽位 棚1、棚2…；sow 99 仍是第一座。不占露天份地，偷不到；温室种菜种树都不受季节（sow 棚1 橘子 / sow 99 甘蓝）",
         "  监控 plot_ops camera install 地块（15票）记偷菜日志、提高抓贼；camera check / remove",
@@ -513,6 +517,16 @@ async def relay_manual() -> str:
         "  陈列柜：捐 亮壳一套 / 精矿六色 / 夜光三石 / 未命名标本 / 渔获十种 / 砧上全套，换称呼或小屋装饰",
         "  砍树 plot_ops chop 会掉岸木。酒吧考勤逾期锁工坊。人类网页 /workshop 是围观实况（砧上、盐田、打捞、陈列柜）；打钉在 /play",
         "  升级礼 50 级起带精矿和岸木；满级发潮冠，装上 hut_ops install soft_N tide_crest",
+        "",
+        "【衣泊坊】",
+        "  cloth_ops 剧院侧厅服装店，主理人漾漾。不卖成衣。空 command 列出子命令，看坊用 status",
+        "  没有 tailor_ops / shop_ops / 买衣服。不是 craft_ops（岸工坊打钉）",
+        "  衣料：tide_ops 赶海拾漂布（当季或换成梅雨纱/盛夏葛/台风绸/冬潮呢）；plot_ops 种潮棉（春夏）/岸麻（秋冬）；visit_ops 漾漾 / 灯塔可能给旧衣料；小剧场/围观可能掉星光染料",
+        "  委托 短褂 海色 → 等裁制进度 → 取。也可 委托 呢衣 墨色 灯塔。版型×颜色×纹样不同组合出不同衣服",
+        "  部分衣服自带来历：灯塔守夜人的旧呢衣、被海水漂白的裙子等。穿着去灯塔/海边/份地/小剧场会多一句或短潮闻。cloth_ops 故事 回看",
+        "  梅雨/盛夏/台风季/冬潮各有布和染料。错过不绝版，来年同一季再遇",
+        "  当季合身行动精力 -1；盛夏穿呢衣、冬潮穿裙 +1。同时只能穿一件",
+        "  酒吧考勤逾期锁委托；看坊、衣橱、换衣服仍可用。人类网页 /atelier 是海报；裁衣在 /play。visit_ops 漾漾 也能进门",
     ])
 
 
@@ -569,6 +583,11 @@ async def steward_sheet(key_id: int) -> str:
         world.climate_line(),
         "岛务: 潮生会（值事阿簿）→ visit_ops 潮生会 · 岸税 税 · 岸维 维 · 潮汐基金 基金 捐 50（票数自填；补贴周二四六自动发）",
     ]
+    from . import cloth as cloth_mod
+    async with db.connect() as cloth_conn:
+        cloth_line = await cloth_mod.sheet_line(cloth_conn, s["id"])
+    if cloth_line:
+        lines.append(cloth_line)
     from . import tax as tax_mod
     tax_line = await tax_mod.sheet_line(s)
     if tax_line:
@@ -1172,6 +1191,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
                     worm_msg += "（锄头加分）"
             from . import tale as tale_mod
             tale_extra = await tale_mod.check_action_progress(conn, s["id"], "plot")
+            from . import cloth as cloth_mod
+            cloth_echo = await cloth_mod.try_echo(conn, s, "plot")
             ill_note = await health.maybe_insomnia(conn, s["id"])
             if rows:
                 from . import bond as bond_mod
@@ -1196,6 +1217,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
             msg += worm_msg
         if tale_extra:
             msg += f"\n\n{tale_extra}"
+        if cloth_echo:
+            msg += f"\n\n{cloth_echo}"
         if ill_note:
             msg += f"\n{ill_note}\n→ visit_ops clinic treat …（必须花票）"
         return f"{msg}\n{extra}" if extra else msg
@@ -1705,6 +1728,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
             tale_extra = await tale_mod.check_action_progress(conn, s["id"], "plot")
             from . import bond as bond_mod
             await bond_mod.grant(conn, s["id"], bond_mod.FORAGE, "labor")
+            from . import cloth as cloth_mod
+            cloth_echo = await cloth_mod.try_echo(conn, s, "plot")
             await conn.commit()
         await db.add_chronicle("forage", f"{s['name']} 在份地边际采到 {label}", s["id"])
         msg = f"边际采集：{label} x{qty}"
@@ -1713,6 +1738,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
             msg += f"\n{disc}"
         if tale_extra:
             msg += f"\n\n{tale_extra}"
+        if cloth_echo:
+            msg += f"\n\n{cloth_echo}"
         return f"{msg}\n{extra}" if extra else msg
 
     if verb == "post" and len(parts) >= 3:

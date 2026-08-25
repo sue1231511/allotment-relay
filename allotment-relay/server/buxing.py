@@ -38,8 +38,13 @@ async def _visit(s: dict) -> str:
         await bond_mod.note_visit(conn, s["id"], "buxing")
         state = await _state(conn, s["id"])
         await conn.execute("UPDATE steward_buxing SET wicks=wicks+1,updated_at=? WHERE steward_id=?", (db.now(), s["id"]))
+        from . import cloth as cloth_mod
+        dye = await cloth_mod.maybe_event_dye(conn, s["id"], "lantern")
+        old = await cloth_mod.maybe_grant_old_cloth(conn, s["id"], 0.12)
+        echo = await cloth_mod.try_echo(conn, s, "lighthouse")
         await conn.commit()
-    return "灯塔里有一壶温茶，塔门内侧刻着：\n“点一盏灯，守一个人。”\n\n看灯的合上潮汐簿。\n“茶不要钱。坐。”\n\n（闲聊记一根灯芯；已有 %s 根）" % (int(state["wicks"])+1)
+    extra = "".join(f"\n{x}" for x in (dye, old, echo) if x)
+    return "灯塔里有一壶温茶，塔门内侧刻着：\n“点一盏灯，守一个人。”\n\n看灯的合上潮汐簿。\n“茶不要钱。坐。”\n\n（闲聊记一根灯芯；已有 %s 根）%s" % (int(state["wicks"])+1, extra)
 
 async def _tea(s: dict) -> str:
     async with db.connect() as conn:

@@ -48,6 +48,10 @@ async def spend(
     # 堂食「饱餐」：期间行动精力消耗 -1（最低 1），先于余额判定生效
     if row and int(row[1] or 0) > db.now():
         amount = max(1, amount - config.DINE_BUFF_ENERGY_SAVE)
+    from . import cloth as cloth_mod
+    cloth_delta = await cloth_mod.energy_adjust(conn, steward_id)
+    if cloth_delta:
+        amount = max(1, amount + cloth_delta)
     current = row[0] if row else config.START_ENERGY
     if current < amount:
         nag = ""

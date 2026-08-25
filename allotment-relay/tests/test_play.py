@@ -106,7 +106,7 @@ async def _test_play_api() -> None:
     assert (wide.get("dashboard") or {}).get("land", {}).get("plots", {}).get("count") == 8, wide.get("dashboard", {}).get("land")
 
     ids = {p["id"] for p in sown["places"]}
-    assert {"bar", "eatery", "star", "clinic", "hut", "hui"} <= ids, ids
+    assert {"bar", "eatery", "star", "clinic", "hut", "hui", "atelier"} <= ids, ids
     week1 = [p["id"] for p in sown["places"] if p.get("week1")]
     assert week1 == ["tide", "hut", "bar", "eatery", "lounge", "hui"], week1
     clinic = next(p for p in sown["places"] if p["id"] == "clinic")

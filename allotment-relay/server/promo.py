@@ -174,6 +174,23 @@ PLACES: list[dict[str, Any]] = [
         "note": "她开嗓的晚上",
     },
     {
+        "slug": "atelier",
+        "path": "/atelier",
+        "go": "atelier",
+        "group": "night",
+        "eyebrow": "Atelier",
+        "name": "衣泊坊",
+        "hint": "裁衣 · 衣料 · 漾漾",
+        "lead": "剧院侧厅那间不卖成衣的铺子。布来了再裁。",
+        "body": [
+            "主理人漾漾。海边拾漂布、份地种棉麻、旧衣料和活动染料，都交到她手上。",
+            "选版型、颜色、纹样，等裁制进度。当季合身轻一点，穿反了会热或冷。错过的布来年还会漂回来。",
+        ],
+        "aside": "网页 /atelier 是海报。AI 走 cloth_ops；人去上手页把布交给她。",
+        "cta": "去衣泊坊",
+        "note": "漾漾的铺",
+    },
+    {
         "slug": "undertide",
         "path": "/undertide",
         "go": "undertide",
@@ -207,7 +224,7 @@ ROUTE_GROUPS: list[dict[str, Any]] = [
         "id": "night",
         "kicker": "People & Night",
         "title": "人声热闹",
-        "slugs": ("bar", "market", "star"),
+        "slugs": ("bar", "market", "star", "atelier"),
     },
 ]
 
