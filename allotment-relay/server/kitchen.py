@@ -634,6 +634,7 @@ async def kitchen_ops(key_id: int, command: str) -> str:
                 )
             item = satchel_item
             gain = 15
+            drunk_line = None
             mix_e = dish_energy(item)
             if mix_e is not None:
                 gain = mix_e
@@ -662,6 +663,12 @@ async def kitchen_ops(key_id: int, command: str) -> str:
                 gain = config.PICKLE_ENERGY
             elif item.startswith("dried_"):
                 gain = config.DRIED_FISH_ENERGY
+            elif item == "ut_bulk_liquor":
+                gain = 30
+                if random.random() < 0.20:
+                    from . import health as health_mod
+                    await health_mod.inflict(conn, s["id"], "hangover", source="drink")
+                    drunk_line = "宿醉上头了——明早见分晓（clinic treat hangover）"
             elif is_raw_meat(item):
                 gain = 12
             else:
@@ -710,6 +717,8 @@ async def kitchen_ops(key_id: int, command: str) -> str:
                 f"\n{infect_line}\n"
                 "→ visit_ops clinic treat infection（约三次、间隔 6 小时；第一次可以马上挂）"
             )
+        if drunk_line:
+            msg += f"\n{drunk_line}"
         if walkblue_line:
             msg += f"\n{walkblue_line}"
         return msg

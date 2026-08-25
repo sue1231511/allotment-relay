@@ -9,32 +9,32 @@ LINKED_GOODS = {
     "deep_wick": {
         "name": "深海灯芯", "emoji": "🕯️", "base": 40, "vend": 50,
         "genuine_hint": "灯芯是干的，但拿在手里有一丝凉意——像刚从很深的地方捞上来。",
-        "effect_note": "（真货效果：下次深漂燃料减免——buff 联动二期接入）",
+        "effect_note": "（近期开放：深漂燃料减免——海上深漂玩法上线后生效）",
     },
     "fake_pass": {
         "name": "伪造买路票", "emoji": "🎫", "base": 15, "vend": 24,
         "genuine_hint": "纸的手感几乎和档口的一模一样。几乎。",
-        "effect_note": "（真货效果：下次 bribe 半价——buff 联动二期接入）",
+        "effect_note": "（近期开放：出海 bribe 半价——黑旗截停玩法上线后生效）",
     },
     "old_hook_t5": {
         "name": "旧制 T5 鱼钩", "emoji": "🎣", "base": 45, "vend": 58,
         "genuine_hint": "钩尖在灯下泛着一层旧钢特有的哑光。",
-        "effect_note": "（真货效果：数次稀有渔获加权——buff 联动二期接入）",
+        "effect_note": "（真货效果：持有即提升稀有渔获概率）",
     },
     "unmarked_pillbox": {
         "name": "无标药盒", "emoji": "💊", "base": 20, "vend": 28,
         "genuine_hint": "盒子是真的。里面的药片没有任何标记。掌柜理货的手停了一下：「吃不死人。」",
-        "effect_note": "（真货效果：下次治疗半价——buff 联动二期接入）",
+        "effect_note": "（真货效果：就医自动抵扣一次，治疗费减半）",
     },
     "greenhouse_part": {
         "name": "温室私改件", "emoji": "🔧", "base": 55, "vend": 70,
         "genuine_hint": "螺纹是正的，咬合得很紧。好东西。",
-        "effect_note": "（真货效果：阵风期生长惩罚减轻——buff 联动二期接入）",
+        "effect_note": "（真货效果：持有即减轻阵风生长惩罚）",
     },
     "unsigned_key": {
         "name": "没署名的仓库钥匙", "emoji": "🗝️", "base": 30, "vend": 40,
         "genuine_hint": "齿口很新。锁孔里的灰是旧的。",
-        "effect_note": "（真货效果：一次性私货箱——联动二期接入）",
+        "effect_note": "（近期开放：一次性私货箱——潮下自己的玩法，未上线）",
     },
 }
 
@@ -42,12 +42,12 @@ LINKED_GOODS = {
 COMMON_GOODS = {
     "smuggled_tobacco": {"name": "走私烟丝", "emoji": "🚬", "base": 12, "vend": 16},
     "bulk_liquor": {"name": "散装烈酒", "emoji": "🥃", "base": 15, "vend": 20,
-                    "hint": "入袋可 kitchen_ops eat 回精力；小概率次日宿醉（联动二期，一期为高回收价物品）"},
+                    "hint": "可 kitchen_ops eat 回精力 30；小概率次日宿醉"},
     "black_salt": {"name": "黑盐", "emoji": "🧂", "base": 18, "vend": 24},
     "old_chart_scrap": {"name": "旧海图残页", "emoji": "🗺️", "base": 22, "vend": 29},
     "rope_toolkit": {"name": "麻绳扳手套件", "emoji": "🧰", "base": 25, "vend": 33},
     "bite_block": {"name": "麻醉咬木", "emoji": "🪵", "base": 10, "vend": 13,
-                   "hint": "角斗前置：咬住它，单场 body 惩罚 -5（深坑二期接入）"},
+                   "hint": "角斗前置：行囊里有它，单场 body 惩罚 -5（自动消耗）"},
     "fog_glass_bead": {"name": "海雾玻璃珠", "emoji": "🔮", "base": 14, "vend": 19},
     "tide_worn_compass": {"name": "潮蚀罗盘", "emoji": "🧭", "base": 20, "vend": 26},
     "herringbone_knife": {"name": "鲱骨小刀", "emoji": "🔪", "base": 16, "vend": 21},

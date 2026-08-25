@@ -1072,6 +1072,11 @@ async def _plot_one(s: dict, cmd: str) -> str:
             )).fetchone()
             from . import hut as hut_mod
             hut_b = await hut_mod.get_bonuses(conn, s["id"])
+            # 温室私改件：持有即减轻阵风生长惩罚
+            has_greenhouse_part = (await (await conn.execute(
+                "SELECT 1 FROM satchel WHERE steward_id=? AND item='ut_greenhouse_part' AND quantity>0",
+                (s["id"],),
+            )).fetchone()) is not None
             iron_edge = hut_b.has("iron_edge")
             if iron_edge:
                 tend_cut = 70
@@ -1089,8 +1094,11 @@ async def _plot_one(s: dict, cmd: str) -> str:
                         "UPDATE parcels SET grow_target=MAX(120, grow_target-?) WHERE id=? AND grow_target>0",
                         (tend_cut, pid),
                     )
-                if world.current_weather() == "gale" and hut_b.gale_grow < 1:
-                    cut = int(80 * (1 - hut_b.gale_grow))
+                gale_grow = hut_b.gale_grow
+                if has_greenhouse_part:
+                    gale_grow *= 0.85
+                if world.current_weather() == "gale" and gale_grow < 1:
+                    cut = int(80 * (1 - gale_grow))
                     await conn.execute(
                         "UPDATE parcels SET grow_target=MAX(120, grow_target-?) WHERE id=? AND grow_target>0",
                         (cut, pid),
