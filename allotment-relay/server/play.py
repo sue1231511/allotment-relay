@@ -80,7 +80,7 @@ PLACES: list[dict[str, Any]] = [
         "week1": True,
         "duty": True,
         "actions": [
-            # 班次由 places_for() 按当前时辰改写；这里只是占位
+            # 班次由 places_for() 按当前时辰改写；这里只是占位。command 不写死 day/night
             {"label": "洗碗上工", "note": "每两天须来一次", "tool": "bar_ops", "command": "work 洗碗"},
             {"label": "今晚", "note": "看看今晚开不开门", "tool": "bar_ops", "command": "tonight"},
             {"label": "酒单", "note": "价目与今晚出品", "tool": "bar_ops", "command": "menu"},
@@ -126,7 +126,7 @@ PLACES: list[dict[str, Any]] = [
         "actions": [
             {"label": "问事", "note": "考勤、岸税、岸维与潮汐基金", "tool": "visit_ops", "command": "潮生会"},
             {"label": "岸税", "note": "档表与欠税。周一自动划", "tool": "visit_ops", "command": "潮生会 税"},
-            {"label": "岸维", "note": "产业维修费。每天划，日单价 2 起，起步免", "tool": "visit_ops", "command": "潮生会 维"},
+            {"label": "岸维", "note": "产业维修费。每天划，单价至少 10 票，起步免", "tool": "visit_ops", "command": "潮生会 维"},
             {"label": "潮汐基金", "note": "岛均与发放日。补贴不用领", "tool": "visit_ops", "command": "潮生会 基金"},
             {"label": "告示", "note": "墙上贴了什么", "tool": "visit_ops", "command": "潮生会 告示"},
         ],

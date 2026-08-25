@@ -26,6 +26,7 @@ async def _boot(tmp: Path):
 
 def test_play_api() -> None:
     asyncio.run(_test_play_api())
+    test_bar_place_actions_match_phase()
     test_play_page_lists_all_plot_kinds()
 
 
@@ -128,6 +129,28 @@ async def _test_play_api() -> None:
         assert "未知工具" in str(exc), exc
 
 
+def test_bar_place_actions_match_phase() -> None:
+    from server import bar, play as play_mod, world
+
+    phase = world.current_day_phase()
+    btn = bar.work_button_for(None)
+    assert btn["command"] == "work 洗碗", btn
+    if phase == "night":
+        assert not btn.get("disabled"), btn
+        assert "夜" in (btn.get("note") or ""), btn
+    elif phase == "dusk":
+        assert not btn.get("disabled"), btn
+        assert "白班" in (btn.get("note") or "") or "暮" in (btn.get("note") or ""), btn
+    else:
+        assert btn.get("disabled") is True, btn
+
+    places = play_mod.places_for(None)
+    bar_place = next(p for p in places if p["id"] == "bar")
+    dish = next(a for a in bar_place["actions"] if str(a.get("command") or "").startswith("work "))
+    assert dish["command"] == "work 洗碗", dish
+    assert dish.get("note") == btn.get("note"), (dish, btn)
+
+
 def test_play_page_lists_all_plot_kinds() -> None:
     html = (ROOT / "server" / "templates" / "play.html").read_text()
     js = (ROOT / "server" / "static" / "play.js").read_text()
@@ -146,9 +169,16 @@ def test_play_page_lists_all_plot_kinds() -> None:
     assert "交岸维" in js
     assert "orderedPlaces" in js
     assert "b.week1" in js
+    assert "parseActPayload" in js
+    assert "setWorkStatus" in js
+    assert "places_for" in (ROOT / "server" / "play.py").read_text()
+    assert "work_button_for" in (ROOT / "server" / "bar.py").read_text()
+    assert "focusPlaceResult" in js
+    assert "is-disabled" in js
 
 
 if __name__ == "__main__":
     asyncio.run(_test_play_api())
+    test_bar_place_actions_match_phase()
     test_play_page_lists_all_plot_kinds()
     print("ok")

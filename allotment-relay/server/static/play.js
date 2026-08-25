@@ -273,6 +273,7 @@ function renderPlace(id) {
   if (switching) {
     if ($('play-work-title')) $('play-work-title').textContent = '选一个动作';
     if ($('play-work-sub')) $('play-work-sub').textContent = '操作结果会直接留在这里。';
+    setWorkStatus('可操作');
     clearPlaceResult();
   } else if (state.placeResult) {
     showPlaceResult(state.placeResult);
@@ -961,6 +962,18 @@ function itemSheet(name) {
   `);
 }
 
+function parseActPayload(raw) {
+  if (!raw) return null;
+  try {
+    const payload = JSON.parse(raw);
+    if (!payload || typeof payload.tool !== 'string') return null;
+    if (payload.command != null && typeof payload.command !== 'string') return null;
+    return { tool: payload.tool, command: payload.command || '' };
+  } catch {
+    return null;
+  }
+}
+
 async function act(tool, command) {
   if (tool === 'go') {
     closeSheet();
@@ -981,7 +994,6 @@ async function act(tool, command) {
     setWorkStatus('没做成', 'err');
     try {
       const snap = await api('', '');
-      // 刷新时辰/按钮，但别清掉刚写上的失败原因
       applySnap(snap, '');
       if (msg) showPlaceResult(msg);
     } catch {
@@ -1354,13 +1366,12 @@ document.body.addEventListener('click', (e) => {
   }
   const btn = e.target.closest('[data-act]');
   if (!btn || btn.disabled || btn.getAttribute('aria-disabled') === 'true') return;
-  let payload;
-  try {
-    payload = JSON.parse(btn.getAttribute('data-act'));
-  } catch {
+  const payload = parseActPayload(btn.getAttribute('data-act'));
+  if (!payload) {
+    setLog('动作按钮坏了，刷新页面再试。');
+    setWorkStatus('没做成', 'err');
     return;
   }
-  if (!payload || !payload.tool) return;
   if (btn.classList.contains('place-tool')) selectPlaceTool(btn);
   act(payload.tool, payload.command || '');
 });
