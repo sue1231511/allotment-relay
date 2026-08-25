@@ -410,15 +410,15 @@ async def status_text(
     from . import upkeep as upkeep_mod
     if greenhouse:
         lines.append(
-            f"岸维：每座温室每周 {upkeep_mod.GREENHOUSE} 票 → visit_ops 潮生会 维"
+            f"岸维：每座温室每天 {upkeep_mod.GREENHOUSE} 票 → visit_ops 潮生会 维"
         )
     elif orchard:
         lines.append(
-            f"岸维：起步 {start} 树位免，超出每周 {upkeep_mod.ORCHARD_EXTRA} 票/树位 → visit_ops 潮生会 维"
+            f"岸维：起步 {start} 树位免，超出每天 {upkeep_mod.ORCHARD_EXTRA} 票/树位 → visit_ops 潮生会 维"
         )
     else:
         lines.append(
-            f"岸维：起步 {start} 块免，超出每周 {upkeep_mod.PLOT_EXTRA} 票/块 → visit_ops 潮生会 维"
+            f"岸维：起步 {start} 块免，超出每天 {upkeep_mod.PLOT_EXTRA} 票/块 → visit_ops 潮生会 维"
         )
     return "\n".join(lines)
 

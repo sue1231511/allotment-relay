@@ -79,7 +79,7 @@ async def barn_ops(key_id: int, command: str) -> str:
         lines.append("粪便进堆肥桶：hut_ops 堆肥桶 存 羊粪 3（先 buy compost_bin → install soft_1，空槽也能装）")
         if built:
             lines.append(
-                f"岸维：畜栏每周 {upkeep_mod.BARN_BASE} 票 + 在栏 {upkeep_mod.BARN_STOCKED} 票/槽"
+                f"岸维：畜栏每天 {upkeep_mod.BARN_BASE} 票 + 在栏 {upkeep_mod.BARN_STOCKED} 票/槽"
                 " → visit_ops 潮生会 维"
             )
         return "\n".join(lines)
@@ -135,7 +135,7 @@ async def barn_ops(key_id: int, command: str) -> str:
                     (s["id"], slot),
                 )
             await conn.commit()
-        return f"畜栏就绪（-{config.BARN_ERECT_COST} 票，{config.BARN_SLOTS} 槽）。每周岸维 {upkeep_mod.BARN_BASE} 票起 → visit_ops 潮生会 维"
+        return f"畜栏就绪（-{config.BARN_ERECT_COST} 票，{config.BARN_SLOTS} 槽）。每天岸维 {upkeep_mod.BARN_BASE} 票起 → visit_ops 潮生会 维"
 
     if verb == "buy" and len(parts) >= 2:
         if not s.get("barn_built"):
