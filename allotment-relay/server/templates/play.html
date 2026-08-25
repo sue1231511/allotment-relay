@@ -197,6 +197,51 @@
               <button type="submit" class="btn primary">入簿</button>
               <p class="muted">补贴不用领。东八区周二、周四、周六自动打到低于岛均的人口袋。</p>
             </form>
+            <form id="play-cloth-sew" class="play-hui-donate hidden">
+              <p class="muted">漾漾不卖成衣。版型、颜色、纹样点好，布从行囊扣。</p>
+              <label>版型
+                <select id="play-cloth-cut">
+                  <option value="短褂">短褂</option>
+                  <option value="长衫">长衫</option>
+                  <option value="裙">裙</option>
+                  <option value="呢衣">呢衣</option>
+                  <option value="斗篷">斗篷</option>
+                  <option value="工装">工装</option>
+                </select>
+              </label>
+              <label>颜色
+                <select id="play-cloth-color">
+                  <option value="海色">海色</option>
+                  <option value="墨色">墨色</option>
+                  <option value="沙色">沙色</option>
+                  <option value="雾色">雾色</option>
+                  <option value="梅青">梅青</option>
+                  <option value="午金">午金</option>
+                  <option value="风绛">风绛</option>
+                  <option value="潮灰">潮灰</option>
+                  <option value="星光">星光</option>
+                  <option value="灯塔色">灯塔色</option>
+                </select>
+              </label>
+              <label>纹样
+                <select id="play-cloth-motif">
+                  <option value="素">素</option>
+                  <option value="潮纹">潮纹</option>
+                  <option value="灯塔">灯塔</option>
+                  <option value="渔网">渔网</option>
+                  <option value="星点">星点</option>
+                  <option value="漂布拼">漂布拼</option>
+                </select>
+              </label>
+              <button type="submit" class="btn primary">交给漾漾</button>
+              <label>衣橱编号 <span class="muted">取衣后看编号</span>
+                <input type="number" id="play-cloth-wear" min="1" step="1" placeholder="例如 1">
+              </label>
+              <div class="play-cloth-wear-row">
+                <button type="button" class="btn" id="play-cloth-wear-btn">穿上</button>
+                <button type="button" class="btn" id="play-cloth-off-btn">脱下</button>
+              </div>
+            </form>
             <div class="place-result-shell">
               <div class="place-result-empty" id="play-place-empty">
                 <div>

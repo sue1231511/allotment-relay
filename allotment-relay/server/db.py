@@ -1753,6 +1753,47 @@ async def init_db() -> None:
             """,
             "CREATE INDEX IF NOT EXISTS idx_star_scripts_status ON star_scripts(status, created_at)",
             "CREATE INDEX IF NOT EXISTS idx_star_scripts_steward ON star_scripts(steward_id, created_at)",
+            # 衣泊坊：剧院侧厅裁衣。成衣进衣橱，不占行囊。
+            """
+            CREATE TABLE IF NOT EXISTS steward_atelier (
+                steward_id INTEGER PRIMARY KEY REFERENCES stewards(id),
+                job_cut TEXT NOT NULL DEFAULT '',
+                job_color TEXT NOT NULL DEFAULT '',
+                job_motif TEXT NOT NULL DEFAULT '',
+                job_fabric TEXT NOT NULL DEFAULT '',
+                job_dye TEXT NOT NULL DEFAULT '',
+                job_story TEXT NOT NULL DEFAULT '',
+                job_name TEXT NOT NULL DEFAULT '',
+                job_ready_at INTEGER NOT NULL DEFAULT 0,
+                worn_id INTEGER NOT NULL DEFAULT 0,
+                sews_total INTEGER NOT NULL DEFAULT 0
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS steward_wardrobe (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                cut_key TEXT NOT NULL,
+                color_key TEXT NOT NULL,
+                motif_key TEXT NOT NULL DEFAULT 'plain',
+                fabric_key TEXT NOT NULL,
+                story_key TEXT NOT NULL DEFAULT '',
+                name TEXT NOT NULL,
+                origin TEXT NOT NULL DEFAULT '',
+                created_at INTEGER NOT NULL DEFAULT 0
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_wardrobe_steward ON steward_wardrobe(steward_id, id)",
+            """
+            CREATE TABLE IF NOT EXISTS steward_cloth_echo (
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                story_key TEXT NOT NULL,
+                place TEXT NOT NULL,
+                text TEXT NOT NULL DEFAULT '',
+                created_at INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (steward_id, story_key, place)
+            )
+            """,
             "ALTER TABLE lounge_messages ADD COLUMN booth_key TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE stewards ADD COLUMN lounge_booth_key TEXT NOT NULL DEFAULT ''",
             "CREATE INDEX IF NOT EXISTS idx_lounge_booth ON lounge_messages(booth_key, id)",

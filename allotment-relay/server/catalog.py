@@ -19,6 +19,8 @@ CROPS = {
     "fogpea":      {"name": "雾豌豆",   "emoji": "🫛", "seed_price": 10, "sell": 23, "grow":  90, "yield": 4, "tier": 2, "spread": 0.28, "tags": ["legume"]},
     "beet":        {"name": "甜菜",     "emoji": "🫘", "seed_price": 9,  "sell": 21, "grow": 100, "yield": 4, "tier": 2, "spread": 0.26, "tags": ["root"]},
     "rye":         {"name": "黑麦",     "emoji": "🌾", "seed_price": 8,  "sell": 19, "grow": 120, "yield": 4, "tier": 2, "spread": 0.28, "tags": ["grain"], "seasons": ("秋", "冬")},
+    "cotton":      {"name": "潮棉",     "emoji": "☁️", "seed_price": 11, "sell": 14, "grow": 100, "yield": 4, "tier": 2, "spread": 0.24, "tags": ["fiber"], "aliases": ["棉", "棉花"], "seasons": ("春", "夏")},
+    "hemp":        {"name": "岸麻",     "emoji": "🌿", "seed_price": 12, "sell": 15, "grow": 110, "yield": 4, "tier": 2, "spread": 0.24, "tags": ["fiber"], "aliases": ["麻", "苎麻"], "seasons": ("秋", "冬")},
     # ── 长茬（约 2.5~3 时）──
     "bramble":     {"name": "荆棘莓",   "emoji": "🫐", "seed_price": 14, "sell": 32, "grow": 150, "yield": 3, "tier": 3, "spread": 0.28, "tags": ["berry"], "seasons": ("春", "夏", "秋")},
     "blueberry":   {"name": "蓝莓",     "emoji": "🫐", "seed_price": 16, "sell": 36, "grow": 160, "yield": 3, "tier": 3, "spread": 0.26, "tags": ["berry", "tropic"], "seasons": ("春", "夏")},
@@ -35,11 +37,12 @@ CROPS = {
 }
 
 # 生吃规则：水果（tags 带 fruit/berry）可以生吃，但只回一点精力、连吃会营养不良；
-# 其余作物一律算蔬菜（甘蓝/姜/红薯/浅海藻等），禁止生吃，只能 cook / brew 下锅。
+# 纤维作物（潮棉/岸麻）是衣料，不能生吃也不能下锅；其余作物一律算蔬菜。
 FRUIT_CROPS = frozenset(
     k for k, v in CROPS.items()
     if "fruit" in v.get("tags", ()) or "berry" in v.get("tags", ())
 )
+FIBER_CROPS = frozenset(("cotton", "hemp"))
 
 
 def is_fruit_item(item: str) -> bool:
@@ -47,7 +50,57 @@ def is_fruit_item(item: str) -> bool:
 
 
 def is_vegetable_item(item: str) -> bool:
-    return bool(item) and item.startswith("crop_") and item[5:] not in FRUIT_CROPS
+    return bool(item) and item.startswith("crop_") and item[5:] not in FRUIT_CROPS and item[5:] not in FIBER_CROPS
+
+# 衣泊坊衣料 / 染料。不成衣；成衣进衣橱不占行囊。
+CLOTH_ITEMS = {
+    "cloth_drift": {
+        "name": "漂布", "emoji": "🧺", "sell": 8,
+        "aliases": ("漂布", "漂来的布", "drift_cloth"),
+    },
+    "cloth_old": {
+        "name": "旧衣料", "emoji": "🧵", "sell": 12,
+        "aliases": ("旧衣料", "旧布", "旧呢"),
+    },
+    "cloth_mist": {
+        "name": "梅雨纱", "emoji": "🌧️", "sell": 16,
+        "aliases": ("梅雨纱", "梅雨布"),
+        "season": "春",
+    },
+    "cloth_sun": {
+        "name": "盛夏葛", "emoji": "☀️", "sell": 16,
+        "aliases": ("盛夏葛", "夏葛"),
+        "season": "夏",
+    },
+    "cloth_gale": {
+        "name": "台风绸", "emoji": "🌀", "sell": 18,
+        "aliases": ("台风绸", "风绸"),
+        "season": "秋",
+    },
+    "cloth_frost": {
+        "name": "冬潮呢", "emoji": "🧣", "sell": 18,
+        "aliases": ("冬潮呢", "冬呢"),
+        "season": "冬",
+    },
+    "dye_sea": {"name": "海色染料", "emoji": "🔵", "sell": 9, "aliases": ("海色染料", "海色")},
+    "dye_ink": {"name": "墨色染料", "emoji": "⚫", "sell": 9, "aliases": ("墨色染料", "墨色")},
+    "dye_sand": {"name": "沙色染料", "emoji": "🟤", "sell": 9, "aliases": ("沙色染料", "沙色")},
+    "dye_plum": {"name": "梅青染料", "emoji": "🟢", "sell": 14, "aliases": ("梅青染料", "梅青"), "season": "春"},
+    "dye_noon": {"name": "午金染料", "emoji": "🟡", "sell": 14, "aliases": ("午金染料", "午金"), "season": "夏"},
+    "dye_typhoon": {"name": "风绛染料", "emoji": "🔴", "sell": 14, "aliases": ("风绛染料", "风绛"), "season": "秋"},
+    "dye_tide": {"name": "潮灰染料", "emoji": "⬜", "sell": 14, "aliases": ("潮灰染料", "潮灰"), "season": "冬"},
+    "dye_fog": {"name": "雾色染料", "emoji": "🌫️", "sell": 9, "aliases": ("雾色染料", "雾色")},
+    "dye_star": {"name": "星光染料", "emoji": "✨", "sell": 22, "aliases": ("星光染料", "星光")},
+    "dye_lantern": {"name": "灯塔染料", "emoji": "🕯️", "sell": 22, "aliases": ("灯塔染料", "灯塔色")},
+}
+
+
+def is_fiber_item(item: str) -> bool:
+    if not item:
+        return False
+    if item in CLOTH_ITEMS:
+        return True
+    return item.startswith("crop_") and item[5:] in FIBER_CROPS
 
 
 _CROP_SUFFIXES = ("种子", "种", "苗")
@@ -223,6 +276,12 @@ def resolve_item_key(token: str, *, prefer: str = "any") -> str | None:
             if ck_item in ITEM_PRICES:
                 return ck_item
 
+    for key, meta in CLOTH_ITEMS.items():
+        if meta["name"] == raw or f"{meta.get('emoji', '')}{meta['name']}" == raw:
+            return key
+        if raw in (meta.get("aliases") or ()) or norm == key:
+            return key
+
     return None
 
 
@@ -298,6 +357,9 @@ FORAGE_LOOT = [
     ("drift_twine", "漂绳", 1, 20),
     ("ticket_stub", "旧票根", 1, 15),
     ("sea_glass", "海玻璃", 1, 5),
+    ("cloth_old", "旧衣料", 1, 6),
+    ("crop_cotton", "潮棉", 1, 4),
+    ("crop_hemp", "岸麻", 1, 3),
 ]
 
 STARTER_STOCK = {
@@ -329,6 +391,7 @@ COMMONS_TEMPLATES = [
     {"key": "amber_hunk", "label": "潮线琥珀", "domain": "shore", "item": "curio_amber", "qty": 1, "tickets": 0, "weight": 5},
     {"key": "pearl_grit", "label": "浅湾珠砂", "domain": "sea", "item": "curio_pearl", "qty": 1, "tickets": 0, "weight": 4},
     {"key": "seed_cache", "label": "公共种箱", "domain": "plot", "item": "seed_kale", "qty": 2, "tickets": 0, "weight": 9},
+    {"key": "cloth_heap", "label": "公共旧布堆", "domain": "plot", "item": "cloth_old", "qty": 1, "tickets": 0, "weight": 6},
 ]
 
 DISCOVERY_LOOT = {
@@ -344,6 +407,7 @@ DISCOVERY_LOOT = {
         ("sea_glass", 1, 14, "海玻璃反光晃你眼"),
         ("wild_mint", 2, 16, "薄荷长得比你还精神"),
         ("ticket_stub", 2, 12, "旧票根成堆，像彩蛋"),
+        ("cloth_old", 1, 8, "篱笆上挂着一匹旧衣料"),
     ],
     "net": [
         ("curio_pearl", 1, 4, "网底卡了粒珠砂"),
@@ -366,6 +430,7 @@ DISCOVERY_LOOT = {
         ("bait_worm", 3, 14, "湿沙下蚯蚓成窝"),
         ("fish_razorclam", 1, 8, "探到竹蛏，惊喜"),
         ("shell_starfish", 1, 6, "海星在看你"),
+        ("cloth_drift", 1, 10, "浪送上一匹漂布"),
     ],
     "pen_harvest": [
         ("curio_pearl", 1, 6, "收网带出一粒珠砂"),
@@ -849,6 +914,11 @@ BEACH_LOOT = [
     ("sea_glass", "海玻璃", 1, 6, 12),
     ("fish_seaurchin", "海胆", 1, 5, 30),
     ("curio_pearl", "浅湾珠砂", 1, 3, 38),
+    ("cloth_drift", "漂布", 1, 9, 8),
+    ("dye_sea", "海色染料", 1, 4, 9),
+    ("dye_ink", "墨色染料", 1, 3, 9),
+    ("dye_sand", "沙色染料", 1, 3, 9),
+    ("dye_fog", "雾色染料", 1, 3, 9),
 ]
 
 MANURE = {
@@ -1344,6 +1414,13 @@ NPC_FIXED = [
         "心情好的时候会塞东西。别天天来蹲。",
         "visit_ops tt catalog 看货架 · buy 物品 · gift 物品",
     ]},
+    {"key": "yangyang", "name": "漾漾", "lines": [
+        "衣泊坊主理人。剧院侧厅那间不卖成衣的裁缝铺。",
+        "成衣没有。布来了再裁。版型、颜色、纹样你自己点。",
+        "梅雨纱过季会收进柜里。不是绝版，明年还会漂回来。",
+        "cloth_ops 看坊 / 委托 短褂 海色 / 取。visit_ops 漾漾 也能进门。",
+        "穿去灯塔的呢衣，不醒认得。穿去海边的裙子，浪也认得。",
+    ]},
 ]
 
 # 栗栗流动摊 — 稀有装饰（deco_*），hut_ops install 到 soft 槽
@@ -1466,6 +1543,7 @@ ITEM_PRICES.update({
 })
 ITEM_PRICES.update({k: v["sell"] for k, v in QUARRY_ORES.items()})
 ITEM_PRICES.update({k: v["sell"] for k, v in CRAFT_ITEMS.items()})
+ITEM_PRICES.update({k: v["sell"] for k, v in CLOTH_ITEMS.items()})
 ITEM_PRICES.update({k: v["sell"] for k, v in MANURE.items()})
 for k, v in LIVESTOCK.items():
     ITEM_PRICES[f"live_{k}"] = v["buy"]
@@ -1514,6 +1592,7 @@ ITEM_NAMES.update({
 })
 ITEM_NAMES.update({k: f"{v['emoji']}{v['name']}" for k, v in QUARRY_ORES.items()})
 ITEM_NAMES.update({k: f"{v['emoji']}{v['name']}" for k, v in CRAFT_ITEMS.items()})
+ITEM_NAMES.update({k: f"{v['emoji']}{v['name']}" for k, v in CLOTH_ITEMS.items()})
 for _shell_base in ("shell_catseye", "shell_conch", "shell_scallop", "shell_starfish", "shell_mussel"):
     _plain = ITEM_NAMES[_shell_base]
     _suffix = _shell_base.replace("shell_", "")

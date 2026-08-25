@@ -247,17 +247,25 @@ async def _cmd_perform(conn: aiosqlite.Connection, s: dict) -> str:
            performance_affinity=? WHERE steward_id=? AND day=?""",
         (outcome, payout, standing_gain, mist_gain, affinity_gain, s["id"], _day()),
     )
-    await conn.commit()
     extras = []
     if encore:
         extras.append("固定班底安可 +20票")
     if weekly:
         extras.append("压轴搭档周奖金 +50票")
+    from . import cloth as cloth_mod
+    dye = await cloth_mod.maybe_event_dye(conn, s["id"], "star")
+    echo = await cloth_mod.try_echo(conn, s, "theater")
+    extra_lines = ""
+    if dye:
+        extra_lines += f"\n{dye}"
+    if echo:
+        extra_lines += f"\n{echo}"
+    await conn.commit()
     return (
         f"«{run['play_title']} · {run['role_label']}\n{OUTCOME_COPY[outcome]}\n"
         f"结果：{OUTCOME_LABELS[outcome]} · 待领 {payout}票 · 档信+{standing_gain} · 雾智+{mist_gain}"
         f" · 小橘好感+{affinity_gain}{'（头粉双倍）' if run['head_fan'] and affinity_gain else ''}"
-        f"{' · ' + '、'.join(extras) if extras else ''}\n"
+        f"{' · ' + '、'.join(extras) if extras else ''}{extra_lines}\n"
         "→ theater_ops 领薪。»"
     )
 
@@ -364,7 +372,11 @@ async def _cmd_guild(conn: aiosqlite.Connection, s: dict) -> str:
     else:
         lines.append("  还没投过。")
     lines.append("»")
-    return "\n".join(lines)
+    from . import cloth as cloth_mod
+    echo = await cloth_mod.try_echo(conn, s, "theater")
+    await conn.commit()
+    text = "\n".join(lines)
+    return f"{text}\n{echo}" if echo else text
 
 
 async def _cmd_submit(conn: aiosqlite.Connection, s: dict, rest: str) -> str:
