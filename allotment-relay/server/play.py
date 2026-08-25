@@ -97,6 +97,21 @@ PLACES: list[dict[str, Any]] = [
         ],
     },
     {
+        "id": "hui",
+        "name": "潮生会",
+        "kicker": "Hall",
+        "blurb": "岛上管事的地方。问事、潮汐基金、告示。不能入会。",
+        "href": "/hui",
+        "live": "打开潮生会现场 →",
+        "rail": "今天来潮生会做什么",
+        "week1": True,
+        "actions": [
+            {"label": "问事", "note": "考勤与潮汐基金", "tool": "visit_ops", "command": "潮生会"},
+            {"label": "潮汐基金", "note": "岛均与发放日。补贴不用领", "tool": "visit_ops", "command": "潮生会 基金"},
+            {"label": "告示", "note": "墙上贴了什么", "tool": "visit_ops", "command": "潮生会 告示"},
+        ],
+    },
+    {
         "id": "craft",
         "name": "岸工坊",
         "kicker": "Workshop",

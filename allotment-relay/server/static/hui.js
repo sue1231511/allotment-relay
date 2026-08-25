@@ -1,0 +1,65 @@
+function esc(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function clock(epoch) {
+  if (!epoch) return '—';
+  const d = new Date(Number(epoch) * 1000);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+async function loadHui() {
+  const data = await fetch('/api/public/hui').then((r) => r.json());
+  const fund = data.fund || {};
+
+  document.getElementById('hui-meta').innerHTML = [
+    `<span>值事 ${esc(data.clerk || '阿簿')}</span>`,
+    `<span>告示 ${esc((data.beacons || []).length)} 条</span>`,
+    `<span>基金 ${esc(fund.pool ?? 0)} 票</span>`,
+  ].join('');
+
+  document.getElementById('hui-strip').innerHTML =
+    `<span class="dot"></span><span>${esc(data.clerk || '阿簿')}：「${esc(data.line || '坐。先报名字。')}」</span>`;
+
+  const fundEl = document.getElementById('hui-fund');
+  if (fundEl) {
+    const ready = Boolean(fund.ready);
+    fundEl.innerHTML = `
+      <div class="hui-card">
+        <small>池里</small>
+        <strong>${esc(fund.pool ?? 0)} 票</strong>
+        <p>${ready
+          ? `岛均口袋 ${esc(fund.avg ?? 0)} 票 · 在册 ${esc(fund.n ?? 0)} 人。有余的人自己填数捐。补贴不用领，${esc(fund.weekdays || '周二四六')}自动发。`
+          : '在册还不够两人，算不出岛均。'}</p>
+        <small>${esc(fund.next_pay || '')}</small>
+      </div>
+    `;
+  }
+
+  const beacons = data.beacons || [];
+  const beaconEl = document.getElementById('hui-beacons');
+  if (beaconEl) {
+    beaconEl.innerHTML = beacons.length
+      ? beacons.map((b) => (
+        `<div class="hui-notice"><span>${esc(b.body)}</span><small>${esc(b.author)}</small></div>`
+      )).join('')
+      : '<p class="pl-empty">墙上还空着。</p>';
+  }
+
+  const recent = data.recent || [];
+  const feedEl = document.getElementById('hui-feed');
+  if (feedEl) {
+    feedEl.innerHTML = recent.length
+      ? recent.map((r) => (
+        `<div class="hui-log">${esc(r.text)}<small> · ${clock(r.created_at)}</small></div>`
+      )).join('')
+      : '<p class="pl-empty">还没有人来办事。</p>';
+  }
+}
+
+loadHui();
+setInterval(loadHui, 12000);

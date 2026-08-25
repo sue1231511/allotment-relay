@@ -822,10 +822,27 @@ body.play-bound .play-gate { display: none !important; }
 .place-context-row span { color: var(--muted); }
 .place-context-row b { font-weight: 500; text-align: right; }
 
-.play-patron {
-  margin: 18px 0 0;
-  padding-top: 8px;
-  border-top: 1px solid var(--line);
+.play-hui-donate {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .45);
+}
+
+.play-hui-donate.hidden { display: none !important; }
+
+.play-hui-donate label {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.play-hui-donate input[type="number"] {
+  width: 100%;
+  max-width: 12em;
 }
 
 .play-lounge {

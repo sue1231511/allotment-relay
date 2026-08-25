@@ -167,6 +167,12 @@ async def eatery_page(request: Request):
     """岸畔小馆围观实况；点餐仍回上手页。"""
     return _html(request, "eatery.html", active="eatery")
 
+
+@app.get("/hui", response_class=HTMLResponse)
+async def hui_page(request: Request):
+    """潮生会围观实况；问事仍回上手页。"""
+    return _html(request, "hui.html", active="hui")
+
 class BarOrderRequest(BaseModel):
     api_key: str
     service: str
@@ -462,6 +468,12 @@ async def bar_duo_activate(body: BarDuoRequest):
 async def public_eatery():
     from . import eatery
     return await eatery.public_eatery_snapshot()
+
+
+@app.get("/api/public/hui")
+async def public_hui():
+    from . import chaoshen
+    return await chaoshen.public_snapshot()
 
 
 @app.post("/api/eatery/order")
