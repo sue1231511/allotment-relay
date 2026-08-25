@@ -1148,6 +1148,27 @@ $('play-star-tip').addEventListener('submit', async (e) => {
   }
 });
 
+$('play-star-script')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const pitch = $('play-star-script-pitch').value.trim();
+  const title = $('play-star-script-title').value.trim().replaceAll('|', '·');
+  const body = $('play-star-script-body').value.trim();
+  if (!title || !body) {
+    showResult('play-star-script-result', '<p class="error">标题和正文都要写。</p>');
+    return;
+  }
+  const head = pitch ? `投稿 ${pitch} ${title}` : `投稿 ${title}`;
+  try {
+    const data = await api('theater_ops', `${head} | ${body}`);
+    applySnap(data, data.text || '');
+    showResult('play-star-script-result', `<p>${esc(data.text || '').replaceAll('\n', '<br>')}</p>`);
+    $('play-star-script-title').value = '';
+    $('play-star-script-body').value = '';
+  } catch (err) {
+    showResult('play-star-script-result', `<p class="error">${esc(err.message)}</p>`);
+  }
+});
+
 $('play-hui-donate')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const amount = parseInt($('play-hui-donate-amount').value, 10);

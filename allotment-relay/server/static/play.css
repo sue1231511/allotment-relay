@@ -897,6 +897,18 @@ body.play-bound .play-gate { display: none !important; }
   max-width: 12em;
 }
 
+#play-star-script {
+  display: grid;
+  gap: 10px;
+}
+
+#play-star-script textarea {
+  width: 100%;
+  min-height: 140px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
 .play-lounge {
   margin-top: 12px;
   display: grid;

@@ -133,7 +133,7 @@ PLACES: list[dict[str, Any]] = [
         "id": "star",
         "name": "小橘星光",
         "kicker": "Starlight",
-        "blurb": "听她唱、打赏。这里是干活页。",
+        "blurb": "听她唱、打赏、投编剧社。这里是干活页。",
         "href": "/star",
         "live": "打开小橘现场 →",
         "rail": "今晚围观她做什么",
@@ -141,6 +141,8 @@ PLACES: list[dict[str, Any]] = [
         "actions": [
             {"label": "她的档", "note": "今晚档与心情", "tool": "star_ops", "command": "status"},
             {"label": "围观", "note": "听一场，回精力", "tool": "star_ops", "command": "围观"},
+            {"label": "编剧社", "note": "投稿潮闻或故事", "tool": "theater_ops", "command": "编剧社"},
+            {"label": "剧场看板", "note": "今晚专场才开", "tool": "theater_ops", "command": "看板"},
         ],
     },
     {
