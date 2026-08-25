@@ -312,13 +312,13 @@ function plotButtons(p) {
 }
 
 function plotCard(p) {
-  const kind = p.greenhouse ? '棚' : (p.orchard ? '园' : '份地');
-  const token = p.token || p.slot;
+  const token = p.token || String(p.slot);
+  const label = (p.greenhouse || p.orchard) ? token : `份地 ${token}`;
   const tone = p.greenhouse ? 'is-shed' : (p.orchard ? 'is-orchard' : '');
   return `
     <article class="play-plot ${p.state === 'ready' ? 'is-ready' : ''} ${tone}">
       <div class="play-plot-top">
-        <span class="play-plot-slot">${kind} ${esc(token)}</span>
+        <span class="play-plot-slot">${esc(label)}</span>
         <span class="play-state">${esc(plotStateLabel(p.state))}</span>
       </div>
       <div class="play-crop">${p.emoji ? esc(p.emoji) + ' ' : ''}${esc(p.name)}</div>
