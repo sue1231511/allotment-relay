@@ -36,6 +36,30 @@
     link.addEventListener('click', closeDrawer);
   });
 
+  const tabs = drawer.querySelectorAll('[data-island-tab]');
+  const panels = drawer.querySelectorAll('[data-island-panel]');
+
+  function activateTab(id) {
+    tabs.forEach((tab) => {
+      const on = tab.dataset.islandTab === id;
+      tab.classList.toggle('is-active', on);
+      tab.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    panels.forEach((panel) => {
+      panel.classList.toggle('is-active', panel.dataset.islandPanel === id);
+    });
+  }
+
+  tabs.forEach((tab) => {
+    tab.addEventListener('click', () => activateTab(tab.dataset.islandTab));
+  });
+
+  const activePlace = drawer.querySelector('.island-drawer-place.is-active');
+  if (activePlace) {
+    const panel = activePlace.closest('[data-island-panel]');
+    if (panel?.dataset.islandPanel) activateTab(panel.dataset.islandPanel);
+  }
+
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeDrawer();
   });
