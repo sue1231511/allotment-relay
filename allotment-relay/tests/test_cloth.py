@@ -80,6 +80,9 @@ async def _test_help_and_empty() -> None:
     assert "不绝版" in empty
     assert "委托 短褂 海色" in empty
     assert "台上：" not in empty
+    assert "tale_ops" in empty
+    assert "forage" in empty or "边际" in empty
+    assert "NPC/潮闻" not in empty
 
     status = await cloth.cloth_ops(kid, "status")
     assert "衣泊坊" in status and "漾漾" in status
@@ -152,7 +155,7 @@ async def _test_sew_claim_wear() -> None:
         s = await db.get_steward_by_id(sid)
         echo = await cloth.try_echo(conn, s, "lighthouse")
         await conn.commit()
-    assert "不醒" in echo and "短潮闻已记下" in echo, echo
+    assert "不醒" in echo and "衣物来历已记下" in echo, echo
     again = ""
     async with db.connect() as conn:
         s = await db.get_steward_by_id(sid)
@@ -265,7 +268,7 @@ def test_mcp_description() -> None:
         f"{tool.description}\n"
         f"{(tool.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
     )
-    for word in ("漾漾", "不卖成衣", "委托 短褂 海色", "空 command", "tailor_ops", "/atelier"):
+    for word in ("漾漾", "不卖成衣", "委托 短褂 海色", "空 command", "tailor_ops", "/atelier", "tale_ops"):
         assert word in blob, word
 
 

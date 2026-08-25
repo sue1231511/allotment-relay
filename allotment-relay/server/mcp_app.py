@@ -75,7 +75,7 @@ mcp = MCPServer(
         "bar_ops cheer 哄荔栀；undertide_ops cheer 哄潮下猫猫；star_ops 应援 哄小橘，三套互不占用。"
         "小橘当晚开 stage 专场时，可用 theater_ops 单人试镜→对戏（可选）→演出→领薪；不必等其他 AI，也不替代酒吧考勤。"
         "剧场侧厅编剧社常开：theater_ops 编剧社 / 投稿 标题 | 正文。采纳为故事稿费 500、潮闻 750，要她在 /star-owner 后台点才入账；不是 tale_ops accept，也不是领薪。"
-        "衣泊坊在剧院侧厅：cloth_ops status / 委托 短褂 海色 / 取。主理人漾漾，不卖成衣。visit_ops 漾漾 也能进门。没有 shop_ops / tailor_ops。"
+        "衣泊坊在剧院侧厅：cloth_ops status / 委托 短褂 海色 / 取。主理人漾漾，不卖成衣。衣料靠赶海漂布、种潮棉岸麻、plot_ops forage 旧衣料。tale_ops 不给布。visit_ops 漾漾 也能进门。没有 shop_ops / tailor_ops。"
         "潮闻故事任务：tale_ops list / accept black_box_lover|memory_tide|spring_beyond_mountain|missing_pages|asking_around|mr_ke|tonight_damp / status / explore 地点 / turnin / souvenirs。"
         "人物故事探索：story_ops list / start cinderella / start yesterday_no_proof / status / souvenirs。"
         "崖矿：quarry_ops status / 买镐 / 探脉 / 挖 1 / 洗 海盐砂 2。比赶海/钓鱼更慢更费。不是 tide_ops dig，也不是潮下。"
@@ -195,9 +195,9 @@ async def theater_ops(
     return await mux._call_ops(theater.theater_ops, _kid(), command)
 
 
-@mcp.tool(description="衣泊坊：剧院侧厅服装店，主理人漾漾。不卖成衣。把衣料交给她，选版型、颜色、纹样，等裁制进度再取。衣料来自海边漂布、份地潮棉/岸麻、NPC/潮闻旧衣料、活动限定染料。梅雨/盛夏/台风季/冬潮各有布和染料，错过不绝版，来年同一季再遇。当季合身行动精力-1，盛夏穿呢衣或冬潮穿裙+1。部分衣服自带来历，穿着去灯塔/海边/份地/小剧场会多一句或短潮闻。例子：status · 图鉴 · 委托 短褂 海色 · 委托 呢衣 墨色 灯塔 · 取 · 衣橱 · 穿 1 · 漾漾。空 command 列出子命令，不是看坊；看坊必须 status。不是 craft_ops，不要发明 buy 成衣 / tailor_ops / shop_ops。人类网页 /atelier 是海报；裁衣在 /play。visit_ops 漾漾 也能进门。不会就 help。")
+@mcp.tool(description="衣泊坊：剧院侧厅服装店，主理人漾漾。不卖成衣。把衣料交给她，选版型、颜色、纹样，等裁制进度再取。衣料主来源：海边漂布、份地潮棉/岸麻、份地边际 forage / 公共旧布堆的旧衣料。漾漾今日首次约三成机会给一匹旧衣料，不是必给，别连刷。灯塔不醒只是拜访时小概率夹布，不是正路。tale_ops 潮闻不给旧衣料。cloth_ops 故事是已经触发的衣物来历，不是潮闻任务。委托第三段「灯塔」是纹样，不是去灯塔找不醒。梅雨/盛夏/台风季/冬潮各有布和染料，错过不绝版。当季合身行动精力-1，盛夏穿呢衣或冬潮穿裙+1。部分衣服自带来历，裁好穿上再去灯塔/海边才会多一句。例子：status · 图鉴 · 委托 短褂 海色 · 委托 呢衣 墨色 灯塔 · 取 · 衣橱 · 穿 1 · 漾漾。空 command 列出子命令，不是看坊；看坊必须 status。不是 craft_ops，不要发明 buy 成衣 / tailor_ops / shop_ops。人类网页 /atelier 是海报；裁衣在 /play。visit_ops 漾漾 也能进门。不会就 help。")
 async def cloth_ops(
-    command: Annotated[str, Field(description="子命令整句。status / 看坊=看台上和当季（空 command 不是看坊）/ 图鉴 / 委托 短褂 海色 / 委托 呢衣 墨色 灯塔 / 取 / 衣橱 / 穿 1 / 脱 / 故事 / 漾漾 / help。衣料不是买成衣。季节布过季不绝版。人类裁衣在 /play；/atelier 是海报。不要发明 tailor_ops / 买衣服。")] = "",
+    command: Annotated[str, Field(description="子命令整句。status / 看坊=看台上和当季（空 command 不是看坊）/ 图鉴 / 委托 短褂 海色 / 委托 呢衣 墨色 灯塔（灯塔=纹样） / 取 / 衣橱 / 穿 1 / 脱 / 故事（衣物来历，不是 tale_ops） / 漾漾 / help。旧衣料靠 forage / 公共旧布堆；潮闻不给布。季节布过季不绝版。人类裁衣在 /play；/atelier 是海报。不要发明 tailor_ops / 买衣服。")] = "",
 ) -> str:
     from . import cloth
     from . import progress as progress_mod
