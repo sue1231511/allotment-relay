@@ -238,6 +238,7 @@ function renderPlace(id) {
   if (switching) {
     if ($('play-work-title')) $('play-work-title').textContent = '选一个动作';
     if ($('play-work-sub')) $('play-work-sub').textContent = '操作结果会直接留在这里。';
+    setWorkStatus('可操作');
     clearPlaceResult();
   } else if (state.placeResult) {
     showPlaceResult(state.placeResult);
@@ -898,14 +899,45 @@ function itemSheet(name) {
   `);
 }
 
+function setWorkStatus(text) {
+  const pill = $('play-work-status');
+  if (!pill) return;
+  pill.textContent = text || '可操作';
+}
+
+function parseActPayload(raw) {
+  if (!raw) return null;
+  try {
+    const payload = JSON.parse(raw);
+    if (!payload || typeof payload.tool !== 'string' || typeof payload.command !== 'string') {
+      return null;
+    }
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
 async function act(tool, command) {
   try {
+    setWorkStatus('处理中…');
     document.querySelectorAll('.play-page button.btn, .play-page .play-mini-btn, .play-page .place-tool, .play-go').forEach((b) => { b.disabled = true; });
     const data = await api(tool, command);
     applySnap(data, data.text || '');
+    setWorkStatus('完成');
     closeSheet();
+    const workarea = $('play-place-workspace');
+    if (workarea && state.placeId) {
+      workarea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
   } catch (err) {
-    setLog(err.message || String(err));
+    const msg = err.message || String(err);
+    setLog(msg);
+    setWorkStatus('未做成');
+    const workarea = $('play-place-workspace');
+    if (workarea && state.placeId) {
+      workarea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
   } finally {
     document.querySelectorAll('button[disabled]').forEach((b) => { b.disabled = false; });
   }
@@ -1270,10 +1302,10 @@ document.body.addEventListener('click', (e) => {
   }
   const btn = e.target.closest('[data-act]');
   if (!btn) return;
-  let payload;
-  try {
-    payload = JSON.parse(btn.getAttribute('data-act'));
-  } catch {
+  const payload = parseActPayload(btn.getAttribute('data-act'));
+  if (!payload) {
+    setLog('动作按钮坏了，刷新页面再试。');
+    setWorkStatus('未做成');
     return;
   }
   if (btn.classList.contains('place-tool')) selectPlaceTool(btn);

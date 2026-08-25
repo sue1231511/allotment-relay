@@ -79,7 +79,7 @@ PLACES: list[dict[str, Any]] = [
         "week1": True,
         "duty": True,
         "actions": [
-            {"label": "洗碗上工", "note": "每两天须来一次", "tool": "bar_ops", "command": "work 洗碗 night"},
+            {"label": "洗碗上工", "note": "每两天须来一次", "tool": "bar_ops", "command": "work 洗碗 day"},
             {"label": "今晚", "note": "看看今晚开不开门", "tool": "bar_ops", "command": "tonight"},
             {"label": "酒单", "note": "价目与今晚出品", "tool": "bar_ops", "command": "menu"},
             {"label": "我的酒吧档", "note": "考勤与上工记录", "tool": "bar_ops", "command": "status"},
@@ -231,9 +231,46 @@ def climate_bits() -> dict[str, str]:
         "weather": world.weather_label(w),
         "tide": world.tide_label(t),
         "phase": world.day_phase_label(p),
+        "phase_code": p,
         "season": season_mod.season_name(),
         "line": world.climate_line(),
     }
+
+
+def bar_work_slot() -> tuple[str, str]:
+    """上手页洗碗上工：暮白班、夜夜班；歇业时仍发 day（逾期可补白班）。"""
+    phase = world.current_day_phase()
+    if phase == "night":
+        return "night", "夜班"
+    if phase == "dusk":
+        return "day", "白班"
+    return "day", "暮/夜开门；白班仅暮可上"
+
+
+def bar_place_actions() -> list[dict[str, Any]]:
+    shift, shift_note = bar_work_slot()
+    actions = next(p for p in PLACES if p["id"] == "bar")["actions"]
+    out: list[dict[str, Any]] = []
+    for act in actions:
+        row = dict(act)
+        if row.get("label") == "洗碗上工":
+            row = {
+                **row,
+                "note": f"每两天须来一次 · {shift_note}",
+                "command": f"work 洗碗 {shift}",
+            }
+        out.append(row)
+    return out
+
+
+def places_for_client() -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for place in PLACES:
+        row = dict(place)
+        if row.get("id") == "bar":
+            row["actions"] = bar_place_actions()
+        out.append(row)
+    return out
 
 
 def seed_options(stock: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -286,7 +323,7 @@ async def snapshot(api_key: str) -> dict[str, Any]:
         "dashboard": dash,
         "seeds": seeds,
         "neighbors": neighbors,
-        "places": PLACES,
+        "places": places_for_client(),
         "climate": climate_bits(),
     }
 
