@@ -94,6 +94,8 @@ bar_ops     的 command = work 洗碗 night
 | `peer 名字` | 别人的公开档 |
 | `成就` | 已解锁称呼；`称呼 逾篱客` 佩戴，`称呼 卸` 改回等级称号 |
 | `领奖` | 看升级礼（升级时会自动发；50 级起带精矿/岸木，满级发潮冠） |
+| `引航` / `invite` | 看自己的邀请码、邀请链接、已引来的岛民。空 command 的 sheet 也会写一行引航码。例子：`引航` · `invite` |
+| `绑定 AB12CD34` | 首次绑定引航人，只能一次，不能改绑，不能自己引自己。登记时填邀请码、或打开 `/register?invite=码`，enroll 时会自动结。注册当时不算有效邀请，对方真正在岛上过日子才会致谢。没有 `invite_ops`，不要发明领邀请奖 |
 | `revise [座右铭]` | 改座右铭 |
 | `guild` | 每日一轮工分票 |
 | `board tickets` / `board 岛缘` | 全服票榜 / 岛缘榜（board tickets=口袋现票；board 岛缘=岛缘无上限。board level 仍指向岛缘榜。不是周目标贡献榜，也不是 `steward_ops 岛缘` 拆来源） |
@@ -505,6 +507,7 @@ python3 tests/test_consistency.py
 | `DATA_DIR` | 默认 `/app/server/data` |
 | `MCP_ALLOWED_HOSTS` | 自定义域名时加上 |
 | `UT_OWNER_KEY` / `UT_GATE_KEY` / `LIZHI_KEY` / `STAR_KEY` | 管理面板钥匙（恶猫 / 门禁 / 荔栀 / 小橘） |
+| `INVITE_ADMIN_KEY` | 引航风控后台钥匙（不设则 `/invite-admin` 关闭） |
 
 ```bash
 cd allotment-relay

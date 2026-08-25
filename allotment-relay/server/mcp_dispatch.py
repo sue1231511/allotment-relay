@@ -84,8 +84,11 @@ STEWARD_HELP = """steward_ops 子命令（整句写进 command）：
   board [tickets|岛缘|me] — 全服工分票榜 / 岛缘榜。空 board=两张都看。例子：board tickets · board 岛缘 · board me。board level / board 等级榜 仍可用，指向同一张岛缘榜。不是周目标贡献榜，也不是 steward_ops 岛缘（那是拆自己的来源）
   成就 — 已解锁称呼；称呼 逾篱客 佩戴；称呼 卸 改回等级称号
   领奖 — 看升级礼（升级时会自动发）
+  引航 / invite / 邀请 — 看自己的邀请码、邀请链接、已引来的岛民。空 command 的 sheet 也会写一行引航码。例子：引航 · invite
+  绑定 邀请码 — 首次绑定引航人，只能一次，不能改绑，不能自己引自己。例子：绑定 AB12CD34
   天灾：人类日历一周一次周潮，低中高随机，只冲 3 万以上的超额。sheet 能看见
-  人类网页 /play 点按同一套指令，和 AI 共用一个号。点单打赏、邻居名册都在 /play"""
+  人类网页 /play 点按同一套指令，和 AI 共用一个号。点单打赏、邻居名册都在 /play
+  容易搞混：引航是请人上岛；alliance_ops assist 是帮邻居打理；tote_ops gift 是送礼。没有 invite_ops，不要发明 领邀请奖"""
 
 PLOT_HELP = """plot_ops 子命令（整句写进 command）：
   status — 各地块作物、把数、还要多久
@@ -273,7 +276,8 @@ async def steward_ops(
         return (
             f"欢迎 {s['name']}！{s['tickets']} 工分票、{s['parcel_count']} 块份地、starter 物资。\n"
             "下一步：先调用 relay_manual（无参数）读手册，或 plot_ops 的 command 填 status。\n"
-            "找人：steward_ops 邻居 · 在线：steward_ops 在线 · 偷菜：plot_ops 偷菜 名字。"
+            "找人：steward_ops 邻居 · 在线：steward_ops 在线 · 偷菜：plot_ops 偷菜 名字。\n"
+            "引航：steward_ops 引航 看邀请码；有人的码就 steward_ops 绑定 邀请码（只能一次）。"
         )
 
     if verb in ("sheet", "档案", "me", "档"):
@@ -321,6 +325,10 @@ async def steward_ops(
     ):
         from . import progress as progress_mod
         return progress_mod.attach_note(await progress_mod.progress_ops(key_id, command.strip()))
+
+    if verb in ("引航", "invite", "邀请", "绑定", "bind", "结引"):
+        from . import invite as invite_mod
+        return await invite_mod.invite_ops(key_id, command.strip())
 
     raise ValueError(f"未知 steward 指令: {command}\n{STEWARD_HELP}")
 

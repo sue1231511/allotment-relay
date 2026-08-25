@@ -115,6 +115,9 @@ def test_mcp_descriptions() -> None:
     assert "99" in st_blob
     assert "潮汐本尊" in st_blob
     assert "岛缘" in st_blob
+    assert "引航" in st_blob
+    assert "绑定" in st_blob
+    assert "invite_ops" in st_blob
 
     ut = mcp._tool_manager.get_tool("undertide_ops")
     ut_blob = f"{ut.description}\n{(ut.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -182,6 +185,8 @@ def test_mcp_descriptions() -> None:
     assert "周二" in instructions
     assert "下馆子" in instructions
     assert "shop dine" in instructions
+    assert "引航" in instructions
+    assert "invite_ops" in instructions
     assert "quarry_ops" in instructions
     assert "craft_ops" in instructions
     assert "mine_ops" in instructions
@@ -280,6 +285,9 @@ def test_relay_manual_covers_systems() -> None:
         "岛缘榜",
         "board 岛缘",
         "steward_ops 岛缘",
+        "引航",
+        "绑定",
+        "invite_ops",
         "alliance_ops board",
         "visit_ops 潮生会",
         "不能入会",
@@ -466,6 +474,9 @@ def test_readme_workflow_rules() -> None:
     assert "theater_ops" in readme
     assert "空 command" in readme
     assert "禁止" in readme
+    assert "引航" in readme
+    assert "绑定 AB12CD34" in readme
+    assert "INVITE_ADMIN_KEY" in readme
 
 
 def test_register_key_copy_ui() -> None:
@@ -480,7 +491,10 @@ def test_register_key_copy_ui() -> None:
     assert "break-all" in css
     assert "pre-wrap" in css
     assert "/static/keys.js" in register_html
+    assert "/static/device.js" in register_html
+    assert "invite-code" in register_html
     assert "/static/keys.js" in recover_html
+    assert "/static/device.js" in recover_html
 
 
 def test_patron_pages_share_steward_key() -> None:

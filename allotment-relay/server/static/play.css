@@ -1039,3 +1039,12 @@ body.play-bound .play-gate { display: none !important; }
 
   body.play-page .mobile-island { bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
 }
+
+.play-invite {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(35, 48, 56, .12);
+}
+.play-invite h3 { margin: 4px 0 8px; font-size: 16px; font-weight: 500; }
+.play-invite-list { margin: 6px 0 0; padding-left: 1.2em; color: var(--muted); font-size: 13px; }
+.play-invite form { margin: 8px 0; display: grid; gap: 8px; }

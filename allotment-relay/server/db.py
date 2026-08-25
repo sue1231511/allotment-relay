@@ -1648,6 +1648,80 @@ async def init_db() -> None:
                 PRIMARY KEY (steward_id, week_id)
             )
             """,
+            "ALTER TABLE stewards ADD COLUMN invite_code TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE stewards ADD COLUMN invited_by INTEGER",
+            "ALTER TABLE stewards ADD COLUMN invite_bound_at INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN invite_status TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE stewards ADD COLUMN invite_lantern INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE api_keys ADD COLUMN pending_invite_code TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE api_keys ADD COLUMN register_device_id TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE api_keys ADD COLUMN register_ip_hash TEXT NOT NULL DEFAULT ''",
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_stewards_invite_code
+            ON stewards(invite_code) WHERE invite_code != ''
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS invite_devices (
+                device_id TEXT NOT NULL,
+                key_id INTEGER NOT NULL,
+                first_seen_at INTEGER NOT NULL,
+                last_seen_at INTEGER NOT NULL,
+                PRIMARY KEY (device_id, key_id)
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS invite_ip_log (
+                ip_hash TEXT NOT NULL,
+                key_id INTEGER NOT NULL,
+                first_seen_at INTEGER NOT NULL,
+                last_seen_at INTEGER NOT NULL,
+                hops INTEGER NOT NULL DEFAULT 1,
+                PRIMARY KEY (ip_hash, key_id)
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS invite_activity (
+                steward_id INTEGER NOT NULL,
+                activity_type TEXT NOT NULL,
+                first_at INTEGER NOT NULL,
+                count INTEGER NOT NULL DEFAULT 1,
+                PRIMARY KEY (steward_id, activity_type)
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS invite_rewards (
+                invitee_id INTEGER NOT NULL,
+                tier TEXT NOT NULL,
+                granted_at INTEGER NOT NULL,
+                PRIMARY KEY (invitee_id, tier)
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS invite_keepsakes (
+                steward_id INTEGER NOT NULL,
+                item_key TEXT NOT NULL,
+                granted_at INTEGER NOT NULL,
+                PRIMARY KEY (steward_id, item_key)
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS invite_risk_log (
+                invitee_id INTEGER PRIMARY KEY,
+                inviter_id INTEGER NOT NULL,
+                bound_at INTEGER NOT NULL,
+                island_bond INTEGER NOT NULL DEFAULT 0,
+                active_days INTEGER NOT NULL DEFAULT 0,
+                activity_types INTEGER NOT NULL DEFAULT 0,
+                device_account_count INTEGER NOT NULL DEFAULT 0,
+                risk_score INTEGER NOT NULL DEFAULT 0,
+                hit_rules TEXT NOT NULL DEFAULT '[]',
+                invite_status TEXT NOT NULL DEFAULT 'pending',
+                rewards_json TEXT NOT NULL DEFAULT '[]',
+                note TEXT NOT NULL DEFAULT '',
+                cleared_at INTEGER NOT NULL DEFAULT 0,
+                updated_at INTEGER NOT NULL
+            )
+            """,
         ):
             try:
                 await db.execute(ddl)
@@ -1667,6 +1741,8 @@ async def init_db() -> None:
         await tax_mod.ensure_shore_tax(db)
         await chaoshen_mod.ensure_fund_payout(db)
         await bond_mod.backfill_all(db)
+        from . import invite as invite_mod
+        await invite_mod.backfill_invite_codes(db)
         await db.commit()
 
 
@@ -1881,7 +1957,14 @@ def make_key() -> str:
     return KEY_PREFIX + secrets.token_urlsafe(24)
 
 
-async def create_api_key(email: str) -> str:
+async def create_api_key(
+    email: str,
+    *,
+    invite_code: str = "",
+    device_id: str = "",
+    ip: str = "",
+    hops: int = 1,
+) -> str:
     email = email.strip().lower()
     if not email or "@" not in email:
         raise ValueError("邮箱格式无效")
@@ -1891,6 +1974,10 @@ async def create_api_key(email: str) -> str:
             "INSERT INTO api_keys (api_key, email, created_at) VALUES (?, ?, ?)",
             (api_key, email, now()),
         )
+        key_id = (await (await db.execute("SELECT last_insert_rowid()")).fetchone())[0]
+        from . import invite as invite_mod
+        await invite_mod.set_pending_invite(db, int(key_id), invite_code, device_id, ip)
+        await invite_mod.observe(int(key_id), device_id, ip, hops, conn=db)
         await db.commit()
     return api_key
 
@@ -2105,14 +2192,16 @@ async def enroll_steward(key_id: int, name: str, motto: str, badge: str, portrai
                 key_id, name, motto, badge, portrait, tickets, xp, parcel_count,
                 orchard_count,
                 enrolled, last_active_at, created_at, energy, last_bar_shift_at,
-                reward_level
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)
+                reward_level, invite_code
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?)
             """,
             (key_id, name, motto.strip()[:200], badge.strip()[:32], portrait.strip()[:120],
              START_TICKETS, START_TICKETS, START_PARCELS, START_ORCHARDS, ts, ts, START_ENERGY, ts,
-             start_level),
+             start_level, ""),
         )
         sid = (await (await db.execute("SELECT last_insert_rowid()")).fetchone())[0]
+        from . import invite as invite_mod
+        await invite_mod.assign_invite_code(db, int(sid))
         await ensure_parcels(db, sid, START_PARCELS)
         await ensure_orchard_parcels(db, sid, START_ORCHARDS)
         for item, qty in STARTER_STOCK.items():
@@ -2121,6 +2210,9 @@ async def enroll_steward(key_id: int, name: str, motto: str, badge: str, portrai
             "INSERT INTO chronicle (action, actor_id, text, created_at) VALUES ('enroll', ?, ?, ?)",
             (sid, f"{name} 加入了潮汐岛份地联盟", ts),
         )
+        row = await (await db.execute("SELECT * FROM stewards WHERE id=?", (sid,))).fetchone()
+        steward_row = dict(row) if row else {"id": sid, "key_id": key_id, "invited_by": 0}
+        await invite_mod.bind_from_pending(db, steward_row)
         await db.commit()
     steward = await get_steward_by_id(sid)
     assert steward

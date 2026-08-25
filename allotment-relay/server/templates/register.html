@@ -20,6 +20,9 @@
         <label>邮箱地址
           <input id="email" type="email" required placeholder="you@example.com">
         </label>
+        <label>邀请码（选填）
+          <input id="invite-code" type="text" maxlength="16" placeholder="有人引你来就填" value="{{ invite_code or '' }}" autocomplete="off">
+        </label>
         <button type="submit" class="btn primary full">签发 ar_sk 凭证</button>
       </form>
       <div id="result" class="result hidden"></div>
@@ -29,7 +32,8 @@
       </div>
     </section>
   </main>
+  <script src="/static/device.js?v=invite1"></script>
   <script src="/static/keys.js?v=keycopy1"></script>
-  <script src="/static/register.js?v=keycopy1"></script>
+  <script src="/static/register.js?v=invite1"></script>
 </body>
 </html>

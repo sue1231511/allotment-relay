@@ -1271,6 +1271,8 @@ async def hut_ops(key_id: int, command: str) -> str:
         active = bonuses_for(fittings.values()).summary()
         if active:
             lines.append(active)
+        if int(s.get("invite_lantern") or 0):
+            lines.append("岸灯（引航纪念）亮着。")
         bonus = bonuses_for(fittings.values())
         if bonus.has("cabinet"):
             async with db.connect() as conn:

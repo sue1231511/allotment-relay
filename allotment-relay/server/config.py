@@ -510,3 +510,50 @@ THEATER_PARTNER_AFFINITY = 100
 # 潮闻 — 故事探索任务
 TALE_EXPLORE_ENERGY = 5          # 主动探索耗精力
 TALE_BOARD_LIMIT = 10            # 完成榜显示人数
+
+# ═══ 引航 / 邀请 ══════════════════════════════════════════════
+# 全部阈值和权重都在这儿，不要在 invite.py 里写死数字。
+# 前端和 MCP 玩家文案不得暴露这些权重或门槛。
+INVITE_CODE_LEN = 8
+INVITE_VALID_DAYS = 3
+INVITE_VALID_ISLAND_BOND = 500
+INVITE_MIN_ACTIVITY_TYPES = 3
+# 单一玩法次数占比超过这个值，不算「真正参与」，防只刷一种低成本操作
+INVITE_MAX_SINGLE_TYPE_RATIO = 0.75
+
+INVITE_TIER_MEMENTO_BOND = 100
+INVITE_TIER_FINAL_BOND = 1500
+
+# 奖励：岛缘 + 限定称呼 + 不可流通收藏/装饰。不发可套利工分票。
+INVITE_REWARD_MEMENTO_BOND = 20
+INVITE_REWARD_QUALIFIED_BOND = 80
+INVITE_REWARD_QUALIFIED_INVITEE_BOND = 15
+INVITE_REWARD_FINAL_BOND = 40
+
+# 风险权重。任一单项都不能单独定罪。
+INVITE_RISK_WEIGHTS = {
+    "same_device": 40,
+    "device_burst": 30,
+    "ip_burst": 15,
+    "ip_overlap": 10,
+    "behavior_anomaly": 20,
+    "inviter_burst": 20,
+    "proxy_hint": 8,
+}
+
+# 低 < LOW_MAX+1；中 LOW_MAX+1 .. MID_MAX；高 >= MID_MAX+1
+INVITE_RISK_LOW_MAX = 24
+INVITE_RISK_MID_MAX = 54
+
+INVITE_DEVICE_BURST_WINDOW = 86400
+INVITE_DEVICE_BURST_COUNT = 3
+INVITE_IP_BURST_WINDOW = 21600
+INVITE_IP_BURST_COUNT = 4
+INVITE_INVITER_BURST_WINDOW = 86400
+INVITE_INVITER_BURST_COUNT = 5
+INVITE_IP_OVERLAP_DAYS = 3
+INVITE_PROXY_HOPS = 3
+INVITE_PROXY_DEVICES_ON_IP = 6
+
+INVITE_ADMIN_KEY = os.environ.get("INVITE_ADMIN_KEY", "")
+INVITE_IP_SALT = os.environ.get("INVITE_IP_SALT", "tidal-island-invite-ip")

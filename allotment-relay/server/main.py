@@ -38,6 +38,16 @@ def public_base_url(request: Request) -> str:
     return f"{scheme}://{host}"
 
 
+async def _observe_key(request: Request, api_key: str, device_id: str = "") -> None:
+    from . import invite as invite_mod
+    row = await db.get_key_row((api_key or "").strip())
+    if not row:
+        return
+    ip, hops = invite_mod.client_ip_and_hops(request)
+    did = (device_id or "").strip() or invite_mod.device_from_cookie(request)
+    await invite_mod.observe(int(row["id"]), did, ip, hops)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await db.init_db()
@@ -66,6 +76,8 @@ def _html(request: Request, name: str, **ctx):
 
 class KeyRequest(BaseModel):
     email: str
+    invite_code: str = ""
+    device_id: str = ""
 
     @field_validator("email")
     @classmethod
@@ -85,7 +97,8 @@ async def index(request: Request):
 
 @app.get("/register", response_class=HTMLResponse)
 async def register_page(request: Request):
-    return _html(request, "register.html", active=None)
+    invite = (request.query_params.get("invite") or request.query_params.get("code") or "").strip()
+    return _html(request, "register.html", active=None, invite_code=invite)
 
 
 @app.get("/recover", response_class=HTMLResponse)
@@ -187,12 +200,14 @@ class BarDuoRequest(BaseModel):
 
 class StewardDashboardRequest(BaseModel):
     api_key: str
+    device_id: str = ""
 
 
 class PlayRequest(BaseModel):
     api_key: str
     tool: str = ""
     command: str = ""
+    device_id: str = ""
 
 
 class StewardMemoryRequest(BaseModel):
@@ -214,6 +229,7 @@ class LoungeNameRequest(BaseModel):
 
 class LoungeKeyRequest(BaseModel):
     api_key: str
+    device_id: str = ""
 
 
 class LoungeModRequest(BaseModel):
@@ -230,10 +246,25 @@ class EateryOrderRequest(BaseModel):
     item: str | None = None
 
 
+class InviteBindRequest(BaseModel):
+    api_key: str
+    code: str
+    device_id: str = ""
+
+
 @app.post("/api/keys/generate")
 async def generate_key(request: Request, body: KeyRequest):
+    from . import invite as invite_mod
+    ip, hops = invite_mod.client_ip_and_hops(request)
+    did = (body.device_id or "").strip() or invite_mod.device_from_cookie(request)
     try:
-        api_key = await db.create_api_key(body.email)
+        api_key = await db.create_api_key(
+            body.email,
+            invite_code=body.invite_code or "",
+            device_id=did,
+            ip=ip,
+            hops=hops,
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
@@ -242,10 +273,24 @@ async def generate_key(request: Request, body: KeyRequest):
             detail="数据库写入失败，请检查 Zeabur 持久卷是否挂载到 /app/server/data",
         ) from exc
     base = public_base_url(request).rstrip("/")
+    row = await db.get_key_row(api_key)
+    pending = ""
+    if row:
+        pending = str(row.get("pending_invite_code") or "")
     return {
         "api_key": api_key,
         "message": "凭证只显示一次，请立即保存。",
         "mcp_url": f"{base}/mcp/?api_key={api_key}",
+        "invite_ok": bool(pending),
+        "invite_note": (
+            "已记下引航码，登记上岛后会自动结关系。"
+            if pending
+            else (
+                "邀请码无效或邀请人还没上岛，凭证照样签发。上岛后可用 steward_ops 绑定 邀请码。"
+                if (body.invite_code or "").strip()
+                else ""
+            )
+        ),
     }
 
 
@@ -254,6 +299,7 @@ async def recover_key(request: Request, body: KeyRequest):
     api_key = await db.recover_api_key(body.email)
     if not api_key:
         raise HTTPException(status_code=404, detail="未找到该邮箱的凭证")
+    await _observe_key(request, api_key, body.device_id)
     base = public_base_url(request).rstrip("/")
     return {"api_key": api_key, "mcp_url": f"{base}/mcp/?api_key={api_key}"}
 
@@ -331,18 +377,20 @@ async def bar_order(body: BarOrderRequest):
 
 
 @app.post("/api/play")
-async def play_action(body: PlayRequest):
+async def play_action(request: Request, body: PlayRequest):
     from . import play as play_mod
     try:
+        await _observe_key(request, body.api_key, body.device_id)
         return await play_mod.run_play(body.api_key, body.tool, body.command)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.post("/api/steward/dashboard")
-async def steward_dashboard(body: StewardDashboardRequest):
+async def steward_dashboard(request: Request, body: StewardDashboardRequest):
     from . import steward_dashboard
     try:
+        await _observe_key(request, body.api_key, body.device_id)
         return await steward_dashboard.fetch_dashboard(body.api_key.strip())
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -402,9 +450,10 @@ async def lounge_set_name(body: LoungeNameRequest):
 
 
 @app.post("/api/lounge/me")
-async def lounge_me(body: LoungeKeyRequest):
+async def lounge_me(request: Request, body: LoungeKeyRequest):
     from . import lounge
     try:
+        await _observe_key(request, body.api_key)
         return await lounge.human_profile(body.api_key.strip())
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -525,7 +574,7 @@ def _owner_ok(key: str, expect: str) -> bool:
 
 _PANEL_DISABLED_HINT = (
     "面板未启用：请在 Zeabur 环境变量设置对应钥匙"
-    "（UT_OWNER_KEY / UT_GATE_KEY / LIZHI_KEY / STAR_KEY）。"
+    "（UT_OWNER_KEY / UT_GATE_KEY / LIZHI_KEY / STAR_KEY / INVITE_ADMIN_KEY）。"
 )
 
 
@@ -1055,6 +1104,54 @@ async def health():
     if not ok:
         return JSONResponse({"ok": False, **detail}, status_code=503)
     return {"ok": True, **detail}
+
+
+@app.post("/api/invite/bind")
+async def invite_bind(request: Request, body: InviteBindRequest):
+    from . import invite as invite_mod
+    try:
+        await _observe_key(request, body.api_key, body.device_id)
+        row = await db.get_key_row(body.api_key.strip())
+        if not row:
+            raise ValueError("凭证无效")
+        text = await invite_mod.invite_ops(int(row["id"]), f"绑定 {body.code}")
+        s = await db.get_steward_by_key_id(int(row["id"]))
+        view = await invite_mod.player_view(s) if s else {}
+        return {"ok": True, "text": text, "invite": view}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/invite-admin")
+async def invite_admin_page(request: Request, key: str = ""):
+    from .config import INVITE_ADMIN_KEY
+    if not INVITE_ADMIN_KEY:
+        return JSONResponse({"detail": _PANEL_DISABLED_HINT}, status_code=503)
+    if not _owner_ok(key, INVITE_ADMIN_KEY):
+        return JSONResponse({"detail": "凭证不对。"}, status_code=401)
+    return _html(request, "invite_admin.html", active=None, admin_key=key)
+
+
+@app.post("/api/invite/admin/list")
+async def invite_admin_list(body: dict):
+    from . import invite as invite_mod
+    from .config import INVITE_ADMIN_KEY
+    if not _owner_ok(str(body.get("key") or ""), INVITE_ADMIN_KEY):
+        raise HTTPException(status_code=401, detail="凭证不对")
+    return {"rows": await invite_mod.admin_rows()}
+
+
+@app.post("/api/invite/admin/clear")
+async def invite_admin_clear(body: dict):
+    from . import invite as invite_mod
+    from .config import INVITE_ADMIN_KEY
+    if not _owner_ok(str(body.get("key") or ""), INVITE_ADMIN_KEY):
+        raise HTTPException(status_code=401, detail="凭证不对")
+    try:
+        text = await invite_mod.admin_clear(int(body.get("invitee_id") or 0), str(body.get("note") or ""))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"ok": True, "text": text}
 
 
 app = NormalizeMcpPathMiddleware(app)
