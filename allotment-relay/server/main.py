@@ -8,7 +8,7 @@ from pydantic import BaseModel, field_validator
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from . import db
-from .config import ISLAND_MANUAL, STATIC_DIR, TEMPLATES_DIR
+from .config import STATIC_DIR, TEMPLATES_DIR
 from .mcp_app import build_mcp_app
 
 import aiosqlite
@@ -164,12 +164,10 @@ async def play_page(request: Request):
     return _html(request, "play.html", active="play")
 
 
-@app.get("/manual")
-async def island_manual_page():
-    """人类使用手册。独立页，不套站点壳。"""
-    if not ISLAND_MANUAL.is_file():
-        raise HTTPException(404, "手册还没放到这台机器上")
-    return FileResponse(ISLAND_MANUAL, media_type="text/html; charset=utf-8")
+@app.get("/manual", response_class=HTMLResponse)
+async def island_manual_page(request: Request):
+    """人类使用手册。套全站导航，章节切换在标题下方横滑标签。"""
+    return _html(request, "manual.html", active="manual")
 
 
 @app.get("/island-manual")

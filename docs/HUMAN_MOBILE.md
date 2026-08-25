@@ -1,6 +1,6 @@
 # 潮汐岛 · 人类手游策划案
 
-给人看的使用手册是站点 **`/manual`**（`allotment-relay/docs/island-manual.html`）。本文是策划方向，不是玩家手册。
+给人看的使用手册是站点 **`/manual`**（`allotment-relay/server/templates/partials/island-manual-content.html`）。本文是策划方向，不是玩家手册。
 
 本文方向已经落到 `/play`：人和 AI 公用一个号，首页左份地、中去岛上。玩法数值未改。
 

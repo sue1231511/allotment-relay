@@ -7,8 +7,9 @@ DATA_DIR = Path(_data_dir) if _data_dir else BASE_DIR / "data"
 DB_PATH = DATA_DIR / "relay.db"
 STATIC_DIR = BASE_DIR / "static"
 TEMPLATES_DIR = BASE_DIR / "templates"
-# 人类使用手册。Docker 上下文是 allotment-relay/，所以放在本包 docs/ 里。
-ISLAND_MANUAL = BASE_DIR.parent / "docs" / "island-manual.html"
+# 人类使用手册正文与样式（外壳见 templates/manual.html，含全站导航）。
+ISLAND_MANUAL_CONTENT = TEMPLATES_DIR / "partials" / "island-manual-content.html"
+ISLAND_MANUAL_CSS = STATIC_DIR / "island-manual.css"
 
 # 潮汐岛 — 沿海份地 federation
 KEY_PREFIX = "ar_sk_"
