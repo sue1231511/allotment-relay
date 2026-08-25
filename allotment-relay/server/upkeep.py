@@ -16,7 +16,7 @@ FLAG_PREFIX = "shore_upkeep:"
 COLLECT_FLOOR = TAX_COLLECT_FLOOR
 
 # 每周单价。起步产业免，扩出来的才计。
-PLOT_EXTRA = 2
+PLOT_EXTRA = 10
 ORCHARD_EXTRA = 3
 GREENHOUSE = 8
 BARN_BASE = 5
@@ -35,7 +35,7 @@ UPKEEP_HELP = f"""visit_ops 潮生会 维（整句写进 command）：
   田间意外一次性处理是 plot_ops repair 编号，也不是这条。
 {UPKEEP_NAME}按产业每周收，和岸税同一天（东八区周一换班）自动划入潮汐基金。
 岸税看口袋现票；岸维看份地/果园/温室/畜栏/小馆/小屋/渔排/盐田/矿坑/船。
-起步 3 块份地、3 树位、棚屋 Lv1、第 1 口盐田、第 1 个矿坑免征。本周新号免征到下周。
+起步 3 块份地、3 树位、棚屋 Lv1、第 1 口盐田、第 1 个矿坑免征。超出份地每块每周 10 票。本周新号免征到下周。
 欠{UPKEEP_NAME}时不能{EXPAND_LOCK}；开着的小馆会暂停堂食。
 例子：潮生会 维 · 潮生会 维 交 · 潮生会 维 交 50
 容易搞混：税=强制岸税（富人按口袋交）。维=产业维修费（产业越大越交）。
