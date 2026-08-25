@@ -539,8 +539,13 @@ def test_human_island_manual() -> None:
         assert needle in html, needle
     assert "plot_ops" not in html
     assert "sow_all" not in html
+    assert 'id="chapterSelect"' in html
+    assert 'aria-label="切换手册章节"' in html
+    assert "chapter-nav" in html
+    assert 'data-tab="faq"' in html
     assert "/manual" in pointer
     assert "island-manual.html" in pointer
+    assert "章节" in pointer
     assert '@app.get("/manual")' in main_py
     assert "ISLAND_MANUAL" in config_py
     assert "ISLAND_MANUAL" in main_py
