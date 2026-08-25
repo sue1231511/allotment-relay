@@ -60,6 +60,8 @@ async def test_old_account_gets_code() -> None:
     view = await invite.player_view(s)
     assert "risk_score" not in view
     assert "weights" not in view
+    assert view.get("official_reward_tickets") == 100
+    assert view.get("official_reward_bond") == 20
 
 
 async def test_self_invite_rejected() -> None:
@@ -174,16 +176,18 @@ async def test_shared_ip_two_players_stays_low() -> None:
         assert invite.risk_band(score) == "low"
 
 
-async def test_rewards_idempotent_and_no_tickets() -> None:
+async def test_rewards_idempotent_tickets_and_bond() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="invite-pay-"))
     db = await _boot(tmp)
     _h, host, _ = await _enroll(db, "h@t.test", "谢人")
     _g, guest, _ = await _enroll(db, "g@t.test", "谢客", invite_code=host["invite_code"])
-    from server import db as dbmod, invite
+    from server import config, db as dbmod, invite
+    host0 = await db.get_steward_by_id(host["id"])
+    t0 = int(host0["tickets"])
+    b0 = int(host0["island_bond"] or 0)
     async with dbmod.connect() as conn:
         conn.row_factory = __import__("aiosqlite").Row
         await _qualify(conn, guest["id"], 1600)
-        t0 = int((await (await conn.execute("SELECT tickets FROM stewards WHERE id=?", (host["id"],))).fetchone())[0])
         r1 = await invite.evaluate_and_settle(conn, guest["id"], force=True)
         r2 = await invite.evaluate_and_settle(conn, guest["id"], force=True)
         await conn.commit()
@@ -191,8 +195,8 @@ async def test_rewards_idempotent_and_no_tickets() -> None:
     assert r2["granted"] == []
     host2 = await db.get_steward_by_id(host["id"])
     guest2 = await db.get_steward_by_id(guest["id"])
-    assert int(host2["tickets"]) == t0
-    assert int(host2["island_bond"]) >= 20 + 80 + 40
+    assert int(host2["tickets"]) == t0 + int(config.INVITE_REWARD_QUALIFIED_TICKETS)
+    assert int(host2["island_bond"]) == b0 + int(config.INVITE_REWARD_QUALIFIED_BOND)
     assert int(host2["invite_lantern"]) == 1
     assert guest2["invite_status"] == "rewarded"
     from server import progress
@@ -365,6 +369,7 @@ async def test_help_and_manual() -> None:
     man = await game.relay_manual()
     assert "引航" in man
     assert "绑定" in man
+    assert "100 工分票和 20 岛缘" in man
 
 
 def test_invite() -> None:
@@ -375,7 +380,7 @@ def test_invite() -> None:
     asyncio.run(test_register_pending_then_enroll())
     asyncio.run(test_same_device_raises_risk_not_ban())
     asyncio.run(test_shared_ip_two_players_stays_low())
-    asyncio.run(test_rewards_idempotent_and_no_tickets())
+    asyncio.run(test_rewards_idempotent_tickets_and_bond())
     asyncio.run(test_concurrent_settle())
     asyncio.run(test_new_device_after_clear_still_binds())
     asyncio.run(test_mid_risk_delays_official())

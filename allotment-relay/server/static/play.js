@@ -557,6 +557,7 @@ function openMe() {
         <p class="error hidden" id="play-invite-bind-err"></p>
       ` : ''}
       <p class="muted">已引来 ${Number(inv.invited && inv.invited.length) || 0} 人，计入有效 ${Number(inv.valid_count) || 0} 人。</p>
+      <p class="muted">对方成为有效岛民后，你会收到 ${Number(inv.official_reward_tickets) || 100} 工分票和 ${Number(inv.official_reward_bond) || 20} 岛缘。</p>
       ${guests ? `<ul class="play-invite-list">${guests}</ul>` : ''}
       ${keeps ? `<p class="muted">收藏 ${keeps}</p>` : ''}
       ${inv.lantern ? `<p class="muted">岸灯已在小屋亮着。</p>` : ''}

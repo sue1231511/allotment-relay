@@ -288,6 +288,7 @@ def test_relay_manual_covers_systems() -> None:
         "引航",
         "绑定",
         "invite_ops",
+        "100 工分票和 20 岛缘",
         "alliance_ops board",
         "visit_ops 潮生会",
         "不能入会",

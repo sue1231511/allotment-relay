@@ -665,7 +665,20 @@ async def _grant_bond(
 ) -> None:
     from . import bond as bond_mod
 
-    await bond_mod.grant(conn, steward_id, int(amount), "give", once=once)
+    n = int(amount or 0)
+    if n <= 0:
+        return
+    await bond_mod.grant(conn, steward_id, n, "give", once=once)
+
+
+async def _grant_tickets(conn: aiosqlite.Connection, steward_id: int, amount: int) -> None:
+    n = int(amount or 0)
+    if n <= 0:
+        return
+    await conn.execute(
+        "UPDATE stewards SET tickets=tickets+? WHERE id=?",
+        (n, steward_id),
+    )
 
 
 async def _grant_title(conn: aiosqlite.Connection, steward_id: int, key: str) -> None:
@@ -715,6 +728,9 @@ async def settle_rewards(
                 await _give_keepsake(conn, inviter_id, "shore_lamp")
                 await conn.execute(
                     "UPDATE stewards SET invite_lantern=1 WHERE id=?", (inviter_id,)
+                )
+                await _grant_tickets(
+                    conn, inviter_id, config.INVITE_REWARD_QUALIFIED_TICKETS,
                 )
                 await _grant_bond(
                     conn, inviter_id, config.INVITE_REWARD_QUALIFIED_BOND,
@@ -1042,6 +1058,8 @@ async def player_view(
             "valid_count": counted,
             "keepsakes": keeps,
             "lantern": bool(s.get("invite_lantern")),
+            "official_reward_tickets": int(config.INVITE_REWARD_QUALIFIED_TICKETS),
+            "official_reward_bond": int(config.INVITE_REWARD_QUALIFIED_BOND),
         }
     finally:
         if owned:
@@ -1056,7 +1074,7 @@ async def player_text(steward: dict[str, Any], *, base: str = "") -> str:
         f"邀请链接：{view['link']}",
         "把码或链接给新岛民。登记或首次绑定后关系就定了，不能改绑。",
         "自己不能引自己。注册当时不算有效邀请；对方真正在岛上过日子才会致谢。",
-        "正式谢礼是称呼、收藏和岛缘，不会一上来发一堆票。",
+        f"正式谢礼：邀请人 {config.INVITE_REWARD_QUALIFIED_TICKETS} 工分票 + {config.INVITE_REWARD_QUALIFIED_BOND} 岛缘（达标后自动入账）。还有称呼和收藏，不要发明领邀请奖。",
     ]
     if view["bound"] and view.get("inviter"):
         lines.append(
