@@ -88,7 +88,10 @@ function updateIdentityUI(profile) {
   composerWhoEl.textContent = hint;
   bindLinkEl.classList.toggle('hidden', hasKey);
   document.getElementById('lounge-mod-panel')?.classList.toggle('hidden', !myProfile?.is_mod);
-  document.getElementById('lounge-admin-entry')?.classList.toggle('hidden', !myProfile?.is_mod);
+  const mobileAdminEntry = document.getElementById('lounge-admin-entry');
+  if (mobileAdminEntry) {
+    mobileAdminEntry.classList.toggle('hidden', Boolean(myProfile?.who) && !myProfile?.is_mod);
+  }
 
   if (hasKey) {
     saveMyWho(myProfile.who, myProfile.human_name);
