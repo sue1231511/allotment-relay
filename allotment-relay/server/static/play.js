@@ -480,8 +480,7 @@ function renderNeighbors() {
   $('play-neighbors-list').innerHTML = people.map((p) => {
     const ripe = p.ripe ? `熟地 ${p.ripe}` : '暂无熟地';
     const where = p.home ? '在档口' : (p.ago || '');
-    const cmd = JSON.stringify({ tool: 'steward_ops', command: `peer ${p.name}` });
-    return `<button type="button" class="play-neighbor" data-act='${cmd}'>
+    return `<button type="button" class="play-neighbor" data-neighbor="${esc(p.name)}">
       <span class="play-neighbor-dot ${p.home ? '' : 'is-away'}" aria-hidden="true"></span>
       <span><strong>${esc(p.name)}</strong><small>${esc(where)} · ${esc(ripe)}</small></span>
     </button>`;
@@ -513,18 +512,29 @@ function renderTote() {
   `).join('');
 }
 
+function giftAgo(epoch) {
+  const sec = Math.max(0, Math.floor(Date.now() / 1000) - Number(epoch || 0));
+  if (!epoch) return '';
+  if (sec < 60) return '刚刚';
+  if (sec < 3600) return `${Math.floor(sec / 60)} 分钟前`;
+  if (sec < 86400) return `${Math.floor(sec / 3600)} 小时前`;
+  return `${Math.floor(sec / 86400)} 天前`;
+}
+
 function renderGifts() {
   const gifts = (state.dash && state.dash.gifts) || [];
   if (!gifts.length) {
-    $('play-gifts').innerHTML = '<p>暂无收礼 / 打赏</p>';
+    $('play-gifts').innerHTML = '<p>暂无收礼 / 打赏。别人送你的会即时进袋，记录在这里，不是集市纪事。</p>';
     return;
   }
-  $('play-gifts').innerHTML = gifts.slice(0, 6).map((g) => `
+  $('play-gifts').innerHTML = gifts.slice(0, 12).map((g) => {
+    const when = giftAgo(g.created_at);
+    return `
     <div class="item">
-      <strong>${esc(g.who)}</strong>
+      <strong>${esc(g.who)}</strong>${when ? `<small> · ${esc(when)}</small>` : ''}
       <p style="margin-top:4px">${esc(g.kind)} · ${esc(g.text)}</p>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 const MEMORY_KIND_LABELS = { tale: '潮闻', story: '故事', npc: '相遇' };
@@ -865,9 +875,42 @@ function buySeedSheet() {
 }
 
 function itemSheet(name) {
+  const people = ((state.neighbors && state.neighbors.people) || []).slice(0, 8);
+  const giftBtns = people.map((p) => {
+    const cmd = JSON.stringify({ tool: 'tote_ops', command: `gift ${p.name} ${name} 1` });
+    return `<button type="button" class="play-mini-btn" data-act='${cmd}'>送给 ${esc(p.name)}</button>`;
+  }).join('');
   openSheet(name, `
     <button type="button" class="play-mini-btn primary" data-act='{"tool":"kitchen_ops","command":"eat ${name}"}'>吃</button>
     <button type="button" class="play-mini-btn" data-act='{"tool":"tote_ops","command":"vend ${name} 1"}'>卖 1</button>
+    ${giftBtns ? `<p class="muted" style="margin-top:10px">送礼（即时到账，对方右侧「收礼」能看到）</p>${giftBtns}` : ''}
+  `);
+}
+
+function neighborSheet(name) {
+  const people = (state.neighbors && state.neighbors.people) || [];
+  const p = people.find((x) => x.name === name) || { name };
+  const stock = ((state.dash && state.dash.stock) || []).filter((it) => Number(it.qty) > 0);
+  const giftItems = stock.slice(0, 12).map((it) => {
+    const cmd = JSON.stringify({ tool: 'tote_ops', command: `gift ${name} ${it.name} 1` });
+    return `<button type="button" class="play-mini-btn" data-act='${cmd}'>送 ${esc(it.name)} ×1</button>`;
+  }).join('');
+  const peerCmd = JSON.stringify({ tool: 'steward_ops', command: `peer ${name}` });
+  const assistCmd = JSON.stringify({ tool: 'alliance_ops', command: `assist ${name}` });
+  const scrumpCmd = JSON.stringify({ tool: 'plot_ops', command: `偷菜 ${name}` });
+  const tip1 = JSON.stringify({ tool: 'tote_ops', command: `gift ${name} 票 1` });
+  const tip5 = JSON.stringify({ tool: 'tote_ops', command: `gift ${name} 票 5` });
+  const where = p.home ? '在档口' : (p.ago || '');
+  const ripe = p.ripe ? `熟地 ${p.ripe}` : '暂无熟地';
+  openSheet(name, `
+    <p class="muted">${esc(where)}${where ? ' · ' : ''}${esc(ripe)}</p>
+    <button type="button" class="play-mini-btn primary" data-act='${peerCmd}'>看档</button>
+    <button type="button" class="play-mini-btn" data-act='${assistCmd}'>帮忙打理</button>
+    <button type="button" class="play-mini-btn" data-act='${scrumpCmd}'>偷菜</button>
+    <p class="muted" style="margin-top:10px">送礼即时到账。对方看右侧「收礼 / 打赏」，不是集市纪事。</p>
+    <button type="button" class="play-mini-btn" data-act='${tip1}'>送 1 票</button>
+    <button type="button" class="play-mini-btn" data-act='${tip5}'>送 5 票</button>
+    ${giftItems || '<p class="muted">口袋空着，送不了东西。</p>'}
   `);
 }
 
@@ -1231,6 +1274,11 @@ document.body.addEventListener('click', (e) => {
   const item = e.target.closest('#play-tote [data-item]');
   if (item) {
     itemSheet(item.getAttribute('data-item'));
+    return;
+  }
+  const neighbor = e.target.closest('[data-neighbor]');
+  if (neighbor) {
+    neighborSheet(neighbor.getAttribute('data-neighbor'));
     return;
   }
   const btn = e.target.closest('[data-act]');

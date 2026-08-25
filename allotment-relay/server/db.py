@@ -1752,6 +1752,7 @@ async def init_db() -> None:
             """,
             "CREATE INDEX IF NOT EXISTS idx_star_scripts_status ON star_scripts(status, created_at)",
             "CREATE INDEX IF NOT EXISTS idx_star_scripts_steward ON star_scripts(steward_id, created_at)",
+            "CREATE INDEX IF NOT EXISTS idx_chronicle_gift_target ON chronicle(action, target_id, created_at)",
         ):
             try:
                 await db.execute(ddl)
@@ -1775,6 +1776,7 @@ async def init_db() -> None:
         await bond_mod.backfill_all(db)
         from . import invite as invite_mod
         await invite_mod.backfill_invite_codes(db)
+        await backfill_gift_chronicle_targets(db)
         await db.commit()
 
 
@@ -2050,6 +2052,18 @@ async def get_steward_by_name(name: str) -> dict[str, Any] | None:
         )
         row = await cur.fetchone()
         return dict(row) if row else None
+
+
+async def match_steward_from_tokens(
+    tokens: list[str],
+) -> tuple[dict[str, Any] | None, list[str]]:
+    """Longest-prefix steward name match so names with spaces still work."""
+    cleaned = [t.strip() for t in tokens if str(t).strip()]
+    for i in range(len(cleaned), 0, -1):
+        peer = await get_steward_by_name(" ".join(cleaned[:i]))
+        if peer and peer.get("enrolled"):
+            return peer, cleaned[i:]
+    return None, cleaned
 
 
 async def get_steward_by_id(steward_id: int) -> dict[str, Any] | None:
@@ -2380,20 +2394,137 @@ async def public_stats() -> dict[str, Any]:
         }
 
 
-async def list_received_gifts(steward_id: int, limit: int = 20) -> list[dict[str, Any]]:
+def _gift_target_name_from_text(action: str, text: str) -> str:
+    raw = text or ""
+    if action == "gift":
+        key = "送礼给 "
+        i = raw.find(key)
+        if i < 0:
+            return ""
+        rest = raw[i + len(key):]
+        cut = rest.find("：")
+        if cut < 0:
+            cut = rest.find(":")
+        return rest[:cut].strip() if cut >= 0 else ""
+    if action == "bar_tip":
+        key = " 给 "
+        i = raw.find(key)
+        if i < 0:
+            return ""
+        rest = raw[i + len(key):]
+        cut = rest.find(" 小费")
+        return rest[:cut].strip() if cut >= 0 else ""
+    return ""
+
+
+async def backfill_gift_chronicle_targets(db: aiosqlite.Connection) -> None:
+    """补上旧纪事漏写的 target_id，否则收礼箱按收件人查会漏。"""
+    db.row_factory = aiosqlite.Row
+    cur = await db.execute(
+        """
+        SELECT id, action, text FROM chronicle
+        WHERE action IN ('gift', 'bar_tip') AND (target_id IS NULL OR target_id = 0)
+        """
+    )
+    rows = await cur.fetchall()
+    for r in rows:
+        name = _gift_target_name_from_text(str(r["action"] or ""), str(r["text"] or ""))
+        if not name:
+            continue
+        peer = await (
+            await db.execute(
+                "SELECT id FROM stewards WHERE name = ? COLLATE NOCASE",
+                (name,),
+            )
+        ).fetchone()
+        if peer:
+            await db.execute(
+                "UPDATE chronicle SET target_id=? WHERE id=?",
+                (int(peer[0]), r["id"]),
+            )
+
+
+async def list_gift_records(
+    steward_id: int,
+    *,
+    direction: str = "received",
+    peer_name: str = "",
+    limit: int = 20,
+) -> list[dict[str, Any]]:
+    """收礼/送出纪事。target_id 对不上时，仍按正文「送礼给 名字」兜底。"""
+    me = await get_steward_by_id(steward_id)
+    my_name = str((me or {}).get("name") or "")
+    limit = min(50, max(1, int(limit)))
+    peer_name = (peer_name or "").strip()
+    direction = (direction or "received").strip().lower()
+    if direction not in ("received", "sent", "both"):
+        direction = "received"
+
+    clauses = ["c.action IN ('gift', 'bar_tip')"]
+    args: list[Any] = []
+    dir_bits: list[str] = []
+    if direction in ("received", "both") and my_name:
+        dir_bits.append("(c.target_id=? OR c.text LIKE ? OR c.text LIKE ?)")
+        args.extend([steward_id, f"%送礼给 {my_name}：%", f"%给 {my_name} 小费%"])
+    elif direction in ("received", "both"):
+        dir_bits.append("c.target_id=?")
+        args.append(steward_id)
+    if direction in ("sent", "both"):
+        if my_name:
+            dir_bits.append("(c.actor_id=? OR c.text LIKE ?)")
+            args.extend([steward_id, f"{my_name} 送礼给 %"])
+        else:
+            dir_bits.append("c.actor_id=?")
+            args.append(steward_id)
+    if dir_bits:
+        clauses.append("(" + " OR ".join(dir_bits) + ")")
+    if peer_name:
+        clauses.append(
+            "(a.name = ? COLLATE NOCASE OR t.name = ? COLLATE NOCASE "
+            "OR c.text LIKE ? OR c.text LIKE ?)"
+        )
+        args.extend([
+            peer_name,
+            peer_name,
+            f"%送礼给 {peer_name}：%",
+            f"{peer_name} 送礼给 %",
+        ])
+
+    sql = f"""
+        SELECT c.id, c.text, c.created_at, c.action,
+               c.actor_id, c.target_id,
+               a.name AS actor_name, t.name AS target_name
+        FROM chronicle c
+        LEFT JOIN stewards a ON a.id = c.actor_id
+        LEFT JOIN stewards t ON t.id = c.target_id
+        WHERE {' AND '.join(clauses)}
+        ORDER BY c.created_at DESC, c.id DESC
+        LIMIT ?
+    """
+    args.append(limit)
     async with connect() as db:
         db.row_factory = aiosqlite.Row
-        cur = await db.execute(
-            """
-            SELECT c.text, c.created_at, c.action, a.name AS actor_name
-            FROM chronicle c
-            LEFT JOIN stewards a ON a.id = c.actor_id
-            WHERE c.action IN ('gift', 'bar_tip') AND c.target_id=?
-            ORDER BY c.created_at DESC LIMIT ?
-            """,
-            (steward_id, limit),
+        cur = await db.execute(sql, tuple(args))
+        rows = [dict(r) for r in await cur.fetchall()]
+    seen: set[int] = set()
+    out: list[dict[str, Any]] = []
+    for r in rows:
+        cid = int(r.get("id") or 0)
+        if cid and cid in seen:
+            continue
+        if cid:
+            seen.add(cid)
+        r["incoming"] = int(r.get("target_id") or 0) == int(steward_id) or (
+            my_name and f"送礼给 {my_name}：" in str(r.get("text") or "")
+        ) or (
+            my_name and f"给 {my_name} 小费" in str(r.get("text") or "")
         )
-        return [dict(r) for r in await cur.fetchall()]
+        out.append(r)
+    return out
+
+
+async def list_received_gifts(steward_id: int, limit: int = 20) -> list[dict[str, Any]]:
+    return await list_gift_records(steward_id, direction="received", limit=limit)
 
 
 async def public_chronicle(limit: int = 40) -> list[dict[str, Any]]:

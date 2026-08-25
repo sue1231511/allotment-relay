@@ -56,6 +56,7 @@ async def _test_tote_gifts_list() -> None:
 
     sent = await game.tote_ops(giver_kid, "gift 收礼人 甘蓝 1 生日快乐")
     assert "已送礼给 收礼人" in sent, sent
+    assert "tote_ops gifts" in sent, sent
 
     gifts = await game.tote_ops(recv_kid, "gifts")
     assert "收礼/打赏记录" in gifts, gifts
@@ -63,14 +64,63 @@ async def _test_tote_gifts_list() -> None:
     assert "甘蓝" in gifts, gifts
     assert "生日快乐" in gifts, gifts
 
-    ticket_gift = await game.tote_ops(giver_kid, "gift 收礼人 票 5")
+    # 空 gift / 中文送礼记录 也是查收件箱，避免对方打错指令以为没记录
+    via_gift = await game.tote_ops(recv_kid, "gift")
+    assert "送礼人" in via_gift and "甘蓝" in via_gift, via_gift
+    via_cn = await game.tote_ops(recv_kid, "赠礼")
+    assert "送礼人" in via_cn, via_cn
+
+    ticket_gift = await game.tote_ops(giver_kid, "送礼 收礼人 票 5")
     assert "工分票" in ticket_gift, ticket_gift
 
     gifts2 = await game.tote_ops(recv_kid, "收礼")
     assert "5 工分票" in gifts2 or "工分票" in gifts2, gifts2
 
+    sent_log = await game.tote_ops(giver_kid, "gifts 送出")
+    assert "送出记录" in sent_log, sent_log
+    assert "收礼人" in sent_log, sent_log
+    assert "甘蓝" in sent_log, sent_log
+
+    filtered = await game.tote_ops(recv_kid, "gifts 送礼人")
+    assert "送礼人" in filtered, filtered
+    assert "甘蓝" in filtered, filtered
+
+    # target_id 漏写时，仍应按正文查到
+    async with db.connect() as conn:
+        await db.add_item(conn, giver_sid, "crop_kale", 1)
+        await conn.commit()
+    await game.tote_ops(giver_kid, "gift 收礼人 甘蓝 1")
+    async with db.connect() as conn:
+        await conn.execute(
+            "UPDATE chronicle SET target_id=NULL WHERE action='gift' AND target_id=?",
+            (recv_sid,),
+        )
+        await conn.commit()
+    recovered = await game.tote_ops(recv_kid, "gifts")
+    assert "甘蓝" in recovered, recovered
+    assert "送礼人" in recovered, recovered
+
+    async with db.connect() as conn:
+        await db.backfill_gift_chronicle_targets(conn)
+        await conn.commit()
+        row = await (
+            await conn.execute(
+                "SELECT target_id FROM chronicle WHERE action='gift' AND text LIKE ? ORDER BY id DESC LIMIT 1",
+                ("%收礼人%",),
+            )
+        ).fetchone()
+    assert row and int(row[0]) == recv_sid, row
+
+    async with db.connect() as conn:
+        await db.add_item(conn, giver_sid, "crop_kale", 1)
+        await conn.commit()
+    qty_default = await game.tote_ops(giver_kid, "gift 收礼人 甘蓝")
+    assert "已送礼给 收礼人" in qty_default, qty_default
+
     from server.mcp_dispatch import TOTE_HELP
     assert "gifts" in TOTE_HELP, TOTE_HELP
+    assert "送出" in TOTE_HELP, TOTE_HELP
+    assert "收礼" in TOTE_HELP or "收件箱" in TOTE_HELP, TOTE_HELP
 
 
 if __name__ == "__main__":

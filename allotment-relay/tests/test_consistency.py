@@ -87,6 +87,7 @@ def test_mcp_descriptions() -> None:
     tote_blob = f"{tote.description}\n{(tote.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
     assert "送票" in tote_blob
     assert "gifts" in tote_blob
+    assert "送出" in tote_blob
     assert "24" in tote_blob
     assert "未命名小鱼" in tote_blob
 
@@ -374,6 +375,7 @@ def test_relay_manual_covers_systems() -> None:
         "/market",
         "能直接送票",
         "tote_ops gifts",
+        "gifts 送出",
         "随机事件整体 +30%",
         "旧史文本",
         "不是流水",
@@ -538,6 +540,8 @@ def test_human_island_manual() -> None:
         "人和管家",
         "编剧社",
         "诊所地点",
+        "收礼 / 打赏",
+        "不是你的收件箱",
     ):
         assert needle in blob, needle
     assert "plot_ops" not in blob
@@ -621,6 +625,9 @@ def test_patron_pages_share_steward_key() -> None:
     assert 'id="play-hui-donate-amount"' in play_html
     assert 'id="play-lounge"' in play_html
     assert 'id="play-neighbors"' in play_html
+    assert "neighborSheet" in play_js
+    assert "data-neighbor" in play_js
+    assert 'command":"gifts"' in play_html
     assert 'id="play-me"' in play_html
     assert 'id="memory-modal"' in play_html
     assert 'id="play-today"' in play_html
@@ -651,7 +658,7 @@ def test_patron_pages_share_steward_key() -> None:
     assert "routes" in index_html
     assert 'href="/manual"' in play_html
     assert 'href="/manual"' in index_html
-    assert '@app.get("/manual")' in main_py
+    assert '@app.get("/manual"' in main_py
     assert '"go": "bar"' in promo
     assert '"go": "eatery"' in promo
     assert '"go": "star"' in promo

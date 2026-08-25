@@ -125,6 +125,9 @@ def test_play_page_lists_all_plot_kinds() -> None:
     assert "交岸维" in js
     assert "orderedPlaces" in js
     assert "b.week1" in js
+    assert "neighborSheet" in js
+    assert "data-neighbor" in js
+    assert "tote_ops gifts" in html or 'command":"gifts"' in html
 
 
 if __name__ == "__main__":

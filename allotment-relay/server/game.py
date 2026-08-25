@@ -199,7 +199,7 @@ async def relay_manual() -> str:
         "                 · compliment · catch · beach scan · dig · probe · gear status",
         "                 · gear upgrade net · tool buy hoe · boss status · boss attack",
         "  tote_ops     行囊/交换台/集市",
-        "               command 例：list · gifts · vend 鲭鱼 1 · vend 芒果 3 木瓜 2（批量）· gift 安 甘蓝 1",
+        "               command 例：list · gifts · gifts 送出 · vend 鲭鱼 1 · vend 芒果 3 木瓜 2（批量）· gift 安 甘蓝 1",
         "                 · swap list · swap offer 甘蓝 2 · market list · market sell 甘蓝 2 8",
         "  kitchen_ops  厨房/小馆。空 command=菜谱",
         "               command 例：menu · cook 蒜蓉生蚝 · cook 糖渍橘子 · cook 甘蓝 鲭鱼 · eat 鲭鱼 · eat 芒果 · eat 橘子 · vend 盐焗沙蟹",
@@ -391,8 +391,9 @@ async def relay_manual() -> str:
         "  Tt酱货架买的种/饲料/工具，系统回收进价九成——退货少亏一成，别反复倒卖当印钞",
         "  买东西不能超过行囊每格上限；满了 vend / 冰柜 存 / tote_ops 扩栈",
         "  未命名小鱼 vend 会再掷一次小咒事件（可能吐票、走回袋、解开或加重小咒）",
-        "  gifts [条数] — 查谁给你送了什么、酒吧谁给你打赏（即时到账，这里只看记录）。也可写 收礼。tote_ops gifts",
-        "  gift 名字 物品|票 数量 [留言] — 送给别人。能直接送票，即时到账，无手续费、无每日上限。票榜看口袋现票，送出会掉名次。协作度 +3",
+        "  gifts [条数] — 查谁给你送了什么、酒吧谁给你打赏（即时到账，这里只看记录）。也可写 收礼 / gift（空）。对方查不到时用这条，不要去翻集市纪事。tote_ops gifts",
+        "  gifts 送出 — 看你送给别人的记录。gifts 名字 只看和某人的来往。集市围观里的「礼物」是全服流水，不是收件箱",
+        "  gift 名字 物品|票 数量 [留言] — 送给别人。也可写 送礼。数量可省=1。能直接送票，即时到账，无手续费、无每日上限。票榜看口袋现票，送出会掉名次。协作度 +3。对方用 gifts / 上手页右侧「收礼」查看",
         "  随机事件整体 +30%（EVENT_RATE_MULT=1.3）：打理/收成/出海等更容易触发意外或惊喜；好事件也可能回一点身体",
         "  swap offer 物品 数量 — 白送挂单；claim 编号领（手续费 3 票，协作度高打折）",
         "  market sell 物品 数量 单价 — 玩家互卖；buy 编号；price 物品 看建议价",
@@ -675,7 +676,10 @@ async def steward_sheet(key_id: int) -> str:
             lines.append(f"  {ITEM_NAMES.get(item, item)} x{qty} · {item}")
     recent_gifts = await db.list_received_gifts(s["id"], 1)
     if recent_gifts:
-        lines.append("最近有人送礼/酒吧打赏 → tote_ops gifts 查看详情")
+        who = recent_gifts[0].get("actor_name") or "某人"
+        lines.append(f"最近收礼：{who} → tote_ops gifts 查看（不要去翻集市纪事）")
+    else:
+        lines.append("收礼记录：tote_ops gifts · 自己送出的：tote_ops gifts 送出")
     async with db.connect() as conn:
         from . import market as market_mod
         extra = await market_mod._market_extra(conn, s["id"])
@@ -2355,6 +2359,165 @@ async def _satchel_stack_expand(s: dict, n: int = 1) -> str:
     )
 
 
+_GIFT_LIST_VERBS = {"gifts", "收礼", "收到的礼", "赠礼", "送礼记录"}
+_GIFT_SEND_VERBS = {"gift", "送礼"}
+_GIFT_SENT_TOKS = {"送出", "sent", "已送", "发出", "outbox"}
+_GIFT_BOTH_TOKS = {"全部", "both", "收发", "来往"}
+
+
+def _parse_gift_list_args(tokens: list[str]) -> tuple[str, str, int]:
+    direction = "received"
+    limit = 20
+    name_toks: list[str] = []
+    for tok in tokens:
+        low = tok.lower()
+        if tok in _GIFT_SENT_TOKS or low in _GIFT_SENT_TOKS:
+            direction = "sent"
+            continue
+        if tok in _GIFT_BOTH_TOKS or low in _GIFT_BOTH_TOKS:
+            direction = "both"
+            continue
+        cleaned = tok.strip().lstrip("#xX")
+        if cleaned.isdigit():
+            limit = min(50, max(1, int(cleaned)))
+            continue
+        name_toks.append(tok)
+    return direction, " ".join(name_toks).strip(), limit
+
+
+async def _gift_list(s: dict, tokens: list[str]) -> str:
+    from . import multi as multi_mod
+
+    direction, peer_name, limit = _parse_gift_list_args(tokens)
+    rows = await db.list_gift_records(
+        s["id"], direction=direction, peer_name=peer_name, limit=limit,
+    )
+    hint = (
+        "礼物即时进行囊或工分票。查自己的收件箱用 tote_ops gifts；"
+        "自己送出的用 tote_ops gifts 送出。"
+        "集市纪事里的「礼物」是全服围观，不是对方的收件箱。"
+    )
+    if not rows:
+        if direction == "sent":
+            return "你还没送过礼。用法：tote_ops gift 名字 物品 数量\n" + hint
+        if peer_name:
+            return f"和「{peer_name}」还没有送礼/打赏记录。\n" + hint
+        return (
+            "还没有人给你送礼或酒吧打赏。礼物即时进行囊或工分票，"
+            "也可 tote_ops list / steward_ops sheet 核对。\n" + hint
+        )
+    if direction == "sent":
+        title = f"送出记录（最近 {len(rows)} 条）"
+    elif direction == "both":
+        title = f"收礼/送出（最近 {len(rows)} 条）"
+    else:
+        title = f"收礼/打赏记录（最近 {len(rows)} 条）"
+    if peer_name:
+        title += f" · 与 {peer_name}"
+    lines = [title + "："]
+    for r in rows:
+        ago = multi_mod._ago(int(r["created_at"]))
+        tag = "打赏" if r.get("action") == "bar_tip" else "礼物"
+        if direction == "sent" or (direction == "both" and not r.get("incoming")):
+            who = r.get("target_name") or "某人"
+            arrow = "→"
+        else:
+            who = r.get("actor_name") or "某人"
+            arrow = "←"
+        lines.append(f"  · [{tag}] {arrow} {who}（{ago}）— {r['text']}")
+    if direction != "sent":
+        lines.append("礼物已即时到账；行囊 tote_ops list，票 steward_ops sheet。")
+        lines.append("对方若说查不到：让对方 tote_ops gifts，不要去翻集市纪事。")
+    else:
+        lines.append("对方查记录：tote_ops gifts / 上手页右侧「收礼 / 打赏」。")
+    if direction == "received":
+        lines.append("自己送出的：tote_ops gifts 送出")
+    return "\n".join(lines)
+
+
+async def _try_gift_send(s: dict, tokens: list[str]) -> str | None:
+    """Return send result, or None if this looks like a list query rather than a send."""
+    if not tokens:
+        return None
+    if tokens[0] in _GIFT_SENT_TOKS or tokens[0].lower() in _GIFT_SENT_TOKS:
+        return None
+    if tokens[0] in _GIFT_BOTH_TOKS or tokens[0].lower() in _GIFT_BOTH_TOKS:
+        return None
+    if tokens[0].strip().lstrip("#xX").isdigit():
+        return None
+    peer, rest = await db.match_steward_from_tokens(tokens)
+    if not peer:
+        guess = tokens[0]
+        raise ValueError(
+            f"找不到管理员「{guess}」。先 steward_ops 邻居 核对名字。"
+            "送礼：gift 名字 物品 数量；查记录：tote_ops gifts"
+        )
+    if not rest:
+        return await _gift_list(s, [peer["name"]])
+    return await _gift_send(s, peer, rest)
+
+
+async def _gift_send(s: dict, peer: dict, rest: list[str]) -> str:
+    if peer["id"] == s["id"]:
+        raise ValueError("不能送礼给自己")
+    token = rest[0]
+    qty = 1
+    note_from = 1
+    if len(rest) >= 2:
+        cleaned = rest[1].strip().lstrip("#xX")
+        if cleaned.isdigit():
+            qty = _parse_int(rest[1])
+            note_from = 2
+    if qty < 1:
+        raise ValueError("送礼数量至少 1")
+    note = " ".join(rest[note_from:])[:80]
+    async with db.connect() as conn:
+        conn.row_factory = aiosqlite.Row
+        from . import multi as multi_mod
+        token_l = token.lower()
+        if token_l in ("tickets", "票", "工分票"):
+            cur = await conn.execute(
+                "SELECT tickets FROM stewards WHERE id=?", (s["id"],)
+            )
+            if (await cur.fetchone())[0] < qty:
+                raise ValueError(f"工分票不足，需要 {qty} 票")
+            await conn.execute(
+                "UPDATE stewards SET tickets=tickets-? WHERE id=?",
+                (qty, s["id"]),
+            )
+            await conn.execute(
+                "UPDATE stewards SET tickets=tickets+? WHERE id=?",
+                (qty, peer["id"]),
+            )
+            gift_line = f"{qty} 工分票"
+        else:
+            item_key = resolve_item_key(token)
+            if not item_key:
+                raise ValueError(unknown_item_message(token))
+            if not await db.take_item(conn, s["id"], item_key, qty):
+                raise ValueError(
+                    f"行囊不足 {ITEM_NAMES.get(item_key, item_key)}（{item_key}）x{qty}"
+                )
+            await db.add_item(conn, peer["id"], item_key, qty)
+            gift_line = f"{ITEM_NAMES.get(item_key, item_key)}（{item_key}）x{qty}"
+        await multi_mod._bump_rapport(conn, s["id"], peer["id"], 3)
+        chronicle = f"{s['name']} 送礼给 {peer['name']}：{gift_line}"
+        if note:
+            chronicle += f" — {note}"
+        await db.add_chronicle("gift", chronicle, int(s["id"]), int(peer["id"]), conn=conn)
+        await conn.commit()
+    msg = f"已送礼给 {peer['name']}：{gift_line}"
+    if note:
+        msg += f"（{note}）"
+    msg += " · 协作度 +3"
+    msg += f"\n对方查记录：tote_ops gifts / 上手页右侧「收礼 / 打赏」。集市纪事不是收件箱。"
+    return msg + flavor.maybe_suffix([
+        "对方行囊已到账，不用等台阶",
+        "礼轻情意重，联盟记一笔",
+        "篱边人情：送了就要认",
+    ])
+
+
 async def _tote_one(s: dict, command: str) -> str:
     parts = command.strip().split()
     verb = parts[0].lower() if parts else "list"
@@ -2430,91 +2593,17 @@ async def _tote_one(s: dict, command: str) -> str:
         if fate_notes:
             msg += "\n" + "\n".join(fate_notes)
         return msg
-    if verb in ("gifts", "收礼", "收到的礼"):
-        from . import multi as multi_mod
-        limit = 20
-        if len(parts) >= 2:
-            limit = min(50, max(1, _parse_int(parts[1], "条数")))
-        rows = await db.list_received_gifts(s["id"], limit)
-        if not rows:
-            return (
-                "还没有人给你送礼或酒吧打赏。礼物即时进行囊或工分票，"
-                "也可 tote_ops list / steward_ops sheet 核对。"
-            )
-        lines = [f"收礼/打赏记录（最近 {len(rows)} 条）："]
-        for r in rows:
-            who = r.get("actor_name") or "某人"
-            ago = multi_mod._ago(int(r["created_at"]))
-            tag = "打赏" if r.get("action") == "bar_tip" else "礼物"
-            lines.append(f"  · [{tag}] {who}（{ago}）— {r['text']}")
-        lines.append("礼物已即时到账；行囊 tote_ops list，票 steward_ops sheet。")
-        return "\n".join(lines)
-    if verb == "gift" and len(parts) >= 4:
-        peer_name = parts[1]
-        token = parts[2]
-        qty = _parse_int(parts[3])
-        if qty < 1:
-            raise ValueError("送礼数量至少 1")
-        note = " ".join(parts[4:])[:80] if len(parts) > 4 else ""
-        async with db.connect() as conn:
-            conn.row_factory = aiosqlite.Row
-            peer_row = await (await conn.execute(
-                "SELECT * FROM stewards WHERE name = ? COLLATE NOCASE",
-                (peer_name.strip(),),
-            )).fetchone()
-            if not peer_row:
-                raise ValueError(f"找不到管理员「{peer_name}」")
-            peer = dict(peer_row)
-            if peer["id"] == s["id"]:
-                raise ValueError("不能送礼给自己")
-            from . import multi as multi_mod
-            token_l = token.lower()
-            if token_l in ("tickets", "票", "工分票"):
-                cur = await conn.execute(
-                    "SELECT tickets FROM stewards WHERE id=?", (s["id"],)
-                )
-                if (await cur.fetchone())[0] < qty:
-                    raise ValueError(f"工分票不足，需要 {qty} 票")
-                await conn.execute(
-                    "UPDATE stewards SET tickets=tickets-? WHERE id=?",
-                    (qty, s["id"]),
-                )
-                await conn.execute(
-                    "UPDATE stewards SET tickets=tickets+? WHERE id=?",
-                    (qty, peer["id"]),
-                )
-                gift_line = f"{qty} 工分票"
-                item_key = None
-            else:
-                item_key = resolve_item_key(token)
-                if not item_key:
-                    raise ValueError(unknown_item_message(token))
-                if not await db.take_item(conn, s["id"], item_key, qty):
-                    raise ValueError(
-                        f"行囊不足 {ITEM_NAMES.get(item_key, item_key)}（{item_key}）x{qty}"
-                    )
-                await db.add_item(conn, peer["id"], item_key, qty)
-                gift_line = f"{ITEM_NAMES.get(item_key, item_key)}（{item_key}）x{qty}"
-            await multi_mod._bump_rapport(conn, s["id"], peer["id"], 3)
-            chronicle = f"{s['name']} 送礼给 {peer['name']}：{gift_line}"
-            if note:
-                chronicle += f" — {note}"
-            await db.add_chronicle("gift", chronicle, s["id"], peer["id"], conn=conn)
-            await conn.commit()
-        msg = f"已送礼给 {peer['name']}：{gift_line}"
-        if note:
-            msg += f"（{note}）"
-        msg += " · 协作度 +3"
-        return msg + flavor.maybe_suffix([
-            "对方行囊已到账，不用等台阶",
-            "礼轻情意重，联盟记一笔",
-            "篱边人情：送了就要认",
-        ])
+    if verb in _GIFT_SEND_VERBS:
+        sent = await _try_gift_send(s, parts[1:])
+        if sent is not None:
+            return sent
+    if verb in _GIFT_LIST_VERBS or verb in _GIFT_SEND_VERBS:
+        return await _gift_list(s, parts[1:])
     if verb in ("扩栈", "expand_stack", "stack_expand"):
         n = _parse_int(parts[1], "数量") if len(parts) >= 2 else 1
         return await _satchel_stack_expand(s, n)
     raise ValueError(
-        f"未知 tote 指令: {command}（list / gifts / vend 物品 数量 / gift 名字 物品|票 数量 / 扩栈 [数量]）"
+        f"未知 tote 指令: {command}（list / gifts / gifts 送出 / vend 物品 数量 / gift 名字 物品|票 数量 / 扩栈 [数量]）"
     )
 
 
