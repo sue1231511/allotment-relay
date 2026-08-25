@@ -1724,6 +1724,7 @@ async def init_db() -> None:
             """,
             "ALTER TABLE stewards ADD COLUMN upkeep_arrears INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE tide_fund ADD COLUMN upkeep_total INTEGER NOT NULL DEFAULT 0",
+            # week_id 存东八区日期 YYYY-MM-DD（每天一张单；旧的 ISO 周键仍可共存）
             """
             CREATE TABLE IF NOT EXISTS shore_upkeep_bills (
                 steward_id INTEGER NOT NULL REFERENCES stewards(id),

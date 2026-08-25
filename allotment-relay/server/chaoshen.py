@@ -43,12 +43,12 @@ CHAOSHEN_HELP = f"""visit_ops 潮生会 子命令（整句写进 command）：
   空 / 问 — 进门问事：考勤、告示摘要、潮汐基金、岸税、岸维。不是入会。
   税 / 岸税 — 岸税：口袋现票超额累进。未过 800 免征。看档、档表、本周应/欠
   税 交 / 税 交 50 — 交欠税（可填票数）。没有 tax_ops。欠税时不能买地/买棚/买园/升屋/买船/开坑/升镐
-  维 / 岸维 / 维修 — 岸维：按产业每周收维修费。起步份地/果园免，产业单价至少 10 票；扩地、开馆、盖棚才交
+  维 / 岸维 / 维修 — 岸维：按产业每天收维修费。起步份地/果园免，日单价 2 起；扩地、开馆、盖棚才交
   维 交 / 维 交 50 — 交欠的维修费。欠维修费时不能扩产；开着的小馆暂停堂食。不是 hut_ops mascot upkeep
   基金 — 潮汐基金：岛均口袋票。有余的人自己填票数捐进来
   基金 捐 50 — 捐票，票数自己填（最少 {FUND_MIN_DONATE}）；口袋须高于岛均，捐完仍须不低于岛均
   告示 — 看告示；贴 标签 正文 发告示；回 编号 正文 回复（同 alliance_ops beacon）
-  岸税和岸维都在东八区每周一换班自动划入基金；本周新号免征到下周。补贴不用领、没有 MCP 指令。东八区{FUND_PAY_WEEKDAY_LABEL}自动打到低于岛均的人口袋（每人顶 {FUND_PAY_CAP} 票，不超过岛均）
+  岸税东八区每周一换班自动划入基金（本周新号免征到下周）。岸维东八区每天换班自动划（今日新号免征到明天）。补贴不用领、没有 MCP 指令。东八区{FUND_PAY_WEEKDAY_LABEL}自动打到低于岛均的人口袋（每人顶 {FUND_PAY_CAP} 票，不超过岛均）
   没有入会 / 开会 / 退会。{ORG_NAME}是岛上管事的机构，上岛时已经在册。
   本周目标 / 公仓 / 公物不在这儿：alliance_ops league · alliance_ops donate / larder · plot_ops commons
 例子：潮生会 · 潮生会 问 · 潮生会 税 · 潮生会 税 交 · 潮生会 税 交 50 · 潮生会 维 · 潮生会 维 交 · 潮生会 维 交 50 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 基金 捐 8 · 潮生会 告示
@@ -60,7 +60,7 @@ _DOOR_LINES = (
     "告示上墙，潮汐基金入簿。岸税、岸维也在这儿划。",
     "潮汐基金按岛均口袋票算。有余就填个数捐。补贴不用领，周二四六自动发。",
     "口袋过了八百，岸税按档交。超额累进，周一换班自动划。欠税别来买地。",
-    "地扩多了、馆开了，岸维按产业收。起步那几块免。欠维修费小馆先停堂。",
+    "地扩多了、馆开了，岸维按产业每天收。起步那几块免。欠维修费小馆先停堂。",
 )
 
 
@@ -140,7 +140,7 @@ async def _front_desk(key_id: int) -> str:
         f"潮汐 {world.tide_label(world.current_tide())} · {world.weather_label(world.current_weather())}",
         "办事：visit_ops 潮生会 税 · 潮生会 税 交 · 潮生会 维 · 潮生会 维 交 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 告示",
         "本周目标走 alliance_ops league。公仓走 alliance_ops donate / larder。公物走 plot_ops commons。",
-        f"岸税按口袋交，岸维按产业交，周一换班一起划。潮汐基金：捐票自己填数。补贴不用领，东八区{FUND_PAY_WEEKDAY_LABEL}自动发。不能加入。上岛已在册。",
+        f"岸税按口袋交（周一划），岸维按产业交（每天划）。潮汐基金：捐票自己填数。补贴不用领，东八区{FUND_PAY_WEEKDAY_LABEL}自动发。不能加入。上岛已在册。",
     ])
     if gift:
         lines.append(gift.strip())
@@ -274,11 +274,11 @@ def _upkeep_brief(snap: dict[str, Any]) -> str:
     if mine.get("arrears"):
         extra = "；小馆已停堂" if mine.get("shop_paused") else ""
         return f"{snap['name']}：欠 {mine['arrears']}{extra} · 先 visit_ops 潮生会 维 交"
-    if mine.get("first_week"):
-        return f"{snap['name']}：本周新号免征 · 看档 visit_ops 潮生会 维"
+    if mine.get("first_day") or mine.get("first_week"):
+        return f"{snap['name']}：今日新号免征 · 看档 visit_ops 潮生会 维"
     due = int(mine.get("due_now") or 0)
     if due:
-        return f"{snap['name']}：周应约 {due} · {snap['next']}"
+        return f"{snap['name']}：日应约 {due} · {snap['next']}"
     return f"{snap['name']}：起步产业免征 · {snap['next']}"
 
 
@@ -699,7 +699,8 @@ async def public_snapshot() -> dict[str, Any]:
         },
         "upkeep": {
             "name": upkeep["name"],
-            "week_id": upkeep["week_id"],
+            "week_id": upkeep.get("day_id") or upkeep["week_id"],
+            "day_id": upkeep.get("day_id") or upkeep["week_id"],
             "floor": upkeep["floor"],
             "done": upkeep["done"],
             "next": upkeep["next"],

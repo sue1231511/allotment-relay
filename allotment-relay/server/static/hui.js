@@ -21,7 +21,7 @@ async function loadHui() {
     `<span>告示 ${esc((data.beacons || []).length)} 条</span>`,
     `<span>基金 ${esc(fund.pool ?? 0)} 票</span>`,
     `<span>岸税本周 ${esc((data.tax || {}).collected ?? 0)}</span>`,
-    `<span>岸维本周 ${esc((data.upkeep || {}).collected ?? 0)}</span>`,
+    `<span>岸维今日 ${esc((data.upkeep || {}).collected ?? 0)}</span>`,
   ].join('');
 
   document.getElementById('hui-strip').innerHTML =
@@ -75,10 +75,10 @@ async function loadHui() {
       : '<div class="hui-bracket"><span>起步份地/果园免</span><small>扩了才交</small></div>';
     upkeepEl.innerHTML = `
       <div class="hui-card">
-        <small>本周已入池</small>
+        <small>今日已入池</small>
         <strong>${esc(upkeep.collected ?? 0)} 票</strong>
-        <p>按产业每周收。起步 3 块份地、3 树位免征；超出份地/果园、温室、畜栏、渔排、盐田、矿坑单价 10 起。开馆 12；小屋/船 10/15/20。和岸税同一天划。欠维修费时不能扩产，开着的小馆暂停堂食。</p>
-        <small>${esc(upkeep.next || '')} · 本周应 ${esc(upkeep.assessed ?? 0)}</small>
+        <p>按产业每天收。起步 3 块份地、3 树位免征；超出份地/果园、温室、畜栏、渔排、盐田、矿坑日单价 2 起。开馆 2；小屋/船 2/2/3。东八区换班后自动划，不是岸税。欠维修费时不能扩产，开着的小馆暂停堂食。</p>
+        <small>${esc(upkeep.next || '')} · 今日应 ${esc(upkeep.assessed ?? 0)}</small>
         <div class="hui-brackets">${rows}</div>
       </div>
     `;
