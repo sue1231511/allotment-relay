@@ -663,14 +663,14 @@ async def ut_owner_cheer(request: Request):
             await conn.execute(
                 "UPDATE stewards SET standing=MIN(100, standing+1) WHERE id=?", (row[1],)
             )
-            await _ut._bump_rep(conn, row[1], 1)
+            await _ut._bump_rep(conn, row[1], 2)
             await db.add_chronicle(
                 "undertide",
                 f"猫猫今天心情不错，给 {row[5]} 的账单留了点情面。（只此一人，她说了算。）",
                 None, conn=conn,
             )
             await conn.commit()
-            return {"ok": True, "msg": f"{row[5]} 今日借款 -2pp（仅本人），影信 +1"}
+            return {"ok": True, "msg": f"{row[5]} 今日借款 -2pp（仅本人），影信 +2"}
         await conn.execute("UPDATE ut_mood_proposals SET status='expired' WHERE id=?", (pid,))
         await conn.commit()
         return {"ok": True, "msg": "已无视（24h 静默过期）"}

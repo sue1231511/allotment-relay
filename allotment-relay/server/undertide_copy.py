@@ -105,6 +105,22 @@ BUY_FAKE_GENERIC = [
     "货是假的，票是真的。这就是后室铺。",
 ]
 
+# ══ 黑市装备 ═══════════════════════════════════════════════
+
+GEAR_BUY = (
+    "掌柜把{name}推过来，全程没抬头。\n\n"
+    "「硬货，不玩真假。」他说，「只此一件，替了你身上旧的。」\n\n"
+    "（战力 +{power} · 耐久 {dur} · 装备只带一件，新的替旧的）"
+)
+
+GEAR_REPAIR = (
+    "掌柜接过{name}，在灯下敲了敲，磨了磨，又吹了吹刀口的灰。\n\n"
+    "「{cost} 票。」他把它推回来，「跟新的一样。」\n\n"
+    "（耐久恢复至 {dur}）"
+)
+
+GEAR_REPAIR_FULL = "掌柜看了一眼你手里的家伙，又推回来。\n\n「没坏，修什么。」"
+
 # ══ 恶猫钱庄 ════════════════════════════════════════════════
 
 CAT_OWNER_DESC = (
@@ -430,8 +446,8 @@ SURGERY_FULL = (
     "切，缝，拆，再缝。他不着急，手法近乎温柔，每一下都让你清醒地知道发生了什么。\n\n"
     "「这里用的是可吸收线。」他中途说。「你吸收不了也没关系——反正还会再切开来。」\n\n"
     "最后他给你盖上一块布，看了一眼表，像下班。\n\n"
-    "「本来八十。麻药没上，算你六十。」\n\n"
-    "桌上压着单子：手术费 60 票。账已划转恶猫钱庄。\n\n"
+    "「本来一百二。麻药没上，算你九十。」\n\n"
+    "桌上压着单子：手术费 90 票。账已划转恶猫钱庄。\n\n"
     "「最后这几针是我自己的乐趣，不收钱。」他替你解开一条皮带——只解了一条。\n"
     "「剩下的自己解。练练手。」"
 )
@@ -604,6 +620,79 @@ LIZHI_NIGHT = (
     "「潮下是他的。地在谁名下，你猜。」"
 )
 
+# ══ 凯斯·红宝石 / 卖血 ═══════════════════════════════════
+
+RUBY_HEADER = "«红宝石 — 凯斯只卖这一款»"
+
+RUBY_DESC = (
+    "凯斯酒馆的酒单上只有一款：红宝石。\n\n"
+    "没人说它是什么。也没人问。\n"
+    "杯子里是稠的，甜里带着腥，腥里又勾着一点回甘。\n\n"
+    "有人喝一口就好了，像把丢掉的力气捡了回来。\n"
+    "也有人喝完一整夜没说话，第二天照旧下井。\n\n"
+    "荔栀从不多说。她把杯子推过来的时候，眼神跟报账一样平。"
+)
+
+RUBY_ORDER_PROMPT = (
+    "荔栀看了你一眼，报了个价。\n\n"
+    "「{price} 票。只此一杯，多了不给。」\n\n"
+    "（undertide_ops tavern ruby 确认 — 喝下它）"
+)
+
+RUBY_DRINK = (
+    "你喝下那杯红宝石。\n\n"
+    "第一口是甜的。然后腥气从喉咙深处漫上来，像海水倒灌。\n"
+    "力气回来了——以一种你自己都不敢细想的方式。\n\n"
+    "（身体 +{heal} · 雾智 −{mist} · 没人问你还喝不喝第二杯）"
+)
+
+RUBY_TOO_LOW_MIST = (
+    "荔栀把杯子收了回去。\n\n"
+    "「你这脸色，再喝会出事的。」她说，「脑子清醒点再来。」\n"
+    "（雾智低于 {floor} 不卖——凯斯不做把客人喝废的生意。）"
+)
+
+RUBY_DAILY_LIMIT = (
+    "荔栀没给你倒。\n\n"
+    "「今天这杯你已经喝过了。」她擦着杯子，「这东西，一天一杯是规矩。」"
+)
+
+RUBY_NO_TICKETS = "票不够。荔栀不会赊这杯——凯斯的两本账里，都没有赊欠这一栏。"
+
+BLOOD_HEADER = "«卖血 — 凯斯的另一本账»"
+
+BLOOD_DESC = (
+    "荔栀会收一样东西，比钱更实在。\n\n"
+    "针管是旧的，针头是新的。消毒水的气味在后间里混着酒味，"
+    "意外地不违和。\n\n"
+    "「别问去了哪。」她卷起你的袖子，「你卖，我收，钱货两清。」"
+)
+
+BLOOD_ORDER_PROMPT = (
+    "荔栀打量了你一眼，报了个数。\n\n"
+    "「{pay} 票。抽 {cost} 格。」她晃了晃针管，「这个价，不还价。」\n\n"
+    "（undertide_ops tavern bleed 确认 — 抽血换票）"
+)
+
+BLOOD_DONE = (
+    "针头扎进去的时候很轻。\n\n"
+    "她抽得很慢，像在数你的呼吸。最后用棉球按住针眼，动作熟练得"
+    "像她做过一万次——因为她真的做过一万次。\n\n"
+    "「钱货两清。」她把票推过来，转身去消毒。\n"
+    "你看着自己的手背，想起了那杯红宝石。"
+)
+
+BLOOD_TOO_LOW_HEALTH = (
+    "荔栀卷起你的袖子，又放下了。\n\n"
+    "「你这身子，抽完就得躺着出去。」她摇头，「凯斯不收死人的血，麻烦。」\n"
+    "（健康低于 {floor} 不抽。）"
+)
+
+BLOOD_DAILY_LIMIT = (
+    "荔栀头也没抬。\n\n"
+    "「一天一次。血这个东西，抽太勤就不值钱了。」"
+)
+
 # ══ 恩怨墙（三期）══════════════════════════════════════════
 
 # ── NPC 每日委托池（UTC 日种子刷新，保证墙上始终有活）──
@@ -629,14 +718,14 @@ NPC_QUESTS = {
     "collect_debt": {
         "name": "催一笔小账", "issuer": "猫猫", "kind": "fight",
         "desc": "有人欠了恶猫钱庄 30 票，好说好商量不管用。让他想起来。",
-        "pay": 25, "power": 25,
+        "pay": 25, "power": 50,
         "done": "对方看了你一眼，又看了看猫猫的条子。票掏得比你预想的快。",
         "fail": "对方不认账，还推了你一把。小八歪头看你：「白跑——白跑——」",
     },
     "rough_up": {
         "name": "给个教训", "issuer": "匿名纸条", "kind": "fight",
         "desc": "有人在后巷偷了东西不认账。让他长个记性，别打太狠。",
-        "pay": 35, "power": 40,
+        "pay": 35, "power": 62,
         "done": "他躺在地上，捂着鼻子点头。你说「下不为例」，他说「一定」。围观的人已经散了。",
         "fail": "对方比情报里说的能打。你空手回来，鼻子反倒是你的在流血。",
     },
@@ -963,6 +1052,12 @@ JESTER_LOSE = [
     "灯闪了一下，灭了。你等了三秒。什么都没有。\n\n「5 票。」Jester 掰着指头，「一杯茶钱，换一次幻想。不亏。」",
 ]
 
+JESTER_FREE = (
+    "Jester 抬头看了你一眼，朝机器扬了扬下巴。\n\n"
+    "「自己人。」他说，「这台机器认得脸。今天这张算我的。」\n\n"
+    "（免费一抽 · 影信 ≥{rep} 的每日福利 · 抽完今日照常 5 票一抽）"
+)
+
 JESTER_SMALL = (
     "机器叮地响了一声，吐出几张票。\n\n"
     "Jester 看了一眼数字：「小奖。{prize} 票。」\n"
@@ -1076,20 +1171,23 @@ undertide_ops descend — 第一次下去（3 票；岛缘 −25）
 undertide_ops enter — 进入潮下（已解锁；每次岛缘 −12，地板 0）
 undertide_ops status — 影信 · 债务 · 案底 · 状态
 undertide_ops market — 后室铺货架
-undertide_ops racket [accept|refuse] — 收账鬼阿标强买强卖（每日一单）
-undertide_ops buy <编号> — 买入（真货/次品/假货，离柜概不认账）
+undertide_ops buy <编号> — 买入（真货/次品/假货，离柜概不认账；偶尔刷装备）
+undertide_ops repair — 找掌柜修身上的装备（按损耗比例收费）
 undertide_ops sell <物品> [数量] — 掌柜处出货（销赃）
+undertide_ops racket [accept|refuse] — 收账鬼阿标强买强卖（每日一单）
 undertide_ops street — 帘外的随机人（每日刷新）
 undertide_ops muscle <名号> — 强买（战力判定）
 undertide_ops push <名号> <物品> — 强卖
 undertide_ops pit — 深坑 NPC 斗士榜（pit list）
 undertide_ops pit board — 井壁胜场榜（玩家，≥10 场才钉名）
 undertide_ops fight <斗士名> [attack|guard|feint] — 下坑
-undertide_ops medic <ring_shock|pit_trauma> — 晏安医务间
+undertide_ops medic <ring_shock|pit_trauma|sprain|backache> — 晏安医务间
+undertide_ops pit drug [list|药名key] — 晏安的体质药（下坑前用，越贵副作用越小）
 undertide_ops casino — 赌场
 undertide_ops dice <small|big|black> <注> — 黑潮骰
 undertide_ops lantern <注> / lantern continue / lantern cash — 最后一盏灯
 undertide_ops draw <注> / draw hit / draw stand — 死人抽牌
+undertide_ops lottery — 潮汐博彩（Jester 的旧机器，5 票一抽；影信≥70 每天首张免费）
 undertide_ops hijack <对象> — 劫持（后果自负）
 undertide_ops grudge pay|fight|run — 寻仇应对
 undertide_ops bank borrow <票数> — 恶猫钱庄借票
@@ -1099,6 +1197,8 @@ undertide_ops bank save <票数> — 存钱（T+1起息·影信×5为限）
 undertide_ops bank take <票数|all> — 取钱（随时可取）
 undertide_ops jail status/ransom/serve/work — 监牢
 undertide_ops tavern — 凯斯酒馆（chat 跟荔栀说话 / whisper 买消息 / spy 查悬赏雇主 / ai 别人动态）
+undertide_ops tavern ruby [确认] — 点红宝石（回身体、掉雾智，价随身价）
+undertide_ops tavern bleed [确认] — 卖血换票（抽身体，价随身价）
 undertide_ops bounty list/post/take — 恩怨墙·悬赏
 undertide_ops kroom status/settle/vr — K室
 undertide_ops cheer <好话> — 哄猫猫（潮下老板娘；不是地面酒吧的荔栀）"""

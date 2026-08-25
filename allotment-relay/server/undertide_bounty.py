@@ -192,11 +192,12 @@ async def bounty_ops(
             return utcopy.QUEST_NO_REP.format(req=rep_req)
         kind = qdef.get("kind", "errand")
         if kind == "fight":
-            # 战力判定
+            # 战力判定（软判定：差距说话）
             from . import undertide_muscle as um
+            from . import undertide_pit as _uptq
             my_power = await um._my_power(conn, s["id"])
-            their_power = qdef.get("power", 30) + random.randint(1, 20)
-            if my_power < their_power:
+            their_power = qdef.get("power", 30)
+            if random.random() >= _uptq.win_prob(my_power - their_power):
                 await conn.execute("UPDATE ut_bounty SET status='open' WHERE id=?", (b["id"],))
                 await conn.execute(
                     "UPDATE stewards SET health=MAX(0,health-?) WHERE id=?",
@@ -216,7 +217,7 @@ async def bounty_ops(
             "UPDATE stewards SET tickets=tickets+? WHERE id=?", (b["bounty"], s["id"])
         )
         from . import undertide as utmod
-        await utmod._bump_rep(conn, s["id"], 1)
+        await utmod._bump_rep(conn, s["id"], 2)
         await db.add_chronicle(
             "undertide", f"{s['name']} 完成了委托「{qdef['name']}」。", s["id"], conn=conn,
         )
@@ -348,10 +349,16 @@ async def bounty_ops(
         floor = utcfg.UT_BOUNTY_TIERS[tier]
         if bounty < floor:
             raise ValueError(f"{tier} 档底价 {floor} 票。仇恨是奢侈品。")
-        total = int(bounty * (1 + utcfg.UT_BOUNTY_FEE))
+        fee = utcfg.UT_BOUNTY_FEE
+        loyal = int(ut["shadow_rep"]) >= utcfg.UT_LOYAL_REP
+        if loyal:
+            fee -= utcfg.UT_BOUNTY_FEE_REP_CUT
+        total = int(bounty * (1 + fee))
         cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
         if (await cur.fetchone())[0] < total:
-            raise ValueError(f"挂单实付 {total} 票（含 20% 抽成）。挂不起的仇，先记账。")
+            raise ValueError(
+                f"挂单实付 {total} 票（含 {int(fee*100)}% 抽成{'，自己人优惠' if loyal else ''}）。挂不起的仇，先记账。"
+            )
         # 同目标冷却
         conn.row_factory = aiosqlite.Row
         row = await (await conn.execute(
@@ -396,12 +403,15 @@ async def bounty_ops(
         if not target:
             raise ValueError("目标已不在档口。")
         from . import undertide_muscle as um
+        from . import undertide_pit as _upt5
         my_power = await um._my_power(conn, s["id"])
-        # 目标战力（他当前的 body/energy 生效）
+        # 目标战力（他当前的 body/energy + 战绩，同新公式）
         cur = await conn.execute("SELECT health, energy FROM stewards WHERE id=?", (target["id"],))
         health, energy = (await cur.fetchone())
-        their_power = int(health / 100 * 30 + energy / 100 * 15 + random.randint(1, 20))
-        if my_power >= their_power:
+        their_power = int(health / 100 * 40 + energy / 100 * 20)
+        _, their_rank, _ = await _upt5.pit_rank(conn, target["id"])
+        their_power += their_rank
+        if random.random() < _upt5.win_prob(my_power - their_power):
             await conn.execute("UPDATE ut_bounty SET status='done' WHERE id=?", (b["id"],))
             await conn.execute("UPDATE stewards SET tickets=tickets+? WHERE id=?", (b["bounty"], s["id"]))
             from . import undertide as utmod

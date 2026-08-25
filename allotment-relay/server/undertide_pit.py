@@ -176,19 +176,48 @@ async def pit_board_text(
 
 
 async def combat_power(conn: aiosqlite.Connection, steward: dict[str, Any]) -> int:
-    """玩家战力 = (body+药buff)/100×30 + energy/100×15 + 战绩等级加成 + 1d20。"""
+    """玩家战力 = (body+药buff)/100×40 + energy/100×20 + 战绩等级加成 + 装备。无骰子——骰子在判定里。"""
     cur = await conn.execute("SELECT health, energy FROM stewards WHERE id=?", (steward["id"],))
     row = await cur.fetchone()
     health, energy = row[0], row[1]
     cur = await conn.execute(
-        "SELECT drug_buff, drug_until FROM steward_undertide WHERE steward_id=?",
+        "SELECT drug_buff, drug_until, gear_key, gear_durability FROM steward_undertide WHERE steward_id=?",
         (steward["id"],),
     )
     drow = await cur.fetchone()
+    drug_active = False
     if drow and drow[1] and db.now() < int(drow[1]):
         health = min(130, health + int(drow[0] or 0))  # 药可超100，封顶130
+        drug_active = True
     _, rank_bonus, _ = await pit_rank(conn, steward["id"])
-    return int(health / 100 * 30 + energy / 100 * 15 + rank_bonus + random.randint(1, 20))
+    power = int(health / 100 * 40 + energy / 100 * 20 + rank_bonus)
+    # 装备加成（有耐久才生效；与体质药同时生效时减半）
+    if drow and drow[2] and int(drow[3]) > 0:
+        from . import undertide_catalog as _cat
+        meta = _cat.UT_GEAR_GOODS.get(drow[2])
+        if meta:
+            gear = int(meta["power"])
+            if drug_active:
+                gear = max(1, gear // 2)
+            power += gear
+    return power
+
+
+async def gear_wear(conn: aiosqlite.Connection, steward_id: int, loss: int) -> None:
+    """装备耐久损耗：耐久归零即失效（战力加成消失，找掌柜修）。"""
+    if loss <= 0:
+        return
+    await conn.execute(
+        "UPDATE steward_undertide SET gear_durability=MAX(0, gear_durability-?) "
+        "WHERE steward_id=? AND gear_key != ''",
+        (loss, steward_id),
+    )
+
+
+def win_prob(diff: float) -> float:
+    """战力差 → 胜率（sigmoid）。差大碾压、差小赌骰子、落后仍留翻盘缝。"""
+    import math
+    return 1.0 / (1.0 + math.exp(-diff / utcfg.UT_COMBAT_SIGMOID_K))
 
 
 STRATEGY_BEATS = {"attack": "feint", "guard": "attack", "feint": "guard"}
@@ -244,6 +273,7 @@ async def pit_ops(
         lines.append(utcopy.PIT_STRATEGY_HINT)
         lines.append("fight 斗士名 [attack|guard|feint] — 下坑")
         lines.append("pit board — 井壁胜场榜（≥10 场才钉名）")
+        lines.append("pit drug — 晏安的体质药（越贵副作用越小，下坑前用）")
         return "\n".join(lines)
 
     if verb == "fight":
@@ -267,14 +297,26 @@ async def pit_ops(
         level = row["level"]
         entry, prize, base, crit_rate = _ladder(level)
 
+        # 自己人折扣：影信≥70 入场 -10%（看门人给熟客面子）
+        entry_discount_note = ""
+        if int(ut["shadow_rep"]) >= utcfg.UT_LOYAL_REP:
+            entry = int(entry * (1 - utcfg.UT_PIT_ENTRY_REP_DISCOUNT))
+            entry_discount_note = "（自己人，看门人给你抹了零）"
+
         cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
         if (await cur.fetchone())[0] < entry:
             raise ValueError(f"入场费 {entry} 票。看门人不赊账，也不负责你的尊严。")
 
         their_strat = random.choice(list(STRATEGY_BEATS))
         my_power = int(await combat_power(conn, s) * strategy_mod(my_strat, their_strat))
-        their_power = int(row["power"] * strategy_mod(their_strat, my_strat)) + random.randint(1, 20)
+        their_power = int(row["power"] * strategy_mod(their_strat, my_strat))
         diff = my_power - their_power
+        win = random.random() < win_prob(diff)
+        # 装备损耗：赢 -1、输 -2，Boss 战额外 -1
+        wear = utcfg.UT_GEAR_WEAR_WIN if win else utcfg.UT_GEAR_WEAR_LOSE
+        if level >= 5:
+            wear += utcfg.UT_GEAR_WEAR_BOSS
+        await gear_wear(conn, s["id"], wear)
 
         await conn.execute(
             "UPDATE stewards SET tickets=tickets-?, energy=MAX(0,energy-15) WHERE id=?",
@@ -288,7 +330,7 @@ async def pit_ops(
                  f"战力 {my_power} vs {their_power}（{'你占优' if diff > 0 else '你落下风'}）", ""]
 
         from . import undertide as utmod
-        if diff >= 0:
+        if win:
             win_msg = utcopy.pick(utcopy.PIT_WIN_LINES)
             await conn.execute(
                 "UPDATE stewards SET tickets=tickets+? WHERE id=?", (entry + prize, s["id"])
@@ -299,7 +341,7 @@ async def pit_ops(
             await utmod._bump_rep(conn, s["id"], utcfg.UT_PIT_WIN_REP)
             await bond_mod.well(conn, s["id"], bond_mod.WELL_WIN)
             lines.append(win_msg)
-            lines.append(f"\n（入场 −{entry} · 胜奖 +{prize} · 影信 +{utcfg.UT_PIT_WIN_REP}）")
+            lines.append(f"\n（入场 −{entry} · 胜奖 +{prize} · 影信 +{utcfg.UT_PIT_WIN_REP}）{entry_discount_note}")
             # 胜者也可能挂彩
             if random.random() < 0.30:
                 loss = random.randint(5, 10)
@@ -323,7 +365,7 @@ async def pit_ops(
             await conn.execute(
                 "UPDATE stewards SET health=MAX(0,health-?) WHERE id=?", (loss, s["id"])
             )
-            lines.append(f"\n（入场 −{entry} · body −{loss}）")
+            lines.append(f"\n（入场 −{entry} · body −{loss}）{entry_discount_note}")
             # 重伤判定
             if random.random() < crit_rate:
                 ailment = random.choices(
@@ -347,10 +389,10 @@ async def pit_ops(
                     f"\n（挂了轻伤 — undertide_ops medic {minor}，晏安医务间；桥桥不接井下伤）"
                 )
         await db.add_chronicle(
-            "undertide", f"{s['name']} 在深坑{'胜' if diff >= 0 else '败'}于 {row['name']}",
+            "undertide", f"{s['name']} 在深坑{'胜' if win else '败'}于 {row['name']}",
             s["id"], conn=conn,
         )
-        await pit_record(conn, s["id"], "pit", "win" if diff >= 0 else "lose", row["name"])
+        await pit_record(conn, s["id"], "pit", "win" if win else "lose", row["name"])
         await conn.commit()
         return "\n".join(lines)
 
@@ -459,7 +501,7 @@ async def pit_ops(
             + (f" · 药劲过后反噬 body −{d['crash']}）" if d["crash"] else " · 无副作用）")
         )
 
-    raise ValueError("未知 pit 指令（list/fight/medic）")
+    raise ValueError("未知 pit 指令（list/fight/medic/drug）")
 
 
 def _ladder(level: int) -> tuple[int, int, int, float]:

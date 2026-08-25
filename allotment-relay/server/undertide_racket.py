@@ -231,15 +231,15 @@ async def _refuse(
 
     sid = s["id"]
     my = await um._my_power(conn, sid)
-    his = utcfg.UT_RACKET_POWER + random.randint(1, 18)
-    margin = my - his
+    his = utcfg.UT_RACKET_POWER
+    diff = my - his
     deal["done"] = 1
     await _save_deal(conn, sid, _day_id(), deal)
 
-    if margin >= 8:
+    if random.random() < pit.win_prob(diff) and diff >= 8:
         await pit.pit_record(conn, sid, "racket", "win", ENFORCER_NAME)
         await conn.execute(
-            "UPDATE steward_undertide SET shadow_rep=MIN(100, shadow_rep+2) WHERE steward_id=?",
+            "UPDATE steward_undertide SET shadow_rep=MIN(100, shadow_rep+3) WHERE steward_id=?",
             (sid,),
         )
         bonus = random.randint(5, 12)
@@ -249,7 +249,7 @@ async def _refuse(
         msg = utcopy.pick(utcopy.RACKET_REFUSE_WIN).format(
             name=ENFORCER_NAME, bonus=bonus
         )
-    elif margin >= 0:
+    elif random.random() < pit.win_prob(diff):
         await pit.pit_record(conn, sid, "racket", "win", ENFORCER_NAME)
         fine = random.randint(4, 10)
         cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (sid,))

@@ -44,7 +44,7 @@ async def _record(
     )
     if net > 0 and net_total >= utcfg.UT_CASINO_HIGHLIGHT and net < utcfg.UT_CASINO_HIGHLIGHT:
         from . import undertide as utmod
-        await utmod._bump_rep(conn, steward_id, 1)
+        await utmod._bump_rep(conn, steward_id, 3)
         extra = "\n\n" + utcopy.CASINO_BACKROOM
     return extra
 

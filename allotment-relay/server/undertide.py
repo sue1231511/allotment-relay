@@ -214,10 +214,13 @@ async def _ensure_shelf(conn: aiosqlite.Connection, day: int) -> list[dict[str, 
         slots.append(("linked", key))
     if rng.random() < 0.55:
         slots.append(("rare", rng.choice(list(cat.RARE_GOODS))))
+    # 装备：每天 55% 概率刷一件（硬货，无真假）
+    if rng.random() < 0.55:
+        slots.append(("gear", rng.choice(list(cat.UT_GEAR_GOODS))))
     rng.shuffle(slots)
 
     for slot, (layer, item_key) in enumerate(slots, start=1):
-        stock = rng.randint(*utcfg.UT_SHELF[layer][2:])
+        stock = 1 if layer == "gear" else rng.randint(*utcfg.UT_SHELF[layer][2:])
         await conn.execute(
             "INSERT INTO ut_market_shelf (day_id, slot, layer, item_key, stock, price_mult) VALUES (?,?,?,?,?,?)",
             (day, slot, layer, item_key, stock, 1.0),
@@ -234,11 +237,15 @@ def _item_meta(item_key: str) -> dict[str, Any]:
         return cat.LINKED_GOODS[item_key]
     if item_key in cat.RARE_GOODS:
         return cat.RARE_GOODS[item_key]
+    if item_key in cat.UT_GEAR_GOODS:
+        return cat.UT_GEAR_GOODS[item_key]
     return cat.COMMON_GOODS[item_key]
 
 
 def _shelf_price(meta: dict[str, Any], layer: str, rep: int) -> int:
     _, rep_mult, _ = _rep_tier(rep)
+    if layer == "gear":
+        return max(1, int(meta["price"] * rep_mult))
     return max(1, int(meta["base"] * cat.LAYER_MULT.get(layer, 1.5) * rep_mult))
 
 
@@ -250,12 +257,17 @@ async def _cmd_market(conn: aiosqlite.Connection, s: dict[str, Any], ut: dict[st
         meta = _item_meta(row["item_key"])
         price = _shelf_price(meta, row["layer"], int(ut["shadow_rep"]))
         stock_note = "已售" if row["stock"] <= 0 else f"剩 {row['stock']}"
-        layer_tag = {"common": "", "linked": "·联动", "rare": "·稀有"}[row["layer"]]
-        lines.append(
-            f"  #{row['slot']} {meta['emoji']}{meta['name']}{layer_tag} — {price} 票（{stock_note}）"
-        )
+        if row["layer"] == "gear":
+            lines.append(
+                f"  #{row['slot']} {meta['emoji']}{meta['name']}·装备 — 战力+{meta['power']} · 耐久{meta['durability']} · {price} 票（{stock_note}）"
+            )
+        else:
+            layer_tag = {"common": "", "linked": "·联动", "rare": "·稀有"}[row["layer"]]
+            lines.append(
+                f"  #{row['slot']} {meta['emoji']}{meta['name']}{layer_tag} — {price} 票（{stock_note}）"
+            )
     lines.append("")
-    lines.append("buy 编号 买入 · 离柜概不认账 · sell 物品 [数量] 在掌柜处出货")
+    lines.append("buy 编号 买入 · 离柜概不认账 · sell 物品 [数量] 在掌柜处出货 · repair 修身上的家伙")
     return "\n".join(lines)
 
 
@@ -280,6 +292,28 @@ async def _cmd_buy(
     cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
     if (await cur.fetchone())[0] < price:
         raise ValueError(f"票不足，掌柜报价 {price} 票（他不接受分期）")
+
+    # 装备：硬货不玩真假，直接上架（替换身上的旧家伙）
+    if row["layer"] == "gear":
+        await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (price, s["id"]))
+        await conn.execute(
+            "UPDATE ut_market_shelf SET stock=stock-1 WHERE day_id=? AND slot=?", (day, slot)
+        )
+        await conn.execute(
+            "UPDATE steward_undertide SET gear_key=?, gear_durability=?, gear_max=? WHERE steward_id=?",
+            (row["item_key"], meta["durability"], meta["durability"], s["id"]),
+        )
+        await _bump_rep(conn, s["id"], 1)
+        await conn.execute(
+            "INSERT INTO ut_market_log (steward_id, day_id, item_key, quality, price, created_at) VALUES (?,?,?,?,?,?)",
+            (s["id"], day, row["item_key"], "genuine", price, db.now()),
+        )
+        await conn.commit()
+        return (
+            f"掌柜报价 {price} 票。\n"
+            + utcopy.GEAR_BUY.format(name=meta["name"], power=meta["power"], dur=meta["durability"])
+            + f"\n{meta['flavor']}"
+        )
 
     # 质量：真/次/假（影信修正真货率）
     g, sub, fake = utcfg.UT_QUALITY_BASE
@@ -649,7 +683,7 @@ async def _cmd_bank(
         paid_total = pay - remaining
         await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (paid_total, s["id"]))
         if settled_all:
-            await _bump_rep(conn, s["id"], 3)
+            await _bump_rep(conn, s["id"], 6)
             av = await avatar_key(conn, s["id"])
             lines.append(utcopy.AVATAR_AN_REPAY if av == "anan" else utcopy.BANK_REPAY_FULL)
         await conn.commit()
@@ -1002,6 +1036,15 @@ async def _cmd_status(conn: aiosqlite.Connection, s: dict[str, Any], ut: dict[st
         rep_line += "\n" + utcopy.AVATAR_K_STATUS_REP
     lines.append(rep_line)
     lines.append(f"黑市价格系数 ×{mult:.2f} · 真货率修正 {bonus:+.0%}")
+    # 身上家伙（黑市装备）
+    gkey = ut.get("gear_key") or ""
+    if gkey:
+        from . import undertide_catalog as _cat
+        meta = _cat.UT_GEAR_GOODS.get(gkey)
+        if meta:
+            dur = int(ut.get("gear_durability") or 0)
+            dur_note = f"耐久 {dur}/{meta['durability']}" if dur > 0 else "耐久耗尽（undertide_ops repair）"
+            lines.append(f"身上家伙：{meta['emoji']}{meta['name']} · 战力+{meta['power']} · {dur_note}")
     if not ut["access"]:
         lines.append("\n你还没下去过。（跟荔栀混熟点——好酒喝到位，她会给你讲故事的。）")
     if ut["jail_state"] == "serving":
@@ -1241,6 +1284,34 @@ async def undertide_ops(key_id: int, command: str) -> str:
         if verb == "status":
             return hits_prefix + await _cmd_status(conn, s, ut)
 
+        if verb == "repair":
+            if not ut["access"]:
+                raise ValueError(utcopy.NO_ACCESS_HINT)
+            from . import undertide_catalog as _cat
+            gkey = ut.get("gear_key") or ""
+            if not gkey:
+                raise ValueError("你身上没带家伙。（黑市后室铺偶尔有货）")
+            meta = _cat.UT_GEAR_GOODS.get(gkey)
+            if not meta:
+                raise ValueError("你身上的家伙来路不明，掌柜不肯碰。")
+            cur_dur = int(ut.get("gear_durability") or 0)
+            max_dur = int(meta["durability"])
+            if cur_dur >= max_dur:
+                return utcopy.GEAR_REPAIR_FULL
+            cost = int(meta["price"] * (1 - cur_dur / max_dur) * utcfg.UT_GEAR_REPAIR_RATE)
+            cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
+            if (await cur.fetchone())[0] < cost:
+                raise ValueError(f"修理要 {cost} 票。掌柜不赊这个。")
+            await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (cost, s["id"]))
+            await conn.execute(
+                "UPDATE steward_undertide SET gear_durability=? WHERE steward_id=?",
+                (max_dur, s["id"]),
+            )
+            from . import bond as bond_mod
+            await bond_mod.well(conn, s["id"], bond_mod.WELL_MARKET)
+            await conn.commit()
+            return utcopy.GEAR_REPAIR.format(name=meta["name"], cost=cost, dur=max_dur)
+
         if verb == "market":
             if not ut["access"]:
                 raise ValueError(utcopy.NO_ACCESS_HINT)
@@ -1290,10 +1361,26 @@ async def undertide_ops(key_id: int, command: str) -> str:
         if verb == "lottery":
             if not ut["access"]:
                 raise ValueError(utcopy.NO_ACCESS_HINT)
-            cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
-            if (await cur.fetchone())[0] < utcfg.LOTTERY_COST:
-                raise ValueError("5 票都拿不出——Jester 的机器不收赊账。")
-            await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (utcfg.LOTTERY_COST, s["id"]))
+            # 自己人福利：影信≥70 每天首张免费（Jester 认得脸）
+            free_row = await (await conn.execute(
+                "SELECT count FROM ut_daily_actions WHERE steward_id=? AND day_id=? AND action='lottery_free'",
+                (s["id"], day),
+            )).fetchone()
+            free_used = int(free_row[0]) if free_row else 0
+            free = int(ut["shadow_rep"]) >= utcfg.UT_LOTTERY_FREE_REP and free_used < 1
+            if free:
+                await conn.execute(
+                    "INSERT INTO ut_daily_actions (steward_id, day_id, action, count) VALUES (?,?,?,1) "
+                    "ON CONFLICT(steward_id, day_id, action) DO UPDATE SET count = count + 1",
+                    (s["id"], day, "lottery_free"),
+                )
+                free_note = utcopy.JESTER_FREE.format(rep=utcfg.UT_LOTTERY_FREE_REP) + "\n\n"
+            else:
+                cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
+                if (await cur.fetchone())[0] < utcfg.LOTTERY_COST:
+                    raise ValueError("5 票都拿不出——Jester 的机器不收赊账。")
+                await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (utcfg.LOTTERY_COST, s["id"]))
+                free_note = ""
             roll = random.random()
             acc = 0.0
             won = False
@@ -1314,9 +1401,9 @@ async def undertide_ops(key_id: int, command: str) -> str:
                     if chron:
                         await db.add_chronicle("undertide", chron, s["id"], conn=conn)
                     await conn.commit()
-                    return tpl.format(prize=prize)
+                    return free_note + tpl.format(prize=prize)
             await conn.commit()
-            return utcopy.pick(utcopy.JESTER_LOSE)
+            return free_note + utcopy.pick(utcopy.JESTER_LOSE)
 
         # ── 二期路由 ──
         if verb in ("street", "muscle", "push"):
