@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""岸维：按产业每周收维修费，和岸税同一天划入潮汐基金。"""
+"""岸维：按产业每天收维修费，东八区换班后划入潮汐基金。"""
 from __future__ import annotations
 
 import asyncio
@@ -19,9 +19,10 @@ def _cst_ts(year: int, month: int, day: int, hour: int = 12) -> int:
     return int(datetime(year, month, day, hour, tzinfo=CST).timestamp())
 
 
-# 2026-08-25 是周二（W35）。下周一 08-31 是 W36。
+# 2026-08-25 是周二。次日 08-26 会再开一张日单。
 ENROLL_TUE = _cst_ts(2026, 8, 25)
-NEXT_MON = _cst_ts(2026, 8, 31)
+NEXT_DAY = _cst_ts(2026, 8, 26)
+DAY_AFTER = _cst_ts(2026, 8, 27)
 
 
 async def _boot(tmp: Path):
@@ -119,7 +120,7 @@ def test_due_from_holdings() -> None:
     assert "plot" in keys and "eatery" in keys and "greenhouse" in keys
 
 
-async def test_first_week_exempt() -> None:
+async def test_first_day_exempt() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="upkeep-new-"))
     db = await _boot(tmp)
     from server import mcp_dispatch
@@ -130,7 +131,7 @@ async def test_first_week_exempt() -> None:
         kid, sid = await _enroll(db, "new@example.com", "新客")
         await _set(db, sid, parcel_count=8, eatery_open=1, tickets=400)
         text = await mcp_dispatch.visit_bundle(kid, "潮生会 维")
-        assert "免征到下周" in text or "新号" in text, text
+        assert "免征到明天" in text or "新号" in text, text
         tickets, arrears = await _row(db, sid)
         assert tickets == 400, tickets
         assert arrears == 0, arrears
@@ -138,7 +139,7 @@ async def test_first_week_exempt() -> None:
         db.now = real_now
 
 
-async def test_weekly_levy_and_lock() -> None:
+async def test_daily_levy_and_lock() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="upkeep-levy-"))
     db = await _boot(tmp)
     from server import mcp_dispatch, game
@@ -156,7 +157,7 @@ async def test_weekly_levy_and_lock() -> None:
         barn_built=1,
         last_bar_shift_at=ENROLL_TUE,
     )
-    db.now = lambda: NEXT_MON
+    db.now = lambda: NEXT_DAY
     try:
         async with db.connect() as conn:
             await conn.execute(
@@ -171,7 +172,19 @@ async def test_weekly_levy_and_lock() -> None:
         assert tickets == 500 - 52, (tickets, text)
         assert "52" in text or "已划" in text or "已结清" in text, text
 
-        await _set(db, sid, tickets=180, upkeep_arrears=12, last_bar_shift_at=NEXT_MON)
+        # same calendar day: no second bill
+        again = await mcp_dispatch.visit_bundle(kid, "潮生会 维")
+        tickets2, arrears2 = await _row(db, sid)
+        assert tickets2 == tickets, (tickets2, again)
+        assert arrears2 == 0, arrears2
+
+        db.now = lambda: DAY_AFTER
+        third = await mcp_dispatch.visit_bundle(kid, "潮生会 维")
+        tickets3, arrears3 = await _row(db, sid)
+        assert arrears3 == 0, (arrears3, tickets3, third)
+        assert tickets3 == tickets - 52, (tickets3, third)
+
+        await _set(db, sid, tickets=180, upkeep_arrears=12, last_bar_shift_at=DAY_AFTER)
         locked = await game.plot_ops(kid, "买地 确认")
         assert "欠岸维" in locked or "维 交" in locked, locked
     finally:
@@ -237,8 +250,8 @@ async def test_help_not_mascot() -> None:
 
 def main() -> None:
     test_due_from_holdings()
-    asyncio.run(test_first_week_exempt())
-    asyncio.run(test_weekly_levy_and_lock())
+    asyncio.run(test_first_day_exempt())
+    asyncio.run(test_daily_levy_and_lock())
     asyncio.run(test_pay_and_shop_pause())
     asyncio.run(test_help_not_mascot())
     print("ok")

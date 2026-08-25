@@ -148,6 +148,7 @@ def test_mcp_descriptions() -> None:
     assert "岸维" in v_blob
     assert "10 票/块" in v_blob
     assert "产业单价至少 10" in v_blob
+    assert "每天收" in v_blob or "每天划" in v_blob
     assert "tax_ops" in v_blob
     assert "upkeep_ops" in v_blob
     assert "潮生会 补贴" not in v_blob
@@ -314,6 +315,7 @@ def test_relay_manual_covers_systems() -> None:
         "岸税",
         "岸维",
         "产业单价至少 10 票",
+        "每天收",
         "超额累进",
         "没有 tax_ops",
         "mascot upkeep",
