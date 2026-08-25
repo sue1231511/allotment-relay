@@ -66,6 +66,8 @@ async def test_chaoshen_desk_and_refuse() -> None:
     help_text = await mcp_dispatch.visit_bundle(kid, "潮生会 help")
     assert "没有入会" in help_text and "捐 甘蓝 2" in help_text, help_text
     assert "guild" in help_text, help_text
+    assert "基金 捐 50" in help_text and "补贴" in help_text, help_text
+    assert "潮汐基金" in desk, desk
 
 
 async def test_chaoshen_same_larder() -> None:
@@ -101,12 +103,108 @@ async def test_chaoshen_public_snapshot() -> None:
     assert snap["clerk"] == "阿簿"
     assert "不收人" in snap["note"] or "不能" in snap["note"]
     assert "league" in snap
+    assert snap["fund"]["name"] == "潮汐基金"
+    assert snap["fund"]["pool"] == 0
+
+
+async def _set_tickets(db, key_id: int, tickets: int) -> None:
+    async with db.connect() as conn:
+        await conn.execute(
+            "UPDATE stewards SET tickets=? WHERE key_id=?",
+            (tickets, key_id),
+        )
+        await conn.commit()
+
+
+async def _tickets(db, key_id: int) -> int:
+    async with db.connect() as conn:
+        row = await (await conn.execute(
+            "SELECT tickets FROM stewards WHERE key_id=?", (key_id,)
+        )).fetchone()
+    return int(row[0])
+
+
+async def test_tide_fund_average() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="chaoshen-fund-"))
+    db = await _boot(tmp)
+    rich = await _enroll(db, "rich@example.com", "余客")
+    poor = await _enroll(db, "poor@example.com", "缺客")
+    from server import chaoshen, mcp_dispatch
+
+    await _set_tickets(db, rich, 400)
+    await _set_tickets(db, poor, 80)
+
+    status_rich = await mcp_dispatch.visit_bundle(rich, "潮生会 基金")
+    assert "岛均水准：240" in status_rich, status_rich
+    assert "你的口袋：400" in status_rich, status_rich
+
+    try:
+        await mcp_dispatch.visit_bundle(poor, "潮生会 基金 捐 20")
+    except ValueError as exc:
+        assert "没过岛均" in str(exc) or "不算有余" in str(exc), str(exc)
+    else:
+        raise AssertionError("poor should not donate")
+
+    try:
+        await mcp_dispatch.visit_bundle(rich, "潮生会 补贴")
+    except ValueError as exc:
+        assert "已经到岛均" in str(exc) or "只补给" in str(exc), str(exc)
+    else:
+        raise AssertionError("rich should not claim")
+
+    donated = await mcp_dispatch.visit_bundle(rich, "潮生会 基金 捐 50")
+    assert "50 票" in donated and "潮汐基金" in donated, donated
+    assert await _tickets(db, rich) == 350
+
+    status = await mcp_dispatch.visit_bundle(poor, "潮生会 基金")
+    assert "池里：50 票" in status, status
+
+    claimed = await mcp_dispatch.visit_bundle(poor, "潮生会 补贴")
+    assert "30 票" in claimed or f"{chaoshen.FUND_DAILY_CAP} 票" in claimed, claimed
+    assert await _tickets(db, poor) == 80 + chaoshen.FUND_DAILY_CAP
+
+    try:
+        await mcp_dispatch.visit_bundle(poor, "潮生会 补贴")
+    except ValueError as exc:
+        assert "今日已经领过" in str(exc), str(exc)
+    else:
+        raise AssertionError("second claim should refuse")
+
+    try:
+        await mcp_dispatch.visit_bundle(rich, "潮生会 捐 50")
+    except ValueError as exc:
+        assert "基金" in str(exc), str(exc)
+    else:
+        raise AssertionError("numeric 捐 should hint fund")
+
+    snap = await chaoshen.public_snapshot()
+    assert snap["fund"]["pool"] == 50 - chaoshen.FUND_DAILY_CAP
+    assert snap["fund"]["avg"] == 230  # (350 + 110) / 2
+
+
+async def test_tide_fund_need_peers() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="chaoshen-fund-solo-"))
+    db = await _boot(tmp)
+    kid = await _enroll(db, "solo@example.com", "独客")
+    from server import mcp_dispatch
+
+    await _set_tickets(db, kid, 400)
+    text = await mcp_dispatch.visit_bundle(kid, "潮生会 基金")
+    assert "算不出" in text or "还不够" in text, text
+    try:
+        await mcp_dispatch.visit_bundle(kid, "潮生会 基金 捐 50")
+    except ValueError as exc:
+        assert "算不出" in str(exc) or "还不够" in str(exc), str(exc)
+    else:
+        raise AssertionError("solo donate should refuse")
 
 
 def test_chaoshen() -> None:
     asyncio.run(test_chaoshen_desk_and_refuse())
     asyncio.run(test_chaoshen_same_larder())
     asyncio.run(test_chaoshen_public_snapshot())
+    asyncio.run(test_tide_fund_average())
+    asyncio.run(test_tide_fund_need_peers())
 
 
 if __name__ == "__main__":

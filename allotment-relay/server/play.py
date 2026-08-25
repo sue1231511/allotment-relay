@@ -100,7 +100,7 @@ PLACES: list[dict[str, Any]] = [
         "id": "hui",
         "name": "潮生会",
         "kicker": "Hall",
-        "blurb": "岛上管事的地方。问事、交周目标、进出公仓。不能入会。",
+        "blurb": "岛上管事的地方。问事、交周目标、潮汐基金、进出公仓。不能入会。",
         "href": "/hui",
         "live": "打开潮生会现场 →",
         "rail": "今天来潮生会做什么",
@@ -108,6 +108,9 @@ PLACES: list[dict[str, Any]] = [
         "actions": [
             {"label": "问事", "note": "本周岛务与考勤", "tool": "visit_ops", "command": "潮生会"},
             {"label": "本周目标", "note": "和联盟周目标同一套", "tool": "visit_ops", "command": "潮生会 周"},
+            {"label": "潮汐基金", "note": "岛均口袋票，有余捐、不够领", "tool": "visit_ops", "command": "潮生会 基金"},
+            {"label": "捐 20 票", "note": "高于岛均才能捐进基金", "tool": "visit_ops", "command": "潮生会 基金 捐 20"},
+            {"label": "领补贴", "note": "低于岛均，每日一次顶 30", "tool": "visit_ops", "command": "潮生会 补贴"},
             {"label": "公仓", "note": "看看公仓有什么", "tool": "visit_ops", "command": "潮生会 仓"},
             {"label": "告示", "note": "墙上贴了什么", "tool": "visit_ops", "command": "潮生会 告示"},
             {"label": "公物", "note": "稀有公共物资", "tool": "visit_ops", "command": "潮生会 公物"},

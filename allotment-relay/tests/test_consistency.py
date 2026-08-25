@@ -132,6 +132,8 @@ def test_mcp_descriptions() -> None:
     assert "不能加入" in v_blob
     assert "阿簿" in v_blob
     assert "潮生会 捐 甘蓝 2" in v_blob
+    assert "潮生会 基金" in v_blob
+    assert "潮生会 补贴" in v_blob
 
     hut = mcp._tool_manager.get_tool("hut_ops")
     hut_blob = f"{hut.description}\n{(hut.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -166,6 +168,7 @@ def test_mcp_descriptions() -> None:
     assert "禁止发明" in instructions or "不是聊天沙盒" in instructions
     assert "潮生会" in instructions
     assert "不能加入" in instructions
+    assert "潮汐基金" in instructions
     assert "下馆子" in instructions
     assert "shop dine" in instructions
     assert "quarry_ops" in instructions
@@ -266,6 +269,9 @@ def test_relay_manual_covers_systems() -> None:
         "visit_ops 潮生会",
         "不能入会",
         "阿簿",
+        "潮汐基金",
+        "潮生会 补贴",
+        "潮生会 基金 捐 50",
         "kitchen_ops eat",
         "下馆子",
         "shop dine",
@@ -582,6 +588,7 @@ def test_patron_pages_share_steward_key() -> None:
     assert "/api/public/quarry" in quarry_js
     assert "/api/public/workshop" in workshop_js
     assert "/api/public/hui" in hui_js
+    assert "hui-fund" in hui_js
     assert "/api/public/stats" in allo_js
     assert "place-live.css" in bar_html
     assert "place-live.css" in tide_html
@@ -665,6 +672,8 @@ def test_patron_pages_share_steward_key() -> None:
     assert "/play?go=craft" in workshop_html
     assert "/play?go=hui" in hui_html
     assert "不能入会" in hui_html or "不入会" in hui_html
+    assert "潮汐基金" in hui_html
+    assert "hui-fund" in hui_html
     assert 'href="/play"' in allo_html
     assert "上手页" in site_key
 

@@ -24,6 +24,7 @@ async function loadHui() {
     `<span>值事 ${esc(data.clerk || '阿簿')}</span>`,
     `<span>公仓 ${esc(data.larder_kinds ?? 0)} 种</span>`,
     `<span>公物在架 ${esc(data.commons_live ?? 0)}</span>`,
+    `<span>基金 ${esc((data.fund && data.fund.pool) ?? 0)} 票</span>`,
   ].join('');
 
   document.getElementById('hui-strip').innerHTML =
@@ -37,6 +38,21 @@ async function loadHui() {
       <div class="hui-progress" aria-hidden="true"><span style="width:${pct}%"></span></div>
     </div>
   `;
+
+  const fund = data.fund || {};
+  const fundEl = document.getElementById('hui-fund');
+  if (fundEl) {
+    const ready = Boolean(fund.ready);
+    fundEl.innerHTML = `
+      <div class="hui-card">
+        <small>池里</small>
+        <strong>${esc(fund.pool ?? 0)} 票</strong>
+        <p>${ready
+          ? `岛均口袋 ${esc(fund.avg ?? 0)} 票 · 在册 ${esc(fund.n ?? 0)} 人。有余的人捐，不够平均的人领补贴。`
+          : '在册还不够两人，算不出岛均。'}</p>
+      </div>
+    `;
+  }
 
   const larder = data.larder || [];
   document.getElementById('hui-larder').innerHTML = larder.length

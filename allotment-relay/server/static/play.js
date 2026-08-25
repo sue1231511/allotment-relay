@@ -138,7 +138,7 @@ function placeContextRows(place) {
     memo.push(`<div class="place-context-row"><span>海况</span><b>${esc([c.tide, c.weather, c.phase].filter(Boolean).join(' · '))}</b></div>`);
   }
   if (place.id === 'hui') {
-    memo.push(`<div class="place-context-row"><span>岛务</span><b>潮生会 · 阿簿。不能入会。</b></div>`);
+    memo.push(`<div class="place-context-row"><span>岛务</span><b>潮生会 · 阿簿。潮汐基金按岛均。不能入会。</b></div>`);
   }
   if (!memo.length) {
     memo.push(`<div class="place-context-row"><span>备忘</span><b>${esc(place.blurb || '先选一个动作')}</b></div>`);

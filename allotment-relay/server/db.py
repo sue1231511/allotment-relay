@@ -1584,6 +1584,22 @@ async def init_db() -> None:
                 PRIMARY KEY (steward_id, set_key)
             )
             """,
+            """
+            CREATE TABLE IF NOT EXISTS tide_fund (
+                id INTEGER PRIMARY KEY CHECK (id=1),
+                tickets INTEGER NOT NULL DEFAULT 0,
+                donated_total INTEGER NOT NULL DEFAULT 0,
+                paid_total INTEGER NOT NULL DEFAULT 0
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS tide_fund_claims (
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                day INTEGER NOT NULL,
+                amount INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (steward_id, day)
+            )
+            """,
         ):
             try:
                 await db.execute(ddl)

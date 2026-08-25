@@ -80,11 +80,16 @@
 }
 
 .hui-week,
+.hui-fund,
 .hui-larder,
 .hui-beacons,
 .hui-feed {
   display: grid;
   gap: 10px;
+}
+
+.hui-fund-head {
+  margin-top: 28px;
 }
 
 .hui-card {
