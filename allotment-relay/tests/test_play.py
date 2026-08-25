@@ -26,6 +26,7 @@ async def _boot(tmp: Path):
 
 def test_play_api() -> None:
     asyncio.run(_test_play_api())
+    test_bar_place_actions_match_phase()
     test_play_page_lists_all_plot_kinds()
 
 
@@ -88,20 +89,17 @@ async def _test_play_api() -> None:
     assert "点单" in bar["blurb"], bar
     work = next(a for a in bar["actions"] if "洗碗" in a["label"])
     from server import world as world_mod
-    phase = world_mod.current_day_phase()
+    phase = sown["climate"].get("phase_code") or world_mod.current_day_phase()
     if phase == "night":
         assert work["command"] == "work 洗碗 night", (phase, work)
     elif phase == "dusk":
         assert work["command"] == "work 洗碗 day", (phase, work)
     else:
-        # 昼间未逾期：不能再写死 night，否则点下去必失败
+        # 昼间未逾期：不能再发必失败的上工指令
         assert work["command"] != "work 洗碗 night", (phase, work)
         assert work["command"] in ("tonight", "work 洗碗 day"), (phase, work)
 
     from server import play as play_check
-    dusk_work = play_check._bar_work_action(overdue=False)
-    # 直接测解析：夜→night，暮→day，昼→tonight，逾期昼→day
-    assert "洗碗" in dusk_work["label"], dusk_work
     overdue_day = play_check._bar_work_action(overdue=True)
     if phase == "day":
         assert overdue_day["command"] == "work 洗碗 day", overdue_day
@@ -141,6 +139,34 @@ async def _test_play_api() -> None:
         assert "未知工具" in str(exc), exc
 
 
+def test_bar_place_actions_match_phase() -> None:
+    from server import play as play_mod, world
+
+    shift, note = play_mod.bar_work_slot()
+    phase = world.current_day_phase()
+    if phase == "night":
+        assert shift == "night"
+        assert note == "夜班"
+    elif phase == "dusk":
+        assert shift == "day"
+        assert note == "白班"
+    else:
+        assert shift == "day"
+        assert "暮" in note
+
+    actions = play_mod.bar_place_actions()
+    dish = next(a for a in actions if "洗碗" in a["label"])
+    if phase == "night":
+        assert dish["command"] == "work 洗碗 night", dish
+        assert "夜班" in dish["note"], dish
+    elif phase == "dusk":
+        assert dish["command"] == "work 洗碗 day", dish
+        assert "白班" in dish["note"] or "暮" in dish["note"], dish
+    else:
+        # 昼间打烊：看今晚，不要发必失败的 work
+        assert dish["command"] == "tonight", dish
+
+
 def test_play_page_lists_all_plot_kinds() -> None:
     html = (ROOT / "server" / "templates" / "play.html").read_text()
     js = (ROOT / "server" / "static" / "play.js").read_text()
@@ -161,11 +187,13 @@ def test_play_page_lists_all_plot_kinds() -> None:
     assert "b.week1" in js
     assert 'data-place="bar"' in js
     assert "payload.go" in js
+    assert "parseActPayload" in js
     assert "setWorkStatus" in js
     play_py = (ROOT / "server" / "play.py").read_text()
     assert "live_places" in play_py
     assert "_bar_work_action" in play_py
-    # PLACES 静态表不得再写死夜班上工；班次由 live_places / _bar_work_action 填
+    assert "bar_place_actions" in play_py
+    # PLACES 静态表不得再写死班次；由 live_places 填
     places_chunk = play_py.split("PLACES:")[1].split("def live_places")[0]
     assert '"command": "work 洗碗 night"' not in places_chunk
     assert '"command": "work 洗碗 day"' not in places_chunk
@@ -173,5 +201,6 @@ def test_play_page_lists_all_plot_kinds() -> None:
 
 if __name__ == "__main__":
     asyncio.run(_test_play_api())
+    test_bar_place_actions_match_phase()
     test_play_page_lists_all_plot_kinds()
     print("ok")

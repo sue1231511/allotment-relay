@@ -261,7 +261,7 @@ PLACES: list[dict[str, Any]] = [
         "actions": [
             {"label": "问事", "note": "考勤、岸税、岸维与潮汐基金", "tool": "visit_ops", "command": "潮生会"},
             {"label": "岸税", "note": "档表与欠税。周一自动划", "tool": "visit_ops", "command": "潮生会 税"},
-            {"label": "岸维", "note": "产业维修费。每天划，日单价 2 起，起步免", "tool": "visit_ops", "command": "潮生会 维"},
+            {"label": "岸维", "note": "产业维修费。每天划，单价至少 10 票，起步免", "tool": "visit_ops", "command": "潮生会 维"},
             {"label": "潮汐基金", "note": "岛均与发放日。补贴不用领", "tool": "visit_ops", "command": "潮生会 基金"},
             {"label": "告示", "note": "墙上贴了什么", "tool": "visit_ops", "command": "潮生会 告示"},
         ],
@@ -377,10 +377,30 @@ def climate_bits() -> dict[str, str]:
         "weather": world.weather_label(w),
         "tide": world.tide_label(t),
         "phase": world.day_phase_label(p),
+        "phase_code": p,
         "season": season_mod.season_name(),
         "line": world.climate_line(),
     }
 
+
+def bar_work_slot() -> tuple[str, str]:
+    """班次码与短说明。暮→day/白班，夜→night/夜班；昼间码仍是 day（仅逾期补班可用）。"""
+    phase = world.current_day_phase()
+    if phase == "night":
+        return "night", "夜班"
+    if phase == "dusk":
+        return "day", "白班"
+    return "day", "暮/夜开门；白班仅暮可上"
+
+
+def bar_place_actions(*, overdue: bool = False) -> list[dict[str, Any]]:
+    """兼容旧测试名；实际走 live_places 的酒吧动作（昼间未逾期会改成看今晚）。"""
+    return _bar_actions(overdue=overdue)
+
+
+def places_for_client(*, overdue: bool = False) -> list[dict[str, Any]]:
+    """兼容旧入口；与 live_places 相同。"""
+    return live_places(overdue=overdue)
 
 def seed_options(stock: list[dict[str, Any]]) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []

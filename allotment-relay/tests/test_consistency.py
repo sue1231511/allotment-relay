@@ -148,8 +148,8 @@ def test_mcp_descriptions() -> None:
     assert "潮生会 维 交" in v_blob
     assert "岸税" in v_blob
     assert "岸维" in v_blob
-    assert "2 票/块" in v_blob
-    assert "日单价 2" in v_blob
+    assert "10 票/块" in v_blob
+    assert "产业单价至少 10" in v_blob
     assert "每天收" in v_blob or "每天划" in v_blob
     assert "tax_ops" in v_blob
     assert "upkeep_ops" in v_blob
@@ -320,7 +320,7 @@ def test_relay_manual_covers_systems() -> None:
         "潮生会 维 交",
         "岸税",
         "岸维",
-        "日单价 2 起",
+        "产业单价至少 10 票",
         "每天收",
         "超额累进",
         "没有 tax_ops",
@@ -525,7 +525,7 @@ def test_human_island_manual() -> None:
         "岛缘",
         "/play",
         "每 2 天",
-        "日单价 2",
+        "产业单价至少 10",
         "引航",
         "欠岸维",
         "去潮生会",
@@ -651,7 +651,7 @@ def test_patron_pages_share_steward_key() -> None:
     assert "routes" in index_html
     assert 'href="/manual"' in play_html
     assert 'href="/manual"' in index_html
-    assert '@app.get("/manual")' in main_py
+    assert '@app.get("/manual"' in main_py
     assert '"go": "bar"' in promo
     assert '"go": "eatery"' in promo
     assert '"go": "star"' in promo
