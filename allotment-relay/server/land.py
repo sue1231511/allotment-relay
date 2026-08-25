@@ -344,6 +344,19 @@ async def status_text(
         lines.append("种树：plot_ops 果园 sow 1 芒果 · 或 sow 园1 橘子。份地 sow 只收蔬菜。")
     else:
         lines.append("种菜：plot_ops sow 1 甘蓝。果树走果园或温室。过季走温室。")
+    from . import upkeep as upkeep_mod
+    if greenhouse:
+        lines.append(
+            f"岸维：每座温室每周 {upkeep_mod.GREENHOUSE} 票 → visit_ops 潮生会 维"
+        )
+    elif orchard:
+        lines.append(
+            f"岸维：起步 {start} 树位免，超出每周 {upkeep_mod.ORCHARD_EXTRA} 票/树位 → visit_ops 潮生会 维"
+        )
+    else:
+        lines.append(
+            f"岸维：起步 {start} 块免，超出每周 {upkeep_mod.PLOT_EXTRA} 票/块 → visit_ops 潮生会 维"
+        )
     return "\n".join(lines)
 
 

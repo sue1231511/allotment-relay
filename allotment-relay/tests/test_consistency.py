@@ -142,8 +142,14 @@ def test_mcp_descriptions() -> None:
     assert "潮生会 基金 捐 50" in v_blob
     assert "潮生会 税" in v_blob
     assert "潮生会 税 交" in v_blob
+    assert "潮生会 维" in v_blob
+    assert "潮生会 维 交" in v_blob
     assert "岸税" in v_blob
+    assert "岸维" in v_blob
+    assert "10 票/块" in v_blob
+    assert "产业单价至少 10" in v_blob
     assert "tax_ops" in v_blob
+    assert "upkeep_ops" in v_blob
     assert "潮生会 补贴" not in v_blob
     assert "周二" in v_blob or "票数" in v_blob
 
@@ -156,10 +162,13 @@ def test_mcp_descriptions() -> None:
     assert "compost_bin" in hut_blob
     assert "tide_weight" in hut_blob
     assert "iron_edge" in hut_blob
+    assert "tide_weight" in hut_blob
+    assert "iron_edge" in hut_blob
     assert "barn collect" in hut_blob
     assert "barn 偷" in hut_blob
     assert "不是一周" in hut_blob
     assert "偷菜" in hut_blob
+    assert "潮生会 维" in hut_blob
 
     kitchen = mcp._tool_manager.get_tool("kitchen_ops")
     k_blob = f"{kitchen.description}\n{(kitchen.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -186,6 +195,7 @@ def test_mcp_descriptions() -> None:
     assert "不能加入" in instructions
     assert "潮汐基金" in instructions
     assert "岸税" in instructions
+    assert "岸维" in instructions
     assert "周二" in instructions
     assert "下馆子" in instructions
     assert "shop dine" in instructions
@@ -308,9 +318,14 @@ def test_relay_manual_covers_systems() -> None:
         "潮生会 基金 捐 50",
         "潮生会 税",
         "潮生会 税 交",
+        "潮生会 维",
+        "潮生会 维 交",
         "岸税",
+        "岸维",
+        "产业单价至少 10 票",
         "超额累进",
         "没有 tax_ops",
+        "mascot upkeep",
         "周二",
         "顶 1000",
         "kitchen_ops eat",
@@ -643,8 +658,11 @@ def test_patron_pages_share_steward_key() -> None:
     assert "/api/public/hui" in hui_js
     assert "hui-fund" in hui_js
     assert "hui-tax" in hui_js
+    assert "hui-upkeep" in hui_js
     assert "hui-tax" in hui_html
+    assert "hui-upkeep" in hui_html
     assert "岸税" in hui_html
+    assert "岸维" in hui_html
     assert "/api/public/stats" in allo_js
     assert "place-live.css" in bar_html
     assert "place-live.css" in tide_html
