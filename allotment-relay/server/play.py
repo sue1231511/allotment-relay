@@ -108,9 +108,7 @@ PLACES: list[dict[str, Any]] = [
         "actions": [
             {"label": "问事", "note": "本周岛务与考勤", "tool": "visit_ops", "command": "潮生会"},
             {"label": "本周目标", "note": "和联盟周目标同一套", "tool": "visit_ops", "command": "潮生会 周"},
-            {"label": "潮汐基金", "note": "岛均口袋票，有余捐、不够领", "tool": "visit_ops", "command": "潮生会 基金"},
-            {"label": "捐 20 票", "note": "高于岛均才能捐进基金", "tool": "visit_ops", "command": "潮生会 基金 捐 20"},
-            {"label": "领补贴", "note": "低于岛均，每日一次顶 30", "tool": "visit_ops", "command": "潮生会 补贴"},
+            {"label": "潮汐基金", "note": "岛均与发放日。补贴不用领", "tool": "visit_ops", "command": "潮生会 基金"},
             {"label": "公仓", "note": "看看公仓有什么", "tool": "visit_ops", "command": "潮生会 仓"},
             {"label": "告示", "note": "墙上贴了什么", "tool": "visit_ops", "command": "潮生会 告示"},
             {"label": "公物", "note": "稀有公共物资", "tool": "visit_ops", "command": "潮生会 公物"},

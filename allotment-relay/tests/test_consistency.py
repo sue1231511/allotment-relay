@@ -133,7 +133,9 @@ def test_mcp_descriptions() -> None:
     assert "阿簿" in v_blob
     assert "潮生会 捐 甘蓝 2" in v_blob
     assert "潮生会 基金" in v_blob
-    assert "潮生会 补贴" in v_blob
+    assert "潮生会 基金 捐 50" in v_blob
+    assert "潮生会 补贴" not in v_blob
+    assert "周二" in v_blob or "票数" in v_blob
 
     hut = mcp._tool_manager.get_tool("hut_ops")
     hut_blob = f"{hut.description}\n{(hut.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -169,6 +171,7 @@ def test_mcp_descriptions() -> None:
     assert "潮生会" in instructions
     assert "不能加入" in instructions
     assert "潮汐基金" in instructions
+    assert "周二" in instructions
     assert "下馆子" in instructions
     assert "shop dine" in instructions
     assert "quarry_ops" in instructions
@@ -270,8 +273,9 @@ def test_relay_manual_covers_systems() -> None:
         "不能入会",
         "阿簿",
         "潮汐基金",
-        "潮生会 补贴",
+        "票数自己填",
         "潮生会 基金 捐 50",
+        "周二",
         "kitchen_ops eat",
         "下馆子",
         "shop dine",
@@ -505,6 +509,8 @@ def test_patron_pages_share_steward_key() -> None:
     assert 'id="play-bar-order"' in play_html
     assert 'id="play-eatery-order"' in play_html
     assert 'id="play-star-tip"' in play_html
+    assert 'id="play-hui-donate"' in play_html
+    assert 'id="play-hui-donate-amount"' in play_html
     assert 'id="play-lounge"' in play_html
     assert 'id="play-neighbors"' in play_html
     assert 'id="play-me"' in play_html

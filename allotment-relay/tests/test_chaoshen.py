@@ -6,10 +6,21 @@ import asyncio
 import os
 import sys
 import tempfile
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+
+CST = timezone(timedelta(hours=8))
+
+
+def _cst_ts(year: int, month: int, day: int, hour: int = 12) -> int:
+    return int(datetime(year, month, day, hour, tzinfo=CST).timestamp())
+
+
+TUE = _cst_ts(2026, 8, 25)
+WED = _cst_ts(2026, 8, 26)
 
 
 async def _boot(tmp: Path):
@@ -66,7 +77,8 @@ async def test_chaoshen_desk_and_refuse() -> None:
     help_text = await mcp_dispatch.visit_bundle(kid, "潮生会 help")
     assert "没有入会" in help_text and "捐 甘蓝 2" in help_text, help_text
     assert "guild" in help_text, help_text
-    assert "基金 捐 50" in help_text and "补贴" in help_text, help_text
+    assert "基金 捐 50" in help_text and "基金 捐 8" in help_text, help_text
+    assert "不用领" in help_text and "周二" in help_text, help_text
     assert "潮汐基金" in desk, desk
 
 
@@ -131,55 +143,90 @@ async def test_tide_fund_average() -> None:
     poor = await _enroll(db, "poor@example.com", "缺客")
     from server import chaoshen, mcp_dispatch
 
-    await _set_tickets(db, rich, 400)
-    await _set_tickets(db, poor, 80)
-
-    status_rich = await mcp_dispatch.visit_bundle(rich, "潮生会 基金")
-    assert "岛均水准：240" in status_rich, status_rich
-    assert "你的口袋：400" in status_rich, status_rich
-
+    real_now = db.now
+    db.now = lambda: WED
     try:
-        await mcp_dispatch.visit_bundle(poor, "潮生会 基金 捐 20")
-    except ValueError as exc:
-        assert "没过岛均" in str(exc) or "不算有余" in str(exc), str(exc)
-    else:
-        raise AssertionError("poor should not donate")
+        await _set_tickets(db, rich, 400)
+        await _set_tickets(db, poor, 80)
 
+        status_rich = await mcp_dispatch.visit_bundle(rich, "潮生会 基金")
+        assert "岛均水准：240" in status_rich, status_rich
+        assert "你的口袋：400" in status_rich, status_rich
+        assert "不用领" in status_rich, status_rich
+
+        try:
+            await mcp_dispatch.visit_bundle(poor, "潮生会 基金 捐 20")
+        except ValueError as exc:
+            assert "没过岛均" in str(exc) or "不算有余" in str(exc), str(exc)
+        else:
+            raise AssertionError("poor should not donate")
+
+        try:
+            await mcp_dispatch.visit_bundle(rich, "潮生会 补贴")
+        except ValueError as exc:
+            assert "不用自己领" in str(exc) or "没有这条" in str(exc), str(exc)
+        else:
+            raise AssertionError("补贴 should refuse")
+
+        donated = await mcp_dispatch.visit_bundle(rich, "潮生会 基金 捐 8")
+        assert "8 票" in donated and "潮汐基金" in donated, donated
+        assert await _tickets(db, rich) == 392
+
+        more = await mcp_dispatch.visit_bundle(rich, "潮生会 基金 捐 50")
+        assert "50 票" in more, more
+        assert await _tickets(db, rich) == 342
+        assert await _tickets(db, poor) == 80
+
+        status = await mcp_dispatch.visit_bundle(poor, "潮生会 基金")
+        assert "池里：58 票" in status, status
+
+        try:
+            await mcp_dispatch.visit_bundle(rich, "潮生会 捐 50")
+        except ValueError as exc:
+            assert "基金" in str(exc), str(exc)
+        else:
+            raise AssertionError("numeric 捐 should hint fund")
+
+        snap = await chaoshen.public_snapshot()
+        assert snap["fund"]["pool"] == 58
+        assert snap["fund"]["avg"] == 211  # (342 + 80) / 2
+        assert "周二" in (snap["fund"].get("weekdays") or "")
+    finally:
+        db.now = real_now
+
+
+async def test_tide_fund_auto_payout() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="chaoshen-fund-pay-"))
+    db = await _boot(tmp)
+    rich = await _enroll(db, "pay-rich@example.com", "发余")
+    poor = await _enroll(db, "pay-poor@example.com", "发缺")
+    from server import chaoshen, mcp_dispatch
+
+    real_now = db.now
+    db.now = lambda: TUE
     try:
-        await mcp_dispatch.visit_bundle(rich, "潮生会 补贴")
-    except ValueError as exc:
-        assert "已经到岛均" in str(exc) or "只补给" in str(exc), str(exc)
-    else:
-        raise AssertionError("rich should not claim")
+        await _set_tickets(db, rich, 400)
+        await _set_tickets(db, poor, 80)
+        donated = await mcp_dispatch.visit_bundle(rich, "潮生会 基金 捐 50")
+        assert "50 票" in donated, donated
+        assert await _tickets(db, rich) == 350
+        assert await _tickets(db, poor) == 80 + chaoshen.FUND_PAY_CAP
+        assert "发放" in donated or "补" in donated, donated
 
-    donated = await mcp_dispatch.visit_bundle(rich, "潮生会 基金 捐 50")
-    assert "50 票" in donated and "潮汐基金" in donated, donated
-    assert await _tickets(db, rich) == 350
+        try:
+            await mcp_dispatch.visit_bundle(poor, "潮生会 补贴")
+        except ValueError as exc:
+            assert "不用自己领" in str(exc), str(exc)
+        else:
+            raise AssertionError("补贴 should refuse even on payday")
 
-    status = await mcp_dispatch.visit_bundle(poor, "潮生会 基金")
-    assert "池里：50 票" in status, status
-
-    claimed = await mcp_dispatch.visit_bundle(poor, "潮生会 补贴")
-    assert "30 票" in claimed or f"{chaoshen.FUND_DAILY_CAP} 票" in claimed, claimed
-    assert await _tickets(db, poor) == 80 + chaoshen.FUND_DAILY_CAP
-
-    try:
-        await mcp_dispatch.visit_bundle(poor, "潮生会 补贴")
-    except ValueError as exc:
-        assert "今日已经领过" in str(exc), str(exc)
-    else:
-        raise AssertionError("second claim should refuse")
-
-    try:
-        await mcp_dispatch.visit_bundle(rich, "潮生会 捐 50")
-    except ValueError as exc:
-        assert "基金" in str(exc), str(exc)
-    else:
-        raise AssertionError("numeric 捐 should hint fund")
-
-    snap = await chaoshen.public_snapshot()
-    assert snap["fund"]["pool"] == 50 - chaoshen.FUND_DAILY_CAP
-    assert snap["fund"]["avg"] == 230  # (350 + 110) / 2
+        async with db.connect() as conn:
+            again = await chaoshen.ensure_fund_payout(conn, ts=TUE)
+            await conn.commit()
+        assert again is None
+        assert await _tickets(db, poor) == 80 + chaoshen.FUND_PAY_CAP
+    finally:
+        db.now = real_now
 
 
 async def test_tide_fund_need_peers() -> None:
@@ -205,6 +252,7 @@ def test_chaoshen() -> None:
     asyncio.run(test_chaoshen_public_snapshot())
     asyncio.run(test_tide_fund_average())
     asyncio.run(test_tide_fund_need_peers())
+    asyncio.run(test_tide_fund_auto_payout())
 
 
 if __name__ == "__main__":

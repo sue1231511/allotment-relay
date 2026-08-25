@@ -48,8 +48,9 @@ async function loadHui() {
         <small>池里</small>
         <strong>${esc(fund.pool ?? 0)} 票</strong>
         <p>${ready
-          ? `岛均口袋 ${esc(fund.avg ?? 0)} 票 · 在册 ${esc(fund.n ?? 0)} 人。有余的人捐，不够平均的人领补贴。`
+          ? `岛均口袋 ${esc(fund.avg ?? 0)} 票 · 在册 ${esc(fund.n ?? 0)} 人。有余的人自己填数捐。补贴不用领，${esc(fund.weekdays || '周二四六')}自动发。`
           : '在册还不够两人，算不出岛均。'}</p>
+        <small>${esc(fund.next_pay || '')}</small>
       </div>
     `;
   }

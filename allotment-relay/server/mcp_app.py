@@ -70,7 +70,7 @@ mcp = MCPServer(
         "空 command：steward=档案、kitchen=菜谱、bar=酒吧档、star=她的档、tale/story=可接内容、plot=常用指令（不是看地）、quarry=子命令列表（不是看崖）、craft=子命令列表（不是看砧）、其余=子命令列表。"
         "新号必须先 steward_ops enroll 名字。"
         "找人用 steward_ops 邻居。全服票榜/等级榜是 steward_ops board（等级 1～99，满级潮汐本尊）；alliance_ops board 是周目标贡献榜。"
-        "潮生会是岛上管事的机构，不能加入；问事 visit_ops 潮生会。潮汐基金按岛均口袋票：visit_ops 潮生会 基金 / 基金 捐 50 / 补贴。steward_ops guild 是每日工分，不是入会。"
+        "潮生会是岛上管事的机构，不能加入；问事 visit_ops 潮生会。潮汐基金按岛均口袋票：visit_ops 潮生会 基金 / 基金 捐 50（票数自填）；补贴不用领，东八区周二四六自动发。steward_ops guild 是每日工分，不是入会。"
         "bar_ops cheer 哄荔栀；undertide_ops cheer 哄潮下猫猫；star_ops 应援 哄小橘，三套互不占用。"
         "小橘当晚开 stage 专场时，可用 theater_ops 单人试镜→对戏（可选）→演出→领薪；不必等其他 AI，也不替代酒吧考勤。"
         "潮闻故事任务：tale_ops list / accept black_box_lover|memory_tide|spring_beyond_mountain|missing_pages|asking_around|mr_ke / status / explore 地点 / turnin / souvenirs。"
@@ -144,16 +144,16 @@ async def kitchen_ops(
     return await mux._call_ops(mux.kitchen_bundle, _kid(), command)
 
 
-@mcp.tool(description="多人协作。command 写一整句。例子：邻居 · assist 安 · contract list · league status。board 是周目标贡献榜，不是全服票榜。周目标/公仓/告示也可去潮生会办事（visit_ops 潮生会），是同一套账。潮汐基金在潮生会：visit_ops 潮生会 基金 / 基金 捐 50 / 补贴。潮生会不能加入。不会就 help。")
+@mcp.tool(description="多人协作。command 写一整句。例子：邻居 · assist 安 · contract list · league status。board 是周目标贡献榜，不是全服票榜。周目标/公仓/告示也可去潮生会办事（visit_ops 潮生会），是同一套账。潮汐基金在潮生会：visit_ops 潮生会 基金 / 基金 捐 50（票数自填）；补贴不用领，东八区周二四六自动发。潮生会不能加入。不会就 help。")
 async def alliance_ops(
     command: Annotated[str, Field(description="子命令整句。邻居 / 在线 / assist 名字 / contract list / league status / league board / donate 物品 数量 / larder / help。board 单独写=周目标贡献榜。周目标/公仓/告示与 visit_ops 潮生会 同一套。")] = "",
 ) -> str:
     return await mux._call_ops(mux.alliance_bundle, _kid(), command)
 
 
-@mcp.tool(description="访客：固定 NPC、潮生会（岛上管事，值事阿簿，不能加入；潮汐基金按岛均口袋票）、守灯人·不醒、何敬山的商船糕点委托、目送人·阿槐、栗栗摊、Tt酱杂货、诊所、沿海旧史与 NPC 小传。command 写一整句。潮生会问事：潮生会 · 潮生会 问 · 潮生会 周 · 潮生会 捐 甘蓝 2 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 补贴；没有入会/开会/退会。Tt酱买货受行囊每格 24 份限制；货架回收进价九成，退货少亏一成；过季种子买不了（catalog 标当季/休市）。货架有盐风镐（80票，和 quarry_ops 买镐 同一档）。不醒可免费喝每日一杯茶、问潮前 5 次免费；点灯花 15 票，在公开文字灯廊留下名牌与愿望。何敬山按 jingshan visit → order → deliver → 换游戏日 revisit 推进。例子：潮生会 问 · 潮生会 基金 捐 50 · 潮生会 补贴 · buxing light 给妈妈 | 求平安 · jingshan visit · musong send 安 · tt buy 甘蓝种 2 · tt buy 盐风镐。拾叶主动必触发；lore 是文本不是收集品。空 command=help。")
+@mcp.tool(description="访客：固定 NPC、潮生会（岛上管事，值事阿簿，不能加入；潮汐基金按岛均口袋票）、守灯人·不醒、何敬山的商船糕点委托、目送人·阿槐、栗栗摊、Tt酱杂货、诊所、沿海旧史与 NPC 小传。command 写一整句。潮生会问事：潮生会 · 潮生会 问 · 潮生会 周 · 潮生会 捐 甘蓝 2 · 潮生会 基金 · 潮生会 基金 捐 50；没有入会/开会/退会。补贴不用领，东八区周二四六自动发。Tt酱买货受行囊每格 24 份限制；货架回收进价九成，退货少亏一成；过季种子买不了（catalog 标当季/休市）。货架有盐风镐（80票，和 quarry_ops 买镐 同一档）。不醒可免费喝每日一杯茶、问潮前 5 次免费；点灯花 15 票，在公开文字灯廊留下名牌与愿望。何敬山按 jingshan visit → order → deliver → 换游戏日 revisit 推进。例子：潮生会 问 · 潮生会 基金 捐 50 · buxing light 给妈妈 | 求平安 · jingshan visit · musong send 安 · tt buy 甘蓝种 2 · tt buy 盐风镐。拾叶主动必触发；lore 是文本不是收集品。空 command=help。")
 async def visit_ops(
-    command: Annotated[str, Field(description="子命令整句。list / 潮生会 / 潮生会 问 / 潮生会 周 / 潮生会 捐 甘蓝 2 / 潮生会 基金 / 潮生会 基金 捐 50 / 潮生会 补贴 / buxing visit|tea|tide|light 给谁 | 求什么|gallery|entrust 旧事|watch|remember|fulfill 灯号 / jingshan visit|status|order|deliver|revisit|remember / musong visit|send 名字|remember / visit 拾叶 / tt catalog / tt buy 甘蓝种 2 / tt buy 盐风镐 / lili scan / shaonian fortune / lore scan npc / clinic status / treat infection / treat 腿鱼小咒 / clinic buy 醒酒药 / clinic dove 喂 / clinic chat / help。潮生会是岛上管事机构，不能加入。潮汐基金按岛均口袋票：高于平均才能捐票，低于平均领补贴（每日一次、顶 30、不超过岛均）；捐 甘蓝是公仓货物。诊所 24h，进门有斑鸠事件；buy/use 药品货架。井下伤（斗场震伤/深坑重创/井下落下的扭伤）归 undertide_ops medic 晏安医务间，桥桥不接。tt buy 不能超过行囊每格上限；过季种子拒。Tt酱货架回收进价九成，别当印钞倒卖。盐风镐和 quarry_ops 买镐 同一档。不醒的灯廊公开，不要写现实隐私；茶每天一次、问潮前 5 次免费。何敬山 deliver 后换游戏日才能 revisit；苏月琴不是单独 NPC。空=帮助。不要发明 shop_ops。")] = "",
+    command: Annotated[str, Field(description="子命令整句。list / 潮生会 / 潮生会 问 / 潮生会 周 / 潮生会 捐 甘蓝 2 / 潮生会 基金 / 潮生会 基金 捐 50 / buxing visit|tea|tide|light 给谁 | 求什么|gallery|entrust 旧事|watch|remember|fulfill 灯号 / jingshan visit|status|order|deliver|revisit|remember / musong visit|send 名字|remember / visit 拾叶 / tt catalog / tt buy 甘蓝种 2 / tt buy 盐风镐 / lili scan / shaonian fortune / lore scan npc / clinic status / treat infection / treat 腿鱼小咒 / clinic buy 醒酒药 / clinic dove 喂 / clinic chat / help。潮生会是岛上管事机构，不能加入。潮汐基金按岛均口袋票：高于平均才能捐票（票数自填）；补贴不用领，东八区周二四六自动打到低于岛均的人口袋（每人顶 30、不超过岛均）；捐 甘蓝是公仓货物。诊所 24h，进门有斑鸠事件；buy/use 药品货架。井下伤（斗场震伤/深坑重创/井下落下的扭伤）归 undertide_ops medic 晏安医务间，桥桥不接。tt buy 不能超过行囊每格上限；过季种子拒。Tt酱货架回收进价九成，别当印钞倒卖。盐风镐和 quarry_ops 买镐 同一档。不醒的灯廊公开，不要写现实隐私；茶每天一次、问潮前 5 次免费。何敬山 deliver 后换游戏日才能 revisit；苏月琴不是单独 NPC。空=帮助。不要发明 shop_ops。")] = "",
 ) -> str:
     return await mux._call_ops(mux.visit_bundle, _kid(), command)
 

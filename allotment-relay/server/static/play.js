@@ -138,7 +138,7 @@ function placeContextRows(place) {
     memo.push(`<div class="place-context-row"><span>海况</span><b>${esc([c.tide, c.weather, c.phase].filter(Boolean).join(' · '))}</b></div>`);
   }
   if (place.id === 'hui') {
-    memo.push(`<div class="place-context-row"><span>岛务</span><b>潮生会 · 阿簿。潮汐基金按岛均。不能入会。</b></div>`);
+    memo.push(`<div class="place-context-row"><span>岛务</span><b>潮生会 · 阿簿。捐票自填。补贴周二四六自动发。不能入会。</b></div>`);
   }
   if (!memo.length) {
     memo.push(`<div class="place-context-row"><span>备忘</span><b>${esc(place.blurb || '先选一个动作')}</b></div>`);
@@ -226,6 +226,7 @@ function renderPlace(id) {
     if (id === 'bar') loadBarPatron();
     if (id === 'eatery') loadEateryPatron();
   }
+  show($('play-hui-donate'), id === 'hui');
 }
 
 function plotStateLabel(stateName) {
@@ -950,6 +951,16 @@ $('play-star-tip').addEventListener('submit', async (e) => {
   } catch (err) {
     showResult('play-star-tip-result', `<p class="error">${esc(err.message)}</p>`);
   }
+});
+
+$('play-hui-donate')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const amount = parseInt($('play-hui-donate-amount').value, 10);
+  if (!Number.isFinite(amount) || amount < 1) {
+    setLog('票数自己填，至少 1。');
+    return;
+  }
+  await act('visit_ops', `潮生会 基金 捐 ${amount}`);
 });
 
 document.body.addEventListener('click', (e) => {

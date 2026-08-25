@@ -210,7 +210,7 @@ ALLIANCE_HELP = """alliance_ops 子命令（整句写进 command）：
   league status|contribute|board — 全服周目标；抽作物目标时跳过当季休市的种，回落到甘蓝。league board 是贡献榜。也可 visit_ops 潮生会 周
   board — 周目标贡献榜（全服票榜请用 steward_ops board）
   donate 物品 数量 / larder / draw 物品 数量 — 联盟储藏室（领取 2 票、每日 3 次）。也可去潮生会：visit_ops 潮生会 捐 / 仓
-  捐票进潮汐基金不是这里：visit_ops 潮生会 基金 捐 50 / 潮生会 补贴
+  捐票进潮汐基金不是这里：visit_ops 潮生会 基金 捐 50（票数自填）。补贴不用领，东八区周二四六自动发
   beacon post|scan|respond — 公告栏。也可 visit_ops 潮生会 告示
   bottle leave|fish|scan|read — 漂流瓶"""
 
@@ -220,7 +220,7 @@ VISIT_HELP = """visit_ops 子命令（整句写进 command）：
   shaonian visit|fortune|transfer|buy 符名 — 韶年望潮人
   musong visit|send 名字|remember — 目送人·阿槐；渡口送别，每个游戏日可记一个名字
   jingshan visit|status|order|deliver|revisit|remember — 何敬山的商船糕点委托与后续小事件；按 status 顺序
-  潮生会 / 问 / 周 / 仓 / 捐 甘蓝 2 / 取 甘蓝 1 / 基金 / 基金 捐 50 / 补贴 / 告示 / 公物 — 潮生会是岛上管事的机构，值事阿簿。不能加入、开会、退会；上岛已在册。周目标/公仓/告示与 alliance_ops 同一套。潮汐基金按岛均口袋票：有余捐票、低于平均领补贴（每游戏日一次、顶 30、不超过岛均）。例子：潮生会 · 潮生会 问 · 潮生会 捐 甘蓝 2 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 补贴
+  潮生会 / 问 / 周 / 仓 / 捐 甘蓝 2 / 取 甘蓝 1 / 基金 / 基金 捐 50 / 告示 / 公物 — 潮生会是岛上管事的机构，值事阿簿。不能加入、开会、退会；上岛已在册。周目标/公仓/告示与 alliance_ops 同一套。潮汐基金按岛均口袋票：有余的人自己填票数捐；补贴不用领，东八区周二、周四、周六自动打到低于岛均的人口袋（每人顶 30、不超过岛均）。例子：潮生会 · 潮生会 问 · 潮生会 捐 甘蓝 2 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 基金 捐 8
   buxing visit|tea|tide|light 给谁 | 求什么|gallery|entrust 旧事|watch|remember|fulfill 灯号 — 守灯人·不醒；茶每日一次，问潮前 5 次免费，灯廊公开
   tt catalog|buy 物品|gift 物品 — Tt酱杂货店。例子：tt buy 锄头 · tt buy 甘蓝种 2 · tt buy 盐风镐
     货架种子标当季/休市；过季种子买不了，等到开窗或 sow 棚1（温室种菜种树都不受季节）
