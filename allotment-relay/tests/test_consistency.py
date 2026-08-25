@@ -101,6 +101,8 @@ def test_mcp_descriptions() -> None:
     theater_blob = f"{theater.description}\n{(theater.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
     assert "试镜" in theater_blob
     assert "头粉" in theater_blob
+    assert "编剧社" in theater_blob
+    assert "投稿" in theater_blob
 
     bar = mcp._tool_manager.get_tool("bar_ops")
     bar_blob = f"{bar.description}\n{(bar.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -286,6 +288,10 @@ def test_relay_manual_covers_systems() -> None:
         "theater_ops",
         "试镜",
         "头粉",
+        "编剧社",
+        "投稿 岸上旧收音机",
+        "故事稿费 500",
+        "潮闻",
         "应援",
         "不要猜",
         "sow_all",

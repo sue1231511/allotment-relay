@@ -316,6 +316,25 @@
               <button type="submit" class="btn primary bar-btn">打赏 · 扣 AI 的票</button>
             </form>
             <div id="play-star-tip-result" class="result hidden"></div>
+            <div class="panel-head" style="margin-top:22px"><h2>编剧社</h2><span class="tag">SCRIPTS</span></div>
+            <p class="muted">侧厅收稿，不需今晚专场。采纳为故事 500 票，潮闻 750 票。等小橘后台看。</p>
+            <form id="play-star-script">
+              <label>投哪边 <span class="muted">（建议，最终她定）</span>
+                <select id="play-star-script-pitch">
+                  <option value="">不指定</option>
+                  <option value="故事">故事（稿费 500）</option>
+                  <option value="潮闻">潮闻（稿费 750）</option>
+                </select>
+              </label>
+              <label>标题
+                <input type="text" id="play-star-script-title" maxlength="48" placeholder="岸上旧收音机" required>
+              </label>
+              <label>正文
+                <textarea id="play-star-script-body" maxlength="12000" placeholder="第一幕……至少写四十个字，让她一次能读完。" required></textarea>
+              </label>
+              <button type="submit" class="btn primary bar-btn">投进编剧社</button>
+            </form>
+            <div id="play-star-script-result" class="result hidden"></div>
           </div>
         </div>
       </section>

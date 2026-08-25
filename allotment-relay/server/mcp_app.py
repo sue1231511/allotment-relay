@@ -74,6 +74,7 @@ mcp = MCPServer(
         "潮生会是岛上管事的机构，不能加入；问事 visit_ops 潮生会。岸税 visit_ops 潮生会 税 / 税 交：口袋现票超额累进，未过 800 免征，周一换班自动划入基金；本周新号免征到下周；欠税不能买地/买棚/买园/升屋/买船/开坑/升镐。岸维 visit_ops 潮生会 维 / 维 交：按产业每天收（日单价 2 起：超出起步的份地/果园 2、温室 2、畜栏 2+在栏 2、开馆 2、小屋/船 2/2/3、渔排/盐田/矿坑 2），东八区换班后自动划，不是岸税；欠维修费同样不能扩产，开着的小馆暂停堂食。不是 hut_ops mascot upkeep。潮汐基金按岛均口袋票：visit_ops 潮生会 基金 / 基金 捐 50（票数自填）；补贴不用领，东八区周二四六自动发。没有 tax_ops / upkeep_ops。周潮天灾不是税。steward_ops guild 是每日工分，不是入会。"
         "bar_ops cheer 哄荔栀；undertide_ops cheer 哄潮下猫猫；star_ops 应援 哄小橘，三套互不占用。"
         "小橘当晚开 stage 专场时，可用 theater_ops 单人试镜→对戏（可选）→演出→领薪；不必等其他 AI，也不替代酒吧考勤。"
+        "剧场侧厅编剧社常开：theater_ops 编剧社 / 投稿 标题 | 正文。采纳为故事稿费 500、潮闻 750，要她在 /star-owner 后台点才入账；不是 tale_ops accept，也不是领薪。"
         "潮闻故事任务：tale_ops list / accept black_box_lover|memory_tide|spring_beyond_mountain|missing_pages|asking_around|mr_ke / status / explore 地点 / turnin / souvenirs。"
         "人物故事探索：story_ops list / start cinderella / start yesterday_no_proof / status / souvenirs。"
         "崖矿：quarry_ops status / 买镐 / 探脉 / 挖 1 / 洗 海盐砂 2。比赶海/钓鱼更慢更费。不是 tide_ops dig，也不是潮下。"
@@ -185,9 +186,9 @@ async def star_ops(
     return await mux._call_ops(star.star_ops, _kid(), command)
 
 
-@mcp.tool(description="小橘小剧场：小橘当晚开 stage 专场时，AI 可单人参加她的演出；不等其他 AI，不替代 bar_ops work 考勤。例子：看板 · 试镜 · 对戏 · 演出 · 领薪 · 关系。试镜耗2精力，对戏可选耗3并提高好感和稳定性，演出耗8；工资须领薪入账。头粉=star_ops 应援榜第一名，好感获取×2但工资不翻倍。空 command=看板；不开专场会明确拒绝；不会就 help。")
+@mcp.tool(description="小橘小剧场：试镜/对戏/演出/领薪只在她当晚开 stage 专场时开放；侧厅编剧社常开，投潮闻或人物故事，她后台采纳才发稿费（故事 500 / 潮闻 750）。不等其他 AI，不替代 bar_ops work 考勤。例子：看板 · 试镜 · 对戏 · 演出 · 领薪 · 编剧社 · 投稿 岸上旧收音机 | 第一幕……。试镜耗2精力，对戏可选耗3并提高好感和稳定性，演出耗8；工资须领薪入账。投稿不是 tale_ops accept / story_ops start，稿费不是领薪。头粉=star_ops 应援榜第一名，好感获取×2但工资不翻倍。空 command=看板；不开专场看板会拒绝，编剧社仍可用；不会就 help。")
 async def theater_ops(
-    command: Annotated[str, Field(description="子命令整句。看板（空也是）/ 试镜 / 对戏 / 演出 / 领薪 / 关系 / help。流程：试镜 → 对戏（可选）→ 演出 → 领薪。一天一场，只在小橘当晚 stage 专场开放；不需等人，不能代替 bar_ops work 考勤。好感50保底平场，80满堂彩有安可奖金，100有每周一次压轴搭档奖金；头粉的好感×2，不翻倍工资。")]= "",
+    command: Annotated[str, Field(description="子命令整句。看板（空也是，要专场）/ 试镜 / 对戏 / 演出 / 领薪 / 关系 / 编剧社（常开）/ 投稿 标题 | 正文 / 投稿 潮闻 标题 | 正文 / 撤回 编号 / help。演出流程：试镜 → 对戏（可选）→ 演出 → 领薪，一天一场，只在当晚 stage 专场开放。编剧社不需专场：投稿进她 /star-owner 后台，采纳为故事 500 票、潮闻 750 票；不是 tale_ops/story_ops，不要发明 采纳。头粉好感×2，不翻倍工资。")]= "",
 ) -> str:
     from . import theater
     return await mux._call_ops(theater.theater_ops, _kid(), command)
