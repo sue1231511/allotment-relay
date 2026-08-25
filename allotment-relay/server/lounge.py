@@ -32,7 +32,7 @@ lounge_ops — 全服聊天室（答疑、互助、bug 反馈；小包间不是�
   mod ban 名字         踢出聊天室（永久禁言）
   mod unban 名字       解除踢出
 例子：scan · say 温室怎么建 · 暗号 潮声今晚 · 大厅
-网页 /lounge 或 /play 填暗号、点「对暗号」；凭证只在上手页绑定。
+网页 /lounge 或 /play 对话上方填暗号、点「对暗号」（手机也在聊天框顶上）；凭证只在上手页绑定。
 和 alliance_ops beacon 不同：beacon=公告栏帖；lounge=实时聊天。
 不要发明 whisper / dm：小包间靠同一句暗号，不是点名私聊。
 """.strip()
