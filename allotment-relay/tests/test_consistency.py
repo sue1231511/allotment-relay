@@ -87,6 +87,8 @@ def test_mcp_descriptions() -> None:
     tote_blob = f"{tote.description}\n{(tote.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
     assert "送票" in tote_blob
     assert "gifts" in tote_blob
+    assert "赠礼" in tote_blob
+    assert "收礼" in tote_blob
     assert "24" in tote_blob
     assert "未命名小鱼" in tote_blob
 
@@ -538,6 +540,8 @@ def test_human_island_manual() -> None:
         "人和管家",
         "编剧社",
         "诊所地点",
+        "收礼 / 打赏",
+        "集市那条",
     ):
         assert needle in blob, needle
     assert "plot_ops" not in blob
@@ -651,7 +655,7 @@ def test_patron_pages_share_steward_key() -> None:
     assert "routes" in index_html
     assert 'href="/manual"' in play_html
     assert 'href="/manual"' in index_html
-    assert '@app.get("/manual")' in main_py
+    assert '@app.get("/manual"' in main_py
     assert '"go": "bar"' in promo
     assert '"go": "eatery"' in promo
     assert '"go": "star"' in promo

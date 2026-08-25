@@ -125,6 +125,12 @@ def test_play_page_lists_all_plot_kinds() -> None:
     assert "交岸维" in js
     assert "orderedPlaces" in js
     assert "b.week1" in js
+    assert "data-neighbor" in js
+    assert "data-gift-to" in js
+    assert "data-gift-item" in js
+    assert "neighborSheet" in js
+    assert "giftToSheet" in js
+    assert "收礼 / 打赏" in html
 
 
 if __name__ == "__main__":

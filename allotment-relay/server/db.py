@@ -2052,6 +2052,24 @@ async def get_steward_by_name(name: str) -> dict[str, Any] | None:
         return dict(row) if row else None
 
 
+async def match_steward_from_tokens(tokens: list[str]) -> tuple[dict[str, Any] | None, int]:
+    """Longest prefix of tokens that matches a steward name (names may contain spaces)."""
+    cleaned = [str(t).strip() for t in tokens if str(t).strip()]
+    if not cleaned:
+        return None, 0
+    async with connect() as db:
+        db.row_factory = aiosqlite.Row
+        for n in range(len(cleaned), 0, -1):
+            name = " ".join(cleaned[:n])
+            row = await (await db.execute(
+                "SELECT * FROM stewards WHERE name = ? COLLATE NOCASE",
+                (name,),
+            )).fetchone()
+            if row:
+                return dict(row), n
+    return None, 0
+
+
 async def get_steward_by_id(steward_id: int) -> dict[str, Any] | None:
     async with connect() as db:
         db.row_factory = aiosqlite.Row
@@ -2381,18 +2399,47 @@ async def public_stats() -> dict[str, Any]:
 
 
 async def list_received_gifts(steward_id: int, limit: int = 20) -> list[dict[str, Any]]:
+    """Gifts/tips aimed at this steward.
+
+    Prefer chronicle.target_id. Also recover older/mis-tagged rows whose text
+    still says 「送礼给 名字」 / 「给 名字 小费」, so the recipient can find them.
+    """
+    limit = max(1, min(int(limit or 20), 50))
     async with connect() as db:
         db.row_factory = aiosqlite.Row
-        cur = await db.execute(
-            """
-            SELECT c.text, c.created_at, c.action, a.name AS actor_name
-            FROM chronicle c
-            LEFT JOIN stewards a ON a.id = c.actor_id
-            WHERE c.action IN ('gift', 'bar_tip') AND c.target_id=?
-            ORDER BY c.created_at DESC LIMIT ?
-            """,
-            (steward_id, limit),
-        )
+        name_row = await (await db.execute(
+            "SELECT name FROM stewards WHERE id=?", (steward_id,)
+        )).fetchone()
+        name = str(name_row["name"] if name_row else "").strip()
+        gift_mark = f"送礼给 {name}：" if name else None
+        tip_mark = f"给 {name} 小费" if name else None
+        if gift_mark and tip_mark:
+            cur = await db.execute(
+                """
+                SELECT c.text, c.created_at, c.action, a.name AS actor_name
+                FROM chronicle c
+                LEFT JOIN stewards a ON a.id = c.actor_id
+                WHERE c.action IN ('gift', 'bar_tip')
+                  AND (
+                    c.target_id = ?
+                    OR (c.action = 'gift' AND instr(c.text, ?) > 0)
+                    OR (c.action = 'bar_tip' AND instr(c.text, ?) > 0)
+                  )
+                ORDER BY c.created_at DESC LIMIT ?
+                """,
+                (steward_id, gift_mark, tip_mark, limit),
+            )
+        else:
+            cur = await db.execute(
+                """
+                SELECT c.text, c.created_at, c.action, a.name AS actor_name
+                FROM chronicle c
+                LEFT JOIN stewards a ON a.id = c.actor_id
+                WHERE c.action IN ('gift', 'bar_tip') AND c.target_id=?
+                ORDER BY c.created_at DESC LIMIT ?
+                """,
+                (steward_id, limit),
+            )
         return [dict(r) for r in await cur.fetchall()]
 
 

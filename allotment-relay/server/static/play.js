@@ -280,6 +280,7 @@ function todayBlurb(d, c) {
   const duty = (d && d.meter_lines && d.meter_lines.bar_duty) || '';
   if (dutyUrgent(d)) bits.push('酒吧值班快到期了');
   else if (duty && duty.includes('内须')) bits.push(duty.replace(/^⚠\s*/, ''));
+  if ((d.gifts || []).length) bits.push('有人送礼 / 打赏');
   const health = d && d.meter_lines && d.meter_lines.health;
   if (health && health.includes('（')) bits.push(health.replace(/^⚠\s*/, ''));
   const dues = duesLine(d);
@@ -480,8 +481,7 @@ function renderNeighbors() {
   $('play-neighbors-list').innerHTML = people.map((p) => {
     const ripe = p.ripe ? `熟地 ${p.ripe}` : '暂无熟地';
     const where = p.home ? '在档口' : (p.ago || '');
-    const cmd = JSON.stringify({ tool: 'steward_ops', command: `peer ${p.name}` });
-    return `<button type="button" class="play-neighbor" data-act='${cmd}'>
+    return `<button type="button" class="play-neighbor" data-neighbor="${esc(p.name)}">
       <span class="play-neighbor-dot ${p.home ? '' : 'is-away'}" aria-hidden="true"></span>
       <span><strong>${esc(p.name)}</strong><small>${esc(where)} · ${esc(ripe)}</small></span>
     </button>`;
@@ -516,10 +516,10 @@ function renderTote() {
 function renderGifts() {
   const gifts = (state.dash && state.dash.gifts) || [];
   if (!gifts.length) {
-    $('play-gifts').innerHTML = '<p>暂无收礼 / 打赏</p>';
+    $('play-gifts').innerHTML = '<p>暂无收礼 / 打赏。点邻居名字可以送礼。</p>';
     return;
   }
-  $('play-gifts').innerHTML = gifts.slice(0, 6).map((g) => `
+  $('play-gifts').innerHTML = gifts.slice(0, 8).map((g) => `
     <div class="item">
       <strong>${esc(g.who)}</strong>
       <p style="margin-top:4px">${esc(g.kind)} · ${esc(g.text)}</p>
@@ -654,6 +654,12 @@ function openMe() {
   const keeps = (inv.keepsakes || []).map((k) =>
     `${esc(k.emoji || '')}${esc(k.name)}`
   ).join(' · ');
+  const gifts = d.gifts || [];
+  const giftHtml = gifts.length
+    ? gifts.slice(0, 8).map((g) =>
+      `<p class="muted" style="margin-top:6px"><strong>${esc(g.who)}</strong> · ${esc(g.kind)} · ${esc(g.text)}</p>`
+    ).join('')
+    : '<p class="muted">还没人送来。点邻居名字可以送礼。</p>';
   $('play-me-body').innerHTML = `
     <div class="play-identity" style="margin-bottom:14px;width:100%;cursor:default">
       <span class="play-avatar">${esc(String(name).slice(0, 1) || '≈')}</span>
@@ -667,6 +673,11 @@ function openMe() {
     <div class="play-rule">${esc(lines.bar_duty || '每 2 天须去酒吧上工。')}</div>
     ${duesLine(d) ? `<div class="play-rule">${esc(duesLine(d))}。去潮生会交。</div>` : ''}
     ${d.voyage ? `<p class="muted" style="margin-top:8px">${esc(d.voyage)}</p>` : ''}
+    <section class="play-invite">
+      <div class="play-kicker">Gifts</div>
+      <h3>收礼 / 打赏</h3>
+      ${giftHtml}
+    </section>
     <section class="play-invite">
       <div class="play-kicker">Pilot</div>
       <h3>引航</h3>
@@ -868,7 +879,54 @@ function itemSheet(name) {
   openSheet(name, `
     <button type="button" class="play-mini-btn primary" data-act='{"tool":"kitchen_ops","command":"eat ${name}"}'>吃</button>
     <button type="button" class="play-mini-btn" data-act='{"tool":"tote_ops","command":"vend ${name} 1"}'>卖 1</button>
+    <button type="button" class="play-mini-btn" data-gift-item="${esc(name)}">送礼</button>
   `);
+}
+
+function neighborSheet(name) {
+  const people = (state.neighbors && state.neighbors.people) || [];
+  const p = people.find((x) => x.name === name) || { name };
+  const ripe = p.ripe ? `熟地 ${p.ripe}` : '暂无熟地';
+  const where = p.home ? '在档口' : (p.ago || '离线');
+  const peer = JSON.stringify({ tool: 'steward_ops', command: `peer ${name}` });
+  const assist = JSON.stringify({ tool: 'alliance_ops', command: `assist ${name}` });
+  const steal = JSON.stringify({ tool: 'plot_ops', command: `偷菜 ${name}` });
+  const amends = JSON.stringify({ tool: 'plot_ops', command: `amends ${name}` });
+  openSheet(name, `
+    <p class="muted">${esc(where)} · ${esc(ripe)}</p>
+    <button type="button" class="play-mini-btn" data-act='${peer}'>看档</button>
+    <button type="button" class="play-mini-btn primary" data-gift-to="${esc(name)}">送礼</button>
+    <button type="button" class="play-mini-btn" data-act='${assist}'>帮忙打理</button>
+    <button type="button" class="play-mini-btn" data-act='${steal}'>偷菜</button>
+    <button type="button" class="play-mini-btn" data-act='${amends}'>致歉</button>
+  `);
+}
+
+function giftToSheet(name) {
+  const stock = ((state.dash && state.dash.stock) || []).filter((it) => Number(it.qty) > 0);
+  const tickets = Number((state.dash && state.dash.tickets) || 0);
+  const items = stock.map((it) => {
+    const cmd = JSON.stringify({ tool: 'tote_ops', command: `gift ${name} ${it.name} 1` });
+    return `<button type="button" class="play-mini-btn" data-act='${cmd}'>${esc(it.name)} ×1</button>`;
+  }).join('');
+  const t5 = JSON.stringify({ tool: 'tote_ops', command: `gift ${name} 票 5` });
+  const t20 = JSON.stringify({ tool: 'tote_ops', command: `gift ${name} 票 20` });
+  openSheet(`送给 ${name}`, `
+    <p class="muted">点一件送 1 份，即时进口袋。对方在「这一号」和右侧「收礼 / 打赏」能看到。</p>
+    ${items || '<p class="muted">口袋空着，只能送票。</p>'}
+    <p class="muted" style="margin-top:10px">现有 ${tickets} 票</p>
+    <button type="button" class="play-mini-btn" data-act='${t5}'>送 5 票</button>
+    <button type="button" class="play-mini-btn" data-act='${t20}'>送 20 票</button>
+  `);
+}
+
+function giftItemSheet(itemName) {
+  const people = (state.neighbors && state.neighbors.people) || [];
+  const btns = people.map((p) => {
+    const cmd = JSON.stringify({ tool: 'tote_ops', command: `gift ${p.name} ${itemName} 1` });
+    return `<button type="button" class="play-mini-btn" data-act='${cmd}'>${esc(p.name)}</button>`;
+  }).join('');
+  openSheet(`把「${itemName}」送给谁`, btns || '<p class="muted">岛上暂时就你一位。</p>');
 }
 
 async function act(tool, command) {
@@ -1231,6 +1289,21 @@ document.body.addEventListener('click', (e) => {
   const item = e.target.closest('#play-tote [data-item]');
   if (item) {
     itemSheet(item.getAttribute('data-item'));
+    return;
+  }
+  const neighbor = e.target.closest('[data-neighbor]');
+  if (neighbor) {
+    neighborSheet(neighbor.getAttribute('data-neighbor'));
+    return;
+  }
+  const giftTo = e.target.closest('[data-gift-to]');
+  if (giftTo) {
+    giftToSheet(giftTo.getAttribute('data-gift-to'));
+    return;
+  }
+  const giftItem = e.target.closest('[data-gift-item]');
+  if (giftItem) {
+    giftItemSheet(giftItem.getAttribute('data-gift-item'));
     return;
   }
   const btn = e.target.closest('[data-act]');

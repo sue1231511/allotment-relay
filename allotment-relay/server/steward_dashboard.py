@@ -47,7 +47,7 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
         craft_view = await craft_mod.dashboard_view(conn, s["id"])
         await conn.commit()
 
-    gifts = await db.list_received_gifts(s["id"], 8)
+    gifts = await db.list_received_gifts(s["id"], 20)
     pulse = await events.public_pulse_snapshot()
 
     s = await db.get_steward_by_id(s["id"]) or s
