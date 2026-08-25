@@ -146,6 +146,13 @@ function placeContextRows(place) {
     const dueLine = bits.length ? bits.join(' · ') : '无欠项 · 税看口袋，维看产业';
     memo.push(`<div class="place-context-row"><span>岛务</span><b>${esc(dueLine)}。捐票自填。补贴周二四六自动发。不能入会。</b></div>`);
   }
+  if (place.id === 'clinic' && d.meter_lines && d.meter_lines.health) {
+    memo.push(`<div class="place-context-row"><span>身子</span><b>${esc(d.meter_lines.health)}</b></div>`);
+  }
+  if (place.id === 'undertide' && (d.island_bond != null || (d.meters && d.meters.island_bond != null))) {
+    const bond = d.island_bond ?? d.meters.island_bond;
+    memo.push(`<div class="place-context-row"><span>岛缘</span><b>${esc(String(bond))} · 下去会蚀</b></div>`);
+  }
   if (!memo.length) {
     memo.push(`<div class="place-context-row"><span>备忘</span><b>${esc(place.blurb || '先选一个动作')}</b></div>`);
   }
@@ -256,6 +263,11 @@ function todayBlurb(d, c) {
   const duty = (d && d.meter_lines && d.meter_lines.bar_duty) || '';
   if (dutyUrgent(d)) bits.push('酒吧值班快到期了');
   else if (duty && duty.includes('内须')) bits.push(duty.replace(/^⚠\s*/, ''));
+  const health = d && d.meter_lines && d.meter_lines.health;
+  if (health && health.includes('（')) bits.push(health.replace(/^⚠\s*/, ''));
+  const dues = (d && d.dues) || {};
+  if (dues.tax_arrears) bits.push(`岸税欠 ${dues.tax_arrears}`);
+  if (dues.upkeep_arrears) bits.push(`岸维欠 ${dues.upkeep_arrears}`);
   if (d && d.voyage) bits.push(d.voyage);
   if (bits.length) return bits.join('。') + '。';
   return d && d.motto ? d.motto : '先看份地，或去岛上晃一圈。';
@@ -279,6 +291,12 @@ function renderAll() {
   $('play-energy').textContent = `${energy} / ${emax}`;
   $('play-tickets').textContent = String(d.tickets ?? '—');
   $('play-level').textContent = `LV ${level}${title ? ' · ' + title : ''}`;
+  const bondEl = $('play-bond');
+  if (bondEl) {
+    const bond = d.island_bond ?? (d.meters && d.meters.island_bond);
+    const flavor = d.bond_flavor || '';
+    bondEl.textContent = bond == null ? '—' : `${bond}${flavor ? ' · ' + flavor : ''}`;
+  }
   const duty = (d.meter_lines && d.meter_lines.bar_duty) || '';
   const dutyEl = $('play-duty');
   dutyEl.textContent = duty;
@@ -404,7 +422,7 @@ function placeCardHtml(pl, urgent) {
 function renderPlaces() {
   const urgent = dutyUrgent(state.dash);
   const places = state.places || [];
-  const home = places.slice(0, 6);
+  const home = places.filter((pl) => pl.week1);
   $('play-places').innerHTML = home.map((pl) => placeCardHtml(pl, urgent)).join('');
 }
 
@@ -580,6 +598,15 @@ function consumeGo() {
   else renderPlace(go);
 }
 
+function duesLine(d) {
+  const dues = (d && d.dues) || {};
+  const bits = [];
+  if (dues.tax_arrears) bits.push(`岸税欠 ${dues.tax_arrears}`);
+  if (dues.upkeep_arrears) bits.push(`岸维欠 ${dues.upkeep_arrears}`);
+  if (!bits.length) return '';
+  return `<p class="muted" style="margin-top:8px">${esc(bits.join(' · '))}。去潮生会交。</p>`;
+}
+
 function openMe() {
   const d = state.dash;
   if (!d) return;
@@ -599,9 +626,12 @@ function openMe() {
       <span><strong>${esc(name)}</strong><small>管理员 · ${esc(d.title || ('LV ' + (d.level || 1)))}</small></span>
     </div>
     <p>精力 ${m.energy || 0}/${m.energy_max || 100} · 工分票 ${d.tickets}</p>
+    <p style="margin-top:6px">岛缘 ${d.island_bond ?? m.island_bond ?? 0} ∞${d.bond_flavor ? ' · ' + esc(d.bond_flavor) : ''}</p>
     <p style="margin-top:6px">饱食 ${m.satiety ?? '—'} · 雾智 ${m.mist_wit ?? '—'} · 档信 ${m.standing ?? '—'}</p>
     ${d.motto ? `<p style="margin-top:8px">「${esc(d.motto)}」</p>` : ''}
+    ${lines.health && lines.health.includes('（') ? `<p class="muted" style="margin-top:8px">${esc(lines.health)}</p>` : ''}
     <div class="play-rule">${esc(lines.bar_duty || '每 2 天须去酒吧上工。')}</div>
+    ${duesLine(d)}
     ${d.voyage ? `<p class="muted" style="margin-top:8px">${esc(d.voyage)}</p>` : ''}
     <section class="play-invite">
       <div class="play-kicker">Pilot</div>
@@ -776,13 +806,28 @@ function sowSheet(token) {
     if (shed) return true;
     return !s.tree;
   });
+  const sowBtns = seeds.map((s) => (
+    `<button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"sow ${token} ${s.name}"}'>${s.emoji || ''} ${s.name} ×${s.qty}</button>`
+  )).join('');
   if (!seeds.length) {
-    setLog('口袋里没有能种在这儿的种。去份地边上的采集，或以后去杂货买。');
+    openSheet(`种到 ${token}`, `<p class="muted">口袋里没有能种在这儿的种。买当季或全年的，过季会拒。</p>${seedBuyHtml()}`);
     return;
   }
-  openSheet(`种到 ${token}`, seeds.map((s) => (
-    `<button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"sow ${token} ${s.name}"}'>${s.emoji || ''} ${s.name} ×${s.qty}</button>`
-  )).join(''));
+  openSheet(`种到 ${token}`, `${sowBtns}<p class="muted" style="margin-top:10px">没有想要的就买一份。</p>${seedBuyHtml()}`);
+}
+
+function seedBuyHtml() {
+  return `
+    <button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"catalog"}'>看当季</button>
+    <button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"buy 1 甘蓝"}'>买甘蓝种</button>
+    <button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"buy 1 甜菜"}'>买甜菜种</button>
+    <button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"buy 1 雾豌豆"}'>买雾豆种</button>
+    <button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"buy 1 浅海藻"}'>买浅海藻种</button>
+  `;
+}
+
+function buySeedSheet() {
+  openSheet('买种', `<p class="muted">买当季或全年种。甘蓝 / 甜菜 / 雾豆 / 浅海藻全年可种。过季会拒。</p>${seedBuyHtml()}`);
 }
 
 function itemSheet(name) {
@@ -1116,6 +1161,10 @@ document.body.addEventListener('click', (e) => {
   const sow = e.target.closest('[data-sow]');
   if (sow) {
     sowSheet(sow.getAttribute('data-sow'));
+    return;
+  }
+  if (e.target.closest('[data-buy-seed]')) {
+    buySeedSheet();
     return;
   }
   const place = e.target.closest('[data-place]');

@@ -187,6 +187,8 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
         "level": ranked.get("level", 1),
         "title": ranked.get("title", ""),
         "xp": ranked.get("xp", 0),
+        "island_bond": int(ranked.get("island_bond") or 0),
+        "bond_flavor": ranked.get("bond_flavor") or "",
         "meters": {
             "satiety": int(s.get("satiety") or 0),
             "mist_wit": int(s.get("mist_wit") or 0),
@@ -195,6 +197,7 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
             "energy": int(s.get("energy") or 0),
             "energy_max": 100,
             "shadow_rep": shadow_rep,
+            "island_bond": int(ranked.get("island_bond") or 0),
         },
         "meter_lines": {
             "survival": survival.meter_line(s),
