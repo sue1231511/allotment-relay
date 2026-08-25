@@ -2791,6 +2791,15 @@ body.memory-open {
   cursor: wait;
 }
 
+.lounge-tool-plus {
+  display: none;
+}
+
+.lounge-tool-backdrop,
+.lounge-tool-sheet {
+  display: none;
+}
+
 .lounge-hint {
   font-size: 11px;
   color: var(--muted);
