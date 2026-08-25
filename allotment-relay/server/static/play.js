@@ -1252,6 +1252,8 @@ document.querySelectorAll('[data-scroll]').forEach((btn) => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.play-dock button').forEach((b) => b.classList.remove('is-active'));
     btn.classList.add('is-active');
+    show($('play-steward-page'), false);
+    show($('play-home'), true);
     if (state.placeId) goHome();
     const el = $(btn.dataset.scroll);
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
