@@ -2227,6 +2227,57 @@ body.memory-open {
   color: var(--muted);
 }
 
+.lounge-booth-bar {
+  flex-shrink: 0;
+  display: grid;
+  gap: 8px;
+  padding: 10px 18px 12px;
+  border-bottom: 1px solid rgba(127, 167, 171, .18);
+  background: rgba(255, 255, 255, .42);
+}
+
+.lounge-booth-bar-top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: baseline;
+}
+
+.lounge-booth-bar .lounge-tiny {
+  margin: 0;
+}
+
+.lounge-booth-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.lounge-booth-code {
+  display: grid;
+  gap: 4px;
+  flex: 1;
+  min-width: 140px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.lounge-booth-code input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid rgba(127, 167, 171, .28);
+  border-radius: 10px;
+  background: #fff;
+  font: inherit;
+  font-size: 14px;
+}
+
+.lounge-booth-row .lounge-mod-btn {
+  flex-shrink: 0;
+}
+
 .lounge-fold {
   margin: 0;
   border-radius: 10px;
@@ -2865,6 +2916,15 @@ body.memory-open {
   .lounge-pin-mobile {
     display: block;
     flex-shrink: 0;
+  }
+
+  .lounge-booth-bar {
+    padding: 8px 16px 10px;
+  }
+
+  .lounge-booth-row .lounge-mod-btn {
+    min-height: 40px;
+    padding: 8px 14px;
   }
 
   .lounge-composer-identity {

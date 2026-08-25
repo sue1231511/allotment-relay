@@ -966,6 +966,9 @@ body.play-bound .play-gate { display: none !important; }
 }
 
 @media (max-width: 760px) {
+  .play-lounge-booth .btn {
+    min-height: 40px;
+  }
   .place-top {
     grid-template-columns: 1fr;
   }

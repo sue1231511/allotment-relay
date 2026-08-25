@@ -183,6 +183,7 @@ def test_mcp_descriptions() -> None:
     assert "小包间" in lounge_blob
     assert "潮声今晚" in lounge_blob
     assert "whisper" in lounge_blob
+    assert "对话上方" in lounge_blob
 
     manual = mcp._tool_manager.get_tool("relay_manual")
     man_blob = manual.description or ""
@@ -444,6 +445,7 @@ def test_relay_manual_covers_systems() -> None:
         "/manual",
         "暗号 潮声今晚",
         "小包间",
+        "对话上方",
     ]
     missing = [n for n in needles if n not in text]
     assert not missing, f"relay_manual missing: {missing}"
@@ -556,6 +558,7 @@ def test_human_island_manual() -> None:
         "今夜潮湿",
         "暗号",
         "小包间",
+        "聊天框顶上",
     ):
         assert needle in blob, needle
     assert "plot_ops" not in blob
@@ -698,6 +701,12 @@ def test_patron_pages_share_steward_key() -> None:
     assert 'id="lounge-booth-code"' in lounge_html
     assert 'id="lounge-booth-enter"' in lounge_html
     assert "对暗号" in lounge_html
+    assert "lounge-booth-bar" in lounge_html
+    aside = lounge_html.split("lounge-side", 1)[1].split("</aside>", 1)[0]
+    chat = lounge_html.split('class="lounge-chat"', 1)[1]
+    assert 'id="lounge-booth-code"' not in aside
+    assert 'id="lounge-booth-code"' in chat
+    assert "lounge-booth-bar" in (root / "server/static/style.css").read_text(encoding="utf-8")
     assert 'id="lounge-booth-code"' in play_html
     assert "/api/lounge/booth" in lounge_js
     assert "POST" in lounge_js
