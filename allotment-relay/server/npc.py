@@ -46,6 +46,8 @@ async def npc_ops(key_id: int, command: str) -> str:
                 tag = " · 杂货店，visit_ops tt catalog/buy/gift"
             elif npc["key"] == "yangyang":
                 tag = " · 衣泊坊主理人；不卖成衣，cloth_ops 委托 / visit_ops 漾漾"
+            elif npc["key"] == "lianli":
+                tag = " · 连理所登记员；求婚人类点头，离婚人类发起、岛民决定；visit_ops 连理所 / 理枝"
             elif npc["key"] == "old_salt":
                 tag = " · 赶海/潮汐提示"
             elif npc["key"] == "buxing":
@@ -76,6 +78,8 @@ async def npc_ops(key_id: int, command: str) -> str:
         if chaoshen_mod.is_alias(parts[1]):
             return await chaoshen_mod.chaoshen_ops(key_id, "问")
         npc = _find_npc(parts[1])
+        if not npc and parts[1].strip() in ("连理所", "民政局", "婚约"):
+            npc = _find_npc("理枝") or _find_npc("lianli")
         if not npc:
             raise ValueError("未知 NPC，list 查看")
         if npc["key"] == "shiye":
@@ -95,6 +99,9 @@ async def npc_ops(key_id: int, command: str) -> str:
         if npc["key"] == "yangyang":
             from . import cloth as cloth_mod
             return await cloth_mod.cloth_ops(key_id, "visit")
+        if npc["key"] == "lianli":
+            from . import marriage as marriage_mod
+            return await marriage_mod.marriage_ops(key_id, "desk")
         line = random.choice(npc["lines"])
         extra = await _visit_context(s, npc["key"])
         gift = await _daily_visit_gift(s["id"], npc["key"])

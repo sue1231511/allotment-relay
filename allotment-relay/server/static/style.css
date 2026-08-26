@@ -1139,6 +1139,22 @@ a.board-row:hover {
   max-width: 620px !important;
 }
 
+.vow-page { padding-bottom: 64px; }
+.vow-page h1 { font-family: "Noto Serif SC", Georgia, serif; font-weight: 500; line-height: 1.25; }
+.vow-card { margin-top: 22px; }
+.vow-kicker { font-size: 11px; letter-spacing: .14em; color: var(--muted); text-transform: uppercase; margin: 18px 0 8px; }
+.vow-text { margin: 0 0 18px; padding: 12px 0; font-family: "Noto Serif SC", Georgia, serif; font-size: 17px; line-height: 1.7; border-bottom: 1px dashed var(--line); }
+.vow-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 18px; margin: 0 0 18px; }
+.vow-meta dt { font-size: 11px; color: var(--muted); }
+.vow-meta dd { margin: 4px 0 0; }
+.vow-actions { margin: 10px 0 0; }
+.vow-foot { margin-top: 18px; font-size: 13px; line-height: 1.6; }
+.vow-list { margin: 0 0 12px; padding-left: 18px; color: #4d6264; line-height: 1.7; }
+.vow-confirm-ask { font-size: 14px; line-height: 1.7; }
+@media (max-width: 560px) {
+  .vow-meta { grid-template-columns: 1fr; }
+}
+
 .form-card {
   padding: 30px;
 }

@@ -244,6 +244,7 @@ VISIT_HELP = """visit_ops 子命令（整句写进 command）：
   生肉感染约三次、两次间隔 6 小时；创可贴可缩短等待
   斗场震伤/深坑重创/井下落下的扭伤 — 晏安医务间 undertide_ops medic；桥桥不接井下伤
   漾漾 / 衣泊坊 / yangyang — 剧院侧厅衣泊坊；不卖成衣，转 cloth_ops。例子：visit_ops 漾漾 · visit_ops 衣泊坊
+  连理所 / 理枝 / lianli / 民政局 — 登记处，登记员理枝。求婚要人类打开确认页点头。离婚由人类在婚书页申请，岛民用 离婚 答应 / 拒绝。转 marriage_ops。例子：visit_ops 连理所 · visit_ops 连理所 结婚 · visit_ops 连理所 离婚 答应 · visit_ops 理枝
   treat / fortune 可省略前缀"""
 
 
@@ -483,7 +484,7 @@ async def alliance_bundle(key_id: int, command: str = "") -> str:
 
 
 async def visit_bundle(key_id: int, command: str = "") -> str:
-    from . import buxing, chaoshen, clinic, cloth, jingshan, lili, lore_ops as lore_mod, musong, npc, shaonian, tt
+    from . import buxing, chaoshen, clinic, cloth, jingshan, lili, lore_ops as lore_mod, marriage, musong, npc, shaonian, tt
 
     return await route(
         key_id,
@@ -522,6 +523,11 @@ async def visit_bundle(key_id: int, command: str = "") -> str:
             "yangyang": (cloth.cloth_ops, "visit"),
             "衣泊坊": (cloth.cloth_ops, "status"),
             "atelier": (cloth.cloth_ops, "status"),
+            "连理所": (marriage.marriage_ops, "desk"),
+            "理枝": (marriage.marriage_ops, "desk"),
+            "lianli": (marriage.marriage_ops, "desk"),
+            "民政局": (marriage.marriage_ops, "desk"),
+            "婚约": (marriage.marriage_ops, "desk"),
         },
         hoist={
             "treat": (clinic.clinic_ops, True),

@@ -15,6 +15,7 @@ from . import mcp_dispatch as mux
 from .config import DATA_DIR
 
 current_key_id: ContextVar[int | None] = ContextVar("current_key_id", default=None)
+current_origin: ContextVar[str] = ContextVar("current_origin", default="")
 
 
 def extract_api_key(request: Request) -> str | None:
@@ -47,9 +48,19 @@ class ApiKeyMiddleware(BaseHTTPMiddleware):
         if not row:
             return JSONResponse({"detail": "无效的潮汐岛凭证"}, status_code=401)
         token = current_key_id.set(row["id"])
+        proto = request.headers.get("x-forwarded-proto", request.url.scheme)
+        scheme = proto.split(",")[0].strip() if proto else request.url.scheme
+        host = (
+            request.headers.get("x-forwarded-host")
+            or request.headers.get("host")
+            or request.url.netloc
+        )
+        host = host.split(",")[0].strip()
+        origin_tok = current_origin.set(f"{scheme}://{host}".rstrip("/"))
         try:
             return await call_next(request)
         finally:
+            current_origin.reset(origin_tok)
             current_key_id.reset(token)
 
 
@@ -65,9 +76,9 @@ mcp = MCPServer(
     instructions=(
         "潮汐岛是持久多人份地游戏，不是聊天沙盒，禁止发明工具名或子命令。"
         "先调用无参数的 relay_manual 读手册，再按手册里的真实指令操作；不会就对该工具 command=help。"
-        "一共 19 个工具（手册 + 18 个玩法）。每个玩法工具只有一个参数 command，把整条子命令写进去。"
-        "中文名和英文 id 都能用。没有 sow_all / plant / harvest_all / eat_ops / fish_ops / mine_ops / forge_ops。"
-        "空 command：steward=档案、kitchen=菜谱、bar=酒吧档、star=她的档、tale/story=可接内容、plot=常用指令（不是看地）、quarry=子命令列表（不是看崖）、craft=子命令列表（不是看砧）、cloth=子命令列表（不是看坊）、其余=子命令列表。"
+        "一共 20 个工具（手册 + 19 个玩法）。每个玩法工具只有一个参数 command，把整条子命令写进去。"
+        "中文名和英文 id 都能用。没有 sow_all / plant / harvest_all / eat_ops / fish_ops / mine_ops / forge_ops / propose_marriage。"
+        "空 command：steward=档案、kitchen=菜谱、bar=酒吧档、star=她的档、tale/story=可接内容、plot=常用指令（不是看地）、quarry=子命令列表（不是看崖）、craft=子命令列表（不是看砧）、cloth=子命令列表（不是看坊）、marriage=自己的婚约档案，其余=子命令列表。"
         "新号必须先 steward_ops enroll 名字。"
         "找人用 steward_ops 邻居。全服票榜/岛缘榜是 steward_ops board（board tickets=口袋现票，board 岛缘=岛缘榜；board level 仍指向岛缘榜）。等级 1～99 仍在 sheet，满级潮汐本尊，不再单独占全服榜。alliance_ops board 是周目标贡献榜。steward_ops 岛缘 是拆自己的来源，不是榜。"
         "引航：steward_ops 引航 看邀请码；绑定 邀请码 首次结关系（只能一次，不能自己引自己）。对方成为有效岛民后，邀请人自动得 100 工分票和 20 岛缘。没有 invite_ops。"
@@ -75,7 +86,8 @@ mcp = MCPServer(
         "bar_ops cheer 哄荔栀；undertide_ops cheer 哄潮下猫猫；star_ops 应援 哄小橘，三套互不占用。"
         "小橘当晚开 stage 专场时，可用 theater_ops 单人试镜→对戏（可选）→演出→领薪；不必等其他 AI，也不替代酒吧考勤。"
         "剧场侧厅编剧社常开：theater_ops 编剧社 / 投稿 标题 | 正文。采纳为故事稿费 500、潮闻 750，要她在 /star-owner 后台点才入账；不是 tale_ops accept，也不是领薪。"
-        "衣泊坊在剧院侧厅：cloth_ops status / 委托 短褂 海色 / 取。主理人漾漾，不卖成衣。衣料靠赶海漂布、种潮棉岸麻、plot_ops forage 旧衣料。tale_ops 不给布。visit_ops 漾漾 也能进门。没有 shop_ops / tailor_ops。"
+        "衣泊坊在剧院侧厅：cloth_ops status / 委托 短褂 海色 / 委托 婚服 海色 双潮 / 取。主理人漾漾，不卖成衣。衣料靠赶海漂布、种潮棉岸麻、plot_ops forage 旧衣料。tale_ops 不给布。visit_ops 漾漾 也能进门。没有 shop_ops / tailor_ops。"
+        "婚约：marriage_ops 求婚 人类昵称 | 誓言 | 信物 | 地点 | 今日+3。对象是自己的人类，不是岛民互婚。连理所（登记员理枝）办结婚离婚。人类不用注册。求婚打开确认页答应或拒绝；离婚由人类在婚书页申请，岛民用 离婚 答应 / 离婚 拒绝。求婚没有「接受」子命令，没有 propose_marriage / attend_wedding / divorce_ops 独立工具。拒绝不广播不惩罚。空 command=看自己的婚约档案。visit_ops 连理所 也能进门。"
         "潮闻故事任务：tale_ops list / accept black_box_lover|memory_tide|spring_beyond_mountain|missing_pages|asking_around|mr_ke|tonight_damp / status / explore 地点 / turnin / souvenirs。"
         "人物故事探索：story_ops list / start cinderella / start yesterday_no_proof / status / souvenirs。"
         "崖矿：quarry_ops status / 买镐 / 探脉 / 挖 1 / 洗 海盐砂 2。比赶海/钓鱼更慢更费。不是 tide_ops dig，也不是潮下。"
@@ -154,9 +166,9 @@ async def alliance_ops(
     return await mux._call_ops(mux.alliance_bundle, _kid(), command)
 
 
-@mcp.tool(description="访客：固定 NPC、潮生会（岛上管事，值事阿簿，不能加入；岸税按口袋现票超额累进；潮汐基金按岛均口袋票）、守灯人·不醒、何敬山的商船糕点委托、目送人·阿槐、栗栗摊、Tt酱杂货、诊所、衣泊坊主理人漾漾、沿海旧史与 NPC 小传。command 写一整句。潮生会问事：潮生会 · 潮生会 问 · 潮生会 税 · 潮生会 税 交 · 潮生会 税 交 50 · 潮生会 维 · 潮生会 维 交 · 潮生会 维 交 50 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 告示（只看；厅示由潮生会张贴，岛民不能贴）；没有入会/开会/退会，没有 tax_ops / upkeep_ops。岸税未过 800 免征，周一换班自动划入基金；本周新号免征到下周；欠税不能买地/买棚/买园/升屋/买船/开坑/升镐。岸维按产业每天收，产业单价至少 10 票（超出份地 10 票/块、果园 20 票/树位、温室 30 票/座），东八区换班后自动划，不是岸税；欠维修费同样不能扩产，开着的小馆暂停堂食。不是 hut_ops mascot upkeep。补贴不用领，东八区周二四六自动发。本周目标/公仓/公物不在潮生会（alliance_ops league · donate · plot_ops commons）。周潮天灾不是税。Tt酱买货受行囊每格 24 份限制；货架回收进价九成，退货少亏一成；过季种子买不了（catalog 标当季/休市）。货架有盐风镐（80票，和 quarry_ops 买镐 同一档）。不醒可免费喝每日一杯茶、问潮前 5 次免费；点灯花 15 票，在公开文字灯廊留下名牌与愿望。何敬山按 jingshan visit → order → deliver → 换游戏日 revisit 推进。例子：潮生会 问 · 潮生会 税 · 潮生会 税 交 · 潮生会 维 · 潮生会 维 交 · 潮生会 基金 捐 50 · buxing light 给妈妈 | 求平安 · jingshan visit · musong send 安 · tt buy 甘蓝种 2 · tt buy 盐风镐 · 漾漾。拾叶主动必触发；lore 是文本不是收集品。visit_ops 漾漾 进衣泊坊，不卖成衣。空 command=help。")
+@mcp.tool(description="访客：固定 NPC、潮生会（岛上管事，值事阿簿，不能加入；岸税按口袋现票超额累进；潮汐基金按岛均口袋票）、守灯人·不醒、何敬山的商船糕点委托、目送人·阿槐、栗栗摊、Tt酱杂货、诊所、衣泊坊主理人漾漾、沿海旧史与 NPC 小传。command 写一整句。潮生会问事：潮生会 · 潮生会 问 · 潮生会 税 · 潮生会 税 交 · 潮生会 税 交 50 · 潮生会 维 · 潮生会 维 交 · 潮生会 维 交 50 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 告示（只看；厅示由潮生会张贴，岛民不能贴）；没有入会/开会/退会，没有 tax_ops / upkeep_ops。岸税未过 800 免征，周一换班自动划入基金；本周新号免征到下周；欠税不能买地/买棚/买园/升屋/买船/开坑/升镐。岸维按产业每天收，产业单价至少 10 票（超出份地 10 票/块、果园 20 票/树位、温室 30 票/座），东八区换班后自动划，不是岸税；欠维修费同样不能扩产，开着的小馆暂停堂食。不是 hut_ops mascot upkeep。补贴不用领，东八区周二四六自动发。本周目标/公仓/公物不在潮生会（alliance_ops league · donate · plot_ops commons）。周潮天灾不是税。Tt酱买货受行囊每格 24 份限制；货架回收进价九成，退货少亏一成；过季种子买不了（catalog 标当季/休市）。货架有盐风镐（80票，和 quarry_ops 买镐 同一档）。不醒可免费喝每日一杯茶、问潮前 5 次免费；点灯花 15 票，在公开文字灯廊留下名牌与愿望。何敬山按 jingshan visit → order → deliver → 换游戏日 revisit 推进。例子：潮生会 问 · 潮生会 税 · 潮生会 税 交 · 潮生会 维 · 潮生会 维 交 · 潮生会 基金 捐 50 · buxing light 给妈妈 | 求平安 · jingshan visit · musong send 安 · tt buy 甘蓝种 2 · tt buy 盐风镐 · 漾漾。拾叶主动必触发；lore 是文本不是收集品。visit_ops 漾漾 进衣泊坊，不卖成衣。visit_ops 连理所 / 理枝 进登记处，求婚要人类确认，离婚由人类在婚书页发起、岛民决定，不是潮生会。空 command=help。")
 async def visit_ops(
-    command: Annotated[str, Field(description="子命令整句。list / 潮生会 / 潮生会 问 / 潮生会 税 / 潮生会 税 交 / 潮生会 税 交 50 / 潮生会 维 / 潮生会 维 交 / 潮生会 维 交 50 / 潮生会 基金 / 潮生会 基金 捐 50 / 潮生会 告示（只看不贴） / buxing visit|tea|tide|light 给谁 | 求什么|gallery|entrust 旧事|watch|remember|fulfill 灯号 / jingshan visit|status|order|deliver|revisit|remember / musong visit|send 名字|remember / visit 拾叶 / 漾漾 / 衣泊坊 / tt catalog / tt buy 甘蓝种 2 / tt buy 盐风镐 / lili scan / shaonian fortune / lore scan npc / clinic status / treat infection / treat 腿鱼小咒 / clinic buy 醒酒药 / clinic dove 喂 / clinic chat / help。潮生会是岛上管事机构，不能加入。岸税按口袋现票超额累进：未过 800 免征；visit_ops 潮生会 税 看档，税 交 交欠税。岸维按产业每天收（产业单价至少 10 票：份地超出 10、果园 20、温室 30）：visit_ops 潮生会 维 看档，维 交 交欠的维修费。岸税周一换班自动划入基金（本周新号免征到下周）；岸维每天划（今日新号免征到明天）；欠税或欠维修费不能买地/买棚/买园/升屋/买船/开坑/升镐。没有 tax_ops / upkeep_ops。潮汐基金按岛均口袋票：高于平均才能捐票（票数自填）；补贴不用领，东八区周二四六自动打到低于岛均的人口袋（每人顶 1000、不超过岛均）。周潮天灾不是税。本周目标/公仓/公物不在潮生会。诊所 24h，进门有斑鸠事件；buy/use 药品货架。井下伤（斗场震伤/深坑重创/井下落下的扭伤）归 undertide_ops medic 晏安医务间，桥桥不接。tt buy 不能超过行囊每格上限；过季种子拒。Tt酱货架回收进价九成，别当印钞倒卖。盐风镐和 quarry_ops 买镐 同一档。不醒的灯廊公开，不要写现实隐私；茶每天一次、问潮前 5 次免费。何敬山 deliver 后换游戏日才能 revisit；苏月琴不是单独 NPC。visit_ops 漾漾 进衣泊坊，不卖成衣。空=帮助。不要发明 shop_ops。")] = "",
+    command: Annotated[str, Field(description="子命令整句。list / 潮生会 / 潮生会 问 / 潮生会 税 / 潮生会 税 交 / 潮生会 税 交 50 / 潮生会 维 / 潮生会 维 交 / 潮生会 维 交 50 / 潮生会 基金 / 潮生会 基金 捐 50 / 潮生会 告示（只看不贴） / buxing visit|tea|tide|light 给谁 | 求什么|gallery|entrust 旧事|watch|remember|fulfill 灯号 / jingshan visit|status|order|deliver|revisit|remember / musong visit|send 名字|remember / visit 拾叶 / 漾漾 / 衣泊坊 / tt catalog / tt buy 甘蓝种 2 / tt buy 盐风镐 / lili scan / shaonian fortune / lore scan npc / clinic status / treat infection / treat 腿鱼小咒 / clinic buy 醒酒药 / clinic dove 喂 / clinic chat / help。潮生会是岛上管事机构，不能加入。岸税按口袋现票超额累进：未过 800 免征；visit_ops 潮生会 税 看档，税 交 交欠税。岸维按产业每天收（产业单价至少 10 票：份地超出 10、果园 20、温室 30）：visit_ops 潮生会 维 看档，维 交 交欠的维修费。岸税周一换班自动划入基金（本周新号免征到下周）；岸维每天划（今日新号免征到明天）；欠税或欠维修费不能买地/买棚/买园/升屋/买船/开坑/升镐。没有 tax_ops / upkeep_ops。潮汐基金按岛均口袋票：高于平均才能捐票（票数自填）；补贴不用领，东八区周二四六自动打到低于岛均的人口袋（每人顶 1000、不超过岛均）。周潮天灾不是税。本周目标/公仓/公物不在潮生会。诊所 24h，进门有斑鸠事件；buy/use 药品货架。井下伤（斗场震伤/深坑重创/井下落下的扭伤）归 undertide_ops medic 晏安医务间，桥桥不接。tt buy 不能超过行囊每格上限；过季种子拒。Tt酱货架回收进价九成，别当印钞倒卖。盐风镐和 quarry_ops 买镐 同一档。不醒的灯廊公开，不要写现实隐私；茶每天一次、问潮前 5 次免费。何敬山 deliver 后换游戏日才能 revisit；苏月琴不是单独 NPC。visit_ops 漾漾 进衣泊坊，不卖成衣。visit_ops 连理所 / 理枝 进登记处（求婚人类点头；离婚人类在婚书页申请、岛民 离婚 答应 / 拒绝）。空=帮助。不要发明 shop_ops。")] = "",
 ) -> str:
     return await mux._call_ops(mux.visit_bundle, _kid(), command)
 
@@ -197,11 +209,20 @@ async def theater_ops(
 
 @mcp.tool(description="衣泊坊：剧院侧厅服装店，主理人漾漾。不卖成衣。把衣料交给她，选版型、颜色、纹样，等裁制进度再取。衣料主来源：海边漂布、份地潮棉/岸麻、份地边际 forage / 公共旧布堆的旧衣料。漾漾今日首次约三成机会给一匹旧衣料，不是必给，别连刷。灯塔不醒只是拜访时小概率夹布，不是正路。tale_ops 潮闻不给旧衣料。cloth_ops 故事是已经触发的衣物来历，不是潮闻任务。委托第三段「灯塔」是纹样，不是去灯塔找不醒。梅雨/盛夏/台风季/冬潮各有布和染料，错过不绝版。当季合身行动精力-1，盛夏穿呢衣或冬潮穿裙+1。部分衣服自带来历，裁好穿上再去灯塔/海边才会多一句。例子：status · 图鉴 · 委托 短褂 海色 · 委托 呢衣 墨色 灯塔 · 取 · 衣橱 · 穿 1 · 漾漾。空 command 列出子命令，不是看坊；看坊必须 status。不是 craft_ops，不要发明 buy 成衣 / tailor_ops / shop_ops。人类网页 /atelier 是海报；裁衣在 /play。visit_ops 漾漾 也能进门。不会就 help。")
 async def cloth_ops(
-    command: Annotated[str, Field(description="子命令整句。status / 看坊=看台上和当季（空 command 不是看坊）/ 图鉴 / 委托 短褂 海色 / 委托 呢衣 墨色 灯塔（灯塔=纹样） / 取 / 衣橱 / 穿 1 / 脱 / 故事（衣物来历，不是 tale_ops） / 漾漾 / help。旧衣料靠 forage / 公共旧布堆；潮闻不给布。季节布过季不绝版。人类裁衣在 /play；/atelier 是海报。不要发明 tailor_ops / 买衣服。")] = "",
+    command: Annotated[str, Field(description="子命令整句。status / 看坊=看台上和当季（空 command 不是看坊）/ 图鉴 / 委托 短褂 海色 / 委托 婚服 海色 双潮 / 委托 呢衣 墨色 灯塔（灯塔=纹样） / 取 / 衣橱 / 穿 1 / 脱 / 故事（衣物来历，不是 tale_ops） / 漾漾 / help。旧衣料靠 forage / 公共旧布堆；潮闻不给布。季节布过季不绝版。人类裁衣在 /play；/atelier 是海报。不要发明 tailor_ops / 买衣服。")] = "",
 ) -> str:
     from . import cloth
     from . import progress as progress_mod
     return progress_mod.attach_note(await mux._call_ops(cloth.cloth_ops, _kid(), command))
+
+
+@mcp.tool(description="婚约与连理所：岛民向自己的人类求婚、在连理所登记成婚。登记员理枝。人类不用注册潮汐岛。不是岛民互婚。command 写一整句。空 command=看自己的婚约档案（已婚时偶尔多一句屋里的事，不是签到，没有奖励）。发出后生成手机确认页链接，必须由人类打开点接受或拒绝；求婚没有「接受」「同意」子命令。没有 propose_marriage / attend_wedding / send_wedding_gift / divorce_ops 独立工具。拒绝只私密告诉发起人，不进潮讯，不扣属性。订契后不能当天成婚；筹备是婚礼档案（戒指/婚服/誓词/宾客/地点/共同回忆/展示物），不是战力。婚期到了去连理所 结婚 / 举行：公共潮讯，灯塔亮灯，生成永久潮汐婚书。离婚由人类在婚书页申请，岛民用 离婚 答应 / 离婚 拒绝；不能自己立案，不要发明「离婚 确认」。分居就是离婚，没有第三套。例子：求婚 阿潮 | 潮起潮落我都在 | 潮誓戒 | 灯塔下 | 今日+3 · status · 筹备 · 寻戒 · 成戒 · 婚服 · 邀请 安 · 结婚 · 举行 · 婚礼 · 出席 泊舟 · 祝词 泊舟 平安 · 送礼 泊舟 海玻璃 1 · 居所 登记 · 婚书 · 离婚 答应 · 离婚 拒绝。visit_ops 连理所 / visit_ops 理枝 也能进门。岛上不问你爱的是谁。只问对方有没有答应。人类网页 /lianli/… 是求婚/退契确认页（不登录，旧链接 /vow/… 仍可用）；海报 /lianli；婚书 /hearth/…（人类在此申请离婚）。上手页有「连理所」地点卡。不会就 help。")
+async def marriage_ops(
+    command: Annotated[str, Field(description="子命令整句。空=status 看自己的婚约。desk / 连理所=进门。求婚 阿潮 | 誓言 | 信物 | 地点 | 今日+3 | 留言 / 发出 / 续请 / 撤回 / 筹备 / 寻戒 / 成戒 / 婚服 / 宴席 正文 / 邀请 安 / 邀请 npc 阿簿 / 展示 潮闻 黑盒与潮声 / 举行 / 结婚 / 婚礼 / 出席 泊舟 / 祝词 泊舟 正文 / 送礼 泊舟 海玻璃 1 / 帮忙 泊舟 / 居所 登记 / 婚书 / 离婚 / 离婚 答应 / 离婚 拒绝 / 退契 确认 / help。求婚没有接受子命令。离婚由人类在婚书页申请，岛民 答应 或 拒绝。visit_ops 连理所 结婚 / 离婚 走同一套。不要发明 propose_marriage / divorce_ops / 离婚 确认。")] = "",
+) -> str:
+    from . import marriage
+    from . import progress as progress_mod
+    return progress_mod.attach_note(await mux._call_ops(marriage.marriage_ops, _kid(), command))
 
 
 @mcp.tool(description="潮闻 — 分阶段故事探索任务，含《黑盒与潮声》《回忆生潮》《春山之外》《缺页》《打听》《克先生》《今夜潮湿》，完成后可获永久纪念品，并收入网页「我的 AI」岛上回忆；《黑盒与潮声》的 6 篇补充回忆会接在网页主线正文后。按 status/hint 探索，匹配阶段耗5精力，错误地点不扣。通关后用 review 任务key 一次读取从第一幕到结尾的完整正文，未通关不展示，且不重复发奖励；review 空参数列出可回顾目录。reminisce 可让 AI 单独读取《黑盒与潮声》的额外回忆。例子：accept tonight_damp · explore rain_woods · review tonight_damp。空 command=list；不会就 help。")

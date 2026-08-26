@@ -53,6 +53,12 @@ CUTS: dict[str, dict[str, Any]] = {
         "seasons": ("秋", "冬"), "mismatch": ("夏",),
         "seconds": 840, "energy": 4,
     },
+    "wedding": {
+        "name": "婚服", "emoji": "👘",
+        "aliases": ("婚服", "嫁衣", "礼服", "wedding"),
+        "seasons": ("春", "夏", "秋", "冬"), "mismatch": (),
+        "seconds": 1200, "energy": 6,
+    },
 }
 
 COLORS: dict[str, dict[str, Any]] = {
@@ -75,6 +81,7 @@ MOTIFS: dict[str, dict[str, Any]] = {
     "net": {"name": "渔网", "aliases": ("渔网", "网纹", "net"), "extra": 1, "seconds": 240},
     "star": {"name": "星点", "aliases": ("星点", "星纹", "star"), "extra": 1, "seconds": 300},
     "patch": {"name": "漂布拼", "aliases": ("漂布拼", "拼布", "patch"), "extra": 1, "seconds": 360},
+    "twin": {"name": "双潮", "aliases": ("双潮", "双潮纹", "twin"), "extra": 1, "seconds": 300},
 }
 
 # 衣料：qty=委托要几份。season=哪一季海边更容易捡到；None=全年。
@@ -190,7 +197,7 @@ CLOTH_HELP = f"""cloth_ops 子命令（整句写进 command）：
 
   status / 看坊 — 看台上在裁什么、当季衣料、身上穿着。看坊必须 status
   图鉴 / catalog — 版型、颜色、纹样、衣料来源、四季布与染料
-  委托 短褂 海色 — 把衣料和染料交给{NPC_NAME}，开始裁制。也可 委托 呢衣 墨色 潮纹 · 委托 裙 沙色 素 漂布
+  委托 短褂 海色 — 把衣料和染料交给{NPC_NAME}，开始裁制。也可 委托 呢衣 墨色 潮纹 · 委托 裙 沙色 素 漂布 · 委托 婚服 海色 双潮
   取 — 领做好的衣服（裁制进度走完才能取）
   衣橱 — 自己裁出来的衣服（不占行囊，不能卖）
   穿 1 / 穿 灯塔守夜人的旧呢衣 — 换上；同时只能穿一件
@@ -543,7 +550,7 @@ async def _cmd_sew(conn: aiosqlite.Connection, s: dict[str, Any], rest: str) -> 
     cut = resolve_cut(parts[0])
     color = resolve_color(parts[1])
     if not cut:
-        raise ValueError(f"未知版型：{parts[0]}。图鉴看短褂/长衫/裙/呢衣/斗篷/工装。")
+        raise ValueError(f"未知版型：{parts[0]}。图鉴看短褂/长衫/裙/呢衣/斗篷/工装/婚服。")
     if not color:
         raise ValueError(f"未知颜色：{parts[1]}。图鉴看海色/墨色/沙色/雾色和当季色。")
     motif = "plain"

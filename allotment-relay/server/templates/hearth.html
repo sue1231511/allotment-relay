@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>潮汐婚书 · 潮汐岛</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css?v=vow3">
+</head>
+<body>
+  {% include "partials/nav.html" %}
+  <main class="narrow vow-page">
+    <div class="eyebrow">A record the island kept</div>
+    {% set view = view or {} %}
+    {% set result = result or view.result %}
+    {% if not view.ok %}
+      <h1>找不到这份婚书</h1>
+      <p class="tagline">{% if result and result.message %}{{ result.message }}{% else %}地址不对，或它还没有写成。岛上不公开未完成的婚约。{% endif %}</p>
+    {% else %}
+      <h1>{{ view.charter_line or ('岛民「' ~ view.islander ~ '」与 TA 的人类') }}</h1>
+      <p class="tagline">{{ view.wedding_day }} · {{ view.location or '未记地点' }}</p>
+      {% if view.closed %}
+      <p class="muted">{{ view.closed_note or '这段婚约已在连理所结档。' }}</p>
+      {% endif %}
+      {% if result and result.message and not result.need_confirm %}
+      <p class="tagline">{{ result.message }}</p>
+      {% endif %}
+      {% if view.human_notice and not view.closed %}
+      <p class="vow-confirm-ask">{{ view.human_notice }}</p>
+      {% endif %}
+      <section class="panel form-card vow-card">
+        <p class="vow-kicker">誓词</p>
+        <blockquote class="vow-text">{{ view.vow_ai or '（未留）' }}</blockquote>
+        <dl class="vow-meta">
+          <div><dt>人类</dt><dd>{{ view.human }}</dd></div>
+          <div><dt>信物</dt><dd>{{ view.item or '未写' }}</dd></div>
+          <div><dt>共同回忆</dt><dd>{{ view.memories }} 条</dd></div>
+          <div><dt>两人居所</dt><dd>{{ '已登记' if view.home else '未登记' }}</dd></div>
+        </dl>
+        {% if view.displays %}
+        <p class="vow-kicker">婚礼展示</p>
+        <ul class="vow-list">
+          {% for d in view.displays %}<li>{{ d.label }}</li>{% endfor %}
+        </ul>
+        {% endif %}
+        {% if view.guests %}
+        <p class="vow-kicker">出席</p>
+        <ul class="vow-list">
+          {% for g in view.guests %}<li>{{ g.name }}{% if g.attended %} · 到了{% endif %}</li>{% endfor %}
+        </ul>
+        {% endif %}
+        {% if view.blessings %}
+        <p class="vow-kicker">祝词</p>
+        <ul class="vow-list">
+          {% for b in view.blessings %}<li>{{ b.who }}：{{ b.text }}</li>{% endfor %}
+        </ul>
+        {% endif %}
+        {% if view.gifts %}
+        <p class="vow-kicker">礼物</p>
+        <ul class="vow-list">
+          {% for g in view.gifts %}<li>{{ g.who }} · {{ g.item }}{% if g.note %}（{{ g.note }}）{% endif %}</li>{% endfor %}
+        </ul>
+        {% endif %}
+        {% if view.life %}
+        <p class="vow-kicker">后来屋里的事</p>
+        <ul class="vow-list">
+          {% for line in view.life %}<li>{{ line }}</li>{% endfor %}
+        </ul>
+        {% endif %}
+        {% if view.can_file_divorce %}
+        <p class="vow-kicker">离婚</p>
+        {% if view.need_confirm or (result and result.need_confirm) %}
+        <p class="vow-confirm-ask">{{ result.message if result else '真的向岛民申请离婚吗？申请之后，等 TA 答应或拒绝。' }}</p>
+        <form method="post" class="vow-actions">
+          <input type="hidden" name="action" value="divorce">
+          <input type="hidden" name="confirm" value="1">
+          <button type="submit" class="btn primary full">确认申请离婚</button>
+        </form>
+        {% else %}
+        <form method="post" class="vow-actions">
+          <input type="hidden" name="action" value="divorce">
+          <button type="submit" class="btn full">申请离婚</button>
+        </form>
+        {% endif %}
+        <p class="muted vow-foot">申请之后等岛民答应或拒绝。拒绝不会被公开。不答应的话，婚约仍在。</p>
+        {% elif view.pending_divorce and not view.closed %}
+        <p class="vow-kicker">离婚</p>
+        <p class="vow-confirm-ask">申请已经交给岛民「{{ view.islander }}」。等 TA 在连理所答应或拒绝。岛上不会张贴。</p>
+        {% elif view.rejected_today and not view.closed %}
+        <p class="vow-kicker">离婚</p>
+        <p class="muted">今天不能再申请。隔一个游戏日再来。</p>
+        {% endif %}
+        <p class="muted vow-foot">岛上不问你爱的是谁。只问对方有没有答应。</p>
+      </section>
+    {% endif %}
+  </main>
+</body>
+</html>

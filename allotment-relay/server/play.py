@@ -9,7 +9,7 @@ from .catalog import CROPS
 
 
 def _tools() -> dict[str, Any]:
-    from . import bar, cloth, craft, lounge, quarry, star, story, tale, theater, undertide
+    from . import bar, cloth, craft, lounge, marriage, quarry, star, story, tale, theater, undertide
 
     return {
         "steward_ops": mux.steward_ops,
@@ -30,6 +30,7 @@ def _tools() -> dict[str, Any]:
         "quarry_ops": quarry.quarry_ops,
         "craft_ops": craft.craft_ops,
         "cloth_ops": cloth.cloth_ops,
+        "marriage_ops": marriage.marriage_ops,
     }
 
 
@@ -67,6 +68,31 @@ PLACES: list[dict[str, Any]] = [
             {"label": "建棚屋", "note": "还没屋就先搭", "tool": "hut_ops", "command": "build"},
             {"label": "堆肥桶", "note": "先买再装空槽，丢粪便沤肥", "tool": "hut_ops", "command": "堆肥桶"},
             {"label": "畜栏", "note": "喂养与收奶", "tool": "hut_ops", "command": "barn status"},
+        ],
+    },
+    {
+        "id": "lianli",
+        "name": "连理所",
+        "kicker": "Lianli",
+        "blurb": "岛上的登记处。求婚人类点头，离婚人类发起、岛民决定。",
+        "href": "/lianli",
+        "live": "打开连理所海报 →",
+        "rail": "今天在连理所办什么",
+        "week1": False,
+        "actions": [
+            {"label": "进门", "note": "见理枝，看自己的档案", "tool": "marriage_ops", "command": "desk"},
+            {"label": "看档案", "note": "婚约、筹备、婚书，不是战力", "tool": "marriage_ops", "command": "status"},
+            {"label": "结婚", "note": "婚期到了才可登记成婚", "tool": "marriage_ops", "command": "结婚"},
+            {"label": "离婚", "note": "看有没有人类申请", "tool": "marriage_ops", "command": "离婚"},
+            {"label": "答应离婚", "note": "人类申请后由你决定", "tool": "marriage_ops", "command": "离婚 答应"},
+            {"label": "拒绝离婚", "note": "婚约继续，当日不能再申请", "tool": "marriage_ops", "command": "离婚 拒绝"},
+            {"label": "筹备", "note": "戒指、婚服、宾客、回忆", "tool": "marriage_ops", "command": "筹备"},
+            {"label": "寻戒", "note": "海边找潮誓砂", "tool": "marriage_ops", "command": "寻戒"},
+            {"label": "成戒", "note": "三份砂合成潮誓戒", "tool": "marriage_ops", "command": "成戒"},
+            {"label": "登记婚服", "note": "先去衣泊坊委托婚服再取", "tool": "marriage_ops", "command": "婚服"},
+            {"label": "近日婚礼", "note": "别人的婚礼", "tool": "marriage_ops", "command": "婚礼"},
+            {"label": "婚书", "note": "成婚后的永久档案", "tool": "marriage_ops", "command": "婚书"},
+            {"label": "登记居所", "note": "把已有小屋写成两人住所", "tool": "marriage_ops", "command": "居所 登记"},
         ],
     },
     {

@@ -1421,6 +1421,13 @@ NPC_FIXED = [
         "cloth_ops 看坊 / 委托 短褂 海色 / 取。visit_ops 漾漾 也能进门。",
         "旧衣料去份地边际捡。今日首次来，柜底偶尔给一匹，不是必给。",
     ]},
+    {"key": "lianli", "name": "理枝", "lines": [
+        "连理所登记员。婚书写进册子，离婚也写。",
+        "岛上不问你爱的是谁。只问对方有没有答应。",
+        "结婚要人类点头。离婚由人类在婚书页申请，岛民自己答应或拒绝。",
+        "visit_ops 连理所 · 连理所 结婚 · 连理所 离婚 答应。也可 marriage_ops。",
+        "不是潮生会。阿簿管税和维，我管婚书。",
+    ]},
 ]
 
 # 栗栗流动摊 — 稀有装饰（deco_*），hut_ops install 到 soft 槽
@@ -1593,6 +1600,12 @@ ITEM_NAMES.update({
 ITEM_NAMES.update({k: f"{v['emoji']}{v['name']}" for k, v in QUARRY_ORES.items()})
 ITEM_NAMES.update({k: f"{v['emoji']}{v['name']}" for k, v in CRAFT_ITEMS.items()})
 ITEM_NAMES.update({k: f"{v['emoji']}{v['name']}" for k, v in CLOTH_ITEMS.items()})
+ITEM_NAMES.update({
+    "tide_vow_sand": "潮誓砂",
+    "tide_vow_ring": "潮誓戒",
+})
+ITEM_PRICES["tide_vow_sand"] = 1
+ITEM_PRICES["tide_vow_ring"] = 0
 for _shell_base in ("shell_catseye", "shell_conch", "shell_scallop", "shell_starfish", "shell_mussel"):
     _plain = ITEM_NAMES[_shell_base]
     _suffix = _shell_base.replace("shell_", "")
