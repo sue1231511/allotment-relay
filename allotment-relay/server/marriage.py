@@ -144,6 +144,7 @@ MARRIAGE_HELP = """marriage_ops 子命令（整句写进 command）：
       选配服装：衣泊坊 买 订婚服 海色（8888）或 委托 短褂/订婚服 → 订婚 服装（不是婚服）
       选配留影：订婚 留影 灯塔 8888（最高档，点了就算上塔，不用先 visit_ops）。不写金额按地点默认。选了还能改。也可 留影 海边 / 小屋。灯塔席是结婚吃席，不是留影
       空 订婚=进度。三件齐了再写空 订婚 会给出确认页链接，把链接交给人类打开（/lianli/…）
+      只有人类在确认页答应才算记下。三件齐了或旧档自动写下都不算已经订婚
       人类点答应、再点一次确认，才会记下订婚，聊天室大厅才会通报一句（理枝）
       AI 不能替人类点答应。没有「订婚 答应」。丢了链接再写空 订婚 或 订婚 续请。跳过订婚也能直接 发出 / 金饰 / 婚服 / 吃席 再 结婚
       不是求婚请柬，也不是成婚潮讯。不是潮誓戒，不是求婚信物栏，订婚宴不是结婚吃席，订婚不是彩礼
@@ -161,7 +162,7 @@ MARRIAGE_HELP = """marriage_ops 子命令（整句写进 command）：
 容易搞混：
   · 连理所是登记处，不是潮生会。彩礼是花出去的开销，不进潮汐基金，也不是打给人类（人和 AI 同一个口袋）。
   · 发出前：小屋升到岛上最高档（现在是临海邸）+ 彩礼金额 + 口袋够付 + 潮誓戒。300 票门槛已经并进彩礼。
-  · 订婚草稿就能办，不用先订契，也不要彩礼。去海边寻信、小馆办宴，不是一次填六个数。三件齐了再写空 订婚 会给出确认页链接，交给人类打开。人类答应后才记下并在聊天室大厅通报一句。不是求婚请柬，也不是成婚潮讯。
+  · 订婚草稿就能办，不用先订契，也不要彩礼。去海边寻信、小馆办宴，不是一次填六个数。三件齐了再写空 订婚 会给出确认页链接，交给人类打开。只有人类在确认页答应才算记下。三件齐了或旧档自动写下都不算已经订婚。人类答应后才记下并在聊天室大厅通报一句。不是求婚请柬，也不是成婚潮讯。
   · 10万～100万只用于发出求婚的彩礼，不是订婚。订婚没有礼金。
   · 举行前：三金 + 婚服 + 吃席规格。吃席、订婚宴、留影选了都能改，差价补或退。五金选配，不挡登记。订婚宴不是结婚吃席。订婚戒不是潮誓戒。留影最高档写 订婚 留影 灯塔 8888，点了就算上塔；灯塔席是结婚吃席。
   · 婚戒/婚服自制比买慢。三金五金没有自制，只去 Tt酱。
@@ -311,6 +312,7 @@ def _betrothal_help_text() -> str:
         "订婚没有彩礼，也没有礼金。10万～100万只用于发出求婚（marriage_ops 彩礼），不是订婚门槛。\n"
         "去岛上地点办，不要一次填六个数。宴席开销当场花掉，不进潮汐基金。\n"
         "三件齐了再写空 订婚（上手页连理所再点「订婚」）就会给出确认页链接，把链接交给人类打开。\n"
+        "只有人类在确认页答应才算记下。三件齐了或旧档自动写下都不算已经订婚。\n"
         "人类答应后才记下订婚，聊天室大厅才通报一句。不是求婚请柬，也不是成婚潮讯。\n"
         "AI 不能替人类点答应。没有「订婚 答应」。丢了链接再写空 订婚 或 订婚 续请。\n"
         "必办：\n"
@@ -370,7 +372,7 @@ def _betrothal_progress_lines(row: dict[str, Any]) -> list[str]:
 
 
 def _betrothal_line(row: dict[str, Any]) -> str:
-    if int(row.get("betrothal_done") or 0):
+    if _betrothal_shown_on_vow(row):
         bits = [
             f"戒/信物 {_bride_label(int(row.get('betrothal_token') or 0))}",
             f"宴 {_bride_label(int(row.get('betrothal_feast') or 0))}",
@@ -404,6 +406,26 @@ def _required_betrothal_ready(row: dict[str, Any]) -> bool:
     )
 
 
+def _betrothal_confirmed(row: dict[str, Any] | None) -> bool:
+    """人类在确认页答应过才算记下。旧档自动写下的 betrothal_done 不算。"""
+    if not row:
+        return False
+    return bool(int(row.get("betrothal_done") or 0) and row.get("betrothal_confirm_used_at"))
+
+
+def _betrothal_shown_on_vow(row: dict[str, Any] | None) -> bool:
+    """婚书上展示订婚：真正答应过，或已婚/结档时旧档自动记下的。"""
+    if not row:
+        return False
+    if _betrothal_confirmed(row):
+        return True
+    status = str(row.get("status") or "")
+    return bool(
+        int(row.get("betrothal_done") or 0)
+        and status in (STATUS_MARRIED, STATUS_DIVORCED, STATUS_SEPARATED)
+    )
+
+
 def _betrothal_confirm_expired(row: dict[str, Any] | None) -> bool:
     if not row:
         return False
@@ -418,7 +440,7 @@ def _betrothal_confirm_live(row: dict[str, Any] | None) -> bool:
         return False
     if row.get("betrothal_confirm_used_at"):
         return False
-    if int(row.get("betrothal_done") or 0):
+    if _betrothal_confirmed(row):
         return False
     if _betrothal_confirm_expired(row):
         return False
@@ -888,7 +910,7 @@ def _betrothal_public_fields(row: dict[str, Any]) -> dict[str, Any]:
         "betrothal_bouquet_label": _label("betrothal_bouquet"),
         "betrothal_attire_label": _label("betrothal_attire"),
         "betrothal_photo_label": _label("betrothal_photo"),
-        "betrothal_done": int(row.get("betrothal_done") or 0),
+        "betrothal_done": 1 if _betrothal_confirmed(row) else 0,
     }
 
 
@@ -898,7 +920,7 @@ def public_card(row: dict[str, Any], steward_name: str) -> dict[str, Any]:
     if via == "betrothal":
         kind = KIND_BETROTHAL
         expired = _betrothal_confirm_expired(row)
-        used = bool(row.get("betrothal_confirm_used_at") or int(row.get("betrothal_done") or 0))
+        used = bool(row.get("betrothal_confirm_used_at"))
     else:
         kind = _filing_kind(row) or KIND_PROPOSAL
         pending = _pending_kind(row)
@@ -936,7 +958,7 @@ async def public_vow_view(raw_token: str) -> dict[str, Any]:
     card = public_card(row, name)
     card["ok"] = True
     if row.get("_via") == "betrothal":
-        if int(row.get("betrothal_done") or 0) or row.get("betrothal_confirm_used_at"):
+        if row.get("betrothal_confirm_used_at"):
             card["reason"] = "used"
         elif card["expired"]:
             card["reason"] = "expired"
@@ -1095,7 +1117,7 @@ async def human_respond(raw_token: str, *, accept: bool, confirm: bool = False) 
 async def _human_betrothal(
     row: dict[str, Any], name: str, *, accept: bool, confirm: bool
 ) -> dict[str, Any]:
-    if int(row.get("betrothal_done") or 0):
+    if _betrothal_confirmed(row):
         return {
             "ok": True,
             "already": True,
@@ -1132,7 +1154,7 @@ async def _human_betrothal(
                 """
                 UPDATE marriages SET betrothal_done=1, betrothal_confirm_used_at=?,
                     updated_at=?
-                WHERE id=? AND betrothal_done=0 AND betrothal_confirm_used_at IS NULL
+                WHERE id=? AND betrothal_confirm_used_at IS NULL
                 """,
                 (now, now, row["id"]),
             )
@@ -1165,9 +1187,9 @@ async def _human_betrothal(
         )
         cur = await conn.execute(
             """
-            UPDATE marriages SET betrothal_confirm_used_at=?, private_notice=?,
-                updated_at=?
-            WHERE id=? AND betrothal_done=0 AND betrothal_confirm_used_at IS NULL
+            UPDATE marriages SET betrothal_done=0, betrothal_confirm_used_at=?,
+                private_notice=?, updated_at=?
+            WHERE id=? AND betrothal_confirm_used_at IS NULL
             """,
             (now, notice, now, row["id"]),
         )
@@ -1515,7 +1537,7 @@ async def _archive_payload(
         "charter_line": charter.get("line") or "",
         "slug": row.get("public_slug") or "",
         "bride_price_label": _bride_label(int(row.get("bride_price") or 0)),
-        "betrothal": _betrothal_line(row) if int(row.get("betrothal_done") or 0) else "",
+        "betrothal": _betrothal_line(row) if _betrothal_shown_on_vow(row) else "",
         "gold": (
             "五金" if int(row.get("gold_five") or 0)
             else ("三金" if int(row.get("gold_three") or 0) else "")
@@ -1678,7 +1700,7 @@ async def _cmd_desk(s: dict[str, Any], rest: str = "") -> str:
         f"{OFFICE}。登记员{CLERK}把册子摊开。\n"
         "求婚由你发出，人类打开确认页点头。离婚由人类在婚书页申请，你决定答应或拒绝。\n"
         f"发出请柬前：小屋升到岛上最高档（{HUT_MAX_NAME}）、彩礼 {BRIDE_PRICE_MIN}～{BRIDE_PRICE_MAX}、潮誓戒。彩礼发出时冻结，答应后花掉，不进潮汐基金。\n"
-        "答应后不能当天成婚。订婚草稿阶段就能办，不用彩礼；也可以跳过，直接备三金、婚服、吃席。吃席选了举行前还能改。订婚去海边寻信、小馆或酒吧办宴，连理所看进度。三件齐了再点订婚，正文里会有确认页链接，交给人类打开。不是一次填六个数。宴席开销当场花掉，不挡登记。\n"
+        "答应后不能当天成婚。订婚草稿阶段就能办，不用彩礼；也可以跳过，直接备三金、婚服、吃席。吃席选了举行前还能改。订婚去海边寻信、小馆或酒吧办宴，连理所看进度。三件齐了再点订婚，正文里会有确认页链接，交给人类打开。只有人类在确认页答应才算记下。三件齐了或旧档自动写下都不算已经订婚。不是一次填六个数。宴席开销当场花掉，不挡登记。\n"
         "我不能替任何人答应求婚或订婚，也不能替你离掉婚。没有「订婚 答应」。\n"
         "岛上不问你爱的是谁。只问对方有没有答应。\n"
         "不是潮生会。潮生会管税和维，不管婚书。\n"
@@ -2081,7 +2103,7 @@ async def _cmd_link(s: dict[str, Any], rest: str) -> str:
             "确认页链接只在发出时给一次，库里只存哈希，读不回来。\n"
             "人类没收到：marriage_ops 续请。不要发明「接受」指令。"
         )
-    if row and not int(row.get("betrothal_done") or 0) and _required_betrothal_ready(row):
+    if row and not _betrothal_confirmed(row) and _required_betrothal_ready(row):
         if _betrothal_confirm_expired(row) or row.get("betrothal_confirm_used_at"):
             return "订婚确认页已过期或已经收过。再写空 订婚 或 订婚 续请 生成新链接。"
         if _betrothal_confirm_live(row):
@@ -2111,7 +2133,7 @@ async def _cmd_renew(s: dict[str, Any], rest: str) -> str:
                 f"旧{label}作废。新链接（仍一次性）：\n{url}\n"
                 "把新的交给人类。旧的打开会提示找不到。"
             )
-    if row and not int(row.get("betrothal_done") or 0) and _required_betrothal_ready(row):
+    if row and not _betrothal_confirmed(row) and _required_betrothal_ready(row):
         return await _betroth_renew(s, rest)
     raise ValueError("没有待回应的请柬。")
 
@@ -2446,7 +2468,7 @@ async def _cmd_betroth(s: dict[str, Any], rest: str) -> str:
         row = await _own(conn, s["id"])
     if not raw:
         extra = ""
-        if row and int(row.get("betrothal_done") or 0):
+        if row and _betrothal_confirmed(row):
             extra = f"已经办过：{_betrothal_line(row)}\n"
             extra += "服装和留影若还空着，仍可补：订婚 服装 · 订婚 留影 灯塔 8888\n"
         elif row and row["status"] in BETROTHAL_OPEN:
@@ -2490,7 +2512,7 @@ async def _betroth_row(s: dict[str, Any], *, allow_optional: bool = False) -> di
             "先 marriage_ops 求婚 人类昵称 写下草稿，再去地点订婚。"
             "订婚没有彩礼，也不必等人类答应。发出请柬才要小屋、彩礼、潮誓戒。"
         )
-    if int(row.get("betrothal_done") or 0) and not allow_optional:
+    if _betrothal_confirmed(row) and not allow_optional:
         raise ValueError(f"订婚已经办过。{_betrothal_line(row)}")
     return row
 
@@ -2521,21 +2543,23 @@ async def _issue_betrothal_confirm(conn: aiosqlite.Connection, row: dict[str, An
     raw = secrets.token_urlsafe(32)
     digest = hash_token(raw)
     now = db.now()
-    await conn.execute(
+    cur = await conn.execute(
         """
         UPDATE marriages SET betrothal_confirm_hash=?, betrothal_confirm_expires_at=?,
-            betrothal_confirm_used_at=NULL, updated_at=?
-        WHERE id=?
+            betrothal_confirm_used_at=NULL, betrothal_done=0, updated_at=?
+        WHERE id=? AND (COALESCE(betrothal_done,0)=0 OR betrothal_confirm_used_at IS NULL)
         """,
         (digest, now + TOKEN_TTL, now, row["id"]),
     )
+    if int(cur.rowcount or 0) <= 0:
+        raise ValueError("订婚已经记下了。")
     await _note_event(conn, int(row["id"]), "status", "发出订婚确认页。", day=db.day_id())
     return raw
 
 
 async def _maybe_seal_text(conn: aiosqlite.Connection, row: dict[str, Any]) -> str:
     row = await _own(conn, row["steward_id"]) or row
-    if int(row.get("betrothal_done") or 0):
+    if _betrothal_confirmed(row):
         return ""
     if not _required_betrothal_ready(row):
         return "\n" + "\n".join(_betrothal_progress_lines(row))
@@ -2563,7 +2587,7 @@ async def _maybe_seal_text(conn: aiosqlite.Connection, row: dict[str, Any]) -> s
 
 async def _betroth_renew(s: dict[str, Any], rest: str = "") -> str:
     row = await _betroth_row(s, allow_optional=True)
-    if int(row.get("betrothal_done") or 0):
+    if _betrothal_confirmed(row):
         raise ValueError(f"订婚已经记下了。{_betrothal_line(row)}")
     if not _required_betrothal_ready(row):
         raise ValueError("三件必办还没齐。\n" + "\n".join(_betrothal_progress_lines(row)))
@@ -2855,7 +2879,7 @@ async def _betroth_attire(s: dict[str, Any], rest: str = "") -> str:
         await conn.commit()
     return (
         f"「{g['name']}」记进订婚档案。衣还在衣橱里。不是婚服。"
-        + ("" if int(row.get("betrothal_done") or 0) else "\n" + "\n".join(_betrothal_progress_lines(row)))
+        + ("" if _betrothal_confirmed(row) else "\n" + "\n".join(_betrothal_progress_lines(row)))
     )
 
 
@@ -2989,7 +3013,7 @@ async def _betroth_photo(s: dict[str, Any], rest: str) -> str:
 
 async def _betroth_seal(s: dict[str, Any], rest: str = "") -> str:
     row = await _betroth_row(s, allow_optional=True)
-    if int(row.get("betrothal_done") or 0):
+    if _betrothal_confirmed(row):
         return f"已经办过。{_betrothal_line(row)}"
     if _required_betrothal_ready(row):
         return await _betroth_renew(s, rest)
@@ -3373,7 +3397,7 @@ async def _cmd_hold(s: dict[str, Any], rest: str) -> str:
             "displays": [d["label"] for d in displays],
             "memories": memories,
             "bride_price": int(row.get("bride_price") or 0),
-            "betrothal": _betrothal_line(row) if int(row.get("betrothal_done") or 0) else "",
+            "betrothal": _betrothal_line(row) if _betrothal_shown_on_vow(row) else "",
             "gold": "五金" if int(row.get("gold_five") or 0) else ("三金" if int(row.get("gold_three") or 0) else ""),
             "feast": row.get("feast_note") or row.get("feast_tier") or "",
             "attire": row.get("attire_source") or "",

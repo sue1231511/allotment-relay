@@ -2085,6 +2085,14 @@ async def init_db() -> None:
                 await db.execute(ddl)
             except aiosqlite.OperationalError:
                 pass
+        try:
+            await db.execute(
+                "UPDATE marriages SET betrothal_done=0 "
+                "WHERE betrothal_done=1 AND betrothal_confirm_used_at IS NULL "
+                "AND status IN ('draft','proposed','engaged')"
+            )
+        except aiosqlite.OperationalError:
+            pass
         await _rebuild_parcels_orchard_unique(db)
         await _rebuild_parcels_kind_unique(db)
         await _migrate_greenhouse_slots(db)
