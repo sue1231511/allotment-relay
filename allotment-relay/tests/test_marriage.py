@@ -624,7 +624,9 @@ async def _betrothal_flow() -> None:
     assert "确认页" in bouquet or "/lianli/" in bouquet, bouquet
     assert "订婚记下了" not in bouquet, bouquet
     assert "大厅已通报" not in bouquet, bouquet
-    token = _token_from(bouquet)
+    again = await marriage.marriage_ops(host, "订婚")
+    assert "/lianli/" in again, again
+    token = _token_from(again)
     from server import lounge
     notices = await lounge.list_messages()
     hit = [m for m in notices if m.get("source") == "notice"]
@@ -644,7 +646,7 @@ async def _betrothal_flow() -> None:
     assert not [m for m in notices if m.get("source") == "notice"]
     still = await marriage.marriage_ops(host, "订婚")
     assert "已经办过" not in still, still
-    assert "/lianli/" in still or "续请" in still, still
+    assert "/lianli/" in still, still
 
     try:
         await marriage.marriage_ops(host, "订婚 答应")
