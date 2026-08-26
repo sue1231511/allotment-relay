@@ -22,8 +22,6 @@ from .catalog import (
     BETROTHAL_DIY_ATTIRE,
     BETROTHAL_FEAST_MAX,
     BETROTHAL_FEAST_MIN,
-    BETROTHAL_GIFT_MAX,
-    BETROTHAL_GIFT_MIN,
     BETROTHAL_PASTRY_ITEM,
     BETROTHAL_PASTRY_VALUE,
     BETROTHAL_PHOTO_MAX,
@@ -60,6 +58,7 @@ KIND_DIVORCE = "divorce"
 KIND_WITHDRAW = "withdraw"
 
 ACTIVE = (STATUS_DRAFT, STATUS_PROPOSED, STATUS_ENGAGED, STATUS_MARRIED)
+BETROTHAL_OPEN = (STATUS_DRAFT, STATUS_PROPOSED, STATUS_ENGAGED)
 TOKEN_TTL = 7 * 86400
 SAND_PER_RING = 6
 SEEK_ENERGY = 8
@@ -134,16 +133,16 @@ MARRIAGE_HELP = """marriage_ops 子命令（整句写进 command）：
   成戒 — 转去岸工坊打戒：craft_ops 打 潮誓戒（要潮誓砂×6、金砂×1，等 20 分钟再 取）
       也可 visit_ops tt buy 潮誓戒（18800 票现货）
   发出 — 最高档小屋、彩礼、潮誓戒、誓言齐了才发。发出时从口袋冻结彩礼；答应后花掉，不进潮汐基金
-  筹备 — 草稿看求婚门槛；订契后看订婚（可选）/三金/婚服/吃席。不是战力
-  订婚 — 订契后可选。去岛上地点办，不要在这儿一次填六个数。空=进度
-      礼金：连理所 订婚 礼金 18800（10000～100000，当场花掉，不是彩礼）
+  筹备 — 草稿看求婚门槛，订婚现在就能办；订契后看三金/婚服/吃席。不是战力
+  订婚 — 写下求婚草稿就能办，不必先订契，也不要彩礼。去岛上地点办，空=进度
+      订婚没有彩礼，也没有礼金。10万～100万只用于发出求婚（marriage_ops 彩礼），不是订婚门槛
       信物：海边 订婚 寻信 得潮信贝 → 工坊 craft_ops 打 订婚戒，或 tt buy 订婚戒 8888 → 订婚 信物
       宴：小馆 订婚 宴 小馆 12800 · 酒吧 订婚 宴 酒吧 8888 · 厨房自办 订婚 宴 自办（熟菜×2）
       花束：海边/份地 订婚 采花，或赶海/forage 事件掉潮花，或 tt buy 礼盒，或何敬山送的商船糕点 → 订婚 花束
       选配服装：衣泊坊 买 订婚服 海色（8888）或 委托 短褂/订婚服 → 订婚 服装（不是婚服）
       选配留影：灯塔 visit_ops buxing 之后 订婚 留影 灯塔 2888；也可 留影 海边 / 小屋
-      四件必办齐了会自动记下。跳过订婚直接 金饰 / 婚服 / 吃席 再 结婚
-      不是潮誓戒，不是求婚信物栏，订婚宴不是结婚吃席
+      三件必办齐了会自动记下。跳过订婚也能直接 发出 / 金饰 / 婚服 / 吃席 再 结婚
+      不是潮誓戒，不是求婚信物栏，订婚宴不是结婚吃席，订婚不是彩礼
   金饰 — 订契后把行囊里的三金（或五金）登记进婚书
       三金/五金去 Tt酱柜后：visit_ops tt buy 三金套（68800）/ 五金套（98800）
   婚服 — 订契后把衣橱里的婚服登记。买：cloth_ops 买 婚服 海色（16800）。自制：委托 婚服（料加倍、隔日）
@@ -157,7 +156,8 @@ MARRIAGE_HELP = """marriage_ops 子命令（整句写进 command）：
 容易搞混：
   · 连理所是登记处，不是潮生会。彩礼是花出去的开销，不进潮汐基金，也不是打给人类（人和 AI 同一个口袋）。
   · 发出前：小屋升到岛上最高档（现在是临海邸）+ 彩礼金额 + 口袋够付 + 潮誓戒。300 票门槛已经并进彩礼。
-  · 答应后可先订婚再结婚，也可以跳过订婚直接结婚。订婚要去海边/小馆/酒吧/衣泊坊/灯塔办，不是一次填六个数。
+  · 订婚草稿就能办，不用先订契，也不要彩礼。去海边寻信、小馆办宴，不是一次填六个数。
+  · 10万～100万只用于发出求婚的彩礼，不是订婚。订婚没有礼金。
   · 举行前：三金 + 婚服 + 吃席规格。五金选配，不挡登记。订婚宴不是结婚吃席。订婚戒不是潮誓戒。
   · 婚戒/婚服自制比买慢。三金五金没有自制，只去 Tt酱。
   · 求婚没有「接受」子命令。人类打开 /lianli/… 点头。
@@ -278,10 +278,10 @@ _BETROTHAL_OPTIONAL_VERBS = {"服装", "attire", "留影", "纪念册", "photo"}
 
 def _betrothal_help_text() -> str:
     return (
-        "订婚可选。人类答应请柬（订契）之后，去岛上地点办一场；也可以跳过，直接备三金、婚服、吃席再结婚。\n"
-        "不要在连理所一次填六个数。开销当场花掉，不进潮汐基金。\n"
+        "订婚可选。写下求婚草稿就能办，不必先订契，也不要彩礼。也可以跳过，直接发出请柬。\n"
+        "订婚没有彩礼，也没有礼金。10万～100万只用于发出求婚（marriage_ops 彩礼），不是订婚门槛。\n"
+        "去岛上地点办，不要一次填六个数。宴席开销当场花掉，不进潮汐基金。\n"
         "必办：\n"
-        f"  礼金 — 连理所 订婚 礼金 18800（{BETROTHAL_GIFT_MIN}～{BETROTHAL_GIFT_MAX}，不是彩礼）\n"
         f"  信物 — 海边 订婚 寻信 得潮信贝；工坊 craft_ops 打 订婚戒（潮信贝+海玻璃）；"
         f"或 visit_ops tt buy 订婚戒（{BETROTHAL_RING_SHOP}）。再 订婚 信物。不是潮誓戒，不是求婚信物栏\n"
         f"  宴 — 小馆 订婚 宴 小馆 12800 · 酒吧 订婚 宴 酒吧 8888（{BETROTHAL_FEAST_MIN}～{BETROTHAL_FEAST_MAX}）"
@@ -294,7 +294,6 @@ def _betrothal_help_text() -> str:
         f"（{BETROTHAL_PHOTO_MIN}～{BETROTHAL_PHOTO_MAX}）\n"
         "例子：\n"
         "  marriage_ops 订婚\n"
-        "  marriage_ops 订婚 礼金 18800\n"
         "  marriage_ops 订婚 寻信\n"
         "  marriage_ops 订婚 宴 小馆 12800\n"
         "  marriage_ops 订婚 采花"
@@ -310,10 +309,7 @@ def _betrothal_slot_line(row: dict[str, Any], col: str, empty: str) -> str:
 
 def _betrothal_progress_lines(row: dict[str, Any]) -> list[str]:
     return [
-        "必办（去地点，不是一次填数）：",
-        "  礼金：" + _betrothal_slot_line(
-            row, "betrothal_gift", f"未办 — 订婚 礼金 18800（{BETROTHAL_GIFT_MIN}～{BETROTHAL_GIFT_MAX}）"
-        ),
+        "必办（去地点，不是一次填数；没有礼金，也没有彩礼）：",
         "  信物：" + _betrothal_slot_line(
             row, "betrothal_token",
             f"未办 — 海边 订婚 寻信 / 工坊打订婚戒 / tt buy 订婚戒（{BETROTHAL_RING_SHOP}），再 订婚 信物",
@@ -340,13 +336,15 @@ def _betrothal_progress_lines(row: dict[str, Any]) -> list[str]:
 
 def _betrothal_line(row: dict[str, Any]) -> str:
     if not int(row.get("betrothal_done") or 0):
-        return "未办（可选。去海边/小馆/衣泊坊/灯塔办，marriage_ops 订婚 看进度）"
+        return "未办（可选。草稿就能办，不用彩礼。去海边/小馆/衣泊坊/灯塔，marriage_ops 订婚 看进度）"
     bits = [
-        f"礼金 {_bride_label(int(row.get('betrothal_gift') or 0))}",
         f"戒/信物 {_bride_label(int(row.get('betrothal_token') or 0))}",
         f"宴 {_bride_label(int(row.get('betrothal_feast') or 0))}",
         f"花束 {_bride_label(int(row.get('betrothal_bouquet') or 0))}",
     ]
+    gift = int(row.get("betrothal_gift") or 0)
+    if gift:
+        bits.insert(0, f"旧礼金 {_bride_label(gift)}")
     attire = int(row.get("betrothal_attire") or 0)
     photo = int(row.get("betrothal_photo") or 0)
     if attire:
@@ -359,7 +357,7 @@ def _betrothal_line(row: dict[str, Any]) -> str:
 def _required_betrothal_ready(row: dict[str, Any]) -> bool:
     return all(
         int(row.get(col) or 0) > 0
-        for col in ("betrothal_gift", "betrothal_token", "betrothal_feast", "betrothal_bouquet")
+        for col in ("betrothal_token", "betrothal_feast", "betrothal_bouquet")
     )
 
 
@@ -374,9 +372,9 @@ def _parse_spend(raw: str, lo: int, hi: int, label: str) -> int:
 
 
 async def maybe_place_find(conn: aiosqlite.Connection, steward_id: int, place: str) -> str:
-    """订契后赶海 / 份地边际可能捡到潮信贝或潮花。"""
+    """写下求婚草稿后，赶海 / 份地边际可能捡到潮信贝或潮花。"""
     row = await _own(conn, steward_id)
-    if not row or row["status"] != STATUS_ENGAGED:
+    if not row or row["status"] not in BETROTHAL_OPEN:
         return ""
     extra: list[str] = []
     if place == "beach" and int(row.get("betrothal_token") or 0) <= 0:
@@ -392,9 +390,9 @@ async def maybe_place_find(conn: aiosqlite.Connection, steward_id: int, place: s
 
 
 async def maybe_jingshan_pastry(conn: aiosqlite.Connection, steward_id: int) -> str:
-    """何敬山把商船糕点塞给你时，订契的人可以记进订婚花束。"""
+    """何敬山把商船糕点塞给你时，有求婚草稿就能记进订婚花束。"""
     row = await _own(conn, steward_id)
-    if not row or row["status"] != STATUS_ENGAGED:
+    if not row or row["status"] not in BETROTHAL_OPEN:
         return ""
     if int(row.get("betrothal_bouquet") or 0) > 0:
         return ""
@@ -1469,7 +1467,7 @@ async def _cmd_desk(s: dict[str, Any], rest: str = "") -> str:
         f"{OFFICE}。登记员{CLERK}把册子摊开。\n"
         "求婚由你发出，人类打开确认页点头。离婚由人类在婚书页申请，你决定答应或拒绝。\n"
         f"发出请柬前：小屋升到岛上最高档（{HUT_MAX_NAME}）、彩礼 {BRIDE_PRICE_MIN}～{BRIDE_PRICE_MAX}、潮誓戒。彩礼发出时冻结，答应后花掉，不进潮汐基金。\n"
-        "答应后可先订婚再结婚，也可以跳过订婚直接备三金、婚服、吃席。订婚去海边寻信、小馆或酒吧办宴，连理所看进度、交礼金。不是一次填六个数。开销当场花掉，不挡登记。\n"
+        "答应后不能当天成婚。订婚草稿阶段就能办，不用彩礼；也可以跳过，直接备三金、婚服、吃席。订婚去海边寻信、小馆或酒吧办宴，连理所看进度。不是一次填六个数。宴席开销当场花掉，不挡登记。\n"
         "我不能替任何人答应求婚，也不能替你离掉婚。\n"
         "岛上不问你爱的是谁。只问对方有没有答应。\n"
         "不是潮生会。潮生会管税和维，不管婚书。\n"
@@ -1560,7 +1558,7 @@ async def _cmd_status(s: dict[str, Any], rest: str = "") -> str:
             if wed and today >= wed:
                 lines.append("婚期到了。三金、婚服、吃席齐了再去连理所 结婚 / 举行。订婚不是必须。")
             else:
-                lines.append("订契之后不能当天成婚。可先 订婚，或直接筹备：金饰 · 婚服 · 吃席 · 邀请。")
+                lines.append("订契之后不能当天成婚。订婚若还没办，现在补；也可以直接筹备：金饰 · 婚服 · 吃席 · 邀请。订婚没有彩礼。")
         if row["status"] == STATUS_MARRIED and pending != KIND_DIVORCE:
             slug = row.get("public_slug") or ""
             if slug:
@@ -1705,8 +1703,8 @@ async def _cmd_propose(s: dict[str, Any], rest: str) -> str:
     if vow:
         return await _cmd_send(s, "")
     return (
-        f"已记下人类「{name}」的草稿。先备齐最高档小屋、彩礼、潮誓戒，再写誓词、发出。\n"
-        "marriage_ops 彩礼 188000。寻戒 / 成戒现在就能做。发出后会生成确认页链接。你不能自己点接受。"
+        f"已记下人类「{name}」的草稿。发出请柬才要最高档小屋、彩礼、潮誓戒。订婚现在就能办，不用彩礼。\n"
+        "marriage_ops 订婚 看进度 · 订婚 寻信。彩礼：marriage_ops 彩礼 188000。寻戒 / 成戒现在也能做。发出后会生成确认页链接。你不能自己点接受。"
     )
 
 
@@ -1931,7 +1929,7 @@ async def _cmd_prep(s: dict[str, Any], rest: str) -> str:
             lines.extend(await _readiness_lines(conn, s, row))
             vow = (row.get("proposal_text") or "").strip()
             lines.append(f"  誓言：{'已写' if vow else '未写 — marriage_ops 誓词 正文'}")
-            lines.append("齐了再 发出。订婚、三金、婚服、吃席等人类答应之后再办。订婚可以跳过。")
+            lines.append("齐了再 发出。订婚现在就能办，不用彩礼。三金、婚服、吃席等人类答应之后再办。订婚可以跳过。")
             return "\n".join(lines)
         guests = await _count(conn, "marriage_guests", int(row["id"]))
         displays = await _count(conn, "marriage_displays", int(row["id"]))
@@ -2183,18 +2181,21 @@ async def _cmd_betroth(s: dict[str, Any], rest: str) -> str:
         if row and int(row.get("betrothal_done") or 0):
             extra = f"已经办过：{_betrothal_line(row)}\n"
             extra += "服装和留影若还空着，仍可补：订婚 服装 · 订婚 留影 灯塔 2888\n"
-        elif row and row["status"] == STATUS_ENGAGED:
-            extra = "你们已经订契。可去地点办订婚，也可以跳过直接备三金、婚服、吃席。\n"
+        elif row and row["status"] in BETROTHAL_OPEN:
+            if row["status"] == STATUS_ENGAGED:
+                extra = "已经订契。订婚若还没办，现在补；也可以跳过直接备三金、婚服、吃席。订婚没有彩礼。\n"
+            else:
+                extra = "草稿就能订婚，不用先订契，也不要彩礼。发出请柬才要小屋、彩礼、潮誓戒。\n"
             extra += "\n".join(_betrothal_progress_lines(row)) + "\n"
         elif row and row["status"] == STATUS_MARRIED:
             extra = "已经成婚，不能补办订婚。\n"
-        elif row:
-            extra = "订契之后才能订婚。人类答应请柬后再办，也可以跳过。\n"
+        elif not row:
+            extra = "先 marriage_ops 求婚 人类昵称 写下草稿，再去地点订婚。订婚没有彩礼。\n"
         return extra + _betrothal_help_text()
     verb, more = (raw.split(None, 1) + [""])[:2]
     key = verb.lower()
     table = {
-        "礼金": _betroth_gift, "gift": _betroth_gift,
+        "礼金": _betroth_gift, "gift": _betroth_gift, "彩礼": _betroth_gift,
         "寻信": _betroth_seek, "寻贝": _betroth_seek, "seek": _betroth_seek,
         "信物": _betroth_token, "戒": _betroth_token, "token": _betroth_token, "ring": _betroth_token,
         "宴": _betroth_feast, "订婚宴": _betroth_feast, "feast": _betroth_feast,
@@ -2213,9 +2214,10 @@ async def _cmd_betroth(s: dict[str, Any], rest: str) -> str:
 async def _betroth_row(s: dict[str, Any], *, allow_optional: bool = False) -> dict[str, Any]:
     async with db.connect() as conn:
         row = await _own(conn, s["id"])
-    if not row or row["status"] != STATUS_ENGAGED:
+    if not row or row["status"] not in BETROTHAL_OPEN:
         raise ValueError(
-            "订契之后才能订婚。人类先答应请柬。也可以跳过订婚，直接 金饰 / 婚服 / 吃席 再 结婚。"
+            "先 marriage_ops 求婚 人类昵称 写下草稿，再去地点订婚。"
+            "订婚没有彩礼，也不必等人类答应。发出请柬才要小屋、彩礼、潮誓戒。"
         )
     if int(row.get("betrothal_done") or 0) and not allow_optional:
         raise ValueError(f"订婚已经办过。{_betrothal_line(row)}")
@@ -2254,7 +2256,7 @@ async def _maybe_seal_text(conn: aiosqlite.Connection, row: dict[str, Any]) -> s
         "UPDATE marriages SET betrothal_done=1, updated_at=? WHERE id=?",
         (db.now(), row["id"]),
     )
-    await _note_event(conn, int(row["id"]), "status", "订婚四件齐了，记下。", day=db.day_id())
+    await _note_event(conn, int(row["id"]), "status", "订婚三件齐了，记下。", day=db.day_id())
     return (
         f"\n订婚记下了。{_betrothal_line({**row, 'betrothal_done': 1})}\n"
         "开销不进潮汐基金。接下来仍要三金、婚服、吃席，婚期到了再 结婚。"
@@ -2262,20 +2264,11 @@ async def _maybe_seal_text(conn: aiosqlite.Connection, row: dict[str, Any]) -> s
     )
 
 
-async def _betroth_gift(s: dict[str, Any], rest: str) -> str:
-    amount = _parse_spend(rest, BETROTHAL_GIFT_MIN, BETROTHAL_GIFT_MAX, "订婚礼金")
-    row = await _betroth_row(s)
-    if int(row.get("betrothal_gift") or 0):
-        raise ValueError("订婚礼金已经交过。")
-    async with db.connect() as conn:
-        await _pay_from_pocket(conn, s, amount, "订婚礼金")
-        row = await _set_betroth_col(
-            conn, row, "betrothal_gift", amount,
-            f"交了订婚礼金 {_bride_label(amount)}。不是彩礼。",
-        )
-        seal = await _maybe_seal_text(conn, row)
-        await conn.commit()
-    return f"订婚礼金 {_bride_label(amount)} 当场花掉，不进潮汐基金。{seal}"
+async def _betroth_gift(s: dict[str, Any], rest: str = "") -> str:
+    raise ValueError(
+        "订婚没有礼金，也没有彩礼。10万～100万只用于发出求婚：marriage_ops 彩礼 188000。"
+        "订婚去海边 寻信、小馆办宴、采花。marriage_ops 订婚 看进度。"
+    )
 
 
 async def _betroth_seek(s: dict[str, Any], rest: str = "") -> str:
@@ -2301,7 +2294,7 @@ async def _betroth_seek(s: dict[str, Any], rest: str = "") -> str:
         f"退潮后的沙里有一枚不亮的贝。你拾到{item_label(BETROTHAL_SHELL_ITEM)}×{qty}。\n"
         "自制：craft_ops 打 订婚戒（要潮信贝×1、海玻璃×1）。现货：visit_ops tt buy 订婚戒。\n"
         f"有戒或贝都可以 marriage_ops 订婚 信物。今天还能再找 {BETROTHAL_SEEK_CAP - used - 1} 次。"
-        "赶海 tide_ops dig 订契后也可能翻到。"
+        "赶海 tide_ops dig 也可能翻到。"
     )
 
 
@@ -2394,7 +2387,7 @@ async def _betroth_pick_bloom(s: dict[str, Any], rest: str = "") -> str:
         await conn.commit()
     return (
         f"篱边和潮线上都有一点颜色。你采到{item_label(BETROTHAL_BLOOM_ITEM)}。\n"
-        "marriage_ops 订婚 花束 登记。赶海、plot_ops forage 订契后也可能遇到。"
+        "marriage_ops 订婚 花束 登记。赶海、plot_ops forage 也可能遇到。"
         f"礼盒现货 visit_ops tt buy 礼盒（{BETROTHAL_BOX_SHOP}）。"
     )
 
@@ -2421,7 +2414,7 @@ async def _betroth_bouquet(s: dict[str, Any], rest: str = "") -> str:
             raise ValueError(
                 "行囊没有潮花、礼盒或商船糕点。海边 订婚 采花；赶海 / plot_ops forage 也可能遇到；"
                 f"visit_ops tt buy 礼盒（{BETROTHAL_BOX_SHOP}）；"
-                "订契后给何敬山送糕点，他会再塞你一块。"
+                "给何敬山送糕点，他会再塞你一块。"
             )
         amount, src = chosen
         row = await _set_betroth_col(
@@ -2526,7 +2519,7 @@ async def _betroth_seal(s: dict[str, Any], rest: str = "") -> str:
         await conn.commit()
     if int(row.get("betrothal_done") or 0) or (seal or "").startswith("\n订婚记下"):
         return (seal or f"已经办过。{_betrothal_line(row)}").strip()
-    raise ValueError("四件必办还没齐。\n" + "\n".join(_betrothal_progress_lines(row)))
+    raise ValueError("三件必办还没齐。\n" + "\n".join(_betrothal_progress_lines(row)))
 
 
 async def _need_engaged(s: dict[str, Any]) -> dict[str, Any]:
