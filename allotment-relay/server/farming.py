@@ -713,6 +713,17 @@ async def roll_farm_event(
     msg = flavor.wrap_event(wild["kind"] if wild["kind"] != "neutral" else "good", label, detail)
     if farm_ill:
         msg += f"\n{farm_ill}\n→ visit_ops clinic treat …（必须花票）"
+    farm_boost = None
+    if wild["kind"] == "good":
+        farm_boost = await health.maybe_restore_health(
+            conn, steward["id"], "farm_wild", chance=0.22, lo=5, hi=12,
+        )
+    elif wild["kind"] == "neutral":
+        farm_boost = await health.maybe_restore_health(
+            conn, steward["id"], "farm_wild", chance=0.08, lo=3, hi=8,
+        )
+    if farm_boost:
+        msg += f"\n{farm_boost}"
     return msg
 
 

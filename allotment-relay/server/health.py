@@ -358,6 +358,57 @@ def event_bias(steward: dict[str, Any], ailment_count: int) -> float:
     return mult
 
 
+async def restore_health(
+    conn: aiosqlite.Connection,
+    steward_id: int,
+    amount: int,
+) -> int:
+    """把健康往 100 推。返回实际加上的点数（已满则 0）。"""
+    amount = max(0, int(amount))
+    if amount <= 0:
+        return 0
+    cur = await conn.execute("SELECT health FROM stewards WHERE id=?", (steward_id,))
+    row = await cur.fetchone()
+    before = int(row[0] if row else config.START_HEALTH)
+    if before >= 100:
+        return 0
+    await conn.execute(
+        "UPDATE stewards SET health=MIN(100, health+?) WHERE id=?",
+        (amount, steward_id),
+    )
+    cur = await conn.execute("SELECT health FROM stewards WHERE id=?", (steward_id,))
+    after = int((await cur.fetchone())[0])
+    return max(0, after - before)
+
+
+async def maybe_restore_health(
+    conn: aiosqlite.Connection,
+    steward_id: int,
+    trigger: str = "",
+    *,
+    chance: float = 0.10,
+    lo: int = 4,
+    hi: int = 10,
+) -> str | None:
+    """干活/事件里偶尔回一点身子。不是诊所调理，别当稳定回血。"""
+    cur = await conn.execute("SELECT health FROM stewards WHERE id=?", (steward_id,))
+    row = await cur.fetchone()
+    body = int(row[0] if row else 100)
+    if body >= 100:
+        return None
+    if random.random() > chance:
+        return None
+    amt = random.randint(max(1, int(lo)), max(int(lo), int(hi)))
+    restored = await restore_health(conn, steward_id, amt)
+    if restored <= 0:
+        return None
+    cur = await conn.execute("SELECT health FROM stewards WHERE id=?", (steward_id,))
+    now = int((await cur.fetchone())[0])
+    pool = flavor.HEALTH_RESTORE_BY_TRIGGER.get(trigger) or flavor.GOOD_HEALTH
+    line = flavor.fill(flavor.pick(pool), n=restored)
+    return f"{line}（现 {now}）"
+
+
 def meter_line(steward: dict[str, Any], ailments: list[dict[str, Any]]) -> str:
     h = steward.get("health", config.START_HEALTH)
     line = f"身体 {h}/100"
@@ -375,6 +426,8 @@ def meter_line(steward: dict[str, Any], ailments: list[dict[str, Any]]) -> str:
         hints.append(flavor.HEALTH_HINT_LOW)
     if ailments:
         hints.append(flavor.HEALTH_HINT_CLINIC)
+    elif h < 100:
+        hints.append(flavor.HEALTH_HINT_TONIC)
     if hints:
         line += f"（{'，'.join(hints)}）"
     return line

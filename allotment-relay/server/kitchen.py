@@ -539,7 +539,7 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             "  menu — 菜谱与定价\n"
             "  cook 菜名 — 定点菜（每天 10 次），例如 cook 蒜蓉生蚝 · cook 糖渍橘子\n"
             "  cook 材料1 材料2 … — 自由组合 2~5 样（每天 24 次），例如 cook 甘蓝 鲭鱼\n"
-            "  eat 物品 — 回精力。熟菜回得最多；水果可生吃但只回一点、连吃会营养不良；\n"
+            "  eat 物品 — 回精力。熟菜回得最多，并点滴回 1 身体；水果可生吃但只回一点、连吃会营养不良；\n"
             "             生鱼/野薄荷安全；蔬菜不能生吃；潮棉/岸麻/漂布是衣料，去衣泊坊委托，别下锅；只有生肉可能感染\n"
             "             未命名小鱼可生吃（不感染）但会再掷小咒事件\n"
             "             例子：eat 鲭鱼 · eat 芒果 · eat 橘子 · eat 兔肉 · eat 未命名小鱼 · eat 蒜蓉生蚝\n"
@@ -548,7 +548,7 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             "             也可 hut_ops 冰柜 存|取，生鲜进潮柜、熟菜进冰箱\n"
             "  brew 材料 — 灶台（回雾智）\n"
             "  shop board — 全服谁在营业的小馆名单（店名和几道菜），不是流水也不是评价\n"
-            "  shop dine 店主名 — 下馆子堂食，也能回精力（按菜价，约 3.5 票/1 精力）+「饱餐」2 小时（行动精力 -1）\n"
+            "  shop dine 店主名 — 下馆子堂食，也能回精力（按菜价，约 3.5 票/1 精力）+「饱餐」2 小时（行动精力 -1）+ 身体 +2\n"
             "             例子：shop board · shop dine 安。没菜就换一家，不要自己编馆名\n"
             "  shop open|stock|卖掉 — 开馆 / 上菜（stock 菜名 [价格]，参考价提示但不限区间）/ 关张回收\n"
             f"             开馆后每天岸维 {upkeep.EATERY} 票（visit_ops 潮生会 维）；欠维修费会暂停堂食\n"
@@ -706,6 +706,12 @@ async def kitchen_ops(key_id: int, command: str) -> str:
                 )
             restored = await energy.restore(conn, s["id"], gain)
             await survival.bump(conn, s["id"], satiety=min(20, gain // 2 + 8))
+            health_note = None
+            if is_cooked_item(item) or item.startswith("meal_"):
+                from . import health as health_mod
+                hgain = await health_mod.restore_health(conn, s["id"], config.COOKED_EAT_HEALTH)
+                if hgain:
+                    health_note = f"身体 +{hgain}"
             walkblue_line = None
             if item == "fish_walkblue":
                 from . import marine as marine_mod
@@ -716,6 +722,8 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             await bond_mod.grant(conn, s["id"], bond_mod.EAT, "life")
             await conn.commit()
         msg = f"吃了 {item_label(item)}（{item}），精力 +{restored}"
+        if health_note:
+            msg += f"，{health_note}"
         if item.startswith("fish_") or item == "wild_mint":
             msg += "（生吃安全，不会感染）"
             if item == "fish_walkblue":

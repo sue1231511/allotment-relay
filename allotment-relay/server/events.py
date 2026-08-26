@@ -518,7 +518,7 @@ async def _apply_effects(
         elif eff.startswith("health:"):
             amt = int(eff.split(":")[1])
             await conn.execute(
-                "UPDATE stewards SET health=MIN(100, health+?) WHERE id=?",
+                "UPDATE stewards SET health=MAX(0, MIN(100, health+?)) WHERE id=?",
                 (amt, steward["id"]),
             )
             ledger["health_delta"] = int(ledger.get("health_delta") or 0) + amt
@@ -564,7 +564,8 @@ async def _ledger_lines(
     if health_delta:
         cur = await conn.execute("SELECT health FROM stewards WHERE id=?", (steward_id,))
         body = (await cur.fetchone())[0]
-        lines.append(f"身体 +{health_delta}（现 {body}）")
+        sign = f"+{health_delta}" if health_delta > 0 else str(health_delta)
+        lines.append(f"身体 {sign}（现 {body}）")
     return lines
 
 

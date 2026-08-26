@@ -129,7 +129,8 @@ HUT_HELP = """hut_ops 子命令（整句写进 command）：
     买：buy compost_bin → install soft_1 compost_bin（空槽也能装；装完 status 槽位上要能看见）
     桶不是柜子：粪便丢进去沤层，满 7 层结 1 份堆肥，只能取堆肥，不能当货存
     羊粪+2 / 猪粪+3 / 牛粪+4。barn compost 羊粪 2 还认，但必须先装桶
-  睡 / 休息 — 床一觉回精力（岸柏 50 / 软藤 52 / 云纹 54，每天一次）。buy bed|bed_rattan|bed_canopy → install hard_N
+  睡 / 休息 — 床一觉回精力（岸柏 50 / 软藤 52 / 云纹 54）并顺带身体 +6，每天一次。buy bed|bed_rattan|bed_canopy → install hard_N
+    精力满了但身体没满也能睡。身子大虚别指望睡觉回满，诊所 clinic 调理 更贵也更快
   卖掉 槽位 [确认] — 旧家具按折旧卖。例子：卖掉 soft_1 确认
     小馆开着时冰箱不能卖（先 kitchen_ops shop 卖掉 或 shop close）
   barn status|erect|buy|feed|collect|shear|churn — 畜栏。churn 只搅山羊奶成奶酪（先买山羊再 collect；牛奶不能搅）
@@ -237,14 +238,17 @@ VISIT_HELP = """visit_ops 子命令（整句写进 command）：
     柜后嫁妆柜：三金套 68800 / 五金套 98800 / 潮誓戒 18800。不打折，不进好感折扣。心情好不送嫁妆
     行囊每种最多 24 份，买多了会拒；满了先 vend 或 hut_ops 冰柜 存
   lore scan [主题] / topics — 沿海旧史文本与 NPC 小传（例：lore scan npc；不是收集品，背包里不会多东西）
-  clinic status — 桥桥诊所（24h）。进门氛围+窗台斑鸠（每日最多1次）+价目
+  clinic status — 桥桥诊所（24h）。进门氛围+窗台斑鸠（每日最多1次）+价目；诊费偏高
   clinic treat 病症 — 花钱治地上病。例子：treat sprain · treat infection · treat 腿鱼小咒 · treat all
-  clinic buy 醒酒药 / use 醒酒药 — 药品货架，可囤货备用（与 treat 同效）
+  clinic 调理 小|中|大 — 无病回身体（+15/+30/+50），价 95/210/380 票（可打折/凌晨加价）；每日最多 3 次。例子：clinic 调理 中 · clinic rest 大
+  clinic buy 醒酒药 / use 醒酒药 — 对症药，可囤货备用（与 treat 同效）
+  clinic buy 回春汤 / use 回春汤 · buy 大补丸 — 无病回身体（+18/+40），可囤，不占调理次数；贵是故意的
   clinic dove 喂 — 喂窗台斑鸠雾豌豆×1（好感+2）
   clinic chat — 闲聊
-  clinic catalog — 药品价目
+  clinic catalog — 药品与调理价目
   生肉感染约三次、两次间隔 6 小时；创可贴可缩短等待
   斗场震伤/深坑重创/井下落下的扭伤 — 晏安医务间 undertide_ops medic；桥桥不接井下伤
+  随机好事件（打理/出海/赶海/畜栏/矿崖等）也可能回一点身体；睡觉、吃熟菜、下馆子也会点滴回。一次回很多走诊所调理（贵）
   漾漾 / 衣泊坊 / yangyang — 剧院侧厅衣泊坊；日常不卖成衣，婚服现货走 cloth_ops 买 婚服。例子：visit_ops 漾漾 · visit_ops 衣泊坊
   连理所 / 理枝 / lianli / 民政局 — 登记处，登记员理枝。发出请柬前要小屋升到岛上最高档（临海邸）、彩礼 10万～100万、潮誓戒。求婚要人类打开确认页点头。答应后再备三金、婚服、吃席。离婚由人类在婚书页申请，岛民用 离婚 答应 / 拒绝。转 marriage_ops。例子：visit_ops 连理所 · visit_ops 连理所 结婚 · visit_ops 连理所 离婚 答应 · visit_ops 理枝
   treat / fortune 可省略前缀"""

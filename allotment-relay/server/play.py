@@ -64,7 +64,7 @@ PLACES: list[dict[str, Any]] = [
         "week1": True,
         "actions": [
             {"label": "看屋", "note": "门牌与装件", "tool": "hut_ops", "command": "status"},
-            {"label": "睡", "note": "回精力，每天一次", "tool": "hut_ops", "command": "睡"},
+            {"label": "睡", "note": "回精力，顺带缓身体，每天一次", "tool": "hut_ops", "command": "睡"},
             {"label": "建棚屋", "note": "还没屋就先搭", "tool": "hut_ops", "command": "build"},
             {"label": "升级", "note": "一档一档升。求婚要最高档临海邸", "tool": "hut_ops", "command": "upgrade"},
             {"label": "堆肥桶", "note": "先买再装空槽，丢粪便沤肥", "tool": "hut_ops", "command": "堆肥桶"},
@@ -173,7 +173,8 @@ PLACES: list[dict[str, Any]] = [
         "actions": [
             {"label": "进门", "note": "氛围、斑鸠、价目", "tool": "visit_ops", "command": "clinic status"},
             {"label": "看病", "note": "一次尽量治完当前地上病", "tool": "visit_ops", "command": "clinic treat all"},
-            {"label": "药架", "note": "可囤的药", "tool": "visit_ops", "command": "clinic catalog"},
+            {"label": "调理", "note": "无病回身体，价偏高", "tool": "visit_ops", "command": "clinic 调理 中"},
+            {"label": "药架", "note": "可囤的药与回春汤", "tool": "visit_ops", "command": "clinic catalog"},
             {"label": "喂斑鸠", "note": "雾豌豆×1，每日一次", "tool": "visit_ops", "command": "clinic dove 喂"},
         ],
     },

@@ -144,9 +144,65 @@ async def test_clinic_catalog() -> None:
     from server import mcp_dispatch
 
     cat = await mcp_dispatch.visit_bundle(kid, "clinic catalog")
-    for name in ("醒酒药", "净血针剂", "祛咒香"):
+    for name in ("醒酒药", "净血针剂", "祛咒香", "回春汤", "大补丸", "调理"):
         assert name in cat, cat
     assert "急救包" not in cat, cat
+
+
+async def test_clinic_tonic_restores_health() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="clinic-tonic-"))
+    db, kid, sid = await _boot(tmp)
+    from server import mcp_dispatch
+
+    async with db.connect() as conn:
+        await conn.execute("UPDATE stewards SET health=60, tickets=800 WHERE id=?", (sid,))
+        await conn.commit()
+
+    with patch("server.clinic.random.random", return_value=0.99):
+        msg = await mcp_dispatch.visit_bundle(kid, "clinic 调理 中")
+    assert "身体 +" in msg, msg
+    assert "中调理" in msg or "调理" in msg, msg
+
+    s = await db.get_steward_by_id(sid)
+    assert int(s["health"]) == 90, s["health"]
+    assert int(s["tickets"]) < 800, s["tickets"]
+    assert int(s.get("clinic_tonic_count") or 0) == 1
+
+
+async def test_clinic_buy_use_tonic() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="clinic-buy-tonic-"))
+    db, kid, sid = await _boot(tmp)
+    from server import mcp_dispatch
+
+    async with db.connect() as conn:
+        await conn.execute("UPDATE stewards SET health=70, tickets=500 WHERE id=?", (sid,))
+        await conn.commit()
+
+    with patch("server.clinic.random.random", return_value=0.99):
+        bought = await mcp_dispatch.visit_bundle(kid, "clinic buy 回春汤")
+    assert "回春汤" in bought, bought
+
+    used = await mcp_dispatch.visit_bundle(kid, "clinic use 回春汤")
+    assert "身体 +" in used, used
+    s = await db.get_steward_by_id(sid)
+    assert int(s["health"]) == 88, s["health"]
+
+
+async def test_clinic_tonic_full_health_refuses() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="clinic-tonic-full-"))
+    db, kid, sid = await _boot(tmp)
+    from server import mcp_dispatch
+
+    async with db.connect() as conn:
+        await conn.execute("UPDATE stewards SET health=100, tickets=500 WHERE id=?", (sid,))
+        await conn.commit()
+
+    try:
+        with patch("server.clinic.random.random", return_value=0.99):
+            await mcp_dispatch.visit_bundle(kid, "clinic 调理 小")
+        raise AssertionError("expected full-health refusal")
+    except ValueError as e:
+        assert "满分" in str(e), e
 
 
 if __name__ == "__main__":
@@ -156,4 +212,7 @@ if __name__ == "__main__":
     asyncio.run(test_clinic_refuses_pit_sourced_sprain())
     asyncio.run(test_clinic_dove_feed())
     asyncio.run(test_clinic_catalog())
+    asyncio.run(test_clinic_tonic_restores_health())
+    asyncio.run(test_clinic_buy_use_tonic())
+    asyncio.run(test_clinic_tonic_full_health_refuses())
     print("ok")

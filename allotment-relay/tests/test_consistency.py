@@ -166,12 +166,15 @@ def test_mcp_descriptions() -> None:
     assert "衣泊坊" in v_blob
     assert "连理所" in v_blob
     assert "理枝" in v_blob
+    assert "clinic 调理" in v_blob
+    assert "回春汤" in v_blob
 
     hut = mcp._tool_manager.get_tool("hut_ops")
     hut_blob = f"{hut.description}\n{(hut.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
     assert "床" in hut_blob
     assert "睡" in hut_blob
     assert "install hard_1 bed" in hut_blob
+    assert "6 健康" in hut_blob or "身体 +6" in hut_blob or "顺带回" in hut_blob
     assert "堆肥桶 存 羊粪 3" in hut_blob
     assert "compost_bin" in hut_blob
     assert "桶不是柜子" in hut_blob
@@ -188,6 +191,7 @@ def test_mcp_descriptions() -> None:
     assert "未命名小鱼" in k_blob
     assert "下馆子" in k_blob
     assert "shop dine" in k_blob
+    assert "身体 +1" in k_blob or "身体 +2" in k_blob
 
     lounge_tool = mcp._tool_manager.get_tool("lounge_ops")
     lounge_blob = f"{lounge_tool.description}\n{(lounge_tool.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -343,6 +347,9 @@ def test_relay_manual_covers_systems() -> None:
         "mascot adopt",
         "lili summon",
         "clinic treat",
+        "clinic 调理",
+        "clinic 调理 中",
+        "回春汤",
         "undertide_ops help",
         "star_ops",
         "小剧场专场每日 5 次",
@@ -578,7 +585,7 @@ def test_readme_workflow_rules() -> None:
     assert 'href="/workshop"' in nav
     assert 'href="/play"' in nav
     assert 'href="/manual"' in nav
-    assert "岛民手册" in nav
+    assert "手册" in nav
     assert 'href="/tide"' in nav
     assert 'href="/huts"' in nav
     assert 'href="/market"' in nav
@@ -648,6 +655,8 @@ def test_human_island_manual() -> None:
         "人和管家",
         "编剧社",
         "诊所地点",
+        "调理",
+        "回春汤",
         "今夜潮湿",
         "暗号",
         "小包间",
@@ -891,7 +900,7 @@ def test_patron_pages_share_steward_key() -> None:
     assert "ticketsBoard" in board_html
     assert "levelBoard" in board_html
     assert "岛缘榜" in board_html
-    assert "工分票 · 岛缘" in nav
+    assert "全服榜" in nav
     assert "ticket_lead" in board_js or "ticket-lead" in board_js
     assert ".dual-board" in board_css
     assert "huts-hero" in huts_html

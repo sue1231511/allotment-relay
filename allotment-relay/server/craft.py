@@ -548,6 +548,9 @@ async def _salvage(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
     ill = await health.maybe_roll_ailment(
         conn, s["id"], "salvage", chance=float(win["hazard"]), source="salvage",
     )
+    boost = await health.maybe_restore_health(
+        conn, s["id"], "salvage", chance=0.10, lo=4, hi=9,
+    )
     disc = await commons.roll_discovery(conn, s, "salvage")
     loot = "、".join(f"{item_label(k)} x{q}" for k, q in got) if got else "没有货"
     await db.add_chronicle(
@@ -562,6 +565,8 @@ async def _salvage(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
     )
     if ill:
         msg += f"\n{ill}\n→ visit_ops clinic treat 咸痰（必须花票）"
+    if boost:
+        msg += f"\n{boost}"
     if disc:
         msg += f"\n{disc}"
     return msg

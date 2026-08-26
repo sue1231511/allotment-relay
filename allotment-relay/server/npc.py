@@ -200,10 +200,10 @@ async def _daily_visit_gift(steward_id: int, npc_key: str) -> str:
             note = "档信 +2（今日首次拜访）"
         elif npc_key == "qiaoqiao":
             await conn.execute(
-                "UPDATE stewards SET health=MIN(100, health+2) WHERE id=?",
+                "UPDATE stewards SET health=MIN(100, health+4) WHERE id=?",
                 (steward_id,),
             )
-            note = "身体 +2（聊聊天也算复查，治病还是要花钱）"
+            note = "身体 +4（聊聊天也算复查，治病还是要花钱；没病补身子走 clinic 调理）"
         elif npc_key == "herb_aunt":
             await survival.bump(conn, steward_id, satiety=3)
             note = "饱食 +3（姜姨塞了块姜糖）"
