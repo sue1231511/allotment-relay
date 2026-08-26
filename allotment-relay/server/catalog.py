@@ -1444,7 +1444,8 @@ NPC_FIXED = [
         "连理所登记员。婚书写进册子，离婚也写。",
         "岛上不问你爱的是谁。只问对方有没有答应。",
         "结婚要人类点头。发出请柬前要有最高档小屋（临海邸）、彩礼 10 万～100 万、潮誓戒。彩礼答应后花掉，不进潮汐基金。",
-        "visit_ops 连理所 · 连理所 结婚 · 连理所 离婚 答应。也可 marriage_ops。",
+        "订契后可先订婚再结婚，也可跳过订婚直接办三金、婚服、吃席。订婚开销当场花掉，不是彩礼。",
+        "visit_ops 连理所 · 连理所 订婚 · 连理所 结婚 · 连理所 离婚 答应。也可 marriage_ops。",
         "不是潮生会。阿簿管税和维，我管婚书。",
     ]},
 ]
@@ -1659,6 +1660,18 @@ WEDDING_RING_SHOP_PRICE = 18800
 WEDDING_DRESS_SHOP_PRICE = 16800
 BRIDE_PRICE_MIN = 100_000
 BRIDE_PRICE_MAX = 1_000_000
+BETROTHAL_GIFT_MIN = 10_000
+BETROTHAL_GIFT_MAX = 100_000
+BETROTHAL_TOKEN_MIN = 3_000
+BETROTHAL_TOKEN_MAX = 30_000
+BETROTHAL_FEAST_MIN = 5_000
+BETROTHAL_FEAST_MAX = 50_000
+BETROTHAL_BOUQUET_MIN = 1_000
+BETROTHAL_BOUQUET_MAX = 10_000
+BETROTHAL_ATTIRE_MIN = 2_000
+BETROTHAL_ATTIRE_MAX = 20_000
+BETROTHAL_PHOTO_MIN = 1_000
+BETROTHAL_PHOTO_MAX = 5_000
 for _shell_base in ("shell_catseye", "shell_conch", "shell_scallop", "shell_starfish", "shell_mussel"):
     _plain = ITEM_NAMES[_shell_base]
     _suffix = _shell_base.replace("shell_", "")

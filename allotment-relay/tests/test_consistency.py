@@ -166,6 +166,7 @@ def test_mcp_descriptions() -> None:
     assert "衣泊坊" in v_blob
     assert "连理所" in v_blob
     assert "理枝" in v_blob
+    assert "订婚" in v_blob
     assert "clinic 调理" in v_blob
     assert "回春汤" in v_blob
 
@@ -296,6 +297,8 @@ def test_mcp_descriptions() -> None:
     assert "潮誓戒" in mar_blob
     assert "临海邸" in mar_blob or "最高档" in mar_blob
     assert "不进潮汐基金" in mar_blob or "花掉" in mar_blob
+    assert "订婚" in mar_blob
+    assert "跳过" in mar_blob
 
 
 def test_relay_manual_covers_systems() -> None:
@@ -379,6 +382,7 @@ def test_relay_manual_covers_systems() -> None:
         "彩礼 188000",
         "潮誓戒",
         "临海邸",
+        "订婚 礼金 18800 信物 8888 宴 12800 花束 3888",
         "tale_ops 潮闻不给旧衣料",
         "plot_ops forage",
         "潮闻",
@@ -684,6 +688,8 @@ def test_human_island_manual() -> None:
         "最高档",
         "花出去",
         "不进潮汐基金",
+        "订婚",
+        "跳过",
     ):
         assert needle in blob, needle
     assert "plot_ops" not in blob

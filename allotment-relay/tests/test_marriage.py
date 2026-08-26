@@ -93,6 +93,8 @@ async def _full_flow() -> None:
     assert "潮誓戒" in help_text
     assert "最高档" in help_text or "临海邸" in help_text
     assert "6" in help_text
+    assert "订婚" in help_text
+    assert "跳过" in help_text
 
     try:
         await marriage.marriage_ops(host, "接受")
@@ -269,6 +271,7 @@ async def _full_flow() -> None:
     dossier = await marriage.marriage_ops(host, "筹备")
     assert "戒指：已准备" in dossier, dossier
     assert "婚服：已准备" in dossier, dossier
+    assert "订婚" in dossier and "未办" in dossier, dossier
     assert "战力" not in dossier or "不是战力" in dossier
 
     held = await marriage.marriage_ops(host, "结婚")
@@ -303,6 +306,7 @@ async def _full_flow() -> None:
     assert hearth["islander"] == "泊舟"
     assert hearth["human"] == "阿潮"
     assert hearth["home"] is True
+    assert not hearth.get("betrothal"), hearth
     assert any(g["name"] == "邻潮" for g in hearth["guests"]), hearth
     assert hearth.get("charter_line")
 
@@ -485,8 +489,145 @@ async def _reject_and_guards() -> None:
         assert "enroll" in str(exc), exc
 
 
+async def _pocket(db, key_id: int) -> int:
+    async with db.connect() as conn:
+        row = await (await conn.execute(
+            "SELECT tickets FROM stewards WHERE key_id=?", (key_id,)
+        )).fetchone()
+        return int(row[0])
+
+
+async def _fund(db) -> int:
+    async with db.connect() as conn:
+        row = await (await conn.execute("SELECT tickets FROM tide_fund WHERE id=1")).fetchone()
+        return int(row[0] or 0) if row else 0
+
+
+async def _betrothal_flow() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="betrothal-"))
+    db = await _boot(tmp)
+    from server import marriage
+    from server import mcp_dispatch as mux
+    from server.mcp_app import current_origin
+
+    current_origin.set("http://island.test")
+    host = await _enroll(db, "host@example.com", "泊舟")
+    other = await _enroll(db, "pipe@example.com", "岸灯")
+
+    menu = await marriage.marriage_ops(host, "订婚")
+    assert "订婚礼金" in menu, menu
+    assert "跳过" in menu, menu
+    assert "礼金 18800" in menu, menu
+    assert "18800 | 8888 | 12800 | 3888" in menu, menu
+
+    await marriage.marriage_ops(host, "求婚 阿潮")
+    try:
+        await marriage.marriage_ops(host, "订婚 礼金 18800 信物 8888 宴 12800 花束 3888")
+        raise AssertionError("draft cannot betroth")
+    except ValueError as exc:
+        assert "订契" in str(exc), exc
+
+    await _ready_to_propose(db, host, tickets=400000)
+    await marriage.marriage_ops(host, "彩礼 100000")
+    sent = await marriage.marriage_ops(
+        host,
+        "求婚 阿潮 | 潮起潮落我都在 | 潮誓戒 | 灯塔下 | 今日+3",
+    )
+    await marriage.human_respond(_token_from(sent), accept=True, confirm=True)
+    assert await _pocket(db, host) == 300000
+    assert await _fund(db) == 0
+
+    ready = await marriage.marriage_ops(host, "订婚")
+    assert "订契" in ready or "跳过" in ready, ready
+    assert "订婚礼金" in ready, ready
+
+    try:
+        await marriage.marriage_ops(host, "订婚 礼金 9 信物 8888 宴 12800 花束 3888")
+        raise AssertionError("gift below min")
+    except ValueError as exc:
+        assert "订婚礼金" in str(exc) or "10000" in str(exc), exc
+
+    try:
+        await marriage.marriage_ops(host, "订婚 礼金 18800 信物 8888 宴 12800")
+        raise AssertionError("missing bouquet")
+    except ValueError as exc:
+        assert "花束" in str(exc) or "还少" in str(exc), exc
+
+    done = await marriage.marriage_ops(
+        host, "订婚 礼金 18800 信物 8888 宴 12800 花束 3888"
+    )
+    assert "记下" in done, done
+    assert "44376" in done, done
+    assert await _pocket(db, host) == 300000 - 44376
+    assert await _fund(db) == 0
+
+    try:
+        await marriage.marriage_ops(
+            host, "订婚 礼金 18800 信物 8888 宴 12800 花束 3888"
+        )
+        raise AssertionError("repeat betrothal")
+    except ValueError as exc:
+        assert "已经" in str(exc) or "办过" in str(exc), exc
+
+    via = await mux.visit_bundle(host, "连理所 订婚")
+    assert "办过" in via or "已经" in via, via
+
+    await marriage.marriage_ops(other, "求婚 灯花")
+    await _ready_to_propose(db, other, tickets=400000)
+    await marriage.marriage_ops(other, "彩礼 100000")
+    sent2 = await marriage.marriage_ops(
+        other,
+        "求婚 灯花 | 潮起潮落我都在 | 潮誓戒 | 灯塔下 | 今日+3",
+    )
+    await marriage.human_respond(_token_from(sent2), accept=True, confirm=True)
+    before2 = await _pocket(db, other)
+    piped = await marriage.marriage_ops(
+        other, "订婚 18800 | 8888 | 12800 | 3888 | 8888 | 2888"
+    )
+    assert "服装" in piped and "留影" in piped, piped
+    total2 = 18800 + 8888 + 12800 + 3888 + 8888 + 2888
+    assert await _pocket(db, other) == before2 - total2
+    assert await _fund(db) == 0
+
+    async with db.connect() as conn:
+        sid = (await (await conn.execute(
+            "SELECT id FROM stewards WHERE key_id=?", (host,)
+        )).fetchone())[0]
+        for item in ("gold_necklace", "gold_bracelet", "gold_earrings"):
+            await db.add_item(conn, sid, item, 1)
+        await conn.execute(
+            """
+            INSERT INTO steward_wardrobe (
+                steward_id, cut_key, color_key, motif_key, fabric_key, name, created_at
+            ) VALUES (?, 'wedding', 'sea', 'twin', 'cloth_drift', '海色双潮婚服', ?)
+            """,
+            (sid, db.now()),
+        )
+        await conn.execute(
+            "UPDATE marriages SET preferred_wedding_date=? WHERE steward_id=?",
+            (db.day_id(), sid),
+        )
+        await conn.commit()
+    await marriage.marriage_ops(host, "婚服")
+    await marriage.marriage_ops(host, "金饰")
+    await marriage.marriage_ops(host, "吃席 滩席")
+    held = await marriage.marriage_ops(host, "结婚")
+    assert "成婚" in held, held
+    slug = re.search(r"/hearth/([A-Za-z0-9_-]+)", held).group(1)
+    hearth = await marriage.public_hearth_view(slug)
+    assert hearth.get("betrothal"), hearth
+    assert "礼金" in hearth["betrothal"], hearth
+    from fastapi.testclient import TestClient
+    from server.main import app
+    page = TestClient(app).get(f"/hearth/{slug}")
+    assert page.status_code == 200, page.text
+    assert "订婚" in page.text
+    assert "礼金" in page.text
+
+
 def test_marriage_system() -> None:
     asyncio.run(_full_flow())
+    asyncio.run(_betrothal_flow())
     asyncio.run(_reject_and_guards())
 
 

@@ -158,6 +158,13 @@ CREATE TABLE IF NOT EXISTS marriages (
     feast_tier TEXT NOT NULL DEFAULT '',
     feast_ready INTEGER NOT NULL DEFAULT 0,
     attire_source TEXT NOT NULL DEFAULT '',
+    betrothal_done INTEGER NOT NULL DEFAULT 0,
+    betrothal_gift INTEGER NOT NULL DEFAULT 0,
+    betrothal_token INTEGER NOT NULL DEFAULT 0,
+    betrothal_feast INTEGER NOT NULL DEFAULT 0,
+    betrothal_bouquet INTEGER NOT NULL DEFAULT 0,
+    betrothal_attire INTEGER NOT NULL DEFAULT 0,
+    betrothal_photo INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
 );
@@ -1976,6 +1983,13 @@ async def init_db() -> None:
                 feast_tier TEXT NOT NULL DEFAULT '',
                 feast_ready INTEGER NOT NULL DEFAULT 0,
                 attire_source TEXT NOT NULL DEFAULT '',
+                betrothal_done INTEGER NOT NULL DEFAULT 0,
+                betrothal_gift INTEGER NOT NULL DEFAULT 0,
+                betrothal_token INTEGER NOT NULL DEFAULT 0,
+                betrothal_feast INTEGER NOT NULL DEFAULT 0,
+                betrothal_bouquet INTEGER NOT NULL DEFAULT 0,
+                betrothal_attire INTEGER NOT NULL DEFAULT 0,
+                betrothal_photo INTEGER NOT NULL DEFAULT 0,
                 created_at INTEGER NOT NULL,
                 updated_at INTEGER NOT NULL
             )
@@ -2047,6 +2061,13 @@ async def init_db() -> None:
             "ALTER TABLE marriages ADD COLUMN feast_tier TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE marriages ADD COLUMN feast_ready INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE marriages ADD COLUMN attire_source TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE marriages ADD COLUMN betrothal_done INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE marriages ADD COLUMN betrothal_gift INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE marriages ADD COLUMN betrothal_token INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE marriages ADD COLUMN betrothal_feast INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE marriages ADD COLUMN betrothal_bouquet INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE marriages ADD COLUMN betrothal_attire INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE marriages ADD COLUMN betrothal_photo INTEGER NOT NULL DEFAULT 0",
         ):
             try:
                 await db.execute(ddl)
