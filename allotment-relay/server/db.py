@@ -112,6 +112,14 @@ CREATE TABLE IF NOT EXISTS beacon_replies (
     created_at INTEGER NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS hui_notices (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tag TEXT NOT NULL DEFAULT '厅示',
+    body TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    retracted INTEGER NOT NULL DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS swap_lots (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     depositor_id INTEGER NOT NULL REFERENCES stewards(id),
@@ -1825,6 +1833,15 @@ async def init_db() -> None:
                 PRIMARY KEY (packet_id, steward_id)
             )
             """,
+            """
+            CREATE TABLE IF NOT EXISTS hui_notices (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tag TEXT NOT NULL DEFAULT '厅示',
+                body TEXT NOT NULL,
+                created_at INTEGER NOT NULL,
+                retracted INTEGER NOT NULL DEFAULT 0
+            )
+            """,
         ):
             try:
                 await db.execute(ddl)
@@ -2397,9 +2414,9 @@ async def public_stats() -> dict[str, Any]:
             }
         beacons = await (await db.execute(
             """
-            SELECT b.body, a.name FROM beacons b
-            JOIN stewards a ON a.id=b.author_id
-            ORDER BY b.created_at DESC LIMIT 5
+            SELECT body, tag FROM hui_notices
+            WHERE retracted=0
+            ORDER BY created_at DESC LIMIT 5
             """
         )).fetchall()
         swap_rows = await (await db.execute(
@@ -2439,7 +2456,7 @@ async def public_stats() -> dict[str, Any]:
             "lili": lili_hint,
             "tt": tt_hint,
             "boss": boss,
-            "beacons": [{"author": r[1], "body": r[0][:80]} for r in beacons],
+            "beacons": [{"author": "潮生会", "tag": r[1], "body": r[0][:80]} for r in beacons],
             "swap_preview": [
                 {
                     "item": r[0],

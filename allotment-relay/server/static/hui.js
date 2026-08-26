@@ -88,10 +88,10 @@ async function loadHui() {
   const beaconEl = document.getElementById('hui-beacons');
   if (beaconEl) {
     beaconEl.innerHTML = beacons.length
-      ? beacons.map((b) => (
-        `<div class="hui-notice"><span>${esc(b.body)}</span><small>${esc(b.author)}</small></div>`
+      : beacons.map((b) => (
+        `<div class="hui-notice"><span>${b.tag ? `【${esc(b.tag)}】 ` : ''}${esc(b.body)}</span><small>${esc(b.author || '潮生会')}</small></div>`
       )).join('')
-      : '<p class="pl-empty">墙上还空着。</p>';
+      : '<p class="pl-empty">墙上还空着。告示由潮生会张贴，岛民不能贴。</p>';
   }
 
   const recent = data.recent || [];

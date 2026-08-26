@@ -85,6 +85,7 @@ async def test_chaoshen_desk_and_refuse() -> None:
     assert "不用领" in help_text and "周二" in help_text, help_text
     assert "alliance_ops league" in help_text, help_text
     assert "plot_ops commons" in help_text, help_text
+    assert "不能贴" in help_text, help_text
     assert "潮汐基金" in desk, desk
 
 
@@ -288,6 +289,126 @@ async def test_tide_fund_need_peers() -> None:
         raise AssertionError("solo donate should refuse")
 
 
+async def test_hui_official_notices() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="hui-notice-"))
+    db = await _boot(tmp)
+    kid = await _enroll(db, "notice@example.com", "看客")
+    from server import chaoshen, mcp_dispatch
+
+    empty = await mcp_dispatch.visit_bundle(kid, "潮生会 告示")
+    assert "暂无" in empty or "空" in empty, empty
+    assert "不能贴" in empty, empty
+
+    try:
+        await mcp_dispatch.visit_bundle(kid, "潮生会 贴 互助 今晚出海")
+    except ValueError as exc:
+        assert "不能贴" in str(exc), str(exc)
+    else:
+        raise AssertionError("贴 should refuse")
+
+    try:
+        await mcp_dispatch.alliance_bundle(kid, "beacon post 互助 今晚出海")
+    except ValueError as exc:
+        assert "不能贴" in str(exc), str(exc)
+    else:
+        raise AssertionError("beacon post should refuse")
+
+    try:
+        await mcp_dispatch.visit_bundle(kid, "潮生会 回 1 收到")
+    except ValueError as exc:
+        assert "不能" in str(exc), str(exc)
+    else:
+        raise AssertionError("回 should refuse")
+
+    posted = await chaoshen.owner_post("维修", "本周岸维照划，起步免。")
+    assert posted["ok"] and posted["id"], posted
+
+    shown = await mcp_dispatch.visit_bundle(kid, "潮生会 告示")
+    assert "本周岸维照划" in shown, shown
+    assert "潮生会" in shown, shown
+    assert "维修" in shown, shown
+
+    via_beacon = await mcp_dispatch.alliance_bundle(kid, "beacon scan")
+    assert "本周岸维照划" in via_beacon, via_beacon
+
+    tagged = await mcp_dispatch.visit_bundle(kid, "潮生会 告示 维修")
+    assert "本周岸维照划" in tagged, tagged
+
+    one = await mcp_dispatch.visit_bundle(kid, f"潮生会 告示 {posted['id']}")
+    assert "本周岸维照划" in one, one
+
+    snap = await chaoshen.public_snapshot()
+    assert any("本周岸维照划" in (b.get("body") or "") for b in snap["beacons"]), snap
+    assert all(b.get("author") == "潮生会" for b in snap["beacons"]), snap
+
+    async with db.connect() as conn:
+        sid = (await (await conn.execute(
+            "SELECT id FROM stewards WHERE key_id=?", (kid,)
+        )).fetchone())[0]
+        await conn.execute(
+            "INSERT INTO beacons (author_id, tag, body, created_at) VALUES (?,?,?,?)",
+            (sid, "notice", "这是玩家留言不该上墙", db.now()),
+        )
+        await conn.commit()
+
+    snap2 = await chaoshen.public_snapshot()
+    assert all("玩家留言" not in (b.get("body") or "") for b in snap2["beacons"]), snap2
+    listed = await mcp_dispatch.visit_bundle(kid, "潮生会 告示")
+    assert "玩家留言" not in listed, listed
+
+    retracted = await chaoshen.owner_retract(posted["id"])
+    assert retracted["ok"], retracted
+    gone = await mcp_dispatch.visit_bundle(kid, "潮生会 告示")
+    assert "本周岸维照划" not in gone, gone
+    try:
+        await chaoshen.owner_retract(posted["id"])
+    except ValueError as exc:
+        assert "收下" in str(exc), str(exc)
+    else:
+        raise AssertionError("second retract should refuse")
+
+
+async def test_hui_owner_http() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="hui-http-"))
+    await _boot(tmp)
+    from fastapi.testclient import TestClient
+    from server import chaoshen, config
+    from server.main import app
+
+    config.HUI_KEY = "test-hui-key"
+    client = TestClient(app)
+
+    denied = client.get("/hui-owner?key=wrong")
+    assert denied.status_code == 401, denied.text
+
+    page = client.get("/hui-owner?key=test-hui-key")
+    assert page.status_code == 200, page.text
+    assert "上墙" in page.text
+    assert "岛民" in page.text and "不能贴" in page.text
+
+    posted = client.post(
+        "/api/hui-owner/post",
+        json={"key": "test-hui-key", "tag": "活动", "body": "周六补贴照发"},
+    )
+    assert posted.status_code == 200, posted.text
+    data = posted.json()
+    assert data.get("ok"), data
+
+    snap = await chaoshen.public_snapshot()
+    assert any("周六补贴照发" in (b.get("body") or "") for b in snap["beacons"]), snap
+
+    public = client.get("/api/public/hui")
+    assert public.status_code == 200, public.text
+    bodies = [b.get("body") for b in public.json().get("beacons") or []]
+    assert any("周六补贴照发" in (b or "") for b in bodies), bodies
+
+    retracted = client.post(
+        "/api/hui-owner/retract",
+        json={"key": "test-hui-key", "id": data["id"]},
+    )
+    assert retracted.status_code == 200, retracted.text
+
+
 def test_chaoshen() -> None:
     asyncio.run(test_chaoshen_desk_and_refuse())
     asyncio.run(test_chaoshen_old_windows_refuse())
@@ -295,6 +416,8 @@ def test_chaoshen() -> None:
     asyncio.run(test_tide_fund_average())
     asyncio.run(test_tide_fund_need_peers())
     asyncio.run(test_tide_fund_auto_payout())
+    asyncio.run(test_hui_official_notices())
+    asyncio.run(test_hui_owner_http())
 
 
 if __name__ == "__main__":
