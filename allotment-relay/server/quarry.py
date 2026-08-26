@@ -613,6 +613,9 @@ async def _hew(conn: aiosqlite.Connection, s: dict[str, Any], token: str) -> str
     ill = await health.maybe_roll_ailment(
         conn, s["id"], "quarry", chance=config.QUARRY_HAZARD_CHANCE, source="quarry",
     )
+    boost = await health.maybe_restore_health(
+        conn, s["id"], "quarry", chance=0.10, lo=4, hi=10,
+    )
     disc = await commons.roll_discovery(conn, s, "quarry")
     loot = "、".join(f"{item_label(k)} x{q}" for k, q in got) if got else "没有矿"
     depleted = ""
@@ -633,6 +636,8 @@ async def _hew(conn: aiosqlite.Connection, s: dict[str, Any], token: str) -> str
     )
     if ill:
         msg += f"\n{ill}\n→ visit_ops clinic treat 岩尘入肺（必须花票）"
+    if boost:
+        msg += f"\n{boost}"
     if disc:
         msg += f"\n{disc}"
     return msg

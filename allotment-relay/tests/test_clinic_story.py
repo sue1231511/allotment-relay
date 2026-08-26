@@ -144,9 +144,10 @@ async def test_clinic_catalog() -> None:
     from server import mcp_dispatch
 
     cat = await mcp_dispatch.visit_bundle(kid, "clinic catalog")
-    for name in ("醒酒药", "净血针剂", "祛咒香"):
+    for name in ("醒酒药", "净血针剂", "祛咒香", "养命汤", "养命丹", "回春散"):
         assert name in cat, cat
     assert "急救包" not in cat, cat
+    assert "调理" in cat or "补身子" in cat, cat
 
 
 if __name__ == "__main__":

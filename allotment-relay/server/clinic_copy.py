@@ -5,6 +5,8 @@ from __future__ import annotations
 import random
 from typing import Any
 
+from . import config
+
 # ── 进门氛围 ──────────────────────────────────────────────
 
 ATMOSPHERE = [
@@ -49,6 +51,7 @@ CHAT_LINES = [
     "桥桥大夫：「票不到位，药不到位。诊所不搞慈善——这话我说腻了，但还得说。」",
     "桥桥大夫：「你要是闲得慌，去种地去。别在我这儿晃。」",
     "桥桥大夫：「窗台上那窝别碰。碰坏了你赔不起。」",
+    "桥桥大夫：「没病也虚？调理单子在门口。价不便宜，别还价。」",
 ]
 
 # ── 窗台斑鸠（每日最多 1 次）──────────────────────────────
@@ -125,7 +128,58 @@ CLINIC_MEDICINES: dict[str, dict[str, Any]] = {
         "name": "祛咒香", "emoji": "🪔", "price": 32, "ailment": "legfish_hex",
         "aliases": ["祛咒香", "祛咒"],
     },
+    "med_tonic": {
+        "name": "养命汤", "emoji": "🍵", "price": 96, "heal": 8,
+        "aliases": ["养命汤"],
+        "hint": "回 8 健康，不治病。身子虚了喝；有病还是要 treat",
+    },
+    "med_elixir": {
+        "name": "养命丹", "emoji": "🟡", "price": 220, "heal": 16,
+        "aliases": ["养命丹"],
+        "hint": "回 16 健康。贵，有余票再囤",
+    },
+    "med_restore": {
+        "name": "回春散", "emoji": "🌺", "price": 420, "heal": 28,
+        "aliases": ["回春散"],
+        "hint": "回 28 健康。桥桥最贵的货，专宰口袋鼓的人",
+    },
 }
+
+# 诊所当场调理（不占行囊）。价高，专给口袋鼓的人补身子。
+CLINIC_TONICS: dict[str, dict[str, Any]] = {
+    "small": {
+        "name": "姜汤小补",
+        "cost": config.CLINIC_TONIC_SMALL_COST,
+        "heal": config.CLINIC_TONIC_SMALL_HEAL,
+        "aliases": ("小", "小补", "sip", "small"),
+    },
+    "mid": {
+        "name": "养命调理",
+        "cost": config.CLINIC_TONIC_MID_COST,
+        "heal": config.CLINIC_TONIC_MID_HEAL,
+        "aliases": ("中", "中补", "tonic", "mid"),
+    },
+    "large": {
+        "name": "回春大补",
+        "cost": config.CLINIC_TONIC_LARGE_COST,
+        "heal": config.CLINIC_TONIC_LARGE_HEAL,
+        "aliases": ("大", "大补", "large"),
+    },
+    "full": {
+        "name": "全套养命",
+        "cost_per": config.CLINIC_TONIC_FULL_PER,
+        "min_cost": config.CLINIC_TONIC_FULL_MIN,
+        "aliases": ("满", "满血", "fill", "full"),
+    },
+}
+
+TONIC_LINES = [
+    "没病也虚？行。药材不便宜，票准备好。",
+    "调理不是治病。有挂号项先 treat，别拿补药当膏药。",
+    "岛上有余票的人太多。这价就是给你这种人定的。",
+    "喝完别立刻去井下打架。我这汤补不了你自己找揍。",
+    "身子满了还来？药材留给真虚的人。",
+]
 
 TREAT_LINES: dict[str, list[str]] = {
     "hangover": [
@@ -239,3 +293,64 @@ def pick_discount_hint() -> str:
 
 def pick_dove_event() -> dict[str, Any]:
     return random.choice(DOVE_EVENTS)
+
+
+def resolve_tonic(token: str) -> str | None:
+    raw = (token or "").strip().lower()
+    if not raw:
+        return None
+    if raw in CLINIC_TONICS:
+        return raw
+    for key, meta in CLINIC_TONICS.items():
+        for alias in meta.get("aliases") or ():
+            if str(alias).lower() == raw:
+                return key
+    return None
+
+
+def tonic_cost(key: str, health: int, *, cost_mult: float = 1.0, cost_add: int = 0) -> tuple[int, int]:
+    """返回 (票价, 预计回血点数)。满档按缺口算。"""
+    from . import health as health_mod
+
+    meta = CLINIC_TONICS[key]
+    body = max(0, min(100, int(health)))
+    need = 100 - body
+    if key == "full":
+        heal = need
+        base = max(int(meta["min_cost"]), heal * int(meta["cost_per"]))
+        if heal <= 0:
+            return health_mod._bill_cost(int(meta["min_cost"]), cost_mult=cost_mult, cost_add=cost_add), 0  # noqa: SLF001
+        return health_mod._bill_cost(base, cost_mult=cost_mult, cost_add=cost_add), heal
+    heal = min(int(meta["heal"]), need)
+    cost = health_mod._bill_cost(int(meta["cost"]), cost_mult=cost_mult, cost_add=cost_add)  # noqa: SLF001
+    return cost, heal
+
+
+def tonic_menu_lines(health: int, *, cost_mult: float = 1.0, cost_add: int = 0) -> list[str]:
+    lines = [
+        "调理价目（没病也能补身子，不治病；有挂号项先 treat）:",
+        f"  现身体 {int(health)}/100",
+    ]
+    labels = {
+        "small": "clinic 调理 小",
+        "mid": "clinic 调理 中",
+        "large": "clinic 调理 大",
+        "full": "clinic 调理 满",
+    }
+    for key, meta in CLINIC_TONICS.items():
+        cost, heal = tonic_cost(key, health, cost_mult=cost_mult, cost_add=cost_add)
+        if key == "full":
+            lines.append(
+                f"  {meta['name']} — {labels[key]} · {cost} 票回 {heal} "
+                f"（缺多少补多少，{meta['cost_per']} 票/点，最低 {meta['min_cost']}）"
+            )
+        else:
+            lines.append(
+                f"  {meta['name']} — {labels[key]} · {cost} 票回 {heal}"
+            )
+    lines.append("也可 clinic buy 养命汤 / 养命丹 / 回春散 囤着喝。价一样贵。")
+    return lines
+
+
+def pick_tonic_line() -> str:
+    return f"桥桥大夫：「{random.choice(TONIC_LINES)}」"

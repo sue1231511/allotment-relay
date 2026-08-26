@@ -194,6 +194,18 @@ START_HEALTH = 100
 HEALTH_LOW = 40
 AILMENT_ROLL_CHANCE = _event_rate(0.12)
 AILMENT_BAD_EVENT_CHANCE = _event_rate(0.13)
+# 没病也能补身子：诊所调理按档收票（有钱人的去处，不赊）
+CLINIC_TONIC_SMALL_COST = 88
+CLINIC_TONIC_SMALL_HEAL = 8
+CLINIC_TONIC_MID_COST = 180
+CLINIC_TONIC_MID_HEAL = 14
+CLINIC_TONIC_LARGE_COST = 360
+CLINIC_TONIC_LARGE_HEAL = 22
+CLINIC_TONIC_FULL_PER = 16       # 全套养命：每缺 1 点健康收这么多票
+CLINIC_TONIC_FULL_MIN = 80
+SLEEP_HEALTH = 6                 # 床上一觉顺带回这么多健康
+COOKED_EAT_HEALTH = 1            # 家里吃熟菜点滴回血
+DINE_HEALTH = 2                  # 下馆子堂食比家里多一口
 # 生肉感染：只有 meat_*（兔肉/猪肉）生吃会滚；水果/生鱼/野薄荷安全
 RAW_MEAT_INFECT_CHANCE = 0.35
 INFECTION_TREAT_COOLDOWN = 21600  # 同一次感染两次治疗至少隔 6 小时

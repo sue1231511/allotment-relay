@@ -181,6 +181,9 @@ async def beach_ops(key_id: int, command: str) -> str:
             beach_ill = await health.maybe_roll_ailment(
                 conn, s["id"], "beach", chance=0.10, source="beach",
             )
+            beach_boost = await health.maybe_restore_health(
+                conn, s["id"], "beach", chance=0.12, lo=4, hi=10,
+            )
             from . import lili as lili_mod
             lili_spawn = await lili_mod.maybe_spawn_visit(conn)
             from . import npc as npc_mod
@@ -194,6 +197,8 @@ async def beach_ops(key_id: int, command: str) -> str:
         msg = f"赶海：{label} x{qty}{extra_msg}"
         if beach_ill:
             msg += f"\n{beach_ill}\n→ visit_ops clinic treat …（必须花票）"
+        if beach_boost:
+            msg += f"\n{beach_boost}"
         if lili_spawn:
             msg += f"\n✨ {lili_spawn['detail']} → visit_ops lili scan"
         if shiye:
@@ -269,6 +274,10 @@ async def beach_ops(key_id: int, command: str) -> str:
             tale_extra = await tale_mod.check_action_progress(conn, s["id"], "beach")
             from . import cloth as cloth_mod
             cloth_echo = await cloth_mod.try_echo(conn, s, "beach")
+            from . import health as health_mod
+            probe_boost = await health_mod.maybe_restore_health(
+                conn, s["id"], "beach", chance=0.10, lo=3, hi=8,
+            )
             await conn.commit()
 
         msg = f"掏洞：{label} x{qty}{charm_msg}{clock_msg}"
@@ -277,6 +286,8 @@ async def beach_ops(key_id: int, command: str) -> str:
             "沙蟹横着跑，你横着捞",
             "探洞手艺人，退潮不打烊",
         ])
+        if probe_boost:
+            msg += f"\n{probe_boost}"
         if disc:
             msg += f"\n{disc}"
         if shiye:
