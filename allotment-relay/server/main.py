@@ -662,7 +662,7 @@ def _owner_ok(key: str, expect: str) -> bool:
 
 _PANEL_DISABLED_HINT = (
     "面板未启用：请在 Zeabur 环境变量设置对应钥匙"
-    "（UT_OWNER_KEY / UT_GATE_KEY / LIZHI_KEY / STAR_KEY / INVITE_ADMIN_KEY）。"
+    "（UT_OWNER_KEY / UT_GATE_KEY / LIZHI_KEY / STAR_KEY / INVITE_ADMIN_KEY / HUI_KEY）。"
 )
 
 
@@ -1263,6 +1263,51 @@ async def invite_admin_clear(body: dict):
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"ok": True, "text": text}
+
+
+@app.get("/hui-owner")
+async def hui_owner_page(request: Request, key: str = ""):
+    from .config import HUI_KEY
+    if not HUI_KEY:
+        return JSONResponse({"detail": _PANEL_DISABLED_HINT}, status_code=503)
+    if not _owner_ok(key, HUI_KEY):
+        return JSONResponse({"detail": "凭证不对。潮生会不认这把钥匙。"}, status_code=401)
+    from . import chaoshen
+    notices = await chaoshen.owner_list()
+    return templates.TemplateResponse(request, "hui_owner.html", {
+        "key": key,
+        "notices": notices,
+        "body_max": chaoshen.NOTICE_BODY_MAX,
+        "tag_max": chaoshen.NOTICE_TAG_MAX,
+    })
+
+
+@app.post("/api/hui-owner/post")
+async def hui_owner_post(request: Request):
+    import json as _json
+    from .config import HUI_KEY
+    body = _json.loads(await request.body())
+    if not _owner_ok(str(body.get("key") or ""), HUI_KEY):
+        return JSONResponse({"detail": "凭证不对"}, status_code=401)
+    from . import chaoshen
+    try:
+        return await chaoshen.owner_post(str(body.get("tag") or ""), str(body.get("body") or ""))
+    except ValueError as exc:
+        return JSONResponse({"detail": str(exc)}, status_code=400)
+
+
+@app.post("/api/hui-owner/retract")
+async def hui_owner_retract(request: Request):
+    import json as _json
+    from .config import HUI_KEY
+    body = _json.loads(await request.body())
+    if not _owner_ok(str(body.get("key") or ""), HUI_KEY):
+        return JSONResponse({"detail": "凭证不对"}, status_code=401)
+    from . import chaoshen
+    try:
+        return await chaoshen.owner_retract(int(body.get("id") or 0))
+    except ValueError as exc:
+        return JSONResponse({"detail": str(exc)}, status_code=400)
 
 
 app = NormalizeMcpPathMiddleware(app)

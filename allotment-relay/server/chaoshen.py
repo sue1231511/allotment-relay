@@ -17,6 +17,15 @@ FUND_PAY_WEEKDAYS = (1, 3, 5)
 FUND_PAY_WEEKDAY_LABEL = "周二、周四、周六"
 _CST = timezone(timedelta(hours=8))
 _WEEKDAY_CN = "一二三四五六日"
+NOTICE_AUTHOR = "潮生会"
+NOTICE_TAG_DEFAULT = "厅示"
+NOTICE_TAG_MAX = 20
+NOTICE_BODY_MAX = 280
+NOTICE_LIST_LIMIT = 12
+PLAYER_NOTICE_REFUSE = (
+    "潮生会告示是岛上贴的厅示，岛民不能贴、不能回。"
+    "去聊天室说话：lounge_ops say 正文。人类去上手页聊天室或 /lounge。"
+)
 
 ORG_NAME = "潮生会"
 CLERK_NAME = "阿簿"
@@ -47,17 +56,17 @@ CHAOSHEN_HELP = f"""visit_ops 潮生会 子命令（整句写进 command）：
   维 交 / 维 交 50 — 交欠的维修费。欠维修费时不能扩产；开着的小馆暂停堂食。不是 hut_ops mascot upkeep
   基金 — 潮汐基金：岛均口袋票。有余的人自己填票数捐进来
   基金 捐 50 — 捐票，票数自己填（最少 {FUND_MIN_DONATE}）；口袋须高于岛均，捐完仍须不低于岛均
-  告示 — 看告示；贴 标签 正文 发告示；回 编号 正文 回复（同 alliance_ops beacon）
+  告示 — 看墙上厅示（岛上贴的，岛民不能贴、不能回）。说话去聊天室 lounge_ops say
   岸税东八区每周一换班自动划入基金（本周新号免征到下周）。岸维东八区每天换班自动划（今日新号免征到明天）。补贴不用领、没有 MCP 指令。东八区{FUND_PAY_WEEKDAY_LABEL}自动打到低于岛均的人口袋（每人顶 {FUND_PAY_CAP} 票，不超过岛均）
   没有入会 / 开会 / 退会。{ORG_NAME}是岛上管事的机构，上岛时已经在册。
   本周目标 / 公仓 / 公物不在这儿：alliance_ops league · alliance_ops donate / larder · plot_ops commons
 例子：潮生会 · 潮生会 问 · 潮生会 税 · 潮生会 税 交 · 潮生会 税 交 50 · 潮生会 维 · 潮生会 维 交 · 潮生会 维 交 50 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 基金 捐 8 · 潮生会 告示
-容易搞混：税=强制岸税（富人按档交，税入基金）。维=产业维修费（产业越大越交，也入基金）。基金 捐 50=自愿捐票（须高于岛均）。mascot upkeep=吉祥物喂养。plot_ops repair=田间意外。周潮天灾=只冲 3 万以上，不是税。公仓捐货走 alliance_ops donate 甘蓝 2。不要写潮生会 补贴。steward_ops guild=每日工分轮值，不是入会；alliance_ops board=周目标贡献榜。没有 tax_ops / upkeep_ops。"""
+容易搞混：税=强制岸税（富人按档交，税入基金）。维=产业维修费（产业越大越交，也入基金）。基金 捐 50=自愿捐票（须高于岛均）。mascot upkeep=吉祥物喂养。plot_ops repair=田间意外。周潮天灾=只冲 3 万以上，不是税。公仓捐货走 alliance_ops donate 甘蓝 2。不要写潮生会 补贴。steward_ops guild=每日工分轮值，不是入会；alliance_ops board=周目标贡献榜。没有 tax_ops / upkeep_ops。告示不能贴：那是厅示，不是聊天室。"""
 
 _DOOR_LINES = (
     "坐。先报名字。入会？没有这回事。",
     "欠工去酒吧打卡。我这儿只记账，不替荔栀收碗。",
-    "告示上墙，潮汐基金入簿。岸税、岸维也在这儿划。",
+    "告示上墙，潮汐基金入簿。岸税、岸维也在这儿划。墙上是厅示，你们不能贴。",
     "潮汐基金按岛均口袋票算。有余就填个数捐。补贴不用领，周二四六自动发。",
     "口袋过了八百，岸税按档交。超额累进，周一换班自动划。欠税别来买地。",
     "地扩多了、馆开了，岸维按产业每天收。起步那几块免。欠维修费小馆先停堂。",
@@ -109,7 +118,7 @@ async def _front_desk(key_id: int) -> str:
     async with db.connect() as conn:
         conn.row_factory = None
         beacon_n = (await (await conn.execute(
-            "SELECT COUNT(*) FROM beacons"
+            "SELECT COUNT(*) FROM hui_notices WHERE retracted=0"
         )).fetchone())[0]
         fund_line = _fund_brief(await fund_snapshot(conn, s["id"]))
         from . import tax as tax_mod
@@ -613,20 +622,13 @@ async def chaoshen_ops(key_id: int, command: str = "") -> str:
         rest = " ".join(parts[1:]) if len(parts) > 1 else "scan"
         if not rest or rest.lower() in ("scan", "看"):
             rest = "scan"
-        from . import game as game_mod
-        return await game_mod.beacon_ops(key_id, rest)
+        return await notice_ops(key_id, rest)
 
     if verb_l in ("贴", "post"):
-        if len(parts) < 3:
-            raise ValueError("用法：visit_ops 潮生会 贴 标签 正文")
-        from . import game as game_mod
-        return await game_mod.beacon_ops(key_id, "post " + " ".join(parts[1:]))
+        raise ValueError(PLAYER_NOTICE_REFUSE)
 
     if verb_l in ("回", "respond", "回复"):
-        if len(parts) < 3:
-            raise ValueError("用法：visit_ops 潮生会 回 编号 正文")
-        from . import game as game_mod
-        return await game_mod.beacon_ops(key_id, "respond " + " ".join(parts[1:]))
+        raise ValueError(PLAYER_NOTICE_REFUSE)
 
     if verb_l in ("公物", "commons", "公共"):
         raise ValueError(_commons_refuse())
@@ -637,6 +639,134 @@ async def chaoshen_ops(key_id: int, command: str = "") -> str:
         raise ValueError(_commons_refuse())
 
     raise ValueError(f"未知潮生会指令: {command}\n{CHAOSHEN_HELP}")
+
+
+def _notice_tag(raw: str) -> str:
+    tag = (raw or "").strip()[:NOTICE_TAG_MAX]
+    return tag or NOTICE_TAG_DEFAULT
+
+
+async def owner_post(tag: str, body: str) -> dict[str, Any]:
+    """制作方面板发厅示。岛民走不了这条。"""
+    body = (body or "").strip()
+    if not body:
+        raise ValueError("告示不能空着")
+    if len(body) > NOTICE_BODY_MAX:
+        raise ValueError(f"告示最多 {NOTICE_BODY_MAX} 字")
+    tag = _notice_tag(tag)
+    async with db.connect() as conn:
+        cur = await conn.execute(
+            "INSERT INTO hui_notices (tag, body, created_at, retracted) VALUES (?,?,?,0)",
+            (tag, body, db.now()),
+        )
+        nid = cur.lastrowid
+        await db.add_chronicle(
+            "hui", f"潮生会贴出告示[{tag}]：{body[:80]}", None, conn=conn,
+        )
+        await conn.commit()
+    return {"ok": True, "id": nid, "tag": tag, "msg": f"告示已上墙 [{tag}] #{nid}"}
+
+
+async def owner_retract(notice_id: int) -> dict[str, Any]:
+    nid = int(notice_id or 0)
+    async with db.connect() as conn:
+        conn.row_factory = None
+        row = await (await conn.execute(
+            "SELECT id, tag, retracted FROM hui_notices WHERE id=?", (nid,)
+        )).fetchone()
+        if not row:
+            raise ValueError("没有这张告示")
+        if int(row[2] or 0):
+            raise ValueError("这张已经收下了")
+        await conn.execute("UPDATE hui_notices SET retracted=1 WHERE id=?", (nid,))
+        await db.add_chronicle(
+            "hui", f"潮生会收下告示 #{nid}[{row[1]}]", None, conn=conn,
+        )
+        await conn.commit()
+    return {"ok": True, "id": nid, "msg": f"已收下 #{nid}"}
+
+
+async def owner_list() -> list[dict[str, Any]]:
+    async with db.connect() as conn:
+        conn.row_factory = None
+        rows = await (await conn.execute(
+            """
+            SELECT id, tag, body, created_at, retracted
+            FROM hui_notices
+            ORDER BY created_at DESC LIMIT 40
+            """
+        )).fetchall()
+    return [
+        {
+            "id": r[0],
+            "tag": r[1],
+            "body": r[2],
+            "created_at": r[3],
+            "retracted": bool(r[4]),
+        }
+        for r in rows
+    ]
+
+
+async def _format_notices(*, notice_id: int | None = None, tag: str | None = None) -> str:
+    async with db.connect() as conn:
+        conn.row_factory = None
+        if notice_id:
+            row = await (await conn.execute(
+                "SELECT id, tag, body FROM hui_notices WHERE id=? AND retracted=0",
+                (notice_id,),
+            )).fetchone()
+            if not row:
+                raise ValueError("没有这张告示")
+            return f"#{row[0]} [{row[1]}] {NOTICE_AUTHOR}：{row[2]}"
+        if tag:
+            rows = await (await conn.execute(
+                """
+                SELECT id, tag, body FROM hui_notices
+                WHERE retracted=0 AND tag=?
+                ORDER BY created_at DESC LIMIT ?
+                """,
+                (tag, NOTICE_LIST_LIMIT),
+            )).fetchall()
+        else:
+            rows = await (await conn.execute(
+                """
+                SELECT id, tag, body FROM hui_notices
+                WHERE retracted=0
+                ORDER BY created_at DESC LIMIT ?
+                """,
+                (NOTICE_LIST_LIMIT,),
+            )).fetchall()
+    if not rows:
+        return "告示栏暂无厅示。告示由潮生会张贴，岛民不能贴。说话去 lounge_ops say。"
+    lines = [f"#{r[0]} [{r[1]}] {NOTICE_AUTHOR}：{r[2]}" for r in rows]
+    lines.append("告示由潮生会张贴，岛民不能贴、不能回。说话去 lounge_ops say。")
+    return "\n".join(lines)
+
+
+async def notice_ops(key_id: int, command: str) -> str:
+    await require_steward(key_id, exempt_duty=True)
+    parts = command.strip().split(maxsplit=2)
+    verb = (parts[0] if parts else "scan").strip()
+    verb_l = verb.lower()
+
+    if verb_l in ("help", "?", "帮助"):
+        return (
+            "看潮生会告示：scan / 看。也可 visit_ops 潮生会 告示。\n"
+            "scan 编号 看一张；scan 标签 按标签筛。\n"
+            f"{PLAYER_NOTICE_REFUSE}"
+        )
+    if verb_l in ("post", "贴", "respond", "回", "回复"):
+        raise ValueError(PLAYER_NOTICE_REFUSE)
+
+    token = None
+    if verb_l in ("scan", "看", "告示", "公告") or not verb:
+        token = parts[1] if len(parts) > 1 else None
+    else:
+        token = verb
+    notice_id = int(token) if token and str(token).isdigit() else None
+    tag = None if notice_id or not token else token
+    return await _format_notices(notice_id=notice_id, tag=tag)
 
 
 async def public_snapshot() -> dict[str, Any]:
@@ -650,15 +780,15 @@ async def public_snapshot() -> dict[str, Any]:
         await ensure_fund_payout(conn)
         beacons = await (await conn.execute(
             """
-            SELECT b.body, a.name, b.created_at FROM beacons b
-            JOIN stewards a ON a.id=b.author_id
-            ORDER BY b.created_at DESC LIMIT 6
+            SELECT body, tag, created_at FROM hui_notices
+            WHERE retracted=0
+            ORDER BY created_at DESC LIMIT 6
             """
         )).fetchall()
         recent = await (await conn.execute(
             """
             SELECT text, created_at FROM chronicle
-            WHERE action IN ('fund', 'tax', 'upkeep')
+            WHERE action IN ('fund', 'tax', 'upkeep', 'hui')
             ORDER BY created_at DESC LIMIT 8
             """
         )).fetchall()
@@ -709,7 +839,7 @@ async def public_snapshot() -> dict[str, Any]:
             "rates": upkeep.get("rates") or [],
         },
         "beacons": [
-            {"author": r[1], "body": (r[0] or "")[:80], "created_at": r[2]}
+            {"author": NOTICE_AUTHOR, "tag": r[1], "body": r[0], "created_at": r[2]}
             for r in beacons
         ],
         "recent": [

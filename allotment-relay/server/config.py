@@ -594,4 +594,6 @@ INVITE_PROXY_HOPS = 3
 INVITE_PROXY_DEVICES_ON_IP = 6
 
 INVITE_ADMIN_KEY = os.environ.get("INVITE_ADMIN_KEY", "")
+# 潮生会厅示后台。不设则 /hui-owner 关闭。告示由制作方张贴，岛民只能看。
+HUI_KEY = os.environ.get("HUI_KEY", "")
 INVITE_IP_SALT = os.environ.get("INVITE_IP_SALT", "tidal-island-invite-ip")

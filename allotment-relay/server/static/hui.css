@@ -152,6 +152,12 @@
   gap: 12px;
 }
 
+.hui-notice-hint {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #8a9898;
+}
+
 .hui-log {
   display: block;
 }

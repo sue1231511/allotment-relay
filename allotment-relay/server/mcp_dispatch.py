@@ -218,7 +218,7 @@ ALLIANCE_HELP = """alliance_ops 子命令（整句写进 command）：
   board — 周目标贡献榜（全服票榜请用 steward_ops board）
   donate 物品 数量 / larder / draw 物品 数量 — 联盟储藏室（领取 2 票、每日 3 次）。不在潮生会办
   捐票进潮汐基金不是这里：visit_ops 潮生会 基金 捐 50（票数自填）。岸税 visit_ops 潮生会 税 / 税 交。岸维 visit_ops 潮生会 维 / 维 交。补贴不用领，东八区周二四六自动发
-  beacon post|scan|respond — 公告栏。也可 visit_ops 潮生会 告示
+  beacon scan — 看潮生会告示（厅示由岛上张贴，岛民不能贴、不能回）。也可 visit_ops 潮生会 告示。说话去 lounge_ops say
   bottle leave|fish|scan|read — 漂流瓶"""
 
 VISIT_HELP = """visit_ops 子命令（整句写进 command）：
@@ -227,7 +227,7 @@ VISIT_HELP = """visit_ops 子命令（整句写进 command）：
   shaonian visit|fortune|transfer|buy 符名 — 韶年望潮人
   musong visit|send 名字|remember — 目送人·阿槐；渡口送别，每个游戏日可记一个名字
   jingshan visit|status|order|deliver|revisit|remember — 何敬山的商船糕点委托与后续小事件；按 status 顺序
-  潮生会 / 问 / 税 / 税 交 / 维 / 维 交 / 基金 / 基金 捐 50 / 告示 — 潮生会是岛上管事的机构，值事阿簿。不能加入、开会、退会；上岛已在册。本周目标/公仓/公物不在这儿（alliance_ops league · donate / larder · plot_ops commons）。岸税按口袋现票超额累进：未过 800 免征；visit_ops 潮生会 税 看档，税 交 交欠税（可 税 交 50）。岸维按产业每天收：起步份地/果园免，产业单价至少 10 票（超出份地 10、果园 20、温室 30）；扩地、开馆、盖棚才交；visit_ops 潮生会 维 看档，维 交 交欠的维修费（可 维 交 50）。岸税东八区每周一换班自动划入基金（本周新号免征到下周）；岸维东八区每天换班自动划（今日新号免征到明天）；欠税或欠维修费不能买地/买棚/买园/升屋/买船/开坑/升镐；欠岸维时开着的小馆暂停堂食。没有 tax_ops / upkeep_ops。hut_ops mascot upkeep 是吉祥物喂养，不是岸维。plot_ops repair 是田间意外。周潮天灾不是税。潮汐基金按岛均口袋票：有余的人自己填票数捐；补贴不用领，东八区周二、周四、周六自动打到低于岛均的人口袋（每人顶 1000、不超过岛均）。例子：潮生会 · 潮生会 问 · 潮生会 税 · 潮生会 税 交 · 潮生会 税 交 50 · 潮生会 维 · 潮生会 维 交 · 潮生会 维 交 50 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 基金 捐 8 · 潮生会 告示
+  潮生会 / 问 / 税 / 税 交 / 维 / 维 交 / 基金 / 基金 捐 50 / 告示 — 潮生会是岛上管事的机构，值事阿簿。不能加入、开会、退会；上岛已在册。告示只看不贴（厅示由潮生会张贴，岛民不能贴、不能回；说话去 lounge_ops say）。本周目标/公仓/公物不在这儿（alliance_ops league · donate / larder · plot_ops commons）。岸税按口袋现票超额累进：未过 800 免征；visit_ops 潮生会 税 看档，税 交 交欠税（可 税 交 50）。岸维按产业每天收：起步份地/果园免，产业单价至少 10 票（超出份地 10、果园 20、温室 30）；扩地、开馆、盖棚才交；visit_ops 潮生会 维 看档，维 交 交欠的维修费（可 维 交 50）。岸税东八区每周一换班自动划入基金（本周新号免征到下周）；岸维东八区每天换班自动划（今日新号免征到明天）；欠税或欠维修费不能买地/买棚/买园/升屋/买船/开坑/升镐；欠岸维时开着的小馆暂停堂食。没有 tax_ops / upkeep_ops。hut_ops mascot upkeep 是吉祥物喂养，不是岸维。plot_ops repair 是田间意外。周潮天灾不是税。潮汐基金按岛均口袋票：有余的人自己填票数捐；补贴不用领，东八区周二、周四、周六自动打到低于岛均的人口袋（每人顶 1000、不超过岛均）。例子：潮生会 · 潮生会 问 · 潮生会 税 · 潮生会 税 交 · 潮生会 税 交 50 · 潮生会 维 · 潮生会 维 交 · 潮生会 维 交 50 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 基金 捐 8 · 潮生会 告示
   buxing visit|tea|tide|light 给谁 | 求什么|gallery|entrust 旧事|watch|remember|fulfill 灯号 — 守灯人·不醒；茶每日一次，问潮前 5 次免费，灯廊公开
   tt catalog|buy 物品|gift 物品 — Tt酱杂货店。例子：tt buy 锄头 · tt buy 甘蓝种 2 · tt buy 盐风镐
     货架种子标当季/休市；过季种子买不了，等到开窗或 sow 棚1（温室种菜种树都不受季节）
