@@ -141,7 +141,7 @@ MARRIAGE_HELP = """marriage_ops 子命令（整句写进 command）：
           选了还能改，再写一次即可。差价补上或退回口袋。不是结婚吃席
       花束：海边/份地 订婚 采花，或赶海/forage 事件掉潮花，或 tt buy 礼盒，或何敬山送的商船糕点 → 订婚 花束
       选配服装：衣泊坊 买 订婚服 海色（8888）或 委托 短褂/订婚服 → 订婚 服装（不是婚服）
-      选配留影：灯塔 visit_ops buxing 之后 订婚 留影 灯塔 2888；也可 留影 海边 / 小屋
+      选配留影：订婚 留影 灯塔 8888（最高档，点了就算上塔，不用先 visit_ops）。不写金额按地点默认。选了还能改。也可 留影 海边 / 小屋。灯塔席是结婚吃席，不是留影
       三件必办齐了会自动记下。跳过订婚也能直接 发出 / 金饰 / 婚服 / 吃席 再 结婚
       不是潮誓戒，不是求婚信物栏，订婚宴不是结婚吃席，订婚不是彩礼
   金饰 — 订契后把行囊里的三金（或五金）登记进婚书
@@ -160,7 +160,7 @@ MARRIAGE_HELP = """marriage_ops 子命令（整句写进 command）：
   · 发出前：小屋升到岛上最高档（现在是临海邸）+ 彩礼金额 + 口袋够付 + 潮誓戒。300 票门槛已经并进彩礼。
   · 订婚草稿就能办，不用先订契，也不要彩礼。去海边寻信、小馆办宴，不是一次填六个数。
   · 10万～100万只用于发出求婚的彩礼，不是订婚。订婚没有礼金。
-  · 举行前：三金 + 婚服 + 吃席规格。吃席和订婚宴选了都能改，差价补或退。五金选配，不挡登记。订婚宴不是结婚吃席。订婚戒不是潮誓戒。
+  · 举行前：三金 + 婚服 + 吃席规格。吃席、订婚宴、留影选了都能改，差价补或退。五金选配，不挡登记。订婚宴不是结婚吃席。订婚戒不是潮誓戒。留影最高档写 订婚 留影 灯塔 8888，点了就算上塔；灯塔席是结婚吃席。
   · 婚戒/婚服自制比买慢。三金五金没有自制，只去 Tt酱。
   · 求婚没有「接受」子命令。人类打开 /lianli/… 点头。
   · 不要发明「离婚 确认」。岛民不能自己立案离婚。
@@ -284,7 +284,13 @@ BETROTHAL_PHOTO_PLACES = {
     "lighthouse": "buxing",
     "beach": "beach",
     "hut": "hut",
+    "最高": "buxing",
+    "最高档": "buxing",
+    "高档": "buxing",
 }
+BETROTHAL_PHOTO_LABELS = {"buxing": "灯塔", "beach": "海边", "hut": "小屋"}
+BETROTHAL_PHOTO_DEFAULTS = {"buxing": 8_888, "beach": 1_888, "hut": 1_888}
+BETROTHAL_PHOTO_FEAST_MIX = {"灯塔席", "满潮席", "岸席", "滩席"}
 BETROTHAL_FEAST_VENUES = {
     "小馆": "eatery",
     "岸畔小馆": "eatery",
@@ -310,13 +316,15 @@ def _betrothal_help_text() -> str:
         f"visit_ops tt buy 礼盒（{BETROTHAL_BOX_SHOP}）；何敬山送糕点。再 订婚 花束\n"
         "选配：\n"
         f"  服装 — 衣泊坊 cloth_ops 买 订婚服 海色（{BETROTHAL_ATTIRE_SHOP}）或 委托 短褂/订婚服，再 订婚 服装。不是婚服\n"
-        f"  留影 — 灯塔 visit_ops buxing 之后 订婚 留影 灯塔 2888；也可 留影 海边 / 小屋"
-        f"（{BETROTHAL_PHOTO_MIN}～{BETROTHAL_PHOTO_MAX}）\n"
+        f"  留影 — 订婚 留影 灯塔 8888（最高档，点了就算上塔，不用先 visit_ops）；"
+        f"也可 留影 海边 / 小屋（{BETROTHAL_PHOTO_MIN}～{BETROTHAL_PHOTO_MAX}）。"
+        f"不写金额按地点默认。选了还能改。灯塔席是结婚吃席，不是留影\n"
         "例子：\n"
         "  marriage_ops 订婚\n"
         "  marriage_ops 订婚 寻信\n"
         "  marriage_ops 订婚 宴 小馆 12800\n"
-        "  marriage_ops 订婚 采花"
+        "  marriage_ops 订婚 采花\n"
+        "  marriage_ops 订婚 留影 灯塔 8888"
     )
 
 
@@ -349,8 +357,8 @@ def _betrothal_progress_lines(row: dict[str, Any]) -> list[str]:
         ),
         "  留影：" + _betrothal_slot_line(
             row, "betrothal_photo",
-            "未办 — 订婚 留影 灯塔 2888（先 visit_ops buxing）· 留影 海边 · 留影 小屋",
-        ),
+            "未办 — 订婚 留影 灯塔 8888（最高档，点了就算上塔）· 留影 海边 · 留影 小屋（选了还能改）",
+        ) + ("（选了还能改）" if int(row.get("betrothal_photo") or 0) else ""),
     ]
 
 
@@ -2244,7 +2252,7 @@ async def _cmd_betroth(s: dict[str, Any], rest: str) -> str:
         extra = ""
         if row and int(row.get("betrothal_done") or 0):
             extra = f"已经办过：{_betrothal_line(row)}\n"
-            extra += "服装和留影若还空着，仍可补：订婚 服装 · 订婚 留影 灯塔 2888\n"
+            extra += "服装和留影若还空着，仍可补：订婚 服装 · 订婚 留影 灯塔 8888\n"
         elif row and row["status"] in BETROTHAL_OPEN:
             if row["status"] == STATUS_ENGAGED:
                 extra = "已经订契。订婚若还没办，现在补；也可以跳过直接备三金、婚服、吃席。订婚没有彩礼。\n"
@@ -2599,31 +2607,89 @@ async def _betroth_attire(s: dict[str, Any], rest: str = "") -> str:
     )
 
 
+async def _betroth_photo_last(conn: aiosqlite.Connection, marriage_id: int) -> str:
+    cur = await conn.execute(
+        """
+        SELECT text FROM marriage_events
+        WHERE marriage_id=? AND text LIKE '%留影%'
+        ORDER BY id DESC LIMIT 1
+        """,
+        (marriage_id,),
+    )
+    row = await cur.fetchone()
+    return str(row[0] if row else "") or ""
+
+
+def _betroth_photo_place_from_note(note: str) -> str:
+    text = note or ""
+    if "灯塔" in text:
+        return "buxing"
+    if "海边" in text:
+        return "beach"
+    if "小屋" in text:
+        return "hut"
+    return ""
+
+
+async def _ensure_lighthouse_visit(conn: aiosqlite.Connection, steward_id: int) -> None:
+    """灯塔留影本身就算上塔，不必先单独 visit_ops buxing。"""
+    await conn.execute(
+        "INSERT OR IGNORE INTO npc_visits (steward_id, npc_key, day) VALUES (?,?,?)",
+        (steward_id, "buxing", db.day_id()),
+    )
+
+
+def _photo_help_line() -> str:
+    return (
+        "留影去地点办：订婚 留影 灯塔 8888（最高档，点了就算上塔，不用先 visit_ops buxing）"
+        " · 订婚 留影 海边 1888 · 订婚 留影 小屋 1888。"
+        f"{BETROTHAL_PHOTO_MIN}～{BETROTHAL_PHOTO_MAX}。不写金额按地点默认。"
+        "选了还能改，差价补上或退回口袋。灯塔席是结婚吃席，不是留影。"
+    )
+
+
 async def _betroth_photo(s: dict[str, Any], rest: str) -> str:
+    async with db.connect() as conn:
+        own = await _own(conn, s["id"])
+    if own and own["status"] == STATUS_MARRIED:
+        raise ValueError("已经成婚，留影不能再改。")
     row = await _betroth_row(s, allow_optional=True)
-    if int(row.get("betrothal_photo") or 0):
-        raise ValueError("留影已经办过。")
-    parts = (rest or "").split()
-    if not parts:
-        raise ValueError(
-            "留影要去地点：订婚 留影 灯塔 2888（先 visit_ops buxing）· 订婚 留影 海边 1888 · 订婚 留影 小屋 1888。"
-            f"{BETROTHAL_PHOTO_MIN}～{BETROTHAL_PHOTO_MAX}。"
-        )
+    changing = bool(int(row.get("betrothal_photo") or 0))
+    help_line = _photo_help_line()
+    raw = (rest or "").strip()
+    if not raw:
+        if changing:
+            return (
+                f"留影已经办过（{_bride_label(int(row.get('betrothal_photo') or 0))}）。"
+                "选了还能改：" + help_line
+            )
+        raise ValueError(help_line)
+    parts = raw.split()
     place_tok = parts[0]
+    if place_tok in BETROTHAL_PHOTO_FEAST_MIX:
+        raise ValueError(
+            "那是结婚吃席，写 marriage_ops 吃席 …。留影最高档：订婚 留影 灯塔 8888。"
+        )
     place = BETROTHAL_PHOTO_PLACES.get(place_tok) or BETROTHAL_PHOTO_PLACES.get(place_tok.lower())
     if not place:
-        raise ValueError("留影地点：灯塔 / 海边 / 小屋。")
-    amount = _parse_spend(
-        " ".join(parts[1:]), BETROTHAL_PHOTO_MIN, BETROTHAL_PHOTO_MAX, "留影"
-    )
+        raise ValueError("留影地点：灯塔 / 海边 / 小屋。最高档写 订婚 留影 灯塔 8888 或 订婚 留影 最高。")
+    amount_raw = " ".join(parts[1:]).strip()
+    if not amount_raw:
+        amount = BETROTHAL_PHOTO_DEFAULTS[place]
+    else:
+        amount = _parse_spend(amount_raw, BETROTHAL_PHOTO_MIN, BETROTHAL_PHOTO_MAX, "留影")
+    label = BETROTHAL_PHOTO_LABELS[place]
     async with db.connect() as conn:
-        if place == "buxing":
-            cur = await conn.execute(
-                "SELECT 1 FROM npc_visits WHERE steward_id=? AND npc_key='buxing' LIMIT 1",
-                (s["id"],),
+        last = await _betroth_photo_last(conn, int(row["id"])) if changing else ""
+        old_place = _betroth_photo_place_from_note(last) if changing else ""
+        old_paid = int(row.get("betrothal_photo") or 0) if changing else 0
+        if changing and old_place == place and old_paid == amount:
+            return (
+                f"留影已经是{label} {_bride_label(amount)}。"
+                "要改再写 订婚 留影 灯塔 8888 · 留影 海边 · 留影 小屋。"
             )
-            if not await cur.fetchone():
-                raise ValueError("先去灯塔 visit_ops buxing，再 订婚 留影 灯塔 金额。")
+        if place == "buxing":
+            await _ensure_lighthouse_visit(conn, int(s["id"]))
         elif place == "hut":
             if not int(s.get("hut_built") or 0):
                 raise ValueError("还没有小屋。hut_ops build 之后再在屋里留影。")
@@ -2640,14 +2706,33 @@ async def _betroth_photo(s: dict[str, Any], rest: str) -> str:
             )
             if not await cur.fetchone() and not await rolls.fetchone():
                 raise ValueError("先去海边 订婚 寻信 / 采花，或 tide_ops dig 赶海，再留影。")
-        await _pay_from_pocket(conn, s, amount, "留影")
-        label = {"buxing": "灯塔", "beach": "海边", "hut": "小屋"}[place]
+        delta = amount - old_paid
+        _, _, tickets = await _live_hut(conn, s)
+        if delta > 0 and tickets < delta:
+            if changing:
+                raise ValueError(f"改留影还要补 {delta} 票，口袋 {tickets}。")
+            raise ValueError(f"口袋 {tickets}，留影 {amount}，不够。")
+        if delta:
+            await conn.execute(
+                "UPDATE stewards SET tickets=tickets-? WHERE id=?",
+                (delta, s["id"]),
+            )
         row = await _set_betroth_col(
             conn, row, "betrothal_photo", amount,
             f"在{label}留影 {_bride_label(amount)}。",
         )
         await conn.commit()
-    return f"{label}留影 {_bride_label(amount)} 记下了。纪念册当场花掉，不进潮汐基金。"
+    if changing:
+        bits = [f"留影改成{label} {_bride_label(amount)}。"]
+        if delta > 0:
+            bits.append(f"补了 {delta} 票，不进潮汐基金。")
+        elif delta < 0:
+            bits.append(f"退回 {-delta} 票到口袋，不进潮汐基金。")
+        return " ".join(bits)
+    return (
+        f"{label}留影 {_bride_label(amount)} 记下了。纪念册当场花掉，不进潮汐基金。"
+        "选了还能改。"
+    )
 
 
 async def _betroth_seal(s: dict[str, Any], rest: str = "") -> str:
