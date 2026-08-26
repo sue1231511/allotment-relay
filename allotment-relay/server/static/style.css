@@ -2930,6 +2930,23 @@ body.memory-open {
   border-bottom-right-radius: 6px;
 }
 
+.lounge-row.notice {
+  justify-content: flex-start;
+}
+
+.lounge-avatar.notice {
+  background: linear-gradient(145deg, #f4efe4, #e6dcc8);
+  border-color: rgba(156, 132, 90, .35);
+  color: #6b5a38;
+}
+
+.lounge-bubble.notice {
+  background: #f7f1e6;
+  border-color: rgba(156, 132, 90, .28);
+  border-bottom-left-radius: 6px;
+  color: #4a3f2c;
+}
+
 .lounge-meta {
   font-size: 11px;
   color: var(--muted);

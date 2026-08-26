@@ -622,6 +622,17 @@ async def _betrothal_flow() -> None:
     assert await _fund(db) == 0
     bouquet = await marriage.marriage_ops(host, "订婚 花束")
     assert "记下" in bouquet, bouquet
+    assert "通报" in bouquet, bouquet
+    from server import lounge
+    notices = await lounge.list_messages()
+    hit = [m for m in notices if m.get("source") == "notice"]
+    assert hit, notices
+    assert "泊舟" in hit[-1]["body"] and "订婚记下" in hit[-1]["body"], hit[-1]
+    assert hit[-1]["who"] == "理枝", hit[-1]
+    assert hit[-1]["kind"] == "通报", hit[-1]
+    scan = await lounge.lounge_ops(host, "scan")
+    assert "理枝" in scan and "订婚记下" in scan, scan
+    assert "成婚潮讯" in scan, scan
     back = await marriage.marriage_ops(host, "订婚 宴 小馆 12800")
     assert "小馆" in back or "改成" in back, back
     assert await _pocket(db, host) == 50000 - 12800
