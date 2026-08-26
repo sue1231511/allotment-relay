@@ -287,7 +287,7 @@ def test_mcp_descriptions() -> None:
     assert "离婚" in mar_blob
     assert "离婚 答应" in mar_blob
     assert "理枝" in mar_blob
-    assert "300" in mar_blob
+    assert "彩礼" in mar_blob
     assert "潮誓戒" in mar_blob
 
 
@@ -366,7 +366,7 @@ def test_relay_manual_covers_systems() -> None:
         "连理所",
         "离婚 答应",
         "理枝",
-        "300 票",
+        "彩礼 188000",
         "潮誓戒",
         "tale_ops 潮闻不给旧衣料",
         "plot_ops forage",
@@ -665,7 +665,7 @@ def test_human_island_manual() -> None:
         "连理所",
         "理枝",
         "离婚",
-        "300 工分票",
+        "彩礼",
         "潮誓戒",
     ):
         assert needle in blob, needle

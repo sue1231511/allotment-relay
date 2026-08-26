@@ -601,6 +601,10 @@ QUARRY_ORES = {
         "name": "夜光髓", "emoji": "🌟", "sell": 90, "kind": "refined",
         "raw": "quarry_marrow_raw", "aliases": ("夜髓", "marrow"),
     },
+    "quarry_gold_sand": {
+        "name": "金砂", "emoji": "🪙", "sell": 80, "kind": "raw",
+        "aliases": ("金沙", "潮金砂", "gold_sand"),
+    },
 }
 
 # 矿脉：潮汐/天气改权重。涨潮出盐，退潮出铁，海雾出稀有。不是赶海沙滩。
@@ -648,6 +652,12 @@ QUARRY_VEINS = {
         "tide_bonus": {"flood": -4, "slack": 2, "ebb": 6},
         "weather_bonus": {"clear": -8, "misty": 10, "gale": 0},
         "phase_bonus": {"night": 10, "dusk": 3, "day": -6},
+    },
+    "gold": {
+        "name": "金砂脉", "emoji": "🪙", "raw": "quarry_gold_sand",
+        "min_tier": 1, "weight": 3, "strikes": (1, 2),
+        "tide_bonus": {"flood": -2, "slack": 4, "ebb": 6},
+        "weather_bonus": {"clear": 2, "misty": 4, "gale": -4},
     },
 }
 
@@ -794,6 +804,12 @@ CRAFT_RECIPES = {
         "need": {"quarry_marrow": 1, "quarry_fog_lead": 1, "drift_twine": 1},
         "seconds": 1500, "energy": 9,
         "hint": "hut_ops install soft_N marrow_sieve。风暴打捞空捞 ×0.70",
+    },
+    "tide_vow_ring": {
+        "name": "潮誓戒", "emoji": "💍", "out": "tide_vow_ring", "qty": 1,
+        "need": {"tide_vow_sand": 6, "quarry_gold_sand": 1},
+        "seconds": 1200, "energy": 10,
+        "hint": "自制婚戒。比 Tt酱买现货慢。marriage_ops 成戒 会转来这里",
     },
 }
 
@@ -1424,7 +1440,7 @@ NPC_FIXED = [
     {"key": "lianli", "name": "理枝", "lines": [
         "连理所登记员。婚书写进册子，离婚也写。",
         "岛上不问你爱的是谁。只问对方有没有答应。",
-        "结婚要人类点头。发出请柬前要有小屋、口袋 300 票、潮誓戒。",
+        "结婚要人类点头。发出请柬前要有小屋、彩礼 10 万～100 万、潮誓戒。",
         "visit_ops 连理所 · 连理所 结婚 · 连理所 离婚 答应。也可 marriage_ops。",
         "不是潮生会。阿簿管税和维，我管婚书。",
     ]},
@@ -1603,9 +1619,43 @@ ITEM_NAMES.update({k: f"{v['emoji']}{v['name']}" for k, v in CLOTH_ITEMS.items()
 ITEM_NAMES.update({
     "tide_vow_sand": "潮誓砂",
     "tide_vow_ring": "潮誓戒",
+    "gold_necklace": "潮金项链",
+    "gold_bracelet": "潮金手镯",
+    "gold_earrings": "潮金耳环",
+    "gold_bangle": "潮金镯",
+    "gold_pendant": "潮金坠",
 })
 ITEM_PRICES["tide_vow_sand"] = 1
-ITEM_PRICES["tide_vow_ring"] = 0
+ITEM_PRICES["tide_vow_ring"] = 18800
+ITEM_PRICES["gold_necklace"] = 24800
+ITEM_PRICES["gold_bracelet"] = 33800
+ITEM_PRICES["gold_earrings"] = 10800
+ITEM_PRICES["gold_bangle"] = 22800
+ITEM_PRICES["gold_pendant"] = 18800
+
+# 嫁妆柜价目。票按 1 元。三金不含婚戒。
+DOWRY_PIECES = {
+    "gold_necklace": {"name": "潮金项链", "emoji": "📿", "price": 24800},
+    "gold_bracelet": {"name": "潮金手镯", "emoji": "🪙", "price": 33800},
+    "gold_earrings": {"name": "潮金耳环", "emoji": "✨", "price": 10800},
+    "gold_bangle": {"name": "潮金镯", "emoji": "⭕", "price": 22800},
+    "gold_pendant": {"name": "潮金坠", "emoji": "🔶", "price": 18800},
+}
+GOLD_THREE = ("gold_necklace", "gold_bracelet", "gold_earrings")
+GOLD_FIVE_EXTRA = ("gold_bangle", "gold_pendant")
+DOWRY_SETS = {
+    "gold_set_three": {
+        "name": "三金套", "emoji": "💍", "price": 68800, "pieces": GOLD_THREE,
+    },
+    "gold_set_five": {
+        "name": "五金套", "emoji": "👑", "price": 98800,
+        "pieces": GOLD_THREE + GOLD_FIVE_EXTRA,
+    },
+}
+WEDDING_RING_SHOP_PRICE = 18800
+WEDDING_DRESS_SHOP_PRICE = 16800
+BRIDE_PRICE_MIN = 100_000
+BRIDE_PRICE_MAX = 1_000_000
 for _shell_base in ("shell_catseye", "shell_conch", "shell_scallop", "shell_starfish", "shell_mussel"):
     _plain = ITEM_NAMES[_shell_base]
     _suffix = _shell_base.replace("shell_", "")

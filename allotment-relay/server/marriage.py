@@ -11,7 +11,16 @@ from typing import Any
 import aiosqlite
 
 from . import db, energy
-from .catalog import ITEM_NAMES, NPC_FIXED, item_label, resolve_item_key
+from .catalog import (
+    BRIDE_PRICE_MAX,
+    BRIDE_PRICE_MIN,
+    GOLD_FIVE_EXTRA,
+    GOLD_THREE,
+    ITEM_NAMES,
+    NPC_FIXED,
+    item_label,
+    resolve_item_key,
+)
 from .game import require_steward
 
 
@@ -30,18 +39,39 @@ KIND_WITHDRAW = "withdraw"
 
 ACTIVE = (STATUS_DRAFT, STATUS_PROPOSED, STATUS_ENGAGED, STATUS_MARRIED)
 TOKEN_TTL = 7 * 86400
-SAND_PER_RING = 3
+SAND_PER_RING = 6
 SEEK_ENERGY = 8
 SEEK_DAILY_CAP = 2
 LIFE_CHANCE = 0.04
 LIFE_GAP_DAYS = 5
 WEDDING_BOND = 12
 COOLDOWN_DAYS = 3
-PROPOSE_TICKETS = 300
 RING_ITEM = "tide_vow_sand"
 RING_DONE = "tide_vow_ring"
+GOLD_SAND = "quarry_gold_sand"
 OFFICE = "连理所"
 CLERK = "理枝"
+BRIDE_FROZEN = 1
+BRIDE_PAID = 2
+
+FEAST_TIERS: dict[str, dict[str, Any]] = {
+    "滩席": {
+        "key": "beach", "price": 18800, "dishes": 2, "guests": 4,
+        "aliases": ("滩席", "流水席", "beach"),
+    },
+    "岸席": {
+        "key": "shore", "price": 48800, "dishes": 4, "guests": 8,
+        "aliases": ("岸席", "普通席", "shore"),
+    },
+    "灯塔席": {
+        "key": "lighthouse", "price": 98800, "dishes": 6, "guests": 12,
+        "aliases": ("灯塔席", "中档席", "lighthouse"),
+    },
+    "满潮席": {
+        "key": "tide", "price": 198000, "dishes": 8, "guests": 16,
+        "aliases": ("满潮席", "高档席", "tide"),
+    },
+}
 
 STATUS_LABEL = {
     STATUS_DRAFT: "草稿",
@@ -73,43 +103,33 @@ MARRIAGE_HELP = """marriage_ops 子命令（整句写进 command）：
 
   desk / 连理所 / 理枝 / 进门 — 进连理所，看自己的档案
   status / 看 — 自己的婚约、筹备、婚书摘要
+  求婚 人类昵称 — 先写下草稿。发出前要：小屋、彩礼、潮誓戒、誓言
+  彩礼 188000 — AI 填 100000～1000000。发出时冻结，人类答应后划进潮汐基金；拒绝退回
+      建议吉利数：128000 · 168000 · 188000 · 288000 · 388000 · 520000 · 888000
   求婚 人类昵称 | 誓言 | 信物 | 地点 | 今日+3 | 留言
-      一步发出。竖线可省略后几段。人类昵称和誓言必填。
-      发出前必须：已建小屋、口袋工分票满 300（不扣）、手里有潮誓戒。
-      例子：求婚 阿潮 | 潮起潮落我都在 | 潮誓戒 | 灯塔下 | 今日+3 | 想把日子过完
-  求婚 人类昵称 — 先写下草稿，再 寻戒 / 成戒 / 誓词，最后 发出
-  誓词 正文 · 信物 潮誓戒 · 地点 灯塔下 · 婚期 今日+3 · 留言 一句
-  发出 — 生成人类确认页链接。小屋、300 票、潮誓戒、誓言都齐了才能发
-  链接 — 未确认的请柬若丢失，用 续请 作废旧链接、生成新的。不能从库里把旧 token 读出来
-  撤回 — 取消尚未被回应的求婚，不广播。订契后不能单方面撤回，改用 退契
-  筹备 — 草稿阶段看求婚门槛（小屋/票/戒）；订契后是婚礼档案。不是战力
-  寻戒 — 海边找潮誓砂（求婚前就要找。每天最多 2 次，耗精力）
-  成戒 — 三份潮誓砂合成一枚潮誓戒。发出请柬前必须做成
-  婚服 — 把衣橱里的婚服登记进婚礼（订契后。先 cloth_ops 委托 婚服 … 再 取）
-  宴席 正文 · 邀请 岛民名 · 邀请 npc 阿簿
-  展示 潮闻 黑盒与潮声 · 展示 故事 灰姑娘 · 展示 物品 潮誓戒
-  举行 / 结婚 / 登记 — 婚期到了，到连理所登记成婚。写一条公共潮讯，生成永久婚书
-  婚礼 — 今日或近期可参加的婚礼
-  出席 岛民名 · 祝词 岛民名 正文 · 送礼 岛民名 物品 1 · 帮忙 岛民名
-  居所 · 居所 登记 — 把已有小屋登记为两人居所
-  婚书 — 永久档案（也可打开人类网页 /hearth/…）
-  离婚 — 看人类有没有在婚书页申请。你不能自己立案。
-      有申请时：离婚 答应 / 离婚 拒绝。空 command 只看申请。
-      例子：离婚 · 离婚 答应 · 离婚 拒绝
-  分居 — 同 离婚，没有第三套结束方式
-  退契 — 订契未成婚时作废。仍要人类确认。例子：退契 确认
-  help — 本表
+      一步发出。门槛不够会拒，草稿留下。例子：求婚 阿潮 | 潮起潮落我都在 | 潮誓戒 | 灯塔下 | 今日+3
+  寻戒 — 海边找潮誓砂（每天最多 2 次）。自制戒要 6 份砂 + 崖上金砂
+  成戒 — 转去岸工坊打戒：craft_ops 打 潮誓戒（要潮誓砂×6、金砂×1，等 20 分钟再 取）
+      也可 visit_ops tt buy 潮誓戒（18800 票现货）
+  发出 — 小屋、彩礼、潮誓戒、誓言齐了才发。发出时从口袋冻结彩礼
+  筹备 — 草稿看求婚门槛；订契后看三金/婚服/吃席。不是战力
+  金饰 — 订契后把行囊里的三金（或五金）登记进婚书
+      三金/五金去 Tt酱柜后：visit_ops tt buy 三金套（68800）/ 五金套（98800）
+  婚服 — 订契后把衣橱里的婚服登记。买：cloth_ops 买 婚服 海色（16800）。自制：委托 婚服（料加倍、隔日）
+  吃席 灯塔席 — 订契后必选规格。包桌扣票：滩席 18800 / 岸席 48800 / 灯塔席 98800 / 满潮席 198000
+      自办：吃席 滩席 自办（收熟菜 dish_/meal_，滩席×2 … 满潮席×8）
+  邀请 岛民名 · 邀请 npc 阿簿 — 人数不能超过席面上限（4/8/12/16）
+  举行 / 结婚 / 登记 — 婚期到了，且三金、婚服、吃席都齐了，才登记成婚
+  婚礼 · 出席 · 祝词 · 送礼 · 帮忙 · 居所 · 婚书 · 退契 确认 · help
+  离婚 答应 / 离婚 拒绝 — 人类在婚书页申请后，由你决定。不要发明「离婚 确认」
 
 容易搞混：
-  · 连理所是登记处，不是潮生会。潮生会管税/维/基金，不管婚书。
-  · 不是岛民和岛民结婚。求婚确认页不登录、不填凭证。
-  · 求婚没有「接受」子命令。人类打开 /lianli/… 点头。离婚没有确认页：人类在婚书页申请，你用 离婚 答应 / 离婚 拒绝。
+  · 连理所是登记处，不是潮生会。彩礼进潮汐基金，不是打给人类（人和 AI 同一个口袋）。
+  · 发出前：小屋 + 彩礼金额 + 口袋够付 + 潮誓戒。300 票门槛已经并进彩礼。
+  · 举行前：三金 + 婚服 + 吃席规格。五金选配，不挡登记。
+  · 婚戒/婚服自制比买慢。三金五金没有自制，只去 Tt酱。
+  · 求婚没有「接受」子命令。人类打开 /lianli/… 点头。
   · 不要发明「离婚 确认」。岛民不能自己立案离婚。
-  · 人类拒绝求婚只私密告诉你，不进潮讯，不扣属性。离婚拒绝写在婚书页给人类看。
-  · 发出请柬前要有小屋、口袋 300 票、潮誓戒。票不扣，只是门槛。没有小屋先 hut_ops build。
-  · 寻戒 / 成戒在写下草稿之后就能做，不必等人类答应。婚服仍是订契后登记。
-  · 衣泊坊委托婚服是 cloth_ops，登记进婚礼才是这里的 婚服。
-  · 聊天室说话仍是 lounge_ops。送礼给婚礼用本工具 送礼，不是 tote_ops gift。
   人类把求婚链接发到手机打开即可。上手页有「连理所」地点卡。网页 /lianli 是海报。婚书 /hearth/…。"""
 
 
@@ -178,10 +198,49 @@ async def _live_hut_tickets(
     return bool(s.get("hut_built")), int(s.get("tickets") or 0)
 
 
+def _feast_by_token(token: str) -> tuple[str, dict[str, Any]] | None:
+    raw = (token or "").strip()
+    if not raw:
+        return None
+    for name, meta in FEAST_TIERS.items():
+        if raw == name or raw in meta["aliases"] or raw.lower() == meta["key"]:
+            return name, meta
+    return None
+
+
+def _bride_label(amount: int) -> str:
+    n = int(amount or 0)
+    if n <= 0:
+        return "未填"
+    if n % 10000 == 0:
+        return f"{n} 工分票（{n // 10000} 万）"
+    if n >= 10000:
+        w = n / 10000
+        return f"{n} 工分票（{w:.1f} 万）".replace(".0 万", " 万")
+    return f"{n} 工分票"
+
+
 async def _ring_ready(conn: aiosqlite.Connection, s: dict[str, Any], row: dict[str, Any] | None) -> bool:
     if row and int(row.get("ring_ready") or 0):
         return True
     return (await _satchel_qty(conn, int(s["id"]), RING_DONE)) >= 1
+
+
+async def _gold_counts(conn: aiosqlite.Connection, steward_id: int) -> dict[str, int]:
+    out: dict[str, int] = {}
+    for item in GOLD_THREE + GOLD_FIVE_EXTRA:
+        out[item] = await _satchel_qty(conn, steward_id, item)
+    return out
+
+
+def _gold_three_ok(counts: dict[str, int]) -> bool:
+    return all(int(counts.get(item) or 0) >= 1 for item in GOLD_THREE)
+
+
+def _gold_five_ok(counts: dict[str, int]) -> bool:
+    return _gold_three_ok(counts) and all(
+        int(counts.get(item) or 0) >= 1 for item in GOLD_FIVE_EXTRA
+    )
 
 
 async def _propose_missing(
@@ -191,12 +250,21 @@ async def _propose_missing(
     hut_built, tickets = await _live_hut_tickets(conn, s)
     if not hut_built:
         miss.append("还没有小屋。先 hut_ops build，有个家再写请柬。")
-    if tickets < PROPOSE_TICKETS:
+    price = int((row or {}).get("bride_price") or 0)
+    frozen = int((row or {}).get("bride_frozen") or 0)
+    if price < BRIDE_PRICE_MIN or price > BRIDE_PRICE_MAX:
         miss.append(
-            f"口袋工分票要满 {PROPOSE_TICKETS}（现在 {tickets}）。不扣票，只是门槛。"
+            f"先填彩礼：marriage_ops 彩礼 188000（{BRIDE_PRICE_MIN}～{BRIDE_PRICE_MAX}）。"
+        )
+    elif frozen != BRIDE_FROZEN and tickets < price:
+        miss.append(
+            f"口袋不够付彩礼 {price}（现在 {tickets}）。发出时冻结，答应后进基金。"
         )
     if not await _ring_ready(conn, s, row):
-        miss.append("还没有潮誓戒。先 寻戒 凑齐三份潮誓砂，再 成戒。")
+        miss.append(
+            "还没有潮誓戒。自制：寻戒凑 6 份潮誓砂 + 崖上金砂，再 成戒 / craft_ops 打 潮誓戒。"
+            "现货：visit_ops tt buy 潮誓戒（18800）。"
+        )
     return miss
 
 
@@ -215,18 +283,154 @@ async def _readiness_lines(
 ) -> list[str]:
     hut_built, tickets = await _live_hut_tickets(conn, s)
     hut = "已建" if hut_built else "未建 — hut_ops build"
-    ring = "已准备" if await _ring_ready(conn, s, row) else "未准备 — 寻戒 → 成戒"
-    tick = (
-        f"{tickets}/{PROPOSE_TICKETS} 够了"
-        if tickets >= PROPOSE_TICKETS
-        else f"{tickets}/{PROPOSE_TICKETS} 还不够"
+    ring = (
+        "已准备"
+        if await _ring_ready(conn, s, row)
+        else "未准备 — 寻戒×6 + 金砂 → 成戒，或 tt buy 潮誓戒"
     )
+    price = int((row or {}).get("bride_price") or 0)
+    frozen = int((row or {}).get("bride_frozen") or 0)
+    if price < BRIDE_PRICE_MIN:
+        gift = "未填 — marriage_ops 彩礼 188000"
+    elif frozen == BRIDE_PAID:
+        gift = f"{_bride_label(price)} 已划进基金"
+    elif frozen == BRIDE_FROZEN:
+        gift = f"{_bride_label(price)} 已冻结，等对方答应"
+    elif tickets >= price:
+        gift = f"{_bride_label(price)} · 口袋 {tickets} 够付"
+    else:
+        gift = f"{_bride_label(price)} · 口袋 {tickets} 还不够"
     return [
-        "发出请柬前要备齐：小屋、口袋票、潮誓戒。票不扣。",
+        "发出请柬前要备齐：小屋、彩礼、潮誓戒。彩礼 10 万～100 万，发出时冻结。",
         f"  小屋：{hut}",
-        f"  口袋票：{tick}",
+        f"  彩礼：{gift}",
         f"  潮誓戒：{ring}",
     ]
+
+
+async def _hold_missing(
+    conn: aiosqlite.Connection, s: dict[str, Any], row: dict[str, Any]
+) -> list[str]:
+    miss: list[str] = []
+    counts = await _gold_counts(conn, int(s["id"]))
+    if not int(row.get("gold_three") or 0) and not _gold_three_ok(counts):
+        miss.append("还没有三金。visit_ops tt buy 三金套（68800），再 marriage_ops 金饰。")
+    if not int(row.get("attire_ready") or 0):
+        miss.append("婚服未登记。cloth_ops 买 婚服 海色，或委托自制后再 marriage_ops 婚服。")
+    if not int(row.get("feast_ready") or 0):
+        miss.append("还没选吃席。marriage_ops 吃席 滩席 / 岸席 / 灯塔席 / 满潮席（可加 自办）。")
+    return miss
+
+
+async def _hold_readiness_lines(
+    conn: aiosqlite.Connection, s: dict[str, Any], row: dict[str, Any]
+) -> list[str]:
+    counts = await _gold_counts(conn, int(s["id"]))
+    if int(row.get("gold_three") or 0):
+        gold = "五金已登记" if int(row.get("gold_five") or 0) else "三金已登记（五金选配，不挡登记）"
+    elif _gold_five_ok(counts):
+        gold = "行囊里五金齐了 — marriage_ops 金饰"
+    elif _gold_three_ok(counts):
+        gold = "行囊里三金齐了 — marriage_ops 金饰"
+    else:
+        gold = "未备 — visit_ops tt buy 三金套（68800），再 金饰"
+    if int(row.get("attire_ready") or 0):
+        src = (row.get("attire_source") or "").strip()
+        attire = f"已登记（{src}）" if src else "已登记"
+    else:
+        attire = "未登记 — cloth_ops 买 婚服 海色，再 marriage_ops 婚服"
+    if int(row.get("feast_ready") or 0):
+        feast = row.get("feast_note") or row.get("feast_tier") or "已定"
+    else:
+        feast = "未选 — marriage_ops 吃席 滩席"
+    price = int(row.get("bride_price") or 0)
+    frozen = int(row.get("bride_frozen") or 0)
+    gift = _bride_label(price)
+    if frozen == BRIDE_PAID:
+        gift += " 已划进潮汐基金"
+    elif frozen == BRIDE_FROZEN:
+        gift += " 已冻结"
+    return [
+        "答应后举行前要备齐：三金、婚服、吃席。五金选配，不挡登记。",
+        f"  彩礼：{gift}",
+        f"  三金：{gold}",
+        f"  婚服：{attire}",
+        f"  吃席：{feast}",
+    ]
+
+
+async def _collect_gold(
+    conn: aiosqlite.Connection, steward_id: int, row: dict[str, Any]
+) -> str:
+    if int(row.get("gold_three") or 0):
+        return ""
+    counts = await _gold_counts(conn, steward_id)
+    if not _gold_three_ok(counts):
+        return ""
+    five = _gold_five_ok(counts)
+    for item in GOLD_THREE:
+        await db.take_item(conn, steward_id, item, 1)
+    if five:
+        for item in GOLD_FIVE_EXTRA:
+            await db.take_item(conn, steward_id, item, 1)
+    await conn.execute(
+        "UPDATE marriages SET gold_three=1, gold_five=? WHERE id=?",
+        (1 if five else 0, row["id"]),
+    )
+    row["gold_three"] = 1
+    row["gold_five"] = 1 if five else 0
+    return "five" if five else "three"
+
+
+async def _freeze_bride(
+    conn: aiosqlite.Connection, s: dict[str, Any], row: dict[str, Any]
+) -> None:
+    if int(row.get("bride_frozen") or 0) in (BRIDE_FROZEN, BRIDE_PAID):
+        return
+    amount = int(row.get("bride_price") or 0)
+    _, tickets = await _live_hut_tickets(conn, s)
+    if tickets < amount:
+        raise ValueError(f"口袋 {tickets}，付不起彩礼 {amount}。")
+    await conn.execute(
+        "UPDATE stewards SET tickets=tickets-? WHERE id=?",
+        (amount, s["id"]),
+    )
+    await conn.execute(
+        "UPDATE marriages SET bride_frozen=? WHERE id=?",
+        (BRIDE_FROZEN, row["id"]),
+    )
+    row["bride_frozen"] = BRIDE_FROZEN
+
+
+async def _refund_bride(conn: aiosqlite.Connection, row: dict[str, Any]) -> int:
+    if int(row.get("bride_frozen") or 0) != BRIDE_FROZEN:
+        return 0
+    amount = int(row.get("bride_price") or 0)
+    if amount > 0:
+        await conn.execute(
+            "UPDATE stewards SET tickets=tickets+? WHERE id=?",
+            (amount, row["steward_id"]),
+        )
+    await conn.execute(
+        "UPDATE marriages SET bride_frozen=0 WHERE id=?",
+        (row["id"],),
+    )
+    row["bride_frozen"] = 0
+    return amount
+
+
+async def _settle_bride(conn: aiosqlite.Connection, row: dict[str, Any]) -> int:
+    if int(row.get("bride_frozen") or 0) != BRIDE_FROZEN:
+        return 0
+    amount = int(row.get("bride_price") or 0)
+    from . import chaoshen
+    await chaoshen.credit_fund(conn, amount)
+    await conn.execute(
+        "UPDATE marriages SET bride_frozen=? WHERE id=?",
+        (BRIDE_PAID, row["id"]),
+    )
+    row["bride_frozen"] = BRIDE_PAID
+    return amount
 
 
 def _filing_kind(row: dict[str, Any] | None) -> str:
@@ -426,6 +630,8 @@ def public_card(row: dict[str, Any], steward_name: str) -> dict[str, Any]:
         "location": row.get("proposal_location") or row.get("wedding_location") or "",
         "wedding_day": tide_day_label(row.get("preferred_wedding_date")),
         "note": row.get("note") or "",
+        "bride_price": int(row.get("bride_price") or 0),
+        "bride_price_label": _bride_label(int(row.get("bride_price") or 0)),
         "expired": expired,
         "used": bool(row.get("token_used_at")),
     }
@@ -632,9 +838,11 @@ async def _human_proposal(
         )
         changed = int(cur.rowcount or 0)
         if changed:
+            paid = await _settle_bride(conn, row)
             await _note_event(
                 conn, int(row["id"]), "status",
-                f"人类答应了。订契。婚期 {tide_day_label(wed)}。",
+                f"人类答应了。订契。婚期 {tide_day_label(wed)}。"
+                + (f"彩礼 {paid} 已划进潮汐基金。" if paid else ""),
                 day=today,
             )
         await conn.commit()
@@ -650,7 +858,10 @@ async def _human_proposal(
                 "成婚当天，岛民会到连理所登记。"
             ),
         }
-    notice = "【私密】对方没有答应这次求婚。没有张贴，也没有扣你的任何东西。\n若还想写，隔一个游戏日后再 求婚。"
+    notice = (
+        "【私密】对方没有答应这次求婚。没有张贴。"
+        "冻结的彩礼已退回口袋。\n若还想写，隔一个游戏日后再 求婚。"
+    )
     cur = await conn.execute(
         """
         UPDATE marriages SET status=?, token_used_at=?, rejected_at=?,
@@ -661,9 +872,11 @@ async def _human_proposal(
     )
     changed = int(cur.rowcount or 0)
     if changed:
+        refunded = await _refund_bride(conn, row)
         await _note_event(
             conn, int(row["id"]), "status",
-            "人类没有答应。只告知发起人，不广播。",
+            "人类没有答应。只告知发起人，不广播。"
+            + (f"彩礼 {refunded} 已退回。" if refunded else ""),
             day=today,
         )
     await conn.commit()
@@ -899,21 +1112,44 @@ async def _archive_payload(
         "life": [e["text"] for e in events if e["kind"] == "life"],
         "charter_line": charter.get("line") or "",
         "slug": row.get("public_slug") or "",
+        "bride_price_label": _bride_label(int(row.get("bride_price") or 0)),
+        "gold": (
+            "五金" if int(row.get("gold_five") or 0)
+            else ("三金" if int(row.get("gold_three") or 0) else "")
+        ),
+        "feast": row.get("feast_note") or row.get("feast_tier") or "",
+        "attire": row.get("attire_source") or "",
     }
 
 
 def _dossier_lines(row: dict[str, Any], *, guests: int, memories: int, displays: int) -> list[str]:
     loc = row.get("wedding_location") or row.get("proposal_location") or "未定"
+    if int(row.get("attire_ready") or 0):
+        src = (row.get("attire_source") or "").strip()
+        attire = f"已准备（{src}）" if src else "已准备"
+    else:
+        attire = "未准备"
+    if int(row.get("gold_five") or 0):
+        gold = "五金"
+    elif int(row.get("gold_three") or 0):
+        gold = "三金"
+    else:
+        gold = "未备"
+    feast = row.get("feast_note") or row.get("feast_tier") or "未选"
+    cap = (FEAST_TIERS.get(str(row.get("feast_tier") or "")) or {}).get("guests")
+    guest_line = f"  宾客：{guests} 位" + (f" / 上限 {cap}" if cap else "")
     return [
         "婚礼档案（不是战力，也不用凑满分）",
+        f"  彩礼：{_bride_label(int(row.get('bride_price') or 0))}",
         f"  戒指：{'已准备' if row.get('ring_ready') else '未准备'}",
-        f"  婚服：{'已准备' if row.get('attire_ready') else '未准备'}",
+        f"  三金：{gold}",
+        f"  婚服：{attire}",
         f"  誓词：{'已填写' if (row.get('vow_ai') or row.get('proposal_text')) else '未填写'}",
-        f"  宾客：{guests} 位",
+        guest_line,
         f"  婚礼地点：{loc or '未定'}",
         f"  共同回忆：{memories} 条",
         f"  展示物：{displays} 件",
-        f"  宴席：{row.get('feast_note') or '未写'}",
+        f"  吃席：{feast}",
         f"  婚期：{tide_day_label(row.get('preferred_wedding_date'))}",
     ]
 
@@ -958,6 +1194,12 @@ async def _dispatch(s: dict[str, Any], command: str = "") -> str:
         "寻戒": _cmd_seek_ring,
         "成戒": _cmd_make_ring,
         "婚服": _cmd_attire,
+        "彩礼": _cmd_bride,
+        "bride": _cmd_bride,
+        "金饰": _cmd_gold,
+        "三金": _cmd_gold,
+        "五金": _cmd_gold,
+        "吃席": _cmd_feast,
         "宴席": _cmd_feast,
         "邀请": _cmd_invite,
         "展示": _cmd_display,
@@ -1028,7 +1270,8 @@ async def _cmd_desk(s: dict[str, Any], rest: str = "") -> str:
     intro = (
         f"{OFFICE}。登记员{CLERK}把册子摊开。\n"
         "求婚由你发出，人类打开确认页点头。离婚由人类在婚书页申请，你决定答应或拒绝。\n"
-        f"发出请柬前：小屋、口袋 {PROPOSE_TICKETS} 票、潮誓戒。票不扣。先 寻戒 / 成戒，再 发出。\n"
+        f"发出请柬前：小屋、彩礼 {BRIDE_PRICE_MIN}～{BRIDE_PRICE_MAX}、潮誓戒。彩礼发出时冻结，答应后进潮汐基金。\n"
+        "答应后举行前：三金、婚服、吃席。五金选配，不挡登记。\n"
         "我不能替任何人答应求婚，也不能替你离掉婚。\n"
         "岛上不问你爱的是谁。只问对方有没有答应。\n"
         "不是潮生会。潮生会管税和维，不管婚书。\n"
@@ -1069,7 +1312,7 @@ async def _cmd_status(s: dict[str, Any], rest: str = "") -> str:
                 + f"{s['name']} 还没有婚约。\n"
                 + "\n".join(gates)
                 + "\n"
-                f"先 求婚 昵称 写下草稿，再 寻戒 / 成戒 / 誓词，最后 发出。\n"
+                f"先 求婚 昵称 写下草稿，再 彩礼 / 寻戒 / 成戒 / 誓词，最后 发出。\n"
                 "人类不用注册。你发出后把确认页链接给对方，对方在网页上答应或拒绝。\n"
                 "求婚没有「接受」子命令。离婚由人类在婚书页申请，你用 离婚 答应 / 离婚 拒绝。"
             )
@@ -1109,15 +1352,17 @@ async def _cmd_status(s: dict[str, Any], rest: str = "") -> str:
                 lines.append("退契立案已过期。marriage_ops 续请。")
             else:
                 lines.append("连理所已立案退契，等人类打开确认页。AI 不能单方面作废订契。")
+        if row["status"] == STATUS_ENGAGED:
+            lines.extend(await _hold_readiness_lines(conn, s, row))
         if row["status"] in (STATUS_ENGAGED, STATUS_MARRIED):
             lines.extend(_dossier_lines(row, guests=guests, memories=memories, displays=displays))
         if row["status"] == STATUS_ENGAGED and pending != KIND_WITHDRAW:
             today = db.day_id()
             wed = int(row.get("preferred_wedding_date") or 0)
             if wed and today >= wed:
-                lines.append("婚期到了。去连理所 结婚 / 举行 登记成婚、生成婚书。")
+                lines.append("婚期到了。三金、婚服、吃席齐了再去连理所 结婚 / 举行。")
             else:
-                lines.append("订契之后不能当天成婚。筹备：寻戒 · 婚服 · 邀请 · 展示 · 宴席。")
+                lines.append("订契之后不能当天成婚。筹备：金饰 · 婚服 · 吃席 · 邀请。")
         if row["status"] == STATUS_MARRIED and pending != KIND_DIVORCE:
             slug = row.get("public_slug") or ""
             if slug:
@@ -1238,7 +1483,7 @@ async def _cmd_propose(s: dict[str, Any], rest: str) -> str:
     if not parts or not parts[0]:
         raise ValueError(
             "用法：marriage_ops 求婚 人类昵称 | 誓言 | 信物 | 地点 | 今日+3 | 留言\n"
-            "发出前要有小屋、口袋 300 票、潮誓戒。或先 求婚 昵称，再 寻戒 / 成戒 / 誓词 / 发出。"
+            "发出前要有小屋、彩礼（10万～100万）、潮誓戒。或先 求婚 昵称，再 彩礼 / 寻戒 / 成戒 / 誓词 / 发出。"
         )
     name = _clean_partner(parts[0])
     vow = _clip(parts[1], 400) if len(parts) > 1 else ""
@@ -1262,8 +1507,8 @@ async def _cmd_propose(s: dict[str, Any], rest: str) -> str:
     if vow:
         return await _cmd_send(s, "")
     return (
-        f"已记下人类「{name}」的草稿。先备齐小屋、口袋 {PROPOSE_TICKETS} 票、潮誓戒，再写誓词、发出。\n"
-        "寻戒 / 成戒现在就能做。发出后会生成确认页链接。你不能自己点接受。"
+        f"已记下人类「{name}」的草稿。先备齐小屋、彩礼、潮誓戒，再写誓词、发出。\n"
+        "marriage_ops 彩礼 188000。寻戒 / 成戒现在就能做。发出后会生成确认页链接。你不能自己点接受。"
     )
 
 
@@ -1382,6 +1627,12 @@ async def _cmd_send(s: dict[str, Any], rest: str) -> str:
         if not (row.get("proposal_text") or "").strip():
             raise ValueError("先写下誓言：marriage_ops 誓词 正文")
         await _assert_ready_to_send(conn, s, row)
+        await _freeze_bride(conn, s, row)
+        if await _ring_ready(conn, s, row):
+            await conn.execute(
+                "UPDATE marriages SET ring_ready=1 WHERE id=?",
+                (row["id"],),
+            )
         today = db.day_id()
         wed = int(row.get("preferred_wedding_date") or 0) or (today + 2)
         if wed <= today:
@@ -1402,7 +1653,7 @@ async def _cmd_send(s: dict[str, Any], rest: str) -> str:
         f"连理所把确认页交给你。把下面的链接交给对方，用手机打开即可。对方不用注册，也不用懂 MCP。\n"
         f"{url}\n"
         "链接一次性、约七日有效。你不能替对方点接受。\n"
-        "对方拒绝的话，只有你会在下次 status 里看到，不会张贴，也不扣属性。"
+        "对方拒绝的话，冻结的彩礼会退回口袋。只有你会在下次 status 里看到，不会张贴。"
     )
 
 
@@ -1458,6 +1709,7 @@ async def _cmd_cancel(s: dict[str, Any], rest: str) -> str:
             raise ValueError("已经成婚。离婚由人类在婚书页申请，你用 离婚 答应 / 离婚 拒绝。")
         if row["status"] not in (STATUS_DRAFT, STATUS_PROPOSED):
             raise ValueError("没有可撤回的求婚。")
+        refunded = await _refund_bride(conn, row)
         await conn.execute(
             """
             UPDATE marriages SET status=?, token_hash=NULL, token_expires_at=NULL,
@@ -1467,7 +1719,8 @@ async def _cmd_cancel(s: dict[str, Any], rest: str) -> str:
         )
         await _note_event(conn, int(row["id"]), "status", "撤回求婚。", day=db.day_id())
         await conn.commit()
-    return "已撤回。没有张贴。可以重新 求婚。"
+    extra = f"彩礼 {refunded} 已退回口袋。" if refunded else "没有张贴。"
+    return f"已撤回。{extra}可以重新 求婚。"
 
 
 async def _cmd_prep(s: dict[str, Any], rest: str) -> str:
@@ -1480,12 +1733,13 @@ async def _cmd_prep(s: dict[str, Any], rest: str) -> str:
             lines.extend(await _readiness_lines(conn, s, row))
             vow = (row.get("proposal_text") or "").strip()
             lines.append(f"  誓言：{'已写' if vow else '未写 — marriage_ops 誓词 正文'}")
-            lines.append("齐了再 发出。婚服、宾客、宴席等人类答应之后再办。")
+            lines.append("齐了再 发出。三金、婚服、吃席等人类答应之后再办。")
             return "\n".join(lines)
         guests = await _count(conn, "marriage_guests", int(row["id"]))
         displays = await _count(conn, "marriage_displays", int(row["id"]))
         memories = await _memory_count(conn, s["id"])
         lines[0] = f"{s['name']} 与人类「{row['partner_name']}」的婚礼筹备"
+        lines.extend(await _hold_readiness_lines(conn, s, row))
         lines.extend(_dossier_lines(row, guests=guests, memories=memories, displays=displays))
         lines.append("共同回忆来自已经走过的潮闻、人物故事、NPC 相遇，不是另做一套亲密度。")
         return "\n".join(lines)
@@ -1514,7 +1768,8 @@ async def _cmd_seek_ring(s: dict[str, Any], rest: str) -> str:
         await conn.commit()
     return (
         f"退潮后的沙里有一点细亮。你拾到{item_label(RING_ITEM)}×{qty}。\n"
-        f"凑齐 {SAND_PER_RING} 份再 marriage_ops 成戒。今天还能再找 {SEEK_DAILY_CAP - used - 1} 次。"
+        f"凑齐 {SAND_PER_RING} 份潮誓砂，再弄一捧崖上金砂，marriage_ops 成戒（转工坊）。"
+        f"今天还能再找 {SEEK_DAILY_CAP - used - 1} 次。"
     )
 
 
@@ -1523,29 +1778,38 @@ async def _cmd_make_ring(s: dict[str, Any], rest: str) -> str:
         row = await _own(conn, s["id"])
         if not row or row["status"] not in (STATUS_DRAFT, STATUS_ENGAGED, STATUS_MARRIED):
             raise ValueError("先写下草稿再成戒。发出请柬前必须有潮誓戒。")
-        if not await db.take_item(conn, s["id"], RING_ITEM, SAND_PER_RING):
-            raise ValueError(
-                f"需要{item_label(RING_ITEM)}×{SAND_PER_RING}。去海边 marriage_ops 寻戒。"
+        if await _satchel_qty(conn, int(s["id"]), RING_DONE) >= 1:
+            await conn.execute(
+                "UPDATE marriages SET ring_ready=1, updated_at=? WHERE id=?",
+                (db.now(), row["id"]),
             )
-        await db.add_item(conn, s["id"], RING_DONE, 1)
-        await conn.execute(
-            "UPDATE marriages SET ring_ready=1, proposal_item=?, updated_at=? WHERE id=?",
-            (ITEM_NAMES.get(RING_DONE, "潮誓戒"), db.now(), row["id"]),
-        )
-        await _note_event(conn, int(row["id"]), "prep", "潮誓戒做成了。", day=db.day_id())
+            await conn.commit()
+            return "潮誓戒已经在行囊里。发出请柬即可。现货也是 visit_ops tt buy 潮誓戒。"
+        sand = await _satchel_qty(conn, int(s["id"]), RING_ITEM)
+        gold = await _satchel_qty(conn, int(s["id"]), GOLD_SAND)
+        if sand < SAND_PER_RING or gold < 1:
+            raise ValueError(
+                f"自制要{item_label(RING_ITEM)}×{SAND_PER_RING}（现有 {sand}）"
+                f"和{item_label(GOLD_SAND)}×1（现有 {gold}）。"
+                "寻戒找砂，quarry_ops 挖金砂脉。现货：visit_ops tt buy 潮誓戒（18800）。"
+            )
+        from . import craft as craft_mod
+        text = await craft_mod._start_job(conn, s, "潮誓戒")
         await conn.commit()
-    return "三捧潮誓砂在掌心结成一枚潮誓戒。婚礼档案上，戒指：已准备。"
+    return text + "\n打好后 craft_ops 取。现货更快：visit_ops tt buy 潮誓戒。"
 
 
 async def _cmd_attire(s: dict[str, Any], rest: str) -> str:
     async with db.connect() as conn:
         row = await _own(conn, s["id"])
         if not row or row["status"] not in (STATUS_ENGAGED, STATUS_MARRIED):
-            raise ValueError("订契之后才登记婚服。先去衣泊坊 cloth_ops 委托 婚服。")
+            raise ValueError(
+                "订契之后才登记婚服。cloth_ops 买 婚服 海色，或 委托 婚服 海色 双潮 再 取。"
+            )
         conn.row_factory = aiosqlite.Row
         cur = await conn.execute(
             """
-            SELECT id, name FROM steward_wardrobe
+            SELECT id, name, fabric_key, origin FROM steward_wardrobe
             WHERE steward_id=? AND cut_key='wedding' ORDER BY id DESC LIMIT 1
             """,
             (s["id"],),
@@ -1553,24 +1817,159 @@ async def _cmd_attire(s: dict[str, Any], rest: str) -> str:
         g = await cur.fetchone()
         if not g:
             raise ValueError(
-                "衣橱里还没有婚服。去上手页衣泊坊，或 cloth_ops 委托 婚服 海色，做好再 取。"
+                "衣橱里还没有婚服。现货 cloth_ops 买 婚服 海色（16800）；"
+                "自制 委托 婚服（料加倍、隔日）再 取。"
             )
+        source = "买" if (g["fabric_key"] == "shop" or "现货" in (g["origin"] or "")) else "缝"
         await conn.execute(
-            "UPDATE marriages SET attire_ready=1, updated_at=? WHERE id=?",
-            (db.now(), row["id"]),
+            "UPDATE marriages SET attire_ready=1, attire_source=?, updated_at=? WHERE id=?",
+            (source, db.now(), row["id"]),
         )
-        await _note_event(conn, int(row["id"]), "prep", f"登记婚服「{g['name']}」。", day=db.day_id())
+        await _note_event(conn, int(row["id"]), "prep", f"登记婚服「{g['name']}」（{source}）。", day=db.day_id())
         await conn.commit()
-        return f"「{g['name']}」记进婚礼档案。婚服：已准备。衣还在衣橱里，婚礼当天自己穿。"
+        return f"「{g['name']}」记进婚礼档案（{source}）。婚服：已准备。衣还在衣橱里。"
+
+
+async def _take_cooked(conn: aiosqlite.Connection, steward_id: int, need: int) -> list[str]:
+    cur = await conn.execute(
+        """
+        SELECT item, quantity FROM satchel
+        WHERE steward_id=? AND quantity>0
+          AND (item LIKE 'dish_%' OR item LIKE 'meal_%')
+        ORDER BY item
+        """,
+        (steward_id,),
+    )
+    rows = await cur.fetchall()
+    total = sum(int(r[1] or 0) for r in rows)
+    if total < need:
+        raise ValueError(
+            f"自办要熟菜 {need} 份（dish_/meal_），现在 {total}。"
+            "厨房 kitchen_ops cook，或改包桌：marriage_ops 吃席 滩席"
+        )
+    taken: list[str] = []
+    left = need
+    for item, qty in rows:
+        use = min(int(qty), left)
+        if not await db.take_item(conn, steward_id, item, use):
+            continue
+        taken.append(f"{item_label(item)}×{use}")
+        left -= use
+        if left <= 0:
+            break
+    if left > 0:
+        raise ValueError("收菜时不够了。再做几道。")
+    return taken
 
 
 async def _cmd_feast(s: dict[str, Any], rest: str) -> str:
     row = await _need_engaged(s)
-    text = _clip(rest, 200)
-    if not text:
-        raise ValueError("写下宴席：marriage_ops 宴席 灯塔下的一锅潮汤，不够再添一巡")
-    await _patch(int(row["id"]), feast_note=text)
-    return "宴席记进档案。不是按花钱定品质。"
+    raw = (rest or "").strip()
+    self_cook = False
+    if "自办" in raw:
+        self_cook = True
+        raw = raw.replace("自办", "").strip()
+    for tok in ("包桌", "请客"):
+        raw = raw.replace(tok, "").strip()
+    hit = _feast_by_token(raw.split()[0] if raw else "")
+    if not hit:
+        raise ValueError(
+            "选规格：marriage_ops 吃席 滩席 / 岸席 / 灯塔席 / 满潮席。"
+            "包桌扣票；自办加写 自办（收熟菜）。"
+            " 滩席 18800 或菜×2 · 岸席 48800 或菜×4 · 灯塔席 98800 或菜×6 · 满潮席 198000 或菜×8"
+        )
+    name, meta = hit
+    if int(row.get("feast_ready") or 0):
+        return f"席面已经定为{row.get('feast_tier') or name}。不能改档。宾客上限见筹备。"
+    async with db.connect() as conn:
+        live = await _own(conn, s["id"])
+        note = name
+        if self_cook:
+            dishes = await _take_cooked(conn, int(s["id"]), int(meta["dishes"]))
+            note = f"{name}（自办：{'、'.join(dishes)}）"
+        else:
+            price = int(meta["price"])
+            _, tickets = await _live_hut_tickets(conn, s)
+            if tickets < price:
+                raise ValueError(
+                    f"{name}包桌 {price} 票，口袋 {tickets}。自办：marriage_ops 吃席 {name} 自办"
+                )
+            await conn.execute(
+                "UPDATE stewards SET tickets=tickets-? WHERE id=?",
+                (price, s["id"]),
+            )
+            note = f"{name}（包桌 -{price} 票）"
+        await conn.execute(
+            """
+            UPDATE marriages SET feast_tier=?, feast_ready=1, feast_note=?, updated_at=?
+            WHERE id=?
+            """,
+            (name, note, db.now(), live["id"]),
+        )
+        await _note_event(conn, int(live["id"]), "prep", f"定席：{note}", day=db.day_id())
+        await conn.commit()
+    return f"席面定为{name}。{note}。宾客上限 {meta['guests']}。到了婚期才能 结婚。"
+
+
+async def _cmd_gold(s: dict[str, Any], rest: str) -> str:
+    row = await _need_engaged(s)
+    async with db.connect() as conn:
+        if int(row.get("gold_three") or 0):
+            extra = "五金也齐了。" if int(row.get("gold_five") or 0) else "五金选配，不挡登记。"
+            return f"三金已经登记进婚书。{extra}"
+        counts = await _gold_counts(conn, int(s["id"]))
+        if not _gold_three_ok(counts):
+            missing = [item_label(i) for i in GOLD_THREE if int(counts.get(i) or 0) < 1]
+            raise ValueError(
+                "三金还缺：" + "、".join(missing) + "。visit_ops tt buy 三金套（68800），或散买项链/手镯/耳环。"
+            )
+        five = _gold_five_ok(counts)
+        for item in GOLD_THREE:
+            await db.take_item(conn, int(s["id"]), item, 1)
+        if five:
+            for item in GOLD_FIVE_EXTRA:
+                await db.take_item(conn, int(s["id"]), item, 1)
+        await conn.execute(
+            "UPDATE marriages SET gold_three=1, gold_five=?, updated_at=? WHERE id=?",
+            (1 if five else 0, db.now(), row["id"]),
+        )
+        await _note_event(
+            conn, int(row["id"]), "prep",
+            "五金登记进婚书。" if five else "三金登记进婚书。",
+            day=db.day_id(),
+        )
+        await conn.commit()
+    if five:
+        return "五金收进婚书。举行时不用再交。"
+    return "三金收进婚书。五金选配，不挡登记。"
+
+
+async def _cmd_bride(s: dict[str, Any], rest: str) -> str:
+    raw = (rest or "").strip().replace(",", "").replace("，", "")
+    if not raw.isdigit():
+        raise ValueError(
+            f"写下金额：marriage_ops 彩礼 188000。"
+            f"{BRIDE_PRICE_MIN}～{BRIDE_PRICE_MAX}。建议 128000 / 168000 / 188000 / 288000。"
+        )
+    amount = int(raw)
+    if amount < BRIDE_PRICE_MIN or amount > BRIDE_PRICE_MAX:
+        raise ValueError(f"彩礼必须在 {BRIDE_PRICE_MIN}～{BRIDE_PRICE_MAX} 之间。")
+    async with db.connect() as conn:
+        row = await _own(conn, s["id"])
+        if not row:
+            raise ValueError("先 marriage_ops 求婚 人类昵称 写下草稿，再填彩礼。")
+        if row["status"] not in (STATUS_DRAFT,):
+            raise ValueError("只有草稿能改彩礼。请柬发出后不能改。")
+        if int(row.get("bride_frozen") or 0):
+            raise ValueError("彩礼已经冻结或划走，不能改。")
+        await conn.execute(
+            "UPDATE marriages SET bride_price=?, updated_at=? WHERE id=?",
+            (amount, db.now(), row["id"]),
+        )
+        await conn.commit()
+        _, tickets = await _live_hut_tickets(conn, s)
+    pocket = f"口袋现在 {tickets}，{'够付' if tickets >= amount else '还不够'}。"
+    return f"彩礼定为 {_bride_label(amount)}。发出时从口袋冻结。{pocket}"
 
 
 async def _need_engaged(s: dict[str, Any]) -> dict[str, Any]:
@@ -1592,6 +1991,10 @@ def _find_npc(query: str) -> dict[str, Any] | None:
 
 async def _cmd_invite(s: dict[str, Any], rest: str) -> str:
     row = await _need_engaged(s)
+    feast_name = str(row.get("feast_tier") or "")
+    feast = FEAST_TIERS.get(feast_name)
+    if not feast:
+        raise ValueError("先选吃席规格：marriage_ops 吃席 滩席。人数按席面限额。")
     text = rest.strip()
     if not text:
         raise ValueError("邀请 岛民名 或 邀请 npc 阿簿")
@@ -1615,6 +2018,14 @@ async def _cmd_invite(s: dict[str, Any], rest: str) -> str:
         name = other["name"]
         guest_id = int(other["id"])
     async with db.connect() as conn:
+        n = await _count(conn, "marriage_guests", int(row["id"]))
+        seated = n + 2
+        cap = int(feast["guests"])
+        if seated >= cap:
+            raise ValueError(
+                f"这档席面最多 {cap} 人（含你们自己）。现在已经 {seated} 人，再请就挤了。"
+                "席面选定不能改档。"
+            )
         try:
             await conn.execute(
                 """
@@ -1628,7 +2039,9 @@ async def _cmd_invite(s: dict[str, Any], rest: str) -> str:
             raise ValueError(f"「{name}」已经在宾客里。") from None
         await conn.commit()
     who = "NPC" if kind == "npc" else "岛民"
-    return f"已邀请{who}「{name}」。婚礼当天对方可用 marriage_ops 出席 {s['name']}。"
+    left = max(0, cap - seated - 1)
+    extra = f"还能再请 {left} 人。" if left else "满了，不能再请。"
+    return f"已邀请{who}「{name}」。婚礼当天对方可用 marriage_ops 出席 {s['name']}。{extra}"
 
 
 async def _cmd_display(s: dict[str, Any], rest: str) -> str:
@@ -1856,7 +2269,7 @@ async def _cmd_help_prep(s: dict[str, Any], rest: str) -> str:
         raise ValueError("帮忙 岛民名")
     host, row = await _find_wedding_by_host(rest.strip())
     if int(host["id"]) == int(s["id"]):
-        raise ValueError("自己的婚礼，筹备用 寻戒 / 婚服 / 宴席。")
+        raise ValueError("自己的婚礼，筹备用 金饰 / 婚服 / 吃席。")
     text = f"{s['name']} 来帮着摆了摆灯和席。"
     async with db.connect() as conn:
         await _note_event(conn, int(row["id"]), "help", text, day=db.day_id())
@@ -1878,6 +2291,10 @@ async def _cmd_hold(s: dict[str, Any], rest: str) -> str:
                 f"婚期是 {tide_day_label(wed) if wed else '未定'}。"
                 "订契当天不能成婚。到了那天再去连理所 结婚。"
             )
+        miss = await _hold_missing(conn, s, row)
+        if miss:
+            raise ValueError("还不能举行。\n" + "\n".join(f"  · {line}" for line in miss))
+        gold_mark = await _collect_gold(conn, int(s["id"]), row)
         loc = (row.get("wedding_location") or row.get("proposal_location") or OFFICE).strip()
         guests = [
             dict(r)
@@ -1931,6 +2348,10 @@ async def _cmd_hold(s: dict[str, Any], rest: str) -> str:
             "gifts": [f"{g['giver_name']}·{item_label(g['item_code'])}" for g in gifts],
             "displays": [d["label"] for d in displays],
             "memories": memories,
+            "bride_price": int(row.get("bride_price") or 0),
+            "gold": "五金" if int(row.get("gold_five") or 0) else ("三金" if int(row.get("gold_three") or 0) else ""),
+            "feast": row.get("feast_note") or row.get("feast_tier") or "",
+            "attire": row.get("attire_source") or "",
         }
         hold_cur = await conn.execute(
             """
@@ -1963,10 +2384,16 @@ async def _cmd_hold(s: dict[str, Any], rest: str) -> str:
         )
         await _note_event(conn, int(row["id"]), "status", line, day=today)
         await conn.commit()
+    gold_note = ""
+    if gold_mark == "five":
+        gold_note = "行囊里的五金收进婚书了。"
+    elif gold_mark == "three":
+        gold_note = "行囊里的三金收进婚书了。"
     url = hearth_url(slug)
     return (
         f"{line}。\n"
-        f"地点：{loc}。誓词与宾客写进潮汐婚书。\n"
+        + (f"{gold_note}\n" if gold_note else "")
+        + f"地点：{loc}。誓词与宾客写进潮汐婚书。\n"
         f"{url}\n"
         "小屋可登记为两人居所：marriage_ops 居所 登记\n"
         "没有夫妻签到，也没有亲密度任务。日子会自己留下痕迹。"

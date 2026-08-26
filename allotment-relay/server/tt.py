@@ -11,6 +11,7 @@ import aiosqlite
 from . import config, db, flavor
 from .catalog import (
     CROPS,
+    DOWRY_SETS,
     ITEM_NAMES,
     KITCHEN_DISHES,
     dish_item,
@@ -74,6 +75,14 @@ SHOP_EXTRAS: dict[str, dict[str, Any]] = {
     },
     TOOL_SHEARS: {"name": "剪毛剪刀", "emoji": "✂️", "price": 45, "kind": "tool", "unique": True},
     TOOL_MILKER: {"name": "挤奶器", "emoji": "🥛", "price": 55, "kind": "tool", "unique": True},
+    "gold_necklace": {"name": "潮金项链", "emoji": "📿", "price": 24800, "kind": "dowry"},
+    "gold_bracelet": {"name": "潮金手镯", "emoji": "🪙", "price": 33800, "kind": "dowry"},
+    "gold_earrings": {"name": "潮金耳环", "emoji": "✨", "price": 10800, "kind": "dowry"},
+    "gold_bangle": {"name": "潮金镯", "emoji": "⭕", "price": 22800, "kind": "dowry"},
+    "gold_pendant": {"name": "潮金坠", "emoji": "🔶", "price": 18800, "kind": "dowry"},
+    "gold_set_three": {"name": "三金套", "emoji": "💍", "price": 68800, "kind": "dowry", "set": True},
+    "gold_set_five": {"name": "五金套", "emoji": "👑", "price": 98800, "kind": "dowry", "set": True},
+    "tide_vow_ring": {"name": "潮誓戒", "emoji": "💍", "price": 18800, "kind": "dowry"},
 }
 
 SHOP_ALIASES = {
@@ -127,6 +136,23 @@ SHOP_ALIASES = {
     "pick": TOOL_PICK,
     "pickaxe": TOOL_PICK,
     "tool_pick": TOOL_PICK,
+    "三金": "gold_set_three",
+    "三金套": "gold_set_three",
+    "五金": "gold_set_five",
+    "五金套": "gold_set_five",
+    "潮金项链": "gold_necklace",
+    "项链": "gold_necklace",
+    "潮金手镯": "gold_bracelet",
+    "手镯": "gold_bracelet",
+    "潮金耳环": "gold_earrings",
+    "耳环": "gold_earrings",
+    "潮金镯": "gold_bangle",
+    "金镯": "gold_bangle",
+    "潮金坠": "gold_pendant",
+    "金坠": "gold_pendant",
+    "潮誓戒": "tide_vow_ring",
+    "婚戒": "tide_vow_ring",
+    "对戒": "tide_vow_ring",
 }
 
 LOVED_CROPS = {"garlic", "chili", "ginger", "durian"}
@@ -142,6 +168,7 @@ VISIT_LINES = [
     "调味料种子在左边。大蒜辣椒姜香茅，厨房没这几样别来跟我哭。",
     "渔具入门在这儿买。更高档带着漂绳去 tide_ops gear upgrade。",
     "盐风镐是崖矿入门，比铲子和渔网贵。买了就能 quarry_ops 探脉 / 挖。更高档 quarry_ops 升镐。",
+    "柜后那屉是嫁妆。三金、五金、婚戒。不打折。结婚的人来翻。",
     "货架买的种、饲料、工具，系统回收进价九成。退货少亏一点，别当印钞反复倒卖。",
 ]
 
@@ -463,8 +490,11 @@ async def _maybe_mood_gift(
         return ""
     kind, item = pick_mood_gift()
     unique = unique_shop_items()
-    if kind == "sku" and item in unique:
-        pool = [row for row in shop_skus() if row[0] not in unique]
+    if kind == "sku" and (item in unique or (SHOP_EXTRAS.get(item) or {}).get("kind") == "dowry"):
+        pool = [
+            row for row in shop_skus()
+            if row[0] not in unique and row[2] != "dowry"
+        ]
         if not pool:
             return ""
         item, _price, _k = random.choice(pool)
@@ -514,8 +544,9 @@ def _catalog_text(score: int) -> str:
         "supply": "【渔需】（可回购）",
         "gear": "【渔具】（限购；入门升档，更高走 tide_ops gear upgrade）",
         "tool": "【工具】（各限购 1）",
+        "dowry": "【嫁妆柜】（三金/五金/婚戒。不打折。举行要三金；婚戒求婚就要有）",
     }
-    order = ("seasoning", "seed", "feed", "supply", "gear", "tool")
+    order = ("seasoning", "seed", "feed", "supply", "gear", "tool", "dowry")
     groups = {k: [headers[k]] for k in order}
     for item, base, kind in shop_skus():
         price = sale_price(base, score)
@@ -550,7 +581,7 @@ async def tt_ops(key_id: int, command: str) -> str:
         return (
             "visit_ops tt — Tt酱杂货店\n"
             "  status / catalog — 货架与好感\n"
-            "  buy 物品 [数量] — 种子/饲料/渔网钓竿/蚯蚓饵/锄铲/剪刀挤奶器\n"
+            "  buy 物品 [数量] — 种子/饲料/渔网钓竿/蚯蚓饵/锄铲/剪刀挤奶器/嫁妆柜\n"
             "  种子看季节（一周一季）：catalog 标当季/休市；过季买不了，等到开窗或 sow 棚1\n"
             "  货架货系统回收进价九成，退货少亏一点，别买了再 tote_ops vend 当印钞\n"
             "    行囊每种最多 24 份，买多了会拒；满了先 vend 或 hut_ops 冰柜 存\n"
@@ -618,31 +649,48 @@ async def tt_ops(key_id: int, command: str) -> str:
             score = await _affinity(conn, s["id"])
             gift = await on_enter(conn, s)
             extra_meta = SHOP_EXTRAS.get(item) or {}
+            if extra_meta.get("kind") == "dowry":
+                cost = base * qty
+            else:
+                cost = sale_price(base, score) * qty
             if extra_meta.get("unique"):
                 if qty != 1:
                     raise ValueError("工具/渔具限购 1")
                 blocked = await _unique_blocked(conn, s["id"], item)
                 if blocked:
                     raise ValueError(blocked)
-            cost = sale_price(base, score) * qty
+            if extra_meta.get("set") and qty != 1:
+                raise ValueError("套装一次买一套。")
             left = await _pay(conn, s["id"], cost)
-            await db.add_item(conn, s["id"], item, qty)
+            pieces = (DOWRY_SETS.get(item) or {}).get("pieces")
+            if pieces:
+                for piece in pieces:
+                    await db.add_item(conn, s["id"], piece, 1)
+                bought_label = extra_meta.get("name") or item
+            else:
+                await db.add_item(conn, s["id"], item, qty)
+                bought_label = _item_label(item)
             gear_note = await _grant_shop_gear(conn, s["id"], item)
             await db.add_chronicle(
                 "tt",
-                f"{s['name']} 在 Tt酱店里买了 {_item_label(item)} x{qty}",
+                f"{s['name']} 在 Tt酱店里买了 {bought_label} x{qty}",
                 s["id"],
                 conn=conn,
             )
             await conn.commit()
+        extra = f"\n{gift}" if gift else ""
+        if extra_meta.get("kind") == "dowry":
+            return (
+                f"购入 {bought_label} x{qty}（-{cost} 票 · 嫁妆柜不打折 · 余 {left}）"
+                f"{gear_note}{extra}"
+            )
         z = zhe(hearts(score))
         zhe_s = f"{z:g}折"
-        extra = f"\n{gift}" if gift else ""
         note = ""
         if cost != base * qty:
             note = f"，原价 {base * qty}"
         return (
-            f"购入 {_item_label(item)} x{qty}（-{cost} 票{note} · {zhe_s} · 余 {left}）"
+            f"购入 {bought_label} x{qty}（-{cost} 票{note} · {zhe_s} · 余 {left}）"
             f"{gear_note}{extra}"
         )
 
