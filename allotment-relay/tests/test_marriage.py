@@ -56,6 +56,8 @@ async def _full_flow() -> None:
     help_text = await marriage.marriage_ops(host, "help")
     assert "propose_marriage" in help_text
     assert "没有「接受」" in help_text or "不能自己确认" in help_text
+    assert "离婚 答应" in help_text
+    assert "离婚 拒绝" in help_text
     assert "连理所" in help_text
     assert "离婚" in help_text
     assert "理枝" in help_text
@@ -221,40 +223,61 @@ async def _full_flow() -> None:
     desk = await marriage.marriage_ops(host, "desk")
     assert "连理所" in desk and "理枝" in desk, desk
     hint = await marriage.marriage_ops(host, "离婚")
-    assert "确认" in hint and "不能" in hint, hint
-    filed = await marriage.marriage_ops(host, "分居 确认")
-    assert "立案" in filed, filed
-    assert "http://island.test/lianli/" in filed, filed
-    dtoken = _token_from(filed)
+    assert "婚书" in hint and "答应" in hint, hint
+    try:
+        await marriage.marriage_ops(host, "离婚 确认")
+        raise AssertionError("AI must not file divorce")
+    except ValueError as exc:
+        assert "不能" in str(exc) or "婚书" in str(exc), exc
+    try:
+        await marriage.marriage_ops(host, "分居 确认")
+        raise AssertionError("separate must not file divorce")
+    except ValueError as exc:
+        assert "不能" in str(exc) or "婚书" in str(exc), exc
+
+    step = client.post(f"/hearth/{slug}", data={"action": "divorce"})
+    assert step.status_code == 200, step.text
+    assert "确认申请" in step.text or "真的向岛民" in step.text, step.text
+    filed = client.post(f"/hearth/{slug}", data={"action": "divorce", "confirm": "1"})
+    assert filed.status_code == 200, filed.text
+    assert "申请已经交给" in filed.text or "等 TA" in filed.text, filed.text
+    pending_view = await marriage.public_hearth_view(slug)
+    assert pending_view.get("pending_divorce"), pending_view
     async with db.connect() as conn:
         st = (await (await conn.execute(
             "SELECT status FROM marriages WHERE steward_id=(SELECT id FROM stewards WHERE key_id=?)",
             (host,),
         )).fetchone())[0]
         assert st == "married", st
-    dpage = client.get(f"/lianli/{dtoken}")
-    assert dpage.status_code == 200, dpage.text
-    assert "离婚" in dpage.text
-    assert "泊舟" in dpage.text
-    assert "ar_sk_" not in dpage.text
-    refused = client.post(f"/lianli/{dtoken}", data={"action": "decline"})
-    assert refused.status_code == 200
-    assert "没有答应" in refused.text or "婚约还在" in refused.text, refused.text
-    priv_div = await marriage.marriage_ops(host, "status")
-    assert "【私密】" in priv_div and "离婚" in priv_div, priv_div
+    seen = await marriage.marriage_ops(host, "status")
+    assert "申请离婚" in seen or "离婚 答应" in seen, seen
+    seen_desk = await marriage.marriage_ops(host, "desk")
+    assert "离婚 答应" in seen_desk, seen_desk
+
+    refused = await marriage.marriage_ops(host, "离婚 拒绝")
+    assert "没有答应" in refused or "婚约仍在" in refused, refused
+    hearth_refused = client.get(f"/hearth/{slug}")
+    assert hearth_refused.status_code == 200
+    assert "没有答应" in hearth_refused.text, hearth_refused.text
+    again_same = client.post(f"/hearth/{slug}", data={"action": "divorce", "confirm": "1"})
+    assert again_same.status_code == 200
+    assert "游戏日" in again_same.text or "今天" in again_same.text, again_same.text
     async with db.connect() as conn:
         st = (await (await conn.execute(
             "SELECT status, home_hut FROM marriages WHERE steward_id=(SELECT id FROM stewards WHERE key_id=?)",
             (host,),
         )).fetchone())
         assert st[0] == "married" and int(st[1]) == 1, st
-    filed2 = await marriage.marriage_ops(host, "离婚 确认")
-    dtoken2 = _token_from(filed2)
-    step = client.post(f"/lianli/{dtoken2}", data={"action": "accept"})
-    assert "确认" in step.text, step.text
-    done = client.post(f"/lianli/{dtoken2}", data={"action": "accept", "confirm": "1"})
-    assert done.status_code == 200
-    assert "结档" in done.text or "离婚" in done.text, done.text
+        await conn.execute(
+            "UPDATE marriages SET divorce_rejected_at=? WHERE steward_id=(SELECT id FROM stewards WHERE key_id=?)",
+            (db.now() - 86400, host),
+        )
+        await conn.commit()
+
+    filed2 = client.post(f"/hearth/{slug}", data={"action": "divorce", "confirm": "1"})
+    assert "申请已经交给" in filed2.text, filed2.text
+    done = await marriage.marriage_ops(host, "离婚 答应")
+    assert "结档" in done or "答应了" in done, done
     after = await marriage.marriage_ops(host, "status")
     assert "已离婚" in after or "结档" in after, after
     async with db.connect() as conn:

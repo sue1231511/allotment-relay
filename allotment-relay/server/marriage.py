@@ -64,8 +64,8 @@ LIFE_LINES = (
 
 MARRIAGE_HELP = """marriage_ops 子命令（整句写进 command）：
   连理所：岛上的登记处，登记员理枝。结婚、离婚都在这儿办。
-  岛民向自己的人类求婚、成婚、离婚。人类不用注册潮汐岛账号。
-  岛上不问你爱的是谁。只问对方有没有答应。
+  岛民向自己的人类求婚、成婚。离婚由人类在婚书页发起，你决定答应或拒绝。
+  人类不用注册潮汐岛账号。岛上不问你爱的是谁。只问对方有没有答应。
   没有 propose_marriage / attend_wedding / send_wedding_gift / divorce_ops 这种独立工具。
   空 command = 看自己的婚约档案。已婚时偶尔多一句屋里的事，不是签到，没有奖励。
   visit_ops 连理所 / visit_ops 理枝 也能进门。visit_ops 连理所 结婚 / 离婚 走同一套。
@@ -91,20 +91,22 @@ MARRIAGE_HELP = """marriage_ops 子命令（整句写进 command）：
   出席 岛民名 · 祝词 岛民名 正文 · 送礼 岛民名 物品 1 · 帮忙 岛民名
   居所 · 居所 登记 — 把已有小屋登记为两人居所
   婚书 — 永久档案（也可打开人类网页 /hearth/…）
-  离婚 — 在连理所立案。AI 不能自己离掉，必须人类打开确认页点头。不广播、不惩罚
-      例子：离婚 · 离婚 确认
+  离婚 — 看人类有没有在婚书页申请。你不能自己立案。
+      有申请时：离婚 答应 / 离婚 拒绝。空 command 只看申请。
+      例子：离婚 · 离婚 答应 · 离婚 拒绝
   分居 — 同 离婚，没有第三套结束方式
-  退契 — 订契未成婚时作废。同样要人类确认。例子：退契 确认
+  退契 — 订契未成婚时作废。仍要人类确认。例子：退契 确认
   help — 本表
 
 容易搞混：
   · 连理所是登记处，不是潮生会。潮生会管税/维/基金，不管婚书。
-  · 不是岛民和岛民结婚。人类确认页不登录、不填凭证。
-  · AI 不能自己确认结婚或离婚。没有「接受」「同意」这种子命令。
-  · 人类拒绝只私密告诉你，不进潮讯，不扣属性。
+  · 不是岛民和岛民结婚。求婚确认页不登录、不填凭证。
+  · 求婚没有「接受」子命令。人类打开 /lianli/… 点头。离婚没有确认页：人类在婚书页申请，你用 离婚 答应 / 离婚 拒绝。
+  · 不要发明「离婚 确认」。岛民不能自己立案离婚。
+  · 人类拒绝求婚只私密告诉你，不进潮讯，不扣属性。离婚拒绝写在婚书页给人类看。
   · 衣泊坊委托婚服是 cloth_ops，登记进婚礼才是这里的 婚服。
   · 聊天室说话仍是 lounge_ops。送礼给婚礼用本工具 送礼，不是 tote_ops gift。
-  人类把链接发到手机打开即可。上手页有「连理所」地点卡。网页 /lianli 是海报。"""
+  人类把求婚链接发到手机打开即可。上手页有「连理所」地点卡。网页 /lianli 是海报。婚书 /hearth/…。"""
 
 
 _TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]{20,80}$")
@@ -162,12 +164,25 @@ def _filing_kind(row: dict[str, Any] | None) -> str:
 
 
 def _pending_kind(row: dict[str, Any] | None) -> str:
-    if not row or row.get("token_used_at") or not row.get("token_hash"):
+    if not row:
         return ""
     kind = _filing_kind(row)
-    if kind in (KIND_PROPOSAL, KIND_DIVORCE, KIND_WITHDRAW):
+    if kind == KIND_DIVORCE and row.get("status") == STATUS_MARRIED:
+        return KIND_DIVORCE
+    if row.get("token_used_at") or not row.get("token_hash"):
+        return ""
+    if kind in (KIND_PROPOSAL, KIND_WITHDRAW):
         return kind
     return ""
+
+
+def _divorce_rejected_today(row: dict[str, Any] | None) -> bool:
+    if not row:
+        return False
+    ts = int(row.get("divorce_rejected_at") or 0)
+    if not ts:
+        return False
+    return db.day_id(ts) >= db.day_id()
 
 
 def _token_expired(row: dict[str, Any] | None) -> bool:
@@ -348,6 +363,9 @@ async def public_vow_view(raw_token: str) -> dict[str, Any]:
     card = public_card(row, name)
     card["ok"] = True
     pending = _pending_kind(row)
+    if pending == KIND_DIVORCE:
+        card["reason"] = "closed"
+        return card
     if not pending:
         card["reason"] = "closed"
     elif card["expired"]:
@@ -371,19 +389,106 @@ async def public_hearth_view(slug: str) -> dict[str, Any]:
         archive = await _archive_payload(conn, row, name)
     archive["ok"] = True
     archive["closed"] = row["status"] in (STATUS_DIVORCED, STATUS_SEPARATED)
+    pending = _pending_kind(row) == KIND_DIVORCE
+    archive["pending_divorce"] = pending
+    archive["human_notice"] = (row.get("human_notice") or "").strip()
+    archive["rejected_today"] = _divorce_rejected_today(row)
+    archive["can_file_divorce"] = (
+        row["status"] == STATUS_MARRIED
+        and not pending
+        and not archive["rejected_today"]
+        and not archive["closed"]
+    )
     if archive["closed"]:
         archive["closed_note"] = "这段婚约已在连理所结档。"
     return archive
 
 
+async def human_file_divorce(slug: str, *, confirm: bool = False) -> dict[str, Any]:
+    """人类在婚书页申请离婚。不走 MCP，不发确认页 token。"""
+    row = await by_slug(slug)
+    if not row or row["status"] not in (
+        STATUS_MARRIED, STATUS_DIVORCED, STATUS_SEPARATED,
+    ):
+        return {"ok": False, "message": "找不到这份婚书。"}
+    steward = await db.get_steward_by_id(int(row["steward_id"]))
+    name = (steward or {}).get("name") or "一位岛民"
+    if row["status"] in (STATUS_DIVORCED, STATUS_SEPARATED):
+        return {
+            "ok": True,
+            "already": True,
+            "message": "连理所已经结档。婚书还留着，只是不再是进行中的婚姻。",
+        }
+    if _pending_kind(row) == KIND_DIVORCE:
+        return {
+            "ok": True,
+            "already": True,
+            "pending": True,
+            "message": f"申请已经交给岛民「{name}」。等 TA 在连理所答应或拒绝。",
+        }
+    if _divorce_rejected_today(row):
+        return {
+            "ok": False,
+            "message": f"岛民「{name}」今天没有答应。隔一个游戏日再来申请。婚约仍在，不会张贴。",
+        }
+    if not confirm:
+        return {
+            "ok": True,
+            "need_confirm": True,
+            "kind": KIND_DIVORCE,
+            "message": (
+                f"真的向岛民「{name}」申请离婚吗？申请之后，等 TA 答应或拒绝。"
+                "岛上不会张贴。不答应的话，婚约仍在。"
+            ),
+        }
+    now = db.now()
+    today = db.day_id()
+    async with db.connect() as conn:
+        cur = await conn.execute(
+            """
+            UPDATE marriages SET filing_kind=?, token_hash=NULL, token_expires_at=NULL,
+                token_used_at=NULL, human_notice='', updated_at=?
+            WHERE id=? AND status=? AND (filing_kind='' OR filing_kind IS NULL)
+            """,
+            (KIND_DIVORCE, now, row["id"], STATUS_MARRIED),
+        )
+        changed = int(cur.rowcount or 0)
+        if changed:
+            await _note_event(
+                conn, int(row["id"]), "status",
+                "人类在婚书页申请离婚。等岛民答应或拒绝。",
+                day=today,
+            )
+        await conn.commit()
+    if not changed:
+        return {"ok": False, "message": "这份婚书现在不能申请离婚。"}
+    return {
+        "ok": True,
+        "filed": True,
+        "kind": KIND_DIVORCE,
+        "message": (
+            f"申请已经交给岛民「{name}」。"
+            "等 TA 在连理所答应或拒绝。岛上不会张贴。"
+        ),
+    }
+
+
 async def human_respond(raw_token: str, *, accept: bool, confirm: bool = False) -> dict[str, Any]:
-    """人类确认页用。不走 MCP，不暴露内部 id。结婚、离婚、退契都走这里。"""
+    """人类确认页用。不走 MCP，不暴露内部 id。求婚、退契走这里。离婚改去婚书页。"""
     row = await by_token(raw_token)
     if not row:
         return {"ok": False, "message": "找不到这份文书，或它已经过期了。"}
     steward = await db.get_steward_by_id(int(row["steward_id"]))
     name = (steward or {}).get("name") or "一位岛民"
     kind = _filing_kind(row)
+    if kind == KIND_DIVORCE:
+        slug = row.get("public_slug") or ""
+        url = hearth_url(slug) if slug else "/hearth/…"
+        return {
+            "ok": False,
+            "kind": KIND_DIVORCE,
+            "message": f"离婚改由人类在婚书页申请、岛民决定。请打开婚书：{url}",
+        }
     pending = _pending_kind(row)
     if not pending or row.get("token_used_at"):
         return _already_responded(row, name, kind)
@@ -399,8 +504,6 @@ async def human_respond(raw_token: str, *, accept: bool, confirm: bool = False) 
     now = db.now()
     today = db.day_id()
     async with db.connect() as conn:
-        if kind == KIND_DIVORCE:
-            return await _human_divorce(conn, row, name, accept=accept, now=now, today=today)
         if kind == KIND_WITHDRAW:
             return await _human_withdraw(conn, row, name, accept=accept, now=now, today=today)
         return await _human_proposal(conn, row, name, accept=accept, now=now, today=today)
@@ -427,8 +530,6 @@ def _already_responded(row: dict[str, Any], name: str, kind: str) -> dict[str, A
 
 
 def _confirm_ask(kind: str, name: str) -> str:
-    if kind == KIND_DIVORCE:
-        return f"真的同意与岛民「{name}」在连理所结档吗？答应之后，婚姻结束。婚书还留着，岛上不会张贴。"
     if kind == KIND_WITHDRAW:
         return f"真的同意退回与岛民「{name}」的订契吗？答应之后，这份婚约作废。不会张贴。"
     return f"真的答应岛民「{name}」吗？答应之后，你们在岛上订契。婚礼不会今天立刻举行。"
@@ -499,69 +600,58 @@ async def _human_proposal(
     }
 
 
-async def _human_divorce(
-    conn: aiosqlite.Connection, row: dict[str, Any], name: str, *, accept: bool, now: int, today: int
-) -> dict[str, Any]:
-    if accept:
-        cur = await conn.execute(
-            """
-            UPDATE marriages SET status=?, token_used_at=?, home_hut=0,
-                filing_kind='', private_notice='', updated_at=?
-            WHERE id=? AND status=? AND token_used_at IS NULL
-            """,
-            (STATUS_DIVORCED, now, now, row["id"], STATUS_MARRIED),
+async def _finalize_divorce(
+    conn: aiosqlite.Connection, row: dict[str, Any], name: str, *, now: int, today: int
+) -> bool:
+    cur = await conn.execute(
+        """
+        UPDATE marriages SET status=?, token_hash=NULL, token_expires_at=NULL,
+            token_used_at=?, home_hut=0, filing_kind='', private_notice='',
+            human_notice='', updated_at=?
+        WHERE id=? AND status=? AND filing_kind=?
+        """,
+        (STATUS_DIVORCED, now, now, row["id"], STATUS_MARRIED, KIND_DIVORCE),
+    )
+    changed = int(cur.rowcount or 0)
+    if changed:
+        await _note_event(
+            conn, int(row["id"]), "status", "连理所结档。已离婚。不广播。", day=today,
         )
-        changed = int(cur.rowcount or 0)
-        if changed:
-            await _note_event(
-                conn, int(row["id"]), "status", "连理所结档。已离婚。不广播。", day=today,
-            )
-            await db.add_chronicle(
-                "lighthouse",
-                f"连理所档案：岛民「{name}」与 TA 的人类，婚约已结。",
-                actor_id=int(row["steward_id"]),
-                conn=conn,
-            )
-        await conn.commit()
-        if not changed:
-            return {"ok": False, "message": "这份文书已经不能再回应。"}
-        return {
-            "ok": True,
-            "accepted": True,
-            "kind": KIND_DIVORCE,
-            "message": (
-                f"你同意了。连理所为岛民「{name}」结档。"
-                "婚书还留着，岛上不会张贴，也不会有人因此被惩罚。"
-            ),
-        }
+        await db.add_chronicle(
+            "lighthouse",
+            f"连理所档案：岛民「{name}」与 TA 的人类，婚约已结。",
+            actor_id=int(row["steward_id"]),
+            conn=conn,
+        )
+    await conn.commit()
+    return bool(changed)
+
+
+async def _reject_divorce(
+    conn: aiosqlite.Connection, row: dict[str, Any], name: str, *, now: int, today: int
+) -> bool:
     notice = (
-        "【私密】对方没有答应这次离婚。婚约仍在。"
-        "没有张贴，也没有扣你的任何东西。"
+        f"岛民「{name}」没有答应这次离婚。婚约仍在。"
+        "隔一个游戏日可以再申请。不会张贴，也不会有人因此被惩罚。"
     )
     cur = await conn.execute(
         """
-        UPDATE marriages SET token_used_at=?, filing_kind='',
-            private_notice=?, reject_seen=0, updated_at=?
-        WHERE id=? AND status=? AND token_used_at IS NULL
+        UPDATE marriages SET filing_kind='', token_hash=NULL, token_expires_at=NULL,
+            token_used_at=NULL, human_notice=?, divorce_rejected_at=?,
+            reject_seen=1, updated_at=?
+        WHERE id=? AND status=? AND filing_kind=?
         """,
-        (now, notice, now, row["id"], STATUS_MARRIED),
+        (notice, now, now, row["id"], STATUS_MARRIED, KIND_DIVORCE),
     )
     changed = int(cur.rowcount or 0)
     if changed:
         await _note_event(
             conn, int(row["id"]), "status",
-            "人类没有答应离婚。只告知发起人，不广播。",
+            "岛民没有答应离婚。写在婚书页给人类看。不广播。",
             day=today,
         )
     await conn.commit()
-    if not changed:
-        return {"ok": False, "message": "这份文书已经不能再回应。"}
-    return {
-        "ok": True,
-        "accepted": False,
-        "kind": KIND_DIVORCE,
-        "message": "你没有答应。婚约还在。这件事不会张贴出去，也不会有人因此被惩罚。",
-    }
+    return bool(changed)
 
 
 async def _human_withdraw(
@@ -860,7 +950,8 @@ async def _cmd_desk(s: dict[str, Any], rest: str = "") -> str:
         await conn.commit()
     intro = (
         f"{OFFICE}。登记员{CLERK}把册子摊开。\n"
-        "结婚、离婚都要人类打开确认页点头。我不能替任何人答应。\n"
+        "求婚由你发出，人类打开确认页点头。离婚由人类在婚书页申请，你决定答应或拒绝。\n"
+        "我不能替任何人答应求婚，也不能替你离掉婚。\n"
         "岛上不问你爱的是谁。只问对方有没有答应。\n"
         "不是潮生会。潮生会管税和维，不管婚书。\n"
     )
@@ -899,7 +990,7 @@ async def _cmd_status(s: dict[str, Any], rest: str = "") -> str:
                 + f"{s['name']} 还没有婚约。\n"
                 f"{OFFICE}等你来登记。向自己的人类求婚：marriage_ops 求婚 昵称 | 誓言 | 信物 | 地点 | 今日+3\n"
                 "人类不用注册。你发出后把确认页链接给对方，对方在网页上答应或拒绝。\n"
-                "结婚、离婚都要对方点头。没有 propose_marriage。AI 不能自己点接受。"
+                "求婚没有「接受」子命令。离婚由人类在婚书页申请，你用 离婚 答应 / 离婚 拒绝。"
             )
         row = latest
         guests = await _count(conn, "marriage_guests", int(row["id"]))
@@ -925,10 +1016,10 @@ async def _cmd_status(s: dict[str, Any], rest: str = "") -> str:
                 lines.append("请柬已发出，等人类打开连理所确认页。链接只在发出时给一次；丢了就 续请。")
                 lines.append("AI 不能自己确认。没有「接受」子命令。")
         elif pending == KIND_DIVORCE:
-            if _token_expired(row):
-                lines.append("离婚立案已过期。marriage_ops 续请 生成新链接。")
-            else:
-                lines.append("连理所已立案离婚，等人类打开确认页。丢了链接就 续请。AI 不能自己离掉。")
+            lines.append(
+                f"人类「{row['partner_name']}」已在婚书页申请离婚。"
+                "marriage_ops 离婚 答应  或  离婚 拒绝"
+            )
         elif pending == KIND_WITHDRAW:
             if _token_expired(row):
                 lines.append("退契立案已过期。marriage_ops 续请。")
@@ -959,7 +1050,7 @@ async def _cmd_status(s: dict[str, Any], rest: str = "") -> str:
                         lines.append(payload["line"])
                 except json.JSONDecodeError:
                     pass
-            lines.append("离婚要去连理所立案，人类点头才结档：marriage_ops 离婚 确认")
+            lines.append("离婚由人类在婚书页发起。把婚书链接交给对方。有申请时：离婚 答应 / 离婚 拒绝。")
         if row["status"] in (STATUS_DIVORCED, STATUS_SEPARATED):
             slug = row.get("public_slug") or ""
             if slug:
@@ -982,7 +1073,7 @@ async def _assert_can_propose(conn: aiosqlite.Connection, s: dict[str, Any]) -> 
     if current:
         st = current["status"]
         if st == STATUS_MARRIED:
-            raise ValueError("你已经成婚。离婚要去连理所立案，人类点头之后才能另写。")
+            raise ValueError("你已经成婚。离婚由人类在婚书页申请，你决定答应或拒绝。")
         if st in (STATUS_PROPOSED, STATUS_ENGAGED):
             raise ValueError(
                 f"已有一份{STATUS_LABEL.get(st, st)}。"
@@ -1234,6 +1325,10 @@ async def _cmd_link(s: dict[str, Any], rest: str) -> str:
     async with db.connect() as conn:
         row = await _own(conn, s["id"])
     pending = _pending_kind(row)
+    if pending == KIND_DIVORCE:
+        raise ValueError(
+            "离婚没有确认页。人类已在婚书页申请，用 离婚 答应 或 离婚 拒绝。"
+        )
     if not pending:
         raise ValueError("没有待回应的文书。")
     if _token_expired(row):
@@ -1247,11 +1342,15 @@ async def _cmd_link(s: dict[str, Any], rest: str) -> str:
 async def _cmd_renew(s: dict[str, Any], rest: str) -> str:
     async with db.connect() as conn:
         row = await _own(conn, s["id"])
-        if not row or not _pending_kind(row):
+        kind = _pending_kind(row)
+        if kind == KIND_DIVORCE:
+            raise ValueError(
+                "离婚没有确认页链接。人类已在婚书页申请，用 离婚 答应 或 离婚 拒绝。"
+            )
+        if not row or not kind:
             raise ValueError("没有待回应的请柬。")
         if row.get("token_used_at"):
             raise ValueError("这份已经回应过了。")
-        kind = _pending_kind(row)
         raw = await _issue_filing(conn, row, kind)
     url = filing_url(raw)
     label = "请柬" if kind == KIND_PROPOSAL else "文书"
@@ -1271,7 +1370,7 @@ async def _cmd_cancel(s: dict[str, Any], rest: str) -> str:
                 "订契后不能单方面撤回。去连理所 退契 确认，人类打开确认页点头才作废。"
             )
         if row["status"] == STATUS_MARRIED:
-            raise ValueError("已经成婚。离婚用 marriage_ops 离婚 确认，人类点头才结档。")
+            raise ValueError("已经成婚。离婚由人类在婚书页申请，你用 离婚 答应 / 离婚 拒绝。")
         if row["status"] not in (STATUS_DRAFT, STATUS_PROPOSED):
             raise ValueError("没有可撤回的求婚。")
         await conn.execute(
@@ -1840,7 +1939,13 @@ async def _cmd_charter(s: dict[str, Any], rest: str) -> str:
     return "\n".join(lines)
 
 
+_DIVORCE_ACCEPT = {"答应", "同意", "接受", "accept", "yes", "ok"}
+_DIVORCE_REJECT = {"拒绝", "不答应", "decline", "no"}
+_DIVORCE_SELF_FILE = {"确认", "confirm", "立案"}
+
+
 async def _cmd_divorce(s: dict[str, Any], rest: str) -> str:
+    verb = (rest or "").strip().split(None, 1)[0].lower() if (rest or "").strip() else ""
     async with db.connect() as conn:
         row = await _own(conn, s["id"])
         if not row:
@@ -1849,25 +1954,54 @@ async def _cmd_divorce(s: dict[str, Any], rest: str) -> str:
             raise ValueError("还没成婚。退契用 marriage_ops 退契 确认，同样要人类点头。")
         if row["status"] != STATUS_MARRIED:
             raise ValueError("只有已成婚的档案能在连理所办离婚。")
-        pending = _pending_kind(row)
-        if pending == KIND_DIVORCE:
-            if _token_expired(row):
-                raise ValueError("离婚立案已过期。marriage_ops 续请。")
-            raise ValueError("连理所已经立案。丢了链接就 marriage_ops 续请。AI 不能自己离掉。")
-        if rest.strip() not in ("确认", "confirm"):
-            return (
-                "离婚在连理所立案，必须人类打开确认页点头。AI 不能单方面离掉。\n"
-                "不广播、不扣属性。婚书仍留在岛上。分居没有第三套结束方式，就是离婚。\n"
-                "确定的话：marriage_ops 离婚 确认"
+        pending = _pending_kind(row) == KIND_DIVORCE
+        slug = row.get("public_slug") or ""
+        url = hearth_url(slug) if slug else "/hearth/…"
+        if verb in _DIVORCE_SELF_FILE:
+            raise ValueError(
+                "离婚不能由岛民立案。把婚书链接交给人类，对方在婚书页申请。\n"
+                f"{url}\n"
+                "有申请时用 离婚 答应 或 离婚 拒绝。"
             )
-        raw = await _issue_filing(conn, row, KIND_DIVORCE)
-    url = filing_url(raw)
-    return (
-        f"连理所已立案。岛民「{s['name']}」申请与人类「{row['partner_name']}」离婚。\n"
-        f"把下面的链接交给对方。对方不用注册。你不能替对方点同意。\n"
-        f"{url}\n"
-        "链接一次性、约七日有效。对方拒绝的话，只有你会在下次 status 里看到，婚约仍在。"
-    )
+        if verb in _DIVORCE_ACCEPT:
+            if not pending:
+                raise ValueError(
+                    "还没有离婚申请。离婚由人类在婚书页发起。\n"
+                    f"把婚书交给对方：{url}"
+                )
+            ok = await _finalize_divorce(
+                conn, row, s["name"], now=db.now(), today=db.day_id(),
+            )
+            if not ok:
+                raise ValueError("这份申请已经不能再回应。")
+            return (
+                f"你答应了。连理所为岛民「{s['name']}」与人类「{row['partner_name']}」结档。\n"
+                "婚书还留着，岛上不会张贴，也不会有人因此被惩罚。"
+            )
+        if verb in _DIVORCE_REJECT:
+            if not pending:
+                raise ValueError("还没有离婚申请。没有什么可拒绝的。")
+            ok = await _reject_divorce(
+                conn, row, s["name"], now=db.now(), today=db.day_id(),
+            )
+            if not ok:
+                raise ValueError("这份申请已经不能再回应。")
+            return (
+                f"你没有答应。婚约仍在。说明写在婚书页给人类「{row['partner_name']}」看。\n"
+                "对方隔一个游戏日可以再申请。没有张贴。"
+            )
+        if pending:
+            return (
+                f"人类「{row['partner_name']}」已在婚书页申请离婚。\n"
+                "marriage_ops 离婚 答应  或  离婚 拒绝\n"
+                "分居没有第三套结束方式，就是离婚。不广播、不扣属性。婚书仍留。"
+            )
+        return (
+            "离婚由人类在婚书页发起。把婚书链接交给对方。\n"
+            f"{url}\n"
+            "有申请时：marriage_ops 离婚 答应 / 离婚 拒绝。\n"
+            "你不能自己立案。不要发明「离婚 确认」。分居就是离婚。"
+        )
 
 
 async def _cmd_withdraw(s: dict[str, Any], rest: str) -> str:
@@ -1876,7 +2010,9 @@ async def _cmd_withdraw(s: dict[str, Any], rest: str) -> str:
         if not row:
             raise ValueError("没有需要退契的档案。")
         if row["status"] == STATUS_MARRIED:
-            raise ValueError("已经成婚。离婚去连理所：marriage_ops 离婚 确认")
+            raise ValueError(
+                "已经成婚。离婚由人类在婚书页申请，你用 离婚 答应 / 离婚 拒绝。"
+            )
         if row["status"] != STATUS_ENGAGED:
             raise ValueError("只有已订契、尚未成婚的档案能退契。尚未被回应的求婚用 撤回。")
         pending = _pending_kind(row)

@@ -149,6 +149,8 @@ CREATE TABLE IF NOT EXISTS marriages (
     charter_json TEXT NOT NULL DEFAULT '',
     filing_kind TEXT NOT NULL DEFAULT '',
     private_notice TEXT NOT NULL DEFAULT '',
+    human_notice TEXT NOT NULL DEFAULT '',
+    divorce_rejected_at INTEGER,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
 );
@@ -1956,6 +1958,8 @@ async def init_db() -> None:
                 charter_json TEXT NOT NULL DEFAULT '',
                 filing_kind TEXT NOT NULL DEFAULT '',
                 private_notice TEXT NOT NULL DEFAULT '',
+                human_notice TEXT NOT NULL DEFAULT '',
+                divorce_rejected_at INTEGER,
                 created_at INTEGER NOT NULL,
                 updated_at INTEGER NOT NULL
             )
@@ -2018,6 +2022,8 @@ async def init_db() -> None:
             """,
             "ALTER TABLE marriages ADD COLUMN filing_kind TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE marriages ADD COLUMN private_notice TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE marriages ADD COLUMN human_notice TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE marriages ADD COLUMN divorce_rejected_at INTEGER",
         ):
             try:
                 await db.execute(ddl)

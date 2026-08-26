@@ -285,6 +285,7 @@ def test_mcp_descriptions() -> None:
     assert "没有「接受」" in mar_blob or "没有接受" in mar_blob
     assert "连理所" in mar_blob
     assert "离婚" in mar_blob
+    assert "离婚 答应" in mar_blob
     assert "理枝" in mar_blob
 
 
@@ -361,7 +362,7 @@ def test_relay_manual_covers_systems() -> None:
         "求婚 阿潮",
         "只问对方有没有答应",
         "连理所",
-        "离婚 确认",
+        "离婚 答应",
         "理枝",
         "tale_ops 潮闻不给旧衣料",
         "plot_ops forage",

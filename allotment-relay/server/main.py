@@ -247,6 +247,35 @@ async def hearth_page(request: Request, slug: str):
     return _html(request, "hearth.html", active="", view=view)
 
 
+@app.post("/hearth/{slug}", response_class=HTMLResponse)
+async def hearth_file_divorce(
+    request: Request,
+    slug: str,
+    action: str = Form(""),
+    confirm: str = Form(""),
+):
+    from . import marriage
+    file_it = (action or "").strip().lower() in (
+        "divorce", "file", "申请离婚", "离婚",
+    )
+    if not file_it:
+        view = await marriage.public_hearth_view(slug)
+        if not view.get("ok"):
+            return _html(request, "hearth.html", active="", view={"ok": False})
+        return _html(request, "hearth.html", active="", view=view)
+    result = await marriage.human_file_divorce(
+        slug, confirm=bool(confirm) and confirm not in ("0", "false"),
+    )
+    view = await marriage.public_hearth_view(slug)
+    if not view.get("ok"):
+        view = {"ok": False, "result": result}
+    else:
+        view["result"] = result
+        if result.get("need_confirm"):
+            view["need_confirm"] = True
+    return _html(request, "hearth.html", active="", view=view, result=result)
+
+
 @app.get("/steward")
 async def steward_page():
     return RedirectResponse("/play?go=me", status_code=302)
