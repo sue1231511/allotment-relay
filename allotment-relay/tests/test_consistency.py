@@ -540,7 +540,7 @@ def test_readme_workflow_rules() -> None:
     assert 'href="/workshop"' in nav
     assert 'href="/play"' in nav
     assert 'href="/manual"' in nav
-    assert "岛民手册" in nav
+    assert "<strong>手册</strong>" in nav
     assert 'href="/tide"' in nav
     assert 'href="/huts"' in nav
     assert 'href="/market"' in nav
@@ -848,7 +848,8 @@ def test_patron_pages_share_steward_key() -> None:
     assert "ticketsBoard" in board_html
     assert "levelBoard" in board_html
     assert "岛缘榜" in board_html
-    assert "工分票 · 岛缘" in nav
+    assert "全服榜" in nav
+    assert "排名" in nav
     assert "ticket_lead" in board_js or "ticket-lead" in board_js
     assert ".dual-board" in board_css
     assert "huts-hero" in huts_html
