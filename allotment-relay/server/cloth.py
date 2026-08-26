@@ -7,7 +7,13 @@ from typing import Any
 import aiosqlite
 
 from . import config, db, energy, survival, world
-from .catalog import CLOTH_ITEMS, WEDDING_DRESS_SHOP_PRICE, item_label, resolve_item_key
+from .catalog import (
+    BETROTHAL_ATTIRE_SHOP,
+    CLOTH_ITEMS,
+    WEDDING_DRESS_SHOP_PRICE,
+    item_label,
+    resolve_item_key,
+)
 
 NPC_KEY = "yangyang"
 NPC_NAME = "漾漾"
@@ -58,6 +64,12 @@ CUTS: dict[str, dict[str, Any]] = {
         "aliases": ("婚服", "嫁衣", "礼服", "wedding"),
         "seasons": ("春", "夏", "秋", "冬"), "mismatch": (),
         "seconds": 1200, "energy": 6,
+    },
+    "betrothal": {
+        "name": "订婚服", "emoji": "👘",
+        "aliases": ("订婚服", "订婚礼服", "betrothal"),
+        "seasons": ("春", "夏", "秋", "冬"), "mismatch": (),
+        "seconds": 840, "energy": 4,
     },
 }
 
@@ -182,7 +194,7 @@ STORIES: dict[str, dict[str, Any]] = {
 }
 
 YANGYANG_LINES = (
-    "成衣没有。布来了再裁。你当这儿是成衣铺？婚服那挂是例外，现货 16800。",
+    "成衣没有。布来了再裁。你当这儿是成衣铺？婚服那挂是例外，现货 16800。订婚服也有一挂 8888，不是婚服。",
     "这布是潮送的，还是地里长的，我闻得出来。",
     "梅雨纱过季了会收进柜里。不是绝版，明年还会漂回来。少搞那种逼人盯着日历的缺德玩意。",
     "版型、颜色、纹样你自己点。组不对也行，衣服还是衣服，故事另说。",
@@ -193,13 +205,14 @@ YANGYANG_LINES = (
 
 CLOTH_HELP = f"""cloth_ops 子命令（整句写进 command）：
   {SHOP_NAME}在小剧场侧厅。主理人{NPC_NAME}。日常不卖成衣，只接裁衣委托。
-  婚服有一挂现货：买 婚服 海色（{WEDDING_DRESS_SHOP_PRICE} 票，当天取）。自制委托更慢、料加倍。
+  现货两挂：买 婚服 海色（{WEDDING_DRESS_SHOP_PRICE} 票）· 买 订婚服 海色（{BETROTHAL_ATTIRE_SHOP} 票）。当天进衣橱。短褂长衫不卖。订婚服不是婚服。
   空 command 列出本表，不是看坊。看坊必须 status。不是 craft_ops（岸工坊打钉），不是 tote_ops vend 成衣。
 
   status / 看坊 — 看台上在裁什么、当季衣料、身上穿着。看坊必须 status
   图鉴 / catalog — 版型、颜色、纹样、衣料来源、四季布与染料
-  买 婚服 海色 — 只卖婚服现货，选色当天进衣橱。{WEDDING_DRESS_SHOP_PRICE} 票。短褂长衫不卖
-  委托 短褂 海色 — 把衣料和染料交给{NPC_NAME}，开始裁制。也可 委托 呢衣 墨色 潮纹 · 委托 裙 沙色 素 漂布 · 委托 婚服 海色 双潮
+  买 婚服 海色 — 婚服现货，选色当天进衣橱。{WEDDING_DRESS_SHOP_PRICE} 票。再 marriage_ops 婚服
+  买 订婚服 海色 — 订婚服现货，{BETROTHAL_ATTIRE_SHOP} 票。不是婚服。再 marriage_ops 订婚 服装
+  委托 短褂 海色 — 把衣料和染料交给{NPC_NAME}，开始裁制。也可 委托 呢衣 墨色 潮纹 · 委托 裙 沙色 素 漂布 · 委托 婚服 海色 双潮 · 委托 订婚服 海色
   取 — 领做好的衣服（裁制进度走完才能取；自制婚服隔日）
   衣橱 — 自己裁出来的衣服（不占行囊，不能卖）
   穿 1 / 穿 灯塔守夜人的旧呢衣 — 换上；同时只能穿一件
@@ -208,7 +221,7 @@ CLOTH_HELP = f"""cloth_ops 子命令（整句写进 command）：
   漾漾 / visit — 见主理人。今日首次约三成机会给旧衣料，不是必给；同一天再访没有第二匹
   help — 本表
 
-例子：status · 图鉴 · 买 婚服 海色 · 委托 短褂 海色 · 委托 婚服 海色 双潮 · 取 · 衣橱 · 穿 1 · 漾漾
+例子：status · 图鉴 · 买 婚服 海色 · 买 订婚服 海色 · 委托 短褂 海色 · 委托 婚服 海色 双潮 · 取 · 衣橱 · 穿 1 · 漾漾
 衣料主来源：海边拾漂布、份地种潮棉/岸麻、份地边际 forage / 公共旧布堆捡旧衣料。羊毛也能当呢料。
 旧衣料不是 tale_ops 奖励。不要为了布去跑潮闻。灯塔不醒拜访时小概率夹一匹，不是正路。
 委托第三段「灯塔」是纹样，不是去灯塔找不醒。不要 invent 买短褂。
@@ -678,24 +691,38 @@ async def _cmd_claim(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
 
 async def _cmd_buy_wedding(conn: aiosqlite.Connection, s: dict[str, Any], rest: str) -> str:
     parts = [p for p in (rest or "").split() if p]
-    if not parts or resolve_cut(parts[0]) != "wedding":
+    cut = resolve_cut(parts[0]) if parts else None
+    if cut not in ("wedding", "betrothal"):
         raise ValueError(
-            f"衣泊坊日常不卖成衣。只有婚服现货：cloth_ops 买 婚服 海色（{WEDDING_DRESS_SHOP_PRICE} 票）。"
+            f"衣泊坊日常不卖成衣。现货只有婚服和订婚服："
+            f"cloth_ops 买 婚服 海色（{WEDDING_DRESS_SHOP_PRICE} 票）· "
+            f"买 订婚服 海色（{BETROTHAL_ATTIRE_SHOP} 票）。短褂长衫不卖。"
         )
     color_tok = parts[1] if len(parts) > 1 else "sea"
     color = resolve_color(color_tok)
     if not color:
         raise ValueError(f"未知颜色：{color_tok}。图鉴看海色/墨色/沙色/雾色和当季色。")
-    cost = int(WEDDING_DRESS_SHOP_PRICE)
+    if cut == "wedding":
+        cost = int(WEDDING_DRESS_SHOP_PRICE)
+        motif = "twin"
+        lack = f"婚服现货 {cost} 票，口袋 {{have}}。自制走 委托 婚服，料加倍、隔日取。"
+        talk = "只这一档婚服现货。日常还是不卖成衣。订婚服另挂。"
+        register = "去连理所 marriage_ops 婚服 登记。"
+    else:
+        cost = int(BETROTHAL_ATTIRE_SHOP)
+        motif = "plain"
+        lack = f"订婚服现货 {cost} 票，口袋 {{have}}。自制走 委托 订婚服 或 委托 短褂。"
+        talk = "订婚服现货。不是婚服。日常短褂还是不卖。"
+        register = "去连理所 marriage_ops 订婚 服装 登记。不是婚服。"
     cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
     have = int((await cur.fetchone())[0] or 0)
     if have < cost:
-        raise ValueError(f"婚服现货 {cost} 票，口袋 {have}。自制走 委托 婚服，料加倍、隔日取。")
+        raise ValueError(lack.format(have=have))
     await conn.execute(
         "UPDATE stewards SET tickets=tickets-? WHERE id=?",
         (cost, s["id"]),
     )
-    name = garment_name("wedding", color, "twin", "shop")
+    name = garment_name(cut, color, motif, "shop")
     origin = "衣泊坊现货。没交布，是柜上那挂。"
     cur = await conn.execute(
         """
@@ -704,16 +731,16 @@ async def _cmd_buy_wedding(conn: aiosqlite.Connection, s: dict[str, Any], rest: 
             name, origin, created_at
         ) VALUES (?,?,?,?,?,?,?,?,?)
         """,
-        (s["id"], "wedding", color, "twin", "shop", "", name, origin, db.now()),
+        (s["id"], cut, color, motif, "shop", "", name, origin, db.now()),
     )
     gid = int(cur.lastrowid or 0)
     await db.add_chronicle(
         "cloth", f"{s['name']} 在{SHOP_NAME}买走现货「{name}」", s["id"], conn=conn,
     )
     return (
-        f"{NPC_NAME}从柜上取下一挂。「只这一档。日常还是不卖成衣。」\n"
+        f"{NPC_NAME}从柜上取下一挂。「{talk}」\n"
         f"「{name}」进衣橱 #{gid}（-{cost} 票 · 余 {have - cost}）。\n"
-        f"去连理所 marriage_ops 婚服 登记。"
+        f"{register}"
     )
 
 
@@ -985,7 +1012,7 @@ async def cloth_ops(key_id: int, command: str = "") -> str:
         else:
             raise ValueError(
                 f"未知衣泊坊指令：{command}。空 command 看表；看坊用 status。"
-                "日常不卖成衣。婚服现货：买 婚服 海色。"
+                "日常不卖成衣。现货：买 婚服 海色 · 买 订婚服 海色。"
             )
         await conn.commit()
     return text

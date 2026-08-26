@@ -95,6 +95,9 @@ async def _full_flow() -> None:
     assert "6" in help_text
     assert "订婚" in help_text
     assert "跳过" in help_text
+    assert "寻信" in help_text
+    assert "小馆" in help_text
+    assert "18800 | 8888" not in help_text
 
     try:
         await marriage.marriage_ops(host, "接受")
@@ -506,7 +509,7 @@ async def _fund(db) -> int:
 async def _betrothal_flow() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="betrothal-"))
     db = await _boot(tmp)
-    from server import marriage
+    from server import cloth, marriage
     from server import mcp_dispatch as mux
     from server.mcp_app import current_origin
 
@@ -515,14 +518,16 @@ async def _betrothal_flow() -> None:
     other = await _enroll(db, "pipe@example.com", "岸灯")
 
     menu = await marriage.marriage_ops(host, "订婚")
-    assert "订婚礼金" in menu, menu
+    assert "礼金" in menu, menu
     assert "跳过" in menu, menu
+    assert "海边" in menu, menu
+    assert "小馆" in menu, menu
     assert "礼金 18800" in menu, menu
-    assert "18800 | 8888 | 12800 | 3888" in menu, menu
+    assert "18800 | 8888 | 12800 | 3888" not in menu, menu
 
     await marriage.marriage_ops(host, "求婚 阿潮")
     try:
-        await marriage.marriage_ops(host, "订婚 礼金 18800 信物 8888 宴 12800 花束 3888")
+        await marriage.marriage_ops(host, "订婚 礼金 18800")
         raise AssertionError("draft cannot betroth")
     except ValueError as exc:
         assert "订契" in str(exc), exc
@@ -539,38 +544,68 @@ async def _betrothal_flow() -> None:
 
     ready = await marriage.marriage_ops(host, "订婚")
     assert "订契" in ready or "跳过" in ready, ready
-    assert "订婚礼金" in ready, ready
+    assert "礼金" in ready, ready
+    assert "海边" in ready and "小馆" in ready, ready
 
     try:
-        await marriage.marriage_ops(host, "订婚 礼金 9 信物 8888 宴 12800 花束 3888")
+        await marriage.marriage_ops(host, "订婚 礼金 9")
         raise AssertionError("gift below min")
     except ValueError as exc:
         assert "订婚礼金" in str(exc) or "10000" in str(exc), exc
 
     try:
-        await marriage.marriage_ops(host, "订婚 礼金 18800 信物 8888 宴 12800")
-        raise AssertionError("missing bouquet")
-    except ValueError as exc:
-        assert "花束" in str(exc) or "还少" in str(exc), exc
-
-    done = await marriage.marriage_ops(
-        host, "订婚 礼金 18800 信物 8888 宴 12800 花束 3888"
-    )
-    assert "记下" in done, done
-    assert "44376" in done, done
-    assert await _pocket(db, host) == 300000 - 44376
-    assert await _fund(db) == 0
-
-    try:
         await marriage.marriage_ops(
             host, "订婚 礼金 18800 信物 8888 宴 12800 花束 3888"
         )
-        raise AssertionError("repeat betrothal")
+        raise AssertionError("fill-six must fail")
+    except ValueError as exc:
+        assert "地点" in str(exc) or "不要" in str(exc), exc
+
+    async with db.connect() as conn:
+        sid = (await (await conn.execute(
+            "SELECT id FROM stewards WHERE key_id=?", (host,)
+        )).fetchone())[0]
+        import random as random_mod
+        old_rand = random_mod.random
+        random_mod.random = lambda: 0.0
+        try:
+            forage_find = await marriage.maybe_place_find(conn, sid, "forage")
+            beach_find = await marriage.maybe_place_find(conn, sid, "beach")
+            pastry = await marriage.maybe_jingshan_pastry(conn, sid)
+        finally:
+            random_mod.random = old_rand
+        await conn.commit()
+    assert "潮花" in forage_find, forage_find
+    assert "潮信贝" in beach_find, beach_find
+    assert "糕点" in pastry, pastry
+
+    token = await marriage.marriage_ops(host, "订婚 信物")
+    assert "潮信贝" in token or "信物" in token, token
+    gift = await marriage.marriage_ops(host, "订婚 礼金 18800")
+    assert "订婚礼金" in gift, gift
+    feast = await marriage.marriage_ops(host, "订婚 宴 小馆 12800")
+    assert "小馆" in feast or "宴" in feast, feast
+    bouquet = await marriage.marriage_ops(host, "订婚 花束")
+    assert "记下" in bouquet, bouquet
+    total = 18800 + 12800
+    assert await _pocket(db, host) == 300000 - total
+    assert await _fund(db) == 0
+
+    try:
+        await marriage.marriage_ops(host, "订婚 礼金 18800")
+        raise AssertionError("repeat gift")
     except ValueError as exc:
         assert "已经" in str(exc) or "办过" in str(exc), exc
 
     via = await mux.visit_bundle(host, "连理所 订婚")
     assert "办过" in via or "已经" in via, via
+
+    bought = await cloth.cloth_ops(host, "买 订婚服 海色")
+    assert "订婚服" in bought, bought
+    attire = await marriage.marriage_ops(host, "订婚 服装")
+    assert "记进" in attire or "订婚服" in attire, attire
+    photo = await marriage.marriage_ops(host, "订婚 留影 小屋 2888")
+    assert "留影" in photo or "记下" in photo, photo
 
     await marriage.marriage_ops(other, "求婚 灯花")
     await _ready_to_propose(db, other, tickets=400000)
@@ -580,14 +615,13 @@ async def _betrothal_flow() -> None:
         "求婚 灯花 | 潮起潮落我都在 | 潮誓戒 | 灯塔下 | 今日+3",
     )
     await marriage.human_respond(_token_from(sent2), accept=True, confirm=True)
-    before2 = await _pocket(db, other)
-    piped = await marriage.marriage_ops(
-        other, "订婚 18800 | 8888 | 12800 | 3888 | 8888 | 2888"
-    )
-    assert "服装" in piped and "留影" in piped, piped
-    total2 = 18800 + 8888 + 12800 + 3888 + 8888 + 2888
-    assert await _pocket(db, other) == before2 - total2
-    assert await _fund(db) == 0
+    try:
+        await marriage.marriage_ops(
+            other, "订婚 18800 | 8888 | 12800 | 3888 | 8888 | 2888"
+        )
+        raise AssertionError("pipe fill must fail")
+    except ValueError as exc:
+        assert "地点" in str(exc) or "不要" in str(exc), exc
 
     async with db.connect() as conn:
         sid = (await (await conn.execute(

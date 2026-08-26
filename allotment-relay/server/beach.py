@@ -192,6 +192,8 @@ async def beach_ops(key_id: int, command: str) -> str:
             tale_extra = await tale_mod.check_action_progress(conn, s["id"], "beach")
             from . import cloth as cloth_mod
             cloth_echo = await cloth_mod.try_echo(conn, s, "beach")
+            from . import marriage as marriage_mod
+            betroth_find = await marriage_mod.maybe_place_find(conn, s["id"], "beach")
             await conn.commit()
 
         msg = f"赶海：{label} x{qty}{extra_msg}"
@@ -215,6 +217,8 @@ async def beach_ops(key_id: int, command: str) -> str:
             msg += f"\n\n{tale_extra}"
         if cloth_echo:
             msg += f"\n\n{cloth_echo}"
+        if betroth_find:
+            msg += f"\n{betroth_find}"
         await db.add_chronicle("beach", f"{s['name']} 赶海得 {label}", s["id"])
         return msg
 
@@ -278,6 +282,8 @@ async def beach_ops(key_id: int, command: str) -> str:
             probe_boost = await health_mod.maybe_restore_health(
                 conn, s["id"], "beach", chance=0.10, lo=3, hi=8,
             )
+            from . import marriage as marriage_mod
+            betroth_find = await marriage_mod.maybe_place_find(conn, s["id"], "beach")
             await conn.commit()
 
         msg = f"掏洞：{label} x{qty}{charm_msg}{clock_msg}"
@@ -296,6 +302,8 @@ async def beach_ops(key_id: int, command: str) -> str:
             msg += f"\n\n{tale_extra}"
         if cloth_echo:
             msg += f"\n\n{cloth_echo}"
+        if betroth_find:
+            msg += f"\n{betroth_find}"
         await db.add_chronicle("beach", f"{s['name']} 掏洞得 {label}", s["id"])
         return msg
 
