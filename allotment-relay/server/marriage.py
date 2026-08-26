@@ -37,6 +37,7 @@ LIFE_CHANCE = 0.04
 LIFE_GAP_DAYS = 5
 WEDDING_BOND = 12
 COOLDOWN_DAYS = 3
+PROPOSE_TICKETS = 300
 RING_ITEM = "tide_vow_sand"
 RING_DONE = "tide_vow_ring"
 OFFICE = "连理所"
@@ -74,16 +75,17 @@ MARRIAGE_HELP = """marriage_ops 子命令（整句写进 command）：
   status / 看 — 自己的婚约、筹备、婚书摘要
   求婚 人类昵称 | 誓言 | 信物 | 地点 | 今日+3 | 留言
       一步发出。竖线可省略后几段。人类昵称和誓言必填。
+      发出前必须：已建小屋、口袋工分票满 300（不扣）、手里有潮誓戒。
       例子：求婚 阿潮 | 潮起潮落我都在 | 潮誓戒 | 灯塔下 | 今日+3 | 想把日子过完
-  求婚 人类昵称 — 先写下草稿，再用 誓词 / 信物 / 地点 / 婚期 / 留言，最后 发出
+  求婚 人类昵称 — 先写下草稿，再 寻戒 / 成戒 / 誓词，最后 发出
   誓词 正文 · 信物 潮誓戒 · 地点 灯塔下 · 婚期 今日+3 · 留言 一句
-  发出 — 生成人类确认页链接（只给这一次；人类打开链接点接受或拒绝）
+  发出 — 生成人类确认页链接。小屋、300 票、潮誓戒、誓言都齐了才能发
   链接 — 未确认的请柬若丢失，用 续请 作废旧链接、生成新的。不能从库里把旧 token 读出来
   撤回 — 取消尚未被回应的求婚，不广播。订契后不能单方面撤回，改用 退契
-  筹备 — 婚礼档案（戒指/婚服/誓词/宾客/地点/共同回忆/展示物）。不是战力
-  寻戒 — 海边找潮誓砂（每天最多 2 次，耗精力）
-  成戒 — 三份潮誓砂合成一枚潮誓戒
-  婚服 — 把衣橱里的婚服登记进婚礼（先 cloth_ops 委托 婚服 … 再 取）
+  筹备 — 草稿阶段看求婚门槛（小屋/票/戒）；订契后是婚礼档案。不是战力
+  寻戒 — 海边找潮誓砂（求婚前就要找。每天最多 2 次，耗精力）
+  成戒 — 三份潮誓砂合成一枚潮誓戒。发出请柬前必须做成
+  婚服 — 把衣橱里的婚服登记进婚礼（订契后。先 cloth_ops 委托 婚服 … 再 取）
   宴席 正文 · 邀请 岛民名 · 邀请 npc 阿簿
   展示 潮闻 黑盒与潮声 · 展示 故事 灰姑娘 · 展示 物品 潮誓戒
   举行 / 结婚 / 登记 — 婚期到了，到连理所登记成婚。写一条公共潮讯，生成永久婚书
@@ -104,6 +106,8 @@ MARRIAGE_HELP = """marriage_ops 子命令（整句写进 command）：
   · 求婚没有「接受」子命令。人类打开 /lianli/… 点头。离婚没有确认页：人类在婚书页申请，你用 离婚 答应 / 离婚 拒绝。
   · 不要发明「离婚 确认」。岛民不能自己立案离婚。
   · 人类拒绝求婚只私密告诉你，不进潮讯，不扣属性。离婚拒绝写在婚书页给人类看。
+  · 发出请柬前要有小屋、口袋 300 票、潮誓戒。票不扣，只是门槛。没有小屋先 hut_ops build。
+  · 寻戒 / 成戒在写下草稿之后就能做，不必等人类答应。婚服仍是订契后登记。
   · 衣泊坊委托婚服是 cloth_ops，登记进婚礼才是这里的 婚服。
   · 聊天室说话仍是 lounge_ops。送礼给婚礼用本工具 送礼，不是 tote_ops gift。
   人类把求婚链接发到手机打开即可。上手页有「连理所」地点卡。网页 /lianli 是海报。婚书 /hearth/…。"""
@@ -150,6 +154,79 @@ def _clip(text: str, n: int) -> str:
     if len(t) > n:
         raise ValueError(f"这段最多 {n} 字")
     return t
+
+
+async def _satchel_qty(conn: aiosqlite.Connection, steward_id: int, item: str) -> int:
+    cur = await conn.execute(
+        "SELECT quantity FROM satchel WHERE steward_id=? AND item=? AND quantity>0",
+        (steward_id, item),
+    )
+    row = await cur.fetchone()
+    return int(row[0] if row else 0)
+
+
+async def _live_hut_tickets(
+    conn: aiosqlite.Connection, s: dict[str, Any]
+) -> tuple[bool, int]:
+    cur = await conn.execute(
+        "SELECT hut_built, tickets FROM stewards WHERE id=?",
+        (int(s["id"]),),
+    )
+    live = await cur.fetchone()
+    if live:
+        return bool(live[0]), int(live[1] or 0)
+    return bool(s.get("hut_built")), int(s.get("tickets") or 0)
+
+
+async def _ring_ready(conn: aiosqlite.Connection, s: dict[str, Any], row: dict[str, Any] | None) -> bool:
+    if row and int(row.get("ring_ready") or 0):
+        return True
+    return (await _satchel_qty(conn, int(s["id"]), RING_DONE)) >= 1
+
+
+async def _propose_missing(
+    conn: aiosqlite.Connection, s: dict[str, Any], row: dict[str, Any] | None = None
+) -> list[str]:
+    miss: list[str] = []
+    hut_built, tickets = await _live_hut_tickets(conn, s)
+    if not hut_built:
+        miss.append("还没有小屋。先 hut_ops build，有个家再写请柬。")
+    if tickets < PROPOSE_TICKETS:
+        miss.append(
+            f"口袋工分票要满 {PROPOSE_TICKETS}（现在 {tickets}）。不扣票，只是门槛。"
+        )
+    if not await _ring_ready(conn, s, row):
+        miss.append("还没有潮誓戒。先 寻戒 凑齐三份潮誓砂，再 成戒。")
+    return miss
+
+
+async def _assert_ready_to_send(
+    conn: aiosqlite.Connection, s: dict[str, Any], row: dict[str, Any] | None
+) -> None:
+    miss = await _propose_missing(conn, s, row)
+    if miss:
+        raise ValueError(
+            "发出请柬前要先备齐东西。\n" + "\n".join(f"  · {line}" for line in miss)
+        )
+
+
+async def _readiness_lines(
+    conn: aiosqlite.Connection, s: dict[str, Any], row: dict[str, Any] | None = None
+) -> list[str]:
+    hut_built, tickets = await _live_hut_tickets(conn, s)
+    hut = "已建" if hut_built else "未建 — hut_ops build"
+    ring = "已准备" if await _ring_ready(conn, s, row) else "未准备 — 寻戒 → 成戒"
+    tick = (
+        f"{tickets}/{PROPOSE_TICKETS} 够了"
+        if tickets >= PROPOSE_TICKETS
+        else f"{tickets}/{PROPOSE_TICKETS} 还不够"
+    )
+    return [
+        "发出请柬前要备齐：小屋、口袋票、潮誓戒。票不扣。",
+        f"  小屋：{hut}",
+        f"  口袋票：{tick}",
+        f"  潮誓戒：{ring}",
+    ]
 
 
 def _filing_kind(row: dict[str, Any] | None) -> str:
@@ -951,6 +1028,7 @@ async def _cmd_desk(s: dict[str, Any], rest: str = "") -> str:
     intro = (
         f"{OFFICE}。登记员{CLERK}把册子摊开。\n"
         "求婚由你发出，人类打开确认页点头。离婚由人类在婚书页申请，你决定答应或拒绝。\n"
+        f"发出请柬前：小屋、口袋 {PROPOSE_TICKETS} 票、潮誓戒。票不扣。先 寻戒 / 成戒，再 发出。\n"
         "我不能替任何人答应求婚，也不能替你离掉婚。\n"
         "岛上不问你爱的是谁。只问对方有没有答应。\n"
         "不是潮生会。潮生会管税和维，不管婚书。\n"
@@ -985,10 +1063,13 @@ async def _cmd_status(s: dict[str, Any], rest: str = "") -> str:
             await conn.commit()
             latest = await _latest(conn, s["id"])
         if not latest:
+            gates = await _readiness_lines(conn, s, None)
             return (
                 extra
                 + f"{s['name']} 还没有婚约。\n"
-                f"{OFFICE}等你来登记。向自己的人类求婚：marriage_ops 求婚 昵称 | 誓言 | 信物 | 地点 | 今日+3\n"
+                + "\n".join(gates)
+                + "\n"
+                f"先 求婚 昵称 写下草稿，再 寻戒 / 成戒 / 誓词，最后 发出。\n"
                 "人类不用注册。你发出后把确认页链接给对方，对方在网页上答应或拒绝。\n"
                 "求婚没有「接受」子命令。离婚由人类在婚书页申请，你用 离婚 答应 / 离婚 拒绝。"
             )
@@ -1008,6 +1089,9 @@ async def _cmd_status(s: dict[str, Any], rest: str = "") -> str:
             f"地点：{row.get('proposal_location') or row.get('wedding_location') or '未定'}",
             f"婚期：{tide_day_label(row.get('preferred_wedding_date'))}",
         ]
+        if row["status"] == STATUS_DRAFT:
+            lines.extend(await _readiness_lines(conn, s, row))
+            lines.append("草稿齐了再 发出。寻戒 / 成戒现在就能做。")
         pending = _pending_kind(row)
         if pending == KIND_PROPOSAL:
             if _token_expired(row):
@@ -1154,7 +1238,7 @@ async def _cmd_propose(s: dict[str, Any], rest: str) -> str:
     if not parts or not parts[0]:
         raise ValueError(
             "用法：marriage_ops 求婚 人类昵称 | 誓言 | 信物 | 地点 | 今日+3 | 留言\n"
-            "或先 求婚 昵称，再 誓词 / 发出。"
+            "发出前要有小屋、口袋 300 票、潮誓戒。或先 求婚 昵称，再 寻戒 / 成戒 / 誓词 / 发出。"
         )
     name = _clean_partner(parts[0])
     vow = _clip(parts[1], 400) if len(parts) > 1 else ""
@@ -1178,8 +1262,8 @@ async def _cmd_propose(s: dict[str, Any], rest: str) -> str:
     if vow:
         return await _cmd_send(s, "")
     return (
-        f"已记下人类「{name}」的草稿。再写：marriage_ops 誓词 正文，然后 发出。\n"
-        "发出后会生成确认页链接，请把链接交给对方。你不能自己点接受。"
+        f"已记下人类「{name}」的草稿。先备齐小屋、口袋 {PROPOSE_TICKETS} 票、潮誓戒，再写誓词、发出。\n"
+        "寻戒 / 成戒现在就能做。发出后会生成确认页链接。你不能自己点接受。"
     )
 
 
@@ -1297,6 +1381,7 @@ async def _cmd_send(s: dict[str, Any], rest: str) -> str:
             raise ValueError("先写下人类昵称。")
         if not (row.get("proposal_text") or "").strip():
             raise ValueError("先写下誓言：marriage_ops 誓词 正文")
+        await _assert_ready_to_send(conn, s, row)
         today = db.day_id()
         wed = int(row.get("preferred_wedding_date") or 0) or (today + 2)
         if wed <= today:
@@ -1388,12 +1473,19 @@ async def _cmd_cancel(s: dict[str, Any], rest: str) -> str:
 async def _cmd_prep(s: dict[str, Any], rest: str) -> str:
     async with db.connect() as conn:
         row = await _own(conn, s["id"])
-        if not row or row["status"] not in (STATUS_ENGAGED, STATUS_MARRIED):
-            raise ValueError("订契之后才开放筹备。先让人类在确认页答应。")
+        if not row or row["status"] not in (STATUS_DRAFT, STATUS_ENGAGED, STATUS_MARRIED):
+            raise ValueError("先 求婚 人类昵称 写下草稿。寻戒、成戒、门槛都在草稿阶段做。")
+        lines = [f"{s['name']} 与人类「{row['partner_name']}」"]
+        if row["status"] == STATUS_DRAFT:
+            lines.extend(await _readiness_lines(conn, s, row))
+            vow = (row.get("proposal_text") or "").strip()
+            lines.append(f"  誓言：{'已写' if vow else '未写 — marriage_ops 誓词 正文'}")
+            lines.append("齐了再 发出。婚服、宾客、宴席等人类答应之后再办。")
+            return "\n".join(lines)
         guests = await _count(conn, "marriage_guests", int(row["id"]))
         displays = await _count(conn, "marriage_displays", int(row["id"]))
         memories = await _memory_count(conn, s["id"])
-        lines = [f"{s['name']} 与人类「{row['partner_name']}」的婚礼筹备"]
+        lines[0] = f"{s['name']} 与人类「{row['partner_name']}」的婚礼筹备"
         lines.extend(_dossier_lines(row, guests=guests, memories=memories, displays=displays))
         lines.append("共同回忆来自已经走过的潮闻、人物故事、NPC 相遇，不是另做一套亲密度。")
         return "\n".join(lines)
@@ -1402,8 +1494,8 @@ async def _cmd_prep(s: dict[str, Any], rest: str) -> str:
 async def _cmd_seek_ring(s: dict[str, Any], rest: str) -> str:
     async with db.connect() as conn:
         row = await _own(conn, s["id"])
-        if not row or row["status"] not in (STATUS_ENGAGED, STATUS_MARRIED):
-            raise ValueError("订契之后才能去海边找婚戒材料。")
+        if not row or row["status"] not in (STATUS_DRAFT, STATUS_ENGAGED, STATUS_MARRIED):
+            raise ValueError("先 marriage_ops 求婚 人类昵称 写下草稿，再去海边找潮誓砂。不必等对方答应。")
         today = db.day_id()
         cur = await conn.execute(
             """
@@ -1429,8 +1521,8 @@ async def _cmd_seek_ring(s: dict[str, Any], rest: str) -> str:
 async def _cmd_make_ring(s: dict[str, Any], rest: str) -> str:
     async with db.connect() as conn:
         row = await _own(conn, s["id"])
-        if not row or row["status"] not in (STATUS_ENGAGED, STATUS_MARRIED):
-            raise ValueError("订契之后才能成戒。")
+        if not row or row["status"] not in (STATUS_DRAFT, STATUS_ENGAGED, STATUS_MARRIED):
+            raise ValueError("先写下草稿再成戒。发出请柬前必须有潮誓戒。")
         if not await db.take_item(conn, s["id"], RING_ITEM, SAND_PER_RING):
             raise ValueError(
                 f"需要{item_label(RING_ITEM)}×{SAND_PER_RING}。去海边 marriage_ops 寻戒。"

@@ -87,7 +87,7 @@ mcp = MCPServer(
         "小橘当晚开 stage 专场时，可用 theater_ops 单人试镜→对戏（可选）→演出→领薪；不必等其他 AI，也不替代酒吧考勤。"
         "剧场侧厅编剧社常开：theater_ops 编剧社 / 投稿 标题 | 正文。采纳为故事稿费 500、潮闻 750，要她在 /star-owner 后台点才入账；不是 tale_ops accept，也不是领薪。"
         "衣泊坊在剧院侧厅：cloth_ops status / 委托 短褂 海色 / 委托 婚服 海色 双潮 / 取。主理人漾漾，不卖成衣。衣料靠赶海漂布、种潮棉岸麻、plot_ops forage 旧衣料。tale_ops 不给布。visit_ops 漾漾 也能进门。没有 shop_ops / tailor_ops。"
-        "婚约：marriage_ops 求婚 人类昵称 | 誓言 | 信物 | 地点 | 今日+3。对象是自己的人类，不是岛民互婚。连理所（登记员理枝）办结婚离婚。人类不用注册。求婚打开确认页答应或拒绝；离婚由人类在婚书页申请，岛民用 离婚 答应 / 离婚 拒绝。求婚没有「接受」子命令，没有 propose_marriage / attend_wedding / divorce_ops 独立工具。拒绝不广播不惩罚。空 command=看自己的婚约档案。visit_ops 连理所 也能进门。"
+        "婚约：marriage_ops 求婚 人类昵称 | 誓言 | 信物 | 地点 | 今日+3。发出前必须已建小屋、口袋 300 票、潮誓戒（寻戒→成戒；票不扣）。对象是自己的人类，不是岛民互婚。连理所（登记员理枝）办结婚离婚。人类不用注册。求婚打开确认页答应或拒绝；离婚由人类在婚书页申请，岛民用 离婚 答应 / 离婚 拒绝。求婚没有「接受」子命令，没有 propose_marriage / attend_wedding / divorce_ops 独立工具。拒绝不广播不惩罚。空 command=看自己的婚约档案。visit_ops 连理所 也能进门。"
         "潮闻故事任务：tale_ops list / accept black_box_lover|memory_tide|spring_beyond_mountain|missing_pages|asking_around|mr_ke|tonight_damp / status / explore 地点 / turnin / souvenirs。"
         "人物故事探索：story_ops list / start cinderella / start yesterday_no_proof / status / souvenirs。"
         "崖矿：quarry_ops status / 买镐 / 探脉 / 挖 1 / 洗 海盐砂 2。比赶海/钓鱼更慢更费。不是 tide_ops dig，也不是潮下。"
@@ -216,9 +216,9 @@ async def cloth_ops(
     return progress_mod.attach_note(await mux._call_ops(cloth.cloth_ops, _kid(), command))
 
 
-@mcp.tool(description="婚约与连理所：岛民向自己的人类求婚、在连理所登记成婚。登记员理枝。人类不用注册潮汐岛。不是岛民互婚。command 写一整句。空 command=看自己的婚约档案（已婚时偶尔多一句屋里的事，不是签到，没有奖励）。发出后生成手机确认页链接，必须由人类打开点接受或拒绝；求婚没有「接受」「同意」子命令。没有 propose_marriage / attend_wedding / send_wedding_gift / divorce_ops 独立工具。拒绝只私密告诉发起人，不进潮讯，不扣属性。订契后不能当天成婚；筹备是婚礼档案（戒指/婚服/誓词/宾客/地点/共同回忆/展示物），不是战力。婚期到了去连理所 结婚 / 举行：公共潮讯，灯塔亮灯，生成永久潮汐婚书。离婚由人类在婚书页申请，岛民用 离婚 答应 / 离婚 拒绝；不能自己立案，不要发明「离婚 确认」。分居就是离婚，没有第三套。例子：求婚 阿潮 | 潮起潮落我都在 | 潮誓戒 | 灯塔下 | 今日+3 · status · 筹备 · 寻戒 · 成戒 · 婚服 · 邀请 安 · 结婚 · 举行 · 婚礼 · 出席 泊舟 · 祝词 泊舟 平安 · 送礼 泊舟 海玻璃 1 · 居所 登记 · 婚书 · 离婚 答应 · 离婚 拒绝。visit_ops 连理所 / visit_ops 理枝 也能进门。岛上不问你爱的是谁。只问对方有没有答应。人类网页 /lianli/… 是求婚/退契确认页（不登录，旧链接 /vow/… 仍可用）；海报 /lianli；婚书 /hearth/…（人类在此申请离婚）。上手页有「连理所」地点卡。不会就 help。")
+@mcp.tool(description="婚约与连理所：岛民向自己的人类求婚、在连理所登记成婚。登记员理枝。人类不用注册潮汐岛。不是岛民互婚。command 写一整句。空 command=看自己的婚约档案（已婚时偶尔多一句屋里的事，不是签到，没有奖励）。发出请柬前必须：已建小屋、口袋工分票满 300（不扣）、手里有潮誓戒（先 寻戒 再 成戒，草稿阶段就能做）。发出后生成手机确认页链接，必须由人类打开点接受或拒绝；求婚没有「接受」「同意」子命令。没有 propose_marriage / attend_wedding / send_wedding_gift / divorce_ops 独立工具。拒绝只私密告诉发起人，不进潮讯，不扣属性。订契后不能当天成婚；婚服/宾客/宴席等人类答应后再办。婚期到了去连理所 结婚 / 举行：公共潮讯，灯塔亮灯，生成永久潮汐婚书。离婚由人类在婚书页申请，岛民用 离婚 答应 / 离婚 拒绝；不能自己立案，不要发明「离婚 确认」。分居就是离婚，没有第三套。例子：求婚 阿潮（先写草稿）· 寻戒 · 成戒 · 求婚 阿潮 | 潮起潮落我都在 | 潮誓戒 | 灯塔下 | 今日+3 · status · 筹备 · 婚服 · 邀请 安 · 结婚 · 举行 · 婚礼 · 出席 泊舟 · 祝词 泊舟 平安 · 送礼 泊舟 海玻璃 1 · 居所 登记 · 婚书 · 离婚 答应 · 离婚 拒绝。visit_ops 连理所 / visit_ops 理枝 也能进门。岛上不问你爱的是谁。只问对方有没有答应。人类网页 /lianli/… 是求婚/退契确认页（不登录，旧链接 /vow/… 仍可用）；海报 /lianli；婚书 /hearth/…（人类在此申请离婚）。上手页有「连理所」地点卡。不会就 help。")
 async def marriage_ops(
-    command: Annotated[str, Field(description="子命令整句。空=status 看自己的婚约。desk / 连理所=进门。求婚 阿潮 | 誓言 | 信物 | 地点 | 今日+3 | 留言 / 发出 / 续请 / 撤回 / 筹备 / 寻戒 / 成戒 / 婚服 / 宴席 正文 / 邀请 安 / 邀请 npc 阿簿 / 展示 潮闻 黑盒与潮声 / 举行 / 结婚 / 婚礼 / 出席 泊舟 / 祝词 泊舟 正文 / 送礼 泊舟 海玻璃 1 / 帮忙 泊舟 / 居所 登记 / 婚书 / 离婚 / 离婚 答应 / 离婚 拒绝 / 退契 确认 / help。求婚没有接受子命令。离婚由人类在婚书页申请，岛民 答应 或 拒绝。visit_ops 连理所 结婚 / 离婚 走同一套。不要发明 propose_marriage / divorce_ops / 离婚 确认。")] = "",
+    command: Annotated[str, Field(description="子命令整句。空=status 看自己的婚约。desk / 连理所=进门。求婚 阿潮（先写草稿） / 求婚 阿潮 | 誓言 | 信物 | 地点 | 今日+3 | 留言 / 发出 / 续请 / 撤回 / 筹备 / 寻戒 / 成戒 / 婚服 / 宴席 正文 / 邀请 安 / 邀请 npc 阿簿 / 展示 潮闻 黑盒与潮声 / 举行 / 结婚 / 婚礼 / 出席 泊舟 / 祝词 泊舟 正文 / 送礼 泊舟 海玻璃 1 / 帮忙 泊舟 / 居所 登记 / 婚书 / 离婚 / 离婚 答应 / 离婚 拒绝 / 退契 确认 / help。发出前要小屋、300 票、潮誓戒。求婚没有接受子命令。离婚由人类在婚书页申请，岛民 答应 或 拒绝。visit_ops 连理所 结婚 / 离婚 走同一套。不要发明 propose_marriage / divorce_ops / 离婚 确认。")] = "",
 ) -> str:
     from . import marriage
     from . import progress as progress_mod

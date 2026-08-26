@@ -38,6 +38,22 @@ def _token_from(text: str) -> str:
     return m.group(1)
 
 
+async def _ready_to_propose(db, key_id: int, *, tickets: int = 400, ring: bool = True, hut: bool = True) -> None:
+    async with db.connect() as conn:
+        sid = (await (await conn.execute(
+            "SELECT id FROM stewards WHERE key_id=?", (key_id,)
+        )).fetchone())[0]
+        if hut:
+            await conn.execute(
+                "UPDATE stewards SET hut_built=1, hut_level=1, hut_label=? WHERE id=?",
+                ("潮声小屋", sid),
+            )
+        await conn.execute("UPDATE stewards SET tickets=? WHERE id=?", (tickets, sid))
+        if ring:
+            await db.add_item(conn, sid, "tide_vow_ring", 1)
+        await conn.commit()
+
+
 async def _full_flow() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="marriage-"))
     db = await _boot(tmp)
@@ -50,6 +66,7 @@ async def _full_flow() -> None:
 
     empty = await marriage.marriage_ops(host, "")
     assert "还没有婚约" in empty, empty
+    assert "小屋" in empty and "300" in empty, empty
     from server import mcp_dispatch as mux
     vdesk = await mux.visit_bundle(host, "连理所")
     assert "连理所" in vdesk and "理枝" in vdesk, vdesk
@@ -61,6 +78,8 @@ async def _full_flow() -> None:
     assert "连理所" in help_text
     assert "离婚" in help_text
     assert "理枝" in help_text
+    assert "300" in help_text
+    assert "潮誓戒" in help_text
 
     try:
         await marriage.marriage_ops(host, "接受")
@@ -68,6 +87,32 @@ async def _full_flow() -> None:
     except ValueError as exc:
         assert "未知" in str(exc) or "propose_marriage" in str(exc), exc
 
+    try:
+        await marriage.marriage_ops(host, "寻戒")
+        raise AssertionError("seek before draft")
+    except ValueError as exc:
+        assert "草稿" in str(exc), exc
+
+    try:
+        await marriage.marriage_ops(
+            host,
+            "求婚 阿潮 | 潮起潮落我都在 | 潮誓戒 | 灯塔下 | 今日+3 | 想把日子过完",
+        )
+        raise AssertionError("propose without hut/tickets/ring")
+    except ValueError as exc:
+        msg = str(exc)
+        assert "小屋" in msg, exc
+        assert "票" in msg, exc
+        assert "潮誓戒" in msg, exc
+
+    draft = await marriage.marriage_ops(host, "求婚 阿潮")
+    assert "草稿" in draft, draft
+    sand = await marriage.marriage_ops(host, "寻戒")
+    assert "潮誓砂" in sand, sand
+    checklist = await marriage.marriage_ops(host, "筹备")
+    assert "小屋" in checklist and "口袋票" in checklist, checklist
+
+    await _ready_to_propose(db, host)
     sent = await marriage.marriage_ops(
         host,
         "求婚 阿潮 | 潮起潮落我都在 | 潮誓戒 | 灯塔下 | 今日+3 | 想把日子过完",
@@ -76,6 +121,20 @@ async def _full_flow() -> None:
     assert "http://island.test/lianli/" in sent, sent
     token = _token_from(sent)
     assert "ar_sk_" not in sent
+
+    async with db.connect() as conn:
+        sid = (await (await conn.execute(
+            "SELECT id FROM stewards WHERE key_id=?", (host,)
+        )).fetchone())[0]
+        tickets = (await (await conn.execute(
+            "SELECT tickets FROM stewards WHERE id=?", (sid,)
+        )).fetchone())[0]
+        assert int(tickets) == 400, tickets
+        ring_qty = (await (await conn.execute(
+            "SELECT quantity FROM satchel WHERE steward_id=? AND item='tide_vow_ring'",
+            (sid,),
+        )).fetchone())
+        assert ring_qty and int(ring_qty[0]) >= 1, ring_qty
 
     async with db.connect() as conn:
         row = await (await conn.execute(
@@ -312,6 +371,7 @@ async def _reject_and_guards() -> None:
 
     host = await _enroll(db, "rej@example.com", "拒客")
     other = await _enroll(db, "oth@example.com", "路过")
+    await _ready_to_propose(db, host)
     sent = await marriage.marriage_ops(host, "求婚 人类甲 | 我在岸上等你")
     token = _token_from(sent)
 
