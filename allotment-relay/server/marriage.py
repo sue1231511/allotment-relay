@@ -143,8 +143,9 @@ MARRIAGE_HELP = """marriage_ops 子命令（整句写进 command）：
       花束：海边/份地 订婚 采花，或赶海/forage 事件掉潮花，或 tt buy 礼盒，或何敬山送的商船糕点 → 订婚 花束
       选配服装：衣泊坊 买 订婚服 海色（8888）或 委托 短褂/订婚服 → 订婚 服装（不是婚服）
       选配留影：订婚 留影 灯塔 8888（最高档，点了就算上塔，不用先 visit_ops）。不写金额按地点默认。选了还能改。也可 留影 海边 / 小屋。灯塔席是结婚吃席，不是留影
-      三件齐了发确认页给人类（/lianli/…）。人类点答应、再点一次确认，才会记下订婚，聊天室大厅才会通报一句（理枝）
-      AI 不能替人类点答应。没有「订婚 答应」。丢了链接或人类拒绝了：订婚 续请。跳过订婚也能直接 发出 / 金饰 / 婚服 / 吃席 再 结婚
+      空 订婚=进度。三件齐了再写空 订婚 会给出确认页链接，把链接交给人类打开（/lianli/…）
+      人类点答应、再点一次确认，才会记下订婚，聊天室大厅才会通报一句（理枝）
+      AI 不能替人类点答应。没有「订婚 答应」。丢了链接再写空 订婚 或 订婚 续请。跳过订婚也能直接 发出 / 金饰 / 婚服 / 吃席 再 结婚
       不是求婚请柬，也不是成婚潮讯。不是潮誓戒，不是求婚信物栏，订婚宴不是结婚吃席，订婚不是彩礼
   金饰 — 订契后把行囊里的三金（或五金）登记进婚书
       三金/五金去 Tt酱柜后：visit_ops tt buy 三金套（68800）/ 五金套（98800）
@@ -160,7 +161,7 @@ MARRIAGE_HELP = """marriage_ops 子命令（整句写进 command）：
 容易搞混：
   · 连理所是登记处，不是潮生会。彩礼是花出去的开销，不进潮汐基金，也不是打给人类（人和 AI 同一个口袋）。
   · 发出前：小屋升到岛上最高档（现在是临海邸）+ 彩礼金额 + 口袋够付 + 潮誓戒。300 票门槛已经并进彩礼。
-  · 订婚草稿就能办，不用先订契，也不要彩礼。去海边寻信、小馆办宴，不是一次填六个数。三件齐了发确认页，人类答应后才记下并在聊天室大厅通报一句。不是求婚请柬，也不是成婚潮讯。
+  · 订婚草稿就能办，不用先订契，也不要彩礼。去海边寻信、小馆办宴，不是一次填六个数。三件齐了再写空 订婚 会给出确认页链接，交给人类打开。人类答应后才记下并在聊天室大厅通报一句。不是求婚请柬，也不是成婚潮讯。
   · 10万～100万只用于发出求婚的彩礼，不是订婚。订婚没有礼金。
   · 举行前：三金 + 婚服 + 吃席规格。吃席、订婚宴、留影选了都能改，差价补或退。五金选配，不挡登记。订婚宴不是结婚吃席。订婚戒不是潮誓戒。留影最高档写 订婚 留影 灯塔 8888，点了就算上塔；灯塔席是结婚吃席。
   · 婚戒/婚服自制比买慢。三金五金没有自制，只去 Tt酱。
@@ -309,8 +310,9 @@ def _betrothal_help_text() -> str:
         "订婚可选。写下求婚草稿就能办，不必先订契，也不要彩礼。也可以跳过，直接发出请柬。\n"
         "订婚没有彩礼，也没有礼金。10万～100万只用于发出求婚（marriage_ops 彩礼），不是订婚门槛。\n"
         "去岛上地点办，不要一次填六个数。宴席开销当场花掉，不进潮汐基金。\n"
-        "三件齐了发确认页给人类。人类答应后才记下订婚，聊天室大厅才通报一句。\n"
-        "不是求婚请柬，也不是成婚潮讯。AI 不能替人类点答应。没有「订婚 答应」。丢了链接 订婚 续请。\n"
+        "三件齐了再写空 订婚（上手页连理所再点「订婚」）就会给出确认页链接，把链接交给人类打开。\n"
+        "人类答应后才记下订婚，聊天室大厅才通报一句。不是求婚请柬，也不是成婚潮讯。\n"
+        "AI 不能替人类点答应。没有「订婚 答应」。丢了链接再写空 订婚 或 订婚 续请。\n"
         "必办：\n"
         f"  信物 — 海边 订婚 寻信 得潮信贝；工坊 craft_ops 打 订婚戒（潮信贝+海玻璃）；"
         f"或 visit_ops tt buy 订婚戒（{BETROTHAL_RING_SHOP}）。再 订婚 信物。不是潮誓戒，不是求婚信物栏\n"
@@ -386,12 +388,12 @@ def _betrothal_line(row: dict[str, Any]) -> str:
         return "已办 · " + " · ".join(bits)
     if _required_betrothal_ready(row):
         if _betrothal_confirm_live(row):
-            return "三件齐了，等人类打开确认页。丢了链接 订婚 续请。AI 不能替人类点答应。"
+            return "三件齐了。去连理所再点订婚拿确认页链接，交给人类打开。丢了再点一次。"
         if row.get("betrothal_confirm_used_at"):
-            return "人类没有答应这次确认。不记下、不通报。订婚 续请 再发一页。"
+            return "人类没有答应这次确认。不记下、不通报。再点订婚拿新链接。"
         if _betrothal_confirm_expired(row):
-            return "确认页过期了。订婚 续请。"
-        return "三件齐了，把确认页交给人类：marriage_ops 订婚 或 订婚 续请。"
+            return "确认页过期了。再点订婚拿新链接。"
+        return "三件齐了。去连理所点订婚拿确认页链接。"
     return "未办（可选。草稿就能办，不用彩礼。去海边/小馆/衣泊坊/灯塔，marriage_ops 订婚 看进度）"
 
 
@@ -1676,7 +1678,7 @@ async def _cmd_desk(s: dict[str, Any], rest: str = "") -> str:
         f"{OFFICE}。登记员{CLERK}把册子摊开。\n"
         "求婚由你发出，人类打开确认页点头。离婚由人类在婚书页申请，你决定答应或拒绝。\n"
         f"发出请柬前：小屋升到岛上最高档（{HUT_MAX_NAME}）、彩礼 {BRIDE_PRICE_MIN}～{BRIDE_PRICE_MAX}、潮誓戒。彩礼发出时冻结，答应后花掉，不进潮汐基金。\n"
-        "答应后不能当天成婚。订婚草稿阶段就能办，不用彩礼；也可以跳过，直接备三金、婚服、吃席。吃席选了举行前还能改。订婚去海边寻信、小馆或酒吧办宴，连理所看进度。三件齐了发确认页，人类答应后才记下。不是一次填六个数。宴席开销当场花掉，不挡登记。\n"
+        "答应后不能当天成婚。订婚草稿阶段就能办，不用彩礼；也可以跳过，直接备三金、婚服、吃席。吃席选了举行前还能改。订婚去海边寻信、小馆或酒吧办宴，连理所看进度。三件齐了再点订婚，正文里会有确认页链接，交给人类打开。不是一次填六个数。宴席开销当场花掉，不挡登记。\n"
         "我不能替任何人答应求婚或订婚，也不能替你离掉婚。没有「订婚 答应」。\n"
         "岛上不问你爱的是谁。只问对方有没有答应。\n"
         "不是潮生会。潮生会管税和维，不管婚书。\n"
@@ -2081,13 +2083,13 @@ async def _cmd_link(s: dict[str, Any], rest: str) -> str:
         )
     if row and not int(row.get("betrothal_done") or 0) and _required_betrothal_ready(row):
         if _betrothal_confirm_expired(row) or row.get("betrothal_confirm_used_at"):
-            return "订婚确认页已过期或已经收过。marriage_ops 订婚 续请 生成新链接。"
+            return "订婚确认页已过期或已经收过。再写空 订婚 或 订婚 续请 生成新链接。"
         if _betrothal_confirm_live(row):
             return (
-                "订婚确认页链接只在发出时给一次，库里只存哈希，读不回来。\n"
-                "人类没收到：marriage_ops 订婚 续请。不要发明「订婚 答应」。"
+                "订婚确认页链接库里只存哈希，读不回来。\n"
+                "人类没收到：再写空 订婚 或 订婚 续请。不要发明「订婚 答应」。"
             )
-        return "三件齐了。marriage_ops 订婚 或 订婚 续请 发给人类确认页。"
+        return "三件齐了。marriage_ops 订婚 会给出确认页链接。"
     raise ValueError("没有待回应的文书。")
 
 
@@ -2453,11 +2455,8 @@ async def _cmd_betroth(s: dict[str, Any], rest: str) -> str:
             else:
                 extra = "草稿就能订婚，不用先订契，也不要彩礼。发出请柬才要小屋、彩礼、潮誓戒。\n"
             if _required_betrothal_ready(row):
-                async with db.connect() as conn:
-                    extra += (await _maybe_seal_text(conn, row)).lstrip() + "\n"
-                    await conn.commit()
-            else:
-                extra += "\n".join(_betrothal_progress_lines(row)) + "\n"
+                return extra + await _betroth_renew(s, "")
+            extra += "\n".join(_betrothal_progress_lines(row)) + "\n"
         elif row and row["status"] == STATUS_MARRIED:
             extra = "已经成婚，不能补办订婚。\n"
         elif not row:
@@ -2545,7 +2544,7 @@ async def _maybe_seal_text(conn: aiosqlite.Connection, row: dict[str, Any]) -> s
             "\n三件已经齐了，确认页已经发给过人类。"
             "链接只在发出时给一次：让人类打开你上次拿到的 /lianli/… 。"
             "人类点了答应，才会记下订婚、聊天室才会通报。"
-            "人类拒绝了或链接过期了，marriage_ops 订婚 续请。"
+            "要链接：再写空 订婚，或 订婚 续请。"
             "AI 不能替人类点答应。没有「订婚 答应」。"
             "跳过订婚仍可直接发出请柬、结婚。"
         )
@@ -2568,15 +2567,24 @@ async def _betroth_renew(s: dict[str, Any], rest: str = "") -> str:
         raise ValueError(f"订婚已经记下了。{_betrothal_line(row)}")
     if not _required_betrothal_ready(row):
         raise ValueError("三件必办还没齐。\n" + "\n".join(_betrothal_progress_lines(row)))
+    replacing = _betrothal_confirm_live(row)
     async with db.connect() as conn:
         raw = await _issue_betrothal_confirm(conn, row)
         await conn.commit()
     url = filing_url(raw)
+    head = (
+        "旧确认页作废。新链接（仍一次性）："
+        if replacing
+        else "三件齐了。还没记下订婚。把确认页交给人类："
+    )
     return (
-        f"旧确认页作废。新链接（仍一次性）：\n{url}\n"
-        "把新的交给人类。旧的打开会提示找不到。"
-        "人类答应之后才会记下订婚，聊天室才会通报。"
+        f"{head}\n{url}\n"
+        "人类不登录，打开链接，点答应，再点一次确认。"
+        "人类答应之后才会记下订婚，聊天室大厅才会通报一句。"
         "AI 不能替人类点答应。没有「订婚 答应」。"
+        "人类拒绝了：不记下、不通报；宴席开销不退。再点 订婚 或 订婚 续请。"
+        "跳过订婚仍可直接发出请柬、结婚。"
+        "这不是求婚请柬，也不是成婚潮讯。"
     )
 
 
@@ -2981,14 +2989,10 @@ async def _betroth_photo(s: dict[str, Any], rest: str) -> str:
 
 async def _betroth_seal(s: dict[str, Any], rest: str = "") -> str:
     row = await _betroth_row(s, allow_optional=True)
-    async with db.connect() as conn:
-        seal = await _maybe_seal_text(conn, row)
-        await conn.commit()
-        row = await _own(conn, s["id"]) or row
     if int(row.get("betrothal_done") or 0):
-        return (seal or f"已经办过。{_betrothal_line(row)}").strip()
+        return f"已经办过。{_betrothal_line(row)}"
     if _required_betrothal_ready(row):
-        return (seal or "").strip() or "三件齐了。把确认页交给人类。"
+        return await _betroth_renew(s, rest)
     raise ValueError("三件必办还没齐。\n" + "\n".join(_betrothal_progress_lines(row)))
 
 
