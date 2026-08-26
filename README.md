@@ -254,7 +254,7 @@ bar_ops     的 command = work 洗碗 night
 
 饭馆和集市各卖各的：**饭馆卖堂食体验**（按价回精力 + 饱餐 buff），**集市卖货**（买回家自己 `eat` 只有基础精力，可囤冰箱）。
 
-感染：`visit_ops clinic treat infection`，约三次、间隔 6 小时，不能一次根治。营养不良（水果当饭吃）：每顿熟菜好一档，`visit_ops clinic treat 营养不良` 两次挂号也能治。另有脱水、过劳（疗程+慢性扣精力）、失眠（连续多天没睡）、湿气入肺、牙酸等——`clinic status` 看当前，`clinic treat 病名` 治。
+感染：`visit_ops clinic treat infection`，约三次、间隔 6 小时，不能一次根治。营养不良（水果当饭吃）：每顿熟菜好一档，`visit_ops clinic treat 营养不良` 两次挂号也能治。另有脱水、过劳（疗程+慢性扣精力）、失眠（连续多天没睡）、湿气入肺、牙酸等——`clinic status` 看当前，`clinic treat 病名` 治。身体不满且没病时：`clinic 调理 小|中|大` 花钱回气色（贵），或 `buy 回春汤` / `大补丸` 囤着喝；随机好事件（打理/出海等）也可能回一点身体。
 
 ### `alliance_ops` — 协作
 
@@ -287,9 +287,11 @@ bar_ops     的 command = work 洗碗 night
 | `buxing light 给谁 \| 求什么` / `buxing gallery` / `buxing entrust 旧事` | 花 15 票点公开守夜灯（回 4 精力）/ 看文字灯廊 / 托付旧事；名牌和愿望公开，勿写现实隐私 |
 | `buxing watch` / `buxing remember` / `buxing fulfill 灯号` | 60 票守夜 / 看潮汐簿与灯芯 / 免费还愿，在自己的灯旁记“成了” |
 | `lore scan` | 沿海旧史文本与 NPC 小传（`lore scan npc`；也可指定其他主题或随机），不是收集品 |
-| `clinic status` | 桥桥诊所（24h）。进门氛围、窗台斑鸠、价目；约 20% 九折，凌晨 +5 票 |
+| `clinic status` | 桥桥诊所（24h）。进门氛围、窗台斑鸠、价目；约 20% 九折，凌晨 +5 票。诊费偏高 |
 | `clinic treat 病症` / `treat all` | 花钱治地上病（井下伤归晏安医务间，桥桥不接） |
-| `clinic buy 醒酒药` / `use 醒酒药` | 药品货架，可囤货；`catalog` 看全表 |
+| `clinic 调理 小` / `调理 中` / `调理 大` | 无病回身体（+15/+30/+50），价 95/210/380 票；每日最多 3 次。例子：`clinic 调理 中`。不是治病 |
+| `clinic buy 醒酒药` / `use 醒酒药` | 对症药，可囤货；`catalog` 看全表 |
+| `clinic buy 回春汤` / `buy 大补丸` / `use …` | 无病回身体（+18/+40），可囤，不占调理次数；贵是故意的 |
 | `clinic dove` / `dove 喂` | 窗台斑鸠互动；喂雾豌豆×1 好感+2 |
 | `clinic chat` | 闲聊 |
 | `visit 拾叶` | 巷口随机事件（主动必触发）；路上每天首次操作掷一次碰上 |

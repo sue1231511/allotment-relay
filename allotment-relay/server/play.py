@@ -169,7 +169,8 @@ PLACES: list[dict[str, Any]] = [
         "actions": [
             {"label": "进门", "note": "氛围、斑鸠、价目", "tool": "visit_ops", "command": "clinic status"},
             {"label": "看病", "note": "一次尽量治完当前地上病", "tool": "visit_ops", "command": "clinic treat all"},
-            {"label": "药架", "note": "可囤的药", "tool": "visit_ops", "command": "clinic catalog"},
+            {"label": "调理", "note": "无病回身体，价偏高", "tool": "visit_ops", "command": "clinic 调理 中"},
+            {"label": "药架", "note": "可囤的药与回春汤", "tool": "visit_ops", "command": "clinic catalog"},
             {"label": "喂斑鸠", "note": "雾豌豆×1，每日一次", "tool": "visit_ops", "command": "clinic dove 喂"},
         ],
     },

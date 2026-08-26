@@ -85,6 +85,7 @@ async def _test_play_api() -> None:
     clinic = next(p for p in sown["places"] if p["id"] == "clinic")
     assert clinic["week1"] is False, clinic
     assert any(a["command"] == "clinic treat all" for a in clinic["actions"]), clinic
+    assert any(a["command"] == "clinic 调理 中" for a in clinic["actions"]), clinic
     bar = next(p for p in sown["places"] if p["id"] == "bar")
     assert "点单" in bar["blurb"], bar
     dish = next(a for a in bar["actions"] if a["label"] == "洗碗上工")

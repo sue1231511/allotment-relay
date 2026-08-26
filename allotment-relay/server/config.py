@@ -198,6 +198,14 @@ AILMENT_BAD_EVENT_CHANCE = _event_rate(0.13)
 RAW_MEAT_INFECT_CHANCE = 0.35
 INFECTION_TREAT_COOLDOWN = 21600  # 同一次感染两次治疗至少隔 6 小时
 INFECTION_DRAIN_EVERY = 1800      # 每 30 分钟按档位扣精力
+# 诊所调理（无病回身体）：价偏高，专门刮有钱人的口袋
+# key → heal / price；也可用 clinic buy 回春汤 / 大补丸 囤货
+CLINIC_TONIC_TIERS = {
+    "小": {"heal": 15, "price": 95, "label": "小调理"},
+    "中": {"heal": 30, "price": 210, "label": "中调理"},
+    "大": {"heal": 50, "price": 380, "label": "大调理"},
+}
+CLINIC_TONIC_DAILY_CAP = 3  # 每个换班日现场调理上限（囤药不算）
 
 # 生吃规则：蔬菜不能生吃；水果能吃但只回一点精力，
 # 连续生吃 FRUIT_EAT_STREAK_LIMIT 口落「营养不良」（吃熟菜可压 / 诊所可治）

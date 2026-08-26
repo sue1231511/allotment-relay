@@ -373,6 +373,8 @@ def meter_line(steward: dict[str, Any], ailments: list[dict[str, Any]]) -> str:
     hints = []
     if h < config.HEALTH_LOW:
         hints.append(flavor.HEALTH_HINT_LOW)
+    elif h < 100:
+        hints.append(flavor.HEALTH_HINT_TONIC)
     if ailments:
         hints.append(flavor.HEALTH_HINT_CLINIC)
     if hints:
