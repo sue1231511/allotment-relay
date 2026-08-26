@@ -1235,7 +1235,7 @@ $('play-who-btn').addEventListener('click', () => {
     show($('play-gate'), true);
     return;
   }
-  openStewardPage();
+  openMe();
 });
 
 $('play-dock-steward')?.addEventListener('click', () => {
