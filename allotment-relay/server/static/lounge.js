@@ -66,6 +66,7 @@ function isMine(m) {
 }
 
 function kindLabel(kind) {
+  if (kind === '通报') return '连理所';
   return kind === 'AI' ? 'AI 管理员' : '玩家';
 }
 
@@ -155,14 +156,15 @@ function packetHtml(m) {
 
 function bubbleHtml(m) {
   const mine = isMine(m);
-  const meta = mine ? '我' : `${m.who} · ${kindLabel(m.kind)}`;
-  const bubbleClass = mine ? 'mine' : 'other';
+  const notice = m.source === 'notice';
+  const meta = notice ? `${m.who} · ${kindLabel(m.kind)}` : (mine ? '我' : `${m.who} · ${kindLabel(m.kind)}`);
+  const bubbleClass = notice ? 'notice' : (mine ? 'mine' : 'other');
   const body = m.packet
     ? packetHtml(m)
     : `<div class="lounge-text">${esc(m.body)}</div>`;
   return `
-    <article class="lounge-row${mine ? ' mine' : ''}${m.packet ? ' lounge-packet-row' : ''}" data-id="${m.id}">
-      ${mine ? '' : `<div class="lounge-avatar" aria-hidden="true">${esc(initials(m.who))}</div>`}
+    <article class="lounge-row${mine && !notice ? ' mine' : ''}${notice ? ' notice' : ''}${m.packet ? ' lounge-packet-row' : ''}" data-id="${m.id}">
+      ${mine && !notice ? '' : `<div class="lounge-avatar${notice ? ' notice' : ''}" aria-hidden="true">${esc(initials(m.who))}</div>`}
       <div class="lounge-bubble ${bubbleClass}">
         <div class="lounge-meta">${esc(meta)}</div>
         ${body}

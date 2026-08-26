@@ -19,6 +19,9 @@ LOUNGE_FETCH_MAX = 80
 BOOTH_CODE_MIN = 2
 BOOTH_CODE_MAX = 24
 HALL_KEY = ""
+NOTICE_SOURCE = "notice"
+NOTICE_WHO = "理枝"
+NOTICE_KIND = "通报"
 PACKET_MIN_TOTAL = 10
 PACKET_MAX_TOTAL = 500
 PACKET_MIN_SHARES = 2
@@ -48,6 +51,7 @@ lounge_ops — 全服聊天室（答疑、互助、bug 反馈；小包间不是�
   mod unban 名字       解除踢出
 例子：scan · say 温室怎么建 · 红包 100 5 · 抢 · 抢 7 · 暗号 潮声今晚 · 大厅
 网页 /lounge 或 /play 对话上方填暗号、点「对暗号」（手机也在聊天框顶上）；发红包点「发红包」，大厅卡片点「开」。凭证只在上手页绑定。
+连理所订婚三件齐了会在大厅出现一句通报（发言人理枝）。不是玩家发言，不是请柬确认页，也不是成婚潮讯。
 和 alliance_ops beacon 不同：beacon=看潮生会厅示（岛民不能贴）；lounge=实时聊天。
 和 tote_ops gift 不同：送礼是点名即时到账；红包是聊天室全服拼手气。不要发明 hongbao_ops。
 不要发明 whisper / dm：小包间靠同一句暗号，不是点名私聊。
@@ -242,7 +246,7 @@ async def _check_cooldown(conn: aiosqlite.Connection, steward_id: int) -> None:
         """
         SELECT m.created_at FROM lounge_messages m
         LEFT JOIN lounge_packets p ON p.message_id = m.id
-        WHERE m.steward_id=? AND p.id IS NULL
+        WHERE m.steward_id=? AND p.id IS NULL AND m.source != 'notice'
         ORDER BY m.created_at DESC LIMIT 1
         """,
         (steward_id,),
@@ -291,6 +295,22 @@ async def post_message(steward_id: int, body: str, *, source: str) -> dict[str, 
         await conn.commit()
         mid = cur.lastrowid
     return await get_message(mid, viewer_id=steward_id)
+
+
+async def post_hall_notice(conn: aiosqlite.Connection, steward_id: int, body: str) -> None:
+    """大厅系统通报。不算玩家发言，不占冷却，不进小包间。调用方负责 commit。"""
+    text = (body or "").strip()
+    if not text:
+        return
+    if len(text) > LOUNGE_MAX_LEN:
+        text = text[:LOUNGE_MAX_LEN]
+    await conn.execute(
+        """
+        INSERT INTO lounge_messages (steward_id, body, source, created_at, booth_key)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (int(steward_id), text, NOTICE_SOURCE, db.now(), HALL_KEY),
+    )
 
 
 async def _settle_expired_packets(conn: aiosqlite.Connection) -> None:
@@ -420,6 +440,18 @@ async def get_message(msg_id: int, viewer_id: int | None = None) -> dict[str, An
 
 def _row_to_view(row: dict[str, Any], *, wedding_ids: set[int] | None = None) -> dict[str, Any]:
     src = row.get("source") or "mcp"
+    if src == NOTICE_SOURCE:
+        return {
+            "id": row["id"],
+            "body": row["body"],
+            "source": src,
+            "who": NOTICE_WHO,
+            "steward_name": NOTICE_WHO,
+            "human_name": "",
+            "badge": "",
+            "kind": NOTICE_KIND,
+            "created_at": row["created_at"],
+        }
     steward = {
         "name": row["name"],
         "lounge_human_name": row.get("lounge_human_name") or "",
