@@ -90,7 +90,7 @@ PLACES: list[dict[str, Any]] = [
             {"label": "筹备", "note": "草稿看小屋档、彩礼、戒，订婚现在就能办；订契后看三金、婚服、吃席", "tool": "marriage_ops", "command": "筹备"},
             {"label": "寻戒", "note": "求婚前去海边找潮誓砂（自制要 6 份）", "tool": "marriage_ops", "command": "寻戒"},
             {"label": "成戒", "note": "转工坊打戒；现货去 Tt酱嫁妆柜", "tool": "marriage_ops", "command": "成戒"},
-            {"label": "订婚", "note": "草稿就能办，不用彩礼。信物去海边，宴去小馆或酒吧，花束登记后三件齐了。再点一次「订婚」，正文里会出现确认页链接，发给人类打开。丢了再点。跳过也能直接结婚", "tool": "marriage_ops", "command": "订婚"},
+            {"label": "订婚", "note": "草稿就能办，不用彩礼。信物去海边，宴去小馆或酒吧，花束登记后三件齐了。再点一次「订婚」，正文里会出现确认页链接，发给人类打开。只有对方在确认页答应才算记下；三件齐了或旧档自动写下都不算已经订婚。丢了再点。跳过也能直接结婚", "tool": "marriage_ops", "command": "订婚"},
             {"label": "订婚续请", "note": "确认页丢了或人类拒绝了，再发一页。和点「订婚」一样会出新链接。不是求婚续请", "tool": "marriage_ops", "command": "订婚 续请"},
             {"label": "登记信物", "note": "先去海边寻信或工坊打订婚戒，再在这儿登记。不是潮誓戒", "tool": "marriage_ops", "command": "订婚 信物"},
             {"label": "登记花束", "note": "先去海边采花、赶海，或买礼盒，再在这儿登记", "tool": "marriage_ops", "command": "订婚 花束"},

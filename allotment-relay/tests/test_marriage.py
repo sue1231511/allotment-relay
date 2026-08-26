@@ -880,6 +880,22 @@ async def _old_db_migrates_betrothal_confirm() -> None:
         )
         """
     )
+    now = 1_700_000_000
+    for sid, status, name in (
+        (1, "draft", "阿草稿"),
+        (2, "proposed", "阿请柬"),
+        (3, "engaged", "阿订契"),
+        (4, "married", "阿成婚"),
+    ):
+        conn.execute(
+            """
+            INSERT INTO marriages (
+                steward_id, partner_type, partner_name, status, betrothal_done,
+                created_at, updated_at
+            ) VALUES (?, 'human', ?, ?, 1, ?, ?)
+            """,
+            (sid, name, status, now, now),
+        )
     conn.commit()
     conn.close()
 
@@ -905,6 +921,72 @@ async def _old_db_migrates_betrothal_confirm() -> None:
             )
         ).fetchone()
         assert idx, "unique index should exist after ALTER"
+        cur = await c.execute(
+            "SELECT partner_name, status, betrothal_done, betrothal_confirm_used_at "
+            "FROM marriages ORDER BY id"
+        )
+        got = [(r[0], r[1], int(r[2] or 0), r[3]) for r in await cur.fetchall()]
+        assert got == [
+            ("阿草稿", "draft", 0, None),
+            ("阿请柬", "proposed", 0, None),
+            ("阿订契", "engaged", 0, None),
+            ("阿成婚", "married", 1, None),
+        ], got
+
+
+async def _legacy_auto_seal_not_confirmed() -> None:
+    """#113 旧档三件齐了就写下 betrothal_done；没点确认页不算订婚，空 订婚 必须再给链接。"""
+    tmp = Path(tempfile.mkdtemp(prefix="betrothal-legacy-"))
+    db = await _boot(tmp)
+    from server import marriage
+    from server.mcp_app import current_origin
+
+    current_origin.set("http://island.test")
+    host = await _enroll(db, "legacy@example.com", "旧档")
+    await _ready_to_propose(db, host, tickets=50000, ring=False, hut=False)
+    await marriage.marriage_ops(host, "求婚 阿潮")
+    async with db.connect() as conn:
+        sid = (await (await conn.execute(
+            "SELECT id FROM stewards WHERE key_id=?", (host,)
+        )).fetchone())[0]
+        await conn.execute(
+            """
+            UPDATE marriages SET betrothal_token=8888, betrothal_feast=12800,
+                betrothal_bouquet=3888, betrothal_done=1,
+                betrothal_confirm_hash=NULL, betrothal_confirm_expires_at=NULL,
+                betrothal_confirm_used_at=NULL
+            WHERE steward_id=?
+            """,
+            (sid,),
+        )
+        await conn.commit()
+    empty = await marriage.marriage_ops(host, "订婚")
+    assert "已经办过" not in empty, empty
+    assert "/lianli/" in empty, empty
+    token = _token_from(empty)
+    view = await marriage.public_vow_view(token)
+    assert view.get("ok") and view.get("reason") == "open", view
+    assert not int(view.get("betrothal_done") or 0), view
+    from fastapi.testclient import TestClient
+    from server.main import app
+    page = TestClient(app).get(f"/lianli/{token}")
+    assert page.status_code == 200, page.text
+    assert "订婚已经记下了" not in page.text, page.text
+    assert "想把订婚记进" in page.text, page.text
+    first = await marriage.human_respond(token, accept=True, confirm=False)
+    assert first.get("need_confirm"), first
+    from server import lounge
+    notices = await lounge.list_messages()
+    assert not [m for m in notices if m.get("source") == "notice"], notices
+    done = await marriage.human_respond(token, accept=True, confirm=True)
+    assert done.get("accepted"), done
+    notices = await lounge.list_messages()
+    hit = [m for m in notices if m.get("source") == "notice"]
+    assert hit, notices
+    assert "旧档" in hit[-1]["body"] and "订婚记下" in hit[-1]["body"], hit[-1]
+    sealed = await marriage.marriage_ops(host, "订婚")
+    assert "已经办过" in sealed or "已办" in sealed, sealed
+    assert "/lianli/" not in sealed, sealed
 
 
 def test_marriage_system() -> None:
@@ -913,6 +995,7 @@ def test_marriage_system() -> None:
     asyncio.run(_highest_photo_flow())
     asyncio.run(_reject_and_guards())
     asyncio.run(_old_db_migrates_betrothal_confirm())
+    asyncio.run(_legacy_auto_seal_not_confirmed())
 
 
 if __name__ == "__main__":
