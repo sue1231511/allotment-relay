@@ -97,6 +97,8 @@ async def _full_flow() -> None:
     assert "跳过" in help_text
     assert "寻信" in help_text
     assert "小馆" in help_text
+    assert "没有彩礼" in help_text
+    assert "礼金 18800" not in help_text
     assert "18800 | 8888" not in help_text
 
     try:
@@ -518,40 +520,35 @@ async def _betrothal_flow() -> None:
     other = await _enroll(db, "pipe@example.com", "岸灯")
 
     menu = await marriage.marriage_ops(host, "订婚")
-    assert "礼金" in menu, menu
     assert "跳过" in menu, menu
     assert "海边" in menu, menu
     assert "小馆" in menu, menu
-    assert "礼金 18800" in menu, menu
+    assert "没有彩礼" in menu, menu
+    assert "礼金 18800" not in menu, menu
     assert "18800 | 8888 | 12800 | 3888" not in menu, menu
+
+    try:
+        await marriage.marriage_ops(host, "订婚 寻信")
+        raise AssertionError("no draft cannot seek")
+    except ValueError as exc:
+        msg = str(exc)
+        assert "草稿" in msg, exc
+        assert "订契之后" not in msg, exc
 
     await marriage.marriage_ops(host, "求婚 阿潮")
     try:
         await marriage.marriage_ops(host, "订婚 礼金 18800")
-        raise AssertionError("draft cannot betroth")
+        raise AssertionError("gift must fail")
     except ValueError as exc:
-        assert "订契" in str(exc), exc
-
-    await _ready_to_propose(db, host, tickets=400000)
-    await marriage.marriage_ops(host, "彩礼 100000")
-    sent = await marriage.marriage_ops(
-        host,
-        "求婚 阿潮 | 潮起潮落我都在 | 潮誓戒 | 灯塔下 | 今日+3",
-    )
-    await marriage.human_respond(_token_from(sent), accept=True, confirm=True)
-    assert await _pocket(db, host) == 300000
-    assert await _fund(db) == 0
-
-    ready = await marriage.marriage_ops(host, "订婚")
-    assert "订契" in ready or "跳过" in ready, ready
-    assert "礼金" in ready, ready
-    assert "海边" in ready and "小馆" in ready, ready
+        msg = str(exc)
+        assert "没有" in msg or "彩礼" in msg, exc
 
     try:
-        await marriage.marriage_ops(host, "订婚 礼金 9")
-        raise AssertionError("gift below min")
+        await marriage.marriage_ops(host, "订婚 彩礼")
+        raise AssertionError("caili alias must fail")
     except ValueError as exc:
-        assert "订婚礼金" in str(exc) or "10000" in str(exc), exc
+        msg = str(exc)
+        assert "没有" in msg or "彩礼" in msg, exc
 
     try:
         await marriage.marriage_ops(
@@ -560,6 +557,9 @@ async def _betrothal_flow() -> None:
         raise AssertionError("fill-six must fail")
     except ValueError as exc:
         assert "地点" in str(exc) or "不要" in str(exc), exc
+
+    await _ready_to_propose(db, host, tickets=50000, ring=False, hut=False)
+    assert await _pocket(db, host) == 50000
 
     async with db.connect() as conn:
         sid = (await (await conn.execute(
@@ -581,21 +581,12 @@ async def _betrothal_flow() -> None:
 
     token = await marriage.marriage_ops(host, "订婚 信物")
     assert "潮信贝" in token or "信物" in token, token
-    gift = await marriage.marriage_ops(host, "订婚 礼金 18800")
-    assert "订婚礼金" in gift, gift
     feast = await marriage.marriage_ops(host, "订婚 宴 小馆 12800")
     assert "小馆" in feast or "宴" in feast, feast
     bouquet = await marriage.marriage_ops(host, "订婚 花束")
     assert "记下" in bouquet, bouquet
-    total = 18800 + 12800
-    assert await _pocket(db, host) == 300000 - total
+    assert await _pocket(db, host) == 50000 - 12800
     assert await _fund(db) == 0
-
-    try:
-        await marriage.marriage_ops(host, "订婚 礼金 18800")
-        raise AssertionError("repeat gift")
-    except ValueError as exc:
-        assert "已经" in str(exc) or "办过" in str(exc), exc
 
     via = await mux.visit_bundle(host, "连理所 订婚")
     assert "办过" in via or "已经" in via, via
@@ -604,17 +595,21 @@ async def _betrothal_flow() -> None:
     assert "订婚服" in bought, bought
     attire = await marriage.marriage_ops(host, "订婚 服装")
     assert "记进" in attire or "订婚服" in attire, attire
+
+    await _ready_to_propose(db, host, tickets=400000)
+    await marriage.marriage_ops(host, "彩礼 100000")
+    sent = await marriage.marriage_ops(
+        host,
+        "求婚 阿潮 | 潮起潮落我都在 | 潮誓戒 | 灯塔下 | 今日+3",
+    )
+    await marriage.human_respond(_token_from(sent), accept=True, confirm=True)
+    assert await _pocket(db, host) == 300000
+    assert await _fund(db) == 0
+
     photo = await marriage.marriage_ops(host, "订婚 留影 小屋 2888")
     assert "留影" in photo or "记下" in photo, photo
 
     await marriage.marriage_ops(other, "求婚 灯花")
-    await _ready_to_propose(db, other, tickets=400000)
-    await marriage.marriage_ops(other, "彩礼 100000")
-    sent2 = await marriage.marriage_ops(
-        other,
-        "求婚 灯花 | 潮起潮落我都在 | 潮誓戒 | 灯塔下 | 今日+3",
-    )
-    await marriage.human_respond(_token_from(sent2), accept=True, confirm=True)
     try:
         await marriage.marriage_ops(
             other, "订婚 18800 | 8888 | 12800 | 3888 | 8888 | 2888"
@@ -650,13 +645,14 @@ async def _betrothal_flow() -> None:
     slug = re.search(r"/hearth/([A-Za-z0-9_-]+)", held).group(1)
     hearth = await marriage.public_hearth_view(slug)
     assert hearth.get("betrothal"), hearth
-    assert "礼金" in hearth["betrothal"], hearth
+    assert "信物" in hearth["betrothal"] or "宴" in hearth["betrothal"], hearth
+    assert "旧礼金" not in hearth["betrothal"], hearth
     from fastapi.testclient import TestClient
     from server.main import app
     page = TestClient(app).get(f"/hearth/{slug}")
     assert page.status_code == 200, page.text
     assert "订婚" in page.text
-    assert "礼金" in page.text
+    assert "旧礼金" not in page.text
 
 
 def test_marriage_system() -> None:
