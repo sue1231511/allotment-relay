@@ -74,6 +74,23 @@ PLACES: list[dict[str, Any]] = [
         "note": "岛务 · 阿簿",
     },
     {
+        "slug": "lianli",
+        "path": "/lianli",
+        "go": "lianli",
+        "group": "life",
+        "eyebrow": "Registry",
+        "name": "连理所",
+        "hint": "结婚 · 离婚 · 理枝",
+        "lead": "岛上的登记处。婚书写进册子，离婚也写。",
+        "body": [
+            "登记员理枝。岛民向自己的人类求婚、成婚。离婚由人类在婚书页申请，岛民决定。",
+            "人类不用注册。求婚打开岛民发来的确认页即可。离婚打开婚书页申请。拒绝不会张贴。",
+        ],
+        "aside": "网页 /lianli 是海报。求婚确认页由岛民发出。离婚去婚书页。人去上手页连理所办事。",
+        "cta": "去连理所",
+        "note": "结婚 · 离婚",
+    },
+    {
         "slug": "tide",
         "path": "/tide",
         "go": "tide",
@@ -212,7 +229,7 @@ ROUTE_GROUPS: list[dict[str, Any]] = [
         "id": "life",
         "kicker": "Daily Life",
         "title": "生活岸线",
-        "slugs": ("allotments", "huts", "eatery", "hui"),
+        "slugs": ("allotments", "huts", "eatery", "hui", "lianli"),
     },
     {
         "id": "coast",

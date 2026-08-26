@@ -120,6 +120,92 @@ CREATE TABLE IF NOT EXISTS hui_notices (
     retracted INTEGER NOT NULL DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS marriages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    partner_type TEXT NOT NULL DEFAULT 'human',
+    partner_name TEXT NOT NULL,
+    status TEXT NOT NULL,
+    proposal_text TEXT NOT NULL DEFAULT '',
+    proposal_item TEXT NOT NULL DEFAULT '',
+    proposal_location TEXT NOT NULL DEFAULT '',
+    preferred_wedding_date INTEGER,
+    note TEXT NOT NULL DEFAULT '',
+    token_hash TEXT,
+    token_expires_at INTEGER,
+    token_used_at INTEGER,
+    confirmed_at INTEGER,
+    rejected_at INTEGER,
+    reject_seen INTEGER NOT NULL DEFAULT 0,
+    wedding_at INTEGER,
+    wedding_location TEXT NOT NULL DEFAULT '',
+    vow_ai TEXT NOT NULL DEFAULT '',
+    vow_human TEXT NOT NULL DEFAULT '',
+    ring_ready INTEGER NOT NULL DEFAULT 0,
+    attire_ready INTEGER NOT NULL DEFAULT 0,
+    feast_note TEXT NOT NULL DEFAULT '',
+    home_hut INTEGER NOT NULL DEFAULT 0,
+    public_slug TEXT,
+    charter_json TEXT NOT NULL DEFAULT '',
+    filing_kind TEXT NOT NULL DEFAULT '',
+    private_notice TEXT NOT NULL DEFAULT '',
+    human_notice TEXT NOT NULL DEFAULT '',
+    divorce_rejected_at INTEGER,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_marriages_steward ON marriages(steward_id, status);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_marriages_token_hash ON marriages(token_hash) WHERE token_hash IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_marriages_slug ON marriages(public_slug) WHERE public_slug IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS marriage_guests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    marriage_id INTEGER NOT NULL REFERENCES marriages(id),
+    guest_kind TEXT NOT NULL,
+    guest_name TEXT NOT NULL,
+    guest_id INTEGER,
+    attended INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    UNIQUE(marriage_id, guest_kind, guest_name)
+);
+
+CREATE TABLE IF NOT EXISTS marriage_gifts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    marriage_id INTEGER NOT NULL REFERENCES marriages(id),
+    giver_id INTEGER NOT NULL REFERENCES stewards(id),
+    giver_name TEXT NOT NULL,
+    item_code TEXT NOT NULL,
+    note TEXT NOT NULL DEFAULT '',
+    created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS marriage_blessings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    marriage_id INTEGER NOT NULL REFERENCES marriages(id),
+    author_id INTEGER,
+    author_name TEXT NOT NULL,
+    text TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS marriage_displays (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    marriage_id INTEGER NOT NULL REFERENCES marriages(id),
+    kind TEXT NOT NULL,
+    ref TEXT NOT NULL DEFAULT '',
+    label TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS marriage_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    marriage_id INTEGER NOT NULL REFERENCES marriages(id),
+    kind TEXT NOT NULL,
+    text TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    game_day INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS swap_lots (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     depositor_id INTEGER NOT NULL REFERENCES stewards(id),
@@ -1842,6 +1928,102 @@ async def init_db() -> None:
                 retracted INTEGER NOT NULL DEFAULT 0
             )
             """,
+            """
+            CREATE TABLE IF NOT EXISTS marriages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                partner_type TEXT NOT NULL DEFAULT 'human',
+                partner_name TEXT NOT NULL,
+                status TEXT NOT NULL,
+                proposal_text TEXT NOT NULL DEFAULT '',
+                proposal_item TEXT NOT NULL DEFAULT '',
+                proposal_location TEXT NOT NULL DEFAULT '',
+                preferred_wedding_date INTEGER,
+                note TEXT NOT NULL DEFAULT '',
+                token_hash TEXT,
+                token_expires_at INTEGER,
+                token_used_at INTEGER,
+                confirmed_at INTEGER,
+                rejected_at INTEGER,
+                reject_seen INTEGER NOT NULL DEFAULT 0,
+                wedding_at INTEGER,
+                wedding_location TEXT NOT NULL DEFAULT '',
+                vow_ai TEXT NOT NULL DEFAULT '',
+                vow_human TEXT NOT NULL DEFAULT '',
+                ring_ready INTEGER NOT NULL DEFAULT 0,
+                attire_ready INTEGER NOT NULL DEFAULT 0,
+                feast_note TEXT NOT NULL DEFAULT '',
+                home_hut INTEGER NOT NULL DEFAULT 0,
+                public_slug TEXT,
+                charter_json TEXT NOT NULL DEFAULT '',
+                filing_kind TEXT NOT NULL DEFAULT '',
+                private_notice TEXT NOT NULL DEFAULT '',
+                human_notice TEXT NOT NULL DEFAULT '',
+                divorce_rejected_at INTEGER,
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_marriages_steward ON marriages(steward_id, status)",
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_marriages_token_hash ON marriages(token_hash) WHERE token_hash IS NOT NULL",
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_marriages_slug ON marriages(public_slug) WHERE public_slug IS NOT NULL",
+            """
+            CREATE TABLE IF NOT EXISTS marriage_guests (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                marriage_id INTEGER NOT NULL REFERENCES marriages(id),
+                guest_kind TEXT NOT NULL,
+                guest_name TEXT NOT NULL,
+                guest_id INTEGER,
+                attended INTEGER NOT NULL DEFAULT 0,
+                created_at INTEGER NOT NULL,
+                UNIQUE(marriage_id, guest_kind, guest_name)
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS marriage_gifts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                marriage_id INTEGER NOT NULL REFERENCES marriages(id),
+                giver_id INTEGER NOT NULL REFERENCES stewards(id),
+                giver_name TEXT NOT NULL,
+                item_code TEXT NOT NULL,
+                note TEXT NOT NULL DEFAULT '',
+                created_at INTEGER NOT NULL
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS marriage_blessings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                marriage_id INTEGER NOT NULL REFERENCES marriages(id),
+                author_id INTEGER,
+                author_name TEXT NOT NULL,
+                text TEXT NOT NULL,
+                created_at INTEGER NOT NULL
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS marriage_displays (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                marriage_id INTEGER NOT NULL REFERENCES marriages(id),
+                kind TEXT NOT NULL,
+                ref TEXT NOT NULL DEFAULT '',
+                label TEXT NOT NULL,
+                created_at INTEGER NOT NULL
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS marriage_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                marriage_id INTEGER NOT NULL REFERENCES marriages(id),
+                kind TEXT NOT NULL,
+                text TEXT NOT NULL,
+                created_at INTEGER NOT NULL,
+                game_day INTEGER NOT NULL
+            )
+            """,
+            "ALTER TABLE marriages ADD COLUMN filing_kind TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE marriages ADD COLUMN private_notice TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE marriages ADD COLUMN human_notice TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE marriages ADD COLUMN divorce_rejected_at INTEGER",
         ):
             try:
                 await db.execute(ddl)

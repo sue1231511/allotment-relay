@@ -164,6 +164,8 @@ def test_mcp_descriptions() -> None:
     assert "周二" in v_blob or "票数" in v_blob
     assert "漾漾" in v_blob
     assert "衣泊坊" in v_blob
+    assert "连理所" in v_blob
+    assert "理枝" in v_blob
 
     hut = mcp._tool_manager.get_tool("hut_ops")
     hut_blob = f"{hut.description}\n{(hut.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -225,8 +227,10 @@ def test_mcp_descriptions() -> None:
     assert "mine_ops" in instructions
     assert "forge_ops" in instructions
     assert "衣泊坊" in instructions
-    assert "19 个工具" in instructions
+    assert "20 个工具" in instructions
     assert "cloth_ops" in instructions
+    assert "marriage_ops" in instructions
+    assert "propose_marriage" in instructions
 
     quarry = mcp._tool_manager.get_tool("quarry_ops")
     q_blob = f"{quarry.description}\n{(quarry.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -269,6 +273,20 @@ def test_mcp_descriptions() -> None:
     assert "forage" in cloth_blob or "边际" in cloth_blob
     assert "tale_ops" in cloth_blob
     assert "NPC/潮闻" not in cloth_blob
+
+    marriage_tool = mcp._tool_manager.get_tool("marriage_ops")
+    mar_blob = f"{marriage_tool.description}\n{(marriage_tool.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
+    assert "求婚" in mar_blob
+    assert "propose_marriage" in mar_blob
+    assert "人类" in mar_blob
+    assert "确认页" in mar_blob or "答应" in mar_blob
+    assert "空 command" in mar_blob or "空=" in mar_blob
+    assert "/vow" in mar_blob
+    assert "没有「接受」" in mar_blob or "没有接受" in mar_blob
+    assert "连理所" in mar_blob
+    assert "离婚" in mar_blob
+    assert "离婚 答应" in mar_blob
+    assert "理枝" in mar_blob
 
 
 def test_relay_manual_covers_systems() -> None:
@@ -338,6 +356,14 @@ def test_relay_manual_covers_systems() -> None:
         "不绝版",
         "tailor_ops",
         "/atelier",
+        "marriage_ops",
+        "propose_marriage",
+        "岛上不问你爱的是谁",
+        "求婚 阿潮",
+        "只问对方有没有答应",
+        "连理所",
+        "离婚 答应",
+        "理枝",
         "tale_ops 潮闻不给旧衣料",
         "plot_ops forage",
         "潮闻",
@@ -515,7 +541,12 @@ def test_readme_workflow_rules() -> None:
         assert "relay_manual" in blob
         assert "mcp_app.py" in blob
         assert "island-manual-content.html" in blob or "island-manual.html" in blob
-    assert "19 个工具" in readme
+    assert "20 个工具" in readme
+    assert "marriage_ops" in readme
+    assert "propose_marriage" in readme
+    assert "/vow" in readme
+    assert "/lianli" in readme
+    assert "/hearth" in readme
     assert "quarry_ops" in readme
     assert "craft_ops" in readme
     assert "/workshop" in readme
@@ -623,6 +654,13 @@ def test_human_island_manual() -> None:
         "不绝版",
         "不能贴",
         "厅示",
+        "婚约",
+        "确认页",
+        "不用注册",
+        "岛上不问你爱的是谁",
+        "连理所",
+        "理枝",
+        "离婚",
     ):
         assert needle in blob, needle
     assert "plot_ops" not in blob
@@ -919,7 +957,7 @@ def test_promo_place_pages() -> None:
     from server import promo
 
     slugs = {p["slug"] for p in promo.PLACES}
-    for slug in ("allotments", "tide", "huts", "bar", "eatery", "market", "quarry", "workshop", "star", "atelier", "undertide", "hui"):
+    for slug in ("allotments", "tide", "huts", "bar", "eatery", "market", "quarry", "workshop", "star", "atelier", "undertide", "hui", "lianli"):
         assert slug in slugs, slug
         ctx = promo.page_context(slug)
         assert ctx["play_href"].startswith("/play")
@@ -936,6 +974,7 @@ def test_promo_place_pages() -> None:
     assert promo.play_href(promo.get("workshop")) == "/play?go=craft"
     assert promo.play_href(promo.get("hui")) == "/play?go=hui"
     assert promo.play_href(promo.get("atelier")) == "/play?go=atelier"
+    assert promo.play_href(promo.get("lianli")) == "/play?go=lianli"
 
 
 def test_bar_ops_help() -> None:
