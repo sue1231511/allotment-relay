@@ -101,6 +101,7 @@ async def _full_flow() -> None:
     assert "礼金 18800" not in help_text
     assert "18800 | 8888" not in help_text
     assert "举行前还能改" in help_text
+    assert "订婚宴" in help_text and "还能改" in help_text
 
     try:
         await marriage.marriage_ops(host, "接受")
@@ -610,8 +611,19 @@ async def _betrothal_flow() -> None:
     assert "潮信贝" in token or "信物" in token, token
     feast = await marriage.marriage_ops(host, "订婚 宴 小馆 12800")
     assert "小馆" in feast or "宴" in feast, feast
+    assert "还能改" in feast, feast
+    same = await marriage.marriage_ops(host, "订婚 宴 小馆 12800")
+    assert "已经是" in same, same
+    peek = await marriage.marriage_ops(host, "订婚 宴")
+    assert "还能改" in peek, peek
+    chg = await marriage.marriage_ops(host, "订婚 宴 酒吧 8888")
+    assert "酒吧" in chg or "改成" in chg, chg
+    assert await _pocket(db, host) == 50000 - 8888
+    assert await _fund(db) == 0
     bouquet = await marriage.marriage_ops(host, "订婚 花束")
     assert "记下" in bouquet, bouquet
+    back = await marriage.marriage_ops(host, "订婚 宴 小馆 12800")
+    assert "小馆" in back or "改成" in back, back
     assert await _pocket(db, host) == 50000 - 12800
     assert await _fund(db) == 0
 

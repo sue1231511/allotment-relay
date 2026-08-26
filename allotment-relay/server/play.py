@@ -128,7 +128,7 @@ PLACES: list[dict[str, Any]] = [
             {"label": "今晚", "note": "看看今晚开不开门", "tool": "bar_ops", "command": "tonight"},
             {"label": "酒单", "note": "价目与今晚出品", "tool": "bar_ops", "command": "menu"},
             {"label": "我的酒吧档", "note": "考勤与上工记录", "tool": "bar_ops", "command": "status"},
-            {"label": "订婚宴", "note": "写下求婚草稿就能办，不必先订契。在酒吧包一桌，不是结婚吃席", "tool": "marriage_ops", "command": "订婚 宴 酒吧 8888"},
+            {"label": "订婚宴", "note": "写下求婚草稿就能办。选了还能改，差价补或退。不是结婚吃席", "tool": "marriage_ops", "command": "订婚 宴 酒吧 8888"},
         ],
     },
     {
@@ -143,7 +143,7 @@ PLACES: list[dict[str, Any]] = [
         "actions": [
             {"label": "谁在营业", "note": "全服小馆名单", "tool": "kitchen_ops", "command": "shop board"},
             {"label": "菜谱", "note": "能做的定点菜", "tool": "kitchen_ops", "command": "menu"},
-            {"label": "订婚宴", "note": "写下求婚草稿就能办，不必先订契。在小馆包一桌，不是结婚吃席", "tool": "marriage_ops", "command": "订婚 宴 小馆 12800"},
+            {"label": "订婚宴", "note": "写下求婚草稿就能办。选了还能改，差价补或退。不是结婚吃席", "tool": "marriage_ops", "command": "订婚 宴 小馆 12800"},
         ],
     },
     {

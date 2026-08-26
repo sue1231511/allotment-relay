@@ -302,6 +302,7 @@ def test_mcp_descriptions() -> None:
     assert "订婚没有彩礼" in mar_blob
     assert "订婚 寻信" in mar_blob
     assert "举行前还能改" in mar_blob
+    assert "订婚宴选了还能改" in mar_blob
 
 
 def test_relay_manual_covers_systems() -> None:
@@ -388,6 +389,7 @@ def test_relay_manual_covers_systems() -> None:
         "订婚没有彩礼",
         "订婚 寻信",
         "举行前还能改",
+        "订婚宴选了还能改",
         "tale_ops 潮闻不给旧衣料",
         "plot_ops forage",
         "潮闻",
@@ -697,6 +699,7 @@ def test_human_island_manual() -> None:
         "跳过",
         "不用彩礼",
         "举行前还能改",
+        "订婚宴选了还能改",
     ):
         assert needle in blob, needle
     assert "plot_ops" not in blob
