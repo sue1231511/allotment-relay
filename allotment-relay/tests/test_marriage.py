@@ -100,6 +100,7 @@ async def _full_flow() -> None:
     assert "没有彩礼" in help_text
     assert "礼金 18800" not in help_text
     assert "18800 | 8888" not in help_text
+    assert "举行前还能改" in help_text
 
     try:
         await marriage.marriage_ops(host, "接受")
@@ -267,10 +268,31 @@ async def _full_flow() -> None:
     assert "三金" in gold, gold
     feast = await marriage.marriage_ops(host, "吃席 滩席")
     assert "滩席" in feast, feast
+    assert "还能改" in feast, feast
+    same = await marriage.marriage_ops(host, "吃席 滩席")
+    assert "已经是" in same, same
+    peek = await marriage.marriage_ops(host, "吃席")
+    assert "还能改" in peek and "滩席" in peek, peek
+    up = await marriage.marriage_ops(host, "吃席 岸席")
+    assert "岸席" in up and ("改成" in up or "改" in up), up
+    assert await _pocket(db, host) == 150000 - 48800
+    assert await _fund(db) == 0
+    down = await marriage.marriage_ops(host, "吃席 滩席")
+    assert "滩席" in down, down
+    assert await _pocket(db, host) == 150000 - 18800
     invited = await marriage.marriage_ops(host, "邀请 邻潮")
     assert "邻潮" in invited, invited
     npc = await marriage.marriage_ops(host, "邀请 npc 阿簿")
     assert "阿簿" in npc, npc
+    await marriage.marriage_ops(host, "吃席 岸席")
+    extra_npc = await marriage.marriage_ops(host, "邀请 npc 韶年")
+    assert "韶年" in extra_npc, extra_npc
+    try:
+        await marriage.marriage_ops(host, "吃席 滩席")
+        raise AssertionError("too many guests to shrink feast")
+    except ValueError as extra:
+        msg = str(extra)
+        assert "人" in msg or "最多" in msg, extra
     shown = await marriage.marriage_ops(host, "展示 小屋 潮声")
     assert "小屋" in shown or "展示" in shown, shown
     dossier = await marriage.marriage_ops(host, "筹备")
@@ -283,6 +305,11 @@ async def _full_flow() -> None:
     assert "成婚" in held, held
     assert "连理所" in held, held
     assert "/hearth/" in held, held
+    try:
+        await marriage.marriage_ops(host, "吃席 满潮席")
+        raise AssertionError("married cannot change feast")
+    except ValueError as extra:
+        assert "成婚" in str(extra), extra
     slug = re.search(r"/hearth/([A-Za-z0-9_-]+)", held).group(1)
 
     async with db.connect() as conn:

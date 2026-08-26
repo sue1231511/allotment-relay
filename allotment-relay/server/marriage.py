@@ -146,9 +146,10 @@ MARRIAGE_HELP = """marriage_ops 子命令（整句写进 command）：
   金饰 — 订契后把行囊里的三金（或五金）登记进婚书
       三金/五金去 Tt酱柜后：visit_ops tt buy 三金套（68800）/ 五金套（98800）
   婚服 — 订契后把衣橱里的婚服登记。买：cloth_ops 买 婚服 海色（16800）。自制：委托 婚服（料加倍、隔日）
-  吃席 灯塔席 — 订契后必选规格。包桌扣票：滩席 18800 / 岸席 48800 / 灯塔席 98800 / 满潮席 198000
+  吃席 灯塔席 — 订契后必选规格。选了举行前还能改。包桌扣票：滩席 18800 / 岸席 48800 / 灯塔席 98800 / 满潮席 198000
       自办：吃席 滩席 自办（收熟菜 dish_/meal_，滩席×2 … 满潮席×8）
-  邀请 岛民名 · 邀请 npc 阿簿 — 人数不能超过席面上限（4/8/12/16）
+      改档：再写 吃席 岸席。差价补上或退回口袋，不进潮汐基金。宾客已超过新档人数就不能改小
+  邀请 岛民名 · 邀请 npc 阿簿 — 人数不能超过席面上限（4/8/12/16）。人多了就改大一档：吃席 岸席
   举行 / 结婚 / 登记 — 婚期到了，且三金、婚服、吃席都齐了，才登记成婚。订婚不是必须
   婚礼 · 出席 · 祝词 · 送礼 · 帮忙 · 居所 · 婚书 · 退契 确认 · help
   离婚 答应 / 离婚 拒绝 — 人类在婚书页申请后，由你决定。不要发明「离婚 确认」
@@ -158,7 +159,7 @@ MARRIAGE_HELP = """marriage_ops 子命令（整句写进 command）：
   · 发出前：小屋升到岛上最高档（现在是临海邸）+ 彩礼金额 + 口袋够付 + 潮誓戒。300 票门槛已经并进彩礼。
   · 订婚草稿就能办，不用先订契，也不要彩礼。去海边寻信、小馆办宴，不是一次填六个数。
   · 10万～100万只用于发出求婚的彩礼，不是订婚。订婚没有礼金。
-  · 举行前：三金 + 婚服 + 吃席规格。五金选配，不挡登记。订婚宴不是结婚吃席。订婚戒不是潮誓戒。
+  · 举行前：三金 + 婚服 + 吃席规格。吃席选了还能改，差价补或退。五金选配，不挡登记。订婚宴不是结婚吃席。订婚戒不是潮誓戒。
   · 婚戒/婚服自制比买慢。三金五金没有自制，只去 Tt酱。
   · 求婚没有「接受」子命令。人类打开 /lianli/… 点头。
   · 不要发明「离婚 确认」。岛民不能自己立案离婚。
@@ -238,6 +239,24 @@ def _feast_by_token(token: str) -> tuple[str, dict[str, Any]] | None:
         if raw == name or raw in meta["aliases"] or raw.lower() == meta["key"]:
             return name, meta
     return None
+
+
+def _feast_paid_tickets(row: dict[str, Any]) -> int:
+    note = str(row.get("feast_note") or "")
+    m = re.search(r"包桌\s*-?\s*(\d+)\s*票", note)
+    return int(m.group(1)) if m else 0
+
+
+def _feast_self_cook(row: dict[str, Any]) -> bool:
+    return "自办" in str(row.get("feast_note") or "")
+
+
+def _feast_change_help() -> str:
+    return (
+        "选规格：marriage_ops 吃席 滩席 / 岸席 / 灯塔席 / 满潮席。"
+        "包桌扣票；自办加写 自办（收熟菜）。选了举行前还能改，差价补上或退回口袋，不进潮汐基金。"
+        " 滩席 18800 或菜×2 · 岸席 48800 或菜×4 · 灯塔席 98800 或菜×6 · 满潮席 198000 或菜×8"
+    )
 
 
 def _bride_label(amount: int) -> str:
@@ -510,7 +529,7 @@ async def _hold_missing(
     if not int(row.get("attire_ready") or 0):
         miss.append("婚服未登记。cloth_ops 买 婚服 海色，或委托自制后再 marriage_ops 婚服。")
     if not int(row.get("feast_ready") or 0):
-        miss.append("还没选吃席。marriage_ops 吃席 滩席 / 岸席 / 灯塔席 / 满潮席（可加 自办）。")
+        miss.append("还没选吃席。marriage_ops 吃席 滩席 / 岸席 / 灯塔席 / 满潮席（可加 自办）。选了举行前还能改。")
     return miss
 
 
@@ -532,7 +551,7 @@ async def _hold_readiness_lines(
     else:
         attire = "未登记 — cloth_ops 买 婚服 海色，再 marriage_ops 婚服"
     if int(row.get("feast_ready") or 0):
-        feast = row.get("feast_note") or row.get("feast_tier") or "已定"
+        feast = (row.get("feast_note") or row.get("feast_tier") or "已定") + " · 举行前还能改"
     else:
         feast = "未选 — marriage_ops 吃席 滩席"
     price = int(row.get("bride_price") or 0)
@@ -1467,7 +1486,7 @@ async def _cmd_desk(s: dict[str, Any], rest: str = "") -> str:
         f"{OFFICE}。登记员{CLERK}把册子摊开。\n"
         "求婚由你发出，人类打开确认页点头。离婚由人类在婚书页申请，你决定答应或拒绝。\n"
         f"发出请柬前：小屋升到岛上最高档（{HUT_MAX_NAME}）、彩礼 {BRIDE_PRICE_MIN}～{BRIDE_PRICE_MAX}、潮誓戒。彩礼发出时冻结，答应后花掉，不进潮汐基金。\n"
-        "答应后不能当天成婚。订婚草稿阶段就能办，不用彩礼；也可以跳过，直接备三金、婚服、吃席。订婚去海边寻信、小馆或酒吧办宴，连理所看进度。不是一次填六个数。宴席开销当场花掉，不挡登记。\n"
+        "答应后不能当天成婚。订婚草稿阶段就能办，不用彩礼；也可以跳过，直接备三金、婚服、吃席。吃席选了举行前还能改。订婚去海边寻信、小馆或酒吧办宴，连理所看进度。不是一次填六个数。宴席开销当场花掉，不挡登记。\n"
         "我不能替任何人答应求婚，也不能替你离掉婚。\n"
         "岛上不问你爱的是谁。只问对方有没有答应。\n"
         "不是潮生会。潮生会管税和维，不管婚书。\n"
@@ -2060,6 +2079,8 @@ async def _take_cooked(conn: aiosqlite.Connection, steward_id: int, need: int) -
 
 async def _cmd_feast(s: dict[str, Any], rest: str) -> str:
     row = await _need_engaged(s)
+    if row["status"] == STATUS_MARRIED:
+        raise ValueError("已经成婚，席面写进婚书了，不能再改。")
     raw = (rest or "").strip()
     self_cook = False
     if "自办" in raw:
@@ -2069,32 +2090,64 @@ async def _cmd_feast(s: dict[str, Any], rest: str) -> str:
         raw = raw.replace(tok, "").strip()
     hit = _feast_by_token(raw.split()[0] if raw else "")
     if not hit:
-        raise ValueError(
-            "选规格：marriage_ops 吃席 滩席 / 岸席 / 灯塔席 / 满潮席。"
-            "包桌扣票；自办加写 自办（收熟菜）。"
-            " 滩席 18800 或菜×2 · 岸席 48800 或菜×4 · 灯塔席 98800 或菜×6 · 满潮席 198000 或菜×8"
-        )
+        if int(row.get("feast_ready") or 0):
+            cur = row.get("feast_note") or row.get("feast_tier") or "已定"
+            return (
+                f"席面现在是{cur}。举行前还能改：marriage_ops 吃席 岸席 / 灯塔席 / 满潮席（可加 自办）。"
+                "包桌差价补上或退回口袋，不进潮汐基金。"
+            )
+        raise ValueError(_feast_change_help())
     name, meta = hit
-    if int(row.get("feast_ready") or 0):
-        return f"席面已经定为{row.get('feast_tier') or name}。不能改档。宾客上限见筹备。"
+    old_name = str(row.get("feast_tier") or "")
+    changing = bool(int(row.get("feast_ready") or 0))
+    if changing and old_name == name and _feast_self_cook(row) == self_cook:
+        mode = "自办" if self_cook else "包桌"
+        return (
+            f"席面已经是{name}{mode}。要改规格再写 吃席 岸席 / 灯塔席 / 满潮席。"
+            "差价补上或退回口袋。"
+        )
     async with db.connect() as conn:
-        live = await _own(conn, s["id"])
-        note = name
-        if self_cook:
-            dishes = await _take_cooked(conn, int(s["id"]), int(meta["dishes"]))
-            note = f"{name}（自办：{'、'.join(dishes)}）"
-        else:
-            price = int(meta["price"])
-            _, _, tickets = await _live_hut(conn, s)
-            if tickets < price:
+        live = await _own(conn, s["id"]) or row
+        n = await _count(conn, "marriage_guests", int(live["id"]))
+        seated = n + 2
+        cap = int(meta["guests"])
+        if seated > cap:
+            raise ValueError(
+                f"已经请了 {seated} 人（含你们自己），{name} 最多 {cap} 人。"
+                "人多了就改大一档：marriage_ops 吃席 岸席 / 灯塔席 / 满潮席。"
+            )
+        old_paid = _feast_paid_tickets(live) if changing else 0
+        new_price = 0 if self_cook else int(meta["price"])
+        delta = new_price - old_paid
+        _, _, tickets = await _live_hut(conn, s)
+        if delta > 0 and tickets < delta:
+            if changing:
                 raise ValueError(
-                    f"{name}包桌 {price} 票，口袋 {tickets}。自办：marriage_ops 吃席 {name} 自办"
+                    f"改成{name}还要补 {delta} 票，口袋 {tickets}。"
+                    f"自办：marriage_ops 吃席 {name} 自办"
                 )
+            raise ValueError(
+                f"{name}包桌 {new_price} 票，口袋 {tickets}。自办：marriage_ops 吃席 {name} 自办"
+            )
+        extra_dishes: list[str] = []
+        if self_cook:
+            old_dishes = 0
+            if changing and _feast_self_cook(live):
+                old_meta = FEAST_TIERS.get(old_name) or {}
+                old_dishes = int(old_meta.get("dishes") or 0)
+            need = int(meta["dishes"]) - old_dishes
+            if need > 0:
+                extra_dishes = await _take_cooked(conn, int(s["id"]), need)
+        if delta:
             await conn.execute(
                 "UPDATE stewards SET tickets=tickets-? WHERE id=?",
-                (price, s["id"]),
+                (delta, s["id"]),
             )
-            note = f"{name}（包桌 -{price} 票）"
+        if self_cook:
+            dish_bit = f"：{'、'.join(extra_dishes)}" if extra_dishes else ""
+            note = f"{name}（自办{dish_bit}）" if dish_bit else f"{name}（自办）"
+        else:
+            note = f"{name}（包桌 -{int(meta['price'])} 票）"
         await conn.execute(
             """
             UPDATE marriages SET feast_tier=?, feast_ready=1, feast_note=?, updated_at=?
@@ -2102,9 +2155,19 @@ async def _cmd_feast(s: dict[str, Any], rest: str) -> str:
             """,
             (name, note, db.now(), live["id"]),
         )
-        await _note_event(conn, int(live["id"]), "prep", f"定席：{note}", day=db.day_id())
+        verb = "改席" if changing else "定席"
+        await _note_event(conn, int(live["id"]), "prep", f"{verb}：{note}", day=db.day_id())
         await conn.commit()
-    return f"席面定为{name}。{note}。宾客上限 {meta['guests']}。到了婚期才能 结婚。"
+    if changing:
+        bits = [f"席面从{old_name}改成{name}。{note}。宾客上限 {cap}。"]
+        if delta > 0:
+            bits.append(f"补了 {delta} 票，不进潮汐基金。")
+        elif delta < 0:
+            bits.append(f"退回 {-delta} 票到口袋，不进潮汐基金。")
+        if changing and _feast_self_cook(row) and not self_cook:
+            bits.append("自办的菜不退。")
+        return " ".join(bits)
+    return f"席面定为{name}。{note}。宾客上限 {cap}。举行前还能改档。到了婚期才能 结婚。"
 
 
 async def _cmd_gold(s: dict[str, Any], rest: str) -> str:
@@ -2574,7 +2637,7 @@ async def _cmd_invite(s: dict[str, Any], rest: str) -> str:
         if seated >= cap:
             raise ValueError(
                 f"这档席面最多 {cap} 人（含你们自己）。现在已经 {seated} 人，再请就挤了。"
-                "席面选定不能改档。"
+                "人多了就改大一档：marriage_ops 吃席 岸席 / 灯塔席 / 满潮席。"
             )
         try:
             await conn.execute(
