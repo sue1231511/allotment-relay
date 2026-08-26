@@ -503,7 +503,68 @@ GOOD_HEALTH = [
     "海风吹过来，头不疼了，身体 +{n}",
     "姜姨塞了杯热汤，没要钱，身体 +{n}",
     "蹲篱笆边缓了缓，身体 +{n}——今天运气不错",
+    "太阳刚好，骨头缝里那点潮气散了，身体 +{n}",
+    "路过的人递了块姜糖，身体 +{n}",
+    "晒了一会儿太阳，气色回了一截，身体 +{n}",
+    "退潮的风把潮气吹散，胸口顺了，身体 +{n}",
+    "路过诊所没进去，自己缓过来一点，身体 +{n}",
+    "渔排上有人递了口淡水，身体 +{n}",
 ]
+
+GOOD_HEALTH_LAND = [
+    "泥土味把腰暖回来，身体 +{n}",
+    "篱笆边蹲了蹲，肩不酸了，身体 +{n}",
+    "份地风一过，身子松了一截，身体 +{n}",
+    "堆肥热气烘了一下，身体 +{n}",
+]
+
+GOOD_HEALTH_SEA = [
+    "潮水拍过来，胸口那口闷气散了，身体 +{n}",
+    "浪花溅到脸上，头不晕了，身体 +{n}",
+    "退潮带上来一口干净风，身体 +{n}",
+    "盐粒咬了咬嘴唇，人反而清醒，身体 +{n}",
+]
+
+GOOD_HEALTH_VOYAGE = [
+    "甲板风灌满肺，身子回了一点，身体 +{n}",
+    "船晃停了一阵，胃不翻了，身体 +{n}",
+    "远岸灯光看着像热汤，身体 +{n}",
+]
+
+GOOD_HEALTH_QUARRY = [
+    "镐停下来那一下，肺里的灰散了点，身体 +{n}",
+    "崖缝漏进一缕潮风，嗓子不刮了，身体 +{n}",
+    "矿灯晃了一下，人醒了，身体 +{n}",
+]
+
+GOOD_HEALTH_BEACH = [
+    "湿沙凉了脚踝，身子轻一点，身体 +{n}",
+    "捡到的壳边还沾着干净水，浇了一把脸，身体 +{n}",
+    "赶海蹲太久，站起来反而通了，身体 +{n}",
+]
+
+GOOD_HEALTH_BAR = [
+    "荔栀塞了碗醒酒面，没记你账，身体 +{n}",
+    "班结束那口白开水比酒管用，身体 +{n}",
+    "后厨热气把寒气逼出去，身体 +{n}",
+]
+
+GOOD_HEALTH_SALVAGE = [
+    "打捞上来的木头还温着，靠了一下，身体 +{n}",
+    "风暴走了，肺里那口咸味淡了，身体 +{n}",
+]
+
+HEALTH_RESTORE_BY_TRIGGER = {
+    "quarry": GOOD_HEALTH_QUARRY,
+    "beach": GOOD_HEALTH_BEACH,
+    "bar_shift": GOOD_HEALTH_BAR,
+    "salvage": GOOD_HEALTH_SALVAGE,
+    "farm_wild": GOOD_HEALTH_LAND,
+    "tend": GOOD_HEALTH_LAND,
+    "gather": GOOD_HEALTH_LAND,
+    "net": GOOD_HEALTH_SEA,
+    "voyage_return": GOOD_HEALTH_VOYAGE,
+}
 
 GOOD_LOOT = [
     "捡到 {item}，像开服礼包——系统终于做回人",
@@ -685,6 +746,7 @@ METER_HINT_STANDING = "档口对你爱搭不理"
 
 HEALTH_HINT_LOW = "身体发虚"
 HEALTH_HINT_CLINIC = "去 visit_ops clinic 挂号"
+HEALTH_HINT_TONIC = "clinic 调理 小|中|大 回气色（贵）"
 
 AILMENT_INFlict_LINES = [
     "身体：{name}（{hint}）——桥桥大夫等着收票",
@@ -796,7 +858,7 @@ LEGGED_FISH_GRAB = [
 WALKBLUE_CATCH_CURSE = [
     "未命名小鱼在袋里跺了一下脚。小小的诅咒贴上来——步子发飘，clinic treat 腿鱼小咒 可解。",
     "2D蓝鱼盯着你：礼遇就好，非要钓上来。腿鱼小咒落袋，行动精力 +1。",
-    "它没自我介绍，只留下一句没说出口的咒。visit_ops clinic treat 腿鱼小咒，32 票。",
+    "它没自我介绍，只留下一句没说出口的咒。visit_ops clinic treat 腿鱼小咒，48 票。",
 ]
 
 WALKBLUE_FATE_EAT = {

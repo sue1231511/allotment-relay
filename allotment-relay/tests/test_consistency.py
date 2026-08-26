@@ -166,18 +166,22 @@ def test_mcp_descriptions() -> None:
     assert "衣泊坊" in v_blob
     assert "连理所" in v_blob
     assert "理枝" in v_blob
+    assert "clinic 调理" in v_blob
+    assert "回春汤" in v_blob
 
     hut = mcp._tool_manager.get_tool("hut_ops")
     hut_blob = f"{hut.description}\n{(hut.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
     assert "床" in hut_blob
     assert "睡" in hut_blob
     assert "install hard_1 bed" in hut_blob
+    assert "6 健康" in hut_blob or "身体 +6" in hut_blob or "顺带回" in hut_blob
     assert "堆肥桶 存 羊粪 3" in hut_blob
     assert "compost_bin" in hut_blob
     assert "桶不是柜子" in hut_blob
     assert "tide_weight" in hut_blob
     assert "iron_edge" in hut_blob
     assert "潮生会 维" in hut_blob
+    assert "临海邸" in hut_blob or "最高档" in hut_blob
 
     kitchen = mcp._tool_manager.get_tool("kitchen_ops")
     k_blob = f"{kitchen.description}\n{(kitchen.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -187,6 +191,7 @@ def test_mcp_descriptions() -> None:
     assert "未命名小鱼" in k_blob
     assert "下馆子" in k_blob
     assert "shop dine" in k_blob
+    assert "身体 +1" in k_blob or "身体 +2" in k_blob
 
     lounge_tool = mcp._tool_manager.get_tool("lounge_ops")
     lounge_blob = f"{lounge_tool.description}\n{(lounge_tool.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -287,6 +292,10 @@ def test_mcp_descriptions() -> None:
     assert "离婚" in mar_blob
     assert "离婚 答应" in mar_blob
     assert "理枝" in mar_blob
+    assert "彩礼" in mar_blob
+    assert "潮誓戒" in mar_blob
+    assert "临海邸" in mar_blob or "最高档" in mar_blob
+    assert "不进潮汐基金" in mar_blob or "花掉" in mar_blob
 
 
 def test_relay_manual_covers_systems() -> None:
@@ -339,6 +348,9 @@ def test_relay_manual_covers_systems() -> None:
         "mascot adopt",
         "lili summon",
         "clinic treat",
+        "clinic 调理",
+        "clinic 调理 中",
+        "回春汤",
         "undertide_ops help",
         "star_ops",
         "小剧场专场每日 5 次",
@@ -364,6 +376,9 @@ def test_relay_manual_covers_systems() -> None:
         "连理所",
         "离婚 答应",
         "理枝",
+        "彩礼 188000",
+        "潮誓戒",
+        "临海邸",
         "tale_ops 潮闻不给旧衣料",
         "plot_ops forage",
         "潮闻",
@@ -641,6 +656,8 @@ def test_human_island_manual() -> None:
         "人和管家",
         "编剧社",
         "诊所地点",
+        "调理",
+        "回春汤",
         "今夜潮湿",
         "暗号",
         "小包间",
@@ -661,6 +678,12 @@ def test_human_island_manual() -> None:
         "连理所",
         "理枝",
         "离婚",
+        "彩礼",
+        "潮誓戒",
+        "临海邸",
+        "最高档",
+        "花出去",
+        "不进潮汐基金",
     ):
         assert needle in blob, needle
     assert "plot_ops" not in blob

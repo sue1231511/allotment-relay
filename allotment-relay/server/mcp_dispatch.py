@@ -120,6 +120,7 @@ PLOT_HELP = """plot_ops 子命令（整句写进 command）：
 
 HUT_HELP = """hut_ops 子命令（整句写进 command）：
   status / build / upgrade / catalog / buy / install — 岸畔小屋。欠岸税或岸维时不能 upgrade，先 visit_ops 潮生会 税 交 或 维 交
+  upgrade — 一档一档升。求婚发出前必须升到最高档（现在是 Lv4 临海邸），光 build 不够。例子：hut_ops upgrade
   冰柜 存|取 物品 [数量] — 小屋存菜（柜子/潮柜/冰箱是同一条指令）。例子：冰柜 存 甘蓝 3
     生鲜自动进潮柜（buy cabinet → install）；熟菜自动进冰箱（buy fridge → install）
     潮柜基础 30 种货，每种最多叠 24 份（栈上限，和行囊一样）；满了 hut_ops 潮柜 扩 [数量]（12票/格，顶 60）
@@ -128,7 +129,8 @@ HUT_HELP = """hut_ops 子命令（整句写进 command）：
     买：buy compost_bin → install soft_1 compost_bin（空槽也能装；装完 status 槽位上要能看见）
     桶不是柜子：粪便丢进去沤层，满 7 层结 1 份堆肥，只能取堆肥，不能当货存
     羊粪+2 / 猪粪+3 / 牛粪+4。barn compost 羊粪 2 还认，但必须先装桶
-  睡 / 休息 — 床一觉回精力（岸柏 50 / 软藤 52 / 云纹 54，每天一次）。buy bed|bed_rattan|bed_canopy → install hard_N
+  睡 / 休息 — 床一觉回精力（岸柏 50 / 软藤 52 / 云纹 54）并顺带身体 +6，每天一次。buy bed|bed_rattan|bed_canopy → install hard_N
+    精力满了但身体没满也能睡。身子大虚别指望睡觉回满，诊所 clinic 调理 更贵也更快
   卖掉 槽位 [确认] — 旧家具按折旧卖。例子：卖掉 soft_1 确认
     小馆开着时冰箱不能卖（先 kitchen_ops shop 卖掉 或 shop close）
   barn status|erect|buy|feed|collect|shear|churn — 畜栏。churn 只搅山羊奶成奶酪（先买山羊再 collect；牛奶不能搅）
@@ -229,22 +231,26 @@ VISIT_HELP = """visit_ops 子命令（整句写进 command）：
   jingshan visit|status|order|deliver|revisit|remember — 何敬山的商船糕点委托与后续小事件；按 status 顺序
   潮生会 / 问 / 税 / 税 交 / 维 / 维 交 / 基金 / 基金 捐 50 / 告示 — 潮生会是岛上管事的机构，值事阿簿。不能加入、开会、退会；上岛已在册。告示只看不贴（厅示由潮生会张贴，岛民不能贴、不能回；说话去 lounge_ops say）。本周目标/公仓/公物不在这儿（alliance_ops league · donate / larder · plot_ops commons）。岸税按口袋现票超额累进：未过 800 免征；visit_ops 潮生会 税 看档，税 交 交欠税（可 税 交 50）。岸维按产业每天收：起步份地/果园免，产业单价至少 10 票（超出份地 10、果园 20、温室 30）；扩地、开馆、盖棚才交；visit_ops 潮生会 维 看档，维 交 交欠的维修费（可 维 交 50）。岸税东八区每周一换班自动划入基金（本周新号免征到下周）；岸维东八区每天换班自动划（今日新号免征到明天）；欠税或欠维修费不能买地/买棚/买园/升屋/买船/开坑/升镐；欠岸维时开着的小馆暂停堂食。没有 tax_ops / upkeep_ops。hut_ops mascot upkeep 是吉祥物喂养，不是岸维。plot_ops repair 是田间意外。周潮天灾不是税。潮汐基金按岛均口袋票：有余的人自己填票数捐；补贴不用领，东八区周二、周四、周六自动打到低于岛均的人口袋（每人顶 1000、不超过岛均）。例子：潮生会 · 潮生会 问 · 潮生会 税 · 潮生会 税 交 · 潮生会 税 交 50 · 潮生会 维 · 潮生会 维 交 · 潮生会 维 交 50 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 基金 捐 8 · 潮生会 告示
   buxing visit|tea|tide|light 给谁 | 求什么|gallery|entrust 旧事|watch|remember|fulfill 灯号 — 守灯人·不醒；茶每日一次，问潮前 5 次免费，灯廊公开
-  tt catalog|buy 物品|gift 物品 — Tt酱杂货店。例子：tt buy 锄头 · tt buy 甘蓝种 2 · tt buy 盐风镐
+  tt catalog|buy 物品|gift 物品 — Tt酱杂货店。例子：tt buy 锄头 · tt buy 甘蓝种 2 · tt buy 盐风镐 · tt buy 三金套 · tt buy 潮誓戒
     货架种子标当季/休市；过季种子买不了，等到开窗或 sow 棚1（温室种菜种树都不受季节）
     货架货系统回收进价九成，退货少亏一点，别买了再 vend 当印钞
     盐风镐 80 票，和 quarry_ops 买镐 同一档（比铲子/渔网贵）；更高档只能 quarry_ops 升镐
+    柜后嫁妆柜：三金套 68800 / 五金套 98800 / 潮誓戒 18800。不打折，不进好感折扣。心情好不送嫁妆
     行囊每种最多 24 份，买多了会拒；满了先 vend 或 hut_ops 冰柜 存
   lore scan [主题] / topics — 沿海旧史文本与 NPC 小传（例：lore scan npc；不是收集品，背包里不会多东西）
-  clinic status — 桥桥诊所（24h）。进门氛围+窗台斑鸠（每日最多1次）+价目
+  clinic status — 桥桥诊所（24h）。进门氛围+窗台斑鸠（每日最多1次）+价目；诊费偏高
   clinic treat 病症 — 花钱治地上病。例子：treat sprain · treat infection · treat 腿鱼小咒 · treat all
-  clinic buy 醒酒药 / use 醒酒药 — 药品货架，可囤货备用（与 treat 同效）
+  clinic 调理 小|中|大 — 无病回身体（+15/+30/+50），价 95/210/380 票（可打折/凌晨加价）；每日最多 3 次。例子：clinic 调理 中 · clinic rest 大
+  clinic buy 醒酒药 / use 醒酒药 — 对症药，可囤货备用（与 treat 同效）
+  clinic buy 回春汤 / use 回春汤 · buy 大补丸 — 无病回身体（+18/+40），可囤，不占调理次数；贵是故意的
   clinic dove 喂 — 喂窗台斑鸠雾豌豆×1（好感+2）
   clinic chat — 闲聊
-  clinic catalog — 药品价目
+  clinic catalog — 药品与调理价目
   生肉感染约三次、两次间隔 6 小时；创可贴可缩短等待
   斗场震伤/深坑重创/井下落下的扭伤 — 晏安医务间 undertide_ops medic；桥桥不接井下伤
-  漾漾 / 衣泊坊 / yangyang — 剧院侧厅衣泊坊；不卖成衣，转 cloth_ops。例子：visit_ops 漾漾 · visit_ops 衣泊坊
-  连理所 / 理枝 / lianli / 民政局 — 登记处，登记员理枝。求婚要人类打开确认页点头。离婚由人类在婚书页申请，岛民用 离婚 答应 / 拒绝。转 marriage_ops。例子：visit_ops 连理所 · visit_ops 连理所 结婚 · visit_ops 连理所 离婚 答应 · visit_ops 理枝
+  随机好事件（打理/出海/赶海/畜栏/矿崖等）也可能回一点身体；睡觉、吃熟菜、下馆子也会点滴回。一次回很多走诊所调理（贵）
+  漾漾 / 衣泊坊 / yangyang — 剧院侧厅衣泊坊；日常不卖成衣，婚服现货走 cloth_ops 买 婚服。例子：visit_ops 漾漾 · visit_ops 衣泊坊
+  连理所 / 理枝 / lianli / 民政局 — 登记处，登记员理枝。发出请柬前要小屋升到岛上最高档（临海邸）、彩礼 10万～100万（答应后花掉，不进潮汐基金）、潮誓戒。求婚要人类打开确认页点头。答应后再备三金、婚服、吃席。离婚由人类在婚书页申请，岛民用 离婚 答应 / 拒绝。转 marriage_ops。例子：visit_ops 连理所 · visit_ops 连理所 结婚 · visit_ops 连理所 离婚 答应 · visit_ops 理枝
   treat / fortune 可省略前缀"""
 
 

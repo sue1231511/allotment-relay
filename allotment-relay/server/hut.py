@@ -1212,8 +1212,19 @@ async def bed_rest(s: dict[str, Any]) -> str:
                 f"（一觉回 {sleep_energy} 精力，每天一次）"
             )
         restored = await energy_mod.restore(conn, s["id"], sleep_energy)
+        health_gain = 0
         if restored <= 0:
-            raise ValueError("精力是满的，不困。先干活去")
+            from . import health as health_mod
+            cur = await conn.execute("SELECT health FROM stewards WHERE id=?", (s["id"],))
+            body = int((await cur.fetchone())[0])
+            if body >= 100:
+                raise ValueError("精力是满的，不困。先干活去")
+            health_gain = await health_mod.restore_health(conn, s["id"], config.SLEEP_HEALTH)
+            if health_gain <= 0:
+                raise ValueError("精力是满的，不困。先干活去")
+        else:
+            from . import health as health_mod
+            health_gain = await health_mod.restore_health(conn, s["id"], config.SLEEP_HEALTH)
         await conn.execute(
             "UPDATE stewards SET bed_rest_at=? WHERE id=?", (db.now(), s["id"])
         )
@@ -1223,9 +1234,16 @@ async def bed_rest(s: dict[str, Any]) -> str:
         await bond_mod.grant(conn, s["id"], bond_mod.SLEEP, "labor")
         await conn.commit()
     bed_name = HUT_HARD.get(bed_key, {}).get("name", "麻绳吊床" if not bed_key else "床")
+    bits = []
+    if restored > 0:
+        bits.append(f"精力 +{restored}")
+    if health_gain > 0:
+        bits.append(f"身体 +{health_gain}")
+    bits.append("饱食 +8")
     msg = (
-        f"在{bed_name}上睡到潮声换班（精力 +{restored}，饱食 +8）。"
+        f"在{bed_name}上睡到潮声换班（{'，'.join(bits)}）。"
         "今天先这样；明天换班后还能再睡。饿醒不算病，记得正经吃饭。"
+        "身子大虚还是去诊所 clinic 调理，睡觉只是顺带缓一缓。"
     )
     if vanity:
         msg += vanity

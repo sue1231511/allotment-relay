@@ -657,6 +657,11 @@ async def _run_work(
     )
     if hangover:
         msg += f"\n{hangover}\n→ visit_ops clinic treat hangover（{AILMENTS['hangover']['cost']} 票）"
+    boost = await health.maybe_restore_health(
+        conn, s["id"], "bar_shift", chance=0.14, lo=4, hi=10,
+    )
+    if boost:
+        msg += f"\n{boost}"
     reaction = owner_event_reaction(state, day, "work")
     return append_owner_reaction(msg, reaction)
 
@@ -867,6 +872,11 @@ async def _cmd_order(conn: aiosqlite.Connection, s: dict[str, Any], drink_name: 
     msg = f"«{drink['name']} · -{cost} 票\n\n{text}\n\n{note}»"
     if hangover:
         msg += f"\n\n{hangover}"
+    drink_boost = await health.maybe_restore_health(
+        conn, s["id"], "bar_shift", chance=0.16, lo=3, hi=8,
+    )
+    if drink_boost:
+        msg += f"\n{drink_boost}"
     await db.add_chronicle(
         "bar_drink", f"{s['name']} 点 {drink['name']}（-{cost}票）", s["id"], conn=conn,
     )

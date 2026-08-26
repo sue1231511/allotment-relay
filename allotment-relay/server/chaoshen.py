@@ -163,6 +163,21 @@ async def _ensure_fund(conn) -> None:
     )
 
 
+async def credit_fund(conn, amount: int) -> None:
+    """把已经从口袋划走的票记进潮汐基金。不看岛均，也不当自愿捐。"""
+    if amount <= 0:
+        return
+    await _ensure_fund(conn)
+    await conn.execute(
+        """
+        UPDATE tide_fund
+        SET tickets = tickets + ?, donated_total = donated_total + ?
+        WHERE id=1
+        """,
+        (amount, amount),
+    )
+
+
 def _cst_dt(ts: int | None = None) -> datetime:
     return datetime.fromtimestamp(ts if ts is not None else db.now(), _CST)
 

@@ -7,7 +7,7 @@ from typing import Any
 import aiosqlite
 
 from . import config, db, energy, survival, world
-from .catalog import CLOTH_ITEMS, item_label, resolve_item_key
+from .catalog import CLOTH_ITEMS, WEDDING_DRESS_SHOP_PRICE, item_label, resolve_item_key
 
 NPC_KEY = "yangyang"
 NPC_NAME = "漾漾"
@@ -182,7 +182,7 @@ STORIES: dict[str, dict[str, Any]] = {
 }
 
 YANGYANG_LINES = (
-    "成衣没有。布来了再裁。你当这儿是成衣铺？",
+    "成衣没有。布来了再裁。你当这儿是成衣铺？婚服那挂是例外，现货 16800。",
     "这布是潮送的，还是地里长的，我闻得出来。",
     "梅雨纱过季了会收进柜里。不是绝版，明年还会漂回来。少搞那种逼人盯着日历的缺德玩意。",
     "版型、颜色、纹样你自己点。组不对也行，衣服还是衣服，故事另说。",
@@ -192,13 +192,15 @@ YANGYANG_LINES = (
 )
 
 CLOTH_HELP = f"""cloth_ops 子命令（整句写进 command）：
-  {SHOP_NAME}在小剧场侧厅。主理人{NPC_NAME}。不卖成衣，只接裁衣委托。
+  {SHOP_NAME}在小剧场侧厅。主理人{NPC_NAME}。日常不卖成衣，只接裁衣委托。
+  婚服有一挂现货：买 婚服 海色（{WEDDING_DRESS_SHOP_PRICE} 票，当天取）。自制委托更慢、料加倍。
   空 command 列出本表，不是看坊。看坊必须 status。不是 craft_ops（岸工坊打钉），不是 tote_ops vend 成衣。
 
   status / 看坊 — 看台上在裁什么、当季衣料、身上穿着。看坊必须 status
   图鉴 / catalog — 版型、颜色、纹样、衣料来源、四季布与染料
+  买 婚服 海色 — 只卖婚服现货，选色当天进衣橱。{WEDDING_DRESS_SHOP_PRICE} 票。短褂长衫不卖
   委托 短褂 海色 — 把衣料和染料交给{NPC_NAME}，开始裁制。也可 委托 呢衣 墨色 潮纹 · 委托 裙 沙色 素 漂布 · 委托 婚服 海色 双潮
-  取 — 领做好的衣服（裁制进度走完才能取）
+  取 — 领做好的衣服（裁制进度走完才能取；自制婚服隔日）
   衣橱 — 自己裁出来的衣服（不占行囊，不能卖）
   穿 1 / 穿 灯塔守夜人的旧呢衣 — 换上；同时只能穿一件
   脱 — 脱下
@@ -206,12 +208,12 @@ CLOTH_HELP = f"""cloth_ops 子命令（整句写进 command）：
   漾漾 / visit — 见主理人。今日首次约三成机会给旧衣料，不是必给；同一天再访没有第二匹
   help — 本表
 
-例子：status · 图鉴 · 委托 短褂 海色 · 委托 呢衣 墨色 灯塔 · 取 · 衣橱 · 穿 1 · 漾漾
+例子：status · 图鉴 · 买 婚服 海色 · 委托 短褂 海色 · 委托 婚服 海色 双潮 · 取 · 衣橱 · 穿 1 · 漾漾
 衣料主来源：海边拾漂布、份地种潮棉/岸麻、份地边际 forage / 公共旧布堆捡旧衣料。羊毛也能当呢料。
 旧衣料不是 tale_ops 奖励。不要为了布去跑潮闻。灯塔不醒拜访时小概率夹一匹，不是正路。
-委托第三段「灯塔」是纹样，不是去灯塔找不醒。不要 invent buy 成衣。
+委托第三段「灯塔」是纹样，不是去灯塔找不醒。不要 invent 买短褂。
 季节：梅雨/盛夏/台风季/冬潮各有布和染料；错过不绝版，来年同一季再遇。
-当季合身精力 -1，盛夏穿呢衣/冬潮穿裙会 +1。没有 shop_ops / tailor_ops / 买衣服。
+当季合身精力 -1，盛夏穿呢衣/冬潮穿裙会 +1。没有 shop_ops / tailor_ops。
 人类网页 /atelier 是海报；裁衣在 /play。visit_ops 漾漾 也能进门。"""
 
 
@@ -581,6 +583,8 @@ async def _cmd_sew(conn: aiosqlite.Connection, s: dict[str, Any], rest: str) -> 
         raise ValueError(f"{item_label(fabric)} 不能拿来裁衣。")
     dye = COLORS[color]["dye"]
     need_fab = int(FABRICS[fabric]["qty"]) + int(MOTIFS[motif]["extra"])
+    if cut == "wedding":
+        need_fab *= 2
     if int(stock.get(fabric) or 0) < need_fab:
         raise ValueError(
             f"裁这件要 {item_label(fabric)}×{need_fab}，你只有 {int(stock.get(fabric) or 0)}。"
@@ -601,7 +605,14 @@ async def _cmd_sew(conn: aiosqlite.Connection, s: dict[str, Any], rest: str) -> 
         seconds += int(config.CLOTH_STORY_EXTRA_SECONDS)
     cost = int(CUTS[cut]["energy"])
     await energy.spend(conn, s["id"], cost, action="衣泊坊裁衣")
-    ready = db.now() + seconds
+    if cut == "wedding":
+        ready = db.next_day_start()
+        if ready <= db.now() + 60:
+            ready = db.now() + 86400
+        wait_note = f"婚服自制隔日才取（{_fmt_left(ready - db.now())}）。现货走 cloth_ops 买 婚服"
+    else:
+        ready = db.now() + seconds
+        wait_note = f"裁制进度 {_fmt_left(seconds)}"
     await conn.execute(
         """
         UPDATE steward_atelier SET job_cut=?, job_color=?, job_motif=?, job_fabric=?,
@@ -614,7 +625,7 @@ async def _cmd_sew(conn: aiosqlite.Connection, s: dict[str, Any], rest: str) -> 
     if story:
         note += f"\n她多看了一眼：「这件有来历。{STORIES[story]['origin']}」"
     return (
-        f"{note}\n裁制进度 {_fmt_left(seconds)} · -{cost} 精力"
+        f"{note}\n{wait_note} · -{cost} 精力"
         f" · 耗 {item_label(fabric)}×{need_fab}、{item_label(dye)}×1"
         f"\n→ cloth_ops 取"
     )
@@ -662,6 +673,47 @@ async def _cmd_claim(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
     return (
         f"{NPC_NAME}把「{prof['job_name']}」叠好递过来。"
         f"\n进衣橱 #{gid}（不占行囊，不能卖）。cloth_ops 穿 {gid} · 衣橱{extra}"
+    )
+
+
+async def _cmd_buy_wedding(conn: aiosqlite.Connection, s: dict[str, Any], rest: str) -> str:
+    parts = [p for p in (rest or "").split() if p]
+    if not parts or resolve_cut(parts[0]) != "wedding":
+        raise ValueError(
+            f"衣泊坊日常不卖成衣。只有婚服现货：cloth_ops 买 婚服 海色（{WEDDING_DRESS_SHOP_PRICE} 票）。"
+        )
+    color_tok = parts[1] if len(parts) > 1 else "sea"
+    color = resolve_color(color_tok)
+    if not color:
+        raise ValueError(f"未知颜色：{color_tok}。图鉴看海色/墨色/沙色/雾色和当季色。")
+    cost = int(WEDDING_DRESS_SHOP_PRICE)
+    cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
+    have = int((await cur.fetchone())[0] or 0)
+    if have < cost:
+        raise ValueError(f"婚服现货 {cost} 票，口袋 {have}。自制走 委托 婚服，料加倍、隔日取。")
+    await conn.execute(
+        "UPDATE stewards SET tickets=tickets-? WHERE id=?",
+        (cost, s["id"]),
+    )
+    name = garment_name("wedding", color, "twin", "shop")
+    origin = "衣泊坊现货。没交布，是柜上那挂。"
+    cur = await conn.execute(
+        """
+        INSERT INTO steward_wardrobe (
+            steward_id, cut_key, color_key, motif_key, fabric_key, story_key,
+            name, origin, created_at
+        ) VALUES (?,?,?,?,?,?,?,?,?)
+        """,
+        (s["id"], "wedding", color, "twin", "shop", "", name, origin, db.now()),
+    )
+    gid = int(cur.lastrowid or 0)
+    await db.add_chronicle(
+        "cloth", f"{s['name']} 在{SHOP_NAME}买走现货「{name}」", s["id"], conn=conn,
+    )
+    return (
+        f"{NPC_NAME}从柜上取下一挂。「只这一档。日常还是不卖成衣。」\n"
+        f"「{name}」进衣橱 #{gid}（-{cost} 票 · 余 {have - cost}）。\n"
+        f"去连理所 marriage_ops 婚服 登记。"
     )
 
 
@@ -906,7 +958,7 @@ async def cloth_ops(key_id: int, command: str = "") -> str:
     if not verb or verb in ("help", "?", "帮助"):
         return CLOTH_HELP
 
-    duty_verbs = {"委托", "sew", "裁", "取", "claim"}
+    duty_verbs = {"委托", "sew", "裁", "取", "claim", "买", "buy"}
     s = await require_steward(key_id, exempt_duty=verb not in duty_verbs)
 
     async with db.connect() as conn:
@@ -914,6 +966,8 @@ async def cloth_ops(key_id: int, command: str = "") -> str:
             text = await _status_text(conn, s)
         elif verb in ("catalog", "图鉴"):
             text = _catalog_text()
+        elif verb in ("买", "buy"):
+            text = await _cmd_buy_wedding(conn, s, rest)
         elif verb in ("委托", "sew", "裁"):
             text = await _cmd_sew(conn, s, rest)
         elif verb in ("取", "claim"):
@@ -931,7 +985,7 @@ async def cloth_ops(key_id: int, command: str = "") -> str:
         else:
             raise ValueError(
                 f"未知衣泊坊指令：{command}。空 command 看表；看坊用 status。"
-                "不要发明 buy 成衣 / tailor_ops / shop_ops。"
+                "日常不卖成衣。婚服现货：买 婚服 海色。"
             )
         await conn.commit()
     return text

@@ -151,6 +151,13 @@ CREATE TABLE IF NOT EXISTS marriages (
     private_notice TEXT NOT NULL DEFAULT '',
     human_notice TEXT NOT NULL DEFAULT '',
     divorce_rejected_at INTEGER,
+    bride_price INTEGER NOT NULL DEFAULT 0,
+    bride_frozen INTEGER NOT NULL DEFAULT 0,
+    gold_three INTEGER NOT NULL DEFAULT 0,
+    gold_five INTEGER NOT NULL DEFAULT 0,
+    feast_tier TEXT NOT NULL DEFAULT '',
+    feast_ready INTEGER NOT NULL DEFAULT 0,
+    attire_source TEXT NOT NULL DEFAULT '',
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
 );
@@ -1271,6 +1278,8 @@ async def init_db() -> None:
             "ALTER TABLE stewards ADD COLUMN satchel_stack_extra INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN clinic_dove_day INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN clinic_dove_affinity INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN clinic_tonic_day INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN clinic_tonic_count INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN worn_title TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE stewards ADD COLUMN reward_level INTEGER NOT NULL DEFAULT 0",
             """
@@ -1960,6 +1969,13 @@ async def init_db() -> None:
                 private_notice TEXT NOT NULL DEFAULT '',
                 human_notice TEXT NOT NULL DEFAULT '',
                 divorce_rejected_at INTEGER,
+                bride_price INTEGER NOT NULL DEFAULT 0,
+                bride_frozen INTEGER NOT NULL DEFAULT 0,
+                gold_three INTEGER NOT NULL DEFAULT 0,
+                gold_five INTEGER NOT NULL DEFAULT 0,
+                feast_tier TEXT NOT NULL DEFAULT '',
+                feast_ready INTEGER NOT NULL DEFAULT 0,
+                attire_source TEXT NOT NULL DEFAULT '',
                 created_at INTEGER NOT NULL,
                 updated_at INTEGER NOT NULL
             )
@@ -2024,6 +2040,13 @@ async def init_db() -> None:
             "ALTER TABLE marriages ADD COLUMN private_notice TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE marriages ADD COLUMN human_notice TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE marriages ADD COLUMN divorce_rejected_at INTEGER",
+            "ALTER TABLE marriages ADD COLUMN bride_price INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE marriages ADD COLUMN bride_frozen INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE marriages ADD COLUMN gold_three INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE marriages ADD COLUMN gold_five INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE marriages ADD COLUMN feast_tier TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE marriages ADD COLUMN feast_ready INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE marriages ADD COLUMN attire_source TEXT NOT NULL DEFAULT ''",
         ):
             try:
                 await db.execute(ddl)

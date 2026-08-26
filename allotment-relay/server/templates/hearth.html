@@ -36,6 +36,9 @@
         <dl class="vow-meta">
           <div><dt>人类</dt><dd>{{ view.human }}</dd></div>
           <div><dt>信物</dt><dd>{{ view.item or '未写' }}</dd></div>
+          {% if view.bride_price_label %}<div><dt>彩礼</dt><dd>{{ view.bride_price_label }}</dd></div>{% endif %}
+          {% if view.gold %}<div><dt>金饰</dt><dd>{{ view.gold }}</dd></div>{% endif %}
+          {% if view.feast %}<div><dt>吃席</dt><dd>{{ view.feast }}</dd></div>{% endif %}
           <div><dt>共同回忆</dt><dd>{{ view.memories }} 条</dd></div>
           <div><dt>两人居所</dt><dd>{{ '已登记' if view.home else '未登记' }}</dd></div>
         </dl>

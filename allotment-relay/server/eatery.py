@@ -392,6 +392,8 @@ async def _dine(guest: dict[str, Any], shop_name: str, item_ref: str | None) -> 
         from . import kitchen as kitchen_mod
         cured_line = await kitchen_mod.ate_cooked_meal(conn, guest["id"])
         restored = await energy.restore(conn, guest["id"], gain)
+        from . import health as health_mod
+        dine_heal = await health_mod.restore_health(conn, guest["id"], config.DINE_HEALTH)
         # 堂食「饱餐」：行动精力 -1 一段时间 + 雾智/档信小加成——家里自己吃没有，
         # 这是饭馆相对集市（买货回家吃只有基础精力）的溢价来源
         await conn.execute(
@@ -431,7 +433,9 @@ async def _dine(guest: dict[str, Any], shop_name: str, item_ref: str | None) -> 
     dish = item_label(picked["item"])
     label = shop.get("eatery_label") or f"{shop['name']}的馆"
     msg = (
-        f"在「{label}」吃了 {dish}（-{price} 票，精力 +{restored}）\n{note}"
+        f"在「{label}」吃了 {dish}（-{price} 票，精力 +{restored}"
+        + (f"，身体 +{dine_heal}" if dine_heal else "")
+        + f"）\n{note}"
     )
     hours = config.DINE_BUFF_SECONDS // 3600
     msg += (

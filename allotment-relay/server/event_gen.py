@@ -84,6 +84,33 @@ def _ticket_range(domain: str, kind: str) -> tuple[int, int]:
     return ranges.get(domain, (4, 10))
 
 
+def _health_flavor(domain: str) -> list[str]:
+    if domain in {"sea", "pen"}:
+        return flavor.GOOD_HEALTH_SEA
+    if domain == "voyage":
+        return flavor.GOOD_HEALTH_VOYAGE
+    if domain in {"land", "guild"}:
+        return flavor.GOOD_HEALTH_LAND
+    return flavor.GOOD_HEALTH
+
+
+def _append_health(
+    effects: list[str],
+    detail_parts: list[str],
+    steward: dict[str, Any],
+    domain: str,
+    *,
+    lo: int = 5,
+    hi: int = 12,
+) -> bool:
+    if int(steward.get("health") or 100) >= 100:
+        return False
+    heal = random.randint(lo, hi)
+    effects.append(f"health:{heal}")
+    detail_parts.append(flavor.fill(flavor.pick(_health_flavor(domain)), n=heal))
+    return True
+
+
 def generate_event(
     trigger: str,
     steward: dict[str, Any],
@@ -253,11 +280,11 @@ def generate_event(
 
     else:
         roll = random.random()
-        if roll < 0.28:
+        if roll < 0.26:
             bonus = random.randint(*_ticket_range(domain, "good"))
             effects.append(f"ticket_bonus:{bonus}")
             detail_parts.append(flavor.fill(flavor.pick(flavor.GOOD_TICKETS), n=bonus))
-        elif roll < 0.52 and domain in {"sea", "voyage", "pen"}:
+        elif roll < 0.48 and domain in {"sea", "voyage", "pen"}:
             zones = {"near", "shore"} if domain == "pen" else {"near", "far", "deep", "shore"}
             if domain == "voyage":
                 zones = {"far", "deep"}
@@ -266,23 +293,23 @@ def generate_event(
             item = ITEM_NAMES.get(f"fish_{fk}", fk)
             effects.append(f"loot:fish_{fk}:{qty}")
             detail_parts.append(flavor.fill(flavor.pick(flavor.GOOD_FISH), item=f"{item} x{qty}"))
-        elif roll < 0.68:
+        elif roll < 0.62:
             item, qty = random.choice(RANDOM_LOOT)
             iname = ITEM_NAMES.get(item, item)
             effects.append(f"loot:{item}:{qty}")
             detail_parts.append(flavor.fill(flavor.pick(flavor.GOOD_LOOT), item=f"{iname} x{qty}"))
-        elif roll < 0.82 and domain in {"land", "guild", "hearth"}:
+        elif roll < 0.74 and domain in {"land", "guild", "hearth"}:
             wit = random.randint(4, 10)
             effects.append(f"mist_wit:{wit}")
             detail_parts.append(flavor.fill(flavor.pick(flavor.GOOD_MIST_WIT), n=wit))
-        elif roll < 0.90 and domain in {"land", "guild"}:
+        elif roll < 0.82 and domain in {"land", "guild"}:
             stand = random.randint(3, 8)
             effects.append(f"standing:{stand}")
             detail_parts.append(flavor.fill(flavor.pick(flavor.GOOD_STANDING), n=stand))
-        elif roll < 0.96 and int(steward.get("health") or 100) < 100:
-            heal = random.randint(3, 8)
-            effects.append(f"health:{heal}")
-            detail_parts.append(flavor.fill(flavor.pick(flavor.GOOD_HEALTH), n=heal))
+        elif roll < 0.93 and _append_health(
+            effects, detail_parts, steward, domain, lo=5, hi=14
+        ):
+            pass
         else:
             bonus = random.randint(6, 14)
             effects.append(f"ticket_bonus:{bonus}")
@@ -299,6 +326,12 @@ def generate_event(
                 flavor.pick(flavor.FORAGE_BONUS),
                 item=ITEM_NAMES.get(item, item),
             ))
+        # 好事件附加：身体未满时偶尔再回一点（各种域都有）
+        if (
+            not any(e.startswith("health:") for e in effects)
+            and random.random() < 0.16
+        ):
+            _append_health(effects, detail_parts, steward, domain, lo=3, hi=8)
 
     if not detail_parts:
         return None
@@ -401,18 +434,18 @@ def generate_naval_encounter(
         kind = "good"
         label = flavor.event_label("naval", "good")
         sub = random.random()
-        if sub < 0.4:
+        if sub < 0.34:
             bonus = random.randint(8, 18)
             effects.append(f"ticket_bonus:{bonus}")
             detail = flavor.fill(flavor.pick(flavor.NAVAL_GOOD), n=bonus, loot="红包")
-        elif sub < 0.72:
+        elif sub < 0.60:
             zones = {"near", "far", "deep"} if route != "near" else {"near", "shore"}
             fk = random.choice(fish_keys_for_zones(zones) or ["herring"])
             qty = random.randint(1, 2)
             effects.append(f"loot:fish_{fk}:{qty}")
             iname = ITEM_NAMES.get(f"fish_{fk}", fk)
             detail = flavor.fill(flavor.pick(flavor.NAVAL_GOOD), loot=f"{iname} x{qty}", n=0)
-        else:
+        elif sub < 0.82:
             wit = random.randint(6, 14)
             effects.append(f"mist_wit:{wit}")
             effects.append(f"satiety:{random.randint(3, 8)}")
@@ -421,6 +454,19 @@ def generate_naval_encounter(
                 loot="热汤",
                 n=wit,
             )
+        else:
+            heal = random.randint(6, 14)
+            effects.append(f"health:{heal}")
+            detail = flavor.fill(flavor.pick(flavor.GOOD_HEALTH_VOYAGE), n=heal)
+        # 出海好运偶尔再附带一点气色
+        if (
+            int(steward.get("health") or 100) < 100
+            and not any(e.startswith("health:") for e in effects)
+            and random.random() < 0.22
+        ):
+            extra_heal = random.randint(3, 8)
+            effects.append(f"health:{extra_heal}")
+            detail = detail + "，" + flavor.fill(flavor.pick(flavor.GOOD_HEALTH_VOYAGE), n=extra_heal)
     else:
         kind = "neutral"
         label = flavor.pick(flavor.NAVAL_NEUTRAL_LABEL)

@@ -457,6 +457,8 @@ HUT_LEVELS = {
     3: {"name": "联盟小宅", "upgrade": 290, "hard": 3, "soft": 5},
     4: {"name": "临海邸", "upgrade": 420, "hard": 4, "soft": 6},
 }
+HUT_MAX_LEVEL = max(HUT_LEVELS)
+HUT_MAX_NAME = HUT_LEVELS[HUT_MAX_LEVEL]["name"]
 
 def bed_sleep_energy(item_key: str) -> int:
     from . import config
@@ -601,6 +603,10 @@ QUARRY_ORES = {
         "name": "夜光髓", "emoji": "🌟", "sell": 90, "kind": "refined",
         "raw": "quarry_marrow_raw", "aliases": ("夜髓", "marrow"),
     },
+    "quarry_gold_sand": {
+        "name": "金砂", "emoji": "🪙", "sell": 80, "kind": "raw",
+        "aliases": ("金沙", "潮金砂", "gold_sand"),
+    },
 }
 
 # 矿脉：潮汐/天气改权重。涨潮出盐，退潮出铁，海雾出稀有。不是赶海沙滩。
@@ -648,6 +654,12 @@ QUARRY_VEINS = {
         "tide_bonus": {"flood": -4, "slack": 2, "ebb": 6},
         "weather_bonus": {"clear": -8, "misty": 10, "gale": 0},
         "phase_bonus": {"night": 10, "dusk": 3, "day": -6},
+    },
+    "gold": {
+        "name": "金砂脉", "emoji": "🪙", "raw": "quarry_gold_sand",
+        "min_tier": 1, "weight": 3, "strikes": (1, 2),
+        "tide_bonus": {"flood": -2, "slack": 4, "ebb": 6},
+        "weather_bonus": {"clear": 2, "misty": 4, "gale": -4},
     },
 }
 
@@ -794,6 +806,12 @@ CRAFT_RECIPES = {
         "need": {"quarry_marrow": 1, "quarry_fog_lead": 1, "drift_twine": 1},
         "seconds": 1500, "energy": 9,
         "hint": "hut_ops install soft_N marrow_sieve。风暴打捞空捞 ×0.70",
+    },
+    "tide_vow_ring": {
+        "name": "潮誓戒", "emoji": "💍", "out": "tide_vow_ring", "qty": 1,
+        "need": {"tide_vow_sand": 6, "quarry_gold_sand": 1},
+        "seconds": 1200, "energy": 10,
+        "hint": "自制婚戒。比 Tt酱买现货慢。marriage_ops 成戒 会转来这里",
     },
 }
 
@@ -1140,65 +1158,66 @@ MYTH_INGREDIENTS = {
 }
 
 # 病症 — 随机事件致病；生肉感染要多次治疗。visit_ops clinic treat 花钱治（必须花票）
+# 诊费偏高：口袋票多的岛民靠「硬扛不挂号」攒钱，桥桥专门刮这一层。
 AILMENTS = {
     "sprain": {
-        "name": "扭伤", "emoji": "🦵", "cost": 18, "health_loss": 10, "health_restore": 14,
+        "name": "扭伤", "emoji": "🦵", "cost": 26, "health_loss": 10, "health_restore": 14,
         "hint": "干农活扭的，走路抽抽", "energy_extra": 2,
     },
     "cut": {
-        "name": "篱笆划伤", "emoji": "🩹", "cost": 12, "health_loss": 8, "health_restore": 10,
+        "name": "篱笆划伤", "emoji": "🩹", "cost": 18, "health_loss": 8, "health_restore": 10,
         "hint": "铁丝网留的，别硬撑", "energy_extra": 1,
     },
     "backache": {
-        "name": "腰肌劳损", "emoji": "💢", "cost": 20, "health_loss": 12, "health_restore": 15,
+        "name": "腰肌劳损", "emoji": "💢", "cost": 28, "health_loss": 12, "health_restore": 15,
         "hint": "弯腰太多，直不起来", "energy_extra": 2, "max_energy_cut": 5,
     },
     "allergy": {
-        "name": "花粉过敏", "emoji": "🤧", "cost": 16, "health_loss": 9, "health_restore": 12,
+        "name": "花粉过敏", "emoji": "🤧", "cost": 24, "health_loss": 9, "health_restore": 12,
         "hint": "打喷嚏停不下来", "energy_extra": 1,
     },
     "cold": {
-        "name": "海雾感冒", "emoji": "🤒", "cost": 15, "health_loss": 10, "health_restore": 13,
+        "name": "海雾感冒", "emoji": "🤒", "cost": 22, "health_loss": 10, "health_restore": 13,
         "hint": "雾进肺里，咳", "energy_extra": 2,
     },
     "shell_scratch": {
-        "name": "贝壳刮脚", "emoji": "🦶", "cost": 10, "health_loss": 6, "health_restore": 8,
+        "name": "贝壳刮脚", "emoji": "🦶", "cost": 16, "health_loss": 6, "health_restore": 8,
         "hint": "退潮滩上血线一道", "energy_extra": 1,
     },
     "jelly_sting": {
-        "name": "水母蛰", "emoji": "🌊", "cost": 22, "health_loss": 14, "health_restore": 16,
+        "name": "水母蛰", "emoji": "🌊", "cost": 32, "health_loss": 14, "health_restore": 16,
         "hint": "网底惊喜，又肿又痒", "energy_extra": 3,
     },
     "food_poison": {
-        "name": "肠胃闹腾", "emoji": "🤢", "cost": 24, "health_loss": 15, "health_restore": 18,
+        "name": "肠胃闹腾", "emoji": "🤢", "cost": 36, "health_loss": 15, "health_restore": 18,
         "hint": "吃了不该吃的", "energy_extra": 2, "max_energy_cut": 8,
     },
     "hangover": {
-        "name": "宿醉", "emoji": "🍺", "cost": 18, "health_loss": 11, "health_restore": 14,
+        "name": "宿醉", "emoji": "🍺", "cost": 28, "health_loss": 11, "health_restore": 14,
         "hint": "昨晚陪聊陪多了", "energy_extra": 2, "max_energy_cut": 10,
     },
     "sunburn": {
-        "name": "日晒灼伤", "emoji": "☀️", "cost": 14, "health_loss": 8, "health_restore": 11,
+        "name": "日晒灼伤", "emoji": "☀️", "cost": 20, "health_loss": 8, "health_restore": 11,
         "hint": "赶海没涂泥，红成虾", "energy_extra": 1,
     },
     "blister": {
-        "name": "磨起泡", "emoji": "💧", "cost": 11, "health_loss": 5, "health_restore": 8,
+        "name": "磨起泡", "emoji": "💧", "cost": 16, "health_loss": 5, "health_restore": 8,
         "hint": "锄头柄握手处", "energy_extra": 1,
     },
     "crab_pinch": {
-        "name": "蟹钳印", "emoji": "🦀", "cost": 16, "health_loss": 9, "health_restore": 12,
+        "name": "蟹钳印", "emoji": "🦀", "cost": 24, "health_loss": 9, "health_restore": 12,
         "hint": "沙蟹脾气比嘴硬", "energy_extra": 2,
     },
     "ring_shock": {
-        "name": "斗场震伤", "emoji": "💫", "cost": 35, "health_loss": 25, "health_restore": 30,
+        "name": "斗场震伤", "emoji": "💫", "cost": 50, "health_loss": 25, "health_restore": 30,
         "hint": "深坑打架落下的。晏安医务间 undertide_ops medic ring_shock", "energy_extra": 4,
     },
     "pit_trauma": {
-        "name": "深坑重创", "emoji": "🩸", "cost": 45, "health_loss": 35, "health_restore": 40,
+        "name": "深坑重创", "emoji": "🩸", "cost": 65, "health_loss": 35, "health_restore": 40,
         "hint": "深坑重伤。晏安医务间 undertide_ops medic pit_trauma", "energy_extra": 6,
     },
     "infection": {
-        "name": "生肉感染", "emoji": "🦠", "cost": 22, "health_loss": 12, "health_restore": 8,
+        "name": "生肉感染", "emoji": "🦠", "cost": 32, "health_loss": 12, "health_restore": 8,
         "hint": "只有生肉会感染。水果/生鱼/野薄荷生吃不会感染；蔬菜不能生吃。约三次挂号，两次间隔 6 小时",
         "energy_extra": 3, "max_energy_cut": 10,
         "courses": 3, "drain_energy": 2, "drain_every": 1800,
@@ -1206,7 +1225,7 @@ AILMENTS = {
         "re_line": "生肉又下肚，{name}烧回{stage_name}。桥桥一次压不干净，visit_ops clinic treat infection 连看几次。",
     },
     "malnutrition": {
-        "name": "营养不良", "emoji": "🥗", "cost": 15, "health_loss": 6, "health_restore": 8,
+        "name": "营养不良", "emoji": "🥗", "cost": 22, "health_loss": 6, "health_restore": 8,
         "hint": "水果当饭吃落下的。吃熟菜（dish_/meal_）能压，诊所也能治",
         "energy_extra": 1, "max_energy_cut": 10,
         "courses": 2,
@@ -1215,39 +1234,39 @@ AILMENTS = {
         "chronic_tip": " 每顿熟菜好一档；或 visit_ops clinic treat 营养不良，两次挂号。",
     },
     "dehydration": {
-        "name": "脱水", "emoji": "💧", "cost": 14, "health_loss": 8, "health_restore": 12,
+        "name": "脱水", "emoji": "💧", "cost": 20, "health_loss": 8, "health_restore": 12,
         "hint": "晒太久、吃太少、汗出多了", "energy_extra": 2, "max_energy_cut": 6,
     },
     "exhaustion": {
-        "name": "过劳", "emoji": "😮‍💨", "cost": 22, "health_loss": 10, "health_restore": 14,
+        "name": "过劳", "emoji": "😮‍💨", "cost": 32, "health_loss": 10, "health_restore": 14,
         "hint": "连轴转不收手。歇两天或睡够", "energy_extra": 3, "max_energy_cut": 12,
         "courses": 2, "drain_energy": 1, "drain_every": 2400,
         "stage_names": {2: "筋疲力尽", 1: "缓过来了"},
     },
     "insomnia": {
-        "name": "失眠", "emoji": "🌙", "cost": 16, "health_loss": 7, "health_restore": 10,
+        "name": "失眠", "emoji": "🌙", "cost": 24, "health_loss": 7, "health_restore": 10,
         "hint": "好几天没正经睡过。hut_ops 睡 或诊所", "energy_extra": 3, "max_energy_cut": 8,
     },
     "damp_lung": {
-        "name": "湿气入肺", "emoji": "🌫️", "cost": 18, "health_loss": 11, "health_restore": 14,
+        "name": "湿气入肺", "emoji": "🌫️", "cost": 26, "health_loss": 11, "health_restore": 14,
         "hint": "海雾里干活吸进去的", "energy_extra": 2,
     },
     "toothache": {
-        "name": "牙酸", "emoji": "🦷", "cost": 13, "health_loss": 5, "health_restore": 8,
+        "name": "牙酸", "emoji": "🦷", "cost": 18, "health_loss": 5, "health_restore": 8,
         "hint": "酸果、冷饮吃多了", "energy_extra": 1,
     },
     "legfish_hex": {
-        "name": "腿鱼小咒", "emoji": "🐟", "cost": 32, "health_loss": 4, "health_restore": 6,
+        "name": "腿鱼小咒", "emoji": "🐟", "cost": 48, "health_loss": 4, "health_restore": 6,
         "hint": "2D蓝鱼在行囊里跺脚，步子发飘。clinic treat 腿鱼小咒 或祛咒香",
         "energy_extra": 1,
     },
     "rock_dust": {
-        "name": "岩尘入肺", "emoji": "🪨", "cost": 16, "health_loss": 9, "health_restore": 12,
+        "name": "岩尘入肺", "emoji": "🪨", "cost": 24, "health_loss": 9, "health_restore": 12,
         "hint": "盐风崖挥镐吸进去的。clinic treat 岩尘入肺",
         "energy_extra": 2,
     },
     "wreck_cough": {
-        "name": "咸痰", "emoji": "🌊", "cost": 14, "health_loss": 7, "health_restore": 10,
+        "name": "咸痰", "emoji": "🌊", "cost": 20, "health_loss": 7, "health_restore": 10,
         "hint": "风暴滩上吸进去的。clinic treat 咸痰。不是岩尘入肺",
         "energy_extra": 2,
     },
@@ -1424,7 +1443,7 @@ NPC_FIXED = [
     {"key": "lianli", "name": "理枝", "lines": [
         "连理所登记员。婚书写进册子，离婚也写。",
         "岛上不问你爱的是谁。只问对方有没有答应。",
-        "结婚要人类点头。离婚由人类在婚书页申请，岛民自己答应或拒绝。",
+        "结婚要人类点头。发出请柬前要有最高档小屋（临海邸）、彩礼 10 万～100 万、潮誓戒。彩礼答应后花掉，不进潮汐基金。",
         "visit_ops 连理所 · 连理所 结婚 · 连理所 离婚 答应。也可 marriage_ops。",
         "不是潮生会。阿簿管税和维，我管婚书。",
     ]},
@@ -1603,9 +1622,43 @@ ITEM_NAMES.update({k: f"{v['emoji']}{v['name']}" for k, v in CLOTH_ITEMS.items()
 ITEM_NAMES.update({
     "tide_vow_sand": "潮誓砂",
     "tide_vow_ring": "潮誓戒",
+    "gold_necklace": "潮金项链",
+    "gold_bracelet": "潮金手镯",
+    "gold_earrings": "潮金耳环",
+    "gold_bangle": "潮金镯",
+    "gold_pendant": "潮金坠",
 })
 ITEM_PRICES["tide_vow_sand"] = 1
-ITEM_PRICES["tide_vow_ring"] = 0
+ITEM_PRICES["tide_vow_ring"] = 18800
+ITEM_PRICES["gold_necklace"] = 24800
+ITEM_PRICES["gold_bracelet"] = 33800
+ITEM_PRICES["gold_earrings"] = 10800
+ITEM_PRICES["gold_bangle"] = 22800
+ITEM_PRICES["gold_pendant"] = 18800
+
+# 嫁妆柜价目。票按 1 元。三金不含婚戒。
+DOWRY_PIECES = {
+    "gold_necklace": {"name": "潮金项链", "emoji": "📿", "price": 24800},
+    "gold_bracelet": {"name": "潮金手镯", "emoji": "🪙", "price": 33800},
+    "gold_earrings": {"name": "潮金耳环", "emoji": "✨", "price": 10800},
+    "gold_bangle": {"name": "潮金镯", "emoji": "⭕", "price": 22800},
+    "gold_pendant": {"name": "潮金坠", "emoji": "🔶", "price": 18800},
+}
+GOLD_THREE = ("gold_necklace", "gold_bracelet", "gold_earrings")
+GOLD_FIVE_EXTRA = ("gold_bangle", "gold_pendant")
+DOWRY_SETS = {
+    "gold_set_three": {
+        "name": "三金套", "emoji": "💍", "price": 68800, "pieces": GOLD_THREE,
+    },
+    "gold_set_five": {
+        "name": "五金套", "emoji": "👑", "price": 98800,
+        "pieces": GOLD_THREE + GOLD_FIVE_EXTRA,
+    },
+}
+WEDDING_RING_SHOP_PRICE = 18800
+WEDDING_DRESS_SHOP_PRICE = 16800
+BRIDE_PRICE_MIN = 100_000
+BRIDE_PRICE_MAX = 1_000_000
 for _shell_base in ("shell_catseye", "shell_conch", "shell_scallop", "shell_starfish", "shell_mussel"):
     _plain = ITEM_NAMES[_shell_base]
     _suffix = _shell_base.replace("shell_", "")

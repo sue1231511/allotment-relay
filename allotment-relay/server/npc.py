@@ -45,9 +45,9 @@ async def npc_ops(key_id: int, command: str) -> str:
             elif npc["key"] == "tt":
                 tag = " · 杂货店，visit_ops tt catalog/buy/gift"
             elif npc["key"] == "yangyang":
-                tag = " · 衣泊坊主理人；不卖成衣，cloth_ops 委托 / visit_ops 漾漾"
+                tag = " · 衣泊坊主理人；日常不卖成衣，婚服现货 cloth_ops 买 婚服；visit_ops 漾漾"
             elif npc["key"] == "lianli":
-                tag = " · 连理所登记员；求婚人类点头，离婚人类发起、岛民决定；visit_ops 连理所 / 理枝"
+                tag = " · 连理所登记员；求婚先备最高档小屋、彩礼、潮誓戒；visit_ops 连理所 / 理枝"
             elif npc["key"] == "old_salt":
                 tag = " · 赶海/潮汐提示"
             elif npc["key"] == "buxing":
@@ -200,10 +200,10 @@ async def _daily_visit_gift(steward_id: int, npc_key: str) -> str:
             note = "档信 +2（今日首次拜访）"
         elif npc_key == "qiaoqiao":
             await conn.execute(
-                "UPDATE stewards SET health=MIN(100, health+2) WHERE id=?",
+                "UPDATE stewards SET health=MIN(100, health+4) WHERE id=?",
                 (steward_id,),
             )
-            note = "身体 +2（聊聊天也算复查，治病还是要花钱）"
+            note = "身体 +4（聊聊天也算复查，治病还是要花钱；没病补身子走 clinic 调理）"
         elif npc_key == "herb_aunt":
             await survival.bump(conn, steward_id, satiety=3)
             note = "饱食 +3（姜姨塞了块姜糖）"
