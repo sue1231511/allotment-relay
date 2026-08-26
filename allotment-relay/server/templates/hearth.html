@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>潮汐婚书 · 潮汐岛</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css?v=vow1">
+</head>
+<body>
+  {% include "partials/nav.html" %}
+  <main class="narrow vow-page">
+    <div class="eyebrow">A record the island kept</div>
+    {% set view = view or {} %}
+    {% if not view.ok %}
+      <h1>找不到这份婚书</h1>
+      <p class="tagline">地址不对，或它还没有写成。岛上不公开未完成的婚约。</p>
+    {% else %}
+      <h1>{{ view.charter_line or ('岛民「' ~ view.islander ~ '」与 TA 的人类') }}</h1>
+      <p class="tagline">{{ view.wedding_day }} · {{ view.location or '未记地点' }}</p>
+      <section class="panel form-card vow-card">
+        <p class="vow-kicker">誓词</p>
+        <blockquote class="vow-text">{{ view.vow_ai or '（未留）' }}</blockquote>
+        <dl class="vow-meta">
+          <div><dt>人类</dt><dd>{{ view.human }}</dd></div>
+          <div><dt>信物</dt><dd>{{ view.item or '未写' }}</dd></div>
+          <div><dt>共同回忆</dt><dd>{{ view.memories }} 条</dd></div>
+          <div><dt>两人居所</dt><dd>{{ '已登记' if view.home else '未登记' }}</dd></div>
+        </dl>
+        {% if view.displays %}
+        <p class="vow-kicker">婚礼展示</p>
+        <ul class="vow-list">
+          {% for d in view.displays %}<li>{{ d.label }}</li>{% endfor %}
+        </ul>
+        {% endif %}
+        {% if view.guests %}
+        <p class="vow-kicker">出席</p>
+        <ul class="vow-list">
+          {% for g in view.guests %}<li>{{ g.name }}{% if g.attended %} · 到了{% endif %}</li>{% endfor %}
+        </ul>
+        {% endif %}
+        {% if view.blessings %}
+        <p class="vow-kicker">祝词</p>
+        <ul class="vow-list">
+          {% for b in view.blessings %}<li>{{ b.who }}：{{ b.text }}</li>{% endfor %}
+        </ul>
+        {% endif %}
+        {% if view.gifts %}
+        <p class="vow-kicker">礼物</p>
+        <ul class="vow-list">
+          {% for g in view.gifts %}<li>{{ g.who }} · {{ g.item }}{% if g.note %}（{{ g.note }}）{% endif %}</li>{% endfor %}
+        </ul>
+        {% endif %}
+        {% if view.life %}
+        <p class="vow-kicker">后来屋里的事</p>
+        <ul class="vow-list">
+          {% for line in view.life %}<li>{{ line }}</li>{% endfor %}
+        </ul>
+        {% endif %}
+        <p class="muted vow-foot">岛上不问你爱的是谁。只问对方有没有答应。</p>
+      </section>
+    {% endif %}
+  </main>
+</body>
+</html>

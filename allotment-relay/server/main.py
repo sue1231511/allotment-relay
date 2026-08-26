@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -179,6 +179,45 @@ async def island_manual_page(request: Request):
 @app.get("/island-manual")
 async def island_manual_alias():
     return RedirectResponse("/manual", status_code=302)
+
+
+@app.get("/vow/{token}", response_class=HTMLResponse)
+async def vow_page(request: Request, token: str):
+    from . import marriage
+    view = await marriage.public_vow_view(token)
+    return _html(request, "vow.html", active="", view=view, token=token)
+
+
+@app.post("/vow/{token}", response_class=HTMLResponse)
+async def vow_respond(
+    request: Request,
+    token: str,
+    action: str = Form(""),
+    confirm: str = Form(""),
+):
+    from . import marriage
+    accept = (action or "").strip().lower() in ("accept", "yes", "答应", "接受")
+    decline = (action or "").strip().lower() in ("decline", "no", "拒绝", "不答应")
+    if not accept and not decline:
+        view = await marriage.public_vow_view(token)
+        return _html(request, "vow.html", active="", view=view, token=token)
+    result = await marriage.human_respond(
+        token, accept=accept, confirm=bool(confirm) and confirm not in ("0", "false"),
+    )
+    view = await marriage.public_vow_view(token)
+    view["result"] = result
+    if result.get("need_confirm"):
+        view["need_confirm"] = True
+    return _html(request, "vow.html", active="", view=view, token=token, result=result)
+
+
+@app.get("/hearth/{slug}", response_class=HTMLResponse)
+async def hearth_page(request: Request, slug: str):
+    from . import marriage
+    view = await marriage.public_hearth_view(slug)
+    if not view.get("ok"):
+        return _html(request, "hearth.html", active="", view={"ok": False})
+    return _html(request, "hearth.html", active="", view=view)
 
 
 @app.get("/steward")
@@ -420,9 +459,14 @@ async def bar_order(body: BarOrderRequest):
 @app.post("/api/play")
 async def play_action(request: Request, body: PlayRequest):
     from . import play as play_mod
+    from .mcp_app import current_origin
     try:
         await _observe_key(request, body.api_key, body.device_id)
-        return await play_mod.run_play(body.api_key, body.tool, body.command)
+        origin_tok = current_origin.set(public_base_url(request))
+        try:
+            return await play_mod.run_play(body.api_key, body.tool, body.command)
+        finally:
+            current_origin.reset(origin_tok)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

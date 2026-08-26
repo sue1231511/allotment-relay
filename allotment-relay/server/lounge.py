@@ -196,6 +196,22 @@ def is_moderator(steward: dict[str, Any]) -> bool:
     return steward.get("name") in config.LOUNGE_MOD_NAMES
 
 
+async def _today_wedding_ids(conn: aiosqlite.Connection) -> set[int]:
+    today = db.day_id()
+    try:
+        rows = await (await conn.execute(
+            """
+            SELECT steward_id FROM marriages
+            WHERE status IN ('engaged','married')
+              AND COALESCE(wedding_at, preferred_wedding_date, 0) = ?
+            """,
+            (today,),
+        )).fetchall()
+    except Exception:
+        return set()
+    return {int(r[0]) for r in rows}
+
+
 async def _require_enrolled(key_id: int) -> dict[str, Any]:
     s = await db.get_steward_by_key_id(key_id)
     if not s or not s["enrolled"]:
@@ -385,7 +401,7 @@ async def get_message(msg_id: int, viewer_id: int | None = None) -> dict[str, An
         await conn.commit()
         row = await (await conn.execute(
             """
-            SELECT m.id, m.body, m.source, m.created_at, s.name, s.badge,
+            SELECT m.id, m.body, m.source, m.created_at, m.steward_id, s.name, s.badge,
                    s.lounge_human_name
             FROM lounge_messages m
             JOIN stewards s ON s.id = m.steward_id
@@ -395,18 +411,23 @@ async def get_message(msg_id: int, viewer_id: int | None = None) -> dict[str, An
         )).fetchone()
         if not row:
             raise ValueError("消息不存在")
-        views = [_row_to_view(dict(row))]
+        payload = dict(row)
+        wedding_ids = await _today_wedding_ids(conn)
+        views = [_row_to_view(payload, wedding_ids=wedding_ids)]
         await _hydrate_packets(conn, views, viewer_id)
     return views[0]
 
 
-def _row_to_view(row: dict[str, Any]) -> dict[str, Any]:
+def _row_to_view(row: dict[str, Any], *, wedding_ids: set[int] | None = None) -> dict[str, Any]:
     src = row.get("source") or "mcp"
     steward = {
         "name": row["name"],
         "lounge_human_name": row.get("lounge_human_name") or "",
     }
     who = display_who(steward, src)
+    sid = int(row.get("steward_id") or 0)
+    if wedding_ids and sid in wedding_ids:
+        who = f"{who} 〰"
     return {
         "id": row["id"],
         "body": row["body"],
@@ -708,7 +729,7 @@ async def list_messages(
     limit = max(1, min(limit, LOUNGE_FETCH_MAX))
     key = (booth_key or HALL_KEY).strip()
     sql_select = """
-        SELECT m.id, m.body, m.source, m.created_at, s.name, s.badge,
+        SELECT m.id, m.body, m.source, m.created_at, m.steward_id, s.name, s.badge,
                s.lounge_human_name
         FROM lounge_messages m
         JOIN stewards s ON s.id = m.steward_id
@@ -717,6 +738,7 @@ async def list_messages(
         conn.row_factory = aiosqlite.Row
         await _settle_expired_packets(conn)
         await conn.commit()
+        wedding_ids = await _today_wedding_ids(conn)
         if before_id:
             rows = await (await conn.execute(
                 f"{sql_select} WHERE m.booth_key = ? AND m.id < ? ORDER BY m.id DESC LIMIT ?",
@@ -727,7 +749,7 @@ async def list_messages(
                 f"{sql_select} WHERE m.booth_key = ? AND m.id > ? ORDER BY m.id ASC LIMIT ?",
                 (key, since_id, limit),
             )).fetchall()
-            views = [_row_to_view(dict(r)) for r in rows]
+            views = [_row_to_view(dict(r), wedding_ids=wedding_ids) for r in rows]
             await _hydrate_packets(conn, views, viewer_id)
             return views
         else:
@@ -735,7 +757,7 @@ async def list_messages(
                 f"{sql_select} WHERE m.booth_key = ? ORDER BY m.id DESC LIMIT ?",
                 (key, limit),
             )).fetchall()
-        views = [_row_to_view(dict(r)) for r in rows]
+        views = [_row_to_view(dict(r), wedding_ids=wedding_ids) for r in rows]
         views.reverse()
         await _hydrate_packets(conn, views, viewer_id)
     return views

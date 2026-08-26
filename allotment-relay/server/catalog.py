@@ -1593,6 +1593,12 @@ ITEM_NAMES.update({
 ITEM_NAMES.update({k: f"{v['emoji']}{v['name']}" for k, v in QUARRY_ORES.items()})
 ITEM_NAMES.update({k: f"{v['emoji']}{v['name']}" for k, v in CRAFT_ITEMS.items()})
 ITEM_NAMES.update({k: f"{v['emoji']}{v['name']}" for k, v in CLOTH_ITEMS.items()})
+ITEM_NAMES.update({
+    "tide_vow_sand": "潮誓砂",
+    "tide_vow_ring": "潮誓戒",
+})
+ITEM_PRICES["tide_vow_sand"] = 1
+ITEM_PRICES["tide_vow_ring"] = 0
 for _shell_base in ("shell_catseye", "shell_conch", "shell_scallop", "shell_starfish", "shell_mussel"):
     _plain = ITEM_NAMES[_shell_base]
     _suffix = _shell_base.replace("shell_", "")

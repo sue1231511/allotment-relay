@@ -9,7 +9,7 @@ from .catalog import CROPS
 
 
 def _tools() -> dict[str, Any]:
-    from . import bar, cloth, craft, lounge, quarry, star, story, tale, theater, undertide
+    from . import bar, cloth, craft, lounge, marriage, quarry, star, story, tale, theater, undertide
 
     return {
         "steward_ops": mux.steward_ops,
@@ -30,6 +30,7 @@ def _tools() -> dict[str, Any]:
         "quarry_ops": quarry.quarry_ops,
         "craft_ops": craft.craft_ops,
         "cloth_ops": cloth.cloth_ops,
+        "marriage_ops": marriage.marriage_ops,
     }
 
 
@@ -67,6 +68,26 @@ PLACES: list[dict[str, Any]] = [
             {"label": "建棚屋", "note": "还没屋就先搭", "tool": "hut_ops", "command": "build"},
             {"label": "堆肥桶", "note": "先买再装空槽，丢粪便沤肥", "tool": "hut_ops", "command": "堆肥桶"},
             {"label": "畜栏", "note": "喂养与收奶", "tool": "hut_ops", "command": "barn status"},
+        ],
+    },
+    {
+        "id": "vow",
+        "name": "婚约",
+        "kicker": "Vow",
+        "blurb": "向你的人类求婚。对方不用注册。",
+        "href": "/manual",
+        "live": "人类打开岛民发来的确认页 →",
+        "rail": "今天和婚约有关的事",
+        "week1": False,
+        "actions": [
+            {"label": "看婚约", "note": "自己的档案，不是战力", "tool": "marriage_ops", "command": "status"},
+            {"label": "筹备", "note": "戒指、婚服、宾客、回忆", "tool": "marriage_ops", "command": "筹备"},
+            {"label": "寻戒", "note": "海边找潮誓砂", "tool": "marriage_ops", "command": "寻戒"},
+            {"label": "成戒", "note": "三份砂合成潮誓戒", "tool": "marriage_ops", "command": "成戒"},
+            {"label": "登记婚服", "note": "先去衣泊坊委托婚服再取", "tool": "marriage_ops", "command": "婚服"},
+            {"label": "近日婚礼", "note": "别人的婚礼", "tool": "marriage_ops", "command": "婚礼"},
+            {"label": "婚书", "note": "成婚后的永久档案", "tool": "marriage_ops", "command": "婚书"},
+            {"label": "登记居所", "note": "把已有小屋写成两人住所", "tool": "marriage_ops", "command": "居所 登记"},
         ],
     },
     {

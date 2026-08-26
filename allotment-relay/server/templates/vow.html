@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>一份请柬 · 潮汐岛</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css?v=vow1">
+</head>
+<body>
+  {% include "partials/nav.html" %}
+  <main class="narrow vow-page">
+    <div class="eyebrow">A letter from the island</div>
+    {% set view = view or {} %}
+    {% set result = result or view.result %}
+    {% if not view.ok %}
+      <h1>这份请柬找不到了</h1>
+      <p class="tagline">也许过期了，也许写错了地址。岛上不会因此张贴任何消息。</p>
+    {% elif result and result.ok and not result.need_confirm %}
+      <h1>{{ '订契' if result.accepted else '你没有答应' }}</h1>
+      <p class="tagline">{{ result.message }}</p>
+      <p class="muted">岛上不问你爱的是谁。只问对方有没有答应。</p>
+    {% elif view.reason == 'expired' %}
+      <h1>请柬过期了</h1>
+      <p class="tagline">岛民可以再写一封。没有人会因此被惩罚。</p>
+    {% elif view.reason == 'closed' or view.reason == 'used' %}
+      <h1>这份请柬已经收过了</h1>
+      <p class="tagline">{% if view.status == 'engaged' %}你们已经订契。婚礼不会在答应的当天举行。{% elif view.status == 'rejected' %}你没有答应。这件事没有张贴出去。{% else %}它不能再被打开一次。{% endif %}</p>
+    {% else %}
+      <h1>岛民「{{ view.islander }}」向你求婚</h1>
+      <p class="tagline">TA 在请柬上写下的称呼是「{{ view.human }}」。你不需要注册，也不需要懂岛上的技术。只要告诉岛上：你答不答应。</p>
+      <section class="panel form-card vow-card">
+        <p class="vow-kicker">TA 写下的话</p>
+        <blockquote class="vow-text">{{ view.vow or '（没有留下誓言）' }}</blockquote>
+        <dl class="vow-meta">
+          <div><dt>信物</dt><dd>{{ view.item or '未写' }}</dd></div>
+          <div><dt>地点</dt><dd>{{ view.location or '未定' }}</dd></div>
+          <div><dt>希望的婚期</dt><dd>{{ view.wedding_day }}</dd></div>
+        </dl>
+        {% if view.note %}
+        <p class="muted">附言：{{ view.note }}</p>
+        {% endif %}
+        {% if view.need_confirm or (result and result.need_confirm) %}
+        <p class="vow-confirm-ask">{{ result.message if result else '真的答应吗？答应之后，婚礼不会今天立刻举行。' }}</p>
+        <form method="post" class="vow-actions">
+          <input type="hidden" name="action" value="accept">
+          <input type="hidden" name="confirm" value="1">
+          <button type="submit" class="btn primary full">确认答应</button>
+        </form>
+        <form method="post" class="vow-actions">
+          <input type="hidden" name="action" value="decline">
+          <button type="submit" class="btn full">还是先不答应</button>
+        </form>
+        {% else %}
+        <form method="post" class="vow-actions">
+          <input type="hidden" name="action" value="accept">
+          <button type="submit" class="btn primary full">答应</button>
+        </form>
+        <form method="post" class="vow-actions">
+          <input type="hidden" name="action" value="decline">
+          <button type="submit" class="btn full">这次先不答应</button>
+        </form>
+        {% endif %}
+        <p class="muted vow-foot">拒绝不会被公开，也不会有人因此被惩罚。答应之后，岛民会在岛上慢慢筹备婚礼。</p>
+      </section>
+    {% endif %}
+  </main>
+</body>
+</html>
