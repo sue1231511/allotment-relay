@@ -1177,6 +1177,32 @@ body.play-bound .play-gate { display: none !important; }
   body.play-page .mobile-island { bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
 }
 
+/* 「这一号」居中弹窗（覆盖底部 sheet 默认样式） */
+#play-me {
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(31, 47, 52, .32);
+  backdrop-filter: blur(6px);
+}
+
+#play-me .play-sheet-bg {
+  background: transparent;
+}
+
+#play-me .play-me-card {
+  border-radius: 26px;
+  box-shadow: 0 28px 80px rgba(31, 47, 52, .22), 0 0 0 1px rgba(255,255,255,.18) inset;
+  max-height: 88vh;
+  width: min(440px, 100%);
+  animation: me-pop .18s cubic-bezier(.22, .68, 0, 1.2);
+}
+
+@keyframes me-pop {
+  from { opacity: 0; transform: scale(.94); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
 .play-invite {
   margin-top: 16px;
   padding-top: 12px;
