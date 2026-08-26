@@ -106,14 +106,14 @@ MARRIAGE_HELP = """marriage_ops 子命令（整句写进 command）：
   desk / 连理所 / 理枝 / 进门 — 进连理所，看自己的档案
   status / 看 — 自己的婚约、筹备、婚书摘要
   求婚 人类昵称 — 先写下草稿。发出前要：最高档小屋（临海邸）、彩礼、潮誓戒、誓言
-  彩礼 188000 — AI 填 100000～1000000。发出时冻结，人类答应后划进潮汐基金；拒绝退回
+  彩礼 188000 — AI 填 100000～1000000。发出时冻结，人类答应后花掉（不进潮汐基金）；拒绝退回
       建议吉利数：128000 · 168000 · 188000 · 288000 · 388000 · 520000 · 888000
   求婚 人类昵称 | 誓言 | 信物 | 地点 | 今日+3 | 留言
       一步发出。门槛不够会拒，草稿留下。例子：求婚 阿潮 | 潮起潮落我都在 | 潮誓戒 | 灯塔下 | 今日+3
   寻戒 — 海边找潮誓砂（每天最多 2 次）。自制戒要 6 份砂 + 崖上金砂
   成戒 — 转去岸工坊打戒：craft_ops 打 潮誓戒（要潮誓砂×6、金砂×1，等 20 分钟再 取）
       也可 visit_ops tt buy 潮誓戒（18800 票现货）
-  发出 — 最高档小屋、彩礼、潮誓戒、誓言齐了才发。发出时从口袋冻结彩礼
+  发出 — 最高档小屋、彩礼、潮誓戒、誓言齐了才发。发出时从口袋冻结彩礼；答应后花掉，不进潮汐基金
   筹备 — 草稿看求婚门槛；订契后看三金/婚服/吃席。不是战力
   金饰 — 订契后把行囊里的三金（或五金）登记进婚书
       三金/五金去 Tt酱柜后：visit_ops tt buy 三金套（68800）/ 五金套（98800）
@@ -126,7 +126,7 @@ MARRIAGE_HELP = """marriage_ops 子命令（整句写进 command）：
   离婚 答应 / 离婚 拒绝 — 人类在婚书页申请后，由你决定。不要发明「离婚 确认」
 
 容易搞混：
-  · 连理所是登记处，不是潮生会。彩礼进潮汐基金，不是打给人类（人和 AI 同一个口袋）。
+  · 连理所是登记处，不是潮生会。彩礼是花出去的开销，不进潮汐基金，也不是打给人类（人和 AI 同一个口袋）。
   · 发出前：小屋升到岛上最高档（现在是临海邸）+ 彩礼金额 + 口袋够付 + 潮誓戒。300 票门槛已经并进彩礼。
   · 举行前：三金 + 婚服 + 吃席规格。五金选配，不挡登记。
   · 婚戒/婚服自制比买慢。三金五金没有自制，只去 Tt酱。
@@ -265,7 +265,7 @@ async def _propose_missing(
         )
     elif frozen != BRIDE_FROZEN and tickets < price:
         miss.append(
-            f"口袋不够付彩礼 {price}（现在 {tickets}）。发出时冻结，答应后进基金。"
+            f"口袋不够付彩礼 {price}（现在 {tickets}）。发出时冻结，答应后花掉，不进基金。"
         )
     if not await _ring_ready(conn, s, row):
         miss.append(
@@ -305,7 +305,7 @@ async def _readiness_lines(
     if price < BRIDE_PRICE_MIN:
         gift = "未填 — marriage_ops 彩礼 188000"
     elif frozen == BRIDE_PAID:
-        gift = f"{_bride_label(price)} 已划进基金"
+        gift = f"{_bride_label(price)} 已花掉"
     elif frozen == BRIDE_FROZEN:
         gift = f"{_bride_label(price)} 已冻结，等对方答应"
     elif tickets >= price:
@@ -359,7 +359,7 @@ async def _hold_readiness_lines(
     frozen = int(row.get("bride_frozen") or 0)
     gift = _bride_label(price)
     if frozen == BRIDE_PAID:
-        gift += " 已划进潮汐基金"
+        gift += " 已花掉"
     elif frozen == BRIDE_FROZEN:
         gift += " 已冻结"
     return [
@@ -435,8 +435,6 @@ async def _settle_bride(conn: aiosqlite.Connection, row: dict[str, Any]) -> int:
     if int(row.get("bride_frozen") or 0) != BRIDE_FROZEN:
         return 0
     amount = int(row.get("bride_price") or 0)
-    from . import chaoshen
-    await chaoshen.credit_fund(conn, amount)
     await conn.execute(
         "UPDATE marriages SET bride_frozen=? WHERE id=?",
         (BRIDE_PAID, row["id"]),
@@ -854,7 +852,7 @@ async def _human_proposal(
             await _note_event(
                 conn, int(row["id"]), "status",
                 f"人类答应了。订契。婚期 {tide_day_label(wed)}。"
-                + (f"彩礼 {paid} 已划进潮汐基金。" if paid else ""),
+                + (f"彩礼 {paid} 已花掉。" if paid else ""),
                 day=today,
             )
         await conn.commit()
@@ -1282,7 +1280,7 @@ async def _cmd_desk(s: dict[str, Any], rest: str = "") -> str:
     intro = (
         f"{OFFICE}。登记员{CLERK}把册子摊开。\n"
         "求婚由你发出，人类打开确认页点头。离婚由人类在婚书页申请，你决定答应或拒绝。\n"
-        f"发出请柬前：小屋升到岛上最高档（{HUT_MAX_NAME}）、彩礼 {BRIDE_PRICE_MIN}～{BRIDE_PRICE_MAX}、潮誓戒。彩礼发出时冻结，答应后进潮汐基金。\n"
+        f"发出请柬前：小屋升到岛上最高档（{HUT_MAX_NAME}）、彩礼 {BRIDE_PRICE_MIN}～{BRIDE_PRICE_MAX}、潮誓戒。彩礼发出时冻结，答应后花掉，不进潮汐基金。\n"
         "答应后举行前：三金、婚服、吃席。五金选配，不挡登记。\n"
         "我不能替任何人答应求婚，也不能替你离掉婚。\n"
         "岛上不问你爱的是谁。只问对方有没有答应。\n"
@@ -1973,7 +1971,7 @@ async def _cmd_bride(s: dict[str, Any], rest: str) -> str:
         if row["status"] not in (STATUS_DRAFT,):
             raise ValueError("只有草稿能改彩礼。请柬发出后不能改。")
         if int(row.get("bride_frozen") or 0):
-            raise ValueError("彩礼已经冻结或划走，不能改。")
+            raise ValueError("彩礼已经冻结或花掉，不能改。")
         await conn.execute(
             "UPDATE marriages SET bride_price=?, updated_at=? WHERE id=?",
             (amount, db.now(), row["id"]),
@@ -1981,7 +1979,7 @@ async def _cmd_bride(s: dict[str, Any], rest: str) -> str:
         await conn.commit()
         _, _, tickets = await _live_hut(conn, s)
     pocket = f"口袋现在 {tickets}，{'够付' if tickets >= amount else '还不够'}。"
-    return f"彩礼定为 {_bride_label(amount)}。发出时从口袋冻结。{pocket}"
+    return f"彩礼定为 {_bride_label(amount)}。发出时从口袋冻结；答应后花掉，不进潮汐基金。{pocket}"
 
 
 async def _need_engaged(s: dict[str, Any]) -> dict[str, Any]:

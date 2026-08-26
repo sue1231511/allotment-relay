@@ -295,6 +295,7 @@ def test_mcp_descriptions() -> None:
     assert "彩礼" in mar_blob
     assert "潮誓戒" in mar_blob
     assert "临海邸" in mar_blob or "最高档" in mar_blob
+    assert "不进潮汐基金" in mar_blob or "花掉" in mar_blob
 
 
 def test_relay_manual_covers_systems() -> None:
@@ -681,6 +682,8 @@ def test_human_island_manual() -> None:
         "潮誓戒",
         "临海邸",
         "最高档",
+        "花出去",
+        "不进潮汐基金",
     ):
         assert needle in blob, needle
     assert "plot_ops" not in blob

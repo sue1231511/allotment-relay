@@ -199,7 +199,7 @@ async def _full_flow() -> None:
     assert "订契" in engaged_page.text or "答应了" in engaged_page.text, engaged_page.text
     async with db.connect() as conn:
         fund = await (await conn.execute("SELECT tickets FROM tide_fund WHERE id=1")).fetchone()
-        assert fund and int(fund[0] or 0) >= 100000, fund
+        assert not fund or int(fund[0] or 0) == 0, fund
         pocket = await (await conn.execute(
             "SELECT tickets FROM stewards WHERE key_id=?", (host,)
         )).fetchone()
