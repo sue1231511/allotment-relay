@@ -165,12 +165,16 @@ CREATE TABLE IF NOT EXISTS marriages (
     betrothal_bouquet INTEGER NOT NULL DEFAULT 0,
     betrothal_attire INTEGER NOT NULL DEFAULT 0,
     betrothal_photo INTEGER NOT NULL DEFAULT 0,
+    betrothal_confirm_hash TEXT,
+    betrothal_confirm_expires_at INTEGER,
+    betrothal_confirm_used_at INTEGER,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_marriages_steward ON marriages(steward_id, status);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_marriages_token_hash ON marriages(token_hash) WHERE token_hash IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_marriages_slug ON marriages(public_slug) WHERE public_slug IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_marriages_betrothal_confirm_hash ON marriages(betrothal_confirm_hash) WHERE betrothal_confirm_hash IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS marriage_guests (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1990,6 +1994,9 @@ async def init_db() -> None:
                 betrothal_bouquet INTEGER NOT NULL DEFAULT 0,
                 betrothal_attire INTEGER NOT NULL DEFAULT 0,
                 betrothal_photo INTEGER NOT NULL DEFAULT 0,
+                betrothal_confirm_hash TEXT,
+                betrothal_confirm_expires_at INTEGER,
+                betrothal_confirm_used_at INTEGER,
                 created_at INTEGER NOT NULL,
                 updated_at INTEGER NOT NULL
             )
@@ -1997,6 +2004,7 @@ async def init_db() -> None:
             "CREATE INDEX IF NOT EXISTS idx_marriages_steward ON marriages(steward_id, status)",
             "CREATE UNIQUE INDEX IF NOT EXISTS idx_marriages_token_hash ON marriages(token_hash) WHERE token_hash IS NOT NULL",
             "CREATE UNIQUE INDEX IF NOT EXISTS idx_marriages_slug ON marriages(public_slug) WHERE public_slug IS NOT NULL",
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_marriages_betrothal_confirm_hash ON marriages(betrothal_confirm_hash) WHERE betrothal_confirm_hash IS NOT NULL",
             """
             CREATE TABLE IF NOT EXISTS marriage_guests (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2068,6 +2076,10 @@ async def init_db() -> None:
             "ALTER TABLE marriages ADD COLUMN betrothal_bouquet INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE marriages ADD COLUMN betrothal_attire INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE marriages ADD COLUMN betrothal_photo INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE marriages ADD COLUMN betrothal_confirm_hash TEXT",
+            "ALTER TABLE marriages ADD COLUMN betrothal_confirm_expires_at INTEGER",
+            "ALTER TABLE marriages ADD COLUMN betrothal_confirm_used_at INTEGER",
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_marriages_betrothal_confirm_hash ON marriages(betrothal_confirm_hash) WHERE betrothal_confirm_hash IS NOT NULL",
         ):
             try:
                 await db.execute(ddl)
