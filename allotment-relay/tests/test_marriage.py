@@ -100,6 +100,8 @@ async def _full_flow() -> None:
     assert "没有彩礼" in help_text
     assert "礼金 18800" not in help_text
     assert "18800 | 8888" not in help_text
+    assert "举行前还能改" in help_text
+    assert "订婚宴" in help_text and "还能改" in help_text
 
     try:
         await marriage.marriage_ops(host, "接受")
@@ -267,10 +269,31 @@ async def _full_flow() -> None:
     assert "三金" in gold, gold
     feast = await marriage.marriage_ops(host, "吃席 滩席")
     assert "滩席" in feast, feast
+    assert "还能改" in feast, feast
+    same = await marriage.marriage_ops(host, "吃席 滩席")
+    assert "已经是" in same, same
+    peek = await marriage.marriage_ops(host, "吃席")
+    assert "还能改" in peek and "滩席" in peek, peek
+    up = await marriage.marriage_ops(host, "吃席 岸席")
+    assert "岸席" in up and ("改成" in up or "改" in up), up
+    assert await _pocket(db, host) == 150000 - 48800
+    assert await _fund(db) == 0
+    down = await marriage.marriage_ops(host, "吃席 滩席")
+    assert "滩席" in down, down
+    assert await _pocket(db, host) == 150000 - 18800
     invited = await marriage.marriage_ops(host, "邀请 邻潮")
     assert "邻潮" in invited, invited
     npc = await marriage.marriage_ops(host, "邀请 npc 阿簿")
     assert "阿簿" in npc, npc
+    await marriage.marriage_ops(host, "吃席 岸席")
+    extra_npc = await marriage.marriage_ops(host, "邀请 npc 韶年")
+    assert "韶年" in extra_npc, extra_npc
+    try:
+        await marriage.marriage_ops(host, "吃席 滩席")
+        raise AssertionError("too many guests to shrink feast")
+    except ValueError as extra:
+        msg = str(extra)
+        assert "人" in msg or "最多" in msg, extra
     shown = await marriage.marriage_ops(host, "展示 小屋 潮声")
     assert "小屋" in shown or "展示" in shown, shown
     dossier = await marriage.marriage_ops(host, "筹备")
@@ -283,6 +306,11 @@ async def _full_flow() -> None:
     assert "成婚" in held, held
     assert "连理所" in held, held
     assert "/hearth/" in held, held
+    try:
+        await marriage.marriage_ops(host, "吃席 满潮席")
+        raise AssertionError("married cannot change feast")
+    except ValueError as extra:
+        assert "成婚" in str(extra), extra
     slug = re.search(r"/hearth/([A-Za-z0-9_-]+)", held).group(1)
 
     async with db.connect() as conn:
@@ -583,8 +611,19 @@ async def _betrothal_flow() -> None:
     assert "潮信贝" in token or "信物" in token, token
     feast = await marriage.marriage_ops(host, "订婚 宴 小馆 12800")
     assert "小馆" in feast or "宴" in feast, feast
+    assert "还能改" in feast, feast
+    same = await marriage.marriage_ops(host, "订婚 宴 小馆 12800")
+    assert "已经是" in same, same
+    peek = await marriage.marriage_ops(host, "订婚 宴")
+    assert "还能改" in peek, peek
+    chg = await marriage.marriage_ops(host, "订婚 宴 酒吧 8888")
+    assert "酒吧" in chg or "改成" in chg, chg
+    assert await _pocket(db, host) == 50000 - 8888
+    assert await _fund(db) == 0
     bouquet = await marriage.marriage_ops(host, "订婚 花束")
     assert "记下" in bouquet, bouquet
+    back = await marriage.marriage_ops(host, "订婚 宴 小馆 12800")
+    assert "小馆" in back or "改成" in back, back
     assert await _pocket(db, host) == 50000 - 12800
     assert await _fund(db) == 0
 
@@ -655,9 +694,80 @@ async def _betrothal_flow() -> None:
     assert "旧礼金" not in page.text
 
 
+async def _highest_photo_flow() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="photo-high-"))
+    db = await _boot(tmp)
+    from server import marriage
+
+    host = await _enroll(db, "photo@example.com", "灯影")
+    await _ready_to_propose(db, host, tickets=20000, ring=False, hut=True)
+    await marriage.marriage_ops(host, "求婚 阿潮")
+
+    async with db.connect() as conn:
+        sid = (await (await conn.execute(
+            "SELECT id FROM stewards WHERE key_id=?", (host,)
+        )).fetchone())[0]
+        n = await (await conn.execute(
+            "SELECT COUNT(*) FROM npc_visits WHERE steward_id=? AND npc_key='buxing'",
+            (sid,),
+        )).fetchone()
+        assert int(n[0] or 0) == 0
+
+    try:
+        await marriage.marriage_ops(host, "订婚 留影 灯塔席")
+        raise AssertionError("feast mixup must fail")
+    except ValueError as exc:
+        assert "吃席" in str(exc), exc
+
+    photo = await marriage.marriage_ops(host, "订婚 留影 灯塔")
+    assert "灯塔" in photo, photo
+    assert "8888" in photo or "8,888" in photo or "八" in photo or "记下" in photo, photo
+    assert await _pocket(db, host) == 20000 - 8888
+    assert await _fund(db) == 0
+
+    async with db.connect() as conn:
+        n = await (await conn.execute(
+            "SELECT COUNT(*) FROM npc_visits WHERE steward_id=? AND npc_key='buxing'",
+            (sid,),
+        )).fetchone()
+        assert int(n[0] or 0) >= 1, "lighthouse photo should count as a visit"
+
+    same = await marriage.marriage_ops(host, "订婚 留影 灯塔 8888")
+    assert "已经是" in same, same
+    assert await _pocket(db, host) == 20000 - 8888
+
+    try:
+        await marriage.marriage_ops(host, "订婚 留影 海边")
+        raise AssertionError("beach without activity must fail")
+    except ValueError as exc:
+        assert "寻信" in str(exc) or "采花" in str(exc) or "赶海" in str(exc), exc
+
+    chg = await marriage.marriage_ops(host, "订婚 留影 小屋")
+    assert "小屋" in chg, chg
+    assert await _pocket(db, host) == 20000 - 1888
+    assert await _fund(db) == 0
+
+    back = await marriage.marriage_ops(host, "订婚 留影 最高")
+    assert "灯塔" in back, back
+    assert await _pocket(db, host) == 20000 - 8888
+
+    async with db.connect() as conn:
+        await conn.execute(
+            "UPDATE marriages SET status=? WHERE steward_id=?",
+            (marriage.STATUS_MARRIED, sid),
+        )
+        await conn.commit()
+    try:
+        await marriage.marriage_ops(host, "订婚 留影 灯塔 8888")
+        raise AssertionError("married cannot change photo")
+    except ValueError as exc:
+        assert "成婚" in str(exc), exc
+
+
 def test_marriage_system() -> None:
     asyncio.run(_full_flow())
     asyncio.run(_betrothal_flow())
+    asyncio.run(_highest_photo_flow())
     asyncio.run(_reject_and_guards())
 
 
