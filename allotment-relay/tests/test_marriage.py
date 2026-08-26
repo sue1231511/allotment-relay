@@ -38,15 +38,26 @@ def _token_from(text: str) -> str:
     return m.group(1)
 
 
-async def _ready_to_propose(db, key_id: int, *, tickets: int = 250000, ring: bool = True, hut: bool = True) -> None:
+async def _ready_to_propose(
+    db,
+    key_id: int,
+    *,
+    tickets: int = 250000,
+    ring: bool = True,
+    hut: bool = True,
+    hut_level: int | None = None,
+) -> None:
+    from server.catalog import HUT_MAX_LEVEL
+
     async with db.connect() as conn:
         sid = (await (await conn.execute(
             "SELECT id FROM stewards WHERE key_id=?", (key_id,)
         )).fetchone())[0]
         if hut:
+            lvl = HUT_MAX_LEVEL if hut_level is None else hut_level
             await conn.execute(
-                "UPDATE stewards SET hut_built=1, hut_level=1, hut_label=? WHERE id=?",
-                ("潮声小屋", sid),
+                "UPDATE stewards SET hut_built=1, hut_level=?, hut_label=? WHERE id=?",
+                (lvl, "潮声小屋", sid),
             )
         await conn.execute("UPDATE stewards SET tickets=? WHERE id=?", (tickets, sid))
         if ring:
@@ -80,6 +91,7 @@ async def _full_flow() -> None:
     assert "理枝" in help_text
     assert "彩礼" in help_text
     assert "潮誓戒" in help_text
+    assert "最高档" in help_text or "临海邸" in help_text
     assert "6" in help_text
 
     try:
@@ -113,9 +125,20 @@ async def _full_flow() -> None:
     checklist = await marriage.marriage_ops(host, "筹备")
     assert "小屋" in checklist and "彩礼" in checklist, checklist
 
-    await _ready_to_propose(db, host)
+    await _ready_to_propose(db, host, hut_level=1)
     priced = await marriage.marriage_ops(host, "彩礼 100000")
     assert "100000" in priced or "10 万" in priced, priced
+    try:
+        await marriage.marriage_ops(
+            host,
+            "求婚 阿潮 | 潮起潮落我都在 | 潮誓戒 | 灯塔下 | 今日+3 | 想把日子过完",
+        )
+        raise AssertionError("Lv1 hut must not send")
+    except ValueError as exc:
+        msg = str(exc)
+        assert "最高档" in msg or "临海邸" in msg, exc
+        assert "upgrade" in msg, exc
+    await _ready_to_propose(db, host)
     sent = await marriage.marriage_ops(
         host,
         "求婚 阿潮 | 潮起潮落我都在 | 潮誓戒 | 灯塔下 | 今日+3 | 想把日子过完",

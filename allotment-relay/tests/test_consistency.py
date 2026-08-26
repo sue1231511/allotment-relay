@@ -178,6 +178,7 @@ def test_mcp_descriptions() -> None:
     assert "tide_weight" in hut_blob
     assert "iron_edge" in hut_blob
     assert "潮生会 维" in hut_blob
+    assert "临海邸" in hut_blob or "最高档" in hut_blob
 
     kitchen = mcp._tool_manager.get_tool("kitchen_ops")
     k_blob = f"{kitchen.description}\n{(kitchen.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -289,6 +290,7 @@ def test_mcp_descriptions() -> None:
     assert "理枝" in mar_blob
     assert "彩礼" in mar_blob
     assert "潮誓戒" in mar_blob
+    assert "临海邸" in mar_blob or "最高档" in mar_blob
 
 
 def test_relay_manual_covers_systems() -> None:
@@ -368,6 +370,7 @@ def test_relay_manual_covers_systems() -> None:
         "理枝",
         "彩礼 188000",
         "潮誓戒",
+        "临海邸",
         "tale_ops 潮闻不给旧衣料",
         "plot_ops forage",
         "潮闻",
@@ -667,6 +670,8 @@ def test_human_island_manual() -> None:
         "离婚",
         "彩礼",
         "潮誓戒",
+        "临海邸",
+        "最高档",
     ):
         assert needle in blob, needle
     assert "plot_ops" not in blob

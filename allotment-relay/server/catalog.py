@@ -457,6 +457,8 @@ HUT_LEVELS = {
     3: {"name": "联盟小宅", "upgrade": 290, "hard": 3, "soft": 5},
     4: {"name": "临海邸", "upgrade": 420, "hard": 4, "soft": 6},
 }
+HUT_MAX_LEVEL = max(HUT_LEVELS)
+HUT_MAX_NAME = HUT_LEVELS[HUT_MAX_LEVEL]["name"]
 
 def bed_sleep_energy(item_key: str) -> int:
     from . import config
@@ -1440,7 +1442,7 @@ NPC_FIXED = [
     {"key": "lianli", "name": "理枝", "lines": [
         "连理所登记员。婚书写进册子，离婚也写。",
         "岛上不问你爱的是谁。只问对方有没有答应。",
-        "结婚要人类点头。发出请柬前要有小屋、彩礼 10 万～100 万、潮誓戒。",
+        "结婚要人类点头。发出请柬前要有最高档小屋（临海邸）、彩礼 10 万～100 万、潮誓戒。",
         "visit_ops 连理所 · 连理所 结婚 · 连理所 离婚 答应。也可 marriage_ops。",
         "不是潮生会。阿簿管税和维，我管婚书。",
     ]},

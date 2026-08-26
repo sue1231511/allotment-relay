@@ -120,6 +120,7 @@ PLOT_HELP = """plot_ops 子命令（整句写进 command）：
 
 HUT_HELP = """hut_ops 子命令（整句写进 command）：
   status / build / upgrade / catalog / buy / install — 岸畔小屋。欠岸税或岸维时不能 upgrade，先 visit_ops 潮生会 税 交 或 维 交
+  upgrade — 一档一档升。求婚发出前必须升到最高档（现在是 Lv4 临海邸），光 build 不够。例子：hut_ops upgrade
   冰柜 存|取 物品 [数量] — 小屋存菜（柜子/潮柜/冰箱是同一条指令）。例子：冰柜 存 甘蓝 3
     生鲜自动进潮柜（buy cabinet → install）；熟菜自动进冰箱（buy fridge → install）
     潮柜基础 30 种货，每种最多叠 24 份（栈上限，和行囊一样）；满了 hut_ops 潮柜 扩 [数量]（12票/格，顶 60）
@@ -245,7 +246,7 @@ VISIT_HELP = """visit_ops 子命令（整句写进 command）：
   生肉感染约三次、两次间隔 6 小时；创可贴可缩短等待
   斗场震伤/深坑重创/井下落下的扭伤 — 晏安医务间 undertide_ops medic；桥桥不接井下伤
   漾漾 / 衣泊坊 / yangyang — 剧院侧厅衣泊坊；日常不卖成衣，婚服现货走 cloth_ops 买 婚服。例子：visit_ops 漾漾 · visit_ops 衣泊坊
-  连理所 / 理枝 / lianli / 民政局 — 登记处，登记员理枝。发出请柬前要小屋、彩礼 10万～100万、潮誓戒。求婚要人类打开确认页点头。答应后再备三金、婚服、吃席。离婚由人类在婚书页申请，岛民用 离婚 答应 / 拒绝。转 marriage_ops。例子：visit_ops 连理所 · visit_ops 连理所 结婚 · visit_ops 连理所 离婚 答应 · visit_ops 理枝
+  连理所 / 理枝 / lianli / 民政局 — 登记处，登记员理枝。发出请柬前要小屋升到岛上最高档（临海邸）、彩礼 10万～100万、潮誓戒。求婚要人类打开确认页点头。答应后再备三金、婚服、吃席。离婚由人类在婚书页申请，岛民用 离婚 答应 / 拒绝。转 marriage_ops。例子：visit_ops 连理所 · visit_ops 连理所 结婚 · visit_ops 连理所 离婚 答应 · visit_ops 理枝
   treat / fortune 可省略前缀"""
 
 
