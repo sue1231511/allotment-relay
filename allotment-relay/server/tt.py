@@ -83,6 +83,8 @@ SHOP_EXTRAS: dict[str, dict[str, Any]] = {
     "gold_set_three": {"name": "三金套", "emoji": "💍", "price": 68800, "kind": "dowry", "set": True},
     "gold_set_five": {"name": "五金套", "emoji": "👑", "price": 98800, "kind": "dowry", "set": True},
     "tide_vow_ring": {"name": "潮誓戒", "emoji": "💍", "price": 18800, "kind": "dowry"},
+    "betroth_ring": {"name": "订婚戒", "emoji": "💍", "price": 8888, "kind": "dowry"},
+    "betroth_box": {"name": "礼盒", "emoji": "🎁", "price": 3888, "kind": "dowry"},
 }
 
 SHOP_ALIASES = {
@@ -153,6 +155,9 @@ SHOP_ALIASES = {
     "潮誓戒": "tide_vow_ring",
     "婚戒": "tide_vow_ring",
     "对戒": "tide_vow_ring",
+    "订婚戒": "betroth_ring",
+    "礼盒": "betroth_box",
+    "订婚礼盒": "betroth_box",
 }
 
 LOVED_CROPS = {"garlic", "chili", "ginger", "durian"}
@@ -168,7 +173,7 @@ VISIT_LINES = [
     "调味料种子在左边。大蒜辣椒姜香茅，厨房没这几样别来跟我哭。",
     "渔具入门在这儿买。更高档带着漂绳去 tide_ops gear upgrade。",
     "盐风镐是崖矿入门，比铲子和渔网贵。买了就能 quarry_ops 探脉 / 挖。更高档 quarry_ops 升镐。",
-    "柜后那屉是嫁妆。三金、五金、婚戒。不打折。结婚的人来翻。",
+    "柜后那屉是嫁妆。三金、五金、婚戒、订婚戒、礼盒。不打折。结婚的人来翻。订婚戒不是潮誓戒。",
     "货架买的种、饲料、工具，系统回收进价九成。退货少亏一点，别当印钞反复倒卖。",
 ]
 
@@ -544,7 +549,7 @@ def _catalog_text(score: int) -> str:
         "supply": "【渔需】（可回购）",
         "gear": "【渔具】（限购；入门升档，更高走 tide_ops gear upgrade）",
         "tool": "【工具】（各限购 1）",
-        "dowry": "【嫁妆柜】（三金/五金/婚戒。不打折。举行要三金；婚戒求婚就要有）",
+        "dowry": "【嫁妆柜】（三金/五金/婚戒/订婚戒/礼盒。不打折。举行要三金；婚戒求婚就要有；订婚戒不是潮誓戒）",
     }
     order = ("seasoning", "seed", "feed", "supply", "gear", "tool", "dowry")
     groups = {k: [headers[k]] for k in order}

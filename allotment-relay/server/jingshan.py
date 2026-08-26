@@ -229,8 +229,11 @@ async def _deliver(steward: dict[str, Any]) -> str:
         await db.add_chronicle(
             "jingshan", f"{steward['name']} 把商船糕点送到何敬山家", steward["id"], conn=conn
         )
+        from . import marriage as marriage_mod
+        pastry = await marriage_mod.maybe_jingshan_pastry(conn, steward["id"])
         await conn.commit()
-    return DELIVER_SCENE + "\n\n饱食 +2\n后续：换一个游戏日后 visit_ops jingshan revisit"
+    extra = f"\n{pastry}" if pastry else ""
+    return DELIVER_SCENE + "\n\n饱食 +2\n后续：换一个游戏日后 visit_ops jingshan revisit" + extra
 
 
 async def _revisit_in_conn(

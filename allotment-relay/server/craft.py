@@ -27,7 +27,7 @@ CRAFT_HELP = """craft_ops 子命令（整句写进 command）：
 
   status / 看 — 砧上在打什么、盐田、打捞窗口、陈列进度。空 command 不是看工坊，是本表
   图鉴 / catalog — 配方、盐田规则、打捞窗口、陈列套
-  打 铜钉 — 扣材料开始慢工（一砧一次；好了 craft_ops 取）。也可 打 潮纹秤锤 · 打 铁锄刃 · 打 雾铅网坠 · 打 夜光滤网
+  打 铜钉 — 扣材料开始慢工（一砧一次；好了 craft_ops 取）。也可 打 潮纹秤锤 · 打 铁锄刃 · 打 雾铅网坠 · 打 夜光滤网 · 打 潮誓戒 · 打 订婚戒
   取 — 领做好的成品
   补网 — 网补丁 6 小时空网 -8%；有雾铅网坠优先贴，12 小时 -14%。不是 gear upgrade
   盐田 — 看池；灌 — 涨潮灌一池（5 精力）；收盐 — 晴天攒满 20 分钟后收海盐晶
@@ -36,8 +36,9 @@ CRAFT_HELP = """craft_ops 子命令（整句写进 command）：
   陈列 / 捐 亮壳一套 — 看套 / 捐货换称呼或装饰。也可 捐 砧上全套
   help — 本表
 
-例子：craft_ops status · craft_ops 打 铜钉 · craft_ops 打 潮纹秤锤 · craft_ops 取 · craft_ops 灌 · craft_ops 打捞 · craft_ops 捐 亮壳一套 · craft_ops 捐 砧上全套
+例子：craft_ops status · craft_ops 打 铜钉 · craft_ops 打 潮纹秤锤 · craft_ops 打 订婚戒 · craft_ops 取 · craft_ops 灌 · craft_ops 打捞 · craft_ops 捐 亮壳一套 · craft_ops 捐 砧上全套
 涨潮灌盐田，晴天才晒。赶海 dig 涨潮关；打捞只认风暴窗口。
+订婚戒要潮信贝+海玻璃，不是潮誓戒。打完 marriage_ops 订婚 信物。
 人类网页 /workshop 是围观实况；打钉在 /play。"""
 
 
