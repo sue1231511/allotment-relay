@@ -819,11 +819,98 @@ async def _highest_photo_flow() -> None:
         assert "成婚" in str(exc), exc
 
 
+async def _old_db_migrates_betrothal_confirm() -> None:
+    """线上旧库没有 betrothal_confirm_* 列；init_db 必须 ALTER，不能在 SCHEMA 里先建索引。"""
+    import sqlite3
+
+    tmp = Path(tempfile.mkdtemp(prefix="marriage-migrate-"))
+    db_path = tmp / "relay.db"
+    conn = sqlite3.connect(db_path)
+    conn.execute(
+        """
+        CREATE TABLE marriages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            steward_id INTEGER NOT NULL,
+            partner_type TEXT NOT NULL DEFAULT 'human',
+            partner_name TEXT NOT NULL,
+            status TEXT NOT NULL,
+            proposal_text TEXT NOT NULL DEFAULT '',
+            proposal_item TEXT NOT NULL DEFAULT '',
+            proposal_location TEXT NOT NULL DEFAULT '',
+            preferred_wedding_date INTEGER,
+            note TEXT NOT NULL DEFAULT '',
+            token_hash TEXT,
+            token_expires_at INTEGER,
+            token_used_at INTEGER,
+            confirmed_at INTEGER,
+            rejected_at INTEGER,
+            reject_seen INTEGER NOT NULL DEFAULT 0,
+            wedding_at INTEGER,
+            wedding_location TEXT NOT NULL DEFAULT '',
+            vow_ai TEXT NOT NULL DEFAULT '',
+            vow_human TEXT NOT NULL DEFAULT '',
+            ring_ready INTEGER NOT NULL DEFAULT 0,
+            attire_ready INTEGER NOT NULL DEFAULT 0,
+            feast_note TEXT NOT NULL DEFAULT '',
+            home_hut INTEGER NOT NULL DEFAULT 0,
+            public_slug TEXT,
+            charter_json TEXT NOT NULL DEFAULT '',
+            filing_kind TEXT NOT NULL DEFAULT '',
+            private_notice TEXT NOT NULL DEFAULT '',
+            human_notice TEXT NOT NULL DEFAULT '',
+            divorce_rejected_at INTEGER,
+            bride_price INTEGER NOT NULL DEFAULT 0,
+            bride_frozen INTEGER NOT NULL DEFAULT 0,
+            gold_three INTEGER NOT NULL DEFAULT 0,
+            gold_five INTEGER NOT NULL DEFAULT 0,
+            feast_tier TEXT NOT NULL DEFAULT '',
+            feast_ready INTEGER NOT NULL DEFAULT 0,
+            attire_source TEXT NOT NULL DEFAULT '',
+            betrothal_done INTEGER NOT NULL DEFAULT 0,
+            betrothal_gift INTEGER NOT NULL DEFAULT 0,
+            betrothal_token INTEGER NOT NULL DEFAULT 0,
+            betrothal_feast INTEGER NOT NULL DEFAULT 0,
+            betrothal_bouquet INTEGER NOT NULL DEFAULT 0,
+            betrothal_attire INTEGER NOT NULL DEFAULT 0,
+            betrothal_photo INTEGER NOT NULL DEFAULT 0,
+            created_at INTEGER NOT NULL,
+            updated_at INTEGER NOT NULL
+        )
+        """
+    )
+    conn.commit()
+    conn.close()
+
+    os.environ["DATA_DIR"] = str(tmp)
+    from server import config, db
+
+    config.DATA_DIR = tmp
+    config.DB_PATH = db_path
+    db.DATA_DIR = tmp
+    db.DB_PATH = db_path
+    await db.init_db()
+    async with db.connect() as c:
+        cur = await c.execute("PRAGMA table_info(marriages)")
+        cols = {row[1] for row in await cur.fetchall()}
+        assert "betrothal_confirm_hash" in cols, cols
+        assert "betrothal_confirm_expires_at" in cols, cols
+        assert "betrothal_confirm_used_at" in cols, cols
+        await c.execute("SELECT betrothal_confirm_hash FROM marriages")
+        idx = await (
+            await c.execute(
+                "SELECT name FROM sqlite_master WHERE type='index' AND name=?",
+                ("idx_marriages_betrothal_confirm_hash",),
+            )
+        ).fetchone()
+        assert idx, "unique index should exist after ALTER"
+
+
 def test_marriage_system() -> None:
     asyncio.run(_full_flow())
     asyncio.run(_betrothal_flow())
     asyncio.run(_highest_photo_flow())
     asyncio.run(_reject_and_guards())
+    asyncio.run(_old_db_migrates_betrothal_confirm())
 
 
 if __name__ == "__main__":

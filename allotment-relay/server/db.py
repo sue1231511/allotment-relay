@@ -174,7 +174,8 @@ CREATE TABLE IF NOT EXISTS marriages (
 CREATE INDEX IF NOT EXISTS idx_marriages_steward ON marriages(steward_id, status);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_marriages_token_hash ON marriages(token_hash) WHERE token_hash IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_marriages_slug ON marriages(public_slug) WHERE public_slug IS NOT NULL;
-CREATE UNIQUE INDEX IF NOT EXISTS idx_marriages_betrothal_confirm_hash ON marriages(betrothal_confirm_hash) WHERE betrothal_confirm_hash IS NOT NULL;
+-- idx_marriages_betrothal_confirm_hash 必须等 ALTER ADD COLUMN 之后再建。
+-- 旧库 marriages 没有 betrothal_confirm_hash；写在 SCHEMA 里会让 executescript 整段失败，启动崩掉。
 
 CREATE TABLE IF NOT EXISTS marriage_guests (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2004,7 +2005,6 @@ async def init_db() -> None:
             "CREATE INDEX IF NOT EXISTS idx_marriages_steward ON marriages(steward_id, status)",
             "CREATE UNIQUE INDEX IF NOT EXISTS idx_marriages_token_hash ON marriages(token_hash) WHERE token_hash IS NOT NULL",
             "CREATE UNIQUE INDEX IF NOT EXISTS idx_marriages_slug ON marriages(public_slug) WHERE public_slug IS NOT NULL",
-            "CREATE UNIQUE INDEX IF NOT EXISTS idx_marriages_betrothal_confirm_hash ON marriages(betrothal_confirm_hash) WHERE betrothal_confirm_hash IS NOT NULL",
             """
             CREATE TABLE IF NOT EXISTS marriage_guests (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
