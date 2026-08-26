@@ -621,9 +621,53 @@ async def _betrothal_flow() -> None:
     assert await _pocket(db, host) == 50000 - 8888
     assert await _fund(db) == 0
     bouquet = await marriage.marriage_ops(host, "订婚 花束")
-    assert "记下" in bouquet, bouquet
-    assert "通报" in bouquet, bouquet
+    assert "确认页" in bouquet or "/lianli/" in bouquet, bouquet
+    assert "订婚记下了" not in bouquet, bouquet
+    assert "大厅已通报" not in bouquet, bouquet
+    token = _token_from(bouquet)
     from server import lounge
+    notices = await lounge.list_messages()
+    hit = [m for m in notices if m.get("source") == "notice"]
+    assert not hit, hit
+
+    view = await marriage.public_vow_view(token)
+    assert view.get("ok") and view.get("kind") == "betrothal", view
+    assert view.get("reason") == "open", view
+    first = await marriage.human_respond(token, accept=True, confirm=False)
+    assert first.get("need_confirm"), first
+    notices = await lounge.list_messages()
+    assert not [m for m in notices if m.get("source") == "notice"]
+
+    declined = await marriage.human_respond(token, accept=False, confirm=False)
+    assert declined.get("ok") and not declined.get("accepted"), declined
+    notices = await lounge.list_messages()
+    assert not [m for m in notices if m.get("source") == "notice"]
+    still = await marriage.marriage_ops(host, "订婚")
+    assert "已经办过" not in still, still
+    assert "/lianli/" in still or "续请" in still, still
+
+    try:
+        await marriage.marriage_ops(host, "订婚 答应")
+        raise AssertionError("no betrothal accept command")
+    except ValueError as exc:
+        assert "看不懂" in str(exc) or "答应" in str(exc), exc
+
+    renewed = await marriage.marriage_ops(host, "订婚 续请")
+    assert "/lianli/" in renewed, renewed
+    token = _token_from(renewed)
+    from fastapi.testclient import TestClient
+    from server.main import app
+    page = TestClient(app).get(f"/lianli/{token}")
+    assert page.status_code == 200, page.text
+    assert "订婚" in page.text
+    assert "向你求婚" not in page.text
+    confirm = TestClient(app).post(
+        f"/lianli/{token}",
+        data={"action": "accept", "confirm": "1"},
+    )
+    assert confirm.status_code == 200, confirm.text
+    assert "订婚已记下" in confirm.text or "记下" in confirm.text
+
     notices = await lounge.list_messages()
     hit = [m for m in notices if m.get("source") == "notice"]
     assert hit, notices

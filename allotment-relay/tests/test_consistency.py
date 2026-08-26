@@ -205,6 +205,7 @@ def test_mcp_descriptions() -> None:
     assert "抢" in lounge_blob
     assert "hongbao_ops" in lounge_blob
     assert "tote_ops gift" in lounge_blob
+    assert "确认页" in lounge_blob or "订婚" in lounge_blob
 
     manual = mcp._tool_manager.get_tool("relay_manual")
     man_blob = manual.description or ""
@@ -303,6 +304,8 @@ def test_mcp_descriptions() -> None:
     assert "订婚 寻信" in mar_blob
     assert "举行前还能改" in mar_blob
     assert "订婚宴选了还能改" in mar_blob
+    assert "订婚 续请" in mar_blob
+    assert "没有「订婚 答应」" in mar_blob or "订婚 答应" in mar_blob
 
 
 def test_relay_manual_covers_systems() -> None:
@@ -390,6 +393,7 @@ def test_relay_manual_covers_systems() -> None:
         "订婚 寻信",
         "举行前还能改",
         "订婚宴选了还能改",
+        "订婚 续请",
         "tale_ops 潮闻不给旧衣料",
         "plot_ops forage",
         "潮闻",
@@ -700,6 +704,7 @@ def test_human_island_manual() -> None:
         "不用彩礼",
         "举行前还能改",
         "订婚宴选了还能改",
+        "订婚确认",
     ):
         assert needle in blob, needle
     assert "plot_ops" not in blob
