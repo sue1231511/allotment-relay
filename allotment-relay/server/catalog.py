@@ -813,6 +813,12 @@ CRAFT_RECIPES = {
         "seconds": 1200, "energy": 10,
         "hint": "自制婚戒。比 Tt酱买现货慢。marriage_ops 成戒 会转来这里",
     },
+    "betroth_ring": {
+        "name": "订婚戒", "emoji": "💍", "out": "betroth_ring", "qty": 1,
+        "need": {"betroth_shell": 1, "sea_glass": 1},
+        "seconds": 600, "energy": 6,
+        "hint": "不是潮誓戒。海边 订婚 寻信 得潮信贝，再打。现货 visit_ops tt buy 订婚戒。marriage_ops 订婚 信物 登记",
+    },
 }
 
 # 陈列柜：捐出指定货，换称呼和/或小屋装饰。不印钞
@@ -1435,16 +1441,17 @@ NPC_FIXED = [
     ]},
     {"key": "yangyang", "name": "漾漾", "lines": [
         "衣泊坊主理人。剧院侧厅那间不卖成衣的裁缝铺。",
-        "成衣没有。布来了再裁。版型、颜色、纹样你自己点。",
+        "成衣没有。布来了再裁。版型、颜色、纹样你自己点。婚服和订婚服柜上各有一挂现货。",
         "梅雨纱过季会收进柜里。不是绝版，明年还会漂回来。",
-        "cloth_ops 看坊 / 委托 短褂 海色 / 取。visit_ops 漾漾 也能进门。",
+        "cloth_ops 看坊 / 买 婚服 海色 / 买 订婚服 海色 / 委托 短褂 海色 / 取。visit_ops 漾漾 也能进门。",
         "旧衣料去份地边际捡。今日首次来，柜底偶尔给一匹，不是必给。",
     ]},
     {"key": "lianli", "name": "理枝", "lines": [
         "连理所登记员。婚书写进册子，离婚也写。",
         "岛上不问你爱的是谁。只问对方有没有答应。",
         "结婚要人类点头。发出请柬前要有最高档小屋（临海邸）、彩礼 10 万～100 万、潮誓戒。彩礼答应后花掉，不进潮汐基金。",
-        "visit_ops 连理所 · 连理所 结婚 · 连理所 离婚 答应。也可 marriage_ops。",
+        "订契后可先订婚再结婚，也可跳过订婚直接办三金、婚服、吃席。订婚去海边寻信、小馆办宴，不是一次填六个数。开销当场花掉，不是彩礼。",
+        "visit_ops 连理所 · 连理所 订婚 · 连理所 结婚 · 连理所 离婚 答应。也可 marriage_ops。",
         "不是潮生会。阿簿管税和维，我管婚书。",
     ]},
 ]
@@ -1622,6 +1629,11 @@ ITEM_NAMES.update({k: f"{v['emoji']}{v['name']}" for k, v in CLOTH_ITEMS.items()
 ITEM_NAMES.update({
     "tide_vow_sand": "潮誓砂",
     "tide_vow_ring": "潮誓戒",
+    "betroth_shell": "潮信贝",
+    "betroth_ring": "订婚戒",
+    "betroth_bloom": "潮花",
+    "betroth_box": "礼盒",
+    "betroth_pastry": "商船糕点",
     "gold_necklace": "潮金项链",
     "gold_bracelet": "潮金手镯",
     "gold_earrings": "潮金耳环",
@@ -1630,6 +1642,11 @@ ITEM_NAMES.update({
 })
 ITEM_PRICES["tide_vow_sand"] = 1
 ITEM_PRICES["tide_vow_ring"] = 18800
+ITEM_PRICES["betroth_shell"] = 1
+ITEM_PRICES["betroth_ring"] = 8888
+ITEM_PRICES["betroth_bloom"] = 1
+ITEM_PRICES["betroth_box"] = 3888
+ITEM_PRICES["betroth_pastry"] = 1
 ITEM_PRICES["gold_necklace"] = 24800
 ITEM_PRICES["gold_bracelet"] = 33800
 ITEM_PRICES["gold_earrings"] = 10800
@@ -1659,6 +1676,31 @@ WEDDING_RING_SHOP_PRICE = 18800
 WEDDING_DRESS_SHOP_PRICE = 16800
 BRIDE_PRICE_MIN = 100_000
 BRIDE_PRICE_MAX = 1_000_000
+BETROTHAL_GIFT_MIN = 10_000
+BETROTHAL_GIFT_MAX = 100_000
+BETROTHAL_TOKEN_MIN = 3_000
+BETROTHAL_TOKEN_MAX = 30_000
+BETROTHAL_FEAST_MIN = 5_000
+BETROTHAL_FEAST_MAX = 50_000
+BETROTHAL_BOUQUET_MIN = 1_000
+BETROTHAL_BOUQUET_MAX = 10_000
+BETROTHAL_ATTIRE_MIN = 2_000
+BETROTHAL_ATTIRE_MAX = 20_000
+BETROTHAL_PHOTO_MIN = 1_000
+BETROTHAL_PHOTO_MAX = 5_000
+BETROTHAL_RING_SHOP = 8_888
+BETROTHAL_BOX_SHOP = 3_888
+BETROTHAL_ATTIRE_SHOP = 8_888
+BETROTHAL_SHELL_VALUE = 3_000
+BETROTHAL_CRAFT_VALUE = 3_888
+BETROTHAL_BLOOM_VALUE = 1_888
+BETROTHAL_PASTRY_VALUE = 1_888
+BETROTHAL_DIY_ATTIRE = 2_000
+BETROTHAL_SHELL_ITEM = "betroth_shell"
+BETROTHAL_RING_ITEM = "betroth_ring"
+BETROTHAL_BLOOM_ITEM = "betroth_bloom"
+BETROTHAL_BOX_ITEM = "betroth_box"
+BETROTHAL_PASTRY_ITEM = "betroth_pastry"
 for _shell_base in ("shell_catseye", "shell_conch", "shell_scallop", "shell_starfish", "shell_mussel"):
     _plain = ITEM_NAMES[_shell_base]
     _suffix = _shell_base.replace("shell_", "")
