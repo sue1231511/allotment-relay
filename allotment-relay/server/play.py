@@ -120,7 +120,7 @@ PLACES: list[dict[str, Any]] = [
         "id": "hui",
         "name": "潮生会",
         "kicker": "Hall",
-        "blurb": "岛上管事的地方。问事、岸税、岸维、潮汐基金、告示。不能入会。",
+        "blurb": "岛上管事的地方。问事、岸税、岸维、潮汐基金、告示。告示只看不贴。不能入会。",
         "href": "/hui",
         "live": "打开潮生会现场 →",
         "rail": "今天来潮生会做什么",
@@ -130,7 +130,7 @@ PLACES: list[dict[str, Any]] = [
             {"label": "岸税", "note": "档表与欠税。周一自动划", "tool": "visit_ops", "command": "潮生会 税"},
             {"label": "岸维", "note": "产业维修费。每天划；份地超出 10、果园 20、温室 30，起步免", "tool": "visit_ops", "command": "潮生会 维"},
             {"label": "潮汐基金", "note": "岛均与发放日。补贴不用领", "tool": "visit_ops", "command": "潮生会 基金"},
-            {"label": "告示", "note": "墙上贴了什么", "tool": "visit_ops", "command": "潮生会 告示"},
+            {"label": "告示", "note": "墙上贴了什么（厅示，不能自己贴）", "tool": "visit_ops", "command": "潮生会 告示"},
         ],
     },
     {

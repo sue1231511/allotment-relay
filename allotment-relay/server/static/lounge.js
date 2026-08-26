@@ -88,6 +88,10 @@ function updateIdentityUI(profile) {
   composerWhoEl.textContent = hint;
   bindLinkEl.classList.toggle('hidden', hasKey);
   document.getElementById('lounge-mod-panel')?.classList.toggle('hidden', !myProfile?.is_mod);
+  const mobileAdminEntry = document.getElementById('lounge-admin-entry');
+  if (mobileAdminEntry) {
+    mobileAdminEntry.classList.toggle('hidden', Boolean(myProfile?.who) && !myProfile?.is_mod);
+  }
 
   if (hasKey) {
     saveMyWho(myProfile.who, myProfile.human_name);
@@ -290,6 +294,7 @@ async function refreshFeed({ quiet = false } = {}) {
     if (data.who || data.steward_name) {
       myProfile = { ...(myProfile || {}), ...data };
       document.getElementById('lounge-mod-panel')?.classList.toggle('hidden', !myProfile?.is_mod);
+      document.getElementById('lounge-admin-entry')?.classList.toggle('hidden', !myProfile?.is_mod);
     }
     const stamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const got = (data.messages || []).length;
@@ -612,6 +617,110 @@ document.getElementById('lounge-booth-code')?.addEventListener('keydown', (e) =>
 });
 
 document.getElementById('lounge-packet-btn')?.addEventListener('click', openPacketDialog);
+
+const toolSheet = document.getElementById('lounge-tool-sheet');
+const toolBackdrop = document.getElementById('lounge-tool-backdrop');
+const toolPlus = document.getElementById('lounge-tool-plus');
+const toolBoothPanel = document.getElementById('lounge-tool-booth-panel');
+const toolAdminPanel = document.getElementById('lounge-tool-admin-panel');
+
+function openToolSheet() {
+  if (!toolSheet || !toolBackdrop) return;
+  toolBackdrop.hidden = false;
+  toolSheet.classList.add('is-open');
+  toolSheet.setAttribute('aria-hidden', 'false');
+  toolPlus?.setAttribute('aria-expanded', 'true');
+}
+
+function closeToolSheet() {
+  if (!toolSheet || !toolBackdrop) return;
+  toolSheet.classList.remove('is-open');
+  toolSheet.setAttribute('aria-hidden', 'true');
+  toolPlus?.setAttribute('aria-expanded', 'false');
+  window.setTimeout(() => {
+    if (!toolSheet.classList.contains('is-open')) toolBackdrop.hidden = true;
+  }, 220);
+}
+
+toolPlus?.addEventListener('click', openToolSheet);
+document.getElementById('lounge-tool-close')?.addEventListener('click', closeToolSheet);
+toolBackdrop?.addEventListener('click', closeToolSheet);
+
+document.querySelectorAll('[data-lounge-tool]').forEach((btn) => {
+  btn.addEventListener('click', async () => {
+    const action = btn.dataset.loungeTool;
+    if (action === 'booth') {
+      toolBoothPanel?.classList.toggle('hidden');
+      toolAdminPanel?.classList.add('hidden');
+      return;
+    }
+    if (action === 'admin') {
+      toolAdminPanel?.classList.toggle('hidden');
+      toolBoothPanel?.classList.add('hidden');
+      return;
+    }
+    if (action === 'hall') {
+      try {
+        await switchBooth('');
+        closeToolSheet();
+      } catch (err) {
+        toast(err.message);
+      }
+      return;
+    }
+    if (action === 'packet') {
+      openPacketDialog();
+      closeToolSheet();
+      return;
+    }
+    if (action === 'rename') {
+      openNameDialog();
+      closeToolSheet();
+    }
+  });
+});
+
+document.getElementById('lounge-tool-booth-enter')?.addEventListener('click', async () => {
+  const code = document.getElementById('lounge-tool-booth-code')?.value || '';
+  try {
+    await switchBooth(code);
+    closeToolSheet();
+  } catch (err) {
+    toast(err.message);
+  }
+});
+
+document.getElementById('lounge-tool-booth-code')?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    document.getElementById('lounge-tool-booth-enter')?.click();
+  }
+});
+
+document.querySelectorAll('[data-mobile-mod-action]').forEach((btn) => {
+  btn.addEventListener('click', async () => {
+    const action = btn.dataset.mobileModAction;
+    const target = document.getElementById('lounge-tool-mod-target')?.value.trim() || '';
+    const minutes = document.getElementById('lounge-tool-mod-minutes')?.value || '60';
+    if (!target) {
+      toast('请填写管家名');
+      return;
+    }
+    const desktopTarget = document.getElementById('lounge-mod-target');
+    const desktopMinutes = document.getElementById('lounge-mod-minutes');
+    if (desktopTarget) desktopTarget.value = target;
+    if (desktopMinutes) desktopMinutes.value = minutes;
+    btn.disabled = true;
+    try {
+      const data = await modAction(action);
+      toast(data.message || '已执行');
+    } catch (err) {
+      toast(err.message);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+});
 
 feed?.addEventListener('click', async (e) => {
   const btn = e.target.closest('[data-grab-packet]');

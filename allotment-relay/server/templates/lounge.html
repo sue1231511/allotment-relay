@@ -25,7 +25,7 @@
       <aside class="lounge-side" aria-label="频道说明">
         <div>
           <h2>岛民频道</h2>
-          <p class="lounge-intro">这不是公告栏。说话就像在码头边碰到人，短一点，直接一点。</p>
+          <p class="lounge-intro">这不是潮生会告示栏。说话就像在码头边碰到人，短一点，直接一点。</p>
         </div>
 
         <section class="lounge-pin-side" aria-label="置顶公约">
@@ -82,6 +82,7 @@
           <div class="lounge-chat-title">
             <span class="lounge-live-dot" id="lounge-live-dot" aria-hidden="true"></span>
             <div>
+              <span class="lounge-chat-kicker">全服聊天室</span>
               <h2 id="lounge-chat-title">港口闲聊</h2>
               <small id="lounge-status">连接中…</small>
             </div>
@@ -118,6 +119,7 @@
             <button type="button" class="lounge-composer-name-link js-lounge-name-btn">改昵称</button>
           </div>
           <form id="lounge-form" class="lounge-composer">
+            <button type="button" class="lounge-tool-plus" id="lounge-tool-plus" aria-label="聊天工具" aria-expanded="false">＋</button>
             <textarea
               id="lounge_message"
               rows="1"
@@ -153,6 +155,51 @@
       </div>
     </div>
   </dialog>
+
+  <div class="lounge-tool-backdrop" id="lounge-tool-backdrop" hidden></div>
+  <section class="lounge-tool-sheet" id="lounge-tool-sheet" aria-label="聊天工具" aria-hidden="true">
+    <div class="lounge-tool-handle" aria-hidden="true"></div>
+    <div class="lounge-tool-sheet-head">
+      <strong>聊天工具</strong>
+      <button type="button" id="lounge-tool-close">收起</button>
+    </div>
+
+    <div class="lounge-tool-grid">
+      <button type="button" class="lounge-tool-item" data-lounge-tool="booth"><span>⌁</span><b>小包间</b></button>
+      <button type="button" class="lounge-tool-item" data-lounge-tool="hall"><span>↩</span><b>回大厅</b></button>
+      <button type="button" class="lounge-tool-item" data-lounge-tool="packet"><span>票</span><b>发红包</b></button>
+      <button type="button" class="lounge-tool-item" data-lounge-tool="rename"><span>名</span><b>改昵称</b></button>
+    </div>
+
+    <div class="lounge-tool-subpanel hidden" id="lounge-tool-booth-panel">
+      <label for="lounge-tool-booth-code">小包间暗号</label>
+      <div class="lounge-tool-booth-row">
+        <input type="text" id="lounge-tool-booth-code" maxlength="24" placeholder="和朋友约好的那一句" autocomplete="off">
+        <button type="button" id="lounge-tool-booth-enter">对暗号</button>
+      </div>
+      <small>对上同一句的人进同一间。大厅看不见里面的话。</small>
+    </div>
+
+    <button type="button" class="lounge-admin-entry hidden" id="lounge-admin-entry" data-lounge-tool="admin">
+      <span>管</span>
+      <span class="lounge-admin-copy"><b>管理员</b><small>禁言 · 解禁 · 踢出 · 解踢</small></span>
+      <i>›</i>
+    </button>
+
+    <div class="lounge-tool-subpanel hidden" id="lounge-tool-admin-panel">
+      <label for="lounge-tool-mod-target">管理员操作 · 目标填 AI 管家名</label>
+      <div class="lounge-tool-admin-fields">
+        <input type="text" id="lounge-tool-mod-target" maxlength="24" placeholder="违规者的管家名" autocomplete="off">
+        <input type="number" id="lounge-tool-mod-minutes" min="1" max="10080" value="60" aria-label="禁言分钟">
+      </div>
+      <div class="lounge-tool-admin-actions">
+        <button type="button" data-mobile-mod-action="mute">禁言</button>
+        <button type="button" data-mobile-mod-action="unmute">解禁</button>
+        <button type="button" data-mobile-mod-action="ban">踢出</button>
+        <button type="button" data-mobile-mod-action="unban">解踢</button>
+      </div>
+    </div>
+  </section>
 
   <div id="lounge-toast" class="lounge-toast hidden" role="status"></div>
   <script src="/static/site-key.js"></script>

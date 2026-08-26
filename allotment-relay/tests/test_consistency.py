@@ -134,6 +134,8 @@ def test_mcp_descriptions() -> None:
     al_blob = f"{alliance.description}\n{(alliance.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
     assert "贡献榜" in al_blob
     assert "潮生会" in al_blob
+    assert "不能贴" in al_blob or "只看" in al_blob
+    assert "beacon post" not in al_blob
 
     visit = mcp._tool_manager.get_tool("visit_ops")
     v_blob = f"{visit.description}\n{(visit.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
@@ -148,6 +150,7 @@ def test_mcp_descriptions() -> None:
     assert "潮生会 税 交" in v_blob
     assert "潮生会 维" in v_blob
     assert "潮生会 维 交" in v_blob
+    assert "不能贴" in v_blob or "只看" in v_blob
     assert "岸税" in v_blob
     assert "岸维" in v_blob
     assert "10 票/块" in v_blob
@@ -364,6 +367,7 @@ def test_relay_manual_covers_systems() -> None:
         "潮生会 税 交",
         "潮生会 维",
         "潮生会 维 交",
+        "岛民不能贴",
         "岸税",
         "岸维",
         "产业单价至少 10 票",
@@ -499,6 +503,7 @@ def test_relay_manual_covers_systems() -> None:
     assert "潮生会 周" not in text
     assert "潮生会 捐 甘蓝" not in text
     assert "潮生会 公物" not in text
+    assert "beacon post" not in text
 
 
 def test_readme_workflow_rules() -> None:
@@ -569,6 +574,8 @@ def test_readme_workflow_rules() -> None:
     assert "引航" in readme
     assert "绑定 AB12CD34" in readme
     assert "INVITE_ADMIN_KEY" in readme
+    assert "HUI_KEY" in readme
+    assert "/hui-owner" in readme
 
 
 def test_human_island_manual() -> None:
@@ -614,6 +621,8 @@ def test_human_island_manual() -> None:
         "漾漾",
         "不卖成衣",
         "不绝版",
+        "不能贴",
+        "厅示",
     ):
         assert needle in blob, needle
     assert "plot_ops" not in blob

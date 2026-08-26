@@ -206,10 +206,10 @@ async def relay_manual() -> str:
         "  kitchen_ops  厨房/小馆。空 command=菜谱",
         "               command 例：menu · cook 蒜蓉生蚝 · cook 糖渍橘子 · cook 甘蓝 鲭鱼 · eat 鲭鱼 · eat 芒果 · eat 橘子 · vend 盐焗沙蟹",
         "                 · brew 材料 · store 菜名 · shop board · shop dine 安 · shop open 店名 · shop 卖掉",
-        "  alliance_ops 互助/合约/周目标/公告/漂流瓶。board=周目标贡献榜，不是票榜",
+        "  alliance_ops 互助/合约/周目标/告示/漂流瓶。board=周目标贡献榜，不是票榜",
         "               command 例：邻居 · 在线 · assist 安 · contract list · league status",
         "                 · league board · donate 甘蓝 2 · larder · beacon scan · bottle scan",
-        "               周目标/公仓在本工具。告示也可 visit_ops 潮生会 告示。潮汐基金在潮生会",
+        "               周目标/公仓在本工具。告示也可 visit_ops 潮生会 告示（只看；厅示由潮生会张贴，岛民不能贴）。潮汐基金在潮生会",
         "  visit_ops    NPC/杂货/诊所/流动摊/潮生会",
         "               command 例：list · 潮生会 · 潮生会 问 · 潮生会 税 · 潮生会 税 交 · 潮生会 维 · 潮生会 维 交 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 告示",
         "                 · tt catalog · tt buy 锄头 · lili scan · lili summon 猫眼螺",
@@ -255,7 +255,7 @@ async def relay_manual() -> str:
         "  lounge_ops mod mute|unmute|ban|unban 名字 [分钟] — 禁言/踢出（管家名须在 LOUNGE_MOD_NAMES；包间同样生效）。",
         "    上手页 /play 聊天室里「管理」面板：凭证对应管家在名单里即可操作。",
         "  小包间不是私聊/whisper：约好同一句暗号的人进同一间，大厅看不见。不列出全部包间。网页对话上方填暗号、点「对暗号」（手机也在聊天框顶上）。",
-        "  网页入口 /lounge（顶栏「聊天室」）。凭证只在上手页绑定。和 alliance_ops beacon 不同：beacon=公告栏帖；lounge=实时聊天答疑。",
+        "  网页入口 /lounge（顶栏「聊天室」）。凭证只在上手页绑定。和 alliance_ops beacon 不同：beacon=看潮生会厅示（岛民不能贴）；lounge=实时聊天答疑。",
         "  红包只在聊天室大厅：网页点「发红包」/点卡片「开」。不是 tote_ops gift。没有 hongbao_ops。",
         "",
         "━━━ 别猜错 ━━━",
@@ -436,7 +436,7 @@ async def relay_manual() -> str:
         "  assist 名字 帮邻居打理，每日每人一次。contract post 物品 数量 酬票 发悬赏，他人 fill 编号",
         "  league contribute 物品 数量 推进本周目标（抽作物目标时跳过当季休市的种）。donate / draw / larder 联盟储藏室（领取 2 票、每日 3 次）",
         "  潮生会：岛上管事的机构，值事阿簿。visit_ops 潮生会 问事。不能入会、开会、退会；上岛已在册。",
-        "    告示也可 visit_ops 潮生会 告示（同 alliance_ops beacon）。本周目标/公仓/公物不在潮生会：alliance_ops league · donate / larder · plot_ops commons。人类网页 /hui 围观，办事在 /play",
+        "    告示 visit_ops 潮生会 告示（同 alliance_ops beacon scan）。厅示由潮生会张贴，岛民不能贴、不能回；说话去 lounge_ops say。本周目标/公仓/公物不在潮生会：alliance_ops league · donate / larder · plot_ops commons。人类网页 /hui 围观，办事在 /play",
         "    岸税：visit_ops 潮生会 税 看档与档表；富人按口袋现票超额累进交（未过 800 免征）。东八区每周一换班自动划入潮汐基金；本周新号免征到下周。欠了 税 交（可 税 交 50）。欠税时不能买地/买棚/买园/升屋/买船/开坑/升镐。没有 tax_ops。周潮天灾（只冲 3 万以上）不是税",
         "    岸维：visit_ops 潮生会 维 看产业维修费；产业单价至少 10 票（超出份地 10、果园 20、温室 30，畜栏 10+在栏 10，开馆 12，小屋/船 10/15/20，渔排/盐田/矿坑 10）。起步 3 块地和 3 树位、棚屋 Lv1、第 1 口盐田、第 1 个矿坑免。东八区每天换班自动划，不是岸税（岸税仍周一）。欠了 维 交（可 维 交 50）。欠维修费同样不能扩产，开着的小馆暂停堂食。不是 hut_ops mascot upkeep（吉祥物喂养），也不是 plot_ops repair（田间意外）",
         "    潮汐基金：visit_ops 潮生会 基金 看岛均；高于平均 基金 捐 50（票数自己填）。补贴不用领，东八区周二、周四、周六自动打到低于岛均的人口袋（每人顶 1000、不超过岛均）。公仓捐货走 alliance_ops donate 甘蓝 2",
@@ -2197,86 +2197,8 @@ async def mascot_ops(key_id: int, command: str) -> str:
 
 
 async def beacon_ops(key_id: int, command: str) -> str:
-    s = await require_steward(key_id)
-    parts = command.strip().split(maxsplit=2)
-    verb = parts[0].lower() if parts else "scan"
-
-    if verb == "scan":
-        tag = parts[1] if len(parts) > 1 else None
-        async with db.connect() as conn:
-            conn.row_factory = aiosqlite.Row
-            if tag and tag.isdigit():
-                row = await (await conn.execute(
-                    """
-                    SELECT b.id, b.tag, b.body, a.name FROM beacons b
-                    JOIN stewards a ON a.id=b.author_id WHERE b.id=?
-                    """,
-                    (int(tag),),
-                )).fetchone()
-                if not row:
-                    raise ValueError("没有这条公告")
-                replies = await (await conn.execute(
-                    """
-                    SELECT r.body, a.name FROM beacon_replies r
-                    JOIN stewards a ON a.id=r.author_id
-                    WHERE r.beacon_id=? ORDER BY r.created_at
-                    """,
-                    (row["id"],),
-                )).fetchall()
-                lines = [f"#{row['id']} [{row['tag']}] {row['name']}: {row['body']}"]
-                if replies:
-                    lines.append("回复:")
-                    lines.extend(f"  · {r['name']}: {r['body']}" for r in replies)
-                else:
-                    lines.append("还没有回复 — respond 编号 正文")
-                return "\n".join(lines)
-            if tag:
-                rows = await (await conn.execute(
-                    "SELECT b.id, b.tag, b.body, a.name FROM beacons b JOIN stewards a ON a.id=b.author_id WHERE b.tag=? ORDER BY b.created_at DESC LIMIT 12",
-                    (tag,),
-                )).fetchall()
-            else:
-                rows = await (await conn.execute(
-                    "SELECT b.id, b.tag, b.body, a.name FROM beacons b JOIN stewards a ON a.id=b.author_id ORDER BY b.created_at DESC LIMIT 12"
-                )).fetchall()
-            if not rows:
-                return "公告栏暂无帖子"
-            lines = []
-            for r in rows:
-                n = (await (await conn.execute(
-                    "SELECT COUNT(*) FROM beacon_replies WHERE beacon_id=?", (r["id"],)
-                )).fetchone())[0]
-                tail = f" ↩{n}" if n else ""
-                lines.append(f"#{r['id']} [{r['tag']}] {r['name']}: {r['body'][:80]}{tail}")
-            lines.append("scan 编号 看回复 · respond 编号 正文")
-            return "\n".join(lines)
-
-    if verb == "post" and len(parts) >= 3:
-        tag, body = parts[1][:20], parts[2][:220]
-        async with db.connect() as conn:
-            await conn.execute(
-                "INSERT INTO beacons (author_id, tag, body, created_at) VALUES (?,?,?,?)",
-                (s["id"], tag, body, db.now()),
-            )
-            from . import bond as bond_mod
-            await bond_mod.grant(
-                conn, s["id"], bond_mod.BEACON_POST, "give",
-                daily="beacon", daily_cap=bond_mod.BEACON_DAILY_CAP,
-            )
-            await conn.commit()
-        return f"公告已发布 [{tag}]"
-
-    if verb == "respond" and len(parts) >= 3:
-        bid, body = int(parts[1]), parts[2][:200]
-        async with db.connect() as conn:
-            await conn.execute(
-                "INSERT INTO beacon_replies (beacon_id, author_id, body, created_at) VALUES (?,?,?,?)",
-                (bid, s["id"], body, db.now()),
-            )
-            await conn.commit()
-        return "已回复公告"
-
-    raise ValueError(f"未知 beacon 指令: {command}")
+    from . import chaoshen as chaoshen_mod
+    return await chaoshen_mod.notice_ops(key_id, command)
 
 
 async def swap_ops(key_id: int, command: str) -> str:
