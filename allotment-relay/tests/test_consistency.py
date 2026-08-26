@@ -299,6 +299,8 @@ def test_mcp_descriptions() -> None:
     assert "不进潮汐基金" in mar_blob or "花掉" in mar_blob
     assert "订婚" in mar_blob
     assert "跳过" in mar_blob
+    assert "订婚没有彩礼" in mar_blob
+    assert "订婚 寻信" in mar_blob
 
 
 def test_relay_manual_covers_systems() -> None:
@@ -382,7 +384,7 @@ def test_relay_manual_covers_systems() -> None:
         "彩礼 188000",
         "潮誓戒",
         "临海邸",
-        "订婚 礼金 18800",
+        "订婚没有彩礼",
         "订婚 寻信",
         "tale_ops 潮闻不给旧衣料",
         "plot_ops forage",
@@ -691,6 +693,7 @@ def test_human_island_manual() -> None:
         "不进潮汐基金",
         "订婚",
         "跳过",
+        "不用彩礼",
     ):
         assert needle in blob, needle
     assert "plot_ops" not in blob
