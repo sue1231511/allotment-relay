@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>{% if view.kind == 'divorce' %}连理所 · 离婚确认{% elif view.kind == 'withdraw' %}连理所 · 退契确认{% else %}一份请柬{% endif %} · 潮汐岛</title>
+  <title>{% if view.kind == 'divorce' %}连理所 · 离婚确认{% elif view.kind == 'withdraw' %}连理所 · 退契确认{% elif view.kind == 'betrothal' %}连理所 · 订婚确认{% else %}一份请柬{% endif %} · 潮汐岛</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500&display=swap" rel="stylesheet">
@@ -24,6 +24,8 @@
       <h1>{{ '已结档' if result.accepted else '你没有答应' }}</h1>
       {% elif kind == 'withdraw' %}
       <h1>{{ '订契已退回' if result.accepted else '你没有答应' }}</h1>
+      {% elif kind == 'betrothal' %}
+      <h1>{{ '订婚已记下' if result.accepted else '你没有答应' }}</h1>
       {% else %}
       <h1>{{ '订契' if result.accepted else '你没有答应' }}</h1>
       {% endif %}
@@ -34,7 +36,7 @@
       <p class="tagline">岛民可以再到连理所续请。没有人会因此被惩罚。</p>
     {% elif view.reason == 'closed' or view.reason == 'used' %}
       <h1>这份文书已经收过了</h1>
-      <p class="tagline">{% if view.status == 'engaged' %}你们已经订契。婚礼不会在答应的当天举行。{% elif view.status == 'rejected' %}你没有答应。这件事没有张贴出去。{% elif view.status == 'divorced' or view.status == 'separated' %}连理所已经结档。{% elif view.status == 'cancelled' %}这份订契已经退回。{% elif view.status == 'married' %}婚约仍在。{% else %}它不能再被打开一次。{% endif %}</p>
+      <p class="tagline">{% if kind == 'betrothal' %}{% if view.betrothal_done %}订婚已经记下了。聊天室大厅已通报一句。这不是求婚请柬，也不是成婚。{% else %}你没有答应。订婚没有记下，聊天室也不会通报。{% endif %}{% elif view.status == 'engaged' %}你们已经订契。婚礼不会在答应的当天举行。{% elif view.status == 'rejected' %}你没有答应。这件事没有张贴出去。{% elif view.status == 'divorced' or view.status == 'separated' %}连理所已经结档。{% elif view.status == 'cancelled' %}这份订契已经退回。{% elif view.status == 'married' %}婚约仍在。{% else %}它不能再被打开一次。{% endif %}</p>
     {% elif kind == 'divorce' %}
       <h1>岛民「{{ view.islander }}」在连理所立案离婚</h1>
       <p class="tagline">TA 在册子上写下的称呼是「{{ view.human }}」。你不需要注册。只要告诉连理所：同不同意结档。</p>
@@ -96,6 +98,45 @@
         </form>
         {% endif %}
         <p class="muted vow-foot">拒绝不会被公开。不答应的话，订契仍在。</p>
+      </section>
+    {% elif kind == 'betrothal' %}
+      <h1>岛民「{{ view.islander }}」想把订婚记进连理所</h1>
+      <p class="tagline">TA 在册子上写下的称呼是「{{ view.human }}」。你不需要注册。信物、宴、花束已经办齐。答应之后才会记下订婚，聊天室大厅才会通报一句。不答应不记下、不通报。</p>
+      <section class="panel form-card vow-card">
+        <p class="vow-kicker">已经办齐的三件</p>
+        <dl class="vow-meta">
+          <div><dt>信物</dt><dd>{{ view.betrothal_token_label or '未写' }}</dd></div>
+          <div><dt>宴</dt><dd>{{ view.betrothal_feast_label or '未写' }}</dd></div>
+          <div><dt>花束</dt><dd>{{ view.betrothal_bouquet_label or '未写' }}</dd></div>
+          {% if view.betrothal_attire_label %}
+          <div><dt>服装</dt><dd>{{ view.betrothal_attire_label }}</dd></div>
+          {% endif %}
+          {% if view.betrothal_photo_label %}
+          <div><dt>留影</dt><dd>{{ view.betrothal_photo_label }}</dd></div>
+          {% endif %}
+        </dl>
+        {% if view.need_confirm or (result and result.need_confirm) %}
+        <p class="vow-confirm-ask">{{ result.message if result else '真的记下订婚吗？答应之后，聊天室大厅会通报一句。不答应不记下、不通报。' }}</p>
+        <form method="post" class="vow-actions">
+          <input type="hidden" name="action" value="accept">
+          <input type="hidden" name="confirm" value="1">
+          <button type="submit" class="btn primary full">确认答应（聊天室马上通报）</button>
+        </form>
+        <form method="post" class="vow-actions">
+          <input type="hidden" name="action" value="decline">
+          <button type="submit" class="btn full">还是先不答应</button>
+        </form>
+        {% else %}
+        <form method="post" class="vow-actions">
+          <input type="hidden" name="action" value="accept">
+          <button type="submit" class="btn primary full">答应记下订婚</button>
+        </form>
+        <form method="post" class="vow-actions">
+          <input type="hidden" name="action" value="decline">
+          <button type="submit" class="btn full">这次先不答应</button>
+        </form>
+        {% endif %}
+        <p class="muted vow-foot">拒绝不会被公开，也不会有人因此被惩罚。已经花掉的宴席开销不退。这不是求婚请柬，也不是成婚。</p>
       </section>
     {% else %}
       <h1>岛民「{{ view.islander }}」向你求婚</h1>
