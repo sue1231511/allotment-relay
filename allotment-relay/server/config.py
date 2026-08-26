@@ -194,22 +194,21 @@ START_HEALTH = 100
 HEALTH_LOW = 40
 AILMENT_ROLL_CHANCE = _event_rate(0.12)
 AILMENT_BAD_EVENT_CHANCE = _event_rate(0.13)
-# 没病也能补身子：诊所调理按档收票（有钱人的去处，不赊）
-CLINIC_TONIC_SMALL_COST = 88
-CLINIC_TONIC_SMALL_HEAL = 8
-CLINIC_TONIC_MID_COST = 180
-CLINIC_TONIC_MID_HEAL = 14
-CLINIC_TONIC_LARGE_COST = 360
-CLINIC_TONIC_LARGE_HEAL = 22
-CLINIC_TONIC_FULL_PER = 16       # 全套养命：每缺 1 点健康收这么多票
-CLINIC_TONIC_FULL_MIN = 80
-SLEEP_HEALTH = 6                 # 床上一觉顺带回这么多健康
-COOKED_EAT_HEALTH = 1            # 家里吃熟菜点滴回血
-DINE_HEALTH = 2                  # 下馆子堂食比家里多一口
 # 生肉感染：只有 meat_*（兔肉/猪肉）生吃会滚；水果/生鱼/野薄荷安全
 RAW_MEAT_INFECT_CHANCE = 0.35
 INFECTION_TREAT_COOLDOWN = 21600  # 同一次感染两次治疗至少隔 6 小时
 INFECTION_DRAIN_EVERY = 1800      # 每 30 分钟按档位扣精力
+# 诊所调理（无病回身体）：价偏高，专门刮有钱人的口袋
+# key → heal / price；也可用 clinic buy 回春汤 / 大补丸 囤货
+CLINIC_TONIC_TIERS = {
+    "小": {"heal": 15, "price": 95, "label": "小调理"},
+    "中": {"heal": 30, "price": 210, "label": "中调理"},
+    "大": {"heal": 50, "price": 380, "label": "大调理"},
+}
+CLINIC_TONIC_DAILY_CAP = 3  # 每个换班日现场调理上限（囤药不算）
+SLEEP_HEALTH = 6                 # 床上一觉顺带回这么多健康
+COOKED_EAT_HEALTH = 1            # 家里吃熟菜点滴回血
+DINE_HEALTH = 2                  # 下馆子堂食比家里多一口
 
 # 生吃规则：蔬菜不能生吃；水果能吃但只回一点精力，
 # 连续生吃 FRUIT_EAT_STREAK_LIMIT 口落「营养不良」（吃熟菜可压 / 诊所可治）
@@ -372,7 +371,7 @@ MARKET_SLOT_COST = 15          # 每加 1 格
 BARN_SLOTS = 6
 BARN_ERECT_COST = 75
 
-# 岸柏板床 — hut_ops 睡：一觉回精力（回饱食 +8），每天一次（游戏日边界刷新）
+# 岸柏板床 — hut_ops 睡：一觉回精力（回饱食 +8、身体 +6），每天一次（游戏日边界刷新）
 BED_REST_ENERGY = 50
 HAMMOCK_ENERGY = 35
 BATH_MIST_WIT = 15

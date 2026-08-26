@@ -1,4 +1,4 @@
-"""诊所 — 桥桥大夫，花钱治病，窗台斑鸠，药品货架。"""
+"""诊所 — 桥桥大夫，花钱治病 / 调理回身体，窗台斑鸠，药品货架。"""
 
 from __future__ import annotations
 
@@ -12,20 +12,19 @@ from . import config, db, flavor, health, survival
 from .catalog import AILMENTS, item_label
 from .clinic_copy import (
     CLINIC_MEDICINES,
-    CLINIC_TONICS,
+    medicine_is_tonic,
     pick_atmosphere,
     pick_chat,
     pick_discount_hint,
     pick_dove_event,
     pick_greeting,
     pick_night,
+    pick_tonic_done,
     pick_tonic_line,
     pick_treat_line,
     register_medicine_items,
     resolve_medicine,
-    resolve_tonic,
-    tonic_cost,
-    tonic_menu_lines,
+    resolve_tonic_tier,
 )
 from .game import require_steward
 
@@ -90,6 +89,66 @@ async def _clinic_scene(conn: aiosqlite.Connection, s: dict[str, Any]) -> tuple[
     return "\n".join(lines), discount, night
 
 
+def _tonic_menu(*, cost_mult: float = 1.0, cost_add: int = 0) -> list[str]:
+    lines = [
+        "调理价目（无病回身体，不治病症；贵是故意的）:",
+    ]
+    for key, meta in config.CLINIC_TONIC_TIERS.items():
+        billed = health._bill_cost(int(meta["price"]), cost_mult=cost_mult, cost_add=cost_add)  # noqa: SLF001
+        lines.append(
+            f"  {meta['label']}（clinic 调理 {key}）— 身体 +{meta['heal']} · {billed} 票"
+        )
+    lines.append(
+        f"本换班日现场调理最多 {config.CLINIC_TONIC_DAILY_CAP} 次"
+        "（clinic buy 回春汤 / 大补丸 可囤，不占次数）"
+    )
+    lines.append("有病先 treat；调理和治病是两回事。")
+    return lines
+
+
+async def _do_tonic(
+    conn: aiosqlite.Connection,
+    s: dict[str, Any],
+    tier: str,
+    *,
+    cost_mult: float = 1.0,
+    cost_add: int = 0,
+) -> str:
+    meta = config.CLINIC_TONIC_TIERS[tier]
+    heal = int(meta["heal"])
+    cost = health._bill_cost(int(meta["price"]), cost_mult=cost_mult, cost_add=cost_add)  # noqa: SLF001
+    day = db.day_id()
+    tonic_day = int(s.get("clinic_tonic_day") or 0)
+    used = int(s.get("clinic_tonic_count") or 0) if tonic_day == day else 0
+    if used >= config.CLINIC_TONIC_DAILY_CAP:
+        raise ValueError(
+            f"今天现场调理已满 {config.CLINIC_TONIC_DAILY_CAP} 次。"
+            "可 clinic buy 回春汤 / 大补丸 囤着自己喝，不占次数。"
+        )
+    cur = await conn.execute("SELECT tickets, health FROM stewards WHERE id=?", (s["id"],))
+    tickets, body = (await cur.fetchone())
+    if int(body) >= 100:
+        raise ValueError("身体已经满分，别浪费票——桥桥不收「没事找事」的冤枉钱")
+    if tickets < cost:
+        raise ValueError(f"{meta['label']}要 {cost} 票，你只有 {tickets} 票——桥桥大夫不赊账")
+    gain = min(heal, 100 - int(body))
+    await conn.execute(
+        """
+        UPDATE stewards
+        SET tickets=tickets-?, health=MIN(100, health+?),
+            clinic_tonic_day=?, clinic_tonic_count=?
+        WHERE id=?
+        """,
+        (cost, gain, day, used + 1, s["id"]),
+    )
+    left = config.CLINIC_TONIC_DAILY_CAP - (used + 1)
+    return (
+        f"{pick_tonic_done()}\n"
+        f"{meta['label']}完成（-{cost} 票 · 身体 +{gain}）。"
+        f"今日现场调理还剩 {left} 次。"
+    )
+
+
 async def _buy_medicine(
     conn: aiosqlite.Connection,
     s: dict[str, Any],
@@ -117,21 +176,27 @@ async def _buy_medicine(
 
 async def _use_medicine(conn: aiosqlite.Connection, s: dict[str, Any], med_key: str) -> str:
     meta = CLINIC_MEDICINES[med_key]
-    heal_only = int(meta.get("heal") or 0)
     if not await db.take_item(conn, s["id"], med_key, 1):
         raise ValueError(f"行囊里没有 {meta['name']}，先 clinic buy {meta['name']}")
-    if heal_only:
-        restored = await health.restore_health(conn, s["id"], heal_only)
-        if restored <= 0:
-            await db.add_item(conn, s["id"], med_key, 1)
-            raise ValueError(f"身子已经满了，{meta['name']}先留着")
+
+    # 回春汤 / 大补丸：无病回身体
+    if medicine_is_tonic(meta):
+        heal = int(meta["heal"])
         cur = await conn.execute("SELECT health FROM stewards WHERE id=?", (s["id"],))
-        now = int((await cur.fetchone())[0])
-        return (
-            f"{pick_tonic_line()}\n"
-            f"喝了 {meta['emoji']}{meta['name']}，身体 +{restored}（现 {now}）。"
-            "这不治病；有挂号项还是 clinic treat。"
+        body = int((await cur.fetchone())[0])
+        if body >= 100:
+            await db.add_item(conn, s["id"], med_key, 1)
+            raise ValueError("身体已经满分，药先留着——别浪费贵东西")
+        gain = min(heal, 100 - body)
+        await conn.execute(
+            "UPDATE stewards SET health=MIN(100, health+?) WHERE id=?",
+            (gain, s["id"]),
         )
+        return (
+            f"服下 {meta['emoji']}{meta['name']}，气色回了一截（身体 +{gain}）。"
+            "这药不治病症；有病仍要 treat。"
+        )
+
     ailment = meta["ailment"]
     ailments = await health.list_ailments(conn, s["id"])
     hit = next((a for a in ailments if a["key"] == ailment), None)
@@ -152,8 +217,11 @@ async def _use_medicine(conn: aiosqlite.Connection, s: dict[str, Any], med_key: 
             (s["id"], ailment),
         )
         heal = AILMENTS[ailment].get("health_restore", 8)
-        restored = await health.restore_health(conn, s["id"], heal)
-        msg = f"用了 {meta['emoji']}{meta['name']}，{AILMENTS[ailment]['emoji']}{AILMENTS[ailment]['name']}好了（身体 +{restored}）"
+        await conn.execute(
+            "UPDATE stewards SET health=MIN(100, health+?) WHERE id=?",
+            (heal, s["id"]),
+        )
+        msg = f"用了 {meta['emoji']}{meta['name']}，{AILMENTS[ailment]['emoji']}{AILMENTS[ailment]['name']}好了（身体 +{heal}）"
     flavor_line = pick_treat_line(ailment)
     return "\n".join(x for x in [flavor_line, msg] if x)
 
@@ -195,10 +263,11 @@ async def clinic_ops(key_id: int, command: str) -> str:
 
     scene_verbs = {
         "status", "visit", "enter", "进", "catalog", "价目", "chat", "闲聊",
-        "dove", "斑鸠", "窗台", "调理", "tonic", "补", "checkup", "养命",
+        "dove", "斑鸠", "窗台", "buy", "买", "use", "用", "treat", "治",
+        "调理", "rest", "tonic", "补", "养生",
     }
 
-    if verb in scene_verbs or verb in ("buy", "买", "use", "用", "treat", "治"):
+    if verb in scene_verbs:
         async with db.connect() as conn:
             scene, discount, night = await _clinic_scene(conn, s)
             mult, add, price_note = _pricing_note(discount=discount, night=night)
@@ -216,14 +285,11 @@ async def clinic_ops(key_id: int, command: str) -> str:
         if price_note:
             lines.append(f"今日价：{price_note}")
         lines.append(
-            "指令: treat 病症 / treat all · 调理 小|中|大|满 · buy 药品 · use 药品 · dove 窗台 · chat 闲聊 · catalog"
+            "指令: treat 病症 / treat all · 调理 小|中|大 · buy 药品 · use 药品 · dove 窗台 · chat 闲聊 · catalog"
         )
-        body = int(s.get("health") or 0)
-        if body < 100:
-            lines.append("")
-            lines.extend(tonic_menu_lines(body, cost_mult=mult, cost_add=add))
+        lines.extend(_tonic_menu(cost_mult=mult, cost_add=add))
         if not ailments:
-            lines.append("目前没挂号项——别装病")
+            lines.append("目前没挂号项——没病可 clinic 调理 回身体（贵）")
             return "\n".join(lines)
         lines.append("待治:")
         bridge_ailments = [a for a in ailments if not health.bridge_refuses(a)]
@@ -255,7 +321,7 @@ async def clinic_ops(key_id: int, command: str) -> str:
         msg = scene + "\n\n" + (pick_chat() if verb != "visit" else random.choice([
             "桥桥大夫推推眼镜：「随机事件搞出来的病，找随机事件哭去——诊费照收。」",
             "桥桥大夫：「咕咕斑鸠伤不得，你扭了脚可得花钱。」",
-            "桥桥大夫指价目表：「看清数字再开口，我不还价。」",
+            "桥桥大夫指价目表：「看清数字再开口，我不还价。调理更贵。」",
         ]))
         async with db.connect() as conn:
             ailments = await health.list_ailments(conn, s["id"])
@@ -270,7 +336,11 @@ async def clinic_ops(key_id: int, command: str) -> str:
             if len(ailments) > len(bridge):
                 msg += f"\n另有 {len(ailments) - len(bridge)} 项井下伤，桥桥不接，找晏安医务间。"
         else:
-            msg += "\n你看上去暂时不用破费。"
+            body = int(s.get("health") or 100)
+            if body < 100:
+                msg += f"\n没挂病，但身体 {body}/100——可 clinic 调理 小|中|大 回气色（贵）。"
+            else:
+                msg += "\n你看上去暂时不用破费。"
         return msg
 
     if verb in ("dove", "斑鸠", "窗台"):
@@ -285,23 +355,44 @@ async def clinic_ops(key_id: int, command: str) -> str:
     if verb in ("catalog", "价目", "shop"):
         lines = [scene, "", "药品货架（clinic buy 药名 · use 药名 · 也可直接 treat 花钱治）:"]
         for key, meta in CLINIC_MEDICINES.items():
-            hint = meta.get("hint") or ""
-            if meta.get("heal"):
+            if medicine_is_tonic(meta):
+                hint = meta.get("hint") or f"无病回身体 +{meta['heal']}"
                 lines.append(
                     f"  {meta['emoji']}{meta['name']}（{key}） {meta['price']}票 "
                     f"→ 身体 +{meta['heal']} · {hint}"
                 )
                 continue
             ail = AILMENTS.get(meta["ailment"], {})
-            hint = hint or ail.get("hint", "")
+            hint = meta.get("hint") or ail.get("hint", "")
             lines.append(
                 f"  {meta['emoji']}{meta['name']}（{key}） {meta['price']}票 "
                 f"→ {ail.get('emoji', '')}{ail.get('name', meta['ailment'])} · {hint}"
             )
         lines.append("")
-        lines.append("没病补身子：clinic 调理 小|中|大|满（当场喝，更贵）；养命汤/养命丹/回春散可囤。")
+        lines.extend(_tonic_menu(cost_mult=mult, cost_add=add))
         lines.append("病症 treat 键名见 visit_ops clinic status")
         return "\n".join(lines)
+
+    if verb in ("调理", "rest", "tonic", "补", "养生"):
+        tier_token = " ".join(parts[1:]).strip() if len(parts) > 1 else ""
+        tier = resolve_tonic_tier(tier_token) if tier_token else None
+        if not tier:
+            # 裸写 rest / 调理：展示价目；若写了无法识别的档位也提示
+            lines = [scene, "", pick_tonic_line()]
+            if tier_token:
+                lines.append(f"未知档位「{tier_token}」。用 小 / 中 / 大。")
+            lines.extend(_tonic_menu(cost_mult=mult, cost_add=add))
+            if price_note:
+                lines.append(f"（{price_note}）")
+            return "\n".join(lines)
+        async with db.connect() as conn:
+            s = await db.get_steward_by_id(s["id"]) or s
+            msg = await _do_tonic(conn, s, tier, cost_mult=mult, cost_add=add)
+            await db.add_chronicle("clinic", f"{s['name']} {msg}", s["id"], conn=conn)
+            await conn.commit()
+        if price_note:
+            msg += f"\n（{price_note}）"
+        return scene + "\n\n" + pick_tonic_line() + "\n" + msg
 
     if verb in ("buy", "买") and len(parts) >= 2:
         med = resolve_medicine(" ".join(parts[1:]))
@@ -355,54 +446,7 @@ async def clinic_ops(key_id: int, command: str) -> str:
             msg += f"\n（{price_note}）"
         return scene + "\n\n" + msg
 
-    if verb in ("调理", "tonic", "补", "checkup", "养命"):
-        token = " ".join(parts[1:]).strip() if len(parts) > 1 else ""
-        key = resolve_tonic(token)
-        async with db.connect() as conn:
-            s = await db.get_steward_by_id(s["id"]) or s
-            body = int(s.get("health") or 0)
-            if key is None:
-                lines = [scene, "", pick_tonic_line()]
-                lines.extend(tonic_menu_lines(body, cost_mult=mult, cost_add=add))
-                return "\n".join(lines)
-            if body >= 100:
-                raise ValueError("身子已经满了。调理留给虚的人，别浪费药材。")
-            cost, heal = tonic_cost(key, body, cost_mult=mult, cost_add=add)
-            if heal <= 0:
-                raise ValueError("身子已经满了。调理留给虚的人，别浪费药材。")
-            cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
-            tickets = int((await cur.fetchone())[0])
-            if tickets < cost:
-                label = CLINIC_TONICS[key]["name"]
-                raise ValueError(
-                    f"{label} 要 {cost} 票，你只有 {tickets} 票。"
-                    "桥桥不赊账。价就是给有余票的人定的。"
-                )
-            await conn.execute(
-                "UPDATE stewards SET tickets=tickets-? WHERE id=?",
-                (cost, s["id"]),
-            )
-            restored = await health.restore_health(conn, s["id"], heal)
-            cur = await conn.execute("SELECT health, tickets FROM stewards WHERE id=?", (s["id"],))
-            now_h, left = await cur.fetchone()
-            label = CLINIC_TONICS[key]["name"]
-            await db.add_chronicle(
-                "clinic",
-                f"{s['name']} 在诊所{label}（-{cost} 票，身体 +{restored}）",
-                s["id"],
-                conn=conn,
-            )
-            await conn.commit()
-        msg = (
-            f"{pick_tonic_line()}\n"
-            f"桥桥大夫收 {cost} 票，做了{label}（身体 +{restored}，现 {now_h}；余 {left} 票）。"
-            "这不治病。有挂号项走 clinic treat。"
-        )
-        if price_note:
-            msg += f"\n（{price_note}）"
-        return scene + "\n\n" + msg
-
     raise ValueError(
         "未知 clinic 指令: "
-        f"{command}（status / treat 病症|all / 调理 小|中|大|满 / buy 药品 / use 药品 / dove / chat / catalog）"
+        f"{command}（status / treat 病症|all / 调理 小|中|大 / buy 药品 / use 药品 / dove / chat / catalog）"
     )

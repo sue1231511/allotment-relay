@@ -505,6 +505,10 @@ GOOD_HEALTH = [
     "蹲篱笆边缓了缓，身体 +{n}——今天运气不错",
     "太阳刚好，骨头缝里那点潮气散了，身体 +{n}",
     "路过的人递了块姜糖，身体 +{n}",
+    "晒了一会儿太阳，气色回了一截，身体 +{n}",
+    "退潮的风把潮气吹散，胸口顺了，身体 +{n}",
+    "路过诊所没进去，自己缓过来一点，身体 +{n}",
+    "渔排上有人递了口淡水，身体 +{n}",
 ]
 
 GOOD_HEALTH_LAND = [
@@ -742,7 +746,7 @@ METER_HINT_STANDING = "档口对你爱搭不理"
 
 HEALTH_HINT_LOW = "身体发虚"
 HEALTH_HINT_CLINIC = "去 visit_ops clinic 挂号"
-HEALTH_HINT_TONIC = "没病也虚就 clinic 调理（花票，贵）"
+HEALTH_HINT_TONIC = "clinic 调理 小|中|大 回气色（贵）"
 
 AILMENT_INFlict_LINES = [
     "身体：{name}（{hint}）——桥桥大夫等着收票",
@@ -854,7 +858,7 @@ LEGGED_FISH_GRAB = [
 WALKBLUE_CATCH_CURSE = [
     "未命名小鱼在袋里跺了一下脚。小小的诅咒贴上来——步子发飘，clinic treat 腿鱼小咒 可解。",
     "2D蓝鱼盯着你：礼遇就好，非要钓上来。腿鱼小咒落袋，行动精力 +1。",
-    "它没自我介绍，只留下一句没说出口的咒。visit_ops clinic treat 腿鱼小咒，32 票。",
+    "它没自我介绍，只留下一句没说出口的咒。visit_ops clinic treat 腿鱼小咒，48 票。",
 ]
 
 WALKBLUE_FATE_EAT = {

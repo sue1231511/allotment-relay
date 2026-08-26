@@ -5,8 +5,6 @@ from __future__ import annotations
 import random
 from typing import Any
 
-from . import config
-
 # ── 进门氛围 ──────────────────────────────────────────────
 
 ATMOSPHERE = [
@@ -51,7 +49,6 @@ CHAT_LINES = [
     "桥桥大夫：「票不到位，药不到位。诊所不搞慈善——这话我说腻了，但还得说。」",
     "桥桥大夫：「你要是闲得慌，去种地去。别在我这儿晃。」",
     "桥桥大夫：「窗台上那窝别碰。碰坏了你赔不起。」",
-    "桥桥大夫：「没病也虚？调理单子在门口。价不便宜，别还价。」",
 ]
 
 # ── 窗台斑鸠（每日最多 1 次）──────────────────────────────
@@ -90,96 +87,56 @@ DOVE_EVENTS: list[dict[str, Any]] = [
 
 CLINIC_MEDICINES: dict[str, dict[str, Any]] = {
     "med_sober": {
-        "name": "醒酒药", "emoji": "💊", "price": 18, "ailment": "hangover",
+        "name": "醒酒药", "emoji": "💊", "price": 28, "ailment": "hangover",
         "aliases": ["醒酒药", "解酒药"],
     },
     "med_sprain": {
-        "name": "消炎镇痛膏药", "emoji": "🩹", "price": 20, "ailment": "sprain",
+        "name": "消炎镇痛膏药", "emoji": "🩹", "price": 28, "ailment": "sprain",
         "aliases": ["膏药", "消炎镇痛膏药", "扭伤膏药"],
     },
     "med_bandage": {
-        "name": "创可贴", "emoji": "🩹", "price": 10, "ailment": "infection",
+        "name": "创可贴", "emoji": "🩹", "price": 16, "ailment": "infection",
         "aliases": ["创可贴", "bandage"],
         "hint": "生肉感染辅助——仍要走疗程，用贴可少等一半间隔",
         "infection_wait_halve": True,
     },
     "med_bloodclear": {
-        "name": "净血针剂", "emoji": "💉", "price": 30, "ailment": "infection",
+        "name": "净血针剂", "emoji": "💉", "price": 42, "ailment": "infection",
         "aliases": ["净血针剂", "针剂"],
         "hint": "生肉感染一针压一档（不能跳疗程间隔）",
     },
     "med_rockcough": {
-        "name": "咳嗽糖浆", "emoji": "🍯", "price": 22, "ailment": "rock_dust",
+        "name": "咳嗽糖浆", "emoji": "🍯", "price": 28, "ailment": "rock_dust",
         "aliases": ["咳嗽糖浆", "糖浆"],
     },
     "med_saltphlegm": {
-        "name": "化痰散", "emoji": "🌿", "price": 18, "ailment": "wreck_cough",
+        "name": "化痰散", "emoji": "🌿", "price": 24, "ailment": "wreck_cough",
         "aliases": ["化痰散"],
     },
     "med_cold": {
-        "name": "感冒药", "emoji": "🤧", "price": 20, "ailment": "cold",
+        "name": "感冒药", "emoji": "🤧", "price": 26, "ailment": "cold",
         "aliases": ["感冒药"],
     },
     "med_vitamin": {
-        "name": "多维元素片", "emoji": "💊", "price": 10, "ailment": "malnutrition",
+        "name": "多维元素片", "emoji": "💊", "price": 16, "ailment": "malnutrition",
         "aliases": ["多维元素片", "维生素片"],
     },
     "med_hexincense": {
-        "name": "祛咒香", "emoji": "🪔", "price": 32, "ailment": "legfish_hex",
+        "name": "祛咒香", "emoji": "🪔", "price": 48, "ailment": "legfish_hex",
         "aliases": ["祛咒香", "祛咒"],
     },
+    # 无病回身体：贵。不是治病，是刮口袋里的票换气色。
     "med_tonic": {
-        "name": "养命汤", "emoji": "🍵", "price": 96, "heal": 8,
-        "aliases": ["养命汤"],
-        "hint": "回 8 健康，不治病。身子虚了喝；有病还是要 treat",
+        "name": "回春汤", "emoji": "🍵", "price": 110, "heal": 18,
+        "aliases": ["回春汤", "tonic"],
+        "hint": "无病可服，身体 +18；不治病症。贵是故意的",
     },
-    "med_elixir": {
-        "name": "养命丹", "emoji": "🟡", "price": 220, "heal": 16,
-        "aliases": ["养命丹"],
-        "hint": "回 16 健康。贵，有余票再囤",
-    },
-    "med_restore": {
-        "name": "回春散", "emoji": "🌺", "price": 420, "heal": 28,
-        "aliases": ["回春散"],
-        "hint": "回 28 健康。桥桥最贵的货，专宰口袋鼓的人",
+    "med_tonic_strong": {
+        "name": "大补丸", "emoji": "🧧", "price": 280, "heal": 40,
+        "aliases": ["大补丸", "大补", "strong_tonic"],
+        "hint": "无病可服，身体 +40；不治病症。口袋鼓才配喝",
     },
 }
-
-# 诊所当场调理（不占行囊）。价高，专给口袋鼓的人补身子。
-CLINIC_TONICS: dict[str, dict[str, Any]] = {
-    "small": {
-        "name": "姜汤小补",
-        "cost": config.CLINIC_TONIC_SMALL_COST,
-        "heal": config.CLINIC_TONIC_SMALL_HEAL,
-        "aliases": ("小", "小补", "sip", "small"),
-    },
-    "mid": {
-        "name": "养命调理",
-        "cost": config.CLINIC_TONIC_MID_COST,
-        "heal": config.CLINIC_TONIC_MID_HEAL,
-        "aliases": ("中", "中补", "tonic", "mid"),
-    },
-    "large": {
-        "name": "回春大补",
-        "cost": config.CLINIC_TONIC_LARGE_COST,
-        "heal": config.CLINIC_TONIC_LARGE_HEAL,
-        "aliases": ("大", "大补", "large"),
-    },
-    "full": {
-        "name": "全套养命",
-        "cost_per": config.CLINIC_TONIC_FULL_PER,
-        "min_cost": config.CLINIC_TONIC_FULL_MIN,
-        "aliases": ("满", "满血", "fill", "full"),
-    },
-}
-
-TONIC_LINES = [
-    "没病也虚？行。药材不便宜，票准备好。",
-    "调理不是治病。有挂号项先 treat，别拿补药当膏药。",
-    "岛上有余票的人太多。这价就是给你这种人定的。",
-    "喝完别立刻去井下打架。我这汤补不了你自己找揍。",
-    "身子满了还来？药材留给真虚的人。",
-]
 
 TREAT_LINES: dict[str, list[str]] = {
     "hangover": [
@@ -195,7 +152,7 @@ TREAT_LINES: dict[str, list[str]] = {
     "infection": [
         "又吃生肉了？你看看你，连兔子都知道找草吃，你连兔子都不如。手伸出来，打针。",
         "生肉生肉生肉，你是没长灶台还是懒得开火？针进去了，别动。",
-        "三十块。贵吧？下次记得开火。这钱本来能买好几份菜了。",
+        "三十多块起。贵吧？下次记得开火。这钱本来能买好几份菜了。",
     ],
     "rock_dust": [
         "矿区待多久了？张嘴，咳两声我听听。……行了，喝糖浆。",
@@ -217,7 +174,7 @@ TREAT_LINES: dict[str, list[str]] = {
     "legfish_hex": [
         "……你碰了那东西？等着。（从柜子深处翻出一捆干草点燃）别问，配合就行。",
         "祛咒香点上了。坐着别说话。我说好了才能动。——好了。以后离那鱼远点。",
-        "三十二块，我这香不便宜。你要是再馋嘴碰那东西，下次五十。",
+        "三十二块？早涨了。你要是再馋嘴碰那东西，下次更贵。",
     ],
     "ring_shock": [
         "又来了。赢了还是输了？——算了别说了，输了的脸就是你这样的。躺好别动。",
@@ -227,14 +184,28 @@ TREAT_LINES: dict[str, list[str]] = {
     ],
     "pit_trauma": [
         "我是大夫不是收尸的，麻烦下次抬上来之前先确认人还有气。",
-        "重创四十五票，嫌贵？你去问问底下那些打你的人报不报销。",
+        "重创不便宜，嫌贵？你去问问底下那些打你的人报不报销。",
         "能不能别每次都搞到这个程度。票不要钱的？我的药材不要钱的？你的命不要钱的？——行了趴好。",
         "我建议你换个爱好。种地挺好的，又晒太阳又不挨揍。",
         "你再来一次我就在门口贴你照片，注明'此人请先收全款再治疗'。",
     ],
 }
 
+TONIC_LINES = [
+    "桥桥大夫：「没病也要调？行啊，票到位就给你吊一瓶。」",
+    "桥桥大夫：「气色差就说气色差。别装病——调理价目表在那儿，自己挑。」",
+    "桥桥大夫：「有钱人的爱好：花钱买睡得着。躺好，别动针。」",
+    "桥桥大夫：「这汤贵是故意的。口袋鼓才配喝。」",
+]
+
+TONIC_DONE_LINES = [
+    "针推完了。腰背松一点了吧？票我收下了。",
+    "调理做完。别指望一次变潮汐本尊——下次还想回气色，再带票来。",
+    "好了。身体回了一截。有病还是先 treat，调理不治病。",
+]
+
 _MED_BY_ALIAS: dict[str, str] = {}
+_TONIC_BY_ALIAS: dict[str, str] = {}
 
 
 def _build_med_aliases() -> None:
@@ -247,12 +218,47 @@ def _build_med_aliases() -> None:
             _MED_BY_ALIAS[alias] = key
 
 
+def _build_tonic_aliases() -> None:
+    if _TONIC_BY_ALIAS:
+        return
+    from . import config
+
+    for key, meta in config.CLINIC_TONIC_TIERS.items():
+        _TONIC_BY_ALIAS[key] = key
+        _TONIC_BY_ALIAS[meta["label"]] = key
+        _TONIC_BY_ALIAS[meta["label"].replace("调理", "")] = key
+    # 常见英文 / 口语
+    _TONIC_BY_ALIAS.update({
+        "light": "小", "small": "小", "s": "小",
+        "mid": "中", "medium": "中", "m": "中",
+        "full": "大", "strong": "大", "l": "大", "大补": "大",
+        "rest": "中",  # 裸写 rest 默认中档
+    })
+
+
 def resolve_medicine(token: str) -> str | None:
     _build_med_aliases()
     raw = (token or "").strip()
     if raw in CLINIC_MEDICINES:
         return raw
     return _MED_BY_ALIAS.get(raw) or _MED_BY_ALIAS.get(raw.lower())
+
+
+def resolve_tonic_tier(token: str) -> str | None:
+    """clinic 调理 小|中|大 → tier key；空串返回 None（由调用方展示价目）。"""
+    _build_tonic_aliases()
+    raw = (token or "").strip()
+    if not raw:
+        return None
+    if raw in _TONIC_BY_ALIAS:
+        return _TONIC_BY_ALIAS[raw]
+    low = raw.lower()
+    return _TONIC_BY_ALIAS.get(low)
+
+
+def medicine_is_tonic(meta: dict[str, Any]) -> bool:
+    """回春汤 / 大补丸：无病可服，只回身体，不治病症。"""
+    return int(meta.get("heal") or 0) > 0 and not meta.get("ailment")
 
 
 def register_medicine_items() -> None:
@@ -269,6 +275,14 @@ def pick_treat_line(ailment_key: str) -> str:
     if not pool:
         return ""
     return f"桥桥大夫：「{random.choice(pool)}」"
+
+
+def pick_tonic_line() -> str:
+    return random.choice(TONIC_LINES)
+
+
+def pick_tonic_done() -> str:
+    return f"桥桥大夫：「{random.choice(TONIC_DONE_LINES)}」"
 
 
 def pick_atmosphere() -> str:
@@ -293,64 +307,3 @@ def pick_discount_hint() -> str:
 
 def pick_dove_event() -> dict[str, Any]:
     return random.choice(DOVE_EVENTS)
-
-
-def resolve_tonic(token: str) -> str | None:
-    raw = (token or "").strip().lower()
-    if not raw:
-        return None
-    if raw in CLINIC_TONICS:
-        return raw
-    for key, meta in CLINIC_TONICS.items():
-        for alias in meta.get("aliases") or ():
-            if str(alias).lower() == raw:
-                return key
-    return None
-
-
-def tonic_cost(key: str, health: int, *, cost_mult: float = 1.0, cost_add: int = 0) -> tuple[int, int]:
-    """返回 (票价, 预计回血点数)。满档按缺口算。"""
-    from . import health as health_mod
-
-    meta = CLINIC_TONICS[key]
-    body = max(0, min(100, int(health)))
-    need = 100 - body
-    if key == "full":
-        heal = need
-        base = max(int(meta["min_cost"]), heal * int(meta["cost_per"]))
-        if heal <= 0:
-            return health_mod._bill_cost(int(meta["min_cost"]), cost_mult=cost_mult, cost_add=cost_add), 0  # noqa: SLF001
-        return health_mod._bill_cost(base, cost_mult=cost_mult, cost_add=cost_add), heal
-    heal = min(int(meta["heal"]), need)
-    cost = health_mod._bill_cost(int(meta["cost"]), cost_mult=cost_mult, cost_add=cost_add)  # noqa: SLF001
-    return cost, heal
-
-
-def tonic_menu_lines(health: int, *, cost_mult: float = 1.0, cost_add: int = 0) -> list[str]:
-    lines = [
-        "调理价目（没病也能补身子，不治病；有挂号项先 treat）:",
-        f"  现身体 {int(health)}/100",
-    ]
-    labels = {
-        "small": "clinic 调理 小",
-        "mid": "clinic 调理 中",
-        "large": "clinic 调理 大",
-        "full": "clinic 调理 满",
-    }
-    for key, meta in CLINIC_TONICS.items():
-        cost, heal = tonic_cost(key, health, cost_mult=cost_mult, cost_add=cost_add)
-        if key == "full":
-            lines.append(
-                f"  {meta['name']} — {labels[key]} · {cost} 票回 {heal} "
-                f"（缺多少补多少，{meta['cost_per']} 票/点，最低 {meta['min_cost']}）"
-            )
-        else:
-            lines.append(
-                f"  {meta['name']} — {labels[key]} · {cost} 票回 {heal}"
-            )
-    lines.append("也可 clinic buy 养命汤 / 养命丹 / 回春散 囤着喝。价一样贵。")
-    return lines
-
-
-def pick_tonic_line() -> str:
-    return f"桥桥大夫：「{random.choice(TONIC_LINES)}」"
