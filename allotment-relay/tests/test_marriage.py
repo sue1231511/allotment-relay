@@ -33,7 +33,7 @@ async def _enroll(db, email: str, name: str) -> int:
 
 
 def _token_from(text: str) -> str:
-    m = re.search(r"/vow/([A-Za-z0-9_-]+)", text)
+    m = re.search(r"/(?:vow|lianli)/([A-Za-z0-9_-]+)", text)
     assert m, text
     return m.group(1)
 
@@ -50,9 +50,15 @@ async def _full_flow() -> None:
 
     empty = await marriage.marriage_ops(host, "")
     assert "还没有婚约" in empty, empty
+    from server import mcp_dispatch as mux
+    vdesk = await mux.visit_bundle(host, "连理所")
+    assert "连理所" in vdesk and "理枝" in vdesk, vdesk
     help_text = await marriage.marriage_ops(host, "help")
     assert "propose_marriage" in help_text
     assert "没有「接受」" in help_text or "不能自己确认" in help_text
+    assert "连理所" in help_text
+    assert "离婚" in help_text
+    assert "理枝" in help_text
 
     try:
         await marriage.marriage_ops(host, "接受")
@@ -65,7 +71,7 @@ async def _full_flow() -> None:
         "求婚 阿潮 | 潮起潮落我都在 | 潮誓戒 | 灯塔下 | 今日+3 | 想把日子过完",
     )
     assert "请柬已写下" in sent, sent
-    assert "http://island.test/vow/" in sent, sent
+    assert "http://island.test/lianli/" in sent, sent
     token = _token_from(sent)
     assert "ar_sk_" not in sent
 
@@ -118,6 +124,12 @@ async def _full_flow() -> None:
     except ValueError as exc:
         assert "不能当天" in str(exc) or "婚期" in str(exc), exc
 
+    try:
+        await marriage.marriage_ops(host, "撤回")
+        raise AssertionError("engaged cannot cancel unilaterally")
+    except ValueError as exc:
+        assert "退契" in str(exc), exc
+
     async with db.connect() as conn:
         sid = (await (await conn.execute(
             "SELECT id FROM stewards WHERE key_id=?", (host,)
@@ -159,8 +171,9 @@ async def _full_flow() -> None:
     assert "婚服：已准备" in dossier, dossier
     assert "战力" not in dossier or "不是战力" in dossier
 
-    held = await marriage.marriage_ops(host, "举行")
+    held = await marriage.marriage_ops(host, "结婚")
     assert "成婚" in held, held
+    assert "连理所" in held, held
     assert "/hearth/" in held, held
     slug = re.search(r"/hearth/([A-Za-z0-9_-]+)", held).group(1)
 
@@ -204,6 +217,69 @@ async def _full_flow() -> None:
     assert page.status_code == 200, page.text
     assert "泊舟" in page.text
     assert "阿潮" in page.text
+
+    desk = await marriage.marriage_ops(host, "desk")
+    assert "连理所" in desk and "理枝" in desk, desk
+    hint = await marriage.marriage_ops(host, "离婚")
+    assert "确认" in hint and "不能" in hint, hint
+    filed = await marriage.marriage_ops(host, "分居 确认")
+    assert "立案" in filed, filed
+    assert "http://island.test/lianli/" in filed, filed
+    dtoken = _token_from(filed)
+    async with db.connect() as conn:
+        st = (await (await conn.execute(
+            "SELECT status FROM marriages WHERE steward_id=(SELECT id FROM stewards WHERE key_id=?)",
+            (host,),
+        )).fetchone())[0]
+        assert st == "married", st
+    dpage = client.get(f"/lianli/{dtoken}")
+    assert dpage.status_code == 200, dpage.text
+    assert "离婚" in dpage.text
+    assert "泊舟" in dpage.text
+    assert "ar_sk_" not in dpage.text
+    refused = client.post(f"/lianli/{dtoken}", data={"action": "decline"})
+    assert refused.status_code == 200
+    assert "没有答应" in refused.text or "婚约还在" in refused.text, refused.text
+    priv_div = await marriage.marriage_ops(host, "status")
+    assert "【私密】" in priv_div and "离婚" in priv_div, priv_div
+    async with db.connect() as conn:
+        st = (await (await conn.execute(
+            "SELECT status, home_hut FROM marriages WHERE steward_id=(SELECT id FROM stewards WHERE key_id=?)",
+            (host,),
+        )).fetchone())
+        assert st[0] == "married" and int(st[1]) == 1, st
+    filed2 = await marriage.marriage_ops(host, "离婚 确认")
+    dtoken2 = _token_from(filed2)
+    step = client.post(f"/lianli/{dtoken2}", data={"action": "accept"})
+    assert "确认" in step.text, step.text
+    done = client.post(f"/lianli/{dtoken2}", data={"action": "accept", "confirm": "1"})
+    assert done.status_code == 200
+    assert "结档" in done.text or "离婚" in done.text, done.text
+    after = await marriage.marriage_ops(host, "status")
+    assert "已离婚" in after or "结档" in after, after
+    async with db.connect() as conn:
+        row = (await (await conn.execute(
+            "SELECT status, home_hut FROM marriages WHERE steward_id=(SELECT id FROM stewards WHERE key_id=?)",
+            (host,),
+        )).fetchone())
+        assert row[0] == "divorced" and int(row[1]) == 0, row
+        cur = await conn.execute(
+            "SELECT COUNT(*) FROM chronicle WHERE action='marriage' AND text LIKE '%离婚%'"
+        )
+        assert (await cur.fetchone())[0] == 0
+    closed = await marriage.public_hearth_view(slug)
+    assert closed.get("ok") and closed.get("closed"), closed
+    hearth_closed = client.get(f"/hearth/{slug}")
+    assert "结档" in hearth_closed.text, hearth_closed.text
+    poster = client.get("/lianli")
+    assert poster.status_code == 200
+    assert "连理所" in poster.text
+
+    try:
+        await marriage.marriage_ops(host, "求婚 阿潮 | 再求一次")
+        raise AssertionError("cooldown after divorce")
+    except ValueError as exc:
+        assert "游戏日" in str(exc), exc
 
 
 async def _reject_and_guards() -> None:

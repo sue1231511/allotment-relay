@@ -135,6 +135,12 @@ async def atelier_page(request: Request):
     return _place_page(request, "atelier")
 
 
+@app.get("/lianli", response_class=HTMLResponse)
+async def lianli_page(request: Request):
+    """连理所海报；结婚离婚仍回上手页。确认页走 /lianli/{token}。"""
+    return _place_page(request, "lianli")
+
+
 @app.get("/tide", response_class=HTMLResponse)
 async def tide_page(request: Request):
     """海边围观实况；动手仍回上手页。"""
@@ -195,8 +201,29 @@ async def vow_respond(
     action: str = Form(""),
     confirm: str = Form(""),
 ):
+    return await _lianli_respond(request, token, action, confirm)
+
+
+@app.get("/lianli/{token}", response_class=HTMLResponse)
+async def lianli_filing_page(request: Request, token: str):
     from . import marriage
-    accept = (action or "").strip().lower() in ("accept", "yes", "答应", "接受")
+    view = await marriage.public_vow_view(token)
+    return _html(request, "vow.html", active="", view=view, token=token)
+
+
+@app.post("/lianli/{token}", response_class=HTMLResponse)
+async def lianli_filing_respond(
+    request: Request,
+    token: str,
+    action: str = Form(""),
+    confirm: str = Form(""),
+):
+    return await _lianli_respond(request, token, action, confirm)
+
+
+async def _lianli_respond(request: Request, token: str, action: str, confirm: str):
+    from . import marriage
+    accept = (action or "").strip().lower() in ("accept", "yes", "答应", "接受", "同意")
     decline = (action or "").strip().lower() in ("decline", "no", "拒绝", "不答应")
     if not accept and not decline:
         view = await marriage.public_vow_view(token)

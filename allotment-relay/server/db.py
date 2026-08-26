@@ -147,6 +147,8 @@ CREATE TABLE IF NOT EXISTS marriages (
     home_hut INTEGER NOT NULL DEFAULT 0,
     public_slug TEXT,
     charter_json TEXT NOT NULL DEFAULT '',
+    filing_kind TEXT NOT NULL DEFAULT '',
+    private_notice TEXT NOT NULL DEFAULT '',
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
 );
@@ -1952,6 +1954,8 @@ async def init_db() -> None:
                 home_hut INTEGER NOT NULL DEFAULT 0,
                 public_slug TEXT,
                 charter_json TEXT NOT NULL DEFAULT '',
+                filing_kind TEXT NOT NULL DEFAULT '',
+                private_notice TEXT NOT NULL DEFAULT '',
                 created_at INTEGER NOT NULL,
                 updated_at INTEGER NOT NULL
             )
@@ -2012,6 +2016,8 @@ async def init_db() -> None:
                 game_day INTEGER NOT NULL
             )
             """,
+            "ALTER TABLE marriages ADD COLUMN filing_kind TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE marriages ADD COLUMN private_notice TEXT NOT NULL DEFAULT ''",
         ):
             try:
                 await db.execute(ddl)

@@ -20,6 +20,9 @@
     {% else %}
       <h1>{{ view.charter_line or ('岛民「' ~ view.islander ~ '」与 TA 的人类') }}</h1>
       <p class="tagline">{{ view.wedding_day }} · {{ view.location or '未记地点' }}</p>
+      {% if view.closed %}
+      <p class="muted">{{ view.closed_note or '这段婚约已在连理所结档。' }}</p>
+      {% endif %}
       <section class="panel form-card vow-card">
         <p class="vow-kicker">誓词</p>
         <blockquote class="vow-text">{{ view.vow_ai or '（未留）' }}</blockquote>
