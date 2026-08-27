@@ -52,10 +52,15 @@ async def test_buxing_flow() -> None:
 
 def test_buxing_mcp_description() -> None:
     from server.mcp_app import mcp
+    from server.mcp_dispatch import VISIT_HELP
+
     tool = mcp._tool_manager.get_tool("visit_ops")
     blob = tool.description + "\n" + ((tool.parameters.get("properties") or {}).get("command", {}).get("description", ""))
-    for text in ("守灯人·不醒", "buxing", "问潮前 5 次免费", "灯廊"):
+    for text in ("守灯人·不醒", "buxing"):
         assert text in blob, blob
+    # 问潮次数等细则在 VISIT_HELP，不塞进 MCP schema
+    assert "问潮前 5 次免费" in VISIT_HELP
+    assert "灯廊" in VISIT_HELP
 
 
 def main() -> None:

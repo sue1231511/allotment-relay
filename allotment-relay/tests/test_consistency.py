@@ -53,261 +53,117 @@ def test_bar_job_aliases() -> None:
     assert resolve_bar_period("night") == "night"
 
 
+def _tool_blob(mcp, name: str) -> str:
+    tool = mcp._tool_manager.get_tool(name)
+    cmd = (tool.parameters.get("properties") or {}).get("command", {}).get("description", "")
+    return f"{tool.description}\n{cmd}"
+
+
 def test_mcp_descriptions() -> None:
+    """MCP schema 保持短：用途 + 空 command + 2～3 例 + 易混点。细则在 relay_manual / help。"""
     from server.mcp_app import mcp
 
-    plot = mcp._tool_manager.get_tool("plot_ops")
-    blob = f"{plot.description}\n{(plot.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
-    assert "空 command 看各地块" not in blob
-    assert "status" in blob
-    assert "30%" in blob
-    assert "sow_all" in blob or "plant" in blob
-    assert "forage" in blob
-    assert "amends" in blob
-    assert "scarecrow" in blob
-    assert "compost" in blob
-    assert "shed erect" in blob or "#99" in blob
-    assert "无上限" in blob or "露天无上限" in blob
-    assert "果园" in blob
-    assert "买园" in blob
-    assert "买棚" in blob or "shed erect" in blob
-    assert "一周一季" in blob or "当季" in blob or "季节" in blob
-    assert "20 票/树位" in blob
-    assert "温室每座 30" in blob
-    assert "/allotments" in blob
-    assert "围观" in blob
+    plot = _tool_blob(mcp, "plot_ops")
+    assert "空 command 看各地块" not in plot
+    assert "status" in plot and "sow 1 甘蓝" in plot
+    assert "sow_all" in plot or "plant" in plot
+    assert "forage" in plot and "30%" in plot
+    assert "买园" in plot and "买棚" in plot
+    assert "/allotments" in plot
 
-    tide = mcp._tool_manager.get_tool("tide_ops")
-    tide_blob = f"{tide.description}\n{(tide.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
-    assert "竹钓竿" in tide_blob
-    assert "probe" in tide_blob
-    assert "4 票" in tide_blob or "4票" in tide_blob
-    assert "不能网" in tide_blob or "坐钓" in tide_blob
-    assert "未命名小鱼" in tide_blob
+    tide = _tool_blob(mcp, "tide_ops")
+    assert "竹钓竿" in tide and "未命名小鱼" in tide
+    assert "不能网" in tide or "坐钓" in tide
+    assert "4 票" in tide or "4票" in tide
 
-    tote = mcp._tool_manager.get_tool("tote_ops")
-    tote_blob = f"{tote.description}\n{(tote.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
-    assert "送票" in tote_blob
-    assert "gifts" in tote_blob
-    assert "24" in tote_blob
-    assert "未命名小鱼" in tote_blob
+    tote = _tool_blob(mcp, "tote_ops")
+    assert "送票" in tote and "gifts" in tote and "24" in tote
+    assert "未命名小鱼" in tote
 
-    star = mcp._tool_manager.get_tool("star_ops")
-    star_blob = f"{star.description}\n{(star.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
-    assert "面板" in star_blob
-    assert "/star" in star_blob
-    assert "围观" in star_blob
-    assert "地点海报" not in star_blob
+    star = _tool_blob(mcp, "star_ops")
+    assert "小橘" in star and "应援" in star and "围观" in star
+    assert "面板" in star and "/star" in star
+    assert "地点海报" not in star
 
-    theater = mcp._tool_manager.get_tool("theater_ops")
-    theater_blob = f"{theater.description}\n{(theater.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
-    assert "试镜" in theater_blob
-    assert "头粉" in theater_blob
-    assert "编剧社" in theater_blob
-    assert "投稿" in theater_blob
+    theater = _tool_blob(mcp, "theater_ops")
+    for word in ("试镜", "对戏", "演出", "领薪", "头粉", "编剧社", "投稿", "不替代"):
+        assert word in theater, word
 
-    bar = mcp._tool_manager.get_tool("bar_ops")
-    bar_blob = f"{bar.description}\n{(bar.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
-    assert "洗碗" in bar_blob
-    assert "荔栀" in bar_blob
-    assert "help" in bar_blob
-    assert "duo" not in bar.description.lower() or "不要发明" in bar_blob
+    bar = _tool_blob(mcp, "bar_ops")
+    assert "洗碗" in bar and "荔栀" in bar and "help" in bar
 
-    steward = mcp._tool_manager.get_tool("steward_ops")
-    st_blob = f"{steward.description}\n{(steward.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
-    assert "成就" in st_blob
-    assert "99" in st_blob
-    assert "潮汐本尊" in st_blob
-    assert "岛缘" in st_blob
-    assert "引航" in st_blob
-    assert "绑定" in st_blob
-    assert "invite_ops" in st_blob
+    steward = _tool_blob(mcp, "steward_ops")
+    for word in ("成就", "岛缘", "引航", "绑定", "潮汐本尊", "invite_ops", "99"):
+        assert word in steward, word
 
-    ut = mcp._tool_manager.get_tool("undertide_ops")
-    ut_blob = f"{ut.description}\n{(ut.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
-    assert "猫猫" in ut_blob
-    assert "pit medic" not in ut_blob
-    assert "medic" in ut_blob
-    assert "岛缘" in ut_blob
+    ut = _tool_blob(mcp, "undertide_ops")
+    assert "猫猫" in ut and "medic" in ut and "岛缘" in ut
+    assert "pit medic" not in ut
 
-    alliance = mcp._tool_manager.get_tool("alliance_ops")
-    al_blob = f"{alliance.description}\n{(alliance.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
-    assert "贡献榜" in al_blob
-    assert "潮生会" in al_blob
-    assert "不能贴" in al_blob or "只看" in al_blob
-    assert "beacon post" not in al_blob
+    alliance = _tool_blob(mcp, "alliance_ops")
+    assert "贡献榜" in alliance and "潮生会" in alliance
+    assert "只看" in alliance or "不能贴" in alliance
+    assert "beacon post" not in alliance
 
-    visit = mcp._tool_manager.get_tool("visit_ops")
-    v_blob = f"{visit.description}\n{(visit.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
-    assert "潮生会" in v_blob
-    assert "不能加入" in v_blob
-    assert "阿簿" in v_blob
-    assert "潮生会 捐 甘蓝 2" not in v_blob
-    assert "潮生会 周" not in v_blob
-    assert "潮生会 基金" in v_blob
-    assert "潮生会 基金 捐 50" in v_blob
-    assert "潮生会 税" in v_blob
-    assert "潮生会 税 交" in v_blob
-    assert "潮生会 维" in v_blob
-    assert "潮生会 维 交" in v_blob
-    assert "不能贴" in v_blob or "只看" in v_blob
-    assert "岸税" in v_blob
-    assert "岸维" in v_blob
-    assert "10 票/块" in v_blob
-    assert "20 票/树位" in v_blob
-    assert "30 票/座" in v_blob
-    assert "产业单价至少 10" in v_blob
-    assert "每天收" in v_blob or "每天划" in v_blob
-    assert "tax_ops" in v_blob
-    assert "upkeep_ops" in v_blob
-    assert "潮生会 补贴" not in v_blob
-    assert "周二" in v_blob or "票数" in v_blob
-    assert "漾漾" in v_blob
-    assert "衣泊坊" in v_blob
-    assert "连理所" in v_blob
-    assert "理枝" in v_blob
-    assert "订婚" in v_blob
-    assert "旧档自动写下" in v_blob
-    assert "clinic 调理" in v_blob
-    assert "回春汤" in v_blob
+    visit = _tool_blob(mcp, "visit_ops")
+    for word in (
+        "潮生会", "不能加入", "阿簿", "岸税", "岸维", "潮生会 税 交", "潮生会 维 交",
+        "潮生会 基金 捐 50", "只看", "tax_ops", "upkeep_ops", "漾漾", "连理所", "理枝",
+        "clinic 调理", "回春汤", "buxing", "jingshan visit",
+    ):
+        assert word in visit, word
+    assert "潮生会 捐 甘蓝 2" not in visit
+    assert "潮生会 补贴" not in visit
 
-    hut = mcp._tool_manager.get_tool("hut_ops")
-    hut_blob = f"{hut.description}\n{(hut.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
-    assert "床" in hut_blob
-    assert "睡" in hut_blob
-    assert "install hard_1 bed" in hut_blob
-    assert "6 健康" in hut_blob or "身体 +6" in hut_blob or "顺带回" in hut_blob
-    assert "堆肥桶 存 羊粪 3" in hut_blob
-    assert "compost_bin" in hut_blob
-    assert "桶不是柜子" in hut_blob
-    assert "tide_weight" in hut_blob
-    assert "iron_edge" in hut_blob
-    assert "潮生会 维" in hut_blob
-    assert "临海邸" in hut_blob or "最高档" in hut_blob
+    hut = _tool_blob(mcp, "hut_ops")
+    assert "睡" in hut and "install hard_1 bed" in hut
+    assert "堆肥桶 存 羊粪 3" in hut and "桶不是柜子" in hut
+    assert "潮生会 维" in hut and ("临海邸" in hut or "最高档" in hut)
 
-    kitchen = mcp._tool_manager.get_tool("kitchen_ops")
-    k_blob = f"{kitchen.description}\n{(kitchen.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
-    assert "shop stock" in k_blob
-    assert "价格自定" in k_blob or "每天 10 次" in k_blob
-    assert "回收" in k_blob
-    assert "未命名小鱼" in k_blob
-    assert "下馆子" in k_blob
-    assert "shop dine" in k_blob
-    assert "身体 +1" in k_blob or "身体 +2" in k_blob
+    kitchen = _tool_blob(mcp, "kitchen_ops")
+    assert "shop stock" in kitchen and "shop dine" in kitchen
+    assert "下馆子" in kitchen and "未命名小鱼" in kitchen
+    assert "eat 芒果" in kitchen and "不能生吃" in kitchen
 
-    lounge_tool = mcp._tool_manager.get_tool("lounge_ops")
-    lounge_blob = f"{lounge_tool.description}\n{(lounge_tool.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
-    assert "暗号" in lounge_blob
-    assert "小包间" in lounge_blob
-    assert "潮声今晚" in lounge_blob
-    assert "whisper" in lounge_blob
-    assert "对话上方" in lounge_blob
-    assert "红包 100 5" in lounge_blob
-    assert "抢" in lounge_blob
-    assert "hongbao_ops" in lounge_blob
-    assert "tote_ops gift" in lounge_blob
-    assert "确认页" in lounge_blob or "订婚" in lounge_blob
+    lounge = _tool_blob(mcp, "lounge_ops")
+    for word in ("暗号", "小包间", "潮声今晚", "whisper", "红包 100 5", "hongbao_ops", "tote_ops gift"):
+        assert word in lounge, word
 
-    manual = mcp._tool_manager.get_tool("relay_manual")
-    man_blob = manual.description or ""
-    assert "禁止发明" in man_blob or "不要发明" in man_blob or "编指令" in man_blob
-    assert "help" in man_blob
-    assert "enroll" in man_blob
-    assert "无参数" in man_blob
+    manual = mcp._tool_manager.get_tool("relay_manual").description or ""
+    assert ("禁止发明" in manual or "编指令" in manual) and "enroll" in manual and "无参数" in manual
 
     instructions = mcp.instructions or ""
-    assert "board" in instructions
-    assert "猫猫" in instructions
-    assert "relay_manual" in instructions
-    assert "禁止发明" in instructions or "不是聊天沙盒" in instructions
-    assert "潮生会" in instructions
-    assert "不能加入" in instructions
-    assert "潮汐基金" in instructions
-    assert "岸税" in instructions
-    assert "岸维" in instructions
-    assert "周二" in instructions
-    assert "下馆子" in instructions
-    assert "shop dine" in instructions
-    assert "引航" in instructions
-    assert "invite_ops" in instructions
-    assert "quarry_ops" in instructions
-    assert "craft_ops" in instructions
-    assert "mine_ops" in instructions
-    assert "forge_ops" in instructions
-    assert "衣泊坊" in instructions
-    assert "20 个工具" in instructions
-    assert "cloth_ops" in instructions
-    assert "marriage_ops" in instructions
-    assert "propose_marriage" in instructions
+    for word in (
+        "relay_manual", "不是聊天沙盒", "潮生会", "不能加入", "岸税", "岸维", "潮汐基金",
+        "周二", "下馆子", "shop dine", "引航", "invite_ops", "quarry_ops", "craft_ops",
+        "mine_ops", "forge_ops", "衣泊坊", "20 个工具", "cloth_ops", "marriage_ops",
+        "propose_marriage", "猫猫", "board",
+    ):
+        assert word in instructions, word
 
-    quarry = mcp._tool_manager.get_tool("quarry_ops")
-    q_blob = f"{quarry.description}\n{(quarry.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
-    assert "status" in q_blob
-    assert "探脉" in q_blob
-    assert "挖" in q_blob
-    assert "买镐" in q_blob
-    assert "mine_ops" in q_blob
-    assert "tide_ops dig" in q_blob or "赶海" in q_blob
-    assert "/quarry" in q_blob
-    assert "围观" in q_blob
-    assert "地点海报" not in q_blob
+    quarry = _tool_blob(mcp, "quarry_ops")
+    assert "status" in quarry and "探脉" in quarry and "买镐" in quarry
+    assert "mine_ops" in quarry and ("tide_ops dig" in quarry or "赶海" in quarry)
+    assert "/quarry" in quarry and "地点海报" not in quarry
 
-    cr = mcp._tool_manager.get_tool("craft_ops")
-    c_blob = f"{cr.description}\n{(cr.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
-    assert "status" in c_blob
-    assert "打 铜钉" in c_blob
-    assert "取" in c_blob
-    assert "/workshop" in c_blob
-    assert "围观" in c_blob
-    assert "地点海报" not in c_blob
-    assert "打捞" in c_blob
-    assert "潮纹秤锤" in c_blob
-    assert "砧上全套" in c_blob
-    assert "雾铅网坠" in c_blob
-    assert "forge_ops" in c_blob
-    assert "tide_ops dig" in c_blob or "赶海" in c_blob
+    craft = _tool_blob(mcp, "craft_ops")
+    for word in ("打 铜钉", "潮纹秤锤", "雾铅网坠", "砧上全套", "打捞", "forge_ops", "/workshop"):
+        assert word in craft, word
+    assert "tide_ops dig" in craft or "赶海" in craft
 
-    cloth_tool = mcp._tool_manager.get_tool("cloth_ops")
-    cloth_blob = f"{cloth_tool.description}\n{(cloth_tool.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
-    assert "漾漾" in cloth_blob
-    assert "不卖成衣" in cloth_blob
-    assert "委托 短褂 海色" in cloth_blob
-    assert "空 command" in cloth_blob
-    assert "看坊" in cloth_blob
-    assert "tailor_ops" in cloth_blob
-    assert "/atelier" in cloth_blob
-    assert "不绝版" in cloth_blob
-    assert "craft_ops" in cloth_blob
-    assert "forage" in cloth_blob or "边际" in cloth_blob
-    assert "tale_ops" in cloth_blob
-    assert "NPC/潮闻" not in cloth_blob
+    cloth = _tool_blob(mcp, "cloth_ops")
+    for word in ("漾漾", "不卖成衣", "委托 短褂 海色", "空 command", "看坊", "tailor_ops", "/atelier", "tale_ops"):
+        assert word in cloth, word
 
-    marriage_tool = mcp._tool_manager.get_tool("marriage_ops")
-    mar_blob = f"{marriage_tool.description}\n{(marriage_tool.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
-    assert "求婚" in mar_blob
-    assert "propose_marriage" in mar_blob
-    assert "人类" in mar_blob
-    assert "确认页" in mar_blob or "答应" in mar_blob
-    assert "空 command" in mar_blob or "空=" in mar_blob
-    assert "/vow" in mar_blob
-    assert "没有「接受」" in mar_blob or "没有接受" in mar_blob
-    assert "连理所" in mar_blob
-    assert "离婚" in mar_blob
-    assert "离婚 答应" in mar_blob
-    assert "理枝" in mar_blob
-    assert "彩礼" in mar_blob
-    assert "潮誓戒" in mar_blob
-    assert "临海邸" in mar_blob or "最高档" in mar_blob
-    assert "不进潮汐基金" in mar_blob or "花掉" in mar_blob
-    assert "订婚" in mar_blob
-    assert "跳过" in mar_blob
-    assert "订婚没有彩礼" in mar_blob
-    assert "订婚 寻信" in mar_blob
-    assert "举行前还能改" in mar_blob
-    assert "订婚宴选了还能改" in mar_blob
-    assert "订婚 续请" in mar_blob
-    assert "没有「订婚 答应」" in mar_blob or "订婚 答应" in mar_blob
-    assert "旧档自动写下" in mar_blob
+    marriage = _tool_blob(mcp, "marriage_ops")
+    for word in (
+        "求婚", "propose_marriage", "连理所", "理枝", "彩礼", "潮誓戒", "离婚 答应",
+        "订婚 寻信", "订婚 续请", "订婚没有彩礼", "旧档自动写下", "/vow",
+    ):
+        assert word in marriage, word
+    assert "空 command" in marriage or "空=" in marriage
+    assert "没有「接受」" in marriage or "没有接受" in marriage
+    assert "举行前还能改" in marriage and "订婚宴选了还能改" in marriage
 
 
 def test_relay_manual_covers_systems() -> None:

@@ -78,7 +78,7 @@ bar_ops     的 command = work 洗碗 night
 
 ## 20 个工具（给人和 AI 看的说明）
 
-每个工具在 MCP 里还有更短的 `description`。改玩法后必须同步改：MCP 描述、`command` 字段说明、`relay_manual`、本表，以及给人类看的 [`/manual`](docs/island-manual.md)。详见文末「每次任务之后必须更新工具说明」。
+每个工具在 MCP 里只有**短** `description`（用途、空 command、2～3 条例子、易混点），细则进 `relay_manual` / `help`，避免连接时吃掉上万 token。改玩法后必须同步改：MCP 描述、`command` 字段说明、`relay_manual`、本表，以及给人类看的 [`/manual`](docs/island-manual.md)。详见文末「每次任务之后必须更新工具说明」。
 
 ### `relay_manual`
 
@@ -656,7 +656,7 @@ AI 只看三处文字决定怎么玩。这三处过时或写糊了，模型就�
 
 | 必须改 | 文件 | 改什么 |
 |--------|------|--------|
-| MCP 工具描述 | `allotment-relay/server/mcp_app.py` | 工具的 `description`，以及 `command` 的 `Field(description=...)`。写清：干什么、空 command 是什么、真实例子、禁止发明的假指令、不会就 `help` |
+| MCP 工具描述 | `allotment-relay/server/mcp_app.py` | 工具的 `description` 与 `command` 的 `Field`：**保持短**。写清干什么、空 command、2～3 条可复制例子、易混点、禁止发明的假指令、不会就 `help`。票价/税率/奖励数字等细则放 `relay_manual` / `help`，不要堆进 schema |
 | 教程手册 | `allotment-relay/server/game.py` 的 `relay_manual()` | 新号怎么玩、该工具的真实子命令、容易猜错的规则 |
 | 子命令 help | `mcp_dispatch.py` 的 `*_HELP`，以及 `bar.py` / `kitchen.py` / `star.py` / `undertide_copy.py` 等各自的 help | `command=help` 时列出来的真指令 |
 | 总说明 | `mcp_app.py` 的 `instructions`、本 README 的工具表 | 和上面保持一致 |

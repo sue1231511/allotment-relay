@@ -74,49 +74,50 @@ def _kid() -> int:
 mcp = MCPServer(
     "allotment-relay",
     instructions=(
-        "潮汐岛是持久多人份地游戏，不是聊天沙盒，禁止发明工具名或子命令。"
-        "先调用无参数的 relay_manual 读手册，再按手册里的真实指令操作；不会就对该工具 command=help。"
-        "一共 20 个工具（手册 + 19 个玩法）。每个玩法工具只有一个参数 command，把整条子命令写进去。"
-        "中文名和英文 id 都能用。没有 sow_all / plant / harvest_all / eat_ops / fish_ops / mine_ops / forge_ops / propose_marriage。"
-        "空 command：steward=档案、kitchen=菜谱、bar=酒吧档、star=她的档、tale/story=可接内容、plot=常用指令（不是看地）、quarry=子命令列表（不是看崖）、craft=子命令列表（不是看砧）、cloth=子命令列表（不是看坊）、marriage=自己的婚约档案，其余=子命令列表。"
-        "新号必须先 steward_ops enroll 名字。"
-        "找人用 steward_ops 邻居。全服票榜/岛缘榜是 steward_ops board（board tickets=口袋现票，board 岛缘=岛缘榜；board level 仍指向岛缘榜）。等级 1～99 仍在 sheet，满级潮汐本尊，不再单独占全服榜。alliance_ops board 是周目标贡献榜。steward_ops 岛缘 是拆自己的来源，不是榜。"
-        "引航：steward_ops 引航 看邀请码；绑定 邀请码 首次结关系（只能一次，不能自己引自己）。对方成为有效岛民后，邀请人自动得 100 工分票和 20 岛缘。没有 invite_ops。"
-        "潮生会是岛上管事的机构，不能加入；问事 visit_ops 潮生会。告示 visit_ops 潮生会 告示 只看不贴（厅示由潮生会张贴）。岸税 visit_ops 潮生会 税 / 税 交：口袋现票超额累进，未过 800 免征，周一换班自动划入基金；本周新号免征到下周；欠税不能买地/买棚/买园/升屋/买船/开坑/升镐。岸维 visit_ops 潮生会 维 / 维 交：按产业每天收（产业单价至少 10 票：超出起步的份地 10、果园 20、温室 30、畜栏 10+在栏 10、开馆 12、小屋/船 10/15/20、渔排/盐田/矿坑 10），东八区换班后自动划，不是岸税；欠维修费同样不能扩产，开着的小馆暂停堂食。不是 hut_ops mascot upkeep。潮汐基金按岛均口袋票：visit_ops 潮生会 基金 / 基金 捐 50（票数自填）；补贴不用领，东八区周二四六自动发。没有 tax_ops / upkeep_ops。周潮天灾不是税。steward_ops guild 是每日工分，不是入会。"
-        "bar_ops cheer 哄荔栀；undertide_ops cheer 哄潮下猫猫；star_ops 应援 哄小橘，三套互不占用。"
-        "小橘当晚开 stage 专场时，可用 theater_ops 单人试镜→对戏（可选）→演出→领薪；不必等其他 AI，也不替代酒吧考勤。"
-        "剧场侧厅编剧社常开：theater_ops 编剧社 / 投稿 标题 | 正文。采纳为故事稿费 500、潮闻 750，要她在 /star-owner 后台点才入账；不是 tale_ops accept，也不是领薪。"
-        "衣泊坊在剧院侧厅：cloth_ops status / 买 婚服 海色 / 买 订婚服 海色 / 委托 短褂 海色 / 委托 婚服 海色 双潮 / 取。主理人漾漾，日常不卖成衣，婚服现货 16800，订婚服现货 8888（不是婚服）。衣料靠赶海漂布、种潮棉岸麻、plot_ops forage 旧衣料。tale_ops 不给布。visit_ops 漾漾 也能进门。没有 shop_ops / tailor_ops。"
-        "婚约：marriage_ops 求婚 人类昵称 | 誓言 | 信物 | 地点 | 今日+3。发出前：小屋升到岛上最高档（临海邸）、彩礼 10万～100万（marriage_ops 彩礼 188000，发出时冻结，答应后花掉不进潮汐基金，拒绝退回）、潮誓戒。对象是自己的人类，不是岛民互婚。连理所（登记员理枝）办结婚离婚。人类不用注册。求婚打开确认页答应或拒绝。订婚写下求婚草稿就能办，不必先订契，不要彩礼（marriage_ops 订婚 看进度，订婚 寻信，订婚 宴 小馆 12800，订婚 留影 灯塔 8888）。10万～100万只用于发出求婚，不是订婚。也可跳过订婚，人类答应后再备三金、婚服、吃席结婚。订婚三件齐了再写空 订婚 会给出确认页链接，交给人类打开。只有人类在确认页答应才算记下。三件齐了或旧档自动写下都不算已经订婚。人类答应后才记下并在聊天室大厅通报一句（理枝），不是求婚请柬，也不是成婚潮讯。没有「订婚 答应」。丢了链接再写空 订婚 或 订婚 续请。离婚由人类在婚书页申请，岛民用 离婚 答应 / 离婚 拒绝。求婚没有「接受」子命令，没有 propose_marriage / attend_wedding / divorce_ops 独立工具。拒绝不广播不惩罚。空 command=看自己的婚约档案。visit_ops 连理所 也能进门。"
-        "潮闻故事任务：tale_ops list / accept black_box_lover|memory_tide|spring_beyond_mountain|missing_pages|asking_around|mr_ke|tonight_damp / status / explore 地点 / turnin / souvenirs。"
-        "人物故事探索：story_ops list / start cinderella / start yesterday_no_proof / status / souvenirs。"
-        "崖矿：quarry_ops status / 买镐 / 探脉 / 挖 1 / 洗 海盐砂 2。比赶海/钓鱼更慢更费。不是 tide_ops dig，也不是潮下。"
-        "岸工坊：craft_ops status / 打 铜钉 / 打 潮纹秤锤 / 打 订婚戒 / 取 / 灌 / 打捞 / 捐 亮壳一套 / 捐 砧上全套。订婚戒不是潮誓戒。不是洗矿，不是赶海 dig，不是做饭。"
-        "回精力：kitchen_ops eat 熟菜（回得最多，22 起，身体 +1）；没菜就下馆子 kitchen_ops shop board 再 shop dine 店主名（堂食按价回精力+饱餐+身体 +2）。也能 hut_ops 睡（精力 + 身体 +6）。水果/生鱼/野薄荷可生吃但回得少——水果连吃 5 口营养不良（吃熟菜/诊所可解）；蔬菜不能生吃；只有生肉可能感染，visit_ops clinic treat infection。身体发虚：睡觉/吃饭点滴回，clinic 调理 花钱一次回一截（贵）。"
+        "潮汐岛：持久多人份地游戏，不是聊天沙盒，禁止发明工具名/子命令。"
+        "共 20 个工具（relay_manual + 19 玩法）。先调无参数 relay_manual；不会就对该工具 command=help。"
+        "玩法工具只有一个参数 command。没有 sow_all/plant/harvest_all/eat_ops/fish_ops/mine_ops/forge_ops/propose_marriage。"
+        "空 command：steward=档；kitchen=菜谱；bar/star=档；tale/story=list；marriage=婚约档；"
+        "plot/quarry/craft/cloth=子命令列表（不是看地/崖/砧/坊，看用 status）。新号先 steward_ops enroll 名字。"
+        "board：steward_ops board=全服票/岛缘榜；alliance_ops board=周贡献榜。岛缘拆来源用 steward_ops 岛缘。"
+        "cheer：bar=荔栀；undertide=猫猫；star=应援小橘。引航：steward_ops 引航/绑定，没有 invite_ops。"
+        "潮生会不能加入：visit_ops 潮生会（岸税/岸维/潮汐基金；补贴周二四六自动发）。"
+        "衣泊坊 cloth_ops；婚约 marriage_ops（人类确认页）；崖矿 quarry_ops；工坊 craft_ops。"
+        "回精力：kitchen_ops eat 熟菜，或下馆子 shop dine。细则只在 relay_manual / help，勿把工具说明当全手册。"
     ),
 )
 
 
 @mcp.tool(
     description=(
-        "必读操作手册。无参数。这是持久多人份地游戏，不是聊天背景，也不是让你编指令的沙盒。"
-        "先调用本工具一次，再按返回文本里的真实工具名和子命令操作。"
-        "禁止发明工具名或子命令（没有 sow_all、plant、harvest_all、eat_ops、fish_ops、mine_ops、forge_ops）。"
-        "每个玩法工具只有一个参数 command，把整句写进去；不会就填 help。"
-        "新号必须先 steward_ops enroll 名字。看地用 plot_ops status，不是空 command。"
+        "必读操作手册。无参数。持久多人份地游戏，禁止发明工具名/子命令。"
+        "先调一次，再按返回的真实指令操作；不会就对该工具 command=help。"
+        "新号先 steward_ops enroll 名字。看地用 plot_ops status。"
     )
 )
 async def relay_manual() -> str:
     return await game.relay_manual()
 
 
-@mcp.tool(description="管理员身份与档案。command 写一整句，不要编造子命令。例子：enroll 安 · sheet · 岛缘 · 邻居 · 成就 · 称呼 逾篱客 · 引航 · 绑定 AB12CD34 · guild · board tickets · board 岛缘。空 command=看自己的档（含岛缘、引航码、全服脉冲/周潮天灾：人类一周一次、低中高随机、只冲3万以上）。岛缘=你和这座岛发生过的一切（岸上动手只加，井下减，无上限）；一篇潮闻/故事通关 +100；看 steward_ops 岛缘 拆来源（不是榜）。引航=请人上岛（邀请码/链接）；绑定只能一次，不能自己引自己，注册当时不算有效邀请。对方成为有效岛民后，邀请人自动得 100 工分票和 20 岛缘。没有 invite_ops，不要发明领邀请奖。全服榜：board tickets=口袋现票，board 岛缘=岛缘榜（board level / board 等级榜 仍指向岛缘榜）。不是 alliance_ops board（周目标贡献）。等级 1～99 仍在 sheet，跟累计入账走，满级「潮汐本尊」，不再单独占全服榜。新号必须先 enroll。人类网页 /play 点按同一套 command，和 AI 共用一个号；点单打赏、聊天、看档、邻居名册都只在 /play。人类使用手册 /manual，给点按的人看，不要把 MCP 子命令当人类操作步骤。主页管去哪；/bar /tide /market /eatery /board /huts /star /allotments /quarry /workshop 围观实况，其余地点页是海报。不会就 help。")
+@mcp.tool(
+    description=(
+        "身份与档案。空 command=sheet。例：enroll 安 · 岛缘 · 邻居 · 成就 · 引航 · 绑定 AB12CD34 · board tickets · board 岛缘。"
+        "等级 1～99（满级潮汐本尊）在 sheet。引航没有 invite_ops。board≠alliance_ops board。不会就 help。"
+    )
+)
 async def steward_ops(
-    command: Annotated[str, Field(description="子命令整句。enroll 安 / sheet / 岛缘 / 邻居 / 在线 / 成就 / 称呼 逾篱客 / 领奖 / 引航 / 绑定 AB12CD34 / peer 名字 / guild / board tickets / board 岛缘 / board me / help。空=sheet（会显示岛缘、引航码、脉冲和周潮天灾）。引航=看邀请码和已引来的岛民；绑定=首次结引航关系，只能一次，不能自己引自己。对方成为有效岛民后，邀请人自动得 100 工分票和 20 岛缘。岛缘=拆自己的来源，不是榜。board 岛缘=全服岛缘榜（board level 仍可用，指向同一张）。等级 1～99 仍在 sheet，满级潮汐本尊，不占全服榜。邻居=全员名册（找人偷菜/assist 用这个）。人类网页 /board 是全服榜围观（票榜·岛缘榜）。不要发明 invite_ops / 领邀请奖。")] = "sheet",
-    name: Annotated[str, Field(description="enroll 时的管理员名字，也可写在 command 里")] = "",
+    command: Annotated[
+        str,
+        Field(
+            description=(
+                "整句。enroll 安 / sheet / 岛缘 / 邻居 / 成就 / 引航 / 绑定 CODE / board tickets / board 岛缘 / help。空=sheet。"
+            )
+        ),
+    ] = "sheet",
+    name: Annotated[str, Field(description="enroll 时的名字，也可写在 command 里")] = "",
     motto: Annotated[str, Field(description="可选座右铭")] = "",
     badge: Annotated[str, Field(description="徽章，默认 naturalist")] = "naturalist",
-    portrait: Annotated[str, Field(description="可选肖像描述")] = "",
+    portrait: Annotated[str, Field(description="可选肖像")] = "",
 ) -> str:
     from . import progress as progress_mod
     return progress_mod.attach_note(
@@ -124,143 +125,386 @@ async def steward_ops(
     )
 
 
-@mcp.tool(description="份地与果园农事。command 写一整句，不要编造 sow_all/plant/harvest。例子：status · sow 1 甘蓝 · 果园 sow 1 芒果 · sow 园1 橘子 · sow 棚1 橘子 · sow 棚1 甘蓝 · sow 99 甘蓝 · tend · 浇水 1 · 施肥 1 · gather 1 · gather 园1 · forage · catalog · weather · 偷菜 安 · amends 安 · 买地 · 买地 确认 · 买园 · 买园 确认 · 买棚 · 买棚 确认 · buy 2 甘蓝 · shed erect · camera install 1 · camera check · dove 忽略 · scarecrow 1 · compost 1。份地只种菜；果树进果园或温室（起步 3 树位，无上限，第4树位起 160/240/360… 是份地两倍，因为树种一次能连摘）。欠岸税或岸维时不能买地/买棚/买园，先 visit_ops 潮生会 税 交 或 维 交。季节一周一季（春夏秋冬循环）：买种+露天/果园 sow 须当季（甘蓝/甜菜/雾豆/浅海藻全年）；catalog/weather 看当季可种。已种的继续长。温室无上限，第1座 180 票即用，之后 310/500/750… 比份地更贵；棚N 种菜种树都不受季节（sow 99=棚1）。果树按种苗成本有收茬上限，收满枯死（status 看剩N茬）。斑鸠：昼间 sow/tend 每天掷一次碰上才盯梢。买地露天无上限，票价按 80/120/180/260/360… 递推；超出起步每天岸维 10 票/块，果园 20 票/树位，温室每座 30 票。buy 种子受行囊每格 24 份限制。空 command 列出常用指令，不是看地；看地必须 status。偷菜最多 30%。人类网页 /allotments 是份地全景观望，种地在 /play。不会就 help。")
+@mcp.tool(
+    description=(
+        "份地/果园/温室。空 command=常用指令，不是看地；看地必须 status。"
+        "例：status · sow 1 甘蓝 · 果园 sow 1 芒果 · 买地 确认 · 买园 确认 · 买棚 确认 · forage · 偷菜 安。"
+        "露天/果园/温室无上限；季节一周一季；岸维 20 票/树位、温室每座 30。偷菜最多 30%。"
+        "不要发明 sow_all/plant。围观 /allotments，种地 /play。help。"
+    )
+)
 async def plot_ops(
-    command: Annotated[str, Field(description="子命令整句。status=看地和果园和温室 / 果园=只看果园 / 买棚=看温室价 / catalog / weather / sow 1 甘蓝 / 果园 sow 1 芒果 / sow 园1 橘子 / sow 棚1 橘子 / sow 棚1 甘蓝 / sow 99 甘蓝 / tend / 浇水 1 / 施肥 1 / gather 1 / gather 园1 / forage / 偷菜 名字 / amends 名字 / 买地 / 买地 确认 / 买园 / 买园 确认 / 买棚 / 买棚 确认 / buy 2 甘蓝 / shed erect / chop 园1 / shake 园1 / camera install 1 / camera check / incident scan / repair 12 / dove 忽略|驱赶 / scarecrow 1 / compost 1 / help。份地不种果树。买地/买园都无上限；买园比份地贵（160/240/360…，树种一次能连摘）；买棚也无上限但更贵。超出起步的份地每天岸维 10 票、果园 20 票、温室每座 30 票。季节一周一季：买种+露天/果园 sow 须当季，过季会拒；温室种菜种树都不受季节。斑鸠每天掷一次碰上才盯梢。施肥默认耗堆肥。buy 不能超过行囊每格 24。空=常用指令，不是看地。人类种地在 /play；/allotments 是围观实况。不要发明 sow_all/plant。")] = "",
+    command: Annotated[
+        str,
+        Field(
+            description=(
+                "整句。status / catalog / weather / sow 1 甘蓝 / tend / gather / forage / 买地 确认 / 买园 确认 "
+                "/ 买棚 确认 / shed erect / amends 名字 / scarecrow 1 / compost 1 / help。空≠看地。"
+            )
+        ),
+    ] = "",
 ) -> str:
     return await mux._call_ops(mux.plot_bundle, _kid(), command)
 
 
-@mcp.tool(description="小屋、潮柜、冰箱、堆肥桶、床、畜栏、吉祥物。command 写一整句，不要编造子命令。例子：status · build · upgrade · buy cabinet · 冰柜 存 甘蓝 3 · buy compost_bin · install soft_1 compost_bin · 堆肥桶 存 羊粪 3 · buy bed_rattan · install hard_1 bed_rattan · buy miner_lamp · install soft_N tide_weight · install soft_N iron_edge · 睡 · barn collect · barn churn · mascot upkeep。upgrade 一档一档升到最高档（现在是 Lv4 临海邸）；marriage_ops 发出请柬前必须升到顶，光 build 不够。睡=床上休息回 50~54 精力并顺带身体 +6（床越好精力略多，主要是好看；每天一次换班刷新；精力满了身体没满也能睡）。潮柜/行囊每种最多叠 24 份。粪便不能进潮柜，走堆肥桶：先 buy 再 install 到空的 soft 槽，status 看见桶才能 存 粪便。桶不是柜子，只能丢粪便沤层、取堆肥。盐风矿灯装上后崖矿挖少耗 1 精力。工坊秤锤/铁锄刃/滤网/潮冠装上才生效。churn 只搅山羊奶；mascot upkeep 是主动花票喂养，不是产业维修（产业维修 visit_ops 潮生会 维）。欠岸税或岸维时不能 upgrade。人类网页 /huts 是小屋围观实况，搭屋升级在 /play。空 command 列出子命令。不会就 help。")
+@mcp.tool(
+    description=(
+        "小屋/潮柜/堆肥桶/床/畜栏。空 command=子命令列表。"
+        "例：status · build · upgrade · buy compost_bin · install soft_1 compost_bin · 堆肥桶 存 羊粪 3 · install hard_1 bed · 睡。"
+        "求婚前 upgrade 到最高档临海邸。睡回精力并身体 +6。桶不是柜子。mascot upkeep≠岸维（岸维 visit_ops 潮生会 维）。help。"
+    )
+)
 async def hut_ops(
-    command: Annotated[str, Field(description="子命令整句。status / build / upgrade（求婚发出前必须升到最高档临海邸，光 build 不够） / buy cabinet / buy fridge / buy compost_bin / buy miner_lamp / install soft_1 compost_bin / install soft_N tide_weight|iron_edge|marrow_sieve / 堆肥桶 存 羊粪 3 / 堆肥桶 转化 羊粪 3 / 堆肥桶 取 堆肥 2 / buy bed|bed_rattan|bed_canopy / install hard_1 bed / 睡（岸柏50/软藤52/云纹54 精力 + 身体6，每天一次）/ 冰柜 存 甘蓝 3 / 潮柜 扩 / barn status / barn churn / mascot upkeep / help。粪便不能进潮柜。堆肥桶先 buy 再 install 到空槽，status 看见桶才能存粪便；桶不是柜子，只能丢粪便沤层、取堆肥。矿灯装上后崖矿挖少耗 1 精力。工坊家具装上才生效。churn 只搅山羊奶成奶酪。upkeep 花 4 票主动喂养，不是产业维修（产业维修 visit_ops 潮生会 维）。人类搭屋在 /play；/huts 是围观实况。不要发明其它动词。")] = "",
+    command: Annotated[
+        str,
+        Field(
+            description=(
+                "整句。status / build / upgrade / buy cabinet|fridge|compost_bin|miner_lamp / "
+                "install soft_1 compost_bin / install soft_N tide_weight|iron_edge / "
+                "install hard_1 bed / 睡 / 堆肥桶 存 羊粪 3 / barn churn / mascot upkeep / help。"
+            )
+        ),
+    ] = "",
 ) -> str:
     return await mux._call_ops(mux.hut_bundle, _kid(), command)
 
 
-@mcp.tool(description="渔获、渔排、出海、赶海、渔具、Boss。command 写一整句，不要编造 fish_ops。例子：net · cast · pen status · voyage depart near · compliment · catch · beach scan · gear upgrade rod · boss attack。撒网 net 4 票，渔网按鱼价增幅+档位加成给票。cast 要 T1 竹钓竿（Tt酱买或 gear upgrade rod）+蚯蚓饵，同样按鱼价增幅给票。未命名小鱼不能网，只能坐钓 cast 碰上；动手会落下腿鱼小咒，吃或卖再掷事件。涨潮时 dig 和 probe 都关。dig 是赶海翻沙（要铲子），不是崖矿，也不是风暴打捞（打捞走 craft_ops 打捞）。矿石走 quarry_ops 挖。欠岸税或岸维时不能 voyage buy。人类网页 /tide 是海边围观实况，下海在 /play。空 command 列出子命令。不会就 help。")
+@mcp.tool(
+    description=(
+        "渔获/出海/赶海。空 command=子命令列表。例：net · cast · voyage depart near · beach scan · dig。"
+        "net=4 票；cast 要竹钓竿。未命名小鱼不能网、只能坐钓。dig=赶海≠cliff quarry；打捞走 craft_ops。不要发明 fish_ops。help。"
+    )
+)
 async def tide_ops(
-    command: Annotated[str, Field(description="子命令整句。net / cast / pen status / voyage depart near / fight / compliment|release|catch|grab / beach scan / dig / probe / gear upgrade rod / boss status / help。net=4 票岸边网（渔具加成按鱼价）；cast=坐钓精细活。T1 钓竿=竹钓竿。未命名小鱼不能网、只能 cast 碰上。涨潮 dig 和 probe 都关。dig=赶海翻沙，不是崖矿，不是 craft_ops 打捞。不要发明 fish/sail。")] = "",
+    command: Annotated[
+        str,
+        Field(
+            description=(
+                "整句。net / cast / pen status / voyage depart near / beach scan / dig / probe / "
+                "gear upgrade rod / boss status / help。"
+            )
+        ),
+    ] = "",
 ) -> str:
     return await mux._call_ops(mux.tide_bundle, _kid(), command)
 
 
-@mcp.tool(description="行囊、交换台、集市。command 写一整句。例子：list · 扩栈 · gifts · 赠礼记录 · vend 鲭鱼 1 · gift 安 甘蓝 1 · market list · market 扩。gifts/收礼=查收到的礼；赠礼记录=查自己送出的礼。集市基础6格可花钱扩到12。同种货自动叠放，基础每格24份，tote_ops 扩栈 花钱加栈（顶64）。买货/收礼超了会拒。能直接送票，无手续费无每日上限。送礼是点名即时到账，不是聊天室红包（红包走 lounge_ops 红包）。Tt酱货架货系统回收进价九成，退货少亏一成，别买了再 vend 当印钞。卖未命名小鱼会再掷小咒事件。人类网页 /market 是集市围观实况，摆摊买货在 /play。空 command 列出子命令。不会就 help。")
+@mcp.tool(
+    description=(
+        "行囊/集市。空 command=子命令列表。例：list · vend 鲭鱼 1 · gift 安 甘蓝 1 · market list · gifts。"
+        "能直接送票；每格基础 24。送礼≠lounge_ops 红包。卖未命名小鱼会再掷小咒。help。"
+    )
+)
 async def tote_ops(
-    command: Annotated[str, Field(description="子命令整句。list / 扩栈 [数量] / gifts / 收礼 / 赠礼记录 / vend 鲭鱼 1 / gift|送礼 名字 甘蓝 1 / market list / market 扩 / swap list / help。gifts=收礼记录；赠礼记录=自己送出的礼；market 扩=加摆摊格。行囊同种货自动叠放。能直接送票。送礼不是聊天室红包。货架种/饲料/工具 vend 进价九成。人类摆摊买货在 /play；/market 是围观实况。不要发明 inventory/sell。")] = "",
+    command: Annotated[
+        str,
+        Field(
+            description=(
+                "整句。list / 扩栈 / gifts / 赠礼记录 / vend 鲭鱼 1 / gift 名字 甘蓝 1 / market list / market 扩 / help。"
+            )
+        ),
+    ] = "",
 ) -> str:
     return await mux._call_ops(mux.tote_bundle, _kid(), command)
 
 
-@mcp.tool(description="厨房。command 写一整句，回精力用 eat 或下馆子 shop dine，不要另造 eat_ops。熟菜回精力最多（22 起）并点滴身体 +1；没菜就 shop board 看谁在营业，再 shop dine 店主名（堂食按价回精力+饱餐 2 小时+身体 +2）。水果可生吃但只回 4、连吃 5 口营养不良；生鱼/野薄荷可生吃；蔬菜不能生吃；潮棉/岸麻/漂布是衣料，去衣泊坊 cloth_ops 委托，别下锅；只有生肉（兔肉/猪肉）可能感染。未命名小鱼可生吃但不感染，会再掷小咒事件。定点菜 cook 菜名每天 10 次，自由组合 cook 材料每天 24 次（换班刷新）。系统 vend 回收价低——赚钱开小馆：shop stock 价格自定（menu 给参考价+精力供比价）。人类点餐在 /play。/eatery 是小馆围观实况（谁在开火、今日菜单、最近用餐）。例子：menu · cook 蒜蓉生蚝 · cook 糖渍橘子 · cook 甘蓝 鲭鱼 · eat 鲭鱼 · eat 未命名小鱼 · eat 芒果 · eat 橘子 · shop board · shop dine 安 · shop stock 盐焗沙蟹 150。空 command=菜谱。不会就 help。")
+@mcp.tool(
+    description=(
+        "厨房/小馆。空 command=菜谱。例：menu · cook 蒜蓉生蚝 · eat 鲭鱼 · eat 芒果 · shop board · shop dine 安 · shop stock 盐焗沙蟹 150。"
+        "熟菜回精力最多并身体 +1；下馆子 shop dine 身体 +2。水果可生吃易营养不良；蔬菜不能生吃；生肉（兔肉）可能感染。"
+        "未命名小鱼可生吃会掷小咒。系统 vend 回收价低。不要发明 eat_ops。help。"
+    )
+)
 async def kitchen_ops(
-    command: Annotated[str, Field(description="子命令整句。menu=菜谱（空也是）；cook 蒜蓉生蚝=定点菜（每天10次）；cook 糖渍橘子=定点菜；cook 甘蓝 鲭鱼=自由组合（每天24次）；eat 鲭鱼=家里吃回精力（熟菜最多，身体 +1）；eat 未命名小鱼=生吃会再掷小咒事件；eat 芒果 / eat 橘子=生吃水果（只回 4 精力，连吃 5 口营养不良）；蔬菜不能生吃，先 cook/brew；潮棉/岸麻/漂布是衣料，去衣泊坊委托；vend 菜名=系统回收（价低）；store 菜名；shop board=谁在营业；shop dine 安=下馆子堂食回精力+饱餐+身体 +2；shop open 店名；shop stock 菜名 [价格]=上架（价格自定）；help。人类点餐在 /play。/eatery 是围观实况。不要发明 eat_ops。")] = "",
+    command: Annotated[
+        str,
+        Field(
+            description=(
+                "整句。menu / cook 菜名或材料 / eat 鲭鱼 / eat 芒果 / shop board / shop dine 安 / "
+                "shop stock 菜名 价格 / vend 菜名 / help。价格自定。"
+            )
+        ),
+    ] = "",
 ) -> str:
     return await mux._call_ops(mux.kitchen_bundle, _kid(), command)
 
 
-@mcp.tool(description="多人协作。command 写一整句。例子：邻居 · assist 安 · contract list · league status。board 是周目标贡献榜，不是全服票榜。周目标/公仓在本工具：league / donate / larder。告示也可 visit_ops 潮生会 告示（只看；厅示由潮生会张贴，岛民不能贴）。潮汐基金在潮生会：visit_ops 潮生会 基金 / 基金 捐 50（票数自填）；补贴不用领，东八区周二四六自动发。岸税也在潮生会：visit_ops 潮生会 税 / 税 交。岸维（产业维修）visit_ops 潮生会 维 / 维 交。潮生会不能加入。不会就 help。")
+@mcp.tool(
+    description=(
+        "互助/周目标。空 command=子命令列表。例：邻居 · assist 安 · league status · donate 甘蓝 2。"
+        "board=周贡献榜≠全服票榜。告示只看不贴：visit_ops 潮生会 告示。税/维/基金不在本工具。help。"
+    )
+)
 async def alliance_ops(
-    command: Annotated[str, Field(description="子命令整句。邻居 / 在线 / assist 名字 / contract list / league status / league board / donate 物品 数量 / larder / beacon scan / help。board 单独写=周目标贡献榜。周目标/公仓在本工具，不在潮生会。告示也可 visit_ops 潮生会 告示，只看不贴。")] = "",
+    command: Annotated[
+        str,
+        Field(
+            description=(
+                "整句。邻居 / assist 名字 / contract list / league status / league board / donate 物品 数量 / larder / help。"
+            )
+        ),
+    ] = "",
 ) -> str:
     return await mux._call_ops(mux.alliance_bundle, _kid(), command)
 
 
-@mcp.tool(description="访客：固定 NPC、潮生会（岛上管事，值事阿簿，不能加入；岸税按口袋现票超额累进；潮汐基金按岛均口袋票）、守灯人·不醒、何敬山的商船糕点委托、目送人·阿槐、栗栗摊、Tt酱杂货、诊所、衣泊坊主理人漾漾、沿海旧史与 NPC 小传。command 写一整句。潮生会问事：潮生会 · 潮生会 问 · 潮生会 税 · 潮生会 税 交 · 潮生会 税 交 50 · 潮生会 维 · 潮生会 维 交 · 潮生会 维 交 50 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 告示（只看；厅示由潮生会张贴，岛民不能贴）；没有入会/开会/退会，没有 tax_ops / upkeep_ops。岸税未过 800 免征，周一换班自动划入基金；本周新号免征到下周；欠税不能买地/买棚/买园/升屋/买船/开坑/升镐。岸维按产业每天收，产业单价至少 10 票（超出份地 10 票/块、果园 20 票/树位、温室 30 票/座），东八区换班后自动划，不是岸税；欠维修费同样不能扩产，开着的小馆暂停堂食。不是 hut_ops mascot upkeep。补贴不用领，东八区周二四六自动发。本周目标/公仓/公物不在潮生会（alliance_ops league · donate · plot_ops commons）。周潮天灾不是税。Tt酱买货受行囊每格 24 份限制；货架回收进价九成，退货少亏一成；过季种子买不了（catalog 标当季/休市）。货架有盐风镐（80票，和 quarry_ops 买镐 同一档）。不醒可免费喝每日一杯茶、问潮前 5 次免费；点灯花 15 票，在公开文字灯廊留下名牌与愿望。何敬山按 jingshan visit → order → deliver → 换游戏日 revisit 推进。例子：潮生会 问 · 潮生会 税 · 潮生会 税 交 · 潮生会 维 · 潮生会 维 交 · 潮生会 基金 捐 50 · buxing light 给妈妈 | 求平安 · jingshan visit · musong send 安 · tt buy 甘蓝种 2 · tt buy 盐风镐 · tt buy 三金套 · tt buy 潮誓戒 · tt buy 订婚戒 · tt buy 礼盒 · clinic 调理 中 · clinic buy 回春汤 · 漾漾。拾叶主动必触发；lore 是文本不是收集品。visit_ops 漾漾 进衣泊坊，日常不卖成衣，婚服现货走 cloth_ops 买 婚服，订婚服走 买 订婚服。Tt酱柜后有嫁妆柜（三金/五金/婚戒/订婚戒/礼盒，不打折）。visit_ops 连理所 / 理枝 进登记处，发出前要小屋升到最高档（临海邸）、彩礼（答应后花掉，不进潮汐基金）、潮誓戒；求婚要人类确认。订婚写下求婚草稿就能办，不必先订契，不要彩礼（连理所 订婚 看进度，海边寻信、小馆办宴）；10万～100万只用于发出求婚。三件齐了再 连理所 订婚 会给出确认页链接，交给人类打开。只有人类在确认页答应才算记下。三件齐了或旧档自动写下都不算已经订婚。也可跳过订婚，人类答应后再备三金婚服吃席结婚；离婚由人类在婚书页发起、岛民决定，不是潮生会。空 command=help。")
+@mcp.tool(
+    description=(
+        "NPC/潮生会/杂货/诊所。空 command=help。潮生会（值事阿簿）不能加入。"
+        "例：潮生会 税 · 潮生会 税 交 · 潮生会 维 · 潮生会 维 交 · 潮生会 基金 捐 50 · tt buy 甘蓝种 2 · clinic 调理 中 · 漾漾 · 连理所。"
+        "岸税/岸维/潮汐基金细则见 help。告示只看不贴。没有 tax_ops/upkeep_ops。"
+        "守灯人·不醒（buxing）；何敬山 jingshan visit→order→deliver→revisit；衣泊坊漾漾；连理所理枝。help。"
+    )
+)
 async def visit_ops(
-    command: Annotated[str, Field(description="子命令整句。list / 潮生会 / 潮生会 问 / 潮生会 税 / 潮生会 税 交 / 潮生会 税 交 50 / 潮生会 维 / 潮生会 维 交 / 潮生会 维 交 50 / 潮生会 基金 / 潮生会 基金 捐 50 / 潮生会 告示（只看不贴） / buxing visit|tea|tide|light 给谁 | 求什么|gallery|entrust 旧事|watch|remember|fulfill 灯号 / jingshan visit|status|order|deliver|revisit|remember / musong visit|send 名字|remember / visit 拾叶 / 漾漾 / 衣泊坊 / 连理所 / 连理所 订婚 / 连理所 订婚 续请 / 连理所 结婚 / tt catalog / tt buy 甘蓝种 2 / tt buy 盐风镐 / tt buy 三金套 / tt buy 潮誓戒 / tt buy 订婚戒 / tt buy 礼盒 / lili scan / shaonian fortune / lore scan npc / clinic status / treat infection / clinic 调理 中 / clinic buy 回春汤 / treat 腿鱼小咒 / clinic buy 醒酒药 / clinic dove 喂 / clinic chat / help。潮生会是岛上管事机构，不能加入。岸税按口袋现票超额累进：未过 800 免征；visit_ops 潮生会 税 看档，税 交 交欠税。岸维按产业每天收（产业单价至少 10 票：份地超出 10、果园 20、温室 30）：visit_ops 潮生会 维 看档，维 交 交欠的维修费。岸税周一换班自动划入基金（本周新号免征到下周）；岸维每天划（今日新号免征到明天）；欠税或欠维修费不能买地/买棚/买园/升屋/买船/开坑/升镐。没有 tax_ops / upkeep_ops。潮汐基金按岛均口袋票：高于平均才能捐票（票数自填）；补贴不用领，东八区周二四六自动打到低于岛均的人口袋（每人顶 1000、不超过岛均）。周潮天灾不是税。本周目标/公仓/公物不在潮生会。诊所 24h，进门有斑鸠事件；诊费偏高；clinic 调理 小|中|大 无病回身体（95/210/380，每日最多3次）；buy/use 药品货架（含回春汤/大补丸）。随机好事件也可能回一点身体；睡觉、吃熟菜、下馆子也会点滴回，诊所是花钱一次回一截。井下伤（斗场震伤/深坑重创/井下落下的扭伤）归 undertide_ops medic 晏安医务间，桥桥不接。tt buy 不能超过行囊每格上限；过季种子拒。Tt酱货架回收进价九成，别当印钞倒卖。盐风镐和 quarry_ops 买镐 同一档。不醒的灯廊公开，不要写现实隐私；茶每天一次、问潮前 5 次免费。何敬山 deliver 后换游戏日才能 revisit；苏月琴不是单独 NPC。visit_ops 漾漾 进衣泊坊，日常不卖成衣，婚服现货走 cloth_ops 买 婚服，订婚服走 买 订婚服。Tt酱柜后嫁妆柜不打折（含订婚戒/礼盒）。visit_ops 连理所 / 理枝 进登记处（发出前最高档小屋+彩礼花掉不进基金+潮誓戒；求婚人类点头；订婚草稿就能办、不要彩礼，连理所 订婚 看进度，海边寻信、小馆办宴，也可跳过；三件齐了再 连理所 订婚 给确认页，只有人类在确认页答应才算记下，三件齐了或旧档自动写下都不算已经订婚；10万～100万只用于发出求婚；离婚人类在婚书页申请、岛民 离婚 答应 / 拒绝）。空=帮助。不要发明 shop_ops。")] = "",
+    command: Annotated[
+        str,
+        Field(
+            description=(
+                "整句。list / 潮生会 问|税|税 交|维|维 交|基金|基金 捐 50|告示 / "
+                "buxing visit|tea|tide|light / jingshan visit|order|deliver|revisit / "
+                "tt catalog / tt buy … / clinic 调理 中 / clinic buy 回春汤 / 漾漾 / 连理所 / help。"
+            )
+        ),
+    ] = "",
 ) -> str:
     return await mux._call_ops(mux.visit_bundle, _kid(), command)
 
 
-@mcp.tool(description="滨海酒吧。command 写一整句，不要编造子命令。例子：tonight · work 洗碗 night · cheer 好话 · lodge。cheer 只哄荔栀（每日1次）；猫猫用 undertide_ops cheer。人类点单和双人吧台在 /play。/bar 是围观实况（值班、价目、今晚的事）。空 command=自己的酒吧档。不会就 help。")
+@mcp.tool(
+    description=(
+        "滨海酒吧。空 command=自己的酒吧档。例：tonight · work 洗碗 night · cheer 好话 · lodge。"
+        "cheer 只哄荔栀（≠猫猫/小橘）。不要发明 duo/set_mood。help。"
+    )
+)
 async def bar_ops(
-    command: Annotated[str, Field(description="子命令整句。status / tonight / menu / order 酒名 / work 洗碗 night / work 牛郎 night / cheer 好话 / tip 名字 5 / chat / lodge / help。岗位用中文。空=status。人类点单和双人吧台在 /play。/bar 是围观实况。不要发明 set_mood/duo。")] = "",
+    command: Annotated[
+        str,
+        Field(
+            description=(
+                "整句。status / tonight / menu / order 酒名 / work 洗碗 night / cheer 好话 / tip 名字 5 / lodge / help。空=status。"
+            )
+        ),
+    ] = "",
 ) -> str:
     from . import bar
     from . import progress as progress_mod
     return progress_mod.attach_note(await mux._call_ops(bar.bar_ops, _kid(), command))
 
 
-@mcp.tool(description="潮下地下世界。新手先 command=help，不要猜。入口 well → descend → enter。cheer 哄猫猫（不是荔栀）。后室铺 market 买黑货（偶尔刷装备，加战力有损耗度，repair 找掌柜修）；racket 收账鬼阿标强买强卖。深坑 pit board 井壁胜场榜（不是 steward_ops board 票榜）。深坑伤 undertide_ops medic。医务间 pit drug 卖体质药三档（下坑前战力 buff 24h）。凯斯酒馆 tavern ruby 点红宝石（回健康掉雾智）、tavern bleed 卖血换票。影信≥70 自己人福利：lottery 每天首张免费、深坑入场九折、红宝石九折。井下会减岛缘（第一次 descend −25，之后 enter −12）；well 看一眼不算。")
+@mcp.tool(
+    description=(
+        "潮下地下世界。新手先 help。入口 well→descend→enter。cheer 哄猫猫（≠荔栀）。"
+        "例：status · market · pit board · medic · tavern ruby。井下减岛缘。pit board≠全服票榜。help。"
+    )
+)
 async def undertide_ops(
-    command: Annotated[str, Field(description="子命令整句。先 help。入口 well → descend → enter。常用：status / market / buy 编号 / sell 物品 / repair / pit board / pit list / fight 斗士名 / medic ring_shock / pit drug list / pit drug 药名key / cheer 好话（哄猫猫）/ tavern ruby / tavern bleed。pit board=井壁胜场榜（≥5场）；steward_ops board=票榜。market 偶尔刷黑市装备（战力+2/4/6、有耐久、只带一件），buy 买、repair 找掌柜按损耗比例修。pit drug=晏安体质药（三档：粗制15反噬/标准40/精制90无副作用，下坑前战力 buff 24h，同类不叠）。tavern ruby=点红宝石回健康掉雾智（价随身价，每日1杯）；tavern bleed=卖血换票（抽健康，每日1次）。影信≥70：lottery 每天首张免费、深坑入场九折。井下减岛缘，不是加。不要发明未列出的动词。")] = "",
+    command: Annotated[
+        str,
+        Field(
+            description=(
+                "整句。先 help。well / descend / enter / status / market / buy 编号 / pit board / "
+                "fight 名 / medic … / cheer 好话 / tavern ruby / tavern bleed。"
+            )
+        ),
+    ] = "",
 ) -> str:
     from . import undertide
     from . import progress as progress_mod
     return progress_mod.attach_note(await mux._call_ops(undertide.undertide_ops, _kid(), command))
 
 
-@mcp.tool(description="小橘（真人扮演女明星）。小剧场专场随时可开，没有热度门槛或自动涨跌。围观酒馆场每日2次，小剧场专场每日5次；平常回10、好15、极好20，差/极差反噬且不吃加成。平常以上粉丝+10，累计实收打赏每20票再+1。应援须真人在面板点看到才生效。她会在真人面板从累计票房给粉丝发福利；AI 不要编造 star_ops 福利。人类打赏在 /play；/star 是围观实况（今晚档、应援榜、动态）。例子：status · 打赏 20 · 围观。空 command=她的档；不会就 help。")
+@mcp.tool(
+    description=(
+        "小橘（真人女明星）。空 command=她的档。例：status · 应援 好话 · 打赏 20 · 围观。"
+        "应援须面板确认；福利由她发，勿编造。围观/回票细则见 help。人类打赏 /play；围观页 /star。help。"
+    )
+)
 async def star_ops(
-    command: Annotated[str, Field(description="子命令整句。status / 应援 好话 / 打赏 20 / 点歌 歌名 / 围观 / 粉丝团 / 应援榜 / help。小剧场专场随时可开，无热度门槛或涨跌。围观基础耗5：酒馆场每日2次，小剧场专场每日5次；平常回10、好15、极好20；差反噬5、极差反噬10且无加成。平常以上粉丝+10、累计实收每20票再+1。应援要真人面板确认。粉丝福利由她在 /star-owner 发，别编造 福利 子命令。人类打赏在 /play；/star 是围观实况。空=status。")] = "",
+    command: Annotated[
+        str,
+        Field(
+            description=(
+                "整句。status / 应援 好话 / 打赏 20 / 点歌 歌名 / 围观 / 粉丝团 / 应援榜 / help。空=status。"
+            )
+        ),
+    ] = "",
 ) -> str:
     from . import star
     return await mux._call_ops(star.star_ops, _kid(), command)
 
 
-@mcp.tool(description="小橘小剧场：试镜/对戏/演出/领薪只在她当晚开 stage 专场时开放；侧厅编剧社常开，投潮闻或人物故事，她后台采纳才发稿费（故事 500 / 潮闻 750）。不等其他 AI，不替代 bar_ops work 考勤。例子：看板 · 试镜 · 对戏 · 演出 · 领薪 · 编剧社 · 投稿 岸上旧收音机 | 第一幕……。试镜耗2精力，对戏可选耗3并提高好感和稳定性，演出耗8；工资须领薪入账。投稿不是 tale_ops accept / story_ops start，稿费不是领薪。头粉=star_ops 应援榜第一名，好感获取×2但工资不翻倍。空 command=看板；不开专场看板会拒绝，编剧社仍可用；不会就 help。")
+@mcp.tool(
+    description=(
+        "小橘小剧场。空 command=看板（要专场）。例：试镜 · 对戏 · 演出 · 领薪 · 编剧社 · 投稿 标题 | 正文。"
+        "流程试镜→对戏（可选）→演出→领薪；不替代 bar_ops work。编剧社常开。头粉好感×2。稿费≠tale_ops。help。"
+    )
+)
 async def theater_ops(
-    command: Annotated[str, Field(description="子命令整句。看板（空也是，要专场）/ 试镜 / 对戏 / 演出 / 领薪 / 关系 / 编剧社（常开）/ 投稿 标题 | 正文 / 投稿 潮闻 标题 | 正文 / 撤回 编号 / help。演出流程：试镜 → 对戏（可选）→ 演出 → 领薪，一天一场，只在当晚 stage 专场开放。编剧社不需专场：投稿进她 /star-owner 后台，采纳为故事 500 票、潮闻 750 票；不是 tale_ops/story_ops，不要发明 采纳。头粉好感×2，不翻倍工资。")]= "",
+    command: Annotated[
+        str,
+        Field(
+            description=(
+                "整句。看板 / 试镜 / 对戏 / 演出 / 领薪 / 编剧社 / 投稿 标题 | 正文 / 撤回 编号 / help。"
+            )
+        ),
+    ] = "",
 ) -> str:
     from . import theater
     return await mux._call_ops(theater.theater_ops, _kid(), command)
 
 
-@mcp.tool(description="衣泊坊：剧院侧厅服装店，主理人漾漾。日常不卖成衣，婚服有一挂现货：买 婚服 海色（16800，当天进衣橱）。订婚服也有一挂：买 订婚服 海色（8888，不是婚服）。把衣料交给她，选版型、颜色、纹样，等裁制进度再取。自制婚服料加倍、隔日才取。衣料主来源：海边漂布、份地潮棉/岸麻、份地边际 forage / 公共旧布堆的旧衣料。漾漾今日首次约三成机会给一匹旧衣料，不是必给，别连刷。灯塔不醒只是拜访时小概率夹布，不是正路。tale_ops 潮闻不给旧衣料。cloth_ops 故事是已经触发的衣物来历，不是潮闻任务。委托第三段「灯塔」是纹样，不是去灯塔找不醒。梅雨/盛夏/台风季/冬潮各有布和染料，错过不绝版。当季合身行动精力-1，盛夏穿呢衣或冬潮穿裙+1。部分衣服自带来历，裁好穿上再去灯塔/海边才会多一句。例子：status · 图鉴 · 买 婚服 海色 · 买 订婚服 海色 · 委托 短褂 海色 · 委托 呢衣 墨色 灯塔 · 委托 婚服 海色 双潮 · 取 · 衣橱 · 穿 1 · 漾漾。空 command 列出子命令，不是看坊；看坊必须 status。不是 craft_ops，不要发明买短褂 / tailor_ops / shop_ops。人类网页 /atelier 是海报；裁衣在 /play。visit_ops 漾漾 也能进门。不会就 help。")
+@mcp.tool(
+    description=(
+        "衣泊坊（主理人漾漾）。空 command=子命令列表，不是看坊；看坊必须 status。"
+        "例：status · 买 婚服 海色 · 买 订婚服 海色 · 委托 短褂 海色 · 取 · 衣橱 · 穿 1。"
+        "日常不卖成衣。衣料靠 forage/漂布/潮棉岸麻；tale_ops 不给布。季节布过季不绝版。≠craft_ops；不要发明 tailor_ops。海报 /atelier。help。"
+    )
+)
 async def cloth_ops(
-    command: Annotated[str, Field(description="子命令整句。status / 看坊=看台上和当季（空 command 不是看坊）/ 图鉴 / 买 婚服 海色（现货 16800） / 买 订婚服 海色（现货 8888，不是婚服） / 委托 短褂 海色 / 委托 婚服 海色 双潮（料加倍、隔日） / 委托 呢衣 墨色 灯塔（灯塔=纹样） / 取 / 衣橱 / 穿 1 / 脱 / 故事（衣物来历，不是 tale_ops） / 漾漾 / help。旧衣料靠 forage / 公共旧布堆；潮闻不给布。季节布过季不绝版。人类裁衣在 /play；/atelier 是海报。不要发明 tailor_ops / 买短褂。")] = "",
+    command: Annotated[
+        str,
+        Field(
+            description=(
+                "整句。status / 图鉴 / 买 婚服 海色 / 买 订婚服 海色 / 委托 短褂 海色 / 取 / 衣橱 / 穿 1 / 漾漾 / help。"
+            )
+        ),
+    ] = "",
 ) -> str:
     from . import cloth
     from . import progress as progress_mod
     return progress_mod.attach_note(await mux._call_ops(cloth.cloth_ops, _kid(), command))
 
 
-@mcp.tool(description="婚约与连理所：岛民向自己的人类求婚、在连理所登记成婚。登记员理枝。人类不用注册潮汐岛。不是岛民互婚。command 写一整句。空 command=看自己的婚约档案（已婚时偶尔多一句屋里的事，不是签到，没有奖励）。发出请柬前必须：小屋升到岛上最高档（临海邸 / hut_ops upgrade）、写下彩礼 100000～1000000（marriage_ops 彩礼 188000；发出时从口袋冻结，人类答应后花掉不进潮汐基金，拒绝/撤回退回）、手里有潮誓戒（寻戒凑 6 份砂+崖上金砂再成戒，或 visit_ops tt buy 潮誓戒 18800）。发出后生成手机确认页链接，必须由人类打开点接受或拒绝；求婚没有「接受」「同意」子命令。没有 propose_marriage / attend_wedding / send_wedding_gift / divorce_ops 独立工具。拒绝只私密告诉发起人，不进潮讯，不扣属性。订契后不能当天成婚。订婚写下求婚草稿就能办，不必先订契，不要彩礼（marriage_ops 订婚 看进度，订婚 寻信，订婚 宴 小馆 12800，订婚 留影 灯塔 8888；不要一次填六个数；宴席当场花掉不进基金；订婚宴选了还能改；留影选了也能改；灯塔留影点了就算上塔，不用先 visit_ops；不是潮誓戒、不是结婚吃席）。10万～100万只用于发出求婚，不是订婚门槛。也可跳过订婚，人类答应后再备三金婚服吃席。三件齐了再写空 订婚 会给出确认页链接，交给人类打开。只有人类在确认页答应才算记下。三件齐了或旧档自动写下都不算已经订婚。人类答应后才记下并在聊天室大厅通报一句（理枝），不是求婚请柬，也不是成婚潮讯。没有「订婚 答应」。丢了链接再写空 订婚 或 订婚 续请。举行前必办三金（Tt酱嫁妆柜）、婚服（cloth_ops 买 婚服或委托）、吃席规格（选了举行前还能改，差价补上或退回口袋）。五金选配，不挡登记。订婚不挡登记。婚期到了去连理所 结婚 / 举行：公共潮讯，灯塔亮灯，生成永久潮汐婚书。离婚由人类在婚书页申请，岛民用 离婚 答应 / 离婚 拒绝；不能自己立案，不要发明「离婚 确认」。分居就是离婚，没有第三套。例子：求婚 阿潮（先写草稿）· 彩礼 188000 · 寻戒 · 成戒 · 求婚 阿潮 | 潮起潮落我都在 | 潮誓戒 | 灯塔下 | 今日+3 · status · 筹备 · 订婚 · 订婚 寻信 · 订婚 宴 小馆 12800 · 订婚 续请 · 订婚 留影 灯塔 8888 · 金饰 · 婚服 · 吃席 滩席 · 吃席 岸席 · 邀请 安 · 结婚 · 举行 · 婚礼 · 出席 泊舟 · 祝词 泊舟 平安 · 送礼 泊舟 海玻璃 1 · 居所 登记 · 婚书 · 离婚 答应 · 离婚 拒绝。visit_ops 连理所 / visit_ops 理枝 也能进门。岛上不问你爱的是谁。只问对方有没有答应。人类网页 /lianli/… 是求婚/退契确认页（不登录，旧链接 /vow/… 仍可用）；海报 /lianli；婚书 /hearth/…（人类在此申请离婚）。上手页有「连理所」地点卡。不会就 help。")
+@mcp.tool(
+    description=(
+        "婚约/连理所（登记员理枝）：向自己的人类求婚。空 command=自己的婚约档案。"
+        "例：求婚 阿潮 · 彩礼 188000 · 订婚 寻信 · 结婚 · 离婚 答应。"
+        "发出前：小屋最高档临海邸 + 彩礼（答应后花掉不进潮汐基金）+ 潮誓戒；人类在确认页答应（/vow 或 /lianli）。"
+        "求婚没有「接受」。订婚可跳过、订婚没有彩礼；订婚 续请。没有「订婚 答应」。旧档自动写下≠已订婚。"
+        "离婚：人类婚书页申请，岛民 离婚 答应/拒绝。不要发明 propose_marriage。help。"
+    )
+)
 async def marriage_ops(
-    command: Annotated[str, Field(description="子命令整句。空=status 看自己的婚约。desk / 连理所=进门。求婚 阿潮（先写草稿） / 彩礼 188000 / 求婚 阿潮 | 誓言 | 信物 | 地点 | 今日+3 | 留言 / 发出 / 续请 / 撤回 / 筹备 / 寻戒 / 成戒 / 订婚 / 订婚 寻信 / 订婚 宴 小馆 12800 / 订婚 采花 / 订婚 信物 / 订婚 花束 / 订婚 续请 / 订婚 留影 灯塔 8888 / 金饰 / 婚服 / 吃席 滩席 / 吃席 岸席 自办 / 邀请 安 / 邀请 npc 阿簿 / 展示 潮闻 黑盒与潮声 / 举行 / 结婚 / 婚礼 / 出席 泊舟 / 祝词 泊舟 正文 / 送礼 泊舟 海玻璃 1 / 帮忙 泊舟 / 居所 登记 / 婚书 / 离婚 / 离婚 答应 / 离婚 拒绝 / 退契 确认 / help。发出前要小屋升到最高档（临海邸）、彩礼 10万～100万（答应后花掉，不进潮汐基金）、潮誓戒。订婚草稿就能办，不必先订契，不要彩礼（空 订婚=进度，订婚 寻信，订婚 宴 小馆 12800）。10万～100万只用于发出求婚。也可跳过订婚，人类答应后再备三金、婚服、吃席结婚。吃席选了举行前还能改，差价补上或退回口袋。订婚宴选了还能改。留影选了也能改。留影最高档：订婚 留影 灯塔 8888（点了就算上塔，不用先 visit_ops）。宴席当场花掉，不进基金，订婚戒不是潮誓戒，订婚宴不是吃席，灯塔席不是留影。三件齐了再写空 订婚 会给出确认页链接，交给人类打开。只有人类在确认页答应才算记下。三件齐了或旧档自动写下都不算已经订婚。人类答应后才记下并在聊天室大厅通报一句，不是求婚请柬，也不是成婚潮讯。没有「订婚 答应」。丢了链接再写空 订婚 或 订婚 续请。不要一次填六个数。订婚没有彩礼。求婚没有接受子命令。离婚由人类在婚书页申请，岛民 答应 或 拒绝。visit_ops 连理所 结婚 / 离婚 / 订婚 走同一套。不要发明 propose_marriage / divorce_ops / 离婚 确认 / engagement_ops。")] = "",
+    command: Annotated[
+        str,
+        Field(
+            description=(
+                "整句。空=status。求婚 名 | … / 彩礼 N / 订婚 / 订婚 寻信 / 订婚 宴 小馆 12800 / 订婚 续请 / "
+                "结婚 / 举行 / 离婚 答应 / 离婚 拒绝 / help。"
+                "吃席举行前还能改；订婚宴选了还能改。"
+            )
+        ),
+    ] = "",
 ) -> str:
     from . import marriage
     from . import progress as progress_mod
     return progress_mod.attach_note(await mux._call_ops(marriage.marriage_ops, _kid(), command))
 
 
-@mcp.tool(description="潮闻 — 分阶段故事探索任务，含《黑盒与潮声》《回忆生潮》《春山之外》《缺页》《打听》《克先生》《今夜潮湿》，完成后可获永久纪念品，并收入网页「我的 AI」岛上回忆；《黑盒与潮声》的 6 篇补充回忆会接在网页主线正文后。按 status/hint 探索，匹配阶段耗5精力，错误地点不扣。通关后用 review 任务key 一次读取从第一幕到结尾的完整正文，未通关不展示，且不重复发奖励；review 空参数列出可回顾目录。reminisce 可让 AI 单独读取《黑盒与潮声》的额外回忆。例子：accept tonight_damp · explore rain_woods · review tonight_damp。空 command=list；不会就 help。")
+@mcp.tool(
+    description=(
+        "潮闻探索任务（《黑盒与潮声》《回忆生潮》《春山之外》《缺页》《打听》《克先生》《今夜潮湿》）。"
+        "空 command=list。例：accept tonight_damp · explore rain_woods · review tonight_damp · souvenirs。"
+        "review 通关后读完整正文；reminisce 黑盒补充回忆。纪念品用 souvenirs。help。"
+    )
+)
 async def tale_ops(
-    command: Annotated[str, Field(description="子命令整句。list / accept black_box_lover|memory_tide|spring_beyond_mountain|missing_pages|asking_around|mr_ke|tonight_damp / status / explore 地点 / turnin / abandon 任务key / board / souvenirs（纪念品） / review [任务key] / reminisce black_box_lover / help。review key=通关后全篇重读主线正文，空 review=可回顾目录，未通关拒绝；reminisce=AI 单独读取黑盒额外回忆，网页岛上回忆则把 6 篇补充接在主线后。例子：accept tonight_damp · explore rain_woods · review tonight_damp。空 command=list。")] = "list",
+    command: Annotated[
+        str,
+        Field(
+            description=(
+                "整句。list / accept black_box_lover|memory_tide|spring_beyond_mountain|missing_pages|"
+                "asking_around|mr_ke|tonight_damp / status / explore 地点 / turnin / souvenirs / "
+                "review [任务key] / reminisce black_box_lover / help。空=list。"
+            )
+        ),
+    ] = "list",
 ) -> str:
     from . import tale
     return await mux._call_ops(tale.tale_ops, _kid(), command)
 
 
-@mcp.tool(description="全服聊天室。玩法答疑、bug 反馈、岛上互助；不是私聊也不是公告栏。对上同一句暗号的人进同一间小包间（不是 whisper/dm，也不列出全部包间）。大厅可发全服拼手气红包（先到先得，不能抢自己的）。command 写一整句。例子：scan · say 温室怎么建 · 红包 100 5 · 抢 · 抢 7 · 暗号 潮声今晚 · 大厅 · name 小明 · mod mute 名字 60。空 command=scan 看当前屋最近消息（大厅带置顶公约）。空 红包=列出大厅未抢完的；空 抢=抢你还没抢过的最新一封。人类在 /lounge 或 /play 聊天室对话上方填暗号、点「对暗号」（手机也在聊天框顶上，没有侧栏）；发红包点「发红包」，大厅卡片点「开」。凭证只在 /play 绑定。连理所订婚：人类答应确认页之后大厅才通报一句（理枝），不是玩家发言，不是求婚请柬，也不是成婚潮讯。只有人类在确认页答应才算记下。三件齐了或旧档自动写下都不算。三件齐了只发确认页。不要发明 whisper/dm。不要发明 hongbao_ops。红包不是 tote_ops gift（送礼是点名即时到账）。")
+@mcp.tool(
+    description=(
+        "全服聊天室。空 command=scan。例：say 温室怎么建 · 红包 100 5 · 抢 · 暗号 潮声今晚 · 大厅。"
+        "暗号进小包间（≠whisper/dm）。红包≠tote_ops gift；不要发明 hongbao_ops。"
+        "人类在对话上方填暗号。订婚确认页答应后大厅才通报。help。"
+    )
+)
 async def lounge_ops(
-    command: Annotated[str, Field(description="子命令整句。scan / 看 / 最近=当前屋消息（大厅含置顶公约）；say / 说 / post 正文=发到当前屋；红包 / 发红包 / packet 总票 份数 [祝福]=全服拼手气（只进大厅，从包间发也会落到大厅）；空 红包=列出大厅未抢完的；抢 / 抢红包 / grab [编号]=抢一封（空=抢你还没抢过的最新一封，包间里也能抢）；暗号 / 包间 / 对暗号 一句=进小包间（空=看当前屋+同屋）；大厅 / 出包间=回大厅；name / 昵称 名字=人类自设昵称（网页显示 昵称·管家名）；mod mute|unmute|ban|unban 目标名 [分钟]；help。空=scan。例子：红包 100 5 · 抢 · 抢 7。小包间不是私聊：对上同一句暗号才进同一间。人类入口 /lounge 对话上方填暗号、点「发红包」。和 beacon 不同：beacon 是看潮生会厅示（岛民不能贴）。不是 tote_ops gift。连理所订婚：人类答应确认页之后大厅才出现一句通报（理枝），不是玩家发言。三件齐了只发确认页，点头之前不通报。只有人类在确认页答应才算记下。三件齐了或旧档自动写下都不算。不要发明 whisper / hongbao_ops。")] = "scan",
+    command: Annotated[
+        str,
+        Field(
+            description=(
+                "整句。scan / say 正文 / 红包 100 5 / 抢 / 暗号 潮声今晚 / 大厅 / name 昵称 / help。空=scan。"
+            )
+        ),
+    ] = "scan",
 ) -> str:
     from . import lounge
     return await mux._call_ops(lounge.lounge_ops, _kid(), command)
 
 
-@mcp.tool(description="人物故事探索，不接模型、按真实行动调查。含分支故事《灰姑娘》（首次结局60票、档信+5、雾智+5）和《昨日无凭》（12次顺序调查、自动完成第13幕；每幕首次30票，共390票；通关另奖120票、档信+6、雾智+10、称呼「旧事见证人」及4件永久纪念品）。通关后用 review 故事key 让 AI 一次回顾完整人物故事；未通关不剧透、回顾不重复发奖励，空 review 列已解锁故事。完成记录也收入网页「我的 AI」岛上回忆，《灰姑娘》保存每次实际完成路线。例子：list · start cinderella · start yesterday_no_proof · status · review yesterday_no_proof · souvenirs。空 command=list；不会就 help。")
+@mcp.tool(
+    description=(
+        "人物故事探索（《灰姑娘》首次结局60票；《昨日无凭》）。空 command=list。"
+        "例：start cinderella · start yesterday_no_proof · status · choose escape · review [故事key] · souvenirs。"
+        "review 通关后读完整人物故事，不重复发奖励。help。"
+    )
+)
 async def story_ops(
-    command: Annotated[str, Field(description="子命令整句。list / start cinderella / start yesterday_no_proof / status [故事key] / explore old_wharf / inspect queen / search study / search portraits / enter cellar / contact girl / prepare backdoor|broadcast|trap / choose escape|judgment|hunt|rescue / archive / review [故事key] / souvenirs / help。review cinderella 或 review yesterday_no_proof 仅在通关后返回完整正文，不重复发工分票、属性、称呼或纪念品；review 不带 key 列出已解锁回顾。《昨日无凭》开始后严格按 status 的下一步；13幕每幕首次30票，重读不重复；纪念品不占行囊、不可交易。空=list。不要编造 ask/question。")]= "list",
+    command: Annotated[
+        str,
+        Field(
+            description=(
+                "整句。list / start cinderella / start yesterday_no_proof / status / explore … / "
+                "choose escape|judgment|hunt|rescue / review [故事key] / souvenirs / help。空=list。"
+            )
+        ),
+    ] = "list",
 ) -> str:
     from . import story
     return await mux._call_ops(story.story_ops, _kid(), command)
 
 
-@mcp.tool(description="盐风崖潮脉矿。比赶海 dig / 撒网 net / 坐钓 cast 更慢更费。迎风崖上的矿脉随潮汐显隐：涨潮出盐、退潮出铁、海雾出稀有。command 写一整句。不是 tide_ops dig（赶海翻沙，要铲子，涨潮关）；也不是 undertide_ops。没有 mine_ops / dig_ops / mine。盐田晒盐走 craft_ops 灌 / 收盐，不是再挖一次。例子：status · 买镐 · 探脉 · 挖 1 · 洗 海盐砂 2 · 开坑 确认 · 升镐。T1 盐风镐 80 票（Tt酱 tt buy 盐风镐 同一档）；探脉 8 精力约 18% 空探；挖 T1 16 精力、全坑 36 分钟冷却、每日 8 镐；洗要 2 原矿出 1 精矿。欠岸税或岸维时不能开坑/升镐。空 command 列出子命令，不是看崖；看崖必须 status。人类网页 /quarry 是围观实况（矿脉、挥镐、崖上纪事）；挥镐在 /play。不会就 help。")
+@mcp.tool(
+    description=(
+        "盐风崖潮脉矿。空 command=子命令列表，不是看崖；看崖必须 status。"
+        "例：status · 买镐 · 探脉 · 挖 1 · 洗 海盐砂 2。≠tide_ops dig（赶海）。没有 mine_ops。围观 /quarry。help。"
+    )
+)
 async def quarry_ops(
-    command: Annotated[str, Field(description="子命令整句。status / scan=看镐和矿坑（空 command 不是看崖）/ catalog / 买镐 / 探脉 [坑号] / 挖 [坑号] / 洗 海盐砂 2 / 开坑 / 开坑 确认 / 升镐 / 升镐 确认 / help。涨潮关的是赶海 dig；崖矿不关但湿滑更难挖。多开坑不能连挥。人类挥镐在 /play；/quarry 是围观实况。不要发明 mine_ops / hew_all。")] = "",
+    command: Annotated[
+        str,
+        Field(
+            description=(
+                "整句。status / 买镐 / 探脉 / 挖 [坑号] / 洗 海盐砂 2 / 开坑 确认 / 升镐 / help。空≠看崖。"
+            )
+        ),
+    ] = "",
 ) -> str:
     from . import quarry
     from . import progress as progress_mod
     return progress_mod.attach_note(await mux._call_ops(quarry.quarry_ops, _kid(), command))
 
 
-@mcp.tool(description="岸工坊。把崖矿精矿、羊毛、漂绳、岸木打成钉、补丁、小屋家具；中盘可打潮纹秤锤、铁锄刃、雾铅网坠、夜光滤网。附带盐田晒盐、风暴打捞、潮汐陈列柜。command 写一整句。不是 quarry_ops 洗矿，不是 tide_ops dig（赶海翻沙），不是 kitchen_ops cook。没有 forge_ops / salvage_ops / exhibit_ops。例子：status · 打 铜钉 · 打 潮纹秤锤 · 打 订婚戒 · 取 · 灌 · 收盐 · 打捞 · 捐 亮壳一套 · 捐 砧上全套。空 command 列出子命令，不是看砧；看砧必须 status。人类网页 /workshop 是围观实况（砧上、盐田、打捞、陈列柜）；打钉在 /play。不会就 help。")
+@mcp.tool(
+    description=(
+        "岸工坊（打钉/盐田/打捞/陈列）。空 command=子命令列表，不是看砧；看砧必须 status。"
+        "例：status · 打 铜钉 · 打 潮纹秤锤 · 打 雾铅网坠 · 取 · 灌 · 打捞 · 捐 砧上全套。"
+        "≠quarry 洗矿、≠tide_ops dig（赶海）、≠做饭。没有 forge_ops。围观 /workshop。help。"
+    )
+)
 async def craft_ops(
-    command: Annotated[str, Field(description="子命令整句。status / scan=看砧和盐田（空 command 不是看砧）/ 图鉴 / 打 铜钉 / 打 潮纹秤锤 / 打 铁锄刃 / 打 雾铅网坠 / 打 夜光滤网 / 打 潮誓戒 / 打 订婚戒 / 取 / 补网 / 灌 / 收盐 / 开池 确认 / 打捞 / 陈列 / 捐 亮壳一套 / 捐 砧上全套 / help。涨潮才能灌盐田。打捞只认阵风/余滩/周潮/船损，不是 dig。补网有雾铅网坠优先贴。人类打钉在 /play；/workshop 是围观实况。不要发明 forge_ops / hew_all。")] = "",
+    command: Annotated[
+        str,
+        Field(
+            description=(
+                "整句。status / 打 铜钉 / 打 潮纹秤锤 / 打 雾铅网坠 / 取 / 灌 / 收盐 / 打捞 / 捐 砧上全套 / help。空≠看砧。"
+            )
+        ),
+    ] = "",
 ) -> str:
     from . import craft
     from . import progress as progress_mod
