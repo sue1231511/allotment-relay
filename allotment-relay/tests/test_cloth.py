@@ -268,7 +268,7 @@ def test_mcp_description() -> None:
         f"{tool.description}\n"
         f"{(tool.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
     )
-    for word in ("漾漾", "不卖成衣", "委托 短褂 海色", "空 command", "tailor_ops", "/atelier", "tale_ops"):
+    for word in ("漾漾", "委托 短褂 海色", "看坊", "tailor_ops"):
         assert word in blob, word
 
 

@@ -59,111 +59,112 @@ def _tool_blob(mcp, name: str) -> str:
     return f"{tool.description}\n{cmd}"
 
 
-def test_mcp_descriptions() -> None:
-    """MCP schema 保持短：用途 + 空 command + 2～3 例 + 易混点。细则在 relay_manual / help。"""
+def _schema_budget() -> None:
+    """连接时 schema 必须短：全工具 JSON + instructions 控制在约 5k 字以内。"""
+    import json
     from server.mcp_app import mcp
+
+    parts = [mcp.instructions or ""]
+    for name in mcp._tool_manager._tools:
+        t = mcp._tool_manager.get_tool(name)
+        parts.append(
+            json.dumps(
+                {"name": name, "description": t.description, "inputSchema": t.parameters},
+                ensure_ascii=False,
+            )
+        )
+    total = sum(len(p) for p in parts)
+    assert total < 5000, f"MCP schema too large for connect-time budget: {total} chars"
+
+
+def test_mcp_descriptions() -> None:
+    """MCP schema 极短：用途 + 空 command + 2～3 例 + 易混点。细则在 relay_manual / help。"""
+    from server.mcp_app import mcp
+
+    _schema_budget()
 
     plot = _tool_blob(mcp, "plot_ops")
     assert "空 command 看各地块" not in plot
     assert "status" in plot and "sow 1 甘蓝" in plot
     assert "sow_all" in plot or "plant" in plot
-    assert "forage" in plot and "30%" in plot
-    assert "买园" in plot and "买棚" in plot
-    assert "/allotments" in plot
 
     tide = _tool_blob(mcp, "tide_ops")
-    assert "竹钓竿" in tide and "未命名小鱼" in tide
-    assert "不能网" in tide or "坐钓" in tide
-    assert "4 票" in tide or "4票" in tide
+    assert "dig" in tide and ("崖矿" in tide or "mine" in tide or "赶海" in tide or "≠" in tide)
 
     tote = _tool_blob(mcp, "tote_ops")
-    assert "送票" in tote and "gifts" in tote and "24" in tote
-    assert "未命名小鱼" in tote
+    assert "vend" in tote and ("gift" in tote or "送礼" in tote)
 
     star = _tool_blob(mcp, "star_ops")
     assert "小橘" in star and "应援" in star and "围观" in star
-    assert "面板" in star and "/star" in star
-    assert "地点海报" not in star
+    assert "面板" in star
 
     theater = _tool_blob(mcp, "theater_ops")
-    for word in ("试镜", "对戏", "演出", "领薪", "头粉", "编剧社", "投稿", "不替代"):
+    for word in ("试镜", "对戏", "演出", "领薪"):
         assert word in theater, word
 
     bar = _tool_blob(mcp, "bar_ops")
-    assert "洗碗" in bar and "荔栀" in bar and "help" in bar
+    assert "洗碗" in bar and "荔栀" in bar
 
     steward = _tool_blob(mcp, "steward_ops")
-    for word in ("成就", "岛缘", "引航", "绑定", "潮汐本尊", "invite_ops", "99"):
-        assert word in steward, word
+    assert "enroll" in steward and "岛缘" in steward and "引航" in steward
+    assert "invite_ops" in steward
 
     ut = _tool_blob(mcp, "undertide_ops")
-    assert "猫猫" in ut and "medic" in ut and "岛缘" in ut
-    assert "pit medic" not in ut
+    assert "猫猫" in ut and "岛缘" in ut and "help" in ut
 
     alliance = _tool_blob(mcp, "alliance_ops")
-    assert "贡献榜" in alliance and "潮生会" in alliance
-    assert "只看" in alliance or "不能贴" in alliance
-    assert "beacon post" not in alliance
+    assert "贡献榜" in alliance or "board" in alliance
 
     visit = _tool_blob(mcp, "visit_ops")
-    for word in (
-        "潮生会", "不能加入", "阿簿", "岸税", "岸维", "潮生会 税 交", "潮生会 维 交",
-        "潮生会 基金 捐 50", "只看", "tax_ops", "upkeep_ops", "漾漾", "连理所", "理枝",
-        "clinic 调理", "回春汤", "buxing", "jingshan visit",
-    ):
-        assert word in visit, word
-    assert "潮生会 捐 甘蓝 2" not in visit
-    assert "潮生会 补贴" not in visit
+    assert "潮生会" in visit and "不能加入" in visit
+    assert "税" in visit and "漾漾" in visit
 
     hut = _tool_blob(mcp, "hut_ops")
-    assert "睡" in hut and "install hard_1 bed" in hut
-    assert "堆肥桶 存 羊粪 3" in hut and "桶不是柜子" in hut
-    assert "潮生会 维" in hut and ("临海邸" in hut or "最高档" in hut)
+    assert "睡" in hut and ("岸维" in hut or "upkeep" in hut)
 
     kitchen = _tool_blob(mcp, "kitchen_ops")
-    assert "shop stock" in kitchen and "shop dine" in kitchen
-    assert "下馆子" in kitchen and "未命名小鱼" in kitchen
-    assert "eat 芒果" in kitchen and "不能生吃" in kitchen
+    assert "eat" in kitchen and ("shop dine" in kitchen or "下馆子" in kitchen)
+    assert "eat_ops" in kitchen
 
     lounge = _tool_blob(mcp, "lounge_ops")
-    for word in ("暗号", "小包间", "潮声今晚", "whisper", "红包 100 5", "hongbao_ops", "tote_ops gift"):
-        assert word in lounge, word
+    assert "暗号" in lounge and "红包" in lounge
 
     manual = mcp._tool_manager.get_tool("relay_manual").description or ""
     assert ("禁止发明" in manual or "编指令" in manual) and "enroll" in manual and "无参数" in manual
 
     instructions = mcp.instructions or ""
-    for word in (
-        "relay_manual", "不是聊天沙盒", "潮生会", "不能加入", "岸税", "岸维", "潮汐基金",
-        "周二", "下馆子", "shop dine", "引航", "invite_ops", "quarry_ops", "craft_ops",
-        "mine_ops", "forge_ops", "衣泊坊", "20 个工具", "cloth_ops", "marriage_ops",
-        "propose_marriage", "猫猫", "board",
-    ):
-        assert word in instructions, word
+    assert "relay_manual" in instructions
+    assert "不是聊天沙盒" in instructions or "禁止发明" in instructions
+    assert "20" in instructions and "help" in instructions
 
     quarry = _tool_blob(mcp, "quarry_ops")
-    assert "status" in quarry and "探脉" in quarry and "买镐" in quarry
-    assert "mine_ops" in quarry and ("tide_ops dig" in quarry or "赶海" in quarry)
-    assert "/quarry" in quarry and "地点海报" not in quarry
+    assert "status" in quarry and "探脉" in quarry and "mine_ops" in quarry
 
     craft = _tool_blob(mcp, "craft_ops")
-    for word in ("打 铜钉", "潮纹秤锤", "雾铅网坠", "砧上全套", "打捞", "forge_ops", "/workshop"):
-        assert word in craft, word
-    assert "tide_ops dig" in craft or "赶海" in craft
+    assert "打 铜钉" in craft and "forge_ops" in craft
 
     cloth = _tool_blob(mcp, "cloth_ops")
-    for word in ("漾漾", "不卖成衣", "委托 短褂 海色", "空 command", "看坊", "tailor_ops", "/atelier", "tale_ops"):
-        assert word in cloth, word
+    assert "漾漾" in cloth and "委托 短褂 海色" in cloth and "tailor_ops" in cloth
+    assert "空" in cloth and "看坊" in cloth
 
     marriage = _tool_blob(mcp, "marriage_ops")
-    for word in (
-        "求婚", "propose_marriage", "连理所", "理枝", "彩礼", "潮誓戒", "离婚 答应",
-        "订婚 寻信", "订婚 续请", "订婚没有彩礼", "旧档自动写下", "/vow",
+    assert "求婚" in marriage and "propose_marriage" in marriage
+    assert "空" in marriage
+
+    # 细则仍须在手册 / help（schema 不再重复）
+    import asyncio
+    from server import game
+    from server.star import STAR_HELP
+
+    man = asyncio.run(game.relay_manual())
+    for needle in (
+        "潮生会 税 交", "潮生会 维 交", "潮生会 基金 捐 50", "tax_ops", "upkeep_ops",
+        "订婚没有彩礼", "离婚 答应", "潮誓戒", "竹钓竿", "未命名小鱼",
+        "堆肥桶 存 羊粪", "sow_all", "偷菜",
     ):
-        assert word in marriage, word
-    assert "空 command" in marriage or "空=" in marriage
-    assert "没有「接受」" in marriage or "没有接受" in marriage
-    assert "举行前还能改" in marriage and "订婚宴选了还能改" in marriage
+        assert needle in man, needle
+    assert "平常回10" in STAR_HELP
+    assert "小剧场专场每日5次" in STAR_HELP
 
 
 def test_relay_manual_covers_systems() -> None:

@@ -264,12 +264,12 @@ def test_star_mcp_description() -> None:
     assert "打赏" in blob
     assert "围观" in blob
     assert "面板" in blob
-    assert "福利" in blob
     # 围观回票数字在 STAR_HELP，不塞进 MCP schema
     from server.star import STAR_HELP
     assert "平常回10" in STAR_HELP or "平常回10、好回15" in STAR_HELP
     assert "小剧场专场每日5次" in STAR_HELP
     assert "每20票" in STAR_HELP or "+1" in STAR_HELP
+    assert "福利" in STAR_HELP or "福利" in blob
 
 
 def main() -> None:

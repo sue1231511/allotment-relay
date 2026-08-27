@@ -43,21 +43,19 @@ def test_meat_aliases_and_flags() -> None:
 
 
 def test_mcp_tool_copy() -> None:
+    import asyncio
     from server.mcp_app import mcp
+    from server import game
 
     kitchen = mcp._tool_manager.get_tool("kitchen_ops")
     assert kitchen is not None
-    props = kitchen.parameters.get("properties") or {}
-    cmd = (props.get("command") or {}).get("description") or ""
-    blob = f"{kitchen.description}\n{cmd}"
-    assert "eat 芒果" in blob
-    assert "eat 鲭鱼" in blob
-    assert "不能生吃" in blob
-    assert "营养不良" in blob
-    assert "兔肉" in blob
-    assert "感染" in blob
-    assert "下馆子" in blob
-    assert "shop dine" in blob
+    blob = kitchen.description or ""
+    assert "eat" in blob and ("shop dine" in blob or "小馆" in blob)
+    assert "eat_ops" in blob
+    # 细则在手册
+    man = asyncio.run(game.relay_manual())
+    for word in ("eat 芒果", "eat 鲭鱼", "不能生吃", "营养不良", "感染", "下馆子", "shop dine"):
+        assert word in man, word
 
 
 async def _boot(tmp: Path):

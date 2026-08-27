@@ -53,12 +53,15 @@ async def test_buxing_flow() -> None:
 def test_buxing_mcp_description() -> None:
     from server.mcp_app import mcp
     from server.mcp_dispatch import VISIT_HELP
+    import asyncio
+    from server import game
 
     tool = mcp._tool_manager.get_tool("visit_ops")
     blob = tool.description + "\n" + ((tool.parameters.get("properties") or {}).get("command", {}).get("description", ""))
-    for text in ("守灯人·不醒", "buxing"):
-        assert text in blob, blob
-    # 问潮次数等细则在 VISIT_HELP，不塞进 MCP schema
+    assert "潮生会" in blob
+    man = asyncio.run(game.relay_manual())
+    assert "守灯人·不醒" in man or "不醒" in man
+    assert "buxing" in man or "buxing" in VISIT_HELP
     assert "问潮前 5 次免费" in VISIT_HELP
     assert "灯廊" in VISIT_HELP
 
