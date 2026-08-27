@@ -85,11 +85,19 @@ async def test_neighbors_and_scrump() -> None:
         assert row[1] >= 1, row
 
     from server import game as game_mod
+    from server import mcp_dispatch
+
     empty = await game_mod.plot_ops(thief_kid, "邻居")
     assert "邻乙" in empty, empty
 
     online_cmd = await game_mod.plot_ops(thief_kid, "在线")
     assert "档口" in online_cmd, online_cmd
+
+    steward_neighbors = await mcp_dispatch.steward_ops(thief_kid, "邻居")
+    assert "邻乙" in steward_neighbors, steward_neighbors
+
+    steward_online = await mcp_dispatch.steward_ops(thief_kid, "在线")
+    assert "档口" in steward_online, steward_online
 
     # 同一人当天不能再摘
     try:
