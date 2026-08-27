@@ -803,14 +803,18 @@ def test_patron_pages_share_steward_key() -> None:
     assert ".star-poster" in star_css
     assert "position: relative" in star_css
     assert "inset: auto" in star_css
-    assert "allo-registry" in allo_html
-    assert "allo-atlas" in allo_html
-    assert "allo-detail" in allo_html
-    assert "fieldList" in allo_html
-    assert "allo-field-row" in allo_js
+    assert "allo-board" in allo_html
+    assert "allo-people" in allo_html or 'id="people"' in allo_html
+    assert "vegGrid" in allo_html
+    assert "orchGrid" in allo_html
+    assert "glassGrid" in allo_html
+    assert "allo-person" in allo_js
     assert "ready_count" in allo_js
-    assert ".allo-registry" in allo_css
-    assert ".allo-field-row" in allo_css
+    assert "parcel_count" in allo_js
+    assert "orchard_count" in allo_js
+    assert ".allo-board" in allo_css
+    assert ".allo-person" in allo_css
+    assert ".allo-plot" in allo_css
     assert "q-hero" in quarry_html
     assert "quarry-veins" in quarry_html
     assert "quarry-feed" in quarry_html
@@ -854,7 +858,7 @@ def test_patron_pages_share_steward_key() -> None:
     assert "hui-fund" in hui_html
     assert "hui-week" not in hui_html
     assert "公仓" not in hui_html
-    assert 'href="/play"' in allo_html
+    assert "/play?go=plot" in allo_html or 'href="/play"' in allo_html
     assert "上手页" in site_key
 
 

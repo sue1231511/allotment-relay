@@ -2851,30 +2851,34 @@ async def public_allotments() -> list[dict[str, Any]]:
             parcels = await get_parcels(p["id"])
             parcel_views = []
             for pl in parcels:
+                orchard = bool(pl.get("orchard"))
+                greenhouse = bool(pl.get("greenhouse"))
                 if land_mod.clear_left(pl) > 0:
                     parcel_views.append({
-                        "slot": pl["slot"], "crop": None, "state": "开垦中",
-                        "orchard": bool(pl.get("orchard")),
-                        "greenhouse": bool(pl.get("greenhouse")),
+                        "slot": pl["slot"], "crop": None, "name": None, "state": "开垦中",
+                        "orchard": orchard, "greenhouse": greenhouse,
                     })
                 elif not pl.get("crop"):
                     parcel_views.append({
-                        "slot": pl["slot"], "crop": None, "state": "休耕",
-                        "orchard": bool(pl.get("orchard")),
-                        "greenhouse": bool(pl.get("greenhouse")),
+                        "slot": pl["slot"], "crop": None, "name": None, "state": "休耕",
+                        "orchard": orchard, "greenhouse": greenhouse,
                     })
                 else:
                     meta = CROPS.get(pl["crop"], {"name": pl["crop"], "emoji": "🌱"})
                     parcel_views.append({
                         "slot": pl["slot"],
                         "crop": pl["crop"],
+                        "name": meta.get("name", pl["crop"]),
                         "emoji": meta.get("emoji", "🌱"),
                         "state": farming.parcel_status(pl),
-                        "orchard": bool(pl.get("orchard")),
-                        "greenhouse": bool(pl.get("greenhouse")),
+                        "orchard": orchard,
+                        "greenhouse": greenhouse,
                     })
             summary = " · ".join(
-                f"#{v['slot']}{v.get('emoji', '')}{v['state'][:2] if v.get('state') else '休'}"
+                (
+                    f"{'棚' if v.get('greenhouse') else ('园' if v.get('orchard') else '#')}"
+                    f"{v['slot']}{v.get('emoji') or ''}{v['state'][:2] if v.get('state') else '休'}"
+                )
                 for v in parcel_views[:5]
             )
             latest_rows = await (await db.execute(
@@ -2918,5 +2922,14 @@ async def public_allotments() -> list[dict[str, Any]]:
                     for r in latest_rows
                 ],
             })
-        result.sort(key=lambda row: (-int(row.get("parcel_count") or 0), -int(row.get("tickets") or 0)))
+        def _land_total(row: dict[str, Any]) -> int:
+            return (
+                int(row.get("parcel_count") or 0)
+                + int(row.get("orchard_count") or 0)
+                + int(row.get("greenhouse_count") or 0)
+            )
+
+        result.sort(
+            key=lambda row: (-_land_total(row), -int(row.get("tickets") or 0), -int(row.get("id") or 0))
+        )
         return result
