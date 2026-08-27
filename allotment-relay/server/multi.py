@@ -72,7 +72,7 @@ async def neighbor_roster(steward: dict[str, Any], *, online_only: bool = False)
             "title": p.get("display_title") or p.get("title") or p["badge"],
             "ripe": int(p.get("ripe") or 0),
             "home": bool(p.get("home")),
-            "ago": _ago(p["last_active_at"]),
+            "ago": db.fmt_cst(p["last_active_at"]),
         }
         for p in peers
     ]
@@ -97,7 +97,7 @@ async def list_neighbors(steward: dict[str, Any], *, online_only: bool = False) 
     def _line(p: dict[str, Any]) -> str:
         ripe = f"熟地 {p['ripe']}" if p["ripe"] else "暂无熟地"
         return (
-            f"- {p['name']} · {p.get('display_title') or p.get('title') or p['badge']} · {ripe} · {_ago(p['last_active_at'])}\n"
+            f"- {p['name']} · {p.get('display_title') or p.get('title') or p['badge']} · {ripe} · {db.fmt_cst(p['last_active_at'])}\n"
             f"  steward_ops peer {p['name']} · plot_ops 偷菜 {p['name']} · alliance_ops assist {p['name']}"
         )
 

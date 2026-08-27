@@ -5,6 +5,7 @@ import secrets
 import sqlite3
 import time
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
 from typing import Any, AsyncIterator
 
 import aiosqlite
@@ -23,6 +24,7 @@ from .config import (
 )
 
 # 单进程内串行化 SQLite 访问，避免多云端 Agent 并发时 database is locked
+_CST = timezone(timedelta(hours=8))
 _DB_MUTEX = asyncio.Lock()
 _DB_CONN: contextvars.ContextVar[aiosqlite.Connection | None] = contextvars.ContextVar(
     "_db_conn", default=None,
@@ -2289,6 +2291,14 @@ async def _grant_starting_orchards(db: aiosqlite.Connection) -> None:
 
 def now() -> int:
     return int(time.time())
+
+
+def fmt_cst(ts: int | None = None) -> str:
+    """东八区时间戳，例如 08-27 23:40。"""
+    t = now() if ts is None else int(ts or 0)
+    if t <= 0:
+        return "—"
+    return datetime.fromtimestamp(t, _CST).strftime("%m-%d %H:%M")
 
 
 def day_id(ts: int | None = None) -> int:

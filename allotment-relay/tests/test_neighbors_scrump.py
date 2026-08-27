@@ -93,8 +93,11 @@ async def test_neighbors_and_scrump() -> None:
     online_cmd = await game_mod.plot_ops(thief_kid, "在线")
     assert "档口" in online_cmd, online_cmd
 
+    import re
+
     steward_neighbors = await mcp_dispatch.steward_ops(thief_kid, "邻居")
     assert "邻乙" in steward_neighbors, steward_neighbors
+    assert re.search(r"\d{2}-\d{2} \d{2}:\d{2}", steward_neighbors), steward_neighbors
 
     steward_online = await mcp_dispatch.steward_ops(thief_kid, "在线")
     assert "档口" in steward_online, steward_online

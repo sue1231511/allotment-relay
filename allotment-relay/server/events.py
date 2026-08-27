@@ -1080,11 +1080,10 @@ async def camera_ops(key_id: int, command: str) -> str:
                 header = "«监控日志 · 全部份地»\n\n"
             if not log_rows:
                 return header + cam_note + "暂无记录。"
-            from datetime import datetime as _dt
             lines = [header + cam_note]
             for r in log_rows:
                 r = dict(r)
-                t = _dt.utcfromtimestamp(r["created_at"]).strftime("%m-%d %H:%M")
+                t = db.fmt_cst(r["created_at"])
                 caught_tag = "【被抓】" if r["caught"] else "【得手】"
                 qty_note = f"拿走 {r['qty']} 把" if r["qty"] > 0 else "没拿到"
                 lines.append(

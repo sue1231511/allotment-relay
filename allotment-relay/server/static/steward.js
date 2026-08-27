@@ -1,6 +1,13 @@
 function fmtTime(epoch) {
   if (!epoch) return '—';
-  return new Date(epoch * 1000).toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
+  return new Intl.DateTimeFormat('zh-CN', {
+    timeZone: 'Asia/Shanghai',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(new Date(Number(epoch) * 1000));
 }
 
 function esc(s) {
