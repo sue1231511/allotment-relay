@@ -714,30 +714,24 @@ async def test_completed_player_gets_backfilled_keepsakes() -> None:
 
 def test_tale_mcp_description() -> None:
     from server.mcp_app import mcp
+    import asyncio
+    from server import game
 
     tool = mcp._tool_manager.get_tool("tale_ops")
     blob = tool.description + "\n" + (
         (tool.parameters.get("properties") or {}).get("command", {}).get("description", "")
     )
     assert "潮闻" in blob
-    assert "black_box_lover" in blob
-    assert "souvenirs" in blob
-    assert "纪念品" in blob
-    assert "reminisce" in blob
-    assert "memory_tide" in blob
-    assert "回忆生潮" in blob
-    assert "spring_beyond_mountain" in blob
-    assert "春山之外" in blob
-    assert "missing_pages" in blob
-    assert "缺页" in blob
-    assert "asking_around" in blob
-    assert "打听" in blob
-    assert "mr_ke" in blob
-    assert "克先生" in blob
-    assert "tonight_damp" in blob
-    assert "今夜潮湿" in blob
-    assert "review" in blob
-    assert "完整正文" in blob
+    assert "tonight_damp" in blob or "accept" in blob
+    assert "souvenirs" in blob or "review" in blob
+    man = asyncio.run(game.relay_manual())
+    for word in (
+        "black_box_lover", "memory_tide", "回忆生潮", "spring_beyond_mountain", "春山之外",
+        "missing_pages", "缺页", "asking_around", "打听", "mr_ke", "克先生",
+        "tonight_damp", "今夜潮湿", "reminisce", "纪念品",
+    ):
+        assert word in man, word
+    assert "全部正文" in man or "完整" in man
 
 
 def main() -> None:

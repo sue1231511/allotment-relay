@@ -87,8 +87,9 @@ def test_help_and_manual_copy() -> None:
 
     tide = mcp._tool_manager.get_tool("tide_ops")
     blob = f"{tide.description}\n{(tide.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
-    assert "不能网" in blob or "只能" in blob
-    assert "未命名小鱼" in blob
+    # schema 极短：赶海/cast 提示即可；未命名小鱼细则在 help/手册
+    assert "cast" in blob or "dig" in blob or "net" in blob
+    assert "未命名小鱼" in manual and ("不能网" in TIDE_HELP or "只能" in TIDE_HELP)
 
 
 async def _test_curse_eat_sell() -> None:

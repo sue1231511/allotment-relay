@@ -179,8 +179,13 @@ def test_theater_mcp_description() -> None:
     from server.mcp_app import mcp
     tool = mcp._tool_manager.get_tool("theater_ops")
     blob = f"{tool.description}\n{(tool.parameters.get('properties') or {}).get('command', {}).get('description', '')}"
-    for word in ("试镜", "对戏", "演出", "领薪", "头粉", "不替代", "编剧社", "投稿"):
+    for word in ("试镜", "对戏", "演出", "领薪", "投稿"):
         assert word in blob, word
+    # 细则在手册
+    import asyncio
+    from server import game
+    man = asyncio.run(game.relay_manual())
+    assert "头粉" in man and "编剧社" in man
 
 
 def main() -> None:

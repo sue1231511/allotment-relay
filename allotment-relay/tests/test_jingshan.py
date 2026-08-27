@@ -120,17 +120,16 @@ async def test_jingshan_flow() -> None:
 def test_jingshan_mcp_description() -> None:
     from server.mcp_app import mcp
     from server import game
+    import asyncio
 
     tool = mcp._tool_manager.get_tool("visit_ops")
     blob = tool.description + "\n" + (
         (tool.parameters.get("properties") or {}).get("command", {}).get("description", "")
     )
-    for text in ("何敬山", "jingshan visit", "order", "deliver", "revisit"):
-        assert text in blob, blob
-    # 苏月琴说明在手册，不塞进 MCP schema
-    import asyncio
+    assert "潮生会" in blob  # visit_ops still the NPC gate
     manual = asyncio.run(game.relay_manual())
-    assert "苏月琴不是单独 NPC" in manual
+    for text in ("何敬山", "jingshan visit", "order", "deliver", "revisit", "苏月琴不是单独 NPC"):
+        assert text in manual, text
 
 
 def main() -> None:

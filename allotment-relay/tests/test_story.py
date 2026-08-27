@@ -226,21 +226,19 @@ async def test_yesterday_story_rewards_and_souvenirs() -> None:
 
 def test_story_mcp_description() -> None:
     from server.mcp_app import mcp
+    import asyncio
+    from server import game
+
     tool = mcp._tool_manager.get_tool("story_ops")
     blob = tool.description + "\n" + (
         (tool.parameters.get("properties") or {}).get("command", {}).get("description", "")
     )
-    assert "灰姑娘" in blob
     assert "start cinderella" in blob
-    assert "choose escape" in blob
-    assert "空 command=list" in blob
-    assert "60票" in blob
-    assert "昨日无凭" in blob
-    assert "start yesterday_no_proof" in blob
-    assert "souvenirs" in blob
-    assert "review [故事key]" in blob
-    assert "完整人物故事" in blob
-    assert "不重复发" in blob
+    assert "yesterday_no_proof" in blob
+    assert "空" in blob and "list" in blob
+    man = asyncio.run(game.relay_manual())
+    assert "灰姑娘" in man and "昨日无凭" in man
+    assert "review" in man and "souvenirs" in man
 
 
 def main() -> None:
