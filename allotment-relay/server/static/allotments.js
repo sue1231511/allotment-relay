@@ -14,172 +14,231 @@ function ago(ts) {
   return `${Math.floor(sec / 86400)}d`;
 }
 
-function agoLong(ts) {
-  const sec = Math.max(0, Math.floor(Date.now() / 1000 - Number(ts || 0)));
-  if (sec < 60) return '刚刚';
-  if (sec < 3600) return `${Math.floor(sec / 60)} 分钟前`;
-  if (sec < 86400) return `${Math.floor(sec / 3600)} 小时前`;
-  return `${Math.floor(sec / 86400)} 天前`;
-}
-
-function stripWidth(count, maxCount) {
-  if (!maxCount) return 24;
-  return Math.max(24, Math.round((Number(count) / maxCount) * 100));
-}
-
-function stripColors(i) {
-  const palette = [
-    ['#6f856f', '#94a08c'],
-    ['#74866f', '#a3ae98'],
-    ['#899678', '#b7b896'],
-    ['#798c76', '#aab79f'],
-    ['#8a9276', '#b5b497'],
-    ['#74877b', '#a9b5a3'],
-    ['#8b907e', '#bcb9a4'],
-    ['#7e8b78', '#acb39e'],
-  ];
-  return palette[i % palette.length];
-}
-
-let state = { list: [], onlineIds: new Set(), selected: 0 };
-
 function setText(id, value) {
   const el = document.getElementById(id);
   if (el) el.textContent = value;
 }
 
+function isReady(state) {
+  const s = String(state || '');
+  return s === '可收' || s === '过熟' || s === 'ready' || s === 'overripe';
+}
+
+function slotLabel(p) {
+  if (p.greenhouse) return `棚${p.slot}`;
+  if (p.orchard) return `园${p.slot}`;
+  return `#${p.slot}`;
+}
+
+function landTotal(a) {
+  return Number(a.parcel_count || 0)
+    + Number(a.orchard_count || 0)
+    + Number(a.greenhouse_count || 0);
+}
+
+function splitParcels(a) {
+  const parcels = a.parcels || [];
+  return {
+    veg: parcels.filter((p) => !p.orchard && !p.greenhouse),
+    orch: parcels.filter((p) => p.orchard && !p.greenhouse),
+    glass: parcels.filter((p) => p.greenhouse),
+  };
+}
+
+function cropRows(a) {
+  return (a.parcels || [])
+    .filter((p) => p.crop || (p.state && p.state !== '休耕'))
+    .map((p) => ({
+      token: slotLabel(p),
+      name: p.name || (p.crop ? String(p.crop) : '—'),
+      state: p.state || '—',
+      ready: isReady(p.state),
+    }));
+}
+
+let state = { list: [], onlineIds: new Set(), selected: 0, chronicle: [] };
+
 function renderHero(stats, list) {
-  const parcels = (list || []).reduce((n, a) => n + Number(a.parcel_count || 0), 0);
+  const totalLand = (list || []).reduce((n, a) => n + landTotal(a), 0);
   const ready = (list || []).reduce((n, a) => n + Number(a.ready_count || 0), 0);
   setText('stewards', stats.stewards ?? '—');
   setText('online', stats.online ?? '—');
-  setText('parcelsTotal', parcels || '—');
+  setText('parcelsTotal', totalLand || '—');
   setText('readyTotal', ready || '—');
 }
 
-function renderOnline(people) {
-  const rows = people || [];
-  document.getElementById('onlineList').innerHTML = rows.length
-    ? rows.slice(0, 6).map((p) => `
-        <div class="allo-live"><i></i><b>${esc(p.name)}</b><span>Lv${esc(p.level || 1)}</span></div>
-      `).join('')
-    : '<div class="allo-empty">这会儿没人。</div>';
-}
-
-function renderChronicle(list) {
-  const rows = list || [];
-  document.getElementById('chronicle').innerHTML = rows.length
-    ? rows.slice(0, 5).map((c) => `
-        <div class="allo-event">
-          <b>${esc(c.text)}</b>
-          <p>${esc(c.actor || '系统')} · ${esc(agoLong(c.created_at))}</p>
-        </div>`).join('')
-    : '<div class="allo-empty">暂无纪事。</div>';
-}
-
-function renderGoals(stats) {
-  const league = stats && stats.league;
-  const contracts = Number(stats && stats.open_contracts) || 0;
-  const swaps = Number(stats && stats.open_swaps) || 0;
-  const items = [];
-  if (league && league.target) {
-    const pct = Math.min(100, Math.round((Number(league.progress || 0) / Number(league.target)) * 100));
-    items.push({
-      label: league.label || league.item_name || '联盟周目标',
-      pct,
-    });
+function renderExpansion(chronicle) {
+  const cut = Math.floor(Date.now() / 1000) - 86400;
+  const rows = (chronicle || []).filter((c) => Number(c.created_at || 0) >= cut);
+  let veg = 0;
+  let orch = 0;
+  let glass = 0;
+  for (const c of rows) {
+    const t = String(c.text || '');
+    if (/买棚|温室/.test(t)) glass += 1;
+    else if (/买园|果园|树位/.test(t)) orch += 1;
+    else if (/买地|份地/.test(t)) veg += 1;
   }
-  items.push({ label: '开放合约', pct: Math.min(100, contracts * 12) });
-  items.push({ label: '交换台挂单', pct: Math.min(100, swaps * 10) });
-  document.getElementById('goals').innerHTML = items.map((g) => `
-    <div class="allo-goal">
-      <div class="allo-goal-head"><b>${esc(g.label)}</b><span>${esc(g.pct)}%</span></div>
-      <div class="allo-goal-bar"><i style="width:${esc(g.pct)}%"></i></div>
-    </div>
-  `).join('');
+  setText('expVeg', veg ? `+${veg}` : '0');
+  setText('expOrch', orch ? `+${orch}` : '0');
+  setText('expGlass', glass ? `+${glass}` : '0');
 }
 
-function choose(i) {
+function plotGrid(prefix, count, parcels) {
+  const bySlot = new Map();
+  for (const p of parcels || []) bySlot.set(Number(p.slot), p);
+  const n = Math.max(Number(count) || 0, 0);
+  const cells = Math.max(n, 7);
+  let html = '';
+  for (let i = 1; i <= cells; i += 1) {
+    if (i > n) {
+      html += '<span class="allo-plot"></span>';
+      continue;
+    }
+    const p = bySlot.get(i);
+    const planted = !!(p && (p.crop || (p.state && p.state !== '休耕')));
+    const ready = !!(p && isReady(p.state));
+    const cls = ['allo-plot'];
+    if (planted) cls.push('on');
+    if (ready) cls.push('ready');
+    html += `<span class="${cls.join(' ')}">${esc(prefix)}${i}</span>`;
+  }
+  return html;
+}
+
+function readyCount(parcels) {
+  return (parcels || []).filter((p) => isReady(p.state)).length;
+}
+
+function select(i) {
   state.selected = i;
   const list = state.list || [];
-  document.querySelectorAll('.allo-field-row').forEach((el, idx) => {
+  document.querySelectorAll('.allo-person').forEach((el, idx) => {
     el.classList.toggle('is-active', idx === i);
   });
   const a = list[i];
   if (!a) return;
-  const online = state.onlineIds.has(a.id);
-  setText('d-name', a.name || '—');
-  setText('d-motto', [a.badge, a.title, a.motto || '无座右铭'].filter(Boolean).join(' · '));
-  setText('d-level', `Lv${a.level || 1}`);
-  setText('d-ticket', Number(a.tickets || 0).toLocaleString('zh-CN'));
-  setText('d-plots', `${a.parcel_count || 0} 块`);
-  setText('d-online', online ? '在线' : `离线 ${ago(a.last_active_at)}`);
-  setText('d-note', a.parcel_summary
-    ? `地况摘要：${a.parcel_summary}`
-    : '这块不是玩家资料卡，而是「这一户在岛上最近是什么状态」。只放会帮助围观的信息。');
 
-  const recent = a.recent && a.recent.length
+  const online = state.onlineIds.has(a.id);
+  const total = landTotal(a);
+  const vegN = Number(a.parcel_count || 0);
+  const orchN = Number(a.orchard_count || 0);
+  const glassN = Number(a.greenhouse_count || 0);
+  const parts = splitParcels(a);
+  const vegReady = readyCount(parts.veg);
+  const orchReady = readyCount(parts.orch);
+  const glassReady = readyCount(parts.glass);
+  const ready = Number(a.ready_count || 0) || (vegReady + orchReady + glassReady);
+  const rows = cropRows(a);
+
+  setText('name', a.name || '—');
+  setText(
+    'meta',
+    `Lv${a.level || 1} · ${online ? '在线' : `离线 ${ago(a.last_active_at)}`} · ${Number(a.tickets || 0).toLocaleString('zh-CN')} 工分票`,
+  );
+  setText('total', String(total));
+  setText('vegCount', String(vegN));
+  setText('orchCount', String(orchN));
+  setText('glassCount', String(glassN));
+  setText('rVeg', String(vegN));
+  setText('rOrch', String(orchN));
+  setText('rGlass', String(glassN));
+
+  document.getElementById('vegGrid').innerHTML = plotGrid('#', vegN, parts.veg);
+  document.getElementById('orchGrid').innerHTML = plotGrid('园', orchN, parts.orch);
+  document.getElementById('glassGrid').innerHTML = plotGrid('棚', glassN, parts.glass);
+
+  setText('vegReady', `${vegReady} 成熟`);
+  setText('orchReady', `${orchReady} 结果`);
+  setText('glassReady', `${glassReady} 成熟`);
+
+  const statusBox = document.getElementById('statusList');
+  statusBox.innerHTML = rows.length
+    ? rows.slice(0, 8).map((r) => `
+        <div class="allo-status-row">
+          <code>${esc(r.token)}</code>
+          <span>${esc(r.name)}</span>
+          <b>${esc(r.state)}</b>
+        </div>`).join('')
+    : '<div class="allo-empty">这会儿地都空着。</div>';
+
+  const recent = (a.recent && a.recent.length)
     ? a.recent
     : (a.latest ? [{ text: a.latest, created_at: a.last_active_at }] : []);
-  document.getElementById('d-recent').innerHTML = recent.length
+  document.getElementById('activity').innerHTML = recent.length
     ? recent.map((r) => `
-        <div class="allo-detail-line">
+        <div class="allo-activity-item">
           <time>${esc(ago(r.created_at))}</time>
-          <span>${esc(r.text)}</span>
+          <div>
+            <b>${esc(r.text)}</b>
+            <span>${esc(a.name)} 的经营记录</span>
+          </div>
         </div>`).join('')
     : '<div class="allo-empty">还没有动静。</div>';
+
+  document.getElementById('miniLand').innerHTML = rows.length
+    ? rows.slice(0, 5).map((r) => `
+        <div class="allo-mini-land">
+          <code>${esc(r.token)}</code>
+          <span>${esc(r.name)}</span>
+          <b>${esc(r.state)}</b>
+        </div>`).join('')
+    : '<div class="allo-empty">暂无在种地块。</div>';
+
+  const rate = total ? Math.round((ready / total) * 100) : 0;
+  const vegPct = total ? Math.round((vegN / total) * 100) : 0;
+  setText('mReady', `${ready} 处`);
+  setText('mRate', `${rate}%`);
+  setText('mVeg', `${vegPct}%`);
+  setText('mOther', `${total ? 100 - vegPct : 0}%`);
+  setText('mRank', `#${String(i + 1).padStart(2, '0')}`);
+  setText('mTotal', `${total} 处`);
+  setText(
+    'note',
+    `${a.name || '这位岛民'} 当前登记 ${total} 处经营土地：菜地 ${vegN}、果园 ${orchN}、温室 ${glassN}。其中 ${ready} 处已经进入可收获或结果状态。`,
+  );
 }
 
-function renderRegistry(list, onlinePeople) {
+function renderPeople(list, onlinePeople) {
   state.list = list || [];
   state.onlineIds = new Set((onlinePeople || []).map((x) => x.id));
-  const shown = state.list.slice(0, 24);
-  const maxPlots = shown.reduce((m, a) => Math.max(m, Number(a.parcel_count) || 0), 0);
-  const box = document.getElementById('fieldList');
+  const shown = state.list.slice(0, 40);
+  const box = document.getElementById('people');
 
   if (!shown.length) {
-    box.innerHTML = '<div class="allo-empty">还没有管理员。去上手页登记，或让 AI steward_ops enroll。</div>';
-    setText('d-name', '还没有管理员');
-    setText('d-motto', '去上手页登记');
+    box.innerHTML = '<div class="allo-empty">还没有管理员。去上手页登记。</div>';
+    setText('name', '还没有管理员');
+    setText('meta', '去上手页登记');
     return;
   }
 
   box.innerHTML = shown.map((a, i) => {
     const online = state.onlineIds.has(a.id);
-    const [c1, c2] = stripColors(i);
-    const w = stripWidth(a.parcel_count || 0, maxPlots);
+    const total = landTotal(a);
     const rank = String(i + 1).padStart(2, '0');
     return `
-      <button type="button" class="allo-field-row${online ? ' is-online' : ''}${i === state.selected ? ' is-active' : ''}" data-index="${i}">
-        ${online ? '<span class="allo-online-dot"></span>' : ''}
-        <div class="allo-rankno">${rank}</div>
-        <div class="allo-field-main">
-          <div class="allo-field-meta">
-            <strong>${esc(a.name)}</strong>
-            <small>Lv${esc(a.level || 1)} · ${Number(a.tickets || 0).toLocaleString('zh-CN')}票</small>
-          </div>
-          <div class="allo-strip"><div class="allo-strip-fill" style="--w:${w}%;--c1:${c1};--c2:${c2}"></div></div>
-        </div>
-        <div class="allo-field-stats">
-          <strong>${esc(a.parcel_count || 0)} 块</strong>
-          <small>${esc(a.ready_count || 0)} 块可收</small>
-        </div>
+      <button type="button" class="allo-person${i === state.selected ? ' is-active' : ''}" data-index="${i}">
+        <span class="no">${rank}</span>
+        <span>
+          <b>${esc(a.name)}${online ? '<i class="allo-online-dot"></i>' : ''}</b>
+          <small>Lv${esc(a.level || 1)} · ${esc(a.ready_count || 0)} 可收</small>
+        </span>
+        <span class="sum">${esc(total)}</span>
       </button>`;
   }).join('');
 
-  box.querySelectorAll('.allo-field-row').forEach((row) => {
-    row.addEventListener('click', () => choose(Number(row.dataset.index)));
+  box.querySelectorAll('.allo-person').forEach((btn) => {
+    btn.addEventListener('click', () => select(Number(btn.dataset.index)));
   });
   if (state.selected >= shown.length) state.selected = 0;
-  choose(state.selected);
+  select(state.selected);
 }
 
 function renderAll(stats, allotments, chronicle) {
+  state.chronicle = chronicle || [];
   renderHero(stats || {}, allotments || []);
-  renderRegistry(allotments || [], (stats && stats.online_people) || []);
-  renderOnline((stats && stats.online_people) || []);
-  renderChronicle(chronicle || []);
-  renderGoals(stats || {});
+  renderExpansion(chronicle || []);
+  renderPeople(allotments || [], (stats && stats.online_people) || []);
 }
 
 async function loadAllotments() {
@@ -193,11 +252,11 @@ async function loadAllotments() {
 
 loadAllotments().catch(() => {
   setText('stewards', '—');
-  document.getElementById('onlineList').innerHTML =
-    '<div class="allo-empty">这会儿看不清。稍后再来。</div>';
-  document.getElementById('fieldList').innerHTML =
+  document.getElementById('people').innerHTML =
     '<div class="allo-empty">地籍暂时看不清。</div>';
-  setText('d-name', '暂时看不清');
-  setText('d-motto', '稍后再来，或去上手页。');
+  setText('name', '暂时看不清');
+  setText('meta', '稍后再来，或去上手页。');
+  setText('note', '地籍暂时看不清。稍后再来，或去上手页动手。');
 });
+
 setInterval(() => { loadAllotments().catch(() => {}); }, 20000);

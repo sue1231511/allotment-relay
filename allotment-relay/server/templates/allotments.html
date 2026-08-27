@@ -14,85 +14,154 @@
   {% include "partials/nav.html" %}
 
   <main class="allo-shell">
-    <header class="allo-hero">
+    <header class="allo-top">
       <div>
         <div class="allo-kicker">Allotment Registry</div>
         <h1>份地全景</h1>
-        <p>不是菜地图鉴，也不是一张大海报。看岛上的人把多少地铺开、谁还在线、最近谁在动土，以及联盟这一片现在活不活。</p>
+        <p>菜地、果园、温室统一计入岛民经营规模，地块编号与状态分开显示。只围观；种地去上手页。</p>
       </div>
-      <div class="allo-hero-stats">
-        <div class="allo-hero-stat"><small>管理员</small><strong id="stewards">—</strong></div>
-        <div class="allo-hero-stat"><small>在线</small><strong id="online">—</strong></div>
-        <div class="allo-hero-stat"><small>总份地</small><strong id="parcelsTotal">—</strong></div>
-        <div class="allo-hero-stat"><small>成熟</small><strong id="readyTotal">—</strong></div>
+      <div class="allo-head-stats">
+        <div class="allo-head-stat"><small>管理员</small><strong id="stewards">—</strong></div>
+        <div class="allo-head-stat"><small>在线</small><strong id="online">—</strong></div>
+        <div class="allo-head-stat"><small>全部土地</small><strong id="parcelsTotal">—</strong></div>
+        <div class="allo-head-stat"><small>可收</small><strong id="readyTotal">—</strong></div>
       </div>
     </header>
 
-    <section class="allo-registry">
-      <section class="allo-atlas">
-        <div class="allo-atlas-head">
+    <section class="allo-board">
+      <aside class="allo-left">
+        <div class="allo-left-title">
           <div>
-            <div class="allo-kicker">Land Register</div>
-            <h2>岛上地籍</h2>
+            <div class="allo-kicker">Stewards</div>
+            <h2>岛民地籍</h2>
           </div>
-          <p>长度代表经营规模。在线的人会亮一点。点任意一户，右侧切换详情。</p>
-          <div class="allo-legend">
-            <span><i class="on"></i>在线</span>
-            <span><i class="off"></i>离线</span>
+          <span>按总量</span>
+        </div>
+        <div class="allo-people" id="people">
+          <div class="allo-empty">在看地籍…</div>
+        </div>
+        <div class="allo-left-foot">
+          <div class="allo-left-foot-row"><span>24h 买地</span><b id="expVeg">—</b></div>
+          <div class="allo-left-foot-row"><span>24h 买园</span><b id="expOrch">—</b></div>
+          <div class="allo-left-foot-row"><span>24h 买棚</span><b id="expGlass">—</b></div>
+        </div>
+      </aside>
+
+      <section class="allo-center">
+        <div class="allo-owner">
+          <div>
+            <div class="allo-kicker">Selected Steward</div>
+            <h2 id="name">—</h2>
+            <p id="meta">点左边一户看详情</p>
+          </div>
+          <div class="allo-owner-total">
+            <small>全部经营土地</small>
+            <strong id="total">—</strong>
+            <span>处</span>
           </div>
         </div>
-        <div class="allo-field-list" id="fieldList">
-          <div class="allo-empty">在看地籍…</div>
+
+        <div class="allo-triple">
+          <section class="allo-land veg">
+            <div class="allo-land-head">
+              <div><small>VEGETABLE</small><h3>菜地</h3></div>
+              <strong id="vegCount">—</strong>
+            </div>
+            <div class="allo-plot-grid" id="vegGrid"></div>
+            <div class="allo-land-foot"><span># 编号</span><span id="vegReady">—</span></div>
+          </section>
+          <section class="allo-land orch">
+            <div class="allo-land-head">
+              <div><small>ORCHARD</small><h3>果园</h3></div>
+              <strong id="orchCount">—</strong>
+            </div>
+            <div class="allo-plot-grid" id="orchGrid"></div>
+            <div class="allo-land-foot"><span>园 编号</span><span id="orchReady">—</span></div>
+          </section>
+          <section class="allo-land glass">
+            <div class="allo-land-head">
+              <div><small>GREENHOUSE</small><h3>温室</h3></div>
+              <strong id="glassCount">—</strong>
+            </div>
+            <div class="allo-plot-grid" id="glassGrid"></div>
+            <div class="allo-land-foot"><span>棚 编号</span><span id="glassReady">—</span></div>
+          </section>
+        </div>
+
+        <div class="allo-mid">
+          <section class="allo-mid-sec">
+            <div class="allo-sec-head">
+              <div><div class="allo-kicker">Current</div><h3>当前地况</h3></div>
+              <span>只列有作物地块</span>
+            </div>
+            <div class="allo-status-list" id="statusList"></div>
+          </section>
+          <section class="allo-mid-sec">
+            <div class="allo-sec-head">
+              <div><div class="allo-kicker">Recent</div><h3>最近动静</h3></div>
+              <span>这一户</span>
+            </div>
+            <div id="activity"></div>
+          </section>
+        </div>
+
+        <div class="allo-bottom">
+          <section class="allo-small">
+            <div class="allo-kicker">Yield</div>
+            <h4>收获情况</h4>
+            <div class="allo-metric"><span>今日可收</span><b id="mReady">—</b></div>
+            <div class="allo-metric"><span>成熟占比</span><b id="mRate">—</b></div>
+          </section>
+          <section class="allo-small">
+            <div class="allo-kicker">Expansion</div>
+            <h4>扩张构成</h4>
+            <div class="allo-metric"><span>菜地占比</span><b id="mVeg">—</b></div>
+            <div class="allo-metric"><span>非菜地占比</span><b id="mOther">—</b></div>
+          </section>
+          <section class="allo-small">
+            <div class="allo-kicker">Rank</div>
+            <h4>岛内位置</h4>
+            <div class="allo-metric"><span>经营规模</span><b id="mRank">—</b></div>
+            <div class="allo-metric"><span>土地总量</span><b id="mTotal">—</b></div>
+          </section>
         </div>
       </section>
 
-      <aside class="allo-detail" id="detail">
-        <div class="allo-detail-head">
-          <small>SELECTED STEWARD</small>
-          <h2 id="d-name">—</h2>
-          <p id="d-motto">点左边一户看详情。</p>
-        </div>
-        <div class="allo-detail-block allo-detail-grid">
-          <div class="allo-detail-item"><small>等级</small><strong id="d-level">—</strong></div>
-          <div class="allo-detail-item"><small>工分票</small><strong id="d-ticket">—</strong></div>
-          <div class="allo-detail-item"><small>份地</small><strong id="d-plots">—</strong></div>
-          <div class="allo-detail-item"><small>状态</small><strong id="d-online">—</strong></div>
-        </div>
-        <div class="allo-detail-block">
-          <div class="allo-kicker" style="margin-bottom:8px">Recent</div>
-          <div class="allo-detail-activity" id="d-recent">
-            <div class="allo-empty">还没有动静。</div>
+      <aside class="allo-right">
+        <div class="allo-kicker">Quick Read</div>
+        <h2>地籍摘要</h2>
+
+        <div class="allo-right-block">
+          <div class="allo-right-label">BREAKDOWN</div>
+          <div class="allo-breakdown">
+            <div class="allo-break-cell"><small>菜地</small><strong id="rVeg">—</strong></div>
+            <div class="allo-break-cell"><small>果园</small><strong id="rOrch">—</strong></div>
+            <div class="allo-break-cell"><small>温室</small><strong id="rGlass">—</strong></div>
           </div>
         </div>
-        <div class="allo-detail-block">
-          <div class="allo-kicker" style="margin-bottom:8px">Reading</div>
-          <div class="allo-detail-note" id="d-note">这块不是玩家资料卡，而是「这一户在岛上最近是什么状态」。只放会帮助围观的信息。</div>
+
+        <div class="allo-right-block">
+          <div class="allo-right-label">ACTIVE LAND</div>
+          <div id="miniLand"></div>
         </div>
-        <div class="allo-detail-foot">
-          <a href="/play?go=neighbors">去上手页看邻居 →</a>
+
+        <div class="allo-right-block">
+          <div class="allo-right-label">READING</div>
+          <div class="allo-note" id="note">点左边一户，看菜地 / 果园 / 温室怎么铺开。</div>
         </div>
+
+        <div class="allo-right-block">
+          <div class="allo-right-label">LEGEND</div>
+          <div class="allo-legend-row">
+            <span class="l1">菜地</span>
+            <span class="l2">果园</span>
+            <span class="l3">温室</span>
+          </div>
+        </div>
+
+        <p class="allo-cta"><a href="/play?go=plot">种地 / 买地 / 偷菜去上手页 →</a></p>
       </aside>
     </section>
-
-    <section class="allo-lower">
-      <div class="allo-lower-sec">
-        <div class="allo-kicker">Online</div>
-        <h3>现在谁在岛上</h3>
-        <div id="onlineList"></div>
-      </div>
-      <div class="allo-lower-sec">
-        <div class="allo-kicker">Alliance</div>
-        <h3>联盟今天</h3>
-        <div id="chronicle"></div>
-      </div>
-      <div class="allo-lower-sec">
-        <div class="allo-kicker">Goals</div>
-        <h3>共同目标</h3>
-        <div id="goals"></div>
-      </div>
-    </section>
-
-    <p class="allo-cta"><a href="/play">种地 / 买地 / 偷菜去上手页 →</a></p>
   </main>
 
   <script src="/static/allotments.js"></script>
