@@ -5,8 +5,10 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Iterator
+
+_CST = timezone(timedelta(hours=8))
 
 SEASONS = ("春", "夏", "秋", "冬")
 SEASON_ALIASES = {
@@ -21,8 +23,8 @@ SEASON_ALIASES = {
     "winter": "冬",
 }
 
-# 2026-01-05 周一 00:00 UTC 起算第一周为春，之后每 7 天换一季。
-SEASON_EPOCH = datetime(2026, 1, 5, tzinfo=timezone.utc)
+# 2026-01-05 周一 00:00 东八区起算第一周为春，之后每 7 天换一季。
+SEASON_EPOCH = datetime(2026, 1, 5, tzinfo=_CST)
 
 # 测试可钉死季节；None = 按纪元周循环
 _override_season: str | None = None
@@ -83,10 +85,17 @@ def pinned_month(month: int | None) -> Iterator[None]:
         yield
 
 
+def _as_cst(at: datetime | None) -> datetime:
+    if at is None:
+        from . import db
+        return db.cst_dt()
+    if at.tzinfo is None:
+        return at.replace(tzinfo=_CST)
+    return at.astimezone(_CST)
+
+
 def _week_index(at: datetime | None = None) -> int:
-    now = at or datetime.now(timezone.utc)
-    if now.tzinfo is None:
-        now = now.replace(tzinfo=timezone.utc)
+    now = _as_cst(at)
     days = (now - SEASON_EPOCH).days
     return max(0, days) // 7
 
@@ -106,9 +115,7 @@ def season_remaining_days(at: datetime | None = None) -> int:
     """本季还剩几天（含今天），1–7。钉季节时返回 7。"""
     if _override_season is not None:
         return 7
-    now = at or datetime.now(timezone.utc)
-    if now.tzinfo is None:
-        now = now.replace(tzinfo=timezone.utc)
+    now = _as_cst(at)
     days = max(0, (now - SEASON_EPOCH).days)
     return 7 - (days % 7)
 

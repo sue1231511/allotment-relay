@@ -122,7 +122,7 @@ async def _maybe_npc_post(conn: aiosqlite.Connection, s: dict[str, Any], reason:
 
 
 async def _ensure_daily_quests(conn: aiosqlite.Connection) -> list[dict[str, Any]]:
-    """NPC 每日委托：UTC 日种子选 4~5 条，写进 ut_bounty（poster='__quest__'）。
+    """NPC 每日委托：游戏日种子选 4~5 条，写进 ut_bounty（poster='__quest__'）。
     保证墙上始终有活——恩怨墙不再空。"""
     import random
     day = _day_id()

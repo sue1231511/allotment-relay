@@ -81,12 +81,11 @@ def _day_id() -> int:
 
 def _weekday_label() -> str:
     wd = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
-    return wd[datetime.utcfromtimestamp(db.now()).weekday()]
+    return wd[db.cst_dt().weekday()]
 
 
 def _is_late_night() -> bool:
-    hour = datetime.utcfromtimestamp(db.now()).hour
-    return hour < 5
+    return db.cst_dt().hour < 5
 
 
 def _work_period(period: str, *, overdue: bool = False) -> str:

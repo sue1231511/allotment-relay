@@ -7,14 +7,7 @@ function esc(s) {
 }
 
 function fmtTime(epoch) {
-  if (!epoch) return '—';
-  const d = new Date(Number(epoch) * 1000);
-  return d.toLocaleString('zh-CN', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  return islandFmtStamp(epoch);
 }
 
 function render(data) {

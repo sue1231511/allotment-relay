@@ -12,12 +12,12 @@ from . import db
 OpsFn = Callable[..., Awaitable[str]]
 
 
-async def _call_ops(fn: OpsFn, *args) -> str:
+async def _call_ops(fn: OpsFn, *args, **kwargs) -> str:
     """MCP 工具统一入口：遇 SQLite 锁时短暂重试。"""
     last: BaseException | None = None
     for attempt in range(5):
         try:
-            return await fn(*args)
+            return await fn(*args, **kwargs)
         except (aiosqlite.OperationalError, sqlite3.OperationalError) as exc:
             last = exc
             if not db.is_db_locked_error(exc) or attempt >= 4:

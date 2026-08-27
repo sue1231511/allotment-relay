@@ -7,11 +7,7 @@ function esc(s) {
 }
 
 function ago(ts) {
-  const sec = Math.max(0, Math.floor(Date.now() / 1000 - Number(ts || 0)));
-  if (sec < 60) return '刚刚';
-  if (sec < 3600) return `${Math.floor(sec / 60)} 分钟前`;
-  if (sec < 86400) return `${Math.floor(sec / 3600)} 小时前`;
-  return `${Math.floor(sec / 86400)} 天前`;
+  return islandFmtStamp(ts);
 }
 
 function tier(level) {

@@ -5,12 +5,7 @@ function esc(s) {
 }
 
 function ago(epoch) {
-  if (!epoch) return '—';
-  const s = Math.max(0, Date.now() / 1000 - epoch);
-  if (s < 45) return '刚才';
-  if (s < 3600) return `${Math.floor(s / 60)} 分钟前`;
-  if (s < 86400) return `${Math.floor(s / 3600)} 小时前`;
-  return `${Math.floor(s / 86400)} 天前`;
+  return islandFmtStamp(epoch);
 }
 
 function medal(i) {

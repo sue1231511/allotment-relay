@@ -1324,7 +1324,7 @@ async def public_snapshot() -> dict[str, Any]:
     tide_idx = now // TIDE_CYCLE
     next_tide_at = (tide_idx + 1) * TIDE_CYCLE
     next_tide_code = ["ebb", "slack", "flood"][(tide_idx + 1) % 3]
-    next_tide_clock = time.strftime("%H:%M", time.localtime(next_tide_at))
+    next_tide_clock = db.fmt_cst_hhmm(next_tide_at)
 
     async with db.connect() as conn:
         conn.row_factory = aiosqlite.Row

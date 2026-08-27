@@ -2445,7 +2445,7 @@ async def _tote_one(s: dict, command: str) -> str:
         lines = [f"收礼/打赏记录（最近 {len(rows)} 条）："]
         for r in rows:
             who = r.get("actor_name") or "某人"
-            ago = multi_mod._ago(int(r["created_at"]))
+            ago = db.fmt_cst(int(r["created_at"]))
             tag = db.gift_kind_label(str(r.get("action") or "gift"))
             detail = r.get("summary") or r.get("text") or ""
             lines.append(f"  · [{tag}] {who}（{ago}）— {detail}")
@@ -2462,7 +2462,7 @@ async def _tote_one(s: dict, command: str) -> str:
         lines = [f"赠礼记录（最近 {len(rows)} 条）："]
         for r in rows:
             who = r.get("target_name") or "某人"
-            ago = multi_mod._ago(int(r["created_at"]))
+            ago = db.fmt_cst(int(r["created_at"]))
             detail = r.get("text") or ""
             lines.append(f"  · {who}（{ago}）— {detail}")
         return "\n".join(lines)

@@ -1,6 +1,5 @@
 function fmtTime(epoch) {
-  if (!epoch) return '—';
-  return new Date(epoch * 1000).toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
+  return islandFmtStamp(epoch);
 }
 
 function esc(s) {
@@ -118,18 +117,12 @@ function plotCard(p) {
 
 function agoLabel(epoch) {
   if (!epoch) return '尚无活动';
-  const sec = Math.max(0, Math.floor(Date.now() / 1000) - Number(epoch));
-  if (sec < 60) return '刚刚';
-  if (sec < 3600) return `${Math.floor(sec / 60)} 分钟前`;
-  if (sec < 86400) return `${Math.floor(sec / 3600)} 小时前`;
-  return `${Math.floor(sec / 86400)} 天前`;
+  return islandAgo(epoch);
 }
 
 function fmtMemoryDate(epoch) {
   if (!epoch) return '已收录';
-  return new Date(Number(epoch) * 1000).toLocaleDateString('zh-CN', {
-    year: 'numeric', month: 'long', day: 'numeric',
-  });
+  return islandFmtDate(epoch);
 }
 
 function multiline(value) {

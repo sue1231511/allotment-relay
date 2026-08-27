@@ -7,11 +7,7 @@ function esc(s) {
 }
 
 function timeAgo(ts) {
-  const sec = Math.max(0, Math.floor(Date.now() / 1000 - Number(ts || 0)));
-  if (sec < 60) return '刚刚';
-  if (sec < 3600) return `${Math.floor(sec / 60)}m`;
-  if (sec < 86400) return `${Math.floor(sec / 3600)}h`;
-  return `${Math.floor(sec / 86400)}d`;
+  return islandFmtStamp(ts);
 }
 
 function setText(id, value) {

@@ -623,6 +623,7 @@
             '<div class="ut-rumor"><span>' + esc(x.text) + "</span>" +
             '<span class="ut-when">' +
             new Date(x.at * 1000).toLocaleString("zh-CN", {
+              timeZone: "Asia/Shanghai",
               month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit"
             }) +
             "</span></div>"
