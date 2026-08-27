@@ -2298,7 +2298,29 @@ def fmt_cst(ts: int | None = None) -> str:
     t = now() if ts is None else int(ts or 0)
     if t <= 0:
         return "—"
-    return datetime.fromtimestamp(t, _CST).strftime("%m-%d %H:%M")
+    return cst_dt(t).strftime("%m-%d %H:%M")
+
+
+def cst_dt(ts: int | None = None) -> datetime:
+    """东八区 datetime；默认当前时刻。"""
+    t = now() if ts is None else int(ts or 0)
+    return datetime.fromtimestamp(t, _CST)
+
+
+def fmt_cst_hhmm(ts: int | None = None) -> str:
+    """东八区钟点，例如 23:40。"""
+    t = now() if ts is None else int(ts or 0)
+    if t <= 0:
+        return "—"
+    return cst_dt(t).strftime("%H:%M")
+
+
+def fmt_cst_date(ts: int | None = None) -> str:
+    """东八区日期，例如 2026-08-27。"""
+    t = now() if ts is None else int(ts or 0)
+    if t <= 0:
+        return "—"
+    return cst_dt(t).strftime("%Y-%m-%d")
 
 
 def day_id(ts: int | None = None) -> int:

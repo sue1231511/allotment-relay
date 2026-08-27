@@ -7,9 +7,7 @@ function esc(s) {
 }
 
 function clock(epoch) {
-  if (!epoch) return '—';
-  const d = new Date(Number(epoch) * 1000);
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  return islandFmtClock(epoch);
 }
 
 function splitMenuColumns(shops) {

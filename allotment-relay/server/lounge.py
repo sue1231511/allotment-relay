@@ -822,8 +822,7 @@ def _format_scan(
             lines.append("（还没有人说话。say 你好 或去 /play 聊天室发言）")
     else:
         for m in messages[-20:]:
-            from . import db as db_mod
-            hhmm = db_mod.fmt_cst(m["created_at"])[-5:]
+            hhmm = db.fmt_cst_hhmm(m["created_at"])
             if m.get("packet"):
                 lines.append(_format_packet_line(m, hhmm))
             else:

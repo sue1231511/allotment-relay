@@ -568,9 +568,7 @@ let continuousMemoryMode = false;
 
 function fmtMemoryDate(epoch) {
   if (!epoch) return '已收录';
-  return new Date(Number(epoch) * 1000).toLocaleDateString('zh-CN', {
-    year: 'numeric', month: 'long', day: 'numeric',
-  });
+  return islandFmtDate(epoch);
 }
 
 function multiline(value) {
@@ -773,7 +771,7 @@ function renderStewardPage(data) {
   $('play-steward-stock').innerHTML = stock.length ? stock.map((it) => `<span><b>${esc(it.name || it.item || '')}</b><em>×${it.qty}</em></span>`).join('') : '<p class="muted">行囊空</p>';
 
   const gifts = data.gifts || [];
-  $('play-steward-gifts').innerHTML = gifts.length ? gifts.slice(0, 6).map((g) => `<article><time>${fmtMemoryDate(g.created_at)}</time><div><strong>${esc(g.who || '')} · ${esc(g.kind || '')}</strong><p>${esc(g.text || '')}</p></div></article>`).join('') : '<p class="muted">暂无收礼 / 打赏</p>';
+  $('play-steward-gifts').innerHTML = gifts.length ? gifts.slice(0, 6).map((g) => `<article><time>${esc(islandFmtStamp(g.created_at))}</time><div><strong>${esc(g.who || '')} · ${esc(g.kind || '')}</strong><p>${esc(g.text || '')}</p></div></article>`).join('') : '<p class="muted">暂无收礼 / 打赏</p>';
 
   const memories = data.memories || [];
   const latest = memories[0];

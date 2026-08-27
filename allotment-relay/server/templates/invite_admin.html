@@ -79,7 +79,7 @@
     }
     function fmt(ts) {
       if (!ts) return '—';
-      return new Date(Number(ts) * 1000).toLocaleString('zh-CN');
+      return new Date(Number(ts) * 1000).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
     }
     async function clearOne(id) {
       const res = await fetch('/api/invite/admin/clear', {
