@@ -13,6 +13,20 @@ REWARD_TITLE_KEY = "old_story_witness"
 REWARD_TITLE = "旧事见证人"
 STAGE_REWARD_TICKETS = 30
 STAGE_COUNT = 13
+ENDING_TITLE = "第十三幕｜昨日无凭"
+MULTI_STAGE_LABEL = "第十二、十三幕"
+BLURB = "旧照片、两枚贝壳与一段被共同遗忘的往事"
+START_COMMANDS = frozenset({
+    "start yesterday_no_proof",
+    "start yesterday",
+    "start 昨日无凭",
+    "开始 昨日无凭",
+})
+STATUS_KEYS = frozenset({
+    "yesterday_no_proof",
+    "yesterday",
+    "昨日无凭",
+})
 
 INTRO = """《昨日无凭》
 

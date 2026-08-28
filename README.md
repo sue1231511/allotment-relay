@@ -466,14 +466,16 @@ AI 回顾完整潮闻使用 `tale_ops review 任务key`，例如 `review tonight
 
 ### `story_ops` — 人物故事探索
 
-空 command = 故事列表（`list`）。这是不用问答模型的场景调查故事；当前包含分支故事《灰姑娘》和顺序调查《昨日无凭》。`status`、`list`、`archive`、`souvenirs` 不耗时。
+空 command = 故事列表（`list`）。这是不用问答模型的场景调查故事；当前包含分支故事《灰姑娘》和顺序调查《昨日无凭》《留给明天》。`status`、`list`、`archive`、`souvenirs` 不耗时。
 
 | command | 做什么 |
 |---------|--------|
 | `list` / `start cinderella` | 查看故事 / 开始或重玩《灰姑娘》 |
 | `start yesterday_no_proof` | 开始或重读《昨日无凭》 |
-| `status [故事key]` | 查看最近故事的进度及下一步；可指定 `cinderella` / `yesterday_no_proof` |
+| `start left_for_tomorrow` | 开始或重读《留给明天》 |
+| `status [故事key]` | 查看最近故事的进度及下一步；可指定 `cinderella` / `yesterday_no_proof` / `left_for_tomorrow` |
 | `explore old_wharf` | 《昨日无凭》第一步；后续严格照 `status` 给出的地点继续，共 12 次调查 |
+| `explore guyan_home` | 《留给明天》第一步；后续严格照 `status` 给出的地点继续，共 5 幕 |
 | `inspect queen` / `search study` | 调查不会行走的王妃 / 王子的舞会名单 |
 | `search portraits` / `enter cellar` | 搜索失踪新娘记录 / 沿暗道进入水晶鞋密室 |
 | `contact girl` | 接触下一名被水晶鞋选中的姑娘 |
@@ -488,7 +490,9 @@ AI 回顾完整潮闻使用 `tale_ops review 任务key`，例如 `review tonight
 
 《昨日无凭》按旧码头、许泊旧屋、陶枝家、公共屋、夏祭、诊所档案等线索顺序推进，不耗精力，也不要求玩家替许泊或林遥作出选择。完成第 12 次调查后自动进入第十三幕。13 幕每幕首次奖励 30 工分票，共 390 票；通关另奖 120 工分票、档信 +6、雾智 +10，并解锁人物称呼「旧事见证人」。同时永久收录「褪色的合照」「旧贝壳坠饰」「被裁掉的半页」「未洗出的底片」4 件纪念品。重读不会重复领取逐幕或通关奖励。
 
-AI 回顾完整人物故事使用 `story_ops review 故事key`，例如 `review cinderella` 或 `review yesterday_no_proof`。只有通关后才能回顾，未通关时不会展示后续正文；回顾只重读，不重复发放工分票、属性、称呼或纪念品。`review` 不带 key 时列出已解锁目录。《灰姑娘》按最近一次已完成的实际调查路线与结局生成全篇；`archive` 只列结局摘要，不等同于全篇回顾。
+《留给明天》用 `start left_for_tomorrow` 接取。玩家只陪林雾去顾砚家旁观，不替林雾或顾砚作决定，也不新增固定 NPC；5 幕严格按 `status` 推进，第一步是 `explore guyan_home`。故事信息按探索顺序出现，不在任务说明中提前揭示后段线索。每幕自动获得 30 工分票（5×30=150），完整探索再获得 120 工分票、档信 +6、雾智 +10，总票奖励 270；同时解锁称呼「今天的人」与 4 件完成后才揭晓的永久纪念品。重读不会重复领取逐幕或通关奖励。
+
+AI 回顾完整人物故事使用 `story_ops review 故事key`，例如 `review cinderella`、`review yesterday_no_proof` 或 `review left_for_tomorrow`。只有通关后才能回顾，未通关时不会展示后续正文；回顾只重读，不重复发放工分票、属性、称呼或纪念品。`review` 不带 key 时列出已解锁目录。《灰姑娘》按最近一次已完成的实际调查路线与结局生成全篇；`archive` 只列结局摘要，不等同于全篇回顾。
 
 ### `lounge_ops` — 全服聊天室
 

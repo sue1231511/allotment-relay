@@ -1,4 +1,4 @@
-"""无模型的人物故事探索：分支故事《灰姑娘》与线性调查《昨日无凭》。"""
+"""无模型的人物故事探索：分支故事《灰姑娘》与线性旁观故事。"""
 from __future__ import annotations
 
 import json
@@ -6,8 +6,11 @@ from typing import Any
 
 import aiosqlite
 
-from . import db, story_yesterday, survival
+from . import db, story_tomorrow, story_yesterday, survival
 from .game import require_steward
+
+LINEAR_STORIES = (story_yesterday, story_tomorrow)
+LINEAR_BY_KEY = {mod.STORY_KEY: mod for mod in LINEAR_STORIES}
 
 STORY_KEY = "cinderella"
 STORY_TITLE = "灰姑娘"
@@ -20,8 +23,10 @@ STORY_HELP = """story_ops 人物故事探索（整句写进 command）：
   list — 查看可探索故事；空 command 与 list 相同
   start cinderella — 开始《灰姑娘》（重新游玩会重置本故事进度）
   start yesterday_no_proof — 开始《昨日无凭》（12 次顺序调查，自动进入结局）
+  start left_for_tomorrow — 开始《留给明天》（5 幕顺序旁观，自动进入结局）
   status [故事key] — 查看当前故事的进度和下一步；不写 key 看最近操作的故事
   explore old_wharf — 《昨日无凭》第一步；之后严格按 status 给出的地点继续
+  explore guyan_home — 《留给明天》第一步；之后严格按 status 给出的地点继续
   inspect queen — 调查不会行走的王妃
   search study — 潜入王子书房，调查舞会名单
   search portraits — 搜索失踪新娘的肖像长廊
@@ -33,7 +38,7 @@ STORY_HELP = """story_ops 人物故事探索（整句写进 command）：
   review [故事key] — 通关后回顾完整人物故事；不写 key 列出可回顾故事
   souvenirs — 查看人物故事永久纪念品（不占行囊，不能出售或赠送）
   help — 本帮助
-《灰姑娘》调查和准备各耗 10 分钟；首次结局奖励 60 票、档信 +5、雾智 +5。《昨日无凭》不耗精力，13 幕每幕首次 +30 票（共 390），通关另奖 120 票、档信 +6、雾智 +10、人物称呼「旧事见证人」和 4 件永久纪念品。所有故事重玩不重复领奖。完成记录也会收入网页「我的 AI」的岛上回忆；《灰姑娘》从完成时保存实际路线。"""
+《灰姑娘》调查和准备各耗 10 分钟；首次结局奖励 60 票、档信 +5、雾智 +5。《昨日无凭》不耗精力，13 幕每幕首次 +30 票（共 390），通关另奖 120 票、档信 +6、雾智 +10、人物称呼「旧事见证人」和 4 件永久纪念品。《留给明天》不耗精力，5 幕每幕首次 +30 票（共 150），通关另奖 120 票、档信 +6、雾智 +10、人物称呼「今天的人」和 4 件完成后才揭晓的永久纪念品。所有故事重玩不重复领奖。完成记录也会收入网页「我的 AI」的岛上回忆；《灰姑娘》从完成时保存实际路线。"""
 
 INTRO = """《灰姑娘》
 
@@ -184,6 +189,30 @@ def _flags(row: aiosqlite.Row) -> set[str]:
     return set(json.loads(row["flags_json"] or "[]"))
 
 
+def _linear_start_mod(cmd: str):
+    return next((mod for mod in LINEAR_STORIES if cmd in mod.START_COMMANDS), None)
+
+
+def _linear_status_mod(arg: str):
+    return next((mod for mod in LINEAR_STORIES if arg in mod.STATUS_KEYS), None)
+
+
+def _linear_command(cmd: str):
+    for mod in LINEAR_STORIES:
+        resolved = mod.ALIASES.get(cmd, cmd)
+        if resolved in mod.ACTION_MAP:
+            return mod, resolved
+    return None, cmd
+
+
+def _story_keys_hint() -> str:
+    return "cinderella / " + " / ".join(mod.STORY_KEY for mod in LINEAR_STORIES)
+
+
+def _linear_starts_hint() -> str:
+    return " · ".join(f"story_ops start {mod.STORY_KEY}" for mod in LINEAR_STORIES)
+
+
 async def _start(conn: aiosqlite.Connection, steward_id: int) -> str:
     ts = db.now()
     await conn.execute(
@@ -269,7 +298,7 @@ async def _claim_pending_reward(conn: aiosqlite.Connection, row: aiosqlite.Row) 
     )
 
 
-async def _start_yesterday(conn: aiosqlite.Connection, steward_id: int) -> str:
+async def _start_linear(conn: aiosqlite.Connection, steward_id: int, mod: Any) -> str:
     ts = db.now()
     await conn.execute(
         """INSERT INTO steward_stories
@@ -278,30 +307,31 @@ async def _start_yesterday(conn: aiosqlite.Connection, steward_id: int) -> str:
            ON CONFLICT(steward_id, story_key) DO UPDATE SET
              status='active', minutes_left=0, flags_json='[]', outcome='',
              started_at=excluded.started_at, updated_at=excluded.updated_at, completed_at=NULL""",
-        (steward_id, story_yesterday.STORY_KEY, ts, ts),
+        (steward_id, mod.STORY_KEY, ts, ts),
     )
     await conn.commit()
-    return story_yesterday.INTRO
+    return mod.INTRO
 
 
-def _yesterday_reward_text(first: bool) -> str:
+def _linear_reward_text(mod: Any, first: bool) -> str:
     if not first:
         return ""
     return (
         "\n\n首次人物故事奖励："
-        f"工分票 +{story_yesterday.REWARD_TICKETS}、"
-        f"档信 +{story_yesterday.REWARD_STANDING}、"
-        f"雾智 +{story_yesterday.REWARD_MIST_WIT}\n"
-        f"人物称呼：{story_yesterday.REWARD_TITLE}（steward_ops 称呼 {story_yesterday.REWARD_TITLE} 佩戴）\n"
-        "永久纪念品：" + "、".join(item["name"] for item in story_yesterday.SOUVENIRS)
+        f"工分票 +{mod.REWARD_TICKETS}、"
+        f"档信 +{mod.REWARD_STANDING}、"
+        f"雾智 +{mod.REWARD_MIST_WIT}\n"
+        f"人物称呼：{mod.REWARD_TITLE}（steward_ops 称呼 {mod.REWARD_TITLE} 佩戴）\n"
+        "永久纪念品：" + "、".join(item["name"] for item in mod.SOUVENIRS)
     )
 
 
-async def _finish_yesterday(
+async def _finish_linear(
     conn: aiosqlite.Connection,
     row: aiosqlite.Row,
     flags: set[str],
     ending: str,
+    mod: Any,
 ) -> str:
     ts = db.now()
     first = not bool(row["reward_granted"])
@@ -309,22 +339,22 @@ async def _finish_yesterday(
     if first:
         await conn.execute(
             "UPDATE stewards SET tickets=tickets+? WHERE id=?",
-            (story_yesterday.REWARD_TICKETS, row["steward_id"]),
+            (mod.REWARD_TICKETS, row["steward_id"]),
         )
         await survival.bump(
             conn,
             row["steward_id"],
-            standing=story_yesterday.REWARD_STANDING,
-            mist_wit=story_yesterday.REWARD_MIST_WIT,
+            standing=mod.REWARD_STANDING,
+            mist_wit=mod.REWARD_MIST_WIT,
         )
         from . import bond as bond_mod
         gained = await bond_mod.story_complete(
-            conn, row["steward_id"], f"story:{story_yesterday.STORY_KEY}"
+            conn, row["steward_id"], f"story:{mod.STORY_KEY}"
         )
         await conn.execute(
             """INSERT OR IGNORE INTO steward_achievements
                (steward_id, ach_key, unlocked_at) VALUES (?,?,?)""",
-            (row["steward_id"], story_yesterday.REWARD_TITLE_KEY, ts),
+            (row["steward_id"], mod.REWARD_TITLE_KEY, ts),
         )
     await conn.execute(
         """UPDATE steward_stories
@@ -332,7 +362,7 @@ async def _finish_yesterday(
                updated_at=?, completed_at=? WHERE id=?""",
         (
             json.dumps(sorted(flags), ensure_ascii=False),
-            story_yesterday.STORY_TITLE,
+            mod.STORY_TITLE,
             ts,
             ts,
             row["id"],
@@ -345,8 +375,8 @@ async def _finish_yesterday(
            DO UPDATE SET completed_at=excluded.completed_at""",
         (
             row["steward_id"],
-            story_yesterday.STORY_KEY,
-            story_yesterday.STORY_TITLE,
+            mod.STORY_KEY,
+            mod.STORY_TITLE,
             ts,
         ),
     )
@@ -356,8 +386,8 @@ async def _finish_yesterday(
            VALUES (?,?,?,?,?)""",
         (
             row["steward_id"],
-            story_yesterday.STORY_KEY,
-            story_yesterday.STORY_TITLE,
+            mod.STORY_KEY,
+            mod.STORY_TITLE,
             json.dumps(sorted(flags), ensure_ascii=False),
             ts,
         ),
@@ -366,37 +396,38 @@ async def _finish_yesterday(
     extra = f"、岛缘 +{gained}" if gained else ""
     return (
         ending
-        + _yesterday_reward_text(first)
+        + _linear_reward_text(mod, first)
         + extra
-        + "\n\n完整回顾：story_ops review yesterday_no_proof · "
-        "重玩：story_ops start yesterday_no_proof · 收藏：story_ops souvenirs"
+        + f"\n\n完整回顾：story_ops review {mod.STORY_KEY} · "
+        f"重玩：story_ops start {mod.STORY_KEY} · 收藏：story_ops souvenirs"
     )
 
 
-async def _status_yesterday(row: aiosqlite.Row) -> str:
+async def _status_linear(row: aiosqlite.Row, mod: Any) -> str:
     flags = _flags(row)
-    done = story_yesterday.completed_count(flags)
+    done = mod.completed_count(flags)
     if row["status"] == "completed":
         return (
-            f"《{story_yesterday.STORY_TITLE}》已经完成（{done}/{len(story_yesterday.ACTIONS)}）。\n"
-            "完整回顾：story_ops review yesterday_no_proof · "
-            "重玩：story_ops start yesterday_no_proof · 收藏：story_ops souvenirs"
+            f"《{mod.STORY_TITLE}》已经完成（{done}/{len(mod.ACTIONS)}）。\n"
+            f"完整回顾：story_ops review {mod.STORY_KEY} · "
+            f"重玩：story_ops start {mod.STORY_KEY} · 收藏：story_ops souvenirs"
         )
-    action = story_yesterday.next_action(flags)
+    action = mod.next_action(flags)
     if action is None:
         return "调查已经走到尽头。请重新调用上一条探索指令完成结算。"
     return (
-        f"《{story_yesterday.STORY_TITLE}》· 调查 {done}/{len(story_yesterday.ACTIONS)}\n"
+        f"《{mod.STORY_TITLE}》· 调查 {done}/{len(mod.ACTIONS)}\n"
         f"下一幕：{action['title']}\n"
         f"继续：story_ops {action['command']}\n\n"
         "本故事按顺序调查，不耗精力。"
     )
 
 
-async def _grant_yesterday_stage_rewards(
+async def _grant_linear_stage_rewards(
     conn: aiosqlite.Connection,
     steward_id: int,
     stage_keys: list[str],
+    mod: Any,
 ) -> int:
     """每幕只发一次；重读重置剧情 flags，但不重置本表。"""
     granted = 0
@@ -404,10 +435,10 @@ async def _grant_yesterday_stage_rewards(
         cur = await conn.execute(
             """INSERT OR IGNORE INTO steward_story_stage_rewards
                (steward_id, story_key, stage_key, rewarded_at) VALUES (?,?,?,?)""",
-            (steward_id, story_yesterday.STORY_KEY, stage_key, db.now()),
+            (steward_id, mod.STORY_KEY, stage_key, db.now()),
         )
         if cur.rowcount == 1:
-            granted += story_yesterday.STAGE_REWARD_TICKETS
+            granted += mod.STAGE_REWARD_TICKETS
     if granted:
         await conn.execute(
             "UPDATE stewards SET tickets=tickets+? WHERE id=?",
@@ -416,17 +447,17 @@ async def _grant_yesterday_stage_rewards(
     return granted
 
 
-async def _act_yesterday(
-    conn: aiosqlite.Connection, row: aiosqlite.Row, command: str
+async def _act_linear(
+    conn: aiosqlite.Connection, row: aiosqlite.Row, command: str, mod: Any
 ) -> str:
-    command = story_yesterday.ALIASES.get(command, command)
-    action = story_yesterday.ACTION_MAP.get(command)
+    command = mod.ALIASES.get(command, command)
+    action = mod.ACTION_MAP.get(command)
     if not action:
         raise ValueError("未知调查地点。用 story_ops status 查看下一步真实指令。")
     flags = _flags(row)
-    expected = story_yesterday.next_action(flags)
+    expected = mod.next_action(flags)
     if expected is None:
-        raise ValueError("《昨日无凭》已经调查完成。查看 story_ops souvenirs，或重新 start。")
+        raise ValueError(f"《{mod.STORY_TITLE}》已经调查完成。查看 story_ops souvenirs，或重新 start。")
     if action["flag"] in flags:
         raise ValueError(f"这一幕已经完成：{command}。用 story_ops status 查看下一步。")
     if action["command"] != expected["command"]:
@@ -436,41 +467,51 @@ async def _act_yesterday(
     flags.add(action["flag"])
     body = f"{action['title']}\n\n{action['text']}"
     stage_keys = [action["flag"]]
-    if action.get("ending"):
+    if action.get("ending") and mod.STAGE_COUNT > len(mod.ACTIONS):
         stage_keys.append("ending")
-    stage_reward = await _grant_yesterday_stage_rewards(
-        conn, row["steward_id"], stage_keys
+    stage_reward = await _grant_linear_stage_rewards(
+        conn, row["steward_id"], stage_keys, mod
     )
     if stage_reward:
-        count = stage_reward // story_yesterday.STAGE_REWARD_TICKETS
-        label = "本幕" if count == 1 else "第十二、十三幕"
+        count = stage_reward // mod.STAGE_REWARD_TICKETS
+        if count == 1:
+            label = "本幕"
+        else:
+            label = getattr(mod, "MULTI_STAGE_LABEL", "本幕与结尾")
         body += f"\n\n{label}探索奖励：工分票 +{stage_reward}"
     if action.get("ending"):
-        return await _finish_yesterday(conn, row, flags, body + "\n\n" + action["ending"])
+        return await _finish_linear(conn, row, flags, body + "\n\n" + action["ending"], mod)
     await conn.execute(
         "UPDATE steward_stories SET flags_json=?, updated_at=? WHERE id=?",
         (json.dumps(sorted(flags), ensure_ascii=False), db.now(), row["id"]),
     )
     await conn.commit()
-    following = story_yesterday.next_action(flags)
+    following = mod.next_action(flags)
     return body + f"\n\n下一步：story_ops {following['command']}"
 
 
 async def _story_souvenirs(conn: aiosqlite.Connection, steward_id: int) -> str:
-    row = await (await conn.execute(
-        """SELECT 1 FROM steward_story_outcomes
-           WHERE steward_id=? AND story_key=? LIMIT 1""",
-        (steward_id, story_yesterday.STORY_KEY),
-    )).fetchone()
-    if not row:
+    lines = ["人物故事收藏册"]
+    total = 0
+    for mod in LINEAR_STORIES:
+        row = await (await conn.execute(
+            """SELECT 1 FROM steward_story_outcomes
+               WHERE steward_id=? AND story_key=? LIMIT 1""",
+            (steward_id, mod.STORY_KEY),
+        )).fetchone()
+        if not row:
+            continue
+        lines.append(f"《{mod.STORY_TITLE}》")
+        for item in mod.SOUVENIRS:
+            lines.append(f"  {item['emoji']}{item['name']} · {item['desc']}")
+        total += len(mod.SOUVENIRS)
+    if total == 0:
+        titles = "、".join(f"《{mod.STORY_TITLE}》" for mod in LINEAR_STORIES)
         return (
-            "人物故事收藏册还是空的。完成《昨日无凭》后会永久收录纪念品；"
+            f"人物故事收藏册还是空的。完成{titles}后会永久收录纪念品；"
             "它们不占行囊，不能出售或赠送。"
         )
-    lines = ["人物故事收藏册", f"《{story_yesterday.STORY_TITLE}》"]
-    for item in story_yesterday.SOUVENIRS:
-        lines.append(f"  {item['emoji']}{item['name']} · {item['desc']}")
-    lines.append(f"\n共 {len(story_yesterday.SOUVENIRS)} 件；不占行囊，不能出售或赠送。")
+    lines.append(f"\n共 {total} 件；不占行囊，不能出售或赠送。")
     return "\n".join(lines)
 
 
@@ -546,14 +587,15 @@ async def _archive(conn: aiosqlite.Connection, steward_id: int) -> str:
     )).fetchall()
     if not rows:
         return "你还没有完成人物故事。用 story_ops list 查看可探索内容。"
-    titles = {STORY_KEY: STORY_TITLE, story_yesterday.STORY_KEY: story_yesterday.STORY_TITLE}
+    titles = {STORY_KEY: STORY_TITLE}
+    titles.update({mod.STORY_KEY: mod.STORY_TITLE for mod in LINEAR_STORIES})
     endings = "\n".join(
         f"  {titles.get(row['story_key'], row['story_key'])} — {row['outcome']}" for row in rows
     )
     return (
         f"人物故事档案\n{endings}\n\n"
         "完整回顾：story_ops review · 重玩：story_ops start cinderella · "
-        "story_ops start yesterday_no_proof · 纪念品：story_ops souvenirs"
+        f"{_linear_starts_hint()} · 纪念品：story_ops souvenirs"
     )
 
 
@@ -582,34 +624,35 @@ async def _review(conn: aiosqlite.Connection, steward_id: int, story_key: str) -
     aliases = {
         "cinderella": STORY_KEY,
         "灰姑娘": STORY_KEY,
-        "yesterday_no_proof": story_yesterday.STORY_KEY,
-        "yesterday": story_yesterday.STORY_KEY,
-        "昨日无凭": story_yesterday.STORY_KEY,
     }
+    for mod in LINEAR_STORIES:
+        for key in mod.STATUS_KEYS:
+            aliases[key] = mod.STORY_KEY
     if not story_key:
         lines = ["已解锁的人物故事全篇回顾"]
         cinderella = await _progress(conn, steward_id, STORY_KEY)
         if cinderella and cinderella["status"] == "completed":
             lines.append(f"  《{STORY_TITLE}》— story_ops review {STORY_KEY}")
-        yesterday = await (await conn.execute(
-            """SELECT 1 FROM steward_story_outcomes
-               WHERE steward_id=? AND story_key=? LIMIT 1""",
-            (steward_id, story_yesterday.STORY_KEY),
-        )).fetchone()
-        if yesterday:
-            lines.append(
-                f"  《{story_yesterday.STORY_TITLE}》— "
-                f"story_ops review {story_yesterday.STORY_KEY}"
-            )
+        for mod in LINEAR_STORIES:
+            done = await (await conn.execute(
+                """SELECT 1 FROM steward_story_outcomes
+                   WHERE steward_id=? AND story_key=? LIMIT 1""",
+                (steward_id, mod.STORY_KEY),
+            )).fetchone()
+            if done:
+                lines.append(
+                    f"  《{mod.STORY_TITLE}》— story_ops review {mod.STORY_KEY}"
+                )
         if len(lines) == 1:
             lines.append("  暂无。完成人物故事后即可回顾；未通关内容不会提前剧透。")
         return "\n".join(lines)
 
     key = aliases.get(story_key)
     if not key:
-        raise ValueError("未知故事。可用：cinderella / yesterday_no_proof")
+        raise ValueError(f"未知故事。可用：{_story_keys_hint()}")
 
-    if key == story_yesterday.STORY_KEY:
+    linear = LINEAR_BY_KEY.get(key)
+    if linear:
         completed = await (await conn.execute(
             """SELECT 1 FROM steward_story_outcomes
                WHERE steward_id=? AND story_key=? LIMIT 1""",
@@ -617,14 +660,17 @@ async def _review(conn: aiosqlite.Connection, steward_id: int, story_key: str) -
         )).fetchone()
         if not completed:
             raise ValueError(
-                "《昨日无凭》尚未解锁全篇回顾。请先完成故事；为避免剧透，未通关时不展示后续正文。"
+                f"《{linear.STORY_TITLE}》尚未解锁全篇回顾。请先完成故事；为避免剧透，未通关时不展示后续正文。"
             )
-        sections = [("引子", story_yesterday.INTRO)]
-        for action in story_yesterday.ACTIONS:
+        sections = [("引子", linear.INTRO)]
+        for action in linear.ACTIONS:
             sections.append((action["title"], action["text"]))
             if action.get("ending"):
-                sections.append(("第十三幕｜昨日无凭", action["ending"]))
-        return _full_review(story_yesterday.STORY_TITLE, sections)
+                sections.append((
+                    getattr(linear, "ENDING_TITLE", "结尾"),
+                    action["ending"],
+                ))
+        return _full_review(linear.STORY_TITLE, sections)
 
     row = await _progress(conn, steward_id, STORY_KEY)
     if not row or row["status"] != "completed":
@@ -648,23 +694,29 @@ async def story_ops(key_id: int, command: str = "list") -> str:
     if cmd in {"help", "帮助"}:
         return STORY_HELP
     if cmd in {"list", "列表"}:
-        return (
-            "人物故事探索\n"
-            "  cinderella — 灰姑娘：水晶鞋、失踪的新娘与午夜前的抉择\n"
-            "  yesterday_no_proof — 昨日无凭：旧照片、两枚贝壳与一段被共同遗忘的往事\n\n"
-            "开始：story_ops start cinderella · story_ops start yesterday_no_proof\n"
-            "回顾：story_ops review [故事key]（仅限已通关）\n"
-            "收藏：story_ops souvenirs"
+        listing = [
+            "人物故事探索",
+            "  cinderella — 灰姑娘：水晶鞋、失踪的新娘与午夜前的抉择",
+        ]
+        listing.extend(
+            f"  {mod.STORY_KEY} — {mod.STORY_TITLE}：{mod.BLURB}"
+            for mod in LINEAR_STORIES
         )
+        listing.extend([
+            "",
+            f"开始：story_ops start cinderella · {_linear_starts_hint()}",
+            "回顾：story_ops review [故事key]（仅限已通关）",
+            "收藏：story_ops souvenirs",
+        ])
+        return "\n".join(listing)
     async with db.connect() as conn:
         if cmd in {"start cinderella", "start 灰姑娘", "开始 灰姑娘"}:
             previous = await _progress(conn, steward["id"])
             pending_reward = await _claim_pending_reward(conn, previous) if previous else ""
             return await _start(conn, steward["id"]) + pending_reward
-        if cmd in {
-            "start yesterday_no_proof", "start yesterday", "start 昨日无凭", "开始 昨日无凭",
-        }:
-            return await _start_yesterday(conn, steward["id"])
+        linear_start = _linear_start_mod(cmd)
+        if linear_start:
+            return await _start_linear(conn, steward["id"], linear_start)
         if cmd in {"archive", "档案"}:
             previous = await _progress(conn, steward["id"])
             pending_reward = await _claim_pending_reward(conn, previous) if previous else ""
@@ -679,25 +731,31 @@ async def story_ops(key_id: int, command: str = "list") -> str:
             arg = cmd.split(" ", 1)[1] if " " in cmd else ""
             if arg in {"cinderella", "灰姑娘"}:
                 row = await _progress(conn, steward["id"], STORY_KEY)
-            elif arg in {"yesterday_no_proof", "yesterday", "昨日无凭"}:
-                row = await _progress(conn, steward["id"], story_yesterday.STORY_KEY)
             elif arg:
-                raise ValueError("未知故事。可用：cinderella / yesterday_no_proof")
+                linear = _linear_status_mod(arg)
+                if not linear:
+                    raise ValueError(f"未知故事。可用：{_story_keys_hint()}")
+                row = await _progress(conn, steward["id"], linear.STORY_KEY)
             else:
                 row = await _latest_progress(conn, steward["id"])
             if not row:
                 raise ValueError("尚未开始人物故事。请用 story_ops list 查看。")
-            if row["story_key"] == story_yesterday.STORY_KEY:
-                return await _status_yesterday(row)
+            linear = LINEAR_BY_KEY.get(row["story_key"])
+            if linear:
+                return await _status_linear(row, linear)
             return await _status(row)
-        yesterday_command = story_yesterday.ALIASES.get(cmd, cmd)
-        if yesterday_command in story_yesterday.ACTION_MAP:
-            row = await _progress(conn, steward["id"], story_yesterday.STORY_KEY)
+        linear, linear_command = _linear_command(cmd)
+        if linear:
+            row = await _progress(conn, steward["id"], linear.STORY_KEY)
             if not row:
-                raise ValueError("尚未开始《昨日无凭》。请用 story_ops start yesterday_no_proof。")
+                raise ValueError(
+                    f"尚未开始《{linear.STORY_TITLE}》。请用 story_ops start {linear.STORY_KEY}。"
+                )
             if row["status"] != "active":
-                raise ValueError("《昨日无凭》已经完成。查看 story_ops souvenirs，或重新 start。")
-            return await _act_yesterday(conn, row, yesterday_command)
+                raise ValueError(
+                    f"《{linear.STORY_TITLE}》已经完成。查看 story_ops souvenirs，或重新 start。"
+                )
+            return await _act_linear(conn, row, linear_command, linear)
         row = await _progress(conn, steward["id"], STORY_KEY)
         if not row:
             raise ValueError("尚未开始人物故事。请用 story_ops start cinderella。")
