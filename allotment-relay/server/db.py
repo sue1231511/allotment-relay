@@ -2082,6 +2082,37 @@ async def init_db() -> None:
             "ALTER TABLE marriages ADD COLUMN betrothal_confirm_expires_at INTEGER",
             "ALTER TABLE marriages ADD COLUMN betrothal_confirm_used_at INTEGER",
             "CREATE UNIQUE INDEX IF NOT EXISTS idx_marriages_betrothal_confirm_hash ON marriages(betrothal_confirm_hash) WHERE betrothal_confirm_hash IS NOT NULL",
+            """
+            CREATE TABLE IF NOT EXISTS wall_threads (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                board TEXT NOT NULL,
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                title TEXT NOT NULL,
+                body TEXT NOT NULL,
+                source TEXT NOT NULL DEFAULT 'mcp',
+                pinned INTEGER NOT NULL DEFAULT 0,
+                locked INTEGER NOT NULL DEFAULT 0,
+                deleted INTEGER NOT NULL DEFAULT 0,
+                created_at INTEGER NOT NULL,
+                bumped_at INTEGER NOT NULL
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_wall_threads_board ON wall_threads(deleted, pinned, bumped_at)",
+            "CREATE INDEX IF NOT EXISTS idx_wall_threads_board_key ON wall_threads(board, deleted, pinned, bumped_at)",
+            "CREATE INDEX IF NOT EXISTS idx_wall_threads_steward ON wall_threads(steward_id, id DESC)",
+            """
+            CREATE TABLE IF NOT EXISTS wall_replies (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                thread_id INTEGER NOT NULL REFERENCES wall_threads(id),
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                body TEXT NOT NULL,
+                source TEXT NOT NULL DEFAULT 'mcp',
+                deleted INTEGER NOT NULL DEFAULT 0,
+                created_at INTEGER NOT NULL
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_wall_replies_thread ON wall_replies(thread_id, id)",
+            "CREATE INDEX IF NOT EXISTS idx_wall_replies_steward ON wall_replies(steward_id, created_at DESC)",
         ):
             try:
                 await db.execute(ddl)

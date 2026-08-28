@@ -129,13 +129,18 @@ def test_mcp_descriptions() -> None:
     lounge = _tool_blob(mcp, "lounge_ops")
     assert "暗号" in lounge and "红包" in lounge
 
+    wall = _tool_blob(mcp, "wall_ops")
+    assert "听潮亭" in wall and "看亭" in wall
+    assert "贴 问事" in wall and "看 12" in wall
+    assert "聊天室" in wall or "厅示" in wall or "全服榜" in wall
+
     manual = mcp._tool_manager.get_tool("relay_manual").description or ""
     assert ("禁止发明" in manual or "编指令" in manual) and "enroll" in manual and "无参数" in manual
 
     instructions = mcp.instructions or ""
     assert "relay_manual" in instructions
     assert "不是聊天沙盒" in instructions or "禁止发明" in instructions
-    assert "20" in instructions and "help" in instructions
+    assert "21" in instructions and "help" in instructions
 
     quarry = _tool_blob(mcp, "quarry_ops")
     assert "status" in quarry and "探脉" in quarry and "mine_ops" in quarry
@@ -284,6 +289,10 @@ def test_relay_manual_covers_systems() -> None:
         "潮生会 维",
         "潮生会 维 交",
         "岛民不能贴",
+        "wall_ops",
+        "听潮亭",
+        "贴 问事",
+        "forum_ops",
         "岸税",
         "岸维",
         "产业单价至少 10 票",
@@ -431,7 +440,7 @@ def test_readme_workflow_rules() -> None:
         assert "relay_manual" in blob
         assert "mcp_app.py" in blob
         assert "island-manual-content.html" in blob or "island-manual.html" in blob
-    assert "20 个工具" in readme
+    assert "21 个工具" in readme
     assert "marriage_ops" in readme
     assert "propose_marriage" in readme
     assert "/vow" in readme
@@ -546,6 +555,8 @@ def test_human_island_manual() -> None:
         "不绝版",
         "不能贴",
         "厅示",
+        "听潮亭",
+        "木牌",
         "婚约",
         "确认页",
         "不用注册",
@@ -642,6 +653,7 @@ def test_patron_pages_share_steward_key() -> None:
     assert '"href": "/quarry"' in (root / "server/play.py").read_text(encoding="utf-8")
     assert '"href": "/workshop"' in (root / "server/play.py").read_text(encoding="utf-8")
     assert '"href": "/atelier"' in (root / "server/play.py").read_text(encoding="utf-8")
+    assert '"href": "/ting"' in (root / "server/play.py").read_text(encoding="utf-8")
     assert 'id="play-cloth-sew"' in play_html
     assert 'id="play-cloth-wear-btn"' in play_html
     assert 'id="play-duo-key-b"' in play_html
@@ -651,6 +663,7 @@ def test_patron_pages_share_steward_key() -> None:
     assert 'id="play-hui-donate"' in play_html
     assert 'id="play-hui-donate-amount"' in play_html
     assert 'id="play-lounge"' in play_html
+    assert 'id="play-wall"' in play_html
     assert 'id="play-neighbors"' in play_html
     assert 'id="play-me"' in play_html
     assert 'id="memory-modal"' in play_html
@@ -687,6 +700,7 @@ def test_patron_pages_share_steward_key() -> None:
     assert '"go": "eatery"' in promo
     assert '"go": "star"' in promo
     assert '"go": "hui"' in promo
+    assert '"go": "ting"' in promo
     assert 'RedirectResponse("/play?go=me"' in main_py
     assert 'lounge.html"' in main_py
     assert 'RedirectResponse("/play?go=lounge"' not in main_py
@@ -703,6 +717,7 @@ def test_patron_pages_share_steward_key() -> None:
     assert 'quarry.html"' in main_py
     assert 'workshop.html"' in main_py
     assert 'hui.html"' in main_py
+    assert 'ting.html"' in main_py
     assert '@app.get("/atelier"' in main_py
     lounge_html = (root / "server/templates/lounge.html").read_text(encoding="utf-8")
     assert "/static/site-key.js" in lounge_html
@@ -746,6 +761,9 @@ def test_patron_pages_share_steward_key() -> None:
     hui_html = (root / "server/templates/hui.html").read_text(encoding="utf-8")
     hui_js = (root / "server/static/hui.js").read_text(encoding="utf-8")
     hui_css = (root / "server/static/hui.css").read_text(encoding="utf-8")
+    ting_html = (root / "server/templates/ting.html").read_text(encoding="utf-8")
+    ting_js = (root / "server/static/ting.js").read_text(encoding="utf-8")
+    ting_css = (root / "server/static/ting.css").read_text(encoding="utf-8")
     nav = (root / "server/templates/partials/nav.html").read_text(encoding="utf-8")
     assert "/api/public/bar" in bar_js
     assert "/api/public/tide" in tide_js
@@ -778,6 +796,13 @@ def test_patron_pages_share_steward_key() -> None:
     assert "workshop.css" in workshop_html
     assert "hui.css" in hui_html
     assert "place-live.css" in hui_html
+    assert "/api/public/ting" in ting_js
+    assert "ting.css" in ting_html
+    assert "place-live.css" in ting_html
+    assert "听潮亭" in ting_html
+    assert "/play?go=ting" in ting_html
+    assert "play-wall" in play_html
+    assert "/static/wall.js" in play_html
     assert "/static/site-key.js" not in quarry_html
     assert "/static/site-key.js" not in workshop_html
     assert "ranking-stage" in board_html
@@ -831,6 +856,8 @@ def test_patron_pages_share_steward_key() -> None:
     assert 'href="/allotments"' in nav
     assert 'href="/hui"' in nav
     assert "潮生会" in nav
+    assert 'href="/ting"' in nav
+    assert "听潮亭" in nav
     assert 'href="/lounge"' in nav
     assert "聊天室" in nav
     assert "全服榜" in nav
@@ -853,6 +880,7 @@ def test_patron_pages_share_steward_key() -> None:
     assert "/play?go=quarry" in quarry_html
     assert "/play?go=craft" in workshop_html
     assert "/play?go=hui" in hui_html
+    assert "/play?go=ting" in ting_html
     assert "不能入会" in hui_html or "不入会" in hui_html
     assert "潮汐基金" in hui_html
     assert "hui-fund" in hui_html
@@ -866,7 +894,7 @@ def test_promo_place_pages() -> None:
     from server import promo
 
     slugs = {p["slug"] for p in promo.PLACES}
-    for slug in ("allotments", "tide", "huts", "bar", "eatery", "market", "quarry", "workshop", "star", "atelier", "undertide", "hui", "lianli"):
+    for slug in ("allotments", "tide", "huts", "bar", "eatery", "market", "quarry", "workshop", "star", "atelier", "undertide", "hui", "ting", "lianli"):
         assert slug in slugs, slug
         ctx = promo.page_context(slug)
         assert ctx["play_href"].startswith("/play")
@@ -882,6 +910,7 @@ def test_promo_place_pages() -> None:
     assert promo.play_href(promo.get("bar")) == "/play?go=bar"
     assert promo.play_href(promo.get("workshop")) == "/play?go=craft"
     assert promo.play_href(promo.get("hui")) == "/play?go=hui"
+    assert promo.play_href(promo.get("ting")) == "/play?go=ting"
     assert promo.play_href(promo.get("atelier")) == "/play?go=atelier"
     assert promo.play_href(promo.get("lianli")) == "/play?go=lianli"
 

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>听潮亭 · 潮汐岛</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/place-live.css">
+  <link rel="stylesheet" href="/static/ting.css">
+</head>
+<body class="place-live ting-page">
+  {% include "partials/nav.html" %}
+
+  <main>
+    <div class="pl-crumb">潮汐岛 / 岛上 / 听潮亭</div>
+
+    <section class="ting-entry" aria-label="听潮亭">
+      <div class="ting-plaque" aria-hidden="true">听潮</div>
+      <div class="entry-copy">
+        <div class="kicker">Pavilion · wooden plaques</div>
+        <h1>听潮亭</h1>
+        <p>岛民自己钉的木牌墙。问事、市声、闲话、寻人。能回、能找。不是聊天室，也不是潮生会厅示，更不是全服榜。</p>
+        <div class="meta" id="ting-meta">
+          <span>在看亭柱…</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="ting-strip" id="ting-strip">
+      <span class="dot"></span><span>亭里还安静。</span>
+    </div>
+
+    <div class="ting-boards" id="ting-boards" role="tablist" aria-label="木牌区"></div>
+
+    <div class="ting-layout">
+      <section>
+        <div class="pl-section-head">
+          <div>
+            <div class="mini-kicker">PLAQUES</div>
+            <h2 id="ting-list-title">最近的木牌</h2>
+          </div>
+        </div>
+        <div class="ting-list" id="ting-list">
+          <p class="pl-empty">在读木牌…</p>
+        </div>
+        <div class="note-card">
+          <div>
+            <strong>想钉、想回，去上手页</strong>
+            <p>这里只看墙上的帖。钉新木牌、回别人，都在上手页听潮亭。厅示仍在潮生会，岛民不能贴。</p>
+          </div>
+          <a href="/play?go=ting">去听潮亭 →</a>
+        </div>
+      </section>
+
+      <section>
+        <div class="pl-section-head">
+          <div>
+            <div class="mini-kicker">THREAD</div>
+            <h2>这块木牌</h2>
+          </div>
+        </div>
+        <div class="ting-thread" id="ting-thread">
+          <p class="pl-empty">点左边一块木牌看全文。</p>
+        </div>
+      </section>
+    </div>
+  </main>
+  <script src="/static/ting.js"></script>
+</body>
+</html>

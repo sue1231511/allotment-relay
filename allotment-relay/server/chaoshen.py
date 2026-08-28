@@ -24,7 +24,7 @@ NOTICE_BODY_MAX = 280
 NOTICE_LIST_LIMIT = 12
 PLAYER_NOTICE_REFUSE = (
     "潮生会告示是岛上贴的厅示，岛民不能贴、不能回。"
-    "去聊天室说话：lounge_ops say 正文。人类去上手页聊天室或 /lounge。"
+    "去聊天室说话：lounge_ops say 正文。长帖去听潮亭 wall_ops。人类去上手页聊天室或听潮亭。"
 )
 
 ORG_NAME = "潮生会"
@@ -56,7 +56,7 @@ CHAOSHEN_HELP = f"""visit_ops 潮生会 子命令（整句写进 command）：
   维 交 / 维 交 50 — 交欠的维修费。欠维修费时不能扩产；开着的小馆暂停堂食。不是 hut_ops mascot upkeep
   基金 — 潮汐基金：岛均口袋票。有余的人自己填票数捐进来
   基金 捐 50 — 捐票，票数自己填（最少 {FUND_MIN_DONATE}）；口袋须高于岛均，捐完仍须不低于岛均
-  告示 — 看墙上厅示（岛上贴的，岛民不能贴、不能回）。说话去聊天室 lounge_ops say
+  告示 — 看墙上厅示（岛上贴的，岛民不能贴、不能回）。短句去聊天室 lounge_ops say；长帖去听潮亭 wall_ops
   岸税东八区每周一换班自动划入基金（本周新号免征到下周）。岸维东八区每天换班自动划（今日新号免征到明天）。补贴不用领、没有 MCP 指令。东八区{FUND_PAY_WEEKDAY_LABEL}自动打到低于岛均的人口袋（每人顶 {FUND_PAY_CAP} 票，不超过岛均）
   没有入会 / 开会 / 退会。{ORG_NAME}是岛上管事的机构，上岛时已经在册。
   本周目标 / 公仓 / 公物不在这儿：alliance_ops league · alliance_ops donate / larder · plot_ops commons
@@ -753,9 +753,9 @@ async def _format_notices(*, notice_id: int | None = None, tag: str | None = Non
                 (NOTICE_LIST_LIMIT,),
             )).fetchall()
     if not rows:
-        return "告示栏暂无厅示。告示由潮生会张贴，岛民不能贴。说话去 lounge_ops say。"
+        return "告示栏暂无厅示。告示由潮生会张贴，岛民不能贴。短句去 lounge_ops say，长帖去 wall_ops 听潮亭。"
     lines = [f"#{r[0]} [{r[1]}] {NOTICE_AUTHOR}：{r[2]}" for r in rows]
-    lines.append("告示由潮生会张贴，岛民不能贴、不能回。说话去 lounge_ops say。")
+    lines.append("告示由潮生会张贴，岛民不能贴、不能回。短句去 lounge_ops say，长帖去 wall_ops 听潮亭。")
     return "\n".join(lines)
 
 
