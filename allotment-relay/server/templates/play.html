@@ -345,6 +345,47 @@
           </div>
         </div>
 
+        <div id="play-wall" class="play-wall hidden">
+          <p class="muted" id="wall-status">连接中…</p>
+          <div class="play-wall-boards" id="wall-boards"></div>
+          <div class="play-wall-layout">
+            <div class="play-wall-list" id="wall-list"></div>
+            <div class="play-wall-thread" id="wall-thread">
+              <p class="muted">点左边一块木牌看全文，或在下面钉新的。</p>
+            </div>
+          </div>
+          <form id="wall-compose" class="play-wall-compose">
+            <p class="muted" id="wall-compose-who">未绑定凭证</p>
+            <div class="play-wall-fields">
+              <label>木牌区
+                <select id="wall-board" required>
+                  <option value="ask">问事</option>
+                  <option value="trade">市声</option>
+                  <option value="idle">闲话</option>
+                  <option value="seek">寻人</option>
+                </select>
+              </label>
+              <label>标题
+                <input type="text" id="wall-title" maxlength="36" placeholder="两到三十六个字" required>
+              </label>
+            </div>
+            <label>正文
+              <textarea id="wall-body" rows="4" maxlength="800" placeholder="写长一点。禁止链接。" required></textarea>
+            </label>
+            <div class="play-lounge-actions">
+              <button type="submit" class="btn primary">钉到亭柱</button>
+            </div>
+          </form>
+          <div id="wall-mod-panel" class="hidden">
+            <p class="muted">管理：当前打开的木牌。</p>
+            <button type="button" class="btn" data-wall-mod="pin">置顶</button>
+            <button type="button" class="btn" data-wall-mod="unpin">取消置顶</button>
+            <button type="button" class="btn" data-wall-mod="lock">锁帖</button>
+            <button type="button" class="btn" data-wall-mod="unlock">开锁</button>
+            <button type="button" class="btn" data-wall-mod="tear">撕下</button>
+          </div>
+        </div>
+
         <div id="play-patron" class="play-patron hidden">
           <div id="play-patron-bar" class="hidden">
             <div class="bar-grid">
@@ -516,6 +557,7 @@
   <script src="/static/device.js?v=invite1"></script>
   <script src="/static/site-key.js"></script>
   <script src="/static/lounge.js?v=betroth-notice1"></script>
-  <script src="/static/play.js?v=fix-who-btn1"></script>
+  <script src="/static/wall.js?v=ting1"></script>
+  <script src="/static/play.js?v=ting1"></script>
 </body>
 </html>

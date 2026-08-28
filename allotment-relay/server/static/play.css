@@ -930,6 +930,115 @@ body.play-bound .play-gate { display: none !important; }
 
 .play-lounge.hidden { display: none !important; }
 
+.play-wall {
+  margin-top: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.play-wall.hidden { display: none !important; }
+
+.play-wall-boards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.play-wall-boards button {
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.55);
+  font: inherit;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.play-wall-boards button.is-active {
+  background: #8a6a3d;
+  color: #f7f1e3;
+  border-color: #8a6a3d;
+}
+
+.play-wall-layout {
+  display: grid;
+  grid-template-columns: .9fr 1.1fr;
+  gap: 12px;
+}
+
+.play-wall-list,
+.play-wall-thread {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255,255,255,.55);
+  padding: 10px;
+  min-height: 240px;
+  max-height: min(52vh, 480px);
+  overflow-y: auto;
+}
+
+.play-wall-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  padding: 8px 4px;
+  cursor: pointer;
+}
+
+.play-wall-item.is-active {
+  background: rgba(138, 106, 61, .08);
+}
+
+.play-wall-item strong { display: block; }
+.play-wall-item small { color: var(--muted); }
+
+.play-wall-compose {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255,255,255,.45);
+}
+
+.play-wall-fields {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 8px;
+}
+
+.play-wall-compose label,
+.play-wall-reply label {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.play-wall-compose input,
+.play-wall-compose select,
+.play-wall-compose textarea,
+.play-wall-reply textarea {
+  font: inherit;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.play-wall-reply {
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.play-place.is-ting .place-workspace,
+.play-place.is-ting .place-context {
+  display: none;
+}
+
 .play-page .lounge-feed {
   min-height: 320px;
   max-height: min(72vh, calc(100dvh - 168px));
@@ -1020,7 +1129,9 @@ body.play-bound .play-gate { display: none !important; }
   }
 
   .play-place.is-lounge .place-workspace,
-  .play-place.is-lounge .place-context {
+  .play-place.is-lounge .place-context,
+  .play-place.is-ting .place-workspace,
+  .play-place.is-ting .place-context {
     display: none;
   }
 
@@ -1030,6 +1141,18 @@ body.play-bound .play-gate { display: none !important; }
     gap: 10px;
     min-height: 0;
     max-height: calc(100dvh - 148px);
+  }
+
+  .play-place.is-ting .play-wall {
+    display: grid;
+    gap: 10px;
+    min-height: 0;
+    max-height: calc(100dvh - 148px);
+  }
+
+  .play-place.is-ting .play-wall-layout {
+    grid-template-columns: 1fr;
+    min-height: 0;
   }
 
   .play-place.is-lounge .lounge-feed {

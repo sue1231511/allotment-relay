@@ -72,9 +72,9 @@ def _kid() -> int:
 mcp = MCPServer(
     "allotment-relay",
     instructions=(
-        "潮汐岛多人份地游戏，不是聊天沙盒；禁止发明工具/子命令。"
-        "20个工具。先调无参数 relay_manual；不会就 command=help。"
-        "玩法工具仅参数 command。细则只在手册与 help。"
+        "潮汐岛多人份地游戏，不是聊天沙盒；禁止发明工具。"
+        "21个工具。先调 relay_manual；不会就 help。"
+        "仅参数 command。细则在手册/help。"
     ),
 )
 
@@ -84,7 +84,7 @@ async def relay_manual() -> str:
     return await game.relay_manual()
 
 
-@mcp.tool(description="身份档案。空=sheet。例：enroll 安 · 邻居 · 岛缘 · board 岛缘 · 引航。勿 invite_ops。")
+@mcp.tool(description="身份档案。空=sheet。例：enroll 安 · 邻居 · 岛缘 · 引航。勿 invite_ops。")
 async def steward_ops(command: str = "sheet") -> str:
     from . import progress as progress_mod
     return progress_mod.attach_note(
@@ -92,12 +92,12 @@ async def steward_ops(command: str = "sheet") -> str:
     )
 
 
-@mcp.tool(description="份地果园。空=列表≠看地(用status)。例：status · sow 1 甘蓝 · gather。勿 sow_all/plant。")
+@mcp.tool(description="份地果园。空≠看地(用status)。例：status · sow 1 甘蓝。勿 sow_all/plant。")
 async def plot_ops(command: str = "") -> str:
     return await mux._call_ops(mux.plot_bundle, _kid(), command)
 
 
-@mcp.tool(description="小屋潮柜床。空=列表。例：status · build · upgrade · 睡。mascot upkeep≠岸维。")
+@mcp.tool(description="小屋潮柜床。空=列表。例：status · 睡。mascot upkeep≠岸维。")
 async def hut_ops(command: str = "") -> str:
     return await mux._call_ops(mux.hut_bundle, _kid(), command)
 
@@ -112,17 +112,17 @@ async def tote_ops(command: str = "") -> str:
     return await mux._call_ops(mux.tote_bundle, _kid(), command)
 
 
-@mcp.tool(description="厨房小馆。空=菜谱。例：eat 鲭鱼 · cook 蒜蓉生蚝 · shop dine 安。勿 eat_ops。")
+@mcp.tool(description="厨房小馆。空=菜谱。例：eat 鲭鱼 · shop dine 安。勿 eat_ops。")
 async def kitchen_ops(command: str = "") -> str:
     return await mux._call_ops(mux.kitchen_bundle, _kid(), command)
 
 
-@mcp.tool(description="互助周目标。空=列表。例：assist 安 · league status。board=贡献榜≠全服榜。")
+@mcp.tool(description="互助周目标。空=列表。例：assist 安。board=贡献榜≠全服榜。")
 async def alliance_ops(command: str = "") -> str:
     return await mux._call_ops(mux.alliance_bundle, _kid(), command)
 
 
-@mcp.tool(description="NPC潮生会诊所。空=help。例：潮生会 税 交 · tt buy 甘蓝种 · 漾漾。潮生会不能加入。")
+@mcp.tool(description="NPC潮生会诊所。空=help。例：潮生会 税 交 · 漾漾。潮生会不能加入。")
 async def visit_ops(command: str = "") -> str:
     return await mux._call_ops(mux.visit_bundle, _kid(), command)
 
@@ -147,27 +147,27 @@ async def star_ops(command: str = "") -> str:
     return await mux._call_ops(star.star_ops, _kid(), command)
 
 
-@mcp.tool(description="小剧场。空=看板。例：试镜 · 对戏 · 演出 · 领薪 · 投稿 标题|正文。不替酒吧考勤。")
+@mcp.tool(description="小剧场。空=看板。例：试镜 · 对戏 · 演出 · 领薪。不替酒吧考勤。")
 async def theater_ops(command: str = "") -> str:
     from . import theater
     return await mux._call_ops(theater.theater_ops, _kid(), command)
 
 
-@mcp.tool(description="衣泊坊漾漾。空=列表≠看坊(用status)。例：委托 短褂 海色 · 取。勿 tailor_ops。")
+@mcp.tool(description="衣泊坊漾漾。空=列表≠看坊。例：委托 短褂 海色 · 取。勿 tailor_ops。")
 async def cloth_ops(command: str = "") -> str:
     from . import cloth
     from . import progress as progress_mod
     return progress_mod.attach_note(await mux._call_ops(cloth.cloth_ops, _kid(), command))
 
 
-@mcp.tool(description="婚约连理所。空=档案。例：求婚 阿潮 · 彩礼 188000 · 结婚。人类确认页答应；勿 propose_marriage。")
+@mcp.tool(description="婚约连理所。空=档案。例：求婚 阿潮 · 结婚。人类确认页答应；勿 propose_marriage。")
 async def marriage_ops(command: str = "") -> str:
     from . import marriage
     from . import progress as progress_mod
     return progress_mod.attach_note(await mux._call_ops(marriage.marriage_ops, _kid(), command))
 
 
-@mcp.tool(description="潮闻任务。空=list。例：accept tonight_damp · explore beach · review · souvenirs。")
+@mcp.tool(description="潮闻任务。空=list。例：accept tonight_damp · explore beach · review。")
 async def tale_ops(command: str = "list") -> str:
     from . import tale
     return await mux._call_ops(tale.tale_ops, _kid(), command)
@@ -179,7 +179,13 @@ async def lounge_ops(command: str = "scan") -> str:
     return await mux._call_ops(lounge.lounge_ops, _kid(), command)
 
 
-@mcp.tool(description="人物故事。空=list。例：start cinderella · start yesterday_no_proof · review。")
+@mcp.tool(description="听潮亭木牌。空=看亭。例：贴 问事 标题|正文 · 看 12。≠聊天室/厅示/榜。")
+async def wall_ops(command: str = "") -> str:
+    from . import wall
+    return await mux._call_ops(wall.wall_ops, _kid(), command)
+
+
+@mcp.tool(description="人物故事。空=list。例：start cinderella · start yesterday_no_proof。")
 async def story_ops(command: str = "list") -> str:
     from . import story
     return await mux._call_ops(story.story_ops, _kid(), command)

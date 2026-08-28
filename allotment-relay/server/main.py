@@ -298,6 +298,12 @@ async def hui_page(request: Request):
     """潮生会围观实况；问事仍回上手页。"""
     return _html(request, "hui.html", active="hui")
 
+
+@app.get("/ting", response_class=HTMLResponse)
+async def ting_page(request: Request):
+    """听潮亭围观实况；钉牌回帖仍回上手页。"""
+    return _html(request, "ting.html", active="ting")
+
 class BarOrderRequest(BaseModel):
     api_key: str
     service: str
@@ -374,6 +380,36 @@ class LoungePacketRequest(BaseModel):
 class LoungeGrabRequest(BaseModel):
     api_key: str
     packet_id: int = 0
+
+
+class WallThreadRequest(BaseModel):
+    api_key: str
+    board: str
+    title: str
+    body: str
+
+
+class WallReplyRequest(BaseModel):
+    api_key: str
+    thread_id: int
+    body: str
+
+
+class WallTearRequest(BaseModel):
+    api_key: str
+    thread_id: int
+    reply_id: int = 0
+
+
+class WallModRequest(BaseModel):
+    api_key: str
+    action: str
+    thread_id: int
+    reply_id: int = 0
+
+
+class WallKeyRequest(BaseModel):
+    api_key: str
 
 
 class EateryOrderRequest(BaseModel):
@@ -711,6 +747,72 @@ async def public_eatery():
 async def public_hui():
     from . import chaoshen
     return await chaoshen.public_snapshot()
+
+
+@app.get("/api/public/ting")
+async def public_ting(board: str = ""):
+    from . import wall
+    return await wall.public_snapshot(board or None)
+
+
+@app.get("/api/public/ting/thread/{thread_id}")
+async def public_ting_thread(thread_id: int):
+    from . import wall
+    try:
+        return await wall.get_thread(thread_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.post("/api/ting/me")
+async def ting_me(body: WallKeyRequest):
+    from . import wall
+    try:
+        return await wall.human_profile(body.api_key.strip())
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/ting/thread")
+async def ting_thread(body: WallThreadRequest):
+    from . import wall
+    try:
+        return await wall.human_create(
+            body.api_key.strip(), body.board.strip(), body.title, body.body
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/ting/reply")
+async def ting_reply(body: WallReplyRequest):
+    from . import wall
+    try:
+        return await wall.human_reply(body.api_key.strip(), body.thread_id, body.body)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/ting/tear")
+async def ting_tear(body: WallTearRequest):
+    from . import wall
+    try:
+        rid = body.reply_id or None
+        return await wall.human_tear(body.api_key.strip(), body.thread_id, rid)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/ting/mod")
+async def ting_mod(body: WallModRequest):
+    from . import wall
+    try:
+        rid = body.reply_id or None
+        return await wall.human_mod(
+            body.api_key.strip(), body.action.strip(), body.thread_id, rid
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.post("/api/eatery/order")

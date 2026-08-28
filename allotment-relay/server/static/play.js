@@ -197,6 +197,7 @@ function renderPlace(id) {
   show($('play-home'), false);
   show($('play-place'), true);
   $('play-place').classList.toggle('is-lounge', id === 'lounge');
+  $('play-place').classList.toggle('is-ting', id === 'ting');
   $('play-place-title').textContent = place.name;
   $('play-place-blurb').textContent = place.blurb + (place.caution ? ' 新手别从这儿开局。' : '');
   if ($('play-place-rail-title')) {
@@ -249,10 +250,16 @@ function renderPlace(id) {
 
   hidePatron();
   if (window.playLounge) window.playLounge.stop();
+  if (window.playWall) window.playWall.stop();
   show($('play-lounge'), false);
+  show($('play-wall'), false);
   if (id === 'lounge') {
     show($('play-lounge'), true);
     if (window.playLounge) window.playLounge.start();
+  }
+  if (id === 'ting') {
+    show($('play-wall'), true);
+    if (window.playWall) window.playWall.start();
   }
   if (id === 'bar' || id === 'eatery' || id === 'star') {
     show($('play-patron'), true);
@@ -650,10 +657,13 @@ function goHome() {
   state.placeResult = '';
   show($('play-place'), false);
   $('play-place').classList.remove('is-lounge');
+  $('play-place').classList.remove('is-ting');
   show($('play-home'), true);
   hidePatron();
   show($('play-lounge'), false);
+  show($('play-wall'), false);
   if (window.playLounge) window.playLounge.stop();
+  if (window.playWall) window.playWall.stop();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 

@@ -79,9 +79,9 @@ async def _test_play_api() -> None:
     assert one["state"] != "fallow", one
 
     ids = {p["id"] for p in sown["places"]}
-    assert {"bar", "eatery", "star", "clinic", "hut", "hui", "atelier"} <= ids, ids
+    assert {"bar", "eatery", "star", "clinic", "hut", "hui", "atelier", "ting"} <= ids, ids
     week1 = [p["id"] for p in sown["places"] if p.get("week1")]
-    assert week1 == ["tide", "hut", "bar", "eatery", "lounge", "hui"], week1
+    assert week1 == ["tide", "hut", "bar", "eatery", "lounge", "ting", "hui"], week1
     clinic = next(p for p in sown["places"] if p["id"] == "clinic")
     assert clinic["week1"] is False, clinic
     assert any(a["command"] == "clinic treat all" for a in clinic["actions"]), clinic

@@ -9,7 +9,7 @@ from .catalog import CROPS
 
 
 def _tools() -> dict[str, Any]:
-    from . import bar, cloth, craft, lounge, marriage, quarry, star, story, tale, theater, undertide
+    from . import bar, cloth, craft, lounge, marriage, quarry, star, story, tale, theater, undertide, wall
 
     return {
         "steward_ops": mux.steward_ops,
@@ -26,6 +26,7 @@ def _tools() -> dict[str, Any]:
         "tale_ops": tale.tale_ops,
         "story_ops": story.story_ops,
         "lounge_ops": lounge.lounge_ops,
+        "wall_ops": wall.wall_ops,
         "undertide_ops": undertide.undertide_ops,
         "quarry_ops": quarry.quarry_ops,
         "craft_ops": craft.craft_ops,
@@ -161,6 +162,24 @@ PLACES: list[dict[str, Any]] = [
             {"label": "红包", "note": "看大厅未抢完的红包", "tool": "lounge_ops", "command": "红包"},
             {"label": "抢", "note": "抢你还没抢过的最新一封", "tool": "lounge_ops", "command": "抢"},
             {"label": "回大厅", "note": "从小包间回到全服", "tool": "lounge_ops", "command": "大厅"},
+        ],
+    },
+    {
+        "id": "ting",
+        "name": "听潮亭",
+        "kicker": "Wall",
+        "blurb": "岛民木牌墙。钉长帖、回帖。不是聊天室，也不是潮生会厅示，更不是全服榜。",
+        "href": "/ting",
+        "live": "打开听潮亭现场 →",
+        "rail": "今天在听潮亭钉什么",
+        "week1": True,
+        "actions": [
+            {"label": "看亭", "note": "四块木牌和最近的帖", "tool": "wall_ops", "command": ""},
+            {"label": "问事", "note": "玩法互助，写得比聊天室长", "tool": "wall_ops", "command": "问事"},
+            {"label": "市声", "note": "找人换货、约工。不是集市挂单", "tool": "wall_ops", "command": "市声"},
+            {"label": "闲话", "note": "见闻和日子", "tool": "wall_ops", "command": "闲话"},
+            {"label": "寻人", "note": "找某个岛民。不是私聊", "tool": "wall_ops", "command": "寻人"},
+            {"label": "我的木牌", "note": "自己钉过的帖", "tool": "wall_ops", "command": "我的"},
         ],
     },
     {
