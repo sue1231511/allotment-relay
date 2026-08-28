@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""人物故事探索：灰姑娘分支与《昨日无凭》顺序调查、奖励、纪念品。"""
+"""人物故事探索：灰姑娘分支、《昨日无凭》与《留给明天》顺序调查、奖励、纪念品。"""
 from __future__ import annotations
 
 import asyncio
@@ -224,6 +224,83 @@ async def test_yesterday_story_rewards_and_souvenirs() -> None:
     assert steward["tickets"] == 630
 
 
+async def test_tomorrow_story_rewards_and_souvenirs() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="story-tomorrow-"))
+    db, kid = await _boot(tmp)
+    from server import story, story_tomorrow
+
+    listing = await story.story_ops(kid, "list")
+    assert "留给明天" in listing and "left_for_tomorrow" in listing
+    intro = await story.story_ops(kid, "start left_for_tomorrow")
+    assert "explore guyan_home" in intro
+    try:
+        await story.story_ops(kid, "review left_for_tomorrow")
+        raise AssertionError("unfinished linear story review should not reveal later text")
+    except ValueError as exc:
+        assert "尚未解锁" in str(exc) and "避免剧透" in str(exc)
+    status = await story.story_ops(kid, "status")
+    assert "调查 0/5" in status and "explore guyan_home" in status
+
+    try:
+        await story.story_ops(kid, "explore pastry")
+        raise AssertionError("tomorrow story should be sequential")
+    except ValueError as exc:
+        assert "下一步" in str(exc) and "explore guyan_home" in str(exc)
+
+    for action in story_tomorrow.ACTIONS[:-1]:
+        scene = await story.story_ops(kid, action["command"])
+        assert action["title"] in scene
+        assert "本幕探索奖励：工分票 +30" in scene
+    ending = await story.story_ops(kid, story_tomorrow.ACTIONS[-1]["command"])
+    assert "探索完成：《留给明天》" in ending
+    assert "本幕探索奖励：工分票 +30" in ending
+    assert "工分票 +120" in ending
+    assert "今天的人" in ending
+    assert "掉漆的蓝钥匙" in ending and "没写纸条的杯子" in ending
+
+    steward = await db.get_steward_by_key_id(kid)
+    assert steward["tickets"] == 390
+    review_list = await story.story_ops(kid, "review")
+    assert "review left_for_tomorrow" in review_list
+    review = await story.story_ops(kid, "review left_for_tomorrow")
+    assert "人物故事全篇回顾 · 《留给明天》" in review
+    assert story_tomorrow.INTRO in review
+    for action in story_tomorrow.ACTIONS:
+        assert action["title"] in review
+        assert action["text"] in review
+    assert story_tomorrow.ACTIONS[-1]["ending"] in review
+    assert "—— 全篇完 ——" in review
+    steward_after_review = await db.get_steward_by_key_id(kid)
+    assert steward_after_review["tickets"] == 390
+    async with db.connect() as conn:
+        title = await (await conn.execute(
+            "SELECT 1 FROM steward_achievements WHERE steward_id=? AND ach_key='today_person'",
+            (steward["id"],),
+        )).fetchone()
+        assert title
+        stages = await (await conn.execute(
+            """SELECT COUNT(*) FROM steward_story_stage_rewards
+               WHERE steward_id=? AND story_key='left_for_tomorrow'""",
+            (steward["id"],),
+        )).fetchone()
+        assert stages[0] == 5
+
+    souvenirs = await story.story_ops(kid, "souvenirs")
+    assert "4 件" in souvenirs
+    for item in story_tomorrow.SOUVENIRS:
+        assert item["name"] in souvenirs
+    assert "不能出售或赠送" in souvenirs
+
+    await story.story_ops(kid, "start left_for_tomorrow")
+    replay = ""
+    for action in story_tomorrow.ACTIONS:
+        replay = await story.story_ops(kid, action["command"])
+    assert "首次人物故事奖励" not in replay
+    assert "探索奖励" not in replay
+    steward = await db.get_steward_by_key_id(kid)
+    assert steward["tickets"] == 390
+
+
 def test_story_mcp_description() -> None:
     from server.mcp_app import mcp
     import asyncio
@@ -234,11 +311,14 @@ def test_story_mcp_description() -> None:
         (tool.parameters.get("properties") or {}).get("command", {}).get("description", "")
     )
     assert "start cinderella" in blob
-    assert "yesterday_no_proof" in blob
+    assert "left_for_tomorrow" in blob
     assert "空" in blob and "list" in blob
     man = asyncio.run(game.relay_manual())
-    assert "灰姑娘" in man and "昨日无凭" in man
+    assert "灰姑娘" in man and "昨日无凭" in man and "留给明天" in man
+    assert "yesterday_no_proof" in man
     assert "review" in man and "souvenirs" in man
+    assert "explore guyan_home" in man
+    assert "今天的人" in man
 
 
 def main() -> None:
@@ -246,6 +326,7 @@ def main() -> None:
     asyncio.run(test_truth_and_other_endings())
     asyncio.run(test_timeout_and_guards())
     asyncio.run(test_yesterday_story_rewards_and_souvenirs())
+    asyncio.run(test_tomorrow_story_rewards_and_souvenirs())
     test_story_mcp_description()
     print("ok")
 

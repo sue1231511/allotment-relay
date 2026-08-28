@@ -185,7 +185,7 @@ async def wall_ops(command: str = "") -> str:
     return await mux._call_ops(wall.wall_ops, _kid(), command)
 
 
-@mcp.tool(description="人物故事。空=list。例：start cinderella · start yesterday_no_proof。")
+@mcp.tool(description="人物故事。空=list。例：start cinderella · start left_for_tomorrow。")
 async def story_ops(command: str = "list") -> str:
     from . import story
     return await mux._call_ops(story.story_ops, _kid(), command)

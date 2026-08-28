@@ -30,7 +30,7 @@ async def _boot(tmp: Path):
 async def test_memory_archive() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="memory-archive-"))
     db, key, kid = await _boot(tmp)
-    from server import memory_archive, story, story_yesterday, steward_dashboard, tale
+    from server import memory_archive, story, story_yesterday, story_tomorrow, steward_dashboard, tale
 
     empty = await steward_dashboard.fetch_dashboard(key)
     assert empty["memories"] == []
@@ -77,6 +77,12 @@ async def test_memory_archive() -> None:
                VALUES (?, ?, ?, ?)""",
             (steward["id"], story_yesterday.STORY_KEY, story_yesterday.STORY_TITLE, db.now()),
         )
+        await conn.execute(
+            """INSERT INTO steward_story_outcomes
+               (steward_id, story_key, outcome, completed_at)
+               VALUES (?, ?, ?, ?)""",
+            (steward["id"], story_tomorrow.STORY_KEY, story_tomorrow.STORY_TITLE, db.now()),
+        )
         await conn.commit()
 
     dashboard = await steward_dashboard.fetch_dashboard(key)
@@ -85,6 +91,7 @@ async def test_memory_archive() -> None:
     assert ("tale", "memory_tide") in indexed
     assert ("story", "cinderella") in indexed
     assert ("story", "yesterday_no_proof") in indexed
+    assert ("story", "left_for_tomorrow") in indexed
     assert ("npc", "jingshan") in indexed
     assert indexed[("story", "cinderella")]["variants"][0]["label"] == "双生逃离"
     assert indexed[("tale", "memory_tide")]["souvenirs"]
@@ -120,6 +127,11 @@ async def test_memory_archive() -> None:
     yesterday = await memory_archive.fetch_review(key, "story", "yesterday_no_proof")
     assert yesterday["title"] == "昨日无凭"
     assert story_yesterday.ACTIONS[-1]["ending"] in yesterday["chapters"][-1]["text"]
+
+    tomorrow = await memory_archive.fetch_review(key, "story", "left_for_tomorrow")
+    assert tomorrow["title"] == "留给明天"
+    assert story_tomorrow.ACTIONS[-1]["ending"] in tomorrow["chapters"][-1]["text"]
+    assert any(chapter["title"] == "第一幕｜这是谁家" for chapter in tomorrow["chapters"])
 
     npc = await memory_archive.fetch_review(key, "npc", "jingshan")
     assert npc["title"] == "幸好还剩一小口"

@@ -178,6 +178,15 @@ async def _check_old_story_witness(conn: aiosqlite.Connection, s: dict[str, Any]
     )
 
 
+async def _check_today_person(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
+    return await _exists(
+        conn,
+        """SELECT 1 FROM steward_story_outcomes
+           WHERE steward_id=? AND story_key='left_for_tomorrow' LIMIT 1""",
+        s["id"],
+    )
+
+
 async def _check_sat_beside_him(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
     return await _exists(
         conn,
@@ -409,6 +418,12 @@ ACHIEVEMENTS: dict[str, dict[str, Any]] = {
         "hint": "完成《昨日无凭》",
         "aliases": ("昨日见证人", "无凭旧事"),
         "check": _check_old_story_witness,
+    },
+    "today_person": {
+        "name": "今天的人",
+        "hint": "完成《留给明天》",
+        "aliases": ("只属于今天", "留给今天", "不交出去的人"),
+        "check": _check_today_person,
     },
     "sat_beside_him": {
         "name": "陪坐的人",

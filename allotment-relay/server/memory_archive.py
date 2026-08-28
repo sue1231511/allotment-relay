@@ -6,7 +6,7 @@ from typing import Any
 
 import aiosqlite
 
-from . import db, jingshan, story, story_yesterday, tale
+from . import db, jingshan, story, story_tomorrow, story_yesterday, tale
 
 
 TALE_BLURBS = {
@@ -17,6 +17,16 @@ TALE_BLURBS = {
     "asking_around": "一个黄毛青年、一次次靠岸的船，和始终没有问出口的话。",
     "mr_ke": "杂货铺里的克太太与克先生，以及一百多年后仍被留下的那个人。",
     "tonight_damp": "雨后林子里刚醒的人，以及他始终觉得自己只是刚刚回家。",
+}
+
+LINEAR_STORY_MODULES = {
+    story_yesterday.STORY_KEY: story_yesterday,
+    story_tomorrow.STORY_KEY: story_tomorrow,
+}
+
+LINEAR_STORY_BLURBS = {
+    story_yesterday.STORY_KEY: "旧照片、两枚贝壳，以及一段被两个人共同遗忘的往事。",
+    story_tomorrow.STORY_KEY: "林雾、两箱东西，以及一扇贴满纸条的门。",
 }
 
 
@@ -145,19 +155,22 @@ async def list_memories(
             variants=variants,
         ))
 
-    if story_yesterday.STORY_KEY in outcomes:
-        latest = outcomes[story_yesterday.STORY_KEY][0]
+    for story_key, mod in LINEAR_STORY_MODULES.items():
+        if story_key not in outcomes:
+            continue
+        latest = outcomes[story_key][0]
+        extra_ending = 1 if any(action.get("ending") for action in mod.ACTIONS) else 0
         memories.append(_entry(
             kind="story",
-            key=story_yesterday.STORY_KEY,
-            title=story_yesterday.STORY_TITLE,
-            blurb="旧照片、两枚贝壳，以及一段被两个人共同遗忘的往事。",
+            key=mod.STORY_KEY,
+            title=mod.STORY_TITLE,
+            blurb=LINEAR_STORY_BLURBS.get(mod.STORY_KEY, "一段已经走完、可以重新翻开的人物故事。"),
             completed_at=latest["completed_at"],
-            chapter_count=1 + len(story_yesterday.ACTIONS) + 1,
-            ending=story_yesterday.STORY_TITLE,
+            chapter_count=1 + len(mod.ACTIONS) + extra_ending,
+            ending=mod.STORY_TITLE,
             souvenirs=[
                 {"name": item["name"], "emoji": item["emoji"], "description": item["desc"]}
-                for item in story_yesterday.SOUVENIRS
+                for item in mod.SOUVENIRS
             ],
             variants=[{"id": "canonical", "label": "完整故事", "completed_at": latest["completed_at"]}],
         ))
@@ -198,12 +211,15 @@ def _tale_chapters(item: dict[str, Any]) -> list[dict[str, str]]:
     return chapters
 
 
-def _yesterday_chapters() -> list[dict[str, str]]:
-    chapters = [{"title": "引子", "text": story_yesterday.INTRO}]
-    for action in story_yesterday.ACTIONS:
+def _linear_chapters(mod: Any) -> list[dict[str, str]]:
+    chapters = [{"title": "引子", "text": mod.INTRO}]
+    for action in mod.ACTIONS:
         chapters.append({"title": action["title"], "text": action["text"]})
         if action.get("ending"):
-            chapters.append({"title": "第十三幕｜昨日无凭", "text": action["ending"]})
+            chapters.append({
+                "title": getattr(mod, "ENDING_TITLE", "结尾"),
+                "text": action["ending"],
+            })
     return chapters
 
 
@@ -268,7 +284,8 @@ async def _load_review(
         completed_at = done["completed_at"]
         souvenirs = _keepsakes(item.get("rewards") or {})
         ending = str(((item.get("rewards") or {}).get("achievement") or {}).get("name") or "完整探索")
-    elif kind == "story" and key == story_yesterday.STORY_KEY:
+    elif kind == "story" and key in LINEAR_STORY_MODULES:
+        mod = LINEAR_STORY_MODULES[key]
         done = await (await conn.execute(
             """SELECT MAX(completed_at) AS completed_at FROM steward_story_outcomes
                WHERE steward_id=? AND story_key=?""",
@@ -276,13 +293,13 @@ async def _load_review(
         )).fetchone()
         if not done or not done["completed_at"]:
             raise ValueError("这段人物故事尚未收入你的岛上回忆。")
-        title = story_yesterday.STORY_TITLE
-        chapters = _yesterday_chapters()
+        title = mod.STORY_TITLE
+        chapters = _linear_chapters(mod)
         completed_at = done["completed_at"]
-        ending = story_yesterday.STORY_TITLE
+        ending = mod.STORY_TITLE
         souvenirs = [
             {"name": item["name"], "emoji": item["emoji"], "description": item["desc"]}
-            for item in story_yesterday.SOUVENIRS
+            for item in mod.SOUVENIRS
         ]
     elif kind == "story" and key == story.STORY_KEY:
         if variant.startswith("legacy:"):
