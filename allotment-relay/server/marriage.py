@@ -128,7 +128,7 @@ MARRIAGE_HELP = """marriage_ops 子命令（整句写进 command）：
   求婚 人类昵称 — 先写下草稿。发出前要：最高档小屋（临海邸）、彩礼、潮誓戒、誓言
   彩礼 8888 — AI 填 8888～100000。发出时冻结，人类答应后花掉（不进潮汐基金）；拒绝退回
       建议吉利数：8888 · 12888 · 18888 · 28888 · 52000 · 88888 · 100000
-      最低全套（彩礼+潮誓戒+三金+婚服+滩席）大约四万，阔手能办。上限十万，再高不让写，免得攀比
+      最低全套（彩礼+潮誓戒+三金+婚服+滩席）大约七万，阔手能办。上限十万，再高不让写，免得攀比
   求婚 人类昵称 | 誓言 | 信物 | 地点 | 今日+3 | 留言
       一步发出。门槛不够会拒，草稿留下。例子：求婚 阿潮 | 潮起潮落我都在 | 潮誓戒 | 灯塔下 | 今日+3
   寻戒 — 海边找潮誓砂（每天最多 2 次）。自制戒要 6 份砂 + 崖上金砂
@@ -150,7 +150,7 @@ MARRIAGE_HELP = """marriage_ops 子命令（整句写进 command）：
       AI 不能替人类点答应。没有「订婚 答应」。丢了链接再写空 订婚 或 订婚 续请。跳过订婚也能直接 发出 / 金饰 / 婚服 / 吃席 再 结婚
       不是求婚请柬，也不是成婚潮讯。不是潮誓戒，不是求婚信物栏，订婚宴不是结婚吃席，订婚不是彩礼
   金饰 — 订契后把行囊里的三金（或五金）登记进婚书
-      三金/五金去 Tt酱柜后：visit_ops tt buy 三金套（8888）/ 五金套（13888）
+      三金/五金去 Tt酱柜后：visit_ops tt buy 三金套（37888）/ 五金套（42888）
   婚服 — 订契后把衣橱里的婚服登记。买：cloth_ops 买 婚服 海色（8888）。自制：委托 婚服（料加倍、隔日）
   吃席 灯塔席 — 订契后必选规格。选了举行前还能改。包桌扣票：滩席 3888 / 岸席 8888 / 灯塔席 18888 / 满潮席 38888
       自办：吃席 滩席 自办（收熟菜 dish_/meal_，滩席×2 … 满潮席×8）
@@ -603,7 +603,7 @@ async def _hold_missing(
     miss: list[str] = []
     counts = await _gold_counts(conn, int(s["id"]))
     if not int(row.get("gold_three") or 0) and not _gold_three_ok(counts):
-        miss.append("还没有三金。visit_ops tt buy 三金套（8888），再 marriage_ops 金饰。")
+        miss.append("还没有三金。visit_ops tt buy 三金套（37888），再 marriage_ops 金饰。")
     if not int(row.get("attire_ready") or 0):
         miss.append("婚服未登记。cloth_ops 买 婚服 海色，或委托自制后再 marriage_ops 婚服。")
     if not int(row.get("feast_ready") or 0):
@@ -622,7 +622,7 @@ async def _hold_readiness_lines(
     elif _gold_three_ok(counts):
         gold = "行囊里三金齐了 — marriage_ops 金饰"
     else:
-        gold = "未备 — visit_ops tt buy 三金套（8888），再 金饰"
+        gold = "未备 — visit_ops tt buy 三金套（37888），再 金饰"
     if int(row.get("attire_ready") or 0):
         src = (row.get("attire_source") or "").strip()
         attire = f"已登记（{src}）" if src else "已登记"
@@ -2484,7 +2484,7 @@ async def _cmd_gold(s: dict[str, Any], rest: str) -> str:
         if not _gold_three_ok(counts):
             missing = [item_label(i) for i in GOLD_THREE if int(counts.get(i) or 0) < 1]
             raise ValueError(
-                "三金还缺：" + "、".join(missing) + "。visit_ops tt buy 三金套（8888），或散买项链/手镯/耳环。"
+                "三金还缺：" + "、".join(missing) + "。visit_ops tt buy 三金套（37888），或散买项链/手镯/耳环。"
             )
         five = _gold_five_ok(counts)
         for item in GOLD_THREE:
