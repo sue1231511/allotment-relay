@@ -308,6 +308,8 @@ def test_island_page_is_modular() -> None:
     assert "min-height: 48px" in css
     assert "overflow-x: hidden" in css
     assert "home-garden.png" in css
+    assert "top: auto" in css
+    assert "/static/style.css" not in html
     assert "/api/v1/" in api
     assert "Authorization" in api
     assert "api_key=" not in api

@@ -211,21 +211,29 @@ body.island-app {
 
 .island-dock {
   position: fixed;
+  top: auto;
   left: 50%;
-  transform: translateX(-50%);
+  right: auto;
   bottom: 0;
+  height: auto;
   width: min(480px, 100%);
+  transform: translateX(-50%);
+  z-index: 8;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: center;
   gap: 4px;
   padding: 6px 8px calc(8px + env(safe-area-inset-bottom));
   background: rgba(244, 241, 232, .94);
+  border: 0;
   border-top: 1px solid var(--is-line);
   box-sizing: border-box;
+  backdrop-filter: none;
 }
 
 .island-dock button {
   min-height: 52px;
+  max-height: 56px;
   border: 0;
   background: transparent;
   font: inherit;
