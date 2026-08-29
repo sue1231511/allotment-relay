@@ -1051,6 +1051,7 @@ async def _wedding_day_pages() -> None:
     assert "去上手页连理所" in home.text
     play_page = client.get("/play")
     assert 'id="play-wedding"' in play_page.text
+    assert "play-gate-wedding" in play_page.text
     api = client.get("/api/public/weddings")
     assert api.status_code == 200
     body = api.json()

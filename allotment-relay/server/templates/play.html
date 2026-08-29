@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css?v=wedding-day1">
-  <link rel="stylesheet" href="/static/play.css?v=wedding-day1">
+  <link rel="stylesheet" href="/static/play.css?v=wedding-day2">
 </head>
 <body class="play-page{% if island_weddings %} is-wedding-day{% endif %}">
   {% include "partials/nav.html" %}
@@ -63,7 +63,11 @@
       <div class="play-gate-card">
         <div class="play-kicker">Enter Tidal Island</div>
         <h2>贴凭证</h2>
+        {% if island_weddings %}
+        <p class="play-gate-wedding">今日岛上有婚礼 · {{ island_wedding_headline }} 贴凭证进去，去连理所可以出席。</p>
+        {% else %}
         <p>和领取凭证是同一份。贴进来，人和管家动的是同一个号。</p>
+        {% endif %}
         <form id="play-key-form">
           <input id="play-key" type="password" placeholder="ar_sk_..." autocomplete="off" required>
           <div class="play-gate-actions">

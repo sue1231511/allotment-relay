@@ -101,6 +101,21 @@
   color: var(--muted);
 }
 
+.play-gate-wedding {
+  color: #6d5343 !important;
+}
+
+body.play-page.is-wedding-day .site-nav,
+.play-page:has(.wedding-ribbon) .site-nav {
+  z-index: 80;
+}
+
+body.play-page.is-wedding-day .play-gate,
+.play-page:has(.wedding-ribbon) .play-gate {
+  padding-top: 118px;
+  background: rgba(247, 239, 230, .94);
+}
+
 .play-gate-card input {
   width: 100%;
   border: 1px solid var(--line);
