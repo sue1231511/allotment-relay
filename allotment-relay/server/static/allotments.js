@@ -7,7 +7,8 @@ function esc(s) {
 }
 
 function ago(ts) {
-  return islandFmtStamp(ts);
+  if (typeof islandFmtStamp === 'function') return islandFmtStamp(ts);
+  return '—';
 }
 
 function setText(id, value) {
@@ -237,12 +238,23 @@ function renderAll(stats, allotments, chronicle) {
   renderPeople(allotments || [], (stats && stats.online_people) || []);
 }
 
+async function loadJson(url, fallback) {
+  try {
+    const r = await fetch(url);
+    if (!r.ok) return fallback;
+    return await r.json();
+  } catch (ex) {
+    return fallback;
+  }
+}
+
 async function loadAllotments() {
   const [s, a, ch] = await Promise.all([
-    fetch('/api/public/stats').then((r) => { if (!r.ok) throw 0; return r.json(); }),
-    fetch('/api/public/allotments').then((r) => { if (!r.ok) throw 0; return r.json(); }),
-    fetch('/api/public/chronicle').then((r) => { if (!r.ok) throw 0; return r.json(); }),
+    loadJson('/api/public/stats', {}),
+    loadJson('/api/public/allotments', null),
+    loadJson('/api/public/chronicle', []),
   ]);
+  if (!Array.isArray(a)) throw 0;
   renderAll(s, a, ch);
 }
 

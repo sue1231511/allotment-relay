@@ -2141,7 +2141,7 @@ async def init_db() -> None:
         await _rebuild_parcels_orchard_unique(db)
         await _rebuild_parcels_kind_unique(db)
         await _migrate_greenhouse_slots(db)
-        await _grant_starting_orchards(db)
+        await _heal_land_rows(db)
         from . import ranks as ranks_mod
         from . import disaster as disaster_mod
         from . import chaoshen as chaoshen_mod
@@ -2319,17 +2319,76 @@ async def _migrate_greenhouse_slots(db: aiosqlite.Connection) -> None:
 
 
 async def _grant_starting_orchards(db: aiosqlite.Connection) -> None:
+    """旧名：启动时把缺失的菜地 / 果园 / 温室行补回来。"""
+    await _heal_land_rows(db)
+
+
+async def _heal_land_rows(db: aiosqlite.Connection) -> None:
     rows = await (await db.execute(
-        "SELECT id, COALESCE(orchard_count, 0) FROM stewards"
+        """
+        SELECT id,
+               COALESCE(parcel_count, 0),
+               COALESCE(orchard_count, 0),
+               COALESCE(greenhouse_count, 0),
+               COALESCE(greenhouse, 0)
+        FROM stewards
+        """
     )).fetchall()
-    for sid, count in rows:
-        n = int(count or 0)
-        if n < START_ORCHARDS:
-            n = START_ORCHARDS
-            await db.execute(
-                "UPDATE stewards SET orchard_count=? WHERE id=?", (n, sid),
-            )
-        await ensure_orchard_parcels(db, sid, n)
+    for sid, plots, orchards, sheds, has_gh in rows:
+        await heal_parcels_for(
+            db,
+            int(sid),
+            parcel_count=int(plots or 0),
+            orchard_count=int(orchards or 0),
+            greenhouse_count=int(sheds or 0),
+            has_greenhouse=bool(has_gh),
+        )
+
+
+async def heal_parcels_for(
+    db: aiosqlite.Connection,
+    steward_id: int,
+    *,
+    parcel_count: int | None = None,
+    orchard_count: int | None = None,
+    greenhouse_count: int | None = None,
+    has_greenhouse: bool | None = None,
+) -> None:
+    """按登记数量补休耕行。种上的作物补不回来，空表至少能再种。"""
+    if parcel_count is None or orchard_count is None or greenhouse_count is None or has_greenhouse is None:
+        row = await (await db.execute(
+            """
+            SELECT COALESCE(parcel_count, 0), COALESCE(orchard_count, 0),
+                   COALESCE(greenhouse_count, 0), COALESCE(greenhouse, 0)
+            FROM stewards WHERE id=?
+            """,
+            (steward_id,),
+        )).fetchone()
+        if not row:
+            return
+        parcel_count = int(row[0] or 0) if parcel_count is None else parcel_count
+        orchard_count = int(row[1] or 0) if orchard_count is None else orchard_count
+        greenhouse_count = int(row[2] or 0) if greenhouse_count is None else greenhouse_count
+        has_greenhouse = bool(row[3]) if has_greenhouse is None else has_greenhouse
+    plots = int(parcel_count or 0)
+    if plots < START_PARCELS:
+        plots = START_PARCELS
+        await db.execute(
+            "UPDATE stewards SET parcel_count=? WHERE id=?", (plots, steward_id),
+        )
+    orch = int(orchard_count or 0)
+    if orch < START_ORCHARDS:
+        orch = START_ORCHARDS
+        await db.execute(
+            "UPDATE stewards SET orchard_count=? WHERE id=?", (orch, steward_id),
+        )
+    sheds = int(greenhouse_count or 0)
+    if sheds <= 0 and has_greenhouse:
+        sheds = 1
+    await ensure_parcels(db, steward_id, plots)
+    await ensure_orchard_parcels(db, steward_id, orch)
+    if sheds > 0:
+        await ensure_greenhouse_parcels(db, steward_id, sheds)
 
 
 def now() -> int:
@@ -2645,6 +2704,18 @@ async def ensure_orchard_parcels(db: aiosqlite.Connection, steward_id: int, coun
         )
 
 
+async def ensure_greenhouse_parcels(db: aiosqlite.Connection, steward_id: int, count: int) -> None:
+    for slot in range(1, count + 1):
+        await db.execute(
+            """
+            INSERT OR IGNORE INTO parcels
+            (steward_id, slot, orchard, greenhouse, crop, planted_at, tended)
+            VALUES (?, ?, 0, 1, NULL, NULL, 0)
+            """,
+            (steward_id, slot),
+        )
+
+
 async def enroll_steward(key_id: int, name: str, motto: str, badge: str, portrait: str) -> dict[str, Any]:
     name = name.strip()
     badge = badge.strip().lower() or "naturalist"
@@ -2947,10 +3018,41 @@ async def public_chronicle(limit: int = 40) -> list[dict[str, Any]]:
         ]
 
 
-async def public_allotments() -> list[dict[str, Any]]:
-    from .catalog import CROPS, ITEM_NAMES
+def _public_parcel_view(pl: dict[str, Any]) -> dict[str, Any]:
+    from .catalog import CROPS
     from . import farming
     from . import land as land_mod
+    orchard = bool(pl.get("orchard"))
+    greenhouse = bool(pl.get("greenhouse"))
+    slot = pl.get("slot")
+    if land_mod.clear_left(pl) > 0:
+        return {
+            "slot": slot, "crop": None, "name": None, "state": "开垦中",
+            "orchard": orchard, "greenhouse": greenhouse,
+        }
+    if not pl.get("crop"):
+        return {
+            "slot": slot, "crop": None, "name": None, "state": "休耕",
+            "orchard": orchard, "greenhouse": greenhouse,
+        }
+    meta = CROPS.get(pl["crop"], {"name": pl["crop"], "emoji": "🌱"})
+    try:
+        state = farming.parcel_status(pl)
+    except Exception:
+        state = "生长"
+    return {
+        "slot": slot,
+        "crop": pl["crop"],
+        "name": meta.get("name", pl["crop"]),
+        "emoji": meta.get("emoji", "🌱"),
+        "state": state,
+        "orchard": orchard,
+        "greenhouse": greenhouse,
+    }
+
+
+async def public_allotments() -> list[dict[str, Any]]:
+    from .catalog import ITEM_NAMES
     from . import ranks as ranks_mod
     async with connect() as db:
         db.row_factory = aiosqlite.Row
@@ -2959,81 +3061,102 @@ async def public_allotments() -> list[dict[str, Any]]:
         )
         result = []
         for p in [dict(r) for r in await cur.fetchall()]:
-            inv = await get_satchel(p["id"])
-            parcels = await get_parcels(p["id"])
-            parcel_views = []
-            for pl in parcels:
-                orchard = bool(pl.get("orchard"))
-                greenhouse = bool(pl.get("greenhouse"))
-                if land_mod.clear_left(pl) > 0:
-                    parcel_views.append({
-                        "slot": pl["slot"], "crop": None, "name": None, "state": "开垦中",
-                        "orchard": orchard, "greenhouse": greenhouse,
-                    })
-                elif not pl.get("crop"):
-                    parcel_views.append({
-                        "slot": pl["slot"], "crop": None, "name": None, "state": "休耕",
-                        "orchard": orchard, "greenhouse": greenhouse,
-                    })
-                else:
-                    meta = CROPS.get(pl["crop"], {"name": pl["crop"], "emoji": "🌱"})
-                    parcel_views.append({
-                        "slot": pl["slot"],
-                        "crop": pl["crop"],
-                        "name": meta.get("name", pl["crop"]),
-                        "emoji": meta.get("emoji", "🌱"),
-                        "state": farming.parcel_status(pl),
-                        "orchard": orchard,
-                        "greenhouse": greenhouse,
-                    })
-            summary = " · ".join(
-                (
-                    f"{'棚' if v.get('greenhouse') else ('园' if v.get('orchard') else '#')}"
-                    f"{v['slot']}{v.get('emoji') or ''}{v['state'][:2] if v.get('state') else '休'}"
+            try:
+                await heal_parcels_for(db, int(p["id"]))
+                inv = await get_satchel(p["id"])
+                parcels = await get_parcels(p["id"])
+                parcel_views = []
+                for pl in parcels:
+                    try:
+                        parcel_views.append(_public_parcel_view(pl))
+                    except Exception:
+                        parcel_views.append({
+                            "slot": pl.get("slot"),
+                            "crop": pl.get("crop"),
+                            "name": pl.get("crop") or "休耕",
+                            "state": "休耕" if not pl.get("crop") else "生长",
+                            "orchard": bool(pl.get("orchard")),
+                            "greenhouse": bool(pl.get("greenhouse")),
+                        })
+                summary = " · ".join(
+                    (
+                        f"{'棚' if v.get('greenhouse') else ('园' if v.get('orchard') else '#')}"
+                        f"{v['slot']}{v.get('emoji') or ''}{v['state'][:2] if v.get('state') else '休'}"
+                    )
+                    for v in parcel_views[:5]
                 )
-                for v in parcel_views[:5]
-            )
-            latest_rows = await (await db.execute(
-                """
-                SELECT text, created_at FROM chronicle
-                WHERE actor_id = ? OR target_id = ?
-                ORDER BY created_at DESC LIMIT 3
-                """,
-                (p["id"], p["id"]),
-            )).fetchall()
-            ranked = ranks_mod.attach_level(p)
-            ready_count = sum(
-                1 for v in parcel_views
-                if str(v.get("state") or "") in ("可收", "过熟", "ready", "overripe")
-            )
-            result.append({
-                "id": p["id"],
-                "name": p["name"],
-                "motto": p["motto"],
-                "badge": p["badge"],
-                "portrait": p["portrait"],
-                "tickets": p["tickets"],
-                "xp": ranked["xp"],
-                "level": ranked["level"],
-                "title": ranked.get("display_title") or ranked["title"],
-                "parcel_count": p["parcel_count"],
-                "ready_count": ready_count,
-                "orchard_count": p.get("orchard_count") or 0,
-                "greenhouse": bool(p["greenhouse"]),
-                "greenhouse_count": int(p.get("greenhouse_count") or 0) or (1 if p.get("greenhouse") else 0),
-                "greenhouse_label": p["greenhouse_label"],
-                "mascot_name": p["mascot_name"],
-                "mascot_trait": p["mascot_trait"],
-                "last_active_at": p["last_active_at"],
-                "parcels": parcel_views,
-                "parcel_summary": summary,
-                "stock": [{"item": k, "name": ITEM_NAMES.get(k, k), "quantity": v} for k, v in list(inv.items())[:10]],
-                "latest": latest_rows[0]["text"] if latest_rows else "",
-                "recent": [
-                    {"text": r["text"], "created_at": r["created_at"]}
-                    for r in latest_rows
-                ],
-            })
+                latest_rows = await (await db.execute(
+                    """
+                    SELECT text, created_at FROM chronicle
+                    WHERE actor_id = ? OR target_id = ?
+                    ORDER BY created_at DESC LIMIT 3
+                    """,
+                    (p["id"], p["id"]),
+                )).fetchall()
+                ranked = ranks_mod.attach_level(p)
+                ready_count = sum(
+                    1 for v in parcel_views
+                    if str(v.get("state") or "") in ("可收", "过熟", "ready", "overripe")
+                )
+                result.append({
+                    "id": p.get("id"),
+                    "name": p.get("name") or "—",
+                    "motto": p.get("motto") or "",
+                    "badge": p.get("badge") or "",
+                    "portrait": p.get("portrait") or "",
+                    "tickets": p.get("tickets") or 0,
+                    "xp": ranked["xp"],
+                    "level": ranked["level"],
+                    "title": ranked.get("display_title") or ranked["title"],
+                    "parcel_count": p.get("parcel_count") or START_PARCELS,
+                    "ready_count": ready_count,
+                    "orchard_count": p.get("orchard_count") or 0,
+                    "greenhouse": bool(p.get("greenhouse")),
+                    "greenhouse_count": int(p.get("greenhouse_count") or 0) or (1 if p.get("greenhouse") else 0),
+                    "greenhouse_label": p.get("greenhouse_label") or "",
+                    "mascot_name": p.get("mascot_name") or "",
+                    "mascot_trait": p.get("mascot_trait") or "",
+                    "last_active_at": p.get("last_active_at") or 0,
+                    "parcels": parcel_views,
+                    "parcel_summary": summary,
+                    "stock": [{"item": k, "name": ITEM_NAMES.get(k, k), "quantity": v} for k, v in list(inv.items())[:10]],
+                    "latest": latest_rows[0]["text"] if latest_rows else "",
+                    "recent": [
+                        {"text": r["text"], "created_at": r["created_at"]}
+                        for r in latest_rows
+                    ],
+                })
+            except Exception:
+                result.append({
+                    "id": p.get("id"),
+                    "name": p.get("name") or "—",
+                    "motto": p.get("motto") or "",
+                    "badge": p.get("badge") or "",
+                    "portrait": p.get("portrait") or "",
+                    "tickets": p.get("tickets") or 0,
+                    "xp": p.get("xp") or 0,
+                    "level": 1,
+                    "title": "",
+                    "parcel_count": p.get("parcel_count") or START_PARCELS,
+                    "ready_count": 0,
+                    "orchard_count": p.get("orchard_count") or 0,
+                    "greenhouse": bool(p.get("greenhouse")),
+                    "greenhouse_count": int(p.get("greenhouse_count") or 0) or (1 if p.get("greenhouse") else 0),
+                    "greenhouse_label": p.get("greenhouse_label") or "",
+                    "mascot_name": p.get("mascot_name") or "",
+                    "mascot_trait": p.get("mascot_trait") or "",
+                    "last_active_at": p.get("last_active_at") or 0,
+                    "parcels": [],
+                    "parcel_summary": "",
+                    "stock": [],
+                    "latest": "",
+                    "recent": [],
+                })
+        try:
+            await db.commit()
+        except Exception:
+            pass
+
         def _land_total(row: dict[str, Any]) -> int:
             return (
                 int(row.get("parcel_count") or 0)

@@ -47,6 +47,7 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
         craft_view = await craft_mod.dashboard_view(conn, s["id"])
         from . import cloth as cloth_mod
         cloth_view = await cloth_mod.dashboard_view(conn, s["id"])
+        await db.heal_parcels_for(conn, s["id"])
         await conn.commit()
 
     gifts = await db.list_received_gifts(s["id"], 8)

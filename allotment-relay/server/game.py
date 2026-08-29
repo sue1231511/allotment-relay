@@ -324,7 +324,7 @@ async def relay_manual() -> str:
         "  公共物资 plot_ops commons scan · claim 编号 — 全服抢，随机上线。不在潮生会",
         "  昼间 sow/tend 每天掷一次斑鸠盯梢（约 23%），碰上 plot_ops dove 忽略|驱赶",
         "  稻草人 scarecrow 地块；过熟 compost 地块进堆肥（果树清果后树还在，不想要才 chop）",
-        "  人类网页 /allotments 是份地全景观望；种地、买地、偷菜都在 /play",
+        "  人类网页 /allotments 是份地全景观望；种地、买地、偷菜都在 /play（?go=plot 滚到份地栏）。婚期顶栏进连理所，份地还在上手页，点返回或底栏「份地」",
         "",
         "【潮闻 · 故事探索任务】",
         "  tale_ops list — 查看可接任务和阶段/通关奖励；accept 任务key 接取。空 command 和 list 相同",
@@ -886,13 +886,14 @@ async def plot_ops(key_id: int, command: str = "") -> str:
             "  买棚 / shed erect — 温室无上限，第1座 180 票即用，之后更贵；买棚 确认 付钱。每座每天岸维 30 票，铺多了加档 48/70\n"
             "  camera install 地块 · incident scan · repair 编号 · commons scan\n"
             "例: plot_ops status · plot_ops sow 1 甘蓝 · plot_ops sow 园1 橘子 · plot_ops sow 棚1 橘子 · plot_ops 买园 确认\n"
-            "人类种地在 /play；/allotments 是份地全景观望。"
+            "人类种地在 /play（?go=plot 滚到份地栏）；/allotments 是份地全景观望。婚期顶栏进连理所不是份地丢了。"
         )
     s = await require_steward(key_id)
     pulse = await events.maybe_world_pulse(s)
     async with db.connect() as conn:
         await commons.maybe_spawn_commons(conn, steward_id=s["id"])
         from . import land as land_mod
+        await db.heal_parcels_for(conn, s["id"])
         finished = await land_mod.settle(conn, s["id"])
         await conn.commit()
     if finished:
