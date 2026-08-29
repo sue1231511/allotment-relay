@@ -350,7 +350,8 @@ def test_island_page_is_modular() -> None:
     assert "菜园" in (ROOT / "server/static/island/map.js").read_text(encoding="utf-8")
     assert "min-height: 48px" in css
     assert "overflow-x: hidden" in css
-    assert "home-garden.png" in css
+    assert "island-plot-tile" in css
+    assert "island-plot-bed" in css
     assert "top: auto" in css
     assert "/static/style.css" not in html
     assert "/api/v1/" in api
@@ -368,12 +369,18 @@ def test_island_page_is_modular() -> None:
     assert (ROOT / "server/static/island/assets/crops/beet.png").exists()
     assert (ROOT / "server/static/island/assets/crops/fogpea.png").exists()
     assert "data-act=\"prev\"" in (ROOT / "server/static/island/ui/plant-panel.js").read_text(encoding="utf-8")
-    assert "island-plot-grid" in (ROOT / "server/static/island/scenes/home.js").read_text(encoding="utf-8")
-    assert "data-yard" in (ROOT / "server/static/island/scenes/home.js").read_text(encoding="utf-8")
+    home_js = (ROOT / "server/static/island/scenes/home.js").read_text(encoding="utf-8")
+    assert "island-plot-grid" in home_js
+    assert "island-plot-bed" in home_js
+    assert "grass.png" in home_js
+    assert "plot.png" in home_js
+    assert "data-yard" in home_js
     assert (ROOT / "server/static/island/scenes/shore.js").exists()
     assert (ROOT / "server/static/island/scenes/plaza.js").exists()
     assert (ROOT / "server/static/island/assets/island-map.png").exists()
     assert (ROOT / "server/static/island/assets/home-garden.png").exists()
+    assert (ROOT / "server/static/island/assets/plot.png").exists()
+    assert (ROOT / "server/static/island/assets/grass.png").exists()
     main_py = (ROOT / "server/main.py").read_text(encoding="utf-8")
     assert '@app.get("/play"' in main_py
     assert '@app.get("/island"' in main_py

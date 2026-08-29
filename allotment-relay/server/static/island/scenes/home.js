@@ -77,22 +77,36 @@ function harvestLabel(ripe) {
   return ripe > 1 ? `一键收获 ${ripe}` : "一键收获";
 }
 
+const GRASS = "/static/island/assets/grass.png";
+const PLOT = "/static/island/assets/plot.png";
+const COLS = 3;
+
 function plotGridMarkup() {
   const plots = yardPlots();
   const meta = yardMeta();
   if (!plots.length) {
-    return `<p class="island-plot-empty">${esc(meta.empty)}</p>`;
+    return `${grassPad(3)}<p class="island-plot-empty">${esc(meta.empty)}</p>`;
   }
-  return plots.map((plot) => {
+  const tiles = plots.map((plot) => {
     const stage = plot.appearance || (plot.can_sow ? "empty" : "growing");
     const art = cropArt(plot.crop, stage);
     const token = plotLabel(plot);
     return `<button type="button" class="island-plot-tile is-${esc(stage)}" data-act="garden" data-token="${esc(token)}" aria-label="${esc(token)}">
+      <img class="island-plot-grass" src="${GRASS}" alt="" draggable="false">
+      <img class="island-plot-bed" src="${PLOT}" alt="" draggable="false">
       <span class="island-plot-soil">${art}</span>
-      <b>${esc(token)}</b>
-      <small>${esc(tileCaption(plot))}</small>
+      <span class="island-plot-meta"><b>${esc(token)}</b><small>${esc(tileCaption(plot))}</small></span>
     </button>`;
-  }).join("");
+  });
+  const pad = (COLS - (plots.length % COLS)) % COLS;
+  if (pad) tiles.push(grassPad(pad));
+  return tiles.join("");
+}
+
+function grassPad(count) {
+  return Array.from({ length: count }, () => (
+    `<span class="island-plot-tile is-pad" aria-hidden="true"><img class="island-plot-grass" src="${GRASS}" alt="" draggable="false"></span>`
+  )).join("");
 }
 
 function tileCaption(plot) {

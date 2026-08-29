@@ -315,15 +315,13 @@ body.island-app {
 .island-pin.is-shore { right: 8%; top: 12%; }
 .island-pin.is-plaza { left: 36%; bottom: 18%; }
 
-/* 家园：背景只当氛围，真正的地是下面整份名单 */
+/* 家园：草地铺底，份地格子叠在上面 */
 .island-home {
   position: absolute;
   inset: 0;
   display: flex;
   flex-direction: column;
-  background:
-    linear-gradient(180deg, rgba(215, 235, 228, .82) 0%, rgba(244, 241, 232, .9) 70%),
-    #d7ebe4 url("/static/island/assets/home-garden.png") center / cover no-repeat;
+  background: #7fa24a;
 }
 
 .island-home-sky { display: none; }
@@ -335,7 +333,8 @@ body.island-app {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
-  padding: 10px 10px 0;
+  padding: 10px 10px 8px;
+  background: rgba(244, 241, 232, .9);
   flex-shrink: 0;
 }
 
@@ -390,69 +389,103 @@ body.island-app {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   align-content: start;
-  gap: 8px;
-  padding: 10px 10px 72px;
+  gap: 2px;
+  padding: 6px 6px 72px;
   -webkit-overflow-scrolling: touch;
 }
 
 .island-plot-empty {
   grid-column: 1 / -1;
-  margin: 18px 6px;
+  margin: 8px 6px;
   padding: 18px 14px;
   border-radius: 16px;
-  background: rgba(255, 253, 248, .9);
+  background: rgba(255, 253, 248, .92);
   text-align: center;
   color: var(--is-deep);
   font-size: 14px;
 }
 
 .island-plot-tile {
-  min-height: 118px;
-  padding: 8px 6px 6px;
+  position: relative;
+  aspect-ratio: 1;
+  min-height: 0;
+  padding: 0;
   border: 0;
-  border-radius: 16px;
-  background: #8b6a45;
-  color: #fffdf8;
+  background: transparent;
+  color: var(--is-ink);
   font: inherit;
+}
+
+.island-plot-grass,
+.island-plot-bed {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.island-plot-bed {
+  inset: 7%;
+  width: 86%;
+  height: 86%;
+}
+
+.island-plot-soil {
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  top: 18%;
+  bottom: 30%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.island-plot-tile .island-crop-pic {
+  width: 100%;
+  height: 100%;
+}
+
+.island-plot-meta {
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  bottom: 12%;
+  min-height: 28px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(255, 253, 248, .9);
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
-  gap: 2px;
-  box-shadow: inset 0 0 0 3px rgba(255,255,255,.08);
+  justify-content: center;
+  line-height: 1.15;
+  pointer-events: none;
 }
 
 .island-plot-tile b {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
 }
 
 .island-plot-tile small {
-  font-size: 11px;
-  color: #f4e3b0;
+  font-size: 10px;
+  color: #5b7377;
 }
 
-.island-plot-soil {
-  width: 72px;
-  height: 64px;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  margin-bottom: 2px;
+.island-plot-tile.is-pad {
+  pointer-events: none;
 }
 
-.island-plot-tile .island-crop-pic {
-  width: 64px;
-  height: 64px;
+.island-plot-tile.is-ripe .island-plot-bed {
+  filter: drop-shadow(0 0 8px #e7c14a);
 }
 
-.island-plot-tile.is-empty {
-  background: #7a5c3c;
-}
-
-.island-plot-tile.is-ripe {
-  outline: 3px solid #e7c14a;
-  outline-offset: -3px;
+.island-plot-tile.is-ripe .island-plot-meta {
+  background: #f4e3b0;
 }
 
 .island-harvest-fab {
