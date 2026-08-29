@@ -1238,35 +1238,39 @@ body.is-wedding-day .play-today,
   }
 }
 
-/* Sheets */
+/* Sheets — 居中弹窗，不贴底 */
 .play-sheet {
   position: fixed;
   inset: 0;
   z-index: 60;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
+  padding: 20px;
+  background: rgba(31, 47, 52, .32);
+  backdrop-filter: blur(6px);
 }
 
 .play-sheet-bg {
   position: absolute;
   inset: 0;
   border: 0;
-  background: rgba(31, 47, 52, .18);
+  background: transparent;
 }
 
 .play-sheet-card {
   position: relative;
   width: min(560px, 100%);
-  max-height: 76vh;
+  max-height: 88vh;
   overflow: auto;
   background: #f4f1e8;
-  border-radius: 26px 26px 0 0;
+  border-radius: 26px;
   padding: 22px;
-  box-shadow: 0 -20px 60px rgba(31, 47, 52, .16);
+  box-shadow: 0 28px 80px rgba(31, 47, 52, .22), 0 0 0 1px rgba(255, 255, 255, .18) inset;
+  animation: me-pop .18s cubic-bezier(.22, .68, 0, 1.2);
 }
 
-.play-me-card { width: min(460px, 100%); }
+.play-me-card { width: min(440px, 100%); }
 
 .play-sheet-head {
   display: flex;
@@ -1376,30 +1380,43 @@ body.is-wedding-day .play-today,
   body.play-page .mobile-island { bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
 }
 
-/* 「这一号」居中弹窗（覆盖底部 sheet 默认样式） */
-#play-me {
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  background: rgba(31, 47, 52, .32);
-  backdrop-filter: blur(6px);
-}
-
-#play-me .play-sheet-bg {
-  background: transparent;
-}
-
+/* 「这一号」与通用 sheet 同为居中弹窗 */
 #play-me .play-me-card {
-  border-radius: 26px;
-  box-shadow: 0 28px 80px rgba(31, 47, 52, .22), 0 0 0 1px rgba(255,255,255,.18) inset;
-  max-height: 88vh;
   width: min(440px, 100%);
-  animation: me-pop .18s cubic-bezier(.22, .68, 0, 1.2);
 }
 
 @keyframes me-pop {
   from { opacity: 0; transform: scale(.94); }
   to   { opacity: 1; transform: scale(1); }
+}
+
+.play-rename {
+  margin: 0 0 14px;
+  padding: 12px 0;
+  border-top: 1px solid rgba(35, 48, 56, .12);
+  border-bottom: 1px solid rgba(35, 48, 56, .12);
+  display: grid;
+  gap: 8px;
+}
+.play-rename label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  color: #758284;
+}
+.play-rename input {
+  padding: 11px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(35, 48, 56, .14);
+  background: #fff;
+  font: inherit;
+  color: #203137;
+}
+.play-rename .play-mini-btn { margin-top: 0; width: fit-content; }
+.play-rename .error {
+  margin: 0;
+  color: #835f54;
+  font-size: 12px;
 }
 
 .play-invite {

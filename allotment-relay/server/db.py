@@ -2463,6 +2463,43 @@ async def get_steward_by_name(name: str) -> dict[str, Any] | None:
         return dict(row) if row else None
 
 
+async def rename_steward(steward_id: int, new_name: str) -> dict[str, Any]:
+    """人类改岛民名。不挂 MCP；AI 不能调。"""
+    name = (new_name or "").strip()
+    if len(name) < 2 or len(name) > 24:
+        raise ValueError("名字长度需在 2~24 之间")
+    ts = now()
+    async with connect() as db:
+        db.row_factory = aiosqlite.Row
+        row = await (await db.execute(
+            "SELECT id, name FROM stewards WHERE id = ? AND enrolled = 1",
+            (steward_id,),
+        )).fetchone()
+        if not row:
+            raise ValueError("尚未登记管理员")
+        old = str(row["name"] or "")
+        if old == name:
+            raise ValueError("已经是这个名字")
+        taken = await (await db.execute(
+            "SELECT id FROM stewards WHERE name = ? COLLATE NOCASE AND id != ?",
+            (name, steward_id),
+        )).fetchone()
+        if taken:
+            raise ValueError("该名字已被登记")
+        await db.execute(
+            "UPDATE stewards SET name = ?, last_active_at = ? WHERE id = ?",
+            (name, ts, steward_id),
+        )
+        await db.execute(
+            "INSERT INTO chronicle (action, actor_id, text, created_at) VALUES ('rename', ?, ?, ?)",
+            (steward_id, f"{old} 改名为 {name}", ts),
+        )
+        await db.commit()
+    steward = await get_steward_by_id(steward_id)
+    assert steward
+    return steward
+
+
 async def get_steward_by_id(steward_id: int) -> dict[str, Any] | None:
     async with connect() as db:
         db.row_factory = aiosqlite.Row

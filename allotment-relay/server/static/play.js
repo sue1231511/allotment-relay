@@ -853,6 +853,14 @@ function openMe() {
       <span class="play-avatar">${esc(String(name).slice(0, 1) || '≈')}</span>
       <span><strong>${esc(name)}</strong><small>管理员 · ${esc(d.title || ('LV ' + (d.level || 1)))}</small></span>
     </div>
+    <form id="play-rename-form" class="play-rename">
+      <label>改岛民名
+        <input id="play-rename-name" type="text" maxlength="24" minlength="2" value="${esc(name)}" autocomplete="off" placeholder="2～24 字">
+      </label>
+      <p class="muted">人和 AI 共用这一个名字。只有你能在这里改，模型改不了。</p>
+      <button type="submit" class="play-mini-btn primary">保存新名字</button>
+      <p class="error hidden" id="play-rename-err"></p>
+    </form>
     <p>精力 ${m.energy || 0}/${m.energy_max || 100} · 工分票 ${d.tickets}</p>
     <p style="margin-top:6px">岛缘 ${d.island_bond ?? m.island_bond ?? 0} ∞${d.bond_flavor ? ' · ' + esc(d.bond_flavor) : ''}</p>
     <p style="margin-top:6px">饱食 ${m.satiety ?? '—'} · 雾智 ${m.mist_wit ?? '—'} · 档信 ${m.standing ?? '—'}</p>
@@ -884,6 +892,43 @@ function openMe() {
       ${inv.lantern ? `<p class="muted">岸灯已在小屋亮着。</p>` : ''}
     </section>
   `;
+  const renameForm = $('play-rename-form');
+  if (renameForm) {
+    renameForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const err = $('play-rename-err');
+      err.classList.add('hidden');
+      const next = ($('play-rename-name').value || '').trim();
+      if (next.length < 2 || next.length > 24) {
+        err.classList.remove('hidden');
+        err.textContent = '名字长度需在 2~24 之间';
+        return;
+      }
+      try {
+        const res = await fetch('/api/steward/rename', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            api_key: state.key,
+            name: next,
+            device_id: typeof getOrCreateDeviceId === 'function' ? getOrCreateDeviceId() : '',
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(typeof data.detail === 'string' ? data.detail : '改不成');
+        if (data.dashboard) applySnap({ enrolled: true, dashboard: data.dashboard, seeds: state.seeds, places: state.places, neighbors: state.neighbors, climate: state.climate }, data.text || '');
+        else if (state.dash) {
+          state.dash = { ...state.dash, name: data.name || next };
+          renderAll();
+        }
+        openMe();
+        setLog(data.text || '名字已改。');
+      } catch (ex) {
+        err.classList.remove('hidden');
+        err.textContent = ex.message;
+      }
+    });
+  }
   const copyBtn = $('play-invite-copy');
   if (copyBtn) {
     copyBtn.addEventListener('click', () => {
