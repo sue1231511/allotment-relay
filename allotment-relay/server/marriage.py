@@ -707,6 +707,9 @@ async def _settle_bride(conn: aiosqlite.Connection, row: dict[str, Any]) -> int:
         (BRIDE_PAID, row["id"]),
     )
     row["bride_frozen"] = BRIDE_PAID
+    if amount:
+        from . import tax as tax_mod
+        await tax_mod.record_life_spend(conn, int(row["steward_id"]), amount, "marriage")
     return amount
 
 
@@ -2370,6 +2373,8 @@ async def _cmd_feast(s: dict[str, Any], rest: str) -> str:
                 "UPDATE stewards SET tickets=tickets-? WHERE id=?",
                 (delta, s["id"]),
             )
+            from . import tax as tax_mod
+            await tax_mod.record_life_spend(conn, s["id"], delta, "marriage")
         if self_cook:
             dish_bit = f"：{'、'.join(extra_dishes)}" if extra_dishes else ""
             note = f"{name}（自办{dish_bit}）" if dish_bit else f"{name}（自办）"
@@ -2525,6 +2530,8 @@ async def _pay_from_pocket(conn: aiosqlite.Connection, s: dict[str, Any], amount
         "UPDATE stewards SET tickets=tickets-? WHERE id=?",
         (amount, s["id"]),
     )
+    from . import tax as tax_mod
+    await tax_mod.record_life_spend(conn, s["id"], amount, "marriage")
 
 
 async def _set_betroth_col(
@@ -2758,6 +2765,8 @@ async def _betroth_feast(s: dict[str, Any], rest: str) -> str:
                 "UPDATE stewards SET tickets=tickets-? WHERE id=?",
                 (delta, s["id"]),
             )
+            from . import tax as tax_mod
+            await tax_mod.record_life_spend(conn, s["id"], delta, "marriage")
         if self_cook:
             dish_bit = f"：{'、'.join(extra_dishes)}" if extra_dishes else ""
             note = f"订婚宴自办{dish_bit}" if dish_bit else "订婚宴自办"
@@ -2993,6 +3002,8 @@ async def _betroth_photo(s: dict[str, Any], rest: str) -> str:
                 "UPDATE stewards SET tickets=tickets-? WHERE id=?",
                 (delta, s["id"]),
             )
+            from . import tax as tax_mod
+            await tax_mod.record_life_spend(conn, s["id"], delta, "marriage")
         row = await _set_betroth_col(
             conn, row, "betrothal_photo", amount,
             f"在{label}留影 {_bride_label(amount)}。",

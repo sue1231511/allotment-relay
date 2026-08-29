@@ -275,6 +275,8 @@ async def _cmd_song(conn: aiosqlite.Connection, s: dict[str, Any], song: str) ->
     if (await cur.fetchone())[0] < config.STAR_SONG_COST:
         raise ValueError(f"点歌费 {config.STAR_SONG_COST} 票，票不足")
     await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (config.STAR_SONG_COST, s["id"]))
+    from . import tax as tax_mod
+    await tax_mod.record_life_spend(conn, s["id"], config.STAR_SONG_COST, "star")
     # 纸条递给她的，钱也归她的账
     await conn.execute("UPDATE star_state SET total_tips=total_tips+? WHERE id=1", (config.STAR_SONG_COST,))
     await conn.execute(

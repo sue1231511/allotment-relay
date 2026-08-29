@@ -193,7 +193,7 @@ PLACES: list[dict[str, Any]] = [
         "week1": True,
         "actions": [
             {"label": "问事", "note": "考勤、岸税、岸维与潮汐基金", "tool": "visit_ops", "command": "潮生会"},
-            {"label": "岸税", "note": "档表、高档加码、潮差。周一自动划", "tool": "visit_ops", "command": "潮生会 税"},
+            {"label": "岸税", "note": "档表、高档加码、潮差、潮锈。闲票要花，买地不算", "tool": "visit_ops", "command": "潮生会 税"},
             {"label": "岸维", "note": "产业维修费。每天划；份地 10/18/28、果园 20/32/48、温室 30/48/70，铺多了加档，起步免", "tool": "visit_ops", "command": "潮生会 维"},
             {"label": "潮汐基金", "note": "岛均与发放日。先托到 800，再按岛均补", "tool": "visit_ops", "command": "潮生会 基金"},
             {"label": "告示", "note": "墙上贴了什么（厅示，不能自己贴）", "tool": "visit_ops", "command": "潮生会 告示"},

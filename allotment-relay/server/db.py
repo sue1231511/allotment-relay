@@ -2113,6 +2113,17 @@ async def init_db() -> None:
             """,
             "CREATE INDEX IF NOT EXISTS idx_wall_replies_thread ON wall_replies(thread_id, id)",
             "CREATE INDEX IF NOT EXISTS idx_wall_replies_steward ON wall_replies(steward_id, created_at DESC)",
+            """
+            CREATE TABLE IF NOT EXISTS shore_life_spend (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                amount INTEGER NOT NULL,
+                kind TEXT NOT NULL DEFAULT '',
+                created_at INTEGER NOT NULL
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_shore_life_spend_steward_at "
+            "ON shore_life_spend(steward_id, created_at)",
         ):
             try:
                 await db.execute(ddl)

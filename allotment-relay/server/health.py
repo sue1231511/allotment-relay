@@ -466,6 +466,8 @@ async def _pay_and_heal(
         "UPDATE stewards SET tickets=tickets-?, health=MIN(100, health+?) WHERE id=?",
         (cost, heal, steward_id),
     )
+    from . import tax as tax_mod
+    await tax_mod.record_life_spend(conn, steward_id, cost, "clinic")
 
 
 async def _apply_chronic_course(

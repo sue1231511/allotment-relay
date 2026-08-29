@@ -722,6 +722,8 @@ async def _cmd_buy_wedding(conn: aiosqlite.Connection, s: dict[str, Any], rest: 
         "UPDATE stewards SET tickets=tickets-? WHERE id=?",
         (cost, s["id"]),
     )
+    from . import tax as tax_mod
+    await tax_mod.record_life_spend(conn, s["id"], cost, "cloth")
     name = garment_name(cut, color, motif, "shop")
     origin = "衣泊坊现货。没交布，是柜上那挂。"
     cur = await conn.execute(
