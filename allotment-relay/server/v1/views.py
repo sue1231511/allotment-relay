@@ -83,12 +83,12 @@ def world_view(
     }
 
 
-# 家园种植面板第一版：界面名对上参考图，播种仍走现有作物与种子。
-HOME_PANEL_CROPS = (
-    ("kale", "白菜"),
-    ("beet", "胡萝卜"),
-    ("fogpea", "番茄"),
-)
+# 家园面板：非果树作物按 catalog 顺序左右翻。三样起步菜保留界面名。
+PANEL_ALIASES = {
+    "kale": "白菜",
+    "beet": "胡萝卜",
+    "fogpea": "番茄",
+}
 
 
 def format_grow_minutes(mins: int) -> str:
@@ -116,14 +116,15 @@ def panel_crops(stock: list[dict[str, Any]] | None = None) -> list[dict[str, Any
     for item in stock or []:
         qty[str(item.get("item") or "")] = int(item.get("qty") or 0)
     out: list[dict[str, Any]] = []
-    for key, label in HOME_PANEL_CROPS:
-        meta = CROPS.get(key) or {}
+    for key, meta in CROPS.items():
+        if meta.get("tree"):
+            continue
         aliases = meta.get("aliases") or []
         sow_name = aliases[0] if aliases else (meta.get("name") or key)
         grow_min = int(meta.get("grow") or 0)
         out.append({
             "key": key,
-            "label": label,
+            "label": PANEL_ALIASES.get(key) or (meta.get("name") or sow_name),
             "name": sow_name,
             "full": meta.get("name") or sow_name,
             "emoji": meta.get("emoji") or "🌱",

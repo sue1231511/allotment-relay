@@ -77,8 +77,11 @@ async def _test_island_v1_api() -> None:
     farm0 = client.get("/api/v1/farm", headers=_auth(key))
     assert farm0.status_code == 200, farm0.text
     panel = farm0.json()["farm"]["panel"]
-    assert [c["label"] for c in panel] == ["白菜", "胡萝卜", "番茄"], panel
-    assert {c["name"] for c in panel} == {"甘蓝", "甜菜", "雾豌豆"}, panel
+    labels = [c["label"] for c in panel]
+    assert panel[0]["key"] == "kale" and panel[0]["label"] == "白菜", panel[0]
+    assert "胡萝卜" in labels and "番茄" in labels
+    assert any(c["key"] == "chili" for c in panel)
+    assert not any(c["key"] == "durian" for c in panel)
     idle = sorted(
         (p for p in farm0.json()["farm"]["home"] if p["can_sow"]),
         key=lambda p: int(p["slot"]),
@@ -319,6 +322,9 @@ def test_island_page_is_modular() -> None:
     assert (ROOT / "server/static/island/scenes/home.js").exists()
     assert (ROOT / "server/static/island/ui/plant-panel.js").exists()
     assert (ROOT / "server/static/island/ui/crops.js").exists()
+    assert (ROOT / "server/static/island/assets/crops/kale.png").exists()
+    assert (ROOT / "server/static/island/assets/crops/beet.png").exists()
+    assert (ROOT / "server/static/island/assets/crops/fogpea.png").exists()
     assert "data-act=\"prev\"" in (ROOT / "server/static/island/ui/plant-panel.js").read_text(encoding="utf-8")
     assert "island-beds" in (ROOT / "server/static/island/scenes/home.js").read_text(encoding="utf-8")
     assert (ROOT / "server/static/island/scenes/shore.js").exists()

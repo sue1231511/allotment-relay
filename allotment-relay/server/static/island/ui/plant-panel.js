@@ -28,15 +28,13 @@ export function renderPlantPanel(root, { onSelect, onPlant, onClose }) {
         </div>
         <button type="button" class="island-plant-arrow" data-act="next" aria-label="下一种">›</button>
       </div>
-      <div class="island-plant-dots" aria-hidden="true">
-        ${crops.map((crop) => `<i class="${crop.key === state.plantKey ? "is-on" : ""}"></i>`).join("")}
-      </div>
+      <p class="island-plant-index">${crops.length ? `${crops.findIndex((c) => c.key === state.plantKey) + 1} / ${crops.length}` : "0 / 0"}</p>
       <div class="island-plant-meta">
         <span>成熟时间 ${esc(selected ? selected.grow_text : "—")}</span>
         <span>预计收获 ${esc(selected ? `${selected.yield}棵` : "—")}</span>
       </div>
-      <button type="button" class="island-plant-go" data-act="plant" ${selected ? "" : "disabled"}>
-        ${selected ? `种下${esc(selected.label)}` : "选择作物"}
+      <button type="button" class="island-plant-go" data-act="plant" ${selected && selected.seed_qty > 0 ? "" : "disabled"}>
+        ${!selected ? "选择作物" : selected.seed_qty > 0 ? `种下${esc(selected.label)}` : `没有${esc(selected.label)}种`}
       </button>
     </section>
   `;
