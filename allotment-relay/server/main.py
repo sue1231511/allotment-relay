@@ -327,6 +327,12 @@ class StewardDashboardRequest(BaseModel):
     device_id: str = ""
 
 
+class StewardRenameRequest(BaseModel):
+    api_key: str
+    name: str
+    device_id: str = ""
+
+
 class PlayRequest(BaseModel):
     api_key: str
     tool: str = ""
@@ -581,6 +587,31 @@ async def steward_dashboard(request: Request, body: StewardDashboardRequest):
     try:
         await _observe_key(request, body.api_key, body.device_id)
         return await steward_dashboard.fetch_dashboard(body.api_key.strip())
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/steward/rename")
+async def steward_rename(request: Request, body: StewardRenameRequest):
+    """人类在上手页改岛民名。不进 MCP，模型调不到。"""
+    try:
+        await _observe_key(request, body.api_key, body.device_id)
+        row = await db.get_key_row(body.api_key.strip())
+        if not row:
+            raise ValueError("凭证无效")
+        s = await db.get_steward_by_key_id(int(row["id"]))
+        if not s or not s.get("enrolled"):
+            raise ValueError("尚未登记管理员")
+        old = s["name"]
+        updated = await db.rename_steward(int(s["id"]), body.name)
+        from . import steward_dashboard
+        dash = await steward_dashboard.fetch_dashboard(body.api_key.strip())
+        return {
+            "ok": True,
+            "text": f"岛民名已从「{old}」改为「{updated['name']}」。",
+            "name": updated["name"],
+            "dashboard": dash,
+        }
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
