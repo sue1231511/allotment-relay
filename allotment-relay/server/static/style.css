@@ -4693,9 +4693,9 @@ body:has(.wedding-ribbon) {
 .wedding-fold-tri {
   width: 0;
   height: 0;
-  border-left: 5px solid transparent;
-  border-right: 5px solid transparent;
-  border-top: 6px solid rgba(143, 103, 72, .62);
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 8px solid rgba(143, 103, 72, .78);
   flex-shrink: 0;
   transform: rotate(-90deg);
   transition: transform .15s ease;

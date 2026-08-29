@@ -80,6 +80,8 @@
     root.classList.toggle('is-open', open);
     toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
     body.hidden = !open;
+    const peek = toggle.querySelector('.wedding-fold-peek');
+    if (peek) peek.textContent = open ? '收起' : '点开看';
     if (persist && isMobile()) {
       try {
         sessionStorage.setItem(STORAGE_KEY, open ? '1' : '0');
