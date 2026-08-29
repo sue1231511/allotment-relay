@@ -1,4 +1,5 @@
-import { growStatusLine, panelSubtitle, ripeHome } from "../store.js";
+import { growStatusLine, homePlots, panelSubtitle, ripeHome } from "../store.js";
+import { cropArt } from "../ui/crops.js";
 import { esc } from "../ui/modal.js";
 
 export function renderHome(root, { onOpenGarden, onHarvestAll, onBack }) {
@@ -6,6 +7,7 @@ export function renderHome(root, { onOpenGarden, onHarvestAll, onBack }) {
   root.innerHTML = `
     <div class="island-home">
       <p class="island-grow-status" id="island-grow-status">${esc(growStatusLine())}</p>
+      <div class="island-beds" id="island-beds" aria-hidden="true">${bedMarkup()}</div>
       <button type="button" class="island-garden-hot" data-act="garden" aria-label="打开种植面板"></button>
       <button type="button" class="island-harvest-fab" id="island-harvest-all" data-act="harvest" ${ripe ? "" : "hidden"}>一键收获</button>
     </div>
@@ -27,6 +29,19 @@ export function syncHomeChrome() {
   if (status) status.textContent = growStatusLine();
   const harvest = document.getElementById("island-harvest-all");
   if (harvest) harvest.hidden = ripeHome().length === 0;
+  const beds = document.getElementById("island-beds");
+  if (beds) beds.innerHTML = bedMarkup();
   const sub = document.getElementById("island-plant-sub");
   if (sub) sub.textContent = panelSubtitle();
+}
+
+function bedMarkup() {
+  return homePlots()
+    .slice(0, 3)
+    .map((plot, index) => {
+      const stage = plot.appearance || "empty";
+      const art = cropArt(plot.crop, stage);
+      return `<div class="island-bed is-${index + 1} is-${esc(stage)}" data-slot="${esc(plot.slot)}">${art}</div>`;
+    })
+    .join("");
 }

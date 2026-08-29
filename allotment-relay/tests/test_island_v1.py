@@ -318,6 +318,9 @@ def test_island_page_is_modular() -> None:
     assert "firstIdleHome" in app
     assert (ROOT / "server/static/island/scenes/home.js").exists()
     assert (ROOT / "server/static/island/ui/plant-panel.js").exists()
+    assert (ROOT / "server/static/island/ui/crops.js").exists()
+    assert "data-act=\"prev\"" in (ROOT / "server/static/island/ui/plant-panel.js").read_text(encoding="utf-8")
+    assert "island-beds" in (ROOT / "server/static/island/scenes/home.js").read_text(encoding="utf-8")
     assert (ROOT / "server/static/island/scenes/shore.js").exists()
     assert (ROOT / "server/static/island/scenes/plaza.js").exists()
     assert (ROOT / "server/static/island/assets/island-map.png").exists()
