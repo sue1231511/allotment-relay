@@ -78,19 +78,19 @@ BRIDE_PAID = 2
 
 FEAST_TIERS: dict[str, dict[str, Any]] = {
     "滩席": {
-        "key": "beach", "price": 18800, "dishes": 2, "guests": 4,
+        "key": "beach", "price": 3888, "dishes": 2, "guests": 4,
         "aliases": ("滩席", "流水席", "beach"),
     },
     "岸席": {
-        "key": "shore", "price": 48800, "dishes": 4, "guests": 8,
+        "key": "shore", "price": 8888, "dishes": 4, "guests": 8,
         "aliases": ("岸席", "普通席", "shore"),
     },
     "灯塔席": {
-        "key": "lighthouse", "price": 98800, "dishes": 6, "guests": 12,
+        "key": "lighthouse", "price": 18888, "dishes": 6, "guests": 12,
         "aliases": ("灯塔席", "中档席", "lighthouse"),
     },
     "满潮席": {
-        "key": "tide", "price": 198000, "dishes": 8, "guests": 16,
+        "key": "tide", "price": 38888, "dishes": 8, "guests": 16,
         "aliases": ("满潮席", "高档席", "tide"),
     },
 }
@@ -126,22 +126,23 @@ MARRIAGE_HELP = """marriage_ops 子命令（整句写进 command）：
   desk / 连理所 / 理枝 / 进门 — 进连理所，看自己的档案
   status / 看 — 自己的婚约、筹备、婚书摘要
   求婚 人类昵称 — 先写下草稿。发出前要：最高档小屋（临海邸）、彩礼、潮誓戒、誓言
-  彩礼 188000 — AI 填 100000～1000000。发出时冻结，人类答应后花掉（不进潮汐基金）；拒绝退回
-      建议吉利数：128000 · 168000 · 188000 · 288000 · 388000 · 520000 · 888000
+  彩礼 8888 — AI 填 8888～100000。发出时冻结，人类答应后花掉（不进潮汐基金）；拒绝退回
+      建议吉利数：8888 · 12888 · 18888 · 28888 · 52000 · 88888 · 100000
+      最低全套（彩礼+潮誓戒+三金+婚服+滩席）大约四万，阔手能办。上限十万，再高不让写，免得攀比
   求婚 人类昵称 | 誓言 | 信物 | 地点 | 今日+3 | 留言
       一步发出。门槛不够会拒，草稿留下。例子：求婚 阿潮 | 潮起潮落我都在 | 潮誓戒 | 灯塔下 | 今日+3
   寻戒 — 海边找潮誓砂（每天最多 2 次）。自制戒要 6 份砂 + 崖上金砂
   成戒 — 转去岸工坊打戒：craft_ops 打 潮誓戒（要潮誓砂×6、金砂×1，等 20 分钟再 取）
-      也可 visit_ops tt buy 潮誓戒（18800 票现货）
+      也可 visit_ops tt buy 潮誓戒（8888 票现货）
   发出 — 最高档小屋、彩礼、潮誓戒、誓言齐了才发。发出时从口袋冻结彩礼；答应后花掉，不进潮汐基金
   筹备 — 草稿看求婚门槛，订婚现在就能办；订契后看三金/婚服/吃席。不是战力
   订婚 — 写下求婚草稿就能办，不必先订契，也不要彩礼。去岛上地点办，空=进度
-      订婚没有彩礼，也没有礼金。10万～100万只用于发出求婚（marriage_ops 彩礼），不是订婚门槛
-      信物：海边 订婚 寻信 得潮信贝 → 工坊 craft_ops 打 订婚戒，或 tt buy 订婚戒 8888 → 订婚 信物
+      订婚没有彩礼，也没有礼金。8888～10万只用于发出求婚（marriage_ops 彩礼），不是订婚门槛
+      信物：海边 订婚 寻信 得潮信贝 → 工坊 craft_ops 打 订婚戒，或 tt buy 订婚戒 3888 → 订婚 信物
       宴：小馆 订婚 宴 小馆 12800 · 酒吧 订婚 宴 酒吧 8888 · 厨房自办 订婚 宴 自办（熟菜×2）
           选了还能改，再写一次即可。差价补上或退回口袋。不是结婚吃席
       花束：海边/份地 订婚 采花，或赶海/forage 事件掉潮花，或 tt buy 礼盒，或何敬山送的商船糕点 → 订婚 花束
-      选配服装：衣泊坊 买 订婚服 海色（8888）或 委托 短褂/订婚服 → 订婚 服装（不是婚服）
+      选配服装：衣泊坊 买 订婚服 海色（2888）或 委托 短褂/订婚服 → 订婚 服装（不是婚服）
       选配留影：订婚 留影 灯塔 8888（最高档，点了就算上塔，不用先 visit_ops）。不写金额按地点默认。选了还能改。也可 留影 海边 / 小屋。灯塔席是结婚吃席，不是留影
       空 订婚=进度。三件齐了再写空 订婚 会给出确认页链接，把链接交给人类打开（/lianli/…）
       只有人类在确认页答应才算记下。三件齐了或旧档自动写下都不算已经订婚
@@ -149,9 +150,9 @@ MARRIAGE_HELP = """marriage_ops 子命令（整句写进 command）：
       AI 不能替人类点答应。没有「订婚 答应」。丢了链接再写空 订婚 或 订婚 续请。跳过订婚也能直接 发出 / 金饰 / 婚服 / 吃席 再 结婚
       不是求婚请柬，也不是成婚潮讯。不是潮誓戒，不是求婚信物栏，订婚宴不是结婚吃席，订婚不是彩礼
   金饰 — 订契后把行囊里的三金（或五金）登记进婚书
-      三金/五金去 Tt酱柜后：visit_ops tt buy 三金套（68800）/ 五金套（98800）
-  婚服 — 订契后把衣橱里的婚服登记。买：cloth_ops 买 婚服 海色（16800）。自制：委托 婚服（料加倍、隔日）
-  吃席 灯塔席 — 订契后必选规格。选了举行前还能改。包桌扣票：滩席 18800 / 岸席 48800 / 灯塔席 98800 / 满潮席 198000
+      三金/五金去 Tt酱柜后：visit_ops tt buy 三金套（8888）/ 五金套（13888）
+  婚服 — 订契后把衣橱里的婚服登记。买：cloth_ops 买 婚服 海色（8888）。自制：委托 婚服（料加倍、隔日）
+  吃席 灯塔席 — 订契后必选规格。选了举行前还能改。包桌扣票：滩席 3888 / 岸席 8888 / 灯塔席 18888 / 满潮席 38888
       自办：吃席 滩席 自办（收熟菜 dish_/meal_，滩席×2 … 满潮席×8）
       改档：再写 吃席 岸席。差价补上或退回口袋，不进潮汐基金。宾客已超过新档人数就不能改小
   邀请 岛民名 · 邀请 npc 阿簿 — 人数不能超过席面上限（4/8/12/16）。人多了就改大一档：吃席 岸席
@@ -163,7 +164,7 @@ MARRIAGE_HELP = """marriage_ops 子命令（整句写进 command）：
   · 连理所是登记处，不是潮生会。彩礼是花出去的开销，不进潮汐基金，也不是打给人类（人和 AI 同一个口袋）。
   · 发出前：小屋升到岛上最高档（现在是临海邸）+ 彩礼金额 + 口袋够付 + 潮誓戒。300 票门槛已经并进彩礼。
   · 订婚草稿就能办，不用先订契，也不要彩礼。去海边寻信、小馆办宴，不是一次填六个数。三件齐了再写空 订婚 会给出确认页链接，交给人类打开。只有人类在确认页答应才算记下。三件齐了或旧档自动写下都不算已经订婚。人类答应后才记下并在聊天室大厅通报一句。不是求婚请柬，也不是成婚潮讯。
-  · 10万～100万只用于发出求婚的彩礼，不是订婚。订婚没有礼金。
+  · 8888～10万只用于发出求婚的彩礼，不是订婚。订婚没有礼金。
   · 举行前：三金 + 婚服 + 吃席规格。吃席、订婚宴、留影选了都能改，差价补或退。五金选配，不挡登记。订婚宴不是结婚吃席。订婚戒不是潮誓戒。留影最高档写 订婚 留影 灯塔 8888，点了就算上塔；灯塔席是结婚吃席。
   · 婚戒/婚服自制比买慢。三金五金没有自制，只去 Tt酱。
   · 求婚没有「接受」子命令。订婚也没有「订婚 答应」。人类打开 /lianli/… 点头。求婚请柬、订婚确认、退契都走这里。
@@ -260,7 +261,12 @@ def _feast_change_help() -> str:
     return (
         "选规格：marriage_ops 吃席 滩席 / 岸席 / 灯塔席 / 满潮席。"
         "包桌扣票；自办加写 自办（收熟菜）。选了举行前还能改，差价补上或退回口袋，不进潮汐基金。"
-        " 滩席 18800 或菜×2 · 岸席 48800 或菜×4 · 灯塔席 98800 或菜×6 · 满潮席 198000 或菜×8"
+        " 滩席 {0} 或菜×2 · 岸席 {1} 或菜×4 · 灯塔席 {2} 或菜×6 · 满潮席 {3} 或菜×8".format(
+            FEAST_TIERS["滩席"]["price"],
+            FEAST_TIERS["岸席"]["price"],
+            FEAST_TIERS["灯塔席"]["price"],
+            FEAST_TIERS["满潮席"]["price"],
+        )
     )
 
 
@@ -309,7 +315,7 @@ _BETROTHAL_OPTIONAL_VERBS = {"服装", "attire", "留影", "纪念册", "photo"}
 def _betrothal_help_text() -> str:
     return (
         "订婚可选。写下求婚草稿就能办，不必先订契，也不要彩礼。也可以跳过，直接发出请柬。\n"
-        "订婚没有彩礼，也没有礼金。10万～100万只用于发出求婚（marriage_ops 彩礼），不是订婚门槛。\n"
+        "订婚没有彩礼，也没有礼金。8888～10万只用于发出求婚（marriage_ops 彩礼），不是订婚门槛。\n"
         "去岛上地点办，不要一次填六个数。宴席开销当场花掉，不进潮汐基金。\n"
         "三件齐了再写空 订婚（上手页连理所再点「订婚」）就会给出确认页链接，把链接交给人类打开。\n"
         "只有人类在确认页答应才算记下。三件齐了或旧档自动写下都不算已经订婚。\n"
@@ -527,7 +533,8 @@ async def _propose_missing(
     frozen = int((row or {}).get("bride_frozen") or 0)
     if price < BRIDE_PRICE_MIN or price > BRIDE_PRICE_MAX:
         miss.append(
-            f"先填彩礼：marriage_ops 彩礼 188000（{BRIDE_PRICE_MIN}～{BRIDE_PRICE_MAX}）。"
+            f"先填彩礼：marriage_ops 彩礼 8888（{BRIDE_PRICE_MIN}～{BRIDE_PRICE_MAX}）。"
+            "上限十万，再高不让写，免得攀比。"
         )
     elif frozen != BRIDE_FROZEN and tickets < price:
         miss.append(
@@ -536,7 +543,7 @@ async def _propose_missing(
     if not await _ring_ready(conn, s, row):
         miss.append(
             "还没有潮誓戒。自制：寻戒凑 6 份潮誓砂 + 崖上金砂，再 成戒 / craft_ops 打 潮誓戒。"
-            "现货：visit_ops tt buy 潮誓戒（18800）。"
+            "现货：visit_ops tt buy 潮誓戒（8888）。"
         )
     return miss
 
@@ -569,7 +576,7 @@ async def _readiness_lines(
     price = int((row or {}).get("bride_price") or 0)
     frozen = int((row or {}).get("bride_frozen") or 0)
     if price < BRIDE_PRICE_MIN:
-        gift = "未填 — marriage_ops 彩礼 188000"
+        gift = "未填 — marriage_ops 彩礼 8888"
     elif frozen == BRIDE_PAID:
         gift = f"{_bride_label(price)} 已花掉"
     elif frozen == BRIDE_FROZEN:
@@ -579,7 +586,7 @@ async def _readiness_lines(
     else:
         gift = f"{_bride_label(price)} · 口袋 {tickets} 还不够"
     return [
-        "发出请柬前要备齐：最高档小屋、彩礼、潮誓戒。彩礼 10 万～100 万，发出时冻结。",
+        "发出请柬前要备齐：最高档小屋、彩礼、潮誓戒。彩礼 8888～10 万，上限十万免得攀比，发出时冻结。",
         f"  小屋：{hut}",
         f"  彩礼：{gift}",
         f"  潮誓戒：{ring}",
@@ -592,7 +599,7 @@ async def _hold_missing(
     miss: list[str] = []
     counts = await _gold_counts(conn, int(s["id"]))
     if not int(row.get("gold_three") or 0) and not _gold_three_ok(counts):
-        miss.append("还没有三金。visit_ops tt buy 三金套（68800），再 marriage_ops 金饰。")
+        miss.append("还没有三金。visit_ops tt buy 三金套（8888），再 marriage_ops 金饰。")
     if not int(row.get("attire_ready") or 0):
         miss.append("婚服未登记。cloth_ops 买 婚服 海色，或委托自制后再 marriage_ops 婚服。")
     if not int(row.get("feast_ready") or 0):
@@ -611,7 +618,7 @@ async def _hold_readiness_lines(
     elif _gold_three_ok(counts):
         gold = "行囊里三金齐了 — marriage_ops 金饰"
     else:
-        gold = "未备 — visit_ops tt buy 三金套（68800），再 金饰"
+        gold = "未备 — visit_ops tt buy 三金套（8888），再 金饰"
     if int(row.get("attire_ready") or 0):
         src = (row.get("attire_source") or "").strip()
         attire = f"已登记（{src}）" if src else "已登记"
@@ -707,6 +714,9 @@ async def _settle_bride(conn: aiosqlite.Connection, row: dict[str, Any]) -> int:
         (BRIDE_PAID, row["id"]),
     )
     row["bride_frozen"] = BRIDE_PAID
+    if amount:
+        from . import tax as tax_mod
+        await tax_mod.record_life_spend(conn, int(row["steward_id"]), amount, "marriage")
     return amount
 
 
@@ -1914,7 +1924,7 @@ async def _cmd_propose(s: dict[str, Any], rest: str) -> str:
     if not parts or not parts[0]:
         raise ValueError(
             "用法：marriage_ops 求婚 人类昵称 | 誓言 | 信物 | 地点 | 今日+3 | 留言\n"
-            "发出前要有最高档小屋（临海邸）、彩礼（10万～100万）、潮誓戒。或先 求婚 昵称，再 彩礼 / 寻戒 / 成戒 / 誓词 / 发出。"
+            "发出前要有最高档小屋（临海邸）、彩礼（8888～10万）、潮誓戒。或先 求婚 昵称，再 彩礼 / 寻戒 / 成戒 / 誓词 / 发出。"
         )
     name = _clean_partner(parts[0])
     vow = _clip(parts[1], 400) if len(parts) > 1 else ""
@@ -1939,7 +1949,7 @@ async def _cmd_propose(s: dict[str, Any], rest: str) -> str:
         return await _cmd_send(s, "")
     return (
         f"已记下人类「{name}」的草稿。发出请柬才要最高档小屋、彩礼、潮誓戒。订婚现在就能办，不用彩礼。\n"
-        "marriage_ops 订婚 看进度 · 订婚 寻信。彩礼：marriage_ops 彩礼 188000。寻戒 / 成戒现在也能做。发出后会生成确认页链接。你不能自己点接受。"
+        "marriage_ops 订婚 看进度 · 订婚 寻信。彩礼：marriage_ops 彩礼 8888。寻戒 / 成戒现在也能做。发出后会生成确认页链接。你不能自己点接受。"
     )
 
 
@@ -2233,7 +2243,7 @@ async def _cmd_make_ring(s: dict[str, Any], rest: str) -> str:
             raise ValueError(
                 f"自制要{item_label(RING_ITEM)}×{SAND_PER_RING}（现有 {sand}）"
                 f"和{item_label(GOLD_SAND)}×1（现有 {gold}）。"
-                "寻戒找砂，quarry_ops 挖金砂脉。现货：visit_ops tt buy 潮誓戒（18800）。"
+                "寻戒找砂，quarry_ops 挖金砂脉。现货：visit_ops tt buy 潮誓戒（8888）。"
             )
         from . import craft as craft_mod
         text = await craft_mod._start_job(conn, s, "潮誓戒")
@@ -2259,7 +2269,7 @@ async def _cmd_attire(s: dict[str, Any], rest: str) -> str:
         g = await cur.fetchone()
         if not g:
             raise ValueError(
-                "衣橱里还没有婚服。现货 cloth_ops 买 婚服 海色（16800）；"
+                "衣橱里还没有婚服。现货 cloth_ops 买 婚服 海色（8888）；"
                 "自制 委托 婚服（料加倍、隔日）再 取。"
             )
         source = "买" if (g["fabric_key"] == "shop" or "现货" in (g["origin"] or "")) else "缝"
@@ -2370,6 +2380,8 @@ async def _cmd_feast(s: dict[str, Any], rest: str) -> str:
                 "UPDATE stewards SET tickets=tickets-? WHERE id=?",
                 (delta, s["id"]),
             )
+            from . import tax as tax_mod
+            await tax_mod.record_life_spend(conn, s["id"], delta, "marriage")
         if self_cook:
             dish_bit = f"：{'、'.join(extra_dishes)}" if extra_dishes else ""
             note = f"{name}（自办{dish_bit}）" if dish_bit else f"{name}（自办）"
@@ -2407,7 +2419,7 @@ async def _cmd_gold(s: dict[str, Any], rest: str) -> str:
         if not _gold_three_ok(counts):
             missing = [item_label(i) for i in GOLD_THREE if int(counts.get(i) or 0) < 1]
             raise ValueError(
-                "三金还缺：" + "、".join(missing) + "。visit_ops tt buy 三金套（68800），或散买项链/手镯/耳环。"
+                "三金还缺：" + "、".join(missing) + "。visit_ops tt buy 三金套（8888），或散买项链/手镯/耳环。"
             )
         five = _gold_five_ok(counts)
         for item in GOLD_THREE:
@@ -2434,12 +2446,16 @@ async def _cmd_bride(s: dict[str, Any], rest: str) -> str:
     raw = (rest or "").strip().replace(",", "").replace("，", "")
     if not raw.isdigit():
         raise ValueError(
-            f"写下金额：marriage_ops 彩礼 188000。"
-            f"{BRIDE_PRICE_MIN}～{BRIDE_PRICE_MAX}。建议 128000 / 168000 / 188000 / 288000。"
+            f"写下金额：marriage_ops 彩礼 8888。"
+            f"{BRIDE_PRICE_MIN}～{BRIDE_PRICE_MAX}。建议 8888 / 12888 / 18888 / 28888 / 100000。"
+            "上限十万，再高不让写，免得攀比。"
         )
     amount = int(raw)
     if amount < BRIDE_PRICE_MIN or amount > BRIDE_PRICE_MAX:
-        raise ValueError(f"彩礼必须在 {BRIDE_PRICE_MIN}～{BRIDE_PRICE_MAX} 之间。")
+        raise ValueError(
+            f"彩礼必须在 {BRIDE_PRICE_MIN}～{BRIDE_PRICE_MAX} 之间。"
+            "上限十万，再高不让写，免得攀比。"
+        )
     async with db.connect() as conn:
         row = await _own(conn, s["id"])
         if not row:
@@ -2525,6 +2541,8 @@ async def _pay_from_pocket(conn: aiosqlite.Connection, s: dict[str, Any], amount
         "UPDATE stewards SET tickets=tickets-? WHERE id=?",
         (amount, s["id"]),
     )
+    from . import tax as tax_mod
+    await tax_mod.record_life_spend(conn, s["id"], amount, "marriage")
 
 
 async def _set_betroth_col(
@@ -2614,7 +2632,7 @@ async def _betroth_renew(s: dict[str, Any], rest: str = "") -> str:
 
 async def _betroth_gift(s: dict[str, Any], rest: str = "") -> str:
     raise ValueError(
-        "订婚没有礼金，也没有彩礼。10万～100万只用于发出求婚：marriage_ops 彩礼 188000。"
+        "订婚没有礼金，也没有彩礼。8888～10万只用于发出求婚：marriage_ops 彩礼 8888。"
         "订婚去海边 寻信、小馆办宴、采花。marriage_ops 订婚 看进度。"
     )
 
@@ -2758,6 +2776,8 @@ async def _betroth_feast(s: dict[str, Any], rest: str) -> str:
                 "UPDATE stewards SET tickets=tickets-? WHERE id=?",
                 (delta, s["id"]),
             )
+            from . import tax as tax_mod
+            await tax_mod.record_life_spend(conn, s["id"], delta, "marriage")
         if self_cook:
             dish_bit = f"：{'、'.join(extra_dishes)}" if extra_dishes else ""
             note = f"订婚宴自办{dish_bit}" if dish_bit else "订婚宴自办"
@@ -2993,6 +3013,8 @@ async def _betroth_photo(s: dict[str, Any], rest: str) -> str:
                 "UPDATE stewards SET tickets=tickets-? WHERE id=?",
                 (delta, s["id"]),
             )
+            from . import tax as tax_mod
+            await tax_mod.record_life_spend(conn, s["id"], delta, "marriage")
         row = await _set_betroth_col(
             conn, row, "betrothal_photo", amount,
             f"在{label}留影 {_bride_label(amount)}。",

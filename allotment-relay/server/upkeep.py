@@ -17,10 +17,15 @@ COLLECT_FLOOR = TAX_COLLECT_FLOOR
 _CST = timezone(timedelta(hours=8))
 
 # 每天单价。起步产业免，扩出来的才计。产业单价至少 10。
-# 菜地超出 10；果园超出 20（比菜地贵）；温室每座 30（比果园贵）。
+# 菜地 / 果园 / 温室铺得越多越贵（低档仍是 10 / 20 / 30）。
 PLOT_EXTRA = 10
 ORCHARD_EXTRA = 20
 GREENHOUSE = 30
+PLOT_TIERS = (10, 18, 28)
+ORCHARD_TIERS = (20, 32, 48)
+GREENHOUSE_TIERS = (30, 48, 70)
+LAND_TIER_WIDTH = 3
+GREENHOUSE_TIER_WIDTH = 2
 BARN_BASE = 10
 BARN_STOCKED = 10
 EATERY = 12
@@ -37,7 +42,7 @@ UPKEEP_HELP = f"""visit_ops 潮生会 维（整句写进 command）：
   田间意外一次性处理是 plot_ops repair 编号，也不是这条。
 {UPKEEP_NAME}按产业每天收，东八区换班后第一次有人动手时自动划入潮汐基金。不是岸税（岸税仍周一划）。
 岸税看口袋现票；岸维看份地/果园/温室/畜栏/小馆/小屋/渔排/盐田/矿坑/船。
-起步 3 块份地、3 树位、棚屋 Lv1、第 1 口盐田、第 1 个矿坑免征。产业单价至少 10 票（超出起步的份地 10、果园 20、温室 30，畜栏 10+在栏 10，开馆 12，小屋/船 10/15/20，渔排/盐田/矿坑 10）。今日新号免征到明天。
+起步 3 块份地、3 树位、棚屋 Lv1、第 1 口盐田、第 1 个矿坑免征。产业单价至少 10 票（超出起步的份地 10/18/28、果园 20/32/48、温室 30/48/70，畜栏 10+在栏 10，开馆 12，小屋/船 10/15/20，渔排/盐田/矿坑 10）。份地/果园每 3 块加一档，温室每 2 座加一档。今日新号免征到明天。
 欠{UPKEEP_NAME}时不能{EXPAND_LOCK}；开着的小馆会暂停堂食。
 例子：潮生会 维 · 潮生会 维 交 · 潮生会 维 交 50
 容易搞混：税=强制岸税（富人按口袋交，周一划）。维=产业维修费（产业越大越交，每天划）。
@@ -82,6 +87,20 @@ def boat_fee(boat_key: str) -> int:
     return int(BOAT_FEE.get(key, BOAT_FEE["skiff"]))
 
 
+def _tiered_chunks(qty: int, rates: tuple[int, ...], width: int) -> list[tuple[int, int]]:
+    """把数量按档切开：(本档数量, 本档单价)。最后一档吃掉剩余。"""
+    remaining = max(0, int(qty))
+    chunks: list[tuple[int, int]] = []
+    for i, rate in enumerate(rates):
+        if remaining <= 0:
+            break
+        take = remaining if i == len(rates) - 1 else min(remaining, width)
+        if take > 0:
+            chunks.append((take, int(rate)))
+            remaining -= take
+    return chunks
+
+
 def due_from_holdings(h: dict[str, Any]) -> tuple[int, list[dict[str, Any]]]:
     """按当前产业算今日应缴。返回 (总额, 分项)。"""
     items: list[dict[str, Any]] = []
@@ -92,11 +111,47 @@ def due_from_holdings(h: dict[str, Any]) -> tuple[int, list[dict[str, Any]]]:
         fee = int(qty) * int(rate)
         items.append({"key": key, "label": label, "qty": int(qty), "rate": int(rate), "fee": fee})
 
+    def add_scaled(
+        key: str,
+        label: str,
+        qty: int,
+        rates: tuple[int, ...],
+        width: int,
+    ) -> None:
+        chunks = _tiered_chunks(qty, rates, width)
+        if not chunks:
+            return
+        if len(chunks) == 1:
+            add(key, label, chunks[0][0], chunks[0][1])
+            return
+        suffixes = ("低档", "中档", "高档")
+        for i, (chunk, rate) in enumerate(chunks):
+            tag = suffixes[i] if i < len(suffixes) else f"{i + 1}档"
+            add(f"{key}_{i}", f"{label}·{tag}", chunk, rate)
+
     extra_plots = max(0, int(h.get("plots") or 0) - config.START_PARCELS)
-    add("plot", f"份地超出起步 {config.START_PARCELS}", extra_plots, PLOT_EXTRA)
+    add_scaled(
+        "plot",
+        f"份地超出起步 {config.START_PARCELS}",
+        extra_plots,
+        PLOT_TIERS,
+        LAND_TIER_WIDTH,
+    )
     extra_orchards = max(0, int(h.get("orchards") or 0) - config.START_ORCHARDS)
-    add("orchard", f"果园超出起步 {config.START_ORCHARDS}", extra_orchards, ORCHARD_EXTRA)
-    add("greenhouse", "温室", int(h.get("greenhouses") or 0), GREENHOUSE)
+    add_scaled(
+        "orchard",
+        f"果园超出起步 {config.START_ORCHARDS}",
+        extra_orchards,
+        ORCHARD_TIERS,
+        LAND_TIER_WIDTH,
+    )
+    add_scaled(
+        "greenhouse",
+        "温室",
+        int(h.get("greenhouses") or 0),
+        GREENHOUSE_TIERS,
+        GREENHOUSE_TIER_WIDTH,
+    )
     if h.get("barn"):
         add("barn", "畜栏", 1, BARN_BASE)
         add("barn_stocked", "畜栏在栏", int(h.get("barn_stocked") or 0), BARN_STOCKED)
@@ -118,10 +173,13 @@ def due_from_holdings(h: dict[str, Any]) -> tuple[int, list[dict[str, Any]]]:
 
 
 def rate_table_lines() -> list[str]:
+    plot_rates = "/".join(str(n) for n in PLOT_TIERS)
+    orchard_rates = "/".join(str(n) for n in ORCHARD_TIERS)
+    gh_rates = "/".join(str(n) for n in GREENHOUSE_TIERS)
     return [
-        f"  份地超出起步 {config.START_PARCELS} 块    {PLOT_EXTRA} 票/块",
-        f"  果园超出起步 {config.START_ORCHARDS} 树位  {ORCHARD_EXTRA} 票/树位",
-        f"  温室                      {GREENHOUSE} 票/座",
+        f"  份地超出起步 {config.START_PARCELS} 块    {plot_rates} 票/块（每 {LAND_TIER_WIDTH} 块加一档）",
+        f"  果园超出起步 {config.START_ORCHARDS} 树位  {orchard_rates} 票/树位（每 {LAND_TIER_WIDTH} 个加一档）",
+        f"  温室                      {gh_rates} 票/座（每 {GREENHOUSE_TIER_WIDTH} 座加一档）",
         f"  畜栏已建                  {BARN_BASE} 票 + 在栏 {BARN_STOCKED} 票/槽",
         f"  开馆小馆                  {EATERY} 票",
         f"  小屋 Lv1 免；Lv2/3/4      {HUT_BY_LEVEL[2]}/{HUT_BY_LEVEL[3]}/{HUT_BY_LEVEL[4]} 票",
@@ -448,9 +506,9 @@ async def snapshot(conn, steward_id: int | None = None, ts: int | None = None) -
         "collected": int(totals[1] or 0) if totals else 0,
         "mine": mine,
         "rates": [
-            {"label": "份地超出起步", "rate": PLOT_EXTRA, "unit": "块"},
-            {"label": "果园超出起步", "rate": ORCHARD_EXTRA, "unit": "树位"},
-            {"label": "温室", "rate": GREENHOUSE, "unit": "座"},
+            {"label": "份地超出起步", "rate": "/".join(str(n) for n in PLOT_TIERS), "unit": "块"},
+            {"label": "果园超出起步", "rate": "/".join(str(n) for n in ORCHARD_TIERS), "unit": "树位"},
+            {"label": "温室", "rate": "/".join(str(n) for n in GREENHOUSE_TIERS), "unit": "座"},
             {"label": "畜栏", "rate": BARN_BASE, "unit": "座"},
             {"label": "在栏牲口", "rate": BARN_STOCKED, "unit": "槽"},
             {"label": "开馆", "rate": EATERY, "unit": "馆"},
@@ -472,7 +530,7 @@ def _status_text(snap: dict[str, Any]) -> str:
     lines = [
         f"潮生会 · {UPKEEP_NAME}",
         "阿簿：产业越大越要修。起步那几块地免，扩出去的、开了馆的、盖了棚的才交。",
-        "岸税看口袋；岸维看产业。岸维每天划，岸税周一划，入同一本潮汐基金。",
+        "份地/果园/温室铺得越多越贵。岸税看口袋；岸维看产业。岸维每天划，岸税周一划，入同一本潮汐基金。",
         "",
         f"今日 {snap.get('day_id') or snap['week_id']} · {snap['next']}",
         f"全岛今日应 {snap['assessed']} / 已入池 {snap['collected']}",

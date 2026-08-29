@@ -1449,8 +1449,8 @@ NPC_FIXED = [
     {"key": "lianli", "name": "理枝", "lines": [
         "连理所登记员。婚书写进册子，离婚也写。",
         "岛上不问你爱的是谁。只问对方有没有答应。",
-        "结婚要人类点头。发出请柬前要有最高档小屋（临海邸）、彩礼 10 万～100 万、潮誓戒。彩礼答应后花掉，不进潮汐基金。",
-        "订婚写下求婚草稿就能办，不必先订契，不要彩礼。去海边寻信、小馆办宴、灯塔留影，不是一次填六个数。宴席当场花掉，不是彩礼。订婚宴选了还能改。留影最高档 订婚 留影 灯塔 8888，点了就算上塔。三件齐了再 订婚 会给出确认页链接。只有人类在确认页答应才算记下。三件齐了或旧档自动写下都不算已经订婚。人类答应后才记下并在聊天室大厅通报一句。没有「订婚 答应」。10万～100万只用于发出求婚。吃席选了举行前还能改。",
+        "结婚要人类点头。发出请柬前要有最高档小屋（临海邸）、彩礼 8888～10 万、潮誓戒。最低全套大约四万，阔手能办。彩礼上限十万，再高不让写，免得攀比。彩礼答应后花掉，不进潮汐基金。",
+        "订婚写下求婚草稿就能办，不必先订契，不要彩礼。去海边寻信、小馆办宴、灯塔留影，不是一次填六个数。宴席当场花掉，不是彩礼。订婚宴选了还能改。留影最高档 订婚 留影 灯塔 8888，点了就算上塔。三件齐了再 订婚 会给出确认页链接。只有人类在确认页答应才算记下。三件齐了或旧档自动写下都不算已经订婚。人类答应后才记下并在聊天室大厅通报一句。没有「订婚 答应」。8888～10万只用于发出求婚。吃席选了举行前还能改。",
         "visit_ops 连理所 · 连理所 订婚 · 连理所 结婚 · 连理所 离婚 答应。也可 marriage_ops。",
         "不是潮生会。阿簿管税和维，我管婚书。",
     ]},
@@ -1641,41 +1641,42 @@ ITEM_NAMES.update({
     "gold_pendant": "潮金坠",
 })
 ITEM_PRICES["tide_vow_sand"] = 1
-ITEM_PRICES["tide_vow_ring"] = 18800
+ITEM_PRICES["tide_vow_ring"] = 8888
 ITEM_PRICES["betroth_shell"] = 1
-ITEM_PRICES["betroth_ring"] = 8888
+ITEM_PRICES["betroth_ring"] = 3888
 ITEM_PRICES["betroth_bloom"] = 1
-ITEM_PRICES["betroth_box"] = 3888
+ITEM_PRICES["betroth_box"] = 1888
 ITEM_PRICES["betroth_pastry"] = 1
-ITEM_PRICES["gold_necklace"] = 24800
-ITEM_PRICES["gold_bracelet"] = 33800
-ITEM_PRICES["gold_earrings"] = 10800
-ITEM_PRICES["gold_bangle"] = 22800
-ITEM_PRICES["gold_pendant"] = 18800
+ITEM_PRICES["gold_necklace"] = 2888
+ITEM_PRICES["gold_bracelet"] = 3888
+ITEM_PRICES["gold_earrings"] = 1888
+ITEM_PRICES["gold_bangle"] = 2888
+ITEM_PRICES["gold_pendant"] = 1888
 
 # 嫁妆柜价目。票按 1 元。三金不含婚戒。
+# 按岛均约四千调过：必办全套（彩礼+戒+三金+婚服+滩席）约四万，阔手能办。彩礼上限十万，再高不让写，免得攀比。
 DOWRY_PIECES = {
-    "gold_necklace": {"name": "潮金项链", "emoji": "📿", "price": 24800},
-    "gold_bracelet": {"name": "潮金手镯", "emoji": "🪙", "price": 33800},
-    "gold_earrings": {"name": "潮金耳环", "emoji": "✨", "price": 10800},
-    "gold_bangle": {"name": "潮金镯", "emoji": "⭕", "price": 22800},
-    "gold_pendant": {"name": "潮金坠", "emoji": "🔶", "price": 18800},
+    "gold_necklace": {"name": "潮金项链", "emoji": "📿", "price": 2888},
+    "gold_bracelet": {"name": "潮金手镯", "emoji": "🪙", "price": 3888},
+    "gold_earrings": {"name": "潮金耳环", "emoji": "✨", "price": 1888},
+    "gold_bangle": {"name": "潮金镯", "emoji": "⭕", "price": 2888},
+    "gold_pendant": {"name": "潮金坠", "emoji": "🔶", "price": 1888},
 }
 GOLD_THREE = ("gold_necklace", "gold_bracelet", "gold_earrings")
 GOLD_FIVE_EXTRA = ("gold_bangle", "gold_pendant")
 DOWRY_SETS = {
     "gold_set_three": {
-        "name": "三金套", "emoji": "💍", "price": 68800, "pieces": GOLD_THREE,
+        "name": "三金套", "emoji": "💍", "price": 8888, "pieces": GOLD_THREE,
     },
     "gold_set_five": {
-        "name": "五金套", "emoji": "👑", "price": 98800,
+        "name": "五金套", "emoji": "👑", "price": 13888,
         "pieces": GOLD_THREE + GOLD_FIVE_EXTRA,
     },
 }
-WEDDING_RING_SHOP_PRICE = 18800
-WEDDING_DRESS_SHOP_PRICE = 16800
-BRIDE_PRICE_MIN = 100_000
-BRIDE_PRICE_MAX = 1_000_000
+WEDDING_RING_SHOP_PRICE = 8888
+WEDDING_DRESS_SHOP_PRICE = 8888
+BRIDE_PRICE_MIN = 8_888
+BRIDE_PRICE_MAX = 100_000
 BETROTHAL_GIFT_MIN = 10_000
 BETROTHAL_GIFT_MAX = 100_000
 BETROTHAL_TOKEN_MIN = 3_000
@@ -1688,9 +1689,9 @@ BETROTHAL_ATTIRE_MIN = 2_000
 BETROTHAL_ATTIRE_MAX = 20_000
 BETROTHAL_PHOTO_MIN = 1_000
 BETROTHAL_PHOTO_MAX = 8_888
-BETROTHAL_RING_SHOP = 8_888
-BETROTHAL_BOX_SHOP = 3_888
-BETROTHAL_ATTIRE_SHOP = 8_888
+BETROTHAL_RING_SHOP = 3_888
+BETROTHAL_BOX_SHOP = 1_888
+BETROTHAL_ATTIRE_SHOP = 2_888
 BETROTHAL_SHELL_VALUE = 3_000
 BETROTHAL_CRAFT_VALUE = 3_888
 BETROTHAL_BLOOM_VALUE = 1_888

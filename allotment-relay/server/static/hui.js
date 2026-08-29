@@ -33,7 +33,7 @@ async function loadHui() {
         <small>池里</small>
         <strong>${esc(fund.pool ?? 0)} 票</strong>
         <p>${ready
-          ? `岛均口袋 ${esc(fund.avg ?? 0)} 票 · 在册 ${esc(fund.n ?? 0)} 人。有余的人自己填数捐。补贴不用领，${esc(fund.weekdays || '周二四六')}自动发。`
+          ? `岛均口袋 ${esc(fund.avg ?? 0)} 票 · 在册 ${esc(fund.n ?? 0)} 人。有余的人自己填数捐。补贴不用领，${esc(fund.weekdays || '周二四六')}自动发：先托到 800，再按岛均补，每人顶 2500。`
           : '在册还不够两人，算不出岛均。'}</p>
         <small>${esc(fund.next_pay || '')}</small>
       </div>
@@ -55,7 +55,7 @@ async function loadHui() {
       <div class="hui-card">
         <small>本周已入池</small>
         <strong>${esc(tax.collected ?? 0)} 票</strong>
-        <p>口袋现票超额累进。未过 ${esc(tax.free ?? 800)} 免征。东八区每周一换班自动划进潮汐基金。欠税时不能扩地扩产。</p>
+        <p>口袋现票超额累进。未过 ${esc(tax.free ?? 800)} 免征。高档加码（阔手 14%、豪客 20%、潮主 26%、潮宗 36%）。离岛均太远加潮差：超过 ${esc(tax.gap_soft || '岛均5倍')} 再加 8%，超过 ${esc(tax.gap_hard || '岛均15倍')} 再加 16%。刚到岛均的人加不到。只攒不花加潮锈：闲票本周要花掉 ${esc(tax.rust_rate ?? 15)}%，没花够的缺口整笔进基金。酒吧、小馆、衣泊坊、诊所、星光、小屋日子、婚宴、三金、基金捐算花；买地买园不算，买棚送礼也不算。东八区每周一换班自动划进潮汐基金。欠税时不能扩地扩产。</p>
         <small>${esc(tax.next || '')} · 本周应 ${esc(tax.assessed ?? 0)}</small>
         <div class="hui-brackets">${rows}</div>
       </div>
@@ -75,7 +75,7 @@ async function loadHui() {
       <div class="hui-card">
         <small>今日已入池</small>
         <strong>${esc(upkeep.collected ?? 0)} 票</strong>
-        <p>按产业每天收。起步 3 块份地、3 树位免征；超出份地 10、果园 20、温室 30；畜栏、渔排、盐田、矿坑 10。开馆 12；小屋/船 10/15/20。东八区换班后自动划，不是岸税。欠维修费时不能扩产，开着的小馆暂停堂食。</p>
+        <p>按产业每天收。起步 3 块份地、3 树位免征；超出份地 10/18/28、果园 20/32/48、温室 30/48/70，铺多了加档。畜栏、渔排、盐田、矿坑 10。开馆 12；小屋/船 10/15/20。东八区换班后自动划，不是岸税。欠维修费时不能扩产，开着的小馆暂停堂食。</p>
         <small>${esc(upkeep.next || '')} · 今日应 ${esc(upkeep.assessed ?? 0)}</small>
         <div class="hui-brackets">${rows}</div>
       </div>

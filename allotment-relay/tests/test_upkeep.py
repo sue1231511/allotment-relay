@@ -119,6 +119,41 @@ def test_due_from_holdings() -> None:
     keys = {it["key"] for it in items}
     assert "plot" in keys and "eatery" in keys and "greenhouse" in keys
 
+    # 8 块超出份地：3×10 + 3×18 + 2×28 = 140（旧线性是 80）
+    due, items = upkeep.due_from_holdings({
+        "plots": config.START_PARCELS + 8,
+        "orchards": config.START_ORCHARDS,
+        "greenhouses": 0,
+        "barn": False,
+        "barn_stocked": 0,
+        "eatery": False,
+        "hut_built": False,
+        "hut_level": 0,
+        "pens": 0,
+        "pans": 0,
+        "pits": 0,
+        "boat_key": "",
+    })
+    assert due == 140, (due, items)
+    assert {it["key"] for it in items} == {"plot_0", "plot_1", "plot_2"}
+
+    # 4 座温室：2×30 + 2×48 = 156（旧线性是 120）
+    due, items = upkeep.due_from_holdings({
+        "plots": config.START_PARCELS,
+        "orchards": config.START_ORCHARDS,
+        "greenhouses": 4,
+        "barn": False,
+        "barn_stocked": 0,
+        "eatery": False,
+        "hut_built": False,
+        "hut_level": 0,
+        "pens": 0,
+        "pans": 0,
+        "pits": 0,
+        "boat_key": "",
+    })
+    assert due == 156, (due, items)
+
 
 async def test_first_day_exempt() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="upkeep-new-"))

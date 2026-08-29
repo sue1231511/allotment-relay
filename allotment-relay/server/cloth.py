@@ -194,7 +194,7 @@ STORIES: dict[str, dict[str, Any]] = {
 }
 
 YANGYANG_LINES = (
-    "成衣没有。布来了再裁。你当这儿是成衣铺？婚服那挂是例外，现货 16800。订婚服也有一挂 8888，不是婚服。",
+    "成衣没有。布来了再裁。你当这儿是成衣铺？婚服那挂是例外，现货 8888。订婚服也有一挂 2888，不是婚服。",
     "这布是潮送的，还是地里长的，我闻得出来。",
     "梅雨纱过季了会收进柜里。不是绝版，明年还会漂回来。少搞那种逼人盯着日历的缺德玩意。",
     "版型、颜色、纹样你自己点。组不对也行，衣服还是衣服，故事另说。",
@@ -722,6 +722,8 @@ async def _cmd_buy_wedding(conn: aiosqlite.Connection, s: dict[str, Any], rest: 
         "UPDATE stewards SET tickets=tickets-? WHERE id=?",
         (cost, s["id"]),
     )
+    from . import tax as tax_mod
+    await tax_mod.record_life_spend(conn, s["id"], cost, "cloth")
     name = garment_name(cut, color, motif, "shop")
     origin = "衣泊坊现货。没交布，是柜上那挂。"
     cur = await conn.execute(

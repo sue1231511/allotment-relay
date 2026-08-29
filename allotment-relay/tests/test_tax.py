@@ -81,13 +81,38 @@ def test_tax_due_brackets() -> None:
     assert tax.tax_due(800) == 0
     assert tax.tax_due(1500) == 28  # (1500-800)*4%
     assert tax.tax_due(4000) == 188  # 68 + 120
-    assert tax.tax_due(10000) == 828
+    assert tax.tax_due(10000) == 908  # 68 + 280 + 560
+    assert tax.tax_due(40000) == 7208
+    assert tax.tax_due(100000) == 24808
     assert tax.band_name(120) == "免征"
     assert tax.band_name(1500) == "温水"
     assert tax.band_name(4000) == "殷实"
     assert tax.band_name(10000) == "阔手"
     assert tax.band_name(20000) == "豪客"
     assert tax.band_name(40000) == "潮主"
+    assert tax.band_name(100000) == "潮宗"
+
+    # 岛上实况：岛均约 4000，第二十名刚到岛均，榜首 20 万。
+    assert tax.gap_surcharge(4000, 4000) == 0
+    assert tax.gap_surcharge(20000, 4000) == 0
+    assert tax.gap_surcharge(40000, 4000) == 1600  # (40000-20000)*8%
+    assert tax.gap_surcharge(200000, 4000) == 25600
+    assert tax.tax_due(4000, 4000) == 188
+    assert tax.tax_due(200000, 4000) == 60808 + 25600
+    assert tax.tax_due(200000) == 60808  # 不传岛均不加潮差
+
+    # 潮锈：闲票 15%，缺口整笔。spent 缺省不加锈。
+    assert tax.rust_idle(4000, 4000) == 0
+    assert tax.rust_need(4000, 4000) == 0
+    assert tax.rust_surcharge(4000, 4000, 0) == 0
+    assert tax.rust_idle(200000, 4000) == 196000
+    assert tax.rust_need(200000, 4000) == 29400
+    assert tax.rust_surcharge(200000, 4000, 0) == 29400
+    assert tax.rust_surcharge(200000, 4000, 29400) == 0
+    assert tax.rust_surcharge(200000, 4000, 10000) == 19400
+    assert tax.rust_surcharge(200000, 4000, None) == 0
+    assert tax.tax_due(200000, 4000, 0) == 60808 + 25600 + 29400
+    assert tax.tax_due(200000, 4000, 29400) == 60808 + 25600
 
 
 async def test_first_week_exempt() -> None:
@@ -105,7 +130,7 @@ async def test_first_week_exempt() -> None:
         tickets, arrears = await _row(db, sid)
         assert tickets == 5000, tickets
         assert arrears == 0, arrears
-        assert tax.tax_due(5000) == 268
+        assert tax.tax_due(5000) == 268  # 殷实档未改
     finally:
         db.now = real_now
 
@@ -218,6 +243,102 @@ async def test_partial_pay_and_help() -> None:
         db.now = real_now
 
 
+async def test_gap_levy_on_whale() -> None:
+    """岛均被少数人拉高时，榜首要交潮差，刚到岛均的人不用。"""
+    tmp = Path(tempfile.mkdtemp(prefix="tax-gap-"))
+    db = await _boot(tmp)
+    from server import tax
+
+    real_now = db.now
+    db.now = lambda: ENROLL_TUE
+    whale_kid, whale_sid = await _enroll(db, "whale@example.com", "鲸客")
+    mid_kid, mid_sid = await _enroll(db, "mid@example.com", "中客")
+    poor = []
+    for i in range(18):
+        kid, sid = await _enroll(db, f"p{i}@example.com", f"贫{i}")
+        poor.append((kid, sid))
+    await _set_tickets(db, whale_sid, 200000)
+    await _set_tickets(db, mid_sid, 4000)
+    for _kid, sid in poor:
+        await _set_tickets(db, sid, 2000)
+    # 200000 + 4000 + 18*2000 = 240000 / 20 = 12000
+    db.now = lambda: NEXT_MON
+    try:
+        async with db.connect() as conn:
+            await conn.execute(
+                "DELETE FROM world_flags WHERE flag_key LIKE 'shore_tax:%'"
+            )
+            result = await tax.ensure_shore_tax(conn, ts=NEXT_MON)
+            await conn.commit()
+        avg = 12000
+        whale_due = tax.tax_due(200000, avg, 0)
+        mid_due = tax.tax_due(4000, avg, 0)
+        assert tax.gap_surcharge(4000, avg) == 0
+        assert tax.rust_surcharge(4000, avg, 0) == 0
+        assert tax.gap_surcharge(200000, avg) > 0
+        assert tax.rust_surcharge(200000, avg, 0) == 28200
+        assert result and result["assessed"] >= whale_due + mid_due, result
+        whale_left, whale_arrears = await _row(db, whale_sid)
+        mid_left, mid_arrears = await _row(db, mid_sid)
+        assert whale_arrears == 0
+        assert mid_arrears == 0
+        assert whale_left == 200000 - whale_due, (whale_left, whale_due)
+        assert mid_left == 4000 - mid_due, (mid_left, mid_due)
+        assert whale_due > tax.bracket_due(200000) + tax.gap_surcharge(200000, avg)
+    finally:
+        db.now = real_now
+
+
+async def test_rust_offset_by_life_spend() -> None:
+    """上周喝过酒就能抵锈；自己请自己吃饭不算；买地不入账。"""
+    tmp = Path(tempfile.mkdtemp(prefix="tax-rust-"))
+    db = await _boot(tmp)
+    from server import tax
+
+    real_now = db.now
+    db.now = lambda: ENROLL_TUE
+    whale_kid, whale_sid = await _enroll(db, "rust@example.com", "锈客")
+    mid_kid, mid_sid = await _enroll(db, "midr@example.com", "中锈")
+    await _set_tickets(db, whale_sid, 200000)
+    await _set_tickets(db, mid_sid, 4000)
+    drink_ts = _cst_ts(2026, 8, 26)
+    async with db.connect() as conn:
+        await conn.execute(
+            """
+            INSERT INTO bar_drink_orders (patron_id, drink_key, cost, note, created_at)
+            VALUES (?, 'wine', 30000, '抵锈', ?)
+            """,
+            (whale_sid, drink_ts),
+        )
+        await conn.execute(
+            """
+            INSERT INTO eatery_orders (shop_id, patron_id, item, price, note, created_at)
+            VALUES (?, ?, 'stew', 8000, '自己请自己', ?)
+            """,
+            (whale_sid, whale_sid, drink_ts),
+        )
+        await conn.commit()
+    db.now = lambda: NEXT_MON
+    try:
+        async with db.connect() as conn:
+            await conn.execute(
+                "DELETE FROM world_flags WHERE flag_key LIKE 'shore_tax:%'"
+            )
+            result = await tax.ensure_shore_tax(conn, ts=NEXT_MON)
+            await conn.commit()
+        avg = 102000  # (200000+4000)/2
+        spent = 30000  # 自己请自己的 8000 不计
+        whale_due = tax.tax_due(200000, avg, spent)
+        assert tax.rust_surcharge(200000, avg, spent) == 0
+        assert tax.rust_surcharge(200000, avg, 0) > 0
+        whale_left, whale_arrears = await _row(db, whale_sid)
+        assert whale_arrears == 0
+        assert whale_left == 200000 - whale_due, (whale_left, whale_due)
+        assert result is not None
+    finally:
+        db.now = real_now
+
+
 async def test_no_tax_ops() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="tax-noops-"))
     db = await _boot(tmp)
@@ -240,6 +361,8 @@ def test_tax() -> None:
     asyncio.run(test_weekly_levy_and_fund())
     asyncio.run(test_pay_arrears_unlocks_land())
     asyncio.run(test_partial_pay_and_help())
+    asyncio.run(test_gap_levy_on_whale())
+    asyncio.run(test_rust_offset_by_life_spend())
     asyncio.run(test_no_tax_ops())
 
 

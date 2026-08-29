@@ -252,7 +252,7 @@ async def test_tide_fund_auto_payout() -> None:
         donated = await mcp_dispatch.visit_bundle(rich, "潮生会 基金 捐 50")
         assert "50 票" in donated, donated
         assert await _tickets(db, rich) == 350
-        assert await _tickets(db, poor) == 130  # 池里 50 全补出去，不到顶 1000
+        assert await _tickets(db, poor) == 130  # 池里 50 全补出去，不到顶 2500
         assert "发放" in donated or "补" in donated, donated
 
         try:
@@ -267,7 +267,50 @@ async def test_tide_fund_auto_payout() -> None:
             await conn.commit()
         assert again is None
         assert await _tickets(db, poor) == 130
-        assert chaoshen.FUND_PAY_CAP == 1000
+        assert chaoshen.FUND_PAY_CAP == 2500
+    finally:
+        db.now = real_now
+
+
+async def test_tide_fund_cap_raised() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="chaoshen-fund-cap-"))
+    db = await _boot(tmp)
+    rich = await _enroll(db, "cap-rich@example.com", "阔余")
+    poor = await _enroll(db, "cap-poor@example.com", "阔缺")
+    from server import mcp_dispatch
+
+    real_now = db.now
+    db.now = lambda: TUE
+    try:
+        await _set_tickets(db, rich, 10000)
+        await _set_tickets(db, poor, 100)
+        donated = await mcp_dispatch.visit_bundle(rich, "潮生会 基金 捐 3000")
+        assert "3000" in donated or "3,000" in donated or "发放" in donated, donated
+        # 先托到 800（+700），剩下 2300 按岛均补 → 口袋 3100
+        assert await _tickets(db, poor) == 3100, await _tickets(db, poor)
+    finally:
+        db.now = real_now
+
+
+async def test_tide_fund_floor_first() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="chaoshen-fund-floor-"))
+    db = await _boot(tmp)
+    rich = await _enroll(db, "floor-rich@example.com", "托余")
+    low = await _enroll(db, "floor-low@example.com", "托低")
+    mid = await _enroll(db, "floor-mid@example.com", "托中")
+    from server import mcp_dispatch
+
+    real_now = db.now
+    db.now = lambda: TUE
+    try:
+        await _set_tickets(db, rich, 4000)
+        await _set_tickets(db, low, 100)
+        await _set_tickets(db, mid, 700)
+        donated = await mcp_dispatch.visit_bundle(rich, "潮生会 基金 捐 800")
+        assert "800" in donated or "发放" in donated, donated
+        # 池里 800：先把 100→800、700→800，两人都托到免税线，不再只喂最低的一个人
+        assert await _tickets(db, low) == 800, await _tickets(db, low)
+        assert await _tickets(db, mid) == 800, await _tickets(db, mid)
     finally:
         db.now = real_now
 
@@ -416,6 +459,8 @@ def test_chaoshen() -> None:
     asyncio.run(test_tide_fund_average())
     asyncio.run(test_tide_fund_need_peers())
     asyncio.run(test_tide_fund_auto_payout())
+    asyncio.run(test_tide_fund_cap_raised())
+    asyncio.run(test_tide_fund_floor_first())
     asyncio.run(test_hui_official_notices())
     asyncio.run(test_hui_owner_http())
 

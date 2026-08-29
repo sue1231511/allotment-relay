@@ -1410,6 +1410,8 @@ async def hut_ops(key_id: int, command: str) -> str:
                 """,
                 (config.HUT_BUILD_COST, s["id"]),
             )
+            from . import tax as tax_mod
+            await tax_mod.record_life_spend(conn, s["id"], config.HUT_BUILD_COST, "hut")
             from . import bond as bond_mod
             await bond_mod.grant(conn, s["id"], bond_mod.HUT_UPGRADE, "life", once="hut_build")
             await conn.commit()
@@ -1440,6 +1442,7 @@ async def hut_ops(key_id: int, command: str) -> str:
                 "UPDATE stewards SET tickets=tickets-?, hut_level=? WHERE id=?",
                 (cost, lvl + 1, s["id"]),
             )
+            await tax_mod.record_life_spend(conn, s["id"], cost, "hut")
             from . import bond as bond_mod
             await bond_mod.grant(conn, s["id"], bond_mod.HUT_UPGRADE, "life")
             await conn.commit()
@@ -1471,6 +1474,8 @@ async def hut_ops(key_id: int, command: str) -> str:
                 "UPDATE stewards SET tickets=tickets-? WHERE id=?",
                 (meta["cost"], s["id"]),
             )
+            from . import tax as tax_mod
+            await tax_mod.record_life_spend(conn, s["id"], meta["cost"], "hut")
             await db.add_item(conn, s["id"], fit_item, 1)
             await conn.commit()
         extra = ""

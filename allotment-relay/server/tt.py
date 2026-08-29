@@ -75,16 +75,16 @@ SHOP_EXTRAS: dict[str, dict[str, Any]] = {
     },
     TOOL_SHEARS: {"name": "剪毛剪刀", "emoji": "✂️", "price": 45, "kind": "tool", "unique": True},
     TOOL_MILKER: {"name": "挤奶器", "emoji": "🥛", "price": 55, "kind": "tool", "unique": True},
-    "gold_necklace": {"name": "潮金项链", "emoji": "📿", "price": 24800, "kind": "dowry"},
-    "gold_bracelet": {"name": "潮金手镯", "emoji": "🪙", "price": 33800, "kind": "dowry"},
-    "gold_earrings": {"name": "潮金耳环", "emoji": "✨", "price": 10800, "kind": "dowry"},
-    "gold_bangle": {"name": "潮金镯", "emoji": "⭕", "price": 22800, "kind": "dowry"},
-    "gold_pendant": {"name": "潮金坠", "emoji": "🔶", "price": 18800, "kind": "dowry"},
-    "gold_set_three": {"name": "三金套", "emoji": "💍", "price": 68800, "kind": "dowry", "set": True},
-    "gold_set_five": {"name": "五金套", "emoji": "👑", "price": 98800, "kind": "dowry", "set": True},
-    "tide_vow_ring": {"name": "潮誓戒", "emoji": "💍", "price": 18800, "kind": "dowry"},
-    "betroth_ring": {"name": "订婚戒", "emoji": "💍", "price": 8888, "kind": "dowry"},
-    "betroth_box": {"name": "礼盒", "emoji": "🎁", "price": 3888, "kind": "dowry"},
+    "gold_necklace": {"name": "潮金项链", "emoji": "📿", "price": 2888, "kind": "dowry"},
+    "gold_bracelet": {"name": "潮金手镯", "emoji": "🪙", "price": 3888, "kind": "dowry"},
+    "gold_earrings": {"name": "潮金耳环", "emoji": "✨", "price": 1888, "kind": "dowry"},
+    "gold_bangle": {"name": "潮金镯", "emoji": "⭕", "price": 2888, "kind": "dowry"},
+    "gold_pendant": {"name": "潮金坠", "emoji": "🔶", "price": 1888, "kind": "dowry"},
+    "gold_set_three": {"name": "三金套", "emoji": "💍", "price": 8888, "kind": "dowry", "set": True},
+    "gold_set_five": {"name": "五金套", "emoji": "👑", "price": 13888, "kind": "dowry", "set": True},
+    "tide_vow_ring": {"name": "潮誓戒", "emoji": "💍", "price": 8888, "kind": "dowry"},
+    "betroth_ring": {"name": "订婚戒", "emoji": "💍", "price": 3888, "kind": "dowry"},
+    "betroth_box": {"name": "礼盒", "emoji": "🎁", "price": 1888, "kind": "dowry"},
 }
 
 SHOP_ALIASES = {
@@ -667,6 +667,9 @@ async def tt_ops(key_id: int, command: str) -> str:
             if extra_meta.get("set") and qty != 1:
                 raise ValueError("套装一次买一套。")
             left = await _pay(conn, s["id"], cost)
+            if extra_meta.get("kind") == "dowry":
+                from . import tax as tax_mod
+                await tax_mod.record_life_spend(conn, s["id"], cost, "tt")
             pieces = (DOWRY_SETS.get(item) or {}).get("pieces")
             if pieces:
                 for piece in pieces:
@@ -728,6 +731,8 @@ async def _gift_tickets(steward: dict[str, Any], qty: int) -> str:
             await conn.commit()
             return f"今日送礼已满 {GIFT_DAILY_CAP} 次。Tt酱挥手：账本要下班。"
         await _pay(conn, steward["id"], qty)
+        from . import tax as tax_mod
+        await tax_mod.record_life_spend(conn, steward["id"], qty, "tt")
         score = await _affinity(conn, steward["id"])
         raw = min(TICKET_GAIN_CAP, max(1, qty // TICKET_PER_POINT))
         gain = apply_gift_gain(raw, score, cap=TICKET_GAIN_CAP)

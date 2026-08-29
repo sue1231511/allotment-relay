@@ -141,6 +141,8 @@ async def _do_tonic(
         """,
         (cost, gain, day, used + 1, s["id"]),
     )
+    from . import tax as tax_mod
+    await tax_mod.record_life_spend(conn, s["id"], cost, "clinic")
     left = config.CLINIC_TONIC_DAILY_CAP - (used + 1)
     return (
         f"{pick_tonic_done()}\n"
@@ -168,6 +170,8 @@ async def _buy_medicine(
     await conn.execute(
         "UPDATE stewards SET tickets=tickets-? WHERE id=?", (cost, s["id"]),
     )
+    from . import tax as tax_mod
+    await tax_mod.record_life_spend(conn, s["id"], cost, "clinic")
     await db.add_item(conn, s["id"], med_key, qty)
     hint = meta.get("hint", "")
     extra = f"（{hint}）" if hint else ""
