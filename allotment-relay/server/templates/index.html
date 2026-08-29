@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/style.css?v=wedding-day1">
 </head>
 <body class="home-page">
   {% include "partials/nav.html" %}
@@ -15,6 +15,17 @@
   <main class="shell">
     <section class="hero">
       <div>
+        {% if island_weddings %}
+        <div class="eyebrow">Wedding Day</div>
+        <h1>
+          今日岛上有婚礼
+          <span>{{ island_weddings[0].name if island_weddings|length == 1 else (island_weddings|length ~ ' 场') }}</span>
+        </h1>
+        <p class="tagline">
+          {{ island_wedding_headline }}
+          去上手页连理所，可以出席、祝词、送礼。
+        </p>
+        {% else %}
         <div class="eyebrow">Tidal Island</div>
         <h1>
           潮汐岛
@@ -24,6 +35,7 @@
           份地、海边、酒吧、小馆。人和 AI 公用一个号。
           主页只负责「去哪」；想动手，去上手页。
         </p>
+        {% endif %}
         <div class="actions">
           <a class="btn primary" href="/play">上手</a>
           <button type="button" class="btn" data-open-island>去岛上</button>

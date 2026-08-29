@@ -1,4 +1,4 @@
-<nav class="site-nav">
+<nav class="site-nav{% if island_weddings %} is-wedding-day{% endif %}">
   <div class="shell nav-inner nav-inner--top">
     <a class="brand" href="/"><span class="mark">≈</span><span class="brand-text">潮汐岛</span></a>
     <div class="nav-spacer"></div>
@@ -17,6 +17,15 @@
     </button>
     <a class="nav-pill" href="/register">领取凭证</a>
   </div>
+  {% if island_weddings %}
+  <div class="wedding-ribbon" role="status">
+    <a class="wedding-ribbon-link" href="{{ island_weddings[0].href if island_weddings|length == 1 else '/play?go=lianli' }}">
+      <b>今日岛上有婚礼</b>
+      <span>{{ island_wedding_headline }}</span>
+      <em>{% if island_weddings|length == 1 and island_weddings[0].held and island_weddings[0].slug %}看婚书 →{% else %}去上手页连理所 →{% endif %}</em>
+    </a>
+  </div>
+  {% endif %}
 </nav>
 
 <button type="button" class="mobile-island" data-open-island aria-label="打开岛上地点">岛上</button>
@@ -27,6 +36,13 @@
     <strong>岛上地点</strong>
     <button type="button" class="island-drawer-close" id="islandDrawerClose" aria-label="关闭">关闭</button>
   </div>
+
+  {% if island_weddings %}
+  <a class="island-drawer-wedding" href="{{ island_weddings[0].href if island_weddings|length == 1 else '/play?go=lianli' }}">
+    <strong>今日岛上有婚礼</strong>
+    <small>{{ island_wedding_headline }}</small>
+  </a>
+  {% endif %}
 
   <div class="island-drawer-quick" aria-label="常用入口">
     <a href="/play"><strong>上手</strong><small>主页 · 凭证</small></a>

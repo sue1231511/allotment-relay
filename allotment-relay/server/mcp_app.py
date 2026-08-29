@@ -160,7 +160,7 @@ async def cloth_ops(command: str = "") -> str:
     return progress_mod.attach_note(await mux._call_ops(cloth.cloth_ops, _kid(), command))
 
 
-@mcp.tool(description="婚约连理所。空=档案。例：求婚 阿潮 · 结婚。人类确认页答应；勿 propose_marriage。")
+@mcp.tool(description="婚约连理所。空=档案。例：求婚 阿潮 · 结婚。婚期全站婚礼页。勿 propose_marriage。")
 async def marriage_ops(command: str = "") -> str:
     from . import marriage
     from . import progress as progress_mod

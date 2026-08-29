@@ -66,11 +66,17 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 app.mount("/mcp", mcp_starlette)
 
 
-def _html(request: Request, name: str, **ctx):
-    """公共页模板：自动带上岛上抽屉用的地点分组。"""
-    from . import promo
+async def _html(request: Request, name: str, **ctx):
+    """公共页模板：自动带上岛上抽屉用的地点分组；婚期当天附婚礼页数据。"""
+    from . import marriage, promo
     ctx.setdefault("route_groups", promo.home_route_groups())
     ctx.setdefault("elsewhere", promo.home_elsewhere())
+    if "island_weddings" not in ctx:
+        ctx["island_weddings"] = await marriage.today_island_weddings()
+    ctx.setdefault(
+        "island_wedding_headline",
+        marriage.island_wedding_headline(ctx.get("island_weddings") or []),
+    )
     return templates.TemplateResponse(request, name, ctx)
 
 
@@ -92,94 +98,94 @@ class KeyRequest(BaseModel):
 async def index(request: Request):
     from . import db, promo
     stats = await db.public_stats()
-    return _html(request, "index.html", **promo.home_context(stats.get("stewards") or 0))
+    return await _html(request, "index.html", **promo.home_context(stats.get("stewards") or 0))
 
 
 @app.get("/register", response_class=HTMLResponse)
 async def register_page(request: Request):
     invite = (request.query_params.get("invite") or request.query_params.get("code") or "").strip()
-    return _html(request, "register.html", active=None, invite_code=invite)
+    return await _html(request, "register.html", active=None, invite_code=invite)
 
 
 @app.get("/recover", response_class=HTMLResponse)
 async def recover_page(request: Request):
-    return _html(request, "recover.html", active=None)
+    return await _html(request, "recover.html", active=None)
 
 
-def _place_page(request: Request, slug: str):
+async def _place_page(request: Request, slug: str):
     from . import promo
-    return _html(request, "place.html", **promo.page_context(slug))
+    return await _html(request, "place.html", **promo.page_context(slug))
 
 
 @app.get("/allotments", response_class=HTMLResponse)
 async def allotments_page(request: Request):
     """份地全景观望实况；种地仍回上手页。"""
-    return _html(request, "allotments.html", active="allotments")
+    return await _html(request, "allotments.html", active="allotments")
 
 
 @app.get("/quarry", response_class=HTMLResponse)
 async def quarry_page(request: Request):
     """盐风崖围观实况；挥镐仍回上手页。"""
-    return _html(request, "quarry.html", active="quarry")
+    return await _html(request, "quarry.html", active="quarry")
 
 
 @app.get("/workshop", response_class=HTMLResponse)
 async def workshop_page(request: Request):
     """岸工坊围观实况；打钉仍回上手页。"""
-    return _html(request, "workshop.html", active="workshop")
+    return await _html(request, "workshop.html", active="workshop")
 
 
 @app.get("/atelier", response_class=HTMLResponse)
 async def atelier_page(request: Request):
     """衣泊坊海报；裁衣仍回上手页。"""
-    return _place_page(request, "atelier")
+    return await _place_page(request, "atelier")
 
 
 @app.get("/lianli", response_class=HTMLResponse)
 async def lianli_page(request: Request):
     """连理所海报；结婚离婚仍回上手页。确认页走 /lianli/{token}。"""
-    return _place_page(request, "lianli")
+    return await _place_page(request, "lianli")
 
 
 @app.get("/tide", response_class=HTMLResponse)
 async def tide_page(request: Request):
     """海边围观实况；动手仍回上手页。"""
-    return _html(request, "tide.html", active="tide")
+    return await _html(request, "tide.html", active="tide")
 
 
 @app.get("/huts", response_class=HTMLResponse)
 async def huts_page(request: Request):
     """岸畔小屋围观实况；搭建装件仍回上手页。"""
-    return _html(request, "huts.html", active="huts")
+    return await _html(request, "huts.html", active="huts")
 
 
 @app.get("/market", response_class=HTMLResponse)
 async def market_page(request: Request):
     """玩家集市围观实况；摆摊买货仍回上手页。"""
-    return _html(request, "market.html", active="market")
+    return await _html(request, "market.html", active="market")
 
 
 @app.get("/board", response_class=HTMLResponse)
 async def board_page(request: Request):
     """全服排行榜围观；点名字去上手页看邻居。"""
-    return _html(request, "board.html", active="board")
+    return await _html(request, "board.html", active="board")
 
 
 @app.get("/bar", response_class=HTMLResponse)
 async def bar_page(request: Request):
     """滨海酒吧围观实况；点单上工仍回上手页。"""
-    return _html(request, "bar.html", active="bar")
+    return await _html(request, "bar.html", active="bar")
 
 
 @app.get("/play", response_class=HTMLResponse)
 async def play_page(request: Request):
-    return _html(request, "play.html", active="play")
+    return await _html(request, "play.html", active="play")
 
 
 @app.get("/manual", response_class=HTMLResponse)
 async def island_manual_page(request: Request):
     """人类使用手册。套全站导航，章节切换在标题下方横滑标签。"""
-    return _html(request, "manual.html", active="manual")
+    return await _html(request, "manual.html", active="manual")
 
 
 @app.get("/island-manual")
@@ -191,7 +197,7 @@ async def island_manual_alias():
 async def vow_page(request: Request, token: str):
     from . import marriage
     view = await marriage.public_vow_view(token)
-    return _html(request, "vow.html", active="", view=view, token=token)
+    return await _html(request, "vow.html", active="", view=view, token=token)
 
 
 @app.post("/vow/{token}", response_class=HTMLResponse)
@@ -208,7 +214,7 @@ async def vow_respond(
 async def lianli_filing_page(request: Request, token: str):
     from . import marriage
     view = await marriage.public_vow_view(token)
-    return _html(request, "vow.html", active="", view=view, token=token)
+    return await _html(request, "vow.html", active="", view=view, token=token)
 
 
 @app.post("/lianli/{token}", response_class=HTMLResponse)
@@ -227,7 +233,7 @@ async def _lianli_respond(request: Request, token: str, action: str, confirm: st
     decline = (action or "").strip().lower() in ("decline", "no", "拒绝", "不答应")
     if not accept and not decline:
         view = await marriage.public_vow_view(token)
-        return _html(request, "vow.html", active="", view=view, token=token)
+        return await _html(request, "vow.html", active="", view=view, token=token)
     result = await marriage.human_respond(
         token, accept=accept, confirm=bool(confirm) and confirm not in ("0", "false"),
     )
@@ -235,7 +241,7 @@ async def _lianli_respond(request: Request, token: str, action: str, confirm: st
     view["result"] = result
     if result.get("need_confirm"):
         view["need_confirm"] = True
-    return _html(request, "vow.html", active="", view=view, token=token, result=result)
+    return await _html(request, "vow.html", active="", view=view, token=token, result=result)
 
 
 @app.get("/hearth/{slug}", response_class=HTMLResponse)
@@ -243,8 +249,8 @@ async def hearth_page(request: Request, slug: str):
     from . import marriage
     view = await marriage.public_hearth_view(slug)
     if not view.get("ok"):
-        return _html(request, "hearth.html", active="", view={"ok": False})
-    return _html(request, "hearth.html", active="", view=view)
+        return await _html(request, "hearth.html", active="", view={"ok": False})
+    return await _html(request, "hearth.html", active="", view=view)
 
 
 @app.post("/hearth/{slug}", response_class=HTMLResponse)
@@ -261,8 +267,8 @@ async def hearth_file_divorce(
     if not file_it:
         view = await marriage.public_hearth_view(slug)
         if not view.get("ok"):
-            return _html(request, "hearth.html", active="", view={"ok": False})
-        return _html(request, "hearth.html", active="", view=view)
+            return await _html(request, "hearth.html", active="", view={"ok": False})
+        return await _html(request, "hearth.html", active="", view=view)
     result = await marriage.human_file_divorce(
         slug, confirm=bool(confirm) and confirm not in ("0", "false"),
     )
@@ -273,7 +279,7 @@ async def hearth_file_divorce(
         view["result"] = result
         if result.get("need_confirm"):
             view["need_confirm"] = True
-    return _html(request, "hearth.html", active="", view=view, result=result)
+    return await _html(request, "hearth.html", active="", view=view, result=result)
 
 
 @app.get("/steward")
@@ -284,25 +290,25 @@ async def steward_page():
 @app.get("/lounge", response_class=HTMLResponse)
 async def lounge_page(request: Request):
     """全服聊天室；凭证仍在上手页绑定。"""
-    return _html(request, "lounge.html", active="lounge")
+    return await _html(request, "lounge.html", active="lounge")
 
 
 @app.get("/eatery", response_class=HTMLResponse)
 async def eatery_page(request: Request):
     """岸畔小馆围观实况；点餐仍回上手页。"""
-    return _html(request, "eatery.html", active="eatery")
+    return await _html(request, "eatery.html", active="eatery")
 
 
 @app.get("/hui", response_class=HTMLResponse)
 async def hui_page(request: Request):
     """潮生会围观实况；问事仍回上手页。"""
-    return _html(request, "hui.html", active="hui")
+    return await _html(request, "hui.html", active="hui")
 
 
 @app.get("/ting", response_class=HTMLResponse)
 async def ting_page(request: Request):
     """听潮亭围观实况；钉牌回帖仍回上手页。"""
-    return _html(request, "ting.html", active="ting")
+    return await _html(request, "ting.html", active="ting")
 
 class BarOrderRequest(BaseModel):
     api_key: str
@@ -476,9 +482,15 @@ async def recover_key(request: Request, body: KeyRequest):
     return {"api_key": api_key, "mcp_url": f"{base}/mcp/?api_key={api_key}"}
 
 
-@app.get("/api/public/stats")
-async def public_stats():
-    return await db.public_stats()
+@app.get("/api/public/weddings")
+async def public_weddings():
+    from . import marriage
+    rows = await marriage.today_island_weddings()
+    return {
+        "today": bool(rows),
+        "headline": marriage.island_wedding_headline(rows),
+        "weddings": rows,
+    }
 
 
 @app.get("/api/public/chronicle")
@@ -831,7 +843,7 @@ async def eatery_order(body: EateryOrderRequest):
 @app.get("/star", response_class=HTMLResponse)
 async def star_page(request: Request):
     """小橘星光围观实况；打赏应援仍回上手页。"""
-    return _html(request, "star.html", active="star")
+    return await _html(request, "star.html", active="star")
 
 
 @app.get("/api/public/star")
@@ -1312,7 +1324,7 @@ async def star_owner_script(request: Request):
 
 @app.get("/undertide")
 async def undertide_page(request: Request):
-    return _html(request, "undertide.html", active="undertide")
+    return await _html(request, "undertide.html", active="undertide")
 
 
 @app.get("/api/public/undertide")
@@ -1442,7 +1454,7 @@ async def invite_admin_page(request: Request, key: str = ""):
         return JSONResponse({"detail": _PANEL_DISABLED_HINT}, status_code=503)
     if not _owner_ok(key, INVITE_ADMIN_KEY):
         return JSONResponse({"detail": "凭证不对。"}, status_code=401)
-    return _html(request, "invite_admin.html", active=None, admin_key=key)
+    return await _html(request, "invite_admin.html", active=None, admin_key=key)
 
 
 @app.post("/api/invite/admin/list")

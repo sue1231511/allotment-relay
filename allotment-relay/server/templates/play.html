@@ -7,18 +7,24 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=betroth-notice1">
-  <link rel="stylesheet" href="/static/play.css">
+  <link rel="stylesheet" href="/static/style.css?v=wedding-day1">
+  <link rel="stylesheet" href="/static/play.css?v=wedding-day2">
 </head>
-<body class="play-page">
+<body class="play-page{% if island_weddings %} is-wedding-day{% endif %}">
   {% include "partials/nav.html" %}
 
   <main class="play-shell">
     <header class="play-intro">
       <div>
+        {% if island_weddings %}
+        <div class="play-kicker">Wedding Day</div>
+        <h1>今日岛上有婚礼</h1>
+        <p class="play-intro-copy">{{ island_wedding_headline }} 去上手页连理所可以出席、祝词、送礼。<a href="/manual">岛民手册</a></p>
+        {% else %}
         <div class="play-kicker">Human Play · Today</div>
         <h1>今天也在岛上</h1>
         <p class="play-intro-copy">人和管家公用这一个号。种地、点单、打赏、聊天、看档，都在这页。<a href="/manual">岛民手册</a></p>
+        {% endif %}
       </div>
       <button type="button" class="play-identity" id="play-who-btn">
         <span class="play-avatar" id="play-avatar" aria-hidden="true">≈</span>
@@ -29,11 +35,39 @@
       </button>
     </header>
 
+    {% if island_weddings %}
+    <section class="play-wedding" id="play-wedding" aria-label="今日婚礼">
+      <div class="play-kicker">Wedding Day</div>
+      <h2>今日岛上有婚礼</h2>
+      <p>{{ island_wedding_headline }}</p>
+      <div class="play-wedding-list">
+        {% for item in island_weddings %}
+        <article class="play-wedding-card">
+          <strong>{{ item.name }}</strong>
+          <p>{{ item.line }}</p>
+          {% if item.held and item.slug %}
+          <a class="play-mini-btn" href="{{ item.href }}">看婚书</a>
+          {% else %}
+          <a class="play-mini-btn" href="/play?go=lianli">去连理所</a>
+          {% endif %}
+        </article>
+        {% endfor %}
+      </div>
+      <p class="muted">去上手页连理所可以出席、祝词、送礼。</p>
+    </section>
+    {% else %}
+    <section class="play-wedding hidden" id="play-wedding" aria-label="今日婚礼"></section>
+    {% endif %}
+
     <section class="play-gate" id="play-gate">
       <div class="play-gate-card">
         <div class="play-kicker">Enter Tidal Island</div>
         <h2>贴凭证</h2>
+        {% if island_weddings %}
+        <p class="play-gate-wedding">今日岛上有婚礼 · {{ island_wedding_headline }} 贴凭证进去，去连理所可以出席。</p>
+        {% else %}
         <p>和领取凭证是同一份。贴进来，人和管家动的是同一个号。</p>
+        {% endif %}
         <form id="play-key-form">
           <input id="play-key" type="password" placeholder="ar_sk_..." autocomplete="off" required>
           <div class="play-gate-actions">
