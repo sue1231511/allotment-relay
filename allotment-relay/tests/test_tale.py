@@ -609,6 +609,118 @@ async def test_tonight_damp_flow() -> None:
         assert "已经完成" in str(exc), exc
 
 
+async def test_unhappy_service_flow() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="unhappy-service-"))
+    db = await _boot(tmp)
+    from server import npc, progress, tale, tale_unhappy_service
+
+    kid, sid = await _enroll(db, "unhappy-service@example.com", "问题机旁听人")
+    listing = await tale.tale_ops(kid, "list")
+    assert "unhappy_service" in listing and "很不高兴为您服务" in listing, listing
+    assert "人物称呼「很不高兴」" in listing, listing
+    assert "完整探索工分票+120" in listing, listing
+
+    npc_listing = await npc.npc_ops(kid, "list")
+    assert "眠" not in npc_listing, npc_listing
+
+    async with db.connect() as conn:
+        before = await (await conn.execute(
+            "SELECT tickets, energy FROM stewards WHERE id=?", (sid,)
+        )).fetchone()
+
+    accepted = await tale.tale_ops(kid, "accept unhappy_service")
+    assert "很不高兴为您服务" in accepted, accepted
+    assert "只是岛上的探索者" in accepted, accepted
+    assert "不替任何人作决定" in accepted, accepted
+    assert "tale_ops explore warehouse_corner" in accepted, accepted
+    assert "我不想换主人了" not in accepted, accepted
+    assert "纯看脸" not in accepted, accepted
+    assert "耶利哥" not in accepted, accepted
+
+    try:
+        await tale.tale_ops(kid, "review unhappy_service")
+        raise AssertionError("unfinished full review should be hidden")
+    except ValueError as exc:
+        assert "尚未解锁" in str(exc) and "避免提前看到后续" in str(exc), exc
+
+    wrong = await tale.tale_ops(kid, "explore night_office")
+    assert "未消耗精力" in wrong and "explore warehouse_corner" in wrong, wrong
+
+    outputs: list[str] = []
+    for index, stage in enumerate(tale_unhappy_service.TALE_STAGES, 1):
+        result = await tale.tale_ops(kid, f"explore {stage['domain']}")
+        outputs.append(result)
+        assert f"第 {index}/6 阶段奖励" in result, result
+        assert "工分票 +30" in result, result
+        if index < 4:
+            assert "耶利哥" not in result, result
+        if index < 5:
+            assert "我不想换主人了" not in result, result
+            assert "纯看脸" not in result, result
+
+    assert "潮声把一份没登记的档案送到你手上" in outputs[0], outputs[0]
+    assert "【人物记录新增：眠】" in outputs[0], outputs[0]
+    assert "耶利哥" in outputs[3], outputs[3]
+    assert "我不想换主人了" in outputs[4], outputs[4]
+    assert "纯看脸" in outputs[4], outputs[4]
+    finish = outputs[-1]
+    assert "«很不高兴为您服务» 已完成" in finish, finish
+    assert "【探索完成：《很不高兴为您服务》】" in finish, finish
+    assert "很不高兴为您服务" in finish, finish
+    assert "未登记条目" in finish, finish
+    assert "完整探索额外奖励" in finish and "工分票 +120" in finish, finish
+    assert "档信 +6" in finish and "雾智 +10" in finish, finish
+    assert "人物称呼「很不高兴」" in finish, finish
+    for name in ("滞销展示牌", "拔下来的电源线", "黑色高领毛衣", "未登记条目"):
+        assert name in finish, finish
+
+    async with db.connect() as conn:
+        after = await (await conn.execute(
+            "SELECT tickets, energy FROM stewards WHERE id=?", (sid,)
+        )).fetchone()
+        unlocked = await (await conn.execute(
+            """SELECT 1 FROM steward_achievements
+               WHERE steward_id=? AND ach_key='unhappy_service_witness'""",
+            (sid,),
+        )).fetchone()
+    assert after[0] - before[0] == 6 * 30 + 120, (before, after)
+    assert after[1] == before[1] - 6 * 5, (before, after)
+    assert unlocked, "unhappy_service title was not recorded"
+    assert progress.resolve_achievement("很不高兴") == "unhappy_service_witness"
+    assert progress.resolve_achievement("编号0627") == "unhappy_service_witness"
+
+    review_list = await tale.tale_ops(kid, "review")
+    assert "unhappy_service" in review_list, review_list
+    assert "tale_ops review unhappy_service" in review_list, review_list
+    full_review = await tale.tale_ops(kid, "review unhappy_service")
+    assert "潮闻全篇回顾 · 《很不高兴为您服务》" in full_review, full_review
+    assert "仅重读正文，不重复发放" in full_review, full_review
+    assert "【引子】" in full_review and "—— 全篇完 ——" in full_review, full_review
+    for index, action in enumerate(tale_unhappy_service.ACTIONS, 1):
+        assert f"【{index}/6 · {action['title']}】" in full_review, action["title"]
+    assert "潮声里漂来一份没登记的档案" in full_review, full_review
+    assert "我不想换主人了" in full_review, full_review
+    assert "纯看脸" in full_review, full_review
+    assert "底特律仿生人数据库" in full_review, full_review
+    async with db.connect() as conn:
+        after_review = await (await conn.execute(
+            "SELECT tickets, energy FROM stewards WHERE id=?", (sid,)
+        )).fetchone()
+    assert tuple(after_review) == tuple(after), (after, after_review)
+
+    souvenirs = await tale.tale_ops(kid, "souvenirs")
+    assert "潮闻收藏册 · 4 件" in souvenirs, souvenirs
+    assert "很不高兴为您服务" in souvenirs, souvenirs
+    for name in ("滞销展示牌", "拔下来的电源线", "黑色高领毛衣", "未登记条目"):
+        assert name in souvenirs, souvenirs
+
+    try:
+        await tale.tale_ops(kid, "accept unhappy_service")
+        raise AssertionError("non-repeatable unhappy_service tale should block")
+    except ValueError as exc:
+        assert "已经完成" in str(exc), exc
+
+
 async def test_tale_explore_is_unlimited() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="tale-unlimited-"))
     db = await _boot(tmp)
@@ -728,7 +840,8 @@ def test_tale_mcp_description() -> None:
     for word in (
         "black_box_lover", "memory_tide", "回忆生潮", "spring_beyond_mountain", "春山之外",
         "missing_pages", "缺页", "asking_around", "打听", "mr_ke", "克先生",
-        "tonight_damp", "今夜潮湿", "reminisce", "纪念品",
+        "tonight_damp", "今夜潮湿", "unhappy_service", "很不高兴为您服务",
+        "reminisce", "纪念品",
     ):
         assert word in man, word
     assert "全部正文" in man or "完整" in man
@@ -742,6 +855,7 @@ def main() -> None:
     asyncio.run(test_asking_around_flow())
     asyncio.run(test_mr_ke_flow())
     asyncio.run(test_tonight_damp_flow())
+    asyncio.run(test_unhappy_service_flow())
     asyncio.run(test_tale_explore_is_unlimited())
     asyncio.run(test_commons_claim_advances_item_stage())
     asyncio.run(test_tale_abandon())

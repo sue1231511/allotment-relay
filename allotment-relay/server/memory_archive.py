@@ -17,6 +17,7 @@ TALE_BLURBS = {
     "asking_around": "一个黄毛青年、一次次靠岸的船，和始终没有问出口的话。",
     "mr_ke": "杂货铺里的克太太与克先生，以及一百多年后仍被留下的那个人。",
     "tonight_damp": "雨后林子里刚醒的人，以及他始终觉得自己只是刚刚回家。",
+    "unhappy_service": "仓库最角落的问题机，以及一句很不高兴为您服务。",
 }
 
 LINEAR_STORY_MODULES = {
