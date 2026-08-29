@@ -81,13 +81,16 @@ def test_tax_due_brackets() -> None:
     assert tax.tax_due(800) == 0
     assert tax.tax_due(1500) == 28  # (1500-800)*4%
     assert tax.tax_due(4000) == 188  # 68 + 120
-    assert tax.tax_due(10000) == 828
+    assert tax.tax_due(10000) == 908  # 68 + 280 + 560
+    assert tax.tax_due(40000) == 7208
+    assert tax.tax_due(100000) == 24808
     assert tax.band_name(120) == "免征"
     assert tax.band_name(1500) == "温水"
     assert tax.band_name(4000) == "殷实"
     assert tax.band_name(10000) == "阔手"
     assert tax.band_name(20000) == "豪客"
     assert tax.band_name(40000) == "潮主"
+    assert tax.band_name(100000) == "潮宗"
 
 
 async def test_first_week_exempt() -> None:
@@ -105,7 +108,7 @@ async def test_first_week_exempt() -> None:
         tickets, arrears = await _row(db, sid)
         assert tickets == 5000, tickets
         assert arrears == 0, arrears
-        assert tax.tax_due(5000) == 268
+        assert tax.tax_due(5000) == 268  # 殷实档未改
     finally:
         db.now = real_now
 
