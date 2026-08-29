@@ -157,6 +157,9 @@ MARRIAGE_HELP = """marriage_ops 子命令（整句写进 command）：
       改档：再写 吃席 岸席。差价补上或退回口袋，不进潮汐基金。宾客已超过新档人数就不能改小
   邀请 岛民名 · 邀请 npc 阿簿 — 人数不能超过席面上限（4/8/12/16）。人多了就改大一档：吃席 岸席
   举行 / 结婚 / 登记 — 婚期到了，且三金、婚服、吃席都齐了，才登记成婚。订婚不是必须
+      登记后写公共潮讯、灯塔亮灯、生成永久潮汐婚书
+      婚期当天全站换成婚礼页：顶栏会出现「今日岛上有婚礼」，主页、上手页、地点页一打开都看得见
+      别人去上手页连理所 出席 / 祝词 / 送礼 / 帮忙
   婚礼 · 出席 · 祝词 · 送礼 · 帮忙 · 居所 · 婚书 · 退契 确认 · help
   离婚 答应 / 离婚 拒绝 — 人类在婚书页申请后，由你决定。不要发明「离婚 确认」
 
@@ -169,6 +172,7 @@ MARRIAGE_HELP = """marriage_ops 子命令（整句写进 command）：
   · 婚戒/婚服自制比买慢。三金五金没有自制，只去 Tt酱。
   · 求婚没有「接受」子命令。订婚也没有「订婚 答应」。人类打开 /lianli/… 点头。求婚请柬、订婚确认、退契都走这里。
   · 不要发明「离婚 确认」。岛民不能自己立案离婚。
+  · 婚期当天不是只在连理所才看得见：顶栏会出现「今日岛上有婚礼」，主页、上手页、地点页一打开都看得见。
   人类把求婚或订婚确认链接发到手机打开即可。上手页有「连理所」地点卡。网页 /lianli 是海报。婚书 /hearth/…。"""
 
 
@@ -907,6 +911,67 @@ async def is_wedding_day(steward_id: int) -> bool:
         today = db.day_id()
         wed = int(row["wedding_at"] or row["preferred_wedding_date"] or 0)
         return bool(wed and wed == today)
+
+
+async def today_island_weddings() -> list[dict[str, Any]]:
+    """今日全岛正在办 / 预定办的婚礼。公开页顶栏、主页、上手页共用。"""
+    today = db.day_id()
+    try:
+        async with db.connect() as conn:
+            conn.row_factory = aiosqlite.Row
+            rows = await (
+                await conn.execute(
+                    """
+                    SELECT m.status, m.partner_name, m.wedding_at, m.preferred_wedding_date,
+                           m.wedding_location, m.proposal_location, m.public_slug,
+                           st.name AS host_name
+                    FROM marriages m
+                    JOIN stewards st ON st.id = m.steward_id
+                    WHERE (m.status='married' AND COALESCE(m.wedding_at, 0)=?)
+                       OR (m.status='engaged' AND COALESCE(m.preferred_wedding_date, 0)=?)
+                    ORDER BY m.id
+                    LIMIT 12
+                    """,
+                    (today, today),
+                )
+            ).fetchall()
+    except Exception:
+        return []
+    out: list[dict[str, Any]] = []
+    for raw in rows:
+        row = dict(raw)
+        name = (row.get("host_name") or "").strip()
+        partner = (row.get("partner_name") or "").strip() or "TA 的人类"
+        loc = (row.get("wedding_location") or row.get("proposal_location") or "连理所").strip() or "连理所"
+        held = row.get("status") == STATUS_MARRIED
+        slug = (row.get("public_slug") or "").strip()
+        if held:
+            line = f"岛民「{name}」与 TA 的人类，今日在{loc}登记成婚。"
+        else:
+            line = f"岛民「{name}」与 TA 的人类，今日预定在{loc}办婚礼。"
+        href = f"/hearth/{slug}" if held and slug else "/play?go=lianli"
+        out.append(
+            {
+                "name": name,
+                "partner": partner,
+                "location": loc,
+                "held": held,
+                "slug": slug,
+                "href": href,
+                "line": line,
+            }
+        )
+    return out
+
+
+def island_wedding_headline(rows: list[dict[str, Any]] | None) -> str:
+    items = list(rows or [])
+    if not items:
+        return ""
+    if len(items) == 1:
+        return str(items[0].get("line") or "")
+    names = "、".join(str(item.get("name") or "") for item in items if item.get("name"))
+    return f"今日岛上有 {len(items)} 场婚礼：{names}"
 
 
 def _betrothal_public_fields(row: dict[str, Any]) -> dict[str, Any]:
@@ -3246,8 +3311,10 @@ async def _cmd_weddings(s: dict[str, Any], rest: str = "") -> str:
         )
         rows = [dict(r) for r in await cur.fetchall()]
     if not rows:
-        return "近几日没有公开的婚礼。有人举行后会出现在潮讯里。"
+        return "近几日没有公开的婚礼。有人举行后会出现在潮讯里，婚期当天全站也会换成婚礼页。"
     lines = ["近几日的婚礼（去参加：出席 岛民名 / 祝词 / 送礼 / 帮忙）"]
+    if any(int(r.get("preferred_wedding_date") or r.get("wedding_at") or 0) == today for r in rows):
+        lines.append("  今日全站已换成婚礼页。点进去就能看见谁在办。")
     for r in rows:
         mark = "今日" if int(r.get("preferred_wedding_date") or 0) == today else tide_day_label(r.get("preferred_wedding_date"))
         loc = r.get("wedding_location") or r.get("proposal_location") or "海边"

@@ -4637,3 +4637,124 @@ code {
 
   .steps { grid-template-columns: 1fr; }
 }
+
+/* 婚期当天：全站换成婚礼页 */
+body:has(.wedding-ribbon) {
+  --bg: #f7efe6;
+  --paper: #fbf6ef;
+  --sea: #c4a07a;
+  --sea-deep: #8f6748;
+  --sand: #e0c49a;
+  --rose: #b57a6f;
+  --line: rgba(143, 103, 72, .16);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(224, 176, 132, .28), transparent 32%),
+    radial-gradient(circle at 88% 8%, rgba(181, 122, 111, .16), transparent 30%),
+    var(--bg);
+}
+
+.site-nav.is-wedding-day {
+  background: rgba(247, 236, 223, .90);
+  border-bottom-color: rgba(176, 122, 90, .18);
+}
+
+.site-nav.is-wedding-day .mark {
+  color: #b57a6f;
+}
+
+.wedding-ribbon {
+  border-top: 1px solid rgba(176, 122, 90, .14);
+  background:
+    linear-gradient(90deg, rgba(224, 176, 132, .22), rgba(247, 236, 223, .55) 40%, rgba(181, 122, 111, .16));
+}
+
+.wedding-ribbon-link {
+  display: flex;
+  align-items: baseline;
+  gap: 12px 18px;
+  flex-wrap: wrap;
+  width: min(1120px, calc(100% - 36px));
+  margin: 0 auto;
+  padding: 10px 0 12px;
+  text-decoration: none;
+}
+
+.wedding-ribbon-link b {
+  font-family: "Noto Serif SC", serif;
+  font-size: 15px;
+  font-weight: 500;
+  color: #8f6748;
+  letter-spacing: .04em;
+}
+
+.wedding-ribbon-link span {
+  flex: 1 1 220px;
+  color: #6d5343;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.wedding-ribbon-link em {
+  font-style: normal;
+  font-size: 12px;
+  color: #b57a6f;
+  letter-spacing: .06em;
+}
+
+.wedding-live {
+  border-radius: 22px;
+  padding: 20px 24px 18px;
+  margin: 16px 0 20px;
+  background: linear-gradient(135deg, #f7efe6, #f3e2d2);
+  border: 1px solid rgba(176, 122, 90, .18);
+  box-shadow: 0 12px 36px rgba(143, 103, 72, .08);
+}
+
+.wedding-live h2 {
+  font-family: "Noto Serif SC", serif;
+  font-weight: 500;
+  margin: 6px 0 8px;
+  color: #8f6748;
+}
+
+.wedding-live p {
+  color: #6d5343;
+}
+
+.lounge-page-main > .wedding-live {
+  margin: 0 0 18px;
+}
+
+.island-drawer-wedding {
+  display: block;
+  margin: 0 22px 14px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  text-decoration: none;
+  color: inherit;
+  background: linear-gradient(135deg, #f7efe6, #f3e2d2);
+  border: 1px solid rgba(176, 122, 90, .18);
+}
+
+.island-drawer-wedding strong {
+  display: block;
+  font-family: "Noto Serif SC", serif;
+  font-size: 16px;
+  font-weight: 500;
+  color: #8f6748;
+}
+
+.island-drawer-wedding small {
+  display: block;
+  margin-top: 4px;
+  color: #6d5343;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+@media (max-width: 560px) {
+  .wedding-ribbon-link {
+    width: min(100% - 24px, 1120px);
+    padding: 9px 0 11px;
+  }
+}

@@ -6,6 +6,7 @@ const state = {
   places: [],
   neighbors: { total: 0, listed: 0, online: 0, people: [] },
   climate: null,
+  islandWeddings: { today: false, headline: '', weddings: [] },
   placeId: '',
   placeResult: '',
   eaterySnap: { shops: [] },
@@ -69,6 +70,7 @@ function applySnap(data, text) {
   state.places = data.places || [];
   state.neighbors = data.neighbors || { total: 0, listed: 0, online: 0, people: [] };
   state.climate = data.climate || null;
+  state.islandWeddings = data.island_weddings || { today: false, headline: '', weddings: [] };
   if (text) setLog(text);
   if (!state.enrolled) {
     document.body.classList.remove('play-bound');
@@ -297,6 +299,8 @@ function todayBlurb(d, c) {
   const dues = duesLine(d);
   if (dues) bits.push(dues);
   if (d && d.voyage) bits.push(d.voyage);
+  const wed = state.islandWeddings || {};
+  if (wed.today && wed.headline) bits.unshift(wed.headline.replace(/。$/, ''));
   if (bits.length) return bits.join('。') + '。';
   return d && d.motto ? d.motto : '先看份地，或去岛上晃一圈。';
 }
@@ -333,6 +337,7 @@ function renderAll() {
   if (dues) dutyBits.push(`${dues}。去潮生会交。`);
   dutyEl.textContent = dutyBits.join(' · ');
   show(dutyEl, dutyBits.length > 0);
+  renderWedding();
   renderPlots();
   renderPlaces();
   renderNeighbors();
@@ -342,6 +347,38 @@ function renderAll() {
   renderMemories();
   if (state.placeId) renderPlace(state.placeId);
   consumeGo();
+}
+
+function renderWedding() {
+  const box = $('play-wedding');
+  if (!box) return;
+  const wed = state.islandWeddings || {};
+  const rows = wed.weddings || [];
+  if (!wed.today || !rows.length) {
+    document.body.classList.remove('is-wedding-day');
+    show(box, false);
+    box.innerHTML = '';
+    return;
+  }
+  document.body.classList.add('is-wedding-day');
+  const cards = rows.map((item) => {
+    const href = item.href || '/play?go=lianli';
+    const extra = item.held && item.slug
+      ? `<a class="play-mini-btn" href="${esc(href)}">看婚书</a>`
+      : `<button type="button" class="play-mini-btn go" data-place="lianli">去连理所</button>`;
+    return `<article class="play-wedding-card">
+      <strong>${esc(item.name || '')}</strong>
+      <p>${esc(item.line || '')}</p>
+      ${extra}
+    </article>`;
+  }).join('');
+  box.innerHTML = `
+    <div class="play-kicker">Wedding Day</div>
+    <h2>今日岛上有婚礼</h2>
+    <p>${esc(wed.headline || '')}</p>
+    <div class="play-wedding-list">${cards}</div>
+    <p class="muted">去连理所可以出席、祝词、送礼。</p>`;
+  show(box, true);
 }
 
 function plotButtons(p) {
@@ -451,12 +488,13 @@ function renderPlots() {
 function placeCardHtml(pl, urgent) {
   const huiUrgent = pl.id === 'hui' && duesUrgent(state.dash);
   const hot = (pl.duty && urgent) || huiUrgent;
+  const wedding = pl.id === 'lianli' && state.islandWeddings && state.islandWeddings.today;
   return `
-    <article class="play-place-card ${hot ? 'is-duty' : ''}">
+    <article class="play-place-card ${hot ? 'is-duty' : ''} ${wedding ? 'is-wedding' : ''}">
       <small>${esc(pl.kicker || (pl.week1 ? 'Often' : 'Later'))}</small>
       <strong>${esc(pl.name)}</strong>
       <p>${esc(pl.blurb)}</p>
-      <button type="button" class="play-mini-btn ${hot ? 'primary' : ''} go" data-place="${esc(pl.id)}">前往</button>
+      <button type="button" class="play-mini-btn ${hot || wedding ? 'primary' : ''} go" data-place="${esc(pl.id)}">前往</button>
     </article>`;
 }
 

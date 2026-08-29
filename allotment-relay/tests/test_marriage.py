@@ -7,6 +7,7 @@ import os
 import re
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -995,6 +996,94 @@ async def _legacy_auto_seal_not_confirmed() -> None:
     assert "/lianli/" not in sealed, sealed
 
 
+async def _wedding_day_pages() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="wedding-day-"))
+    db = await _boot(tmp)
+    from server import marriage, play
+
+    key = await db.create_api_key("host@example.com")
+    row = await db.get_key_row(key)
+    await db.enroll_steward(row["id"], "泊舟", "", "naturalist", "")
+    host = row["id"]
+    today = db.day_id()
+    now = int(time.time())
+    async with db.connect() as conn:
+        sid = (await (await conn.execute(
+            "SELECT id FROM stewards WHERE key_id=?", (host,)
+        )).fetchone())[0]
+        await conn.execute(
+            """
+            INSERT INTO marriages (
+                steward_id, partner_type, partner_name, status,
+                preferred_wedding_date, wedding_location, proposal_location,
+                created_at, updated_at
+            ) VALUES (?, 'human', '阿潮', 'engaged', ?, '灯塔下', '灯塔下', ?, ?)
+            """,
+            (sid, today, now, now),
+        )
+        await conn.commit()
+
+    rows = await marriage.today_island_weddings()
+    assert len(rows) == 1, rows
+    assert rows[0]["name"] == "泊舟"
+    assert "预定" in rows[0]["line"] and "灯塔下" in rows[0]["line"]
+    headline = marriage.island_wedding_headline(rows)
+    assert "泊舟" in headline
+
+    snap = await play.snapshot(key)
+    assert snap["island_weddings"]["today"] is True
+    assert "泊舟" in snap["island_weddings"]["headline"]
+    lianli = next(p for p in snap["places"] if p["id"] == "lianli")
+    assert lianli.get("week1") is True
+    assert "今日岛上有婚礼" in lianli["blurb"]
+
+    from fastapi.testclient import TestClient
+    from server.main import app
+
+    client = TestClient(app)
+    for path in ("/", "/play", "/lianli", "/lounge", "/bar"):
+        page = client.get(path)
+        assert page.status_code == 200, (path, page.text[:200])
+        assert "wedding-ribbon" in page.text, path
+        assert "今日岛上有婚礼" in page.text, path
+        assert "泊舟" in page.text, path
+    home = client.get("/")
+    assert "去上手页连理所" in home.text
+    play_page = client.get("/play")
+    assert 'id="play-wedding"' in play_page.text
+    api = client.get("/api/public/weddings")
+    assert api.status_code == 200
+    body = api.json()
+    assert body["today"] is True
+    assert "泊舟" in body["headline"]
+    assert body["weddings"][0]["name"] == "泊舟"
+
+    async with db.connect() as conn:
+        await conn.execute(
+            "UPDATE marriages SET status='married', wedding_at=?, public_slug=?",
+            (today, "tide-hearth-demo"),
+        )
+        await conn.commit()
+    held = await marriage.today_island_weddings()
+    assert held[0]["held"] is True
+    assert held[0]["href"] == "/hearth/tide-hearth-demo"
+    held_home = client.get("/")
+    assert "登记成婚" in held_home.text
+    assert "/hearth/tide-hearth-demo" in held_home.text
+
+    async with db.connect() as conn:
+        await conn.execute("DELETE FROM marriages")
+        await conn.commit()
+    empty = await marriage.today_island_weddings()
+    assert empty == []
+    quiet = client.get("/")
+    assert "今日岛上有婚礼" not in quiet.text
+    assert "wedding-ribbon" not in quiet.text
+    quiet_api = client.get("/api/public/weddings").json()
+    assert quiet_api["today"] is False
+    assert quiet_api["weddings"] == []
+
+
 def test_marriage_system() -> None:
     asyncio.run(_full_flow())
     asyncio.run(_betrothal_flow())
@@ -1002,6 +1091,7 @@ def test_marriage_system() -> None:
     asyncio.run(_reject_and_guards())
     asyncio.run(_old_db_migrates_betrothal_confirm())
     asyncio.run(_legacy_auto_seal_not_confirmed())
+    asyncio.run(_wedding_day_pages())
 
 
 if __name__ == "__main__":

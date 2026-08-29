@@ -106,11 +106,11 @@ PLACES: list[dict[str, Any]] = [
             {"label": "吃席·岸席", "note": "改大一档。岸席 8888，上限 8 人。差价补上或退回口袋", "tool": "marriage_ops", "command": "吃席 岸席"},
             {"label": "吃席·灯塔席", "note": "灯塔席 18888，上限 12 人。举行前还能改", "tool": "marriage_ops", "command": "吃席 灯塔席"},
             {"label": "吃席·满潮席", "note": "满潮席 38888，上限 16 人。举行前还能改", "tool": "marriage_ops", "command": "吃席 满潮席"},
-            {"label": "结婚", "note": "婚期到了，且三金、婚服、吃席齐了才可登记。订婚不是必须", "tool": "marriage_ops", "command": "结婚"},
+            {"label": "结婚", "note": "婚期到了，且三金、婚服、吃席齐了才可登记。订婚不是必须。婚期当天全站换成婚礼页", "tool": "marriage_ops", "command": "结婚"},
             {"label": "离婚", "note": "看有没有人类申请", "tool": "marriage_ops", "command": "离婚"},
             {"label": "答应离婚", "note": "人类申请后由你决定", "tool": "marriage_ops", "command": "离婚 答应"},
             {"label": "拒绝离婚", "note": "婚约继续，当日不能再申请", "tool": "marriage_ops", "command": "离婚 拒绝"},
-            {"label": "近日婚礼", "note": "别人的婚礼", "tool": "marriage_ops", "command": "婚礼"},
+            {"label": "近日婚礼", "note": "别人的婚礼。婚期当天全站顶栏会写谁在办", "tool": "marriage_ops", "command": "婚礼"},
             {"label": "婚书", "note": "成婚后的永久档案", "tool": "marriage_ops", "command": "婚书"},
             {"label": "登记居所", "note": "把已有小屋写成两人住所", "tool": "marriage_ops", "command": "居所 登记"},
         ],
@@ -355,12 +355,17 @@ def bar_place_actions() -> list[dict[str, Any]]:
     return out
 
 
-def places_for_client() -> list[dict[str, Any]]:
+def places_for_client(island_weddings: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
+    live = bool(island_weddings)
     for place in PLACES:
         row = dict(place)
         if row.get("id") == "bar":
             row["actions"] = bar_place_actions()
+        if live and row.get("id") == "lianli":
+            row["week1"] = True
+            row["kicker"] = "Today"
+            row["blurb"] = "今日岛上有婚礼。点进去可以出席、祝词、送礼。"
         out.append(row)
     return out
 
@@ -410,13 +415,20 @@ async def snapshot(api_key: str) -> dict[str, Any]:
             "window_min": roster["window_min"],
             "people": roster["people"],
         }
+    from . import marriage
+    weddings = await marriage.today_island_weddings()
     return {
         "enrolled": enrolled,
         "dashboard": dash,
         "seeds": seeds,
         "neighbors": neighbors,
-        "places": places_for_client(),
+        "places": places_for_client(weddings),
         "climate": climate_bits(),
+        "island_weddings": {
+            "today": bool(weddings),
+            "headline": marriage.island_wedding_headline(weddings),
+            "weddings": weddings,
+        },
     }
 
 
