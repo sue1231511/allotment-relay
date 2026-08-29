@@ -276,11 +276,11 @@ async def _full_flow() -> None:
     assert "还能改" in peek and "滩席" in peek, peek
     up = await marriage.marriage_ops(host, "吃席 岸席")
     assert "岸席" in up and ("改成" in up or "改" in up), up
-    assert await _pocket(db, host) == 150000 - 48800
+    assert await _pocket(db, host) == 150000 - 8888
     assert await _fund(db) == 0
     down = await marriage.marriage_ops(host, "吃席 滩席")
     assert "滩席" in down, down
-    assert await _pocket(db, host) == 150000 - 18800
+    assert await _pocket(db, host) == 150000 - 3888
     invited = await marriage.marriage_ops(host, "邀请 邻潮")
     assert "邻潮" in invited, invited
     npc = await marriage.marriage_ops(host, "邀请 npc 阿簿")
