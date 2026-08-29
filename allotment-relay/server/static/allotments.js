@@ -64,6 +64,21 @@ function renderHero(stats, list) {
   setText('readyTotal', ready || '—');
 }
 
+const ONLINE_WINDOW = 900;
+
+function withHeroStats(stats, list) {
+  const people = list || [];
+  const now = Math.floor(Date.now() / 1000);
+  const derivedOnline = people.filter((a) => Number(a.last_active_at || 0) > now - ONLINE_WINDOW);
+  const out = Object.assign({}, stats || {});
+  if (typeof out.stewards !== 'number') out.stewards = people.length;
+  if (typeof out.online !== 'number') out.online = derivedOnline.length;
+  if (!Array.isArray(out.online_people) || !out.online_people.length) {
+    out.online_people = derivedOnline.map((a) => ({ id: a.id, name: a.name }));
+  }
+  return out;
+}
+
 function renderExpansion(chronicle) {
   const cut = Math.floor(Date.now() / 1000) - 86400;
   const rows = (chronicle || []).filter((c) => Number(c.created_at || 0) >= cut);
@@ -233,9 +248,10 @@ function renderPeople(list, onlinePeople) {
 
 function renderAll(stats, allotments, chronicle) {
   state.chronicle = chronicle || [];
-  renderHero(stats || {}, allotments || []);
+  const hero = withHeroStats(stats, allotments || []);
+  renderHero(hero, allotments || []);
   renderExpansion(chronicle || []);
-  renderPeople(allotments || [], (stats && stats.online_people) || []);
+  renderPeople(allotments || [], hero.online_people || []);
 }
 
 async function loadJson(url, fallback) {

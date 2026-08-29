@@ -267,6 +267,7 @@ def test_relay_manual_covers_systems() -> None:
         "全站换成婚礼页",
         "?go=plot",
         "婚期顶栏进连理所",
+        "顶上管理员/在线",
         "tale_ops 潮闻不给旧衣料",
         "plot_ops forage",
         "潮闻",
@@ -618,6 +619,7 @@ def test_human_island_manual() -> None:
         "我的份地",
         "种地去上手页",
         "底栏「份地」",
+        "全岛登记人数",
     ):
         assert needle in blob, needle
     assert "plot_ops" not in blob
@@ -825,6 +827,9 @@ def test_patron_pages_share_steward_key() -> None:
     assert "岸税" in hui_html
     assert "岸维" in hui_html
     assert "/api/public/stats" in allo_js
+    assert "withHeroStats" in allo_js
+    assert '@app.get("/api/public/stats")' in main_py
+    assert '@app.get("/api/public/weddings")' in main_py
     assert "place-live.css" in bar_html
     assert "place-live.css" in tide_html
     assert "place-live.css" in market_html

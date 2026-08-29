@@ -117,7 +117,7 @@ PLOT_HELP = """plot_ops 子命令（整句写进 command）：
   camera install 地块 — 装监控（15票），记录偷菜日志，提高抓贼概率
   camera check [地块] — 查偷菜日志（不写地块看所有）
   camera remove 地块 — 拆监控
-  人类看地在 /play（份地全景点种地会滚到份地栏）；/allotments 只围观。婚期顶栏进连理所不是份地丢了"""
+  人类看地在 /play（份地全景点种地会滚到份地栏）；/allotments 只围观（顶上管理员/在线是全岛人数）。婚期顶栏进连理所不是份地丢了"""
 
 HUT_HELP = """hut_ops 子命令（整句写进 command）：
   status / build / upgrade / catalog / buy / install — 岸畔小屋。欠岸税或岸维时不能 upgrade，先 visit_ops 潮生会 税 交 或 维 交

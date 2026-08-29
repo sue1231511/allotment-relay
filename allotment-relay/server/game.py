@@ -324,7 +324,7 @@ async def relay_manual() -> str:
         "  公共物资 plot_ops commons scan · claim 编号 — 全服抢，随机上线。不在潮生会",
         "  昼间 sow/tend 每天掷一次斑鸠盯梢（约 23%），碰上 plot_ops dove 忽略|驱赶",
         "  稻草人 scarecrow 地块；过熟 compost 地块进堆肥（果树清果后树还在，不想要才 chop）",
-        "  人类网页 /allotments 是份地全景观望；种地、买地、偷菜都在 /play（?go=plot 滚到份地栏）。婚期顶栏进连理所，份地还在上手页，点返回或底栏「份地」",
+        "  人类网页 /allotments 是份地全景观望（顶上管理员/在线是全岛人数）；种地、买地、偷菜都在 /play（?go=plot 滚到份地栏）。婚期顶栏进连理所，份地还在上手页，点返回或底栏「份地」",
         "",
         "【潮闻 · 故事探索任务】",
         "  tale_ops list — 查看可接任务和阶段/通关奖励；accept 任务key 接取。空 command 和 list 相同",

@@ -130,9 +130,36 @@ def test_play_js_routes_plot_go_home() -> None:
     assert "(d.meters && d.meters.energy)" not in js
 
 
+def test_public_stats_http_returns_stewards_and_online() -> None:
+    asyncio.run(_test_public_stats_http_returns_stewards_and_online())
+
+
+async def _test_public_stats_http_returns_stewards_and_online() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="allo-stats-"))
+    db = await _boot(tmp)
+    await _enroll(db, "stats@example.com", "统计人")
+    from fastapi.testclient import TestClient
+    from server.main import app
+
+    client = TestClient(app)
+    missing = client.get("/api/public/weddings")
+    assert missing.status_code == 200, missing.text
+    res = client.get("/api/public/stats")
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["stewards"] >= 1, body
+    assert "online" in body, body
+    assert isinstance(body.get("online_people"), list), body
+    allo = client.get("/api/public/allotments")
+    assert allo.status_code == 200, allo.text
+    rows = allo.json()
+    assert any(r.get("name") == "统计人" for r in rows), rows
+
+
 if __name__ == "__main__":
     test_missing_veg_rows_heal_on_dashboard()
     test_public_allotments_survives_unknown_crop()
     test_init_db_heals_empty_plot_table()
     test_play_js_routes_plot_go_home()
+    test_public_stats_http_returns_stewards_and_online()
     print("ok")

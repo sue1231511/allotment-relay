@@ -488,6 +488,11 @@ async def recover_key(request: Request, body: KeyRequest):
     return {"api_key": api_key, "mcp_url": f"{base}/mcp/?api_key={api_key}"}
 
 
+@app.get("/api/public/stats")
+async def public_stats():
+    return await db.public_stats()
+
+
 @app.get("/api/public/weddings")
 async def public_weddings():
     from . import marriage
