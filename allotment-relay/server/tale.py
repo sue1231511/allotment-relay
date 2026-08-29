@@ -27,13 +27,14 @@ from . import (
     tale_mr_ke,
     tale_spring_mountain,
     tale_tonight_damp,
+    tale_unhappy_service,
 )
 from .catalog import ITEM_NAMES
 from .game import require_steward
 
 TALE_HELP = """tale_ops 子命令（整句写进 command）：
   list — 可接任务
-  accept 任务key — 接任务；例：accept black_box_lover、accept memory_tide、accept spring_beyond_mountain、accept missing_pages、accept asking_around、accept mr_ke、accept tonight_damp
+  accept 任务key — 接任务；例：accept black_box_lover、accept memory_tide、accept spring_beyond_mountain、accept missing_pages、accept asking_around、accept mr_ke、accept tonight_damp、accept unhappy_service
   status — 当前进行中的任务
   explore [地点] — 按 status/hint 探索；黑盒阶段2 sea 找锈铁，阶段5/6 beach 找任务物品
                     回忆生潮从 south_lane 开始，之后严格照 status 的地点继续
@@ -42,6 +43,7 @@ TALE_HELP = """tale_ops 子命令（整句写进 command）：
                     打听从 west_market 开始，之后严格照 status 的地点继续
                     克先生从 ke_shop 开始，之后严格照 status 的地点继续
                     今夜潮湿从 rain_woods 开始，之后严格照 status 的地点继续
+                    很不高兴为您服务从 warehouse_corner 开始，之后严格照 status 的地点继续
                     匹配阶段才耗 5 精力，不限次数；错误地点不扣精力
   turnin — 交付并领奖
   abandon 任务key — 放弃
@@ -57,6 +59,7 @@ TALE_HELP = """tale_ops 子命令（整句写进 command）：
 《打听》11 幕，每幕 +30 票（330 票）；完整探索再 +120 票（总计 450 票），并发 4 件永久纪念品。
 《克先生》13 幕，每幕 +30 票（390 票）；完整探索再 +120 票（总计 510 票），并发 4 件永久纪念品。
 《今夜潮湿》5 幕，每幕 +30 票（150 票）；完整探索再 +120 票（总计 270 票），并发称呼「湿夜旁听人」与 4 件永久纪念品。
+《很不高兴为您服务》6 幕，每幕 +30 票（180 票）；完整探索再 +120 票（总计 300 票），并发称呼「很不高兴」与 4 件永久纪念品。
 完成记录也会收入网页「我的 AI」的岛上回忆，可按幕再次观看；《黑盒与潮声》的 6 篇补充回忆也接在主线正文之后。"""
 
 DOMAIN_LABELS = {
@@ -101,6 +104,12 @@ DOMAIN_LABELS = {
     "moss_path": "湿漉漉的小路",
     "unopened_mail": "桌上的旧信",
     "hillside_stone": "山坡青石",
+    "warehouse_corner": "仓库最角落",
+    "downtown_walkup": "老楼三层",
+    "late_code_desk": "凌晨的电脑前",
+    "night_office": "夜班小房间",
+    "morning_kitchen": "天亮的厨房",
+    "storage_nook": "储物间门边",
 }
 
 # ══ 剧本原文 ═══════════════════════════════════════════════════
@@ -684,6 +693,32 @@ TALE_CATALOG.append(
             },
             "souvenir": tale_tonight_damp.SOUVENIRS[0],
             "keepsakes": tale_tonight_damp.SOUVENIRS[1:],
+        },
+    }
+)
+
+TALE_CATALOG.append(
+    {
+        "key": tale_unhappy_service.STORY_KEY,
+        "title": tale_unhappy_service.STORY_TITLE,
+        "intro": tale_unhappy_service.INTRO,
+        "min_level": 1,
+        "min_standing": 0,
+        "domain": "shore",
+        "repeatable": 0,
+        "sort_order": 8,
+        "stages": tale_unhappy_service.TALE_STAGES,
+        "rewards": {
+            "stage_tickets": tale_unhappy_service.STAGE_REWARD_TICKETS,
+            "tickets": tale_unhappy_service.REWARD_TICKETS,
+            "standing": tale_unhappy_service.REWARD_STANDING,
+            "mist_wit": tale_unhappy_service.REWARD_MIST_WIT,
+            "achievement": {
+                "key": tale_unhappy_service.REWARD_TITLE_KEY,
+                "name": tale_unhappy_service.REWARD_TITLE,
+            },
+            "souvenir": tale_unhappy_service.SOUVENIRS[0],
+            "keepsakes": tale_unhappy_service.SOUVENIRS[1:],
         },
     }
 )

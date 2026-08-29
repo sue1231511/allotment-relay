@@ -286,6 +286,18 @@ async def _check_tonight_damp(
     )
 
 
+async def _check_unhappy_service(
+    conn: aiosqlite.Connection, s: dict[str, Any]
+) -> bool:
+    return await _exists(
+        conn,
+        """SELECT 1 FROM steward_tales_done
+           WHERE steward_id=? AND tale_key='unhappy_service'
+             AND outcome='completed' LIMIT 1""",
+        s["id"],
+    )
+
+
 async def _check_navigator(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
     return await _exists(
         conn,
@@ -442,6 +454,12 @@ ACHIEVEMENTS: dict[str, dict[str, Any]] = {
         "hint": "完成潮闻《今夜潮湿》",
         "aliases": ("今夜潮湿的人", "湿夜听潮人", "今夜旁听人"),
         "check": _check_tonight_damp,
+    },
+    "unhappy_service_witness": {
+        "name": "很不高兴",
+        "hint": "完成潮闻《很不高兴为您服务》",
+        "aliases": ("很不高兴为您服务", "问题机旁听人", "编号0627"),
+        "check": _check_unhappy_service,
     },
     "quarrier": {
         "name": "盐风矿工",
