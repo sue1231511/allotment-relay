@@ -1,0 +1,26 @@
+import { state } from "../store.js";
+import { esc } from "../ui/modal.js";
+
+export function renderShore(root, { onCast, onBack }) {
+  const w = state.world || {};
+  const shore = state.shore || {};
+  root.innerHTML = `
+    <div class="island-shore">
+      <article class="island-shore-card">
+        <b>${esc(w.tide || "潮位")} · ${esc(w.weather || "天气")}</b>
+        <p>${esc(w.phase || "")} · ${esc(w.season || "")}</p>
+        <p>${esc(w.line || "海边风很轻。")}</p>
+        <p>渔网 T${esc(shore.net_tier || 0)} · 钓竿 T${esc(shore.rod_tier || 0)} · 蚯蚓 ${esc(shore.bait_worm || 0)}</p>
+      </article>
+    </div>
+  `;
+  const bar = document.getElementById("island-actionbar");
+  bar.innerHTML = `
+    <button type="button" class="island-btn" data-act="back">回地图</button>
+    <button type="button" class="island-btn primary" data-act="net" ${shore.can_net ? "" : "disabled"}>撒网</button>
+    <button type="button" class="island-btn" data-act="cast" ${shore.can_cast ? "" : "disabled"}>坐钓</button>
+  `;
+  bar.querySelector("[data-act=back]").addEventListener("click", onBack);
+  bar.querySelector("[data-act=net]").addEventListener("click", () => onCast("net"));
+  bar.querySelector("[data-act=cast]").addEventListener("click", () => onCast("cast"));
+}

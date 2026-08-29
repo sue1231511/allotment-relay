@@ -901,6 +901,18 @@ CREATE TABLE IF NOT EXISTS steward_story_runs (
 
 CREATE INDEX IF NOT EXISTS idx_story_runs_steward
 ON steward_story_runs(steward_id, story_key, completed_at DESC);
+
+CREATE TABLE IF NOT EXISTS v1_idempotency (
+    idem_key TEXT NOT NULL,
+    steward_id INTEGER NOT NULL,
+    route TEXT NOT NULL,
+    status INTEGER NOT NULL,
+    body TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    PRIMARY KEY (idem_key, steward_id, route)
+);
+CREATE INDEX IF NOT EXISTS idx_v1_idempotency_created
+ON v1_idempotency(created_at);
 """
 
 

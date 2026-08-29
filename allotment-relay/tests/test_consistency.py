@@ -493,6 +493,7 @@ def test_readme_workflow_rules() -> None:
     assert "promo-poster" in place_html
     assert 'href="/workshop"' in nav
     assert 'href="/play"' in nav
+    assert 'href="/island"' in nav
     assert 'href="/manual"' in nav
     assert "手册" in nav
     assert 'href="/tide"' in nav
@@ -620,6 +621,8 @@ def test_human_island_manual() -> None:
         "种地去上手页",
         "底栏「份地」",
         "全岛登记人数",
+        "/island",
+        "手机地图",
     ):
         assert needle in blob, needle
     assert "plot_ops" not in blob
@@ -678,6 +681,12 @@ def test_patron_pages_share_steward_key() -> None:
     assert "playLounge" in lounge_js
     assert "/static/site-key.js" in play_html
     assert "/static/style.css" in play_html
+    island_html = (root / "server/templates/island.html").read_text(encoding="utf-8")
+    island_api = (root / "server/static/island/api.js").read_text(encoding="utf-8")
+    assert "/static/site-key.js" in island_html
+    assert "tidal_island_steward_api_key" in island_api
+    assert "/api/v1/" in island_api
+    assert "/play" in island_html
     assert 'partials/nav.html' in play_html
     assert "play-top" not in play_html
     assert "loadSavedKey" in play_js
