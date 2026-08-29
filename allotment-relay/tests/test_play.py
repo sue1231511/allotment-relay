@@ -144,6 +144,8 @@ def test_play_page_lists_all_plot_kinds() -> None:
     assert "plotGroupHtml(`菜地" in js
     assert "plotGroupHtml(`果园" in js
     assert "还没有温室" in js
+    assert "isPlotGo" in js
+    assert "goHome('plotsSection')" in js
     assert 'data-buy-seed' in html
     assert "seedBuyHtml" in js
     assert 'id="play-bond"' in html

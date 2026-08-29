@@ -1,5 +1,6 @@
 /* 份地全景 — 密集地籍册围观 */
 
+body.allo-page:has(.wedding-ribbon),
 .allo-page {
   --allo-bg: #ebe6dc;
   --allo-paper: #f3efe7;

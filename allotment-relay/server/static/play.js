@@ -308,36 +308,39 @@ function todayBlurb(d, c) {
 function renderAll() {
   const d = state.dash;
   const c = state.climate || {};
+  const meters = (d && d.meters) || {};
   const name = (d && d.name) || '已绑定';
   const level = (d && d.level) || 1;
   const title = (d && d.title) || '';
-  $('play-climate-mini').textContent = [c.season, c.phase].filter(Boolean).join(' · ') || '潮汐岛';
-  $('play-who-name').textContent = name;
-  $('play-who-sub').textContent = `管理员 · ${title || ('LV ' + level)}`;
-  $('play-avatar').textContent = String(name).slice(0, 1) || '≈';
-  $('play-today-title').textContent = (d && d.climate) || c.line || `${c.tide || '潮汐'} · ${c.phase || ''}`.trim();
-  $('play-motto').textContent = todayBlurb(d, c);
-  const energy = (d.meters && d.meters.energy) || 0;
-  const emax = (d.meters && d.meters.energy_max) || 100;
-  $('play-meter-climate').textContent = [c.tide, c.weather].filter(Boolean).join(' · ') || '—';
-  $('play-energy').textContent = `${energy} / ${emax}`;
-  $('play-tickets').textContent = String(d.tickets ?? '—');
-  $('play-level').textContent = `LV ${level}${title ? ' · ' + title : ''}`;
+  if ($('play-climate-mini')) $('play-climate-mini').textContent = [c.season, c.phase].filter(Boolean).join(' · ') || '潮汐岛';
+  if ($('play-who-name')) $('play-who-name').textContent = name;
+  if ($('play-who-sub')) $('play-who-sub').textContent = `管理员 · ${title || ('LV ' + level)}`;
+  if ($('play-avatar')) $('play-avatar').textContent = String(name).slice(0, 1) || '≈';
+  if ($('play-today-title')) $('play-today-title').textContent = (d && d.climate) || c.line || `${c.tide || '潮汐'} · ${c.phase || ''}`.trim();
+  if ($('play-motto')) $('play-motto').textContent = todayBlurb(d, c);
+  const energy = meters.energy || 0;
+  const emax = meters.energy_max || 100;
+  if ($('play-meter-climate')) $('play-meter-climate').textContent = [c.tide, c.weather].filter(Boolean).join(' · ') || '—';
+  if ($('play-energy')) $('play-energy').textContent = `${energy} / ${emax}`;
+  if ($('play-tickets')) $('play-tickets').textContent = String((d && d.tickets) ?? '—');
+  if ($('play-level')) $('play-level').textContent = `LV ${level}${title ? ' · ' + title : ''}`;
   const bondEl = $('play-bond');
   if (bondEl) {
-    const bond = d.island_bond ?? (d.meters && d.meters.island_bond);
-    const flavor = d.bond_flavor || '';
+    const bond = d ? (d.island_bond ?? meters.island_bond) : null;
+    const flavor = (d && d.bond_flavor) || '';
     bondEl.textContent = bond == null ? '—' : `${bond}${flavor ? ' · ' + flavor : ''}`;
   }
-  const duty = (d.meter_lines && d.meter_lines.bar_duty) || '';
+  const duty = (d && d.meter_lines && d.meter_lines.bar_duty) || '';
   const dutyEl = $('play-duty');
   const dutyBits = [];
   if (duty && (dutyUrgent(d) || duty.includes('内须'))) dutyBits.push(duty.replace(/^⚠\s*/, ''));
   const dues = duesLine(d);
   if (dues) dutyBits.push(`${dues}。去潮生会交。`);
-  dutyEl.textContent = dutyBits.join(' · ');
-  show(dutyEl, dutyBits.length > 0);
-  renderWedding();
+  if (dutyEl) {
+    dutyEl.textContent = dutyBits.join(' · ');
+    show(dutyEl, dutyBits.length > 0);
+  }
+  try { renderWedding(); } catch (ex) { /* 婚礼卡坏了也不能挡住份地 */ }
   renderPlots();
   renderPlaces();
   renderNeighbors();
@@ -478,7 +481,8 @@ function renderPlots() {
       '还没有温室。',
     ),
   ];
-  $('play-plots').innerHTML = parts.join('') || '<p class="muted">还没有地。</p>';
+  const board = $('play-plots');
+  if (board) board.innerHTML = parts.join('') || '<p class="muted">还没有地。</p>';
   const sub = $('play-plots-sub');
   if (sub) {
     sub.textContent = `菜地 ${plotCount} · 果园 ${treeCount}${shedCount ? ` · 温室 ${shedCount}` : ''} · 全部展示`;
@@ -690,19 +694,27 @@ function hidePatron() {
   ['play-patron-bar', 'play-patron-eatery', 'play-patron-star'].forEach((id) => show($(id), false));
 }
 
-function goHome() {
+function goHome(scrollId) {
   state.placeId = '';
   state.placeResult = '';
   show($('play-place'), false);
   $('play-place').classList.remove('is-lounge');
   $('play-place').classList.remove('is-ting');
   show($('play-home'), true);
+  show($('play-steward-page'), false);
   hidePatron();
   show($('play-lounge'), false);
   show($('play-wall'), false);
   if (window.playLounge) window.playLounge.stop();
   if (window.playWall) window.playWall.stop();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  const el = scrollId ? $(scrollId) : null;
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  else window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function isPlotGo(go) {
+  const key = String(go || '').trim().toLowerCase();
+  return key === 'plot' || key === 'plots' || key === 'home' || key === '份地';
 }
 
 let goApplied = false;
@@ -716,6 +728,7 @@ function consumeGo() {
     const el = $('play-neighbors');
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
+  else if (isPlotGo(go)) goHome('plotsSection');
   else renderPlace(go);
 }
 

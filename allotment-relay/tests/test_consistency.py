@@ -265,6 +265,8 @@ def test_relay_manual_covers_systems() -> None:
         "旧档自动写下",
         "今日岛上有婚礼",
         "全站换成婚礼页",
+        "?go=plot",
+        "婚期顶栏进连理所",
         "tale_ops 潮闻不给旧衣料",
         "plot_ops forage",
         "潮闻",
@@ -613,6 +615,9 @@ def test_human_island_manual() -> None:
         "刷新上手页不会回精力",
         "今日岛上有婚礼",
         "全站换成婚礼页",
+        "我的份地",
+        "种地去上手页",
+        "底栏「份地」",
     ):
         assert needle in blob, needle
     assert "plot_ops" not in blob
@@ -873,6 +878,8 @@ def test_patron_pages_share_steward_key() -> None:
     assert "ready_count" in allo_js
     assert "parcel_count" in allo_js
     assert "orchard_count" in allo_js
+    assert "loadJson" in allo_js
+    assert "typeof islandFmtStamp" in allo_js
     assert ".allo-board" in allo_css
     assert ".allo-person" in allo_css
     assert ".allo-plot" in allo_css
