@@ -263,6 +263,7 @@ def test_relay_manual_covers_systems() -> None:
         "订婚宴选了还能改",
         "订婚 续请",
         "旧档自动写下",
+        "聊天室大厅也会通报一句",
         "tale_ops 潮闻不给旧衣料",
         "plot_ops forage",
         "潮闻",
@@ -609,6 +610,7 @@ def test_human_island_manual() -> None:
         "订婚确认",
         "以前系统自动写下",
         "刷新上手页不会回精力",
+        "聊天室大厅也会出现一句通报",
     ):
         assert needle in blob, needle
     assert "plot_ops" not in blob
