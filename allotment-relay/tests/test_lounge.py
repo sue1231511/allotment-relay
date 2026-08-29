@@ -45,6 +45,7 @@ async def _test_lounge_mcp_and_web() -> None:
     assert "红包" in help_text and "抢" in help_text
     assert "tote_ops gift" in help_text
     assert "hongbao_ops" in help_text
+    assert "成婚当天登记后" in help_text
 
     scan_empty = await lounge.lounge_ops(row["id"], "")
     assert "全服聊天室公约" in scan_empty

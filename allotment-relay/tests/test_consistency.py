@@ -268,6 +268,7 @@ def test_relay_manual_covers_systems() -> None:
         "?go=plot",
         "婚期顶栏进连理所",
         "顶上管理员/在线",
+        "聊天室大厅也会通报一句",
         "tale_ops 潮闻不给旧衣料",
         "plot_ops forage",
         "潮闻",
@@ -628,6 +629,7 @@ def test_human_island_manual() -> None:
         "菜地已经种满了",
         "果园已经种满了",
         "温室已经种满了",
+        "聊天室大厅也会出现一句通报",
     ):
         assert needle in blob, needle
     assert "plot_ops" not in blob
