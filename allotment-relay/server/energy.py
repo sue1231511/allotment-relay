@@ -20,7 +20,7 @@ def low_energy_hint(current: int, cap: int, amount: int, nag: str = "") -> str:
         " —— 堂食按菜价回精力（约 3.5 票/1 精力），还带「饱餐」2 小时（行动精力 -1）。"
         "没菜就换一家，不要自己编馆名。\n"
         "· 睡觉：hut_ops 睡（装了床每天一次，回 50~54）。\n"
-        "· 路过：steward_ops sheet 档口会慢慢回。\n"
+        "· 路过：档口按时间慢慢回（约 20 分钟 +2），刷新上手页或多看几次不会多给。\n"
         "· 有 5 精力且小橘今晚开嗓：star_ops 围观 也能回。"
         f"{nag}\n"
         "实在没钱吃饭、饿得干不动活：bar_ops lodge — 酒馆包宿（管饭+工钱15，干一整天）"
@@ -96,18 +96,45 @@ async def restore(
 
 
 async def soft_regen(conn: aiosqlite.Connection, steward_id: int) -> None:
-    """查看档口时微量回精力。带长期耗精力的病时不回。"""
+    """按时间微量回精力。看档 / 刷新上手页只结算已过的间隔，不会每看一次就加。"""
     from . import health
 
     if await health.has_chronic_drain(conn, steward_id):
         return
     cap = await _energy_cap(conn, steward_id)
+    cur = await conn.execute(
+        "SELECT energy, energy_regen_at FROM stewards WHERE id=?",
+        (steward_id,),
+    )
+    row = await cur.fetchone()
+    if not row:
+        return
+    stored = int(row[0] or 0)
+    regen_at = int(row[1] or 0)
+    now = db.now()
+    interval = max(1, int(config.ENERGY_REGEN_IDLE_SEC))
+    if regen_at <= 0:
+        await conn.execute(
+            "UPDATE stewards SET energy_regen_at=? WHERE id=?",
+            (now, steward_id),
+        )
+        return
+    ticks = (now - regen_at) // interval
+    if ticks <= 0:
+        return
+    soft_cap = max(0, cap - 2)
+    new_at = regen_at + ticks * interval
+    if stored >= soft_cap:
+        await conn.execute(
+            "UPDATE stewards SET energy_regen_at=? WHERE id=?",
+            (new_at, steward_id),
+        )
+        return
+    grant = ticks * int(config.ENERGY_REGEN_IDLE)
+    new_val = min(soft_cap, stored + grant)
     await conn.execute(
-        """
-        UPDATE stewards SET energy = MIN(?, energy + ?)
-        WHERE id=? AND energy < ?
-        """,
-        (cap, config.ENERGY_REGEN_IDLE, steward_id, cap - 2),
+        "UPDATE stewards SET energy=?, energy_regen_at=? WHERE id=?",
+        (new_val, new_at, steward_id),
     )
 
 

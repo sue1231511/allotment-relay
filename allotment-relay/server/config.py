@@ -279,7 +279,8 @@ HUT_BUILD_COST = 95
 # 精力 — 出海/撒网/赶海消耗，吃饭恢复
 START_ENERGY = 80
 MAX_ENERGY = 100
-ENERGY_REGEN_IDLE = 2  # 每次 sheet 查看慢回（软机制）
+ENERGY_REGEN_IDLE = 2  # 每个间隔慢回
+ENERGY_REGEN_IDLE_SEC = 20 * 60  # 20 分钟一跳。刷 sheet / 上手页不会多给
 
 # 赶海 / 工具
 BEACH_COOLDOWN = 1800
