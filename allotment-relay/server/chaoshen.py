@@ -11,6 +11,7 @@ FUND_NAME = "潮汐基金"
 FUND_MIN_DONATE = 1
 FUND_PAY_CAP = 2500
 FUND_DAILY_CAP = FUND_PAY_CAP
+FUND_FLOOR = 800
 FUND_MIN_PEERS = 2
 # 东八区星期：周二、周四、周六自动发放补贴
 FUND_PAY_WEEKDAYS = (1, 3, 5)
@@ -50,14 +51,14 @@ JOIN_REFUSE = (
 
 CHAOSHEN_HELP = f"""visit_ops 潮生会 子命令（整句写进 command）：
   空 / 问 — 进门问事：考勤、告示摘要、潮汐基金、岸税、岸维。不是入会。
-  税 / 岸税 — 岸税：口袋现票超额累进。未过 800 免征。高档加码（阔手 14%、豪客 20%、潮主 26%、潮宗 36%）。看档、档表、本周应/欠
+  税 / 岸税 — 岸税：口袋现票超额累进。未过 800 免征。高档加码（阔手 14%、豪客 20%、潮主 26%、潮宗 36%）。离岛均太远加潮差（5 倍 +8%，15 倍 +16%）。看档、档表、本周应/欠
   税 交 / 税 交 50 — 交欠税（可填票数）。没有 tax_ops。欠税时不能买地/买棚/买园/升屋/买船/开坑/升镐
   维 / 岸维 / 维修 — 岸维：按产业每天收维修费。起步份地/果园免，产业单价至少 10 票（超出份地 10/18/28、果园 20/32/48、温室 30/48/70，铺多了加档）；扩地、开馆、盖棚才交
   维 交 / 维 交 50 — 交欠的维修费。欠维修费时不能扩产；开着的小馆暂停堂食。不是 hut_ops mascot upkeep
   基金 — 潮汐基金：岛均口袋票。有余的人自己填票数捐进来
   基金 捐 50 — 捐票，票数自己填（最少 {FUND_MIN_DONATE}）；口袋须高于岛均，捐完仍须不低于岛均
   告示 — 看墙上厅示（岛上贴的，岛民不能贴、不能回）。短句去聊天室 lounge_ops say；长帖去听潮亭 wall_ops
-  岸税东八区每周一换班自动划入基金（本周新号免征到下周）。岸维东八区每天换班自动划（今日新号免征到明天）。补贴不用领、没有 MCP 指令。东八区{FUND_PAY_WEEKDAY_LABEL}自动打到低于岛均的人口袋（每人顶 {FUND_PAY_CAP} 票，不超过岛均）
+  岸税东八区每周一换班自动划入基金（本周新号免征到下周）。离岛均太远另加潮差附加（超过岛均 5 倍再加 8%，超过 15 倍再加 16%）。岸维东八区每天换班自动划（今日新号免征到明天）。补贴不用领、没有 MCP 指令。东八区{FUND_PAY_WEEKDAY_LABEL}自动发：先把低于 {FUND_FLOOR} 的托到 {FUND_FLOOR}，剩下再补给低于岛均的人（每人顶 {FUND_PAY_CAP}、不超过岛均）
   没有入会 / 开会 / 退会。{ORG_NAME}是岛上管事的机构，上岛时已经在册。
   本周目标 / 公仓 / 公物不在这儿：alliance_ops league · alliance_ops donate / larder · plot_ops commons
 例子：潮生会 · 潮生会 问 · 潮生会 税 · 潮生会 税 交 · 潮生会 税 交 50 · 潮生会 维 · 潮生会 维 交 · 潮生会 维 交 50 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 基金 捐 8 · 潮生会 告示
@@ -216,7 +217,7 @@ def subsidy_refuse() -> str:
     return (
         f"{FUND_NAME}的补贴不用自己领，也没有这条 MCP 指令。"
         f"东八区{FUND_PAY_WEEKDAY_LABEL}自动打到低于岛均的人口袋"
-        f"（每人顶 {FUND_PAY_CAP} 票，且不超过岛均）。看簿：visit_ops 潮生会 基金"
+        f"（先托到 {FUND_FLOOR}，再按岛均补，每人顶 {FUND_PAY_CAP} 票，且不超过岛均）。看簿：visit_ops 潮生会 基金"
     )
 
 
@@ -360,7 +361,7 @@ def _fund_status_text(snap: dict[str, Any]) -> str:
     lines.extend([
         "",
         "捐：visit_ops 潮生会 基金 捐 50（票数自己填；捐完仍须不低于岛均）",
-        f"补贴不用领。东八区{FUND_PAY_WEEKDAY_LABEL}自动发，每人顶 {FUND_PAY_CAP} 票、不超过岛均。",
+        f"补贴不用领。东八区{FUND_PAY_WEEKDAY_LABEL}自动发：先把低于 {FUND_FLOOR} 的托到 {FUND_FLOOR}，剩下再按岛均补，每人顶 {FUND_PAY_CAP} 票、不超过岛均。",
         "不是公仓：公仓捐货走 alliance_ops donate 甘蓝 2，基金捐的是票。",
     ])
     return "\n".join(lines)
@@ -504,22 +505,28 @@ async def ensure_fund_payout(
     remaining = pool
     paid_n = 0
     paid_tickets = 0
-    for row in rows:
-        if remaining <= 0:
-            break
-        sid, name, tickets = int(row[0]), row[1], int(row[2])
-        want = min(FUND_PAY_CAP, avg - tickets, remaining)
-        if want < 1:
-            continue
+    pocket = {int(row[0]): int(row[2]) for row in rows}
+    names = {int(row[0]): row[1] for row in rows}
+    claimed: set[int] = set()
+    gained: dict[int, int] = {}
+
+    async def _credit(sid: int, want: int, why: str) -> int:
+        nonlocal remaining, paid_n, paid_tickets
+        if want < 1 or remaining < 1:
+            return 0
         already = await (await conn.execute(
             "SELECT 1 FROM tide_fund_claims WHERE steward_id=? AND day=?",
             (sid, day_int),
         )).fetchone()
         if already:
-            continue
+            return 0
+        take = min(want, remaining)
+        if take < 1:
+            return 0
+        tickets = pocket[sid]
         await conn.execute(
             "UPDATE stewards SET tickets = tickets + ? WHERE id=?",
-            (want, sid),
+            (take, sid),
         )
         await conn.execute(
             """
@@ -527,27 +534,47 @@ async def ensure_fund_payout(
             SET tickets = tickets - ?, paid_total = paid_total + ?
             WHERE id=1
             """,
-            (want, want),
+            (take, take),
         )
-        await conn.execute(
-            "INSERT INTO tide_fund_claims (steward_id, day, amount) VALUES (?,?,?)",
-            (sid, day_int, want),
-        )
-        after = tickets + want
+        pocket[sid] = tickets + take
+        remaining -= take
+        paid_tickets += take
+        gained[sid] = gained.get(sid, 0) + take
+        if sid not in claimed:
+            claimed.add(sid)
+            paid_n += 1
         await db.add_chronicle(
             "fund",
-            f"{name} 获{FUND_NAME}补贴 {want} 票（岛均 {avg}，补后口袋 {after}）",
+            f"{names[sid]} 获{FUND_NAME}补贴 {take} 票（{why}，岛均 {avg}，补后口袋 {pocket[sid]}）",
             sid,
             conn=conn,
         )
-        remaining -= want
-        paid_n += 1
-        paid_tickets += want
+        return take
+
+    # 先把最低的托到免税线，再按岛均补。最低的先领。
+    for sid in sorted(pocket, key=lambda i: (pocket[i], i)):
+        if remaining <= 0:
+            break
+        if pocket[sid] >= FUND_FLOOR:
+            continue
+        await _credit(sid, FUND_FLOOR - pocket[sid], f"先托到 {FUND_FLOOR}")
+    for sid in sorted(pocket, key=lambda i: (pocket[i], i)):
+        if remaining <= 0:
+            break
+        if pocket[sid] >= avg:
+            continue
+        await _credit(sid, min(FUND_PAY_CAP, avg - pocket[sid]), "按岛均")
+
     if paid_n <= 0:
         return None
+    for sid, total in gained.items():
+        await conn.execute(
+            "INSERT INTO tide_fund_claims (steward_id, day, amount) VALUES (?,?,?)",
+            (sid, day_int, total),
+        )
     detail = (
         f"{day_str} 按岛均 {avg} 发放：{paid_n} 人共 {paid_tickets} 票"
-        f"（每人顶 {FUND_PAY_CAP}，不超过岛均）"
+        f"（先托到 {FUND_FLOOR}，再每人顶 {FUND_PAY_CAP}，不超过岛均）"
     )
     await conn.execute(
         "INSERT INTO world_flags (flag_key, applied_at, detail) VALUES (?,?,?)",
@@ -841,6 +868,9 @@ async def public_snapshot() -> dict[str, Any]:
             "assessed": tax["assessed"],
             "collected": tax["collected"],
             "brackets": tax["brackets"],
+            "avg": tax.get("avg") or 0,
+            "gap_soft": tax.get("gap_soft") or 0,
+            "gap_hard": tax.get("gap_hard") or 0,
         },
         "upkeep": {
             "name": upkeep["name"],

@@ -92,6 +92,15 @@ def test_tax_due_brackets() -> None:
     assert tax.band_name(40000) == "潮主"
     assert tax.band_name(100000) == "潮宗"
 
+    # 岛上实况：岛均约 4000，第二十名刚到岛均，榜首 20 万。
+    assert tax.gap_surcharge(4000, 4000) == 0
+    assert tax.gap_surcharge(20000, 4000) == 0
+    assert tax.gap_surcharge(40000, 4000) == 1600  # (40000-20000)*8%
+    assert tax.gap_surcharge(200000, 4000) == 25600
+    assert tax.tax_due(4000, 4000) == 188
+    assert tax.tax_due(200000, 4000) == 60808 + 25600
+    assert tax.tax_due(200000) == 60808  # 不传岛均不加潮差
+
 
 async def test_first_week_exempt() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="tax-new-"))
@@ -221,6 +230,50 @@ async def test_partial_pay_and_help() -> None:
         db.now = real_now
 
 
+async def test_gap_levy_on_whale() -> None:
+    """岛均被少数人拉高时，榜首要交潮差，刚到岛均的人不用。"""
+    tmp = Path(tempfile.mkdtemp(prefix="tax-gap-"))
+    db = await _boot(tmp)
+    from server import tax
+
+    real_now = db.now
+    db.now = lambda: ENROLL_TUE
+    whale_kid, whale_sid = await _enroll(db, "whale@example.com", "鲸客")
+    mid_kid, mid_sid = await _enroll(db, "mid@example.com", "中客")
+    poor = []
+    for i in range(18):
+        kid, sid = await _enroll(db, f"p{i}@example.com", f"贫{i}")
+        poor.append((kid, sid))
+    await _set_tickets(db, whale_sid, 200000)
+    await _set_tickets(db, mid_sid, 4000)
+    for _kid, sid in poor:
+        await _set_tickets(db, sid, 2000)
+    # 200000 + 4000 + 18*2000 = 240000 / 20 = 12000
+    db.now = lambda: NEXT_MON
+    try:
+        async with db.connect() as conn:
+            await conn.execute(
+                "DELETE FROM world_flags WHERE flag_key LIKE 'shore_tax:%'"
+            )
+            result = await tax.ensure_shore_tax(conn, ts=NEXT_MON)
+            await conn.commit()
+        avg = 12000
+        whale_due = tax.tax_due(200000, avg)
+        mid_due = tax.tax_due(4000, avg)
+        assert tax.gap_surcharge(4000, avg) == 0
+        assert tax.gap_surcharge(200000, avg) > 0
+        assert result and result["assessed"] >= whale_due + mid_due, result
+        whale_left, whale_arrears = await _row(db, whale_sid)
+        mid_left, mid_arrears = await _row(db, mid_sid)
+        assert whale_arrears == 0
+        assert mid_arrears == 0
+        assert whale_left == 200000 - whale_due, (whale_left, whale_due)
+        assert mid_left == 4000 - mid_due, (mid_left, mid_due)
+        assert whale_due > tax.bracket_due(200000)
+    finally:
+        db.now = real_now
+
+
 async def test_no_tax_ops() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="tax-noops-"))
     db = await _boot(tmp)
@@ -243,6 +296,7 @@ def test_tax() -> None:
     asyncio.run(test_weekly_levy_and_fund())
     asyncio.run(test_pay_arrears_unlocks_land())
     asyncio.run(test_partial_pay_and_help())
+    asyncio.run(test_gap_levy_on_whale())
     asyncio.run(test_no_tax_ops())
 
 

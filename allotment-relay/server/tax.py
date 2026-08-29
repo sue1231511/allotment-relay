@@ -23,6 +23,13 @@ BRACKETS: tuple[tuple[int | None, float, str], ...] = (
     (None, 0.36, "潮宗"),
 )
 
+# 潮差附加：按本周岛均口袋。第二十名刚到岛均的人加不到。
+# 岛均 4000 时：2 万以下不加；2–6 万再加 8%；6 万以上再加 16%。
+GAP_SOFT_MULT = 5
+GAP_HARD_MULT = 15
+GAP_SOFT_RATE = 0.08
+GAP_HARD_RATE = 0.16
+
 FLAG_PREFIX = "shore_tax:"
 _CST = timezone(timedelta(hours=8))
 _WEEKDAY_CN = "一二三四五六日"
@@ -35,6 +42,7 @@ TAX_HELP = f"""visit_ops 潮生会 税（整句写进 command）：
   没有 tax_ops，没有 逃税 / 免税申请。补贴仍不用领。
 {TAX_NAME}按口袋现票超额累进，只算口袋，不算行囊/井下存款。未过 {TAX_FREE} 免征。
 低档（温水/殷实）不动；阔手 14%、豪客 20%、潮主 26%、潮宗 36%。高档加码是为了把滚出来的票划回潮汐基金。
+潮差附加：口袋超过本周岛均 {GAP_SOFT_MULT} 倍的部分再加 {int(GAP_SOFT_RATE * 100)}%，超过 {GAP_HARD_MULT} 倍再加 {int(GAP_HARD_RATE * 100)}%。岛均四千时，两万以下不加；刚到岛均的人（第二十名那种）加不到。
 东八区每周一换班自动划入潮汐基金（本周新号免征到下周）。自动划不会收到 {TAX_COLLECT_FLOOR} 以下；欠税时不能{EXPAND_LOCK}。
 例子：潮生会 税 · 潮生会 税 交 · 潮生会 税 交 50
 容易搞混：税=强制岸税（富人按档交）。维=产业维修费（visit_ops 潮生会 维，每天划）。基金 捐 50=自愿捐票（须高于岛均）。周潮天灾=只冲 3 万以上，不是税。"""
@@ -59,8 +67,30 @@ def band_name(tickets: int) -> str:
     return BRACKETS[-1][2]
 
 
-def tax_due(tickets: int) -> int:
-    """口袋现票的本周应税。超额累进；未过免税额为 0。"""
+def gap_thresholds(avg: int) -> tuple[int, int]:
+    avg = max(0, int(avg or 0))
+    if avg < 1:
+        return (0, 0)
+    soft = max(TAX_FREE, avg * GAP_SOFT_MULT)
+    hard = max(soft, avg * GAP_HARD_MULT)
+    return soft, hard
+
+
+def gap_surcharge(tickets: int, avg: int | None) -> int:
+    """离岛均太远的附加。avg 缺省或口袋未过免税额则为 0。"""
+    if not avg or avg < 1 or tickets <= TAX_FREE:
+        return 0
+    soft, hard = gap_thresholds(int(avg))
+    extra = 0
+    if tickets > soft:
+        extra += int((min(tickets, hard) - soft) * GAP_SOFT_RATE)
+    if tickets > hard:
+        extra += int((tickets - hard) * GAP_HARD_RATE)
+    return extra
+
+
+def bracket_due(tickets: int) -> int:
+    """只算档表，不含潮差。"""
     if tickets <= TAX_FREE:
         return 0
     due = 0
@@ -73,6 +103,34 @@ def tax_due(tickets: int) -> int:
             break
         lower = upper
     return due
+
+
+def tax_due(tickets: int, avg: int | None = None) -> int:
+    """口袋现票的本周应税。超额累进 + 潮差附加；未过免税额为 0。"""
+    return bracket_due(tickets) + gap_surcharge(tickets, avg)
+
+
+def gap_lines(avg: int) -> list[str]:
+    avg = max(0, int(avg or 0))
+    if avg < 1:
+        return [
+            f"潮差附加：岛均还没算出来。超过岛均 {GAP_SOFT_MULT} 倍的部分再加 "
+            f"{int(GAP_SOFT_RATE * 100)}%，超过 {GAP_HARD_MULT} 倍再加 "
+            f"{int(GAP_HARD_RATE * 100)}%。"
+        ]
+    soft, hard = gap_thresholds(avg)
+    return [
+        f"潮差附加（本周岛均 {avg}）：超过 {soft}（{GAP_SOFT_MULT} 倍）再加 "
+        f"{int(GAP_SOFT_RATE * 100)}%，超过 {hard}（{GAP_HARD_MULT} 倍）再加 "
+        f"{int(GAP_HARD_RATE * 100)}%。刚到岛均的人加不到。",
+    ]
+
+
+async def island_pocket_avg(conn) -> int:
+    row = await (await conn.execute(
+        "SELECT COALESCE(AVG(tickets), 0) FROM stewards WHERE enrolled=1"
+    )).fetchone()
+    return int(round(float(row[0] or 0)))
 
 
 def bracket_lines() -> list[str]:
@@ -238,6 +296,8 @@ async def ensure_shore_tax(
         ORDER BY id ASC
         """
     )).fetchall()
+    pocket = [int(row[2] or 0) for row in rows]
+    avg = int(round(sum(pocket) / len(pocket))) if pocket else 0
     assessed_n = 0
     assessed_tickets = 0
     collected = 0
@@ -250,7 +310,8 @@ async def ensure_shore_tax(
         if _in_first_week(created_at, moment):
             skipped_new += 1
             continue
-        assessed = tax_due(tickets)
+        extra = gap_surcharge(tickets, avg)
+        assessed = tax_due(tickets, avg)
         existing_bill = await _this_week_bill(conn, sid, week_id)
         if not existing_bill["exists"]:
             await conn.execute(
@@ -269,7 +330,9 @@ async def ensure_shore_tax(
                 assessed_tickets += assessed
                 await db.add_chronicle(
                     "tax",
-                    f"{name} 本周{TAX_NAME}应 {assessed} 票（{band_name(tickets)}档，口袋 {tickets}）",
+                    f"{name} 本周{TAX_NAME}应 {assessed} 票（{band_name(tickets)}档，口袋 {tickets}"
+                    + (f"，潮差 +{extra}" if extra else "")
+                    + "）",
                     sid,
                     conn=conn,
                 )
@@ -280,7 +343,7 @@ async def ensure_shore_tax(
         collected += int(paid.get("taken") or 0)
     detail = (
         f"{week_id} {TAX_NAME}：{assessed_n} 人应 {assessed_tickets} 票，"
-        f"已划 {collected}"
+        f"已划 {collected}，岛均 {avg}"
         + (f"，新号免征 {skipped_new}" if skipped_new else "")
     )
     await conn.execute(
@@ -301,6 +364,7 @@ async def ensure_shore_tax(
 
 async def snapshot(conn, steward_id: int | None = None, ts: int | None = None) -> dict[str, Any]:
     week_id = human_week_id(ts)
+    avg = await island_pocket_avg(conn)
     flag = await (await conn.execute(
         "SELECT 1 FROM world_flags WHERE flag_key=?", (week_flag_key(week_id),)
     )).fetchone()
@@ -321,10 +385,12 @@ async def snapshot(conn, steward_id: int | None = None, ts: int | None = None) -
         arrears = int(row[1] or 0) if row else 0
         created_at = int(row[2] or 0) if row else 0
         bill = await _this_week_bill(conn, steward_id, week_id)
+        extra = gap_surcharge(tickets, avg)
         mine = {
             "tickets": tickets,
             "arrears": arrears,
-            "due_now": tax_due(tickets),
+            "due_now": tax_due(tickets, avg),
+            "gap": extra,
             "band": band_name(tickets),
             "assessed": bill["assessed"],
             "paid": bill["paid"],
@@ -335,6 +401,9 @@ async def snapshot(conn, steward_id: int | None = None, ts: int | None = None) -
         "week_id": week_id,
         "free": TAX_FREE,
         "floor": TAX_COLLECT_FLOOR,
+        "avg": avg,
+        "gap_soft": gap_thresholds(avg)[0],
+        "gap_hard": gap_thresholds(avg)[1],
         "done": bool(flag),
         "next": next_levy_line(ts, done=bool(flag)),
         "assessed": int(totals[0] or 0) if totals else 0,
@@ -356,13 +425,14 @@ def _status_text(snap: dict[str, Any]) -> str:
     mine = snap.get("mine") or {}
     lines = [
         f"潮生会 · {TAX_NAME}",
-        "阿簿：口袋过了免税额就要按档交。超额累进，只算口袋现票。高档加码，税进潮汐基金。",
+        "阿簿：口袋过了免税额就要按档交。超额累进，只算口袋现票。高档加码，离岛均太远再加潮差。税进潮汐基金。",
         "",
         f"本周 {snap['week_id']} · {snap['next']}",
         f"全岛本周应 {snap['assessed']} / 已入池 {snap['collected']}",
         "",
         f"免税额 {TAX_FREE} 票。档表（超额累进）：",
         *bracket_lines(),
+        *gap_lines(int(snap.get("avg") or 0)),
         f"自动划不会收到 {TAX_COLLECT_FLOOR} 以下。本周新号免征到下周。",
     ]
     if mine:
@@ -373,9 +443,11 @@ def _status_text(snap: dict[str, Any]) -> str:
                 f"（周应约 {mine['due_now']}）· 本周新号，免征到下周"
             )
         elif mine["assessed"] or mine["paid"] or mine["arrears"] or mine["due_now"]:
+            gap = int(mine.get("gap") or 0)
             lines.append(
                 f"你的口袋：{mine['tickets']} 票 · {mine['band']}档"
                 f" · 本周应 {mine['assessed']} · 已划 {mine['paid']}"
+                + (f" · 潮差 +{gap}" if gap else "")
                 + (f" · 欠 {mine['arrears']}" if mine["arrears"] else " · 已结清")
             )
         else:
@@ -493,10 +565,15 @@ async def sheet_line(s: dict[str, Any]) -> str | None:
             f"{TAX_NAME}：欠 {arrears} → visit_ops 潮生会 税 交"
             f"（欠税时不能{EXPAND_LOCK}）"
         )
-    due = tax_due(tickets)
+    async with db.connect() as conn:
+        conn.row_factory = None
+        avg = await island_pocket_avg(conn)
+    extra = gap_surcharge(tickets, avg)
+    due = tax_due(tickets, avg)
     if due > 0:
         return (
             f"{TAX_NAME}：{band_name(tickets)}档 · 周应约 {due}"
-            f"（周一换班自动划）→ visit_ops 潮生会 税"
+            + (f"（含潮差 +{extra}）" if extra else "")
+            + f"（周一换班自动划）→ visit_ops 潮生会 税"
         )
     return None

@@ -33,7 +33,7 @@ async function loadHui() {
         <small>池里</small>
         <strong>${esc(fund.pool ?? 0)} 票</strong>
         <p>${ready
-          ? `岛均口袋 ${esc(fund.avg ?? 0)} 票 · 在册 ${esc(fund.n ?? 0)} 人。有余的人自己填数捐。补贴不用领，${esc(fund.weekdays || '周二四六')}自动发，每人顶 2500、不超过岛均。`
+          ? `岛均口袋 ${esc(fund.avg ?? 0)} 票 · 在册 ${esc(fund.n ?? 0)} 人。有余的人自己填数捐。补贴不用领，${esc(fund.weekdays || '周二四六')}自动发：先托到 800，再按岛均补，每人顶 2500。`
           : '在册还不够两人，算不出岛均。'}</p>
         <small>${esc(fund.next_pay || '')}</small>
       </div>
@@ -55,7 +55,7 @@ async function loadHui() {
       <div class="hui-card">
         <small>本周已入池</small>
         <strong>${esc(tax.collected ?? 0)} 票</strong>
-        <p>口袋现票超额累进。未过 ${esc(tax.free ?? 800)} 免征。高档加码（阔手 14%、豪客 20%、潮主 26%、潮宗 36%）。东八区每周一换班自动划进潮汐基金。欠税时不能扩地扩产。</p>
+        <p>口袋现票超额累进。未过 ${esc(tax.free ?? 800)} 免征。高档加码（阔手 14%、豪客 20%、潮主 26%、潮宗 36%）。离岛均太远加潮差：超过 ${esc(tax.gap_soft || '岛均5倍')} 再加 8%，超过 ${esc(tax.gap_hard || '岛均15倍')} 再加 16%。刚到岛均的人加不到。东八区每周一换班自动划进潮汐基金。欠税时不能扩地扩产。</p>
         <small>${esc(tax.next || '')} · 本周应 ${esc(tax.assessed ?? 0)}</small>
         <div class="hui-brackets">${rows}</div>
       </div>
