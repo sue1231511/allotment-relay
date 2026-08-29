@@ -8,17 +8,16 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=island-map1">
-  <link rel="stylesheet" href="/static/island/island.css?v=island-map1">
+  <link rel="stylesheet" href="/static/style.css?v=island-garden1">
+  <link rel="stylesheet" href="/static/island/island.css?v=island-garden1">
 </head>
 <body class="island-app{% if island_weddings %} is-wedding-day{% endif %}">
-  <a class="island-skip" href="/play">回上手页</a>
-
   <div id="island-root" class="island-root">
     <header class="island-hud" id="island-hud">
       <div class="island-hud-who">
         <span class="island-hud-name" id="hud-name">未绑定</span>
         <span class="island-hud-lv" id="hud-lv">Lv —</span>
+        <a class="island-hud-play" href="/play">上手页</a>
       </div>
       <div class="island-hud-meters">
         <span class="island-meter" title="精力"><i>精力</i><b id="hud-energy">—</b></span>
@@ -51,8 +50,19 @@
     </section>
 
     <main class="island-stage island-hidden" id="island-stage" hidden>
-      <div class="island-scene" id="island-scene" aria-live="polite"></div>
-      <div class="island-actionbar" id="island-actionbar"></div>
+      <div class="island-scene" id="island-scene" aria-live="polite">
+        <div class="island-map">
+          <button type="button" class="island-map-hot is-garden" data-go="home" aria-label="菜园">
+            <small>Garden</small><b>菜园</b>
+          </button>
+          <button type="button" class="island-pin is-shore" data-go="shore"><small>Tide</small><b>海边</b></button>
+          <button type="button" class="island-pin is-plaza" data-go="plaza"><small>Plaza</small><b>岛心广场</b></button>
+        </div>
+      </div>
+      <div class="island-actionbar" id="island-actionbar">
+        <a class="island-btn" href="/play">上手页</a>
+        <p class="island-fine" style="grid-column:1/-1;margin:4px 2px 0">点左上角菜园进家园。点整片菜地就能种。</p>
+      </div>
     </main>
 
     <nav class="island-dock" id="island-dock" aria-label="底栏" hidden>
@@ -64,10 +74,11 @@
   </div>
 
   <div class="island-sheet" id="island-sheet" hidden></div>
+  <div class="island-plant" id="island-plant" hidden></div>
   <div class="island-modal" id="island-modal" hidden></div>
   <p class="island-toast" id="island-toast" hidden></p>
 
-  <script src="/static/site-key.js?v=island-map1"></script>
-  <script type="module" src="/static/island/app.js?v=island-map1"></script>
+  <script src="/static/site-key.js?v=island-garden1"></script>
+  <script type="module" src="/static/island/app.js?v=island-garden1"></script>
 </body>
 </html>

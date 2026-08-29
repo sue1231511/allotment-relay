@@ -1,47 +1,32 @@
-import { homePlots, selectedPlot, state } from "../store.js";
+import { growStatusLine, panelSubtitle, ripeHome } from "../store.js";
 import { esc } from "../ui/modal.js";
 
-export function renderHome(root, { onSelect, onSow, onWater, onLook, onHarvest, onBack }) {
-  const plots = homePlots();
+export function renderHome(root, { onOpenGarden, onHarvestAll, onBack }) {
+  const ripe = ripeHome().length;
   root.innerHTML = `
     <div class="island-home">
-      <div class="island-home-sky"></div>
-      <div class="island-farmer" aria-hidden="true"><div class="head"></div><div class="body"></div></div>
-      <div class="island-plots">
-        ${plots.slice(0, 3).map(plotHtml).join("") || "<p style='padding:16px'>还看不见份地。</p>"}
-      </div>
+      <p class="island-grow-status" id="island-grow-status">${esc(growStatusLine())}</p>
+      <button type="button" class="island-garden-hot" data-act="garden" aria-label="打开种植面板"></button>
+      <button type="button" class="island-harvest-fab" id="island-harvest-all" data-act="harvest" ${ripe ? "" : "hidden"}>一键收获</button>
     </div>
   `;
-  root.querySelectorAll("[data-slot]").forEach((btn) => {
-    btn.addEventListener("click", () => onSelect(btn.getAttribute("data-slot")));
-  });
   const bar = document.getElementById("island-actionbar");
-  const plot = selectedPlot();
-  const seeds = (state.me && state.me.seeds) || [];
-  const seed = seeds.find((s) => !s.tree) || seeds[0];
   bar.innerHTML = `
     <button type="button" class="island-btn" data-act="back">回地图</button>
-    <button type="button" class="island-btn" data-act="look" ${plot ? "" : "disabled"}>查看</button>
-    <button type="button" class="island-btn primary" data-act="sow" ${plot && plot.can_sow && seed ? "" : "disabled"}>播种</button>
-    <button type="button" class="island-btn" data-act="water" ${plot && plot.can_water ? "" : "disabled"}>浇水</button>
-    <button type="button" class="island-btn primary" data-act="harvest" ${plot && plot.can_harvest ? "" : "disabled"}>收获</button>
+    <button type="button" class="island-btn primary" data-act="garden">种植</button>
   `;
+  root.querySelector("[data-act=garden]").addEventListener("click", onOpenGarden);
+  const harvest = root.querySelector("[data-act=harvest]");
+  if (harvest) harvest.addEventListener("click", onHarvestAll);
   bar.querySelector("[data-act=back]").addEventListener("click", onBack);
-  bar.querySelector("[data-act=look]").addEventListener("click", () => plot && onLook(plot));
-  bar.querySelector("[data-act=sow]").addEventListener("click", () => {
-    if (!plot || !seed) return;
-    onSow(plot.slot, seed.name || seed.crop);
-  });
-  bar.querySelector("[data-act=water]").addEventListener("click", () => plot && onWater(plot.slot));
-  bar.querySelector("[data-act=harvest]").addEventListener("click", () => plot && onHarvest(plot.slot));
+  bar.querySelector("[data-act=garden]").addEventListener("click", onOpenGarden);
 }
 
-function plotHtml(p) {
-  const on = String(state.selectedSlot) === String(p.slot) ? " is-on" : "";
-  return `
-    <button type="button" class="island-plot${on}" data-slot="${esc(p.slot)}">
-      <span class="meta">${esc(p.token || p.slot)} · ${esc(p.name || "空地")}<br>${esc(p.detail || "")}</span>
-      <span class="crop ${esc(p.appearance || "empty")}"></span>
-    </button>
-  `;
+export function syncHomeChrome() {
+  const status = document.getElementById("island-grow-status");
+  if (status) status.textContent = growStatusLine();
+  const harvest = document.getElementById("island-harvest-all");
+  if (harvest) harvest.hidden = ripeHome().length === 0;
+  const sub = document.getElementById("island-plant-sub");
+  if (sub) sub.textContent = panelSubtitle();
 }

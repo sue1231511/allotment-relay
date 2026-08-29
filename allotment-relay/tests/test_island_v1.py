@@ -74,17 +74,34 @@ async def _test_island_v1_api() -> None:
     assert missing_item.status_code == 409, missing_item.text
     assert missing_item.json()["error"]["code"] == "ITEM_REQUIRED"
 
+    farm0 = client.get("/api/v1/farm", headers=_auth(key))
+    assert farm0.status_code == 200, farm0.text
+    panel = farm0.json()["farm"]["panel"]
+    assert [c["label"] for c in panel] == ["白菜", "胡萝卜", "番茄"], panel
+    assert {c["name"] for c in panel} == {"甘蓝", "甜菜", "雾豌豆"}, panel
+    idle = sorted(
+        (p for p in farm0.json()["farm"]["home"] if p["can_sow"]),
+        key=lambda p: int(p["slot"]),
+    )
+    assert idle and int(idle[0]["slot"]) == 1, idle
+
     sown = client.post(
-        "/api/v1/farm/parcels/1/sow",
+        f"/api/v1/farm/parcels/{idle[0]['slot']}/sow",
         headers=_auth(key, {"Idempotency-Key": "sow-kale-1"}),
-        json={"crop": "甘蓝"},
+        json={"crop": panel[0]["name"]},
     )
     assert sown.status_code == 200, sown.text
     one = next(p for p in sown.json()["farm"]["home"] if int(p["slot"]) == 1)
     assert one["state"] != "fallow", one
     assert one["appearance"] in ("seedling", "growing"), one
+    assert one["remain_sec"] > 0, one
     assert sown.json()["event"]["kind"] == "farm"
     assert "sow 1" not in (sown.json()["event"]["narrative"] or "")
+
+    refreshed = client.get("/api/v1/farm", headers=_auth(key))
+    again_plot = next(p for p in refreshed.json()["farm"]["home"] if int(p["slot"]) == 1)
+    assert again_plot["crop"] == one["crop"]
+    assert again_plot["remain_sec"] > 0
 
     again = client.post(
         "/api/v1/farm/parcels/1/sow",
@@ -169,6 +186,52 @@ async def _test_island_v1_api() -> None:
     mcp_bag = await play_mod.run_play(key, "tote_ops", "list")
     assert "甘蓝" in (mcp_bag.get("text") or ""), mcp_bag.get("text")
 
+    # 前端自动找空地：按 slot 顺序把三块都种上，就没有 can_sow。
+    empty = sorted(
+        (p for p in harvested.json()["farm"]["home"] if p["can_sow"]),
+        key=lambda p: int(p["slot"]),
+    )
+    assert len(empty) == 3, empty
+    last_sow = harvested
+    for plot, crop, idem in zip(
+        empty,
+        ("甘蓝", "甜菜", "雾豌豆"),
+        ("sow-fill-1", "sow-fill-2", "sow-fill-3"),
+    ):
+        last_sow = client.post(
+            f"/api/v1/farm/parcels/{plot['slot']}/sow",
+            headers=_auth(key, {"Idempotency-Key": idem}),
+            json={"crop": crop},
+        )
+        assert last_sow.status_code == 200, last_sow.text
+    assert not any(p["can_sow"] for p in last_sow.json()["farm"]["home"])
+
+    parcels = await db.get_parcels(row["id"])
+    home_ids = [
+        p for p in parcels
+        if not p.get("orchard") and not p.get("greenhouse")
+    ]
+    async with db.connect() as conn:
+        for plot in home_ids:
+            await conn.execute(
+                "UPDATE parcels SET planted_at=planted_at-? WHERE id=?",
+                (200000, plot["id"]),
+            )
+        await conn.commit()
+    ripe_farm = client.get("/api/v1/farm", headers=_auth(key))
+    ripe = [p for p in ripe_farm.json()["farm"]["home"] if p["can_harvest"]]
+    assert ripe, ripe_farm.text
+    last_harvest = None
+    for plot in ripe:
+        last_harvest = client.post(
+            f"/api/v1/farm/parcels/{plot['slot']}/harvest",
+            headers=_auth(key, {"Idempotency-Key": f"harvest-all-{plot['slot']}"}),
+            json={},
+        )
+        assert last_harvest.status_code == 200, last_harvest.text
+    assert last_harvest is not None
+    assert not any(p["can_harvest"] for p in last_harvest.json()["farm"]["home"])
+
     steward = await db.get_steward_by_key_id(row["id"])
     sid = int(steward["id"])
     async with db.connect() as conn:
@@ -241,16 +304,22 @@ def test_island_page_is_modular() -> None:
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
     assert "island-dock" in html
-    assert "家园" in (ROOT / "server/static/island/map.js").read_text(encoding="utf-8")
+    assert "菜园" in (ROOT / "server/static/island/map.js").read_text(encoding="utf-8")
     assert "min-height: 48px" in css
     assert "overflow-x: hidden" in css
+    assert "home-garden.png" in css
     assert "/api/v1/" in api
     assert "Authorization" in api
     assert "api_key=" not in api
     assert "浇水 1" not in app
+    assert "菜园已经种满了" in app
+    assert "firstIdleHome" in app
     assert (ROOT / "server/static/island/scenes/home.js").exists()
+    assert (ROOT / "server/static/island/ui/plant-panel.js").exists()
     assert (ROOT / "server/static/island/scenes/shore.js").exists()
     assert (ROOT / "server/static/island/scenes/plaza.js").exists()
+    assert (ROOT / "server/static/island/assets/island-map.png").exists()
+    assert (ROOT / "server/static/island/assets/home-garden.png").exists()
     main_py = (ROOT / "server/main.py").read_text(encoding="utf-8")
     assert '@app.get("/play"' in main_py
     assert '@app.get("/island"' in main_py

@@ -83,6 +83,59 @@ def world_view(
     }
 
 
+# 家园种植面板第一版：界面名对上参考图，播种仍走现有作物与种子。
+HOME_PANEL_CROPS = (
+    ("kale", "白菜"),
+    ("beet", "胡萝卜"),
+    ("fogpea", "番茄"),
+)
+
+
+def format_grow_minutes(mins: int) -> str:
+    mins = max(0, int(mins or 0))
+    if mins < 60:
+        return f"{mins}分钟"
+    hours, left = divmod(mins, 60)
+    if left == 0:
+        return f"{hours}小时"
+    return f"{hours}小时{left}分"
+
+
+def remain_seconds(raw: dict[str, Any] | None, view: dict[str, Any]) -> int:
+    state = str(view.get("state") or "fallow")
+    if state in ("fallow", "clearing", "ready", "overripe"):
+        return 0
+    if not raw or not raw.get("crop"):
+        return 0
+    _, _, left = farming.grow_progress(raw)
+    return int(left)
+
+
+def panel_crops(stock: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+    qty: dict[str, int] = {}
+    for item in stock or []:
+        qty[str(item.get("item") or "")] = int(item.get("qty") or 0)
+    out: list[dict[str, Any]] = []
+    for key, label in HOME_PANEL_CROPS:
+        meta = CROPS.get(key) or {}
+        aliases = meta.get("aliases") or []
+        sow_name = aliases[0] if aliases else (meta.get("name") or key)
+        grow_min = int(meta.get("grow") or 0)
+        out.append({
+            "key": key,
+            "label": label,
+            "name": sow_name,
+            "full": meta.get("name") or sow_name,
+            "emoji": meta.get("emoji") or "🌱",
+            "grow_min": grow_min,
+            "grow_text": format_grow_minutes(grow_min),
+            "yield": int(meta.get("yield") or 0),
+            "seed": f"seed_{key}",
+            "seed_qty": qty.get(f"seed_{key}", 0),
+        })
+    return out
+
+
 def farm_parcel(view: dict[str, Any], raw: dict[str, Any] | None = None) -> dict[str, Any]:
     crop_key = view.get("crop")
     meta = CROPS.get(crop_key or "") or {}
@@ -101,6 +154,7 @@ def farm_parcel(view: dict[str, Any], raw: dict[str, Any] | None = None) -> dict
         "watered": bool(view.get("watered")),
         "fertilized": bool(view.get("fertilized")),
         "tended": bool(view.get("tended")),
+        "remain_sec": remain_seconds(raw, view),
         "can_sow": view.get("state") == "fallow",
         "can_water": view.get("state") in ("growing", "tending") and not view.get("watered"),
         "can_harvest": view.get("state") in ("ready", "overripe"),
@@ -122,6 +176,7 @@ async def farm_view(api_key: str, steward_id: int | None = None) -> dict[str, An
         "home": home,
         "parcels": parcels,
         "land": dash.get("land") or {},
+        "panel": panel_crops(dash.get("stock") or []),
     }
 
 

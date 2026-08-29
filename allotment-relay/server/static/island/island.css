@@ -23,14 +23,7 @@ body.island-app {
   font-family: "Noto Serif SC", serif;
 }
 
-.island-skip {
-  position: absolute;
-  left: 12px;
-  top: 8px;
-  z-index: 8;
-  font-size: 12px;
-  color: var(--is-deep);
-}
+.island-skip { display: none; }
 
 .island-root {
   width: min(480px, 100%);
@@ -76,6 +69,13 @@ body.island-app {
   font-size: 11px;
   letter-spacing: .08em;
   color: var(--is-deep);
+}
+
+.island-hud-play {
+  font-size: 11px;
+  color: var(--is-deep);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .island-hud-meters {
@@ -244,27 +244,46 @@ body.island-app {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, #9ec4c4 0%, #7fa7ab 28%, #d8c39a 62%, #6f8f6a 100%);
+    #c5ddd6 url("/static/island/assets/island-map.png") center / cover no-repeat;
 }
 
-.island-map-sea {
-  position: absolute;
-  inset: 0 0 42% 0;
-  background:
-    repeating-linear-gradient(180deg, transparent 0 16px, rgba(255,255,255,.12) 16px 18px);
-}
-
+.island-map-sea,
 .island-land {
+  display: none;
+}
+
+.island-map-hot {
   position: absolute;
-  left: 8%;
-  right: 8%;
-  top: 28%;
-  bottom: 8%;
-  border-radius: 46% 42% 38% 44%;
-  background:
-    radial-gradient(circle at 30% 30%, #e7f0c8, transparent 42%),
-    linear-gradient(160deg, #8da56a 0%, #6f8f6a 60%, #c9b58e 100%);
-  box-shadow: 0 10px 0 rgba(61, 92, 97, .18);
+  border: 0;
+  background: transparent;
+  color: var(--is-ink);
+  font: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 8px 10px;
+  box-sizing: border-box;
+}
+
+.island-map-hot.is-garden {
+  left: 4%;
+  top: 14%;
+  width: 38%;
+  height: 26%;
+  border-radius: 18px;
+}
+
+.island-map-hot small,
+.island-pin small { font-size: 11px; color: #5b7377; }
+.island-map-hot b,
+.island-pin b { font-size: 15px; }
+
+.island-map-hot small,
+.island-map-hot b {
+  background: rgba(255,253,248,.88);
+  padding: 1px 8px;
+  border-radius: 999px;
 }
 
 .island-pin {
@@ -284,25 +303,61 @@ body.island-app {
   gap: 2px;
 }
 
-.island-pin small { font-size: 11px; color: #5b7377; }
-.island-pin b { font-size: 15px; }
-.island-pin.is-home { left: 18%; top: 38%; }
-.island-pin.is-shore { right: 10%; top: 16%; }
-.island-pin.is-plaza { left: 36%; bottom: 16%; }
+.island-pin.is-home { left: 12%; top: 22%; }
+.island-pin.is-shore { right: 8%; top: 12%; }
+.island-pin.is-plaza { left: 36%; bottom: 18%; }
 
 /* 家园 */
 .island-home {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, #d7ebe4 0%, #e8efd4 40%, #c9b58e 100%);
+  background:
+    #d7ebe4 url("/static/island/assets/home-garden.png") center / cover no-repeat;
 }
 
-.island-home-sky { height: 28%; }
-.island-plots {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  padding: 0 12px;
+.island-home-sky { display: none; }
+.island-plots { display: none; }
+
+.island-grow-status {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 12px;
+  margin: 0;
+  min-height: 44px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(255, 253, 248, .9);
+  border: 1px solid var(--is-line);
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.island-garden-hot {
+  position: absolute;
+  left: 22%;
+  top: 36%;
+  width: 48%;
+  height: 44%;
+  border: 0;
+  border-radius: 22px;
+  background: transparent;
+}
+
+.island-harvest-fab {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  min-height: 52px;
+  border: 0;
+  border-radius: 999px;
+  background: #95b98a;
+  color: #f7f3ea;
+  font: inherit;
+  font-weight: 600;
 }
 
 .island-plot {
@@ -476,6 +531,130 @@ body.island-app {
 }
 
 .island-composer input { flex: 1; min-width: 0; }
+
+.island-plant {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(68px + env(safe-area-inset-bottom));
+  width: min(480px, 100%);
+  z-index: 7;
+}
+
+.island-plant-card {
+  background: #faf9f0;
+  border-radius: 22px 22px 0 0;
+  padding: 16px 16px 18px;
+  box-shadow: 0 -10px 28px rgba(42, 58, 60, .14);
+}
+
+.island-plant-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.island-plant-head h2 {
+  margin: 0;
+  font-size: 22px;
+  color: #5f7a58;
+}
+
+.island-plant-head p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: #7a8b7e;
+}
+
+.island-plant-x {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #7a8b7e;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.island-plant-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.island-crop {
+  position: relative;
+  min-height: 112px;
+  border: 1px solid #e4e0d4;
+  border-radius: 16px;
+  background: #fffdf8;
+  color: var(--is-ink);
+  font: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 10px 6px 8px;
+}
+
+.island-crop.is-on {
+  border-color: #95b98a;
+  box-shadow: 0 0 0 2px rgba(149, 185, 138, .35);
+}
+
+.island-crop-art {
+  width: 56px;
+  height: 56px;
+  display: block;
+}
+
+.island-crop-art svg { width: 100%; height: 100%; }
+
+.island-crop b { font-size: 14px; }
+.island-crop small { font-size: 11px; color: #7a8b7e; }
+
+.island-crop-check {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #95b98a;
+  color: #fff;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.island-plant-meta {
+  margin: 12px 0;
+  min-height: 40px;
+  border-radius: 999px;
+  background: rgba(149, 185, 138, .16);
+  color: #5f7a58;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  font-size: 12px;
+}
+
+.island-plant-go {
+  width: 100%;
+  min-height: 52px;
+  border: 0;
+  border-radius: 999px;
+  background: #95b98a;
+  color: #f7f3ea;
+  font: inherit;
+  font-weight: 600;
+}
 
 @media (max-width: 360px) {
   .island-hud { padding-left: 10px; padding-right: 10px; }
