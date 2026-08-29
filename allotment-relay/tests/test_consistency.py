@@ -624,7 +624,9 @@ def test_human_island_manual() -> None:
         "/island",
         "手机地图",
         "一键收获",
-        "菜园已经种满了",
+        "菜地已经种满了",
+        "果园已经种满了",
+        "温室已经种满了",
     ):
         assert needle in blob, needle
     assert "plot_ops" not in blob

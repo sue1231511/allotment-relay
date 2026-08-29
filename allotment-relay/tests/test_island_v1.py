@@ -60,7 +60,12 @@ async def _test_island_v1_api() -> None:
     assert body["enrolled"] is True
     assert body["me"]["name"] == "地图人"
     assert len(body["farm"]["home"]) == 3, body["farm"]["home"]
+    assert len(body["farm"]["orchard"]) == 3, body["farm"]["orchard"]
+    assert isinstance(body["farm"]["greenhouse"], list)
     assert body["farm"]["home"][0]["appearance"] == "empty"
+    assert body["farm"]["home"][0]["kind"] == "home"
+    assert body["farm"]["orchard"][0]["token"] == "园1"
+    assert body["farm"]["orchard"][0]["kind"] == "orchard"
 
     me = client.get("/api/v1/me", headers=_auth(key))
     assert me.status_code == 200, me.text
@@ -76,12 +81,25 @@ async def _test_island_v1_api() -> None:
 
     farm0 = client.get("/api/v1/farm", headers=_auth(key))
     assert farm0.status_code == 200, farm0.text
-    panel = farm0.json()["farm"]["panel"]
+    farm_body = farm0.json()["farm"]
+    panel = farm_body["panel"]
     labels = [c["label"] for c in panel]
     assert panel[0]["key"] == "kale" and panel[0]["label"] == "白菜", panel[0]
     assert "胡萝卜" in labels and "番茄" in labels
     assert any(c["key"] == "chili" for c in panel)
     assert not any(c["key"] == "durian" for c in panel)
+    orchard_panel = farm_body["panels"]["orchard"]
+    assert any(c["key"] == "durian" for c in orchard_panel), orchard_panel
+    assert not any(c["key"] == "kale" for c in orchard_panel)
+    shed_panel = farm_body["panels"]["greenhouse"]
+    assert any(c["key"] == "kale" for c in shed_panel) and any(c["key"] == "durian" for c in shed_panel)
+
+    wrong_yard = client.post(
+        "/api/v1/farm/parcels/园1/sow",
+        headers=_auth(key, {"Idempotency-Key": "sow-orchard-kale"}),
+        json={"crop": "甘蓝"},
+    )
+    assert wrong_yard.status_code >= 400, wrong_yard.text
     idle = sorted(
         (p for p in farm0.json()["farm"]["home"] if p["can_sow"]),
         key=lambda p: int(p["slot"]),
@@ -235,6 +253,28 @@ async def _test_island_v1_api() -> None:
     assert last_harvest is not None
     assert not any(p["can_harvest"] for p in last_harvest.json()["farm"]["home"])
 
+    # 扩到二十几块时，三类地都要整份回给前端，不能只画画面上的三块。
+    steward = await db.get_steward_by_key_id(row["id"])
+    sid_for_yards = int(steward["id"])
+    async with db.connect() as conn:
+        await conn.execute(
+            "UPDATE stewards SET parcel_count=22, orchard_count=22, greenhouse_count=22, greenhouse=1 WHERE id=?",
+            (sid_for_yards,),
+        )
+        await db.ensure_parcels(conn, sid_for_yards, 22)
+        await db.ensure_orchard_parcels(conn, sid_for_yards, 22)
+        await db.ensure_greenhouse_parcels(conn, sid_for_yards, 22)
+        await conn.commit()
+    many = client.get("/api/v1/farm", headers=_auth(key))
+    assert many.status_code == 200, many.text
+    yards = many.json()["farm"]
+    assert len(yards["home"]) == 22, len(yards["home"])
+    assert len(yards["orchard"]) == 22, len(yards["orchard"])
+    assert len(yards["greenhouse"]) == 22, len(yards["greenhouse"])
+    assert yards["home"][-1]["token"] == "22"
+    assert yards["orchard"][-1]["token"] == "园22"
+    assert yards["greenhouse"][-1]["token"] == "棚22"
+
     steward = await db.get_steward_by_key_id(row["id"])
     sid = int(steward["id"])
     async with db.connect() as conn:
@@ -315,10 +355,12 @@ def test_island_page_is_modular() -> None:
     assert "/static/style.css" not in html
     assert "/api/v1/" in api
     assert "Authorization" in api
+    assert "encodeURIComponent" in api
     assert "api_key=" not in api
     assert "浇水 1" not in app
-    assert "菜园已经种满了" in app
-    assert "firstIdleHome" in app
+    assert "菜地已经种满了" in (ROOT / "server/static/island/store.js").read_text(encoding="utf-8")
+    assert "firstIdleYard" in app
+    assert "plotToken" in app
     assert (ROOT / "server/static/island/scenes/home.js").exists()
     assert (ROOT / "server/static/island/ui/plant-panel.js").exists()
     assert (ROOT / "server/static/island/ui/crops.js").exists()
@@ -326,7 +368,8 @@ def test_island_page_is_modular() -> None:
     assert (ROOT / "server/static/island/assets/crops/beet.png").exists()
     assert (ROOT / "server/static/island/assets/crops/fogpea.png").exists()
     assert "data-act=\"prev\"" in (ROOT / "server/static/island/ui/plant-panel.js").read_text(encoding="utf-8")
-    assert "island-beds" in (ROOT / "server/static/island/scenes/home.js").read_text(encoding="utf-8")
+    assert "island-plot-grid" in (ROOT / "server/static/island/scenes/home.js").read_text(encoding="utf-8")
+    assert "data-yard" in (ROOT / "server/static/island/scenes/home.js").read_text(encoding="utf-8")
     assert (ROOT / "server/static/island/scenes/shore.js").exists()
     assert (ROOT / "server/static/island/scenes/plaza.js").exists()
     assert (ROOT / "server/static/island/assets/island-map.png").exists()

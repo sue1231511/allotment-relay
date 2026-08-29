@@ -1,23 +1,40 @@
-import { growStatusLine, homePlots, panelSubtitle, ripeHome } from "../store.js";
+import {
+  formatRemain,
+  growStatusLine,
+  panelSubtitle,
+  plotLabel,
+  ripeYard,
+  state,
+  yardMeta,
+  yardPlots,
+  YARDS,
+} from "../store.js";
 import { cropArt } from "../ui/crops.js";
 import { esc } from "../ui/modal.js";
 
-export function renderHome(root, { onOpenGarden, onHarvestAll, onBack }) {
-  const ripe = ripeHome().length;
+export function renderHome(root, { onOpenGarden, onHarvestAll, onSwitchYard, onBack }) {
+  const ripe = ripeYard().length;
   root.innerHTML = `
     <div class="island-home">
+      <div class="island-yard-tabs" role="tablist" aria-label="地块类型">
+        ${yardTabs()}
+      </div>
       <p class="island-grow-status" id="island-grow-status">${esc(growStatusLine())}</p>
-      <div class="island-beds" id="island-beds" aria-hidden="true">${bedMarkup()}</div>
-      <button type="button" class="island-garden-hot" data-act="garden" aria-label="打开种植面板"></button>
-      <button type="button" class="island-harvest-fab" id="island-harvest-all" data-act="harvest" ${ripe ? "" : "hidden"}>一键收获</button>
+      <div class="island-plot-grid" id="island-plot-grid">${plotGridMarkup()}</div>
+      <button type="button" class="island-harvest-fab" id="island-harvest-all" data-act="harvest" ${ripe ? "" : "hidden"}>${harvestLabel(ripe)}</button>
     </div>
   `;
   const bar = document.getElementById("island-actionbar");
   bar.innerHTML = `
     <button type="button" class="island-btn" data-act="back">回地图</button>
-    <button type="button" class="island-btn primary" data-act="garden">种植</button>
+    <button type="button" class="island-btn primary" data-act="garden">${esc(yardMeta().plant)}</button>
   `;
-  root.querySelector("[data-act=garden]").addEventListener("click", onOpenGarden);
+  root.querySelectorAll("[data-yard]").forEach((btn) => {
+    btn.addEventListener("click", () => onSwitchYard(btn.getAttribute("data-yard")));
+  });
+  root.querySelectorAll("[data-act=garden]").forEach((btn) => {
+    btn.addEventListener("click", onOpenGarden);
+  });
   const harvest = root.querySelector("[data-act=harvest]");
   if (harvest) harvest.addEventListener("click", onHarvestAll);
   bar.querySelector("[data-act=back]").addEventListener("click", onBack);
@@ -28,20 +45,60 @@ export function syncHomeChrome() {
   const status = document.getElementById("island-grow-status");
   if (status) status.textContent = growStatusLine();
   const harvest = document.getElementById("island-harvest-all");
-  if (harvest) harvest.hidden = ripeHome().length === 0;
-  const beds = document.getElementById("island-beds");
-  if (beds) beds.innerHTML = bedMarkup();
+  if (harvest) {
+    const ripe = ripeYard().length;
+    harvest.hidden = ripe === 0;
+    harvest.textContent = harvestLabel(ripe);
+  }
+  const grid = document.getElementById("island-plot-grid");
+  if (grid) grid.innerHTML = plotGridMarkup();
+  document.querySelectorAll(".island-yard-tabs [data-yard]").forEach((btn) => {
+    const kind = btn.getAttribute("data-yard");
+    btn.classList.toggle("is-on", kind === state.yard);
+    btn.setAttribute("aria-selected", kind === state.yard ? "true" : "false");
+    const count = btn.querySelector("small");
+    if (count) count.textContent = String(yardPlots(kind).length);
+  });
+  const plantBtn = document.querySelector("#island-actionbar [data-act=garden]");
+  if (plantBtn) plantBtn.textContent = yardMeta().plant;
   const sub = document.getElementById("island-plant-sub");
   if (sub) sub.textContent = panelSubtitle();
 }
 
-function bedMarkup() {
-  return homePlots()
-    .slice(0, 3)
-    .map((plot, index) => {
-      const stage = plot.appearance || "empty";
-      const art = cropArt(plot.crop, stage);
-      return `<div class="island-bed is-${index + 1} is-${esc(stage)}" data-slot="${esc(plot.slot)}">${art}</div>`;
-    })
-    .join("");
+function yardTabs() {
+  return Object.values(YARDS).map((yard) => {
+    const n = yardPlots(yard.key).length;
+    const on = yard.key === state.yard;
+    return `<button type="button" role="tab" class="${on ? "is-on" : ""}" data-yard="${esc(yard.key)}" aria-selected="${on ? "true" : "false"}">${esc(yard.label)} <small>${n}</small></button>`;
+  }).join("");
+}
+
+function harvestLabel(ripe) {
+  return ripe > 1 ? `一键收获 ${ripe}` : "一键收获";
+}
+
+function plotGridMarkup() {
+  const plots = yardPlots();
+  const meta = yardMeta();
+  if (!plots.length) {
+    return `<p class="island-plot-empty">${esc(meta.empty)}</p>`;
+  }
+  return plots.map((plot) => {
+    const stage = plot.appearance || (plot.can_sow ? "empty" : "growing");
+    const art = cropArt(plot.crop, stage);
+    const token = plotLabel(plot);
+    return `<button type="button" class="island-plot-tile is-${esc(stage)}" data-act="garden" data-token="${esc(token)}" aria-label="${esc(token)}">
+      <span class="island-plot-soil">${art}</span>
+      <b>${esc(token)}</b>
+      <small>${esc(tileCaption(plot))}</small>
+    </button>`;
+  }).join("");
+}
+
+function tileCaption(plot) {
+  if (plot.state === "clearing") return plot.detail || "开垦中";
+  if (plot.can_sow) return "空闲";
+  if (plot.can_harvest) return "可收";
+  if ((plot.remain_sec || 0) > 0) return formatRemain(plot.remain_sec);
+  return plot.label || plot.name || "生长中";
 }

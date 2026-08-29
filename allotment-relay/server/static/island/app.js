@@ -1,10 +1,12 @@
 import { api, loadKey, saveKey } from "./api.js";
 import {
   applySnapshot,
-  firstIdleHome,
-  ripeHome,
+  firstIdleYard,
+  plotToken,
+  ripeYard,
   state,
   tickGrow,
+  yardFullMessage,
 } from "./store.js";
 import { renderHud } from "./hud.js";
 import { renderMap } from "./map.js";
@@ -61,6 +63,7 @@ async function enterScene(name) {
       renderHome(root, {
         onOpenGarden: openPlant,
         onHarvestAll: harvestAll,
+        onSwitchYard: switchYard,
         onBack: () => enterScene("map"),
       });
       startGrowTick();
@@ -118,22 +121,28 @@ function closePlant() {
   hidePlantPanel(plantEl());
 }
 
+function switchYard(yard) {
+  state.yard = yard || "home";
+  syncHomeChrome();
+  if (state.plantOpen) openPlant();
+}
+
 async function autoSow(crop) {
   if (!crop) {
-    toast("菜园已经种满了");
+    toast(yardFullMessage());
     return;
   }
-  const idle = firstIdleHome();
+  const idle = firstIdleYard();
   if (!idle) {
-    toast("菜园已经种满了");
+    toast(yardFullMessage());
     openPlant();
     return;
   }
-  await act(() => api.sow(idle.slot, crop.name || crop.key), { keepPlant: false });
+  await act(() => api.sow(plotToken(idle), crop.name || crop.key), { keepPlant: false });
 }
 
 async function harvestAll() {
-  const ready = ripeHome();
+  const ready = ripeYard();
   if (!ready.length) {
     toast("还没有成熟的作物。");
     return;
@@ -145,7 +154,7 @@ async function harvestAll() {
     let last = null;
     const notes = [];
     for (const plot of ready) {
-      last = await api.harvest(plot.slot);
+      last = await api.harvest(plotToken(plot));
       applySnapshot(last);
       if (last.event && last.event.narrative) notes.push(last.event.narrative);
     }
@@ -201,7 +210,7 @@ function startGrowTick() {
       if (state.plantOpen) openPlant();
       else {
         const harvest = document.getElementById("island-harvest-all");
-        if (harvest) harvest.hidden = ripeHome().length === 0;
+        if (harvest) harvest.hidden = ripeYard().length === 0;
       }
     } catch {
       /* 下一秒再试 */

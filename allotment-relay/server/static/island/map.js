@@ -9,7 +9,7 @@ export function renderMap(root, { onOpen }) {
     </div>
   `;
   const bar = document.getElementById("island-actionbar");
-  bar.innerHTML = `<p class="island-fine" style="grid-column:1/-1;margin:4px 2px 0">点左上角菜园进家园。点整片菜地就能种，不用选某一块。</p>`;
+  bar.innerHTML = `<p class="island-fine" style="grid-column:1/-1;margin:4px 2px 0">点左上角菜园进家园。菜地、果园、温室各看各的地，有多少块就列出多少块。</p>`;
   root.querySelectorAll("[data-go]").forEach((btn) => {
     btn.addEventListener("click", () => onOpen(btn.getAttribute("data-go")));
   });

@@ -1,20 +1,21 @@
 import { neighborCrop, cropArt } from "./crops.js";
-import { panelCrops, panelSubtitle, state } from "../store.js";
+import { firstIdleYard, panelCrops, panelSubtitle, state, yardMeta } from "../store.js";
 import { esc } from "./modal.js";
 
 export function renderPlantPanel(root, { onSelect, onPlant, onClose }) {
   const crops = panelCrops();
   const selected = crops.find((c) => c.key === state.plantKey) || crops[0];
   if (selected) state.plantKey = selected.key;
-  const full = !((state.farm && state.farm.home) || []).some((p) => p.can_sow);
+  const idle = firstIdleYard();
+  const meta = yardMeta();
   const prev = neighborCrop(crops, state.plantKey, -1);
   const next = neighborCrop(crops, state.plantKey, 1);
   root.hidden = false;
   root.innerHTML = `
-    <section class="island-plant-card" role="dialog" aria-label="种植">
+    <section class="island-plant-card" role="dialog" aria-label="${esc(meta.plant)}">
       <header class="island-plant-head">
         <div>
-          <h2>种植</h2>
+          <h2>${esc(meta.plant)}</h2>
           <p id="island-plant-sub">${esc(panelSubtitle())}</p>
         </div>
         <button type="button" class="island-plant-x" data-act="close" aria-label="关闭">×</button>
@@ -42,7 +43,7 @@ export function renderPlantPanel(root, { onSelect, onPlant, onClose }) {
   root.querySelector("[data-act=prev]").addEventListener("click", () => prev && onSelect(prev));
   root.querySelector("[data-act=next]").addEventListener("click", () => next && onSelect(next));
   root.querySelector("[data-act=plant]").addEventListener("click", () => {
-    if (full) {
+    if (!idle) {
       onPlant(null);
       return;
     }

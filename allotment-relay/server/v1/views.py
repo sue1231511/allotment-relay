@@ -83,7 +83,7 @@ def world_view(
     }
 
 
-# 家园面板：非果树作物按 catalog 顺序左右翻。三样起步菜保留界面名。
+# 家园面板：菜地非果树、果园只果树、温室两种都有。三样起步菜保留界面名。
 PANEL_ALIASES = {
     "kale": "白菜",
     "beet": "胡萝卜",
@@ -111,13 +111,18 @@ def remain_seconds(raw: dict[str, Any] | None, view: dict[str, Any]) -> int:
     return int(left)
 
 
-def panel_crops(stock: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+def panel_crops(
+    stock: list[dict[str, Any]] | None = None, *, kind: str = "home"
+) -> list[dict[str, Any]]:
     qty: dict[str, int] = {}
     for item in stock or []:
         qty[str(item.get("item") or "")] = int(item.get("qty") or 0)
     out: list[dict[str, Any]] = []
     for key, meta in CROPS.items():
-        if meta.get("tree"):
+        is_tree = bool(meta.get("tree"))
+        if kind == "home" and is_tree:
+            continue
+        if kind == "orchard" and not is_tree:
             continue
         aliases = meta.get("aliases") or []
         sow_name = aliases[0] if aliases else (meta.get("name") or key)
@@ -133,6 +138,7 @@ def panel_crops(stock: list[dict[str, Any]] | None = None) -> list[dict[str, Any
             "yield": int(meta.get("yield") or 0),
             "seed": f"seed_{key}",
             "seed_qty": qty.get(f"seed_{key}", 0),
+            "tree": is_tree,
         })
     return out
 
@@ -140,11 +146,20 @@ def panel_crops(stock: list[dict[str, Any]] | None = None) -> list[dict[str, Any
 def farm_parcel(view: dict[str, Any], raw: dict[str, Any] | None = None) -> dict[str, Any]:
     crop_key = view.get("crop")
     meta = CROPS.get(crop_key or "") or {}
+    greenhouse = bool(view.get("greenhouse"))
+    orchard = bool(view.get("orchard"))
+    if greenhouse:
+        kind = "greenhouse"
+    elif orchard:
+        kind = "orchard"
+    else:
+        kind = "home"
     return {
         "slot": view.get("slot"),
         "token": view.get("token"),
-        "orchard": bool(view.get("orchard")),
-        "greenhouse": bool(view.get("greenhouse")),
+        "kind": kind,
+        "orchard": orchard,
+        "greenhouse": greenhouse,
         "state": view.get("state"),
         "appearance": visual_stage(raw, view),
         "crop": crop_key,
@@ -162,22 +177,40 @@ def farm_parcel(view: dict[str, Any], raw: dict[str, Any] | None = None) -> dict
     }
 
 
+def _sort_plots(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return sorted(rows, key=lambda p: int(p.get("slot") or 0))
+
+
 async def farm_view(api_key: str, steward_id: int | None = None) -> dict[str, Any]:
     dash = await steward_dashboard.fetch_dashboard(api_key)
     raw_rows = await _raw_parcels(steward_id)
     parcels = []
-    home = []
+    home: list[dict[str, Any]] = []
+    orchard: list[dict[str, Any]] = []
+    greenhouse: list[dict[str, Any]] = []
     for view in dash.get("parcels") or []:
         raw = raw_rows.get(_parcel_key(view))
         row = farm_parcel(view, raw)
         parcels.append(row)
-        if not row["orchard"] and not row["greenhouse"]:
+        if row["kind"] == "greenhouse":
+            greenhouse.append(row)
+        elif row["kind"] == "orchard":
+            orchard.append(row)
+        else:
             home.append(row)
+    stock = dash.get("stock") or []
     return {
-        "home": home,
+        "home": _sort_plots(home),
+        "orchard": _sort_plots(orchard),
+        "greenhouse": _sort_plots(greenhouse),
         "parcels": parcels,
         "land": dash.get("land") or {},
-        "panel": panel_crops(dash.get("stock") or []),
+        "panel": panel_crops(stock, kind="home"),
+        "panels": {
+            "home": panel_crops(stock, kind="home"),
+            "orchard": panel_crops(stock, kind="orchard"),
+            "greenhouse": panel_crops(stock, kind="greenhouse"),
+        },
     }
 
 
