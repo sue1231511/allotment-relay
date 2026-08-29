@@ -18,12 +18,27 @@
     <a class="nav-pill" href="/register">领取凭证</a>
   </div>
   {% if island_weddings %}
-  <div class="wedding-ribbon" role="status">
-    <a class="wedding-ribbon-link" href="{{ island_weddings[0].href if island_weddings|length == 1 else '/play?go=lianli' }}">
+  {% set wedding_href = island_weddings[0].href if island_weddings|length == 1 else '/play?go=lianli' %}
+  {% set wedding_cta = '看婚书 →' if island_weddings|length == 1 and island_weddings[0].held and island_weddings[0].slug else '去上手页连理所 →' %}
+  <div class="wedding-ribbon" id="weddingRibbon" role="status" data-wedding-fold>
+    <button
+      type="button"
+      class="wedding-fold-toggle"
+      data-wedding-fold-toggle
+      aria-expanded="false"
+      aria-controls="weddingRibbonBody"
+    >
+      <i class="wedding-fold-tri" aria-hidden="true"></i>
       <b>今日岛上有婚礼</b>
-      <span>{{ island_wedding_headline }}</span>
-      <em>{% if island_weddings|length == 1 and island_weddings[0].held and island_weddings[0].slug %}看婚书 →{% else %}去上手页连理所 →{% endif %}</em>
-    </a>
+      <em class="wedding-fold-peek">点开看</em>
+    </button>
+    <div class="wedding-ribbon-body" id="weddingRibbonBody" data-wedding-fold-body hidden>
+      <a class="wedding-ribbon-link" href="{{ wedding_href }}">
+        <b>今日岛上有婚礼</b>
+        <span>{{ island_wedding_headline }}</span>
+        <em>{{ wedding_cta }}</em>
+      </a>
+    </div>
   </div>
   {% endif %}
 </nav>
@@ -129,4 +144,4 @@
 
 <script src="/static/device.js?v=invite1"></script>
 <script src="/static/island-time.js"></script>
-<script src="/static/nav.js" defer></script>
+<script src="/static/nav.js?v=wedding-fold1" defer></script>

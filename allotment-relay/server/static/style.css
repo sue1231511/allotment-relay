@@ -4674,6 +4674,73 @@ body:has(.wedding-ribbon) {
     linear-gradient(90deg, rgba(224, 176, 132, .22), rgba(247, 236, 223, .55) 40%, rgba(181, 122, 111, .16));
 }
 
+.wedding-fold-toggle {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  padding: 10px 18px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.wedding-fold-tri {
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid rgba(143, 103, 72, .62);
+  flex-shrink: 0;
+  transform: rotate(-90deg);
+  transition: transform .15s ease;
+}
+
+[data-wedding-fold].is-open > .wedding-fold-toggle .wedding-fold-tri,
+[data-wedding-fold].is-open > .wedding-live-toggle .wedding-fold-tri {
+  transform: rotate(0deg);
+}
+
+.wedding-fold-toggle b {
+  font-family: "Noto Serif SC", serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #8f6748;
+  letter-spacing: .04em;
+}
+
+.wedding-fold-peek {
+  margin-left: auto;
+  font-style: normal;
+  font-size: 11px;
+  color: #b57a6f;
+  letter-spacing: .04em;
+}
+
+.wedding-fold-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.wedding-fold-label b {
+  font-family: "Noto Serif SC", serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #8f6748;
+}
+
+.wedding-fold-label small {
+  font-size: 11px;
+  color: #6d5343;
+}
+
 .wedding-ribbon-link {
   display: flex;
   align-items: baseline;
@@ -4762,5 +4829,85 @@ body:has(.wedding-ribbon) {
   .wedding-ribbon-link {
     width: min(100% - 24px, 1120px);
     padding: 9px 0 11px;
+  }
+}
+
+/* 手机：婚礼提示默认收成小三角，点开再看全文 */
+@media (max-width: 860px) {
+  .wedding-fold-toggle {
+    display: flex;
+    min-height: 40px;
+    padding: 8px 14px;
+  }
+
+  .wedding-ribbon .wedding-ribbon-body[hidden],
+  .wedding-live .wedding-live-body[hidden] {
+    display: none !important;
+  }
+
+  .wedding-ribbon:not(.is-open) .wedding-ribbon-body,
+  .wedding-live:not(.is-open) .wedding-live-body {
+    display: none !important;
+  }
+
+  .wedding-ribbon.is-open .wedding-ribbon-body,
+  .wedding-live.is-open .wedding-live-body {
+    display: block;
+  }
+
+  .wedding-ribbon .wedding-fold-peek {
+    display: inline;
+  }
+
+  .wedding-ribbon.is-open .wedding-fold-peek {
+    opacity: .55;
+  }
+
+  .wedding-ribbon.is-open .wedding-ribbon-link {
+    width: min(100% - 24px, 1120px);
+    padding: 0 0 12px;
+  }
+
+  .wedding-ribbon.is-open .wedding-ribbon-link b {
+    display: none;
+  }
+
+  .wedding-live {
+    padding: 0;
+    margin: 10px 0 12px;
+    overflow: hidden;
+  }
+
+  .wedding-live-toggle {
+    padding: 10px 14px;
+  }
+
+  .wedding-live-body {
+    padding: 0 16px 14px;
+  }
+
+  .wedding-live-body .eyebrow {
+    margin-top: 2px;
+  }
+
+  /* 聊天室手机端高度紧，顶栏小三角够用，不再叠一张婚礼卡 */
+  .lounge-page-main > .wedding-live {
+    display: none !important;
+  }
+}
+
+@media (min-width: 861px) {
+  .wedding-fold-toggle {
+    display: none !important;
+  }
+
+  .wedding-ribbon-body,
+  .wedding-live-body {
+    display: block !important;
+  }
+
+  .wedding-ribbon-body[hidden],
+  .wedding-live-body[hidden] {
+    display: block !important;
   }
 }

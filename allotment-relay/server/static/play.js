@@ -376,12 +376,31 @@ function renderWedding() {
     </article>`;
   }).join('');
   box.innerHTML = `
-    <div class="play-kicker">Wedding Day</div>
-    <h2>今日岛上有婚礼</h2>
-    <p>${esc(wed.headline || '')}</p>
-    <div class="play-wedding-list">${cards}</div>
-    <p class="muted">去连理所可以出席、祝词、送礼。</p>`;
+    <button
+      type="button"
+      class="wedding-fold-toggle play-wedding-toggle"
+      data-wedding-fold-toggle
+      aria-expanded="false"
+      aria-controls="playWeddingBody"
+    >
+      <i class="wedding-fold-tri" aria-hidden="true"></i>
+      <span class="wedding-fold-label">
+        <b>今日岛上有婚礼</b>
+        <small>点开看谁在办</small>
+      </span>
+    </button>
+    <div class="play-wedding-body" id="playWeddingBody" data-wedding-fold-body hidden>
+      <div class="play-kicker">Wedding Day</div>
+      <h2>今日岛上有婚礼</h2>
+      <p>${esc(wed.headline || '')}</p>
+      <div class="play-wedding-list">${cards}</div>
+      <p class="muted">去连理所可以出席、祝词、送礼。</p>
+    </div>`;
+  box.setAttribute('data-wedding-fold', '');
   show(box, true);
+  if (typeof window.__syncWeddingFolds === 'function') {
+    window.__syncWeddingFolds();
+  }
 }
 
 function plotButtons(p) {

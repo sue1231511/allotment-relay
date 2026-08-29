@@ -186,7 +186,8 @@ body.is-wedding-day .play-today,
   color: #8f6748;
 }
 
-.play-wedding > p {
+.play-wedding > p,
+.play-wedding-body > p {
   margin: 0 0 14px;
   color: #6d5343;
 }
@@ -218,6 +219,47 @@ body.is-wedding-day .play-today,
   margin: 0;
   font-size: 13px;
   color: #6d5343;
+}
+
+@media (max-width: 860px) {
+  .play-wedding {
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .play-wedding-toggle {
+    display: flex;
+    width: 100%;
+    padding: 12px 14px;
+  }
+
+  .play-wedding-body {
+    padding: 0 16px 16px;
+  }
+
+  .play-wedding:not(.is-open) .play-wedding-body,
+  .play-wedding .play-wedding-body[hidden] {
+    display: none !important;
+  }
+
+  .play-wedding.is-open .play-wedding-body {
+    display: block;
+  }
+
+  .play-wedding.is-open .play-wedding-body[hidden] {
+    display: block !important;
+  }
+}
+
+@media (min-width: 861px) {
+  .play-wedding-toggle {
+    display: none !important;
+  }
+
+  .play-wedding-body,
+  .play-wedding-body[hidden] {
+    display: block !important;
+  }
 }
 
 .play-today::after {

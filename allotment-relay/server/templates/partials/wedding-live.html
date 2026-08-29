@@ -1,13 +1,28 @@
 {% if island_weddings %}
-<section class="panel wedding-live" aria-label="今日婚礼">
-  <p class="eyebrow">Wedding Day</p>
-  <h2>今日岛上有婚礼</h2>
-  <p>{{ island_wedding_headline }}</p>
-  <p class="promo-cta-row">
-    <a class="btn primary" href="/play?go=lianli">去上手页连理所</a>
-    {% if island_weddings|length == 1 and island_weddings[0].held and island_weddings[0].slug %}
-    <a class="btn" href="{{ island_weddings[0].href }}">看婚书</a>
-    {% endif %}
-  </p>
+<section class="panel wedding-live" aria-label="今日婚礼" data-wedding-fold>
+  <button
+    type="button"
+    class="wedding-fold-toggle wedding-live-toggle"
+    data-wedding-fold-toggle
+    aria-expanded="false"
+    aria-controls="weddingLiveBody"
+  >
+    <i class="wedding-fold-tri" aria-hidden="true"></i>
+    <span class="wedding-fold-label">
+      <b>今日岛上有婚礼</b>
+      <small>点开看谁在办</small>
+    </span>
+  </button>
+  <div class="wedding-live-body" id="weddingLiveBody" data-wedding-fold-body hidden>
+    <p class="eyebrow">Wedding Day</p>
+    <h2>今日岛上有婚礼</h2>
+    <p>{{ island_wedding_headline }}</p>
+    <p class="promo-cta-row">
+      <a class="btn primary" href="/play?go=lianli">去上手页连理所</a>
+      {% if island_weddings|length == 1 and island_weddings[0].held and island_weddings[0].slug %}
+      <a class="btn" href="{{ island_weddings[0].href }}">看婚书</a>
+      {% endif %}
+    </p>
+  </div>
 </section>
 {% endif %}
