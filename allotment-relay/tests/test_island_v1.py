@@ -347,11 +347,14 @@ def test_island_page_is_modular() -> None:
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
     assert "island-dock" in html
-    assert "菜园" in (ROOT / "server/static/island/map.js").read_text(encoding="utf-8")
+    assert "家园" in (ROOT / "server/static/island/map.js").read_text(encoding="utf-8")
     assert "min-height: 48px" in css
     assert "overflow-x: hidden" in css
     assert "island-plot-tile" in css
     assert "island-plot-bed" in css
+    assert "island-yards" in css
+    assert "home-garden.png" in css
+    assert "#7fa24a" not in css
     assert "top: auto" in css
     assert "/static/style.css" not in html
     assert "/api/v1/" in api
@@ -362,6 +365,8 @@ def test_island_page_is_modular() -> None:
     assert "菜地已经种满了" in (ROOT / "server/static/island/store.js").read_text(encoding="utf-8")
     assert "firstIdleYard" in app
     assert "plotToken" in app
+    assert "renderYards" in app
+    assert "enterScene(\"yards\")" in app
     assert (ROOT / "server/static/island/scenes/home.js").exists()
     assert (ROOT / "server/static/island/ui/plant-panel.js").exists()
     assert (ROOT / "server/static/island/ui/crops.js").exists()
@@ -372,6 +377,8 @@ def test_island_page_is_modular() -> None:
     home_js = (ROOT / "server/static/island/scenes/home.js").read_text(encoding="utf-8")
     assert "island-plot-grid" in home_js
     assert "island-plot-bed" in home_js
+    assert "island-garden-hot" in home_js
+    assert "renderYards" in home_js
     assert "grass.png" in home_js
     assert "plot.png" in home_js
     assert "data-yard" in home_js

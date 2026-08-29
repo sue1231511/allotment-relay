@@ -10,7 +10,7 @@ import {
 } from "./store.js";
 import { renderHud } from "./hud.js";
 import { renderMap } from "./map.js";
-import { renderHome, syncHomeChrome } from "./scenes/home.js";
+import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js";
 import { renderShore } from "./scenes/shore.js";
 import { renderPlaza } from "./scenes/plaza.js";
 import { renderBag } from "./ui/bag.js";
@@ -52,7 +52,7 @@ async function enterScene(name) {
   state.tab = "map";
   markDock("map");
   hideSheet();
-  if (name !== "home") closePlant();
+  if (name !== "yards") closePlant();
   const root = sceneEl();
   if (!root) {
     toast("地图画布还没准备好。");
@@ -60,11 +60,19 @@ async function enterScene(name) {
   }
   try {
     if (name === "home") {
+      stopGrowTick();
       renderHome(root, {
+        onOpenLand: () => enterScene("yards"),
+        onBack: () => enterScene("map"),
+      });
+      return;
+    }
+    if (name === "yards") {
+      renderYards(root, {
         onOpenGarden: openPlant,
         onHarvestAll: harvestAll,
         onSwitchYard: switchYard,
-        onBack: () => enterScene("map"),
+        onBack: () => enterScene("home"),
       });
       startGrowTick();
       if (state.plantOpen) openPlant();
@@ -166,10 +174,10 @@ async function harvestAll() {
         kind: "farm",
       });
     }
-    await enterScene("home");
+    await enterScene("yards");
   } catch (err) {
     toast(err.message || "这次没做成。");
-    await enterScene("home");
+    await enterScene("yards");
   } finally {
     state.busy = false;
   }
@@ -184,12 +192,12 @@ async function act(fn, { refreshScene = false, keepPlant = false } = {}) {
     renderHud();
     if (data.event) showEvent(data.event);
     if (!keepPlant) closePlant();
-    if (refreshScene || state.scene === "home" || state.scene === "shore" || state.scene === "plaza") {
+    if (refreshScene || state.scene === "home" || state.scene === "yards" || state.scene === "shore" || state.scene === "plaza") {
       await enterScene(state.scene);
     }
   } catch (err) {
     toast(err.message || "这次没做成。");
-    if (state.scene === "home" && state.plantOpen) openPlant();
+    if (state.scene === "yards" && state.plantOpen) openPlant();
   } finally {
     state.busy = false;
   }
@@ -198,7 +206,7 @@ async function act(fn, { refreshScene = false, keepPlant = false } = {}) {
 function startGrowTick() {
   stopGrowTick();
   growTimer = window.setInterval(async () => {
-    if (state.scene !== "home" || state.busy) return;
+    if (state.scene !== "yards" || state.busy) return;
     const matured = tickGrow(1);
     syncHomeChrome();
     if (!matured) return;
@@ -240,7 +248,7 @@ async function openTab(tab) {
   markDock(tab);
   if (tab === "map") {
     hideSheet();
-    if (state.scene !== "map" && state.scene !== "home" && state.scene !== "shore" && state.scene !== "plaza") {
+    if (state.scene !== "map" && state.scene !== "home" && state.scene !== "yards" && state.scene !== "shore" && state.scene !== "plaza") {
       await enterScene("map");
     }
     return;
@@ -357,7 +365,7 @@ window.addEventListener("pageshow", () => {
     api.me().then((data) => {
       applySnapshot(data);
       renderHud();
-      if (state.scene === "home") syncHomeChrome();
+      if (state.scene === "yards") syncHomeChrome();
     }).catch(() => {});
   }
 });

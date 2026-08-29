@@ -12,10 +12,26 @@ import {
 import { cropArt } from "../ui/crops.js";
 import { esc } from "../ui/modal.js";
 
-export function renderHome(root, { onOpenGarden, onHarvestAll, onSwitchYard, onBack }) {
-  const ripe = ripeYard().length;
+export function renderHome(root, { onOpenLand, onBack }) {
   root.innerHTML = `
     <div class="island-home">
+      <button type="button" class="island-garden-hot" data-act="land" aria-label="查看土地"></button>
+    </div>
+  `;
+  const bar = document.getElementById("island-actionbar");
+  bar.innerHTML = `
+    <button type="button" class="island-btn" data-act="back">回地图</button>
+    <button type="button" class="island-btn primary" data-act="land">看土地</button>
+  `;
+  root.querySelector("[data-act=land]").addEventListener("click", onOpenLand);
+  bar.querySelector("[data-act=back]").addEventListener("click", onBack);
+  bar.querySelector("[data-act=land]").addEventListener("click", onOpenLand);
+}
+
+export function renderYards(root, { onOpenGarden, onHarvestAll, onSwitchYard, onBack }) {
+  const ripe = ripeYard().length;
+  root.innerHTML = `
+    <div class="island-yards">
       <div class="island-yard-tabs" role="tablist" aria-label="地块类型">
         ${yardTabs()}
       </div>
@@ -26,7 +42,7 @@ export function renderHome(root, { onOpenGarden, onHarvestAll, onSwitchYard, onB
   `;
   const bar = document.getElementById("island-actionbar");
   bar.innerHTML = `
-    <button type="button" class="island-btn" data-act="back">回地图</button>
+    <button type="button" class="island-btn" data-act="back">回家园</button>
     <button type="button" class="island-btn primary" data-act="garden">${esc(yardMeta().plant)}</button>
   `;
   root.querySelectorAll("[data-yard]").forEach((btn) => {
@@ -85,7 +101,7 @@ function plotGridMarkup() {
   const plots = yardPlots();
   const meta = yardMeta();
   if (!plots.length) {
-    return `${grassPad(3)}<p class="island-plot-empty">${esc(meta.empty)}</p>`;
+    return `<p class="island-plot-empty">${esc(meta.empty)}</p>`;
   }
   const tiles = plots.map((plot) => {
     const stage = plot.appearance || (plot.can_sow ? "empty" : "growing");
