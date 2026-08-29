@@ -138,6 +138,12 @@ async def _full_flow() -> None:
     priced = await marriage.marriage_ops(host, "彩礼 100000")
     assert "100000" in priced or "10 万" in priced, priced
     try:
+        await marriage.marriage_ops(host, "彩礼 188000")
+        raise AssertionError("bride price over 100000 must fail")
+    except ValueError as exc:
+        msg = str(exc)
+        assert "上限" in msg or "攀比" in msg or "100000" in msg, exc
+    try:
         await marriage.marriage_ops(
             host,
             "求婚 阿潮 | 潮起潮落我都在 | 潮誓戒 | 灯塔下 | 今日+3 | 想把日子过完",
