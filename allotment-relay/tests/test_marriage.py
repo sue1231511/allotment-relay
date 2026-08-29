@@ -102,6 +102,7 @@ async def _full_flow() -> None:
     assert "礼金 18800" not in help_text
     assert "18800 | 8888" not in help_text
     assert "举行前还能改" in help_text
+    assert "聊天室大厅通报一句" in help_text
     assert "订婚宴" in help_text and "还能改" in help_text
 
     try:
@@ -313,6 +314,17 @@ async def _full_flow() -> None:
     assert "成婚" in held, held
     assert "连理所" in held, held
     assert "/hearth/" in held, held
+    assert "聊天室大厅已通报" in held, held
+    from server import lounge
+    notices = await lounge.list_messages()
+    hit = [m for m in notices if m.get("source") == "notice"]
+    assert hit, notices
+    assert "泊舟" in hit[-1]["body"] and "登记成婚" in hit[-1]["body"], hit[-1]
+    assert "灯塔" in hit[-1]["body"], hit[-1]
+    assert hit[-1]["who"] == "理枝", hit[-1]
+    assert hit[-1]["kind"] == "通报", hit[-1]
+    scan = await lounge.lounge_ops(host, "scan")
+    assert "理枝" in scan and "登记成婚" in scan, scan
     try:
         await marriage.marriage_ops(host, "吃席 满潮席")
         raise AssertionError("married cannot change feast")
