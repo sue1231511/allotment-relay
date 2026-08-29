@@ -2124,6 +2124,7 @@ async def init_db() -> None:
             """,
             "CREATE INDEX IF NOT EXISTS idx_shore_life_spend_steward_at "
             "ON shore_life_spend(steward_id, created_at)",
+            "ALTER TABLE stewards ADD COLUMN energy_regen_at INTEGER NOT NULL DEFAULT 0",
         ):
             try:
                 await db.execute(ddl)

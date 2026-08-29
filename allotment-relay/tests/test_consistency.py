@@ -197,6 +197,7 @@ def test_relay_manual_covers_systems() -> None:
         "饱餐",
         "饭馆卖堂食",
         "hut_ops 睡",
+        "刷新上手页不会回精力",
         "游戏日换班",
         "buy bed",
         "lodge",
@@ -602,6 +603,7 @@ def test_human_island_manual() -> None:
         "订婚宴选了还能改",
         "订婚确认",
         "以前系统自动写下",
+        "刷新上手页不会回精力",
     ):
         assert needle in blob, needle
     assert "plot_ops" not in blob
