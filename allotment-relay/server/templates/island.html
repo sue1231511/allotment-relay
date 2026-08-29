@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+  <meta name="theme-color" content="#d8ebe8">
+  <title>地图 · 潮汐岛</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/island/island.css?v=island-home2">
+</head>
+<body class="island-app{% if island_weddings %} is-wedding-day{% endif %}">
+  <div id="island-root" class="island-root">
+    <header class="island-hud" id="island-hud">
+      <div class="island-hud-who">
+        <span class="island-hud-name" id="hud-name">未绑定</span>
+        <span class="island-hud-lv" id="hud-lv">Lv —</span>
+        <a class="island-hud-play" href="/play">上手页</a>
+      </div>
+      <div class="island-hud-meters">
+        <span class="island-meter" title="精力"><i>精力</i><b id="hud-energy">—</b></span>
+        <span class="island-meter" title="工分票"><i>工分票</i><b id="hud-tickets">—</b></span>
+      </div>
+    </header>
+
+    <section class="island-gate" id="island-gate">
+      <p class="island-kicker">Mobile Map · MVP</p>
+      <h1>先把凭证贴上</h1>
+      <p>和上手页是同一个号。种下的菜、网来的鱼，AI 接着也能看见。</p>
+      <form id="island-key-form">
+        <label class="island-field">
+          <span>凭证</span>
+          <input id="island-key" type="password" autocomplete="off" placeholder="ar_sk_..." required>
+        </label>
+        <div class="island-row">
+          <a class="island-btn" href="/register">去领取</a>
+          <button type="submit" class="island-btn primary">进入地图</button>
+        </div>
+      </form>
+      <form id="island-enroll-form" class="island-hidden">
+        <label class="island-field">
+          <span>岛上的名字</span>
+          <input id="island-enroll-name" type="text" maxlength="24" placeholder="安" required>
+        </label>
+        <button type="submit" class="island-btn primary wide">登记登岛</button>
+      </form>
+      <p class="island-fine">完整地点、点单打赏仍在 <a href="/play">上手页</a>。</p>
+    </section>
+
+    <main class="island-stage island-hidden" id="island-stage" hidden>
+      <div class="island-scene" id="island-scene" aria-live="polite">
+        <div class="island-map">
+          <button type="button" class="island-map-hot is-garden" data-go="home" aria-label="家园">
+            <small>Home</small><b>家园</b>
+          </button>
+          <button type="button" class="island-pin is-shore" data-go="shore"><small>Tide</small><b>海边</b></button>
+          <button type="button" class="island-pin is-plaza" data-go="plaza"><small>Plaza</small><b>岛心广场</b></button>
+        </div>
+      </div>
+      <div class="island-actionbar" id="island-actionbar">
+        <a class="island-btn" href="/play">上手页</a>
+        <p class="island-fine" style="grid-column:1/-1;margin:4px 2px 0">点家园进院子。再点土地才看菜地、果园、温室。</p>
+      </div>
+    </main>
+
+    <nav class="island-dock" id="island-dock" aria-label="底栏" hidden>
+      <button type="button" data-tab="map" class="is-on">地图</button>
+      <button type="button" data-tab="bag">背包</button>
+      <button type="button" data-tab="quest">任务</button>
+      <button type="button" data-tab="chat">聊天</button>
+    </nav>
+  </div>
+
+  <div class="island-sheet" id="island-sheet" hidden></div>
+  <div class="island-plant" id="island-plant" hidden></div>
+  <div class="island-modal" id="island-modal" hidden></div>
+  <p class="island-toast" id="island-toast" hidden></p>
+
+  <script src="/static/site-key.js?v=island-home2"></script>
+  <script type="module" src="/static/island/app.js?v=island-home2"></script>
+</body>
+</html>

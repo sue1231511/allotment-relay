@@ -1,0 +1,859 @@
+/* 手机地图 MVP · 治愈海岛。竖屏 360×800 优先。 */
+:root {
+  --is-paper: #f4f1e8;
+  --is-ink: #2a3a3c;
+  --is-sea: #7fa7ab;
+  --is-deep: #3d5c61;
+  --is-sand: #d8c39a;
+  --is-moss: #6f8f6a;
+  --is-dusk: #c9846a;
+  --is-sky: #d8ebe8;
+  --is-line: rgba(61, 92, 97, 0.16);
+}
+
+html, body.island-app {
+  margin: 0;
+  min-height: 100%;
+  background: var(--is-sky);
+  color: var(--is-ink);
+  overflow-x: hidden;
+}
+
+body.island-app {
+  font-family: "Noto Serif SC", serif;
+}
+
+.island-skip { display: none; }
+
+.island-root {
+  width: min(480px, 100%);
+  margin: 0 auto;
+  min-height: 100dvh;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(120% 70% at 50% -10%, #fff8e8 0%, transparent 50%),
+    linear-gradient(180deg, #d8ebe8 0%, #e7f0ea 38%, #f4f1e8 100%);
+  box-sizing: border-box;
+  padding: env(safe-area-inset-top) 0 calc(68px + env(safe-area-inset-bottom));
+}
+
+.island-hud {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px 8px;
+  min-height: 56px;
+  box-sizing: border-box;
+}
+
+.island-hud-who {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.island-hud-name {
+  font-size: 16px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 46vw;
+}
+
+.island-hud-lv {
+  font-size: 11px;
+  letter-spacing: .08em;
+  color: var(--is-deep);
+}
+
+.island-hud-play {
+  font-size: 11px;
+  color: var(--is-deep);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.island-hud-meters {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.island-meter {
+  min-width: 64px;
+  min-height: 44px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: rgba(255,255,255,.62);
+  border: 1px solid var(--is-line);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.island-meter i {
+  font-style: normal;
+  font-size: 10px;
+  color: var(--is-deep);
+}
+
+.island-meter b {
+  font-size: 15px;
+}
+
+.island-gate, .island-stage {
+  flex: 1;
+  min-height: 0;
+  padding: 8px 16px 12px;
+  box-sizing: border-box;
+}
+
+.island-gate h1 {
+  font-size: 28px;
+  font-weight: 500;
+  margin: 6px 0 10px;
+}
+
+.island-kicker {
+  font-size: 10px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: #6b8589;
+  margin: 0;
+}
+
+.island-field {
+  display: block;
+  margin: 14px 0;
+}
+
+.island-field span {
+  display: block;
+  font-size: 12px;
+  color: var(--is-deep);
+  margin-bottom: 6px;
+}
+
+.island-field input,
+.island-composer input,
+.island-composer textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 48px;
+  border: 1px solid var(--is-line);
+  border-radius: 14px;
+  padding: 10px 12px;
+  font: inherit;
+  background: #fffdf8;
+}
+
+.island-row {
+  display: flex;
+  gap: 10px;
+}
+
+.island-btn {
+  min-height: 48px;
+  min-width: 72px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--is-line);
+  background: #fffdf8;
+  color: var(--is-ink);
+  font: inherit;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.island-btn.primary {
+  background: var(--is-deep);
+  color: #f7f3ea;
+  border-color: var(--is-deep);
+}
+
+.island-btn.wide { width: 100%; }
+.island-btn:disabled { opacity: .45; }
+
+.island-fine {
+  font-size: 12px;
+  color: #5b7377;
+}
+
+.island-hidden, [hidden] { display: none !important; }
+
+.island-scene {
+  height: calc(100dvh - 210px);
+  height: calc(100vh - 210px);
+  min-height: 420px;
+  border-radius: 22px;
+  overflow: hidden;
+  position: relative;
+  background: #c9ddd8;
+  box-shadow: inset 0 0 0 1px var(--is-line);
+}
+
+.island-actionbar {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.island-actionbar .island-btn { width: 100%; }
+
+.island-dock {
+  position: fixed;
+  top: auto;
+  left: 50%;
+  right: auto;
+  bottom: 0;
+  height: auto;
+  width: min(480px, 100%);
+  transform: translateX(-50%);
+  z-index: 8;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px calc(8px + env(safe-area-inset-bottom));
+  background: rgba(244, 241, 232, .94);
+  border: 0;
+  border-top: 1px solid var(--is-line);
+  box-sizing: border-box;
+  backdrop-filter: none;
+}
+
+.island-dock button {
+  min-height: 52px;
+  max-height: 56px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: #5b7377;
+  border-radius: 12px;
+}
+
+.island-dock button.is-on {
+  background: rgba(61, 92, 97, .12);
+  color: var(--is-ink);
+  font-weight: 600;
+}
+
+/* 总览地图 */
+.island-map {
+  position: absolute;
+  inset: 0;
+  background:
+    #c5ddd6 url("/static/island/assets/island-map.png") center / cover no-repeat;
+}
+
+.island-map-sea,
+.island-land {
+  display: none;
+}
+
+.island-map-hot {
+  position: absolute;
+  border: 0;
+  background: transparent;
+  color: var(--is-ink);
+  font: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 8px 10px;
+  box-sizing: border-box;
+}
+
+.island-map-hot.is-garden {
+  left: 4%;
+  top: 14%;
+  width: 38%;
+  height: 26%;
+  border-radius: 18px;
+}
+
+.island-map-hot small,
+.island-pin small { font-size: 11px; color: #5b7377; }
+.island-map-hot b,
+.island-pin b { font-size: 15px; }
+
+.island-map-hot small,
+.island-map-hot b {
+  background: rgba(255,253,248,.88);
+  padding: 1px 8px;
+  border-radius: 999px;
+}
+
+.island-pin {
+  position: absolute;
+  min-width: 88px;
+  min-height: 64px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 16px;
+  background: rgba(255,253,248,.9);
+  color: var(--is-ink);
+  font: inherit;
+  box-shadow: 0 4px 0 rgba(42, 58, 60, .12);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.island-pin.is-home { left: 12%; top: 22%; }
+.island-pin.is-shore { right: 8%; top: 12%; }
+.island-pin.is-plaza { left: 36%; bottom: 18%; }
+
+/* 家园：只铺院子图，点土地再进分区 */
+.island-home {
+  position: absolute;
+  inset: 0;
+  background: #c9ddd8 url("/static/island/assets/home-garden.png") center / cover no-repeat;
+}
+
+.island-home-sky { display: none; }
+.island-plots { display: none; }
+.island-beds { display: none; }
+
+.island-garden-hot {
+  position: absolute;
+  left: 28%;
+  top: 38%;
+  width: 44%;
+  height: 46%;
+  border: 0;
+  border-radius: 22px;
+  background: transparent;
+}
+
+/* 分区：没有底图，只有份地格子 */
+.island-yards {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--is-paper);
+}
+
+.island-yard-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  padding: 10px 10px 8px;
+  background: transparent;
+  flex-shrink: 0;
+}
+
+.island-yard-tabs button {
+  min-height: 48px;
+  border: 1px solid var(--is-line);
+  border-radius: 14px;
+  background: rgba(255, 253, 248, .78);
+  color: var(--is-deep);
+  font: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  line-height: 1.15;
+}
+
+.island-yard-tabs button small {
+  font-size: 11px;
+  color: #5b7377;
+}
+
+.island-yard-tabs button.is-on {
+  background: #3d5c61;
+  border-color: #3d5c61;
+  color: #f7f3ea;
+}
+
+.island-yard-tabs button.is-on small {
+  color: #d8ebe8;
+}
+
+.island-grow-status {
+  margin: 8px 10px 0;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: rgba(255, 253, 248, .9);
+  border: 1px solid var(--is-line);
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.island-plot-grid {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-content: start;
+  gap: 2px;
+  padding: 6px 6px 72px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.island-plot-empty {
+  grid-column: 1 / -1;
+  margin: 8px 6px;
+  padding: 18px 14px;
+  border-radius: 16px;
+  background: rgba(255, 253, 248, .92);
+  text-align: center;
+  color: var(--is-deep);
+  font-size: 14px;
+}
+
+.island-plot-tile {
+  position: relative;
+  aspect-ratio: 1;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--is-ink);
+  font: inherit;
+}
+
+.island-plot-grass,
+.island-plot-bed {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.island-plot-bed {
+  inset: 7%;
+  width: 86%;
+  height: 86%;
+}
+
+.island-plot-soil {
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  top: 18%;
+  bottom: 30%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.island-plot-tile .island-crop-pic {
+  width: 100%;
+  height: 100%;
+}
+
+.island-plot-meta {
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  bottom: 12%;
+  min-height: 28px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(255, 253, 248, .9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.15;
+  pointer-events: none;
+}
+
+.island-plot-tile b {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.island-plot-tile small {
+  font-size: 10px;
+  color: #5b7377;
+}
+
+.island-plot-tile.is-pad {
+  pointer-events: none;
+}
+
+.island-plot-tile.is-ripe .island-plot-bed {
+  filter: drop-shadow(0 0 8px #e7c14a);
+}
+
+.island-plot-tile.is-ripe .island-plot-meta {
+  background: #f4e3b0;
+}
+
+.island-harvest-fab {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  min-height: 52px;
+  border: 0;
+  border-radius: 999px;
+  background: #95b98a;
+  color: #f7f3ea;
+  font: inherit;
+  font-weight: 600;
+  z-index: 2;
+}
+
+.island-plot {
+  min-height: 132px;
+  border: 0;
+  border-radius: 16px;
+  background: #8b6a45;
+  color: #fffdf8;
+  font: inherit;
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 3px rgba(255,255,255,.08);
+}
+
+.island-plot.is-on { outline: 3px solid #f4e3b0; }
+.island-plot .crop {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  width: 36px;
+  height: 48px;
+}
+.island-plot .crop.empty { background: #6d5336; width: 70%; height: 18px; border-radius: 6px; }
+.island-plot .crop.seedling {
+  width: 10px; height: 22px; border-radius: 8px 8px 2px 2px;
+  background: #8fbf72;
+}
+.island-plot .crop.growing {
+  width: 22px; height: 40px; border-radius: 12px 12px 4px 4px;
+  background: linear-gradient(#6f8f6a, #8fbf72);
+}
+.island-plot .crop.ripe {
+  width: 28px; height: 46px; border-radius: 14px;
+  background: radial-gradient(circle at 50% 30%, #e7c14a, #6f8f6a 70%);
+}
+.island-plot .meta {
+  position: absolute;
+  left: 8px; right: 8px; top: 8px;
+  font-size: 12px;
+  text-align: left;
+}
+.island-farmer {
+  position: absolute;
+  left: 18px;
+  bottom: 22px;
+  width: 28px;
+  height: 46px;
+}
+.island-farmer .head {
+  width: 16px; height: 16px; border-radius: 50%;
+  background: #f0d2b0; margin: 0 auto;
+}
+.island-farmer .body {
+  width: 20px; height: 22px; border-radius: 8px;
+  background: #3d5c61; margin: 2px auto 0;
+}
+
+/* 海边 */
+.island-shore {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #9ec4d0 0%, #7fa7ab 36%, #d8c39a 100%);
+}
+.island-shore-card {
+  margin: 18px 14px;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255,253,248,.88);
+}
+.island-shore-card b { display: block; font-size: 18px; margin-bottom: 6px; }
+.island-shore-card p { margin: 0; font-size: 13px; color: #3d5c61; }
+
+/* 广场 */
+.island-plaza {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #efe4c8, #d8c39a 40%, #c9b58e);
+}
+.island-board {
+  margin: 10px 12px 6px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255,253,248,.9);
+  min-height: 56px;
+}
+.island-board small { color: #5b7377; font-size: 11px; }
+.island-msgs {
+  flex: 1;
+  overflow: auto;
+  padding: 0 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.island-msg {
+  background: rgba(255,253,248,.92);
+  border-radius: 12px;
+  padding: 8px 10px;
+}
+.island-msg b { font-size: 12px; color: #3d5c61; }
+.island-msg p { margin: 4px 0 0; font-size: 14px; word-break: break-word; }
+
+.island-sheet {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(68px + env(safe-area-inset-bottom));
+  width: min(480px, 100%);
+  max-height: 58vh;
+  overflow: auto;
+  background: #fbfaf6;
+  border-radius: 18px 18px 0 0;
+  box-shadow: 0 -8px 24px rgba(42,58,60,.12);
+  padding: 14px 14px 18px;
+  box-sizing: border-box;
+  z-index: 6;
+}
+
+.island-sheet h2 { font-size: 18px; margin: 0 0 10px; }
+.island-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--is-line);
+  font-size: 14px;
+}
+
+.island-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(35, 48, 56, .42);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 9;
+}
+
+.island-card {
+  width: min(480px, 100%);
+  background: #fbfaf6;
+  border-radius: 20px 20px 0 0;
+  padding: 18px 16px calc(20px + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+
+.island-card h3 { margin: 0 0 8px; font-size: 18px; }
+.island-card p { margin: 0 0 14px; line-height: 1.55; word-break: break-word; }
+
+.island-toast {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 92px;
+  max-width: min(420px, calc(100% - 24px));
+  background: #2a3a3c;
+  color: #f7f3ea;
+  padding: 10px 14px;
+  border-radius: 12px;
+  z-index: 10;
+  font-size: 13px;
+}
+
+.island-composer {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px 10px;
+}
+
+.island-composer input { flex: 1; min-width: 0; }
+
+.island-plant {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(68px + env(safe-area-inset-bottom));
+  width: min(480px, 100%);
+  z-index: 7;
+}
+
+.island-plant-card {
+  background: #faf9f0;
+  border-radius: 22px 22px 0 0;
+  padding: 16px 16px 18px;
+  box-shadow: 0 -10px 28px rgba(42, 58, 60, .14);
+}
+
+.island-plant-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.island-plant-head h2 {
+  margin: 0;
+  font-size: 22px;
+  color: #5f7a58;
+}
+
+.island-plant-head p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: #7a8b7e;
+}
+
+.island-plant-x {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #7a8b7e;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.island-plant-pick {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) 52px;
+  align-items: center;
+  gap: 8px;
+  min-height: 148px;
+}
+
+.island-plant-arrow {
+  width: 52px;
+  height: 52px;
+  border: 1px solid #e4e0d4;
+  border-radius: 50%;
+  background: #fffdf8;
+  color: #5f7a58;
+  font-size: 32px;
+  line-height: 1;
+}
+
+.island-plant-hero {
+  min-height: 140px;
+  border: 1px solid #e4e0d4;
+  border-radius: 18px;
+  background: #fffdf8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 8px;
+}
+
+.island-crop-art {
+  width: 96px;
+  height: 96px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.island-crop-art.is-lg {
+  width: 128px;
+  height: 128px;
+}
+
+.island-crop-pic {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.island-crop-pic.is-seed { transform: scale(.42); transform-origin: bottom center; }
+.island-crop-pic.is-grow { transform: scale(.72); transform-origin: bottom center; }
+.island-crop-pic.is-ripe { transform: scale(1); transform-origin: bottom center; }
+
+.island-bed .island-crop-pic { width: 100%; height: 100%; }
+
+.island-plant-index {
+  margin: 8px 0 0;
+  text-align: center;
+  font-size: 12px;
+  color: #7a8b7e;
+}
+
+.island-plant-hero b { font-size: 18px; color: #5f7a58; }
+.island-plant-hero small { font-size: 12px; color: #7a8b7e; }
+
+.island-plant-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 10px 0 0;
+}
+
+.island-plant-dots i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d5d2c6;
+}
+
+.island-plant-dots i.is-on { background: #95b98a; }
+
+.island-plant-meta {
+  margin: 12px 0;
+  min-height: 40px;
+  border-radius: 999px;
+  background: rgba(149, 185, 138, .16);
+  color: #5f7a58;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  font-size: 12px;
+}
+
+.island-plant-go {
+  width: 100%;
+  min-height: 52px;
+  border: 0;
+  border-radius: 999px;
+  background: #95b98a;
+  color: #f7f3ea;
+  font: inherit;
+  font-weight: 600;
+}
+
+@media (max-width: 360px) {
+  .island-hud { padding-left: 10px; padding-right: 10px; }
+  .island-meter { min-width: 56px; padding: 6px 8px; }
+  .island-pin { min-width: 80px; }
+  .island-root, .island-dock, .island-sheet, .island-card { width: 100%; }
+}
+
+@media (min-width: 720px) {
+  .island-root { min-height: 100vh; }
+}

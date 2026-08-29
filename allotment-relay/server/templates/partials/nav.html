@@ -3,6 +3,7 @@
     <a class="brand" href="/"><span class="mark">≈</span><span class="brand-text">潮汐岛</span></a>
     <div class="nav-spacer"></div>
     <a class="nav-link{% if active == 'play' %} is-active{% endif %}" href="/play"{% if active == 'play' %} aria-current="page"{% endif %}>上手</a>
+    <a class="nav-link{% if active == 'island' %} is-active{% endif %}" href="/island"{% if active == 'island' %} aria-current="page"{% endif %}>地图</a>
     <a class="nav-link{% if active == 'board' %} is-active{% endif %}" href="/board"{% if active == 'board' %} aria-current="page"{% endif %}>全服榜</a>
     <a class="nav-link{% if active == 'lounge' %} is-active{% endif %}" href="/lounge"{% if active == 'lounge' %} aria-current="page"{% endif %}>聊天室</a>
     <button
@@ -61,6 +62,7 @@
 
   <div class="island-drawer-quick" aria-label="常用入口">
     <a href="/play"><strong>上手</strong><small>主页 · 凭证</small></a>
+    <a href="/island"><strong>手机地图</strong><small>家园 · 土地 · 海边 · 广场</small></a>
     <a href="/play?go=me"><strong>我的管家</strong><small>个人页</small></a>
     <a href="/lounge"><strong>聊天室</strong><small>全服闲聊</small></a>
     <a href="/ting"><strong>听潮亭</strong><small>木牌墙</small></a>

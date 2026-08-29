@@ -10,6 +10,7 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 from . import db
 from .config import STATIC_DIR, TEMPLATES_DIR
 from .mcp_app import build_mcp_app
+from .v1.router import router as island_v1_router
 
 import aiosqlite
 
@@ -62,6 +63,7 @@ app = FastAPI(
     redirect_slashes=False,
 )
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+app.include_router(island_v1_router)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 app.mount("/mcp", mcp_starlette)
 
@@ -180,6 +182,12 @@ async def bar_page(request: Request):
 @app.get("/play", response_class=HTMLResponse)
 async def play_page(request: Request):
     return await _html(request, "play.html", active="play")
+
+
+@app.get("/island", response_class=HTMLResponse)
+async def island_map_page(request: Request):
+    """手机地图 MVP：家园 / 海边 / 岛心广场。和 /play 共用一张凭证。"""
+    return await _html(request, "island.html", active="island")
 
 
 @app.get("/manual", response_class=HTMLResponse)
