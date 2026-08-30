@@ -761,7 +761,7 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-theater1" in html
+    assert "island-theater2" in html
     assert "/static/island/tap.js" in html
     assert "/static/island/boot.js" in html
     assert 'id="island-enter"' in html
@@ -1160,6 +1160,11 @@ def test_island_page_is_modular() -> None:
     assert 'go: "writers"' in theater_js
     assert 'go: "atelier"' in theater_js
     assert 'go: "hall"' in theater_js
+    assert "点一下看编剧社" in theater_js
+    assert "点一下看衣泊坊" in theater_js
+    assert "点一下看剧场" in theater_js
+    assert "island-scene-tap" in theater_js
+    assert "island-hot" not in theater_js
     assert "编剧社" in theater_js
     assert "衣泊坊" in theater_js
     assert "剧场" in theater_js
@@ -1173,6 +1178,7 @@ def test_island_page_is_modular() -> None:
     assert "/api/v1/atelier" in api
     assert "/api/v1/hall" in api
     assert ".island-theater-board" in css
+    assert ".island-theater-picks" in css
     assert 'lighthouse: "灯塔"' in app
     assert 'notice: "潮汐公告"' in app
     assert "state.backTo" in app
