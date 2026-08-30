@@ -522,7 +522,7 @@ body.island-app.is-playing .island-actionbar {
   gap: 2px;
 }
 
-/* 家园：插图位铺底，点土地再进分区 */
+/* 家园院子插图位（份地点进直接是格子页） */
 .island-home {
   position: absolute;
   inset: 0;
