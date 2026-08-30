@@ -1,7 +1,7 @@
 /** 插图位。文件放到 /static/island/assets/scenes/{id}.png 就会自动铺上。 */
 
 export const SLOTS = {
-  "island-map": { label: "岛屿总览", size: "941×1672" },
+  "island-map": { label: "岛屿总览", size: "972×1619" },
   home: { label: "家园院子", size: "1080×1920" },
   shore: { label: "港口", size: "1080×1920" },
   plaza: { label: "潮汐广场", size: "1080×1920" },
