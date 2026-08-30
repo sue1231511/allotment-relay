@@ -28,3 +28,34 @@ export function sceneArt(id) {
     <span class="island-slot-mark"><b>插图位</b><small>${meta.label} · ${meta.size}</small></span>
   </div>`;
 }
+
+/** 底图至少铺满滚动容器，底下不漏色；比一屏高才往下滚。 */
+export function layoutCoverBoard(scroller, boardSel, fallbackW, fallbackH) {
+  if (!scroller) return;
+  const board = scroller.querySelector(boardSel);
+  const img = scroller.querySelector(".island-slot-pic");
+  if (!board || !img) return;
+  const apply = () => {
+    const iw = img.naturalWidth || fallbackW;
+    const ih = img.naturalHeight || fallbackH;
+    const cw = scroller.clientWidth;
+    const ch = scroller.clientHeight;
+    if (!cw) return;
+    const sW = cw / iw;
+    const sH = ch / ih;
+    const s = Math.max(sW, sH || 0);
+    const bw = Math.round(iw * s);
+    const bh = Math.round(ih * s);
+    board.style.width = `${bw}px`;
+    board.style.height = `${bh}px`;
+    board.style.left = `${Math.round((cw - bw) / 2)}px`;
+    board.style.top = "0px";
+  };
+  apply();
+  requestAnimationFrame(apply);
+  img.addEventListener("load", apply);
+  if (!scroller._laid) {
+    scroller._laid = true;
+    window.addEventListener("resize", apply);
+  }
+}

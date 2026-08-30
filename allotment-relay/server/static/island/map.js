@@ -1,4 +1,4 @@
-import { sceneArt } from "./ui/art.js";
+import { layoutCoverBoard, sceneArt } from "./ui/art.js";
 
 /** 热区百分比按总览图 972×1619 的标签位置。图上已有地名，不再叠钉子。 */
 const HOTS = [
@@ -33,7 +33,7 @@ export function renderMap(root, { onOpen }) {
     bar.hidden = true;
   }
   const map = root.querySelector(".island-map");
-  layoutMapBoard(map);
+  layoutCoverBoard(map, ".island-map-board", 972, 1619);
   if (typeof onOpen === "function") {
     root.querySelectorAll("[data-go],[data-href]").forEach((btn) => {
       btn.addEventListener("click", (ev) => {
@@ -58,33 +58,3 @@ function hotMarkup(p) {
   return `<button type="button" class="island-hot ${p.cls}" ${key} style="${style}" aria-label="${aria}"></button>`;
 }
 
-function layoutMapBoard(map) {
-  if (!map) return;
-  const board = map.querySelector(".island-map-board");
-  const img = map.querySelector(".island-slot-pic");
-  if (!board || !img) return;
-  const apply = () => {
-    const iw = img.naturalWidth || 972;
-    const ih = img.naturalHeight || 1619;
-    const cw = map.clientWidth;
-    const ch = map.clientHeight;
-    if (!cw) return;
-    /* 铺满一屏：至少和屏幕一样宽、一样高，底下不漏色。太高才往下滚。 */
-    const sW = cw / iw;
-    const sH = ch / ih;
-    const s = Math.max(sW, sH || 0);
-    const bw = Math.round(iw * s);
-    const bh = Math.round(ih * s);
-    board.style.width = `${bw}px`;
-    board.style.height = `${bh}px`;
-    board.style.left = `${Math.round((cw - bw) / 2)}px`;
-    board.style.top = "0px";
-  };
-  apply();
-  requestAnimationFrame(apply);
-  img.addEventListener("load", apply);
-  if (!map._laid) {
-    map._laid = true;
-    window.addEventListener("resize", apply);
-  }
-}

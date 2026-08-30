@@ -611,8 +611,11 @@ def test_island_page_is_modular() -> None:
     assert "铺满一屏" in css
     assert "底下不漏色" in css
     assert "max-width: 480px" in css
-    assert "sW = cw / iw" in map_js
-    assert "Math.max(sW, sH" in map_js
+    art_js = (ROOT / "server/static/island/ui/art.js").read_text(encoding="utf-8")
+    assert "sW = cw / iw" in art_js
+    assert "Math.max(sW, sH" in art_js
+    assert "layoutCoverBoard" in map_js
+    assert "layoutCoverBoard" in art_js
     assert "is-playing" in (ROOT / "server/static/island/boot.js").read_text(encoding="utf-8")
     assert "island-place" in css
     assert "island-plant-buy" in css
@@ -795,7 +798,9 @@ def test_island_page_is_modular() -> None:
     assert (ROOT / "server/static/island/scenes/shore.js").exists()
     assert (ROOT / "server/static/island/scenes/plaza.js").exists()
     assert "renderPlace" in (ROOT / "server/static/island/scenes/shore.js").read_text(encoding="utf-8")
-    assert "island-plaza-board" in (ROOT / "server/static/island/scenes/plaza.js").read_text(encoding="utf-8")
+    plaza_js = (ROOT / "server/static/island/scenes/plaza.js").read_text(encoding="utf-8")
+    assert "island-plaza-board" in plaza_js
+    assert "layoutCoverBoard" in plaza_js
     assert 'shop: "杂货铺"' in app
     shop_js = (ROOT / "server/static/island/scenes/shop.js").read_text(encoding="utf-8")
     assert "island-shop-shelf" in shop_js
