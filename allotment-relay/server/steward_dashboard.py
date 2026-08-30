@@ -8,7 +8,7 @@ from typing import Any
 from . import bar, db, energy, events, farming, health, land, memory_archive, ranks, survival, world
 from . import undertide as undertide_mod
 from . import undertide_config as utcfg
-from .catalog import CROPS, ITEM_NAMES
+from .catalog import CROPS, ITEM_NAMES, item_stack_cap
 from . import market as market_mod
 from .config import ONLINE_WINDOW
 
@@ -146,7 +146,12 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
             })
 
     stock_items = [
-        {"item": k, "name": ITEM_NAMES.get(k, k), "qty": q}
+        {
+            "item": k,
+            "name": ITEM_NAMES.get(k, k),
+            "qty": q,
+            "stack_cap": item_stack_cap(k, stack_tier=int(s.get("satchel_stack_extra") or 0)),
+        }
         for k, q in sorted(stock.items(), key=lambda x: (-x[1], x[0]))[:48]
     ]
 

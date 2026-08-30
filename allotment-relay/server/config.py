@@ -351,9 +351,9 @@ CABINET_SLOTS = 30
 CABINET_STACK = 24
 CABINET_SLOT_COST = 12
 CABINET_SLOTS_MAX = 60
-# 行囊 / 潮柜 / 冰箱每格同一上限；买货也不能超过。tote_ops 扩栈 可花钱加栈（同种货自动叠放）
+# 行囊 / 潮柜 / 冰箱：MC 式一组上限；同种货可占多组。tote_ops 扩栈 加每组上限
 SATCHEL_STACK = CABINET_STACK
-SATCHEL_STACK_STEP = 8       # 每扩 1 级 +8 份/格
+SATCHEL_STACK_STEP = 8       # 每扩 1 级 +8 份/组
 SATCHEL_STACK_COST = 15      # 票/级
 SATCHEL_STACK_TIERS_MAX = 5  # 24 → 32 → 40 → 48 → 56 → 64
 SATCHEL_STACK_MAX = SATCHEL_STACK + SATCHEL_STACK_TIERS_MAX * SATCHEL_STACK_STEP

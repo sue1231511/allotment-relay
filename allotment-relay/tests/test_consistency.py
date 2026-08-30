@@ -220,7 +220,7 @@ def test_relay_manual_covers_systems() -> None:
         "buy compost_bin",
         "桶不是柜子",
         "空槽也能装",
-        "基础每格 24",
+        "每组基础 24",
         "tote_ops 扩栈",
         "mascot adopt",
         "lili summon",

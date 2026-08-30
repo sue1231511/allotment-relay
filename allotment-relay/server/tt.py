@@ -572,7 +572,7 @@ def _catalog_text(score: int) -> str:
         lines.append("")
     lines.append("buy 物品 [数量] · gift 物品 [数量] · 中文名或 id 都行")
     lines.append("系统回收进价九成（退货少亏一成），别反复倒卖当正业")
-    lines.append("行囊每种最多 24 份（和潮柜一样），买多了会拒")
+    lines.append("可叠放货满一组会开下一组（MC 式；工具只能 1）")
     lines.append("送礼一次一笔，件数不叠；4 心起减半，8 心起更慢")
     return "\n".join(lines).rstrip()
 
@@ -589,7 +589,7 @@ async def tt_ops(key_id: int, command: str) -> str:
             "  buy 物品 [数量] — 种子/饲料/渔网钓竿/蚯蚓饵/锄铲/剪刀挤奶器/嫁妆柜\n"
             "  种子看季节（一周一季）：catalog 标当季/休市；过季买不了，等到开窗或 sow 棚1\n"
             "  货架货系统回收进价九成，退货少亏一点，别买了再 tote_ops vend 当印钞\n"
-            "    行囊每种最多 24 份，买多了会拒；满了先 vend 或 hut_ops 冰柜 存\n"
+            "    可叠放货满一组会开下一组；工具只能 1。潮柜格满了先 vend 或 hut_ops 冰柜 取\n"
             "  gift 物品 [数量] — 送礼（一次一笔，每日最多 3 次；4 心减半，8 心更慢）\n"
             "  visit — 聊天；每日首次进店 10% 她心情好送礼"
         )

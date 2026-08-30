@@ -2624,7 +2624,11 @@ async def satchel_stack_state(
     steward_id: int,
     item: str,
 ) -> tuple[int, int, int]:
-    """返回 (have, cap, room)。room = max(0, cap - have)。"""
+    """返回 (have, cap, room)。
+
+    MC 式：可叠放货一组上限为 cap，同种可开多组；行囊不限组数，room 对可叠放货视为充足。
+    工具 / 装件等 cap==1 仍只能 1 份。
+    """
     from .catalog import item_stack_cap
 
     cur = await db.execute(
@@ -2639,7 +2643,11 @@ async def satchel_stack_state(
     )
     row = await cur.fetchone()
     have = int(row[0] if row else 0)
-    room = max(0, cap - have)
+    if cap <= 1:
+        room = max(0, cap - have)
+    else:
+        # 可叠放：满一组就另开一组，行囊侧不因「已有 cap」拒收
+        room = 10**9
     return have, cap, room
 
 
@@ -2656,8 +2664,9 @@ async def add_item(
     if not over_cap:
         from .catalog import satchel_full_message
 
-        have, cap, _room = await satchel_stack_state(db, steward_id, item)
-        if have + qty > cap:
+        have, cap, room = await satchel_stack_state(db, steward_id, item)
+        # 可叠放货 room 极大；工具等 cap==1 仍拦
+        if qty > room:
             raise ValueError(satchel_full_message(item, have, qty, cap))
     await db.execute(
         """

@@ -91,19 +91,22 @@ async def _test_tote_gifts_list() -> None:
     from server.mcp_dispatch import TOTE_HELP
     assert "gifts" in TOTE_HELP, TOTE_HELP
     assert "赠礼记录" in TOTE_HELP, TOTE_HELP
-    assert "对方行囊" in TOTE_HELP or "还能收" in TOTE_HELP, TOTE_HELP
+    assert "多组" in TOTE_HELP or "MC" in TOTE_HELP, TOTE_HELP
 
 
-def test_gift_rejects_when_peer_stack_full() -> None:
-    asyncio.run(_test_gift_rejects_when_peer_stack_full())
+def test_gift_multi_stack_when_peer_has_full_group() -> None:
+    asyncio.run(_test_gift_multi_stack_when_peer_has_full_group())
 
 
-async def _test_gift_rejects_when_peer_stack_full() -> None:
-    """对方同种货到顶时：拒收并写明是对方满了；送礼方数量不变。"""
-    tmp = Path(tempfile.mkdtemp(prefix="tote-gift-full-"))
+async def _test_gift_multi_stack_when_peer_has_full_group() -> None:
+    """MC 式：对方已有一整组 64，再送 20 应开第二组，而不是拒收。"""
+    tmp = Path(tempfile.mkdtemp(prefix="tote-gift-multi-"))
     db = await _boot(tmp)
     from server import game
-    from server.catalog import peer_satchel_full_message
+    from server.catalog import format_stack_qty, split_stacks
+
+    assert split_stacks(84, 64) == [64, 20]
+    assert "2组" in format_stack_qty(84, 64)
 
     giver_kid, giver_sid = await _enroll(db, "full-giver@example.com", "雾豆送礼")
     _recv_kid, recv_sid = await _enroll(db, "full-recv@example.com", "雾豆收礼")
@@ -117,37 +120,19 @@ async def _test_gift_rejects_when_peer_stack_full() -> None:
         await db.add_item(conn, recv_sid, "crop_fogpea", 64)
         await conn.commit()
 
-    try:
-        await game.tote_ops(giver_kid, "gift 雾豆收礼 雾豌豆 20")
-        raise AssertionError("gift must fail when peer stack is full")
-    except ValueError as exc:
-        msg = str(exc)
-        assert "对方" in msg and "雾豆收礼" in msg, msg
-        assert "满了" in msg or "还能再收" in msg, msg
-        assert "不是你自己的计数坏了" in msg or "货还在你行囊里" in msg, msg
-        # 旧文案会让模型以为是自己的包满了
-        assert not msg.startswith("行囊里 雾豌豆"), msg
-
-    sample = peer_satchel_full_message("雾豆收礼", "crop_fogpea", 60, 10, 64)
-    assert "还能再收 4" in sample, sample
-    assert "改送 ≤4" in sample, sample
+    ok = await game.tote_ops(giver_kid, "gift 雾豆收礼 雾豌豆 20")
+    assert "已送礼给 雾豆收礼" in ok, ok
 
     bag = await db.get_satchel(giver_sid)
-    assert bag.get("crop_fogpea") == 64, bag
+    assert bag.get("crop_fogpea") == 44, bag
     peer_bag = await db.get_satchel(recv_sid)
-    assert peer_bag.get("crop_fogpea") == 64, peer_bag
+    assert peer_bag.get("crop_fogpea") == 84, peer_bag
 
-    # 对方腾出一点空位后，按空位送得进
-    async with db.connect() as conn:
-        assert await db.take_item(conn, recv_sid, "crop_fogpea", 4)
-        await conn.commit()
-    ok = await game.tote_ops(giver_kid, "gift 雾豆收礼 雾豌豆 4")
-    assert "已送礼给 雾豆收礼" in ok, ok
-    bag2 = await db.get_satchel(giver_sid)
-    assert bag2.get("crop_fogpea") == 60, bag2
+    listed = await game.tote_ops(_recv_kid, "list")
+    assert "雾豌豆" in listed and "2组" in listed, listed
 
 
 if __name__ == "__main__":
     asyncio.run(_test_tote_gifts_list())
-    asyncio.run(_test_gift_rejects_when_peer_stack_full())
+    asyncio.run(_test_gift_multi_stack_when_peer_has_full_group())
     print("ok")

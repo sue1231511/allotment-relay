@@ -260,7 +260,10 @@ def _fridge_need_msg() -> str:
 
 
 async def fridge_status_text(s: dict[str, Any]) -> str:
-    stack_cap = item_stack_cap("dish_salt_crab_s4", stack_tier=int(s.get("satchel_stack_extra") or 0))
+    from .catalog import format_stack_qty, stacks_needed
+
+    tier = int(s.get("satchel_stack_extra") or 0)
+    stack_cap = item_stack_cap("dish_salt_crab_s4", stack_tier=tier)
     async with db.connect() as conn:
         installed = await _has_fridge(conn, s["id"])
         conn.row_factory = aiosqlite.Row
@@ -278,21 +281,28 @@ async def fridge_status_text(s: dict[str, Any]) -> str:
         )
     if not rows:
         return (
-            f"冰箱空（{config.FRIDGE_SLOTS} 格，每格最多 {stack_cap}）。"
+            f"冰箱空（{config.FRIDGE_SLOTS} 格；每组最多 {stack_cap}，同种可占多组）。"
             "hut_ops 冰柜 存 盐焗沙蟹 · kitchen_ops store 菜名"
         )
-    lines = [f"冰箱 {len(rows)}/{config.FRIDGE_SLOTS}:"]
+    used = sum(stacks_needed(int(r["quantity"] or 0), stack_cap) for r in rows)
+    lines = [f"冰箱 {used}/{config.FRIDGE_SLOTS} 格（每组最多 {stack_cap}，同种可多组）:"]
     expire = config.FRIDGE_DAYS * config.FORAGE_COOLDOWN_DAY
     for r in rows:
+        q = int(r["quantity"] or 0)
         age = db.now() - r["stored_at"]
         stale = " ⚠快过期" if age > expire * 0.85 else ""
-        lines.append(f"  {_fridge_label(r['dish_key'], r['stars'])} x{r['quantity']}{stale}")
+        lines.append(
+            f"  {_fridge_label(r['dish_key'], r['stars'])} {format_stack_qty(q, stack_cap)}{stale}"
+        )
     lines.append("取：hut_ops 冰柜 取 菜名 · kitchen_ops take 菜名")
     return "\n".join(lines)
 
 
 async def fridge_put(s: dict[str, Any], token: str, qty: int = 1) -> str:
+    from .catalog import stacks_needed
+
     qty = max(1, int(qty))
+    tier = int(s.get("satchel_stack_extra") or 0)
     async with db.connect() as conn:
         if not await _has_fridge(conn, s["id"]):
             raise ValueError(_fridge_need_msg())
@@ -315,6 +325,7 @@ async def fridge_put(s: dict[str, Any], token: str, qty: int = 1) -> str:
         if have < qty:
             raise ValueError("行囊里没有这么多熟菜")
         dish_key, stars = _fridge_parts(item)
+        stack_cap = item_stack_cap(item, stack_tier=tier)
         cur = await conn.execute(
             """
             SELECT id, quantity FROM meal_storage
@@ -324,20 +335,19 @@ async def fridge_put(s: dict[str, Any], token: str, qty: int = 1) -> str:
             (s["id"], dish_key, stars),
         )
         existing = await cur.fetchone()
-        if not existing:
-            cur = await conn.execute(
-                "SELECT COUNT(*) FROM meal_storage WHERE steward_id=?",
-                (s["id"],),
-            )
-            if (await cur.fetchone())[0] >= config.FRIDGE_SLOTS:
-                raise ValueError(f"冰箱满了（{config.FRIDGE_SLOTS} 格）")
-        elif int(existing[1] or 0) + qty > item_stack_cap(
-            item, stack_tier=int(s.get("satchel_stack_extra") or 0)
-        ):
-            stack_cap = item_stack_cap(item, stack_tier=int(s.get("satchel_stack_extra") or 0))
+        all_rows = await (await conn.execute(
+            "SELECT quantity FROM meal_storage WHERE steward_id=?",
+            (s["id"],),
+        )).fetchall()
+        used = sum(stacks_needed(int(r[0] or 0), stack_cap) for r in all_rows)
+        stacked = int(existing[1] or 0) if existing else 0
+        used -= stacks_needed(stacked, stack_cap)
+        need = stacks_needed(stacked + qty, stack_cap)
+        if used + need > config.FRIDGE_SLOTS:
             raise ValueError(
-                f"冰箱这格最多叠 {stack_cap} 份（和行囊/潮柜同上限），"
-                f"已有 {int(existing[1] or 0)}。多出来的先 eat 或 vend。"
+                f"冰箱满了或再存会超过 {config.FRIDGE_SLOTS} 格"
+                f"（每组最多 {stack_cap}，同种可占多组；已用约 {used + stacks_needed(stacked, stack_cap)} 格）。"
+                f"先 eat / 取走一些，或 tote_ops 扩栈 让每组更厚。"
             )
         if not await db.take_item(conn, s["id"], item, qty):
             raise ValueError("行囊里没有这么多熟菜")
