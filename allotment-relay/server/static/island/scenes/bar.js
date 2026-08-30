@@ -117,7 +117,7 @@ function listMarkup(shop, tab) {
 }
 
 function sku(kind, target, title, note, price, on, extra = "") {
-  return `<button type="button" class="island-shop-sku ${on ? "" : "is-off"} ${extra}" data-act="${esc(kind)}" data-target="${esc(target)}">
+  return `<button type="button" class="island-shop-sku island-bar-opt ${on ? "" : "is-off"} ${extra}" data-act="${esc(kind)}" data-target="${esc(target)}">
     <span class="island-shop-emoji">${esc(title.emoji || "·")}</span>
     <span class="island-shop-name"><b>${esc(title.name)}</b><small>${esc(note)}</small></span>
     <span class="island-shop-price">${esc(price)}</span>
