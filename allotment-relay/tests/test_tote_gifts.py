@@ -91,8 +91,63 @@ async def _test_tote_gifts_list() -> None:
     from server.mcp_dispatch import TOTE_HELP
     assert "gifts" in TOTE_HELP, TOTE_HELP
     assert "赠礼记录" in TOTE_HELP, TOTE_HELP
+    assert "对方行囊" in TOTE_HELP or "还能收" in TOTE_HELP, TOTE_HELP
+
+
+def test_gift_rejects_when_peer_stack_full() -> None:
+    asyncio.run(_test_gift_rejects_when_peer_stack_full())
+
+
+async def _test_gift_rejects_when_peer_stack_full() -> None:
+    """对方同种货到顶时：拒收并写明是对方满了；送礼方数量不变。"""
+    tmp = Path(tempfile.mkdtemp(prefix="tote-gift-full-"))
+    db = await _boot(tmp)
+    from server import game
+    from server.catalog import peer_satchel_full_message
+
+    giver_kid, giver_sid = await _enroll(db, "full-giver@example.com", "雾豆送礼")
+    _recv_kid, recv_sid = await _enroll(db, "full-recv@example.com", "雾豆收礼")
+
+    async with db.connect() as conn:
+        await conn.execute(
+            "UPDATE stewards SET satchel_stack_extra=5 WHERE id IN (?,?)",
+            (giver_sid, recv_sid),
+        )
+        await db.add_item(conn, giver_sid, "crop_fogpea", 64)
+        await db.add_item(conn, recv_sid, "crop_fogpea", 64)
+        await conn.commit()
+
+    try:
+        await game.tote_ops(giver_kid, "gift 雾豆收礼 雾豌豆 20")
+        raise AssertionError("gift must fail when peer stack is full")
+    except ValueError as exc:
+        msg = str(exc)
+        assert "对方" in msg and "雾豆收礼" in msg, msg
+        assert "满了" in msg or "还能再收" in msg, msg
+        assert "不是你自己的计数坏了" in msg or "货还在你行囊里" in msg, msg
+        # 旧文案会让模型以为是自己的包满了
+        assert not msg.startswith("行囊里 雾豌豆"), msg
+
+    sample = peer_satchel_full_message("雾豆收礼", "crop_fogpea", 60, 10, 64)
+    assert "还能再收 4" in sample, sample
+    assert "改送 ≤4" in sample, sample
+
+    bag = await db.get_satchel(giver_sid)
+    assert bag.get("crop_fogpea") == 64, bag
+    peer_bag = await db.get_satchel(recv_sid)
+    assert peer_bag.get("crop_fogpea") == 64, peer_bag
+
+    # 对方腾出一点空位后，按空位送得进
+    async with db.connect() as conn:
+        assert await db.take_item(conn, recv_sid, "crop_fogpea", 4)
+        await conn.commit()
+    ok = await game.tote_ops(giver_kid, "gift 雾豆收礼 雾豌豆 4")
+    assert "已送礼给 雾豆收礼" in ok, ok
+    bag2 = await db.get_satchel(giver_sid)
+    assert bag2.get("crop_fogpea") == 60, bag2
 
 
 if __name__ == "__main__":
     asyncio.run(_test_tote_gifts_list())
+    asyncio.run(_test_gift_rejects_when_peer_stack_full())
     print("ok")

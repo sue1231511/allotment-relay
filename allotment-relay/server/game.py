@@ -444,7 +444,7 @@ async def relay_manual() -> str:
         "  未命名小鱼 vend 会再掷一次小咒事件（可能吐票、走回袋、解开或加重小咒）",
         "  gifts [条数] — 查谁给你送了什么、酒吧谁给你打赏（即时到账，这里只看记录）。也可写 收礼 / 收礼记录。tote_ops gifts 或 steward_ops 收礼",
         "  赠礼记录 [条数] — 查你送出的礼。tote_ops 赠礼记录",
-        "  gift|送礼|赠礼 名字 物品|票 数量 [留言] — 送给别人。能直接送票，即时到账，无手续费、无每日上限。票榜看口袋现票，送出会掉名次。协作度 +3。不是聊天室红包（红包走 lounge_ops 红包，全服拼手气）",
+        "  gift|送礼|赠礼 名字 物品|票 数量 [留言] — 送给别人。能直接送票，即时到账，无手续费、无每日上限。票榜看口袋现票，送出会掉名次。协作度 +3。对方行囊同种货到顶会拒，并写明对方还能收几份（货仍在你包里）。不是聊天室红包（红包走 lounge_ops 红包，全服拼手气）",
         "  随机事件整体 +30%（EVENT_RATE_MULT=1.3）：打理/收成/出海等更容易触发意外或惊喜；"
         "好事件更常回一点身体。睡觉、吃熟菜、下馆子也会点滴回；一次回很多走 clinic 调理（贵）",
         "  swap offer 物品 数量 — 白送挂单；claim 编号领（手续费 3 票，协作度高打折）",
@@ -2184,22 +2184,41 @@ async def _shed_one(s: dict, cmd: str) -> str:
         peer = await db.get_steward_by_name(peer_name)
         if not peer:
             raise ValueError("找不到管理员")
+        item_key = resolve_item_key(item) or item
         async with db.connect() as conn:
-            if not await db.take_item(conn, s["id"], item, qty):
-                raise ValueError("行囊数量不足")
             online = db.now() - peer["last_active_at"] <= 900
             if online:
-                await db.add_item(conn, peer["id"], item, qty)
+                from .catalog import peer_satchel_full_message
+
+                have, cap, room = await db.satchel_stack_state(
+                    conn, peer["id"], item_key
+                )
+                if qty > room:
+                    raise ValueError(
+                        peer_satchel_full_message(
+                            peer["name"], item_key, have, qty, cap
+                        )
+                    )
+            if not await db.take_item(conn, s["id"], item_key, qty):
+                raise ValueError("行囊数量不足")
+            if online:
+                await db.add_item(conn, peer["id"], item_key, qty)
                 await conn.commit()
-                msg = f"{s['name']} 当面交给 {peer['name']} {ITEM_NAMES.get(item,item)} x{qty}"
+                msg = (
+                    f"{s['name']} 当面交给 {peer['name']} "
+                    f"{ITEM_NAMES.get(item_key, item_key)} x{qty}"
+                )
                 await db.add_chronicle("handoff", msg, s["id"], peer["id"])
                 return msg
             await conn.execute(
                 "INSERT INTO handoffs (from_id, to_id, item, quantity, created_at) VALUES (?,?,?,?,?)",
-                (s["id"], peer["id"], item, qty, db.now()),
+                (s["id"], peer["id"], item_key, qty, db.now()),
             )
             await conn.commit()
-        return f"已把 {ITEM_NAMES.get(item,item)} x{qty} 放在 {peer_name} 温室台阶（对方 steward_ops sheet / plot_ops shed status 时入袋）"
+        return (
+            f"已把 {ITEM_NAMES.get(item_key, item_key)} x{qty} 放在 {peer_name} 温室台阶"
+            f"（对方 steward_ops sheet / plot_ops shed status 时入袋）"
+        )
 
     raise ValueError(f"未知 shed 指令: {cmd}")
 
@@ -2550,6 +2569,17 @@ async def _tote_one(s: dict, command: str) -> str:
                 item_key = resolve_item_key(token)
                 if not item_key:
                     raise ValueError(unknown_item_message(token))
+                from .catalog import peer_satchel_full_message
+
+                have, cap, room = await db.satchel_stack_state(
+                    conn, peer["id"], item_key
+                )
+                if qty > room:
+                    raise ValueError(
+                        peer_satchel_full_message(
+                            peer["name"], item_key, have, qty, cap
+                        )
+                    )
                 if not await db.take_item(conn, s["id"], item_key, qty):
                     raise ValueError(
                         f"行囊不足 {ITEM_NAMES.get(item_key, item_key)}（{item_key}）x{qty}"

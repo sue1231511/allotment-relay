@@ -2619,6 +2619,30 @@ async def get_satchel(steward_id: int) -> dict[str, int]:
         return {r["item"]: r["quantity"] for r in await cur.fetchall()}
 
 
+async def satchel_stack_state(
+    db: aiosqlite.Connection,
+    steward_id: int,
+    item: str,
+) -> tuple[int, int, int]:
+    """返回 (have, cap, room)。room = max(0, cap - have)。"""
+    from .catalog import item_stack_cap
+
+    cur = await db.execute(
+        "SELECT satchel_stack_extra FROM stewards WHERE id=?", (steward_id,)
+    )
+    tier_row = await cur.fetchone()
+    stack_tier = int(tier_row[0] or 0) if tier_row else 0
+    cap = item_stack_cap(item, stack_tier=stack_tier)
+    cur = await db.execute(
+        "SELECT quantity FROM satchel WHERE steward_id = ? AND item = ?",
+        (steward_id, item),
+    )
+    row = await cur.fetchone()
+    have = int(row[0] if row else 0)
+    room = max(0, cap - have)
+    return have, cap, room
+
+
 async def add_item(
     db: aiosqlite.Connection,
     steward_id: int,
@@ -2630,19 +2654,9 @@ async def add_item(
     if qty <= 0:
         return
     if not over_cap:
-        from .catalog import item_stack_cap, satchel_full_message
-        cur = await db.execute(
-            "SELECT satchel_stack_extra FROM stewards WHERE id=?", (steward_id,)
-        )
-        tier_row = await cur.fetchone()
-        stack_tier = int(tier_row[0] or 0) if tier_row else 0
-        cap = item_stack_cap(item, stack_tier=stack_tier)
-        cur = await db.execute(
-            "SELECT quantity FROM satchel WHERE steward_id = ? AND item = ?",
-            (steward_id, item),
-        )
-        row = await cur.fetchone()
-        have = int(row[0] if row else 0)
+        from .catalog import satchel_full_message
+
+        have, cap, _room = await satchel_stack_state(db, steward_id, item)
         if have + qty > cap:
             raise ValueError(satchel_full_message(item, have, qty, cap))
     await db.execute(

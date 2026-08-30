@@ -1865,6 +1865,31 @@ def satchel_full_message(item: str, have: int, want: int, cap: int) -> str:
     )
 
 
+def peer_satchel_full_message(
+    peer_name: str,
+    item: str,
+    have: int,
+    want: int,
+    cap: int,
+) -> str:
+    """送礼 / 当面交付时：写明是对方行囊满了，避免当成自己的计数坏了。"""
+    label = item_label(item)
+    room = max(0, int(cap) - int(have))
+    who = (peer_name or "对方").strip() or "对方"
+    if room <= 0:
+        return (
+            f"对方「{who}」行囊里 {label} 已有 {have}/{cap}，满了，再送 {want} 放不下。"
+            f"不是你自己的计数坏了——货还在你行囊里。"
+            f"请对方先 tote_ops vend / hut_ops 冰柜 存 / tote_ops 扩栈 腾位，"
+            f"或你改送更少 / 送给别人。"
+        )
+    return (
+        f"对方「{who}」行囊里 {label} 已有 {have}/{cap}，还能再收 {room} 份，"
+        f"你这次要送 {want}，放不下。"
+        f"货还在你行囊里。改送 ≤{room}，或请对方腾位 / 扩栈后再送。"
+    )
+
+
 def dish_display_name(key: str, stars: int) -> str:
     if key.startswith("mix_"):
         dummy = dish_item(key, stars)
