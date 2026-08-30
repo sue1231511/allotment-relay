@@ -101,12 +101,12 @@
       root.innerHTML =
         '<div class="island-fallback">' +
         "<b>地图脚本还没就绪</b>" +
-        "<p>" + (reason || "先去上手页，或换系统浏览器再打开这一页。") + "</p>" +
-        '<a class="island-btn primary" href="/play">去上手页</a>' +
+        "<p>" + (reason || "换系统浏览器再打开这一页。") + "</p>" +
         "</div>";
     }
     if (bar) {
-      bar.innerHTML = '<a class="island-btn wide" href="/play">去上手页</a>';
+      bar.innerHTML = "";
+      bar.hidden = true;
     }
   }
 
@@ -116,7 +116,7 @@
     }
     window.__islandPending = { data: data, scene: scene || "map" };
     showPlay();
-    fallbackScene("页面还在加载地点。等一两秒，或去上手页。");
+    fallbackScene("页面还在加载地点。等一两秒再进。");
     return Promise.resolve();
   }
 

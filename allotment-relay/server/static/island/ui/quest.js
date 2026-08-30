@@ -16,7 +16,7 @@ export function renderQuest(sheet) {
     Number(dues.tax_arrears) > 0 || Number(dues.upkeep_arrears) > 0
       ? "欠了岸税或岸维，去潮生会交。"
       : "岸税岸维没欠就不用跑潮生会。",
-    "饿了去小馆或打开行囊吃。困了回小屋睡。潮闻下一步仍在上手页。",
+    "饿了去小馆或打开行囊吃。困了回小屋睡。",
   ];
   sheet.hidden = false;
   sheet.innerHTML = `

@@ -11,6 +11,7 @@ import {
   YARDS,
 } from "../store.js";
 import { sceneArt } from "../ui/art.js";
+import { backChipMarkup, bindBackChip } from "../ui/back-map.js";
 import { cropArt } from "../ui/crops.js";
 import { esc } from "../ui/modal.js";
 
@@ -18,17 +19,17 @@ export function renderHome(root, { onOpenLand, onBack }) {
   root.innerHTML = `
     <div class="island-home">
       ${sceneArt("home")}
+      ${backChipMarkup()}
       <button type="button" class="island-garden-hot" data-act="land" aria-label="查看土地"></button>
     </div>
   `;
+  bindBackChip(root, onBack);
   const bar = document.getElementById("island-actionbar");
-  bar.innerHTML = `
-    <button type="button" class="island-btn" data-act="back">回地图</button>
-    <button type="button" class="island-btn primary" data-act="land">看土地</button>
-  `;
+  if (bar) {
+    bar.innerHTML = "";
+    bar.hidden = true;
+  }
   root.querySelector("[data-act=land]").addEventListener("click", onOpenLand);
-  bar.querySelector("[data-act=back]").addEventListener("click", onBack);
-  bar.querySelector("[data-act=land]").addEventListener("click", onOpenLand);
 }
 
 export function renderYards(root, { onOpenGarden, onHarvestAll, onWaterAll, onSwitchYard, onBack }) {
@@ -42,8 +43,8 @@ export function renderYards(root, { onOpenGarden, onHarvestAll, onWaterAll, onSw
       <p class="island-grow-status" id="island-grow-status">${esc(growStatusLine())}</p>
       <div class="island-plot-grid" id="island-plot-grid">${plotGridMarkup()}</div>
       <div class="island-plot-pager" id="island-plot-pager">${pagerMarkup()}</div>
+      ${backChipMarkup()}
       <div class="island-yard-acts">
-        <button type="button" class="island-btn" data-act="back">返回地图</button>
         <button type="button" class="island-btn" data-act="water" ${thirsty ? "" : "disabled"}>浇水${thirsty ? ` ${thirsty}` : ""}</button>
         <button type="button" class="island-btn primary" data-act="garden">${esc(yardMeta().plant)}</button>
       </div>
@@ -60,7 +61,7 @@ export function renderYards(root, { onOpenGarden, onHarvestAll, onWaterAll, onSw
   });
   const harvest = root.querySelector("[data-act=harvest]");
   if (harvest) harvest.addEventListener("click", onHarvestAll);
-  root.querySelector("[data-act=back]").addEventListener("click", onBack);
+  bindBackChip(root, onBack);
   root.querySelector("[data-act=water]").addEventListener("click", onWaterAll);
   root.querySelector("[data-act=garden]").addEventListener("click", onOpenGarden);
   bindGrid(onOpenGarden);

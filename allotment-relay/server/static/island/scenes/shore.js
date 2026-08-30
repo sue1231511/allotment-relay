@@ -1,5 +1,6 @@
 import { state } from "../store.js";
 import { sceneArt } from "../ui/art.js";
+import { backChipMarkup, bindBackChip } from "../ui/back-map.js";
 import { esc } from "../ui/modal.js";
 
 export function renderShore(root, { onCast, onBack }) {
@@ -8,6 +9,7 @@ export function renderShore(root, { onCast, onBack }) {
   root.innerHTML = `
     <div class="island-place">
       ${sceneArt("shore")}
+      ${backChipMarkup()}
       <article class="island-place-card">
         <b>港口</b>
         <p>${esc(w.tide || "潮位")} · ${esc(w.weather || "天气")} · ${esc(w.phase || "")} · ${esc(w.season || "")}</p>
@@ -16,13 +18,14 @@ export function renderShore(root, { onCast, onBack }) {
       </article>
     </div>
   `;
+  bindBackChip(root, onBack);
   const bar = document.getElementById("island-actionbar");
+  bar.hidden = false;
+  bar.removeAttribute("hidden");
   bar.innerHTML = `
-    <button type="button" class="island-btn" data-act="back">回地图</button>
     <button type="button" class="island-btn primary" data-act="net" ${shore.can_net ? "" : "disabled"}>撒网</button>
     <button type="button" class="island-btn" data-act="cast" ${shore.can_cast ? "" : "disabled"}>坐钓</button>
   `;
-  bar.querySelector("[data-act=back]").addEventListener("click", onBack);
   bar.querySelector("[data-act=net]").addEventListener("click", () => onCast("net"));
   bar.querySelector("[data-act=cast]").addEventListener("click", () => onCast("cast"));
 }

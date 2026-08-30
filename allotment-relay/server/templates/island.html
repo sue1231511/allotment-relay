@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/island/island.css?v=island-dock-bag1">
+  <link rel="stylesheet" href="/static/island/island.css?v=island-back-chip1">
 </head>
 <body class="island-app{% if island_weddings %} is-wedding-day{% endif %}">
   <div id="island-root" class="island-root">
@@ -16,7 +16,6 @@
       <div class="island-hud-who">
         <span class="island-hud-name" id="hud-name">未绑定</span>
         <span class="island-hud-lv" id="hud-lv">Lv —</span>
-        <a class="island-hud-play" href="/play">上手页</a>
       </div>
       <div class="island-hud-meters">
         <span class="island-meter" title="精力"><i>精力</i><b id="hud-energy">—</b></span>
@@ -47,7 +46,7 @@
         <button type="button" class="island-btn primary wide" id="island-enroll-btn">登记登岛</button>
       </form>
       <p class="island-gate-hint" id="island-gate-hint" aria-live="polite"></p>
-      <p class="island-fine">点单、打赏、扩地仍在 <a href="/play">上手页</a>。点了没反应，换系统浏览器打开，不要停在微信里。</p>
+      <p class="island-fine">点了没反应，换系统浏览器打开，不要停在微信里。</p>
     </section>
 
     <main class="island-stage island-hidden" id="island-stage" hidden>
@@ -69,12 +68,12 @@
   <div class="island-modal" id="island-modal" hidden></div>
   <p class="island-toast" id="island-toast" hidden></p>
 
-  <script src="/static/site-key.js?v=island-dock-bag1"></script>
-  <script src="/static/island/boot.js?v=island-dock-bag1"></script>
-  <script type="module" src="/static/island/app.js?v=island-dock-bag1"></script>
+  <script src="/static/site-key.js?v=island-back-chip1"></script>
+  <script src="/static/island/boot.js?v=island-back-chip1"></script>
+  <script type="module" src="/static/island/app.js?v=island-back-chip1"></script>
   <script nomodule>
     var hint = document.getElementById("island-gate-hint");
-    if (hint) hint.textContent = "这台浏览器跑不了完整地图。换系统浏览器，或去上手页。";
+    if (hint) hint.textContent = "这台浏览器跑不了完整地图。换系统浏览器打开。";
   </script>
 </body>
 </html>

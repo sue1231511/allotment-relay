@@ -91,13 +91,6 @@ body.island-app.is-playing .island-root {
   color: var(--is-deep);
 }
 
-.island-hud-play {
-  font-size: 11px;
-  color: var(--is-deep);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
 .island-hud-meters {
   display: flex;
   gap: 8px;
@@ -753,6 +746,29 @@ body.island-app.is-playing.is-yards .island-actionbar {
 
 .island-plot-pager .island-btn {
   min-width: 88px;
+}
+
+.island-back-chip {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 7;
+  min-height: 36px;
+  min-width: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(42, 58, 60, .18);
+  background: rgba(255, 253, 248, .92);
+  color: var(--is-ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  box-shadow: 0 2px 8px rgba(42, 58, 60, .12);
+}
+
+.island-yards .island-yard-tabs {
+  padding-right: 86px;
 }
 
 .island-yard-acts {

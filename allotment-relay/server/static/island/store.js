@@ -20,7 +20,7 @@ export const YARDS = {
     label: "温室",
     unit: "座",
     full: "温室已经种满了",
-    empty: "还没有温室。去上手页买棚。",
+    empty: "还没有温室。",
     plant: "种温室",
   },
 };
