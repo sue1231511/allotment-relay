@@ -10,11 +10,11 @@ export function renderShop(root, { onBuy, onSwitchTab }) {
   root.innerHTML = `
     <div class="island-shop">
       ${sceneArt("shop")}
-      <article class="island-shop-card">
-        <b>${esc(shop.name || "Tt酱杂货铺")}</b>
-        <small>${esc(shop.heart_bar || "")} · ${esc(shop.zhe_label || "原价")}</small>
-      </article>
       <div class="island-shop-shelf">
+        <div class="island-shop-meta">
+          <b>${esc(shop.name || "Tt酱杂货铺")}</b>
+          <small>${esc(shop.heart_bar || "")} · ${esc(shop.zhe_label || "原价")}</small>
+        </div>
         <div class="island-shop-tabs" role="tablist" aria-label="货架">
           ${tabs.map((row) => (
             `<button type="button" role="tab" class="${row.key === tab ? "is-on" : ""}" data-tab="${esc(row.key)}" aria-selected="${row.key === tab ? "true" : "false"}">${esc(row.label)}</button>`

@@ -799,6 +799,8 @@ def test_island_page_is_modular() -> None:
     assert 'shop: "杂货铺"' in app
     shop_js = (ROOT / "server/static/island/scenes/shop.js").read_text(encoding="utf-8")
     assert "island-shop-shelf" in shop_js
+    assert "island-shop-meta" in shop_js
+    assert "island-shop-card" not in shop_js
     assert "data-sku" in shop_js
     assert "去上手页" not in shop_js
     assert "api.shopBuy" in app
@@ -817,6 +819,9 @@ def test_island_page_is_modular() -> None:
     assert "is-theater" in css
     assert "island-plaza-board" in css
     assert "941 / 1672" in css
+    assert ".island-shop .island-slot" in css
+    assert "island-shop-meta" in css
+    assert "object-position: center 38%" in css
     assert "/play?go=star" not in app
     assert (ROOT / "server/static/island/assets/plot.png").exists()
     assert (ROOT / "server/static/island/assets/grass.png").exists()
