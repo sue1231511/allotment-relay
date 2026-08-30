@@ -39,7 +39,65 @@ CRAFT_HELP = """craft_ops 子命令（整句写进 command）：
 例子：craft_ops status · craft_ops 打 铜钉 · craft_ops 打 潮纹秤锤 · craft_ops 打 订婚戒 · craft_ops 取 · craft_ops 灌 · craft_ops 打捞 · craft_ops 捐 亮壳一套 · craft_ops 捐 砧上全套
 涨潮灌盐田，晴天才晒。赶海 dig 涨潮关；打捞只认风暴窗口。
 订婚戒要潮信贝+海玻璃，不是潮誓戒。打完 marriage_ops 订婚 信物。
-人类网页 /workshop 是围观实况；打钉在 /play 或手机地图 /island 进岸工坊点。"""
+人类网页 /workshop 是围观实况；打钉在 /play 或手机地图 /island 进岸工坊点。缺料时面板写出去哪弄。"""
+
+
+def _item_where(item: str) -> str:
+    """给 /island 配方写人话来源，不写 MCP 子命令。"""
+    table = {
+        "quarry_copper_bar": "盐风崖洗铜",
+        "quarry_iron_bar": "盐风崖洗铁",
+        "quarry_brick": "盐风崖洗砖",
+        "quarry_salt": "盐田收盐或崖上洗",
+        "quarry_tide_stone": "盐风崖稀矿",
+        "quarry_fog_lead": "盐风崖稀矿",
+        "quarry_marrow": "盐风崖夜光髓",
+        "quarry_gold_sand": "盐风崖金砂",
+        "drift_twine": "工坊打捞或赶海",
+        "craft_timber": "工坊打捞或果园砍树",
+        "wool": "小屋畜栏剪毛",
+        "tide_vow_sand": "成婚潮誓沙",
+        "betroth_shell": "海边寻信",
+        "sea_glass": "赶海或打捞",
+        "fish_walkblue": "海里少见的未命名小鱼",
+        "craft_copper_nails": "砧上打铜钉",
+        "craft_net_patch": "砧上打网补丁",
+    }
+    if item in table:
+        return table[item]
+    if item.startswith("shell_shine_"):
+        return "赶海捡亮壳"
+    if item.startswith("shell_"):
+        return "赶海"
+    return ""
+
+
+RECIPE_USE = {
+    "copper_nails": "修船能少花钱",
+    "net_patch": "贴上之后撒网少空网",
+    "lamp_wick": "装到小屋，矿灯再少 1 精力",
+    "shale_shelf": "小屋软装，纯好看",
+    "copper_chime": "小屋软装，酒吧小费多 1",
+    "boat_rib": "小屋软装，出海少翻",
+    "salt_stool": "小屋软装，档信多 1",
+    "wool_rug": "小屋软装，纯好看",
+    "tide_weight": "装到小屋，公共物资和赶海更好",
+    "iron_edge": "装到小屋，打理不必再带锄",
+    "fog_sinker": "贴上比普通补丁更久、更少空网",
+    "marrow_sieve": "装到小屋，风暴打捞少空捞",
+    "tide_vow_ring": "自制婚戒，比店里慢",
+    "betroth_ring": "不是潮誓戒。打完去连理所登记信物",
+}
+
+
+def _need_detail(needs: list[dict[str, Any]], note: str, hint: str = "") -> str:
+    bits = [note]
+    missing = [n for n in needs if int(n.get("have") or 0) < int(n.get("qty") or 0) and n.get("where")]
+    if missing:
+        bits.append("；".join(f"{n['label']}去{n['where']}" for n in missing))
+    if hint:
+        bits.append(hint)
+    return "。".join(b.rstrip("。") for b in bits if b) + "。"
 
 
 def _fmt_left(seconds: int) -> str:
@@ -746,6 +804,7 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
             "ready": remain <= 0,
             "can_take": remain <= 0,
             "note": "好了，可以取" if remain <= 0 else f"还要 {_fmt_left(remain)}",
+            "detail": "好了，可以取下来。" if remain <= 0 else f"还要 {_fmt_left(remain)}。砧上一次一件，好了再取。",
         }
     recipes = []
     for key, meta in CRAFT_RECIPES.items():
@@ -759,11 +818,13 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
                 "label": item_label(item),
                 "qty": int(qty),
                 "have": have,
+                "where": _item_where(item),
             })
             if have < int(qty):
                 ok = False
                 short.append(f"{item_label(item)}差{int(qty) - have}")
         energy_need = int(meta["energy"])
+        hint = RECIPE_USE.get(key) or ""
         if busy:
             note = "砧上有活，先取再打"
             can = False
@@ -783,10 +844,12 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
             "need": needs,
             "minutes": int(meta["seconds"]) // 60,
             "energy": energy_need,
-            "hint": meta.get("hint") or "",
+            "hint": hint,
             "can_craft": can,
             "note": note,
+            "detail": _need_detail(needs, note, hint),
         })
+    recipes.sort(key=lambda row: (not row["can_craft"], row["name"]))
     flood = world.current_tide() == "flood"
     weather = world.current_weather()
     pans = []
@@ -811,6 +874,7 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
             "can_fill": empty and flood,
             "can_harvest": ready,
             "note": note,
+            "detail": note + ("涨潮才灌，退潮去赶海。" if empty and not flood else ""),
         })
     next_pan = None
     if prof["pan_count"] < config.CRAFT_SALT_PAN_MAX:
@@ -819,6 +883,7 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
             "cost": cost,
             "can_buy": tickets >= cost,
             "note": f"下一池 {cost} 票" + ("。票不够。" if tickets < cost else ""),
+            "detail": f"再开一口盐田要 {cost} 票。最多三口。票不够先去卖货或上工。",
         }
     win = await _window(conn, s)
     left = int(prof["last_salvage_at"] or 0) + config.CRAFT_SALVAGE_COOLDOWN - now
@@ -864,6 +929,7 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
                 "label": "图鉴鱼种",
                 "qty": need_n,
                 "have": catch_n,
+                "where": "撒网或出海记进图鉴，不扣鱼",
             })
         else:
             for item, qty in (meta.get("need") or {}).items():
@@ -873,9 +939,20 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
                     "label": item_label(item),
                     "qty": int(qty),
                     "have": have,
+                    "where": _item_where(item),
                 })
                 if have < int(qty):
                     ok = False
+        if donated:
+            note = "已经捐过"
+        elif ok:
+            note = meta.get("hint") or "可以捐"
+        else:
+            short = [
+                f"{n['label']}差{int(n['qty']) - int(n['have'])}"
+                for n in needs if int(n["have"]) < int(n["qty"])
+            ]
+            note = "缺 " + "、".join(short) if short else (meta.get("hint") or "凑齐再捐")
         exhibits.append({
             "id": key,
             "name": meta["name"],
@@ -884,7 +961,8 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
             "need": needs,
             "donated": donated,
             "can_donate": (not donated) and ok,
-            "note": "已经捐过" if donated else (meta.get("hint") or "凑齐再捐"),
+            "note": note,
+            "detail": _need_detail(needs, note, meta.get("hint") or ""),
         })
     if job and job["ready"]:
         line = f"砧上：{job['name']} 好了"
@@ -896,10 +974,10 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
         "name": "岸工坊",
         "line": line,
         "tabs": [
-            {"key": "anvil", "label": "砧上"},
-            {"key": "salt", "label": "盐田"},
-            {"key": "salvage", "label": "打捞"},
-            {"key": "exhibit", "label": "陈列"},
+            {"key": "anvil", "label": "砧上", "badge": "好了" if job and job.get("ready") else ("在打" if job else "")},
+            {"key": "salt", "label": "盐田", "badge": "收" if any(p.get("can_harvest") for p in pans) else ("灌" if any(p.get("can_fill") for p in pans) else "")},
+            {"key": "salvage", "label": "打捞", "badge": "开" if can_salvage else ""},
+            {"key": "exhibit", "label": "陈列", "badge": "可捐" if any(e.get("can_donate") for e in exhibits) else ""},
         ],
         "job": job,
         "recipes": recipes,
@@ -911,6 +989,7 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
             "energy": int(win.get("energy") or 0),
             "can_salvage": can_salvage,
             "note": salvage_note,
+            "detail": salvage_note + " 不是赶海翻沙。铜锭还是要去盐风崖洗。",
         },
         "patch": {
             "can_patch": patch_have > 0,
@@ -919,6 +998,11 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
                 f"补网还在：{_fmt_left(patch_until - now)}"
                 if patch_on else
                 ("口袋有补丁或网坠，可以贴。" if patch_have else "没有网补丁也没有雾铅网坠。")
+            ),
+            "detail": (
+                f"补网还在：{_fmt_left(patch_until - now)}"
+                if patch_on else
+                ("口袋有补丁或网坠，贴上之后撒网少空网。" if patch_have else "先在砧上打网补丁或雾铅网坠。羊毛小屋剪，漂绳打捞。")
             ),
         },
         "exhibits": exhibits,

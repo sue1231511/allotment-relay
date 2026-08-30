@@ -127,6 +127,25 @@ export function showVendSheet(item, { onConfirm, onClose } = {}) {
   }, { once: true });
 }
 
+export function showHintSheet({ title, body, onClose } = {}) {
+  const root = document.getElementById("island-modal");
+  if (!root) return;
+  root.hidden = false;
+  root.innerHTML = cardMarkup(`
+      <h3>${esc(title || "岸工坊")}</h3>
+      <p>${esc(body || "")}</p>
+      <button type="button" class="island-btn primary wide" data-close-modal>知道了</button>
+  `, "island-care");
+  const close = () => {
+    hideModal();
+    if (onClose) onClose();
+  };
+  root.querySelector("[data-close-modal]").addEventListener("click", close);
+  root.addEventListener("click", (ev) => {
+    if (ev.target === root) close();
+  }, { once: true });
+}
+
 export function showActSheet({ title, body, confirm, onConfirm, onClose } = {}) {
   const root = document.getElementById("island-modal");
   if (!root) return;
