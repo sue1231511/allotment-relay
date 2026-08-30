@@ -149,8 +149,8 @@ function renderPlaceScene(name) {
       id: "hut",
       title: "岸畔小屋",
       body: built
-        ? ["困了就睡。每天一次，回精力。没有床就去上手页买一张装上。升级仍去上手页。"]
-        : ["还没有棚屋。先搭一座才能睡。床和升级仍去上手页。"],
+        ? ["困了就睡。每天一次，回精力。"]
+        : ["还没有棚屋。先搭一座才能睡。"],
       actions: built
         ? [{ id: "sleep", label: "睡觉", primary: true }]
         : [{ id: "build", label: "搭棚屋", primary: true }],
@@ -165,7 +165,6 @@ function renderPlaceScene(name) {
       title: "潮汐酒吧",
       body: [
         me.duty || "每 2 天来洗一次碗。",
-        "点单仍去上手页。",
       ],
       actions: [{ id: "work", label: "洗碗", primary: true }],
       onAct: () => act(() => api.work()),
@@ -177,9 +176,8 @@ function renderPlaceScene(name) {
     renderPlace(root, {
       id: "theater",
       title: "潮汐剧场",
-      body: ["浪潮为幕，星光为灯。打赏、看今晚档仍去上手页。"],
-      actions: [{ id: "play", label: "去上手页", primary: true }],
-      onAct: () => { window.location.href = "/play?go=star"; },
+      body: ["浪潮为幕，星光为灯。"],
+      actions: [],
       onBack: back,
     });
     return;
@@ -189,7 +187,7 @@ function renderPlaceScene(name) {
       id: "eatery",
       title: "岸畔小馆",
       body: [
-        stock.length ? "饿了打开行囊吃一口。点单、下别人家馆子仍去上手页。" : "行囊空着。先种、收或去上手页下馆子。",
+        stock.length ? "饿了打开行囊吃一口。" : "行囊空着。先种、收，再回来吃。",
       ],
       actions: [{ id: "bag", label: "打开行囊", primary: true }],
       onAct: () => openTab("bag"),
@@ -204,7 +202,6 @@ function renderPlaceScene(name) {
     title: "潮生会",
     body: [
       tax || upkeep ? "欠了就交。交完红条会灭。" : "岸税岸维没欠就不用跑。",
-      "捐基金、看告示仍去上手页。",
     ],
     actions: [
       { id: "tax", label: tax ? `交岸税 ${tax}` : "交岸税", primary: !!tax, disabled: !tax },

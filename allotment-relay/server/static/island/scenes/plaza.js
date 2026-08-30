@@ -1,4 +1,5 @@
 import { sceneArt } from "../ui/art.js";
+import { backChipMarkup, bindBackChip } from "../ui/back-map.js";
 import { esc } from "../ui/modal.js";
 
 export function renderPlaza(root, { messages, notices, onSay, onBack }) {
@@ -7,6 +8,7 @@ export function renderPlaza(root, { messages, notices, onSay, onBack }) {
   root.innerHTML = `
     <div class="island-plaza">
       ${sceneArt("plaza")}
+      ${backChipMarkup()}
       <aside class="island-board">
         <small>潮汐广场</small>
         <b>${esc(board.title || "世界")}</b>
@@ -26,9 +28,12 @@ export function renderPlaza(root, { messages, notices, onSay, onBack }) {
       </form>
     </div>
   `;
+  bindBackChip(root, onBack);
   const bar = document.getElementById("island-actionbar");
-  bar.innerHTML = `<button type="button" class="island-btn wide" data-act="back">回地图</button>`;
-  bar.querySelector("[data-act=back]").addEventListener("click", onBack);
+  if (bar) {
+    bar.innerHTML = "";
+    bar.hidden = true;
+  }
   root.querySelector("#plaza-say").addEventListener("submit", (ev) => {
     ev.preventDefault();
     const input = ev.target.elements.text;

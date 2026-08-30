@@ -632,8 +632,9 @@ def test_human_island_manual() -> None:
         "点总览图上的份地",
         "一页最多 9 块",
         "左右滑切页",
-        "返回地图",
-        "格子下面点「返回地图」",
+        "回地图",
+        "右上角点「回地图」",
+        "没有去上手页按钮",
         "左下角图片小组件",
         "回地图、浇水、种植叠在一起的白卡",
         "底栏只留背包",
@@ -715,7 +716,8 @@ def test_patron_pages_share_steward_key() -> None:
     assert 'id="island-enter"' in island_html
     assert "tidal_island_steward_api_key" in island_api
     assert "/api/v1/" in island_api
-    assert "/play" in island_html
+    assert 'href="/play"' not in island_html
+    assert "去上手页" not in island_html
     assert 'partials/nav.html' in play_html
     assert "play-top" not in play_html
     assert "loadSavedKey" in play_js

@@ -6,7 +6,7 @@ export function renderBag(sheet, { onEat } = {}) {
   sheet.hidden = false;
   sheet.innerHTML = `
     <h2>行囊</h2>
-    <p class="island-fine">和 AI 看见的是同一口袋。点吃一口；卖货、送礼仍去上手页。</p>
+    <p class="island-fine">和 AI 看见的是同一口袋。点吃一口。</p>
     ${stock.map((it) => `
       <div class="island-item">
         <span>${esc(it.name || it.item)} ×${esc(it.qty)}</span>
