@@ -1021,29 +1021,21 @@ body.island-app.is-playing.is-yards .island-actionbar {
   object-position: center;
 }
 
-/* 花边框只套店景上「点一下看…」那颗钮，不套底下列表，也不套剧场院景热区。 */
 .island-scene-tap {
   position: absolute;
-  left: 4%;
-  right: 4%;
-  bottom: 8px;
+  left: 12px;
+  right: 12px;
+  bottom: 14px;
   z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: auto;
-  height: auto;
-  aspect-ratio: 2000 / 750;
-  min-height: 0;
-  padding: 12% 14% 16%;
+  min-height: 48px;
+  padding: 10px 14px;
   border: 0;
-  border-radius: 0;
-  background: url("/static/island/assets/scene-tap-frame.png") center / 100% 100% no-repeat;
-  background-color: transparent;
-  color: #2f3f42;
+  border-radius: 16px;
+  background: rgba(255, 253, 248, .92);
+  color: inherit;
   font: inherit;
   font-size: 16px;
-  box-shadow: none;
+  box-shadow: 0 8px 20px rgba(42, 58, 60, .12);
 }
 
 .island-scene-fold {
