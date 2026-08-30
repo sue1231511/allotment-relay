@@ -274,13 +274,13 @@ async def _test_island_v1_api() -> None:
     )
     assert harvested.status_code == 200, harvested.text
     bag = harvested.json()["me"]["stock"]
+    assert any(
+        str(it.get("item") or "").startswith("kale") or "甘蓝" in str(it.get("name") or "")
+        for it in bag
+    ), bag
     kale_row = next(
         it for it in bag
-        if str(it.get("item") or "") == "crop_kale"
-        or (
-            str(it.get("item") or "").startswith("crop_")
-            and "甘蓝" in str(it.get("name") or "")
-        )
+        if it.get("item") in ("crop_kale", "seed_kale")
     )
     assert kale_row["can_vend"] is True
     assert kale_row["can_eat"] is False

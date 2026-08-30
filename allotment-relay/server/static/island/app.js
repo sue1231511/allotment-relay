@@ -399,7 +399,7 @@ async function eatItem(item) {
 function tapVend(item) {
   if (!item) return;
   if (item.can_vend === false) {
-    toast("这件不能从行囊卖掉。家具去上手页小屋。");
+    toast("这件不能从行囊卖掉。家具回小屋卖掉。");
     return;
   }
   showVendSheet(item, { onConfirm: () => vendItem(item) });
