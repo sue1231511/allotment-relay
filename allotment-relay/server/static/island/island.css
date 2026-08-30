@@ -772,26 +772,33 @@ body.island-app.is-playing.is-yards .island-actionbar {
   cursor: pointer;
 }
 
-.island-float-chip.is-bag {
+.island-float-chip.is-bag,
+.island-float-chip.is-back {
   top: env(safe-area-inset-top, 0px);
+  height: 66px;
+  display: flex;
+  align-items: center;
+}
+
+.island-float-chip.is-bag {
   right: 0;
   left: auto;
   width: min(88px, 24%);
-  min-height: 44px;
 }
 
 .island-float-chip.is-back {
-  top: env(safe-area-inset-top, 0px);
   left: 0;
   right: auto;
   width: min(196px, 58%);
-  /* 原图左右透明边很宽，往左上推，让金框贴角。 */
-  transform: translate(-22%, -2%);
+  /* 原图左右透明边很宽，只往左推，上下和背包同一条水平线。 */
+  transform: translateX(-22%);
 }
 
 .island-float-chip img {
   width: 100%;
   height: auto;
+  max-height: 100%;
+  object-fit: contain;
   display: block;
   pointer-events: none;
 }
