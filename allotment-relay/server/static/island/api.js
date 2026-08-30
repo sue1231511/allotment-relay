@@ -94,4 +94,6 @@ export const api = {
   atelierAct: (kind, target = "", idem) => req("/api/v1/atelier/act", { method: "POST", body: { kind, target }, idem }),
   hall: () => req("/api/v1/hall"),
   hallAct: (kind, target = "", idem) => req("/api/v1/hall/act", { method: "POST", body: { kind, target }, idem }),
+  eatery: () => req("/api/v1/eatery"),
+  eateryAct: (kind, target = "", idem) => req("/api/v1/eatery/act", { method: "POST", body: { kind, target }, idem }),
 };

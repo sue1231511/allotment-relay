@@ -1,4 +1,4 @@
-"""岸畔小馆 — 熟菜开店，AI dine / 人类在 /play 点餐。"""
+"""岸畔小馆 — 熟菜开店，AI dine / 人类在 /play 或 /island 点餐。"""
 
 from __future__ import annotations
 
@@ -185,7 +185,7 @@ async def eatery_command(s: dict[str, Any], command: str) -> str:
         from . import upkeep as upkeep_mod
         return (
             f"「{label}」开张（-{cost} 票）。shop stock 菜名 上菜单，"
-            f"别人 dine {s['name']}，人类走 /play。"
+            f"别人 dine {s['name']}，人类走 /play 或 /island 总览点小馆。"
             f"开馆后每天岸维 {upkeep_mod.EATERY} 票 → visit_ops 潮生会 维"
         )
 
@@ -562,4 +562,185 @@ async def place_human_order(api_key: str, shop_name: str, item_ref: str | None =
         "patron": patron["name"] if patron else "?",
         "message": msg,
         "tickets_left": patron["tickets"] if patron else 0,
+    }
+
+
+async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str, Any]:
+    """给 /island 用的小馆面板。数值仍走 kitchen_ops shop，这里只摊开能点的。"""
+    from . import kitchen as kitchen_mod
+    from . import upkeep as upkeep_mod
+
+    conn.row_factory = aiosqlite.Row
+    tickets = int(s.get("tickets") or 0)
+    day = _day_id()
+    cur = await conn.execute(
+        "SELECT count FROM eatery_rolls WHERE steward_id=? AND day=?",
+        (s["id"], day),
+    )
+    used = int((await cur.fetchone() or [0])[0] or 0)
+    dine_left = max(0, config.EATERY_DINE_DAILY - used)
+    shops = await (await conn.execute(
+        """
+        SELECT id, name, eatery_label, COALESCE(upkeep_arrears, 0) AS upkeep_arrears
+        FROM stewards
+        WHERE enrolled=1 AND eatery_open=1
+        ORDER BY last_active_at DESC LIMIT 24
+        """
+    )).fetchall()
+    dishes: list[dict[str, Any]] = []
+    open_n = 0
+    paused_n = 0
+    for sh in shops:
+        row = dict(sh) if not isinstance(sh, dict) else sh
+        paused = int(row.get("upkeep_arrears") or 0) > 0
+        label = row.get("eatery_label") or f"{row['name']}的馆"
+        mine = int(row["id"]) == int(s["id"])
+        if paused:
+            paused_n += 1
+        else:
+            open_n += 1
+        menu = await _menu_rows(conn, row["id"])
+        if not menu:
+            note = "欠岸维停堂" if paused else ("自己的馆，别刷单" if mine else "菜单空了")
+            dishes.append({
+                "id": 0,
+                "shop": row["name"],
+                "label": label,
+                "item": "",
+                "name": label,
+                "emoji": "🍜",
+                "price": 0,
+                "energy": 0,
+                "paused": paused,
+                "mine": mine,
+                "can_dine": False,
+                "note": note,
+                "detail": note,
+            })
+            continue
+        for m in menu:
+            energy = dish_energy(m["item"]) or 0
+            price = int(m["price"] or 0)
+            can = False
+            if mine:
+                note = "自己的馆，别刷单"
+            elif paused:
+                note = f"欠岸维停堂 · 店主要交岸维"
+            elif dine_left <= 0:
+                note = f"今日下馆子上限 {config.EATERY_DINE_DAILY}"
+            elif tickets < price:
+                note = f"要 {price} 票，现在 {tickets}"
+            else:
+                can = True
+                extra = f" · 精力+{energy}" if energy else ""
+                note = f"{label} · {price} 票{extra}"
+            dishes.append({
+                "id": int(m["id"]),
+                "shop": row["name"],
+                "label": label,
+                "item": m["item"],
+                "name": item_label(m["item"]),
+                "emoji": "🍜",
+                "price": price,
+                "energy": int(energy),
+                "paused": paused,
+                "mine": mine,
+                "can_dine": can,
+                "note": note,
+                "detail": (
+                    f"在「{label}」吃 {item_label(m['item'])}。"
+                    f"{note}。堂食带饱餐两小时，家里自己吃没有。"
+                ),
+            })
+    has_fridge = await (await conn.execute(
+        "SELECT 1 FROM hut_fittings WHERE steward_id=? AND item_key='fridge'",
+        (s["id"],),
+    )).fetchone() is not None
+    satchel = await (await conn.execute(
+        "SELECT item, quantity FROM satchel WHERE steward_id=? AND quantity>0 ORDER BY item",
+        (s["id"],),
+    )).fetchall()
+    stock: list[dict[str, Any]] = []
+    for raw in satchel:
+        item = raw["item"] if not isinstance(raw, dict) else raw["item"]
+        qty = int(raw["quantity"] if not isinstance(raw, dict) else raw["quantity"])
+        if not kitchen_mod.is_cooked_item(item):
+            continue
+        ref = eatery_reference_price(item)
+        energy = dish_energy(item) or 0
+        stock.append({
+            "item": item,
+            "name": item_label(item),
+            "emoji": "🍲",
+            "qty": qty,
+            "ref": int(ref),
+            "energy": int(energy),
+            "can_stock": bool(s.get("eatery_open")),
+            "note": f"行囊 {qty} · 参考 {ref} 票",
+            "detail": f"上架 {item_label(item)}。参考约 {ref} 票，价格按参考价。",
+        })
+    my_menu: list[dict[str, Any]] = []
+    sell_quote = None
+    if s.get("eatery_open"):
+        for m in await _menu_rows(conn, s["id"]):
+            my_menu.append({
+                "id": int(m["id"]),
+                "item": m["item"],
+                "name": item_label(m["item"]),
+                "emoji": "📜",
+                "price": int(m["price"] or 0),
+                "can_unstock": True,
+                "note": f"{m['price']} 票 · 点一下撤下",
+                "detail": f"撤下 {item_label(m['item'])}，回行囊。",
+            })
+        sell_quote = eatery_sell_quote(s.get("eatery_opened_at"))
+    can_open = (
+        not s.get("eatery_open")
+        and bool(s.get("hut_built"))
+        and has_fridge
+        and tickets >= config.EATERY_OPEN_COST
+    )
+    if s.get("eatery_open"):
+        open_note = f"「{s.get('eatery_label') or s['name']+'的馆'}」在营业。上菜或卖掉。"
+    elif not s.get("hut_built"):
+        open_note = "开馆要先有小屋。去上手页搭屋。"
+    elif not has_fridge:
+        open_note = "开馆要先装冰箱。去上手页小屋买冰箱再装上。"
+    elif tickets < config.EATERY_OPEN_COST:
+        open_note = f"开张要 {config.EATERY_OPEN_COST} 票，现在 {tickets}。"
+    else:
+        open_note = f"开张 {config.EATERY_OPEN_COST} 票。开馆后每天岸维 {upkeep_mod.EATERY} 票。"
+    if open_n == 0 and paused_n == 0:
+        line = "还没人开张。有小屋和冰箱就能开馆。"
+    elif dine_left <= 0:
+        line = f"今日堂食已满 {config.EATERY_DINE_DAILY} 顿"
+    elif open_n:
+        line = f"{open_n} 家在开火 · 今日还能吃 {dine_left} 顿"
+    else:
+        line = f"{paused_n} 家欠岸维停堂"
+    return {
+        "name": "岸畔小馆",
+        "line": line,
+        "tabs": [
+            {"key": "board", "label": "堂食", "badge": str(open_n) if open_n else ""},
+            {"key": "mine", "label": "我的馆", "badge": "开" if s.get("eatery_open") else ""},
+        ],
+        "dine_left": dine_left,
+        "dine_daily": config.EATERY_DINE_DAILY,
+        "dishes": dishes,
+        "mine": {
+            "open": bool(s.get("eatery_open")),
+            "label": s.get("eatery_label") or (f"{s['name']}的馆" if s.get("eatery_open") else ""),
+            "can_open": can_open,
+            "open_cost": config.EATERY_OPEN_COST,
+            "open_note": open_note,
+            "menu": my_menu,
+            "stock": stock,
+            "can_sell": bool(s.get("eatery_open")),
+            "sell_refund": int((sell_quote or {}).get("refund") or 0),
+            "sell_note": (
+                f"现在卖掉可回收 {sell_quote['refund']} 票（{sell_quote['pct']}%）。{sell_quote['note']}"
+                if sell_quote else "没有在开的馆。"
+            ),
+        },
     }

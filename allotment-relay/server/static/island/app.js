@@ -25,6 +25,7 @@ import { renderTheater } from "./scenes/theater.js";
 import { renderWriters } from "./scenes/writers.js";
 import { renderAtelier } from "./scenes/atelier.js";
 import { renderHall } from "./scenes/hall.js";
+import { renderEatery } from "./scenes/eatery.js";
 import { renderBag } from "./ui/bag.js";
 import { setBackChip, setBagChip } from "./ui/back-map.js";
 import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js";
@@ -189,6 +190,11 @@ async function enterScene(name) {
     if (name === "hall") {
       state.hallShelf = false;
       await openHall(root);
+      return;
+    }
+    if (name === "eatery") {
+      state.eateryShelf = false;
+      await openEatery(root);
       return;
     }
     if (PLACE_TITLES[name]) {
@@ -915,6 +921,112 @@ async function runHall(kind, target) {
   await act(() => api.hallAct(kind, target), { keepHall: true, listTop, quiet: true });
 }
 
+async function openEatery(root) {
+  try {
+    const data = await api.eatery();
+    applySnapshot(data);
+    renderHud();
+    if (data.event) showEvent(data.event);
+  } catch (err) {
+    toast(err.message || "小馆门还没开。");
+  }
+  const tabs = (state.eatery && state.eatery.tabs) || [];
+  if (!tabs.some((row) => row.key === state.eateryTab)) {
+    state.eateryTab = (tabs[0] && tabs[0].key) || "board";
+  }
+  paintEatery();
+}
+
+function paintEatery(listTop = 0) {
+  renderEatery(sceneEl(), {
+    onAct: tapEatery,
+    onSwitchTab: (tab) => {
+      state.eateryTab = tab || "board";
+      hideModal();
+      paintEatery(0);
+    },
+    onOpenShelf: () => {
+      state.eateryShelf = true;
+      paintEatery(0);
+    },
+    onCloseShelf: () => {
+      state.eateryShelf = false;
+      hideModal();
+      paintEatery();
+    },
+    listTop,
+  });
+}
+
+function eateryRow(kind, target) {
+  const shop = state.eatery || {};
+  const mine = shop.mine || {};
+  if (kind === "dine") {
+    const [host, id] = String(target || "").split("|");
+    return (shop.dishes || []).find((row) => row.shop === host && String(row.id) === String(id));
+  }
+  if (kind === "stock") return (mine.stock || []).find((row) => row.item === target);
+  if (kind === "unstock") return (mine.menu || []).find((row) => String(row.id) === String(target));
+  if (kind === "open" || kind === "sell") return mine;
+  return (shop.dishes || []).find((row) => `${row.shop}|${row.id}` === target)
+    || (mine.stock || []).find((row) => row.item === target)
+    || mine;
+}
+
+function tapEatery(kind, target) {
+  const shop = state.eatery || {};
+  const mine = shop.mine || {};
+  if (kind === "look") {
+    const row = eateryRow("look", target) || {};
+    showHintSheet({
+      title: row.name || shop.name || "岸畔小馆",
+      body: row.detail || row.note || row.open_note || shop.line || "先看看谁在开火。",
+    });
+    return;
+  }
+  const row = eateryRow(kind, target);
+  const body = (row && (row.detail || row.note || row.open_note || row.sell_note)) || "做这一下？";
+  const can = {
+    dine: Boolean(row && row.can_dine),
+    stock: Boolean(row && row.can_stock),
+    unstock: Boolean(row && row.can_unstock),
+    open: Boolean(mine.can_open),
+    sell: Boolean(mine.can_sell),
+  }[kind];
+  if (!can) {
+    showHintSheet({
+      title: (row && row.name) || ({
+        dine: "堂食",
+        stock: "上架",
+        unstock: "撤菜单",
+        open: "开馆",
+        sell: "卖掉小馆",
+      }[kind] || "岸畔小馆"),
+      body,
+    });
+    return;
+  }
+  const pack = {
+    dine: ["堂食", body, "确认吃"],
+    stock: ["上架", body, "确认上"],
+    unstock: ["撤菜单", body, "确认撤"],
+    open: ["开馆", mine.open_note || body, "确认开"],
+    sell: ["卖掉小馆", mine.sell_note || body, "确认卖"],
+  }[kind] || ["岸畔小馆", body, "确认"];
+  showActSheet({
+    title: pack[0],
+    body: pack[1],
+    confirm: pack[2],
+    onConfirm: () => runEatery(kind, target),
+  });
+}
+
+async function runEatery(kind, target) {
+  const list = document.getElementById("island-eatery-list");
+  const listTop = list ? list.scrollTop : 0;
+  await act(() => api.eateryAct(kind, target), { keepEatery: true, listTop, quiet: true });
+}
+
 function startQuarryTick() {
   stopQuarryTick();
   quarryTimer = window.setInterval(() => {
@@ -1142,7 +1254,7 @@ async function vendItem(item) {
   await act(() => api.vend(name, 1), { keepTab: true });
 }
 
-async function act(fn, { refreshScene = false, keepPlant = false, keepTab = false, keepShop = false, keepWorkshop = false, keepQuarry = false, keepBar = false, keepWriters = false, keepAtelier = false, keepHall = false, listTop = null, quiet = false } = {}) {
+async function act(fn, { refreshScene = false, keepPlant = false, keepTab = false, keepShop = false, keepWorkshop = false, keepQuarry = false, keepBar = false, keepWriters = false, keepAtelier = false, keepHall = false, keepEatery = false, listTop = null, quiet = false } = {}) {
   if (state.busy) return;
   state.busy = true;
   try {
@@ -1183,6 +1295,10 @@ async function act(fn, { refreshScene = false, keepPlant = false, keepTab = fals
     }
     if (keepHall && state.scene === "hall") {
       paintHall(listTop);
+      return;
+    }
+    if (keepEatery && state.scene === "eatery") {
+      paintEatery(listTop);
       return;
     }
     if (refreshScene || LIVE_SCENES.includes(state.scene)) {

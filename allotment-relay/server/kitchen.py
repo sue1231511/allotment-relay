@@ -540,7 +540,12 @@ async def _cook_mix(s: dict[str, Any], ings: list[str]) -> str:
 async def kitchen_ops(key_id: int, command: str) -> str:
     parts = command.strip().split()
     verb = parts[0].lower() if parts else "menu"
-    exempt = verb in ("eat", "brew", "recipes", "menu", "help", "?", "帮助", "status")
+    shop_rest = ""
+    if verb in ("shop", "stall", "eatery"):
+        shop_rest = parts[1].lower() if len(parts) > 1 else "board"
+    exempt = verb in ("eat", "brew", "recipes", "menu", "help", "?", "帮助", "status") or shop_rest in (
+        "board", "shops", "list", "dine",
+    )
     s = await require_steward(key_id, exempt_duty=exempt)
 
     if verb in ("help", "?", "帮助"):
@@ -560,6 +565,7 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             "  shop board — 全服谁在营业的小馆名单（店名和几道菜），不是流水也不是评价\n"
             "  shop dine 店主名 — 下馆子堂食，也能回精力（按菜价，约 3.5 票/1 精力）+「饱餐」2 小时（行动精力 -1）+ 身体 +2\n"
             "             例子：shop board · shop dine 安。没菜就换一家，不要自己编馆名\n"
+            "             人类 /island 总览点小馆，先进店景，点一下才出菜单列表，能堂食\n"
             "  shop open|stock|卖掉 — 开馆 / 上菜（stock 菜名 [价格]，参考价提示但不限区间）/ 关张回收\n"
             f"             开馆后每天岸维 {upkeep.EATERY} 票（visit_ops 潮生会 维）；欠维修费会暂停堂食\n"
             "             集市买的菜回家自己吃只有基础精力——饭馆卖堂食，集市卖货\n"

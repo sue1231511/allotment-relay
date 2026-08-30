@@ -7,7 +7,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from . import atelier_service, bar_service, farm_service, hall_service, lounge_service, place_service, quarry_service, session_service, shore_service, shop_service, workshop_service, writers_service
+from . import atelier_service, bar_service, eatery_service, farm_service, hall_service, lounge_service, place_service, quarry_service, session_service, shore_service, shop_service, workshop_service, writers_service
 from . import idempotency
 from .auth import extract_api_key, key_row, require_enrolled
 from .errors import ApiError
@@ -89,6 +89,12 @@ class BarActBody(BaseModel):
 
 
 class TheaterActBody(BaseModel):
+    kind: str = ""
+    target: str = ""
+    api_key: str = ""
+
+
+class EateryActBody(BaseModel):
     kind: str = ""
     target: str = ""
     api_key: str = ""
@@ -433,6 +439,33 @@ async def hall_act(request: Request, body: TheaterActBody):
         row, _ = await require_enrolled(key)
         result = await hall_service.act(key, int(row["id"]), kind, target)
         await idempotency.store(sid, f"hall:{kind}:{target}", _idem_key(request), 200, result)
+        return result
+    except ApiError as exc:
+        return _error(exc)
+
+
+@router.get("/eatery")
+async def eatery_status(request: Request):
+    try:
+        key = extract_api_key(request)
+        row, _ = await require_enrolled(key)
+        return await eatery_service.snapshot(key, int(row["id"]))
+    except ApiError as exc:
+        return _error(exc)
+
+
+@router.post("/eatery/act")
+async def eatery_act(request: Request, body: EateryActBody):
+    try:
+        key = extract_api_key(request, body.api_key)
+        kind = (body.kind or "").strip()
+        target = (body.target or "").strip()
+        sid, cached = await _write_guard(request, key, f"eatery:{kind}:{target}")
+        if cached:
+            return _cached_response(cached)
+        row, _ = await require_enrolled(key)
+        result = await eatery_service.act(key, int(row["id"]), kind, target)
+        await idempotency.store(sid, f"eatery:{kind}:{target}", _idem_key(request), 200, result)
         return result
     except ApiError as exc:
         return _error(exc)
