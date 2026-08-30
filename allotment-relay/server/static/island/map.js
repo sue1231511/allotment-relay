@@ -62,16 +62,13 @@ function layoutMapBoard(map) {
     const iw = img.naturalWidth || 941;
     const ih = img.naturalHeight || 1672;
     const cw = map.clientWidth;
-    const ch = map.clientHeight;
-    if (!cw || !ch) return;
-    /* 竖屏 contain：整张 941×1672 都进画布，按较短边缩放，留海色边，永不裁切。 */
-    const s = Math.min(cw / iw, ch / ih);
-    const w = Math.round(iw * s);
-    const h = Math.round(ih * s);
-    board.style.width = `${w}px`;
-    board.style.height = `${h}px`;
-    board.style.left = `${Math.round((cw - w) / 2)}px`;
-    board.style.top = `${Math.round((ch - h) / 2)}px`;
+    if (!cw) return;
+    /* 和顶栏一样宽：按宽度缩放 941×1672，高度跟比例走，太高就在图上滚，不裁切。 */
+    const s = cw / iw;
+    board.style.width = `${cw}px`;
+    board.style.height = `${Math.round(ih * s)}px`;
+    board.style.left = "0px";
+    board.style.top = "0px";
   };
   apply();
   requestAnimationFrame(apply);

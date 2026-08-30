@@ -401,18 +401,20 @@ body.island-app.is-playing .island-actionbar {
 .island-slot-mark b { font-size: 14px; }
 .island-slot-mark small { font-size: 11px; color: #5b7377; }
 
-/* 总览地图：竖屏整图完整显示，按比例缩进顶栏和底栏之间，不裁切 */
+/* 总览地图：和顶栏一样宽，按 941×1672 比例往下排，太高就滚，不裁切 */
 .island-map {
   position: absolute;
   inset: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   background: #8ed3e2;
+  -webkit-overflow-scrolling: touch;
 }
 
 .island-map-board {
-  position: absolute;
-  left: 0;
-  top: 0;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 941 / 1672;
   line-height: 0;
 }
 
