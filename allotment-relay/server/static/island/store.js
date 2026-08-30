@@ -48,6 +48,7 @@ export const state = {
   quarry: null,
   quarryTab: "pits",
   quarryShelf: false,
+  bagPage: 0,
   busy: false,
 };
 

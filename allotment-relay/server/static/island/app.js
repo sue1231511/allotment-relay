@@ -678,8 +678,18 @@ async function runPlotBatch(plots, fn, manyTitle, oneTitle) {
   }
 }
 
+function closeBag() {
+  hideSheet();
+  state.tab = "map";
+  markDock("");
+  if (state.scene !== "map") {
+    setBagChip(true);
+    setBackChip(true, () => enterScene(state.backTo || "map"));
+  }
+}
+
 function bagHandlers() {
-  return { onEat: eatItem, onVend: tapVend };
+  return { onEat: eatItem, onVend: tapVend, onClose: closeBag };
 }
 
 async function eatItem(item) {
@@ -770,6 +780,8 @@ function stopGrowTick() {
 function hideSheet() {
   const sheet = sheetEl();
   sheet.hidden = true;
+  sheet.classList.remove("is-bag");
+  document.body.classList.remove("is-bag-open");
   sheet.innerHTML = "";
 }
 
@@ -794,14 +806,15 @@ async function openTab(tab) {
   if (tab !== "bag") return;
   const sheet = sheetEl();
   if (state.tab === "bag" && sheet && !sheet.hidden) {
-    hideSheet();
-    state.tab = "map";
-    markDock("");
+    closeBag();
     return;
   }
   state.tab = "bag";
+  state.bagPage = 0;
   markDock("bag");
   closePlant();
+  setBagChip(false);
+  setBackChip(false);
   renderBag(sheet, bagHandlers());
 }
 
