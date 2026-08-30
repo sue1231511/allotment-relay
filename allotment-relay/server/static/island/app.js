@@ -191,7 +191,7 @@ async function openShop(root) {
 function switchShopTab(tab) {
   state.shopTab = tab || "seed";
   hideModal();
-  paintShop();
+  paintShop(0);
 }
 
 function tapShopSku(item) {
@@ -219,7 +219,7 @@ function paintShop(listTop = 0) {
 async function buyShopSku(item) {
   if (!item) return;
   const listTop = shopListTop();
-  await act(() => api.shopBuy(item.id, 1), { keepShop: true, listTop });
+  await act(() => api.shopBuy(item.id, 1), { keepShop: true, listTop, quiet: true });
 }
 
 function tapGrass() {
@@ -411,14 +411,15 @@ async function vendItem(item) {
   await act(() => api.vend(name, 1), { keepTab: true });
 }
 
-async function act(fn, { refreshScene = false, keepPlant = false, keepTab = false, keepShop = false, listTop = 0 } = {}) {
+async function act(fn, { refreshScene = false, keepPlant = false, keepTab = false, keepShop = false, listTop = null, quiet = false } = {}) {
   if (state.busy) return;
   state.busy = true;
   try {
     const data = await fn();
     applySnapshot(data);
     renderHud();
-    if (data.event) showEvent(data.event);
+    if (data.event && !quiet) showEvent(data.event);
+    else if (quiet && data.event && data.event.narrative) toast(data.event.narrative);
     if (!keepPlant) closePlant();
     else state.plantOpen = true;
     if (keepTab) {

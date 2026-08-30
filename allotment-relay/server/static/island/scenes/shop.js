@@ -2,11 +2,18 @@ import { sceneArt } from "../ui/art.js";
 import { esc } from "../ui/modal.js";
 import { state } from "../store.js";
 
-export function renderShop(root, { onBuy, onSwitchTab, listTop = 0 } = {}) {
+export function renderShop(root, { onBuy, onSwitchTab, listTop = null } = {}) {
   const shop = state.shop || {};
   const tabs = shop.tabs || [];
   const tab = state.shopTab || (tabs[0] && tabs[0].key) || "seed";
   const items = (shop.items || []).filter((row) => row.tab === tab);
+  const existing = root.querySelector(".island-shop");
+  if (existing) {
+    paintShopChrome(existing, shop, tabs, tab, onSwitchTab);
+    paintShopList(existing, shop, items, onBuy, listTop);
+    hideActionBar();
+    return;
+  }
   root.innerHTML = `
     <div class="island-shop">
       ${sceneArt("shop")}
@@ -16,38 +23,60 @@ export function renderShop(root, { onBuy, onSwitchTab, listTop = 0 } = {}) {
           <small>${esc(shop.heart_bar || "")} · ${esc(shop.zhe_label || "原价")}</small>
         </div>
         <div class="island-shop-tabs" role="tablist" aria-label="货架">
-          ${tabs.map((row) => (
-            `<button type="button" role="tab" class="${row.key === tab ? "is-on" : ""}" data-tab="${esc(row.key)}" aria-selected="${row.key === tab ? "true" : "false"}">${esc(row.label)}</button>`
-          )).join("")}
+          ${tabs.map((row) => tabMarkup(row, tab)).join("")}
         </div>
-        <div class="island-shop-list" id="island-shop-list">
-          ${items.map((row) => skuMarkup(row)).join("") || `<p class="island-shop-empty">这栏现在没货。</p>`}
-        </div>
+        <div class="island-shop-list" id="island-shop-list"></div>
       </div>
     </div>
   `;
+  hideActionBar();
+  const wrap = root.querySelector(".island-shop");
+  paintShopChrome(wrap, shop, tabs, tab, onSwitchTab);
+  paintShopList(wrap, shop, items, onBuy, listTop == null ? 0 : listTop);
+}
+
+function hideActionBar() {
   const bar = document.getElementById("island-actionbar");
   if (bar) {
     bar.innerHTML = "";
     bar.hidden = true;
   }
-  root.querySelectorAll("[data-tab]").forEach((btn) => {
-    btn.addEventListener("click", () => onSwitchTab && onSwitchTab(btn.getAttribute("data-tab")));
-  });
-  root.querySelectorAll("[data-sku]").forEach((btn) => {
+}
+
+function paintShopChrome(wrap, shop, tabs, tab, onSwitchTab) {
+  const name = wrap.querySelector(".island-shop-meta b");
+  const note = wrap.querySelector(".island-shop-meta small");
+  if (name) name.textContent = shop.name || "Tt酱杂货铺";
+  if (note) note.textContent = `${shop.heart_bar || ""} · ${shop.zhe_label || "原价"}`;
+  const tabBar = wrap.querySelector(".island-shop-tabs");
+  if (tabBar) {
+    tabBar.innerHTML = tabs.map((row) => tabMarkup(row, tab)).join("");
+    tabBar.querySelectorAll("[data-tab]").forEach((btn) => {
+      btn.addEventListener("click", () => onSwitchTab && onSwitchTab(btn.getAttribute("data-tab")));
+    });
+  }
+}
+
+function paintShopList(wrap, shop, items, onBuy, listTop) {
+  const list = wrap.querySelector("#island-shop-list");
+  if (!list) return;
+  const keep = listTop == null ? list.scrollTop : listTop;
+  list.innerHTML = items.map((row) => skuMarkup(row)).join("") || `<p class="island-shop-empty">这栏现在没货。</p>`;
+  list.querySelectorAll("[data-sku]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const id = btn.getAttribute("data-sku");
       const row = (shop.items || []).find((item) => item.id === id);
       if (row && onBuy) onBuy(row);
     });
   });
-  const list = root.querySelector("#island-shop-list");
-  if (list) {
-    list.scrollTop = listTop;
-    requestAnimationFrame(() => {
-      list.scrollTop = listTop;
-    });
-  }
+  list.scrollTop = keep;
+  requestAnimationFrame(() => {
+    list.scrollTop = keep;
+  });
+}
+
+function tabMarkup(row, tab) {
+  return `<button type="button" role="tab" class="${row.key === tab ? "is-on" : ""}" data-tab="${esc(row.key)}" aria-selected="${row.key === tab ? "true" : "false"}">${esc(row.label)}</button>`;
 }
 
 function skuMarkup(row) {

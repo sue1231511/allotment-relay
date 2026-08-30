@@ -6,7 +6,7 @@ export function renderBag(sheet, { onEat, onVend } = {}) {
   sheet.hidden = false;
   sheet.innerHTML = `
     <h2>行囊</h2>
-    <p class="island-fine">和 AI 看见的是同一口袋。能吃的点吃，能卖的点卖。</p>
+    <p class="island-fine">和 AI 看见的是同一口袋。左边吃，右边卖。</p>
     ${stock.map((it) => itemMarkup(it)).join("") || "<p>行囊空着。</p>"}
   `;
   sheet.querySelectorAll("[data-eat]").forEach((btn) => {
@@ -28,8 +28,8 @@ function itemMarkup(it) {
     acts.push(`<button type="button" class="island-btn" data-eat="${esc(name)}">吃</button>`);
   }
   if (it.can_vend !== false) {
-    const price = it.vend_price ? `${it.vend_price}票` : "卖";
-    acts.push(`<button type="button" class="island-btn" data-vend="${esc(name)}">卖${it.vend_price ? ` ${esc(price)}` : ""}</button>`);
+    const price = it.vend_price ? `${it.vend_price}票` : "";
+    acts.push(`<button type="button" class="island-btn primary" data-vend="${esc(name)}">卖${price ? ` ${esc(price)}` : ""}</button>`);
   }
   return `
     <div class="island-item">

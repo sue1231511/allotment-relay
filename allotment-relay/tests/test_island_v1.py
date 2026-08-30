@@ -755,7 +755,8 @@ def test_island_page_is_modular() -> None:
     bag_js = (ROOT / "server/static/island/ui/bag.js").read_text(encoding="utf-8")
     assert "data-eat" in bag_js
     assert "data-vend" in bag_js
-    assert "能卖的点卖" in bag_js
+    assert "左边吃，右边卖" in bag_js
+    assert "data-vend" in bag_js
     assert "交岸税" not in app
     assert "洗碗" not in app
     assert "只铺图和地名" in (ROOT / "server/static/island/scenes/place.js").read_text(encoding="utf-8")
@@ -862,6 +863,8 @@ def test_island_page_is_modular() -> None:
     assert "showBuySheet" in app
     assert "renderShop" in app
     assert "listTop" in shop_js
+    assert "paintShopList" in shop_js
+    assert "querySelector(\".island-shop\")" in shop_js
     assert "refreshScene: true" not in app
     assert "/api/v1/shop/buy" in api
     assert "/api/v1/tote/vend" in api
