@@ -956,42 +956,117 @@ body.island-app.is-playing.is-yards .island-actionbar {
   padding: 3px 10px;
 }
 
+/* 店景和对话/货架上下分栏，不再叠在店招或返回/背包上。 */
 .island-shop {
   position: absolute;
   inset: 0;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  padding-top: calc(66px + env(safe-area-inset-top, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   background: #c9ddd8;
+  overflow: hidden;
 }
 
-.island-shop-card {
+.island-shop-stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 120px;
+}
+
+.island-shop-stage .island-slot {
   position: absolute;
-  left: 12px;
-  right: 12px;
-  top: 12px;
-  padding: 10px 14px;
+  inset: 0;
+}
+
+.island-shop-stage .island-slot-pic {
+  object-fit: cover;
+  object-position: center top;
+}
+
+.island-shop-talk {
+  position: relative;
+  flex: 0 0 auto;
+  margin: 0 12px 16px;
+  padding: 12px 14px 14px;
   border-radius: 16px;
-  background: rgba(255, 253, 248, .9);
+  background: rgba(255, 253, 248, .94);
+  box-shadow: 0 8px 24px rgba(42, 58, 60, .12);
   z-index: 1;
 }
 
-.island-shop-card b { display: block; font-size: 18px; }
-.island-shop-card small { color: #5b7377; font-size: 12px; }
+.island-shop-talk header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.island-shop-talk header b {
+  font-size: 14px;
+  color: #5b7377;
+}
+
+.island-shop-talk header small {
+  color: #5b7377;
+  font-size: 11px;
+}
+
+.island-shop-talk p {
+  margin: 10px 0 14px;
+  font-size: 20px;
+  line-height: 1.4;
+}
 
 .island-shop-shelf {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  max-height: 48%;
+  position: relative;
+  flex: 0 0 46%;
+  max-height: 46%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  background: rgba(251, 250, 246, .94);
+  background: #fbfaf6;
   border-radius: 18px 18px 0 0;
   box-shadow: 0 -8px 24px rgba(42, 58, 60, .12);
   z-index: 1;
 }
 
+.island-shop.is-shelf .island-shop-stage {
+  flex: 1 1 54%;
+  min-height: 0;
+}
+
+.island-shop-shelf-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 10px 14px 0;
+}
+
+.island-shop-shelf-head b { display: block; font-size: 15px; }
+
+.island-shop-shelf-head small {
+  display: block;
+  color: #5b7377;
+  font-size: 11px;
+}
+
+.island-shop-x {
+  border: 0;
+  background: transparent;
+  color: #5b7377;
+  font: inherit;
+  min-height: 36px;
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+
 .island-shop-tabs {
   display: flex;
+  flex-shrink: 0;
   gap: 6px;
   padding: 10px 12px 6px;
   overflow-x: auto;
@@ -1014,9 +1089,10 @@ body.island-app.is-playing.is-yards .island-actionbar {
 }
 
 .island-shop-list {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: auto;
-  padding: 0 12px 14px;
+  padding: 0 12px calc(14px + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
   gap: 8px;
