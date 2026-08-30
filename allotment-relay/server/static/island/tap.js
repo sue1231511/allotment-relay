@@ -4,7 +4,7 @@
   window.__islandTapBound = true;
 
   var PRESS =
-    "button, a.island-btn, .island-hot, .island-float-chip, .island-bag-slot:not(.is-empty), " +
+    "button, a.island-btn, .island-hot, .island-scene-tap, .island-float-chip, .island-bag-slot:not(.is-empty), " +
     ".island-slot, .island-plot-tile, .island-plant-arrow, .island-plant-x, .island-plant-go, " +
     ".island-plant-buy, [data-go], [data-act], [data-tab], [data-eat], [data-vend], [data-page], " +
     "[data-close], [data-care], [data-yard], [data-href], [data-close-modal]";

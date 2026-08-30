@@ -973,14 +973,27 @@ body.island-app.is-playing.is-yards .island-actionbar {
   padding: 3px 10px;
 }
 
-/* 剧场院景：图上点编剧社 / 衣泊坊 / 剧场看台。铺满一屏，底下不漏色。 */
+/* 剧场院景：图上叠三颗「点一下看…」白钮，不是热区小标签，也不是底下货架列表。 */
 .island-theater-board {
   aspect-ratio: 1080 / 1920;
 }
 
-.island-theater .island-hot span {
-  font-size: 13px;
-  padding: 3px 10px;
+.island-theater-picks {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 14px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.island-theater-picks .island-scene-tap {
+  position: relative;
+  left: auto;
+  right: auto;
+  bottom: auto;
 }
 
 .island-shop {
@@ -1770,6 +1783,7 @@ button.is-tap,
 .island-bag-x.is-tap,
 .island-bag-done.is-tap,
 .island-hot.is-tap,
+.island-scene-tap.is-tap,
 .island-slot.is-tap,
 .island-plot-tile.is-tap,
 .island-plant-arrow.is-tap,
@@ -1790,6 +1804,7 @@ button.is-tap,
 .island-bag-x,
 .island-bag-done,
 .island-hot,
+.island-scene-tap,
 .island-float-chip,
 .island-plant-arrow,
 .island-plant-x,
