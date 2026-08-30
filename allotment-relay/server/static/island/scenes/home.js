@@ -3,9 +3,9 @@ import {
   growStatusLine,
   panelSubtitle,
   plotLabel,
+  plotToken,
   ripeYard,
   state,
-  thirstyYard,
   yardMeta,
   yardPlots,
   YARDS,
@@ -29,9 +29,8 @@ export function renderHome(root, { onOpenLand }) {
   root.querySelector("[data-act=land]").addEventListener("click", onOpenLand);
 }
 
-export function renderYards(root, { onOpenGarden, onHarvestAll, onWaterAll, onSwitchYard, onBack }) {
+export function renderYards(root, { onTapPlot, onHarvestAll, onSwitchYard }) {
   const ripe = ripeYard().length;
-  const thirsty = thirstyYard().length;
   root.innerHTML = `
     <div class="island-yards">
       ${sceneArt("yards")}
@@ -41,10 +40,6 @@ export function renderYards(root, { onOpenGarden, onHarvestAll, onWaterAll, onSw
       <p class="island-grow-status" id="island-grow-status">${esc(growStatusLine())}</p>
       <div class="island-plot-grid" id="island-plot-grid">${plotGridMarkup()}</div>
       <div class="island-plot-pager" id="island-plot-pager">${pagerMarkup()}</div>
-      <div class="island-yard-acts">
-        <button type="button" class="island-btn" data-act="water" ${thirsty ? "" : "disabled"}>浇水${thirsty ? ` ${thirsty}` : ""}</button>
-        <button type="button" class="island-btn primary" data-act="garden">${esc(yardMeta().plant)}</button>
-      </div>
       <button type="button" class="island-harvest-fab" id="island-harvest-all" data-act="harvest" ${ripe ? "" : "hidden"}>${harvestLabel(ripe)}</button>
     </div>
   `;
@@ -58,9 +53,7 @@ export function renderYards(root, { onOpenGarden, onHarvestAll, onWaterAll, onSw
   });
   const harvest = root.querySelector("[data-act=harvest]");
   if (harvest) harvest.addEventListener("click", onHarvestAll);
-  root.querySelector("[data-act=water]").addEventListener("click", onWaterAll);
-  root.querySelector("[data-act=garden]").addEventListener("click", onOpenGarden);
-  bindGrid(onOpenGarden);
+  bindGrid(onTapPlot);
   bindPager();
   bindSwipe();
 }
@@ -85,14 +78,6 @@ export function syncHomeChrome() {
     const count = btn.querySelector("small");
     if (count) count.textContent = String(yardPlots(kind).length);
   });
-  const plantBtn = document.querySelector(".island-yard-acts [data-act=garden]");
-  if (plantBtn) plantBtn.textContent = yardMeta().plant;
-  const waterBtn = document.querySelector(".island-yard-acts [data-act=water]");
-  if (waterBtn) {
-    const n = thirstyYard().length;
-    waterBtn.disabled = n === 0;
-    waterBtn.textContent = n ? `浇水 ${n}` : "浇水";
-  }
   const sub = document.getElementById("island-plant-sub");
   if (sub) sub.textContent = panelSubtitle();
 }
@@ -140,12 +125,13 @@ function plotGridMarkup() {
   const tiles = plots.map((plot) => {
     const stage = plot.appearance || (plot.can_sow ? "empty" : "growing");
     const art = cropArt(plot.crop, stage);
-    const token = plotLabel(plot);
-    return `<button type="button" class="island-plot-tile is-${esc(stage)}" data-act="garden" data-token="${esc(token)}" aria-label="${esc(token)}">
+    const token = plotToken(plot);
+    const label = plotLabel(plot);
+    return `<button type="button" class="island-plot-tile is-${esc(stage)}" data-token="${esc(token)}" aria-label="${esc(label)}">
       <img class="island-plot-grass" src="${GRASS}" alt="" draggable="false">
       <img class="island-plot-bed" src="${PLOT}" alt="" draggable="false">
       <span class="island-plot-soil">${art}</span>
-      <span class="island-plot-meta"><b>${esc(token)}</b><small>${esc(tileCaption(plot))}</small></span>
+      <span class="island-plot-meta"><b>${esc(label)}</b><small>${esc(tileCaption(plot))}</small></span>
     </button>`;
   });
   const pad = PAGE_SIZE - plots.length;
@@ -175,14 +161,15 @@ function turnPage(delta) {
   return true;
 }
 
-function bindGrid(onOpenGarden) {
+function bindGrid(onTapPlot) {
   const grid = document.getElementById("island-plot-grid");
   if (!grid || grid._bound) return;
   grid._bound = true;
   grid.addEventListener("click", (ev) => {
     if (grid._ignoreClick) return;
-    if (!ev.target.closest("[data-act=garden]")) return;
-    onOpenGarden();
+    const tile = ev.target.closest("[data-token]");
+    if (!tile) return;
+    onTapPlot(tile.getAttribute("data-token"));
   });
 }
 

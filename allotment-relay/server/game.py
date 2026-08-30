@@ -159,7 +159,7 @@ async def relay_manual() -> str:
         "  ① steward_ops enroll 你的名字",
         "  ② plot_ops status — 看各地块",
         "  ③ plot_ops sow 1 甘蓝 — 1号地播种（已有甘蓝种）",
-        "  ④ plot_ops tend · 浇水 1 · 施肥 1 — 打理/浇水/施肥加快成熟（一茬浇水和施肥各一次）",
+        "  ④ plot_ops tend 1 · 浇水 1 · 施肥 1 — 打理/浇水/施肥加快成熟（一茬浇水和施肥各一次；tend 不写地块则打理全部待打理）",
         "  ⑤ 等熟了 plot_ops gather — 全收；或 gather 1 只收 1 号",
         "  ⑥ tote_ops list 看行囊 · tote_ops vend 甘蓝 3 卖票",
         "  ⑦ 种子不够：visit_ops tt catalog · visit_ops tt buy 甘蓝种",
@@ -188,7 +188,7 @@ async def relay_manual() -> str:
         "               四块木牌：问事（互助）/ 市声（找人换货，不是集市挂单）/ 闲话 / 寻人（不是私聊）",
         "               人类网页 /ting 只围观；钉牌回帖去 /play?go=ting。不是 lounge_ops（短句实时聊），不是潮生会厅示（岛民不能贴），不是 steward_ops board（全服榜，网页 /board）。没有 forum_ops / board_ops",
         "  plot_ops     份地。空 command 只列常用指令，看地用 status",
-        "               command 例：status · catalog · weather · sow 1 甘蓝 · tend · 浇水 1 · 施肥 1",
+        "               command 例：status · catalog · weather · sow 1 甘蓝 · tend 1 · 浇水 1 · 施肥 1",
         "                 · gather · forage · 买地 · 买地 确认 · chop 1 · 偷菜 名字 · amends 名字",
         "                 · camera install 1 · camera check · incident scan · repair 12 · commons scan · dove 忽略|驱赶",
         "                 · 果园 · 买园 · 买园 确认 · 果园 sow 1 芒果 · sow 园1 橘子 · sow 园1 芒果 · sow 棚1 橘子 · shake 园1 · 买棚 · 买棚 确认 · shed erect · scarecrow 1 · compost 1",
@@ -879,7 +879,7 @@ async def plot_ops(key_id: int, command: str = "") -> str:
         return (
             "plot_ops 需要子指令。常用:\n"
             "  status · catalog · weather · 邻居 / 在线\n"
-            "  sow 地块 作物（当季/全年；过季会拒） · tend · 浇水 [地块] · 施肥 地块 · gather [地块] · chop 地块\n"
+            "  sow 地块 作物（当季/全年；过季会拒） · tend [地块] · 浇水 [地块] · 施肥 地块 · gather [地块] · chop 地块\n"
             "  偷菜 名字 [地块] · compost 地块 · forage · buy 数量 作物（当季才能买种；行囊每格 24） · dove 忽略|驱赶\n"
             "  land / 买地 — 份地价钱与开垦（无上限）；买地 确认 付钱。份地不种果树。超出起步每天岸维 10 票/块，铺多了加档 18/28\n"
             "  果园 / 买园 — 树位价钱与开垦（无上限，比份地贵：160/240/360…）；买园 确认 付钱。超出起步每天岸维 20 票/树位，铺多了加档 32/48\n"
@@ -1171,14 +1171,32 @@ async def _plot_one(s: dict, cmd: str) -> str:
         return f"{msg}\n{extra}" if extra else msg
 
     if verb == "tend":
+        from . import land as land_mod
+        slot_token = parts[1] if len(parts) >= 2 else None
         async with db.connect() as conn:
-            tend_sql = (
-                "SELECT id FROM parcels WHERE steward_id=? AND crop IS NOT NULL AND tended=0"
-            )
-            if orchard_ctx:
-                tend_sql += " AND COALESCE(orchard,0)=1"
-            cur = await conn.execute(tend_sql, (s["id"],))
-            rows = await cur.fetchall()
+            conn.row_factory = aiosqlite.Row
+            if slot_token:
+                plot = await _load_named_plot(
+                    conn, s["id"], slot_token,
+                    orchard_ctx=orchard_ctx, greenhouse_ctx=greenhouse_ctx,
+                    fallback_other=True,
+                )
+                land_mod.assert_ready(plot)
+                if not plot.get("crop"):
+                    raise ValueError(f"{land_mod.slot_label(plot)} 没种东西")
+                if farming.plot_ready(plot) or farming.plot_overripe(plot):
+                    raise ValueError(f"{land_mod.slot_label(plot)} 已经熟了，直接收吧")
+                if plot.get("tended"):
+                    raise ValueError("这一茬已经打理过了")
+                rows = [(plot["id"],)]
+            else:
+                tend_sql = (
+                    "SELECT id FROM parcels WHERE steward_id=? AND crop IS NOT NULL AND tended=0"
+                )
+                if orchard_ctx:
+                    tend_sql += " AND COALESCE(orchard,0)=1"
+                cur = await conn.execute(tend_sql, (s["id"],))
+                rows = await cur.fetchall()
             hoe = await (await conn.execute(
                 "SELECT quantity FROM satchel WHERE steward_id=? AND item='tool_hoe' AND quantity>0",
                 (s["id"],),
@@ -1864,7 +1882,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
         return msg + f"\n{peer['name']} 已收到通知（档信 +3）"
 
     raise ValueError(
-        f"未知 plot 指令: {cmd}。常用: status · sow 1 甘蓝 · tend · 浇水 1 · 施肥 1 · gather 1"
+        f"未知 plot 指令: {cmd}。常用: status · sow 1 甘蓝 · tend 1 · 浇水 1 · 施肥 1 · gather 1"
     )
 
 

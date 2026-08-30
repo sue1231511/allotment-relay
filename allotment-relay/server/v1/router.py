@@ -168,6 +168,66 @@ async def harvest_parcel(slot: str, request: Request, body: SowBody | None = Non
         return _error(exc)
 
 
+@router.post("/farm/parcels/{slot}/tend")
+async def tend_parcel(slot: str, request: Request, body: SowBody | None = None):
+    try:
+        key = extract_api_key(request, (body.api_key if body else ""))
+        sid, cached = await _write_guard(request, key, f"tend:{slot}")
+        if cached:
+            return _cached_response(cached)
+        row, _ = await require_enrolled(key)
+        result = await farm_service.tend(key, int(row["id"]), slot)
+        await idempotency.store(sid, f"tend:{slot}", _idem_key(request), 200, result)
+        return result
+    except ApiError as exc:
+        return _error(exc)
+
+
+@router.post("/farm/parcels/{slot}/fertilize")
+async def fertilize_parcel(slot: str, request: Request, body: SowBody | None = None):
+    try:
+        key = extract_api_key(request, (body.api_key if body else ""))
+        sid, cached = await _write_guard(request, key, f"fertilize:{slot}")
+        if cached:
+            return _cached_response(cached)
+        row, _ = await require_enrolled(key)
+        result = await farm_service.fertilize(key, int(row["id"]), slot)
+        await idempotency.store(sid, f"fertilize:{slot}", _idem_key(request), 200, result)
+        return result
+    except ApiError as exc:
+        return _error(exc)
+
+
+@router.post("/farm/parcels/{slot}/compost")
+async def compost_parcel(slot: str, request: Request, body: SowBody | None = None):
+    try:
+        key = extract_api_key(request, (body.api_key if body else ""))
+        sid, cached = await _write_guard(request, key, f"compost:{slot}")
+        if cached:
+            return _cached_response(cached)
+        row, _ = await require_enrolled(key)
+        result = await farm_service.compost(key, int(row["id"]), slot)
+        await idempotency.store(sid, f"compost:{slot}", _idem_key(request), 200, result)
+        return result
+    except ApiError as exc:
+        return _error(exc)
+
+
+@router.post("/farm/parcels/{slot}/shake")
+async def shake_parcel(slot: str, request: Request, body: SowBody | None = None):
+    try:
+        key = extract_api_key(request, (body.api_key if body else ""))
+        sid, cached = await _write_guard(request, key, f"shake:{slot}")
+        if cached:
+            return _cached_response(cached)
+        row, _ = await require_enrolled(key)
+        result = await farm_service.shake(key, int(row["id"]), slot)
+        await idempotency.store(sid, f"shake:{slot}", _idem_key(request), 200, result)
+        return result
+    except ApiError as exc:
+        return _error(exc)
+
+
 @router.post("/farm/buy")
 async def buy_seed(request: Request, body: BuyBody):
     try:

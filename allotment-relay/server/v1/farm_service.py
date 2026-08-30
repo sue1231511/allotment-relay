@@ -2,7 +2,7 @@
 
 MIGRATION BOUNDARY
 ------------------
-播种 / 浇水 / 收获的数值与副作用仍走 `game._plot_one`（与 MCP `plot_ops` 同一条路径）。
+播种 / 打理 / 浇水 / 施肥 / 收获 / 堆肥 / 摇树的数值与副作用仍走 `game._plot_one`（与 MCP `plot_ops` 同一条路径）。
 本模块只做：结构化入参、地块预检、稳定错误码、结构化回包。
 下一步应把 `_plot_one` 里的 sow/water/gather 抽成 `farm_actions.py`，
 让 MCP 解析器和本服务一起调用，而不是让 REST 长期拼命令字符串。
@@ -150,6 +150,129 @@ async def water(api_key: str, key_id: int, slot: int | str) -> dict[str, Any]:
     snap = await snapshot(api_key, s["id"])
     snap["event"] = {
         "title": "浇水",
+        "narrative": views_human(narrative),
+        "kind": "farm",
+    }
+    return snap
+
+
+async def tend(api_key: str, key_id: int, slot: int | str) -> dict[str, Any]:
+    try:
+        s = await _prepare(key_id)
+    except ValueError as exc:
+        raise classify(exc) from exc
+    token = _slot_token(slot)
+    plot = await _load_home_plot(s["id"], token)
+    try:
+        land_mod.assert_ready(plot)
+    except ValueError as exc:
+        raise classify(exc) from exc
+    if not plot.get("crop"):
+        raise ApiError("NOT_READY", "这块地还是空的。", status=409)
+    if farming.plot_ready(plot) or farming.plot_overripe(plot):
+        raise ApiError("NOT_READY", "已经熟了，直接收吧。", status=409)
+    if plot.get("tended"):
+        raise ApiError("ALREADY_DONE", "这一茬已经打理过了。", status=409)
+
+    try:
+        narrative = await game._plot_one(s, f"tend {token}")
+    except ValueError as exc:
+        raise classify(exc) from exc
+    snap = await snapshot(api_key, s["id"])
+    snap["event"] = {
+        "title": "打理",
+        "narrative": views_human(narrative),
+        "kind": "farm",
+    }
+    return snap
+
+
+async def fertilize(api_key: str, key_id: int, slot: int | str) -> dict[str, Any]:
+    try:
+        s = await _prepare(key_id)
+    except ValueError as exc:
+        raise classify(exc) from exc
+    token = _slot_token(slot)
+    plot = await _load_home_plot(s["id"], token)
+    try:
+        land_mod.assert_ready(plot)
+    except ValueError as exc:
+        raise classify(exc) from exc
+    if not plot.get("crop"):
+        raise ApiError("NOT_READY", "这块地还是空的。", status=409)
+    if farming.plot_ready(plot) or farming.plot_overripe(plot):
+        raise ApiError("NOT_READY", "已经熟了，肥料留给下一茬。", status=409)
+    if plot.get("fertilized"):
+        raise ApiError("ALREADY_DONE", "这一茬已经施过肥了。", status=409)
+
+    try:
+        narrative = await game._plot_one(s, f"施肥 {token}")
+    except ValueError as exc:
+        raise classify(exc) from exc
+    snap = await snapshot(api_key, s["id"])
+    snap["event"] = {
+        "title": "施肥",
+        "narrative": views_human(narrative),
+        "kind": "farm",
+    }
+    return snap
+
+
+async def compost(api_key: str, key_id: int, slot: int | str) -> dict[str, Any]:
+    try:
+        s = await _prepare(key_id)
+    except ValueError as exc:
+        raise classify(exc) from exc
+    token = _slot_token(slot)
+    plot = await _load_home_plot(s["id"], token)
+    try:
+        land_mod.assert_ready(plot)
+    except ValueError as exc:
+        raise classify(exc) from exc
+    if not plot.get("crop"):
+        raise ApiError("NOT_READY", "这块地是空的。", status=409)
+    if not farming.plot_overripe(plot) and not farming.plot_ready(plot):
+        raise ApiError("NOT_READY", "只有过熟或枯了才能进堆肥桶。", status=409)
+
+    try:
+        narrative = await game._plot_one(s, f"compost {token}")
+    except ValueError as exc:
+        raise classify(exc) from exc
+    snap = await snapshot(api_key, s["id"])
+    snap["event"] = {
+        "title": "堆肥",
+        "narrative": views_human(narrative),
+        "kind": "farm",
+    }
+    return snap
+
+
+async def shake(api_key: str, key_id: int, slot: int | str) -> dict[str, Any]:
+    try:
+        s = await _prepare(key_id)
+    except ValueError as exc:
+        raise classify(exc) from exc
+    token = _slot_token(slot)
+    plot = await _load_home_plot(s["id"], token)
+    try:
+        land_mod.assert_ready(plot)
+    except ValueError as exc:
+        raise classify(exc) from exc
+    if not plot.get("crop"):
+        raise ApiError("NOT_READY", "这块地没有能摇的树。", status=409)
+    meta = CROPS.get(plot["crop"], {})
+    if not meta.get("shake"):
+        raise ApiError("NOT_READY", f"{meta.get('name', plot['crop'])} 不能摇，直接收吧。", status=409)
+    if not farming.plot_ready(plot):
+        raise ApiError("NOT_READY", "还没熟，等等再摇。", status=409)
+
+    try:
+        narrative = await game._plot_one(s, f"shake {token}")
+    except ValueError as exc:
+        raise classify(exc) from exc
+    snap = await snapshot(api_key, s["id"])
+    snap["event"] = {
+        "title": "摇一摇",
         "narrative": views_human(narrative),
         "kind": "farm",
     }

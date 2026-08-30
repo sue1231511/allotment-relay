@@ -119,8 +119,46 @@ async def _test_island_v1_api() -> None:
     assert one["state"] != "fallow", one
     assert one["appearance"] in ("seedling", "growing"), one
     assert one["remain_sec"] > 0, one
+    assert one["can_tend"] is True, one
+    assert one["can_water"] is True, one
+    assert one["can_fertilize"] is True, one
     assert sown.json()["event"]["kind"] == "farm"
     assert "sow 1" not in (sown.json()["event"]["narrative"] or "")
+
+    tended = client.post(
+        "/api/v1/farm/parcels/1/tend",
+        headers=_auth(key, {"Idempotency-Key": "tend-1"}),
+        json={},
+    )
+    assert tended.status_code == 200, tended.text
+    assert tended.json()["event"]["title"] == "打理"
+    assert "打理了" in (tended.json()["event"]["narrative"] or ""), tended.json()["event"]
+    tplot = next(p for p in tended.json()["farm"]["home"] if int(p["slot"]) == 1)
+    # 小虫过境可能把打理打回去，再读一次地况
+    if not tplot["tended"]:
+        again = client.get("/api/v1/farm", headers=_auth(key))
+        tplot = next(p for p in again.json()["farm"]["home"] if int(p["slot"]) == 1)
+    assert tplot["tended"] is True or "小虫" in (tended.json()["event"]["narrative"] or ""), tplot
+    if tplot["tended"]:
+        assert tplot["can_tend"] is False, tplot
+
+    fert_ok = client.post(
+        "/api/v1/farm/parcels/1/fertilize",
+        headers=_auth(key, {"Idempotency-Key": "fert-1"}),
+        json={},
+    )
+    assert fert_ok.status_code == 200, fert_ok.text
+    fplot = next(p for p in fert_ok.json()["farm"]["home"] if int(p["slot"]) == 1)
+    assert fplot["fertilized"] is True, fplot
+    assert fplot["can_fertilize"] is False, fplot
+
+    fert_again = client.post(
+        "/api/v1/farm/parcels/1/fertilize",
+        headers=_auth(key, {"Idempotency-Key": "fert-2"}),
+        json={},
+    )
+    assert fert_again.status_code == 409, fert_again.text
+    assert fert_again.json()["error"]["code"] == "ALREADY_DONE"
 
     refreshed = client.get("/api/v1/farm", headers=_auth(key))
     again_plot = next(p for p in refreshed.json()["farm"]["home"] if int(p["slot"]) == 1)
@@ -210,7 +248,7 @@ async def _test_island_v1_api() -> None:
     mcp_bag = await play_mod.run_play(key, "tote_ops", "list")
     assert "甘蓝" in (mcp_bag.get("text") or ""), mcp_bag.get("text")
 
-    # 前端自动找空地：按 slot 顺序把三块都种上，就没有 can_sow。
+    # 点哪块种哪块：按 slot 顺序把三块都种上，就没有 can_sow。
     empty = sorted(
         (p for p in harvested.json()["farm"]["home"] if p["can_sow"]),
         key=lambda p: int(p["slot"]),
@@ -522,7 +560,9 @@ def test_island_page_is_modular() -> None:
     assert "api_key=" not in api
     assert "浇水 1" not in app
     assert "菜地已经种满了" in (ROOT / "server/static/island/store.js").read_text(encoding="utf-8")
-    assert "firstIdleYard" in app
+    assert "plotByToken" in app
+    assert "tapPlot" in app
+    assert "showCareSheet" in app
     assert "__islandStart" in app
     assert "bindGate" not in app
     boot = (ROOT / "server/static/island/boot.js").read_text(encoding="utf-8")
@@ -556,8 +596,11 @@ def test_island_page_is_modular() -> None:
     assert "去上手页" not in boot
     assert 'href="/play"' not in boot
     assert (ROOT / "server/static/island/ui/back-map.js").exists()
-    assert "island-yard-acts" in yards_js
-    assert "data-act=\"water\"" in yards_js
+    assert "island-yard-acts" not in yards_js
+    assert "data-act=\"water\"" not in yards_js
+    assert "onTapPlot" in yards_js
+    assert "data-token" in home_js
+    assert "onWaterAll" not in home_js
     assert "#island-actionbar [data-act=water]" not in home_js
     assert "#island-actionbar [data-act=garden]" not in home_js
     assert "setYardsChrome" in app
@@ -567,7 +610,8 @@ def test_island_page_is_modular() -> None:
     assert "is-yards" in boot
     assert "is-yards" in css
     assert ".island-back-map" not in css
-    assert ".island-yard-acts" in css
+    assert ".island-care-acts" in css
+    assert ".island-yard-acts" not in css
     assert ".island-float-chip" in css
     assert ".island-back-chip" not in css
     assert (ROOT / "server/static/island/assets/chip-back.png").exists()
@@ -590,6 +634,10 @@ def test_island_page_is_modular() -> None:
     assert "data-act=\"net\"" not in (ROOT / "server/static/island/scenes/shore.js").read_text(encoding="utf-8")
     assert "发言" not in (ROOT / "server/static/island/scenes/plaza.js").read_text(encoding="utf-8")
     assert "/api/v1/farm/buy" in api
+    assert "/tend" in api
+    assert "/fertilize" in api
+    assert "api.tend" in app
+    assert "api.fertilize" in app
     assert "/api/v1/hut/sleep" in api
     assert "/api/v1/bar/work" in api
     assert "/api/v1/kitchen/eat" in api
@@ -643,7 +691,7 @@ def test_island_page_is_modular() -> None:
     assert "bindSwipe" in home_js
     assert "左右滑" in home_js
     assert "data-yard" in home_js
-    assert "onWaterAll" in home_js
+    assert "onTapPlot" in home_js
     assert "sceneArt" in home_js
     assert (ROOT / "server/static/island/scenes/shore.js").exists()
     assert (ROOT / "server/static/island/scenes/plaza.js").exists()

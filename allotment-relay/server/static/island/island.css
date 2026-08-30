@@ -803,16 +803,11 @@ body.island-app.is-playing.is-yards .island-actionbar {
   pointer-events: none;
 }
 
-.island-yard-acts {
+.island-care-acts {
   display: flex;
+  flex-direction: column;
   gap: 8px;
-  margin: 0 16px 10px;
-  flex-shrink: 0;
-}
-
-.island-yard-acts .island-btn {
-  flex: 1;
-  min-width: 0;
+  margin: 0 0 10px;
 }
 
 .island-harvest-fab {

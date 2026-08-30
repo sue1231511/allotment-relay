@@ -175,7 +175,10 @@ def farm_parcel(view: dict[str, Any], raw: dict[str, Any] | None = None) -> dict
         "remain_sec": remain_seconds(raw, view),
         "can_sow": view.get("state") == "fallow",
         "can_water": view.get("state") in ("growing", "tending") and not view.get("watered"),
+        "can_tend": view.get("state") in ("growing", "tending") and not view.get("tended"),
+        "can_fertilize": view.get("state") in ("growing", "tending") and not view.get("fertilized"),
         "can_harvest": view.get("state") in ("ready", "overripe"),
+        "shake": bool(view.get("shake")),
     }
 
 
