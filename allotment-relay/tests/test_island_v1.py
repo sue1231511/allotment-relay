@@ -761,7 +761,7 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-bar-list1" in html
+    assert "island-theater-art1" in html
     assert "/static/island/tap.js" in html
     assert "/static/island/boot.js" in html
     assert 'id="island-enter"' in html
@@ -1181,6 +1181,23 @@ def test_island_page_is_modular() -> None:
     assert (ROOT / "server/static/island/assets/scenes/bar.png").exists()
     assert (ROOT / "server/static/island/assets/scenes/plaza.png").exists()
     assert (ROOT / "server/static/island/assets/scenes/theater.png").exists()
+    assert (ROOT / "server/static/island/assets/scenes/writers.png").exists()
+    assert (ROOT / "server/static/island/assets/scenes/atelier.png").exists()
+    assert (ROOT / "server/static/island/assets/scenes/hall.png").exists()
+    art_js = (ROOT / "server/static/island/ui/art.js").read_text(encoding="utf-8")
+    assert 'writers: { label: "编剧社", size: "941×1672" }' in art_js
+    assert 'atelier: { label: "衣泊坊", size: "941×1672" }' in art_js
+    assert 'hall: { label: "剧场看台", size: "941×1672" }' in art_js
+    assert 'file: "theater"' not in art_js
+    art_md = (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
+    assert "暂用院景" not in art_md
+    try:
+        from PIL import Image
+        for place in ("writers", "atelier", "hall"):
+            pic = ROOT / f"server/static/island/assets/scenes/{place}.png"
+            assert Image.open(pic).size == (941, 1672), place
+    except ImportError:
+        pass
     assert "港口" in (ROOT / "server/static/island/map.js").read_text(encoding="utf-8")
     assert "剧场" in (ROOT / "server/static/island/map.js").read_text(encoding="utf-8")
     assert "is-theater" in css

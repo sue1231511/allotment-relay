@@ -30,7 +30,7 @@ export function renderWriters(root, { onAct, onSwitchTab, onOpenShelf, onCloseSh
     `;
     hideActionBar();
     const wrap = root.querySelector(".island-writers");
-    layoutCoverBoard(wrap, ".island-shop-board", 1080, 1920);
+    layoutCoverBoard(wrap, ".island-shop-board", 941, 1672);
     bindPeek(wrap, onOpenShelf);
     return;
   }

@@ -30,7 +30,7 @@ export function renderAtelier(root, { onAct, onSwitchTab, onOpenShelf, onCloseSh
     `;
     hideActionBar();
     const wrap = root.querySelector(".island-atelier");
-    layoutCoverBoard(wrap, ".island-shop-board", 1080, 1920);
+    layoutCoverBoard(wrap, ".island-shop-board", 941, 1672);
     bindPeek(wrap, onOpenShelf);
     return;
   }
