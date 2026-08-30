@@ -53,8 +53,14 @@ def classify(exc: BaseException) -> ApiError:
         return ApiError("NOT_ENROLLED", "还没起岛上的名字。", status=403, detail=msg)
     if "精力不足" in raw:
         return ApiError("ENERGY_LOW", "精力不够了。回家吃饭、下馆子或睡一觉再来。", status=409, detail=msg)
-    if "缺少" in raw:
+    if "缺少" in raw or "缺材料" in raw or raw.startswith("缺："):
         return ApiError("ITEM_REQUIRED", msg or "行囊里没有需要的东西。", status=409, detail=msg)
+    if "开池要" in raw:
+        return ApiError("TICKETS_LOW", msg or "工分票不够。", status=409, detail=msg)
+    if "砧上是空的" in raw or "还没好" in raw or "正在打" in raw or "已经好了" in raw:
+        return ApiError("NOT_READY", msg or "砧上这会儿动不了。", status=409, detail=msg)
+    if "滩上没风暴货" in raw or "打捞已满" in raw or "刚捞过" in raw:
+        return ApiError("NOT_READY", msg or "这会儿捞不了。", status=409, detail=msg)
     if "工分票不足" in raw or "撒网需要" in raw or "坐钓需要" in raw:
         return ApiError("TICKETS_LOW", msg or "工分票不够。", status=409, detail=msg)
     if "需要" in raw and "票" in raw and "只有" in raw:

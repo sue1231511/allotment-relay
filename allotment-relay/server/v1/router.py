@@ -7,7 +7,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from . import farm_service, lounge_service, place_service, session_service, shore_service, shop_service
+from . import farm_service, lounge_service, place_service, session_service, shore_service, shop_service, workshop_service
 from . import idempotency
 from .auth import extract_api_key, key_row, require_enrolled
 from .errors import ApiError
@@ -67,6 +67,12 @@ class ShopBuyBody(BaseModel):
 class VendBody(BaseModel):
     item: str = ""
     qty: int = 1
+    api_key: str = ""
+
+
+class WorkshopActBody(BaseModel):
+    kind: str = ""
+    target: str = ""
     api_key: str = ""
 
 
@@ -373,6 +379,33 @@ async def shop_buy(request: Request, body: ShopBuyBody):
         row, _ = await require_enrolled(key)
         result = await shop_service.buy(key, int(row["id"]), item, body.qty)
         await idempotency.store(sid, f"shop:{item}:{body.qty}", _idem_key(request), 200, result)
+        return result
+    except ApiError as exc:
+        return _error(exc)
+
+
+@router.get("/workshop")
+async def workshop_status(request: Request):
+    try:
+        key = extract_api_key(request)
+        row, _ = await require_enrolled(key)
+        return await workshop_service.snapshot(key, int(row["id"]))
+    except ApiError as exc:
+        return _error(exc)
+
+
+@router.post("/workshop/act")
+async def workshop_act(request: Request, body: WorkshopActBody):
+    try:
+        key = extract_api_key(request, body.api_key)
+        kind = (body.kind or "").strip()
+        target = (body.target or "").strip()
+        sid, cached = await _write_guard(request, key, f"workshop:{kind}:{target}")
+        if cached:
+            return _cached_response(cached)
+        row, _ = await require_enrolled(key)
+        result = await workshop_service.act(key, int(row["id"]), kind, target)
+        await idempotency.store(sid, f"workshop:{kind}:{target}", _idem_key(request), 200, result)
         return result
     except ApiError as exc:
         return _error(exc)

@@ -41,6 +41,8 @@ export const state = {
   shore: null,
   shop: null,
   shopTab: "seed",
+  workshop: null,
+  workshopTab: "anvil",
   busy: false,
 };
 
@@ -52,6 +54,7 @@ export function applySnapshot(data) {
   if (data.world) state.world = data.world;
   if (data.shore) state.shore = data.shore;
   if (data.shop) state.shop = data.shop;
+  if (data.workshop) state.workshop = data.workshop;
 }
 
 export function yardMeta(kind = state.yard) {
@@ -143,6 +146,22 @@ export function growingYard(kind = state.yard) {
 
 export function growingHome() {
   return growingYard("home");
+}
+
+export function tickWorkshop(seconds = 1) {
+  const job = state.workshop && state.workshop.job;
+  if (!job || job.ready) return false;
+  job.remain_sec = Math.max(0, (job.remain_sec || 0) - seconds);
+  if (job.remain_sec === 0) {
+    job.ready = true;
+    job.can_take = true;
+    job.note = "好了，可以取";
+    state.workshop.line = `砧上：${job.name} 好了`;
+    return true;
+  }
+  const n = job.remain_sec;
+  job.note = n < 60 ? `还要 ${n} 秒` : `还要 ${Math.ceil(n / 60)} 分`;
+  return false;
 }
 
 export function tickGrow(seconds = 1) {
