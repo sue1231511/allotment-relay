@@ -486,11 +486,11 @@ def test_island_page_is_modular() -> None:
     assert "island-hot" in css
     assert "island-map-board" in css
     assert "is-playing" in css
-    assert "不裁切" in css
-    assert "和顶栏一样宽" in css
+    assert "铺满一屏" in css
+    assert "底下不漏色" in css
     assert "max-width: 480px" in css
-    assert "cw / iw" in map_js
-    assert "Math.min(cw / iw, ch / ih)" not in map_js
+    assert "sW = cw / iw" in map_js
+    assert "Math.max(sW, sH" in map_js
     assert "is-playing" in (ROOT / "server/static/island/boot.js").read_text(encoding="utf-8")
     assert "island-place" in css
     assert "island-plant-buy" in css

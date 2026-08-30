@@ -45,7 +45,7 @@ body.island-app.is-playing {
   height: 100dvh;
   height: 100vh;
   overflow: hidden;
-  background: #8ed3e2;
+  background: #b0b7a7;
 }
 
 body.island-app.is-playing .island-root {
@@ -56,7 +56,7 @@ body.island-app.is-playing .island-root {
   min-height: 100dvh;
   padding: 0;
   overflow: hidden;
-  background: #8ed3e2;
+  background: #b0b7a7;
 }
 
 .island-hud {
@@ -262,6 +262,7 @@ body.island-app.is-playing .island-scene {
   min-height: 0;
   border-radius: 0;
   box-shadow: none;
+  background: #b0b7a7;
 }
 
 body.island-app.is-playing .island-actionbar {
@@ -403,13 +404,13 @@ body.island-app.is-playing.is-yards .island-actionbar {
 .island-slot-mark b { font-size: 14px; }
 .island-slot-mark small { font-size: 11px; color: #5b7377; }
 
-/* 总览地图：和顶栏一样宽，按 972×1619 比例往下排，太高就滚，不裁切 */
+/* 总览地图：铺满一屏，底下不漏色。太高就滚。小屋到井下仍看得见。 */
 .island-map {
   position: absolute;
   inset: 0;
   overflow-x: hidden;
   overflow-y: auto;
-  background: #8ed3e2;
+  background: #b0b7a7;
   -webkit-overflow-scrolling: touch;
 }
 

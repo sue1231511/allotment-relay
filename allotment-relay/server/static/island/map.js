@@ -67,12 +67,17 @@ function layoutMapBoard(map) {
     const iw = img.naturalWidth || 972;
     const ih = img.naturalHeight || 1619;
     const cw = map.clientWidth;
+    const ch = map.clientHeight;
     if (!cw) return;
-    /* 和顶栏一样宽：按宽度缩放 972×1619，高度跟比例走，太高就在图上滚，不裁切。 */
-    const s = cw / iw;
-    board.style.width = `${cw}px`;
-    board.style.height = `${Math.round(ih * s)}px`;
-    board.style.left = "0px";
+    /* 铺满一屏：至少和屏幕一样宽、一样高，底下不漏色。太高才往下滚。 */
+    const sW = cw / iw;
+    const sH = ch / ih;
+    const s = Math.max(sW, sH || 0);
+    const bw = Math.round(iw * s);
+    const bh = Math.round(ih * s);
+    board.style.width = `${bw}px`;
+    board.style.height = `${bh}px`;
+    board.style.left = `${Math.round((cw - bw) / 2)}px`;
     board.style.top = "0px";
   };
   apply();
