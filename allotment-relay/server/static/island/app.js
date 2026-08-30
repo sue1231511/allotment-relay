@@ -19,7 +19,7 @@ import { renderShop } from "./scenes/shop.js";
 import { renderBag } from "./ui/bag.js";
 import { setBackChip, setBagChip } from "./ui/back-map.js";
 import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js";
-import { careActs, hideModal, showBuySheet, showCareSheet, showExpandSheet, showEvent, toast } from "./ui/modal.js";
+import { careActs, hideModal, showBuySheet, showCareSheet, showExpandSheet, showEvent, showVendSheet, toast } from "./ui/modal.js";
 
 const sceneEl = () => document.getElementById("island-scene");
 const sheetEl = () => document.getElementById("island-sheet");
@@ -185,13 +185,13 @@ async function openShop(root) {
   if (!tabs.some((row) => row.key === state.shopTab)) {
     state.shopTab = (tabs[0] && tabs[0].key) || "seed";
   }
-  renderShop(root, { onBuy: tapShopSku, onSwitchTab: switchShopTab });
+  paintShop();
 }
 
 function switchShopTab(tab) {
   state.shopTab = tab || "seed";
   hideModal();
-  renderShop(sceneEl(), { onBuy: tapShopSku, onSwitchTab: switchShopTab });
+  paintShop(0);
 }
 
 function tapShopSku(item) {
@@ -203,9 +203,23 @@ function tapShopSku(item) {
   showBuySheet(item, { onConfirm: () => buyShopSku(item) });
 }
 
+function shopListTop() {
+  const list = document.getElementById("island-shop-list");
+  return list ? list.scrollTop : 0;
+}
+
+function paintShop(listTop = 0) {
+  renderShop(sceneEl(), {
+    onBuy: tapShopSku,
+    onSwitchTab: switchShopTab,
+    listTop,
+  });
+}
+
 async function buyShopSku(item) {
   if (!item) return;
-  await act(() => api.shopBuy(item.id, 1), { refreshScene: true });
+  const listTop = shopListTop();
+  await act(() => api.shopBuy(item.id, 1), { keepShop: true, listTop, quiet: true });
 }
 
 function tapGrass() {
@@ -374,22 +388,46 @@ async function runPlotBatch(plots, fn, manyTitle, oneTitle) {
   }
 }
 
+function bagHandlers() {
+  return { onEat: eatItem, onVend: tapVend };
+}
+
 async function eatItem(item) {
   await act(() => api.eat(item), { keepTab: true });
 }
 
-async function act(fn, { refreshScene = false, keepPlant = false, keepTab = false } = {}) {
+function tapVend(item) {
+  if (!item) return;
+  if (item.can_vend === false) {
+    toast("这件不能从行囊卖掉。家具回小屋卖掉。");
+    return;
+  }
+  showVendSheet(item, { onConfirm: () => vendItem(item) });
+}
+
+async function vendItem(item) {
+  const name = (item && (item.name || item.item)) || "";
+  if (!name) return;
+  await act(() => api.vend(name, 1), { keepTab: true });
+}
+
+async function act(fn, { refreshScene = false, keepPlant = false, keepTab = false, keepShop = false, listTop = null, quiet = false } = {}) {
   if (state.busy) return;
   state.busy = true;
   try {
     const data = await fn();
     applySnapshot(data);
     renderHud();
-    if (data.event) showEvent(data.event);
+    if (data.event && !quiet) showEvent(data.event);
+    else if (quiet && data.event && data.event.narrative) toast(data.event.narrative);
     if (!keepPlant) closePlant();
     else state.plantOpen = true;
     if (keepTab) {
-      if (state.tab === "bag") renderBag(sheetEl(), { onEat: eatItem });
+      if (state.tab === "bag") renderBag(sheetEl(), bagHandlers());
+      return;
+    }
+    if (keepShop && state.scene === "shop") {
+      paintShop(listTop);
       return;
     }
     if (refreshScene || LIVE_SCENES.includes(state.scene)) {
@@ -466,7 +504,7 @@ async function openTab(tab) {
   state.tab = "bag";
   markDock("bag");
   closePlant();
-  renderBag(sheet, { onEat: eatItem });
+  renderBag(sheet, bagHandlers());
 }
 
 async function startFromSnapshot(data, scene) {

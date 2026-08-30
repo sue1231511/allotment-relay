@@ -115,6 +115,13 @@ async def _test_island_v1_api() -> None:
     assert shop_buy.status_code == 200, shop_buy.text
     assert shop_buy.json()["event"]["kind"] == "shop"
     assert any(row["id"] == "seed_kale" for row in shop_buy.json()["shop"]["items"])
+    seed_row = next(
+        it for it in (shop_buy.json()["me"]["stock"] or [])
+        if it.get("item") == "seed_kale"
+    )
+    assert seed_row["can_vend"] is True
+    assert seed_row["can_eat"] is False
+    assert int(seed_row.get("vend_price") or 0) > 0
 
     wrong_yard = client.post(
         "/api/v1/farm/parcels/园1/sow",
@@ -271,9 +278,32 @@ async def _test_island_v1_api() -> None:
         str(it.get("item") or "").startswith("kale") or "甘蓝" in str(it.get("name") or "")
         for it in bag
     ), bag
+    kale_row = next(
+        it for it in bag
+        if it.get("item") in ("crop_kale", "seed_kale")
+    )
+    assert kale_row["can_vend"] is True
+    assert kale_row["can_eat"] is False
 
     mcp_bag = await play_mod.run_play(key, "tote_ops", "list")
     assert "甘蓝" in (mcp_bag.get("text") or ""), mcp_bag.get("text")
+
+    sold = client.post(
+        "/api/v1/tote/vend",
+        headers=_auth(key, {"Idempotency-Key": "vend-kale-1"}),
+        json={"item": kale_row["name"], "qty": 1},
+    )
+    assert sold.status_code == 200, sold.text
+    assert sold.json()["event"]["kind"] == "tote"
+    sold_bag = sold.json()["me"]["stock"]
+    leftover = next(
+        (
+            it for it in sold_bag
+            if it.get("item") == kale_row["item"]
+        ),
+        None,
+    )
+    assert leftover is None or int(leftover.get("qty") or 0) < int(kale_row.get("qty") or 0)
 
     # 点哪块种哪块：按 slot 顺序把三块都种上，就没有 can_sow。
     empty = sorted(
@@ -719,6 +749,14 @@ def test_island_page_is_modular() -> None:
     assert not (ROOT / "server/static/island/assets/back-map.png").exists()
     assert "api.buy" in app
     assert "api.eat" in app
+    assert "api.vend" in app
+    assert "keepShop" in app
+    assert "showVendSheet" in app
+    bag_js = (ROOT / "server/static/island/ui/bag.js").read_text(encoding="utf-8")
+    assert "data-eat" in bag_js
+    assert "data-vend" in bag_js
+    assert "左边吃，右边卖" in bag_js
+    assert "data-vend" in bag_js
     assert "交岸税" not in app
     assert "洗碗" not in app
     assert "只铺图和地名" in (ROOT / "server/static/island/scenes/place.js").read_text(encoding="utf-8")
@@ -742,6 +780,7 @@ def test_island_page_is_modular() -> None:
     assert "/api/v1/hut/sleep" in api
     assert "/api/v1/bar/work" in api
     assert "/api/v1/kitchen/eat" in api
+    assert "/api/v1/tote/vend" in api
     assert "/api/v1/hui/pay" in api
     assert (ROOT / "server/static/island/scenes/home.js").exists()
     assert (ROOT / "server/static/island/scenes/place.js").exists()
@@ -823,7 +862,12 @@ def test_island_page_is_modular() -> None:
     assert "api.shopBuy" in app
     assert "showBuySheet" in app
     assert "renderShop" in app
+    assert "listTop" in shop_js
+    assert "paintShopList" in shop_js
+    assert "querySelector(\".island-shop\")" in shop_js
+    assert "refreshScene: true" not in app
     assert "/api/v1/shop/buy" in api
+    assert "/api/v1/tote/vend" in api
     assert 'lighthouse: "灯塔"' in app
     assert 'notice: "潮汐公告"' in app
     assert "state.backTo" in app
@@ -838,6 +882,7 @@ def test_island_page_is_modular() -> None:
     assert "941 / 1672" in css
     assert ".island-shop .island-slot" in css
     assert "island-shop-meta" in css
+    assert "island-item-acts" in css
     assert "object-position: center 38%" in css
     assert "/play?go=star" not in app
     assert (ROOT / "server/static/island/assets/plot.png").exists()

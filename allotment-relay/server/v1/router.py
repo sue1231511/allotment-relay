@@ -64,6 +64,12 @@ class ShopBuyBody(BaseModel):
     api_key: str = ""
 
 
+class VendBody(BaseModel):
+    item: str = ""
+    qty: int = 1
+    api_key: str = ""
+
+
 def _error(exc: ApiError) -> JSONResponse:
     return JSONResponse(exc.as_dict(), status_code=exc.status)
 
@@ -325,6 +331,22 @@ async def kitchen_eat(request: Request, body: EatBody):
         row, _ = await require_enrolled(key)
         result = await place_service.eat(key, int(row["id"]), body.item)
         await idempotency.store(sid, f"eat:{body.item}", _idem_key(request), 200, result)
+        return result
+    except ApiError as exc:
+        return _error(exc)
+
+
+@router.post("/tote/vend")
+async def tote_vend(request: Request, body: VendBody):
+    try:
+        key = extract_api_key(request, body.api_key)
+        item = (body.item or "").strip()
+        sid, cached = await _write_guard(request, key, f"vend:{item}:{body.qty}")
+        if cached:
+            return _cached_response(cached)
+        row, _ = await require_enrolled(key)
+        result = await place_service.vend(key, int(row["id"]), item, body.qty)
+        await idempotency.store(sid, f"vend:{item}:{body.qty}", _idem_key(request), 200, result)
         return result
     except ApiError as exc:
         return _error(exc)

@@ -75,6 +75,7 @@ export const api = {
   buildHut: (idem) => req("/api/v1/hut/build", { method: "POST", body: {}, idem }),
   work: (idem) => req("/api/v1/bar/work", { method: "POST", body: {}, idem }),
   eat: (item, idem) => req("/api/v1/kitchen/eat", { method: "POST", body: { item }, idem }),
+  vend: (item, qty = 1, idem) => req("/api/v1/tote/vend", { method: "POST", body: { item, qty }, idem }),
   pay: (kind, idem) => req("/api/v1/hui/pay", { method: "POST", body: { kind }, idem }),
   shore: (mode, idem) => req("/api/v1/shore/cast", { method: "POST", body: { mode }, idem }),
   messages: () => req("/api/v1/lounge/messages"),
