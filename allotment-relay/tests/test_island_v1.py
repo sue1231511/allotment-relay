@@ -690,6 +690,18 @@ def test_island_page_is_modular() -> None:
     assert "is-yards" in css
     assert ".island-back-map" not in css
     assert ".island-care-acts" in css
+    assert "prompt-frame.png" in css
+    assert "island-card-inner" in css
+    modal_js = (ROOT / "server/static/island/ui/modal.js").read_text(encoding="utf-8")
+    assert "island-card-inner" in modal_js
+    assert "cardMarkup" in modal_js
+    frame = ROOT / "server/static/island/assets/prompt-frame.png"
+    assert frame.exists()
+    try:
+        from PIL import Image
+        assert Image.open(frame).size == (840, 840)
+    except ImportError:
+        pass
     assert ".island-yard-acts" not in css
     assert ".island-float-chip" in css
     assert ".island-back-chip" not in css

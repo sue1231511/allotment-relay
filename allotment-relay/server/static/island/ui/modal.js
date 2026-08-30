@@ -3,13 +3,11 @@ export function showEvent(event) {
   const root = document.getElementById("island-modal");
   if (!root) return;
   root.hidden = false;
-  root.innerHTML = `
-    <article class="island-card">
+  root.innerHTML = cardMarkup(`
       <h3>${esc(event.title || "岛上")}</h3>
       <p>${esc(event.narrative || "")}</p>
       <button type="button" class="island-btn primary wide" data-close-modal>收下</button>
-    </article>
-  `;
+  `);
   root.querySelector("[data-close-modal]").addEventListener("click", hideModal);
   root.addEventListener("click", (ev) => {
     if (ev.target === root) hideModal();
@@ -48,16 +46,14 @@ export function showCareSheet(plot, { onAct, onClose } = {}) {
     : `#${plot.slot}`;
   const crop = plot.name || "作物";
   root.hidden = false;
-  root.innerHTML = `
-    <article class="island-card island-care">
+  root.innerHTML = cardMarkup(`
       <h3>${esc(title)} · ${esc(crop)}</h3>
       <p>${esc(plot.detail || "选一项。")}</p>
       <div class="island-care-acts">
         ${acts.map((a) => `<button type="button" class="island-btn ${a.primary ? "primary" : ""} wide" data-care="${esc(a.id)}">${esc(a.label)}</button>`).join("")}
       </div>
       <button type="button" class="island-btn wide" data-close-modal>先不忙</button>
-    </article>
-  `;
+  `, "island-care");
   const close = () => {
     hideModal();
     if (onClose) onClose();
@@ -81,16 +77,14 @@ export function showExpandSheet(snap, { onConfirm, onClose } = {}) {
   const token = offer.token || "";
   const word = (snap && snap.next_word) || "下一块";
   root.hidden = false;
-  root.innerHTML = `
-    <article class="island-card island-care">
+  root.innerHTML = cardMarkup(`
       <h3>开垦草地</h3>
       <p>${esc(word)} ${esc(token)} · ${esc(offer.cost)} 票 · 开垦 ${esc(offer.clear_eta || "一会儿")}</p>
       <div class="island-care-acts">
         <button type="button" class="island-btn primary wide" data-act="confirm">确认开垦</button>
       </div>
       <button type="button" class="island-btn wide" data-close-modal>先不忙</button>
-    </article>
-  `;
+  `, "island-care");
   const close = () => {
     hideModal();
     if (onClose) onClose();
@@ -111,16 +105,14 @@ export function showBuySheet(item, { onConfirm, onClose } = {}) {
   const label = (item && (item.label || item.name)) || "这件";
   const price = item && item.price != null ? item.price : "—";
   root.hidden = false;
-  root.innerHTML = `
-    <article class="island-card island-care">
+  root.innerHTML = cardMarkup(`
       <h3>买下来</h3>
       <p>${esc(label)} · ${esc(price)} 票</p>
       <div class="island-care-acts">
         <button type="button" class="island-btn primary wide" data-act="confirm">确认买</button>
       </div>
       <button type="button" class="island-btn wide" data-close-modal>先不忙</button>
-    </article>
-  `;
+  `, "island-care");
   const close = () => {
     hideModal();
     if (onClose) onClose();
@@ -133,6 +125,13 @@ export function showBuySheet(item, { onConfirm, onClose } = {}) {
   root.addEventListener("click", (ev) => {
     if (ev.target === root) close();
   }, { once: true });
+}
+
+function cardMarkup(inner, extraClass) {
+  const cls = extraClass ? `island-card ${extraClass}` : "island-card";
+  return `<article class="${cls}" role="dialog">
+    <div class="island-card-inner">${inner}</div>
+  </article>`;
 }
 
 export function hideModal() {

@@ -1134,21 +1134,40 @@ body.island-app.is-playing.is-yards .island-actionbar {
   inset: 0;
   background: rgba(35, 48, 56, .42);
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
+  padding: 18px 8px;
+  box-sizing: border-box;
   z-index: 9;
 }
 
+/* 海贝金边提示框：字和按钮落在中间奶油格里，别压到贝壳珍珠。 */
 .island-card {
-  width: min(480px, 100%);
-  background: #fbfaf6;
-  border-radius: 20px 20px 0 0;
-  padding: 18px 16px calc(20px + env(safe-area-inset-bottom));
+  width: min(400px, calc(100% - 8px));
+  max-height: min(86dvh, 560px);
+  aspect-ratio: 1;
+  background: url("/static/island/assets/prompt-frame.png") center / 100% 100% no-repeat;
+  background-color: transparent;
+  border-radius: 0;
+  padding: 0;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 }
 
-.island-card h3 { margin: 0 0 8px; font-size: 18px; }
-.island-card p { margin: 0 0 14px; line-height: 1.55; word-break: break-word; }
+.island-card-inner {
+  flex: 1;
+  min-height: 0;
+  margin: 24% 12% 22%;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+
+.island-card h3 { margin: 0 0 8px; font-size: 18px; flex-shrink: 0; }
+.island-card p { margin: 0 0 12px; line-height: 1.55; word-break: break-word; }
+.island-card .island-btn { min-height: 44px; }
+.island-card .island-care-acts { flex-shrink: 0; }
 
 .island-toast {
   position: fixed;
@@ -1347,7 +1366,7 @@ body.island-app.is-playing.is-yards .island-actionbar {
   .island-hud { padding-left: 10px; padding-right: 10px; }
   .island-meter { min-width: 56px; padding: 6px 8px; }
   .island-pin { min-width: 80px; }
-  .island-root, .island-dock, .island-sheet, .island-card { width: 100%; }
+  .island-root, .island-dock, .island-sheet { width: 100%; }
 }
 
 @media (min-width: 720px) {
