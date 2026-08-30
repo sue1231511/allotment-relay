@@ -668,7 +668,7 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-tap1" in html
+    assert "island-pop1" in html
     assert "/static/island/tap.js" in html
     assert "/static/island/boot.js" in html
     assert 'id="island-enter"' in html
@@ -871,6 +871,14 @@ def test_island_page_is_modular() -> None:
     assert "island-spark" in css
     assert ".is-tap" in css
     assert "island-spark-fly" in css
+    assert "island-pop-in" in css
+    assert "island-pop-out" in css
+    pop_js = (ROOT / "server/static/island/ui/pop.js").read_text(encoding="utf-8")
+    assert "function popIn" in pop_js
+    assert "function popOut" in pop_js
+    modal_js = (ROOT / "server/static/island/ui/modal.js").read_text(encoding="utf-8")
+    assert "paintModal" in modal_js
+    assert "popOut" in modal_js
     assert "交岸税" not in app
     assert "洗碗" not in app
     assert "只铺图和地名" in (ROOT / "server/static/island/scenes/place.js").read_text(encoding="utf-8")

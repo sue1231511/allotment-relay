@@ -1,13 +1,21 @@
+import { popIn, popOut } from "./pop.js";
+
+function paintModal(html) {
+  const root = document.getElementById("island-modal");
+  if (!root) return null;
+  root.innerHTML = html;
+  popIn(root);
+  return root;
+}
+
 export function showEvent(event) {
   if (!event) return;
-  const root = document.getElementById("island-modal");
-  if (!root) return;
-  root.hidden = false;
-  root.innerHTML = cardMarkup(`
+  const root = paintModal(cardMarkup(`
       <h3>${esc(event.title || "岛上")}</h3>
       <p>${esc(event.narrative || "")}</p>
       <button type="button" class="island-btn primary wide" data-close-modal>收下</button>
-  `);
+  `));
+  if (!root) return;
   root.querySelector("[data-close-modal]").addEventListener("click", hideModal);
   root.addEventListener("click", (ev) => {
     if (ev.target === root) hideModal();
@@ -38,22 +46,20 @@ export function careActs(plot) {
 }
 
 export function showCareSheet(plot, { onAct, onClose } = {}) {
-  const root = document.getElementById("island-modal");
-  if (!root) return;
   const acts = careActs(plot);
   const title = plot.token && /[园棚]/.test(String(plot.token))
     ? String(plot.token)
     : `#${plot.slot}`;
   const crop = plot.name || "作物";
-  root.hidden = false;
-  root.innerHTML = cardMarkup(`
+  const root = paintModal(cardMarkup(`
       <h3>${esc(title)} · ${esc(crop)}</h3>
       <p>${esc(plot.detail || "选一项。")}</p>
       <div class="island-care-acts">
         ${acts.map((a) => `<button type="button" class="island-btn ${a.primary ? "primary" : ""} wide" data-care="${esc(a.id)}">${esc(a.label)}</button>`).join("")}
       </div>
       <button type="button" class="island-btn wide" data-close-modal>先不忙</button>
-  `, "island-care");
+  `, "island-care"));
+  if (!root) return;
   const close = () => {
     hideModal();
     if (onClose) onClose();
@@ -71,20 +77,18 @@ export function showCareSheet(plot, { onAct, onClose } = {}) {
 }
 
 export function showExpandSheet(snap, { onConfirm, onClose } = {}) {
-  const root = document.getElementById("island-modal");
-  if (!root) return;
   const offer = (snap && snap.offer) || {};
   const token = offer.token || "";
   const word = (snap && snap.next_word) || "下一块";
-  root.hidden = false;
-  root.innerHTML = cardMarkup(`
+  const root = paintModal(cardMarkup(`
       <h3>开垦草地</h3>
       <p>${esc(word)} ${esc(token)} · ${esc(offer.cost)} 票 · 开垦 ${esc(offer.clear_eta || "一会儿")}</p>
       <div class="island-care-acts">
         <button type="button" class="island-btn primary wide" data-act="confirm">确认开垦</button>
       </div>
       <button type="button" class="island-btn wide" data-close-modal>先不忙</button>
-  `, "island-care");
+  `, "island-care"));
+  if (!root) return;
   const close = () => {
     hideModal();
     if (onClose) onClose();
@@ -100,19 +104,17 @@ export function showExpandSheet(snap, { onConfirm, onClose } = {}) {
 }
 
 export function showVendSheet(item, { onConfirm, onClose } = {}) {
-  const root = document.getElementById("island-modal");
-  if (!root) return;
   const label = (item && (item.label || item.name || item.item)) || "这件";
   const price = item && item.vend_price != null ? item.vend_price : "—";
-  root.hidden = false;
-  root.innerHTML = cardMarkup(`
+  const root = paintModal(cardMarkup(`
       <h3>卖掉</h3>
       <p>${esc(label)} · 回收 ${esc(price)} 票</p>
       <div class="island-care-acts">
         <button type="button" class="island-btn primary wide" data-act="confirm">确认卖</button>
       </div>
       <button type="button" class="island-btn wide" data-close-modal>先不忙</button>
-  `, "island-care");
+  `, "island-care"));
+  if (!root) return;
   const close = () => {
     hideModal();
     if (onClose) onClose();
@@ -128,14 +130,12 @@ export function showVendSheet(item, { onConfirm, onClose } = {}) {
 }
 
 export function showHintSheet({ title, body, onClose } = {}) {
-  const root = document.getElementById("island-modal");
-  if (!root) return;
-  root.hidden = false;
-  root.innerHTML = cardMarkup(`
+  const root = paintModal(cardMarkup(`
       <h3>${esc(title || "岸工坊")}</h3>
       <p>${esc(body || "")}</p>
       <button type="button" class="island-btn primary wide" data-close-modal>知道了</button>
-  `, "island-care");
+  `, "island-care"));
+  if (!root) return;
   const close = () => {
     hideModal();
     if (onClose) onClose();
@@ -147,17 +147,15 @@ export function showHintSheet({ title, body, onClose } = {}) {
 }
 
 export function showActSheet({ title, body, confirm, onConfirm, onClose } = {}) {
-  const root = document.getElementById("island-modal");
-  if (!root) return;
-  root.hidden = false;
-  root.innerHTML = cardMarkup(`
+  const root = paintModal(cardMarkup(`
       <h3>${esc(title || "确认")}</h3>
       <p>${esc(body || "做这一下？")}</p>
       <div class="island-care-acts">
         <button type="button" class="island-btn primary wide" data-act="confirm">${esc(confirm || "确认")}</button>
       </div>
       <button type="button" class="island-btn wide" data-close-modal>先不忙</button>
-  `, "island-care");
+  `, "island-care"));
+  if (!root) return;
   const close = () => {
     hideModal();
     if (onClose) onClose();
@@ -173,19 +171,17 @@ export function showActSheet({ title, body, confirm, onConfirm, onClose } = {}) 
 }
 
 export function showBuySheet(item, { onConfirm, onClose } = {}) {
-  const root = document.getElementById("island-modal");
-  if (!root) return;
   const label = (item && (item.label || item.name)) || "这件";
   const price = item && item.price != null ? item.price : "—";
-  root.hidden = false;
-  root.innerHTML = cardMarkup(`
+  const root = paintModal(cardMarkup(`
       <h3>买下来</h3>
       <p>${esc(label)} · ${esc(price)} 票</p>
       <div class="island-care-acts">
         <button type="button" class="island-btn primary wide" data-act="confirm">确认买</button>
       </div>
       <button type="button" class="island-btn wide" data-close-modal>先不忙</button>
-  `, "island-care");
+  `, "island-care"));
+  if (!root) return;
   const close = () => {
     hideModal();
     if (onClose) onClose();
@@ -210,8 +206,9 @@ function cardMarkup(inner, extraClass) {
 export function hideModal() {
   const root = document.getElementById("island-modal");
   if (!root) return;
-  root.hidden = true;
-  root.innerHTML = "";
+  popOut(root, () => {
+    root.innerHTML = "";
+  });
 }
 
 export function toast(text) {
@@ -223,6 +220,9 @@ export function toast(text) {
   if (!el) return;
   el.hidden = false;
   el.removeAttribute("hidden");
+  el.classList.remove("is-pop");
+  void el.offsetWidth;
+  el.classList.add("is-pop");
   el.textContent = text;
   clearTimeout(el._t);
   el._t = setTimeout(() => { el.hidden = true; }, 3200);

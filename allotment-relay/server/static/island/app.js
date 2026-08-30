@@ -23,6 +23,7 @@ import { renderQuarry } from "./scenes/quarry.js";
 import { renderBag } from "./ui/bag.js";
 import { setBackChip, setBagChip } from "./ui/back-map.js";
 import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js";
+import { popOut } from "./ui/pop.js";
 import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showExpandSheet, showEvent, showHintSheet, showVendSheet, toast } from "./ui/modal.js";
 
 const sceneEl = () => document.getElementById("island-scene");
@@ -80,7 +81,7 @@ async function enterScene(name) {
   state.scene = name;
   state.tab = "map";
   markDock("");
-  hideSheet();
+  hideSheet({ instant: true });
   if (name !== "yards") {
     closePlant();
     hideModal();
@@ -777,12 +778,25 @@ function stopGrowTick() {
   growTimer = 0;
 }
 
-function hideSheet() {
+function hideSheet({ instant = false } = {}) {
   const sheet = sheetEl();
-  sheet.hidden = true;
-  sheet.classList.remove("is-bag");
-  document.body.classList.remove("is-bag-open");
-  sheet.innerHTML = "";
+  if (!sheet) return;
+  const finish = () => {
+    if (sheet._popTimer) {
+      window.clearTimeout(sheet._popTimer);
+      sheet._popTimer = 0;
+      sheet._popOut = false;
+    }
+    sheet.hidden = true;
+    sheet.classList.remove("is-bag", "is-pop", "is-out");
+    document.body.classList.remove("is-bag-open");
+    sheet.innerHTML = "";
+  };
+  if (instant || sheet.hidden || !sheet.classList.contains("is-bag")) {
+    finish();
+    return;
+  }
+  popOut(sheet, finish);
 }
 
 function markDock(tab) {

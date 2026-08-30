@@ -1,6 +1,7 @@
 import { neighborCrop, cropArt } from "./crops.js";
 import { panelCrops, panelSubtitle, selectedPlot, state, yardMeta } from "../store.js";
 import { esc } from "./modal.js";
+import { popIn, popOut } from "./pop.js";
 
 export function renderPlantPanel(root, { onSelect, onPlant, onBuy, onClose }) {
   const crops = panelCrops();
@@ -11,7 +12,7 @@ export function renderPlantPanel(root, { onSelect, onPlant, onBuy, onClose }) {
   const meta = yardMeta();
   const prev = neighborCrop(crops, state.plantKey, -1);
   const next = neighborCrop(crops, state.plantKey, 1);
-  root.hidden = false;
+  const already = !root.hidden && !!root.querySelector(".island-plant-card");
   root.innerHTML = `
     <section class="island-plant-card" role="dialog" aria-label="${esc(meta.plant)}">
       <header class="island-plant-head">
@@ -43,6 +44,8 @@ export function renderPlantPanel(root, { onSelect, onPlant, onBuy, onClose }) {
       </button>
     </section>
   `;
+  if (already) root.hidden = false;
+  else popIn(root);
   root.querySelector("[data-act=close]").addEventListener("click", onClose);
   root.querySelector("[data-act=prev]").addEventListener("click", () => prev && onSelect(prev));
   root.querySelector("[data-act=next]").addEventListener("click", () => next && onSelect(next));
@@ -76,6 +79,7 @@ function bindSwipe(el, { onLeft, onRight }) {
 
 export function hidePlantPanel(root) {
   if (!root) return;
-  root.hidden = true;
-  root.innerHTML = "";
+  popOut(root, () => {
+    root.innerHTML = "";
+  });
 }
