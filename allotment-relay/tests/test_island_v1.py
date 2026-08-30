@@ -539,7 +539,9 @@ def test_island_page_is_modular() -> None:
     assert "left: 0" in css
     assert "min(196px, 58%)" in css
     assert "min(88px, 24%)" in css
-    assert "translate(-22%, -2%)" in css
+    assert "translateX(-22%)" in css
+    assert "height: 66px" in css
+    assert "align-items: center" in css
     home_js = (ROOT / "server/static/island/scenes/home.js").read_text(encoding="utf-8")
     yards_js = home_js.split("export function renderYards", 1)[1].split("export function", 1)[0]
     assert "island-back-map" not in yards_js
