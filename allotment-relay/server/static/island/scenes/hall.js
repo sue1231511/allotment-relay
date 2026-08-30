@@ -30,7 +30,7 @@ export function renderHall(root, { onAct, onSwitchTab, onOpenShelf, onCloseShelf
     `;
     hideActionBar();
     const wrap = root.querySelector(".island-hall");
-    layoutCoverBoard(wrap, ".island-shop-board", 1080, 1920);
+    layoutCoverBoard(wrap, ".island-shop-board", 941, 1672);
     bindPeek(wrap, onOpenShelf);
     return;
   }
