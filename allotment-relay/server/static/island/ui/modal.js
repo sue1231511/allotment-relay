@@ -105,6 +105,36 @@ export function showExpandSheet(snap, { onConfirm, onClose } = {}) {
   }, { once: true });
 }
 
+export function showBuySheet(item, { onConfirm, onClose } = {}) {
+  const root = document.getElementById("island-modal");
+  if (!root) return;
+  const label = (item && (item.label || item.name)) || "这件";
+  const price = item && item.price != null ? item.price : "—";
+  root.hidden = false;
+  root.innerHTML = `
+    <article class="island-card island-care">
+      <h3>买下来</h3>
+      <p>${esc(label)} · ${esc(price)} 票</p>
+      <div class="island-care-acts">
+        <button type="button" class="island-btn primary wide" data-act="confirm">确认买</button>
+      </div>
+      <button type="button" class="island-btn wide" data-close-modal>先不忙</button>
+    </article>
+  `;
+  const close = () => {
+    hideModal();
+    if (onClose) onClose();
+  };
+  root.querySelector("[data-close-modal]").addEventListener("click", close);
+  root.querySelector("[data-act=confirm]").addEventListener("click", () => {
+    hideModal();
+    if (onConfirm) onConfirm();
+  });
+  root.addEventListener("click", (ev) => {
+    if (ev.target === root) close();
+  }, { once: true });
+}
+
 export function hideModal() {
   const root = document.getElementById("island-modal");
   if (!root) return;

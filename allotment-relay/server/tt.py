@@ -878,3 +878,93 @@ async def _bump_ask_crop(
 
 def shopfront_line() -> str:
     return "Tt酱杂货店营业中 · 种子/饲料/渔网钓竿/蚯蚓饵/锄铲 · 送礼涨好感"
+
+
+SHELF_TABS = (
+    ("seed", "种子", ("seasoning", "seed")),
+    ("feed", "饲料", ("feed",)),
+    ("gear", "渔具", ("supply", "gear")),
+    ("tool", "工具", ("tool",)),
+    ("dowry", "嫁妆", ("dowry",)),
+)
+
+_SHELF_ALIAS = {"kale": "白菜", "beet": "胡萝卜", "fogpea": "番茄"}
+
+
+def _shelf_label(item: str) -> str:
+    if item.startswith("seed_"):
+        crop = item[5:]
+        nick = _SHELF_ALIAS.get(crop)
+        if nick:
+            return f"{nick}种"
+    return _item_label(item)
+
+
+async def shelf_view(
+    conn: aiosqlite.Connection, steward: dict[str, Any]
+) -> dict[str, Any]:
+    """手机地图货架。价钱和好感与 catalog / buy 同一套。"""
+    from . import season as season_mod
+
+    score = await _affinity(conn, steward["id"])
+    gift = await on_enter(conn, steward)
+    h = hearts(score)
+    z = zhe(h)
+    items: list[dict[str, Any]] = []
+    for item, base, kind in shop_skus():
+        extra = SHOP_EXTRAS.get(item) or {}
+        tab = next((key for key, _lab, kinds in SHELF_TABS if kind in kinds), kind)
+        if extra.get("kind") == "dowry":
+            price = int(base)
+        else:
+            price = sale_price(base, score)
+        in_season = True
+        season = ""
+        if item.startswith("seed_"):
+            crop = item[5:]
+            in_season = season_mod.crop_in_season(crop)
+            season = season_mod.season_tag(crop)
+        blocked = await _unique_blocked(conn, steward["id"], item)
+        note = ""
+        if blocked:
+            note = blocked.replace("`", "")
+            for junk in ("quarry_ops 升镐", "tide_ops gear upgrade net", "tide_ops gear upgrade rod"):
+                note = note.replace(junk, "更高档去上手页")
+            note = note.replace("tide_ops gear upgrade", "更高档去上手页")
+        elif not in_season:
+            note = season or "过季买不了"
+        elif extra.get("kind") == "dowry":
+            note = "嫁妆柜不打折"
+        elif price != base:
+            note = f"原价 {base}"
+        emoji = extra.get("emoji") or ""
+        if item.startswith("seed_"):
+            emoji = (CROPS.get(item[5:]) or {}).get("emoji") or "🌱"
+        items.append({
+            "id": item,
+            "name": _item_label(item),
+            "label": _shelf_label(item),
+            "emoji": emoji or "·",
+            "kind": kind,
+            "tab": tab,
+            "base": int(base),
+            "price": int(price),
+            "unique": bool(extra.get("unique")),
+            "dowry": extra.get("kind") == "dowry",
+            "in_season": in_season,
+            "season": season,
+            "can_buy": bool(in_season and not blocked),
+            "note": note,
+        })
+    zhe_s = f"{z:g}折" if z != int(z) else f"{int(z)}折"
+    return {
+        "name": f"{TT_NAME}杂货铺",
+        "hearts": h,
+        "score": score,
+        "zhe": z,
+        "zhe_label": zhe_s,
+        "heart_bar": heart_bar(score),
+        "gift": gift or "",
+        "tabs": [{"key": key, "label": lab} for key, lab, _k in SHELF_TABS],
+        "items": items,
+    }

@@ -956,6 +956,98 @@ body.island-app.is-playing.is-yards .island-actionbar {
   padding: 3px 10px;
 }
 
+.island-shop {
+  position: absolute;
+  inset: 0;
+  background: #c9ddd8;
+}
+
+.island-shop-card {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 12px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: rgba(255, 253, 248, .9);
+  z-index: 1;
+}
+
+.island-shop-card b { display: block; font-size: 18px; }
+.island-shop-card small { color: #5b7377; font-size: 12px; }
+
+.island-shop-shelf {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 48%;
+  display: flex;
+  flex-direction: column;
+  background: rgba(251, 250, 246, .94);
+  border-radius: 18px 18px 0 0;
+  box-shadow: 0 -8px 24px rgba(42, 58, 60, .12);
+  z-index: 1;
+}
+
+.island-shop-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 10px 12px 6px;
+  overflow-x: auto;
+}
+
+.island-shop-tabs button {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: #efe8d8;
+  color: #3d5c61;
+  font: inherit;
+}
+
+.island-shop-tabs button.is-on {
+  background: #3d5c61;
+  color: #f7f3ea;
+}
+
+.island-shop-list {
+  flex: 1;
+  overflow: auto;
+  padding: 0 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.island-shop-sku {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 52px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 14px;
+  background: #fffdf8;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.island-shop-sku.is-off {
+  opacity: .55;
+}
+
+.island-shop-emoji { font-size: 22px; width: 28px; text-align: center; }
+.island-shop-name { flex: 1; min-width: 0; }
+.island-shop-name b { display: block; font-size: 15px; }
+.island-shop-name small { color: #5b7377; font-size: 11px; }
+.island-shop-price { font-size: 13px; color: #5f7a58; white-space: nowrap; }
+.island-shop-empty { margin: 12px 4px; color: #5b7377; font-size: 13px; }
+
 .island-plaza .island-board,
 .island-plaza .island-msgs,
 .island-plaza .island-composer { position: relative; z-index: 1; }

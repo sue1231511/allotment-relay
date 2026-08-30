@@ -79,4 +79,6 @@ export const api = {
   shore: (mode, idem) => req("/api/v1/shore/cast", { method: "POST", body: { mode }, idem }),
   messages: () => req("/api/v1/lounge/messages"),
   say: (text, idem) => req("/api/v1/lounge/messages", { method: "POST", body: { text }, idem }),
+  shop: () => req("/api/v1/shop"),
+  shopBuy: (item, qty = 1, idem) => req("/api/v1/shop/buy", { method: "POST", body: { item, qty }, idem }),
 };
