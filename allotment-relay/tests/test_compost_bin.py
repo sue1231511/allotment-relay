@@ -107,14 +107,16 @@ async def test_compost_bin_layers_and_take() -> None:
 
 
 async def test_buy_respects_satchel_stack() -> None:
+    """可叠放货满一组可开下一组；工具仍只能 1。"""
     tmp = Path(tempfile.mkdtemp(prefix="buy-cap-"))
     db = await _boot(tmp)
     from server import game, tt
-    from server.catalog import item_stack_cap, satchel_full_message
+    from server.catalog import format_stack_qty, item_stack_cap, satchel_full_message
 
     assert item_stack_cap("seed_kale") == 24
     assert item_stack_cap("tool_hoe") == 1
-    assert "24" in satchel_full_message("seed_kale", 24, 1, 24)
+    assert "每组" in satchel_full_message("tool_hoe", 1, 1, 1)
+    assert format_stack_qty(25, 24) == "x25（2组 24+1）"
 
     kid, sid = await _enroll(db, "cap@example.com", "囤种")
     async with db.connect() as conn:
@@ -122,18 +124,33 @@ async def test_buy_respects_satchel_stack() -> None:
             "UPDATE satchel SET quantity=24 WHERE steward_id=? AND item='seed_kale'",
             (sid,),
         )
+        await conn.execute(
+            """
+            INSERT INTO satchel (steward_id, item, quantity) VALUES (?,?,1)
+            ON CONFLICT(steward_id, item) DO UPDATE SET quantity=1
+            """,
+            (sid, "tool_hoe"),
+        )
         await conn.commit()
-    try:
-        await tt.tt_ops(kid, "buy 甘蓝种 1")
-        raise AssertionError("tt buy should refuse over-stack")
-    except ValueError as exc:
-        assert "24" in str(exc) and "行囊" in str(exc), exc
+
+    bought = await tt.tt_ops(kid, "buy 甘蓝种 1")
+    assert "甘蓝" in bought or "种" in bought, bought
+    bag = await db.get_satchel(sid)
+    assert bag.get("seed_kale") == 25, bag
 
     plot = await game.plot_ops(kid, "buy 1 甘蓝")
-    assert "24" in plot and "行囊" in plot, plot
+    assert "购入" in plot or "甘蓝" in plot, plot
+    bag2 = await db.get_satchel(sid)
+    assert bag2.get("seed_kale") == 26, bag2
+
+    try:
+        await tt.tt_ops(kid, "buy 锄头 1")
+        raise AssertionError("tool buy should refuse when already holding one")
+    except ValueError as exc:
+        assert "行囊" in str(exc) or "锄" in str(exc), exc
 
     listed = await game.tote_ops(kid, "list")
-    assert "x24/24" in listed, listed
+    assert "2组" in listed or "x26" in listed, listed
 
 
 def test_help_copy() -> None:
@@ -152,8 +169,8 @@ def test_help_copy() -> None:
     assert "buy compost_bin" in manual
     assert "空槽也能装" in manual
     assert "桶不是柜子" in manual
-    assert "行囊/潮柜/冰箱同种货自动叠放" in manual
-    assert "基础每格 24 份" in manual
+    assert "行囊/潮柜/冰箱同种货可占多组" in manual or "MC 式" in manual
+    assert "每组基础 24" in manual or "基础 24" in manual
 
 
 async def test_buy_install_empty_slot_then_put() -> None:

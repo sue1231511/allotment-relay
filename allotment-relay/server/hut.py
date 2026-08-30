@@ -762,12 +762,19 @@ async def _cabinet_status_text(s: dict[str, Any]) -> str:
     )
     if not rows:
         return (
-            f"潮柜空（{cap} 格，每格最多 {stack_cap}）。"
+            f"潮柜空（{cap} 格；每组最多 {stack_cap}，同种可占多组）。"
             f"hut_ops 冰柜 存 甘蓝 3。{expand_hint}"
         )
-    lines = [f"潮柜 {len(rows)}/{cap}:"]
+    from .catalog import format_stack_qty, stacks_needed
+
+    used = sum(
+        stacks_needed(q, item_stack_cap(it, stack_tier=int(s.get("satchel_stack_extra") or 0)))
+        for it, q in rows
+    )
+    lines = [f"潮柜 {used}/{cap} 格（{len(rows)} 种货；每组最多 {stack_cap}，同种可多组）:"]
     for item, qty in rows:
-        lines.append(f"  {item_label(item)}（{item}） x{qty}")
+        item_cap = item_stack_cap(item, stack_tier=int(s.get("satchel_stack_extra") or 0))
+        lines.append(f"  {item_label(item)}（{item}） {format_stack_qty(qty, item_cap)}")
     lines.append("取：hut_ops 冰柜 取 物品 [数量]")
     if cap < config.CABINET_SLOTS_MAX:
         lines.append(expand_hint)
@@ -787,6 +794,9 @@ async def storage_status(s: dict[str, Any]) -> str:
 
 
 async def cabinet_put(s: dict[str, Any], item: str, qty: int) -> str:
+    from .catalog import cabinet_stacks_full_message, stacks_needed
+
+    tier = int(s.get("satchel_stack_extra") or 0)
     async with db.connect() as conn:
         if not await has_cabinet(conn, s["id"]):
             raise ValueError(
@@ -798,18 +808,26 @@ async def cabinet_put(s: dict[str, Any], item: str, qty: int) -> str:
             raise ValueError(blocked)
         rows = await _cabinet_rows(conn, s["id"])
         have = {k: v for k, v in rows}
-        cap = cabinet_capacity(await _cabinet_extra(conn, s["id"]))
-        if item not in have and len(have) >= cap:
-            raise ValueError(
-                f"柜子满了（{cap} 种）。hut_ops 潮柜 扩 再买一格"
-                f"（{config.CABINET_SLOT_COST}票，顶 {config.CABINET_SLOTS_MAX}）"
-            )
+        slot_cap = cabinet_capacity(await _cabinet_extra(conn, s["id"]))
+        stack_cap = item_stack_cap(item, stack_tier=tier)
+        used = sum(
+            stacks_needed(q, item_stack_cap(it, stack_tier=tier)) for it, q in have.items()
+        )
         stacked = have.get(item, 0)
-        stack_cap = item_stack_cap(item, stack_tier=int(s.get("satchel_stack_extra") or 0))
-        if stacked + qty > stack_cap:
+        old_stacks = stacks_needed(stacked, stack_cap)
+        new_stacks = stacks_needed(stacked + qty, stack_cap)
+        extra_slots = new_stacks - old_stacks
+        if used + extra_slots > slot_cap:
             raise ValueError(
-                f"{item_label(item)} 这格最多叠 {stack_cap} 份（同种货栈上限，防单格囤货），"
-                f"已有 {stacked}。多出来的先 vend、cook，或 tote_ops 扩栈。"
+                cabinet_stacks_full_message(
+                    item,
+                    stacked,
+                    qty,
+                    stack_cap,
+                    used_slots=used,
+                    max_slots=slot_cap,
+                    free_slots=max(0, slot_cap - used),
+                )
             )
         if not await db.take_item(conn, s["id"], item, qty):
             raise ValueError("行囊没有这么多")
@@ -885,7 +903,8 @@ async def cabinet_expand(s: dict[str, Any], n: int = 1) -> str:
         new_cap = cabinet_capacity(extra + n)
     return (
         f"潮柜加了 {n} 格（-{cost} 票）。现在 {new_cap}/{config.CABINET_SLOTS_MAX} 格，"
-        f"每格最多 {item_stack_cap('crop_kale', stack_tier=int(s.get('satchel_stack_extra') or 0))}。格子跟着人走，卸了柜子再装还在。"
+        f"每组最多 {item_stack_cap('crop_kale', stack_tier=int(s.get('satchel_stack_extra') or 0))}，同种可占多组。"
+        f"格子跟着人走，卸了柜子再装还在。"
     )
 
 

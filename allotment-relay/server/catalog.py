@@ -1838,7 +1838,7 @@ def item_label(item: str) -> str:
 
 
 def item_stack_cap(item: str, *, stack_tier: int = 0) -> int:
-    """行囊每格上限。潮柜/冰箱同数；同种货自动叠放。工具 / 装件 / 活物只能 1。"""
+    """一组（一格）叠放上限。MC 式：同种货可占多组。工具 / 装件 / 活物只能 1。"""
     from . import config
     if item.startswith(("fit_", "deco_", "live_", "tool_")):
         return 1
@@ -1849,7 +1849,41 @@ def item_stack_cap(item: str, *, stack_tier: int = 0) -> int:
     return min(int(config.SATCHEL_STACK_MAX), cap)
 
 
+def stacks_needed(qty: int, cap: int) -> int:
+    """qty 需要几组（ceil）。cap<=0 时按 1 份一组。"""
+    n = max(0, int(qty))
+    if n <= 0:
+        return 0
+    c = max(1, int(cap))
+    return (n + c - 1) // c
+
+
+def split_stacks(qty: int, cap: int) -> list[int]:
+    """把总量拆成 MC 式多组，例如 84@64 → [64, 20]。"""
+    n = max(0, int(qty))
+    if n <= 0:
+        return []
+    c = max(1, int(cap))
+    full, rem = divmod(n, c)
+    out = [c] * full
+    if rem:
+        out.append(rem)
+    return out
+
+
+def format_stack_qty(qty: int, cap: int) -> str:
+    """行囊列表：x84（2组 64+20）/ 单组仍写 x12/64。"""
+    n = max(0, int(qty))
+    c = max(1, int(cap))
+    groups = split_stacks(n, c)
+    if len(groups) <= 1:
+        return f"x{n}/{c}"
+    parts = "+".join(str(g) for g in groups)
+    return f"x{n}（{len(groups)}组 {parts}）"
+
+
 def satchel_full_message(item: str, have: int, want: int, cap: int) -> str:
+    """仅工具等只能 1 份的货会走到这里；可叠放货走多组，不会因「已有 cap」拒收。"""
     label = item_label(item)
     if item.startswith("manure_"):
         extra = "粪便请 hut_ops 堆肥桶 存，别囤兜里。"
@@ -1858,10 +1892,53 @@ def satchel_full_message(item: str, have: int, want: int, cap: int) -> str:
     elif item.startswith("quarry_"):
         extra = "原矿可 quarry_ops 洗 再卖，或 tote_ops vend。"
     else:
-        extra = "先 tote_ops vend，或 hut_ops 冰柜 存 进潮柜；也能 tote_ops 扩栈 加每格上限。"
+        extra = "先 tote_ops vend，或 hut_ops 冰柜 存 进潮柜。"
     return (
-        f"行囊里 {label} 已有 {have}，再来 {want} 会超过每格 {cap} 份"
-        f"（同种货自动叠放，行囊/潮柜/冰箱同上限）。{extra}"
+        f"行囊里 {label} 已有 {have}，再来 {want} 会超过每组 {cap} 份"
+        f"（这类只能 1 份一组）。{extra}"
+    )
+
+
+def peer_satchel_full_message(
+    peer_name: str,
+    item: str,
+    have: int,
+    want: int,
+    cap: int,
+    *,
+    room: int | None = None,
+) -> str:
+    """送礼 / 当面交付：写明是对方行囊（工具满了或柜格式容器满了）。"""
+    label = item_label(item)
+    who = (peer_name or "对方").strip() or "对方"
+    free = max(0, int(cap) - int(have)) if room is None else max(0, int(room))
+    if free <= 0:
+        return (
+            f"对方「{who}」行囊里 {label} 已有 {have}，这类每组只能 {cap} 份，再送 {want} 放不下。"
+            f"不是你自己的计数坏了——货还在你行囊里。"
+            f"请对方先处理掉手里的，或你改送别的 / 送给别人。"
+        )
+    return (
+        f"对方「{who}」行囊里 {label} 已有 {have}，这类每组只能 {cap} 份，还能再收 {free}，"
+        f"你这次要送 {want}，放不下。货还在你行囊里。改送 ≤{free}。"
+    )
+
+
+def cabinet_stacks_full_message(
+    item: str,
+    have: int,
+    want: int,
+    cap: int,
+    *,
+    used_slots: int,
+    max_slots: int,
+    free_slots: int,
+) -> str:
+    label = item_label(item)
+    return (
+        f"潮柜满了或再存会超过格数：{label} 已有 {have}，再存 {want} 需要新开一组"
+        f"（每组最多 {cap}）。现在 {used_slots}/{max_slots} 格，空位 {free_slots}。"
+        f"先取一些出去，或 hut_ops 潮柜 扩。"
     )
 
 

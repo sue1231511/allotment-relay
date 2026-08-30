@@ -13,7 +13,7 @@ const CROP_KEYS = new Set([
 ]);
 
 export function renderBag(sheet, { onEat, onVend, onClose } = {}) {
-  const stock = (state.me && state.me.stock) || [];
+  const stock = expandStacks((state.me && state.me.stock) || []);
   const pages = Math.max(1, Math.ceil(stock.length / PAGE) || 1);
   if (state.bagPage >= pages) state.bagPage = pages - 1;
   if (state.bagPage < 0) state.bagPage = 0;
@@ -75,6 +75,23 @@ export function renderBag(sheet, { onEat, onVend, onClose } = {}) {
   });
 }
 
+/** MC 式：总量按 stack_cap 拆成多格，例如 84@64 → 两格 64 与 20。 */
+function expandStacks(stock) {
+  const out = [];
+  for (const it of stock || []) {
+    const total = Math.max(0, Number(it.qty) || 0);
+    if (total <= 0) continue;
+    const cap = Math.max(1, Number(it.stack_cap) || 64);
+    let left = total;
+    while (left > 0) {
+      const n = Math.min(cap, left);
+      out.push({ ...it, qty: n, stack_total: total });
+      left -= n;
+    }
+  }
+  return out;
+}
+
 function closeBag(sheet, onClose) {
   if (onClose) {
     onClose();
@@ -88,7 +105,7 @@ function closeBag(sheet, onClose) {
 }
 
 function turnPage(delta, sheet, handlers) {
-  const stock = (state.me && state.me.stock) || [];
+  const stock = expandStacks((state.me && state.me.stock) || []);
   const pages = Math.max(1, Math.ceil(stock.length / PAGE) || 1);
   const next = state.bagPage + delta;
   if (next < 0 || next >= pages) return;
