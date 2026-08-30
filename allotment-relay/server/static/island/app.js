@@ -23,8 +23,7 @@ import { showEvent, toast } from "./ui/modal.js";
 const sceneEl = () => document.getElementById("island-scene");
 const sheetEl = () => document.getElementById("island-sheet");
 const plantEl = () => document.getElementById("island-plant");
-const LIVE_SCENES = ["home", "yards", "shore", "plaza", "hut", "bar", "theater", "eatery", "hui", "market", "ting", "lianli"];
-let loungeCache = { messages: [], notices: [] };
+const LIVE_SCENES = ["home", "yards"];
 let growTimer = 0;
 
 function showPlay() {
@@ -109,28 +108,11 @@ async function enterScene(name) {
     }
     stopGrowTick();
     if (name === "shore") {
-      renderShore(root, {
-        onCast: (mode) => act(() => api.shore(mode)),
-        onBack: () => enterScene("map"),
-      });
+      renderShore(root);
       return;
     }
     if (name === "plaza") {
-      try {
-        loungeCache = await api.messages();
-      } catch (err) {
-        toast(err.message);
-      }
-      renderPlaza(root, {
-        messages: loungeCache.messages,
-        notices: loungeCache.notices,
-        onSay: (text) => act(async () => {
-          const out = await api.say(text);
-          loungeCache = out;
-          return out;
-        }, { refreshScene: true }),
-        onBack: () => enterScene("map"),
-      });
+      renderPlaza(root);
       return;
     }
     if (name === "hut" || name === "bar" || name === "theater" || name === "eatery" || name === "hui" || name === "market" || name === "ting" || name === "lianli") {
@@ -144,110 +126,19 @@ async function enterScene(name) {
   }
 }
 
+const PLACE_TITLES = {
+  hut: "岸畔小屋",
+  bar: "潮汐酒吧",
+  theater: "潮汐剧场",
+  eatery: "岸畔小馆",
+  market: "集市",
+  ting: "听潮亭",
+  lianli: "连理所",
+  hui: "潮生会",
+};
+
 function renderPlaceScene(name) {
-  const root = sceneEl();
-  const me = state.me || {};
-  const flags = me.flags || {};
-  const dues = me.dues || {};
-  const stock = me.stock || [];
-  const back = () => enterScene("map");
-  if (name === "hut") {
-    const built = !!flags.hut_built;
-    renderPlace(root, {
-      id: "hut",
-      title: "岸畔小屋",
-      body: built
-        ? ["困了就睡。每天一次，回精力。"]
-        : ["还没有棚屋。先搭一座才能睡。"],
-      actions: built
-        ? [{ id: "sleep", label: "睡觉", primary: true }]
-        : [{ id: "build", label: "搭棚屋", primary: true }],
-      onAct: (id) => act(() => (id === "build" ? api.buildHut() : api.sleep())),
-      onBack: back,
-    });
-    return;
-  }
-  if (name === "bar") {
-    renderPlace(root, {
-      id: "bar",
-      title: "潮汐酒吧",
-      body: [
-        me.duty || "每 2 天来洗一次碗。",
-      ],
-      actions: [{ id: "work", label: "洗碗", primary: true }],
-      onAct: () => act(() => api.work()),
-      onBack: back,
-    });
-    return;
-  }
-  if (name === "theater") {
-    renderPlace(root, {
-      id: "theater",
-      title: "潮汐剧场",
-      body: ["浪潮为幕，星光为灯。"],
-      actions: [],
-      onBack: back,
-    });
-    return;
-  }
-  if (name === "eatery") {
-    renderPlace(root, {
-      id: "eatery",
-      title: "岸畔小馆",
-      body: [
-        stock.length ? "饿了打开行囊吃一口。" : "行囊空着。先种、收，再回来吃。",
-      ],
-      actions: [{ id: "bag", label: "打开行囊", primary: true }],
-      onAct: () => openTab("bag"),
-      onBack: back,
-    });
-    return;
-  }
-  if (name === "market") {
-    renderPlace(root, {
-      id: "market",
-      title: "集市",
-      body: ["海边的集市。"],
-      actions: [],
-      onBack: back,
-    });
-    return;
-  }
-  if (name === "ting") {
-    renderPlace(root, {
-      id: "ting",
-      title: "听潮亭",
-      body: ["放慢脚步，倾听大海。"],
-      actions: [],
-      onBack: back,
-    });
-    return;
-  }
-  if (name === "lianli") {
-    renderPlace(root, {
-      id: "lianli",
-      title: "连理所",
-      body: ["今日宜缔娶。"],
-      actions: [],
-      onBack: back,
-    });
-    return;
-  }
-  const tax = Number(dues.tax_arrears) || 0;
-  const upkeep = Number(dues.upkeep_arrears) || 0;
-  renderPlace(root, {
-    id: "hui",
-    title: "潮生会",
-    body: [
-      tax || upkeep ? "欠了就交。交完红条会灭。" : "岸税岸维没欠就不用跑。",
-    ],
-    actions: [
-      { id: "tax", label: tax ? `交岸税 ${tax}` : "交岸税", primary: !!tax, disabled: !tax },
-      { id: "upkeep", label: upkeep ? `交岸维 ${upkeep}` : "交岸维", disabled: !upkeep },
-    ],
-    onAct: (id) => act(() => api.pay(id === "upkeep" ? "upkeep" : "tax")),
-    onBack: back,
-  });
+  renderPlace(sceneEl(), { id: name, title: PLACE_TITLES[name] || name });
 }
 
 function openPlant() {

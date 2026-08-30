@@ -579,10 +579,12 @@ def test_island_page_is_modular() -> None:
     assert "is-yards .island-actionbar" in css
     assert not (ROOT / "server/static/island/assets/back-map.png").exists()
     assert "api.buy" in app
-    assert "api.sleep" in app
-    assert "api.work" in app
     assert "api.eat" in app
-    assert "api.pay" in app
+    assert "交岸税" not in app
+    assert "洗碗" not in app
+    assert "只铺图和地名" in (ROOT / "server/static/island/scenes/place.js").read_text(encoding="utf-8")
+    assert "data-act=\"net\"" not in (ROOT / "server/static/island/scenes/shore.js").read_text(encoding="utf-8")
+    assert "发言" not in (ROOT / "server/static/island/scenes/plaza.js").read_text(encoding="utf-8")
     assert "/api/v1/farm/buy" in api
     assert "/api/v1/hut/sleep" in api
     assert "/api/v1/bar/work" in api
@@ -609,9 +611,9 @@ def test_island_page_is_modular() -> None:
             assert Image.open(pic).size == (941, 1672)
     except ImportError:
         pass
-    assert 'id: "market"' in app
-    assert 'id: "ting"' in app
-    assert 'id: "lianli"' in app
+    assert 'market: "集市"' in app
+    assert 'ting: "听潮亭"' in app
+    assert 'lianli: "连理所"' in app
     assert (ROOT / "server/static/island/ui/plant-panel.js").exists()
     assert (ROOT / "server/static/island/ui/crops.js").exists()
     assert "island-crop-fallback" in (ROOT / "server/static/island/ui/crops.js").read_text(encoding="utf-8")
@@ -637,7 +639,8 @@ def test_island_page_is_modular() -> None:
     assert "sceneArt" in home_js
     assert (ROOT / "server/static/island/scenes/shore.js").exists()
     assert (ROOT / "server/static/island/scenes/plaza.js").exists()
-    assert "sceneArt" in (ROOT / "server/static/island/scenes/shore.js").read_text(encoding="utf-8")
+    assert "renderPlace" in (ROOT / "server/static/island/scenes/shore.js").read_text(encoding="utf-8")
+    assert "renderPlace" in (ROOT / "server/static/island/scenes/plaza.js").read_text(encoding="utf-8")
     assert (ROOT / "server/static/island/assets/scenes/shore.png").exists()
     assert (ROOT / "server/static/island/assets/scenes/bar.png").exists()
     assert (ROOT / "server/static/island/assets/scenes/plaza.png").exists()

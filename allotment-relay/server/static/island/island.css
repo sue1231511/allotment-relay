@@ -885,7 +885,7 @@ body.island-app.is-playing.is-yards .island-actionbar {
   background: #3d5c61; margin: 2px auto 0;
 }
 
-/* 地点卡：插图位 + 底部说明 */
+/* 地点卡：只显示地名，不放洗碗、交税这些按钮。 */
 .island-place {
   position: absolute;
   inset: 0;
@@ -897,14 +897,14 @@ body.island-app.is-playing.is-yards .island-actionbar {
   left: 12px;
   right: 12px;
   bottom: 14px;
-  padding: 14px;
+  padding: 10px 14px;
   border-radius: 16px;
   background: rgba(255,253,248,.9);
   z-index: 1;
 }
 
-.island-place-card b { display: block; font-size: 18px; margin-bottom: 6px; }
-.island-place-card p { margin: 0 0 4px; font-size: 13px; color: #3d5c61; }
+.island-place-card b { display: block; font-size: 18px; }
+.island-place-card p { display: none; }
 
 /* 海边 */
 .island-shore {
