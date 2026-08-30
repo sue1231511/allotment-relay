@@ -153,6 +153,22 @@ body.island-app.is-playing .island-root {
   margin-bottom: 6px;
 }
 
+.island-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 120px;
+  border: 1px solid var(--is-line);
+  border-radius: 14px;
+  padding: 10px 12px;
+  font: inherit;
+  background: #fffdf8;
+  resize: vertical;
+}
+
+.island-field [data-pitch].is-on {
+  background: #d8ebe8;
+}
+
 .island-field input,
 .island-composer input,
 .island-composer textarea {
@@ -953,6 +969,16 @@ body.island-app.is-playing.is-yards .island-actionbar {
 }
 
 .island-plaza .island-hot span {
+  font-size: 13px;
+  padding: 3px 10px;
+}
+
+/* 剧场院景：图上点编剧社 / 衣泊坊 / 剧场看台。铺满一屏，底下不漏色。 */
+.island-theater-board {
+  aspect-ratio: 1080 / 1920;
+}
+
+.island-theater .island-hot span {
   font-size: 13px;
   padding: 3px 10px;
 }

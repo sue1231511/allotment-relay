@@ -190,6 +190,70 @@ export function showCheerSheet({ title, body, presets = [], onConfirm, onClose }
   }, { once: true });
 }
 
+export function showPitchSheet({ title, body, titleMin = 2, bodyMin = 40, onConfirm, onClose } = {}) {
+  const root = paintModal(cardMarkup(`
+      <h3>${esc(title || "投稿")}</h3>
+      <p>${esc(body || "标题和正文分开写。不是接现有潮闻，稿费也不是领薪。")}</p>
+      <label class="island-field">
+        <span>建议做成</span>
+        <span class="island-care-acts">
+          <button type="button" class="island-btn" data-pitch="">不指定</button>
+          <button type="button" class="island-btn" data-pitch="潮闻">潮闻</button>
+          <button type="button" class="island-btn" data-pitch="故事">故事</button>
+        </span>
+      </label>
+      <label class="island-field">
+        <span>标题</span>
+        <input id="island-pitch-title" type="text" maxlength="48" placeholder="岸上旧收音机" autocomplete="off">
+      </label>
+      <label class="island-field">
+        <span>正文</span>
+        <textarea id="island-pitch-body" rows="5" maxlength="12000" placeholder="至少 ${bodyMin} 字。第一幕……"></textarea>
+      </label>
+      <div class="island-care-acts">
+        <button type="button" class="island-btn primary wide" data-act="confirm">投出去</button>
+      </div>
+      <button type="button" class="island-btn wide" data-close-modal>先不忙</button>
+  `, "island-care"));
+  if (!root) return;
+  let pitch = "";
+  const markPitch = () => {
+    root.querySelectorAll("[data-pitch]").forEach((btn) => {
+      btn.classList.toggle("is-on", (btn.getAttribute("data-pitch") || "") === pitch);
+    });
+  };
+  markPitch();
+  const close = () => {
+    hideModal();
+    if (onClose) onClose();
+  };
+  root.querySelector("[data-close-modal]").addEventListener("click", close);
+  root.querySelectorAll("[data-pitch]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      pitch = btn.getAttribute("data-pitch") || "";
+      markPitch();
+    });
+  });
+  root.querySelector("[data-act=confirm]").addEventListener("click", () => {
+    const head = String(root.querySelector("#island-pitch-title")?.value || "").trim();
+    const text = String(root.querySelector("#island-pitch-body")?.value || "").trim();
+    if (head.length < titleMin) {
+      toast(`标题至少 ${titleMin} 个字。`);
+      return;
+    }
+    if (text.length < bodyMin) {
+      toast(`正文太短（至少 ${bodyMin} 字）。编剧社收稿，不是扔一张便签。`);
+      return;
+    }
+    const line = pitch ? `${pitch} ${head} | ${text}` : `${head} | ${text}`;
+    hideModal();
+    if (onConfirm) onConfirm(line);
+  });
+  root.addEventListener("click", (ev) => {
+    if (ev.target === root) close();
+  }, { once: true });
+}
+
 export function showActSheet({ title, body, confirm, onConfirm, onClose } = {}) {
   const root = paintModal(cardMarkup(`
       <h3>${esc(title || "确认")}</h3>
