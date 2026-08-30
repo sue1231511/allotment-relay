@@ -14,6 +14,8 @@ export const SLOTS = {
   market: { label: "集市", size: "941×1672" },
   ting: { label: "听潮亭", size: "941×1672" },
   lianli: { label: "连理所", size: "941×1672" },
+  workshop: { label: "岸工坊", size: "941×1672" },
+  quarry: { label: "盐风崖", size: "941×1672" },
 };
 
 export function sceneArt(id) {
