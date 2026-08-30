@@ -37,7 +37,7 @@ QUARRY_HELP = """quarry_ops 子命令（整句写进 command）：
 例子：quarry_ops status · quarry_ops 买镐 · quarry_ops 探脉 · quarry_ops 挖 1 · quarry_ops 洗 海盐砂 2
 涨潮关的是赶海 dig；崖矿不关，但湿滑：挖更费精力、空挥更高。不要发明 hew_all / mine_all。
 盐田晒盐走 craft_ops 灌 / 收盐，和洗矿是同一种海盐晶，更慢更省镐。
-人类网页 /quarry 是围观实况；挥镐在 /play。"""
+人类网页 /quarry 是围观实况；挥镐在 /play 或手机地图 /island 进盐风崖点。"""
 
 
 def _fmt_left(seconds: int) -> str:
@@ -875,6 +875,219 @@ async def quarry_ops(key_id: int, command: str = "") -> str:
         f"未知 quarry 指令: {command}\n{QUARRY_HELP}\n"
         "不要发明 mine_ops / dig_ops。赶海翻沙是 tide_ops dig。"
     )
+
+
+async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str, Any]:
+    """给 /island 用的崖矿面板。数值仍走 quarry_ops，这里只摊开能点的。"""
+    prof = await ensure_profile(conn, s["id"])
+    claims = await _claims(conn, s["id"])
+    now = db.now()
+    pick = pick_tier_meta(prof["pick_tier"])
+    tickets = int(s.get("tickets") or 0)
+    energy_now = int(s.get("energy") or 0)
+    stock = await db.get_satchel(s["id"])
+    tide, weather, phase = world.current_tide(), world.current_weather(), world.current_day_phase()
+    hints = climate_hint(tide=tide, weather=weather, phase=phase)
+    prospect_left = max(0, int(prof["last_prospect_at"] or 0) + config.QUARRY_PROSPECT_COOLDOWN - now)
+    hew_global = max(0, int(prof["last_hew_at"] or 0) + config.QUARRY_HEW_GLOBAL_COOLDOWN - now)
+    day = db.day_id(now)
+    used_row = await (await conn.execute(
+        "SELECT count FROM quarry_rolls WHERE steward_id=? AND day=?",
+        (s["id"], day),
+    )).fetchone()
+    used = int(used_row[0] if used_row else 0)
+    daily_left = max(0, config.QUARRY_HEW_DAILY_CAP - used)
+    hew_energy = await _hew_energy(conn, s["id"], pick["tier"]) if pick["tier"] >= 1 else 0
+    pits = []
+    for c in claims:
+        vein = c["vein"]
+        meta = QUARRY_VEINS.get(vein) or {}
+        clearing = int(c["ready_at"] or 0) > now
+        empty = (not vein) or int(c["strikes_left"] or 0) <= 0
+        pit_cd = max(0, int(c["last_hew_at"] or 0) + config.QUARRY_HEW_COOLDOWN - now)
+        need_tier = int(meta.get("min_tier") or 1)
+        gated = (not empty) and pick["tier"] < need_tier
+        if clearing:
+            state = "clearing"
+            remain = int(c["ready_at"]) - now
+            note = f"开凿中，还要 {_fmt_left(remain)}"
+            can_prospect = False
+            can_hew = False
+        elif empty:
+            state = "empty"
+            remain = prospect_left
+            if pick["tier"] < 1:
+                note = "空坑。先买一把盐风镐再探。"
+                can_prospect = False
+            elif prospect_left > 0:
+                note = f"刚探过，{_fmt_left(prospect_left)}后再来。"
+                can_prospect = False
+            elif energy_now < config.QUARRY_PROSPECT_ENERGY:
+                note = "精力不够，探脉要 8 精力。"
+                can_prospect = False
+            else:
+                note = "空着，可以探脉。"
+                can_prospect = True
+            can_hew = False
+        else:
+            state = "vein"
+            remain = max(pit_cd, hew_global)
+            name = f"{meta.get('emoji', '🪨')}{meta.get('name', vein)}"
+            if gated:
+                note = f"{name} 剩 {c['strikes_left']} 镐 · 要 T{need_tier}"
+                can_hew = False
+            elif pick["tier"] < 1:
+                note = f"{name} · 还没镐"
+                can_hew = False
+            elif daily_left <= 0:
+                note = f"{name} · 今日已挥满 {config.QUARRY_HEW_DAILY_CAP} 镐"
+                can_hew = False
+            elif hew_global > 0:
+                note = f"{name} · 腕还酸，{_fmt_left(hew_global)}后再挖"
+                can_hew = False
+            elif pit_cd > 0:
+                note = f"{name} · 这坑刚挥过，{_fmt_left(pit_cd)}后再挖"
+                can_hew = False
+            elif energy_now < hew_energy:
+                note = f"{name} · 精力不够（下一镐约 {hew_energy}）"
+                can_hew = False
+            else:
+                note = f"{name} 剩 {c['strikes_left']} 镐 · 约 {hew_energy} 精力"
+                can_hew = True
+            can_prospect = False
+        pits.append({
+            "slot": int(c["slot"]),
+            "state": state,
+            "vein": vein,
+            "name": meta.get("name") or f"坑{c['slot']}",
+            "emoji": meta.get("emoji") or "🪨",
+            "strikes_left": int(c["strikes_left"] or 0),
+            "remain_sec": remain,
+            "can_prospect": can_prospect,
+            "can_hew": can_hew,
+            "note": note,
+            "detail": note + (" 不是赶海翻沙。" if empty or clearing else " 挖到的是原矿，要去洗矿栏洗。"),
+        })
+    offer = _next_claim_offer(prof["claim_count"])
+    next_pit = {
+        "slot": offer["slot"],
+        "cost": offer["cost"],
+        "minutes": offer["clear_seconds"] // 60,
+        "can_buy": tickets >= offer["cost"],
+        "note": f"下一坑 {offer['cost']} 票 · 开凿 {offer['clear_seconds'] // 60} 分"
+                + ("。票不够。" if tickets < offer["cost"] else ""),
+        "detail": f"再开一口矿坑要 {offer['cost']} 票，开凿 {offer['clear_seconds'] // 60} 分钟。欠岸税或岸维不能开。",
+    }
+    raws = []
+    ratio = config.QUARRY_WASH_RAW_PER
+    for key, meta in QUARRY_ORES.items():
+        if meta.get("kind") != "raw" or not meta.get("refined"):
+            continue
+        have = int(stock.get(key) or 0)
+        if have <= 0:
+            continue
+        refined = QUARRY_ORES.get(meta["refined"]) or {}
+        qty = (have // ratio) * ratio
+        if qty < ratio:
+            qty = ratio
+        can = have >= ratio and energy_now >= config.QUARRY_WASH_ENERGY
+        note = f"{have} 份 · 洗 {ratio} 得 1 {refined.get('name') or '精矿'}"
+        if have < ratio:
+            note = f"{have} 份，还差 {ratio - have} 才能洗"
+        elif energy_now < config.QUARRY_WASH_ENERGY:
+            note = f"{have} 份 · 精力不够"
+        raws.append({
+            "item": key,
+            "name": meta["name"],
+            "emoji": meta.get("emoji") or "🪨",
+            "have": have,
+            "qty": qty if have >= ratio else ratio,
+            "out": refined.get("name") or "",
+            "can_wash": can,
+            "note": note,
+            "detail": f"{meta['name']} {have} 份。{ratio} 份出 1 份{refined.get('name') or '精矿'}，大约 12% 会被潮水冲散。",
+        })
+    can_buy = pick["tier"] < 1 and tickets >= config.QUARRY_PICK_T1_COST
+    nxt = next((r for r in PICK_TIERS if r["tier"] == pick["tier"] + 1), None)
+    upgrade_need = []
+    can_upgrade = False
+    upgrade_note = "已经是满级。" if pick["tier"] >= 1 and not nxt else ""
+    if pick["tier"] < 1:
+        upgrade_note = f"先花 {config.QUARRY_PICK_T1_COST} 票买 T1 盐风镐。Tt酱也卖同一把。"
+    elif nxt:
+        short = []
+        ok = tickets >= int(nxt["tickets"])
+        if tickets < int(nxt["tickets"]):
+            short.append(f"票差{int(nxt['tickets']) - tickets}")
+        for item, qty in (nxt.get("need") or {}).items():
+            have = int(stock.get(item) or 0)
+            upgrade_need.append({
+                "item": item,
+                "label": item_label(item),
+                "qty": int(qty),
+                "have": have,
+            })
+            if have < int(qty):
+                ok = False
+                short.append(f"{item_label(item)}差{int(qty) - have}")
+        can_upgrade = ok
+        upgrade_note = (
+            f"升 T{nxt['tier']} {nxt['name']} · {nxt['tickets']} 票"
+            + ((" · " + "、".join(f"{n['label']} {n['have']}/{n['qty']}" for n in upgrade_need)) if upgrade_need else "")
+            + (("。缺 " + "、".join(short)) if short else "")
+        )
+    pick_view = {
+        "tier": pick["tier"],
+        "name": pick["name"],
+        "buy_cost": config.QUARRY_PICK_T1_COST,
+        "can_buy": can_buy,
+        "can_upgrade": can_upgrade,
+        "upgrade_need": upgrade_need,
+        "note": (
+            f"还没镐。{config.QUARRY_PICK_T1_COST} 票一把。"
+            if pick["tier"] < 1 else
+            f"T{pick['tier']} {pick['name']}" + (f" · {upgrade_note}" if nxt else " · 满级")
+        ),
+        "detail": upgrade_note or f"T{pick['tier']} {pick['name']}",
+        "upgrade_note": upgrade_note,
+    }
+    if pick["tier"] < 1 and tickets < config.QUARRY_PICK_T1_COST:
+        pick_view["note"] = f"买镐要 {config.QUARRY_PICK_T1_COST} 票，现在 {tickets}。"
+        pick_view["detail"] = pick_view["note"] + " 先去卖货或上工。"
+    any_hew = any(p["can_hew"] for p in pits)
+    any_prospect = any(p["can_prospect"] for p in pits)
+    if pick["tier"] < 1:
+        line = "未开镐。先买一把盐风镐。"
+    elif any_hew:
+        line = f"T{pick['tier']} {pick['name']} · 有脉可挖"
+    elif any_prospect:
+        line = f"T{pick['tier']} {pick['name']} · 空坑能探"
+    else:
+        line = f"T{pick['tier']} {pick['name']} · {world.climate_line()}"
+    return {
+        "name": "盐风崖",
+        "line": line,
+        "climate": world.climate_line(),
+        "hints": hints,
+        "tabs": [
+            {"key": "pits", "label": "矿坑", "badge": "挖" if any_hew else ("探" if any_prospect else "")},
+            {"key": "wash", "label": "洗矿", "badge": "洗" if any(r["can_wash"] for r in raws) else ""},
+            {"key": "pick", "label": "镐", "badge": "买" if can_buy else ("升" if can_upgrade else "")},
+        ],
+        "pick": pick_view,
+        "pits": pits,
+        "next_pit": next_pit,
+        "raws": raws,
+        "prospect": {
+            "remain_sec": prospect_left,
+            "energy": config.QUARRY_PROSPECT_ENERGY,
+        },
+        "hew": {
+            "remain_sec": hew_global,
+            "daily_left": daily_left,
+            "energy": hew_energy,
+        },
+    }
 
 
 async def public_snapshot() -> dict[str, Any]:

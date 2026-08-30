@@ -173,6 +173,45 @@ async def _test_island_v1_api() -> None:
     bag = took.json()["me"]["stock"]
     assert any(it.get("item") == "craft_copper_nails" for it in bag), bag
 
+    cliff0 = client.get("/api/v1/quarry", headers=_auth(key))
+    assert cliff0.status_code == 200, cliff0.text
+    cliff = cliff0.json()["quarry"]
+    assert cliff["pick"]["tier"] == 0
+    assert any(t["key"] == "pits" for t in cliff["tabs"]), cliff
+    bought = client.post(
+        "/api/v1/quarry/act",
+        headers=_auth(key, {"Idempotency-Key": "qy-pick"}),
+        json={"kind": "buy_pick"},
+    )
+    assert bought.status_code == 200, bought.text
+    assert bought.json()["quarry"]["pick"]["tier"] == 1
+    empty_hew = client.post(
+        "/api/v1/quarry/act",
+        headers=_auth(key, {"Idempotency-Key": "qy-hew-empty"}),
+        json={"kind": "hew", "target": "1"},
+    )
+    assert empty_hew.status_code >= 400, empty_hew.text
+    async with db.connect() as conn:
+        await conn.execute(
+            "UPDATE quarry_claims SET vein='salt', strikes_left=3, last_hew_at=0 WHERE steward_id=?",
+            (sid,),
+        )
+        await db.add_item(conn, sid, "quarry_salt_sand", 2)
+        await conn.commit()
+    hit_hew = client.post(
+        "/api/v1/quarry/act",
+        headers=_auth(key, {"Idempotency-Key": "qy-hew-ok"}),
+        json={"kind": "hew", "target": "1"},
+    )
+    assert hit_hew.status_code == 200, hit_hew.text
+    assert hit_hew.json()["event"]["kind"] == "quarry"
+    washed = client.post(
+        "/api/v1/quarry/act",
+        headers=_auth(key, {"Idempotency-Key": "qy-wash"}),
+        json={"kind": "wash", "target": "海盐砂 2"},
+    )
+    assert washed.status_code == 200, washed.text
+
     wrong_yard = client.post(
         "/api/v1/farm/parcels/园1/sow",
         headers=_auth(key, {"Idempotency-Key": "sow-orchard-kale"}),
@@ -923,7 +962,9 @@ def test_island_page_is_modular() -> None:
     assert "/api/v1/shop/buy" in api
     assert "/api/v1/tote/vend" in api
     assert "/api/v1/workshop" in api
+    assert "/api/v1/quarry" in api
     assert "api.workshopAct" in app
+    assert "api.quarryAct" in app
     assert "keepWorkshop" in app
     workshop_js = (ROOT / "server/static/island/scenes/workshop.js").read_text(encoding="utf-8")
     assert "island-workshop" in workshop_js
@@ -934,6 +975,13 @@ def test_island_page_is_modular() -> None:
     assert "disabled" not in workshop_js
     assert "showHintSheet" in app
     assert "quiet: true" in app
+    quarry_js = (ROOT / "server/static/island/scenes/quarry.js").read_text(encoding="utf-8")
+    assert "island-quarry" in quarry_js
+    assert "点一下看矿坑" in quarry_js
+    assert "data-act" in quarry_js
+    assert "去上手页" not in quarry_js
+    assert "keepQuarry" in app
+    assert "quarryShelf" in app
     assert "renderWorkshop" in app
     assert 'lighthouse: "灯塔"' in app
     assert 'notice: "潮汐公告"' in app

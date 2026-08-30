@@ -45,6 +45,9 @@ export const state = {
   workshop: null,
   workshopTab: "anvil",
   workshopShelf: false,
+  quarry: null,
+  quarryTab: "pits",
+  quarryShelf: false,
   busy: false,
 };
 
@@ -57,6 +60,7 @@ export function applySnapshot(data) {
   if (data.shore) state.shore = data.shore;
   if (data.shop) state.shop = data.shop;
   if (data.workshop) state.workshop = data.workshop;
+  if (data.quarry) state.quarry = data.quarry;
 }
 
 export function yardMeta(kind = state.yard) {
@@ -164,6 +168,21 @@ export function tickWorkshop(seconds = 1) {
   const n = job.remain_sec;
   job.note = n < 60 ? `还要 ${n} 秒` : `还要 ${Math.ceil(n / 60)} 分`;
   return false;
+}
+
+export function tickQuarry(seconds = 1) {
+  const q = state.quarry;
+  if (!q) return false;
+  let ready = false;
+  const tick = (row) => {
+    if (!row || !(row.remain_sec > 0)) return;
+    row.remain_sec = Math.max(0, row.remain_sec - seconds);
+    if (row.remain_sec === 0) ready = true;
+  };
+  for (const pit of q.pits || []) tick(pit);
+  if (q.prospect) tick(q.prospect);
+  if (q.hew) tick(q.hew);
+  return ready;
 }
 
 export function tickGrow(seconds = 1) {
