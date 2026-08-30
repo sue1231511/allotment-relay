@@ -96,6 +96,8 @@ async def _test_island_v1_api() -> None:
     assert not any(c["key"] == "kale" for c in orchard_panel)
     shed_panel = farm_body["panels"]["greenhouse"]
     assert any(c["key"] == "kale" for c in shed_panel) and any(c["key"] == "durian" for c in shed_panel)
+    offer = ((farm_body.get("land") or {}).get("plots") or {}).get("offer")
+    assert offer and int(offer["cost"]) > 0, farm_body.get("land")
 
     wrong_yard = client.post(
         "/api/v1/farm/parcels/园1/sow",
@@ -134,10 +136,18 @@ async def _test_island_v1_api() -> None:
     assert tended.json()["event"]["title"] == "打理"
     assert "打理了" in (tended.json()["event"]["narrative"] or ""), tended.json()["event"]
     tplot = next(p for p in tended.json()["farm"]["home"] if int(p["slot"]) == 1)
-    # 小虫过境可能把打理打回去，再读一次地况
+    # 小虫过境可能把打理打回去，再读一次地况；还没沾上就再打理一次。
     if not tplot["tended"]:
         again = client.get("/api/v1/farm", headers=_auth(key))
         tplot = next(p for p in again.json()["farm"]["home"] if int(p["slot"]) == 1)
+    if not tplot["tended"] and tplot.get("can_tend"):
+        tended = client.post(
+            "/api/v1/farm/parcels/1/tend",
+            headers=_auth(key, {"Idempotency-Key": "tend-1-retry"}),
+            json={},
+        )
+        assert tended.status_code == 200, tended.text
+        tplot = next(p for p in tended.json()["farm"]["home"] if int(p["slot"]) == 1)
     assert tplot["tended"] is True or "小虫" in (tended.json()["event"]["narrative"] or ""), tplot
     if tplot["tended"]:
         assert tplot["can_tend"] is False, tplot
@@ -265,6 +275,18 @@ async def _test_island_v1_api() -> None:
             headers=_auth(key, {"Idempotency-Key": idem}),
             json={"crop": crop},
         )
+        if last_sow.status_code == 409 and last_sow.json().get("error", {}).get("code") == "ITEM_REQUIRED":
+            bought_fill = client.post(
+                "/api/v1/farm/buy",
+                headers=_auth(key, {"Idempotency-Key": f"buy-{idem}"}),
+                json={"crop": crop, "qty": 1},
+            )
+            assert bought_fill.status_code == 200, bought_fill.text
+            last_sow = client.post(
+                f"/api/v1/farm/parcels/{plot['slot']}/sow",
+                headers=_auth(key, {"Idempotency-Key": f"{idem}-after-buy"}),
+                json={"crop": crop},
+            )
         assert last_sow.status_code == 200, last_sow.text
     assert not any(p["can_sow"] for p in last_sow.json()["farm"]["home"])
 
@@ -293,6 +315,40 @@ async def _test_island_v1_api() -> None:
         assert last_harvest.status_code == 200, last_harvest.text
     assert last_harvest is not None
     assert not any(p["can_harvest"] for p in last_harvest.json()["farm"]["home"])
+
+    # 点草地开垦：起步 3 块时下一块是 #4（80 票），不能等到后面被扩成 22 块再测。
+    steward = await db.get_steward_by_key_id(row["id"])
+    sid = int(steward["id"])
+    tickets_before_expand = int(steward["tickets"] or 0)
+    async with db.connect() as conn:
+        await conn.execute(
+            "UPDATE stewards SET tickets=tickets+200 WHERE id=?",
+            (sid,),
+        )
+        await conn.commit()
+    n0 = len(last_harvest.json()["farm"]["home"])
+    assert n0 == 3, n0
+    expanded = client.post(
+        "/api/v1/farm/expand",
+        headers=_auth(key, {"Idempotency-Key": "expand-home-1"}),
+        json={"kind": "home"},
+    )
+    assert expanded.status_code == 200, expanded.text
+    assert len(expanded.json()["farm"]["home"]) == n0 + 1
+    assert any(p["state"] == "clearing" for p in expanded.json()["farm"]["home"])
+    expand_again = client.post(
+        "/api/v1/farm/expand",
+        headers=_auth(key, {"Idempotency-Key": "expand-home-2"}),
+        json={"kind": "home"},
+    )
+    assert expand_again.status_code == 409, expand_again.text
+    assert expand_again.json()["error"]["code"] == "NOT_READY"
+    async with db.connect() as conn:
+        await conn.execute(
+            "UPDATE stewards SET tickets=? WHERE id=?",
+            (tickets_before_expand, sid),
+        )
+        await conn.commit()
 
     # 扩到二十几块时，三类地都要整份回给前端，不能只画画面上的三块。
     steward = await db.get_steward_by_key_id(row["id"])
@@ -337,6 +393,9 @@ async def _test_island_v1_api() -> None:
     async with db.connect() as conn:
         await conn.execute("UPDATE stewards SET energy=80 WHERE id=?", (sid,))
         await conn.commit()
+    tickets_pre_fish = int(
+        (await db.get_steward_by_key_id(row["id"]))["tickets"] or 0
+    )
     fished = client.post(
         "/api/v1/shore/cast",
         headers=_auth(key, {"Idempotency-Key": "net-ok"}),
@@ -344,7 +403,7 @@ async def _test_island_v1_api() -> None:
     )
     assert fished.status_code == 200, fished.text
     assert fished.json()["event"]["kind"] == "shore"
-    assert fished.json()["me"]["tickets"] <= tickets0 + 40
+    assert fished.json()["me"]["tickets"] <= tickets_pre_fish + 40
 
     from server import mcp_dispatch as mux
 
@@ -686,6 +745,14 @@ def test_island_page_is_modular() -> None:
     assert "grass.png" in home_js
     assert "plot.png" in home_js
     assert "PAGE_SIZE = 9" in home_js
+    assert "data-act=\"expand\"" in home_js
+    assert "onTapGrass" in home_js
+    assert "n % PAGE_SIZE === 0" in home_js
+    store_js = (ROOT / "server/static/island/store.js").read_text(encoding="utf-8")
+    assert "点草地开垦第一座" in store_js
+    assert "/api/v1/farm/expand" in api
+    assert "api.expand" in app
+    assert "showExpandSheet" in app
     assert "yardPage" in home_js
     assert "island-plot-pager" in home_js
     assert "bindSwipe" in home_js

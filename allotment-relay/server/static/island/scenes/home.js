@@ -1,6 +1,7 @@
 import {
   formatRemain,
   growStatusLine,
+  landSnap,
   panelSubtitle,
   plotLabel,
   plotToken,
@@ -29,7 +30,7 @@ export function renderHome(root, { onOpenLand }) {
   root.querySelector("[data-act=land]").addEventListener("click", onOpenLand);
 }
 
-export function renderYards(root, { onTapPlot, onHarvestAll, onSwitchYard }) {
+export function renderYards(root, { onTapPlot, onTapGrass, onHarvestAll, onSwitchYard }) {
   const ripe = ripeYard().length;
   root.innerHTML = `
     <div class="island-yards">
@@ -53,7 +54,7 @@ export function renderYards(root, { onTapPlot, onHarvestAll, onSwitchYard }) {
   });
   const harvest = root.querySelector("[data-act=harvest]");
   if (harvest) harvest.addEventListener("click", onHarvestAll);
-  bindGrid(onTapPlot);
+  bindGrid(onTapPlot, onTapGrass);
   bindPager();
   bindSwipe();
 }
@@ -99,7 +100,10 @@ const PLOT = "/static/island/assets/plot.png";
 const PAGE_SIZE = 9;
 
 function pageCount() {
-  return Math.max(1, Math.ceil(yardPlots().length / PAGE_SIZE));
+  const n = yardPlots().length;
+  const filled = Math.ceil(n / PAGE_SIZE);
+  const extra = (n % PAGE_SIZE === 0) ? 1 : 0;
+  return Math.max(1, filled + extra);
 }
 
 function clampPage() {
@@ -116,11 +120,6 @@ function pagePlots() {
 }
 
 function plotGridMarkup() {
-  const all = yardPlots();
-  const meta = yardMeta();
-  if (!all.length) {
-    return `<p class="island-plot-empty">${esc(meta.empty)}</p>`;
-  }
   const plots = pagePlots();
   const tiles = plots.map((plot) => {
     const stage = plot.appearance || (plot.can_sow ? "empty" : "growing");
@@ -140,8 +139,7 @@ function plotGridMarkup() {
 }
 
 function pagerMarkup() {
-  const n = yardPlots().length;
-  if (n <= PAGE_SIZE) return "";
+  if (pageCount() <= 1) return "";
   clampPage();
   const pages = pageCount();
   const cur = state.yardPage + 1;
@@ -161,12 +159,17 @@ function turnPage(delta) {
   return true;
 }
 
-function bindGrid(onTapPlot) {
+function bindGrid(onTapPlot, onTapGrass) {
   const grid = document.getElementById("island-plot-grid");
   if (!grid || grid._bound) return;
   grid._bound = true;
   grid.addEventListener("click", (ev) => {
     if (grid._ignoreClick) return;
+    const grass = ev.target.closest("[data-act=expand]");
+    if (grass) {
+      if (onTapGrass) onTapGrass();
+      return;
+    }
     const tile = ev.target.closest("[data-token]");
     if (!tile) return;
     onTapPlot(tile.getAttribute("data-token"));
@@ -228,9 +231,20 @@ function bindSwipe() {
 }
 
 function grassPad(count) {
+  const cap = grassCaption();
   return Array.from({ length: count }, () => (
-    `<span class="island-plot-tile is-pad" aria-hidden="true"><img class="island-plot-grass" src="${GRASS}" alt="" draggable="false"></span>`
+    `<button type="button" class="island-plot-tile is-pad" data-act="expand" aria-label="开垦草地">
+      <img class="island-plot-grass" src="${GRASS}" alt="" draggable="false">
+      <span class="island-plot-meta"><b>草地</b><small>${esc(cap)}</small></span>
+    </button>`
   )).join("");
+}
+
+function grassCaption() {
+  const snap = landSnap();
+  if (snap && snap.clearing) return snap.clearing_eta || "开垦中";
+  if (snap && snap.offer && snap.offer.cost != null) return `${snap.offer.cost} 票`;
+  return "开垦";
 }
 
 function tileCaption(plot) {

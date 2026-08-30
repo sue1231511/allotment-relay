@@ -43,6 +43,11 @@ class BuyBody(BaseModel):
     api_key: str = ""
 
 
+class ExpandBody(BaseModel):
+    kind: str = "home"
+    api_key: str = ""
+
+
 class EatBody(BaseModel):
     item: str = ""
     api_key: str = ""
@@ -223,6 +228,22 @@ async def shake_parcel(slot: str, request: Request, body: SowBody | None = None)
         row, _ = await require_enrolled(key)
         result = await farm_service.shake(key, int(row["id"]), slot)
         await idempotency.store(sid, f"shake:{slot}", _idem_key(request), 200, result)
+        return result
+    except ApiError as exc:
+        return _error(exc)
+
+
+@router.post("/farm/expand")
+async def expand_land(request: Request, body: ExpandBody):
+    try:
+        key = extract_api_key(request, body.api_key)
+        kind = (body.kind or "home").strip() or "home"
+        sid, cached = await _write_guard(request, key, f"expand:{kind}")
+        if cached:
+            return _cached_response(cached)
+        row, _ = await require_enrolled(key)
+        result = await farm_service.expand(key, int(row["id"]), kind)
+        await idempotency.store(sid, f"expand:{kind}", _idem_key(request), 200, result)
         return result
     except ApiError as exc:
         return _error(exc)

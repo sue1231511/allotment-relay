@@ -20,7 +20,7 @@ export const YARDS = {
     label: "温室",
     unit: "座",
     full: "温室已经种满了",
-    empty: "还没有温室。",
+    empty: "还没有温室。点草地开垦第一座。",
     plant: "种温室",
   },
 };
@@ -195,4 +195,16 @@ export function panelSubtitle(kind = state.yard) {
 
 export function yardFullMessage(kind = state.yard) {
   return yardMeta(kind).full;
+}
+
+export function landSnap(kind = state.yard) {
+  const land = (state.farm && state.farm.land) || {};
+  if (kind === "orchard") return land.orchard || null;
+  if (kind === "greenhouse") return land.greenhouse || null;
+  return land.plots || null;
+}
+
+export function duesBlocked() {
+  const dues = (state.me && state.me.dues) || {};
+  return Number(dues.tax_arrears || 0) > 0 || Number(dues.upkeep_arrears || 0) > 0;
 }

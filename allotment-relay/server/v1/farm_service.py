@@ -2,7 +2,7 @@
 
 MIGRATION BOUNDARY
 ------------------
-播种 / 打理 / 浇水 / 施肥 / 收获 / 堆肥 / 摇树的数值与副作用仍走 `game._plot_one`（与 MCP `plot_ops` 同一条路径）。
+播种 / 打理 / 浇水 / 施肥 / 收获 / 堆肥 / 摇树 / 开垦的数值与副作用仍走 `game._plot_one`（与 MCP `plot_ops` 同一条路径）。
 本模块只做：结构化入参、地块预检、稳定错误码、结构化回包。
 下一步应把 `_plot_one` 里的 sow/water/gather 抽成 `farm_actions.py`，
 让 MCP 解析器和本服务一起调用，而不是让 REST 长期拼命令字符串。
@@ -83,6 +83,43 @@ async def buy(api_key: str, key_id: int, crop: str, qty: int = 1) -> dict[str, A
     snap = await snapshot(api_key, s["id"])
     snap["event"] = {
         "title": "买种",
+        "narrative": views_human(narrative),
+        "kind": "farm",
+    }
+    return snap
+
+
+_EXPAND_CMD = {
+    "home": ("买地 确认", "开垦"),
+    "plots": ("买地 确认", "开垦"),
+    "orchard": ("买园 确认", "买园"),
+    "greenhouse": ("买棚 确认", "买棚"),
+}
+
+
+async def expand(api_key: str, key_id: int, kind: str = "home") -> dict[str, Any]:
+    try:
+        s = await _prepare(key_id)
+    except ValueError as exc:
+        raise classify(exc) from exc
+    key = (kind or "home").strip().lower()
+    if key in ("plot", "plots", "yard", "land"):
+        key = "home"
+    if key in ("shed", "棚", "温室"):
+        key = "greenhouse"
+    if key in ("园", "grove", "tree"):
+        key = "orchard"
+    pair = _EXPAND_CMD.get(key)
+    if not pair:
+        raise ApiError("BAD_REQUEST", "没有这一类地。切菜地、果园或温室再点草地。")
+    cmd, title = pair
+    try:
+        narrative = await game._plot_one(s, cmd)
+    except ValueError as exc:
+        raise classify(exc) from exc
+    snap = await snapshot(api_key, s["id"])
+    snap["event"] = {
+        "title": title,
         "narrative": views_human(narrative),
         "kind": "farm",
     }

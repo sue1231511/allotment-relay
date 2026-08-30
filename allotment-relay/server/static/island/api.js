@@ -69,6 +69,7 @@ export const api = {
   harvest: (slot, idem) => req(`/api/v1/farm/parcels/${encodeURIComponent(slot)}/harvest`, { method: "POST", body: {}, idem }),
   compost: (slot, idem) => req(`/api/v1/farm/parcels/${encodeURIComponent(slot)}/compost`, { method: "POST", body: {}, idem }),
   shake: (slot, idem) => req(`/api/v1/farm/parcels/${encodeURIComponent(slot)}/shake`, { method: "POST", body: {}, idem }),
+  expand: (kind = "home", idem) => req("/api/v1/farm/expand", { method: "POST", body: { kind }, idem }),
   buy: (crop, qty = 1, idem) => req("/api/v1/farm/buy", { method: "POST", body: { crop, qty }, idem }),
   sleep: (idem) => req("/api/v1/hut/sleep", { method: "POST", body: {}, idem }),
   buildHut: (idem) => req("/api/v1/hut/build", { method: "POST", body: {}, idem }),
