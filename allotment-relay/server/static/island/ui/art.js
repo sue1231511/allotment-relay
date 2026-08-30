@@ -5,7 +5,7 @@ export const SLOTS = {
   home: { label: "家园院子", size: "1080×1920" },
   yards: { label: "份地", size: "941×1672" },
   shore: { label: "港口", size: "1080×1920" },
-  plaza: { label: "潮汐广场", size: "1080×1920" },
+  plaza: { label: "潮汐广场", size: "941×1672" },
   hut: { label: "岸畔小屋", size: "1080×1920" },
   bar: { label: "潮汐酒吧", size: "1080×1920" },
   theater: { label: "潮汐剧场", size: "1080×1920" },
@@ -16,6 +16,9 @@ export const SLOTS = {
   lianli: { label: "连理所", size: "941×1672" },
   workshop: { label: "岸工坊", size: "941×1672" },
   quarry: { label: "盐风崖", size: "941×1672" },
+  shop: { label: "杂货铺", size: "1080×1920" },
+  lighthouse: { label: "灯塔", size: "1080×1920" },
+  notice: { label: "潮汐公告", size: "1080×1920" },
 };
 
 export function sceneArt(id) {

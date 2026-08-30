@@ -87,7 +87,7 @@ async function enterScene(name) {
   if (bar) bar.hidden = name === "map" || name === "yards";
   setYardsChrome(name === "yards");
   setBagChip(name !== "map");
-  setBackChip(name !== "map", () => enterScene("map"));
+  setBackChip(name !== "map", () => enterScene(state.backTo || "map"));
   try {
     if (name === "home") {
       stopGrowTick();
@@ -114,17 +114,36 @@ async function enterScene(name) {
       return;
     }
     if (name === "plaza") {
-      renderPlaza(root);
+      state.backTo = "map";
+      setBackChip(true, () => enterScene("map"));
+      renderPlaza(root, {
+        onOpen: (go) => {
+          state.backTo = "plaza";
+          enterScene(go);
+        },
+      });
       return;
     }
-    if (name === "hut" || name === "bar" || name === "theater" || name === "eatery" || name === "hui" || name === "market" || name === "ting" || name === "lianli" || name === "workshop" || name === "quarry") {
+    if (PLACE_TITLES[name]) {
       renderPlaceScene(name);
       return;
     }
-    renderMap(root, { onOpen: enterScene });
+    state.backTo = "map";
+    renderMap(root, {
+      onOpen: (go) => {
+        state.backTo = "map";
+        enterScene(go);
+      },
+    });
   } catch (err) {
     toast(err.message || "这处场景没能打开。");
-    renderMap(root, { onOpen: enterScene });
+    state.backTo = "map";
+    renderMap(root, {
+      onOpen: (go) => {
+        state.backTo = "map";
+        enterScene(go);
+      },
+    });
   }
 }
 
@@ -139,6 +158,9 @@ const PLACE_TITLES = {
   hui: "潮生会",
   workshop: "岸工坊",
   quarry: "盐风崖",
+  shop: "杂货铺",
+  lighthouse: "灯塔",
+  notice: "潮汐公告",
 };
 
 function renderPlaceScene(name) {

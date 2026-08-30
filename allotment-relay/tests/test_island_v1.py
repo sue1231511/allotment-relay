@@ -691,7 +691,17 @@ def test_island_page_is_modular() -> None:
     assert "洗碗" not in app
     assert "只铺图和地名" in (ROOT / "server/static/island/scenes/place.js").read_text(encoding="utf-8")
     assert "data-act=\"net\"" not in (ROOT / "server/static/island/scenes/shore.js").read_text(encoding="utf-8")
-    assert "发言" not in (ROOT / "server/static/island/scenes/plaza.js").read_text(encoding="utf-8")
+    plaza_js = (ROOT / "server/static/island/scenes/plaza.js").read_text(encoding="utf-8")
+    assert "发言" not in plaza_js
+    assert "洗碗" not in plaza_js
+    assert "杂货铺" in plaza_js
+    assert "灯塔" in plaza_js
+    assert "岸工坊" in plaza_js
+    assert "潮汐公告" in plaza_js
+    assert 'go: "shop"' in plaza_js
+    assert 'go: "lighthouse"' in plaza_js
+    assert 'go: "workshop"' in plaza_js
+    assert 'go: "notice"' in plaza_js
     assert "/api/v1/farm/buy" in api
     assert "/tend" in api
     assert "/fertilize" in api
@@ -714,7 +724,12 @@ def test_island_page_is_modular() -> None:
     assert "scenes/market.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
     assert "scenes/ting.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
     assert "scenes/lianli.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
-    assert "scenes/workshop.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
+    art_md = (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
+    assert "scenes/workshop.png" in art_md
+    assert "scenes/shop.png" in art_md
+    assert "scenes/lighthouse.png" in art_md
+    assert "scenes/notice.png" in art_md
+    assert "杂货铺" in art_md and "潮汐公告" in art_md
     assert "scenes/quarry.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
     try:
         from PIL import Image
@@ -763,7 +778,11 @@ def test_island_page_is_modular() -> None:
     assert (ROOT / "server/static/island/scenes/shore.js").exists()
     assert (ROOT / "server/static/island/scenes/plaza.js").exists()
     assert "renderPlace" in (ROOT / "server/static/island/scenes/shore.js").read_text(encoding="utf-8")
-    assert "renderPlace" in (ROOT / "server/static/island/scenes/plaza.js").read_text(encoding="utf-8")
+    assert "island-plaza-board" in (ROOT / "server/static/island/scenes/plaza.js").read_text(encoding="utf-8")
+    assert 'shop: "杂货铺"' in app
+    assert 'lighthouse: "灯塔"' in app
+    assert 'notice: "潮汐公告"' in app
+    assert "state.backTo" in app
     assert (ROOT / "server/static/island/assets/scenes/shore.png").exists()
     assert (ROOT / "server/static/island/assets/scenes/bar.png").exists()
     assert (ROOT / "server/static/island/assets/scenes/plaza.png").exists()
@@ -771,6 +790,8 @@ def test_island_page_is_modular() -> None:
     assert "港口" in (ROOT / "server/static/island/map.js").read_text(encoding="utf-8")
     assert "剧场" in (ROOT / "server/static/island/map.js").read_text(encoding="utf-8")
     assert "is-theater" in css
+    assert "island-plaza-board" in css
+    assert "941 / 1672" in css
     assert "/play?go=star" not in app
     assert (ROOT / "server/static/island/assets/plot.png").exists()
     assert (ROOT / "server/static/island/assets/grass.png").exists()

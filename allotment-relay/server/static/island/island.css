@@ -924,16 +924,38 @@ body.island-app.is-playing.is-yards .island-actionbar {
 .island-shore-card b { display: block; font-size: 18px; margin-bottom: 6px; }
 .island-shore-card p { margin: 0; font-size: 13px; color: #3d5c61; }
 
-/* 广场 */
+/* 广场：整图可见，热区对上杂货铺 / 灯塔 / 岸工坊 / 潮汐公告。 */
 .island-plaza {
   position: absolute;
   inset: 0;
-  display: flex;
-  flex-direction: column;
+  overflow-x: hidden;
+  overflow-y: auto;
   background: #efe4c8;
+  -webkit-overflow-scrolling: touch;
 }
 
-.island-plaza .island-slot { z-index: 0; }
+.island-plaza-board {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 941 / 1672;
+  line-height: 0;
+}
+
+.island-plaza-board .island-slot {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.island-plaza-board .island-slot-pic {
+  object-fit: fill;
+}
+
+.island-plaza .island-hot span {
+  font-size: 13px;
+  padding: 3px 10px;
+}
+
 .island-plaza .island-board,
 .island-plaza .island-msgs,
 .island-plaza .island-composer { position: relative; z-index: 1; }
