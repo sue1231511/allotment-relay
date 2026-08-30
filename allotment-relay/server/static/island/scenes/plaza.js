@@ -8,7 +8,7 @@ export function renderPlaza(root, { messages, notices, onSay, onBack }) {
     <div class="island-plaza">
       ${sceneArt("plaza")}
       <aside class="island-board">
-        <small>公告牌</small>
+        <small>潮汐广场</small>
         <b>${esc(board.title || "世界")}</b>
         <p>${esc(board.body || "")}</p>
       </aside>

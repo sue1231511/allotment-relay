@@ -502,7 +502,13 @@ def test_island_page_is_modular() -> None:
     assert (ROOT / "server/static/island/scenes/plaza.js").exists()
     assert "sceneArt" in (ROOT / "server/static/island/scenes/shore.js").read_text(encoding="utf-8")
     assert (ROOT / "server/static/island/assets/scenes/shore.png").exists()
+    assert (ROOT / "server/static/island/assets/scenes/bar.png").exists()
+    assert (ROOT / "server/static/island/assets/scenes/plaza.png").exists()
+    assert (ROOT / "server/static/island/assets/scenes/theater.png").exists()
     assert "港口" in (ROOT / "server/static/island/map.js").read_text(encoding="utf-8")
+    assert "剧场" in (ROOT / "server/static/island/map.js").read_text(encoding="utf-8")
+    assert "is-theater" in css
+    assert "/play?go=star" in app
     assert (ROOT / "server/static/island/assets/plot.png").exists()
     assert (ROOT / "server/static/island/assets/grass.png").exists()
     assert (ROOT / "server/static/island/assets/scenes/.gitkeep").exists()
