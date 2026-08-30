@@ -23,7 +23,7 @@ import { showEvent, toast } from "./ui/modal.js";
 const sceneEl = () => document.getElementById("island-scene");
 const sheetEl = () => document.getElementById("island-sheet");
 const plantEl = () => document.getElementById("island-plant");
-const LIVE_SCENES = ["home", "yards", "shore", "plaza", "hut", "bar", "theater", "eatery", "hui"];
+const LIVE_SCENES = ["home", "yards", "shore", "plaza", "hut", "bar", "theater", "eatery", "hui", "market", "ting", "lianli"];
 let loungeCache = { messages: [], notices: [] };
 let growTimer = 0;
 
@@ -133,7 +133,7 @@ async function enterScene(name) {
       });
       return;
     }
-    if (name === "hut" || name === "bar" || name === "theater" || name === "eatery" || name === "hui") {
+    if (name === "hut" || name === "bar" || name === "theater" || name === "eatery" || name === "hui" || name === "market" || name === "ting" || name === "lianli") {
       renderPlaceScene(name);
       return;
     }
@@ -199,6 +199,36 @@ function renderPlaceScene(name) {
       ],
       actions: [{ id: "bag", label: "打开行囊", primary: true }],
       onAct: () => openTab("bag"),
+      onBack: back,
+    });
+    return;
+  }
+  if (name === "market") {
+    renderPlace(root, {
+      id: "market",
+      title: "集市",
+      body: ["海边的集市。"],
+      actions: [],
+      onBack: back,
+    });
+    return;
+  }
+  if (name === "ting") {
+    renderPlace(root, {
+      id: "ting",
+      title: "听潮亭",
+      body: ["放慢脚步，倾听大海。"],
+      actions: [],
+      onBack: back,
+    });
+    return;
+  }
+  if (name === "lianli") {
+    renderPlace(root, {
+      id: "lianli",
+      title: "连理所",
+      body: ["今日宜缔娶。"],
+      actions: [],
       onBack: back,
     });
     return;

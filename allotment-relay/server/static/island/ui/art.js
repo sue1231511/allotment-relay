@@ -9,8 +9,11 @@ export const SLOTS = {
   hut: { label: "岸畔小屋", size: "1080×1920" },
   bar: { label: "潮汐酒吧", size: "1080×1920" },
   theater: { label: "潮汐剧场", size: "1080×1920" },
-  eatery: { label: "岸畔小馆", size: "1080×1920" },
-  hui: { label: "潮生会", size: "1080×1920" },
+  eatery: { label: "岸畔小馆", size: "941×1672" },
+  hui: { label: "潮生会", size: "941×1672" },
+  market: { label: "集市", size: "941×1672" },
+  ting: { label: "听潮亭", size: "941×1672" },
+  lianli: { label: "连理所", size: "941×1672" },
 };
 
 export function sceneArt(id) {
