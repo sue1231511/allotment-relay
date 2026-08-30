@@ -38,7 +38,7 @@ export function renderWriters(root, { onAct, onSwitchTab, onOpenShelf, onCloseSh
     <div class="island-shop island-bar island-writers">
       ${sceneArt("writers")}
       <button type="button" class="island-scene-fold" aria-label="收起列表"></button>
-      <div class="island-shop-shelf island-bar-tray">
+      <div class="island-shop-shelf">
         <div class="island-shop-meta">
           <b>编剧社</b>
           <small></small>

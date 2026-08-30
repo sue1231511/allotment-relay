@@ -38,7 +38,7 @@ export function renderHall(root, { onAct, onSwitchTab, onOpenShelf, onCloseShelf
     <div class="island-shop island-bar island-hall">
       ${sceneArt("hall")}
       <button type="button" class="island-scene-fold" aria-label="收起列表"></button>
-      <div class="island-shop-shelf island-bar-tray">
+      <div class="island-shop-shelf">
         <div class="island-shop-meta">
           <b>剧场看台</b>
           <small></small>

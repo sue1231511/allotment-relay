@@ -38,7 +38,7 @@ export function renderAtelier(root, { onAct, onSwitchTab, onOpenShelf, onCloseSh
     <div class="island-shop island-bar island-atelier">
       ${sceneArt("atelier")}
       <button type="button" class="island-scene-fold" aria-label="收起列表"></button>
-      <div class="island-shop-shelf island-bar-tray">
+      <div class="island-shop-shelf">
         <div class="island-shop-meta">
           <b>衣泊坊</b>
           <small></small>
