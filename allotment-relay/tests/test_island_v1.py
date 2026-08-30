@@ -439,6 +439,15 @@ def test_island_page_is_modular() -> None:
     assert 'id="island-enter"' in html
     assert "novalidate" in html
     assert "island-dock" in html
+    assert 'data-tab="bag"' in html
+    assert 'data-tab="map"' not in html
+    assert 'data-tab="quest"' not in html
+    assert 'data-tab="chat"' not in html
+    assert ">任务<" not in html
+    assert ">聊天<" not in html
+    assert ">地图<" not in html
+    assert "renderQuest" not in app
+    assert "renderChat" not in app
     assert "island-ribbon" in html
     assert "island-gate-hint" in html
     map_js = (ROOT / "server/static/island/map.js").read_text(encoding="utf-8")
