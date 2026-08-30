@@ -59,10 +59,9 @@
     }
     if (dock) dock.hidden = true;
     var bag = document.getElementById("island-bag-chip");
-    if (bag) {
-      bag.hidden = false;
-      bag.removeAttribute("hidden");
-    }
+    var back = document.getElementById("island-back-chip");
+    if (bag) bag.hidden = true;
+    if (back) back.hidden = true;
   }
 
   function loadKey() {

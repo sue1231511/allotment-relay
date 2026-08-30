@@ -519,6 +519,9 @@ def test_island_page_is_modular() -> None:
     assert "backChipMarkup" not in (ROOT / "server/static/island/scenes/home.js").read_text(encoding="utf-8")
     assert "setBackChip" in (ROOT / "server/static/island/ui/back-map.js").read_text(encoding="utf-8")
     assert "setBagChip" in app
+    assert "setBagChip(name !== \"map\")" in app
+    assert "left: 4px" in css
+    assert "min(196px, 58%)" in css
     home_js = (ROOT / "server/static/island/scenes/home.js").read_text(encoding="utf-8")
     yards_js = home_js.split("export function renderYards", 1)[1].split("export function", 1)[0]
     assert "island-back-map" not in yards_js
@@ -547,6 +550,14 @@ def test_island_page_is_modular() -> None:
     assert ".island-back-chip" not in css
     assert (ROOT / "server/static/island/assets/chip-back.png").exists()
     assert (ROOT / "server/static/island/assets/chip-bag.png").exists()
+    try:
+        from PIL import Image
+        back = Image.open(ROOT / "server/static/island/assets/chip-back.png")
+        assert back.size == (2000, 667)
+        assert back.mode == "RGBA"
+        assert back.getpixel((0, 0))[3] == 0
+    except ImportError:
+        pass
     assert "is-yards .island-actionbar" in css
     assert not (ROOT / "server/static/island/assets/back-map.png").exists()
     assert "api.buy" in app

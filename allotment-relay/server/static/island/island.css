@@ -759,12 +759,15 @@ body.island-app.is-playing.is-yards .island-actionbar {
 
 .island-float-chip.is-bag {
   top: calc(8px + env(safe-area-inset-top));
-  left: 6px;
+  right: 6px;
+  left: auto;
 }
 
 .island-float-chip.is-back {
   top: calc(8px + env(safe-area-inset-top));
-  right: 6px;
+  left: 4px;
+  right: auto;
+  width: min(196px, 58%);
 }
 
 .island-float-chip img {

@@ -41,7 +41,7 @@ function showPlay() {
   stage.hidden = false;
   const dock = document.getElementById("island-dock");
   if (dock) dock.hidden = true;
-  setBagChip(true);
+  setBagChip(false);
 }
 
 function showGate() {
@@ -84,7 +84,7 @@ async function enterScene(name) {
   const bar = document.getElementById("island-actionbar");
   if (bar) bar.hidden = name === "map" || name === "yards";
   setYardsChrome(name === "yards");
-  setBagChip(true);
+  setBagChip(name !== "map");
   setBackChip(name !== "map", () => enterScene("map"));
   try {
     if (name === "home") {
