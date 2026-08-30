@@ -115,7 +115,7 @@ async function enterScene(name) {
       renderPlaza(root);
       return;
     }
-    if (name === "hut" || name === "bar" || name === "theater" || name === "eatery" || name === "hui" || name === "market" || name === "ting" || name === "lianli") {
+    if (name === "hut" || name === "bar" || name === "theater" || name === "eatery" || name === "hui" || name === "market" || name === "ting" || name === "lianli" || name === "workshop" || name === "quarry") {
       renderPlaceScene(name);
       return;
     }
@@ -135,6 +135,8 @@ const PLACE_TITLES = {
   ting: "听潮亭",
   lianli: "连理所",
   hui: "潮生会",
+  workshop: "岸工坊",
+  quarry: "盐风崖",
 };
 
 function renderPlaceScene(name) {

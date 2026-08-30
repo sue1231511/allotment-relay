@@ -462,8 +462,10 @@ def test_island_page_is_modular() -> None:
     assert "酒吧" in map_js
     assert "island-hot" in map_js
     assert "data-href" in map_js
-    assert '"/workshop"' in map_js
-    assert '"/quarry"' in map_js
+    assert 'go: "workshop"' in map_js
+    assert 'go: "quarry"' in map_js
+    assert '"/workshop"' not in map_js
+    assert '"/quarry"' not in map_js
     assert 'go: "market"' in map_js
     assert 'go: "ting"' in map_js
     assert 'go: "lianli"' in map_js
@@ -605,9 +607,11 @@ def test_island_page_is_modular() -> None:
     assert "scenes/market.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
     assert "scenes/ting.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
     assert "scenes/lianli.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
+    assert "scenes/workshop.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
+    assert "scenes/quarry.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
     try:
         from PIL import Image
-        for place in ("eatery", "hui", "market", "ting", "lianli"):
+        for place in ("eatery", "hui", "market", "ting", "lianli", "workshop", "quarry"):
             pic = ROOT / f"server/static/island/assets/scenes/{place}.png"
             assert pic.exists(), place
             assert Image.open(pic).size == (941, 1672)
@@ -616,6 +620,8 @@ def test_island_page_is_modular() -> None:
     assert 'market: "集市"' in app
     assert 'ting: "听潮亭"' in app
     assert 'lianli: "连理所"' in app
+    assert 'workshop: "岸工坊"' in app
+    assert 'quarry: "盐风崖"' in app
     assert (ROOT / "server/static/island/ui/plant-panel.js").exists()
     assert (ROOT / "server/static/island/ui/crops.js").exists()
     assert "island-crop-fallback" in (ROOT / "server/static/island/ui/crops.js").read_text(encoding="utf-8")
