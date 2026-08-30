@@ -129,6 +129,10 @@ async def _test_island_v1_api() -> None:
     assert any(t["key"] == "anvil" for t in forge["tabs"]), forge
     nails = next(r for r in forge["recipes"] if r["id"] == "copper_nails")
     assert nails["can_craft"] is False
+    copper = next(n for n in nails["need"] if n["item"] == "quarry_copper_bar")
+    assert copper["where"] == "盐风崖洗铜"
+    assert "盐风崖" in (nails.get("detail") or "")
+    assert all("badge" in t for t in forge["tabs"])
     miss_nail = client.post(
         "/api/v1/workshop/act",
         headers=_auth(key, {"Idempotency-Key": "ws-nail-miss"}),
@@ -921,6 +925,9 @@ def test_island_page_is_modular() -> None:
     assert "island-workshop" in workshop_js
     assert "data-act" in workshop_js
     assert "去上手页" not in workshop_js
+    assert "disabled" not in workshop_js
+    assert "showHintSheet" in app
+    assert "quiet: true" in app
     assert "renderWorkshop" in app
     assert 'lighthouse: "灯塔"' in app
     assert 'notice: "潮汐公告"' in app

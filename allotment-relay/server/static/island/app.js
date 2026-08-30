@@ -21,7 +21,7 @@ import { renderWorkshop } from "./scenes/workshop.js";
 import { renderBag } from "./ui/bag.js";
 import { setBackChip, setBagChip } from "./ui/back-map.js";
 import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js";
-import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showExpandSheet, showEvent, showVendSheet, toast } from "./ui/modal.js";
+import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showExpandSheet, showEvent, showHintSheet, showVendSheet, toast } from "./ui/modal.js";
 
 const sceneEl = () => document.getElementById("island-scene");
 const sheetEl = () => document.getElementById("island-sheet");
@@ -257,17 +257,62 @@ function switchWorkshopTab(tab) {
   paintWorkshop(0);
 }
 
+function workshopRow(kind, target) {
+  const shop = state.workshop || {};
+  if (kind === "craft") return (shop.recipes || []).find((row) => row.name === target);
+  if (kind === "take") return shop.job;
+  if (kind === "fill" || kind === "harvest") {
+    return (shop.pans || []).find((row) => String(row.slot) === String(target));
+  }
+  if (kind === "open_pan") return shop.next_pan;
+  if (kind === "salvage") return shop.salvage;
+  if (kind === "patch") return shop.patch;
+  if (kind === "donate") return (shop.exhibits || []).find((row) => row.name === target);
+  return null;
+}
+
+function workshopCan(kind, row) {
+  if (!row) return false;
+  if (kind === "craft") return Boolean(row.can_craft);
+  if (kind === "take") return Boolean(row.can_take);
+  if (kind === "fill") return Boolean(row.can_fill);
+  if (kind === "harvest") return Boolean(row.can_harvest);
+  if (kind === "open_pan") return Boolean(row.can_buy);
+  if (kind === "salvage") return Boolean(row.can_salvage);
+  if (kind === "patch") return Boolean(row.can_patch);
+  if (kind === "donate") return Boolean(row.can_donate);
+  return false;
+}
+
 function tapWorkshop(kind, target) {
+  const row = workshopRow(kind, target);
+  const body = (row && (row.detail || row.note)) || "做这一下？";
+  if (!workshopCan(kind, row)) {
+    showHintSheet({
+      title: (row && row.name) || ({
+        take: "砧上",
+        fill: "盐田",
+        harvest: "盐田",
+        open_pan: "开池",
+        salvage: "打捞",
+        patch: "补网",
+        donate: "陈列",
+        craft: target || "砧上",
+      }[kind] || "岸工坊"),
+      body,
+    });
+    return;
+  }
   const pack = {
-    craft: ["开打", `打 ${target}`, "确认打"],
-    take: ["取成品", "好了就取下来。", "确认取"],
-    fill: ["灌盐田", target ? `灌进池${target}` : "灌一口空池", "确认灌"],
-    harvest: ["收盐", target ? `收池${target}` : "收结壳的盐", "确认收"],
-    open_pan: ["开新池", "付钱再开一口盐田。", "确认开"],
-    salvage: ["打捞", "只认风暴窗口，不是赶海。", "确认捞"],
-    donate: ["捐陈列", `捐 ${target}`, "确认捐"],
-    patch: ["补网", "贴上补丁或雾铅网坠。", "确认贴"],
-  }[kind] || ["岸工坊", "做这一下？", "确认"];
+    craft: ["开打", body, "确认打"],
+    take: ["取成品", body, "确认取"],
+    fill: ["灌盐田", body, "确认灌"],
+    harvest: ["收盐", body, "确认收"],
+    open_pan: ["开新池", body, "确认开"],
+    salvage: ["打捞", body, "确认捞"],
+    donate: ["捐陈列", body, "确认捐"],
+    patch: ["补网", body, "确认贴"],
+  }[kind] || ["岸工坊", body, "确认"];
   showActSheet({
     title: pack[0],
     body: pack[1],
@@ -279,7 +324,7 @@ function tapWorkshop(kind, target) {
 async function runWorkshop(kind, target) {
   const list = document.getElementById("island-workshop-list");
   const listTop = list ? list.scrollTop : 0;
-  await act(() => api.workshopAct(kind, target), { keepWorkshop: true, listTop });
+  await act(() => api.workshopAct(kind, target), { keepWorkshop: true, listTop, quiet: true });
 }
 
 function startWorkshopTick() {

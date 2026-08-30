@@ -49,7 +49,7 @@ function paintChrome(wrap, shop, tabs, tab, onSwitchTab) {
   const tabBar = wrap.querySelector(".island-shop-tabs");
   if (tabBar) {
     tabBar.innerHTML = tabs.map((row) => (
-      `<button type="button" role="tab" class="${row.key === tab ? "is-on" : ""}" data-tab="${esc(row.key)}" aria-selected="${row.key === tab ? "true" : "false"}">${esc(row.label)}</button>`
+      `<button type="button" role="tab" class="${row.key === tab ? "is-on" : ""}" data-tab="${esc(row.key)}" aria-selected="${row.key === tab ? "true" : "false"}">${esc(row.label)}${row.badge ? `<i>${esc(row.badge)}</i>` : ""}</button>`
     )).join("");
     tabBar.querySelectorAll("[data-tab]").forEach((btn) => {
       btn.addEventListener("click", () => onSwitchTab && onSwitchTab(btn.getAttribute("data-tab")));
@@ -80,12 +80,16 @@ function listMarkup(shop, tab) {
   return anvilMarkup(shop);
 }
 
-function sku(kind, target, title, note, price, on) {
-  return `<button type="button" class="island-shop-sku ${on ? "" : "is-off"}" data-act="${esc(kind)}" data-target="${esc(target)}" ${on ? "" : "disabled"}>
+function sku(kind, target, title, note, price, on, extra = "") {
+  return `<button type="button" class="island-shop-sku ${on ? "" : "is-off"} ${extra}" data-act="${esc(kind)}" data-target="${esc(target)}">
     <span class="island-shop-emoji">${esc(title.emoji || "·")}</span>
     <span class="island-shop-name"><b>${esc(title.name)}</b><small>${esc(note)}</small></span>
     <span class="island-shop-price">${esc(price)}</span>
   </button>`;
+}
+
+function needLine(needs) {
+  return (needs || []).map((n) => `${n.label} ${n.have}/${n.qty}`).join(" · ");
 }
 
 function anvilMarkup(shop) {
@@ -99,16 +103,17 @@ function anvilMarkup(shop) {
       job.note || "",
       job.ready ? "取" : "等",
       Boolean(job.can_take),
+      job.ready ? "is-ready" : "",
     ));
   }
   for (const row of shop.recipes || []) {
-    const need = (row.need || []).map((n) => `${n.label} ${n.have}/${n.qty}`).join(" · ");
+    const need = needLine(row.need) || row.note || "";
     rows.push(sku(
       "craft",
       row.name,
       { emoji: row.emoji, name: row.name },
       row.note || need,
-      row.can_craft ? "打" : "—",
+      row.can_craft ? "打" : "看",
       Boolean(row.can_craft),
     ));
   }
@@ -119,9 +124,9 @@ function saltMarkup(shop) {
   const rows = [];
   for (const pan of shop.pans || []) {
     if (pan.can_harvest) {
-      rows.push(sku("harvest", String(pan.slot), { emoji: "🧂", name: `池${pan.slot}` }, pan.note, "收盐", true));
+      rows.push(sku("harvest", String(pan.slot), { emoji: "🧂", name: `池${pan.slot}` }, pan.note, "收盐", true, "is-ready"));
     } else {
-      rows.push(sku("fill", String(pan.slot), { emoji: "🌊", name: `池${pan.slot}` }, pan.note, pan.can_fill ? "灌" : "—", Boolean(pan.can_fill)));
+      rows.push(sku("fill", String(pan.slot), { emoji: "🌊", name: `池${pan.slot}` }, pan.note, pan.can_fill ? "灌" : "看", Boolean(pan.can_fill)));
     }
   }
   const next = shop.next_pan;
@@ -135,8 +140,8 @@ function salvageMarkup(shop) {
   const s = shop.salvage || {};
   const p = shop.patch || {};
   return [
-    sku("salvage", "", { emoji: "🪵", name: "下滩打捞" }, s.note || "", s.can_salvage ? "捞" : "—", Boolean(s.can_salvage)),
-    sku("patch", "", { emoji: "🩹", name: "补网" }, p.note || "", p.can_patch ? "贴" : "—", Boolean(p.can_patch)),
+    sku("salvage", "", { emoji: "🪵", name: "下滩打捞" }, s.note || "", s.can_salvage ? "捞" : "看", Boolean(s.can_salvage), s.can_salvage ? "is-ready" : ""),
+    sku("patch", "", { emoji: "🩹", name: "补网" }, p.note || "", p.can_patch ? "贴" : "看", Boolean(p.can_patch)),
   ].join("");
 }
 
@@ -145,9 +150,10 @@ function exhibitMarkup(shop) {
     "donate",
     row.name,
     { emoji: row.emoji, name: row.name },
-    row.note || row.hint || "",
-    row.donated ? "齐了" : (row.can_donate ? "捐" : "—"),
+    row.note || needLine(row.need) || row.hint || "",
+    row.donated ? "齐了" : (row.can_donate ? "捐" : "看"),
     Boolean(row.can_donate),
+    row.can_donate ? "is-ready" : "",
   ));
   return rows.join("") || `<p class="island-shop-empty">柜子还空着。</p>`;
 }

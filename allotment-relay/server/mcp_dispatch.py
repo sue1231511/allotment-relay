@@ -210,7 +210,7 @@ CRAFT_HELP = """craft_ops 子命令（整句写进 command）：
 
 例子：status · 打 铜钉 · 打 潮纹秤锤 · 取 · 灌 · 收盐 · 打捞 · 捐 亮壳一套 · 捐 砧上全套
 涨潮灌盐田，晴天才晒。赶海 dig 涨潮关；打捞只认风暴窗口。
-人类网页 /workshop 是围观实况；打钉在 /play。"""
+人类网页 /workshop 是围观实况；打钉在 /play 或手机地图 /island 进岸工坊点。缺料时面板写出去哪弄。"""
 
 ALLIANCE_HELP = """alliance_ops 子命令（整句写进 command）：
   在线 — 档口里的人（15 分钟内有操作）
