@@ -70,6 +70,9 @@ async def _test_island_v1_api() -> None:
     me = client.get("/api/v1/me", headers=_auth(key))
     assert me.status_code == 200, me.text
     tickets0 = me.json()["me"]["tickets"]
+    assert "duty" in me.json()["me"]
+    assert "flags" in me.json()["me"]
+    assert "satiety" in me.json()["me"]
 
     missing_item = client.post(
         "/api/v1/farm/parcels/1/sow",
@@ -335,6 +338,92 @@ async def _test_island_v1_api() -> None:
     world = client.get("/api/v1/world", headers=_auth(key))
     assert world.status_code == 200, world.text
     assert world.json()["world"]["tide"]
+
+    bought = client.post(
+        "/api/v1/farm/buy",
+        headers=_auth(key, {"Idempotency-Key": "buy-kale"}),
+        json={"crop": "甘蓝", "qty": 1},
+    )
+    assert bought.status_code == 200, bought.text
+    assert bought.json()["event"]["kind"] == "farm"
+    assert bought.json()["event"]["title"] == "买种"
+
+    async with db.connect() as conn:
+        await conn.execute(
+            "UPDATE stewards SET tickets=tickets+200, energy=80 WHERE id=?",
+            (sid,),
+        )
+        await conn.commit()
+    built = client.post(
+        "/api/v1/hut/build",
+        headers=_auth(key, {"Idempotency-Key": "hut-build"}),
+        json={},
+    )
+    assert built.status_code == 200, built.text
+    assert built.json()["event"]["kind"] == "hut"
+    assert built.json()["me"]["flags"]["hut_built"] is True
+    async with db.connect() as conn:
+        await conn.execute(
+            "INSERT INTO hut_fittings (steward_id, slot, item_key, installed_at) VALUES (?,?,?,?)",
+            (sid, "hard_1", "bed", 1),
+        )
+        await conn.execute("UPDATE stewards SET energy=20 WHERE id=?", (sid,))
+        await conn.commit()
+    slept = client.post(
+        "/api/v1/hut/sleep",
+        headers=_auth(key, {"Idempotency-Key": "hut-sleep"}),
+        json={},
+    )
+    assert slept.status_code == 200, slept.text
+    assert slept.json()["event"]["kind"] == "hut"
+
+    async with db.connect() as conn:
+        await conn.execute(
+            "UPDATE stewards SET last_bar_shift_at=1, energy=80 WHERE id=?",
+            (sid,),
+        )
+        await conn.commit()
+    worked = client.post(
+        "/api/v1/bar/work",
+        headers=_auth(key, {"Idempotency-Key": "bar-work"}),
+        json={},
+    )
+    assert worked.status_code == 200, worked.text
+    assert worked.json()["event"]["kind"] == "bar"
+
+    async with db.connect() as conn:
+        await db.add_item(conn, sid, "crop_mango", 1)
+        await conn.commit()
+    ate = client.post(
+        "/api/v1/kitchen/eat",
+        headers=_auth(key, {"Idempotency-Key": "eat-mango"}),
+        json={"item": "芒果"},
+    )
+    assert ate.status_code == 200, ate.text
+    assert ate.json()["event"]["kind"] == "eatery"
+
+    async with db.connect() as conn:
+        await conn.execute(
+            "UPDATE stewards SET tax_arrears=20, upkeep_arrears=15, tickets=tickets+80 WHERE id=?",
+            (sid,),
+        )
+        await conn.commit()
+    paid_tax = client.post(
+        "/api/v1/hui/pay",
+        headers=_auth(key, {"Idempotency-Key": "hui-tax"}),
+        json={"kind": "tax"},
+    )
+    assert paid_tax.status_code == 200, paid_tax.text
+    assert paid_tax.json()["event"]["kind"] == "hui"
+    assert int(paid_tax.json()["me"]["dues"]["tax_arrears"] or 0) == 0
+    paid_upkeep = client.post(
+        "/api/v1/hui/pay",
+        headers=_auth(key, {"Idempotency-Key": "hui-upkeep"}),
+        json={"kind": "upkeep"},
+    )
+    assert paid_upkeep.status_code == 200, paid_upkeep.text
+    assert int(paid_upkeep.json()["me"]["dues"]["upkeep_arrears"] or 0) == 0
+
     page = client.get("/island")
     assert page.status_code == 200, page.text
     assert "手机地图" in page.text or "island-root" in page.text
@@ -347,13 +436,19 @@ def test_island_page_is_modular() -> None:
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
     assert "island-dock" in html
+    assert "island-ribbon" in html
     assert "家园" in (ROOT / "server/static/island/map.js").read_text(encoding="utf-8")
+    assert "小屋" in (ROOT / "server/static/island/map.js").read_text(encoding="utf-8")
+    assert "酒吧" in (ROOT / "server/static/island/map.js").read_text(encoding="utf-8")
     assert "min-height: 48px" in css
     assert "overflow-x: hidden" in css
     assert "island-plot-tile" in css
     assert "island-plot-bed" in css
     assert "island-yards" in css
-    assert "home-garden.png" in css
+    assert "island-slot" in css
+    assert "island-place" in css
+    assert "island-plant-buy" in css
+    assert "is-hui" in css
     assert "#7fa24a" not in css
     assert "top: auto" in css
     assert "/static/style.css" not in html
@@ -364,16 +459,35 @@ def test_island_page_is_modular() -> None:
     assert "浇水 1" not in app
     assert "菜地已经种满了" in (ROOT / "server/static/island/store.js").read_text(encoding="utf-8")
     assert "firstIdleYard" in app
+    assert "thirstyYard" in (ROOT / "server/static/island/store.js").read_text(encoding="utf-8")
     assert "plotToken" in app
     assert "renderYards" in app
     assert "enterScene(\"yards\")" in app
+    assert "api.buy" in app
+    assert "api.sleep" in app
+    assert "api.work" in app
+    assert "api.eat" in app
+    assert "api.pay" in app
+    assert "/api/v1/farm/buy" in api
+    assert "/api/v1/hut/sleep" in api
+    assert "/api/v1/bar/work" in api
+    assert "/api/v1/kitchen/eat" in api
+    assert "/api/v1/hui/pay" in api
     assert (ROOT / "server/static/island/scenes/home.js").exists()
+    assert (ROOT / "server/static/island/scenes/place.js").exists()
+    assert (ROOT / "server/static/island/ui/art.js").exists()
+    assert (ROOT / "server/static/island/assets/ART.md").exists()
+    assert "sceneArt" in (ROOT / "server/static/island/ui/art.js").read_text(encoding="utf-8")
+    assert "插图位" in (ROOT / "server/static/island/ui/art.js").read_text(encoding="utf-8")
+    assert "scenes/island-map.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
     assert (ROOT / "server/static/island/ui/plant-panel.js").exists()
     assert (ROOT / "server/static/island/ui/crops.js").exists()
+    assert "island-crop-fallback" in (ROOT / "server/static/island/ui/crops.js").read_text(encoding="utf-8")
     assert (ROOT / "server/static/island/assets/crops/kale.png").exists()
     assert (ROOT / "server/static/island/assets/crops/beet.png").exists()
     assert (ROOT / "server/static/island/assets/crops/fogpea.png").exists()
     assert "data-act=\"prev\"" in (ROOT / "server/static/island/ui/plant-panel.js").read_text(encoding="utf-8")
+    assert "data-act=\"buy\"" in (ROOT / "server/static/island/ui/plant-panel.js").read_text(encoding="utf-8")
     home_js = (ROOT / "server/static/island/scenes/home.js").read_text(encoding="utf-8")
     assert "island-plot-grid" in home_js
     assert "island-plot-bed" in home_js
@@ -382,12 +496,14 @@ def test_island_page_is_modular() -> None:
     assert "grass.png" in home_js
     assert "plot.png" in home_js
     assert "data-yard" in home_js
+    assert "onWaterAll" in home_js
+    assert "sceneArt" in home_js
     assert (ROOT / "server/static/island/scenes/shore.js").exists()
     assert (ROOT / "server/static/island/scenes/plaza.js").exists()
-    assert (ROOT / "server/static/island/assets/island-map.png").exists()
-    assert (ROOT / "server/static/island/assets/home-garden.png").exists()
+    assert "sceneArt" in (ROOT / "server/static/island/scenes/shore.js").read_text(encoding="utf-8")
     assert (ROOT / "server/static/island/assets/plot.png").exists()
     assert (ROOT / "server/static/island/assets/grass.png").exists()
+    assert (ROOT / "server/static/island/assets/scenes/.gitkeep").exists()
     main_py = (ROOT / "server/main.py").read_text(encoding="utf-8")
     assert '@app.get("/play"' in main_py
     assert '@app.get("/island"' in main_py

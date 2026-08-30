@@ -1,3 +1,4 @@
+import { sceneArt } from "../ui/art.js";
 import { esc } from "../ui/modal.js";
 
 export function renderPlaza(root, { messages, notices, onSay, onBack }) {
@@ -5,6 +6,7 @@ export function renderPlaza(root, { messages, notices, onSay, onBack }) {
   const rows = (messages || []).slice(-16);
   root.innerHTML = `
     <div class="island-plaza">
+      ${sceneArt("plaza")}
       <aside class="island-board">
         <small>公告牌</small>
         <b>${esc(board.title || "世界")}</b>

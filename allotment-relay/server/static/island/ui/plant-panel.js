@@ -2,7 +2,7 @@ import { neighborCrop, cropArt } from "./crops.js";
 import { firstIdleYard, panelCrops, panelSubtitle, state, yardMeta } from "../store.js";
 import { esc } from "./modal.js";
 
-export function renderPlantPanel(root, { onSelect, onPlant, onClose }) {
+export function renderPlantPanel(root, { onSelect, onPlant, onBuy, onClose }) {
   const crops = panelCrops();
   const selected = crops.find((c) => c.key === state.plantKey) || crops[0];
   if (selected) state.plantKey = selected.key;
@@ -37,6 +37,9 @@ export function renderPlantPanel(root, { onSelect, onPlant, onClose }) {
       <button type="button" class="island-plant-go" data-act="plant" ${selected && selected.seed_qty > 0 ? "" : "disabled"}>
         ${!selected ? "选择作物" : selected.seed_qty > 0 ? `种下${esc(selected.label)}` : `没有${esc(selected.label)}种`}
       </button>
+      <button type="button" class="island-plant-buy" data-act="buy" ${selected ? "" : "disabled"}>
+        ${selected ? `买一份${esc(selected.label)}种` : "买种"}
+      </button>
     </section>
   `;
   root.querySelector("[data-act=close]").addEventListener("click", onClose);
@@ -49,6 +52,8 @@ export function renderPlantPanel(root, { onSelect, onPlant, onClose }) {
     }
     if (selected) onPlant(selected);
   });
+  const buy = root.querySelector("[data-act=buy]");
+  if (buy) buy.addEventListener("click", () => selected && onBuy && onBuy(selected));
   bindSwipe(root.querySelector("#island-plant-pick"), {
     onLeft: () => next && onSelect(next),
     onRight: () => prev && onSelect(prev),

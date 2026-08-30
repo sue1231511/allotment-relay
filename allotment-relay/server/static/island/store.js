@@ -118,6 +118,10 @@ export function ripeYard(kind = state.yard) {
   return yardPlots(kind).filter((p) => p.can_harvest);
 }
 
+export function thirstyYard(kind = state.yard) {
+  return yardPlots(kind).filter((p) => p.can_water);
+}
+
 export function ripeHome() {
   return ripeYard("home");
 }

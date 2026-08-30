@@ -629,6 +629,8 @@ def test_human_island_manual() -> None:
         "菜地已经种满了",
         "果园已经种满了",
         "温室已经种满了",
+        "种植面板里买一份",
+        "手机地图点酒吧就能洗",
         "聊天室大厅也会出现一句通报",
     ):
         assert needle in blob, needle

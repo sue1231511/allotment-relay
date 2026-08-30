@@ -7,7 +7,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from . import farm_service, lounge_service, session_service, shore_service
+from . import farm_service, lounge_service, place_service, session_service, shore_service
 from . import idempotency
 from .auth import extract_api_key, key_row, require_enrolled
 from .errors import ApiError
@@ -34,6 +34,22 @@ class ShoreBody(BaseModel):
 class LoungePostBody(BaseModel):
     text: str = ""
     message: str = ""
+    api_key: str = ""
+
+
+class BuyBody(BaseModel):
+    crop: str = ""
+    qty: int = 1
+    api_key: str = ""
+
+
+class EatBody(BaseModel):
+    item: str = ""
+    api_key: str = ""
+
+
+class PayBody(BaseModel):
+    kind: str = ""
     api_key: str = ""
 
 
@@ -147,6 +163,96 @@ async def harvest_parcel(slot: str, request: Request, body: SowBody | None = Non
         row, _ = await require_enrolled(key)
         result = await farm_service.harvest(key, int(row["id"]), slot)
         await idempotency.store(sid, f"harvest:{slot}", _idem_key(request), 200, result)
+        return result
+    except ApiError as exc:
+        return _error(exc)
+
+
+@router.post("/farm/buy")
+async def buy_seed(request: Request, body: BuyBody):
+    try:
+        key = extract_api_key(request, body.api_key)
+        sid, cached = await _write_guard(request, key, f"buy:{body.crop}:{body.qty}")
+        if cached:
+            return _cached_response(cached)
+        row, _ = await require_enrolled(key)
+        result = await farm_service.buy(key, int(row["id"]), body.crop, body.qty)
+        await idempotency.store(sid, f"buy:{body.crop}:{body.qty}", _idem_key(request), 200, result)
+        return result
+    except ApiError as exc:
+        return _error(exc)
+
+
+@router.post("/hut/sleep")
+async def hut_sleep(request: Request, body: SowBody | None = None):
+    try:
+        key = extract_api_key(request, (body.api_key if body else ""))
+        sid, cached = await _write_guard(request, key, "hut:sleep")
+        if cached:
+            return _cached_response(cached)
+        row, _ = await require_enrolled(key)
+        result = await place_service.sleep(key, int(row["id"]))
+        await idempotency.store(sid, "hut:sleep", _idem_key(request), 200, result)
+        return result
+    except ApiError as exc:
+        return _error(exc)
+
+
+@router.post("/hut/build")
+async def hut_build(request: Request, body: SowBody | None = None):
+    try:
+        key = extract_api_key(request, (body.api_key if body else ""))
+        sid, cached = await _write_guard(request, key, "hut:build")
+        if cached:
+            return _cached_response(cached)
+        row, _ = await require_enrolled(key)
+        result = await place_service.build_hut(key, int(row["id"]))
+        await idempotency.store(sid, "hut:build", _idem_key(request), 200, result)
+        return result
+    except ApiError as exc:
+        return _error(exc)
+
+
+@router.post("/bar/work")
+async def bar_work(request: Request, body: SowBody | None = None):
+    try:
+        key = extract_api_key(request, (body.api_key if body else ""))
+        sid, cached = await _write_guard(request, key, "bar:work")
+        if cached:
+            return _cached_response(cached)
+        row, _ = await require_enrolled(key)
+        result = await place_service.work(key, int(row["id"]))
+        await idempotency.store(sid, "bar:work", _idem_key(request), 200, result)
+        return result
+    except ApiError as exc:
+        return _error(exc)
+
+
+@router.post("/kitchen/eat")
+async def kitchen_eat(request: Request, body: EatBody):
+    try:
+        key = extract_api_key(request, body.api_key)
+        sid, cached = await _write_guard(request, key, f"eat:{body.item}")
+        if cached:
+            return _cached_response(cached)
+        row, _ = await require_enrolled(key)
+        result = await place_service.eat(key, int(row["id"]), body.item)
+        await idempotency.store(sid, f"eat:{body.item}", _idem_key(request), 200, result)
+        return result
+    except ApiError as exc:
+        return _error(exc)
+
+
+@router.post("/hui/pay")
+async def hui_pay(request: Request, body: PayBody):
+    try:
+        key = extract_api_key(request, body.api_key)
+        sid, cached = await _write_guard(request, key, f"hui:{body.kind}")
+        if cached:
+            return _cached_response(cached)
+        row, _ = await require_enrolled(key)
+        result = await place_service.pay(key, int(row["id"]), body.kind)
+        await idempotency.store(sid, f"hui:{body.kind}", _idem_key(request), 200, result)
         return result
     except ApiError as exc:
         return _error(exc)
