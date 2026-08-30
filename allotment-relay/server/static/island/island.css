@@ -617,6 +617,7 @@ body.island-app.is-playing .island-actionbar {
   align-content: stretch;
   gap: 0;
   padding: 4px;
+  touch-action: none;
 }
 
 .island-plot-grid:has(.island-plot-empty) {
@@ -726,7 +727,7 @@ body.island-app.is-playing .island-actionbar {
 }
 
 .island-plot-pager span {
-  min-width: 4.5em;
+  min-width: 7em;
   text-align: center;
   font-size: 13px;
   color: #2a3a3c;
