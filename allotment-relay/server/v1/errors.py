@@ -61,6 +61,12 @@ def classify(exc: BaseException) -> ApiError:
         return ApiError("NOT_READY", msg or "砧上这会儿动不了。", status=409, detail=msg)
     if "滩上没风暴货" in raw or "打捞已满" in raw or "刚捞过" in raw:
         return ApiError("NOT_READY", msg or "这会儿捞不了。", status=409, detail=msg)
+    if "没有镐" in raw or "探不出脉" in raw:
+        return ApiError("TOOL_REQUIRED", msg or "还没有镐。", status=409, detail=msg)
+    if "刚探过" in raw or "刚挥过" in raw or "腕还酸" in raw or "挥满" in raw or "还在开凿" in raw:
+        return ApiError("NOT_READY", msg or "这会儿挖不了。", status=409, detail=msg)
+    if "买镐要" in raw or "开坑要" in raw or "升镐要" in raw:
+        return ApiError("TICKETS_LOW", msg or "工分票不够。", status=409, detail=msg)
     if "工分票不足" in raw or "撒网需要" in raw or "坐钓需要" in raw:
         return ApiError("TICKETS_LOW", msg or "工分票不够。", status=409, detail=msg)
     if "需要" in raw and "票" in raw and "只有" in raw:

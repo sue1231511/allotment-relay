@@ -189,7 +189,7 @@ QUARRY_HELP = """quarry_ops 子命令（整句写进 command）：
 例子：status · 买镐 · 探脉 · 挖 1 · 洗 海盐砂 2
 涨潮关的是赶海 dig；崖矿不关，但湿滑更难挖。不要发明 hew_all / mine_all。
 盐田晒盐走 craft_ops 灌 / 收盐，不是再挖一次。
-人类网页 /quarry 是围观实况；挥镐在 /play。"""
+人类网页 /quarry 是围观实况；挥镐在 /play 或手机地图 /island 进盐风崖点。"""
 
 CRAFT_HELP = """craft_ops 子命令（整句写进 command）：
   岸工坊。把崖矿精矿、羊毛、漂绳、岸木做成东西；附带盐田、风暴打捞、陈列柜。

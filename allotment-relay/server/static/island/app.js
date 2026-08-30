@@ -8,6 +8,7 @@ import {
   ripeYard,
   state,
   tickGrow,
+  tickQuarry,
   tickWorkshop,
 } from "./store.js";
 import { renderHud } from "./hud.js";
@@ -18,6 +19,7 @@ import { renderPlaza } from "./scenes/plaza.js";
 import { renderPlace } from "./scenes/place.js";
 import { renderShop } from "./scenes/shop.js";
 import { renderWorkshop } from "./scenes/workshop.js";
+import { renderQuarry } from "./scenes/quarry.js";
 import { renderBag } from "./ui/bag.js";
 import { setBackChip, setBagChip } from "./ui/back-map.js";
 import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js";
@@ -29,6 +31,7 @@ const plantEl = () => document.getElementById("island-plant");
 const LIVE_SCENES = ["home", "yards"];
 let growTimer = 0;
 let workshopTimer = 0;
+let quarryTimer = 0;
 
 function showPlay() {
   if (window.__islandBoot && typeof window.__islandBoot.showPlay === "function") {
@@ -96,6 +99,7 @@ async function enterScene(name) {
     if (name === "home") {
       stopGrowTick();
       stopWorkshopTick();
+      stopQuarryTick();
       renderHome(root, {
         onOpenLand: () => enterScene("yards"),
         onBack: () => enterScene("map"),
@@ -104,6 +108,7 @@ async function enterScene(name) {
     }
     if (name === "yards") {
       stopWorkshopTick();
+      stopQuarryTick();
       renderYards(root, {
         onTapPlot: tapPlot,
         onTapGrass: tapGrass,
@@ -116,6 +121,7 @@ async function enterScene(name) {
     }
     stopGrowTick();
     stopWorkshopTick();
+    stopQuarryTick();
     if (name === "shore") {
       renderShore(root);
       return;
@@ -140,6 +146,12 @@ async function enterScene(name) {
       state.workshopShelf = false;
       await openWorkshop(root);
       startWorkshopTick();
+      return;
+    }
+    if (name === "quarry") {
+      state.quarryShelf = false;
+      await openQuarry(root);
+      startQuarryTick();
       return;
     }
     if (PLACE_TITLES[name]) {
@@ -369,6 +381,131 @@ function stopWorkshopTick() {
   workshopTimer = 0;
 }
 
+async function openQuarry(root) {
+  try {
+    const data = await api.quarry();
+    applySnapshot(data);
+    renderHud();
+    if (data.event) showEvent(data.event);
+  } catch (err) {
+    toast(err.message || "崖门还没开。");
+  }
+  const tabs = (state.quarry && state.quarry.tabs) || [];
+  if (!tabs.some((row) => row.key === state.quarryTab)) {
+    state.quarryTab = (tabs[0] && tabs[0].key) || "pits";
+  }
+  paintQuarry();
+}
+
+function paintQuarry(listTop = 0) {
+  renderQuarry(sceneEl(), {
+    onAct: tapQuarry,
+    onSwitchTab: switchQuarryTab,
+    onOpenShelf: () => {
+      state.quarryShelf = true;
+      paintQuarry(0);
+    },
+    onCloseShelf: () => {
+      state.quarryShelf = false;
+      hideModal();
+      paintQuarry();
+    },
+    listTop,
+  });
+}
+
+function switchQuarryTab(tab) {
+  state.quarryTab = tab || "pits";
+  hideModal();
+  paintQuarry(0);
+}
+
+function quarryRow(kind, target) {
+  const q = state.quarry || {};
+  if (kind === "prospect" || kind === "hew") {
+    return (q.pits || []).find((row) => String(row.slot) === String(target));
+  }
+  if (kind === "wash") {
+    const name = String(target || "").split(/\s+/)[0];
+    return (q.raws || []).find((row) => row.name === name);
+  }
+  if (kind === "open_pit") return q.next_pit;
+  if (kind === "buy_pick" || kind === "upgrade") return q.pick;
+  return null;
+}
+
+function quarryCan(kind, row) {
+  if (!row) return false;
+  if (kind === "prospect") return Boolean(row.can_prospect);
+  if (kind === "hew") return Boolean(row.can_hew);
+  if (kind === "wash") return Boolean(row.can_wash);
+  if (kind === "open_pit") return Boolean(row.can_buy);
+  if (kind === "buy_pick") return Boolean(row.can_buy);
+  if (kind === "upgrade") return Boolean(row.can_upgrade);
+  return false;
+}
+
+function tapQuarry(kind, target) {
+  const row = quarryRow(kind, target);
+  const body = (row && (row.detail || row.note || row.upgrade_note)) || "做这一下？";
+  if (!quarryCan(kind, row)) {
+    showHintSheet({
+      title: (row && (row.name ? `坑${row.slot || ""} ${row.name}`.trim() : row.name)) || ({
+        prospect: "探脉",
+        hew: "挖",
+        wash: "洗矿",
+        open_pit: "开坑",
+        buy_pick: "买镐",
+        upgrade: "升镐",
+      }[kind] || "盐风崖"),
+      body,
+    });
+    return;
+  }
+  const pack = {
+    prospect: ["探脉", body, "确认探"],
+    hew: ["挥镐", body, "确认挖"],
+    wash: ["洗矿", body, "确认洗"],
+    open_pit: ["开新坑", body, "确认开"],
+    buy_pick: ["买镐", body, "确认买"],
+    upgrade: ["升镐", body, "确认升"],
+  }[kind] || ["盐风崖", body, "确认"];
+  showActSheet({
+    title: pack[0],
+    body: pack[1],
+    confirm: pack[2],
+    onConfirm: () => runQuarry(kind, target),
+  });
+}
+
+async function runQuarry(kind, target) {
+  const list = document.getElementById("island-quarry-list");
+  const listTop = list ? list.scrollTop : 0;
+  await act(() => api.quarryAct(kind, target), { keepQuarry: true, listTop, quiet: true });
+}
+
+function startQuarryTick() {
+  stopQuarryTick();
+  quarryTimer = window.setInterval(() => {
+    if (state.scene !== "quarry" || state.busy) return;
+    const ready = tickQuarry(1);
+    const list = document.getElementById("island-quarry-list");
+    paintQuarry(list ? list.scrollTop : 0);
+    if (!ready) return;
+    api.quarry().then((data) => {
+      applySnapshot(data);
+      renderHud();
+      const after = document.getElementById("island-quarry-list");
+      paintQuarry(after ? after.scrollTop : 0);
+    }).catch(() => {});
+  }, 1000);
+}
+
+function stopQuarryTick() {
+  if (quarryTimer) window.clearInterval(quarryTimer);
+  quarryTimer = 0;
+}
+
 async function buyShopSku(item) {
   if (!item) return;
   const listTop = shopListTop();
@@ -564,7 +701,7 @@ async function vendItem(item) {
   await act(() => api.vend(name, 1), { keepTab: true });
 }
 
-async function act(fn, { refreshScene = false, keepPlant = false, keepTab = false, keepShop = false, keepWorkshop = false, listTop = null, quiet = false } = {}) {
+async function act(fn, { refreshScene = false, keepPlant = false, keepTab = false, keepShop = false, keepWorkshop = false, keepQuarry = false, listTop = null, quiet = false } = {}) {
   if (state.busy) return;
   state.busy = true;
   try {
@@ -585,6 +722,10 @@ async function act(fn, { refreshScene = false, keepPlant = false, keepTab = fals
     }
     if (keepWorkshop && state.scene === "workshop") {
       paintWorkshop(listTop);
+      return;
+    }
+    if (keepQuarry && state.scene === "quarry") {
+      paintQuarry(listTop);
       return;
     }
     if (refreshScene || LIVE_SCENES.includes(state.scene)) {
