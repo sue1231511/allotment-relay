@@ -4,7 +4,35 @@ from __future__ import annotations
 from typing import Any
 
 from .. import farming, play, steward_dashboard, world
-from ..catalog import CROPS
+from ..catalog import (
+    CROPS,
+    ITEM_PRICES,
+    is_fruit_item,
+    is_raw_meat,
+    item_vendable,
+    suggested_price,
+)
+
+
+def _can_eat(item: str) -> bool:
+    key = str(item or "")
+    if key.startswith(("dish_", "meal_", "fish_", "dried_")):
+        return True
+    if key in {"wild_mint", "pickles", "myth_octopus"}:
+        return True
+    return is_fruit_item(key) or is_raw_meat(key)
+
+
+def _stock_row(it: dict[str, Any]) -> dict[str, Any]:
+    item = str(it.get("item") or "")
+    furniture = item.startswith("fit_") or item.startswith("deco_")
+    price = int(suggested_price(item) or ITEM_PRICES.get(item, 0) or 0)
+    return {
+        **it,
+        "can_eat": _can_eat(item),
+        "can_vend": bool(item_vendable(item) and not furniture),
+        "vend_price": price,
+    }
 
 
 def appearance_of(parcel: dict[str, Any]) -> str:
@@ -61,7 +89,7 @@ def player_view(dash: dict[str, Any] | None, *, enrolled: bool) -> dict[str, Any
         "dues": dash.get("dues") or {},
         "duty": (dash.get("meter_lines") or {}).get("bar_duty") or "",
         "flags": dash.get("flags") or {},
-        "stock": dash.get("stock") or [],
+        "stock": [_stock_row(it) for it in (dash.get("stock") or [])],
         "seeds": play.seed_options(dash.get("stock") or []),
     }
 

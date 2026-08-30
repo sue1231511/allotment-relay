@@ -1123,6 +1123,12 @@ body.island-app.is-playing.is-yards .island-actionbar {
   font-size: 14px;
 }
 
+.island-item-acts {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
 .island-item .island-btn {
   min-width: 56px;
   min-height: 40px;

@@ -90,6 +90,24 @@ async def eat(api_key: str, key_id: int, item: str) -> dict[str, Any]:
     return snap
 
 
+async def vend(api_key: str, key_id: int, item: str, qty: int = 1) -> dict[str, Any]:
+    name = (item or "").strip()
+    if not name:
+        raise ApiError("BAD_REQUEST", "先选要卖的东西。")
+    n = max(1, min(99, int(qty or 1)))
+    try:
+        s = await game.require_steward(key_id)
+    except ValueError as exc:
+        raise classify(exc) from exc
+    try:
+        narrative = await game.tote_ops(key_id, f"vend {name} {n}")
+    except ValueError as exc:
+        raise classify(exc) from exc
+    snap = await snapshot(api_key, s["id"])
+    snap["event"] = _event("卖掉了", narrative, "tote")
+    return snap
+
+
 async def pay(api_key: str, key_id: int, kind: str) -> dict[str, Any]:
     raw = (kind or "").strip().lower()
     if raw in ("tax", "税", "岸税"):

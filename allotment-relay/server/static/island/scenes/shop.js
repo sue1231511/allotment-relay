@@ -2,7 +2,7 @@ import { sceneArt } from "../ui/art.js";
 import { esc } from "../ui/modal.js";
 import { state } from "../store.js";
 
-export function renderShop(root, { onBuy, onSwitchTab }) {
+export function renderShop(root, { onBuy, onSwitchTab, listTop = 0 } = {}) {
   const shop = state.shop || {};
   const tabs = shop.tabs || [];
   const tab = state.shopTab || (tabs[0] && tabs[0].key) || "seed";
@@ -41,6 +41,13 @@ export function renderShop(root, { onBuy, onSwitchTab }) {
       if (row && onBuy) onBuy(row);
     });
   });
+  const list = root.querySelector("#island-shop-list");
+  if (list) {
+    list.scrollTop = listTop;
+    requestAnimationFrame(() => {
+      list.scrollTop = listTop;
+    });
+  }
 }
 
 function skuMarkup(row) {
