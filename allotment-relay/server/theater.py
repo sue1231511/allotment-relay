@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import random
+from typing import Any
 
 import aiosqlite
 
@@ -23,7 +24,8 @@ THEATER_HELP = """theater_ops 子命令（整句写进 command）：
   试镜/对戏/演出只在小橘当晚开 stage 小剧场专场时开放；编剧社常开。不替代 bar_ops work 的考勤。
   例子：看板 · 试镜 · 对戏 · 演出 · 领薪 · 编剧社 · 投稿 岸上旧收音机 | 第一幕……
   头粉=star_ops 应援榜第一名；头粉好感获取和每日上限翻倍，不翻倍工资。
-  投稿不是 tale_ops accept / story_ops start（那是玩已有篇章）；稿费不是 领薪（那是专场工资）。不要发明 采纳 / 发稿费。"""
+  投稿不是 tale_ops accept / story_ops start（那是玩已有篇章）；稿费不是 领薪（那是专场工资）。不要发明 采纳 / 发稿费。
+  人类 /island 总览点剧场，进院景再点编剧社 / 衣泊坊 / 剧场看台。编剧社常开能投稿；剧场看台要专场才试镜演出领薪。"""
 
 ROLES = (
     ("announcer", "报幕员", "你替她把开场前的静默接成一句话。"),
@@ -522,6 +524,203 @@ async def owner_decide_script(script_id: int, action: str, note: str = "") -> di
         await conn.commit()
         extra = f"：{note}" if note else "。"
         return {"ok": True, "msg": f"已退稿《{row['title']}》{extra}".rstrip("。") + "。", "payout": 0}
+
+
+async def writers_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str, Any]:
+    """给 /island 编剧社用。数值仍走 theater_ops，这里只摊开能点的。"""
+    conn.row_factory = aiosqlite.Row
+    rows = await (await conn.execute(
+        """SELECT id, title, pitch, status, accepted_as, payout, note
+           FROM star_scripts WHERE steward_id=? ORDER BY id DESC LIMIT 12""",
+        (s["id"],),
+    )).fetchall()
+    pending = sum(1 for r in rows if r["status"] == "pending")
+    scripts: list[dict[str, Any]] = []
+    for row in rows:
+        extra = ""
+        if row["status"] == "accepted":
+            kind = PITCH_LABELS.get(row["accepted_as"] or "", row["accepted_as"] or "")
+            extra = f"为{kind} · 稿费 {int(row['payout'] or 0)}票"
+        elif row["status"] == "rejected" and row["note"]:
+            extra = str(row["note"])
+        scripts.append({
+            "id": int(row["id"]),
+            "title": row["title"],
+            "pitch": PITCH_LABELS.get(row["pitch"] or "", "不指定"),
+            "status": SCRIPT_STATUS_LABELS.get(row["status"], row["status"]),
+            "status_key": row["status"],
+            "can_withdraw": row["status"] == "pending",
+            "note": extra or SCRIPT_STATUS_LABELS.get(row["status"], row["status"]),
+            "detail": extra or "待审的稿能撤回。稿费要她后台采纳才入账，不是领薪。",
+        })
+    can_submit = pending < config.THEATER_SCRIPT_PENDING_MAX
+    return {
+        "name": "编剧社",
+        "line": f"侧厅常开 · 待审 {pending}/{config.THEATER_SCRIPT_PENDING_MAX}",
+        "tabs": [{"key": "desk", "label": "收稿台", "badge": "投" if can_submit else ""}],
+        "scripts": scripts,
+        "can_submit": can_submit,
+        "submit_note": (
+            f"待审已经 {config.THEATER_SCRIPT_PENDING_MAX} 篇。等她看完，或先撤回一篇。"
+            if not can_submit
+            else (
+                f"标题至少 {config.THEATER_SCRIPT_TITLE_MIN} 字，正文至少 "
+                f"{config.THEATER_SCRIPT_BODY_MIN} 字。故事稿费 {config.THEATER_SCRIPT_STORY_PAY}，"
+                f"潮闻 {config.THEATER_SCRIPT_TALE_PAY}。不是接现有篇章，也不是领薪。"
+            )
+        ),
+        "pending": pending,
+        "pending_max": config.THEATER_SCRIPT_PENDING_MAX,
+        "story_pay": config.THEATER_SCRIPT_STORY_PAY,
+        "tale_pay": config.THEATER_SCRIPT_TALE_PAY,
+        "title_min": config.THEATER_SCRIPT_TITLE_MIN,
+        "body_min": config.THEATER_SCRIPT_BODY_MIN,
+    }
+
+
+async def hall_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str, Any]:
+    """给 /island 剧场看台用。数值仍走 theater_ops，这里只摊开能点的。"""
+    conn.row_factory = aiosqlite.Row
+    row = await (await conn.execute(
+        "SELECT venue, venue_date, setlist FROM star_state WHERE id=1"
+    )).fetchone()
+    venue = (row["venue"] if row else "") or ""
+    venue_date = int(row["venue_date"] if row else 0) or 0
+    setlist = (row["setlist"] if row else "") or "未命名专场"
+    open_now = venue == "stage" and venue_date == _day()
+    score = await _affinity(conn, s["id"])
+    head = await _head_fan(conn, s["id"])
+    run = await _run(conn, s["id"])
+    pending = await _pending_run(conn, s["id"])
+    energy_now = int(s.get("energy") or 0)
+    tier, _ = _tier(score)
+    if not open_now:
+        phase = "今晚没专场"
+    elif not run:
+        phase = "还没试镜"
+    elif not run["outcome"]:
+        phase = f"已入选{run['role_label']}" + ("，已对戏" if run["rehearsed"] else "")
+    elif not run["claimed"]:
+        phase = f"{OUTCOME_LABELS[run['outcome']]}，工资待领"
+    else:
+        phase = "今晚已谢幕"
+    can_audition = bool(open_now and not run and energy_now >= config.THEATER_AUDITION_ENERGY)
+    can_rehearse = bool(
+        open_now and run and not run["outcome"] and not run["rehearsed"]
+        and energy_now >= config.THEATER_REHEARSE_ENERGY
+    )
+    can_perform = bool(
+        open_now and run and not run["outcome"] and energy_now >= config.THEATER_SHOW_ENERGY
+    )
+    can_claim = bool(pending and pending["outcome"] and not pending["claimed"])
+    if not open_now:
+        audition_note = "小橘今晚没有在小剧场开专场。"
+        rehearse_note = audition_note
+        perform_note = audition_note
+    else:
+        audition_note = (
+            "今晚已经试过镜了。"
+            if run
+            else (
+                f"精力不够，试镜要 {config.THEATER_AUDITION_ENERGY}"
+                if energy_now < config.THEATER_AUDITION_ENERGY
+                else f"耗 {config.THEATER_AUDITION_ENERGY} 精力，抽今晚岗位。"
+            )
+        )
+        if not run:
+            rehearse_note = "先试镜，拿到岗位才能对戏。"
+            perform_note = "先试镜。"
+        elif run["outcome"]:
+            rehearse_note = "这场已经演完，去领薪。"
+            perform_note = "这场已经结算，去领薪。"
+        else:
+            rehearse_note = (
+                "今晚已经对过戏了。"
+                if run["rehearsed"]
+                else (
+                    f"精力不够，对戏要 {config.THEATER_REHEARSE_ENERGY}"
+                    if energy_now < config.THEATER_REHEARSE_ENERGY
+                    else f"耗 {config.THEATER_REHEARSE_ENERGY} 精力，演出更稳。"
+                )
+            )
+            perform_note = (
+                f"精力不够，演出要 {config.THEATER_SHOW_ENERGY}"
+                if energy_now < config.THEATER_SHOW_ENERGY
+                else f"耗 {config.THEATER_SHOW_ENERGY} 精力，按岗位和对戏结算。"
+            )
+    claim_note = (
+        f"待领 {int(pending['payout'] or 0)} 票。忘了领也不会丢。"
+        if can_claim
+        else "还没有可领的演出工资。"
+    )
+    jobs = [
+        {
+            "id": "audition",
+            "cmd": "试镜",
+            "name": "试镜",
+            "emoji": "🎬",
+            "can_act": can_audition,
+            "note": audition_note,
+            "detail": audition_note + "不替代酒吧考勤。",
+        },
+        {
+            "id": "rehearse",
+            "cmd": "对戏",
+            "name": "对戏",
+            "emoji": "🎭",
+            "can_act": can_rehearse,
+            "note": rehearse_note,
+            "detail": rehearse_note,
+        },
+        {
+            "id": "perform",
+            "cmd": "演出",
+            "name": "演出",
+            "emoji": "🌟",
+            "can_act": can_perform,
+            "note": perform_note,
+            "detail": perform_note,
+        },
+        {
+            "id": "claim",
+            "cmd": "领薪",
+            "name": "领薪",
+            "emoji": "🎫",
+            "can_act": can_claim,
+            "note": claim_note,
+            "detail": claim_note + "稿费不是领薪。",
+        },
+    ]
+    line = f"{setlist} · {phase}" if open_now else f"今晚没专场 · {tier}"
+    if can_claim:
+        line = f"工资待领 · {int(pending['payout'] or 0)} 票"
+    return {
+        "name": "剧场看台",
+        "line": line,
+        "open": open_now,
+        "tabs": [
+            {"key": "board", "label": "看板", "badge": "开" if open_now else ""},
+            {"key": "work", "label": "上场", "badge": "领" if can_claim else ("演" if can_perform else "")},
+        ],
+        "board": {
+            "title": setlist if open_now else "今晚没专场",
+            "phase": phase,
+            "affinity": score,
+            "tier": tier,
+            "head_fan": head,
+            "role": (run["role_label"] if run else ""),
+            "note": (
+                f"{phase}。小橘好感 {score}/100 · {tier}"
+                + (" · 头粉好感×2" if head else "")
+                + "。打赏小橘仍去上手页。"
+            ),
+        },
+        "jobs": jobs,
+        "can_audition": can_audition,
+        "can_rehearse": can_rehearse,
+        "can_perform": can_perform,
+        "can_claim": can_claim,
+    }
 
 
 async def theater_ops(key_id: int, command: str) -> str:

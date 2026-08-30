@@ -227,7 +227,8 @@ CLOTH_HELP = f"""cloth_ops 子命令（整句写进 command）：
 委托第三段「灯塔」是纹样，不是去灯塔找不醒。不要 invent 买短褂。
 季节：梅雨/盛夏/台风季/冬潮各有布和染料；错过不绝版，来年同一季再遇。
 当季合身精力 -1，盛夏穿呢衣/冬潮穿裙会 +1。没有 shop_ops / tailor_ops。
-人类网页 /atelier 是海报；裁衣在 /play。visit_ops 漾漾 也能进门。"""
+  人类网页 /atelier 是海报；裁衣在 /play。visit_ops 漾漾 也能进门。
+  人类 /island 总览点剧场，进院景再点衣泊坊：能看坊、买婚服订婚服、取衣、换衣服。委托短褂仍去上手页。"""
 
 
 def current_cloth_season() -> str:
@@ -976,6 +977,113 @@ def beach_loot_item() -> str:
     if random.random() < float(config.CLOTH_BEACH_DRIFT_CHANCE):
         return maybe_upgrade_beach_fabric("cloth_drift")
     return ""
+
+
+async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str, Any]:
+    """给 /island 衣泊坊用。数值仍走 cloth_ops，这里只摊开能点的。"""
+    from . import bar as bar_mod
+
+    conn.row_factory = aiosqlite.Row
+    prof = await ensure_profile(conn, s["id"])
+    now = db.now()
+    season = current_cloth_season()
+    worn = await worn_garment(conn, s["id"])
+    tickets = int(s.get("tickets") or 0)
+    overdue = bar_mod.is_shift_overdue(s)
+    job_name = prof["job_name"]
+    ready_at = int(prof["job_ready_at"] or 0)
+    can_take = bool(job_name and ready_at <= now)
+    if overdue:
+        take_note = "考勤逾期，先去酒吧洗碗。看坊、衣橱、换衣服仍可用。"
+        can_take = False
+    elif can_take:
+        take_note = f"{job_name} 好了，可以取。"
+    elif job_name:
+        take_note = f"正在裁 {job_name}，{_fmt_left(ready_at - now)}后再取。"
+    else:
+        take_note = f"台上空闲。委托短褂去上手页交给{NPC_NAME}。"
+    worn_name = worn["name"] if worn else "没穿"
+    if worn:
+        delta = wear_energy_delta(worn["cut_key"], worn["fabric_key"], season)
+        worn_note = wear_delta_label(delta, season)
+    else:
+        worn_note = "当季合身会轻一点，反季会热或冷。"
+    goods: list[dict[str, Any]] = []
+    for cut, label, price in (
+        ("wedding", "婚服", int(WEDDING_DRESS_SHOP_PRICE)),
+        ("betrothal", "订婚服", int(BETROTHAL_ATTIRE_SHOP)),
+    ):
+        for color_key in ("sea", "ink", "sand", "fog"):
+            color = COLORS[color_key]["name"]
+            can = tickets >= price and not overdue
+            if overdue:
+                note = "考勤逾期，先去酒吧洗碗。"
+            elif tickets < price:
+                note = f"要 {price} 票，现在 {tickets}"
+            else:
+                note = f"{label}现货 · {price} 票。当天进衣橱。"
+            goods.append({
+                "id": f"{cut}:{color_key}",
+                "cmd": f"{label} {color}",
+                "name": f"{color}{label}",
+                "kind": cut,
+                "color": color,
+                "emoji": "👘",
+                "price": price,
+                "can_buy": can,
+                "note": note,
+                "detail": (
+                    f"{note}订婚服不是婚服。"
+                    if cut == "betrothal"
+                    else f"{note}日常短褂不卖。"
+                ),
+            })
+    closet: list[dict[str, Any]] = []
+    for row in await _wardrobe_rows(conn, s["id"]):
+        on = int(row["id"]) == int(prof["worn_id"] or 0)
+        delta = wear_energy_delta(row["cut_key"], row["fabric_key"], season)
+        closet.append({
+            "id": int(row["id"]),
+            "name": row["name"],
+            "worn": on,
+            "can_wear": not on,
+            "note": ("穿着 · " if on else "") + wear_delta_label(delta, season),
+            "detail": row.get("origin") or wear_delta_label(delta, season),
+        })
+    can_remove = bool(worn)
+    any_buy = any(row["can_buy"] for row in goods)
+    if overdue:
+        line = "考勤逾期 · 看坊衣橱仍开"
+    elif can_take:
+        line = f"台上做好了 · {job_name}"
+    elif any_buy:
+        line = f"{cloth_season_label(season)} · 能买现货"
+    else:
+        line = f"{cloth_season_label(season)} · {NPC_NAME}在"
+    return {
+        "name": SHOP_NAME,
+        "line": line,
+        "tabs": [
+            {"key": "desk", "label": "看坊", "badge": "取" if can_take else ""},
+            {"key": "shop", "label": "现货", "badge": "买" if any_buy else ""},
+            {"key": "closet", "label": "衣橱", "badge": str(len(closet)) if closet else ""},
+        ],
+        "desk": {
+            "job": job_name or "空闲",
+            "can_take": can_take,
+            "take_note": take_note,
+            "worn": worn_name,
+            "worn_note": worn_note,
+            "can_remove": can_remove,
+            "season": cloth_season_label(season),
+            "yangyang": YANGYANG_LINES[0],
+            "overdue": overdue,
+        },
+        "goods": goods,
+        "closet": closet,
+        "can_take": can_take,
+        "can_remove": can_remove,
+    }
 
 
 async def cloth_ops(key_id: int, command: str = "") -> str:

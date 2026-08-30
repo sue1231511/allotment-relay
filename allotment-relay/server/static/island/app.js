@@ -21,11 +21,15 @@ import { renderShop } from "./scenes/shop.js";
 import { renderWorkshop } from "./scenes/workshop.js";
 import { renderQuarry } from "./scenes/quarry.js";
 import { renderBar } from "./scenes/bar.js";
+import { renderTheater } from "./scenes/theater.js";
+import { renderWriters } from "./scenes/writers.js";
+import { renderAtelier } from "./scenes/atelier.js";
+import { renderHall } from "./scenes/hall.js";
 import { renderBag } from "./ui/bag.js";
 import { setBackChip, setBagChip } from "./ui/back-map.js";
 import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js";
 import { popOut } from "./ui/pop.js";
-import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showHintSheet, showVendSheet, toast } from "./ui/modal.js";
+import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showHintSheet, showPitchSheet, showVendSheet, toast } from "./ui/modal.js";
 
 const sceneEl = () => document.getElementById("island-scene");
 const sheetEl = () => document.getElementById("island-sheet");
@@ -161,6 +165,32 @@ async function enterScene(name) {
       await openBar(root);
       return;
     }
+    if (name === "theater") {
+      state.backTo = "map";
+      setBackChip(true, () => enterScene("map"));
+      renderTheater(root, {
+        onOpen: (go) => {
+          state.backTo = "theater";
+          enterScene(go);
+        },
+      });
+      return;
+    }
+    if (name === "writers") {
+      state.writersShelf = false;
+      await openWriters(root);
+      return;
+    }
+    if (name === "atelier") {
+      state.atelierShelf = false;
+      await openAtelier(root);
+      return;
+    }
+    if (name === "hall") {
+      state.hallShelf = false;
+      await openHall(root);
+      return;
+    }
     if (PLACE_TITLES[name]) {
       renderPlaceScene(name);
       return;
@@ -188,6 +218,9 @@ const PLACE_TITLES = {
   hut: "岸畔小屋",
   bar: "潮汐酒吧",
   theater: "潮汐剧场",
+  writers: "编剧社",
+  atelier: "衣泊坊",
+  hall: "剧场看台",
   eatery: "岸畔小馆",
   market: "集市",
   ting: "听潮亭",
@@ -600,6 +633,288 @@ async function runBar(kind, target) {
   await act(() => api.barAct(kind, target), { keepBar: true, listTop, quiet: true });
 }
 
+async function openWriters(root) {
+  try {
+    const data = await api.writers();
+    applySnapshot(data);
+    renderHud();
+    if (data.event) showEvent(data.event);
+  } catch (err) {
+    toast(err.message || "编剧社门还没开。");
+  }
+  const tabs = (state.writers && state.writers.tabs) || [];
+  if (!tabs.some((row) => row.key === state.writersTab)) {
+    state.writersTab = (tabs[0] && tabs[0].key) || "desk";
+  }
+  paintWriters();
+}
+
+function paintWriters(listTop = 0) {
+  renderWriters(sceneEl(), {
+    onAct: tapWriters,
+    onSwitchTab: (tab) => {
+      state.writersTab = tab || "desk";
+      hideModal();
+      paintWriters(0);
+    },
+    onOpenShelf: () => {
+      state.writersShelf = true;
+      paintWriters(0);
+    },
+    onCloseShelf: () => {
+      state.writersShelf = false;
+      hideModal();
+      paintWriters();
+    },
+    listTop,
+  });
+}
+
+function tapWriters(kind, target) {
+  const shop = state.writers || {};
+  if (kind === "look") {
+    const row = (shop.scripts || []).find((item) => String(item.id) === String(target));
+    showHintSheet({
+      title: row ? `《${row.title}》` : "编剧社",
+      body: (row && (row.detail || row.note)) || shop.submit_note || "侧厅常开。稿费不是领薪。",
+    });
+    return;
+  }
+  if (kind === "submit") {
+    if (!shop.can_submit) {
+      showHintSheet({ title: "投稿", body: shop.submit_note || "待审已经满了。" });
+      return;
+    }
+    showPitchSheet({
+      title: "投稿",
+      body: shop.submit_note || "标题和正文分开写。不是接现有潮闻。",
+      titleMin: shop.title_min || 2,
+      bodyMin: shop.body_min || 40,
+      onConfirm: (line) => runWriters("submit", line),
+    });
+    return;
+  }
+  if (kind === "withdraw") {
+    const row = (shop.scripts || []).find((item) => String(item.id) === String(target));
+    if (!row || !row.can_withdraw) {
+      showHintSheet({ title: "撤回", body: (row && row.detail) || "这篇不能撤回。" });
+      return;
+    }
+    showActSheet({
+      title: "撤回稿件",
+      body: `撤回《${row.title}》？待审才能撤。`,
+      confirm: "确认撤回",
+      onConfirm: () => runWriters("withdraw", String(row.id)),
+    });
+  }
+}
+
+async function runWriters(kind, target) {
+  const list = document.getElementById("island-writers-list");
+  const listTop = list ? list.scrollTop : 0;
+  await act(() => api.writersAct(kind, target), { keepWriters: true, listTop, quiet: true });
+}
+
+async function openAtelier(root) {
+  try {
+    const data = await api.atelier();
+    applySnapshot(data);
+    renderHud();
+    if (data.event) showEvent(data.event);
+  } catch (err) {
+    toast(err.message || "衣泊坊门还没开。");
+  }
+  const tabs = (state.atelier && state.atelier.tabs) || [];
+  if (!tabs.some((row) => row.key === state.atelierTab)) {
+    state.atelierTab = (tabs[0] && tabs[0].key) || "desk";
+  }
+  paintAtelier();
+}
+
+function paintAtelier(listTop = 0) {
+  renderAtelier(sceneEl(), {
+    onAct: tapAtelier,
+    onSwitchTab: (tab) => {
+      state.atelierTab = tab || "desk";
+      hideModal();
+      paintAtelier(0);
+    },
+    onOpenShelf: () => {
+      state.atelierShelf = true;
+      paintAtelier(0);
+    },
+    onCloseShelf: () => {
+      state.atelierShelf = false;
+      hideModal();
+      paintAtelier();
+    },
+    listTop,
+  });
+}
+
+function tapAtelier(kind, target) {
+  const shop = state.atelier || {};
+  const desk = shop.desk || {};
+  if (kind === "look") {
+    const body = target === "worn" ? (desk.worn_note || "没穿。") : (desk.take_note || "台上空闲。");
+    showHintSheet({
+      title: target === "worn" ? (desk.worn || "身上") : (desk.job || "看坊"),
+      body,
+    });
+    return;
+  }
+  if (kind === "take") {
+    if (!desk.can_take) {
+      showHintSheet({ title: "取衣", body: desk.take_note || "台上还没有做好的衣服。" });
+      return;
+    }
+    showActSheet({
+      title: "取衣",
+      body: desk.take_note,
+      confirm: "确认取",
+      onConfirm: () => runAtelier("take", ""),
+    });
+    return;
+  }
+  if (kind === "remove") {
+    if (!desk.can_remove) {
+      showHintSheet({ title: "脱下", body: "本来就没穿。" });
+      return;
+    }
+    showActSheet({
+      title: "脱下",
+      body: desk.worn_note || `脱下「${desk.worn}」。`,
+      confirm: "确认脱",
+      onConfirm: () => runAtelier("remove", ""),
+    });
+    return;
+  }
+  if (kind === "visit") {
+    showActSheet({
+      title: "见漾漾",
+      body: desk.yangyang || "今日首次约三成给旧衣料，不是必给。",
+      confirm: "去见",
+      onConfirm: () => runAtelier("visit", ""),
+    });
+    return;
+  }
+  if (kind === "buy") {
+    const row = (shop.goods || []).find((item) => item.cmd === target);
+    if (!row || !row.can_buy) {
+      showHintSheet({
+        title: (row && row.name) || "现货",
+        body: (row && (row.detail || row.note)) || "日常不卖成衣。",
+      });
+      return;
+    }
+    showActSheet({
+      title: `买${row.name}`,
+      body: row.detail || row.note,
+      confirm: "确认买",
+      onConfirm: () => runAtelier("buy", row.cmd),
+    });
+    return;
+  }
+  if (kind === "wear") {
+    const row = (shop.closet || []).find((item) => String(item.id) === String(target));
+    if (!row || !row.can_wear) {
+      showHintSheet({
+        title: (row && row.name) || "衣橱",
+        body: (row && (row.detail || row.note)) || "衣橱空着。",
+      });
+      return;
+    }
+    showActSheet({
+      title: "换衣服",
+      body: `换上「${row.name}」。${row.note || ""}`,
+      confirm: "确认穿",
+      onConfirm: () => runAtelier("wear", String(row.id)),
+    });
+  }
+}
+
+async function runAtelier(kind, target) {
+  const list = document.getElementById("island-atelier-list");
+  const listTop = list ? list.scrollTop : 0;
+  await act(() => api.atelierAct(kind, target), { keepAtelier: true, listTop, quiet: true });
+}
+
+async function openHall(root) {
+  try {
+    const data = await api.hall();
+    applySnapshot(data);
+    renderHud();
+    if (data.event) showEvent(data.event);
+  } catch (err) {
+    toast(err.message || "剧场门还没开。");
+  }
+  const tabs = (state.hall && state.hall.tabs) || [];
+  if (!tabs.some((row) => row.key === state.hallTab)) {
+    state.hallTab = (tabs[0] && tabs[0].key) || "board";
+  }
+  paintHall();
+}
+
+function paintHall(listTop = 0) {
+  renderHall(sceneEl(), {
+    onAct: tapHall,
+    onSwitchTab: (tab) => {
+      state.hallTab = tab || "board";
+      hideModal();
+      paintHall(0);
+    },
+    onOpenShelf: () => {
+      state.hallShelf = true;
+      paintHall(0);
+    },
+    onCloseShelf: () => {
+      state.hallShelf = false;
+      hideModal();
+      paintHall();
+    },
+    listTop,
+  });
+}
+
+function tapHall(kind, target) {
+  const shop = state.hall || {};
+  const board = shop.board || {};
+  if (kind === "look") {
+    showHintSheet({
+      title: target === "affinity" ? "舞台好感" : (board.title || "看板"),
+      body: board.note || "先看看今晚有没有专场。打赏小橘仍在上手页。",
+    });
+    return;
+  }
+  const row = (shop.jobs || []).find((item) => item.id === kind);
+  const body = (row && (row.detail || row.note)) || "做这一下？";
+  if (!row || !row.can_act) {
+    showHintSheet({
+      title: (row && row.name) || "剧场看台",
+      body,
+    });
+    return;
+  }
+  const pack = {
+    audition: ["试镜", body, "确认试镜"],
+    rehearse: ["对戏", body, "确认对戏"],
+    perform: ["演出", body, "确认上场"],
+    claim: ["领薪", body, "确认领"],
+  }[kind] || ["剧场看台", body, "确认"];
+  showActSheet({
+    title: pack[0],
+    body: pack[1],
+    confirm: pack[2],
+    onConfirm: () => runHall(kind, target),
+  });
+}
+
+async function runHall(kind, target) {
+  const list = document.getElementById("island-hall-list");
+  const listTop = list ? list.scrollTop : 0;
+  await act(() => api.hallAct(kind, target), { keepHall: true, listTop, quiet: true });
+}
+
 function startQuarryTick() {
   stopQuarryTick();
   quarryTimer = window.setInterval(() => {
@@ -827,7 +1142,7 @@ async function vendItem(item) {
   await act(() => api.vend(name, 1), { keepTab: true });
 }
 
-async function act(fn, { refreshScene = false, keepPlant = false, keepTab = false, keepShop = false, keepWorkshop = false, keepQuarry = false, keepBar = false, listTop = null, quiet = false } = {}) {
+async function act(fn, { refreshScene = false, keepPlant = false, keepTab = false, keepShop = false, keepWorkshop = false, keepQuarry = false, keepBar = false, keepWriters = false, keepAtelier = false, keepHall = false, listTop = null, quiet = false } = {}) {
   if (state.busy) return;
   state.busy = true;
   try {
@@ -856,6 +1171,18 @@ async function act(fn, { refreshScene = false, keepPlant = false, keepTab = fals
     }
     if (keepBar && state.scene === "bar") {
       paintBar(listTop);
+      return;
+    }
+    if (keepWriters && state.scene === "writers") {
+      paintWriters(listTop);
+      return;
+    }
+    if (keepAtelier && state.scene === "atelier") {
+      paintAtelier(listTop);
+      return;
+    }
+    if (keepHall && state.scene === "hall") {
+      paintHall(listTop);
       return;
     }
     if (refreshScene || LIVE_SCENES.includes(state.scene)) {

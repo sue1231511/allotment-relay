@@ -9,6 +9,9 @@ export const SLOTS = {
   hut: { label: "岸畔小屋", size: "1080×1920" },
   bar: { label: "潮汐酒吧", size: "1080×1920" },
   theater: { label: "潮汐剧场", size: "1080×1920" },
+  writers: { label: "编剧社", size: "1080×1920", file: "theater" },
+  atelier: { label: "衣泊坊", size: "1080×1920", file: "theater" },
+  hall: { label: "剧场看台", size: "1080×1920", file: "theater" },
   eatery: { label: "岸畔小馆", size: "941×1672" },
   hui: { label: "潮生会", size: "941×1672" },
   market: { label: "集市", size: "941×1672" },
@@ -23,8 +26,9 @@ export const SLOTS = {
 
 export function sceneArt(id) {
   const meta = SLOTS[id] || { label: id, size: "1080×1920" };
+  const file = meta.file || id;
   return `<div class="island-slot" data-slot="${id}">
-    <img class="island-slot-pic" src="/static/island/assets/scenes/${id}.png" alt="" onerror="this.closest('.island-slot').classList.add('is-empty')">
+    <img class="island-slot-pic" src="/static/island/assets/scenes/${file}.png" alt="" onerror="this.closest('.island-slot').classList.add('is-empty')">
     <span class="island-slot-mark"><b>插图位</b><small>${meta.label} · ${meta.size}</small></span>
   </div>`;
 }

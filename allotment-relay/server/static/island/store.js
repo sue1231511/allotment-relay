@@ -51,6 +51,15 @@ export const state = {
   bar: null,
   barTab: "work",
   barShelf: false,
+  writers: null,
+  writersTab: "desk",
+  writersShelf: false,
+  atelier: null,
+  atelierTab: "desk",
+  atelierShelf: false,
+  hall: null,
+  hallTab: "board",
+  hallShelf: false,
   bagPage: 0,
   busy: false,
 };
@@ -66,6 +75,9 @@ export function applySnapshot(data) {
   if (data.workshop) state.workshop = data.workshop;
   if (data.quarry) state.quarry = data.quarry;
   if (data.bar) state.bar = data.bar;
+  if (data.writers) state.writers = data.writers;
+  if (data.atelier) state.atelier = data.atelier;
+  if (data.hall) state.hall = data.hall;
 }
 
 export function yardMeta(kind = state.yard) {

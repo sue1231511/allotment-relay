@@ -88,4 +88,10 @@ export const api = {
   quarryAct: (kind, target = "", idem) => req("/api/v1/quarry/act", { method: "POST", body: { kind, target }, idem }),
   bar: () => req("/api/v1/bar"),
   barAct: (kind, target = "", idem) => req("/api/v1/bar/act", { method: "POST", body: { kind, target }, idem }),
+  writers: () => req("/api/v1/writers"),
+  writersAct: (kind, target = "", idem) => req("/api/v1/writers/act", { method: "POST", body: { kind, target }, idem }),
+  atelier: () => req("/api/v1/atelier"),
+  atelierAct: (kind, target = "", idem) => req("/api/v1/atelier/act", { method: "POST", body: { kind, target }, idem }),
+  hall: () => req("/api/v1/hall"),
+  hallAct: (kind, target = "", idem) => req("/api/v1/hall/act", { method: "POST", body: { kind, target }, idem }),
 };

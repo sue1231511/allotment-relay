@@ -250,6 +250,61 @@ async def _test_island_v1_api() -> None:
     assert worked_act.status_code == 200, worked_act.text
     assert worked_act.json()["event"]["kind"] == "bar"
 
+    writers0 = client.get("/api/v1/writers", headers=_auth(key))
+    assert writers0.status_code == 200, writers0.text
+    desk = writers0.json()["writers"]
+    assert desk["name"] == "编剧社", desk
+    assert desk["can_submit"] is True, desk
+    assert any(t["key"] == "desk" for t in desk["tabs"]), desk
+    pitch_miss = client.post(
+        "/api/v1/writers/act",
+        headers=_auth(key, {"Idempotency-Key": "writers-empty"}),
+        json={"kind": "submit", "target": ""},
+    )
+    assert pitch_miss.status_code >= 400, pitch_miss.text
+    pitched = client.post(
+        "/api/v1/writers/act",
+        headers=_auth(key, {"Idempotency-Key": "writers-submit"}),
+        json={"kind": "submit", "target": "岸上旧收音机 | " + "第一幕海边有人把旧收音机打开，潮水把字迹冲淡。" * 2},
+    )
+    assert pitched.status_code == 200, pitched.text
+    assert pitched.json()["event"]["kind"] == "writers"
+    assert pitched.json()["writers"]["scripts"], pitched.json()["writers"]
+    script_id = pitched.json()["writers"]["scripts"][0]["id"]
+    withdrawn = client.post(
+        "/api/v1/writers/act",
+        headers=_auth(key, {"Idempotency-Key": "writers-withdraw"}),
+        json={"kind": "withdraw", "target": str(script_id)},
+    )
+    assert withdrawn.status_code == 200, withdrawn.text
+
+    hall0 = client.get("/api/v1/hall", headers=_auth(key))
+    assert hall0.status_code == 200, hall0.text
+    hall = hall0.json()["hall"]
+    assert hall["name"] == "剧场看台", hall
+    assert hall["open"] is False, hall
+    assert any(t["key"] == "board" for t in hall["tabs"]), hall
+    assert any(r["cmd"] == "试镜" and r["can_act"] is False for r in hall["jobs"]), hall
+    audition_off = client.post(
+        "/api/v1/hall/act",
+        headers=_auth(key, {"Idempotency-Key": "hall-audition-off"}),
+        json={"kind": "audition", "target": ""},
+    )
+    assert audition_off.status_code >= 400, audition_off.text
+
+    atelier0 = client.get("/api/v1/atelier", headers=_auth(key))
+    assert atelier0.status_code == 200, atelier0.text
+    atelier = atelier0.json()["atelier"]
+    assert atelier["name"] == "衣泊坊", atelier
+    assert any(t["key"] == "shop" for t in atelier["tabs"]), atelier
+    assert any(r["cmd"] == "婚服 海色" for r in atelier["goods"]), atelier
+    buy_miss = client.post(
+        "/api/v1/atelier/act",
+        headers=_auth(key, {"Idempotency-Key": "atelier-buy-empty"}),
+        json={"kind": "buy", "target": ""},
+    )
+    assert buy_miss.status_code >= 400, buy_miss.text
+
     wrong_yard = client.post(
         "/api/v1/farm/parcels/园1/sow",
         headers=_auth(key, {"Idempotency-Key": "sow-orchard-kale"}),
@@ -706,7 +761,7 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-bar3" in html
+    assert "island-theater1" in html
     assert "/static/island/tap.js" in html
     assert "/static/island/boot.js" in html
     assert 'id="island-enter"' in html
@@ -1036,6 +1091,9 @@ def test_island_page_is_modular() -> None:
     assert "api.workshopAct" in app
     assert "api.quarryAct" in app
     assert "api.barAct" in app
+    assert "api.writersAct" in app
+    assert "api.atelierAct" in app
+    assert "api.hallAct" in app
     assert "keepWorkshop" in app
     workshop_js = (ROOT / "server/static/island/scenes/workshop.js").read_text(encoding="utf-8")
     assert "island-workshop" in workshop_js
@@ -1053,10 +1111,20 @@ def test_island_page_is_modular() -> None:
     assert "去上手页" not in quarry_js
     assert "keepQuarry" in app
     assert "keepBar" in app
+    assert "keepWriters" in app
+    assert "keepAtelier" in app
+    assert "keepHall" in app
     assert "quarryShelf" in app
     assert "barShelf" in app
+    assert "writersShelf" in app
+    assert "atelierShelf" in app
+    assert "hallShelf" in app
     assert "renderWorkshop" in app
     assert "renderBar" in app
+    assert "renderTheater" in app
+    assert "renderWriters" in app
+    assert "renderAtelier" in app
+    assert "renderHall" in app
     bar_js = (ROOT / "server/static/island/scenes/bar.js").read_text(encoding="utf-8")
     assert "island-bar" in bar_js
     assert "island-bar-tray" in bar_js
@@ -1080,7 +1148,31 @@ def test_island_page_is_modular() -> None:
     except ImportError:
         pass
     assert "showCheerSheet" in app
+    assert "showPitchSheet" in app
     assert (ROOT / "server/v1/bar_service.py").exists()
+    assert (ROOT / "server/v1/writers_service.py").exists()
+    assert (ROOT / "server/v1/atelier_service.py").exists()
+    assert (ROOT / "server/v1/hall_service.py").exists()
+    theater_js = (ROOT / "server/static/island/scenes/theater.js").read_text(encoding="utf-8")
+    writers_js = (ROOT / "server/static/island/scenes/writers.js").read_text(encoding="utf-8")
+    atelier_js = (ROOT / "server/static/island/scenes/atelier.js").read_text(encoding="utf-8")
+    hall_js = (ROOT / "server/static/island/scenes/hall.js").read_text(encoding="utf-8")
+    assert 'go: "writers"' in theater_js
+    assert 'go: "atelier"' in theater_js
+    assert 'go: "hall"' in theater_js
+    assert "编剧社" in theater_js
+    assert "衣泊坊" in theater_js
+    assert "剧场" in theater_js
+    assert "点一下看收稿台" in writers_js
+    assert "点一下看坊" in atelier_js
+    assert "点一下看看板" in hall_js
+    assert "去上手页" not in writers_js
+    assert "去上手页" not in atelier_js
+    assert "去上手页" not in hall_js
+    assert "/api/v1/writers" in api
+    assert "/api/v1/atelier" in api
+    assert "/api/v1/hall" in api
+    assert ".island-theater-board" in css
     assert 'lighthouse: "灯塔"' in app
     assert 'notice: "潮汐公告"' in app
     assert "state.backTo" in app
