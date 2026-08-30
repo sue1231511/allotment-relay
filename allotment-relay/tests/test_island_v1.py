@@ -761,7 +761,7 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-theater-art1" in html
+    assert "island-tap-frame1" in html
     assert "/static/island/tap.js" in html
     assert "/static/island/boot.js" in html
     assert 'id="island-enter"' in html
@@ -1011,6 +1011,8 @@ def test_island_page_is_modular() -> None:
     assert "scenes/lianli.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
     art_md = (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
     assert "bar-opt-frame.png" not in art_md
+    assert "scene-tap-frame.png" in art_md
+    assert "只套这颗" in art_md
     assert "scenes/workshop.png" in art_md
     assert "scenes/shop.png" in art_md
     assert "scenes/lighthouse.png" in art_md
@@ -1140,6 +1142,17 @@ def test_island_page_is_modular() -> None:
     assert ".island-bar-tray" not in css
     assert ".island-bar-opt" not in css
     assert not (ROOT / "server/static/island/assets/bar-opt-frame.png").exists()
+    assert "scene-tap-frame.png" in css
+    assert "只套店景上「点一下看…」" in css
+    tap_frame = ROOT / "server/static/island/assets/scene-tap-frame.png"
+    assert tap_frame.exists()
+    try:
+        from PIL import Image
+        frame = Image.open(tap_frame)
+        assert frame.size == (2000, 750)
+        assert frame.mode == "RGBA"
+    except ImportError:
+        pass
     assert "showCheerSheet" in app
     assert "showPitchSheet" in app
     assert (ROOT / "server/v1/bar_service.py").exists()
@@ -1154,6 +1167,7 @@ def test_island_page_is_modular() -> None:
     assert 'go: "atelier"' in theater_js
     assert 'go: "hall"' in theater_js
     assert "island-hot" in theater_js
+    assert "island-scene-tap" not in theater_js
     assert "island-theater-picks" not in theater_js
     assert "点一下看编剧社" not in theater_js
     assert "编剧社" in theater_js
