@@ -509,13 +509,19 @@ def test_island_page_is_modular() -> None:
     assert "island-back-map" in yards_js
     assert "aria-label=\"返回地图\"" in yards_js
     assert 'data-act="back">回地图' not in yards_js
+    assert "island-yard-acts" in yards_js
     assert "data-act=\"water\"" in yards_js
+    assert "#island-actionbar [data-act=water]" not in home_js
+    assert "#island-actionbar [data-act=garden]" not in home_js
     assert "setYardsChrome" in app
     assert "is-yards" in app
     assert "classList.remove(\"is-yards\")" in app
+    assert "name === \"map\" || name === \"yards\"" in app
     assert "is-yards" in boot
     assert "is-yards" in css
     assert ".island-back-map" in css
+    assert ".island-yard-acts" in css
+    assert "is-yards .island-actionbar" in css
     assert (ROOT / "server/static/island/assets/back-map.png").exists()
     assert "api.buy" in app
     assert "api.sleep" in app

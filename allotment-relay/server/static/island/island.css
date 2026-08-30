@@ -293,15 +293,7 @@ body.island-app.is-playing.is-yards .island-dock {
 }
 
 body.island-app.is-playing.is-yards .island-actionbar {
-  left: auto;
-  right: 8px;
-  width: auto;
-  max-width: 42%;
-  grid-template-columns: 1fr 1fr;
-}
-
-body.island-app.is-playing.is-yards .island-actionbar .island-btn {
-  min-width: 0;
+  display: none !important;
 }
 
 .island-ribbon {
@@ -760,6 +752,18 @@ body.island-app.is-playing.is-yards .island-actionbar .island-btn {
 
 .island-plot-pager .island-btn {
   min-width: 88px;
+}
+
+.island-yard-acts {
+  display: flex;
+  gap: 8px;
+  margin: 0 16px 10px;
+  flex-shrink: 0;
+}
+
+.island-yard-acts .island-btn {
+  flex: 1;
+  min-width: 0;
 }
 
 .island-harvest-fab {

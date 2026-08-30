@@ -42,6 +42,10 @@ export function renderYards(root, { onOpenGarden, onHarvestAll, onWaterAll, onSw
       <p class="island-grow-status" id="island-grow-status">${esc(growStatusLine())}</p>
       <div class="island-plot-grid" id="island-plot-grid">${plotGridMarkup()}</div>
       <div class="island-plot-pager" id="island-plot-pager">${pagerMarkup()}</div>
+      <div class="island-yard-acts">
+        <button type="button" class="island-btn" data-act="water" ${thirsty ? "" : "disabled"}>浇水${thirsty ? ` ${thirsty}` : ""}</button>
+        <button type="button" class="island-btn primary" data-act="garden">${esc(yardMeta().plant)}</button>
+      </div>
       <button type="button" class="island-harvest-fab" id="island-harvest-all" data-act="harvest" ${ripe ? "" : "hidden"}>${harvestLabel(ripe)}</button>
       <button type="button" class="island-back-map" data-act="back" aria-label="返回地图">
         <img src="/static/island/assets/back-map.png" alt="" draggable="false">
@@ -49,18 +53,18 @@ export function renderYards(root, { onOpenGarden, onHarvestAll, onWaterAll, onSw
     </div>
   `;
   const bar = document.getElementById("island-actionbar");
-  bar.innerHTML = `
-    <button type="button" class="island-btn" data-act="water" ${thirsty ? "" : "disabled"}>浇水${thirsty ? ` ${thirsty}` : ""}</button>
-    <button type="button" class="island-btn primary" data-act="garden">${esc(yardMeta().plant)}</button>
-  `;
+  if (bar) {
+    bar.innerHTML = "";
+    bar.hidden = true;
+  }
   root.querySelectorAll("[data-yard]").forEach((btn) => {
     btn.addEventListener("click", () => onSwitchYard(btn.getAttribute("data-yard")));
   });
   const harvest = root.querySelector("[data-act=harvest]");
   if (harvest) harvest.addEventListener("click", onHarvestAll);
   root.querySelector("[data-act=back]").addEventListener("click", onBack);
-  bar.querySelector("[data-act=water]").addEventListener("click", onWaterAll);
-  bar.querySelector("[data-act=garden]").addEventListener("click", onOpenGarden);
+  root.querySelector("[data-act=water]").addEventListener("click", onWaterAll);
+  root.querySelector("[data-act=garden]").addEventListener("click", onOpenGarden);
   bindGrid(onOpenGarden);
   bindPager();
   bindSwipe();
@@ -86,9 +90,9 @@ export function syncHomeChrome() {
     const count = btn.querySelector("small");
     if (count) count.textContent = String(yardPlots(kind).length);
   });
-  const plantBtn = document.querySelector("#island-actionbar [data-act=garden]");
+  const plantBtn = document.querySelector(".island-yard-acts [data-act=garden]");
   if (plantBtn) plantBtn.textContent = yardMeta().plant;
-  const waterBtn = document.querySelector("#island-actionbar [data-act=water]");
+  const waterBtn = document.querySelector(".island-yard-acts [data-act=water]");
   if (waterBtn) {
     const n = thirstyYard().length;
     waterBtn.disabled = n === 0;
