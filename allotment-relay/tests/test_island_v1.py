@@ -668,7 +668,8 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-bag-frame1" in html
+    assert "island-tap1" in html
+    assert "/static/island/tap.js" in html
     assert "/static/island/boot.js" in html
     assert 'id="island-enter"' in html
     assert "novalidate" in html
@@ -863,6 +864,13 @@ def test_island_page_is_modular() -> None:
         assert frame.mode == "RGBA"
     except ImportError:
         pass
+    tap_js = (ROOT / "server/static/island/tap.js").read_text(encoding="utf-8")
+    assert "island-spark" in tap_js
+    assert "is-tap" in tap_js
+    assert "pointerdown" in tap_js
+    assert "island-spark" in css
+    assert ".is-tap" in css
+    assert "island-spark-fly" in css
     assert "交岸税" not in app
     assert "洗碗" not in app
     assert "只铺图和地名" in (ROOT / "server/static/island/scenes/place.js").read_text(encoding="utf-8")
