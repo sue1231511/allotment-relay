@@ -959,40 +959,52 @@ body.island-app.is-playing.is-yards .island-actionbar {
 .island-shop {
   position: absolute;
   inset: 0;
-  background: #c9ddd8;
-}
-
-.island-shop-card {
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  top: 12px;
-  padding: 10px 14px;
-  border-radius: 16px;
-  background: rgba(255, 253, 248, .9);
-  z-index: 1;
-}
-
-.island-shop-card b { display: block; font-size: 18px; }
-.island-shop-card small { color: #5b7377; font-size: 12px; }
-
-.island-shop-shelf {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  max-height: 48%;
   display: flex;
   flex-direction: column;
-  background: rgba(251, 250, 246, .94);
+  background: #c9ddd8;
+  overflow: hidden;
+}
+
+/* 店景只占上半，不要铺到货架上把分类标签盖住。 */
+.island-shop .island-slot {
+  position: relative;
+  inset: auto;
+  flex: 1 1 42%;
+  min-height: 120px;
+  z-index: 0;
+}
+
+.island-shop .island-slot-pic {
+  object-fit: cover;
+  object-position: center 38%;
+}
+
+.island-shop-shelf {
+  position: relative;
+  flex: 0 1 58%;
+  max-height: 58%;
+  min-height: 248px;
+  display: flex;
+  flex-direction: column;
+  background: #fbfaf6;
   border-radius: 18px 18px 0 0;
   box-shadow: 0 -8px 24px rgba(42, 58, 60, .12);
-  z-index: 1;
+  z-index: 2;
+  overflow: hidden;
 }
+
+.island-shop-meta {
+  flex-shrink: 0;
+  padding: 10px 14px 0;
+}
+
+.island-shop-meta b { display: block; font-size: 16px; }
+.island-shop-meta small { color: #5b7377; font-size: 12px; }
 
 .island-shop-tabs {
   display: flex;
   gap: 6px;
+  flex-shrink: 0;
   padding: 10px 12px 6px;
   overflow-x: auto;
 }
@@ -1015,6 +1027,7 @@ body.island-app.is-playing.is-yards .island-actionbar {
 
 .island-shop-list {
   flex: 1;
+  min-height: 0;
   overflow: auto;
   padding: 0 12px 14px;
   display: flex;
@@ -1047,6 +1060,14 @@ body.island-app.is-playing.is-yards .island-actionbar {
 .island-shop-name small { color: #5b7377; font-size: 11px; }
 .island-shop-price { font-size: 13px; color: #5f7a58; white-space: nowrap; }
 .island-shop-empty { margin: 12px 4px; color: #5b7377; font-size: 13px; }
+
+@media (max-height: 560px) {
+  .island-shop-shelf {
+    min-height: 200px;
+    max-height: 64%;
+    flex-basis: 64%;
+  }
+}
 
 .island-plaza .island-board,
 .island-plaza .island-msgs,
