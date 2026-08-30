@@ -539,6 +539,8 @@ def test_island_page_is_modular() -> None:
     assert "PAGE_SIZE = 9" in home_js
     assert "yardPage" in home_js
     assert "island-plot-pager" in home_js
+    assert "bindSwipe" in home_js
+    assert "左右滑" in home_js
     assert "data-yard" in home_js
     assert "onWaterAll" in home_js
     assert "sceneArt" in home_js

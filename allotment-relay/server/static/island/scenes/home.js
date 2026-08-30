@@ -61,6 +61,7 @@ export function renderYards(root, { onOpenGarden, onHarvestAll, onWaterAll, onSw
   bar.querySelector("[data-act=garden]").addEventListener("click", onOpenGarden);
   bindGrid(onOpenGarden);
   bindPager();
+  bindSwipe();
 }
 
 export function syncHomeChrome() {
@@ -159,9 +160,18 @@ function pagerMarkup() {
   const cur = state.yardPage + 1;
   return `
     <button type="button" class="island-btn" data-page="-1" ${state.yardPage <= 0 ? "disabled" : ""}>上一页</button>
-    <span>${cur} / ${pages}</span>
+    <span>${cur} / ${pages} · 左右滑</span>
     <button type="button" class="island-btn" data-page="1" ${state.yardPage >= pages - 1 ? "disabled" : ""}>下一页</button>
   `;
+}
+
+function turnPage(delta) {
+  if (pageCount() <= 1) return false;
+  const next = state.yardPage + delta;
+  if (next < 0 || next >= pageCount()) return false;
+  state.yardPage = next;
+  syncHomeChrome();
+  return true;
 }
 
 function bindGrid(onOpenGarden) {
@@ -169,6 +179,7 @@ function bindGrid(onOpenGarden) {
   if (!grid || grid._bound) return;
   grid._bound = true;
   grid.addEventListener("click", (ev) => {
+    if (grid._ignoreClick) return;
     if (!ev.target.closest("[data-act=garden]")) return;
     onOpenGarden();
   });
@@ -181,9 +192,50 @@ function bindPager() {
   pager.addEventListener("click", (ev) => {
     const btn = ev.target.closest("[data-page]");
     if (!btn || btn.disabled) return;
-    state.yardPage += Number(btn.getAttribute("data-page"));
-    clampPage();
-    syncHomeChrome();
+    turnPage(Number(btn.getAttribute("data-page")));
+  });
+}
+
+function bindSwipe() {
+  const grid = document.getElementById("island-plot-grid");
+  if (!grid || grid._swiped) return;
+  grid._swiped = true;
+  let x0 = 0;
+  let y0 = 0;
+  let tracking = false;
+  const start = (x, y) => {
+    x0 = x;
+    y0 = y;
+    tracking = true;
+  };
+  const finish = (x, y) => {
+    if (!tracking) return;
+    tracking = false;
+    const dx = x - x0;
+    const dy = y - y0;
+    if (Math.abs(dx) < 48 || Math.abs(dx) <= Math.abs(dy)) return;
+    if (turnPage(dx < 0 ? 1 : -1)) {
+      grid._ignoreClick = true;
+      setTimeout(() => {
+        grid._ignoreClick = false;
+      }, 320);
+    }
+  };
+  grid.addEventListener("touchstart", (ev) => {
+    const t = ev.changedTouches[0];
+    if (t) start(t.clientX, t.clientY);
+  }, { passive: true });
+  grid.addEventListener("touchend", (ev) => {
+    const t = ev.changedTouches[0];
+    if (t) finish(t.clientX, t.clientY);
+  }, { passive: true });
+  grid.addEventListener("pointerdown", (ev) => {
+    if (ev.pointerType === "touch") return;
+    start(ev.clientX, ev.clientY);
+  });
+  grid.addEventListener("pointerup", (ev) => {
+    if (ev.pointerType === "touch") return;
+    finish(ev.clientX, ev.clientY);
   });
 }
 
