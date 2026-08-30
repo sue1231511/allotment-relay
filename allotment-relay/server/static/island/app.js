@@ -439,6 +439,11 @@ function bindDock() {
     if (btn) openTab(btn.getAttribute("data-tab"));
   });
   document.getElementById("island-scene").addEventListener("click", (ev) => {
+    const link = ev.target.closest("[data-href]");
+    if (link) {
+      window.location.href = link.getAttribute("data-href");
+      return;
+    }
     const pin = ev.target.closest("[data-go]");
     if (pin) enterScene(pin.getAttribute("data-go"));
   });

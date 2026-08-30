@@ -441,15 +441,24 @@ def test_island_page_is_modular() -> None:
     assert "island-dock" in html
     assert "island-ribbon" in html
     assert "island-gate-hint" in html
-    assert "家园" in (ROOT / "server/static/island/map.js").read_text(encoding="utf-8")
-    assert "小屋" in (ROOT / "server/static/island/map.js").read_text(encoding="utf-8")
-    assert "酒吧" in (ROOT / "server/static/island/map.js").read_text(encoding="utf-8")
+    map_js = (ROOT / "server/static/island/map.js").read_text(encoding="utf-8")
+    assert "家园" in map_js
+    assert "份地" in map_js
+    assert "小屋" in map_js
+    assert "酒吧" in map_js
+    assert "island-hot" in map_js
+    assert "data-href" in map_js
+    assert '"/workshop"' in map_js
+    assert '"/market"' in map_js
+    assert (ROOT / "server/static/island/assets/scenes/island-map.png").exists()
     assert "min-height: 48px" in css
     assert "overflow-x: hidden" in css
     assert "island-plot-tile" in css
     assert "island-plot-bed" in css
     assert "island-yards" in css
     assert "island-slot" in css
+    assert "island-hot" in css
+    assert "island-map-board" in css
     assert "island-place" in css
     assert "island-plant-buy" in css
     assert "is-hui" in css

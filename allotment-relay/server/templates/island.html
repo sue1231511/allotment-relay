@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/island/island.css?v=island-gate1">
+  <link rel="stylesheet" href="/static/island/island.css?v=island-map1">
 </head>
 <body class="island-app{% if island_weddings %} is-wedding-day{% endif %}">
   <div id="island-root" class="island-root">
@@ -28,7 +28,7 @@
     <section class="island-gate" id="island-gate">
       <p class="island-kicker">Mobile Map · MVP</p>
       <h1>先把凭证贴上</h1>
-      <p>和上手页是同一个号。种浇收买种、洗碗、睡觉、吃饭、交税维，地图里都能点。插图后补。</p>
+      <p>和上手页是同一个号。种浇收买种、洗碗、睡觉、吃饭、交税维，地图里都能点。点总览图上的地名就能进。</p>
       <form id="island-key-form" novalidate>
         <label class="island-field">
           <span>凭证</span>
@@ -55,7 +55,7 @@
         <div class="island-map"></div>
       </div>
       <div class="island-actionbar" id="island-actionbar">
-        <p class="island-fine" style="grid-column:1/-1;margin:4px 2px 0">点家园进院子。再点土地才看菜地、果园、温室。小屋、酒吧、小馆、潮生会也能进。</p>
+        <p class="island-fine" style="grid-column:1/-1;margin:4px 2px 0">点图上的份地进院子。再点土地才看菜地、果园、温室。海边、小屋、酒吧、小馆、潮生会也能进。</p>
       </div>
     </main>
 
@@ -72,9 +72,9 @@
   <div class="island-modal" id="island-modal" hidden></div>
   <p class="island-toast" id="island-toast" hidden></p>
 
-  <script src="/static/site-key.js?v=island-gate1"></script>
-  <script src="/static/island/boot.js?v=island-gate1"></script>
-  <script type="module" src="/static/island/app.js?v=island-gate1"></script>
+  <script src="/static/site-key.js?v=island-map1"></script>
+  <script src="/static/island/boot.js?v=island-map1"></script>
+  <script type="module" src="/static/island/app.js?v=island-map1"></script>
   <script nomodule>
     var hint = document.getElementById("island-gate-hint");
     if (hint) hint.textContent = "这台浏览器跑不了完整地图。换系统浏览器，或去上手页。";

@@ -337,11 +337,29 @@ body.island-app {
 .island-slot-mark b { font-size: 14px; }
 .island-slot-mark small { font-size: 11px; color: #5b7377; }
 
-/* 总览地图 */
+/* 总览地图：整图 contain，热区按图上标签对齐 */
 .island-map {
   position: absolute;
   inset: 0;
-  background: #c5ddd6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #4f9eb0;
+}
+
+.island-map-board {
+  position: relative;
+  flex: 0 0 auto;
+  line-height: 0;
+}
+
+.island-map-board .island-slot {
+  position: absolute;
+  inset: 0;
+}
+
+.island-map-board .island-slot-pic {
+  object-fit: fill;
 }
 
 .island-map-sea,
@@ -383,32 +401,46 @@ body.island-app {
   border-radius: 999px;
 }
 
-.island-pin {
+.island-pin,
+.island-hot {
   position: absolute;
+  z-index: 2;
+  pointer-events: auto;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  color: transparent;
+  font: inherit;
+}
+
+.island-hot {
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 18px;
+}
+
+.island-hot:focus-visible {
+  outline: 2px solid #f7f3ea;
+  outline-offset: 2px;
+}
+
+.island-hot.is-hui,
+.island-hot.is-theater { z-index: 2; }
+
+.island-pin {
   min-width: 88px;
   min-height: 64px;
   padding: 8px 10px;
-  border: 0;
   border-radius: 16px;
   background: rgba(255,253,248,.9);
   color: var(--is-ink);
-  font: inherit;
   box-shadow: 0 4px 0 rgba(42, 58, 60, .12);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 2px;
 }
-
-.island-pin { z-index: 2; pointer-events: auto; }
-.island-pin.is-home { left: 8%; top: 18%; }
-.island-pin.is-shore { right: 6%; top: 10%; }
-.island-pin.is-hut { left: 8%; top: 44%; }
-.island-pin.is-bar { right: 8%; top: 38%; }
-.island-pin.is-theater { left: 52%; top: 30%; }
-.island-pin.is-eatery { left: 28%; top: 58%; }
-.island-pin.is-hui { right: 18%; top: 60%; }
-.island-pin.is-plaza { left: 36%; bottom: 12%; }
 
 /* 家园：插图位铺底，点土地再进分区 */
 .island-home {
