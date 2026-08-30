@@ -16,6 +16,7 @@ import { renderShore } from "./scenes/shore.js";
 import { renderPlaza } from "./scenes/plaza.js";
 import { renderPlace } from "./scenes/place.js";
 import { renderBag } from "./ui/bag.js";
+import { setBackChip, setBagChip } from "./ui/back-map.js";
 import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js";
 import { showEvent, toast } from "./ui/modal.js";
 
@@ -38,7 +39,9 @@ function showPlay() {
   const stage = document.getElementById("island-stage");
   stage.classList.remove("island-hidden");
   stage.hidden = false;
-  document.getElementById("island-dock").hidden = false;
+  const dock = document.getElementById("island-dock");
+  if (dock) dock.hidden = true;
+  setBagChip(true);
 }
 
 function showGate() {
@@ -52,7 +55,10 @@ function showGate() {
   if (root) root.classList.remove("is-playing");
   document.getElementById("island-gate").classList.remove("island-hidden");
   document.getElementById("island-stage").hidden = true;
-  document.getElementById("island-dock").hidden = true;
+  const dock = document.getElementById("island-dock");
+  if (dock) dock.hidden = true;
+  setBagChip(false);
+  setBackChip(false);
 }
 
 async function bootFromServer() {
@@ -78,6 +84,8 @@ async function enterScene(name) {
   const bar = document.getElementById("island-actionbar");
   if (bar) bar.hidden = name === "map" || name === "yards";
   setYardsChrome(name === "yards");
+  setBagChip(true);
+  setBackChip(name !== "map", () => enterScene("map"));
   try {
     if (name === "home") {
       stopGrowTick();
@@ -381,9 +389,7 @@ function setYardsChrome(on) {
     bar.innerHTML = "";
   }
   const dock = document.getElementById("island-dock");
-  if (!dock) return;
-  dock.hidden = on;
-  if (!on) dock.removeAttribute("hidden");
+  if (dock) dock.hidden = true;
 }
 
 async function openTab(tab) {
@@ -433,10 +439,15 @@ async function startFromSnapshot(data, scene) {
 }
 
 function bindDock() {
-  document.getElementById("island-dock").addEventListener("click", (ev) => {
-    const btn = ev.target.closest("[data-tab]");
-    if (btn) openTab(btn.getAttribute("data-tab"));
-  });
+  const bag = document.getElementById("island-bag-chip");
+  if (bag) bag.addEventListener("click", () => openTab("bag"));
+  const dock = document.getElementById("island-dock");
+  if (dock) {
+    dock.addEventListener("click", (ev) => {
+      const btn = ev.target.closest("[data-tab]");
+      if (btn) openTab(btn.getAttribute("data-tab"));
+    });
+  }
   document.getElementById("island-scene").addEventListener("click", (ev) => {
     const link = ev.target.closest("[data-href]");
     if (link) {

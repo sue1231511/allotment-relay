@@ -439,7 +439,11 @@ def test_island_page_is_modular() -> None:
     assert 'id="island-enter"' in html
     assert "novalidate" in html
     assert "island-dock" in html
-    assert 'data-tab="bag"' in html
+    assert 'id="island-bag-chip"' in html
+    assert 'id="island-back-chip"' in html
+    assert "chip-bag.png" in html
+    assert "chip-back.png" in html
+    assert 'data-tab="bag"' not in html
     assert 'data-tab="map"' not in html
     assert 'data-tab="quest"' not in html
     assert 'data-tab="chat"' not in html
@@ -512,13 +516,14 @@ def test_island_page_is_modular() -> None:
     assert "renderYards" in app
     assert "enterScene(\"yards\")" in app
     assert 'name === "home"' in app
-    assert "backChipMarkup" in (ROOT / "server/static/island/scenes/home.js").read_text(encoding="utf-8")
-    assert "回地图" in (ROOT / "server/static/island/ui/back-map.js").read_text(encoding="utf-8")
+    assert "backChipMarkup" not in (ROOT / "server/static/island/scenes/home.js").read_text(encoding="utf-8")
+    assert "setBackChip" in (ROOT / "server/static/island/ui/back-map.js").read_text(encoding="utf-8")
+    assert "setBagChip" in app
     home_js = (ROOT / "server/static/island/scenes/home.js").read_text(encoding="utf-8")
     yards_js = home_js.split("export function renderYards", 1)[1].split("export function", 1)[0]
     assert "island-back-map" not in yards_js
     assert "back-map.png" not in yards_js
-    assert "backChipMarkup" in yards_js
+    assert "backChipMarkup" not in yards_js
     assert 'data-act="back">返回地图' not in yards_js
     assert "去上手页" not in app
     assert "去上手页" not in html
@@ -538,7 +543,10 @@ def test_island_page_is_modular() -> None:
     assert "is-yards" in css
     assert ".island-back-map" not in css
     assert ".island-yard-acts" in css
-    assert ".island-back-chip" in css
+    assert ".island-float-chip" in css
+    assert ".island-back-chip" not in css
+    assert (ROOT / "server/static/island/assets/chip-back.png").exists()
+    assert (ROOT / "server/static/island/assets/chip-bag.png").exists()
     assert "is-yards .island-actionbar" in css
     assert not (ROOT / "server/static/island/assets/back-map.png").exists()
     assert "api.buy" in app

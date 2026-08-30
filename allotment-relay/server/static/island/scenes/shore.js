@@ -1,15 +1,13 @@
 import { state } from "../store.js";
 import { sceneArt } from "../ui/art.js";
-import { backChipMarkup, bindBackChip } from "../ui/back-map.js";
 import { esc } from "../ui/modal.js";
 
-export function renderShore(root, { onCast, onBack }) {
+export function renderShore(root, { onCast }) {
   const w = state.world || {};
   const shore = state.shore || {};
   root.innerHTML = `
     <div class="island-place">
       ${sceneArt("shore")}
-      ${backChipMarkup()}
       <article class="island-place-card">
         <b>港口</b>
         <p>${esc(w.tide || "潮位")} · ${esc(w.weather || "天气")} · ${esc(w.phase || "")} · ${esc(w.season || "")}</p>
@@ -18,7 +16,6 @@ export function renderShore(root, { onCast, onBack }) {
       </article>
     </div>
   `;
-  bindBackChip(root, onBack);
   const bar = document.getElementById("island-actionbar");
   bar.hidden = false;
   bar.removeAttribute("hidden");

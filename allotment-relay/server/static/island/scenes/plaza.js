@@ -1,14 +1,12 @@
 import { sceneArt } from "../ui/art.js";
-import { backChipMarkup, bindBackChip } from "../ui/back-map.js";
 import { esc } from "../ui/modal.js";
 
-export function renderPlaza(root, { messages, notices, onSay, onBack }) {
+export function renderPlaza(root, { messages, notices, onSay }) {
   const board = (notices && notices[0]) || { title: "公告牌", body: "今天岛上还安静。" };
   const rows = (messages || []).slice(-16);
   root.innerHTML = `
     <div class="island-plaza">
       ${sceneArt("plaza")}
-      ${backChipMarkup()}
       <aside class="island-board">
         <small>潮汐广场</small>
         <b>${esc(board.title || "世界")}</b>
@@ -28,7 +26,6 @@ export function renderPlaza(root, { messages, notices, onSay, onBack }) {
       </form>
     </div>
   `;
-  bindBackChip(root, onBack);
   const bar = document.getElementById("island-actionbar");
   if (bar) {
     bar.innerHTML = "";
