@@ -127,7 +127,7 @@ async def visit_ops(command: str = "") -> str:
     return await mux._call_ops(mux.visit_bundle, _kid(), command)
 
 
-@mcp.tool(description="酒吧。空=档。例：work 洗碗 night · cheer 好话。cheer=荔栀≠猫猫/小橘。")
+@mcp.tool(description="酒吧。空=档。例：work 洗碗 night · cheer 好话。cheer=荔栀≠猫猫/小橘。人类 /island 进酒吧能洗碗/点酒/看今晚。")
 async def bar_ops(command: str = "") -> str:
     from . import bar
     from . import progress as progress_mod

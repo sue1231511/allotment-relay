@@ -8,7 +8,7 @@ export function renderShop(root, { onBuy, onSwitchTab, onOpenShelf, onCloseShelf
   const tab = state.shopTab || (tabs[0] && tabs[0].key) || "seed";
   const items = (shop.items || []).filter((row) => row.tab === tab);
   const peek = !state.shopShelf;
-  const existing = root.querySelector(".island-shop:not(.island-workshop):not(.island-quarry)");
+  const existing = root.querySelector(".island-shop:not(.island-workshop):not(.island-quarry):not(.island-bar)");
   if (existing && existing.classList.contains("is-peek") === peek) {
     if (peek) {
       bindPeek(existing, onOpenShelf);

@@ -146,6 +146,50 @@ export function showHintSheet({ title, body, onClose } = {}) {
   }, { once: true });
 }
 
+export function showCheerSheet({ title, body, presets = [], onConfirm, onClose } = {}) {
+  const chips = (presets || []).map((line) => (
+    `<button type="button" class="island-btn wide" data-cheer="${esc(line)}">${esc(line)}</button>`
+  )).join("");
+  const root = paintModal(cardMarkup(`
+      <h3>${esc(title || "哄荔栀")}</h3>
+      <p>${esc(body || "说句好话。不是潮下猫猫，也不是小橘应援。")}</p>
+      <label class="island-field">
+        <span>好话</span>
+        <input id="island-cheer-input" type="text" maxlength="100" placeholder="今晚生意好" autocomplete="off">
+      </label>
+      <div class="island-care-acts">
+        ${chips}
+        <button type="button" class="island-btn primary wide" data-act="confirm">说出去</button>
+      </div>
+      <button type="button" class="island-btn wide" data-close-modal>先不忙</button>
+  `, "island-care"));
+  if (!root) return;
+  const close = () => {
+    hideModal();
+    if (onClose) onClose();
+  };
+  const send = (text) => {
+    const line = String(text || "").trim();
+    if (!line) {
+      toast("说点什么。荔栀不接受沉默的讨好。");
+      return;
+    }
+    hideModal();
+    if (onConfirm) onConfirm(line);
+  };
+  root.querySelector("[data-close-modal]").addEventListener("click", close);
+  root.querySelector("[data-act=confirm]").addEventListener("click", () => {
+    const input = root.querySelector("#island-cheer-input");
+    send(input && input.value);
+  });
+  root.querySelectorAll("[data-cheer]").forEach((btn) => {
+    btn.addEventListener("click", () => send(btn.getAttribute("data-cheer")));
+  });
+  root.addEventListener("click", (ev) => {
+    if (ev.target === root) close();
+  }, { once: true });
+}
+
 export function showActSheet({ title, body, confirm, onConfirm, onClose } = {}) {
   const root = paintModal(cardMarkup(`
       <h3>${esc(title || "确认")}</h3>
