@@ -20,7 +20,7 @@
 | `scenes/writers.png` | 编剧社（已就位；先进店景，点一下才出收稿台） | 941×1672 |
 | `scenes/atelier.png` | 衣泊坊（已就位；先进店景，点一下才出列表） | 941×1672 |
 | `scenes/hall.png` | 剧场看台（已就位；先进店景，点一下才出看板） | 941×1672 |
-| `scenes/eatery.png` | 岸畔小馆（已就位） | 941×1672 |
+| `scenes/eatery.png` | 岸畔小馆（已就位；先进店景，点一下才出菜单） | 941×1672 |
 | `scenes/hui.png` | 潮生会（已就位） | 941×1672 |
 | `scenes/market.png` | 集市（已就位） | 941×1672 |
 | `scenes/ting.png` | 听潮亭（已就位） | 941×1672 |

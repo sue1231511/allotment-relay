@@ -292,6 +292,70 @@ async def _test_island_v1_api() -> None:
     )
     assert audition_off.status_code >= 400, audition_off.text
 
+    stall0 = client.get("/api/v1/eatery", headers=_auth(key))
+    assert stall0.status_code == 200, stall0.text
+    stall = stall0.json()["eatery"]
+    assert stall["name"] == "岸畔小馆", stall
+    assert any(t["key"] == "board" for t in stall["tabs"]), stall
+    assert any(t["key"] == "mine" for t in stall["tabs"]), stall
+    assert stall["mine"]["open"] is False, stall
+    dine_miss = client.post(
+        "/api/v1/eatery/act",
+        headers=_auth(key, {"Idempotency-Key": "eatery-dine-empty"}),
+        json={"kind": "dine", "target": ""},
+    )
+    assert dine_miss.status_code >= 400, dine_miss.text
+    host_key = await db.create_api_key("eatery-host@example.com")
+    host_open = client.post("/api/v1/session", json={"api_key": host_key, "name": "馆主"})
+    assert host_open.status_code == 200, host_open.text
+    host = await db.get_steward_by_key_id((await db.get_key_row(host_key))["id"])
+    host_sid = int(host["id"])
+    async with db.connect() as conn:
+        await conn.execute(
+            "UPDATE stewards SET hut_built=1, tickets=200 WHERE id=?",
+            (host_sid,),
+        )
+        await conn.execute(
+            "INSERT INTO hut_fittings (steward_id, slot, item_key, installed_at)"
+            " VALUES (?, 'soft_1', 'fridge', ?)",
+            (host_sid, db.now()),
+        )
+        await db.add_item(conn, host_sid, "dish_salt_crab_s4", 1)
+        await conn.commit()
+    opened_shop = client.post(
+        "/api/v1/eatery/act",
+        headers=_auth(host_key, {"Idempotency-Key": "eatery-open"}),
+        json={"kind": "open", "target": ""},
+    )
+    assert opened_shop.status_code == 200, opened_shop.text
+    assert opened_shop.json()["eatery"]["mine"]["open"] is True
+    stocked = client.post(
+        "/api/v1/eatery/act",
+        headers=_auth(host_key, {"Idempotency-Key": "eatery-stock"}),
+        json={"kind": "stock", "target": "dish_salt_crab_s4"},
+    )
+    assert stocked.status_code == 200, stocked.text
+    menu = stocked.json()["eatery"]["mine"]["menu"]
+    assert menu, stocked.json()["eatery"]
+    dish_id = menu[0]["id"]
+    async with db.connect() as conn:
+        await conn.execute(
+            "UPDATE stewards SET tickets=300 WHERE id=?",
+            (sid,),
+        )
+        await conn.commit()
+    guest_board = client.get("/api/v1/eatery", headers=_auth(key))
+    assert guest_board.status_code == 200, guest_board.text
+    dishes = guest_board.json()["eatery"]["dishes"]
+    assert any(row.get("can_dine") for row in dishes), dishes
+    dined = client.post(
+        "/api/v1/eatery/act",
+        headers=_auth(key, {"Idempotency-Key": "eatery-dine-ok"}),
+        json={"kind": "dine", "target": f"馆主|{dish_id}"},
+    )
+    assert dined.status_code == 200, dined.text
+    assert dined.json()["event"]["kind"] == "eatery"
+
     atelier0 = client.get("/api/v1/atelier", headers=_auth(key))
     assert atelier0.status_code == 200, atelier0.text
     atelier = atelier0.json()["atelier"]
@@ -761,7 +825,7 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-no-tap-frame1" in html
+    assert "island-eatery1" in html
     assert "/static/island/tap.js" in html
     assert "/static/island/boot.js" in html
     assert 'id="island-enter"' in html
@@ -1005,6 +1069,7 @@ def test_island_page_is_modular() -> None:
     assert "scenes/island-map.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
     assert "scenes/yards.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
     assert "scenes/eatery.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
+    assert "点一下才出菜单" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
     assert "scenes/hui.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
     assert "scenes/market.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
     assert "scenes/ting.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
@@ -1083,6 +1148,7 @@ def test_island_page_is_modular() -> None:
     assert "listTop" in shop_js
     assert "paintShopList" in shop_js
     assert "querySelector(\".island-shop\")" in shop_js
+    assert ":not(.island-eatery)" in shop_js
     assert "refreshScene: true" not in app
     assert "/api/v1/shop/buy" in api
     assert "/api/v1/tote/vend" in api
@@ -1095,6 +1161,7 @@ def test_island_page_is_modular() -> None:
     assert "api.writersAct" in app
     assert "api.atelierAct" in app
     assert "api.hallAct" in app
+    assert "api.eateryAct" in app
     assert "keepWorkshop" in app
     workshop_js = (ROOT / "server/static/island/scenes/workshop.js").read_text(encoding="utf-8")
     assert "island-workshop" in workshop_js
@@ -1115,17 +1182,20 @@ def test_island_page_is_modular() -> None:
     assert "keepWriters" in app
     assert "keepAtelier" in app
     assert "keepHall" in app
+    assert "keepEatery" in app
     assert "quarryShelf" in app
     assert "barShelf" in app
     assert "writersShelf" in app
     assert "atelierShelf" in app
     assert "hallShelf" in app
+    assert "eateryShelf" in app
     assert "renderWorkshop" in app
     assert "renderBar" in app
     assert "renderTheater" in app
     assert "renderWriters" in app
     assert "renderAtelier" in app
     assert "renderHall" in app
+    assert "renderEatery" in app
     bar_js = (ROOT / "server/static/island/scenes/bar.js").read_text(encoding="utf-8")
     assert "island-bar" in bar_js
     assert "island-shop-shelf" in bar_js
@@ -1149,10 +1219,12 @@ def test_island_page_is_modular() -> None:
     assert (ROOT / "server/v1/writers_service.py").exists()
     assert (ROOT / "server/v1/atelier_service.py").exists()
     assert (ROOT / "server/v1/hall_service.py").exists()
+    assert (ROOT / "server/v1/eatery_service.py").exists()
     theater_js = (ROOT / "server/static/island/scenes/theater.js").read_text(encoding="utf-8")
     writers_js = (ROOT / "server/static/island/scenes/writers.js").read_text(encoding="utf-8")
     atelier_js = (ROOT / "server/static/island/scenes/atelier.js").read_text(encoding="utf-8")
     hall_js = (ROOT / "server/static/island/scenes/hall.js").read_text(encoding="utf-8")
+    eatery_js = (ROOT / "server/static/island/scenes/eatery.js").read_text(encoding="utf-8")
     assert 'go: "writers"' in theater_js
     assert 'go: "atelier"' in theater_js
     assert 'go: "hall"' in theater_js
@@ -1166,6 +1238,12 @@ def test_island_page_is_modular() -> None:
     assert "点一下看收稿台" in writers_js
     assert "点一下看坊" in atelier_js
     assert "点一下看看板" in hall_js
+    assert "点一下看菜单" in eatery_js
+    assert "island-eatery" in eatery_js
+    assert "island-shop-shelf" in eatery_js
+    assert "island-bar-tray" not in eatery_js
+    assert "去上手页" not in eatery_js
+    assert "disabled" not in eatery_js
     assert "island-bar-tray" not in writers_js
     assert "island-bar-tray" not in atelier_js
     assert "island-bar-tray" not in hall_js
@@ -1175,6 +1253,7 @@ def test_island_page_is_modular() -> None:
     assert "/api/v1/writers" in api
     assert "/api/v1/atelier" in api
     assert "/api/v1/hall" in api
+    assert "/api/v1/eatery" in api
     assert ".island-theater-board" in css
     assert ".island-theater-picks" not in css
     assert ".island-theater .island-hot span" in css

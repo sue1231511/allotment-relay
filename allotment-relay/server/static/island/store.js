@@ -60,6 +60,9 @@ export const state = {
   hall: null,
   hallTab: "board",
   hallShelf: false,
+  eatery: null,
+  eateryTab: "board",
+  eateryShelf: false,
   bagPage: 0,
   busy: false,
 };
@@ -78,6 +81,13 @@ export function applySnapshot(data) {
   if (data.writers) state.writers = data.writers;
   if (data.atelier) state.atelier = data.atelier;
   if (data.hall) state.hall = data.hall;
+  if (data.eatery) {
+    state.eatery = data.eatery;
+    const tabs = data.eatery.tabs || [];
+    if (tabs.length && !tabs.some((t) => t.key === state.eateryTab)) {
+      state.eateryTab = tabs[0].key;
+    }
+  }
 }
 
 export function yardMeta(kind = state.yard) {
