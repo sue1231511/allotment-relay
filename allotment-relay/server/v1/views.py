@@ -59,6 +59,8 @@ def player_view(dash: dict[str, Any] | None, *, enrolled: bool) -> dict[str, Any
         "health": meters.get("health") or 0,
         "satiety": meters.get("satiety") or 0,
         "dues": dash.get("dues") or {},
+        "duty": (dash.get("meter_lines") or {}).get("bar_duty") or "",
+        "flags": dash.get("flags") or {},
         "stock": dash.get("stock") or [],
         "seeds": play.seed_options(dash.get("stock") or []),
     }

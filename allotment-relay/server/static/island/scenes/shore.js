@@ -1,12 +1,14 @@
 import { state } from "../store.js";
+import { sceneArt } from "../ui/art.js";
 import { esc } from "../ui/modal.js";
 
 export function renderShore(root, { onCast, onBack }) {
   const w = state.world || {};
   const shore = state.shore || {};
   root.innerHTML = `
-    <div class="island-shore">
-      <article class="island-shore-card">
+    <div class="island-place">
+      ${sceneArt("shore")}
+      <article class="island-place-card">
         <b>${esc(w.tide || "潮位")} · ${esc(w.weather || "天气")}</b>
         <p>${esc(w.phase || "")} · ${esc(w.season || "")}</p>
         <p>${esc(w.line || "海边风很轻。")}</p>

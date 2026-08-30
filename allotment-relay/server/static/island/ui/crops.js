@@ -1,9 +1,21 @@
 /** 作物图按 catalog.CROPS 顺序，文件在 /static/island/assets/crops/{key}.png */
 
+const CROP_FALLBACK = {
+  kale: "🥬",
+  beet: "🥕",
+  fogpea: "🍅",
+  chili: "🌶️",
+  garlic: "🧄",
+  durian: "🌳",
+  mango: "🥭",
+  orange: "🍊",
+};
+
 export function cropArt(key, stage = "ripe") {
   if (!key || stage === "empty") return "";
   const cls = stage === "seedling" ? "is-seed" : stage === "growing" ? "is-grow" : "is-ripe";
-  return `<img class="island-crop-pic ${cls}" src="/static/island/assets/crops/${key}.png" alt="" draggable="false">`;
+  const fallback = CROP_FALLBACK[key] || "🌱";
+  return `<img class="island-crop-pic ${cls}" src="/static/island/assets/crops/${key}.png" alt="" draggable="false" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'island-crop-fallback',textContent:'${fallback}'}))">`;
 }
 
 export function neighborCrop(crops, key, delta) {

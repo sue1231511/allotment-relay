@@ -5,6 +5,7 @@ import {
   plotToken,
   ripeYard,
   state,
+  thirstyYard,
   tickGrow,
   yardFullMessage,
 } from "./store.js";
@@ -13,6 +14,7 @@ import { renderMap } from "./map.js";
 import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js";
 import { renderShore } from "./scenes/shore.js";
 import { renderPlaza } from "./scenes/plaza.js";
+import { renderPlace } from "./scenes/place.js";
 import { renderBag } from "./ui/bag.js";
 import { renderQuest } from "./ui/quest.js";
 import { renderChat } from "./ui/chat.js";
@@ -22,6 +24,7 @@ import { showEvent, toast } from "./ui/modal.js";
 const sceneEl = () => document.getElementById("island-scene");
 const sheetEl = () => document.getElementById("island-sheet");
 const plantEl = () => document.getElementById("island-plant");
+const LIVE_SCENES = ["home", "yards", "shore", "plaza", "hut", "bar", "eatery", "hui"];
 let loungeCache = { messages: [], notices: [] };
 let growTimer = 0;
 
@@ -71,6 +74,7 @@ async function enterScene(name) {
       renderYards(root, {
         onOpenGarden: openPlant,
         onHarvestAll: harvestAll,
+        onWaterAll: waterAll,
         onSwitchYard: switchYard,
         onBack: () => enterScene("home"),
       });
@@ -104,11 +108,83 @@ async function enterScene(name) {
       });
       return;
     }
+    if (name === "hut" || name === "bar" || name === "eatery" || name === "hui") {
+      renderPlaceScene(name);
+      return;
+    }
     renderMap(root, { onOpen: enterScene });
   } catch (err) {
     toast(err.message || "这处场景没能打开。");
     renderMap(root, { onOpen: enterScene });
   }
+}
+
+function renderPlaceScene(name) {
+  const root = sceneEl();
+  const me = state.me || {};
+  const flags = me.flags || {};
+  const dues = me.dues || {};
+  const stock = me.stock || [];
+  const back = () => enterScene("map");
+  if (name === "hut") {
+    const built = !!flags.hut_built;
+    renderPlace(root, {
+      id: "hut",
+      title: "岸畔小屋",
+      body: built
+        ? ["困了就睡。每天一次，回精力。没有床就去上手页买一张装上。升级仍去上手页。"]
+        : ["还没有棚屋。先搭一座才能睡。床和升级仍去上手页。"],
+      actions: built
+        ? [{ id: "sleep", label: "睡觉", primary: true }]
+        : [{ id: "build", label: "搭棚屋", primary: true }],
+      onAct: (id) => act(() => (id === "build" ? api.buildHut() : api.sleep())),
+      onBack: back,
+    });
+    return;
+  }
+  if (name === "bar") {
+    renderPlace(root, {
+      id: "bar",
+      title: "滨海酒吧",
+      body: [
+        me.duty || "每 2 天来洗一次碗。",
+        "点单、打赏仍去上手页。",
+      ],
+      actions: [{ id: "work", label: "洗碗", primary: true }],
+      onAct: () => act(() => api.work()),
+      onBack: back,
+    });
+    return;
+  }
+  if (name === "eatery") {
+    renderPlace(root, {
+      id: "eatery",
+      title: "岸畔小馆",
+      body: [
+        stock.length ? "饿了打开行囊吃一口。点单、下别人家馆子仍去上手页。" : "行囊空着。先种、收或去上手页下馆子。",
+      ],
+      actions: [{ id: "bag", label: "打开行囊", primary: true }],
+      onAct: () => openTab("bag"),
+      onBack: back,
+    });
+    return;
+  }
+  const tax = Number(dues.tax_arrears) || 0;
+  const upkeep = Number(dues.upkeep_arrears) || 0;
+  renderPlace(root, {
+    id: "hui",
+    title: "潮生会",
+    body: [
+      tax || upkeep ? "欠了就交。交完红条会灭。" : "岸税岸维没欠就不用跑。",
+      "捐基金、看告示仍去上手页。",
+    ],
+    actions: [
+      { id: "tax", label: tax ? `交岸税 ${tax}` : "交岸税", primary: !!tax, disabled: !tax },
+      { id: "upkeep", label: upkeep ? `交岸维 ${upkeep}` : "交岸维", disabled: !upkeep },
+    ],
+    onAct: (id) => act(() => api.pay(id === "upkeep" ? "upkeep" : "tax")),
+    onBack: back,
+  });
 }
 
 function openPlant() {
@@ -120,6 +196,7 @@ function openPlant() {
       openPlant();
     },
     onPlant: autoSow,
+    onBuy: buySeed,
     onClose: closePlant,
   });
 }
@@ -149,27 +226,45 @@ async function autoSow(crop) {
   await act(() => api.sow(plotToken(idle), crop.name || crop.key), { keepPlant: false });
 }
 
+async function buySeed(crop) {
+  if (!crop) return;
+  await act(() => api.buy(crop.name || crop.key, 1), { keepPlant: true });
+}
+
 async function harvestAll() {
   const ready = ripeYard();
   if (!ready.length) {
     toast("还没有成熟的作物。");
     return;
   }
+  await runPlotBatch(ready, (plot) => api.harvest(plotToken(plot)), "一键收获", "收获");
+}
+
+async function waterAll() {
+  const thirsty = thirstyYard();
+  if (!thirsty.length) {
+    toast("这一类没有要浇的地。");
+    return;
+  }
+  await runPlotBatch(thirsty, (plot) => api.water(plotToken(plot)), "浇水", "浇水");
+}
+
+async function runPlotBatch(plots, fn, manyTitle, oneTitle) {
   if (state.busy) return;
   state.busy = true;
   closePlant();
   try {
     let last = null;
     const notes = [];
-    for (const plot of ready) {
-      last = await api.harvest(plotToken(plot));
+    for (const plot of plots) {
+      last = await fn(plot);
       applySnapshot(last);
       if (last.event && last.event.narrative) notes.push(last.event.narrative);
     }
     renderHud();
     if (notes.length) {
       showEvent({
-        title: notes.length > 1 ? "一键收获" : "收获",
+        title: notes.length > 1 ? manyTitle : oneTitle,
         narrative: notes.join("\n"),
         kind: "farm",
       });
@@ -183,7 +278,11 @@ async function harvestAll() {
   }
 }
 
-async function act(fn, { refreshScene = false, keepPlant = false } = {}) {
+async function eatItem(item) {
+  await act(() => api.eat(item), { keepTab: true });
+}
+
+async function act(fn, { refreshScene = false, keepPlant = false, keepTab = false } = {}) {
   if (state.busy) return;
   state.busy = true;
   try {
@@ -192,7 +291,12 @@ async function act(fn, { refreshScene = false, keepPlant = false } = {}) {
     renderHud();
     if (data.event) showEvent(data.event);
     if (!keepPlant) closePlant();
-    if (refreshScene || state.scene === "home" || state.scene === "yards" || state.scene === "shore" || state.scene === "plaza") {
+    else state.plantOpen = true;
+    if (keepTab) {
+      if (state.tab === "bag") renderBag(sheetEl(), { onEat: eatItem });
+      return;
+    }
+    if (refreshScene || LIVE_SCENES.includes(state.scene)) {
       await enterScene(state.scene);
     }
   } catch (err) {
@@ -248,7 +352,7 @@ async function openTab(tab) {
   markDock(tab);
   if (tab === "map") {
     hideSheet();
-    if (state.scene !== "map" && state.scene !== "home" && state.scene !== "yards" && state.scene !== "shore" && state.scene !== "plaza") {
+    if (state.scene !== "map" && !LIVE_SCENES.includes(state.scene)) {
       await enterScene("map");
     }
     return;
@@ -256,7 +360,7 @@ async function openTab(tab) {
   closePlant();
   const sheet = sheetEl();
   if (tab === "bag") {
-    renderBag(sheet);
+    renderBag(sheet, { onEat: eatItem });
     return;
   }
   if (tab === "quest") {
@@ -274,7 +378,7 @@ async function openTab(tab) {
       loungeCache = out;
       renderChat(sheet, { messages: out.messages, onSay: talk });
       return out;
-    });
+    }, { keepTab: true });
     renderChat(sheet, { messages: loungeCache.messages, onSay: talk });
   }
 }
@@ -337,6 +441,13 @@ function bindDock() {
     const pin = ev.target.closest("[data-go]");
     if (pin) enterScene(pin.getAttribute("data-go"));
   });
+  const ribbon = document.getElementById("island-ribbon");
+  if (ribbon) {
+    ribbon.addEventListener("click", (ev) => {
+      const go = ev.target.closest("[data-go]");
+      if (go) enterScene(go.getAttribute("data-go"));
+    });
+  }
 }
 
 async function start() {

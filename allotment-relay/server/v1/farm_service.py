@@ -66,6 +66,29 @@ async def snapshot(api_key: str, steward_id: int) -> dict[str, Any]:
     }
 
 
+async def buy(api_key: str, key_id: int, crop: str, qty: int = 1) -> dict[str, Any]:
+    try:
+        s = await _prepare(key_id)
+    except ValueError as exc:
+        raise classify(exc) from exc
+    crop_key = resolve_crop_key((crop or "").strip())
+    if not crop_key:
+        raise ApiError("BAD_REQUEST", "没有这种作物。")
+    n = max(1, min(24, int(qty or 1)))
+    sow_name = (CROPS[crop_key].get("aliases") or [CROPS[crop_key]["name"]])[0]
+    try:
+        narrative = await game._plot_one(s, f"buy {n} {sow_name}")
+    except ValueError as exc:
+        raise classify(exc) from exc
+    snap = await snapshot(api_key, s["id"])
+    snap["event"] = {
+        "title": "买种",
+        "narrative": views_human(narrative),
+        "kind": "farm",
+    }
+    return snap
+
+
 async def sow(api_key: str, key_id: int, slot: int | str, crop: str) -> dict[str, Any]:
     try:
         s = await _prepare(key_id)
