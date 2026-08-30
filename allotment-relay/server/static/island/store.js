@@ -41,6 +41,7 @@ export const state = {
   shore: null,
   shop: null,
   shopTab: "seed",
+  shopShelf: false,
   busy: false,
 };
 

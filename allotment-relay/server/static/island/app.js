@@ -71,7 +71,9 @@ async function bootFromServer() {
 
 async function enterScene(name) {
   if (name === "home") name = "yards";
+  const prev = state.scene;
   state.scene = name;
+  if (name === "shop" && prev !== "shop") state.shopShelf = false;
   state.tab = "map";
   markDock("");
   hideSheet();
@@ -185,13 +187,34 @@ async function openShop(root) {
   if (!tabs.some((row) => row.key === state.shopTab)) {
     state.shopTab = (tabs[0] && tabs[0].key) || "seed";
   }
-  renderShop(root, { onBuy: tapShopSku, onSwitchTab: switchShopTab });
+  paintShop();
+}
+
+function paintShop() {
+  renderShop(sceneEl(), {
+    onBuy: tapShopSku,
+    onSwitchTab: switchShopTab,
+    onOpenShelf: openShopShelf,
+    onCloseShelf: closeShopShelf,
+  });
+}
+
+function openShopShelf() {
+  state.shopShelf = true;
+  hideModal();
+  paintShop();
+}
+
+function closeShopShelf() {
+  state.shopShelf = false;
+  hideModal();
+  paintShop();
 }
 
 function switchShopTab(tab) {
   state.shopTab = tab || "seed";
   hideModal();
-  renderShop(sceneEl(), { onBuy: tapShopSku, onSwitchTab: switchShopTab });
+  paintShop();
 }
 
 function tapShopSku(item) {

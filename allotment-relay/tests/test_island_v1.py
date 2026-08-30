@@ -798,9 +798,18 @@ def test_island_page_is_modular() -> None:
     assert "island-plaza-board" in (ROOT / "server/static/island/scenes/plaza.js").read_text(encoding="utf-8")
     assert 'shop: "杂货铺"' in app
     shop_js = (ROOT / "server/static/island/scenes/shop.js").read_text(encoding="utf-8")
+    assert "island-shop-talk" in shop_js
+    assert "island-shop-stage" in shop_js
     assert "island-shop-shelf" in shop_js
+    assert "看看货架" in shop_js
+    assert "你有什么心事吗" in shop_js
+    assert "is-shelf" in shop_js
     assert "data-sku" in shop_js
     assert "去上手页" not in shop_js
+    assert "island-shop-talk" in css
+    assert ".island-shop.is-shelf" in css
+    assert "object-position: center top" in css
+    assert "island-shop-layout1" in (ROOT / "server/templates/island.html").read_text(encoding="utf-8")
     assert "api.shopBuy" in app
     assert "showBuySheet" in app
     assert "renderShop" in app
