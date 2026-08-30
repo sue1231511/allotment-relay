@@ -435,8 +435,12 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
+    assert "/static/island/boot.js" in html
+    assert 'id="island-enter"' in html
+    assert "novalidate" in html
     assert "island-dock" in html
     assert "island-ribbon" in html
+    assert "island-gate-hint" in html
     assert "家园" in (ROOT / "server/static/island/map.js").read_text(encoding="utf-8")
     assert "小屋" in (ROOT / "server/static/island/map.js").read_text(encoding="utf-8")
     assert "酒吧" in (ROOT / "server/static/island/map.js").read_text(encoding="utf-8")
@@ -459,6 +463,12 @@ def test_island_page_is_modular() -> None:
     assert "浇水 1" not in app
     assert "菜地已经种满了" in (ROOT / "server/static/island/store.js").read_text(encoding="utf-8")
     assert "firstIdleYard" in app
+    assert "__islandStart" in app
+    assert "bindGate" not in app
+    boot = (ROOT / "server/static/island/boot.js").read_text(encoding="utf-8")
+    assert "/api/v1/session" in boot
+    assert "正在进入" in boot
+    assert "island-enter" in boot
     assert "thirstyYard" in (ROOT / "server/static/island/store.js").read_text(encoding="utf-8")
     assert "plotToken" in app
     assert "renderYards" in app

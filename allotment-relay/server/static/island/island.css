@@ -187,6 +187,26 @@ body.island-app {
   color: #5b7377;
 }
 
+.island-gate-hint {
+  min-height: 1.4em;
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: #8a4b3a;
+}
+
+.island-fallback {
+  position: absolute;
+  inset: 18% 16px auto;
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(255, 253, 248, .92);
+  text-align: center;
+  z-index: 3;
+}
+
+.island-fallback b { display: block; font-size: 16px; margin-bottom: 8px; }
+.island-fallback p { margin: 0 0 12px; font-size: 13px; color: #3d5c61; }
+
 .island-hidden, [hidden] { display: none !important; }
 
 .island-scene {
@@ -272,6 +292,8 @@ body.island-app {
   position: absolute;
   inset: 0;
   background: #c9ddd8;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .island-slot-pic {
@@ -378,7 +400,7 @@ body.island-app {
   gap: 2px;
 }
 
-.island-pin { z-index: 2; }
+.island-pin { z-index: 2; pointer-events: auto; }
 .island-pin.is-home { left: 8%; top: 18%; }
 .island-pin.is-shore { right: 6%; top: 10%; }
 .island-pin.is-hut { left: 8%; top: 44%; }

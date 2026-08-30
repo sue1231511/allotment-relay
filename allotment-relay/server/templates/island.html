@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/island/island.css?v=island-art2">
+  <link rel="stylesheet" href="/static/island/island.css?v=island-gate1">
 </head>
 <body class="island-app{% if island_weddings %} is-wedding-day{% endif %}">
   <div id="island-root" class="island-root">
@@ -29,24 +29,25 @@
       <p class="island-kicker">Mobile Map · MVP</p>
       <h1>先把凭证贴上</h1>
       <p>和上手页是同一个号。种浇收买种、洗碗、睡觉、吃饭、交税维，地图里都能点。插图后补。</p>
-      <form id="island-key-form">
+      <form id="island-key-form" novalidate>
         <label class="island-field">
           <span>凭证</span>
-          <input id="island-key" type="password" autocomplete="off" placeholder="ar_sk_..." required>
+          <input id="island-key" type="text" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ar_sk_..." value="">
         </label>
         <div class="island-row">
           <a class="island-btn" href="/register">去领取</a>
-          <button type="submit" class="island-btn primary">进入地图</button>
+          <button type="button" class="island-btn primary" id="island-enter">进入地图</button>
         </div>
       </form>
-      <form id="island-enroll-form" class="island-hidden">
+      <form id="island-enroll-form" class="island-hidden" novalidate>
         <label class="island-field">
           <span>岛上的名字</span>
-          <input id="island-enroll-name" type="text" maxlength="24" placeholder="安" required>
+          <input id="island-enroll-name" type="text" maxlength="24" placeholder="安" autocomplete="nickname">
         </label>
-        <button type="submit" class="island-btn primary wide">登记登岛</button>
+        <button type="button" class="island-btn primary wide" id="island-enroll-btn">登记登岛</button>
       </form>
-      <p class="island-fine">点单、打赏、扩地仍在 <a href="/play">上手页</a>。</p>
+      <p class="island-gate-hint" id="island-gate-hint" aria-live="polite"></p>
+      <p class="island-fine">点单、打赏、扩地仍在 <a href="/play">上手页</a>。点了没反应，换系统浏览器打开，不要停在微信里。</p>
     </section>
 
     <main class="island-stage island-hidden" id="island-stage" hidden>
@@ -71,7 +72,12 @@
   <div class="island-modal" id="island-modal" hidden></div>
   <p class="island-toast" id="island-toast" hidden></p>
 
-  <script src="/static/site-key.js?v=island-art2"></script>
-  <script type="module" src="/static/island/app.js?v=island-art2"></script>
+  <script src="/static/site-key.js?v=island-gate1"></script>
+  <script src="/static/island/boot.js?v=island-gate1"></script>
+  <script type="module" src="/static/island/app.js?v=island-gate1"></script>
+  <script nomodule>
+    var hint = document.getElementById("island-gate-hint");
+    if (hint) hint.textContent = "这台浏览器跑不了完整地图。换系统浏览器，或去上手页。";
+  </script>
 </body>
 </html>

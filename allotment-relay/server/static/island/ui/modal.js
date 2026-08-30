@@ -24,12 +24,17 @@ export function hideModal() {
 }
 
 export function toast(text) {
+  if (window.__islandBoot && typeof window.__islandBoot.toast === "function") {
+    window.__islandBoot.toast(text);
+    return;
+  }
   const el = document.getElementById("island-toast");
   if (!el) return;
   el.hidden = false;
+  el.removeAttribute("hidden");
   el.textContent = text;
   clearTimeout(el._t);
-  el._t = setTimeout(() => { el.hidden = true; }, 2800);
+  el._t = setTimeout(() => { el.hidden = true; }, 3200);
 }
 
 export function esc(s) {

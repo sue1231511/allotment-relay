@@ -624,6 +624,8 @@ def test_human_island_manual() -> None:
         "全岛登记人数",
         "/island",
         "手机地图",
+        "进入地图",
+        "不要停在微信里",
         "一键收获",
         "再点土地",
         "菜地已经种满了",
@@ -695,6 +697,8 @@ def test_patron_pages_share_steward_key() -> None:
     island_html = (root / "server/templates/island.html").read_text(encoding="utf-8")
     island_api = (root / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/site-key.js" in island_html
+    assert "/static/island/boot.js" in island_html
+    assert 'id="island-enter"' in island_html
     assert "tidal_island_steward_api_key" in island_api
     assert "/api/v1/" in island_api
     assert "/play" in island_html

@@ -1,4 +1,4 @@
-import { api, loadKey, saveKey } from "./api.js";
+import { api, loadKey } from "./api.js";
 import {
   applySnapshot,
   firstIdleYard,
@@ -29,6 +29,10 @@ let loungeCache = { messages: [], notices: [] };
 let growTimer = 0;
 
 function showPlay() {
+  if (window.__islandBoot && typeof window.__islandBoot.showPlay === "function") {
+    window.__islandBoot.showPlay();
+    return;
+  }
   document.getElementById("island-gate").classList.add("island-hidden");
   const stage = document.getElementById("island-stage");
   stage.classList.remove("island-hidden");
@@ -37,6 +41,10 @@ function showPlay() {
 }
 
 function showGate() {
+  if (window.__islandBoot && typeof window.__islandBoot.showGate === "function") {
+    window.__islandBoot.showGate();
+    return;
+  }
   document.getElementById("island-gate").classList.remove("island-hidden");
   document.getElementById("island-stage").hidden = true;
   document.getElementById("island-dock").hidden = true;
@@ -394,53 +402,35 @@ async function openTab(tab) {
   }
 }
 
-function bindGate() {
-  const keyForm = document.getElementById("island-key-form");
-  const enrollForm = document.getElementById("island-enroll-form");
-  const keyInput = document.getElementById("island-key");
-  const saved = loadKey();
-  if (saved) keyInput.value = saved;
-  keyForm.addEventListener("submit", async (ev) => {
-    ev.preventDefault();
-    const key = keyInput.value.trim();
-    if (!key.startsWith("ar_sk_")) {
-      toast("凭证应以 ar_sk_ 开头。");
-      return;
-    }
-    saveKey(key);
-    try {
-      const data = await api.session(key);
-      applySnapshot(data);
-      renderHud();
-      if (!data.enrolled) {
-        enrollForm.classList.remove("island-hidden");
-        toast("先起一个岛上的名字。");
-        return;
-      }
-      showPlay();
-      await enterScene("map");
-    } catch (err) {
-      toast(err.message);
-    }
-  });
-  enrollForm.addEventListener("submit", async (ev) => {
-    ev.preventDefault();
-    const name = document.getElementById("island-enroll-name").value.trim();
-    try {
-      const data = await api.session(loadKey(), name);
-      applySnapshot(data);
-      renderHud();
-      showPlay();
+async function startFromSnapshot(data, scene) {
+  applySnapshot(data);
+  renderHud();
+  if (!data || !data.enrolled) {
+    showGate();
+    const enrollForm = document.getElementById("island-enroll-form");
+    if (enrollForm) enrollForm.classList.remove("island-hidden");
+    toast("先起一个岛上的名字。");
+    return;
+  }
+  showPlay();
+  try {
+    if (data.event && scene === "home") showEvent(data.event);
+  } catch {
+    /* 弹窗失败不挡进图 */
+  }
+  try {
+    await enterScene(scene || "map");
+  } catch (err) {
+    toast(err.message || "地图没能打开。");
+    const root = sceneEl();
+    if (root) {
       try {
-        if (data.event) showEvent(data.event);
+        renderMap(root, { onOpen: enterScene });
       } catch {
-        /* 弹窗失败不挡进家园 */
+        if (window.__islandBoot) window.__islandBoot.fallbackScene(err.message);
       }
-      await enterScene("home");
-    } catch (err) {
-      toast(err.message);
     }
-  });
+  }
 }
 
 function bindDock() {
@@ -462,12 +452,28 @@ function bindDock() {
 }
 
 async function start() {
-  bindGate();
   bindDock();
+  window.__islandApp = true;
+  window.__islandStart = startFromSnapshot;
+  if (window.__islandPending) {
+    const pending = window.__islandPending;
+    window.__islandPending = null;
+    await startFromSnapshot(pending.data, pending.scene);
+    return;
+  }
   const key = loadKey();
   if (!key) {
     showGate();
     return;
+  }
+  const enterBtn = document.getElementById("island-enter");
+  window.__islandBusy = true;
+  if (enterBtn) {
+    enterBtn.disabled = true;
+    enterBtn.textContent = "正在进入…";
+  }
+  if (window.__islandBoot && window.__islandBoot.hint) {
+    window.__islandBoot.hint("正在进入地图。");
   }
   try {
     await bootFromServer();
@@ -475,10 +481,20 @@ async function start() {
     if (err.code === "NOT_ENROLLED") {
       showGate();
       document.getElementById("island-enroll-form").classList.remove("island-hidden");
+      toast("先起一个岛上的名字。");
       return;
     }
     showGate();
-    toast(err.message || "没能读到存档。");
+    toast(err.message || "没能读到存档。再点一次进入地图。");
+  } finally {
+    window.__islandBusy = false;
+    if (enterBtn) {
+      enterBtn.disabled = false;
+      enterBtn.textContent = "进入地图";
+    }
+    if (window.__islandBoot && window.__islandBoot.hint) {
+      window.__islandBoot.hint("");
+    }
   }
 }
 
@@ -492,4 +508,7 @@ window.addEventListener("pageshow", () => {
   }
 });
 
-start();
+start().catch((error) => {
+  showGate();
+  toast((error && error.message) || "地图没能打开。再点一次进入地图。");
+});

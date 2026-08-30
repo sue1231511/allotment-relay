@@ -21,8 +21,15 @@ export function renderMap(root, { onOpen }) {
     </div>
   `;
   const bar = document.getElementById("island-actionbar");
-  bar.innerHTML = `<p class="island-fine" style="grid-column:1/-1;margin:4px 2px 0">点家园进院子，再点土地才看菜地、果园、温室。插图后补，地点已经能进。</p>`;
-  root.querySelectorAll("[data-go]").forEach((btn) => {
-    btn.addEventListener("click", () => onOpen(btn.getAttribute("data-go")));
-  });
+  if (bar) {
+    bar.innerHTML = `<p class="island-fine" style="grid-column:1/-1;margin:4px 2px 0">点家园、港口、小屋这些钉子就能进。插图后补。</p>`;
+  }
+  if (typeof onOpen === "function") {
+    root.querySelectorAll("[data-go]").forEach((btn) => {
+      btn.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        onOpen(btn.getAttribute("data-go"));
+      });
+    });
+  }
 }
