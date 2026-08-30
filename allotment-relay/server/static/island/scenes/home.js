@@ -47,7 +47,7 @@ export function renderYards(root, { onOpenGarden, onHarvestAll, onWaterAll, onSw
   `;
   const bar = document.getElementById("island-actionbar");
   bar.innerHTML = `
-    <button type="button" class="island-btn" data-act="back">回家园</button>
+    <button type="button" class="island-btn" data-act="back">回地图</button>
     <button type="button" class="island-btn" data-act="water" ${thirsty ? "" : "disabled"}>浇水${thirsty ? ` ${thirsty}` : ""}</button>
     <button type="button" class="island-btn primary" data-act="garden">${esc(yardMeta().plant)}</button>
   `;

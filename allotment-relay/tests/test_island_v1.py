@@ -444,6 +444,7 @@ def test_island_page_is_modular() -> None:
     map_js = (ROOT / "server/static/island/map.js").read_text(encoding="utf-8")
     assert "家园" in map_js
     assert "份地" in map_js
+    assert 'go: "yards"' in map_js
     assert "小屋" in map_js
     assert "酒吧" in map_js
     assert "island-hot" in map_js
@@ -501,6 +502,8 @@ def test_island_page_is_modular() -> None:
     assert "plotToken" in app
     assert "renderYards" in app
     assert "enterScene(\"yards\")" in app
+    assert 'name === "home"' in app
+    assert "回地图" in (ROOT / "server/static/island/scenes/home.js").read_text(encoding="utf-8")
     assert "api.buy" in app
     assert "api.sleep" in app
     assert "api.work" in app

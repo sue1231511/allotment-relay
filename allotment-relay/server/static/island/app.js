@@ -65,6 +65,7 @@ async function bootFromServer() {
 }
 
 async function enterScene(name) {
+  if (name === "home") name = "yards";
   state.scene = name;
   state.tab = "map";
   markDock("map");
@@ -92,7 +93,7 @@ async function enterScene(name) {
         onHarvestAll: harvestAll,
         onWaterAll: waterAll,
         onSwitchYard: switchYard,
-        onBack: () => enterScene("home"),
+        onBack: () => enterScene("map"),
       });
       startGrowTick();
       if (state.plantOpen) openPlant();
