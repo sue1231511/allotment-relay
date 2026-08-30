@@ -448,17 +448,19 @@ def test_island_page_is_modular() -> None:
     assert "酒吧" in map_js
     assert "island-hot" in map_js
     assert "data-href" in map_js
-    assert '"/workshop"' not in map_js
-    assert '"/quarry"' not in map_js
+    assert '"/workshop"' in map_js
+    assert '"/quarry"' in map_js
     assert '"/market"' in map_js
+    assert '"/ting"' in map_js
+    assert '"/lianli"' in map_js
     assert '"/undertide"' in map_js
-    assert "941" in map_js
-    assert "1672" in map_js
+    assert "972" in map_js
+    assert "1619" in map_js
     map_png = ROOT / "server/static/island/assets/scenes/island-map.png"
     assert map_png.exists()
     try:
         from PIL import Image
-        assert Image.open(map_png).size == (941, 1672)
+        assert Image.open(map_png).size == (972, 1619)
     except ImportError:
         pass
     assert "min-height: 48px" in css
