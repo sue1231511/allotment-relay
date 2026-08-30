@@ -10,7 +10,10 @@
 | `scenes/home.png` | 家园院子 | 1080×1920 |
 | `scenes/yards.png` | 份地页底图（已就位；海边草地，不是一块纯绿） | 941×1672 |
 | `scenes/shore.png` | 海边 / 港口（已就位） | 1080×1920 |
-| `scenes/plaza.png` | 潮汐广场（已就位） | 1080×1920 |
+| `scenes/plaza.png` | 潮汐广场（已就位；图上点杂货铺 / 灯塔 / 岸工坊 / 潮汐公告） | 941×1672 |
+| `scenes/shop.png` | 杂货铺（插图后补；从广场点进去） | 1080×1920 |
+| `scenes/lighthouse.png` | 灯塔（插图后补；从广场点进去） | 1080×1920 |
+| `scenes/notice.png` | 潮汐公告（插图后补；从广场点进去） | 1080×1920 |
 | `scenes/hut.png` | 岸畔小屋 | 1080×1920 |
 | `scenes/bar.png` | 潮汐酒吧（已就位） | 1080×1920 |
 | `scenes/theater.png` | 潮汐剧场（已就位） | 1080×1920 |

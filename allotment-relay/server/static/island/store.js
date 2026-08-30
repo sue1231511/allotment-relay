@@ -28,6 +28,7 @@ export const YARDS = {
 export const state = {
   enrolled: false,
   scene: "map",
+  backTo: "map",
   tab: "map",
   yard: "home",
   yardPage: 0,
