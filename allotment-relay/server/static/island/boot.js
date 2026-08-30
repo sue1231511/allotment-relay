@@ -13,6 +13,9 @@
     if (!toastEl || !text) return;
     toastEl.hidden = false;
     toastEl.removeAttribute("hidden");
+    toastEl.classList.remove("is-pop");
+    void toastEl.offsetWidth;
+    toastEl.classList.add("is-pop");
     toastEl.textContent = text;
     clearTimeout(toastEl._t);
     toastEl._t = setTimeout(function () {

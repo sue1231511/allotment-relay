@@ -1,6 +1,7 @@
 import { state } from "../store.js";
 import { esc, toast } from "./modal.js";
 import { cropArt } from "./crops.js";
+import { popIn, popOut } from "./pop.js";
 
 const PAGE = 20;
 const CROP_KEYS = new Set([
@@ -21,7 +22,7 @@ export function renderBag(sheet, { onEat, onVend, onClose } = {}) {
   const slots = Array.from({ length: PAGE }, (_, i) => pageItems[i] || null);
   const multi = pages > 1;
 
-  sheet.hidden = false;
+  const already = sheet.classList.contains("is-bag") && !sheet.hidden;
   sheet.classList.add("is-bag");
   document.body.classList.add("is-bag-open");
   sheet.innerHTML = `
@@ -39,6 +40,11 @@ export function renderBag(sheet, { onEat, onVend, onClose } = {}) {
       <div class="island-bag-pop" id="island-bag-pop" hidden></div>
     </section>
   `;
+  if (already) {
+    sheet.hidden = false;
+  } else {
+    popIn(sheet);
+  }
 
   sheet.querySelectorAll("[data-close]").forEach((btn) => {
     btn.addEventListener("click", (ev) => {
@@ -74,10 +80,11 @@ function closeBag(sheet, onClose) {
     onClose();
     return;
   }
-  sheet.hidden = true;
-  sheet.classList.remove("is-bag");
-  document.body.classList.remove("is-bag-open");
-  sheet.innerHTML = "";
+  popOut(sheet, () => {
+    sheet.classList.remove("is-bag");
+    document.body.classList.remove("is-bag-open");
+    sheet.innerHTML = "";
+  });
 }
 
 function turnPage(delta, sheet, handlers) {
@@ -113,7 +120,6 @@ function showSlotPop(sheet, it, { onEat, onVend }) {
   if (!pop) return;
   const name = it.name || it.item;
   const price = it.vend_price ? `${it.vend_price}票` : "";
-  pop.hidden = false;
   pop.innerHTML = `
     <p>${esc(name)} ×${esc(it.qty)}</p>
     <div class="island-bag-pop-acts">
@@ -121,15 +127,14 @@ function showSlotPop(sheet, it, { onEat, onVend }) {
       <button type="button" class="island-btn primary" data-vend="${esc(name)}">卖${price ? ` ${esc(price)}` : ""}</button>
     </div>
   `;
+  popIn(pop);
   pop.querySelector("[data-eat]").addEventListener("click", (ev) => {
     ev.stopPropagation();
-    pop.hidden = true;
-    if (onEat) onEat(name);
+    popOut(pop, () => { if (onEat) onEat(name); });
   });
   pop.querySelector("[data-vend]").addEventListener("click", (ev) => {
     ev.stopPropagation();
-    pop.hidden = true;
-    if (onVend) onVend(it);
+    popOut(pop, () => { if (onVend) onVend(it); });
   });
 }
 

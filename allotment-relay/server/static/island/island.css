@@ -1733,3 +1733,91 @@ button.is-tap,
 .island-plant-buy {
   transition: transform 90ms ease-out, filter 90ms ease-out;
 }
+
+@keyframes island-veil-in {
+  from { background-color: rgba(35, 48, 56, 0); }
+  to { background-color: rgba(35, 48, 56, .42); }
+}
+
+@keyframes island-veil-out {
+  from { background-color: rgba(35, 48, 56, .42); }
+  to { background-color: rgba(35, 48, 56, 0); }
+}
+
+@keyframes island-pop-in {
+  0% { opacity: 0; transform: scale(.82); }
+  70% { opacity: 1; transform: scale(1.06); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes island-pop-out {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(.88); }
+}
+
+@keyframes island-toast-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(10px) scale(.94); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+.island-modal.is-pop {
+  animation: island-veil-in .28s ease-out both;
+}
+.island-modal.is-pop .island-card {
+  animation: island-pop-in .36s cubic-bezier(.2, 1.2, .32, 1) both;
+}
+.island-modal.is-out {
+  animation: island-veil-out .22s ease-in both;
+}
+.island-modal.is-out .island-card {
+  animation: island-pop-out .22s ease-in both;
+}
+
+.island-sheet.is-bag.is-pop {
+  animation: island-veil-in .28s ease-out both;
+}
+.island-sheet.is-bag.is-pop .island-bag {
+  animation: island-pop-in .36s cubic-bezier(.2, 1.2, .32, 1) both;
+}
+.island-sheet.is-bag.is-out {
+  animation: island-veil-out .22s ease-in both;
+}
+.island-sheet.is-bag.is-out .island-bag {
+  animation: island-pop-out .22s ease-in both;
+}
+
+.island-plant.is-pop .island-plant-card {
+  animation: island-pop-in .36s cubic-bezier(.2, 1.2, .32, 1) both;
+}
+.island-plant.is-out .island-plant-card {
+  animation: island-pop-out .22s ease-in both;
+}
+
+.island-bag-pop.is-pop {
+  animation: island-pop-in .28s cubic-bezier(.2, 1.2, .32, 1) both;
+}
+.island-bag-pop.is-out {
+  animation: island-pop-out .2s ease-in both;
+}
+
+.island-toast.is-pop {
+  animation: island-toast-in .28s cubic-bezier(.2, 1.1, .32, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .island-modal.is-pop,
+  .island-modal.is-out,
+  .island-modal.is-pop .island-card,
+  .island-modal.is-out .island-card,
+  .island-sheet.is-bag.is-pop,
+  .island-sheet.is-bag.is-out,
+  .island-sheet.is-bag.is-pop .island-bag,
+  .island-sheet.is-bag.is-out .island-bag,
+  .island-plant.is-pop .island-plant-card,
+  .island-plant.is-out .island-plant-card,
+  .island-bag-pop.is-pop,
+  .island-bag-pop.is-out,
+  .island-toast.is-pop {
+    animation: none;
+  }
+}
