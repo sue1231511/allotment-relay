@@ -706,7 +706,7 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-pop1" in html
+    assert "island-bar1" in html
     assert "/static/island/tap.js" in html
     assert "/static/island/boot.js" in html
     assert 'id="island-enter"' in html
