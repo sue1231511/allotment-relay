@@ -123,6 +123,52 @@ async def _test_island_v1_api() -> None:
     assert seed_row["can_eat"] is False
     assert int(seed_row.get("vend_price") or 0) > 0
 
+    ws0 = client.get("/api/v1/workshop", headers=_auth(key))
+    assert ws0.status_code == 200, ws0.text
+    forge = ws0.json()["workshop"]
+    assert any(t["key"] == "anvil" for t in forge["tabs"]), forge
+    nails = next(r for r in forge["recipes"] if r["id"] == "copper_nails")
+    assert nails["can_craft"] is False
+    miss_nail = client.post(
+        "/api/v1/workshop/act",
+        headers=_auth(key, {"Idempotency-Key": "ws-nail-miss"}),
+        json={"kind": "craft", "target": "铜钉"},
+    )
+    assert miss_nail.status_code >= 400, miss_nail.text
+    steward = await db.get_steward_by_key_id((await db.get_key_row(key))["id"])
+    sid = int(steward["id"])
+    async with db.connect() as conn:
+        await db.add_item(conn, sid, "quarry_copper_bar", 1)
+        await db.add_item(conn, sid, "drift_twine", 1)
+        await conn.commit()
+    hit_nail = client.post(
+        "/api/v1/workshop/act",
+        headers=_auth(key, {"Idempotency-Key": "ws-nail-hit"}),
+        json={"kind": "craft", "target": "铜钉"},
+    )
+    assert hit_nail.status_code == 200, hit_nail.text
+    job = hit_nail.json()["workshop"]["job"]
+    assert job and job["id"] == "copper_nails"
+    early_take = client.post(
+        "/api/v1/workshop/act",
+        headers=_auth(key, {"Idempotency-Key": "ws-take-early"}),
+        json={"kind": "take"},
+    )
+    assert early_take.status_code >= 400, early_take.text
+    async with db.connect() as conn:
+        await conn.execute("UPDATE steward_craft SET job_ready_at=1 WHERE steward_id=?", (sid,))
+        await conn.commit()
+    took = client.post(
+        "/api/v1/workshop/act",
+        headers=_auth(key, {"Idempotency-Key": "ws-take-ok"}),
+        json={"kind": "take"},
+    )
+    assert took.status_code == 200, took.text
+    assert took.json()["event"]["kind"] == "workshop"
+    assert took.json()["workshop"]["job"] is None
+    bag = took.json()["me"]["stock"]
+    assert any(it.get("item") == "craft_copper_nails" for it in bag), bag
+
     wrong_yard = client.post(
         "/api/v1/farm/parcels/园1/sow",
         headers=_auth(key, {"Idempotency-Key": "sow-orchard-kale"}),
@@ -868,6 +914,14 @@ def test_island_page_is_modular() -> None:
     assert "refreshScene: true" not in app
     assert "/api/v1/shop/buy" in api
     assert "/api/v1/tote/vend" in api
+    assert "/api/v1/workshop" in api
+    assert "api.workshopAct" in app
+    assert "keepWorkshop" in app
+    workshop_js = (ROOT / "server/static/island/scenes/workshop.js").read_text(encoding="utf-8")
+    assert "island-workshop" in workshop_js
+    assert "data-act" in workshop_js
+    assert "去上手页" not in workshop_js
+    assert "renderWorkshop" in app
     assert 'lighthouse: "灯塔"' in app
     assert 'notice: "潮汐公告"' in app
     assert "state.backTo" in app

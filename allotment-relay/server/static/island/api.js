@@ -82,4 +82,6 @@ export const api = {
   say: (text, idem) => req("/api/v1/lounge/messages", { method: "POST", body: { text }, idem }),
   shop: () => req("/api/v1/shop"),
   shopBuy: (item, qty = 1, idem) => req("/api/v1/shop/buy", { method: "POST", body: { item, qty }, idem }),
+  workshop: () => req("/api/v1/workshop"),
+  workshopAct: (kind, target = "", idem) => req("/api/v1/workshop/act", { method: "POST", body: { kind, target }, idem }),
 };

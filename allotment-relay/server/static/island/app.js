@@ -8,6 +8,7 @@ import {
   ripeYard,
   state,
   tickGrow,
+  tickWorkshop,
 } from "./store.js";
 import { renderHud } from "./hud.js";
 import { renderMap } from "./map.js";
@@ -16,16 +17,18 @@ import { renderShore } from "./scenes/shore.js";
 import { renderPlaza } from "./scenes/plaza.js";
 import { renderPlace } from "./scenes/place.js";
 import { renderShop } from "./scenes/shop.js";
+import { renderWorkshop } from "./scenes/workshop.js";
 import { renderBag } from "./ui/bag.js";
 import { setBackChip, setBagChip } from "./ui/back-map.js";
 import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js";
-import { careActs, hideModal, showBuySheet, showCareSheet, showExpandSheet, showEvent, showVendSheet, toast } from "./ui/modal.js";
+import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showExpandSheet, showEvent, showVendSheet, toast } from "./ui/modal.js";
 
 const sceneEl = () => document.getElementById("island-scene");
 const sheetEl = () => document.getElementById("island-sheet");
 const plantEl = () => document.getElementById("island-plant");
 const LIVE_SCENES = ["home", "yards"];
 let growTimer = 0;
+let workshopTimer = 0;
 
 function showPlay() {
   if (window.__islandBoot && typeof window.__islandBoot.showPlay === "function") {
@@ -92,6 +95,7 @@ async function enterScene(name) {
   try {
     if (name === "home") {
       stopGrowTick();
+      stopWorkshopTick();
       renderHome(root, {
         onOpenLand: () => enterScene("yards"),
         onBack: () => enterScene("map"),
@@ -99,6 +103,7 @@ async function enterScene(name) {
       return;
     }
     if (name === "yards") {
+      stopWorkshopTick();
       renderYards(root, {
         onTapPlot: tapPlot,
         onTapGrass: tapGrass,
@@ -110,6 +115,7 @@ async function enterScene(name) {
       return;
     }
     stopGrowTick();
+    stopWorkshopTick();
     if (name === "shore") {
       renderShore(root);
       return;
@@ -127,6 +133,11 @@ async function enterScene(name) {
     }
     if (name === "shop") {
       await openShop(root);
+      return;
+    }
+    if (name === "workshop") {
+      await openWorkshop(root);
+      startWorkshopTick();
       return;
     }
     if (PLACE_TITLES[name]) {
@@ -214,6 +225,83 @@ function paintShop(listTop = 0) {
     onSwitchTab: switchShopTab,
     listTop,
   });
+}
+
+async function openWorkshop(root) {
+  try {
+    const data = await api.workshop();
+    applySnapshot(data);
+    renderHud();
+    if (data.event) showEvent(data.event);
+  } catch (err) {
+    toast(err.message || "工坊门还没开。");
+  }
+  const tabs = (state.workshop && state.workshop.tabs) || [];
+  if (!tabs.some((row) => row.key === state.workshopTab)) {
+    state.workshopTab = (tabs[0] && tabs[0].key) || "anvil";
+  }
+  paintWorkshop();
+}
+
+function paintWorkshop(listTop = 0) {
+  renderWorkshop(sceneEl(), {
+    onAct: tapWorkshop,
+    onSwitchTab: switchWorkshopTab,
+    listTop,
+  });
+}
+
+function switchWorkshopTab(tab) {
+  state.workshopTab = tab || "anvil";
+  hideModal();
+  paintWorkshop(0);
+}
+
+function tapWorkshop(kind, target) {
+  const pack = {
+    craft: ["开打", `打 ${target}`, "确认打"],
+    take: ["取成品", "好了就取下来。", "确认取"],
+    fill: ["灌盐田", target ? `灌进池${target}` : "灌一口空池", "确认灌"],
+    harvest: ["收盐", target ? `收池${target}` : "收结壳的盐", "确认收"],
+    open_pan: ["开新池", "付钱再开一口盐田。", "确认开"],
+    salvage: ["打捞", "只认风暴窗口，不是赶海。", "确认捞"],
+    donate: ["捐陈列", `捐 ${target}`, "确认捐"],
+    patch: ["补网", "贴上补丁或雾铅网坠。", "确认贴"],
+  }[kind] || ["岸工坊", "做这一下？", "确认"];
+  showActSheet({
+    title: pack[0],
+    body: pack[1],
+    confirm: pack[2],
+    onConfirm: () => runWorkshop(kind, target),
+  });
+}
+
+async function runWorkshop(kind, target) {
+  const list = document.getElementById("island-workshop-list");
+  const listTop = list ? list.scrollTop : 0;
+  await act(() => api.workshopAct(kind, target), { keepWorkshop: true, listTop });
+}
+
+function startWorkshopTick() {
+  stopWorkshopTick();
+  workshopTimer = window.setInterval(() => {
+    if (state.scene !== "workshop" || state.busy) return;
+    const ready = tickWorkshop(1);
+    const list = document.getElementById("island-workshop-list");
+    paintWorkshop(list ? list.scrollTop : 0);
+    if (!ready) return;
+    api.workshop().then((data) => {
+      applySnapshot(data);
+      renderHud();
+      const after = document.getElementById("island-workshop-list");
+      paintWorkshop(after ? after.scrollTop : 0);
+    }).catch(() => {});
+  }, 1000);
+}
+
+function stopWorkshopTick() {
+  if (workshopTimer) window.clearInterval(workshopTimer);
+  workshopTimer = 0;
 }
 
 async function buyShopSku(item) {
@@ -411,7 +499,7 @@ async function vendItem(item) {
   await act(() => api.vend(name, 1), { keepTab: true });
 }
 
-async function act(fn, { refreshScene = false, keepPlant = false, keepTab = false, keepShop = false, listTop = null, quiet = false } = {}) {
+async function act(fn, { refreshScene = false, keepPlant = false, keepTab = false, keepShop = false, keepWorkshop = false, listTop = null, quiet = false } = {}) {
   if (state.busy) return;
   state.busy = true;
   try {
@@ -428,6 +516,10 @@ async function act(fn, { refreshScene = false, keepPlant = false, keepTab = fals
     }
     if (keepShop && state.scene === "shop") {
       paintShop(listTop);
+      return;
+    }
+    if (keepWorkshop && state.scene === "workshop") {
+      paintWorkshop(listTop);
       return;
     }
     if (refreshScene || LIVE_SCENES.includes(state.scene)) {

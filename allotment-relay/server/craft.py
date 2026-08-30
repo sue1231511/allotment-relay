@@ -39,7 +39,7 @@ CRAFT_HELP = """craft_ops 子命令（整句写进 command）：
 例子：craft_ops status · craft_ops 打 铜钉 · craft_ops 打 潮纹秤锤 · craft_ops 打 订婚戒 · craft_ops 取 · craft_ops 灌 · craft_ops 打捞 · craft_ops 捐 亮壳一套 · craft_ops 捐 砧上全套
 涨潮灌盐田，晴天才晒。赶海 dig 涨潮关；打捞只认风暴窗口。
 订婚戒要潮信贝+海玻璃，不是潮誓戒。打完 marriage_ops 订婚 信物。
-人类网页 /workshop 是围观实况；打钉在 /play。"""
+人类网页 /workshop 是围观实况；打钉在 /play 或手机地图 /island 进岸工坊点。"""
 
 
 def _fmt_left(seconds: int) -> str:
@@ -724,6 +724,205 @@ async def craft_ops(key_id: int, command: str = "") -> str:
         f"未知 craft 指令: {command}\n{CRAFT_HELP}\n"
         "不要发明 forge_ops / salvage_ops。赶海是 tide_ops dig，矿是 quarry_ops。"
     )
+
+
+async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str, Any]:
+    """给 /island 用的工坊面板。数值仍走 craft_ops，这里只摊开能点的。"""
+    prof = await ensure_profile(conn, s["id"])
+    now = db.now()
+    stock = await db.get_satchel(s["id"])
+    energy_now = int(s.get("energy") or 0)
+    tickets = int(s.get("tickets") or 0)
+    busy = bool(prof["job_key"])
+    job = None
+    if prof["job_key"]:
+        meta = CRAFT_RECIPES.get(prof["job_key"], {})
+        remain = max(0, int(prof["job_ready_at"] or 0) - now)
+        job = {
+            "id": prof["job_key"],
+            "name": meta.get("name", prof["job_key"]),
+            "emoji": meta.get("emoji", "🔨"),
+            "remain_sec": remain,
+            "ready": remain <= 0,
+            "can_take": remain <= 0,
+            "note": "好了，可以取" if remain <= 0 else f"还要 {_fmt_left(remain)}",
+        }
+    recipes = []
+    for key, meta in CRAFT_RECIPES.items():
+        needs = []
+        ok = True
+        short = []
+        for item, qty in meta["need"].items():
+            have = int(stock.get(item) or 0)
+            needs.append({
+                "item": item,
+                "label": item_label(item),
+                "qty": int(qty),
+                "have": have,
+            })
+            if have < int(qty):
+                ok = False
+                short.append(f"{item_label(item)}差{int(qty) - have}")
+        energy_need = int(meta["energy"])
+        if busy:
+            note = "砧上有活，先取再打"
+            can = False
+        elif not ok:
+            note = "缺 " + "、".join(short)
+            can = False
+        elif energy_now < energy_need:
+            note = "精力不够"
+            can = False
+        else:
+            note = f"{int(meta['seconds']) // 60} 分钟 · {energy_need} 精力"
+            can = True
+        recipes.append({
+            "id": key,
+            "name": meta["name"],
+            "emoji": meta.get("emoji") or "🔨",
+            "need": needs,
+            "minutes": int(meta["seconds"]) // 60,
+            "energy": energy_need,
+            "hint": meta.get("hint") or "",
+            "can_craft": can,
+            "note": note,
+        })
+    flood = world.current_tide() == "flood"
+    weather = world.current_weather()
+    pans = []
+    for p in await _pans(conn, s["id"]):
+        empty = int(p["brine_at"] or 0) <= 0
+        got, need = _pan_progress(p["brine_at"], now=now)
+        ready = (not empty) and got >= need
+        if empty:
+            state = "empty"
+            note = "空池。涨潮才能灌。" if not flood else "空着，可以灌。"
+        elif ready:
+            state = "ready"
+            note = "盐壳结了，可以收。"
+        else:
+            state = "drying"
+            pause = "（这会儿不是晴，暂停）" if weather != "clear" else ""
+            note = f"在晒 {got // 60}/{need // 60} 分晴天{pause}"
+        pans.append({
+            "slot": int(p["slot"]),
+            "state": state,
+            "remain_sec": 0 if empty or ready else max(0, need - got),
+            "can_fill": empty and flood,
+            "can_harvest": ready,
+            "note": note,
+        })
+    next_pan = None
+    if prof["pan_count"] < config.CRAFT_SALT_PAN_MAX:
+        cost = config.craft_pan_cost(prof["pan_count"] - 1)
+        next_pan = {
+            "cost": cost,
+            "can_buy": tickets >= cost,
+            "note": f"下一池 {cost} 票" + ("。票不够。" if tickets < cost else ""),
+        }
+    win = await _window(conn, s)
+    left = int(prof["last_salvage_at"] or 0) + config.CRAFT_SALVAGE_COOLDOWN - now
+    day = db.day_id(now)
+    used_row = await (await conn.execute(
+        "SELECT count FROM craft_rolls WHERE steward_id=? AND day=?",
+        (s["id"], day),
+    )).fetchone()
+    used = int(used_row[0] if used_row else 0)
+    daily_left = max(0, config.CRAFT_SALVAGE_DAILY - used)
+    can_salvage = bool(win["open"]) and left <= 0 and daily_left > 0
+    if not win["open"]:
+        salvage_note = "关着。等阵风、阵风后的晴天、周潮，或船损搁浅。不是赶海。"
+    elif left > 0:
+        salvage_note = f"刚捞过，{_fmt_left(left)}后再来。"
+    elif daily_left <= 0:
+        salvage_note = f"今日打捞已满 {config.CRAFT_SALVAGE_DAILY} 次。"
+    else:
+        salvage_note = f"{win['label']}开着 · {win['energy']} 精力 · 今日还剩 {daily_left} 次"
+    patch_have = int(stock.get("craft_fog_sinker") or 0) + int(stock.get("craft_net_patch") or 0)
+    patch_until = int(prof["net_patch_until"] or 0)
+    patch_on = patch_until > now
+    exhibits = []
+    done = {
+        r[0] for r in await (await conn.execute(
+            "SELECT set_key FROM steward_exhibits WHERE steward_id=?",
+            (s["id"],),
+        )).fetchall()
+    }
+    catch_n = 0
+    if any(m.get("need_catches") for m in EXHIBIT_SETS.values()):
+        from . import catches as catches_mod
+        catch_n = await catches_mod.species_count(conn, s["id"])
+    for key, meta in EXHIBIT_SETS.items():
+        donated = key in done
+        needs = []
+        ok = True
+        if meta.get("need_catches"):
+            need_n = int(meta["need_catches"])
+            ok = catch_n >= need_n
+            needs.append({
+                "item": "catches",
+                "label": "图鉴鱼种",
+                "qty": need_n,
+                "have": catch_n,
+            })
+        else:
+            for item, qty in (meta.get("need") or {}).items():
+                have = int(stock.get(item) or 0)
+                needs.append({
+                    "item": item,
+                    "label": item_label(item),
+                    "qty": int(qty),
+                    "have": have,
+                })
+                if have < int(qty):
+                    ok = False
+        exhibits.append({
+            "id": key,
+            "name": meta["name"],
+            "emoji": meta.get("emoji") or "📦",
+            "hint": meta.get("hint") or "",
+            "need": needs,
+            "donated": donated,
+            "can_donate": (not donated) and ok,
+            "note": "已经捐过" if donated else (meta.get("hint") or "凑齐再捐"),
+        })
+    if job and job["ready"]:
+        line = f"砧上：{job['name']} 好了"
+    elif job:
+        line = f"砧上：正在打 {job['name']}"
+    else:
+        line = "砧上：空闲"
+    return {
+        "name": "岸工坊",
+        "line": line,
+        "tabs": [
+            {"key": "anvil", "label": "砧上"},
+            {"key": "salt", "label": "盐田"},
+            {"key": "salvage", "label": "打捞"},
+            {"key": "exhibit", "label": "陈列"},
+        ],
+        "job": job,
+        "recipes": recipes,
+        "pans": pans,
+        "next_pan": next_pan,
+        "salvage": {
+            "open": bool(win["open"]),
+            "label": win["label"] if win.get("open") else "关着",
+            "energy": int(win.get("energy") or 0),
+            "can_salvage": can_salvage,
+            "note": salvage_note,
+        },
+        "patch": {
+            "can_patch": patch_have > 0,
+            "active": patch_on,
+            "note": (
+                f"补网还在：{_fmt_left(patch_until - now)}"
+                if patch_on else
+                ("口袋有补丁或网坠，可以贴。" if patch_have else "没有网补丁也没有雾铅网坠。")
+            ),
+        },
+        "exhibits": exhibits,
+    }
 
 
 async def public_snapshot() -> dict[str, Any]:

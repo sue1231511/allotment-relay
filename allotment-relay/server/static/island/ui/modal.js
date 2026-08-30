@@ -127,6 +127,32 @@ export function showVendSheet(item, { onConfirm, onClose } = {}) {
   }, { once: true });
 }
 
+export function showActSheet({ title, body, confirm, onConfirm, onClose } = {}) {
+  const root = document.getElementById("island-modal");
+  if (!root) return;
+  root.hidden = false;
+  root.innerHTML = cardMarkup(`
+      <h3>${esc(title || "确认")}</h3>
+      <p>${esc(body || "做这一下？")}</p>
+      <div class="island-care-acts">
+        <button type="button" class="island-btn primary wide" data-act="confirm">${esc(confirm || "确认")}</button>
+      </div>
+      <button type="button" class="island-btn wide" data-close-modal>先不忙</button>
+  `, "island-care");
+  const close = () => {
+    hideModal();
+    if (onClose) onClose();
+  };
+  root.querySelector("[data-close-modal]").addEventListener("click", close);
+  root.querySelector("[data-act=confirm]").addEventListener("click", () => {
+    hideModal();
+    if (onConfirm) onConfirm();
+  });
+  root.addEventListener("click", (ev) => {
+    if (ev.target === root) close();
+  }, { once: true });
+}
+
 export function showBuySheet(item, { onConfirm, onClose } = {}) {
   const root = document.getElementById("island-modal");
   if (!root) return;

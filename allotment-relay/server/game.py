@@ -324,7 +324,7 @@ async def relay_manual() -> str:
         "  公共物资 plot_ops commons scan · claim 编号 — 全服抢，随机上线。不在潮生会",
         "  昼间 sow/tend 每天掷一次斑鸠盯梢（约 23%），碰上 plot_ops dove 忽略|驱赶",
         "  稻草人 scarecrow 地块；过熟 compost 地块进堆肥（果树清果后树还在，不想要才 chop）",
-        "  人类网页 /allotments 是份地全景观望（顶上管理员/在线是全岛人数）；种地、买地、偷菜都在 /play（?go=plot 滚到份地栏）。手机地图 /island 份地页点草地开垦，一页开满会多一页草地；广场点杂货铺能买（visit_ops tt 同一货架，买完货架停在刚才翻到的位置，不会跳回货架顶），右上角背包能吃也能卖（tote_ops vend 同一口袋；家具仍 hut_ops 卖掉），灯塔 / 岸工坊 / 潮汐公告进了只显示地名。婚期顶栏进连理所，份地还在上手页，点返回或底栏「份地」",
+        "  人类网页 /allotments 是份地全景观望（顶上管理员/在线是全岛人数）；种地、买地、偷菜都在 /play（?go=plot 滚到份地栏）。手机地图 /island 份地页点草地开垦，一页开满会多一页草地；广场点杂货铺能买（visit_ops tt 同一货架，买完货架停在刚才翻到的位置，不会跳回货架顶），岸工坊能打钉/取/灌盐/打捞（craft_ops 同一砧），右上角背包能吃也能卖（tote_ops vend 同一口袋；家具仍 hut_ops 卖掉），灯塔 / 潮汐公告进了只显示地名。婚期顶栏进连理所，份地还在上手页，点返回或底栏「份地」",
         "",
         "【潮闻 · 故事探索任务】",
         "  tale_ops list — 查看可接任务和阶段/通关奖励；accept 任务key 接取。空 command 和 list 相同",
@@ -553,7 +553,7 @@ async def relay_manual() -> str:
         "  盐田：涨潮 灌，晴天攒满 20 分钟 收盐，出海盐晶（和崖矿洗的是同一种，更慢更省）",
         "  打捞：阵风中 / 阵风后晴天 / 周潮 / 船损才开。货少且脏，可能咸痰。不是赶海 dig。夜光滤网减空捞",
         "  陈列柜：捐 亮壳一套 / 精矿六色 / 夜光三石 / 未命名标本 / 渔获十种 / 砧上全套，换称呼或小屋装饰",
-        "  砍树 plot_ops chop 会掉岸木。酒吧考勤逾期锁工坊。人类网页 /workshop 是围观实况（砧上、盐田、打捞、陈列柜）；打钉在 /play",
+        "  砍树 plot_ops chop 会掉岸木。酒吧考勤逾期锁工坊。人类网页 /workshop 是围观实况（砧上、盐田、打捞、陈列柜）；打钉在 /play 或 /island 进岸工坊点",
         "  升级礼 50 级起带精矿和岸木；满级发潮冠，装上 hut_ops install soft_N tide_crest",
         "",
         "【衣泊坊】",
@@ -886,7 +886,7 @@ async def plot_ops(key_id: int, command: str = "") -> str:
             "  买棚 / shed erect — 温室无上限，第1座 180 票即用，之后更贵；买棚 确认 付钱。每座每天岸维 30 票，铺多了加档 48/70\n"
             "  camera install 地块 · incident scan · repair 编号 · commons scan\n"
             "例: plot_ops status · plot_ops sow 1 甘蓝 · plot_ops sow 园1 橘子 · plot_ops sow 棚1 橘子 · plot_ops 买园 确认\n"
-            "人类种地在 /play（?go=plot 滚到份地栏）；/island 份地页点草地开垦（一页开满会多一页草地），广场点杂货铺能买（visit_ops tt 同一货架，买完不跳回货架顶），右上角背包能吃也能卖；/allotments 是份地全景观望。婚期顶栏进连理所不是份地丢了。"
+            "人类种地在 /play（?go=plot 滚到份地栏）；/island 份地页点草地开垦（一页开满会多一页草地），广场点杂货铺能买（visit_ops tt 同一货架，买完不跳回货架顶），岸工坊能打钉取货灌盐打捞；/allotments 是份地全景观望。婚期顶栏进连理所不是份地丢了。"
         )
     s = await require_steward(key_id)
     pulse = await events.maybe_world_pulse(s)

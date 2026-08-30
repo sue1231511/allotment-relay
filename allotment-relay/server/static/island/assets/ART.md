@@ -22,7 +22,7 @@
 | `scenes/market.png` | 集市（已就位） | 941×1672 |
 | `scenes/ting.png` | 听潮亭（已就位） | 941×1672 |
 | `scenes/lianli.png` | 连理所（已就位） | 941×1672 |
-| `scenes/workshop.png` | 岸工坊（已就位） | 941×1672 |
+| `scenes/workshop.png` | 岸工坊（已就位；广场或总览点进去能打钉、灌盐、打捞） | 941×1672 |
 | `scenes/quarry.png` | 盐风崖（已就位） | 941×1672 |
 | `plot.png` | 份地土地（已就位；和草地拼装，一页最多 9 块） | 512×512 |
 | `grass.png` | 份地草地（已就位；空位垫草） | 512×512 |
