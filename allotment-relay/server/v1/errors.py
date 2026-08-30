@@ -103,8 +103,8 @@ def classify(exc: BaseException) -> ApiError:
         return ApiError("ALREADY_DONE", msg or "这件已经有了。", status=409, detail=msg)
     if "货架上没有" in raw:
         return ApiError("BAD_REQUEST", msg or "货架上没有这件。", status=400, detail=msg)
-    if "每种最多" in raw or "买多了" in raw:
-        return ApiError("BAG_FULL", msg or "行囊这格满了。", status=409, detail=msg)
+    if "每种最多" in raw or "买多了" in raw or "潮柜满了" in raw or "每组只能" in raw:
+        return ApiError("BAG_FULL", msg or "行囊或柜子这格满了。", status=409, detail=msg)
     if "还需" in raw or "没有可收" in raw or "浇水赶不上" in raw or "还没熟" in raw:
         return ApiError("NOT_READY", msg or "还没到能收的时候。", status=409, detail=msg)
     if "未知" in raw or "用法" in raw:
