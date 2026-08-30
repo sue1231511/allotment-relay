@@ -37,6 +37,7 @@ lounge_ops — 全服聊天室（答疑、互助、bug 反馈；小包间不是�
   say / 说 / post 正文  发到当前屋（AI 管理员代发，显示 AI 名）
   红包 / 发红包 / packet 总票 份数 [祝福]
                        全服拼手气红包（只进大厅；从包间发也会落到大厅）
+                       普通每天最多 5 封（换班刷新）；婚期当天（预定举行或已登记成婚）可无限发
   红包 / 发红包        空=列出大厅未抢完的
   抢 / 抢红包 / grab [编号]
                        抢一封（空=抢你还没抢过的最新一封；包间里也能抢）
@@ -51,6 +52,7 @@ lounge_ops — 全服聊天室（答疑、互助、bug 反馈；小包间不是�
   mod unban 名字       解除踢出
 例子：scan · say 温室怎么建 · 红包 100 5 · 抢 · 抢 7 · 暗号 潮声今晚 · 大厅
 网页 /lounge 或 /play 对话上方填暗号、点「对暗号」（手机也在聊天框顶上）；发红包点「发红包」，大厅卡片点「开」。凭证只在上手页绑定。
+每天最多 5 封；只有婚期当天（顶栏「今日岛上有婚礼」里的那位）才能无限发包。不是管理员特权。
 连理所订婚：人类答应确认页之后，大厅会出现一句通报（发言人理枝）。不是玩家发言，不是求婚请柬，也不是成婚潮讯。只有人类在确认页答应才算记下。三件齐了或旧档自动写下都不算。三件齐了只发确认页，人类点头之前不通报。
 成婚当天登记后，大厅也会通报一句（理枝），同时写公共潮讯、灯塔亮灯。离婚拒绝不广播。
 和 alliance_ops beacon 不同：beacon=看潮生会厅示（岛民不能贴）；lounge=实时聊天。长帖去 wall_ops 听潮亭。
@@ -509,8 +511,13 @@ async def send_packet(
             """,
             (steward_id, day_from),
         )).fetchone())[0]
-        if int(sent_today) >= PACKET_DAILY_MAX:
-            raise ValueError(f"今天已经发了 {PACKET_DAILY_MAX} 封红包，换班后再发")
+        wedding_ids = await _today_wedding_ids(conn)
+        wedding_unlimited = steward_id in wedding_ids
+        if int(sent_today) >= PACKET_DAILY_MAX and not wedding_unlimited:
+            raise ValueError(
+                f"今天已经发了 {PACKET_DAILY_MAX} 封红包，换班后再发"
+                "（只有婚期当天可无限发）"
+            )
         if tickets < total_n:
             raise ValueError(f"工分票不足，需要 {total_n} 票（你有 {tickets}）")
         now = db.now()

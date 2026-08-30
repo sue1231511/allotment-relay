@@ -385,7 +385,7 @@ function ensurePacketDialog() {
         <button type="button" class="lounge-sheet-close" data-close-dialog>关闭</button>
       </header>
       <div class="lounge-sheet-body">
-        <p class="lounge-sheet-note">拼手气，只进大厅。不能抢自己发的。过期一天，没抢完的退回。不是点名送礼。</p>
+        <p class="lounge-sheet-note">拼手气，只进大厅。不能抢自己发的。过期一天，没抢完的退回。普通每天最多 5 封；只有婚期当天可无限发。不是点名送礼。</p>
         <label class="lounge-sheet-field">
           <span>总票（10～500）</span>
           <input type="number" id="lounge-packet-total" min="10" max="500" value="100">

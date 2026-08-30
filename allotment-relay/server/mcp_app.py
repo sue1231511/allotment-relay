@@ -173,7 +173,7 @@ async def tale_ops(command: str = "list") -> str:
     return await mux._call_ops(tale.tale_ops, _kid(), command)
 
 
-@mcp.tool(description="全服聊天。空=scan。例：say 正文 · 红包 100 5 · 暗号 潮声今晚。≠whisper/gift。")
+@mcp.tool(description="全服聊天。空=scan。例：say 正文 · 红包 100 5 · 暗号 潮声今晚。红包日限5，婚期当天无限。≠whisper/gift。")
 async def lounge_ops(command: str = "scan") -> str:
     from . import lounge
     return await mux._call_ops(lounge.lounge_ops, _kid(), command)
