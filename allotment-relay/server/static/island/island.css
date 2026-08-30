@@ -45,7 +45,7 @@ body.island-app.is-playing {
   height: 100dvh;
   height: 100vh;
   overflow: hidden;
-  background: #4f9eb0;
+  background: #8ed3e2;
 }
 
 body.island-app.is-playing .island-root {
@@ -56,7 +56,7 @@ body.island-app.is-playing .island-root {
   min-height: 100dvh;
   padding: 0 0 calc(68px + env(safe-area-inset-bottom));
   overflow: hidden;
-  background: #4f9eb0;
+  background: #8ed3e2;
 }
 
 .island-hud {
@@ -406,7 +406,7 @@ body.island-app.is-playing .island-actionbar {
   position: absolute;
   inset: 0;
   overflow: hidden;
-  background: #4f9eb0;
+  background: #8ed3e2;
 }
 
 .island-map-board {
@@ -481,6 +481,21 @@ body.island-app.is-playing .island-actionbar {
   min-width: 44px;
   min-height: 44px;
   border-radius: 18px;
+}
+
+.island-hot span {
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  color: var(--is-ink);
+  background: rgba(255, 253, 248, .9);
+  font-size: 11px;
+  line-height: 1.3;
+  padding: 1px 7px;
+  border-radius: 999px;
+  pointer-events: none;
 }
 
 .island-hot:focus-visible {
