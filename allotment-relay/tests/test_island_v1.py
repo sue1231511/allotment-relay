@@ -99,6 +99,23 @@ async def _test_island_v1_api() -> None:
     offer = ((farm_body.get("land") or {}).get("plots") or {}).get("offer")
     assert offer and int(offer["cost"]) > 0, farm_body.get("land")
 
+    shop0 = client.get("/api/v1/shop", headers=_auth(key))
+    assert shop0.status_code == 200, shop0.text
+    shelf = shop0.json()["shop"]
+    assert "Tt酱" in (shelf.get("name") or ""), shelf
+    sku_ids = [row["id"] for row in shelf["items"]]
+    assert "seed_kale" in sku_ids and "tool_hoe" in sku_ids, sku_ids
+    kale = next(row for row in shelf["items"] if row["id"] == "seed_kale")
+    assert kale["can_buy"] is True and int(kale["price"]) > 0, kale
+    shop_buy = client.post(
+        "/api/v1/shop/buy",
+        headers=_auth(key, {"Idempotency-Key": "shop-kale-1"}),
+        json={"item": "seed_kale", "qty": 1},
+    )
+    assert shop_buy.status_code == 200, shop_buy.text
+    assert shop_buy.json()["event"]["kind"] == "shop"
+    assert any(row["id"] == "seed_kale" for row in shop_buy.json()["shop"]["items"])
+
     wrong_yard = client.post(
         "/api/v1/farm/parcels/园1/sow",
         headers=_auth(key, {"Idempotency-Key": "sow-orchard-kale"}),
@@ -733,7 +750,7 @@ def test_island_page_is_modular() -> None:
     assert "scenes/quarry.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
     try:
         from PIL import Image
-        for place in ("eatery", "hui", "market", "ting", "lianli", "workshop", "quarry"):
+        for place in ("eatery", "hui", "market", "ting", "lianli", "workshop", "quarry", "shop"):
             pic = ROOT / f"server/static/island/assets/scenes/{place}.png"
             assert pic.exists(), place
             assert Image.open(pic).size == (941, 1672)
@@ -780,6 +797,14 @@ def test_island_page_is_modular() -> None:
     assert "renderPlace" in (ROOT / "server/static/island/scenes/shore.js").read_text(encoding="utf-8")
     assert "island-plaza-board" in (ROOT / "server/static/island/scenes/plaza.js").read_text(encoding="utf-8")
     assert 'shop: "杂货铺"' in app
+    shop_js = (ROOT / "server/static/island/scenes/shop.js").read_text(encoding="utf-8")
+    assert "island-shop-shelf" in shop_js
+    assert "data-sku" in shop_js
+    assert "去上手页" not in shop_js
+    assert "api.shopBuy" in app
+    assert "showBuySheet" in app
+    assert "renderShop" in app
+    assert "/api/v1/shop/buy" in api
     assert 'lighthouse: "灯塔"' in app
     assert 'notice: "潮汐公告"' in app
     assert "state.backTo" in app

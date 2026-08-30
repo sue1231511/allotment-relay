@@ -15,10 +15,11 @@ import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js";
 import { renderShore } from "./scenes/shore.js";
 import { renderPlaza } from "./scenes/plaza.js";
 import { renderPlace } from "./scenes/place.js";
+import { renderShop } from "./scenes/shop.js";
 import { renderBag } from "./ui/bag.js";
 import { setBackChip, setBagChip } from "./ui/back-map.js";
 import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js";
-import { careActs, hideModal, showCareSheet, showExpandSheet, showEvent, toast } from "./ui/modal.js";
+import { careActs, hideModal, showBuySheet, showCareSheet, showExpandSheet, showEvent, toast } from "./ui/modal.js";
 
 const sceneEl = () => document.getElementById("island-scene");
 const sheetEl = () => document.getElementById("island-sheet");
@@ -124,6 +125,10 @@ async function enterScene(name) {
       });
       return;
     }
+    if (name === "shop") {
+      await openShop(root);
+      return;
+    }
     if (PLACE_TITLES[name]) {
       renderPlaceScene(name);
       return;
@@ -165,6 +170,42 @@ const PLACE_TITLES = {
 
 function renderPlaceScene(name) {
   renderPlace(sceneEl(), { id: name, title: PLACE_TITLES[name] || name });
+}
+
+async function openShop(root) {
+  try {
+    const data = await api.shop();
+    applySnapshot(data);
+    renderHud();
+    if (data.event) showEvent(data.event);
+  } catch (err) {
+    toast(err.message || "店门还没开。");
+  }
+  const tabs = (state.shop && state.shop.tabs) || [];
+  if (!tabs.some((row) => row.key === state.shopTab)) {
+    state.shopTab = (tabs[0] && tabs[0].key) || "seed";
+  }
+  renderShop(root, { onBuy: tapShopSku, onSwitchTab: switchShopTab });
+}
+
+function switchShopTab(tab) {
+  state.shopTab = tab || "seed";
+  hideModal();
+  renderShop(sceneEl(), { onBuy: tapShopSku, onSwitchTab: switchShopTab });
+}
+
+function tapShopSku(item) {
+  if (!item) return;
+  if (!item.can_buy) {
+    toast(item.note || "这件现在买不了。");
+    return;
+  }
+  showBuySheet(item, { onConfirm: () => buyShopSku(item) });
+}
+
+async function buyShopSku(item) {
+  if (!item) return;
+  await act(() => api.shopBuy(item.id, 1), { refreshScene: true });
 }
 
 function tapGrass() {

@@ -39,6 +39,8 @@ export const state = {
   farm: null,
   world: null,
   shore: null,
+  shop: null,
+  shopTab: "seed",
   busy: false,
 };
 
@@ -49,6 +51,7 @@ export function applySnapshot(data) {
   if (data.farm) state.farm = data.farm;
   if (data.world) state.world = data.world;
   if (data.shore) state.shore = data.shore;
+  if (data.shop) state.shop = data.shop;
 }
 
 export function yardMeta(kind = state.yard) {
