@@ -69,12 +69,13 @@ function layoutMapBoard(map) {
     const cw = map.clientWidth;
     const ch = map.clientHeight;
     if (!cw || !ch) return;
-    const s = cw / iw;
+    /* 竖屏 contain：整张 972×1619 都进画布，按较短边缩放，留海色边，永不裁切。 */
+    const s = Math.min(cw / iw, ch / ih);
     const w = Math.round(iw * s);
     const h = Math.round(ih * s);
     board.style.width = `${w}px`;
     board.style.height = `${h}px`;
-    board.style.left = "0px";
+    board.style.left = `${Math.round((cw - w) / 2)}px`;
     board.style.top = `${Math.round((ch - h) / 2)}px`;
   };
   apply();
