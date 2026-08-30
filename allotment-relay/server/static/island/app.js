@@ -24,7 +24,7 @@ import { showEvent, toast } from "./ui/modal.js";
 const sceneEl = () => document.getElementById("island-scene");
 const sheetEl = () => document.getElementById("island-sheet");
 const plantEl = () => document.getElementById("island-plant");
-const LIVE_SCENES = ["home", "yards", "shore", "plaza", "hut", "bar", "eatery", "hui"];
+const LIVE_SCENES = ["home", "yards", "shore", "plaza", "hut", "bar", "theater", "eatery", "hui"];
 let loungeCache = { messages: [], notices: [] };
 let growTimer = 0;
 
@@ -108,7 +108,7 @@ async function enterScene(name) {
       });
       return;
     }
-    if (name === "hut" || name === "bar" || name === "eatery" || name === "hui") {
+    if (name === "hut" || name === "bar" || name === "theater" || name === "eatery" || name === "hui") {
       renderPlaceScene(name);
       return;
     }
@@ -145,13 +145,24 @@ function renderPlaceScene(name) {
   if (name === "bar") {
     renderPlace(root, {
       id: "bar",
-      title: "滨海酒吧",
+      title: "潮汐酒吧",
       body: [
         me.duty || "每 2 天来洗一次碗。",
-        "点单、打赏仍去上手页。",
+        "点单仍去上手页。",
       ],
       actions: [{ id: "work", label: "洗碗", primary: true }],
       onAct: () => act(() => api.work()),
+      onBack: back,
+    });
+    return;
+  }
+  if (name === "theater") {
+    renderPlace(root, {
+      id: "theater",
+      title: "潮汐剧场",
+      body: ["浪潮为幕，星光为灯。打赏、看今晚档仍去上手页。"],
+      actions: [{ id: "play", label: "去上手页", primary: true }],
+      onAct: () => { window.location.href = "/play?go=star"; },
       onBack: back,
     });
     return;

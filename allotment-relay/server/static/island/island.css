@@ -383,6 +383,7 @@ body.island-app {
 .island-pin.is-shore { right: 6%; top: 10%; }
 .island-pin.is-hut { left: 8%; top: 44%; }
 .island-pin.is-bar { right: 8%; top: 38%; }
+.island-pin.is-theater { left: 52%; top: 30%; }
 .island-pin.is-eatery { left: 28%; top: 58%; }
 .island-pin.is-hui { right: 18%; top: 60%; }
 .island-pin.is-plaza { left: 36%; bottom: 12%; }

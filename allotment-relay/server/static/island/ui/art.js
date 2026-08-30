@@ -3,10 +3,11 @@
 export const SLOTS = {
   "island-map": { label: "岛屿总览", size: "1080×1920" },
   home: { label: "家园院子", size: "1080×1920" },
-  shore: { label: "海边", size: "1080×1920" },
-  plaza: { label: "岛心广场", size: "1080×1920" },
+  shore: { label: "港口", size: "1080×1920" },
+  plaza: { label: "潮汐广场", size: "1080×1920" },
   hut: { label: "岸畔小屋", size: "1080×1920" },
-  bar: { label: "滨海酒吧", size: "1080×1920" },
+  bar: { label: "潮汐酒吧", size: "1080×1920" },
+  theater: { label: "潮汐剧场", size: "1080×1920" },
   eatery: { label: "岸畔小馆", size: "1080×1920" },
   hui: { label: "潮生会", size: "1080×1920" },
 };
