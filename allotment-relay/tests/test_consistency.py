@@ -179,6 +179,7 @@ def test_relay_manual_covers_systems() -> None:
     text = asyncio.run(game.relay_manual())
     needles = [
         "sow 1 甘蓝",
+        "tend 1",
         "plot_ops status",
         "camera install",
         "incident",
@@ -650,6 +651,9 @@ def test_human_island_manual() -> None:
         "果园已经种满了",
         "温室已经种满了",
         "种植面板里买一份",
+        "点空地打开种植面板",
+        "打理、浇水、施肥",
+        "底下没有浇水、种菜地大按钮",
         "进了具体地点只显示地名",
         "还没做到",
         "港口（海边）",

@@ -59,6 +59,12 @@ def classify(exc: BaseException) -> ApiError:
         return ApiError("TICKETS_LOW", msg or "工分票不够。", status=409, detail=msg)
     if "已经浇过" in raw:
         return ApiError("ALREADY_DONE", "这块地这一茬已经浇过水了。", status=409, detail=msg)
+    if "已经施过" in raw:
+        return ApiError("ALREADY_DONE", "这一茬已经施过肥了。", status=409, detail=msg)
+    if "已经打理" in raw:
+        return ApiError("ALREADY_DONE", "这一茬已经打理过了。", status=409, detail=msg)
+    if "施肥需要" in raw:
+        return ApiError("ITEM_REQUIRED", msg or "施肥需要堆肥。", status=409, detail=msg)
     if "已在种植" in raw:
         return ApiError("PLOT_BUSY", "这块地已经种着东西。", status=409, detail=msg)
     if "渔网" in raw or "钓竿" in raw:

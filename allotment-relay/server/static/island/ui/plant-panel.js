@@ -1,12 +1,13 @@
 import { neighborCrop, cropArt } from "./crops.js";
-import { firstIdleYard, panelCrops, panelSubtitle, state, yardMeta } from "../store.js";
+import { panelCrops, panelSubtitle, selectedPlot, state, yardMeta } from "../store.js";
 import { esc } from "./modal.js";
 
 export function renderPlantPanel(root, { onSelect, onPlant, onBuy, onClose }) {
   const crops = panelCrops();
   const selected = crops.find((c) => c.key === state.plantKey) || crops[0];
   if (selected) state.plantKey = selected.key;
-  const idle = firstIdleYard();
+  const target = selectedPlot();
+  const idle = target && target.can_sow ? target : null;
   const meta = yardMeta();
   const prev = neighborCrop(crops, state.plantKey, -1);
   const next = neighborCrop(crops, state.plantKey, 1);
@@ -34,8 +35,8 @@ export function renderPlantPanel(root, { onSelect, onPlant, onBuy, onClose }) {
         <span>成熟时间 ${esc(selected ? selected.grow_text : "—")}</span>
         <span>预计收获 ${esc(selected ? `${selected.yield}棵` : "—")}</span>
       </div>
-      <button type="button" class="island-plant-go" data-act="plant" ${selected && selected.seed_qty > 0 ? "" : "disabled"}>
-        ${!selected ? "选择作物" : selected.seed_qty > 0 ? `种下${esc(selected.label)}` : `没有${esc(selected.label)}种`}
+      <button type="button" class="island-plant-go" data-act="plant" ${selected && selected.seed_qty > 0 && idle ? "" : "disabled"}>
+        ${!idle ? "先点一块空地" : !selected ? "选择作物" : selected.seed_qty > 0 ? `种下${esc(selected.label)}` : `没有${esc(selected.label)}种`}
       </button>
       <button type="button" class="island-plant-buy" data-act="buy" ${selected ? "" : "disabled"}>
         ${selected ? `买一份${esc(selected.label)}种` : "买种"}

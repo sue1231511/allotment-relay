@@ -1,13 +1,11 @@
 import { api, loadKey } from "./api.js";
 import {
   applySnapshot,
-  firstIdleYard,
+  plotByToken,
   plotToken,
   ripeYard,
   state,
-  thirstyYard,
   tickGrow,
-  yardFullMessage,
 } from "./store.js";
 import { renderHud } from "./hud.js";
 import { renderMap } from "./map.js";
@@ -18,7 +16,7 @@ import { renderPlace } from "./scenes/place.js";
 import { renderBag } from "./ui/bag.js";
 import { setBackChip, setBagChip } from "./ui/back-map.js";
 import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js";
-import { showEvent, toast } from "./ui/modal.js";
+import { careActs, hideModal, showCareSheet, showEvent, toast } from "./ui/modal.js";
 
 const sceneEl = () => document.getElementById("island-scene");
 const sheetEl = () => document.getElementById("island-sheet");
@@ -74,7 +72,10 @@ async function enterScene(name) {
   state.tab = "map";
   markDock("");
   hideSheet();
-  if (name !== "yards") closePlant();
+  if (name !== "yards") {
+    closePlant();
+    hideModal();
+  }
   const root = sceneEl();
   if (!root) {
     toast("地图画布还没准备好。");
@@ -96,11 +97,9 @@ async function enterScene(name) {
     }
     if (name === "yards") {
       renderYards(root, {
-        onOpenGarden: openPlant,
+        onTapPlot: tapPlot,
         onHarvestAll: harvestAll,
-        onWaterAll: waterAll,
         onSwitchYard: switchYard,
-        onBack: () => enterScene("map"),
       });
       startGrowTick();
       if (state.plantOpen) openPlant();
@@ -143,15 +142,68 @@ function renderPlaceScene(name) {
   renderPlace(sceneEl(), { id: name, title: PLACE_TITLES[name] || name });
 }
 
+function tapPlot(token) {
+  const plot = plotByToken(token);
+  if (!plot) return;
+  state.selectedSlot = token;
+  closePlant();
+  hideModal();
+  if (plot.state === "clearing") {
+    toast(plot.detail || "开垦中");
+    return;
+  }
+  if (plot.can_sow || plot.state === "fallow") {
+    openPlant();
+    return;
+  }
+  if (plot.state === "growing" || plot.state === "tending") {
+    const acts = careActs(plot);
+    if (!acts.length) {
+      toast("这一茬打理、浇水、施肥都做过了。等它熟再点这块地。");
+      return;
+    }
+    showCareSheet(plot, { onAct: (kind) => careAct(kind, token) });
+    return;
+  }
+  if (plot.state === "ready") {
+    const acts = careActs(plot);
+    if (acts.length === 1 && acts[0].id === "harvest") {
+      act(() => api.harvest(token));
+      return;
+    }
+    showCareSheet(plot, { onAct: (kind) => careAct(kind, token) });
+    return;
+  }
+  if (plot.state === "overripe") {
+    showCareSheet(plot, { onAct: (kind) => careAct(kind, token) });
+    return;
+  }
+  toast(plot.detail || "这块地现在点不了。");
+}
+
+async function careAct(kind, token) {
+  const fn = {
+    tend: () => api.tend(token),
+    water: () => api.water(token),
+    fertilize: () => api.fertilize(token),
+    harvest: () => api.harvest(token),
+    compost: () => api.compost(token),
+    shake: () => api.shake(token),
+  }[kind];
+  if (!fn) return;
+  await act(fn);
+}
+
 function openPlant() {
   state.plantOpen = true;
   hideSheet();
+  hideModal();
   renderPlantPanel(plantEl(), {
     onSelect: (key) => {
       state.plantKey = key;
       openPlant();
     },
-    onPlant: autoSow,
+    onPlant: sowSelected,
     onBuy: buySeed,
     onClose: closePlant,
   });
@@ -165,22 +217,23 @@ function closePlant() {
 function switchYard(yard) {
   state.yard = yard || "home";
   state.yardPage = 0;
+  state.selectedSlot = null;
+  closePlant();
+  hideModal();
   syncHomeChrome();
-  if (state.plantOpen) openPlant();
 }
 
-async function autoSow(crop) {
+async function sowSelected(crop) {
   if (!crop) {
-    toast(yardFullMessage());
+    toast("先点一块空地。");
     return;
   }
-  const idle = firstIdleYard();
-  if (!idle) {
-    toast(yardFullMessage());
-    openPlant();
+  const plot = plotByToken(state.selectedSlot);
+  if (!plot || !plot.can_sow) {
+    toast("先点一块空地。");
     return;
   }
-  await act(() => api.sow(plotToken(idle), crop.name || crop.key), { keepPlant: false });
+  await act(() => api.sow(plotToken(plot), crop.name || crop.key), { keepPlant: false });
 }
 
 async function buySeed(crop) {
@@ -197,19 +250,11 @@ async function harvestAll() {
   await runPlotBatch(ready, (plot) => api.harvest(plotToken(plot)), "一键收获", "收获");
 }
 
-async function waterAll() {
-  const thirsty = thirstyYard();
-  if (!thirsty.length) {
-    toast("这一类没有要浇的地。");
-    return;
-  }
-  await runPlotBatch(thirsty, (plot) => api.water(plotToken(plot)), "浇水", "浇水");
-}
-
 async function runPlotBatch(plots, fn, manyTitle, oneTitle) {
   if (state.busy) return;
   state.busy = true;
   closePlant();
+  hideModal();
   try {
     let last = null;
     const notes = [];

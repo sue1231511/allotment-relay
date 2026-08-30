@@ -101,8 +101,14 @@ export function plotLabel(plot) {
   return `#${plot.slot}`;
 }
 
+export function plotByToken(token) {
+  const want = String(token || "");
+  if (!want) return null;
+  return allPlots().find((p) => plotToken(p) === want) || null;
+}
+
 export function selectedPlot() {
-  return yardPlots().find((p) => plotToken(p) === String(state.selectedSlot)) || null;
+  return plotByToken(state.selectedSlot);
 }
 
 export function firstIdleYard(kind = state.yard) {
@@ -180,6 +186,9 @@ export function growStatusLine(kind = state.yard) {
 export function panelSubtitle(kind = state.yard) {
   const meta = yardMeta(kind);
   if (!yardPlots(kind).length) return meta.empty;
+  const selected = selectedPlot();
+  if (selected && selected.can_sow) return `种到 ${plotLabel(selected)}`;
+  if (selected && !selected.can_sow) return "先点一块空地";
   if (!firstIdleYard(kind)) return meta.full;
   return growStatusLine(kind);
 }
