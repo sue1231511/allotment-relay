@@ -43,13 +43,11 @@ export function renderYards(root, { onOpenGarden, onHarvestAll, onWaterAll, onSw
       <div class="island-plot-grid" id="island-plot-grid">${plotGridMarkup()}</div>
       <div class="island-plot-pager" id="island-plot-pager">${pagerMarkup()}</div>
       <div class="island-yard-acts">
+        <button type="button" class="island-btn" data-act="back">返回地图</button>
         <button type="button" class="island-btn" data-act="water" ${thirsty ? "" : "disabled"}>浇水${thirsty ? ` ${thirsty}` : ""}</button>
         <button type="button" class="island-btn primary" data-act="garden">${esc(yardMeta().plant)}</button>
       </div>
       <button type="button" class="island-harvest-fab" id="island-harvest-all" data-act="harvest" ${ripe ? "" : "hidden"}>${harvestLabel(ripe)}</button>
-      <button type="button" class="island-back-map" data-act="back" aria-label="返回地图">
-        <img src="/static/island/assets/back-map.png" alt="" draggable="false">
-      </button>
     </div>
   `;
   const bar = document.getElementById("island-actionbar");

@@ -506,9 +506,9 @@ def test_island_page_is_modular() -> None:
     assert "回地图" in (ROOT / "server/static/island/scenes/home.js").read_text(encoding="utf-8")
     home_js = (ROOT / "server/static/island/scenes/home.js").read_text(encoding="utf-8")
     yards_js = home_js.split("export function renderYards", 1)[1].split("export function", 1)[0]
-    assert "island-back-map" in yards_js
-    assert "aria-label=\"返回地图\"" in yards_js
-    assert 'data-act="back">回地图' not in yards_js
+    assert "island-back-map" not in yards_js
+    assert "back-map.png" not in yards_js
+    assert 'data-act="back">返回地图' in yards_js
     assert "island-yard-acts" in yards_js
     assert "data-act=\"water\"" in yards_js
     assert "#island-actionbar [data-act=water]" not in home_js
@@ -519,10 +519,10 @@ def test_island_page_is_modular() -> None:
     assert "name === \"map\" || name === \"yards\"" in app
     assert "is-yards" in boot
     assert "is-yards" in css
-    assert ".island-back-map" in css
+    assert ".island-back-map" not in css
     assert ".island-yard-acts" in css
     assert "is-yards .island-actionbar" in css
-    assert (ROOT / "server/static/island/assets/back-map.png").exists()
+    assert not (ROOT / "server/static/island/assets/back-map.png").exists()
     assert "api.buy" in app
     assert "api.sleep" in app
     assert "api.work" in app

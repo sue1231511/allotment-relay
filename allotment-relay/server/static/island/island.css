@@ -564,7 +564,7 @@ body.island-app.is-playing.is-yards .island-actionbar {
   display: flex;
   flex-direction: column;
   background: #8faf4a;
-  padding-bottom: 100px;
+  padding-bottom: env(safe-area-inset-bottom);
   box-sizing: border-box;
 }
 
@@ -785,26 +785,6 @@ body.island-app.is-playing.is-yards .island-actionbar {
 
 .island-harvest-fab[hidden] {
   display: none !important;
-}
-
-.island-back-map {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  z-index: 6;
-  width: min(210px, 54%);
-  padding: 0;
-  border: 0;
-  background: transparent;
-  line-height: 0;
-  cursor: pointer;
-}
-
-.island-back-map img {
-  width: 100%;
-  height: auto;
-  display: block;
-  pointer-events: none;
 }
 
 .island-plot {
