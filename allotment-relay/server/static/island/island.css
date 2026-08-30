@@ -776,7 +776,7 @@ body.island-app.is-playing.is-yards .island-actionbar {
   top: env(safe-area-inset-top, 0px);
   right: 0;
   left: auto;
-  width: min(44px, 12%);
+  width: min(88px, 24%);
   min-height: 44px;
 }
 
