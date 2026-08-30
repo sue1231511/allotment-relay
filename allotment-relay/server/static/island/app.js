@@ -132,10 +132,12 @@ async function enterScene(name) {
       return;
     }
     if (name === "shop") {
+      state.shopShelf = false;
       await openShop(root);
       return;
     }
     if (name === "workshop") {
+      state.workshopShelf = false;
       await openWorkshop(root);
       startWorkshopTick();
       return;
@@ -223,6 +225,15 @@ function paintShop(listTop = 0) {
   renderShop(sceneEl(), {
     onBuy: tapShopSku,
     onSwitchTab: switchShopTab,
+    onOpenShelf: () => {
+      state.shopShelf = true;
+      paintShop(0);
+    },
+    onCloseShelf: () => {
+      state.shopShelf = false;
+      hideModal();
+      paintShop();
+    },
     listTop,
   });
 }
@@ -247,6 +258,15 @@ function paintWorkshop(listTop = 0) {
   renderWorkshop(sceneEl(), {
     onAct: tapWorkshop,
     onSwitchTab: switchWorkshopTab,
+    onOpenShelf: () => {
+      state.workshopShelf = true;
+      paintWorkshop(0);
+    },
+    onCloseShelf: () => {
+      state.workshopShelf = false;
+      hideModal();
+      paintWorkshop();
+    },
     listTop,
   });
 }

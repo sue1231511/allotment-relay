@@ -1,22 +1,44 @@
-import { sceneArt } from "../ui/art.js";
+import { layoutCoverBoard, sceneArt } from "../ui/art.js";
 import { esc } from "../ui/modal.js";
 import { state } from "../store.js";
 
-export function renderShop(root, { onBuy, onSwitchTab, listTop = null } = {}) {
+export function renderShop(root, { onBuy, onSwitchTab, onOpenShelf, onCloseShelf, listTop = null } = {}) {
   const shop = state.shop || {};
   const tabs = shop.tabs || [];
   const tab = state.shopTab || (tabs[0] && tabs[0].key) || "seed";
   const items = (shop.items || []).filter((row) => row.tab === tab);
-  const existing = root.querySelector(".island-shop");
-  if (existing) {
-    paintShopChrome(existing, shop, tabs, tab, onSwitchTab);
-    paintShopList(existing, shop, items, onBuy, listTop);
+  const peek = !state.shopShelf;
+  const existing = root.querySelector(".island-shop:not(.island-workshop)");
+  if (existing && existing.classList.contains("is-peek") === peek) {
+    if (peek) {
+      bindPeek(existing, onOpenShelf);
+    } else {
+      paintShopChrome(existing, shop, tabs, tab, onSwitchTab);
+      paintShopList(existing, shop, items, onBuy, listTop);
+      bindFold(existing, onCloseShelf);
+    }
     hideActionBar();
+    return;
+  }
+  if (peek) {
+    root.innerHTML = `
+      <div class="island-shop is-peek">
+        <div class="island-shop-board">
+          ${sceneArt("shop")}
+          <button type="button" class="island-scene-tap">点一下看货架</button>
+        </div>
+      </div>
+    `;
+    hideActionBar();
+    const wrap = root.querySelector(".island-shop");
+    layoutCoverBoard(wrap, ".island-shop-board", 941, 1672);
+    bindPeek(wrap, onOpenShelf);
     return;
   }
   root.innerHTML = `
     <div class="island-shop">
       ${sceneArt("shop")}
+      <button type="button" class="island-scene-fold" aria-label="收起货架"></button>
       <div class="island-shop-shelf">
         <div class="island-shop-meta">
           <b>${esc(shop.name || "Tt酱杂货铺")}</b>
@@ -33,6 +55,7 @@ export function renderShop(root, { onBuy, onSwitchTab, listTop = null } = {}) {
   const wrap = root.querySelector(".island-shop");
   paintShopChrome(wrap, shop, tabs, tab, onSwitchTab);
   paintShopList(wrap, shop, items, onBuy, listTop == null ? 0 : listTop);
+  bindFold(wrap, onCloseShelf);
 }
 
 function hideActionBar() {
@@ -41,6 +64,20 @@ function hideActionBar() {
     bar.innerHTML = "";
     bar.hidden = true;
   }
+}
+
+function bindPeek(wrap, onOpenShelf) {
+  const board = wrap.querySelector(".island-shop-board");
+  if (!board || board._bound) return;
+  board._bound = true;
+  board.addEventListener("click", () => onOpenShelf && onOpenShelf());
+}
+
+function bindFold(wrap, onCloseShelf) {
+  const fold = wrap.querySelector(".island-scene-fold");
+  if (!fold || fold._bound) return;
+  fold._bound = true;
+  fold.addEventListener("click", () => onCloseShelf && onCloseShelf());
 }
 
 function paintShopChrome(wrap, shop, tabs, tab, onSwitchTab) {

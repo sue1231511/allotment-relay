@@ -41,8 +41,10 @@ export const state = {
   shore: null,
   shop: null,
   shopTab: "seed",
+  shopShelf: false,
   workshop: null,
   workshopTab: "anvil",
+  workshopShelf: false,
   busy: false,
 };
 
