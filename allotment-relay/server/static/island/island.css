@@ -280,6 +280,11 @@ body.island-app.is-playing .island-actionbar {
 
 body.island-app.is-playing.is-yards .island-root {
   padding-bottom: env(safe-area-inset-bottom);
+  background: #4aa3d8;
+}
+
+body.island-app.is-playing.is-yards .island-scene {
+  background: #4aa3d8;
 }
 
 body.island-app.is-playing.is-yards .island-actionbar {
@@ -548,16 +553,26 @@ body.island-app.is-playing.is-yards .island-actionbar {
   z-index: 2;
 }
 
-/* 分区：没有底图，只有份地格子 */
+/* 份地：铺海边草地底图，不再铺一块纯绿。 */
 .island-yards {
   position: absolute;
   inset: 0;
   display: flex;
   flex-direction: column;
-  background: #8faf4a;
+  background: #4aa3d8;
   padding-top: 44px;
   padding-bottom: env(safe-area-inset-bottom);
   box-sizing: border-box;
+}
+
+.island-yards .island-slot {
+  z-index: 0;
+  background: #4aa3d8;
+}
+
+.island-yards > :not(.island-slot) {
+  position: relative;
+  z-index: 1;
 }
 
 .island-yard-tabs {
