@@ -16,8 +16,6 @@ import { renderShore } from "./scenes/shore.js";
 import { renderPlaza } from "./scenes/plaza.js";
 import { renderPlace } from "./scenes/place.js";
 import { renderBag } from "./ui/bag.js";
-import { renderQuest } from "./ui/quest.js";
-import { renderChat } from "./ui/chat.js";
 import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js";
 import { showEvent, toast } from "./ui/modal.js";
 
@@ -69,7 +67,7 @@ async function enterScene(name) {
   if (name === "home") name = "yards";
   state.scene = name;
   state.tab = "map";
-  markDock("map");
+  markDock("");
   hideSheet();
   if (name !== "yards") closePlant();
   const root = sceneEl();
@@ -392,39 +390,18 @@ function setYardsChrome(on) {
 }
 
 async function openTab(tab) {
-  state.tab = tab;
-  markDock(tab);
-  if (tab === "map") {
-    hideSheet();
-    if (state.scene !== "map" && !LIVE_SCENES.includes(state.scene)) {
-      await enterScene("map");
-    }
-    return;
-  }
-  closePlant();
+  if (tab !== "bag") return;
   const sheet = sheetEl();
-  if (tab === "bag") {
-    renderBag(sheet, { onEat: eatItem });
+  if (state.tab === "bag" && sheet && !sheet.hidden) {
+    hideSheet();
+    state.tab = "map";
+    markDock("");
     return;
   }
-  if (tab === "quest") {
-    renderQuest(sheet);
-    return;
-  }
-  if (tab === "chat") {
-    try {
-      loungeCache = await api.messages();
-    } catch (err) {
-      toast(err.message);
-    }
-    const talk = (text) => act(async () => {
-      const out = await api.say(text);
-      loungeCache = out;
-      renderChat(sheet, { messages: out.messages, onSay: talk });
-      return out;
-    }, { keepTab: true });
-    renderChat(sheet, { messages: loungeCache.messages, onSay: talk });
-  }
+  state.tab = "bag";
+  markDock("bag");
+  closePlant();
+  renderBag(sheet, { onEat: eatItem });
 }
 
 async function startFromSnapshot(data, scene) {

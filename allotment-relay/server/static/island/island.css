@@ -335,9 +335,9 @@ body.island-app.is-playing.is-yards .island-actionbar {
   width: min(480px, 100%);
   transform: translateX(-50%);
   z-index: 8;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  display: flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
   padding: 6px 8px calc(8px + env(safe-area-inset-bottom));
   background: rgba(244, 241, 232, .94);
@@ -350,6 +350,7 @@ body.island-app.is-playing.is-yards .island-actionbar {
 .island-dock button {
   min-height: 52px;
   max-height: 56px;
+  min-width: 140px;
   border: 0;
   background: transparent;
   font: inherit;
