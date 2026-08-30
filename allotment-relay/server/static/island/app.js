@@ -78,7 +78,7 @@ async function enterScene(name) {
     return;
   }
   const bar = document.getElementById("island-actionbar");
-  if (bar && name !== "map") bar.hidden = false;
+  if (bar) bar.hidden = name === "map" || name === "yards";
   setYardsChrome(name === "yards");
   try {
     if (name === "home") {
@@ -380,6 +380,11 @@ function markDock(tab) {
 
 function setYardsChrome(on) {
   document.body.classList.toggle("is-yards", on);
+  const bar = document.getElementById("island-actionbar");
+  if (bar && on) {
+    bar.hidden = true;
+    bar.innerHTML = "";
+  }
   const dock = document.getElementById("island-dock");
   if (!dock) return;
   dock.hidden = on;
