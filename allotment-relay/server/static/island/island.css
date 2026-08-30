@@ -17,6 +17,7 @@ html, body.island-app {
   background: var(--is-sky);
   color: var(--is-ink);
   overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body.island-app {
@@ -1640,4 +1641,95 @@ body.island-app.is-bag-open .island-float-chip {
 
 @media (min-width: 720px) {
   .island-root { min-height: 100vh; }
+}
+
+/* 橙光那种点按：落点星闪 + 能点的瘪一下。 */
+.island-spark {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  z-index: 40;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.island-spark em {
+  position: absolute;
+  left: -10px;
+  top: -10px;
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 236, 180, .95);
+  border-radius: 50%;
+  box-shadow: 0 0 12px 3px rgba(255, 230, 150, .55);
+  animation: island-spark-ring .42s ease-out forwards;
+}
+
+.island-spark i {
+  position: absolute;
+  left: -5px;
+  top: -5px;
+  width: 10px;
+  height: 10px;
+  background: #fff6d0;
+  clip-path: polygon(50% 0, 61% 35%, 100% 50%, 61% 65%, 50% 100%, 39% 65%, 0 50%, 39% 35%);
+  box-shadow: 0 0 8px 2px rgba(255, 230, 150, .85);
+  animation: island-spark-fly .42s ease-out forwards;
+}
+
+@keyframes island-spark-ring {
+  0% { transform: scale(.35); opacity: 1; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+@keyframes island-spark-fly {
+  0% {
+    transform: rotate(calc(var(--a) * 1deg)) translateY(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(calc(var(--a) * 1deg)) translateY(-30px) scale(.35);
+    opacity: 0;
+  }
+}
+
+.is-tap {
+  filter: brightness(1.18) saturate(1.06);
+}
+
+button.is-tap,
+.island-btn.is-tap,
+.island-bag-slot.is-tap,
+.island-bag-turn.is-tap,
+.island-bag-x.is-tap,
+.island-bag-done.is-tap,
+.island-hot.is-tap,
+.island-slot.is-tap,
+.island-plot-tile.is-tap,
+.island-plant-arrow.is-tap,
+.island-plant-x.is-tap,
+.island-plant-go.is-tap,
+.island-plant-buy.is-tap,
+.island-float-chip.is-bag.is-tap {
+  transform: scale(0.94);
+}
+
+.island-float-chip.is-back.is-tap {
+  transform: translateX(-22%) scale(0.94);
+}
+
+.island-btn,
+.island-bag-slot,
+.island-bag-turn,
+.island-bag-x,
+.island-bag-done,
+.island-hot,
+.island-float-chip,
+.island-plant-arrow,
+.island-plant-x,
+.island-plant-go,
+.island-plant-buy {
+  transition: transform 90ms ease-out, filter 90ms ease-out;
 }
