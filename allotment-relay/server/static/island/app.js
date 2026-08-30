@@ -44,6 +44,7 @@ function showPlay() {
 }
 
 function showGate() {
+  document.body.classList.remove("is-yards");
   if (window.__islandBoot && typeof window.__islandBoot.showGate === "function") {
     window.__islandBoot.showGate();
     return;
@@ -78,6 +79,7 @@ async function enterScene(name) {
   }
   const bar = document.getElementById("island-actionbar");
   if (bar && name !== "map") bar.hidden = false;
+  setYardsChrome(name === "yards");
   try {
     if (name === "home") {
       stopGrowTick();
@@ -374,6 +376,14 @@ function markDock(tab) {
   document.querySelectorAll("#island-dock [data-tab]").forEach((btn) => {
     btn.classList.toggle("is-on", btn.getAttribute("data-tab") === tab);
   });
+}
+
+function setYardsChrome(on) {
+  document.body.classList.toggle("is-yards", on);
+  const dock = document.getElementById("island-dock");
+  if (!dock) return;
+  dock.hidden = on;
+  if (!on) dock.removeAttribute("hidden");
 }
 
 async function openTab(tab) {

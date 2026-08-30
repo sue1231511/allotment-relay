@@ -30,6 +30,7 @@
     var dock = document.getElementById("island-dock");
     var root = document.getElementById("island-root");
     document.body.classList.remove("is-playing");
+    document.body.classList.remove("is-yards");
     if (root) root.classList.remove("is-playing");
     if (gate) gate.classList.remove("island-hidden");
     if (stage) {

@@ -284,6 +284,26 @@ body.island-app.is-playing .island-actionbar {
   box-sizing: border-box;
 }
 
+body.island-app.is-playing.is-yards .island-root {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+body.island-app.is-playing.is-yards .island-dock {
+  display: none !important;
+}
+
+body.island-app.is-playing.is-yards .island-actionbar {
+  left: auto;
+  right: 8px;
+  width: auto;
+  max-width: 42%;
+  grid-template-columns: 1fr 1fr;
+}
+
+body.island-app.is-playing.is-yards .island-actionbar .island-btn {
+  min-width: 0;
+}
+
 .island-ribbon {
   display: flex;
   flex-wrap: wrap;
@@ -552,6 +572,8 @@ body.island-app.is-playing .island-actionbar {
   display: flex;
   flex-direction: column;
   background: #8faf4a;
+  padding-bottom: 100px;
+  box-sizing: border-box;
 }
 
 .island-yard-tabs {
@@ -759,6 +781,26 @@ body.island-app.is-playing .island-actionbar {
 
 .island-harvest-fab[hidden] {
   display: none !important;
+}
+
+.island-back-map {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  z-index: 6;
+  width: min(210px, 54%);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  line-height: 0;
+  cursor: pointer;
+}
+
+.island-back-map img {
+  width: 100%;
+  height: auto;
+  display: block;
+  pointer-events: none;
 }
 
 .island-plot {

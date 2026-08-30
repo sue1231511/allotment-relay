@@ -43,11 +43,13 @@ export function renderYards(root, { onOpenGarden, onHarvestAll, onWaterAll, onSw
       <div class="island-plot-grid" id="island-plot-grid">${plotGridMarkup()}</div>
       <div class="island-plot-pager" id="island-plot-pager">${pagerMarkup()}</div>
       <button type="button" class="island-harvest-fab" id="island-harvest-all" data-act="harvest" ${ripe ? "" : "hidden"}>${harvestLabel(ripe)}</button>
+      <button type="button" class="island-back-map" data-act="back" aria-label="返回地图">
+        <img src="/static/island/assets/back-map.png" alt="" draggable="false">
+      </button>
     </div>
   `;
   const bar = document.getElementById("island-actionbar");
   bar.innerHTML = `
-    <button type="button" class="island-btn" data-act="back">回地图</button>
     <button type="button" class="island-btn" data-act="water" ${thirsty ? "" : "disabled"}>浇水${thirsty ? ` ${thirsty}` : ""}</button>
     <button type="button" class="island-btn primary" data-act="garden">${esc(yardMeta().plant)}</button>
   `;
@@ -56,7 +58,7 @@ export function renderYards(root, { onOpenGarden, onHarvestAll, onWaterAll, onSw
   });
   const harvest = root.querySelector("[data-act=harvest]");
   if (harvest) harvest.addEventListener("click", onHarvestAll);
-  bar.querySelector("[data-act=back]").addEventListener("click", onBack);
+  root.querySelector("[data-act=back]").addEventListener("click", onBack);
   bar.querySelector("[data-act=water]").addEventListener("click", onWaterAll);
   bar.querySelector("[data-act=garden]").addEventListener("click", onOpenGarden);
   bindGrid(onOpenGarden);
