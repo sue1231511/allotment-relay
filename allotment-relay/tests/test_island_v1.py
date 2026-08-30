@@ -533,6 +533,9 @@ def test_island_page_is_modular() -> None:
     assert "renderYards" in home_js
     assert "grass.png" in home_js
     assert "plot.png" in home_js
+    assert "PAGE_SIZE = 9" in home_js
+    assert "yardPage" in home_js
+    assert "island-plot-pager" in home_js
     assert "data-yard" in home_js
     assert "onWaterAll" in home_js
     assert "sceneArt" in home_js
@@ -549,6 +552,14 @@ def test_island_page_is_modular() -> None:
     assert "/play?go=star" in app
     assert (ROOT / "server/static/island/assets/plot.png").exists()
     assert (ROOT / "server/static/island/assets/grass.png").exists()
+    try:
+        from PIL import Image
+        grass = Image.open(ROOT / "server/static/island/assets/grass.png")
+        plot = Image.open(ROOT / "server/static/island/assets/plot.png")
+        assert grass.size == (512, 512) and grass.mode == "RGBA"
+        assert plot.size == (512, 512) and plot.mode == "RGBA"
+    except ImportError:
+        pass
     assert (ROOT / "server/static/island/assets/scenes/.gitkeep").exists()
     main_py = (ROOT / "server/main.py").read_text(encoding="utf-8")
     assert '@app.get("/play"' in main_py

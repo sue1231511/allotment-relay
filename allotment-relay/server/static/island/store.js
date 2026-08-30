@@ -30,6 +30,7 @@ export const state = {
   scene: "map",
   tab: "map",
   yard: "home",
+  yardPage: 0,
   selectedSlot: null,
   plantOpen: false,
   plantKey: "kale",

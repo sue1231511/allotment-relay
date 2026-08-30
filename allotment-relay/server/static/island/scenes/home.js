@@ -41,6 +41,7 @@ export function renderYards(root, { onOpenGarden, onHarvestAll, onWaterAll, onSw
       </div>
       <p class="island-grow-status" id="island-grow-status">${esc(growStatusLine())}</p>
       <div class="island-plot-grid" id="island-plot-grid">${plotGridMarkup()}</div>
+      <div class="island-plot-pager" id="island-plot-pager">${pagerMarkup()}</div>
       <button type="button" class="island-harvest-fab" id="island-harvest-all" data-act="harvest" ${ripe ? "" : "hidden"}>${harvestLabel(ripe)}</button>
     </div>
   `;
@@ -53,14 +54,13 @@ export function renderYards(root, { onOpenGarden, onHarvestAll, onWaterAll, onSw
   root.querySelectorAll("[data-yard]").forEach((btn) => {
     btn.addEventListener("click", () => onSwitchYard(btn.getAttribute("data-yard")));
   });
-  root.querySelectorAll("[data-act=garden]").forEach((btn) => {
-    btn.addEventListener("click", onOpenGarden);
-  });
   const harvest = root.querySelector("[data-act=harvest]");
   if (harvest) harvest.addEventListener("click", onHarvestAll);
   bar.querySelector("[data-act=back]").addEventListener("click", onBack);
   bar.querySelector("[data-act=water]").addEventListener("click", onWaterAll);
   bar.querySelector("[data-act=garden]").addEventListener("click", onOpenGarden);
+  bindGrid(onOpenGarden);
+  bindPager();
 }
 
 export function syncHomeChrome() {
@@ -74,6 +74,8 @@ export function syncHomeChrome() {
   }
   const grid = document.getElementById("island-plot-grid");
   if (grid) grid.innerHTML = plotGridMarkup();
+  const pager = document.getElementById("island-plot-pager");
+  if (pager) pager.innerHTML = pagerMarkup();
   document.querySelectorAll(".island-yard-tabs [data-yard]").forEach((btn) => {
     const kind = btn.getAttribute("data-yard");
     btn.classList.toggle("is-on", kind === state.yard);
@@ -107,14 +109,32 @@ function harvestLabel(ripe) {
 
 const GRASS = "/static/island/assets/grass.png";
 const PLOT = "/static/island/assets/plot.png";
-const COLS = 3;
+const PAGE_SIZE = 9;
+
+function pageCount() {
+  return Math.max(1, Math.ceil(yardPlots().length / PAGE_SIZE));
+}
+
+function clampPage() {
+  const last = pageCount() - 1;
+  if (state.yardPage > last) state.yardPage = last;
+  if (state.yardPage < 0) state.yardPage = 0;
+}
+
+function pagePlots() {
+  clampPage();
+  const plots = yardPlots();
+  const start = state.yardPage * PAGE_SIZE;
+  return plots.slice(start, start + PAGE_SIZE);
+}
 
 function plotGridMarkup() {
-  const plots = yardPlots();
+  const all = yardPlots();
   const meta = yardMeta();
-  if (!plots.length) {
+  if (!all.length) {
     return `<p class="island-plot-empty">${esc(meta.empty)}</p>`;
   }
+  const plots = pagePlots();
   const tiles = plots.map((plot) => {
     const stage = plot.appearance || (plot.can_sow ? "empty" : "growing");
     const art = cropArt(plot.crop, stage);
@@ -126,9 +146,45 @@ function plotGridMarkup() {
       <span class="island-plot-meta"><b>${esc(token)}</b><small>${esc(tileCaption(plot))}</small></span>
     </button>`;
   });
-  const pad = (COLS - (plots.length % COLS)) % COLS;
+  const pad = PAGE_SIZE - plots.length;
   if (pad) tiles.push(grassPad(pad));
   return tiles.join("");
+}
+
+function pagerMarkup() {
+  const n = yardPlots().length;
+  if (n <= PAGE_SIZE) return "";
+  clampPage();
+  const pages = pageCount();
+  const cur = state.yardPage + 1;
+  return `
+    <button type="button" class="island-btn" data-page="-1" ${state.yardPage <= 0 ? "disabled" : ""}>上一页</button>
+    <span>${cur} / ${pages}</span>
+    <button type="button" class="island-btn" data-page="1" ${state.yardPage >= pages - 1 ? "disabled" : ""}>下一页</button>
+  `;
+}
+
+function bindGrid(onOpenGarden) {
+  const grid = document.getElementById("island-plot-grid");
+  if (!grid || grid._bound) return;
+  grid._bound = true;
+  grid.addEventListener("click", (ev) => {
+    if (!ev.target.closest("[data-act=garden]")) return;
+    onOpenGarden();
+  });
+}
+
+function bindPager() {
+  const pager = document.getElementById("island-plot-pager");
+  if (!pager || pager._bound) return;
+  pager._bound = true;
+  pager.addEventListener("click", (ev) => {
+    const btn = ev.target.closest("[data-page]");
+    if (!btn || btn.disabled) return;
+    state.yardPage += Number(btn.getAttribute("data-page"));
+    clampPage();
+    syncHomeChrome();
+  });
 }
 
 function grassPad(count) {

@@ -235,6 +235,7 @@ function closePlant() {
 
 function switchYard(yard) {
   state.yard = yard || "home";
+  state.yardPage = 0;
   syncHomeChrome();
   if (state.plantOpen) openPlant();
 }
