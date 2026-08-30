@@ -1,6 +1,8 @@
 import { api, loadKey } from "./api.js";
 import {
   applySnapshot,
+  duesBlocked,
+  landSnap,
   plotByToken,
   plotToken,
   ripeYard,
@@ -16,7 +18,7 @@ import { renderPlace } from "./scenes/place.js";
 import { renderBag } from "./ui/bag.js";
 import { setBackChip, setBagChip } from "./ui/back-map.js";
 import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js";
-import { careActs, hideModal, showCareSheet, showEvent, toast } from "./ui/modal.js";
+import { careActs, hideModal, showCareSheet, showExpandSheet, showEvent, toast } from "./ui/modal.js";
 
 const sceneEl = () => document.getElementById("island-scene");
 const sheetEl = () => document.getElementById("island-sheet");
@@ -98,6 +100,7 @@ async function enterScene(name) {
     if (name === "yards") {
       renderYards(root, {
         onTapPlot: tapPlot,
+        onTapGrass: tapGrass,
         onHarvestAll: harvestAll,
         onSwitchYard: switchYard,
       });
@@ -140,6 +143,34 @@ const PLACE_TITLES = {
 
 function renderPlaceScene(name) {
   renderPlace(sceneEl(), { id: name, title: PLACE_TITLES[name] || name });
+}
+
+function tapGrass() {
+  closePlant();
+  hideModal();
+  if (duesBlocked()) {
+    toast("欠岸税或岸维，交清才能开垦。先去潮生会。");
+    return;
+  }
+  const snap = landSnap();
+  if (!snap) {
+    toast("这块还不能开垦。");
+    return;
+  }
+  if (snap.clearing) {
+    const label = [snap.clearing_label, "开垦中", snap.clearing_eta].filter(Boolean).join(" · ");
+    toast(label);
+    return;
+  }
+  if (!snap.offer) {
+    toast("现在不能开垦。");
+    return;
+  }
+  showExpandSheet(snap, { onConfirm: confirmExpand });
+}
+
+async function confirmExpand() {
+  await act(() => api.expand(state.yard || "home"));
 }
 
 function tapPlot(token) {

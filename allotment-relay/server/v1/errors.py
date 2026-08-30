@@ -57,6 +57,12 @@ def classify(exc: BaseException) -> ApiError:
         return ApiError("ITEM_REQUIRED", msg or "行囊里没有需要的东西。", status=409, detail=msg)
     if "工分票不足" in raw or "撒网需要" in raw or "坐钓需要" in raw:
         return ApiError("TICKETS_LOW", msg or "工分票不够。", status=409, detail=msg)
+    if "需要" in raw and "票" in raw and "只有" in raw:
+        return ApiError("TICKETS_LOW", msg or "工分票不够。", status=409, detail=msg)
+    if "还在开垦" in raw:
+        return ApiError("NOT_READY", msg or "上一块还在开垦。", status=409, detail=msg)
+    if ("欠" in raw) and ("岸税" in raw or "维修" in raw or "岸维" in raw):
+        return ApiError("DUES_LOCKED", "欠岸税或岸维，交清才能开垦。先去潮生会。", status=403, detail=msg)
     if "已经浇过" in raw:
         return ApiError("ALREADY_DONE", "这块地这一茬已经浇过水了。", status=409, detail=msg)
     if "已经施过" in raw:

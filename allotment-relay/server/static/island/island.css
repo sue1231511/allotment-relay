@@ -723,7 +723,8 @@ body.island-app.is-playing.is-yards .island-actionbar {
 }
 
 .island-plot-tile.is-pad {
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 .island-plot-tile.is-ripe .island-plot-bed {
