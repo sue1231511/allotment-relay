@@ -536,8 +536,10 @@ def test_island_page_is_modular() -> None:
     assert "setBackChip" in (ROOT / "server/static/island/ui/back-map.js").read_text(encoding="utf-8")
     assert "setBagChip" in app
     assert "setBagChip(name !== \"map\")" in app
-    assert "left: 4px" in css
+    assert "left: 0" in css
     assert "min(196px, 58%)" in css
+    assert "min(44px, 12%)" in css
+    assert "translate(-22%, -2%)" in css
     home_js = (ROOT / "server/static/island/scenes/home.js").read_text(encoding="utf-8")
     yards_js = home_js.split("export function renderYards", 1)[1].split("export function", 1)[0]
     assert "island-back-map" not in yards_js

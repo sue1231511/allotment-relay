@@ -773,16 +773,20 @@ body.island-app.is-playing.is-yards .island-actionbar {
 }
 
 .island-float-chip.is-bag {
-  top: calc(8px + env(safe-area-inset-top));
-  right: 6px;
+  top: env(safe-area-inset-top, 0px);
+  right: 0;
   left: auto;
+  width: min(44px, 12%);
+  min-height: 44px;
 }
 
 .island-float-chip.is-back {
-  top: calc(8px + env(safe-area-inset-top));
-  left: 4px;
+  top: env(safe-area-inset-top, 0px);
+  left: 0;
   right: auto;
   width: min(196px, 58%);
+  /* 原图左右透明边很宽，往左上推，让金框贴角。 */
+  transform: translate(-22%, -2%);
 }
 
 .island-float-chip img {
