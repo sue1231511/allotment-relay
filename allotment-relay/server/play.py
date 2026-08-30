@@ -331,12 +331,8 @@ def climate_bits() -> dict[str, str]:
 
 def bar_work_slot() -> tuple[str, str]:
     """上手页洗碗上工：暮白班、夜夜班；歇业时仍发 day（逾期可补白班）。"""
-    phase = world.current_day_phase()
-    if phase == "night":
-        return "night", "夜班"
-    if phase == "dusk":
-        return "day", "白班"
-    return "day", "暮/夜开门；白班仅暮可上"
+    from . import bar
+    return bar.work_slot()
 
 
 def bar_place_actions() -> list[dict[str, Any]]:

@@ -212,6 +212,44 @@ async def _test_island_v1_api() -> None:
     )
     assert washed.status_code == 200, washed.text
 
+    tap0 = client.get("/api/v1/bar", headers=_auth(key))
+    assert tap0.status_code == 200, tap0.text
+    tap = tap0.json()["bar"]
+    assert any(t["key"] == "work" for t in tap["tabs"]), tap
+    assert any(t["key"] == "menu" for t in tap["tabs"]), tap
+    assert any(t["key"] == "tonight" for t in tap["tabs"]), tap
+    dish = next(r for r in tap["jobs"] if r["cmd"] == "洗碗")
+    assert dish["name"] == "洗碗工", dish
+    assert "海盐拉格" in [r["name"] for r in tap["drinks"]], tap["drinks"]
+    assert tap["tonight"]["singer"]
+    cheer_miss = client.post(
+        "/api/v1/bar/act",
+        headers=_auth(key, {"Idempotency-Key": "bar-cheer-empty"}),
+        json={"kind": "cheer", "target": ""},
+    )
+    assert cheer_miss.status_code >= 400, cheer_miss.text
+    cheered = client.post(
+        "/api/v1/bar/act",
+        headers=_auth(key, {"Idempotency-Key": "bar-cheer-ok"}),
+        json={"kind": "cheer", "target": "今晚生意好"},
+    )
+    assert cheered.status_code == 200, cheered.text
+    assert cheered.json()["event"]["kind"] == "bar"
+    assert cheered.json()["bar"]["tonight"]["can_cheer"] is False
+    async with db.connect() as conn:
+        await conn.execute(
+            "UPDATE stewards SET last_bar_shift_at=1, energy=80 WHERE id=?",
+            (sid,),
+        )
+        await conn.commit()
+    worked_act = client.post(
+        "/api/v1/bar/act",
+        headers=_auth(key, {"Idempotency-Key": "bar-act-work"}),
+        json={"kind": "work", "target": "洗碗"},
+    )
+    assert worked_act.status_code == 200, worked_act.text
+    assert worked_act.json()["event"]["kind"] == "bar"
+
     wrong_yard = client.post(
         "/api/v1/farm/parcels/园1/sow",
         headers=_auth(key, {"Idempotency-Key": "sow-orchard-kale"}),
@@ -668,7 +706,7 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-pop1" in html
+    assert "island-bar2" in html
     assert "/static/island/tap.js" in html
     assert "/static/island/boot.js" in html
     assert 'id="island-enter"' in html
@@ -880,7 +918,6 @@ def test_island_page_is_modular() -> None:
     assert "paintModal" in modal_js
     assert "popOut" in modal_js
     assert "交岸税" not in app
-    assert "洗碗" not in app
     assert "只铺图和地名" in (ROOT / "server/static/island/scenes/place.js").read_text(encoding="utf-8")
     assert "data-act=\"net\"" not in (ROOT / "server/static/island/scenes/shore.js").read_text(encoding="utf-8")
     plaza_js = (ROOT / "server/static/island/scenes/plaza.js").read_text(encoding="utf-8")
@@ -918,6 +955,7 @@ def test_island_page_is_modular() -> None:
     assert "scenes/ting.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
     assert "scenes/lianli.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
     art_md = (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
+    assert "bar-opt-frame.png" in art_md
     assert "scenes/workshop.png" in art_md
     assert "scenes/shop.png" in art_md
     assert "scenes/lighthouse.png" in art_md
@@ -994,8 +1032,10 @@ def test_island_page_is_modular() -> None:
     assert "/api/v1/tote/vend" in api
     assert "/api/v1/workshop" in api
     assert "/api/v1/quarry" in api
+    assert "/api/v1/bar" in api
     assert "api.workshopAct" in app
     assert "api.quarryAct" in app
+    assert "api.barAct" in app
     assert "keepWorkshop" in app
     workshop_js = (ROOT / "server/static/island/scenes/workshop.js").read_text(encoding="utf-8")
     assert "island-workshop" in workshop_js
@@ -1012,8 +1052,33 @@ def test_island_page_is_modular() -> None:
     assert "data-act" in quarry_js
     assert "去上手页" not in quarry_js
     assert "keepQuarry" in app
+    assert "keepBar" in app
     assert "quarryShelf" in app
+    assert "barShelf" in app
     assert "renderWorkshop" in app
+    assert "renderBar" in app
+    bar_js = (ROOT / "server/static/island/scenes/bar.js").read_text(encoding="utf-8")
+    assert "island-bar" in bar_js
+    assert "island-bar-opt" in bar_js
+    assert "is-peek" in bar_js
+    assert "点一下看吧台" in bar_js
+    assert "洗碗" in bar_js
+    assert "data-act" in bar_js
+    assert "去上手页" not in bar_js
+    assert "disabled" not in bar_js
+    assert "bar-opt-frame.png" in css
+    assert ".island-bar-opt" in css
+    bar_frame = ROOT / "server/static/island/assets/bar-opt-frame.png"
+    assert bar_frame.exists()
+    try:
+        from PIL import Image
+        frame = Image.open(bar_frame)
+        assert frame.size == (2000, 750)
+        assert frame.mode == "RGBA"
+    except ImportError:
+        pass
+    assert "showCheerSheet" in app
+    assert (ROOT / "server/v1/bar_service.py").exists()
     assert 'lighthouse: "灯塔"' in app
     assert 'notice: "潮汐公告"' in app
     assert "state.backTo" in app

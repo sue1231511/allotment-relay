@@ -20,11 +20,12 @@ import { renderPlace } from "./scenes/place.js";
 import { renderShop } from "./scenes/shop.js";
 import { renderWorkshop } from "./scenes/workshop.js";
 import { renderQuarry } from "./scenes/quarry.js";
+import { renderBar } from "./scenes/bar.js";
 import { renderBag } from "./ui/bag.js";
 import { setBackChip, setBagChip } from "./ui/back-map.js";
 import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js";
 import { popOut } from "./ui/pop.js";
-import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showExpandSheet, showEvent, showHintSheet, showVendSheet, toast } from "./ui/modal.js";
+import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showHintSheet, showVendSheet, toast } from "./ui/modal.js";
 
 const sceneEl = () => document.getElementById("island-scene");
 const sheetEl = () => document.getElementById("island-sheet");
@@ -153,6 +154,11 @@ async function enterScene(name) {
       state.quarryShelf = false;
       await openQuarry(root);
       startQuarryTick();
+      return;
+    }
+    if (name === "bar") {
+      state.barShelf = false;
+      await openBar(root);
       return;
     }
     if (PLACE_TITLES[name]) {
@@ -485,6 +491,115 @@ async function runQuarry(kind, target) {
   await act(() => api.quarryAct(kind, target), { keepQuarry: true, listTop, quiet: true });
 }
 
+async function openBar(root) {
+  try {
+    const data = await api.bar();
+    applySnapshot(data);
+    renderHud();
+    if (data.event) showEvent(data.event);
+  } catch (err) {
+    toast(err.message || "酒吧门还没开。");
+  }
+  const tabs = (state.bar && state.bar.tabs) || [];
+  if (!tabs.some((row) => row.key === state.barTab)) {
+    state.barTab = (tabs[0] && tabs[0].key) || "work";
+  }
+  paintBar();
+}
+
+function paintBar(listTop = 0) {
+  renderBar(sceneEl(), {
+    onAct: tapBar,
+    onSwitchTab: switchBarTab,
+    onOpenShelf: () => {
+      state.barShelf = true;
+      paintBar(0);
+    },
+    onCloseShelf: () => {
+      state.barShelf = false;
+      hideModal();
+      paintBar();
+    },
+    listTop,
+  });
+}
+
+function switchBarTab(tab) {
+  state.barTab = tab || "work";
+  hideModal();
+  paintBar(0);
+}
+
+function barRow(kind, target) {
+  const shop = state.bar || {};
+  if (kind === "work") return (shop.jobs || []).find((row) => row.cmd === target);
+  if (kind === "order") return (shop.drinks || []).find((row) => row.name === target);
+  if (kind === "cheer" || kind === "look") return shop.tonight || {};
+  return null;
+}
+
+function barCan(kind, row) {
+  if (!row) return false;
+  if (kind === "work") return Boolean(row.can_work);
+  if (kind === "order") return Boolean(row.can_order);
+  if (kind === "cheer") return Boolean(row.can_cheer);
+  return false;
+}
+
+function tapBar(kind, target) {
+  const row = barRow(kind, target);
+  if (kind === "look") {
+    const t = row || {};
+    const pack = {
+      singer: [t.singer || "驻唱", t.singer_line || `今晚歌单 ${t.songs || 0} 首`],
+      special: ["今日特调", t.special || "今晚还没定"],
+      activity: [t.activity || "今晚", t.activity_desc || t.mood || "先看看场子"],
+    }[target] || ["今晚", t.cheer_note || "先看看场子"];
+    showHintSheet({ title: pack[0], body: pack[1] });
+    return;
+  }
+  const body = (row && (row.detail || row.note || row.cheer_note)) || "做这一下？";
+  if (!barCan(kind, row)) {
+    showHintSheet({
+      title: (row && row.name) || ({
+        work: target || "上工",
+        order: target || "酒单",
+        cheer: "哄荔栀",
+      }[kind] || "潮汐酒吧"),
+      body,
+    });
+    return;
+  }
+  if (kind === "cheer") {
+    showCheerSheet({
+      title: "哄荔栀",
+      body: body,
+      presets: (row && row.cheer_presets) || ["今晚生意好", "杯子擦得亮", "辛苦了"],
+      onConfirm: (line) => runBar("cheer", line),
+    });
+    return;
+  }
+  const pack = {
+    work: ["洗碗打卡", body, "确认上工"],
+    order: ["点酒", body, "确认点"],
+  }[kind] || ["潮汐酒吧", body, "确认"];
+  if (kind === "work") {
+    pack[0] = (row && row.name) || "洗碗打卡";
+  }
+  showActSheet({
+    title: pack[0],
+    body: pack[1],
+    confirm: pack[2],
+    onConfirm: () => runBar(kind, target),
+  });
+}
+
+async function runBar(kind, target) {
+  const list = document.getElementById("island-bar-list");
+  const listTop = list ? list.scrollTop : 0;
+  await act(() => api.barAct(kind, target), { keepBar: true, listTop, quiet: true });
+}
+
 function startQuarryTick() {
   stopQuarryTick();
   quarryTimer = window.setInterval(() => {
@@ -712,7 +827,7 @@ async function vendItem(item) {
   await act(() => api.vend(name, 1), { keepTab: true });
 }
 
-async function act(fn, { refreshScene = false, keepPlant = false, keepTab = false, keepShop = false, keepWorkshop = false, keepQuarry = false, listTop = null, quiet = false } = {}) {
+async function act(fn, { refreshScene = false, keepPlant = false, keepTab = false, keepShop = false, keepWorkshop = false, keepQuarry = false, keepBar = false, listTop = null, quiet = false } = {}) {
   if (state.busy) return;
   state.busy = true;
   try {
@@ -737,6 +852,10 @@ async function act(fn, { refreshScene = false, keepPlant = false, keepTab = fals
     }
     if (keepQuarry && state.scene === "quarry") {
       paintQuarry(listTop);
+      return;
+    }
+    if (keepBar && state.scene === "bar") {
+      paintBar(listTop);
       return;
     }
     if (refreshScene || LIVE_SCENES.includes(state.scene)) {
