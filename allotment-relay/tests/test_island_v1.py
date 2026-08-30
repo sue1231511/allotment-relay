@@ -496,6 +496,16 @@ def test_island_page_is_modular() -> None:
     assert "island-plant-buy" in css
     assert "is-hui" in css
     assert "#7fa24a" not in css
+    assert "#8faf4a" not in css
+    assert "海边草地底图" in css
+    assert 'sceneArt("yards")' in (ROOT / "server/static/island/scenes/home.js").read_text(encoding="utf-8")
+    yards_png = ROOT / "server/static/island/assets/scenes/yards.png"
+    assert yards_png.exists()
+    try:
+        from PIL import Image
+        assert Image.open(yards_png).size == (941, 1672)
+    except ImportError:
+        pass
     assert "top: auto" in css
     assert "/static/style.css" not in html
     assert "/api/v1/" in api
@@ -577,6 +587,7 @@ def test_island_page_is_modular() -> None:
     assert "sceneArt" in (ROOT / "server/static/island/ui/art.js").read_text(encoding="utf-8")
     assert "插图位" in (ROOT / "server/static/island/ui/art.js").read_text(encoding="utf-8")
     assert "scenes/island-map.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
+    assert "scenes/yards.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
     assert (ROOT / "server/static/island/ui/plant-panel.js").exists()
     assert (ROOT / "server/static/island/ui/crops.js").exists()
     assert "island-crop-fallback" in (ROOT / "server/static/island/ui/crops.js").read_text(encoding="utf-8")

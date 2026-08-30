@@ -34,6 +34,7 @@ export function renderYards(root, { onOpenGarden, onHarvestAll, onWaterAll, onSw
   const thirsty = thirstyYard().length;
   root.innerHTML = `
     <div class="island-yards">
+      ${sceneArt("yards")}
       <div class="island-yard-tabs" role="tablist" aria-label="地块类型">
         ${yardTabs()}
       </div>
