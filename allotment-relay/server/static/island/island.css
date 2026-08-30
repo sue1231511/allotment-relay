@@ -1165,44 +1165,6 @@ body.island-app.is-playing.is-yards .island-actionbar {
 .island-shop-price { font-size: 13px; color: #5f7a58; white-space: nowrap; }
 .island-shop-empty { margin: 12px 4px; color: #5b7377; font-size: 13px; }
 
-.island-bar:not(.is-peek) .island-slot {
-  flex: 1 1 52%;
-  min-height: 160px;
-}
-
-.island-bar-tray {
-  flex: 0 0 auto;
-  width: 100%;
-  height: min(38dvh, 280px);
-  max-height: 40%;
-  min-height: 168px;
-  padding: 14% 9% 16%;
-  box-sizing: border-box;
-  border-radius: 0;
-  background: url("/static/island/assets/bar-opt-frame.png") center / 100% 100% no-repeat;
-  background-color: transparent;
-  box-shadow: none;
-  overflow: hidden;
-}
-
-.island-bar-tray .island-shop-meta {
-  padding: 0 4px 2px;
-}
-
-.island-bar-tray .island-shop-tabs {
-  padding: 4px 2px 6px;
-}
-
-.island-bar-tray .island-shop-list {
-  padding: 0 2px 4px;
-  gap: 6px;
-}
-
-.island-bar-tray .island-shop-sku {
-  min-height: 44px;
-  background: rgba(255, 253, 248, .62);
-}
-
 @media (max-height: 560px) {
   .island-shop-shelf {
     min-height: 200px;

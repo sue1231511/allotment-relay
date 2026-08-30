@@ -38,7 +38,7 @@ export function renderBar(root, { onAct, onSwitchTab, onOpenShelf, onCloseShelf,
     <div class="island-shop island-bar">
       ${sceneArt("bar")}
       <button type="button" class="island-scene-fold" aria-label="收起列表"></button>
-      <div class="island-shop-shelf island-bar-tray">
+      <div class="island-shop-shelf">
         <div class="island-shop-meta">
           <b>潮汐酒吧</b>
           <small></small>
