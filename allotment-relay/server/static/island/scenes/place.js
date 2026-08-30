@@ -1,20 +1,17 @@
 import { sceneArt } from "../ui/art.js";
-import { backChipMarkup, bindBackChip } from "../ui/back-map.js";
 import { esc } from "../ui/modal.js";
 
-export function renderPlace(root, { id, title, body, actions, onAct, onBack }) {
+export function renderPlace(root, { id, title, body, actions, onAct }) {
   const acts = actions || [];
   root.innerHTML = `
     <div class="island-place">
       ${sceneArt(id)}
-      ${backChipMarkup()}
       <article class="island-place-card">
         <b>${esc(title)}</b>
         ${body.map((line) => `<p>${esc(line)}</p>`).join("")}
       </article>
     </div>
   `;
-  bindBackChip(root, onBack);
   const bar = document.getElementById("island-actionbar");
   if (!bar) return;
   if (!acts.length) {

@@ -38,6 +38,10 @@
       stage.hidden = true;
     }
     if (dock) dock.hidden = true;
+    var bag = document.getElementById("island-bag-chip");
+    var back = document.getElementById("island-back-chip");
+    if (bag) bag.hidden = true;
+    if (back) back.hidden = true;
   }
 
   function showPlay() {
@@ -53,9 +57,11 @@
       stage.hidden = false;
       stage.removeAttribute("hidden");
     }
-    if (dock) {
-      dock.hidden = false;
-      dock.removeAttribute("hidden");
+    if (dock) dock.hidden = true;
+    var bag = document.getElementById("island-bag-chip");
+    if (bag) {
+      bag.hidden = false;
+      bag.removeAttribute("hidden");
     }
   }
 
