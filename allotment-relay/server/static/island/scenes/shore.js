@@ -9,9 +9,9 @@ export function renderShore(root, { onCast, onBack }) {
     <div class="island-place">
       ${sceneArt("shore")}
       <article class="island-place-card">
-        <b>${esc(w.tide || "潮位")} · ${esc(w.weather || "天气")}</b>
-        <p>${esc(w.phase || "")} · ${esc(w.season || "")}</p>
-        <p>${esc(w.line || "海边风很轻。")}</p>
+        <b>港口</b>
+        <p>${esc(w.tide || "潮位")} · ${esc(w.weather || "天气")} · ${esc(w.phase || "")} · ${esc(w.season || "")}</p>
+        <p>${esc(w.line || "码头风很轻。")}</p>
         <p>渔网 T${esc(shore.net_tier || 0)} · 钓竿 T${esc(shore.rod_tier || 0)} · 蚯蚓 ${esc(shore.bait_worm || 0)}</p>
       </article>
     </div>

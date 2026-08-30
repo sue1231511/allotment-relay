@@ -8,7 +8,7 @@
 |------|----------|----------|
 | `scenes/island-map.png` | 岛屿总览 | 1080×1920 |
 | `scenes/home.png` | 家园院子 | 1080×1920 |
-| `scenes/shore.png` | 海边 | 1080×1920 |
+| `scenes/shore.png` | 海边 / 港口（已就位） | 1080×1920 |
 | `scenes/plaza.png` | 岛心广场 | 1080×1920 |
 | `scenes/hut.png` | 岸畔小屋 | 1080×1920 |
 | `scenes/bar.png` | 滨海酒吧 | 1080×1920 |

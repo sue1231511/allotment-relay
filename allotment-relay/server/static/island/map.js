@@ -2,7 +2,7 @@ import { sceneArt } from "./ui/art.js";
 
 const PINS = [
   { go: "home", cls: "is-home", kicker: "Home", name: "家园" },
-  { go: "shore", cls: "is-shore", kicker: "Tide", name: "海边" },
+  { go: "shore", cls: "is-shore", kicker: "Tide", name: "港口" },
   { go: "hut", cls: "is-hut", kicker: "Hut", name: "小屋" },
   { go: "bar", cls: "is-bar", kicker: "Bar", name: "酒吧" },
   { go: "eatery", cls: "is-eatery", kicker: "Eat", name: "小馆" },
