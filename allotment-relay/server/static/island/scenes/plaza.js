@@ -1,4 +1,4 @@
-import { sceneArt } from "../ui/art.js";
+import { layoutCoverBoard, sceneArt } from "../ui/art.js";
 
 /** 热区按广场图 941×1672 上的房子和公告栏。图上已有店招，再叠游戏用地名。 */
 const HOTS = [
@@ -22,6 +22,7 @@ export function renderPlaza(root, { onOpen } = {}) {
     bar.innerHTML = "";
     bar.hidden = true;
   }
+  layoutCoverBoard(root.querySelector(".island-plaza"), ".island-plaza-board", 941, 1672);
   if (typeof onOpen !== "function") return;
   root.querySelectorAll("[data-go]").forEach((btn) => {
     btn.addEventListener("click", (ev) => {
