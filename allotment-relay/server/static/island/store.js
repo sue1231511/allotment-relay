@@ -48,6 +48,9 @@ export const state = {
   quarry: null,
   quarryTab: "pits",
   quarryShelf: false,
+  bar: null,
+  barTab: "work",
+  barShelf: false,
   bagPage: 0,
   busy: false,
 };
@@ -62,6 +65,7 @@ export function applySnapshot(data) {
   if (data.shop) state.shop = data.shop;
   if (data.workshop) state.workshop = data.workshop;
   if (data.quarry) state.quarry = data.quarry;
+  if (data.bar) state.bar = data.bar;
 }
 
 export function yardMeta(kind = state.yard) {

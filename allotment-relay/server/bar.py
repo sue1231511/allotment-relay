@@ -72,7 +72,8 @@ BAR_HELP = """bar_ops 子命令（整句写进 command）：
   song / request_song 歌名 — 驻唱「我哪有旺夫命」/ 点歌
   staff — 今晚员工
   lodge — 走投无路才收：管饭+工钱15，干 6 小时，期间哪儿也去不了
-  心情不能由 AI 定。想哄她用 cheer。没有 duo / set_mood。"""
+  心情不能由 AI 定。想哄她用 cheer。没有 duo / set_mood。
+  人类 /island 进酒吧能洗碗打卡、点酒、看今晚（先进店景，点一下才出吧台）。点单打赏、双人吧台仍在上手页。"""
 
 
 def _day_id() -> int:
@@ -113,6 +114,55 @@ def _owner_lines() -> list[str]:
 
 def is_open() -> bool:
     return world.current_day_phase() in COASTAL_BAR["open_phases"]
+
+
+def work_slot() -> tuple[str, str]:
+    """暮白班、夜夜班；歇业时仍发 day（逾期可补白班）。"""
+    phase = world.current_day_phase()
+    if phase == "night":
+        return "night", "夜班"
+    if phase == "dusk":
+        return "day", "白班"
+    return "day", "暮/夜开门；白班仅暮可上"
+
+
+_JOB_CMD = {
+    "dishwasher": "洗碗",
+    "runner": "杂工",
+    "greeter": "迎宾",
+    "server": "服务生",
+    "bartender": "调酒师",
+    "host": "牛郎",
+}
+
+_JOB_EMOJI = {
+    "dishwasher": "🍽",
+    "runner": "🧹",
+    "greeter": "🚪",
+    "server": "🥂",
+    "bartender": "🍸",
+    "host": "🌙",
+}
+
+_DRINK_EMOJI = {
+    "啤酒": "🍺",
+    "低度酒": "🥂",
+    "鸡尾酒": "🍹",
+    "烈酒": "🥃",
+    "特调": "✨",
+    "隐藏酒": "🌊",
+}
+
+_CHEER_PRESETS = ("今晚生意好", "杯子擦得亮", "辛苦了")
+
+
+def human_duty_line(steward: dict[str, Any]) -> str:
+    left = shift_seconds_left(steward)
+    if left < 0:
+        return f"考勤逾期 {abs(left) // 3600}h，先洗碗打卡"
+    if left < 86400:
+        return f"{left // 3600}h 内须上工"
+    return f"约 {left // 86400} 天后须上工"
 
 
 def shift_deadline(steward: dict[str, Any]) -> int:
@@ -1708,3 +1758,147 @@ async def bar_ops(key_id: int, command: str) -> str:
         f"{command}（tonight/menu/order/work/status/staff/song/request_song/tip/chat/duo/"
         "cheer/lodge/shift）。不会就 bar_ops help。"
     )
+
+
+async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str, Any]:
+    """给 /island 用的酒吧面板。数值仍走 bar_ops，这里只摊开能点的。"""
+    skills = await _ensure_skills(conn, s["id"])
+    daily = await _ensure_daily_state(conn)
+    daily = await _refresh_state_mood(conn, daily)
+    shipwreck = await _shipwreck_eligible(conn, s)
+    open_now = is_open()
+    overdue = is_shift_overdue(s)
+    period, period_note = work_slot()
+    makeup = overdue and world.current_day_phase() == "day"
+    tickets = int(s.get("tickets") or 0)
+    energy_now = int(s.get("energy") or 0)
+    cur = await conn.execute(
+        "SELECT count FROM bar_rolls WHERE steward_id=? AND day=?",
+        (s["id"], _day_id()),
+    )
+    used = int((await cur.fetchone() or [0])[0] or 0)
+    jobs: list[dict[str, Any]] = []
+    for jid, meta in BAR_JOBS.items():
+        ok, reason = _job_eligible(skills, jid, period)
+        pay = meta["pay"].get(period)
+        if pay is None:
+            continue
+        can = False
+        if not open_now and not makeup:
+            note = f"{COASTAL_BAR['name']} 暮/夜才营业"
+        elif used >= config.BAR_SHIFT_DAILY:
+            note = f"今日上工上限 {config.BAR_SHIFT_DAILY}"
+        elif energy_now < config.BAR_SHIFT_ENERGY:
+            note = f"精力不够，上工要 {config.BAR_SHIFT_ENERGY}"
+        elif not ok:
+            note = reason
+        else:
+            can = True
+            extra = " · 补班 ×0.72" if makeup else ""
+            note = f"{period_note} · {pay} 票{extra}"
+        jobs.append({
+            "id": jid,
+            "cmd": _JOB_CMD.get(jid, meta["name"]),
+            "name": meta["name"],
+            "emoji": _JOB_EMOJI.get(jid, "·"),
+            "period": period,
+            "period_label": "白班" if period == "day" else "夜班",
+            "pay": int(pay),
+            "can_work": can,
+            "note": note,
+            "detail": (
+                f"{note}。洗碗就能打卡，每两天须来一次。"
+                if jid == "dishwasher"
+                else note
+            ),
+        })
+    first_free = not daily.get("first_order_free")
+    drinks: list[dict[str, Any]] = []
+    for key, drink in BAR_DRINKS.items():
+        if drink.get("hidden") and not await _has_unlock(conn, s["id"], drink.get("unlock", key)):
+            continue
+        if drink.get("night_only") and world.current_day_phase() != "night":
+            continue
+        price = _drink_price(
+            drink, key, daily,
+            shipwreck=shipwreck,
+            first_discount=first_free,
+        )
+        if not open_now:
+            can = False
+            note = "现在打烊，点单暮场再来"
+        elif tickets < price:
+            can = False
+            note = f"要 {price} 票，现在 {tickets}"
+        else:
+            can = True
+            note = f"{drink['type']} · {price} 票"
+        drinks.append({
+            "id": key,
+            "name": drink["name"],
+            "emoji": _DRINK_EMOJI.get(drink.get("type"), "🥂"),
+            "type": drink["type"],
+            "price": int(price),
+            "can_order": can,
+            "note": note,
+            "detail": (drink.get("text") or note).replace("\n", " "),
+            "hidden": bool(drink.get("hidden")),
+            "special": bool(drink.get("special")),
+        })
+    cheer_row = await (await conn.execute(
+        "SELECT COUNT(*) FROM ut_mood_proposals WHERE steward_id=? AND status='pending' "
+        "AND target='lizhi' AND created_at > ?",
+        (s["id"], db.now() - 86400),
+    )).fetchone()
+    can_cheer = int(cheer_row[0] if cheer_row else 0) < 1
+    special = BAR_DRINKS.get(daily.get("special_drink") or "", {})
+    activity = BAR_ACTIVITIES.get(daily.get("activity_key") or "", {})
+    tonight = {
+        "open": open_now,
+        "phase": world.day_phase_label(world.current_day_phase()),
+        "singer": BAR_SINGER["name"],
+        "singer_line": daily.get("singer_state") or BAR_SINGER["lines"][0],
+        "songs": len(_playlist_keys(daily)),
+        "special": special.get("name") or "—",
+        "activity": activity.get("name") or "—",
+        "activity_desc": activity.get("desc") or "",
+        "mood": mood_label(daily.get("effective_mood", "normal")),
+        "can_cheer": can_cheer,
+        "cheer_note": (
+            "今天已经说过一次了。"
+            if not can_cheer
+            else "每日一句。不是潮下猫猫，也不是小橘应援。"
+        ),
+        "cheer_presets": list(_CHEER_PRESETS),
+    }
+    duty = human_duty_line(s)
+    any_work = any(row["can_work"] for row in jobs)
+    any_order = any(row["can_order"] for row in drinks)
+    if overdue:
+        line = duty
+    elif open_now and any_work:
+        line = f"{period_note} · 能上工"
+    elif open_now:
+        line = f"营业中 · {duty}"
+    else:
+        line = f"打烊 · {duty}"
+    return {
+        "name": COASTAL_BAR["name"],
+        "line": line,
+        "open": open_now,
+        "duty": duty,
+        "overdue": overdue,
+        "period": period,
+        "period_note": period_note,
+        "used": used,
+        "daily": config.BAR_SHIFT_DAILY,
+        "energy": config.BAR_SHIFT_ENERGY,
+        "tabs": [
+            {"key": "work", "label": "上工", "badge": "洗" if any_work else ""},
+            {"key": "menu", "label": "酒单", "badge": "点" if any_order else ""},
+            {"key": "tonight", "label": "今晚", "badge": "哄" if can_cheer else ""},
+        ],
+        "jobs": jobs,
+        "drinks": drinks,
+        "tonight": tonight,
+    }
