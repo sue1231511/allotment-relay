@@ -39,6 +39,18 @@ body.island-app {
   padding: env(safe-area-inset-top) 0 calc(68px + env(safe-area-inset-bottom));
 }
 
+body.island-app.is-playing,
+body.island-app.is-playing .island-root {
+  width: 100%;
+  max-width: none;
+  height: 100dvh;
+  height: 100vh;
+  min-height: 100dvh;
+  padding: 0;
+  overflow: hidden;
+  background: #4f9eb0;
+}
+
 .island-hud {
   display: flex;
   align-items: center;
@@ -220,6 +232,60 @@ body.island-app {
   box-shadow: inset 0 0 0 1px var(--is-line);
 }
 
+body.island-app.is-playing .island-hud {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 5;
+  padding-top: calc(10px + env(safe-area-inset-top));
+  background: linear-gradient(180deg, rgba(244, 241, 232, .9) 0%, rgba(244, 241, 232, .35) 70%, transparent 100%);
+}
+
+body.island-app.is-playing .island-ribbon {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(56px + env(safe-area-inset-top));
+  z-index: 5;
+}
+
+body.island-app.is-playing .island-stage {
+  flex: 1;
+  min-height: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+body.island-app.is-playing .island-scene {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+body.island-app.is-playing .island-actionbar {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: calc(72px + env(safe-area-inset-bottom));
+  z-index: 5;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 14px;
+  background: rgba(255, 253, 248, .9);
+  box-sizing: border-box;
+}
+
+body.island-app.is-playing .island-dock,
+body.island-app.is-playing .island-sheet,
+body.island-app.is-playing .island-plant,
+body.island-app.is-playing .island-card {
+  width: 100%;
+}
+
 .island-ribbon {
   display: flex;
   flex-wrap: wrap;
@@ -337,19 +403,18 @@ body.island-app {
 .island-slot-mark b { font-size: 14px; }
 .island-slot-mark small { font-size: 11px; color: #5b7377; }
 
-/* 总览地图：整图 contain，热区按图上标签对齐 */
+/* 总览地图：铺满画布，多出来的边裁掉，热区仍按整图百分比 */
 .island-map {
   position: absolute;
   inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  overflow: hidden;
   background: #4f9eb0;
 }
 
 .island-map-board {
-  position: relative;
-  flex: 0 0 auto;
+  position: absolute;
+  left: 0;
+  top: 0;
   line-height: 0;
 }
 

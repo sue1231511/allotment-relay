@@ -29,7 +29,8 @@ export function renderMap(root, { onOpen }) {
   `;
   const bar = document.getElementById("island-actionbar");
   if (bar) {
-    bar.innerHTML = `<p class="island-fine" style="grid-column:1/-1;margin:4px 2px 0">点图上的份地进院子，再点土地。海边、小屋、酒吧、剧场、小馆、潮生会、广场也能进。集市、工坊、崖、听潮亭、连理所、井下先去围观或上手页。</p>`;
+    bar.innerHTML = "";
+    bar.hidden = true;
   }
   const map = root.querySelector(".island-map");
   layoutMapBoard(map);
@@ -68,11 +69,16 @@ function layoutMapBoard(map) {
     const cw = map.clientWidth;
     const ch = map.clientHeight;
     if (!cw || !ch) return;
-    const s = Math.min(cw / iw, ch / ih);
-    board.style.width = `${Math.round(iw * s)}px`;
-    board.style.height = `${Math.round(ih * s)}px`;
+    const s = cw / iw;
+    const w = Math.round(iw * s);
+    const h = Math.round(ih * s);
+    board.style.width = `${w}px`;
+    board.style.height = `${h}px`;
+    board.style.left = "0px";
+    board.style.top = `${Math.round((ch - h) / 2)}px`;
   };
   apply();
+  requestAnimationFrame(apply);
   img.addEventListener("load", apply);
   if (!map._laid) {
     map._laid = true;

@@ -33,6 +33,9 @@ function showPlay() {
     window.__islandBoot.showPlay();
     return;
   }
+  document.body.classList.add("is-playing");
+  const root = document.getElementById("island-root");
+  if (root) root.classList.add("is-playing");
   document.getElementById("island-gate").classList.add("island-hidden");
   const stage = document.getElementById("island-stage");
   stage.classList.remove("island-hidden");
@@ -45,6 +48,9 @@ function showGate() {
     window.__islandBoot.showGate();
     return;
   }
+  document.body.classList.remove("is-playing");
+  const root = document.getElementById("island-root");
+  if (root) root.classList.remove("is-playing");
   document.getElementById("island-gate").classList.remove("island-hidden");
   document.getElementById("island-stage").hidden = true;
   document.getElementById("island-dock").hidden = true;
@@ -69,6 +75,8 @@ async function enterScene(name) {
     toast("地图画布还没准备好。");
     return;
   }
+  const bar = document.getElementById("island-actionbar");
+  if (bar && name !== "map") bar.hidden = false;
   try {
     if (name === "home") {
       stopGrowTick();

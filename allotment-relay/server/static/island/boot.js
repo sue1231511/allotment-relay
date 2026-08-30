@@ -28,6 +28,9 @@
     var gate = document.getElementById("island-gate");
     var stage = document.getElementById("island-stage");
     var dock = document.getElementById("island-dock");
+    var root = document.getElementById("island-root");
+    document.body.classList.remove("is-playing");
+    if (root) root.classList.remove("is-playing");
     if (gate) gate.classList.remove("island-hidden");
     if (stage) {
       stage.classList.add("island-hidden");
@@ -40,6 +43,9 @@
     var gate = document.getElementById("island-gate");
     var stage = document.getElementById("island-stage");
     var dock = document.getElementById("island-dock");
+    var root = document.getElementById("island-root");
+    document.body.classList.add("is-playing");
+    if (root) root.classList.add("is-playing");
     if (gate) gate.classList.add("island-hidden");
     if (stage) {
       stage.classList.remove("island-hidden");
