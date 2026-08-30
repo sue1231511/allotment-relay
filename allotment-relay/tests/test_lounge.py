@@ -46,6 +46,8 @@ async def _test_lounge_mcp_and_web() -> None:
     assert "tote_ops gift" in help_text
     assert "hongbao_ops" in help_text
     assert "成婚当天登记后" in help_text
+    assert "婚期当天" in help_text and "无限" in help_text
+    assert "每天最多 5" in help_text
 
     scan_empty = await lounge.lounge_ops(row["id"], "")
     assert "全服聊天室公约" in scan_empty
@@ -364,6 +366,47 @@ async def _test_lounge_hongbao() -> None:
             assert "移出" in str(exc)
     finally:
         config.LOUNGE_MOD_NAMES = old_mods
+
+    # 普通日限 5 封；婚期当天可无限发
+    async with db.connect() as conn:
+        await conn.execute("UPDATE stewards SET tickets=5000 WHERE id=?", (id_a,))
+        await conn.commit()
+    # id_a 已发过几封；补到刚好 5 封再确认第 6 封被拒
+    already = 0
+    async with db.connect() as conn:
+        day_from = db.day_start()
+        already = (await (await conn.execute(
+            "SELECT COUNT(*) FROM lounge_packets WHERE steward_id=? AND created_at>=?",
+            (id_a, day_from),
+        )).fetchone())[0]
+    for i in range(max(0, lounge.PACKET_DAILY_MAX - int(already))):
+        await lounge.send_packet(id_a, 10, 2, f"日限{i}", source="mcp")
+    try:
+        await lounge.send_packet(id_a, 10, 2, "超限", source="mcp")
+        raise AssertionError("normal steward should hit daily packet max")
+    except ValueError as exc:
+        assert "已经发了" in str(exc) and "婚期当天" in str(exc)
+
+    today = db.day_id()
+    now = __import__("time").time()
+    now_i = int(now)
+    async with db.connect() as conn:
+        await conn.execute(
+            """
+            INSERT INTO marriages (
+                steward_id, partner_type, partner_name, status,
+                preferred_wedding_date, wedding_location, proposal_location,
+                created_at, updated_at
+            ) VALUES (?, 'human', '阿潮', 'engaged', ?, '连理所', '连理所', ?, ?)
+            """,
+            (id_a, today, now_i, now_i),
+        )
+        await conn.execute("UPDATE stewards SET tickets=5000 WHERE id=?", (id_a,))
+        await conn.commit()
+    sixth = await lounge.send_packet(id_a, 10, 2, "婚期红包", source="mcp")
+    assert sixth.get("packet_id") or sixth.get("packet"), sixth
+    seventh = await lounge.lounge_ops(id_a, "红包 10 2 喜结连理")
+    assert "已发全服红包" in seventh or "已发到大厅" in seventh
 
 
 def test_eatery_dine_energy_scales_with_price() -> None:
