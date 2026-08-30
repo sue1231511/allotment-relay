@@ -668,6 +668,7 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
+    assert "island-bag-frame1" in html
     assert "/static/island/boot.js" in html
     assert 'id="island-enter"' in html
     assert "novalidate" in html
@@ -846,8 +847,22 @@ def test_island_page_is_modular() -> None:
     bag_js = (ROOT / "server/static/island/ui/bag.js").read_text(encoding="utf-8")
     assert "data-eat" in bag_js
     assert "data-vend" in bag_js
-    assert "左边吃，右边卖" in bag_js
+    assert "bag-frame.png" in bag_js or "bag-frame.png" in css
+    assert "island-bag-grid" in bag_js
+    assert "data-page" in bag_js
+    assert "const PAGE = 20" in bag_js
+    assert "左边吃，右边卖" not in bag_js
+    assert "island-item" not in bag_js
     assert "data-vend" in bag_js
+    bag_frame = ROOT / "server/static/island/assets/bag-frame.png"
+    assert bag_frame.exists()
+    try:
+        from PIL import Image
+        frame = Image.open(bag_frame)
+        assert frame.size == (941, 1672)
+        assert frame.mode == "RGBA"
+    except ImportError:
+        pass
     assert "交岸税" not in app
     assert "洗碗" not in app
     assert "只铺图和地名" in (ROOT / "server/static/island/scenes/place.js").read_text(encoding="utf-8")
@@ -1000,6 +1015,9 @@ def test_island_page_is_modular() -> None:
     assert "island-scene-tap" in css
     assert ".island-shop.is-peek" in css
     assert "island-item-acts" in css
+    assert "island-bag-grid" in css
+    assert "bag-frame.png" in css
+    assert ".island-sheet.is-bag" in css
     assert "object-position: center 38%" in css
     assert "/play?go=star" not in app
     assert (ROOT / "server/static/island/assets/plot.png").exists()
