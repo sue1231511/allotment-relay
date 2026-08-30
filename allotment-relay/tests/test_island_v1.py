@@ -464,10 +464,16 @@ def test_island_page_is_modular() -> None:
     assert "data-href" in map_js
     assert '"/workshop"' in map_js
     assert '"/quarry"' in map_js
-    assert '"/market"' in map_js
-    assert '"/ting"' in map_js
-    assert '"/lianli"' in map_js
+    assert 'go: "market"' in map_js
+    assert 'go: "ting"' in map_js
+    assert 'go: "lianli"' in map_js
+    assert 'go: "eatery"' in map_js
+    assert 'go: "hui"' in map_js
+    assert '"/market"' not in map_js
+    assert '"/ting"' not in map_js
+    assert '"/lianli"' not in map_js
     assert '"/undertide"' in map_js
+    assert "岸畔小馆" in map_js
     assert "972" in map_js
     assert "1619" in map_js
     map_png = ROOT / "server/static/island/assets/scenes/island-map.png"
@@ -588,6 +594,22 @@ def test_island_page_is_modular() -> None:
     assert "插图位" in (ROOT / "server/static/island/ui/art.js").read_text(encoding="utf-8")
     assert "scenes/island-map.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
     assert "scenes/yards.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
+    assert "scenes/eatery.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
+    assert "scenes/hui.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
+    assert "scenes/market.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
+    assert "scenes/ting.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
+    assert "scenes/lianli.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
+    try:
+        from PIL import Image
+        for place in ("eatery", "hui", "market", "ting", "lianli"):
+            pic = ROOT / f"server/static/island/assets/scenes/{place}.png"
+            assert pic.exists(), place
+            assert Image.open(pic).size == (941, 1672)
+    except ImportError:
+        pass
+    assert 'id: "market"' in app
+    assert 'id: "ting"' in app
+    assert 'id: "lianli"' in app
     assert (ROOT / "server/static/island/ui/plant-panel.js").exists()
     assert (ROOT / "server/static/island/ui/crops.js").exists()
     assert "island-crop-fallback" in (ROOT / "server/static/island/ui/crops.js").read_text(encoding="utf-8")

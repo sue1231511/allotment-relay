@@ -10,11 +10,11 @@ const HOTS = [
   { go: "plaza", cls: "is-plaza", name: "广场", left: 36, top: 40, w: 28, h: 16 },
   { go: "theater", cls: "is-theater", name: "剧场", left: 70, top: 40, w: 28, h: 14 },
   { go: "bar", cls: "is-bar", name: "酒吧", left: 5, top: 50, w: 24, h: 14 },
-  { go: "eatery", cls: "is-eatery", name: "小馆", left: 70, top: 54, w: 28, h: 14 },
-  { href: "/market", cls: "is-market", name: "集市", left: 8, top: 62, w: 24, h: 12 },
-  { href: "/ting", cls: "is-ting", name: "听潮亭", left: 34, top: 66, w: 26, h: 12 },
+  { go: "eatery", cls: "is-eatery", name: "岸畔小馆", left: 70, top: 54, w: 28, h: 14 },
+  { go: "market", cls: "is-market", name: "集市", left: 8, top: 62, w: 24, h: 12 },
+  { go: "ting", cls: "is-ting", name: "听潮亭", left: 34, top: 66, w: 26, h: 12 },
   { go: "hui", cls: "is-hui", name: "潮生会", left: 70, top: 68, w: 26, h: 12 },
-  { href: "/lianli", cls: "is-lianli", name: "连理所", left: 16, top: 82, w: 26, h: 12 },
+  { go: "lianli", cls: "is-lianli", name: "连理所", left: 16, top: 82, w: 26, h: 12 },
   { href: "/undertide", cls: "is-well", name: "井下入口", left: 44, top: 82, w: 26, h: 14 },
 ];
 

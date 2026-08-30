@@ -14,8 +14,11 @@
 | `scenes/hut.png` | 岸畔小屋 | 1080×1920 |
 | `scenes/bar.png` | 潮汐酒吧（已就位） | 1080×1920 |
 | `scenes/theater.png` | 潮汐剧场（已就位） | 1080×1920 |
-| `scenes/eatery.png` | 岸畔小馆 | 1080×1920 |
-| `scenes/hui.png` | 潮生会 | 1080×1920 |
+| `scenes/eatery.png` | 岸畔小馆（已就位） | 941×1672 |
+| `scenes/hui.png` | 潮生会（已就位） | 941×1672 |
+| `scenes/market.png` | 集市（已就位） | 941×1672 |
+| `scenes/ting.png` | 听潮亭（已就位） | 941×1672 |
+| `scenes/lianli.png` | 连理所（已就位） | 941×1672 |
 | `plot.png` | 份地土地（已就位；和草地拼装，一页最多 9 块） | 512×512 |
 | `grass.png` | 份地草地（已就位；空位垫草） | 512×512 |
 | `chip-back.png` | 进地点后左上角「返回地图」（原图透明底，未另扣） | 2000×667 |
