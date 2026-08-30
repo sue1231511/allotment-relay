@@ -801,6 +801,8 @@ def test_island_page_is_modular() -> None:
     assert "api.eat" in app
     assert "api.vend" in app
     assert "keepShop" in app
+    assert "shopShelf" in app
+    assert "workshopShelf" in app
     assert "showVendSheet" in app
     bag_js = (ROOT / "server/static/island/ui/bag.js").read_text(encoding="utf-8")
     assert "data-eat" in bag_js
@@ -906,6 +908,8 @@ def test_island_page_is_modular() -> None:
     shop_js = (ROOT / "server/static/island/scenes/shop.js").read_text(encoding="utf-8")
     assert "island-shop-shelf" in shop_js
     assert "island-shop-meta" in shop_js
+    assert "is-peek" in shop_js
+    assert "点一下看货架" in shop_js
     assert "island-shop-card" not in shop_js
     assert "data-sku" in shop_js
     assert "去上手页" not in shop_js
@@ -923,6 +927,8 @@ def test_island_page_is_modular() -> None:
     assert "keepWorkshop" in app
     workshop_js = (ROOT / "server/static/island/scenes/workshop.js").read_text(encoding="utf-8")
     assert "island-workshop" in workshop_js
+    assert "is-peek" in workshop_js
+    assert "点一下看砧上" in workshop_js
     assert "data-act" in workshop_js
     assert "去上手页" not in workshop_js
     assert "disabled" not in workshop_js
@@ -943,6 +949,8 @@ def test_island_page_is_modular() -> None:
     assert "941 / 1672" in css
     assert ".island-shop .island-slot" in css
     assert "island-shop-meta" in css
+    assert "island-scene-tap" in css
+    assert ".island-shop.is-peek" in css
     assert "island-item-acts" in css
     assert "object-position: center 38%" in css
     assert "/play?go=star" not in app

@@ -1,21 +1,43 @@
-import { sceneArt } from "../ui/art.js";
+import { layoutCoverBoard, sceneArt } from "../ui/art.js";
 import { esc } from "../ui/modal.js";
 import { state } from "../store.js";
 
-export function renderWorkshop(root, { onAct, onSwitchTab, listTop = null } = {}) {
+export function renderWorkshop(root, { onAct, onSwitchTab, onOpenShelf, onCloseShelf, listTop = null } = {}) {
   const shop = state.workshop || {};
   const tabs = shop.tabs || [];
   const tab = state.workshopTab || (tabs[0] && tabs[0].key) || "anvil";
+  const peek = !state.workshopShelf;
   const existing = root.querySelector(".island-workshop");
-  if (existing) {
-    paintChrome(existing, shop, tabs, tab, onSwitchTab);
-    paintList(existing, shop, tab, onAct, listTop);
+  if (existing && existing.classList.contains("is-peek") === peek) {
+    if (peek) {
+      bindPeek(existing, onOpenShelf);
+    } else {
+      paintChrome(existing, shop, tabs, tab, onSwitchTab);
+      paintList(existing, shop, tab, onAct, listTop);
+      bindFold(existing, onCloseShelf);
+    }
     hideActionBar();
+    return;
+  }
+  if (peek) {
+    root.innerHTML = `
+      <div class="island-shop island-workshop is-peek">
+        <div class="island-shop-board">
+          ${sceneArt("workshop")}
+          <button type="button" class="island-scene-tap">点一下看砧上</button>
+        </div>
+      </div>
+    `;
+    hideActionBar();
+    const wrap = root.querySelector(".island-workshop");
+    layoutCoverBoard(wrap, ".island-shop-board", 941, 1672);
+    bindPeek(wrap, onOpenShelf);
     return;
   }
   root.innerHTML = `
     <div class="island-shop island-workshop">
       ${sceneArt("workshop")}
+      <button type="button" class="island-scene-fold" aria-label="收起列表"></button>
       <div class="island-shop-shelf">
         <div class="island-shop-meta">
           <b>岸工坊</b>
@@ -31,6 +53,21 @@ export function renderWorkshop(root, { onAct, onSwitchTab, listTop = null } = {}
   const wrap = root.querySelector(".island-workshop");
   paintChrome(wrap, shop, tabs, tab, onSwitchTab);
   paintList(wrap, shop, tab, onAct, listTop == null ? 0 : listTop);
+  bindFold(wrap, onCloseShelf);
+}
+
+function bindPeek(wrap, onOpenShelf) {
+  const board = wrap.querySelector(".island-shop-board");
+  if (!board || board._bound) return;
+  board._bound = true;
+  board.addEventListener("click", () => onOpenShelf && onOpenShelf());
+}
+
+function bindFold(wrap, onCloseShelf) {
+  const fold = wrap.querySelector(".island-scene-fold");
+  if (!fold || fold._bound) return;
+  fold._bound = true;
+  fold.addEventListener("click", () => onCloseShelf && onCloseShelf());
 }
 
 function hideActionBar() {

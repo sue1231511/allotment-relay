@@ -965,6 +965,64 @@ body.island-app.is-playing.is-yards .island-actionbar {
   overflow: hidden;
 }
 
+/* 进店先进店景，点一下才出货架。 */
+.island-shop.is-peek {
+  display: block;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.island-shop-board {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 941 / 1672;
+  line-height: 0;
+  cursor: pointer;
+}
+
+.island-shop.is-peek .island-shop-board .island-slot {
+  position: absolute;
+  inset: 0;
+  flex: none;
+  min-height: 0;
+  z-index: 0;
+}
+
+.island-shop.is-peek .island-shop-board .island-slot-pic {
+  object-fit: fill;
+  object-position: center;
+}
+
+.island-scene-tap {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 14px;
+  z-index: 2;
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 16px;
+  background: rgba(255, 253, 248, .92);
+  color: inherit;
+  font: inherit;
+  font-size: 16px;
+  box-shadow: 0 8px 20px rgba(42, 58, 60, .12);
+}
+
+.island-scene-fold {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 42%;
+  z-index: 1;
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
 /* 店景只占上半，不要铺到货架上把分类标签盖住。 */
 .island-shop .island-slot {
   position: relative;
