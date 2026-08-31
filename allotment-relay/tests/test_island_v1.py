@@ -1239,7 +1239,7 @@ def test_island_page_is_modular() -> None:
     assert "/static/island/app.js" in html
     assert "island-mapbgm1" in app
     assert html.count("island.css?v=island-shorescenes1") == 1
-    assert html.count("app.js?v=island-shorescenes1") == 1
+    assert html.count("app.js?v=island-shorepick1") == 1
     assert html.count("lounge-embed.css?v=island-portlounge1") == 1
     assert "lounge.js?v=lounge-board-compose6" in html
     assert "island-time.js" in html
@@ -2043,6 +2043,12 @@ def test_island_page_is_modular() -> None:
     assert "boardW: 1086" in shore_js
     assert "boardH: 1448" in shore_js
     assert "island-shop-sku" in shore_js
+    assert "data-pick=" in shore_js
+    assert 'querySelectorAll("[data-pick]")' in shore_js
+    sku_line = [ln for ln in shore_js.splitlines() if "island-shop-sku" in ln][0]
+    assert "data-go" not in sku_line
+    pick_fn = shore_js.split('querySelectorAll("[data-pick]")')[1].split("export function")[0]
+    assert "stopPropagation" in pick_fn
     assert "闲聊" in shore_js
     assert "看码头" in shore_js
     assert "去见韶年" in shore_js
@@ -2060,12 +2066,15 @@ def test_island_page_is_modular() -> None:
     assert "playLounge" in app
     assert "portChatOpen" in app
     assert "portPeek" in app
-    assert 'shore.js?v=island-shorescenes1' in app
+    assert 'shore.js?v=island-shorepick1' in app
     paint_port = app.split("function paintPort")[1].split("async function openBeach")[0]
     assert paint_port.index("state.portChatOpen") < paint_port.index("state.portShelf")
     assert paint_port.index("state.portShelf") < paint_port.index("renderPortHub")
     assert "openPortChat" in app
     assert "closePortChat" in app
+    assert "function isIslandScene" in app
+    scene_click = app.split('getElementById("island-scene")')[1].split("const ribbon")[0]
+    assert "isIslandScene" in scene_click
     assert "api.say" not in app
     assert "renderChat" not in app
     store_src = (ROOT / "server/static/island/store.js").read_text(encoding="utf-8")
