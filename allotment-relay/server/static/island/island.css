@@ -991,7 +991,7 @@ body.island-app.is-playing.is-yards .island-actionbar {
   overflow: hidden;
 }
 
-/* 列表和灯塔选项一个样子，底下深色金边框，一条一条往下排，不左右两列。进店先进店景，点一下只出列表，店景不换裁切。 */
+/* 列表和灯塔选项一个样子，底下深色金边框。进店先进店景，点一下只出列表，店景不换裁切。 */
 .island-shop.is-peek {
   overflow: hidden;
 }
@@ -1155,7 +1155,7 @@ body.island-app.is-playing.is-yards .island-actionbar {
   overflow: auto;
   padding: 0;
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 6px;
   align-content: start;
 }
@@ -1897,7 +1897,7 @@ body.island-app.is-bag-open .island-float-chip {
 
 .island-vn-choices {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 6px;
   overflow-y: auto;
   min-height: 0;
