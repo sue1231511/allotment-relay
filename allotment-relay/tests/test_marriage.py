@@ -1097,6 +1097,67 @@ async def _wedding_day_pages() -> None:
     assert quiet_api["weddings"] == []
 
 
+async def _luxury_sinks() -> None:
+    from server import marriage
+
+    assert marriage.FEAST_TIERS["潮宗席"]["price"] == 68888
+    assert marriage.FEAST_TIERS["潮宗席"]["guests"] == 24
+    assert marriage.GOLD_REFRESH_FIVE == 58_888
+
+    tmp = Path(tempfile.mkdtemp(prefix="mar-lux-"))
+    db = await _boot(tmp)
+    host = await _enroll(db, "whale@example.com", "鲸主")
+    guest = await _enroll(db, "gift@example.com", "贺人")
+    now = db.now()
+    day = db.day_id()
+    async with db.connect() as conn:
+        hid = (await (await conn.execute(
+            "SELECT id FROM stewards WHERE key_id=?", (host,)
+        )).fetchone())[0]
+        gid = (await (await conn.execute(
+            "SELECT id FROM stewards WHERE key_id=?", (guest,)
+        )).fetchone())[0]
+        await conn.execute(
+            """
+            INSERT INTO marriages (
+                steward_id, partner_name, status, preferred_wedding_date,
+                feast_tier, feast_ready, gold_three, public_slug,
+                created_at, updated_at
+            ) VALUES (?, '人类', 'engaged', ?, '岸席', 1, 0, 'lux-demo', ?, ?)
+            """,
+            (hid, day, now, now),
+        )
+        await conn.execute("UPDATE stewards SET tickets=200000 WHERE id=?", (gid,))
+        await conn.commit()
+
+    gift = await marriage.marriage_ops(guest, "贺礼 鲸主 500")
+    assert "500" in gift and "婚书" in gift, gift
+    async with db.connect() as conn:
+        pocket = (await (await conn.execute(
+            "SELECT tickets FROM stewards WHERE id=?", (gid,)
+        )).fetchone())[0]
+    assert pocket == 200000 - 500, pocket
+
+    async with db.connect() as conn:
+        await conn.execute(
+            "UPDATE marriages SET status='married', gold_three=1, gold_five=1 WHERE steward_id=?",
+            (hid,),
+        )
+        await conn.execute("UPDATE stewards SET tickets=200000 WHERE id=?", (hid,))
+        await conn.commit()
+
+    ann = await marriage.marriage_ops(host, "纪念日 潮宗贺")
+    assert "68888" in ann or "潮宗" in ann, ann
+    try:
+        await marriage.marriage_ops(host, "纪念日 点灯")
+        raise AssertionError("anniversary twice same year")
+    except ValueError as exc:
+        assert "已经办过" in str(exc), exc
+
+    refresh = await marriage.marriage_ops(host, "金饰 焕新 五金")
+    assert "58888" in refresh or "焕新" in refresh, refresh
+
+
 def test_marriage_system() -> None:
     asyncio.run(_full_flow())
     asyncio.run(_betrothal_flow())
@@ -1105,6 +1166,7 @@ def test_marriage_system() -> None:
     asyncio.run(_old_db_migrates_betrothal_confirm())
     asyncio.run(_legacy_auto_seal_not_confirmed())
     asyncio.run(_wedding_day_pages())
+    asyncio.run(_luxury_sinks())
 
 
 if __name__ == "__main__":
