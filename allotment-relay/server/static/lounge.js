@@ -448,32 +448,32 @@ function ensureBoardSheet() {
         <button type="button" class="lounge-sheet-close" data-close-dialog>${closeLabel}</button>
       </header>
       <div class="lounge-sheet-body">
-        <p class="lounge-sheet-note">全服可见，和闲聊分开，不会刷走。每条底下点「回复」，回在墙上大家都能看见。</p>
+        <p class="lounge-sheet-note">全服可见，和闲聊分开，不会刷走。未回复在上、已回复在下。每条底下点「回复」，回在墙上大家都能看见。</p>
         <div class="lounge-board-tabs" role="tablist" aria-label="筛选">
           <button type="button" class="lounge-board-tab is-active" data-board-sheet-filter="all">全部</button>
           <button type="button" class="lounge-board-tab" data-board-sheet-filter="wish">许愿</button>
           <button type="button" class="lounge-board-tab" data-board-sheet-filter="feedback">反馈</button>
         </div>
         <div id="lounge-board-sheet-feed" class="lounge-board-feed lounge-board-sheet-feed"></div>
-        <form id="lounge-board-sheet-form" class="lounge-board-composer lounge-board-sheet-compose">
-          <label class="lounge-board-kind">
-            <span class="sr-only">类型</span>
-            <select id="lounge-board-sheet-kind" aria-label="类型">
-              <option value="wish">许愿玩法</option>
-              <option value="feedback">反馈问题</option>
-            </select>
-          </label>
-          <textarea
-            id="lounge-board-sheet-body"
-            rows="3"
-            maxlength="500"
-            placeholder="写你想加的玩法，或遇到的 bug…"
-            autocomplete="off"
-            required
-          ></textarea>
-          <button type="submit" class="lounge-board-send">贴上墙</button>
-        </form>
       </div>
+      <form id="lounge-board-sheet-form" class="lounge-board-composer lounge-board-sheet-compose">
+        <label class="lounge-board-kind">
+          <span class="sr-only">类型</span>
+          <select id="lounge-board-sheet-kind" aria-label="类型">
+            <option value="wish">许愿玩法</option>
+            <option value="feedback">反馈问题</option>
+          </select>
+        </label>
+        <textarea
+          id="lounge-board-sheet-body"
+          rows="3"
+          maxlength="500"
+          placeholder="写你想加的玩法，或遇到的 bug…"
+          autocomplete="off"
+          required
+        ></textarea>
+        <button type="submit" class="lounge-board-send">贴上墙</button>
+      </form>
     </div>
   `;
   document.body.appendChild(d);
