@@ -1238,8 +1238,8 @@ def test_island_page_is_modular() -> None:
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
     assert "island-mapbgm1" in app
-    assert html.count("island.css?v=island-shorelist1") == 1
-    assert html.count("app.js?v=island-shorelist2") == 1
+    assert html.count("island.css?v=island-shorescenes1") == 1
+    assert html.count("app.js?v=island-shorescenes1") == 1
     assert html.count("lounge-embed.css?v=island-portlounge1") == 1
     assert "lounge.js?v=lounge-board-compose6" in html
     assert "island-time.js" in html
@@ -1642,6 +1642,8 @@ def test_island_page_is_modular() -> None:
     assert "scenes/shop.png" in art_md
     assert "scenes/lili.png" in art_md
     assert "scenes/clinic.png" in art_md
+    assert "scenes/beach.png" in art_md
+    assert "scenes/port.png" in art_md
     assert "audio/island.mp3" in art_md
     assert "audio/clinic.mp3" not in art_md
     assert "chip-bgm-pause.png" in art_md
@@ -1717,6 +1719,8 @@ def test_island_page_is_modular() -> None:
     frame_js = (ROOT / "server/static/island/ui/shop-frame.js").read_text(encoding="utf-8")
     assert "ensureShopFrame" in shop_js
     assert "island-shop-shelf" in frame_js
+    assert "boardW" in frame_js
+    assert "boardH" in frame_js
     assert "不换裁切" in frame_js
     assert "不重载底图" in frame_js
     assert "和灯塔选项一个样子" in css
@@ -1791,6 +1795,7 @@ def test_island_page_is_modular() -> None:
     assert "island-vn-stand" in shaonian_js
     assert "is-half" in shaonian_js
     assert "sprites/shaonian.png" in shaonian_js
+    assert 'sceneArt("beach")' in shaonian_js
     assert "点一下见韶年" in shaonian_js
     assert "点一下看沙滩" not in shaonian_js
     assert "去赶海" in shaonian_js
@@ -1827,7 +1832,7 @@ def test_island_page_is_modular() -> None:
     beach_enter = app.split('name === "beach"')[1].split('name === "plaza"')[0]
     assert "state.beachPeek = true" in beach_enter
     assert "state.beachPeek = false" not in beach_enter
-    assert 'shaonian.js?v=island-shorelist1' in app
+    assert 'shaonian.js?v=island-shorescenes1' in app
     assert "startIslandBgm" in app
     assert "paintBgmChip" in app
     assert "bindBgmChip" in app
@@ -2031,6 +2036,12 @@ def test_island_page_is_modular() -> None:
     assert "renderBeachHub" in shore_js
     assert "island-port-hub-list" in shore_js
     assert "island-beach-hub-list" in shore_js
+    assert 'sceneId: "port"' in shore_js
+    assert 'sceneId: "beach"' in shore_js
+    assert "boardW: 941" in shore_js
+    assert "boardH: 1672" in shore_js
+    assert "boardW: 1086" in shore_js
+    assert "boardH: 1448" in shore_js
     assert "island-shop-sku" in shore_js
     assert "闲聊" in shore_js
     assert "看码头" in shore_js
@@ -2049,7 +2060,7 @@ def test_island_page_is_modular() -> None:
     assert "playLounge" in app
     assert "portChatOpen" in app
     assert "portPeek" in app
-    assert 'shore.js?v=island-shorelist1' in app
+    assert 'shore.js?v=island-shorescenes1' in app
     paint_port = app.split("function paintPort")[1].split("async function openBeach")[0]
     assert paint_port.index("state.portChatOpen") < paint_port.index("state.portShelf")
     assert paint_port.index("state.portShelf") < paint_port.index("renderPortHub")
@@ -2113,6 +2124,11 @@ def test_island_page_is_modular() -> None:
     assert "点一下才出人小橘" in art_md
     assert "点一下才出人桥桥" in art_md
     assert "去见韶年才出人韶年" in art_md
+    assert "scenes/beach.png" in art_md
+    assert "scenes/port.png" in art_md
+    assert "点海边就出列表" in art_md
+    assert "点港口就出列表" in art_md
+    assert "先进沙滩景，点一下看沙滩" not in art_md
     assert "全身的二分之一" in art_md
     assert ".island-vn-talk" in css
     assert ".island-vn-box" in css
@@ -2149,6 +2165,8 @@ def test_island_page_is_modular() -> None:
     assert 'notice: "潮汐公告"' in app
     assert "state.backTo" in app
     assert (ROOT / "server/static/island/assets/scenes/shore.png").exists()
+    assert (ROOT / "server/static/island/assets/scenes/beach.png").exists()
+    assert (ROOT / "server/static/island/assets/scenes/port.png").exists()
     assert (ROOT / "server/static/island/assets/scenes/bar.png").exists()
     assert (ROOT / "server/static/island/assets/scenes/plaza.png").exists()
     assert (ROOT / "server/static/island/assets/scenes/lili.png").exists()
@@ -2164,6 +2182,9 @@ def test_island_page_is_modular() -> None:
     assert 'file: "theater"' not in art_js
     assert 'lili: { label: "栗栗流动摊", size: "1086×1448" }' in art_js
     assert 'clinic: { label: "乔乔诊所", size: "941×1672" }' in art_js
+    assert 'port: { label: "码头", size: "941×1672" }' in art_js
+    assert 'beach: { label: "沙滩", size: "1086×1448" }' in art_js
+    assert 'file: "shore"' not in art_js
     assert 'file: "plaza"' not in art_js
     art_md = (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
     assert "暂用院景" not in art_md
@@ -2174,6 +2195,10 @@ def test_island_page_is_modular() -> None:
             assert Image.open(pic).size == (941, 1672), place
         lili_pic = ROOT / "server/static/island/assets/scenes/lili.png"
         assert Image.open(lili_pic).size == (1086, 1448)
+        beach_pic = ROOT / "server/static/island/assets/scenes/beach.png"
+        port_pic = ROOT / "server/static/island/assets/scenes/port.png"
+        assert Image.open(beach_pic).size == (1086, 1448)
+        assert Image.open(port_pic).size == (941, 1672)
     except ImportError:
         pass
     assert "海边" in (ROOT / "server/static/island/map.js").read_text(encoding="utf-8")
@@ -2182,6 +2207,8 @@ def test_island_page_is_modular() -> None:
     assert "is-theater" in css
     assert "island-plaza-board" in css
     assert ".island-lili .island-shop-board" in css
+    assert ".island-beach-hub .island-shop-board" in css
+    assert ".island-port-hub .island-shop-board" in css
     assert "1086 / 1448" in css
     assert "941 / 1672" in css
     assert ".island-shop:not(.is-peek) .island-scene-tap" in css
