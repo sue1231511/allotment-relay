@@ -1131,6 +1131,21 @@ def test_bar_ops_help() -> None:
     assert "set_mood" not in text or "没有" in text
 
 
+async def test_bar_ops_chat_not_coroutine_error() -> None:
+    """bar_ops chat 曾因 await fetchone()[0] 括号错位稳定炸 'coroutine' object is not subscriptable。"""
+    tmp = Path(tempfile.mkdtemp(prefix="consist-bar-chat-"))
+    db = await _boot(tmp)
+    from server import bar
+
+    kid, _sid = await _enroll(db, "chatter@example.com", "唠客")
+    msg = await bar.bar_ops(kid, "chat")
+    assert "coroutine" not in msg.lower(), msg
+    assert "荔栀" in msg or "唠嗑" in msg, msg
+    again = await bar.bar_ops(kid, "chat 打工")
+    assert "coroutine" not in again.lower(), again
+    assert "荔栀" in again or "唠嗑" in again, again
+
+
 async def test_scrump_victim_chronicle() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="consist-scrump-"))
     db = await _boot(tmp)
@@ -1227,6 +1242,7 @@ def main() -> None:
     test_patron_pages_share_steward_key()
     test_promo_place_pages()
     test_bar_ops_help()
+    asyncio.run(test_bar_ops_chat_not_coroutine_error())
     asyncio.run(test_scrump_victim_chronicle())
     asyncio.run(test_cheer_targets_isolated())
     asyncio.run(test_kitchen_vend_chinese_and_incident_hint())

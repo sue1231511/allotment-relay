@@ -43,6 +43,7 @@ UPKEEP_HELP = f"""visit_ops 潮生会 维（整句写进 command）：
 {UPKEEP_NAME}按产业每天收，东八区换班后第一次有人动手时自动划入潮汐基金。不是岸税（岸税仍周一划）。
 岸税看口袋现票；岸维看份地/果园/温室/畜栏/小馆/小屋/渔排/盐田/矿坑/船。
 起步 3 块份地、3 树位、棚屋 Lv1、第 1 口盐田、第 1 个矿坑免征。产业单价至少 10 票（超出起步的份地 10/18/28、果园 20/32/48、温室 30/48/70，畜栏 10+在栏 10，开馆 12，小屋/船 10/15/20，渔排/盐田/矿坑 10）。份地/果园每 3 块加一档，温室每 2 座加一档。今日新号免征到明天。
+今日单按开征那一刻的产业记死；开征后再升屋/进牲口/扩产，分项会按此刻产业重算，但今日应/已划不改，差价明日重算、不补不退。面板上「今日应」对开征单，「分项」对此刻产业——两者合计可以不一致，不是漏减免。
 欠{UPKEEP_NAME}时不能{EXPAND_LOCK}；开着的小馆会暂停堂食。
 例子：潮生会 维 · 潮生会 维 交 · 潮生会 维 交 50
 容易搞混：税=强制岸税（富人按口袋交，周一划）。维=产业维修费（产业越大越交，每天划）。
@@ -525,6 +526,10 @@ def _item_line(it: dict[str, Any]) -> str:
     return f"  {it['label']} ×{it['qty']} · {it['rate']}票 = {it['fee']}"
 
 
+def _items_total(items: list[dict[str, Any]]) -> int:
+    return sum(int(it.get("fee") or 0) for it in items)
+
+
 def _status_text(snap: dict[str, Any]) -> str:
     mine = snap.get("mine") or {}
     lines = [
@@ -542,21 +547,34 @@ def _status_text(snap: dict[str, Any]) -> str:
     if mine:
         lines.append("")
         items = mine.get("items") or []
+        item_sum = _items_total(items)
+        due_now = int(mine.get("due_now") or 0)
+        assessed = int(mine.get("assessed") or 0)
+        paid = int(mine.get("paid") or 0)
         if mine.get("first_day") or mine.get("first_week"):
             lines.append(
-                f"你今日产业应约 {mine['due_now']} 票 · 今日新号，免征到明天"
+                f"你今日产业应约 {due_now} 票 · 今日新号，免征到明天"
             )
-        elif mine["assessed"] or mine["paid"] or mine["arrears"] or mine["due_now"]:
+        elif assessed or paid or mine["arrears"] or due_now:
             lines.append(
-                f"你今日应 {mine['assessed']} · 已划 {mine['paid']}"
+                f"你今日应 {assessed} · 已划 {paid}"
                 + (f" · 欠 {mine['arrears']}" if mine["arrears"] else " · 已结清")
             )
+            # 开征后产业变了：分项按此刻重算，今日单仍按开征时记。
+            if assessed and due_now != assessed:
+                lines.append(
+                    f"此刻产业应约 {due_now}（开征后产业变了；今日单按开征时 {assessed} 记，"
+                    f"差价明日重算，不补不退）"
+                )
         else:
             lines.append("你现在只有起步产业，不用交。扩地、开馆、盖棚之后才会记。")
         if items:
-            lines.append("分项：")
+            if assessed and due_now != assessed:
+                lines.append(f"此刻分项（合计 {item_sum}，对「此刻产业」；不是漏减免）：")
+            else:
+                lines.append("分项：")
             lines.extend(_item_line(it) for it in items)
-        elif mine["due_now"] == 0:
+        elif due_now == 0:
             lines.append("分项：无（起步份地/果园、棚屋 Lv1、第一口盐田、第一个矿坑免）")
         if mine["arrears"]:
             extra = "；你的小馆已暂停堂食" if mine.get("shop_paused") else ""

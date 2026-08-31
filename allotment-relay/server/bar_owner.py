@@ -207,28 +207,28 @@ async def steward_bar_context(conn: aiosqlite.Connection, steward_id: int, day: 
             "SELECT COALESCE(SUM(cost),0) FROM bar_drink_orders "
             "WHERE patron_id=? AND created_at>=? AND created_at<?",
             (steward_id, start, end),
-        )).fetchone()[0])
+        )).fetchone())[0]
     )
     spend_song = int(
         (await (await conn.execute(
             "SELECT COUNT(*) FROM chronicle WHERE actor_id=? AND action='bar_song' "
             "AND created_at>=? AND created_at<?",
             (steward_id, start, end),
-        )).fetchone()[0]) * SONG_REQUEST_COST
-    )
+        )).fetchone())[0]
+    ) * SONG_REQUEST_COST
     spend_human = int(
         (await (await conn.execute(
             "SELECT COALESCE(SUM(cost),0) FROM bar_orders "
             "WHERE patron_id=? AND created_at>=? AND created_at<?",
             (steward_id, start, end),
-        )).fetchone()[0])
+        )).fetchone())[0]
     )
     tipped_out = int(
         (await (await conn.execute(
             "SELECT COALESCE(SUM(amount),0) FROM bar_tips "
             "WHERE from_id=? AND day=?",
             (steward_id, day),
-        )).fetchone()[0])
+        )).fetchone())[0]
     )
     shifts = await (await conn.execute(
         "SELECT job, period FROM bar_shifts WHERE steward_id=? AND day=?",
