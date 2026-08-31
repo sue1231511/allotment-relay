@@ -46,7 +46,7 @@ UPKEEP_HELP = f"""visit_ops 潮生会 维（整句写进 command）：
 欠{UPKEEP_NAME}时不能{EXPAND_LOCK}；开着的小馆会暂停堂食。
 例子：潮生会 维 · 潮生会 维 交 · 潮生会 维 交 50
 容易搞混：税=强制岸税（富人按口袋交，周一划）。维=产业维修费（产业越大越交，每天划）。
-mascot upkeep=吉祥物花 4 票主动喂养。plot_ops repair=处理田间意外。voyage repair=修船。"""
+mascot upkeep=吉祥物花 4 票主动喂养。plot_ops repair=处理田间意外。voyage repair=修船。人类 /island 总览点潮生会，先进店景，点一下才出会厅，能看档、交欠维。"""
 
 
 def human_day_id(ts: int | None = None) -> str:

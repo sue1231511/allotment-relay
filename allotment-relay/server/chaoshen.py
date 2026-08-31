@@ -62,7 +62,7 @@ CHAOSHEN_HELP = f"""visit_ops 潮生会 子命令（整句写进 command）：
   没有入会 / 开会 / 退会。{ORG_NAME}是岛上管事的机构，上岛时已经在册。
   本周目标 / 公仓 / 公物不在这儿：alliance_ops league · alliance_ops donate / larder · plot_ops commons
 例子：潮生会 · 潮生会 问 · 潮生会 税 · 潮生会 税 交 · 潮生会 税 交 50 · 潮生会 维 · 潮生会 维 交 · 潮生会 维 交 50 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 基金 捐 8 · 潮生会 告示
-容易搞混：税=强制岸税（富人按档交，税入基金）。维=产业维修费（产业越大越交，也入基金）。基金 捐 50=自愿捐票（须高于岛均）。mascot upkeep=吉祥物喂养。plot_ops repair=田间意外。周潮天灾=只冲 3 万以上，不是税。公仓捐货走 alliance_ops donate 甘蓝 2。不要写潮生会 补贴。steward_ops guild=每日工分轮值，不是入会；alliance_ops board=周目标贡献榜。没有 tax_ops / upkeep_ops。告示不能贴：那是厅示，不是聊天室。"""
+容易搞混：税=强制岸税（富人按档交，税入基金）。维=产业维修费（产业越大越交，也入基金）。基金 捐 50=自愿捐票（须高于岛均）。mascot upkeep=吉祥物喂养。plot_ops repair=田间意外。周潮天灾=只冲 3 万以上，不是税。公仓捐货走 alliance_ops donate 甘蓝 2。不要写潮生会 补贴。steward_ops guild=每日工分轮值，不是入会；alliance_ops board=周目标贡献榜。没有 tax_ops / upkeep_ops。告示不能贴：那是厅示，不是聊天室。人类 /island 总览点潮生会，先进店景，点一下才出会厅，能问事、交岸税岸维、捐基金、看告示。围观 /hui 只看。"""
 
 _DOOR_LINES = (
     "坐。先报名字。入会？没有这回事。",
@@ -894,5 +894,240 @@ async def public_snapshot() -> dict[str, Any]:
             {"text": r[0], "created_at": r[1]}
             for r in recent
         ],
-        "note": "潮生会管事，不收人。上岛已在册。办事去上手页。",
+        "note": "潮生会管事，不收人。上岛已在册。办事去上手页或手机地图潮生会。",
+    }
+
+
+def _sku(
+    *,
+    sid: str,
+    kind: str,
+    name: str,
+    note: str,
+    price: str,
+    can: bool,
+    emoji: str = "·",
+    detail: str = "",
+    target: str = "",
+) -> dict[str, Any]:
+    return {
+        "id": sid,
+        "kind": kind,
+        "name": name,
+        "emoji": emoji,
+        "note": note,
+        "detail": detail or note,
+        "price": price,
+        "can": can,
+        "target": target or sid,
+    }
+
+
+async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
+    """给 /island 潮生会用。数值仍走 visit_ops 潮生会，这里只摊开能点的。"""
+    from . import tax as tax_mod
+    from . import upkeep as upkeep_mod
+
+    tax_snap = await tax_mod.snapshot(conn, s["id"])
+    upkeep_snap = await upkeep_mod.snapshot(conn, s["id"])
+    fund = await fund_snapshot(conn, s["id"])
+    duty = bar.human_duty_line(s)
+    notices = await (await conn.execute(
+        """
+        SELECT id, tag, body FROM hui_notices
+        WHERE retracted=0
+        ORDER BY created_at DESC LIMIT ?
+        """,
+        (NOTICE_LIST_LIMIT,),
+    )).fetchall()
+    tax_mine = tax_snap.get("mine") or {}
+    upkeep_mine = upkeep_snap.get("mine") or {}
+    tax_owed = int(tax_mine.get("arrears") or 0)
+    upkeep_owed = int(upkeep_mine.get("arrears") or 0)
+    tickets = int(s.get("tickets") or 0)
+    notice_n = len(notices)
+    can_donate = bool(fund.get("can_donate"))
+    max_donate = int(fund.get("max_donate") or 0)
+
+    parts = [duty, _tax_brief(tax_snap).split("· 先")[0].split("· 看档")[0].strip()]
+    parts.append(_upkeep_brief(upkeep_snap).split("· 先")[0].split("· 看档")[0].strip())
+    parts.append(_fund_brief(fund))
+    if tax_owed:
+        spoken = f"欠岸税 {tax_owed}。点岸税交。"
+    elif upkeep_owed:
+        spoken = f"欠岸维 {upkeep_owed}。点岸维交。"
+    else:
+        spoken = "阿簿在。问事、交税交维、捐基金、看厅示。不能入会，也不能贴告示。"
+
+    tax_badge = str(tax_owed) if tax_owed else ""
+    upkeep_badge = str(upkeep_owed) if upkeep_owed else ""
+    tabs = [
+        {"key": "ask", "label": "问事", "badge": ""},
+        {"key": "tax", "label": "岸税", "badge": tax_badge},
+        {"key": "upkeep", "label": "岸维", "badge": upkeep_badge},
+        {"key": "fund", "label": "基金", "badge": ""},
+        {"key": "notices", "label": "告示", "badge": str(notice_n) if notice_n else ""},
+    ]
+
+    ask_items = [
+        _sku(
+            sid="ask",
+            kind="look",
+            name="问事",
+            emoji="📒",
+            note="考勤、岸税、岸维和潮汐基金摘要。不是入会。",
+            price="看",
+            can=True,
+            target="ask",
+        ),
+    ]
+    tax_note = (
+        f"欠 {tax_owed}。口袋 {tickets}。"
+        if tax_owed
+        else (f"{tax_mine.get('band') or '免征'}档 · 周应约 {tax_mine.get('due_now') or 0}" if tax_mine else "看档表。")
+    )
+    tax_items = [
+        _sku(
+            sid="tax-look",
+            kind="look",
+            name="看岸税档",
+            emoji="📄",
+            note=tax_note,
+            price="看",
+            can=True,
+            target="tax",
+        ),
+        _sku(
+            sid="tax-pay",
+            kind="pay",
+            name="交清欠税",
+            emoji="💰",
+            note=f"欠 {tax_owed}。能交多少交多少。" if tax_owed else "这会儿不欠岸税。",
+            detail="欠税时不能买地、买棚、买园、升屋、买船、开坑、升镐。",
+            price="交" if tax_owed else "看",
+            can=bool(tax_owed and tickets > 0),
+            target="tax",
+        ),
+        _sku(
+            sid="tax-part",
+            kind="pay_part",
+            name="交一部分岸税",
+            emoji="✏️",
+            note="自己填票数。不够就先交能交的。",
+            price="填",
+            can=bool(tax_owed and tickets > 0),
+            target="tax",
+        ),
+    ]
+    upkeep_note = (
+        f"欠 {upkeep_owed}。" + ("小馆已停堂。" if upkeep_mine.get("shop_paused") else "")
+        if upkeep_owed
+        else f"日应约 {upkeep_mine.get('due_now') or 0}"
+    )
+    upkeep_items = [
+        _sku(
+            sid="upkeep-look",
+            kind="look",
+            name="看岸维档",
+            emoji="📄",
+            note=upkeep_note,
+            price="看",
+            can=True,
+            target="upkeep",
+        ),
+        _sku(
+            sid="upkeep-pay",
+            kind="pay",
+            name="交清欠维",
+            emoji="🔧",
+            note=f"欠 {upkeep_owed}。产业维修费，每天划。" if upkeep_owed else "这会儿不欠岸维。",
+            detail="欠维修费同样不能扩产；开着的小馆会暂停堂食。不是吉祥物喂养。",
+            price="交" if upkeep_owed else "看",
+            can=bool(upkeep_owed and tickets > 0),
+            target="upkeep",
+        ),
+        _sku(
+            sid="upkeep-part",
+            kind="pay_part",
+            name="交一部分岸维",
+            emoji="✏️",
+            note="自己填票数。",
+            price="填",
+            can=bool(upkeep_owed and tickets > 0),
+            target="upkeep",
+        ),
+    ]
+    fund_items = [
+        _sku(
+            sid="fund-look",
+            kind="look",
+            name="看潮汐基金",
+            emoji="🌊",
+            note=_fund_brief(fund),
+            price="看",
+            can=True,
+            target="fund",
+        ),
+        _sku(
+            sid="fund-donate",
+            kind="donate",
+            name="捐进基金",
+            emoji="🫶",
+            note=(
+                f"口袋须高于岛均。最多还能捐 {max_donate}。"
+                if can_donate
+                else "口袋不高于岛均，或岛上人还不够，捐不了。补贴不用领，周二四六自动发。"
+            ),
+            detail=f"票数自己填，最少 {FUND_MIN_DONATE}。捐了算生活花销，能抵潮锈。",
+            price="捐" if can_donate else "看",
+            can=can_donate,
+            target="fund",
+        ),
+    ]
+    notice_items = [
+        _sku(
+            sid=f"notice-{row[0]}",
+            kind="look",
+            name=f"[{row[1]}] #{row[0]}",
+            emoji="🪧",
+            note=(row[2] or "")[:40],
+            detail=row[2] or "",
+            price="看",
+            can=True,
+            target=f"notice:{row[0]}",
+        )
+        for row in notices
+    ]
+    if not notice_items:
+        notice_items = [
+            _sku(
+                sid="notice-empty",
+                kind="look",
+                name="告示栏",
+                emoji="🪧",
+                note="这会儿没有厅示。岛民不能贴、不能回。短句去聊天室，长帖去听潮亭。",
+                price="看",
+                can=True,
+                target="notice",
+            ),
+        ]
+
+    return {
+        "name": ORG_NAME,
+        "line": spoken,
+        "clerk": CLERK_NAME,
+        "tabs": tabs,
+        "items": {
+            "ask": ask_items,
+            "tax": tax_items,
+            "upkeep": upkeep_items,
+            "fund": fund_items,
+            "notices": notice_items,
+        },
+        "tax_arrears": tax_owed,
+        "upkeep_arrears": upkeep_owed,
+        "fund_min": FUND_MIN_DONATE,
+        "fund_max": max_donate,
+        "tickets": tickets,
+        "min_donate": FUND_MIN_DONATE,
     }

@@ -112,6 +112,10 @@ export const api = {
   marketAct: (kind, target = "", idem) => req("/api/v1/market/act", { method: "POST", body: { kind, target }, idem }),
   ting: () => req("/api/v1/ting"),
   tingAct: (kind, target = "", idem) => req("/api/v1/ting/act", { method: "POST", body: { kind, target }, idem }),
+  hui: () => req("/api/v1/hui"),
+  huiAct: (kind, target = "", idem) => req("/api/v1/hui/act", { method: "POST", body: { kind, target }, idem }),
+  lianli: () => req("/api/v1/lianli"),
+  lianliAct: (kind, target = "", idem) => req("/api/v1/lianli/act", { method: "POST", body: { kind, target }, idem }),
   lighthouse: () => req("/api/v1/lighthouse"),
   lighthouseAct: (kind, target = "", idem) => req("/api/v1/lighthouse/act", { method: "POST", body: { kind, target }, idem }),
 };
