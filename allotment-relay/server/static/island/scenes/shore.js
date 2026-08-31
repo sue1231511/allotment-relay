@@ -41,16 +41,18 @@ function renderPickHub(root, {
   if (tabBar) tabBar.innerHTML = "";
   const list = wrap.querySelector(`#${listId}`);
   if (!list) return;
+  // 货架选项用 data-pick，不能用 data-go。#island-scene 把 data-go 当成进场景，闲聊/看码头/去见韶年会掉回总览。
   list.innerHTML = rows.map((row) => (
-    `<button type="button" class="island-shop-sku" data-go="${esc(row.go)}">
+    `<button type="button" class="island-shop-sku" data-pick="${esc(row.go)}">
       <span class="island-shop-emoji">${esc(row.emoji)}</span>
       <span class="island-shop-name"><b>${esc(row.name)}</b><small>${esc(row.note)}</small></span>
       <span class="island-shop-price">${esc(row.price)}</span>
     </button>`
   )).join("");
-  list.querySelectorAll("[data-go]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      if (onPick) onPick(btn.getAttribute("data-go"));
+  list.querySelectorAll("[data-pick]").forEach((btn) => {
+    btn.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      if (onPick) onPick(btn.getAttribute("data-pick"));
     });
   });
 }

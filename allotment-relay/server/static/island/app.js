@@ -15,7 +15,7 @@ import {
 import { renderHud } from "./hud.js?v=island-mapbgm1";
 import { renderMap } from "./map.js?v=island-mapbgm1";
 import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=island-mapbgm1";
-import { renderShore, renderShoreYard, renderPortHub, renderBeachHub } from "./scenes/shore.js?v=island-shorescenes1";
+import { renderShore, renderShoreYard, renderPortHub, renderBeachHub } from "./scenes/shore.js?v=island-shorepick1";
 import { renderPlaza } from "./scenes/plaza.js?v=island-mapbgm1";
 import { renderPlace } from "./scenes/place.js?v=island-mapbgm1";
 import { renderHut } from "./scenes/hut.js?v=island-hutcook1";
@@ -408,6 +408,12 @@ const PLACE_TITLES = {
   lighthouse: "灯塔",
   notice: "潮汐公告",
 };
+
+function isIslandScene(name) {
+  return name === "map" || name === "yards" || name === "home" || name === "shore"
+    || name === "port" || name === "beach" || name === "plaza"
+    || Boolean(PLACE_TITLES[name]);
+}
 
 function renderPlaceScene(name) {
   renderPlace(sceneEl(), { id: name, title: PLACE_TITLES[name] || name });
@@ -2890,7 +2896,10 @@ function bindDock() {
       return;
     }
     const pin = ev.target.closest("[data-go]");
-    if (pin) enterScene(pin.getAttribute("data-go"));
+    if (pin) {
+      const go = pin.getAttribute("data-go");
+      if (go && isIslandScene(go)) enterScene(go);
+    }
   });
   const ribbon = document.getElementById("island-ribbon");
   if (ribbon) {
