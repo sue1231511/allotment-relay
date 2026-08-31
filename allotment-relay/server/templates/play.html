@@ -407,6 +407,11 @@
             </form>
           </section>
           <div id="lounge-feed" class="lounge-feed" role="log" aria-live="polite"></div>
+          <div class="lounge-board-mobile-entry" id="lounge-board-mobile-entry" aria-label="许愿墙快捷入口">
+            <button type="button" class="lounge-board-mobile-btn" data-board-open="wish">许愿</button>
+            <button type="button" class="lounge-board-mobile-btn" data-board-open="feedback">反馈</button>
+            <button type="button" class="lounge-board-mobile-btn accent" data-board-open="view">许愿墙</button>
+          </div>
           <form id="lounge-form" class="lounge-composer">
             <p class="muted" id="lounge-composer-who">未绑定凭证</p>
             <textarea id="lounge_message" rows="1" maxlength="280" placeholder="说点什么…" autocomplete="off" required></textarea>
@@ -637,7 +642,7 @@
 
   <script src="/static/device.js?v=invite1"></script>
   <script src="/static/site-key.js"></script>
-  <script src="/static/lounge.js?v=betroth-notice1"></script>
+  <script src="/static/lounge.js?v=wish-board-mobile1"></script>
   <script src="/static/wall.js?v=ting1"></script>
   <script src="/static/play.js?v=plots-heal1"></script>
 </body>
