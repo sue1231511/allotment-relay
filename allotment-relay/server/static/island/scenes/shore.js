@@ -1,7 +1,7 @@
-import { layoutCoverBoard, sceneArt } from "../ui/art.js?v=island-mapbgm1";
+import { layoutCoverBoard, sceneArt } from "../ui/art.js?v=island-shorescenes1";
 import { esc } from "../ui/modal.js?v=island-mapbgm1";
 import { state } from "../store.js?v=island-mapbgm1";
-import { bindShopFrame, ensureShopFrame, setShopPeek } from "../ui/shop-frame.js?v=island-mapbgm1";
+import { bindShopFrame, ensureShopFrame, setShopPeek } from "../ui/shop-frame.js?v=island-shorescenes1";
 
 function renderPickHub(root, {
   findClass,
@@ -13,6 +13,8 @@ function renderPickHub(root, {
   line,
   rows,
   peek,
+  boardW,
+  boardH,
   onPeek,
   onClose,
   onPick,
@@ -24,6 +26,8 @@ function renderPickHub(root, {
     tap,
     listId,
     tabAria: title,
+    boardW,
+    boardH,
   });
   setShopPeek(wrap, peek);
   bindShopFrame(wrap, { onOpenShelf: onPeek, onCloseShelf: onClose });
@@ -61,6 +65,8 @@ export function renderPortHub(root, { onPeek, onClose, onChat, onDock } = {}) {
     title: "港口",
     line: "闲聊或看码头。",
     peek: !state.portPeek,
+    boardW: 941,
+    boardH: 1672,
     rows: [
       { go: "chat", name: "闲聊", emoji: "💬", note: "全服聊天室。说话、发红包、对暗号、许愿墙。", price: "聊" },
       { go: "dock", name: "看码头", emoji: "⚓", note: "撒网、坐钓、开船。", price: "看" },
@@ -84,6 +90,8 @@ export function renderBeachHub(root, { onPeek, onClose, onMeet, onShore } = {}) 
     title: "海边",
     line: "去见韶年或去赶海。",
     peek: !state.beachPeek,
+    boardW: 1086,
+    boardH: 1448,
     rows: [
       { go: "shaonian", name: "去见韶年", emoji: "🎴", note: "卜卦、转运、买符。", price: "见" },
       { go: "shore", name: "去赶海", emoji: "🐚", note: "撒网、坐钓、赶海、开船。", price: "去" },
@@ -142,6 +150,8 @@ export function renderShore(root, { place = "beach", onAct, onSwitchTab, onOpenS
     tap: isPort ? "点一下看码头" : "点一下看沙滩",
     listId: isPort ? "island-port-list" : "island-shore-list",
     tabAria: isPort ? "港口" : "海边",
+    boardW: isPort ? 941 : 1086,
+    boardH: isPort ? 1672 : 1448,
   });
   setShopPeek(wrap, peek);
   bindShopFrame(wrap, { onOpenShelf, onCloseShelf });

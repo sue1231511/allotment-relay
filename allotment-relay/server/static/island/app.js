@@ -15,14 +15,14 @@ import {
 import { renderHud } from "./hud.js?v=island-mapbgm1";
 import { renderMap } from "./map.js?v=island-mapbgm1";
 import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=island-mapbgm1";
-import { renderShore, renderShoreYard, renderPortHub, renderBeachHub } from "./scenes/shore.js?v=island-shorelist1";
+import { renderShore, renderShoreYard, renderPortHub, renderBeachHub } from "./scenes/shore.js?v=island-shorescenes1";
 import { renderPlaza } from "./scenes/plaza.js?v=island-mapbgm1";
 import { renderPlace } from "./scenes/place.js?v=island-mapbgm1";
 import { renderHut } from "./scenes/hut.js?v=island-hutcook1";
 import { renderShop } from "./scenes/shop.js?v=island-mapbgm1";
 import { renderLili } from "./scenes/lili.js?v=island-mapbgm1";
 import { renderClinic } from "./scenes/clinic.js?v=island-mapbgm1";
-import { renderShaonian } from "./scenes/shaonian.js?v=island-shorelist1";
+import { renderShaonian } from "./scenes/shaonian.js?v=island-shorescenes1";
 import { renderWorkshop } from "./scenes/workshop.js?v=island-mapbgm1";
 import { renderQuarry } from "./scenes/quarry.js?v=island-mapbgm1";
 import { renderBar } from "./scenes/bar.js?v=island-mapbgm1";

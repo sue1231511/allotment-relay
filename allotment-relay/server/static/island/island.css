@@ -1074,8 +1074,13 @@ body.island-app.is-playing.is-yards .island-actionbar {
 }
 
 .island-port .island-shop-board,
-.island-beach .island-shop-board {
-  aspect-ratio: 1080 / 1920;
+.island-port-hub .island-shop-board {
+  aspect-ratio: 941 / 1672;
+}
+
+.island-beach .island-shop-board,
+.island-beach-hub .island-shop-board {
+  aspect-ratio: 1086 / 1448;
 }
 
 .island-lili .island-shop-board {
