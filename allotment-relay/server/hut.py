@@ -9,14 +9,19 @@ import aiosqlite
 
 from . import config, db, flavor
 from .catalog import (
+    CROPS,
     HUT_HARD,
     HUT_LEVELS,
+    HUT_MAX_LEVEL,
+    HUT_MAX_NAME,
     HUT_SOFT,
     ITEM_NAMES,
     LILI_DECOR,
     LILI_JUNK_DECOR,
+    LIVESTOCK,
     MANURE,
     dish_item,
+    is_bed_key,
     item_label,
     item_stack_cap,
     resolve_item_key,
@@ -29,6 +34,15 @@ def _slots(level: int) -> tuple[list[str], list[str]]:
     hard = [f"hard_{i}" for i in range(1, meta["hard"] + 1)]
     soft = [f"soft_{i}" for i in range(1, meta["soft"] + 1)]
     return hard, soft
+
+
+def first_empty_slot(level: int, fittings: dict[str, str], kind: str) -> str | None:
+    hard, soft = _slots(max(1, int(level or 1)))
+    pool = hard if kind == "hard" else soft
+    for slot in pool:
+        if slot not in fittings:
+            return slot
+    return None
 
 
 FIT_ALIASES = {
@@ -1764,4 +1778,661 @@ async def public_snapshot() -> dict[str, Any]:
             }
             for r in feed
         ],
+    }
+
+
+def _sku(
+    *,
+    sid: str,
+    kind: str,
+    name: str,
+    emoji: str = "·",
+    note: str = "",
+    detail: str = "",
+    price: str = "看",
+    can: bool = False,
+    target: str = "",
+    qty: int = 0,
+) -> dict[str, Any]:
+    return {
+        "id": sid,
+        "kind": kind,
+        "name": name,
+        "emoji": emoji,
+        "note": note,
+        "detail": detail or note,
+        "price": price,
+        "can": can,
+        "target": target,
+        "qty": int(qty or 0),
+    }
+
+
+def _item_emoji(item: str) -> str:
+    key = str(item or "")
+    if key.startswith("crop_") and key[5:] in CROPS:
+        return str(CROPS[key[5:]].get("emoji") or "🥬")
+    if key.startswith("seed_") and key[5:] in CROPS:
+        return str(CROPS[key[5:]].get("emoji") or "🌱")
+    if key in MANURE:
+        return str(MANURE[key].get("emoji") or "💩")
+    if key in LIVESTOCK:
+        return str(LIVESTOCK[key].get("emoji") or "·")
+    if key == "compost":
+        return "🪴"
+    if key.startswith("dish_") or key.startswith("meal_"):
+        return "🍽️"
+    label = item_label(key)
+    if label and not label[0].isalnum():
+        return label[0]
+    return "·"
+
+
+def _has_bed(fittings: dict[str, str]) -> bool:
+    for key in fittings.values():
+        bare = _fitting_bare(key)
+        if is_bed_key(bare) or bare == "hammock":
+            return True
+    return False
+
+
+def _has_fit(fittings: dict[str, str], name: str) -> bool:
+    return any(_fitting_bare(key) == name for key in fittings.values())
+
+
+async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str, Any]:
+    """给 /island 小屋用。数值仍走 hut_ops / barn_ops，这里只摊开能点的。"""
+    from . import barn, kitchen
+    from .catalog import bed_sleep_energy
+
+    built = bool(s.get("hut_built"))
+    lvl = max(1, int(s.get("hut_level") or 1)) if built else 0
+    meta = HUT_LEVELS.get(lvl, HUT_LEVELS[1]) if built else HUT_LEVELS[1]
+    name = (s.get("hut_label") or meta["name"]) if built else "岸畔小屋"
+    tickets = int(s.get("tickets") or 0)
+    energy_now = int(s.get("energy") or 0)
+    health_now = int(s.get("health") or 0)
+    tax_owed = int(s.get("tax_arrears") or 0)
+    upkeep_owed = int(s.get("upkeep_arrears") or 0)
+    fittings = await _fittings(conn, s["id"]) if built else {}
+    stock = await db.get_satchel(s["id"])
+    empty_hard = first_empty_slot(lvl, fittings, "hard") if built else None
+    empty_soft = first_empty_slot(lvl, fittings, "soft") if built else None
+    has_bed = _has_bed(fittings)
+    has_cab = _has_fit(fittings, "cabinet")
+    has_fridge = _has_fit(fittings, "fridge")
+    has_bin = _has_fit(fittings, "compost_bin")
+    slept = False
+    if built:
+        row = await (await conn.execute(
+            "SELECT bed_rest_at FROM stewards WHERE id=?", (s["id"],)
+        )).fetchone()
+        last = int(row[0] if row else 0)
+        slept = bool(last and db.day_id(last) >= db.day_id())
+    need_rest = energy_now < 100 or health_now < 100
+    can_sleep = bool(built and has_bed and not slept and need_rest)
+    sleep_energy = config.BED_REST_ENERGY
+    if has_bed:
+        for key in fittings.values():
+            bare = _fitting_bare(key)
+            if is_bed_key(bare):
+                sleep_energy = bed_sleep_energy(bare)
+                break
+        else:
+            sleep_energy = config.HAMMOCK_ENERGY
+
+    nxt = HUT_LEVELS.get(lvl + 1) if built and lvl < HUT_MAX_LEVEL else None
+    upgrade_cost = int((nxt or {}).get("upgrade") or 0)
+    dues_ok = tax_owed <= 0 and upkeep_owed <= 0
+    can_upgrade = bool(nxt and dues_ok and tickets >= upgrade_cost)
+    if not built:
+        spoken = "还没搭棚屋。点搭棚屋。"
+    elif can_sleep:
+        spoken = "困了就睡。潮柜、堆肥桶、畜栏也在这儿。"
+    elif not has_bed:
+        spoken = "先买张床再睡。潮柜、堆肥、畜栏也在这儿。"
+    else:
+        spoken = "今天睡过了。潮柜、堆肥、畜栏还在。"
+
+    home_items: list[dict[str, Any]] = []
+    if built:
+        home_items.append(_sku(
+            sid="look",
+            kind="look",
+            name="看屋",
+            emoji="🏠",
+            note="门牌和装件。",
+            detail="点开看这间屋现在装了什么。",
+            price="看",
+            can=True,
+            target="status",
+        ))
+        if can_sleep:
+            sleep_note = f"回 {sleep_energy} 精力，顺带缓身体。每天一次。"
+        elif not has_bed:
+            sleep_note = "屋里还没有床。先买岸柏板床再睡。"
+        elif slept:
+            wait = db.seconds_until_next_day()
+            hours = wait // 3600 + (1 if wait % 3600 else 0)
+            sleep_note = f"今天睡过了，约 {hours} 小时后再来。"
+        else:
+            sleep_note = "精力是满的，不困。"
+        home_items.append(_sku(
+            sid="sleep",
+            kind="sleep",
+            name="睡",
+            emoji="🛏️",
+            note=sleep_note,
+            detail=sleep_note + "身子大虚去诊所调理，睡觉只是顺带缓一缓。",
+            price="睡" if can_sleep else "看",
+            can=can_sleep,
+            target="",
+        ))
+        if not has_bed:
+            bag_bed = int(stock.get("fit_bed") or 0) > 0
+            if bag_bed and empty_hard:
+                home_items.append(_sku(
+                    sid="install-bed",
+                    kind="install",
+                    name="装岸柏板床",
+                    emoji="🛏️",
+                    note="行囊里有床，装上才能睡。",
+                    detail="装到空的硬装槽。装好就能睡。",
+                    price="装",
+                    can=True,
+                    target="bed",
+                ))
+            elif empty_hard:
+                home_items.append(_sku(
+                    sid="buy-bed",
+                    kind="buy_install",
+                    name="买岸柏板床",
+                    emoji="🛏️",
+                    note=f"{HUT_HARD['bed']['cost']} 票。装上才能睡。",
+                    detail=f"买岸柏板床并装上，要 {HUT_HARD['bed']['cost']} 票。不是装修游戏，只为能睡。",
+                    price=f"{HUT_HARD['bed']['cost']} 票",
+                    can=tickets >= HUT_HARD["bed"]["cost"],
+                    target="bed",
+                ))
+            else:
+                home_items.append(_sku(
+                    sid="bed-slot",
+                    kind="look",
+                    name="硬装槽满了",
+                    emoji="🛏️",
+                    note="没有空槽装床。先升级小屋。",
+                    detail="硬装槽满了。先升级再买床。",
+                    price="看",
+                    can=True,
+                    target="status",
+                ))
+        if nxt:
+            if not dues_ok:
+                up_note = "欠岸税或岸维，交清才能升屋。去潮生会。"
+            elif tickets < upgrade_cost:
+                up_note = f"要 {upgrade_cost} 票，现在 {tickets}。"
+            else:
+                up_note = f"升到 Lv{lvl + 1} {nxt['name']}，要 {upgrade_cost} 票。"
+            home_items.append(_sku(
+                sid="upgrade",
+                kind="upgrade",
+                name=f"升级 · {nxt['name']}",
+                emoji="🪜",
+                note=up_note,
+                detail=up_note + f"求婚发出前必须升到 {HUT_MAX_NAME}。",
+                price="升" if can_upgrade else "看",
+                can=can_upgrade,
+                target="",
+            ))
+        else:
+            home_items.append(_sku(
+                sid="max",
+                kind="look",
+                name=f"已是 {HUT_MAX_NAME}",
+                emoji="🏡",
+                note="最高档了。换软装或升级床。",
+                detail="已经是岛上最高档小屋。求婚发出前要这一档。",
+                price="看",
+                can=True,
+                target="status",
+            ))
+
+    cab_items: list[dict[str, Any]] = []
+    if built and not has_cab:
+        bag_cab = int(stock.get("fit_cabinet") or 0) > 0
+        if bag_cab and empty_soft:
+            cab_items.append(_sku(
+                sid="install-cab",
+                kind="install",
+                name="装潮柜",
+                emoji="🗄️",
+                note="行囊里有潮柜，装上才能存生鲜。",
+                detail="装到空的软装槽。生鲜进潮柜，小偷翻不到。",
+                price="装",
+                can=True,
+                target="cabinet",
+            ))
+        elif empty_soft:
+            cab_items.append(_sku(
+                sid="buy-cab",
+                kind="buy_install",
+                name="买潮柜",
+                emoji="🗄️",
+                note=f"{HUT_SOFT['cabinet']['cost']} 票。生鲜放这儿。",
+                detail="买潮柜并装上。粪便别进潮柜，走堆肥桶。",
+                price=f"{HUT_SOFT['cabinet']['cost']} 票",
+                can=tickets >= HUT_SOFT["cabinet"]["cost"],
+                target="cabinet",
+            ))
+        else:
+            cab_items.append(_sku(
+                sid="cab-slot",
+                kind="look",
+                name="软装槽满了",
+                emoji="🗄️",
+                note="没有空槽装潮柜。先升级小屋。",
+                detail="软装槽满了。先升级再买潮柜。",
+                price="看",
+                can=True,
+                target="status",
+            ))
+    elif built and has_cab:
+        extra = await _cabinet_extra(conn, s["id"])
+        cap = cabinet_capacity(extra)
+        rows = await _cabinet_rows(conn, s["id"])
+        used = 0
+        from .catalog import stacks_needed
+        tier = int(s.get("satchel_stack_extra") or 0)
+        for item, qty in rows:
+            used += stacks_needed(qty, item_stack_cap(item, stack_tier=tier))
+            cab_items.append(_sku(
+                sid=f"take-{item}",
+                kind="take",
+                name=item_label(item),
+                emoji=_item_emoji(item),
+                note=f"柜里 {qty}",
+                detail="取回行囊。",
+                price="取",
+                can=True,
+                target=item_label(item),
+                qty=qty,
+            ))
+        for item, qty in (stock or {}).items():
+            n = int(qty or 0)
+            if n <= 0:
+                continue
+            if _cabinet_forbid(item):
+                continue
+            if kitchen.is_cooked_item(item):
+                continue
+            cab_items.append(_sku(
+                sid=f"put-{item}",
+                kind="put",
+                name=item_label(item),
+                emoji=_item_emoji(item),
+                note=f"行囊 {n}",
+                detail="放进潮柜。小偷翻不到。",
+                price="存",
+                can=True,
+                target=item_label(item),
+                qty=n,
+            ))
+        if cap < config.CABINET_SLOTS_MAX:
+            cab_items.append(_sku(
+                sid="expand",
+                kind="expand",
+                name="潮柜加一格",
+                emoji="➕",
+                note=f"{used}/{cap} 格。每格 {config.CABINET_SLOT_COST} 票，顶 {config.CABINET_SLOTS_MAX}。",
+                detail=f"加一格要 {config.CABINET_SLOT_COST} 票。",
+                price=f"{config.CABINET_SLOT_COST} 票",
+                can=tickets >= config.CABINET_SLOT_COST,
+                target="1",
+            ))
+        if not any(row["kind"] == "put" for row in cab_items) and not any(row["kind"] == "take" for row in cab_items):
+            cab_items.insert(0, _sku(
+                sid="cab-empty",
+                kind="look",
+                name="潮柜空着",
+                emoji="🗄️",
+                note=f"{used}/{cap} 格。行囊这会儿没有能存的生鲜。",
+                detail="生鲜进潮柜。熟菜走冰箱。粪便走堆肥桶。",
+                price="看",
+                can=True,
+                target="status",
+            ))
+
+    if built and not has_fridge:
+        bag_fr = int(stock.get("fit_fridge") or 0) > 0
+        if bag_fr and empty_soft:
+            cab_items.append(_sku(
+                sid="install-fridge",
+                kind="install",
+                name="装冰箱",
+                emoji="🧊",
+                note="行囊里有冰箱，装上才能存熟菜。开小馆也要它。",
+                detail="装到空的软装槽。熟菜进冰箱。",
+                price="装",
+                can=True,
+                target="fridge",
+            ))
+        elif empty_soft:
+            cab_items.append(_sku(
+                sid="buy-fridge",
+                kind="buy_install",
+                name="买冰箱",
+                emoji="🧊",
+                note=f"{HUT_SOFT['fridge']['cost']} 票。熟菜放这儿。开小馆要冰箱。",
+                detail="买冰箱并装上。生鲜走潮柜。",
+                price=f"{HUT_SOFT['fridge']['cost']} 票",
+                can=tickets >= HUT_SOFT["fridge"]["cost"],
+                target="fridge",
+            ))
+    elif built and has_fridge:
+        prev_factory = conn.row_factory
+        conn.row_factory = aiosqlite.Row
+        fridge_rows = await (await conn.execute(
+            """
+            SELECT dish_key, stars, quantity FROM meal_storage
+            WHERE steward_id=? AND quantity>0 ORDER BY stored_at
+            """,
+            (s["id"],),
+        )).fetchall()
+        conn.row_factory = prev_factory
+        for r in fridge_rows:
+            label = kitchen._fridge_label(r["dish_key"], r["stars"])
+            q = int(r["quantity"] or 0)
+            cab_items.append(_sku(
+                sid=f"fridge-take-{r['dish_key']}-{r['stars']}",
+                kind="take",
+                name=label,
+                emoji="🧊",
+                note=f"冰箱 {q}",
+                detail="取出回行囊。",
+                price="取",
+                can=True,
+                target=label,
+                qty=q,
+            ))
+        for item, qty in (stock or {}).items():
+            n = int(qty or 0)
+            if n <= 0 or not kitchen.is_cooked_item(item):
+                continue
+            cab_items.append(_sku(
+                sid=f"fridge-put-{item}",
+                kind="put",
+                name=item_label(item),
+                emoji="🍽️",
+                note=f"行囊 {n}",
+                detail="熟菜进冰箱。",
+                price="存",
+                can=True,
+                target=item_label(item),
+                qty=n,
+            ))
+
+    compost_items: list[dict[str, Any]] = []
+    fill, ready = (0, 0)
+    if built and not has_bin:
+        bag_bin = int(stock.get("fit_compost_bin") or 0) > 0
+        if bag_bin and empty_soft:
+            compost_items.append(_sku(
+                sid="install-bin",
+                kind="install",
+                name="装堆肥桶",
+                emoji="🪣",
+                note="行囊里有桶，装上才能沤粪。",
+                detail="空槽也能装。桶不是柜子，粪便丢进去沤层。",
+                price="装",
+                can=True,
+                target="compost_bin",
+            ))
+        elif empty_soft:
+            compost_items.append(_sku(
+                sid="buy-bin",
+                kind="buy_install",
+                name="买堆肥桶",
+                emoji="🪣",
+                note=f"{HUT_SOFT['compost_bin']['cost']} 票。粪便丢进去沤。",
+                detail="买堆肥桶并装上。粪便别进潮柜。",
+                price=f"{HUT_SOFT['compost_bin']['cost']} 票",
+                can=tickets >= HUT_SOFT["compost_bin"]["cost"],
+                target="compost_bin",
+            ))
+        else:
+            compost_items.append(_sku(
+                sid="bin-slot",
+                kind="look",
+                name="软装槽满了",
+                emoji="🪣",
+                note="没有空槽装堆肥桶。先升级小屋。",
+                detail="软装槽满了。先升级再买桶。",
+                price="看",
+                can=True,
+                target="status",
+            ))
+    elif built and has_bin:
+        fill, ready = await _compost_bin_row(conn, s["id"])
+        compost_items.append(_sku(
+            sid="bin-look",
+            kind="look",
+            name="堆肥桶",
+            emoji="🪣",
+            note=f"{fill}/{config.COMPOST_BIN_LAYERS} 层，可取堆肥 x{ready}",
+            detail="粪便丢进去沤层，满 7 层结 1 份堆肥。只能取堆肥。",
+            price="看",
+            can=True,
+            target="status",
+        ))
+        for item, qty in (stock or {}).items():
+            n = int(qty or 0)
+            if n <= 0 or item not in MANURE:
+                continue
+            compost_items.append(_sku(
+                sid=f"bin-put-{item}",
+                kind="compost_put",
+                name=item_label(item),
+                emoji=_item_emoji(item),
+                note=f"行囊 {n} · 沤 +{int(MANURE[item]['compost_yield'])}/份",
+                detail="丢进堆肥桶沤层。满 7 层结 1 份堆肥。",
+                price="沤",
+                can=True,
+                target=item_label(item),
+                qty=n,
+            ))
+        if ready > 0:
+            compost_items.append(_sku(
+                sid="bin-take",
+                kind="compost_take",
+                name="取出堆肥",
+                emoji="🪴",
+                note=f"桶里结好 {ready} 份。",
+                detail="取出回行囊，拿去份地施肥。",
+                price="取",
+                can=True,
+                target=str(ready),
+                qty=ready,
+            ))
+        if not any(row["kind"] == "compost_put" for row in compost_items):
+            compost_items.append(_sku(
+                sid="bin-need",
+                kind="look",
+                name="行囊没有粪便",
+                emoji="💩",
+                note="喂畜栏会顺手收粪。粪便别进潮柜。",
+                detail="羊粪 / 猪粪 / 牛粪才能沤。先去畜栏喂。",
+                price="看",
+                can=True,
+                target="status",
+            ))
+
+    barn_built = bool(s.get("barn_built"))
+    barn_items: list[dict[str, Any]] = []
+    collectable = 0
+    if built and not barn_built:
+        barn_items.append(_sku(
+            sid="erect",
+            kind="barn_erect",
+            name="搭畜栏",
+            emoji="🪵",
+            note=f"{config.BARN_ERECT_COST} 票，{config.BARN_SLOTS} 槽。每天算岸维。",
+            detail=f"搭畜栏要 {config.BARN_ERECT_COST} 票。粪便进堆肥桶，不要进潮柜。",
+            price=f"{config.BARN_ERECT_COST} 票",
+            can=tickets >= config.BARN_ERECT_COST,
+            target="",
+        ))
+    elif built and barn_built:
+        prev_factory = conn.row_factory
+        conn.row_factory = aiosqlite.Row
+        animals = await (await conn.execute(
+            "SELECT * FROM barn_animals WHERE steward_id=? ORDER BY slot",
+            (s["id"],),
+        )).fetchall()
+        day = db.day_id()
+        collected = {
+            int(r["slot"])
+            for r in await (await conn.execute(
+                "SELECT slot FROM barn_daily_collect WHERE steward_id=? AND day=?",
+                (s["id"], day),
+            )).fetchall()
+        }
+        conn.row_factory = prev_factory
+        by_slot = {int(r["slot"]): dict(r) for r in animals}
+        empty_slots = [
+            slot for slot in range(1, config.BARN_SLOTS + 1)
+            if not (by_slot.get(slot) or {}).get("species")
+        ]
+        for slot in range(1, config.BARN_SLOTS + 1):
+            row = by_slot.get(slot) or {}
+            species = row.get("species")
+            if not species or species not in LIVESTOCK:
+                continue
+            spec = LIVESTOCK[species]
+            fed = bool(row.get("fed"))
+            ready_h = barn._ready(row, species)
+            feed_name = ITEM_NAMES.get(spec["feed"], spec["feed"])
+            have_feed = int(stock.get(spec["feed"]) or 0) >= int(spec["feed_qty"])
+            have_generic = int(stock.get("feed_animal") or 0) > 0
+            can_feed = (not fed) and (have_feed or have_generic)
+            if not fed:
+                barn_items.append(_sku(
+                    sid=f"feed-{slot}",
+                    kind="barn_feed",
+                    name=f"喂 #{slot} {spec['name']}",
+                    emoji=spec.get("emoji") or "·",
+                    note=f"要 {feed_name} x{spec['feed_qty']}（或动物饲料）。",
+                    detail="喂过才收。粪便会顺手进行囊，拿去堆肥桶。",
+                    price="喂" if can_feed else "看",
+                    can=can_feed,
+                    target=str(slot),
+                ))
+            if spec.get("daily") or spec.get("hive"):
+                can_c = bool(fed) and slot not in collected
+                if can_c:
+                    collectable += 1
+                barn_items.append(_sku(
+                    sid=f"collect-{slot}",
+                    kind="barn_collect",
+                    name=f"收 #{slot} {spec['name']}",
+                    emoji=spec.get("emoji") or "·",
+                    note="今日已收。" if slot in collected else ("先喂再收。" if not fed else "可以收了。"),
+                    detail="日常收奶/蛋/蜜。羊剪毛走剪。",
+                    price="收" if can_c else "看",
+                    can=can_c,
+                    target=str(slot),
+                ))
+            if species == "sheep":
+                have_shears = int(stock.get("tool_shears") or 0) > 0
+                can_sh = bool(fed) and have_shears and slot not in collected
+                barn_items.append(_sku(
+                    sid=f"shear-{slot}",
+                    kind="barn_shear",
+                    name=f"剪 #{slot} 羊毛",
+                    emoji="✂️",
+                    note="要剪毛剪刀。羊还在。" if have_shears else "先去广场杂货铺买剪毛剪刀。",
+                    detail="剪毛不杀羊。",
+                    price="剪" if can_sh else "看",
+                    can=can_sh,
+                    target=str(slot),
+                ))
+            if not spec.get("guard") and not spec.get("hive"):
+                barn_items.append(_sku(
+                    sid=f"harvest-{slot}",
+                    kind="barn_harvest",
+                    name=f"大收 #{slot} {spec['name']}",
+                    emoji=spec.get("emoji") or "·",
+                    note="长成了，栏位会空出来。" if ready_h else "还没长成。",
+                    detail="大收会清栏。日常动物可先每日收。",
+                    price="收" if ready_h else "看",
+                    can=bool(ready_h),
+                    target=str(slot),
+                ))
+        if empty_slots:
+            slot = empty_slots[0]
+            for key, spec in LIVESTOCK.items():
+                barn_items.append(_sku(
+                    sid=f"buy-{key}",
+                    kind="barn_buy",
+                    name=f"买{spec['name']}",
+                    emoji=spec.get("emoji") or "·",
+                    note=f"{spec['buy']} 票，进空栏 #{slot}。",
+                    detail=f"买{spec['name']}放到空栏。粪便进堆肥桶。",
+                    price=f"{spec['buy']} 票",
+                    can=tickets >= int(spec["buy"]),
+                    target=f"{key} {slot}",
+                ))
+        milk = int(stock.get("goat_milk") or 0)
+        if milk >= 2:
+            barn_items.append(_sku(
+                sid="churn",
+                kind="barn_churn",
+                name="搅山羊奶",
+                emoji="🧀",
+                note=f"行囊山羊奶 {milk}。两份奶一份奶酪。",
+                detail="只搅山羊奶。牛奶不能搅。",
+                price="搅",
+                can=True,
+                target=str(milk - (milk % 2)),
+                qty=milk - (milk % 2),
+            ))
+        if not barn_items:
+            barn_items.append(_sku(
+                sid="barn-empty",
+                kind="look",
+                name="畜栏空着",
+                emoji="🪵",
+                note="栏位都空。先买一只。",
+                detail="买鸡鸭羊牛山羊兔猪狗或蜂箱。",
+                price="看",
+                can=True,
+                target="status",
+            ))
+
+    cab_badge = ""
+    if has_cab or has_fridge:
+        cab_badge = str(sum(1 for row in cab_items if row["kind"] in ("put", "take"))) or ""
+    tabs = [
+        {"key": "home", "label": "屋里", "badge": "睡" if can_sleep else ""},
+        {"key": "cabinet", "label": "潮柜", "badge": cab_badge},
+        {"key": "compost", "label": "堆肥", "badge": str(ready) if ready else ""},
+        {"key": "barn", "label": "畜栏", "badge": str(collectable) if collectable else ""},
+    ]
+    return {
+        "name": name,
+        "line": spoken,
+        "built": built,
+        "level": lvl,
+        "level_name": meta["name"] if built else "",
+        "scene_id": f"hut-{lvl}" if built else "",
+        "tabs": tabs,
+        "items": {
+            "home": home_items,
+            "cabinet": cab_items,
+            "compost": compost_items,
+            "barn": barn_items,
+        },
+        "sleep_energy": sleep_energy,
+        "can_sleep": can_sleep,
+        "upgrade_cost": upgrade_cost,
+        "can_upgrade": can_upgrade,
     }

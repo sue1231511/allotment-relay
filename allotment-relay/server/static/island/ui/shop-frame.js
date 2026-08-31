@@ -1,4 +1,4 @@
-import { layoutCoverBoard, sceneArt } from "./art.js?v=island-hutscene1";
+import { layoutCoverBoard, sceneArt } from "./art.js?v=island-huthome1";
 
 /** 店景只铺一次。点一下只叠出列表，不换裁切、不重载底图。 */
 export function ensureShopFrame(root, {

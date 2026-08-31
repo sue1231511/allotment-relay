@@ -1,4 +1,4 @@
-import { api, loadKey } from "./api.js?v=island-hutscene1";
+import { api, loadKey } from "./api.js?v=island-huthome1";
 import {
   applySnapshot,
   duesBlocked,
@@ -11,39 +11,39 @@ import {
   tickGrow,
   tickQuarry,
   tickWorkshop,
-} from "./store.js?v=island-hutscene1";
-import { renderHud } from "./hud.js?v=island-hutscene1";
-import { renderMap } from "./map.js?v=island-hutscene1";
-import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=island-hutscene1";
-import { renderShore, renderShoreYard } from "./scenes/shore.js?v=island-hutscene1";
-import { renderPlaza } from "./scenes/plaza.js?v=island-hutscene1";
-import { renderPlace } from "./scenes/place.js?v=island-hutscene1";
-import { renderHut } from "./scenes/hut.js?v=island-hutscene1";
-import { renderShop } from "./scenes/shop.js?v=island-hutscene1";
-import { renderLili } from "./scenes/lili.js?v=island-hutscene1";
-import { renderClinic } from "./scenes/clinic.js?v=island-hutscene1";
-import { renderWorkshop } from "./scenes/workshop.js?v=island-hutscene1";
-import { renderQuarry } from "./scenes/quarry.js?v=island-hutscene1";
-import { renderBar } from "./scenes/bar.js?v=island-hutscene1";
-import { renderTheater } from "./scenes/theater.js?v=island-hutscene1";
-import { renderWriters } from "./scenes/writers.js?v=island-hutscene1";
-import { renderAtelier } from "./scenes/atelier.js?v=island-hutscene1";
-import { renderHall } from "./scenes/hall.js?v=island-hutscene1";
-import { renderEatery } from "./scenes/eatery.js?v=island-hutscene1";
-import { renderMarket } from "./scenes/market.js?v=island-hutscene1";
-import { renderTing } from "./scenes/ting.js?v=island-hutscene1";
-import { renderHui } from "./scenes/hui.js?v=island-hutscene1";
-import { renderLianli } from "./scenes/lianli.js?v=island-hutscene1";
+} from "./store.js?v=island-huthome1";
+import { renderHud } from "./hud.js?v=island-huthome1";
+import { renderMap } from "./map.js?v=island-huthome1";
+import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=island-huthome1";
+import { renderShore, renderShoreYard } from "./scenes/shore.js?v=island-huthome1";
+import { renderPlaza } from "./scenes/plaza.js?v=island-huthome1";
+import { renderPlace } from "./scenes/place.js?v=island-huthome1";
+import { renderHut } from "./scenes/hut.js?v=island-huthome1";
+import { renderShop } from "./scenes/shop.js?v=island-huthome1";
+import { renderLili } from "./scenes/lili.js?v=island-huthome1";
+import { renderClinic } from "./scenes/clinic.js?v=island-huthome1";
+import { renderWorkshop } from "./scenes/workshop.js?v=island-huthome1";
+import { renderQuarry } from "./scenes/quarry.js?v=island-huthome1";
+import { renderBar } from "./scenes/bar.js?v=island-huthome1";
+import { renderTheater } from "./scenes/theater.js?v=island-huthome1";
+import { renderWriters } from "./scenes/writers.js?v=island-huthome1";
+import { renderAtelier } from "./scenes/atelier.js?v=island-huthome1";
+import { renderHall } from "./scenes/hall.js?v=island-huthome1";
+import { renderEatery } from "./scenes/eatery.js?v=island-huthome1";
+import { renderMarket } from "./scenes/market.js?v=island-huthome1";
+import { renderTing } from "./scenes/ting.js?v=island-huthome1";
+import { renderHui } from "./scenes/hui.js?v=island-huthome1";
+import { renderLianli } from "./scenes/lianli.js?v=island-huthome1";
 let lighthouseMod = null;
 async function lighthouseScene() {
-  if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-hutscene1");
+  if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-huthome1");
   return lighthouseMod;
 }
-import { renderBag } from "./ui/bag.js?v=island-hutscene1";
-import { setBackChip, setBagChip } from "./ui/back-map.js?v=island-hutscene1";
-import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=island-hutscene1";
-import { popOut } from "./ui/pop.js?v=island-hutscene1";
-import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showPitchSheet, showVendSheet, toast } from "./ui/modal.js?v=island-hutscene1";
+import { renderBag } from "./ui/bag.js?v=island-huthome1";
+import { setBackChip, setBagChip } from "./ui/back-map.js?v=island-huthome1";
+import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=island-huthome1";
+import { popOut } from "./ui/pop.js?v=island-huthome1";
+import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showPitchSheet, showVendSheet, toast } from "./ui/modal.js?v=island-huthome1";
 
 const sceneEl = () => document.getElementById("island-scene");
 const sheetEl = () => document.getElementById("island-sheet");
@@ -306,7 +306,8 @@ async function enterScene(name, opts) {
       stopGrowTick();
       stopWorkshopTick();
       stopQuarryTick();
-      paintHut();
+      state.hutShelf = false;
+      await openHut();
     } else if (PLACE_TITLES[name]) {
       stopGrowTick();
       stopWorkshopTick();
@@ -365,8 +366,26 @@ function renderPlaceScene(name) {
   renderPlace(sceneEl(), { id: name, title: PLACE_TITLES[name] || name });
 }
 
-function paintHut() {
-  renderHut(sceneEl(), { onBuild: tapBuildHut });
+function paintHut(listTop = 0) {
+  renderHut(sceneEl(), {
+    onBuild: tapBuildHut,
+    onAct: tapHut,
+    onSwitchTab: (tab) => {
+      state.hutTab = tab || "home";
+      hideModal();
+      paintHut(0);
+    },
+    onOpenShelf: () => {
+      state.hutShelf = true;
+      paintHut(0);
+    },
+    onCloseShelf: () => {
+      state.hutShelf = false;
+      hideModal();
+      paintHut();
+    },
+    listTop,
+  });
 }
 
 function tapBuildHut() {
@@ -378,6 +397,94 @@ function tapBuildHut() {
     confirm: "确认搭",
     onConfirm: () => act(() => api.buildHut()),
   });
+}
+
+async function openHut() {
+  try {
+    const data = await api.hut();
+    applySnapshot(data);
+    renderHud();
+    if (data.event) showEvent(data.event);
+  } catch (err) {
+    toast(err.message || "屋门还没开。");
+  }
+  const tabs = (state.hut && state.hut.tabs) || [];
+  if (!tabs.some((row) => row.key === state.hutTab)) {
+    state.hutTab = (tabs[0] && tabs[0].key) || "home";
+  }
+  paintHut();
+}
+
+function hutRow(kind, target, id) {
+  const shop = state.hut || {};
+  const items = shop.items || {};
+  for (const key of Object.keys(items)) {
+    const hit = (items[key] || []).find((row) => row.id === id || (row.kind === kind && String(row.target) === String(target)));
+    if (hit) return hit;
+  }
+  return null;
+}
+
+function tapHut(kind, target, id) {
+  const row = hutRow(kind, target, id) || {};
+  if (kind === "look") {
+    lookHut(row);
+    return;
+  }
+  if (!row.can) {
+    showHintSheet({
+      title: row.name || "小屋",
+      body: row.detail || row.note || "这会儿还不行。",
+    });
+    return;
+  }
+  if (kind === "put" || kind === "take" || kind === "compost_put" || kind === "compost_take" || kind === "barn_churn" || kind === "expand") {
+    const have = Number(row.qty) || 0;
+    if (have > 1 || kind === "expand") {
+      showFormSheet({
+        title: row.name || "小屋",
+        body: row.detail || row.note || "",
+        fields: [
+          { id: "qty", label: "份数", placeholder: have ? String(have) : "1", max: 4, empty: "先写下份数。" },
+        ],
+        confirm: row.price || "确认",
+        onConfirm: (vals) => {
+          const base = String(row.target || target || "").replace(/\s+\d+$/, "");
+          runHut(kind, `${base} ${vals.qty}`.trim());
+        },
+      });
+      return;
+    }
+  }
+  showActSheet({
+    title: row.name || "小屋",
+    body: row.detail || row.note || "",
+    confirm: row.price || "确认",
+    onConfirm: () => runHut(kind, row.target || target || ""),
+  });
+}
+
+async function lookHut(row) {
+  if (state.busy) return;
+  state.busy = true;
+  try {
+    const data = await api.hutAct("look", (row && row.target) || "status");
+    applySnapshot(data);
+    renderHud();
+    const text = (data.event && data.event.narrative) || (row && row.detail) || "先看看屋里。";
+    showHintSheet({ title: (row && row.name) || "看屋", body: text });
+    paintHut();
+  } catch (err) {
+    toast(err.message || "屋里看不清。");
+  } finally {
+    state.busy = false;
+  }
+}
+
+async function runHut(kind, target) {
+  const list = document.getElementById("island-hut-list");
+  const listTop = list ? list.scrollTop : 0;
+  await act(() => api.hutAct(kind, target), { keepHut: true, listTop, quiet: true });
 }
 
 async function openShop(root) {
@@ -2339,7 +2446,7 @@ async function vendItem(item) {
   await act(() => api.vend(name, 1), { keepTab: true });
 }
 
-async function act(fn, { refreshScene = false, keepPlant = false, keepTab = false, keepShop = false, keepWorkshop = false, keepQuarry = false, keepBar = false, keepWriters = false, keepAtelier = false, keepHall = false, keepEatery = false, keepMarket = false, keepTing = false, keepHui = false, keepLianli = false, keepShore = false, keepPort = false, keepLighthouse = false, keepLili = false, keepClinic = false, listTop = null, quiet = false } = {}) {
+async function act(fn, { refreshScene = false, keepPlant = false, keepTab = false, keepShop = false, keepWorkshop = false, keepQuarry = false, keepBar = false, keepWriters = false, keepAtelier = false, keepHall = false, keepEatery = false, keepMarket = false, keepTing = false, keepHui = false, keepHut = false, keepLianli = false, keepShore = false, keepPort = false, keepLighthouse = false, keepLili = false, keepClinic = false, listTop = null, quiet = false } = {}) {
   if (state.busy) return;
   state.busy = true;
   try {
@@ -2408,6 +2515,10 @@ async function act(fn, { refreshScene = false, keepPlant = false, keepTab = fals
     }
     if (keepHui && state.scene === "hui") {
       paintHui(listTop);
+      return;
+    }
+    if (keepHut && state.scene === "hut") {
+      paintHut(listTop);
       return;
     }
     if (keepPort && state.scene === "port") {

@@ -85,6 +85,8 @@ export const api = {
   buy: (crop, qty = 1, idem) => req("/api/v1/farm/buy", { method: "POST", body: { crop, qty }, idem }),
   sleep: (idem) => req("/api/v1/hut/sleep", { method: "POST", body: {}, idem }),
   buildHut: (idem) => req("/api/v1/hut/build", { method: "POST", body: {}, idem }),
+  hut: () => req("/api/v1/hut"),
+  hutAct: (kind, target = "", idem) => req("/api/v1/hut/act", { method: "POST", body: { kind, target }, idem }),
   work: (idem) => req("/api/v1/bar/work", { method: "POST", body: {}, idem }),
   eat: (item, idem) => req("/api/v1/kitchen/eat", { method: "POST", body: { item }, idem }),
   vend: (item, qty = 1, idem) => req("/api/v1/tote/vend", { method: "POST", body: { item, qty }, idem }),
