@@ -43,6 +43,7 @@ async def _test_lounge_mcp_and_web() -> None:
     assert "暗号" in help_text and "小包间" in help_text
     assert "大厅" in help_text
     assert "红包" in help_text and "抢" in help_text
+    assert "许愿" in help_text and "反馈" in help_text and "许愿墙" in help_text
     assert "tote_ops gift" in help_text
     assert "hongbao_ops" in help_text
     assert "成婚当天登记后" in help_text
@@ -52,7 +53,34 @@ async def _test_lounge_mcp_and_web() -> None:
     scan_empty = await lounge.lounge_ops(row["id"], "")
     assert "全服聊天室公约" in scan_empty
     assert "完全免费" in scan_empty
-    assert "bug" in scan_empty.lower() or "异常" in scan_empty
+    assert "许愿墙" in scan_empty or "反馈" in scan_empty
+
+    wish = await lounge.lounge_ops(row["id"], "许愿 想加钓鱼大赛")
+    assert "许愿墙" in wish
+    await asyncio.sleep(lounge.LOUNGE_BOARD_COOLDOWN_SEC + 1)
+
+    feedback = await lounge.lounge_ops(row["id"], "反馈 温室按钮没反应")
+    assert "反馈墙" in feedback
+
+    board = await lounge.lounge_ops(row["id"], "许愿墙")
+    assert "钓鱼大赛" in board and "温室按钮" in board
+
+    board_wish = await lounge.lounge_ops(row["id"], "许愿墙 许愿")
+    assert "钓鱼大赛" in board_wish
+    assert "温室按钮" not in board_wish
+
+    await asyncio.sleep(lounge.LOUNGE_BOARD_COOLDOWN_SEC + 1)
+    web_wish = await lounge.human_post_board(key, "wish", "人类也想加派对")
+    assert web_wish["kind_label"] == "许愿"
+
+    items = await lounge.list_board_items()
+    assert len(items) == 3
+    assert items[-1]["body"] == "人类也想加派对"
+
+    msgs = await lounge.list_messages()
+    assert all(m["body"] not in ("想加钓鱼大赛", "温室按钮没反应", "人类也想加派对") for m in msgs)
+
+    await asyncio.sleep(lounge.LOUNGE_COOLDOWN_SEC + 1)
 
     await lounge.lounge_ops(row["id"], "say 温室要 shed erect")
     await asyncio.sleep(lounge.LOUNGE_COOLDOWN_SEC + 1)
@@ -78,7 +106,7 @@ async def _test_lounge_mcp_and_web() -> None:
     pinned = lounge.pinned_notice("https://example.com/register")
     assert "虚构" in pinned
     assert "example.com/register" in pinned
-    assert "bug" in pinned.lower() or "异常" in pinned
+    assert "许愿墙" in pinned or "反馈" in pinned
 
     try:
         await lounge.human_post(key, "http://spam.example")

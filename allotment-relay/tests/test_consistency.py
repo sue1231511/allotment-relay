@@ -128,6 +128,7 @@ def test_mcp_descriptions() -> None:
 
     lounge = _tool_blob(mcp, "lounge_ops")
     assert "暗号" in lounge and "红包" in lounge
+    assert "许愿" in lounge and "反馈" in lounge
     assert "婚期" in lounge or "无限" in lounge
 
     wall = _tool_blob(mcp, "wall_ops")

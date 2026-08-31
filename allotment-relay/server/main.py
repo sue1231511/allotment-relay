@@ -402,6 +402,12 @@ class LoungeGrabRequest(BaseModel):
     packet_id: int = 0
 
 
+class LoungeBoardRequest(BaseModel):
+    api_key: str
+    kind: str
+    body: str
+
+
 class WallThreadRequest(BaseModel):
     api_key: str
     board: str
@@ -651,6 +657,7 @@ async def lounge_meta(request: Request):
         "max_len": lounge.LOUNGE_MAX_LEN,
         "cooldown_sec": lounge.LOUNGE_COOLDOWN_SEC,
         **lounge.packet_limits(),
+        **lounge.board_limits(),
     }
 
 
@@ -716,6 +723,32 @@ async def lounge_grab(body: LoungeGrabRequest):
     from . import lounge
     try:
         return await lounge.human_grab_packet(body.api_key.strip(), body.packet_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/lounge/board")
+async def lounge_board_public(since: int = 0, before: int = 0, limit: int = 40, kind: str = ""):
+    from . import lounge
+    try:
+        kind_filter = lounge._normalize_board_kind(kind) if kind else None
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    before_id = before or None
+    items = await lounge.list_board_items(
+        since_id=max(0, since) if not before_id else 0,
+        before_id=before_id,
+        limit=limit,
+        kind=kind_filter,
+    )
+    return {"items": items}
+
+
+@app.post("/api/lounge/board")
+async def lounge_board_post(body: LoungeBoardRequest):
+    from . import lounge
+    try:
+        return await lounge.human_post_board(body.api_key.strip(), body.kind, body.body)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

@@ -2137,6 +2137,18 @@ async def init_db() -> None:
             "CREATE INDEX IF NOT EXISTS idx_shore_life_spend_steward_at "
             "ON shore_life_spend(steward_id, created_at)",
             "ALTER TABLE stewards ADD COLUMN energy_regen_at INTEGER NOT NULL DEFAULT 0",
+            """
+            CREATE TABLE IF NOT EXISTS lounge_board (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                kind TEXT NOT NULL,
+                body TEXT NOT NULL,
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                source TEXT NOT NULL DEFAULT 'mcp',
+                created_at INTEGER NOT NULL
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_lounge_board_created ON lounge_board(created_at DESC)",
+            "CREATE INDEX IF NOT EXISTS idx_lounge_board_kind ON lounge_board(kind, id DESC)",
         ):
             try:
                 await db.execute(ddl)
