@@ -67,7 +67,7 @@ def classify(exc: BaseException) -> ApiError:
         return ApiError("NOT_READY", msg or "这会儿挖不了。", status=409, detail=msg)
     if "买镐要" in raw or "开坑要" in raw or "升镐要" in raw:
         return ApiError("TICKETS_LOW", msg or "工分票不够。", status=409, detail=msg)
-    if "工分票不足" in raw or "撒网需要" in raw or "坐钓需要" in raw:
+    if "工分票不足" in raw or "撒网需要" in raw or "坐钓需要" in raw or "票不够" in raw or "灯油钱" in raw:
         return ApiError("TICKETS_LOW", msg or "工分票不够。", status=409, detail=msg)
     if "需要" in raw and "票" in raw and "只有" in raw:
         return ApiError("TICKETS_LOW", msg or "工分票不够。", status=409, detail=msg)

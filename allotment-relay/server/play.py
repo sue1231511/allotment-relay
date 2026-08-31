@@ -215,6 +215,22 @@ PLACES: list[dict[str, Any]] = [
         ],
     },
     {
+        "id": "lighthouse",
+        "name": "灯塔",
+        "kicker": "Lighthouse",
+        "blurb": "守灯人·不醒在这儿。喝茶、问潮、点灯、守夜。灯廊是公开的，别写现实隐私。",
+        "rail": "今天上塔做什么",
+        "week1": False,
+        "actions": [
+            {"label": "上塔", "note": "见不醒，闲聊记灯芯", "tool": "visit_ops", "command": "buxing visit"},
+            {"label": "喝茶", "note": "免费，每天一次，回 2 精力", "tool": "visit_ops", "command": "buxing tea"},
+            {"label": "问潮", "note": "前 5 次免费，之后 3 票", "tool": "visit_ops", "command": "buxing tide"},
+            {"label": "看灯廊", "note": "全岛公开的名牌与愿望", "tool": "visit_ops", "command": "buxing gallery"},
+            {"label": "潮汐簿", "note": "自己的旧事和灯", "tool": "visit_ops", "command": "buxing remember"},
+            {"label": "守夜", "note": "60 票上塔坐一夜", "tool": "visit_ops", "command": "buxing watch"},
+        ],
+    },
+    {
         "id": "market",
         "name": "玩家集市",
         "kicker": "Market",

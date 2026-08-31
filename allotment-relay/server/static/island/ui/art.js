@@ -20,7 +20,7 @@ export const SLOTS = {
   workshop: { label: "岸工坊", size: "941×1672" },
   quarry: { label: "盐风崖", size: "941×1672" },
   shop: { label: "Tt酱杂货铺", size: "941×1672" },
-  lighthouse: { label: "灯塔", size: "1080×1920" },
+  lighthouse: { label: "灯塔", size: "941×1672" },
   notice: { label: "潮汐公告", size: "1080×1920" },
 };
 

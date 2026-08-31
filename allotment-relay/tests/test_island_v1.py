@@ -356,6 +356,49 @@ async def _test_island_v1_api() -> None:
     assert dined.status_code == 200, dined.text
     assert dined.json()["event"]["kind"] == "eatery"
 
+    tower0 = client.get("/api/v1/lighthouse", headers=_auth(key))
+    assert tower0.status_code == 200, tower0.text
+    tower = tower0.json()["lighthouse"]
+    assert tower["speaker"] == "不醒", tower
+    assert tower["name"] == "灯塔", tower
+    assert any(row["id"] == "tea" for row in tower["choices"]), tower
+    assert any(row["id"] == "light" for row in tower["choices"]), tower
+    tea = client.post(
+        "/api/v1/lighthouse/act",
+        headers=_auth(key, {"Idempotency-Key": "lh-tea"}),
+        json={"kind": "tea", "target": ""},
+    )
+    assert tea.status_code == 200, tea.text
+    assert tea.json()["event"]["kind"] == "lighthouse"
+    assert "精力" in tea.json()["event"]["narrative"]
+    tea2 = client.post(
+        "/api/v1/lighthouse/act",
+        headers=_auth(key, {"Idempotency-Key": "lh-tea2"}),
+        json={"kind": "tea", "target": ""},
+    )
+    assert tea2.status_code == 200, tea2.text
+    assert "今天喝过了" in tea2.json()["event"]["narrative"]
+    light_miss = client.post(
+        "/api/v1/lighthouse/act",
+        headers=_auth(key, {"Idempotency-Key": "lh-light-empty"}),
+        json={"kind": "light", "target": ""},
+    )
+    assert light_miss.status_code >= 400, light_miss.text
+    lit = client.post(
+        "/api/v1/lighthouse/act",
+        headers=_auth(key, {"Idempotency-Key": "lh-light-ok"}),
+        json={"kind": "light", "target": "妈妈 | 平安"},
+    )
+    assert lit.status_code == 200, lit.text
+    assert "第 1 盏" in lit.json()["event"]["narrative"]
+    gallery = client.post(
+        "/api/v1/lighthouse/act",
+        headers=_auth(key, {"Idempotency-Key": "lh-gallery"}),
+        json={"kind": "gallery", "target": ""},
+    )
+    assert gallery.status_code == 200, gallery.text
+    assert "给妈妈点的" in gallery.json()["event"]["narrative"]
+
     atelier0 = client.get("/api/v1/atelier", headers=_auth(key))
     assert atelier0.status_code == 200, atelier0.text
     atelier = atelier0.json()["atelier"]
@@ -825,7 +868,7 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-eatery1" in html
+    assert "island-lighthouse1" in html
     assert "/static/island/tap.js" in html
     assert "/static/island/boot.js" in html
     assert 'id="island-enter"' in html
@@ -1085,7 +1128,7 @@ def test_island_page_is_modular() -> None:
     assert "scenes/quarry.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
     try:
         from PIL import Image
-        for place in ("eatery", "hui", "market", "ting", "lianli", "workshop", "quarry", "shop"):
+        for place in ("eatery", "hui", "market", "ting", "lianli", "workshop", "quarry", "shop", "lighthouse"):
             pic = ROOT / f"server/static/island/assets/scenes/{place}.png"
             assert pic.exists(), place
             assert Image.open(pic).size == (941, 1672)
@@ -1254,6 +1297,21 @@ def test_island_page_is_modular() -> None:
     assert "/api/v1/atelier" in api
     assert "/api/v1/hall" in api
     assert "/api/v1/eatery" in api
+    assert "/api/v1/lighthouse" in api
+    assert "api.lighthouseAct" in app
+    assert "keepLighthouse" in app
+    assert (ROOT / "server/v1/lighthouse_service.py").exists()
+    lighthouse_js = (ROOT / "server/static/island/scenes/lighthouse.js").read_text(encoding="utf-8")
+    assert "island-vn" in lighthouse_js
+    assert "sprites/buxing.png" in lighthouse_js
+    assert "island-vn-choice" in lighthouse_js
+    assert "去上手页" not in lighthouse_js
+    assert "island-shop-shelf" not in lighthouse_js
+    assert (ROOT / "server/static/island/assets/sprites/buxing.png").exists()
+    assert "sprites/buxing.png" in art_md
+    assert "立绘对话" in art_md
+    assert ".island-vn-box" in css
+    assert ".island-vn-sprite" in css
     assert ".island-theater-board" in css
     assert ".island-theater-picks" not in css
     assert ".island-theater .island-hot span" in css

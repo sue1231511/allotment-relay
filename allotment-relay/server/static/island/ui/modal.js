@@ -254,6 +254,76 @@ export function showPitchSheet({ title, body, titleMin = 2, bodyMin = 40, onConf
   }, { once: true });
 }
 
+export function showFormSheet({ title, body, fields = [], confirm, onConfirm, onClose } = {}) {
+  const inputs = (fields || []).map((field, idx) => (
+    `<label class="island-field">
+      <span>${esc(field.label || "")}</span>
+      <input id="island-form-${esc(field.id || idx)}" type="text" maxlength="${esc(field.max || 48)}" placeholder="${esc(field.placeholder || "")}" autocomplete="off">
+    </label>`
+  )).join("");
+  const root = paintModal(cardMarkup(`
+      <h3>${esc(title || "写下")}</h3>
+      <p>${esc(body || "")}</p>
+      ${inputs}
+      <div class="island-care-acts">
+        <button type="button" class="island-btn primary wide" data-act="confirm">${esc(confirm || "确认")}</button>
+      </div>
+      <button type="button" class="island-btn wide" data-close-modal>先不忙</button>
+  `, "island-care"));
+  if (!root) return;
+  const close = () => {
+    hideModal();
+    if (onClose) onClose();
+  };
+  root.querySelector("[data-close-modal]").addEventListener("click", close);
+  root.querySelector("[data-act=confirm]").addEventListener("click", () => {
+    const vals = {};
+    for (const field of fields) {
+      const el = root.querySelector(`#island-form-${field.id}`);
+      const text = String(el && el.value || "").trim();
+      if (!text) {
+        toast(field.empty || `先写下${field.label || "这一栏"}。`);
+        return;
+      }
+      vals[field.id] = text;
+    }
+    hideModal();
+    if (onConfirm) onConfirm(vals);
+  });
+  root.addEventListener("click", (ev) => {
+    if (ev.target === root) close();
+  }, { once: true });
+}
+
+export function showPickSheet({ title, body, options = [], onConfirm, onClose } = {}) {
+  const rows = (options || []).map((row) => (
+    `<button type="button" class="island-btn wide" data-pick="${esc(row.id)}">${esc(row.label)}</button>`
+  )).join("");
+  const root = paintModal(cardMarkup(`
+      <h3>${esc(title || "选一个")}</h3>
+      <p>${esc(body || "")}</p>
+      <div class="island-care-acts">
+        ${rows || `<p class="island-fine">这会儿没有可选的。</p>`}
+      </div>
+      <button type="button" class="island-btn wide" data-close-modal>先不忙</button>
+  `, "island-care"));
+  if (!root) return;
+  const close = () => {
+    hideModal();
+    if (onClose) onClose();
+  };
+  root.querySelector("[data-close-modal]").addEventListener("click", close);
+  root.querySelectorAll("[data-pick]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      hideModal();
+      if (onConfirm) onConfirm(btn.getAttribute("data-pick"));
+    });
+  });
+  root.addEventListener("click", (ev) => {
+    if (ev.target === root) close();
+  }, { once: true });
+}
+
 export function showActSheet({ title, body, confirm, onConfirm, onClose } = {}) {
   const root = paintModal(cardMarkup(`
       <h3>${esc(title || "确认")}</h3>

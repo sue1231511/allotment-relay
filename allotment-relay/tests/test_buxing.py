@@ -48,6 +48,14 @@ async def test_buxing_flow() -> None:
     assert "灯油钱 −60 票" in await mcp_dispatch.visit_bundle(kid, "buxing watch")
     remembered = await mcp_dispatch.visit_bundle(kid, "buxing remember")
     assert "一把旧钥匙" in remembered and "给妈妈" in remembered
+    from server import buxing, game
+    s = await game.require_steward(kid, exempt_duty=True)
+    async with db.connect() as conn:
+        view = await buxing.player_view(conn, s)
+        await conn.commit()
+    assert view["speaker"] == "不醒"
+    assert {row["id"] for row in view["choices"]} >= {"tea", "tide", "light", "gallery", "watch"}
+    assert any(row["id"] == 1 for row in view["lights"])
 
 
 def test_buxing_mcp_description() -> None:
@@ -64,6 +72,9 @@ def test_buxing_mcp_description() -> None:
     assert "buxing" in man or "buxing" in VISIT_HELP
     assert "问潮前 5 次免费" in VISIT_HELP
     assert "灯廊" in VISIT_HELP
+    from server.buxing import BUXING_HELP
+    assert "立绘对话" in VISIT_HELP
+    assert "立绘对话" in BUXING_HELP
 
 
 def main() -> None:
