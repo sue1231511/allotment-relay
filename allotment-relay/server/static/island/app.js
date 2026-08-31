@@ -1,4 +1,4 @@
-import { api, loadKey } from "./api.js?v=island-plantbag1";
+import { api, loadKey } from "./api.js?v=island-hutscene1";
 import {
   applySnapshot,
   duesBlocked,
@@ -7,46 +7,48 @@ import {
   plotToken,
   ripeYard,
   state,
+  hutScene,
   tickGrow,
   tickQuarry,
   tickWorkshop,
-} from "./store.js?v=island-plantbag1";
-import { renderHud } from "./hud.js?v=island-plantbag1";
-import { renderMap } from "./map.js?v=island-plantbag1";
-import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=island-plantbag1";
-import { renderShore, renderShoreYard } from "./scenes/shore.js?v=island-plantbag1";
-import { renderPlaza } from "./scenes/plaza.js?v=island-plantbag1";
-import { renderPlace } from "./scenes/place.js?v=island-plantbag1";
-import { renderShop } from "./scenes/shop.js?v=island-plantbag1";
-import { renderLili } from "./scenes/lili.js?v=island-plantbag1";
-import { renderClinic } from "./scenes/clinic.js?v=island-plantbag1";
-import { renderWorkshop } from "./scenes/workshop.js?v=island-plantbag1";
-import { renderQuarry } from "./scenes/quarry.js?v=island-plantbag1";
-import { renderBar } from "./scenes/bar.js?v=island-plantbag1";
-import { renderTheater } from "./scenes/theater.js?v=island-plantbag1";
-import { renderWriters } from "./scenes/writers.js?v=island-plantbag1";
-import { renderAtelier } from "./scenes/atelier.js?v=island-plantbag1";
-import { renderHall } from "./scenes/hall.js?v=island-plantbag1";
-import { renderEatery } from "./scenes/eatery.js?v=island-plantbag1";
-import { renderMarket } from "./scenes/market.js?v=island-plantbag1";
-import { renderTing } from "./scenes/ting.js?v=island-plantbag1";
-import { renderHui } from "./scenes/hui.js?v=island-plantbag1";
-import { renderLianli } from "./scenes/lianli.js?v=island-plantbag1";
+} from "./store.js?v=island-hutscene1";
+import { renderHud } from "./hud.js?v=island-hutscene1";
+import { renderMap } from "./map.js?v=island-hutscene1";
+import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=island-hutscene1";
+import { renderShore, renderShoreYard } from "./scenes/shore.js?v=island-hutscene1";
+import { renderPlaza } from "./scenes/plaza.js?v=island-hutscene1";
+import { renderPlace } from "./scenes/place.js?v=island-hutscene1";
+import { renderHut } from "./scenes/hut.js?v=island-hutscene1";
+import { renderShop } from "./scenes/shop.js?v=island-hutscene1";
+import { renderLili } from "./scenes/lili.js?v=island-hutscene1";
+import { renderClinic } from "./scenes/clinic.js?v=island-hutscene1";
+import { renderWorkshop } from "./scenes/workshop.js?v=island-hutscene1";
+import { renderQuarry } from "./scenes/quarry.js?v=island-hutscene1";
+import { renderBar } from "./scenes/bar.js?v=island-hutscene1";
+import { renderTheater } from "./scenes/theater.js?v=island-hutscene1";
+import { renderWriters } from "./scenes/writers.js?v=island-hutscene1";
+import { renderAtelier } from "./scenes/atelier.js?v=island-hutscene1";
+import { renderHall } from "./scenes/hall.js?v=island-hutscene1";
+import { renderEatery } from "./scenes/eatery.js?v=island-hutscene1";
+import { renderMarket } from "./scenes/market.js?v=island-hutscene1";
+import { renderTing } from "./scenes/ting.js?v=island-hutscene1";
+import { renderHui } from "./scenes/hui.js?v=island-hutscene1";
+import { renderLianli } from "./scenes/lianli.js?v=island-hutscene1";
 let lighthouseMod = null;
 async function lighthouseScene() {
-  if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-plantbag1");
+  if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-hutscene1");
   return lighthouseMod;
 }
-import { renderBag } from "./ui/bag.js?v=island-plantbag1";
-import { setBackChip, setBagChip } from "./ui/back-map.js?v=island-plantbag1";
-import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=island-plantbag1";
-import { popOut } from "./ui/pop.js?v=island-plantbag1";
-import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showPitchSheet, showVendSheet, toast } from "./ui/modal.js?v=island-plantbag1";
+import { renderBag } from "./ui/bag.js?v=island-hutscene1";
+import { setBackChip, setBagChip } from "./ui/back-map.js?v=island-hutscene1";
+import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=island-hutscene1";
+import { popOut } from "./ui/pop.js?v=island-hutscene1";
+import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showPitchSheet, showVendSheet, toast } from "./ui/modal.js?v=island-hutscene1";
 
 const sceneEl = () => document.getElementById("island-scene");
 const sheetEl = () => document.getElementById("island-sheet");
 const plantEl = () => document.getElementById("island-plant");
-const LIVE_SCENES = ["home", "yards"];
+const LIVE_SCENES = ["home", "yards", "hut"];
 let growTimer = 0;
 let workshopTimer = 0;
 let quarryTimer = 0;
@@ -300,6 +302,11 @@ async function enterScene(name, opts) {
       stopQuarryTick();
       state.lighthouseMeet = false;
       await openLighthouse(root);
+    } else if (name === "hut") {
+      stopGrowTick();
+      stopWorkshopTick();
+      stopQuarryTick();
+      paintHut();
     } else if (PLACE_TITLES[name]) {
       stopGrowTick();
       stopWorkshopTick();
@@ -356,6 +363,21 @@ const PLACE_TITLES = {
 
 function renderPlaceScene(name) {
   renderPlace(sceneEl(), { id: name, title: PLACE_TITLES[name] || name });
+}
+
+function paintHut() {
+  renderHut(sceneEl(), { onBuild: tapBuildHut });
+}
+
+function tapBuildHut() {
+  const info = hutScene();
+  if (info.built) return;
+  showActSheet({
+    title: "搭棚屋",
+    body: `还没买房，棚屋场景还锁着。搭好才看得见。要 ${info.cost} 票。`,
+    confirm: "确认搭",
+    onConfirm: () => act(() => api.buildHut()),
+  });
 }
 
 async function openShop(root) {

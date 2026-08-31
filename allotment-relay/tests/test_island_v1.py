@@ -73,6 +73,9 @@ async def _test_island_v1_api() -> None:
     tickets0 = me.json()["me"]["tickets"]
     assert "duty" in me.json()["me"]
     assert "flags" in me.json()["me"]
+    assert me.json()["me"]["flags"]["hut_built"] is False
+    assert me.json()["me"]["flags"]["hut_level"] == 0
+    assert me.json()["me"]["hut_build_cost"] == 95
     assert "satiety" in me.json()["me"]
 
     missing_item = client.post(
@@ -1036,6 +1039,8 @@ async def _test_island_v1_api() -> None:
     assert built.status_code == 200, built.text
     assert built.json()["event"]["kind"] == "hut"
     assert built.json()["me"]["flags"]["hut_built"] is True
+    assert built.json()["me"]["flags"]["hut_level"] == 1
+    assert built.json()["me"]["flags"]["hut_name"] == "棚屋"
     async with db.connect() as conn:
         await conn.execute(
             "INSERT INTO hut_fittings (steward_id, slot, item_key, installed_at) VALUES (?,?,?,?)",
@@ -1130,23 +1135,34 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-plantbag1" in app
-    assert html.count("island.css?v=island-plantbag1") == 1
-    assert html.count("app.js?v=island-plantbag1") == 1
-    assert "lighthouse.js?v=island-plantbag1" in app
-    assert "hall.js?v=island-plantbag1" in app
-    assert "shop.js?v=island-plantbag1" in app
-    assert "lili.js?v=island-plantbag1" in app
-    assert "clinic.js?v=island-plantbag1" in app
-    assert "market.js?v=island-plantbag1" in app
+    assert "island-hutscene1" in app
+    assert html.count("island.css?v=island-hutscene1") == 1
+    assert html.count("app.js?v=island-hutscene1") == 1
+    assert "lighthouse.js?v=island-hutscene1" in app
+    assert "hall.js?v=island-hutscene1" in app
+    assert "shop.js?v=island-hutscene1" in app
+    assert "lili.js?v=island-hutscene1" in app
+    assert "clinic.js?v=island-hutscene1" in app
+    assert "market.js?v=island-hutscene1" in app
     js_blob = "\n".join(p.read_text(encoding="utf-8") for p in (ROOT / "server/static/island").rglob("*.js"))
     store_vs = set(re.findall(r"store\.js\?v=([^\s\"']+)", js_blob))
     modal_vs = set(re.findall(r"modal\.js\?v=([^\s\"']+)", js_blob))
-    assert store_vs == {"island-plantbag1"}, store_vs
-    assert modal_vs == {"island-plantbag1"}, modal_vs
-    assert 'from "../store.js?v=island-plantbag1"' in (ROOT / "server/static/island/scenes/atelier.js").read_text(encoding="utf-8")
-    assert 'from "../store.js?v=island-plantbag1"' in (ROOT / "server/static/island/scenes/writers.js").read_text(encoding="utf-8")
-    assert 'from "../store.js?v=island-plantbag1"' in (ROOT / "server/static/island/scenes/hall.js").read_text(encoding="utf-8")
+    assert store_vs == {"island-hutscene1"}, store_vs
+    assert modal_vs == {"island-hutscene1"}, modal_vs
+    assert 'from "../store.js?v=island-hutscene1"' in (ROOT / "server/static/island/scenes/atelier.js").read_text(encoding="utf-8")
+    assert 'from "../store.js?v=island-hutscene1"' in (ROOT / "server/static/island/scenes/writers.js").read_text(encoding="utf-8")
+    assert 'from "../store.js?v=island-hutscene1"' in (ROOT / "server/static/island/scenes/hall.js").read_text(encoding="utf-8")
+    hut_js = (ROOT / "server/static/island/scenes/hut.js").read_text(encoding="utf-8")
+    store_js = (ROOT / "server/static/island/store.js").read_text(encoding="utf-8")
+    art_js = (ROOT / "server/static/island/ui/art.js").read_text(encoding="utf-8")
+    assert "没买房" in hut_js
+    assert "棚屋场景还锁着" in hut_js
+    assert "renderHut" in app
+    assert 'name === "hut"' in app
+    assert "hutScene" in store_js
+    assert '"hut-1"' in art_js and '"hut-4"' in art_js
+    for name in ("hut-1.png", "hut-2.png", "hut-3.png", "hut-4.png"):
+        assert (ROOT / "server/static/island/assets/scenes" / name).exists(), name
     assert "island-wait2" in html
     assert 'id="island-boot-veil"' in html
     assert "正在进入" in html
@@ -1230,7 +1246,7 @@ def test_island_page_is_modular() -> None:
     assert "waitScenePics" in app
     assert "await waitScenePics" in app
     assert "enterGen" in app
-    assert 'from "./ui/modal.js?v=island-plantbag1"' in app
+    assert 'from "./ui/modal.js?v=island-hutscene1"' in app
     modal_src = (ROOT / "server/static/island/ui/modal.js").read_text(encoding="utf-8")
     assert "export function showFormSheet" in modal_src
     assert "export function showPickSheet" in modal_src
@@ -1247,6 +1263,7 @@ def test_island_page_is_modular() -> None:
     assert "layoutCoverBoard" in art_js
     assert "is-playing" in (ROOT / "server/static/island/boot.js").read_text(encoding="utf-8")
     assert "island-place" in css
+    assert "is-locked" in css
     assert "island-plant-buy" in css
     assert "is-hui" in css
     assert "#7fa24a" not in css
@@ -1550,6 +1567,7 @@ def test_island_page_is_modular() -> None:
     assert ":not(.island-lili)" in shop_js
     assert ":not(.island-clinic)" in shop_js
     assert "refreshScene: true" not in app
+    assert 'LIVE_SCENES = ["home", "yards", "hut"]' in app
     assert "/api/v1/shop/buy" in api
     assert "/api/v1/tote/vend" in api
     assert "/api/v1/workshop" in api

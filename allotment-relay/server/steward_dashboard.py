@@ -8,9 +8,17 @@ from typing import Any
 from . import bar, db, energy, events, farming, health, land, memory_archive, ranks, survival, world
 from . import undertide as undertide_mod
 from . import undertide_config as utcfg
-from .catalog import CROPS, ITEM_NAMES, item_stack_cap
+from .catalog import CROPS, HUT_LEVELS, ITEM_NAMES, item_stack_cap
 from . import market as market_mod
 from .config import ONLINE_WINDOW
+
+
+def _hut_flag_name(s: dict[str, Any]) -> str:
+    if not s.get("hut_built"):
+        return ""
+    lvl = max(1, int(s.get("hut_level") or 1))
+    meta = HUT_LEVELS.get(lvl) or HUT_LEVELS[1]
+    return str(s.get("hut_label") or meta["name"])
 
 
 async def fetch_dashboard(api_key: str) -> dict[str, Any]:
@@ -244,6 +252,8 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
         "flags": {
             "greenhouse": bool(s.get("greenhouse")),
             "hut_built": bool(s.get("hut_built")),
+            "hut_level": int(s.get("hut_level") or 0) if s.get("hut_built") else 0,
+            "hut_name": _hut_flag_name(s),
             "barn_built": bool(s.get("barn_built")),
             "eatery_open": bool(s.get("eatery_open")),
             "boat": bool(s.get("boat_key")),

@@ -363,3 +363,29 @@ export function duesBlocked() {
   const dues = (state.me && state.me.dues) || {};
   return Number(dues.tax_arrears || 0) > 0 || Number(dues.upkeep_arrears || 0) > 0;
 }
+
+const HUT_NAMES = {
+  1: "棚屋",
+  2: "岸畔小屋",
+  3: "联盟小宅",
+  4: "临海邸",
+};
+
+/** 没买房看不见棚屋场景。买了才按 Lv1 棚屋 / Lv2 岸畔小屋 / Lv3 联盟小宅 / Lv4 临海邸换景。 */
+export function hutScene() {
+  const me = state.me || {};
+  const flags = me.flags || {};
+  const built = Boolean(flags.hut_built);
+  const raw = Number(flags.hut_level) || 0;
+  const level = built ? Math.min(4, Math.max(1, raw || 1)) : 0;
+  const title = built
+    ? (flags.hut_name || HUT_NAMES[level] || "岸畔小屋")
+    : "岸畔小屋";
+  return {
+    built,
+    level,
+    sceneId: built ? `hut-${level}` : null,
+    title,
+    cost: Number(me.hut_build_cost) || 95,
+  };
+}
