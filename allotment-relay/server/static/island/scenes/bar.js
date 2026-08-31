@@ -1,6 +1,6 @@
-import { esc } from "../ui/modal.js?v=island-lilistall1";
-import { state } from "../store.js?v=island-lilistall1";
-import { bindShopFrame, ensureShopFrame, setShopPeek } from "../ui/shop-frame.js?v=island-lilistall1";
+import { esc } from "../ui/modal.js?v=island-plazaclinic1";
+import { state } from "../store.js?v=island-plazaclinic1";
+import { bindShopFrame, ensureShopFrame, setShopPeek } from "../ui/shop-frame.js?v=island-plazaclinic1";
 
 export function renderBar(root, { onAct, onSwitchTab, onOpenShelf, onCloseShelf, listTop = null } = {}) {
   const shop = state.bar || {};

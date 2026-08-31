@@ -454,3 +454,231 @@ async def clinic_ops(key_id: int, command: str) -> str:
         "未知 clinic 指令: "
         f"{command}（status / treat 病症|all / 调理 小|中|大 / buy 药品 / use 药品 / dove / chat / catalog）"
     )
+
+
+def _sku(
+    *,
+    sid: str,
+    kind: str,
+    name: str,
+    emoji: str,
+    note: str,
+    price: str,
+    can: bool,
+    target: str = "",
+    detail: str = "",
+) -> dict[str, Any]:
+    return {
+        "id": sid,
+        "kind": kind,
+        "name": name,
+        "emoji": emoji,
+        "note": note,
+        "detail": detail or note,
+        "price": price,
+        "can": can,
+        "target": target or sid,
+    }
+
+
+async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str, Any]:
+    """给 /island 乔乔诊所。数值仍走 clinic_ops，这里只摊开能点的。"""
+    ailments = await health.list_ailments(conn, s["id"])
+    cur = await conn.execute(
+        "SELECT item, quantity FROM satchel WHERE steward_id=? AND quantity>0",
+        (s["id"],),
+    )
+    stock = {row[0]: int(row[1]) for row in await cur.fetchall()}
+    tickets = int(s.get("tickets") or 0)
+    body = int(s.get("health") or 100)
+    day = db.day_id()
+    tonic_used = int(s.get("clinic_tonic_count") or 0) if int(s.get("clinic_tonic_day") or 0) == day else 0
+    tonic_left = max(0, config.CLINIC_TONIC_DAILY_CAP - tonic_used)
+    favor = int(s.get("clinic_dove_affinity") or 0)
+    peas = int(stock.get("crop_fogpea") or 0)
+    meter = health.meter_line(s, ailments)
+    bridge = [a for a in ailments if not health.bridge_refuses(a)]
+    pit = [a for a in ailments if health.bridge_refuses(a)]
+    if bridge:
+        line = f"桥桥在。地上病 {len(bridge)} 项。{meter}"
+    elif pit:
+        line = f"桥桥在。井下伤她不接，找晏安。{meter}"
+    elif body < 100:
+        line = f"桥桥在。没挂号，身体 {body}/100，可调理（贵）。"
+    else:
+        line = "桥桥在。地上的病来看病，没病可调理，药架能买，窗台能喂斑鸠。"
+
+    treat_items: list[dict[str, Any]] = []
+    if bridge:
+        treat_all_cost = sum(health._bill_cost(a["cost"]) for a in bridge)  # noqa: SLF001
+        treat_items.append(_sku(
+            sid="treat-all",
+            kind="treat",
+            name="一次尽量治完",
+            emoji="🩺",
+            note=f"地上病 {len(bridge)} 项，合计约 {treat_all_cost} 票。井下伤不接。",
+            detail="visit_ops clinic treat all 同一套。诊费偏高，不赊账。慢性病要歇够间隔。",
+            price=f"{treat_all_cost}票",
+            can=tickets >= treat_all_cost and all(a.get("treat_ready") for a in bridge),
+            target="all",
+        ))
+        for a in bridge:
+            billed = health._bill_cost(a["cost"])  # noqa: SLF001
+            extra = a.get("hint") or ""
+            if a.get("chronic"):
+                extra = f"{a.get('stage_name') or ''} · 疗程还剩 {a.get('remaining_courses', 1)} 次"
+                if a.get("treat_ready"):
+                    extra += " · 现在可压一档"
+                else:
+                    extra += f" · 还需歇 {health.fmt_wait(a['treat_wait'])}"
+            can = bool(a.get("treat_ready")) and tickets >= billed
+            treat_items.append(_sku(
+                sid=f"treat-{a['key']}",
+                kind="treat",
+                name=a["name"],
+                emoji=a.get("emoji") or "🩹",
+                note=extra or f"诊费约 {billed} 票",
+                detail=f"{a.get('hint') or ''} 诊费约 {billed} 票。{extra}".strip(),
+                price=f"{billed}票",
+                can=can,
+                target=a["key"],
+            ))
+    else:
+        treat_items.append(_sku(
+            sid="treat-none",
+            kind="look",
+            name="目前没挂号",
+            emoji="🩺",
+            note="没病可点调理回气色（贵）。井下伤找晏安，桥桥不接。",
+            detail="上手页和 visit_ops clinic status 同一家。没病别硬治。",
+            price="看",
+            can=True,
+            target="status",
+        ))
+    for a in pit:
+        treat_items.append(_sku(
+            sid=f"pit-{a['key']}",
+            kind="look",
+            name=f"{a['name']}（井下）",
+            emoji=a.get("emoji") or "🩹",
+            note="桥桥不接。去井下找晏安医务间。",
+            detail=a.get("hint") or "井下伤归晏安。",
+            price="看",
+            can=True,
+            target="status",
+        ))
+
+    tonic_items: list[dict[str, Any]] = []
+    for key, meta in config.CLINIC_TONIC_TIERS.items():
+        billed = health._bill_cost(int(meta["price"]))  # noqa: SLF001
+        if body >= 100:
+            note = "身体已经满分，别浪费票。"
+            can = False
+        elif tonic_left <= 0:
+            note = "今天现场调理满了。药架买回春汤、大补丸不占次数。"
+            can = False
+        elif tickets < billed:
+            note = f"要 {billed} 票，口袋 {tickets}。桥桥不赊账。"
+            can = False
+        else:
+            note = f"无病回身体 +{meta['heal']}。今日还剩 {tonic_left} 次。"
+            can = True
+        tonic_items.append(_sku(
+            sid=f"tonic-{key}",
+            kind="tonic",
+            name=meta["label"],
+            emoji="💉",
+            note=note,
+            detail=f"{meta['label']}：身体 +{meta['heal']}，{billed} 票。不治病。visit_ops clinic 调理 {key}。",
+            price=f"{billed}票",
+            can=can,
+            target=key,
+        ))
+
+    shelf_items: list[dict[str, Any]] = []
+    for key, meta in CLINIC_MEDICINES.items():
+        billed = health._bill_cost(int(meta["price"]))  # noqa: SLF001
+        have = int(stock.get(key) or 0)
+        hint = meta.get("hint") or ""
+        if medicine_is_tonic(meta):
+            hint = hint or f"无病回身体 +{meta['heal']}；不治病。"
+        can_buy = tickets >= billed
+        shelf_items.append(_sku(
+            sid=f"buy-{key}",
+            kind="buy",
+            name=meta["name"],
+            emoji=meta.get("emoji") or "💊",
+            note=(f"袋里 {have}。{hint}" if have else hint) or f"{billed} 票",
+            detail=f"clinic buy {meta['name']}。{hint}",
+            price=f"{billed}票",
+            can=can_buy,
+            target=meta["name"],
+        ))
+        if have:
+            shelf_items.append(_sku(
+                sid=f"use-{key}",
+                kind="use",
+                name=f"服用{meta['name']}",
+                emoji=meta.get("emoji") or "💊",
+                note=f"袋里 {have}。{hint}",
+                detail=f"clinic use {meta['name']}。{hint}",
+                price="服",
+                can=True,
+                target=meta["name"],
+            ))
+
+    dove_items = [
+        _sku(
+            sid="dove-feed",
+            kind="dove",
+            name="喂斑鸠",
+            emoji="🕊️",
+            note=f"雾豌豆×1，好感+2（现 {favor}）。袋里豌豆 {peas}。"
+            if peas else "要雾豌豆×1。去份地种雾豌豆。",
+            detail="visit_ops clinic dove 喂。耗雾豌豆×1，好感+2。",
+            price="喂" if peas else "看",
+            can=peas > 0,
+            target="喂",
+        ),
+        _sku(
+            sid="dove-look",
+            kind="look",
+            name="看窗台",
+            emoji="🪟",
+            note=f"斑鸠好感 {favor}。",
+            detail="clinic dove 看窝。喂雾豌豆才加好感。",
+            price="看",
+            can=True,
+            target="dove",
+        ),
+        _sku(
+            sid="chat",
+            kind="chat",
+            name="跟桥桥闲聊",
+            emoji="💬",
+            note="听她损两句。不治病。",
+            detail="visit_ops clinic chat。",
+            price="聊",
+            can=True,
+            target="chat",
+        ),
+    ]
+
+    treat_badge = str(len(bridge)) if bridge else ""
+    tabs = [
+        {"key": "treat", "label": "看病", "badge": treat_badge},
+        {"key": "tonic", "label": "调理", "badge": str(tonic_left) if tonic_left < config.CLINIC_TONIC_DAILY_CAP else ""},
+        {"key": "shelf", "label": "药架", "badge": ""},
+        {"key": "dove", "label": "窗台", "badge": ""},
+    ]
+    return {
+        "name": "乔乔诊所",
+        "line": line,
+        "tabs": tabs,
+        "items": {
+            "treat": treat_items,
+            "tonic": tonic_items,
+            "shelf": shelf_items,
+            "dove": dove_items,
+        },
+    }

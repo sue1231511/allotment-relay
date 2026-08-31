@@ -1,7 +1,7 @@
-import { layoutCoverBoard, sceneArt } from "../ui/art.js?v=island-lilistall1";
-import { esc } from "../ui/modal.js?v=island-lilistall1";
-import { state } from "../store.js?v=island-lilistall1";
-import { bindShopFrame, ensureShopFrame, setShopPeek } from "../ui/shop-frame.js?v=island-lilistall1";
+import { layoutCoverBoard, sceneArt } from "../ui/art.js?v=island-plazaclinic1";
+import { esc } from "../ui/modal.js?v=island-plazaclinic1";
+import { state } from "../store.js?v=island-plazaclinic1";
+import { bindShopFrame, ensureShopFrame, setShopPeek } from "../ui/shop-frame.js?v=island-plazaclinic1";
 
 /** 热区按滩景 1080×1920：码头船是港口，左下沙滩是海边。 */
 const HOTS = [

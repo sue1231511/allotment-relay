@@ -1,4 +1,4 @@
-import { api, loadKey } from "./api.js?v=island-lilistall1";
+import { api, loadKey } from "./api.js?v=island-plazaclinic1";
 import {
   applySnapshot,
   duesBlocked,
@@ -10,37 +10,38 @@ import {
   tickGrow,
   tickQuarry,
   tickWorkshop,
-} from "./store.js?v=island-lilistall1";
-import { renderHud } from "./hud.js?v=island-lilistall1";
-import { renderMap } from "./map.js?v=island-lilistall1";
-import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=island-lilistall1";
-import { renderShore, renderShoreYard } from "./scenes/shore.js?v=island-lilistall1";
-import { renderPlaza } from "./scenes/plaza.js?v=island-lilistall1";
-import { renderPlace } from "./scenes/place.js?v=island-lilistall1";
-import { renderShop } from "./scenes/shop.js?v=island-lilistall1";
-import { renderLili } from "./scenes/lili.js?v=island-lilistall1";
-import { renderWorkshop } from "./scenes/workshop.js?v=island-lilistall1";
-import { renderQuarry } from "./scenes/quarry.js?v=island-lilistall1";
-import { renderBar } from "./scenes/bar.js?v=island-lilistall1";
-import { renderTheater } from "./scenes/theater.js?v=island-lilistall1";
-import { renderWriters } from "./scenes/writers.js?v=island-lilistall1";
-import { renderAtelier } from "./scenes/atelier.js?v=island-lilistall1";
-import { renderHall } from "./scenes/hall.js?v=island-lilistall1";
-import { renderEatery } from "./scenes/eatery.js?v=island-lilistall1";
-import { renderMarket } from "./scenes/market.js?v=island-lilistall1";
-import { renderTing } from "./scenes/ting.js?v=island-lilistall1";
-import { renderHui } from "./scenes/hui.js?v=island-lilistall1";
-import { renderLianli } from "./scenes/lianli.js?v=island-lilistall1";
+} from "./store.js?v=island-plazaclinic1";
+import { renderHud } from "./hud.js?v=island-plazaclinic1";
+import { renderMap } from "./map.js?v=island-plazaclinic1";
+import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=island-plazaclinic1";
+import { renderShore, renderShoreYard } from "./scenes/shore.js?v=island-plazaclinic1";
+import { renderPlaza } from "./scenes/plaza.js?v=island-plazaclinic1";
+import { renderPlace } from "./scenes/place.js?v=island-plazaclinic1";
+import { renderShop } from "./scenes/shop.js?v=island-plazaclinic1";
+import { renderLili } from "./scenes/lili.js?v=island-plazaclinic1";
+import { renderClinic } from "./scenes/clinic.js?v=island-plazaclinic1";
+import { renderWorkshop } from "./scenes/workshop.js?v=island-plazaclinic1";
+import { renderQuarry } from "./scenes/quarry.js?v=island-plazaclinic1";
+import { renderBar } from "./scenes/bar.js?v=island-plazaclinic1";
+import { renderTheater } from "./scenes/theater.js?v=island-plazaclinic1";
+import { renderWriters } from "./scenes/writers.js?v=island-plazaclinic1";
+import { renderAtelier } from "./scenes/atelier.js?v=island-plazaclinic1";
+import { renderHall } from "./scenes/hall.js?v=island-plazaclinic1";
+import { renderEatery } from "./scenes/eatery.js?v=island-plazaclinic1";
+import { renderMarket } from "./scenes/market.js?v=island-plazaclinic1";
+import { renderTing } from "./scenes/ting.js?v=island-plazaclinic1";
+import { renderHui } from "./scenes/hui.js?v=island-plazaclinic1";
+import { renderLianli } from "./scenes/lianli.js?v=island-plazaclinic1";
 let lighthouseMod = null;
 async function lighthouseScene() {
-  if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-lilistall1");
+  if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-plazaclinic1");
   return lighthouseMod;
 }
-import { renderBag } from "./ui/bag.js?v=island-lilistall1";
-import { setBackChip, setBagChip } from "./ui/back-map.js?v=island-lilistall1";
-import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=island-lilistall1";
-import { popOut } from "./ui/pop.js?v=island-lilistall1";
-import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showPitchSheet, showVendSheet, toast } from "./ui/modal.js?v=island-lilistall1";
+import { renderBag } from "./ui/bag.js?v=island-plazaclinic1";
+import { setBackChip, setBagChip } from "./ui/back-map.js?v=island-plazaclinic1";
+import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=island-plazaclinic1";
+import { popOut } from "./ui/pop.js?v=island-plazaclinic1";
+import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showPitchSheet, showVendSheet, toast } from "./ui/modal.js?v=island-plazaclinic1";
 
 const sceneEl = () => document.getElementById("island-scene");
 const sheetEl = () => document.getElementById("island-sheet");
@@ -205,6 +206,12 @@ async function enterScene(name, opts) {
       stopQuarryTick();
       state.liliShelf = false;
       await openLili(root);
+    } else if (name === "clinic") {
+      stopGrowTick();
+      stopWorkshopTick();
+      stopQuarryTick();
+      state.clinicShelf = false;
+      await openClinic(root);
     } else if (name === "workshop") {
       stopGrowTick();
       stopWorkshopTick();
@@ -341,6 +348,7 @@ const PLACE_TITLES = {
   quarry: "盐风崖",
   shop: "杂货铺",
   lili: "栗栗流动摊",
+  clinic: "乔乔诊所",
   lighthouse: "灯塔",
   notice: "潮汐公告",
 };
@@ -480,6 +488,89 @@ async function runLili(kind, target) {
   const list = document.getElementById("island-lili-list");
   const listTop = list ? list.scrollTop : 0;
   await act(() => api.liliAct(kind, target), { keepLili: true, listTop, quiet: true });
+}
+
+async function openClinic() {
+  try {
+    const data = await api.clinic();
+    applySnapshot(data);
+    renderHud();
+    if (data.event) showEvent(data.event);
+  } catch (err) {
+    toast(err.message || "诊室门还关着。");
+  }
+  const tabs = (state.clinic && state.clinic.tabs) || [];
+  if (!tabs.some((row) => row.key === state.clinicTab)) {
+    state.clinicTab = (tabs[0] && tabs[0].key) || "treat";
+  }
+  paintClinic();
+}
+
+function paintClinic(listTop = 0) {
+  renderClinic(sceneEl(), {
+    onAct: tapClinic,
+    onSwitchTab: (tab) => {
+      state.clinicTab = tab || "treat";
+      hideModal();
+      paintClinic(0);
+    },
+    onOpenShelf: () => {
+      state.clinicShelf = true;
+      paintClinic(0);
+    },
+    onCloseShelf: () => {
+      state.clinicShelf = false;
+      hideModal();
+      paintClinic();
+    },
+    listTop,
+  });
+}
+
+function clinicRow(kind, target, id) {
+  const shop = state.clinic || {};
+  const items = shop.items || {};
+  const rows = [
+    ...(items.treat || []),
+    ...(items.tonic || []),
+    ...(items.shelf || []),
+    ...(items.dove || []),
+  ];
+  return rows.find((row) =>
+    (id && String(row.id) === String(id))
+    || (row.kind === kind && String(row.target || "") === String(target || ""))
+  ) || null;
+}
+
+function tapClinic(kind, target, id) {
+  const row = clinicRow(kind, target, id) || {};
+  if (kind === "look" || !row.can) {
+    showHintSheet({
+      title: row.name || "乔乔诊所",
+      body: row.detail || row.note || (state.clinic && state.clinic.line) || "这会儿诊所用不上这一下。",
+    });
+    return;
+  }
+  const pack = {
+    treat: ["看病", row.detail || row.note, "确认治"],
+    tonic: ["调理", row.detail || row.note, "确认调"],
+    buy: ["买药", row.detail || row.note, "确认买"],
+    use: ["服药", row.detail || row.note, "确认服"],
+    dove: ["喂斑鸠", row.detail || row.note, "确认喂"],
+    chat: ["闲聊", row.detail || row.note, "确认聊"],
+  }[kind] || ["乔乔诊所", row.detail || row.note || "做这一下？", "确认"];
+  showActSheet({
+    title: pack[0],
+    body: pack[1],
+    confirm: pack[2],
+    onConfirm: () => runClinic(kind, target || row.target || ""),
+  });
+}
+
+async function runClinic(kind, target) {
+  const list = document.getElementById("island-clinic-list");
+  const listTop = list ? list.scrollTop : 0;
+  await act(() => api.clinicAct(kind, target), { keepClinic: true, listTop, quiet: true });
 }
 
 async function openWorkshop(root) {
@@ -2231,7 +2322,7 @@ async function vendItem(item) {
   await act(() => api.vend(name, 1), { keepTab: true });
 }
 
-async function act(fn, { refreshScene = false, keepPlant = false, keepTab = false, keepShop = false, keepWorkshop = false, keepQuarry = false, keepBar = false, keepWriters = false, keepAtelier = false, keepHall = false, keepEatery = false, keepMarket = false, keepTing = false, keepHui = false, keepLianli = false, keepShore = false, keepPort = false, keepLighthouse = false, keepLili = false, listTop = null, quiet = false } = {}) {
+async function act(fn, { refreshScene = false, keepPlant = false, keepTab = false, keepShop = false, keepWorkshop = false, keepQuarry = false, keepBar = false, keepWriters = false, keepAtelier = false, keepHall = false, keepEatery = false, keepMarket = false, keepTing = false, keepHui = false, keepLianli = false, keepShore = false, keepPort = false, keepLighthouse = false, keepLili = false, keepClinic = false, listTop = null, quiet = false } = {}) {
   if (state.busy) return;
   state.busy = true;
   try {
@@ -2252,6 +2343,10 @@ async function act(fn, { refreshScene = false, keepPlant = false, keepTab = fals
     }
     if (keepLili && state.scene === "lili") {
       paintLili(listTop);
+      return;
+    }
+    if (keepClinic && state.scene === "clinic") {
+      paintClinic(listTop);
       return;
     }
     if (keepWorkshop && state.scene === "workshop") {

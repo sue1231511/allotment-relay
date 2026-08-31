@@ -85,6 +85,9 @@ export const state = {
   lili: null,
   liliTab: "shelf",
   liliShelf: false,
+  clinic: null,
+  clinicTab: "treat",
+  clinicShelf: false,
   lighthouse: null,
   lighthouseMeet: false,
   bagPage: 0,
@@ -158,6 +161,13 @@ export function applySnapshot(data) {
     const tabs = data.lili.tabs || [];
     if (tabs.length && !tabs.some((t) => t.key === state.liliTab)) {
       state.liliTab = tabs[0].key;
+    }
+  }
+  if (data.clinic) {
+    state.clinic = data.clinic;
+    const tabs = data.clinic.tabs || [];
+    if (tabs.length && !tabs.some((t) => t.key === state.clinicTab)) {
+      state.clinicTab = tabs[0].key;
     }
   }
   if (data.lighthouse) state.lighthouse = data.lighthouse;

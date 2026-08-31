@@ -122,4 +122,6 @@ export const api = {
   lighthouseAct: (kind, target = "", idem) => req("/api/v1/lighthouse/act", { method: "POST", body: { kind, target }, idem }),
   lili: () => req("/api/v1/lili"),
   liliAct: (kind, target = "", idem) => req("/api/v1/lili/act", { method: "POST", body: { kind, target }, idem }),
+  clinic: () => req("/api/v1/clinic"),
+  clinicAct: (kind, target = "", idem) => req("/api/v1/clinic/act", { method: "POST", body: { kind, target }, idem }),
 };

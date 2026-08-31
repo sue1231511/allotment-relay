@@ -533,6 +533,7 @@ body.island-app.is-playing.is-yards .island-actionbar {
 .island-hot.is-hui,
 .island-hot.is-theater,
 .island-hot.is-lili { z-index: 2; }
+.island-hot.is-clinic { z-index: 2; }
 
 .island-pin {
   min-width: 88px;
@@ -942,7 +943,7 @@ body.island-app.is-playing.is-yards .island-actionbar {
 .island-shore-card b { display: block; font-size: 18px; margin-bottom: 6px; }
 .island-shore-card p { margin: 0; font-size: 13px; color: #3d5c61; }
 
-/* 广场：整图可见，热区对上杂货铺 / 灯塔 / 岸工坊 / 潮汐公告。铺满一屏，底下不漏色，太高就滚。 */
+/* 广场：整图可见，热区对上杂货铺 / 灯塔 / 乔乔诊所 / 潮汐公告 / 栗栗摊。铺满一屏，底下不漏色，太高就滚。 */
 .island-plaza {
   position: absolute;
   inset: 0;
