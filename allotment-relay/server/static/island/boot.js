@@ -89,7 +89,9 @@
     }
   }
 
-  var MAP_PICS = ["/static/island/assets/scenes/island-map.png"];
+  var MAP_PICS = ["/static/island/assets/scenes/island-map.jpg"];
+  var VEIL_MS = 8000;
+  var veilTimer = 0;
 
   function showVeil(text) {
     var el = document.getElementById("island-boot-veil");
@@ -98,16 +100,45 @@
     if (line) line.textContent = text || "正在铺地图…";
     el.hidden = false;
     el.removeAttribute("hidden");
+    clearTimeout(veilTimer);
+    veilTimer = setTimeout(hideVeil, VEIL_MS);
   }
 
   function hideVeil() {
+    clearTimeout(veilTimer);
+    veilTimer = 0;
     var el = document.getElementById("island-boot-veil");
     if (el) el.hidden = true;
   }
 
+  function withTimeout(promise, ms, message) {
+    return new Promise(function (resolve, reject) {
+      var done = false;
+      var timer = setTimeout(function () {
+        if (done) return;
+        done = true;
+        reject(new Error(message || "等太久了。再点一次进入地图。"));
+      }, ms);
+      promise.then(
+        function (value) {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          resolve(value);
+        },
+        function (err) {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          reject(err);
+        }
+      );
+    });
+  }
+
   function preload(urls, timeoutMs) {
     urls = urls || MAP_PICS;
-    timeoutMs = timeoutMs || 25000;
+    timeoutMs = timeoutMs || 8000;
     return Promise.all(
       urls.map(function (src) {
         return new Promise(function (resolve) {
@@ -129,7 +160,7 @@
 
   function waitPics(root, timeoutMs) {
     root = root || document.getElementById("island-scene");
-    timeoutMs = timeoutMs || 25000;
+    timeoutMs = timeoutMs || 8000;
     if (!root) return Promise.resolve();
     var imgs = root.querySelectorAll(".island-slot-pic, .island-vn-sprite");
     if (!imgs.length) return Promise.resolve();
@@ -246,9 +277,9 @@
     saveKey(key);
     showVeil("正在铺地图…");
     setBusy(true, name ? "enroll" : "enter");
-    return Promise.all([postSession(key, name), preload(MAP_PICS)])
-      .then(function (pair) {
-        var data = pair[0];
+    return withTimeout(postSession(key, name), 12000, "号还没接上。再点一次进入地图。")
+      .then(function (data) {
+        preload(MAP_PICS, 8000);
         if (!data.enrolled) {
           hideVeil();
           if (enrollForm) enrollForm.classList.remove("island-hidden");

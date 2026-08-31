@@ -1,7 +1,7 @@
 /** 插图位。文件放到 /static/island/assets/scenes/{id}.png 就会自动铺上。 */
 
 export const SLOTS = {
-  "island-map": { label: "岛屿总览", size: "972×1619" },
+  "island-map": { label: "岛屿总览", size: "972×1619", ext: "jpg" },
   home: { label: "家园院子", size: "1080×1920" },
   yards: { label: "份地", size: "941×1672" },
   shore: { label: "港口", size: "1080×1920" },
@@ -24,11 +24,17 @@ export const SLOTS = {
   notice: { label: "潮汐公告", size: "1080×1920" },
 };
 
+export function scenePicUrl(id) {
+  const meta = SLOTS[id] || {};
+  const file = meta.file || id;
+  const ext = meta.ext || "png";
+  return `/static/island/assets/scenes/${file}.${ext}`;
+}
+
 export function sceneArt(id) {
   const meta = SLOTS[id] || { label: id, size: "1080×1920" };
-  const file = meta.file || id;
   return `<div class="island-slot" data-slot="${id}">
-    <img class="island-slot-pic" src="/static/island/assets/scenes/${file}.png" alt="" decoding="async" onerror="this.closest('.island-slot').classList.add('is-empty')">
+    <img class="island-slot-pic" src="${scenePicUrl(id)}" alt="" decoding="async" onerror="this.closest('.island-slot').classList.add('is-empty')">
     <span class="island-slot-mark"><b>插图位</b><small>${meta.label} · ${meta.size}</small></span>
   </div>`;
 }

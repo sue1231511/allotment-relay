@@ -868,7 +868,7 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-boot1" in html
+    assert "island-boot2" in html
     assert 'id="island-boot-veil"' in html
     assert "正在铺地图" in html
     assert "fonts.googleapis.com" not in html
@@ -922,10 +922,14 @@ def test_island_page_is_modular() -> None:
     assert "972" in map_js
     assert "1619" in map_js
     map_png = ROOT / "server/static/island/assets/scenes/island-map.png"
+    map_jpg = ROOT / "server/static/island/assets/scenes/island-map.jpg"
     assert map_png.exists()
+    assert map_jpg.exists()
+    assert map_jpg.stat().st_size < 500_000
     try:
         from PIL import Image
         assert Image.open(map_png).size == (972, 1619)
+        assert Image.open(map_jpg).size == (972, 1619)
     except ImportError:
         pass
     assert "min-height: 48px" in css
@@ -948,6 +952,8 @@ def test_island_page_is_modular() -> None:
     assert "sW = cw / iw" in art_js
     assert "Math.max(sW, sH" in art_js
     assert "decoding=\"async\"" in art_js
+    assert "scenePicUrl" in art_js
+    assert "island-map.jpg" in art_js or 'ext: "jpg"' in art_js
     assert "layoutCoverBoard" in map_js
     assert "layoutCoverBoard" in art_js
     assert "is-playing" in (ROOT / "server/static/island/boot.js").read_text(encoding="utf-8")
@@ -969,6 +975,7 @@ def test_island_page_is_modular() -> None:
     assert "/static/style.css" not in html
     assert "/api/v1/" in api
     assert "Authorization" in api
+    assert "AbortController" in api
     assert "encodeURIComponent" in api
     assert "api_key=" not in api
     assert "浇水 1" not in app
@@ -982,7 +989,9 @@ def test_island_page_is_modular() -> None:
     assert "/api/v1/session" in boot
     assert "正在进入" in boot
     assert "island-enter" in boot
-    assert "island-map.png" in boot
+    assert "island-map.jpg" in boot
+    assert "VEIL_MS" in boot
+    assert "8000" in boot
     assert "showVeil" in boot
     assert "waitPics" in boot
     assert "正在铺地图" in boot
@@ -1130,7 +1139,7 @@ def test_island_page_is_modular() -> None:
     assert (ROOT / "server/static/island/assets/ART.md").exists()
     assert "sceneArt" in (ROOT / "server/static/island/ui/art.js").read_text(encoding="utf-8")
     assert "插图位" in (ROOT / "server/static/island/ui/art.js").read_text(encoding="utf-8")
-    assert "scenes/island-map.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
+    assert "scenes/island-map.jpg" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
     assert "scenes/yards.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
     assert "scenes/eatery.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
     assert "点一下才出菜单" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
