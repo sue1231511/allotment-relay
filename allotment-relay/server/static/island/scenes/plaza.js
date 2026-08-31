@@ -1,4 +1,4 @@
-import { layoutCoverBoard, sceneArt } from "../ui/art.js?v=island-hui1";
+import { layoutCoverBoard, sceneArt } from "../ui/art.js?v=island-shore1";
 
 /** 热区按广场图 941×1672 上的房子和公告栏。图上已有店招，再叠游戏用地名。 */
 const HOTS = [

@@ -1,5 +1,5 @@
-import { sceneArt } from "../ui/art.js?v=island-hui1";
-import { esc } from "../ui/modal.js?v=island-hui1";
+import { sceneArt } from "../ui/art.js?v=island-shore1";
+import { esc } from "../ui/modal.js?v=island-shore1";
 
 /** 具体地点只铺图和地名，不放洗碗、交税这些按钮。 */
 export function renderPlace(root, { id, title }) {

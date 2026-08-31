@@ -512,6 +512,26 @@ async def _test_island_v1_api() -> None:
     assert "/lianli/" not in betroth_text
     assert "求婚草稿" in betroth_text or "信物" in betroth_text
 
+    shore0 = client.get("/api/v1/shore", headers=_auth(key))
+    assert shore0.status_code == 200, shore0.text
+    pier = shore0.json()["shore"]
+    assert pier["name"] == "海边", pier
+    assert any(t["key"] == "cast" for t in pier["tabs"]), pier
+    assert any(t["key"] == "beach" for t in pier["tabs"]), pier
+    looked_sea = client.post(
+        "/api/v1/shore/act",
+        headers=_auth(key, {"Idempotency-Key": "shore-look-status"}),
+        json={"kind": "look", "target": "status"},
+    )
+    assert looked_sea.status_code == 200, looked_sea.text
+    assert looked_sea.json()["event"]["kind"] == "shore"
+    scanned = client.post(
+        "/api/v1/shore/act",
+        headers=_auth(key, {"Idempotency-Key": "shore-look-beach"}),
+        json={"kind": "look", "target": "beach"},
+    )
+    assert scanned.status_code == 200, scanned.text
+
     tower0 = client.get("/api/v1/lighthouse", headers=_auth(key))
     assert tower0.status_code == 200, tower0.text
     tower = tower0.json()["lighthouse"]
@@ -1045,21 +1065,21 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-hui1" in app
-    assert html.count("island.css?v=island-hui1") == 1
-    assert html.count("app.js?v=island-hui1") == 1
-    assert "lighthouse.js?v=island-hui1" in app
-    assert "hall.js?v=island-hui1" in app
-    assert "shop.js?v=island-hui1" in app
-    assert "market.js?v=island-hui1" in app
+    assert "island-shore1" in app
+    assert html.count("island.css?v=island-shore1") == 1
+    assert html.count("app.js?v=island-shore1") == 1
+    assert "lighthouse.js?v=island-shore1" in app
+    assert "hall.js?v=island-shore1" in app
+    assert "shop.js?v=island-shore1" in app
+    assert "market.js?v=island-shore1" in app
     js_blob = "\n".join(p.read_text(encoding="utf-8") for p in (ROOT / "server/static/island").rglob("*.js"))
     store_vs = set(re.findall(r"store\.js\?v=([^\s\"']+)", js_blob))
     modal_vs = set(re.findall(r"modal\.js\?v=([^\s\"']+)", js_blob))
-    assert store_vs == {"island-hui1"}, store_vs
-    assert modal_vs == {"island-hui1"}, modal_vs
-    assert 'from "../store.js?v=island-hui1"' in (ROOT / "server/static/island/scenes/atelier.js").read_text(encoding="utf-8")
-    assert 'from "../store.js?v=island-hui1"' in (ROOT / "server/static/island/scenes/writers.js").read_text(encoding="utf-8")
-    assert 'from "../store.js?v=island-hui1"' in (ROOT / "server/static/island/scenes/hall.js").read_text(encoding="utf-8")
+    assert store_vs == {"island-shore1"}, store_vs
+    assert modal_vs == {"island-shore1"}, modal_vs
+    assert 'from "../store.js?v=island-shore1"' in (ROOT / "server/static/island/scenes/atelier.js").read_text(encoding="utf-8")
+    assert 'from "../store.js?v=island-shore1"' in (ROOT / "server/static/island/scenes/writers.js").read_text(encoding="utf-8")
+    assert 'from "../store.js?v=island-shore1"' in (ROOT / "server/static/island/scenes/hall.js").read_text(encoding="utf-8")
     assert "island-wait2" in html
     assert 'id="island-boot-veil"' in html
     assert "正在进入" in html
@@ -1140,7 +1160,7 @@ def test_island_page_is_modular() -> None:
     assert "waitScenePics" in app
     assert "await waitScenePics" in app
     assert "enterGen" in app
-    assert 'from "./ui/modal.js?v=island-hui1"' in app
+    assert 'from "./ui/modal.js?v=island-shore1"' in app
     modal_src = (ROOT / "server/static/island/ui/modal.js").read_text(encoding="utf-8")
     assert "export function showFormSheet" in modal_src
     assert "export function showPickSheet" in modal_src
@@ -1318,7 +1338,7 @@ def test_island_page_is_modular() -> None:
     assert "popOut" in modal_js
     assert "交岸税" not in app
     assert "只铺图和地名" in (ROOT / "server/static/island/scenes/place.js").read_text(encoding="utf-8")
-    assert "data-act=\"net\"" not in (ROOT / "server/static/island/scenes/shore.js").read_text(encoding="utf-8")
+    assert "ensureShopFrame" in (ROOT / "server/static/island/scenes/shore.js").read_text(encoding="utf-8")
     plaza_js = (ROOT / "server/static/island/scenes/plaza.js").read_text(encoding="utf-8")
     assert "发言" not in plaza_js
     assert "洗碗" not in plaza_js
@@ -1409,7 +1429,7 @@ def test_island_page_is_modular() -> None:
     assert "sceneArt" in home_js
     assert (ROOT / "server/static/island/scenes/shore.js").exists()
     assert (ROOT / "server/static/island/scenes/plaza.js").exists()
-    assert "renderPlace" in (ROOT / "server/static/island/scenes/shore.js").read_text(encoding="utf-8")
+    assert "ensureShopFrame" in (ROOT / "server/static/island/scenes/shore.js").read_text(encoding="utf-8")
     plaza_js = (ROOT / "server/static/island/scenes/plaza.js").read_text(encoding="utf-8")
     assert "island-plaza-board" in plaza_js
     assert "layoutCoverBoard" in plaza_js
@@ -1590,6 +1610,15 @@ def test_island_page_is_modular() -> None:
     assert "/api/v1/lianli" in api
     assert "api.lianliAct" in app
     assert (ROOT / "server/v1/lianli_service.py").exists()
+    shore_js = (ROOT / "server/static/island/scenes/shore.js").read_text(encoding="utf-8")
+    assert "点一下看出海" in shore_js
+    assert "island-shore" in shore_js
+    assert "ensureShopFrame" in shore_js
+    assert "去上手页" not in shore_js
+    assert "renderShore" in app
+    assert "keepShore" in app
+    assert "/api/v1/shore" in api
+    assert "api.shoreAct" in app
     assert "field.type === \"textarea\"" in modal_src or 'field.type === "textarea"' in modal_src
     assert "island-eatery" in eatery_js
     assert "ensureShopFrame" in eatery_js

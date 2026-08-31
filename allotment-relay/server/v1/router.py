@@ -31,6 +31,12 @@ class ShoreBody(BaseModel):
     api_key: str = ""
 
 
+class ShoreActBody(BaseModel):
+    kind: str = ""
+    target: str = ""
+    api_key: str = ""
+
+
 class LoungePostBody(BaseModel):
     text: str = ""
     message: str = ""
@@ -772,6 +778,33 @@ async def hui_pay(request: Request, body: PayBody):
         row, _ = await require_enrolled(key)
         result = await place_service.pay(key, int(row["id"]), body.kind)
         await idempotency.store(sid, f"hui:{body.kind}", _idem_key(request), 200, result)
+        return result
+    except ApiError as exc:
+        return _error(exc)
+
+
+@router.get("/shore")
+async def shore_status(request: Request):
+    try:
+        key = extract_api_key(request)
+        row, _ = await require_enrolled(key)
+        return await shore_service.snapshot(key, int(row["id"]))
+    except ApiError as exc:
+        return _error(exc)
+
+
+@router.post("/shore/act")
+async def shore_act(request: Request, body: ShoreActBody):
+    try:
+        key = extract_api_key(request, body.api_key)
+        kind = (body.kind or "").strip()
+        target = (body.target or "").strip()
+        sid, cached = await _write_guard(request, key, f"shore:{kind}:{target}")
+        if cached:
+            return _cached_response(cached)
+        row, _ = await require_enrolled(key)
+        result = await shore_service.act(key, int(row["id"]), kind, target)
+        await idempotency.store(sid, f"shore:{kind}:{target}", _idem_key(request), 200, result)
         return result
     except ApiError as exc:
         return _error(exc)

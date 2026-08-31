@@ -1,5 +1,5 @@
-import { ripeYard, state, thirstyYard, yardPlots } from "../store.js?v=island-hui1";
-import { esc } from "./modal.js?v=island-hui1";
+import { ripeYard, state, thirstyYard, yardPlots } from "../store.js?v=island-shore1";
+import { esc } from "./modal.js?v=island-shore1";
 
 export function renderQuest(sheet) {
   const me = state.me || {};

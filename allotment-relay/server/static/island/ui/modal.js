@@ -1,4 +1,4 @@
-import { popIn, popOut } from "./pop.js?v=island-hui1";
+import { popIn, popOut } from "./pop.js?v=island-shore1";
 
 function paintModal(html) {
   const root = document.getElementById("island-modal");

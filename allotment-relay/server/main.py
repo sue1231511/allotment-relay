@@ -151,7 +151,7 @@ async def lianli_page(request: Request):
 
 @app.get("/tide", response_class=HTMLResponse)
 async def tide_page(request: Request):
-    """海边围观实况；动手仍回上手页。"""
+    """海边围观实况；动手去上手页或手机地图总览点海边。"""
     return await _html(request, "tide.html", active="tide")
 
 

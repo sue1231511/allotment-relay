@@ -1,6 +1,6 @@
-import { esc } from "../ui/modal.js?v=island-hui1";
-import { state } from "../store.js?v=island-hui1";
-import { bindShopFrame, ensureShopFrame, setShopPeek } from "../ui/shop-frame.js?v=island-hui1";
+import { esc } from "../ui/modal.js?v=island-shore1";
+import { state } from "../store.js?v=island-shore1";
+import { bindShopFrame, ensureShopFrame, setShopPeek } from "../ui/shop-frame.js?v=island-shore1";
 
 export function renderLianli(root, { onAct, onSwitchTab, onOpenShelf, onCloseShelf, listTop = null } = {}) {
   const shop = state.lianli || {};
