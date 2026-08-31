@@ -17,10 +17,12 @@ export function renderLighthouse(root, { onAct } = {}) {
         <div class="island-vn-stand">
           <img class="island-vn-sprite" src="/static/island/assets/sprites/buxing.png" alt="不醒" draggable="false">
         </div>
-        <div class="island-vn-box">
-          <span class="island-vn-name"></span>
-          <p class="island-vn-line"></p>
+        <div class="island-vn-talk">
           <div class="island-vn-choices" id="island-lighthouse-choices"></div>
+          <div class="island-vn-box">
+            <span class="island-vn-name"></span>
+            <p class="island-vn-line"></p>
+          </div>
         </div>
       </div>
     </div>
