@@ -868,10 +868,11 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-list-vn1" in html
-    assert html.count("island.css?v=island-list-vn1") == 1
-    assert html.count("app.js?v=island-list-vn1") == 1
-    assert "lighthouse.js?v=island-list-vn1" in app
+    assert "island-stay1" in html
+    assert html.count("island.css?v=island-stay1") == 1
+    assert html.count("app.js?v=island-stay1") == 1
+    assert "lighthouse.js?v=island-stay1" in app
+    assert "shop.js?v=island-stay1" in app
     assert "island-boot3" in html
     assert 'id="island-boot-veil"' in html
     assert "正在进入" in html
@@ -1217,12 +1218,17 @@ def test_island_page_is_modular() -> None:
     assert "layoutCoverBoard" in plaza_js
     assert 'shop: "杂货铺"' in app
     shop_js = (ROOT / "server/static/island/scenes/shop.js").read_text(encoding="utf-8")
-    assert "island-shop-shelf" in shop_js
+    frame_js = (ROOT / "server/static/island/ui/shop-frame.js").read_text(encoding="utf-8")
+    assert "ensureShopFrame" in shop_js
+    assert "island-shop-shelf" in frame_js
+    assert "不换裁切" in frame_js
+    assert "不重载底图" in frame_js
     assert "和灯塔选项一个样子" in css
     assert "底下深色金边框" in css
     assert "grid-template-columns: 1fr 1fr" in css.split(".island-shop-list")[1].split(".island-shop-sku")[0]
     assert "island-shop-meta" in shop_js
-    assert "is-peek" in shop_js
+    assert "setShopPeek" in shop_js
+    assert "is-peek" in frame_js
     assert "点一下看货架" in shop_js
     assert "island-shop-card" not in shop_js
     assert "data-sku" in shop_js
@@ -1232,7 +1238,7 @@ def test_island_page_is_modular() -> None:
     assert "renderShop" in app
     assert "listTop" in shop_js
     assert "paintShopList" in shop_js
-    assert "querySelector(\".island-shop\")" in shop_js
+    assert ".island-shop:not(.island-workshop)" in shop_js
     assert ":not(.island-eatery)" in shop_js
     assert "refreshScene: true" not in app
     assert "/api/v1/shop/buy" in api
@@ -1250,7 +1256,7 @@ def test_island_page_is_modular() -> None:
     assert "keepWorkshop" in app
     workshop_js = (ROOT / "server/static/island/scenes/workshop.js").read_text(encoding="utf-8")
     assert "island-workshop" in workshop_js
-    assert "is-peek" in workshop_js
+    assert "setShopPeek" in workshop_js
     assert "点一下看砧上" in workshop_js
     assert "data-act" in workshop_js
     assert "去上手页" not in workshop_js
@@ -1283,10 +1289,10 @@ def test_island_page_is_modular() -> None:
     assert "renderEatery" in app
     bar_js = (ROOT / "server/static/island/scenes/bar.js").read_text(encoding="utf-8")
     assert "island-bar" in bar_js
-    assert "island-shop-shelf" in bar_js
+    assert "ensureShopFrame" in bar_js
     assert "island-bar-tray" not in bar_js
     assert "island-bar-opt" not in bar_js
-    assert "is-peek" in bar_js
+    assert "setShopPeek" in bar_js
     assert "点一下看吧台" in bar_js
     assert "洗碗" in bar_js
     assert "data-act" in bar_js
@@ -1325,7 +1331,7 @@ def test_island_page_is_modular() -> None:
     assert "点一下看看板" in hall_js
     assert "点一下看菜单" in eatery_js
     assert "island-eatery" in eatery_js
-    assert "island-shop-shelf" in eatery_js
+    assert "ensureShopFrame" in eatery_js
     assert "island-bar-tray" not in eatery_js
     assert "去上手页" not in eatery_js
     assert "disabled" not in eatery_js
@@ -1405,7 +1411,8 @@ def test_island_page_is_modular() -> None:
     assert "is-theater" in css
     assert "island-plaza-board" in css
     assert "941 / 1672" in css
-    assert ".island-shop:not(.is-peek) .island-slot" in css
+    assert ".island-shop:not(.is-peek) .island-scene-tap" in css
+    assert "店景不换裁切" in css
     assert "island-shop-meta" in css
     assert "island-scene-tap" in css
     assert ".island-shop.is-peek" in css
@@ -1414,7 +1421,7 @@ def test_island_page_is_modular() -> None:
     assert "url(\"/static/island/assets/bag-frame.png\")" not in css
     assert "bag-frame.png" in bag_js
     assert ".island-sheet.is-bag" in css
-    assert "object-position: center 38%" in css
+    assert "object-fit: fill" in css
     assert "/play?go=star" not in app
     assert (ROOT / "server/static/island/assets/plot.png").exists()
     assert (ROOT / "server/static/island/assets/grass.png").exists()

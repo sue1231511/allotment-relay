@@ -17,18 +17,18 @@ import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=isla
 import { renderShore } from "./scenes/shore.js?v=island-fix1";
 import { renderPlaza } from "./scenes/plaza.js?v=island-fix1";
 import { renderPlace } from "./scenes/place.js?v=island-fix1";
-import { renderShop } from "./scenes/shop.js?v=island-fix1";
-import { renderWorkshop } from "./scenes/workshop.js?v=island-fix1";
-import { renderQuarry } from "./scenes/quarry.js?v=island-fix1";
-import { renderBar } from "./scenes/bar.js?v=island-fix1";
+import { renderShop } from "./scenes/shop.js?v=island-stay1";
+import { renderWorkshop } from "./scenes/workshop.js?v=island-stay1";
+import { renderQuarry } from "./scenes/quarry.js?v=island-stay1";
+import { renderBar } from "./scenes/bar.js?v=island-stay1";
 import { renderTheater } from "./scenes/theater.js?v=island-fix1";
-import { renderWriters } from "./scenes/writers.js?v=island-fix1";
-import { renderAtelier } from "./scenes/atelier.js?v=island-fix1";
-import { renderHall } from "./scenes/hall.js?v=island-fix1";
-import { renderEatery } from "./scenes/eatery.js?v=island-fix1";
+import { renderWriters } from "./scenes/writers.js?v=island-stay1";
+import { renderAtelier } from "./scenes/atelier.js?v=island-stay1";
+import { renderHall } from "./scenes/hall.js?v=island-stay1";
+import { renderEatery } from "./scenes/eatery.js?v=island-stay1";
 let lighthouseMod = null;
 async function lighthouseScene() {
-  if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-list-vn1");
+  if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-stay1");
   return lighthouseMod;
 }
 import { renderBag } from "./ui/bag.js?v=island-fix1";

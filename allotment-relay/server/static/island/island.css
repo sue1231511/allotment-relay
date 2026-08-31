@@ -986,18 +986,14 @@ body.island-app.is-playing.is-yards .island-actionbar {
 .island-shop {
   position: absolute;
   inset: 0;
-  display: flex;
-  flex-direction: column;
+  display: block;
   background: #c9ddd8;
   overflow: hidden;
 }
 
-/* 进店先进店景，点一下才出货架。 */
+/* 列表和灯塔选项一个样子，底下深色金边框。进店先进店景，点一下只出列表，店景不换裁切。 */
 .island-shop.is-peek {
-  display: block;
-  overflow-x: hidden;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  overflow: hidden;
 }
 
 .island-shop-board {
@@ -1053,18 +1049,13 @@ body.island-app.is-playing.is-yards .island-actionbar {
   background: transparent;
 }
 
-/* 列表和灯塔选项一个样子：店景铺满，底下深色金边框。 */
-.island-shop:not(.is-peek) .island-slot {
-  position: absolute;
-  inset: 0;
-  flex: none;
-  min-height: 0;
-  z-index: 0;
+.island-shop.is-peek .island-shop-shelf,
+.island-shop.is-peek .island-scene-fold {
+  display: none;
 }
 
-.island-shop:not(.is-peek) .island-slot-pic {
-  object-fit: cover;
-  object-position: center 38%;
+.island-shop:not(.is-peek) .island-scene-tap {
+  display: none;
 }
 
 .island-shop-shelf {
