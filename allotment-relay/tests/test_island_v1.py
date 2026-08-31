@@ -1215,7 +1215,7 @@ def test_island_page_is_modular() -> None:
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
     assert "island-mapbgm1" in app
-    assert html.count("island.css?v=island-bgmchip2") == 1
+    assert html.count("island.css?v=island-bgmchip3") == 1
     assert html.count("app.js?v=island-bgmchip1") == 1
     assert "bgm.js?v=island-burgertown1" in app
     assert "lighthouse.js?v=island-mapbgm1" in app
@@ -1425,9 +1425,9 @@ def test_island_page_is_modular() -> None:
     assert "left: 0" in css
     assert "min(196px, 58%)" in css
     assert "min(88px, 24%)" in css
-    assert "right: min(35px, 10%)" in css
+    assert "right: min(58px, 16%)" in css
     assert "min(46px, 13%)" in css
-    assert "height: 33px" in css
+    assert "height: 33px" not in css
     assert "translateX(-22%)" in css
     assert "height: 66px" in css
     assert "align-items: center" in css
