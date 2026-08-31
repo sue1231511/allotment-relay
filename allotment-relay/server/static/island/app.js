@@ -18,7 +18,7 @@ import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=isla
 import { renderShore, renderShoreYard } from "./scenes/shore.js?v=island-mapbgm1";
 import { renderPlaza } from "./scenes/plaza.js?v=island-mapbgm1";
 import { renderPlace } from "./scenes/place.js?v=island-mapbgm1";
-import { renderHut } from "./scenes/hut.js?v=island-mapbgm1";
+import { renderHut } from "./scenes/hut.js?v=island-hutcook1";
 import { renderShop } from "./scenes/shop.js?v=island-mapbgm1";
 import { renderLili } from "./scenes/lili.js?v=island-mapbgm1";
 import { renderClinic } from "./scenes/clinic.js?v=island-mapbgm1";
@@ -460,6 +460,30 @@ function tapHut(kind, target, id) {
   const row = hutRow(kind, target, id) || {};
   if (kind === "look") {
     lookHut(row);
+    return;
+  }
+  if (kind === "quota") {
+    showHintSheet({
+      title: row.name || "灶",
+      body: row.detail || row.note || "定点菜每天 10 次，乱炖每天 24 次。",
+    });
+    return;
+  }
+  if (kind === "cook_mix") {
+    const ings = String(target || "").trim().split(/\s+/).filter(Boolean);
+    if (ings.length < 2 || ings.length > 5) {
+      showHintSheet({
+        title: "乱炖",
+        body: row.detail || "点 2～5 样材料再下锅。活物、工具、熟菜、衣料不能下锅。",
+      });
+      return;
+    }
+    showActSheet({
+      title: "乱炖下锅",
+      body: `材料：${ings.join("、")}。和定点菜不是同一次数。`,
+      confirm: "煮",
+      onConfirm: () => runHut("cook", ings.join(" ")),
+    });
     return;
   }
   if (!row.can) {

@@ -1,9 +1,9 @@
-"""小屋写操作。睡 / 升级 / 潮柜 / 堆肥桶 / 畜栏仍走 hut_ops，不另做数值。"""
+"""小屋写操作。睡 / 升级 / 潮柜 / 堆肥桶 / 畜栏仍走 hut_ops；做饭走 kitchen_ops cook，不另做数值。"""
 from __future__ import annotations
 
 from typing import Any
 
-from .. import barn, db, game, hut
+from .. import barn, db, game, hut, kitchen
 from ..catalog import is_bed_key
 from . import farm_service
 from .errors import ApiError, classify, humanize
@@ -12,6 +12,7 @@ from .errors import ApiError, classify, humanize
 TITLES = {
     "look": "看屋",
     "sleep": "睡觉",
+    "cook": "出锅了",
     "upgrade": "升级",
     "buy_install": "装上了",
     "install": "装上了",
@@ -124,7 +125,7 @@ async def _install(key_id: int, key: str) -> str:
 
 
 def _command(kind: str, target: str) -> tuple[str, str]:
-    """返回 (channel, command)。channel=hut 走 hut_ops，barn 走 barn_ops。"""
+    """返回 (channel, command)。hut 走 hut_ops，barn 走 barn_ops，kitchen 走 kitchen_ops cook。"""
     extra = (target or "").strip()
     if kind == "look":
         return "hut", "status"
@@ -178,6 +179,10 @@ def _command(kind: str, target: str) -> tuple[str, str]:
     if kind == "barn_churn":
         n = extra if extra.isdigit() else "2"
         return "barn", f"churn {n}"
+    if kind == "cook":
+        if not extra:
+            raise ApiError("BAD_REQUEST", "先点要煮的菜，或点 2～5 样材料再下锅。")
+        return "kitchen", f"cook {extra}"
     raise ApiError("BAD_REQUEST", "小屋里没有这一下。")
 
 
@@ -209,6 +214,9 @@ async def act(api_key: str, key_id: int, kind: str, target: str = "") -> dict[st
             if channel == "barn":
                 await game.require_steward(key_id)
                 narrative = await barn.barn_ops(key_id, command)
+            elif channel == "kitchen":
+                await game.require_steward(key_id)
+                narrative = await kitchen.kitchen_ops(key_id, command)
             else:
                 await game.require_steward(key_id)
                 narrative = await hut.hut_ops(key_id, command)

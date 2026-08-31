@@ -1267,6 +1267,15 @@ body.island-app.is-playing.is-yards .island-actionbar {
   opacity: .55;
 }
 
+.island-shop-sku.is-picked {
+  box-shadow: inset 0 0 0 1px rgba(236, 214, 160, .9);
+  background: rgba(42, 52, 40, .88);
+}
+
+.island-shop-sku.is-span {
+  grid-column: 1 / -1;
+}
+
 .island-shop-emoji { display: none; }
 .island-shop-name { min-width: 0; max-width: 100%; }
 .island-shop-name b,
