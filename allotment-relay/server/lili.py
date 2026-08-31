@@ -9,7 +9,7 @@ from typing import Any
 import aiosqlite
 
 from . import config, db, flavor, lili_extras
-from .catalog import ITEM_NAMES, LILI_JUNK_DECOR
+from .catalog import ITEM_NAMES, ITEM_PRICES, LILI_DECOR, LILI_JUNK_DECOR
 from .game import require_steward
 from .lili_catalog import (
     DOMAIN_LABELS,
@@ -443,6 +443,235 @@ async def lili_ops(key_id: int, command: str) -> str:
         await conn.commit()
 
     raise ValueError(f"未知 lili 指令: {command}（scan/trade/junk/pet/summon/visit/catalog/levels）")
+
+
+def _item_emoji(key: str) -> str:
+    if key.startswith("deco_junk_"):
+        meta = LILI_JUNK_DECOR.get(key.replace("deco_junk_", "", 1)) or {}
+        return str(meta.get("emoji") or "🦌")
+    if key.startswith("deco_"):
+        meta = LILI_DECOR.get(key.replace("deco_", "", 1)) or {}
+        return str(meta.get("emoji") or "🐚")
+    if key.startswith("shell_"):
+        return "🐚"
+    return "🌰"
+
+
+def _sku(
+    *,
+    sid: str,
+    kind: str,
+    name: str,
+    note: str,
+    price: str,
+    can: bool,
+    emoji: str = "·",
+    detail: str = "",
+    target: str = "",
+) -> dict[str, Any]:
+    return {
+        "id": sid,
+        "kind": kind,
+        "name": name,
+        "emoji": emoji,
+        "note": note,
+        "detail": detail or note,
+        "price": price,
+        "can": can,
+        "target": target or sid,
+    }
+
+
+def _give_ready(stock: dict[str, int], give: dict[str, int]) -> tuple[bool, str]:
+    taken: dict[str, int] = {}
+    for req_item, req_qty in give.items():
+        base_shell = lili_extras.parse_shell(req_item)
+        if base_shell and base_shell[0] == req_item and base_shell[1] == "normal":
+            need_value = lili_extras.item_trade_value(req_item, req_qty)
+            got_value = 0
+            variants = [
+                lili_extras.shell_item_key(req_item, "shine"),
+                req_item,
+                lili_extras.shell_item_key(req_item, "rough"),
+            ]
+            for variant in variants:
+                have = stock.get(variant, 0) - taken.get(variant, 0)
+                if have <= 0:
+                    continue
+                grade = lili_extras.parse_shell(variant)[1]
+                unit = max(1, int(ITEM_PRICES.get(req_item, 1) * lili_extras.SHELL_GRADE_MULT[grade]))
+                while have > 0 and got_value < need_value:
+                    take_n = min(have, max(1, (need_value - got_value + unit - 1) // unit))
+                    taken[variant] = taken.get(variant, 0) + take_n
+                    have -= take_n
+                    got_value += unit * take_n
+            if got_value < need_value:
+                label = ITEM_NAMES.get(req_item, req_item)
+                return False, f"缺少 {label}（按品相折算还差约 {need_value - got_value} 票等价）"
+            continue
+        have = stock.get(req_item, 0) - taken.get(req_item, 0)
+        if have < req_qty:
+            return False, f"缺少 {ITEM_NAMES.get(req_item, req_item)} x{req_qty}"
+        taken[req_item] = taken.get(req_item, 0) + req_qty
+    return True, ""
+
+
+async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str, Any]:
+    """给 /island 用的流动摊。数值仍走 lili_ops，这里只摊开能点的。"""
+    spawned = await maybe_spawn_visit(conn)
+    visit = await _active_visit(conn)
+    levels = await steward_domain_levels(conn, s["id"])
+    today = day_id()
+    stock = await db.get_satchel(s["id"])
+    tickets = int(s.get("tickets") or 0)
+    block = await lili_extras.stars_block(conn, s["id"])
+    st = await lili_extras.load_summon_state(conn, s["id"])
+    here = visit is not None
+    left = max(0, (visit["expires_at"] - db.now()) // 60) if visit else 0
+    if block:
+        line = block
+    elif spawned and visit:
+        line = spawned.get("detail") or f"栗栗在摊（剩 {left} 分）"
+    elif here:
+        line = f"栗栗在摊（剩 {left} 分）。贝壳换货，不在就献壳唤摊。"
+        bell = lili_extras.visit_bell_warning(visit)
+        if bell:
+            line = f"{line} {bell}"
+    else:
+        line = "现在不在。赶海捡到贝壳后，点「唤摊」献一枚试试。"
+    line = f"{line} · {domain_level_line(levels)}"
+
+    offers: list[dict[str, Any]] = []
+    if here:
+        rows = await ensure_daily_offers(conn, today, visit["id"])
+        for row in rows:
+            give = json.loads(row["give_json"])
+            stock_left = int(row["stock"]) - int(row["sold"])
+            get_name = ITEM_NAMES.get(row["get_item"], row["get_item"])
+            domains = _parse_domains(row)
+            cost_tickets = ticket_cost_for_steward(row["ticket_cost"], domains, levels)
+            ready, why = _give_ready(stock, give)
+            if stock_left <= 0:
+                can = False
+                note = "已售罄"
+            elif block:
+                can = False
+                note = block
+            elif not ready:
+                can = False
+                note = why
+            elif cost_tickets and tickets < cost_tickets:
+                can = False
+                note = f"还缺 {cost_tickets} 票"
+            else:
+                can = True
+                note = row.get("note") or _format_give(give, cost_tickets)
+            offers.append(_sku(
+                sid=str(row["id"]),
+                kind="trade",
+                name=f"{get_name} x{row['get_qty']}",
+                emoji=_item_emoji(row["get_item"]),
+                note=note,
+                detail=f"{_format_give(give, cost_tickets)}。{note}",
+                price="换" if can else ("罄" if stock_left <= 0 else "看"),
+                can=can,
+                target=str(row["id"]),
+            ))
+    else:
+        offers.append(_sku(
+            sid="away",
+            kind="look",
+            name="摊还没支",
+            emoji="🌰",
+            note="不在。切到唤摊，献一枚贝壳试试。",
+            detail="栗栗是流动摊。不在时献壳唤摊，和 visit_ops lili summon 同一套。",
+            price="看",
+            can=False,
+            target="scan",
+        ))
+
+    summons: list[dict[str, Any]] = []
+    for item, qty in sorted(stock.items()):
+        n = int(qty or 0)
+        if n <= 0:
+            continue
+        if not lili_extras.resolve_summon_item(item):
+            continue
+        grade = lili_extras.summon_grade(item)
+        grade_name = lili_extras.SUMMON_GRADE_LABEL.get(grade, grade)
+        can = (not block) and n > 0
+        summons.append(_sku(
+            sid=item,
+            kind="summon",
+            name=ITEM_NAMES.get(item, item),
+            emoji=_item_emoji(item),
+            note=f"袋里 {n} · {grade_name} · {lili_extras.summon_rate_line(st)}",
+            detail=f"献上这枚，向海风寄气息。{grade_name}。{lili_extras.summon_rate_line(st)}",
+            price="献",
+            can=can,
+            target=item,
+        ))
+    if not summons:
+        summons.append(_sku(
+            sid="no-shell",
+            kind="look",
+            name="没有能献的壳",
+            emoji="🐚",
+            note="去海边赶海捡。亮壳比糙壳灵。",
+            detail="赶海翻沙能捡到贝壳。第一次献壳海风一定把她送来。",
+            price="看",
+            can=False,
+            target="scan",
+        ))
+
+    pet_ok = here and not block
+    rough_n = sum(v for k, v in stock.items() if k.startswith("shell_rough_"))
+    junk_ok = here and (not block) and rough_n >= lili_extras.ROUGH_JUNK_COST
+    side = [
+        _sku(
+            sid="pet",
+            kind="pet",
+            name="摸夜栖",
+            emoji="🐕",
+            note="摊在才能摸。每天每摊一次。" if pet_ok else ("夜栖跟着摊走。" if not here else (block or "这会儿摸不了。")),
+            detail="摸护摊犬夜栖。可能蹭来祝福，也可能翻车得狗毛。摊不在摸不到。",
+            price="摸" if pet_ok else "看",
+            can=pet_ok,
+            target="",
+        ),
+        _sku(
+            sid="junk",
+            kind="junk",
+            name="糙壳换乱捡款",
+            emoji="🦌",
+            note=(
+                f"糙壳 {rough_n}/{lili_extras.ROUGH_JUNK_COST}"
+                if junk_ok else
+                (f"凑够 {lili_extras.ROUGH_JUNK_COST} 枚糙壳。现在 {rough_n}。" if here else "摊不在。")
+            ),
+            detail=f"铃鹿乱捡的货，不退换。要 {lili_extras.ROUGH_JUNK_COST} 枚糙壳。",
+            price="换" if junk_ok else "看",
+            can=junk_ok,
+            target="",
+        ),
+    ]
+
+    return {
+        "name": "栗栗流动摊",
+        "line": line,
+        "here": here,
+        "left_min": left,
+        "tabs": [
+            {"key": "shelf", "label": "货架", "badge": "在" if here else ""},
+            {"key": "summon", "label": "唤摊", "badge": ""},
+            {"key": "side", "label": "摊边", "badge": ""},
+        ],
+        "items": {
+            "shelf": offers,
+            "summon": summons,
+            "side": side,
+        },
+    }
 
 
 async def active_visit_hint(conn: aiosqlite.Connection) -> str | None:

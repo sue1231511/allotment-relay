@@ -82,6 +82,9 @@ export const state = {
   lianli: null,
   lianliTab: "desk",
   lianliShelf: false,
+  lili: null,
+  liliTab: "shelf",
+  liliShelf: false,
   lighthouse: null,
   lighthouseMeet: false,
   bagPage: 0,
@@ -148,6 +151,13 @@ export function applySnapshot(data) {
     const tabs = data.lianli.tabs || [];
     if (tabs.length && !tabs.some((t) => t.key === state.lianliTab)) {
       state.lianliTab = tabs[0].key;
+    }
+  }
+  if (data.lili) {
+    state.lili = data.lili;
+    const tabs = data.lili.tabs || [];
+    if (tabs.length && !tabs.some((t) => t.key === state.liliTab)) {
+      state.liliTab = tabs[0].key;
     }
   }
   if (data.lighthouse) state.lighthouse = data.lighthouse;

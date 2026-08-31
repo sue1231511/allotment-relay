@@ -8,6 +8,7 @@ export const SLOTS = {
   port: { label: "港口", size: "1080×1920", file: "shore" },
   beach: { label: "海边", size: "1080×1920", file: "shore" },
   plaza: { label: "潮汐广场", size: "941×1672" },
+  lili: { label: "栗栗流动摊", size: "941×1672", file: "plaza" },
   hut: { label: "岸畔小屋", size: "1080×1920" },
   bar: { label: "潮汐酒吧", size: "1080×1920" },
   theater: { label: "潮汐剧场", size: "1080×1920" },

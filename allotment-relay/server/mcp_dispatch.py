@@ -228,7 +228,7 @@ ALLIANCE_HELP = """alliance_ops 子命令（整句写进 command）：
 
 VISIT_HELP = """visit_ops 子命令（整句写进 command）：
   list / visit 名字 — 固定 NPC
-  lili scan|trade 编号|summon 贝壳 — 栗栗流动摊。例子：lili summon shell_catseye
+  lili scan|trade 编号|summon 贝壳 — 栗栗流动摊。例子：lili summon shell_catseye。人类 /island 广场点栗栗流动摊，点一下看摊
   shaonian visit|fortune|transfer|buy 符名 — 韶年望潮人
   musong visit|send 名字|remember — 目送人·阿槐；渡口送别，每个游戏日可记一个名字
   jingshan visit|status|order|deliver|revisit|remember — 何敬山的商船糕点委托与后续小事件；按 status 顺序

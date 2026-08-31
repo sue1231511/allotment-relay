@@ -1,6 +1,6 @@
-import { esc } from "../ui/modal.js?v=island-portchat1";
-import { state } from "../store.js?v=island-portchat1";
-import { bindShopFrame, ensureShopFrame, setShopPeek } from "../ui/shop-frame.js?v=island-portchat1";
+import { esc } from "../ui/modal.js?v=island-plazalili1";
+import { state } from "../store.js?v=island-plazalili1";
+import { bindShopFrame, ensureShopFrame, setShopPeek } from "../ui/shop-frame.js?v=island-plazalili1";
 
 export function renderEatery(root, { onAct, onSwitchTab, onOpenShelf, onCloseShelf, listTop = null } = {}) {
   const shop = state.eatery || {};

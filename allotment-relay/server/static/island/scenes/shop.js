@@ -1,6 +1,6 @@
-import { esc } from "../ui/modal.js?v=island-portchat1";
-import { state } from "../store.js?v=island-portchat1";
-import { bindShopFrame, ensureShopFrame, setShopPeek } from "../ui/shop-frame.js?v=island-portchat1";
+import { esc } from "../ui/modal.js?v=island-plazalili1";
+import { state } from "../store.js?v=island-plazalili1";
+import { bindShopFrame, ensureShopFrame, setShopPeek } from "../ui/shop-frame.js?v=island-plazalili1";
 
 export function renderShop(root, { onBuy, onSwitchTab, onOpenShelf, onCloseShelf, listTop = null } = {}) {
   const shop = state.shop || {};
@@ -9,7 +9,7 @@ export function renderShop(root, { onBuy, onSwitchTab, onOpenShelf, onCloseShelf
   const items = (shop.items || []).filter((row) => row.tab === tab);
   const peek = !state.shopShelf;
   const wrap = ensureShopFrame(root, {
-    find: (el) => el.querySelector(".island-shop:not(.island-workshop):not(.island-quarry):not(.island-bar):not(.island-writers):not(.island-atelier):not(.island-hall):not(.island-eatery):not(.island-market)"),
+    find: (el) => el.querySelector(".island-shop:not(.island-workshop):not(.island-quarry):not(.island-bar):not(.island-writers):not(.island-atelier):not(.island-hall):not(.island-eatery):not(.island-market):not(.island-lili)"),
     className: "island-shop",
     sceneId: "shop",
     tap: "点一下看货架",

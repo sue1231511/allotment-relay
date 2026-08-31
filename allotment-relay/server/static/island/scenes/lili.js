@@ -2,18 +2,18 @@ import { esc } from "../ui/modal.js?v=island-plazalili1";
 import { state } from "../store.js?v=island-plazalili1";
 import { bindShopFrame, ensureShopFrame, setShopPeek } from "../ui/shop-frame.js?v=island-plazalili1";
 
-export function renderLianli(root, { onAct, onSwitchTab, onOpenShelf, onCloseShelf, listTop = null } = {}) {
-  const shop = state.lianli || {};
+export function renderLili(root, { onAct, onSwitchTab, onOpenShelf, onCloseShelf, listTop = null } = {}) {
+  const shop = state.lili || {};
   const tabs = shop.tabs || [];
-  const tab = state.lianliTab || (tabs[0] && tabs[0].key) || "desk";
-  const peek = !state.lianliShelf;
+  const tab = state.liliTab || (tabs[0] && tabs[0].key) || "shelf";
+  const peek = !state.liliShelf;
   const wrap = ensureShopFrame(root, {
-    find: (el) => el.querySelector(".island-lianli"),
-    className: "island-shop island-lianli",
-    sceneId: "lianli",
-    tap: "点一下看登记处",
-    listId: "island-lianli-list",
-    tabAria: "连理所",
+    find: (el) => el.querySelector(".island-lili"),
+    className: "island-shop island-lili",
+    sceneId: "lili",
+    tap: "点一下看摊",
+    listId: "island-lili-list",
+    tabAria: "栗栗流动摊",
   });
   setShopPeek(wrap, peek);
   bindShopFrame(wrap, { onOpenShelf, onCloseShelf });
@@ -34,7 +34,7 @@ function hideActionBar() {
 function paintChrome(wrap, shop, tabs, tab, onSwitchTab) {
   const name = wrap.querySelector(".island-shop-meta b");
   const note = wrap.querySelector(".island-shop-meta small");
-  if (name) name.textContent = shop.name || "连理所";
+  if (name) name.textContent = shop.name || "栗栗流动摊";
   if (note) note.textContent = shop.line || "";
   const tabBar = wrap.querySelector(".island-shop-tabs");
   if (tabBar) {
@@ -48,7 +48,7 @@ function paintChrome(wrap, shop, tabs, tab, onSwitchTab) {
 }
 
 function paintList(wrap, shop, tab, onAct, listTop) {
-  const list = wrap.querySelector("#island-lianli-list");
+  const list = wrap.querySelector("#island-lili-list");
   if (!list) return;
   const keep = listTop == null ? list.scrollTop : listTop;
   const rows = (shop.items && shop.items[tab]) || [];

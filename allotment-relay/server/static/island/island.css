@@ -531,7 +531,8 @@ body.island-app.is-playing.is-yards .island-actionbar {
 }
 
 .island-hot.is-hui,
-.island-hot.is-theater { z-index: 2; }
+.island-hot.is-theater,
+.island-hot.is-lili { z-index: 2; }
 
 .island-pin {
   min-width: 88px;

@@ -124,6 +124,38 @@ async def _test_island_v1_api() -> None:
     assert seed_row["can_eat"] is False
     assert int(seed_row.get("vend_price") or 0) > 0
 
+    stall0 = client.get("/api/v1/lili", headers=_auth(key))
+    assert stall0.status_code == 200, stall0.text
+    stall = stall0.json()["lili"]
+    assert stall["name"] == "栗栗流动摊", stall
+    assert any(t["key"] == "shelf" for t in stall["tabs"]), stall
+    assert any(t["key"] == "summon" for t in stall["tabs"]), stall
+    miss_summon = client.post(
+        "/api/v1/lili/act",
+        headers=_auth(key, {"Idempotency-Key": "lili-summon-miss"}),
+        json={"kind": "summon", "target": "shell_catseye"},
+    )
+    assert miss_summon.status_code >= 400, miss_summon.text
+    steward = await db.get_steward_by_key_id((await db.get_key_row(key))["id"])
+    sid = int(steward["id"])
+    async with db.connect() as conn:
+        await db.add_item(conn, sid, "shell_catseye", 1)
+        await conn.commit()
+    hit_summon = client.post(
+        "/api/v1/lili/act",
+        headers=_auth(key, {"Idempotency-Key": "lili-summon-hit"}),
+        json={"kind": "summon", "target": "shell_catseye"},
+    )
+    assert hit_summon.status_code == 200, hit_summon.text
+    assert hit_summon.json()["event"]["kind"] == "lili"
+    assert hit_summon.json()["lili"]["here"] is True
+    pet = client.post(
+        "/api/v1/lili/act",
+        headers=_auth(key, {"Idempotency-Key": "lili-pet"}),
+        json={"kind": "pet"},
+    )
+    assert pet.status_code == 200, pet.text
+
     ws0 = client.get("/api/v1/workshop", headers=_auth(key))
     assert ws0.status_code == 200, ws0.text
     forge = ws0.json()["workshop"]
@@ -1070,21 +1102,22 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-portchat1" in app
-    assert html.count("island.css?v=island-portchat1") == 1
-    assert html.count("app.js?v=island-portchat1") == 1
-    assert "lighthouse.js?v=island-portchat1" in app
-    assert "hall.js?v=island-portchat1" in app
-    assert "shop.js?v=island-portchat1" in app
-    assert "market.js?v=island-portchat1" in app
+    assert "island-plazalili1" in app
+    assert html.count("island.css?v=island-plazalili1") == 1
+    assert html.count("app.js?v=island-plazalili1") == 1
+    assert "lighthouse.js?v=island-plazalili1" in app
+    assert "hall.js?v=island-plazalili1" in app
+    assert "shop.js?v=island-plazalili1" in app
+    assert "lili.js?v=island-plazalili1" in app
+    assert "market.js?v=island-plazalili1" in app
     js_blob = "\n".join(p.read_text(encoding="utf-8") for p in (ROOT / "server/static/island").rglob("*.js"))
     store_vs = set(re.findall(r"store\.js\?v=([^\s\"']+)", js_blob))
     modal_vs = set(re.findall(r"modal\.js\?v=([^\s\"']+)", js_blob))
-    assert store_vs == {"island-portchat1"}, store_vs
-    assert modal_vs == {"island-portchat1"}, modal_vs
-    assert 'from "../store.js?v=island-portchat1"' in (ROOT / "server/static/island/scenes/atelier.js").read_text(encoding="utf-8")
-    assert 'from "../store.js?v=island-portchat1"' in (ROOT / "server/static/island/scenes/writers.js").read_text(encoding="utf-8")
-    assert 'from "../store.js?v=island-portchat1"' in (ROOT / "server/static/island/scenes/hall.js").read_text(encoding="utf-8")
+    assert store_vs == {"island-plazalili1"}, store_vs
+    assert modal_vs == {"island-plazalili1"}, modal_vs
+    assert 'from "../store.js?v=island-plazalili1"' in (ROOT / "server/static/island/scenes/atelier.js").read_text(encoding="utf-8")
+    assert 'from "../store.js?v=island-plazalili1"' in (ROOT / "server/static/island/scenes/writers.js").read_text(encoding="utf-8")
+    assert 'from "../store.js?v=island-plazalili1"' in (ROOT / "server/static/island/scenes/hall.js").read_text(encoding="utf-8")
     assert "island-wait2" in html
     assert 'id="island-boot-veil"' in html
     assert "正在进入" in html
@@ -1165,7 +1198,7 @@ def test_island_page_is_modular() -> None:
     assert "waitScenePics" in app
     assert "await waitScenePics" in app
     assert "enterGen" in app
-    assert 'from "./ui/modal.js?v=island-portchat1"' in app
+    assert 'from "./ui/modal.js?v=island-plazalili1"' in app
     modal_src = (ROOT / "server/static/island/ui/modal.js").read_text(encoding="utf-8")
     assert "export function showFormSheet" in modal_src
     assert "export function showPickSheet" in modal_src
@@ -1355,6 +1388,8 @@ def test_island_page_is_modular() -> None:
     assert 'go: "lighthouse"' in plaza_js
     assert 'go: "workshop"' in plaza_js
     assert 'go: "notice"' in plaza_js
+    assert 'go: "lili"' in plaza_js
+    assert "栗栗流动摊" in plaza_js
     assert "/api/v1/farm/buy" in api
     assert "/tend" in api
     assert "/fertilize" in api
@@ -1463,6 +1498,7 @@ def test_island_page_is_modular() -> None:
     assert ".island-shop:not(.island-workshop)" in shop_js
     assert ":not(.island-eatery)" in shop_js
     assert ":not(.island-market)" in shop_js
+    assert ":not(.island-lili)" in shop_js
     assert "refreshScene: true" not in app
     assert "/api/v1/shop/buy" in api
     assert "/api/v1/tote/vend" in api
@@ -1476,6 +1512,14 @@ def test_island_page_is_modular() -> None:
     assert "api.atelierAct" in app
     assert "api.hallAct" in app
     assert "api.eateryAct" in app
+    assert "/api/v1/lili" in api
+    assert "api.liliAct" in app
+    assert "keepLili" in app
+    assert "renderLili" in app
+    lili_js = (ROOT / "server/static/island/scenes/lili.js").read_text(encoding="utf-8")
+    assert "island-lili" in lili_js
+    assert "点一下看摊" in lili_js
+    assert "去上手页" not in lili_js
     assert "keepWorkshop" in app
     workshop_js = (ROOT / "server/static/island/scenes/workshop.js").read_text(encoding="utf-8")
     assert "island-workshop" in workshop_js
@@ -1717,6 +1761,7 @@ def test_island_page_is_modular() -> None:
     assert ".island-port-say" in css
     assert ".island-port-msg" in css
     assert 'lighthouse: "灯塔"' in app
+    assert 'lili: "栗栗流动摊"' in app
     assert 'notice: "潮汐公告"' in app
     assert "state.backTo" in app
     assert (ROOT / "server/static/island/assets/scenes/shore.png").exists()
