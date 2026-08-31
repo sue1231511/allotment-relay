@@ -2,6 +2,53 @@ import { sceneArt } from "../ui/art.js?v=island-mapbgm1";
 import { esc } from "../ui/modal.js?v=island-mapbgm1";
 import { state } from "../store.js?v=island-mapbgm1";
 
+export function renderBeachHub(root, { onPeek, onMeet, onShore } = {}) {
+  const peek = !state.beachPeek;
+  let wrap = root.querySelector(".island-beach-hub");
+  if (!wrap) {
+    root.innerHTML = `
+      <div class="island-vn island-beach-hub">
+        <div class="island-vn-board">
+          ${sceneArt("beach")}
+          <div class="island-vn-talk is-picks">
+            <div class="island-vn-choices" id="island-beach-hub-choices">
+              <button type="button" class="island-vn-choice" data-go="shaonian"><b>去见韶年</b></button>
+              <button type="button" class="island-vn-choice" data-go="shore"><b>去赶海</b></button>
+            </div>
+          </div>
+          <button type="button" class="island-scene-tap">点一下看沙滩</button>
+        </div>
+      </div>
+    `;
+    wrap = root.querySelector(".island-beach-hub");
+  }
+  wrap.classList.toggle("is-peek", peek);
+  hideActionBar();
+  bindHub(wrap, onPeek, onMeet, onShore);
+}
+
+function bindHub(wrap, onPeek, onMeet, onShore) {
+  const board = wrap.querySelector(".island-vn-board");
+  if (board && !board._hubPeekBound) {
+    board._hubPeekBound = true;
+    board.addEventListener("click", (ev) => {
+      if (!wrap.classList.contains("is-peek")) return;
+      if (ev.target.closest("[data-go]")) return;
+      if (onPeek) onPeek();
+    });
+  }
+  if (wrap._hubGoBound) return;
+  wrap._hubGoBound = true;
+  wrap.querySelectorAll("[data-go]").forEach((btn) => {
+    btn.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      const go = btn.getAttribute("data-go");
+      if (go === "shaonian" && onMeet) onMeet();
+      if (go === "shore" && onShore) onShore();
+    });
+  });
+}
+
 export function renderShaonian(root, { onAct, onMeet } = {}) {
   const shop = state.shaonian || {};
   const peek = !state.shaonianMeet;

@@ -93,6 +93,7 @@ export const state = {
   lighthouseMeet: false,
   shaonian: null,
   shaonianMeet: false,
+  beachPeek: false,
   hut: null,
   hutTab: "home",
   hutShelf: false,
