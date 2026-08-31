@@ -1669,6 +1669,122 @@ body.island-app.is-bag-open .island-float-chip {
   .island-root { min-height: 100vh; }
 }
 
+/* 灯塔：橙光那种立绘对话。 */
+.island-vn {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #1c2a33;
+}
+
+.island-vn-board {
+  position: absolute;
+  inset: 0;
+  line-height: 0;
+}
+
+.island-vn .island-slot {
+  position: absolute;
+  inset: 0;
+  flex: none;
+  min-height: 0;
+}
+
+.island-vn .island-slot-pic {
+  object-fit: cover;
+  object-position: center 42%;
+}
+
+.island-vn-sprite {
+  position: absolute;
+  left: 50%;
+  bottom: 27%;
+  transform: translateX(-50%);
+  height: 58%;
+  width: auto;
+  max-width: 78%;
+  object-fit: contain;
+  object-position: bottom center;
+  pointer-events: none;
+  z-index: 2;
+  filter: drop-shadow(0 10px 18px rgba(12, 20, 28, .38));
+}
+
+.island-vn-box {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  z-index: 3;
+  max-height: 46%;
+  display: flex;
+  flex-direction: column;
+  background: rgba(16, 22, 30, .84);
+  border: 1px solid rgba(236, 214, 160, .55);
+  border-radius: 8px;
+  padding: 20px 12px 10px;
+  color: #f6f0e4;
+  box-shadow: 0 10px 28px rgba(10, 16, 22, .28);
+  line-height: 1.45;
+}
+
+.island-vn-name {
+  position: absolute;
+  left: 12px;
+  top: -13px;
+  background: #2a3544;
+  border: 1px solid rgba(236, 214, 160, .7);
+  border-radius: 4px;
+  padding: 2px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #f4e6c2;
+}
+
+.island-vn-line {
+  margin: 0 0 8px;
+  max-height: 7.4em;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  font-size: 15px;
+}
+
+.island-vn-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  overflow-y: auto;
+}
+
+.island-vn-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: 44px;
+  padding: 7px 10px;
+  border: 1px solid rgba(236, 214, 160, .38);
+  border-radius: 6px;
+  background: rgba(255, 250, 236, .08);
+  color: #f6f0e4;
+  font: inherit;
+  text-align: left;
+}
+
+.island-vn-choice b {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.island-vn-choice small {
+  color: rgba(246, 240, 228, .72);
+  font-size: 11px;
+}
+
+.island-vn-choice.is-off {
+  opacity: .55;
+}
+
 /* 橙光那种点按：落点星闪 + 能点的瘪一下。 */
 .island-spark {
   position: fixed;
@@ -1732,6 +1848,7 @@ button.is-tap,
 .island-bag-x.is-tap,
 .island-bag-done.is-tap,
 .island-hot.is-tap,
+.island-vn-choice.is-tap,
 .island-scene-tap.is-tap,
 .island-slot.is-tap,
 .island-plot-tile.is-tap,

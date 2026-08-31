@@ -63,6 +63,7 @@ export const state = {
   eatery: null,
   eateryTab: "board",
   eateryShelf: false,
+  lighthouse: null,
   bagPage: 0,
   busy: false,
 };
@@ -88,6 +89,7 @@ export function applySnapshot(data) {
       state.eateryTab = tabs[0].key;
     }
   }
+  if (data.lighthouse) state.lighthouse = data.lighthouse;
 }
 
 export function yardMeta(kind = state.yard) {

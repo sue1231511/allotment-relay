@@ -96,4 +96,6 @@ export const api = {
   hallAct: (kind, target = "", idem) => req("/api/v1/hall/act", { method: "POST", body: { kind, target }, idem }),
   eatery: () => req("/api/v1/eatery"),
   eateryAct: (kind, target = "", idem) => req("/api/v1/eatery/act", { method: "POST", body: { kind, target }, idem }),
+  lighthouse: () => req("/api/v1/lighthouse"),
+  lighthouseAct: (kind, target = "", idem) => req("/api/v1/lighthouse/act", { method: "POST", body: { kind, target }, idem }),
 };

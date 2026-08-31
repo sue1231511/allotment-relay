@@ -26,11 +26,12 @@ import { renderWriters } from "./scenes/writers.js";
 import { renderAtelier } from "./scenes/atelier.js";
 import { renderHall } from "./scenes/hall.js";
 import { renderEatery } from "./scenes/eatery.js";
+import { renderLighthouse } from "./scenes/lighthouse.js";
 import { renderBag } from "./ui/bag.js";
 import { setBackChip, setBagChip } from "./ui/back-map.js";
 import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js";
 import { popOut } from "./ui/pop.js";
-import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showHintSheet, showPitchSheet, showVendSheet, toast } from "./ui/modal.js";
+import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showPitchSheet, showVendSheet, toast } from "./ui/modal.js";
 
 const sceneEl = () => document.getElementById("island-scene");
 const sheetEl = () => document.getElementById("island-sheet");
@@ -195,6 +196,10 @@ async function enterScene(name) {
     if (name === "eatery") {
       state.eateryShelf = false;
       await openEatery(root);
+      return;
+    }
+    if (name === "lighthouse") {
+      await openLighthouse(root);
       return;
     }
     if (PLACE_TITLES[name]) {
@@ -1027,6 +1032,99 @@ async function runEatery(kind, target) {
   await act(() => api.eateryAct(kind, target), { keepEatery: true, listTop, quiet: true });
 }
 
+async function openLighthouse() {
+  try {
+    const data = await api.lighthouse();
+    applySnapshot(data);
+    renderHud();
+  } catch (err) {
+    toast(err.message || "塔门还没开。");
+  }
+  paintLighthouse();
+  await act(() => api.lighthouseAct("visit"), { keepLighthouse: true, quiet: true });
+}
+
+function paintLighthouse() {
+  renderLighthouse(sceneEl(), { onAct: tapLighthouse });
+}
+
+function lighthouseChoice(kind) {
+  const shop = state.lighthouse || {};
+  return (shop.choices || []).find((row) => row.id === kind) || null;
+}
+
+function tapLighthouse(kind) {
+  const shop = state.lighthouse || {};
+  const row = lighthouseChoice(kind);
+  if (kind === "light") {
+    if (row && !row.can) {
+      showHintSheet({ title: "点一盏守夜灯", body: row.detail || row.note || "灯油钱不够。" });
+      return;
+    }
+    showFormSheet({
+      title: "点一盏守夜灯",
+      body: "名牌和愿望会挂上灯廊，全岛看得见。别写现实隐私。15 票，回 4 精力。",
+      fields: [
+        { id: "who", label: "给谁点的", placeholder: "妈妈", max: 24, empty: "先写下给谁点的。" },
+        { id: "wish", label: "求什么", placeholder: "平安", max: 48, empty: "先写下求什么。" },
+      ],
+      confirm: "确认点灯",
+      onConfirm: (vals) => runLighthouse("light", `${vals.who} | ${vals.wish}`),
+    });
+    return;
+  }
+  if (kind === "entrust") {
+    showFormSheet({
+      title: "托付旧事",
+      body: "东西你留着，话记下。不要填写现实隐私。",
+      fields: [
+        { id: "text", label: "一件旧事", placeholder: "一把旧钥匙", max: 120, empty: "先写下一件旧事。" },
+      ],
+      confirm: "记下",
+      onConfirm: (vals) => runLighthouse("entrust", vals.text),
+    });
+    return;
+  }
+  if (kind === "fulfill") {
+    const open = (shop.lights || []).filter((item) => !item.fulfilled);
+    if (!open.length) {
+      showHintSheet({ title: "还愿", body: (row && (row.detail || row.note)) || "还没有自己点着的灯。" });
+      return;
+    }
+    showPickSheet({
+      title: "还愿",
+      body: "在自己的灯旁记一个成了。",
+      options: open.map((item) => ({
+        id: String(item.id),
+        label: `第 ${item.id} 盏 · 给${item.label}，求${item.wish}`,
+      })),
+      onConfirm: (id) => runLighthouse("fulfill", id),
+    });
+    return;
+  }
+  if (!row || !row.can) {
+    showHintSheet({
+      title: (row && row.label) || "灯塔",
+      body: (row && (row.detail || row.note)) || "这会儿还不行。",
+    });
+    return;
+  }
+  if (row.confirm) {
+    showActSheet({
+      title: row.label,
+      body: row.detail || row.note,
+      confirm: row.confirm,
+      onConfirm: () => runLighthouse(kind, ""),
+    });
+    return;
+  }
+  runLighthouse(kind, "");
+}
+
+async function runLighthouse(kind, target) {
+  await act(() => api.lighthouseAct(kind, target), { keepLighthouse: true, quiet: true });
+}
+
 function startQuarryTick() {
   stopQuarryTick();
   quarryTimer = window.setInterval(() => {
@@ -1254,7 +1352,7 @@ async function vendItem(item) {
   await act(() => api.vend(name, 1), { keepTab: true });
 }
 
-async function act(fn, { refreshScene = false, keepPlant = false, keepTab = false, keepShop = false, keepWorkshop = false, keepQuarry = false, keepBar = false, keepWriters = false, keepAtelier = false, keepHall = false, keepEatery = false, listTop = null, quiet = false } = {}) {
+async function act(fn, { refreshScene = false, keepPlant = false, keepTab = false, keepShop = false, keepWorkshop = false, keepQuarry = false, keepBar = false, keepWriters = false, keepAtelier = false, keepHall = false, keepEatery = false, keepLighthouse = false, listTop = null, quiet = false } = {}) {
   if (state.busy) return;
   state.busy = true;
   try {
@@ -1262,7 +1360,7 @@ async function act(fn, { refreshScene = false, keepPlant = false, keepTab = fals
     applySnapshot(data);
     renderHud();
     if (data.event && !quiet) showEvent(data.event);
-    else if (quiet && data.event && data.event.narrative) toast(data.event.narrative);
+    else if (quiet && data.event && data.event.narrative && !keepLighthouse) toast(data.event.narrative);
     if (!keepPlant) closePlant();
     else state.plantOpen = true;
     if (keepTab) {
@@ -1299,6 +1397,14 @@ async function act(fn, { refreshScene = false, keepPlant = false, keepTab = fals
     }
     if (keepEatery && state.scene === "eatery") {
       paintEatery(listTop);
+      return;
+    }
+    if (keepLighthouse && state.scene === "lighthouse") {
+      if (data.event && data.event.narrative && state.lighthouse) {
+        state.lighthouse.line = data.event.narrative;
+        state.lighthouse.speaker = data.event.speaker || "不醒";
+      }
+      paintLighthouse();
       return;
     }
     if (refreshScene || LIVE_SCENES.includes(state.scene)) {

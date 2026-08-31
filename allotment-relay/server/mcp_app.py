@@ -122,7 +122,7 @@ async def alliance_ops(command: str = "") -> str:
     return await mux._call_ops(mux.alliance_bundle, _kid(), command)
 
 
-@mcp.tool(description="NPC潮生会诊所。空=help。例：潮生会 税 交 · 漾漾。潮生会不能加入。")
+@mcp.tool(description="NPC潮生会诊所灯塔。空=help。例：潮生会 税 交 · 漾漾。潮生会不能加入。")
 async def visit_ops(command: str = "") -> str:
     return await mux._call_ops(mux.visit_bundle, _kid(), command)
 
