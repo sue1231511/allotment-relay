@@ -868,10 +868,10 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-vn-bust1" in html
-    assert html.count("island.css?v=island-vn-bust1") == 1
-    assert html.count("app.js?v=island-vn-bust1") == 1
-    assert "lighthouse.js?v=island-vn-bust1" in app
+    assert "island-vn-bust2" in html
+    assert html.count("island.css?v=island-vn-bust2") == 1
+    assert html.count("app.js?v=island-vn-bust2") == 1
+    assert "lighthouse.js?v=island-vn-bust2" in app
     assert "island-boot3" in html
     assert 'id="island-boot-veil"' in html
     assert "正在进入" in html
@@ -1355,7 +1355,8 @@ def test_island_page_is_modular() -> None:
     assert ".island-vn-box" in css
     assert ".island-vn-stand" in css
     assert ".island-vn-sprite" in css
-    assert "只要胸以上" in css
+    assert "只要头和胸" in css
+    assert "矮一半" in css
     assert ".island-theater-board" in css
     assert ".island-theater-picks" not in css
     assert ".island-theater .island-hot span" in css

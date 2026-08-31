@@ -1726,25 +1726,26 @@ body.island-app.is-bag-open .island-float-chip {
   object-position: center 42%;
 }
 
-/* 橙光那种半身：只要胸以上，人靠左，右边留出塔，下头让对话框挡住。 */
+/* 橙光那种半身：只要头和胸，比原先矮一半，人靠左，下头让对话框挡住。 */
 .island-vn-stand {
   position: absolute;
   left: 0;
-  top: 0;
-  width: 76%;
-  height: 70%;
+  top: auto;
+  bottom: 34%;
+  width: 58%;
+  height: 36%;
   overflow: hidden;
   z-index: 2;
   pointer-events: none;
-  -webkit-mask-image: linear-gradient(180deg, #000 68%, rgba(0, 0, 0, .4) 86%, transparent 100%);
-  mask-image: linear-gradient(180deg, #000 68%, rgba(0, 0, 0, .4) 86%, transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, #000 72%, rgba(0, 0, 0, .35) 88%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 72%, rgba(0, 0, 0, .35) 88%, transparent 100%);
 }
 
 .island-vn-sprite {
   position: absolute;
   left: 0;
-  top: 3%;
-  height: 161%;
+  top: 0;
+  height: 255%;
   width: auto;
   max-width: none;
   object-fit: contain;

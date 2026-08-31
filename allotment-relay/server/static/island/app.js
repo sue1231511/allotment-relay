@@ -28,7 +28,7 @@ import { renderHall } from "./scenes/hall.js?v=island-fix1";
 import { renderEatery } from "./scenes/eatery.js?v=island-fix1";
 let lighthouseMod = null;
 async function lighthouseScene() {
-  if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-vn-bust1");
+  if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-vn-bust2");
   return lighthouseMod;
 }
 import { renderBag } from "./ui/bag.js?v=island-fix1";
