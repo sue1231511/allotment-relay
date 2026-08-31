@@ -18,7 +18,7 @@ BUXING_HELP = """visit_ops buxing 子命令（整句写进 command）：
   buxing fulfill 灯号 — 还愿；免费，在那盏灯旁记一个成了的记号
 例子：buxing tea · buxing tide · buxing light 给妈妈 | 求平安
 不要把现实隐私写进名牌、愿望或旧事；灯廊是公开的文字场景。
-人类 /island 广场点灯塔是半身立绘对话，不醒站左边，选项和对话分开（喝茶、问潮、点灯、守夜），和这里同一套。上手页「灯塔」也能点。"""
+人类 /island 广场点灯塔是半身立绘对话，不醒站左边，先点对话框再出选项（喝茶、问潮、点灯、守夜），和这里同一套。上手页「灯塔」也能点。"""
 
 async def _state(conn, sid: int) -> dict:
     row = await (await conn.execute(

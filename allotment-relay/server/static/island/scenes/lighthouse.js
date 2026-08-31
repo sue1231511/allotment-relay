@@ -17,12 +17,13 @@ export function renderLighthouse(root, { onAct } = {}) {
         <div class="island-vn-stand">
           <img class="island-vn-sprite" src="/static/island/assets/sprites/buxing.png" alt="不醒" draggable="false">
         </div>
-        <div class="island-vn-talk">
-          <div class="island-vn-choices" id="island-lighthouse-choices"></div>
-          <div class="island-vn-box">
+        <div class="island-vn-talk is-line">
+          <button type="button" class="island-vn-box" id="island-vn-advance">
             <span class="island-vn-name"></span>
             <p class="island-vn-line"></p>
-          </div>
+            <i class="island-vn-more" aria-hidden="true"></i>
+          </button>
+          <div class="island-vn-choices" id="island-lighthouse-choices"></div>
         </div>
       </div>
     </div>
@@ -39,11 +40,37 @@ function hideActionBar() {
   }
 }
 
+function showLine(talk) {
+  if (!talk) return;
+  talk.classList.add("is-line");
+  talk.classList.remove("is-picks");
+}
+
+function showPicks(talk) {
+  if (!talk) return;
+  talk.classList.remove("is-line");
+  talk.classList.add("is-picks");
+}
+
+function bindAdvance(wrap) {
+  const talk = wrap.querySelector(".island-vn-talk");
+  const box = wrap.querySelector("#island-vn-advance");
+  if (!talk || !box || box._vnBound) return;
+  box._vnBound = true;
+  box.addEventListener("click", () => {
+    if (talk.classList.contains("is-picks")) return;
+    showPicks(talk);
+  });
+}
+
 function paintTalk(wrap, shop, onAct) {
+  const talk = wrap.querySelector(".island-vn-talk");
   const name = wrap.querySelector(".island-vn-name");
   const line = wrap.querySelector(".island-vn-line");
   if (name) name.textContent = shop.speaker || "不醒";
   if (line) line.textContent = shop.line || "茶不要钱。坐。";
+  showLine(talk);
+  bindAdvance(wrap);
   const list = wrap.querySelector("#island-lighthouse-choices");
   if (!list) return;
   const rows = shop.choices || [];
