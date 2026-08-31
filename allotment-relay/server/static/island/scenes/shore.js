@@ -3,6 +3,53 @@ import { esc } from "../ui/modal.js?v=island-mapbgm1";
 import { state } from "../store.js?v=island-mapbgm1";
 import { bindShopFrame, ensureShopFrame, setShopPeek } from "../ui/shop-frame.js?v=island-mapbgm1";
 
+export function renderPortHub(root, { onPeek, onChat, onDock } = {}) {
+  const peek = !state.portPeek;
+  let wrap = root.querySelector(".island-port-hub");
+  if (!wrap) {
+    root.innerHTML = `
+      <div class="island-vn island-port-hub">
+        <div class="island-vn-board">
+          ${sceneArt("port")}
+          <div class="island-vn-talk is-picks">
+            <div class="island-vn-choices" id="island-port-hub-choices">
+              <button type="button" class="island-vn-choice" data-go="chat"><b>闲聊</b></button>
+              <button type="button" class="island-vn-choice" data-go="dock"><b>看码头</b></button>
+            </div>
+          </div>
+          <button type="button" class="island-scene-tap">点一下看码头</button>
+        </div>
+      </div>
+    `;
+    wrap = root.querySelector(".island-port-hub");
+  }
+  wrap.classList.toggle("is-peek", peek);
+  hideActionBar();
+  bindPortHub(wrap, onPeek, onChat, onDock);
+}
+
+function bindPortHub(wrap, onPeek, onChat, onDock) {
+  const board = wrap.querySelector(".island-vn-board");
+  if (board && !board._hubPeekBound) {
+    board._hubPeekBound = true;
+    board.addEventListener("click", (ev) => {
+      if (!wrap.classList.contains("is-peek")) return;
+      if (ev.target.closest("[data-go]")) return;
+      if (onPeek) onPeek();
+    });
+  }
+  if (wrap._hubGoBound) return;
+  wrap._hubGoBound = true;
+  wrap.querySelectorAll("[data-go]").forEach((btn) => {
+    btn.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      const go = btn.getAttribute("data-go");
+      if (go === "chat" && onChat) onChat();
+      if (go === "dock" && onDock) onDock();
+    });
+  });
+}
+
 /** 热区按滩景 1080×1920：码头船是港口，左下沙滩是海边。 */
 const HOTS = [
   { go: "port", cls: "is-port", name: "港口", left: 28, top: 22, w: 68, h: 42 },
@@ -85,10 +132,6 @@ function paintList(wrap, shop, tab, onAct, listId, listTop, onSay) {
   const list = wrap.querySelector(`#${listId}`);
   if (!list) return;
   const keep = listTop == null ? list.scrollTop : listTop;
-  if (tab === "chat") {
-    paintChat(list, onSay);
-    return;
-  }
   list.classList.remove("is-chat");
   const rows = (shop.items && shop.items[tab]) || [];
   if (!rows.length) {
@@ -105,38 +148,6 @@ function paintList(wrap, shop, tab, onAct, listId, listTop, onSay) {
   requestAnimationFrame(() => {
     list.scrollTop = keep;
   });
-}
-
-function paintChat(list, onSay) {
-  list.classList.add("is-chat");
-  const rows = state.portChat || [];
-  const msgs = rows.length
-    ? rows.slice(-20).map((m) => `
-        <article class="island-port-msg">
-          <b>${esc(m.who || "")}</b>
-          <p>${esc(m.text || m.body || "")}</p>
-        </article>
-      `).join("")
-    : `<p class="island-shop-empty">码头边还没人说话。</p>`;
-  list.innerHTML = `
-    <div class="island-port-msgs">${msgs}</div>
-    <form class="island-port-say" id="island-port-say">
-      <input name="text" maxlength="280" placeholder="码头边说一句" autocomplete="off">
-      <button type="submit">发送</button>
-    </form>
-    <p class="island-shop-empty">港口闲聊，和上手页聊天室同一屋。对暗号、发红包仍去全服聊天室。</p>
-  `;
-  const box = list.querySelector(".island-port-msgs");
-  if (box) box.scrollTop = box.scrollHeight;
-  const form = list.querySelector("#island-port-say");
-  if (form) {
-    form.addEventListener("submit", (ev) => {
-      ev.preventDefault();
-      const input = ev.target.elements.text;
-      const text = (input.value || "").trim();
-      if (text && onSay) onSay(text);
-    });
-  }
 }
 
 function sku(row) {
