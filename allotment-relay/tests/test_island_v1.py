@@ -869,11 +869,11 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-col1" in html
-    assert html.count("island.css?v=island-col1") == 1
-    assert html.count("app.js?v=island-col1") == 1
+    assert "island-cols1" in html
+    assert html.count("island.css?v=island-cols1") == 1
+    assert html.count("app.js?v=island-cols1") == 1
     assert "lighthouse.js?v=island-stay1" in app
-    assert "hall.js?v=island-col1" in app
+    assert "hall.js?v=island-cols1" in app
     assert "shop.js?v=island-stay1" in app
     assert "island-boot3" in html
     assert 'id="island-boot-veil"' in html
@@ -1227,10 +1227,7 @@ def test_island_page_is_modular() -> None:
     assert "不重载底图" in frame_js
     assert "和灯塔选项一个样子" in css
     assert "底下深色金边框" in css
-    assert "grid-template-columns: 1fr;" in css.split(".island-shop-list")[1].split(".island-shop-sku")[0]
-    assert "1fr 1fr" not in css.split(".island-shop-list")[1].split(".island-shop-sku")[0]
-    assert "1fr 1fr" not in css.split(".island-vn-choices {\n")[1].split("}")[0]
-    assert "不左右两列" in css
+    assert "grid-template-columns: 1fr 1fr" in css.split(".island-shop-list")[1].split(".island-shop-sku")[0]
     assert "island-shop-meta" in shop_js
     assert "setShopPeek" in shop_js
     assert "is-peek" in frame_js
