@@ -110,6 +110,8 @@ export const api = {
   eateryAct: (kind, target = "", idem) => req("/api/v1/eatery/act", { method: "POST", body: { kind, target }, idem }),
   market: () => req("/api/v1/market"),
   marketAct: (kind, target = "", idem) => req("/api/v1/market/act", { method: "POST", body: { kind, target }, idem }),
+  ting: () => req("/api/v1/ting"),
+  tingAct: (kind, target = "", idem) => req("/api/v1/ting/act", { method: "POST", body: { kind, target }, idem }),
   lighthouse: () => req("/api/v1/lighthouse"),
   lighthouseAct: (kind, target = "", idem) => req("/api/v1/lighthouse/act", { method: "POST", body: { kind, target }, idem }),
 };

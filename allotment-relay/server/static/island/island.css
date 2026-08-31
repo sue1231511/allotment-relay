@@ -1502,7 +1502,7 @@ body.island-app.is-bag-open .island-float-chip {
 }
 
 .island-card h3 { margin: 0 0 8px; font-size: 18px; flex-shrink: 0; }
-.island-card p { margin: 0 0 12px; line-height: 1.55; word-break: break-word; }
+.island-card p { margin: 0 0 12px; line-height: 1.55; word-break: break-word; white-space: pre-wrap; }
 .island-card .island-btn { min-height: 44px; }
 .island-card .island-care-acts { flex-shrink: 0; }
 

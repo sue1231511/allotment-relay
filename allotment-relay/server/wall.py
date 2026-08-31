@@ -66,7 +66,7 @@ wall_ops — 听潮亭木牌墙（岛民论坛；空 command=看亭）
   mod lock 12 / unlock 12 锁帖 / 开锁
   mod tear 12 / mod tear 12 5  管理撕帖或撕回复
 例子：贴 问事 温室怎么建 | 先 shed erect 再 sow 棚1 · 看 12 · 回 12 谢了棚盖好了
-网页 /ting 只围观；钉牌、回帖去上手页「听潮亭」。凭证只在上手页绑定。
+网页 /ting 只围观。钉牌、回帖去上手页听潮亭，或手机地图 /island 总览点听潮亭（点一下看木牌）。
 和 lounge_ops 不同：聊天室是短句实时聊；听潮亭是能回的长帖，钉在墙上。
 和 visit_ops 潮生会 告示 不同：厅示由潮生会张贴，岛民不能贴；听潮亭岛民自己钉。
 和 steward_ops board 不同：那是全服票榜/岛缘榜，网页 /board，不是论坛。
@@ -327,7 +327,7 @@ async def public_snapshot(board: str | None = None) -> dict[str, Any]:
     ]
     total = sum(counts.values())
     if total:
-        line = f"亭柱上钉着 {total} 块木牌。想回、想钉，去上手页。"
+        line = f"亭柱上钉着 {total} 块木牌。想回、想钉，去上手页或手机地图听潮亭。"
     else:
         line = "亭里还空着。岛民自己钉木牌；厅示不在这儿。"
     return {
@@ -337,6 +337,82 @@ async def public_snapshot(board: str | None = None) -> dict[str, Any]:
         "boards": boards,
         "threads": recent,
         "total": total,
+    }
+
+
+async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str, Any]:
+    """给 /island 听潮亭用。数值仍走 wall_ops，这里只摊开能点的。"""
+    conn.row_factory = aiosqlite.Row
+    my_id = int(s["id"])
+    counts = await _board_counts(conn)
+
+    async def cards(*, board: str | None = None, mine: bool = False) -> list[dict[str, Any]]:
+        sql = """
+            SELECT t.*, st.name, st.badge, st.lounge_human_name
+            FROM wall_threads t
+            JOIN stewards st ON st.id = t.steward_id
+            WHERE t.deleted=0
+        """
+        args: list[Any] = []
+        if mine:
+            sql += " AND t.steward_id=?"
+            args.append(my_id)
+        elif board:
+            sql += " AND t.board=?"
+            args.append(board)
+        sql += " ORDER BY t.pinned DESC, t.bumped_at DESC, t.id DESC LIMIT ?"
+        args.append(LIST_DEFAULT)
+        rows = [dict(r) for r in await (await conn.execute(sql, args)).fetchall()]
+        out = []
+        for row in rows:
+            n = await _reply_count(conn, int(row["id"]))
+            item = _thread_summary(row, n)
+            own = int(row["steward_id"]) == my_id
+            flags = []
+            if item["pinned"]:
+                flags.append("置顶")
+            if item["locked"]:
+                flags.append("已锁")
+            flag = (" · ".join(flags) + " · ") if flags else ""
+            item["mine"] = own
+            item["can_reply"] = not bool(row.get("locked"))
+            item["can_tear"] = own
+            item["note"] = f"{flag}{item['who']} · {item['replies']} 回"
+            item["detail"] = item["excerpt"]
+            out.append(item)
+        return out
+
+    boards: dict[str, Any] = {}
+    tabs = []
+    for bid, meta in BOARDS.items():
+        rows = await cards(board=bid)
+        boards[bid] = {"hint": meta["hint"], "threads": rows}
+        n = int(counts.get(bid, 0) or 0)
+        tabs.append({"key": bid, "label": meta["name"], "badge": str(n) if n else ""})
+    mine_rows = await cards(mine=True)
+    mine_n = int((await (await conn.execute(
+        "SELECT COUNT(*) AS n FROM wall_threads WHERE steward_id=? AND deleted=0",
+        (my_id,),
+    )).fetchone())["n"] or 0)
+    tabs.append({"key": "mine", "label": "我的", "badge": str(mine_n) if mine_n else ""})
+    total = sum(int(counts.get(bid, 0) or 0) for bid in BOARDS)
+    if total:
+        spoken = f"亭柱上 {total} 块木牌。点一块看全文，能回、能撕自己的。"
+    else:
+        spoken = "亭里还空着。先钉一块。不是聊天室，不是潮生会厅示。"
+    return {
+        "name": "听潮亭",
+        "line": spoken,
+        "tabs": tabs,
+        "boards": boards,
+        "mine": mine_rows,
+        "post_note": "每天 4 帖、24 回。钉完 20 秒冷却。禁止链接。不是聊天室，不是厅示，不是全服榜。",
+        "title_min": TITLE_MIN,
+        "title_max": TITLE_MAX,
+        "body_min": BODY_MIN,
+        "body_max": BODY_MAX,
+        "reply_min": REPLY_MIN,
+        "reply_max": REPLY_MAX,
     }
 
 

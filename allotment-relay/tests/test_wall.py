@@ -89,6 +89,19 @@ async def _test_wall_mcp_and_web() -> None:
     assert idle["board"] == "idle"
     assert any(t["title"] == "今晚雾大" for t in idle["threads"])
 
+    s = await db.get_steward_by_key_id(id_a)
+    async with db.connect() as conn:
+        view = await wall.player_view(conn, s)
+    assert view["name"] == "听潮亭"
+    keys = [t["key"] for t in view["tabs"]]
+    assert keys == ["ask", "trade", "idle", "seek", "mine"], keys
+    assert view["boards"]["ask"]["threads"], view["boards"]
+    assert view["mine"], view
+    assert view["mine"][0]["can_tear"] is True
+    assert view["title_min"] == wall.TITLE_MIN
+    assert view["body_min"] == wall.BODY_MIN
+    assert "每天 4 帖" in view["post_note"]
+
     torn = await wall.wall_ops(id_a, "撕 1")
     assert "已撕下 #1" in torn
     try:

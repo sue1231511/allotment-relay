@@ -255,12 +255,21 @@ export function showPitchSheet({ title, body, titleMin = 2, bodyMin = 40, onConf
 }
 
 export function showFormSheet({ title, body, fields = [], confirm, onConfirm, onClose } = {}) {
-  const inputs = (fields || []).map((field, idx) => (
-    `<label class="island-field">
+  const inputs = (fields || []).map((field, idx) => {
+    const id = esc(field.id || idx);
+    const max = esc(field.max || 48);
+    const ph = esc(field.placeholder || "");
+    if (field.type === "textarea") {
+      return `<label class="island-field">
+        <span>${esc(field.label || "")}</span>
+        <textarea id="island-form-${id}" rows="${esc(field.rows || 4)}" maxlength="${max}" placeholder="${ph}"></textarea>
+      </label>`;
+    }
+    return `<label class="island-field">
       <span>${esc(field.label || "")}</span>
-      <input id="island-form-${esc(field.id || idx)}" type="text" maxlength="${esc(field.max || 48)}" placeholder="${esc(field.placeholder || "")}" autocomplete="off">
-    </label>`
-  )).join("");
+      <input id="island-form-${id}" type="text" maxlength="${max}" placeholder="${ph}" autocomplete="off">
+    </label>`;
+  }).join("");
   const root = paintModal(cardMarkup(`
       <h3>${esc(title || "写下")}</h3>
       <p>${esc(body || "")}</p>
@@ -283,6 +292,10 @@ export function showFormSheet({ title, body, fields = [], confirm, onConfirm, on
       const text = String(el && el.value || "").trim();
       if (!text) {
         toast(field.empty || `先写下${field.label || "这一栏"}。`);
+        return;
+      }
+      if (field.min && text.length < field.min) {
+        toast(field.empty || `${field.label || "这一栏"}至少 ${field.min} 个字。`);
         return;
       }
       vals[field.id] = text;

@@ -423,6 +423,46 @@ async def _test_island_v1_api() -> None:
     )
     assert guest_buy.status_code == 200, guest_buy.text
 
+    from server import wall
+    wall.COOLDOWN_SEC = 0
+    ting0 = client.get("/api/v1/ting", headers=_auth(key))
+    assert ting0.status_code == 200, ting0.text
+    ting = ting0.json()["ting"]
+    assert ting["name"] == "听潮亭", ting
+    assert any(t["key"] == "ask" for t in ting["tabs"]), ting
+    assert any(t["key"] == "mine" for t in ting["tabs"]), ting
+    assert "boards" in ting and "ask" in ting["boards"], ting
+    posted = client.post(
+        "/api/v1/ting/act",
+        headers=_auth(key, {"Idempotency-Key": "ting-post"}),
+        json={"kind": "post", "target": "ask|温室怎么建|先 shed erect 再 sow 棚1"},
+    )
+    assert posted.status_code == 200, posted.text
+    assert posted.json()["event"]["kind"] == "ting"
+    mine = posted.json()["ting"]["mine"]
+    assert mine, posted.json()["ting"]
+    note_id = mine[0]["id"]
+    looked = client.post(
+        "/api/v1/ting/act",
+        headers=_auth(key, {"Idempotency-Key": "ting-look"}),
+        json={"kind": "look", "target": str(note_id)},
+    )
+    assert looked.status_code == 200, looked.text
+    assert "温室怎么建" in looked.json()["event"]["narrative"]
+    replied = client.post(
+        "/api/v1/ting/act",
+        headers=_auth(host_key, {"Idempotency-Key": "ting-reply"}),
+        json={"kind": "reply", "target": f"{note_id}|谢了棚盖好了就能种"},
+    )
+    assert replied.status_code == 200, replied.text
+    torn = client.post(
+        "/api/v1/ting/act",
+        headers=_auth(key, {"Idempotency-Key": "ting-tear"}),
+        json={"kind": "tear", "target": str(note_id)},
+    )
+    assert torn.status_code == 200, torn.text
+    assert not torn.json()["ting"]["mine"], torn.json()["ting"]
+
     tower0 = client.get("/api/v1/lighthouse", headers=_auth(key))
     assert tower0.status_code == 200, tower0.text
     tower = tower0.json()["lighthouse"]
@@ -936,8 +976,8 @@ def test_island_page_is_modular() -> None:
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
     assert "island-market1" in app
-    assert html.count("island.css?v=island-wait2") == 1
-    assert html.count("app.js?v=island-wait2") == 1
+    assert html.count("island.css?v=island-ting1") == 1
+    assert html.count("app.js?v=island-ting1") == 1
     assert "lighthouse.js?v=island-stay1" in app
     assert "hall.js?v=island-star1" in app
     assert "shop.js?v=island-market1" in app
@@ -1022,7 +1062,7 @@ def test_island_page_is_modular() -> None:
     assert "waitScenePics" in app
     assert "await waitScenePics" in app
     assert "enterGen" in app
-    assert 'from "./ui/modal.js?v=island-fix1"' in app
+    assert 'from "./ui/modal.js?v=island-ting1"' in app
     modal_src = (ROOT / "server/static/island/ui/modal.js").read_text(encoding="utf-8")
     assert "export function showFormSheet" in modal_src
     assert "export function showPickSheet" in modal_src
@@ -1392,12 +1432,14 @@ def test_island_page_is_modular() -> None:
     assert (ROOT / "server/v1/hall_service.py").exists()
     assert (ROOT / "server/v1/eatery_service.py").exists()
     assert (ROOT / "server/v1/market_service.py").exists()
+    assert (ROOT / "server/v1/ting_service.py").exists()
     theater_js = (ROOT / "server/static/island/scenes/theater.js").read_text(encoding="utf-8")
     writers_js = (ROOT / "server/static/island/scenes/writers.js").read_text(encoding="utf-8")
     atelier_js = (ROOT / "server/static/island/scenes/atelier.js").read_text(encoding="utf-8")
     hall_js = (ROOT / "server/static/island/scenes/hall.js").read_text(encoding="utf-8")
     eatery_js = (ROOT / "server/static/island/scenes/eatery.js").read_text(encoding="utf-8")
     market_js = (ROOT / "server/static/island/scenes/market.js").read_text(encoding="utf-8")
+    ting_js = (ROOT / "server/static/island/scenes/ting.js").read_text(encoding="utf-8")
     assert 'go: "writers"' in theater_js
     assert 'go: "atelier"' in theater_js
     assert 'go: "hall"' in theater_js
@@ -1442,6 +1484,15 @@ def test_island_page_is_modular() -> None:
     assert "/api/v1/market" in api
     assert "api.marketAct" in app
     assert "keepMarket" in app
+    assert "点一下看木牌" in ting_js
+    assert "island-ting" in ting_js
+    assert "ensureShopFrame" in ting_js
+    assert "去上手页" not in ting_js
+    assert "renderTing" in app
+    assert "keepTing" in app
+    assert "/api/v1/ting" in api
+    assert "api.tingAct" in app
+    assert "field.type === \"textarea\"" in modal_src or 'field.type === "textarea"' in modal_src
     assert "island-eatery" in eatery_js
     assert "ensureShopFrame" in eatery_js
     assert "island-bar-tray" not in eatery_js

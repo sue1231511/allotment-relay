@@ -1,4 +1,4 @@
-import { api, loadKey } from "./api.js?v=island-market1";
+import { api, loadKey } from "./api.js?v=island-ting1";
 import {
   applySnapshot,
   duesBlocked,
@@ -10,7 +10,7 @@ import {
   tickGrow,
   tickQuarry,
   tickWorkshop,
-} from "./store.js?v=island-fix1";
+} from "./store.js?v=island-ting1";
 import { renderHud } from "./hud.js?v=island-fix1";
 import { renderMap } from "./map.js?v=island-fix1";
 import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=island-fix1";
@@ -27,6 +27,7 @@ import { renderAtelier } from "./scenes/atelier.js?v=island-stay1";
 import { renderHall } from "./scenes/hall.js?v=island-star1";
 import { renderEatery } from "./scenes/eatery.js?v=island-stay1";
 import { renderMarket } from "./scenes/market.js?v=island-market1";
+import { renderTing } from "./scenes/ting.js?v=island-ting1";
 let lighthouseMod = null;
 async function lighthouseScene() {
   if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-stay1");
@@ -36,7 +37,7 @@ import { renderBag } from "./ui/bag.js?v=island-fix1";
 import { setBackChip, setBagChip } from "./ui/back-map.js?v=island-fix1";
 import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=island-fix1";
 import { popOut } from "./ui/pop.js?v=island-fix1";
-import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showPitchSheet, showVendSheet, toast } from "./ui/modal.js?v=island-fix1";
+import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showPitchSheet, showVendSheet, toast } from "./ui/modal.js?v=island-ting1";
 
 const sceneEl = () => document.getElementById("island-scene");
 const sheetEl = () => document.getElementById("island-sheet");
@@ -236,6 +237,12 @@ async function enterScene(name, opts) {
       stopQuarryTick();
       state.marketShelf = false;
       await openMarket(root);
+    } else if (name === "ting") {
+      stopGrowTick();
+      stopWorkshopTick();
+      stopQuarryTick();
+      state.tingShelf = false;
+      await openTing(root);
     } else if (name === "lighthouse") {
       stopGrowTick();
       stopWorkshopTick();
@@ -1213,6 +1220,140 @@ async function runMarket(kind, target) {
   await act(() => api.marketAct(kind, target), { keepMarket: true, listTop, quiet: true });
 }
 
+async function openTing() {
+  try {
+    const data = await api.ting();
+    applySnapshot(data);
+    renderHud();
+    if (data.event) showEvent(data.event);
+  } catch (err) {
+    toast(err.message || "亭门还没开。");
+  }
+  const tabs = (state.ting && state.ting.tabs) || [];
+  if (!tabs.some((row) => row.key === state.tingTab)) {
+    state.tingTab = (tabs[0] && tabs[0].key) || "ask";
+  }
+  paintTing();
+}
+
+function paintTing(listTop = 0) {
+  renderTing(sceneEl(), {
+    onAct: tapTing,
+    onSwitchTab: (tab) => {
+      state.tingTab = tab || "ask";
+      hideModal();
+      paintTing(0);
+    },
+    onOpenShelf: () => {
+      state.tingShelf = true;
+      paintTing(0);
+    },
+    onCloseShelf: () => {
+      state.tingShelf = false;
+      hideModal();
+      paintTing();
+    },
+    listTop,
+  });
+}
+
+function tingThread(id) {
+  const shop = state.ting || {};
+  const mine = shop.mine || [];
+  const hit = mine.find((row) => String(row.id) === String(id));
+  if (hit) return hit;
+  const boards = shop.boards || {};
+  for (const key of Object.keys(boards)) {
+    const rows = (boards[key] && boards[key].threads) || [];
+    const row = rows.find((item) => String(item.id) === String(id));
+    if (row) return row;
+  }
+  return null;
+}
+
+function tapTing(kind, target) {
+  const shop = state.ting || {};
+  if (kind === "post") {
+    const board = target || state.tingTab || "ask";
+    const meta = (shop.boards && shop.boards[board]) || {};
+    const tab = (shop.tabs || []).find((row) => row.key === board);
+    showFormSheet({
+      title: `钉到${(tab && tab.label) || "木牌"}`,
+      body: meta.hint || shop.post_note || "标题和正文分开写。不是聊天室，不是厅示。",
+      fields: [
+        { id: "title", label: "标题", max: shop.title_max || 36, min: shop.title_min || 2, empty: "标题至少 2 个字。" },
+        { id: "body", label: "正文", type: "textarea", rows: 5, max: shop.body_max || 800, min: shop.body_min || 8, empty: "正文至少 8 个字。" },
+      ],
+      confirm: "钉上去",
+      onConfirm: (vals) => runTing("post", `${board}|${vals.title}|${vals.body}`),
+    });
+    return;
+  }
+  if (kind === "look") {
+    lookTing(target);
+    return;
+  }
+  if (kind === "tear") {
+    const row = tingThread(target);
+    if (!row || !row.can_tear) {
+      showHintSheet({ title: "撕牌", body: (row && row.note) || "只能撕自己钉的。" });
+      return;
+    }
+    showActSheet({
+      title: "撕下来",
+      body: `撕《${row.title}》？整帖从墙上拿下。`,
+      confirm: "确认撕",
+      onConfirm: () => runTing("tear", String(row.id)),
+    });
+  }
+}
+
+async function lookTing(id) {
+  if (state.busy) return;
+  state.busy = true;
+  try {
+    const data = await api.tingAct("look", String(id));
+    applySnapshot(data);
+    renderHud();
+    const row = tingThread(id) || {};
+    const text = (data.event && data.event.narrative) || row.detail || "这块木牌看不清。";
+    const title = row.title ? `《${row.title}》` : "木牌";
+    if (row.can_reply) {
+      showActSheet({
+        title,
+        body: text,
+        confirm: "回一张",
+        onConfirm: () => replyTing(row),
+      });
+    } else {
+      showHintSheet({ title, body: text });
+    }
+  } catch (err) {
+    toast(err.message || "这块木牌看不清。");
+  } finally {
+    state.busy = false;
+  }
+}
+
+function replyTing(row) {
+  const shop = state.ting || {};
+  showFormSheet({
+    title: row.title ? `回《${row.title}》` : "回帖",
+    body: "回帖会钉在这块木牌下面。不是聊天室。",
+    fields: [
+      { id: "body", label: "回帖", type: "textarea", rows: 4, max: shop.reply_max || 400, min: shop.reply_min || 2, empty: "回帖至少 2 个字。" },
+    ],
+    confirm: "钉上去",
+    onConfirm: (vals) => runTing("reply", `${row.id}|${vals.body}`),
+  });
+}
+
+async function runTing(kind, target) {
+  const list = document.getElementById("island-ting-list");
+  const listTop = list ? list.scrollTop : 0;
+  await act(() => api.tingAct(kind, target), { keepTing: true, listTop, quiet: true });
+}
+
 async function openLighthouse() {
   try {
     const data = await api.lighthouse();
@@ -1534,7 +1675,7 @@ async function vendItem(item) {
   await act(() => api.vend(name, 1), { keepTab: true });
 }
 
-async function act(fn, { refreshScene = false, keepPlant = false, keepTab = false, keepShop = false, keepWorkshop = false, keepQuarry = false, keepBar = false, keepWriters = false, keepAtelier = false, keepHall = false, keepEatery = false, keepMarket = false, keepLighthouse = false, listTop = null, quiet = false } = {}) {
+async function act(fn, { refreshScene = false, keepPlant = false, keepTab = false, keepShop = false, keepWorkshop = false, keepQuarry = false, keepBar = false, keepWriters = false, keepAtelier = false, keepHall = false, keepEatery = false, keepMarket = false, keepTing = false, keepLighthouse = false, listTop = null, quiet = false } = {}) {
   if (state.busy) return;
   state.busy = true;
   try {
@@ -1587,6 +1728,10 @@ async function act(fn, { refreshScene = false, keepPlant = false, keepTab = fals
     }
     if (keepMarket && state.scene === "market") {
       paintMarket(listTop);
+      return;
+    }
+    if (keepTing && state.scene === "ting") {
+      paintTing(listTop);
       return;
     }
     if (keepLighthouse && state.scene === "lighthouse") {

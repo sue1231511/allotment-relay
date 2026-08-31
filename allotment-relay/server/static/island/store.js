@@ -66,6 +66,9 @@ export const state = {
   market: null,
   marketTab: "board",
   marketShelf: false,
+  ting: null,
+  tingTab: "ask",
+  tingShelf: false,
   lighthouse: null,
   bagPage: 0,
   busy: false,
@@ -97,6 +100,13 @@ export function applySnapshot(data) {
     const tabs = data.market.tabs || [];
     if (tabs.length && !tabs.some((t) => t.key === state.marketTab)) {
       state.marketTab = tabs[0].key;
+    }
+  }
+  if (data.ting) {
+    state.ting = data.ting;
+    const tabs = data.ting.tabs || [];
+    if (tabs.length && !tabs.some((t) => t.key === state.tingTab)) {
+      state.tingTab = tabs[0].key;
     }
   }
   if (data.lighthouse) state.lighthouse = data.lighthouse;
