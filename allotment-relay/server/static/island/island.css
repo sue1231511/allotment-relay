@@ -1906,7 +1906,7 @@ body.island-app.is-bag-open .island-float-chip {
   opacity: 0;
 }
 
-/* 灯塔 / 看台：橙光那种立绘对话。先进场景图，点一下才出人。 */
+/* 灯塔 / 看台 / 诊所：橙光那种立绘对话。先进场景图，点一下才出人。 */
 .island-vn {
   position: absolute;
   inset: 0;
@@ -1972,7 +1972,7 @@ body.island-app.is-bag-open .island-float-chip {
   filter: drop-shadow(0 10px 18px rgba(12, 20, 28, .38));
 }
 
-/* 小橘：半身进去，只取全身的二分之一（腰以上），靠左。 */
+/* 小橘 / 桥桥：半身进去，只取全身的二分之一（腰以上），靠左。 */
 .island-vn-stand.is-half {
   width: 88%;
   height: 50%;
