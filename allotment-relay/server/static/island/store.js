@@ -91,6 +91,8 @@ export const state = {
   clinicMeet: false,
   lighthouse: null,
   lighthouseMeet: false,
+  shaonian: null,
+  shaonianMeet: false,
   hut: null,
   hutTab: "home",
   hutShelf: false,
@@ -182,6 +184,7 @@ export function applySnapshot(data) {
     }
   }
   if (data.lighthouse) state.lighthouse = data.lighthouse;
+  if (data.shaonian) state.shaonian = data.shaonian;
 }
 
 export function yardMeta(kind = state.yard) {
