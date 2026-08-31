@@ -983,6 +983,25 @@ body.island-app.is-playing.is-yards .island-actionbar {
   padding: 3px 10px;
 }
 
+/* 海边滩景：图上点港口 / 海边。铺满一屏，底下不漏色。 */
+.island-shore-yard {
+  background: #9ec4d0;
+}
+
+.island-shore-board {
+  aspect-ratio: 1080 / 1920;
+}
+
+.island-shore-yard .island-hot span {
+  font-size: 13px;
+  padding: 3px 10px;
+}
+
+.island-port .island-shop-board,
+.island-beach .island-shop-board {
+  aspect-ratio: 1080 / 1920;
+}
+
 .island-shop {
   position: absolute;
   inset: 0;

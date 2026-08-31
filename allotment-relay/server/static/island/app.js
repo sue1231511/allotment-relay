@@ -1,4 +1,4 @@
-import { api, loadKey } from "./api.js?v=island-vn-meet1";
+import { api, loadKey } from "./api.js?v=island-port1";
 import {
   applySnapshot,
   duesBlocked,
@@ -10,36 +10,36 @@ import {
   tickGrow,
   tickQuarry,
   tickWorkshop,
-} from "./store.js?v=island-vn-meet1";
-import { renderHud } from "./hud.js?v=island-vn-meet1";
-import { renderMap } from "./map.js?v=island-vn-meet1";
-import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=island-vn-meet1";
-import { renderShore } from "./scenes/shore.js?v=island-vn-meet1";
-import { renderPlaza } from "./scenes/plaza.js?v=island-vn-meet1";
-import { renderPlace } from "./scenes/place.js?v=island-vn-meet1";
-import { renderShop } from "./scenes/shop.js?v=island-vn-meet1";
-import { renderWorkshop } from "./scenes/workshop.js?v=island-vn-meet1";
-import { renderQuarry } from "./scenes/quarry.js?v=island-vn-meet1";
-import { renderBar } from "./scenes/bar.js?v=island-vn-meet1";
-import { renderTheater } from "./scenes/theater.js?v=island-vn-meet1";
-import { renderWriters } from "./scenes/writers.js?v=island-vn-meet1";
-import { renderAtelier } from "./scenes/atelier.js?v=island-vn-meet1";
-import { renderHall } from "./scenes/hall.js?v=island-vn-meet1";
-import { renderEatery } from "./scenes/eatery.js?v=island-vn-meet1";
-import { renderMarket } from "./scenes/market.js?v=island-vn-meet1";
-import { renderTing } from "./scenes/ting.js?v=island-vn-meet1";
-import { renderHui } from "./scenes/hui.js?v=island-vn-meet1";
-import { renderLianli } from "./scenes/lianli.js?v=island-vn-meet1";
+} from "./store.js?v=island-port1";
+import { renderHud } from "./hud.js?v=island-port1";
+import { renderMap } from "./map.js?v=island-port1";
+import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=island-port1";
+import { renderShore, renderShoreYard } from "./scenes/shore.js?v=island-port1";
+import { renderPlaza } from "./scenes/plaza.js?v=island-port1";
+import { renderPlace } from "./scenes/place.js?v=island-port1";
+import { renderShop } from "./scenes/shop.js?v=island-port1";
+import { renderWorkshop } from "./scenes/workshop.js?v=island-port1";
+import { renderQuarry } from "./scenes/quarry.js?v=island-port1";
+import { renderBar } from "./scenes/bar.js?v=island-port1";
+import { renderTheater } from "./scenes/theater.js?v=island-port1";
+import { renderWriters } from "./scenes/writers.js?v=island-port1";
+import { renderAtelier } from "./scenes/atelier.js?v=island-port1";
+import { renderHall } from "./scenes/hall.js?v=island-port1";
+import { renderEatery } from "./scenes/eatery.js?v=island-port1";
+import { renderMarket } from "./scenes/market.js?v=island-port1";
+import { renderTing } from "./scenes/ting.js?v=island-port1";
+import { renderHui } from "./scenes/hui.js?v=island-port1";
+import { renderLianli } from "./scenes/lianli.js?v=island-port1";
 let lighthouseMod = null;
 async function lighthouseScene() {
-  if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-vn-meet1");
+  if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-port1");
   return lighthouseMod;
 }
-import { renderBag } from "./ui/bag.js?v=island-vn-meet1";
-import { setBackChip, setBagChip } from "./ui/back-map.js?v=island-vn-meet1";
-import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=island-vn-meet1";
-import { popOut } from "./ui/pop.js?v=island-vn-meet1";
-import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showPitchSheet, showVendSheet, toast } from "./ui/modal.js?v=island-vn-meet1";
+import { renderBag } from "./ui/bag.js?v=island-port1";
+import { setBackChip, setBagChip } from "./ui/back-map.js?v=island-port1";
+import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=island-port1";
+import { popOut } from "./ui/pop.js?v=island-port1";
+import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showPitchSheet, showVendSheet, toast } from "./ui/modal.js?v=island-port1";
 
 const sceneEl = () => document.getElementById("island-scene");
 const sheetEl = () => document.getElementById("island-sheet");
@@ -158,8 +158,28 @@ async function enterScene(name, opts) {
       stopGrowTick();
       stopWorkshopTick();
       stopQuarryTick();
+      state.backTo = "map";
+      setBackChip(true, () => enterScene("map"));
+      renderShoreYard(root, {
+        onOpen: (go) => {
+          state.backTo = "shore";
+          enterScene(go);
+        },
+      });
+    } else if (name === "port") {
+      stopGrowTick();
+      stopWorkshopTick();
+      stopQuarryTick();
+      state.backTo = "shore";
+      state.portShelf = false;
+      await openPort(root);
+    } else if (name === "beach") {
+      stopGrowTick();
+      stopWorkshopTick();
+      stopQuarryTick();
+      state.backTo = "shore";
       state.shoreShelf = false;
-      await openShore(root);
+      await openBeach(root);
     } else if (name === "plaza") {
       stopGrowTick();
       stopWorkshopTick();
@@ -1377,7 +1397,45 @@ async function runTing(kind, target) {
   await act(() => api.tingAct(kind, target), { keepTing: true, listTop, quiet: true });
 }
 
-async function openShore() {
+async function openPort() {
+  try {
+    const data = await api.shore();
+    applySnapshot(data);
+    renderHud();
+    if (data.event) showEvent(data.event);
+  } catch (err) {
+    toast(err.message || "潮水还没退到岸边。");
+  }
+  const tabs = (state.port && state.port.tabs) || [];
+  if (!tabs.some((row) => row.key === state.portTab)) {
+    state.portTab = (tabs[0] && tabs[0].key) || "cast";
+  }
+  paintPort();
+}
+
+function paintPort(listTop = 0) {
+  renderShore(sceneEl(), {
+    place: "port",
+    onAct: tapShore,
+    onSwitchTab: (tab) => {
+      state.portTab = tab || "cast";
+      hideModal();
+      paintPort(0);
+    },
+    onOpenShelf: () => {
+      state.portShelf = true;
+      paintPort(0);
+    },
+    onCloseShelf: () => {
+      state.portShelf = false;
+      hideModal();
+      paintPort();
+    },
+    listTop,
+  });
+}
+
+async function openBeach() {
   try {
     const data = await api.shore();
     applySnapshot(data);
@@ -1388,34 +1446,43 @@ async function openShore() {
   }
   const tabs = (state.shore && state.shore.tabs) || [];
   if (!tabs.some((row) => row.key === state.shoreTab)) {
-    state.shoreTab = (tabs[0] && tabs[0].key) || "cast";
+    state.shoreTab = (tabs[0] && tabs[0].key) || "beach";
   }
-  paintShore();
+  paintBeach();
 }
 
-function paintShore(listTop = 0) {
+function paintBeach(listTop = 0) {
   renderShore(sceneEl(), {
+    place: "beach",
     onAct: tapShore,
     onSwitchTab: (tab) => {
-      state.shoreTab = tab || "cast";
+      state.shoreTab = tab || "beach";
       hideModal();
-      paintShore(0);
+      paintBeach(0);
     },
     onOpenShelf: () => {
       state.shoreShelf = true;
-      paintShore(0);
+      paintBeach(0);
     },
     onCloseShelf: () => {
       state.shoreShelf = false;
       hideModal();
-      paintShore();
+      paintBeach();
     },
     listTop,
   });
 }
 
+function shoreShop() {
+  return state.scene === "port" ? (state.port || {}) : (state.shore || {});
+}
+
+function shoreTitle() {
+  return state.scene === "port" ? "港口" : "海边";
+}
+
 function shoreRow(kind, target, id) {
-  const shop = state.shore || {};
+  const shop = shoreShop();
   const items = shop.items || {};
   for (const key of Object.keys(items)) {
     const hit = (items[key] || []).find((row) => row.id === id || (row.kind === kind && String(row.target) === String(target)));
@@ -1431,11 +1498,11 @@ function tapShore(kind, target, id) {
     return;
   }
   if (!row.can) {
-    showHintSheet({ title: row.name || "海边", body: row.detail || row.note || "这会儿做不了。" });
+    showHintSheet({ title: row.name || shoreTitle(), body: row.detail || row.note || "这会儿做不了。" });
     return;
   }
   showActSheet({
-    title: row.name || "海边",
+    title: row.name || shoreTitle(),
     body: row.detail || row.note || "点一下就办。",
     confirm: row.price && row.price !== "看" ? String(row.price) : "确认",
     onConfirm: () => runShore(kind, target),
@@ -1450,7 +1517,7 @@ async function lookShore(target, row) {
     applySnapshot(data);
     renderHud();
     const text = (data.event && data.event.narrative) || (row && (row.detail || row.note)) || "潮水拍了一下岸。";
-    showHintSheet({ title: (row && row.name) || "海边", body: text });
+    showHintSheet({ title: (row && row.name) || shoreTitle(), body: text });
   } catch (err) {
     toast(err.message || "这会儿看不清。");
   } finally {
@@ -1459,9 +1526,11 @@ async function lookShore(target, row) {
 }
 
 async function runShore(kind, target) {
-  const list = document.getElementById("island-shore-list");
+  const listId = state.scene === "port" ? "island-port-list" : "island-shore-list";
+  const list = document.getElementById(listId);
   const listTop = list ? list.scrollTop : 0;
-  await act(() => api.shoreAct(kind, target), { keepShore: true, listTop, quiet: true });
+  const keep = state.scene === "port" ? { keepPort: true } : { keepShore: true };
+  await act(() => api.shoreAct(kind, target), { ...keep, listTop, quiet: true });
 }
 
 async function openHui() {
@@ -2040,7 +2109,7 @@ async function vendItem(item) {
   await act(() => api.vend(name, 1), { keepTab: true });
 }
 
-async function act(fn, { refreshScene = false, keepPlant = false, keepTab = false, keepShop = false, keepWorkshop = false, keepQuarry = false, keepBar = false, keepWriters = false, keepAtelier = false, keepHall = false, keepEatery = false, keepMarket = false, keepTing = false, keepHui = false, keepLianli = false, keepShore = false, keepLighthouse = false, listTop = null, quiet = false } = {}) {
+async function act(fn, { refreshScene = false, keepPlant = false, keepTab = false, keepShop = false, keepWorkshop = false, keepQuarry = false, keepBar = false, keepWriters = false, keepAtelier = false, keepHall = false, keepEatery = false, keepMarket = false, keepTing = false, keepHui = false, keepLianli = false, keepShore = false, keepPort = false, keepLighthouse = false, listTop = null, quiet = false } = {}) {
   if (state.busy) return;
   state.busy = true;
   try {
@@ -2103,8 +2172,12 @@ async function act(fn, { refreshScene = false, keepPlant = false, keepTab = fals
       paintHui(listTop);
       return;
     }
-    if (keepShore && state.scene === "shore") {
-      paintShore(listTop);
+    if (keepPort && state.scene === "port") {
+      paintPort(listTop);
+      return;
+    }
+    if (keepShore && state.scene === "beach") {
+      paintBeach(listTop);
       return;
     }
     if (keepLianli && state.scene === "lianli") {

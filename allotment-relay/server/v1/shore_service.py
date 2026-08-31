@@ -1,4 +1,4 @@
-"""海边写操作。撒网 / 坐钓 / 赶海 / 出海仍走 tide_ops，订婚寻信采花留影仍走 marriage_ops，不另做数值。"""
+"""港口 / 海边写操作。撒网 / 坐钓 / 出海在港口，赶海 / 寻信在海边。仍走 tide_ops / marriage_ops，不另做数值。"""
 from __future__ import annotations
 
 from typing import Any
@@ -10,7 +10,7 @@ from .errors import ApiError, classify, humanize
 
 
 TITLES = {
-    "look": "海边",
+    "look": "潮岸",
     "net": "撒网",
     "cast": "坐钓",
     "dig": "翻沙",
@@ -87,7 +87,7 @@ def _command(kind: str, target: str) -> tuple[str, str]:
     if verb == "look":
         cmd = LOOK.get(extra)
         if not cmd:
-            raise ApiError("BAD_REQUEST", "海边没有这一眼。")
+            raise ApiError("BAD_REQUEST", "潮岸没有这一眼。")
         return "tide", cmd
     if verb in TIDE_KINDS:
         return "tide", TIDE_KINDS[verb]
@@ -98,7 +98,7 @@ def _command(kind: str, target: str) -> tuple[str, str]:
         return "tide", cmd
     if verb in MARRY:
         return "marriage", MARRY[verb]
-    raise ApiError("BAD_REQUEST", "海边没有这一下。")
+    raise ApiError("BAD_REQUEST", "潮岸没有这一下。")
 
 
 async def _gear_view(steward_id: int) -> dict[str, Any]:
@@ -125,7 +125,7 @@ async def _gear_view(steward_id: int) -> dict[str, Any]:
 
 
 async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
-    """给 /island 海边用。数值仍走 tide_ops / marriage_ops，这里只摊开能点的。"""
+    """给 /island 港口和海边用。数值仍走 tide_ops / marriage_ops，这里只摊开能点的。"""
     from .. import marine
 
     gear = await _gear_view(s["id"])
@@ -161,20 +161,27 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
         else "袋里还没有渔获"
     )
     if hailed:
-        spoken = "黑旗截停。先点打、逃、谈或买路。"
+        port_line = "黑旗截停。先点打、逃、谈或买路。"
+        beach_line = f"{tide_name}。船在海上碰上事了，先去港口。"
     elif fish_enc:
-        spoken = "未命名小鱼碰上了。礼遇或动手，二选一。"
+        port_line = "未命名小鱼碰上了。礼遇或动手，二选一。"
+        beach_line = f"{tide_name}。港口那边碰上未命名小鱼了。"
     elif sailing:
-        spoken = f"船在海上。{tide_name}。点看出海。"
+        port_line = f"船在海上。{tide_name}。看船、归港在码头。"
+        beach_line = f"{tide_name}。赶海、寻信在沙滩。"
     elif not gear["can_net"] and not gear["can_cast"]:
-        spoken = f"{tide_name}。先把渔网或钓竿备上，再撒网坐钓。"
+        port_line = f"{tide_name}。先把渔网或钓竿备上，再撒网坐钓。"
+        beach_line = f"{tide_name}。赶海、寻信在沙滩。围观页只看。"
     else:
-        spoken = f"{tide_name}。撒网、赶海、开船都在这儿。围观页只看。"
+        port_line = f"{tide_name}。撒网、坐钓、开船都在码头。围观页只看。"
+        beach_line = f"{tide_name}。赶海、寻信在沙滩。围观页只看。"
 
-    tabs = [
+    port_tabs = [
         {"key": "cast", "label": "岸边", "badge": ""},
-        {"key": "beach", "label": "赶海", "badge": ""},
         {"key": "voyage", "label": "出海", "badge": "海" if sailing else ""},
+    ]
+    beach_tabs = [
+        {"key": "beach", "label": "赶海", "badge": ""},
         {"key": "vow", "label": "信物", "badge": ""},
     ]
 
@@ -408,19 +415,27 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
         ),
     ]
 
-    shelf = {
-        "name": "海边",
-        "line": spoken,
-        "tabs": tabs,
+    port_shelf = {
+        "name": "港口",
+        "line": port_line,
+        "tabs": port_tabs,
         "items": {
             "cast": cast_items,
-            "beach": beach_items,
             "voyage": voyage_items,
+        },
+    }
+    beach_shelf = {
+        "name": "海边",
+        "line": beach_line,
+        "tabs": beach_tabs,
+        "items": {
+            "beach": beach_items,
             "vow": vow_items,
         },
     }
-    shelf.update(gear)
-    return shelf
+    port_shelf.update(gear)
+    beach_shelf.update(gear)
+    return {"port": port_shelf, "shore": beach_shelf}
 
 
 async def snapshot(api_key: str, key_id: int) -> dict[str, Any]:
@@ -430,10 +445,11 @@ async def snapshot(api_key: str, key_id: int) -> dict[str, Any]:
         raise classify(exc) from exc
     async with db.connect() as conn:
         s = await db.get_steward_by_id(s["id"]) or s
-        shelf = await player_view(conn, s)
+        shelves = await player_view(conn, s)
         await conn.commit()
     snap = await farm_service.snapshot(api_key, s["id"])
-    snap["shore"] = shelf
+    snap["port"] = shelves["port"]
+    snap["shore"] = shelves["shore"]
     return snap
 
 

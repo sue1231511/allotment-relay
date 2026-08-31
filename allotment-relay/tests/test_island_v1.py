@@ -515,9 +515,13 @@ async def _test_island_v1_api() -> None:
     shore0 = client.get("/api/v1/shore", headers=_auth(key))
     assert shore0.status_code == 200, shore0.text
     pier = shore0.json()["shore"]
+    dock = shore0.json()["port"]
     assert pier["name"] == "海边", pier
-    assert any(t["key"] == "cast" for t in pier["tabs"]), pier
     assert any(t["key"] == "beach" for t in pier["tabs"]), pier
+    assert all(t["key"] != "cast" for t in pier["tabs"]), pier
+    assert dock["name"] == "港口", dock
+    assert any(t["key"] == "cast" for t in dock["tabs"]), dock
+    assert any(t["key"] == "voyage" for t in dock["tabs"]), dock
     looked_sea = client.post(
         "/api/v1/shore/act",
         headers=_auth(key, {"Idempotency-Key": "shore-look-status"}),
@@ -1065,21 +1069,21 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-vn-meet1" in app
-    assert html.count("island.css?v=island-vn-meet1") == 1
-    assert html.count("app.js?v=island-vn-meet1") == 1
-    assert "lighthouse.js?v=island-vn-meet1" in app
-    assert "hall.js?v=island-vn-meet1" in app
-    assert "shop.js?v=island-vn-meet1" in app
-    assert "market.js?v=island-vn-meet1" in app
+    assert "island-port1" in app
+    assert html.count("island.css?v=island-port1") == 1
+    assert html.count("app.js?v=island-port1") == 1
+    assert "lighthouse.js?v=island-port1" in app
+    assert "hall.js?v=island-port1" in app
+    assert "shop.js?v=island-port1" in app
+    assert "market.js?v=island-port1" in app
     js_blob = "\n".join(p.read_text(encoding="utf-8") for p in (ROOT / "server/static/island").rglob("*.js"))
     store_vs = set(re.findall(r"store\.js\?v=([^\s\"']+)", js_blob))
     modal_vs = set(re.findall(r"modal\.js\?v=([^\s\"']+)", js_blob))
-    assert store_vs == {"island-vn-meet1"}, store_vs
-    assert modal_vs == {"island-vn-meet1"}, modal_vs
-    assert 'from "../store.js?v=island-vn-meet1"' in (ROOT / "server/static/island/scenes/atelier.js").read_text(encoding="utf-8")
-    assert 'from "../store.js?v=island-vn-meet1"' in (ROOT / "server/static/island/scenes/writers.js").read_text(encoding="utf-8")
-    assert 'from "../store.js?v=island-vn-meet1"' in (ROOT / "server/static/island/scenes/hall.js").read_text(encoding="utf-8")
+    assert store_vs == {"island-port1"}, store_vs
+    assert modal_vs == {"island-port1"}, modal_vs
+    assert 'from "../store.js?v=island-port1"' in (ROOT / "server/static/island/scenes/atelier.js").read_text(encoding="utf-8")
+    assert 'from "../store.js?v=island-port1"' in (ROOT / "server/static/island/scenes/writers.js").read_text(encoding="utf-8")
+    assert 'from "../store.js?v=island-port1"' in (ROOT / "server/static/island/scenes/hall.js").read_text(encoding="utf-8")
     assert "island-wait2" in html
     assert 'id="island-boot-veil"' in html
     assert "正在进入" in html
@@ -1160,7 +1164,7 @@ def test_island_page_is_modular() -> None:
     assert "waitScenePics" in app
     assert "await waitScenePics" in app
     assert "enterGen" in app
-    assert 'from "./ui/modal.js?v=island-vn-meet1"' in app
+    assert 'from "./ui/modal.js?v=island-port1"' in app
     modal_src = (ROOT / "server/static/island/ui/modal.js").read_text(encoding="utf-8")
     assert "export function showFormSheet" in modal_src
     assert "export function showPickSheet" in modal_src
@@ -1618,12 +1622,20 @@ def test_island_page_is_modular() -> None:
     assert "api.lianliAct" in app
     assert (ROOT / "server/v1/lianli_service.py").exists()
     shore_js = (ROOT / "server/static/island/scenes/shore.js").read_text(encoding="utf-8")
-    assert "点一下看出海" in shore_js
+    assert "点一下看码头" in shore_js
+    assert "点一下看沙滩" in shore_js
+    assert "renderShoreYard" in shore_js
+    assert 'go: "port"' in shore_js
+    assert 'go: "beach"' in shore_js
+    assert "island-shore-yard" in shore_js
+    assert "island-hot" in shore_js
     assert "island-shore" in shore_js
     assert "ensureShopFrame" in shore_js
     assert "去上手页" not in shore_js
     assert "renderShore" in app
+    assert "renderShoreYard" in app
     assert "keepShore" in app
+    assert "keepPort" in app
     assert "/api/v1/shore" in api
     assert "api.shoreAct" in app
     assert "field.type === \"textarea\"" in modal_src or 'field.type === "textarea"' in modal_src
@@ -1691,6 +1703,8 @@ def test_island_page_is_modular() -> None:
     assert ".island-theater-board" in css
     assert ".island-theater-picks" not in css
     assert ".island-theater .island-hot span" in css
+    assert ".island-shore-board" in css
+    assert ".island-shore-yard .island-hot span" in css
     assert 'lighthouse: "灯塔"' in app
     assert 'notice: "潮汐公告"' in app
     assert "state.backTo" in app
@@ -1715,7 +1729,8 @@ def test_island_page_is_modular() -> None:
             assert Image.open(pic).size == (941, 1672), place
     except ImportError:
         pass
-    assert "港口" in (ROOT / "server/static/island/map.js").read_text(encoding="utf-8")
+    assert "海边" in (ROOT / "server/static/island/map.js").read_text(encoding="utf-8")
+    assert "港口" in (ROOT / "server/static/island/scenes/shore.js").read_text(encoding="utf-8")
     assert "剧场" in (ROOT / "server/static/island/map.js").read_text(encoding="utf-8")
     assert "is-theater" in css
     assert "island-plaza-board" in css

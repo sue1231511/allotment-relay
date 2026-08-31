@@ -1,10 +1,10 @@
-import { layoutCoverBoard, sceneArt } from "./ui/art.js?v=island-vn-meet1";
+import { layoutCoverBoard, sceneArt } from "./ui/art.js?v=island-port1";
 
 /** 热区百分比按总览图 972×1619 的标签位置。图上已有地名，不再叠钉子。 */
 const HOTS = [
   { go: "hut", cls: "is-hut", name: "岸畔小屋", left: 8, top: 5, w: 24, h: 16 },
   { go: "yards", cls: "is-home", name: "份地", label: "家园", left: 36, top: 7, w: 26, h: 18 },
-  { go: "shore", cls: "is-shore", name: "海边", label: "港口", left: 66, top: 10, w: 30, h: 16 },
+  { go: "shore", cls: "is-shore", name: "海边", left: 66, top: 10, w: 30, h: 16 },
   { go: "workshop", cls: "is-workshop", name: "岸工坊", left: 56, top: 27, w: 24, h: 13 },
   { go: "quarry", cls: "is-quarry", name: "盐风崖", left: 3, top: 35, w: 22, h: 14 },
   { go: "plaza", cls: "is-plaza", name: "广场", left: 36, top: 40, w: 28, h: 16 },
