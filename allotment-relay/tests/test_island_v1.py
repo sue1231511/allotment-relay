@@ -868,10 +868,10 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-vn-step1" in html
-    assert html.count("island.css?v=island-vn-step1") == 1
-    assert html.count("app.js?v=island-vn-step1") == 1
-    assert "lighthouse.js?v=island-vn-step1" in app
+    assert "island-vn-fit1" in html
+    assert html.count("island.css?v=island-vn-fit1") == 1
+    assert html.count("app.js?v=island-vn-fit1") == 1
+    assert "lighthouse.js?v=island-vn-fit1" in app
     assert "island-boot3" in html
     assert 'id="island-boot-veil"' in html
     assert "正在进入" in html
@@ -1351,6 +1351,7 @@ def test_island_page_is_modular() -> None:
     assert "is-picks" in lighthouse_js
     assert "island-vn-advance" in lighthouse_js
     assert "island-vn-choice" in lighthouse_js
+    assert "row.price || row.note" not in lighthouse_js
     assert "去上手页" not in lighthouse_js
     assert "island-shop-shelf" not in lighthouse_js
     assert (ROOT / "server/static/island/assets/sprites/buxing.png").exists()
@@ -1359,6 +1360,7 @@ def test_island_page_is_modular() -> None:
     assert ".island-vn-talk" in css
     assert ".island-vn-box" in css
     assert "点一下对话框才变成选项" in css
+    assert "不吃底图 line-height:0" in css
     assert ".island-vn-talk.is-picks" in css
     assert ".island-vn-talk.is-line" in css
     assert ".island-vn-stand" in css

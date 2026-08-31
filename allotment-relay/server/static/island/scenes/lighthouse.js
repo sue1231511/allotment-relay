@@ -74,12 +74,13 @@ function paintTalk(wrap, shop, onAct) {
   const list = wrap.querySelector("#island-lighthouse-choices");
   if (!list) return;
   const rows = shop.choices || [];
-  list.innerHTML = rows.map((row) => (
-    `<button type="button" class="island-vn-choice ${row.can ? "" : "is-off"}" data-act="${esc(row.id)}">
+  list.innerHTML = rows.map((row) => {
+    const fee = row.price ? `<small>${esc(row.price)}</small>` : "";
+    return `<button type="button" class="island-vn-choice ${row.can ? "" : "is-off"}" data-act="${esc(row.id)}">
       <b>${esc(row.label)}</b>
-      <small>${esc(row.price || row.note || "")}</small>
-    </button>`
-  )).join("");
+      ${fee}
+    </button>`;
+  }).join("");
   list.querySelectorAll("[data-act]").forEach((btn) => {
     btn.addEventListener("click", () => {
       if (onAct) onAct(btn.getAttribute("data-act"), "");
