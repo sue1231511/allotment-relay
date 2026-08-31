@@ -1726,12 +1726,12 @@ body.island-app.is-bag-open .island-float-chip {
   object-position: center 42%;
 }
 
-/* 橙光那种半身：只要头和胸，比原先矮一半，人靠左，下头让对话框挡住。 */
+/* 橙光那种半身：只要头和胸，比原先矮一半，人靠左下移，下头让对话框挡住。 */
 .island-vn-stand {
   position: absolute;
   left: 0;
   top: auto;
-  bottom: 34%;
+  bottom: 16%;
   width: 58%;
   height: 36%;
   overflow: hidden;
@@ -1760,7 +1760,8 @@ body.island-app.is-bag-open .island-float-chip {
   right: 10px;
   bottom: 10px;
   z-index: 3;
-  max-height: 46%;
+  max-height: none;
+  overflow: visible;
   line-height: 1.4;
   font-size: 15px;
 }
@@ -1816,8 +1817,8 @@ body.island-app.is-bag-open .island-float-chip {
 
 .island-vn-line {
   margin: 0;
-  max-height: 6.2em;
-  overflow-y: auto;
+  max-height: none;
+  overflow: visible;
   white-space: pre-wrap;
   font-size: 15px;
   line-height: 1.5;

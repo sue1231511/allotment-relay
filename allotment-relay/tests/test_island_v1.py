@@ -868,10 +868,10 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-vn-fit1" in html
-    assert html.count("island.css?v=island-vn-fit1") == 1
-    assert html.count("app.js?v=island-vn-fit1") == 1
-    assert "lighthouse.js?v=island-vn-fit1" in app
+    assert "island-vn-full1" in html
+    assert html.count("island.css?v=island-vn-full1") == 1
+    assert html.count("app.js?v=island-vn-full1") == 1
+    assert "lighthouse.js?v=island-vn-full1" in app
     assert "island-boot3" in html
     assert 'id="island-boot-veil"' in html
     assert "正在进入" in html
@@ -1361,6 +1361,9 @@ def test_island_page_is_modular() -> None:
     assert ".island-vn-box" in css
     assert "点一下对话框才变成选项" in css
     assert "不吃底图 line-height:0" in css
+    assert "人靠左下移" in css
+    assert ".island-vn-line" in css
+    assert "overflow-y: auto" not in css.split(".island-vn-line")[1].split(".island-vn-more")[0]
     assert ".island-vn-talk.is-picks" in css
     assert ".island-vn-talk.is-line" in css
     assert ".island-vn-stand" in css
