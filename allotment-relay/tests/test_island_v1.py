@@ -1238,7 +1238,7 @@ def test_island_page_is_modular() -> None:
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
     assert "island-mapbgm1" in app
-    assert html.count("island.css?v=island-bgmchip3") == 1
+    assert html.count("island.css?v=island-shaonian2") == 1
     assert html.count("app.js?v=island-shaonian1") == 1
     assert "bgm.js?v=island-burgertown1" in app
     assert "lighthouse.js?v=island-mapbgm1" in app
@@ -2061,6 +2061,8 @@ def test_island_page_is_modular() -> None:
     assert "只要头和胸" in css
     assert "矮一半" in css
     assert ".island-vn-stand.is-half" in css
+    assert ".island-shaonian .island-vn-stand.is-half .island-vn-sprite" in css
+    assert "left: -12%" in css
     assert ".island-bgm-chip" in css
     assert "island-vn-mute" not in css
     assert "全身的二分之一" in css
