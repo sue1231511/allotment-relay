@@ -609,6 +609,11 @@ body.island-app.is-playing.is-yards .island-actionbar {
   z-index: 1;
 }
 
+.island-yards .island-scene-tap {
+  position: absolute;
+  z-index: 3;
+}
+
 .island-yards.is-peek .island-yard-tabs,
 .island-yards.is-peek .island-grow-status,
 .island-yards.is-peek .island-plot-grid,

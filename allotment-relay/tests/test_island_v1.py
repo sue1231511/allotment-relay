@@ -1218,6 +1218,7 @@ def test_island_page_is_modular() -> None:
     assert "island-yards" in css
     assert "island-yards-board" in css
     assert ".island-yards.is-peek" in css
+    assert ".island-yards .island-scene-tap" in css
     assert "island-slot" in css
     assert "island-hot" in css
     assert "island-map-board" in css
