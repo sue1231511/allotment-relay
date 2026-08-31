@@ -64,9 +64,17 @@ function paintBgmChip(on) {
   btn.hidden = false;
   btn.removeAttribute("hidden");
   const off = bgmMuted();
-  btn.textContent = off ? "出声" : "静音";
+  btn.classList.toggle("is-muted", off);
   btn.setAttribute("aria-pressed", off ? "true" : "false");
   btn.setAttribute("aria-label", off ? "打开背景乐" : "关掉背景乐");
+  const img = btn.querySelector("img");
+  if (!img) return;
+  const next = off
+    ? (img.getAttribute("data-play") || "")
+    : (img.getAttribute("data-pause") || img.getAttribute("data-src") || "");
+  if (!next) return;
+  img.setAttribute("data-src", next);
+  if (img.getAttribute("src") !== next) img.src = next;
 }
 
 function bindBgmChip() {

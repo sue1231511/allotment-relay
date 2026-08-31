@@ -833,7 +833,9 @@ body.island-app.is-playing.is-yards .island-actionbar {
 }
 
 .island-float-chip.is-bag,
-.island-float-chip.is-back {
+.island-float-chip.is-back,
+.island-float-chip.is-bgm,
+.island-bgm-chip {
   top: env(safe-area-inset-top, 0px);
   height: 66px;
   display: flex;
@@ -841,9 +843,25 @@ body.island-app.is-playing.is-yards .island-actionbar {
 }
 
 .island-float-chip.is-bag {
-  right: 0;
+  /* 往左挪一点，右边留给贝壳音乐钮 */
+  right: min(70px, 20%);
   left: auto;
   width: min(88px, 24%);
+}
+
+.island-float-chip.is-bgm,
+.island-bgm-chip {
+  appearance: none;
+  -webkit-appearance: none;
+  z-index: 10;
+  right: 0;
+  left: auto;
+  bottom: auto;
+  width: min(92px, 26%);
+  margin: 0;
+  background: transparent;
+  border: 0;
+  padding: 0;
 }
 
 .island-float-chip.is-back {
@@ -2056,39 +2074,8 @@ body.island-app.is-bag-open .island-float-chip {
   white-space: nowrap;
 }
 
-.island-bgm-chip {
-  appearance: none;
-  -webkit-appearance: none;
-  position: absolute;
-  z-index: 9;
-  right: max(10px, env(safe-area-inset-right, 0px));
-  bottom: max(14px, env(safe-area-inset-bottom, 0px));
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 52px;
-  height: 32px;
-  margin: 0;
-  padding: 0 14px;
-  background: rgba(42, 53, 68, .88);
-  border: 1px solid rgba(236, 214, 160, .7);
-  border-radius: 999px;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1;
-  color: #f4e6c2;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
 .island-bgm-chip[hidden] {
   display: none !important;
-}
-
-body.island-app.is-bag-open .island-bgm-chip {
-  visibility: hidden;
-  pointer-events: none;
 }
 
 .island-vn-line {
@@ -2241,6 +2228,7 @@ button.is-tap,
 .island-plant-go.is-tap,
 .island-plant-buy.is-tap,
 .island-float-chip.is-bag.is-tap,
+.island-float-chip.is-bgm.is-tap,
 .island-bgm-chip.is-tap {
   transform: scale(0.94);
 }
