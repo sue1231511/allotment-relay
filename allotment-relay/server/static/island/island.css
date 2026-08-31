@@ -968,6 +968,22 @@ body.island-app.is-playing.is-yards .island-actionbar {
 .island-place-card b { display: block; font-size: 18px; }
 .island-place-card p { display: none; }
 
+.island-place.is-locked {
+  background:
+    repeating-linear-gradient(
+      -12deg,
+      rgba(255, 253, 248, .42) 0 10px,
+      rgba(201, 221, 216, .9) 10px 20px
+    );
+}
+.island-place-card.is-lock p {
+  display: block;
+  margin: 8px 0 12px;
+  font-size: 13px;
+  color: #3d5c61;
+  line-height: 1.45;
+}
+
 /* 海边 */
 .island-shore {
   position: absolute;

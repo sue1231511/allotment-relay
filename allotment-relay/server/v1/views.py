@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .. import farming, play, steward_dashboard, world
+from .. import config, farming, play, steward_dashboard, world
 from ..catalog import (
     CROPS,
     ITEM_PRICES,
@@ -89,6 +89,7 @@ def player_view(dash: dict[str, Any] | None, *, enrolled: bool) -> dict[str, Any
         "dues": dash.get("dues") or {},
         "duty": (dash.get("meter_lines") or {}).get("bar_duty") or "",
         "flags": dash.get("flags") or {},
+        "hut_build_cost": config.HUT_BUILD_COST,
         "stock": [_stock_row(it) for it in (dash.get("stock") or [])],
         "seeds": play.seed_options(dash.get("stock") or []),
     }
