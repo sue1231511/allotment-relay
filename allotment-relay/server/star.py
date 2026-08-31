@@ -31,7 +31,7 @@ STAR_HELP = f"""star_ops 子命令（整句写进 command）：
     平常及以上：粉丝固定再+10；粉丝累计给小橘的实收打赏每满20票再+1。
   粉丝团 — 入团。一人一次，退团这个选项不存在；围观回神+10、档信翻倍（fan）
   应援榜 — 谁在真金白银地捧她（board）
-  她常驻荔栀的酒馆，随时能开小剧场专场。人类打赏在 /play。/star 是围观实况（今晚档、应援榜、动态）。"""
+  她常驻荔栀的酒馆，随时能开小剧场专场。人类去 /island 剧场看台点应援打赏点歌围观（和 star_ops 同一套）；/play 也能打赏。/star 是围观实况（今晚档、应援榜、动态）。"""
 
 # 演出事件池 — 按她面板心情档加权：她心情好不好，观众听得出来
 SHOW_POOLS: dict[str, list[str]] = {
@@ -298,7 +298,7 @@ async def _cmd_watch(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
     if not _venue_active_today(state):
         raise ValueError(
             f"{STAR_NAME}今晚不开嗓。场子不是天天有的——star_ops status 看她的档，"
-            "上手页 /play 也能听她唱。"
+            "剧场看台或上手页也能听她唱。"
         )
     day = _day_id()
     conn.row_factory = aiosqlite.Row
@@ -422,6 +422,126 @@ async def _cmd_board() -> str:
         lines.append(f"  {i}. {r['name']} — 被她看到 {r['cheers']} 次 · 打赏 {r['tip_total']} 票")
     lines.append("»")
     return "\n".join(lines)
+
+
+async def hall_star_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> list[dict[str, Any]]:
+    """给 /island 剧场看台摊开星光选项。数值仍走 star_ops，这里只摊开能点的。"""
+    state = await _ensure_state(conn)
+    voice = _venue_active_today(state)
+    venue = state.get("venue") or "rest"
+    tickets = int(s.get("tickets") or 0)
+    energy_now = int(s.get("energy") or 0)
+    day = _day_id()
+    cheer_row = await (await conn.execute(
+        "SELECT id FROM star_proposals WHERE steward_id=? AND kind='cheer' "
+        "AND status='pending' AND created_at > ?",
+        (s["id"], db.now() - config.STAR_CHEER_WINDOW),
+    )).fetchone()
+    fan_row = await (await conn.execute(
+        "SELECT 1 FROM star_fans WHERE steward_id=?", (s["id"],)
+    )).fetchone()
+    watch_row = await (await conn.execute(
+        "SELECT count FROM star_watches WHERE steward_id=? AND day=?",
+        (s["id"], day),
+    )).fetchone()
+    watched = int(watch_row["count"] if watch_row else 0)
+    watch_limit = (
+        config.STAR_STAGE_WATCH_DAILY
+        if venue == "stage"
+        else config.STAR_WATCH_DAILY
+    )
+    cheers_used = bool(cheer_row)
+    is_fan = bool(fan_row)
+    can_cheer = not cheers_used
+    can_tip = tickets >= config.STAR_TIP_MIN
+    can_song = tickets >= config.STAR_SONG_COST
+    can_watch = bool(
+        voice and watched < watch_limit and energy_now >= config.STAR_WATCH_ENERGY
+    )
+    can_fan = not is_fan
+    if cheers_used:
+        cheer_note = "这张嘴今天用过了。应援每天一条。"
+    else:
+        cheer_note = "每日一条，进她收件盒。要她本人点「看到」才算。"
+    if not can_tip:
+        tip_note = "口袋不够 1 票。"
+    else:
+        tip_note = "1～100 票。酒馆场荔栀抽三成，小剧场全归她。"
+    if not can_song:
+        song_note = f"点歌要 {config.STAR_SONG_COST} 票。"
+    else:
+        song_note = f"{config.STAR_SONG_COST} 票，纸条递上台。她唱不唱看她自己。"
+    if not voice:
+        watch_note = "她今晚没开嗓。场子不是天天有的。"
+    elif watched >= watch_limit:
+        watch_note = f"今天已围观 {watched}/{watch_limit} 次。"
+    elif energy_now < config.STAR_WATCH_ENERGY:
+        watch_note = f"精力不够，围观要 {config.STAR_WATCH_ENERGY}。"
+    else:
+        watch_note = (
+            f"耗 {config.STAR_WATCH_ENERGY} 精力。"
+            f"酒馆日 {config.STAR_WATCH_DAILY} 次，专场日 {config.STAR_STAGE_WATCH_DAILY} 次。"
+        )
+    fan_note = "你已经在团里了。入团不能退。" if is_fan else "入团一次，不能退。围观回神多一点。"
+    return [
+        {
+            "id": "cheer",
+            "cmd": "应援",
+            "name": "应援",
+            "price": "免费",
+            "can_act": can_cheer,
+            "note": cheer_note,
+            "detail": cheer_note,
+            "form": "words",
+        },
+        {
+            "id": "tip",
+            "cmd": "打赏",
+            "name": "打赏",
+            "price": "1~100票",
+            "can_act": can_tip,
+            "note": tip_note,
+            "detail": tip_note,
+            "form": "amount",
+        },
+        {
+            "id": "song",
+            "cmd": "点歌",
+            "name": "点歌",
+            "price": f"{config.STAR_SONG_COST}票",
+            "can_act": can_song,
+            "note": song_note,
+            "detail": song_note,
+            "form": "song",
+        },
+        {
+            "id": "watch",
+            "cmd": "围观",
+            "name": "围观",
+            "price": "看",
+            "can_act": can_watch,
+            "note": watch_note,
+            "detail": watch_note,
+        },
+        {
+            "id": "fan",
+            "cmd": "粉丝团",
+            "name": "粉丝团",
+            "price": "已入" if is_fan else "入团",
+            "can_act": can_fan,
+            "note": fan_note,
+            "detail": fan_note,
+        },
+        {
+            "id": "fans",
+            "cmd": "应援榜",
+            "name": "应援榜",
+            "price": "看",
+            "can_act": True,
+            "note": "谁在真金白银地捧她。榜一是头粉。",
+            "detail": "谁在真金白银地捧她。榜一是头粉。",
+        },
+    ]
 
 
 async def star_ops(key_id: int, command: str) -> str:

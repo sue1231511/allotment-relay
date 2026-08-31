@@ -886,7 +886,7 @@ async def eatery_order(body: EateryOrderRequest):
 
 @app.get("/star", response_class=HTMLResponse)
 async def star_page(request: Request):
-    """小橘星光围观实况；打赏应援仍回上手页。"""
+    """小橘星光围观实况；打赏应援去剧场看台。"""
     return await _html(request, "star.html", active="star")
 
 

@@ -25,7 +25,7 @@ THEATER_HELP = """theater_ops 子命令（整句写进 command）：
   例子：看板 · 试镜 · 对戏 · 演出 · 领薪 · 编剧社 · 投稿 岸上旧收音机 | 第一幕……
   头粉=star_ops 应援榜第一名；头粉好感获取和每日上限翻倍，不翻倍工资。
   投稿不是 tale_ops accept / story_ops start（那是玩已有篇章）；稿费不是 领薪（那是专场工资）。不要发明 采纳 / 发稿费。
-  人类 /island 总览点剧场，进院景再点编剧社 / 衣泊坊 / 剧场看台。编剧社常开能投稿；剧场看台进了是半身立绘对话，小橘站左边，只露上半身（全身的二分之一），先点对话框再出选项，点选项话写在对话框里，不另弹窗，要专场才试镜演出领薪。"""
+  人类 /island 总览点剧场，进院景再点编剧社 / 衣泊坊 / 剧场看台。编剧社常开能投稿；剧场看台进了是半身立绘对话，小橘站左边，只露上半身（全身的二分之一），先点对话框再出选项，点选项话写在对话框里，不另弹窗，能应援、打赏、点歌、围观（star_ops 同一套），要专场才试镜演出领薪。"""
 
 ROLES = (
     ("announcer", "报幕员", "你替她把开场前的静默接成一句话。"),
@@ -579,7 +579,7 @@ async def writers_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[st
 
 
 async def hall_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str, Any]:
-    """给 /island 剧场看台用。数值仍走 theater_ops，这里只摊开能点的。"""
+    """给 /island 剧场看台用。上场仍走 theater_ops，星光仍走 star_ops，这里只摊开能点的。"""
     conn.row_factory = aiosqlite.Row
     row = await (await conn.execute(
         "SELECT venue, venue_date, setlist FROM star_state WHERE id=1"
@@ -694,7 +694,10 @@ async def hall_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str, 
     if can_claim:
         spoken = f"这场演完了。去领薪，{int(pending['payout'] or 0)} 票。"
     elif not open_now:
-        spoken = "今晚没专场。侧厅编剧社还开着。"
+        if venue == "bar" and venue_date == _day():
+            spoken = "她今晚在酒吧开嗓。看台也能应援打赏围观。"
+        else:
+            spoken = "今晚没专场。应援打赏还能点。"
     elif not run:
         spoken = f"今晚是「{setlist}」。先试镜。"
     elif run["outcome"]:
@@ -723,9 +726,10 @@ async def hall_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str, 
             "note": (
                 f"{phase}。小橘好感 {score}/100 · {tier}"
                 + (" · 头粉好感×2" if head else "")
-                + "。打赏小橘仍去上手页。"
+                + "。应援打赏围观就在看台。"
             ),
         },
+        "stars": await star.hall_star_view(conn, s),
         "jobs": jobs,
         "can_audition": can_audition,
         "can_rehearse": can_rehearse,

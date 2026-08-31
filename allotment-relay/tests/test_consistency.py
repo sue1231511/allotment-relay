@@ -171,6 +171,7 @@ def test_mcp_descriptions() -> None:
         assert needle in man, needle
     assert "平常回10" in STAR_HELP
     assert "小剧场专场每日5次" in STAR_HELP
+    assert "剧场看台" in STAR_HELP
 
 
 def test_relay_manual_covers_systems() -> None:
@@ -705,6 +706,7 @@ def test_human_island_manual() -> None:
         "点选项话写在对话框里",
         "不另弹窗",
         "试镜、对戏、演出、领薪",
+        "应援、打赏、点歌、围观",
         "先点对话框再出选项",
         "点一下才变成",
         "喝茶、问潮、点灯",
@@ -715,6 +717,7 @@ def test_human_island_manual() -> None:
         "聊天室大厅也会出现一句通报",
     ):
         assert needle in blob, needle
+    assert "打赏小橘仍去上手页" not in blob
     assert "plot_ops" not in blob
     assert "sow_all" not in blob
     assert "chapter-jump" not in content

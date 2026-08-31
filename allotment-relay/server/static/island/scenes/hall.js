@@ -66,6 +66,7 @@ function bindAdvance(wrap) {
 function hallChoices(shop) {
   const board = shop.board || {};
   const jobs = shop.jobs || [];
+  const stars = shop.stars || [];
   return [
     {
       id: "look",
@@ -81,6 +82,13 @@ function hallChoices(shop) {
       price: `${board.affinity ?? 0}/100`,
       look: true,
     },
+    ...stars.map((row) => ({
+      id: row.id,
+      target: row.cmd,
+      label: row.name,
+      price: row.price || (row.can_act ? "上" : "看"),
+      can: Boolean(row.can_act),
+    })),
     ...jobs.map((row) => ({
       id: row.id,
       target: row.cmd,

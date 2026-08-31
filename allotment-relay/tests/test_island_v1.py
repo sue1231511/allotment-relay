@@ -286,6 +286,40 @@ async def _test_island_v1_api() -> None:
     assert hall["open"] is False, hall
     assert any(t["key"] == "board" for t in hall["tabs"]), hall
     assert any(r["cmd"] == "试镜" and r["can_act"] is False for r in hall["jobs"]), hall
+    assert any(r["id"] == "cheer" for r in hall["stars"]), hall
+    assert any(r["id"] == "tip" for r in hall["stars"]), hall
+    assert any(r["id"] == "watch" for r in hall["stars"]), hall
+    assert "打赏小橘仍" not in (hall.get("board") or {}).get("note", "")
+    watch_off = client.post(
+        "/api/v1/hall/act",
+        headers=_auth(key, {"Idempotency-Key": "hall-watch-off"}),
+        json={"kind": "watch", "target": ""},
+    )
+    assert watch_off.status_code >= 400, watch_off.text
+    sid = int((await db.get_steward_by_key_id((await db.get_key_row(key))["id"]))["id"])
+    async with db.connect() as conn:
+        await conn.execute("UPDATE stewards SET tickets=tickets+80 WHERE id=?", (sid,))
+        await conn.commit()
+    tipped = client.post(
+        "/api/v1/hall/act",
+        headers=_auth(key, {"Idempotency-Key": "hall-tip"}),
+        json={"kind": "tip", "target": "20"},
+    )
+    assert tipped.status_code == 200, tipped.text
+    assert tipped.json()["event"]["kind"] == "hall"
+    assert "打赏" in tipped.json()["event"]["narrative"]
+    cheered = client.post(
+        "/api/v1/hall/act",
+        headers=_auth(key, {"Idempotency-Key": "hall-cheer"}),
+        json={"kind": "cheer", "target": "今晚很好听"},
+    )
+    assert cheered.status_code == 200, cheered.text
+    fans = client.post(
+        "/api/v1/hall/act",
+        headers=_auth(key, {"Idempotency-Key": "hall-fans"}),
+        json={"kind": "fans", "target": ""},
+    )
+    assert fans.status_code == 200, fans.text
     audition_off = client.post(
         "/api/v1/hall/act",
         headers=_auth(key, {"Idempotency-Key": "hall-audition-off"}),
@@ -869,11 +903,11 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-cols1" in html
-    assert html.count("island.css?v=island-cols1") == 1
-    assert html.count("app.js?v=island-cols1") == 1
+    assert "island-star1" in html
+    assert html.count("island.css?v=island-star1") == 1
+    assert html.count("app.js?v=island-star1") == 1
     assert "lighthouse.js?v=island-stay1" in app
-    assert "hall.js?v=island-cols1" in app
+    assert "hall.js?v=island-star1" in app
     assert "shop.js?v=island-stay1" in app
     assert "island-boot3" in html
     assert 'id="island-boot-veil"' in html
@@ -1343,8 +1377,15 @@ def test_island_page_is_modular() -> None:
     assert "island-shop-shelf" not in hall_js
     hall_fn = app.split("function tapHall")[1].split("async function runHall")[0]
     assert "speakHall" in app
+    assert "showFormSheet" in hall_fn
+    assert "cheer" in hall_fn
     assert "showHintSheet" not in hall_fn
     assert "showActSheet" not in hall_fn
+    assert "打赏小橘仍" not in hall_fn
+    assert "stars" in hall_js
+    assert "应援" in hall_fn
+    assert "打赏" in hall_fn
+    assert "点歌" in hall_fn
     assert "showEvent" not in app.split("async function openHall")[1].split("function paintHall")[0]
     assert "点一下看菜单" in eatery_js
     assert "island-eatery" in eatery_js

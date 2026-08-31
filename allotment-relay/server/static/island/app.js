@@ -24,7 +24,7 @@ import { renderBar } from "./scenes/bar.js?v=island-stay1";
 import { renderTheater } from "./scenes/theater.js?v=island-fix1";
 import { renderWriters } from "./scenes/writers.js?v=island-stay1";
 import { renderAtelier } from "./scenes/atelier.js?v=island-stay1";
-import { renderHall } from "./scenes/hall.js?v=island-cols1";
+import { renderHall } from "./scenes/hall.js?v=island-star1";
 import { renderEatery } from "./scenes/eatery.js?v=island-stay1";
 let lighthouseMod = null;
 async function lighthouseScene() {
@@ -920,7 +920,57 @@ function tapHall(kind, target) {
   const shop = state.hall || {};
   const board = shop.board || {};
   if (kind === "look") {
-    speakHall(board.note || "先看看今晚有没有专场。打赏小橘仍在上手页。");
+    if (target === "affinity") {
+      const head = board.head_fan ? " · 头粉好感×2" : "";
+      speakHall(`小橘好感 ${board.affinity ?? 0}/100${board.tier ? ` · ${board.tier}` : ""}${head}。`);
+      return;
+    }
+    speakHall(board.note || "先看看今晚有没有专场。应援打赏围观就在看台。");
+    return;
+  }
+  const star = (shop.stars || []).find((item) => item.id === kind);
+  if (star) {
+    if (!star.can_act) {
+      speakHall(star.detail || star.note || "这会儿还不行。");
+      return;
+    }
+    if (kind === "cheer") {
+      showFormSheet({
+        title: "应援",
+        body: "每日一条，进她收件盒。要她本人点「看到」才算。",
+        fields: [
+          { id: "words", label: "好话", placeholder: "今晚很好听", max: 100, empty: "先写下一句好话。" },
+        ],
+        confirm: "递上去",
+        onConfirm: (vals) => runHall("cheer", vals.words),
+      });
+      return;
+    }
+    if (kind === "tip") {
+      showFormSheet({
+        title: "打赏",
+        body: "1～100 票。酒馆场荔栀抽三成，小剧场全归她。",
+        fields: [
+          { id: "amount", label: "票数", placeholder: "20", max: 3, empty: "先写下票数。" },
+        ],
+        confirm: "打赏",
+        onConfirm: (vals) => runHall("tip", vals.amount),
+      });
+      return;
+    }
+    if (kind === "song") {
+      showFormSheet({
+        title: "点歌",
+        body: "15 票，纸条递上台。她唱不唱，看她自己。",
+        fields: [
+          { id: "song", label: "歌名", placeholder: "歌名", max: 60, empty: "先写下歌名。" },
+        ],
+        confirm: "递纸条",
+        onConfirm: (vals) => runHall("song", vals.song),
+      });
+      return;
+    }
+    runHall(kind, "");
     return;
   }
   const row = (shop.jobs || []).find((item) => item.id === kind);
