@@ -52,6 +52,7 @@ async def act(api_key: str, key_id: int, kind: str, target: str = "") -> dict[st
             "title": board.get("title") or "看板",
             "narrative": board.get("note") or "先看看今晚有没有专场。",
             "kind": "hall",
+            "speaker": "小橘",
         }
         return snap
     command = _command(verb)
@@ -68,5 +69,6 @@ async def act(api_key: str, key_id: int, kind: str, target: str = "") -> dict[st
         "title": TITLES.get(verb, "剧场看台"),
         "narrative": humanize(narrative),
         "kind": "hall",
+        "speaker": "小橘",
     }
     return snap

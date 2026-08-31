@@ -1794,6 +1794,19 @@ body.island-app.is-bag-open .island-float-chip {
   filter: drop-shadow(0 10px 18px rgba(12, 20, 28, .38));
 }
 
+/* 小橘：半身进去，只取全身的二分之一（腰以上），靠左。 */
+.island-vn-stand.is-half {
+  width: 88%;
+  height: 50%;
+  bottom: 14%;
+}
+
+.island-vn-stand.is-half .island-vn-sprite {
+  height: 200%;
+  left: 0;
+  object-position: top left;
+}
+
 /* 橙光：先出对话，点一下对话框才变成选项。字和框自己对齐，不吃底图 line-height:0。 */
 .island-vn-talk {
   position: absolute;
