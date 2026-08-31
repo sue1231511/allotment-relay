@@ -2012,6 +2012,11 @@ body.island-app.is-bag-open .island-float-chip {
   object-position: top left;
 }
 
+/* 韶年原图人比桥桥靠中，半身再往左一点。 */
+.island-shaonian .island-vn-stand.is-half .island-vn-sprite {
+  left: -12%;
+}
+
 /* 橙光：先进场景图，点一下才出人；再点一下对话框才变成选项。字和框自己对齐，不吃底图 line-height:0。 */
 .island-vn-talk {
   position: absolute;
