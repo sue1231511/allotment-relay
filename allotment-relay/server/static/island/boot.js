@@ -90,7 +90,7 @@
   }
 
   var MAP_PICS = ["/static/island/assets/scenes/island-map.jpg"];
-  var VEIL_MS = 8000;
+  var VEIL_MS = 10000;
   var veilTimer = 0;
 
   function showVeil(text) {
@@ -158,30 +158,66 @@
     );
   }
 
+  function waitOnePic(img, timeoutMs) {
+    return new Promise(function (resolve) {
+      var done = false;
+      var finish = function () {
+        if (done) return;
+        done = true;
+        resolve();
+      };
+      var timer = setTimeout(finish, timeoutMs);
+      function decoded() {
+        clearTimeout(timer);
+        finish();
+      }
+      function afterLoad() {
+        img.removeEventListener("load", afterLoad);
+        img.removeEventListener("error", afterLoad);
+        if (typeof img.decode === "function") {
+          img.decode().then(decoded, decoded);
+        } else {
+          decoded();
+        }
+      }
+      if (img.complete) {
+        if (img.naturalWidth && typeof img.decode === "function") {
+          img.decode().then(decoded, decoded);
+        } else {
+          decoded();
+        }
+        return;
+      }
+      img.addEventListener("load", afterLoad);
+      img.addEventListener("error", afterLoad);
+    });
+  }
+
+  function afterPaint() {
+    return new Promise(function (resolve) {
+      if (typeof requestAnimationFrame !== "function") {
+        resolve();
+        return;
+      }
+      requestAnimationFrame(function () {
+        requestAnimationFrame(resolve);
+      });
+    });
+  }
+
   function waitPics(root, timeoutMs) {
     root = root || document.getElementById("island-scene");
     timeoutMs = timeoutMs || 8000;
     if (!root) return Promise.resolve();
     var imgs = root.querySelectorAll(".island-slot-pic, .island-vn-sprite");
-    if (!imgs.length) return Promise.resolve();
-    return Promise.all(
-      Array.prototype.map.call(imgs, function (img) {
-        return new Promise(function (resolve) {
-          if (img.complete && img.naturalWidth) {
-            resolve();
-            return;
-          }
-          var finish = function () {
-            img.removeEventListener("load", finish);
-            img.removeEventListener("error", finish);
-            resolve();
-          };
-          img.addEventListener("load", finish);
-          img.addEventListener("error", finish);
-          setTimeout(finish, timeoutMs);
-        });
-      })
-    );
+    var ready = imgs.length
+      ? Promise.all(
+          Array.prototype.map.call(imgs, function (img) {
+            return waitOnePic(img, timeoutMs);
+          })
+        )
+      : Promise.resolve();
+    return ready.then(afterPaint);
   }
 
   function setBusy(on, mode) {

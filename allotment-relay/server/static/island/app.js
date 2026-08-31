@@ -98,13 +98,16 @@ async function waitScenePics(root) {
   }
 }
 
+let enterGen = 0;
+
 async function bootFromServer() {
   showBootVeil("正在进入…");
+  const pending = [api.me()];
   if (window.__islandBoot && typeof window.__islandBoot.preload === "function") {
-    window.__islandBoot.preload();
+    pending.push(window.__islandBoot.preload());
   }
-  const data = await api.me();
-  applySnapshot(data);
+  const pair = await Promise.all(pending);
+  applySnapshot(pair[0]);
   renderHud();
   showPlay();
   await enterScene(state.scene);
@@ -113,6 +116,7 @@ async function bootFromServer() {
 async function enterScene(name, opts) {
   const quiet = !!(opts && opts.quiet);
   if (name === "home") name = "yards";
+  const gen = quiet ? enterGen : ++enterGen;
   if (!quiet) {
     showBootVeil("正在进入…");
   }
@@ -126,7 +130,7 @@ async function enterScene(name, opts) {
   }
   const root = sceneEl();
   if (!root) {
-    if (!quiet) hideBootVeil();
+    if (!quiet && gen === enterGen) hideBootVeil();
     toast("地图画布还没准备好。");
     return;
   }
@@ -254,8 +258,7 @@ async function enterScene(name, opts) {
         },
       });
     }
-    if (!quiet) hideBootVeil();
-    waitScenePics(root);
+    if (!quiet) await waitScenePics(root);
   } catch (err) {
     toast(err.message || "这处场景没能打开。");
     state.backTo = "map";
@@ -265,9 +268,9 @@ async function enterScene(name, opts) {
         enterScene(go);
       },
     });
-    if (!quiet) hideBootVeil();
+    if (!quiet) await waitScenePics(root);
   } finally {
-    if (!quiet) hideBootVeil();
+    if (!quiet && gen === enterGen) hideBootVeil();
   }
 }
 

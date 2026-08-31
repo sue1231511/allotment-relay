@@ -937,12 +937,12 @@ def test_island_page_is_modular() -> None:
     assert "/static/island/app.js" in html
     assert "island-market1" in html
     assert html.count("island.css?v=island-market1") == 1
-    assert html.count("app.js?v=island-market1") == 1
+    assert html.count("app.js?v=island-wait1") == 1
     assert "lighthouse.js?v=island-stay1" in app
     assert "hall.js?v=island-star1" in app
     assert "shop.js?v=island-market1" in app
     assert "market.js?v=island-market1" in app
-    assert "island-boot3" in html
+    assert "island-wait1" in html
     assert 'id="island-boot-veil"' in html
     assert "正在进入" in html
     assert "fonts.googleapis.com" not in html
@@ -1019,7 +1019,8 @@ def test_island_page_is_modular() -> None:
     assert "island-boot-spin" in css
     assert "正在进入" in app
     assert "waitScenePics" in app
-    assert "await waitScenePics" not in app
+    assert "await waitScenePics" in app
+    assert "enterGen" in app
     assert 'from "./ui/modal.js?v=island-fix1"' in app
     modal_src = (ROOT / "server/static/island/ui/modal.js").read_text(encoding="utf-8")
     assert "export function showFormSheet" in modal_src
@@ -1073,6 +1074,8 @@ def test_island_page_is_modular() -> None:
     assert "8000" in boot
     assert "showVeil" in boot
     assert "waitPics" in boot
+    assert "waitOnePic" in boot
+    assert "img.decode" in boot
     assert "正在进入" in boot
     assert "thirstyYard" in (ROOT / "server/static/island/store.js").read_text(encoding="utf-8")
     assert "plotToken" in app
