@@ -3570,6 +3570,12 @@ body.memory-open {
   background: transparent;
 }
 
+/* 须写在 .lounge-sheet 后面：同特异性下后者会盖掉许愿墙的加宽 */
+.lounge-sheet.lounge-board-sheet {
+  max-width: min(96vw, 920px);
+  width: min(96vw, 920px);
+}
+
 .lounge-sheet::backdrop {
   background: rgba(30, 45, 48, .35);
   backdrop-filter: blur(3px);
