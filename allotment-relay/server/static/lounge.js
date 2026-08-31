@@ -10,10 +10,6 @@ let myProfile = null;
 let currentBoothLabel = '';
 
 const feed = document.getElementById('lounge-feed');
-const boardFeed = document.getElementById('lounge-board-feed');
-const boardForm = document.getElementById('lounge-board-form');
-const boardBodyInput = document.getElementById('lounge-board-body');
-const boardKindSelect = document.getElementById('lounge-board-kind');
 const statusEl = document.getElementById('lounge-status');
 const statusBadge = document.getElementById('lounge-status-badge');
 const liveDot = document.getElementById('lounge-live-dot');
@@ -237,7 +233,7 @@ function ensureBoardEmptyState(container) {
   container.appendChild(empty);
 }
 
-function upsertBoardItems(items, container = boardFeed) {
+function upsertBoardItems(items, container) {
   if (!container) return;
   if (!items.length) {
     ensureBoardEmptyState(container);
@@ -267,7 +263,6 @@ function upsertBoardItems(items, container = boardFeed) {
 
 function resetBoardFeed() {
   boardLastId = 0;
-  if (boardFeed) boardFeed.innerHTML = '';
   const sheetFeed = document.getElementById('lounge-board-sheet-feed');
   if (sheetFeed) sheetFeed.innerHTML = '';
 }
@@ -286,7 +281,6 @@ async function refreshBoard({ quiet = false } = {}) {
   try {
     const data = await fetchBoard();
     const items = data.items || [];
-    if (boardFeed) upsertBoardItems(items, boardFeed);
     const sheetFeed = document.getElementById('lounge-board-sheet-feed');
     if (sheetFeed) upsertBoardItems(items, sheetFeed);
   } catch (err) {
@@ -307,9 +301,6 @@ async function postBoardItem(apiKey, kind, body) {
 
 function setBoardFilter(next) {
   boardFilter = next || 'all';
-  document.querySelectorAll('[data-board-filter]').forEach((btn) => {
-    btn.classList.toggle('is-active', btn.dataset.boardFilter === boardFilter);
-  });
   document.querySelectorAll('[data-board-sheet-filter]').forEach((btn) => {
     btn.classList.toggle('is-active', btn.dataset.boardSheetFilter === boardFilter);
   });
@@ -395,7 +386,6 @@ async function submitBoardSheetForm(e) {
   if (btn) btn.disabled = true;
   try {
     const item = await postBoardItem(apiKey, kind, body);
-    upsertBoardItems([item], boardFeed);
     upsertBoardItems([item], document.getElementById('lounge-board-sheet-feed'));
     const bodyInput = document.getElementById('lounge-board-sheet-body');
     if (bodyInput) bodyInput.value = '';
@@ -407,7 +397,7 @@ async function submitBoardSheetForm(e) {
   }
 }
 
-function bindBoardMobileEntry() {
+function bindBoardEntry() {
   document.querySelectorAll('[data-board-open]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const mode = btn.dataset.boardOpen || 'view';
@@ -1012,42 +1002,13 @@ document.getElementById('lounge-form')?.addEventListener('submit', async (e) => 
   }
 });
 
-boardForm?.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const body = boardBodyInput?.value.trim();
-  if (!body) return;
-  const apiKey = loadSavedKey();
-  if (!apiKey.startsWith('ar_sk_')) {
-    toast('请先在上手页贴凭证后再贴墙');
-    bindLinkEl?.classList.remove('hidden');
-    return;
-  }
-  const kind = boardKindSelect?.value || 'wish';
-  const btn = boardForm.querySelector('.lounge-board-send');
-  if (btn) btn.disabled = true;
-  try {
-    const item = await postBoardItem(apiKey, kind, body);
-    upsertBoardItems([item]);
-    if (boardBodyInput) boardBodyInput.value = '';
-    toast(item.kind === 'feedback' ? '反馈已贴上墙' : '许愿已贴上墙');
-  } catch (err) {
-    toast(err.message);
-  } finally {
-    if (btn) btn.disabled = false;
-  }
-});
-
-document.querySelectorAll('[data-board-filter]').forEach((btn) => {
-  btn.addEventListener('click', () => setBoardFilter(btn.dataset.boardFilter || 'all'));
-});
-
 window.playLounge = {
   start() {
     (async function boot() {
       try {
         await Promise.all([fetchMeta(), fetchProfile()]);
         ensurePacketDialog();
-        bindBoardMobileEntry();
+        bindBoardEntry();
         const data = await fetchMessages();
         resetFeed();
         applyRoomMeta(data);
