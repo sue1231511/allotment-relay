@@ -1,73 +1,26 @@
-import { layoutCoverBoard, sceneArt } from "../ui/art.js?v=island-fix1";
 import { esc } from "../ui/modal.js?v=island-fix1";
 import { state } from "../store.js?v=island-fix1";
+import { bindShopFrame, ensureShopFrame, setShopPeek } from "../ui/shop-frame.js?v=island-stay1";
 
 export function renderBar(root, { onAct, onSwitchTab, onOpenShelf, onCloseShelf, listTop = null } = {}) {
   const shop = state.bar || {};
   const tabs = shop.tabs || [];
   const tab = state.barTab || (tabs[0] && tabs[0].key) || "work";
   const peek = !state.barShelf;
-  const existing = root.querySelector(".island-bar");
-  if (existing && existing.classList.contains("is-peek") === peek) {
-    if (peek) {
-      bindPeek(existing, onOpenShelf);
-    } else {
-      paintChrome(existing, shop, tabs, tab, onSwitchTab);
-      paintList(existing, shop, tab, onAct, listTop);
-      bindFold(existing, onCloseShelf);
-    }
-    hideActionBar();
-    return;
-  }
-  if (peek) {
-    root.innerHTML = `
-      <div class="island-shop island-bar is-peek">
-        <div class="island-shop-board">
-          ${sceneArt("bar")}
-          <button type="button" class="island-scene-tap">点一下看吧台</button>
-        </div>
-      </div>
-    `;
-    hideActionBar();
-    const wrap = root.querySelector(".island-bar");
-    layoutCoverBoard(wrap, ".island-shop-board", 941, 1672);
-    bindPeek(wrap, onOpenShelf);
-    return;
-  }
-  root.innerHTML = `
-    <div class="island-shop island-bar">
-      ${sceneArt("bar")}
-      <button type="button" class="island-scene-fold" aria-label="收起列表"></button>
-      <div class="island-shop-shelf">
-        <div class="island-shop-meta">
-          <b>潮汐酒吧</b>
-          <small></small>
-        </div>
-        <div class="island-shop-tabs" role="tablist" aria-label="酒吧">
-        </div>
-        <div class="island-shop-list" id="island-bar-list"></div>
-      </div>
-    </div>
-  `;
+  const wrap = ensureShopFrame(root, {
+    find: (el) => el.querySelector(".island-bar"),
+    className: "island-shop island-bar",
+    sceneId: "bar",
+    tap: "点一下看吧台",
+    listId: "island-bar-list",
+    tabAria: "酒吧",
+  });
+  setShopPeek(wrap, peek);
+  bindShopFrame(wrap, { onOpenShelf, onCloseShelf });
   hideActionBar();
-  const wrap = root.querySelector(".island-bar");
+  if (peek) return;
   paintChrome(wrap, shop, tabs, tab, onSwitchTab);
   paintList(wrap, shop, tab, onAct, listTop == null ? 0 : listTop);
-  bindFold(wrap, onCloseShelf);
-}
-
-function bindPeek(wrap, onOpenShelf) {
-  const board = wrap.querySelector(".island-shop-board");
-  if (!board || board._bound) return;
-  board._bound = true;
-  board.addEventListener("click", () => onOpenShelf && onOpenShelf());
-}
-
-function bindFold(wrap, onCloseShelf) {
-  const fold = wrap.querySelector(".island-scene-fold");
-  if (!fold || fold._bound) return;
-  fold._bound = true;
-  fold.addEventListener("click", () => onCloseShelf && onCloseShelf());
 }
 
 function hideActionBar() {
