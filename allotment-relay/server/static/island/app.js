@@ -24,7 +24,7 @@ import { renderBar } from "./scenes/bar.js?v=island-stay1";
 import { renderTheater } from "./scenes/theater.js?v=island-fix1";
 import { renderWriters } from "./scenes/writers.js?v=island-stay1";
 import { renderAtelier } from "./scenes/atelier.js?v=island-stay1";
-import { renderHall } from "./scenes/hall.js?v=island-talk1";
+import { renderHall } from "./scenes/hall.js?v=island-col1";
 import { renderEatery } from "./scenes/eatery.js?v=island-stay1";
 let lighthouseMod = null;
 async function lighthouseScene() {
