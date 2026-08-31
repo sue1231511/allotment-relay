@@ -1,6 +1,7 @@
 const SRC = {
   island: "/static/island/assets/audio/island",
 };
+const BUST = "island-burgertown1";
 
 const MUTE_KEY = "island-bgm-mute";
 
@@ -27,11 +28,11 @@ export function setBgmMuted(on) {
 
 function pickSrc(base) {
   const probe = document.createElement("audio");
-  if (probe.canPlayType("audio/mpeg")) return `${base}.mp3`;
-  if (probe.canPlayType('audio/ogg; codecs="vorbis"') || probe.canPlayType("audio/ogg")) {
-    return `${base}.ogg`;
+  let file = `${base}.mp3`;
+  if (!probe.canPlayType("audio/mpeg") && (probe.canPlayType('audio/ogg; codecs="vorbis"') || probe.canPlayType("audio/ogg"))) {
+    file = `${base}.ogg`;
   }
-  return `${base}.mp3`;
+  return `${file}?v=${BUST}`;
 }
 
 function halt() {

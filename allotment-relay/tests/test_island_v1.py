@@ -1202,7 +1202,8 @@ def test_island_page_is_modular() -> None:
     assert "/static/island/app.js" in html
     assert "island-mapbgm1" in app
     assert html.count("island.css?v=island-mapbgm1") == 1
-    assert html.count("app.js?v=island-mapbgm1") == 1
+    assert html.count("app.js?v=island-burgertown1") == 1
+    assert "bgm.js?v=island-burgertown1" in app
     assert "lighthouse.js?v=island-mapbgm1" in app
     assert "hall.js?v=island-mapbgm1" in app
     assert "shop.js?v=island-mapbgm1" in app
@@ -1696,6 +1697,9 @@ def test_island_page_is_modular() -> None:
     assert "audio/clinic" not in bgm_js
     assert (ROOT / "server/static/island/assets/audio/island.mp3").exists()
     assert (ROOT / "server/static/island/assets/audio/island.ogg").exists()
+    assert (ROOT / "server/static/island/assets/audio/island.mp3").stat().st_size > 1_000_000
+    assert "island-burgertown1" in bgm_js
+    assert "Magical Burger Town" in art_md
     assert not (ROOT / "server/static/island/assets/audio/clinic.mp3").exists()
     enter_fn = app.split("async function enterScene")[1].split("try {")[0]
     assert "stopBgm" not in enter_fn
