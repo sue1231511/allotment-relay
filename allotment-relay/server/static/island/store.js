@@ -39,8 +39,11 @@ export const state = {
   farm: null,
   world: null,
   shore: null,
-  shoreTab: "cast",
+  shoreTab: "beach",
   shoreShelf: false,
+  port: null,
+  portTab: "cast",
+  portShelf: false,
   shop: null,
   shopTab: "seed",
   shopShelf: false,
@@ -95,6 +98,13 @@ export function applySnapshot(data) {
     const tabs = data.shore.tabs || [];
     if (tabs.length && !tabs.some((t) => t.key === state.shoreTab)) {
       state.shoreTab = tabs[0].key;
+    }
+  }
+  if (data.port) {
+    state.port = data.port;
+    const tabs = data.port.tabs || [];
+    if (tabs.length && !tabs.some((t) => t.key === state.portTab)) {
+      state.portTab = tabs[0].key;
     }
   }
   if (data.shop) state.shop = data.shop;

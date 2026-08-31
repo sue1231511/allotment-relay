@@ -156,7 +156,7 @@ TIDE_HELP = """tide_ops 子命令（整句写进 command）：
   tool list|buy hoe|shovel — 锄头铲子
   boss status|attack — 潮渊之主（无船也能岸边围攻）
   fight/flee/dig/probe/compliment 可省略前缀
-  人类 /island 总览点海边，点一下看出海/滩，能撒网、坐钓、赶海、开船（和 tide_ops 同一套）；/tide 只围观"""
+  人类 /island 总览点海边，进滩景再点港口、海边。港口点一下看码头，海边点一下看沙滩，能撒网、坐钓、赶海、开船（和 tide_ops 同一套）；/tide 只围观"""
 
 TOTE_HELP = """tote_ops 子命令（整句写进 command）：
   list — 行囊（中文名 + 英文 id）。同种货可占多组（MC 式），每组基础 24 份（和潮柜一样；工具/装件 1）

@@ -1,6 +1,6 @@
-import { esc } from "../ui/modal.js?v=island-vn-meet1";
-import { state } from "../store.js?v=island-vn-meet1";
-import { bindShopFrame, ensureShopFrame, setShopPeek } from "../ui/shop-frame.js?v=island-vn-meet1";
+import { esc } from "../ui/modal.js?v=island-port1";
+import { state } from "../store.js?v=island-port1";
+import { bindShopFrame, ensureShopFrame, setShopPeek } from "../ui/shop-frame.js?v=island-port1";
 
 export function renderAtelier(root, { onAct, onSwitchTab, onOpenShelf, onCloseShelf, listTop = null } = {}) {
   const shop = state.atelier || {};
