@@ -10,10 +10,10 @@ import {
   yardMeta,
   yardPlots,
   YARDS,
-} from "../store.js?v=island-port1";
-import { sceneArt } from "../ui/art.js?v=island-port1";
-import { cropArt } from "../ui/crops.js?v=island-port1";
-import { esc } from "../ui/modal.js?v=island-port1";
+} from "../store.js?v=island-portchat1";
+import { sceneArt } from "../ui/art.js?v=island-portchat1";
+import { cropArt } from "../ui/crops.js?v=island-portchat1";
+import { esc } from "../ui/modal.js?v=island-portchat1";
 
 export function renderHome(root, { onOpenLand }) {
   root.innerHTML = `

@@ -173,12 +173,13 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
         port_line = f"{tide_name}。先把渔网或钓竿备上，再撒网坐钓。"
         beach_line = f"{tide_name}。赶海、寻信在沙滩。围观页只看。"
     else:
-        port_line = f"{tide_name}。撒网、坐钓、开船都在码头。围观页只看。"
+        port_line = f"{tide_name}。撒网、坐钓、开船、闲聊都在码头。围观页只看。"
         beach_line = f"{tide_name}。赶海、寻信在沙滩。围观页只看。"
 
     port_tabs = [
         {"key": "cast", "label": "岸边", "badge": ""},
         {"key": "voyage", "label": "出海", "badge": "海" if sailing else ""},
+        {"key": "chat", "label": "闲聊", "badge": ""},
     ]
     beach_tabs = [
         {"key": "beach", "label": "赶海", "badge": ""},
@@ -422,6 +423,7 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
         "items": {
             "cast": cast_items,
             "voyage": voyage_items,
+            "chat": [],
         },
     }
     beach_shelf = {

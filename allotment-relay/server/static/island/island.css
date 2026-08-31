@@ -1227,6 +1227,76 @@ body.island-app.is-playing.is-yards .island-actionbar {
   font-size: 13px;
 }
 
+#island-port-list.is-chat {
+  display: flex;
+  flex-direction: column;
+  grid-template-columns: none;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.island-port-msgs {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.island-port-msg {
+  padding: 8px 10px;
+  border: 1px solid rgba(236, 214, 160, .4);
+  border-radius: 6px;
+  background: rgba(16, 22, 30, .78);
+  color: #f6f0e4;
+}
+
+.island-port-msg b {
+  display: block;
+  font-size: 12px;
+  color: rgba(236, 214, 160, .88);
+}
+
+.island-port-msg p {
+  margin: 4px 0 0;
+  font-size: 14px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.island-port-say {
+  display: flex;
+  gap: 6px;
+  flex: none;
+}
+
+.island-port-say input {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  padding: 0 10px;
+  border: 1px solid rgba(236, 214, 160, .5);
+  border-radius: 6px;
+  background: rgba(16, 22, 30, .86);
+  color: #f6f0e4;
+  font: inherit;
+}
+
+.island-port-say button {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid rgba(236, 214, 160, .55);
+  border-radius: 6px;
+  background: rgba(16, 22, 30, .84);
+  color: #f6f0e4;
+  font: inherit;
+}
+
 @media (max-height: 560px) {
   .island-shop-shelf {
     max-height: 58%;

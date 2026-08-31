@@ -44,6 +44,7 @@ export const state = {
   port: null,
   portTab: "cast",
   portShelf: false,
+  portChat: [],
   shop: null,
   shopTab: "seed",
   shopShelf: false,

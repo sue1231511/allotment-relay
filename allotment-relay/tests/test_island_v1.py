@@ -522,6 +522,7 @@ async def _test_island_v1_api() -> None:
     assert dock["name"] == "港口", dock
     assert any(t["key"] == "cast" for t in dock["tabs"]), dock
     assert any(t["key"] == "voyage" for t in dock["tabs"]), dock
+    assert any(t["key"] == "chat" for t in dock["tabs"]), dock
     looked_sea = client.post(
         "/api/v1/shore/act",
         headers=_auth(key, {"Idempotency-Key": "shore-look-status"}),
@@ -1069,21 +1070,21 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-port1" in app
-    assert html.count("island.css?v=island-port1") == 1
-    assert html.count("app.js?v=island-port1") == 1
-    assert "lighthouse.js?v=island-port1" in app
-    assert "hall.js?v=island-port1" in app
-    assert "shop.js?v=island-port1" in app
-    assert "market.js?v=island-port1" in app
+    assert "island-portchat1" in app
+    assert html.count("island.css?v=island-portchat1") == 1
+    assert html.count("app.js?v=island-portchat1") == 1
+    assert "lighthouse.js?v=island-portchat1" in app
+    assert "hall.js?v=island-portchat1" in app
+    assert "shop.js?v=island-portchat1" in app
+    assert "market.js?v=island-portchat1" in app
     js_blob = "\n".join(p.read_text(encoding="utf-8") for p in (ROOT / "server/static/island").rglob("*.js"))
     store_vs = set(re.findall(r"store\.js\?v=([^\s\"']+)", js_blob))
     modal_vs = set(re.findall(r"modal\.js\?v=([^\s\"']+)", js_blob))
-    assert store_vs == {"island-port1"}, store_vs
-    assert modal_vs == {"island-port1"}, modal_vs
-    assert 'from "../store.js?v=island-port1"' in (ROOT / "server/static/island/scenes/atelier.js").read_text(encoding="utf-8")
-    assert 'from "../store.js?v=island-port1"' in (ROOT / "server/static/island/scenes/writers.js").read_text(encoding="utf-8")
-    assert 'from "../store.js?v=island-port1"' in (ROOT / "server/static/island/scenes/hall.js").read_text(encoding="utf-8")
+    assert store_vs == {"island-portchat1"}, store_vs
+    assert modal_vs == {"island-portchat1"}, modal_vs
+    assert 'from "../store.js?v=island-portchat1"' in (ROOT / "server/static/island/scenes/atelier.js").read_text(encoding="utf-8")
+    assert 'from "../store.js?v=island-portchat1"' in (ROOT / "server/static/island/scenes/writers.js").read_text(encoding="utf-8")
+    assert 'from "../store.js?v=island-portchat1"' in (ROOT / "server/static/island/scenes/hall.js").read_text(encoding="utf-8")
     assert "island-wait2" in html
     assert 'id="island-boot-veil"' in html
     assert "正在进入" in html
@@ -1164,7 +1165,7 @@ def test_island_page_is_modular() -> None:
     assert "waitScenePics" in app
     assert "await waitScenePics" in app
     assert "enterGen" in app
-    assert 'from "./ui/modal.js?v=island-port1"' in app
+    assert 'from "./ui/modal.js?v=island-portchat1"' in app
     modal_src = (ROOT / "server/static/island/ui/modal.js").read_text(encoding="utf-8")
     assert "export function showFormSheet" in modal_src
     assert "export function showPickSheet" in modal_src
@@ -1632,10 +1633,18 @@ def test_island_page_is_modular() -> None:
     assert "island-shore" in shore_js
     assert "ensureShopFrame" in shore_js
     assert "去上手页" not in shore_js
+    assert "island-port-say" in shore_js
+    assert "闲聊" in shore_js
+    assert "paintChat" in shore_js
     assert "renderShore" in app
     assert "renderShoreYard" in app
     assert "keepShore" in app
     assert "keepPort" in app
+    assert "sayPort" in app
+    assert "loadPortChat" in app
+    assert "api.say" in app
+    assert "api.messages" in app
+    assert "renderChat" not in app
     assert "/api/v1/shore" in api
     assert "api.shoreAct" in app
     assert "field.type === \"textarea\"" in modal_src or 'field.type === "textarea"' in modal_src
@@ -1705,6 +1714,8 @@ def test_island_page_is_modular() -> None:
     assert ".island-theater .island-hot span" in css
     assert ".island-shore-board" in css
     assert ".island-shore-yard .island-hot span" in css
+    assert ".island-port-say" in css
+    assert ".island-port-msg" in css
     assert 'lighthouse: "灯塔"' in app
     assert 'notice: "潮汐公告"' in app
     assert "state.backTo" in app

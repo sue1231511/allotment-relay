@@ -1,4 +1,4 @@
-import { api, loadKey } from "./api.js?v=island-port1";
+import { api, loadKey } from "./api.js?v=island-portchat1";
 import {
   applySnapshot,
   duesBlocked,
@@ -10,36 +10,36 @@ import {
   tickGrow,
   tickQuarry,
   tickWorkshop,
-} from "./store.js?v=island-port1";
-import { renderHud } from "./hud.js?v=island-port1";
-import { renderMap } from "./map.js?v=island-port1";
-import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=island-port1";
-import { renderShore, renderShoreYard } from "./scenes/shore.js?v=island-port1";
-import { renderPlaza } from "./scenes/plaza.js?v=island-port1";
-import { renderPlace } from "./scenes/place.js?v=island-port1";
-import { renderShop } from "./scenes/shop.js?v=island-port1";
-import { renderWorkshop } from "./scenes/workshop.js?v=island-port1";
-import { renderQuarry } from "./scenes/quarry.js?v=island-port1";
-import { renderBar } from "./scenes/bar.js?v=island-port1";
-import { renderTheater } from "./scenes/theater.js?v=island-port1";
-import { renderWriters } from "./scenes/writers.js?v=island-port1";
-import { renderAtelier } from "./scenes/atelier.js?v=island-port1";
-import { renderHall } from "./scenes/hall.js?v=island-port1";
-import { renderEatery } from "./scenes/eatery.js?v=island-port1";
-import { renderMarket } from "./scenes/market.js?v=island-port1";
-import { renderTing } from "./scenes/ting.js?v=island-port1";
-import { renderHui } from "./scenes/hui.js?v=island-port1";
-import { renderLianli } from "./scenes/lianli.js?v=island-port1";
+} from "./store.js?v=island-portchat1";
+import { renderHud } from "./hud.js?v=island-portchat1";
+import { renderMap } from "./map.js?v=island-portchat1";
+import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=island-portchat1";
+import { renderShore, renderShoreYard } from "./scenes/shore.js?v=island-portchat1";
+import { renderPlaza } from "./scenes/plaza.js?v=island-portchat1";
+import { renderPlace } from "./scenes/place.js?v=island-portchat1";
+import { renderShop } from "./scenes/shop.js?v=island-portchat1";
+import { renderWorkshop } from "./scenes/workshop.js?v=island-portchat1";
+import { renderQuarry } from "./scenes/quarry.js?v=island-portchat1";
+import { renderBar } from "./scenes/bar.js?v=island-portchat1";
+import { renderTheater } from "./scenes/theater.js?v=island-portchat1";
+import { renderWriters } from "./scenes/writers.js?v=island-portchat1";
+import { renderAtelier } from "./scenes/atelier.js?v=island-portchat1";
+import { renderHall } from "./scenes/hall.js?v=island-portchat1";
+import { renderEatery } from "./scenes/eatery.js?v=island-portchat1";
+import { renderMarket } from "./scenes/market.js?v=island-portchat1";
+import { renderTing } from "./scenes/ting.js?v=island-portchat1";
+import { renderHui } from "./scenes/hui.js?v=island-portchat1";
+import { renderLianli } from "./scenes/lianli.js?v=island-portchat1";
 let lighthouseMod = null;
 async function lighthouseScene() {
-  if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-port1");
+  if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-portchat1");
   return lighthouseMod;
 }
-import { renderBag } from "./ui/bag.js?v=island-port1";
-import { setBackChip, setBagChip } from "./ui/back-map.js?v=island-port1";
-import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=island-port1";
-import { popOut } from "./ui/pop.js?v=island-port1";
-import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showPitchSheet, showVendSheet, toast } from "./ui/modal.js?v=island-port1";
+import { renderBag } from "./ui/bag.js?v=island-portchat1";
+import { setBackChip, setBagChip } from "./ui/back-map.js?v=island-portchat1";
+import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=island-portchat1";
+import { popOut } from "./ui/pop.js?v=island-portchat1";
+import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showPitchSheet, showVendSheet, toast } from "./ui/modal.js?v=island-portchat1";
 
 const sceneEl = () => document.getElementById("island-scene");
 const sheetEl = () => document.getElementById("island-sheet");
@@ -1421,18 +1421,52 @@ function paintPort(listTop = 0) {
       state.portTab = tab || "cast";
       hideModal();
       paintPort(0);
+      if (tab === "chat") loadPortChat();
     },
     onOpenShelf: () => {
       state.portShelf = true;
       paintPort(0);
+      if (state.portTab === "chat") loadPortChat();
     },
     onCloseShelf: () => {
       state.portShelf = false;
       hideModal();
       paintPort();
     },
+    onSay: sayPort,
     listTop,
   });
+}
+
+async function loadPortChat() {
+  if (state.scene !== "port" || !state.portShelf) return;
+  try {
+    const data = await api.messages();
+    state.portChat = data.messages || [];
+    if (state.scene === "port" && state.portTab === "chat" && state.portShelf) {
+      paintPort();
+    }
+  } catch (err) {
+    toast(err.message || "这会儿码头没人说话。");
+  }
+}
+
+async function sayPort(text) {
+  const line = (text || "").trim();
+  if (!line || state.busy) return;
+  state.busy = true;
+  try {
+    const data = await api.say(line);
+    state.portChat = data.messages || [];
+    renderHud();
+    if (state.scene === "port" && state.portTab === "chat" && state.portShelf) {
+      paintPort();
+    }
+  } catch (err) {
+    toast(err.message || "这句没能说出去。");
+  } finally {
+    state.busy = false;
+  }
 }
 
 async function openBeach() {
