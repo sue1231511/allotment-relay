@@ -586,7 +586,7 @@ async def _test_island_v1_api() -> None:
     assert dock["name"] == "港口", dock
     assert any(t["key"] == "cast" for t in dock["tabs"]), dock
     assert any(t["key"] == "voyage" for t in dock["tabs"]), dock
-    assert any(t["key"] == "chat" for t in dock["tabs"]), dock
+    assert all(t["key"] != "chat" for t in dock["tabs"]), dock
     looked_sea = client.post(
         "/api/v1/shore/act",
         headers=_auth(key, {"Idempotency-Key": "shore-look-status"}),
@@ -1238,8 +1238,38 @@ def test_island_page_is_modular() -> None:
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
     assert "island-mapbgm1" in app
-    assert html.count("island.css?v=island-shaonian2") == 1
-    assert html.count("app.js?v=island-beachhub1") == 1
+    assert html.count("island.css?v=island-portlounge1") == 1
+    assert html.count("app.js?v=island-portlounge1") == 1
+    assert html.count("lounge-embed.css?v=island-portlounge1") == 1
+    assert "lounge.js?v=lounge-board-compose6" in html
+    assert "island-time.js" in html
+    assert 'include "partials/island-lounge.html"' in html
+    lounge_embed = (ROOT / "server/templates/partials/island-lounge.html").read_text(encoding="utf-8")
+    lounge_css = (ROOT / "server/static/lounge-embed.css").read_text(encoding="utf-8")
+    lounge_js = (ROOT / "server/static/lounge.js").read_text(encoding="utf-8")
+    assert "id=\"island-lounge\"" in lounge_embed
+    assert "id=\"lounge-feed\"" in lounge_embed
+    assert "发红包" in lounge_embed
+    assert "对暗号" in lounge_embed
+    assert "许愿墙" in lounge_embed
+    assert "id=\"lounge-packet-btn\"" in lounge_embed
+    assert "id=\"lounge-booth-code\"" in lounge_embed
+    assert "id=\"lounge-booth-enter\"" in lounge_embed
+    assert "id=\"lounge-booth-leave\"" in lounge_embed
+    assert 'data-lounge-tool="packet"' in lounge_embed
+    assert 'data-lounge-tool="booth"' in lounge_embed
+    assert 'data-lounge-tool="board"' in lounge_embed
+    assert "lounge-packet-grab" in lounge_js
+    assert "lounge-packet-total" in lounge_js
+    assert "/api/lounge/packet" in lounge_js
+    assert "/api/lounge/grab" in lounge_js
+    assert "/api/lounge/booth" in lounge_js
+    assert "/api/lounge/board" in lounge_js
+    assert "body.island-app.is-port-chat" in lounge_css
+    assert ".lounge-booth-bar" in lounge_css
+    assert "发红包" in html
+    assert "对暗号" in html
+    assert "许愿墙" in html
     assert "bgm.js?v=island-burgertown1" in app
     assert "lighthouse.js?v=island-mapbgm1" in app
     assert "hall.js?v=island-mapbgm1" in app
@@ -1992,18 +2022,34 @@ def test_island_page_is_modular() -> None:
     assert "island-shore" in shore_js
     assert "ensureShopFrame" in shore_js
     assert "去上手页" not in shore_js
-    assert "island-port-say" in shore_js
+    assert "renderPortHub" in shore_js
     assert "闲聊" in shore_js
-    assert "paintChat" in shore_js
+    assert "看码头" in shore_js
+    assert "paintChat" not in shore_js
+    assert "island-port-say" not in shore_js
     assert "renderShore" in app
     assert "renderShoreYard" in app
+    assert "renderPortHub" in app
     assert "keepShore" in app
     assert "keepPort" in app
-    assert "sayPort" in app
-    assert "loadPortChat" in app
-    assert "api.say" in app
-    assert "api.messages" in app
+    assert "showIslandLounge" in app
+    assert "hideIslandLounge" in app
+    assert "playLounge" in app
+    assert "portChatOpen" in app
+    assert "portPeek" in app
+    assert 'shore.js?v=island-portlounge1' in app
+    paint_port = app.split("function paintPort")[1].split("async function openBeach")[0]
+    assert paint_port.index("state.portChatOpen") < paint_port.index("state.portShelf")
+    assert paint_port.index("state.portShelf") < paint_port.index("renderPortHub")
+    assert "openPortChat" in app
+    assert "closePortChat" in app
+    assert "api.say" not in app
     assert "renderChat" not in app
+    store_src = (ROOT / "server/static/island/store.js").read_text(encoding="utf-8")
+    assert "portPeek: false" in store_src
+    assert "portChatOpen: false" in store_src
+    assert "state.portPeek = false" in app
+    assert "state.portChatOpen = false" in app
     assert "/api/v1/shore" in api
     assert "api.shoreAct" in app
     assert "field.type === \"textarea\"" in modal_src or 'field.type === "textarea"' in modal_src

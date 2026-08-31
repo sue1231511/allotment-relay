@@ -1,0 +1,132 @@
+<div id="island-lounge" class="island-lounge lounge-page" hidden>
+  <span id="lounge-status-badge" class="hidden"></span>
+  <span id="lounge-my-who" class="hidden"></span>
+  <a id="lounge-bind-link" class="hidden" href="/play">去上手页贴凭证</a>
+  <div class="lounge-page-main">
+    <div class="lounge-layout">
+      <section class="lounge-chat" aria-label="港口闲聊">
+        <header class="lounge-chat-head">
+          <div class="lounge-chat-title">
+            <span class="lounge-live-dot" id="lounge-live-dot" aria-hidden="true"></span>
+            <div>
+              <span class="lounge-chat-kicker">全服聊天室</span>
+              <h2 id="lounge-chat-title">港口闲聊</h2>
+              <small id="lounge-status">连接中…</small>
+            </div>
+          </div>
+          <div class="lounge-board-entry lounge-board-entry-head" aria-label="许愿墙快捷入口">
+            <button type="button" class="lounge-board-entry-btn" data-board-open="wish">许愿</button>
+            <button type="button" class="lounge-board-entry-btn" data-board-open="feedback">反馈</button>
+            <button type="button" class="lounge-board-entry-btn accent" data-board-open="view">许愿墙</button>
+          </div>
+        </header>
+        <details class="lounge-pin-mobile">
+          <summary>📌 置顶公约</summary>
+          <div id="lounge-pinned-body" class="lounge-pin-body">加载中…</div>
+          <div id="lounge-pinned-mobile" class="hidden"></div>
+        </details>
+        <div class="lounge-booth-bar" aria-label="小包间暗号">
+          <div class="lounge-booth-bar-top">
+            <span class="lounge-booth-now">现在：<strong id="lounge-room-title">大厅</strong></span>
+            <span id="lounge-room-meta" class="lounge-tiny"></span>
+          </div>
+          <div class="lounge-booth-row">
+            <label class="lounge-booth-code">
+              <span>暗号</span>
+              <input type="text" id="lounge-booth-code" maxlength="24" placeholder="和朋友约好的那一句" autocomplete="off">
+            </label>
+            <button type="button" class="lounge-mod-btn" id="lounge-booth-enter">对暗号</button>
+            <button type="button" class="lounge-mod-btn" id="lounge-booth-leave">回大厅</button>
+            <button type="button" class="lounge-mod-btn" id="lounge-packet-btn">发红包</button>
+          </div>
+        </div>
+        <div id="lounge-feed" class="lounge-feed" role="log" aria-live="polite"></div>
+        <footer class="lounge-composer-wrap">
+          <div class="lounge-composer-identity" id="lounge-composer-identity">
+            <span id="lounge-composer-who">未绑定凭证</span>
+            <button type="button" class="lounge-composer-name-link js-lounge-name-btn">改昵称</button>
+          </div>
+          <form id="lounge-form" class="lounge-composer">
+            <button type="button" class="lounge-tool-plus" id="lounge-tool-plus" aria-label="聊天工具" aria-expanded="false">＋</button>
+            <textarea id="lounge_message" rows="1" maxlength="280" placeholder="说点什么…" autocomplete="off" required></textarea>
+            <button type="submit" class="lounge-send" aria-label="发送">➤</button>
+          </form>
+        </footer>
+      </section>
+    </div>
+  </div>
+
+  <div id="lounge-mod-panel" class="hidden">
+    <input type="text" id="lounge-mod-target" maxlength="24" autocomplete="off">
+    <input type="number" id="lounge-mod-minutes" min="1" max="10080" value="60">
+    <button type="button" data-mod-action="mute">禁言</button>
+    <button type="button" data-mod-action="unmute">解禁</button>
+    <button type="button" data-mod-action="ban">踢出</button>
+    <button type="button" data-mod-action="unban">解踢</button>
+  </div>
+
+  <dialog class="lounge-sheet" id="lounge-name-dialog">
+    <div class="lounge-sheet-inner">
+      <header class="lounge-sheet-head">
+        <h2>修改人类昵称</h2>
+        <button type="button" class="lounge-sheet-close" data-close-dialog>关闭</button>
+      </header>
+      <div class="lounge-sheet-body">
+        <p class="lounge-sheet-note">聊天里会显示为「昵称·AI管家名」。凭证在上手页绑定。</p>
+        <label class="lounge-sheet-field">
+          <span>昵称（1~16 字）</span>
+          <input type="text" id="lounge_human_name" maxlength="16" placeholder="例如：小明" autocomplete="off">
+        </label>
+        <p id="lounge-name-preview" class="lounge-key-status hidden"></p>
+        <div class="lounge-sheet-actions">
+          <button type="button" class="btn primary" id="lounge-save-name">保存昵称</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <div class="lounge-tool-backdrop" id="lounge-tool-backdrop" hidden></div>
+  <section class="lounge-tool-sheet" id="lounge-tool-sheet" aria-label="聊天工具" aria-hidden="true">
+    <div class="lounge-tool-handle" aria-hidden="true"></div>
+    <div class="lounge-tool-sheet-head">
+      <strong>聊天工具</strong>
+      <button type="button" id="lounge-tool-close">收起</button>
+    </div>
+    <div class="lounge-tool-grid">
+      <button type="button" class="lounge-tool-item" data-lounge-tool="wish"><span>愿</span><b>许愿</b></button>
+      <button type="button" class="lounge-tool-item" data-lounge-tool="feedback"><span>馈</span><b>反馈</b></button>
+      <button type="button" class="lounge-tool-item" data-lounge-tool="board"><span>墙</span><b>许愿墙</b></button>
+      <button type="button" class="lounge-tool-item" data-lounge-tool="booth"><span>⌁</span><b>小包间</b></button>
+      <button type="button" class="lounge-tool-item" data-lounge-tool="hall"><span>↩</span><b>回大厅</b></button>
+      <button type="button" class="lounge-tool-item" data-lounge-tool="packet"><span>票</span><b>发红包</b></button>
+      <button type="button" class="lounge-tool-item" data-lounge-tool="rename"><span>名</span><b>改昵称</b></button>
+    </div>
+    <div class="lounge-tool-subpanel hidden" id="lounge-tool-booth-panel">
+      <label for="lounge-tool-booth-code">小包间暗号</label>
+      <div class="lounge-tool-booth-row">
+        <input type="text" id="lounge-tool-booth-code" maxlength="24" placeholder="和朋友约好的那一句" autocomplete="off">
+        <button type="button" id="lounge-tool-booth-enter">对暗号</button>
+      </div>
+      <small>对上同一句的人进同一间。大厅看不见里面的话。</small>
+    </div>
+    <button type="button" class="lounge-admin-entry hidden" id="lounge-admin-entry" data-lounge-tool="admin">
+      <span>管</span>
+      <span class="lounge-admin-copy"><b>管理员</b><small>禁言 · 解禁 · 踢出 · 解踢</small></span>
+      <i>›</i>
+    </button>
+    <div class="lounge-tool-subpanel hidden" id="lounge-tool-admin-panel">
+      <label for="lounge-tool-mod-target">管理员操作 · 目标填 AI 管家名</label>
+      <div class="lounge-tool-admin-fields">
+        <input type="text" id="lounge-tool-mod-target" maxlength="24" placeholder="违规者的管家名" autocomplete="off">
+        <input type="number" id="lounge-tool-mod-minutes" min="1" max="10080" value="60" aria-label="禁言分钟">
+      </div>
+      <div class="lounge-tool-admin-actions">
+        <button type="button" data-mobile-mod-action="mute">禁言</button>
+        <button type="button" data-mobile-mod-action="unmute">解禁</button>
+        <button type="button" data-mobile-mod-action="ban">踢出</button>
+        <button type="button" data-mobile-mod-action="unban">解踢</button>
+      </div>
+    </div>
+  </section>
+  <div id="lounge-toast" class="lounge-toast hidden" role="status"></div>
+</div>

@@ -15,7 +15,7 @@ import {
 import { renderHud } from "./hud.js?v=island-mapbgm1";
 import { renderMap } from "./map.js?v=island-mapbgm1";
 import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=island-mapbgm1";
-import { renderShore, renderShoreYard } from "./scenes/shore.js?v=island-mapbgm1";
+import { renderShore, renderShoreYard, renderPortHub } from "./scenes/shore.js?v=island-portlounge1";
 import { renderPlaza } from "./scenes/plaza.js?v=island-mapbgm1";
 import { renderPlace } from "./scenes/place.js?v=island-mapbgm1";
 import { renderHut } from "./scenes/hut.js?v=island-hutcook1";
@@ -171,6 +171,7 @@ async function enterScene(name, opts) {
   state.tab = "map";
   markDock("");
   hideSheet({ instant: true });
+  if (name !== "port") hideIslandLounge();
   if (name !== "yards") {
     closePlant();
     hideModal();
@@ -217,6 +218,10 @@ async function enterScene(name, opts) {
       stopQuarryTick();
       state.backTo = "shore";
       state.portShelf = false;
+      state.portPeek = false;
+      state.portChatOpen = false;
+      if (state.portTab === "chat") state.portTab = "cast";
+      hideIslandLounge();
       await openPort(root);
     } else if (name === "beach") {
       stopGrowTick();
@@ -1767,60 +1772,117 @@ async function openPort() {
   paintPort();
 }
 
-function paintPort(listTop = 0) {
-  renderShore(sceneEl(), {
-    place: "port",
-    onAct: tapShore,
-    onSwitchTab: (tab) => {
-      state.portTab = tab || "cast";
-      hideModal();
-      paintPort(0);
-      if (tab === "chat") loadPortChat();
-    },
-    onOpenShelf: () => {
-      state.portShelf = true;
-      paintPort(0);
-      if (state.portTab === "chat") loadPortChat();
-    },
-    onCloseShelf: () => {
-      state.portShelf = false;
-      hideModal();
-      paintPort();
-    },
-    onSay: sayPort,
-    listTop,
+function bindPortBack() {
+  setBackChip(true, () => {
+    if (state.portChatOpen) {
+      closePortChat();
+      return;
+    }
+    enterScene(state.backTo || "shore");
   });
 }
 
-async function loadPortChat() {
-  if (state.scene !== "port" || !state.portShelf) return;
-  try {
-    const data = await api.messages();
-    state.portChat = data.messages || [];
-    if (state.scene === "port" && state.portTab === "chat" && state.portShelf) {
-      paintPort();
-    }
-  } catch (err) {
-    toast(err.message || "这会儿码头没人说话。");
+function showIslandLounge() {
+  const el = document.getElementById("island-lounge");
+  if (!el) {
+    toast("聊天室还没铺好。");
+    return;
+  }
+  const already = document.body.classList.contains("is-port-chat") && !el.hidden;
+  el.hidden = false;
+  document.body.classList.add("is-port-chat");
+  hideActionBarSafe();
+  bindPortBack();
+  if (!already && window.playLounge && typeof window.playLounge.start === "function") {
+    window.playLounge.start();
   }
 }
 
-async function sayPort(text) {
-  const line = (text || "").trim();
-  if (!line || state.busy) return;
-  state.busy = true;
-  try {
-    const data = await api.say(line);
-    state.portChat = data.messages || [];
-    renderHud();
-    if (state.scene === "port" && state.portTab === "chat" && state.portShelf) {
-      paintPort();
-    }
-  } catch (err) {
-    toast(err.message || "这句没能说出去。");
-  } finally {
-    state.busy = false;
+function hideIslandLounge() {
+  const el = document.getElementById("island-lounge");
+  if (el) el.hidden = true;
+  document.body.classList.remove("is-port-chat");
+  ["lounge-packet-dialog", "lounge-board-dialog", "lounge-name-dialog"].forEach((id) => {
+    const d = document.getElementById(id);
+    if (d && typeof d.close === "function" && d.open) d.close();
+  });
+  const toolSheet = document.getElementById("lounge-tool-sheet");
+  const toolBackdrop = document.getElementById("lounge-tool-backdrop");
+  if (toolSheet) {
+    toolSheet.classList.remove("is-open");
+    toolSheet.setAttribute("aria-hidden", "true");
   }
+  if (toolBackdrop) toolBackdrop.hidden = true;
+  if (window.playLounge && typeof window.playLounge.stop === "function") {
+    window.playLounge.stop();
+  }
+}
+
+function hideActionBarSafe() {
+  const bar = document.getElementById("island-actionbar");
+  if (bar) {
+    bar.innerHTML = "";
+    bar.hidden = true;
+  }
+}
+
+function openPortChat() {
+  state.portChatOpen = true;
+  state.portShelf = false;
+  hideModal();
+  paintPort();
+}
+
+function closePortChat() {
+  state.portChatOpen = false;
+  state.portPeek = true;
+  hideIslandLounge();
+  hideModal();
+  paintPort();
+}
+
+function paintPort(listTop = 0) {
+  bindPortBack();
+  if (state.portChatOpen) {
+    showIslandLounge();
+    return;
+  }
+  hideIslandLounge();
+  if (state.portShelf) {
+    renderShore(sceneEl(), {
+      place: "port",
+      onAct: tapShore,
+      onSwitchTab: (tab) => {
+        state.portTab = tab || "cast";
+        hideModal();
+        paintPort(0);
+      },
+      onOpenShelf: () => {
+        state.portShelf = true;
+        paintPort(0);
+      },
+      onCloseShelf: () => {
+        state.portShelf = false;
+        state.portPeek = true;
+        hideModal();
+        paintPort();
+      },
+      listTop,
+    });
+    return;
+  }
+  renderPortHub(sceneEl(), {
+    onPeek: () => {
+      state.portPeek = true;
+      paintPort();
+    },
+    onChat: () => openPortChat(),
+    onDock: () => {
+      state.portShelf = true;
+      hideModal();
+      paintPort(0);
+    },
+  });
 }
 
 async function openBeach() {
