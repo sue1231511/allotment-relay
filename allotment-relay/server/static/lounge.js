@@ -223,8 +223,8 @@ function boardItemHtml(item) {
   `;
 }
 
-function ensureBoardEmptyState() {
-  if (!boardFeed || boardFeed.querySelector('.lounge-board-item') || boardFeed.querySelector('.lounge-board-empty')) {
+function ensureBoardEmptyState(container) {
+  if (!container || container.querySelector('.lounge-board-item') || container.querySelector('.lounge-board-empty')) {
     return;
   }
   const empty = document.createElement('p');
@@ -234,21 +234,21 @@ function ensureBoardEmptyState() {
     : boardFilter === 'feedback'
       ? '还没有反馈。'
       : '还没有人贴。想加玩法或遇到 bug 都可以写。';
-  boardFeed.appendChild(empty);
+  container.appendChild(empty);
 }
 
-function upsertBoardItems(items) {
-  if (!boardFeed) return;
+function upsertBoardItems(items, container = boardFeed) {
+  if (!container) return;
   if (!items.length) {
-    ensureBoardEmptyState();
+    ensureBoardEmptyState(container);
     return;
   }
-  const empty = boardFeed.querySelector('.lounge-board-empty');
+  const empty = container.querySelector('.lounge-board-empty');
   if (empty) empty.remove();
   let appended = false;
   for (const item of items) {
     boardLastId = Math.max(boardLastId, item.id);
-    const existing = boardFeed.querySelector(`[data-board-id="${item.id}"]`);
+    const existing = container.querySelector(`[data-board-id="${item.id}"]`);
     const wrap = document.createElement('div');
     wrap.innerHTML = boardItemHtml(item);
     const node = wrap.firstElementChild;
@@ -256,18 +256,20 @@ function upsertBoardItems(items) {
       existing.replaceWith(node);
       continue;
     }
-    const rows = [...boardFeed.querySelectorAll('.lounge-board-item')];
+    const rows = [...container.querySelectorAll('.lounge-board-item')];
     const next = rows.find((r) => Number(r.dataset.boardId) > item.id);
-    if (next) boardFeed.insertBefore(node, next);
-    else boardFeed.appendChild(node);
+    if (next) container.insertBefore(node, next);
+    else container.appendChild(node);
     appended = true;
   }
-  if (appended) boardFeed.scrollTop = boardFeed.scrollHeight;
+  if (appended) container.scrollTop = container.scrollHeight;
 }
 
 function resetBoardFeed() {
   boardLastId = 0;
   if (boardFeed) boardFeed.innerHTML = '';
+  const sheetFeed = document.getElementById('lounge-board-sheet-feed');
+  if (sheetFeed) sheetFeed.innerHTML = '';
 }
 
 async function fetchBoard({ since = 0 } = {}) {
@@ -281,10 +283,12 @@ async function fetchBoard({ since = 0 } = {}) {
 }
 
 async function refreshBoard({ quiet = false } = {}) {
-  if (!boardFeed) return;
   try {
     const data = await fetchBoard();
-    upsertBoardItems(data.items || []);
+    const items = data.items || [];
+    if (boardFeed) upsertBoardItems(items, boardFeed);
+    const sheetFeed = document.getElementById('lounge-board-sheet-feed');
+    if (sheetFeed) upsertBoardItems(items, sheetFeed);
   } catch (err) {
     if (!quiet) console.error(err);
   }
@@ -306,8 +310,114 @@ function setBoardFilter(next) {
   document.querySelectorAll('[data-board-filter]').forEach((btn) => {
     btn.classList.toggle('is-active', btn.dataset.boardFilter === boardFilter);
   });
+  document.querySelectorAll('[data-board-sheet-filter]').forEach((btn) => {
+    btn.classList.toggle('is-active', btn.dataset.boardSheetFilter === boardFilter);
+  });
   resetBoardFeed();
   refreshBoard();
+}
+
+function ensureBoardSheet() {
+  if (document.getElementById('lounge-board-dialog')) return;
+  const d = document.createElement('dialog');
+  d.id = 'lounge-board-dialog';
+  d.className = 'lounge-sheet lounge-board-sheet';
+  d.innerHTML = `
+    <div class="lounge-sheet-inner">
+      <header class="lounge-sheet-head">
+        <h2>许愿墙 / 问题反馈</h2>
+        <button type="button" class="lounge-sheet-close" data-close-dialog>关闭</button>
+      </header>
+      <div class="lounge-sheet-body">
+        <p class="lounge-sheet-note">全服可见，和闲聊分开，不会刷走。</p>
+        <div class="lounge-board-tabs" role="tablist" aria-label="筛选">
+          <button type="button" class="lounge-board-tab is-active" data-board-sheet-filter="all">全部</button>
+          <button type="button" class="lounge-board-tab" data-board-sheet-filter="wish">许愿</button>
+          <button type="button" class="lounge-board-tab" data-board-sheet-filter="feedback">反馈</button>
+        </div>
+        <div id="lounge-board-sheet-feed" class="lounge-board-feed lounge-board-sheet-feed"></div>
+        <form id="lounge-board-sheet-form" class="lounge-board-composer lounge-board-sheet-compose">
+          <label class="lounge-board-kind">
+            <span class="sr-only">类型</span>
+            <select id="lounge-board-sheet-kind" aria-label="类型">
+              <option value="wish">许愿玩法</option>
+              <option value="feedback">反馈问题</option>
+            </select>
+          </label>
+          <textarea
+            id="lounge-board-sheet-body"
+            rows="3"
+            maxlength="500"
+            placeholder="写你想加的玩法，或遇到的 bug…"
+            autocomplete="off"
+            required
+          ></textarea>
+          <button type="submit" class="lounge-board-send">贴上墙</button>
+        </form>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(d);
+  d.querySelector('[data-close-dialog]')?.addEventListener('click', () => closeDialog(d));
+  d.querySelectorAll('[data-board-sheet-filter]').forEach((btn) => {
+    btn.addEventListener('click', () => setBoardFilter(btn.dataset.boardSheetFilter || 'all'));
+  });
+  document.getElementById('lounge-board-sheet-form')?.addEventListener('submit', submitBoardSheetForm);
+}
+
+async function openBoardSheet({ kind = 'wish', focusCompose = false } = {}) {
+  ensureBoardSheet();
+  const dialog = document.getElementById('lounge-board-dialog');
+  const kindSelect = document.getElementById('lounge-board-sheet-kind');
+  const bodyInput = document.getElementById('lounge-board-sheet-body');
+  if (kindSelect && (kind === 'wish' || kind === 'feedback')) {
+    kindSelect.value = kind;
+  }
+  await refreshBoard();
+  openDialog(dialog);
+  if (focusCompose && bodyInput) {
+    window.setTimeout(() => bodyInput.focus(), 80);
+  }
+}
+
+async function submitBoardSheetForm(e) {
+  e.preventDefault();
+  const body = document.getElementById('lounge-board-sheet-body')?.value.trim();
+  if (!body) return;
+  const apiKey = loadSavedKey();
+  if (!apiKey.startsWith('ar_sk_')) {
+    toast('请先在上手页贴凭证后再贴墙');
+    bindLinkEl?.classList.remove('hidden');
+    return;
+  }
+  const kind = document.getElementById('lounge-board-sheet-kind')?.value || 'wish';
+  const btn = document.querySelector('#lounge-board-sheet-form .lounge-board-send');
+  if (btn) btn.disabled = true;
+  try {
+    const item = await postBoardItem(apiKey, kind, body);
+    upsertBoardItems([item], boardFeed);
+    upsertBoardItems([item], document.getElementById('lounge-board-sheet-feed'));
+    const bodyInput = document.getElementById('lounge-board-sheet-body');
+    if (bodyInput) bodyInput.value = '';
+    toast(item.kind === 'feedback' ? '反馈已贴上墙' : '许愿已贴上墙');
+  } catch (err) {
+    toast(err.message);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+function bindBoardMobileEntry() {
+  document.querySelectorAll('[data-board-open]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const mode = btn.dataset.boardOpen || 'view';
+      if (mode === 'view') {
+        openBoardSheet({ focusCompose: false });
+        return;
+      }
+      openBoardSheet({ kind: mode, focusCompose: true });
+    });
+  });
 }
 
 async function fetchMeta() {
@@ -786,6 +896,21 @@ document.querySelectorAll('[data-lounge-tool]').forEach((btn) => {
     if (action === 'rename') {
       openNameDialog();
       closeToolSheet();
+      return;
+    }
+    if (action === 'wish') {
+      closeToolSheet();
+      openBoardSheet({ kind: 'wish', focusCompose: true });
+      return;
+    }
+    if (action === 'feedback') {
+      closeToolSheet();
+      openBoardSheet({ kind: 'feedback', focusCompose: true });
+      return;
+    }
+    if (action === 'board') {
+      closeToolSheet();
+      openBoardSheet({ focusCompose: false });
     }
   });
 });
@@ -922,6 +1047,7 @@ window.playLounge = {
       try {
         await Promise.all([fetchMeta(), fetchProfile()]);
         ensurePacketDialog();
+        bindBoardMobileEntry();
         const data = await fetchMessages();
         resetFeed();
         applyRoomMeta(data);
