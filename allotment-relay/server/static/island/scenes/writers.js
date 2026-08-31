@@ -1,6 +1,6 @@
-import { layoutCoverBoard, sceneArt } from "../ui/art.js";
-import { esc } from "../ui/modal.js";
-import { state } from "../store.js";
+import { layoutCoverBoard, sceneArt } from "../ui/art.js?v=island-fix1";
+import { esc } from "../ui/modal.js?v=island-fix1";
+import { state } from "../store.js?v=island-fix1";
 
 export function renderWriters(root, { onAct, onSwitchTab, onOpenShelf, onCloseShelf, listTop = null } = {}) {
   const shop = state.writers || {};

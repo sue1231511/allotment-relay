@@ -97,7 +97,7 @@
     var el = document.getElementById("island-boot-veil");
     if (!el) return;
     var line = el.querySelector("p");
-    if (line) line.textContent = text || "正在铺地图…";
+    if (line) line.textContent = text || "正在进入…";
     el.hidden = false;
     el.removeAttribute("hidden");
     clearTimeout(veilTimer);
@@ -275,7 +275,7 @@
       return Promise.resolve();
     }
     saveKey(key);
-    showVeil("正在铺地图…");
+    showVeil("正在进入…");
     setBusy(true, name ? "enroll" : "enter");
     return withTimeout(postSession(key, name), 12000, "号还没接上。再点一次进入地图。")
       .then(function (data) {
