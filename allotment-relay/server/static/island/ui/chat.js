@@ -1,4 +1,4 @@
-import { esc } from "./modal.js?v=island-ting2";
+import { esc } from "./modal.js?v=island-hui1";
 
 export function renderChat(sheet, { messages, onSay }) {
   const rows = (messages || []).slice(-20);

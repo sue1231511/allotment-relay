@@ -69,6 +69,12 @@ export const state = {
   ting: null,
   tingTab: "ask",
   tingShelf: false,
+  hui: null,
+  huiTab: "ask",
+  huiShelf: false,
+  lianli: null,
+  lianliTab: "desk",
+  lianliShelf: false,
   lighthouse: null,
   bagPage: 0,
   busy: false,
@@ -107,6 +113,20 @@ export function applySnapshot(data) {
     const tabs = data.ting.tabs || [];
     if (tabs.length && !tabs.some((t) => t.key === state.tingTab)) {
       state.tingTab = tabs[0].key;
+    }
+  }
+  if (data.hui) {
+    state.hui = data.hui;
+    const tabs = data.hui.tabs || [];
+    if (tabs.length && !tabs.some((t) => t.key === state.huiTab)) {
+      state.huiTab = tabs[0].key;
+    }
+  }
+  if (data.lianli) {
+    state.lianli = data.lianli;
+    const tabs = data.lianli.tabs || [];
+    if (tabs.length && !tabs.some((t) => t.key === state.lianliTab)) {
+      state.lianliTab = tabs[0].key;
     }
   }
   if (data.lighthouse) state.lighthouse = data.lighthouse;

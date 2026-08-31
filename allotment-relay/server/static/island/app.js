@@ -1,4 +1,4 @@
-import { api, loadKey } from "./api.js?v=island-ting2";
+import { api, loadKey } from "./api.js?v=island-hui1";
 import {
   applySnapshot,
   duesBlocked,
@@ -10,34 +10,36 @@ import {
   tickGrow,
   tickQuarry,
   tickWorkshop,
-} from "./store.js?v=island-ting2";
-import { renderHud } from "./hud.js?v=island-ting2";
-import { renderMap } from "./map.js?v=island-ting2";
-import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=island-ting2";
-import { renderShore } from "./scenes/shore.js?v=island-ting2";
-import { renderPlaza } from "./scenes/plaza.js?v=island-ting2";
-import { renderPlace } from "./scenes/place.js?v=island-ting2";
-import { renderShop } from "./scenes/shop.js?v=island-ting2";
-import { renderWorkshop } from "./scenes/workshop.js?v=island-ting2";
-import { renderQuarry } from "./scenes/quarry.js?v=island-ting2";
-import { renderBar } from "./scenes/bar.js?v=island-ting2";
-import { renderTheater } from "./scenes/theater.js?v=island-ting2";
-import { renderWriters } from "./scenes/writers.js?v=island-ting2";
-import { renderAtelier } from "./scenes/atelier.js?v=island-ting2";
-import { renderHall } from "./scenes/hall.js?v=island-ting2";
-import { renderEatery } from "./scenes/eatery.js?v=island-ting2";
-import { renderMarket } from "./scenes/market.js?v=island-ting2";
-import { renderTing } from "./scenes/ting.js?v=island-ting2";
+} from "./store.js?v=island-hui1";
+import { renderHud } from "./hud.js?v=island-hui1";
+import { renderMap } from "./map.js?v=island-hui1";
+import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=island-hui1";
+import { renderShore } from "./scenes/shore.js?v=island-hui1";
+import { renderPlaza } from "./scenes/plaza.js?v=island-hui1";
+import { renderPlace } from "./scenes/place.js?v=island-hui1";
+import { renderShop } from "./scenes/shop.js?v=island-hui1";
+import { renderWorkshop } from "./scenes/workshop.js?v=island-hui1";
+import { renderQuarry } from "./scenes/quarry.js?v=island-hui1";
+import { renderBar } from "./scenes/bar.js?v=island-hui1";
+import { renderTheater } from "./scenes/theater.js?v=island-hui1";
+import { renderWriters } from "./scenes/writers.js?v=island-hui1";
+import { renderAtelier } from "./scenes/atelier.js?v=island-hui1";
+import { renderHall } from "./scenes/hall.js?v=island-hui1";
+import { renderEatery } from "./scenes/eatery.js?v=island-hui1";
+import { renderMarket } from "./scenes/market.js?v=island-hui1";
+import { renderTing } from "./scenes/ting.js?v=island-hui1";
+import { renderHui } from "./scenes/hui.js?v=island-hui1";
+import { renderLianli } from "./scenes/lianli.js?v=island-hui1";
 let lighthouseMod = null;
 async function lighthouseScene() {
-  if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-ting2");
+  if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-hui1");
   return lighthouseMod;
 }
-import { renderBag } from "./ui/bag.js?v=island-ting2";
-import { setBackChip, setBagChip } from "./ui/back-map.js?v=island-ting2";
-import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=island-ting2";
-import { popOut } from "./ui/pop.js?v=island-ting2";
-import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showPitchSheet, showVendSheet, toast } from "./ui/modal.js?v=island-ting2";
+import { renderBag } from "./ui/bag.js?v=island-hui1";
+import { setBackChip, setBagChip } from "./ui/back-map.js?v=island-hui1";
+import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=island-hui1";
+import { popOut } from "./ui/pop.js?v=island-hui1";
+import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showPitchSheet, showVendSheet, toast } from "./ui/modal.js?v=island-hui1";
 
 const sceneEl = () => document.getElementById("island-scene");
 const sheetEl = () => document.getElementById("island-sheet");
@@ -243,6 +245,18 @@ async function enterScene(name, opts) {
       stopQuarryTick();
       state.tingShelf = false;
       await openTing(root);
+    } else if (name === "hui") {
+      stopGrowTick();
+      stopWorkshopTick();
+      stopQuarryTick();
+      state.huiShelf = false;
+      await openHui(root);
+    } else if (name === "lianli") {
+      stopGrowTick();
+      stopWorkshopTick();
+      stopQuarryTick();
+      state.lianliShelf = false;
+      await openLianli(root);
     } else if (name === "lighthouse") {
       stopGrowTick();
       stopWorkshopTick();
@@ -1354,6 +1368,255 @@ async function runTing(kind, target) {
   await act(() => api.tingAct(kind, target), { keepTing: true, listTop, quiet: true });
 }
 
+async function openHui() {
+  try {
+    const data = await api.hui();
+    applySnapshot(data);
+    renderHud();
+    if (data.event) showEvent(data.event);
+  } catch (err) {
+    toast(err.message || "会厅门还没开。");
+  }
+  const tabs = (state.hui && state.hui.tabs) || [];
+  if (!tabs.some((row) => row.key === state.huiTab)) {
+    state.huiTab = (tabs[0] && tabs[0].key) || "ask";
+  }
+  paintHui();
+}
+
+function paintHui(listTop = 0) {
+  renderHui(sceneEl(), {
+    onAct: tapHui,
+    onSwitchTab: (tab) => {
+      state.huiTab = tab || "ask";
+      hideModal();
+      paintHui(0);
+    },
+    onOpenShelf: () => {
+      state.huiShelf = true;
+      paintHui(0);
+    },
+    onCloseShelf: () => {
+      state.huiShelf = false;
+      hideModal();
+      paintHui();
+    },
+    listTop,
+  });
+}
+
+function huiRow(kind, target, id) {
+  const shop = state.hui || {};
+  const items = shop.items || {};
+  for (const key of Object.keys(items)) {
+    const hit = (items[key] || []).find((row) => row.id === id || (row.kind === kind && String(row.target) === String(target)));
+    if (hit) return hit;
+  }
+  return null;
+}
+
+function tapHui(kind, target, id) {
+  const shop = state.hui || {};
+  const row = huiRow(kind, target, id) || {};
+  if (kind === "look") {
+    lookHui(target, row);
+    return;
+  }
+  if (kind === "donate") {
+    if (!row.can) {
+      showHintSheet({ title: row.name || "捐基金", body: row.detail || row.note || "口袋不高于岛均，捐不了。" });
+      return;
+    }
+    const max = shop.fund_max || shop.max_donate || "";
+    showFormSheet({
+      title: "捐进潮汐基金",
+      body: row.detail || `票数自己填。最少 ${shop.min_donate || 1}。`,
+      fields: [
+        { id: "amount", label: "票数", placeholder: max ? String(max) : "50", max: 8, empty: "先写下票数。" },
+      ],
+      confirm: "捐进去",
+      onConfirm: (vals) => runHui("donate", String(vals.amount)),
+    });
+    return;
+  }
+  if (kind === "pay_part") {
+    if (!row.can) {
+      showHintSheet({ title: row.name || "交一部分", body: row.detail || row.note || "这会儿不欠。" });
+      return;
+    }
+    showFormSheet({
+      title: row.name || "交一部分",
+      body: row.detail || row.note || "自己填票数。",
+      fields: [
+        { id: "amount", label: "票数", placeholder: "50", max: 8, empty: "先写下票数。" },
+      ],
+      confirm: "交",
+      onConfirm: (vals) => runHui("pay", `${target}:${vals.amount}`),
+    });
+    return;
+  }
+  if (kind === "pay") {
+    if (!row.can) {
+      showHintSheet({ title: row.name || "交", body: row.detail || row.note || "这会儿不欠。" });
+      return;
+    }
+    showActSheet({
+      title: row.name || "交清",
+      body: row.detail || row.note || "把欠的交上。",
+      confirm: "确认交",
+      onConfirm: () => runHui("pay", target),
+    });
+  }
+}
+
+async function lookHui(target, row) {
+  if (state.busy) return;
+  state.busy = true;
+  try {
+    const data = await api.huiAct("look", String(target));
+    applySnapshot(data);
+    renderHud();
+    const text = (data.event && data.event.narrative) || (row && (row.detail || row.note)) || "阿簿把册子合上。";
+    showHintSheet({ title: (row && row.name) || "会厅", body: text });
+  } catch (err) {
+    toast(err.message || "这会儿看不清。");
+  } finally {
+    state.busy = false;
+  }
+}
+
+async function runHui(kind, target) {
+  const list = document.getElementById("island-hui-list");
+  const listTop = list ? list.scrollTop : 0;
+  await act(() => api.huiAct(kind, target), { keepHui: true, listTop, quiet: true });
+}
+
+async function openLianli() {
+  try {
+    const data = await api.lianli();
+    applySnapshot(data);
+    renderHud();
+    if (data.event) showEvent(data.event);
+  } catch (err) {
+    toast(err.message || "登记处门还没开。");
+  }
+  const tabs = (state.lianli && state.lianli.tabs) || [];
+  if (!tabs.some((row) => row.key === state.lianliTab)) {
+    state.lianliTab = (tabs[0] && tabs[0].key) || "desk";
+  }
+  paintLianli();
+}
+
+function paintLianli(listTop = 0) {
+  renderLianli(sceneEl(), {
+    onAct: tapLianli,
+    onSwitchTab: (tab) => {
+      state.lianliTab = tab || "desk";
+      hideModal();
+      paintLianli(0);
+    },
+    onOpenShelf: () => {
+      state.lianliShelf = true;
+      paintLianli(0);
+    },
+    onCloseShelf: () => {
+      state.lianliShelf = false;
+      hideModal();
+      paintLianli();
+    },
+    listTop,
+  });
+}
+
+function lianliRow(kind, target, id) {
+  const shop = state.lianli || {};
+  const items = shop.items || {};
+  for (const key of Object.keys(items)) {
+    const hit = (items[key] || []).find((row) => row.id === id || (row.kind === kind && String(row.target) === String(target)));
+    if (hit) return hit;
+  }
+  return null;
+}
+
+function tapLianli(kind, target, id) {
+  const row = lianliRow(kind, target, id) || {};
+  if (kind === "look") {
+    if (row.can === false) {
+      showHintSheet({ title: row.name || "登记处", body: row.detail || row.note || "这会儿还不行。" });
+      return;
+    }
+    lookLianli(target, row);
+    return;
+  }
+  if (kind === "bless") {
+    if (!row.can) {
+      showHintSheet({ title: row.name || "祝词", body: row.detail || row.note || "这会儿写不了。" });
+      return;
+    }
+    showFormSheet({
+      title: row.name || "祝词",
+      body: row.note || "写下祝词，只进对方婚书。",
+      fields: [
+        { id: "body", label: "祝词", type: "textarea", rows: 4, max: 200, min: 2, empty: "祝词至少 2 个字。" },
+      ],
+      confirm: "留下",
+      onConfirm: (vals) => runLianli("bless", `${target}|${vals.body}`),
+    });
+    return;
+  }
+  if (kind === "gift") {
+    if (!row.can) {
+      showHintSheet({ title: row.name || "送礼", body: row.detail || row.note || "这会儿送不了。" });
+      return;
+    }
+    showFormSheet({
+      title: row.name || "送礼",
+      body: row.note || "写下行囊里的物品名。",
+      fields: [
+        { id: "item", label: "物品", placeholder: "海玻璃", max: 20, empty: "先写下物品名。" },
+      ],
+      confirm: "送出",
+      onConfirm: (vals) => runLianli("gift", `${target}|${vals.item}`),
+    });
+    return;
+  }
+  if (!row.can) {
+    showHintSheet({ title: row.name || "连理所", body: row.detail || row.note || "这会儿还不行。" });
+    return;
+  }
+  const pack = kind === "buy"
+    ? ["买下", row.detail || row.note || "Tt酱嫁妆柜，不打折。", "确认买"]
+    : [row.name || "连理所", row.detail || row.note || "办这一下？", "确认"];
+  showActSheet({
+    title: pack[0],
+    body: pack[1],
+    confirm: pack[2],
+    onConfirm: () => runLianli(kind, target),
+  });
+}
+
+async function lookLianli(target, row) {
+  if (state.busy) return;
+  state.busy = true;
+  try {
+    const data = await api.lianliAct("look", String(target));
+    applySnapshot(data);
+    renderHud();
+    const text = (data.event && data.event.narrative) || (row && (row.detail || row.note)) || "理枝把册子合上。";
+    showHintSheet({ title: (row && row.name) || "登记处", body: text });
+  } catch (err) {
+    toast(err.message || "这会儿看不清。");
+  } finally {
+    state.busy = false;
+  }
+}
+
+async function runLianli(kind, target) {
+  const list = document.getElementById("island-lianli-list");
+  const listTop = list ? list.scrollTop : 0;
+  await act(() => api.lianliAct(kind, target), { keepLianli: true, listTop, quiet: true });
+}
+
 async function openLighthouse() {
   try {
     const data = await api.lighthouse();
@@ -1675,7 +1938,7 @@ async function vendItem(item) {
   await act(() => api.vend(name, 1), { keepTab: true });
 }
 
-async function act(fn, { refreshScene = false, keepPlant = false, keepTab = false, keepShop = false, keepWorkshop = false, keepQuarry = false, keepBar = false, keepWriters = false, keepAtelier = false, keepHall = false, keepEatery = false, keepMarket = false, keepTing = false, keepLighthouse = false, listTop = null, quiet = false } = {}) {
+async function act(fn, { refreshScene = false, keepPlant = false, keepTab = false, keepShop = false, keepWorkshop = false, keepQuarry = false, keepBar = false, keepWriters = false, keepAtelier = false, keepHall = false, keepEatery = false, keepMarket = false, keepTing = false, keepHui = false, keepLianli = false, keepLighthouse = false, listTop = null, quiet = false } = {}) {
   if (state.busy) return;
   state.busy = true;
   try {
@@ -1732,6 +1995,14 @@ async function act(fn, { refreshScene = false, keepPlant = false, keepTab = fals
     }
     if (keepTing && state.scene === "ting") {
       paintTing(listTop);
+      return;
+    }
+    if (keepHui && state.scene === "hui") {
+      paintHui(listTop);
+      return;
+    }
+    if (keepLianli && state.scene === "lianli") {
+      paintLianli(listTop);
       return;
     }
     if (keepLighthouse && state.scene === "lighthouse") {

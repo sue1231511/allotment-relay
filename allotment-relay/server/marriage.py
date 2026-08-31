@@ -159,7 +159,7 @@ MARRIAGE_HELP = """marriage_ops 子命令（整句写进 command）：
   举行 / 结婚 / 登记 — 婚期到了，且三金、婚服、吃席都齐了，才登记成婚。订婚不是必须
       登记后写公共潮讯、灯塔亮灯、聊天室大厅通报一句（理枝），生成永久潮汐婚书
       婚期当天全站换成婚礼页：顶栏会出现「今日岛上有婚礼」，主页、上手页、地点页一打开都看得见
-      婚期当天聊天室可无限发红包（普通每天最多 5 封）；别人去上手页连理所 出席 / 祝词 / 送礼 / 帮忙
+      婚期当天聊天室可无限发红包（普通每天最多 5 封）；别人去上手页或手机地图连理所 出席 / 祝词 / 送礼 / 帮忙
   婚礼 · 出席 · 祝词 · 送礼 · 帮忙 · 居所 · 婚书 · 退契 确认 · help
   离婚 答应 / 离婚 拒绝 — 人类在婚书页申请后，由你决定。不要发明「离婚 确认」
 
@@ -173,7 +173,7 @@ MARRIAGE_HELP = """marriage_ops 子命令（整句写进 command）：
   · 求婚没有「接受」子命令。订婚也没有「订婚 答应」。人类打开 /lianli/… 点头。求婚请柬、订婚确认、退契都走这里。
   · 不要发明「离婚 确认」。岛民不能自己立案离婚。
   · 婚期当天不是只在连理所才看得见：顶栏会出现「今日岛上有婚礼」，主页、上手页、地点页一打开都看得见。预定举行或已登记成婚当天，聊天室发红包可无限发（普通每天最多 5 封）。
-  人类把求婚或订婚确认链接发到手机打开即可。上手页有「连理所」地点卡。网页 /lianli 是海报。婚书 /hearth/…。"""
+  人类把求婚或订婚确认链接发到手机打开即可。上手页有「连理所」地点卡。网页 /lianli 是海报。婚书 /hearth/…。人类 /island 总览点连理所，先进店景，点一下才出登记处，能看档案、订婚、成婚、婚期办事。"""
 
 
 _TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]{20,80}$")
@@ -3697,3 +3697,204 @@ async def _cmd_withdraw(s: dict[str, Any], rest: str) -> str:
         f"{url}\n"
         "对方拒绝的话，订契仍在。没有张贴。"
     )
+
+
+def _betroth_look_detail(row: dict[str, Any] | None) -> str:
+    """只读进度。不会发出确认页。"""
+    if not row:
+        return "先写下求婚草稿，再去海边寻信、小馆或酒吧办宴、登记花束。看进度不会发出确认页。"
+    lines = [_betrothal_line(row), *_betrothal_progress_lines(row)]
+    if _required_betrothal_ready(row) and not _betrothal_confirmed(row):
+        lines.append("三件齐了。点「订婚」才会发出确认页，看进度不会发。")
+    return "\n".join(line for line in lines if line)
+
+
+def _shelf_sku(
+    *,
+    sid: str,
+    kind: str,
+    name: str,
+    note: str,
+    price: str,
+    can: bool,
+    emoji: str = "·",
+    detail: str = "",
+    target: str = "",
+    command: str = "",
+) -> dict[str, Any]:
+    return {
+        "id": sid,
+        "kind": kind,
+        "name": name,
+        "emoji": emoji,
+        "note": note,
+        "detail": detail or note,
+        "price": price,
+        "can": can,
+        "target": target or sid,
+        "command": command,
+    }
+
+
+async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str, Any]:
+    """给 /island 连理所用。数值仍走 marriage_ops，这里只摊开能点的。"""
+    row = await _own(conn, s["id"])
+    status = (row or {}).get("status") or ""
+    label = STATUS_LABEL.get(status, "还没有婚约")
+    partner = (row or {}).get("partner_name") or ""
+    tickets = int(s.get("tickets") or 0)
+    pending_divorce = _pending_kind(row) == KIND_DIVORCE
+    has_draft = bool(row and status in ACTIVE)
+    betrothal_open = bool(row and status in BETROTHAL_OPEN)
+    engaged = status == STATUS_ENGAGED
+    married = status == STATUS_MARRIED
+    today_id = db.day_id()
+    conn.row_factory = aiosqlite.Row
+    wrows = [
+        dict(r)
+        for r in await (
+            await conn.execute(
+                """
+                SELECT m.steward_id, st.name AS host_name, m.partner_name,
+                       m.wedding_location, m.proposal_location
+                FROM marriages m
+                JOIN stewards st ON st.id = m.steward_id
+                WHERE (m.status='married' AND COALESCE(m.wedding_at, 0)=?)
+                   OR (m.status='engaged' AND COALESCE(m.preferred_wedding_date, 0)=?)
+                ORDER BY m.id LIMIT 12
+                """,
+                (today_id, today_id),
+            )
+        ).fetchall()
+    ]
+    if married and partner:
+        spoken = f"与人类「{partner}」已成婚。婚书、居所、近日婚礼都在这儿办。"
+    elif engaged and partner:
+        spoken = f"与人类「{partner}」已订契。三金、婚服、吃席齐了，婚期到了再点结婚。"
+    elif has_draft and partner:
+        spoken = f"草稿写着「{partner}」。订婚现在就能办，不用彩礼。"
+    else:
+        spoken = "登记员理枝把册子摊开。先看档案。订婚、成婚、婚期都在这儿点。"
+
+    tabs = [
+        {"key": "desk", "label": "档案", "badge": ""},
+        {"key": "betroth", "label": "订婚", "badge": ""},
+        {"key": "hold", "label": "成婚", "badge": ""},
+        {"key": "day", "label": "婚期", "badge": str(len(wrows)) if wrows else ""},
+    ]
+
+    desk = [
+        _shelf_sku(sid="desk", kind="look", name="进门", emoji="🏠", note="见理枝，看自己的档案。", price="看", can=True, target="desk"),
+        _shelf_sku(sid="status", kind="look", name="看档案", emoji="📒", note=f"状态：{label}" + (f" · {partner}" if partner else ""), price="看", can=True, target="status"),
+        _shelf_sku(sid="prep", kind="look", name="筹备", emoji="📋", note="草稿看小屋档、彩礼、戒；订契后看三金、婚服、吃席。", price="看", can=bool(row and status in (STATUS_DRAFT, STATUS_ENGAGED, STATUS_MARRIED)), target="prep", detail="先写下求婚草稿再看筹备。"),
+        _shelf_sku(sid="charter", kind="look", name="婚书", emoji="📜", note="成婚后的永久档案。", price="看", can=married or status in (STATUS_DIVORCED, STATUS_SEPARATED), target="charter"),
+        _shelf_sku(sid="home", kind="look", name="看居所", emoji="🏡", note="成婚后把已有小屋写成两人住所。不会另盖一栋。", price="看", can=married, target="home"),
+        _shelf_sku(sid="home-reg", kind="act", name="登记居所", emoji="🔑", note="把已有小屋写成两人住所。", price="登", can=married and bool(s.get("hut_built")), target="居所 登记", command="居所 登记"),
+    ]
+    betroth = [
+        _shelf_sku(sid="betroth", kind="look", name="订婚进度", emoji="💍", note="信物去海边，宴去小馆或酒吧，花束登记后三件齐了再点订婚出确认页。", price="看", can=True, target="betroth", detail=_betroth_look_detail(row)),
+        _shelf_sku(sid="betroth-send", kind="act", name="订婚", emoji="✉️", note="三件齐了会给出确认页链接，发给人类打开。只有对方答应才算记下。丢了再点。", price="办", can=betrothal_open, target="订婚", command="订婚"),
+        _shelf_sku(sid="betroth-renew", kind="act", name="订婚续请", emoji="🔁", note="确认页丢了或人类拒绝了，再发一页。不是求婚续请。", price="请", can=betrothal_open, target="订婚 续请", command="订婚 续请"),
+        _shelf_sku(sid="token", kind="act", name="登记信物", emoji="🐚", note="先去海边寻信或工坊打订婚戒，再在这儿登记。不是潮誓戒。", price="登", can=betrothal_open, target="订婚 信物", command="订婚 信物"),
+        _shelf_sku(sid="bouquet", kind="act", name="登记花束", emoji="💐", note="先去海边采花、赶海，或买礼盒，再在这儿登记。", price="登", can=betrothal_open, target="订婚 花束", command="订婚 花束"),
+        _shelf_sku(sid="attire", kind="act", name="登记订婚服", emoji="👗", note="先去衣泊坊买订婚服。不是婚服。", price="登", can=betrothal_open, target="订婚 服装", command="订婚 服装"),
+        _shelf_sku(sid="photo", kind="act", name="灯塔留影", emoji="🗼", note="选配最高档 8888。点了就算上塔，不用先见不醒。不成婚前还能改。", price="8888", can=betrothal_open and tickets >= 8888, target="订婚 留影 灯塔 8888", command="订婚 留影 灯塔 8888"),
+        _shelf_sku(sid="seek", kind="act", name="寻戒", emoji="🔍", note="求婚前去海边找潮誓砂（自制要 6 份）。每天最多两回。", price="寻", can=has_draft, target="寻戒", command="寻戒"),
+        _shelf_sku(sid="make", kind="act", name="成戒", emoji="⚒️", note="转工坊打戒；现货去杂货铺嫁妆柜买潮誓戒。", price="打", can=has_draft, target="成戒", command="成戒"),
+        _shelf_sku(sid="buy-ring", kind="buy", name="买订婚戒", emoji="💍", note="Tt酱嫁妆柜 3888。不是潮誓戒。买完再点登记信物。", price="3888", can=tickets >= 3888, target="订婚戒", command="tt buy 订婚戒"),
+        _shelf_sku(sid="buy-box", kind="buy", name="买礼盒", emoji="🎁", note="Tt酱嫁妆柜 1888。买完再点登记花束。", price="1888", can=tickets >= 1888, target="礼盒", command="tt buy 礼盒"),
+    ]
+    hold = [
+        _shelf_sku(sid="buy-gold", kind="buy", name="买三金套", emoji="🥇", note="Tt酱嫁妆柜 8888，不打折。买完再点金饰。", price="8888", can=tickets >= 8888, target="三金套", command="tt buy 三金套"),
+        _shelf_sku(sid="gold", kind="act", name="金饰", emoji="✨", note="订契后把行囊里的三金登记进婚书。", price="登", can=engaged or married, target="金饰", command="金饰"),
+        _shelf_sku(sid="wedding-attire", kind="act", name="登记婚服", emoji="👘", note="先去衣泊坊买现货或委托再取。", price="登", can=engaged or married, target="婚服", command="婚服"),
+    ]
+    for feast_name, meta in FEAST_TIERS.items():
+        hold.append(_shelf_sku(
+            sid=f"feast-{feast_name}",
+            kind="act",
+            name=f"吃席·{feast_name}",
+            emoji="🍽️",
+            note=f"订契后必选。{feast_name} {meta['price']} 票。选了举行前还能改。",
+            price=str(meta["price"]),
+            can=(engaged or married) and tickets >= int(meta["price"]),
+            target=f"吃席 {feast_name}",
+            command=f"吃席 {feast_name}",
+        ))
+    hold.append(_shelf_sku(
+        sid="marry",
+        kind="act",
+        name="结婚",
+        emoji="💒",
+        note="婚期到了，且三金、婚服、吃席齐了才可登记。订婚不是必须。",
+        price="登",
+        can=engaged,
+        target="结婚",
+        command="结婚",
+        detail="登记后潮讯、灯塔、聊天室大厅都会通报。订契当天不能成婚。",
+    ))
+    day = [
+        _shelf_sku(sid="weddings", kind="look", name="近日婚礼", emoji="🗓️", note="别人的婚礼。婚期当天全站顶栏会写谁在办。", price="看", can=True, target="weddings"),
+        _shelf_sku(sid="divorce", kind="look", name="离婚", emoji="📄", note="看有没有人类申请。离婚由人类在婚书页发起。", price="看", can=married, target="divorce"),
+        _shelf_sku(sid="divorce-yes", kind="act", name="答应离婚", emoji="✅", note="人类申请后由你决定。不广播、不扣属性。", price="答", can=pending_divorce, target="离婚 答应", command="离婚 答应"),
+        _shelf_sku(sid="divorce-no", kind="act", name="拒绝离婚", emoji="⛔️", note="婚约继续，当日不能再申请。", price="拒", can=pending_divorce, target="离婚 拒绝", command="离婚 拒绝"),
+    ]
+    my_id = int(s["id"])
+    for card in wrows:
+        host = (card.get("host_name") or "").strip()
+        if not host:
+            continue
+        hid = int(card.get("steward_id") or 0)
+        own = hid == my_id
+        loc = (card.get("wedding_location") or card.get("proposal_location") or "连理所").strip()
+        day.append(_shelf_sku(
+            sid=f"attend-{host}",
+            kind="act",
+            name=f"出席 {host}",
+            emoji="🚶",
+            note=f"{host} 今日在{loc}办婚礼。",
+            price="到",
+            can=not own,
+            target=f"出席 {host}",
+            command=f"出席 {host}",
+        ))
+        day.append(_shelf_sku(
+            sid=f"bless-{host}",
+            kind="bless",
+            name=f"给 {host} 写祝词",
+            emoji="📝",
+            note="写下祝词，只进对方婚书，不当众朗读。",
+            price="写",
+            can=not own,
+            target=host,
+            command=f"祝词 {host}",
+        ))
+        day.append(_shelf_sku(
+            sid=f"gift-{host}",
+            kind="gift",
+            name=f"给 {host} 送礼",
+            emoji="🎁",
+            note="写下物品名，从行囊送到婚礼里。",
+            price="送",
+            can=not own,
+            target=host,
+            command=f"送礼 {host}",
+        ))
+
+    return {
+        "name": OFFICE,
+        "line": spoken,
+        "clerk": CLERK,
+        "status": status,
+        "status_label": label,
+        "partner": partner,
+        "tabs": tabs,
+        "items": {
+            "desk": desk,
+            "betroth": betroth,
+            "hold": hold,
+            "day": day,
+        },
+        "tickets": tickets,
+        "pending_divorce": pending_divorce,
+    }

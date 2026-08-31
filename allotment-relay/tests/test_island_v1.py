@@ -464,6 +464,54 @@ async def _test_island_v1_api() -> None:
     assert torn.status_code == 200, torn.text
     assert not torn.json()["ting"]["mine"], torn.json()["ting"]
 
+    hui0 = client.get("/api/v1/hui", headers=_auth(key))
+    assert hui0.status_code == 200, hui0.text
+    hall = hui0.json()["hui"]
+    assert hall["name"] == "潮生会", hall
+    assert any(t["key"] == "tax" for t in hall["tabs"]), hall
+    assert any(t["key"] == "fund" for t in hall["tabs"]), hall
+    asked = client.post(
+        "/api/v1/hui/act",
+        headers=_auth(key, {"Idempotency-Key": "hui-look-ask"}),
+        json={"kind": "look", "target": "ask"},
+    )
+    assert asked.status_code == 200, asked.text
+    assert asked.json()["event"]["kind"] == "hui"
+    taxed = client.post(
+        "/api/v1/hui/act",
+        headers=_auth(key, {"Idempotency-Key": "hui-look-tax"}),
+        json={"kind": "look", "target": "tax"},
+    )
+    assert taxed.status_code == 200, taxed.text
+    noted = client.post(
+        "/api/v1/hui/act",
+        headers=_auth(key, {"Idempotency-Key": "hui-look-notice"}),
+        json={"kind": "look", "target": "notice"},
+    )
+    assert noted.status_code == 200, noted.text
+
+    lianli0 = client.get("/api/v1/lianli", headers=_auth(key))
+    assert lianli0.status_code == 200, lianli0.text
+    desk = lianli0.json()["lianli"]
+    assert desk["name"] == "连理所", desk
+    assert any(t["key"] == "desk" for t in desk["tabs"]), desk
+    filed = client.post(
+        "/api/v1/lianli/act",
+        headers=_auth(key, {"Idempotency-Key": "lianli-look-desk"}),
+        json={"kind": "look", "target": "desk"},
+    )
+    assert filed.status_code == 200, filed.text
+    assert filed.json()["event"]["kind"] == "lianli"
+    betroth_look = client.post(
+        "/api/v1/lianli/act",
+        headers=_auth(key, {"Idempotency-Key": "lianli-look-betroth"}),
+        json={"kind": "look", "target": "betroth"},
+    )
+    assert betroth_look.status_code == 200, betroth_look.text
+    betroth_text = betroth_look.json()["event"]["narrative"] or ""
+    assert "/lianli/" not in betroth_text
+    assert "求婚草稿" in betroth_text or "信物" in betroth_text
+
     tower0 = client.get("/api/v1/lighthouse", headers=_auth(key))
     assert tower0.status_code == 200, tower0.text
     tower = tower0.json()["lighthouse"]
@@ -965,6 +1013,27 @@ async def _test_island_v1_api() -> None:
     assert paid_upkeep.status_code == 200, paid_upkeep.text
     assert int(paid_upkeep.json()["me"]["dues"]["upkeep_arrears"] or 0) == 0
 
+    async with db.connect() as conn:
+        await conn.execute(
+            "UPDATE stewards SET tax_arrears=12, tickets=tickets+40 WHERE id=?",
+            (sid,),
+        )
+        await conn.commit()
+    paid_act = client.post(
+        "/api/v1/hui/act",
+        headers=_auth(key, {"Idempotency-Key": "hui-act-tax"}),
+        json={"kind": "pay", "target": "tax"},
+    )
+    assert paid_act.status_code == 200, paid_act.text
+    assert paid_act.json()["event"]["kind"] == "hui"
+    assert int(paid_act.json()["me"]["dues"]["tax_arrears"] or 0) == 0
+    fund_look = client.post(
+        "/api/v1/hui/act",
+        headers=_auth(key, {"Idempotency-Key": "hui-look-fund"}),
+        json={"kind": "look", "target": "fund"},
+    )
+    assert fund_look.status_code == 200, fund_look.text
+
     page = client.get("/island")
     assert page.status_code == 200, page.text
     assert "手机地图" in page.text or "island-root" in page.text
@@ -976,21 +1045,21 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-ting2" in app
-    assert html.count("island.css?v=island-ting2") == 1
-    assert html.count("app.js?v=island-ting2") == 1
-    assert "lighthouse.js?v=island-ting2" in app
-    assert "hall.js?v=island-ting2" in app
-    assert "shop.js?v=island-ting2" in app
-    assert "market.js?v=island-ting2" in app
+    assert "island-hui1" in app
+    assert html.count("island.css?v=island-hui1") == 1
+    assert html.count("app.js?v=island-hui1") == 1
+    assert "lighthouse.js?v=island-hui1" in app
+    assert "hall.js?v=island-hui1" in app
+    assert "shop.js?v=island-hui1" in app
+    assert "market.js?v=island-hui1" in app
     js_blob = "\n".join(p.read_text(encoding="utf-8") for p in (ROOT / "server/static/island").rglob("*.js"))
     store_vs = set(re.findall(r"store\.js\?v=([^\s\"']+)", js_blob))
     modal_vs = set(re.findall(r"modal\.js\?v=([^\s\"']+)", js_blob))
-    assert store_vs == {"island-ting2"}, store_vs
-    assert modal_vs == {"island-ting2"}, modal_vs
-    assert 'from "../store.js?v=island-ting2"' in (ROOT / "server/static/island/scenes/atelier.js").read_text(encoding="utf-8")
-    assert 'from "../store.js?v=island-ting2"' in (ROOT / "server/static/island/scenes/writers.js").read_text(encoding="utf-8")
-    assert 'from "../store.js?v=island-ting2"' in (ROOT / "server/static/island/scenes/hall.js").read_text(encoding="utf-8")
+    assert store_vs == {"island-hui1"}, store_vs
+    assert modal_vs == {"island-hui1"}, modal_vs
+    assert 'from "../store.js?v=island-hui1"' in (ROOT / "server/static/island/scenes/atelier.js").read_text(encoding="utf-8")
+    assert 'from "../store.js?v=island-hui1"' in (ROOT / "server/static/island/scenes/writers.js").read_text(encoding="utf-8")
+    assert 'from "../store.js?v=island-hui1"' in (ROOT / "server/static/island/scenes/hall.js").read_text(encoding="utf-8")
     assert "island-wait2" in html
     assert 'id="island-boot-veil"' in html
     assert "正在进入" in html
@@ -1071,7 +1140,7 @@ def test_island_page_is_modular() -> None:
     assert "waitScenePics" in app
     assert "await waitScenePics" in app
     assert "enterGen" in app
-    assert 'from "./ui/modal.js?v=island-ting2"' in app
+    assert 'from "./ui/modal.js?v=island-hui1"' in app
     modal_src = (ROOT / "server/static/island/ui/modal.js").read_text(encoding="utf-8")
     assert "export function showFormSheet" in modal_src
     assert "export function showPickSheet" in modal_src
@@ -1501,6 +1570,26 @@ def test_island_page_is_modular() -> None:
     assert "keepTing" in app
     assert "/api/v1/ting" in api
     assert "api.tingAct" in app
+    hui_js = (ROOT / "server/static/island/scenes/hui.js").read_text(encoding="utf-8")
+    lianli_js = (ROOT / "server/static/island/scenes/lianli.js").read_text(encoding="utf-8")
+    assert "点一下看会厅" in hui_js
+    assert "island-hui" in hui_js
+    assert "ensureShopFrame" in hui_js
+    assert "去上手页" not in hui_js
+    assert "renderHui" in app
+    assert "keepHui" in app
+    assert "/api/v1/hui" in api
+    assert "api.huiAct" in app
+    assert (ROOT / "server/v1/hui_service.py").exists()
+    assert "点一下看登记处" in lianli_js
+    assert "island-lianli" in lianli_js
+    assert "ensureShopFrame" in lianli_js
+    assert "去上手页" not in lianli_js
+    assert "renderLianli" in app
+    assert "keepLianli" in app
+    assert "/api/v1/lianli" in api
+    assert "api.lianliAct" in app
+    assert (ROOT / "server/v1/lianli_service.py").exists()
     assert "field.type === \"textarea\"" in modal_src or 'field.type === "textarea"' in modal_src
     assert "island-eatery" in eatery_js
     assert "ensureShopFrame" in eatery_js
