@@ -868,7 +868,8 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-lighthouse1" in html
+    assert "island-map-nowait1" in html
+    assert "fonts.googleapis.com" not in html
     assert "/static/island/tap.js" in html
     assert "/static/island/boot.js" in html
     assert 'id="island-enter"' in html
@@ -876,6 +877,11 @@ def test_island_page_is_modular() -> None:
     assert "island-dock" in html
     assert 'id="island-bag-chip"' in html
     assert 'id="island-back-chip"' in html
+    assert ' data-src="/static/island/assets/chip-bag.png"' in html
+    assert ' data-src="/static/island/assets/chip-back.png"' in html
+    assert html.count("/static/island/assets/chip-bag.png") == 1
+    assert 'src="/static/island/assets/chip-bag.png"' not in html.replace("data-src=", "x=")
+    assert 'src="/static/island/assets/chip-back.png"' not in html.replace("data-src=", "x=")
     assert "chip-bag.png" in html
     assert "chip-back.png" in html
     assert 'data-tab="bag"' not in html
@@ -935,6 +941,7 @@ def test_island_page_is_modular() -> None:
     art_js = (ROOT / "server/static/island/ui/art.js").read_text(encoding="utf-8")
     assert "sW = cw / iw" in art_js
     assert "Math.max(sW, sH" in art_js
+    assert "decoding=\"async\"" in art_js
     assert "layoutCoverBoard" in map_js
     assert "layoutCoverBoard" in art_js
     assert "is-playing" in (ROOT / "server/static/island/boot.js").read_text(encoding="utf-8")
@@ -975,7 +982,10 @@ def test_island_page_is_modular() -> None:
     assert "enterScene(\"yards\")" in app
     assert 'name === "home"' in app
     assert "backChipMarkup" not in (ROOT / "server/static/island/scenes/home.js").read_text(encoding="utf-8")
-    assert "setBackChip" in (ROOT / "server/static/island/ui/back-map.js").read_text(encoding="utf-8")
+    back_js = (ROOT / "server/static/island/ui/back-map.js").read_text(encoding="utf-8")
+    assert "setBackChip" in back_js
+    assert "data-src" in back_js
+    assert "revealChipSrc" in back_js
     assert "setBagChip" in app
     assert "setBagChip(name !== \"map\")" in app
     assert "left: 0" in css
@@ -1011,9 +1021,10 @@ def test_island_page_is_modular() -> None:
     assert "is-yards" in css
     assert ".island-back-map" not in css
     assert ".island-care-acts" in css
-    assert "prompt-frame.png" in css
-    assert "island-card-inner" in css
     modal_js = (ROOT / "server/static/island/ui/modal.js").read_text(encoding="utf-8")
+    assert "url(\"/static/island/assets/prompt-frame.png\")" not in css
+    assert "prompt-frame.png" in modal_js
+    assert "island-card-inner" in css
     assert "island-card-inner" in modal_js
     assert "cardMarkup" in modal_js
     frame = ROOT / "server/static/island/assets/prompt-frame.png"
@@ -1300,6 +1311,8 @@ def test_island_page_is_modular() -> None:
     assert "/api/v1/lighthouse" in api
     assert "api.lighthouseAct" in app
     assert "keepLighthouse" in app
+    assert 'import { renderLighthouse }' not in app
+    assert 'import("./scenes/lighthouse.js")' in app
     assert (ROOT / "server/v1/lighthouse_service.py").exists()
     lighthouse_js = (ROOT / "server/static/island/scenes/lighthouse.js").read_text(encoding="utf-8")
     assert "island-vn" in lighthouse_js
@@ -1350,7 +1363,8 @@ def test_island_page_is_modular() -> None:
     assert ".island-shop.is-peek" in css
     assert "island-item-acts" in css
     assert "island-bag-grid" in css
-    assert "bag-frame.png" in css
+    assert "url(\"/static/island/assets/bag-frame.png\")" not in css
+    assert "bag-frame.png" in bag_js
     assert ".island-sheet.is-bag" in css
     assert "object-position: center 38%" in css
     assert "/play?go=star" not in app

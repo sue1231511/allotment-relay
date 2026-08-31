@@ -5,10 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
   <meta name="theme-color" content="#d8ebe8">
   <title>地图 · 潮汐岛</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/island/island.css?v=island-lighthouse1">
+  <link rel="stylesheet" href="/static/island/island.css?v=island-map-nowait1">
 </head>
 <body class="island-app{% if island_weddings %} is-wedding-day{% endif %}">
   <div id="island-root" class="island-root">
@@ -60,10 +57,10 @@
 
     <nav class="island-dock" id="island-dock" aria-label="背包" hidden></nav>
     <button type="button" class="island-float-chip is-bag" id="island-bag-chip" hidden>
-      <img src="/static/island/assets/chip-bag.png" alt="背包" draggable="false">
+      <img data-src="/static/island/assets/chip-bag.png" alt="背包" draggable="false">
     </button>
     <button type="button" class="island-float-chip is-back" id="island-back-chip" hidden>
-      <img src="/static/island/assets/chip-back.png" alt="回地图" draggable="false">
+      <img data-src="/static/island/assets/chip-back.png" alt="回地图" draggable="false">
     </button>
   </div>
 
@@ -73,9 +70,9 @@
   <p class="island-toast" id="island-toast" hidden></p>
 
   <script src="/static/site-key.js?v=island-mini-chips1"></script>
-  <script src="/static/island/boot.js?v=island-back-left1"></script>
+  <script src="/static/island/boot.js?v=island-map-nowait1"></script>
   <script src="/static/island/tap.js?v=island-tap2"></script>
-  <script type="module" src="/static/island/app.js?v=island-lighthouse1"></script>
+  <script type="module" src="/static/island/app.js?v=island-map-nowait1"></script>
   <script nomodule>
     var hint = document.getElementById("island-gate-hint");
     if (hint) hint.textContent = "这台浏览器跑不了完整地图。换系统浏览器打开。";

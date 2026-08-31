@@ -26,7 +26,7 @@ export function renderBag(sheet, { onEat, onVend, onClose } = {}) {
   sheet.classList.add("is-bag");
   document.body.classList.add("is-bag-open");
   sheet.innerHTML = `
-    <section class="island-bag" role="dialog" aria-label="背包">
+    <section class="island-bag" role="dialog" aria-label="背包" style="background-image:url('/static/island/assets/bag-frame.png')">
       <button type="button" class="island-bag-x" data-close aria-label="关闭"></button>
       <div class="island-bag-grid" id="island-bag-grid">
         ${slots.map((it, i) => slotMarkup(it, start + i)).join("")}

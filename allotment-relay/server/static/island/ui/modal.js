@@ -376,7 +376,7 @@ export function showBuySheet(item, { onConfirm, onClose } = {}) {
 
 function cardMarkup(inner, extraClass) {
   const cls = extraClass ? `island-card ${extraClass}` : "island-card";
-  return `<article class="${cls}" role="dialog">
+  return `<article class="${cls}" role="dialog" style="background-image:url('/static/island/assets/prompt-frame.png')">
     <div class="island-card-inner">${inner}</div>
   </article>`;
 }
