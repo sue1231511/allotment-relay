@@ -112,7 +112,7 @@ async def tote_ops(command: str = "") -> str:
     return await mux._call_ops(mux.tote_bundle, _kid(), command)
 
 
-@mcp.tool(description="厨房小馆。空=菜谱。例：eat 鲭鱼 · shop dine 安。勿 eat_ops。")
+@mcp.tool(description="厨房小馆。空=菜谱。例：cook 蒜蓉生蚝 · eat 鲭鱼。勿 eat_ops。下馆子")
 async def kitchen_ops(command: str = "") -> str:
     return await mux._call_ops(mux.kitchen_bundle, _kid(), command)
 

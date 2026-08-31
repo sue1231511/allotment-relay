@@ -1055,9 +1055,11 @@ async def _test_island_v1_api() -> None:
     assert hut_body["built"] is True
     assert hut_body["can_sleep"] is True
     assert any(t["key"] == "home" for t in hut_body["tabs"])
+    assert any(t["key"] == "cook" for t in hut_body["tabs"])
     assert any(t["key"] == "cabinet" for t in hut_body["tabs"])
     assert any(t["key"] == "compost" for t in hut_body["tabs"])
     assert any(t["key"] == "barn" for t in hut_body["tabs"])
+    assert any(row["kind"] == "cook" for row in (hut_body["items"].get("cook") or []))
     slept = client.post(
         "/api/v1/hut/sleep",
         headers=_auth(key, {"Idempotency-Key": "hut-sleep"}),
@@ -1072,8 +1074,20 @@ async def _test_island_v1_api() -> None:
             (sid,),
         )
         await db.add_item(conn, sid, "crop_kale", 3)
+        await db.add_item(conn, sid, "fish_mackerel", 2)
         await db.add_item(conn, sid, "manure_sheep", 4)
         await conn.commit()
+    cooked = client.post(
+        "/api/v1/hut/act",
+        headers=_auth(key, {"Idempotency-Key": "hut-cook"}),
+        json={"kind": "cook", "target": "甘蓝 鲭鱼"},
+    )
+    assert cooked.status_code == 200, cooked.text
+    assert cooked.json()["event"]["kind"] == "hut"
+    assert cooked.json()["event"]["title"] == "出锅了"
+    cook_tab = cooked.json()["hut"]["items"]["cook"]
+    assert any(row["kind"] == "mix_pick" for row in cook_tab)
+    assert any(row["kind"] == "cook_mix" for row in cook_tab)
     looked = client.post(
         "/api/v1/hut/act",
         headers=_auth(key, {"Idempotency-Key": "hut-look"}),
@@ -1201,8 +1215,8 @@ def test_island_page_is_modular() -> None:
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
     assert "island-mapbgm1" in app
-    assert html.count("island.css?v=island-mapbgm1") == 1
-    assert html.count("app.js?v=island-burgertown1") == 1
+    assert html.count("island.css?v=island-hutcook1") == 1
+    assert html.count("app.js?v=island-hutcook1") == 1
     assert "bgm.js?v=island-burgertown1" in app
     assert "lighthouse.js?v=island-mapbgm1" in app
     assert "hall.js?v=island-mapbgm1" in app
@@ -1224,10 +1238,15 @@ def test_island_page_is_modular() -> None:
     assert "没买房" in hut_js
     assert "棚屋场景还锁着" in hut_js
     assert "点一下看屋里" in hut_js
+    assert "能睡、做饭、升级、潮柜、堆肥桶、畜栏" in hut_js
+    assert "mix_pick" in hut_js
+    assert "cook_mix" in hut_js
     assert "ensureShopFrame" in hut_js
     assert "去上手页" not in hut_js
     assert "api.hutAct" in app
     assert "keepHut" in app
+    assert 'hut.js?v=island-hutcook1' in app
+    assert "kind === \"cook_mix\"" in app
     assert "openHut" in app
     assert "renderHut" in app
     assert 'name === "hut"' in app
@@ -1852,6 +1871,7 @@ def test_island_page_is_modular() -> None:
     assert (ROOT / "server/v1/hui_service.py").exists()
     hut_js = (ROOT / "server/static/island/scenes/hut.js").read_text(encoding="utf-8")
     assert "点一下看屋里" in hut_js
+    assert "mix_pick" in hut_js
     assert "island-hut" in hut_js
     assert "ensureShopFrame" in hut_js
     assert "去上手页" not in hut_js

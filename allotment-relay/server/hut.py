@@ -1840,8 +1840,147 @@ def _has_fit(fittings: dict[str, str], name: str) -> bool:
     return any(_fitting_bare(key) == name for key in fittings.values())
 
 
+async def _cook_tab_items(
+    conn: aiosqlite.Connection,
+    s: dict[str, Any],
+    stock: dict[str, Any],
+) -> tuple[list[dict[str, Any]], int, int]:
+    """小屋灶栏。数值仍走 kitchen_ops cook，这里只摊开能点的定点菜和乱炖材料。"""
+    from collections import Counter
+
+    from . import cook_mix, kitchen
+    from .catalog import KITCHEN_DISHES, is_fiber_item
+
+    used, mix_used = await kitchen._cook_counts(conn, s["id"])
+    recipe_cap = int(config.KITCHEN_RECIPE_COOK_DAILY)
+    mix_cap = int(config.KITCHEN_MIX_COOK_DAILY)
+    recipe_left = max(0, recipe_cap - used)
+    mix_left = max(0, mix_cap - mix_used)
+    rows: list[dict[str, Any]] = []
+    rows.append(_sku(
+        sid="cook-quota-recipe",
+        kind="quota",
+        name="定点菜",
+        emoji="🍳",
+        note=f"今日 {used}/{recipe_cap}。菜单上那几道，每天 {recipe_cap} 次。",
+        detail=(
+            f"点菜名下锅。每天 {recipe_cap} 次，换班刷新。"
+            "缺料的也能点开看差什么。乱炖是另一栏次数。"
+        ),
+        price=f"{recipe_left} 次",
+        can=True,
+        target="",
+    ))
+    rows.append(_sku(
+        sid="cook-quota-mix",
+        kind="quota",
+        name="乱炖",
+        emoji="🥘",
+        note=f"今日 {mix_used}/{mix_cap}。点 2～5 样材料再下锅。",
+        detail=(
+            f"点行囊里的料，凑 2～5 样再点乱炖下锅。每天 {mix_cap} 次，换班刷新。"
+            "活物、工具、装饰、熟菜、衣料不能下锅。乱搭也按材料身价兜底。"
+        ),
+        price=f"{mix_left} 次",
+        can=True,
+        target="",
+    ))
+    rows.append(_sku(
+        sid="cook-mix",
+        kind="cook_mix",
+        name="乱炖下锅",
+        emoji="🔥",
+        note="先点下面的材料 2～5 样，再点这里下锅。",
+        detail="自由组合 2～5 样。点材料会亮，再点乱炖下锅。和定点菜不是同一次数。",
+        price="煮",
+        can=mix_left > 0,
+        target="",
+    ))
+
+    ready_n = 0
+    recipe_rows: list[dict[str, Any]] = []
+    for key, meta in KITCHEN_DISHES.items():
+        need = Counter(meta["ings"])
+        short: list[str] = []
+        labels: list[str] = []
+        for item, n in need.items():
+            labels.append(item_label(item) if n == 1 else f"{item_label(item)}×{n}")
+            have = int(stock.get(item) or 0)
+            if have < n:
+                short.append(f"{item_label(item)}差{n - have}")
+        ings_txt = " + ".join(labels)
+        energy = int(meta.get("energy") or 0)
+        if short:
+            note = "缺 " + "、".join(short)
+            can = False
+            price = "看"
+        elif recipe_left <= 0:
+            note = f"今日定点菜满了（{recipe_cap} 次）。"
+            can = False
+            price = "看"
+        else:
+            note = f"{ings_txt} · eat +{energy}"
+            can = True
+            price = "煮"
+            ready_n += 1
+        recipe_rows.append(_sku(
+            sid=f"cook-{key}",
+            kind="cook",
+            name=str(meta.get("name") or key),
+            emoji=str(meta.get("emoji") or "🍳"),
+            note=note,
+            detail=(
+                f"{ings_txt}。定点菜，每天 {recipe_cap} 次。"
+                + (f"缺：{'、'.join(short)}。" if short else f"下锅后可 eat 回 {energy} 精力。")
+            ),
+            price=price,
+            can=can,
+            target=str(meta.get("name") or key),
+        ))
+    recipe_rows.sort(key=lambda row: (not row["can"], row["name"]))
+    rows.extend(recipe_rows)
+
+    mix_rows: list[dict[str, Any]] = []
+    for item, qty in (stock or {}).items():
+        n = int(qty or 0)
+        if n <= 0:
+            continue
+        if is_fiber_item(item):
+            continue
+        if cook_mix.classify(item) == "refuse":
+            continue
+        mix_rows.append(_sku(
+            sid=f"mix-{item}",
+            kind="mix_pick",
+            name=item_label(item),
+            emoji=_item_emoji(item),
+            note=f"行囊 {n}。点一下算一份，最多 5 样。",
+            detail="点亮算入锅，再点乱炖下锅。同一料可点多份。衣料、熟菜、工具不能下锅。",
+            price="点",
+            can=mix_left > 0,
+            target=item_label(item),
+            qty=n,
+        ))
+    mix_rows.sort(key=lambda row: row["name"])
+    if mix_rows:
+        rows.extend(mix_rows)
+    else:
+        rows.append(_sku(
+            sid="cook-need",
+            kind="quota",
+            name="行囊没有能下锅的料",
+            emoji="🥬",
+            note="份地收菜、海边拿鱼，再回来煮。",
+            detail="定点菜看上面缺什么。乱炖至少 2 样。蔬菜不能生吃，要先下锅。",
+            price="看",
+            can=True,
+            target="",
+        ))
+    return rows, recipe_left, ready_n
+
+
 async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str, Any]:
-    """给 /island 小屋用。数值仍走 hut_ops / barn_ops，这里只摊开能点的。"""
+    """给 /island 小屋用。数值仍走 hut_ops / barn_ops / kitchen_ops cook，这里只摊开能点的。"""
     from . import barn, kitchen
     from .catalog import bed_sleep_energy
 
@@ -1888,11 +2027,11 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
     if not built:
         spoken = "还没搭棚屋。点搭棚屋。"
     elif can_sleep:
-        spoken = "困了就睡。潮柜、堆肥桶、畜栏也在这儿。"
+        spoken = "困了就睡。灶、潮柜、堆肥桶、畜栏也在这儿。"
     elif not has_bed:
-        spoken = "先买张床再睡。潮柜、堆肥、畜栏也在这儿。"
+        spoken = "先买张床再睡。灶、潮柜、堆肥、畜栏也在这儿。"
     else:
-        spoken = "今天睡过了。潮柜、堆肥、畜栏还在。"
+        spoken = "今天睡过了。灶、潮柜、堆肥、畜栏还在。"
 
     home_items: list[dict[str, Any]] = []
     if built:
@@ -2408,11 +2547,17 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
                 target="status",
             ))
 
+    cook_items: list[dict[str, Any]] = []
+    cook_ready = 0
+    if built:
+        cook_items, _recipe_left, cook_ready = await _cook_tab_items(conn, s, stock)
+
     cab_badge = ""
     if has_cab or has_fridge:
         cab_badge = str(sum(1 for row in cab_items if row["kind"] in ("put", "take"))) or ""
     tabs = [
         {"key": "home", "label": "屋里", "badge": "睡" if can_sleep else ""},
+        {"key": "cook", "label": "灶", "badge": str(cook_ready) if cook_ready else ""},
         {"key": "cabinet", "label": "潮柜", "badge": cab_badge},
         {"key": "compost", "label": "堆肥", "badge": str(ready) if ready else ""},
         {"key": "barn", "label": "畜栏", "badge": str(collectable) if collectable else ""},
@@ -2427,6 +2572,7 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
         "tabs": tabs,
         "items": {
             "home": home_items,
+            "cook": cook_items,
             "cabinet": cab_items,
             "compost": compost_items,
             "barn": barn_items,

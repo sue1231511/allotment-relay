@@ -124,6 +124,7 @@ def test_mcp_descriptions() -> None:
 
     kitchen = _tool_blob(mcp, "kitchen_ops")
     assert "eat" in kitchen and ("shop dine" in kitchen or "下馆子" in kitchen)
+    assert "cook" in kitchen
     assert "eat_ops" in kitchen
 
     lounge = _tool_blob(mcp, "lounge_ops")
@@ -204,7 +205,8 @@ def test_relay_manual_covers_systems() -> None:
         "hut_ops 睡",
         "没买房看不见棚屋场景",
         "点一下看屋里",
-        "能睡、升级、潮柜、堆肥桶、畜栏",
+        "能睡、做饭、升级、潮柜、堆肥桶、畜栏",
+        "点一下看屋里就能煮",
         "刷新上手页不会回精力",
         "游戏日换班",
         "buy bed",
@@ -739,7 +741,8 @@ def test_human_island_manual() -> None:
         "进院景再点编剧社",
         "没买房看不见棚屋场景",
         "点一下看屋里",
-        "能睡、升级、潮柜、堆肥桶、畜栏",
+        "能睡、做饭、升级、潮柜、堆肥桶、畜栏",
+        "点一下看屋里就能煮",
         "立绘对话",
         "半身立绘对话",
         "点一下才出人不醒",
@@ -767,6 +770,8 @@ def test_human_island_manual() -> None:
     ):
         assert needle in blob, needle
     assert "打赏小橘仍去上手页" not in blob
+    assert "做饭仍去上手页" not in blob
+    assert "做饭仍上手页" not in blob
     assert "plot_ops" not in blob
     assert "sow_all" not in blob
     assert "chapter-jump" not in content

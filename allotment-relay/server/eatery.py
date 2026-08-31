@@ -703,9 +703,9 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
     if s.get("eatery_open"):
         open_note = f"「{s.get('eatery_label') or s['name']+'的馆'}」在营业。上菜或卖掉。"
     elif not s.get("hut_built"):
-        open_note = "开馆要先有小屋。去上手页搭屋。"
+        open_note = "开馆要先有小屋。总览点小屋搭棚屋。"
     elif not has_fridge:
-        open_note = "开馆要先装冰箱。去上手页小屋买冰箱再装上。"
+        open_note = "开馆要先装冰箱。总览点小屋，点一下看屋里，潮柜栏买冰箱再装上。"
     elif tickets < config.EATERY_OPEN_COST:
         open_note = f"开张要 {config.EATERY_OPEN_COST} 票，现在 {tickets}。"
     else:
