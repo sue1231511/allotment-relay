@@ -868,9 +868,10 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-boot2" in html
+    assert "island-boot3" in html
+    assert "island-fix1" in html or "island-boot3" in html
     assert 'id="island-boot-veil"' in html
-    assert "正在铺地图" in html
+    assert "正在进入" in html
     assert "fonts.googleapis.com" not in html
     assert "/static/island/tap.js" in html
     assert "/static/island/boot.js" in html
@@ -943,8 +944,13 @@ def test_island_page_is_modular() -> None:
     assert "is-playing" in css
     assert "island-boot-veil" in css
     assert "island-boot-spin" in css
-    assert "正在铺地图" in app
+    assert "正在进入" in app
     assert "waitScenePics" in app
+    assert "await waitScenePics" not in app
+    assert 'from "./ui/modal.js?v=island-fix1"' in app
+    modal_src = (ROOT / "server/static/island/ui/modal.js").read_text(encoding="utf-8")
+    assert "export function showFormSheet" in modal_src
+    assert "export function showPickSheet" in modal_src
     assert "铺满一屏" in css
     assert "底下不漏色" in css
     assert "max-width: 480px" in css
@@ -994,7 +1000,7 @@ def test_island_page_is_modular() -> None:
     assert "8000" in boot
     assert "showVeil" in boot
     assert "waitPics" in boot
-    assert "正在铺地图" in boot
+    assert "正在进入" in boot
     assert "thirstyYard" in (ROOT / "server/static/island/store.js").read_text(encoding="utf-8")
     assert "plotToken" in app
     assert "renderYards" in app
@@ -1331,7 +1337,7 @@ def test_island_page_is_modular() -> None:
     assert "api.lighthouseAct" in app
     assert "keepLighthouse" in app
     assert 'import { renderLighthouse }' not in app
-    assert 'import("./scenes/lighthouse.js")' in app
+    assert 'import("./scenes/lighthouse.js' in app
     assert (ROOT / "server/v1/lighthouse_service.py").exists()
     lighthouse_js = (ROOT / "server/static/island/scenes/lighthouse.js").read_text(encoding="utf-8")
     assert "island-vn" in lighthouse_js

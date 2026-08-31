@@ -1,4 +1,4 @@
-import { api, loadKey } from "./api.js";
+import { api, loadKey } from "./api.js?v=island-fix1";
 import {
   applySnapshot,
   duesBlocked,
@@ -10,32 +10,32 @@ import {
   tickGrow,
   tickQuarry,
   tickWorkshop,
-} from "./store.js";
-import { renderHud } from "./hud.js";
-import { renderMap } from "./map.js";
-import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js";
-import { renderShore } from "./scenes/shore.js";
-import { renderPlaza } from "./scenes/plaza.js";
-import { renderPlace } from "./scenes/place.js";
-import { renderShop } from "./scenes/shop.js";
-import { renderWorkshop } from "./scenes/workshop.js";
-import { renderQuarry } from "./scenes/quarry.js";
-import { renderBar } from "./scenes/bar.js";
-import { renderTheater } from "./scenes/theater.js";
-import { renderWriters } from "./scenes/writers.js";
-import { renderAtelier } from "./scenes/atelier.js";
-import { renderHall } from "./scenes/hall.js";
-import { renderEatery } from "./scenes/eatery.js";
+} from "./store.js?v=island-fix1";
+import { renderHud } from "./hud.js?v=island-fix1";
+import { renderMap } from "./map.js?v=island-fix1";
+import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=island-fix1";
+import { renderShore } from "./scenes/shore.js?v=island-fix1";
+import { renderPlaza } from "./scenes/plaza.js?v=island-fix1";
+import { renderPlace } from "./scenes/place.js?v=island-fix1";
+import { renderShop } from "./scenes/shop.js?v=island-fix1";
+import { renderWorkshop } from "./scenes/workshop.js?v=island-fix1";
+import { renderQuarry } from "./scenes/quarry.js?v=island-fix1";
+import { renderBar } from "./scenes/bar.js?v=island-fix1";
+import { renderTheater } from "./scenes/theater.js?v=island-fix1";
+import { renderWriters } from "./scenes/writers.js?v=island-fix1";
+import { renderAtelier } from "./scenes/atelier.js?v=island-fix1";
+import { renderHall } from "./scenes/hall.js?v=island-fix1";
+import { renderEatery } from "./scenes/eatery.js?v=island-fix1";
 let lighthouseMod = null;
 async function lighthouseScene() {
-  if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js");
+  if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-fix1");
   return lighthouseMod;
 }
-import { renderBag } from "./ui/bag.js";
-import { setBackChip, setBagChip } from "./ui/back-map.js";
-import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js";
-import { popOut } from "./ui/pop.js";
-import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showPitchSheet, showVendSheet, toast } from "./ui/modal.js";
+import { renderBag } from "./ui/bag.js?v=island-fix1";
+import { setBackChip, setBagChip } from "./ui/back-map.js?v=island-fix1";
+import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=island-fix1";
+import { popOut } from "./ui/pop.js?v=island-fix1";
+import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showPitchSheet, showVendSheet, toast } from "./ui/modal.js?v=island-fix1";
 
 const sceneEl = () => document.getElementById("island-scene");
 const sheetEl = () => document.getElementById("island-sheet");
@@ -98,13 +98,12 @@ async function waitScenePics(root) {
 }
 
 async function bootFromServer() {
-  showBootVeil("正在铺地图…");
-  const pending = [api.me()];
+  showBootVeil("正在进入…");
   if (window.__islandBoot && typeof window.__islandBoot.preload === "function") {
-    pending.push(window.__islandBoot.preload());
+    window.__islandBoot.preload();
   }
-  const pair = await Promise.all(pending);
-  applySnapshot(pair[0]);
+  const data = await api.me();
+  applySnapshot(data);
   renderHud();
   showPlay();
   await enterScene(state.scene);
@@ -114,7 +113,7 @@ async function enterScene(name, opts) {
   const quiet = !!(opts && opts.quiet);
   if (name === "home") name = "yards";
   if (!quiet) {
-    showBootVeil(name === "map" || name === "yards" ? "正在铺地图…" : "正在铺店景…");
+    showBootVeil("正在进入…");
   }
   state.scene = name;
   state.tab = "map";
@@ -248,7 +247,8 @@ async function enterScene(name, opts) {
         },
       });
     }
-    if (!quiet) await waitScenePics(root);
+    if (!quiet) hideBootVeil();
+    waitScenePics(root);
   } catch (err) {
     toast(err.message || "这处场景没能打开。");
     state.backTo = "map";
@@ -258,7 +258,7 @@ async function enterScene(name, opts) {
         enterScene(go);
       },
     });
-    if (!quiet) await waitScenePics(root);
+    if (!quiet) hideBootVeil();
   } finally {
     if (!quiet) hideBootVeil();
   }
@@ -1615,7 +1615,7 @@ async function start() {
     showGate();
     return;
   }
-  showBootVeil("正在铺地图…");
+  showBootVeil("正在进入…");
   const enterBtn = document.getElementById("island-enter");
   window.__islandBusy = true;
   if (enterBtn) {

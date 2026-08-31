@@ -1,4 +1,4 @@
-import { layoutCoverBoard, sceneArt } from "../ui/art.js";
+import { layoutCoverBoard, sceneArt } from "../ui/art.js?v=island-fix1";
 
 /** 热区按剧场院景 1080×1920：贝壳台是剧场，右侧小屋是衣泊坊，右下收稿桌是编剧社。 */
 const HOTS = [
