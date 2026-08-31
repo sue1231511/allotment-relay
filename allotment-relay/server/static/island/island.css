@@ -1209,6 +1209,10 @@ body.island-app.is-playing.is-yards .island-actionbar {
   overflow-x: auto;
 }
 
+.island-shop-tabs:empty {
+  display: none;
+}
+
 .island-shop-tabs button {
   appearance: none;
   -webkit-appearance: none;
