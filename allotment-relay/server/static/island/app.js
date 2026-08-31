@@ -218,7 +218,7 @@ async function enterScene(name, opts) {
       stopQuarryTick();
       state.backTo = "shore";
       state.portShelf = false;
-      state.portPeek = false;
+      state.portPeek = true;
       state.portChatOpen = false;
       if (state.portTab === "chat") state.portTab = "cast";
       hideIslandLounge();
@@ -230,7 +230,7 @@ async function enterScene(name, opts) {
       state.backTo = "shore";
       state.shoreShelf = false;
       state.shaonianMeet = false;
-      state.beachPeek = false;
+      state.beachPeek = true;
       await openBeach(root);
     } else if (name === "plaza") {
       stopGrowTick();
