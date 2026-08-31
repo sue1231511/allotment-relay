@@ -673,6 +673,7 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
     ]
     return {
         "name": "乔乔诊所",
+        "speaker": "桥桥",
         "line": line,
         "tabs": tabs,
         "items": {

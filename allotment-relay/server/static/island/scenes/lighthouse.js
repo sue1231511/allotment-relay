@@ -1,6 +1,6 @@
-import { sceneArt } from "../ui/art.js?v=island-huthome1";
-import { esc } from "../ui/modal.js?v=island-huthome1";
-import { state } from "../store.js?v=island-huthome1";
+import { sceneArt } from "../ui/art.js?v=island-qiaoqiao1";
+import { esc } from "../ui/modal.js?v=island-qiaoqiao1";
+import { state } from "../store.js?v=island-qiaoqiao1";
 
 export function renderLighthouse(root, { onAct, onMeet } = {}) {
   const shop = state.lighthouse || {};

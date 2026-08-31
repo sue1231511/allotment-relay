@@ -1,4 +1,4 @@
-import { api, loadKey } from "./api.js?v=island-huthome1";
+import { api, loadKey } from "./api.js?v=island-qiaoqiao1";
 import {
   applySnapshot,
   duesBlocked,
@@ -11,39 +11,39 @@ import {
   tickGrow,
   tickQuarry,
   tickWorkshop,
-} from "./store.js?v=island-huthome1";
-import { renderHud } from "./hud.js?v=island-huthome1";
-import { renderMap } from "./map.js?v=island-huthome1";
-import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=island-huthome1";
-import { renderShore, renderShoreYard } from "./scenes/shore.js?v=island-huthome1";
-import { renderPlaza } from "./scenes/plaza.js?v=island-huthome1";
-import { renderPlace } from "./scenes/place.js?v=island-huthome1";
-import { renderHut } from "./scenes/hut.js?v=island-huthome1";
-import { renderShop } from "./scenes/shop.js?v=island-huthome1";
-import { renderLili } from "./scenes/lili.js?v=island-huthome1";
-import { renderClinic } from "./scenes/clinic.js?v=island-huthome1";
-import { renderWorkshop } from "./scenes/workshop.js?v=island-huthome1";
-import { renderQuarry } from "./scenes/quarry.js?v=island-huthome1";
-import { renderBar } from "./scenes/bar.js?v=island-huthome1";
-import { renderTheater } from "./scenes/theater.js?v=island-huthome1";
-import { renderWriters } from "./scenes/writers.js?v=island-huthome1";
-import { renderAtelier } from "./scenes/atelier.js?v=island-huthome1";
-import { renderHall } from "./scenes/hall.js?v=island-huthome1";
-import { renderEatery } from "./scenes/eatery.js?v=island-huthome1";
-import { renderMarket } from "./scenes/market.js?v=island-huthome1";
-import { renderTing } from "./scenes/ting.js?v=island-huthome1";
-import { renderHui } from "./scenes/hui.js?v=island-huthome1";
-import { renderLianli } from "./scenes/lianli.js?v=island-huthome1";
+} from "./store.js?v=island-qiaoqiao1";
+import { renderHud } from "./hud.js?v=island-qiaoqiao1";
+import { renderMap } from "./map.js?v=island-qiaoqiao1";
+import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=island-qiaoqiao1";
+import { renderShore, renderShoreYard } from "./scenes/shore.js?v=island-qiaoqiao1";
+import { renderPlaza } from "./scenes/plaza.js?v=island-qiaoqiao1";
+import { renderPlace } from "./scenes/place.js?v=island-qiaoqiao1";
+import { renderHut } from "./scenes/hut.js?v=island-qiaoqiao1";
+import { renderShop } from "./scenes/shop.js?v=island-qiaoqiao1";
+import { renderLili } from "./scenes/lili.js?v=island-qiaoqiao1";
+import { renderClinic } from "./scenes/clinic.js?v=island-qiaoqiao1";
+import { renderWorkshop } from "./scenes/workshop.js?v=island-qiaoqiao1";
+import { renderQuarry } from "./scenes/quarry.js?v=island-qiaoqiao1";
+import { renderBar } from "./scenes/bar.js?v=island-qiaoqiao1";
+import { renderTheater } from "./scenes/theater.js?v=island-qiaoqiao1";
+import { renderWriters } from "./scenes/writers.js?v=island-qiaoqiao1";
+import { renderAtelier } from "./scenes/atelier.js?v=island-qiaoqiao1";
+import { renderHall } from "./scenes/hall.js?v=island-qiaoqiao1";
+import { renderEatery } from "./scenes/eatery.js?v=island-qiaoqiao1";
+import { renderMarket } from "./scenes/market.js?v=island-qiaoqiao1";
+import { renderTing } from "./scenes/ting.js?v=island-qiaoqiao1";
+import { renderHui } from "./scenes/hui.js?v=island-qiaoqiao1";
+import { renderLianli } from "./scenes/lianli.js?v=island-qiaoqiao1";
 let lighthouseMod = null;
 async function lighthouseScene() {
-  if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-huthome1");
+  if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-qiaoqiao1");
   return lighthouseMod;
 }
-import { renderBag } from "./ui/bag.js?v=island-huthome1";
-import { setBackChip, setBagChip } from "./ui/back-map.js?v=island-huthome1";
-import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=island-huthome1";
-import { popOut } from "./ui/pop.js?v=island-huthome1";
-import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showPitchSheet, showVendSheet, toast } from "./ui/modal.js?v=island-huthome1";
+import { renderBag } from "./ui/bag.js?v=island-qiaoqiao1";
+import { setBackChip, setBagChip } from "./ui/back-map.js?v=island-qiaoqiao1";
+import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=island-qiaoqiao1";
+import { popOut } from "./ui/pop.js?v=island-qiaoqiao1";
+import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showPitchSheet, showVendSheet, toast } from "./ui/modal.js?v=island-qiaoqiao1";
 
 const sceneEl = () => document.getElementById("island-scene");
 const sheetEl = () => document.getElementById("island-sheet");
@@ -213,7 +213,7 @@ async function enterScene(name, opts) {
       stopGrowTick();
       stopWorkshopTick();
       stopQuarryTick();
-      state.clinicShelf = false;
+      state.clinicMeet = false;
       await openClinic(root);
     } else if (name === "workshop") {
       stopGrowTick();
@@ -625,7 +625,6 @@ async function openClinic() {
     const data = await api.clinic();
     applySnapshot(data);
     renderHud();
-    if (data.event) showEvent(data.event);
   } catch (err) {
     toast(err.message || "诊室门还关着。");
   }
@@ -636,25 +635,22 @@ async function openClinic() {
   paintClinic();
 }
 
-function paintClinic(listTop = 0) {
-  renderClinic(sceneEl(), {
-    onAct: tapClinic,
-    onSwitchTab: (tab) => {
-      state.clinicTab = tab || "treat";
-      hideModal();
-      paintClinic(0);
-    },
-    onOpenShelf: () => {
-      state.clinicShelf = true;
-      paintClinic(0);
-    },
-    onCloseShelf: () => {
-      state.clinicShelf = false;
-      hideModal();
-      paintClinic();
-    },
-    listTop,
-  });
+function paintClinic() {
+  renderClinic(sceneEl(), { onAct: tapClinic, onMeet: meetClinic });
+}
+
+function meetClinic() {
+  if (state.clinicMeet) return;
+  state.clinicMeet = true;
+  paintClinic();
+}
+
+function speakClinic(text) {
+  hideModal();
+  if (!state.clinic) state.clinic = {};
+  state.clinic.line = text || "……";
+  state.clinic.speaker = state.clinic.speaker || "桥桥";
+  paintClinic();
 }
 
 function clinicRow(kind, target, id) {
@@ -674,33 +670,16 @@ function clinicRow(kind, target, id) {
 
 function tapClinic(kind, target, id) {
   const row = clinicRow(kind, target, id) || {};
+  const body = row.detail || row.note || (state.clinic && state.clinic.line) || "这会儿诊所用不上这一下。";
   if (kind === "look" || !row.can) {
-    showHintSheet({
-      title: row.name || "乔乔诊所",
-      body: row.detail || row.note || (state.clinic && state.clinic.line) || "这会儿诊所用不上这一下。",
-    });
+    speakClinic(body);
     return;
   }
-  const pack = {
-    treat: ["看病", row.detail || row.note, "确认治"],
-    tonic: ["调理", row.detail || row.note, "确认调"],
-    buy: ["买药", row.detail || row.note, "确认买"],
-    use: ["服药", row.detail || row.note, "确认服"],
-    dove: ["喂斑鸠", row.detail || row.note, "确认喂"],
-    chat: ["闲聊", row.detail || row.note, "确认聊"],
-  }[kind] || ["乔乔诊所", row.detail || row.note || "做这一下？", "确认"];
-  showActSheet({
-    title: pack[0],
-    body: pack[1],
-    confirm: pack[2],
-    onConfirm: () => runClinic(kind, target || row.target || ""),
-  });
+  runClinic(kind, target || row.target || "");
 }
 
 async function runClinic(kind, target) {
-  const list = document.getElementById("island-clinic-list");
-  const listTop = list ? list.scrollTop : 0;
-  await act(() => api.clinicAct(kind, target), { keepClinic: true, listTop, quiet: true });
+  await act(() => api.clinicAct(kind, target), { keepClinic: true, quiet: true });
 }
 
 async function openWorkshop(root) {
@@ -2454,7 +2433,7 @@ async function act(fn, { refreshScene = false, keepPlant = false, keepTab = fals
     applySnapshot(data);
     renderHud();
     if (data.event && !quiet) showEvent(data.event);
-    else if (quiet && data.event && data.event.narrative && !keepLighthouse && !keepHall) toast(data.event.narrative);
+    else if (quiet && data.event && data.event.narrative && !keepLighthouse && !keepHall && !keepClinic) toast(data.event.narrative);
     if (!keepPlant) closePlant();
     else state.plantOpen = true;
     if (keepTab) {
@@ -2470,7 +2449,11 @@ async function act(fn, { refreshScene = false, keepPlant = false, keepTab = fals
       return;
     }
     if (keepClinic && state.scene === "clinic") {
-      paintClinic(listTop);
+      if (data.event && data.event.narrative && state.clinic) {
+        state.clinic.line = data.event.narrative;
+        state.clinic.speaker = data.event.speaker || "桥桥";
+      }
+      paintClinic();
       return;
     }
     if (keepWorkshop && state.scene === "workshop") {
@@ -2547,6 +2530,7 @@ async function act(fn, { refreshScene = false, keepPlant = false, keepTab = fals
   } catch (err) {
     const msg = err.message || "这次没做成。";
     if (keepHall && state.scene === "hall") speakHall(msg);
+    else if (keepClinic && state.scene === "clinic") speakClinic(msg);
     else toast(msg);
     if (state.scene === "yards" && state.plantOpen) openPlant();
   } finally {

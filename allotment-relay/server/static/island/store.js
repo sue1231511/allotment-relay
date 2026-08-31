@@ -88,7 +88,7 @@ export const state = {
   liliShelf: false,
   clinic: null,
   clinicTab: "treat",
-  clinicShelf: false,
+  clinicMeet: false,
   lighthouse: null,
   lighthouseMeet: false,
   hut: null,

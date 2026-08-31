@@ -242,7 +242,7 @@ VISIT_HELP = """visit_ops 子命令（整句写进 command）：
     柜后嫁妆柜：三金套 8888 / 五金套 13888 / 潮誓戒 8888 / 订婚戒 3888 / 礼盒 1888。不打折，不进好感折扣。心情好不送嫁妆。订婚戒不是潮誓戒
     可叠放货满一组会开下一组；工具只能 1。潮柜格满了先 vend 或 hut_ops 冰柜 取
   lore scan [主题] / topics — 沿海旧史文本与 NPC 小传（例：lore scan npc；不是收集品，背包里不会多东西）
-  clinic status — 桥桥诊所（24h）。进门氛围+窗台斑鸠（每日最多1次）+价目；诊费偏高。人类 /island 广场点乔乔诊所，点一下看诊
+  clinic status — 桥桥诊所（24h）。进门氛围+窗台斑鸠（每日最多1次）+价目；诊费偏高。人类 /island 广场点乔乔诊所先进店景，点一下才出人桥桥，半身立绘对话，桥桥站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗
   clinic treat 病症 — 花钱治地上病。例子：treat sprain · treat infection · treat 腿鱼小咒 · treat all
   clinic 调理 小|中|大 — 无病回身体（+15/+30/+50），价 95/210/380 票（可打折/凌晨加价）；每日最多 3 次。例子：clinic 调理 中 · clinic rest 大
   clinic buy 醒酒药 / use 醒酒药 — 对症药，可囤货备用（与 treat 同效）

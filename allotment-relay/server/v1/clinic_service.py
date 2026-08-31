@@ -83,5 +83,6 @@ async def act(api_key: str, key_id: int, kind: str, target: str = "") -> dict[st
         "title": TITLES.get(verb, "乔乔诊所"),
         "narrative": humanize(narrative),
         "kind": "clinic",
+        "speaker": "桥桥",
     }
     return snap
