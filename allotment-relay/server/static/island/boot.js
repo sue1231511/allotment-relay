@@ -89,6 +89,70 @@
     }
   }
 
+  var MAP_PICS = ["/static/island/assets/scenes/island-map.png"];
+
+  function showVeil(text) {
+    var el = document.getElementById("island-boot-veil");
+    if (!el) return;
+    var line = el.querySelector("p");
+    if (line) line.textContent = text || "正在铺地图…";
+    el.hidden = false;
+    el.removeAttribute("hidden");
+  }
+
+  function hideVeil() {
+    var el = document.getElementById("island-boot-veil");
+    if (el) el.hidden = true;
+  }
+
+  function preload(urls, timeoutMs) {
+    urls = urls || MAP_PICS;
+    timeoutMs = timeoutMs || 25000;
+    return Promise.all(
+      urls.map(function (src) {
+        return new Promise(function (resolve) {
+          var done = false;
+          var finish = function () {
+            if (done) return;
+            done = true;
+            resolve();
+          };
+          var img = new Image();
+          img.onload = finish;
+          img.onerror = finish;
+          img.src = src;
+          setTimeout(finish, timeoutMs);
+        });
+      })
+    );
+  }
+
+  function waitPics(root, timeoutMs) {
+    root = root || document.getElementById("island-scene");
+    timeoutMs = timeoutMs || 25000;
+    if (!root) return Promise.resolve();
+    var imgs = root.querySelectorAll(".island-slot-pic, .island-vn-sprite");
+    if (!imgs.length) return Promise.resolve();
+    return Promise.all(
+      Array.prototype.map.call(imgs, function (img) {
+        return new Promise(function (resolve) {
+          if (img.complete && img.naturalWidth) {
+            resolve();
+            return;
+          }
+          var finish = function () {
+            img.removeEventListener("load", finish);
+            img.removeEventListener("error", finish);
+            resolve();
+          };
+          img.addEventListener("load", finish);
+          img.addEventListener("error", finish);
+          setTimeout(finish, timeoutMs);
+        });
+      })
+    );
+  }
+
   function setBusy(on, mode) {
     window.__islandBusy = !!on;
     if (enterBtn) {
@@ -180,10 +244,13 @@
       return Promise.resolve();
     }
     saveKey(key);
+    showVeil("正在铺地图…");
     setBusy(true, name ? "enroll" : "enter");
-    return postSession(key, name)
-      .then(function (data) {
+    return Promise.all([postSession(key, name), preload(MAP_PICS)])
+      .then(function (pair) {
+        var data = pair[0];
         if (!data.enrolled) {
+          hideVeil();
           if (enrollForm) enrollForm.classList.remove("island-hidden");
           toast("先起一个岛上的名字。");
           hint("下面写下岛上的名字，再点登记登岛。");
@@ -194,6 +261,7 @@
         return handoff(data, name ? "home" : "map");
       })
       .catch(function (err) {
+        hideVeil();
         showGate();
         toast((err && err.message) || "没能进入地图。");
         hint((err && err.message) || "没能进入地图。");
@@ -233,6 +301,10 @@
     hint: hint,
     showGate: showGate,
     showPlay: showPlay,
+    showVeil: showVeil,
+    hideVeil: hideVeil,
+    preload: preload,
+    waitPics: waitPics,
     loadKey: loadKey,
     saveKey: saveKey,
     enterWithKey: enterWithKey,

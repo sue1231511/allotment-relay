@@ -440,8 +440,8 @@ def test_relay_manual_covers_systems() -> None:
         "进价九成",
         "/play 点按同一套指令",
         "二十格一页",
-        "不用等图全部下完",
-        "总览底图随后铺上",
+        "点进入后会转圈",
+        "总览图铺好了才进去",
         "点按会闪一下",
         "弹窗会弹一下",
         "共用一个号",
@@ -634,9 +634,8 @@ def test_human_island_manual() -> None:
         "/island",
         "手机地图",
         "进入地图",
-        "不用等所有图下完",
-        "不要停在转圈",
-        "总览底图随后铺上",
+        "会转圈",
+        "总览图铺好了才进去",
         "不要停在微信里",
         "一键收获",
         "点总览图上的份地就进",
@@ -761,6 +760,7 @@ def test_patron_pages_share_steward_key() -> None:
     island_api = (root / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/site-key.js" in island_html
     assert "/static/island/boot.js" in island_html
+    assert 'id="island-boot-veil"' in island_html
     assert "fonts.googleapis.com" not in island_html
     assert ' data-src="/static/island/assets/chip-bag.png"' in island_html
     assert 'src="/static/island/assets/chip-bag.png"' not in island_html.replace("data-src=", "x=")

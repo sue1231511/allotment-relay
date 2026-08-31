@@ -868,7 +868,9 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-map-nowait1" in html
+    assert "island-boot1" in html
+    assert 'id="island-boot-veil"' in html
+    assert "正在铺地图" in html
     assert "fonts.googleapis.com" not in html
     assert "/static/island/tap.js" in html
     assert "/static/island/boot.js" in html
@@ -935,6 +937,10 @@ def test_island_page_is_modular() -> None:
     assert "island-hot" in css
     assert "island-map-board" in css
     assert "is-playing" in css
+    assert "island-boot-veil" in css
+    assert "island-boot-spin" in css
+    assert "正在铺地图" in app
+    assert "waitScenePics" in app
     assert "铺满一屏" in css
     assert "底下不漏色" in css
     assert "max-width: 480px" in css
@@ -976,10 +982,14 @@ def test_island_page_is_modular() -> None:
     assert "/api/v1/session" in boot
     assert "正在进入" in boot
     assert "island-enter" in boot
+    assert "island-map.png" in boot
+    assert "showVeil" in boot
+    assert "waitPics" in boot
+    assert "正在铺地图" in boot
     assert "thirstyYard" in (ROOT / "server/static/island/store.js").read_text(encoding="utf-8")
     assert "plotToken" in app
     assert "renderYards" in app
-    assert "enterScene(\"yards\")" in app
+    assert "enterScene(\"yards\"" in app
     assert 'name === "home"' in app
     assert "backChipMarkup" not in (ROOT / "server/static/island/scenes/home.js").read_text(encoding="utf-8")
     back_js = (ROOT / "server/static/island/ui/back-map.js").read_text(encoding="utf-8")
