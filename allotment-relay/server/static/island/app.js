@@ -24,7 +24,7 @@ import { renderBar } from "./scenes/bar.js?v=island-stay1";
 import { renderTheater } from "./scenes/theater.js?v=island-fix1";
 import { renderWriters } from "./scenes/writers.js?v=island-stay1";
 import { renderAtelier } from "./scenes/atelier.js?v=island-stay1";
-import { renderHall } from "./scenes/hall.js?v=island-xiaoju1";
+import { renderHall } from "./scenes/hall.js?v=island-talk1";
 import { renderEatery } from "./scenes/eatery.js?v=island-stay1";
 let lighthouseMod = null;
 async function lighthouseScene() {
@@ -894,7 +894,6 @@ async function openHall(root) {
     const data = await api.hall();
     applySnapshot(data);
     renderHud();
-    if (data.event) showEvent(data.event);
   } catch (err) {
     toast(err.message || "剧场门还没开。");
   }
@@ -909,43 +908,32 @@ function paintHall() {
   renderHall(sceneEl(), { onAct: tapHall });
 }
 
+function speakHall(text) {
+  hideModal();
+  if (!state.hall) state.hall = {};
+  state.hall.line = text || "……";
+  state.hall.speaker = state.hall.speaker || "小橘";
+  paintHall();
+}
+
 function tapHall(kind, target) {
   const shop = state.hall || {};
   const board = shop.board || {};
   if (kind === "look") {
-    showHintSheet({
-      title: target === "affinity" ? "舞台好感" : (board.title || "看板"),
-      body: board.note || "先看看今晚有没有专场。打赏小橘仍在上手页。",
-    });
+    speakHall(board.note || "先看看今晚有没有专场。打赏小橘仍在上手页。");
     return;
   }
   const row = (shop.jobs || []).find((item) => item.id === kind);
   const body = (row && (row.detail || row.note)) || "做这一下？";
   if (!row || !row.can_act) {
-    showHintSheet({
-      title: (row && row.name) || "剧场看台",
-      body,
-    });
+    speakHall(body);
     return;
   }
-  const pack = {
-    audition: ["试镜", body, "确认试镜"],
-    rehearse: ["对戏", body, "确认对戏"],
-    perform: ["演出", body, "确认上场"],
-    claim: ["领薪", body, "确认领"],
-  }[kind] || ["剧场看台", body, "确认"];
-  showActSheet({
-    title: pack[0],
-    body: pack[1],
-    confirm: pack[2],
-    onConfirm: () => runHall(kind, target),
-  });
+  runHall(kind, target);
 }
 
 async function runHall(kind, target) {
-  const list = document.getElementById("island-hall-list");
-  const listTop = list ? list.scrollTop : 0;
-  await act(() => api.hallAct(kind, target), { keepHall: true, listTop, quiet: true });
+  await act(() => api.hallAct(kind, target), { keepHall: true, quiet: true });
 }
 
 async function openEatery(root) {
@@ -1383,7 +1371,7 @@ async function act(fn, { refreshScene = false, keepPlant = false, keepTab = fals
     applySnapshot(data);
     renderHud();
     if (data.event && !quiet) showEvent(data.event);
-    else if (quiet && data.event && data.event.narrative && !keepLighthouse) toast(data.event.narrative);
+    else if (quiet && data.event && data.event.narrative && !keepLighthouse && !keepHall) toast(data.event.narrative);
     if (!keepPlant) closePlant();
     else state.plantOpen = true;
     if (keepTab) {
@@ -1438,7 +1426,9 @@ async function act(fn, { refreshScene = false, keepPlant = false, keepTab = fals
       await enterScene(state.scene, { quiet: true });
     }
   } catch (err) {
-    toast(err.message || "这次没做成。");
+    const msg = err.message || "这次没做成。";
+    if (keepHall && state.scene === "hall") speakHall(msg);
+    else toast(msg);
     if (state.scene === "yards" && state.plantOpen) openPlant();
   } finally {
     state.busy = false;

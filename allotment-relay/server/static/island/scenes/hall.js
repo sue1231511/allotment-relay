@@ -1,4 +1,4 @@
-import { sceneArt } from "../ui/art.js?v=island-xiaoju1";
+import { sceneArt } from "../ui/art.js?v=island-talk1";
 import { esc } from "../ui/modal.js?v=island-fix1";
 import { state } from "../store.js?v=island-fix1";
 
