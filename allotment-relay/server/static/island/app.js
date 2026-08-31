@@ -79,16 +79,43 @@ function showGate() {
   setBackChip(false);
 }
 
+function showBootVeil(text) {
+  if (window.__islandBoot && typeof window.__islandBoot.showVeil === "function") {
+    window.__islandBoot.showVeil(text);
+  }
+}
+
+function hideBootVeil() {
+  if (window.__islandBoot && typeof window.__islandBoot.hideVeil === "function") {
+    window.__islandBoot.hideVeil();
+  }
+}
+
+async function waitScenePics(root) {
+  if (window.__islandBoot && typeof window.__islandBoot.waitPics === "function") {
+    await window.__islandBoot.waitPics(root);
+  }
+}
+
 async function bootFromServer() {
-  const data = await api.me();
-  applySnapshot(data);
+  showBootVeil("正在铺地图…");
+  const pending = [api.me()];
+  if (window.__islandBoot && typeof window.__islandBoot.preload === "function") {
+    pending.push(window.__islandBoot.preload());
+  }
+  const pair = await Promise.all(pending);
+  applySnapshot(pair[0]);
   renderHud();
   showPlay();
   await enterScene(state.scene);
 }
 
-async function enterScene(name) {
+async function enterScene(name, opts) {
+  const quiet = !!(opts && opts.quiet);
   if (name === "home") name = "yards";
+  if (!quiet) {
+    showBootVeil(name === "map" || name === "yards" ? "正在铺地图…" : "正在铺店景…");
+  }
   state.scene = name;
   state.tab = "map";
   markDock("");
@@ -99,6 +126,7 @@ async function enterScene(name) {
   }
   const root = sceneEl();
   if (!root) {
+    if (!quiet) hideBootVeil();
     toast("地图画布还没准备好。");
     return;
   }
@@ -108,16 +136,6 @@ async function enterScene(name) {
   setBagChip(name !== "map");
   setBackChip(name !== "map", () => enterScene(state.backTo || "map"));
   try {
-    if (name === "home") {
-      stopGrowTick();
-      stopWorkshopTick();
-      stopQuarryTick();
-      renderHome(root, {
-        onOpenLand: () => enterScene("yards"),
-        onBack: () => enterScene("map"),
-      });
-      return;
-    }
     if (name === "yards") {
       stopWorkshopTick();
       stopQuarryTick();
@@ -129,16 +147,15 @@ async function enterScene(name) {
       });
       startGrowTick();
       if (state.plantOpen) openPlant();
-      return;
-    }
-    stopGrowTick();
-    stopWorkshopTick();
-    stopQuarryTick();
-    if (name === "shore") {
+    } else if (name === "shore") {
+      stopGrowTick();
+      stopWorkshopTick();
+      stopQuarryTick();
       renderShore(root);
-      return;
-    }
-    if (name === "plaza") {
+    } else if (name === "plaza") {
+      stopGrowTick();
+      stopWorkshopTick();
+      stopQuarryTick();
       state.backTo = "map";
       setBackChip(true, () => enterScene("map"));
       renderPlaza(root, {
@@ -147,31 +164,36 @@ async function enterScene(name) {
           enterScene(go);
         },
       });
-      return;
-    }
-    if (name === "shop") {
+    } else if (name === "shop") {
+      stopGrowTick();
+      stopWorkshopTick();
+      stopQuarryTick();
       state.shopShelf = false;
       await openShop(root);
-      return;
-    }
-    if (name === "workshop") {
+    } else if (name === "workshop") {
+      stopGrowTick();
+      stopWorkshopTick();
+      stopQuarryTick();
       state.workshopShelf = false;
       await openWorkshop(root);
       startWorkshopTick();
-      return;
-    }
-    if (name === "quarry") {
+    } else if (name === "quarry") {
+      stopGrowTick();
+      stopWorkshopTick();
+      stopQuarryTick();
       state.quarryShelf = false;
       await openQuarry(root);
       startQuarryTick();
-      return;
-    }
-    if (name === "bar") {
+    } else if (name === "bar") {
+      stopGrowTick();
+      stopWorkshopTick();
+      stopQuarryTick();
       state.barShelf = false;
       await openBar(root);
-      return;
-    }
-    if (name === "theater") {
+    } else if (name === "theater") {
+      stopGrowTick();
+      stopWorkshopTick();
+      stopQuarryTick();
       state.backTo = "map";
       setBackChip(true, () => enterScene("map"));
       renderTheater(root, {
@@ -180,43 +202,53 @@ async function enterScene(name) {
           enterScene(go);
         },
       });
-      return;
-    }
-    if (name === "writers") {
+    } else if (name === "writers") {
+      stopGrowTick();
+      stopWorkshopTick();
+      stopQuarryTick();
       state.writersShelf = false;
       await openWriters(root);
-      return;
-    }
-    if (name === "atelier") {
+    } else if (name === "atelier") {
+      stopGrowTick();
+      stopWorkshopTick();
+      stopQuarryTick();
       state.atelierShelf = false;
       await openAtelier(root);
-      return;
-    }
-    if (name === "hall") {
+    } else if (name === "hall") {
+      stopGrowTick();
+      stopWorkshopTick();
+      stopQuarryTick();
       state.hallShelf = false;
       await openHall(root);
-      return;
-    }
-    if (name === "eatery") {
+    } else if (name === "eatery") {
+      stopGrowTick();
+      stopWorkshopTick();
+      stopQuarryTick();
       state.eateryShelf = false;
       await openEatery(root);
-      return;
-    }
-    if (name === "lighthouse") {
+    } else if (name === "lighthouse") {
+      stopGrowTick();
+      stopWorkshopTick();
+      stopQuarryTick();
       await openLighthouse(root);
-      return;
-    }
-    if (PLACE_TITLES[name]) {
+    } else if (PLACE_TITLES[name]) {
+      stopGrowTick();
+      stopWorkshopTick();
+      stopQuarryTick();
       renderPlaceScene(name);
-      return;
+    } else {
+      stopGrowTick();
+      stopWorkshopTick();
+      stopQuarryTick();
+      state.backTo = "map";
+      renderMap(root, {
+        onOpen: (go) => {
+          state.backTo = "map";
+          enterScene(go);
+        },
+      });
     }
-    state.backTo = "map";
-    renderMap(root, {
-      onOpen: (go) => {
-        state.backTo = "map";
-        enterScene(go);
-      },
-    });
+    if (!quiet) await waitScenePics(root);
   } catch (err) {
     toast(err.message || "这处场景没能打开。");
     state.backTo = "map";
@@ -226,6 +258,9 @@ async function enterScene(name) {
         enterScene(go);
       },
     });
+    if (!quiet) await waitScenePics(root);
+  } finally {
+    if (!quiet) hideBootVeil();
   }
 }
 
@@ -1315,10 +1350,10 @@ async function runPlotBatch(plots, fn, manyTitle, oneTitle) {
         kind: "farm",
       });
     }
-    await enterScene("yards");
+    await enterScene("yards", { quiet: true });
   } catch (err) {
     toast(err.message || "这次没做成。");
-    await enterScene("yards");
+    await enterScene("yards", { quiet: true });
   } finally {
     state.busy = false;
   }
@@ -1413,7 +1448,7 @@ async function act(fn, { refreshScene = false, keepPlant = false, keepTab = fals
       return;
     }
     if (refreshScene || LIVE_SCENES.includes(state.scene)) {
-      await enterScene(state.scene);
+      await enterScene(state.scene, { quiet: true });
     }
   } catch (err) {
     toast(err.message || "这次没做成。");
@@ -1509,6 +1544,7 @@ async function startFromSnapshot(data, scene) {
   applySnapshot(data);
   renderHud();
   if (!data || !data.enrolled) {
+    hideBootVeil();
     showGate();
     const enrollForm = document.getElementById("island-enroll-form");
     if (enrollForm) enrollForm.classList.remove("island-hidden");
@@ -1579,6 +1615,7 @@ async function start() {
     showGate();
     return;
   }
+  showBootVeil("正在铺地图…");
   const enterBtn = document.getElementById("island-enter");
   window.__islandBusy = true;
   if (enterBtn) {
@@ -1591,6 +1628,7 @@ async function start() {
   try {
     await bootFromServer();
   } catch (err) {
+    hideBootVeil();
     if (err.code === "NOT_ENROLLED") {
       showGate();
       document.getElementById("island-enroll-form").classList.remove("island-hidden");
@@ -1622,6 +1660,7 @@ window.addEventListener("pageshow", () => {
 });
 
 start().catch((error) => {
+  hideBootVeil();
   showGate();
   toast((error && error.message) || "地图没能打开。再点一次进入地图。");
 });
