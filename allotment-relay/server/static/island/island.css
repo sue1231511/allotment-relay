@@ -1003,6 +1003,10 @@ body.island-app.is-playing.is-yards .island-actionbar {
   aspect-ratio: 1080 / 1920;
 }
 
+.island-lili .island-shop-board {
+  aspect-ratio: 1086 / 1448;
+}
+
 .island-shop {
   position: absolute;
   inset: 0;

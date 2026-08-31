@@ -1102,22 +1102,22 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-plazalili1" in app
-    assert html.count("island.css?v=island-plazalili1") == 1
-    assert html.count("app.js?v=island-plazalili1") == 1
-    assert "lighthouse.js?v=island-plazalili1" in app
-    assert "hall.js?v=island-plazalili1" in app
-    assert "shop.js?v=island-plazalili1" in app
-    assert "lili.js?v=island-plazalili1" in app
-    assert "market.js?v=island-plazalili1" in app
+    assert "island-lilistall1" in app
+    assert html.count("island.css?v=island-lilistall1") == 1
+    assert html.count("app.js?v=island-lilistall1") == 1
+    assert "lighthouse.js?v=island-lilistall1" in app
+    assert "hall.js?v=island-lilistall1" in app
+    assert "shop.js?v=island-lilistall1" in app
+    assert "lili.js?v=island-lilistall1" in app
+    assert "market.js?v=island-lilistall1" in app
     js_blob = "\n".join(p.read_text(encoding="utf-8") for p in (ROOT / "server/static/island").rglob("*.js"))
     store_vs = set(re.findall(r"store\.js\?v=([^\s\"']+)", js_blob))
     modal_vs = set(re.findall(r"modal\.js\?v=([^\s\"']+)", js_blob))
-    assert store_vs == {"island-plazalili1"}, store_vs
-    assert modal_vs == {"island-plazalili1"}, modal_vs
-    assert 'from "../store.js?v=island-plazalili1"' in (ROOT / "server/static/island/scenes/atelier.js").read_text(encoding="utf-8")
-    assert 'from "../store.js?v=island-plazalili1"' in (ROOT / "server/static/island/scenes/writers.js").read_text(encoding="utf-8")
-    assert 'from "../store.js?v=island-plazalili1"' in (ROOT / "server/static/island/scenes/hall.js").read_text(encoding="utf-8")
+    assert store_vs == {"island-lilistall1"}, store_vs
+    assert modal_vs == {"island-lilistall1"}, modal_vs
+    assert 'from "../store.js?v=island-lilistall1"' in (ROOT / "server/static/island/scenes/atelier.js").read_text(encoding="utf-8")
+    assert 'from "../store.js?v=island-lilistall1"' in (ROOT / "server/static/island/scenes/writers.js").read_text(encoding="utf-8")
+    assert 'from "../store.js?v=island-lilistall1"' in (ROOT / "server/static/island/scenes/hall.js").read_text(encoding="utf-8")
     assert "island-wait2" in html
     assert 'id="island-boot-veil"' in html
     assert "正在进入" in html
@@ -1198,7 +1198,7 @@ def test_island_page_is_modular() -> None:
     assert "waitScenePics" in app
     assert "await waitScenePics" in app
     assert "enterGen" in app
-    assert 'from "./ui/modal.js?v=island-plazalili1"' in app
+    assert 'from "./ui/modal.js?v=island-lilistall1"' in app
     modal_src = (ROOT / "server/static/island/ui/modal.js").read_text(encoding="utf-8")
     assert "export function showFormSheet" in modal_src
     assert "export function showPickSheet" in modal_src
@@ -1419,6 +1419,8 @@ def test_island_page_is_modular() -> None:
     assert "scene-tap-frame.png" not in art_md
     assert "scenes/workshop.png" in art_md
     assert "scenes/shop.png" in art_md
+    assert "scenes/lili.png" in art_md
+    assert "摊车特写" in art_md
     assert "scenes/lighthouse.png" in art_md
     assert "scenes/notice.png" in art_md
     assert "杂货铺" in art_md and "潮汐公告" in art_md
@@ -1767,6 +1769,7 @@ def test_island_page_is_modular() -> None:
     assert (ROOT / "server/static/island/assets/scenes/shore.png").exists()
     assert (ROOT / "server/static/island/assets/scenes/bar.png").exists()
     assert (ROOT / "server/static/island/assets/scenes/plaza.png").exists()
+    assert (ROOT / "server/static/island/assets/scenes/lili.png").exists()
     assert (ROOT / "server/static/island/assets/scenes/theater.png").exists()
     assert (ROOT / "server/static/island/assets/scenes/writers.png").exists()
     assert (ROOT / "server/static/island/assets/scenes/atelier.png").exists()
@@ -1776,6 +1779,8 @@ def test_island_page_is_modular() -> None:
     assert 'atelier: { label: "衣泊坊", size: "941×1672" }' in art_js
     assert 'hall: { label: "剧场看台", size: "941×1672" }' in art_js
     assert 'file: "theater"' not in art_js
+    assert 'lili: { label: "栗栗流动摊", size: "1086×1448" }' in art_js
+    assert 'file: "plaza"' not in art_js
     art_md = (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
     assert "暂用院景" not in art_md
     try:
@@ -1783,6 +1788,8 @@ def test_island_page_is_modular() -> None:
         for place in ("writers", "atelier", "hall"):
             pic = ROOT / f"server/static/island/assets/scenes/{place}.png"
             assert Image.open(pic).size == (941, 1672), place
+        lili_pic = ROOT / "server/static/island/assets/scenes/lili.png"
+        assert Image.open(lili_pic).size == (1086, 1448)
     except ImportError:
         pass
     assert "海边" in (ROOT / "server/static/island/map.js").read_text(encoding="utf-8")
@@ -1790,6 +1797,8 @@ def test_island_page_is_modular() -> None:
     assert "剧场" in (ROOT / "server/static/island/map.js").read_text(encoding="utf-8")
     assert "is-theater" in css
     assert "island-plaza-board" in css
+    assert ".island-lili .island-shop-board" in css
+    assert "1086 / 1448" in css
     assert "941 / 1672" in css
     assert ".island-shop:not(.is-peek) .island-scene-tap" in css
     assert "店景不换裁切" in css

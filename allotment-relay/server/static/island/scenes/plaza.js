@@ -1,4 +1,4 @@
-import { layoutCoverBoard, sceneArt } from "../ui/art.js?v=island-plazalili1";
+import { layoutCoverBoard, sceneArt } from "../ui/art.js?v=island-lilistall1";
 
 /** 热区按广场图 941×1672：左杂货、右工坊、后灯塔、前栗栗摊、右下公告栏。 */
 const HOTS = [
