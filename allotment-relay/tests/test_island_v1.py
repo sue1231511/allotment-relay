@@ -935,14 +935,14 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-market1" in html
-    assert html.count("island.css?v=island-market1") == 1
-    assert html.count("app.js?v=island-wait1") == 1
+    assert "island-market1" in app
+    assert html.count("island.css?v=island-wait2") == 1
+    assert html.count("app.js?v=island-wait2") == 1
     assert "lighthouse.js?v=island-stay1" in app
     assert "hall.js?v=island-star1" in app
     assert "shop.js?v=island-market1" in app
     assert "market.js?v=island-market1" in app
-    assert "island-wait1" in html
+    assert "island-wait2" in html
     assert 'id="island-boot-veil"' in html
     assert "正在进入" in html
     assert "fonts.googleapis.com" not in html
@@ -1017,6 +1017,7 @@ def test_island_page_is_modular() -> None:
     assert "is-playing" in css
     assert "island-boot-veil" in css
     assert "island-boot-spin" in css
+    assert "is-entering" in css
     assert "正在进入" in app
     assert "waitScenePics" in app
     assert "await waitScenePics" in app
@@ -1071,7 +1072,13 @@ def test_island_page_is_modular() -> None:
     assert "island-enter" in boot
     assert "island-map.jpg" in boot
     assert "VEIL_MS" in boot
+    assert "PIC_MS" in boot
+    assert "25000" in boot
+    assert "30000" in boot
     assert "8000" in boot
+    assert "picHasPixels" in boot
+    assert "naturalWidth" in boot
+    assert "is-entering" in boot
     assert "showVeil" in boot
     assert "waitPics" in boot
     assert "waitOnePic" in boot

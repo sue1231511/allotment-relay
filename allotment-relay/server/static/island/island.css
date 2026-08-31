@@ -1741,6 +1741,12 @@ body.island-app.is-bag-open .island-float-chip {
   to { transform: rotate(360deg); }
 }
 
+/* 转圈时先藏底图，避免渐进 JPEG/PNG 露出半截。 */
+.island-app.is-entering .island-slot-pic,
+.island-app.is-entering .island-vn-sprite {
+  opacity: 0;
+}
+
 /* 灯塔：橙光那种立绘对话。 */
 .island-vn {
   position: absolute;

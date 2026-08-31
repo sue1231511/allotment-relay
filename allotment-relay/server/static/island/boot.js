@@ -90,7 +90,8 @@
   }
 
   var MAP_PICS = ["/static/island/assets/scenes/island-map.jpg"];
-  var VEIL_MS = 10000;
+  var VEIL_MS = 30000;
+  var PIC_MS = 25000;
   var veilTimer = 0;
 
   function showVeil(text) {
@@ -100,6 +101,7 @@
     if (line) line.textContent = text || "正在进入…";
     el.hidden = false;
     el.removeAttribute("hidden");
+    document.body.classList.add("is-entering");
     clearTimeout(veilTimer);
     veilTimer = setTimeout(hideVeil, VEIL_MS);
   }
@@ -109,6 +111,7 @@
     veilTimer = 0;
     var el = document.getElementById("island-boot-veil");
     if (el) el.hidden = true;
+    document.body.classList.remove("is-entering");
   }
 
   function withTimeout(promise, ms, message) {
@@ -158,41 +161,6 @@
     );
   }
 
-  function waitOnePic(img, timeoutMs) {
-    return new Promise(function (resolve) {
-      var done = false;
-      var finish = function () {
-        if (done) return;
-        done = true;
-        resolve();
-      };
-      var timer = setTimeout(finish, timeoutMs);
-      function decoded() {
-        clearTimeout(timer);
-        finish();
-      }
-      function afterLoad() {
-        img.removeEventListener("load", afterLoad);
-        img.removeEventListener("error", afterLoad);
-        if (typeof img.decode === "function") {
-          img.decode().then(decoded, decoded);
-        } else {
-          decoded();
-        }
-      }
-      if (img.complete) {
-        if (img.naturalWidth && typeof img.decode === "function") {
-          img.decode().then(decoded, decoded);
-        } else {
-          decoded();
-        }
-        return;
-      }
-      img.addEventListener("load", afterLoad);
-      img.addEventListener("error", afterLoad);
-    });
-  }
-
   function afterPaint() {
     return new Promise(function (resolve) {
       if (typeof requestAnimationFrame !== "function") {
@@ -205,9 +173,77 @@
     });
   }
 
+  function picHasPixels(img) {
+    return !!(img && img.complete && img.naturalWidth > 0 && img.naturalHeight > 0);
+  }
+
+  function waitOnePic(img, timeoutMs) {
+    return new Promise(function (resolve) {
+      var settled = false;
+      function finish() {
+        if (settled) return;
+        settled = true;
+        resolve();
+      }
+      var timer = setTimeout(finish, timeoutMs);
+
+      function painted() {
+        if (settled) return;
+        clearTimeout(timer);
+        afterPaint().then(finish);
+      }
+
+      function decodeThen() {
+        if (settled) return;
+        if (picHasPixels(img) && typeof img.decode === "function") {
+          img.decode().then(painted, painted);
+        } else {
+          painted();
+        }
+      }
+
+      function onDomLoad() {
+        img.removeEventListener("load", onDomLoad);
+        img.removeEventListener("error", onDomErr);
+        decodeThen();
+      }
+      function onDomErr() {
+        img.removeEventListener("load", onDomLoad);
+        img.removeEventListener("error", onDomErr);
+        painted();
+      }
+
+      img.addEventListener("load", onDomLoad);
+      img.addEventListener("error", onDomErr);
+
+      if (picHasPixels(img)) {
+        decodeThen();
+        return;
+      }
+
+      var src = img.currentSrc || img.src;
+      if (!src) {
+        painted();
+        return;
+      }
+
+      var probe = new Image();
+      probe.onload = function () {
+        if (settled) return;
+        if (picHasPixels(img)) {
+          decodeThen();
+          return;
+        }
+        img.addEventListener("load", onDomLoad);
+      };
+      probe.onerror = onDomErr;
+      probe.src = src;
+    });
+  }
+
   function waitPics(root, timeoutMs) {
     root = root || document.getElementById("island-scene");
-    timeoutMs = timeoutMs || 8000;
+    timeoutMs = timeoutMs || PIC_MS;
     if (!root) return Promise.resolve();
     var imgs = root.querySelectorAll(".island-slot-pic, .island-vn-sprite");
     var ready = imgs.length
@@ -217,7 +253,14 @@
           })
         )
       : Promise.resolve();
-    return ready.then(afterPaint);
+    return ready.then(afterPaint).then(function () {
+      try {
+        window.dispatchEvent(new Event("resize"));
+      } catch (err) {
+        /* 旧浏览器 */
+      }
+      return afterPaint();
+    });
   }
 
   function setBusy(on, mode) {
