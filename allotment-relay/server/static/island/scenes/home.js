@@ -10,10 +10,10 @@ import {
   yardMeta,
   yardPlots,
   YARDS,
-} from "../store.js?v=island-plazaclinic1";
-import { sceneArt } from "../ui/art.js?v=island-plazaclinic1";
-import { cropArt } from "../ui/crops.js?v=island-plazaclinic1";
-import { esc } from "../ui/modal.js?v=island-plazaclinic1";
+} from "../store.js?v=island-yardspeek1";
+import { layoutCoverBoard, sceneArt } from "../ui/art.js?v=island-yardspeek1";
+import { cropArt } from "../ui/crops.js?v=island-yardspeek1";
+import { esc } from "../ui/modal.js?v=island-yardspeek1";
 
 export function renderHome(root, { onOpenLand }) {
   root.innerHTML = `
@@ -31,32 +31,66 @@ export function renderHome(root, { onOpenLand }) {
 }
 
 export function renderYards(root, { onTapPlot, onTapGrass, onHarvestAll, onSwitchYard }) {
-  const ripe = ripeYard().length;
-  root.innerHTML = `
-    <div class="island-yards">
-      ${sceneArt("yards")}
-      <div class="island-yard-tabs" role="tablist" aria-label="地块类型">
-        ${yardTabs()}
+  const peek = !state.yardsShelf;
+  let wrap = root.querySelector(".island-yards");
+  if (!wrap || !wrap.querySelector(".island-yards-board")) {
+    const ripe = ripeYard().length;
+    root.innerHTML = `
+      <div class="island-yards${peek ? " is-peek" : ""}">
+        <div class="island-yards-board">
+          ${sceneArt("yards")}
+        </div>
+        <button type="button" class="island-scene-tap">点一下看地</button>
+        <div class="island-yard-tabs" role="tablist" aria-label="地块类型">
+          ${yardTabs()}
+        </div>
+        <p class="island-grow-status" id="island-grow-status">${esc(growStatusLine())}</p>
+        <div class="island-plot-grid" id="island-plot-grid">${plotGridMarkup()}</div>
+        <div class="island-plot-pager" id="island-plot-pager">${pagerMarkup()}</div>
+        <button type="button" class="island-harvest-fab" id="island-harvest-all" data-act="harvest" ${ripe ? "" : "hidden"}>${harvestLabel(ripe)}</button>
       </div>
-      <p class="island-grow-status" id="island-grow-status">${esc(growStatusLine())}</p>
-      <div class="island-plot-grid" id="island-plot-grid">${plotGridMarkup()}</div>
-      <div class="island-plot-pager" id="island-plot-pager">${pagerMarkup()}</div>
-      <button type="button" class="island-harvest-fab" id="island-harvest-all" data-act="harvest" ${ripe ? "" : "hidden"}>${harvestLabel(ripe)}</button>
-    </div>
-  `;
+    `;
+    wrap = root.querySelector(".island-yards");
+    layoutCoverBoard(wrap, ".island-yards-board", 941, 1672);
+    bindYardsPeek(wrap);
+    wrap.querySelectorAll("[data-yard]").forEach((btn) => {
+      btn.addEventListener("click", () => onSwitchYard(btn.getAttribute("data-yard")));
+    });
+    const harvest = wrap.querySelector("[data-act=harvest]");
+    if (harvest) harvest.addEventListener("click", onHarvestAll);
+    bindGrid(onTapPlot, onTapGrass);
+    bindPager();
+    bindSwipe();
+  } else {
+    wrap.classList.toggle("is-peek", peek);
+    syncHomeChrome();
+  }
   const bar = document.getElementById("island-actionbar");
   if (bar) {
     bar.innerHTML = "";
     bar.hidden = true;
   }
-  root.querySelectorAll("[data-yard]").forEach((btn) => {
-    btn.addEventListener("click", () => onSwitchYard(btn.getAttribute("data-yard")));
-  });
-  const harvest = root.querySelector("[data-act=harvest]");
-  if (harvest) harvest.addEventListener("click", onHarvestAll);
-  bindGrid(onTapPlot, onTapGrass);
-  bindPager();
-  bindSwipe();
+}
+
+function bindYardsPeek(wrap) {
+  const open = () => {
+    if (!wrap.classList.contains("is-peek")) return;
+    state.yardsShelf = true;
+    wrap.classList.remove("is-peek");
+  };
+  const board = wrap.querySelector(".island-yards-board");
+  if (board && !board._bound) {
+    board._bound = true;
+    board.addEventListener("click", open);
+  }
+  const tap = wrap.querySelector(".island-scene-tap");
+  if (tap && !tap._bound) {
+    tap._bound = true;
+    tap.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      open();
+    });
+  }
 }
 
 export function syncHomeChrome() {

@@ -572,7 +572,7 @@ body.island-app.is-playing.is-yards .island-actionbar {
   z-index: 2;
 }
 
-/* 份地：铺海边草地底图，不再铺一块纯绿。 */
+/* 份地：铺海边草地底图，不再铺一块纯绿。先进份地景，点一下看地才出格子。 */
 .island-yards {
   position: absolute;
   inset: 0;
@@ -582,16 +582,51 @@ body.island-app.is-playing.is-yards .island-actionbar {
   padding-top: 44px;
   padding-bottom: env(safe-area-inset-bottom);
   box-sizing: border-box;
+  overflow: hidden;
 }
 
-.island-yards .island-slot {
+.island-yards-board {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  line-height: 0;
+  cursor: pointer;
+}
+
+.island-yards-board .island-slot {
+  position: absolute;
+  inset: 0;
   z-index: 0;
   background: #4aa3d8;
 }
 
-.island-yards > :not(.island-slot) {
+.island-yards-board .island-slot-pic {
+  object-fit: fill;
+}
+
+.island-yards > :not(.island-yards-board) {
   position: relative;
   z-index: 1;
+}
+
+.island-yards.is-peek .island-yard-tabs,
+.island-yards.is-peek .island-grow-status,
+.island-yards.is-peek .island-plot-grid,
+.island-yards.is-peek .island-plot-pager,
+.island-yards.is-peek .island-harvest-fab {
+  display: none;
+}
+
+.island-yards.is-peek .island-scene-tap {
+  z-index: 3;
+}
+
+.island-yards:not(.is-peek) .island-scene-tap {
+  display: none;
+}
+
+.island-yards:not(.is-peek) .island-yards-board {
+  cursor: default;
 }
 
 .island-yard-tabs {

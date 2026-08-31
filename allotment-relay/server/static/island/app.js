@@ -1,4 +1,4 @@
-import { api, loadKey } from "./api.js?v=island-plazaclinic1";
+import { api, loadKey } from "./api.js?v=island-yardspeek1";
 import {
   applySnapshot,
   duesBlocked,
@@ -10,38 +10,38 @@ import {
   tickGrow,
   tickQuarry,
   tickWorkshop,
-} from "./store.js?v=island-plazaclinic1";
-import { renderHud } from "./hud.js?v=island-plazaclinic1";
-import { renderMap } from "./map.js?v=island-plazaclinic1";
-import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=island-plazaclinic1";
-import { renderShore, renderShoreYard } from "./scenes/shore.js?v=island-plazaclinic1";
-import { renderPlaza } from "./scenes/plaza.js?v=island-plazaclinic1";
-import { renderPlace } from "./scenes/place.js?v=island-plazaclinic1";
-import { renderShop } from "./scenes/shop.js?v=island-plazaclinic1";
-import { renderLili } from "./scenes/lili.js?v=island-plazaclinic1";
-import { renderClinic } from "./scenes/clinic.js?v=island-plazaclinic1";
-import { renderWorkshop } from "./scenes/workshop.js?v=island-plazaclinic1";
-import { renderQuarry } from "./scenes/quarry.js?v=island-plazaclinic1";
-import { renderBar } from "./scenes/bar.js?v=island-plazaclinic1";
-import { renderTheater } from "./scenes/theater.js?v=island-plazaclinic1";
-import { renderWriters } from "./scenes/writers.js?v=island-plazaclinic1";
-import { renderAtelier } from "./scenes/atelier.js?v=island-plazaclinic1";
-import { renderHall } from "./scenes/hall.js?v=island-plazaclinic1";
-import { renderEatery } from "./scenes/eatery.js?v=island-plazaclinic1";
-import { renderMarket } from "./scenes/market.js?v=island-plazaclinic1";
-import { renderTing } from "./scenes/ting.js?v=island-plazaclinic1";
-import { renderHui } from "./scenes/hui.js?v=island-plazaclinic1";
-import { renderLianli } from "./scenes/lianli.js?v=island-plazaclinic1";
+} from "./store.js?v=island-yardspeek1";
+import { renderHud } from "./hud.js?v=island-yardspeek1";
+import { renderMap } from "./map.js?v=island-yardspeek1";
+import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=island-yardspeek1";
+import { renderShore, renderShoreYard } from "./scenes/shore.js?v=island-yardspeek1";
+import { renderPlaza } from "./scenes/plaza.js?v=island-yardspeek1";
+import { renderPlace } from "./scenes/place.js?v=island-yardspeek1";
+import { renderShop } from "./scenes/shop.js?v=island-yardspeek1";
+import { renderLili } from "./scenes/lili.js?v=island-yardspeek1";
+import { renderClinic } from "./scenes/clinic.js?v=island-yardspeek1";
+import { renderWorkshop } from "./scenes/workshop.js?v=island-yardspeek1";
+import { renderQuarry } from "./scenes/quarry.js?v=island-yardspeek1";
+import { renderBar } from "./scenes/bar.js?v=island-yardspeek1";
+import { renderTheater } from "./scenes/theater.js?v=island-yardspeek1";
+import { renderWriters } from "./scenes/writers.js?v=island-yardspeek1";
+import { renderAtelier } from "./scenes/atelier.js?v=island-yardspeek1";
+import { renderHall } from "./scenes/hall.js?v=island-yardspeek1";
+import { renderEatery } from "./scenes/eatery.js?v=island-yardspeek1";
+import { renderMarket } from "./scenes/market.js?v=island-yardspeek1";
+import { renderTing } from "./scenes/ting.js?v=island-yardspeek1";
+import { renderHui } from "./scenes/hui.js?v=island-yardspeek1";
+import { renderLianli } from "./scenes/lianli.js?v=island-yardspeek1";
 let lighthouseMod = null;
 async function lighthouseScene() {
-  if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-plazaclinic1");
+  if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-yardspeek1");
   return lighthouseMod;
 }
-import { renderBag } from "./ui/bag.js?v=island-plazaclinic1";
-import { setBackChip, setBagChip } from "./ui/back-map.js?v=island-plazaclinic1";
-import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=island-plazaclinic1";
-import { popOut } from "./ui/pop.js?v=island-plazaclinic1";
-import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showPitchSheet, showVendSheet, toast } from "./ui/modal.js?v=island-plazaclinic1";
+import { renderBag } from "./ui/bag.js?v=island-yardspeek1";
+import { setBackChip, setBagChip } from "./ui/back-map.js?v=island-yardspeek1";
+import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=island-yardspeek1";
+import { popOut } from "./ui/pop.js?v=island-yardspeek1";
+import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showPitchSheet, showVendSheet, toast } from "./ui/modal.js?v=island-yardspeek1";
 
 const sceneEl = () => document.getElementById("island-scene");
 const sheetEl = () => document.getElementById("island-sheet");
@@ -148,6 +148,7 @@ async function enterScene(name, opts) {
     if (name === "yards") {
       stopWorkshopTick();
       stopQuarryTick();
+      if (!quiet) state.yardsShelf = false;
       renderYards(root, {
         onTapPlot: tapPlot,
         onTapGrass: tapGrass,

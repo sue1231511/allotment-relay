@@ -1130,23 +1130,23 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-plazaclinic1" in app
-    assert html.count("island.css?v=island-plazaclinic1") == 1
-    assert html.count("app.js?v=island-plazaclinic1") == 1
-    assert "lighthouse.js?v=island-plazaclinic1" in app
-    assert "hall.js?v=island-plazaclinic1" in app
-    assert "shop.js?v=island-plazaclinic1" in app
-    assert "lili.js?v=island-plazaclinic1" in app
-    assert "clinic.js?v=island-plazaclinic1" in app
-    assert "market.js?v=island-plazaclinic1" in app
+    assert "island-yardspeek1" in app
+    assert html.count("island.css?v=island-yardspeek1") == 1
+    assert html.count("app.js?v=island-yardspeek1") == 1
+    assert "lighthouse.js?v=island-yardspeek1" in app
+    assert "hall.js?v=island-yardspeek1" in app
+    assert "shop.js?v=island-yardspeek1" in app
+    assert "lili.js?v=island-yardspeek1" in app
+    assert "clinic.js?v=island-yardspeek1" in app
+    assert "market.js?v=island-yardspeek1" in app
     js_blob = "\n".join(p.read_text(encoding="utf-8") for p in (ROOT / "server/static/island").rglob("*.js"))
     store_vs = set(re.findall(r"store\.js\?v=([^\s\"']+)", js_blob))
     modal_vs = set(re.findall(r"modal\.js\?v=([^\s\"']+)", js_blob))
-    assert store_vs == {"island-plazaclinic1"}, store_vs
-    assert modal_vs == {"island-plazaclinic1"}, modal_vs
-    assert 'from "../store.js?v=island-plazaclinic1"' in (ROOT / "server/static/island/scenes/atelier.js").read_text(encoding="utf-8")
-    assert 'from "../store.js?v=island-plazaclinic1"' in (ROOT / "server/static/island/scenes/writers.js").read_text(encoding="utf-8")
-    assert 'from "../store.js?v=island-plazaclinic1"' in (ROOT / "server/static/island/scenes/hall.js").read_text(encoding="utf-8")
+    assert store_vs == {"island-yardspeek1"}, store_vs
+    assert modal_vs == {"island-yardspeek1"}, modal_vs
+    assert 'from "../store.js?v=island-yardspeek1"' in (ROOT / "server/static/island/scenes/atelier.js").read_text(encoding="utf-8")
+    assert 'from "../store.js?v=island-yardspeek1"' in (ROOT / "server/static/island/scenes/writers.js").read_text(encoding="utf-8")
+    assert 'from "../store.js?v=island-yardspeek1"' in (ROOT / "server/static/island/scenes/hall.js").read_text(encoding="utf-8")
     assert "island-wait2" in html
     assert 'id="island-boot-veil"' in html
     assert "正在进入" in html
@@ -1216,6 +1216,8 @@ def test_island_page_is_modular() -> None:
     assert "island-plot-tile" in css
     assert "island-plot-bed" in css
     assert "island-yards" in css
+    assert "island-yards-board" in css
+    assert ".island-yards.is-peek" in css
     assert "island-slot" in css
     assert "island-hot" in css
     assert "island-map-board" in css
@@ -1227,7 +1229,7 @@ def test_island_page_is_modular() -> None:
     assert "waitScenePics" in app
     assert "await waitScenePics" in app
     assert "enterGen" in app
-    assert 'from "./ui/modal.js?v=island-plazaclinic1"' in app
+    assert 'from "./ui/modal.js?v=island-yardspeek1"' in app
     modal_src = (ROOT / "server/static/island/ui/modal.js").read_text(encoding="utf-8")
     assert "export function showFormSheet" in modal_src
     assert "export function showPickSheet" in modal_src
@@ -1292,6 +1294,7 @@ def test_island_page_is_modular() -> None:
     assert "thirstyYard" in (ROOT / "server/static/island/store.js").read_text(encoding="utf-8")
     assert "plotToken" in app
     assert "renderYards" in app
+    assert "yardsShelf" in app
     assert "enterScene(\"yards\"" in app
     assert 'name === "home"' in app
     assert "backChipMarkup" not in (ROOT / "server/static/island/scenes/home.js").read_text(encoding="utf-8")
@@ -1483,6 +1486,10 @@ def test_island_page_is_modular() -> None:
     assert "island-plot-bed" in home_js
     assert "island-garden-hot" in home_js
     assert "renderYards" in home_js
+    assert "点一下看地" in home_js
+    assert "is-peek" in home_js
+    assert "island-yards-board" in home_js
+    assert "yardsShelf" in home_js
     assert "grass.png" in home_js
     assert "plot.png" in home_js
     assert "PAGE_SIZE = 9" in home_js
@@ -1490,6 +1497,7 @@ def test_island_page_is_modular() -> None:
     assert "onTapGrass" in home_js
     assert "n % PAGE_SIZE === 0" in home_js
     store_js = (ROOT / "server/static/island/store.js").read_text(encoding="utf-8")
+    assert "yardsShelf" in store_js
     assert "点草地开垦第一座" in store_js
     assert "/api/v1/farm/expand" in api
     assert "api.expand" in app

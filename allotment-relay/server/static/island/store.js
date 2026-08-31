@@ -32,6 +32,7 @@ export const state = {
   tab: "map",
   yard: "home",
   yardPage: 0,
+  yardsShelf: false,
   selectedSlot: null,
   plantOpen: false,
   plantKey: "kale",
