@@ -644,6 +644,29 @@ async def _test_island_v1_api() -> None:
     assert gallery.status_code == 200, gallery.text
     assert "给妈妈点的" in gallery.json()["event"]["narrative"]
 
+    desk0 = client.get("/api/v1/shaonian", headers=_auth(key))
+    assert desk0.status_code == 200, desk0.text
+    desk = desk0.json()["shaonian"]
+    assert desk["speaker"] == "韶年", desk
+    assert desk["name"] == "韶年望潮人", desk
+    assert any(row["id"] == "fortune" for row in desk["choices"]), desk
+    assert any(row["id"] == "transfer" for row in desk["choices"]), desk
+    seen = client.post(
+        "/api/v1/shaonian/act",
+        headers=_auth(key, {"Idempotency-Key": "sn-visit"}),
+        json={"kind": "visit", "target": ""},
+    )
+    assert seen.status_code == 200, seen.text
+    assert seen.json()["event"]["kind"] == "shaonian"
+    assert "韶年" in seen.json()["event"]["narrative"]
+    roll = client.post(
+        "/api/v1/shaonian/act",
+        headers=_auth(key, {"Idempotency-Key": "sn-fortune"}),
+        json={"kind": "fortune", "target": ""},
+    )
+    assert roll.status_code == 200, roll.text
+    assert "卦" in roll.json()["event"]["narrative"] or "韶年" in roll.json()["event"]["narrative"]
+
     atelier0 = client.get("/api/v1/atelier", headers=_auth(key))
     assert atelier0.status_code == 200, atelier0.text
     atelier = atelier0.json()["atelier"]
@@ -1216,7 +1239,7 @@ def test_island_page_is_modular() -> None:
     assert "/static/island/app.js" in html
     assert "island-mapbgm1" in app
     assert html.count("island.css?v=island-bgmchip3") == 1
-    assert html.count("app.js?v=island-bgmchip1") == 1
+    assert html.count("app.js?v=island-shaonian1") == 1
     assert "bgm.js?v=island-burgertown1" in app
     assert "lighthouse.js?v=island-mapbgm1" in app
     assert "hall.js?v=island-mapbgm1" in app
@@ -1728,6 +1751,37 @@ def test_island_page_is_modular() -> None:
     assert "clinicMeet" in app
     assert "meetClinic" in app
     assert "speakClinic" in app
+    assert "/api/v1/shaonian" in api
+    assert "api.shaonianAct" in app
+    assert "keepShaonian" in app
+    assert "renderShaonian" in app
+    shaonian_js = (ROOT / "server/static/island/scenes/shaonian.js").read_text(encoding="utf-8")
+    assert "island-shaonian" in shaonian_js
+    assert "island-vn" in shaonian_js
+    assert "island-vn-stand" in shaonian_js
+    assert "is-half" in shaonian_js
+    assert "sprites/shaonian.png" in shaonian_js
+    assert "点一下见韶年" in shaonian_js
+    assert "去赶海" in shaonian_js
+    assert "ensureShopFrame" not in shaonian_js
+    assert "去上手页" not in shaonian_js
+    assert "shaonianMeet" in app
+    assert "meetShaonian" in app
+    assert "speakShaonian" in app
+    assert (ROOT / "server/static/island/assets/sprites/shaonian.png").exists()
+    try:
+        from PIL import Image
+        sprite = Image.open(ROOT / "server/static/island/assets/sprites/shaonian.png")
+        assert sprite.size == (941, 1672)
+        assert sprite.mode == "RGBA"
+        assert sprite.getpixel((0, 0))[3] == 0
+    except ImportError:
+        pass
+    tap_sn = app.split("function tapShaonian")[1].split("async function runShaonian")[0]
+    assert "speakShaonian" in tap_sn
+    assert "showHintSheet" not in tap_sn
+    assert "showActSheet" not in tap_sn
+    assert 'shaonian.js?v=island-shaonian1' in app
     assert "startIslandBgm" in app
     assert "paintBgmChip" in app
     assert "bindBgmChip" in app
@@ -1984,10 +2038,12 @@ def test_island_page_is_modular() -> None:
     assert "sprites/buxing.png" in art_md
     assert "sprites/xiaoju.png" in art_md
     assert "sprites/qiaoqiao.png" in art_md
+    assert "sprites/shaonian.png" in art_md
     assert "立绘对话" in art_md
     assert "点一下才出人不醒" in art_md
     assert "点一下才出人小橘" in art_md
     assert "点一下才出人桥桥" in art_md
+    assert "点一下才出人韶年" in art_md
     assert "全身的二分之一" in art_md
     assert ".island-vn-talk" in css
     assert ".island-vn-box" in css

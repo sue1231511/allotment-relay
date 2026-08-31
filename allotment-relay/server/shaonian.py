@@ -286,6 +286,115 @@ async def shaonian_ops(key_id: int, command: str) -> str:
     )
 
 
+async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str, Any]:
+    """给 /island 海边立绘对话用。数值仍走 shaonian_ops。"""
+    today = day_id()
+    row = await _ensure_row(conn, s["id"], today)
+    cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
+    got = await cur.fetchone()
+    tickets = int(got[0] if got else s.get("tickets") or 0)
+    owned_rows = await (await conn.execute(
+        "SELECT charm_key FROM shaonian_charms WHERE steward_id=? AND day=?",
+        (s["id"], today),
+    )).fetchall()
+    owned = {r[0] for r in owned_rows}
+    fortune = row.get("fortune") or ""
+    casts = int(row.get("fortune_casts") or 0)
+    fortune_cost = 0 if casts == 0 else FORTUNE_COST
+    transfer_done = bool(row.get("transfer_done"))
+    line = VISIT_LINE
+    if fortune:
+        meta = FORTUNES.get(fortune, {})
+        line += f"\n今日卦：{fortune_label(fortune)} — {meta.get('hint', '')}"
+    if fortune_cost and tickets < fortune_cost:
+        fortune_note = f"再算要 {fortune_cost} 票，票不够。"
+        fortune_can = False
+    else:
+        fortune_note = "今日首次免费。再算 10 票一次。" if casts == 0 else f"再算要 {fortune_cost} 票。"
+        fortune_can = True
+    if not fortune:
+        transfer_note = "先卜今日卦象。"
+        transfer_can = False
+    elif fortune not in BAD_FORTUNES:
+        transfer_note = f"当前{fortune_label(fortune)}不是凶卦，不用转。"
+        transfer_can = False
+    elif transfer_done:
+        transfer_note = "今日已试过转运。"
+        transfer_can = False
+    elif tickets < TRANSFER_COST:
+        transfer_note = f"转运要 {TRANSFER_COST} 票，票不够。"
+        transfer_can = False
+    else:
+        transfer_note = f"{TRANSFER_COST} 票，六成能把凶卦转吉。"
+        transfer_can = True
+    choices = [
+        {
+            "id": "fortune",
+            "kind": "fortune",
+            "target": "",
+            "name": "卜卦",
+            "note": fortune_note,
+            "detail": fortune_note,
+            "price": "免费" if fortune_cost == 0 else f"{fortune_cost}票",
+            "can": fortune_can,
+        },
+        {
+            "id": "transfer",
+            "kind": "transfer",
+            "target": "",
+            "name": "转运",
+            "note": transfer_note,
+            "detail": transfer_note,
+            "price": f"{TRANSFER_COST}票",
+            "can": transfer_can,
+        },
+        {
+            "id": "catalog",
+            "kind": "look",
+            "target": "catalog",
+            "name": "看卦书",
+            "note": "今日卦、符价、已买的符。",
+            "detail": "今日卦、符价、已买的符。",
+            "price": "",
+            "can": True,
+        },
+    ]
+    for key, meta in CHARMS.items():
+        bought = key in owned
+        price = int(meta["price"])
+        if bought:
+            note = "今日已经买过这张。"
+            can = False
+            tag = "已买"
+        elif tickets < price:
+            note = f"{price} 票，票不够。"
+            can = False
+            tag = f"{price}票"
+        else:
+            note = meta["hint"]
+            can = True
+            tag = f"{price}票"
+        choices.append({
+            "id": f"buy-{key}",
+            "kind": "buy",
+            "target": key,
+            "name": meta["name"],
+            "note": note,
+            "detail": note,
+            "price": tag,
+            "can": can,
+        })
+    return {
+        "name": "韶年望潮人",
+        "speaker": "韶年",
+        "title": "韶年望潮人",
+        "line": line,
+        "tickets": tickets,
+        "fortune": fortune,
+        "choices": choices,
+    }
+
+
 # ── 玩法挂钩 ──
 
 
