@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""岸税：口袋现票超额累进，周一换班自动划入潮汐基金。"""
+"""岸税：口袋+囤货款超额累进，周一换班自动划入潮汐基金。"""
 from __future__ import annotations
 
 import asyncio
@@ -45,6 +45,12 @@ async def _enroll(db, email: str, name: str) -> tuple[int, int]:
             "SELECT id FROM stewards WHERE key_id=?", (row["id"],)
         )).fetchone())[0]
     return row["id"], sid
+
+
+async def _clear_satchel(db, sid: int) -> None:
+    async with db.connect() as conn:
+        await conn.execute("DELETE FROM satchel WHERE steward_id=?", (sid,))
+        await conn.commit()
 
 
 async def _set_tickets(db, sid: int, tickets: int) -> None:
@@ -124,6 +130,7 @@ async def test_first_week_exempt() -> None:
     db.now = lambda: ENROLL_TUE
     try:
         kid, sid = await _enroll(db, "new@example.com", "新客")
+        await _clear_satchel(db, sid)
         await _set_tickets(db, sid, 5000)
         text = await mcp_dispatch.visit_bundle(kid, "潮生会 税")
         assert "免征到下周" in text or "新号" in text, text
@@ -143,6 +150,7 @@ async def test_weekly_levy_and_fund() -> None:
     real_now = db.now
     db.now = lambda: ENROLL_TUE
     kid, sid = await _enroll(db, "rich@example.com", "阔客")
+    await _clear_satchel(db, sid)
     await _set_tickets(db, sid, 4000)
     db.now = lambda: NEXT_MON
     try:
@@ -177,6 +185,7 @@ async def test_pay_arrears_unlocks_land() -> None:
     kid, sid = await _enroll(db, "owe@example.com", "欠客")
     db.now = lambda: NEXT_MON
     try:
+        await _clear_satchel(db, sid)
         await _set_tickets(db, sid, 4000)
         async with db.connect() as conn:
             await conn.execute(
@@ -259,7 +268,10 @@ async def test_gap_levy_on_whale() -> None:
         poor.append((kid, sid))
     await _set_tickets(db, whale_sid, 200000)
     await _set_tickets(db, mid_sid, 4000)
+    await _clear_satchel(db, whale_sid)
+    await _clear_satchel(db, mid_sid)
     for _kid, sid in poor:
+        await _clear_satchel(db, sid)
         await _set_tickets(db, sid, 2000)
     # 200000 + 4000 + 18*2000 = 240000 / 20 = 12000
     db.now = lambda: NEXT_MON
@@ -299,6 +311,8 @@ async def test_rust_offset_by_life_spend() -> None:
     db.now = lambda: ENROLL_TUE
     whale_kid, whale_sid = await _enroll(db, "rust@example.com", "锈客")
     mid_kid, mid_sid = await _enroll(db, "midr@example.com", "中锈")
+    await _clear_satchel(db, whale_sid)
+    await _clear_satchel(db, mid_sid)
     await _set_tickets(db, whale_sid, 200000)
     await _set_tickets(db, mid_sid, 4000)
     drink_ts = _cst_ts(2026, 8, 26)
@@ -339,6 +353,41 @@ async def test_rust_offset_by_life_spend() -> None:
         db.now = real_now
 
 
+async def test_hoarding_counts_toward_tax() -> None:
+    """口袋很穷但囤货很多，也要按应税家当交岸税。"""
+    tmp = Path(tempfile.mkdtemp(prefix="tax-hoard-"))
+    db = await _boot(tmp)
+    from server import mcp_dispatch, tax
+
+    real_now = db.now
+    db.now = lambda: ENROLL_TUE
+    kid, sid = await _enroll(db, "hoard@example.com", "囤客")
+    await _clear_satchel(db, sid)
+    await _set_tickets(db, sid, 1000)
+    async with db.connect() as conn:
+        await db.add_item(conn, sid, "crop_kale", 500, over_cap=True)
+        await conn.commit()
+    goods = 500 * 16
+    wealth = 1000 + goods
+    assert wealth > tax.TAX_FREE
+    db.now = lambda: NEXT_MON
+    try:
+        async with db.connect() as conn:
+            await conn.execute(
+                "DELETE FROM world_flags WHERE flag_key LIKE 'shore_tax:%'"
+            )
+            await conn.commit()
+        text = await mcp_dispatch.visit_bundle(kid, "潮生会 税")
+        due = tax.tax_due(wealth)
+        assert due > 0
+        tickets, arrears = await _row(db, sid)
+        assert arrears == 0, arrears
+        assert tickets == 1000 - due, (tickets, due, due)
+        assert "囤货估价" in text or str(goods) in text, text
+    finally:
+        db.now = real_now
+
+
 async def test_no_tax_ops() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="tax-noops-"))
     db = await _boot(tmp)
@@ -363,6 +412,7 @@ def test_tax() -> None:
     asyncio.run(test_partial_pay_and_help())
     asyncio.run(test_gap_levy_on_whale())
     asyncio.run(test_rust_offset_by_life_spend())
+    asyncio.run(test_hoarding_counts_toward_tax())
     asyncio.run(test_no_tax_ops())
 
 
