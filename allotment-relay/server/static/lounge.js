@@ -207,6 +207,21 @@ function renderMessages(messages) {
 function boardItemHtml(item) {
   const mine = isMine(item);
   const kindClass = item.kind === 'feedback' ? 'feedback' : 'wish';
+  const replies = Array.isArray(item.replies) ? item.replies : [];
+  const replyHtml = replies.map((r) => {
+    const rMine = isMine(r);
+    const mod = r.is_mod ? '<span class="lounge-board-mod">管理</span>' : '';
+    return `
+      <div class="lounge-board-reply${rMine ? ' mine' : ''}${r.is_mod ? ' is-mod' : ''}">
+        <div class="lounge-board-reply-head">
+          <span class="lounge-board-who">${rMine ? '我' : esc(r.who)}</span>
+          ${mod}
+          <span class="lounge-board-time">${esc(fmtClock(r.created_at))}</span>
+        </div>
+        <div class="lounge-board-reply-text">${esc(r.body)}</div>
+      </div>
+    `;
+  }).join('');
   return `
     <article class="lounge-board-item ${kindClass}${mine ? ' mine' : ''}" data-board-id="${item.id}">
       <div class="lounge-board-item-head">
@@ -215,6 +230,25 @@ function boardItemHtml(item) {
         <span class="lounge-board-time">${esc(fmtClock(item.created_at))}</span>
       </div>
       <div class="lounge-board-text">${esc(item.body)}</div>
+      <div class="lounge-board-replies" data-board-replies="${item.id}">
+        ${replyHtml || ''}
+      </div>
+      <div class="lounge-board-reply-actions">
+        <button type="button" class="lounge-board-reply-btn" data-board-reply="${item.id}">回复</button>
+      </div>
+      <form class="lounge-board-reply-form hidden" data-board-reply-form="${item.id}">
+        <textarea
+          rows="2"
+          maxlength="500"
+          placeholder="回在墙上，全服可见…"
+          autocomplete="off"
+          required
+        ></textarea>
+        <div class="lounge-board-reply-form-actions">
+          <button type="button" class="lounge-board-reply-cancel" data-board-reply-cancel="${item.id}">取消</button>
+          <button type="submit" class="lounge-board-send">发出</button>
+        </div>
+      </form>
     </article>
   `;
 }
@@ -250,12 +284,14 @@ function upsertBoardItems(items, container) {
     const node = wrap.firstElementChild;
     if (existing) {
       existing.replaceWith(node);
+      bindBoardReplyUi(node);
       continue;
     }
     const rows = [...container.querySelectorAll('.lounge-board-item')];
     const next = rows.find((r) => Number(r.dataset.boardId) > item.id);
     if (next) container.insertBefore(node, next);
     else container.appendChild(node);
+    bindBoardReplyUi(node);
     appended = true;
   }
   if (appended) container.scrollTop = container.scrollHeight;
@@ -299,6 +335,84 @@ async function postBoardItem(apiKey, kind, body) {
   return data;
 }
 
+async function postBoardReply(apiKey, boardId, body) {
+  const res = await fetch('/api/lounge/board/reply', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      api_key: apiKey.trim(),
+      board_id: Number(boardId),
+      body: body.trim(),
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || '回复失败');
+  return data;
+}
+
+function showBoardReplyForm(boardId) {
+  const form = document.querySelector(`[data-board-reply-form="${boardId}"]`);
+  if (!form) return;
+  form.classList.remove('hidden');
+  const ta = form.querySelector('textarea');
+  if (ta) {
+    ta.value = '';
+    window.setTimeout(() => ta.focus(), 40);
+  }
+}
+
+function hideBoardReplyForm(boardId) {
+  const form = document.querySelector(`[data-board-reply-form="${boardId}"]`);
+  if (!form) return;
+  form.classList.add('hidden');
+}
+
+async function submitBoardReplyForm(e) {
+  e.preventDefault();
+  const form = e.currentTarget;
+  const boardId = form.dataset.boardReplyForm;
+  const body = form.querySelector('textarea')?.value.trim();
+  if (!body || !boardId) return;
+  const apiKey = loadSavedKey();
+  if (!apiKey.startsWith('ar_sk_')) {
+    toast('请先在上手页贴凭证后再回复');
+    bindLinkEl?.classList.remove('hidden');
+    return;
+  }
+  const btn = form.querySelector('.lounge-board-send');
+  if (btn) btn.disabled = true;
+  try {
+    const data = await postBoardReply(apiKey, boardId, body);
+    if (data.item) {
+      upsertBoardItems([data.item], document.getElementById('lounge-board-sheet-feed'));
+    }
+    toast('已回在墙上');
+  } catch (err) {
+    toast(err.message);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+function bindBoardReplyUi(root) {
+  const scope = root || document;
+  scope.querySelectorAll('[data-board-reply]').forEach((btn) => {
+    if (btn._bound) return;
+    btn._bound = true;
+    btn.addEventListener('click', () => showBoardReplyForm(btn.dataset.boardReply));
+  });
+  scope.querySelectorAll('[data-board-reply-cancel]').forEach((btn) => {
+    if (btn._bound) return;
+    btn._bound = true;
+    btn.addEventListener('click', () => hideBoardReplyForm(btn.dataset.boardReplyCancel));
+  });
+  scope.querySelectorAll('[data-board-reply-form]').forEach((form) => {
+    if (form._bound) return;
+    form._bound = true;
+    form.addEventListener('submit', submitBoardReplyForm);
+  });
+}
+
 function setBoardFilter(next) {
   boardFilter = next || 'all';
   document.querySelectorAll('[data-board-sheet-filter]').forEach((btn) => {
@@ -320,7 +434,7 @@ function ensureBoardSheet() {
         <button type="button" class="lounge-sheet-close" data-close-dialog>关闭</button>
       </header>
       <div class="lounge-sheet-body">
-        <p class="lounge-sheet-note">全服可见，和闲聊分开，不会刷走。</p>
+        <p class="lounge-sheet-note">全服可见，和闲聊分开，不会刷走。每条底下点「回复」，回在墙上大家都能看见。</p>
         <div class="lounge-board-tabs" role="tablist" aria-label="筛选">
           <button type="button" class="lounge-board-tab is-active" data-board-sheet-filter="all">全部</button>
           <button type="button" class="lounge-board-tab" data-board-sheet-filter="wish">许愿</button>

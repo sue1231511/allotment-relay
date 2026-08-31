@@ -408,6 +408,12 @@ class LoungeBoardRequest(BaseModel):
     body: str
 
 
+class LoungeBoardReplyRequest(BaseModel):
+    api_key: str
+    board_id: int
+    body: str
+
+
 class WallThreadRequest(BaseModel):
     api_key: str
     board: str
@@ -749,6 +755,17 @@ async def lounge_board_post(body: LoungeBoardRequest):
     from . import lounge
     try:
         return await lounge.human_post_board(body.api_key.strip(), body.kind, body.body)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/lounge/board/reply")
+async def lounge_board_reply(body: LoungeBoardReplyRequest):
+    from . import lounge
+    try:
+        return await lounge.human_post_board_reply(
+            body.api_key.strip(), body.board_id, body.body
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

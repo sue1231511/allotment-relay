@@ -34,6 +34,8 @@ LOUNGE_BOARD_MAX_LEN = 500
 LOUNGE_BOARD_COOLDOWN_SEC = 60
 LOUNGE_BOARD_FETCH_DEFAULT = 40
 LOUNGE_BOARD_FETCH_MAX = 80
+LOUNGE_BOARD_REPLY_MAX = 80
+LOUNGE_BOARD_REPLY_COOLDOWN_SEC = 20
 BOARD_KIND_WISH = "wish"
 BOARD_KIND_FEEDBACK = "feedback"
 BOARD_KIND_LABELS = {
@@ -64,9 +66,11 @@ lounge_ops — 全服聊天室（答疑、互助；许愿/反馈走许愿墙；�
   反馈 / feedback / bug 正文
                        贴上问题反馈墙（bug/异常；全服可见，不进闲聊）
   许愿墙 / 壁榜 / board [许愿|反馈]
-                       看许愿墙与反馈（空=全部；和闲聊分开，不会刷走）
-例子：scan · say 温室怎么建 · 许愿 想加钓鱼大赛 · 反馈 温室按钮没反应 · 许愿墙 · 红包 100 5 · 抢 · 暗号 潮声今晚 · 大厅
-网页 /lounge 或 /play 聊天区上方有「许愿墙 / 问题反馈」专用区；对话上方填暗号、点「对暗号」（手机也在聊天框顶上）；发红包点「发红包」，大厅卡片点「开」。凭证只在上手页绑定。
+                       看许愿墙与反馈（空=全部；和闲聊分开，不会刷走；带回复）
+  回墙 12 正文 / board reply 12 正文
+                       在许愿墙/反馈墙上公开回复（全服可见，不进闲聊）
+例子：scan · say 温室怎么建 · 许愿 想加钓鱼大赛 · 反馈 温室按钮没反应 · 许愿墙 · 回墙 12 已修好 · 红包 100 5 · 抢 · 暗号 潮声今晚 · 大厅
+网页 /lounge 或 /play 聊天区上方有「许愿墙 / 问题反馈」专用区；每条底下有「回复」按键，回在墙上大家都能看见。对话上方填暗号、点「对暗号」（手机也在聊天框顶上）；发红包点「发红包」，大厅卡片点「开」。凭证只在上手页绑定。
 人类也可 /island 总览点海边，进滩景再点港口，点一下看码头，闲聊栏能说话（同一屋）。对暗号、发红包仍去 /play 或 /lounge。
 每天最多 5 封；只有婚期当天（顶栏「今日岛上有婚礼」里的那位）才能无限发包。不是管理员特权。
 连理所订婚：人类答应确认页之后，大厅会出现一句通报（发言人理枝）。不是玩家发言，不是求婚请柬，也不是成婚潮讯。只有人类在确认页答应才算记下。三件齐了或旧档自动写下都不算。三件齐了只发确认页，人类点头之前不通报。
@@ -172,6 +176,8 @@ def board_limits() -> dict[str, int]:
     return {
         "board_max_len": LOUNGE_BOARD_MAX_LEN,
         "board_cooldown_sec": LOUNGE_BOARD_COOLDOWN_SEC,
+        "board_reply_max": LOUNGE_BOARD_REPLY_MAX,
+        "board_reply_cooldown_sec": LOUNGE_BOARD_REPLY_COOLDOWN_SEC,
     }
 
 
@@ -195,13 +201,36 @@ def _validate_board_body(body: str) -> str:
     return text
 
 
-def _board_row_to_view(row: dict[str, Any]) -> dict[str, Any]:
+def _board_reply_to_view(row: dict[str, Any]) -> dict[str, Any]:
+    src = row.get("source") or "mcp"
+    steward = {
+        "name": row["name"],
+        "lounge_human_name": row.get("lounge_human_name") or "",
+    }
+    return {
+        "id": int(row["id"]),
+        "board_id": int(row["board_id"]),
+        "body": row["body"],
+        "source": src,
+        "who": display_who(steward, src),
+        "steward_name": steward["name"],
+        "human_name": (steward.get("lounge_human_name") or "").strip() or "岛民",
+        "created_at": int(row["created_at"]),
+        "is_mod": steward["name"] in config.LOUNGE_MOD_NAMES,
+    }
+
+
+def _board_row_to_view(
+    row: dict[str, Any],
+    replies: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     src = row.get("source") or "mcp"
     steward = {
         "name": row["name"],
         "lounge_human_name": row.get("lounge_human_name") or "",
     }
     kind = row.get("kind") or BOARD_KIND_WISH
+    reply_rows = replies or []
     return {
         "id": int(row["id"]),
         "kind": kind,
@@ -212,18 +241,30 @@ def _board_row_to_view(row: dict[str, Any]) -> dict[str, Any]:
         "steward_name": steward["name"],
         "human_name": (steward.get("lounge_human_name") or "").strip() or "岛民",
         "created_at": int(row["created_at"]),
+        "replies": reply_rows,
+        "reply_count": len(reply_rows),
     }
 
 
 def _format_board_list(items: list[dict[str, Any]]) -> str:
     if not items:
-        return "【许愿墙 / 问题反馈】还没有人贴。用法：许愿 想加的玩法 · 反馈 遇到的 bug"
-    lines = ["【许愿墙 / 问题反馈】全服可见，和闲聊分开，不会刷走。", ""]
+        return (
+            "【许愿墙 / 问题反馈】还没有人贴。"
+            "用法：许愿 想加的玩法 · 反馈 遇到的 bug · 回墙 12 已修好"
+        )
+    lines = [
+        "【许愿墙 / 问题反馈】全服可见，和闲聊分开，不会刷走。回在墙上：回墙 编号 正文",
+        "",
+    ]
     for item in items:
         ts = db.fmt_cst_hhmm(int(item["created_at"]))
         lines.append(
             f"#{item['id']} {item['kind_label']} · {item['who']} · {ts}\n{item['body']}"
         )
+        for reply in item.get("replies") or []:
+            rts = db.fmt_cst_hhmm(int(reply["created_at"]))
+            tag = " · 管理" if reply.get("is_mod") else ""
+            lines.append(f"  ↳ {reply['who']}{tag} · {rts}\n  {reply['body']}")
         lines.append("")
     return "\n".join(lines).rstrip()
 
@@ -242,6 +283,48 @@ async def _check_board_cooldown(conn: aiosqlite.Connection, steward_id: int) -> 
     left = LOUNGE_BOARD_COOLDOWN_SEC - (db.now() - int(row[0]))
     if left > 0:
         raise ValueError(f"贴得太密，{left} 秒后再试")
+
+
+async def _check_board_reply_cooldown(
+    conn: aiosqlite.Connection, steward_id: int
+) -> None:
+    row = await (await conn.execute(
+        """
+        SELECT created_at FROM lounge_board_replies
+        WHERE steward_id=?
+        ORDER BY created_at DESC LIMIT 1
+        """,
+        (steward_id,),
+    )).fetchone()
+    if not row:
+        return
+    left = LOUNGE_BOARD_REPLY_COOLDOWN_SEC - (db.now() - int(row[0]))
+    if left > 0:
+        raise ValueError(f"回得太密，{left} 秒后再试")
+
+
+async def _load_replies_for(
+    conn: aiosqlite.Connection, board_ids: list[int]
+) -> dict[int, list[dict[str, Any]]]:
+    if not board_ids:
+        return {}
+    placeholders = ",".join("?" for _ in board_ids)
+    rows = await (await conn.execute(
+        f"""
+        SELECT r.id, r.board_id, r.body, r.source, r.created_at, r.steward_id,
+               s.name, s.lounge_human_name
+        FROM lounge_board_replies r
+        JOIN stewards s ON s.id = r.steward_id
+        WHERE r.board_id IN ({placeholders})
+        ORDER BY r.id ASC
+        """,
+        board_ids,
+    )).fetchall()
+    out: dict[int, list[dict[str, Any]]] = {int(bid): [] for bid in board_ids}
+    for row in rows:
+        view = _board_reply_to_view(dict(row))
+        out.setdefault(int(view["board_id"]), []).append(view)
+    return out
 
 
 async def post_board_item(
@@ -278,6 +361,50 @@ async def post_board_item(
     return await get_board_item(int(item_id))
 
 
+async def post_board_reply(
+    steward_id: int,
+    board_id: int,
+    body: str,
+    *,
+    source: str,
+) -> dict[str, Any]:
+    text = _validate_board_body(body)
+    if source not in ("mcp", "web"):
+        raise ValueError("invalid source")
+    bid = int(board_id)
+    if bid < 1:
+        raise ValueError("用法: lounge_ops 回墙 12 正文")
+    async with db.connect() as conn:
+        conn.row_factory = aiosqlite.Row
+        parent = await (await conn.execute(
+            "SELECT id FROM lounge_board WHERE id=?", (bid,),
+        )).fetchone()
+        if not parent:
+            raise ValueError(f"找不到墙上 #{bid}")
+        row = await (await conn.execute(
+            "SELECT * FROM stewards WHERE id=?", (steward_id,),
+        )).fetchone()
+        if not row:
+            raise ValueError("管理员不存在")
+        steward = dict(row)
+        await _assert_can_speak(conn, steward)
+        await _check_board_reply_cooldown(conn, steward_id)
+        now = db.now()
+        cur = await conn.execute(
+            """
+            INSERT INTO lounge_board_replies
+                (board_id, body, steward_id, source, created_at)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (bid, text, steward_id, source, now),
+        )
+        await conn.commit()
+        reply_id = int(cur.lastrowid)
+    item = await get_board_item(bid)
+    reply = next((r for r in item.get("replies") or [] if r["id"] == reply_id), None)
+    return {"item": item, "reply": reply}
+
+
 async def get_board_item(item_id: int) -> dict[str, Any]:
     async with db.connect() as conn:
         conn.row_factory = aiosqlite.Row
@@ -293,7 +420,8 @@ async def get_board_item(item_id: int) -> dict[str, Any]:
         )).fetchone()
         if not row:
             raise ValueError("条目不存在")
-        return _board_row_to_view(dict(row))
+        replies = await _load_replies_for(conn, [int(item_id)])
+        return _board_row_to_view(dict(row), replies.get(int(item_id), []))
 
 
 async def list_board_items(
@@ -330,7 +458,12 @@ async def list_board_items(
             """,
             [*params, lim],
         )).fetchall()
-    items = [_board_row_to_view(dict(r)) for r in rows]
+        board_ids = [int(r["id"]) for r in rows]
+        replies_map = await _load_replies_for(conn, board_ids)
+    items = [
+        _board_row_to_view(dict(r), replies_map.get(int(r["id"]), []))
+        for r in rows
+    ]
     items.reverse()
     return items
 
@@ -341,6 +474,16 @@ async def human_post_board(api_key: str, kind: str, body: str) -> dict[str, Any]
         raise ValueError("凭证无效")
     s = await _require_enrolled(row["id"])
     return await post_board_item(s["id"], kind, body, source="web")
+
+
+async def human_post_board_reply(
+    api_key: str, board_id: int, body: str
+) -> dict[str, Any]:
+    row = await db.get_key_row(api_key.strip())
+    if not row:
+        raise ValueError("凭证无效")
+    s = await _require_enrolled(row["id"])
+    return await post_board_reply(s["id"], board_id, body, source="web")
 
 
 def normalize_booth_code(raw: str) -> str:
@@ -1234,19 +1377,55 @@ async def lounge_ops(key_id: int, command: str, *, register_url: str = "/registe
         view = await post_board_item(s["id"], BOARD_KIND_FEEDBACK, rest, source="mcp")
         return f"已贴上反馈墙 #{view['id']}：{rest[:80]}"
 
+    if verb in ("回墙", "墙回", "replywall") or (
+        verb == "board" and rest.lower().startswith("reply ")
+    ):
+        bits = rest.split(None, 1)
+        if verb == "board":
+            bits = rest.split(None, 2)  # reply 12 body
+            if len(bits) < 3 or bits[0].lower() != "reply":
+                raise ValueError("用法: lounge_ops board reply 12 正文")
+            bits = bits[1:]
+        if len(bits) < 2:
+            raise ValueError("用法: lounge_ops 回墙 12 正文")
+        try:
+            bid = int(bits[0])
+        except ValueError as exc:
+            raise ValueError("用法: lounge_ops 回墙 12 正文") from exc
+        result = await post_board_reply(s["id"], bid, bits[1], source="mcp")
+        item = result["item"]
+        return (
+            f"已回墙上 #{item['id']}（{item['kind_label']}）：{bits[1][:80]}\n"
+            f"现有 {item['reply_count']} 条回复。看墙：许愿墙"
+        )
+
     if verb in ("许愿墙", "壁榜", "board", "墙"):
         kind_filter = None
         if rest in ("许愿", "wish"):
             kind_filter = BOARD_KIND_WISH
         elif rest in ("反馈", "feedback", "bug"):
             kind_filter = BOARD_KIND_FEEDBACK
+        elif rest.lower().startswith("reply "):
+            bits = rest.split(None, 2)
+            if len(bits) < 3:
+                raise ValueError("用法: lounge_ops 许愿墙 reply 12 正文")
+            try:
+                bid = int(bits[1])
+            except ValueError as exc:
+                raise ValueError("用法: lounge_ops 许愿墙 reply 12 正文") from exc
+            result = await post_board_reply(s["id"], bid, bits[2], source="mcp")
+            item = result["item"]
+            return (
+                f"已回墙上 #{item['id']}（{item['kind_label']}）：{bits[2][:80]}\n"
+                f"现有 {item['reply_count']} 条回复。看墙：许愿墙"
+            )
         elif rest:
-            raise ValueError("许愿墙 子参数只能是 许愿 或 反馈")
+            raise ValueError("许愿墙 子参数：许愿 / 反馈 / reply 编号 正文")
         items = await list_board_items(kind=kind_filter)
         return _format_board_list(items)
 
     raise ValueError(
-        f"未知 lounge 指令: {command}（scan / say / 许愿 / 反馈 / 许愿墙 / 红包 / 抢 / 暗号 / 大厅 / name / mod / help）"
+        f"未知 lounge 指令: {command}（scan / say / 许愿 / 反馈 / 许愿墙 / 回墙 / 红包 / 抢 / 暗号 / 大厅 / name / mod / help）"
     )
 
 
