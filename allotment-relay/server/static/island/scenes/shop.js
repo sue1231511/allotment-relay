@@ -9,7 +9,7 @@ export function renderShop(root, { onBuy, onSwitchTab, onOpenShelf, onCloseShelf
   const items = (shop.items || []).filter((row) => row.tab === tab);
   const peek = !state.shopShelf;
   const wrap = ensureShopFrame(root, {
-    find: (el) => el.querySelector(".island-shop:not(.island-workshop):not(.island-quarry):not(.island-bar):not(.island-writers):not(.island-atelier):not(.island-hall):not(.island-eatery)"),
+    find: (el) => el.querySelector(".island-shop:not(.island-workshop):not(.island-quarry):not(.island-bar):not(.island-writers):not(.island-atelier):not(.island-hall):not(.island-eatery):not(.island-market)"),
     className: "island-shop",
     sceneId: "shop",
     tap: "点一下看货架",

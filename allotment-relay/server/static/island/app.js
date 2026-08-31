@@ -1,4 +1,4 @@
-import { api, loadKey } from "./api.js?v=island-fix1";
+import { api, loadKey } from "./api.js?v=island-market1";
 import {
   applySnapshot,
   duesBlocked,
@@ -17,7 +17,7 @@ import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=isla
 import { renderShore } from "./scenes/shore.js?v=island-fix1";
 import { renderPlaza } from "./scenes/plaza.js?v=island-fix1";
 import { renderPlace } from "./scenes/place.js?v=island-fix1";
-import { renderShop } from "./scenes/shop.js?v=island-stay1";
+import { renderShop } from "./scenes/shop.js?v=island-market1";
 import { renderWorkshop } from "./scenes/workshop.js?v=island-stay1";
 import { renderQuarry } from "./scenes/quarry.js?v=island-stay1";
 import { renderBar } from "./scenes/bar.js?v=island-stay1";
@@ -26,6 +26,7 @@ import { renderWriters } from "./scenes/writers.js?v=island-stay1";
 import { renderAtelier } from "./scenes/atelier.js?v=island-stay1";
 import { renderHall } from "./scenes/hall.js?v=island-star1";
 import { renderEatery } from "./scenes/eatery.js?v=island-stay1";
+import { renderMarket } from "./scenes/market.js?v=island-market1";
 let lighthouseMod = null;
 async function lighthouseScene() {
   if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-stay1");
@@ -225,6 +226,12 @@ async function enterScene(name, opts) {
       stopQuarryTick();
       state.eateryShelf = false;
       await openEatery(root);
+    } else if (name === "market") {
+      stopGrowTick();
+      stopWorkshopTick();
+      stopQuarryTick();
+      state.marketShelf = false;
+      await openMarket(root);
     } else if (name === "lighthouse") {
       stopGrowTick();
       stopWorkshopTick();
@@ -1092,6 +1099,117 @@ async function runEatery(kind, target) {
   await act(() => api.eateryAct(kind, target), { keepEatery: true, listTop, quiet: true });
 }
 
+async function openMarket() {
+  try {
+    const data = await api.market();
+    applySnapshot(data);
+    renderHud();
+    if (data.event) showEvent(data.event);
+  } catch (err) {
+    toast(err.message || "集市门还没开。");
+  }
+  const tabs = (state.market && state.market.tabs) || [];
+  if (!tabs.some((row) => row.key === state.marketTab)) {
+    state.marketTab = (tabs[0] && tabs[0].key) || "board";
+  }
+  paintMarket();
+}
+
+function paintMarket(listTop = 0) {
+  renderMarket(sceneEl(), {
+    onAct: tapMarket,
+    onSwitchTab: (tab) => {
+      state.marketTab = tab || "board";
+      hideModal();
+      paintMarket(0);
+    },
+    onOpenShelf: () => {
+      state.marketShelf = true;
+      paintMarket(0);
+    },
+    onCloseShelf: () => {
+      state.marketShelf = false;
+      hideModal();
+      paintMarket();
+    },
+    listTop,
+  });
+}
+
+function marketRow(kind, target) {
+  const shop = state.market || {};
+  const mine = shop.mine || {};
+  if (kind === "buy" || (kind === "look" && target)) {
+    return (shop.listings || []).find((row) => String(row.id) === String(target))
+      || (mine.listings || []).find((row) => String(row.id) === String(target))
+      || (mine.goods || []).find((row) => row.item === target)
+      || mine;
+  }
+  if (kind === "cancel") return (mine.listings || []).find((row) => String(row.id) === String(target));
+  if (kind === "sell") return (mine.goods || []).find((row) => row.item === target);
+  if (kind === "expand") return mine;
+  return null;
+}
+
+function tapMarket(kind, target) {
+  const shop = state.market || {};
+  const mine = shop.mine || {};
+  const row = marketRow(kind, target) || {};
+  if (kind === "look") {
+    showHintSheet({
+      title: row.name || shop.name || "玩家集市",
+      body: row.detail || row.note || mine.expand_note || shop.line || "先看看街上谁在卖。",
+    });
+    return;
+  }
+  if (kind === "sell") {
+    if (!row.can_sell) {
+      showHintSheet({ title: row.name || "挂摊", body: row.detail || row.note || "这会儿挂不了。" });
+      return;
+    }
+    showFormSheet({
+      title: `挂出 ${row.name}`,
+      body: row.detail || `袋里 ${row.qty}。建议 ${row.suggested} 票/个。`,
+      fields: [
+        { id: "qty", label: "数量", placeholder: "1", max: 4, empty: "先写下数量。" },
+        { id: "price", label: "单价（票）", placeholder: String(row.suggested || 8), max: 6, empty: "先写下单价。" },
+      ],
+      confirm: "挂上",
+      onConfirm: (vals) => runMarket("sell", `${row.item} ${vals.qty} ${vals.price}`),
+    });
+    return;
+  }
+  const can = {
+    buy: Boolean(row.can_buy),
+    cancel: Boolean(row.can_cancel),
+    expand: Boolean(mine.can_expand),
+  }[kind];
+  if (!can) {
+    showHintSheet({
+      title: row.name || ({ buy: "买", cancel: "下架", expand: "扩摊" }[kind] || "集市"),
+      body: row.detail || row.note || mine.expand_note || "这会儿还不行。",
+    });
+    return;
+  }
+  const pack = {
+    buy: ["买下", row.detail || `一共 ${row.cost} 票（含手续费）。`, "确认买"],
+    cancel: ["下架", row.detail || "货退回行囊。", "确认下架"],
+    expand: ["扩一格", mine.expand_note || "加一格摊位。", "确认扩"],
+  }[kind] || ["集市", "做这一下？", "确认"];
+  showActSheet({
+    title: pack[0],
+    body: pack[1],
+    confirm: pack[2],
+    onConfirm: () => runMarket(kind, target),
+  });
+}
+
+async function runMarket(kind, target) {
+  const list = document.getElementById("island-market-list");
+  const listTop = list ? list.scrollTop : 0;
+  await act(() => api.marketAct(kind, target), { keepMarket: true, listTop, quiet: true });
+}
+
 async function openLighthouse() {
   try {
     const data = await api.lighthouse();
@@ -1413,7 +1531,7 @@ async function vendItem(item) {
   await act(() => api.vend(name, 1), { keepTab: true });
 }
 
-async function act(fn, { refreshScene = false, keepPlant = false, keepTab = false, keepShop = false, keepWorkshop = false, keepQuarry = false, keepBar = false, keepWriters = false, keepAtelier = false, keepHall = false, keepEatery = false, keepLighthouse = false, listTop = null, quiet = false } = {}) {
+async function act(fn, { refreshScene = false, keepPlant = false, keepTab = false, keepShop = false, keepWorkshop = false, keepQuarry = false, keepBar = false, keepWriters = false, keepAtelier = false, keepHall = false, keepEatery = false, keepMarket = false, keepLighthouse = false, listTop = null, quiet = false } = {}) {
   if (state.busy) return;
   state.busy = true;
   try {
@@ -1462,6 +1580,10 @@ async function act(fn, { refreshScene = false, keepPlant = false, keepTab = fals
     }
     if (keepEatery && state.scene === "eatery") {
       paintEatery(listTop);
+      return;
+    }
+    if (keepMarket && state.scene === "market") {
+      paintMarket(listTop);
       return;
     }
     if (keepLighthouse && state.scene === "lighthouse") {

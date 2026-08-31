@@ -163,7 +163,7 @@ async def huts_page(request: Request):
 
 @app.get("/market", response_class=HTMLResponse)
 async def market_page(request: Request):
-    """玩家集市围观实况；摆摊买货仍回上手页。"""
+    """玩家集市围观实况；摆摊买货去手机地图集市。"""
     return await _html(request, "market.html", active="market")
 
 

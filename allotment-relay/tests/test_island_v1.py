@@ -391,6 +391,38 @@ async def _test_island_v1_api() -> None:
     assert dined.status_code == 200, dined.text
     assert dined.json()["event"]["kind"] == "eatery"
 
+    async with db.connect() as conn:
+        await db.add_item(conn, sid, "crop_kale", 2)
+        await conn.commit()
+    bazaar0 = client.get("/api/v1/market", headers=_auth(key))
+    assert bazaar0.status_code == 200, bazaar0.text
+    bazaar = bazaar0.json()["market"]
+    assert bazaar["name"] == "玩家集市", bazaar
+    assert any(t["key"] == "board" for t in bazaar["tabs"]), bazaar
+    assert any(t["key"] == "mine" for t in bazaar["tabs"]), bazaar
+    hung = client.post(
+        "/api/v1/market/act",
+        headers=_auth(key, {"Idempotency-Key": "market-sell"}),
+        json={"kind": "sell", "target": "crop_kale 1 8"},
+    )
+    assert hung.status_code == 200, hung.text
+    assert hung.json()["event"]["kind"] == "market"
+    lots = hung.json()["market"]["mine"]["listings"]
+    assert lots, hung.json()["market"]
+    lot_id = lots[0]["id"]
+    own_buy = client.post(
+        "/api/v1/market/act",
+        headers=_auth(key, {"Idempotency-Key": "market-buy-own"}),
+        json={"kind": "buy", "target": str(lot_id)},
+    )
+    assert own_buy.status_code >= 400, own_buy.text
+    guest_buy = client.post(
+        "/api/v1/market/act",
+        headers=_auth(host_key, {"Idempotency-Key": "market-buy"}),
+        json={"kind": "buy", "target": str(lot_id)},
+    )
+    assert guest_buy.status_code == 200, guest_buy.text
+
     tower0 = client.get("/api/v1/lighthouse", headers=_auth(key))
     assert tower0.status_code == 200, tower0.text
     tower = tower0.json()["lighthouse"]
@@ -903,12 +935,13 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-star1" in html
-    assert html.count("island.css?v=island-star1") == 1
-    assert html.count("app.js?v=island-star1") == 1
+    assert "island-market1" in html
+    assert html.count("island.css?v=island-market1") == 1
+    assert html.count("app.js?v=island-market1") == 1
     assert "lighthouse.js?v=island-stay1" in app
     assert "hall.js?v=island-star1" in app
-    assert "shop.js?v=island-stay1" in app
+    assert "shop.js?v=island-market1" in app
+    assert "market.js?v=island-market1" in app
     assert "island-boot3" in html
     assert 'id="island-boot-veil"' in html
     assert "正在进入" in html
@@ -1276,6 +1309,7 @@ def test_island_page_is_modular() -> None:
     assert "paintShopList" in shop_js
     assert ".island-shop:not(.island-workshop)" in shop_js
     assert ":not(.island-eatery)" in shop_js
+    assert ":not(.island-market)" in shop_js
     assert "refreshScene: true" not in app
     assert "/api/v1/shop/buy" in api
     assert "/api/v1/tote/vend" in api
@@ -1322,6 +1356,7 @@ def test_island_page_is_modular() -> None:
     assert "renderAtelier" in app
     assert "renderHall" in app
     assert "renderEatery" in app
+    assert "renderMarket" in app
     bar_js = (ROOT / "server/static/island/scenes/bar.js").read_text(encoding="utf-8")
     assert "island-bar" in bar_js
     assert "ensureShopFrame" in bar_js
@@ -1346,11 +1381,13 @@ def test_island_page_is_modular() -> None:
     assert (ROOT / "server/v1/atelier_service.py").exists()
     assert (ROOT / "server/v1/hall_service.py").exists()
     assert (ROOT / "server/v1/eatery_service.py").exists()
+    assert (ROOT / "server/v1/market_service.py").exists()
     theater_js = (ROOT / "server/static/island/scenes/theater.js").read_text(encoding="utf-8")
     writers_js = (ROOT / "server/static/island/scenes/writers.js").read_text(encoding="utf-8")
     atelier_js = (ROOT / "server/static/island/scenes/atelier.js").read_text(encoding="utf-8")
     hall_js = (ROOT / "server/static/island/scenes/hall.js").read_text(encoding="utf-8")
     eatery_js = (ROOT / "server/static/island/scenes/eatery.js").read_text(encoding="utf-8")
+    market_js = (ROOT / "server/static/island/scenes/market.js").read_text(encoding="utf-8")
     assert 'go: "writers"' in theater_js
     assert 'go: "atelier"' in theater_js
     assert 'go: "hall"' in theater_js
@@ -1388,6 +1425,13 @@ def test_island_page_is_modular() -> None:
     assert "点歌" in hall_fn
     assert "showEvent" not in app.split("async function openHall")[1].split("function paintHall")[0]
     assert "点一下看菜单" in eatery_js
+    assert "点一下看摊" in market_js
+    assert "island-market" in market_js
+    assert "ensureShopFrame" in market_js
+    assert "去上手页" not in market_js
+    assert "/api/v1/market" in api
+    assert "api.marketAct" in app
+    assert "keepMarket" in app
     assert "island-eatery" in eatery_js
     assert "ensureShopFrame" in eatery_js
     assert "island-bar-tray" not in eatery_js

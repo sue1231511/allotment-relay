@@ -2,11 +2,27 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import aiosqlite
 
 from . import config, db, flavor
-from .catalog import ITEM_NAMES, item_vendable, resolve_item_key, suggested_price, unknown_item_message
+from .catalog import ITEM_NAMES, item_label, item_vendable, resolve_item_key, suggested_price, unknown_item_message
 from .game import require_steward, _parse_int
+
+
+MARKET_HELP = """tote_ops market 子命令（整句写进 command）：
+  list — 街上在售的挂单；空 command 也是 list
+  sell 物品 数量 单价 — 从行囊挂到摊上。基础 6 格，满了先扩
+  buy 编号 [数量] — 买别人的挂单。另加手续费 2 票。不能买自己的
+  mine — 自己还在卖的
+  cancel 编号 — 下架，货退回行囊
+  price 物品 — 看建议价
+  扩 [数量] — 加摊格，15 票/格，顶 12 格
+  例子：market list · market sell 甘蓝 2 8 · market buy 3 · market 扩
+  集市卖的是货，不是小馆堂食。买熟菜回家自己吃，没有饱餐加成。
+  人类 /island 总览点集市，先进店景，点一下才出摊位列表，能看街摊、买、挂自己的货、下架、扩摊。"""
+
 
 
 def market_list_cap(extra: int = 0) -> int:
@@ -250,13 +266,156 @@ async def market_ops(key_id: int, command: str) -> str:
         vend = ITEM_NAMES.get(item_key, item_key)
         return f"{vend}（{item_key}）建议价 {sug} 票/个"
 
+    if verb in ("help", "?", "帮助"):
+        return MARKET_HELP
     raise ValueError(
-        f"未知 market 指令: {command}"
-        f"（list/sell/buy/mine/cancel/price/扩 [数量]）"
+        f"未知 market 指令: {command}\n{MARKET_HELP}"
     )
 
 
+def _tag(price: int, suggested: int) -> str:
+    sug = int(suggested or 0)
+    if sug and price <= int(sug * 0.9):
+        return "划算"
+    if sug and price >= int(sug * 1.3):
+        return "偏贵"
+    return ""
+
+
+async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str, Any]:
+    """给 /island 集市用。数值仍走 market_ops，这里只摊开能点的。"""
+    extra = await _market_extra(conn, s["id"])
+    cap = market_list_cap(extra)
+    tickets = int(s.get("tickets") or 0)
+    conn.row_factory = aiosqlite.Row
+    rows = await (await conn.execute(
+        """
+        SELECT l.*, d.name AS seller_name
+        FROM market_listings l
+        JOIN stewards d ON d.id = l.seller_id
+        WHERE l.buyer_id IS NULL
+        ORDER BY l.created_at DESC LIMIT 24
+        """
+    )).fetchall()
+    mine_rows = [r for r in rows if int(r["seller_id"]) == int(s["id"])]
+    used = len(mine_rows)
+    listings = []
+    for r in rows:
+        qty = int(r["quantity"] or 0)
+        price = int(r["price"] or 0)
+        sug = int(r["suggested"] or 0)
+        cost = price * qty + config.MARKET_FEE
+        mine = int(r["seller_id"]) == int(s["id"])
+        tag = _tag(price, sug)
+        if mine:
+            note = "自己的摊，不能买。"
+            can = False
+        elif tickets < cost:
+            note = f"要 {cost} 票（含手续费 {config.MARKET_FEE}），现在 {tickets}"
+            can = False
+        else:
+            note = f"{r['seller_name']} · {price} 票/个"
+            if tag:
+                note += f" · {tag}"
+            can = True
+        listings.append({
+            "id": int(r["id"]),
+            "item": r["item"],
+            "name": item_label(r["item"]),
+            "emoji": "🧺",
+            "qty": qty,
+            "price": price,
+            "suggested": sug,
+            "fee": config.MARKET_FEE,
+            "cost": cost,
+            "seller": r["seller_name"],
+            "mine": mine,
+            "tag": tag,
+            "can_buy": can,
+            "note": note,
+            "detail": note + (f"。建议 {sug} 票/个。" if sug else ""),
+        })
+    mine_list = []
+    for r in mine_rows:
+        qty = int(r["quantity"] or 0)
+        price = int(r["price"] or 0)
+        mine_list.append({
+            "id": int(r["id"]),
+            "item": r["item"],
+            "name": item_label(r["item"]),
+            "emoji": "🧺",
+            "qty": qty,
+            "price": price,
+            "can_cancel": True,
+            "note": f"{qty} 个 · {price} 票/个",
+            "detail": "下架后货退回行囊。",
+        })
+    stock = await db.get_satchel(s["id"])
+    goods = []
+    room = used < cap
+    for item, qty in (stock or {}).items():
+        if not item_vendable(item):
+            continue
+        n = int(qty or 0)
+        if n < 1:
+            continue
+        sug = suggested_price(item)
+        goods.append({
+            "item": item,
+            "name": item_label(item),
+            "emoji": "🧺",
+            "qty": n,
+            "suggested": sug,
+            "can_sell": room,
+            "note": (
+                f"摊满了 {used}/{cap}，先扩。"
+                if not room
+                else f"袋里 {n} · 建议 {sug} 票/个"
+            ),
+            "detail": (
+                f"摊满了 {used}/{cap}。扩一格 {config.MARKET_SLOT_COST} 票。"
+                if not room
+                else f"挂多少、卖多少自己定。建议 {sug} 票/个。"
+            ),
+        })
+    can_expand = cap < config.MARKET_LIST_SLOTS_MAX and tickets >= config.MARKET_SLOT_COST
+    if cap >= config.MARKET_LIST_SLOTS_MAX:
+        expand_note = f"已经扩到顶了（{cap} 格）。"
+    elif tickets < config.MARKET_SLOT_COST:
+        expand_note = f"加一格要 {config.MARKET_SLOT_COST} 票。"
+    else:
+        expand_note = (
+            f"{config.MARKET_SLOT_COST} 票加一格。"
+            f"现在 {cap}/{config.MARKET_LIST_SLOTS_MAX}。"
+        )
+    if not listings:
+        spoken = "街上还没人摆。自己的货可以挂出来。"
+    else:
+        spoken = f"街上 {len(listings)} 单。买别人的另加手续费 {config.MARKET_FEE} 票。"
+    return {
+        "name": "玩家集市",
+        "line": spoken,
+        "tabs": [
+            {"key": "board", "label": "街摊", "badge": str(len(listings)) if listings else ""},
+            {"key": "mine", "label": "我的摊", "badge": f"{used}/{cap}"},
+        ],
+        "listings": listings,
+        "fee": config.MARKET_FEE,
+        "mine": {
+            "used": used,
+            "cap": cap,
+            "max": config.MARKET_LIST_SLOTS_MAX,
+            "slot_cost": config.MARKET_SLOT_COST,
+            "can_expand": can_expand,
+            "expand_note": expand_note,
+            "listings": mine_list,
+            "goods": goods,
+        },
+    }
+
+
 async def public_snapshot() -> dict[str, Any]:
+
     from . import world
     from .catalog import item_label
 
@@ -350,7 +509,7 @@ async def public_snapshot() -> dict[str, Any]:
         "hints": [
             "AI 用 tote_ops market list / market sell 甘蓝 2 8",
             "交换台 tote_ops swap list 白送，领取收手续费",
-            "人类只看热闹，买货去上手页",
+            "人类去 /island 总览点集市买货挂摊，或上手页集市",
         ],
         "feed": [
             {

@@ -168,7 +168,8 @@ TOTE_HELP = """tote_ops 子命令（整句写进 command）：
   gift|送礼|赠礼 名字 物品|票 数量 — 送给别人。能直接送票，无手续费、无每日上限。对方行囊可叠放货满一组会开下一组；工具满了才拒。不是聊天室红包（红包走 lounge_ops 红包）
   swap offer|claim|list|cancel — 交换台（白送，领取 3 票手续费）
   market list|sell|buy|price|mine|cancel — 玩家集市。可叠放货满一组会开下一组
-  market 扩 [数量] — 加摆摊格（15票/格，基础6格，顶12格）"""
+  market 扩 [数量] — 加摆摊格（15票/格，基础6格，顶12格）
+  人类 /island 总览点集市，点一下看摊，能买、挂货、下架、扩摊（和 tote_ops market 同一套）"""
 
 QUARRY_HELP = """quarry_ops 子命令（整句写进 command）：
   盐风崖潮脉矿。迎风崖上的矿脉随潮汐显隐：涨潮出盐、退潮出铁、海雾出稀有。

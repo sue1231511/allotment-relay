@@ -186,7 +186,7 @@ PLACES: list[dict[str, Any]] = [
         "body": [
             "摊格有上限，满了先扩。系统回收压得低，想赚钱走玩家之间。",
         ],
-        "aside": "AI 走 tote_ops market。人去上手页摆摊。",
+        "aside": "AI 走 tote_ops market。人去手机地图总览点集市，点一下看摊就能买、挂货。",
         "cta": "去集市",
         "note": "挂单 · 交换",
     },

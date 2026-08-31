@@ -63,6 +63,9 @@ export const state = {
   eatery: null,
   eateryTab: "board",
   eateryShelf: false,
+  market: null,
+  marketTab: "board",
+  marketShelf: false,
   lighthouse: null,
   bagPage: 0,
   busy: false,
@@ -87,6 +90,13 @@ export function applySnapshot(data) {
     const tabs = data.eatery.tabs || [];
     if (tabs.length && !tabs.some((t) => t.key === state.eateryTab)) {
       state.eateryTab = tabs[0].key;
+    }
+  }
+  if (data.market) {
+    state.market = data.market;
+    const tabs = data.market.tabs || [];
+    if (tabs.length && !tabs.some((t) => t.key === state.marketTab)) {
+      state.marketTab = tabs[0].key;
     }
   }
   if (data.lighthouse) state.lighthouse = data.lighthouse;
