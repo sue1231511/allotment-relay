@@ -1239,7 +1239,7 @@ def test_island_page_is_modular() -> None:
     assert "/static/island/app.js" in html
     assert "island-mapbgm1" in app
     assert html.count("island.css?v=island-shaonian2") == 1
-    assert html.count("app.js?v=island-shaonian1") == 1
+    assert html.count("app.js?v=island-beachhub1") == 1
     assert "bgm.js?v=island-burgertown1" in app
     assert "lighthouse.js?v=island-mapbgm1" in app
     assert "hall.js?v=island-mapbgm1" in app
@@ -1762,10 +1762,16 @@ def test_island_page_is_modular() -> None:
     assert "is-half" in shaonian_js
     assert "sprites/shaonian.png" in shaonian_js
     assert "点一下见韶年" in shaonian_js
+    assert "点一下看沙滩" in shaonian_js
+    assert "去见韶年" in shaonian_js
     assert "去赶海" in shaonian_js
+    assert "renderBeachHub" in shaonian_js
+    assert "island-beach-hub" in shaonian_js
     assert "ensureShopFrame" not in shaonian_js
     assert "去上手页" not in shaonian_js
     assert "shaonianMeet" in app
+    assert "beachPeek" in app
+    assert "renderBeachHub" in app
     assert "meetShaonian" in app
     assert "speakShaonian" in app
     assert (ROOT / "server/static/island/assets/sprites/shaonian.png").exists()
@@ -1781,7 +1787,12 @@ def test_island_page_is_modular() -> None:
     assert "speakShaonian" in tap_sn
     assert "showHintSheet" not in tap_sn
     assert "showActSheet" not in tap_sn
-    assert 'shaonian.js?v=island-shaonian1' in app
+    paint_beach = app.split("function paintBeach")[1].split("function shoreShop")[0]
+    assert "renderBeachHub" in paint_beach
+    assert paint_beach.index("if (state.shoreShelf)") < paint_beach.index("if (state.shaonianMeet)")
+    assert paint_beach.index("if (state.shaonianMeet)") < paint_beach.index("renderBeachHub")
+    assert "beachPeek = true" in paint_beach
+    assert 'shaonian.js?v=island-beachhub1' in app
     assert "startIslandBgm" in app
     assert "paintBgmChip" in app
     assert "bindBgmChip" in app
@@ -2043,7 +2054,7 @@ def test_island_page_is_modular() -> None:
     assert "点一下才出人不醒" in art_md
     assert "点一下才出人小橘" in art_md
     assert "点一下才出人桥桥" in art_md
-    assert "点一下才出人韶年" in art_md
+    assert "去见韶年才出人韶年" in art_md
     assert "全身的二分之一" in art_md
     assert ".island-vn-talk" in css
     assert ".island-vn-box" in css

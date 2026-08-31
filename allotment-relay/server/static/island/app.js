@@ -22,7 +22,7 @@ import { renderHut } from "./scenes/hut.js?v=island-hutcook1";
 import { renderShop } from "./scenes/shop.js?v=island-mapbgm1";
 import { renderLili } from "./scenes/lili.js?v=island-mapbgm1";
 import { renderClinic } from "./scenes/clinic.js?v=island-mapbgm1";
-import { renderShaonian } from "./scenes/shaonian.js?v=island-shaonian1";
+import { renderShaonian, renderBeachHub } from "./scenes/shaonian.js?v=island-beachhub1";
 import { renderWorkshop } from "./scenes/workshop.js?v=island-mapbgm1";
 import { renderQuarry } from "./scenes/quarry.js?v=island-mapbgm1";
 import { renderBar } from "./scenes/bar.js?v=island-mapbgm1";
@@ -225,6 +225,7 @@ async function enterScene(name, opts) {
       state.backTo = "shore";
       state.shoreShelf = false;
       state.shaonianMeet = false;
+      state.beachPeek = false;
       await openBeach(root);
     } else if (name === "plaza") {
       stopGrowTick();
@@ -1846,28 +1847,45 @@ async function openBeach() {
 }
 
 function paintBeach(listTop = 0) {
-  if (!state.shoreShelf) {
+  if (state.shoreShelf) {
+    renderShore(sceneEl(), {
+      place: "beach",
+      onAct: tapShore,
+      onSwitchTab: (tab) => {
+        state.shoreTab = tab || "beach";
+        hideModal();
+        paintBeach(0);
+      },
+      onOpenShelf: () => {
+        state.shoreShelf = true;
+        paintBeach(0);
+      },
+      onCloseShelf: () => {
+        state.shoreShelf = false;
+        state.shaonianMeet = false;
+        state.beachPeek = true;
+        hideModal();
+        paintBeach();
+      },
+      listTop,
+    });
+    return;
+  }
+  if (state.shaonianMeet) {
     renderShaonian(sceneEl(), { onAct: tapShaonian, onMeet: meetShaonian });
     return;
   }
-  renderShore(sceneEl(), {
-    place: "beach",
-    onAct: tapShore,
-    onSwitchTab: (tab) => {
-      state.shoreTab = tab || "beach";
-      hideModal();
-      paintBeach(0);
-    },
-    onOpenShelf: () => {
-      state.shoreShelf = true;
-      paintBeach(0);
-    },
-    onCloseShelf: () => {
-      state.shoreShelf = false;
-      hideModal();
+  renderBeachHub(sceneEl(), {
+    onPeek: () => {
+      state.beachPeek = true;
       paintBeach();
     },
-    listTop,
+    onMeet: () => meetShaonian(),
+    onShore: () => {
+      state.shoreShelf = true;
+      hideModal();
+      paintBeach(0);
+    },
   });
 }
 
@@ -1945,7 +1963,9 @@ function shaonianRow(kind, target, id) {
 
 function tapShaonian(kind, target, id) {
   if (kind === "beach") {
+    state.shaonianMeet = false;
     state.shoreShelf = true;
+    state.beachPeek = true;
     hideModal();
     paintBeach(0);
     return;
