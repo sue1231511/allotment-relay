@@ -869,11 +869,11 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-xiaoju1" in html
-    assert html.count("island.css?v=island-xiaoju1") == 1
-    assert html.count("app.js?v=island-xiaoju1") == 1
+    assert "island-talk1" in html
+    assert html.count("island.css?v=island-talk1") == 1
+    assert html.count("app.js?v=island-talk1") == 1
     assert "lighthouse.js?v=island-stay1" in app
-    assert "hall.js?v=island-xiaoju1" in app
+    assert "hall.js?v=island-talk1" in app
     assert "shop.js?v=island-stay1" in app
     assert "island-boot3" in html
     assert 'id="island-boot-veil"' in html
@@ -1341,6 +1341,11 @@ def test_island_page_is_modular() -> None:
     assert "ensureShopFrame" not in hall_js
     assert "点一下看看板" not in hall_js
     assert "island-shop-shelf" not in hall_js
+    hall_fn = app.split("function tapHall")[1].split("async function runHall")[0]
+    assert "speakHall" in app
+    assert "showHintSheet" not in hall_fn
+    assert "showActSheet" not in hall_fn
+    assert "showEvent" not in app.split("async function openHall")[1].split("function paintHall")[0]
     assert "点一下看菜单" in eatery_js
     assert "island-eatery" in eatery_js
     assert "ensureShopFrame" in eatery_js
