@@ -1,6 +1,6 @@
-import { hutScene, state } from "../store.js?v=island-qiaoqiao1";
-import { bindShopFrame, ensureShopFrame, setShopPeek } from "../ui/shop-frame.js?v=island-qiaoqiao1";
-import { esc } from "../ui/modal.js?v=island-qiaoqiao1";
+import { hutScene, state } from "../store.js?v=island-mapbgm1";
+import { bindShopFrame, ensureShopFrame, setShopPeek } from "../ui/shop-frame.js?v=island-mapbgm1";
+import { esc } from "../ui/modal.js?v=island-mapbgm1";
 
 /** 没买房看不见棚屋场景。买了才按等级换景，点一下看出能睡、升级、潮柜、堆肥桶、畜栏。 */
 export function renderHut(root, { onBuild, onAct, onSwitchTab, onOpenShelf, onCloseShelf, listTop = null } = {}) {

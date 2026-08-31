@@ -43,8 +43,10 @@
     if (dock) dock.hidden = true;
     var bag = document.getElementById("island-bag-chip");
     var back = document.getElementById("island-back-chip");
+    var bgm = document.getElementById("island-bgm-chip");
     if (bag) bag.hidden = true;
     if (back) back.hidden = true;
+    if (bgm) bgm.hidden = true;
   }
 
   function showPlay() {

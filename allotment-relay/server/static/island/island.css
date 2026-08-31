@@ -2047,6 +2047,41 @@ body.island-app.is-bag-open .island-float-chip {
   white-space: nowrap;
 }
 
+.island-bgm-chip {
+  appearance: none;
+  -webkit-appearance: none;
+  position: absolute;
+  z-index: 9;
+  right: max(10px, env(safe-area-inset-right, 0px));
+  bottom: max(14px, env(safe-area-inset-bottom, 0px));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  height: 32px;
+  margin: 0;
+  padding: 0 14px;
+  background: rgba(42, 53, 68, .88);
+  border: 1px solid rgba(236, 214, 160, .7);
+  border-radius: 999px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  color: #f4e6c2;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.island-bgm-chip[hidden] {
+  display: none !important;
+}
+
+body.island-app.is-bag-open .island-bgm-chip {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .island-vn-line {
   margin: 0;
   max-height: none;
@@ -2196,7 +2231,8 @@ button.is-tap,
 .island-plant-x.is-tap,
 .island-plant-go.is-tap,
 .island-plant-buy.is-tap,
-.island-float-chip.is-bag.is-tap {
+.island-float-chip.is-bag.is-tap,
+.island-bgm-chip.is-tap {
   transform: scale(0.94);
 }
 
@@ -2212,6 +2248,7 @@ button.is-tap,
 .island-hot,
 .island-scene-tap,
 .island-float-chip,
+.island-bgm-chip,
 .island-plant-arrow,
 .island-plant-x,
 .island-plant-go,
