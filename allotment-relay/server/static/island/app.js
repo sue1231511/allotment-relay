@@ -1,4 +1,4 @@
-import { api, loadKey } from "./api.js?v=island-qiaoqiao1";
+import { api, loadKey } from "./api.js?v=island-mapbgm1";
 import {
   applySnapshot,
   duesBlocked,
@@ -11,39 +11,40 @@ import {
   tickGrow,
   tickQuarry,
   tickWorkshop,
-} from "./store.js?v=island-qiaoqiao1";
-import { renderHud } from "./hud.js?v=island-qiaoqiao1";
-import { renderMap } from "./map.js?v=island-qiaoqiao1";
-import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=island-qiaoqiao1";
-import { renderShore, renderShoreYard } from "./scenes/shore.js?v=island-qiaoqiao1";
-import { renderPlaza } from "./scenes/plaza.js?v=island-qiaoqiao1";
-import { renderPlace } from "./scenes/place.js?v=island-qiaoqiao1";
-import { renderHut } from "./scenes/hut.js?v=island-qiaoqiao1";
-import { renderShop } from "./scenes/shop.js?v=island-qiaoqiao1";
-import { renderLili } from "./scenes/lili.js?v=island-qiaoqiao1";
-import { renderClinic } from "./scenes/clinic.js?v=island-qiaoqiao1";
-import { renderWorkshop } from "./scenes/workshop.js?v=island-qiaoqiao1";
-import { renderQuarry } from "./scenes/quarry.js?v=island-qiaoqiao1";
-import { renderBar } from "./scenes/bar.js?v=island-qiaoqiao1";
-import { renderTheater } from "./scenes/theater.js?v=island-qiaoqiao1";
-import { renderWriters } from "./scenes/writers.js?v=island-qiaoqiao1";
-import { renderAtelier } from "./scenes/atelier.js?v=island-qiaoqiao1";
-import { renderHall } from "./scenes/hall.js?v=island-qiaoqiao1";
-import { renderEatery } from "./scenes/eatery.js?v=island-qiaoqiao1";
-import { renderMarket } from "./scenes/market.js?v=island-qiaoqiao1";
-import { renderTing } from "./scenes/ting.js?v=island-qiaoqiao1";
-import { renderHui } from "./scenes/hui.js?v=island-qiaoqiao1";
-import { renderLianli } from "./scenes/lianli.js?v=island-qiaoqiao1";
+} from "./store.js?v=island-mapbgm1";
+import { renderHud } from "./hud.js?v=island-mapbgm1";
+import { renderMap } from "./map.js?v=island-mapbgm1";
+import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=island-mapbgm1";
+import { renderShore, renderShoreYard } from "./scenes/shore.js?v=island-mapbgm1";
+import { renderPlaza } from "./scenes/plaza.js?v=island-mapbgm1";
+import { renderPlace } from "./scenes/place.js?v=island-mapbgm1";
+import { renderHut } from "./scenes/hut.js?v=island-mapbgm1";
+import { renderShop } from "./scenes/shop.js?v=island-mapbgm1";
+import { renderLili } from "./scenes/lili.js?v=island-mapbgm1";
+import { renderClinic } from "./scenes/clinic.js?v=island-mapbgm1";
+import { renderWorkshop } from "./scenes/workshop.js?v=island-mapbgm1";
+import { renderQuarry } from "./scenes/quarry.js?v=island-mapbgm1";
+import { renderBar } from "./scenes/bar.js?v=island-mapbgm1";
+import { renderTheater } from "./scenes/theater.js?v=island-mapbgm1";
+import { renderWriters } from "./scenes/writers.js?v=island-mapbgm1";
+import { renderAtelier } from "./scenes/atelier.js?v=island-mapbgm1";
+import { renderHall } from "./scenes/hall.js?v=island-mapbgm1";
+import { renderEatery } from "./scenes/eatery.js?v=island-mapbgm1";
+import { renderMarket } from "./scenes/market.js?v=island-mapbgm1";
+import { renderTing } from "./scenes/ting.js?v=island-mapbgm1";
+import { renderHui } from "./scenes/hui.js?v=island-mapbgm1";
+import { renderLianli } from "./scenes/lianli.js?v=island-mapbgm1";
 let lighthouseMod = null;
 async function lighthouseScene() {
-  if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-qiaoqiao1");
+  if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-mapbgm1");
   return lighthouseMod;
 }
-import { renderBag } from "./ui/bag.js?v=island-qiaoqiao1";
-import { setBackChip, setBagChip } from "./ui/back-map.js?v=island-qiaoqiao1";
-import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=island-qiaoqiao1";
-import { popOut } from "./ui/pop.js?v=island-qiaoqiao1";
-import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showPitchSheet, showVendSheet, toast } from "./ui/modal.js?v=island-qiaoqiao1";
+import { renderBag } from "./ui/bag.js?v=island-mapbgm1";
+import { setBackChip, setBagChip } from "./ui/back-map.js?v=island-mapbgm1";
+import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=island-mapbgm1";
+import { popOut } from "./ui/pop.js?v=island-mapbgm1";
+import { bgmMuted, setBgmMuted, startIslandBgm, stopBgm } from "./ui/bgm.js?v=island-mapbgm1";
+import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showPitchSheet, showVendSheet, toast } from "./ui/modal.js?v=island-mapbgm1";
 
 const sceneEl = () => document.getElementById("island-scene");
 const sheetEl = () => document.getElementById("island-sheet");
@@ -53,24 +54,54 @@ let growTimer = 0;
 let workshopTimer = 0;
 let quarryTimer = 0;
 
+function paintBgmChip(on) {
+  const btn = document.getElementById("island-bgm-chip");
+  if (!btn) return;
+  if (!on) {
+    btn.hidden = true;
+    return;
+  }
+  btn.hidden = false;
+  btn.removeAttribute("hidden");
+  const off = bgmMuted();
+  btn.textContent = off ? "出声" : "静音";
+  btn.setAttribute("aria-pressed", off ? "true" : "false");
+  btn.setAttribute("aria-label", off ? "打开背景乐" : "关掉背景乐");
+}
+
+function bindBgmChip() {
+  const btn = document.getElementById("island-bgm-chip");
+  if (!btn || btn._bgmBound) return;
+  btn._bgmBound = true;
+  btn.addEventListener("click", (ev) => {
+    ev.stopPropagation();
+    setBgmMuted(!bgmMuted());
+    paintBgmChip(true);
+  });
+}
+
 function showPlay() {
   if (window.__islandBoot && typeof window.__islandBoot.showPlay === "function") {
     window.__islandBoot.showPlay();
-    return;
+  } else {
+    document.body.classList.add("is-playing");
+    const root = document.getElementById("island-root");
+    if (root) root.classList.add("is-playing");
+    document.getElementById("island-gate").classList.add("island-hidden");
+    const stage = document.getElementById("island-stage");
+    stage.classList.remove("island-hidden");
+    stage.hidden = false;
+    const dock = document.getElementById("island-dock");
+    if (dock) dock.hidden = true;
+    setBagChip(false);
   }
-  document.body.classList.add("is-playing");
-  const root = document.getElementById("island-root");
-  if (root) root.classList.add("is-playing");
-  document.getElementById("island-gate").classList.add("island-hidden");
-  const stage = document.getElementById("island-stage");
-  stage.classList.remove("island-hidden");
-  stage.hidden = false;
-  const dock = document.getElementById("island-dock");
-  if (dock) dock.hidden = true;
-  setBagChip(false);
+  startIslandBgm();
+  paintBgmChip(true);
 }
 
 function showGate() {
+  stopBgm();
+  paintBgmChip(false);
   document.body.classList.remove("is-yards");
   if (window.__islandBoot && typeof window.__islandBoot.showGate === "function") {
     window.__islandBoot.showGate();
@@ -2653,6 +2684,7 @@ async function startFromSnapshot(data, scene) {
 }
 
 function bindDock() {
+  bindBgmChip();
   const bag = document.getElementById("island-bag-chip");
   if (bag) bag.addEventListener("click", () => openTab("bag"));
   const dock = document.getElementById("island-dock");

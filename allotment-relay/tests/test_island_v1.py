@@ -1200,23 +1200,23 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-qiaoqiao1" in app
-    assert html.count("island.css?v=island-qiaoqiao1") == 1
-    assert html.count("app.js?v=island-qiaoqiao1") == 1
-    assert "lighthouse.js?v=island-qiaoqiao1" in app
-    assert "hall.js?v=island-qiaoqiao1" in app
-    assert "shop.js?v=island-qiaoqiao1" in app
-    assert "lili.js?v=island-qiaoqiao1" in app
-    assert "clinic.js?v=island-qiaoqiao1" in app
-    assert "market.js?v=island-qiaoqiao1" in app
+    assert "island-mapbgm1" in app
+    assert html.count("island.css?v=island-mapbgm1") == 1
+    assert html.count("app.js?v=island-mapbgm1") == 1
+    assert "lighthouse.js?v=island-mapbgm1" in app
+    assert "hall.js?v=island-mapbgm1" in app
+    assert "shop.js?v=island-mapbgm1" in app
+    assert "lili.js?v=island-mapbgm1" in app
+    assert "clinic.js?v=island-mapbgm1" in app
+    assert "market.js?v=island-mapbgm1" in app
     js_blob = "\n".join(p.read_text(encoding="utf-8") for p in (ROOT / "server/static/island").rglob("*.js"))
     store_vs = set(re.findall(r"store\.js\?v=([^\s\"']+)", js_blob))
     modal_vs = set(re.findall(r"modal\.js\?v=([^\s\"']+)", js_blob))
-    assert store_vs == {"island-qiaoqiao1"}, store_vs
-    assert modal_vs == {"island-qiaoqiao1"}, modal_vs
-    assert 'from "../store.js?v=island-qiaoqiao1"' in (ROOT / "server/static/island/scenes/atelier.js").read_text(encoding="utf-8")
-    assert 'from "../store.js?v=island-qiaoqiao1"' in (ROOT / "server/static/island/scenes/writers.js").read_text(encoding="utf-8")
-    assert 'from "../store.js?v=island-qiaoqiao1"' in (ROOT / "server/static/island/scenes/hall.js").read_text(encoding="utf-8")
+    assert store_vs == {"island-mapbgm1"}, store_vs
+    assert modal_vs == {"island-mapbgm1"}, modal_vs
+    assert 'from "../store.js?v=island-mapbgm1"' in (ROOT / "server/static/island/scenes/atelier.js").read_text(encoding="utf-8")
+    assert 'from "../store.js?v=island-mapbgm1"' in (ROOT / "server/static/island/scenes/writers.js").read_text(encoding="utf-8")
+    assert 'from "../store.js?v=island-mapbgm1"' in (ROOT / "server/static/island/scenes/hall.js").read_text(encoding="utf-8")
     hut_js = (ROOT / "server/static/island/scenes/hut.js").read_text(encoding="utf-8")
     store_js = (ROOT / "server/static/island/store.js").read_text(encoding="utf-8")
     art_js = (ROOT / "server/static/island/ui/art.js").read_text(encoding="utf-8")
@@ -1234,7 +1234,8 @@ def test_island_page_is_modular() -> None:
     assert '"hut-1"' in art_js and '"hut-4"' in art_js
     for name in ("hut-1.png", "hut-2.png", "hut-3.png", "hut-4.png"):
         assert (ROOT / "server/static/island/assets/scenes" / name).exists(), name
-    assert "island-wait2" in html
+    assert "island-mapbgm1" in html
+    assert "boot.js?v=island-mapbgm1" in html
     assert 'id="island-boot-veil"' in html
     assert "正在进入" in html
     assert "fonts.googleapis.com" not in html
@@ -1245,6 +1246,8 @@ def test_island_page_is_modular() -> None:
     assert "island-dock" in html
     assert 'id="island-bag-chip"' in html
     assert 'id="island-back-chip"' in html
+    assert 'id="island-bgm-chip"' in html
+    assert ">静音<" in html
     assert ' data-src="/static/island/assets/chip-bag.png"' in html
     assert ' data-src="/static/island/assets/chip-back.png"' in html
     assert html.count("/static/island/assets/chip-bag.png") == 1
@@ -1317,7 +1320,7 @@ def test_island_page_is_modular() -> None:
     assert "waitScenePics" in app
     assert "await waitScenePics" in app
     assert "enterGen" in app
-    assert 'from "./ui/modal.js?v=island-qiaoqiao1"' in app
+    assert 'from "./ui/modal.js?v=island-mapbgm1"' in app
     modal_src = (ROOT / "server/static/island/ui/modal.js").read_text(encoding="utf-8")
     assert "export function showFormSheet" in modal_src
     assert "export function showPickSheet" in modal_src
@@ -1548,6 +1551,8 @@ def test_island_page_is_modular() -> None:
     assert "scenes/shop.png" in art_md
     assert "scenes/lili.png" in art_md
     assert "scenes/clinic.png" in art_md
+    assert "audio/island.mp3" in art_md
+    assert "audio/clinic.mp3" not in art_md
     assert "摊车特写" in art_md
     assert "scenes/lighthouse.png" in art_md
     assert "scenes/notice.png" in art_md
@@ -1677,9 +1682,26 @@ def test_island_page_is_modular() -> None:
     assert "点一下看诊" not in clinic_js
     assert "island-shop-shelf" not in clinic_js
     assert "去上手页" not in clinic_js
+    assert "island-vn-mute" not in clinic_js
+    assert "bgm.js" not in clinic_js
     assert "clinicMeet" in app
     assert "meetClinic" in app
     assert "speakClinic" in app
+    assert "startIslandBgm" in app
+    assert "paintBgmChip" in app
+    assert "bindBgmChip" in app
+    bgm_js = (ROOT / "server/static/island/ui/bgm.js").read_text(encoding="utf-8")
+    assert 'playBgm("island")' in bgm_js
+    assert "audio/island" in bgm_js
+    assert "audio/clinic" not in bgm_js
+    assert (ROOT / "server/static/island/assets/audio/island.mp3").exists()
+    assert (ROOT / "server/static/island/assets/audio/island.ogg").exists()
+    assert not (ROOT / "server/static/island/assets/audio/clinic.mp3").exists()
+    enter_fn = app.split("async function enterScene")[1].split("try {")[0]
+    assert "stopBgm" not in enter_fn
+    meet_fn = app.split("function meetClinic")[1].split("function speakClinic")[0]
+    assert "playBgm" not in meet_fn
+    assert "startIslandBgm" not in meet_fn
     clinic_fn = app.split("function tapClinic")[1].split("async function runClinic")[0]
     assert "speakClinic" in clinic_fn
     assert "showHintSheet" not in clinic_fn
@@ -1932,6 +1954,8 @@ def test_island_page_is_modular() -> None:
     assert "只要头和胸" in css
     assert "矮一半" in css
     assert ".island-vn-stand.is-half" in css
+    assert ".island-bgm-chip" in css
+    assert "island-vn-mute" not in css
     assert "全身的二分之一" in css
     assert ".island-theater-board" in css
     assert ".island-theater-picks" not in css

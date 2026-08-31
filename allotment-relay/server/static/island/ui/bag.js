@@ -1,7 +1,7 @@
-import { state } from "../store.js?v=island-qiaoqiao1";
-import { esc, toast } from "./modal.js?v=island-qiaoqiao1";
-import { cropArt } from "./crops.js?v=island-qiaoqiao1";
-import { popIn, popOut } from "./pop.js?v=island-qiaoqiao1";
+import { state } from "../store.js?v=island-mapbgm1";
+import { esc, toast } from "./modal.js?v=island-mapbgm1";
+import { cropArt } from "./crops.js?v=island-mapbgm1";
+import { popIn, popOut } from "./pop.js?v=island-mapbgm1";
 
 const PAGE = 20;
 const CROP_KEYS = new Set([
