@@ -26,7 +26,11 @@ import { renderWriters } from "./scenes/writers.js";
 import { renderAtelier } from "./scenes/atelier.js";
 import { renderHall } from "./scenes/hall.js";
 import { renderEatery } from "./scenes/eatery.js";
-import { renderLighthouse } from "./scenes/lighthouse.js";
+let lighthouseMod = null;
+async function lighthouseScene() {
+  if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js");
+  return lighthouseMod;
+}
 import { renderBag } from "./ui/bag.js";
 import { setBackChip, setBagChip } from "./ui/back-map.js";
 import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js";
@@ -1040,11 +1044,12 @@ async function openLighthouse() {
   } catch (err) {
     toast(err.message || "塔门还没开。");
   }
-  paintLighthouse();
+  await paintLighthouse();
   await act(() => api.lighthouseAct("visit"), { keepLighthouse: true, quiet: true });
 }
 
-function paintLighthouse() {
+async function paintLighthouse() {
+  const { renderLighthouse } = await lighthouseScene();
   renderLighthouse(sceneEl(), { onAct: tapLighthouse });
 }
 
@@ -1404,7 +1409,7 @@ async function act(fn, { refreshScene = false, keepPlant = false, keepTab = fals
         state.lighthouse.line = data.event.narrative;
         state.lighthouse.speaker = data.event.speaker || "不醒";
       }
-      paintLighthouse();
+      await paintLighthouse();
       return;
     }
     if (refreshScene || LIVE_SCENES.includes(state.scene)) {

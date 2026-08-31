@@ -21,7 +21,7 @@ html, body.island-app {
 }
 
 body.island-app {
-  font-family: "Noto Serif SC", serif;
+  font-family: "Songti SC", "STSong", "Source Han Serif SC", "Noto Serif SC", serif;
 }
 
 .island-skip { display: none; }
@@ -1245,7 +1245,7 @@ body.island-app.is-bag-open .island-float-chip {
   width: min(420px, 92vw, calc(94dvh * 941 / 1672));
   aspect-ratio: 941 / 1672;
   max-height: 94dvh;
-  background: url("/static/island/assets/bag-frame.png") center / 100% 100% no-repeat;
+  background: none center / 100% 100% no-repeat;
   background-color: transparent;
 }
 
@@ -1442,7 +1442,7 @@ body.island-app.is-bag-open .island-float-chip {
   width: min(400px, calc(100% - 8px));
   max-height: min(86dvh, 560px);
   aspect-ratio: 1;
-  background: url("/static/island/assets/prompt-frame.png") center / 100% 100% no-repeat;
+  background: none center / 100% 100% no-repeat;
   background-color: transparent;
   border-radius: 0;
   padding: 0;

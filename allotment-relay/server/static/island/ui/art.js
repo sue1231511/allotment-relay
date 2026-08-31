@@ -28,7 +28,7 @@ export function sceneArt(id) {
   const meta = SLOTS[id] || { label: id, size: "1080×1920" };
   const file = meta.file || id;
   return `<div class="island-slot" data-slot="${id}">
-    <img class="island-slot-pic" src="/static/island/assets/scenes/${file}.png" alt="" onerror="this.closest('.island-slot').classList.add('is-empty')">
+    <img class="island-slot-pic" src="/static/island/assets/scenes/${file}.png" alt="" decoding="async" onerror="this.closest('.island-slot').classList.add('is-empty')">
     <span class="island-slot-mark"><b>插图位</b><small>${meta.label} · ${meta.size}</small></span>
   </div>`;
 }
