@@ -3,50 +3,97 @@ import { esc } from "../ui/modal.js?v=island-mapbgm1";
 import { state } from "../store.js?v=island-mapbgm1";
 import { bindShopFrame, ensureShopFrame, setShopPeek } from "../ui/shop-frame.js?v=island-mapbgm1";
 
-export function renderPortHub(root, { onPeek, onChat, onDock } = {}) {
-  const peek = !state.portPeek;
-  let wrap = root.querySelector(".island-port-hub");
-  if (!wrap) {
-    root.innerHTML = `
-      <div class="island-vn island-port-hub">
-        <div class="island-vn-board">
-          ${sceneArt("port")}
-          <div class="island-vn-talk is-picks">
-            <div class="island-vn-choices" id="island-port-hub-choices">
-              <button type="button" class="island-vn-choice" data-go="chat"><b>闲聊</b></button>
-              <button type="button" class="island-vn-choice" data-go="dock"><b>看码头</b></button>
-            </div>
-          </div>
-          <button type="button" class="island-scene-tap">点一下看码头</button>
-        </div>
-      </div>
-    `;
-    wrap = root.querySelector(".island-port-hub");
-  }
-  wrap.classList.toggle("is-peek", peek);
+function renderPickHub(root, {
+  findClass,
+  className,
+  sceneId,
+  tap,
+  listId,
+  title,
+  line,
+  rows,
+  peek,
+  onPeek,
+  onClose,
+  onPick,
+}) {
+  const wrap = ensureShopFrame(root, {
+    find: (el) => el.querySelector(`.${findClass}`),
+    className,
+    sceneId,
+    tap,
+    listId,
+    tabAria: title,
+  });
+  setShopPeek(wrap, peek);
+  bindShopFrame(wrap, { onOpenShelf: onPeek, onCloseShelf: onClose });
   hideActionBar();
-  bindPortHub(wrap, onPeek, onChat, onDock);
+  if (peek) return;
+  const name = wrap.querySelector(".island-shop-meta b");
+  const note = wrap.querySelector(".island-shop-meta small");
+  if (name) name.textContent = title;
+  if (note) note.textContent = line;
+  const tabBar = wrap.querySelector(".island-shop-tabs");
+  if (tabBar) tabBar.innerHTML = "";
+  const list = wrap.querySelector(`#${listId}`);
+  if (!list) return;
+  list.innerHTML = rows.map((row) => (
+    `<button type="button" class="island-shop-sku" data-go="${esc(row.go)}">
+      <span class="island-shop-emoji">${esc(row.emoji)}</span>
+      <span class="island-shop-name"><b>${esc(row.name)}</b><small>${esc(row.note)}</small></span>
+      <span class="island-shop-price">${esc(row.price)}</span>
+    </button>`
+  )).join("");
+  list.querySelectorAll("[data-go]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (onPick) onPick(btn.getAttribute("data-go"));
+    });
+  });
 }
 
-function bindPortHub(wrap, onPeek, onChat, onDock) {
-  const board = wrap.querySelector(".island-vn-board");
-  if (board && !board._hubPeekBound) {
-    board._hubPeekBound = true;
-    board.addEventListener("click", (ev) => {
-      if (!wrap.classList.contains("is-peek")) return;
-      if (ev.target.closest("[data-go]")) return;
-      if (onPeek) onPeek();
-    });
-  }
-  if (wrap._hubGoBound) return;
-  wrap._hubGoBound = true;
-  wrap.querySelectorAll("[data-go]").forEach((btn) => {
-    btn.addEventListener("click", (ev) => {
-      ev.stopPropagation();
-      const go = btn.getAttribute("data-go");
+export function renderPortHub(root, { onPeek, onClose, onChat, onDock } = {}) {
+  renderPickHub(root, {
+    findClass: "island-port-hub",
+    className: "island-shop island-port-hub",
+    sceneId: "port",
+    tap: "点一下看码头",
+    listId: "island-port-hub-list",
+    title: "港口",
+    line: "闲聊或看码头。",
+    peek: !state.portPeek,
+    rows: [
+      { go: "chat", name: "闲聊", emoji: "💬", note: "全服聊天室。说话、发红包、对暗号、许愿墙。", price: "聊" },
+      { go: "dock", name: "看码头", emoji: "⚓", note: "撒网、坐钓、开船。", price: "看" },
+    ],
+    onPeek,
+    onClose,
+    onPick: (go) => {
       if (go === "chat" && onChat) onChat();
       if (go === "dock" && onDock) onDock();
-    });
+    },
+  });
+}
+
+export function renderBeachHub(root, { onPeek, onClose, onMeet, onShore } = {}) {
+  renderPickHub(root, {
+    findClass: "island-beach-hub",
+    className: "island-shop island-beach-hub",
+    sceneId: "beach",
+    tap: "点一下看沙滩",
+    listId: "island-beach-hub-list",
+    title: "海边",
+    line: "去见韶年或去赶海。",
+    peek: !state.beachPeek,
+    rows: [
+      { go: "shaonian", name: "去见韶年", emoji: "🎴", note: "卜卦、转运、买符。", price: "见" },
+      { go: "shore", name: "去赶海", emoji: "🐚", note: "撒网、坐钓、赶海、开船。", price: "去" },
+    ],
+    onPeek,
+    onClose,
+    onPick: (go) => {
+      if (go === "shaonian" && onMeet) onMeet();
+      if (go === "shore" && onShore) onShore();
+    },
   });
 }
 

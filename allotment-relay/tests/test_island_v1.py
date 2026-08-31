@@ -1238,8 +1238,8 @@ def test_island_page_is_modular() -> None:
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
     assert "island-mapbgm1" in app
-    assert html.count("island.css?v=island-portlounge1") == 1
-    assert html.count("app.js?v=island-portlounge1") == 1
+    assert html.count("island.css?v=island-shorelist1") == 1
+    assert html.count("app.js?v=island-shorelist1") == 1
     assert html.count("lounge-embed.css?v=island-portlounge1") == 1
     assert "lounge.js?v=lounge-board-compose6" in html
     assert "island-time.js" in html
@@ -1792,11 +1792,10 @@ def test_island_page_is_modular() -> None:
     assert "is-half" in shaonian_js
     assert "sprites/shaonian.png" in shaonian_js
     assert "点一下见韶年" in shaonian_js
-    assert "点一下看沙滩" in shaonian_js
-    assert "去见韶年" in shaonian_js
+    assert "点一下看沙滩" not in shaonian_js
     assert "去赶海" in shaonian_js
-    assert "renderBeachHub" in shaonian_js
-    assert "island-beach-hub" in shaonian_js
+    assert "renderBeachHub" not in shaonian_js
+    assert "island-beach-hub" not in shaonian_js
     assert "ensureShopFrame" not in shaonian_js
     assert "去上手页" not in shaonian_js
     assert "shaonianMeet" in app
@@ -1822,7 +1821,7 @@ def test_island_page_is_modular() -> None:
     assert paint_beach.index("if (state.shoreShelf)") < paint_beach.index("if (state.shaonianMeet)")
     assert paint_beach.index("if (state.shaonianMeet)") < paint_beach.index("renderBeachHub")
     assert "beachPeek = true" in paint_beach
-    assert 'shaonian.js?v=island-beachhub1' in app
+    assert 'shaonian.js?v=island-shorelist1' in app
     assert "startIslandBgm" in app
     assert "paintBgmChip" in app
     assert "bindBgmChip" in app
@@ -2023,8 +2022,15 @@ def test_island_page_is_modular() -> None:
     assert "ensureShopFrame" in shore_js
     assert "去上手页" not in shore_js
     assert "renderPortHub" in shore_js
+    assert "renderBeachHub" in shore_js
+    assert "island-port-hub-list" in shore_js
+    assert "island-beach-hub-list" in shore_js
+    assert "island-shop-sku" in shore_js
     assert "闲聊" in shore_js
     assert "看码头" in shore_js
+    assert "去见韶年" in shore_js
+    assert "去赶海" in shore_js
+    assert "island-vn-choice" not in shore_js
     assert "paintChat" not in shore_js
     assert "island-port-say" not in shore_js
     assert "renderShore" in app
@@ -2037,7 +2043,7 @@ def test_island_page_is_modular() -> None:
     assert "playLounge" in app
     assert "portChatOpen" in app
     assert "portPeek" in app
-    assert 'shore.js?v=island-portlounge1' in app
+    assert 'shore.js?v=island-shorelist1' in app
     paint_port = app.split("function paintPort")[1].split("async function openBeach")[0]
     assert paint_port.index("state.portChatOpen") < paint_port.index("state.portShelf")
     assert paint_port.index("state.portShelf") < paint_port.index("renderPortHub")
@@ -2127,6 +2133,7 @@ def test_island_page_is_modular() -> None:
     assert ".island-theater-picks" not in css
     assert ".island-theater .island-hot span" in css
     assert ".island-shore-board" in css
+    assert ".island-shop-tabs:empty" in css
     assert ".island-shore-yard .island-hot span" in css
     assert ".island-port-say" in css
     assert ".island-port-msg" in css
