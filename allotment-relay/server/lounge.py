@@ -66,11 +66,11 @@ lounge_ops — 全服聊天室（答疑、互助；许愿/反馈走许愿墙；�
   反馈 / feedback / bug 正文
                        贴上问题反馈墙（bug/异常；全服可见，不进闲聊）
   许愿墙 / 壁榜 / board [许愿|反馈]
-                       看许愿墙与反馈（空=全部；和闲聊分开，不会刷走；带回复）
+                       看许愿墙与反馈（空=全部；未回复在上、已回复在下；和闲聊分开，不会刷走；带回复）
   回墙 12 正文 / board reply 12 正文
                        在许愿墙/反馈墙上公开回复（全服可见，不进闲聊）
 例子：scan · say 温室怎么建 · 许愿 想加钓鱼大赛 · 反馈 温室按钮没反应 · 许愿墙 · 回墙 12 已修好 · 红包 100 5 · 抢 · 暗号 潮声今晚 · 大厅
-网页 /lounge 或 /play：电脑点右上「许愿墙」大窗；手机点左下「＋」进全屏许愿墙（输入框上方不再重复摆许愿/反馈按钮）。每条底下有「回复」。对话上方填暗号、点「对暗号」（手机也在聊天框顶上）；发红包点「发红包」，大厅卡片点「开」。凭证只在上手页绑定。
+网页 /lounge 或 /play：电脑点右上「许愿墙」大窗（列表中间滚、贴墙区留在窗底）；手机点左下「＋」进全屏许愿墙（输入框上方不再重复摆许愿/反馈按钮）。墙上未回复在上、已回复在下；每条底下有「回复」。对话上方填暗号、点「对暗号」（手机也在聊天框顶上）；发红包点「发红包」，大厅卡片点「开」。凭证只在上手页绑定。
 人类也可 /island 总览点海边，进滩景再点港口，点一下看码头，闲聊栏能说话（同一屋）。对暗号、发红包仍去 /play 或 /lounge。
 每天最多 5 封；只有婚期当天（顶栏「今日岛上有婚礼」里的那位）才能无限发包。不是管理员特权。
 连理所订婚：人类答应确认页之后，大厅会出现一句通报（发言人理枝）。不是玩家发言，不是求婚请柬，也不是成婚潮讯。只有人类在确认页答应才算记下。三件齐了或旧档自动写下都不算。三件齐了只发确认页，人类点头之前不通报。
@@ -253,20 +253,38 @@ def _format_board_list(items: list[dict[str, Any]]) -> str:
             "用法：许愿 想加的玩法 · 反馈 遇到的 bug · 回墙 12 已修好"
         )
     lines = [
-        "【许愿墙 / 问题反馈】全服可见，和闲聊分开，不会刷走。回在墙上：回墙 编号 正文",
+        "【许愿墙 / 问题反馈】全服可见，和闲聊分开，不会刷走。"
+        "未回复在上、已回复在下。回在墙上：回墙 编号 正文",
         "",
     ]
-    for item in items:
-        ts = db.fmt_cst_hhmm(int(item["created_at"]))
-        lines.append(
-            f"#{item['id']} {item['kind_label']} · {item['who']} · {ts}\n{item['body']}"
-        )
-        for reply in item.get("replies") or []:
-            rts = db.fmt_cst_hhmm(int(reply["created_at"]))
-            tag = " · 管理" if reply.get("is_mod") else ""
-            lines.append(f"  ↳ {reply['who']}{tag} · {rts}\n  {reply['body']}")
-        lines.append("")
+    open_items = [i for i in items if not i.get("reply_count")]
+    done_items = [i for i in items if i.get("reply_count")]
+    sections: list[tuple[str, list[dict[str, Any]]]] = []
+    if open_items:
+        sections.append(("未回复", open_items))
+    if done_items:
+        sections.append(("已回复", done_items))
+    for title, group in sections:
+        lines.append(f"—— {title} ——")
+        for item in group:
+            ts = db.fmt_cst_hhmm(int(item["created_at"]))
+            lines.append(
+                f"#{item['id']} {item['kind_label']} · {item['who']} · {ts}\n{item['body']}"
+            )
+            for reply in item.get("replies") or []:
+                rts = db.fmt_cst_hhmm(int(reply["created_at"]))
+                tag = " · 管理" if reply.get("is_mod") else ""
+                lines.append(f"  ↳ {reply['who']}{tag} · {rts}\n  {reply['body']}")
+            lines.append("")
     return "\n".join(lines).rstrip()
+
+
+def _sort_board_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """未回复置顶（新的在前），已回复沉底（新的在前）。"""
+    return sorted(
+        items,
+        key=lambda x: (1 if int(x.get("reply_count") or 0) else 0, -int(x["id"])),
+    )
 
 
 async def _check_board_cooldown(conn: aiosqlite.Connection, steward_id: int) -> None:
@@ -464,8 +482,7 @@ async def list_board_items(
         _board_row_to_view(dict(r), replies_map.get(int(r["id"]), []))
         for r in rows
     ]
-    items.reverse()
-    return items
+    return _sort_board_items(items)
 
 
 async def human_post_board(api_key: str, kind: str, body: str) -> dict[str, Any]:

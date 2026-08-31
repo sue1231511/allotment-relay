@@ -75,7 +75,7 @@ async def _test_lounge_mcp_and_web() -> None:
 
     items = await lounge.list_board_items()
     assert len(items) == 3
-    assert items[-1]["body"] == "人类也想加派对"
+    assert items[0]["body"] == "人类也想加派对"
 
     feedback_id = next(i["id"] for i in items if "温室按钮" in i["body"])
     await asyncio.sleep(lounge.LOUNGE_BOARD_REPLY_COOLDOWN_SEC + 1)
@@ -85,7 +85,17 @@ async def _test_lounge_mcp_and_web() -> None:
     assert "已回墙上" in replied, replied
     board_after = await lounge.lounge_ops(row["id"], "许愿墙")
     assert "已修好" in board_after
+    assert "未回复" in board_after and "已回复" in board_after
     assert "↳" in board_after or "管理" in board_after or "聊天测试" in board_after
+
+    items_after = await lounge.list_board_items()
+    open_ids = [i["id"] for i in items_after if not i["reply_count"]]
+    done_ids = [i["id"] for i in items_after if i["reply_count"]]
+    assert open_ids and done_ids
+    assert feedback_id in done_ids
+    assert items_after.index(next(i for i in items_after if i["id"] == open_ids[0])) < items_after.index(
+        next(i for i in items_after if i["id"] == done_ids[0])
+    )
 
     await asyncio.sleep(lounge.LOUNGE_BOARD_REPLY_COOLDOWN_SEC + 1)
     web_reply = await lounge.human_post_board_reply(

@@ -2983,6 +2983,20 @@ body.memory-open {
   -webkit-overflow-scrolling: touch;
 }
 
+.lounge-board-section {
+  margin: 4px 0 0;
+  padding: 4px 2px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: #8f764a;
+  opacity: .85;
+}
+
+.lounge-board-section + .lounge-board-item {
+  margin-top: 0;
+}
+
 .lounge-board-empty {
   margin: 0;
   font-size: 12px;
@@ -3151,9 +3165,16 @@ body.memory-open {
 
 .lounge-board-composer {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: minmax(0, auto) 1fr;
+  grid-template-areas:
+    "kind send"
+    "body body";
   gap: 8px;
-  align-items: end;
+  align-items: center;
+}
+
+.lounge-board-kind {
+  grid-area: kind;
 }
 
 .lounge-board-kind select {
@@ -3166,21 +3187,26 @@ body.memory-open {
 }
 
 .lounge-board-composer textarea {
+  grid-area: body;
   width: 100%;
-  min-height: 44px;
+  min-height: 72px;
+  max-height: 140px;
   resize: vertical;
   border: 1px solid rgba(143, 118, 74, .24);
   border-radius: 12px;
-  padding: 8px 10px;
+  padding: 10px 12px;
   font: inherit;
   font-size: 13px;
   background: rgba(255, 255, 255, .92);
+  box-sizing: border-box;
 }
 
 .lounge-board-send {
+  grid-area: send;
+  justify-self: end;
   border: none;
   border-radius: 12px;
-  padding: 10px 14px;
+  padding: 10px 16px;
   background: #8f764a;
   color: #fff;
   font-size: 13px;
@@ -3214,31 +3240,7 @@ body.memory-open {
   display: none;
 }
 
-.lounge-board-sheet {
-  max-width: min(96vw, 920px);
-  width: 100%;
-}
-
-.lounge-board-sheet .lounge-sheet-inner {
-  max-height: min(90vh, 860px);
-  display: flex;
-  flex-direction: column;
-}
-
-.lounge-board-sheet .lounge-sheet-body {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-  padding-bottom: 16px;
-}
-
-.lounge-board-sheet .lounge-board-sheet-feed {
-  flex: 1;
-  min-height: min(42vh, 420px);
-  max-height: none;
-}
+/* 许愿墙尺寸/结构写在 .lounge-sheet 之后，见下方 .lounge-sheet.lounge-board-sheet */
 
 .lounge-board-sheet-compose {
   margin-top: 10px;
@@ -3256,14 +3258,6 @@ body.memory-open {
 
   .lounge-chat-head {
     gap: 12px;
-  }
-
-  .lounge-board-sheet .lounge-sheet-head h2 {
-    font-size: 20px;
-  }
-
-  .lounge-board-sheet .lounge-sheet-body {
-    padding: 18px 22px 22px;
   }
 }
 
@@ -3285,81 +3279,9 @@ body.memory-open {
   .lounge-composer-identity {
     padding-right: 4px;
   }
-
-  /* 手机许愿墙改成全屏子页，不再用小弹窗 */
-  .lounge-board-sheet {
-    inset: 0;
-    max-width: none;
-    width: 100vw;
-    height: 100%;
-    max-height: 100%;
-    margin: 0;
-    padding: 0;
-    border-radius: 0;
-    border: none;
-  }
-
-  .lounge-board-sheet::backdrop {
-    background: #eef3f2;
-  }
-
-  .lounge-board-sheet .lounge-sheet-inner {
-    width: 100vw;
-    height: 100dvh;
-    max-height: 100dvh;
-    border-radius: 0;
-    border: none;
-    box-shadow: none;
-    background: #f7f5ef;
-  }
-
-  .lounge-board-sheet .lounge-sheet-head {
-    position: sticky;
-    top: 0;
-    z-index: 2;
-    padding: 12px 14px calc(12px + env(safe-area-inset-top, 0px));
-    padding-top: calc(12px + env(safe-area-inset-top, 0px));
-    background: rgba(247, 245, 239, .96);
-    backdrop-filter: blur(8px);
-  }
-
-  .lounge-board-sheet .lounge-sheet-head h2 {
-    font-size: 17px;
-  }
-
-  .lounge-board-sheet .lounge-sheet-close {
-    font-size: 14px;
-    color: #496762;
-    font-weight: 600;
-  }
-
-  .lounge-board-sheet .lounge-sheet-body {
-    padding: 12px 14px calc(14px + env(safe-area-inset-bottom, 0px));
-    max-height: none;
-  }
-
-  .lounge-board-sheet .lounge-board-sheet-feed {
-    min-height: 0;
-    flex: 1;
-  }
-
-  .lounge-board-sheet-compose {
-    position: sticky;
-    bottom: 0;
-    margin-top: 8px;
-    padding-top: 8px;
-    background: linear-gradient(180deg, transparent, #f7f5ef 18%);
-  }
 }
 
 @media (max-width: 720px) {
-  .lounge-board-composer {
-    grid-template-columns: 1fr;
-  }
-
-  .lounge-board-send {
-    width: 100%;
-  }
 }
 
 .lounge-feed {
@@ -3570,11 +3492,130 @@ body.memory-open {
   background: transparent;
 }
 
-/* 须写在 .lounge-sheet 后面，且按断点拆开，避免手机也被打成 96vw */
+.lounge-sheet::backdrop {
+  background: rgba(30, 45, 48, .35);
+  backdrop-filter: blur(3px);
+}
+
+.lounge-sheet-inner {
+  background: #fff;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(127, 167, 171, .2);
+  box-shadow: 0 20px 50px rgba(45, 74, 78, .18);
+}
+
+.lounge-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(127, 167, 171, .12);
+  flex-shrink: 0;
+}
+
+.lounge-sheet-head h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.lounge-sheet-close {
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: var(--sea-deep);
+  cursor: pointer;
+}
+
+.lounge-sheet-body {
+  padding: 14px 16px 18px;
+  font-size: 14px;
+  line-height: 1.7;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+/* 许愿墙：整窗 flex，列表滚动，贴墙区留在窗内底部，不被 60vh 裁掉 */
+.lounge-sheet.lounge-board-sheet .lounge-sheet-inner {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.lounge-sheet.lounge-board-sheet .lounge-sheet-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none !important;
+  overflow: hidden;
+  padding-bottom: 16px;
+}
+
+.lounge-sheet.lounge-board-sheet .lounge-sheet-note,
+.lounge-sheet.lounge-board-sheet .lounge-board-tabs {
+  flex-shrink: 0;
+}
+
+.lounge-sheet.lounge-board-sheet .lounge-board-sheet-feed {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.lounge-sheet.lounge-board-sheet .lounge-board-sheet-compose {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    "kind send"
+    "body body";
+  gap: 8px;
+  align-items: center;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(143, 118, 74, .14);
+  background: #fff;
+  position: static;
+}
+
+.lounge-sheet.lounge-board-sheet .lounge-board-kind {
+  grid-area: kind;
+}
+
+.lounge-sheet.lounge-board-sheet .lounge-board-sheet-compose textarea {
+  grid-area: body;
+  width: 100%;
+  min-height: 72px;
+  max-height: 160px;
+  resize: vertical;
+}
+
+.lounge-sheet.lounge-board-sheet .lounge-board-send {
+  grid-area: send;
+  justify-self: end;
+}
+
 @media (min-width: 861px) {
   .lounge-sheet.lounge-board-sheet {
-    max-width: min(96vw, 920px);
-    width: min(96vw, 920px);
+    max-width: min(96vw, 960px);
+    width: min(96vw, 960px);
+  }
+
+  .lounge-sheet.lounge-board-sheet .lounge-sheet-inner {
+    height: min(88vh, 820px);
+    max-height: min(88vh, 820px);
+  }
+
+  .lounge-sheet.lounge-board-sheet .lounge-sheet-head h2 {
+    font-size: 20px;
+  }
+
+  .lounge-sheet.lounge-board-sheet .lounge-sheet-body {
+    padding: 18px 22px 20px;
   }
 }
 
@@ -3607,49 +3648,30 @@ body.memory-open {
     box-shadow: none !important;
     background: #f7f5ef;
   }
-}
 
-.lounge-sheet::backdrop {
-  background: rgba(30, 45, 48, .35);
-  backdrop-filter: blur(3px);
-}
+  .lounge-sheet.lounge-board-sheet .lounge-sheet-head {
+    padding: 12px 14px;
+    padding-top: calc(12px + env(safe-area-inset-top, 0px));
+    background: rgba(247, 245, 239, .96);
+  }
 
-.lounge-sheet-inner {
-  background: #fff;
-  border-radius: 18px;
-  overflow: hidden;
-  border: 1px solid rgba(127, 167, 171, .2);
-  box-shadow: 0 20px 50px rgba(45, 74, 78, .18);
-}
+  .lounge-sheet.lounge-board-sheet .lounge-sheet-head h2 {
+    font-size: 17px;
+  }
 
-.lounge-sheet-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 16px;
-  border-bottom: 1px solid rgba(127, 167, 171, .12);
-}
+  .lounge-sheet.lounge-board-sheet .lounge-sheet-close {
+    font-size: 14px;
+    color: #496762;
+    font-weight: 600;
+  }
 
-.lounge-sheet-head h2 {
-  margin: 0;
-  font-size: 16px;
-}
+  .lounge-sheet.lounge-board-sheet .lounge-sheet-body {
+    padding: 12px 14px calc(14px + env(safe-area-inset-bottom, 0px));
+  }
 
-.lounge-sheet-close {
-  border: none;
-  background: transparent;
-  font: inherit;
-  font-size: 13px;
-  color: var(--sea-deep);
-  cursor: pointer;
-}
-
-.lounge-sheet-body {
-  padding: 14px 16px 18px;
-  font-size: 14px;
-  line-height: 1.7;
-  max-height: 60vh;
-  overflow-y: auto;
+  .lounge-sheet.lounge-board-sheet .lounge-board-sheet-compose {
+    background: #f7f5ef;
+  }
 }
 
 .lounge-sheet-note {

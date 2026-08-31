@@ -267,34 +267,49 @@ function ensureBoardEmptyState(container) {
   container.appendChild(empty);
 }
 
+function boardSectionLabel(text) {
+  const el = document.createElement('p');
+  el.className = 'lounge-board-section';
+  el.textContent = text;
+  return el;
+}
+
+function renderBoardFeed(items, container) {
+  if (!container) return;
+  container.innerHTML = '';
+  boardLastId = 0;
+  if (!items.length) {
+    ensureBoardEmptyState(container);
+    return;
+  }
+  const openItems = items.filter((item) => !(item.reply_count > 0 || (item.replies || []).length));
+  const doneItems = items.filter((item) => item.reply_count > 0 || (item.replies || []).length);
+  const sections = [];
+  if (openItems.length) sections.push(['未回复', openItems]);
+  if (doneItems.length) sections.push(['已回复', doneItems]);
+  for (const [title, group] of sections) {
+    if (sections.length > 1 || title === '已回复') {
+      container.appendChild(boardSectionLabel(title));
+    }
+    for (const item of group) {
+      boardLastId = Math.max(boardLastId, item.id);
+      const wrap = document.createElement('div');
+      wrap.innerHTML = boardItemHtml(item);
+      const node = wrap.firstElementChild;
+      container.appendChild(node);
+      bindBoardReplyUi(node);
+    }
+  }
+  container.scrollTop = 0;
+}
+
 function upsertBoardItems(items, container) {
   if (!container) return;
   if (!items.length) {
     ensureBoardEmptyState(container);
     return;
   }
-  const empty = container.querySelector('.lounge-board-empty');
-  if (empty) empty.remove();
-  let appended = false;
-  for (const item of items) {
-    boardLastId = Math.max(boardLastId, item.id);
-    const existing = container.querySelector(`[data-board-id="${item.id}"]`);
-    const wrap = document.createElement('div');
-    wrap.innerHTML = boardItemHtml(item);
-    const node = wrap.firstElementChild;
-    if (existing) {
-      existing.replaceWith(node);
-      bindBoardReplyUi(node);
-      continue;
-    }
-    const rows = [...container.querySelectorAll('.lounge-board-item')];
-    const next = rows.find((r) => Number(r.dataset.boardId) > item.id);
-    if (next) container.insertBefore(node, next);
-    else container.appendChild(node);
-    bindBoardReplyUi(node);
-    appended = true;
-  }
-  if (appended) container.scrollTop = container.scrollHeight;
+  renderBoardFeed(items, container);
 }
 
 function resetBoardFeed() {
@@ -318,7 +333,7 @@ async function refreshBoard({ quiet = false } = {}) {
     const data = await fetchBoard();
     const items = data.items || [];
     const sheetFeed = document.getElementById('lounge-board-sheet-feed');
-    if (sheetFeed) upsertBoardItems(items, sheetFeed);
+    if (sheetFeed) renderBoardFeed(items, sheetFeed);
   } catch (err) {
     if (!quiet) console.error(err);
   }
@@ -383,9 +398,7 @@ async function submitBoardReplyForm(e) {
   if (btn) btn.disabled = true;
   try {
     const data = await postBoardReply(apiKey, boardId, body);
-    if (data.item) {
-      upsertBoardItems([data.item], document.getElementById('lounge-board-sheet-feed'));
-    }
+    await refreshBoard({ quiet: true });
     toast('已回在墙上');
   } catch (err) {
     toast(err.message);
@@ -501,7 +514,7 @@ async function submitBoardSheetForm(e) {
   if (btn) btn.disabled = true;
   try {
     const item = await postBoardItem(apiKey, kind, body);
-    upsertBoardItems([item], document.getElementById('lounge-board-sheet-feed'));
+    await refreshBoard({ quiet: true });
     const bodyInput = document.getElementById('lounge-board-sheet-body');
     if (bodyInput) bodyInput.value = '';
     toast(item.kind === 'feedback' ? '反馈已贴上墙' : '许愿已贴上墙');
