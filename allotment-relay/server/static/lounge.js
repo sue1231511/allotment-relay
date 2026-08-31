@@ -288,9 +288,7 @@ function renderBoardFeed(items, container) {
   if (openItems.length) sections.push(['未回复', openItems]);
   if (doneItems.length) sections.push(['已回复', doneItems]);
   for (const [title, group] of sections) {
-    if (sections.length > 1 || title === '已回复') {
-      container.appendChild(boardSectionLabel(title));
-    }
+    container.appendChild(boardSectionLabel(title));
     for (const item of group) {
       boardLastId = Math.max(boardLastId, item.id);
       const wrap = document.createElement('div');

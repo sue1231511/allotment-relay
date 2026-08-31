@@ -2984,13 +2984,19 @@ body.memory-open {
 }
 
 .lounge-board-section {
-  margin: 4px 0 0;
-  padding: 4px 2px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: .04em;
+  margin: 10px 0 2px;
+  padding: 6px 2px 2px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .06em;
   color: #8f764a;
-  opacity: .85;
+  border-top: 1px solid rgba(143, 118, 74, .14);
+}
+
+.lounge-board-section:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
 }
 
 .lounge-board-section + .lounge-board-item {
@@ -3537,11 +3543,18 @@ body.memory-open {
 }
 
 /* 许愿墙：头 / 列表 / 贴墙区三截；贴墙是 inner 底脚，不进 body，不被 60vh 裁、不漏圆角 */
+.lounge-sheet.lounge-board-sheet {
+  overflow: hidden;
+  border-radius: 18px;
+  background: transparent;
+}
+
 .lounge-sheet.lounge-board-sheet .lounge-sheet-inner {
   display: flex;
   flex-direction: column;
   overflow: hidden;
   border-radius: 18px;
+  min-height: 0;
 }
 
 .lounge-sheet.lounge-board-sheet .lounge-sheet-body {
