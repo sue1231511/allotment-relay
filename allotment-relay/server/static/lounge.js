@@ -267,34 +267,47 @@ function ensureBoardEmptyState(container) {
   container.appendChild(empty);
 }
 
+function boardSectionLabel(text) {
+  const el = document.createElement('p');
+  el.className = 'lounge-board-section';
+  el.textContent = text;
+  return el;
+}
+
+function renderBoardFeed(items, container) {
+  if (!container) return;
+  container.innerHTML = '';
+  boardLastId = 0;
+  if (!items.length) {
+    ensureBoardEmptyState(container);
+    return;
+  }
+  const openItems = items.filter((item) => !(item.reply_count > 0 || (item.replies || []).length));
+  const doneItems = items.filter((item) => item.reply_count > 0 || (item.replies || []).length);
+  const sections = [];
+  if (openItems.length) sections.push(['未回复', openItems]);
+  if (doneItems.length) sections.push(['已回复', doneItems]);
+  for (const [title, group] of sections) {
+    container.appendChild(boardSectionLabel(title));
+    for (const item of group) {
+      boardLastId = Math.max(boardLastId, item.id);
+      const wrap = document.createElement('div');
+      wrap.innerHTML = boardItemHtml(item);
+      const node = wrap.firstElementChild;
+      container.appendChild(node);
+      bindBoardReplyUi(node);
+    }
+  }
+  container.scrollTop = 0;
+}
+
 function upsertBoardItems(items, container) {
   if (!container) return;
   if (!items.length) {
     ensureBoardEmptyState(container);
     return;
   }
-  const empty = container.querySelector('.lounge-board-empty');
-  if (empty) empty.remove();
-  let appended = false;
-  for (const item of items) {
-    boardLastId = Math.max(boardLastId, item.id);
-    const existing = container.querySelector(`[data-board-id="${item.id}"]`);
-    const wrap = document.createElement('div');
-    wrap.innerHTML = boardItemHtml(item);
-    const node = wrap.firstElementChild;
-    if (existing) {
-      existing.replaceWith(node);
-      bindBoardReplyUi(node);
-      continue;
-    }
-    const rows = [...container.querySelectorAll('.lounge-board-item')];
-    const next = rows.find((r) => Number(r.dataset.boardId) > item.id);
-    if (next) container.insertBefore(node, next);
-    else container.appendChild(node);
-    bindBoardReplyUi(node);
-    appended = true;
-  }
-  if (appended) container.scrollTop = container.scrollHeight;
+  renderBoardFeed(items, container);
 }
 
 function resetBoardFeed() {
@@ -318,7 +331,7 @@ async function refreshBoard({ quiet = false } = {}) {
     const data = await fetchBoard();
     const items = data.items || [];
     const sheetFeed = document.getElementById('lounge-board-sheet-feed');
-    if (sheetFeed) upsertBoardItems(items, sheetFeed);
+    if (sheetFeed) renderBoardFeed(items, sheetFeed);
   } catch (err) {
     if (!quiet) console.error(err);
   }
@@ -383,9 +396,7 @@ async function submitBoardReplyForm(e) {
   if (btn) btn.disabled = true;
   try {
     const data = await postBoardReply(apiKey, boardId, body);
-    if (data.item) {
-      upsertBoardItems([data.item], document.getElementById('lounge-board-sheet-feed'));
-    }
+    await refreshBoard({ quiet: true });
     toast('已回在墙上');
   } catch (err) {
     toast(err.message);
@@ -435,32 +446,32 @@ function ensureBoardSheet() {
         <button type="button" class="lounge-sheet-close" data-close-dialog>${closeLabel}</button>
       </header>
       <div class="lounge-sheet-body">
-        <p class="lounge-sheet-note">全服可见，和闲聊分开，不会刷走。每条底下点「回复」，回在墙上大家都能看见。</p>
+        <p class="lounge-sheet-note">全服可见，和闲聊分开，不会刷走。未回复在上、已回复在下。每条底下点「回复」，回在墙上大家都能看见。</p>
         <div class="lounge-board-tabs" role="tablist" aria-label="筛选">
           <button type="button" class="lounge-board-tab is-active" data-board-sheet-filter="all">全部</button>
           <button type="button" class="lounge-board-tab" data-board-sheet-filter="wish">许愿</button>
           <button type="button" class="lounge-board-tab" data-board-sheet-filter="feedback">反馈</button>
         </div>
         <div id="lounge-board-sheet-feed" class="lounge-board-feed lounge-board-sheet-feed"></div>
-        <form id="lounge-board-sheet-form" class="lounge-board-composer lounge-board-sheet-compose">
-          <label class="lounge-board-kind">
-            <span class="sr-only">类型</span>
-            <select id="lounge-board-sheet-kind" aria-label="类型">
-              <option value="wish">许愿玩法</option>
-              <option value="feedback">反馈问题</option>
-            </select>
-          </label>
-          <textarea
-            id="lounge-board-sheet-body"
-            rows="3"
-            maxlength="500"
-            placeholder="写你想加的玩法，或遇到的 bug…"
-            autocomplete="off"
-            required
-          ></textarea>
-          <button type="submit" class="lounge-board-send">贴上墙</button>
-        </form>
       </div>
+      <form id="lounge-board-sheet-form" class="lounge-board-composer lounge-board-sheet-compose">
+        <label class="lounge-board-kind">
+          <span class="sr-only">类型</span>
+          <select id="lounge-board-sheet-kind" aria-label="类型">
+            <option value="wish">许愿玩法</option>
+            <option value="feedback">反馈问题</option>
+          </select>
+        </label>
+        <textarea
+          id="lounge-board-sheet-body"
+          rows="3"
+          maxlength="500"
+          placeholder="写你想加的玩法，或遇到的 bug…"
+          autocomplete="off"
+          required
+        ></textarea>
+        <button type="submit" class="lounge-board-send">贴上墙</button>
+      </form>
     </div>
   `;
   document.body.appendChild(d);
@@ -501,7 +512,7 @@ async function submitBoardSheetForm(e) {
   if (btn) btn.disabled = true;
   try {
     const item = await postBoardItem(apiKey, kind, body);
-    upsertBoardItems([item], document.getElementById('lounge-board-sheet-feed'));
+    await refreshBoard({ quiet: true });
     const bodyInput = document.getElementById('lounge-board-sheet-body');
     if (bodyInput) bodyInput.value = '';
     toast(item.kind === 'feedback' ? '反馈已贴上墙' : '许愿已贴上墙');
