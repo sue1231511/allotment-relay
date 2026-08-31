@@ -35,11 +35,23 @@ async function req(path, { method = "GET", body, idem } = {}) {
   if (key) headers.Authorization = `Bearer ${key}`;
   if (body !== undefined) headers["Content-Type"] = "application/json";
   if (method !== "GET") headers["Idempotency-Key"] = idem || newIdem();
-  const res = await fetch(path, {
-    method,
-    headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
+  const ctrl = typeof AbortController === "function" ? new AbortController() : null;
+  const timer = ctrl ? setTimeout(() => ctrl.abort(), 12000) : 0;
+  let res;
+  try {
+    res = await fetch(path, {
+      method,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: ctrl ? ctrl.signal : undefined,
+    });
+  } catch (err) {
+    if (timer) clearTimeout(timer);
+    const error = new Error(err && err.name === "AbortError" ? "等太久了。再点一次进入地图。" : "没能连上岛。再点一次进入地图。");
+    error.code = err && err.name === "AbortError" ? "TIMEOUT" : "NETWORK";
+    throw error;
+  }
+  if (timer) clearTimeout(timer);
   let data = {};
   try {
     data = await res.json();
