@@ -1048,6 +1048,15 @@ async def _test_island_v1_api() -> None:
         )
         await conn.execute("UPDATE stewards SET energy=20 WHERE id=?", (sid,))
         await conn.commit()
+    hut_snap = client.get("/api/v1/hut", headers=_auth(key))
+    assert hut_snap.status_code == 200, hut_snap.text
+    hut_body = hut_snap.json()["hut"]
+    assert hut_body["built"] is True
+    assert hut_body["can_sleep"] is True
+    assert any(t["key"] == "home" for t in hut_body["tabs"])
+    assert any(t["key"] == "cabinet" for t in hut_body["tabs"])
+    assert any(t["key"] == "compost" for t in hut_body["tabs"])
+    assert any(t["key"] == "barn" for t in hut_body["tabs"])
     slept = client.post(
         "/api/v1/hut/sleep",
         headers=_auth(key, {"Idempotency-Key": "hut-sleep"}),
@@ -1055,6 +1064,61 @@ async def _test_island_v1_api() -> None:
     )
     assert slept.status_code == 200, slept.text
     assert slept.json()["event"]["kind"] == "hut"
+
+    async with db.connect() as conn:
+        await conn.execute(
+            "UPDATE stewards SET tickets=tickets+500 WHERE id=?",
+            (sid,),
+        )
+        await db.add_item(conn, sid, "crop_kale", 3)
+        await db.add_item(conn, sid, "manure_sheep", 4)
+        await conn.commit()
+    looked = client.post(
+        "/api/v1/hut/act",
+        headers=_auth(key, {"Idempotency-Key": "hut-look"}),
+        json={"kind": "look", "target": "status"},
+    )
+    assert looked.status_code == 200, looked.text
+    assert looked.json()["event"]["kind"] == "hut"
+    upgraded = client.post(
+        "/api/v1/hut/act",
+        headers=_auth(key, {"Idempotency-Key": "hut-upgrade"}),
+        json={"kind": "upgrade"},
+    )
+    assert upgraded.status_code == 200, upgraded.text
+    assert upgraded.json()["me"]["flags"]["hut_level"] == 2
+    assert upgraded.json()["me"]["flags"]["hut_name"] == "岸畔小屋"
+    cab = client.post(
+        "/api/v1/hut/act",
+        headers=_auth(key, {"Idempotency-Key": "hut-cab"}),
+        json={"kind": "buy_install", "target": "cabinet"},
+    )
+    assert cab.status_code == 200, cab.text
+    put = client.post(
+        "/api/v1/hut/act",
+        headers=_auth(key, {"Idempotency-Key": "hut-put"}),
+        json={"kind": "put", "target": "甘蓝 2"},
+    )
+    assert put.status_code == 200, put.text
+    bin_on = client.post(
+        "/api/v1/hut/act",
+        headers=_auth(key, {"Idempotency-Key": "hut-bin"}),
+        json={"kind": "buy_install", "target": "compost_bin"},
+    )
+    assert bin_on.status_code == 200, bin_on.text
+    composted = client.post(
+        "/api/v1/hut/act",
+        headers=_auth(key, {"Idempotency-Key": "hut-compost"}),
+        json={"kind": "compost_put", "target": "羊粪 3"},
+    )
+    assert composted.status_code == 200, composted.text
+    erected = client.post(
+        "/api/v1/hut/act",
+        headers=_auth(key, {"Idempotency-Key": "hut-barn"}),
+        json={"kind": "barn_erect"},
+    )
+    assert erected.status_code == 200, erected.text
+    assert erected.json()["hut"]["items"]["barn"]
 
     async with db.connect() as conn:
         await conn.execute(
@@ -1135,28 +1199,34 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-hutscene1" in app
-    assert html.count("island.css?v=island-hutscene1") == 1
-    assert html.count("app.js?v=island-hutscene1") == 1
-    assert "lighthouse.js?v=island-hutscene1" in app
-    assert "hall.js?v=island-hutscene1" in app
-    assert "shop.js?v=island-hutscene1" in app
-    assert "lili.js?v=island-hutscene1" in app
-    assert "clinic.js?v=island-hutscene1" in app
-    assert "market.js?v=island-hutscene1" in app
+    assert "island-huthome1" in app
+    assert html.count("island.css?v=island-huthome1") == 1
+    assert html.count("app.js?v=island-huthome1") == 1
+    assert "lighthouse.js?v=island-huthome1" in app
+    assert "hall.js?v=island-huthome1" in app
+    assert "shop.js?v=island-huthome1" in app
+    assert "lili.js?v=island-huthome1" in app
+    assert "clinic.js?v=island-huthome1" in app
+    assert "market.js?v=island-huthome1" in app
     js_blob = "\n".join(p.read_text(encoding="utf-8") for p in (ROOT / "server/static/island").rglob("*.js"))
     store_vs = set(re.findall(r"store\.js\?v=([^\s\"']+)", js_blob))
     modal_vs = set(re.findall(r"modal\.js\?v=([^\s\"']+)", js_blob))
-    assert store_vs == {"island-hutscene1"}, store_vs
-    assert modal_vs == {"island-hutscene1"}, modal_vs
-    assert 'from "../store.js?v=island-hutscene1"' in (ROOT / "server/static/island/scenes/atelier.js").read_text(encoding="utf-8")
-    assert 'from "../store.js?v=island-hutscene1"' in (ROOT / "server/static/island/scenes/writers.js").read_text(encoding="utf-8")
-    assert 'from "../store.js?v=island-hutscene1"' in (ROOT / "server/static/island/scenes/hall.js").read_text(encoding="utf-8")
+    assert store_vs == {"island-huthome1"}, store_vs
+    assert modal_vs == {"island-huthome1"}, modal_vs
+    assert 'from "../store.js?v=island-huthome1"' in (ROOT / "server/static/island/scenes/atelier.js").read_text(encoding="utf-8")
+    assert 'from "../store.js?v=island-huthome1"' in (ROOT / "server/static/island/scenes/writers.js").read_text(encoding="utf-8")
+    assert 'from "../store.js?v=island-huthome1"' in (ROOT / "server/static/island/scenes/hall.js").read_text(encoding="utf-8")
     hut_js = (ROOT / "server/static/island/scenes/hut.js").read_text(encoding="utf-8")
     store_js = (ROOT / "server/static/island/store.js").read_text(encoding="utf-8")
     art_js = (ROOT / "server/static/island/ui/art.js").read_text(encoding="utf-8")
     assert "没买房" in hut_js
     assert "棚屋场景还锁着" in hut_js
+    assert "点一下看屋里" in hut_js
+    assert "ensureShopFrame" in hut_js
+    assert "去上手页" not in hut_js
+    assert "api.hutAct" in app
+    assert "keepHut" in app
+    assert "openHut" in app
     assert "renderHut" in app
     assert 'name === "hut"' in app
     assert "hutScene" in store_js
@@ -1246,7 +1316,7 @@ def test_island_page_is_modular() -> None:
     assert "waitScenePics" in app
     assert "await waitScenePics" in app
     assert "enterGen" in app
-    assert 'from "./ui/modal.js?v=island-hutscene1"' in app
+    assert 'from "./ui/modal.js?v=island-huthome1"' in app
     modal_src = (ROOT / "server/static/island/ui/modal.js").read_text(encoding="utf-8")
     assert "export function showFormSheet" in modal_src
     assert "export function showPickSheet" in modal_src
@@ -1449,6 +1519,9 @@ def test_island_page_is_modular() -> None:
     assert "api.tend" in app
     assert "api.fertilize" in app
     assert "/api/v1/hut/sleep" in api
+    assert "/api/v1/hut" in api
+    assert "api.hutAct" in app
+    assert (ROOT / "server/v1/hut_service.py").exists()
     assert "/api/v1/bar/work" in api
     assert "/api/v1/kitchen/eat" in api
     assert "/api/v1/tote/vend" in api
@@ -1733,6 +1806,16 @@ def test_island_page_is_modular() -> None:
     assert "/api/v1/hui" in api
     assert "api.huiAct" in app
     assert (ROOT / "server/v1/hui_service.py").exists()
+    hut_js = (ROOT / "server/static/island/scenes/hut.js").read_text(encoding="utf-8")
+    assert "点一下看屋里" in hut_js
+    assert "island-hut" in hut_js
+    assert "ensureShopFrame" in hut_js
+    assert "去上手页" not in hut_js
+    assert "renderHut" in app
+    assert "keepHut" in app
+    assert "/api/v1/hut" in api
+    assert "api.hutAct" in app
+    assert (ROOT / "server/v1/hut_service.py").exists()
     assert "点一下看登记处" in lianli_js
     assert "island-lianli" in lianli_js
     assert "ensureShopFrame" in lianli_js

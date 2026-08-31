@@ -91,6 +91,9 @@ export const state = {
   clinicShelf: false,
   lighthouse: null,
   lighthouseMeet: false,
+  hut: null,
+  hutTab: "home",
+  hutShelf: false,
   bagPage: 0,
   busy: false,
 };
@@ -169,6 +172,13 @@ export function applySnapshot(data) {
     const tabs = data.clinic.tabs || [];
     if (tabs.length && !tabs.some((t) => t.key === state.clinicTab)) {
       state.clinicTab = tabs[0].key;
+    }
+  }
+  if (data.hut) {
+    state.hut = data.hut;
+    const tabs = data.hut.tabs || [];
+    if (tabs.length && !tabs.some((t) => t.key === state.hutTab)) {
+      state.hutTab = tabs[0].key;
     }
   }
   if (data.lighthouse) state.lighthouse = data.lighthouse;

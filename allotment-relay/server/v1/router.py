@@ -7,7 +7,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from . import atelier_service, bar_service, clinic_service, eatery_service, farm_service, hall_service, hui_service, lighthouse_service, lianli_service, lili_service, lounge_service, market_service, place_service, quarry_service, session_service, shore_service, shop_service, ting_service, workshop_service, writers_service
+from . import atelier_service, bar_service, clinic_service, eatery_service, farm_service, hall_service, hui_service, hut_service, lighthouse_service, lianli_service, lili_service, lounge_service, market_service, place_service, quarry_service, session_service, shore_service, shop_service, ting_service, workshop_service, writers_service
 from . import idempotency
 from .auth import extract_api_key, key_row, require_enrolled
 from .errors import ApiError
@@ -125,6 +125,12 @@ class TingActBody(BaseModel):
 
 
 class HuiActBody(BaseModel):
+    kind: str = ""
+    target: str = ""
+    api_key: str = ""
+
+
+class HutActBody(BaseModel):
     kind: str = ""
     target: str = ""
     api_key: str = ""
@@ -379,6 +385,33 @@ async def hut_build(request: Request, body: SowBody | None = None):
         row, _ = await require_enrolled(key)
         result = await place_service.build_hut(key, int(row["id"]))
         await idempotency.store(sid, "hut:build", _idem_key(request), 200, result)
+        return result
+    except ApiError as exc:
+        return _error(exc)
+
+
+@router.get("/hut")
+async def hut_status(request: Request):
+    try:
+        key = extract_api_key(request)
+        row, _ = await require_enrolled(key)
+        return await hut_service.snapshot(key, int(row["id"]))
+    except ApiError as exc:
+        return _error(exc)
+
+
+@router.post("/hut/act")
+async def hut_act(request: Request, body: HutActBody):
+    try:
+        key = extract_api_key(request, body.api_key)
+        kind = (body.kind or "").strip()
+        target = (body.target or "").strip()
+        sid, cached = await _write_guard(request, key, f"hut:{kind}:{target}")
+        if cached:
+            return _cached_response(cached)
+        row, _ = await require_enrolled(key)
+        result = await hut_service.act(key, int(row["id"]), kind, target)
+        await idempotency.store(sid, f"hut:{kind}:{target}", _idem_key(request), 200, result)
         return result
     except ApiError as exc:
         return _error(exc)
