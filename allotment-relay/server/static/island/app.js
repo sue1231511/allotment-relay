@@ -24,7 +24,7 @@ import { renderBar } from "./scenes/bar.js?v=island-stay1";
 import { renderTheater } from "./scenes/theater.js?v=island-fix1";
 import { renderWriters } from "./scenes/writers.js?v=island-stay1";
 import { renderAtelier } from "./scenes/atelier.js?v=island-stay1";
-import { renderHall } from "./scenes/hall.js?v=island-stay1";
+import { renderHall } from "./scenes/hall.js?v=island-xiaoju1";
 import { renderEatery } from "./scenes/eatery.js?v=island-stay1";
 let lighthouseMod = null;
 async function lighthouseScene() {
@@ -905,25 +905,8 @@ async function openHall(root) {
   paintHall();
 }
 
-function paintHall(listTop = 0) {
-  renderHall(sceneEl(), {
-    onAct: tapHall,
-    onSwitchTab: (tab) => {
-      state.hallTab = tab || "board";
-      hideModal();
-      paintHall(0);
-    },
-    onOpenShelf: () => {
-      state.hallShelf = true;
-      paintHall(0);
-    },
-    onCloseShelf: () => {
-      state.hallShelf = false;
-      hideModal();
-      paintHall();
-    },
-    listTop,
-  });
+function paintHall() {
+  renderHall(sceneEl(), { onAct: tapHall });
 }
 
 function tapHall(kind, target) {
@@ -1432,7 +1415,11 @@ async function act(fn, { refreshScene = false, keepPlant = false, keepTab = fals
       return;
     }
     if (keepHall && state.scene === "hall") {
-      paintHall(listTop);
+      if (data.event && data.event.narrative && state.hall) {
+        state.hall.line = data.event.narrative;
+        state.hall.speaker = data.event.speaker || "小橘";
+      }
+      paintHall();
       return;
     }
     if (keepEatery && state.scene === "eatery") {

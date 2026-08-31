@@ -25,7 +25,7 @@ THEATER_HELP = """theater_ops 子命令（整句写进 command）：
   例子：看板 · 试镜 · 对戏 · 演出 · 领薪 · 编剧社 · 投稿 岸上旧收音机 | 第一幕……
   头粉=star_ops 应援榜第一名；头粉好感获取和每日上限翻倍，不翻倍工资。
   投稿不是 tale_ops accept / story_ops start（那是玩已有篇章）；稿费不是 领薪（那是专场工资）。不要发明 采纳 / 发稿费。
-  人类 /island 总览点剧场，进院景再点编剧社 / 衣泊坊 / 剧场看台。编剧社常开能投稿；剧场看台要专场才试镜演出领薪。"""
+  人类 /island 总览点剧场，进院景再点编剧社 / 衣泊坊 / 剧场看台。编剧社常开能投稿；剧场看台进了是半身立绘对话，小橘站左边，只露上半身（全身的二分之一），先点对话框再出选项，要专场才试镜演出领薪。"""
 
 ROLES = (
     ("announcer", "报幕员", "你替她把开场前的静默接成一句话。"),
@@ -691,12 +691,23 @@ async def hall_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str, 
             "detail": claim_note + "稿费不是领薪。",
         },
     ]
-    line = f"{setlist} · {phase}" if open_now else f"今晚没专场 · {tier}"
     if can_claim:
-        line = f"工资待领 · {int(pending['payout'] or 0)} 票"
+        spoken = f"这场演完了。去领薪，{int(pending['payout'] or 0)} 票。"
+    elif not open_now:
+        spoken = "今晚没专场。侧厅编剧社还开着。"
+    elif not run:
+        spoken = f"今晚是「{setlist}」。先试镜。"
+    elif run["outcome"]:
+        spoken = "今晚已谢幕。"
+    elif run["rehearsed"]:
+        spoken = f"你是{run['role_label']}。可以对戏过了，上场吧。"
+    else:
+        spoken = f"你是{run['role_label']}。要对戏，还是直接上场？"
     return {
         "name": "剧场看台",
-        "line": line,
+        "speaker": "小橘",
+        "title": "小橘",
+        "line": spoken,
         "open": open_now,
         "tabs": [
             {"key": "board", "label": "看板", "badge": "开" if open_now else ""},

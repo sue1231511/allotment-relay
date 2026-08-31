@@ -282,6 +282,7 @@ async def _test_island_v1_api() -> None:
     assert hall0.status_code == 200, hall0.text
     hall = hall0.json()["hall"]
     assert hall["name"] == "剧场看台", hall
+    assert hall["speaker"] == "小橘", hall
     assert hall["open"] is False, hall
     assert any(t["key"] == "board" for t in hall["tabs"]), hall
     assert any(r["cmd"] == "试镜" and r["can_act"] is False for r in hall["jobs"]), hall
@@ -868,10 +869,11 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-stay1" in html
-    assert html.count("island.css?v=island-stay1") == 1
-    assert html.count("app.js?v=island-stay1") == 1
+    assert "island-xiaoju1" in html
+    assert html.count("island.css?v=island-xiaoju1") == 1
+    assert html.count("app.js?v=island-xiaoju1") == 1
     assert "lighthouse.js?v=island-stay1" in app
+    assert "hall.js?v=island-xiaoju1" in app
     assert "shop.js?v=island-stay1" in app
     assert "island-boot3" in html
     assert 'id="island-boot-veil"' in html
@@ -1278,7 +1280,6 @@ def test_island_page_is_modular() -> None:
     assert "barShelf" in app
     assert "writersShelf" in app
     assert "atelierShelf" in app
-    assert "hallShelf" in app
     assert "eateryShelf" in app
     assert "renderWorkshop" in app
     assert "renderBar" in app
@@ -1328,7 +1329,18 @@ def test_island_page_is_modular() -> None:
     assert "剧场" in theater_js
     assert "点一下看收稿台" in writers_js
     assert "点一下看坊" in atelier_js
-    assert "点一下看看板" in hall_js
+    assert "island-vn" in hall_js
+    assert "island-vn-stand" in hall_js
+    assert "is-half" in hall_js
+    assert "sprites/xiaoju.png" in hall_js
+    assert "island-vn-talk" in hall_js
+    assert "is-line" in hall_js
+    assert "is-picks" in hall_js
+    assert "island-vn-advance" in hall_js
+    assert "island-vn-choice" in hall_js
+    assert "ensureShopFrame" not in hall_js
+    assert "点一下看看板" not in hall_js
+    assert "island-shop-shelf" not in hall_js
     assert "点一下看菜单" in eatery_js
     assert "island-eatery" in eatery_js
     assert "ensureShopFrame" in eatery_js
@@ -1364,8 +1376,11 @@ def test_island_page_is_modular() -> None:
     assert "去上手页" not in lighthouse_js
     assert "island-shop-shelf" not in lighthouse_js
     assert (ROOT / "server/static/island/assets/sprites/buxing.png").exists()
+    assert (ROOT / "server/static/island/assets/sprites/xiaoju.png").exists()
     assert "sprites/buxing.png" in art_md
+    assert "sprites/xiaoju.png" in art_md
     assert "立绘对话" in art_md
+    assert "全身的二分之一" in art_md
     assert ".island-vn-talk" in css
     assert ".island-vn-box" in css
     assert "点一下对话框才变成选项" in css
@@ -1379,6 +1394,8 @@ def test_island_page_is_modular() -> None:
     assert ".island-vn-sprite" in css
     assert "只要头和胸" in css
     assert "矮一半" in css
+    assert ".island-vn-stand.is-half" in css
+    assert "全身的二分之一" in css
     assert ".island-theater-board" in css
     assert ".island-theater-picks" not in css
     assert ".island-theater .island-hot span" in css
