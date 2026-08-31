@@ -1215,8 +1215,8 @@ def test_island_page_is_modular() -> None:
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
     assert "island-mapbgm1" in app
-    assert html.count("island.css?v=island-hutcook1") == 1
-    assert html.count("app.js?v=island-hutcook1") == 1
+    assert html.count("island.css?v=island-bgmchip1") == 1
+    assert html.count("app.js?v=island-bgmchip1") == 1
     assert "bgm.js?v=island-burgertown1" in app
     assert "lighthouse.js?v=island-mapbgm1" in app
     assert "hall.js?v=island-mapbgm1" in app
@@ -1267,7 +1267,13 @@ def test_island_page_is_modular() -> None:
     assert 'id="island-bag-chip"' in html
     assert 'id="island-back-chip"' in html
     assert 'id="island-bgm-chip"' in html
-    assert ">静音<" in html
+    assert ">静音<" not in html
+    assert "chip-bgm-pause.png" in html
+    assert "chip-bgm-play.png" in html
+    assert ' data-src="/static/island/assets/chip-bgm-pause.png"' in html
+    assert ' data-play="/static/island/assets/chip-bgm-play.png"' in html
+    assert 'src="/static/island/assets/chip-bgm-pause.png"' not in html.replace("data-src=", "x=").replace("data-pause=", "x=")
+    assert 'src="/static/island/assets/chip-bgm-play.png"' not in html.replace("data-src=", "x=").replace("data-play=", "x=")
     assert ' data-src="/static/island/assets/chip-bag.png"' in html
     assert ' data-src="/static/island/assets/chip-back.png"' in html
     assert html.count("/static/island/assets/chip-bag.png") == 1
@@ -1419,6 +1425,8 @@ def test_island_page_is_modular() -> None:
     assert "left: 0" in css
     assert "min(196px, 58%)" in css
     assert "min(88px, 24%)" in css
+    assert "right: min(70px, 20%)" in css
+    assert "min(92px, 26%)" in css
     assert "translateX(-22%)" in css
     assert "height: 66px" in css
     assert "align-items: center" in css
@@ -1467,12 +1475,21 @@ def test_island_page_is_modular() -> None:
     assert ".island-back-chip" not in css
     assert (ROOT / "server/static/island/assets/chip-back.png").exists()
     assert (ROOT / "server/static/island/assets/chip-bag.png").exists()
+    assert (ROOT / "server/static/island/assets/chip-bgm-pause.png").exists()
+    assert (ROOT / "server/static/island/assets/chip-bgm-play.png").exists()
     try:
         from PIL import Image
         back = Image.open(ROOT / "server/static/island/assets/chip-back.png")
         assert back.size == (2000, 667)
         assert back.mode == "RGBA"
         assert back.getpixel((0, 0))[3] == 0
+        pause = Image.open(ROOT / "server/static/island/assets/chip-bgm-pause.png")
+        play = Image.open(ROOT / "server/static/island/assets/chip-bgm-play.png")
+        assert pause.size == (420, 285)
+        assert play.size == (420, 295)
+        assert pause.mode == "RGBA" and play.mode == "RGBA"
+        assert pause.getpixel((0, 0))[3] == 0
+        assert play.getpixel((0, 0))[3] == 0
     except ImportError:
         pass
     assert "is-yards .island-actionbar" in css
@@ -1573,6 +1590,9 @@ def test_island_page_is_modular() -> None:
     assert "scenes/clinic.png" in art_md
     assert "audio/island.mp3" in art_md
     assert "audio/clinic.mp3" not in art_md
+    assert "chip-bgm-pause.png" in art_md
+    assert "chip-bgm-play.png" in art_md
+    assert "贝壳音乐钮" in art_md
     assert "摊车特写" in art_md
     assert "scenes/lighthouse.png" in art_md
     assert "scenes/notice.png" in art_md
@@ -1710,6 +1730,12 @@ def test_island_page_is_modular() -> None:
     assert "startIslandBgm" in app
     assert "paintBgmChip" in app
     assert "bindBgmChip" in app
+    paint_fn = app.split("function paintBgmChip")[1].split("function bindBgmChip")[0]
+    assert "textContent" not in paint_fn
+    assert "静音" not in paint_fn
+    assert "出声" not in paint_fn
+    assert "data-play" in paint_fn
+    assert "data-pause" in paint_fn
     bgm_js = (ROOT / "server/static/island/ui/bgm.js").read_text(encoding="utf-8")
     assert 'playBgm("island")' in bgm_js
     assert "audio/island" in bgm_js
