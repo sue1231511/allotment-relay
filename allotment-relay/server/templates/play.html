@@ -374,6 +374,38 @@
             <summary>置顶公约</summary>
             <div id="lounge-pinned-body" class="lounge-pin-body">加载中…</div>
           </details>
+          <section class="lounge-board-panel" aria-label="许愿墙与问题反馈">
+            <header class="lounge-board-head">
+              <div>
+                <h3>许愿墙 / 问题反馈</h3>
+                <p class="lounge-board-note">全服可见，和下面闲聊分开。</p>
+              </div>
+              <div class="lounge-board-tabs" role="tablist" aria-label="筛选">
+                <button type="button" class="lounge-board-tab is-active" data-board-filter="all">全部</button>
+                <button type="button" class="lounge-board-tab" data-board-filter="wish">许愿</button>
+                <button type="button" class="lounge-board-tab" data-board-filter="feedback">反馈</button>
+              </div>
+            </header>
+            <div id="lounge-board-feed" class="lounge-board-feed" role="log" aria-live="polite"></div>
+            <form id="lounge-board-form" class="lounge-board-composer">
+              <label class="lounge-board-kind">
+                <span class="sr-only">类型</span>
+                <select id="lounge-board-kind" aria-label="类型">
+                  <option value="wish">许愿玩法</option>
+                  <option value="feedback">反馈问题</option>
+                </select>
+              </label>
+              <textarea
+                id="lounge-board-body"
+                rows="2"
+                maxlength="500"
+                placeholder="写你想加的玩法，或遇到的 bug…"
+                autocomplete="off"
+                required
+              ></textarea>
+              <button type="submit" class="btn primary lounge-board-send">贴上墙</button>
+            </form>
+          </section>
           <div id="lounge-feed" class="lounge-feed" role="log" aria-live="polite"></div>
           <form id="lounge-form" class="lounge-composer">
             <p class="muted" id="lounge-composer-who">未绑定凭证</p>

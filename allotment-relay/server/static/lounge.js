@@ -3,11 +3,17 @@ const HUMAN_NAME_STORAGE = 'tidal_island_lounge_human_name';
 const POLL_MS = 6000;
 
 let lastId = 0;
+let boardLastId = 0;
+let boardFilter = 'all';
 let pollTimer = null;
 let myProfile = null;
 let currentBoothLabel = '';
 
 const feed = document.getElementById('lounge-feed');
+const boardFeed = document.getElementById('lounge-board-feed');
+const boardForm = document.getElementById('lounge-board-form');
+const boardBodyInput = document.getElementById('lounge-board-body');
+const boardKindSelect = document.getElementById('lounge-board-kind');
 const statusEl = document.getElementById('lounge-status');
 const statusBadge = document.getElementById('lounge-status-badge');
 const liveDot = document.getElementById('lounge-live-dot');
@@ -200,6 +206,108 @@ function upsertMessages(messages) {
 
 function renderMessages(messages) {
   upsertMessages(messages);
+}
+
+function boardItemHtml(item) {
+  const mine = isMine(item);
+  const kindClass = item.kind === 'feedback' ? 'feedback' : 'wish';
+  return `
+    <article class="lounge-board-item ${kindClass}${mine ? ' mine' : ''}" data-board-id="${item.id}">
+      <div class="lounge-board-item-head">
+        <span class="lounge-board-tag">${esc(item.kind_label || item.kind)}</span>
+        <span class="lounge-board-who">${mine ? '我' : esc(item.who)}</span>
+        <span class="lounge-board-time">${esc(fmtClock(item.created_at))}</span>
+      </div>
+      <div class="lounge-board-text">${esc(item.body)}</div>
+    </article>
+  `;
+}
+
+function ensureBoardEmptyState() {
+  if (!boardFeed || boardFeed.querySelector('.lounge-board-item') || boardFeed.querySelector('.lounge-board-empty')) {
+    return;
+  }
+  const empty = document.createElement('p');
+  empty.className = 'lounge-board-empty';
+  empty.textContent = boardFilter === 'wish'
+    ? '还没有许愿，来贴第一条吧。'
+    : boardFilter === 'feedback'
+      ? '还没有反馈。'
+      : '还没有人贴。想加玩法或遇到 bug 都可以写。';
+  boardFeed.appendChild(empty);
+}
+
+function upsertBoardItems(items) {
+  if (!boardFeed) return;
+  if (!items.length) {
+    ensureBoardEmptyState();
+    return;
+  }
+  const empty = boardFeed.querySelector('.lounge-board-empty');
+  if (empty) empty.remove();
+  let appended = false;
+  for (const item of items) {
+    boardLastId = Math.max(boardLastId, item.id);
+    const existing = boardFeed.querySelector(`[data-board-id="${item.id}"]`);
+    const wrap = document.createElement('div');
+    wrap.innerHTML = boardItemHtml(item);
+    const node = wrap.firstElementChild;
+    if (existing) {
+      existing.replaceWith(node);
+      continue;
+    }
+    const rows = [...boardFeed.querySelectorAll('.lounge-board-item')];
+    const next = rows.find((r) => Number(r.dataset.boardId) > item.id);
+    if (next) boardFeed.insertBefore(node, next);
+    else boardFeed.appendChild(node);
+    appended = true;
+  }
+  if (appended) boardFeed.scrollTop = boardFeed.scrollHeight;
+}
+
+function resetBoardFeed() {
+  boardLastId = 0;
+  if (boardFeed) boardFeed.innerHTML = '';
+}
+
+async function fetchBoard({ since = 0 } = {}) {
+  const params = new URLSearchParams({ limit: '40' });
+  if (since) params.set('since', String(since));
+  if (boardFilter !== 'all') params.set('kind', boardFilter);
+  const res = await fetch(`/api/lounge/board?${params.toString()}`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || '加载许愿墙失败');
+  return data;
+}
+
+async function refreshBoard({ quiet = false } = {}) {
+  if (!boardFeed) return;
+  try {
+    const data = await fetchBoard();
+    upsertBoardItems(data.items || []);
+  } catch (err) {
+    if (!quiet) console.error(err);
+  }
+}
+
+async function postBoardItem(apiKey, kind, body) {
+  const res = await fetch('/api/lounge/board', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ api_key: apiKey.trim(), kind, body: body.trim() }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || '贴上墙失败');
+  return data;
+}
+
+function setBoardFilter(next) {
+  boardFilter = next || 'all';
+  document.querySelectorAll('[data-board-filter]').forEach((btn) => {
+    btn.classList.toggle('is-active', btn.dataset.boardFilter === boardFilter);
+  });
+  resetBoardFeed();
+  refreshBoard();
 }
 
 async function fetchMeta() {
@@ -503,7 +611,10 @@ function autoGrow(el) {
 
 function startPolling() {
   if (pollTimer) clearInterval(pollTimer);
-  pollTimer = setInterval(() => refreshFeed({ quiet: true }), POLL_MS);
+  pollTimer = setInterval(() => {
+    refreshFeed({ quiet: true });
+    refreshBoard({ quiet: true });
+  }, POLL_MS);
 }
 
 document.querySelectorAll('[data-close-dialog]').forEach((btn) => {
@@ -744,7 +855,7 @@ feed?.addEventListener('click', async (e) => {
   }
 });
 
-document.getElementById('lounge-form').addEventListener('submit', async (e) => {
+document.getElementById('lounge-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const body = msgInput.value.trim();
   if (!body) return;
@@ -776,6 +887,35 @@ document.getElementById('lounge-form').addEventListener('submit', async (e) => {
   }
 });
 
+boardForm?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const body = boardBodyInput?.value.trim();
+  if (!body) return;
+  const apiKey = loadSavedKey();
+  if (!apiKey.startsWith('ar_sk_')) {
+    toast('请先在上手页贴凭证后再贴墙');
+    bindLinkEl?.classList.remove('hidden');
+    return;
+  }
+  const kind = boardKindSelect?.value || 'wish';
+  const btn = boardForm.querySelector('.lounge-board-send');
+  if (btn) btn.disabled = true;
+  try {
+    const item = await postBoardItem(apiKey, kind, body);
+    upsertBoardItems([item]);
+    if (boardBodyInput) boardBodyInput.value = '';
+    toast(item.kind === 'feedback' ? '反馈已贴上墙' : '许愿已贴上墙');
+  } catch (err) {
+    toast(err.message);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+});
+
+document.querySelectorAll('[data-board-filter]').forEach((btn) => {
+  btn.addEventListener('click', () => setBoardFilter(btn.dataset.boardFilter || 'all'));
+});
+
 window.playLounge = {
   start() {
     (async function boot() {
@@ -786,6 +926,7 @@ window.playLounge = {
         resetFeed();
         applyRoomMeta(data);
         renderMessages(data.messages || []);
+        await refreshBoard();
         if (statusEl) statusEl.textContent = '连接正常';
         if (statusBadge) statusBadge.textContent = `在线 · ${POLL_MS / 1000} 秒刷新`;
         liveDot?.classList.add('is-live');
