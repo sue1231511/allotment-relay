@@ -833,9 +833,7 @@ body.island-app.is-playing.is-yards .island-actionbar {
 }
 
 .island-float-chip.is-bag,
-.island-float-chip.is-back,
-.island-float-chip.is-bgm,
-.island-bgm-chip {
+.island-float-chip.is-back {
   top: env(safe-area-inset-top, 0px);
   height: 66px;
   display: flex;
@@ -843,8 +841,8 @@ body.island-app.is-playing.is-yards .island-actionbar {
 }
 
 .island-float-chip.is-bag {
-  /* 往左挪一点，右边留给贝壳音乐钮 */
-  right: min(70px, 20%);
+  /* 往左挪一点，右边留给一半大的贝壳音乐钮 */
+  right: min(35px, 10%);
   left: auto;
   width: min(88px, 24%);
 }
@@ -853,12 +851,16 @@ body.island-app.is-playing.is-yards .island-actionbar {
 .island-bgm-chip {
   appearance: none;
   -webkit-appearance: none;
+  top: env(safe-area-inset-top, 0px);
   z-index: 10;
   right: 0;
   left: auto;
   bottom: auto;
-  width: min(92px, 26%);
+  height: 33px;
+  width: min(46px, 13%);
   margin: 0;
+  display: flex;
+  align-items: center;
   background: transparent;
   border: 0;
   padding: 0;
