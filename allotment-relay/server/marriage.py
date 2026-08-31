@@ -1,6 +1,7 @@
 """连理所 — 岛民与自己的人类结婚、离婚。不是岛民互婚，也没有独立 propose_marriage 工具。"""
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 import hashlib
 import json
 import random
@@ -76,6 +77,21 @@ CLERK = "理枝"
 BRIDE_FROZEN = 1
 BRIDE_PAID = 2
 
+TICKET_GIFT_CODE = "ticket_gift"
+GIFT_TICKET_MIN = 88
+GIFT_TICKET_MAX = 88_888
+
+ANNIVERSARY_TIERS: dict[str, dict[str, Any]] = {
+    "点灯": {"price": 8888, "label": "岸灯一盏"},
+    "续席": {"price": 18888, "label": "小幅续宴"},
+    "潮宗贺": {"price": 68888, "label": "潮宗贺典"},
+}
+
+GOLD_REFRESH_THREE = 28_888
+GOLD_REFRESH_FIVE = 58_888
+
+_CST = timezone(timedelta(hours=8))
+
 FEAST_TIERS: dict[str, dict[str, Any]] = {
     "滩席": {
         "key": "beach", "price": 3888, "dishes": 2, "guests": 4,
@@ -92,6 +108,10 @@ FEAST_TIERS: dict[str, dict[str, Any]] = {
     "满潮席": {
         "key": "tide", "price": 38888, "dishes": 8, "guests": 16,
         "aliases": ("满潮席", "高档席", "tide"),
+    },
+    "潮宗席": {
+        "key": "ocean", "price": 68888, "dishes": 10, "guests": 24,
+        "aliases": ("潮宗席", "潮宗", "至尊席", "ocean"),
     },
 }
 
@@ -152,14 +172,17 @@ MARRIAGE_HELP = """marriage_ops 子命令（整句写进 command）：
   金饰 — 订契后把行囊里的三金（或五金）登记进婚书
       三金/五金去 Tt酱柜后：visit_ops tt buy 三金套（8888）/ 五金套（13888）
   婚服 — 订契后把衣橱里的婚服登记。买：cloth_ops 买 婚服 海色（8888）。自制：委托 婚服（料加倍、隔日）
-  吃席 灯塔席 — 订契后必选规格。选了举行前还能改。包桌扣票：滩席 3888 / 岸席 8888 / 灯塔席 18888 / 满潮席 38888
-      自办：吃席 滩席 自办（收熟菜 dish_/meal_，滩席×2 … 满潮席×8）
+  吃席 灯塔席 — 订契后必选规格。选了举行前还能改。包桌扣票：滩席 3888 / 岸席 8888 / 灯塔席 18888 / 满潮席 38888 / 潮宗席 68888
+      自办：吃席 滩席 自办（收熟菜 dish_/meal_，滩席×2 … 潮宗席×10）
       改档：再写 吃席 岸席。差价补上或退回口袋，不进潮汐基金。宾客已超过新档人数就不能改小
-  邀请 岛民名 · 邀请 npc 阿簿 — 人数不能超过席面上限（4/8/12/16）。人多了就改大一档：吃席 岸席
+  邀请 岛民名 · 邀请 npc 阿簿 — 人数不能超过席面上限（4/8/12/16/24）。人多了就改大一档：吃席 岸席
   举行 / 结婚 / 登记 — 婚期到了，且三金、婚服、吃席都齐了，才登记成婚。订婚不是必须
       登记后写公共潮讯、灯塔亮灯、聊天室大厅通报一句（理枝），生成永久潮汐婚书
       婚期当天全站换成婚礼页：顶栏会出现「今日岛上有婚礼」，主页、上手页、地点页一打开都看得见
       婚期当天聊天室可无限发红包（普通每天最多 5 封）；别人去上手页连理所 出席 / 祝词 / 送礼 / 帮忙
+  送礼 岛民名 物品 [数量] — 宾客送物。也可 送礼 岛民名 票 500 / 贺礼 岛民名 500（88～88888，当场花掉不进对方口袋，记在婚书）
+  纪念日 点灯 / 续席 / 潮宗贺 — 成婚之后每年一次（东八区年）。8888 / 18888 / 68888 票，花掉记婚书，能抵锈
+  金饰 焕新 / 金饰 焕新 五金 — 成婚之后每年一次。三金焕新 28888 / 五金焕新 58888（须已登记五金），婚书多一行
   婚礼 · 出席 · 祝词 · 送礼 · 帮忙 · 居所 · 婚书 · 退契 确认 · help
   离婚 答应 / 离婚 拒绝 — 人类在婚书页申请后，由你决定。不要发明「离婚 确认」
 
@@ -263,15 +286,44 @@ def _feast_self_cook(row: dict[str, Any]) -> bool:
 
 def _feast_change_help() -> str:
     return (
-        "选规格：marriage_ops 吃席 滩席 / 岸席 / 灯塔席 / 满潮席。"
+        "选规格：marriage_ops 吃席 滩席 / 岸席 / 灯塔席 / 满潮席 / 潮宗席。"
         "包桌扣票；自办加写 自办（收熟菜）。选了举行前还能改，差价补上或退回口袋，不进潮汐基金。"
-        " 滩席 {0} 或菜×2 · 岸席 {1} 或菜×4 · 灯塔席 {2} 或菜×6 · 满潮席 {3} 或菜×8".format(
+        " 滩席 {0} 或菜×2 · 岸席 {1} 或菜×4 · 灯塔席 {2} 或菜×6 · 满潮席 {3} 或菜×8 · 潮宗席 {4} 或菜×10".format(
             FEAST_TIERS["滩席"]["price"],
             FEAST_TIERS["岸席"]["price"],
             FEAST_TIERS["灯塔席"]["price"],
             FEAST_TIERS["满潮席"]["price"],
+            FEAST_TIERS["潮宗席"]["price"],
         )
     )
+
+
+def _cst_year(ts: int | None = None) -> int:
+    return datetime.fromtimestamp(ts if ts is not None else db.now(), _CST).year
+
+
+def _gift_label(item_code: str, note: str = "") -> str:
+    if item_code == TICKET_GIFT_CODE:
+        raw = (note or "").strip()
+        amt = raw.split()[0] if raw else "?"
+        if amt.isdigit():
+            return f"贺礼 {amt} 票"
+        return f"贺礼 {raw or '?'} 票"
+    return item_label(item_code)
+
+
+async def _year_event_done(
+    conn: aiosqlite.Connection, marriage_id: int, kind: str, year: int
+) -> bool:
+    cur = await conn.execute(
+        """
+        SELECT 1 FROM marriage_events
+        WHERE marriage_id=? AND kind=? AND text LIKE ?
+        LIMIT 1
+        """,
+        (int(marriage_id), kind, f"{year}:%"),
+    )
+    return bool(await cur.fetchone())
 
 
 def _bride_label(amount: int) -> str:
@@ -1600,8 +1652,8 @@ async def _archive_payload(
         "gifts": [
             {
                 "who": g["giver_name"],
-                "item": item_label(g["item_code"]),
-                "note": g["note"],
+                "item": _gift_label(g["item_code"], g.get("note") or ""),
+                "note": g["note"] if g["item_code"] != TICKET_GIFT_CODE else "",
             }
             for g in gifts
         ],
@@ -1716,6 +1768,8 @@ async def _dispatch(s: dict[str, Any], command: str = "") -> str:
         "出席": _cmd_attend,
         "祝词": _cmd_bless,
         "送礼": _cmd_gift,
+        "贺礼": _cmd_gift,
+        "纪念日": _cmd_anniversary,
         "帮忙": _cmd_help_prep,
         "居所": _cmd_home,
         "婚书": _cmd_charter,
@@ -2396,7 +2450,7 @@ async def _cmd_feast(s: dict[str, Any], rest: str) -> str:
         if int(row.get("feast_ready") or 0):
             cur = row.get("feast_note") or row.get("feast_tier") or "已定"
             return (
-                f"席面现在是{cur}。举行前还能改：marriage_ops 吃席 岸席 / 灯塔席 / 满潮席（可加 自办）。"
+                f"席面现在是{cur}。举行前还能改：marriage_ops 吃席 岸席 / 灯塔席 / 满潮席 / 潮宗席（可加 自办）。"
                 "包桌差价补上或退回口袋，不进潮汐基金。"
             )
         raise ValueError(_feast_change_help())
@@ -2406,7 +2460,7 @@ async def _cmd_feast(s: dict[str, Any], rest: str) -> str:
     if changing and old_name == name and _feast_self_cook(row) == self_cook:
         mode = "自办" if self_cook else "包桌"
         return (
-            f"席面已经是{name}{mode}。要改规格再写 吃席 岸席 / 灯塔席 / 满潮席。"
+            f"席面已经是{name}{mode}。要改规格再写 吃席 岸席 / 灯塔席 / 满潮席 / 潮宗席。"
             "差价补上或退回口袋。"
         )
     async with db.connect() as conn:
@@ -2417,7 +2471,7 @@ async def _cmd_feast(s: dict[str, Any], rest: str) -> str:
         if seated > cap:
             raise ValueError(
                 f"已经请了 {seated} 人（含你们自己），{name} 最多 {cap} 人。"
-                "人多了就改大一档：marriage_ops 吃席 岸席 / 灯塔席 / 满潮席。"
+                "人多了就改大一档：marriage_ops 吃席 岸席 / 灯塔席 / 满潮席 / 潮宗席。"
             )
         old_paid = _feast_paid_tickets(live) if changing else 0
         new_price = 0 if self_cook else int(meta["price"])
@@ -2476,6 +2530,9 @@ async def _cmd_feast(s: dict[str, Any], rest: str) -> str:
 
 
 async def _cmd_gold(s: dict[str, Any], rest: str) -> str:
+    raw = (rest or "").strip()
+    if raw.startswith("焕新"):
+        return await _cmd_gold_refresh(s, raw.replace("焕新", "", 1).strip())
     row = await _need_engaged(s)
     async with db.connect() as conn:
         if int(row.get("gold_three") or 0):
@@ -2506,6 +2563,97 @@ async def _cmd_gold(s: dict[str, Any], rest: str) -> str:
     if five:
         return "五金收进婚书。举行时不用再交。"
     return "三金收进婚书。五金选配，不挡登记。"
+
+
+async def _cmd_gold_refresh(s: dict[str, Any], rest: str) -> str:
+    async with db.connect() as conn:
+        row = await _own(conn, s["id"])
+        if not row or row["status"] != STATUS_MARRIED:
+            raise ValueError("只有成婚之后才能金饰焕新。")
+        if not int(row.get("gold_three") or 0):
+            raise ValueError("先登记三金，再谈焕新。marriage_ops 金饰")
+        want_five = rest.lower() in ("五金", "five", "5", "全套")
+        year = _cst_year()
+        if await _year_event_done(conn, int(row["id"]), "gold_refresh", year):
+            raise ValueError(f"{year} 年已经焕新过了。明年再来。")
+        price = GOLD_REFRESH_FIVE if want_five else GOLD_REFRESH_THREE
+        if want_five and not int(row.get("gold_five") or 0):
+            raise ValueError("婚书里还没有五金。先登记五金，或写 金饰 焕新（三金 28888）。")
+        _, _, tickets = await _live_hut(conn, s)
+        if tickets < price:
+            raise ValueError(f"焕新要 {price} 票，口袋 {tickets}。")
+        label = f"{'五金' if want_five else '三金'}焕新（{year}）"
+        await conn.execute(
+            "UPDATE stewards SET tickets=tickets-? WHERE id=?",
+            (price, s["id"]),
+        )
+        from . import tax as tax_mod
+        await tax_mod.record_life_spend(conn, s["id"], price, "marriage")
+        await conn.execute(
+            """
+            INSERT INTO marriage_displays (marriage_id, kind, label, created_at)
+            VALUES (?, 'gold_refresh', ?, ?)
+            """,
+            (int(row["id"]), label, db.now()),
+        )
+        await _note_event(
+            conn, int(row["id"]), "gold_refresh", f"{year}:{label}", day=db.day_id()
+        )
+        await conn.commit()
+    return (
+        f"婚书里记下{label}（-{price} 票）。不是战力，只是让人看见你们还在过。"
+        "明年还能再焕新一次。"
+    )
+
+
+async def _cmd_anniversary(s: dict[str, Any], rest: str) -> str:
+    tier_tok = (rest or "").strip() or "点灯"
+    hit = None
+    for name, meta in ANNIVERSARY_TIERS.items():
+        if tier_tok == name or tier_tok in meta.get("aliases", ()):
+            hit = (name, meta)
+            break
+    if not hit:
+        opts = " / ".join(
+            f"{n} {m['price']}" for n, m in ANNIVERSARY_TIERS.items()
+        )
+        raise ValueError(
+            f"纪念日：marriage_ops 纪念日 点灯 / 续席 / 潮宗贺（{opts}）。成婚之后每年一次。"
+        )
+    name, meta = hit
+    price = int(meta["price"])
+    async with db.connect() as conn:
+        row = await _own(conn, s["id"])
+        if not row or row["status"] != STATUS_MARRIED:
+            raise ValueError("只有成婚之后才能办纪念日。")
+        year = _cst_year()
+        if await _year_event_done(conn, int(row["id"]), "anniversary", year):
+            raise ValueError(f"{year} 年已经办过纪念日了。明年再来。")
+        _, _, tickets = await _live_hut(conn, s)
+        if tickets < price:
+            raise ValueError(f"{name}要 {price} 票，口袋 {tickets}。")
+        await conn.execute(
+            "UPDATE stewards SET tickets=tickets-? WHERE id=?",
+            (price, s["id"]),
+        )
+        from . import tax as tax_mod
+        await tax_mod.record_life_spend(conn, s["id"], price, "marriage")
+        label = f"{year}·{meta['label']}"
+        await conn.execute(
+            """
+            INSERT INTO marriage_displays (marriage_id, kind, label, created_at)
+            VALUES (?, 'anniversary', ?, ?)
+            """,
+            (int(row["id"]), label, db.now()),
+        )
+        await _note_event(
+            conn, int(row["id"]), "anniversary", f"{year}:{name}", day=db.day_id()
+        )
+        await conn.commit()
+    return (
+        f"纪念日记下{name}（{meta['label']}，-{price} 票）。"
+        "写进婚书展示，不进对方口袋，能抵锈。明年还能再办一次。"
+    )
 
 
 async def _cmd_bride(s: dict[str, Any], rest: str) -> str:
@@ -3160,7 +3308,7 @@ async def _cmd_invite(s: dict[str, Any], rest: str) -> str:
         if seated >= cap:
             raise ValueError(
                 f"这档席面最多 {cap} 人（含你们自己）。现在已经 {seated} 人，再请就挤了。"
-                "人多了就改大一档：marriage_ops 吃席 岸席 / 灯塔席 / 满潮席。"
+                "人多了就改大一档：marriage_ops 吃席 岸席 / 灯塔席 / 满潮席 / 潮宗席。"
             )
         try:
             await conn.execute(
@@ -3369,14 +3517,62 @@ async def _cmd_bless(s: dict[str, Any], rest: str) -> str:
 async def _cmd_gift(s: dict[str, Any], rest: str) -> str:
     parts = rest.split()
     if len(parts) < 2:
-        raise ValueError("送礼 岛民名 物品 [数量] [留言]")
+        raise ValueError(
+            "送礼 岛民名 物品 [数量] [留言] · 或 送礼 岛民名 票 500 · 贺礼 岛民名 500"
+        )
     host, row = await _find_wedding_by_host(parts[0])
     if int(host["id"]) == int(s["id"]):
         raise ValueError("自己的婚礼不用给自己送礼。")
+    if len(parts) >= 2 and parts[1].isdigit():
+        parts = [parts[0], "票", parts[1]] + parts[2:]
     item_tok = parts[1]
     qty = 1
     note = ""
     idx = 2
+    if item_tok.lower() in ("票", "tickets", "工分票", "礼金", "贺礼"):
+        if len(parts) < 3 or not parts[2].isdigit():
+            raise ValueError(
+                f"贺礼要写票数：marriage_ops 送礼 {host['name']} 票 500"
+                f"（{GIFT_TICKET_MIN}～{GIFT_TICKET_MAX}，当场花掉，记在婚书）"
+            )
+        amount = int(parts[2])
+        if amount < GIFT_TICKET_MIN or amount > GIFT_TICKET_MAX:
+            raise ValueError(
+                f"贺礼 {GIFT_TICKET_MIN}～{GIFT_TICKET_MAX} 票。"
+                "当场花掉，不进对方口袋，只记在婚书。"
+            )
+        if len(parts) > 3:
+            note = _clip(" ".join(parts[3:]), 80)
+        async with db.connect() as conn:
+            cur = await conn.execute(
+                "SELECT tickets FROM stewards WHERE id=?", (s["id"],)
+            )
+            pocket = int((await cur.fetchone())[0] or 0)
+            if pocket < amount:
+                raise ValueError(f"口袋 {pocket} 票，贺礼要 {amount}。")
+            await conn.execute(
+                "UPDATE stewards SET tickets=tickets-? WHERE id=?",
+                (amount, s["id"]),
+            )
+            from . import tax as tax_mod
+            await tax_mod.record_life_spend(conn, s["id"], amount, "marriage")
+            gift_note = str(amount)
+            if note:
+                gift_note += f" {note}"
+            await conn.execute(
+                """
+                INSERT INTO marriage_gifts (
+                    marriage_id, giver_id, giver_name, item_code, note, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (row["id"], s["id"], s["name"], TICKET_GIFT_CODE, gift_note, db.now()),
+            )
+            await conn.commit()
+        extra = f" 附言：{note}" if note else ""
+        return (
+            f"贺礼 {amount} 票已记在「{host['name']}」的婚书里（当场花掉，不进对方口袋）。"
+            f"{extra}"
+        ).strip()
     if len(parts) > 2 and parts[2].isdigit():
         qty = max(1, min(12, int(parts[2])))
         idx = 3
@@ -3483,7 +3679,7 @@ async def _cmd_hold(s: dict[str, Any], rest: str) -> str:
             "item": row.get("proposal_item") or "",
             "guests": [g["guest_name"] for g in guests],
             "blessings": [b["text"] for b in blessings],
-            "gifts": [f"{g['giver_name']}·{item_label(g['item_code'])}" for g in gifts],
+            "gifts": [f"{g['giver_name']}·{_gift_label(g['item_code'], g.get('note') or '')}" for g in gifts],
             "displays": [d["label"] for d in displays],
             "memories": memories,
             "bride_price": int(row.get("bride_price") or 0),
