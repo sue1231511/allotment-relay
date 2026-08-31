@@ -283,12 +283,80 @@ async def test_help_not_mascot() -> None:
         db.now = real_now
 
 
+async def test_status_explains_midday_holdings_change() -> None:
+    """开征后再升屋：今日应仍是开征单，分项按此刻；面板要写清楚不是漏减免。"""
+    tmp = Path(tempfile.mkdtemp(prefix="upkeep-midday-"))
+    db = await _boot(tmp)
+    from server import mcp_dispatch
+
+    real_now = db.now
+    db.now = lambda: ENROLL_TUE
+    kid, sid = await _enroll(db, "midday@example.com", "午后升屋")
+    # 温室30+畜栏10+在栏4×10+小馆12+第二矿坑10+切波艇15 = 117；再加小屋会变
+    # 开征时：无小屋费（Lv1 免）→ 温室30+畜栏10+在栏6×10+小馆12+矿坑10+切波艇15 = 137
+    await _set(
+        db, sid,
+        tickets=800,
+        greenhouse_count=1,
+        greenhouse=1,
+        barn_built=1,
+        eatery_open=1,
+        hut_built=1,
+        hut_level=1,
+        boat_key="cutter",
+        last_bar_shift_at=ENROLL_TUE,
+    )
+    async with db.connect() as conn:
+        for i in range(6):
+            await conn.execute(
+                "INSERT INTO barn_animals (steward_id, slot, species) VALUES (?,?,?)",
+                (sid, i + 1, "goat"),
+            )
+        await conn.execute(
+            "INSERT INTO quarry_claims (steward_id, slot) VALUES (?,1)",
+            (sid,),
+        )
+        await conn.execute(
+            "INSERT INTO quarry_claims (steward_id, slot) VALUES (?,2)",
+            (sid,),
+        )
+        await conn.commit()
+
+    db.now = lambda: NEXT_DAY
+    try:
+        async with db.connect() as conn:
+            await conn.execute(
+                "DELETE FROM world_flags WHERE flag_key LIKE 'shore_upkeep:%'"
+            )
+            await conn.commit()
+        first = await mcp_dispatch.visit_bundle(kid, "潮生会 维")
+        assert "今日应 137" in first or "应 137" in first, first
+        tickets, arrears = await _row(db, sid)
+        assert arrears == 0, (arrears, tickets, first)
+        assert tickets == 800 - 137, (tickets, first)
+
+        # 开征后再升到 Lv4（+20）：今日单不改，分项合计 157
+        await _set(db, sid, hut_level=4)
+        again = await mcp_dispatch.visit_bundle(kid, "潮生会 维")
+        assert "今日应 137" in again, again
+        assert "已划 137" in again or "已结清" in again, again
+        assert "此刻产业应约 157" in again, again
+        assert "不是漏减免" in again or "不补不退" in again, again
+        assert "小屋 Lv4" in again, again
+        tickets2, arrears2 = await _row(db, sid)
+        assert tickets2 == tickets, (tickets2, again)
+        assert arrears2 == 0, arrears2
+    finally:
+        db.now = real_now
+
+
 def main() -> None:
     test_due_from_holdings()
     asyncio.run(test_first_day_exempt())
     asyncio.run(test_daily_levy_and_lock())
     asyncio.run(test_pay_and_shop_pause())
     asyncio.run(test_help_not_mascot())
+    asyncio.run(test_status_explains_midday_holdings_change())
     print("ok")
 
 
