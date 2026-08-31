@@ -868,10 +868,10 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-vn-full1" in html
-    assert html.count("island.css?v=island-vn-full1") == 1
-    assert html.count("app.js?v=island-vn-full1") == 1
-    assert "lighthouse.js?v=island-vn-full1" in app
+    assert "island-list-vn1" in html
+    assert html.count("island.css?v=island-list-vn1") == 1
+    assert html.count("app.js?v=island-list-vn1") == 1
+    assert "lighthouse.js?v=island-list-vn1" in app
     assert "island-boot3" in html
     assert 'id="island-boot-veil"' in html
     assert "正在进入" in html
@@ -1218,6 +1218,9 @@ def test_island_page_is_modular() -> None:
     assert 'shop: "杂货铺"' in app
     shop_js = (ROOT / "server/static/island/scenes/shop.js").read_text(encoding="utf-8")
     assert "island-shop-shelf" in shop_js
+    assert "和灯塔选项一个样子" in css
+    assert "底下深色金边框" in css
+    assert "grid-template-columns: 1fr 1fr" in css.split(".island-shop-list")[1].split(".island-shop-sku")[0]
     assert "island-shop-meta" in shop_js
     assert "is-peek" in shop_js
     assert "点一下看货架" in shop_js
@@ -1402,7 +1405,7 @@ def test_island_page_is_modular() -> None:
     assert "is-theater" in css
     assert "island-plaza-board" in css
     assert "941 / 1672" in css
-    assert ".island-shop .island-slot" in css
+    assert ".island-shop:not(.is-peek) .island-slot" in css
     assert "island-shop-meta" in css
     assert "island-scene-tap" in css
     assert ".island-shop.is-peek" in css
