@@ -2149,6 +2149,18 @@ async def init_db() -> None:
             """,
             "CREATE INDEX IF NOT EXISTS idx_lounge_board_created ON lounge_board(created_at DESC)",
             "CREATE INDEX IF NOT EXISTS idx_lounge_board_kind ON lounge_board(kind, id DESC)",
+            """
+            CREATE TABLE IF NOT EXISTS lounge_board_replies (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                board_id INTEGER NOT NULL REFERENCES lounge_board(id),
+                body TEXT NOT NULL,
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                source TEXT NOT NULL DEFAULT 'mcp',
+                created_at INTEGER NOT NULL
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_lounge_board_replies_board "
+            "ON lounge_board_replies(board_id, id ASC)",
         ):
             try:
                 await db.execute(ddl)

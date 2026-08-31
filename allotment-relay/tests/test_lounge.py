@@ -77,8 +77,37 @@ async def _test_lounge_mcp_and_web() -> None:
     assert len(items) == 3
     assert items[-1]["body"] == "人类也想加派对"
 
+    feedback_id = next(i["id"] for i in items if "温室按钮" in i["body"])
+    await asyncio.sleep(lounge.LOUNGE_BOARD_REPLY_COOLDOWN_SEC + 1)
+    replied = await lounge.lounge_ops(
+        row["id"], f"回墙 {feedback_id} 已修好，开征后升屋会对不上属正常"
+    )
+    assert "已回墙上" in replied, replied
+    board_after = await lounge.lounge_ops(row["id"], "许愿墙")
+    assert "已修好" in board_after
+    assert "↳" in board_after or "管理" in board_after or "聊天测试" in board_after
+
+    await asyncio.sleep(lounge.LOUNGE_BOARD_REPLY_COOLDOWN_SEC + 1)
+    web_reply = await lounge.human_post_board_reply(
+        key, feedback_id, "网页也能回在墙上"
+    )
+    assert web_reply["reply"]["body"] == "网页也能回在墙上"
+    assert any(
+        r["body"] == "网页也能回在墙上"
+        for r in web_reply["item"]["replies"]
+    )
+
     msgs = await lounge.list_messages()
-    assert all(m["body"] not in ("想加钓鱼大赛", "温室按钮没反应", "人类也想加派对") for m in msgs)
+    assert all(
+        m["body"] not in (
+            "想加钓鱼大赛",
+            "温室按钮没反应",
+            "人类也想加派对",
+            "已修好，开征后升屋会对不上属正常",
+            "网页也能回在墙上",
+        )
+        for m in msgs
+    )
 
     await asyncio.sleep(lounge.LOUNGE_COOLDOWN_SEC + 1)
 
