@@ -1,10 +1,11 @@
-"""岸税 — 口袋现票超额累进。潮生会征收，税入潮汐基金。"""
+"""岸税 — 口袋+囤货款超额累进。潮生会征收，税入潮汐基金。"""
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from . import db
+from .catalog import dish_item, suggested_price
 from .disaster import human_week_id
 
 TAX_NAME = "岸税"
@@ -23,14 +24,14 @@ BRACKETS: tuple[tuple[int | None, float, str], ...] = (
     (None, 0.36, "潮宗"),
 )
 
-# 潮差附加：按本周岛均口袋。第二十名刚到岛均的人加不到。
+# 潮差附加：按本周岛均应税家当（口袋+囤货款）。第二十名刚到岛均的人加不到。
 # 岛均 4000 时：2 万以下不加；2–6 万再加 8%；6 万以上再加 16%。
 GAP_SOFT_MULT = 5
 GAP_HARD_MULT = 15
 GAP_SOFT_RATE = 0.08
 GAP_HARD_RATE = 0.16
 
-# 潮锈：闲票（口袋超过岛均的部分）本周要花掉这一成半，缺口整笔进基金。
+# 潮锈：闲钱（应税家当超过岛均的部分）本周要花掉这一成半，缺口整笔进基金。
 # 岛均 4000 时，第二十名闲票为 0；榜首 20 万不花则锈 29400。
 RUST_RATE = 0.15
 RUST_NAME = "潮锈"
@@ -45,10 +46,10 @@ TAX_HELP = f"""visit_ops 潮生会 税（整句写进 command）：
   税 / 岸税 — 看档：免税额、累进档表、你的档、本周应/已划/欠
   税 交 — 把欠税（含本周未划完的）能交的交清。也可 税 交 50 交一部分
   没有 tax_ops，没有 逃税 / 免税申请。补贴仍不用领。
-{TAX_NAME}按口袋现票超额累进，只算口袋，不算行囊/井下存款。未过 {TAX_FREE} 免征。
+{TAX_NAME}按应税家当超额累进：口袋现票 + 行囊/潮柜/冰箱/集市挂单/交换台囤货款（按系统回收价估，和 tote_ops vend 同价）。不算井下存款。未过 {TAX_FREE} 免征。
 低档（温水/殷实）不动；阔手 14%、豪客 20%、潮主 26%、潮宗 36%。高档加码是为了把滚出来的票划回潮汐基金。
-潮差附加：口袋超过本周岛均 {GAP_SOFT_MULT} 倍的部分再加 {int(GAP_SOFT_RATE * 100)}%，超过 {GAP_HARD_MULT} 倍再加 {int(GAP_HARD_RATE * 100)}%。岛均四千时，两万以下不加；刚到岛均的人（第二十名那种）加不到。
-{RUST_NAME}：口袋超过岛均的闲票，本周生活花销要够闲票的 {int(RUST_RATE * 100)}%。没花够的缺口整笔进基金。酒吧、小馆、衣泊坊、诊所、星光、小屋日子、婚宴、三金、基金捐算花；买地、买园、买棚、送礼不算。刚到岛均的人闲票为 0。周一按上周花销划。
+潮差附加：应税家当超过本周岛均 {GAP_SOFT_MULT} 倍的部分再加 {int(GAP_SOFT_RATE * 100)}%，超过 {GAP_HARD_MULT} 倍再加 {int(GAP_HARD_RATE * 100)}%。岛均四千时，两万以下不加；刚到岛均的人（第二十名那种）加不到。
+{RUST_NAME}：应税家当超过岛均的闲钱，本周生活花销要够闲钱的 {int(RUST_RATE * 100)}%。没花够的缺口整笔进基金。酒吧、小馆、衣泊坊、诊所、星光、小屋日子、婚宴、三金、基金捐算花；买地、买园、买棚、送礼不算。刚到岛均的人闲钱为 0。周一按上周花销划。税仍从口袋划，囤着不卖也要按估价交。
 东八区每周一换班自动划入潮汐基金（本周新号免征到下周）。自动划不会收到 {TAX_COLLECT_FLOOR} 以下；欠税时不能{EXPAND_LOCK}。
 例子：潮生会 税 · 潮生会 税 交 · 潮生会 税 交 50
 容易搞混：税=强制岸税（富人按档交）。维=产业维修费（visit_ops 潮生会 维，每天划）。基金 捐 50=自愿捐票（须高于岛均），也算生活花销、能抵锈。周潮天灾=只冲 3 万以上，不是税。"""
@@ -73,6 +74,73 @@ def band_name(tickets: int) -> str:
     return BRACKETS[-1][2]
 
 
+def item_goods_value(item: str, qty: int = 1) -> int:
+    """单种囤货款（系统回收价，和 tote_ops vend 同价）。"""
+    if qty <= 0:
+        return 0
+    unit = int(suggested_price(item) or 0)
+    return unit * int(qty) if unit > 0 else 0
+
+
+def stock_goods_value(stock: dict[str, int]) -> int:
+    return sum(item_goods_value(item, qty) for item, qty in stock.items())
+
+
+def _fridge_item_key(dish_key: str, stars: int) -> str:
+    if dish_key.startswith("meal_"):
+        return dish_key
+    return dish_item(dish_key, int(stars))
+
+
+async def steward_goods_value(conn, steward_id: int) -> int:
+    """行囊、潮柜、冰箱、集市挂单、交换台待领的囤货款合计。"""
+    sid = int(steward_id)
+    total = 0
+    queries = (
+        "SELECT item, quantity FROM satchel WHERE steward_id=? AND quantity>0",
+        "SELECT item, quantity FROM hut_cabinet WHERE steward_id=? AND quantity>0",
+        (
+            "SELECT item, quantity FROM market_listings "
+            "WHERE seller_id=? AND buyer_id IS NULL AND quantity>0"
+        ),
+        (
+            "SELECT item, quantity FROM swap_lots "
+            "WHERE depositor_id=? AND claimed_by IS NULL AND quantity>0"
+        ),
+    )
+    for sql in queries:
+        try:
+            rows = await (await conn.execute(sql, (sid,))).fetchall()
+        except Exception:
+            continue
+        for item, qty in rows:
+            total += item_goods_value(str(item), int(qty or 0))
+    try:
+        rows = await (await conn.execute(
+            "SELECT dish_key, stars, quantity FROM meal_storage "
+            "WHERE steward_id=? AND quantity>0",
+            (sid,),
+        )).fetchall()
+    except Exception:
+        rows = []
+    for dish_key, stars, qty in rows:
+        item = _fridge_item_key(str(dish_key), int(stars or 0))
+        total += item_goods_value(item, int(qty or 0))
+    return total
+
+
+async def steward_tax_wealth(conn, steward_id: int, tickets: int | None = None) -> dict[str, int]:
+    """口袋 + 囤货款 = 应税家当。"""
+    pocket = int(tickets) if tickets is not None else 0
+    if tickets is None:
+        row = await (await conn.execute(
+            "SELECT tickets FROM stewards WHERE id=?", (int(steward_id),)
+        )).fetchone()
+        pocket = int((row[0] if row else 0) or 0)
+    goods = await steward_goods_value(conn, int(steward_id))
+    return {"pocket": pocket, "goods": goods, "wealth": pocket + goods}
+
+
 def gap_thresholds(avg: int) -> tuple[int, int]:
     avg = max(0, int(avg or 0))
     if avg < 1:
@@ -83,7 +151,7 @@ def gap_thresholds(avg: int) -> tuple[int, int]:
 
 
 def gap_surcharge(tickets: int, avg: int | None) -> int:
-    """离岛均太远的附加。avg 缺省或口袋未过免税额则为 0。"""
+    """离岛均太远的附加。avg 缺省或应税家当未过免税额则为 0。"""
     if not avg or avg < 1 or tickets <= TAX_FREE:
         return 0
     soft, hard = gap_thresholds(int(avg))
@@ -96,7 +164,7 @@ def gap_surcharge(tickets: int, avg: int | None) -> int:
 
 
 def rust_idle(tickets: int, avg: int | None) -> int:
-    """口袋超过岛均（且过了免税额）的闲票。刚到岛均的人为 0。"""
+    """应税家当超过岛均（且过了免税额）的闲钱。刚到岛均的人为 0。"""
     if not avg or avg < 1 or tickets <= TAX_FREE:
         return 0
     floor = max(TAX_FREE, int(avg))
@@ -226,7 +294,7 @@ def tax_due(
     avg: int | None = None,
     spent: int | None = None,
 ) -> int:
-    """口袋现票的本周应税。超额累进 + 潮差 + 潮锈；未过免税额为 0。spent 缺省不加锈。"""
+    """应税家当的本周应税额。超额累进 + 潮差 + 潮锈；未过免税额为 0。spent 缺省不加锈。"""
     return (
         bracket_due(tickets)
         + gap_surcharge(tickets, avg)
@@ -241,24 +309,35 @@ def gap_lines(avg: int) -> list[str]:
             f"潮差附加：岛均还没算出来。超过岛均 {GAP_SOFT_MULT} 倍的部分再加 "
             f"{int(GAP_SOFT_RATE * 100)}%，超过 {GAP_HARD_MULT} 倍再加 "
             f"{int(GAP_HARD_RATE * 100)}%。",
-            f"{RUST_NAME}：闲票本周要花掉 {int(RUST_RATE * 100)}%。买地买园不算花。",
+            f"{RUST_NAME}：闲钱本周要花掉 {int(RUST_RATE * 100)}%。买地买园不算花。",
         ]
     soft, hard = gap_thresholds(avg)
     return [
         f"潮差附加（本周岛均 {avg}）：超过 {soft}（{GAP_SOFT_MULT} 倍）再加 "
         f"{int(GAP_SOFT_RATE * 100)}%，超过 {hard}（{GAP_HARD_MULT} 倍）再加 "
         f"{int(GAP_HARD_RATE * 100)}%。刚到岛均的人加不到。",
-        f"{RUST_NAME}：闲票（超过岛均的部分）本周要花掉 {int(RUST_RATE * 100)}%，"
+        f"{RUST_NAME}：闲钱（超过岛均的部分）本周要花掉 {int(RUST_RATE * 100)}%，"
         "没花够的缺口整笔进基金。酒吧/小馆/衣泊坊/诊所/星光/小屋日子/婚宴/三金/基金捐算花；"
-        "买地买园不算，买棚送礼也不算。刚到岛均的人闲票为 0。",
+        "买地买园不算，买棚送礼也不算。刚到岛均的人闲钱为 0。",
     ]
 
 
+async def island_wealth_avg(conn) -> int:
+    rows = await (await conn.execute(
+        "SELECT id, tickets FROM stewards WHERE enrolled=1"
+    )).fetchall()
+    if not rows:
+        return 0
+    total = 0
+    for sid, tickets in rows:
+        goods = await steward_goods_value(conn, int(sid))
+        total += int(tickets or 0) + goods
+    return int(round(total / len(rows)))
+
+
 async def island_pocket_avg(conn) -> int:
-    row = await (await conn.execute(
-        "SELECT COALESCE(AVG(tickets), 0) FROM stewards WHERE enrolled=1"
-    )).fetchone()
-    return int(round(float(row[0] or 0)))
+    """兼容旧名：岸税岛均已含囤货款。"""
+    return await island_wealth_avg(conn)
 
 
 def bracket_lines() -> list[str]:
@@ -424,8 +503,15 @@ async def ensure_shore_tax(
         ORDER BY id ASC
         """
     )).fetchall()
-    pocket = [int(row[2] or 0) for row in rows]
-    avg = int(round(sum(pocket) / len(pocket))) if pocket else 0
+    wealths: list[int] = []
+    goods_by_id: dict[int, int] = {}
+    for row in rows:
+        sid = int(row[0])
+        tickets = int(row[2] or 0)
+        goods = await steward_goods_value(conn, sid)
+        goods_by_id[sid] = goods
+        wealths.append(tickets + goods)
+    avg = int(round(sum(wealths) / len(wealths))) if wealths else 0
     rust_start, rust_end = rust_window(moment, previous=True)
     assessed_n = 0
     assessed_tickets = 0
@@ -436,13 +522,15 @@ async def ensure_shore_tax(
         name = row[1]
         tickets = int(row[2] or 0)
         created_at = int(row[3] or 0)
+        goods = goods_by_id.get(sid, 0)
+        wealth = tickets + goods
         if _in_first_week(created_at, moment):
             skipped_new += 1
             continue
         spent = await life_spent(conn, sid, rust_start, rust_end)
-        extra = gap_surcharge(tickets, avg)
-        rust = rust_surcharge(tickets, avg, spent)
-        assessed = tax_due(tickets, avg, spent)
+        extra = gap_surcharge(wealth, avg)
+        rust = rust_surcharge(wealth, avg, spent)
+        assessed = tax_due(wealth, avg, spent)
         existing_bill = await _this_week_bill(conn, sid, week_id)
         if not existing_bill["exists"]:
             await conn.execute(
@@ -450,7 +538,7 @@ async def ensure_shore_tax(
                 INSERT INTO shore_tax_bills (steward_id, week_id, assessed, paid, tickets_at)
                 VALUES (?, ?, ?, 0, ?)
                 """,
-                (sid, week_id, assessed, tickets),
+                (sid, week_id, assessed, wealth),
             )
             if assessed > 0:
                 await conn.execute(
@@ -460,8 +548,12 @@ async def ensure_shore_tax(
                 assessed_n += 1
                 assessed_tickets += assessed
                 detail = (
-                    f"{name} 本周{TAX_NAME}应 {assessed} 票（{band_name(tickets)}档，口袋 {tickets}"
+                    f"{name} 本周{TAX_NAME}应 {assessed} 票（{band_name(wealth)}档，"
+                    f"口袋 {tickets}"
                 )
+                if goods:
+                    detail += f"，囤货估价 {goods}"
+                detail += f"，应税 {wealth}"
                 if extra:
                     detail += f"，潮差 +{extra}"
                 if rust:
@@ -515,23 +607,28 @@ async def snapshot(conn, steward_id: int | None = None, ts: int | None = None) -
         tickets = int(row[0] or 0) if row else 0
         arrears = int(row[1] or 0) if row else 0
         created_at = int(row[2] or 0) if row else 0
+        wealth_info = await steward_tax_wealth(conn, steward_id, tickets)
+        goods = int(wealth_info["goods"])
+        wealth = int(wealth_info["wealth"])
         bill = await _this_week_bill(conn, steward_id, week_id)
         start, end = rust_window(ts, previous=rust_use_previous(ts, bool(flag)))
         spent = await life_spent(conn, steward_id, start, end)
-        extra = gap_surcharge(tickets, avg)
-        rust = rust_surcharge(tickets, avg, spent)
-        idle = rust_idle(tickets, avg)
-        need = rust_need(tickets, avg)
+        extra = gap_surcharge(wealth, avg)
+        rust = rust_surcharge(wealth, avg, spent)
+        idle = rust_idle(wealth, avg)
+        need = rust_need(wealth, avg)
         mine = {
             "tickets": tickets,
+            "goods": goods,
+            "wealth": wealth,
             "arrears": arrears,
-            "due_now": tax_due(tickets, avg, spent),
+            "due_now": tax_due(wealth, avg, spent),
             "gap": extra,
             "rust": rust,
             "spent": spent,
             "idle": idle,
             "rust_need": need,
-            "band": band_name(tickets),
+            "band": band_name(wealth),
             "assessed": bill["assessed"],
             "paid": bill["paid"],
             "first_week": _in_first_week(created_at, ts),
@@ -566,21 +663,26 @@ def _status_text(snap: dict[str, Any]) -> str:
     mine = snap.get("mine") or {}
     lines = [
         f"潮生会 · {TAX_NAME}",
-        "阿簿：口袋过了免税额就要按档交。超额累进，只算口袋现票。高档加码，离岛均太远再加潮差。只攒不花再加潮锈。税进潮汐基金。",
+        "阿簿：应税家当过了免税额就要按档交。口袋现票 + 行囊/潮柜/冰箱/挂单囤货款（按系统回收价估）。超额累进，高档加码，离岛均太远再加潮差。只攒不花再加潮锈。税仍从口袋划，囤着不卖也要交。税进潮汐基金。",
         "",
         f"本周 {snap['week_id']} · {snap['next']}",
         f"全岛本周应 {snap['assessed']} / 已入池 {snap['collected']}",
         "",
-        f"免税额 {TAX_FREE} 票。档表（超额累进）：",
+        f"免税额 {TAX_FREE} 票（应税家当 = 口袋 + 囤货款）。档表（超额累进）：",
         *bracket_lines(),
         *gap_lines(int(snap.get("avg") or 0)),
         f"自动划不会收到 {TAX_COLLECT_FLOOR} 以下。本周新号免征到下周。",
     ]
     if mine:
         lines.append("")
+        wealth_bits = [f"口袋 {mine['tickets']}"]
+        if mine.get("goods"):
+            wealth_bits.append(f"囤货估价 {mine['goods']}")
+        wealth_bits.append(f"应税 {mine.get('wealth', mine['tickets'])}")
+        wealth_line = " · ".join(wealth_bits)
         if mine["first_week"]:
             lines.append(
-                f"你的口袋：{mine['tickets']} 票 · {mine['band']}档"
+                f"你的家当：{wealth_line} · {mine['band']}档"
                 f"（周应约 {mine['due_now']}）· 本周新号，免征到下周"
             )
         elif mine["assessed"] or mine["paid"] or mine["arrears"] or mine["due_now"]:
@@ -589,7 +691,7 @@ def _status_text(snap: dict[str, Any]) -> str:
             spent = int(mine.get("spent") or 0)
             need = int(mine.get("rust_need") or 0)
             lines.append(
-                f"你的口袋：{mine['tickets']} 票 · {mine['band']}档"
+                f"你的家当：{wealth_line} · {mine['band']}档"
                 f" · 本周应 {mine['assessed']} · 已划 {mine['paid']}"
                 + (f" · 潮差 +{gap}" if gap else "")
                 + (f" · {RUST_NAME} +{rust}" if rust else "")
@@ -604,7 +706,7 @@ def _status_text(snap: dict[str, Any]) -> str:
                 )
         else:
             lines.append(
-                f"你的口袋：{mine['tickets']} 票 · 未过免税额 {TAX_FREE}，不用交"
+                f"你的家当：{wealth_line} · 未过免税额 {TAX_FREE}，不用交"
             )
         if mine["arrears"]:
             lines.append(
@@ -719,15 +821,17 @@ async def sheet_line(s: dict[str, Any]) -> str | None:
         )
     async with db.connect() as conn:
         conn.row_factory = None
-        avg = await island_pocket_avg(conn)
+        avg = await island_wealth_avg(conn)
         flag = await (await conn.execute(
             "SELECT 1 FROM world_flags WHERE flag_key=?", (week_flag_key(),)
         )).fetchone()
         start, end = rust_window(previous=rust_use_previous(None, bool(flag)))
         spent = await life_spent(conn, int(s["id"]), start, end)
-    extra = gap_surcharge(tickets, avg)
-    rust = rust_surcharge(tickets, avg, spent)
-    due = tax_due(tickets, avg, spent)
+        wealth_info = await steward_tax_wealth(conn, int(s["id"]), tickets)
+    wealth = int(wealth_info["wealth"])
+    extra = gap_surcharge(wealth, avg)
+    rust = rust_surcharge(wealth, avg, spent)
+    due = tax_due(wealth, avg, spent)
     if due > 0:
         extras = []
         if extra:
@@ -735,7 +839,7 @@ async def sheet_line(s: dict[str, Any]) -> str | None:
         if rust:
             extras.append(f"{RUST_NAME} +{rust}")
         return (
-            f"{TAX_NAME}：{band_name(tickets)}档 · 周应约 {due}"
+            f"{TAX_NAME}：{band_name(wealth)}档 · 周应约 {due}"
             + (f"（含{'，'.join(extras)}）" if extras else "")
             + f"（周一换班自动划）→ visit_ops 潮生会 税"
         )
