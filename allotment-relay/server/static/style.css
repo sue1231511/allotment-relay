@@ -3215,11 +3215,12 @@ body.memory-open {
 }
 
 .lounge-board-sheet {
-  max-width: min(92vw, 560px);
+  max-width: min(96vw, 920px);
+  width: 100%;
 }
 
 .lounge-board-sheet .lounge-sheet-inner {
-  max-height: min(84vh, 720px);
+  max-height: min(90vh, 860px);
   display: flex;
   flex-direction: column;
 }
@@ -3227,12 +3228,16 @@ body.memory-open {
 .lounge-board-sheet .lounge-sheet-body {
   display: flex;
   flex-direction: column;
+  flex: 1;
   min-height: 0;
   overflow: hidden;
+  padding-bottom: 16px;
 }
 
 .lounge-board-sheet .lounge-board-sheet-feed {
-  max-height: min(46vh, 380px);
+  flex: 1;
+  min-height: min(42vh, 420px);
+  max-height: none;
 }
 
 .lounge-board-sheet-compose {
@@ -3252,6 +3257,14 @@ body.memory-open {
   .lounge-chat-head {
     gap: 12px;
   }
+
+  .lounge-board-sheet .lounge-sheet-head h2 {
+    font-size: 20px;
+  }
+
+  .lounge-board-sheet .lounge-sheet-body {
+    padding: 18px 22px 22px;
+  }
 }
 
 @media (max-width: 860px) {
@@ -3259,8 +3272,83 @@ body.memory-open {
     display: none;
   }
 
+  /* 手机只留左下角「＋」里的许愿/反馈/墙/改昵称，去掉重复入口 */
   .lounge-board-entry-mobile {
-    display: flex;
+    display: none !important;
+  }
+
+  .lounge-composer-name-link,
+  #lounge-mobile-name-btn {
+    display: none !important;
+  }
+
+  .lounge-composer-identity {
+    padding-right: 4px;
+  }
+
+  /* 手机许愿墙改成全屏子页，不再用小弹窗 */
+  .lounge-board-sheet {
+    inset: 0;
+    max-width: none;
+    width: 100vw;
+    height: 100%;
+    max-height: 100%;
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+    border: none;
+  }
+
+  .lounge-board-sheet::backdrop {
+    background: #eef3f2;
+  }
+
+  .lounge-board-sheet .lounge-sheet-inner {
+    width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+    background: #f7f5ef;
+  }
+
+  .lounge-board-sheet .lounge-sheet-head {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding: 12px 14px calc(12px + env(safe-area-inset-top, 0px));
+    padding-top: calc(12px + env(safe-area-inset-top, 0px));
+    background: rgba(247, 245, 239, .96);
+    backdrop-filter: blur(8px);
+  }
+
+  .lounge-board-sheet .lounge-sheet-head h2 {
+    font-size: 17px;
+  }
+
+  .lounge-board-sheet .lounge-sheet-close {
+    font-size: 14px;
+    color: #496762;
+    font-weight: 600;
+  }
+
+  .lounge-board-sheet .lounge-sheet-body {
+    padding: 12px 14px calc(14px + env(safe-area-inset-bottom, 0px));
+    max-height: none;
+  }
+
+  .lounge-board-sheet .lounge-board-sheet-feed {
+    min-height: 0;
+    flex: 1;
+  }
+
+  .lounge-board-sheet-compose {
+    position: sticky;
+    bottom: 0;
+    margin-top: 8px;
+    padding-top: 8px;
+    background: linear-gradient(180deg, transparent, #f7f5ef 18%);
   }
 }
 

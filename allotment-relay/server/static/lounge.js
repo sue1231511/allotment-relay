@@ -427,11 +427,12 @@ function ensureBoardSheet() {
   const d = document.createElement('dialog');
   d.id = 'lounge-board-dialog';
   d.className = 'lounge-sheet lounge-board-sheet';
+  const closeLabel = window.matchMedia('(max-width: 860px)').matches ? '返回' : '关闭';
   d.innerHTML = `
     <div class="lounge-sheet-inner">
       <header class="lounge-sheet-head">
         <h2>许愿墙 / 问题反馈</h2>
-        <button type="button" class="lounge-sheet-close" data-close-dialog>关闭</button>
+        <button type="button" class="lounge-sheet-close" data-close-dialog>${closeLabel}</button>
       </header>
       <div class="lounge-sheet-body">
         <p class="lounge-sheet-note">全服可见，和闲聊分开，不会刷走。每条底下点「回复」，回在墙上大家都能看见。</p>
