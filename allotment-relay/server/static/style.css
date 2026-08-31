@@ -3570,10 +3570,43 @@ body.memory-open {
   background: transparent;
 }
 
-/* 须写在 .lounge-sheet 后面：同特异性下后者会盖掉许愿墙的加宽 */
-.lounge-sheet.lounge-board-sheet {
-  max-width: min(96vw, 920px);
-  width: min(96vw, 920px);
+/* 须写在 .lounge-sheet 后面，且按断点拆开，避免手机也被打成 96vw */
+@media (min-width: 861px) {
+  .lounge-sheet.lounge-board-sheet {
+    max-width: min(96vw, 920px);
+    width: min(96vw, 920px);
+  }
+}
+
+@media (max-width: 860px) {
+  .lounge-sheet.lounge-board-sheet {
+    position: fixed;
+    inset: 0;
+    max-width: none !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: #f7f5ef;
+  }
+
+  .lounge-sheet.lounge-board-sheet::backdrop {
+    background: #f7f5ef;
+  }
+
+  .lounge-sheet.lounge-board-sheet .lounge-sheet-inner {
+    width: 100%;
+    height: 100%;
+    min-height: 100dvh;
+    max-height: none;
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #f7f5ef;
+  }
 }
 
 .lounge-sheet::backdrop {
