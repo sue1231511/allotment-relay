@@ -62,6 +62,7 @@ export const state = {
   hall: null,
   hallTab: "board",
   hallShelf: false,
+  hallMeet: false,
   eatery: null,
   eateryTab: "board",
   eateryShelf: false,
@@ -78,6 +79,7 @@ export const state = {
   lianliTab: "desk",
   lianliShelf: false,
   lighthouse: null,
+  lighthouseMeet: false,
   bagPage: 0,
   busy: false,
 };

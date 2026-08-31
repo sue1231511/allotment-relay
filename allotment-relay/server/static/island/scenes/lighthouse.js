@@ -1,35 +1,48 @@
-import { sceneArt } from "../ui/art.js?v=island-shore1";
-import { esc } from "../ui/modal.js?v=island-shore1";
-import { state } from "../store.js?v=island-shore1";
+import { sceneArt } from "../ui/art.js?v=island-vn-meet1";
+import { esc } from "../ui/modal.js?v=island-vn-meet1";
+import { state } from "../store.js?v=island-vn-meet1";
 
-export function renderLighthouse(root, { onAct } = {}) {
+export function renderLighthouse(root, { onAct, onMeet } = {}) {
   const shop = state.lighthouse || {};
-  const existing = root.querySelector(".island-lighthouse");
-  if (existing) {
-    paintTalk(existing, shop, onAct);
-    hideActionBar();
-    return;
-  }
-  root.innerHTML = `
-    <div class="island-vn island-lighthouse">
-      <div class="island-vn-board">
-        ${sceneArt("lighthouse")}
-        <div class="island-vn-stand">
-          <img class="island-vn-sprite" src="/static/island/assets/sprites/buxing.png" alt="不醒" draggable="false">
-        </div>
-        <div class="island-vn-talk is-line">
-          <button type="button" class="island-vn-box" id="island-vn-advance">
-            <span class="island-vn-name"></span>
-            <p class="island-vn-line"></p>
-            <i class="island-vn-more" aria-hidden="true"></i>
-          </button>
-          <div class="island-vn-choices" id="island-lighthouse-choices"></div>
+  const peek = !state.lighthouseMeet;
+  let wrap = root.querySelector(".island-lighthouse");
+  if (!wrap) {
+    root.innerHTML = `
+      <div class="island-vn island-lighthouse">
+        <div class="island-vn-board">
+          ${sceneArt("lighthouse")}
+          <div class="island-vn-stand">
+            <img class="island-vn-sprite" src="/static/island/assets/sprites/buxing.png" alt="不醒" draggable="false">
+          </div>
+          <div class="island-vn-talk is-line">
+            <button type="button" class="island-vn-box" id="island-vn-advance">
+              <span class="island-vn-name"></span>
+              <p class="island-vn-line"></p>
+              <i class="island-vn-more" aria-hidden="true"></i>
+            </button>
+            <div class="island-vn-choices" id="island-lighthouse-choices"></div>
+          </div>
+          <button type="button" class="island-scene-tap">点一下见不醒</button>
         </div>
       </div>
-    </div>
-  `;
+    `;
+    wrap = root.querySelector(".island-lighthouse");
+  }
+  wrap.classList.toggle("is-peek", peek);
   hideActionBar();
-  paintTalk(root.querySelector(".island-lighthouse"), shop, onAct);
+  bindMeet(wrap, onMeet);
+  if (peek) return;
+  paintTalk(wrap, shop, onAct);
+}
+
+function bindMeet(wrap, onMeet) {
+  const board = wrap.querySelector(".island-vn-board");
+  if (!board || board._meetBound) return;
+  board._meetBound = true;
+  board.addEventListener("click", () => {
+    if (!wrap.classList.contains("is-peek")) return;
+    if (onMeet) onMeet();
+  });
 }
 
 function hideActionBar() {

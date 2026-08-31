@@ -1,4 +1,4 @@
-import { state } from "./store.js?v=island-shore1";
+import { state } from "./store.js?v=island-vn-meet1";
 
 export function renderHud() {
   const me = state.me || {};

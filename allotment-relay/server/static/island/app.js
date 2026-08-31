@@ -1,4 +1,4 @@
-import { api, loadKey } from "./api.js?v=island-shore1";
+import { api, loadKey } from "./api.js?v=island-vn-meet1";
 import {
   applySnapshot,
   duesBlocked,
@@ -10,36 +10,36 @@ import {
   tickGrow,
   tickQuarry,
   tickWorkshop,
-} from "./store.js?v=island-shore1";
-import { renderHud } from "./hud.js?v=island-shore1";
-import { renderMap } from "./map.js?v=island-shore1";
-import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=island-shore1";
-import { renderShore } from "./scenes/shore.js?v=island-shore1";
-import { renderPlaza } from "./scenes/plaza.js?v=island-shore1";
-import { renderPlace } from "./scenes/place.js?v=island-shore1";
-import { renderShop } from "./scenes/shop.js?v=island-shore1";
-import { renderWorkshop } from "./scenes/workshop.js?v=island-shore1";
-import { renderQuarry } from "./scenes/quarry.js?v=island-shore1";
-import { renderBar } from "./scenes/bar.js?v=island-shore1";
-import { renderTheater } from "./scenes/theater.js?v=island-shore1";
-import { renderWriters } from "./scenes/writers.js?v=island-shore1";
-import { renderAtelier } from "./scenes/atelier.js?v=island-shore1";
-import { renderHall } from "./scenes/hall.js?v=island-shore1";
-import { renderEatery } from "./scenes/eatery.js?v=island-shore1";
-import { renderMarket } from "./scenes/market.js?v=island-shore1";
-import { renderTing } from "./scenes/ting.js?v=island-shore1";
-import { renderHui } from "./scenes/hui.js?v=island-shore1";
-import { renderLianli } from "./scenes/lianli.js?v=island-shore1";
+} from "./store.js?v=island-vn-meet1";
+import { renderHud } from "./hud.js?v=island-vn-meet1";
+import { renderMap } from "./map.js?v=island-vn-meet1";
+import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=island-vn-meet1";
+import { renderShore } from "./scenes/shore.js?v=island-vn-meet1";
+import { renderPlaza } from "./scenes/plaza.js?v=island-vn-meet1";
+import { renderPlace } from "./scenes/place.js?v=island-vn-meet1";
+import { renderShop } from "./scenes/shop.js?v=island-vn-meet1";
+import { renderWorkshop } from "./scenes/workshop.js?v=island-vn-meet1";
+import { renderQuarry } from "./scenes/quarry.js?v=island-vn-meet1";
+import { renderBar } from "./scenes/bar.js?v=island-vn-meet1";
+import { renderTheater } from "./scenes/theater.js?v=island-vn-meet1";
+import { renderWriters } from "./scenes/writers.js?v=island-vn-meet1";
+import { renderAtelier } from "./scenes/atelier.js?v=island-vn-meet1";
+import { renderHall } from "./scenes/hall.js?v=island-vn-meet1";
+import { renderEatery } from "./scenes/eatery.js?v=island-vn-meet1";
+import { renderMarket } from "./scenes/market.js?v=island-vn-meet1";
+import { renderTing } from "./scenes/ting.js?v=island-vn-meet1";
+import { renderHui } from "./scenes/hui.js?v=island-vn-meet1";
+import { renderLianli } from "./scenes/lianli.js?v=island-vn-meet1";
 let lighthouseMod = null;
 async function lighthouseScene() {
-  if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-shore1");
+  if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-vn-meet1");
   return lighthouseMod;
 }
-import { renderBag } from "./ui/bag.js?v=island-shore1";
-import { setBackChip, setBagChip } from "./ui/back-map.js?v=island-shore1";
-import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=island-shore1";
-import { popOut } from "./ui/pop.js?v=island-shore1";
-import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showPitchSheet, showVendSheet, toast } from "./ui/modal.js?v=island-shore1";
+import { renderBag } from "./ui/bag.js?v=island-vn-meet1";
+import { setBackChip, setBagChip } from "./ui/back-map.js?v=island-vn-meet1";
+import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=island-vn-meet1";
+import { popOut } from "./ui/pop.js?v=island-vn-meet1";
+import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showPitchSheet, showVendSheet, toast } from "./ui/modal.js?v=island-vn-meet1";
 
 const sceneEl = () => document.getElementById("island-scene");
 const sheetEl = () => document.getElementById("island-sheet");
@@ -227,6 +227,7 @@ async function enterScene(name, opts) {
       stopWorkshopTick();
       stopQuarryTick();
       state.hallShelf = false;
+      state.hallMeet = false;
       await openHall(root);
     } else if (name === "eatery") {
       stopGrowTick();
@@ -262,6 +263,7 @@ async function enterScene(name, opts) {
       stopGrowTick();
       stopWorkshopTick();
       stopQuarryTick();
+      state.lighthouseMeet = false;
       await openLighthouse(root);
     } else if (PLACE_TITLES[name]) {
       stopGrowTick();
@@ -937,7 +939,13 @@ async function openHall(root) {
 }
 
 function paintHall() {
-  renderHall(sceneEl(), { onAct: tapHall });
+  renderHall(sceneEl(), { onAct: tapHall, onMeet: meetHall });
+}
+
+function meetHall() {
+  if (state.hallMeet) return;
+  state.hallMeet = true;
+  paintHall();
 }
 
 function speakHall(text) {
@@ -1714,12 +1722,18 @@ async function openLighthouse() {
     toast(err.message || "塔门还没开。");
   }
   await paintLighthouse();
-  await act(() => api.lighthouseAct("visit"), { keepLighthouse: true, quiet: true });
 }
 
 async function paintLighthouse() {
   const { renderLighthouse } = await lighthouseScene();
-  renderLighthouse(sceneEl(), { onAct: tapLighthouse });
+  renderLighthouse(sceneEl(), { onAct: tapLighthouse, onMeet: meetLighthouse });
+}
+
+async function meetLighthouse() {
+  if (state.lighthouseMeet || state.busy) return;
+  state.lighthouseMeet = true;
+  await paintLighthouse();
+  await act(() => api.lighthouseAct("visit"), { keepLighthouse: true, quiet: true });
 }
 
 function lighthouseChoice(kind) {

@@ -1065,21 +1065,21 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-shore1" in app
-    assert html.count("island.css?v=island-shore1") == 1
-    assert html.count("app.js?v=island-shore1") == 1
-    assert "lighthouse.js?v=island-shore1" in app
-    assert "hall.js?v=island-shore1" in app
-    assert "shop.js?v=island-shore1" in app
-    assert "market.js?v=island-shore1" in app
+    assert "island-vn-meet1" in app
+    assert html.count("island.css?v=island-vn-meet1") == 1
+    assert html.count("app.js?v=island-vn-meet1") == 1
+    assert "lighthouse.js?v=island-vn-meet1" in app
+    assert "hall.js?v=island-vn-meet1" in app
+    assert "shop.js?v=island-vn-meet1" in app
+    assert "market.js?v=island-vn-meet1" in app
     js_blob = "\n".join(p.read_text(encoding="utf-8") for p in (ROOT / "server/static/island").rglob("*.js"))
     store_vs = set(re.findall(r"store\.js\?v=([^\s\"']+)", js_blob))
     modal_vs = set(re.findall(r"modal\.js\?v=([^\s\"']+)", js_blob))
-    assert store_vs == {"island-shore1"}, store_vs
-    assert modal_vs == {"island-shore1"}, modal_vs
-    assert 'from "../store.js?v=island-shore1"' in (ROOT / "server/static/island/scenes/atelier.js").read_text(encoding="utf-8")
-    assert 'from "../store.js?v=island-shore1"' in (ROOT / "server/static/island/scenes/writers.js").read_text(encoding="utf-8")
-    assert 'from "../store.js?v=island-shore1"' in (ROOT / "server/static/island/scenes/hall.js").read_text(encoding="utf-8")
+    assert store_vs == {"island-vn-meet1"}, store_vs
+    assert modal_vs == {"island-vn-meet1"}, modal_vs
+    assert 'from "../store.js?v=island-vn-meet1"' in (ROOT / "server/static/island/scenes/atelier.js").read_text(encoding="utf-8")
+    assert 'from "../store.js?v=island-vn-meet1"' in (ROOT / "server/static/island/scenes/writers.js").read_text(encoding="utf-8")
+    assert 'from "../store.js?v=island-vn-meet1"' in (ROOT / "server/static/island/scenes/hall.js").read_text(encoding="utf-8")
     assert "island-wait2" in html
     assert 'id="island-boot-veil"' in html
     assert "正在进入" in html
@@ -1160,7 +1160,7 @@ def test_island_page_is_modular() -> None:
     assert "waitScenePics" in app
     assert "await waitScenePics" in app
     assert "enterGen" in app
-    assert 'from "./ui/modal.js?v=island-shore1"' in app
+    assert 'from "./ui/modal.js?v=island-vn-meet1"' in app
     modal_src = (ROOT / "server/static/island/ui/modal.js").read_text(encoding="utf-8")
     assert "export function showFormSheet" in modal_src
     assert "export function showPickSheet" in modal_src
@@ -1491,6 +1491,10 @@ def test_island_page_is_modular() -> None:
     assert "keepWriters" in app
     assert "keepAtelier" in app
     assert "keepHall" in app
+    assert "hallMeet" in app
+    assert "lighthouseMeet" in app
+    assert "meetHall" in app
+    assert "meetLighthouse" in app
     assert "keepEatery" in app
     assert "quarryShelf" in app
     assert "barShelf" in app
@@ -1559,6 +1563,9 @@ def test_island_page_is_modular() -> None:
     assert "is-picks" in hall_js
     assert "island-vn-advance" in hall_js
     assert "island-vn-choice" in hall_js
+    assert "点一下见小橘" in hall_js
+    assert "is-peek" in hall_js
+    assert "island-scene-tap" in hall_js
     assert "ensureShopFrame" not in hall_js
     assert "点一下看看板" not in hall_js
     assert "island-shop-shelf" not in hall_js
@@ -1650,6 +1657,9 @@ def test_island_page_is_modular() -> None:
     assert "is-picks" in lighthouse_js
     assert "island-vn-advance" in lighthouse_js
     assert "island-vn-choice" in lighthouse_js
+    assert "点一下见不醒" in lighthouse_js
+    assert "is-peek" in lighthouse_js
+    assert "island-scene-tap" in lighthouse_js
     assert "row.price || row.note" not in lighthouse_js
     assert "去上手页" not in lighthouse_js
     assert "island-shop-shelf" not in lighthouse_js
@@ -1658,9 +1668,13 @@ def test_island_page_is_modular() -> None:
     assert "sprites/buxing.png" in art_md
     assert "sprites/xiaoju.png" in art_md
     assert "立绘对话" in art_md
+    assert "点一下才出人不醒" in art_md
+    assert "点一下才出人小橘" in art_md
     assert "全身的二分之一" in art_md
     assert ".island-vn-talk" in css
     assert ".island-vn-box" in css
+    assert ".island-vn.is-peek" in css
+    assert "点一下才出人" in css
     assert "点一下对话框才变成选项" in css
     assert "不吃底图 line-height:0" in css
     assert "人靠左下移" in css
