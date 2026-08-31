@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -975,13 +976,21 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-market1" in app
-    assert html.count("island.css?v=island-ting1") == 1
-    assert html.count("app.js?v=island-ting1") == 1
-    assert "lighthouse.js?v=island-stay1" in app
-    assert "hall.js?v=island-star1" in app
-    assert "shop.js?v=island-market1" in app
-    assert "market.js?v=island-market1" in app
+    assert "island-ting2" in app
+    assert html.count("island.css?v=island-ting2") == 1
+    assert html.count("app.js?v=island-ting2") == 1
+    assert "lighthouse.js?v=island-ting2" in app
+    assert "hall.js?v=island-ting2" in app
+    assert "shop.js?v=island-ting2" in app
+    assert "market.js?v=island-ting2" in app
+    js_blob = "\n".join(p.read_text(encoding="utf-8") for p in (ROOT / "server/static/island").rglob("*.js"))
+    store_vs = set(re.findall(r"store\.js\?v=([^\s\"']+)", js_blob))
+    modal_vs = set(re.findall(r"modal\.js\?v=([^\s\"']+)", js_blob))
+    assert store_vs == {"island-ting2"}, store_vs
+    assert modal_vs == {"island-ting2"}, modal_vs
+    assert 'from "../store.js?v=island-ting2"' in (ROOT / "server/static/island/scenes/atelier.js").read_text(encoding="utf-8")
+    assert 'from "../store.js?v=island-ting2"' in (ROOT / "server/static/island/scenes/writers.js").read_text(encoding="utf-8")
+    assert 'from "../store.js?v=island-ting2"' in (ROOT / "server/static/island/scenes/hall.js").read_text(encoding="utf-8")
     assert "island-wait2" in html
     assert 'id="island-boot-veil"' in html
     assert "正在进入" in html
@@ -1062,7 +1071,7 @@ def test_island_page_is_modular() -> None:
     assert "waitScenePics" in app
     assert "await waitScenePics" in app
     assert "enterGen" in app
-    assert 'from "./ui/modal.js?v=island-ting1"' in app
+    assert 'from "./ui/modal.js?v=island-ting2"' in app
     modal_src = (ROOT / "server/static/island/ui/modal.js").read_text(encoding="utf-8")
     assert "export function showFormSheet" in modal_src
     assert "export function showPickSheet" in modal_src

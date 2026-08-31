@@ -1,6 +1,6 @@
-import { esc } from "../ui/modal.js?v=island-fix1";
-import { state } from "../store.js?v=island-fix1";
-import { bindShopFrame, ensureShopFrame, setShopPeek } from "../ui/shop-frame.js?v=island-stay1";
+import { esc } from "../ui/modal.js?v=island-ting2";
+import { state } from "../store.js?v=island-ting2";
+import { bindShopFrame, ensureShopFrame, setShopPeek } from "../ui/shop-frame.js?v=island-ting2";
 
 export function renderBar(root, { onAct, onSwitchTab, onOpenShelf, onCloseShelf, listTop = null } = {}) {
   const shop = state.bar || {};

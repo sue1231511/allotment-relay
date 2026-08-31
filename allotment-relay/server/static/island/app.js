@@ -1,4 +1,4 @@
-import { api, loadKey } from "./api.js?v=island-ting1";
+import { api, loadKey } from "./api.js?v=island-ting2";
 import {
   applySnapshot,
   duesBlocked,
@@ -10,34 +10,34 @@ import {
   tickGrow,
   tickQuarry,
   tickWorkshop,
-} from "./store.js?v=island-ting1";
-import { renderHud } from "./hud.js?v=island-fix1";
-import { renderMap } from "./map.js?v=island-fix1";
-import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=island-fix1";
-import { renderShore } from "./scenes/shore.js?v=island-fix1";
-import { renderPlaza } from "./scenes/plaza.js?v=island-fix1";
-import { renderPlace } from "./scenes/place.js?v=island-fix1";
-import { renderShop } from "./scenes/shop.js?v=island-market1";
-import { renderWorkshop } from "./scenes/workshop.js?v=island-stay1";
-import { renderQuarry } from "./scenes/quarry.js?v=island-stay1";
-import { renderBar } from "./scenes/bar.js?v=island-stay1";
-import { renderTheater } from "./scenes/theater.js?v=island-fix1";
-import { renderWriters } from "./scenes/writers.js?v=island-stay1";
-import { renderAtelier } from "./scenes/atelier.js?v=island-stay1";
-import { renderHall } from "./scenes/hall.js?v=island-star1";
-import { renderEatery } from "./scenes/eatery.js?v=island-stay1";
-import { renderMarket } from "./scenes/market.js?v=island-market1";
-import { renderTing } from "./scenes/ting.js?v=island-ting1";
+} from "./store.js?v=island-ting2";
+import { renderHud } from "./hud.js?v=island-ting2";
+import { renderMap } from "./map.js?v=island-ting2";
+import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=island-ting2";
+import { renderShore } from "./scenes/shore.js?v=island-ting2";
+import { renderPlaza } from "./scenes/plaza.js?v=island-ting2";
+import { renderPlace } from "./scenes/place.js?v=island-ting2";
+import { renderShop } from "./scenes/shop.js?v=island-ting2";
+import { renderWorkshop } from "./scenes/workshop.js?v=island-ting2";
+import { renderQuarry } from "./scenes/quarry.js?v=island-ting2";
+import { renderBar } from "./scenes/bar.js?v=island-ting2";
+import { renderTheater } from "./scenes/theater.js?v=island-ting2";
+import { renderWriters } from "./scenes/writers.js?v=island-ting2";
+import { renderAtelier } from "./scenes/atelier.js?v=island-ting2";
+import { renderHall } from "./scenes/hall.js?v=island-ting2";
+import { renderEatery } from "./scenes/eatery.js?v=island-ting2";
+import { renderMarket } from "./scenes/market.js?v=island-ting2";
+import { renderTing } from "./scenes/ting.js?v=island-ting2";
 let lighthouseMod = null;
 async function lighthouseScene() {
-  if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-stay1");
+  if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-ting2");
   return lighthouseMod;
 }
-import { renderBag } from "./ui/bag.js?v=island-fix1";
-import { setBackChip, setBagChip } from "./ui/back-map.js?v=island-fix1";
-import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=island-fix1";
-import { popOut } from "./ui/pop.js?v=island-fix1";
-import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showPitchSheet, showVendSheet, toast } from "./ui/modal.js?v=island-ting1";
+import { renderBag } from "./ui/bag.js?v=island-ting2";
+import { setBackChip, setBagChip } from "./ui/back-map.js?v=island-ting2";
+import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=island-ting2";
+import { popOut } from "./ui/pop.js?v=island-ting2";
+import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showPitchSheet, showVendSheet, toast } from "./ui/modal.js?v=island-ting2";
 
 const sceneEl = () => document.getElementById("island-scene");
 const sheetEl = () => document.getElementById("island-sheet");
