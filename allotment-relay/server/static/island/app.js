@@ -22,6 +22,7 @@ import { renderHut } from "./scenes/hut.js?v=island-hutcook1";
 import { renderShop } from "./scenes/shop.js?v=island-mapbgm1";
 import { renderLili } from "./scenes/lili.js?v=island-mapbgm1";
 import { renderClinic } from "./scenes/clinic.js?v=island-mapbgm1";
+import { renderShaonian } from "./scenes/shaonian.js?v=island-shaonian1";
 import { renderWorkshop } from "./scenes/workshop.js?v=island-mapbgm1";
 import { renderQuarry } from "./scenes/quarry.js?v=island-mapbgm1";
 import { renderBar } from "./scenes/bar.js?v=island-mapbgm1";
@@ -223,6 +224,7 @@ async function enterScene(name, opts) {
       stopQuarryTick();
       state.backTo = "shore";
       state.shoreShelf = false;
+      state.shaonianMeet = false;
       await openBeach(root);
     } else if (name === "plaza") {
       stopGrowTick();
@@ -1829,6 +1831,13 @@ async function openBeach() {
   } catch (err) {
     toast(err.message || "潮水还没退到岸边。");
   }
+  try {
+    const desk = await api.shaonian();
+    applySnapshot(desk);
+    renderHud();
+  } catch (err) {
+    toast(err.message || "滩头还没见着韶年。");
+  }
   const tabs = (state.shore && state.shore.tabs) || [];
   if (!tabs.some((row) => row.key === state.shoreTab)) {
     state.shoreTab = (tabs[0] && tabs[0].key) || "beach";
@@ -1837,6 +1846,10 @@ async function openBeach() {
 }
 
 function paintBeach(listTop = 0) {
+  if (!state.shoreShelf) {
+    renderShaonian(sceneEl(), { onAct: tapShaonian, onMeet: meetShaonian });
+    return;
+  }
   renderShore(sceneEl(), {
     place: "beach",
     onAct: tapShore,
@@ -1908,6 +1921,49 @@ async function lookShore(target, row) {
   } finally {
     state.busy = false;
   }
+}
+
+async function meetShaonian() {
+  if (state.shaonianMeet || state.busy) return;
+  state.shaonianMeet = true;
+  paintBeach();
+  await act(() => api.shaonianAct("visit"), { keepShaonian: true, quiet: true });
+}
+
+function speakShaonian(text) {
+  hideModal();
+  if (!state.shaonian) state.shaonian = {};
+  state.shaonian.line = text || "……";
+  state.shaonian.speaker = state.shaonian.speaker || "韶年";
+  paintBeach();
+}
+
+function shaonianRow(kind, target, id) {
+  const rows = (state.shaonian && state.shaonian.choices) || [];
+  return rows.find((row) => row.id === id || (row.kind === kind && String(row.target || "") === String(target || ""))) || {};
+}
+
+function tapShaonian(kind, target, id) {
+  if (kind === "beach") {
+    state.shoreShelf = true;
+    hideModal();
+    paintBeach(0);
+    return;
+  }
+  const row = shaonianRow(kind, target, id);
+  if (kind === "look") {
+    runShaonian(kind, target || row.target || "catalog");
+    return;
+  }
+  if (!row.can) {
+    speakShaonian(row.detail || row.note || "这会儿卜不了。");
+    return;
+  }
+  runShaonian(kind, target || row.target || "");
+}
+
+async function runShaonian(kind, target) {
+  await act(() => api.shaonianAct(kind, target), { keepShaonian: true, quiet: true });
 }
 
 async function runShore(kind, target) {
@@ -2488,7 +2544,7 @@ async function vendItem(item) {
   await act(() => api.vend(name, 1), { keepTab: true });
 }
 
-async function act(fn, { refreshScene = false, keepPlant = false, keepTab = false, keepShop = false, keepWorkshop = false, keepQuarry = false, keepBar = false, keepWriters = false, keepAtelier = false, keepHall = false, keepEatery = false, keepMarket = false, keepTing = false, keepHui = false, keepHut = false, keepLianli = false, keepShore = false, keepPort = false, keepLighthouse = false, keepLili = false, keepClinic = false, listTop = null, quiet = false } = {}) {
+async function act(fn, { refreshScene = false, keepPlant = false, keepTab = false, keepShop = false, keepWorkshop = false, keepQuarry = false, keepBar = false, keepWriters = false, keepAtelier = false, keepHall = false, keepEatery = false, keepMarket = false, keepTing = false, keepHui = false, keepHut = false, keepLianli = false, keepShore = false, keepPort = false, keepLighthouse = false, keepLili = false, keepClinic = false, keepShaonian = false, listTop = null, quiet = false } = {}) {
   if (state.busy) return;
   state.busy = true;
   try {
@@ -2496,7 +2552,7 @@ async function act(fn, { refreshScene = false, keepPlant = false, keepTab = fals
     applySnapshot(data);
     renderHud();
     if (data.event && !quiet) showEvent(data.event);
-    else if (quiet && data.event && data.event.narrative && !keepLighthouse && !keepHall && !keepClinic) toast(data.event.narrative);
+    else if (quiet && data.event && data.event.narrative && !keepLighthouse && !keepHall && !keepClinic && !keepShaonian) toast(data.event.narrative);
     if (!keepPlant) closePlant();
     else state.plantOpen = true;
     if (keepTab) {
@@ -2571,6 +2627,14 @@ async function act(fn, { refreshScene = false, keepPlant = false, keepTab = fals
       paintPort(listTop);
       return;
     }
+    if (keepShaonian && state.scene === "beach") {
+      if (data.event && data.event.narrative && state.shaonian) {
+        state.shaonian.line = data.event.narrative;
+        state.shaonian.speaker = data.event.speaker || "韶年";
+      }
+      paintBeach();
+      return;
+    }
     if (keepShore && state.scene === "beach") {
       paintBeach(listTop);
       return;
@@ -2594,6 +2658,7 @@ async function act(fn, { refreshScene = false, keepPlant = false, keepTab = fals
     const msg = err.message || "这次没做成。";
     if (keepHall && state.scene === "hall") speakHall(msg);
     else if (keepClinic && state.scene === "clinic") speakClinic(msg);
+    else if (keepShaonian && state.scene === "beach") speakShaonian(msg);
     else toast(msg);
     if (state.scene === "yards" && state.plantOpen) openPlant();
   } finally {

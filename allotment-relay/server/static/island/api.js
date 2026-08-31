@@ -126,4 +126,6 @@ export const api = {
   liliAct: (kind, target = "", idem) => req("/api/v1/lili/act", { method: "POST", body: { kind, target }, idem }),
   clinic: () => req("/api/v1/clinic"),
   clinicAct: (kind, target = "", idem) => req("/api/v1/clinic/act", { method: "POST", body: { kind, target }, idem }),
+  shaonian: () => req("/api/v1/shaonian"),
+  shaonianAct: (kind, target = "", idem) => req("/api/v1/shaonian/act", { method: "POST", body: { kind, target }, idem }),
 };
