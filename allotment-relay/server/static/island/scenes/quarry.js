@@ -1,6 +1,6 @@
-import { esc } from "../ui/modal.js?v=island-yardspeek1";
-import { state } from "../store.js?v=island-yardspeek1";
-import { bindShopFrame, ensureShopFrame, setShopPeek } from "../ui/shop-frame.js?v=island-yardspeek1";
+import { esc } from "../ui/modal.js?v=island-plantbag1";
+import { state } from "../store.js?v=island-plantbag1";
+import { bindShopFrame, ensureShopFrame, setShopPeek } from "../ui/shop-frame.js?v=island-plantbag1";
 
 export function renderQuarry(root, { onAct, onSwitchTab, onOpenShelf, onCloseShelf, listTop = null } = {}) {
   const shop = state.quarry || {};

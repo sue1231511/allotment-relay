@@ -1,5 +1,5 @@
-import { ripeYard, state, thirstyYard, yardPlots } from "../store.js?v=island-yardspeek1";
-import { esc } from "./modal.js?v=island-yardspeek1";
+import { ripeYard, state, thirstyYard, yardPlots } from "../store.js?v=island-plantbag1";
+import { esc } from "./modal.js?v=island-plantbag1";
 
 export function renderQuest(sheet) {
   const me = state.me || {};
@@ -9,7 +9,7 @@ export function renderQuest(sheet) {
   const thirsty = thirstyYard("home").length + thirstyYard("orchard").length + thirstyYard("greenhouse").length;
   const seeds = ((me.seeds) || []).filter((s) => !s.tree);
   const lines = [
-    seeds.length && idle ? `手里还有种子，菜地有 ${idle} 块空地。` : "空地先买种，种植面板里就能买一份。",
+    seeds.length && idle ? `手里还有种子，菜地有 ${idle} 块空地。` : "空地没有种就去广场杂货铺买，种植面板只出背包里有的种。",
     thirsty ? `有 ${thirsty} 块能浇水。` : "浇过的地这一茬不用再浇。",
     ripe ? `有 ${ripe} 块已经熟了，点份地进去收。` : "熟了才会出现收获。急不来。",
     String(me.duty || "").includes("逾期") ? "酒吧考勤逾期了，去地图点酒吧洗碗。" : "酒吧每 2 天上一次工。地图里有酒吧。",

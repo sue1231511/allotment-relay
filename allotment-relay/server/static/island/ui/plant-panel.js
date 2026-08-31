@@ -1,11 +1,11 @@
-import { neighborCrop, cropArt } from "./crops.js?v=island-yardspeek1";
-import { panelCrops, panelSubtitle, selectedPlot, state, yardMeta } from "../store.js?v=island-yardspeek1";
-import { esc } from "./modal.js?v=island-yardspeek1";
-import { popIn, popOut } from "./pop.js?v=island-yardspeek1";
+import { neighborCrop, cropArt } from "./crops.js?v=island-plantbag1";
+import { panelCrops, panelSubtitle, selectedPlot, state, yardMeta } from "../store.js?v=island-plantbag1";
+import { esc } from "./modal.js?v=island-plantbag1";
+import { popIn, popOut } from "./pop.js?v=island-plantbag1";
 
-export function renderPlantPanel(root, { onSelect, onPlant, onBuy, onClose }) {
+export function renderPlantPanel(root, { onSelect, onPlant, onClose }) {
   const crops = panelCrops();
-  const selected = crops.find((c) => c.key === state.plantKey) || crops[0];
+  const selected = crops.find((c) => c.key === state.plantKey) || crops[0] || null;
   if (selected) state.plantKey = selected.key;
   const target = selectedPlot();
   const idle = target && target.can_sow ? target : null;
@@ -27,7 +27,7 @@ export function renderPlantPanel(root, { onSelect, onPlant, onBuy, onClose }) {
         <div class="island-plant-hero">
           <span class="island-crop-art is-lg">${selected ? cropArt(selected.key, "ripe") : ""}</span>
           <b>${esc(selected ? selected.label : "—")}</b>
-          <small>${esc(selected ? `${selected.name}种 ×${selected.seed_qty}` : "")}</small>
+          <small>${esc(selected ? `${selected.name}种 ×${selected.seed_qty}` : "行囊里没有能种的种子")}</small>
         </div>
         <button type="button" class="island-plant-arrow" data-act="next" aria-label="下一种">›</button>
       </div>
@@ -36,11 +36,9 @@ export function renderPlantPanel(root, { onSelect, onPlant, onBuy, onClose }) {
         <span>成熟时间 ${esc(selected ? selected.grow_text : "—")}</span>
         <span>预计收获 ${esc(selected ? `${selected.yield}棵` : "—")}</span>
       </div>
-      <button type="button" class="island-plant-go" data-act="plant" ${selected && selected.seed_qty > 0 && idle ? "" : "disabled"}>
-        ${!idle ? "先点一块空地" : !selected ? "选择作物" : selected.seed_qty > 0 ? `种下${esc(selected.label)}` : `没有${esc(selected.label)}种`}
-      </button>
-      <button type="button" class="island-plant-buy" data-act="buy" ${selected ? "" : "disabled"}>
-        ${selected ? `买一份${esc(selected.label)}种` : "买种"}
+      ${selected ? "" : `<p class="island-plant-empty">去广场杂货铺买。种植面板只出背包里有的种，没有买一份。</p>`}
+      <button type="button" class="island-plant-go" data-act="plant" ${selected && idle ? "" : "disabled"}>
+        ${!selected ? "没有种子" : !idle ? "先点一块空地" : `种下${esc(selected.label)}`}
       </button>
     </section>
   `;
@@ -56,8 +54,6 @@ export function renderPlantPanel(root, { onSelect, onPlant, onBuy, onClose }) {
     }
     if (selected) onPlant(selected);
   });
-  const buy = root.querySelector("[data-act=buy]");
-  if (buy) buy.addEventListener("click", () => selected && onBuy && onBuy(selected));
   bindSwipe(root.querySelector("#island-plant-pick"), {
     onLeft: () => next && onSelect(next),
     onRight: () => prev && onSelect(prev),

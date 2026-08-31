@@ -1,6 +1,6 @@
-import { sceneArt } from "../ui/art.js?v=island-yardspeek1";
-import { esc } from "../ui/modal.js?v=island-yardspeek1";
-import { state } from "../store.js?v=island-yardspeek1";
+import { sceneArt } from "../ui/art.js?v=island-plantbag1";
+import { esc } from "../ui/modal.js?v=island-plantbag1";
+import { state } from "../store.js?v=island-plantbag1";
 
 export function renderHall(root, { onAct, onMeet } = {}) {
   const shop = state.hall || {};

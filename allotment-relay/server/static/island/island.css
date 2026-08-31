@@ -1807,6 +1807,14 @@ body.island-app.is-bag-open .island-float-chip {
   font-size: 12px;
 }
 
+.island-plant-empty {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #5f7a58;
+  text-align: center;
+}
+
 .island-plant-go {
   width: 100%;
   min-height: 52px;

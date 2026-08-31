@@ -207,8 +207,8 @@ export function homePlots() {
 export function panelCrops() {
   const farm = state.farm || {};
   const kind = state.yard || "home";
-  if (farm.panels && farm.panels[kind]) return farm.panels[kind];
-  return farm.panel || [];
+  const all = (farm.panels && farm.panels[kind]) ? farm.panels[kind] : (farm.panel || []);
+  return all.filter((crop) => (crop.seed_qty || 0) > 0);
 }
 
 export function plotToken(plot) {

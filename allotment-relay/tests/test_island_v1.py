@@ -1130,23 +1130,23 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-yardspeek1" in app
-    assert html.count("island.css?v=island-yardspeek1") == 1
-    assert html.count("app.js?v=island-yardspeek1") == 1
-    assert "lighthouse.js?v=island-yardspeek1" in app
-    assert "hall.js?v=island-yardspeek1" in app
-    assert "shop.js?v=island-yardspeek1" in app
-    assert "lili.js?v=island-yardspeek1" in app
-    assert "clinic.js?v=island-yardspeek1" in app
-    assert "market.js?v=island-yardspeek1" in app
+    assert "island-plantbag1" in app
+    assert html.count("island.css?v=island-plantbag1") == 1
+    assert html.count("app.js?v=island-plantbag1") == 1
+    assert "lighthouse.js?v=island-plantbag1" in app
+    assert "hall.js?v=island-plantbag1" in app
+    assert "shop.js?v=island-plantbag1" in app
+    assert "lili.js?v=island-plantbag1" in app
+    assert "clinic.js?v=island-plantbag1" in app
+    assert "market.js?v=island-plantbag1" in app
     js_blob = "\n".join(p.read_text(encoding="utf-8") for p in (ROOT / "server/static/island").rglob("*.js"))
     store_vs = set(re.findall(r"store\.js\?v=([^\s\"']+)", js_blob))
     modal_vs = set(re.findall(r"modal\.js\?v=([^\s\"']+)", js_blob))
-    assert store_vs == {"island-yardspeek1"}, store_vs
-    assert modal_vs == {"island-yardspeek1"}, modal_vs
-    assert 'from "../store.js?v=island-yardspeek1"' in (ROOT / "server/static/island/scenes/atelier.js").read_text(encoding="utf-8")
-    assert 'from "../store.js?v=island-yardspeek1"' in (ROOT / "server/static/island/scenes/writers.js").read_text(encoding="utf-8")
-    assert 'from "../store.js?v=island-yardspeek1"' in (ROOT / "server/static/island/scenes/hall.js").read_text(encoding="utf-8")
+    assert store_vs == {"island-plantbag1"}, store_vs
+    assert modal_vs == {"island-plantbag1"}, modal_vs
+    assert 'from "../store.js?v=island-plantbag1"' in (ROOT / "server/static/island/scenes/atelier.js").read_text(encoding="utf-8")
+    assert 'from "../store.js?v=island-plantbag1"' in (ROOT / "server/static/island/scenes/writers.js").read_text(encoding="utf-8")
+    assert 'from "../store.js?v=island-plantbag1"' in (ROOT / "server/static/island/scenes/hall.js").read_text(encoding="utf-8")
     assert "island-wait2" in html
     assert 'id="island-boot-veil"' in html
     assert "正在进入" in html
@@ -1230,7 +1230,7 @@ def test_island_page_is_modular() -> None:
     assert "waitScenePics" in app
     assert "await waitScenePics" in app
     assert "enterGen" in app
-    assert 'from "./ui/modal.js?v=island-yardspeek1"' in app
+    assert 'from "./ui/modal.js?v=island-plantbag1"' in app
     modal_src = (ROOT / "server/static/island/ui/modal.js").read_text(encoding="utf-8")
     assert "export function showFormSheet" in modal_src
     assert "export function showPickSheet" in modal_src
@@ -1366,7 +1366,8 @@ def test_island_page_is_modular() -> None:
         pass
     assert "is-yards .island-actionbar" in css
     assert not (ROOT / "server/static/island/assets/back-map.png").exists()
-    assert "api.buy" in app
+    assert "buySeed" not in app
+    assert "api.buy(" not in app
     assert "api.eat" in app
     assert "api.vend" in app
     assert "keepShop" in app
@@ -1481,7 +1482,11 @@ def test_island_page_is_modular() -> None:
     assert (ROOT / "server/static/island/assets/crops/beet.png").exists()
     assert (ROOT / "server/static/island/assets/crops/fogpea.png").exists()
     assert "data-act=\"prev\"" in (ROOT / "server/static/island/ui/plant-panel.js").read_text(encoding="utf-8")
-    assert "data-act=\"buy\"" in (ROOT / "server/static/island/ui/plant-panel.js").read_text(encoding="utf-8")
+    plant_js = (ROOT / "server/static/island/ui/plant-panel.js").read_text(encoding="utf-8")
+    assert "data-act=\"buy\"" not in plant_js
+    assert "island-plant-buy" not in plant_js
+    assert "onBuy" not in plant_js
+    assert "种植面板只出背包里有的种" in plant_js
     home_js = (ROOT / "server/static/island/scenes/home.js").read_text(encoding="utf-8")
     assert "island-plot-grid" in home_js
     assert "island-plot-bed" in home_js
@@ -1500,6 +1505,7 @@ def test_island_page_is_modular() -> None:
     store_js = (ROOT / "server/static/island/store.js").read_text(encoding="utf-8")
     assert "yardsShelf" in store_js
     assert "点草地开垦第一座" in store_js
+    assert "seed_qty || 0) > 0" in store_js
     assert "/api/v1/farm/expand" in api
     assert "api.expand" in app
     assert "showExpandSheet" in app
