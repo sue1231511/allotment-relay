@@ -14,7 +14,9 @@ export function renderLighthouse(root, { onAct } = {}) {
     <div class="island-vn island-lighthouse">
       <div class="island-vn-board">
         ${sceneArt("lighthouse")}
-        <img class="island-vn-sprite" src="/static/island/assets/sprites/buxing.png" alt="不醒" draggable="false">
+        <div class="island-vn-stand">
+          <img class="island-vn-sprite" src="/static/island/assets/sprites/buxing.png" alt="不醒" draggable="false">
+        </div>
         <div class="island-vn-box">
           <span class="island-vn-name"></span>
           <p class="island-vn-line"></p>

@@ -868,8 +868,11 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
+    assert "island-vn-bust1" in html
+    assert html.count("island.css?v=island-vn-bust1") == 1
+    assert html.count("app.js?v=island-vn-bust1") == 1
+    assert "lighthouse.js?v=island-vn-bust1" in app
     assert "island-boot3" in html
-    assert "island-fix1" in html or "island-boot3" in html
     assert 'id="island-boot-veil"' in html
     assert "正在进入" in html
     assert "fonts.googleapis.com" not in html
@@ -1341,6 +1344,7 @@ def test_island_page_is_modular() -> None:
     assert (ROOT / "server/v1/lighthouse_service.py").exists()
     lighthouse_js = (ROOT / "server/static/island/scenes/lighthouse.js").read_text(encoding="utf-8")
     assert "island-vn" in lighthouse_js
+    assert "island-vn-stand" in lighthouse_js
     assert "sprites/buxing.png" in lighthouse_js
     assert "island-vn-choice" in lighthouse_js
     assert "去上手页" not in lighthouse_js
@@ -1349,7 +1353,9 @@ def test_island_page_is_modular() -> None:
     assert "sprites/buxing.png" in art_md
     assert "立绘对话" in art_md
     assert ".island-vn-box" in css
+    assert ".island-vn-stand" in css
     assert ".island-vn-sprite" in css
+    assert "只要胸以上" in css
     assert ".island-theater-board" in css
     assert ".island-theater-picks" not in css
     assert ".island-theater .island-hot span" in css
