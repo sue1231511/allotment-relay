@@ -1239,7 +1239,7 @@ def test_island_page_is_modular() -> None:
     assert "/static/island/app.js" in html
     assert "island-mapbgm1" in app
     assert html.count("island.css?v=island-shorelist1") == 1
-    assert html.count("app.js?v=island-shorelist1") == 1
+    assert html.count("app.js?v=island-shorelist2") == 1
     assert html.count("lounge-embed.css?v=island-portlounge1") == 1
     assert "lounge.js?v=lounge-board-compose6" in html
     assert "island-time.js" in html
@@ -1821,6 +1821,12 @@ def test_island_page_is_modular() -> None:
     assert paint_beach.index("if (state.shoreShelf)") < paint_beach.index("if (state.shaonianMeet)")
     assert paint_beach.index("if (state.shaonianMeet)") < paint_beach.index("renderBeachHub")
     assert "beachPeek = true" in paint_beach
+    port_enter = app.split('name === "port"')[1].split('name === "beach"')[0]
+    assert "state.portPeek = true" in port_enter
+    assert "state.portPeek = false" not in port_enter
+    beach_enter = app.split('name === "beach"')[1].split('name === "plaza"')[0]
+    assert "state.beachPeek = true" in beach_enter
+    assert "state.beachPeek = false" not in beach_enter
     assert 'shaonian.js?v=island-shorelist1' in app
     assert "startIslandBgm" in app
     assert "paintBgmChip" in app
