@@ -1694,6 +1694,7 @@ def test_island_page_is_modular() -> None:
     assert "function setStatsChip" in (ROOT / "server/static/island/ui/stats.js").read_text(encoding="utf-8")
     assert "setStatsChip(on)" in (ROOT / "server/static/island/ui/back-map.js").read_text(encoding="utf-8")
     assert ".island-float-chip.is-stats" in css
+    assert "left: 72%" in css
     assert "top: 24.7%" in css
     stats_frame = ROOT / "server/static/island/assets/stats-frame.png"
     assert stats_frame.exists()
