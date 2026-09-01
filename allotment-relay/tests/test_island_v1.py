@@ -1238,8 +1238,8 @@ def test_island_page_is_modular() -> None:
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
     assert "island-mapbgm1" in app
-    assert html.count("island.css?v=island-shorescenes1") == 1
-    assert html.count("app.js?v=island-shorepick1") == 1
+    assert html.count("island.css?v=island-lilisprite1") == 1
+    assert html.count("app.js?v=island-lilisprite1") == 1
     assert html.count("lounge-embed.css?v=island-portlounge1") == 1
     assert "lounge.js?v=lounge-board-compose6" in html
     assert "island-time.js" in html
@@ -1274,7 +1274,7 @@ def test_island_page_is_modular() -> None:
     assert "lighthouse.js?v=island-mapbgm1" in app
     assert "hall.js?v=island-mapbgm1" in app
     assert "shop.js?v=island-mapbgm1" in app
-    assert "lili.js?v=island-mapbgm1" in app
+    assert "lili.js?v=island-lilisprite1" in app
     assert "clinic.js?v=island-mapbgm1" in app
     assert "market.js?v=island-mapbgm1" in app
     js_blob = "\n".join(p.read_text(encoding="utf-8") for p in (ROOT / "server/static/island").rglob("*.js"))
@@ -1763,8 +1763,31 @@ def test_island_page_is_modular() -> None:
     assert "renderLili" in app
     lili_js = (ROOT / "server/static/island/scenes/lili.js").read_text(encoding="utf-8")
     assert "island-lili" in lili_js
-    assert "点一下看摊" in lili_js
+    assert "island-vn" in lili_js
+    assert "island-vn-stand" in lili_js
+    assert "is-half" in lili_js
+    assert "sprites/lili.png" in lili_js
+    assert "点一下见栗栗" in lili_js
+    assert "ensureShopFrame" not in lili_js
+    assert "点一下看摊" not in lili_js
+    assert "island-shop-shelf" not in lili_js
     assert "去上手页" not in lili_js
+    assert "liliMeet" in app
+    assert "meetLili" in app
+    assert "speakLili" in app
+    assert (ROOT / "server/static/island/assets/sprites/lili.png").exists()
+    try:
+        from PIL import Image
+        sprite = Image.open(ROOT / "server/static/island/assets/sprites/lili.png")
+        assert sprite.size == (1024, 1536)
+        assert sprite.mode == "RGBA"
+        assert sprite.getpixel((0, 0))[3] == 0
+    except ImportError:
+        pass
+    tap_lili = app.split("function tapLili")[1].split("async function runLili")[0]
+    assert "speakLili" in tap_lili
+    assert "showHintSheet" not in tap_lili
+    assert "showActSheet" not in tap_lili
     assert "/api/v1/clinic" in api
     assert "api.clinicAct" in app
     assert "keepClinic" in app
@@ -2128,10 +2151,13 @@ def test_island_page_is_modular() -> None:
     assert "sprites/xiaoju.png" in art_md
     assert "sprites/qiaoqiao.png" in art_md
     assert "sprites/shaonian.png" in art_md
+    assert "sprites/lili.png" in art_md
+    assert "点一下才出人栗栗" in art_md
     assert "立绘对话" in art_md
     assert "点一下才出人不醒" in art_md
     assert "点一下才出人小橘" in art_md
     assert "点一下才出人桥桥" in art_md
+    assert "点一下才出人栗栗" in art_md
     assert "去见韶年才出人韶年" in art_md
     assert "scenes/beach.png" in art_md
     assert "scenes/port.png" in art_md
@@ -2156,6 +2182,7 @@ def test_island_page_is_modular() -> None:
     assert "矮一半" in css
     assert ".island-vn-stand.is-half" in css
     assert ".island-shaonian .island-vn-stand.is-half .island-vn-sprite" in css
+    assert ".island-lili .island-vn-stand.is-half .island-vn-sprite" in css
     assert "left: -12%" in css
     assert ".island-bgm-chip" in css
     assert "island-vn-mute" not in css

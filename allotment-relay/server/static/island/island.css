@@ -2026,6 +2026,11 @@ body.island-app.is-bag-open .island-float-chip {
   left: -12%;
 }
 
+/* 栗栗和桥桥同一套半身：腰以上，靠左。 */
+.island-lili .island-vn-stand.is-half .island-vn-sprite {
+  left: 0;
+}
+
 /* 橙光：先进场景图，点一下才出人；再点一下对话框才变成选项。字和框自己对齐，不吃底图 line-height:0。 */
 .island-vn-talk {
   position: absolute;
