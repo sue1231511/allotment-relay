@@ -898,11 +898,12 @@ body.island-app.is-playing.is-yards .island-actionbar {
 }
 
 .island-float-chip.is-back {
-  left: 0;
+  /* chip-back 左右透明约 1/4，可见只约占一半；数值牌几乎贴边。
+     按两张图的可见左缘和可见宽度对齐，竖着成一列。 */
+  left: calc(4px - min(124px, 34%) * 0.461);
   right: auto;
-  width: min(196px, 58%);
-  /* 原图左右透明边很宽，只往左推，上下和背包同一条水平线。 */
-  transform: translateX(-22%);
+  width: calc(min(124px, 34%) * 1.946);
+  transform: none;
 }
 
 .island-float-chip.is-stats {
@@ -2351,7 +2352,7 @@ button.is-tap,
 }
 
 .island-float-chip.is-back.is-tap {
-  transform: translateX(-22%) scale(0.94);
+  transform: scale(0.94);
 }
 
 .island-btn,

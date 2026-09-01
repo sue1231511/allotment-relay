@@ -1483,12 +1483,13 @@ def test_island_page_is_modular() -> None:
     assert "setBagChip" in app
     assert "setBagChip(name !== \"map\")" in app
     assert "left: 0" in css
-    assert "min(196px, 58%)" in css
     assert "min(88px, 24%)" in css
     assert "right: min(58px, 16%)" in css
     assert "min(46px, 13%)" in css
     assert "height: 33px" not in css
-    assert "translateX(-22%)" in css
+    assert "translateX(-22%)" not in css
+    assert "min(124px, 34%) * 1.946" in css
+    assert "min(124px, 34%) * 0.461" in css
     assert "height: 66px" in css
     assert "align-items: center" in css
     home_js = (ROOT / "server/static/island/scenes/home.js").read_text(encoding="utf-8")
