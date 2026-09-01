@@ -18,7 +18,7 @@ import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=isla
 import { renderShore, renderShoreYard, renderPortHub, renderBeachHub } from "./scenes/shore.js?v=island-fastscenes1";
 import { renderPlaza } from "./scenes/plaza.js?v=island-fastscenes1";
 import { renderPlace } from "./scenes/place.js?v=island-fastscenes1";
-import { hideClimateSheet, setClimateChip, showClimateSheet } from "./ui/climate.js?v=island-climate5";
+import { hideClimateSheet, showClimateSheet } from "./ui/climate.js?v=island-climate5";
 import { renderHut } from "./scenes/hut.js?v=island-fastscenes1";
 import { renderShop } from "./scenes/shop.js?v=island-fastscenes1";
 import { renderLili } from "./scenes/lili.js?v=island-fastscenes1";
@@ -105,7 +105,6 @@ function showPlay() {
     const dock = document.getElementById("island-dock");
     if (dock) dock.hidden = true;
     setBagChip(false);
-    setClimateChip(false);
   }
   paintBgmChip(true);
   clearTimeout(bgmStartTimer);
@@ -120,7 +119,6 @@ function showGate() {
   document.body.classList.remove("is-yards");
   if (window.__islandBoot && typeof window.__islandBoot.showGate === "function") {
     window.__islandBoot.showGate();
-    setClimateChip(false);
     return;
   }
   document.body.classList.remove("is-playing");
@@ -132,7 +130,6 @@ function showGate() {
   if (dock) dock.hidden = true;
   setBagChip(false);
   setBackChip(false);
-  setClimateChip(false);
 }
 
 function showBootVeil(text) {
@@ -152,12 +149,16 @@ let enterGen = 0;
 async function bootFromServer() {
   showBootVeil("正在进入…");
   const pending = [api.me()];
-  if (window.__islandBoot && typeof window.__islandBoot.preload === "function") {
-    pending.push(window.__islandBoot.preload());
+  if (window.__islandBoot && typeof window.__islandBoot.preloadAllScenes === "function") {
+    pending.push(window.__islandBoot.preloadAllScenes());
   }
   const pair = await Promise.all(pending);
   applySnapshot(pair[0]);
   renderHud();
+  showBootVeil("正在准备岛屿…");
+  if (window.__islandBoot && typeof window.__islandBoot.preloadAllScenes === "function") {
+    await window.__islandBoot.preloadAllScenes();
+  }
   showPlay();
   await enterScene(state.scene);
 }
@@ -189,7 +190,6 @@ async function enterScene(name, opts) {
   setYardsChrome(name === "yards");
   setBagChip(name !== "map");
   setBackChip(name !== "map", () => enterScene(state.backTo || "map"));
-  setClimateChip(name === "map");
   try {
     if (name === "yards") {
       stopWorkshopTick();
@@ -369,7 +369,6 @@ async function enterScene(name, opts) {
       state.scene = "plaza";
       state.backTo = "map";
       setBackChip(true, () => enterScene("map"));
-      setClimateChip(false);
       renderPlaza(root, {
         onOpen: (go) => {
           if (go === "notice") {
@@ -449,7 +448,6 @@ function closeClimate() {
     hideClimateSheet(sheet);
   }
   if (state.tab === "climate") state.tab = "map";
-  if (state.scene === "map") setClimateChip(true);
 }
 
 async function openClimateSheet() {
@@ -466,7 +464,6 @@ async function openClimateSheet() {
     /* 木牌用上次读到的海况 */
   }
   state.tab = "climate";
-  setClimateChip(false);
   showClimateSheet(sheet, { onClose: closeClimate });
 }
 
@@ -2644,9 +2641,6 @@ function closeBag() {
   if (state.scene !== "map") {
     setBagChip(true);
     setBackChip(true, () => enterScene(state.backTo || "map"));
-  } else {
-    setClimateChip(true);
-  }
 }
 
 function bagHandlers() {
@@ -2878,7 +2872,6 @@ async function openTab(tab) {
   closePlant();
   setBagChip(false);
   setBackChip(false);
-  setClimateChip(false);
   renderBag(sheet, bagHandlers());
 }
 
@@ -2916,8 +2909,6 @@ async function startFromSnapshot(data, scene) {
 
 function bindDock() {
   bindBgmChip();
-  const climate = document.getElementById("island-climate-chip");
-  if (climate) climate.addEventListener("click", () => openClimateSheet());
   const bag = document.getElementById("island-bag-chip");
   if (bag) bag.addEventListener("click", () => openTab("bag"));
   const dock = document.getElementById("island-dock");

@@ -76,24 +76,3 @@ export function hideClimateSheet(sheet, onClose) {
   }
   popOut(sheet, finish);
 }
-
-export function paintClimateChip() {
-  const btn = document.getElementById("island-climate-chip");
-  if (!btn) return;
-  const c = climateOf();
-  const season = btn.querySelector("[data-climate-season]");
-  const weather = btn.querySelector("[data-climate-weather]");
-  if (season) season.textContent = c.season || "—";
-  if (weather) weather.textContent = c.weather || "—";
-  btn.setAttribute("aria-label", `天气 ${c.weather}，季节 ${c.season}。点开潮汐木牌。`);
-}
-
-export function setClimateChip(on) {
-  const btn = document.getElementById("island-climate-chip");
-  if (!btn) return;
-  btn.hidden = !on;
-  if (on) {
-    btn.removeAttribute("hidden");
-    paintClimateChip();
-  }
-}

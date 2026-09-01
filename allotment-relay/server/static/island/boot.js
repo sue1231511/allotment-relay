@@ -92,15 +92,25 @@
   }
 
   var MAP_PICS = ["/static/island/assets/scenes/island-map.jpg"];
+  var SCENE_PICS = [
+    "atelier", "bar", "beach", "clinic", "eatery", "hall", "hui", "hut-1", "hut-2", "hut-3", "hut-4",
+    "island-map", "lianli", "lighthouse", "lili", "market", "plaza", "port", "quarry", "shop", "shore",
+    "theater", "ting", "workshop", "writers", "yards"
+  ].map(function (id) { return "/static/island/assets/scenes/" + id + ".webp"; });
   var VEIL_MS = 30000;
   var PIC_MS = 25000;
   var veilTimer = 0;
+  var allScenesPromise = null;
 
   function showVeil(text) {
     var el = document.getElementById("island-boot-veil");
     if (!el) return;
     var line = el.querySelector("p");
+    var progress = el.querySelector("progress");
+    var count = el.querySelector("small");
     if (line) line.textContent = text || "正在进入…";
+    if (progress) progress.hidden = true;
+    if (count) count.hidden = true;
     el.hidden = false;
     el.removeAttribute("hidden");
     document.body.classList.add("is-entering");
@@ -141,7 +151,7 @@
     });
   }
 
-  function preload(urls, timeoutMs) {
+  function preload(urls, timeoutMs, onProgress) {
     urls = urls || MAP_PICS;
     timeoutMs = timeoutMs || 8000;
     return Promise.all(
@@ -151,6 +161,7 @@
           var finish = function () {
             if (done) return;
             done = true;
+            if (onProgress) onProgress();
             resolve();
           };
           var img = new Image();
@@ -161,6 +172,32 @@
         });
       })
     );
+  }
+
+  function preloadAllScenes() {
+    if (allScenesPromise) return allScenesPromise;
+    clearTimeout(veilTimer);
+    veilTimer = 0;
+    var veil = document.getElementById("island-boot-veil");
+    var progress = veil && veil.querySelector("progress");
+    var count = veil && veil.querySelector("small");
+    var completed = 0;
+    var total = SCENE_PICS.length;
+    if (progress) {
+      progress.hidden = false;
+      progress.max = total;
+      progress.value = 0;
+    }
+    if (count) {
+      count.hidden = false;
+      count.textContent = "0 / " + total + " 个地点";
+    }
+    allScenesPromise = preload(SCENE_PICS, PIC_MS, function () {
+      completed += 1;
+      if (progress) progress.value = completed;
+      if (count) count.textContent = completed + " / " + total + " 个地点";
+    });
+    return allScenesPromise;
   }
 
   function afterPaint() {
@@ -360,7 +397,6 @@
     setBusy(true, name ? "enroll" : "enter");
     return withTimeout(postSession(key, name), 12000, "号还没接上。再点一次进入地图。")
       .then(function (data) {
-        preload(MAP_PICS, 8000);
         if (!data.enrolled) {
           hideVeil();
           if (enrollForm) enrollForm.classList.remove("island-hidden");
@@ -369,7 +405,6 @@
           return;
         }
         hint("");
-        showPlay();
         return handoff(data, name ? "home" : "map");
       })
       .catch(function (err) {
@@ -416,6 +451,7 @@
     showVeil: showVeil,
     hideVeil: hideVeil,
     preload: preload,
+    preloadAllScenes: preloadAllScenes,
     waitPics: waitPics,
     loadKey: loadKey,
     saveKey: saveKey,

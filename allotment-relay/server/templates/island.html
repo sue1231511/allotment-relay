@@ -58,10 +58,6 @@
     </main>
 
     <nav class="island-dock" id="island-dock" aria-label="背包" hidden></nav>
-    <button type="button" class="island-float-chip is-climate" id="island-climate-chip" hidden aria-label="天气潮汐时辰季节">
-      <small data-climate-season>—</small>
-      <b data-climate-weather>—</b>
-    </button>
     <button type="button" class="island-float-chip is-bag" id="island-bag-chip" hidden>
       <img data-src="/static/island/assets/chip-bag.png" alt="背包" draggable="false">
     </button>
@@ -88,14 +84,16 @@
   <div id="island-boot-veil" class="island-boot-veil" hidden>
     <i class="island-boot-spin" aria-hidden="true"></i>
     <p>正在进入…</p>
+    <progress max="100" value="0" hidden aria-label="地点资源加载进度"></progress>
+    <small hidden>0 / 0 个地点</small>
   </div>
 
   <script src="/static/site-key.js?v=island-mini-chips1"></script>
   <script src="/static/island-time.js"></script>
   <script src="/static/lounge.js?v=lounge-board-compose6"></script>
-  <script src="/static/island/boot.js?v=island-mapbgm1"></script>
+  <script src="/static/island/boot.js?v=island-preloadall1"></script>
   <script src="/static/island/tap.js?v=island-tap2"></script>
-  <script type="module" src="/static/island/app.js?v=island-fastscenes1"></script>
+  <script type="module" src="/static/island/app.js?v=island-preloadall1"></script>
   <script nomodule>
     var hint = document.getElementById("island-gate-hint");
     if (hint) hint.textContent = "这台浏览器跑不了完整地图。换系统浏览器打开。";

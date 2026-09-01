@@ -2002,6 +2002,15 @@ body.island-app.is-climate-open .island-float-chip {
   margin: 0;
   font-size: 15px;
 }
+.island-boot-veil progress {
+  width: min(240px, 68vw);
+  height: 8px;
+  accent-color: #3d5c61;
+}
+.island-boot-veil small {
+  color: rgba(61, 92, 97, .78);
+  font-size: 12px;
+}
 .island-boot-spin {
   width: 42px;
   height: 42px;
