@@ -345,8 +345,7 @@
       return Promise.resolve(window.__islandStart(data, scene || "map"));
     }
     window.__islandPending = { data: data, scene: scene || "map" };
-    showPlay();
-    fallbackScene("页面还在加载地点。等一两秒再进。");
+    showVeil("正在准备 26 个地点…", true);
     return Promise.resolve();
   }
 
