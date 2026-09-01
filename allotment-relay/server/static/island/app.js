@@ -132,9 +132,9 @@ function showGate() {
   setBackChip(false);
 }
 
-function showBootVeil(text) {
+function showBootVeil(text, withProgress = false) {
   if (window.__islandBoot && typeof window.__islandBoot.showVeil === "function") {
-    window.__islandBoot.showVeil(text);
+    window.__islandBoot.showVeil(text, withProgress);
   }
 }
 
@@ -147,7 +147,7 @@ function hideBootVeil() {
 let enterGen = 0;
 
 async function bootFromServer() {
-  showBootVeil("正在进入…");
+  showBootVeil("正在准备 26 个地点…", true);
   const pending = [api.me()];
   if (window.__islandBoot && typeof window.__islandBoot.preloadAllScenes === "function") {
     pending.push(window.__islandBoot.preloadAllScenes());
@@ -155,7 +155,7 @@ async function bootFromServer() {
   const pair = await Promise.all(pending);
   applySnapshot(pair[0]);
   renderHud();
-  showBootVeil("正在准备岛屿…");
+  showBootVeil("正在准备 26 个地点…", true);
   if (window.__islandBoot && typeof window.__islandBoot.preloadAllScenes === "function") {
     await window.__islandBoot.preloadAllScenes();
   }
@@ -2954,7 +2954,7 @@ async function start() {
     showGate();
     return;
   }
-  showBootVeil("正在进入…");
+  showBootVeil("正在准备 26 个地点…", true);
   const enterBtn = document.getElementById("island-enter");
   window.__islandBusy = true;
   if (enterBtn) {

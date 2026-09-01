@@ -102,15 +102,24 @@
   var veilTimer = 0;
   var allScenesPromise = null;
 
-  function showVeil(text) {
+  function showVeil(text, withProgress) {
     var el = document.getElementById("island-boot-veil");
     if (!el) return;
     var line = el.querySelector("p");
     var progress = el.querySelector("progress");
     var count = el.querySelector("small");
     if (line) line.textContent = text || "正在进入…";
-    if (progress) progress.hidden = true;
-    if (count) count.hidden = true;
+    if (progress) {
+      progress.hidden = !withProgress;
+      if (withProgress) {
+        progress.max = SCENE_PICS.length;
+        progress.value = 0;
+      }
+    }
+    if (count) {
+      count.hidden = !withProgress;
+      if (withProgress) count.textContent = "0 / " + SCENE_PICS.length + " 个地点";
+    }
     el.hidden = false;
     el.removeAttribute("hidden");
     document.body.classList.add("is-entering");
@@ -393,7 +402,7 @@
       return Promise.resolve();
     }
     saveKey(key);
-    showVeil("正在进入…");
+    showVeil("正在准备 26 个地点…", true);
     setBusy(true, name ? "enroll" : "enter");
     return withTimeout(postSession(key, name), 12000, "号还没接上。再点一次进入地图。")
       .then(function (data) {
