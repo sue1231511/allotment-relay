@@ -16,7 +16,7 @@ export function setBagChip(on) {
   }
 }
 
-export function setBackChip(on, onBack) {
+export function setBackChip(on, onBack, { showStats = true } = {}) {
   const btn = document.getElementById("island-back-chip");
   if (!btn) return;
   btn.hidden = !on;
@@ -25,5 +25,5 @@ export function setBackChip(on, onBack) {
     revealChipSrc(btn);
   }
   btn.onclick = on && typeof onBack === "function" ? onBack : null;
-  setStatsChip(on);
+  setStatsChip(on && showStats);
 }

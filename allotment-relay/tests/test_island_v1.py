@@ -1693,7 +1693,9 @@ def test_island_page_is_modular() -> None:
     assert "island-climate-chip" in (ROOT / "server/templates/island.html").read_text(encoding="utf-8")
     assert "island-stats" in (ROOT / "server/templates/island.html").read_text(encoding="utf-8")
     assert "function setStatsChip" in (ROOT / "server/static/island/ui/stats.js").read_text(encoding="utf-8")
-    assert "setStatsChip(on)" in (ROOT / "server/static/island/ui/back-map.js").read_text(encoding="utf-8")
+    back_map_js = (ROOT / "server/static/island/ui/back-map.js").read_text(encoding="utf-8")
+    assert "setStatsChip(on && showStats)" in back_map_js
+    assert 'showStats: name !== "yards"' in app
     assert ".island-float-chip.is-stats" in css
     assert "left: 72%" in css
     assert "top: 24.7%" in css

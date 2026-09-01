@@ -43,7 +43,7 @@ async function lighthouseScene() {
   return lighthouseMod;
 }
 import { renderBag } from "./ui/bag.js?v=island-modulefix2";
-import { setBackChip, setBagChip } from "./ui/back-map.js?v=island-modulefix2";
+import { setBackChip, setBagChip } from "./ui/back-map.js?v=yards-no-stats1";
 import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=island-modulefix2";
 import { popOut } from "./ui/pop.js?v=island-modulefix2";
 import { bgmMuted, setBgmMuted, startIslandBgm, stopBgm } from "./ui/bgm.js?v=island-modulefix2";
@@ -190,7 +190,9 @@ async function enterScene(name, opts) {
   if (bar) bar.hidden = name === "map" || name === "yards";
   setYardsChrome(name === "yards");
   setBagChip(name !== "map");
-  setBackChip(name !== "map", () => enterScene(state.backTo || "map"));
+  setBackChip(name !== "map", () => enterScene(state.backTo || "map"), {
+    showStats: name !== "yards",
+  });
   try {
     if (name === "yards") {
       stopWorkshopTick();
