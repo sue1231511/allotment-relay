@@ -1667,10 +1667,11 @@ def test_island_page_is_modular() -> None:
     assert "island-climate-title" not in climate_js
     assert "rgba(35, 48, 56, .28)" in css
     assert "1536 / 1024" in css
+    assert "min(360px" in css
     assert "island-climate-lab" in climate_js
     assert 'left: 36%' in css
     assert 'left: 64%' in css
-    assert "top: 46%" in css
+    assert "top: 50%" in css
     climate_frame = ROOT / "server/static/island/assets/climate-frame.png"
     assert climate_frame.exists()
     try:

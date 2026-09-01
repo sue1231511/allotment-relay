@@ -2447,9 +2447,9 @@ button.is-tap,
 
 .island-climate {
   position: relative;
-  width: min(560px, 94vw, calc(58dvh * 1536 / 1024));
+  width: min(360px, 78vw, calc(40dvh * 1536 / 1024));
   aspect-ratio: 1536 / 1024;
-  max-height: 58dvh;
+  max-height: 40dvh;
   background: none center / 100% 100% no-repeat;
   background-color: transparent;
   color: #4e584c;
@@ -2469,7 +2469,7 @@ button.is-tap,
 
 .island-climate-lab {
   height: 6%;
-  font-size: clamp(13px, 3.4vw, 18px);
+  font-size: clamp(12px, 3vw, 16px);
   font-weight: 500;
   letter-spacing: .18em;
   color: #b07846;
@@ -2477,20 +2477,20 @@ button.is-tap,
 
 .island-climate-val {
   height: 7.2%;
-  font-size: clamp(16px, 4.4vw, 24px);
+  font-size: clamp(14px, 3.8vw, 20px);
   font-weight: 600;
   letter-spacing: .08em;
   color: #4a5348;
 }
 
-.island-climate-lab[data-k="weather"] { left: 36%; top: 38%; }
-.island-climate-lab[data-k="tide"] { left: 64%; top: 38%; }
-.island-climate-lab[data-k="phase"] { left: 36%; top: 54%; }
-.island-climate-lab[data-k="season"] { left: 64%; top: 54%; }
-.island-climate-val[data-k="weather"] { left: 36%; top: 46%; }
-.island-climate-val[data-k="tide"] { left: 64%; top: 46%; }
-.island-climate-val[data-k="phase"] { left: 36%; top: 62%; }
-.island-climate-val[data-k="season"] { left: 64%; top: 62%; }
+.island-climate-lab[data-k="weather"] { left: 36%; top: 42%; }
+.island-climate-lab[data-k="tide"] { left: 64%; top: 42%; }
+.island-climate-lab[data-k="phase"] { left: 36%; top: 58%; }
+.island-climate-lab[data-k="season"] { left: 64%; top: 58%; }
+.island-climate-val[data-k="weather"] { left: 36%; top: 50%; }
+.island-climate-val[data-k="tide"] { left: 64%; top: 50%; }
+.island-climate-val[data-k="phase"] { left: 36%; top: 66%; }
+.island-climate-val[data-k="season"] { left: 64%; top: 66%; }
 
 .island-climate-x {
   position: absolute;
