@@ -1983,7 +1983,7 @@ body.island-app.is-bag-open .island-float-chip {
   object-position: center 42%;
 }
 
-/* 橙光那种半身：只要头和胸，比原先矮一半，人靠左下移，下头让对话框挡住。下沿齐切，不要渐变淡出。 */
+/* 橙光那种半身：只要头和胸，比原先矮一半，人靠左下移，下头让对话框挡住。下沿渐变淡出。 */
 .island-vn-stand {
   position: absolute;
   left: 0;
@@ -1994,6 +1994,8 @@ body.island-app.is-bag-open .island-float-chip {
   overflow: hidden;
   z-index: 2;
   pointer-events: none;
+  -webkit-mask-image: linear-gradient(180deg, #000 72%, rgba(0, 0, 0, .35) 88%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 72%, rgba(0, 0, 0, .35) 88%, transparent 100%);
 }
 
 .island-vn-sprite {
@@ -2026,9 +2028,9 @@ body.island-app.is-bag-open .island-float-chip {
   left: -12%;
 }
 
-/* 栗栗和桥桥同一套半身：腰以上，靠左。 */
+/* 栗栗原图人比桥桥靠左，半身再往右一点。 */
 .island-lili .island-vn-stand.is-half .island-vn-sprite {
-  left: 0;
+  left: 12%;
 }
 
 /* 橙光：先进场景图，点一下才出人；再点一下对话框才变成选项。字和框自己对齐，不吃底图 line-height:0。 */
