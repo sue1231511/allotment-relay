@@ -134,7 +134,7 @@ async def bar_ops(command: str = "") -> str:
     return progress_mod.attach_note(await mux._call_ops(bar.bar_ops, _kid(), command))
 
 
-@mcp.tool(description="潮下。先help。入口 well→descend→enter。cheer=猫猫。井下减岛缘。")
+@mcp.tool(description="潮下地下世界。空=help。例：well · descend · enter。cheer=猫猫；井下减岛缘。人类可在 /island 点井下入口看总览图。")
 async def undertide_ops(command: str = "") -> str:
     from . import undertide
     from . import progress as progress_mod

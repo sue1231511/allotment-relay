@@ -13,7 +13,7 @@ import {
   tickWorkshop,
 } from "./store.js?v=island-modulefix2";
 import { renderHud } from "./hud.js?v=island-modulefix2";
-import { renderMap } from "./map.js?v=island-modulefix2";
+import { renderMap } from "./map.js?v=undertide-map1";
 import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=island-modulefix2";
 import { renderShore, renderShoreYard, renderPortHub, renderBeachHub } from "./scenes/shore.js?v=island-modulefix2";
 import { renderPlaza } from "./scenes/plaza.js?v=island-modulefix2";
@@ -36,6 +36,7 @@ import { renderMarket } from "./scenes/market.js?v=island-modulefix2";
 import { renderTing } from "./scenes/ting.js?v=island-modulefix2";
 import { renderHui } from "./scenes/hui.js?v=island-modulefix2";
 import { renderLianli } from "./scenes/lianli.js?v=island-modulefix2";
+import { renderUndertide } from "./scenes/undertide.js?v=undertide-map1";
 let lighthouseMod = null;
 async function lighthouseScene() {
   if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-modulefix2");
@@ -147,7 +148,7 @@ function hideBootVeil() {
 let enterGen = 0;
 
 async function bootFromServer() {
-  showBootVeil("正在准备 26 个地点…", true);
+  showBootVeil("正在准备 27 个地点…", true);
   const pending = [api.me()];
   if (window.__islandBoot && typeof window.__islandBoot.preloadAllScenes === "function") {
     pending.push(window.__islandBoot.preloadAllScenes());
@@ -155,7 +156,7 @@ async function bootFromServer() {
   const pair = await Promise.all(pending);
   applySnapshot(pair[0]);
   renderHud();
-  showBootVeil("正在准备 26 个地点…", true);
+  showBootVeil("正在准备 27 个地点…", true);
   if (window.__islandBoot && typeof window.__islandBoot.preloadAllScenes === "function") {
     await window.__islandBoot.preloadAllScenes();
   }
@@ -203,6 +204,13 @@ async function enterScene(name, opts) {
       });
       startGrowTick();
       if (state.plantOpen) openPlant();
+    } else if (name === "undertide") {
+      stopGrowTick();
+      stopWorkshopTick();
+      stopQuarryTick();
+      state.backTo = "map";
+      setBackChip(true, () => enterScene("map"));
+      renderUndertide(root);
     } else if (name === "shore") {
       stopGrowTick();
       stopWorkshopTick();
@@ -433,7 +441,7 @@ const PLACE_TITLES = {
 };
 
 function isIslandScene(name) {
-  return name === "map" || name === "yards" || name === "home" || name === "shore"
+  return name === "map" || name === "yards" || name === "home" || name === "undertide" || name === "shore"
     || name === "port" || name === "beach" || name === "plaza"
     || Boolean(PLACE_TITLES[name]);
 }
@@ -2955,7 +2963,7 @@ async function start() {
     showGate();
     return;
   }
-  showBootVeil("正在准备 26 个地点…", true);
+  showBootVeil("正在准备 27 个地点…", true);
   const enterBtn = document.getElementById("island-enter");
   window.__islandBusy = true;
   if (enterBtn) {

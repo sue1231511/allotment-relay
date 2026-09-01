@@ -15,7 +15,7 @@ const HOTS = [
   { go: "ting", cls: "is-ting", name: "听潮亭", left: 34, top: 66, w: 26, h: 12 },
   { go: "hui", cls: "is-hui", name: "潮生会", left: 70, top: 68, w: 26, h: 12 },
   { go: "lianli", cls: "is-lianli", name: "连理所", left: 16, top: 82, w: 26, h: 12 },
-  { href: "/undertide", cls: "is-well", name: "井下入口", left: 44, top: 82, w: 26, h: 14 },
+  { go: "undertide", cls: "is-well", name: "井下入口", left: 44, top: 82, w: 26, h: 14 },
 ];
 
 export function renderMap(root, { onOpen }) {
@@ -51,7 +51,7 @@ export function renderMap(root, { onOpen }) {
 }
 
 function warmNearbyScenes() {
-  const load = () => ["yards", "shore", "plaza"].forEach((id) => {
+  const load = () => ["yards", "shore", "plaza", "undertide-map"].forEach((id) => {
     const img = new Image();
     img.src = sceneWebpUrl(id);
   });

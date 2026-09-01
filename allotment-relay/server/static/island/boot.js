@@ -94,7 +94,7 @@
   var MAP_PICS = ["/static/island/assets/scenes/island-map.jpg"];
   var SCENE_PICS = [
     "atelier", "bar", "beach", "clinic", "eatery", "hall", "hui", "hut-1", "hut-2", "hut-3", "hut-4",
-    "island-map", "lianli", "lighthouse", "lili", "market", "plaza", "port", "quarry", "shop", "shore",
+    "island-map", "undertide-map", "lianli", "lighthouse", "lili", "market", "plaza", "port", "quarry", "shop", "shore",
     "theater", "ting", "workshop", "writers", "yards"
   ].map(function (id) { return "/static/island/assets/scenes/" + id + ".webp"; });
   var VEIL_MS = 30000;
@@ -345,7 +345,7 @@
       return Promise.resolve(window.__islandStart(data, scene || "map"));
     }
     window.__islandPending = { data: data, scene: scene || "map" };
-    showVeil("正在准备 26 个地点…", true);
+    showVeil("正在准备 27 个地点…", true);
     return Promise.resolve();
   }
 
@@ -401,7 +401,7 @@
       return Promise.resolve();
     }
     saveKey(key);
-    showVeil("正在准备 26 个地点…", true);
+    showVeil("正在准备 27 个地点…", true);
     setBusy(true, name ? "enroll" : "enter");
     return withTimeout(postSession(key, name), 12000, "号还没接上。再点一次进入地图。")
       .then(function (data) {

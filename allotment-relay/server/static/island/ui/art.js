@@ -2,6 +2,7 @@
 
 export const SLOTS = {
   "island-map": { label: "岛屿总览", size: "972×1619", ext: "jpg" },
+  "undertide-map": { label: "井下总览", size: "941×1672" },
   home: { label: "家园院子", size: "1080×1920" },
   yards: { label: "份地", size: "941×1672" },
   shore: { label: "海边", size: "1080×1920" },
