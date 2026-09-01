@@ -18,7 +18,7 @@ import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=isla
 import { renderShore, renderShoreYard, renderPortHub, renderBeachHub } from "./scenes/shore.js?v=island-shorepick1";
 import { renderPlaza } from "./scenes/plaza.js?v=island-mapbgm1";
 import { renderPlace } from "./scenes/place.js?v=island-mapbgm1";
-import { hideClimateSheet, renderNotice, setClimateChip, showClimateSheet } from "./ui/climate.js?v=island-climate2";
+import { hideClimateSheet, setClimateChip, showClimateSheet } from "./ui/climate.js?v=island-climate3";
 import { renderHut } from "./scenes/hut.js?v=island-hutcook1";
 import { renderShop } from "./scenes/shop.js?v=island-mapbgm1";
 import { renderLili } from "./scenes/lili.js?v=island-lilisprite1";
@@ -245,6 +245,10 @@ async function enterScene(name, opts) {
       setBackChip(true, () => enterScene("map"));
       renderPlaza(root, {
         onOpen: (go) => {
+          if (go === "notice") {
+            openClimateSheet();
+            return;
+          }
           state.backTo = "plaza";
           enterScene(go);
         },
@@ -364,7 +368,21 @@ async function enterScene(name, opts) {
       stopGrowTick();
       stopWorkshopTick();
       stopQuarryTick();
-      await openNotice();
+      state.scene = "plaza";
+      state.backTo = "map";
+      setBackChip(true, () => enterScene("map"));
+      setClimateChip(false);
+      renderPlaza(root, {
+        onOpen: (go) => {
+          if (go === "notice") {
+            openClimateSheet();
+            return;
+          }
+          state.backTo = "plaza";
+          enterScene(go);
+        },
+      });
+      await openClimateSheet();
     } else if (PLACE_TITLES[name]) {
       stopGrowTick();
       stopWorkshopTick();
@@ -429,17 +447,6 @@ function renderPlaceScene(name) {
   renderPlace(sceneEl(), { id: name, title: PLACE_TITLES[name] || name });
 }
 
-async function openNotice() {
-  try {
-    const data = await api.world();
-    applySnapshot(data);
-    renderHud();
-  } catch {
-    /* 木牌用上次读到的海况 */
-  }
-  renderNotice(sceneEl());
-}
-
 function closeClimate() {
   const sheet = sheetEl();
   if (sheet && sheet.classList.contains("is-climate")) {
@@ -450,7 +457,6 @@ function closeClimate() {
 }
 
 async function openClimateSheet() {
-  if (state.scene === "notice") return;
   const sheet = sheetEl();
   if (state.tab === "climate" && sheet && !sheet.hidden && sheet.classList.contains("is-climate")) {
     closeClimate();

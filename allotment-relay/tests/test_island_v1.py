@@ -1659,15 +1659,16 @@ def test_island_page_is_modular() -> None:
     assert "天气 / 潮汐 / 时辰 / 季节" in art_md
     assert "杂货铺" in art_md and "潮汐公告" in art_md
     climate_js = (ROOT / "server/static/island/ui/climate.js").read_text(encoding="utf-8")
-    assert "function renderNotice" in climate_js
     assert "function showClimateSheet" in climate_js
+    assert "function renderNotice" not in climate_js
     assert "climate-frame.png" in climate_js
     assert "island-climate-val" in climate_js
     assert "时辰" in climate_js
     assert "island-climate-title" not in climate_js
-    assert "#dceae6" in css
+    assert "rgba(35, 48, 56, .28)" in css
     assert 'left: 30.4%' in css
     assert 'left: 66.2%' in css
+    assert "top: 41.2%" in css
     climate_frame = ROOT / "server/static/island/assets/climate-frame.png"
     assert climate_frame.exists()
     try:
@@ -1679,8 +1680,9 @@ def test_island_page_is_modular() -> None:
         pass
     assert "island-climate-chip" in (ROOT / "server/templates/island.html").read_text(encoding="utf-8")
     assert ".island-climate" in css
-    assert "renderNotice" in app
+    assert "renderNotice" not in app
     assert "openClimateSheet" in app
+    assert 'go === "notice"' in app
     assert "setClimateChip" in app
     assert "潮汐公告进了只显示地名" not in (ROOT / "server/templates/partials/island-manual-content.html").read_text(encoding="utf-8")
     assert "scenes/quarry.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
