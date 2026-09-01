@@ -45,7 +45,7 @@ import { renderBag } from "./ui/bag.js?v=island-mapbgm1";
 import { setBackChip, setBagChip } from "./ui/back-map.js?v=island-stats3";
 import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=island-mapbgm1";
 import { popOut } from "./ui/pop.js?v=island-mapbgm1";
-import { bgmMuted, setBgmMuted, startIslandBgm, stopBgm } from "./ui/bgm.js?v=island-burgertown1";
+import { bgmMuted, setBgmMuted, startIslandBgm, stopBgm } from "./ui/bgm.js?v=island-two-track-bgm1";
 import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showPitchSheet, showVendSheet, toast } from "./ui/modal.js?v=island-mapbgm1";
 
 const sceneEl = () => document.getElementById("island-scene");

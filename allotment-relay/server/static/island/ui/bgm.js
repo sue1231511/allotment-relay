@@ -1,13 +1,15 @@
-const SRC = {
-  island: "/static/island/assets/audio/island",
-};
-const BUST = "island-burgertown1";
+const TRACKS = [
+  { id: "island", base: "/static/island/assets/audio/island", ogg: true },
+  { id: "enchanted-garden", base: "/static/island/assets/audio/vadim_makes_sound-fantasy-worlds-enchanted-garden-570007", ogg: false },
+];
+const BUST = "island-two-track-bgm1";
 
 const MUTE_KEY = "island-bgm-mute";
 
 let current = "";
 let el = null;
 let want = false;
+let trackIndex = 0;
 
 export function bgmMuted() {
   try {
@@ -26,11 +28,11 @@ export function setBgmMuted(on) {
   if (el) el.muted = Boolean(on);
 }
 
-function pickSrc(base) {
+function pickSrc(track) {
   const probe = document.createElement("audio");
-  let file = `${base}.mp3`;
-  if (!probe.canPlayType("audio/mpeg") && (probe.canPlayType('audio/ogg; codecs="vorbis"') || probe.canPlayType("audio/ogg"))) {
-    file = `${base}.ogg`;
+  let file = `${track.base}.mp3`;
+  if (track.ogg && !probe.canPlayType("audio/mpeg") && (probe.canPlayType('audio/ogg; codecs="vorbis"') || probe.canPlayType("audio/ogg"))) {
+    file = `${track.base}.ogg`;
   }
   return `${file}?v=${BUST}`;
 }
@@ -48,20 +50,26 @@ function halt() {
 }
 
 export function playBgm(id) {
-  const base = SRC[id];
-  if (!base) return;
+  const nextIndex = TRACKS.findIndex((track) => track.id === id);
+  if (nextIndex < 0) return;
   if (current === id && el) {
     el.muted = bgmMuted();
     if (el.paused) el.play().catch(() => {});
     return;
   }
   halt();
+  trackIndex = nextIndex;
+  const track = TRACKS[trackIndex];
   current = id;
-  el = new Audio(pickSrc(base));
-  el.loop = true;
+  el = new Audio(pickSrc(track));
+  el.loop = false;
   el.preload = "auto";
   el.volume = 0.38;
   el.muted = bgmMuted();
+  el.addEventListener("ended", () => {
+    const next = TRACKS[(trackIndex + 1) % TRACKS.length];
+    playBgm(next.id);
+  });
   el.play().catch(() => {});
 }
 

@@ -22,7 +22,8 @@
 | `sprites/qiaoqiao.png` | 桥桥立绘（已就位；乔乔诊所先进店景，点一下才出人桥桥；对话只取半身，全身的二分之一，靠左） | 1086×1448 |
 | `sprites/shaonian.png` | 韶年立绘（已就位；点海边就出列表，去见韶年才出人韶年，底图是沙滩景；对话只取半身，全身的二分之一，靠左） | 941×1672 |
 | `sprites/lili.png` | 栗栗立绘（已就位；广场点流动摊先进摊车特写，点一下才出人栗栗；对话只取半身，全身的二分之一，靠左；半身框铺满宽度，立绘按原图完整露出，不要切掉右边摊车） | 1024×1536 |
-| `audio/island.mp3` | 手机地图背景乐（已就位；rumina《Magical Burger Town》，进地图就循环，换地点不停；不想听点右上角贝壳音乐钮。另有 `audio/island.ogg`） | 约 3 分 22 秒循环 |
+| `audio/island.mp3` | 手机地图背景乐之一（已就位；rumina《Magical Burger Town》。另有 `audio/island.ogg`） | 与花园曲依次循环 |
+| `audio/vadim_makes_sound-fantasy-worlds-enchanted-garden-570007.mp3` | 手机地图背景乐之一（Vadim_Makes_Sound《Fantasy Worlds • Enchanted Garden》） | 与岛屿曲依次循环 |
 | `scenes/notice.png` | 潮汐公告底（插图后补；广场点潮汐公告不换景，弹出 climate-frame 木牌，底下还是广场） | 1080×1920 |
 | `climate-frame.png` | 潮汐木牌框（已就位；原图透明底，不要再抠。页面叠天气 / 潮汐 / 时辰 / 季节，头顶空着。弹窗，广场还在底下。广场点潮汐公告或总览左上角小牌弹出） | 1536×1024 |
 | `stats-frame.png` | 数值木牌（已就位；原图透明底，不要再抠。进了地点挂在左上角返回地图下面，叠影信 / 饱食 / 雾智 / 档信 / 健康 / 精力。总览图不显示） | 1024×1536 |
