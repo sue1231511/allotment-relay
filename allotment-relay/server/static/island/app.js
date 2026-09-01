@@ -2641,6 +2641,7 @@ function closeBag() {
   if (state.scene !== "map") {
     setBagChip(true);
     setBackChip(true, () => enterScene(state.backTo || "map"));
+  }
 }
 
 function bagHandlers() {
