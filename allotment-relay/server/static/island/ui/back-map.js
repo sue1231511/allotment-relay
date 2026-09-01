@@ -1,3 +1,5 @@
+import { setStatsChip } from "./stats.js?v=island-stats1";
+
 function revealChipSrc(btn) {
   const img = btn && btn.querySelector("img[data-src]");
   if (!img || img.getAttribute("src")) return;
@@ -23,4 +25,5 @@ export function setBackChip(on, onBack) {
     revealChipSrc(btn);
   }
   btn.onclick = on && typeof onBack === "function" ? onBack : null;
+  setStatsChip(on);
 }

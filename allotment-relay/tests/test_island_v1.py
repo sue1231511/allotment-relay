@@ -77,6 +77,10 @@ async def _test_island_v1_api() -> None:
     assert me.json()["me"]["flags"]["hut_level"] == 0
     assert me.json()["me"]["hut_build_cost"] == 95
     assert "satiety" in me.json()["me"]
+    assert "mist_wit" in me.json()["me"]
+    assert "standing" in me.json()["me"]
+    assert "shadow_rep" in me.json()["me"]
+    assert "health" in me.json()["me"]
 
     missing_item = client.post(
         "/api/v1/farm/parcels/1/sow",
@@ -1657,6 +1661,8 @@ def test_island_page_is_modular() -> None:
     assert "scenes/notice.png" in art_md
     assert "climate-frame.png" in art_md
     assert "天气 / 潮汐 / 时辰 / 季节" in art_md
+    assert "stats-frame.png" in art_md
+    assert "影信 / 饱食 / 雾智 / 档信 / 健康 / 精力" in art_md
     assert "杂货铺" in art_md and "潮汐公告" in art_md
     climate_js = (ROOT / "server/static/island/ui/climate.js").read_text(encoding="utf-8")
     assert "function showClimateSheet" in climate_js
@@ -1684,6 +1690,22 @@ def test_island_page_is_modular() -> None:
     except ImportError:
         pass
     assert "island-climate-chip" in (ROOT / "server/templates/island.html").read_text(encoding="utf-8")
+    assert "island-stats" in (ROOT / "server/templates/island.html").read_text(encoding="utf-8")
+    assert "function setStatsChip" in (ROOT / "server/static/island/ui/stats.js").read_text(encoding="utf-8")
+    assert "setStatsChip(on)" in (ROOT / "server/static/island/ui/back-map.js").read_text(encoding="utf-8")
+    assert ".island-float-chip.is-stats" in css
+    assert "top: 24.7%" in css
+    stats_frame = ROOT / "server/static/island/assets/stats-frame.png"
+    assert stats_frame.exists()
+    try:
+        from PIL import Image
+        sframe = Image.open(stats_frame)
+        assert sframe.size == (1024, 1536)
+        assert sframe.mode == "RGBA"
+        assert sframe.getpixel((0, 0))[3] == 0
+    except ImportError:
+        pass
+    assert "影信饱食雾智档信健康精力木牌" in (ROOT / "server/templates/partials/island-manual-content.html").read_text(encoding="utf-8")
     assert ".island-climate" in css
     assert "renderNotice" not in app
     assert "openClimateSheet" in app
