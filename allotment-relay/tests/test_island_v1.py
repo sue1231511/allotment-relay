@@ -2182,9 +2182,9 @@ def test_island_page_is_modular() -> None:
     assert ".island-vn-talk.is-line" in css
     assert ".island-vn-stand" in css
     assert ".island-vn-sprite" in css
-    stand_css = css.split(".island-vn-stand {")[1].split(".island-vn-sprite")[0]
-    assert "mask-image" in stand_css
-    assert "-webkit-mask-image" in stand_css
+    assert "下沿渐变淡出" in css
+    assert "mask-image: linear-gradient" in css
+    assert "-webkit-mask-image: linear-gradient" in css
     assert "只要头和胸" in css
     assert "矮一半" in css
     assert ".island-vn-stand.is-half" in css
