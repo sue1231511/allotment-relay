@@ -1,6 +1,6 @@
 import { state } from "../store.js?v=island-mapbgm1";
-import { esc } from "./modal.js?v=island-climate5";
-import { popIn, popOut } from "./pop.js?v=island-climate5";
+import { esc } from "./modal.js?v=island-mapbgm1";
+import { popIn, popOut } from "./pop.js?v=island-mapbgm1";
 
 const WEATHER_CODE = { 晴朗: "clear", 海雾: "misty", 阵风: "gale" };
 const TIDE_CODE = { 退潮: "ebb", 平潮: "slack", 涨潮: "flood" };
@@ -75,25 +75,4 @@ export function hideClimateSheet(sheet, onClose) {
     return;
   }
   popOut(sheet, finish);
-}
-
-export function paintClimateChip() {
-  const btn = document.getElementById("island-climate-chip");
-  if (!btn) return;
-  const c = climateOf();
-  const season = btn.querySelector("[data-climate-season]");
-  const weather = btn.querySelector("[data-climate-weather]");
-  if (season) season.textContent = c.season || "—";
-  if (weather) weather.textContent = c.weather || "—";
-  btn.setAttribute("aria-label", `天气 ${c.weather}，季节 ${c.season}。点开潮汐木牌。`);
-}
-
-export function setClimateChip(on) {
-  const btn = document.getElementById("island-climate-chip");
-  if (!btn) return;
-  btn.hidden = !on;
-  if (on) {
-    btn.removeAttribute("hidden");
-    paintClimateChip();
-  }
 }

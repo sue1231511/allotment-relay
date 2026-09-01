@@ -12,13 +12,13 @@ import {
   tickQuarry,
   tickWorkshop,
 } from "./store.js?v=island-mapbgm1";
-import { renderHud } from "./hud.js?v=island-stats3";
+import { renderHud } from "./hud.js?v=island-climate7";
 import { renderMap } from "./map.js?v=island-mapbgm1";
 import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=island-mapbgm1";
 import { renderShore, renderShoreYard, renderPortHub, renderBeachHub } from "./scenes/shore.js?v=island-shorepick1";
 import { renderPlaza } from "./scenes/plaza.js?v=island-mapbgm1";
 import { renderPlace } from "./scenes/place.js?v=island-mapbgm1";
-import { hideClimateSheet, setClimateChip, showClimateSheet } from "./ui/climate.js?v=island-climate5";
+import { hideClimateSheet, showClimateSheet } from "./ui/climate.js?v=island-climate7";
 import { renderHut } from "./scenes/hut.js?v=island-hutcook1";
 import { renderShop } from "./scenes/shop.js?v=island-mapbgm1";
 import { renderLili } from "./scenes/lili.js?v=island-lilisprite1";
@@ -104,7 +104,6 @@ function showPlay() {
     const dock = document.getElementById("island-dock");
     if (dock) dock.hidden = true;
     setBagChip(false);
-    setClimateChip(false);
   }
   startIslandBgm();
   paintBgmChip(true);
@@ -116,7 +115,6 @@ function showGate() {
   document.body.classList.remove("is-yards");
   if (window.__islandBoot && typeof window.__islandBoot.showGate === "function") {
     window.__islandBoot.showGate();
-    setClimateChip(false);
     return;
   }
   document.body.classList.remove("is-playing");
@@ -128,7 +126,6 @@ function showGate() {
   if (dock) dock.hidden = true;
   setBagChip(false);
   setBackChip(false);
-  setClimateChip(false);
 }
 
 function showBootVeil(text) {
@@ -191,7 +188,6 @@ async function enterScene(name, opts) {
   setYardsChrome(name === "yards");
   setBagChip(name !== "map");
   setBackChip(name !== "map", () => enterScene(state.backTo || "map"));
-  setClimateChip(name === "map");
   try {
     if (name === "yards") {
       stopWorkshopTick();
@@ -371,7 +367,6 @@ async function enterScene(name, opts) {
       state.scene = "plaza";
       state.backTo = "map";
       setBackChip(true, () => enterScene("map"));
-      setClimateChip(false);
       renderPlaza(root, {
         onOpen: (go) => {
           if (go === "notice") {
@@ -453,7 +448,6 @@ function closeClimate() {
     hideClimateSheet(sheet);
   }
   if (state.tab === "climate") state.tab = "map";
-  if (state.scene === "map") setClimateChip(true);
 }
 
 async function openClimateSheet() {
@@ -470,7 +464,6 @@ async function openClimateSheet() {
     /* 木牌用上次读到的海况 */
   }
   state.tab = "climate";
-  setClimateChip(false);
   showClimateSheet(sheet, { onClose: closeClimate });
 }
 
@@ -2648,8 +2641,6 @@ function closeBag() {
   if (state.scene !== "map") {
     setBagChip(true);
     setBackChip(true, () => enterScene(state.backTo || "map"));
-  } else {
-    setClimateChip(true);
   }
 }
 
@@ -2882,7 +2873,6 @@ async function openTab(tab) {
   closePlant();
   setBagChip(false);
   setBackChip(false);
-  setClimateChip(false);
   renderBag(sheet, bagHandlers());
 }
 
@@ -2920,8 +2910,6 @@ async function startFromSnapshot(data, scene) {
 
 function bindDock() {
   bindBgmChip();
-  const climate = document.getElementById("island-climate-chip");
-  if (climate) climate.addEventListener("click", () => openClimateSheet());
   const bag = document.getElementById("island-bag-chip");
   if (bag) bag.addEventListener("click", () => openTab("bag"));
   const dock = document.getElementById("island-dock");
