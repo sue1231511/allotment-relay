@@ -1238,7 +1238,7 @@ def test_island_page_is_modular() -> None:
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
     assert "island-mapbgm1" in app
-    assert html.count("island.css?v=island-lilicut1") == 1
+    assert html.count("island.css?v=island-xiaojucut1") == 1
     assert html.count("app.js?v=island-lilisprite1") == 1
     assert html.count("lounge-embed.css?v=island-portlounge1") == 1
     assert "lounge.js?v=lounge-board-compose6" in html
@@ -2199,6 +2199,13 @@ def test_island_page_is_modular() -> None:
     assert "left: 0" in lili_sprite
     assert "width: 100%" in lili_sprite
     assert "height: auto" in lili_sprite
+    assert ".island-hall .island-vn-stand.is-half {" in css
+    hall_stand = css.split(".island-hall .island-vn-stand.is-half {")[1].split("}")[0]
+    assert "width: 100%" in hall_stand
+    hall_sprite = css.split(".island-hall .island-vn-stand.is-half .island-vn-sprite")[1].split("}")[0]
+    assert "left: 0" in hall_sprite
+    assert "width: 100%" in hall_sprite
+    assert "height: auto" in hall_sprite
     assert ".island-bgm-chip" in css
     assert "island-vn-mute" not in css
     assert "全身的二分之一" in css
