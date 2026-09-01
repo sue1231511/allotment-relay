@@ -1245,8 +1245,8 @@ def test_island_page_is_modular() -> None:
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
     assert "island-mapbgm1" in app
-    assert html.count("island.css?v=island-xiaojucut1") == 1
-    assert html.count("app.js?v=island-lilisprite1") == 1
+    assert html.count("island.css?v=island-climate7") == 1
+    assert html.count("app.js?v=island-climate7") == 1
     assert html.count("lounge-embed.css?v=island-portlounge1") == 1
     assert "lounge.js?v=lounge-board-compose6" in html
     assert "island-time.js" in html
@@ -1690,7 +1690,7 @@ def test_island_page_is_modular() -> None:
         assert corner[3] == 0
     except ImportError:
         pass
-    assert "island-climate-chip" in (ROOT / "server/templates/island.html").read_text(encoding="utf-8")
+    assert "island-climate-chip" not in (ROOT / "server/templates/island.html").read_text(encoding="utf-8")
     assert "island-stats" in (ROOT / "server/templates/island.html").read_text(encoding="utf-8")
     assert "function setStatsChip" in (ROOT / "server/static/island/ui/stats.js").read_text(encoding="utf-8")
     assert "setStatsChip(on)" in (ROOT / "server/static/island/ui/back-map.js").read_text(encoding="utf-8")
@@ -1712,7 +1712,19 @@ def test_island_page_is_modular() -> None:
     assert "renderNotice" not in app
     assert "openClimateSheet" in app
     assert 'go === "notice"' in app
-    assert "setClimateChip" in app
+    assert "setClimateChip" not in app
+    assert "function setClimateChip" not in climate_js
+    assert "function paintClimateChip" not in climate_js
+    assert ".island-float-chip.is-climate" not in css
+    assert "总览图左上角没有这块" in (ROOT / "server/templates/partials/island-manual-content.html").read_text(encoding="utf-8")
+    assert "总览图左上角小牌也能弹出同一块" not in (ROOT / "server/templates/partials/island-manual-content.html").read_text(encoding="utf-8")
+    game_py = (ROOT / "server/game.py").read_text(encoding="utf-8")
+    dispatch = (ROOT / "server/mcp_dispatch.py").read_text(encoding="utf-8")
+    assert "只在广场点潮汐公告弹出，总览图左上角没有" in game_py
+    assert "只在广场点潮汐公告弹出，总览图左上角没有" in dispatch
+    assert "人类总览图左上角也能弹出" not in game_py
+    assert "人类总览图左上角也能弹出" not in dispatch
+    assert "只在广场点潮汐公告弹出，总览图左上角没有" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
     assert "潮汐公告进了只显示地名" not in (ROOT / "server/templates/partials/island-manual-content.html").read_text(encoding="utf-8")
     assert "scenes/quarry.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
     try:

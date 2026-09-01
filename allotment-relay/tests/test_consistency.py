@@ -702,6 +702,8 @@ def test_human_island_manual() -> None:
         "回地图",
         "左上角贴边的迷你「返回地图」",
         "影信饱食雾智档信健康精力木牌",
+        "广场点潮汐公告弹出天气潮汐时辰季节木牌",
+        "总览图左上角没有这块",
         "音乐钮左边迷你「背包」",
         "右上角贝壳音乐钮",
         "贴边",
@@ -800,6 +802,8 @@ def test_human_island_manual() -> None:
     assert "做饭仍上手页" not in blob
     assert "plot_ops" not in blob
     assert "sow_all" not in blob
+    assert "总览图左上角小牌也能弹出同一块" not in blob
+    assert "手机地图总览左上角小牌" not in blob
     assert "chapter-jump" not in content
     assert 'include "partials/nav.html"' in manual_html
     assert "/manual" in pointer
