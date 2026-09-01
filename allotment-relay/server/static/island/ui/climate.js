@@ -1,6 +1,6 @@
-import { state } from "../store.js?v=island-climate1";
-import { esc } from "./modal.js?v=island-climate1";
-import { popIn, popOut } from "./pop.js?v=island-climate1";
+import { state } from "../store.js?v=island-mapbgm1";
+import { esc } from "./modal.js?v=island-climate2";
+import { popIn, popOut } from "./pop.js?v=island-climate2";
 
 const WEATHER_CODE = { 晴朗: "clear", 海雾: "misty", 阵风: "gale" };
 const TIDE_CODE = { 退潮: "ebb", 平潮: "slack", 涨潮: "flood" };
@@ -28,32 +28,13 @@ export function climateOf() {
 }
 
 export function climatePanelHtml(c, { closeable = false } = {}) {
-  const left = c.season_left ? `一周一季 · 还剩 ${esc(c.season_left)} 天` : "一周一季";
-  const note = c.weather_hint || c.season_hint || "";
   return `
     <section class="island-climate is-${esc(c.phase_code || "day")}" role="dialog" aria-label="天气潮汐时辰季节" style="background-image:url('/static/island/assets/climate-frame.png')">
       ${closeable ? `<button type="button" class="island-climate-x" data-climate-close aria-label="关闭"></button>` : ""}
-      <h2 class="island-climate-title">${esc(c.season)}</h2>
-      <p class="island-climate-sub">${esc(left)}</p>
-      <div class="island-climate-grid">
-        <div class="island-climate-cell" data-k="weather">
-          <small>天气</small>
-          <b>${esc(c.weather)}</b>
-        </div>
-        <div class="island-climate-cell" data-k="tide">
-          <small>潮汐</small>
-          <b>${esc(c.tide)}</b>
-        </div>
-        <div class="island-climate-cell" data-k="phase">
-          <small>时辰</small>
-          <b>${esc(c.phase)}</b>
-        </div>
-        <div class="island-climate-cell" data-k="season">
-          <small>季节</small>
-          <b>${esc(c.season)}</b>
-        </div>
-      </div>
-      <p class="island-climate-note">${esc(note)}</p>
+      <b class="island-climate-val" data-k="weather">${esc(c.weather)}</b>
+      <b class="island-climate-val" data-k="tide">${esc(c.tide)}</b>
+      <b class="island-climate-val" data-k="phase">${esc(c.phase)}</b>
+      <b class="island-climate-val" data-k="season">${esc(c.season)}</b>
     </section>
   `;
 }
