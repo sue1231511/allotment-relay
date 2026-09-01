@@ -1238,7 +1238,7 @@ def test_island_page_is_modular() -> None:
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
     assert "island-mapbgm1" in app
-    assert html.count("island.css?v=island-lilisprite1") == 1
+    assert html.count("island.css?v=island-vnnofade1") == 1
     assert html.count("app.js?v=island-lilisprite1") == 1
     assert html.count("lounge-embed.css?v=island-portlounge1") == 1
     assert "lounge.js?v=lounge-board-compose6" in html
@@ -2168,6 +2168,10 @@ def test_island_page_is_modular() -> None:
     assert ".island-vn-talk" in css
     assert ".island-vn-box" in css
     assert ".island-vn.is-peek" in css
+    peek_stand = css.split(".island-vn.is-peek .island-vn-stand")[1].split(".island-vn.is-peek .island-vn-talk")[0]
+    assert "visibility: hidden" in peek_stand
+    assert "display: none" not in peek_stand
+    assert ".island-app.is-entering .island-vn-sprite" not in css
     assert "点一下才出人" in css
     assert "点一下对话框才变成选项" in css
     assert "不吃底图 line-height:0" in css
