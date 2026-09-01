@@ -187,7 +187,9 @@ async def play_page(request: Request):
 @app.get("/island", response_class=HTMLResponse)
 async def island_map_page(request: Request):
     """手机地图 MVP：家园 / 海边 / 岛心广场。和 /play 共用一张凭证。"""
-    return await _html(request, "island.html", active="island")
+    response = await _html(request, "island.html", active="island")
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @app.get("/manual", response_class=HTMLResponse)

@@ -10,10 +10,10 @@ import {
   yardMeta,
   yardPlots,
   YARDS,
-} from "../store.js?v=island-mapbgm1";
-import { layoutCoverBoard, sceneArt } from "../ui/art.js?v=island-fastscenes1";
-import { cropArt } from "../ui/crops.js?v=island-mapbgm1";
-import { esc } from "../ui/modal.js?v=island-mapbgm1";
+} from "../store.js?v=island-modulefix2";
+import { layoutCoverBoard, sceneArt } from "../ui/art.js?v=island-modulefix2";
+import { cropArt } from "../ui/crops.js?v=island-modulefix2";
+import { esc } from "../ui/modal.js?v=island-modulefix2";
 
 export function renderHome(root, { onOpenLand }) {
   root.innerHTML = `

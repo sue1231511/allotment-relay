@@ -1,6 +1,6 @@
-import { sceneArt } from "../ui/art.js?v=island-fastscenes1";
-import { esc } from "../ui/modal.js?v=island-mapbgm1";
-import { state } from "../store.js?v=island-mapbgm1";
+import { sceneArt } from "../ui/art.js?v=island-modulefix2";
+import { esc } from "../ui/modal.js?v=island-modulefix2";
+import { state } from "../store.js?v=island-modulefix2";
 
 export function renderLighthouse(root, { onAct, onMeet } = {}) {
   const shop = state.lighthouse || {};

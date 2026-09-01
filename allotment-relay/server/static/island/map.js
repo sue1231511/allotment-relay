@@ -1,4 +1,4 @@
-import { layoutCoverBoard, sceneArt, sceneWebpUrl } from "./ui/art.js?v=island-fastscenes1";
+import { layoutCoverBoard, sceneArt, sceneWebpUrl } from "./ui/art.js?v=island-modulefix2";
 
 /** 热区百分比按总览图 972×1619 的标签位置。图上已有地名，不再叠钉子。 */
 const HOTS = [

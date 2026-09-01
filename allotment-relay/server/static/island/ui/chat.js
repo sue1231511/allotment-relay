@@ -1,4 +1,4 @@
-import { esc } from "./modal.js?v=island-mapbgm1";
+import { esc } from "./modal.js?v=island-modulefix2";
 
 export function renderChat(sheet, { messages, onSay }) {
   const rows = (messages || []).slice(-20);

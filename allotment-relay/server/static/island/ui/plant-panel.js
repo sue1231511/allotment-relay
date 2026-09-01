@@ -1,7 +1,7 @@
-import { neighborCrop, cropArt } from "./crops.js?v=island-mapbgm1";
-import { panelCrops, panelSubtitle, selectedPlot, state, yardMeta } from "../store.js?v=island-mapbgm1";
-import { esc } from "./modal.js?v=island-mapbgm1";
-import { popIn, popOut } from "./pop.js?v=island-mapbgm1";
+import { neighborCrop, cropArt } from "./crops.js?v=island-modulefix2";
+import { panelCrops, panelSubtitle, selectedPlot, state, yardMeta } from "../store.js?v=island-modulefix2";
+import { esc } from "./modal.js?v=island-modulefix2";
+import { popIn, popOut } from "./pop.js?v=island-modulefix2";
 
 export function renderPlantPanel(root, { onSelect, onPlant, onClose }) {
   const crops = panelCrops();

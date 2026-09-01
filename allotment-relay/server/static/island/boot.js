@@ -124,7 +124,7 @@
     el.removeAttribute("hidden");
     document.body.classList.add("is-entering");
     clearTimeout(veilTimer);
-    veilTimer = setTimeout(hideVeil, VEIL_MS);
+    veilTimer = withProgress ? 0 : setTimeout(hideVeil, VEIL_MS);
   }
 
   function hideVeil() {

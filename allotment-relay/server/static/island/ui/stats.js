@@ -1,4 +1,4 @@
-import { state } from "../store.js?v=island-mapbgm1";
+import { state } from "../store.js?v=island-modulefix2";
 
 const KEYS = [
   ["shadow", "shadow_rep"],
