@@ -1,5 +1,5 @@
 import { state } from "./store.js?v=island-mapbgm1";
-import { paintClimateChip } from "./ui/climate.js?v=island-climate3";
+import { paintClimateChip } from "./ui/climate.js?v=island-climate4";
 
 export function renderHud() {
   const me = state.me || {};

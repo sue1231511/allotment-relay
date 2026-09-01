@@ -1666,16 +1666,20 @@ def test_island_page_is_modular() -> None:
     assert "时辰" in climate_js
     assert "island-climate-title" not in climate_js
     assert "rgba(35, 48, 56, .28)" in css
-    assert 'left: 30.4%' in css
-    assert 'left: 66.2%' in css
-    assert "top: 41.2%" in css
+    assert "1536 / 1024" in css
+    assert "island-climate-lab" in climate_js
+    assert 'left: 36%' in css
+    assert 'left: 64%' in css
+    assert "top: 46%" in css
     climate_frame = ROOT / "server/static/island/assets/climate-frame.png"
     assert climate_frame.exists()
     try:
         from PIL import Image
         frame = Image.open(climate_frame)
-        assert frame.size == (497, 408)
+        assert frame.size == (1536, 1024)
         assert frame.mode == "RGBA"
+        corner = frame.getpixel((0, 0))
+        assert corner[3] == 0
     except ImportError:
         pass
     assert "island-climate-chip" in (ROOT / "server/templates/island.html").read_text(encoding="utf-8")
