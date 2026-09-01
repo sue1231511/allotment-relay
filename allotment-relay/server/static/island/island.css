@@ -1240,6 +1240,31 @@ body.island-app.is-playing.is-yards .island-actionbar {
   display: none;
 }
 
+/* 杂货铺点店景后，Tt酱和货架一起出现；立绘在货架后，只露上半身。 */
+.island-tt-stand {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 30%;
+  z-index: 1;
+  height: 58%;
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(180deg, #000 76%, rgba(0, 0, 0, .45) 90%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 76%, rgba(0, 0, 0, .45) 90%, transparent 100%);
+}
+
+.island-shop.is-peek .island-tt-stand {
+  display: none;
+}
+
+.island-tt-sprite {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 10px 18px rgba(12, 20, 28, .4));
+}
+
 .island-shop-shelf {
   position: absolute;
   left: 10px;

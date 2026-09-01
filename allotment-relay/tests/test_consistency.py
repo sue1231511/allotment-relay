@@ -729,6 +729,7 @@ def test_human_island_manual() -> None:
         "栗栗流动摊",
         "杂货铺能买种",
         "同一家 Tt酱",
+        "Tt酱半身立绘和货架一起出现",
         "能吃的点吃，能卖的点卖",
         "二十格一页",
         "左右翻",
@@ -856,6 +857,9 @@ def test_patron_pages_share_steward_key() -> None:
     assert "/static/style.css" in play_html
     island_html = (root / "server/templates/island.html").read_text(encoding="utf-8")
     island_api = (root / "server/static/island/api.js").read_text(encoding="utf-8")
+    island_shop = (root / "server/static/island/scenes/shop.js").read_text(encoding="utf-8")
+    island_boot = (root / "server/static/island/boot.js").read_text(encoding="utf-8")
+    island_css = (root / "server/static/island/island.css").read_text(encoding="utf-8")
     assert "/static/site-key.js" in island_html
     assert "/static/island/boot.js" in island_html
     assert 'id="island-boot-veil"' in island_html
@@ -863,6 +867,11 @@ def test_patron_pages_share_steward_key() -> None:
     assert ' data-src="/static/island/assets/chip-bag.png"' in island_html
     assert 'src="/static/island/assets/chip-bag.png"' not in island_html.replace("data-src=", "x=")
     assert 'id="island-enter"' in island_html
+    assert "/static/island/assets/sprites/tt.webp" in island_shop
+    assert "/static/island/assets/sprites/tt.webp" in island_boot
+    assert "island-tt-stand" in island_shop
+    assert ".island-shop.is-peek .island-tt-stand" in island_css
+    assert "tt-sprite1" in island_html
     assert "tidal_island_steward_api_key" in island_api
     assert "/api/v1/" in island_api
     assert 'href="/play"' not in island_html

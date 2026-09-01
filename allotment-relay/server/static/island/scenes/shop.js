@@ -12,17 +12,30 @@ export function renderShop(root, { onBuy, onSwitchTab, onOpenShelf, onCloseShelf
     find: (el) => el.querySelector(".island-shop:not(.island-workshop):not(.island-quarry):not(.island-bar):not(.island-writers):not(.island-atelier):not(.island-hall):not(.island-eatery):not(.island-market):not(.island-lili):not(.island-clinic)"),
     className: "island-shop",
     sceneId: "shop",
-    tap: "点一下看货架",
+    tap: "点一下见 Tt酱、看货架",
     fold: "收起货架",
     listId: "island-shop-list",
     tabAria: "货架",
   });
+  ensureTtSprite(wrap);
   setShopPeek(wrap, peek);
   bindShopFrame(wrap, { onOpenShelf, onCloseShelf });
   hideActionBar();
   if (peek) return;
   paintShopChrome(wrap, shop, tabs, tab, onSwitchTab);
   paintShopList(wrap, shop, items, onBuy, listTop == null ? 0 : listTop);
+}
+
+function ensureTtSprite(wrap) {
+  const board = wrap && wrap.querySelector(".island-shop-board");
+  if (!board || board.querySelector(".island-tt-stand")) return;
+  const tap = board.querySelector(".island-scene-tap");
+  if (!tap) return;
+  tap.insertAdjacentHTML("beforebegin", `
+    <div class="island-tt-stand" aria-hidden="true">
+      <img class="island-tt-sprite" src="/static/island/assets/sprites/tt.webp?v=tt-sprite1" alt="" draggable="false">
+    </div>
+  `);
 }
 
 function hideActionBar() {

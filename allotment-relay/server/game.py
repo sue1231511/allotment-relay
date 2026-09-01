@@ -163,6 +163,7 @@ async def relay_manual() -> str:
         "  ⑤ 等熟了 plot_ops gather — 全收；或 gather 1 只收 1 号",
         "  ⑥ tote_ops list 看行囊 · tote_ops vend 甘蓝 3 卖票",
         "  ⑦ 种子不够：visit_ops tt catalog · visit_ops tt buy 甘蓝种",
+        "     人类手机地图：进广场点杂货铺，先看店景；再点一下，Tt酱半身立绘和货架一起出现。",
         f"  ⑧ 每 {BAR_MANDATORY_DAYS} 天必须 bar_ops work 一次（暮/夜上工；逾期锁份地/出海/行囊/崖矿/工坊/衣泊坊委托）",
         "  票紧：bar_ops work 洗碗 night 就能上；熟了再迎宾/服务生/调酒师。牛郎只夜班。",
         "  饿了回精力：kitchen_ops eat 熟菜最划算（回 22 起，身体 +1）。没菜就下馆子：kitchen_ops shop board 看谁在营业，",
