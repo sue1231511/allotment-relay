@@ -1,4 +1,4 @@
-import { layoutCoverBoard, sceneArt } from "./ui/art.js?v=island-mapbgm1";
+import { layoutCoverBoard, sceneArt, sceneWebpUrl } from "./ui/art.js?v=island-fastscenes1";
 
 /** 热区百分比按总览图 972×1619 的标签位置。图上已有地名，不再叠钉子。 */
 const HOTS = [
@@ -34,6 +34,7 @@ export function renderMap(root, { onOpen }) {
   }
   const map = root.querySelector(".island-map");
   layoutCoverBoard(map, ".island-map-board", 972, 1619);
+  warmNearbyScenes();
   if (typeof onOpen === "function") {
     root.querySelectorAll("[data-go],[data-href]").forEach((btn) => {
       btn.addEventListener("click", (ev) => {
@@ -47,6 +48,15 @@ export function renderMap(root, { onOpen }) {
       });
     });
   }
+}
+
+function warmNearbyScenes() {
+  const load = () => ["yards", "shore", "plaza"].forEach((id) => {
+    const img = new Image();
+    img.src = sceneWebpUrl(id);
+  });
+  if (typeof requestIdleCallback === "function") requestIdleCallback(load, { timeout: 1200 });
+  else setTimeout(load, 500);
 }
 
 function hotMarkup(p) {

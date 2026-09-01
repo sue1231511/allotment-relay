@@ -1,4 +1,4 @@
-import { layoutCoverBoard, sceneArt } from "../ui/art.js?v=island-mapbgm1";
+import { layoutCoverBoard, sceneArt } from "../ui/art.js?v=island-fastscenes1";
 
 /** 热区按广场图 941×1672：左杂货、右诊所、后灯塔、前栗栗摊、右下公告栏。 */
 const HOTS = [

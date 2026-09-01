@@ -380,9 +380,17 @@ body.island-app.is-playing.is-yards .island-actionbar {
 .island-slot {
   position: absolute;
   inset: 0;
-  background: #c9ddd8;
+  background:
+    radial-gradient(circle at 65% 28%, rgba(255, 255, 255, .25), transparent 32%),
+    linear-gradient(145deg, #c7dad4, #9ebbb6);
   pointer-events: none;
   z-index: 0;
+}
+
+.island-slot-picture {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .island-slot-pic {
@@ -2007,10 +2015,7 @@ body.island-app.is-climate-open .island-float-chip {
   to { transform: rotate(360deg); }
 }
 
-/* 转圈时先藏底图，避免渐进 JPEG/PNG 露出半截。立绘不跟底图一起藏，否则点出人时才露，人人都像淡入。 */
-.island-app.is-entering .island-slot-pic {
-  opacity: 0;
-}
+/* 地点先立即出现渐变底，高清图到位后由浏览器异步解码，不再用转圈挡住操作。 */
 
 /* 灯塔 / 看台 / 诊所：橙光那种立绘对话。先进场景图，点一下才出人。 */
 .island-vn {

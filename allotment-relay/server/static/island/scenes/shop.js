@@ -1,6 +1,6 @@
 import { esc } from "../ui/modal.js?v=island-mapbgm1";
 import { state } from "../store.js?v=island-mapbgm1";
-import { bindShopFrame, ensureShopFrame, setShopPeek } from "../ui/shop-frame.js?v=island-mapbgm1";
+import { bindShopFrame, ensureShopFrame, setShopPeek } from "../ui/shop-frame.js?v=island-fastscenes1";
 
 export function renderShop(root, { onBuy, onSwitchTab, onOpenShelf, onCloseShelf, listTop = null } = {}) {
   const shop = state.shop || {};

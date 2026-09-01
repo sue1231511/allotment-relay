@@ -1,4 +1,4 @@
-import { sceneArt } from "../ui/art.js?v=island-mapbgm1";
+import { sceneArt } from "../ui/art.js?v=island-fastscenes1";
 import { esc } from "../ui/modal.js?v=island-mapbgm1";
 import { state } from "../store.js?v=island-mapbgm1";
 

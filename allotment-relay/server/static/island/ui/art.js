@@ -32,17 +32,24 @@ export const SLOTS = {
   notice: { label: "潮汐公告", size: "1080×1920" },
 };
 
-export function scenePicUrl(id) {
+export function scenePicUrl(id, ext) {
   const meta = SLOTS[id] || {};
   const file = meta.file || id;
-  const ext = meta.ext || "png";
-  return `/static/island/assets/scenes/${file}.${ext}`;
+  const suffix = ext || meta.ext || "png";
+  return `/static/island/assets/scenes/${file}.${suffix}`;
+}
+
+export function sceneWebpUrl(id) {
+  return scenePicUrl(id, "webp");
 }
 
 export function sceneArt(id) {
   const meta = SLOTS[id] || { label: id, size: "1080×1920" };
   return `<div class="island-slot" data-slot="${id}">
-    <img class="island-slot-pic" src="${scenePicUrl(id)}" alt="" decoding="async" onerror="this.closest('.island-slot').classList.add('is-empty')">
+    <picture class="island-slot-picture">
+      <source srcset="${sceneWebpUrl(id)}" type="image/webp">
+      <img class="island-slot-pic" src="${scenePicUrl(id)}" alt="" decoding="async" onerror="this.closest('.island-slot').classList.add('is-empty')">
+    </picture>
     <span class="island-slot-mark"><b>插图位</b><small>${meta.label} · ${meta.size}</small></span>
   </div>`;
 }

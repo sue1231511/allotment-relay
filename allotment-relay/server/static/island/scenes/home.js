@@ -11,7 +11,7 @@ import {
   yardPlots,
   YARDS,
 } from "../store.js?v=island-mapbgm1";
-import { layoutCoverBoard, sceneArt } from "../ui/art.js?v=island-mapbgm1";
+import { layoutCoverBoard, sceneArt } from "../ui/art.js?v=island-fastscenes1";
 import { cropArt } from "../ui/crops.js?v=island-mapbgm1";
 import { esc } from "../ui/modal.js?v=island-mapbgm1";
 

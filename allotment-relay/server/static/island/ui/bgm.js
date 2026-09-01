@@ -63,7 +63,8 @@ export function playBgm(id) {
   current = id;
   el = new Audio(pickSrc(track));
   el.loop = false;
-  el.preload = "auto";
+  // 首屏先让场景图拿到带宽；用户点开音乐后再继续流式加载。
+  el.preload = "metadata";
   el.volume = 0.38;
   el.muted = bgmMuted();
   el.addEventListener("ended", () => {

@@ -13,32 +13,32 @@ import {
   tickWorkshop,
 } from "./store.js?v=island-mapbgm1";
 import { renderHud } from "./hud.js?v=island-stats3";
-import { renderMap } from "./map.js?v=island-mapbgm1";
-import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=island-mapbgm1";
-import { renderShore, renderShoreYard, renderPortHub, renderBeachHub } from "./scenes/shore.js?v=island-shorepick1";
-import { renderPlaza } from "./scenes/plaza.js?v=island-mapbgm1";
-import { renderPlace } from "./scenes/place.js?v=island-mapbgm1";
+import { renderMap } from "./map.js?v=island-fastscenes1";
+import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=island-fastscenes1";
+import { renderShore, renderShoreYard, renderPortHub, renderBeachHub } from "./scenes/shore.js?v=island-fastscenes1";
+import { renderPlaza } from "./scenes/plaza.js?v=island-fastscenes1";
+import { renderPlace } from "./scenes/place.js?v=island-fastscenes1";
 import { hideClimateSheet, setClimateChip, showClimateSheet } from "./ui/climate.js?v=island-climate5";
-import { renderHut } from "./scenes/hut.js?v=island-hutcook1";
-import { renderShop } from "./scenes/shop.js?v=island-mapbgm1";
-import { renderLili } from "./scenes/lili.js?v=island-lilisprite1";
-import { renderClinic } from "./scenes/clinic.js?v=island-mapbgm1";
-import { renderShaonian } from "./scenes/shaonian.js?v=island-shorescenes1";
-import { renderWorkshop } from "./scenes/workshop.js?v=island-mapbgm1";
-import { renderQuarry } from "./scenes/quarry.js?v=island-mapbgm1";
-import { renderBar } from "./scenes/bar.js?v=island-mapbgm1";
-import { renderTheater } from "./scenes/theater.js?v=island-mapbgm1";
-import { renderWriters } from "./scenes/writers.js?v=island-mapbgm1";
-import { renderAtelier } from "./scenes/atelier.js?v=island-mapbgm1";
-import { renderHall } from "./scenes/hall.js?v=island-mapbgm1";
-import { renderEatery } from "./scenes/eatery.js?v=island-mapbgm1";
-import { renderMarket } from "./scenes/market.js?v=island-mapbgm1";
-import { renderTing } from "./scenes/ting.js?v=island-mapbgm1";
-import { renderHui } from "./scenes/hui.js?v=island-mapbgm1";
-import { renderLianli } from "./scenes/lianli.js?v=island-mapbgm1";
+import { renderHut } from "./scenes/hut.js?v=island-fastscenes1";
+import { renderShop } from "./scenes/shop.js?v=island-fastscenes1";
+import { renderLili } from "./scenes/lili.js?v=island-fastscenes1";
+import { renderClinic } from "./scenes/clinic.js?v=island-fastscenes1";
+import { renderShaonian } from "./scenes/shaonian.js?v=island-fastscenes1";
+import { renderWorkshop } from "./scenes/workshop.js?v=island-fastscenes1";
+import { renderQuarry } from "./scenes/quarry.js?v=island-fastscenes1";
+import { renderBar } from "./scenes/bar.js?v=island-fastscenes1";
+import { renderTheater } from "./scenes/theater.js?v=island-fastscenes1";
+import { renderWriters } from "./scenes/writers.js?v=island-fastscenes1";
+import { renderAtelier } from "./scenes/atelier.js?v=island-fastscenes1";
+import { renderHall } from "./scenes/hall.js?v=island-fastscenes1";
+import { renderEatery } from "./scenes/eatery.js?v=island-fastscenes1";
+import { renderMarket } from "./scenes/market.js?v=island-fastscenes1";
+import { renderTing } from "./scenes/ting.js?v=island-fastscenes1";
+import { renderHui } from "./scenes/hui.js?v=island-fastscenes1";
+import { renderLianli } from "./scenes/lianli.js?v=island-fastscenes1";
 let lighthouseMod = null;
 async function lighthouseScene() {
-  if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-mapbgm1");
+  if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-fastscenes1");
   return lighthouseMod;
 }
 import { renderBag } from "./ui/bag.js?v=island-mapbgm1";
@@ -46,7 +46,7 @@ import { setBackChip, setBagChip } from "./ui/back-map.js?v=island-stats3";
 import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=island-mapbgm1";
 import { popOut } from "./ui/pop.js?v=island-mapbgm1";
 import { bgmMuted, setBgmMuted, startIslandBgm, stopBgm } from "./ui/bgm.js?v=island-two-track-bgm1";
-import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showPitchSheet, showVendSheet, toast } from "./ui/modal.js?v=island-mapbgm1";
+import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showVendSheet, toast } from "./ui/modal.js?v=island-mapbgm1";
 
 const sceneEl = () => document.getElementById("island-scene");
 const sheetEl = () => document.getElementById("island-sheet");
@@ -55,6 +55,7 @@ const LIVE_SCENES = ["home", "yards", "hut"];
 let growTimer = 0;
 let workshopTimer = 0;
 let quarryTimer = 0;
+let bgmStartTimer = 0;
 
 function paintBgmChip(on) {
   const btn = document.getElementById("island-bgm-chip");
@@ -106,11 +107,14 @@ function showPlay() {
     setBagChip(false);
     setClimateChip(false);
   }
-  startIslandBgm();
   paintBgmChip(true);
+  clearTimeout(bgmStartTimer);
+  // 首屏场景图先走，避免 6MB 音乐和移动网络抢带宽。
+  bgmStartTimer = setTimeout(startIslandBgm, 900);
 }
 
 function showGate() {
+  clearTimeout(bgmStartTimer);
   stopBgm();
   paintBgmChip(false);
   document.body.classList.remove("is-yards");
@@ -140,12 +144,6 @@ function showBootVeil(text) {
 function hideBootVeil() {
   if (window.__islandBoot && typeof window.__islandBoot.hideVeil === "function") {
     window.__islandBoot.hideVeil();
-  }
-}
-
-async function waitScenePics(root) {
-  if (window.__islandBoot && typeof window.__islandBoot.waitPics === "function") {
-    await window.__islandBoot.waitPics(root);
   }
 }
 
@@ -400,7 +398,6 @@ async function enterScene(name, opts) {
         },
       });
     }
-    if (!quiet) await waitScenePics(root);
   } catch (err) {
     toast(err.message || "这处场景没能打开。");
     state.backTo = "map";
@@ -410,7 +407,6 @@ async function enterScene(name, opts) {
         enterScene(go);
       },
     });
-    if (!quiet) await waitScenePics(root);
   } finally {
     if (!quiet && gen === enterGen) hideBootVeil();
   }
