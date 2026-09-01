@@ -1,6 +1,6 @@
 import { state } from "../store.js?v=island-mapbgm1";
-import { esc } from "./modal.js?v=island-climate2";
-import { popIn, popOut } from "./pop.js?v=island-climate2";
+import { esc } from "./modal.js?v=island-climate3";
+import { popIn, popOut } from "./pop.js?v=island-climate3";
 
 const WEATHER_CODE = { 晴朗: "clear", 海雾: "misty", 阵风: "gale" };
 const TIDE_CODE = { 退潮: "ebb", 平潮: "slack", 涨潮: "flood" };
@@ -37,19 +37,6 @@ export function climatePanelHtml(c, { closeable = false } = {}) {
       <b class="island-climate-val" data-k="season">${esc(c.season)}</b>
     </section>
   `;
-}
-
-export function renderNotice(root) {
-  const c = climateOf();
-  root.innerHTML = `
-    <div class="island-notice">
-      ${climatePanelHtml(c)}
-    </div>
-  `;
-  const bar = document.getElementById("island-actionbar");
-  if (!bar) return;
-  bar.innerHTML = "";
-  bar.hidden = true;
 }
 
 export function showClimateSheet(sheet, { onClose } = {}) {

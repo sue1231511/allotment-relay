@@ -2426,18 +2426,7 @@ button.is-tap,
   }
 }
 
-/* 潮汐木牌：框上已画标签。数值叠在下划线上。素材 497×408，浅青底。 */
-.island-notice {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  box-sizing: border-box;
-  background: #dceae6;
-}
-
+/* 潮汐木牌弹窗：叠在广场上，框透明底。数值叠在下划线上，略低于标签。 */
 .island-sheet.is-climate {
   inset: 0;
   left: 0;
@@ -2445,10 +2434,10 @@ button.is-tap,
   width: 100%;
   max-height: none;
   bottom: 0;
-  background: #dceae6;
+  background: rgba(35, 48, 56, .28);
   border-radius: 0;
   box-shadow: none;
-  padding: 0;
+  padding: 12px 8px;
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -2458,17 +2447,12 @@ button.is-tap,
 
 .island-climate {
   position: relative;
-  width: min(100%, calc(100dvh * 497 / 408));
+  width: min(420px, 92vw, calc(62dvh * 497 / 408));
   aspect-ratio: 497 / 408;
-  max-height: 100%;
+  max-height: 62dvh;
   background: none center / 100% 100% no-repeat;
-  background-color: #dceae6;
+  background-color: transparent;
   color: #4e584c;
-}
-
-.island-notice .island-climate {
-  width: min(100%, calc(100dvh * 497 / 408));
-  max-height: 100%;
 }
 
 .island-climate-val {
@@ -2487,10 +2471,10 @@ button.is-tap,
   color: #4a5348;
 }
 
-.island-climate-val[data-k="weather"] { left: 30.4%; top: 38.4%; }
-.island-climate-val[data-k="tide"] { left: 66.2%; top: 38.4%; }
-.island-climate-val[data-k="phase"] { left: 30.4%; top: 55.4%; }
-.island-climate-val[data-k="season"] { left: 66.2%; top: 55.4%; }
+.island-climate-val[data-k="weather"] { left: 30.4%; top: 41.2%; }
+.island-climate-val[data-k="tide"] { left: 66.2%; top: 41.2%; }
+.island-climate-val[data-k="phase"] { left: 30.4%; top: 58.2%; }
+.island-climate-val[data-k="season"] { left: 66.2%; top: 58.2%; }
 
 .island-climate-x {
   position: absolute;
