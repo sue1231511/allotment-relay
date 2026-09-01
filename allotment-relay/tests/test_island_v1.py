@@ -1039,6 +1039,9 @@ async def _test_island_v1_api() -> None:
     world = client.get("/api/v1/world", headers=_auth(key))
     assert world.status_code == 200, world.text
     assert world.json()["world"]["tide"]
+    assert world.json()["world"]["weather_code"] in {"clear", "misty", "gale"}
+    assert world.json()["world"]["season"]
+    assert world.json()["world"]["season_hint"]
 
     bought = client.post(
         "/api/v1/farm/buy",
@@ -1652,7 +1655,29 @@ def test_island_page_is_modular() -> None:
     assert "摊车特写" in art_md
     assert "scenes/lighthouse.png" in art_md
     assert "scenes/notice.png" in art_md
+    assert "climate-frame.png" in art_md
+    assert "天气 / 潮汐 / 时辰 / 季节" in art_md
     assert "杂货铺" in art_md and "潮汐公告" in art_md
+    climate_js = (ROOT / "server/static/island/ui/climate.js").read_text(encoding="utf-8")
+    assert "function renderNotice" in climate_js
+    assert "function showClimateSheet" in climate_js
+    assert "climate-frame.png" in climate_js
+    assert "时辰" in climate_js
+    climate_frame = ROOT / "server/static/island/assets/climate-frame.png"
+    assert climate_frame.exists()
+    try:
+        from PIL import Image
+        frame = Image.open(climate_frame)
+        assert frame.size == (1536, 1024)
+        assert frame.mode == "RGBA"
+    except ImportError:
+        pass
+    assert "island-climate-chip" in (ROOT / "server/templates/island.html").read_text(encoding="utf-8")
+    assert ".island-climate" in css
+    assert "renderNotice" in app
+    assert "openClimateSheet" in app
+    assert "setClimateChip" in app
+    assert "潮汐公告进了只显示地名" not in (ROOT / "server/templates/partials/island-manual-content.html").read_text(encoding="utf-8")
     assert "scenes/quarry.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
     try:
         from PIL import Image

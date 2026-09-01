@@ -1,4 +1,5 @@
 import { state } from "./store.js?v=island-mapbgm1";
+import { paintClimateChip } from "./ui/climate.js?v=island-climate1";
 
 export function renderHud() {
   const me = state.me || {};
@@ -10,6 +11,7 @@ export function renderHud() {
   if (lv) lv.textContent = me.level ? `Lv ${me.level}` : "Lv —";
   if (energy) energy.textContent = me.energy == null ? "—" : `${me.energy}/${me.energy_max || 100}`;
   if (tickets) tickets.textContent = me.tickets == null ? "—" : String(me.tickets);
+  paintClimateChip();
   const ribbon = document.getElementById("island-ribbon");
   if (!ribbon) return;
   const notes = [];
