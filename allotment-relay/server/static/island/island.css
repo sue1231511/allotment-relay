@@ -2028,9 +2028,19 @@ body.island-app.is-bag-open .island-float-chip {
   left: -12%;
 }
 
-/* 栗栗原图人比桥桥靠左，半身再往右一点。 */
+/* 栗栗立绘带摊车。半身框铺满，立绘按原图宽度完整露出；不要给 sprite 加正 left，overflow:hidden 会切掉右边头发和摊柱。 */
+.island-lili .island-vn-stand.is-half {
+  left: 0;
+  width: 100%;
+}
+
 .island-lili .island-vn-stand.is-half .island-vn-sprite {
-  left: 12%;
+  left: 0;
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: top left;
 }
 
 /* 橙光：先进场景图，点一下才出人；再点一下对话框才变成选项。字和框自己对齐，不吃底图 line-height:0。 */
