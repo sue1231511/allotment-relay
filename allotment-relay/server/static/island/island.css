@@ -1936,9 +1936,8 @@ body.island-app.is-bag-open .island-float-chip {
   to { transform: rotate(360deg); }
 }
 
-/* 转圈时先藏底图，避免渐进 JPEG/PNG 露出半截。 */
-.island-app.is-entering .island-slot-pic,
-.island-app.is-entering .island-vn-sprite {
+/* 转圈时先藏底图，避免渐进 JPEG/PNG 露出半截。立绘不跟底图一起藏，否则点出人时才露，人人都像淡入。 */
+.island-app.is-entering .island-slot-pic {
   opacity: 0;
 }
 
@@ -1950,7 +1949,10 @@ body.island-app.is-bag-open .island-float-chip {
   background: #1c2a33;
 }
 
-.island-vn.is-peek .island-vn-stand,
+.island-vn.is-peek .island-vn-stand {
+  visibility: hidden;
+}
+
 .island-vn.is-peek .island-vn-talk {
   display: none;
 }
