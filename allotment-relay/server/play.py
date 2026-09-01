@@ -338,11 +338,18 @@ def climate_bits() -> dict[str, str]:
     w, t, p = world.current_weather(), world.current_tide(), world.current_day_phase()
     return {
         "weather": world.weather_label(w),
+        "weather_code": w,
         "tide": world.tide_label(t),
+        "tide_code": t,
         "phase": world.day_phase_label(p),
         "phase_code": p,
         "season": season_mod.season_name(),
+        "season_left": str(season_mod.season_remaining_days()),
         "line": world.climate_line(),
+        "weather_hint": world.WEATHER_HINT.get(w, ""),
+        "tide_hint": world.TIDE_HINT.get(t, ""),
+        "phase_hint": world.PHASE_HINT.get(p, ""),
+        "season_hint": world.SEASON_HINT,
     }
 
 

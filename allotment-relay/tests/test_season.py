@@ -243,8 +243,30 @@ async def test_planted_off_season_keeps_growing() -> None:
         assert "大蒜" in gathered or "蒜" in gathered, gathered
 
 
+def test_climate_bits_include_panel_fields() -> None:
+    from server import play, season, world
+
+    with season.pinned_season("秋"):
+        bits = play.climate_bits()
+    assert bits["season"] == "秋"
+    assert bits["season_left"]
+    assert bits["weather_code"] in {"clear", "misty", "gale"}
+    assert bits["tide_code"] in {"ebb", "slack", "flood"}
+    assert bits["phase_code"] in {"day", "dusk", "night"}
+    assert bits["weather"] == world.weather_label(bits["weather_code"])
+    assert bits["tide"] == world.tide_label(bits["tide_code"])
+    assert bits["phase"] == world.day_phase_label(bits["phase_code"])
+    assert "一周一季" in bits["season_hint"]
+    assert bits["weather_hint"]
+    from server.v1 import views
+    view = views.world_view(bits)
+    assert view["weather_code"] == bits["weather_code"]
+    assert view["season"] == "秋"
+
+
 def main() -> None:
     test_week_maps_to_season()
+    test_climate_bits_include_panel_fields()
     test_year_round_and_windows()
     test_catalog_marks_season()
     test_league_skips_off_season_crop()

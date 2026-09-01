@@ -104,11 +104,18 @@ def world_view(
     bits = climate or play.climate_bits()
     return {
         "weather": bits.get("weather") or "",
+        "weather_code": bits.get("weather_code") or "",
         "tide": bits.get("tide") or "",
+        "tide_code": bits.get("tide_code") or "",
         "phase": bits.get("phase") or "",
         "phase_code": bits.get("phase_code") or "",
         "season": bits.get("season") or "",
+        "season_left": bits.get("season_left") or "",
         "line": bits.get("line") or world.climate_line(),
+        "weather_hint": bits.get("weather_hint") or "",
+        "tide_hint": bits.get("tide_hint") or "",
+        "phase_hint": bits.get("phase_hint") or "",
+        "season_hint": bits.get("season_hint") or "",
         "notices": notices or [],
         "pulse": pulse,
     }
