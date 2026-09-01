@@ -1,6 +1,6 @@
 import { state } from "../store.js?v=island-mapbgm1";
-import { esc } from "./modal.js?v=island-climate4";
-import { popIn, popOut } from "./pop.js?v=island-climate4";
+import { esc } from "./modal.js?v=island-climate5";
+import { popIn, popOut } from "./pop.js?v=island-climate5";
 
 const WEATHER_CODE = { 晴朗: "clear", 海雾: "misty", 阵风: "gale" };
 const TIDE_CODE = { 退潮: "ebb", 平潮: "slack", 涨潮: "flood" };
