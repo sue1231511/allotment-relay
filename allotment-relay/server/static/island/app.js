@@ -189,9 +189,9 @@ async function enterScene(name, opts) {
   const bar = document.getElementById("island-actionbar");
   if (bar) bar.hidden = name === "map" || name === "yards";
   setYardsChrome(name === "yards");
-  setBagChip(name !== "map");
+  setBagChip(name !== "map" && name !== "undertide");
   setBackChip(name !== "map", () => enterScene(state.backTo || "map"), {
-    showStats: name !== "yards",
+    showStats: name !== "yards" && name !== "undertide",
   });
   try {
     if (name === "yards") {
@@ -211,7 +211,7 @@ async function enterScene(name, opts) {
       stopWorkshopTick();
       stopQuarryTick();
       state.backTo = "map";
-      setBackChip(true, () => enterScene("map"));
+      setBackChip(true, () => enterScene("map"), { showStats: false });
       renderUndertide(root);
     } else if (name === "shore") {
       stopGrowTick();
