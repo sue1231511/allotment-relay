@@ -1238,7 +1238,7 @@ def test_island_page_is_modular() -> None:
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
     assert "island-mapbgm1" in app
-    assert html.count("island.css?v=island-vnnomask1") == 1
+    assert html.count("island.css?v=island-liliright1") == 1
     assert html.count("app.js?v=island-lilisprite1") == 1
     assert html.count("lounge-embed.css?v=island-portlounge1") == 1
     assert "lounge.js?v=lounge-board-compose6" in html
@@ -2183,14 +2183,16 @@ def test_island_page_is_modular() -> None:
     assert ".island-vn-stand" in css
     assert ".island-vn-sprite" in css
     stand_css = css.split(".island-vn-stand {")[1].split(".island-vn-sprite")[0]
-    assert "mask-image" not in stand_css
-    assert "-webkit-mask-image" not in stand_css
+    assert "mask-image" in stand_css
+    assert "-webkit-mask-image" in stand_css
     assert "只要头和胸" in css
     assert "矮一半" in css
     assert ".island-vn-stand.is-half" in css
     assert ".island-shaonian .island-vn-stand.is-half .island-vn-sprite" in css
     assert ".island-lili .island-vn-stand.is-half .island-vn-sprite" in css
     assert "left: -12%" in css
+    lili_sprite = css.split(".island-lili .island-vn-stand.is-half .island-vn-sprite")[1].split("}")[0]
+    assert "left: 12%" in lili_sprite
     assert ".island-bgm-chip" in css
     assert "island-vn-mute" not in css
     assert "全身的二分之一" in css
