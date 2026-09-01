@@ -1,12 +1,9 @@
 import { state } from "../store.js?v=island-modulefix2";
 
 const KEYS = [
-  ["shadow", "shadow_rep"],
-  ["satiety", "satiety"],
-  ["mist", "mist_wit"],
-  ["standing", "standing"],
-  ["health", "health"],
-  ["energy", "energy"],
+  ["tickets", "tickets"],
+  ["level", "level"],
+  ["bond", "island_bond"],
 ];
 
 function num(v) {

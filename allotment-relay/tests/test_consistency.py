@@ -701,7 +701,7 @@ def test_human_island_manual() -> None:
         "左右滑切页",
         "回地图",
         "左上角贴边的迷你「返回地图」",
-        "影信饱食雾智档信健康精力木牌",
+        "工分票、等级、岛缘三项面板",
         "音乐钮左边迷你「背包」",
         "右上角贝壳音乐钮",
         "贴边",
@@ -860,6 +860,7 @@ def test_patron_pages_share_steward_key() -> None:
     island_shop = (root / "server/static/island/scenes/shop.js").read_text(encoding="utf-8")
     island_boot = (root / "server/static/island/boot.js").read_text(encoding="utf-8")
     island_css = (root / "server/static/island/island.css").read_text(encoding="utf-8")
+    island_stats = (root / "server/static/island/ui/stats.js").read_text(encoding="utf-8")
     assert "/static/site-key.js" in island_html
     assert "/static/island/boot.js" in island_html
     assert 'id="island-boot-veil"' in island_html
@@ -871,7 +872,18 @@ def test_patron_pages_share_steward_key() -> None:
     assert "/static/island/assets/sprites/tt.webp" in island_boot
     assert "island-tt-stand" in island_shop
     assert ".island-shop.is-peek .island-tt-stand" in island_css
-    assert "tt-sprite1" in island_html
+    assert "status-frame1" in island_html
+    assert 'aria-label="工分票、等级、岛缘"' in island_html
+    assert 'data-k="tickets"' in island_html
+    assert 'data-k="level"' in island_html
+    assert 'data-k="bond"' in island_html
+    assert '"tickets", "tickets"' in island_stats
+    assert '"level", "level"' in island_stats
+    assert '"bond", "island_bond"' in island_stats
+    assert "/static/island/assets/status-frame.webp" in island_css
+    assert "/static/island/assets/status-frame.webp" in island_boot
+    assert (root / "server/static/island/assets/status-frame.png").is_file()
+    assert (root / "server/static/island/assets/status-frame.webp").is_file()
     assert "tidal_island_steward_api_key" in island_api
     assert "/api/v1/" in island_api
     assert 'href="/play"' not in island_html

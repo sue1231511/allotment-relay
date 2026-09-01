@@ -1,5 +1,5 @@
 import { state } from "./store.js?v=island-modulefix2";
-import { paintStats } from "./ui/stats.js?v=island-modulefix2";
+import { paintStats } from "./ui/stats.js?v=status-frame1";
 
 export function renderHud() {
   const me = state.me || {};

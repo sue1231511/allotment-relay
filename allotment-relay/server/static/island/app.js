@@ -12,7 +12,7 @@ import {
   tickQuarry,
   tickWorkshop,
 } from "./store.js?v=island-modulefix2";
-import { renderHud } from "./hud.js?v=island-modulefix2";
+import { renderHud } from "./hud.js?v=status-frame1";
 import { renderMap } from "./map.js?v=undertide-map1";
 import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=island-modulefix2";
 import { renderShore, renderShoreYard, renderPortHub, renderBeachHub } from "./scenes/shore.js?v=island-modulefix2";

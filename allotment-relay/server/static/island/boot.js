@@ -98,6 +98,7 @@
     "theater", "ting", "workshop", "writers", "yards"
   ].map(function (id) { return "/static/island/assets/scenes/" + id + ".webp"; });
   SCENE_PICS.push("/static/island/assets/sprites/tt.webp?v=tt-sprite1");
+  SCENE_PICS.push("/static/island/assets/status-frame.webp?v=status-frame1");
   var VEIL_MS = 30000;
   var PIC_MS = 25000;
   var veilTimer = 0;
