@@ -229,7 +229,7 @@ ALLIANCE_HELP = """alliance_ops 子命令（整句写进 command）：
 
 VISIT_HELP = """visit_ops 子命令（整句写进 command）：
   list / visit 名字 — 固定 NPC
-  lili scan|trade 编号|summon 贝壳 — 栗栗流动摊。例子：lili summon shell_catseye。人类 /island 广场点栗栗流动摊，点一下看摊
+  lili scan|trade 编号|summon 贝壳 — 栗栗流动摊。例子：lili summon shell_catseye。人类 /island 广场点栗栗流动摊，先进摊车特写，点一下才出人栗栗，半身立绘对话，栗栗站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗；能看货、换货、献壳唤摊、摸夜栖
   shaonian visit|fortune|transfer|buy 符名 — 韶年望潮人。人类 /island 总览点海边，进滩景再点海边，点海边就出列表，两个选项去见韶年和去赶海；去见韶年才出人韶年，半身立绘对话，韶年站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗；能卜卦、转运、买符
   musong visit|send 名字|remember — 目送人·阿槐；渡口送别，每个游戏日可记一个名字
   jingshan visit|status|order|deliver|revisit|remember — 何敬山的商船糕点委托与后续小事件；按 status 顺序

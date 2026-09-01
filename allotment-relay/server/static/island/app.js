@@ -20,7 +20,7 @@ import { renderPlaza } from "./scenes/plaza.js?v=island-mapbgm1";
 import { renderPlace } from "./scenes/place.js?v=island-mapbgm1";
 import { renderHut } from "./scenes/hut.js?v=island-hutcook1";
 import { renderShop } from "./scenes/shop.js?v=island-mapbgm1";
-import { renderLili } from "./scenes/lili.js?v=island-mapbgm1";
+import { renderLili } from "./scenes/lili.js?v=island-lilisprite1";
 import { renderClinic } from "./scenes/clinic.js?v=island-mapbgm1";
 import { renderShaonian } from "./scenes/shaonian.js?v=island-shorescenes1";
 import { renderWorkshop } from "./scenes/workshop.js?v=island-mapbgm1";
@@ -254,7 +254,7 @@ async function enterScene(name, opts) {
       stopGrowTick();
       stopWorkshopTick();
       stopQuarryTick();
-      state.liliShelf = false;
+      state.liliMeet = false;
       await openLili(root);
     } else if (name === "clinic") {
       stopGrowTick();
@@ -622,36 +622,28 @@ async function openLili() {
     const data = await api.lili();
     applySnapshot(data);
     renderHud();
-    if (data.event) showEvent(data.event);
   } catch (err) {
     toast(err.message || "摊子还没支起来。");
-  }
-  const tabs = (state.lili && state.lili.tabs) || [];
-  if (!tabs.some((row) => row.key === state.liliTab)) {
-    state.liliTab = (tabs[0] && tabs[0].key) || "shelf";
   }
   paintLili();
 }
 
-function paintLili(listTop = 0) {
-  renderLili(sceneEl(), {
-    onAct: tapLili,
-    onSwitchTab: (tab) => {
-      state.liliTab = tab || "shelf";
-      hideModal();
-      paintLili(0);
-    },
-    onOpenShelf: () => {
-      state.liliShelf = true;
-      paintLili(0);
-    },
-    onCloseShelf: () => {
-      state.liliShelf = false;
-      hideModal();
-      paintLili();
-    },
-    listTop,
-  });
+function paintLili() {
+  renderLili(sceneEl(), { onAct: tapLili, onMeet: meetLili });
+}
+
+function meetLili() {
+  if (state.liliMeet) return;
+  state.liliMeet = true;
+  paintLili();
+}
+
+function speakLili(text) {
+  hideModal();
+  if (!state.lili) state.lili = {};
+  state.lili.line = text || "……";
+  state.lili.speaker = state.lili.speaker || "栗栗";
+  paintLili();
 }
 
 function liliRow(kind, target, id) {
@@ -670,31 +662,16 @@ function liliRow(kind, target, id) {
 
 function tapLili(kind, target, id) {
   const row = liliRow(kind, target, id) || {};
+  const body = row.detail || row.note || (state.lili && state.lili.line) || "这会儿摊上没有这一下。";
   if (kind === "look" || !row.can) {
-    showHintSheet({
-      title: row.name || "栗栗流动摊",
-      body: row.detail || row.note || (state.lili && state.lili.line) || "这会儿摊上没有这一下。",
-    });
+    speakLili(body);
     return;
   }
-  const pack = {
-    trade: ["换货", row.detail || row.note, "确认换"],
-    summon: ["献壳唤摊", row.detail || row.note, "确认献"],
-    pet: ["摸夜栖", row.detail || row.note, "确认摸"],
-    junk: ["糙壳换乱捡款", row.detail || row.note, "确认换"],
-  }[kind] || ["栗栗流动摊", row.detail || row.note || "做这一下？", "确认"];
-  showActSheet({
-    title: pack[0],
-    body: pack[1],
-    confirm: pack[2],
-    onConfirm: () => runLili(kind, target || row.target || ""),
-  });
+  runLili(kind, target || row.target || "");
 }
 
 async function runLili(kind, target) {
-  const list = document.getElementById("island-lili-list");
-  const listTop = list ? list.scrollTop : 0;
-  await act(() => api.liliAct(kind, target), { keepLili: true, listTop, quiet: true });
+  await act(() => api.liliAct(kind, target), { keepLili: true, quiet: true });
 }
 
 async function openClinic() {
@@ -2650,7 +2627,7 @@ async function act(fn, { refreshScene = false, keepPlant = false, keepTab = fals
     applySnapshot(data);
     renderHud();
     if (data.event && !quiet) showEvent(data.event);
-    else if (quiet && data.event && data.event.narrative && !keepLighthouse && !keepHall && !keepClinic && !keepShaonian) toast(data.event.narrative);
+    else if (quiet && data.event && data.event.narrative && !keepLighthouse && !keepHall && !keepClinic && !keepShaonian && !keepLili) toast(data.event.narrative);
     if (!keepPlant) closePlant();
     else state.plantOpen = true;
     if (keepTab) {
@@ -2662,7 +2639,11 @@ async function act(fn, { refreshScene = false, keepPlant = false, keepTab = fals
       return;
     }
     if (keepLili && state.scene === "lili") {
-      paintLili(listTop);
+      if (data.event && data.event.narrative && state.lili) {
+        state.lili.line = data.event.narrative;
+        state.lili.speaker = data.event.speaker || "栗栗";
+      }
+      paintLili();
       return;
     }
     if (keepClinic && state.scene === "clinic") {
@@ -2756,6 +2737,7 @@ async function act(fn, { refreshScene = false, keepPlant = false, keepTab = fals
     const msg = err.message || "这次没做成。";
     if (keepHall && state.scene === "hall") speakHall(msg);
     else if (keepClinic && state.scene === "clinic") speakClinic(msg);
+    else if (keepLili && state.scene === "lili") speakLili(msg);
     else if (keepShaonian && state.scene === "beach") speakShaonian(msg);
     else toast(msg);
     if (state.scene === "yards" && state.plantOpen) openPlant();
