@@ -1238,7 +1238,7 @@ def test_island_page_is_modular() -> None:
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
     assert "island-mapbgm1" in app
-    assert html.count("island.css?v=island-vnnofade1") == 1
+    assert html.count("island.css?v=island-vnnomask1") == 1
     assert html.count("app.js?v=island-lilisprite1") == 1
     assert html.count("lounge-embed.css?v=island-portlounge1") == 1
     assert "lounge.js?v=lounge-board-compose6" in html
@@ -2182,6 +2182,9 @@ def test_island_page_is_modular() -> None:
     assert ".island-vn-talk.is-line" in css
     assert ".island-vn-stand" in css
     assert ".island-vn-sprite" in css
+    stand_css = css.split(".island-vn-stand {")[1].split(".island-vn-sprite")[0]
+    assert "mask-image" not in stand_css
+    assert "-webkit-mask-image" not in stand_css
     assert "只要头和胸" in css
     assert "矮一半" in css
     assert ".island-vn-stand.is-half" in css

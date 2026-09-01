@@ -1983,7 +1983,7 @@ body.island-app.is-bag-open .island-float-chip {
   object-position: center 42%;
 }
 
-/* 橙光那种半身：只要头和胸，比原先矮一半，人靠左下移，下头让对话框挡住。 */
+/* 橙光那种半身：只要头和胸，比原先矮一半，人靠左下移，下头让对话框挡住。下沿齐切，不要渐变淡出。 */
 .island-vn-stand {
   position: absolute;
   left: 0;
@@ -1994,8 +1994,6 @@ body.island-app.is-bag-open .island-float-chip {
   overflow: hidden;
   z-index: 2;
   pointer-events: none;
-  -webkit-mask-image: linear-gradient(180deg, #000 72%, rgba(0, 0, 0, .35) 88%, transparent 100%);
-  mask-image: linear-gradient(180deg, #000 72%, rgba(0, 0, 0, .35) 88%, transparent 100%);
 }
 
 .island-vn-sprite {
