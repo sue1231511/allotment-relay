@@ -73,6 +73,11 @@ def player_view(dash: dict[str, Any] | None, *, enrolled: bool) -> dict[str, Any
             "energy": 0,
             "energy_max": 100,
             "island_bond": 0,
+            "health": 0,
+            "satiety": 0,
+            "mist_wit": 0,
+            "standing": 0,
+            "shadow_rep": 0,
         }
     meters = dash.get("meters") or {}
     return {
@@ -86,6 +91,9 @@ def player_view(dash: dict[str, Any] | None, *, enrolled: bool) -> dict[str, Any
         "island_bond": dash.get("island_bond") or 0,
         "health": meters.get("health") or 0,
         "satiety": meters.get("satiety") or 0,
+        "mist_wit": meters.get("mist_wit") or 0,
+        "standing": meters.get("standing") or 0,
+        "shadow_rep": meters.get("shadow_rep") or 0,
         "dues": dash.get("dues") or {},
         "duty": (dash.get("meter_lines") or {}).get("bar_duty") or "",
         "flags": dash.get("flags") or {},

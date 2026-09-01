@@ -905,6 +905,42 @@ body.island-app.is-playing.is-yards .island-actionbar {
   transform: translateX(-22%);
 }
 
+.island-float-chip.is-stats {
+  top: calc(62px + env(safe-area-inset-top, 0px));
+  left: 4px;
+  right: auto;
+  width: min(124px, 34%);
+  height: auto;
+  aspect-ratio: 1024 / 1536;
+  pointer-events: none;
+  background: transparent center / 100% 100% no-repeat;
+  background-image: url("/static/island/assets/stats-frame.png");
+}
+
+.island-stats-val {
+  position: absolute;
+  left: 79%;
+  width: 16%;
+  height: 5.2%;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translate(-50%, -50%);
+  font-size: clamp(9px, 2.6vw, 13px);
+  font-weight: 700;
+  letter-spacing: .02em;
+  line-height: 1;
+  color: #5a4a3a;
+}
+
+.island-stats-val[data-k="shadow"] { top: 24.7%; }
+.island-stats-val[data-k="satiety"] { top: 36.7%; }
+.island-stats-val[data-k="mist"] { top: 48.5%; }
+.island-stats-val[data-k="standing"] { top: 59.9%; }
+.island-stats-val[data-k="health"] { top: 72.2%; }
+.island-stats-val[data-k="energy"] { top: 83.0%; }
+
 .island-float-chip img {
   width: 100%;
   height: auto;
