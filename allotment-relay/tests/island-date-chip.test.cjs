@@ -74,6 +74,8 @@ test("icon is a root sibling before bag; shares top and height with bag", () => 
   const dateCss = read("server/static/island/companion-date.css");
   assert.match(dateCss, /right:calc\(min\(58px, 16%\) \+ min\(88px, 24%\) \+ 8px\)/);
   assert.match(dateCss, /width:44px/);
+  assert.match(dateCss, /#island-date-chip img \{ width:66\.6667%; \}/);
+  assert.match(dateCss, /top:16px; right:5px/);
   assert.match(dateCss, /z-index:10/); // above transparent edges of back-map artwork at narrow widths
   assert.doesNotMatch(dateCss, /bottom:calc\(20px|left:50%|translateX\(-50%\)/);
   for (const width of [280, 320, 375, 414, 768, 1200]) {
@@ -86,7 +88,7 @@ test("icon is a root sibling before bag; shares top and height with bag", () => 
   const asset = fs.readFileSync(path.join(root, "server/static/island/assets/chip-date.png"));
   assert.equal(asset.toString("hex", 0, 8), "89504e470d0a1a0a");
   assert.equal(asset[25], 6); // RGBA PNG; preserve original transparency.
-  assert.match(html, /companion-date.css\?v=date-chip1/);
+  assert.match(html, /companion-date.css\?v=date-chip2/);
   assert.match(html, /app.js\?v=date-chip1/);
   assert.match(read("server/static/island/app.js"), /companion-date.js\?v=date-chip1/);
 });

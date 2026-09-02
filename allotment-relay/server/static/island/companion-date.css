@@ -1,7 +1,8 @@
 #island-date-chip { z-index:10; right:calc(min(58px, 16%) + min(88px, 24%) + 8px); left:auto; width:44px; justify-content:center; touch-action:manipulation; }
+#island-date-chip img { width:66.6667%; }
 #island-date-chip:focus-visible { outline:2px solid #d5b879; outline-offset:2px; border-radius:12px; }
 #island-date-chip:disabled { cursor:wait; }
-#island-date-chip .island-date-badge { position:absolute; top:9px; right:0; width:9px; height:9px; border:2px solid #fff0cd; border-radius:50%; background:#cc655a; }
+#island-date-chip .island-date-badge { position:absolute; top:16px; right:5px; width:9px; height:9px; border:2px solid #fff0cd; border-radius:50%; background:#cc655a; }
 #island-date-chip[hidden], #island-date-panel[hidden] { display:none; }
 #island-date-panel { position:fixed; inset:0; z-index:160; overflow-y:auto; overscroll-behavior:contain; background:#122824d9; padding:calc(24px + env(safe-area-inset-top)) 16px calc(30px + env(safe-area-inset-bottom)); }
 .is-date-open { overflow:hidden; }
