@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
   <meta name="theme-color" content="#d8ebe8">
   <title>地图 · 潮汐岛</title>
-  <link rel="stylesheet" href="/static/island/island.css?v=status-frame1">
+  <link rel="stylesheet" href="/static/island/island.css?v=dual-panels1">
   <link rel="stylesheet" href="/static/lounge-embed.css?v=island-portlounge1">
 </head>
 <body class="island-app{% if island_weddings %} is-wedding-day{% endif %}">
@@ -67,10 +67,18 @@
     <button type="button" class="island-float-chip is-back" id="island-back-chip" hidden>
       <img data-src="/static/island/assets/chip-back.png" alt="回地图" draggable="false">
     </button>
-    <aside class="island-float-chip is-stats" id="island-stats" hidden aria-label="工分票、等级、岛缘">
-      <b class="island-stats-val" data-k="tickets">—</b>
-      <b class="island-stats-val" data-k="level">—</b>
-      <b class="island-stats-val" data-k="bond">—</b>
+    <aside class="island-float-chip is-stats" id="island-stats" hidden aria-label="影信、饱食、雾智、档信、健康、精力">
+      <b class="island-stats-val" data-k="shadow">—</b>
+      <b class="island-stats-val" data-k="satiety">—</b>
+      <b class="island-stats-val" data-k="mist">—</b>
+      <b class="island-stats-val" data-k="standing">—</b>
+      <b class="island-stats-val" data-k="health">—</b>
+      <b class="island-stats-val" data-k="energy">—</b>
+    </aside>
+    <aside class="island-float-chip is-status" id="island-status" hidden aria-label="工分票、等级、岛缘">
+      <b class="island-status-val" data-k="tickets">—</b>
+      <b class="island-status-val" data-k="level">—</b>
+      <b class="island-status-val" data-k="bond">—</b>
     </aside>
   </div>
 
@@ -88,9 +96,9 @@
   <script src="/static/site-key.js?v=island-modulefix2"></script>
   <script src="/static/island-time.js?v=island-modulefix2"></script>
   <script src="/static/lounge.js?v=island-modulefix2"></script>
-  <script src="/static/island/boot.js?v=status-frame1"></script>
+  <script src="/static/island/boot.js?v=dual-panels1"></script>
   <script src="/static/island/tap.js?v=island-modulefix2"></script>
-  <script type="module" src="/static/island/app.js?v=status-frame1"></script>
+  <script type="module" src="/static/island/app.js?v=dual-panels1"></script>
   <script nomodule>
     var hint = document.getElementById("island-gate-hint");
     if (hint) hint.textContent = "这台浏览器跑不了完整地图。换系统浏览器打开。";

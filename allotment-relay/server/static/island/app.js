@@ -12,7 +12,7 @@ import {
   tickQuarry,
   tickWorkshop,
 } from "./store.js?v=island-modulefix2";
-import { renderHud } from "./hud.js?v=status-frame1";
+import { renderHud } from "./hud.js?v=dual-panels1";
 import { renderMap } from "./map.js?v=undertide-map1";
 import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=island-modulefix2";
 import { renderShore, renderShoreYard, renderPortHub, renderBeachHub } from "./scenes/shore.js?v=island-modulefix2";
@@ -43,7 +43,7 @@ async function lighthouseScene() {
   return lighthouseMod;
 }
 import { renderBag } from "./ui/bag.js?v=island-modulefix2";
-import { setBackChip, setBagChip } from "./ui/back-map.js?v=yards-no-stats1";
+import { setBackChip, setBagChip } from "./ui/back-map.js?v=dual-panels1";
 import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=island-modulefix2";
 import { popOut } from "./ui/pop.js?v=island-modulefix2";
 import { bgmMuted, setBgmMuted, startIslandBgm, stopBgm } from "./ui/bgm.js?v=island-modulefix2";

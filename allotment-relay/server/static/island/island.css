@@ -914,23 +914,35 @@ body.island-app.is-playing.is-yards .island-actionbar {
   transform: none;
 }
 
+.island-float-chip.is-stats,
+.island-float-chip.is-status {
+  height: auto;
+  pointer-events: none;
+  background: transparent center / 100% 100% no-repeat;
+}
+
+/* 左侧保留原六项木牌；右侧是独立的工分票、等级、岛缘面板。 */
 .island-float-chip.is-stats {
   top: calc(62px + env(safe-area-inset-top, 0px));
   left: 4px;
   right: auto;
+  width: min(124px, 34%);
+  aspect-ratio: 1024 / 1536;
+  background-image: url("/static/island/assets/stats-frame.png");
+}
+
+.island-float-chip.is-status {
+  top: calc(72px + env(safe-area-inset-top, 0px));
+  left: auto;
+  right: 4px;
   width: min(150px, 40%);
-  height: auto;
   aspect-ratio: 1004 / 1118;
-  pointer-events: none;
-  background: transparent center / 100% 100% no-repeat;
   background-image: url("/static/island/assets/status-frame.webp?v=status-frame1");
 }
 
-.island-stats-val {
+.island-stats-val,
+.island-status-val {
   position: absolute;
-  left: 71%;
-  width: 24%;
-  height: 10%;
   margin: 0;
   display: flex;
   align-items: center;
@@ -943,9 +955,27 @@ body.island-app.is-playing.is-yards .island-actionbar {
   color: #5a4a3a;
 }
 
-.island-stats-val[data-k="tickets"] { top: 31.6%; }
-.island-stats-val[data-k="level"] { top: 53.9%; }
-.island-stats-val[data-k="bond"] { top: 76.0%; }
+.island-stats-val {
+  left: 72%;
+  width: 16%;
+  height: 5.2%;
+}
+
+.island-status-val {
+  left: 71%;
+  width: 24%;
+  height: 10%;
+}
+
+.island-stats-val[data-k="shadow"] { top: 24.7%; }
+.island-stats-val[data-k="satiety"] { top: 36.7%; }
+.island-stats-val[data-k="mist"] { top: 48.5%; }
+.island-stats-val[data-k="standing"] { top: 59.9%; }
+.island-stats-val[data-k="health"] { top: 72.2%; }
+.island-stats-val[data-k="energy"] { top: 83.0%; }
+.island-status-val[data-k="tickets"] { top: 31.6%; }
+.island-status-val[data-k="level"] { top: 53.9%; }
+.island-status-val[data-k="bond"] { top: 76.0%; }
 
 .island-float-chip img {
   width: 100%;

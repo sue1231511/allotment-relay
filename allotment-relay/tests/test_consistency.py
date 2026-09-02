@@ -702,6 +702,8 @@ def test_human_island_manual() -> None:
         "回地图",
         "左上角贴边的迷你「返回地图」",
         "工分票、等级、岛缘三项面板",
+        "左侧返回地图下保留影信、饱食、雾智、档信、健康、精力六项数值面板",
+        "右侧背包和音乐钮下",
         "音乐钮左边迷你「背包」",
         "右上角贝壳音乐钮",
         "贴边",
@@ -872,7 +874,15 @@ def test_patron_pages_share_steward_key() -> None:
     assert "/static/island/assets/sprites/tt.webp" in island_boot
     assert "island-tt-stand" in island_shop
     assert ".island-shop.is-peek .island-tt-stand" in island_css
-    assert "status-frame1" in island_html
+    assert "dual-panels1" in island_html
+    assert 'id="island-stats"' in island_html
+    assert 'id="island-status"' in island_html
+    assert 'aria-label="影信、饱食、雾智、档信、健康、精力"' in island_html
+    for slot in ("shadow", "satiety", "mist", "standing", "health", "energy"):
+        assert f'data-k="{slot}"' in island_html
+    assert "/static/island/assets/stats-frame.png" in island_css
+    assert "/static/island/assets/stats-frame.png" in island_boot
+    assert (root / "server/static/island/assets/stats-frame.png").is_file()
     assert 'aria-label="工分票、等级、岛缘"' in island_html
     assert 'data-k="tickets"' in island_html
     assert 'data-k="level"' in island_html

@@ -1,4 +1,4 @@
-import { setStatsChip } from "./stats.js?v=island-modulefix2";
+import { setStatsChip } from "./stats.js?v=dual-panels1";
 
 function revealChipSrc(btn) {
   const img = btn && btn.querySelector("img[data-src]");
