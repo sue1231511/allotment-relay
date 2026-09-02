@@ -124,7 +124,7 @@ async def alliance_ops(command: str = "") -> str:
     return await mux._call_ops(mux.alliance_bundle, _kid(), command)
 
 
-@mcp.tool(description="NPC、杂货与花店。空=help。例：tt buy 甘蓝种 · 默默 scan · 默默 买花 玫瑰。默默 花语/花茶/记名/干花，详见 默默 help；鲜花不是种子。玩家集市走 tote_ops market；潮生会不能加入。")
+@mcp.tool(description="NPC、杂货与花店。空=help。例：tt buy 甘蓝种 · tt gift 姜 · 默默 scan · 默默 买花 玫瑰。tt gift 姜=调味料作物≠姜种；默默 花语/花茶/记名/干花，详见 默默 help；鲜花不是种子。玩家集市走 tote_ops market；潮生会不能加入。")
 async def visit_ops(command: Annotated[str, Field(description="整句子命令；空=help。默默=进花店；默默 花茶 玫瑰花茶；默默 记名；默默 help 看花语/买花/干花费用。")] = "") -> str:
     return await mux._call_ops(mux.visit_bundle, _kid(), command)
 
