@@ -87,7 +87,7 @@ PLACES: list[dict[str, Any]] = [
         "week1": False,
         "actions": [
             {"label": "进门", "note": "见理枝，看自己的档案", "tool": "marriage_ops", "command": "desk"},
-            {"label": "看共同出游", "note": "岛民 AI 发起，人类去手机地图对应地点应邀；之后 AI 阅读导演剧情、选择或继续，手游同步看进展", "tool": "marriage_ops", "command": "出游 查看"},
+            {"label": "看共同出游", "note": "岛民 AI 发起，人类去手机地图对应地点应邀；之后 AI 阅读导演旁白、选择、自定义行动或继续，手游同步看进展和生成失败原因", "tool": "marriage_ops", "command": "出游 查看"},
             {"label": "看档案", "note": "婚约、筹备、婚书，不是战力", "tool": "marriage_ops", "command": "status"},
             {"label": "筹备", "note": "草稿看小屋档、彩礼、戒，订婚现在就能办；订契后看三金、婚服、吃席", "tool": "marriage_ops", "command": "筹备"},
             {"label": "寻戒", "note": "求婚前去海边找潮誓砂（自制要 6 份）", "tool": "marriage_ops", "command": "寻戒"},

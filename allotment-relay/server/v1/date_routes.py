@@ -1,4 +1,4 @@
-"""手游只应邀和看进度；推进/选项由 MCP 岛民负责。"""
+"""手游只应邀和看旁白/进度/失败原因；推进/选项/自定义由 MCP 岛民负责。"""
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field

@@ -31,6 +31,7 @@ export function mountDates(enterScene) {
     openId = row.id;
     painted = "";
     paint();
+    refresh();
   });
   panel.addEventListener("keydown", ev => {
     if (ev.key === "Escape" && !busy) close();
@@ -44,6 +45,7 @@ export function mountDates(enterScene) {
   });
   panel.addEventListener("click", async ev => {
     if (ev.target.closest("[data-date-close]") && !busy) close();
+    if (ev.target.closest("[data-date-refresh]") && !busy) { refresh(); return; }
     const history = ev.target.closest("[data-date-open]");
     if (history) { openId = Number(history.dataset.dateOpen); painted = ""; paint(); }
     const response = ev.target.closest("[data-date-respond]");
@@ -105,12 +107,12 @@ async function refresh() {
     if (err.status === 401 || err.status === 403) resetDates();
     // 暂时断网不影响地图其他玩法；下次自动刷新。
   }
-  finally { loading = false; timer = setTimeout(refresh, 10000); }
+  finally { loading = false; timer = setTimeout(refresh, openId ? 2500 : 10000); }
 }
 
 function cardMarkup(card, choice) {
   if (!card) return "";
-  return `<article class="date-chapter"><h3>${esc(card.title)}</h3><p>${esc(card.narrative)}</p>
+  return `<article class="date-chapter"><small class="date-narrator">${card.kind === "event" ? "导演旁白 · 特别事件" : "导演旁白"}</small><h3>${esc(card.title)}</h3><p>${esc(card.narrative)}</p>
     ${choice ? `<p class="date-receipt">岛民选择：${esc(choice.label)} · ${esc(choice.name)} ${choice.cost} 票</p>` : ""}</article>`;
 }
 
@@ -137,7 +139,9 @@ function paint() {
       <p class="date-receipt">邀请七天有效。预订费已付，拒绝或过期不另扣票，也不退预订费。</p>` : ""}
     ${row.history.length ? `<details><summary>翻看走过的 ${row.history.length} 幕</summary>${row.history.map(c => cardMarkup(c, c.choice)).join("")}</details>` : ""}
     ${cardMarkup(card)}
-    ${row.status === "active" ? `<p class="date-wait">${row.generating ? "导演正在写下一幕…" : card && card.options.length ? "岛民正在决定下一步，选好会自动更新在这里。" : "已应邀，等岛民继续这一程。"}</p>
+    ${row.status === "active" ? `${!row.generating && row.director_error ? `<p class="date-error" role="status">这次没有生成新旁白：${esc(row.director_error)}</p>` : ""}
+      <p class="date-wait">${row.generating ? "导演正在写下一幕，已有旁白会保留在这里…" : !card ? "还没有第一幕旁白。应邀已完成，请让岛民发起第一幕；刷新这里只查看进度，不会开始生成。" : card.options.length ? "岛民正在决定下一步，也可以通过 MCP 自定义行动，选好会自动更新。" : "这一幕旁白已写好。等岛民继续、自定义行动或结束这一程。"}</p>
+      <button type="button" data-date-refresh>刷新旁白与进度</button>
       ${card && card.options.length ? `<ul class="date-options">${card.options.map(o => `<li><b>${esc(o.label)}</b><small>${esc(o.name)} · ${o.cost} 票</small></li>`).join("")}</ul>` : ""}` : ""}
     ${!["pending", "active"].includes(row.status) ? `<p>这一程已记下。纪念不进背包，不产生可回本资源。</p>` : ""}
     <details class="date-archive"><summary>其他共同出游</summary>${rows.filter(d => d.id !== row.id).map(d => `<button type="button" data-date-open="${d.id}">${esc(d.title)} · ${esc(d.status_label)}</button>`).join("") || "还没有其他记录"}</details>

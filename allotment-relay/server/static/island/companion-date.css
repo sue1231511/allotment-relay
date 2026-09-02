@@ -14,6 +14,8 @@
 .date-response button:first-child { color:#fff8e9; background:#315c4e; }
 .date-receipt { font-size:13px; color:#64776a; }
 .date-wait { padding:12px; background:#e4edde; border-radius:10px; }
+.date-error { padding:12px; border-left:3px solid #a86742; background:#faeadd; color:#78472e; }
+.date-narrator { display:block; margin-top:12px; letter-spacing:.06em; color:#657e6b; }
 .date-chapter { border-top:1px solid #dfd2b3; padding-top:8px; }
 .date-options { list-style:none; padding:0; }
 .date-options li { padding:12px 0; border-bottom:1px solid #dfd2b3; }

@@ -58,12 +58,20 @@ def _view(row: dict) -> dict:
     status = row["status"]
     if status == "pending" and row["expires_at"] <= db.now():
         status = "expired"
+    generating = row.get("generating_until", 0) > db.now()
+    error = state.get("director_error", "") if status == "active" else ""
+    if status == "active" and row.get("generating_until", 0) and not generating:
+        error = "上次生成已中断或超时，没有写入新旁白。请让岛民重试原幕，或退出。"
+    phase = ("generating" if generating else "failed" if error else
+             "needs_opening" if not state.get("current") else "ready")
     return {"id": row["id"], "place": row["place"], "scene": PLACES[row["place"]]["scene"],
             "title": row["title"], "status": status, "status_label": STATUS.get(status, status),
             "kind_label": state.get("kind_label", "约会"), "partner": state.get("partner", "自己的人类"),
             "seq": state.get("seq", 0), "current": state.get("current"), "history": state.get("history", []),
             "total_spent": row.get("total_spent", 0), "special": bool(row["special"]),
-            "note": state.get("note", ""), "generating": row.get("generating_until", 0) > db.now()}
+            "note": state.get("note", ""), "generating": generating,
+            "generation_state": phase, "director_error": error,
+            "can_custom": status == "active" and bool(state.get("current")) and not generating}
 
 
 async def snapshot(sid: int) -> dict:
@@ -80,15 +88,23 @@ def describe(view: dict) -> str:
     elif view["status"] == "active":
         card = view.get("current")
         if card:
-            text.extend([f"第 {view['seq']} 幕 · {card['title']}（{card['kind']}）", card["narrative"]])
+            kind = {"event": "特别事件", "choice": "行动选择", "ending": "纪念结尾"}.get(card["kind"], card["kind"])
+            text.extend([f"第 {view['seq']} 幕 · {card['title']}（{kind}）", "【导演旁白】", card["narrative"]])
             for o in card["options"]:
                 text.append(f"  {o['id']}：{o['label']}｜{o['name']} · {o['cost']} 票")
         if view["generating"]:
-            text.append("导演正在生成本幕，请稍后「出游 查看」，不要重复请求。")
+            text.append(("导演正在生成下一幕，以上旁白仍是当前幕；" if card else "导演正在生成第一幕旁白；") + "请稍后「出游 查看」，不要重复推进。")
+            return "\n".join(text)
+        if view.get("director_error"):
+            text.append("【未生成新旁白】" + view["director_error"])
+        if not card:
+            text.append("人类已经应邀，但第一幕旁白还没生成。请 marriage_ops 出游 继续 0；只查看不会启动导演。")
         elif card and card["options"]:
-            text.append(f"有选项必须选择：marriage_ops 出游 选择 {view['seq']} A；也可 出游 退出。")
+            text.append(f"按选项行动：marriage_ops 出游 选择 {view['seq']} A；也可 出游 退出。")
         else:
             text.append(f"无选项：marriage_ops 出游 继续 {view['seq']}；也可 出游 退出。")
+        if card:
+            text.append(f"没合适的选项可自定义：marriage_ops 出游 自定义 {view['seq']} | 牵着对方去窗边听雨（1～500字）。只提交行动意图；消费须选报价确认。")
     else:
         card = view.get("current")
         if card:
@@ -152,7 +168,10 @@ async def respond(sid: int, date_id: int, scene: str, *, accept: bool) -> dict:
     return await snapshot(sid)
 
 
-async def advance(sid: int, seq: int, option: str = "") -> str:
+async def advance(sid: int, seq: int, option: str = "", *, custom: str = "") -> str:
+    custom = custom.strip()
+    if custom and (len(custom) > 500 or option):
+        raise ValueError("自定义行动须为1～500字，不能同时传选项编号。")
     now = db.now()
     weather = world.climate_line()
     async with db.connect() as conn:
@@ -164,12 +183,16 @@ async def advance(sid: int, seq: int, option: str = "") -> str:
         if seq != state["seq"]:
             return "该幕已处理或编号不符，没有再次扣票。\n" + describe(_view(row))
         if row["generating_until"] > now:
-            return "导演正在生成，请稍后 出游 查看。"
+            return describe(_view(row))
         current = state.get("current")
         options = current.get("options", []) if current else []
         chosen = next((o for o in options if o["id"] == option), None)
+        if custom:
+            if not current:
+                raise ValueError("第一幕还没有旁白，先 出游 继续 0，读完再自定义行动。")
+            chosen = {"id": "custom", "label": custom, "action": "custom", "name": "自定义行动意图", "cost": 0}
         if options and not chosen:
-            raise ValueError(f"本幕有选项，请 出游 选择 {seq} A（按当前选项编号），不能直接继续。")
+            raise ValueError(f"本幕有选项，请 出游 选择 {seq} A，或 出游 自定义 {seq} | 行动文字；不能直接继续。")
         if option and not options:
             raise ValueError(f"本幕没有选项，请 出游 继续 {seq}，或 出游 退出。")
         cost = int(chosen["cost"]) if chosen else 0
@@ -193,6 +216,7 @@ async def advance(sid: int, seq: int, option: str = "") -> str:
                "booking": state.get("booking_place", row["place"]),
                "prepaid_meal": state.get("booking_place") == "小馆",
                "spent": row["total_spent"] + cost, "balance_after_choice": steward["tickets"] - cost,
+               "custom_action": custom,
                "history": state["history"][-8:]}
     try:
         # 网络期间不占 SQLite 锁；失败保留原幕和余额。
@@ -207,16 +231,30 @@ async def advance(sid: int, seq: int, option: str = "") -> str:
             if paid.rowcount != 1:
                 raise ValueError("工分票不足，本幕仍保留原来的选项。")
             state.update(seq=next_seq, current=card)
+            state.pop("director_error", None)
             done = card["kind"] == "ending"
             await conn.execute("UPDATE companion_dates SET state_json=?,place=?,title=?,stage=?,status=?,completed_at=?,total_spent=total_spent+?,revision=revision+1,generating_until=0,updated_at=? WHERE id=?",
                                (_dump(state), place, card["title"], next_seq, "completed" if done else "active", db.now() if done else None, cost, db.now(), row["id"]))
             await conn.commit()
     except BaseException as exc:
+        # 错误留在同一幕的进度里，手游/后续 MCP 查看都能读到；绝不存上游原包或凭证。
+        if isinstance(exc, TimeoutError):
+            failure = "剧情导演超时，本次未推进、未扣选项费。重试原指令或退出。"
+        elif isinstance(exc, ValueError) and str(exc).startswith(("剧情导演", "工分票不足")):
+            failure = str(exc)
+        else:
+            failure = "剧情导演生成中断，本次未推进、未扣选项费。重试原指令或退出。"
         async with db.connect() as conn:
-            await conn.execute("UPDATE companion_dates SET generating_until=0 WHERE id=? AND revision=? AND generating_until=?", (row["id"], row["revision"], lease))
+            await conn.execute("BEGIN IMMEDIATE")
+            conn.row_factory = aiosqlite.Row
+            failed = await (await conn.execute("SELECT * FROM companion_dates WHERE id=? AND status='active' AND revision=? AND generating_until=?", (row["id"], row["revision"], lease))).fetchone()
+            if failed:
+                original = _state(dict(failed))
+                original["director_error"] = failure
+                await conn.execute("UPDATE companion_dates SET state_json=?,generating_until=0,updated_at=? WHERE id=?", (_dump(original), db.now(), row["id"]))
             await conn.commit()
         if isinstance(exc, TimeoutError):
-            raise ValueError("剧情导演超时，本次未推进、未扣选项费。重试原指令或退出。") from None
+            raise ValueError(failure) from None
         raise
     async with db.connect() as conn:
         conn.row_factory = aiosqlite.Row
@@ -249,9 +287,14 @@ async def command(steward: dict[str, Any], rest: str) -> str:
         if len(args) != (2 if verb == "选择" else 1) or not args[0].isdigit():
             raise ValueError("请带当前幕号防止重复推进：出游 继续 0；有选项时 出游 选择 1 A。先 出游 查看。")
         return await advance(steward["id"], int(args[0]), args[1].upper() if verb == "选择" else "")
+    if verb in ("自定义", "custom"):
+        number, separator, action = tail.partition("|")
+        if not separator or not number.strip().isdigit() or not 1 <= len(action.strip()) <= 500:
+            raise ValueError("格式：出游 自定义 1 | 牵着对方去窗边听雨。须用当前幕号，行动1～500字。")
+        return await advance(steward["id"], int(number.strip()), custom=action.strip())
     if verb == "退出":
         return await leave(steward["id"])
-    raise ValueError("出游：查看 · 选择 幕号 A · 继续 幕号 · 退出。人类只在地图应邀；加项和转场请选导演给出的选项。")
+    raise ValueError("出游：查看 · 选择 幕号 A · 自定义 幕号 | 行动文字 · 继续 幕号 · 退出。人类只在地图应邀；自定义不直接买单，加项和转场须选报价确认。")
 
 
 def archive_chapters(row: dict) -> list[dict[str, str]]:

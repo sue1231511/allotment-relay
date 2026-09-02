@@ -1,7 +1,7 @@
 import { api, loadKey } from "./api.js?v=flowers1";
 import { renderMarketHub } from "./scenes/market-hub.js?v=flowers1";
 import { renderFlorist } from "./scenes/florist.js?v=flowers1";
-import { mountDates, dateSceneChanged, resetDates } from "./ui/companion-date.js?v=dates2";
+import { mountDates, dateSceneChanged, resetDates } from "./ui/companion-date.js?v=date-custom1";
 import {
   applySnapshot,
   duesBlocked,
