@@ -9,10 +9,10 @@
 | `scenes/island-map.jpg` | 岛屿总览（已就位；铺满一屏，底下不漏色；小图，进岛不等 3MB） | 972×1619 |
 | `scenes/undertide-map.png` | 井下总览（已标注：井下入口、后室铺、恩怨墙、恶猫钱庄、深坑、死人赌场、凯斯酒馆、晏安医务间、地下监牢、K 室） | 941×1672 |
 | `scenes/undertide-backroom.png` | 后室铺具体场景（已就位；从井下总览点后室铺进入，只看景，可返回井下地图） | 1024×1536 |
-| `scenes/undertide-bank.png` | 恶猫钱庄具体场景（已就位；从井下总览点恶猫钱庄进入，只看景，可返回井下地图） | 1024×1536 |
+| `scenes/undertide-bank.png` | 恶猫钱庄具体场景（已就位；从井下总览点恶猫钱庄进入，可查账、借还、存取，返回井下地图） | 1024×1536 |
 | `scenes/undertide-bounty.png` | 恩怨墙具体场景（已就位；从井下总览点恩怨墙进入，只看景，可返回井下地图） | 1024×1536 |
 | `scenes/undertide-medic.png` | 晏安医务间具体场景（已就位；从井下总览点晏安医务间进入，只看景，可返回井下地图） | 1024×1536 |
-| `scenes/undertide-casino.png` | 死人赌场具体场景（已就位；从井下总览点死人赌场进入，Silas 会出现在场景左侧） | 1024×1536 |
+| `scenes/undertide-casino.png` | 死人赌场具体场景（已就位；从井下总览点死人赌场进入，Silas 会出现在场景左侧，可玩骰/灯/抽牌） | 1024×1536 |
 | `sprites/cat-bank-president.png` | 恶猫钱庄行长立绘（透明底；钱庄场景使用） | 1024×1536 |
 | `sprites/silas.png` | Silas 荷官立绘（透明底；死人赌场场景使用） | 1024×1536 |
 
