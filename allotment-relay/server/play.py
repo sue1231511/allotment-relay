@@ -243,6 +243,10 @@ PLACES: list[dict[str, Any]] = [
         "week1": False,
         "actions": [
             {"label": "看集市", "note": "先看谁挂了什么", "tool": "tote_ops", "command": "market list"},
+            {"label": "去花房见默默", "note": "每日首次见面礼；手游集市里也能选花店", "tool": "visit_ops", "command": "默默"},
+            {"label": "今日花单茶单", "note": "只看不领礼、不消费", "tool": "visit_ops", "command": "默默 scan"},
+            {"label": "听花语", "note": "每日首次免费，再听5票", "tool": "visit_ops", "command": "默默 花语"},
+            {"label": "记熟客名", "note": "先打招呼，每日一次，7天得花房熟客称呼", "tool": "visit_ops", "command": "默默 记名"},
             {"label": "交换台", "note": "白送与领取", "tool": "tote_ops", "command": "swap list"},
         ],
     },

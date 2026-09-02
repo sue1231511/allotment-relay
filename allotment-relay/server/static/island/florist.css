@@ -1,0 +1,13 @@
+/* 半身原图完整摆在柜台左侧；沿用岛上对话样式，不弹交易窗。 */
+.island-florist .island-vn-stand {
+  left: 1%; right: auto; bottom: 23%; width: 66%; height: 53%;
+  overflow: hidden; pointer-events: none;
+}
+.island-florist .island-vn-sprite {
+  position: absolute; left: 0; bottom: 0; width: 100%; height: 100%;
+  max-width: none; object-fit: contain; object-position: left bottom; transform: none;
+}
+.island-florist .island-vn-line { white-space: pre-line; max-height: 28vh; overflow-y: auto; }
+.island-florist .island-vn-choices { max-height: 43vh; overscroll-behavior: contain; }
+.island-florist .island-vn-choice:disabled { opacity: .55; }
+.island-florist .island-vn-choice b { white-space: normal; }

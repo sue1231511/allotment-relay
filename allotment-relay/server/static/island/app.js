@@ -1,4 +1,6 @@
-import { api, loadKey } from "./api.js?v=dates2";
+import { api, loadKey } from "./api.js?v=flowers1";
+import { renderMarketHub } from "./scenes/market-hub.js?v=flowers1";
+import { renderFlorist } from "./scenes/florist.js?v=flowers1";
 import { mountDates, dateSceneChanged, resetDates } from "./ui/companion-date.js?v=dates2";
 import {
   applySnapshot,
@@ -116,6 +118,9 @@ function showPlay() {
 
 function showGate() {
   resetDates();
+  state.florist = null;
+  state.floristMeet = false;
+  floristRetry = null;
   clearTimeout(bgmStartTimer);
   stopBgm();
   paintBgmChip(false);
@@ -343,6 +348,26 @@ async function enterScene(name, opts) {
       stopGrowTick();
       stopWorkshopTick();
       stopQuarryTick();
+      state.backTo = "map";
+      setBackChip(true, () => enterScene("map"));
+      renderMarketHub(root, { onOpen: (place) => {
+        state.backTo = "market";
+        enterScene(place);
+      } });
+    } else if (name === "florist") {
+      stopGrowTick();
+      stopWorkshopTick();
+      stopQuarryTick();
+      state.backTo = "market";
+      setBackChip(true, () => enterScene("market"));
+      state.floristMeet = false;
+      await openFlorist();
+    } else if (name === "market_stalls") {
+      stopGrowTick();
+      stopWorkshopTick();
+      stopQuarryTick();
+      state.backTo = "market";
+      setBackChip(true, () => enterScene("market"));
       state.marketShelf = false;
       await openMarket(root);
     } else if (name === "ting") {
@@ -435,6 +460,8 @@ const PLACE_TITLES = {
   hall: "剧场看台",
   eatery: "岸畔小馆",
   market: "集市",
+  market_stalls: "集市摊位",
+  florist: "默语花房",
   ting: "听潮亭",
   lianli: "连理所",
   hui: "潮生会",
@@ -1555,6 +1582,64 @@ async function runEatery(kind, target) {
   const list = document.getElementById("island-eatery-list");
   const listTop = list ? list.scrollTop : 0;
   await act(() => api.eateryAct(kind, target), { keepEatery: true, listTop, quiet: true });
+}
+
+let floristRetry = null;
+
+async function openFlorist() {
+  try {
+    const data = await api.florist();
+    if (state.scene !== "florist") return;
+    applySnapshot(data);
+    renderHud();
+  } catch (err) {
+    state.florist = { line: err.message || "花房暂时没连上，点对话重试打招呼。" };
+    state.floristMeet = true;
+  }
+  if (floristRetry) {
+    state.florist = { ...state.florist, pending: true, line: "上次的结果还没确认，点对话重试。不会重复扣款。" };
+    state.floristMeet = true;
+  }
+  if (state.scene === "florist") paintFlorist();
+}
+
+function paintFlorist() {
+  renderFlorist(sceneEl(), {
+    onMeet: () => runFlorist("visit"),
+    onAct: runFlorist,
+  });
+}
+
+async function runFlorist(kind, target = "") {
+  if (state.busy) return;
+  if (kind === "retry") {
+    if (!floristRetry) return;
+    ({ kind, target } = floristRetry);
+  }
+  const request = floristRetry || { kind, target, idem: globalThis.crypto?.randomUUID?.() || `flower-${Date.now()}-${Math.random()}` };
+  const account = loadKey();
+  floristRetry = request;
+  state.busy = true;
+  state.floristMeet = true;
+  state.florist = { ...state.florist, line: "稍等，默默正在柜台后忙着…" };
+  paintFlorist();
+  try {
+    const data = await api.floristAct(request.kind, request.target, request.idem);
+    if (loadKey() !== account) return;
+    floristRetry = null;
+    applySnapshot(data);
+    state.florist.line = data.event?.narrative || "好了。";
+    renderHud();
+  } catch (err) {
+    if (loadKey() !== account) return;
+    const uncertain = ["NETWORK", "TIMEOUT", "BAD_RESPONSE"].includes(err.code) || err.status >= 500;
+    if (!uncertain) floristRetry = null;
+    state.florist = { ...state.florist, pending: uncertain,
+      line: uncertain ? "刚才的结果还没确认。点对话重试同一笔，不会重复扣款。" : (err.message || "这次没做成。") };
+  } finally {
+    state.busy = false;
+    if (state.scene === "florist" && loadKey() === account) paintFlorist();
+  }
 }
 
 async function openMarket() {
@@ -2749,7 +2834,7 @@ async function act(fn, { refreshScene = false, keepPlant = false, keepTab = fals
       paintEatery(listTop);
       return;
     }
-    if (keepMarket && state.scene === "market") {
+    if (keepMarket && state.scene === "market_stalls") {
       paintMarket(listTop);
       return;
     }

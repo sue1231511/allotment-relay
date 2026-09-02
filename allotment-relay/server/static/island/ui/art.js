@@ -24,6 +24,7 @@ export const SLOTS = {
   eatery: { label: "岸畔小馆", size: "941×1672" },
   hui: { label: "潮生会", size: "941×1672" },
   market: { label: "集市", size: "941×1672" },
+  florist: { label: "默语花房", size: "941×1672", noWebp: true },
   ting: { label: "听潮亭", size: "941×1672" },
   lianli: { label: "连理所", size: "941×1672" },
   workshop: { label: "岸工坊", size: "941×1672" },
@@ -48,7 +49,7 @@ export function sceneArt(id) {
   const meta = SLOTS[id] || { label: id, size: "1080×1920" };
   return `<div class="island-slot" data-slot="${id}">
     <picture class="island-slot-picture">
-      <source srcset="${sceneWebpUrl(id)}" type="image/webp">
+      ${meta.noWebp ? "" : `<source srcset="${sceneWebpUrl(id)}" type="image/webp">`}
       <img class="island-slot-pic" src="${scenePicUrl(id)}" alt="" decoding="async" onerror="this.closest('.island-slot').classList.add('is-empty')">
     </picture>
     <span class="island-slot-mark"><b>插图位</b><small>${meta.label} · ${meta.size}</small></span>

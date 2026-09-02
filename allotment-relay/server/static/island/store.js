@@ -76,6 +76,8 @@ export const state = {
   market: null,
   marketTab: "board",
   marketShelf: false,
+  florist: null,
+  floristMeet: false,
   ting: null,
   tingTab: "ask",
   tingShelf: false,
@@ -125,6 +127,7 @@ export function applySnapshot(data) {
     }
   }
   if (data.shop) state.shop = data.shop;
+  if (data.florist) state.florist = data.florist;
   if (data.workshop) state.workshop = data.workshop;
   if (data.quarry) state.quarry = data.quarry;
   if (data.bar) state.bar = data.bar;

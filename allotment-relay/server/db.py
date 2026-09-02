@@ -227,6 +227,25 @@ CREATE TABLE IF NOT EXISTS marriage_events (
     game_day INTEGER NOT NULL
 );
 
+-- 花房每日互动与消费回执；回执不受其他接口的短期清理影响。
+CREATE TABLE IF NOT EXISTS steward_florist (
+    steward_id INTEGER PRIMARY KEY REFERENCES stewards(id),
+    visit_day INTEGER NOT NULL DEFAULT -1,
+    language_day INTEGER NOT NULL DEFAULT -1,
+    stamp_day INTEGER NOT NULL DEFAULT -1,
+    stamps INTEGER NOT NULL DEFAULT 0,
+    line_seq INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS florist_receipts (
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    idem_key TEXT NOT NULL,
+    command TEXT NOT NULL,
+    narrative TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    PRIMARY KEY (steward_id, idem_key)
+);
+
 -- 可反复的 AI / 人类共同出游；只记经历，不发放可交易资源。
 CREATE TABLE IF NOT EXISTS companion_dates (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

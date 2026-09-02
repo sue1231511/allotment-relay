@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import re
+from .florist_catalog import FLORIST_ITEMS
 CROPS = {
     # ── 短茬（约 1 时，把数多）──
     "kale":        {"name": "羽衣甘蓝", "emoji": "🥬", "seed_price": 7,  "sell": 16, "grow":  60, "yield": 5, "tier": 1, "spread": 0.30, "tags": ["leaf"], "aliases": ["甘蓝", "羽衣"]},
@@ -1398,6 +1399,10 @@ NPC_FIXED = [
         "clinic dove 喂 斑鸠（雾豌豆×1）；clinic chat 闲聊；clinic catalog 价目",
         "visit_ops visit 只能聊天，真治得 visit_ops clinic treat",
     ]},
+    {"key": "momo", "name": "默默", "lines": [
+        "默语花房在集市旁，鲜花与花茶每日迎客。",
+        "visit_ops 默默 scan 看花单；默默 买花 玫瑰；默默 花茶 玫瑰花茶。",
+    ]},
     {"key": "lili", "name": "栗栗", "lines": [
         "潮汐游商。滩头喊栗栗，驮包兽铃鹿、护摊犬夜栖。",
         "贝壳按品相收：亮壳硬通货，糙壳凑一把可换乱捡款。",
@@ -1592,7 +1597,9 @@ for k, v in LILI_DECOR.items():
 for k, v in LILI_JUNK_DECOR.items():
     ITEM_PRICES[f"deco_junk_{k}"] = 0
 
+ITEM_PRICES.update({k: v["sell"] for k, v in FLORIST_ITEMS.items()})
 ITEM_NAMES = {f"seed_{k}": f"{v['name']}种" for k, v in CROPS.items()}
+ITEM_NAMES.update({k: v["name"] for k, v in FLORIST_ITEMS.items()})
 ITEM_NAMES.update({f"crop_{k}": v["name"] for k, v in CROPS.items()})
 ITEM_NAMES.update({f"fish_{k}": v["name"] for k, v in SEA_CATCH.items()})
 ITEM_NAMES.update({

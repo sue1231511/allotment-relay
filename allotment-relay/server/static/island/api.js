@@ -70,6 +70,8 @@ async function req(path, { method = "GET", body, idem } = {}) {
 }
 
 export const api = {
+  florist: () => req("/api/v1/florist"),
+  floristAct: (kind, target = "", idem) => req("/api/v1/florist/act", { method: "POST", body: { kind, target }, idem }),
   dates: () => req("/api/v1/dates"),
   dateRespond: (date_id, scene, accept) => req("/api/v1/dates/respond", { method: "POST", body: { date_id, scene, accept } }),
   session: (apiKey, name = "") => req("/api/v1/session", { method: "POST", body: { api_key: apiKey, name } }),

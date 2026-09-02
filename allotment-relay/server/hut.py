@@ -8,6 +8,7 @@ from typing import Any
 import aiosqlite
 
 from . import config, db, flavor
+from .florist_catalog import FLORIST_DECOR
 from .catalog import (
     CROPS,
     HUT_HARD,
@@ -90,6 +91,9 @@ COMPOST_BIN_USAGE = (
 
 
 def _resolve_fitting_key(token: str) -> str:
+    for key, meta in FLORIST_DECOR.items():
+        if token in (key, f"deco_{key}", meta["name"]):
+            return key
     raw = (token or "").strip()
     low = raw.lower()
     if raw in FIT_ALIASES:
@@ -438,6 +442,10 @@ def furniture_sell_quote(cost: int, installed_at: int | None, now: int | None = 
 
 def _fitting_value(key: str) -> dict[str, Any]:
     raw = key or ""
+    flower_key = raw.removeprefix("deco_")
+    if flower_key in FLORIST_DECOR:
+        meta = FLORIST_DECOR[flower_key]
+        return {"name": meta["name"], "cost": meta["sell"], "junk": False}
     if raw.startswith("deco_junk_") or raw in LILI_JUNK_DECOR:
         jk = raw.replace("deco_junk_", "") if raw.startswith("deco_junk_") else raw
         meta = LILI_JUNK_DECOR.get(jk, {})
@@ -1541,14 +1549,15 @@ async def hut_ops(key_id: int, command: str) -> str:
         if slot not in hard_slots + soft_slots:
             raise ValueError(f"无效槽位，可用: {', '.join(hard_slots + soft_slots)}")
 
-        if key in LILI_DECOR:
+        if key in LILI_DECOR or key in FLORIST_DECOR:
             if not slot.startswith("soft"):
-                raise ValueError("栗栗稀有装饰只能装 soft 槽")
-            deco_meta = LILI_DECOR[key]
+                raise ValueError("装饰只能装 soft 槽")
+            deco_meta = (FLORIST_DECOR if key in FLORIST_DECOR else LILI_DECOR)[key]
             deco_item = f"deco_{key}"
             async with db.connect() as conn:
                 if not await db.take_item(conn, s["id"], deco_item, 1):
-                    raise ValueError(f"行囊没有 {deco_meta['name']}，先 visit_ops lili trade")
+                    source = "visit_ops 默默 干花 花名（首次自动挂空槽）" if key in FLORIST_DECOR else "visit_ops lili trade"
+                    raise ValueError(f"行囊没有 {deco_meta['name']}，先 {source}")
                 old = await _fittings(conn, s["id"])
                 dumped = 0
                 if slot in old:

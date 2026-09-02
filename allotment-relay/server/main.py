@@ -12,6 +12,7 @@ from .config import STATIC_DIR, TEMPLATES_DIR
 from .mcp_app import build_mcp_app
 from .v1.router import router as island_v1_router
 from .v1.date_routes import router as date_router
+from .v1.florist_routes import router as florist_router
 
 import aiosqlite
 
@@ -66,6 +67,7 @@ app = FastAPI(
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 app.include_router(island_v1_router)
 app.include_router(date_router)
+app.include_router(florist_router)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 app.mount("/mcp", mcp_starlette)
 

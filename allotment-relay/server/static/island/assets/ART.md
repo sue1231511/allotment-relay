@@ -43,7 +43,7 @@
 | `scenes/hall.png` | 剧场看台（已就位；先进看台景，点一下才出人小橘，半身立绘对话，小橘站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗，能应援、打赏、点歌、围观，专场才试镜、对戏、演出、领薪） | 941×1672 |
 | `scenes/eatery.png` | 岸畔小馆（已就位；先进店景，点一下才出菜单） | 941×1672 |
 | `scenes/hui.png` | 潮生会（已就位） | 941×1672 |
-| `scenes/market.png` | 集市（已就位；先进店景，点一下才出摊位列表，能看街摊、买、挂货、下架、扩摊） | 941×1672 |
+| `scenes/market.png` | 集市（已就位；总览进入先选集市 / 花店地名；选集市再进店景，点一下才出摊位列表，能看街摊、买、挂货、下架、扩摊） | 941×1672 |
 | `scenes/ting.png` | 听潮亭（已就位） | 941×1672 |
 | `scenes/lianli.png` | 连理所（已就位） | 941×1672 |
 | `scenes/workshop.png` | 岸工坊（已就位；总览点进去先看店景，点一下才出列表；能打钉、灌盐、打捞；缺料也能点开看去哪弄。广场上的工坊位已改成乔乔诊所） | 941×1672 |
@@ -59,3 +59,18 @@
 | `crops/{key}.png` | 作物图，按 catalog 英文 id | 256×256 |
 
 参考原图可以放 `_src/`，运行时不读。
+
+## 默语花房（2026-09-02）
+
+使用内置 image_gen 分别生成，下列 PNG 是复制到仓库的原始输出，未另行裁切或抠图。可独立替换，不改变集市总览入口。
+
+- `scenes/florist.png`：941×1672，店内背景；花草、香茅姜串、花茶罐，无人物。
+- `sprites/momo.png`：1157×1360，默默半身立绘，RGBA 透明底；左侧柜台叠加。
+
+背景完整提示词：
+
+> Use case: stylized-concept. Asset type: portrait background for a cozy Chinese coastal life-simulation mobile game. Generate ONE background image, 9:16 portrait composition, warm finely detailed watercolor and gouache storybook illustration with delicate hand-drawn texture, soft turquoise daylight and natural wood, matching a gentle seaside village. Interior of a small flower shop, no people: overflowing fresh flowers in simple buckets, potted herbs, bundles of dried lemongrass and ginger hanging from wood beams, a row of flower-tea glass jars behind a wooden counter. The counter runs across the lower-middle area, leaving a clear space on its left for an adult shopkeeper sprite to be overlaid later, and the bottom quarter can sit behind a game dialogue panel. Through a side window a hint of the coastal market outside. Cozy, lived-in, not extravagant. No lettering, no logo, no UI, no watermark. Complete frame, no blank margins.
+
+立绘完整提示词：
+
+> Use case: stylized-concept. Asset type: one transparent PNG NPC sprite for a cozy seaside mobile life simulation. Subject: 默默, an unmistakably adult florist around 30, gentle and androgynous appearance, dark brown hair loosely tied back, cream linen shirt with rolled sleeves and a muted green florist apron, holding a small wrapped bouquet with relaxed natural hands, welcoming reserved smile, looking toward the viewer. Style: refined hand-drawn watercolor storybook game character, fine warm outlines, delicate watercolor paper shading, compatible with soft coastal village illustrations. Framing: head to waist only, full head and both shoulders visible with padding, upper body centered, intended to overlay at the left of a shop counter; not a full-body figure, no legs, no chibi proportions. GENUINELY TRANSPARENT alpha background with clean edges, no checkerboard illustration, no environment, no text, no watermark, no props outside the held bouquet.

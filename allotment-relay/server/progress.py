@@ -316,7 +316,15 @@ async def _check_same_tide(conn: aiosqlite.Connection, s: dict[str, Any]) -> boo
     )
 
 
+async def _check_florist_regular(conn, s: dict[str, Any]) -> bool:
+    return await _exists(conn, "SELECT 1 FROM steward_florist WHERE steward_id=? AND stamps>=7", s["id"])
+
+
 ACHIEVEMENTS: dict[str, dict[str, Any]] = {
+    "florist_regular": {
+        "name": "花房熟客", "hint": "在默语花房累计7个游戏日记名", "aliases": (),
+        "check": _check_florist_regular,
+    },
     "sower": {
         "name": "播手",
         "hint": "份地上播过种",

@@ -121,6 +121,7 @@ PLOT_HELP = """plot_ops 子命令（整句写进 command）：
   人类看地在 /play（份地全景点种地会滚到份地栏）；/island 总览点份地先进份地景，点一下看地才出格子；点空地打开种植面板，种植面板只出背包里有的种，没有买一份，没种子去广场杂货铺买；/allotments 只围观（顶上管理员/在线是全岛人数）。婚期顶栏进连理所不是份地丢了"""
 
 HUT_HELP = """hut_ops 子命令（整句写进 command）：
+  花房干花：visit_ops 默默 干花 玫瑰 耗鲜花+28票，自动挂空软装槽，不覆盖家具；纯装饰。替换回行囊后 install soft_1 flower_rose 可重挂；卖掉 soft_1 先看折旧报价
   status / build / upgrade / catalog / buy / install — 岸畔小屋。欠岸税或岸维时不能 upgrade，先 visit_ops 潮生会 税 交 或 维 交
   人类 /island 总览点小屋：没买房看不见棚屋场景，点进去搭棚屋（和 hut_ops build 同一笔）；搭好后按等级换景（Lv1 棚屋 / Lv2 岸畔小屋 / Lv3 联盟小宅 / Lv4 临海邸）。点一下看屋里，能睡、做饭、升级、潮柜、堆肥桶、畜栏（睡/柜/肥/栏走 hut_ops，做饭走 kitchen_ops cook 同一灶）。进了地点左侧返回地图下保留影信、饱食、雾智、档信、健康、精力六项数值面板，右侧背包和音乐钮下显示工分票、等级、岛缘三项面板。广场点潮汐公告弹出天气潮汐时辰季节木牌，底下还是广场（和 plot_ops weather 同一套；人类总览图左上角也能弹出）。
   upgrade — 一档一档升。求婚发出前必须升到最高档（现在是 Lv4 临海邸），光 build 不够。例子：hut_ops upgrade
@@ -172,7 +173,7 @@ TOTE_HELP = """tote_ops 子命令（整句写进 command）：
   swap offer|claim|list|cancel — 交换台（白送，领取 3 票手续费）
   market list|sell|buy|price|mine|cancel — 玩家集市。可叠放货满一组会开下一组
   market 扩 [数量] — 加摆摊格（15票/格，基础6格，顶12格）
-  人类 /island 总览点集市，点一下看摊，能买、挂货、下架、扩摊（和 tote_ops market 同一套）"""
+  人类 /island 总览点集市，先选「集市 / 花店」地名，选集市再点一下看摊，能买、挂货、下架、扩摊（和 tote_ops market 同一套）"""
 
 QUARRY_HELP = """quarry_ops 子命令（整句写进 command）：
   盐风崖潮脉矿。迎风崖上的矿脉随潮汐显隐：涨潮出盐、退潮出铁、海雾出稀有。
@@ -229,6 +230,11 @@ ALLIANCE_HELP = """alliance_ops 子命令（整句写进 command）：
   bottle leave|fish|scan|read — 漂流瓶"""
 
 VISIT_HELP = """visit_ops 子命令（整句写进 command）：
+  默默 / 花店 / momo — 默语花房，空子命令进店打招呼；每日首次送当季花（档信+1）或试饮（精力+3/雾智+1），只看 scan 不领奖
+  默默 scan / 默默 花语 / 默默 买花 玫瑰 — 每日轮换花单，花语首次免费之后5票；鲜花48～88票，种地/赶海域最多减8票；不是种子
+  默默 花茶 玫瑰花茶 / 默默 花茶 玫瑰花茶包 / 默默 花茶 冲泡 玫瑰花茶包 — 现煮当场喝38票+10精力/+2雾智；桂花姜茶48票+14/+2，菊花香茅茶28票+8/+1；茶包便宜8票，冲泡耗包不另收费，受属性上限限制
+  默默 记名 / 默默 干花 玫瑰 / 默默 告别 / 默默 help — 打过招呼每日记一次，7天得称呼「花房熟客」；鲜花一枝+28票自动挂小屋空软装槽，无房/满槽不扣，不覆盖家具，无属性；告别不收费
+  花房UTC午夜刷新。人类 /island 总览点集市，再选地名「集市 / 花店」；花店点场景见默默，再点对话出选项，回复留在框内。不是栗栗换货、玩家集市或约会导演；无 flower_ops，无赊账
   list / visit 名字 — 固定 NPC
   lili scan|trade 编号|summon 贝壳 — 栗栗流动摊。例子：lili summon shell_catseye。人类 /island 广场点栗栗流动摊，先进摊车特写，点一下才出人栗栗，半身立绘对话，栗栗站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗；能看货、换货、献壳唤摊、摸夜栖
   shaonian visit|fortune|transfer|buy 符名 — 韶年望潮人。人类 /island 总览点海边，进滩景再点海边，点海边就出列表，两个选项去见韶年和去赶海；去见韶年才出人韶年，半身立绘对话，韶年站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗；能卜卦、转运、买符
@@ -495,12 +501,16 @@ async def alliance_bundle(key_id: int, command: str = "") -> str:
 
 
 async def visit_bundle(key_id: int, command: str = "") -> str:
-    from . import buxing, chaoshen, clinic, cloth, jingshan, lili, lore_ops as lore_mod, marriage, musong, npc, shaonian, tt
+    from . import buxing, chaoshen, clinic, cloth, florist, jingshan, lili, lore_ops as lore_mod, marriage, musong, npc, shaonian, tt
 
     return await route(
         key_id,
         command,
         table={
+            "默默": (florist.florist_ops, "visit"),
+            "花店": (florist.florist_ops, "visit"),
+            "默语花房": (florist.florist_ops, "visit"),
+            "momo": (florist.florist_ops, "visit"),
             "lili": (lili.lili_ops, "scan"),
             "栗栗": (lili.lili_ops, "scan"),
             "shaonian": (shaonian.shaonian_ops, "visit"),
