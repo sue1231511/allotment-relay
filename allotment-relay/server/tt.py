@@ -262,17 +262,47 @@ def resolve_shop_item(token: str) -> str | None:
     return None
 
 
+def _token_wants_seed(token: str) -> bool:
+    """写「姜种」/seed_ginger 才认种子；单写「姜」/ginger 是调味料作物。"""
+    raw = (token or "").strip()
+    if not raw:
+        return False
+    low = raw.lower().replace(" ", "_")
+    if low.startswith("seed_"):
+        return True
+    if raw.endswith("种子") or raw.endswith("种"):
+        return True
+    if low.endswith("_seed") or low.endswith("seed"):
+        return True
+    return False
+
+
 async def _resolve_owned_item(
     conn: aiosqlite.Connection, steward_id: int, token: str
 ) -> str | None:
-    """送礼认行囊里实际有的：大蒜种优先 seed_garlic，而不是作物。"""
+    """送礼认行囊：写「姜」优先作物调味料；写「姜种」/seed_ 才认种子。
+
+    旧逻辑先走店货解析（prefer seed），行囊里同时有姜和姜种时会误送种子。
+    """
+    raw = (token or "").strip()
+    if not raw:
+        return None
     keys: list[str] = []
-    for k in (
-        resolve_shop_item(token),
-        resolve_item_key(token, prefer="seed"),
-        resolve_item_key(token, prefer="crop"),
-        resolve_item_key(token),
-    ):
+    if _token_wants_seed(raw):
+        candidates = (
+            resolve_item_key(raw, prefer="seed"),
+            resolve_shop_item(raw),
+            resolve_item_key(raw),
+        )
+    else:
+        # 不先走 resolve_shop_item：店货会把「姜」收成姜种
+        candidates = (
+            resolve_item_key(raw, prefer="crop"),
+            resolve_item_key(raw),
+            resolve_shop_item(raw),
+            resolve_item_key(raw, prefer="seed"),
+        )
+    for k in candidates:
         if k and k not in keys:
             keys.append(k)
     for k in keys:
@@ -574,6 +604,7 @@ def _catalog_text(score: int) -> str:
     lines.append("系统回收进价九成（退货少亏一成），别反复倒卖当正业")
     lines.append("可叠放货满一组会开下一组（MC 式；工具只能 1）")
     lines.append("送礼一次一笔，件数不叠；4 心起减半，8 心起更慢")
+    lines.append("gift 姜 / 大蒜 = 调味料作物；gift 姜种 / 大蒜种 = 种子（别混）")
     return "\n".join(lines).rstrip()
 
 
@@ -591,6 +622,8 @@ async def tt_ops(key_id: int, command: str) -> str:
             "  货架货系统回收进价九成，退货少亏一点，别买了再 tote_ops vend 当印钞\n"
             "    可叠放货满一组会开下一组；工具只能 1。潮柜格满了先 vend 或 hut_ops 冰柜 取\n"
             "  gift 物品 [数量] — 送礼（一次一笔，每日最多 3 次；4 心减半，8 心更慢）\n"
+            "    写「姜」「大蒜」「辣椒」送的是收成的调味料作物，不是种子；爱吃大蒜/辣椒/姜/榴莲\n"
+            "    要送种子必须写「姜种」「大蒜种」或 seed_ginger。例：gift 姜 · gift 姜种 1 · gift 票 12\n"
             "  visit — 聊天；每日首次进店 10% 她心情好送礼\n"
             "  人类手机地图：进广场点杂货铺，先看店景；再点一下，Tt酱半身立绘和货架一起出现"
         )
@@ -705,7 +738,10 @@ async def tt_ops(key_id: int, command: str) -> str:
 
     if verb in ("gift", "送礼"):
         if len(parts) < 2:
-            raise ValueError("用法: visit_ops tt gift 大蒜  或 gift 票 12")
+            raise ValueError(
+                "用法: visit_ops tt gift 姜  或 gift 姜种 1  或 gift 票 12"
+                "（姜=调味料作物，姜种=种子；别把调味料写成种子）"
+            )
         qty = 1
         name_toks = parts[1:]
         if name_toks[-1].isdigit():
