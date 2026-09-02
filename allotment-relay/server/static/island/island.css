@@ -1274,6 +1274,8 @@ body.island-app.is-playing.is-yards .island-actionbar {
   left: 0;
   right: 0;
   bottom: calc(30% - 24px);
+  /* 在上次位置基础上，再向下移动立绘显示区域自身高度的一半。 */
+  transform: translateY(50%);
   z-index: 1;
   height: 58%;
   overflow: hidden;

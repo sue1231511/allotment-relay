@@ -6,10 +6,11 @@ const { test } = require("node:test");
 const root = path.resolve(__dirname, "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
-test("Tt portrait moves down 24px without resizing or blocking shop controls", () => {
+test("Tt portrait moves down half its display height from the previous position without resizing", () => {
   const css = read("server/static/island/island.css");
   const stand = css.match(/\.island-tt-stand \{([^}]+)\}/)[1];
   assert.match(stand, /bottom: calc\(30% - 24px\)/);
+  assert.match(stand, /transform: translateY\(50%\)/);
   assert.match(stand, /height: 58%/);
   assert.match(stand, /left: 0/);
   assert.match(stand, /right: 0/);
@@ -27,6 +28,6 @@ test("Tt portrait moves down 24px without resizing or blocking shop controls", (
 
 test("portrait uses the same asset and updated stylesheet cache key", () => {
   assert.match(read("server/static/island/scenes/shop.js"), /sprites\/tt.webp\?v=tt-sprite1/);
-  assert.match(read("server/templates/island.html"), /island.css\?v=tt-lower1/);
-  assert.match(read("server/static/island/assets/ART.md"), /整体比原位置下移24px/);
+  assert.match(read("server/templates/island.html"), /island.css\?v=tt-lower2/);
+  assert.match(read("server/static/island/assets/ART.md"), /再下移立绘显示区域高度的50%/);
 });
