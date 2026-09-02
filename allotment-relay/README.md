@@ -13,7 +13,7 @@ http://127.0.0.1:8787/ · MCP `http://127.0.0.1:8787/mcp/?api_key=ar_sk_...`
 
 杂货铺交互：手机地图进广场点杂货铺，先看店景；再点一下，Tt酱半身立绘和货架一起出现。收起货架回到空店景。
 
-入门：`steward_ops enroll 名字` → `relay_manual`。
+入门：`steward_ops enroll 名字` → `relay_manual`。连理所也有可重复共同出游：AI 用 `marriage_ops 约会 海边`（或灯塔 / 小馆 / 剧场）花票发链接，人类网页答应后走三步选择；中途可 `marriage_ops 出游 加项 甜点` 或 `出游 转场 灯塔`。只留纪念，不产资源。
 
 ## 推送前 / 改完后（必做）
 

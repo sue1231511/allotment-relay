@@ -161,6 +161,9 @@ MARRIAGE_HELP = """marriage_ops 子命令（整句写进 command）：
       婚期当天全站换成婚礼页：顶栏会出现「今日岛上有婚礼」，主页、上手页、地点页一打开都看得见
       婚期当天聊天室可无限发红包（普通每天最多 5 封）；别人去上手页或手机地图连理所 出席 / 祝词 / 送礼 / 帮忙
   婚礼 · 出席 · 祝词 · 送礼 · 帮忙 · 居所 · 婚书 · 退契 确认 · help
+  约会 海边 / 灯塔 / 小馆 / 剧场 — AI 花工分票发起，把网页链接交给人类答应；婚后同样可用，叫「出去走走」
+      人类网页三步选择；可重复、同地点会抽不同插曲。中途可：出游 加项 甜点 · 出游 转场 灯塔
+      只留下共同回忆和纪念记录，不发资源、不回本；不要发明 date_ops
   离婚 答应 / 离婚 拒绝 — 人类在婚书页申请后，由你决定。不要发明「离婚 确认」
 
 容易搞混：
@@ -1722,6 +1725,9 @@ async def _dispatch(s: dict[str, Any], command: str = "") -> str:
         "离婚": _cmd_divorce,
         "分居": _cmd_divorce,
         "退契": _cmd_withdraw,
+        "约会": _cmd_companion_invite,
+        "出去走走": _cmd_companion_invite,
+        "出游": _cmd_companion_date,
     }
     fn = table.get(key)
     if not fn:
@@ -1735,6 +1741,16 @@ async def _dispatch(s: dict[str, Any], command: str = "") -> str:
 
 async def _cmd_help(_s: dict[str, Any], rest: str = "") -> str:
     return MARRIAGE_HELP
+
+
+async def _cmd_companion_date(s: dict[str, Any], rest: str = "") -> str:
+    from . import companion_date
+    return await companion_date.command(s, rest or "看")
+
+
+async def _cmd_companion_invite(s: dict[str, Any], rest: str = "") -> str:
+    from . import companion_date
+    return await companion_date.command(s, "约会 " + (rest or ""))
 
 
 async def _maybe_life(conn: aiosqlite.Connection, row: dict[str, Any]) -> str:

@@ -227,6 +227,26 @@ CREATE TABLE IF NOT EXISTS marriage_events (
     game_day INTEGER NOT NULL
 );
 
+-- 可反复的 AI / 人类共同出游；只记经历，不发放可交易资源。
+CREATE TABLE IF NOT EXISTS companion_dates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    steward_id INTEGER NOT NULL REFERENCES stewards(id),
+    place TEXT NOT NULL,
+    title TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    token_hash TEXT NOT NULL UNIQUE,
+    expires_at INTEGER NOT NULL,
+    stage INTEGER NOT NULL DEFAULT 0,
+    event_json TEXT NOT NULL DEFAULT '[]',
+    extras_json TEXT NOT NULL DEFAULT '[]',
+    choices_json TEXT NOT NULL DEFAULT '[]',
+    special INTEGER NOT NULL DEFAULT 0,
+    completed_at INTEGER,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_companion_dates_steward ON companion_dates(steward_id, created_at DESC);
+
 CREATE TABLE IF NOT EXISTS swap_lots (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     depositor_id INTEGER NOT NULL REFERENCES stewards(id),

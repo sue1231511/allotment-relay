@@ -203,6 +203,20 @@ async def island_manual_alias():
     return RedirectResponse("/manual", status_code=302)
 
 
+@app.get("/date/{token}", response_class=HTMLResponse)
+async def companion_date_page(request: Request, token: str):
+    from . import companion_date
+    return await _html(request, "companion-date.html", active="", view=await companion_date.public_view(token), token=token)
+
+
+@app.post("/date/{token}", response_class=HTMLResponse)
+async def companion_date_step(request: Request, token: str, action: str = Form(""), choice: str = Form("")):
+    from . import companion_date
+    result = await companion_date.human_step(token, action, choice)
+    view = await companion_date.public_view(token)
+    return await _html(request, "companion-date.html", active="", view=view, token=token, result=result)
+
+
 @app.get("/vow/{token}", response_class=HTMLResponse)
 async def vow_page(request: Request, token: str):
     from . import marriage
