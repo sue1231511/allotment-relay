@@ -4,6 +4,7 @@ import { esc, toast } from "./modal.js?v=island-modulefix2";
 let navigate, scene = "map", rows = [], timer = 0, loading = false, openId = 0, busy = false;
 let chip, panel, painted = "";
 let sessionEpoch = 0;
+let panelOpen = false, loaded = false, loadError = "";
 
 function matches(row) {
   return row.scene === scene || (row.scene === "shore" && scene === "beach") || (row.scene === "theater" && scene === "hall");
@@ -12,11 +13,9 @@ function matches(row) {
 export function mountDates(enterScene) {
   if (chip) return;
   navigate = enterScene;
-  chip = document.createElement("button");
-  chip.type = "button";
-  chip.id = "island-date-chip";
+  chip = document.getElementById("island-date-chip");
+  if (!chip) return;
   chip.hidden = true;
-  document.body.append(chip);
   panel = document.createElement("section");
   panel.id = "island-date-panel";
   panel.setAttribute("role", "dialog");
@@ -25,13 +24,20 @@ export function mountDates(enterScene) {
   panel.hidden = true;
   document.body.append(panel);
   chip.addEventListener("click", async () => {
-    const row = rows.find(d => ["pending", "active"].includes(d.status)) || rows[0];
-    if (!row) return;
-    if (row.status === "pending" && !matches(row)) await navigate(row.scene);
-    openId = row.id;
-    painted = "";
-    paint();
-    refresh();
+    if (chip.disabled || busy) return;
+    const epoch = sessionEpoch;
+    chip.disabled = true;
+    try {
+      const row = rows.find(d => ["pending", "active"].includes(d.status)) || rows[0];
+      if (row && row.status === "pending" && !matches(row)) await navigate(row.scene);
+      if (epoch !== sessionEpoch) return;
+      openId = row ? row.id : 0;
+      panelOpen = true;
+      painted = "";
+      paint();
+      refresh();
+    } catch (err) { toast(err.message || "约会面板暂时没能打开，请重试。"); }
+    finally { chip.disabled = false; }
   });
   panel.addEventListener("keydown", ev => {
     if (ev.key === "Escape" && !busy) close();
@@ -64,15 +70,18 @@ export function mountDates(enterScene) {
 }
 
 function close() {
+  panelOpen = false;
   openId = 0;
   panel.hidden = true;
+  chip.setAttribute("aria-expanded", "false");
   document.body.classList.remove("is-date-open");
   chip.focus();
 }
 
 export function dateSceneChanged(name) {
   scene = name;
-  if (openId) close();
+  if (panelOpen) close();
+  paint();
   refresh();
 }
 
@@ -80,8 +89,11 @@ export function resetDates() {
   sessionEpoch++;
   rows = [];
   openId = 0;
+  panelOpen = false;
+  loaded = false;
+  loadError = "";
   painted = "";
-  if (chip) chip.hidden = true;
+  if (chip) { chip.hidden = true; chip.setAttribute("aria-expanded", "false"); }
   if (panel) panel.hidden = true;
   document.body.classList.remove("is-date-open");
 }
@@ -101,13 +113,17 @@ async function refresh() {
       const data = await api.dates();
       if (epoch !== sessionEpoch) return;
       rows = data.dates || [];
+      loaded = true;
+      loadError = "";
       paint();
     }
   } catch (err) {
+    if (epoch !== sessionEpoch) return;
     if (err.status === 401 || err.status === 403) resetDates();
+    else { loadError = "暂时没能读取约会，请稍后刷新。"; paint(); }
     // 暂时断网不影响地图其他玩法；下次自动刷新。
   }
-  finally { loading = false; timer = setTimeout(refresh, openId ? 2500 : 10000); }
+  finally { loading = false; timer = setTimeout(refresh, panelOpen ? 2500 : 10000); }
 }
 
 function cardMarkup(card, choice) {
@@ -119,17 +135,26 @@ function cardMarkup(card, choice) {
 function paint() {
   if (!chip) return;
   const live = rows.find(d => ["pending", "active"].includes(d.status));
-  chip.hidden = !rows.length;
-  chip.textContent = live ? (live.status === "pending" ? `有约 · ${live.place}应邀` : `同行 · ${live.place} 第${live.seq}幕`) : "共同出游 · 回忆";
-  if (!openId || busy) return;
-  const row = rows.find(d => d.id === openId);
-  if (!row) { close(); return; }
-  const signature = JSON.stringify(row) + scene;
+  chip.hidden = !document.body.classList.contains("is-playing");
+  const label = live ? (live.status === "pending" ? `约会 · ${live.place}待应邀` : `约会 · ${live.place} 第${live.seq}幕`) : "约会 · 邀请与共同回忆";
+  chip.setAttribute("aria-label", label);
+  chip.title = label;
+  chip.querySelector(".island-date-badge").hidden = !live;
+  if (!panelOpen || busy || chip.hidden) return;
+  const row = rows.find(d => d.id === openId) || live || rows[0];
+  openId = row ? row.id : 0;
+  const signature = JSON.stringify({ row, loadError, loaded }) + scene;
   if (signature === painted) return;
   painted = signature;
-  const firstOpen = panel.hidden;
+  if (!row) {
+    showPanel(`<div class="date-paper"><header><small>TOGETHER · 约会</small><button type="button" data-date-close aria-label="收起共同出游">收起 ×</button></header>
+      <h2>约会 · 一起出去走走</h2><p role="status">${loadError ? esc(loadError) : loaded ? "还没有约会邀请或共同出游记录。" : "正在读取约会邀请与进度…"}</p>
+      <p>让岛民先发起地点约会，你再到对应地点应邀。之后在这里看旁白、特别事件和共同回忆，行动由岛民决定。</p>
+      <p class="date-receipt">打开面板和刷新不会发起约会、生成剧情或扣票。</p><button type="button" data-date-refresh>刷新旁白与进度</button></div>`);
+    return;
+  }
   const card = row.current;
-  panel.innerHTML = `<div class="date-paper"><header><small>TOGETHER · ${esc(row.status_label)}</small>
+  showPanel(`<div class="date-paper"><header><small>TOGETHER · ${esc(row.status_label)}</small>
     <button type="button" data-date-close aria-label="收起共同出游">收起 ×</button></header>
     <h2>${esc(row.kind_label)} · ${esc(row.place)}</h2>
     <p class="date-receipt">已花 ${row.total_spent} 工分票${row.special ? " · 婚礼周年纪念日" : ""}</p>
@@ -145,8 +170,14 @@ function paint() {
       ${card && card.options.length ? `<ul class="date-options">${card.options.map(o => `<li><b>${esc(o.label)}</b><small>${esc(o.name)} · ${o.cost} 票</small></li>`).join("")}</ul>` : ""}` : ""}
     ${!["pending", "active"].includes(row.status) ? `<p>这一程已记下。纪念不进背包，不产生可回本资源。</p>` : ""}
     <details class="date-archive"><summary>其他共同出游</summary>${rows.filter(d => d.id !== row.id).map(d => `<button type="button" data-date-open="${d.id}">${esc(d.title)} · ${esc(d.status_label)}</button>`).join("") || "还没有其他记录"}</details>
-    </div>`;
+    </div>`);
+}
+
+function showPanel(markup) {
+  const firstOpen = panel.hidden;
+  panel.innerHTML = markup;
   panel.hidden = false;
+  chip.setAttribute("aria-expanded", "true");
   document.body.classList.add("is-date-open");
   if (firstOpen) panel.querySelector("[data-date-close]").focus();
 }
