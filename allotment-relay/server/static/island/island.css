@@ -1273,7 +1273,7 @@ body.island-app.is-playing.is-yards .island-actionbar {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 30%;
+  bottom: calc(30% - 24px);
   z-index: 1;
   height: 58%;
   overflow: hidden;
