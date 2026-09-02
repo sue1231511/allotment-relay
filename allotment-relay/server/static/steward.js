@@ -21,7 +21,7 @@ function badgeLabel(key) {
   return BADGE_LABELS[key] || key || '—';
 }
 
-const MEMORY_KIND_LABELS = { tale: '潮闻', story: '故事', npc: '相遇' };
+const MEMORY_KIND_LABELS = { tale: '潮闻', story: '故事', npc: '相遇', date: '共同出游' };
 let memoryCatalog = [];
 let memoryFilter = 'all';
 let activeMemory = null;

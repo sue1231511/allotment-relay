@@ -38,3 +38,5 @@
 .manual-head-copy strong{font-family:Georgia,"Noto Serif SC",serif;font-size:17px;font-weight:500}
 .manual-page .wrap{padding-top:10px}
 @media(max-width:680px){.manual-page .wrap{padding-bottom:calc(80px + env(safe-area-inset-bottom,0px))}}
+/* 共同出游：明确票价，与实际地图玩法一致。 */
+.manual-date-prices { padding:16px; border-left:3px solid #b49a62; background:#f4efdF; line-height:1.9; }

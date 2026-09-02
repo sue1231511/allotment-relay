@@ -1,4 +1,5 @@
-import { api, loadKey } from "./api.js?v=island-modulefix2";
+import { api, loadKey } from "./api.js?v=dates2";
+import { mountDates, dateSceneChanged, resetDates } from "./ui/companion-date.js?v=dates2";
 import {
   applySnapshot,
   duesBlocked,
@@ -114,6 +115,7 @@ function showPlay() {
 }
 
 function showGate() {
+  resetDates();
   clearTimeout(bgmStartTimer);
   stopBgm();
   paintBgmChip(false);
@@ -167,6 +169,7 @@ async function bootFromServer() {
 async function enterScene(name, opts) {
   const quiet = !!(opts && opts.quiet);
   if (name === "home") name = "yards";
+  let datePlace = name;
   const gen = quiet ? enterGen : ++enterGen;
   if (!quiet) {
     showBootVeil("正在进入…");
@@ -409,6 +412,7 @@ async function enterScene(name, opts) {
     }
   } catch (err) {
     toast(err.message || "这处场景没能打开。");
+    datePlace = "map";
     state.backTo = "map";
     renderMap(root, {
       onOpen: (go) => {
@@ -418,6 +422,7 @@ async function enterScene(name, opts) {
     });
   } finally {
     if (!quiet && gen === enterGen) hideBootVeil();
+    if (!quiet && gen === enterGen) dateSceneChanged(datePlace);
   }
 }
 
@@ -2919,6 +2924,7 @@ async function startFromSnapshot(data, scene) {
 }
 
 function bindDock() {
+  mountDates(enterScene);
   bindBgmChip();
   const bag = document.getElementById("island-bag-chip");
   if (bag) bag.addEventListener("click", () => openTab("bag"));

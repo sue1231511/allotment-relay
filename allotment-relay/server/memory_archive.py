@@ -192,7 +192,20 @@ async def list_memories(
             ending="何敬山与苏月琴",
         ))
 
-    kind_order = {"tale": 0, "story": 1, "npc": 2}
+    from . import companion_date
+    date_rows = await (await conn.execute(
+        "SELECT * FROM companion_dates WHERE steward_id=? AND status IN ('completed','exited') ORDER BY id DESC",
+        (steward_id,),
+    )).fetchall()
+    for date in date_rows:
+        chapters = companion_date.archive_chapters(dict(date))
+        if not chapters:
+            continue
+        memories.append(_entry(kind="date", key=str(date["id"]), title=date["title"],
+            blurb=f"{date['place']}的一次共同出游，保存实际剧情与选择。", completed_at=date["completed_at"],
+            chapter_count=len(chapters), ending="完整纪念" if date["status"] == "completed" else "提前结束的纪念"))
+
+    kind_order = {"tale": 0, "story": 1, "npc": 2, "date": 3}
     memories.sort(key=lambda item: (-item["completed_at"], kind_order[item["kind"]], item["title"]))
     return memories
 
@@ -270,7 +283,19 @@ async def _load_review(
     souvenirs: list[dict[str, str]] = []
     notice = "回忆重映只读取已完成正文，不消耗精力，也不会重复发放任何奖励。"
 
-    if kind == "tale":
+    if kind == "date":
+        from . import companion_date
+        date = await (await conn.execute(
+            "SELECT * FROM companion_dates WHERE id=? AND steward_id=? AND status IN ('completed','exited')",
+            (key, steward_id),
+        )).fetchone()
+        if not date:
+            raise ValueError("这段共同出游尚未收入你的回忆。")
+        title = date["title"]
+        completed_at = date["completed_at"]
+        ending = "完整纪念" if date["status"] == "completed" else "提前结束的纪念"
+        chapters = companion_date.archive_chapters(dict(date))
+    elif kind == "tale":
         catalog = await tale._catalog(conn)
         item = catalog.get(key)
         done = await (await conn.execute(

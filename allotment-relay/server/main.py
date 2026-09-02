@@ -11,6 +11,7 @@ from . import db
 from .config import STATIC_DIR, TEMPLATES_DIR
 from .mcp_app import build_mcp_app
 from .v1.router import router as island_v1_router
+from .v1.date_routes import router as date_router
 
 import aiosqlite
 
@@ -64,6 +65,7 @@ app = FastAPI(
 )
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 app.include_router(island_v1_router)
+app.include_router(date_router)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 app.mount("/mcp", mcp_starlette)
 
@@ -205,16 +207,12 @@ async def island_manual_alias():
 
 @app.get("/date/{token}", response_class=HTMLResponse)
 async def companion_date_page(request: Request, token: str):
-    from . import companion_date
-    return await _html(request, "companion-date.html", active="", view=await companion_date.public_view(token), token=token)
+    return RedirectResponse("/island", status_code=303)
 
 
 @app.post("/date/{token}", response_class=HTMLResponse)
 async def companion_date_step(request: Request, token: str, action: str = Form(""), choice: str = Form("")):
-    from . import companion_date
-    result = await companion_date.human_step(token, action, choice)
-    view = await companion_date.public_view(token)
-    return await _html(request, "companion-date.html", active="", view=view, token=token, result=result)
+    return RedirectResponse("/island", status_code=303)
 
 
 @app.get("/vow/{token}", response_class=HTMLResponse)

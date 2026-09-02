@@ -1,127 +1,270 @@
-"""AI 发起、由人类网页共同完成的可重复出游。只消耗工分票并留下回忆。"""
+"""AI 邀约 → 人类地图应邀 → MCP 查看/选择/继续。数值由服务端控制。"""
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import random
 import secrets
 from typing import Any
 
-from . import db
+import aiosqlite
+
+from . import date_director, db, world
 
 PLACES = {
-    "海边": ("海边", 80, ["潮水忽然退得很远，露出一段只够两个人走的沙脊。", "一只小蟹把贝壳推到你们脚边，又飞快钻回沙里。"]),
-    "灯塔": ("灯塔", 100, ["灯火转过来时，影子在墙上短暂地碰到一起。", "守灯人留了一壶热茶，说今晚风会替人保守秘密。"]),
-    "小馆": ("岸畔小馆", 90, ["老板端来一碟没写进菜单的热菜，说刚好够两个人分。", "窗外落了点雨，碗里热气把玻璃蒙成了雾。"]),
-    "剧场": ("剧场", 120, ["空台上只剩一束追光，像在等一个临时起意的节目。", "后台翻出一张旧节目单，背面有人写着不完整的情诗。"]),
+    "海边": {"scene": "shore", "cost": 168, "seeds": ["退潮沙脊", "骤雨与共伞", "搁浅的纸船", "远岸烟火"]},
+    "灯塔": {"scene": "lighthouse", "cost": 198, "seeds": ["守灯人的旧照片", "雾中的汽笛", "一盏迟亮的灯", "台阶上的回声"]},
+    "小馆": {"scene": "eatery", "cost": 188, "seeds": ["窗边双人餐", "老板的私房菜单", "临时停电的烛光", "雨声与一道热菜"]},
+    "剧场": {"scene": "theater", "cost": 228, "seeds": ["谢幕后的空舞台", "临时加演", "旧节目单", "错拿的道具"]},
 }
-EXTRAS = {"甜点": 30, "拍照": 20, "夜航": 45, "花束": 35}
+ACTIONS = {
+    "stay": {"name": "不追加消费", "cost": 0},
+    "meal": {"name": "双人餐", "cost": 188},
+    "feast": {"name": "特别晚餐", "cost": 298},
+    "dessert": {"name": "甜点", "cost": 68},
+    "photo": {"name": "留影", "cost": 88},
+    "boat": {"name": "夜航", "cost": 268},
+    "flowers": {"name": "花束", "cost": 128},
+    **{f"go_{p}": {"name": f"转场·{p}", "cost": v["cost"], "place": p} for p, v in PLACES.items()},
+}
+STATUS = {"pending": "等人类应邀", "active": "正在出游", "completed": "已完成", "exited": "提前结束", "declined": "这次未应邀", "expired": "邀请已过期"}
 
-def _hash(token: str) -> str: return hashlib.sha256(token.encode()).hexdigest()
 
-def _url(token: str) -> str:
-    from .mcp_app import current_origin
-    base = (current_origin.get() or "").rstrip("/")
-    return f"{base}/date/{token}" if base else f"/date/{token}"
+def _dump(value: Any) -> str:
+    return json.dumps(value, ensure_ascii=False)
 
-async def _row(token: str) -> dict[str, Any] | None:
+
+async def _latest(conn: Any, sid: int, *, live: bool = False) -> dict | None:
+    conn.row_factory = aiosqlite.Row
+    clause = " AND (status='active' OR (status='pending' AND expires_at>?))" if live else ""
+    args = (sid, db.now()) if live else (sid,)
+    row = await (await conn.execute(f"SELECT * FROM companion_dates WHERE steward_id=?{clause} ORDER BY id DESC LIMIT 1", args)).fetchone()
+    return dict(row) if row else None
+
+
+def _state(row: dict) -> dict:
+    state = json.loads(row.get("state_json") or "{}")
+    if not state:
+        # 旧版已记录的文字原样保留，不编造旧选项。
+        state = {"history": [{"title": "旧出游记录", "narrative": text, "options": []}
+                             for text in json.loads(row.get("event_json") or "[]")], "seq": 0,
+                 "kind_label": "约会", "partner": "自己的人类", "seen": []}
+    return state
+
+
+def _view(row: dict) -> dict:
+    state = _state(row)
+    status = row["status"]
+    if status == "pending" and row["expires_at"] <= db.now():
+        status = "expired"
+    return {"id": row["id"], "place": row["place"], "scene": PLACES[row["place"]]["scene"],
+            "title": row["title"], "status": status, "status_label": STATUS.get(status, status),
+            "kind_label": state.get("kind_label", "约会"), "partner": state.get("partner", "自己的人类"),
+            "seq": state.get("seq", 0), "current": state.get("current"), "history": state.get("history", []),
+            "total_spent": row.get("total_spent", 0), "special": bool(row["special"]),
+            "note": state.get("note", ""), "generating": row.get("generating_until", 0) > db.now()}
+
+
+async def snapshot(sid: int) -> dict:
     async with db.connect() as conn:
-        conn.row_factory = __import__('aiosqlite').Row
-        row = await (await conn.execute("SELECT d.*, s.name FROM companion_dates d JOIN stewards s ON s.id=d.steward_id WHERE d.token_hash=?", (_hash(token),))).fetchone()
-        return dict(row) if row else None
+        conn.row_factory = aiosqlite.Row
+        rows = await (await conn.execute("SELECT * FROM companion_dates WHERE steward_id=? ORDER BY id DESC LIMIT 30", (sid,))).fetchall()
+    return {"ok": True, "dates": [_view(dict(row)) for row in rows]}
+
+
+def describe(view: dict) -> str:
+    text = [f"#{view['id']} {view['kind_label']}·{view['place']}｜{view['status_label']}｜已花 {view['total_spent']} 票"]
+    if view["status"] == "pending":
+        text.append(f"请人类打开 /island，到{view['place']}点「应邀」。AI 没有接受指令。")
+    elif view["status"] == "active":
+        card = view.get("current")
+        if card:
+            text.extend([f"第 {view['seq']} 幕 · {card['title']}（{card['kind']}）", card["narrative"]])
+            for o in card["options"]:
+                text.append(f"  {o['id']}：{o['label']}｜{o['name']} · {o['cost']} 票")
+        if view["generating"]:
+            text.append("导演正在生成本幕，请稍后「出游 查看」，不要重复请求。")
+        elif card and card["options"]:
+            text.append(f"有选项必须选择：marriage_ops 出游 选择 {view['seq']} A；也可 出游 退出。")
+        else:
+            text.append(f"无选项：marriage_ops 出游 继续 {view['seq']}；也可 出游 退出。")
+    else:
+        card = view.get("current")
+        if card:
+            text.extend([card["title"], card["narrative"]])
+        text.append("只留共同回忆，不产资源。可重新约会同一地点。")
+    return "\n".join(text)
+
+
+async def invite(sid: int, place: str, note: str = "") -> str:
+    if place not in PLACES:
+        raise ValueError("约会地点：海边 / 灯塔 / 小馆 / 剧场。例：marriage_ops 约会 小馆")
+    if len(note) > 240:
+        raise ValueError("邀请留言最多 240 字。")
+    date_director.settings()
+    cost, now = PLACES[place]["cost"], db.now()
+    async with db.connect() as conn:
+        await conn.execute("BEGIN IMMEDIATE")
+        active = await _latest(conn, sid, live=True)
+        if active:
+            return "已有一场未结束的出游，不会重复扣票。\n" + describe(_view(active))
+        marriage = await (await conn.execute("SELECT * FROM marriages WHERE steward_id=? ORDER BY id DESC LIMIT 1", (sid,))).fetchone()
+        married = bool(marriage and marriage["status"] == "married")
+        special = False
+        if married and marriage["wedding_at"] is not None:
+            # wedding_at 是游戏日序号，confirmed_at 是答应求婚的时间。
+            wedding = db.cst_dt(int(marriage["wedding_at"]) * 86400)
+            today = db.cst_dt(now)
+            special = today.year > wedding.year and today.strftime("%m-%d") == wedding.strftime("%m-%d")
+        state = {"seq": 0, "history": [], "seen": [], "note": note, "booking_place": place,
+                 "kind_label": "出去走走" if married else "约会",
+                 "partner": marriage["partner_name"] if marriage and marriage["status"] in ("draft", "proposed", "engaged", "married") else "自己的人类"}
+        cur = await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=? AND tickets>=?", (cost, sid, cost))
+        if cur.rowcount != 1:
+            raise ValueError(f"工分票不足，这次{place}需 {cost} 票。")
+        await conn.execute("INSERT INTO companion_dates(steward_id,place,title,token_hash,expires_at,state_json,special,total_spent,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)",
+                           (sid, place, place, hashlib.sha256(secrets.token_bytes(32)).hexdigest(), now + 7*86400, _dump(state), int(special), cost, now, now))
+        await conn.commit()
+    return f"已花 {cost} 票发起{state['kind_label']}·{place}。请人类打开 /island，到{place}点「应邀」。邀请7天有效，预订费不退。\n人类应邀后：出游 查看 → 出游 继续 0。"
+
+
+async def respond(sid: int, date_id: int, scene: str, *, accept: bool) -> dict:
+    """仅人类地图 API 调用；MCP 不提供接受/拒绝指令。"""
+    async with db.connect() as conn:
+        await conn.execute("BEGIN IMMEDIATE")
+        conn.row_factory = aiosqlite.Row
+        found = await (await conn.execute("SELECT * FROM companion_dates WHERE id=? AND steward_id=?", (date_id, sid))).fetchone()
+        if not found:
+            raise ValueError("找不到自己的这份邀请。")
+        row = dict(found)
+        expected = PLACES[row["place"]]["scene"]
+        permitted = {expected} | ({"beach"} if expected == "shore" else set()) | ({"hall"} if expected == "theater" else set())
+        if scene not in permitted:
+            raise ValueError(f"请先到地图里的{row['place']}应邀。")
+        if row["status"] == "pending":
+            if row["expires_at"] <= db.now():
+                raise ValueError("这份邀请已过期，请让岛民重新发起。")
+            await conn.execute("UPDATE companion_dates SET status=?,revision=revision+1,updated_at=? WHERE id=?", ("active" if accept else "declined", db.now(), date_id))
+            await conn.commit()
+        elif row["status"] not in ("active", "declined"):
+            raise ValueError("这场出游已经结束。")
+    return await snapshot(sid)
+
+
+async def advance(sid: int, seq: int, option: str = "") -> str:
+    now = db.now()
+    weather = world.climate_line()
+    async with db.connect() as conn:
+        await conn.execute("BEGIN IMMEDIATE")
+        row = await _latest(conn, sid, live=True)
+        if not row or row["status"] != "active":
+            raise ValueError("先由人类到手游对应地点应邀。")
+        state = _state(row)
+        if seq != state["seq"]:
+            return "该幕已处理或编号不符，没有再次扣票。\n" + describe(_view(row))
+        if row["generating_until"] > now:
+            return "导演正在生成，请稍后 出游 查看。"
+        current = state.get("current")
+        options = current.get("options", []) if current else []
+        chosen = next((o for o in options if o["id"] == option), None)
+        if options and not chosen:
+            raise ValueError(f"本幕有选项，请 出游 选择 {seq} A（按当前选项编号），不能直接继续。")
+        if option and not options:
+            raise ValueError(f"本幕没有选项，请 出游 继续 {seq}，或 出游 退出。")
+        cost = int(chosen["cost"]) if chosen else 0
+        steward = dict(await (await conn.execute("SELECT name,tickets FROM stewards WHERE id=?", (sid,))).fetchone())
+        if steward["tickets"] < cost:
+            raise ValueError(f"工分票不足，此选项要 {cost} 票。可以选免费选项或退出。")
+        place = chosen.get("place", row["place"]) if chosen else row["place"]
+        if current:
+            state["history"].append({**current, "choice": chosen, "place": row["place"]})
+        next_seq = seq + 1
+        seen = state.setdefault("seen", [])
+        pool = [v for v in PLACES[place]["seeds"] if f"{place}:{v}" not in seen] or PLACES[place]["seeds"]
+        seed = random.choice(pool)
+        seen.append(f"{place}:{seed}")
+        lease = now + 90
+        await conn.execute("UPDATE companion_dates SET generating_until=? WHERE id=?", (lease, row["id"]))
+        await conn.commit()
+    context = {"islander": steward["name"], "partner": state.get("partner"), "relationship": state.get("kind_label"),
+               "place": place, "scene_number": next_seq, "event_seed": seed, "special": bool(row["special"]),
+               "weather": weather, "invite_note": state.get("note", ""),
+               "booking": state.get("booking_place", row["place"]),
+               "prepaid_meal": state.get("booking_place") == "小馆",
+               "spent": row["total_spent"] + cost, "balance_after_choice": steward["tickets"] - cost,
+               "history": state["history"][-8:]}
+    try:
+        # 网络期间不占 SQLite 锁；失败保留原幕和余额。
+        card = await asyncio.wait_for(date_director.generate(context, ACTIONS, last=next_seq >= 8), timeout=45)
+        async with db.connect() as conn:
+            await conn.execute("BEGIN IMMEDIATE")
+            conn.row_factory = aiosqlite.Row
+            live = await (await conn.execute("SELECT status,revision,generating_until FROM companion_dates WHERE id=?", (row["id"],))).fetchone()
+            if not live or live["status"] != "active" or live["revision"] != row["revision"] or live["generating_until"] != lease:
+                raise ValueError("这场出游的状态已变化，本次生成未扣票，请重新查看。")
+            paid = await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=? AND tickets>=?", (cost, sid, cost))
+            if paid.rowcount != 1:
+                raise ValueError("工分票不足，本幕仍保留原来的选项。")
+            state.update(seq=next_seq, current=card)
+            done = card["kind"] == "ending"
+            await conn.execute("UPDATE companion_dates SET state_json=?,place=?,title=?,stage=?,status=?,completed_at=?,total_spent=total_spent+?,revision=revision+1,generating_until=0,updated_at=? WHERE id=?",
+                               (_dump(state), place, card["title"], next_seq, "completed" if done else "active", db.now() if done else None, cost, db.now(), row["id"]))
+            await conn.commit()
+    except BaseException as exc:
+        async with db.connect() as conn:
+            await conn.execute("UPDATE companion_dates SET generating_until=0 WHERE id=? AND revision=? AND generating_until=?", (row["id"], row["revision"], lease))
+            await conn.commit()
+        if isinstance(exc, TimeoutError):
+            raise ValueError("剧情导演超时，本次未推进、未扣选项费。重试原指令或退出。") from None
+        raise
+    async with db.connect() as conn:
+        conn.row_factory = aiosqlite.Row
+        updated = dict(await (await conn.execute("SELECT * FROM companion_dates WHERE id=? AND steward_id=?", (row["id"], sid))).fetchone())
+    return describe(_view(updated))
+
+
+async def leave(sid: int) -> str:
+    async with db.connect() as conn:
+        await conn.execute("BEGIN IMMEDIATE")
+        row = await _latest(conn, sid, live=True)
+        if not row:
+            return "没有未结束的出游。"
+        await conn.execute("UPDATE companion_dates SET status='exited',completed_at=?,revision=revision+1,generating_until=0,updated_at=? WHERE id=?", (db.now(), db.now(), row["id"]))
+        await conn.commit()
+    return "已结束这场出游。已发生的剧情和消费保留为纪念，已花票不退；没有资源奖励。"
+
 
 async def command(steward: dict[str, Any], rest: str) -> str:
-    bits = rest.strip().split()
-    if not bits or bits[0] in ("看", "状态", "status"):
+    verb, _, tail = rest.strip().partition(" ")
+    if verb in ("约会", "出去走走", "date", "发起"):
+        place, _, note = tail.partition("|")
+        return await invite(steward["id"], place.strip(), note.strip())
+    if not verb or verb in ("看", "查看", "进度", "状态", "status"):
         async with db.connect() as conn:
-            conn.row_factory = __import__('aiosqlite').Row
-            rows = await (await conn.execute("SELECT place,title,status,stage,created_at,completed_at FROM companion_dates WHERE steward_id=? ORDER BY id DESC LIMIT 6", (steward['id'],))).fetchall()
-        if not rows: return "还没有约会。写 marriage_ops 约会 海边 / 灯塔 / 小馆 / 剧场 发起；AI 先花票，人类打开链接答应。"
-        return "共同出游：\n" + "\n".join(f"  {r['title']}｜{r['status']}｜第{r['stage']}步" for r in rows)
-    action = bits[0]
-    if action in ("约会", "出去走走", "date", "发起"):
-        place = "".join(bits[1:])
-        if place not in PLACES: raise ValueError("地点写 海边 / 灯塔 / 小馆 / 剧场。例：marriage_ops 约会 海边")
-        title, cost, _ = PLACES[place]
-        tickets = int(steward.get('tickets') or 0)
-        if tickets < cost: raise ValueError(f"这次{title}要 {cost} 票，口袋不够。出游不产出可回本资源。")
-        now = db.now(); token = secrets.token_urlsafe(24)
-        anniversary = await _anniversary(steward['id'], now)
-        async with db.connect() as conn:
-            await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (cost, steward['id']))
-            await conn.execute("INSERT INTO companion_dates(steward_id,place,title,token_hash,expires_at,event_json,special,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)", (steward['id'], place, title, _hash(token), now+7*86400, json.dumps(["今天的日期和婚书上那天重合，岛上替你们留了一盏小灯。"], ensure_ascii=False) if anniversary else '[]', int(anniversary), now, now))
-            await db.add_chronicle('date_invite', f"{steward['name']} 留出 {title} 的一晚，等对方决定要不要一起去。", actor_id=steward['id'], conn=conn)
-            await conn.commit()
-        word = "出去走走" if await _married(steward['id']) else "约会"
-        special = " 今天是你们的纪念日，第一段会多一件特别插曲。" if anniversary else ""
-        return f"已花 {cost} 票发起{word}：{title}。把这个链接交给人类打开并答应（AI 不能代点）：{_url(token)}{special}\n答应后网页会走三步选择；中途你可写 marriage_ops 出游 加项 甜点，或 出游 转场 灯塔。"
-    if action == "加项":
-        return await _extra(steward, "".join(bits[1:]))
-    if action == "转场":
-        return await _transfer(steward, "".join(bits[1:]))
-    raise ValueError("出游指令：约会 海边｜看｜加项 甜点｜转场 灯塔。不要发明 date_ops。")
+            row = await _latest(conn, steward["id"], live=True) or await _latest(conn, steward["id"])
+        return describe(_view(row)) if row else "还没有共同出游。marriage_ops 约会 小馆 发起（188票含双人餐）。"
+    if verb in ("继续", "选择"):
+        args = tail.split()
+        if len(args) != (2 if verb == "选择" else 1) or not args[0].isdigit():
+            raise ValueError("请带当前幕号防止重复推进：出游 继续 0；有选项时 出游 选择 1 A。先 出游 查看。")
+        return await advance(steward["id"], int(args[0]), args[1].upper() if verb == "选择" else "")
+    if verb == "退出":
+        return await leave(steward["id"])
+    raise ValueError("出游：查看 · 选择 幕号 A · 继续 幕号 · 退出。人类只在地图应邀；加项和转场请选导演给出的选项。")
 
-async def _married(steward_id: int) -> bool:
-    async with db.connect() as conn:
-        row = await (await conn.execute("SELECT 1 FROM marriages WHERE steward_id=? AND status='married' LIMIT 1", (steward_id,))).fetchone()
-    return bool(row)
 
-async def _anniversary(steward_id: int, now: int) -> bool:
-    async with db.connect() as conn:
-        row = await (await conn.execute("SELECT confirmed_at FROM marriages WHERE steward_id=? AND status='married' LIMIT 1", (steward_id,))).fetchone()
-    if not row or not row[0]: return False
-    return db.cst_dt(int(row[0])).strftime('%m-%d') == db.cst_dt(now).strftime('%m-%d')
-
-async def _active(conn: Any, steward_id: int) -> Any:
-    return await (await conn.execute("SELECT * FROM companion_dates WHERE steward_id=? AND status='active' ORDER BY id DESC LIMIT 1", (steward_id,))).fetchone()
-
-async def _extra(s: dict[str, Any], item: str) -> str:
-    if item not in EXTRAS: raise ValueError("临时加项写 甜点 / 拍照 / 夜航 / 花束。")
-    async with db.connect() as conn:
-        row = await _active(conn, s['id'])
-        if not row: raise ValueError("没有正在进行的出游；人类先打开邀请链接答应。")
-        if int(s.get('tickets') or 0) < EXTRAS[item]: raise ValueError("口袋不够加这个项目。")
-        xs = json.loads(row['extras_json'] or '[]'); xs.append(item)
-        await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (EXTRAS[item], s['id']))
-        await conn.execute("UPDATE companion_dates SET extras_json=?,updated_at=? WHERE id=?", (json.dumps(xs, ensure_ascii=False), db.now(), row['id']))
-        await conn.commit()
-    return f"临时加了「{item}」，花 {EXTRAS[item]} 票。它会写进这次共同回忆，不会换成资源。"
-
-async def _transfer(s: dict[str, Any], place: str) -> str:
-    if place not in PLACES: raise ValueError("可转场到 海边 / 灯塔 / 小馆 / 剧场。")
-    cost = 40
-    async with db.connect() as conn:
-        row = await _active(conn, s['id'])
-        if not row: raise ValueError("没有正在进行的出游；人类先答应。")
-        if int(s.get('tickets') or 0) < cost: raise ValueError("转场要 40 票，口袋不够。")
-        events = json.loads(row['event_json'] or '[]'); events.append(f"转场去了{PLACES[place][0]}")
-        await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (cost, s['id']))
-        await conn.execute("UPDATE companion_dates SET place=?,title=?,event_json=?,updated_at=? WHERE id=?", (place, PLACES[place][0], json.dumps(events, ensure_ascii=False), db.now(), row['id']))
-        await conn.commit()
-    return f"转场到{PLACES[place][0]}，花 40 票。下一步会从新地点的事件池继续抽，不是重开。"
-
-async def public_view(token: str) -> dict[str, Any]:
-    row = await _row(token)
-    if not row: return {'ok': False}
-    if row['expires_at'] < db.now() and row['status'] == 'pending': return {'ok': False, 'reason': 'expired'}
-    return {'ok': True, **row, 'events': json.loads(row['event_json'] or '[]'), 'extras': json.loads(row['extras_json'] or '[]'), 'choices': json.loads(row['choices_json'] or '[]')}
-
-async def human_step(token: str, action: str, choice: str = '') -> dict[str, Any]:
-    row = await _row(token)
-    if not row: return {'ok': False}
-    now = db.now()
-    async with db.connect() as conn:
-        if action == 'decline' and row['status'] == 'pending':
-            await conn.execute("UPDATE companion_dates SET status='declined',updated_at=? WHERE id=?", (now,row['id'])); await conn.commit(); return {'ok': True,'done':True,'message':'这次先不去。岛上没有张贴，也不会扣更多票。'}
-        if action == 'accept' and row['status'] == 'pending':
-            await conn.execute("UPDATE companion_dates SET status='active',stage=1,updated_at=? WHERE id=?", (now,row['id'])); await conn.commit(); return {'ok':True,'message':'那就出发。第一段路，交给你来选。'}
-        if action == 'choose' and row['status'] == 'active' and choice in ('慢一点','往前走'):
-            choices=json.loads(row['choices_json'] or '[]'); events=json.loads(row['event_json'] or '[]')
-            choices.append(choice); events.append(random.choice(PLACES[row['place']][2]))
-            stage=int(row['stage'])+1; done=stage>3
-            status='completed' if done else 'active'
-            await conn.execute("UPDATE companion_dates SET choices_json=?,event_json=?,stage=?,status=?,completed_at=?,updated_at=? WHERE id=?", (json.dumps(choices,ensure_ascii=False),json.dumps(events,ensure_ascii=False),stage,status,now if done else None,now,row['id']))
-            if done: await db.add_chronicle('date_memory', f"{row['name']} 和对方完成了《{row['title']}》，留下了一段只属于两人的回忆。", actor_id=row['steward_id'], conn=conn)
-            await conn.commit()
-            return {'ok':True,'done':done,'message':'这段路被好好记下了。' if done else '风景换了一点，下一步仍等你们一起决定。'}
-    return {'ok':False,'message':'这次出游已经走到别处了。'}
+def archive_chapters(row: dict) -> list[dict[str, str]]:
+    state = _state(row)
+    cards = state.get("history", []) + ([state["current"]] if state.get("current") else [])
+    chapters = []
+    for card in cards:
+        text = card["narrative"]
+        choice = card.get("choice")
+        if choice:
+            text += f"\n岛民选择：{choice['label']}（{choice['name']} · {choice['cost']} 票）"
+        chapters.append({"title": card["title"], "text": text})
+    if chapters:
+        legacy = "旧版本没有完整消费账单。" if not row.get("state_json") or row["state_json"] == "{}" else f"这一程共花 {row['total_spent']} 工分票。"
+        chapters.append({"title": "这次的纪念", "text": legacy + "只留下共同经历，不发放资源。"})
+    return chapters

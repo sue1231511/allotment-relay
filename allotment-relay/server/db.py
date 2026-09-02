@@ -241,6 +241,10 @@ CREATE TABLE IF NOT EXISTS companion_dates (
     extras_json TEXT NOT NULL DEFAULT '[]',
     choices_json TEXT NOT NULL DEFAULT '[]',
     special INTEGER NOT NULL DEFAULT 0,
+    state_json TEXT NOT NULL DEFAULT '{}',
+    revision INTEGER NOT NULL DEFAULT 0,
+    generating_until INTEGER NOT NULL DEFAULT 0,
+    total_spent INTEGER NOT NULL DEFAULT 0,
     completed_at INTEGER,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
@@ -982,6 +986,10 @@ async def init_db() -> None:
         await db.execute("PRAGMA busy_timeout=10000")
         await db.executescript(SCHEMA)
         for ddl in (
+            "ALTER TABLE companion_dates ADD COLUMN state_json TEXT NOT NULL DEFAULT '{}'",
+            "ALTER TABLE companion_dates ADD COLUMN revision INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE companion_dates ADD COLUMN generating_until INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE companion_dates ADD COLUMN total_spent INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN boat_key TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE stewards ADD COLUMN boat_damaged INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE steward_incidents ADD COLUMN label TEXT NOT NULL DEFAULT ''",

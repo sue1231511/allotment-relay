@@ -1,4 +1,6 @@
 from contextvars import ContextVar
+from typing import Annotated
+from pydantic import Field
 
 import aiosqlite
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -160,8 +162,8 @@ async def cloth_ops(command: str = "") -> str:
     return progress_mod.attach_note(await mux._call_ops(cloth.cloth_ops, _kid(), command))
 
 
-@mcp.tool(description="婚约与共同出游。空=档案。例：求婚 阿潮 · 约会 海边 · 出游 加项 甜点。约会由人类网页答应，非资源收益；勿 date_ops/propose_marriage。")
-async def marriage_ops(command: str = "") -> str:
+@mcp.tool(description="婚约与导演约会。空=婚档。例：约会 小馆 · 出游 查看 · 出游 选择 1 A。人类手游到地点应邀；AI查看后有选项就选，无选项出游 继续 幕号或退出。勿 date_ops；费用只换回忆。")
+async def marriage_ops(command: Annotated[str, Field(description="整句子命令；空看婚档。出游 继续 0、出游 选择 1 A 须用当前幕号；help看价目和全部指令。")] = "") -> str:
     from . import marriage
     from . import progress as progress_mod
     return progress_mod.attach_note(await mux._call_ops(marriage.marriage_ops, _kid(), command))
