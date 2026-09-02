@@ -351,3 +351,56 @@ def views_human(text: str) -> str:
     from .errors import humanize
 
     return humanize(text)
+
+
+async def event_snapshot(steward_id: int) -> dict[str, Any]:
+    """Read stored events only: no attendance, random roll, or settlement on refresh."""
+    import aiosqlite
+    from ..catalog import ITEM_NAMES
+
+    async with db.connect() as conn:
+        conn.row_factory = aiosqlite.Row
+        owner = await (await conn.execute("SELECT tickets FROM stewards WHERE id=?", (steward_id,))).fetchone()
+        tickets = int(owner["tickets"] or 0)
+        stock_rows = await (await conn.execute("SELECT item, quantity FROM satchel WHERE steward_id=?", (steward_id,))).fetchall()
+        stock = {r["item"]: r["quantity"] for r in stock_rows}
+        rows = await (await conn.execute(
+            "SELECT * FROM steward_incidents WHERE steward_id=? AND resolved=0 ORDER BY created_at DESC, id DESC",
+            (steward_id,),
+        )).fetchall()
+        history = await (await conn.execute(
+            "SELECT id, text, created_at FROM chronicle WHERE actor_id=? AND action IN ('incident', 'incident_fix', 'farm_event') ORDER BY created_at DESC, id DESC LIMIT 20",
+            (steward_id,),
+        )).fetchall()
+    incidents = []
+    for row in rows:
+        cost = int(row["repair_tickets"] or 0)
+        item = row["repair_item"] or ""
+        qty = int(row["repair_qty"] or 1) if item else 0
+        incidents.append({
+            "id": row["id"], "label": row["label"] or "意外",
+            "detail": views_human(row["detail"] or ""),
+            "repair_tickets": cost, "repair_item": item,
+            "repair_item_label": ITEM_NAMES.get(item, item), "repair_qty": qty,
+            "can_pay_tickets": tickets >= cost,
+            "can_pay_item": bool(item) and stock.get(item, 0) >= qty,
+        })
+    return {"ok": True, "tickets": tickets, "incidents": incidents,
+            "history": [{"id": r["id"], "text": views_human(r["text"]), "created_at": r["created_at"]} for r in history]}
+
+
+async def repair_event(api_key: str, key_id: int, incident_id: int, payment: str) -> dict[str, Any]:
+    from .. import events
+
+    if incident_id <= 0 or payment not in {"tickets", "item"}:
+        raise ApiError("BAD_REQUEST", "请选择事件和处理方式。")
+    try:
+        # Same ownership, costs, repair effects and resolved flag as MCP.
+        narrative = await events.incident_ops(key_id, f"repair {incident_id}" + (" item" if payment == "item" else ""))
+    except ValueError as exc:
+        raise ApiError("ACTION_FAILED", str(exc).replace("repair 需要", "处理需要"), status=409) from exc
+    s = await db.get_steward_by_key_id(key_id)
+    result = await snapshot(api_key, s["id"])
+    result.update(await event_snapshot(s["id"]))
+    result["event"] = {"title": "田间事件", "narrative": views_human(narrative), "kind": "farm"}
+    return result

@@ -1,4 +1,5 @@
-import { api, loadKey } from "./api.js?v=flowers1";
+import { api, loadKey } from "./api.js?v=farm-events1";
+import { openFarmEvents, closeFarmEvents } from "./ui/farm-events.js?v=farm-events1";
 import { renderMarketHub } from "./scenes/market-hub.js?v=flowers1";
 import { renderFlorist } from "./scenes/florist.js?v=flowers1";
 import { mountDates, dateSceneChanged, resetDates } from "./ui/companion-date.js?v=date-chip1";
@@ -17,7 +18,7 @@ import {
 } from "./store.js?v=island-modulefix2";
 import { renderHud } from "./hud.js?v=dual-panels1";
 import { renderMap } from "./map.js?v=undertide-map1";
-import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=island-modulefix2";
+import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=farm-events1";
 import { renderShore, renderShoreYard, renderPortHub, renderBeachHub } from "./scenes/shore.js?v=island-modulefix2";
 import { renderPlaza } from "./scenes/plaza.js?v=island-modulefix2";
 import { renderPlace } from "./scenes/place.js?v=island-modulefix2";
@@ -117,6 +118,7 @@ function showPlay() {
 }
 
 function showGate() {
+  closeFarmEvents();
   resetDates();
   state.florist = null;
   state.floristMeet = false;
@@ -174,6 +176,7 @@ async function bootFromServer() {
 async function enterScene(name, opts) {
   const quiet = !!(opts && opts.quiet);
   if (name === "home") name = "yards";
+  if (!quiet || name !== "yards") closeFarmEvents();
   let datePlace = name;
   const gen = quiet ? enterGen : ++enterGen;
   if (!quiet) {
@@ -211,6 +214,11 @@ async function enterScene(name, opts) {
         onTapGrass: tapGrass,
         onHarvestAll: harvestAll,
         onSwitchYard: switchYard,
+        onOpenEvents: wrap => openFarmEvents(wrap, data => {
+          applySnapshot(data);
+          renderHud();
+          syncHomeChrome();
+        }),
       });
       startGrowTick();
       if (state.plantOpen) openPlant();

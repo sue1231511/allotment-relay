@@ -944,6 +944,9 @@ async def incident_ops(key_id: int, command: str) -> str:
                     f"  编号 #{r['id']} {label} — {r['detail']}"
                     f"（plot_ops repair {r['id']} · {cost} 票起）"
                 )
+                if r.get("repair_item"):
+                    item = r["repair_item"]
+                    lines.append(f"    或用 {ITEM_NAMES.get(item, item)} x{r.get('repair_qty') or 1}：plot_ops repair {r['id']} item")
         return "\n".join(lines) if lines else "风平浪静，暂无意外"
 
     if verb == "pulse":
@@ -955,6 +958,8 @@ async def incident_ops(key_id: int, command: str) -> str:
     if verb == "repair" and len(parts) >= 2:
         iid = int(parts[1].lstrip("#"))
         async with db.connect() as conn:
+            if not conn.in_transaction:
+                await conn.execute("BEGIN IMMEDIATE")
             conn.row_factory = aiosqlite.Row
             row = await (await conn.execute(
                 "SELECT * FROM steward_incidents WHERE id=? AND steward_id=? AND resolved=0",
@@ -967,7 +972,9 @@ async def incident_ops(key_id: int, command: str) -> str:
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
             have = (await cur.fetchone())[0]
             paid = ""
-            if row.get("repair_item") and len(parts) >= 3 and parts[2] == "item":
+            if len(parts) >= 3 and parts[2] == "item":
+                if not row.get("repair_item"):
+                    raise ValueError("这条意外不能用材料处理，请选择花票。")
                 item, qty = row["repair_item"], row.get("repair_qty") or 1
                 if not await db.take_item(conn, s["id"], item, qty):
                     raise ValueError(f"需要 {ITEM_NAMES.get(item, item)} x{qty}")
@@ -982,12 +989,12 @@ async def incident_ops(key_id: int, command: str) -> str:
                 paid = f"-{tickets} 票"
             if row.get("plot_id"):
                 pen = await (await conn.execute(
-                    "SELECT id FROM fish_pens WHERE id=?", (row["plot_id"],)
+                    "SELECT id FROM fish_pens WHERE id=? AND steward_id=?", (row["plot_id"], s["id"])
                 )).fetchone()
                 if pen:
-                    await conn.execute("UPDATE fish_pens SET fed=1 WHERE id=?", (row["plot_id"],))
+                    await conn.execute("UPDATE fish_pens SET fed=1 WHERE id=? AND steward_id=?", (row["plot_id"], s["id"]))
                 else:
-                    await conn.execute("UPDATE parcels SET tended=1 WHERE id=?", (row["plot_id"],))
+                    await conn.execute("UPDATE parcels SET tended=1 WHERE id=? AND steward_id=?", (row["plot_id"], s["id"]))
             await conn.execute("UPDATE steward_incidents SET resolved=1 WHERE id=?", (iid,))
             await conn.commit()
         label = row.get("label") or "意外"

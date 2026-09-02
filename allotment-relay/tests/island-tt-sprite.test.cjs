@@ -28,6 +28,6 @@ test("Tt portrait moves up 24px while preserving half-height translation and siz
 
 test("portrait uses the same asset and updated stylesheet cache key", () => {
   assert.match(read("server/static/island/scenes/shop.js"), /sprites\/tt.webp\?v=tt-sprite1/);
-  assert.match(read("server/templates/island.html"), /island.css\?v=tt-position3/);
+  assert.match(read("server/templates/island.html"), /island.css\?v=farm-events1/);
   assert.match(read("server/static/island/assets/ART.md"), /比上一版上移24px/);
 });

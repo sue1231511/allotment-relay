@@ -30,7 +30,7 @@ export function renderHome(root, { onOpenLand }) {
   root.querySelector("[data-act=land]").addEventListener("click", onOpenLand);
 }
 
-export function renderYards(root, { onTapPlot, onTapGrass, onHarvestAll, onSwitchYard }) {
+export function renderYards(root, { onTapPlot, onTapGrass, onHarvestAll, onSwitchYard, onOpenEvents }) {
   const peek = !state.yardsShelf;
   let wrap = root.querySelector(".island-yards");
   if (!wrap || !wrap.querySelector(".island-yards-board")) {
@@ -40,7 +40,11 @@ export function renderYards(root, { onTapPlot, onTapGrass, onHarvestAll, onSwitc
         <div class="island-yards-board">
           ${sceneArt("yards")}
         </div>
-        <button type="button" class="island-scene-tap">点一下看地</button>
+        <button type="button" class="island-scene-tap" aria-expanded="false">点一下看地</button>
+        <div class="island-yard-choices" aria-label="份地去处" hidden>
+          <button type="button" data-yard-choice="plots">看地</button>
+          <button type="button" data-yard-choice="events">田间事件</button>
+        </div>
         <div class="island-yard-tabs" role="tablist" aria-label="地块类型">
           ${yardTabs()}
         </div>
@@ -52,7 +56,7 @@ export function renderYards(root, { onTapPlot, onTapGrass, onHarvestAll, onSwitc
     `;
     wrap = root.querySelector(".island-yards");
     layoutCoverBoard(wrap, ".island-yards-board", 941, 1672);
-    bindYardsPeek(wrap);
+    bindYardsPeek(wrap, onOpenEvents);
     wrap.querySelectorAll("[data-yard]").forEach((btn) => {
       btn.addEventListener("click", () => onSwitchYard(btn.getAttribute("data-yard")));
     });
@@ -62,7 +66,14 @@ export function renderYards(root, { onTapPlot, onTapGrass, onHarvestAll, onSwitc
     bindPager();
     bindSwipe();
   } else {
+    const wasPeek = wrap.classList.contains("is-peek");
     wrap.classList.toggle("is-peek", peek);
+    if (peek && !wasPeek) {
+      wrap.querySelector(".island-yard-choices").hidden = true;
+      const tap = wrap.querySelector(".island-scene-tap");
+      tap.hidden = false;
+      tap.setAttribute("aria-expanded", "false");
+    }
     syncHomeChrome();
   }
   const bar = document.getElementById("island-actionbar");
@@ -72,18 +83,28 @@ export function renderYards(root, { onTapPlot, onTapGrass, onHarvestAll, onSwitc
   }
 }
 
-function bindYardsPeek(wrap) {
+function bindYardsPeek(wrap, onOpenEvents) {
+  const tap = wrap.querySelector(".island-scene-tap");
+  const choices = wrap.querySelector(".island-yard-choices");
   const open = () => {
     if (!wrap.classList.contains("is-peek")) return;
+    tap.hidden = true;
+    tap.setAttribute("aria-expanded", "true");
+    choices.hidden = false;
+  };
+  choices.querySelector('[data-yard-choice="plots"]').addEventListener("click", () => {
+    choices.hidden = true;
     state.yardsShelf = true;
     wrap.classList.remove("is-peek");
-  };
+  });
+  choices.querySelector('[data-yard-choice="events"]').addEventListener("click", () => {
+    if (onOpenEvents) onOpenEvents(wrap);
+  });
   const board = wrap.querySelector(".island-yards-board");
   if (board && !board._bound) {
     board._bound = true;
     board.addEventListener("click", open);
   }
-  const tap = wrap.querySelector(".island-scene-tap");
   if (tap && !tap._bound) {
     tap._bound = true;
     tap.addEventListener("click", (ev) => {

@@ -642,6 +642,56 @@ body.island-app.is-playing.is-yards .island-actionbar {
   cursor: default;
 }
 
+.island-yards .island-yard-choices {
+  position: absolute;
+  z-index: 3;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.island-yards .island-yard-choices[hidden],
+.island-yards .island-scene-tap[hidden] { display: none; }
+
+.island-yard-choices button,
+.island-farm-events button {
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 1px solid rgba(236, 214, 160, .55);
+  border-radius: 8px;
+  background: rgba(16, 22, 30, .92);
+  color: #f6f0e4;
+  font: inherit;
+}
+
+.island-yards .island-farm-events {
+  position: absolute;
+  inset: 90px 10px 10px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 14px;
+  border: 1px solid #c8af78;
+  border-radius: 12px;
+  background: rgba(16, 22, 30, .97);
+  color: #f6f0e4;
+  font-size: 14px;
+}
+
+.island-farm-events header,
+.island-farm-event-tools { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.island-farm-events h3, .island-farm-events h4 { margin: 8px 0; }
+.island-farm-events p { white-space: pre-wrap; overflow-wrap: anywhere; margin: 8px 0; line-height: 1.6; }
+.island-farm-event-note, .island-farm-events small { color: #d1c8b5; font-size: 12px; }
+.island-farm-event-list { overflow-y: auto; min-height: 0; overscroll-behavior: contain; }
+.island-farm-event-list article { padding: 10px 0; border-bottom: 1px solid #655c49; }
+.island-farm-event-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.island-farm-events button:disabled { opacity: .5; }
+
 .island-yard-tabs {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

@@ -1,7 +1,7 @@
 """/api/v1 — 移动端结构化接口。凭证走 Authorization / X-Api-Key / POST 体。"""
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
@@ -23,6 +23,12 @@ class SessionBody(BaseModel):
 
 class SowBody(BaseModel):
     crop: str = Field(default="", min_length=0)
+    api_key: str = ""
+
+
+class FarmRepairBody(BaseModel):
+    incident_id: int = Field(gt=0)
+    payment: Literal["tickets", "item"]
     api_key: str = ""
 
 
@@ -226,6 +232,31 @@ async def get_farm(request: Request):
             "farm": state["farm"],
             "world": state["world"],
         }
+    except ApiError as exc:
+        return _error(exc)
+
+
+@router.get("/farm/events")
+async def farm_events(request: Request) -> Any:
+    try:
+        _, steward = await require_enrolled(extract_api_key(request))
+        return await farm_service.event_snapshot(steward["id"])
+    except ApiError as exc:
+        return _error(exc)
+
+
+@router.post("/farm/events/repair")
+async def repair_farm_event(body: FarmRepairBody, request: Request) -> Any:
+    key = extract_api_key(request, body.api_key)
+    route = f"/farm/events/repair/{body.incident_id}/{body.payment}"
+    try:
+        sid, cached = await _write_guard(request, key, route)
+        if cached:
+            return _cached_response(cached)
+        row, _ = await require_enrolled(key)
+        data = await farm_service.repair_event(key, row["id"], body.incident_id, body.payment)
+        await idempotency.store(sid, route, _idem_key(request), 200, data)
+        return data
     except ApiError as exc:
         return _error(exc)
 

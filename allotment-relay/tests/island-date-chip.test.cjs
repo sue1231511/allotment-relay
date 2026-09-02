@@ -89,7 +89,7 @@ test("icon is a root sibling before bag; shares top and height with bag", () => 
   assert.equal(asset.toString("hex", 0, 8), "89504e470d0a1a0a");
   assert.equal(asset[25], 6); // RGBA PNG; preserve original transparency.
   assert.match(html, /companion-date.css\?v=date-chip2/);
-  assert.match(html, /app.js\?v=date-chip1/);
+  assert.match(html, /app.js\?v=farm-events1/);
   assert.match(read("server/static/island/app.js"), /companion-date.js\?v=date-chip1/);
 });
 

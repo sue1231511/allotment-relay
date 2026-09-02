@@ -45,3 +45,13 @@
 .manual-date-format, .manual-date-entry { padding:12px 16px; border-left:3px solid var(--sea); background:#eef2f0; line-height:1.9; }
 .manual-florist { margin:12px 0 24px; padding:8px 18px; border-left:3px solid #8d9a76; background:#f1f3e8; border-radius:0 14px 14px 0; }
 .manual-florist p { line-height:1.8; }
+.farm-event-guide {
+  margin: 0 0 20px;
+  padding: 16px;
+  border: 1px solid #c5b58a;
+  border-radius: 8px;
+  background: #f6f0df;
+  color: #343c37;
+  line-height: 1.7;
+}
+.farm-event-guide p { margin: 8px 0 0; }

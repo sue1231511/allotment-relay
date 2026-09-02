@@ -725,6 +725,10 @@ async def roll_farm_event(
         )
     if farm_boost:
         msg += f"\n{farm_boost}"
+    await conn.execute(
+        "INSERT INTO chronicle (action, actor_id, text, created_at) VALUES (?, ?, ?, ?)",
+        ("farm_event", steward["id"], msg, db.now()),
+    )
     return msg
 
 
