@@ -230,7 +230,8 @@ async function enterScene(name, opts) {
       state.backTo = "map";
       renderUndertide(root, {
         onDetailChange: (isDetail, returnToUndertide) => {
-          setBackChip(true, isDetail ? returnToUndertide : () => enterScene("map"), { showStats: false });
+          setBagChip(isDetail);
+          setBackChip(true, isDetail ? returnToUndertide : () => enterScene("map"), { showStats: isDetail });
         },
       });
     } else if (name === "shore") {
