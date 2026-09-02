@@ -50,7 +50,7 @@ import { renderBag } from "./ui/bag.js?v=island-modulefix2";
 import { setBackChip, setBagChip } from "./ui/back-map.js?v=dual-panels1";
 import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=island-modulefix2";
 import { popOut } from "./ui/pop.js?v=island-modulefix2";
-import { bgmMuted, setBgmMuted, startIslandBgm, stopBgm } from "./ui/bgm.js?v=island-modulefix2";
+import { bgmMuted, playBgm, setBgmMuted, startIslandBgm, stopBgm } from "./ui/bgm.js?v=undertide-bgm1";
 import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showVendSheet, toast } from "./ui/modal.js?v=island-modulefix2";
 
 const sceneEl = () => document.getElementById("island-scene");
@@ -183,6 +183,7 @@ async function enterScene(name, opts) {
     showBootVeil("正在进入…");
   }
   state.scene = name;
+  playBgm(name === "undertide" ? "undertide" : "island");
   state.tab = "map";
   markDock("");
   hideSheet({ instant: true });

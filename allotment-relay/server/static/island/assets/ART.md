@@ -36,6 +36,7 @@
 | `sprites/tt.webp` | Tt酱交互加载版（透明 WebP；约 175 KB；进入地图时随进度条预载） | 1024×1536 |
 | `audio/island.mp3` | 手机地图背景乐之一（已就位；rumina《Magical Burger Town》。另有 `audio/island.ogg`） | 与花园曲依次循环 |
 | `audio/vadim_makes_sound-fantasy-worlds-enchanted-garden-570007.mp3` | 手机地图背景乐之一（Vadim_Makes_Sound《Fantasy Worlds • Enchanted Garden》） | 与岛屿曲依次循环 |
+| `audio/ncone-chiptune-garden-fight-535721.mp3` | 潮下专属背景乐（ncone《Chiptune Garden Fight》） | 进入井下切换；离开后回岛屿曲 |
 | `scenes/notice.png` | 潮汐公告底（插图后补；广场点潮汐公告不换景，弹出 climate-frame 木牌，底下还是广场） | 1080×1920 |
 | `climate-frame.png` | 潮汐木牌框（已就位；原图透明底，不要再抠。页面叠天气 / 潮汐 / 时辰 / 季节，头顶空着。弹窗，广场还在底下。广场点潮汐公告或总览左上角小牌弹出） | 1536×1024 |
 | `stats-frame.png` | 左侧原六项数值木牌（影信、饱食、雾智、档信、健康、精力） | 1024×1536 |

@@ -1,8 +1,9 @@
 const TRACKS = [
   { id: "island", base: "/static/island/assets/audio/island", ogg: true },
   { id: "enchanted-garden", base: "/static/island/assets/audio/vadim_makes_sound-fantasy-worlds-enchanted-garden-570007", ogg: false },
+  { id: "undertide", base: "/static/island/assets/audio/ncone-chiptune-garden-fight-535721", ogg: false },
 ];
-const BUST = "island-two-track-bgm1";
+const BUST = "island-undertide-bgm1";
 
 const MUTE_KEY = "island-bgm-mute";
 
@@ -10,6 +11,7 @@ let current = "";
 let el = null;
 let want = false;
 let trackIndex = 0;
+let desired = "island";
 
 export function bgmMuted() {
   try {
@@ -52,6 +54,8 @@ function halt() {
 export function playBgm(id) {
   const nextIndex = TRACKS.findIndex((track) => track.id === id);
   if (nextIndex < 0) return;
+  desired = id;
+  if (!want) return;
   if (current === id && el) {
     el.muted = bgmMuted();
     if (el.paused) el.play().catch(() => {});
@@ -76,6 +80,7 @@ export function playBgm(id) {
 
 export function startIslandBgm() {
   want = true;
+  desired = "island";
   playBgm("island");
 }
 
@@ -85,7 +90,7 @@ export function stopBgm() {
 }
 
 function unlock() {
-  if (want) playBgm("island");
+  if (want) playBgm(desired);
 }
 
 if (typeof document !== "undefined") {
