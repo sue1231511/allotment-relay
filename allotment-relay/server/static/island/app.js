@@ -40,7 +40,7 @@ import { renderMarket } from "./scenes/market.js?v=island-modulefix2";
 import { renderTing } from "./scenes/ting.js?v=island-modulefix2";
 import { renderHui } from "./scenes/hui.js?v=island-modulefix2";
 import { renderLianli } from "./scenes/lianli.js?v=island-modulefix2";
-import { renderUndertide } from "./scenes/undertide.js?v=undertide-play1";
+import { renderUndertide } from "./scenes/undertide.js?v=undertide-play2";
 let lighthouseMod = null;
 async function lighthouseScene() {
   if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-modulefix2");

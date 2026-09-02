@@ -1142,44 +1142,6 @@ body.island-app.is-playing.is-yards .island-actionbar {
 .island-place-card b { display: block; font-size: 18px; }
 .island-place-card p { display: none; }
 
-.island-undertide-control {
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: 14px;
-  z-index: 2;
-  padding: 12px 14px;
-  border: 1px solid rgba(108, 76, 45, .52);
-  border-radius: 16px;
-  background: rgba(255, 250, 238, .94);
-  box-shadow: 0 8px 22px rgba(27, 21, 22, .22);
-}
-.island-undertide-control b { display: block; font-size: 17px; color: #4f3930; }
-.island-undertide-copy { margin: 7px 0 10px; white-space: pre-line; font-size: 12px; line-height: 1.45; color: #5d5147; max-height: 8.7em; overflow: auto; }
-.island-undertide-actions { display: flex; flex-wrap: wrap; gap: 7px; }
-.island-undertide-actions .island-btn { flex: 1 0 auto; min-width: 64px; }
-
-.island-undertide-sprite {
-  position: absolute;
-  left: 0;
-  bottom: 7%;
-  z-index: 0;
-  height: 50%;
-  width: 88%;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.island-undertide-sprite img {
-  position: absolute;
-  left: 0;
-  top: 0;
-  height: 200%;
-  width: auto;
-  max-width: none;
-  filter: drop-shadow(0 10px 18px rgba(12, 20, 28, .28));
-}
-
 .island-place.is-locked {
   background:
     repeating-linear-gradient(
@@ -2249,6 +2211,12 @@ body.island-app.is-climate-open .island-float-chip {
   height: 200%;
   left: 0;
   object-position: top left;
+}
+
+/* 潮下两位 NPC 同样使用橙光半身与对话框，人物略低，交给对话框收边。 */
+.island-undertide-vn .island-vn-stand.is-half {
+  bottom: 11%;
+  height: 53%;
 }
 
 /* 韶年原图人比桥桥靠中，半身再往左一点。 */

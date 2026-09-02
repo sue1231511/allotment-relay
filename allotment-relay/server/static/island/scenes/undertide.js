@@ -1,7 +1,7 @@
 import { layoutCoverBoard, sceneArt } from "../ui/art.js?v=undertide-scenes1";
 import { renderPlace } from "./place.js?v=undertide-scenes1";
 import { api } from "../api.js?v=undertide-scenes1";
-import { esc, showFormSheet, showHintSheet, showPickSheet, toast } from "../ui/modal.js?v=undertide-scenes1";
+import { esc, showFormSheet, toast } from "../ui/modal.js?v=undertide-scenes1";
 
 /** 热区对齐井下总览原有的地点牌；底图本身不改动。 */
 const HOTS = [
@@ -36,18 +36,12 @@ export function renderUndertide(root, { onDetailChange } = {}) {
   };
 
   const showPlace = (spot) => {
-    renderPlace(root, { id: spot.id, title: spot.title });
-    if (typeof onDetailChange === "function") onDetailChange(true, showMap);
-    if (spot.sprite) {
-      root.querySelector(".island-place").insertAdjacentHTML("beforeend", `
-        <div class="island-undertide-sprite">
-          <img src="/static/island/assets/sprites/${spot.sprite}.png" alt="${spot.name}" draggable="false">
-        </div>
-      `);
-    }
     if (spot.id === "undertide-bank" || spot.id === "undertide-casino") {
-      paintUndertideDesk(root, spot);
+      renderUndertideNpc(root, spot);
+    } else {
+      renderPlace(root, { id: spot.id, title: spot.title });
     }
+    if (typeof onDetailChange === "function") onDetailChange(true, showMap);
   };
 
   showMap();
@@ -58,118 +52,113 @@ export function renderUndertide(root, { onDetailChange } = {}) {
   }
 }
 
-async function paintUndertideDesk(root, spot) {
-  const place = root.querySelector(".island-place");
-  if (!place) return;
-  place.insertAdjacentHTML("beforeend", `
-    <section class="island-undertide-control" aria-live="polite">
-      <b>${spot.id === "undertide-bank" ? "恶猫钱庄 · 账本" : "死人赌场 · 赌桌"}</b>
-      <p>账本正在翻页……</p>
-    </section>
-  `);
-  const panel = place.querySelector(".island-undertide-control");
+function renderUndertideNpc(root, spot) {
+  const bank = spot.id === "undertide-bank";
+  root.innerHTML = `
+    <div class="island-vn island-undertide-vn is-peek">
+      <div class="island-vn-board">
+        ${sceneArt(spot.id)}
+        <div class="island-vn-stand is-half"><img class="island-vn-sprite" src="/static/island/assets/sprites/${spot.sprite}.png" alt="${esc(spot.name)}" draggable="false"></div>
+        <div class="island-vn-talk is-line">
+          <button type="button" class="island-vn-box" data-ut-advance><span class="island-vn-name"></span><p class="island-vn-line"></p><i class="island-vn-more" aria-hidden="true"></i></button>
+          <div class="island-vn-choices"></div>
+        </div>
+        <button type="button" class="island-scene-tap">点一下${bank ? "见行长" : "见 Silas"}</button>
+      </div>
+    </div>
+  `;
+  const wrap = root.querySelector(".island-undertide-vn");
+  const board = wrap.querySelector(".island-vn-board");
+  board.addEventListener("click", () => {
+    if (wrap.classList.contains("is-peek")) openUndertideNpc(wrap, bank);
+  });
+}
+
+async function openUndertideNpc(wrap, bank) {
+  wrap.classList.remove("is-peek");
   try {
     const snap = await api.undertide();
-    if (!panel || !panel.isConnected) return;
-    const under = snap.undertide || {};
-    const bank = spot.id === "undertide-bank";
-    const text = bank ? under.bank : under.casino;
-    panel.innerHTML = `
-      <b>${bank ? "恶猫钱庄 · 账本" : "死人赌场 · 赌桌"}</b>
-      <p class="island-undertide-copy">${esc(text || "这会儿没有可看的。")}</p>
-      <div class="island-undertide-actions">${bank ? bankActions() : casinoActions(Boolean(under.casino_open))}</div>
-    `;
-    bindDeskActions(panel, bank);
+    paintUndertideTalk(wrap, bank, snap.undertide || {});
   } catch (err) {
-    if (panel && panel.isConnected) panel.innerHTML = `<b>${esc(spot.title)}</b><p>${esc(err.message || "账本没翻开。")}</p>`;
+    paintUndertideTalk(wrap, bank, {}, err.message || "这会儿不见客。");
   }
 }
 
-function bankActions() {
-  return `
-    <button type="button" class="island-btn primary" data-ut="bank_debt">查账</button>
-    <button type="button" class="island-btn" data-ut="bank_borrow">借票</button>
-    <button type="button" class="island-btn" data-ut="bank_repay">还款</button>
-    <button type="button" class="island-btn" data-ut="bank_save">存钱</button>
-    <button type="button" class="island-btn" data-ut="bank_take">取钱</button>
-  `;
+function paintUndertideTalk(wrap, bank, under, override = "") {
+  const talk = wrap.querySelector(".island-vn-talk");
+  const name = wrap.querySelector(".island-vn-name");
+  const line = wrap.querySelector(".island-vn-line");
+  const box = wrap.querySelector("[data-ut-advance]");
+  if (!talk || !name || !line || !box) return;
+  name.textContent = bank ? "恶猫钱庄行长" : "Silas";
+  line.textContent = override || (bank ? under.bank : under.casino) || "这会儿没有可看的。";
+  talk.classList.add("is-line");
+  talk.classList.remove("is-picks");
+  box.onclick = () => paintUndertideChoices(wrap, bank, under);
 }
 
-function casinoActions(open) {
-  if (!open) return `<button type="button" class="island-btn primary" data-ut="casino_desk">看门牌</button>`;
-  return `
-    <button type="button" class="island-btn primary" data-ut="casino_desk">看赌桌</button>
-    <button type="button" class="island-btn" data-ut="casino_dice">黑潮骰</button>
-    <button type="button" class="island-btn" data-ut="casino_lantern">最后一盏灯</button>
-    <button type="button" class="island-btn" data-ut="casino_draw">死人抽牌</button>
-  `;
+function paintUndertideChoices(wrap, bank, under, mode = "main") {
+  const talk = wrap.querySelector(".island-vn-talk");
+  const list = wrap.querySelector(".island-vn-choices");
+  if (!talk || !list) return;
+  talk.classList.remove("is-line");
+  talk.classList.add("is-picks");
+  const rows = deskChoices(bank, under, mode);
+  list.innerHTML = rows.map((row) => `<button type="button" class="island-vn-choice" data-ut-kind="${esc(row.kind)}" data-ut-target="${esc(row.target || "")}"><b>${esc(row.label)}</b>${row.note ? `<small>${esc(row.note)}</small>` : ""}</button>`).join("");
+  list.querySelectorAll("[data-ut-kind]").forEach((btn) => btn.addEventListener("click", () => chooseDeskAction(
+    btn.getAttribute("data-ut-kind"), btn.getAttribute("data-ut-target") || "", bank, wrap, under,
+  )));
 }
 
-function bindDeskActions(panel, bank) {
-  panel.querySelectorAll("[data-ut]").forEach((btn) => {
-    btn.addEventListener("click", () => chooseDeskAction(btn.getAttribute("data-ut"), bank, panel));
-  });
+function deskChoices(bank, under, mode) {
+  if (bank) return [
+    { kind: "bank_debt", label: "查账" }, { kind: "bank_borrow", label: "借票" }, { kind: "bank_repay", target: "ask", label: "还款" },
+    { kind: "bank_save", label: "存钱" }, { kind: "bank_take", target: "ask", label: "取钱" },
+  ];
+  if (mode === "dice") return [
+    { kind: "casino_dice", target: "small", label: "押小", note: "×2" }, { kind: "casino_dice", target: "big", label: "押大", note: "×2" }, { kind: "casino_dice", target: "black", label: "押黑潮", note: "对子 ×5" },
+  ];
+  if (mode === "lantern") return [
+    { kind: "casino_lantern", target: "start", label: "开一局" }, { kind: "casino_lantern", target: "continue", label: "继续" }, { kind: "casino_lantern", target: "cash", label: "收手" },
+  ];
+  if (!under.casino_open) return [{ kind: "casino_desk", label: "看门牌" }];
+  return [
+    { kind: "casino_desk", label: "看赌桌" }, { kind: "menu", target: "dice", label: "黑潮骰" }, { kind: "menu", target: "lantern", label: "最后一盏灯" }, { kind: "casino_draw", label: "死人抽牌" },
+  ];
 }
 
-function chooseDeskAction(kind, bank, panel) {
-  if (kind === "bank_debt" || kind === "casino_desk") return runDeskAction(kind, "", bank, panel);
-  if (kind === "bank_save" || kind === "bank_borrow") return askAmount(kind, "票数", bank, panel);
+function chooseDeskAction(kind, target, bank, wrap, under) {
+  if (kind === "menu") return paintUndertideChoices(wrap, bank, under, target);
+  if (kind === "bank_debt" || kind === "casino_desk") return runDeskAction(kind, "", bank, wrap);
+  if (kind === "bank_save" || kind === "bank_borrow") return askAmount(kind, "票数", bank, wrap);
   if (kind === "bank_take" || kind === "bank_repay") {
-    return showPickSheet({
-      title: kind === "bank_take" ? "取多少" : "还多少",
-      body: "也可以手填具体票数。",
-      options: [{ id: "all", label: "全部" }, { id: "custom", label: "手填票数" }],
-      onConfirm: (value) => value === "all" ? runDeskAction(kind, "all", bank, panel) : askAmount(kind, "票数", bank, panel),
-    });
+    if (target === "ask") return askAmount(kind, "票数（填 all 可全部）", bank, wrap, "", true);
   }
-  if (kind === "casino_dice") {
-    return showPickSheet({
-      title: "黑潮骰",
-      body: "小 / 大 赔率 ×2；黑潮（对子）×5。",
-      options: [{ id: "small", label: "押小（×2）" }, { id: "big", label: "押大（×2）" }, { id: "black", label: "押黑潮（×5）" }],
-      onConfirm: (choice) => askAmount(kind, "下注票数", bank, panel, choice),
-    });
-  }
-  if (kind === "casino_lantern") {
-    return showPickSheet({
-      title: "最后一盏灯",
-      body: "续灯会继续往上走，也可能直接熄灭。",
-      options: [{ id: "start", label: "开一局" }, { id: "continue", label: "继续" }, { id: "cash", label: "收手" }],
-      onConfirm: (value) => value === "start" ? askAmount(kind, "下注票数", bank, panel) : runDeskAction(kind, value, bank, panel),
-    });
-  }
+  if (kind === "casino_dice") return askAmount(kind, "下注票数", bank, wrap, target);
+  if (kind === "casino_lantern") return target === "start" ? askAmount(kind, "下注票数", bank, wrap) : runDeskAction(kind, target, bank, wrap);
   if (kind === "casino_draw") {
-    return showFormSheet({
-      title: "死人抽牌",
-      body: "填下注和停牌点（12 到 20），这一把一次结算。",
-      fields: [{ id: "bet", label: "下注票数", placeholder: "10" }, { id: "stand", label: "停牌点", placeholder: "17" }],
-      confirm: "发牌",
-      onConfirm: (values) => runDeskAction(kind, `${values.bet} ${values.stand}`, bank, panel),
-    });
+    return showFormSheet({ title: "死人抽牌", body: "填下注和停牌点（12 到 20），这一把一次结算。", fields: [{ id: "bet", label: "下注票数", placeholder: "10" }, { id: "stand", label: "停牌点", placeholder: "17" }], confirm: "发牌", onConfirm: (values) => runDeskAction(kind, `${values.bet} ${values.stand}`, bank, wrap) });
   }
 }
 
-function askAmount(kind, label, bank, panel, prefix = "") {
+function askAmount(kind, label, bank, wrap, prefix = "", allowAll = false) {
   showFormSheet({
     title: label,
-    body: "只收正整数；实际限额和余额由柜台当场核。",
+    body: allowAll ? "填正整数，或填 all 一次结清。实际限额和余额由柜台当场核。" : "只收正整数；实际限额和余额由柜台当场核。",
     fields: [{ id: "amount", label, placeholder: "10" }],
     confirm: "交给柜台",
-    onConfirm: (values) => runDeskAction(kind, prefix ? `${prefix} ${values.amount}` : values.amount, bank, panel),
+    onConfirm: (values) => runDeskAction(kind, prefix ? `${prefix} ${values.amount}` : values.amount, bank, wrap),
   });
 }
 
-async function runDeskAction(kind, target, bank, panel) {
+async function runDeskAction(kind, target, bank, wrap) {
   try {
     const snap = await api.undertideAct(kind, target);
     const event = snap.event || {};
-    showHintSheet({ title: event.title || (bank ? "恶猫钱庄" : "死人赌场"), body: event.narrative || "这一下结清了。" });
-    if (!panel || !panel.isConnected) return;
-    const under = snap.undertide || {};
-    const text = bank ? under.bank : under.casino;
-    panel.querySelector(".island-undertide-copy").textContent = text || "这会儿没有可看的。";
+    if (!wrap || !wrap.isConnected) return;
+    paintUndertideTalk(wrap, bank, snap.undertide || {}, event.narrative || "这一下结清了。");
   } catch (err) {
-    toast(err.message || "这一下没做成。")
+    toast(err.message || "这一下没做成。");
   }
 }
 
