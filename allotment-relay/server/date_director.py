@@ -68,8 +68,34 @@ def normalize(raw: dict, actions: dict, *, last: bool) -> dict:
     return {"kind": kind, "title": title.strip(), "narrative": narrative.strip(), "options": choices}
 
 
+def _parse_card_text(content: str) -> dict:
+    """只剥离外层包装，不修补残缺 JSON，也不从思考或嵌套对象里猜一幕。"""
+    content = content.strip().lstrip("\ufeff").strip()
+    # 某些兼容网关仍把思考拼到 content 开头；必须整段跳过，不能提取其中的 JSON 示例。
+    while re.match(r"<think\s*>", content, re.IGNORECASE):
+        block = re.match(r"<think\s*>[\s\S]*?</think\s*>\s*", content, re.IGNORECASE)
+        if not block:
+            raise ValueError("剧情导演只有未完成的思考内容，没有最终旁白；本次未推进、未扣选项费。")
+        content = content[block.end():]
+    if not content:
+        raise ValueError("剧情导演返回了空正文（思考内容不等于旁白）；本次未推进、未扣选项费。")
+    # 从第一个对象开始解码，并拒绝外层数组、多对象或残缺包装；括号出现在正文字符串中不受影响。
+    start = content.find("{")
+    prefix = content[:start] if start >= 0 else content
+    try:
+        if start < 0 or re.search(r"[\[\]}]|</?think\b", prefix, re.IGNORECASE):
+            raise ValueError
+        parsed, end = json.JSONDecoder().raw_decode(content, start)
+        suffix = content[end:]
+        if re.search(r"[{}\[\]]|</?think\b", suffix, re.IGNORECASE):
+            raise ValueError
+    except (ValueError, RecursionError):
+        raise ValueError("剧情导演正文中没有唯一可读取的完整JSON旁白与选项（可能格式损坏或返回了多份）。可重试原幕；本次未推进、未扣选项费。") from None
+    return parsed
+
+
 def _read_card(data: dict, actions: dict, *, last: bool) -> dict:
-    """兼容文本块/JSON 代码围栏；思考字段不是旁白，不回传到玩家端。"""
+    """兼容文本块/JSON 外层说明；reasoning_details 等思考字段不作旁白。"""
     choice = data["choices"][0]
     message = choice["message"]
     if choice.get("finish_reason") == "length":
@@ -83,15 +109,7 @@ def _read_card(data: dict, actions: dict, *, last: bool) -> dict:
         return normalize(content, actions, last=last)
     if not isinstance(content, str) or not content.strip():
         raise ValueError("剧情导演返回了空正文（思考内容不等于旁白）。请确认模型能输出最终文本后重试；本次未推进、未扣选项费。")
-    content = content.strip()
-    fenced = re.fullmatch(r"```(?:json)?\s*([\s\S]*?)\s*```", content, re.IGNORECASE)
-    if fenced:
-        content = fenced.group(1)
-    try:
-        parsed = json.loads(content)
-    except json.JSONDecodeError:
-        raise ValueError("剧情导演正文不是完整JSON，无法读取旁白与选项。请确认模型支持JSON输出后重试；本次未推进、未扣选项费。") from None
-    return normalize(parsed, actions, last=last)
+    return normalize(_parse_card_text(content), actions, last=last)
 
 
 async def generate(context: dict, actions: dict, *, last: bool = False) -> dict:
@@ -117,12 +135,20 @@ async def generate(context: dict, actions: dict, *, last: bool = False) -> dict:
         "根据情境交替生成特殊事件(event，无选项)和选择(choice，2到4项，至少一项 stay)，不可每次都重复同样选择。"
         "若 context.special 为真，融入婚礼周年纪念事件。第3幕前不结束，第3幕后可自然收尾，最迟第8幕必须 ending。"
         "must_end为真时优先收尾，不再安排新的消费选项；自定义里尚未确认的消费只写成下次约定，不得当成已经完成。"
-        "输出纯JSON：{kind: event或choice或ending,title:标题,narrative:正文,options:[{label:选项文字,action:项目代码}]}。"
+        '最终正文只输出一个完整JSON对象，所有键和字符串必须使用双引号，不能带注释、尾逗号、代码围栏或解释；字符串内换行须转义。'
+        'kind只能是"event"、"choice"或"ending"，不要把三种值写在一起。'
+        '无选项结构示例：{"kind":"event","title":"窗边听雨","narrative":"雨点敲在窗上，两人把椅子挪近了一点。","options":[]}。'
+        '选择结构示例：{"kind":"choice","title":"下一段时光","narrative":"两人商量要不要加一份甜点，也可以继续坐着聊天。","options":[{"label":"加一份甜点","action":"dessert"},{"label":"留在这里聊天","action":"stay"}]}。'
+        '示例只说明结构，不要照抄剧情，实际旁白仍须200到500字。'
         "event和ending的options是空数组；ending标题作为这次共同纪念的标题。"
     )
     payload = {"model": model, "messages": [{"role": "system", "content": prompt},
                {"role": "user", "content": json.dumps({"context": context, "actions": actions, "must_end": last}, ensure_ascii=False)}],
                "max_tokens": token_limit, "stream": False}
+    # 等价于 OpenAI SDK extra_body={"reasoning_split": True}：HTTP JSON 顶层字段，非 extra_body 嵌套。
+    # 只给 MiniMax 模型发送此扩展，避免其他兼容接口因未知参数拒绝请求。
+    if "minimax" in model.casefold():
+        payload["reasoning_split"] = True
     try:
         # 环境仅由站长配置。禁止跳转，避免授权头跟随重定向流出。
         async with httpx.AsyncClient(timeout=httpx.Timeout(request_timeout(), connect=10.0), follow_redirects=False, trust_env=False) as client:

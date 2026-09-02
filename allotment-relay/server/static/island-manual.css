@@ -42,5 +42,6 @@
 .manual-date-prices { padding:16px; border-left:3px solid #b49a62; background:#f4efdF; line-height:1.9; }
 .manual-date-narration { padding:16px; border-left:3px solid var(--sea); background:#e9eeea; line-height:1.9; }
 .manual-date-background { padding:12px 16px; border:1px dashed var(--sea); border-radius:12px; line-height:1.9; }
+.manual-date-format { padding:12px 16px; border-left:3px solid var(--sea); background:#eef2f0; line-height:1.9; }
 .manual-florist { margin:12px 0 24px; padding:8px 18px; border-left:3px solid #8d9a76; background:#f1f3e8; border-radius:0 14px 14px 0; }
 .manual-florist p { line-height:1.8; }

@@ -162,8 +162,8 @@ async def cloth_ops(command: str = "") -> str:
     return progress_mod.attach_note(await mux._call_ops(cloth.cloth_ops, _kid(), command))
 
 
-@mcp.tool(description="婚约/导演约会。空=婚档。例：约会 小馆 · 出游 查看 · 出游 自定义 1 | 听雨。人类应邀，AI行动；花票只留回忆。勿date_ops。")
-async def marriage_ops(command: Annotated[str, Field(description="整句命令；help看全表。出游 继续 0 / 出游 自定义 1 | 行动 用当前幕号；后台受理后只 出游 查看，勿重复推进。")] = "") -> str:
+@mcp.tool(description="婚约/导演约会。空=婚档。例：约会 小馆 · 出游 查看 · 出游 自定义 1 | 听雨。人类应邀，AI行动；旁白非思考，只留回忆。勿date_ops。")
+async def marriage_ops(command: Annotated[str, Field(description="整句命令；help看全表。出游 继续 0 / 出游 自定义 1 | 行动 带当前幕号；格式失败重试原幕，受理后只 出游 查看。")] = "") -> str:
     from . import marriage
     from . import progress as progress_mod
     return progress_mod.attach_note(await mux._call_ops(marriage.marriage_ops, _kid(), command))
