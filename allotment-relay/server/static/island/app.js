@@ -227,8 +227,11 @@ async function enterScene(name, opts) {
       stopWorkshopTick();
       stopQuarryTick();
       state.backTo = "map";
-      setBackChip(true, () => enterScene("map"), { showStats: false });
-      renderUndertide(root);
+      renderUndertide(root, {
+        onDetailChange: (isDetail, returnToUndertide) => {
+          setBackChip(true, isDetail ? returnToUndertide : () => enterScene("map"), { showStats: false });
+        },
+      });
     } else if (name === "shore") {
       stopGrowTick();
       stopWorkshopTick();

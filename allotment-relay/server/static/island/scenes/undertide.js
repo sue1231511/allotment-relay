@@ -11,8 +11,9 @@ const HOTS = [
 ];
 
 /** 先展示完整总览，点已有地点牌才进入对应场景。 */
-export function renderUndertide(root) {
+export function renderUndertide(root, { onDetailChange } = {}) {
   const showMap = () => {
+    if (typeof onDetailChange === "function") onDetailChange(false);
     root.innerHTML = `
     <div class="island-map island-undertide-map">
       <div class="island-map-board island-undertide-board">
@@ -34,21 +35,13 @@ export function renderUndertide(root) {
 
   const showPlace = (spot) => {
     renderPlace(root, { id: spot.id, title: spot.title });
+    if (typeof onDetailChange === "function") onDetailChange(true, showMap);
     if (spot.sprite) {
       root.querySelector(".island-place").insertAdjacentHTML("beforeend", `
         <div class="island-undertide-sprite">
           <img src="/static/island/assets/sprites/${spot.sprite}.png" alt="${spot.name}" draggable="false">
         </div>
       `);
-    }
-    const card = root.querySelector(".island-place-card");
-    if (card) {
-      const back = document.createElement("button");
-      back.type = "button";
-      back.className = "island-undertide-return";
-      back.textContent = "返回井下地图";
-      back.addEventListener("click", showMap);
-      card.append(back);
     }
   };
 

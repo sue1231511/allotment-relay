@@ -1142,17 +1142,6 @@ body.island-app.is-playing.is-yards .island-actionbar {
 .island-place-card b { display: block; font-size: 18px; }
 .island-place-card p { display: none; }
 
-.island-undertide-return {
-  margin-top: 8px;
-  border: 0;
-  border-radius: 999px;
-  padding: 6px 10px;
-  background: #3d5c61;
-  color: #fffdf8;
-  font: inherit;
-  font-size: 13px;
-}
-
 .island-undertide-sprite {
   position: absolute;
   left: 0;
