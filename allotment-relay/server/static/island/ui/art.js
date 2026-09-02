@@ -7,6 +7,7 @@ export const SLOTS = {
   "undertide-backroom": { label: "后室铺", size: "1024×1536", noWebp: true },
   "undertide-bank": { label: "恶猫钱庄", size: "1024×1536", noWebp: true },
   "undertide-bounty": { label: "恩怨墙", size: "1024×1536", noWebp: true },
+  "undertide-casino": { label: "死人赌场", size: "1024×1536", noWebp: true },
   home: { label: "家园院子", size: "1080×1920" },
   yards: { label: "份地", size: "941×1672" },
   shore: { label: "海边", size: "1080×1920" },

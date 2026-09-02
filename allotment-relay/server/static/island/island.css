@@ -1153,6 +1153,24 @@ body.island-app.is-playing.is-yards .island-actionbar {
   font-size: 13px;
 }
 
+.island-undertide-sprite {
+  position: absolute;
+  left: 0;
+  bottom: 10%;
+  z-index: 0;
+  height: 76%;
+  width: 62%;
+  pointer-events: none;
+}
+
+.island-undertide-sprite img {
+  display: block;
+  height: 100%;
+  width: auto;
+  max-width: none;
+  filter: drop-shadow(0 10px 18px rgba(12, 20, 28, .28));
+}
+
 .island-place.is-locked {
   background:
     repeating-linear-gradient(

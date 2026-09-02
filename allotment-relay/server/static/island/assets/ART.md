@@ -12,6 +12,9 @@
 | `scenes/undertide-bank.png` | 恶猫钱庄具体场景（已就位；从井下总览点恶猫钱庄进入，只看景，可返回井下地图） | 1024×1536 |
 | `scenes/undertide-bounty.png` | 恩怨墙具体场景（已就位；从井下总览点恩怨墙进入，只看景，可返回井下地图） | 1024×1536 |
 | `scenes/undertide-medic.png` | 晏安医务间具体场景（已就位；从井下总览点晏安医务间进入，只看景，可返回井下地图） | 1024×1536 |
+| `scenes/undertide-casino.png` | 死人赌场具体场景（已就位；从井下总览点死人赌场进入，Silas 会出现在场景左侧） | 1024×1536 |
+| `sprites/cat-bank-president.png` | 恶猫钱庄行长立绘（透明底；钱庄场景使用） | 1024×1536 |
+| `sprites/silas.png` | Silas 荷官立绘（透明底；死人赌场场景使用） | 1024×1536 |
 
 以上四张井下具体场景暂直接使用原 PNG，插图槽已标为不请求缺失的 WebP；后续压缩时再补同名 WebP 并移除该标记。
 | `scenes/home.png` | 家园院子 | 1080×1920 |
