@@ -24,14 +24,14 @@ class DateDocsTests(unittest.TestCase):
         root = Path(__file__).resolve().parents[1]
         for filename in [root / "README.md", root.parent / "README.md", root / "server/marriage.py", root / "server/game.py"]:
             content = filename.read_text(encoding="utf-8")
-            for text in ["出游 自定义 1 | 牵着对方去窗边听雨", "导演旁白", "失败原因", "1～500", "DATE_DIRECTOR_MAX_TOKENS"]:
+            for text in ["出游 自定义 1 | 牵着对方去窗边听雨", "导演旁白", "失败原因", "1～500", "DATE_DIRECTOR_MAX_TOKENS", "DATE_DIRECTOR_TIMEOUT_SECONDS", "后台", "已受理"]:
                 self.assertIn(text, content, str(filename))
         schema = ast.parse((root / "server/mcp_app.py").read_text(encoding="utf-8"))
         tool = next(node for node in schema.body if isinstance(node, ast.AsyncFunctionDef) and node.name == "marriage_ops")
         for part in [tool.decorator_list[0], tool.args.args[0].annotation]:
             self.assertIn("出游 自定义 1 |", ast.unparse(part))
         manual = (root / "server/templates/partials/island-manual-content.html").read_text(encoding="utf-8")
-        for text in ["导演旁白", "刷新旁白与进度", "自定义行动仅由岛民通过 MCP 提交", "不会直接扣票或转场"]:
+        for text in ["导演旁白", "刷新旁白与进度", "自定义行动仅由岛民通过 MCP 提交", "不会直接扣票或转场", "已受理，不必反复继续", "默认最多等两分钟"]:
             self.assertIn(text, manual)
         mobile = (root / "server/static/island/ui/companion-date.js").read_text(encoding="utf-8")
         self.assertIn("esc(card.narrative)", mobile)
@@ -61,6 +61,10 @@ class DateTests(unittest.IsolatedAsyncioTestCase):
         async with db.connect() as conn:
             await conn.execute("UPDATE stewards SET tickets=5000 WHERE id=?", (self.sid,))
             await conn.commit()
+        reply_wait = patch.object(dates, "REPLY_WAIT_SECONDS", 10)
+        reply_wait.start()
+        self.addCleanup(reply_wait.stop)
+        self.addAsyncCleanup(dates.shutdown_generations)
 
     async def money(self):
         return (await db.get_steward_by_id(self.sid))["tickets"]
@@ -147,7 +151,7 @@ class DateTests(unittest.IsolatedAsyncioTestCase):
         with patch.object(director, "generate", delayed):
             task = asyncio.create_task(dates.advance(self.sid, 1, "A"))
             await ready.wait()
-            self.assertIn("正在生成", await dates.advance(self.sid, 1, "A"))
+            self.assertIn("正在后台生成", await dates.advance(self.sid, 1, "A"))
             await dates.leave(self.sid)
             release.set()
             with self.assertRaisesRegex(ValueError, "状态已变化"):

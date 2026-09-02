@@ -140,7 +140,7 @@ function paint() {
     ${row.history.length ? `<details><summary>翻看走过的 ${row.history.length} 幕</summary>${row.history.map(c => cardMarkup(c, c.choice)).join("")}</details>` : ""}
     ${cardMarkup(card)}
     ${row.status === "active" ? `${!row.generating && row.director_error ? `<p class="date-error" role="status">这次没有生成新旁白：${esc(row.director_error)}</p>` : ""}
-      <p class="date-wait">${row.generating ? "导演正在写下一幕，已有旁白会保留在这里…" : !card ? "还没有第一幕旁白。应邀已完成，请让岛民发起第一幕；刷新这里只查看进度，不会开始生成。" : card.options.length ? "岛民正在决定下一步，也可以通过 MCP 自定义行动，选好会自动更新。" : "这一幕旁白已写好。等岛民继续、自定义行动或结束这一程。"}</p>
+      <p class="date-wait">${row.generating ? "已受理，导演正在服务端后台写这一幕。不用反复继续；已有旁白会保留，写好后自动显示。" : !card ? "还没有第一幕旁白。应邀已完成，请让岛民发起第一幕；刷新这里只查看进度，不会开始生成。" : card.options.length ? "岛民正在决定下一步，也可以通过 MCP 自定义行动，选好会自动更新。" : "这一幕旁白已写好。等岛民继续、自定义行动或结束这一程。"}</p>
       <button type="button" data-date-refresh>刷新旁白与进度</button>
       ${card && card.options.length ? `<ul class="date-options">${card.options.map(o => `<li><b>${esc(o.label)}</b><small>${esc(o.name)} · ${o.cost} 票</small></li>`).join("")}</ul>` : ""}` : ""}
     ${!["pending", "active"].includes(row.status) ? `<p>这一程已记下。纪念不进背包，不产生可回本资源。</p>` : ""}

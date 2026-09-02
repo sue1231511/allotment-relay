@@ -53,9 +53,13 @@ async def _observe_key(request: Request, api_key: str, device_id: str = "") -> N
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    from . import companion_date
     await db.init_db()
     async with mcp_session_manager.run():
-        yield
+        try:
+            yield
+        finally:
+            await companion_date.shutdown_generations()
 
 
 app = FastAPI(

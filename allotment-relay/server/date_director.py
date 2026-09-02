@@ -23,6 +23,16 @@ def settings() -> tuple[str, str, str]:
     return base, key, model
 
 
+def request_timeout() -> int:
+    try:
+        seconds = int(os.environ.get("DATE_DIRECTOR_TIMEOUT_SECONDS", "120"))
+    except ValueError:
+        raise ValueError("剧情导演 DATE_DIRECTOR_TIMEOUT_SECONDS 须为15～300的整数秒数。") from None
+    if not 15 <= seconds <= 300:
+        raise ValueError("剧情导演 DATE_DIRECTOR_TIMEOUT_SECONDS 须为15～300的整数秒数。")
+    return seconds
+
+
 def normalize(raw: dict, actions: dict, *, last: bool) -> dict:
     """永不使用模型给的价格、余额、工具调用或数据库字段。"""
     if not isinstance(raw, dict):
@@ -115,7 +125,7 @@ async def generate(context: dict, actions: dict, *, last: bool = False) -> dict:
                "max_tokens": token_limit, "stream": False}
     try:
         # 环境仅由站长配置。禁止跳转，避免授权头跟随重定向流出。
-        async with httpx.AsyncClient(timeout=httpx.Timeout(40.0, connect=10.0), follow_redirects=False, trust_env=False) as client:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(request_timeout(), connect=10.0), follow_redirects=False, trust_env=False) as client:
             async with client.stream("POST", url, headers={"Authorization": f"Bearer {key}"}, json=payload) as response:
                 if response.status_code != 200:
                     raise ValueError(f"剧情导演暂时不可用（HTTP {response.status_code}），本次未推进、未扣选项费。")
