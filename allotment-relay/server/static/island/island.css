@@ -2215,8 +2215,12 @@ body.island-app.is-climate-open .island-float-chip {
 
 /* 潮下两位 NPC 同样使用橙光半身与对话框，人物略低，交给对话框收边。 */
 .island-undertide-vn .island-vn-stand.is-half {
+  width: 100%;
   bottom: 11%;
   height: 53%;
+  overflow: visible;
+  -webkit-mask-image: none;
+  mask-image: none;
 }
 
 /* 韶年原图人比桥桥靠中，半身再往左一点。 */
