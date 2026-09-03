@@ -138,7 +138,7 @@ async def bar_ops(command: str = "") -> str:
     return progress_mod.attach_note(await mux._call_ops(bar.bar_ops, _kid(), command))
 
 
-@mcp.tool(description="潮下地下世界。空=help。例：well · descend · enter；bank debt / borrow 20 / repay all；dice small 10、lantern 10、draw 10 17。cheer=猫猫；井下减岛缘。/island 的恶猫钱庄可存取借还，死人赌场可赌骰/灯/抽牌；其余井下玩法仍在上手页。")
+@mcp.tool(description="潮下地下世界。空=help。例：well · descend · enter；bank debt / borrow 20 / repay all；dice small 10、lantern 10、draw 10 17。钱庄存款硬上限8888，满额后不再滚入利息。cheer=猫猫；井下减岛缘。/island 的恶猫钱庄可存取借还，死人赌场可赌骰/灯/抽牌；其余井下玩法仍在上手页。")
 async def undertide_ops(command: Annotated[str, Field(description="整句子命令；空=help。入口：well→descend→enter。钱庄：bank debt|save 票数|take 票数/all|borrow 票数|repay 票数/all。赌场：dice small|big|black 注；lantern 注/continue/cash；draw 注 停牌点12~20。手机地图只接钱庄和赌场，后室铺/恩怨墙/医务间仍用这里或上手页。")] = "") -> str:
     from . import undertide
     from . import progress as progress_mod

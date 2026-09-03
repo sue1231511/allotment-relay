@@ -1220,7 +1220,7 @@ undertide_ops grudge pay|fight|run — 寻仇应对
 undertide_ops bank borrow <票数> — 恶猫钱庄借票
 undertide_ops bank debt — 查账（欠单 + 存款）
 undertide_ops bank repay <票数|all> — 还款
-undertide_ops bank save <票数> — 存钱（T+1起息·影信×5为限）
+undertide_ops bank save <票数> — 存钱（T+1起息·影信×5为限·存款硬上限8888，满额不再滚息）
 undertide_ops bank take <票数|all> — 取钱（随时可取）
 undertide_ops jail status/ransom/serve/work — 监牢
 undertide_ops tavern — 凯斯酒馆（chat 跟荔栀说话 / whisper 买消息 / spy 查悬赏雇主 / ai 别人动态）

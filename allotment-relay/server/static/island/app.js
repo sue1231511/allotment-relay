@@ -232,6 +232,7 @@ async function enterScene(name, opts) {
         onDetailChange: (isDetail, returnToUndertide) => {
           setBagChip(isDetail);
           setBackChip(true, isDetail ? returnToUndertide : () => enterScene("map"), { showStats: isDetail });
+          if (isDetail) renderHud();
         },
       });
     } else if (name === "shore") {

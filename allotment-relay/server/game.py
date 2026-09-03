@@ -560,7 +560,7 @@ async def relay_manual() -> str:
         "  想下去：先 undertide_ops help，不要猜指令。",
         "  后室铺收账鬼阿标会强买强卖：undertide_ops market 看单 · racket accept|refuse",
         "  后室铺偶尔刷黑市装备（加战力、有损耗度）：undertide_ops market 看 · buy 编号 买 · repair 找掌柜修",
-        "  恶猫钱庄：bank debt 查账 · borrow 票数 借 · repay 票数/all 还 · save/take 存取；死人赌场：dice 小/大/黑潮 注、lantern 灯、draw 抽牌。手机地图两处也能点，仍吃影信限额和连输停桌。",
+        "  恶猫钱庄：bank debt 查账 · borrow 票数 借 · repay 票数/all 还 · save/take 存取（存款硬上限 8888，满额不再滚息）；死人赌场：dice 小/大/黑潮 注、lantern 灯、draw 抽牌。手机地图两处也能点，仍吃影信限额和连输停桌。",
         "  凯斯酒馆只卖一款酒：undertide_ops tavern ruby（回身体、掉雾智，价随身价，每日一杯）；缺钱可 tavern bleed 卖血",
         "  影信≥70 就是自己人：lottery 每天首张免费、深坑入场九折、红宝石九折、卖血加价",
         "",

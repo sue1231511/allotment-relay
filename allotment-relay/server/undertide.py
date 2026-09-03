@@ -470,7 +470,21 @@ async def _settle_savings(
     """存款懒结算：T+1 起息，复利滚入，只对计息额度内计息。返回 (结算后余额, 本次利息)。"""
     bal = int(ut.get("savings") or 0)
     last_day = int(ut.get("savings_day") or 0)
+    # UT_SAVE_CAP 是硬上限。旧版本曾让结算利息越过它；把历史超额原样
+    # 退回钱包，不能无声吞掉，也不能继续显示“8900 / 上限 8888”。
+    overflow = max(0, bal - utcfg.UT_SAVE_CAP)
+    if overflow:
+        bal = utcfg.UT_SAVE_CAP
+        await conn.execute(
+            "UPDATE stewards SET tickets=tickets+? WHERE id=?", (overflow, ut["steward_id"])
+        )
     if bal <= 0 or last_day <= 0 or day <= last_day:
+        if overflow:
+            await conn.execute(
+                "UPDATE steward_undertide SET savings=? WHERE steward_id=?",
+                (bal, ut["steward_id"]),
+            )
+            await conn.commit()
         return bal, 0
     rate = await _get_save_rate(conn, day)
     gain = 0
@@ -481,6 +495,10 @@ async def _settle_savings(
         step = int(base * rate)
         if step < 1:
             step = 1 if base >= 50 else 0  # 小额存款每天至少 1 票（本金≥50）
+        # 利息最多填到硬上限；封顶后不再滚息。
+        step = min(step, utcfg.UT_SAVE_CAP - bal)
+        if step <= 0:
+            break
         bal += step
         gain += step
         if step == 0:
@@ -490,6 +508,7 @@ async def _settle_savings(
             "UPDATE steward_undertide SET savings=?, savings_day=? WHERE steward_id=?",
             (bal, day, ut["steward_id"]),
         )
+        await conn.commit()
     return bal, gain
 
 
