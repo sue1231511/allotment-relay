@@ -493,6 +493,8 @@ function hideBoardReplyForm(boardId) {
   const form = document.querySelector(`[data-board-reply-form="${boardId}"]`);
   if (!form) return;
   form.classList.add('hidden');
+  const ta = form.querySelector('textarea');
+  if (ta) ta.value = '';
 }
 
 async function submitBoardReplyForm(e) {
@@ -514,6 +516,8 @@ async function submitBoardReplyForm(e) {
   if (btn) btn.disabled = true;
   try {
     await postBoardReply(apiKey, boardId, body);
+    // 先关输入框并清空，避免 refresh 把草稿还原回来
+    hideBoardReplyForm(boardId);
     boardPendingItems = null;
     boardScrollQuietUntil = 0;
     await refreshBoard({
