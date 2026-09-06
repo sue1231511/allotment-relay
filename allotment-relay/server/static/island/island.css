@@ -2089,7 +2089,7 @@ body.island-app.is-climate-open .island-float-chip {
   .island-root { min-height: 100vh; }
 }
 
-/* 进岛缓冲：转圈，图铺好了才揭开。 */
+/* 进岛缓冲：只等总览图；点进地点再等那一张底图。其余后台备。 */
 .island-boot-veil {
   position: fixed;
   inset: 0;

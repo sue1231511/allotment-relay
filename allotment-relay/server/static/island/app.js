@@ -154,23 +154,38 @@ function hideBootVeil() {
   }
 }
 
+async function waitScenePics(root) {
+  if (window.__islandBoot && typeof window.__islandBoot.waitPics === "function") {
+    await window.__islandBoot.waitPics(root);
+  }
+}
+
+function warmScenesLater() {
+  const kick = () => {
+    if (window.__islandBoot && typeof window.__islandBoot.warmScenesInBackground === "function") {
+      window.__islandBoot.warmScenesInBackground();
+    }
+  };
+  if (typeof requestIdleCallback === "function") requestIdleCallback(kick, { timeout: 1800 });
+  else setTimeout(kick, 400);
+}
+
 let enterGen = 0;
 
 async function bootFromServer() {
-  showBootVeil("正在准备 27 个地点…", true);
+  showBootVeil("正在进入…");
   const pending = [api.me()];
-  if (window.__islandBoot && typeof window.__islandBoot.preloadAllScenes === "function") {
-    pending.push(window.__islandBoot.preloadAllScenes());
+  if (window.__islandBoot && typeof window.__islandBoot.preloadMap === "function") {
+    pending.push(window.__islandBoot.preloadMap());
+  } else if (window.__islandBoot && typeof window.__islandBoot.preload === "function") {
+    pending.push(window.__islandBoot.preload());
   }
   const pair = await Promise.all(pending);
   applySnapshot(pair[0]);
   renderHud();
-  showBootVeil("正在准备 27 个地点…", true);
-  if (window.__islandBoot && typeof window.__islandBoot.preloadAllScenes === "function") {
-    await window.__islandBoot.preloadAllScenes();
-  }
   showPlay();
   await enterScene(state.scene);
+  warmScenesLater();
 }
 
 async function enterScene(name, opts) {
@@ -460,6 +475,13 @@ async function enterScene(name, opts) {
       },
     });
   } finally {
+    if (!quiet && gen === enterGen) {
+      try {
+        await waitScenePics(root);
+      } catch {
+        /* 单张底图超时也揭幕，避免卡死 */
+      }
+    }
     if (!quiet && gen === enterGen) hideBootVeil();
     if (!quiet && gen === enterGen) dateSceneChanged(datePlace);
   }
@@ -3020,6 +3042,7 @@ async function startFromSnapshot(data, scene) {
       }
     }
   }
+  warmScenesLater();
 }
 
 function bindDock() {
@@ -3070,7 +3093,7 @@ async function start() {
     showGate();
     return;
   }
-  showBootVeil("正在准备 27 个地点…", true);
+  showBootVeil("正在进入…");
   const enterBtn = document.getElementById("island-enter");
   window.__islandBusy = true;
   if (enterBtn) {
