@@ -128,9 +128,11 @@ PLACES: list[dict[str, Any]] = [
         "duty": True,
         "actions": [
             {"label": "洗碗上工", "note": "每两天须来一次", "tool": "bar_ops", "command": "work 洗碗 day"},
+            {"label": "牛郎", "note": "仅夜班 · 需服务熟练度", "tool": "bar_ops", "command": "work 牛郎 night"},
             {"label": "今晚", "note": "看看今晚开不开门", "tool": "bar_ops", "command": "tonight"},
             {"label": "酒单", "note": "价目与今晚出品", "tool": "bar_ops", "command": "menu"},
             {"label": "我的酒吧档", "note": "考勤与上工记录", "tool": "bar_ops", "command": "status"},
+            {"label": "今晚员工", "note": "谁在上工、谁在牛郎班", "tool": "bar_ops", "command": "staff"},
             {"label": "订婚宴", "note": "写下求婚草稿就能办。选了还能改，差价补或退。不是结婚吃席", "tool": "marriage_ops", "command": "订婚 宴 酒吧 8888"},
         ],
     },
@@ -366,8 +368,11 @@ def bar_work_slot() -> tuple[str, str]:
 
 def bar_place_actions() -> list[dict[str, Any]]:
     shift, shift_note = bar_work_slot()
+    from . import bar
+    from . import world as world_mod
     actions = next(p for p in PLACES if p["id"] == "bar")["actions"]
     out: list[dict[str, Any]] = []
+    night = world_mod.current_day_phase() == "night" or (shift == "night")
     for act in actions:
         row = dict(act)
         if row.get("label") == "洗碗上工":
@@ -376,6 +381,20 @@ def bar_place_actions() -> list[dict[str, Any]]:
                 "note": f"每两天须来一次 · {shift_note}",
                 "command": f"work 洗碗 {shift}",
             }
+        if row.get("label") == "牛郎":
+            if not night and not bar.is_open():
+                # 白天歇业也保留按钮，点了由 bar_ops 说明仅夜班
+                row = {
+                    **row,
+                    "note": "仅夜班可上 · 现在不是夜场",
+                    "command": "work 牛郎 night",
+                }
+            else:
+                row = {
+                    **row,
+                    "note": f"仅夜班 · {shift_note}",
+                    "command": "work 牛郎 night",
+                }
         out.append(row)
     return out
 

@@ -679,6 +679,7 @@ function renderMemories() {
         <div class="memory-card-action">
           ${chooser}
           <button type="button" class="btn primary memory-watch" data-memory-watch="${index}">再次观看</button>
+          ${item.kind === 'date' ? `<button type="button" class="btn memory-forget" data-memory-forget="${index}">删除这次回忆</button>` : ''}
         </div>
       </article>`;
   }).join('');
@@ -1057,6 +1058,32 @@ function renderMemoryReader() {
   $('memory-reader-mode').textContent = continuousMemoryMode ? '按幕阅读' : '连续阅读';
 }
 
+async function forgetMemory(index, trigger) {
+  const item = memoryCatalog[index];
+  if (!item || item.kind !== 'date') return;
+  const label = item.title || item.key;
+  if (!window.confirm(`删除共同出游「${label}」#${item.key}？删后不可恢复。正式约会请核对编号。`)) {
+    return;
+  }
+  trigger.disabled = true;
+  trigger.textContent = '删除中…';
+  try {
+    await postJson('/api/steward/memory/delete', {
+      api_key: state.key,
+      kind: 'date',
+      key: String(item.key),
+    });
+    const data = await api('', '');
+    applySnap(data, '');
+    setLog(`已删除共同出游 #${item.key}`);
+  } catch (err) {
+    setLog(err.message || String(err));
+  } finally {
+    trigger.disabled = false;
+    trigger.textContent = '删除这次回忆';
+  }
+}
+
 async function openMemory(index, trigger) {
   const item = memoryCatalog[index];
   if (!item) return;
@@ -1244,10 +1271,32 @@ async function loadBarPatron() {
 
   const hostSel = $('play-bar-host');
   const prevHost = hostSel.value;
-  hostSel.innerHTML = '<option value="">随机安排</option>' + (data.hosts || []).map((h) =>
+  const hosts = data.hosts || [];
+  hostSel.innerHTML = '<option value="">随机安排</option>' + hosts.map((h) =>
     `<option value="${esc(h.name)}">${esc(h.name)} · ${esc(h.badge || '')}</option>`
   ).join('');
   if ([...hostSel.options].some((o) => o.value === prevHost)) hostSel.value = prevHost;
+
+  let hostChips = $('play-bar-host-chips');
+  if (!hostChips) {
+    hostChips = document.createElement('div');
+    hostChips.id = 'play-bar-host-chips';
+    hostChips.className = 'play-host-chips';
+    hostSel.parentElement?.appendChild(hostChips);
+  }
+  if (!hosts.length) {
+    hostChips.innerHTML = '<p class="muted">今晚还没有牛郎值班。可让岛民 <code>bar_ops work 牛郎 night</code>，或点左侧「牛郎」上工。</p>';
+  } else {
+    hostChips.innerHTML = '<p class="muted">点名字指定值班牛郎：</p>' + hosts.map((h) =>
+      `<button type="button" class="play-host-chip" data-host="${esc(h.name)}">${esc(h.name)}</button>`
+    ).join('');
+    hostChips.querySelectorAll('[data-host]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        hostSel.value = btn.getAttribute('data-host') || '';
+        hostChips.querySelectorAll('.play-host-chip').forEach((el) => el.classList.toggle('is-on', el === btn));
+      });
+    });
+  }
 
   const nudgeSel = $('play-duo-nudge');
   if (!nudgeSel.options.length && data.duo_nudges) {
@@ -1589,6 +1638,11 @@ $('memory-filters').addEventListener('click', (e) => {
 });
 
 $('memories').addEventListener('click', (e) => {
+  const forget = e.target.closest('[data-memory-forget]');
+  if (forget) {
+    forgetMemory(Number(forget.dataset.memoryForget), forget);
+    return;
+  }
   const button = e.target.closest('[data-memory-watch]');
   if (!button) return;
   openMemory(Number(button.dataset.memoryWatch), button);

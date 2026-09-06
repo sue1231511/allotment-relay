@@ -1,4 +1,4 @@
-import { api } from "../api.js?v=dates2";
+import { api } from "../api.js?v=date-forget1";
 import { esc, toast } from "./modal.js?v=island-modulefix2";
 
 let navigate, scene = "map", rows = [], timer = 0, loading = false, openId = 0, busy = false;
@@ -53,7 +53,23 @@ export function mountDates(enterScene) {
     if (ev.target.closest("[data-date-close]") && !busy) close();
     if (ev.target.closest("[data-date-refresh]") && !busy) { refresh(); return; }
     const history = ev.target.closest("[data-date-open]");
-    if (history) { openId = Number(history.dataset.dateOpen); painted = ""; paint(); }
+    if (history) { openId = Number(history.dataset.dateOpen); painted = ""; paint(); return; }
+    const forget = ev.target.closest("[data-date-forget]");
+    if (forget && !busy) {
+      const id = Number(forget.dataset.dateForget);
+      const title = forget.dataset.dateTitle || `#${id}`;
+      if (!window.confirm(`删除共同出游「${title}」#${id}？删后不可恢复。正式约会请核对编号。`)) return;
+      busy = true;
+      panel.querySelectorAll("button").forEach(btn => { btn.disabled = true; });
+      try {
+        const data = await api.dateForget(id);
+        rows = data.dates || [];
+        openId = rows[0] ? rows[0].id : 0;
+        toast((data.event && data.event.narrative) || "已删除。");
+      } catch (err) { toast(err.message || "暂时没能删除，请重试。"); }
+      finally { busy = false; painted = ""; paint(); }
+      return;
+    }
     const response = ev.target.closest("[data-date-respond]");
     if (!response || busy) return;
     busy = true;
@@ -168,8 +184,9 @@ function paint() {
       <p class="date-wait">${row.generating ? "已受理，导演正在服务端后台写这一幕。不用反复继续；已有旁白会保留，写好后自动显示。" : !card ? "还没有第一幕旁白。应邀已完成，请让岛民发起第一幕；刷新这里只查看进度，不会开始生成。" : card.options.length ? "岛民正在决定下一步，也可以通过 MCP 自定义行动，选好会自动更新。" : "这一幕旁白已写好。等岛民继续、自定义行动或结束这一程。"}</p>
       <button type="button" data-date-refresh>刷新旁白与进度</button>
       ${card && card.options.length ? `<ul class="date-options">${card.options.map(o => `<li><b>${esc(o.label)}</b><small>${esc(o.name)} · ${o.cost} 票</small></li>`).join("")}</ul>` : ""}` : ""}
-    ${!["pending", "active"].includes(row.status) ? `<p>这一程已记下。纪念不进背包，不产生可回本资源。</p>` : ""}
-    <details class="date-archive"><summary>其他共同出游</summary>${rows.filter(d => d.id !== row.id).map(d => `<button type="button" data-date-open="${d.id}">${esc(d.title)} · ${esc(d.status_label)}</button>`).join("") || "还没有其他记录"}</details>
+    ${!["pending", "active"].includes(row.status) ? `<p>这一程已记下。纪念不进背包，不产生可回本资源。</p>
+      <button type="button" data-date-forget="${row.id}" data-date-title="${esc(row.title || row.place)}">删除这次回忆 #${row.id}</button>` : ""}
+    <details class="date-archive"><summary>其他共同出游</summary>${rows.filter(d => d.id !== row.id).map(d => `<button type="button" data-date-open="${d.id}">#${d.id} ${esc(d.title)} · ${esc(d.status_label)}</button>`).join("") || "还没有其他记录"}</details>
     </div>`);
 }
 

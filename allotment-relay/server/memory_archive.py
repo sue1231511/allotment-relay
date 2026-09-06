@@ -417,3 +417,20 @@ async def fetch_review(
             key.strip().lower(),
             variant.strip(),
         )
+
+
+async def forget_date_memory(api_key: str, key: str) -> dict[str, Any]:
+    """人类上手页删除某次共同出游回忆。"""
+    from . import companion_date
+
+    key_row = await db.get_key_row(api_key.strip())
+    if not key_row:
+        raise ValueError("凭证无效")
+    steward = await db.get_steward_by_key_id(key_row["id"])
+    if not steward or not steward["enrolled"]:
+        raise ValueError("请先 steward_ops enroll 登记管理员")
+    tok = str(key or "").strip().lstrip("#")
+    if not tok.isdigit():
+        raise ValueError("请指定要删的共同出游编号。")
+    msg = await companion_date.forget(int(steward["id"]), int(tok))
+    return {"ok": True, "text": msg}

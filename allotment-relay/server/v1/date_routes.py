@@ -16,6 +16,10 @@ class ResponseBody(BaseModel):
     accept: bool
 
 
+class ForgetBody(BaseModel):
+    date_id: int = Field(gt=0)
+
+
 @router.get("")
 async def dates(request: Request):
     try:
@@ -32,6 +36,20 @@ async def respond(request: Request, body: ResponseBody):
         _, s = await require_enrolled(extract_api_key(request))
         result = await companion_date.respond(s["id"], body.date_id, body.scene, accept=body.accept)
         return JSONResponse(result, headers={"Cache-Control": "no-store"})
+    except ApiError as exc:
+        return JSONResponse(exc.as_dict(), status_code=exc.status)
+    except ValueError as exc:
+        return JSONResponse({"ok": False, "error": {"code": "DATE_STATE", "message": str(exc)}}, status_code=409)
+
+
+@router.post("/forget")
+async def forget(request: Request, body: ForgetBody):
+    try:
+        _, s = await require_enrolled(extract_api_key(request))
+        msg = await companion_date.forget(s["id"], body.date_id)
+        snap = await companion_date.snapshot(s["id"])
+        snap["event"] = {"title": "删掉回忆", "narrative": msg, "kind": "date"}
+        return JSONResponse(snap, headers={"Cache-Control": "no-store"})
     except ApiError as exc:
         return JSONResponse(exc.as_dict(), status_code=exc.status)
     except ValueError as exc:

@@ -222,7 +222,7 @@ ALLIANCE_HELP = """alliance_ops 子命令（整句写进 command）：
   在线 — 档口里的人（15 分钟内有操作）
   邻居 — 同 steward_ops 邻居（全员、熟地、可否偷菜/assist）
   assist 名字 — 帮邻居打理。例子：assist 安
-  contract post|list|fill|mine|cancel — 悬赏合约
+  contract post|list|fill|mine|cancel — 悬赏合约（post/fill 认中文名与英文 id，如 石蟹王 / fish_kingcrab）
   league status|contribute|board — 全服周目标；抽作物目标时跳过当季休市的种，回落到甘蓝。league board 是贡献榜。不在潮生会办
   board — 周目标贡献榜（全服票榜请用 steward_ops board）
   donate 物品 数量 / larder / draw 物品 数量 — 联盟储藏室（领取 2 票、每日 3 次）。不在潮生会办

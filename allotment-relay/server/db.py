@@ -3062,6 +3062,7 @@ async def list_received_gifts(steward_id: int, limit: int = 20) -> list[dict[str
         if steward_name:
             await _repair_gift_targets(db, steward_id, steward_name)
             await db.commit()
+        # gift + gift_inbox 同一次送礼各写一条；多取再去重，旧数据只有 gift 的仍保留
         cur = await db.execute(
             """
             SELECT c.text, c.created_at, c.action, a.name AS actor_name
@@ -3070,7 +3071,7 @@ async def list_received_gifts(steward_id: int, limit: int = 20) -> list[dict[str
             WHERE c.target_id=? AND c.action IN ('gift', 'gift_inbox', 'bar_tip', 'handoff')
             ORDER BY c.created_at DESC LIMIT ?
             """,
-            (steward_id, limit),
+            (steward_id, max(limit * 3, limit)),
         )
         rows = [dict(r) for r in await cur.fetchall()]
         for r in rows:
@@ -3079,7 +3080,21 @@ async def list_received_gifts(steward_id: int, limit: int = 20) -> list[dict[str
                 viewer_name=steward_name,
                 action=str(r.get("action") or "gift"),
             )
-        return rows
+        out: list[dict[str, Any]] = []
+        seen: set[tuple[Any, ...]] = set()
+        for r in rows:
+            sig = (
+                str(r.get("actor_name") or ""),
+                int(r.get("created_at") or 0),
+                str(r.get("summary") or r.get("text") or ""),
+            )
+            if sig in seen:
+                continue
+            seen.add(sig)
+            out.append(r)
+            if len(out) >= limit:
+                break
+        return out
 
 
 async def list_sent_gifts(steward_id: int, limit: int = 20) -> list[dict[str, Any]]:
@@ -3090,7 +3105,7 @@ async def list_sent_gifts(steward_id: int, limit: int = 20) -> list[dict[str, An
             SELECT c.text, c.created_at, c.action, t.name AS target_name
             FROM chronicle c
             LEFT JOIN stewards t ON t.id = c.target_id
-            WHERE c.actor_id=? AND c.action IN ('gift', 'gift_inbox')
+            WHERE c.actor_id=? AND c.action='gift'
             ORDER BY c.created_at DESC LIMIT ?
             """,
             (steward_id, limit),

@@ -74,6 +74,7 @@ export const api = {
   floristAct: (kind, target = "", idem) => req("/api/v1/florist/act", { method: "POST", body: { kind, target }, idem }),
   dates: () => req("/api/v1/dates"),
   dateRespond: (date_id, scene, accept) => req("/api/v1/dates/respond", { method: "POST", body: { date_id, scene, accept } }),
+  dateForget: (date_id) => req("/api/v1/dates/forget", { method: "POST", body: { date_id } }),
   session: (apiKey, name = "") => req("/api/v1/session", { method: "POST", body: { api_key: apiKey, name } }),
   me: () => req("/api/v1/me"),
   world: () => req("/api/v1/world"),

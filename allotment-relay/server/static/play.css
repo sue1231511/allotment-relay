@@ -1708,10 +1708,40 @@ body.is-wedding-day .play-today,
 .play-steward-plots strong { display: block; margin-top: 7px; font-size: 13px; }
 .play-steward-plots p { margin: 5px 0 0; font-size: 9px; color: #8c948e; line-height: 1.5; }
 
-.play-steward-stock { display: flex; flex-wrap: wrap; gap: 7px; }
+.play-steward-stock {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  max-height: min(52vh, 420px);
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
 .play-steward-stock span { padding: 7px 9px; border-radius: 12px; background: #f8f4ec; font-size: 10px; }
 .play-steward-stock b { font-weight: 500; }
 .play-steward-stock em { margin-left: 4px; color: #939993; font-style: normal; }
+
+.play-host-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+  align-items: center;
+}
+.play-host-chips > p { flex: 1 0 100%; margin: 0; }
+.play-host-chip {
+  border: 1px solid #cbb898;
+  background: #f8f4ec;
+  color: #5d5346;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+}
+.play-host-chip.is-on {
+  background: #465d60;
+  border-color: #465d60;
+  color: #fff;
+}
+.memory-forget { margin-left: 8px; }
 
 .play-steward-gifts article {
   display: grid;

@@ -116,6 +116,7 @@ def describe(view: dict) -> str:
         if card:
             text.extend([card["title"], card["narrative"]])
         text.append("只留共同回忆，不产资源。可重新约会同一地点。")
+        text.append(f"不要的测试回忆可删：marriage_ops 出游 删除 {view['id']}（上手页共同出游也可删）。")
     return "\n".join(text)
 
 
@@ -345,6 +346,30 @@ async def leave(sid: int) -> str:
     return "已结束这场出游。已发生的剧情和消费保留为纪念，已花票不退；没有资源奖励。"
 
 
+async def forget(sid: int, date_id: int) -> str:
+    """删掉已结束的测试/不要的约会回忆。正式进行中的不能删。"""
+    async with db.connect() as conn:
+        conn.row_factory = aiosqlite.Row
+        row = await (await conn.execute(
+            "SELECT * FROM companion_dates WHERE id=? AND steward_id=?",
+            (date_id, sid),
+        )).fetchone()
+        if not row:
+            raise ValueError(f"找不到出游 #{date_id}。出游 查看 看编号。")
+        row = dict(row)
+        if row["status"] in ("pending", "active"):
+            raise ValueError(
+                f"#{date_id} 还在进行或等应邀。先 出游 退出，或等人类应邀/拒绝后再删。"
+            )
+        title = row.get("title") or row.get("place") or f"#{date_id}"
+        await conn.execute(
+            "DELETE FROM companion_dates WHERE id=? AND steward_id=?",
+            (date_id, sid),
+        )
+        await conn.commit()
+    return f"已删除共同出游回忆 #{date_id}「{title}」。上手页岛上回忆与手游出游面板不再显示。"
+
+
 async def command(steward: dict[str, Any], rest: str) -> str:
     verb, _, tail = rest.strip().partition(" ")
     if verb in ("约会", "出去走走", "date", "发起"):
@@ -366,8 +391,18 @@ async def command(steward: dict[str, Any], rest: str) -> str:
         return await submit_generation(steward["id"], int(number.strip()), custom=action.strip())
     if verb == "退出":
         return await leave(steward["id"])
-    raise ValueError("出游：查看 · 选择 幕号 A · 自定义 幕号 | 行动文字 · 继续 幕号 · 退出。人类只在地图应邀；自定义不直接买单，加项和转场须选报价确认。")
-
+    if verb in ("删除", "忘掉", "forget", "delete"):
+        tok = tail.strip().lstrip("#")
+        if not tok.isdigit():
+            raise ValueError(
+                "格式：出游 删除 12。编号看出游 查看 或上手页共同出游卡片。"
+                "只能删已结束的；进行中的先退出。正式约会请核对编号，勿误删。"
+            )
+        return await forget(steward["id"], int(tok))
+    raise ValueError(
+        "出游：查看 · 选择 幕号 A · 自定义 幕号 | 行动文字 · 继续 幕号 · 退出 · 删除 编号。"
+        "人类只在地图应邀；自定义不直接买单，加项和转场须选报价确认。"
+    )
 
 def archive_chapters(row: dict) -> list[dict[str, str]]:
     state = _state(row)

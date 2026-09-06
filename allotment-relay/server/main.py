@@ -375,6 +375,12 @@ class StewardMemoryRequest(BaseModel):
     variant: str = ""
 
 
+class StewardMemoryDeleteRequest(BaseModel):
+    api_key: str
+    kind: str
+    key: str
+
+
 class LoungePostRequest(BaseModel):
     api_key: str
     message: str
@@ -668,6 +674,17 @@ async def steward_memory(body: StewardMemoryRequest):
         return await memory_archive.fetch_review(
             body.api_key.strip(), body.kind, body.key, body.variant
         )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/steward/memory/delete")
+async def steward_memory_delete(body: StewardMemoryDeleteRequest):
+    from . import memory_archive
+    if body.kind.strip().lower() != "date":
+        raise HTTPException(status_code=400, detail="目前只能删除共同出游回忆。")
+    try:
+        return await memory_archive.forget_date_memory(body.api_key.strip(), body.key)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

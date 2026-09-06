@@ -3,7 +3,7 @@ from typing import Any
 import aiosqlite
 
 from . import db, world
-from .catalog import ITEM_NAMES
+from .catalog import ITEM_NAMES, resolve_item_key, unknown_item_message
 from .config import (
     ASSIST_RAPPORT,
     ASSIST_TICKETS,
@@ -500,7 +500,10 @@ async def contract_ops(key_id: int, command: str) -> str:
         )
 
     if verb == "post" and len(parts) >= 4:
-        item, qty, reward = parts[1], int(parts[2]), int(parts[3])
+        raw_item, qty, reward = parts[1], int(parts[2]), int(parts[3])
+        item = resolve_item_key(raw_item)
+        if not item:
+            raise ValueError(unknown_item_message(raw_item))
         if reward < 1:
             raise ValueError("酬劳至少 1 票")
         async with db.connect() as conn:
@@ -534,9 +537,24 @@ async def contract_ops(key_id: int, command: str) -> str:
                 raise ValueError("合约不存在或已关闭")
             if c["poster_id"] == s["id"]:
                 raise ValueError("不能交付自己的合约")
-            if not await db.take_item(conn, s["id"], c["want_item"], c["want_qty"]):
-                raise ValueError("行囊里没有足够物资")
-            await db.add_item(conn, c["poster_id"], c["want_item"], c["want_qty"])
+            want_raw = str(c["want_item"] or "")
+            want = resolve_item_key(want_raw) or want_raw
+            qty = int(c["want_qty"] or 0)
+            took = await db.take_item(conn, s["id"], want, qty)
+            if not took and want != want_raw:
+                took = await db.take_item(conn, s["id"], want_raw, qty)
+                if took:
+                    want = want_raw
+            if not took:
+                raise ValueError(
+                    f"行囊里没有足够物资（需要 {ITEM_NAMES.get(want, want)} / {want} x{qty}）"
+                )
+            if want != want_raw:
+                await conn.execute(
+                    "UPDATE contracts SET want_item=? WHERE id=? AND status='open'",
+                    (want, cid),
+                )
+            await db.add_item(conn, c["poster_id"], want, qty)
             await conn.execute(
                 "UPDATE stewards SET tickets = tickets + ? WHERE id=?",
                 (c["reward_tickets"], s["id"]),

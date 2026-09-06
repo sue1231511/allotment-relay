@@ -160,7 +160,7 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
             "qty": q,
             "stack_cap": item_stack_cap(k, stack_tier=int(s.get("satchel_stack_extra") or 0)),
         }
-        for k, q in sorted(stock.items(), key=lambda x: (-x[1], x[0]))[:48]
+        for k, q in sorted(stock.items(), key=lambda x: (-x[1], x[0]))
     ]
 
     incident_views = [
