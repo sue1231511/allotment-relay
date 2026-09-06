@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Form, HTTPException, Request
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -748,6 +748,58 @@ async def lounge_post(body: LoungePostRequest):
     try:
         msg = await lounge.human_post(body.api_key.strip(), body.message)
         return msg
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+
+class LoungeStickerSendRequest(BaseModel):
+    api_key: str
+    sticker_id: int
+
+
+@app.get("/api/lounge/stickers")
+async def lounge_stickers_list(api_key: str):
+    from . import lounge
+    try:
+        return {"items": await lounge.human_list_stickers(api_key.strip())}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/lounge/stickers")
+async def lounge_stickers_upload(
+    api_key: str = Form(...),
+    files: list[UploadFile] = File(...),
+):
+    from . import lounge
+    payload: list[tuple[str, str, bytes]] = []
+    for f in files or []:
+        raw = await f.read()
+        payload.append((f.filename or "sticker", f.content_type or "", raw))
+    try:
+        items = await lounge.human_upload_stickers(api_key.strip(), payload)
+        return {"items": items}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/lounge/stickers/{sticker_id}/file")
+async def lounge_sticker_file(sticker_id: int):
+    from . import lounge_stickers as stickers
+    from fastapi.responses import FileResponse
+    try:
+        path = await stickers.sticker_file_path(sticker_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return FileResponse(path)
+
+
+@app.post("/api/lounge/stickers/send")
+async def lounge_sticker_send(body: LoungeStickerSendRequest):
+    from . import lounge
+    try:
+        return await lounge.human_send_sticker(body.api_key.strip(), int(body.sticker_id))
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
