@@ -91,7 +91,12 @@
     }
   }
 
-  var MAP_PICS = ["/static/island/assets/scenes/island-map.jpg"];
+  /* 进岛只等总览图；其余地点后台备，点进去再等那一张。jpg 仍是 picture 回退。 */
+  var MAP_PICS = ["/static/island/assets/scenes/island-map.webp"];
+  var MAP_JPG = "/static/island/assets/scenes/island-map.jpg";
+  var NEARBY_PICS = ["yards", "shore", "plaza", "undertide-map"].map(function (id) {
+    return "/static/island/assets/scenes/" + id + ".webp";
+  });
   var SCENE_PICS = [
     "atelier", "bar", "beach", "clinic", "eatery", "hall", "hui", "hut-1", "hut-2", "hut-3", "hut-4",
     "island-map", "undertide-map", "lianli", "lighthouse", "lili", "market", "plaza", "port", "quarry", "shop", "shore",
@@ -103,9 +108,10 @@
   SCENE_PICS.push("/static/island/assets/status-frame.webp?v=status-frame1");
   SCENE_PICS.push("/static/island/assets/stats-frame.png");
   var VEIL_MS = 30000;
-  var PIC_MS = 25000;
+  var PIC_MS = 12000;
   var veilTimer = 0;
   var allScenesPromise = null;
+  var warmedUrls = {};
 
   function showVeil(text, withProgress) {
     var el = document.getElementById("island-boot-veil");
@@ -114,22 +120,13 @@
     var progress = el.querySelector("progress");
     var count = el.querySelector("small");
     if (line) line.textContent = text || "正在进入…";
-    if (progress) {
-      progress.hidden = !withProgress;
-      if (withProgress) {
-        progress.max = SCENE_PICS.length;
-        progress.value = 0;
-      }
-    }
-    if (count) {
-      count.hidden = !withProgress;
-      if (withProgress) count.textContent = "0 / " + SCENE_PICS.length + " 个地点";
-    }
+    if (progress) progress.hidden = true;
+    if (count) count.hidden = true;
     el.hidden = false;
     el.removeAttribute("hidden");
     document.body.classList.add("is-entering");
     clearTimeout(veilTimer);
-    veilTimer = withProgress ? 0 : setTimeout(hideVeil, VEIL_MS);
+    veilTimer = setTimeout(hideVeil, VEIL_MS);
   }
 
   function hideVeil() {
@@ -175,9 +172,14 @@
           var finish = function () {
             if (done) return;
             done = true;
+            warmedUrls[src] = true;
             if (onProgress) onProgress();
             resolve();
           };
+          if (warmedUrls[src]) {
+            finish();
+            return;
+          }
           var img = new Image();
           img.onload = finish;
           img.onerror = finish;
@@ -188,30 +190,66 @@
     );
   }
 
-  function preloadAllScenes() {
+  function preloadMap() {
+    return preload(MAP_PICS, 12000).then(function () {
+      /* 不支持 webp 时再备 jpg 回退，不挡进岛。 */
+      if (!warmedUrls[MAP_JPG]) {
+        var img = new Image();
+        img.onload = function () { warmedUrls[MAP_JPG] = true; };
+        img.onerror = function () {};
+        img.src = MAP_JPG;
+      }
+    });
+  }
+
+  function warmQueue(urls, concurrency) {
+    urls = (urls || []).filter(function (src) { return !warmedUrls[src]; });
+    if (!urls.length) return Promise.resolve();
+    concurrency = concurrency || 3;
+    return new Promise(function (resolve) {
+      var i = 0;
+      var inflight = 0;
+      function kick() {
+        while (inflight < concurrency && i < urls.length) {
+          (function (src) {
+            inflight += 1;
+            var img = new Image();
+            var finish = function () {
+              warmedUrls[src] = true;
+              inflight -= 1;
+              if (i >= urls.length && inflight === 0) resolve();
+              else schedule();
+            };
+            img.onload = finish;
+            img.onerror = finish;
+            img.src = src;
+          })(urls[i++]);
+        }
+        if (i >= urls.length && inflight === 0) resolve();
+      }
+      function schedule() {
+        if (typeof requestIdleCallback === "function") {
+          requestIdleCallback(kick, { timeout: 1200 });
+        } else {
+          setTimeout(kick, 80);
+        }
+      }
+      schedule();
+    });
+  }
+
+  /** 进岛后后台备地点图：先邻居，再其余。不挡操作、不转圈。 */
+  function warmScenesInBackground() {
     if (allScenesPromise) return allScenesPromise;
-    clearTimeout(veilTimer);
-    veilTimer = 0;
-    var veil = document.getElementById("island-boot-veil");
-    var progress = veil && veil.querySelector("progress");
-    var count = veil && veil.querySelector("small");
-    var completed = 0;
-    var total = SCENE_PICS.length;
-    if (progress) {
-      progress.hidden = false;
-      progress.max = total;
-      progress.value = 0;
-    }
-    if (count) {
-      count.hidden = false;
-      count.textContent = "0 / " + total + " 个地点";
-    }
-    allScenesPromise = preload(SCENE_PICS, PIC_MS, function () {
-      completed += 1;
-      if (progress) progress.value = completed;
-      if (count) count.textContent = completed + " / " + total + " 个地点";
+    allScenesPromise = warmQueue(NEARBY_PICS, 2).then(function () {
+      return warmQueue(SCENE_PICS, 3);
     });
     return allScenesPromise;
+  }
+
+  /** 旧名保留：改成后台暖图，不再挡进岛。 */
+  function preloadAllScenes() {
+    return warmScenesInBackground();
   }
 
   function afterPaint() {
@@ -350,7 +388,7 @@
       return Promise.resolve(window.__islandStart(data, scene || "map"));
     }
     window.__islandPending = { data: data, scene: scene || "map" };
-    showVeil("正在准备 27 个地点…", true);
+    showVeil("正在进入…");
     return Promise.resolve();
   }
 
@@ -406,7 +444,7 @@
       return Promise.resolve();
     }
     saveKey(key);
-    showVeil("正在准备 27 个地点…", true);
+    showVeil("正在进入…");
     setBusy(true, name ? "enroll" : "enter");
     return withTimeout(postSession(key, name), 12000, "号还没接上。再点一次进入地图。")
       .then(function (data) {
@@ -418,7 +456,9 @@
           return;
         }
         hint("");
-        return handoff(data, name ? "home" : "map");
+        return preloadMap().then(function () {
+          return handoff(data, name ? "home" : "map");
+        });
       })
       .catch(function (err) {
         hideVeil();
@@ -464,7 +504,9 @@
     showVeil: showVeil,
     hideVeil: hideVeil,
     preload: preload,
+    preloadMap: preloadMap,
     preloadAllScenes: preloadAllScenes,
+    warmScenesInBackground: warmScenesInBackground,
     waitPics: waitPics,
     loadKey: loadKey,
     saveKey: saveKey,

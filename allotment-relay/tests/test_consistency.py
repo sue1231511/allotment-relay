@@ -448,9 +448,9 @@ def test_relay_manual_covers_systems() -> None:
         "进价九成",
         "/play 点按同一套指令",
         "二十格一页",
-        "每个地点先进转圈",
-        "底图铺好了再进",
-        "不会半截就揭。进去之后有轻音乐，不想听点右上角贝壳音乐钮。",
+        "进岛只等总览图",
+        "点进某个地点时再等那一张底图铺好了再进",
+        "不会半截就揭。其余地点后台备着。进去之后有轻音乐，不想听点右上角贝壳音乐钮。",
         "点一下看木牌",
         "点一下看会厅",
         "点一下看登记处",
@@ -668,9 +668,9 @@ def test_human_island_manual() -> None:
         "/island",
         "手机地图",
         "进入地图",
-        "每个地点先进转圈",
-        "底图铺好了再进",
-        "不会半截就揭。进去之后有轻音乐，不想听点右上角贝壳音乐钮。",
+        "进岛只等总览图",
+        "点进某个地点时再等那一张底图铺好了再进",
+        "不会半截就揭。其余地点后台备着。进去之后有轻音乐，不想听点右上角贝壳音乐钮。",
         "点一下看木牌",
         "点一下看会厅",
         "点一下看登记处",
@@ -874,7 +874,11 @@ def test_patron_pages_share_steward_key() -> None:
     assert "/static/island/assets/sprites/tt.webp" in island_boot
     assert "island-tt-stand" in island_shop
     assert ".island-shop.is-peek .island-tt-stand" in island_css
-    assert "dual-panels1" in island_html
+    assert "map-load-fast1" in island_html
+    assert 'rel="preload"' in island_html
+    assert "island-map.webp" in island_html
+    assert "preloadMap" in island_boot
+    assert "warmScenesInBackground" in island_boot
     assert 'id="island-stats"' in island_html
     assert 'id="island-status"' in island_html
     assert 'aria-label="影信、饱食、雾智、档信、健康、精力"' in island_html

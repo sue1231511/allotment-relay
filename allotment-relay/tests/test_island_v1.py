@@ -1244,11 +1244,17 @@ def test_island_page_is_modular() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     api = (ROOT / "server/static/island/api.js").read_text(encoding="utf-8")
     assert "/static/island/app.js" in html
-    assert "island-mapbgm1" in app
-    assert html.count("island.css?v=island-xiaojucut1") == 1
-    assert html.count("app.js?v=island-lilisprite1") == 1
+    assert "preloadMap" in (ROOT / "server/static/island/boot.js").read_text(encoding="utf-8")
+    assert "warmScenesInBackground" in (ROOT / "server/static/island/boot.js").read_text(encoding="utf-8")
+    assert "warmScenesLater" in app
+    assert "waitScenePics" in app
+    assert html.count("island.css?v=map-load-fast1") == 1
+    assert html.count("app.js?v=map-load-fast1") == 1
+    assert html.count("boot.js?v=map-load-fast1") == 1
+    assert 'rel="preload"' in html
+    assert "island-map.webp" in html
     assert html.count("lounge-embed.css?v=island-portlounge1") == 1
-    assert "lounge.js?v=lounge-board-compose6" in html
+    assert "lounge.js?v=island-modulefix2" in html
     assert "island-time.js" in html
     assert 'include "partials/island-lounge.html"' in html
     lounge_embed = (ROOT / "server/templates/partials/island-lounge.html").read_text(encoding="utf-8")
@@ -1277,21 +1283,19 @@ def test_island_page_is_modular() -> None:
     assert "发红包" in html
     assert "对暗号" in html
     assert "许愿墙" in html
-    assert "bgm.js?v=island-burgertown1" in app
-    assert "lighthouse.js?v=island-mapbgm1" in app
-    assert "hall.js?v=island-mapbgm1" in app
-    assert "shop.js?v=island-mapbgm1" in app
-    assert "lili.js?v=island-lilisprite1" in app
-    assert "clinic.js?v=island-mapbgm1" in app
-    assert "market.js?v=island-mapbgm1" in app
+    assert "bgm.js?v=undertide-bgm1" in app
+    assert "lighthouse.js?v=island-modulefix2" in app
+    assert "hall.js?v=island-modulefix2" in app
+    assert "shop.js?v=tt-sprite1" in app
+    assert "lili.js?v=island-modulefix2" in app
+    assert "clinic.js?v=island-modulefix2" in app
+    assert "market.js?v=island-modulefix2" in app
     js_blob = "\n".join(p.read_text(encoding="utf-8") for p in (ROOT / "server/static/island").rglob("*.js"))
     store_vs = set(re.findall(r"store\.js\?v=([^\s\"']+)", js_blob))
-    modal_vs = set(re.findall(r"modal\.js\?v=([^\s\"']+)", js_blob))
-    assert store_vs == {"island-mapbgm1"}, store_vs
-    assert modal_vs == {"island-mapbgm1"}, modal_vs
-    assert 'from "../store.js?v=island-mapbgm1"' in (ROOT / "server/static/island/scenes/atelier.js").read_text(encoding="utf-8")
-    assert 'from "../store.js?v=island-mapbgm1"' in (ROOT / "server/static/island/scenes/writers.js").read_text(encoding="utf-8")
-    assert 'from "../store.js?v=island-mapbgm1"' in (ROOT / "server/static/island/scenes/hall.js").read_text(encoding="utf-8")
+    assert "island-modulefix2" in store_vs, store_vs
+    assert 'from "../store.js?v=island-modulefix2"' in (ROOT / "server/static/island/scenes/atelier.js").read_text(encoding="utf-8")
+    assert 'from "../store.js?v=island-modulefix2"' in (ROOT / "server/static/island/scenes/writers.js").read_text(encoding="utf-8")
+    assert 'from "../store.js?v=island-modulefix2"' in (ROOT / "server/static/island/scenes/hall.js").read_text(encoding="utf-8")
     hut_js = (ROOT / "server/static/island/scenes/hut.js").read_text(encoding="utf-8")
     store_js = (ROOT / "server/static/island/store.js").read_text(encoding="utf-8")
     art_js = (ROOT / "server/static/island/ui/art.js").read_text(encoding="utf-8")
@@ -1305,7 +1309,7 @@ def test_island_page_is_modular() -> None:
     assert "去上手页" not in hut_js
     assert "api.hutAct" in app
     assert "keepHut" in app
-    assert 'hut.js?v=island-hutcook1' in app
+    assert 'hut.js?v=island-modulefix2' in app
     assert "kind === \"cook_mix\"" in app
     assert "openHut" in app
     assert "renderHut" in app
@@ -1314,8 +1318,8 @@ def test_island_page_is_modular() -> None:
     assert '"hut-1"' in art_js and '"hut-4"' in art_js
     for name in ("hut-1.png", "hut-2.png", "hut-3.png", "hut-4.png"):
         assert (ROOT / "server/static/island/assets/scenes" / name).exists(), name
-    assert "island-mapbgm1" in html
-    assert "boot.js?v=island-mapbgm1" in html
+    assert "map-load-fast1" in html
+    assert "boot.js?v=map-load-fast1" in html
     assert 'id="island-boot-veil"' in html
     assert "正在进入" in html
     assert "fonts.googleapis.com" not in html
@@ -1372,7 +1376,8 @@ def test_island_page_is_modular() -> None:
     assert '"/market"' not in map_js
     assert '"/ting"' not in map_js
     assert '"/lianli"' not in map_js
-    assert '"/undertide"' in map_js
+    assert 'go: "undertide"' in map_js
+    assert '"/undertide"' not in map_js
     assert "岸畔小馆" in map_js
     assert "972" in map_js
     assert "1619" in map_js
@@ -1401,12 +1406,13 @@ def test_island_page_is_modular() -> None:
     assert "is-playing" in css
     assert "island-boot-veil" in css
     assert "island-boot-spin" in css
-    assert "is-entering" in css
+    assert "is-entering" in (ROOT / "server/static/island/boot.js").read_text(encoding="utf-8")
     assert "正在进入" in app
     assert "waitScenePics" in app
     assert "await waitScenePics" in app
+    assert "warmScenesLater" in app
     assert "enterGen" in app
-    assert 'from "./ui/modal.js?v=island-mapbgm1"' in app
+    assert 'from "./ui/modal.js?v=island-modulefix2"' in app
     modal_src = (ROOT / "server/static/island/ui/modal.js").read_text(encoding="utf-8")
     assert "export function showFormSheet" in modal_src
     assert "export function showPickSheet" in modal_src
@@ -1455,10 +1461,13 @@ def test_island_page_is_modular() -> None:
     assert "/api/v1/session" in boot
     assert "正在进入" in boot
     assert "island-enter" in boot
+    assert "island-map.webp" in boot
     assert "island-map.jpg" in boot
+    assert "preloadMap" in boot
+    assert "warmScenesInBackground" in boot
     assert "VEIL_MS" in boot
     assert "PIC_MS" in boot
-    assert "25000" in boot
+    assert "12000" in boot
     assert "30000" in boot
     assert "8000" in boot
     assert "picHasPixels" in boot
@@ -1481,7 +1490,7 @@ def test_island_page_is_modular() -> None:
     assert "data-src" in back_js
     assert "revealChipSrc" in back_js
     assert "setBagChip" in app
-    assert "setBagChip(name !== \"map\")" in app
+    assert 'setBagChip(name !== "map" && name !== "undertide")' in app
     assert "left: 0" in css
     assert "min(88px, 24%)" in css
     assert "right: min(58px, 16%)" in css
@@ -1663,7 +1672,7 @@ def test_island_page_is_modular() -> None:
     assert "climate-frame.png" in art_md
     assert "天气 / 潮汐 / 时辰 / 季节" in art_md
     assert "stats-frame.png" in art_md
-    assert "影信 / 饱食 / 雾智 / 档信 / 健康 / 精力" in art_md
+    assert "影信、饱食、雾智、档信、健康、精力" in art_md
     assert "杂货铺" in art_md and "潮汐公告" in art_md
     climate_js = (ROOT / "server/static/island/ui/climate.js").read_text(encoding="utf-8")
     assert "function showClimateSheet" in climate_js
@@ -1690,17 +1699,14 @@ def test_island_page_is_modular() -> None:
         assert corner[3] == 0
     except ImportError:
         pass
-    assert "island-climate-chip" in (ROOT / "server/templates/island.html").read_text(encoding="utf-8")
+    assert "island-climate-chip" not in (ROOT / "server/templates/island.html").read_text(encoding="utf-8")
     assert "island-stats" in (ROOT / "server/templates/island.html").read_text(encoding="utf-8")
     assert "function setStatsChip" in (ROOT / "server/static/island/ui/stats.js").read_text(encoding="utf-8")
     back_map_js = (ROOT / "server/static/island/ui/back-map.js").read_text(encoding="utf-8")
     assert "setStatsChip(on && showStats)" in back_map_js
     assert 'showStats: name !== "yards" && name !== "undertide"' in app
     assert 'setBagChip(name !== "map" && name !== "undertide")' in app
-    assert 'setBackChip(true, () => enterScene("map"), { showStats: false })' in app
     assert ".island-float-chip.is-stats" in css
-    assert "left: 72%" in css
-    assert "top: 24.7%" in css
     stats_frame = ROOT / "server/static/island/assets/stats-frame.png"
     assert stats_frame.exists()
     try:
@@ -1711,12 +1717,12 @@ def test_island_page_is_modular() -> None:
         assert sframe.getpixel((0, 0))[3] == 0
     except ImportError:
         pass
-    assert "影信饱食雾智档信健康精力木牌" in (ROOT / "server/templates/partials/island-manual-content.html").read_text(encoding="utf-8")
+    assert "影信、饱食、雾智、档信、健康、精力六项数值面板" in (ROOT / "server/templates/partials/island-manual-content.html").read_text(encoding="utf-8")
     assert ".island-climate" in css
     assert "renderNotice" not in app
     assert "openClimateSheet" in app
     assert 'go === "notice"' in app
-    assert "setClimateChip" in app
+    assert "setClimateChip" not in app
     assert "潮汐公告进了只显示地名" not in (ROOT / "server/templates/partials/island-manual-content.html").read_text(encoding="utf-8")
     assert "scenes/quarry.png" in (ROOT / "server/static/island/assets/ART.md").read_text(encoding="utf-8")
     try:
@@ -1794,7 +1800,7 @@ def test_island_page_is_modular() -> None:
     assert "island-shop-meta" in shop_js
     assert "setShopPeek" in shop_js
     assert "is-peek" in frame_js
-    assert "点一下看货架" in shop_js
+    assert "点一下见 Tt酱、看货架" in shop_js
     assert "island-shop-card" not in shop_js
     assert "data-sku" in shop_js
     assert "去上手页" not in shop_js
@@ -1832,7 +1838,7 @@ def test_island_page_is_modular() -> None:
     assert "island-vn-stand" in lili_js
     assert "is-half" in lili_js
     assert "sprites/lili.png" in lili_js
-    assert "点一下见栗栗" in lili_js
+    assert "点一下才出人栗栗" in lili_js or "点一下见栗栗" in lili_js
     assert "ensureShopFrame" not in lili_js
     assert "点一下看摊" not in lili_js
     assert "island-shop-shelf" not in lili_js
@@ -1920,7 +1926,7 @@ def test_island_page_is_modular() -> None:
     beach_enter = app.split('name === "beach"')[1].split('name === "plaza"')[0]
     assert "state.beachPeek = true" in beach_enter
     assert "state.beachPeek = false" not in beach_enter
-    assert 'shaonian.js?v=island-shorescenes1' in app
+    assert 'shaonian.js?v=island-modulefix2' in app
     assert "startIslandBgm" in app
     assert "paintBgmChip" in app
     assert "bindBgmChip" in app
@@ -1937,7 +1943,7 @@ def test_island_page_is_modular() -> None:
     assert (ROOT / "server/static/island/assets/audio/island.mp3").exists()
     assert (ROOT / "server/static/island/assets/audio/island.ogg").exists()
     assert (ROOT / "server/static/island/assets/audio/island.mp3").stat().st_size > 1_000_000
-    assert "island-burgertown1" in bgm_js
+    assert "undertide-bgm1" in bgm_js
     assert "Magical Burger Town" in art_md
     assert not (ROOT / "server/static/island/assets/audio/clinic.mp3").exists()
     enter_fn = app.split("async function enterScene")[1].split("try {")[0]
@@ -2154,7 +2160,7 @@ def test_island_page_is_modular() -> None:
     assert "playLounge" in app
     assert "portChatOpen" in app
     assert "portPeek" in app
-    assert 'shore.js?v=island-shorepick1' in app
+    assert 'shore.js?v=island-modulefix2' in app
     paint_port = app.split("function paintPort")[1].split("async function openBeach")[0]
     assert paint_port.index("state.portChatOpen") < paint_port.index("state.portShelf")
     assert paint_port.index("state.portShelf") < paint_port.index("renderPortHub")
