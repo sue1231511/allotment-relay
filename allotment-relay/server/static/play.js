@@ -671,7 +671,7 @@ function renderMemories() {
           <time>${esc(fmtMemoryDate(item.completed_at))}</time>
         </div>
         <h3>《${esc(item.title)}》</h3>
-        <p class="memory-blurb">${esc(item.blurb)}</p>
+        <p class="memory-blurb">${esc(item.blurb)}${item.kind === 'date' ? ` · #${esc(item.key)}` : ''}</p>
         <div class="memory-card-meta">
           <span>${esc(count)}</span>
           ${item.ending ? `<span>${esc(item.ending)}</span>` : ''}
