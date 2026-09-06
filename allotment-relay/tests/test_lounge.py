@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -36,6 +37,7 @@ async def _test_lounge_mcp_and_web() -> None:
     key = await db.create_api_key("chat@example.com")
     row = await db.get_key_row(key)
     await db.enroll_steward(row["id"], "聊天测试", "", "naturalist", "")
+    config.LOUNGE_MOD_NAMES = frozenset({"聊天测试"})
 
     help_text = await lounge.lounge_ops(row["id"], "help")
     assert "scan" in help_text and "say" in help_text
@@ -64,6 +66,8 @@ async def _test_lounge_mcp_and_web() -> None:
 
     board = await lounge.lounge_ops(row["id"], "许愿墙")
     assert "钓鱼大赛" in board and "温室按钮" in board
+    # 墙上时间应带年月日（YYYY-MM-DD HH:MM）
+    assert re.search(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}", board), board
 
     board_wish = await lounge.lounge_ops(row["id"], "许愿墙 许愿")
     assert "钓鱼大赛" in board_wish
@@ -78,6 +82,17 @@ async def _test_lounge_mcp_and_web() -> None:
     assert items[0]["body"] == "人类也想加派对"
 
     feedback_id = next(i["id"] for i in items if "温室按钮" in i["body"])
+
+    # 非管理员不能回墙
+    other_key = await db.create_api_key("passerby@example.com")
+    other = await db.get_key_row(other_key)
+    await db.enroll_steward(other["id"], "路人甲", "", "naturalist", "")
+    try:
+        await lounge.lounge_ops(other["id"], f"回墙 {feedback_id} 我不是管理员")
+        raise AssertionError("non-mod should not reply")
+    except ValueError as exc:
+        assert "LOUNGE_MOD_NAMES" in str(exc) or "管理员" in str(exc), exc
+
     await asyncio.sleep(lounge.LOUNGE_BOARD_REPLY_COOLDOWN_SEC + 1)
     replied = await lounge.lounge_ops(
         row["id"], f"回墙 {feedback_id} 已修好，开征后升屋会对不上属正常"

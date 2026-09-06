@@ -68,7 +68,7 @@ lounge_ops — 全服聊天室（答疑、互助；许愿/反馈走许愿墙；�
   许愿墙 / 壁榜 / board [许愿|反馈]
                        看许愿墙与反馈（空=全部；未回复在上、已回复在下；和闲聊分开，不会刷走；带回复）
   回墙 12 正文 / board reply 12 正文
-                       在许愿墙/反馈墙上公开回复（全服可见，不进闲聊）
+                       管理员在许愿墙/反馈墙上公开回复（须 LOUNGE_MOD_NAMES；全服可见，不进闲聊）
 例子：scan · say 温室怎么建 · 许愿 想加钓鱼大赛 · 反馈 温室按钮没反应 · 许愿墙 · 回墙 12 已修好 · 红包 100 5 · 抢 · 暗号 潮声今晚 · 大厅
 网页 /lounge 或 /play：电脑点右上「许愿墙」大窗（列表中间滚、贴墙区留在窗底）；手机点左下「＋」进全屏许愿墙（输入框上方不再重复摆许愿/反馈按钮）。墙上未回复在上、已回复在下；每条底下有「回复」。对话上方填暗号、点「对暗号」（手机也在聊天框顶上）；发红包点「发红包」，大厅卡片点「开」。凭证只在上手页绑定。
 人类也可 /island 总览点海边，进滩景再点港口，点港口就出列表，两个选项闲聊和看码头；闲聊是全屏聊天记录，能说话、发红包、对暗号、许愿墙（同一屋）。
@@ -250,11 +250,11 @@ def _format_board_list(items: list[dict[str, Any]]) -> str:
     if not items:
         return (
             "【许愿墙 / 问题反馈】还没有人贴。"
-            "用法：许愿 想加的玩法 · 反馈 遇到的 bug · 回墙 12 已修好"
+            "用法：许愿 想加的玩法 · 反馈 遇到的 bug · 回墙 12 已修好（仅 LOUNGE_MOD_NAMES 管理员）"
         )
     lines = [
         "【许愿墙 / 问题反馈】全服可见，和闲聊分开，不会刷走。"
-        "未回复在上、已回复在下。回在墙上：回墙 编号 正文",
+        "未回复在上、已回复在下。回墙仅 LOUNGE_MOD_NAMES 管理员：回墙 编号 正文",
         "",
     ]
     open_items = [i for i in items if not i.get("reply_count")]
@@ -267,12 +267,12 @@ def _format_board_list(items: list[dict[str, Any]]) -> str:
     for title, group in sections:
         lines.append(f"—— {title} ——")
         for item in group:
-            ts = db.fmt_cst_hhmm(int(item["created_at"]))
+            ts = db.fmt_cst_ymd_hm(int(item["created_at"]))
             lines.append(
                 f"#{item['id']} {item['kind_label']} · {item['who']} · {ts}\n{item['body']}"
             )
             for reply in item.get("replies") or []:
-                rts = db.fmt_cst_hhmm(int(reply["created_at"]))
+                rts = db.fmt_cst_ymd_hm(int(reply["created_at"]))
                 tag = " · 管理" if reply.get("is_mod") else ""
                 lines.append(f"  ↳ {reply['who']}{tag} · {rts}\n  {reply['body']}")
             lines.append("")
@@ -405,6 +405,11 @@ async def post_board_reply(
         if not row:
             raise ValueError("管理员不存在")
         steward = dict(row)
+        if not is_moderator(steward):
+            raise ValueError(
+                "只有 LOUNGE_MOD_NAMES 里的管理员能回许愿墙。"
+                "普通人可以贴许愿/反馈，回复留给名单上的管理员。"
+            )
         await _assert_can_speak(conn, steward)
         await _check_board_reply_cooldown(conn, steward_id)
         now = db.now()
@@ -1181,7 +1186,7 @@ def _format_scan(
             lines.append("（还没有人说话。say 你好 或去 /play 聊天室发言）")
     else:
         for m in messages[-20:]:
-            hhmm = db.fmt_cst_hhmm(m["created_at"])
+            hhmm = db.fmt_cst_ymd_hm(m["created_at"])
             if m.get("packet"):
                 lines.append(_format_packet_line(m, hhmm))
             else:
