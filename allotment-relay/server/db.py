@@ -2230,6 +2230,17 @@ async def init_db() -> None:
             "CREATE INDEX IF NOT EXISTS idx_heart_gifts_steward ON heart_gifts(steward_id, id DESC)",
             "CREATE INDEX IF NOT EXISTS idx_heart_gifts_day ON heart_gifts(steward_id, from_role, day_id)",
             "CREATE INDEX IF NOT EXISTS idx_heart_gifts_reply_day ON heart_gifts(steward_id, reply_day_id)",
+            """
+            CREATE TABLE IF NOT EXISTS lounge_stickers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                filename TEXT NOT NULL,
+                created_at INTEGER NOT NULL
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_lounge_stickers_steward ON lounge_stickers(steward_id, id DESC)",
+            "ALTER TABLE lounge_messages ADD COLUMN msg_kind TEXT NOT NULL DEFAULT 'text'",
+            "ALTER TABLE lounge_messages ADD COLUMN sticker_id INTEGER NOT NULL DEFAULT 0",
         ):
             try:
                 await db.execute(ddl)

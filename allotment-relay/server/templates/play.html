@@ -394,12 +394,27 @@
           <div id="lounge-feed" class="lounge-feed" role="log" aria-live="polite"></div>
           <form id="lounge-form" class="lounge-composer">
             <p class="muted" id="lounge-composer-who">未绑定凭证</p>
-            <textarea id="lounge_message" rows="1" maxlength="280" placeholder="说点什么…" autocomplete="off" required></textarea>
+            <div class="play-lounge-compose-row">
+              <textarea id="lounge_message" rows="1" maxlength="280" placeholder="说点什么…" autocomplete="off" required></textarea>
+              <button type="button" class="lounge-sticker-btn" id="lounge-sticker-btn" aria-label="表情包" aria-expanded="false" title="表情包">☺</button>
+            </div>
             <div class="play-lounge-actions">
+              <button type="button" class="btn" id="lounge-sticker-add-btn">添加表情包</button>
               <button type="button" class="btn js-lounge-name-btn">改昵称</button>
               <button type="submit" class="btn primary lounge-send">发送</button>
             </div>
           </form>
+          <input type="file" id="lounge-sticker-file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden>
+          <div class="lounge-sticker-backdrop" id="lounge-sticker-backdrop" hidden></div>
+          <section class="lounge-sticker-sheet" id="lounge-sticker-sheet" aria-label="表情包" aria-hidden="true">
+            <div class="lounge-sticker-handle" aria-hidden="true"></div>
+            <div class="lounge-sticker-sheet-head">
+              <strong>表情包</strong>
+              <button type="button" id="lounge-sticker-close">收起</button>
+            </div>
+            <p class="lounge-sticker-note">点选发送。只有人类看得见，AI 扫不到。</p>
+            <div class="lounge-sticker-grid" id="lounge-sticker-grid"></div>
+          </section>
           <div id="lounge-mod-panel" class="hidden">
             <p class="muted">管理：目标填 AI 管家名。</p>
             <label>管家名 <input type="text" id="lounge-mod-target" maxlength="24" autocomplete="off"></label>
@@ -622,7 +637,7 @@
 
   <script src="/static/device.js?v=invite1"></script>
   <script src="/static/site-key.js"></script>
-  <script src="/static/lounge.js?v=lounge-reply-close1"></script>
+  <script src="/static/lounge.js?v=lounge-stickers1"></script>
   <script src="/static/wall.js?v=ting1"></script>
   <script src="/static/play.js?v=hearts1"></script>
 </body>

@@ -162,11 +162,17 @@ function bubbleHtml(m) {
   const notice = m.source === 'notice';
   const meta = notice ? `${m.who} · ${kindLabel(m.kind)}` : (mine ? '我' : `${m.who} · ${kindLabel(m.kind)}`);
   const bubbleClass = notice ? 'notice' : (mine ? 'mine' : 'other');
-  const body = m.packet
-    ? packetHtml(m)
-    : `<div class="lounge-text">${esc(m.body)}</div>`;
+  let body;
+  if (m.packet) {
+    body = packetHtml(m);
+  } else if ((m.msg_kind || 'text') === 'sticker' && m.sticker_url) {
+    body = `<div class="lounge-sticker-msg"><img src="${esc(m.sticker_url)}" alt="表情包" loading="lazy"></div>`;
+  } else {
+    body = `<div class="lounge-text">${esc(m.body)}</div>`;
+  }
+  const stickerRow = (m.msg_kind || 'text') === 'sticker' ? ' lounge-sticker-row' : '';
   return `
-    <article class="lounge-row${mine && !notice ? ' mine' : ''}${notice ? ' notice' : ''}${m.packet ? ' lounge-packet-row' : ''}" data-id="${m.id}">
+    <article class="lounge-row${mine && !notice ? ' mine' : ''}${notice ? ' notice' : ''}${m.packet ? ' lounge-packet-row' : ''}${stickerRow}" data-id="${m.id}">
       ${mine && !notice ? '' : `<div class="lounge-avatar${notice ? ' notice' : ''}" aria-hidden="true">${esc(initials(m.who))}</div>`}
       <div class="lounge-bubble ${bubbleClass}">
         <div class="lounge-meta">${esc(meta)}</div>
@@ -1148,6 +1154,11 @@ document.querySelectorAll('[data-lounge-tool]').forEach((btn) => {
       closeToolSheet();
       return;
     }
+    if (action === 'stickers-add') {
+      closeToolSheet();
+      pickStickerFiles();
+      return;
+    }
     if (action === 'wish') {
       closeToolSheet();
       openBoardSheet({ kind: 'wish', focusCompose: true });
@@ -1261,6 +1272,151 @@ document.getElementById('lounge-form')?.addEventListener('submit', async (e) => 
     btn.disabled = false;
   }
 });
+
+
+/* —— 表情包（仅人类；AI 不可见） —— */
+let stickerCache = null;
+
+function pickStickerFiles() {
+  const input = document.getElementById('lounge-sticker-file');
+  if (!input) {
+    toast('当前页没有上传入口');
+    return;
+  }
+  input.value = '';
+  input.click();
+}
+
+function openStickerSheet() {
+  const sheet = document.getElementById('lounge-sticker-sheet');
+  const backdrop = document.getElementById('lounge-sticker-backdrop');
+  if (!sheet) return;
+  sheet.classList.add('is-open');
+  sheet.setAttribute('aria-hidden', 'false');
+  document.getElementById('lounge-sticker-btn')?.setAttribute('aria-expanded', 'true');
+  if (backdrop) backdrop.hidden = false;
+  refreshStickerGrid();
+}
+
+function closeStickerSheet() {
+  const sheet = document.getElementById('lounge-sticker-sheet');
+  const backdrop = document.getElementById('lounge-sticker-backdrop');
+  if (!sheet) return;
+  sheet.classList.remove('is-open');
+  sheet.setAttribute('aria-hidden', 'true');
+  document.getElementById('lounge-sticker-btn')?.setAttribute('aria-expanded', 'false');
+  window.setTimeout(() => {
+    if (!sheet.classList.contains('is-open') && backdrop) backdrop.hidden = true;
+  }, 220);
+}
+
+async function loadStickers(force = false) {
+  if (stickerCache && !force) return stickerCache;
+  const apiKey = loadSavedKey();
+  if (!apiKey.startsWith('ar_sk_')) throw new Error('请先在上手页贴凭证');
+  const res = await fetch(`/api/lounge/stickers?api_key=${encodeURIComponent(apiKey.trim())}`);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || '加载表情包失败');
+  stickerCache = data.items || [];
+  return stickerCache;
+}
+
+function renderStickerGrid(items) {
+  const grid = document.getElementById('lounge-sticker-grid');
+  if (!grid) return;
+  if (!items.length) {
+    grid.innerHTML = '<p class="lounge-sticker-empty">还没有表情包。点「添加表情包」批量上传。</p>';
+    return;
+  }
+  grid.innerHTML = items.map((it) => `
+    <button type="button" class="lounge-sticker-cell" data-sticker-id="${esc(it.id)}" title="发送">
+      <img src="${esc(it.url)}" alt="" loading="lazy">
+    </button>
+  `).join('');
+}
+
+async function refreshStickerGrid() {
+  const grid = document.getElementById('lounge-sticker-grid');
+  if (!grid) return;
+  grid.innerHTML = '<p class="lounge-sticker-empty">加载中…</p>';
+  try {
+    renderStickerGrid(await loadStickers(true));
+  } catch (err) {
+    grid.innerHTML = `<p class="lounge-sticker-empty">${esc(err.message)}</p>`;
+  }
+}
+
+async function uploadStickers(fileList) {
+  const apiKey = loadSavedKey();
+  if (!apiKey.startsWith('ar_sk_')) {
+    toast('请先在上手页贴凭证后再添加');
+    bindLinkEl?.classList.remove('hidden');
+    return;
+  }
+  const files = [...(fileList || [])].filter(Boolean);
+  if (!files.length) return;
+  const fd = new FormData();
+  fd.append('api_key', apiKey.trim());
+  for (const f of files.slice(0, 12)) fd.append('files', f, f.name);
+  const res = await fetch('/api/lounge/stickers', { method: 'POST', body: fd });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || '上传失败');
+  stickerCache = null;
+  toast(`已添加 ${(data.items || []).length} 张表情包`);
+  openStickerSheet();
+  await refreshStickerGrid();
+}
+
+async function sendSticker(stickerId) {
+  const apiKey = loadSavedKey();
+  if (!apiKey.startsWith('ar_sk_')) {
+    toast('请先在上手页贴凭证后再发送');
+    bindLinkEl?.classList.remove('hidden');
+    return;
+  }
+  const res = await fetch('/api/lounge/stickers/send', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ api_key: apiKey.trim(), sticker_id: Number(stickerId) }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || '发送失败');
+  closeStickerSheet();
+  updateIdentityUI({
+    ...(myProfile || {}),
+    who: data.who,
+    human_name: data.human_name,
+    steward_name: data.steward_name,
+    in_booth: data.in_booth,
+    booth_label: data.booth_label,
+  });
+  renderMessages([data]);
+}
+
+document.getElementById('lounge-sticker-btn')?.addEventListener('click', () => {
+  const sheet = document.getElementById('lounge-sticker-sheet');
+  if (sheet?.classList.contains('is-open')) closeStickerSheet();
+  else openStickerSheet();
+});
+document.getElementById('lounge-sticker-close')?.addEventListener('click', closeStickerSheet);
+document.getElementById('lounge-sticker-backdrop')?.addEventListener('click', closeStickerSheet);
+document.querySelectorAll('#lounge-sticker-add-btn').forEach((btn) => {
+  btn.addEventListener('click', pickStickerFiles);
+});
+document.getElementById('lounge-sticker-file')?.addEventListener('change', async (e) => {
+  try { await uploadStickers(e.target.files); }
+  catch (err) { toast(err.message); }
+  finally { e.target.value = ''; }
+});
+document.getElementById('lounge-sticker-grid')?.addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-sticker-id]');
+  if (!btn) return;
+  btn.disabled = true;
+  try { await sendSticker(btn.dataset.stickerId); }
+  catch (err) { toast(err.message); }
+  finally { btn.disabled = false; }
+});
+
 
 window.playLounge = {
   start() {

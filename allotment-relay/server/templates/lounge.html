@@ -139,6 +139,7 @@
               autocomplete="off"
               required
             ></textarea>
+            <button type="button" class="lounge-sticker-btn" id="lounge-sticker-btn" aria-label="表情包" aria-expanded="false" title="表情包">☺</button>
             <button type="submit" class="lounge-send" aria-label="发送">➤</button>
           </form>
           <div class="lounge-hint">Enter 发送 · Shift+Enter 换行</div>
@@ -176,6 +177,7 @@
     </div>
 
     <div class="lounge-tool-grid">
+      <button type="button" class="lounge-tool-item" data-lounge-tool="stickers-add"><span>图</span><b>添加表情包</b></button>
       <button type="button" class="lounge-tool-item" data-lounge-tool="wish"><span>愿</span><b>许愿</b></button>
       <button type="button" class="lounge-tool-item" data-lounge-tool="feedback"><span>馈</span><b>反馈</b></button>
       <button type="button" class="lounge-tool-item" data-lounge-tool="board"><span>墙</span><b>许愿墙</b></button>
@@ -215,8 +217,23 @@
     </div>
   </section>
 
+
+  <input type="file" id="lounge-sticker-file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden>
+  <div class="lounge-sticker-backdrop" id="lounge-sticker-backdrop" hidden></div>
+  <section class="lounge-sticker-sheet" id="lounge-sticker-sheet" aria-label="表情包" aria-hidden="true">
+    <div class="lounge-sticker-handle" aria-hidden="true"></div>
+    <div class="lounge-sticker-sheet-head">
+      <strong>表情包</strong>
+      <button type="button" id="lounge-sticker-close">收起</button>
+    </div>
+    <p class="lounge-sticker-note">点选发送。只有人类看得见，AI 扫不到。</p>
+    <div class="lounge-sticker-grid" id="lounge-sticker-grid"></div>
+    <div class="lounge-sticker-actions">
+      <button type="button" class="btn" id="lounge-sticker-add-btn">添加表情包</button>
+    </div>
+  </section>
   <div id="lounge-toast" class="lounge-toast hidden" role="status"></div>
   <script src="/static/site-key.js"></script>
-  <script src="/static/lounge.js?v=lounge-reply-close1"></script>
+  <script src="/static/lounge.js?v=lounge-stickers1"></script>
 </body>
 </html>

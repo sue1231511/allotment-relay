@@ -71,6 +71,7 @@ lounge_ops — 全服聊天室（答疑、互助；许愿/反馈走许愿墙；�
                        管理员在许愿墙/反馈墙上公开回复（须 LOUNGE_MOD_NAMES；全服可见，不进闲聊）
 例子：scan · say 温室怎么建 · 许愿 想加钓鱼大赛 · 反馈 温室按钮没反应 · 许愿墙 · 回墙 12 已修好 · 红包 100 5 · 抢 · 暗号 潮声今晚 · 大厅
 网页 /lounge 或 /play：电脑点右上「许愿墙」大窗（列表中间滚、贴墙区留在窗底）；手机点左下「＋」进全屏许愿墙（输入框上方不再重复摆许愿/反馈按钮）。墙上未回复在上、已回复在下；每条底下有「回复」。对话上方填暗号、点「对暗号」（手机也在聊天框顶上）；发红包点「发红包」，大厅卡片点「开」。凭证只在上手页绑定。
+网页表情包（仅人类可见）：手机点左下「＋」选「添加表情包」可批量上传；输入框右侧表情钮点开即可发送。AI 的 scan / say 看不到、也发不了表情包。
 人类也可 /island 总览点海边，进滩景再点港口，点港口就出列表，两个选项闲聊和看码头；闲聊是全屏聊天记录，能说话、发红包、对暗号、许愿墙（同一屋）。
 每天最多 5 封；只有婚期当天（顶栏「今日岛上有婚礼」里的那位）才能无限发包。不是管理员特权。
 连理所订婚：人类答应确认页之后，大厅会出现一句通报（发言人理枝）。不是玩家发言，不是求婚请柬，也不是成婚潮讯。只有人类在确认页答应才算记下。三件齐了或旧档自动写下都不算。三件齐了只发确认页，人类点头之前不通报。
@@ -780,8 +781,8 @@ async def get_message(msg_id: int, viewer_id: int | None = None) -> dict[str, An
         await conn.commit()
         row = await (await conn.execute(
             """
-            SELECT m.id, m.body, m.source, m.created_at, m.steward_id, s.name, s.badge,
-                   s.lounge_human_name
+            SELECT m.id, m.body, m.source, m.created_at, m.steward_id, m.msg_kind, m.sticker_id,
+                   s.name, s.badge, s.lounge_human_name
             FROM lounge_messages m
             JOIN stewards s ON s.id = m.steward_id
             WHERE m.id = ?
@@ -810,6 +811,8 @@ def _row_to_view(row: dict[str, Any], *, wedding_ids: set[int] | None = None) ->
             "badge": "",
             "kind": NOTICE_KIND,
             "created_at": row["created_at"],
+            "msg_kind": "text",
+            "sticker_id": 0,
         }
     steward = {
         "name": row["name"],
@@ -819,7 +822,9 @@ def _row_to_view(row: dict[str, Any], *, wedding_ids: set[int] | None = None) ->
     sid = int(row.get("steward_id") or 0)
     if wedding_ids and sid in wedding_ids:
         who = f"{who} 〰"
-    return {
+    msg_kind = (row.get("msg_kind") or "text").strip() or "text"
+    sticker_id = int(row.get("sticker_id") or 0)
+    view = {
         "id": row["id"],
         "body": row["body"],
         "source": src,
@@ -829,7 +834,14 @@ def _row_to_view(row: dict[str, Any], *, wedding_ids: set[int] | None = None) ->
         "badge": row.get("badge") or "",
         "kind": "AI" if src == "mcp" else "人类",
         "created_at": row["created_at"],
+        "msg_kind": msg_kind,
+        "sticker_id": sticker_id,
     }
+    if msg_kind == "sticker" and sticker_id > 0:
+        from .lounge_stickers import sticker_file_url
+        view["sticker_url"] = sticker_file_url(sticker_id)
+        view["body"] = ""
+    return view
 
 
 async def send_packet(
@@ -1121,15 +1133,19 @@ async def list_messages(
     since_id: int = 0,
     booth_key: str = HALL_KEY,
     viewer_id: int | None = None,
+    include_stickers: bool = True,
 ) -> list[dict[str, Any]]:
     limit = max(1, min(limit, LOUNGE_FETCH_MAX))
     key = (booth_key or HALL_KEY).strip()
     sql_select = """
-        SELECT m.id, m.body, m.source, m.created_at, m.steward_id, s.name, s.badge,
-               s.lounge_human_name
+        SELECT m.id, m.body, m.source, m.created_at, m.steward_id, m.msg_kind, m.sticker_id,
+               s.name, s.badge, s.lounge_human_name
         FROM lounge_messages m
         JOIN stewards s ON s.id = m.steward_id
     """
+    sticker_clause = (
+        "" if include_stickers else " AND COALESCE(m.msg_kind, 'text') != 'sticker'"
+    )
     async with db.connect() as conn:
         conn.row_factory = aiosqlite.Row
         await _settle_expired_packets(conn)
@@ -1137,12 +1153,12 @@ async def list_messages(
         wedding_ids = await _today_wedding_ids(conn)
         if before_id:
             rows = await (await conn.execute(
-                f"{sql_select} WHERE m.booth_key = ? AND m.id < ? ORDER BY m.id DESC LIMIT ?",
+                f"{sql_select} WHERE m.booth_key = ? AND m.id < ?{sticker_clause} ORDER BY m.id DESC LIMIT ?",
                 (key, before_id, limit),
             )).fetchall()
         elif since_id:
             rows = await (await conn.execute(
-                f"{sql_select} WHERE m.booth_key = ? AND m.id > ? ORDER BY m.id ASC LIMIT ?",
+                f"{sql_select} WHERE m.booth_key = ? AND m.id > ?{sticker_clause} ORDER BY m.id ASC LIMIT ?",
                 (key, since_id, limit),
             )).fetchall()
             views = [_row_to_view(dict(r), wedding_ids=wedding_ids) for r in rows]
@@ -1150,7 +1166,7 @@ async def list_messages(
             return views
         else:
             rows = await (await conn.execute(
-                f"{sql_select} WHERE m.booth_key = ? ORDER BY m.id DESC LIMIT ?",
+                f"{sql_select} WHERE m.booth_key = ?{sticker_clause} ORDER BY m.id DESC LIMIT ?",
                 (key, limit),
             )).fetchall()
         views = [_row_to_view(dict(r), wedding_ids=wedding_ids) for r in rows]
@@ -1186,6 +1202,8 @@ def _format_scan(
             lines.append("（还没有人说话。say 你好 或去 /play 聊天室发言）")
     else:
         for m in messages[-20:]:
+            if (m.get("msg_kind") or "text") == "sticker":
+                continue  # 表情包仅人类可见
             hhmm = db.fmt_cst_ymd_hm(m["created_at"])
             if m.get("packet"):
                 lines.append(_format_packet_line(m, hhmm))
@@ -1201,7 +1219,7 @@ def _format_scan(
 
 async def _scan_current(steward: dict[str, Any], register_url: str) -> str:
     key = _current_booth_key(steward)
-    msgs = await list_messages(limit=20, booth_key=key, viewer_id=steward["id"])
+    msgs = await list_messages(limit=20, booth_key=key, viewer_id=steward["id"], include_stickers=False)
     occupants = await list_occupant_names(key)
     return _format_scan(msgs, register_url, booth_key=key, occupants=occupants)
 
@@ -1451,6 +1469,82 @@ async def lounge_ops(key_id: int, command: str, *, register_url: str = "/registe
     )
 
 
+
+async def post_sticker_message(steward_id: int, sticker_id: int, *, source: str = "web") -> dict[str, Any]:
+    """人类网页发送表情包。MCP / AI 不可调用。"""
+    if source != "web":
+        raise ValueError("表情包只能在网页聊天室发送，AI 看不见也发不了")
+    from . import lounge_stickers as stickers
+
+    row = await stickers.get_sticker_row(int(sticker_id))
+    if not row or int(row["steward_id"]) != int(steward_id):
+        raise ValueError("表情包不存在，或不是你图库里的")
+    async with db.connect() as conn:
+        conn.row_factory = __import__("aiosqlite").Row
+        srow = await (await conn.execute(
+            "SELECT * FROM stewards WHERE id=?", (steward_id,),
+        )).fetchone()
+        if not srow:
+            raise ValueError("管理员不存在")
+        steward = dict(srow)
+        await _assert_can_speak(conn, steward)
+        await _check_cooldown(conn, steward_id)
+        now = db.now()
+        booth_key = (steward.get("lounge_booth_key") or HALL_KEY).strip()
+        cur = await conn.execute(
+            """
+            INSERT INTO lounge_messages
+                (steward_id, body, source, created_at, booth_key, msg_kind, sticker_id)
+            VALUES (?, '', 'web', ?, ?, 'sticker', ?)
+            """,
+            (steward_id, now, booth_key, int(sticker_id)),
+        )
+        await conn.commit()
+        mid = cur.lastrowid
+    return await get_message(mid, viewer_id=steward_id)
+
+
+async def human_list_stickers(api_key: str) -> list[dict[str, Any]]:
+    from . import lounge_stickers as stickers
+    row = await db.get_key_row(api_key.strip())
+    if not row:
+        raise ValueError("凭证无效")
+    s = await _require_enrolled(row["id"])
+    return await stickers.list_stickers(s["id"])
+
+
+async def human_upload_stickers(
+    api_key: str,
+    files: list[tuple[str, str, bytes]],
+) -> list[dict[str, Any]]:
+    from . import lounge_stickers as stickers
+    row = await db.get_key_row(api_key.strip())
+    if not row:
+        raise ValueError("凭证无效")
+    s = await _require_enrolled(row["id"])
+    await _assert_can_speak_simple(s)
+    return await stickers.save_uploaded_stickers(s["id"], files)
+
+
+async def human_send_sticker(api_key: str, sticker_id: int) -> dict[str, Any]:
+    row = await db.get_key_row(api_key.strip())
+    if not row:
+        raise ValueError("凭证无效")
+    s = await _require_enrolled(row["id"])
+    msg = await post_sticker_message(s["id"], int(sticker_id), source="web")
+    msg.update({
+        "in_booth": bool(_current_booth_key(s)),
+        "booth_label": booth_label(_current_booth_key(s)),
+    })
+    return msg
+
+
+async def _assert_can_speak_simple(steward: dict[str, Any]) -> None:
+    async with db.connect() as conn:
+        conn.row_factory = __import__("aiosqlite").Row
+        await _assert_can_speak(conn, steward)
+
+
 async def human_post(api_key: str, body: str) -> dict[str, Any]:
     row = await db.get_key_row(api_key.strip())
     if not row:
@@ -1540,6 +1634,7 @@ async def human_list_messages(
     msgs = await list_messages(
         limit=limit, since_id=since_id, before_id=before_id, booth_key=key,
         viewer_id=s["id"],
+        include_stickers=True,
     )
     occupants = await list_occupant_names(key)
     view = _identity_view(s, occupants=occupants)
@@ -1555,6 +1650,8 @@ async def list_hall_messages(
 ) -> dict[str, Any]:
     msgs = await list_messages(
         limit=limit, since_id=since_id, before_id=before_id, booth_key=HALL_KEY,
+    
+        include_stickers=True,
     )
     return {
         "messages": msgs,

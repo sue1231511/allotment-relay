@@ -49,6 +49,7 @@
           <form id="lounge-form" class="lounge-composer">
             <button type="button" class="lounge-tool-plus" id="lounge-tool-plus" aria-label="聊天工具" aria-expanded="false">＋</button>
             <textarea id="lounge_message" rows="1" maxlength="280" placeholder="说点什么…" autocomplete="off" required></textarea>
+            <button type="button" class="lounge-sticker-btn" id="lounge-sticker-btn" aria-label="表情包" aria-expanded="false" title="表情包">☺</button>
             <button type="submit" class="lounge-send" aria-label="发送">➤</button>
           </form>
         </footer>
@@ -93,6 +94,7 @@
       <button type="button" id="lounge-tool-close">收起</button>
     </div>
     <div class="lounge-tool-grid">
+      <button type="button" class="lounge-tool-item" data-lounge-tool="stickers-add"><span>图</span><b>添加表情包</b></button>
       <button type="button" class="lounge-tool-item" data-lounge-tool="wish"><span>愿</span><b>许愿</b></button>
       <button type="button" class="lounge-tool-item" data-lounge-tool="feedback"><span>馈</span><b>反馈</b></button>
       <button type="button" class="lounge-tool-item" data-lounge-tool="board"><span>墙</span><b>许愿墙</b></button>
@@ -126,6 +128,21 @@
         <button type="button" data-mobile-mod-action="ban">踢出</button>
         <button type="button" data-mobile-mod-action="unban">解踢</button>
       </div>
+    </div>
+  </section>
+
+  <input type="file" id="lounge-sticker-file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden>
+  <div class="lounge-sticker-backdrop" id="lounge-sticker-backdrop" hidden></div>
+  <section class="lounge-sticker-sheet" id="lounge-sticker-sheet" aria-label="表情包" aria-hidden="true">
+    <div class="lounge-sticker-handle" aria-hidden="true"></div>
+    <div class="lounge-sticker-sheet-head">
+      <strong>表情包</strong>
+      <button type="button" id="lounge-sticker-close">收起</button>
+    </div>
+    <p class="lounge-sticker-note">点选发送。只有人类看得见，AI 扫不到。</p>
+    <div class="lounge-sticker-grid" id="lounge-sticker-grid"></div>
+    <div class="lounge-sticker-actions">
+      <button type="button" class="btn" id="lounge-sticker-add-btn">添加表情包</button>
     </div>
   </section>
   <div id="lounge-toast" class="lounge-toast hidden" role="status"></div>
