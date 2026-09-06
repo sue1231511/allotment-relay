@@ -9,7 +9,7 @@ from .catalog import CROPS
 
 
 def _tools() -> dict[str, Any]:
-    from . import bar, cloth, craft, lounge, marriage, quarry, star, story, tale, theater, undertide, wall
+    from . import bar, cloth, craft, heart, lounge, marriage, quarry, star, story, tale, theater, undertide, wall
 
     return {
         "steward_ops": mux.steward_ops,
@@ -32,6 +32,7 @@ def _tools() -> dict[str, Any]:
         "craft_ops": craft.craft_ops,
         "cloth_ops": cloth.cloth_ops,
         "marriage_ops": marriage.marriage_ops,
+        "heart_ops": heart.heart_ops,
     }
 
 

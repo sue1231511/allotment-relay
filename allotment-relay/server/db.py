@@ -2208,6 +2208,28 @@ async def init_db() -> None:
             """,
             "CREATE INDEX IF NOT EXISTS idx_lounge_board_replies_board "
             "ON lounge_board_replies(board_id, id ASC)",
+            """
+            CREATE TABLE IF NOT EXISTS heart_gifts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                from_role TEXT NOT NULL,
+                emoji TEXT NOT NULL,
+                title TEXT NOT NULL,
+                scene TEXT NOT NULL,
+                note TEXT NOT NULL DEFAULT '',
+                tickets INTEGER NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending',
+                reply_text TEXT NOT NULL DEFAULT '',
+                created_at INTEGER NOT NULL,
+                opened_at INTEGER NOT NULL DEFAULT 0,
+                replied_at INTEGER NOT NULL DEFAULT 0,
+                day_id INTEGER NOT NULL,
+                reply_day_id INTEGER NOT NULL DEFAULT 0
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_heart_gifts_steward ON heart_gifts(steward_id, id DESC)",
+            "CREATE INDEX IF NOT EXISTS idx_heart_gifts_day ON heart_gifts(steward_id, from_role, day_id)",
+            "CREATE INDEX IF NOT EXISTS idx_heart_gifts_reply_day ON heart_gifts(steward_id, reply_day_id)",
         ):
             try:
                 await db.execute(ddl)

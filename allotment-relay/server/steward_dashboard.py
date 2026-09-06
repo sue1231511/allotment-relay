@@ -59,6 +59,8 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
         await conn.commit()
 
     gifts = await db.list_received_gifts(s["id"], 8)
+    from . import heart as heart_mod
+    hearts = await heart_mod.snapshot(s["id"])
     pulse = await events.public_pulse_snapshot()
 
     s = await db.get_steward_by_id(s["id"]) or s
@@ -243,6 +245,7 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
         "stock": stock_items,
         "incidents": incident_views,
         "gifts": gift_views,
+        "hearts": hearts,
         "market": {"used": used, "cap": cap},
         "voyage": voyage_view,
         "quarry": quarry_view,

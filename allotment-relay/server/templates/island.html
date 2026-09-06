@@ -65,6 +65,11 @@
       <img src="/static/island/assets/chip-date.png" alt="" draggable="false" decoding="async">
       <span class="island-date-badge" aria-hidden="true" hidden></span>
     </button>
+    <button type="button" class="island-float-chip is-heart" id="island-heart-chip" aria-label="日常心意" hidden>
+      <span class="island-float-chip-emoji" aria-hidden="true">🫧</span>
+      <span class="island-float-chip-label">心意</span>
+      <span class="island-float-chip-badge" id="island-heart-badge" hidden>0</span>
+    </button>
     <button type="button" class="island-float-chip is-bag" id="island-bag-chip" hidden>
       <img data-src="/static/island/assets/chip-bag.png" alt="背包" draggable="false">
     </button>
@@ -102,10 +107,10 @@
 
   <script src="/static/site-key.js?v=island-modulefix2"></script>
   <script src="/static/island-time.js?v=island-modulefix2"></script>
-  <script src="/static/lounge.js?v=island-modulefix2"></script>
+  <script src="/static/lounge.js?v=lounge-board-scroll2"></script>
   <script src="/static/island/boot.js?v=map-load-fast1"></script>
   <script src="/static/island/tap.js?v=island-modulefix2"></script>
-<script type="module" src="/static/island/app.js?v=map-load-fast1"></script>
+<script type="module" src="/static/island/app.js?v=hearts1"></script>
   <script nomodule>
     var hint = document.getElementById("island-gate-hint");
     if (hint) hint.textContent = "这台浏览器跑不了完整地图。换系统浏览器打开。";

@@ -347,6 +347,7 @@ function renderAll() {
   renderTide();
   renderTote();
   renderGifts();
+  renderHearts();
   renderMemories();
   if (state.placeId) renderPlace(state.placeId);
   consumeGo();
@@ -625,6 +626,153 @@ function renderGifts() {
       <p style="margin-top:4px">${esc(g.text)}</p>
     </div>
   `).join('');
+}
+
+async function heartApi(path, body) {
+  const res = await fetch(path, {
+    method: body ? 'POST' : 'GET',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${state.key}`,
+      ...(body ? { 'Content-Type': 'application/json', 'Idempotency-Key': `heart-${Date.now()}-${Math.random()}` } : {}),
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || data.detail || '心意操作失败');
+  return data;
+}
+
+function heartCardHtml(card, { pending } = {}) {
+  const note = card.note ? `<p class="muted">${esc(card.note)}</p>` : '';
+  const reply = card.reply_text ? `<p>回一句：${esc(card.reply_text)}</p>` : '';
+  let actions = '';
+  if (pending && card.from_role === 'ai') {
+    actions = `
+      <div class="play-mini-actions" style="margin-top:8px;flex-wrap:wrap">
+        <button type="button" class="play-mini-btn" data-heart-open="${card.id}">拆开</button>
+        <button type="button" class="play-mini-btn" data-heart-keep="${card.id}">收好</button>
+        <button type="button" class="play-mini-btn" data-heart-reply="${card.id}">回一句</button>
+      </div>`;
+  } else if (pending && card.from_role === 'human') {
+    actions = `<p class="muted">等岛民用 heart_ops 列表 / 看 ${card.id} 查看</p>`;
+  }
+  return `
+    <article class="item" data-heart-id="${card.id}">
+      <strong>${esc(card.emoji)} ${esc(card.title)}</strong>
+      <span class="muted"> · ${esc(card.from_label)}→${esc(card.to_label)} · ${esc(card.status_label)} · ${card.tickets}票</span>
+      <p style="margin-top:4px">${esc(card.scene)}</p>
+      ${note}${reply}${actions}
+    </article>`;
+}
+
+function bindHeartActions(root) {
+  root.querySelectorAll('[data-heart-open]').forEach((btn) => {
+    if (btn._bound) return;
+    btn._bound = true;
+    btn.addEventListener('click', async () => {
+      try {
+        const snap = await heartApi('/api/v1/hearts/open', { id: Number(btn.dataset.heartOpen) });
+        if (state.dash) state.dash.hearts = snap;
+        renderHearts();
+        setLog('已拆开');
+      } catch (err) { setLog(err.message); }
+    });
+  });
+  root.querySelectorAll('[data-heart-keep]').forEach((btn) => {
+    if (btn._bound) return;
+    btn._bound = true;
+    btn.addEventListener('click', async () => {
+      try {
+        const snap = await heartApi('/api/v1/hearts/keep', { id: Number(btn.dataset.heartKeep) });
+        if (state.dash) state.dash.hearts = snap;
+        renderHearts();
+        setLog('已收好');
+      } catch (err) { setLog(err.message); }
+    });
+  });
+  root.querySelectorAll('[data-heart-reply]').forEach((btn) => {
+    if (btn._bound) return;
+    btn._bound = true;
+    btn.addEventListener('click', async () => {
+      const text = window.prompt('回一句（每天最多 3 次）', '');
+      if (!text || !text.trim()) return;
+      try {
+        const snap = await heartApi('/api/v1/hearts/reply', { id: Number(btn.dataset.heartReply), text: text.trim() });
+        if (state.dash) state.dash.hearts = snap;
+        renderHearts();
+        setLog('已回一句');
+      } catch (err) { setLog(err.message); }
+    });
+  });
+}
+
+function renderHearts() {
+  const box = $('play-hearts');
+  const countEl = $('play-hearts-count');
+  if (!box) return;
+  const hearts = (state.dash && state.dash.hearts) || {};
+  const pending = hearts.pending || [];
+  const album = hearts.album || [];
+  const lim = hearts.limits || {};
+  if (countEl) countEl.textContent = pending.length ? `待拆 ${pending.length}` : '—';
+  const head = `
+    <div style="margin-bottom:8px" class="play-mini-actions">
+      <button type="button" class="play-text-btn" id="play-hearts-refresh">刷新心意</button>
+      <button type="button" class="play-mini-btn" id="play-hearts-return">回礼</button>
+    </div>
+    <p class="muted">岛民每天可送 3 次；你也可回礼 / 回一句，各 3 次。只花工分票，不进行囊。剩余：回礼 ${lim.human_send_left ?? '—'} · 回一句 ${lim.reply_left ?? '—'}</p>`;
+  let body = '';
+  if (pending.length) {
+    body += '<p><strong>待拆</strong></p>' + pending.map((c) => heartCardHtml(c, { pending: true })).join('');
+  }
+  if (album.length) {
+    body += '<p style="margin-top:10px"><strong>心意册</strong></p>' + album.slice(0, 6).map((c) => heartCardHtml(c)).join('');
+  }
+  if (!pending.length && !album.length) {
+    body = '<p>还没有心意卡。让岛民执行 heart_ops 送 🧋 | 名字 | 场景 | 票数。</p>';
+  }
+  box.innerHTML = head + body;
+  bindHeartActions(box);
+  const refreshBtn = $('play-hearts-refresh');
+  if (refreshBtn && !refreshBtn._bound) {
+    refreshBtn._bound = true;
+    refreshBtn.addEventListener('click', async () => {
+      try {
+        const snap = await heartApi('/api/v1/hearts');
+        if (state.dash) state.dash.hearts = snap;
+        renderHearts();
+      } catch (err) { setLog(err.message); }
+    });
+  }
+  const retBtn = $('play-hearts-return');
+  if (retBtn && !retBtn._bound) {
+    retBtn._bound = true;
+    retBtn.addEventListener('click', async () => {
+      const emojis = (hearts.emojis || []).join(' ');
+      const emoji = window.prompt(`选一个外观 emoji\n${emojis}`, '🍰');
+      if (!emoji) return;
+      const title = window.prompt('给这件心意起个名字', '回礼');
+      if (!title) return;
+      const scene = window.prompt('写个场景', '桌边');
+      if (!scene) return;
+      const tickets = window.prompt('花多少工分票（5～88）', '8');
+      if (!tickets) return;
+      const note = window.prompt('留言（可空）', '') || '';
+      try {
+        const snap = await heartApi('/api/v1/hearts/return', {
+          emoji: emoji.trim(),
+          title: title.trim(),
+          scene: scene.trim(),
+          tickets: Number(tickets),
+          note,
+        });
+        if (state.dash) state.dash.hearts = snap;
+        renderHearts();
+        setLog('回礼已送出');
+      } catch (err) { setLog(err.message); }
+    });
+  }
 }
 
 const MEMORY_KIND_LABELS = { tale: '潮闻', story: '故事', npc: '相遇', date: '共同出游' };

@@ -75,7 +75,7 @@ mcp = MCPServer(
     "allotment-relay",
     instructions=(
         "潮汐岛多人份地游戏，不是聊天沙盒；禁止发明工具。"
-        "21个工具。先调 relay_manual；不会就 help。"
+        "22个工具。先调 relay_manual；不会就 help。"
         "仅参数 command。细则在手册/help。"
     ),
 )
@@ -207,6 +207,13 @@ async def craft_ops(command: str = "") -> str:
     from . import craft
     from . import progress as progress_mod
     return progress_mod.attach_note(await mux._call_ops(craft.craft_ops, _kid(), command))
+
+
+@mcp.tool(description="日常心意。空=help。例：送 🧋 | 午后奶茶 | 窗边 | 12 | 记得喝水 · 列表 · 册 · 看 12。AI每天最多3次；人类上手页拆卡/回一句/回礼也各3次。只扣工分票不进行囊。≠tote_ops gift。")
+async def heart_ops(command: str = "") -> str:
+    from . import heart
+    return await mux._call_ops(heart.heart_ops, _kid(), command)
+
 
 
 def _mcp_transport_security() -> TransportSecuritySettings:

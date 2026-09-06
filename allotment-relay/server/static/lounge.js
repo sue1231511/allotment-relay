@@ -5,6 +5,9 @@ const POLL_MS = 6000;
 let lastId = 0;
 let boardLastId = 0;
 let boardFilter = 'all';
+let boardFeedSig = '';
+let boardPendingItems = null;
+let boardScrollQuietUntil = 0;
 let pollTimer = null;
 let myProfile = null;
 let currentBoothLabel = '';
@@ -274,12 +277,74 @@ function boardSectionLabel(text) {
   return el;
 }
 
-function renderBoardFeed(items, container) {
+function boardItemsSignature(items) {
+  return (items || []).map((item) => {
+    const replies = Array.isArray(item.replies) ? item.replies : [];
+    const replySig = replies.map((r) => `${r.id}:${r.body || ''}`).join(',');
+    return `${item.id}:${item.kind}:${item.body || ''}:${item.reply_count || 0}:${replySig}`;
+  }).join('|');
+}
+
+function isBoardSheetOpen() {
+  const dialog = document.getElementById('lounge-board-dialog');
+  return !!(dialog && dialog.open);
+}
+
+function hasOpenBoardReplyForm() {
+  return !!document.querySelector('#lounge-board-sheet-feed .lounge-board-reply-form:not(.hidden)');
+}
+
+function bindBoardFeedScroll(container) {
+  if (!container || container._boardScrollBound) return;
+  container._boardScrollBound = true;
+  container.addEventListener('scroll', () => {
+    boardScrollQuietUntil = Date.now() + 1400;
+  }, { passive: true });
+}
+
+function captureBoardReplyDrafts(container) {
+  const drafts = {};
+  if (!container) return drafts;
+  container.querySelectorAll('[data-board-reply-form]').forEach((form) => {
+    if (form.classList.contains('hidden')) return;
+    const id = form.dataset.boardReplyForm;
+    const ta = form.querySelector('textarea');
+    drafts[id] = ta ? ta.value : '';
+  });
+  return drafts;
+}
+
+function restoreBoardReplyDrafts(container, drafts) {
+  if (!container || !drafts) return;
+  Object.entries(drafts).forEach(([id, text]) => {
+    showBoardReplyForm(id);
+    const form = container.querySelector(`[data-board-reply-form="${id}"]`);
+    const ta = form?.querySelector('textarea');
+    if (ta) ta.value = text;
+  });
+}
+
+function renderBoardFeed(items, container, {
+  preserveScroll = false,
+  force = false,
+  pinBoardId = null,
+  pinOffset = null,
+} = {}) {
   if (!container) return;
+  bindBoardFeedScroll(container);
+  const nextSig = boardItemsSignature(items);
+  if (!force && nextSig === boardFeedSig && container.querySelector('.lounge-board-item, .lounge-board-empty')) {
+    return;
+  }
+  const drafts = captureBoardReplyDrafts(container);
+  const keepScroll = preserveScroll || (container.scrollTop > 0);
+  const prevScroll = container.scrollTop;
   container.innerHTML = '';
   boardLastId = 0;
+  boardFeedSig = nextSig;
   if (!items.length) {
     ensureBoardEmptyState(container);
+    container.scrollTop = 0;
     return;
   }
   const openItems = items.filter((item) => !(item.reply_count > 0 || (item.replies || []).length));
@@ -298,20 +363,36 @@ function renderBoardFeed(items, container) {
       bindBoardReplyUi(node);
     }
   }
-  container.scrollTop = 0;
+  restoreBoardReplyDrafts(container, drafts);
+  const applyScroll = () => {
+    if (pinBoardId != null) {
+      const card = container.querySelector(`[data-board-id="${pinBoardId}"]`);
+      if (card) {
+        const offset = pinOffset == null ? 48 : pinOffset;
+        container.scrollTop = Math.max(0, card.offsetTop - offset);
+        return;
+      }
+    }
+    container.scrollTop = keepScroll ? prevScroll : 0;
+  };
+  applyScroll();
+  requestAnimationFrame(applyScroll);
 }
 
-function upsertBoardItems(items, container) {
+function upsertBoardItems(items, container, opts = {}) {
   if (!container) return;
   if (!items.length) {
+    boardFeedSig = '';
+    container.innerHTML = '';
     ensureBoardEmptyState(container);
     return;
   }
-  renderBoardFeed(items, container);
+  renderBoardFeed(items, container, opts);
 }
 
 function resetBoardFeed() {
   boardLastId = 0;
+  boardFeedSig = '';
   const sheetFeed = document.getElementById('lounge-board-sheet-feed');
   if (sheetFeed) sheetFeed.innerHTML = '';
 }
@@ -326,14 +407,46 @@ async function fetchBoard({ since = 0 } = {}) {
   return data;
 }
 
-async function refreshBoard({ quiet = false } = {}) {
+async function refreshBoard({
+  quiet = false,
+  preserveScroll = true,
+  force = false,
+  pinBoardId = null,
+  pinOffset = null,
+} = {}) {
   try {
     const data = await fetchBoard();
     const items = data.items || [];
     const sheetFeed = document.getElementById('lounge-board-sheet-feed');
-    if (sheetFeed) renderBoardFeed(items, sheetFeed);
+    if (!sheetFeed) return;
+    if (
+      quiet
+      && !force
+      && (Date.now() < boardScrollQuietUntil || hasOpenBoardReplyForm())
+    ) {
+      boardPendingItems = items;
+      return;
+    }
+    boardPendingItems = null;
+    renderBoardFeed(items, sheetFeed, {
+      preserveScroll: quiet ? true : preserveScroll,
+      force,
+      pinBoardId,
+      pinOffset,
+    });
   } catch (err) {
     if (!quiet) console.error(err);
+  }
+}
+
+function flushBoardPendingIfIdle() {
+  if (!boardPendingItems || !isBoardSheetOpen()) return;
+  if (Date.now() < boardScrollQuietUntil || hasOpenBoardReplyForm()) return;
+  const items = boardPendingItems;
+  boardPendingItems = null;
+  const sheetFeed = document.getElementById('lounge-board-sheet-feed');
+  if (sheetFeed) {
+    renderBoardFeed(items, sheetFeed, { preserveScroll: true, force: false });
   }
 }
 
@@ -392,11 +505,22 @@ async function submitBoardReplyForm(e) {
     bindLinkEl?.classList.remove('hidden');
     return;
   }
+  const sheetFeed = document.getElementById('lounge-board-sheet-feed');
+  const card = sheetFeed?.querySelector(`[data-board-id="${boardId}"]`);
+  const pinOffset = card && sheetFeed ? card.offsetTop - sheetFeed.scrollTop : 48;
   const btn = form.querySelector('.lounge-board-send');
   if (btn) btn.disabled = true;
   try {
-    const data = await postBoardReply(apiKey, boardId, body);
-    await refreshBoard({ quiet: true });
+    await postBoardReply(apiKey, boardId, body);
+    boardPendingItems = null;
+    boardScrollQuietUntil = 0;
+    await refreshBoard({
+      quiet: true,
+      preserveScroll: true,
+      force: true,
+      pinBoardId: boardId,
+      pinOffset,
+    });
     toast('已回在墙上');
   } catch (err) {
     toast(err.message);
@@ -839,7 +963,11 @@ function startPolling() {
   if (pollTimer) clearInterval(pollTimer);
   pollTimer = setInterval(() => {
     refreshFeed({ quiet: true });
-    refreshBoard({ quiet: true });
+    // 许愿墙只在打开时静默刷新；滚动中/写回复时先攒着，避免下拉回弹
+    if (isBoardSheetOpen()) {
+      flushBoardPendingIfIdle();
+      refreshBoard({ quiet: true, preserveScroll: true });
+    }
   }, POLL_MS);
 }
 

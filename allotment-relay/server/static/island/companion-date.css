@@ -26,3 +26,8 @@
 .date-options small { display:block; color:#64776a; }
 .date-archive button { display:block; width:100%; margin:8px 0; text-align:left; }
 @media (max-width:420px) { .date-paper { padding:18px; } }
+
+
+.island-float-chip.is-heart {
+  --chip-accent: #c45c7a;
+}

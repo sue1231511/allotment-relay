@@ -1,8 +1,9 @@
-import { api, loadKey } from "./api.js?v=date-forget1";
+import { api, loadKey } from "./api.js?v=hearts1";
 import { openFarmEvents, closeFarmEvents } from "./ui/farm-events.js?v=farm-events1";
 import { renderMarketHub } from "./scenes/market-hub.js?v=flowers1";
 import { renderFlorist } from "./scenes/florist.js?v=flowers1";
 import { mountDates, dateSceneChanged, resetDates } from "./ui/companion-date.js?v=date-forget1";
+import { mountHearts, resetHearts } from "./ui/heart-gifts.js?v=hearts1";
 import {
   applySnapshot,
   duesBlocked,
@@ -120,6 +121,7 @@ function showPlay() {
 function showGate() {
   closeFarmEvents();
   resetDates();
+  resetHearts();
   state.florist = null;
   state.floristMeet = false;
   floristRetry = null;
@@ -3047,6 +3049,7 @@ async function startFromSnapshot(data, scene) {
 
 function bindDock() {
   mountDates(enterScene);
+  mountHearts();
   bindBgmChip();
   const bag = document.getElementById("island-bag-chip");
   if (bag) bag.addEventListener("click", () => openTab("bag"));
