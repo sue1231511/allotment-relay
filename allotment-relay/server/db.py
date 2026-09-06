@@ -2522,6 +2522,14 @@ def fmt_cst_hhmm(ts: int | None = None) -> str:
     return cst_dt(t).strftime("%H:%M")
 
 
+def fmt_cst_ymd_hm(ts: int | None = None) -> str:
+    """东八区年月日时分，例如 2026-09-06 12:36。"""
+    t = now() if ts is None else int(ts or 0)
+    if t <= 0:
+        return "—"
+    return cst_dt(t).strftime("%Y-%m-%d %H:%M")
+
+
 def fmt_cst_date(ts: int | None = None) -> str:
     """东八区日期，例如 2026-08-27。"""
     t = now() if ts is None else int(ts or 0)

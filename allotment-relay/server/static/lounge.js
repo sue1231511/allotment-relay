@@ -32,6 +32,7 @@ function esc(s) {
 
 function fmtClock(epoch) {
   if (!epoch) return '';
+  if (typeof islandFmtDateTime === 'function') return islandFmtDateTime(epoch);
   return islandFmtClock(epoch);
 }
 
@@ -236,6 +237,7 @@ function boardItemHtml(item) {
       <div class="lounge-board-replies" data-board-replies="${item.id}">
         ${replyHtml || ''}
       </div>
+      ${myProfile?.is_mod ? `
       <div class="lounge-board-reply-actions">
         <button type="button" class="lounge-board-reply-btn" data-board-reply="${item.id}">回复</button>
       </div>
@@ -251,7 +253,7 @@ function boardItemHtml(item) {
           <button type="button" class="lounge-board-reply-cancel" data-board-reply-cancel="${item.id}">取消</button>
           <button type="submit" class="lounge-board-send">发出</button>
         </div>
-      </form>
+      </form>` : ''}
     </article>
   `;
 }
