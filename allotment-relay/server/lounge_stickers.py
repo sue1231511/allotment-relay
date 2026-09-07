@@ -10,10 +10,11 @@ import aiosqlite
 
 from . import config, db
 
-STICKER_DIR = config.DATA_DIR / "lounge_stickers"
 STICKER_MAX_BYTES = 3 * 1024 * 1024
 STICKER_MAX_PER_STEWARD = 64
 STICKER_MAX_BATCH = 12
+STICKER_DISPLAY_EDGE = 240
+STICKER_THUMB_EDGE = 96
 STICKER_MEDIA = {
     ".png": "image/png",
     ".jpg": "image/jpeg",
@@ -23,14 +24,21 @@ STICKER_MEDIA = {
 }
 
 
+def sticker_root() -> Path:
+    return config.DATA_DIR / "lounge_stickers"
+
+
 def sticker_dir_for(steward_id: int) -> Path:
-    path = STICKER_DIR / str(int(steward_id))
+    path = sticker_root() / str(int(steward_id))
     path.mkdir(parents=True, exist_ok=True)
     return path
 
 
-def sticker_file_url(sticker_id: int) -> str:
-    return f"/api/lounge/stickers/{int(sticker_id)}/file"
+def sticker_file_url(sticker_id: int, variant: str = "full") -> str:
+    url = f"/api/lounge/stickers/{int(sticker_id)}/file"
+    if variant and variant != "full":
+        return f"{url}?variant={variant}"
+    return url
 
 
 def sticker_media_type(path: Path) -> str:
@@ -71,11 +79,76 @@ def _sticker_view(row: dict[str, Any]) -> dict[str, Any]:
     ext = Path(name).suffix.lower()
     return {
         "id": sid,
-        "url": sticker_file_url(sid),
+        "url": sticker_file_url(sid, "display"),
+        "thumb_url": sticker_file_url(sid, "thumb"),
         "created_at": int(row.get("created_at") or 0),
         "kind": "gif" if ext == ".gif" else "image",
         "mime": STICKER_MEDIA.get(ext, "application/octet-stream"),
     }
+
+
+def _compress_sticker(data: bytes, ext: str) -> tuple[bytes, str]:
+    """Shrink still images to sticker size. GIFs stay animated."""
+    if ext == ".gif":
+        return data, ext
+    try:
+        from io import BytesIO
+
+        from PIL import Image
+
+        im = Image.open(BytesIO(data))
+        im.load()
+        w, h = im.size
+        need_resize = max(w, h) > STICKER_DISPLAY_EDGE
+        has_alpha = im.mode in ("RGBA", "LA") or (
+            im.mode == "P" and "transparency" in im.info
+        )
+        im = im.convert("RGBA") if has_alpha else im.convert("RGB")
+        if need_resize:
+            im.thumbnail((STICKER_DISPLAY_EDGE, STICKER_DISPLAY_EDGE), Image.Resampling.LANCZOS)
+        buf = BytesIO()
+        if has_alpha:
+            im.save(buf, format="PNG", optimize=True)
+            out, out_ext = buf.getvalue(), ".png"
+        else:
+            im.save(buf, format="JPEG", quality=82, optimize=True)
+            out, out_ext = buf.getvalue(), ".jpg"
+        if not need_resize and len(out) >= len(data):
+            return data, ext
+        return out, out_ext
+    except Exception:
+        return data, ext
+
+
+def ensure_variant(path: Path, variant: str = "full") -> Path:
+    """Serve a cached jpeg fit, or the original GIF for chat display."""
+    kind = (variant or "full").lower()
+    if kind in ("", "full"):
+        return path
+    if path.suffix.lower() == ".gif" and kind == "display":
+        return path
+    edge = STICKER_THUMB_EDGE if kind == "thumb" else STICKER_DISPLAY_EDGE
+    quality = 72 if kind == "thumb" else 82
+    out = path.with_name(f"{path.stem}.{kind}.jpg")
+    try:
+        if out.is_file() and out.stat().st_mtime >= path.stat().st_mtime:
+            return out
+        from PIL import Image
+
+        im = Image.open(path)
+        im.load()
+        if im.mode in ("RGBA", "LA") or (im.mode == "P" and "transparency" in im.info):
+            bg = Image.new("RGB", im.size, (251, 248, 239))
+            rgba = im.convert("RGBA")
+            bg.paste(rgba, mask=rgba.split()[-1])
+            im = bg
+        else:
+            im = im.convert("RGB")
+        im.thumbnail((edge, edge), Image.Resampling.LANCZOS)
+        im.save(out, format="JPEG", quality=quality, optimize=True)
+        return out
+    except Exception:
+        return path
 
 
 async def list_stickers(steward_id: int) -> list[dict[str, Any]]:
@@ -110,7 +183,7 @@ async def sticker_file_path(sticker_id: int) -> Path:
     row = await get_sticker_row(sticker_id)
     if not row:
         raise ValueError("表情包不存在")
-    path = STICKER_DIR / str(int(row["steward_id"])) / str(row["filename"])
+    path = sticker_root() / str(int(row["steward_id"])) / str(row["filename"])
     if not path.is_file():
         raise ValueError("表情包文件丢失")
     return path
@@ -144,6 +217,7 @@ async def save_uploaded_stickers(
                 "动图请先压缩，静态图另存为较小的 jpg/png。"
             )
         ext, _mime = _sniff_image(data, name or "图片")
+        data, ext = _compress_sticker(data, ext)
         prepared.append((f"{uuid.uuid4().hex}{ext}", data, ext))
 
     folder = sticker_dir_for(steward_id)

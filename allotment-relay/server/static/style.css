@@ -3994,6 +3994,9 @@ body.memory-open {
     background: rgba(255, 255, 255, .72);
     color: #435754;
     text-align: left;
+    font: inherit;
+    cursor: pointer;
+    box-sizing: border-box;
   }
 
   .lounge-tool-item > span,
@@ -5515,6 +5518,30 @@ body:has(.wedding-ribbon) {
 .lounge-sticker-btn[aria-expanded="true"] {
   background: rgba(73, 103, 98, .22);
 }
+.lounge-sticker-file {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0.01;
+  overflow: hidden;
+  z-index: 0;
+  pointer-events: none;
+}
+label.lounge-sticker-add,
+label.lounge-sticker-cell {
+  cursor: pointer;
+  box-sizing: border-box;
+}
+label.lounge-sticker-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
 .lounge-sticker-msg {
   position: relative;
 }
@@ -5794,6 +5821,25 @@ body:has(.wedding-ribbon) {
     border-radius: 15px;
     border: 1px solid rgba(127, 167, 171, .22);
     background: rgba(255, 255, 255, .78);
+  }
+  .lounge-sticker-msg img {
+    max-width: min(108px, 36vw);
+    max-height: 108px;
+    border-radius: 10px;
+  }
+  .lounge-sticker-grid {
+    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+    gap: 8px;
+    min-height: 96px;
+    max-height: 38vh;
+  }
+  .lounge-sticker-cell.is-add span {
+    font-size: 22px;
+  }
+  .lounge-tool-item {
+    font: inherit;
+    cursor: pointer;
+    box-sizing: border-box;
   }
 }
 @media (min-width: 861px) {

@@ -792,17 +792,18 @@ async def lounge_stickers_upload(
 
 
 @app.get("/api/lounge/stickers/{sticker_id}/file")
-async def lounge_sticker_file(sticker_id: int):
+async def lounge_sticker_file(sticker_id: int, variant: str = "full"):
     from . import lounge_stickers as stickers
     from fastapi.responses import FileResponse
     try:
         path = await stickers.sticker_file_path(sticker_id)
+        path = stickers.ensure_variant(path, variant)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return FileResponse(
         path,
         media_type=stickers.sticker_media_type(path),
-        headers={"Cache-Control": "public, max-age=86400"},
+        headers={"Cache-Control": "public, max-age=31536000, immutable"},
     )
 
 
