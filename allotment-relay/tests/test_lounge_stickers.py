@@ -49,13 +49,51 @@ async def _run() -> None:
     assert len(items) == 1, items
     sid = items[0]["id"]
     assert f"/api/lounge/stickers/{sid}/file" in items[0]["url"]
+    assert items[0]["kind"] == "image"
 
     listed = await lounge.human_list_stickers(key)
     assert any(x["id"] == sid for x in listed)
 
-    msg = await lounge.human_send_sticker(key, sid)
+    # 文件名/MIME 乱了也能靠文件头识别
+    stealth = await lounge.human_upload_stickers(
+        key, [("photo.bin", "application/octet-stream", png)]
+    )
+    assert stealth[0]["kind"] == "image"
+
+    gif = bytes.fromhex(
+        "47494638396101000100800000ffffff00000021f90401000000002c00000000010001000002024401003b"
+    )
+    gif_items = await lounge.human_upload_stickers(
+        key, [("dance.gif", "application/octet-stream", gif)]
+    )
+    assert gif_items[0]["kind"] == "gif", gif_items
+    gif_path = await stickers.sticker_file_path(gif_items[0]["id"])
+    assert gif_path.suffix == ".gif"
+    assert stickers.sticker_media_type(gif_path) == "image/gif"
+
+    try:
+        await lounge.human_upload_stickers(
+            key, [("live.heic", "image/heic", b"\x00\x00\x00\x18ftypheic" + b"\x00" * 32)]
+        )
+        raise AssertionError("expected heic reject")
+    except ValueError as exc:
+        assert "HEIC" in str(exc) or "另存" in str(exc), exc
+
+    try:
+        await lounge.human_upload_stickers(
+            key, [("huge.png", "image/png", png + b"\x00" * (stickers.STICKER_MAX_BYTES + 1))]
+        )
+        raise AssertionError("expected size reject")
+    except ValueError as exc:
+        assert "KB" in str(exc) or "大" in str(exc), exc
+
+    await lounge.human_delete_sticker(key, sid)
+    after_del = await lounge.human_list_stickers(key)
+    assert all(x["id"] != sid for x in after_del)
+
+    msg = await lounge.human_send_sticker(key, gif_items[0]["id"])
     assert msg["msg_kind"] == "sticker", msg
-    assert msg["sticker_id"] == sid
+    assert msg["sticker_id"] == gif_items[0]["id"]
     assert msg.get("sticker_url")
 
     human_feed = await lounge.human_list_messages(key)
@@ -79,8 +117,13 @@ async def _run() -> None:
     assert "/api/lounge/stickers/" not in scan
     assert "最近消息" in scan or "最近" in scan
 
-    path = await stickers.sticker_file_path(sid)
+    path = await stickers.sticker_file_path(gif_items[0]["id"])
     assert path.is_file()
+    await lounge.human_delete_sticker(key, gif_items[0]["id"])
+    gone = await lounge.human_list_stickers(key)
+    assert all(x["id"] != gif_items[0]["id"] for x in gone)
+    # 图库删了，聊天室已发的动图文件还在
+    assert (await stickers.sticker_file_path(gif_items[0]["id"])).is_file()
     print("lounge stickers ok")
 
 

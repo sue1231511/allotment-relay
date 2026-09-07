@@ -655,7 +655,7 @@ function heartCardHtml(card, { pending } = {}) {
         <button type="button" class="play-mini-btn" data-heart-reply="${card.id}">回一句</button>
       </div>`;
   } else if (pending && card.from_role === 'human') {
-    actions = `<p class="muted">等岛民用 heart_ops 列表 / 看 ${card.id} 查看</p>`;
+    actions = `<p class="muted">等岛民拆开这张回礼，待拆提醒才会消失</p>`;
   }
   return `
     <article class="item" data-heart-id="${card.id}">

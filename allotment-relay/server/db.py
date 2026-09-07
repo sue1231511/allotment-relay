@@ -2239,6 +2239,7 @@ async def init_db() -> None:
             )
             """,
             "CREATE INDEX IF NOT EXISTS idx_lounge_stickers_steward ON lounge_stickers(steward_id, id DESC)",
+            "ALTER TABLE lounge_stickers ADD COLUMN deleted_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE lounge_messages ADD COLUMN msg_kind TEXT NOT NULL DEFAULT 'text'",
             "ALTER TABLE lounge_messages ADD COLUMN sticker_id INTEGER NOT NULL DEFAULT 0",
         ):

@@ -3,7 +3,7 @@ import { openFarmEvents, closeFarmEvents } from "./ui/farm-events.js?v=farm-even
 import { renderMarketHub } from "./scenes/market-hub.js?v=flowers1";
 import { renderFlorist } from "./scenes/florist.js?v=flowers1";
 import { mountDates, dateSceneChanged, resetDates } from "./ui/companion-date.js?v=date-forget1";
-import { mountHearts, resetHearts } from "./ui/heart-gifts.js?v=hearts1";
+import { mountHearts, resetHearts } from "./ui/heart-gifts.js?v=hearts2";
 import {
   applySnapshot,
   duesBlocked,

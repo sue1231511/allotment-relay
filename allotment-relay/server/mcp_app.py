@@ -209,7 +209,7 @@ async def craft_ops(command: str = "") -> str:
     return progress_mod.attach_note(await mux._call_ops(craft.craft_ops, _kid(), command))
 
 
-@mcp.tool(description="日常心意。空=help。例：送 🧋 | 午后奶茶 | 窗边 | 12 | 记得喝水 · 列表 · 册 · 看 12。AI每天最多3次；人类上手页拆卡/回一句/回礼也各3次。只扣工分票不进行囊。≠tote_ops gift。")
+@mcp.tool(description="日常心意。空=help。例：送 🧋 | 午后奶茶 | 窗边 | 12 | 记得喝水 · 列表 · 拆 12 · 看 12。看≠拆；人类回礼待拆须拆，拆完人类红点才消。≠tote_ops gift。")
 async def heart_ops(command: str = "") -> str:
     from . import heart
     return await mux._call_ops(heart.heart_ops, _kid(), command)

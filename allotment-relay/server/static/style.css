@@ -5514,16 +5514,21 @@ body:has(.wedding-ribbon) {
 .lounge-sticker-btn:hover {
   background: rgba(73, 103, 98, .18);
 }
-.lounge-composer {
-  /* keep existing; sticker sits before send */
+.lounge-sticker-msg {
+  position: relative;
 }
 .lounge-sticker-msg img {
   display: block;
-  max-width: min(168px, 56vw);
-  max-height: 168px;
-  border-radius: 12px;
+  max-width: min(196px, 62vw);
+  max-height: 196px;
+  border-radius: 14px;
   object-fit: contain;
-  background: rgba(255,255,255,.4);
+  background:
+    linear-gradient(45deg, #efeae0 25%, transparent 25%, transparent 75%, #efeae0 75%),
+    linear-gradient(45deg, #efeae0 25%, transparent 25%, transparent 75%, #efeae0 75%),
+    #fbf8ef;
+  background-size: 12px 12px;
+  background-position: 0 0, 6px 6px;
 }
 .lounge-sticker-row .lounge-bubble {
   background: transparent;
@@ -5533,7 +5538,8 @@ body:has(.wedding-ribbon) {
 .lounge-sticker-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(20, 30, 32, .28);
+  background: rgba(20, 30, 32, .34);
+  backdrop-filter: blur(2px);
   z-index: 70;
 }
 .lounge-sticker-sheet {
@@ -5542,11 +5548,17 @@ body:has(.wedding-ribbon) {
   right: 0;
   bottom: 0;
   z-index: 71;
-  max-height: min(68vh, 520px);
-  padding: 10px 14px calc(14px + env(safe-area-inset-bottom, 0px));
-  border-radius: 18px 18px 0 0;
-  background: #f7f3ec;
-  box-shadow: 0 -10px 40px rgba(0,0,0,.16);
+  display: flex;
+  flex-direction: column;
+  max-height: min(78vh, 620px);
+  padding: 8px 16px 16px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  border-radius: 22px 22px 0 0;
+  background:
+    radial-gradient(circle at 12% 0, rgba(216, 201, 170, .4), transparent 42%),
+    linear-gradient(180deg, #fbf8ef 0%, #f3efe5 100%);
+  border: 1px solid rgba(157, 176, 174, .38);
+  box-shadow: 0 -16px 48px rgba(38, 56, 59, .16);
   transform: translateY(110%);
   transition: transform .22s ease;
 }
@@ -5559,40 +5571,78 @@ body:has(.wedding-ribbon) {
   margin: 2px auto 10px;
   border-radius: 999px;
   background: rgba(80, 90, 88, .25);
+  flex-shrink: 0;
 }
 .lounge-sticker-sheet-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 6px;
+  gap: 12px;
+  margin-bottom: 4px;
+  flex-shrink: 0;
 }
-.lounge-sticker-sheet-head button,
-.lounge-sticker-actions .btn {
-  border: 0;
-  background: transparent;
-  color: #3d5c56;
-  font: inherit;
-  cursor: pointer;
+.lounge-sticker-sheet-head strong {
+  font-family: Georgia, "Noto Serif SC", serif;
+  font-weight: 500;
+  font-size: 18px;
+  letter-spacing: .04em;
+  color: #26383b;
 }
-.lounge-sticker-note {
-  margin: 0 0 10px;
+.lounge-sticker-count {
+  margin-left: 8px;
   font-size: 12px;
   color: #7a8682;
+  font-weight: 400;
+}
+.lounge-sticker-sheet-head button {
+  border: 1px solid rgba(127, 167, 171, .32);
+  background: rgba(255, 255, 255, .72);
+  color: #3d5c56;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 999px;
+  padding: 5px 12px;
+}
+.lounge-sticker-note {
+  margin: 0 0 12px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #7a8682;
+  flex-shrink: 0;
 }
 .lounge-sticker-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  gap: 10px;
   overflow: auto;
-  max-height: 42vh;
-  padding-bottom: 8px;
+  flex: 1;
+  min-height: 140px;
+  max-height: 46vh;
+  padding: 2px 2px 10px;
 }
 .lounge-sticker-cell {
+  position: relative;
   aspect-ratio: 1;
-  border: 1px solid rgba(127, 167, 171, .2);
-  border-radius: 12px;
-  background: #fff;
-  padding: 6px;
+  border: 1px solid rgba(157, 176, 174, .3);
+  border-radius: 16px;
+  background:
+    linear-gradient(45deg, #efeae0 25%, transparent 25%, transparent 75%, #efeae0 75%),
+    linear-gradient(45deg, #efeae0 25%, transparent 25%, transparent 75%, #efeae0 75%),
+    #fbf8ef;
+  background-size: 12px 12px;
+  background-position: 0 0, 6px 6px;
+  box-shadow: 0 1px 0 rgba(255,255,255,.85) inset, 0 8px 18px rgba(45, 74, 78, .07);
+  overflow: hidden;
+  padding: 0;
+}
+.lounge-sticker-thumb {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  padding: 8px;
   cursor: pointer;
 }
 .lounge-sticker-cell img {
@@ -5600,18 +5650,117 @@ body:has(.wedding-ribbon) {
   height: 100%;
   object-fit: contain;
   display: block;
+  pointer-events: none;
+}
+.lounge-sticker-del {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(38, 56, 59, .78);
+  color: #fbf8ef;
+  font-size: 15px;
+  line-height: 22px;
+  padding: 0;
+  cursor: pointer;
+}
+.lounge-sticker-del:hover {
+  background: #8f6b61;
+}
+.lounge-sticker-gif {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  font-size: 9px;
+  letter-spacing: .08em;
+  background: rgba(38, 56, 59, .78);
+  color: #f7f3ec;
+  border-radius: 999px;
+  padding: 2px 6px;
+  pointer-events: none;
+}
+.lounge-sticker-cell.is-add {
+  border: 1.5px dashed rgba(109, 143, 148, .5);
+  background: rgba(255,255,255,.55);
+  box-shadow: none;
+  display: grid;
+  place-items: center;
+  color: #3d5c56;
+  cursor: pointer;
+  font: inherit;
+}
+.lounge-sticker-cell.is-add span {
+  display: block;
+  font-size: 28px;
+  line-height: 1;
+  color: #6d8f94;
+}
+.lounge-sticker-cell.is-add small {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #7a8682;
 }
 .lounge-sticker-empty {
   grid-column: 1 / -1;
-  margin: 18px 0;
+  margin: 10px 0 4px;
   text-align: center;
   color: #7a8682;
   font-size: 13px;
+  line-height: 1.6;
 }
 .lounge-sticker-actions {
   display: flex;
-  justify-content: flex-end;
-  padding-top: 6px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 8px;
+  flex-shrink: 0;
+}
+.lounge-sticker-hint {
+  margin: 0;
+  font-size: 11px;
+  color: #8a9692;
+  line-height: 1.45;
+}
+.lounge-sticker-add,
+.lounge-sticker-actions .btn {
+  border: 1px solid rgba(109, 143, 148, .4);
+  background: #3d5c56;
+  color: #f7f3ec;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 999px;
+  padding: 7px 14px;
+  white-space: nowrap;
+}
+.lounge-sticker-busy {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(251, 248, 239, .78);
+  color: #3d5c56;
+  font-size: 14px;
+  border-radius: inherit;
+  z-index: 2;
+}
+.lounge-sticker-busy[hidden] {
+  display: none;
+}
+.lounge-sticker-alert {
+  max-width: min(92vw, 380px);
+}
+.lounge-sticker-alert .lounge-sheet-body p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #3d5c56;
+  white-space: pre-wrap;
 }
 .play-lounge-compose-row {
   display: flex;
@@ -5637,5 +5786,19 @@ body:has(.wedding-ribbon) {
   .lounge-page .lounge-sticker-btn,
   .island-app .lounge-sticker-btn {
     display: grid;
+  }
+  .lounge-page .lounge-sticker-sheet,
+  .island-app .lounge-sticker-sheet {
+    left: 50%;
+    right: auto;
+    bottom: 28px;
+    width: min(440px, calc(100vw - 48px));
+    transform: translate(-50%, 110%);
+    border-radius: 22px;
+    max-height: min(72vh, 640px);
+  }
+  .lounge-page .lounge-sticker-sheet.is-open,
+  .island-app .lounge-sticker-sheet.is-open {
+    transform: translate(-50%, 0);
   }
 }

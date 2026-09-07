@@ -11,15 +11,15 @@ import aiosqlite
 from . import config, db
 
 STICKER_DIR = config.DATA_DIR / "lounge_stickers"
-STICKER_MAX_BYTES = 512 * 1024
+STICKER_MAX_BYTES = 3 * 1024 * 1024
 STICKER_MAX_PER_STEWARD = 64
 STICKER_MAX_BATCH = 12
-STICKER_ALLOWED_EXT = {
-    "image/png": ".png",
-    "image/jpeg": ".jpg",
-    "image/jpg": ".jpg",
-    "image/webp": ".webp",
-    "image/gif": ".gif",
+STICKER_MEDIA = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".webp": "image/webp",
+    ".gif": "image/gif",
 }
 
 
@@ -33,12 +33,48 @@ def sticker_file_url(sticker_id: int) -> str:
     return f"/api/lounge/stickers/{int(sticker_id)}/file"
 
 
+def sticker_media_type(path: Path) -> str:
+    return STICKER_MEDIA.get(path.suffix.lower(), "application/octet-stream")
+
+
+def _kb(n: int) -> int:
+    return max(1, int(n) // 1024)
+
+
+def _sniff_image(data: bytes, filename: str) -> tuple[str, str]:
+    """Return (ext, media_type) from magic bytes. Ignore claimed MIME / suffix."""
+    label = filename or "图片"
+    if not data:
+        raise ValueError(f"{label}是空文件")
+    head = data[:16]
+    if head.startswith(b"\x89PNG\r\n\x1a\n"):
+        return ".png", "image/png"
+    if head.startswith(b"\xff\xd8\xff"):
+        return ".jpg", "image/jpeg"
+    if head.startswith(b"GIF87a") or head.startswith(b"GIF89a"):
+        return ".gif", "image/gif"
+    if len(data) >= 12 and head.startswith(b"RIFF") and data[8:12] == b"WEBP":
+        return ".webp", "image/webp"
+    if head[4:8] == b"ftyp" or b"ftypheic" in data[:24] or b"ftypheif" in data[:24]:
+        raise ValueError(
+            f"{label}是 iPhone 实况/HEIC，网页加不进去。请另存为 JPG、PNG 或 GIF 再添加。"
+        )
+    raise ValueError(
+        f"{label}不是 png / jpg / gif / webp（当前文件头无法识别）。"
+        "请换一张，或用相册里「导出图片」后再试。"
+    )
+
+
 def _sticker_view(row: dict[str, Any]) -> dict[str, Any]:
     sid = int(row["id"])
+    name = str(row.get("filename") or "")
+    ext = Path(name).suffix.lower()
     return {
         "id": sid,
         "url": sticker_file_url(sid),
         "created_at": int(row.get("created_at") or 0),
+        "kind": "gif" if ext == ".gif" else "image",
+        "mime": STICKER_MEDIA.get(ext, "application/octet-stream"),
     }
 
 
@@ -48,8 +84,8 @@ async def list_stickers(steward_id: int) -> list[dict[str, Any]]:
         rows = await (
             await conn.execute(
                 """
-                SELECT id, created_at FROM lounge_stickers
-                WHERE steward_id=?
+                SELECT id, filename, created_at FROM lounge_stickers
+                WHERE steward_id=? AND COALESCE(deleted_at, 0)=0
                 ORDER BY id DESC
                 """,
                 (int(steward_id),),
@@ -80,49 +116,42 @@ async def sticker_file_path(sticker_id: int) -> Path:
     return path
 
 
-def _ext_for(content_type: str, filename: str) -> str:
-    ctype = (content_type or "").split(";")[0].strip().lower()
-    if ctype in STICKER_ALLOWED_EXT:
-        return STICKER_ALLOWED_EXT[ctype]
-    lower = (filename or "").lower()
-    for ext in (".png", ".jpg", ".jpeg", ".webp", ".gif"):
-        if lower.endswith(ext):
-            return ".jpg" if ext == ".jpeg" else ext
-    raise ValueError("只支持 png / jpg / webp / gif 图片")
-
-
 async def save_uploaded_stickers(
     steward_id: int,
     files: list[tuple[str, str, bytes]],
 ) -> list[dict[str, Any]]:
     """files: list of (filename, content_type, raw_bytes)."""
     if not files:
-        raise ValueError("请选择要添加的表情包图片")
+        raise ValueError("请选择要添加的表情包图片（png / jpg / gif）")
     if len(files) > STICKER_MAX_BATCH:
         raise ValueError(f"一次最多添加 {STICKER_MAX_BATCH} 张")
 
     existing = await list_stickers(steward_id)
     if len(existing) + len(files) > STICKER_MAX_PER_STEWARD:
         raise ValueError(
-            f"表情包最多 {STICKER_MAX_PER_STEWARD} 张（已有 {len(existing)}）"
+            f"表情包最多 {STICKER_MAX_PER_STEWARD} 张（已有 {len(existing)}）。"
+            "先删掉不用的再添加。"
         )
 
-    prepared: list[tuple[str, bytes]] = []
-    for name, ctype, raw in files:
+    prepared: list[tuple[str, bytes, str]] = []
+    for name, _ctype, raw in files:
         data = raw or b""
         if not data:
             raise ValueError(f"{name or '图片'}是空文件")
         if len(data) > STICKER_MAX_BYTES:
-            raise ValueError(f"单张不能超过 {STICKER_MAX_BYTES // 1024}KB")
-        ext = _ext_for(ctype, name)
-        prepared.append((f"{uuid.uuid4().hex}{ext}", data))
+            raise ValueError(
+                f"{name or '图片'}太大了（{_kb(len(data))}KB，上限 {_kb(STICKER_MAX_BYTES)}KB）。"
+                "动图请先压缩，静态图另存为较小的 jpg/png。"
+            )
+        ext, _mime = _sniff_image(data, name or "图片")
+        prepared.append((f"{uuid.uuid4().hex}{ext}", data, ext))
 
     folder = sticker_dir_for(steward_id)
     now = db.now()
     created: list[dict[str, Any]] = []
     async with db.connect() as conn:
         conn.row_factory = aiosqlite.Row
-        for filename, data in prepared:
+        for filename, data, _ext in prepared:
             (folder / filename).write_bytes(data)
             cur = await conn.execute(
                 """
@@ -132,7 +161,9 @@ async def save_uploaded_stickers(
                 (int(steward_id), filename, now),
             )
             created.append(
-                _sticker_view({"id": int(cur.lastrowid), "created_at": now})
+                _sticker_view(
+                    {"id": int(cur.lastrowid), "filename": filename, "created_at": now}
+                )
             )
         await conn.commit()
     return created
@@ -142,11 +173,16 @@ async def delete_sticker(steward_id: int, sticker_id: int) -> None:
     row = await get_sticker_row(sticker_id)
     if not row or int(row["steward_id"]) != int(steward_id):
         raise ValueError("表情包不存在")
-    path = STICKER_DIR / str(int(steward_id)) / str(row["filename"])
+    if int(row.get("deleted_at") or 0):
+        raise ValueError("表情包不存在")
+    now = db.now()
     async with db.connect() as conn:
         await conn.execute(
-            "DELETE FROM lounge_stickers WHERE id=? AND steward_id=?",
-            (int(sticker_id), int(steward_id)),
+            """
+            UPDATE lounge_stickers
+            SET deleted_at=?
+            WHERE id=? AND steward_id=? AND COALESCE(deleted_at, 0)=0
+            """,
+            (now, int(sticker_id), int(steward_id)),
         )
         await conn.commit()
-    path.unlink(missing_ok=True)

@@ -152,6 +152,10 @@ def test_mcp_descriptions() -> None:
     craft = _tool_blob(mcp, "craft_ops")
     assert "打 铜钉" in craft and "forge_ops" in craft
 
+    heart = _tool_blob(mcp, "heart_ops")
+    assert "拆 12" in heart and "看 12" in heart
+    assert "tote_ops" in heart
+
     cloth = _tool_blob(mcp, "cloth_ops")
     assert "漾漾" in cloth and "委托 短褂 海色" in cloth and "tailor_ops" in cloth
     assert "空" in cloth and "看坊" in cloth
@@ -487,6 +491,8 @@ def test_relay_manual_covers_systems() -> None:
         "对话上方",
         "红包 100 5",
         "hongbao_ops",
+        "拆 12",
+        "看 12",
     ]
     missing = [n for n in needles if n not in text]
     assert not missing, f"relay_manual missing: {missing}"
@@ -796,6 +802,10 @@ def test_human_island_manual() -> None:
         "海边（滩景再点港口、海边）",
         "剧场看台",
         "聊天室大厅也会出现一句通报",
+        "动图会动",
+        "格子右上角叉可删除",
+        "弹出失败原因",
+        "等岛民把回礼拆开",
     ):
         assert needle in blob, needle
     assert "打赏小橘仍去上手页" not in blob

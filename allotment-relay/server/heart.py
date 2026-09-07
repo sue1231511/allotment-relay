@@ -9,15 +9,16 @@ import aiosqlite
 from . import db
 
 HELP = """heart_ops — 日常心意（AI↔人类小礼物；只花工分票，不进行囊）
-空 command / help — 本说明 + 今日剩余次数 + 待拆卡片
+空 command / help — 本说明 + 今日剩余次数 + 待你拆的人类回礼
 送 🧋 | 午后奶茶 | 窗边 | 12 | 记得喝水
   AI 每天最多 3 次。格式：送 emoji | 名字 | 场景 | 票数 [| 留言]
   emoji 必须用预设；票数 5～88；名字/场景 AI 自拟。
 列表 / 册 — 待拆与心意册
-看 12 — 看一张卡片
-人类在上手页 / 手机地图拆卡、回一句、回礼（各每天最多 3 次）。
+看 12 — 只看一张，不会拆；人类端提醒还在
+拆 12 — 拆开人类回礼（待拆→已拆）。成功后人类上手页/地图红点会消
+人类在上手页 / 手机地图拆你送的卡、回一句、回礼（各每天最多 3 次）。
 预设 emoji：🧋 🍰 💐 🐚 ☕ 🍡 🎀 🌙 ⭐ 🌊 🍵 🍪 🍀 🍬 🫧
-容易搞混：tote_ops gift 是点名送物品/票即时进对方行囊；聊天室红包走 lounge_ops。"""
+容易搞混：tote_ops gift 是点名送物品/票即时进对方行囊；聊天室红包走 lounge_ops。看≠拆。"""
 
 EMOJIS = (
     "🧋", "🍰", "💐", "🐚", "☕", "🍡", "🎀", "🌙", "⭐", "🌊",
@@ -341,12 +342,21 @@ async def list_text(key_id: int, *, album: bool = False) -> str:
     pending = snap["pending"]
     album_rows = snap["album"]
     if not album:
-        lines += ["", f"待拆 {len(pending)} 张："]
-        if not pending:
+        mine = [v for v in pending if v["from_role"] == "human"]
+        theirs = [v for v in pending if v["from_role"] != "human"]
+        lines += ["", f"待你拆（人类回礼）{len(mine)} 张："]
+        if not mine:
             lines.append("  （没有）")
-        for v in pending[:12]:
+        for v in mine[:12]:
             lines.append(
-                f"  #{v['id']} {v['emoji']} {v['title']} · {v['from_label']}→{v['to_label']} · {v['tickets']}票 · {v['scene']}"
+                f"  #{v['id']} {v['emoji']} {v['title']} · {v['tickets']}票 · {v['scene']} → heart_ops 拆 {v['id']}"
+            )
+        lines += ["", f"待人类拆 {len(theirs)} 张："]
+        if not theirs:
+            lines.append("  （没有）")
+        for v in theirs[:12]:
+            lines.append(
+                f"  #{v['id']} {v['emoji']} {v['title']} · {v['tickets']}票 · {v['scene']}"
             )
         lines += ["", "最近已收："]
         show = album_rows[:8]
@@ -360,7 +370,8 @@ async def list_text(key_id: int, *, album: bool = False) -> str:
         lines += [
             "",
             "送：heart_ops 送 🧋 | 名字 | 场景 | 票数 [| 留言]",
-            "人类在上手页拆卡 / 回一句 / 回礼。不是 tote_ops gift。",
+            "拆人类回礼：heart_ops 拆 12（看 12 只看不拆，红点不会消）",
+            "人类在上手页拆你送的卡 / 回一句 / 回礼。不是 tote_ops gift。",
         ]
         return "\n".join(lines)
     lines.append("")
@@ -394,14 +405,57 @@ async def look(key_id: int, rest: str) -> str:
         lines.append(f"留言：{v['note']}")
     if v["reply_text"]:
         lines.append(f"人类回一句：{v['reply_text']}")
+    if v["status"] == "pending" and row["from_role"] == "human":
+        lines.append(f"这张还待拆，人类端红点还在。拆开请 heart_ops 拆 {v['id']}（看不会拆）。")
+    elif v["status"] == "pending" and row["from_role"] == "ai":
+        lines.append("这张等人类在上手页或手机地图拆开。")
     return "\n".join(lines)
+
+
+async def unwrap_as_ai(key_id: int, rest: str) -> str:
+    s = await _require_enrolled(key_id)
+    m = re.search(r"(\d+)", rest or "")
+    if not m:
+        return (
+            "用法：heart_ops 拆 12\n"
+            "只拆人类回礼。看卡用 heart_ops 看 12，不会拆，红点也不会消。"
+        )
+    gid = int(m.group(1))
+    async with db.connect() as conn:
+        row = await _get(conn, int(s["id"]), gid)
+    if row["from_role"] != "human":
+        raise ValueError(
+            "这张是你送给人类的心意，请对方在上手页或手机地图拆开。"
+            "人类回礼才用 heart_ops 拆 编号。"
+        )
+    if row["status"] != "pending":
+        v = _view(row)
+        return f"#{v['id']} {v['emoji']}「{v['title']}」已经是{v['status_label']}，不用再拆。"
+    view = await open_card(int(s["id"]), gid)
+    lines = [
+        f"已拆开心意 #{view['id']} {view['emoji']}「{view['title']}」·{view['scene']}（{view['tickets']} 票）。",
+        "人类端待拆提醒 / 红点已清除。",
+    ]
+    if view["note"]:
+        lines.append(f"留言：{view['note']}")
+    return "\n".join(lines)
+
+
+async def _help_text(key_id: int) -> str:
+    s = await _require_enrolled(key_id)
+    snap = await snapshot(int(s["id"]))
+    mine = [v for v in snap["pending"] if v["from_role"] == "human"]
+    extra = list(await _quota_via_sid(int(s["id"])))
+    extra.append(f"待你拆的人类回礼 {len(mine)} 张。看不会拆；拆开用 heart_ops 拆 编号。")
+    for v in mine[:8]:
+        extra.append(f"  #{v['id']} {v['emoji']} {v['title']} → heart_ops 拆 {v['id']}")
+    return HELP + "\n\n" + "\n".join(extra)
 
 
 async def heart_ops(key_id: int, command: str = "") -> str:
     raw = (command or "").strip()
     if not raw or raw.lower() in ("help", "?", "帮助"):
-        s = await _require_enrolled(key_id)
-        return HELP + "\n\n" + "\n".join(await _quota_via_sid(int(s["id"])))
+        return await _help_text(key_id)
     verb, _, rest = raw.partition(" ")
     verb = verb.strip().lower()
     rest = rest.strip()
@@ -411,6 +465,8 @@ async def heart_ops(key_id: int, command: str = "") -> str:
         return await list_text(key_id, album=False)
     if verb in ("册", "album", "心意册"):
         return await list_text(key_id, album=True)
-    if verb in ("看", "view", "open"):
+    if verb in ("看", "view"):
         return await look(key_id, rest)
+    if verb in ("拆", "拆卡", "unwrap", "open"):
+        return await unwrap_as_ai(key_id, rest)
     return "未知子命令。先 heart_ops help。不要发明指令；送礼进囊用 tote_ops gift。"
