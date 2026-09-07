@@ -220,7 +220,7 @@ function bubbleHtml(m) {
   if (m.packet) {
     body = packetHtml(m);
   } else if ((m.msg_kind || 'text') === 'sticker' && m.sticker_url) {
-    body = `<div class="lounge-sticker-msg"><img src="${esc(m.sticker_url)}" alt="表情包" decoding="async"></div>`;
+    body = `<div class="lounge-sticker-msg"><img src="${esc(m.sticker_url)}" alt="表情包" decoding="async" loading="lazy"></div>`;
   } else {
     body = `<div class="lounge-text">${esc(m.body)}</div>`;
   }
@@ -1210,7 +1210,6 @@ document.querySelectorAll('[data-lounge-tool]').forEach((btn) => {
     }
     if (action === 'stickers-add') {
       closeToolSheet();
-      pickStickerFiles();
       return;
     }
     if (action === 'wish') {
@@ -1405,10 +1404,11 @@ function renderStickerGrid(items) {
   if (countEl) countEl.textContent = `${items.length}/${stickerMeta.max}`;
   if (!grid) return;
   const addCell = `
-    <button type="button" class="lounge-sticker-cell is-add js-lounge-sticker-add" title="添加图片">
+    <label class="lounge-sticker-cell is-add${items.length ? '' : ' is-hero'}" for="lounge-sticker-file" title="添加图片">
       <span aria-hidden="true">＋</span>
-      <small>添加</small>
-    </button>`;
+      <b>添加图片</b>
+      <small>${items.length ? '添加' : 'png / jpg / gif · 动图会动'}</small>
+    </label>`;
   if (!items.length) {
     grid.innerHTML = addCell + '<p class="lounge-sticker-empty">还没有表情包。可加 png / jpg / gif，动图会动。</p>';
     return;
@@ -1416,7 +1416,7 @@ function renderStickerGrid(items) {
   grid.innerHTML = addCell + items.map((it) => `
     <div class="lounge-sticker-cell">
       <button type="button" class="lounge-sticker-thumb" data-sticker-id="${esc(it.id)}" title="发送">
-        <img src="${esc(it.url)}" alt="" decoding="async">
+        <img src="${esc(it.thumb_url || it.url)}" alt="" decoding="async" loading="lazy">
       </button>
       ${it.kind === 'gif' ? '<span class="lounge-sticker-gif">GIF</span>' : ''}
       <button type="button" class="lounge-sticker-del" data-sticker-del="${esc(it.id)}" aria-label="删除" title="删除">×</button>
@@ -1450,6 +1450,31 @@ function localFileProblems(files) {
   return problems;
 }
 
+function isGifFile(file) {
+  return /gif$/i.test(file.type || '') || /\.gif$/i.test(file.name || '');
+}
+
+async function compressStickerFile(file) {
+  if (!file || isGifFile(file)) return file;
+  try {
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, 240 / Math.max(bmp.width, bmp.height, 1));
+    const w = Math.max(1, Math.round(bmp.width * scale));
+    const h = Math.max(1, Math.round(bmp.height * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    canvas.getContext('2d').drawImage(bmp, 0, 0, w, h);
+    if (typeof bmp.close === 'function') bmp.close();
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.82));
+    if (!blob || blob.size >= file.size) return file;
+    const base = (file.name || 'sticker').replace(/\.[^.]+$/, '');
+    return new File([blob], `${base}.jpg`, { type: 'image/jpeg', lastModified: Date.now() });
+  } catch {
+    return file;
+  }
+}
+
 async function uploadStickers(fileList) {
   const apiKey = loadSavedKey();
   if (!apiKey.startsWith('ar_sk_')) {
@@ -1459,14 +1484,18 @@ async function uploadStickers(fileList) {
   }
   const files = [...(fileList || [])].filter(Boolean);
   if (!files.length) return;
-  const local = localFileProblems(files);
+  const packed = [];
+  for (const f of files.slice(0, stickerMeta.max_batch || 12)) {
+    packed.push(await compressStickerFile(f));
+  }
+  const local = localFileProblems(packed);
   if (local.length) {
     showLoungeAlert(local.join('\n'), '添加失败');
     return;
   }
   const fd = new FormData();
   fd.append('api_key', apiKey.trim());
-  for (const f of files.slice(0, stickerMeta.max_batch || 12)) fd.append('files', f, f.name);
+  for (const f of packed) fd.append('files', f, f.name);
   setStickerBusy(true, '正在添加…');
   try {
     const res = await fetch('/api/lounge/stickers', { method: 'POST', body: fd });
@@ -1542,11 +1571,10 @@ document.getElementById('lounge-sticker-btn')?.addEventListener('click', () => {
 });
 document.getElementById('lounge-sticker-close')?.addEventListener('click', closeStickerSheet);
 document.getElementById('lounge-sticker-backdrop')?.addEventListener('click', closeStickerSheet);
-document.addEventListener('click', (e) => {
-  if (e.target.closest('.js-lounge-sticker-add, #lounge-sticker-add-btn')) {
-    e.preventDefault();
-    pickStickerFiles();
-  }
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  const sheet = document.getElementById('lounge-sticker-sheet');
+  if (sheet?.classList.contains('is-open')) closeStickerSheet();
 });
 document.getElementById('lounge-sticker-file')?.addEventListener('change', async (e) => {
   try { await uploadStickers(e.target.files); }

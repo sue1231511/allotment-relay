@@ -50,6 +50,8 @@ async def _run() -> None:
     sid = items[0]["id"]
     assert f"/api/lounge/stickers/{sid}/file" in items[0]["url"]
     assert items[0]["kind"] == "image"
+    assert "variant=display" in items[0]["url"]
+    assert "variant=thumb" in items[0]["thumb_url"]
 
     listed = await lounge.human_list_stickers(key)
     assert any(x["id"] == sid for x in listed)
@@ -70,6 +72,21 @@ async def _run() -> None:
     gif_path = await stickers.sticker_file_path(gif_items[0]["id"])
     assert gif_path.suffix == ".gif"
     assert stickers.sticker_media_type(gif_path) == "image/gif"
+    gif_thumb = stickers.ensure_variant(gif_path, "thumb")
+    assert gif_thumb.suffix == ".jpg"
+    assert stickers.ensure_variant(gif_path, "display") == gif_path
+
+    from io import BytesIO
+    from PIL import Image
+    raw_big = BytesIO()
+    Image.new("RGB", (400, 400), (200, 40, 40)).save(raw_big, format="PNG")
+    big_png = raw_big.getvalue()
+    assert len(big_png) > 800
+    shrunk = await lounge.human_upload_stickers(key, [("photo.png", "image/png", big_png)])
+    shrunk_path = await stickers.sticker_file_path(shrunk[0]["id"])
+    assert shrunk_path.stat().st_size < len(big_png)
+    with Image.open(shrunk_path) as im:
+        assert max(im.size) <= stickers.STICKER_DISPLAY_EDGE
 
     try:
         await lounge.human_upload_stickers(
