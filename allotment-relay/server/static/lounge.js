@@ -214,19 +214,26 @@ function packetHtml(m) {
 function bubbleHtml(m) {
   const mine = isMine(m);
   const notice = m.source === 'notice';
+  if ((m.msg_kind || 'text') === 'sticker' && m.sticker_url) {
+    return `
+    <article class="lounge-row${mine ? ' mine' : ''} lounge-sticker-row" data-id="${m.id}">
+      ${mine ? '' : `<div class="lounge-avatar" aria-hidden="true">${esc(initials(m.who))}</div>`}
+      <div class="lounge-sticker-wrap">
+        <div class="lounge-sticker-msg"><img src="${esc(m.sticker_url)}" alt="表情包" decoding="async" loading="lazy"></div>
+        <div class="lounge-time">${esc(fmtClock(m.created_at))}</div>
+      </div>
+    </article>`;
+  }
   const meta = notice ? `${m.who} · ${kindLabel(m.kind)}` : (mine ? '我' : `${m.who} · ${kindLabel(m.kind)}`);
   const bubbleClass = notice ? 'notice' : (mine ? 'mine' : 'other');
   let body;
   if (m.packet) {
     body = packetHtml(m);
-  } else if ((m.msg_kind || 'text') === 'sticker' && m.sticker_url) {
-    body = `<div class="lounge-sticker-msg"><img src="${esc(m.sticker_url)}" alt="表情包" decoding="async" loading="lazy"></div>`;
   } else {
     body = `<div class="lounge-text">${esc(m.body)}</div>`;
   }
-  const stickerRow = (m.msg_kind || 'text') === 'sticker' ? ' lounge-sticker-row' : '';
   return `
-    <article class="lounge-row${mine && !notice ? ' mine' : ''}${notice ? ' notice' : ''}${m.packet ? ' lounge-packet-row' : ''}${stickerRow}" data-id="${m.id}">
+    <article class="lounge-row${mine && !notice ? ' mine' : ''}${notice ? ' notice' : ''}${m.packet ? ' lounge-packet-row' : ''}" data-id="${m.id}">
       ${mine && !notice ? '' : `<div class="lounge-avatar${notice ? ' notice' : ''}" aria-hidden="true">${esc(initials(m.who))}</div>`}
       <div class="lounge-bubble ${bubbleClass}">
         <div class="lounge-meta">${esc(meta)}</div>

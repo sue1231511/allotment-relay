@@ -1945,10 +1945,22 @@ label.lounge-sticker-add {
   background-size: 12px 12px;
   background-position: 0 0, 6px 6px;
 }
-.lounge-sticker-row .lounge-bubble {
-  background: transparent;
+.lounge-sticker-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  max-width: min(72%, 560px);
+  gap: 4px;
+}
+.lounge-sticker-row.mine .lounge-sticker-wrap {
+  align-items: flex-end;
+}
+.lounge-sticker-row .lounge-time {
+  margin-top: 0;
+  background: none;
+  border: none;
   box-shadow: none;
-  padding: 4px 0;
+  padding: 0;
 }
 .lounge-sticker-backdrop {
   position: fixed;
