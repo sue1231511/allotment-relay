@@ -144,5 +144,27 @@ async def _run() -> None:
     print("lounge stickers ok")
 
 
+def test_sticker_add_wraps_file_input() -> None:
+    """套进 WebView 时，添加按钮必须自己包选图控件，不能 for= 藏着的 input。"""
+    root = ROOT / "server" / "templates"
+    pages = [
+        root / "lounge.html",
+        root / "play.html",
+        root / "partials" / "island-lounge.html",
+    ]
+    for path in pages:
+        text = path.read_text(encoding="utf-8")
+        assert 'id="lounge-sticker-file"' not in text, path.name
+        assert 'for="lounge-sticker-file"' not in text, path.name
+        assert 'data-lounge-tool="stickers-add"' not in text, path.name
+        assert 'class="js-lounge-sticker-file lounge-sticker-file-hit"' in text, path.name
+        assert 'accept="image/*"' in text, path.name
+    js = (ROOT / "server" / "static" / "lounge.js").read_text(encoding="utf-8")
+    assert "isEmbeddedWebView" in js
+    assert "stickerFileInputHtml" in js
+    print("sticker add wraps file input ok")
+
+
 if __name__ == "__main__":
     test_lounge_stickers_human_only()
+    test_sticker_add_wraps_file_input()

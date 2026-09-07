@@ -5518,22 +5518,26 @@ body:has(.wedding-ribbon) {
 .lounge-sticker-btn[aria-expanded="true"] {
   background: rgba(73, 103, 98, .22);
 }
-.lounge-sticker-file {
-  position: fixed;
-  left: 0;
-  bottom: 0;
-  width: 32px;
-  height: 32px;
+.lounge-sticker-file-hit {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   margin: 0;
   padding: 0;
   border: 0;
   opacity: 0.01;
-  overflow: hidden;
-  z-index: 0;
-  pointer-events: none;
+  font-size: 80px;
+  cursor: pointer;
+  z-index: 3;
 }
 label.lounge-sticker-add,
-label.lounge-sticker-cell {
+label.lounge-sticker-cell.is-add,
+label.lounge-sticker-pick,
+label.lounge-tool-item.lounge-sticker-pick,
+label.js-lounge-sticker-add {
+  position: relative;
+  overflow: hidden;
   cursor: pointer;
   box-sizing: border-box;
 }
@@ -5541,6 +5545,14 @@ label.lounge-sticker-add {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+label.lounge-sticker-add > *:not(.lounge-sticker-file-hit),
+label.lounge-sticker-cell.is-add > *:not(.lounge-sticker-file-hit),
+label.lounge-sticker-pick > *:not(.lounge-sticker-file-hit),
+label.lounge-tool-item.lounge-sticker-pick > *:not(.lounge-sticker-file-hit) {
+  pointer-events: none;
+  position: relative;
+  z-index: 1;
 }
 .lounge-sticker-msg {
   position: relative;

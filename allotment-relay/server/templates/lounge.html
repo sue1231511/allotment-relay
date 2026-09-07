@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=lounge-stickers8">
+  <link rel="stylesheet" href="/static/style.css?v=lounge-stickers9">
 </head>
 <body class="lounge-page">
   {% include "partials/nav.html" %}
@@ -119,7 +119,6 @@
 
         <div id="lounge-feed" class="lounge-feed" role="log" aria-live="polite"></div>
 
-        <input type="file" id="lounge-sticker-file" class="lounge-sticker-file" accept="image/*,image/png,image/jpeg,image/gif,image/webp,.png,.jpg,.jpeg,.gif,.webp" multiple>
         <section class="lounge-sticker-sheet" id="lounge-sticker-sheet" aria-label="表情包" aria-hidden="true">
           <div class="lounge-sticker-handle" aria-hidden="true"></div>
           <div class="lounge-sticker-sheet-head">
@@ -133,7 +132,7 @@
           <div class="lounge-sticker-grid" id="lounge-sticker-grid"></div>
           <div class="lounge-sticker-actions">
             <p class="lounge-sticker-hint">点＋打开相册 · png / jpg / gif · 原图不超过 3MB · 最多 64 张</p>
-            <label class="lounge-sticker-add" id="lounge-sticker-add-btn" for="lounge-sticker-file">添加图片</label>
+            <label class="lounge-sticker-add" id="lounge-sticker-add-btn">添加图片<input class="js-lounge-sticker-file lounge-sticker-file-hit" type="file" accept="image/*"></label>
           </div>
         </section>
 
@@ -195,7 +194,7 @@
     </div>
 
     <div class="lounge-tool-grid">
-      <label class="lounge-tool-item" for="lounge-sticker-file" data-lounge-tool="stickers-add"><span>图</span><b>添加表情包</b></label>
+      <label class="lounge-tool-item lounge-sticker-pick"><span>图</span><b>添加表情包</b><input class="js-lounge-sticker-file lounge-sticker-file-hit" type="file" accept="image/*"></label>
       <button type="button" class="lounge-tool-item" data-lounge-tool="wish"><span>愿</span><b>许愿</b></button>
       <button type="button" class="lounge-tool-item" data-lounge-tool="feedback"><span>馈</span><b>反馈</b></button>
       <button type="button" class="lounge-tool-item" data-lounge-tool="board"><span>墙</span><b>许愿墙</b></button>
@@ -239,6 +238,6 @@
   <div class="lounge-sticker-backdrop" id="lounge-sticker-backdrop" hidden></div>
   <div id="lounge-toast" class="lounge-toast hidden" role="status"></div>
   <script src="/static/site-key.js"></script>
-  <script src="/static/lounge.js?v=lounge-stickers8"></script>
+  <script src="/static/lounge.js?v=lounge-stickers9"></script>
 </body>
 </html>

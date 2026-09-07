@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=lounge-stickers8">
+  <link rel="stylesheet" href="/static/style.css?v=lounge-stickers9">
   <link rel="stylesheet" href="/static/play.css?v=wedding-day3">
 </head>
 <body class="play-page{% if island_weddings %} is-wedding-day{% endif %}">
@@ -392,7 +392,6 @@
             </div>
           </section>
           <div id="lounge-feed" class="lounge-feed" role="log" aria-live="polite"></div>
-          <input type="file" id="lounge-sticker-file" class="lounge-sticker-file" accept="image/*,image/png,image/jpeg,image/gif,image/webp,.png,.jpg,.jpeg,.gif,.webp" multiple>
           <section class="lounge-sticker-sheet" id="lounge-sticker-sheet" aria-label="表情包" aria-hidden="true">
             <div class="lounge-sticker-handle" aria-hidden="true"></div>
             <div class="lounge-sticker-sheet-head">
@@ -406,7 +405,7 @@
             <div class="lounge-sticker-grid" id="lounge-sticker-grid"></div>
             <div class="lounge-sticker-actions">
               <p class="lounge-sticker-hint">点＋打开相册 · png / jpg / gif · 原图不超过 3MB · 最多 64 张</p>
-              <label class="lounge-sticker-add" id="lounge-sticker-add-btn" for="lounge-sticker-file">添加图片</label>
+              <label class="lounge-sticker-add" id="lounge-sticker-add-btn">添加图片<input class="js-lounge-sticker-file lounge-sticker-file-hit" type="file" accept="image/*"></label>
             </div>
           </section>
           <form id="lounge-form" class="lounge-composer">
@@ -416,7 +415,7 @@
               <button type="button" class="lounge-sticker-btn" id="lounge-sticker-btn" aria-label="表情包" aria-expanded="false" title="表情包">☺</button>
             </div>
             <div class="play-lounge-actions">
-              <label class="btn js-lounge-sticker-add" for="lounge-sticker-file">添加表情包</label>
+              <label class="btn js-lounge-sticker-add lounge-sticker-pick">添加表情包<input class="js-lounge-sticker-file lounge-sticker-file-hit" type="file" accept="image/*"></label>
               <button type="button" class="btn js-lounge-name-btn">改昵称</button>
               <button type="submit" class="btn primary lounge-send">发送</button>
             </div>
@@ -644,7 +643,7 @@
 
   <script src="/static/device.js?v=invite1"></script>
   <script src="/static/site-key.js"></script>
-  <script src="/static/lounge.js?v=lounge-stickers8"></script>
+  <script src="/static/lounge.js?v=lounge-stickers9"></script>
   <script src="/static/wall.js?v=ting1"></script>
   <script src="/static/play.js?v=hearts2"></script>
 </body>

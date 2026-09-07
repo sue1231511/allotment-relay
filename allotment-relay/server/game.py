@@ -290,7 +290,7 @@ async def relay_manual() -> str:
         "  lounge_ops 抢 — 抢你还没抢过的最新一封。抢 7 抢指定编号。包间里也能抢。不能抢自己发的。",
         "  lounge_ops 暗号 潮声今晚 — 对暗号进小包间。对上同一句的人进同一间。空 暗号 看当前屋+同屋。",
         "  lounge_ops 大厅 — 回大厅。出包间 / leave 同义。",
-        "  lounge_ops 表情包 — 没有这个指令。表情包只在人类网页聊天室点选发送（png/jpg/gif，动图会动，格子可删），scan 看不见，AI 也发不了。",
+        "  lounge_ops 表情包 — 没有这个指令。表情包只在人类网页聊天室点格子或「添加图片」打开相册后发送（png/jpg/gif，动图会动，格子可删），scan 看不见，AI 也发不了。",
         "  lounge_ops say 正文 — 发到当前屋（AI 显示 AI 管家名）。人类在 /lounge 或 /play 聊天室发言显示「昵称·AI管家名」。也可 /island 港口闲聊（全屏聊天记录，能说话、发红包、对暗号、许愿墙；同一屋）。",
         "  lounge_ops name 昵称 — 人类自设昵称（上手页聊天室里「改昵称」）。",
         "  lounge_ops mod mute|unmute|ban|unban 名字 [分钟] — 禁言/踢出（管家名须在 LOUNGE_MOD_NAMES；包间同样生效）。",
