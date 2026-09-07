@@ -5838,15 +5838,18 @@ body:has(.wedding-ribbon) {
     font-size: 15px;
     letter-spacing: .02em;
   }
-  .lounge-sticker-close {
+  .lounge-sticker-sheet-head .lounge-sticker-close {
     font-size: 0;
     line-height: 0;
     width: 32px;
+    min-width: 32px;
     height: 32px;
     padding: 0;
+    overflow: hidden;
+    white-space: nowrap;
     border-radius: 10px;
   }
-  .lounge-sticker-close::before {
+  .lounge-sticker-sheet-head .lounge-sticker-close::before {
     content: "×";
     font-size: 22px;
     line-height: 1;
