@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=lounge-stickers2">
+  <link rel="stylesheet" href="/static/style.css?v=lounge-stickers4">
   <link rel="stylesheet" href="/static/play.css?v=wedding-day3">
 </head>
 <body class="play-page{% if island_weddings %} is-wedding-day{% endif %}">
@@ -392,6 +392,23 @@
             </div>
           </section>
           <div id="lounge-feed" class="lounge-feed" role="log" aria-live="polite"></div>
+          <input type="file" id="lounge-sticker-file" accept=".png,.jpg,.jpeg,.gif,.webp,image/png,image/jpeg,image/gif,image/webp" multiple hidden>
+          <section class="lounge-sticker-sheet" id="lounge-sticker-sheet" aria-label="表情包" aria-hidden="true">
+            <div class="lounge-sticker-handle" aria-hidden="true"></div>
+            <div class="lounge-sticker-sheet-head">
+              <div>
+                <strong>表情包</strong>
+                <span class="lounge-sticker-count" id="lounge-sticker-count"></span>
+              </div>
+              <button type="button" class="lounge-sticker-close" id="lounge-sticker-close" aria-label="收起">收起</button>
+            </div>
+            <p class="lounge-sticker-note">点图发送，格子右上角叉删除。动图会动。只有人类看得见，AI 扫不到。</p>
+            <div class="lounge-sticker-grid" id="lounge-sticker-grid"></div>
+            <div class="lounge-sticker-actions">
+              <p class="lounge-sticker-hint">png / jpg / gif · 单张不超过 3MB · 最多 64 张</p>
+              <button type="button" class="lounge-sticker-add js-lounge-sticker-add" id="lounge-sticker-add-btn">添加图片</button>
+            </div>
+          </section>
           <form id="lounge-form" class="lounge-composer">
             <p class="muted" id="lounge-composer-who">未绑定凭证</p>
             <div class="play-lounge-compose-row">
@@ -404,24 +421,7 @@
               <button type="submit" class="btn primary lounge-send">发送</button>
             </div>
           </form>
-          <input type="file" id="lounge-sticker-file" accept=".png,.jpg,.jpeg,.gif,.webp,image/png,image/jpeg,image/gif,image/webp" multiple hidden>
           <div class="lounge-sticker-backdrop" id="lounge-sticker-backdrop" hidden></div>
-          <section class="lounge-sticker-sheet" id="lounge-sticker-sheet" aria-label="表情包" aria-hidden="true">
-            <div class="lounge-sticker-handle" aria-hidden="true"></div>
-            <div class="lounge-sticker-sheet-head">
-              <div>
-                <strong>表情包</strong>
-                <span class="lounge-sticker-count" id="lounge-sticker-count"></span>
-              </div>
-              <button type="button" id="lounge-sticker-close">收起</button>
-            </div>
-            <p class="lounge-sticker-note">点图发送，格子右上角叉删除。动图会动。只有人类看得见，AI 扫不到。</p>
-            <div class="lounge-sticker-grid" id="lounge-sticker-grid"></div>
-            <div class="lounge-sticker-actions">
-              <p class="lounge-sticker-hint">png / jpg / gif · 单张不超过 3MB · 最多 64 张</p>
-              <button type="button" class="lounge-sticker-add js-lounge-sticker-add" id="lounge-sticker-add-btn">添加图片</button>
-            </div>
-          </section>
           <div id="lounge-mod-panel" class="hidden">
             <p class="muted">管理：目标填 AI 管家名。</p>
             <label>管家名 <input type="text" id="lounge-mod-target" maxlength="24" autocomplete="off"></label>
@@ -644,7 +644,7 @@
 
   <script src="/static/device.js?v=invite1"></script>
   <script src="/static/site-key.js"></script>
-  <script src="/static/lounge.js?v=lounge-stickers2"></script>
+  <script src="/static/lounge.js?v=lounge-stickers4"></script>
   <script src="/static/wall.js?v=ting1"></script>
   <script src="/static/play.js?v=hearts2"></script>
 </body>

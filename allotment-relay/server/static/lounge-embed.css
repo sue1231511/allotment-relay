@@ -1898,8 +1898,9 @@ body.island-app .island-lounge .lounge-composer-wrap {
   cursor: pointer;
   flex-shrink: 0;
 }
-.lounge-sticker-btn:hover {
-  background: rgba(73, 103, 98, .18);
+.lounge-sticker-btn:hover,
+.lounge-sticker-btn[aria-expanded="true"] {
+  background: rgba(73, 103, 98, .22);
 }
 .lounge-sticker-msg {
   position: relative;
@@ -1981,7 +1982,8 @@ body.island-app .island-lounge .lounge-composer-wrap {
   color: #7a8682;
   font-weight: 400;
 }
-.lounge-sticker-sheet-head button {
+.lounge-sticker-sheet-head button,
+.lounge-sticker-close {
   border: 1px solid rgba(127, 167, 171, .32);
   background: rgba(255, 255, 255, .72);
   color: #3d5c56;
@@ -2073,11 +2075,19 @@ body.island-app .island-lounge .lounge-composer-wrap {
   border: 1.5px dashed rgba(109, 143, 148, .5);
   background: rgba(255,255,255,.55);
   box-shadow: none;
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   color: #3d5c56;
   cursor: pointer;
   font: inherit;
+}
+.lounge-sticker-cell.is-add:hover,
+.lounge-sticker-cell.is-add:focus-visible {
+  border-color: rgba(61, 92, 86, .55);
+  background: rgba(255, 255, 255, .82);
 }
 .lounge-sticker-cell.is-add span {
   display: block;
@@ -2085,9 +2095,13 @@ body.island-app .island-lounge .lounge-composer-wrap {
   line-height: 1;
   color: #6d8f94;
 }
+.lounge-sticker-cell.is-add b {
+  display: none;
+  font-size: 14px;
+  font-weight: 600;
+}
 .lounge-sticker-cell.is-add small {
   display: block;
-  margin-top: 4px;
   font-size: 11px;
   color: #7a8682;
 }
@@ -2170,22 +2184,91 @@ body.island-app .island-lounge .lounge-composer-wrap {
   }
 }
 @media (min-width: 861px) {
-  .lounge-page .lounge-sticker-btn,
-  .island-app .lounge-sticker-btn {
-    display: grid;
+  .lounge-sticker-backdrop {
+    display: none !important;
   }
-  .lounge-page .lounge-sticker-sheet,
-  .island-app .lounge-sticker-sheet {
-    left: 50%;
+  .lounge-sticker-sheet {
+    position: relative;
+    left: auto;
     right: auto;
-    bottom: 28px;
-    width: min(440px, calc(100vw - 48px));
-    transform: translate(-50%, 110%);
-    border-radius: 22px;
-    max-height: min(72vh, 640px);
+    bottom: auto;
+    z-index: 2;
+    display: none;
+    width: auto;
+    max-height: none;
+    transform: none;
+    transition: none;
+    flex-shrink: 0;
+    padding: 10px 16px 12px;
+    border: 0;
+    border-top: 1px solid rgba(157, 176, 174, .32);
+    border-radius: 0;
+    box-shadow: none;
+    background: rgba(247, 243, 236, .94);
   }
-  .lounge-page .lounge-sticker-sheet.is-open,
-  .island-app .lounge-sticker-sheet.is-open {
-    transform: translate(-50%, 0);
+  .lounge-sticker-sheet.is-open {
+    display: flex;
+    transform: none;
+  }
+  .lounge-sticker-handle,
+  .lounge-sticker-note,
+  .lounge-sticker-add {
+    display: none;
+  }
+  .lounge-sticker-sheet:has(.is-hero) .lounge-sticker-actions {
+    display: none;
+  }
+  .lounge-sticker-sheet-head {
+    margin-bottom: 8px;
+  }
+  .lounge-sticker-sheet-head strong {
+    font-size: 15px;
+    letter-spacing: .02em;
+  }
+  .lounge-sticker-close {
+    font-size: 0;
+    line-height: 0;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 10px;
+  }
+  .lounge-sticker-close::before {
+    content: "×";
+    font-size: 22px;
+    line-height: 1;
+    color: #3d5c56;
+  }
+  .lounge-sticker-grid {
+    min-height: 0;
+    max-height: 220px;
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+    gap: 8px;
+    padding: 0 0 4px;
+  }
+  .lounge-sticker-empty {
+    display: none;
+  }
+  .lounge-sticker-cell.is-add.is-hero {
+    grid-column: 1 / -1;
+    aspect-ratio: auto;
+    min-height: 108px;
+    padding: 18px 12px;
+    border-radius: 14px;
+    gap: 6px;
+  }
+  .lounge-sticker-cell.is-add.is-hero span {
+    font-size: 22px;
+  }
+  .lounge-sticker-cell.is-add.is-hero b {
+    display: block;
+    font-size: 15px;
+    color: #3d5c56;
+  }
+  .lounge-sticker-cell.is-add.is-hero small {
+    font-size: 12px;
+  }
+  .lounge-sticker-actions {
+    padding-top: 4px;
   }
 }

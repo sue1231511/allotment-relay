@@ -1405,9 +1405,10 @@ function renderStickerGrid(items) {
   if (countEl) countEl.textContent = `${items.length}/${stickerMeta.max}`;
   if (!grid) return;
   const addCell = `
-    <button type="button" class="lounge-sticker-cell is-add js-lounge-sticker-add" title="添加图片">
+    <button type="button" class="lounge-sticker-cell is-add${items.length ? '' : ' is-hero'} js-lounge-sticker-add" title="添加图片">
       <span aria-hidden="true">＋</span>
-      <small>添加</small>
+      <b>添加图片</b>
+      <small>${items.length ? '添加' : 'png / jpg / gif · 动图会动'}</small>
     </button>`;
   if (!items.length) {
     grid.innerHTML = addCell + '<p class="lounge-sticker-empty">还没有表情包。可加 png / jpg / gif，动图会动。</p>';
@@ -1542,6 +1543,11 @@ document.getElementById('lounge-sticker-btn')?.addEventListener('click', () => {
 });
 document.getElementById('lounge-sticker-close')?.addEventListener('click', closeStickerSheet);
 document.getElementById('lounge-sticker-backdrop')?.addEventListener('click', closeStickerSheet);
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  const sheet = document.getElementById('lounge-sticker-sheet');
+  if (sheet?.classList.contains('is-open')) closeStickerSheet();
+});
 document.addEventListener('click', (e) => {
   if (e.target.closest('.js-lounge-sticker-add, #lounge-sticker-add-btn')) {
     e.preventDefault();
