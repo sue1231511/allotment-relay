@@ -219,8 +219,7 @@ function bubbleHtml(m) {
     <article class="lounge-row${mine ? ' mine' : ''} lounge-sticker-row" data-id="${m.id}">
       ${mine ? '' : `<div class="lounge-avatar" aria-hidden="true">${esc(initials(m.who))}</div>`}
       <div class="lounge-sticker-wrap">
-        <div class="lounge-sticker-msg"><img src="${esc(m.sticker_url)}" alt="表情包" decoding="async" loading="lazy"></div>
-        <div class="lounge-time">${esc(fmtClock(m.created_at))}</div>
+        <div class="lounge-sticker-msg"><img src="${esc(m.sticker_url)}" alt="表情包" title="${esc(fmtClock(m.created_at))}" decoding="async" loading="lazy"></div>
       </div>
     </article>`;
   }
