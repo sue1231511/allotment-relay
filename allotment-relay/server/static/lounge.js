@@ -1215,7 +1215,6 @@ document.querySelectorAll('[data-lounge-tool]').forEach((btn) => {
       return;
     }
     if (action === 'stickers-add') {
-      closeToolSheet();
       return;
     }
     if (action === 'wish') {
@@ -1337,14 +1336,29 @@ document.getElementById('lounge-form')?.addEventListener('submit', async (e) => 
 let stickerCache = null;
 let stickerMeta = { max: 64, max_bytes: 3 * 1024 * 1024, max_batch: 12 };
 
-function pickStickerFiles() {
-  const input = document.getElementById('lounge-sticker-file');
-  if (!input) {
-    showLoungeAlert('当前页没有上传入口', '添加失败');
-    return;
-  }
-  input.value = '';
-  input.click();
+function isEmbeddedWebView() {
+  const ua = navigator.userAgent || '';
+  if (window.Capacitor || window.flutter_inappwebview || window.ReactNativeWebView) return true;
+  if (window.webkit?.messageHandlers) return true;
+  if (/MicroMessenger|QQ\/|DingTalk|AlipayClient|miniProgram|BytedanceWebview|ToutiaoMicroApp/i.test(ua)) return true;
+  if (/WebView|; wv\)/i.test(ua)) return true;
+  if (/Android/i.test(ua) && /; wv\)/i.test(ua)) return true;
+  if (/(iPhone|iPod|iPad)/i.test(ua) && /AppleWebKit/i.test(ua) && !/Safari|CriOS|FxiOS|EdgiOS/i.test(ua)) return true;
+  return false;
+}
+
+function decorateStickerFileInputs(root) {
+  const scope = root && root.querySelectorAll ? root : document;
+  scope.querySelectorAll('.js-lounge-sticker-file').forEach((el) => {
+    el.setAttribute('accept', 'image/*');
+    if (isEmbeddedWebView()) el.removeAttribute('multiple');
+    else el.setAttribute('multiple', '');
+  });
+}
+
+function stickerFileInputHtml() {
+  const multi = isEmbeddedWebView() ? '' : ' multiple';
+  return `<input type="file" class="js-lounge-sticker-file lounge-sticker-file-hit" accept="image/*"${multi}>`;
 }
 
 function setStickerBusy(on, text) {
@@ -1410,13 +1424,15 @@ function renderStickerGrid(items) {
   if (countEl) countEl.textContent = `${items.length}/${stickerMeta.max}`;
   if (!grid) return;
   const addCell = `
-    <label class="lounge-sticker-cell is-add${items.length ? '' : ' is-hero'}" for="lounge-sticker-file" title="添加图片">
+    <label class="lounge-sticker-cell is-add${items.length ? '' : ' is-hero'}" title="添加图片">
+      ${stickerFileInputHtml()}
       <span aria-hidden="true">＋</span>
       <b>添加图片</b>
       <small>${items.length ? '添加' : 'png / jpg / gif · 动图会动'}</small>
     </label>`;
   if (!items.length) {
     grid.innerHTML = addCell + '<p class="lounge-sticker-empty">还没有表情包。可加 png / jpg / gif，动图会动。</p>';
+    decorateStickerFileInputs(grid);
     return;
   }
   grid.innerHTML = addCell + items.map((it) => `
@@ -1428,6 +1444,7 @@ function renderStickerGrid(items) {
       <button type="button" class="lounge-sticker-del" data-sticker-del="${esc(it.id)}" aria-label="删除" title="删除">×</button>
     </div>
   `).join('');
+  decorateStickerFileInputs(grid);
 }
 
 async function refreshStickerGrid() {
@@ -1582,10 +1599,15 @@ document.addEventListener('keydown', (e) => {
   const sheet = document.getElementById('lounge-sticker-sheet');
   if (sheet?.classList.contains('is-open')) closeStickerSheet();
 });
-document.getElementById('lounge-sticker-file')?.addEventListener('change', async (e) => {
-  try { await uploadStickers(e.target.files); }
+document.addEventListener('change', async (e) => {
+  const input = e.target;
+  if (!input?.classList?.contains('js-lounge-sticker-file')) return;
+  try {
+    closeToolSheet();
+    await uploadStickers(input.files);
+  }
   catch (err) { showLoungeAlert(err.message || '上传失败', '添加失败'); }
-  finally { e.target.value = ''; }
+  finally { input.value = ''; }
 });
 document.getElementById('lounge-sticker-grid')?.addEventListener('click', async (e) => {
   const del = e.target.closest('[data-sticker-del]');
@@ -1610,6 +1632,7 @@ window.playLounge = {
         await Promise.all([fetchMeta(), fetchProfile()]);
         ensurePacketDialog();
         bindBoardEntry();
+        decorateStickerFileInputs();
         const data = await fetchMessages();
         resetFeed();
         applyRoomMeta(data);
