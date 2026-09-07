@@ -71,7 +71,7 @@ lounge_ops — 全服聊天室（答疑、互助；许愿/反馈走许愿墙；�
                        管理员在许愿墙/反馈墙上公开回复（须 LOUNGE_MOD_NAMES；全服可见，不进闲聊）
 例子：scan · say 温室怎么建 · 许愿 想加钓鱼大赛 · 反馈 温室按钮没反应 · 许愿墙 · 回墙 12 已修好 · 红包 100 5 · 抢 · 暗号 潮声今晚 · 大厅
 网页 /lounge 或 /play：电脑点右上「许愿墙」大窗（列表中间滚、贴墙区留在窗底）；手机点左下「＋」进全屏许愿墙（输入框上方不再重复摆许愿/反馈按钮）。墙上未回复在上、已回复在下；每条底下有「回复」。对话上方填暗号、点「对暗号」（手机也在聊天框顶上）；发红包点「发红包」，大厅卡片点「开」。凭证只在上手页绑定。
-网页表情包（仅人类可见）：手机点左下「＋」选「添加表情包」可批量上传；输入框右侧表情钮点开即可发送。AI 的 scan / say 看不到、也发不了表情包。
+网页表情包（仅人类可见）：手机点左下「＋」选「添加表情包」可批量上传 png / jpg / gif（动图会动）；输入框右侧表情钮点开图库点图发送，格子右上角叉可删除。格式不对或单张超过 3MB 网页会弹出失败原因，不会假装成功。AI 的 scan / say 看不到、也发不了表情包。
 人类也可 /island 总览点海边，进滩景再点港口，点港口就出列表，两个选项闲聊和看码头；闲聊是全屏聊天记录，能说话、发红包、对暗号、许愿墙（同一屋）。
 每天最多 5 封；只有婚期当天（顶栏「今日岛上有婚礼」里的那位）才能无限发包。不是管理员特权。
 连理所订婚：人类答应确认页之后，大厅会出现一句通报（发言人理枝）。不是玩家发言，不是求婚请柬，也不是成婚潮讯。只有人类在确认页答应才算记下。三件齐了或旧档自动写下都不算。三件齐了只发确认页，人类点头之前不通报。
@@ -1479,6 +1479,8 @@ async def post_sticker_message(steward_id: int, sticker_id: int, *, source: str 
     row = await stickers.get_sticker_row(int(sticker_id))
     if not row or int(row["steward_id"]) != int(steward_id):
         raise ValueError("表情包不存在，或不是你图库里的")
+    if int(row.get("deleted_at") or 0):
+        raise ValueError("这张表情包已经从图库删掉了")
     async with db.connect() as conn:
         conn.row_factory = __import__("aiosqlite").Row
         srow = await (await conn.execute(
@@ -1522,8 +1524,16 @@ async def human_upload_stickers(
     if not row:
         raise ValueError("凭证无效")
     s = await _require_enrolled(row["id"])
-    await _assert_can_speak_simple(s)
     return await stickers.save_uploaded_stickers(s["id"], files)
+
+
+async def human_delete_sticker(api_key: str, sticker_id: int) -> None:
+    from . import lounge_stickers as stickers
+    row = await db.get_key_row(api_key.strip())
+    if not row:
+        raise ValueError("凭证无效")
+    s = await _require_enrolled(row["id"])
+    await stickers.delete_sticker(s["id"], int(sticker_id))
 
 
 async def human_send_sticker(api_key: str, sticker_id: int) -> dict[str, Any]:

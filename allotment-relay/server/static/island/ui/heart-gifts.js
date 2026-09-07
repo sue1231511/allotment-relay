@@ -88,6 +88,7 @@ function cardHtml(c, actions = true) {
     <p>${esc(c.scene)}</p>
     ${c.note ? `<p>${esc(c.note)}</p>` : ""}
     ${c.reply_text ? `<p>回：${esc(c.reply_text)}</p>` : ""}
+    ${c.from_role === "human" && c.status === "pending" ? "<p>等岛民拆开后，小红点才会消失。</p>" : ""}
     ${can ? `<div>
       <button type="button" data-heart-open="${c.id}">拆开</button>
       <button type="button" data-heart-keep="${c.id}">收好</button>

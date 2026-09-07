@@ -64,6 +64,28 @@ async def _test() -> None:
         sid, emoji="🍰", title="回你蛋糕", scene="桌边", tickets=8, note="也想你"
     )
     assert ret["from_role"] == "human", ret
+    rid = int(ret["id"])
+    assert ret["status"] == "pending", ret
+
+    looked = await heart.heart_ops(kid, f"看 {rid}")
+    assert "待拆" in looked and "拆" in looked, looked
+    still = await heart.snapshot(sid)
+    assert any(c["id"] == rid and c["status"] == "pending" for c in still["pending"]), still
+
+    unwrapped = await heart.heart_ops(kid, f"拆 {rid}")
+    assert "已拆开" in unwrapped and "红点" in unwrapped, unwrapped
+    after = await heart.snapshot(sid)
+    assert not any(c["id"] == rid for c in after["pending"]), after
+    assert any(c["id"] == rid and c["status"] == "opened" for c in after["album"]), after
+
+    try:
+        await heart.heart_ops(kid, f"拆 {gid}")
+        raise AssertionError("expected unwrap of own gift to fail")
+    except ValueError as exc:
+        assert "人类" in str(exc) or "上手页" in str(exc), exc
+
+    listed = await heart.heart_ops(kid, "列表")
+    assert "待你拆" in listed and "heart_ops 拆" in listed, listed
 
     await heart.heart_ops(kid, "送 ☕ | 第二杯 | 阳台 | 5")
     await heart.heart_ops(kid, "送 🌙 | 第三份 | 廊下 | 5")

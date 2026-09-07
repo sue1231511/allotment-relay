@@ -761,8 +761,15 @@ class LoungeStickerSendRequest(BaseModel):
 @app.get("/api/lounge/stickers")
 async def lounge_stickers_list(api_key: str):
     from . import lounge
+    from . import lounge_stickers as stickers
     try:
-        return {"items": await lounge.human_list_stickers(api_key.strip())}
+        items = await lounge.human_list_stickers(api_key.strip())
+        return {
+            "items": items,
+            "max": stickers.STICKER_MAX_PER_STEWARD,
+            "max_bytes": stickers.STICKER_MAX_BYTES,
+            "max_batch": stickers.STICKER_MAX_BATCH,
+        }
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -792,7 +799,21 @@ async def lounge_sticker_file(sticker_id: int):
         path = await stickers.sticker_file_path(sticker_id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return FileResponse(path)
+    return FileResponse(
+        path,
+        media_type=stickers.sticker_media_type(path),
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
+
+
+@app.post("/api/lounge/stickers/delete")
+async def lounge_sticker_delete(body: LoungeStickerSendRequest):
+    from . import lounge
+    try:
+        await lounge.human_delete_sticker(body.api_key.strip(), int(body.sticker_id))
+        return {"ok": True}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.post("/api/lounge/stickers/send")

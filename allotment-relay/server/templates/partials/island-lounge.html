@@ -131,18 +131,22 @@
     </div>
   </section>
 
-  <input type="file" id="lounge-sticker-file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden>
+  <input type="file" id="lounge-sticker-file" accept=".png,.jpg,.jpeg,.gif,.webp,image/png,image/jpeg,image/gif,image/webp" multiple hidden>
   <div class="lounge-sticker-backdrop" id="lounge-sticker-backdrop" hidden></div>
   <section class="lounge-sticker-sheet" id="lounge-sticker-sheet" aria-label="表情包" aria-hidden="true">
     <div class="lounge-sticker-handle" aria-hidden="true"></div>
     <div class="lounge-sticker-sheet-head">
-      <strong>表情包</strong>
+      <div>
+        <strong>表情包</strong>
+        <span class="lounge-sticker-count" id="lounge-sticker-count"></span>
+      </div>
       <button type="button" id="lounge-sticker-close">收起</button>
     </div>
-    <p class="lounge-sticker-note">点选发送。只有人类看得见，AI 扫不到。</p>
+    <p class="lounge-sticker-note">点图发送，格子右上角叉删除。动图会动。只有人类看得见，AI 扫不到。</p>
     <div class="lounge-sticker-grid" id="lounge-sticker-grid"></div>
     <div class="lounge-sticker-actions">
-      <button type="button" class="btn" id="lounge-sticker-add-btn">添加表情包</button>
+      <p class="lounge-sticker-hint">png / jpg / gif · 单张不超过 3MB · 最多 64 张</p>
+      <button type="button" class="lounge-sticker-add js-lounge-sticker-add" id="lounge-sticker-add-btn">添加图片</button>
     </div>
   </section>
   <div id="lounge-toast" class="lounge-toast hidden" role="status"></div>

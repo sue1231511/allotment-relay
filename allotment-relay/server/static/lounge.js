@@ -52,10 +52,64 @@ function saveMyWho(who, humanName) {
 }
 
 function toast(msg, ms = 3200) {
+  if (!toastEl) {
+    showLoungeAlert(String(msg || '出错了'));
+    return;
+  }
   toastEl.textContent = msg;
   toastEl.classList.remove('hidden');
   clearTimeout(toast._t);
   toast._t = setTimeout(() => toastEl.classList.add('hidden'), ms);
+}
+
+function apiErrorText(data, fallback) {
+  const d = data && (data.detail ?? data.error ?? data.message);
+  if (typeof d === 'string' && d.trim()) return d;
+  if (Array.isArray(d)) {
+    const bits = d.map((x) => (x && (x.msg || x.message)) || '').filter(Boolean);
+    if (bits.length) return bits.join('\n');
+  }
+  if (d && typeof d === 'object' && (d.msg || d.message)) return d.msg || d.message;
+  return fallback;
+}
+
+function ensureLoungeAlert() {
+  let dlg = document.getElementById('lounge-sticker-alert');
+  if (dlg) return dlg;
+  dlg = document.createElement('dialog');
+  dlg.id = 'lounge-sticker-alert';
+  dlg.className = 'lounge-sheet lounge-sticker-alert';
+  dlg.innerHTML = `
+    <div class="lounge-sheet-inner">
+      <header class="lounge-sheet-head">
+        <h2 data-alert-title>添加失败</h2>
+        <button type="button" class="lounge-sheet-close" data-close-dialog>关闭</button>
+      </header>
+      <div class="lounge-sheet-body">
+        <p data-alert-body></p>
+      </div>
+    </div>`;
+  (document.querySelector('.island-lounge') || document.body).appendChild(dlg);
+  dlg.querySelector('[data-close-dialog]')?.addEventListener('click', () => dlg.close());
+  dlg.addEventListener('click', (e) => {
+    if (e.target === dlg) dlg.close();
+  });
+  return dlg;
+}
+
+function showLoungeAlert(message, title = '添加失败') {
+  const text = String(message || '出错了');
+  const dlg = ensureLoungeAlert();
+  const titleEl = dlg.querySelector('[data-alert-title]');
+  const bodyEl = dlg.querySelector('[data-alert-body]');
+  if (titleEl) titleEl.textContent = title;
+  if (bodyEl) bodyEl.textContent = text;
+  try {
+    if (typeof dlg.showModal === 'function') dlg.showModal();
+    else window.alert(text);
+  } catch {
+    window.alert(text);
+  }
 }
 
 function initials(name) {
@@ -166,7 +220,7 @@ function bubbleHtml(m) {
   if (m.packet) {
     body = packetHtml(m);
   } else if ((m.msg_kind || 'text') === 'sticker' && m.sticker_url) {
-    body = `<div class="lounge-sticker-msg"><img src="${esc(m.sticker_url)}" alt="表情包" loading="lazy"></div>`;
+    body = `<div class="lounge-sticker-msg"><img src="${esc(m.sticker_url)}" alt="表情包" decoding="async"></div>`;
   } else {
     body = `<div class="lounge-text">${esc(m.body)}</div>`;
   }
@@ -1276,15 +1330,30 @@ document.getElementById('lounge-form')?.addEventListener('submit', async (e) => 
 
 /* —— 表情包（仅人类；AI 不可见） —— */
 let stickerCache = null;
+let stickerMeta = { max: 64, max_bytes: 3 * 1024 * 1024, max_batch: 12 };
 
 function pickStickerFiles() {
   const input = document.getElementById('lounge-sticker-file');
   if (!input) {
-    toast('当前页没有上传入口');
+    showLoungeAlert('当前页没有上传入口', '添加失败');
     return;
   }
   input.value = '';
   input.click();
+}
+
+function setStickerBusy(on, text) {
+  const sheet = document.getElementById('lounge-sticker-sheet');
+  if (!sheet) return;
+  let busy = sheet.querySelector('.lounge-sticker-busy');
+  if (!busy) {
+    busy = document.createElement('div');
+    busy.className = 'lounge-sticker-busy';
+    busy.hidden = true;
+    sheet.appendChild(busy);
+  }
+  busy.textContent = text || '正在添加…';
+  busy.hidden = !on;
 }
 
 function openStickerSheet() {
@@ -1316,22 +1385,42 @@ async function loadStickers(force = false) {
   if (!apiKey.startsWith('ar_sk_')) throw new Error('请先在上手页贴凭证');
   const res = await fetch(`/api/lounge/stickers?api_key=${encodeURIComponent(apiKey.trim())}`);
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.detail || '加载表情包失败');
+  if (!res.ok) throw new Error(apiErrorText(data, '加载表情包失败'));
   stickerCache = data.items || [];
+  stickerMeta = {
+    max: Number(data.max) || 64,
+    max_bytes: Number(data.max_bytes) || 3 * 1024 * 1024,
+    max_batch: Number(data.max_batch) || 12,
+  };
   return stickerCache;
+}
+
+function kbLimit() {
+  return Math.round((stickerMeta.max_bytes || 3 * 1024 * 1024) / 1024);
 }
 
 function renderStickerGrid(items) {
   const grid = document.getElementById('lounge-sticker-grid');
+  const countEl = document.getElementById('lounge-sticker-count');
+  if (countEl) countEl.textContent = `${items.length}/${stickerMeta.max}`;
   if (!grid) return;
+  const addCell = `
+    <button type="button" class="lounge-sticker-cell is-add js-lounge-sticker-add" title="添加图片">
+      <span aria-hidden="true">＋</span>
+      <small>添加</small>
+    </button>`;
   if (!items.length) {
-    grid.innerHTML = '<p class="lounge-sticker-empty">还没有表情包。点「添加表情包」批量上传。</p>';
+    grid.innerHTML = addCell + '<p class="lounge-sticker-empty">还没有表情包。可加 png / jpg / gif，动图会动。</p>';
     return;
   }
-  grid.innerHTML = items.map((it) => `
-    <button type="button" class="lounge-sticker-cell" data-sticker-id="${esc(it.id)}" title="发送">
-      <img src="${esc(it.url)}" alt="" loading="lazy">
-    </button>
+  grid.innerHTML = addCell + items.map((it) => `
+    <div class="lounge-sticker-cell">
+      <button type="button" class="lounge-sticker-thumb" data-sticker-id="${esc(it.id)}" title="发送">
+        <img src="${esc(it.url)}" alt="" decoding="async">
+      </button>
+      ${it.kind === 'gif' ? '<span class="lounge-sticker-gif">GIF</span>' : ''}
+      <button type="button" class="lounge-sticker-del" data-sticker-del="${esc(it.id)}" aria-label="删除" title="删除">×</button>
+    </div>
   `).join('');
 }
 
@@ -1346,31 +1435,84 @@ async function refreshStickerGrid() {
   }
 }
 
+function localFileProblems(files) {
+  const problems = [];
+  const maxBytes = stickerMeta.max_bytes || 3 * 1024 * 1024;
+  const batch = stickerMeta.max_batch || 12;
+  if (files.length > batch) problems.push(`一次最多添加 ${batch} 张，这次选了 ${files.length} 张。`);
+  for (const f of files.slice(0, batch)) {
+    const name = f.name || '图片';
+    if (!f.size) problems.push(`${name}是空文件。`);
+    else if (f.size > maxBytes) {
+      problems.push(`${name}太大了（${Math.round(f.size / 1024)}KB，上限 ${kbLimit()}KB）。动图请先压缩。`);
+    }
+  }
+  return problems;
+}
+
 async function uploadStickers(fileList) {
   const apiKey = loadSavedKey();
   if (!apiKey.startsWith('ar_sk_')) {
-    toast('请先在上手页贴凭证后再添加');
+    showLoungeAlert('请先在上手页贴凭证后再添加。', '添加失败');
     bindLinkEl?.classList.remove('hidden');
     return;
   }
   const files = [...(fileList || [])].filter(Boolean);
   if (!files.length) return;
+  const local = localFileProblems(files);
+  if (local.length) {
+    showLoungeAlert(local.join('\n'), '添加失败');
+    return;
+  }
   const fd = new FormData();
   fd.append('api_key', apiKey.trim());
-  for (const f of files.slice(0, 12)) fd.append('files', f, f.name);
-  const res = await fetch('/api/lounge/stickers', { method: 'POST', body: fd });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.detail || '上传失败');
-  stickerCache = null;
-  toast(`已添加 ${(data.items || []).length} 张表情包`);
-  openStickerSheet();
-  await refreshStickerGrid();
+  for (const f of files.slice(0, stickerMeta.max_batch || 12)) fd.append('files', f, f.name);
+  setStickerBusy(true, '正在添加…');
+  try {
+    const res = await fetch('/api/lounge/stickers', { method: 'POST', body: fd });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(apiErrorText(data, '上传失败'));
+    stickerCache = null;
+    toast(`已添加 ${(data.items || []).length} 张表情包`);
+    openStickerSheet();
+    await refreshStickerGrid();
+  } catch (err) {
+    showLoungeAlert(err.message || '上传失败', '添加失败');
+  } finally {
+    setStickerBusy(false);
+  }
+}
+
+async function deleteSticker(stickerId) {
+  const apiKey = loadSavedKey();
+  if (!apiKey.startsWith('ar_sk_')) {
+    showLoungeAlert('请先在上手页贴凭证后再删除。', '删除失败');
+    return;
+  }
+  if (!window.confirm('从表情包图库删掉这张？已经发到聊天室的记录还在。')) return;
+  setStickerBusy(true, '正在删除…');
+  try {
+    const res = await fetch('/api/lounge/stickers/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ api_key: apiKey.trim(), sticker_id: Number(stickerId) }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(apiErrorText(data, '删除失败'));
+    stickerCache = null;
+    toast('已删除');
+    await refreshStickerGrid();
+  } catch (err) {
+    showLoungeAlert(err.message || '删除失败', '删除失败');
+  } finally {
+    setStickerBusy(false);
+  }
 }
 
 async function sendSticker(stickerId) {
   const apiKey = loadSavedKey();
   if (!apiKey.startsWith('ar_sk_')) {
-    toast('请先在上手页贴凭证后再发送');
+    showLoungeAlert('请先在上手页贴凭证后再发送。', '发送失败');
     bindLinkEl?.classList.remove('hidden');
     return;
   }
@@ -1380,7 +1522,7 @@ async function sendSticker(stickerId) {
     body: JSON.stringify({ api_key: apiKey.trim(), sticker_id: Number(stickerId) }),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.detail || '发送失败');
+  if (!res.ok) throw new Error(apiErrorText(data, '发送失败'));
   closeStickerSheet();
   updateIdentityUI({
     ...(myProfile || {}),
@@ -1400,20 +1542,29 @@ document.getElementById('lounge-sticker-btn')?.addEventListener('click', () => {
 });
 document.getElementById('lounge-sticker-close')?.addEventListener('click', closeStickerSheet);
 document.getElementById('lounge-sticker-backdrop')?.addEventListener('click', closeStickerSheet);
-document.querySelectorAll('#lounge-sticker-add-btn').forEach((btn) => {
-  btn.addEventListener('click', pickStickerFiles);
+document.addEventListener('click', (e) => {
+  if (e.target.closest('.js-lounge-sticker-add, #lounge-sticker-add-btn')) {
+    e.preventDefault();
+    pickStickerFiles();
+  }
 });
 document.getElementById('lounge-sticker-file')?.addEventListener('change', async (e) => {
   try { await uploadStickers(e.target.files); }
-  catch (err) { toast(err.message); }
+  catch (err) { showLoungeAlert(err.message || '上传失败', '添加失败'); }
   finally { e.target.value = ''; }
 });
 document.getElementById('lounge-sticker-grid')?.addEventListener('click', async (e) => {
+  const del = e.target.closest('[data-sticker-del]');
+  if (del) {
+    e.preventDefault();
+    await deleteSticker(del.dataset.stickerDel);
+    return;
+  }
   const btn = e.target.closest('[data-sticker-id]');
   if (!btn) return;
   btn.disabled = true;
   try { await sendSticker(btn.dataset.stickerId); }
-  catch (err) { toast(err.message); }
+  catch (err) { showLoungeAlert(err.message || '发送失败', '发送失败'); }
   finally { btn.disabled = false; }
 });
 
