@@ -2242,6 +2242,8 @@ async def init_db() -> None:
             "ALTER TABLE lounge_stickers ADD COLUMN deleted_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE lounge_messages ADD COLUMN msg_kind TEXT NOT NULL DEFAULT 'text'",
             "ALTER TABLE lounge_messages ADD COLUMN sticker_id INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE parcels ADD COLUMN tree_born_at INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE barn_animals ADD COLUMN born_at INTEGER NOT NULL DEFAULT 0",
         ):
             try:
                 await db.execute(ddl)
@@ -2266,6 +2268,7 @@ async def init_db() -> None:
         from . import bond as bond_mod
         await ranks_mod.seed_xp(db)
         await disaster_mod.ensure_weekly_tide(db)
+        await disaster_mod.ensure_season_climate(db)
         await tax_mod.ensure_shore_tax(db)
         from . import upkeep as upkeep_mod
         await upkeep_mod.ensure_shore_upkeep(db)
@@ -2320,6 +2323,7 @@ async def _rebuild_parcels_orchard_unique(db: aiosqlite.Connection) -> None:
             tree_harvests INTEGER NOT NULL DEFAULT 0,
             tree_harvest_max INTEGER NOT NULL DEFAULT 0,
             orchard INTEGER NOT NULL DEFAULT 0,
+            tree_born_at INTEGER NOT NULL DEFAULT 0,
             UNIQUE(steward_id, slot, orchard)
         )
         """
@@ -2329,7 +2333,7 @@ async def _rebuild_parcels_orchard_unique(db: aiosqlite.Connection) -> None:
         "id", "steward_id", "slot", "crop", "planted_at", "tended", "greenhouse",
         "ready_at", "grow_target", "grow_pace", "fertilized", "scarecrow",
         "dove_yield_mult", "harvest_left", "watered", "camera",
-        "tree_harvests", "tree_harvest_max", "orchard",
+        "tree_harvests", "tree_harvest_max", "orchard", "tree_born_at",
     ]
     select_bits = [c if c in src_cols else "0" for c in dest]
     await db.execute(
@@ -2383,6 +2387,7 @@ async def _rebuild_parcels_kind_unique(db: aiosqlite.Connection) -> None:
             tree_harvests INTEGER NOT NULL DEFAULT 0,
             tree_harvest_max INTEGER NOT NULL DEFAULT 0,
             orchard INTEGER NOT NULL DEFAULT 0,
+            tree_born_at INTEGER NOT NULL DEFAULT 0,
             UNIQUE(steward_id, slot, orchard, greenhouse)
         )
         """
@@ -2392,7 +2397,7 @@ async def _rebuild_parcels_kind_unique(db: aiosqlite.Connection) -> None:
         "id", "steward_id", "slot", "crop", "planted_at", "tended", "greenhouse",
         "ready_at", "grow_target", "grow_pace", "fertilized", "scarecrow",
         "dove_yield_mult", "harvest_left", "watered", "camera",
-        "tree_harvests", "tree_harvest_max", "orchard",
+        "tree_harvests", "tree_harvest_max", "orchard", "tree_born_at",
     ]
     select_bits = [c if c in src_cols else "0" for c in dest]
     await db.execute(

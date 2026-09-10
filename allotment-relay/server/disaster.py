@@ -340,3 +340,337 @@ async def recent_hit_line(steward_id: int) -> str | None:
     if " — " in text:
         text = text.split(" — ", 1)[1]
     return f"天灾：{text}"
+
+
+def climate_flag_key(week_id: str | None = None) -> str:
+    return f"{config.SEASON_CLIMATE_FLAG_PREFIX}{week_id or human_week_id()}"
+
+
+def pick_season_climate(season: str | None = None) -> str:
+    from . import season as season_mod
+
+    season = season or season_mod.current_season()
+    rows = config.SEASON_CLIMATE_WEIGHTS.get(season) or config.SEASON_CLIMATE_WEIGHTS["夏"]
+    keys = [k for k, _ in rows]
+    weights = [w for _, w in rows]
+    return random.choices(keys, weights=weights, k=1)[0]
+
+
+def climate_intensity() -> Intensity:
+    return pick_intensity()
+
+
+async def _delay_unwatered_outdoor(
+    conn: aiosqlite.Connection,
+    steward_id: int,
+    seconds: int,
+) -> int:
+    cur = await conn.execute(
+        """
+        SELECT id FROM parcels
+        WHERE steward_id=? AND greenhouse=0 AND crop IS NOT NULL
+          AND COALESCE(watered,0)=0 AND planted_at IS NOT NULL
+        """,
+        (steward_id,),
+    )
+    ids = [r[0] for r in await cur.fetchall()]
+    hit = 0
+    for pid in ids:
+        await conn.execute(
+            "UPDATE parcels SET planted_at = planted_at + ?, tended=0 WHERE id=?",
+            (seconds, pid),
+        )
+        hit += 1
+    return hit
+
+
+async def _wilt_unwatered_outdoor(
+    conn: aiosqlite.Connection,
+    steward_id: int,
+    chance: float,
+    *,
+    trees_only_delay: bool = True,
+) -> int:
+    from .catalog import CROPS as _crops
+
+    conn.row_factory = aiosqlite.Row
+    rows = await (
+        await conn.execute(
+            """
+            SELECT * FROM parcels
+            WHERE steward_id=? AND greenhouse=0 AND crop IS NOT NULL
+              AND COALESCE(watered,0)=0
+            """,
+            (steward_id,),
+        )
+    ).fetchall()
+    wilted = 0
+    for row in rows:
+        if random.random() > chance:
+            continue
+        plot = dict(row)
+        meta = _crops.get(plot["crop"] or "", {})
+        if meta.get("tree") and trees_only_delay:
+            await conn.execute(
+                "UPDATE parcels SET planted_at = planted_at + ? WHERE id=?",
+                (random.randint(600, 1200), plot["id"]),
+            )
+            continue
+        await conn.execute(
+            """
+            UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
+                grow_target=0, grow_pace='', fertilized=0, watered=0,
+                harvest_left=0, ready_at=0, tree_born_at=0
+            WHERE id=?
+            """,
+            (plot["id"],),
+        )
+        wilted += 1
+    return wilted
+
+
+async def _thirst_unfed_animals(
+    conn: aiosqlite.Connection,
+    steward_id: int,
+    chance: float,
+) -> list[str]:
+    from .catalog import LIVESTOCK
+
+    conn.row_factory = aiosqlite.Row
+    rows = await (
+        await conn.execute(
+            """
+            SELECT * FROM barn_animals
+            WHERE steward_id=? AND species IS NOT NULL AND COALESCE(fed,0)=0
+            """,
+            (steward_id,),
+        )
+    ).fetchall()
+    lost: list[str] = []
+    for row in rows:
+        if random.random() > chance:
+            continue
+        spec = LIVESTOCK.get(row["species"] or "", {})
+        name = spec.get("name") or row["species"]
+        await conn.execute(
+            """
+            UPDATE barn_animals SET species=NULL, stocked_at=NULL, fed=0, guard=0, born_at=0
+            WHERE id=?
+            """,
+            (row["id"],),
+        )
+        lost.append(f"#{row['slot']}{name}")
+    return lost
+
+
+async def apply_season_climate(
+    conn: aiosqlite.Connection,
+    *,
+    week_id: str,
+    effect: str,
+    intensity: Intensity,
+) -> dict[str, Any]:
+    """对本周套一次季节气候。不冲票。"""
+    conn.row_factory = aiosqlite.Row
+    rows = await (
+        await conn.execute("SELECT * FROM stewards WHERE enrolled=1")
+    ).fetchall()
+    delay = {"low": 720, "mid": 1500, "high": 2400}[intensity]
+    wilt_p = {"low": 0.0, "mid": 0.08, "high": 0.16}[intensity]
+    thirst_p = {"low": 0.0, "mid": 0.10, "high": 0.22}[intensity]
+    if effect == "heatwave":
+        delay = int(delay * 1.2)
+        wilt_p = min(0.22, wilt_p + 0.04)
+        thirst_p = min(0.30, thirst_p + 0.08)
+    if effect == "frost":
+        wilt_p = wilt_p * 0.6
+        thirst_p = 0.0
+    if effect not in {"drought", "heatwave", "frost"}:
+        delay = 0
+        wilt_p = 0.0
+        thirst_p = 0.0
+        if effect == "pest_wave":
+            await conn.execute(
+                "UPDATE parcels SET tended=0 WHERE greenhouse=0 AND crop IS NOT NULL",
+            )
+
+    hit_plots = 0
+    wilted = 0
+    animals = 0
+    for s in rows:
+        sid = int(s["id"])
+        if delay:
+            hit_plots += await _delay_unwatered_outdoor(conn, sid, delay)
+        if wilt_p > 0:
+            wilted += await _wilt_unwatered_outdoor(conn, sid, wilt_p)
+        if thirst_p > 0:
+            lost = await _thirst_unfed_animals(conn, sid, thirst_p)
+            animals += len(lost)
+            if lost:
+                await db.add_chronicle(
+                    "climate",
+                    f"{s['name']} — 旱渴：{'、'.join(lost[:4])} 没撑过",
+                    sid,
+                    conn=conn,
+                )
+
+    label = config.SEASON_CLIMATE_LABELS.get(effect, effect)
+    grade = config.WEEKLY_TIDE_GRADES[intensity]
+    detail = (
+        f"{week_id} 季节气候·{label}（{grade}）：露天没浇水的地发僵"
+        + ("，没浇的菜可能枯。" if wilt_p else "。")
+        + "温室免疫。浇水能扛。"
+        + (f" 此轮 {wilted} 块露天地枯了。" if wilted else "")
+        + (f" {animals} 头没喂的牲口渴垮了。" if animals else "")
+    )
+    now = db.now()
+    duration = config.SEASON_CLIMATE_DURATION
+    kind = "good" if effect in {"warm_rain", "fish_run", "loot_surge", "calm_sea"} else "bad"
+    await _insert_pulse(
+        conn,
+        effect=effect,
+        pulse_key=f"season_climate:{week_id}",
+        label=f"气候·{label}",
+        kind=kind,
+        detail=detail,
+        duration=duration,
+    )
+    await db.add_chronicle("pulse", f"🌾 全服气候·{label}：{detail}", None, conn=conn)
+    await conn.execute(
+        """
+        INSERT INTO world_flags (flag_key, applied_at, detail) VALUES (?,?,?)
+        """,
+        (
+            climate_flag_key(week_id),
+            now,
+            f"effect={effect} intensity={intensity} wilt={wilted} animals={animals}",
+        ),
+    )
+    from . import world as world_mod
+
+    world_mod.note_climate(effect, now + duration)
+    return {
+        "week_id": week_id,
+        "effect": effect,
+        "intensity": intensity,
+        "wilted": wilted,
+        "hit_plots": hit_plots,
+        "animals": animals,
+        "detail": detail,
+    }
+
+
+async def ensure_season_climate(
+    conn: aiosqlite.Connection | None = None,
+    *,
+    week_id: str | None = None,
+    effect: str | None = None,
+    intensity: Intensity | None = None,
+) -> dict[str, Any] | None:
+    """幂等：每个东八区自然周最多刮一次季节气候。"""
+    if conn is None:
+        async with db.connect() as owned:
+            result = await ensure_season_climate(
+                owned, week_id=week_id, effect=effect, intensity=intensity
+            )
+            if result:
+                await owned.commit()
+            return result
+    await _ensure_flags_table(conn)
+    wid = week_id or human_week_id()
+    if await flag_applied(conn, climate_flag_key(wid)):
+        await refresh_climate_cache(conn)
+        return None
+    return await apply_season_climate(
+        conn,
+        week_id=wid,
+        effect=effect or pick_season_climate(),
+        intensity=intensity or climate_intensity(),
+    )
+
+
+async def refresh_climate_cache(conn: aiosqlite.Connection) -> str | None:
+    """把本周还有效的气候写进 world 缓存，给生长倍率用。"""
+    from . import world as world_mod
+
+    await _ensure_flags_table(conn)
+    wid = human_week_id()
+    row = await (
+        await conn.execute(
+            "SELECT applied_at, detail FROM world_flags WHERE flag_key=?",
+            (climate_flag_key(wid),),
+        )
+    ).fetchone()
+    if not row:
+        world_mod.note_climate(None, 0)
+        return None
+    applied = int(row[0] if not hasattr(row, "keys") else row["applied_at"])
+    detail = str(row[1] if not hasattr(row, "keys") else row["detail"] or "")
+    until = applied + config.SEASON_CLIMATE_DURATION
+    if db.now() >= until:
+        world_mod.note_climate(None, 0)
+        return None
+    effect = "drought"
+    if "effect=" in detail:
+        effect = detail.split("effect=", 1)[1].split()[0]
+    world_mod.note_climate(effect, until)
+    return effect
+
+
+async def apply_pulse_field_hit(
+    conn: aiosqlite.Connection,
+    effect: str,
+) -> None:
+    """短脉冲版干旱/热浪/霜冻/虫害：比每周气候轻一档，不写本周 flag。"""
+    if effect == "pest_wave":
+        await conn.execute(
+            "UPDATE parcels SET tended=0 WHERE greenhouse=0 AND crop IS NOT NULL",
+        )
+        return
+    if effect not in {"drought", "heatwave", "frost"}:
+        return
+    conn.row_factory = aiosqlite.Row
+    rows = await (
+        await conn.execute("SELECT id FROM stewards WHERE enrolled=1")
+    ).fetchall()
+    delay = 480
+    wilt_p = 0.04
+    thirst_p = 0.04
+    if effect == "heatwave":
+        delay = 600
+        wilt_p = 0.06
+        thirst_p = 0.08
+    if effect == "frost":
+        wilt_p = 0.02
+        thirst_p = 0.0
+    for row in rows:
+        sid = int(row[0] if not hasattr(row, "keys") else row["id"])
+        await _delay_unwatered_outdoor(conn, sid, delay)
+        await _wilt_unwatered_outdoor(conn, sid, wilt_p)
+        if thirst_p:
+            await _thirst_unfed_animals(conn, sid, thirst_p)
+
+
+async def climate_sheet_line() -> str | None:
+    effect = None
+    from . import world as world_mod
+
+    effect = world_mod.active_climate_effect()
+    if not effect:
+        async with db.connect() as conn:
+            effect = await refresh_climate_cache(conn)
+    if not effect:
+        return None
+    label = config.SEASON_CLIMATE_LABELS.get(effect, effect)
+    hint = {
+        "drought": "露天没浇水会发僵、可能枯。去份地点浇水。温室不怕。",
+        "heatwave": "热浪：浇水更要紧，没喂的牲口容易渴垮。",
+        "frost": "霜冻：热带露天发僵。温室免疫。",
+        "pest_wave": "虫害潮：露天可能要再 tend。",
+        "warm_rain": "回暖雨：地里润一点。",
+        "gale_crop": "秋台扫过露天，打理过的地更稳。",
+        "fish_run": "渔汛：撒网手气好一点。",
+        "loot_surge": "退潮礼包：交换台台阶像宝藏区。",
+        "calm_sea": "平流：出海略稳。",
+    }.get(effect, "")
+    return f"本周气候：{label}。{hint}"

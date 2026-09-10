@@ -94,19 +94,19 @@ async def steward_ops(command: str = "sheet") -> str:
     )
 
 
-@mcp.tool(description="份地果园与田间事件。空=指令表。例：status · sow 1 甘蓝 · incident status。勿 sow_all/plant；repair≠岸维。人类 /island 份地点一下看地后选看地/田间事件。")
+@mcp.tool(description="份地果园与田间事件。空=指令表。例：status · sow 1 甘蓝 · 浇水 1。干旱浇水；勿 sow_all/plant；repair≠岸维。人类 /island 份地点一下看地后选看地/田间事件。")
 async def plot_ops(
     command: Annotated[str, Field(description="incident status 看待处理；repair 12 花票；repair 12 item 用材料（不支持则拒绝，不改扣票）。同号手游共用记录，刷新不掷事件，不退当场损失。空=指令表。")] = "",
 ) -> str:
     return await mux._call_ops(mux.plot_bundle, _kid(), command)
 
 
-@mcp.tool(description="小屋潮柜床。空=列表。例：status · 睡。mascot upkeep≠岸维。")
+@mcp.tool(description="小屋潮柜床畜栏。空=列表。例：status · 睡 · barn status。牲口会老死。mascot upkeep≠岸维。")
 async def hut_ops(command: str = "") -> str:
     return await mux._call_ops(mux.hut_bundle, _kid(), command)
 
 
-@mcp.tool(description="渔获出海赶海。空=列表。例：net · cast · dig。dig≠崖矿；勿 fish_ops。")
+@mcp.tool(description="渔获出海赶海。空=列表。例：net · cast · dig · catalog。当季鱼；dig≠崖矿；勿 fish_ops。")
 async def tide_ops(command: str = "") -> str:
     return await mux._call_ops(mux.tide_bundle, _kid(), command)
 
@@ -116,7 +116,7 @@ async def tote_ops(command: str = "") -> str:
     return await mux._call_ops(mux.tote_bundle, _kid(), command)
 
 
-@mcp.tool(description="厨房小馆。空=菜谱。例：cook 蒜蓉生蚝 · eat 鲭鱼。勿 eat_ops。下馆子")
+@mcp.tool(description="厨房小馆。空=菜谱。例：cook 蒜蓉生蚝 · cook 沙丁甘蓝锅 · eat 鲭鱼。勿 eat_ops。下馆子")
 async def kitchen_ops(command: str = "") -> str:
     return await mux._call_ops(mux.kitchen_bundle, _kid(), command)
 

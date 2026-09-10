@@ -8,6 +8,44 @@ DAY_PHASE_LABELS = {
     "night": "夜",
 }
 
+# 当前全服气候/脉冲缓存（同步生长倍率用）。由 events / disaster 刷新。
+_pulse_effect: str | None = None
+_pulse_until: int = 0
+_climate_effect: str | None = None
+_climate_until: int = 0
+
+
+def note_pulse(effect: str | None, expires_at: int = 0) -> None:
+    global _pulse_effect, _pulse_until
+    _pulse_effect = effect or None
+    _pulse_until = int(expires_at or 0)
+
+
+def note_climate(effect: str | None, expires_at: int = 0) -> None:
+    global _climate_effect, _climate_until
+    _climate_effect = effect or None
+    _climate_until = int(expires_at or 0)
+
+
+def active_pulse_effect() -> str | None:
+    if _pulse_until and _pulse_until <= int(time.time()):
+        return None
+    return _pulse_effect
+
+
+def active_climate_effect() -> str | None:
+    if _climate_until and _climate_until <= int(time.time()):
+        return None
+    return _climate_effect
+
+
+def field_climate_effect() -> str | None:
+    """干旱/霜冻/热浪：优先本周气候，其次短脉冲。"""
+    for key in (active_climate_effect(), active_pulse_effect()):
+        if key in {"drought", "heatwave", "frost", "pest_wave", "gale_crop", "warm_rain"}:
+            return key
+    return None
+
 
 def weather_at(ts: int | None = None) -> str:
     t = int(ts if ts is not None else time.time())
@@ -110,12 +148,18 @@ def climate_line() -> str:
     from . import season as season_mod
 
     w, t, p = current_weather(), current_tide(), current_day_phase()
-    return (
-        f"天气 {weather_label(w)}({w}) · "
-        f"潮汐 {tide_label(t)}({t}) · "
-        f"时辰 {day_phase_label(p)}({p}) · "
-        f"季节 {season_mod.season_name()}（一周一季）"
-    )
+    bits = [
+        f"天气 {weather_label(w)}({w})",
+        f"潮汐 {tide_label(t)}({t})",
+        f"时辰 {day_phase_label(p)}({p})",
+        f"季节 {season_mod.season_name()}（一周一季）",
+    ]
+    climate = active_climate_effect()
+    if climate:
+        from . import config
+        label = config.SEASON_CLIMATE_LABELS.get(climate, climate)
+        bits.append(f"本周气候 {label}")
+    return " · ".join(bits)
 
 
 WEATHER_NOW = {
@@ -150,22 +194,39 @@ PHASE_HINT = {
     "dusk": "酒吧开门。意外略高。",
     "night": "酒吧继续开。户外长得稍快。",
 }
-SEASON_HINT = "一周一季。买种和露天、果园须当季；已种的继续长。温室不受季节。"
+SEASON_HINT = "一周一季。买种和露天、果园须当季；已种的继续长。温室不受季节。夏天更常干旱，冬天霜冻；露天没浇水会长得慢、可能枯。"
+CLIMATE_NOW = {
+    "drought": "干旱：露天没浇水的地长得慢，还可能枯。浇过水的好很多。温室不怕。牲口没喂更容易老死。",
+    "heatwave": "热浪：比干旱更烤。没浇水的露天地更慢，中暑更容易。温室仍免疫。",
+    "frost": "霜冻：热带露天作物发僵。温室不怕。",
+    "pest_wave": "虫害潮：露天刚打理完，虫可能再来一遍。温室更省心。",
+    "warm_rain": "回暖雨：露天地自己润一点，浇水更香。",
+    "gale_crop": "秋台：没人看的露天地更容易出事。",
+    "fish_run": "渔汛：撒网和赶海手气上调。",
+    "loot_surge": "退潮礼包：交换台台阶像宝藏区。",
+    "calm_sea": "平流：出海报废略降。",
+}
 
 
 def climate_report() -> str:
     from . import season as season_mod
 
     w, t, p = current_weather(), current_tide(), current_day_phase()
-    return "\n".join([
+    lines = [
         climate_line(),
         season_mod.month_line(),
         "买种 + 露天/果园 sow 须当季（一周一季）；已种的继续长、继续收。温室种菜种树都不受季节。",
         WEATHER_NOW[w],
         TIDE_NOW[t],
         PHASE_NOW[p],
-        "查法：plot_ops weather · plot_ops catalog · quarry_ops status · craft_ops status · steward_ops sheet · relay_manual",
-    ])
+    ]
+    climate = active_climate_effect()
+    if climate:
+        lines.append(CLIMATE_NOW.get(climate, f"本周气候：{climate}"))
+    lines.append(
+        "查法：plot_ops weather · plot_ops catalog · quarry_ops status · craft_ops status · steward_ops sheet · relay_manual"
+    )
+    return "\n".join(lines)
 
 
 def grow_multiplier(weather: str, tended: bool, in_greenhouse: bool) -> float:
@@ -177,6 +238,25 @@ def grow_multiplier(weather: str, tended: bool, in_greenhouse: bool) -> float:
         return 1.35 if tended else 1.6
     if current_day_phase() == "night" and not in_greenhouse:
         return 1.08
+    return 1.0
+
+
+def climate_grow_mult(in_greenhouse: bool, watered: bool, tropic: bool = False) -> float:
+    """干旱/霜冻叠在天气倍率上。温室免疫。"""
+    if in_greenhouse:
+        return 1.0
+    climate = field_climate_effect()
+    if climate in ("drought", "heatwave"):
+        extra = 1.12 if climate == "heatwave" else 1.0
+        if watered:
+            return 0.88 * extra
+        return 1.38 * extra
+    if climate == "frost" and tropic:
+        return 1.45
+    if climate == "warm_rain":
+        return 0.92 if watered else 0.97
+    if climate == "gale_crop":
+        return 1.12
     return 1.0
 
 

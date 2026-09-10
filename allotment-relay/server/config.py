@@ -163,6 +163,8 @@ def _event_rate(x: float) -> float:
 
 EVENT_ROLL_CHANCE = _event_rate(0.08)
 EVENT_DAILY_CAP = max(1, round(4 * EVENT_RATE_MULT))
+# 坏事件再升级成凶兆的概率（干旱/热浪时田间和畜栏更高）
+EVENT_HARD_CHANCE = 0.18
 EVENT_GOOD_SHARE = 0.30
 SCRUMP_EVENT_CHANCE = _event_rate(0.18)
 WORLD_PULSE_CHANCE = _event_rate(0.05)
@@ -178,6 +180,28 @@ WEEKLY_TIDE_LABELS = {"low": "浅潮", "mid": "灌仓潮", "high": "黑潮"}
 WEEKLY_TIDE_GRADES = {"low": "低", "mid": "中", "high": "高"}
 STORM_SHUTTER_LEVY_MULT = 0.85
 DISASTER_NOTICE_DAYS = 7
+
+# 季节气候：人类日历每周一次，和周潮分开。夏天更常干旱，冬天霜冻。
+# 不冲票（冲票是周潮的事），打露天作物和牲口。温室免疫。
+SEASON_CLIMATE_FLAG_PREFIX = "season_climate:"
+SEASON_CLIMATE_DURATION = 2 * 86400
+SEASON_CLIMATE_LABELS = {
+    "drought": "干旱",
+    "heatwave": "热浪",
+    "frost": "霜冻",
+    "pest_wave": "虫害潮",
+    "warm_rain": "回暖雨",
+    "gale_crop": "秋台",
+    "fish_run": "渔汛",
+    "loot_surge": "退潮礼包",
+    "calm_sea": "平流",
+}
+SEASON_CLIMATE_WEIGHTS = {
+    "春": (("pest_wave", 45), ("warm_rain", 35), ("drought", 20)),
+    "夏": (("drought", 55), ("heatwave", 25), ("fish_run", 20)),
+    "秋": (("gale_crop", 40), ("drought", 25), ("loot_surge", 35)),
+    "冬": (("frost", 50), ("calm_sea", 25), ("drought", 25)),
+}
 
 # 休闲生存感 — 慢衰减、无硬死亡
 DAY_PHASE_CYCLE = 2400

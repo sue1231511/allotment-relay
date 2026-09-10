@@ -17,9 +17,9 @@ from .catalog import (
 )
 
 TRIGGER_AILMENTS: dict[str, list[str]] = {
-    "tend": ["sprain", "backache", "blister", "cut", "allergy", "exhaustion", "damp_lung"],
-    "gather": ["sprain", "backache", "blister", "allergy", "exhaustion", "toothache"],
-    "sow": ["sprain", "backache", "cut"],
+    "tend": ["sprain", "backache", "blister", "cut", "allergy", "exhaustion", "damp_lung", "heatstroke", "dehydration"],
+    "gather": ["sprain", "backache", "blister", "allergy", "exhaustion", "toothache", "heatstroke"],
+    "sow": ["sprain", "backache", "cut", "heatstroke"],
     "forage": ["allergy", "blister", "cut", "dehydration"],
     "net": ["jelly_sting", "cold", "shell_scratch", "dehydration"],
     "pen_feed": ["cut", "blister"],
@@ -29,6 +29,8 @@ TRIGGER_AILMENTS: dict[str, list[str]] = {
     "voyage_return": ["cold", "food_poison", "backache"],
     "guild": ["blister"],
     "brew": ["food_poison", "damp_lung"],
+    "barn_feed": ["cut", "blister", "heatstroke"],
+    "barn_collect": ["cut", "blister"],
     "beach": ["shell_scratch", "sunburn", "crab_pinch", "dehydration"],
     "quarry": ["rock_dust", "sprain", "backache", "blister", "cut"],
     "salvage": ["wreck_cough", "shell_scratch", "cold", "dehydration"],

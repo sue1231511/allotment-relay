@@ -95,19 +95,19 @@ STEWARD_HELP = """steward_ops 子命令（整句写进 command）：
 PLOT_HELP = """plot_ops 子命令（整句写进 command）：
   status — 各地块作物、把数、还要多久
   catalog — 作物全表（档/时间/把数/季节：当季可种或休市；一周一季）
-  weather — 天气潮汐时辰 + 当季（一周一季）
+  weather — 天气潮汐时辰 + 当季（一周一季）+ 本周气候（干旱/热浪/霜冻等）。干旱不冲票；露天没浇水会发僵、可能枯，浇水能扛，温室免疫
   买地 / land — 现有几块、价钱、开垦时间（起步 3 块，露天无上限，票价 80/120/180/260/360…）；买地 确认 付钱开垦。份地不种果树。超出起步每天岸维 10 票/块，铺多了加档 18/28。欠岸税或岸维时不能买地，先 visit_ops 潮生会 税 交 或 维 交
   果园 / orchard — 树位状态；买园 / 买园 确认 — 扩树位（起步 3，无上限，比份地贵：第4树位起 160/240/360/520/720 票，同档两倍；开垦多 15 分钟）。超出起步每天岸维 20 票/树位，铺多了加档 32/48。欠岸税或岸维时不能买园
   果园 sow 1 芒果 · sow 园1 橘子 · sow 园1 芒果 — 果树进果园或温室；shake 园1 / 果园 gather
   sow 地块 作物 — 例子：sow 1 甘蓝 · sow 2 fogpea · sow 棚1 橘子。露天/果园须当季或全年；过季会拒并写下一开窗季节
-  tend · 浇水 [地块] · 施肥 [地块] [堆肥|羊粪|猪粪|牛粪] — 浇水/施肥加快成熟（各一次）
+  tend · 浇水 [地块] · 施肥 [地块] [堆肥|羊粪|猪粪|牛粪] — 浇水/施肥加快成熟（各一次）。干旱/热浪时没浇的露天地可能枯
   gather [地块] · forage
   buy 数量 作物 — 例子：buy 2 甘蓝。当季/全年才能买种；可叠放货满一组会开下一组
   偷菜 名字 [地块] — 最多掐走 30%，永远留一把。先 steward_ops 邻居 看谁熟了
   邻居 / 在线 — 同 steward_ops 邻居（这里也能用）
   amends 名字 — 向被摘的邻居致歉，双方档信回暖
   shake 地块 — 摇果（青柠/橘子/芒果/椰子）
-  chop 地块 — 砍树腾地（树龄尽了会自己枯；想提前清地不必等过熟）
+  chop 地块 — 砍树腾地（树龄尽了会自己枯；收茬上限到了也会枯；想提前清地不必等过熟）
   compost 地块 — 过熟进堆肥（果树清果后若还有茬则继续长；枯了或不要了才 chop）
   scarecrow 地块 — 扎稻草人
   买棚 / 温室 — 看价；买棚 确认 / shed erect — 加盖（无上限。第1座 180票马上能种，之后 310/500/750… 比份地更贵；每座每天岸维 30 票，铺多了加档 48/70）。欠岸税或岸维时不能买棚
@@ -139,6 +139,7 @@ HUT_HELP = """hut_ops 子命令（整句写进 command）：
   卖掉 槽位 [确认] — 旧家具按折旧卖。例子：卖掉 soft_1 确认
     小馆开着时冰箱不能卖（先 kitchen_ops shop 卖掉 或 shop close）
   barn status|erect|buy|feed|collect|shear|churn — 畜栏。churn 只搅山羊奶成奶酪（先买山羊再 collect；牛奶不能搅）
+    牲口有寿（兔约3天…狗约12天），过了栏空，老死不给肉（想收肉用 harvest）。干旱没喂可能渴死
   mascot adopt 名字 scout|lucky|compost / upkeep / train / feed — 吉祥物
     upkeep 花 4 票主动喂养，不是每日自动扣，也不是产业维修费（产业维修 visit_ops 潮生会 维）；train 免费练、不换特质；feed 耗宠物饲料。士气不每天掉。
   buy miner_lamp → install soft_N miner_lamp — 盐风矿灯，崖矿挖精力 -1
@@ -150,6 +151,7 @@ TIDE_HELP = """tide_ops 子命令（整句写进 command）：
     net 4 票，渔网按鱼价增幅+档位加成给票（消息写「渔具加成+N票」）
     T1 钓竿 = 竹钓竿：visit_ops tt buy 竹钓竿 或 tide_ops gear upgrade rod，同一档
     未命名小鱼不能网，只能坐钓：net 网不到、也不触发遭遇；出海期间 cast 才可能碰上
+    鱼种变多：沙丁/银鱼/黄鱼/生蚝/梭子蟹/真鲷/马鲛/飞鱼/鲥鱼/冰鱼/石斑/八爪/鲍鱼/龙虾/金枪/旗鱼。catalog 看图鉴。飞鱼春夏、鲥鱼春、冰鱼冬
   pen status — 渔排；扩池后可指定池号：stock herring 2 · feed 2 · harvest 2 · label 2 薄荷池
   voyage buy|depart|return|fight|flee|parley|bribe — 出海 / 黑旗（fight/flee 可省略 voyage）。欠岸税或岸维时不能买船
   compliment|release|catch|grab — 未命名小鱼（可省略 voyage）。compliment=release 礼遇回赠普通鱼；
@@ -252,7 +254,7 @@ VISIT_HELP = """visit_ops 子命令（整句写进 command）：
     可叠放货满一组会开下一组；工具只能 1。潮柜格满了先 vend 或 hut_ops 冰柜 取
   lore scan [主题] / topics — 沿海旧史文本与 NPC 小传（例：lore scan npc；不是收集品，背包里不会多东西）
   clinic status — 桥桥诊所（24h）。进门氛围+窗台斑鸠（每日最多1次）+价目；诊费偏高。人类 /island 广场点乔乔诊所先进店景，点一下才出人桥桥，半身立绘对话，桥桥站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗
-  clinic treat 病症 — 花钱治地上病。例子：treat sprain · treat infection · treat 腿鱼小咒 · treat all
+  clinic treat 病症 — 花钱治地上病。例子：treat sprain · treat infection · treat 腿鱼小咒 · treat 中暑 · treat all
   clinic 调理 小|中|大 — 无病回身体（+15/+30/+50），价 95/210/380 票（可打折/凌晨加价）；每日最多 3 次。例子：clinic 调理 中 · clinic rest 大
   clinic buy 醒酒药 / use 醒酒药 — 对症药，可囤货备用（与 treat 同效）
   clinic buy 回春汤 / use 回春汤 · buy 大补丸 — 无病回身体（+18/+40），可囤，不占调理次数；贵是故意的
