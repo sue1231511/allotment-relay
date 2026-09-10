@@ -363,16 +363,39 @@ export function showActSheet({ title, body, confirm, onConfirm, onClose } = {}) 
 
 export function showBuySheet(item, { onConfirm, onClose } = {}) {
   const label = (item && (item.label || item.name)) || "这件";
-  const price = item && item.price != null ? item.price : "—";
+  const unit = Number(item && item.price);
+  const batch = Boolean(item) && !item.unique && !item.dowry;
+  const max = 24;
+  let qty = 1;
+  const lineText = () => {
+    if (!batch) return `${esc(label)} · ${esc(item && item.price != null ? item.price : "—")} 票`;
+    const total = Number.isFinite(unit) ? unit * qty : "—";
+    return `${esc(label)} · ${esc(unit)} 票/份 · 一共 ${esc(total)} 票`;
+  };
+  const qtyBlock = batch ? `
+      <div class="island-qty-row" data-buy-qty>
+        <button type="button" class="island-btn" data-qty-delta="-1" aria-label="少买一份">−</button>
+        <b data-qty-val>1</b>
+        <button type="button" class="island-btn" data-qty-delta="1" aria-label="多买一份">+</button>
+        <button type="button" class="island-btn" data-qty-set="5">5</button>
+        <button type="button" class="island-btn" data-qty-set="10">10</button>
+      </div>` : "";
   const root = paintModal(cardMarkup(`
       <h3>买下来</h3>
-      <p>${esc(label)} · ${esc(price)} 票</p>
+      <p data-buy-line>${lineText()}</p>
+      ${qtyBlock}
       <div class="island-care-acts">
         <button type="button" class="island-btn primary wide" data-act="confirm">确认买</button>
       </div>
       <button type="button" class="island-btn wide" data-close-modal>先不忙</button>
   `, "island-care"));
   if (!root) return;
+  const paintQty = () => {
+    const val = root.querySelector("[data-qty-val]");
+    if (val) val.textContent = String(qty);
+    const line = root.querySelector("[data-buy-line]");
+    if (line) line.innerHTML = lineText();
+  };
   const close = () => {
     hideModal();
     if (onClose) onClose();
@@ -380,7 +403,22 @@ export function showBuySheet(item, { onConfirm, onClose } = {}) {
   root.querySelector("[data-close-modal]").addEventListener("click", close);
   root.querySelector("[data-act=confirm]").addEventListener("click", () => {
     hideModal();
-    if (onConfirm) onConfirm();
+    if (onConfirm) onConfirm(qty);
+  });
+  root.querySelectorAll("[data-qty-delta]").forEach((btn) => {
+    btn.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      const delta = Number(btn.getAttribute("data-qty-delta") || 0);
+      qty = Math.max(1, Math.min(max, qty + delta));
+      paintQty();
+    });
+  });
+  root.querySelectorAll("[data-qty-set]").forEach((btn) => {
+    btn.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      qty = Math.max(1, Math.min(max, Number(btn.getAttribute("data-qty-set") || 1)));
+      paintQty();
+    });
   });
   root.addEventListener("click", (ev) => {
     if (ev.target === root) close();

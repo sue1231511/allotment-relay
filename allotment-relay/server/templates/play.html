@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css?v=lounge-stickers9">
-  <link rel="stylesheet" href="/static/play.css?v=wedding-day3">
+  <link rel="stylesheet" href="/static/play.css?v=farm-batch1">
 </head>
 <body class="play-page{% if island_weddings %} is-wedding-day{% endif %}">
   {% include "partials/nav.html" %}
@@ -135,6 +135,12 @@
               <div class="play-section-grow"></div>
               <button type="button" class="play-text-btn" data-buy-seed>买种 →</button>
               <button type="button" class="play-text-btn" data-act='{"tool":"plot_ops","command":"forage"}'>去采集 →</button>
+            </div>
+            <div class="play-plot-batch" aria-label="一键打理">
+              <button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"浇水"}'>一键浇水</button>
+              <button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"tend"}'>一键打理</button>
+              <button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"施肥"}'>一键施肥</button>
+              <button type="button" class="play-mini-btn primary" data-act='{"tool":"plot_ops","command":"gather"}'>一键收获</button>
             </div>
             <div class="play-plot-wrap">
               <div class="play-plot-board" id="play-plots"></div>
@@ -645,6 +651,6 @@
   <script src="/static/site-key.js"></script>
   <script src="/static/lounge.js?v=lounge-stickers9"></script>
   <script src="/static/wall.js?v=ting1"></script>
-  <script src="/static/play.js?v=hearts2"></script>
+  <script src="/static/play.js?v=farm-batch1"></script>
 </body>
 </html>

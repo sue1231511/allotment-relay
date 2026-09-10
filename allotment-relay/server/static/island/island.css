@@ -626,6 +626,7 @@ body.island-app.is-playing.is-yards .island-actionbar {
 .island-yards.is-peek .island-grow-status,
 .island-yards.is-peek .island-plot-grid,
 .island-yards.is-peek .island-plot-pager,
+.island-yards.is-peek .island-care-fabs,
 .island-yards.is-peek .island-harvest-fab {
   display: none;
 }
@@ -1044,13 +1045,27 @@ body.island-app.is-playing.is-yards .island-actionbar {
   margin: 0 0 10px;
 }
 
+.island-care-fabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 16px 12px;
+  z-index: 2;
+  flex-shrink: 0;
+}
+
+.island-care-fabs[hidden] {
+  display: none !important;
+}
+
 .island-harvest-fab {
   position: relative;
   left: auto;
   right: auto;
   bottom: auto;
-  margin: 0 16px 12px;
+  margin: 0;
   min-height: 52px;
+  flex: 1 1 calc(50% - 8px);
   border: 0;
   border-radius: 999px;
   background: #95b98a;
@@ -1061,8 +1076,32 @@ body.island-app.is-playing.is-yards .island-actionbar {
   flex-shrink: 0;
 }
 
+.island-harvest-fab[data-act="water"] { background: #6e9aa8; }
+.island-harvest-fab[data-act="tend"] { background: #8aa56e; }
+.island-harvest-fab[data-act="fertilize"] { background: #b08958; }
+.island-harvest-fab[data-act="harvest"] { background: #95b98a; }
+
 .island-harvest-fab[hidden] {
   display: none !important;
+}
+
+.island-qty-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+
+.island-qty-row [data-qty-val] {
+  min-width: 1.6em;
+  text-align: center;
+  font-size: 18px;
+}
+
+.island-qty-row .island-btn {
+  min-width: 44px;
+  min-height: 44px;
 }
 
 .island-plot {

@@ -11,6 +11,8 @@ import {
   plotByToken,
   plotToken,
   ripeYard,
+  thirstyYard,
+  yardPlots,
   state,
   hutScene,
   tickGrow,
@@ -19,7 +21,7 @@ import {
 } from "./store.js?v=island-modulefix2";
 import { renderHud } from "./hud.js?v=dual-panels1";
 import { renderMap } from "./map.js?v=hotspot-fix1";
-import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=farm-events1";
+import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=farm-batch1";
 import { renderShore, renderShoreYard, renderPortHub, renderBeachHub } from "./scenes/shore.js?v=island-modulefix2";
 import { renderPlaza } from "./scenes/plaza.js?v=island-modulefix2";
 import { renderPlace } from "./scenes/place.js?v=island-modulefix2";
@@ -52,7 +54,7 @@ import { setBackChip, setBagChip } from "./ui/back-map.js?v=dual-panels1";
 import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=island-modulefix2";
 import { popOut } from "./ui/pop.js?v=island-modulefix2";
 import { bgmMuted, playBgm, setBgmMuted, startIslandBgm, stopBgm } from "./ui/bgm.js?v=undertide-bgm1";
-import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showVendSheet, toast } from "./ui/modal.js?v=island-modulefix2";
+import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showVendSheet, toast } from "./ui/modal.js?v=farm-batch1";
 
 const sceneEl = () => document.getElementById("island-scene");
 const sheetEl = () => document.getElementById("island-sheet");
@@ -230,7 +232,7 @@ async function enterScene(name, opts) {
       renderYards(root, {
         onTapPlot: tapPlot,
         onTapGrass: tapGrass,
-        onHarvestAll: harvestAll,
+        onCareBatch: careBatch,
         onSwitchYard: switchYard,
         onOpenEvents: wrap => openFarmEvents(wrap, data => {
           applySnapshot(data);
@@ -720,7 +722,7 @@ function tapShopSku(item) {
     toast(item.note || "这件现在买不了。");
     return;
   }
-  showBuySheet(item, { onConfirm: () => buyShopSku(item) });
+  showBuySheet(item, { onConfirm: (qty) => buyShopSku(item, qty) });
 }
 
 function shopListTop() {
@@ -2606,10 +2608,11 @@ function stopQuarryTick() {
   quarryTimer = 0;
 }
 
-async function buyShopSku(item) {
+async function buyShopSku(item, qty = 1) {
   if (!item) return;
+  const n = Math.max(1, Math.min(24, Number(qty) || 1));
   const listTop = shopListTop();
-  await act(() => api.shopBuy(item.id, 1), { keepShop: true, listTop, quiet: true });
+  await act(() => api.shopBuy(item.id, n), { keepShop: true, listTop, quiet: true });
 }
 
 function tapGrass() {
@@ -2734,12 +2737,24 @@ async function sowSelected(crop) {
 }
 
 async function harvestAll() {
-  const ready = ripeYard();
+  await careBatch("harvest");
+}
+
+async function careBatch(kind) {
+  const jobs = {
+    harvest: { pick: ripeYard, call: (plot) => api.harvest(plotToken(plot)), many: "一键收获", one: "收获", empty: "还没有成熟的作物。" },
+    water: { pick: thirstyYard, call: (plot) => api.water(plotToken(plot)), many: "一键浇水", one: "浇水", empty: "没有能浇的地。" },
+    tend: { pick: () => yardPlots().filter((p) => p.can_tend), call: (plot) => api.tend(plotToken(plot)), many: "一键打理", one: "打理", empty: "没有待打理的地。" },
+    fertilize: { pick: () => yardPlots().filter((p) => p.can_fertilize), call: (plot) => api.fertilize(plotToken(plot)), many: "一键施肥", one: "施肥", empty: "没有能施肥的地。堆肥或粪便不够也会停。" },
+  };
+  const job = jobs[kind];
+  if (!job) return;
+  const ready = job.pick();
   if (!ready.length) {
-    toast("还没有成熟的作物。");
+    toast(job.empty);
     return;
   }
-  await runPlotBatch(ready, (plot) => api.harvest(plotToken(plot)), "一键收获", "收获");
+  await runPlotBatch(ready, job.call, job.many, job.one);
 }
 
 async function runPlotBatch(plots, fn, manyTitle, oneTitle) {
@@ -2945,10 +2960,6 @@ function startGrowTick() {
       renderHud();
       syncHomeChrome();
       if (state.plantOpen) openPlant();
-      else {
-        const harvest = document.getElementById("island-harvest-all");
-        if (harvest) harvest.hidden = ripeYard().length === 0;
-      }
     } catch {
       /* 下一秒再试 */
     }

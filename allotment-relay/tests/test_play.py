@@ -147,7 +147,15 @@ def test_play_page_lists_all_plot_kinds() -> None:
     assert "isPlotGo" in js
     assert "goHome('plotsSection')" in js
     assert 'data-buy-seed' in html
+    assert "play-plot-batch" in html
+    assert "一键浇水" in html
+    assert "一键打理" in html
+    assert "一键施肥" in html
+    assert "一键收获" in html
     assert "seedBuyHtml" in js
+    assert "buy 5 ${cmd}" in js
+    assert "buy 10 ${cmd}" in js
+    assert "tend ${token}" in js
     assert 'id="play-bond"' in html
     assert "duesUrgent" in js
     assert "去潮生会" in js
