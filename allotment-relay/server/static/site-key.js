@@ -7,18 +7,29 @@ function siteKeyEsc(s) {
   return d.innerHTML;
 }
 
+function normalizeSiteKey(raw) {
+  const text = String(raw || '').trim();
+  if (!text) return '';
+  if (text.indexOf('ar_sk_') === 0 && text.indexOf('://') < 0 && text.indexOf('=') < 0) {
+    return text.split(/\s/)[0];
+  }
+  const m = text.match(/ar_sk_[A-Za-z0-9_-]+/);
+  return m ? m[0] : '';
+}
+
 function loadSavedKey() {
   try {
-    const key = localStorage.getItem(SITE_KEY_STORAGE);
-    return key && key.startsWith('ar_sk_') ? key : '';
+    return normalizeSiteKey(localStorage.getItem(SITE_KEY_STORAGE) || '');
   } catch {
     return '';
   }
 }
 
 function saveSiteKey(key) {
+  const clean = normalizeSiteKey(key);
+  if (!clean) return;
   try {
-    localStorage.setItem(SITE_KEY_STORAGE, key);
+    localStorage.setItem(SITE_KEY_STORAGE, clean);
   } catch {
     /* private mode / quota */
   }

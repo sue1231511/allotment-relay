@@ -2629,10 +2629,45 @@ async def recover_api_key(email: str) -> str | None:
         return row["api_key"] if row else None
 
 
+_API_KEY_RE = re.compile(rf"{re.escape(KEY_PREFIX)}[A-Za-z0-9_-]+")
+
+
+def normalize_api_key(raw: str) -> str:
+    """网页/家机常把 MCP 地址整段贴进来。只留下 ar_sk_ 那一串。"""
+    text = (raw or "").strip()
+    if not text:
+        return ""
+    if text.startswith(KEY_PREFIX) and "://" not in text and "=" not in text:
+        return text.split()[0]
+    found = _API_KEY_RE.search(text)
+    return found.group(0) if found else ""
+
+
+def invalid_key_message(raw: str) -> str:
+    text = (raw or "").strip()
+    if not text:
+        return "请先贴上凭证。"
+    extracted = normalize_api_key(text)
+    looks_like_url = (
+        "://" in text
+        or "mcp" in text.lower()
+        or "api_key=" in text.lower()
+        or text.lower().startswith("http")
+    )
+    if looks_like_url and not extracted:
+        return "网页只认 ar_sk_ 开头那一串，不要贴整段 MCP 地址。家机开着也能进。"
+    if not extracted:
+        return "凭证无效。只要 ar_sk_ 开头那一串，不要带网址。"
+    return "凭证无效。回上手页重新贴一次。家机开着也能进，人和管家是同一个号。"
+
+
 async def get_key_row(api_key: str) -> dict[str, Any] | None:
+    key = normalize_api_key(api_key)
+    if not key:
+        return None
     async with connect() as db:
         db.row_factory = aiosqlite.Row
-        cur = await db.execute("SELECT * FROM api_keys WHERE api_key = ?", (api_key,))
+        cur = await db.execute("SELECT * FROM api_keys WHERE api_key = ?", (key,))
         row = await cur.fetchone()
         return dict(row) if row else None
 

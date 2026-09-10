@@ -1373,8 +1373,12 @@ async function act(tool, command) {
 }
 
 async function bootWithKey(key) {
-  state.key = key;
-  saveSiteKey(key);
+  const clean = typeof normalizeSiteKey === 'function' ? normalizeSiteKey(key) : String(key || '').trim();
+  if (!clean) {
+    throw new Error('网页只认 ar_sk_ 开头那一串，不要贴整段 MCP 地址。家机开着也能进。');
+  }
+  state.key = clean;
+  saveSiteKey(clean);
   const data = await api('', '');
   applySnap(data, '');
 }

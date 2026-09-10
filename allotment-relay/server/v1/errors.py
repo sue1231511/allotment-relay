@@ -47,8 +47,8 @@ def humanize(text: str) -> str:
 def classify(exc: BaseException) -> ApiError:
     raw = str(exc)
     msg = humanize(raw)
-    if "凭证无效" in raw:
-        return ApiError("INVALID_KEY", "凭证无效。回上手页重新贴一次。", status=401, detail=msg)
+    if "凭证无效" in raw or "不要贴整段 MCP" in raw:
+        return ApiError("INVALID_KEY", msg or "凭证无效。回上手页重新贴一次。家机开着也能进。", status=401, detail=msg)
     if "尚未登记" in raw or "请先" in raw and "enroll" in raw:
         return ApiError("NOT_ENROLLED", "还没起岛上的名字。", status=403, detail=msg)
     if "精力不足" in raw:

@@ -9,6 +9,7 @@ export function loadKey() {
       if (fromSite) return fromSite;
     }
     const key = localStorage.getItem(STORAGE);
+    if (typeof normalizeSiteKey === "function") return normalizeSiteKey(key || "");
     return key && key.startsWith("ar_sk_") ? key : "";
   } catch {
     return "";

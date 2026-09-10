@@ -81,7 +81,7 @@
         {% if island_weddings %}
         <p class="play-gate-wedding">今日岛上有婚礼 · {{ island_wedding_headline }} 贴凭证进去，去连理所可以出席。</p>
         {% else %}
-        <p>和领取凭证是同一份。贴进来，人和管家动的是同一个号。</p>
+        <p>和领取凭证是同一份。只要 <span class="mono">ar_sk_...</span> 那一串，不要贴整段 MCP 地址。家机开着也能进，人和管家是同一个号。</p>
         {% endif %}
         <form id="play-key-form">
           <input id="play-key" type="password" placeholder="ar_sk_..." autocomplete="off" required>
@@ -648,9 +648,9 @@
   <div id="lounge-toast" class="lounge-toast hidden" role="status"></div>
 
   <script src="/static/device.js?v=invite1"></script>
-  <script src="/static/site-key.js"></script>
+  <script src="/static/site-key.js?v=keynorm1"></script>
   <script src="/static/lounge.js?v=lounge-stickers9"></script>
   <script src="/static/wall.js?v=ting1"></script>
-  <script src="/static/play.js?v=farm-batch1"></script>
+  <script src="/static/play.js?v=keynorm1"></script>
 </body>
 </html>
