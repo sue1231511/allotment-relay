@@ -108,3 +108,15 @@ async def _test_session_accepts_mcp_url() -> None:
     play_res = client.post("/api/play", json={"api_key": wrapped, "tool": "", "command": ""})
     assert play_res.status_code == 200, play_res.text
     assert play_res.json()["enrolled"] is True
+
+
+def main() -> None:
+    test_normalize_api_key_shapes()
+    test_get_key_row_accepts_mcp_url()
+    test_human_and_mcp_can_use_same_key()
+    test_session_accepts_mcp_url()
+    print("api key normalize ok")
+
+
+if __name__ == "__main__":
+    main()
