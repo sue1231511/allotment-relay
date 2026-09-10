@@ -86,6 +86,82 @@ async def _pick_plot(
     return dict(row) if row else None
 
 
+async def _pick_unwatered_outdoor(
+    conn: aiosqlite.Connection,
+    steward_id: int,
+    *,
+    exclude_ids: set[int] | None = None,
+) -> dict[str, Any] | None:
+    conn.row_factory = aiosqlite.Row
+    exclude_ids = exclude_ids or set()
+    extra = ""
+    args: list[Any] = [steward_id]
+    if exclude_ids:
+        extra = f" AND id NOT IN ({','.join('?' * len(exclude_ids))})"
+        args.extend(exclude_ids)
+    cur = await conn.execute(
+        f"""
+        SELECT * FROM parcels
+        WHERE steward_id=? AND crop IS NOT NULL AND greenhouse=0
+          AND COALESCE(watered,0)=0{extra}
+        ORDER BY RANDOM() LIMIT 1
+        """,
+        args,
+    )
+    row = await cur.fetchone()
+    return dict(row) if row else None
+
+
+async def _pick_watered_plot(
+    conn: aiosqlite.Connection,
+    steward_id: int,
+    *,
+    exclude_ids: set[int] | None = None,
+) -> dict[str, Any] | None:
+    conn.row_factory = aiosqlite.Row
+    exclude_ids = exclude_ids or set()
+    extra = ""
+    args: list[Any] = [steward_id]
+    if exclude_ids:
+        extra = f" AND id NOT IN ({','.join('?' * len(exclude_ids))})"
+        args.extend(exclude_ids)
+    cur = await conn.execute(
+        f"""
+        SELECT * FROM parcels
+        WHERE steward_id=? AND crop IS NOT NULL AND COALESCE(watered,0)=1{extra}
+        ORDER BY RANDOM() LIMIT 1
+        """,
+        args,
+    )
+    row = await cur.fetchone()
+    return dict(row) if row else None
+
+
+async def _pick_barn_animal(
+    conn: aiosqlite.Connection,
+    steward_id: int,
+    *,
+    prefer_fed: bool = False,
+    prefer_unfed: bool = False,
+) -> dict[str, Any] | None:
+    conn.row_factory = aiosqlite.Row
+    order = "ORDER BY RANDOM()"
+    if prefer_unfed:
+        order = "ORDER BY COALESCE(fed,0) ASC, RANDOM()"
+    elif prefer_fed:
+        order = "ORDER BY COALESCE(fed,0) DESC, RANDOM()"
+    cur = await conn.execute(
+        f"""
+        SELECT * FROM barn_animals
+        WHERE steward_id=? AND species IS NOT NULL
+        {order} LIMIT 1
+        """,
+        (steward_id,),
+    )
+    row = await cur.fetchone()
+    return dict(row) if row else None
+
+
 async def _steal_random_item(conn: aiosqlite.Connection, steward_id: int) -> str | None:
     conn.row_factory = aiosqlite.Row
     rows = await (await conn.execute(
@@ -464,9 +540,64 @@ async def _apply_effects(
             if plot:
                 plot_id_holder[0] = plot["id"]
                 await conn.execute(
-                    "UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0 WHERE id=?",
+                    """
+                    UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
+                        tree_born_at=0, harvest_left=0, watered=0
+                    WHERE id=?
+                    """,
                     (plot["id"],),
                 )
+        elif eff == "plot_wilt":
+            plot = await _pick_unwatered_outdoor(conn, steward["id"], exclude_ids=exclude)
+            if plot:
+                plot_id_holder[0] = plot["id"]
+                meta = CROPS.get(plot.get("crop") or "", {})
+                if meta.get("tree"):
+                    await conn.execute(
+                        "UPDATE parcels SET planted_at = planted_at + ? WHERE id=?",
+                        (random.randint(600, 1200), plot["id"]),
+                    )
+                else:
+                    await conn.execute(
+                        """
+                        UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
+                            grow_target=0, grow_pace='', fertilized=0, watered=0,
+                            harvest_left=0, ready_at=0, tree_born_at=0
+                        WHERE id=?
+                        """,
+                        (plot["id"],),
+                    )
+        elif eff == "plot_unwater":
+            plot = await _pick_watered_plot(conn, steward["id"], exclude_ids=exclude)
+            if plot:
+                plot_id_holder[0] = plot["id"]
+                await conn.execute("UPDATE parcels SET watered=0 WHERE id=?", (plot["id"],))
+        elif eff == "barn_unfeed":
+            animal = await _pick_barn_animal(conn, steward["id"], prefer_fed=True)
+            if animal:
+                await conn.execute(
+                    "UPDATE barn_animals SET fed=0 WHERE id=?",
+                    (animal["id"],),
+                )
+        elif eff == "barn_die":
+            animal = await _pick_barn_animal(conn, steward["id"], prefer_unfed=True)
+            if animal:
+                from . import barn_disease as barn_disease_mod
+                sick_key = barn_disease_mod.animal_ailment_key(dict(animal))
+                await conn.execute(
+                    """
+                    UPDATE barn_animals SET species=NULL, stocked_at=NULL,
+                        fed=0, guard=0, born_at=0, ailment='', ailment_at=0
+                    WHERE id=?
+                    """,
+                    (animal["id"],),
+                )
+                if sick_key:
+                    msg = await barn_disease_mod.contact_human(
+                        conn, steward["id"], sick_key, source="barn_die"
+                    )
+                    if msg:
+                        ailment_msgs.append(msg)
         elif eff == "plot_delay":
             plot = await _pick_plot(conn, steward["id"], exclude_ids=exclude)
             if plot and plot.get("planted_at"):
@@ -761,19 +892,29 @@ async def gather_blight_loss(conn: aiosqlite.Connection, steward_id: int, crop_k
 
 async def net_bonus_chance() -> float:
     pulse = await active_world_pulse()
-    if pulse and pulse.get("effect_type") == "fish_run":
+    effect = (pulse or {}).get("effect_type") if pulse else None
+    from . import world as world_mod
+
+    climate = world_mod.field_climate_effect() or effect
+    if climate in {"fish_run", "spring_flood"}:
         return 0.32
-    if pulse and pulse.get("effect_type") == "calm_sea":
+    if climate == "calm_sea":
         return 0.12
     return 0.0
 
 
 async def net_fog_penalty() -> float:
     pulse = await active_world_pulse()
-    if pulse and pulse.get("effect_type") == "fog_bank":
-        return 0.10
-    if pulse and pulse.get("effect_type") == "weekly_tide":
+    effect = (pulse or {}).get("effect_type") if pulse else None
+    from . import world as world_mod
+
+    climate = world_mod.field_climate_effect() or effect
+    if climate in {"fog_bank", "red_tide", "north_wind"}:
+        return 0.10 if climate != "red_tide" else 0.14
+    if climate == "weekly_tide":
         return 0.12
+    if climate == "thunderstorm":
+        return 0.08
     return 0.0
 
 
@@ -830,7 +971,12 @@ async def active_world_pulse(conn: aiosqlite.Connection | None = None) -> dict[s
         "SELECT * FROM world_pulse WHERE expires_at > ? ORDER BY started_at DESC LIMIT 1",
         (now,),
     )).fetchone()
-    return dict(row) if row else None
+    if not row:
+        world.note_pulse(None, 0)
+        return None
+    pulse = dict(row)
+    world.note_pulse(pulse.get("effect_type") or "", int(pulse.get("expires_at") or 0))
+    return pulse
 
 
 async def purge_expired_pulses(conn: aiosqlite.Connection) -> None:
@@ -869,6 +1015,10 @@ async def maybe_world_pulse(steward: dict[str, Any]) -> str | None:
             await conn.execute(
                 "UPDATE parcels SET tended=0 WHERE greenhouse=0 AND crop IS NOT NULL",
             )
+        world.note_pulse(pulse["effect"], now + config.WORLD_PULSE_DURATION)
+        if pulse["effect"] in {"drought", "heatwave", "frost", "pest_wave"}:
+            from . import disaster as disaster_mod
+            await disaster_mod.apply_pulse_field_hit(conn, pulse["effect"])
         await conn.commit()
         from . import lore as lore_mod
         msg = f"🌊 全服脉冲·{pulse['label']}：{pulse['text']}"

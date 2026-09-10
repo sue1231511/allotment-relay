@@ -234,9 +234,9 @@ def _legged_fish_roll_chance(route_key: str) -> float:
 async def _legged_fish_roll_chance_async(conn: aiosqlite.Connection, route_key: str) -> float:
     chance = _legged_fish_roll_chance(route_key)
     pulse = await events.active_world_pulse(conn)
-    if pulse and pulse.get("effect_type") == "fish_run":
+    if pulse and pulse.get("effect_type") in {"fish_run", "spring_flood"}:
         chance += 0.03
-    if pulse and pulse.get("effect_type") == "red_tide":
+    if pulse and pulse.get("effect_type") in {"red_tide", "north_wind"}:
         chance -= 0.02
     return max(0.02, min(0.25, chance))
 
@@ -943,10 +943,14 @@ async def _resolve_voyage(
     hut_b = await hut_mod.get_bonuses(conn, s["id"])
     fail_chance *= hut_b.voyage_fail
     pulse = await events.active_world_pulse(conn)
-    if pulse and pulse.get("effect_type") == "fish_run":
+    if pulse and pulse.get("effect_type") in {"fish_run", "spring_flood"}:
         fail_chance *= 0.85
     if pulse and pulse.get("effect_type") == "storm_front":
         fail_chance += 0.08
+    if pulse and pulse.get("effect_type") in {"thunderstorm", "north_wind"}:
+        fail_chance += 0.06
+    if pulse and pulse.get("effect_type") == "red_tide":
+        fail_chance += 0.04
 
     extra = await events.roll_after_action(s, "voyage_return", conn, voyage=voyage)
     s = await _refresh_steward(conn, s["id"])

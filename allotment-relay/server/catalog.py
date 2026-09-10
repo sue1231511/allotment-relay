@@ -328,6 +328,81 @@ SEA_CATCH = {
         "pen": False,
         "cast_only": True,
     },
+    # ── 新鱼种：近岸家常 → 深海贵物，部分带季节 ──
+    "sardine": {
+        "name": "沙丁", "emoji": "🐟", "sell": 12,
+        "tides": ["ebb", "slack"], "zones": ["shore", "near"], "rarity": 1,
+        "pen": True, "grow": 340, "stock_tickets": 6, "feed_item": "compost", "feed_qty": 1,
+    },
+    "whitebait": {
+        "name": "银鱼", "emoji": "🐟", "sell": 13,
+        "tides": ["ebb", "slack"], "zones": ["shore"], "rarity": 1,
+        "pen": True, "grow": 320, "stock_tickets": 6, "feed_item": "compost", "feed_qty": 1,
+    },
+    "yellowcroaker": {
+        "name": "黄鱼", "emoji": "🐠", "sell": 24,
+        "tides": ["slack", "flood"], "zones": ["near", "shore"], "rarity": 2,
+        "pen": True, "grow": 540, "stock_tickets": 16, "feed_item": "crop_kelp", "feed_qty": 1,
+    },
+    "oyster": {
+        "name": "生蚝", "emoji": "🦪", "sell": 20,
+        "tides": ["ebb"], "zones": ["shore"], "rarity": 2, "pen": False,
+    },
+    "swimmingcrab": {
+        "name": "梭子蟹", "emoji": "🦀", "sell": 34,
+        "tides": ["ebb", "slack"], "zones": ["shore", "near"], "rarity": 3,
+        "pen": True, "grow": 700, "stock_tickets": 24, "feed_item": "compost", "feed_qty": 2,
+    },
+    "seabream": {
+        "name": "真鲷", "emoji": "🐡", "sell": 32,
+        "tides": ["slack", "flood"], "zones": ["near", "far"], "rarity": 3,
+        "pen": True, "grow": 620, "stock_tickets": 22, "feed_item": "crop_kelp", "feed_qty": 1,
+    },
+    "spanishmack": {
+        "name": "马鲛", "emoji": "🐠", "sell": 28,
+        "tides": ["flood", "slack"], "zones": ["near", "far"], "rarity": 3,
+        "pen": True, "grow": 600, "stock_tickets": 20, "feed_item": "wild_mint", "feed_qty": 1,
+    },
+    "flyingfish": {
+        "name": "飞鱼", "emoji": "🐟", "sell": 30,
+        "tides": ["flood", "slack"], "zones": ["near", "far"], "rarity": 3, "pen": False,
+        "seasons": ("春", "夏"),
+    },
+    "shad": {
+        "name": "鲥鱼", "emoji": "🐟", "sell": 29,
+        "tides": ["ebb", "slack"], "zones": ["near", "shore"], "rarity": 3, "pen": False,
+        "seasons": ("春",),
+    },
+    "icefish": {
+        "name": "冰鱼", "emoji": "🐟", "sell": 22,
+        "tides": ["ebb", "slack"], "zones": ["shore", "near"], "rarity": 2, "pen": False,
+        "seasons": ("冬",),
+    },
+    "grouper": {
+        "name": "石斑", "emoji": "🐠", "sell": 48,
+        "tides": ["slack", "flood"], "zones": ["far", "deep"], "rarity": 4, "pen": False,
+    },
+    "octopus": {
+        "name": "八爪", "emoji": "🐙", "sell": 42,
+        "tides": ["ebb", "flood"], "zones": ["far", "deep"], "rarity": 4, "pen": False,
+    },
+    "abalone": {
+        "name": "鲍鱼", "emoji": "🐚", "sell": 52,
+        "tides": ["ebb"], "zones": ["shore", "near"], "rarity": 4, "pen": False,
+    },
+    "lobster": {
+        "name": "龙虾", "emoji": "🦞", "sell": 70,
+        "tides": ["ebb", "slack"], "zones": ["deep", "far"], "rarity": 5,
+        "pen": True, "grow": 960, "stock_tickets": 40, "feed_item": "crop_kelp", "feed_qty": 3,
+    },
+    "tuna": {
+        "name": "金枪", "emoji": "🐟", "sell": 58,
+        "tides": ["flood"], "zones": ["deep", "far"], "rarity": 5, "pen": False,
+    },
+    "swordfish": {
+        "name": "旗鱼", "emoji": "🗡️", "sell": 78,
+        "tides": ["flood"], "zones": ["deep"], "rarity": 6, "pen": False,
+    },
 }
 
 WALKBLUE_SPECIES = "walkblue"
@@ -380,6 +455,11 @@ HEARTH_RECIPES = {
     "compost|crop_beet": {"name": "甜菜酵碗", "sell": 30, "tags": ["root", "ferment"]},
     "fish_seatrout|crop_kelp": {"name": "海鳟卷", "sell": 55, "tags": ["sea"]},
     "fish_glassshrimp|wild_mint": {"name": "水晶虾盘", "sell": 46, "tags": ["sea"]},
+    "crop_kale|fish_sardine": {"name": "沙丁叶汤", "sell": 36, "tags": ["sea", "leaf"]},
+    "crop_garlic|fish_oyster": {"name": "蒜烤生蚝", "sell": 44, "tags": ["sea"]},
+    "crop_ginger|fish_yellowcroaker": {"name": "姜丝黄鱼", "sell": 52, "tags": ["sea"]},
+    "crop_kelp|fish_icefish": {"name": "冰鱼海藻盅", "sell": 48, "tags": ["sea"]},
+    "crop_lemongrass|fish_flyingfish": {"name": "香茅飞鱼", "sell": 54, "tags": ["sea", "tropic"]},
 }
 
 COMMONS_TEMPLATES = [
@@ -955,15 +1035,15 @@ MANURE = {
 LARGE_LIVESTOCK = {"sheep", "pig", "cow", "goat"}
 
 LIVESTOCK = {
-    "rabbit": {"name": "兔", "emoji": "🐰", "buy": 55, "feed": "crop_fogpea", "feed_qty": 1, "grow": 600, "product": "meat_rabbit", "product_qty": 1},
-    "chicken": {"name": "鸡", "emoji": "🐔", "buy": 48, "feed": "crop_rye", "feed_qty": 1, "grow": 480, "product": "egg", "product_qty": 2, "daily": True},
-    "duck": {"name": "鸭", "emoji": "🦆", "buy": 58, "feed": "crop_sweetpotato", "feed_qty": 1, "grow": 520, "product": "duck_egg", "product_qty": 2, "daily": True},
-    "sheep": {"name": "羊", "emoji": "🐑", "buy": 95, "feed": "crop_kale", "feed_qty": 2, "grow": 900, "product": "wool", "product_qty": 1, "manure": "manure_sheep", "manure_feed": 1, "manure_harvest": 1},
-    "pig": {"name": "猪", "emoji": "🐷", "buy": 110, "feed": "crop_beet", "feed_qty": 2, "grow": 840, "product": "meat_pork", "product_qty": 2, "manure": "manure_pig", "manure_feed": 1, "manure_harvest": 2},
-    "goat": {"name": "山羊", "emoji": "🐐", "buy": 125, "feed": "crop_lemongrass", "feed_qty": 2, "grow": 960, "product": "goat_milk", "product_qty": 2, "manure": "manure_sheep", "manure_feed": 1, "manure_harvest": 1, "daily": True},
-    "cow": {"name": "牛", "emoji": "🐄", "buy": 180, "feed": "crop_rye", "feed_qty": 3, "grow": 1200, "product": "milk", "product_qty": 2, "manure": "manure_cow", "manure_feed": 2, "manure_harvest": 3, "daily": True},
-    "bee": {"name": "蜂箱", "emoji": "🐝", "buy": 85, "feed": "crop_blueberry", "feed_qty": 1, "grow": 0, "product": "honey", "product_qty": 2, "hive": True},
-    "dog": {"name": "狗", "emoji": "🐕", "buy": 70, "feed": "meat_rabbit", "feed_qty": 1, "grow": 0, "product": "guard", "product_qty": 0, "guard": True},
+    "rabbit": {"name": "兔", "emoji": "🐰", "buy": 55, "feed": "crop_fogpea", "feed_qty": 1, "grow": 600, "product": "meat_rabbit", "product_qty": 1, "life_days": 3},
+    "chicken": {"name": "鸡", "emoji": "🐔", "buy": 48, "feed": "crop_rye", "feed_qty": 1, "grow": 480, "product": "egg", "product_qty": 2, "daily": True, "life_days": 4},
+    "duck": {"name": "鸭", "emoji": "🦆", "buy": 58, "feed": "crop_sweetpotato", "feed_qty": 1, "grow": 520, "product": "duck_egg", "product_qty": 2, "daily": True, "life_days": 4},
+    "sheep": {"name": "羊", "emoji": "🐑", "buy": 95, "feed": "crop_kale", "feed_qty": 2, "grow": 900, "product": "wool", "product_qty": 1, "manure": "manure_sheep", "manure_feed": 1, "manure_harvest": 1, "life_days": 6},
+    "pig": {"name": "猪", "emoji": "🐷", "buy": 110, "feed": "crop_beet", "feed_qty": 2, "grow": 840, "product": "meat_pork", "product_qty": 2, "manure": "manure_pig", "manure_feed": 1, "manure_harvest": 2, "life_days": 5},
+    "goat": {"name": "山羊", "emoji": "🐐", "buy": 125, "feed": "crop_lemongrass", "feed_qty": 2, "grow": 960, "product": "goat_milk", "product_qty": 2, "manure": "manure_sheep", "manure_feed": 1, "manure_harvest": 1, "daily": True, "life_days": 6},
+    "cow": {"name": "牛", "emoji": "🐄", "buy": 180, "feed": "crop_rye", "feed_qty": 3, "grow": 1200, "product": "milk", "product_qty": 2, "manure": "manure_cow", "manure_feed": 2, "manure_harvest": 3, "daily": True, "life_days": 8},
+    "bee": {"name": "蜂箱", "emoji": "🐝", "buy": 85, "feed": "crop_blueberry", "feed_qty": 1, "grow": 0, "product": "honey", "product_qty": 2, "hive": True, "life_days": 10},
+    "dog": {"name": "狗", "emoji": "🐕", "buy": 70, "feed": "meat_rabbit", "feed_qty": 1, "grow": 0, "product": "guard", "product_qty": 0, "guard": True, "life_days": 12},
 }
 
 # 渔具数值 tier — tide_ops gear status / upgrade bait|rod|net
@@ -1158,6 +1238,86 @@ KITCHEN_DISHES = {
         "ings": ["crop_fogpea", "crop_garlic", "crop_chili"],
         "base_sell": 55, "energy": 22, "tags": ["legume"],
     },
+    "sardine_kale": {
+        "name": "沙丁甘蓝锅", "emoji": "🍲",
+        "ings": ["fish_sardine", "crop_kale", "crop_garlic"],
+        "base_sell": 50, "energy": 24, "tags": ["sea"],
+    },
+    "whitebait_omelette": {
+        "name": "银鱼煎蛋", "emoji": "🍳",
+        "ings": ["fish_whitebait", "egg", "crop_garlic"],
+        "base_sell": 49, "energy": 24, "tags": ["sea"],
+    },
+    "steam_yellowcroaker": {
+        "name": "清蒸黄鱼", "emoji": "🐟",
+        "ings": ["fish_yellowcroaker", "crop_ginger", "crop_garlic"],
+        "base_sell": 72, "energy": 28, "tags": ["sea"],
+    },
+    "roast_oyster": {
+        "name": "烤生蚝", "emoji": "🦪",
+        "ings": ["fish_oyster", "crop_garlic", "crop_chili"],
+        "base_sell": 66, "energy": 26, "tags": ["sea", "spicy"],
+    },
+    "ginger_swimmingcrab": {
+        "name": "姜炒梭子蟹", "emoji": "🦀",
+        "ings": ["fish_swimmingcrab", "crop_ginger", "crop_chili"],
+        "base_sell": 88, "energy": 28, "tags": ["sea", "spicy"],
+    },
+    "oil_seabream": {
+        "name": "葱油真鲷", "emoji": "🐡",
+        "ings": ["fish_seabream", "crop_garlic", "crop_ginger"],
+        "base_sell": 81, "energy": 30, "tags": ["sea"],
+    },
+    "spanishmack_stew": {
+        "name": "姜炖马鲛", "emoji": "🍲",
+        "ings": ["fish_spanishmack", "crop_ginger", "crop_kale"],
+        "base_sell": 74, "energy": 28, "tags": ["sea"],
+    },
+    "lemongrass_flyingfish": {
+        "name": "香茅飞鱼", "emoji": "🐟",
+        "ings": ["fish_flyingfish", "crop_lemongrass", "crop_lime"],
+        "base_sell": 83, "energy": 28, "tags": ["sea", "tropic"],
+    },
+    "spring_shad": {
+        "name": "清蒸鲥鱼", "emoji": "🐟",
+        "ings": ["fish_shad", "crop_ginger", "crop_fogpea"],
+        "base_sell": 83, "energy": 28, "tags": ["sea"],
+    },
+    "icefish_kelp": {
+        "name": "冰鱼海藻汤", "emoji": "🍲",
+        "ings": ["fish_icefish", "crop_kelp", "crop_ginger"],
+        "base_sell": 62, "energy": 26, "tags": ["sea"],
+    },
+    "chili_grouper": {
+        "name": "红烧石斑", "emoji": "🌶️",
+        "ings": ["fish_grouper", "crop_chili", "crop_garlic"],
+        "base_sell": 96, "energy": 32, "tags": ["sea", "spicy"],
+    },
+    "garlic_octopus": {
+        "name": "葱烧八爪", "emoji": "🐙",
+        "ings": ["fish_octopus", "crop_garlic", "crop_chili"],
+        "base_sell": 90, "energy": 30, "tags": ["sea", "spicy"],
+    },
+    "abalone_porridge": {
+        "name": "鲍鱼粥", "emoji": "🥣",
+        "ings": ["fish_abalone", "crop_rye", "crop_ginger"],
+        "base_sell": 104, "energy": 30, "tags": ["sea", "rich"],
+    },
+    "garlic_lobster": {
+        "name": "蒜蓉龙虾", "emoji": "🦞",
+        "ings": ["fish_lobster", "crop_garlic", "crop_chili"],
+        "base_sell": 120, "energy": 34, "tags": ["sea", "spicy"],
+    },
+    "seared_tuna": {
+        "name": "香煎金枪", "emoji": "🐟",
+        "ings": ["fish_tuna", "crop_lime", "crop_chili"],
+        "base_sell": 116, "energy": 32, "tags": ["sea", "tropic"],
+    },
+    "swordfish_steak": {
+        "name": "旗鱼排", "emoji": "🗡️",
+        "ings": ["fish_swordfish", "crop_ginger", "crop_rye"],
+        "base_sell": 133, "energy": 34, "tags": ["sea", "rich"],
+    },
 }
 
 MYTH_INGREDIENTS = {
@@ -1206,6 +1366,10 @@ AILMENTS = {
     "sunburn": {
         "name": "日晒灼伤", "emoji": "☀️", "cost": 20, "health_loss": 8, "health_restore": 11,
         "hint": "赶海没涂泥，红成虾", "energy_extra": 1,
+    },
+    "heatstroke": {
+        "name": "中暑", "emoji": "🥵", "cost": 28, "health_loss": 12, "health_restore": 15,
+        "hint": "旱天里干活烤的。clinic treat 中暑", "energy_extra": 3, "max_energy_cut": 8,
     },
     "blister": {
         "name": "磨起泡", "emoji": "💧", "cost": 16, "health_loss": 5, "health_restore": 8,
@@ -1277,6 +1441,32 @@ AILMENTS = {
         "hint": "风暴滩上吸进去的。clinic treat 咸痰。不是岩尘入肺",
         "energy_extra": 2,
     },
+    "barn_fever": {
+        "name": "畜热", "emoji": "🤒", "cost": 26, "health_loss": 11, "health_restore": 14,
+        "hint": "摸病畜、挤病奶落下的。clinic treat 畜热。霍衡不给人开药",
+        "energy_extra": 2, "max_energy_cut": 6,
+    },
+    "hoof_toxin": {
+        "name": "蹄毒", "emoji": "🦠", "cost": 28, "health_loss": 12, "health_restore": 10,
+        "hint": "接触蹄瘟牲口或病死栏。约两次挂号。clinic treat 蹄毒，不是兽医",
+        "energy_extra": 3, "max_energy_cut": 8,
+        "courses": 2, "drain_energy": 1, "drain_every": 1800,
+        "stage_names": {2: "红肿", 1: "结痂"},
+        "re_line": "又碰了病蹄，{name}回到{stage_name}。visit_ops clinic treat 蹄毒。",
+    },
+    "murrain_touch": {
+        "name": "瘟触", "emoji": "☠️", "cost": 38, "health_loss": 14, "health_restore": 10,
+        "hint": "接触畜瘟病死牲口。约两次挂号。clinic treat 瘟触。霍衡治栏不治人",
+        "energy_extra": 3, "max_energy_cut": 10,
+        "courses": 2, "drain_energy": 2, "drain_every": 1800,
+        "stage_names": {2: "发冷", 1: "余热"},
+        "re_line": "又碰了瘟栏，{name}烧回{stage_name}。visit_ops clinic treat 瘟触。",
+    },
+    "tide_rash": {
+        "name": "潮疹", "emoji": "🪸", "cost": 24, "health_loss": 9, "health_restore": 12,
+        "hint": "赤潮周撒网、坐钓、赶海沾上的。clinic treat 潮疹。不是水母蛰",
+        "energy_extra": 2,
+    },
 }
 
 PIT_AILMENTS = frozenset({"ring_shock", "pit_trauma"})
@@ -1294,6 +1484,13 @@ AILMENT_ALIASES = {
     "咸痰": "wreck_cough",
     "湿咳": "wreck_cough",
     "风暴咳": "wreck_cough",
+    "中暑": "heatstroke",
+    "热射病": "heatstroke",
+    "畜热": "barn_fever",
+    "蹄毒": "hoof_toxin",
+    "瘟触": "murrain_touch",
+    "潮疹": "tide_rash",
+    "赤潮疹": "tide_rash",
 }
 
 
@@ -1398,6 +1595,16 @@ NPC_FIXED = [
         "clinic buy 醒酒药 / use 醒酒药 可囤货；进门可能有九折，凌晨 +5 票",
         "clinic dove 喂 斑鸠（雾豌豆×1）；clinic chat 闲聊；clinic catalog 价目",
         "visit_ops visit 只能聊天，真治得 visit_ops clinic treat",
+        "牲口的病找霍衡蹄角棚，我不管羊蹄。人沾了畜热/蹄毒/瘟触/潮疹才来我这儿",
+    ]},
+    {"key": "huoheng", "name": "霍衡", "lines": [
+        "蹄角棚。岸兽医。治牲口，不治人。人发烧去桥桥。",
+        "话少，手稳。闻得出牲口气。碘酒在左边，票放桌上，不赊。",
+        "年轻时跟北岸商船看驮畜。二十年前那一场畜瘟，他没赶上第一夜，只赶上清栏。",
+        "visit_ops 霍衡 / 兽医 status / 兽医 treat 1 / 兽医 catalog / 兽医 chat 话",
+        "这人有时话会飘一下——那是真 AI，偶尔波动，正常。没接上就按老规矩说话。",
+        "栏里不对劲牵过来。拖着会病死，死了没肉。邻栏会传。",
+        "人类上手页小屋点「找兽医」。不是 hut_ops barn，也不是诊所。",
     ]},
     {"key": "momo", "name": "默默", "lines": [
         "默语花房在集市旁，鲜花与花茶每日迎客。",
@@ -2099,7 +2306,14 @@ def weighted_fish_pick(
             continue
         if rarity_cap and meta.get("rarity", 1) > rarity_cap:
             continue
+        seasons = meta.get("seasons")
+        if seasons:
+            from . import season as season_mod
+            if season_mod.current_season() not in seasons:
+                continue
         weight = max(1, 7 - meta.get("rarity", 1))
+        if seasons:
+            weight += 2
         pool.append((key, weight))
     if not pool:
         fallback = [

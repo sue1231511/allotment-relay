@@ -25,6 +25,8 @@ TRIGGER_DOMAIN = {
     "voyage_return": "voyage",
     "guild": "guild",
     "brew": "hearth",
+    "barn_feed": "barn",
+    "barn_collect": "barn",
 }
 
 ALL_TRIGGERS = set(TRIGGER_DOMAIN)
@@ -32,12 +34,13 @@ ALL_TRIGGERS = set(TRIGGER_DOMAIN)
 SCRUMP_TRIGGERS = {"tend", "gather", "forage", "guild"}
 
 DOMAIN_AILMENTS = {
-    "land": ["sprain", "cut", "backache", "allergy", "blister"],
+    "land": ["sprain", "cut", "backache", "allergy", "blister", "dehydration", "heatstroke"],
     "sea": ["cold", "jelly_sting", "shell_scratch"],
     "pen": ["cut", "crab_pinch", "blister"],
     "voyage": ["cold", "food_poison", "backache"],
     "guild": ["blister", "sprain"],
     "hearth": ["food_poison"],
+    "barn": ["cut", "blister", "heatstroke"],
 }
 
 
@@ -80,6 +83,7 @@ def _ticket_range(domain: str, kind: str) -> tuple[int, int]:
         "guild": (6, 12),
         "hearth": (3, 8),
         "scrump": (4, 10),
+        "barn": (5, 14),
     }
     return ranges.get(domain, (4, 10))
 
@@ -109,6 +113,56 @@ def _append_health(
     effects.append(f"health:{heal}")
     detail_parts.append(flavor.fill(flavor.pick(_health_flavor(domain)), n=heal))
     return True
+
+
+def _maybe_harden(
+    domain: str,
+    effects: list[str],
+    detail_parts: list[str],
+    repair_tickets: int,
+    label: str,
+) -> tuple[int, list[str], list[str], str]:
+    chance = config.EVENT_HARD_CHANCE
+    climate = world.field_climate_effect()
+    if climate in {"drought", "heatwave"} and domain in {"land", "barn"}:
+        chance = 0.32
+    elif climate == "frost" and domain == "land":
+        chance = 0.26
+    if random.random() >= chance:
+        return repair_tickets, effects, detail_parts, label
+    repair_tickets = min(
+        48,
+        (repair_tickets * 2) if repair_tickets else random.randint(12, 22),
+    )
+    extra = random.randint(8, 18)
+    effects.append(f"ticket_fine:{extra}")
+    if domain == "land":
+        roll = random.random()
+        if climate in {"drought", "heatwave"} and roll < 0.55:
+            effects.append("plot_wilt")
+            detail_parts.append(flavor.pick(flavor.LAND_WILT))
+        elif roll < 0.40:
+            effects.append("plot_unwater")
+            detail_parts.append(flavor.pick(flavor.LAND_UNWATER))
+        elif roll < 0.72:
+            effects.append("plot_wilt")
+            detail_parts.append(flavor.pick(flavor.LAND_WILT))
+        else:
+            effects.append("ailment:heatstroke")
+            detail_parts.append(flavor.pick(flavor.LAND_HARD_HEAT))
+    elif domain == "barn":
+        if random.random() < 0.55:
+            effects.append("barn_die")
+            detail_parts.append(flavor.pick(flavor.BARN_DIE))
+        else:
+            effects.append("barn_unfeed")
+            detail_parts.append(flavor.pick(flavor.BARN_BAD))
+    elif domain == "voyage":
+        effects.append("boat_damage")
+        detail_parts.append(flavor.pick(flavor.SEA_HARD))
+    else:
+        detail_parts.append(flavor.pick(flavor.SEA_HARD))
+    return repair_tickets, effects, detail_parts, "凶兆·" + label
 
 
 def generate_event(
@@ -263,6 +317,17 @@ def generate_event(
                 fine=fine,
             ))
 
+        elif domain == "barn" and roll < 0.58:
+            effects.append("barn_unfeed")
+            detail_parts.append(flavor.pick(flavor.BARN_BAD))
+        elif domain == "barn":
+            fine = random.randint(5, 12)
+            effects.append(f"ticket_fine:{fine}")
+            detail_parts.append(flavor.fill(
+                flavor.pick(flavor.GENERIC_FINE),
+                fine=fine,
+            ))
+
         else:
             fine = random.randint(*_ticket_range(domain, kind))
             effects.append(f"ticket_fine:{fine}")
@@ -277,6 +342,11 @@ def generate_event(
             repair_item, repair_qty = "compost", 1
         if domain == "pen" and random.random() < 0.4:
             repair_item, repair_qty = "compost", random.randint(1, 2)
+
+    if kind == "bad":
+        repair_tickets, effects, detail_parts, label = _maybe_harden(
+            domain, effects, detail_parts, repair_tickets, label
+        )
 
     else:
         roll = random.random()
@@ -499,6 +569,19 @@ def generate_world_pulse() -> dict[str, Any]:
         ("fog_bank", "bad", "浓雾缠岸，赶海和撒网都容易空欢喜"),
         ("merchant_caravan", "good", "流动商贩路过档口，票子像被风捎来"),
         ("gnat_swarm", "bad", "小虫成团，露天作物得再 tend 一遍"),
+        ("drought", "bad", "旱风过境，露天没浇水的地发僵，可能枯"),
+        ("heatwave", "bad", "热浪烤岸，没浇的菜和没喂的牲口都遭罪"),
+        ("frost", "bad", "霜降：热带露天发僵，温室不怕"),
+        ("pest_wave", "bad", "虫害潮：露天刚 tend 完可能再来一遍"),
+        ("warm_rain", "good", "回暖雨：露天地自己润一点"),
+        ("gale_crop", "bad", "秋台扫过份地，没人看的地更容易出事"),
+        ("blossom_tide", "bad", "花粉潮：花开得凶，鸡鸭和鼻子都遭罪"),
+        ("spring_flood", "good", "春汛：近岸鱼多一点"),
+        ("thunderstorm", "bad", "雷暴扫岸，露天发僵，出海不稳"),
+        ("leaf_fall", "good", "落叶潮：篱边好捡"),
+        ("murrain_week", "bad", "畜瘟潮：栏里容易传，去蹄角棚"),
+        ("snowbound", "bad", "雪封：露天发僵，栏里小心冻蹄"),
+        ("north_wind", "bad", "北风：出海发硬"),
     ]
     effect, kind, hint = random.choice(effect_types)
 
@@ -513,6 +596,19 @@ def generate_world_pulse() -> dict[str, Any]:
         "fog_bank": ["雾墙", "贴岸浓雾", "能见度告急", "海雾结账"],
         "merchant_caravan": ["流动商贩", "驮货驴队", "档口巡游", "票子顺风车"],
         "gnat_swarm": ["小虫汛", "蚜虫云", "飞虫编队", "嗡嗡编队"],
+        "drought": ["旱风", "龟裂周", "井绳发紧", "土渴"],
+        "heatwave": ["热浪", "烤岸", "日头罚站", "中暑预警"],
+        "frost": ["霜降", "白霜", "热带发僵", "寒露"],
+        "pest_wave": ["虫害潮", "虫口暴涨", "菜青虫周", "蚜虫翻倍"],
+        "warm_rain": ["回暖雨", "润土", "春雨过篱", "墒情回"],
+        "gale_crop": ["秋台", "田间台风", "篱笆倒伏", "风灾茬"],
+        "blossom_tide": ["花粉潮", "花浪", "喷嚏周", "花开得凶"],
+        "spring_flood": ["春汛", "桃花水", "近岸满潮", "春水"],
+        "thunderstorm": ["雷暴", "岸雷", "闪白", "雷先到"],
+        "leaf_fall": ["落叶潮", "篱边黄", "扫叶天", "秋叶"],
+        "murrain_week": ["畜瘟潮", "栏疫", "蹄角警报", "邻栏传"],
+        "snowbound": ["雪封", "封门雪", "冻蹄周", "白门"],
+        "north_wind": ["北风", "硬风", "空网风", "蹄缝风"],
         "weekly_tide": ["周潮", "浅潮", "灌仓潮", "黑潮"],
     }
     verbs = ["掠过", "笼罩", "扫过", "渗入", "降临在", "打卡"]

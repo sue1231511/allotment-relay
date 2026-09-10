@@ -36,6 +36,93 @@ def _ready(animal: dict, species: str) -> bool:
     return db.now() - animal["stocked_at"] >= grow
 
 
+CLEAR_SLOT_SQL = (
+    "UPDATE barn_animals SET species=NULL, stocked_at=NULL, fed=0, guard=0, born_at=0, "
+    "ailment='', ailment_at=0 "
+    "WHERE steward_id=? AND slot=?"
+)
+
+
+def animal_born_at(animal: dict) -> int:
+    born = int(animal.get("born_at") or 0)
+    if born > 0:
+        return born
+    return int(animal.get("stocked_at") or 0)
+
+
+def animal_lifespan_seconds(species: str) -> int:
+    days = int(LIVESTOCK.get(species, {}).get("life_days") or 8)
+    return max(1, days) * 86400
+
+
+def animal_age_label(animal: dict) -> str:
+    species = animal.get("species")
+    if not species:
+        return ""
+    born = animal_born_at(animal)
+    if born <= 0:
+        return ""
+    age = max(0, db.now() - born)
+    days = age // 86400
+    hours = (age % 86400) // 3600
+    life_d = int(LIVESTOCK.get(species, {}).get("life_days") or 8)
+    if days > 0:
+        return f"龄{days}天{hours}时/寿约{life_d}天"
+    return f"龄{hours}时/寿约{life_d}天"
+
+
+def animal_died_of_age(animal: dict) -> bool:
+    species = animal.get("species")
+    if not species or species not in LIVESTOCK:
+        return False
+    born = animal_born_at(animal)
+    if born <= 0:
+        return False
+    return db.now() - born >= animal_lifespan_seconds(species)
+
+
+async def tick_animal_age(
+    conn: aiosqlite.Connection,
+    steward_id: int,
+) -> list[str]:
+    """过寿则空栏。不给肉——那是 harvest。"""
+    conn.row_factory = aiosqlite.Row
+    rows = await (
+        await conn.execute(
+            "SELECT * FROM barn_animals WHERE steward_id=? AND species IS NOT NULL",
+            (steward_id,),
+        )
+    ).fetchall()
+    notes: list[str] = []
+    for row in rows:
+        animal = dict(row)
+        species = animal.get("species")
+        if not species:
+            continue
+        if int(animal.get("born_at") or 0) <= 0:
+            born = int(animal.get("stocked_at") or 0)
+            if born:
+                await conn.execute(
+                    "UPDATE barn_animals SET born_at=? WHERE id=?",
+                    (born, animal["id"]),
+                )
+                animal["born_at"] = born
+        if not animal_died_of_age(animal):
+            continue
+        spec = LIVESTOCK.get(species, {})
+        name = spec.get("name") or species
+        slot = int(animal["slot"])
+        await conn.execute(CLEAR_SLOT_SQL, (steward_id, slot))
+        notes.append(f"#{slot} {name}老死了，栏空了（大收才给肉，寿尽不掉货）")
+        await db.add_chronicle(
+            "barn_age",
+            f"畜栏老死：#{slot} {name}",
+            steward_id,
+            conn=conn,
+        )
+    return notes
+
+
 def _line(animal: dict | None, slot: int) -> str:
     if not animal or not animal.get("species"):
         return f"  #{slot}: 空栏"
@@ -51,7 +138,13 @@ def _line(animal: dict | None, slot: int) -> str:
         state = f"放养{extra}"
     else:
         state = "待喂"
-    return f"  #{slot}: {spec['emoji']}{spec['name']}（{state}）"
+    age = animal_age_label(animal)
+    extra = f" · {age}" if age else ""
+    from . import barn_disease as barn_disease_mod
+    sick = barn_disease_mod.animal_ailment_label(animal)
+    if sick:
+        extra += f" · 病{sick}"
+    return f"  #{slot}: {spec['emoji']}{spec['name']}（{state}）{extra}"
 
 
 async def barn_ops(key_id: int, command: str) -> str:
@@ -62,6 +155,10 @@ async def barn_ops(key_id: int, command: str) -> str:
     if verb == "status":
         async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
+            await tick_animal_age(conn, s["id"])
+            from . import barn_disease as barn_disease_mod
+            disease_notes = await barn_disease_mod.tick_barn_disease(conn, s["id"])
+            await conn.commit()
             rows = await (await conn.execute(
                 "SELECT * FROM barn_animals WHERE steward_id=? ORDER BY slot",
                 (s["id"],),
@@ -71,11 +168,16 @@ async def barn_ops(key_id: int, command: str) -> str:
             f"畜栏: {'已建' if built else '未建'}（erect {config.BARN_ERECT_COST} 票）",
             f"槽位 {config.BARN_SLOTS}",
         ]
+        for note in s.get("_life_notes") or []:
+            lines.append(note)
+        for note in disease_notes:
+            lines.append(note)
         by_slot = {r["slot"]: dict(r) for r in rows}
         for slot in range(1, config.BARN_SLOTS + 1):
             lines.append(_line(by_slot.get(slot), slot))
         lines.append(f"可购: {', '.join(LIVESTOCK.keys())}")
         lines.append("catalog 看详情 · collect 日常收奶/蛋/蜜 · shear 剪羊毛（要剪刀） · churn 山羊奶→奶酪")
+        lines.append("栏里不对劲：visit_ops 兽医 status / treat 槽位（霍衡）。人发烧去 clinic")
         lines.append("粪便进堆肥桶：hut_ops 堆肥桶 存 羊粪 3（先 buy compost_bin → install soft_1，空槽也能装）")
         if built:
             lines.append(
@@ -89,21 +191,27 @@ async def barn_ops(key_id: int, command: str) -> str:
         for key, meta in LIVESTOCK.items():
             feed = ITEM_NAMES.get(meta["feed"], meta["feed"])
             if meta.get("guard"):
+                life = meta.get("life_days")
+                life_bit = f" · 寿约{life}天" if life else ""
                 lines.append(
                     f"  {meta['emoji']}{meta['name']} {meta['buy']}票 — 喂{feed}守夜："
-                    f"野兽总掷×0.78、兔/鹿/猪权重×0.45、斑鸠偷包×0.35、拾叶小偷拆穿+0.22"
+                    f"野兽总掷×0.78、兔/鹿/猪权重×0.45、斑鸠偷包×0.35、拾叶小偷拆穿+0.22{life_bit}"
                 )
             elif meta.get("hive"):
+                life = meta.get("life_days")
+                life_bit = f" · 寿约{life}天" if life else ""
                 lines.append(
                     f"  {meta['emoji']}{meta['name']} {meta['buy']}票 — "
-                    f"喂{feed} x{meta['feed_qty']} · collect 采{ITEM_NAMES.get(meta['product'], meta['product'])}"
+                    f"喂{feed} x{meta['feed_qty']} · collect 采{ITEM_NAMES.get(meta['product'], meta['product'])}{life_bit}"
                 )
             elif meta.get("daily"):
                 prod = ITEM_NAMES.get(meta["product"], meta["product"])
                 extra = " · 挤奶器（Tt酱）多收 1" if key in ("cow", "goat") else ""
+                life = meta.get("life_days")
+                life_bit = f" · 寿约{life}天" if life else ""
                 lines.append(
                     f"  {meta['emoji']}{meta['name']} {meta['buy']}票 — "
-                    f"feed 后 collect 日常{prod} · harvest 满周期大收{extra}"
+                    f"feed 后 collect 日常{prod} · harvest 满周期大收{extra}{life_bit}"
                 )
             else:
                 prod = ITEM_NAMES.get(meta["product"], meta["product"])
@@ -111,11 +219,16 @@ async def barn_ops(key_id: int, command: str) -> str:
                 if meta.get("manure"):
                     manure = f" · 产{MANURE[meta['manure']]['name']}"
                 shear = " · shear 剪毛（要剪刀，不杀羊）" if key == "sheep" else ""
+                life = meta.get("life_days")
+                life_bit = f" · 寿约{life}天" if life else ""
                 lines.append(
                     f"  {meta['emoji']}{meta['name']} {meta['buy']}票 — "
-                    f"喂{feed} x{meta['feed_qty']} → {prod} x{meta['product_qty']}{manure}{shear}"
+                    f"喂{feed} x{meta['feed_qty']} → {prod} x{meta['product_qty']}{manure}{shear}{life_bit}"
                 )
         lines.append("粪便进堆肥桶 hut_ops 堆肥桶 存，不能进潮柜")
+        lines.append("牲口有寿：过了栏空，不给肉。想收肉用 harvest。干旱没喂可能渴死。")
+        lines.append("牲口会得病。病畜减产，拖着可能病死（不给肉）。异常去 visit_ops 兽医 / 霍衡。")
+        lines.append("摸病死牲口可能沾病菌，人去 clinic，不是蹄角棚。")
         return "\n".join(lines)
 
     if verb == "erect":
@@ -172,10 +285,11 @@ async def barn_ops(key_id: int, command: str) -> str:
             stocked = db.now() if not meta.get("hive") else db.now()
             await conn.execute(
                 """
-                UPDATE barn_animals SET species=?, stocked_at=?, fed=0, guard=?
+                UPDATE barn_animals SET species=?, stocked_at=?, fed=0, guard=?, born_at=?,
+                    ailment='', ailment_at=0
                 WHERE steward_id=? AND slot=?
                 """,
-                (species, stocked, guard, s["id"], slot),
+                (species, stocked, guard, db.now(), s["id"], slot),
             )
             await conn.commit()
         if meta.get("guard"):
@@ -224,8 +338,28 @@ async def barn_ops(key_id: int, command: str) -> str:
                 qty = meta.get("manure_feed", 1)
                 await db.add_item(conn, s["id"], meta["manure"], qty)
                 manure_msg = f"，顺手收 {MANURE[meta['manure']]['name']} x{qty}"
+            from . import events
+            extra = await events.roll_after_action(s, "barn_feed", conn)
+            from . import barn_disease as barn_disease_mod
+            ill = None
+            sick_key = barn_disease_mod.animal_ailment_key(row)
+            if sick_key:
+                ill = await barn_disease_mod.contact_human(
+                    conn, s["id"], sick_key, source="barn_feed"
+                )
             await conn.commit()
-        return f"#{slot} 已喂食{manure_msg}"
+        bits = [f"#{slot} 已喂食{manure_msg}"]
+        sick_label = ""
+        from . import barn_disease as barn_disease_mod
+        sick_label = barn_disease_mod.animal_ailment_label(row)
+        if sick_label:
+            bits.append(f"这头病着（{sick_label}）。去 visit_ops 兽医 treat {slot}")
+        if extra:
+            bits.append(extra)
+        if ill:
+            bits.append(ill)
+            bits.append("人的病去 visit_ops clinic treat，霍衡不给人开药")
+        return "\n".join(bits)
 
     if verb == "collect":
         slot = int(parts[1]) if len(parts) > 1 else 1
@@ -251,6 +385,8 @@ async def barn_ops(key_id: int, command: str) -> str:
                 raise ValueError("今日已收过")
             product = meta["product"]
             qty = meta["product_qty"]
+            from . import barn_disease as barn_disease_mod
+            qty = barn_disease_mod.yield_qty(row, qty)
             extra = ""
             if meta.get("hive") and random.random() < 0.2:
                 qty += 1
@@ -269,12 +405,29 @@ async def barn_ops(key_id: int, command: str) -> str:
                 "INSERT INTO barn_daily_collect (steward_id, slot, day) VALUES (?,?,?)",
                 (s["id"], slot, day),
             )
+            from . import events
+            hit = await events.roll_after_action(s, "barn_collect", conn)
+            ill = None
+            sick_key = barn_disease_mod.animal_ailment_key(row)
+            if sick_key:
+                ill = await barn_disease_mod.contact_human(
+                    conn, s["id"], sick_key, source="barn_collect"
+                )
             await conn.commit()
         msg = f"#{slot} 收取 {ITEM_NAMES.get(product, product)} x{qty}{extra}"
+        sick_label = barn_disease_mod.animal_ailment_label(row)
+        if sick_label:
+            msg += f" · 病畜减产（{sick_label}）· visit_ops 兽医 treat {slot}"
         tail = flavor.maybe_suffix(["日常小收，积少成多", "栏里忙，票里稳"])
         if tail:
             msg += f" · {tail}"
-        return msg
+        bits = [msg]
+        if hit:
+            bits.append(hit)
+        if ill:
+            bits.append(ill)
+            bits.append("人的病去 visit_ops clinic treat")
+        return "\n".join(bits)
 
     if verb == "harvest":
         slot = int(parts[1]) if len(parts) > 1 else 1
@@ -298,7 +451,15 @@ async def barn_ops(key_id: int, command: str) -> str:
             qty = meta["product_qty"]
             if not row.get("fed"):
                 qty = max(1, qty // 2)
+            from . import barn_disease as barn_disease_mod
+            qty = barn_disease_mod.yield_qty(row, qty)
             await db.add_item(conn, s["id"], product, qty)
+            ill = None
+            sick_key = barn_disease_mod.animal_ailment_key(row)
+            if sick_key:
+                ill = await barn_disease_mod.contact_human(
+                    conn, s["id"], sick_key, source="harvest"
+                )
             bonus_msg = ""
             if species == "goat":
                 await db.add_item(conn, s["id"], "goat_cheese", 1)
@@ -308,16 +469,14 @@ async def barn_ops(key_id: int, command: str) -> str:
                 mqty = meta.get("manure_harvest", 1)
                 await db.add_item(conn, s["id"], meta["manure"], mqty)
                 manure_msg = f"，{MANURE[meta['manure']]['name']} x{mqty}"
-            await conn.execute(
-                """
-                UPDATE barn_animals SET species=NULL, stocked_at=NULL, fed=0, guard=0
-                WHERE steward_id=? AND slot=?
-                """,
-                (s["id"], slot),
-            )
+            await conn.execute(CLEAR_SLOT_SQL, (s["id"], slot))
             await conn.commit()
         msg = f"#{slot} 收获 {ITEM_NAMES.get(product, product)} x{qty}{bonus_msg}{manure_msg}"
         msg += flavor.maybe_suffix(["栏里忙，票里稳", "牲畜：今天也努力了"])
+        if sick_key:
+            msg += f"\n病畜大收，肉可能不干净。人若发烧去 visit_ops clinic treat"
+        if ill:
+            msg += f"\n{ill}\n人的病去桥桥，牲口的病才去霍衡"
         await db.add_chronicle("barn", f"{s['name']} 畜栏收 {product}", s["id"])
         return msg
 

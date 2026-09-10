@@ -552,7 +552,7 @@ async def kitchen_ops(key_id: int, command: str) -> str:
         return (
             "kitchen_ops 子命令（整句写进 command）：\n"
             "  menu — 菜谱与定价\n"
-            "  cook 菜名 — 定点菜（每天 10 次），例如 cook 蒜蓉生蚝 · cook 糖渍橘子\n"
+            "  cook 菜名 — 定点菜（每天 10 次），例如 cook 蒜蓉生蚝 · cook 沙丁甘蓝锅 · cook 蒜蓉龙虾 · cook 旗鱼排\n"
             "  cook 材料1 材料2 … — 自由组合 2~5 样（每天 24 次），例如 cook 甘蓝 鲭鱼\n"
             "             人类 /island 总览点小屋，点一下看屋里就能煮（灶栏，和 cook 同一套；定点菜点菜名，乱炖先点材料再下锅）\n"
             "  eat 物品 — 回精力。熟菜回得最多，并点滴回 1 身体；水果可生吃但只回一点、连吃会营养不良；\n"
@@ -575,7 +575,7 @@ async def kitchen_ops(key_id: int, command: str) -> str:
 
     if verb in ("menu", "status"):
         lines = [
-            "厨房菜单（command 例子：cook 蒜蓉生蚝 / cook 糖渍橘子 / cook 甘蓝 鲭鱼 / brew 材料 / eat 鲭鱼 / eat 橘子）:",
+            "厨房菜单（command 例子：cook 蒜蓉生蚝 / cook 沙丁甘蓝锅 / cook 蒜蓉龙虾 / cook 甘蓝 鲭鱼 / brew 材料 / eat 鲭鱼 / eat 橘子）:",
             EAT_RULES,
             "定点菜谱如下。也可以 cook 材料自由组合（2~5 样），按星级可卖；乱搭也按材料身价兜底 45%。",
             "系统回收压得低（3★≈材料价+10%）：想赚钱 shop stock 上架小馆——menu 给参考价和精力，",

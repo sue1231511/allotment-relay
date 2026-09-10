@@ -32,11 +32,13 @@ async def _test_world_pulse_pool() -> None:
     from server import event_gen
 
     seen = set()
-    for _ in range(80):
+    for _ in range(250):
         pulse = event_gen.generate_world_pulse()
         seen.add(pulse["effect"])
     assert "warm_breeze" in seen
     assert "gnat_swarm" in seen
+    assert "drought" in seen
+    assert "red_tide" in seen or "murrain_week" in seen
 
 
 def test_world_pulse_pool() -> None:

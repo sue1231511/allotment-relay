@@ -248,6 +248,12 @@ def effective_grow(plot: dict[str, Any], crop_key: str | None = None) -> int:
         mult *= config.FERTILIZE_GROW_MULT
     if plot.get("watered"):
         mult *= config.WATER_GROW_MULT
+    tropic = "tropic" in meta.get("tags", ())
+    mult *= world.climate_grow_mult(
+        bool(plot.get("greenhouse")),
+        bool(plot.get("watered")),
+        tropic=tropic,
+    )
     return max(60, int(base * mult))
 
 
@@ -332,7 +338,8 @@ async def record_tree_harvest(
             """
             UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0, grow_target=0,
             grow_pace='', fertilized=0, watered=0, harvest_left=0,
-            tree_harvests=0, tree_harvest_max=0, scarecrow=0, dove_yield_mult=1.0
+            tree_harvests=0, tree_harvest_max=0, scarecrow=0, dove_yield_mult=1.0,
+            tree_born_at=0
             WHERE id=?
             """,
             (plot["id"],),
@@ -345,6 +352,104 @@ async def record_tree_harvest(
     plot["tree_harvests"] = done
     left = mx - done
     return True, f"（还能收 {left} 茬）"
+
+
+def tree_born_at(plot: dict[str, Any]) -> int:
+    born = int(plot.get("tree_born_at") or 0)
+    if born > 0:
+        return born
+    return int(plot.get("planted_at") or 0)
+
+
+def tree_lifespan_seconds(plot: dict[str, Any]) -> int:
+    """能收完大部分茬；撂荒会先老死。温室多撑一会儿。"""
+    crop = plot.get("crop")
+    meta = CROPS.get(crop or "", {})
+    if not meta.get("tree"):
+        return 0
+    mx = int(plot.get("tree_harvest_max") or 0) or calc_tree_harvest_max(crop)
+    grow = int(meta.get("grow") or 200) * 60
+    slack = 6 * 3600
+    if plot.get("greenhouse"):
+        slack += 4 * 3600
+    return grow * max(mx, 4) + slack
+
+
+def tree_age_label(plot: dict[str, Any]) -> str:
+    born = tree_born_at(plot)
+    if born <= 0:
+        return ""
+    age = max(0, db.now() - born)
+    days = age // 86400
+    hours = (age % 86400) // 3600
+    life = tree_lifespan_seconds(plot)
+    life_d = max(1, (life + 86399) // 86400)
+    if days > 0:
+        return f"树龄{days}天{hours}时/寿约{life_d}天"
+    return f"树龄{hours}时/寿约{life_d}天"
+
+
+def tree_died_of_age(plot: dict[str, Any]) -> bool:
+    crop = plot.get("crop")
+    if not crop or not CROPS.get(crop, {}).get("tree"):
+        return False
+    born = tree_born_at(plot)
+    if born <= 0:
+        return False
+    return db.now() - born >= tree_lifespan_seconds(plot)
+
+
+async def tick_tree_age(
+    conn: aiosqlite.Connection,
+    steward_id: int,
+) -> list[str]:
+    """果树过寿则枯死清地，掉 1 岸木。"""
+    conn.row_factory = aiosqlite.Row
+    rows = await (
+        await conn.execute(
+            "SELECT * FROM parcels WHERE steward_id=? AND crop IS NOT NULL",
+            (steward_id,),
+        )
+    ).fetchall()
+    notes: list[str] = []
+    from .catalog import CROPS as _crops
+    from . import land as land_mod
+    for row in rows:
+        plot = dict(row)
+        crop = plot.get("crop")
+        if not crop or not _crops.get(crop, {}).get("tree"):
+            continue
+        if int(plot.get("tree_born_at") or 0) <= 0:
+            born = int(plot.get("planted_at") or 0)
+            if born:
+                await conn.execute(
+                    "UPDATE parcels SET tree_born_at=? WHERE id=?",
+                    (born, plot["id"]),
+                )
+                plot["tree_born_at"] = born
+        if not tree_died_of_age(plot):
+            continue
+        name = _crops[crop]["name"]
+        label = land_mod.slot_label(plot)
+        await conn.execute(
+            """
+            UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0, grow_target=0,
+            grow_pace='', fertilized=0, watered=0, harvest_left=0,
+            tree_harvests=0, tree_harvest_max=0, scarecrow=0, dove_yield_mult=1.0,
+            tree_born_at=0
+            WHERE id=?
+            """,
+            (plot["id"],),
+        )
+        await db.add_item(conn, steward_id, "craft_timber", 1)
+        notes.append(f"{label} 的{name}树龄尽了，枯倒了（岸木 x1）")
+        await db.add_chronicle(
+            "tree_age",
+            f"树龄尽了：{label} {name}",
+            steward_id,
+            conn=conn,
+        )
+    return notes
 
 
 TREE_EVENT_FLAVOR = {
@@ -467,6 +572,9 @@ def parcel_extra(plot: dict[str, Any]) -> str:
             th_left = tree_harvests_left(plot)
             if th_left is not None:
                 bits.append(f"剩{th_left}茬")
+            age = tree_age_label(plot)
+            if age:
+                bits.append(age)
             if meta.get("shake"):
                 bits.append("可摇")
         if plot.get("scarecrow"):
@@ -486,6 +594,9 @@ def parcel_extra(plot: dict[str, Any]) -> str:
         bits.append("🌾")
     if is_tree:
         bits.append("树")
+        age = tree_age_label(plot)
+        if age:
+            bits.append(age)
     return f"·{'·'.join(bits)}" if bits else ""
 
 

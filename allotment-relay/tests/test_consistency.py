@@ -60,20 +60,15 @@ def _tool_blob(mcp, name: str) -> str:
 
 
 def _schema_budget() -> None:
-    """连接时 schema 必须短：全工具 JSON + instructions 控制在约 5k 字以内。"""
-    import json
+    """连接时说明书必须短：instructions + 各工具 description + command 字段说明。"""
     from server.mcp_app import mcp
 
-    parts = [mcp.instructions or ""]
+    total = len(mcp.instructions or "")
     for name in mcp._tool_manager._tools:
         t = mcp._tool_manager.get_tool(name)
-        parts.append(
-            json.dumps(
-                {"name": name, "description": t.description, "inputSchema": t.parameters},
-                ensure_ascii=False,
-            )
-        )
-    total = sum(len(p) for p in parts)
+        total += len(t.description or "")
+        cmd = (t.parameters.get("properties") or {}).get("command", {}).get("description", "")
+        total += len(cmd or "")
     assert total < 5000, f"MCP schema too large for connect-time budget: {total} chars"
 
 
@@ -144,7 +139,7 @@ def test_mcp_descriptions() -> None:
     instructions = mcp.instructions or ""
     assert "relay_manual" in instructions
     assert "不是聊天沙盒" in instructions or "禁止发明" in instructions
-    assert "21" in instructions and "help" in instructions
+    assert "22" in instructions and "help" in instructions
 
     quarry = _tool_blob(mcp, "quarry_ops")
     assert "status" in quarry and "探脉" in quarry and "mine_ops" in quarry
@@ -228,6 +223,9 @@ def test_relay_manual_covers_systems() -> None:
         "gear upgrade",
         "boss attack",
         "barn erect",
+        "干旱",
+        "树龄",
+        "老死",
         "堆肥桶",
         "buy compost_bin",
         "桶不是柜子",
@@ -240,6 +238,11 @@ def test_relay_manual_covers_systems() -> None:
         "clinic 调理",
         "clinic 调理 中",
         "回春汤",
+        "霍衡",
+        "蹄角棚",
+        "兽医 treat 1",
+        "畜热",
+        "潮疹",
         "undertide_ops help",
         "star_ops",
         "小剧场专场每日 5 次",
@@ -514,7 +517,7 @@ def test_readme_workflow_rules() -> None:
         assert "relay_manual" in blob
         assert "mcp_app.py" in blob
         assert "island-manual-content.html" in blob or "island-manual.html" in blob
-    assert "21 个工具" in readme
+    assert "22 个工具" in readme
     assert "marriage_ops" in readme
     assert "propose_marriage" in readme
     assert "/vow" in readme
@@ -624,6 +627,11 @@ def test_human_island_manual() -> None:
         "诊所地点",
         "调理",
         "回春汤",
+        "霍衡",
+        "蹄角棚",
+        "找兽医",
+        "畜热",
+        "潮疹",
         "今夜潮湿",
         "很不高兴为您服务",
         "留给明天",

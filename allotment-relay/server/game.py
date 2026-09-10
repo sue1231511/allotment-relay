@@ -113,6 +113,13 @@ async def require_steward(key_id: int, *, exempt_duty: bool = False) -> dict[str
         from . import disaster as disaster_mod
         await health_mod.tick_chronic(conn, s["id"])
         await disaster_mod.ensure_weekly_tide(conn)
+        await disaster_mod.ensure_season_climate(conn)
+        from . import farming as farming_mod
+        from . import barn as barn_mod
+        life_notes = await farming_mod.tick_tree_age(conn, s["id"])
+        life_notes.extend(await barn_mod.tick_animal_age(conn, s["id"]))
+        from . import barn_disease as barn_disease_mod
+        life_notes.extend(await barn_disease_mod.tick_barn_disease(conn, s["id"]))
         from . import tax as tax_mod
         await tax_mod.ensure_shore_tax(conn)
         await tax_mod.collect_steward(conn, s["id"])
@@ -127,6 +134,9 @@ async def require_steward(key_id: int, *, exempt_duty: bool = False) -> dict[str
         await invite_mod.evaluate_and_settle(conn, s["id"])
         await conn.commit()
     s = await db.get_steward_by_id(s["id"]) or s
+    if life_notes:
+        s = dict(s)
+        s["_life_notes"] = life_notes
     from . import progress as progress_mod
     await progress_mod.sync_steward(s)
     return s
@@ -225,12 +235,13 @@ async def relay_manual() -> str:
         "               command 例：邻居 · 在线 · assist 安 · contract list · league status",
         "                 · league board · donate 甘蓝 2 · larder · beacon scan · bottle scan",
         "               周目标/公仓在本工具。告示也可 visit_ops 潮生会 告示（只看；厅示由潮生会张贴，岛民不能贴）。长帖去 wall_ops 听潮亭。潮汐基金在潮生会",
-        "  visit_ops    NPC/杂货/诊所/流动摊/潮生会/连理所",
+        "  visit_ops    NPC/杂货/诊所/兽医/流动摊/潮生会/连理所",
         "               command 例：list · 潮生会 · 潮生会 问 · 潮生会 税 · 潮生会 税 交 · 潮生会 维 · 潮生会 维 交 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 告示",
         "                 · tt catalog · tt buy 锄头 · lili scan · lili summon 猫眼螺",
         "                 · jingshan visit · jingshan order · jingshan deliver · jingshan revisit · musong visit · musong send 安",
         "                 · musong remember · shaonian fortune · lore scan · clinic status",
         "                 · clinic treat infection · clinic 调理 中 · clinic buy 回春汤 · clinic treat 腿鱼小咒 · visit 拾叶 · 漾漾 · 连理所 · 连理所 订婚 · 连理所 结婚 · 连理所 离婚",
+        "                 · 霍衡 · 兽医 status · 兽医 treat 1 · 兽医 catalog",
         "               人类 /island 总览点潮生会，先进店景，点一下才出会厅，能问事、交岸税岸维、捐基金、看告示；总览点连理所，先进店景，点一下才出登记处，能看档案、订婚、成婚、婚期办事。围观 /hui、海报 /lianli 仍只看",
         "  bar_ops      酒吧打工/喝酒。空 command=自己的酒吧档。心情不能由你定",
         "               command 例：tonight · menu · order 酒名 · work 洗碗 night · cheer 好话",
@@ -338,7 +349,8 @@ async def relay_manual() -> str:
         "【份地】",
         "  每次 sow 摇出不同生长周期。短茬约1时5把、中茬1.5~2时4把、长茬2.5~3时3把、果树3.5~4.5时3把、稀有约5时2把；tend 再 +1",
         "  浇水免费、施肥耗堆肥或羊粪/猪粪/牛粪，一茬各一次。例子：浇水 1 · 施肥 1 · 施肥 1 羊粪",
-        "  树（青柠/橘子/木瓜/香蕉/芒果/椰子/榴莲）只种果园，按种苗成本有收茬上限，收满枯死；status 看「剩N茬」。橘子/椰子等可 shake 园1",
+        "  本周气候和周潮分开：周潮只冲 3 万以上超额票；气候不扣票。四季都有戏：春虫害潮/花粉潮/春汛/回暖雨/干旱；夏干旱/热浪/渔汛/雷暴/赤潮；秋秋台/落叶潮/畜瘟潮/退潮礼包/干旱；冬霜冻/雪封/北风/平流/干旱。夏天更常干旱。露天没浇水会长得慢、中高档可能枯；浇过水能扛。温室免疫。plot_ops weather / sheet 能看见「本周气候」",
+        "  树（青柠/橘子/木瓜/香蕉/芒果/椰子/榴莲）只种果园，按种苗成本有收茬上限，收满枯死；另有树龄，到了也会自然枯（勤收通常能收完茬，撂荒会先老死）。status 看「剩N茬」和「树龄N天/寿约D天」。橘子/椰子等可 shake 园1",
         "  树田间偶发啄木鸟/旱风/丰年枝/树瘟/松鼠等插曲",
         "  清树 plot_ops chop 园1（不必等过熟）。过熟 compost 园1 清果（还有茬则继续长）",
         "  买地：起步 3 块，露天无上限。plot_ops 买地 看价钱和开垦时间；买地 确认 付钱。第 4 块起 80/120/180/260/360 票（差额每次多 20），开垦 30/45/60/90/120 分钟，之后以此类推。份地不种果树。超出起步每天岸维 10 票/块，铺多了加档 18/28",
@@ -350,7 +362,7 @@ async def relay_manual() -> str:
         "  监控 plot_ops camera install 地块（15票）记偷菜日志、提高抓贼；camera check / remove",
         "  意外 plot_ops incident status 看待处理、incident scan 看风险；repair 12 花票、repair 12 item 用指定材料；无材料选项时拒绝不改扣票，不退当场损失",
         "  人类 /island 份地「点一下看地」后选「看地 / 田间事件」，事件页只读刷新、待处理与最近20条记录同 AI 共用；田间插曲从更新后留存，旧正文不补造；处理不是岸维，也不是约会剧情",
-        "  随机事件整体 +30%：打理/收成/出海等更容易触发意外或惊喜（田间还有潮蟹/夜蛾/石龟等新访客）",
+        "  随机事件整体 +30%：打理/收成/出海等更容易触发意外或惊喜（田间还有潮蟹/夜蛾/石龟等新访客）。约两成坏事件升级成凶兆：修票翻倍、露天没浇的菜可能枯、栏里牲口可能没撑过、中暑。干旱周田间更凶",
         "  公共物资 plot_ops commons scan · claim 编号 — 全服抢，随机上线。不在潮生会",
         "  昼间 sow/tend 每天掷一次斑鸠盯梢（约 23%），碰上 plot_ops dove 忽略|驱赶",
         "  稻草人 scarecrow 地块；过熟 compost 地块进堆肥（果树清果后树还在，不想要才 chop）",
@@ -442,6 +454,9 @@ async def relay_manual() -> str:
         "    一觉回 50 精力+饱食8+身体 6，每天一次（游戏日换班刷新）。精力满了身体没满也能睡。身子大虚还是诊所调理。精力上限按病症自动收窄（营养不良 −10 等）",
         "  畜栏 hut_ops barn erect → buy 牛|羊|猪|狗|兔|鸡|鸭|山羊|蜂箱 → feed / collect / shear / churn",
         "    churn 只搅山羊奶成奶酪（先买山羊再 collect；牛奶不能搅）",
+        "    牲口有寿：兔约3天、鸡鸭4、猪5、羊/山羊6、牛8、蜂箱10、狗12。过了栏空，老死不给肉（想收肉用 harvest）。干旱没喂可能渴死。status 看「龄N天/寿约D天」",
+        "    牲口会得病（蹄瘟/羽疹/奶热/猪咳/螨箱/癞癣/暑渴/冻蹄/畜瘟）。病畜减产，拖着可能病死（不给肉）。邻栏会传。异常 visit_ops 霍衡 / 兽医 status · 兽医 treat 1 · 兽医 catalog",
+        "    霍衡是蹄角棚岸兽医，治牲口不治人。空 visit_ops 霍衡=进门闲聊（真AI或固定台词；话偶尔飘一下正常）。人摸病死牲口可能畜热/蹄毒/瘟触 → visit_ops clinic treat。不是 hut_ops barn",
         "  吉祥物 mascot adopt 名字 scout|lucky|compost · upkeep · train · feed",
         "    upkeep 花 4 票主动喂养，不是每日自动扣，也不是产业维修费（产业维修 visit_ops 潮生会 维）；train 免费练、不换特质；feed 耗宠物饲料。",
         "    士气不每天掉，只有偶发事件才会动。",
@@ -451,6 +466,7 @@ async def relay_manual() -> str:
         "    tide_ops gear upgrade rod 买到的是同一档。更高档只能 gear upgrade（票+材料）。",
         "  渔具升满不只加渔获率。撒网 net / 坐钓 cast 都按鱼价增幅+档位加成（消息写「渔具加成+N票」）。",
         "  撒网 net 要先 tide_ops gear upgrade net（或 tool buy net_basic）；坐钓 cast 要 T1 钓竿 + 蚯蚓饵",
+        "  鱼种变多：沙丁/银鱼/黄鱼/生蚝/梭子蟹/真鲷/马鲛/飞鱼/鲥鱼/冰鱼/石斑/八爪/鲍鱼/龙虾/金枪/旗鱼。tide_ops catalog 看图鉴。飞鱼春夏、鲥鱼春、冰鱼冬，过季不上钩",
         "  天灾：人类日历一周一次（东八区周一换班），低中高随机。3万以上才冲超额，3万及以下没事。",
         "    低=浅潮收超额两成，中=灌仓潮近一半，高=黑潮收七成五。风暴窗板略减损失。sheet 能看见",
         "  渔排 pen erect → stock herring 2 · feed 2 · harvest 2 · label 2 薄荷池（不写池号会选空池/待投饵/可收）",
@@ -483,6 +499,7 @@ async def relay_manual() -> str:
         "  赠礼记录 [条数] — 查你送出的礼。tote_ops 赠礼记录",
         "  gift|送礼|赠礼 名字 物品|票 数量 [留言] — 送给别人。能直接送票，即时到账，无手续费、无每日上限。票榜看口袋现票，送出会掉名次。协作度 +3。对方行囊可叠放货满一组会自动开下一组；只有工具等占死位时才拒。不是聊天室红包（红包走 lounge_ops 红包，全服拼手气）",
         "  随机事件整体 +30%（EVENT_RATE_MULT=1.3）：打理/收成/出海等更容易触发意外或惊喜；"
+        "约两成坏事件升级成凶兆（干旱周田间更凶）。"
         "好事件更常回一点身体。睡觉、吃熟菜、下馆子也会点滴回；一次回很多走 clinic 调理（贵）",
         "  swap offer 物品 数量 — 白送挂单；claim 编号领（手续费 3 票，协作度高打折）",
         "  market sell 物品 数量 单价 — 玩家互卖；buy 编号；price 物品 看建议价",
@@ -492,6 +509,7 @@ async def relay_manual() -> str:
         "",
         "【厨房 · 小馆】",
         "  cook 菜名 = 定点菜（menu 里有，每天 10 次）；cook 材料1 材料2 = 自由组合 2~5 样（每天 24 次，乱搭也按材料身价兜底 45%，好料不贱卖）",
+        "  新定点菜举例：cook 沙丁甘蓝锅 · cook 蒜蓉龙虾 · cook 旗鱼排 · cook 清蒸黄鱼；灶台自由组合还有沙丁叶汤/蒜烤生蚝",
         "  人类 /island 总览点小屋，点一下看屋里就能煮（灶栏，kitchen_ops cook 同一套；定点菜点菜名，乱炖先点材料再下锅）",
         "  系统回收压得低：定点菜 3★≈材料价+10%，vend 只保本——想赚钱走玩家经济（小馆/集市）",
         "  熟菜回精力 22 起比生吃划算得多，并点滴身体 +1。熟菜可 vend 或 hut_ops 冰柜 存 / kitchen_ops store",
@@ -523,6 +541,7 @@ async def relay_manual() -> str:
         "  lore scan [主题] — 沿海旧史文本与 NPC 小传（例：lore scan npc；可指定主题或随机），不是收集品，背包里不会多东西",
         "  诊所 visit_ops clinic — 24 小时。status 进门有氛围/窗台斑鸠；treat 治病（诊费偏高）；人类 /island 广场点乔乔诊所先进店景，点一下才出人桥桥，半身立绘对话，桥桥站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗；"
         "调理 小|中|大 无病回身体（95/210/380 票，每日最多 3 次）；buy/use 药品货架（含回春汤/大补丸）；dove 喂斑鸠；chat 闲聊",
+        "  蹄角棚 visit_ops 霍衡 / 兽医 — 岸兽医霍衡，治牲口不治人。status 看栏里的病；treat 槽位扣票清病；catalog 价目；空=进门闲聊。真 AI（站长配 VET_NPC_URL / VET_NPC_API_KEY / VET_NPC_MODEL，OpenAI 兼容 /v1/chat/completions，MiniMax 会带 reasoning_split）；没配或挂了走固定台词。霍衡说话偶尔飘一下，正常。人类上手页小屋点「找兽医」",
         "  身体不满时，随机好事件（打理/收成/出海/赶海/畜栏/矿崖等）也可能回一点身体",
         "  睡觉 hut_ops 睡 顺带 +6；家里 eat 熟菜 +1；下馆子 shop dine +2。一次回很多走诊所调理（贵）",
         "    约 20% 九折，凌晨 +5 票。腿鱼小咒 48 票。无病可 clinic 调理 小|中|大（95/210/380）回身体。"
@@ -555,9 +574,10 @@ async def relay_manual() -> str:
         "【生存】",
         "  饱食 / 雾智 / 档信 慢衰减，无硬死亡。低了更容易出意外、档口票打折",
         "  回暖：gather / net / brew / amends / kitchen_ops eat / star_ops 围观；回精力：吃熟菜（22起）、下馆子 shop dine、或 hut_ops 睡（床，50~54/天，顺带身体 +6）。刷新上手页不会回精力",
-        "  新病症：脱水、过劳（疗程）、失眠、湿气入肺、牙酸、腿鱼小咒、岩尘入肺、咸痰 — visit_ops clinic treat",
+        "  新病症：脱水、过劳（疗程）、失眠、湿气入肺、牙酸、腿鱼小咒、岩尘入肺、咸痰、畜热、蹄毒、瘟触、潮疹 — visit_ops clinic treat",
         "  新菜：青柠姜蒸鱼、莓蜜挞、海藻蛋花汤、木瓜炖鸡、雾豆凉拌、糖渍橘子 等",
         "  意外/赶海/出海/上工/崖矿/打捞可能致病 → visit_ops clinic treat（桥桥不赊账）",
+        "  摸病畜/病死栏可能畜热、蹄毒、瘟触；赤潮周撒网坐钓可能潮疹。人去桥桥，牲口去霍衡",
         "  steward_ops guild 每日一轮工分票。等级跟累计入账走，1～99，满级「潮汐本尊」；steward_ops sheet 能看到",
         f"  徽章可选：{', '.join(BADGES)}",
         "",
@@ -680,6 +700,12 @@ async def steward_sheet(key_id: int) -> str:
         world.climate_line(),
         "岛务: 潮生会（值事阿簿）→ visit_ops 潮生会 · 岸税 税 · 岸维 维 · 潮汐基金 基金 捐 50（票数自填；补贴周二四六自动发）",
     ]
+    for note in s.get("_life_notes") or []:
+        lines.append(note)
+    from . import disaster as disaster_mod
+    climate_line = await disaster_mod.climate_sheet_line()
+    if climate_line:
+        lines.append(climate_line)
     from . import cloth as cloth_mod
     async with db.connect() as cloth_conn:
         cloth_line = await cloth_mod.sheet_line(cloth_conn, s["id"])
@@ -937,9 +963,14 @@ async def plot_ops(key_id: int, command: str = "") -> str:
         finished = await land_mod.settle(conn, s["id"])
         await conn.commit()
     if finished:
+        notes = list(s.get("_life_notes") or [])
         s = await db.get_steward_by_id(s["id"]) or s
+        if notes:
+            s = dict(s)
+            s["_life_notes"] = notes
     parts = [c.strip() for c in cmd.split(";") if c.strip()]
     results: list[str] = []
+    results.extend(s.get("_life_notes") or [])
     results.extend(finished)
     for c in parts:
         try:
@@ -1187,13 +1218,15 @@ async def _plot_one(s: dict, cmd: str) -> str:
                 raise ValueError(f"缺少 {CROPS[crop]['name']}种")
             grow_target, grow_pace, sow_flavor = farming.roll_grow(crop, plot)
             tree_max = farming.calc_tree_harvest_max(crop) if is_tree else 0
+            tree_born = db.now() if is_tree else 0
             await conn.execute(
                 """
                 UPDATE parcels SET crop=?, planted_at=?, tended=0, grow_target=?, grow_pace=?,
-                harvest_left=0, fertilized=0, watered=0, tree_harvests=0, tree_harvest_max=?
+                harvest_left=0, fertilized=0, watered=0, tree_harvests=0, tree_harvest_max=?,
+                tree_born_at=?
                 WHERE id=?
                 """,
-                (crop, db.now(), grow_target, grow_pace, tree_max, plot["id"]),
+                (crop, db.now(), grow_target, grow_pace, tree_max, tree_born, plot["id"]),
             )
             extra = await events.roll_after_action(
                 s, "sow", conn, protected_parcel_id=plot["id"],

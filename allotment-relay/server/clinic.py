@@ -291,6 +291,7 @@ async def clinic_ops(key_id: int, command: str) -> str:
         lines.append(
             "指令: treat 病症 / treat all · 调理 小|中|大 · buy 药品 · use 药品 · dove 窗台 · chat 闲聊 · catalog"
         )
+        lines.append("牲口的病去上手页小屋点「找兽医」（霍衡），不是这家。")
         lines.extend(_tonic_menu(cost_mult=mult, cost_add=add))
         if not ailments:
             lines.append("目前没挂号项——没病可 clinic 调理 回身体（贵）")
@@ -326,6 +327,7 @@ async def clinic_ops(key_id: int, command: str) -> str:
             "桥桥大夫推推眼镜：「随机事件搞出来的病，找随机事件哭去——诊费照收。」",
             "桥桥大夫：「咕咕斑鸠伤不得，你扭了脚可得花钱。」",
             "桥桥大夫指价目表：「看清数字再开口，我不还价。调理更贵。」",
+            "桥桥大夫：「羊蹄去霍衡。人发烧才来我这儿。」",
         ]))
         async with db.connect() as conn:
             ailments = await health.list_ailments(conn, s["id"])
