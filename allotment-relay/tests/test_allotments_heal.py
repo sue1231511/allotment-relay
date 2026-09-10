@@ -126,7 +126,7 @@ def test_play_js_routes_plot_go_home() -> None:
     html = (ROOT / "server" / "templates" / "play.html").read_text(encoding="utf-8")
     assert "function isPlotGo" in js
     assert "goHome('plotsSection')" in js
-    assert "play.js?v=plots-heal1" in html
+    assert "play.js?v=plot-overview1" in html
     assert "(d.meters && d.meters.energy)" not in js
 
 
