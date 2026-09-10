@@ -454,7 +454,8 @@ async def _thirst_unfed_animals(
         name = spec.get("name") or row["species"]
         await conn.execute(
             """
-            UPDATE barn_animals SET species=NULL, stocked_at=NULL, fed=0, guard=0, born_at=0
+            UPDATE barn_animals SET species=NULL, stocked_at=NULL, fed=0, guard=0, born_at=0,
+                ailment='', ailment_at=0
             WHERE id=?
             """,
             (row["id"],),
@@ -485,7 +486,7 @@ async def apply_season_climate(
     if effect == "frost":
         wilt_p = wilt_p * 0.6
         thirst_p = 0.0
-    if effect not in {"drought", "heatwave", "frost"}:
+    if effect not in {"drought", "heatwave", "frost", "thunderstorm", "snowbound"}:
         delay = 0
         wilt_p = 0.0
         thirst_p = 0.0
@@ -493,6 +494,18 @@ async def apply_season_climate(
             await conn.execute(
                 "UPDATE parcels SET tended=0 WHERE greenhouse=0 AND crop IS NOT NULL",
             )
+        if effect == "blossom_tide":
+            await conn.execute(
+                "UPDATE parcels SET tended=0 WHERE greenhouse=0 AND crop IS NOT NULL",
+            )
+    if effect == "thunderstorm":
+        delay = int(delay * 0.55) if delay else 480
+        wilt_p = 0.0
+        thirst_p = 0.0
+    if effect == "snowbound":
+        delay = int(delay * 0.8) if delay else 900
+        wilt_p = min(0.08, wilt_p if wilt_p else 0.04)
+        thirst_p = 0.0
 
     hit_plots = 0
     wilted = 0
@@ -516,16 +529,36 @@ async def apply_season_climate(
 
     label = config.SEASON_CLIMATE_LABELS.get(effect, effect)
     grade = config.WEEKLY_TIDE_GRADES[intensity]
+    lore = {
+        "drought": "露天没浇水的地发僵，浇水能扛。温室免疫。",
+        "heatwave": "热浪烤岸。没浇的菜、没喂的牲口更遭罪。温室免疫。",
+        "frost": "霜冻：热带露天发僵。温室免疫。",
+        "thunderstorm": "雷暴扫过露天，没浇的地发僵。出海不稳。",
+        "snowbound": "雪封：露天发僵，栏里小心冻蹄。温室免疫。",
+        "pest_wave": "虫害潮：露天刚打理完，虫可能再来一遍。",
+        "blossom_tide": "花粉潮：花开得凶，羽疹和喷嚏都上来。",
+        "spring_flood": "春汛：近岸鱼多，滩上湿。",
+        "warm_rain": "回暖雨：露天地自己润一点。",
+        "gale_crop": "秋台扫过露天，没人看的地更容易出事。",
+        "fish_run": "渔汛：撒网和赶海手气上调。",
+        "loot_surge": "退潮礼包：交换台台阶像宝藏区。",
+        "red_tide": "赤潮：近岸别贪。网和钓都容易沾潮疹。",
+        "leaf_fall": "落叶潮：篱边好捡，栏里也该看一眼。",
+        "murrain_week": "畜瘟潮：栏里容易传。不对劲去蹄角棚找霍衡。",
+        "calm_sea": "平流：出海报废略降。",
+        "north_wind": "北风：出海发硬，栏里小心冻蹄。",
+    }.get(effect, "本周气候变了。不冲票。")
     detail = (
-        f"{week_id} 季节气候·{label}（{grade}）：露天没浇水的地发僵"
-        + ("，没浇的菜可能枯。" if wilt_p else "。")
-        + "温室免疫。浇水能扛。"
+        f"{week_id} 季节气候·{label}（{grade}）：{lore}"
         + (f" 此轮 {wilted} 块露天地枯了。" if wilted else "")
         + (f" {animals} 头没喂的牲口渴垮了。" if animals else "")
     )
     now = db.now()
     duration = config.SEASON_CLIMATE_DURATION
-    kind = "good" if effect in {"warm_rain", "fish_run", "loot_surge", "calm_sea"} else "bad"
+    kind = "good" if effect in {
+        "warm_rain", "fish_run", "loot_surge", "calm_sea",
+        "blossom_tide", "spring_flood", "leaf_fall",
+    } else "bad"
     await _insert_pulse(
         conn,
         effect=effect,
@@ -627,7 +660,12 @@ async def apply_pulse_field_hit(
             "UPDATE parcels SET tended=0 WHERE greenhouse=0 AND crop IS NOT NULL",
         )
         return
-    if effect not in {"drought", "heatwave", "frost"}:
+    if effect == "blossom_tide":
+        await conn.execute(
+            "UPDATE parcels SET tended=0 WHERE greenhouse=0 AND crop IS NOT NULL",
+        )
+        return
+    if effect not in {"drought", "heatwave", "frost", "thunderstorm", "snowbound"}:
         return
     conn.row_factory = aiosqlite.Row
     rows = await (
@@ -642,6 +680,11 @@ async def apply_pulse_field_hit(
         thirst_p = 0.08
     if effect == "frost":
         wilt_p = 0.02
+        thirst_p = 0.0
+    if effect == "thunderstorm":
+        wilt_p = 0.0
+        thirst_p = 0.0
+    if effect == "snowbound":
         thirst_p = 0.0
     for row in rows:
         sid = int(row[0] if not hasattr(row, "keys") else row["id"])
@@ -672,5 +715,13 @@ async def climate_sheet_line() -> str | None:
         "fish_run": "渔汛：撒网手气好一点。",
         "loot_surge": "退潮礼包：交换台台阶像宝藏区。",
         "calm_sea": "平流：出海略稳。",
+        "blossom_tide": "花粉潮：露天可能要再 tend。栏里小心羽疹。",
+        "spring_flood": "春汛：撒网手气好一点。",
+        "thunderstorm": "雷暴：露天发僵，出海不稳。",
+        "red_tide": "赤潮：别贪网。人若起潮疹去诊所。",
+        "leaf_fall": "落叶潮：篱边好捡。",
+        "murrain_week": "畜瘟潮：栏里不对劲去上手页找兽医。",
+        "snowbound": "雪封：露天发僵，栏里小心冻蹄。",
+        "north_wind": "北风：出海发硬。",
     }.get(effect, "")
     return f"本周气候：{label}。{hint}"

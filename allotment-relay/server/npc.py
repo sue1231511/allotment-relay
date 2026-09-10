@@ -19,6 +19,9 @@ def _day_id() -> int:
 def _find_npc(query: str) -> dict[str, Any] | None:
     q = query.strip()
     ql = q.lower()
+    if ql in ("霍衡", "huoheng", "兽医", "蹄角棚", "vet"):
+        ql = "huoheng"
+        q = "霍衡"
     for npc in NPC_FIXED:
         if npc["key"] == ql or npc["name"] == q or npc["name"].lower() == ql:
             return npc
@@ -37,7 +40,9 @@ async def npc_ops(key_id: int, command: str) -> str:
             if npc["key"] == "gugu_dove":
                 tag = " · 昼间每天掷一次盯梢，不可伤害"
             elif npc["key"] == "qiaoqiao":
-                tag = " · 诊所 NPC，治病用 visit_ops clinic treat"
+                tag = " · 诊所 NPC，治人用 visit_ops clinic treat；牲口找霍衡"
+            elif npc["key"] == "huoheng":
+                tag = " · 蹄角棚兽医，治牲口 visit_ops 霍衡 / 兽医 treat 1；不治人"
             elif npc["key"] == "lili":
                 tag = " · 流动贝壳商，visit_ops lili scan/trade/summon"
             elif npc["key"] == "shaonian":
@@ -102,6 +107,9 @@ async def npc_ops(key_id: int, command: str) -> str:
         if npc["key"] == "lianli":
             from . import marriage as marriage_mod
             return await marriage_mod.marriage_ops(key_id, "desk")
+        if npc["key"] == "huoheng":
+            from . import vet as vet_mod
+            return await vet_mod.vet_ops(key_id, "visit")
         line = random.choice(npc["lines"])
         extra = await _visit_context(s, npc["key"])
         gift = await _daily_visit_gift(s["id"], npc["key"])
@@ -170,7 +178,9 @@ async def _visit_context(steward: dict, key: str) -> str:
         if ailments:
             names = "、".join(a["name"] for a in ailments[:3])
             return f"——你挂着 {names}，visit_ops clinic treat，不赊账"
-        return "——身子还行。别等病了再来聊天"
+        return "——身子还行。牲口不对劲找霍衡，别来我这儿排"
+    if key == "huoheng":
+        return "——栏里不对劲 visit_ops 兽医 status。人发烧去桥桥"
     if key == "tt":
         return "——店在档口东头。visit_ops tt catalog 看货架（渔网钓竿也有），gift 送礼涨好感"
     return flavor.pick([

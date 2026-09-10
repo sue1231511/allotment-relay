@@ -21,17 +21,17 @@ TRIGGER_AILMENTS: dict[str, list[str]] = {
     "gather": ["sprain", "backache", "blister", "allergy", "exhaustion", "toothache", "heatstroke"],
     "sow": ["sprain", "backache", "cut", "heatstroke"],
     "forage": ["allergy", "blister", "cut", "dehydration"],
-    "net": ["jelly_sting", "cold", "shell_scratch", "dehydration"],
-    "pen_feed": ["cut", "blister"],
-    "pen_harvest": ["cut", "crab_pinch"],
+    "net": ["jelly_sting", "cold", "shell_scratch", "dehydration", "tide_rash"],
+    "pen_feed": ["cut", "blister", "tide_rash"],
+    "pen_harvest": ["cut", "crab_pinch", "tide_rash"],
     "pen_stock": ["cut"],
-    "voyage_depart": ["cold", "food_poison", "backache", "damp_lung"],
-    "voyage_return": ["cold", "food_poison", "backache"],
+    "voyage_depart": ["cold", "food_poison", "backache", "damp_lung", "tide_rash"],
+    "voyage_return": ["cold", "food_poison", "backache", "tide_rash"],
     "guild": ["blister"],
     "brew": ["food_poison", "damp_lung"],
-    "barn_feed": ["cut", "blister", "heatstroke"],
-    "barn_collect": ["cut", "blister"],
-    "beach": ["shell_scratch", "sunburn", "crab_pinch", "dehydration"],
+    "barn_feed": ["cut", "blister", "heatstroke", "barn_fever"],
+    "barn_collect": ["cut", "blister", "barn_fever", "hoof_toxin"],
+    "beach": ["shell_scratch", "sunburn", "crab_pinch", "dehydration", "tide_rash"],
     "quarry": ["rock_dust", "sprain", "backache", "blister", "cut"],
     "salvage": ["wreck_cough", "shell_scratch", "cold", "dehydration"],
     "bar_shift": ["hangover"],
@@ -274,7 +274,25 @@ async def maybe_roll_ailment(
     keys = pool or TRIGGER_AILMENTS.get(trigger, [])
     if not keys:
         return None
+    from . import world as world_mod
+
+    climate = world_mod.field_climate_effect()
+    if pool is None:
+        if climate == "red_tide" and trigger in {"net", "beach", "voyage_depart", "voyage_return", "pen_feed", "pen_harvest"}:
+            keys = ["tide_rash", "jelly_sting", "shell_scratch"]
+        elif climate == "blossom_tide" and trigger in {"tend", "gather", "forage", "sow"}:
+            keys = ["allergy", "blister"]
+        elif climate == "murrain_week" and trigger in {"barn_feed", "barn_collect"}:
+            keys = ["barn_fever", "hoof_toxin", "cut"]
     roll_chance = chance if chance is not None else config.AILMENT_ROLL_CHANCE
+    if climate == "red_tide" and trigger in {"net", "beach", "voyage_depart", "voyage_return"}:
+        roll_chance = min(0.42, roll_chance + 0.16)
+    elif climate == "thunderstorm" and trigger in {"net", "voyage_depart", "voyage_return"}:
+        roll_chance = min(0.28, roll_chance + 0.08)
+    elif climate in ("murrain_week", "heatwave") and trigger in {"barn_feed", "barn_collect"}:
+        roll_chance = min(0.32, roll_chance + 0.10)
+    elif climate == "blossom_tide" and trigger in {"tend", "forage", "gather"}:
+        roll_chance = min(0.28, roll_chance + 0.08)
     if random.random() > roll_chance:
         return None
     key = random.choice(keys)

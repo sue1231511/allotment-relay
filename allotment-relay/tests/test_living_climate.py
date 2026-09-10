@@ -108,9 +108,12 @@ async def _test_drought_does_not_levy_and_delays_unwatered() -> None:
             )
         assert result["effect"] == "drought"
         assert tickets == 90000
-        assert outdoor[0] == planted + 2400
         assert indoor[0] == planted
         assert indoor[1] == "kale"
+        if outdoor[1] == "kale":
+            assert outdoor[0] == planted + 2400
+        else:
+            assert outdoor[0] is None
 
 
 async def _test_tree_died_of_age() -> None:

@@ -194,17 +194,25 @@ PHASE_HINT = {
     "dusk": "酒吧开门。意外略高。",
     "night": "酒吧继续开。户外长得稍快。",
 }
-SEASON_HINT = "一周一季。买种和露天、果园须当季；已种的继续长。温室不受季节。夏天更常干旱，冬天霜冻；露天没浇水会长得慢、可能枯。"
+SEASON_HINT = "一周一季。买种和露天、果园须当季；已种的继续长。温室不受季节。夏天更常干旱，也有热浪、渔汛、雷暴、赤潮；春天虫害潮、花粉潮、春汛；秋天秋台、落叶、畜瘟潮；冬天霜冻、雪封、北风。干旱不冲票。"
 CLIMATE_NOW = {
-    "drought": "干旱：露天没浇水的地长得慢，还可能枯。浇过水的好很多。温室不怕。牲口没喂更容易老死。",
-    "heatwave": "热浪：比干旱更烤。没浇水的露天地更慢，中暑更容易。温室仍免疫。",
-    "frost": "霜冻：热带露天作物发僵。温室不怕。",
-    "pest_wave": "虫害潮：露天刚打理完，虫可能再来一遍。温室更省心。",
+    "drought": "干旱：露天没浇水的地长得慢，还可能枯。浇过水的好很多。温室不怕。牲口没喂更容易渴死。",
+    "heatwave": "热浪：比干旱更烤。没浇水的露天地更慢，中暑更容易。温室仍免疫。栏里小心暑渴。",
+    "frost": "霜冻：热带露天作物发僵。温室不怕。栏里小心冻蹄。",
+    "pest_wave": "虫害潮：露天刚打理完，虫可能再来一遍。温室更省心。鸡鸭小心羽疹。",
     "warm_rain": "回暖雨：露天地自己润一点，浇水更香。",
-    "gale_crop": "秋台：没人看的露天地更容易出事。",
+    "gale_crop": "秋台：没人看的露天地更容易出事。羊牛小心蹄瘟。",
     "fish_run": "渔汛：撒网和赶海手气上调。",
     "loot_surge": "退潮礼包：交换台台阶像宝藏区。",
     "calm_sea": "平流：出海报废略降。",
+    "blossom_tide": "花粉潮：花开得凶。人可能喷嚏，鸡鸭小心羽疹。",
+    "spring_flood": "春汛：近岸鱼多一点，滩上湿。",
+    "thunderstorm": "雷暴：露天发僵，出海不稳。",
+    "red_tide": "赤潮：近岸别贪。撒网坐钓更容易水母蛰和潮疹。人去桥桥，不是霍衡。",
+    "leaf_fall": "落叶潮：篱边好捡。栏里也该巡一眼。",
+    "murrain_week": "畜瘟潮：栏里容易传。不对劲去蹄角棚找霍衡。拖着会病死，死了没肉。",
+    "snowbound": "雪封：露天发僵，栏里小心冻蹄。温室免疫。",
+    "north_wind": "北风：出海发硬，空网略增。栏里小心冻蹄。",
 }
 
 
@@ -257,6 +265,14 @@ def climate_grow_mult(in_greenhouse: bool, watered: bool, tropic: bool = False) 
         return 0.92 if watered else 0.97
     if climate == "gale_crop":
         return 1.12
+    if climate == "thunderstorm":
+        return 1.10
+    if climate == "snowbound":
+        return 1.22
+    if climate == "spring_flood":
+        return 0.94
+    if climate == "blossom_tide":
+        return 0.96
     return 1.0
 
 

@@ -2431,6 +2431,8 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
         ))
     elif built and barn_built:
         await barn.tick_animal_age(conn, s["id"])
+        from . import barn_disease as barn_disease_mod
+        await barn_disease_mod.tick_barn_disease(conn, s["id"])
         prev_factory = conn.row_factory
         conn.row_factory = aiosqlite.Row
         animals = await (await conn.execute(
@@ -2465,13 +2467,16 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
             can_feed = (not fed) and (have_feed or have_generic)
             age = barn.animal_age_label(row)
             age_bit = f" {age}。" if age else ""
+            from . import barn_disease as barn_disease_mod
+            sick = barn_disease_mod.animal_ailment_label(row)
+            sick_bit = f"病着：{sick}。去上手页点找兽医。" if sick else ""
             if not fed:
                 barn_items.append(_sku(
                     sid=f"feed-{slot}",
                     kind="barn_feed",
                     name=f"喂 #{slot} {spec['name']}",
                     emoji=spec.get("emoji") or "·",
-                    note=f"要 {feed_name} x{spec['feed_qty']}（或动物饲料）。{age_bit}",
+                    note=f"要 {feed_name} x{spec['feed_qty']}（或动物饲料）。{age_bit}{sick_bit}",
                     detail="喂过才收。粪便会顺手进行囊，拿去堆肥桶。过了寿栏会空，大收才给肉。",
                     price="喂" if can_feed else "看",
                     can=can_feed,

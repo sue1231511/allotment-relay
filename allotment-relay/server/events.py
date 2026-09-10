@@ -582,14 +582,22 @@ async def _apply_effects(
         elif eff == "barn_die":
             animal = await _pick_barn_animal(conn, steward["id"], prefer_unfed=True)
             if animal:
+                from . import barn_disease as barn_disease_mod
+                sick_key = barn_disease_mod.animal_ailment_key(dict(animal))
                 await conn.execute(
                     """
                     UPDATE barn_animals SET species=NULL, stocked_at=NULL,
-                        fed=0, guard=0, born_at=0
+                        fed=0, guard=0, born_at=0, ailment='', ailment_at=0
                     WHERE id=?
                     """,
                     (animal["id"],),
                 )
+                if sick_key:
+                    msg = await barn_disease_mod.contact_human(
+                        conn, steward["id"], sick_key, source="barn_die"
+                    )
+                    if msg:
+                        ailment_msgs.append(msg)
         elif eff == "plot_delay":
             plot = await _pick_plot(conn, steward["id"], exclude_ids=exclude)
             if plot and plot.get("planted_at"):
@@ -884,19 +892,29 @@ async def gather_blight_loss(conn: aiosqlite.Connection, steward_id: int, crop_k
 
 async def net_bonus_chance() -> float:
     pulse = await active_world_pulse()
-    if pulse and pulse.get("effect_type") == "fish_run":
+    effect = (pulse or {}).get("effect_type") if pulse else None
+    from . import world as world_mod
+
+    climate = world_mod.field_climate_effect() or effect
+    if climate in {"fish_run", "spring_flood"}:
         return 0.32
-    if pulse and pulse.get("effect_type") == "calm_sea":
+    if climate == "calm_sea":
         return 0.12
     return 0.0
 
 
 async def net_fog_penalty() -> float:
     pulse = await active_world_pulse()
-    if pulse and pulse.get("effect_type") == "fog_bank":
-        return 0.10
-    if pulse and pulse.get("effect_type") == "weekly_tide":
+    effect = (pulse or {}).get("effect_type") if pulse else None
+    from . import world as world_mod
+
+    climate = world_mod.field_climate_effect() or effect
+    if climate in {"fog_bank", "red_tide", "north_wind"}:
+        return 0.10 if climate != "red_tide" else 0.14
+    if climate == "weekly_tide":
         return 0.12
+    if climate == "thunderstorm":
+        return 0.08
     return 0.0
 
 

@@ -38,6 +38,7 @@ async def _test_world_pulse_pool() -> None:
     assert "warm_breeze" in seen
     assert "gnat_swarm" in seen
     assert "drought" in seen
+    assert "red_tide" in seen or "murrain_week" in seen
 
 
 def test_world_pulse_pool() -> None:

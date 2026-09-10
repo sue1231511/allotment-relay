@@ -86,7 +86,7 @@ async def relay_manual() -> str:
     return await game.relay_manual()
 
 
-@mcp.tool(description="身份档案。空=sheet。例：enroll 安 · 岛缘 · board tickets。人类地图左侧保留六项属性数值，右侧三项面板显示工分票/等级/岛缘；勿 invite_ops。")
+@mcp.tool(description="身份档案。空=sheet。例：enroll 安 · 岛缘 · 引航 · board tickets。勿 invite_ops。")
 async def steward_ops(command: str = "sheet") -> str:
     from . import progress as progress_mod
     return progress_mod.attach_note(
@@ -126,8 +126,8 @@ async def alliance_ops(command: str = "") -> str:
     return await mux._call_ops(mux.alliance_bundle, _kid(), command)
 
 
-@mcp.tool(description="NPC、杂货与花店。空=help。例：tt buy 甘蓝种 · tt gift 姜 · 默默 scan · 默默 买花 玫瑰。tt gift 姜=调味料作物≠姜种；默默 花语/花茶/记名/干花，详见 默默 help；鲜花不是种子。玩家集市走 tote_ops market；潮生会不能加入。")
-async def visit_ops(command: Annotated[str, Field(description="整句子命令；空=help。默默=进花店；默默 花茶 玫瑰花茶；默默 记名；默默 help 看花语/买花/干花费用。")] = "") -> str:
+@mcp.tool(description="NPC、杂货、诊所、兽医与花店。空=help。例：tt buy 甘蓝种 · 霍衡 · 默默 scan。桥桥治人≠霍衡治牲口；潮生会不能加入。")
+async def visit_ops(command: Annotated[str, Field(description="整句子命令；空=help。霍衡=兽医；clinic=桥桥；默默=花店。税/维走潮生会。漾漾=衣泊坊。")] = "") -> str:
     return await mux._call_ops(mux.visit_bundle, _kid(), command)
 
 
@@ -164,7 +164,7 @@ async def cloth_ops(command: str = "") -> str:
     return progress_mod.attach_note(await mux._call_ops(cloth.cloth_ops, _kid(), command))
 
 
-@mcp.tool(description="婚约/导演约会。空=婚档。例：约会 小馆 · 出游 查看 · 出游 自定义 1 | 听雨 · 出游 删除 9。人类点手游背包左侧图标应邀，AI行动；只留回忆。勿date_ops。")
+@mcp.tool(description="婚约/导演约会。空=婚档。例：约会 小馆 · 出游 查看。求婚走连理所。勿date_ops/propose_marriage。")
 async def marriage_ops(command: Annotated[str, Field(description="整句命令；help看全表。手游图标只看/应邀；出游 继续 0 / 出游 自定义 1 | 行动 带当前幕号；失败重试原幕，受理后只 出游 查看；出游 删除 编号删已结束回忆。")] = "") -> str:
     from . import marriage
     from . import progress as progress_mod

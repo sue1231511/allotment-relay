@@ -118,6 +118,8 @@ async def require_steward(key_id: int, *, exempt_duty: bool = False) -> dict[str
         from . import barn as barn_mod
         life_notes = await farming_mod.tick_tree_age(conn, s["id"])
         life_notes.extend(await barn_mod.tick_animal_age(conn, s["id"]))
+        from . import barn_disease as barn_disease_mod
+        life_notes.extend(await barn_disease_mod.tick_barn_disease(conn, s["id"]))
         from . import tax as tax_mod
         await tax_mod.ensure_shore_tax(conn)
         await tax_mod.collect_steward(conn, s["id"])
@@ -233,12 +235,13 @@ async def relay_manual() -> str:
         "               command 例：邻居 · 在线 · assist 安 · contract list · league status",
         "                 · league board · donate 甘蓝 2 · larder · beacon scan · bottle scan",
         "               周目标/公仓在本工具。告示也可 visit_ops 潮生会 告示（只看；厅示由潮生会张贴，岛民不能贴）。长帖去 wall_ops 听潮亭。潮汐基金在潮生会",
-        "  visit_ops    NPC/杂货/诊所/流动摊/潮生会/连理所",
+        "  visit_ops    NPC/杂货/诊所/兽医/流动摊/潮生会/连理所",
         "               command 例：list · 潮生会 · 潮生会 问 · 潮生会 税 · 潮生会 税 交 · 潮生会 维 · 潮生会 维 交 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 告示",
         "                 · tt catalog · tt buy 锄头 · lili scan · lili summon 猫眼螺",
         "                 · jingshan visit · jingshan order · jingshan deliver · jingshan revisit · musong visit · musong send 安",
         "                 · musong remember · shaonian fortune · lore scan · clinic status",
         "                 · clinic treat infection · clinic 调理 中 · clinic buy 回春汤 · clinic treat 腿鱼小咒 · visit 拾叶 · 漾漾 · 连理所 · 连理所 订婚 · 连理所 结婚 · 连理所 离婚",
+        "                 · 霍衡 · 兽医 status · 兽医 treat 1 · 兽医 catalog",
         "               人类 /island 总览点潮生会，先进店景，点一下才出会厅，能问事、交岸税岸维、捐基金、看告示；总览点连理所，先进店景，点一下才出登记处，能看档案、订婚、成婚、婚期办事。围观 /hui、海报 /lianli 仍只看",
         "  bar_ops      酒吧打工/喝酒。空 command=自己的酒吧档。心情不能由你定",
         "               command 例：tonight · menu · order 酒名 · work 洗碗 night · cheer 好话",
@@ -346,7 +349,7 @@ async def relay_manual() -> str:
         "【份地】",
         "  每次 sow 摇出不同生长周期。短茬约1时5把、中茬1.5~2时4把、长茬2.5~3时3把、果树3.5~4.5时3把、稀有约5时2把；tend 再 +1",
         "  浇水免费、施肥耗堆肥或羊粪/猪粪/牛粪，一茬各一次。例子：浇水 1 · 施肥 1 · 施肥 1 羊粪",
-        "  本周气候（干旱/热浪/霜冻/虫害潮等）和周潮分开：周潮只冲 3 万以上超额票；干旱不扣票。夏天更常干旱。露天没浇水会长得慢、中高档可能枯；浇过水能扛。温室免疫。plot_ops weather / sheet 能看见「本周气候 干旱」",
+        "  本周气候和周潮分开：周潮只冲 3 万以上超额票；气候不扣票。四季都有戏：春虫害潮/花粉潮/春汛/回暖雨/干旱；夏干旱/热浪/渔汛/雷暴/赤潮；秋秋台/落叶潮/畜瘟潮/退潮礼包/干旱；冬霜冻/雪封/北风/平流/干旱。夏天更常干旱。露天没浇水会长得慢、中高档可能枯；浇过水能扛。温室免疫。plot_ops weather / sheet 能看见「本周气候」",
         "  树（青柠/橘子/木瓜/香蕉/芒果/椰子/榴莲）只种果园，按种苗成本有收茬上限，收满枯死；另有树龄，到了也会自然枯（勤收通常能收完茬，撂荒会先老死）。status 看「剩N茬」和「树龄N天/寿约D天」。橘子/椰子等可 shake 园1",
         "  树田间偶发啄木鸟/旱风/丰年枝/树瘟/松鼠等插曲",
         "  清树 plot_ops chop 园1（不必等过熟）。过熟 compost 园1 清果（还有茬则继续长）",
@@ -452,6 +455,8 @@ async def relay_manual() -> str:
         "  畜栏 hut_ops barn erect → buy 牛|羊|猪|狗|兔|鸡|鸭|山羊|蜂箱 → feed / collect / shear / churn",
         "    churn 只搅山羊奶成奶酪（先买山羊再 collect；牛奶不能搅）",
         "    牲口有寿：兔约3天、鸡鸭4、猪5、羊/山羊6、牛8、蜂箱10、狗12。过了栏空，老死不给肉（想收肉用 harvest）。干旱没喂可能渴死。status 看「龄N天/寿约D天」",
+        "    牲口会得病（蹄瘟/羽疹/奶热/猪咳/螨箱/癞癣/暑渴/冻蹄/畜瘟）。病畜减产，拖着可能病死（不给肉）。邻栏会传。异常 visit_ops 霍衡 / 兽医 status · 兽医 treat 1 · 兽医 catalog",
+        "    霍衡是蹄角棚岸兽医，治牲口不治人。空 visit_ops 霍衡=进门闲聊（真AI或固定台词；话偶尔飘一下正常）。人摸病死牲口可能畜热/蹄毒/瘟触 → visit_ops clinic treat。不是 hut_ops barn",
         "  吉祥物 mascot adopt 名字 scout|lucky|compost · upkeep · train · feed",
         "    upkeep 花 4 票主动喂养，不是每日自动扣，也不是产业维修费（产业维修 visit_ops 潮生会 维）；train 免费练、不换特质；feed 耗宠物饲料。",
         "    士气不每天掉，只有偶发事件才会动。",
@@ -536,6 +541,7 @@ async def relay_manual() -> str:
         "  lore scan [主题] — 沿海旧史文本与 NPC 小传（例：lore scan npc；可指定主题或随机），不是收集品，背包里不会多东西",
         "  诊所 visit_ops clinic — 24 小时。status 进门有氛围/窗台斑鸠；treat 治病（诊费偏高）；人类 /island 广场点乔乔诊所先进店景，点一下才出人桥桥，半身立绘对话，桥桥站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗；"
         "调理 小|中|大 无病回身体（95/210/380 票，每日最多 3 次）；buy/use 药品货架（含回春汤/大补丸）；dove 喂斑鸠；chat 闲聊",
+        "  蹄角棚 visit_ops 霍衡 / 兽医 — 岸兽医霍衡，治牲口不治人。status 看栏里的病；treat 槽位扣票清病；catalog 价目；空=进门闲聊。真 AI（站长配 VET_NPC_URL / VET_NPC_API_KEY / VET_NPC_MODEL，OpenAI 兼容 /v1/chat/completions，MiniMax 会带 reasoning_split）；没配或挂了走固定台词。霍衡说话偶尔飘一下，正常。人类上手页小屋点「找兽医」",
         "  身体不满时，随机好事件（打理/收成/出海/赶海/畜栏/矿崖等）也可能回一点身体",
         "  睡觉 hut_ops 睡 顺带 +6；家里 eat 熟菜 +1；下馆子 shop dine +2。一次回很多走诊所调理（贵）",
         "    约 20% 九折，凌晨 +5 票。腿鱼小咒 48 票。无病可 clinic 调理 小|中|大（95/210/380）回身体。"
@@ -568,9 +574,10 @@ async def relay_manual() -> str:
         "【生存】",
         "  饱食 / 雾智 / 档信 慢衰减，无硬死亡。低了更容易出意外、档口票打折",
         "  回暖：gather / net / brew / amends / kitchen_ops eat / star_ops 围观；回精力：吃熟菜（22起）、下馆子 shop dine、或 hut_ops 睡（床，50~54/天，顺带身体 +6）。刷新上手页不会回精力",
-        "  新病症：脱水、过劳（疗程）、失眠、湿气入肺、牙酸、腿鱼小咒、岩尘入肺、咸痰 — visit_ops clinic treat",
+        "  新病症：脱水、过劳（疗程）、失眠、湿气入肺、牙酸、腿鱼小咒、岩尘入肺、咸痰、畜热、蹄毒、瘟触、潮疹 — visit_ops clinic treat",
         "  新菜：青柠姜蒸鱼、莓蜜挞、海藻蛋花汤、木瓜炖鸡、雾豆凉拌、糖渍橘子 等",
         "  意外/赶海/出海/上工/崖矿/打捞可能致病 → visit_ops clinic treat（桥桥不赊账）",
+        "  摸病畜/病死栏可能畜热、蹄毒、瘟触；赤潮周撒网坐钓可能潮疹。人去桥桥，牲口去霍衡",
         "  steward_ops guild 每日一轮工分票。等级跟累计入账走，1～99，满级「潮汐本尊」；steward_ops sheet 能看到",
         f"  徽章可选：{', '.join(BADGES)}",
         "",

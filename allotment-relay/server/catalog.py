@@ -1441,6 +1441,32 @@ AILMENTS = {
         "hint": "风暴滩上吸进去的。clinic treat 咸痰。不是岩尘入肺",
         "energy_extra": 2,
     },
+    "barn_fever": {
+        "name": "畜热", "emoji": "🤒", "cost": 26, "health_loss": 11, "health_restore": 14,
+        "hint": "摸病畜、挤病奶落下的。clinic treat 畜热。霍衡不给人开药",
+        "energy_extra": 2, "max_energy_cut": 6,
+    },
+    "hoof_toxin": {
+        "name": "蹄毒", "emoji": "🦠", "cost": 28, "health_loss": 12, "health_restore": 10,
+        "hint": "接触蹄瘟牲口或病死栏。约两次挂号。clinic treat 蹄毒，不是兽医",
+        "energy_extra": 3, "max_energy_cut": 8,
+        "courses": 2, "drain_energy": 1, "drain_every": 1800,
+        "stage_names": {2: "红肿", 1: "结痂"},
+        "re_line": "又碰了病蹄，{name}回到{stage_name}。visit_ops clinic treat 蹄毒。",
+    },
+    "murrain_touch": {
+        "name": "瘟触", "emoji": "☠️", "cost": 38, "health_loss": 14, "health_restore": 10,
+        "hint": "接触畜瘟病死牲口。约两次挂号。clinic treat 瘟触。霍衡治栏不治人",
+        "energy_extra": 3, "max_energy_cut": 10,
+        "courses": 2, "drain_energy": 2, "drain_every": 1800,
+        "stage_names": {2: "发冷", 1: "余热"},
+        "re_line": "又碰了瘟栏，{name}烧回{stage_name}。visit_ops clinic treat 瘟触。",
+    },
+    "tide_rash": {
+        "name": "潮疹", "emoji": "🪸", "cost": 24, "health_loss": 9, "health_restore": 12,
+        "hint": "赤潮周撒网、坐钓、赶海沾上的。clinic treat 潮疹。不是水母蛰",
+        "energy_extra": 2,
+    },
 }
 
 PIT_AILMENTS = frozenset({"ring_shock", "pit_trauma"})
@@ -1460,6 +1486,11 @@ AILMENT_ALIASES = {
     "风暴咳": "wreck_cough",
     "中暑": "heatstroke",
     "热射病": "heatstroke",
+    "畜热": "barn_fever",
+    "蹄毒": "hoof_toxin",
+    "瘟触": "murrain_touch",
+    "潮疹": "tide_rash",
+    "赤潮疹": "tide_rash",
 }
 
 
@@ -1564,6 +1595,16 @@ NPC_FIXED = [
         "clinic buy 醒酒药 / use 醒酒药 可囤货；进门可能有九折，凌晨 +5 票",
         "clinic dove 喂 斑鸠（雾豌豆×1）；clinic chat 闲聊；clinic catalog 价目",
         "visit_ops visit 只能聊天，真治得 visit_ops clinic treat",
+        "牲口的病找霍衡蹄角棚，我不管羊蹄。人沾了畜热/蹄毒/瘟触/潮疹才来我这儿",
+    ]},
+    {"key": "huoheng", "name": "霍衡", "lines": [
+        "蹄角棚。岸兽医。治牲口，不治人。人发烧去桥桥。",
+        "话少，手稳。闻得出牲口气。碘酒在左边，票放桌上，不赊。",
+        "年轻时跟北岸商船看驮畜。二十年前那一场畜瘟，他没赶上第一夜，只赶上清栏。",
+        "visit_ops 霍衡 / 兽医 status / 兽医 treat 1 / 兽医 catalog / 兽医 chat 话",
+        "这人有时话会飘一下——那是真 AI，偶尔波动，正常。没接上就按老规矩说话。",
+        "栏里不对劲牵过来。拖着会病死，死了没肉。邻栏会传。",
+        "人类上手页小屋点「找兽医」。不是 hut_ops barn，也不是诊所。",
     ]},
     {"key": "momo", "name": "默默", "lines": [
         "默语花房在集市旁，鲜花与花茶每日迎客。",

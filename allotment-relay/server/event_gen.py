@@ -575,6 +575,13 @@ def generate_world_pulse() -> dict[str, Any]:
         ("pest_wave", "bad", "虫害潮：露天刚 tend 完可能再来一遍"),
         ("warm_rain", "good", "回暖雨：露天地自己润一点"),
         ("gale_crop", "bad", "秋台扫过份地，没人看的地更容易出事"),
+        ("blossom_tide", "bad", "花粉潮：花开得凶，鸡鸭和鼻子都遭罪"),
+        ("spring_flood", "good", "春汛：近岸鱼多一点"),
+        ("thunderstorm", "bad", "雷暴扫岸，露天发僵，出海不稳"),
+        ("leaf_fall", "good", "落叶潮：篱边好捡"),
+        ("murrain_week", "bad", "畜瘟潮：栏里容易传，去蹄角棚"),
+        ("snowbound", "bad", "雪封：露天发僵，栏里小心冻蹄"),
+        ("north_wind", "bad", "北风：出海发硬"),
     ]
     effect, kind, hint = random.choice(effect_types)
 
@@ -595,6 +602,13 @@ def generate_world_pulse() -> dict[str, Any]:
         "pest_wave": ["虫害潮", "虫口暴涨", "菜青虫周", "蚜虫翻倍"],
         "warm_rain": ["回暖雨", "润土", "春雨过篱", "墒情回"],
         "gale_crop": ["秋台", "田间台风", "篱笆倒伏", "风灾茬"],
+        "blossom_tide": ["花粉潮", "花浪", "喷嚏周", "花开得凶"],
+        "spring_flood": ["春汛", "桃花水", "近岸满潮", "春水"],
+        "thunderstorm": ["雷暴", "岸雷", "闪白", "雷先到"],
+        "leaf_fall": ["落叶潮", "篱边黄", "扫叶天", "秋叶"],
+        "murrain_week": ["畜瘟潮", "栏疫", "蹄角警报", "邻栏传"],
+        "snowbound": ["雪封", "封门雪", "冻蹄周", "白门"],
+        "north_wind": ["北风", "硬风", "空网风", "蹄缝风"],
         "weekly_tide": ["周潮", "浅潮", "灌仓潮", "黑潮"],
     }
     verbs = ["掠过", "笼罩", "扫过", "渗入", "降临在", "打卡"]

@@ -195,12 +195,20 @@ SEASON_CLIMATE_LABELS = {
     "fish_run": "渔汛",
     "loot_surge": "退潮礼包",
     "calm_sea": "平流",
+    "blossom_tide": "花粉潮",
+    "spring_flood": "春汛",
+    "thunderstorm": "雷暴",
+    "red_tide": "赤潮",
+    "leaf_fall": "落叶潮",
+    "murrain_week": "畜瘟潮",
+    "snowbound": "雪封",
+    "north_wind": "北风",
 }
 SEASON_CLIMATE_WEIGHTS = {
-    "春": (("pest_wave", 45), ("warm_rain", 35), ("drought", 20)),
-    "夏": (("drought", 55), ("heatwave", 25), ("fish_run", 20)),
-    "秋": (("gale_crop", 40), ("drought", 25), ("loot_surge", 35)),
-    "冬": (("frost", 50), ("calm_sea", 25), ("drought", 25)),
+    "春": (("pest_wave", 28), ("warm_rain", 18), ("blossom_tide", 18), ("spring_flood", 16), ("drought", 20)),
+    "夏": (("drought", 32), ("heatwave", 18), ("fish_run", 14), ("thunderstorm", 18), ("red_tide", 18)),
+    "秋": (("gale_crop", 26), ("drought", 14), ("loot_surge", 20), ("leaf_fall", 18), ("murrain_week", 22)),
+    "冬": (("frost", 28), ("calm_sea", 14), ("drought", 14), ("snowbound", 24), ("north_wind", 20)),
 }
 
 # 休闲生存感 — 慢衰减、无硬死亡

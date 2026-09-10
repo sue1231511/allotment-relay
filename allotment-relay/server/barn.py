@@ -37,7 +37,8 @@ def _ready(animal: dict, species: str) -> bool:
 
 
 CLEAR_SLOT_SQL = (
-    "UPDATE barn_animals SET species=NULL, stocked_at=NULL, fed=0, guard=0, born_at=0 "
+    "UPDATE barn_animals SET species=NULL, stocked_at=NULL, fed=0, guard=0, born_at=0, "
+    "ailment='', ailment_at=0 "
     "WHERE steward_id=? AND slot=?"
 )
 
@@ -139,6 +140,10 @@ def _line(animal: dict | None, slot: int) -> str:
         state = "待喂"
     age = animal_age_label(animal)
     extra = f" · {age}" if age else ""
+    from . import barn_disease as barn_disease_mod
+    sick = barn_disease_mod.animal_ailment_label(animal)
+    if sick:
+        extra += f" · 病{sick}"
     return f"  #{slot}: {spec['emoji']}{spec['name']}（{state}）{extra}"
 
 
@@ -151,6 +156,8 @@ async def barn_ops(key_id: int, command: str) -> str:
         async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             await tick_animal_age(conn, s["id"])
+            from . import barn_disease as barn_disease_mod
+            disease_notes = await barn_disease_mod.tick_barn_disease(conn, s["id"])
             await conn.commit()
             rows = await (await conn.execute(
                 "SELECT * FROM barn_animals WHERE steward_id=? ORDER BY slot",
@@ -163,11 +170,14 @@ async def barn_ops(key_id: int, command: str) -> str:
         ]
         for note in s.get("_life_notes") or []:
             lines.append(note)
+        for note in disease_notes:
+            lines.append(note)
         by_slot = {r["slot"]: dict(r) for r in rows}
         for slot in range(1, config.BARN_SLOTS + 1):
             lines.append(_line(by_slot.get(slot), slot))
         lines.append(f"可购: {', '.join(LIVESTOCK.keys())}")
         lines.append("catalog 看详情 · collect 日常收奶/蛋/蜜 · shear 剪羊毛（要剪刀） · churn 山羊奶→奶酪")
+        lines.append("栏里不对劲：visit_ops 兽医 status / treat 槽位（霍衡）。人发烧去 clinic")
         lines.append("粪便进堆肥桶：hut_ops 堆肥桶 存 羊粪 3（先 buy compost_bin → install soft_1，空槽也能装）")
         if built:
             lines.append(
@@ -217,6 +227,8 @@ async def barn_ops(key_id: int, command: str) -> str:
                 )
         lines.append("粪便进堆肥桶 hut_ops 堆肥桶 存，不能进潮柜")
         lines.append("牲口有寿：过了栏空，不给肉。想收肉用 harvest。干旱没喂可能渴死。")
+        lines.append("牲口会得病。病畜减产，拖着可能病死（不给肉）。异常去 visit_ops 兽医 / 霍衡。")
+        lines.append("摸病死牲口可能沾病菌，人去 clinic，不是蹄角棚。")
         return "\n".join(lines)
 
     if verb == "erect":
@@ -273,7 +285,8 @@ async def barn_ops(key_id: int, command: str) -> str:
             stocked = db.now() if not meta.get("hive") else db.now()
             await conn.execute(
                 """
-                UPDATE barn_animals SET species=?, stocked_at=?, fed=0, guard=?, born_at=?
+                UPDATE barn_animals SET species=?, stocked_at=?, fed=0, guard=?, born_at=?,
+                    ailment='', ailment_at=0
                 WHERE steward_id=? AND slot=?
                 """,
                 (species, stocked, guard, db.now(), s["id"], slot),
@@ -327,9 +340,26 @@ async def barn_ops(key_id: int, command: str) -> str:
                 manure_msg = f"，顺手收 {MANURE[meta['manure']]['name']} x{qty}"
             from . import events
             extra = await events.roll_after_action(s, "barn_feed", conn)
+            from . import barn_disease as barn_disease_mod
+            ill = None
+            sick_key = barn_disease_mod.animal_ailment_key(row)
+            if sick_key:
+                ill = await barn_disease_mod.contact_human(
+                    conn, s["id"], sick_key, source="barn_feed"
+                )
             await conn.commit()
-        msg = f"#{slot} 已喂食{manure_msg}"
-        return f"{msg}\n{extra}" if extra else msg
+        bits = [f"#{slot} 已喂食{manure_msg}"]
+        sick_label = ""
+        from . import barn_disease as barn_disease_mod
+        sick_label = barn_disease_mod.animal_ailment_label(row)
+        if sick_label:
+            bits.append(f"这头病着（{sick_label}）。去 visit_ops 兽医 treat {slot}")
+        if extra:
+            bits.append(extra)
+        if ill:
+            bits.append(ill)
+            bits.append("人的病去 visit_ops clinic treat，霍衡不给人开药")
+        return "\n".join(bits)
 
     if verb == "collect":
         slot = int(parts[1]) if len(parts) > 1 else 1
@@ -355,6 +385,8 @@ async def barn_ops(key_id: int, command: str) -> str:
                 raise ValueError("今日已收过")
             product = meta["product"]
             qty = meta["product_qty"]
+            from . import barn_disease as barn_disease_mod
+            qty = barn_disease_mod.yield_qty(row, qty)
             extra = ""
             if meta.get("hive") and random.random() < 0.2:
                 qty += 1
@@ -375,12 +407,27 @@ async def barn_ops(key_id: int, command: str) -> str:
             )
             from . import events
             hit = await events.roll_after_action(s, "barn_collect", conn)
+            ill = None
+            sick_key = barn_disease_mod.animal_ailment_key(row)
+            if sick_key:
+                ill = await barn_disease_mod.contact_human(
+                    conn, s["id"], sick_key, source="barn_collect"
+                )
             await conn.commit()
         msg = f"#{slot} 收取 {ITEM_NAMES.get(product, product)} x{qty}{extra}"
+        sick_label = barn_disease_mod.animal_ailment_label(row)
+        if sick_label:
+            msg += f" · 病畜减产（{sick_label}）· visit_ops 兽医 treat {slot}"
         tail = flavor.maybe_suffix(["日常小收，积少成多", "栏里忙，票里稳"])
         if tail:
             msg += f" · {tail}"
-        return f"{msg}\n{hit}" if hit else msg
+        bits = [msg]
+        if hit:
+            bits.append(hit)
+        if ill:
+            bits.append(ill)
+            bits.append("人的病去 visit_ops clinic treat")
+        return "\n".join(bits)
 
     if verb == "harvest":
         slot = int(parts[1]) if len(parts) > 1 else 1
@@ -404,7 +451,15 @@ async def barn_ops(key_id: int, command: str) -> str:
             qty = meta["product_qty"]
             if not row.get("fed"):
                 qty = max(1, qty // 2)
+            from . import barn_disease as barn_disease_mod
+            qty = barn_disease_mod.yield_qty(row, qty)
             await db.add_item(conn, s["id"], product, qty)
+            ill = None
+            sick_key = barn_disease_mod.animal_ailment_key(row)
+            if sick_key:
+                ill = await barn_disease_mod.contact_human(
+                    conn, s["id"], sick_key, source="harvest"
+                )
             bonus_msg = ""
             if species == "goat":
                 await db.add_item(conn, s["id"], "goat_cheese", 1)
@@ -418,6 +473,10 @@ async def barn_ops(key_id: int, command: str) -> str:
             await conn.commit()
         msg = f"#{slot} 收获 {ITEM_NAMES.get(product, product)} x{qty}{bonus_msg}{manure_msg}"
         msg += flavor.maybe_suffix(["栏里忙，票里稳", "牲畜：今天也努力了"])
+        if sick_key:
+            msg += f"\n病畜大收，肉可能不干净。人若发烧去 visit_ops clinic treat"
+        if ill:
+            msg += f"\n{ill}\n人的病去桥桥，牲口的病才去霍衡"
         await db.add_chronicle("barn", f"{s['name']} 畜栏收 {product}", s["id"])
         return msg
 

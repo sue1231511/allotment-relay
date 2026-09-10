@@ -42,11 +42,20 @@ DATE_DIRECTOR_API_KEY=你的密钥
 DATE_DIRECTOR_MODEL=你的模型名
 DATE_DIRECTOR_MAX_TOKENS=4096
 DATE_DIRECTOR_TIMEOUT_SECONDS=120
+
+# 蹄角棚霍衡（可选）。OpenAI 兼容 Chat Completions。三者齐全才打真模型，挂了走固定台词。
+VET_NPC_URL=https://你的接口域名/v1
+VET_NPC_API_KEY=你的密钥
+VET_NPC_MODEL=你的模型名
+VET_NPC_MAX_TOKENS=512
+VET_NPC_TIMEOUT_SECONDS=20
 ```
 
 `DATE_DIRECTOR_MAX_TOKENS` 可省略，默认4096，范围1024～16384；输出截断、空正文或格式不符会显示明确提示。
 
-模型名含 MiniMax（不区分大小写，例如 `MiniMax-M3`）时，服务端自动发送 `reasoning_split: true`，只读 `content`，不展示 `reasoning_details` / `reasoning_content`。兼容正文前完整的 `<think>…</think>` 和单个完整 JSON 外的说明/代码围栏；不从思考里取剧情，不修补残缺 JSON、不猜选项。格式失败仍保留原幕、不扣本次选项费；部署修复后重试原幕，已受理后只查看。不需要新增环境变量；其他模型不发送此扩展参数。
+霍衡只写对白，不改票、不治栏。治栏走 `visit_ops 兽医 treat 槽位`。接口是 OpenAI 兼容 `POST /v1/chat/completions`（MiniMax、智谱 GLM、通义 DashScope compatible-mode、DeepSeek、Moonshot 等国模只要开了兼容口都能用）。模型名含 MiniMax 或 `abab` 时发送 `reasoning_split: true`；其它模型不带此扩展。URL 禁止带用户名密码、query、fragment；缺 path 则补 `/v1/chat/completions`。未配置或超时/非 JSON 不崩，用固定台词。玩家可见「这是真 AI，偶尔波动正常现象。」
+
+模型名含 MiniMax（不区分大小写，例如 `MiniMax-M3`）时，约会导演同样发送 `reasoning_split: true`，只读 `content`，不展示 `reasoning_details` / `reasoning_content`。兼容正文前完整的 `<think>…</think>` 和单个完整 JSON 外的说明/代码围栏；不从思考里取剧情，不修补残缺 JSON、不猜选项。格式失败仍保留原幕、不扣本次选项费；部署修复后重试原幕，已受理后只查看。不需要新增环境变量；其他模型不发送此扩展参数。
 
 继续/选择/自定义由服务端后台生成。快模型直接返回旁白；慢模型先回「已受理」，AI 应隔几秒用 `出游 查看` 读结果，不要重复推进。MCP 返回、断线或取消请求不会取消已受理的本幕；查看不调用模型，也不自动进入下一幕。手游等旁白自动显示即可；`出游 退出` 才停止这一程。可选 `DATE_DIRECTOR_TIMEOUT_SECONDS` 默认120秒、范围15～300，控制导演总等待时间；超时或正常停服保留原幕并显示失败原因，不自动重试。原幕重试不另付预订费；强制终止进程可能只留下过期占用提示。
 
