@@ -113,9 +113,48 @@ async def test_water_and_fertilize() -> None:
     assert "水" in extra and "肥" in extra, extra
 
 
+async def test_water_and_fertilize_all() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="water-all-"))
+    db = await _boot(tmp)
+    from server import game
+
+    kid, sid = await _enroll(db, "waterall@example.com", "全浇人")
+    planted = db.now() - 60
+    async with db.connect() as conn:
+        await conn.execute(
+            """
+            UPDATE parcels SET crop='kale', planted_at=?, tended=0, greenhouse=0,
+            grow_target=3600, harvest_left=0, fertilized=0, watered=0
+            WHERE steward_id=? AND COALESCE(orchard,0)=0 AND COALESCE(greenhouse,0)=0
+            """,
+            (planted, sid),
+        )
+        await db.add_item(conn, sid, "compost", 1)
+        await conn.commit()
+
+    water = await game.plot_ops(kid, "浇水")
+    assert "浇了水" in water, water
+    async with db.connect() as conn:
+        rows = await (await conn.execute(
+            """
+            SELECT watered FROM parcels
+            WHERE steward_id=? AND COALESCE(orchard,0)=0 AND COALESCE(greenhouse,0)=0 AND crop IS NOT NULL
+            """,
+            (sid,),
+        )).fetchall()
+    assert rows and all(r[0] == 1 for r in rows), rows
+
+    tend = await game.plot_ops(kid, "tend")
+    assert tend
+    fert = await game.plot_ops(kid, "施肥")
+    assert "已施" in fert, fert
+    assert "不够了" in fert or "停手" in fert or fert.count("已施") >= 1
+
+
 def main() -> None:
     test_grow_cut_math()
     asyncio.run(test_water_and_fertilize())
+    asyncio.run(test_water_and_fertilize_all())
     print("water/fertilize tests ok")
 
 

@@ -94,7 +94,7 @@ async def steward_ops(command: str = "sheet") -> str:
     )
 
 
-@mcp.tool(description="份地果园与田间事件。空=指令表。例：status · sow 1 甘蓝 · incident status。勿 sow_all/plant；repair≠岸维。人类 /island 份地点一下看地后选看地/田间事件。")
+@mcp.tool(description="份地果园与田间事件。空=指令表。例：status · sow 1 甘蓝 · 浇水 · buy 2 甘蓝。勿 sow_all/plant；repair≠岸维。人类 /island 份地点一下看地后选看地/田间事件。")
 async def plot_ops(
     command: Annotated[str, Field(description="incident status 看待处理；repair 12 花票；repair 12 item 用材料（不支持则拒绝，不改扣票）。同号手游共用记录，刷新不掷事件，不退当场损失。空=指令表。")] = "",
 ) -> str:
@@ -126,7 +126,7 @@ async def alliance_ops(command: str = "") -> str:
     return await mux._call_ops(mux.alliance_bundle, _kid(), command)
 
 
-@mcp.tool(description="NPC、杂货、诊所、兽医与花店。空=help。例：tt buy 甘蓝种 · 霍衡 · 默默 scan。桥桥治人≠霍衡治牲口；潮生会不能加入。")
+@mcp.tool(description="NPC、杂货、诊所、兽医与花店。空=help。例：tt buy 甘蓝种 2 · 霍衡 · 默默 scan。桥桥治人≠霍衡治牲口；潮生会不能加入。")
 async def visit_ops(command: Annotated[str, Field(description="整句子命令；空=help。霍衡=兽医；clinic=桥桥；默默=花店。税/维走潮生会。漾漾=衣泊坊。")] = "") -> str:
     return await mux._call_ops(mux.visit_bundle, _kid(), command)
 

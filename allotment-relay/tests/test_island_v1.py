@@ -130,6 +130,24 @@ async def _test_island_v1_api() -> None:
     assert seed_row["can_vend"] is True
     assert seed_row["can_eat"] is False
     assert int(seed_row.get("vend_price") or 0) > 0
+    before_qty = int(seed_row.get("qty") or 0)
+    shop_buy3 = client.post(
+        "/api/v1/shop/buy",
+        headers=_auth(key, {"Idempotency-Key": "shop-kale-3"}),
+        json={"item": "seed_kale", "qty": 3},
+    )
+    assert shop_buy3.status_code == 200, shop_buy3.text
+    seed_row3 = next(
+        it for it in (shop_buy3.json()["me"]["stock"] or [])
+        if it.get("item") == "seed_kale"
+    )
+    assert int(seed_row3.get("qty") or 0) == before_qty + 3
+    hoe2 = client.post(
+        "/api/v1/shop/buy",
+        headers=_auth(key, {"Idempotency-Key": "shop-hoe-2"}),
+        json={"item": "tool_hoe", "qty": 2},
+    )
+    assert hoe2.status_code >= 400, hoe2.text
 
     stall0 = client.get("/api/v1/lili", headers=_auth(key))
     assert stall0.status_code == 200, stall0.text
@@ -1248,13 +1266,13 @@ def test_island_page_is_modular() -> None:
     assert "warmScenesInBackground" in (ROOT / "server/static/island/boot.js").read_text(encoding="utf-8")
     assert "warmScenesLater" in app
     assert "waitScenePics" in app
-    assert html.count("island.css?v=map-load-fast1") == 1
-    assert html.count("app.js?v=map-load-fast1") == 1
+    assert html.count("island.css?v=farm-batch1") == 1
+    assert html.count("app.js?v=farm-batch1") == 1
     assert html.count("boot.js?v=map-load-fast1") == 1
     assert 'rel="preload"' in html
     assert "island-map.webp" in html
-    assert html.count("lounge-embed.css?v=island-portlounge1") == 1
-    assert "lounge.js?v=island-modulefix2" in html
+    assert html.count("lounge-embed.css?v=lounge-stickers9") == 1
+    assert "lounge.js?v=lounge-stickers9" in html
     assert "island-time.js" in html
     assert 'include "partials/island-lounge.html"' in html
     lounge_embed = (ROOT / "server/templates/partials/island-lounge.html").read_text(encoding="utf-8")
@@ -1412,7 +1430,7 @@ def test_island_page_is_modular() -> None:
     assert "await waitScenePics" in app
     assert "warmScenesLater" in app
     assert "enterGen" in app
-    assert 'from "./ui/modal.js?v=island-modulefix2"' in app
+    assert 'from "./ui/modal.js?v=farm-batch1"' in app
     modal_src = (ROOT / "server/static/island/ui/modal.js").read_text(encoding="utf-8")
     assert "export function showFormSheet" in modal_src
     assert "export function showPickSheet" in modal_src
@@ -1514,9 +1532,12 @@ def test_island_page_is_modular() -> None:
     assert 'href="/play"' not in boot
     assert (ROOT / "server/static/island/ui/back-map.js").exists()
     assert "island-yard-acts" not in yards_js
-    assert "data-act=\"water\"" not in yards_js
+    assert 'id="island-water-all" data-act="water"' in yards_js
+    assert 'id="island-tend-all" data-act="tend"' in yards_js
+    assert 'id="island-fertilize-all" data-act="fertilize"' in yards_js
     assert "onTapPlot" in yards_js
     assert "data-token" in home_js
+    assert "onCareBatch" in home_js
     assert "onWaterAll" not in home_js
     assert "#island-actionbar [data-act=water]" not in home_js
     assert "#island-actionbar [data-act=garden]" not in home_js
@@ -1755,6 +1776,13 @@ def test_island_page_is_modular() -> None:
     assert "island-plot-bed" in home_js
     assert "island-garden-hot" in home_js
     assert "renderYards" in home_js
+    assert "island-care-fabs" in home_js
+    assert "island-water-all" in home_js
+    assert "island-tend-all" in home_js
+    assert "island-fertilize-all" in home_js
+    assert "onCareBatch" in home_js
+    assert "一键浇水" in home_js
+    assert "sow_all" not in home_js
     assert "点一下看地" in home_js
     assert "is-peek" in home_js
     assert "island-yards-board" in home_js
@@ -1806,6 +1834,10 @@ def test_island_page_is_modular() -> None:
     assert "去上手页" not in shop_js
     assert "api.shopBuy" in app
     assert "showBuySheet" in app
+    assert "onCareBatch: careBatch" in app
+    assert "data-qty-delta" in (ROOT / "server/static/island/ui/modal.js").read_text(encoding="utf-8")
+    assert "island-qty-row" in css
+    assert "api.shopBuy(item.id, n)" in app
     assert "renderShop" in app
     assert "listTop" in shop_js
     assert "paintShopList" in shop_js

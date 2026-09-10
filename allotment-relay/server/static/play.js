@@ -411,7 +411,7 @@ function plotButtons(p) {
     acts.push(`<button type="button" class="play-mini-btn" data-sow="${esc(token)}">播种</button>`);
   }
   if (p.state === 'growing' || p.state === 'tending') {
-    if (!p.tended) acts.push(`<button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"tend"}'>打理</button>`);
+    if (!p.tended) acts.push(`<button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"tend ${token}"}'>打理</button>`);
     if (!p.watered) acts.push(`<button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"浇水 ${token}"}'>浇水</button>`);
     if (!p.fertilized) acts.push(`<button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"施肥 ${token}"}'>施肥</button>`);
   }
@@ -1293,16 +1293,27 @@ function sowSheet(token) {
     openSheet(`种到 ${token}`, `<p class="muted">口袋里没有能种在这儿的种。买当季或全年的，过季会拒。</p>${seedBuyHtml()}`);
     return;
   }
-  openSheet(`种到 ${token}`, `${sowBtns}<p class="muted" style="margin-top:10px">没有想要的就买一份。</p>${seedBuyHtml()}`);
+  openSheet(`种到 ${token}`, `${sowBtns}<p class="muted" style="margin-top:10px">没有想要的就买，一次可买多份。</p>${seedBuyHtml()}`);
 }
 
 function seedBuyHtml() {
+  const crops = [
+    ["甘蓝", "甘蓝种"],
+    ["甜菜", "甜菜种"],
+    ["雾豌豆", "雾豆种"],
+    ["浅海藻", "浅海藻种"],
+  ];
+  const rows = crops.map(([cmd, label]) => `
+    <div class="play-seed-buy">
+      <span>${esc(label)}</span>
+      <button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"buy 1 ${cmd}"}'>买 1</button>
+      <button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"buy 5 ${cmd}"}'>买 5</button>
+      <button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"buy 10 ${cmd}"}'>买 10</button>
+    </div>`).join("");
   return `
     <button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"catalog"}'>看当季</button>
-    <button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"buy 1 甘蓝"}'>买甘蓝种</button>
-    <button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"buy 1 甜菜"}'>买甜菜种</button>
-    <button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"buy 1 雾豌豆"}'>买雾豆种</button>
-    <button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"buy 1 浅海藻"}'>买浅海藻种</button>
+    <p class="muted" style="margin:8px 0 0">一次可买多份，最多心里有数就行。过季会拒。</p>
+    ${rows}
   `;
 }
 

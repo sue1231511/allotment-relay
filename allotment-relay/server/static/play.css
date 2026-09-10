@@ -373,6 +373,26 @@ body.is-wedding-day .play-today,
   font: inherit;
 }
 
+.play-plot-batch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+.play-seed-buy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.play-seed-buy span {
+  min-width: 4.5em;
+  font-size: 13px;
+}
+
 .play-plot-wrap {
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);

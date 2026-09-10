@@ -7,6 +7,7 @@ import {
   plotToken,
   ripeYard,
   state,
+  thirstyYard,
   yardMeta,
   yardPlots,
   YARDS,
@@ -30,11 +31,10 @@ export function renderHome(root, { onOpenLand }) {
   root.querySelector("[data-act=land]").addEventListener("click", onOpenLand);
 }
 
-export function renderYards(root, { onTapPlot, onTapGrass, onHarvestAll, onSwitchYard, onOpenEvents }) {
+export function renderYards(root, { onTapPlot, onTapGrass, onCareBatch, onSwitchYard, onOpenEvents }) {
   const peek = !state.yardsShelf;
   let wrap = root.querySelector(".island-yards");
-  if (!wrap || !wrap.querySelector(".island-yards-board")) {
-    const ripe = ripeYard().length;
+  if (!wrap || !wrap.querySelector(".island-yards-board") || !wrap.querySelector(".island-care-fabs")) {
     root.innerHTML = `
       <div class="island-yards${peek ? " is-peek" : ""}">
         <div class="island-yards-board">
@@ -51,7 +51,12 @@ export function renderYards(root, { onTapPlot, onTapGrass, onHarvestAll, onSwitc
         <p class="island-grow-status" id="island-grow-status">${esc(growStatusLine())}</p>
         <div class="island-plot-grid" id="island-plot-grid">${plotGridMarkup()}</div>
         <div class="island-plot-pager" id="island-plot-pager">${pagerMarkup()}</div>
-        <button type="button" class="island-harvest-fab" id="island-harvest-all" data-act="harvest" ${ripe ? "" : "hidden"}>${harvestLabel(ripe)}</button>
+        <div class="island-care-fabs" id="island-care-fabs">
+          <button type="button" class="island-harvest-fab" id="island-water-all" data-act="water" hidden>一键浇水</button>
+          <button type="button" class="island-harvest-fab" id="island-tend-all" data-act="tend" hidden>一键打理</button>
+          <button type="button" class="island-harvest-fab" id="island-fertilize-all" data-act="fertilize" hidden>一键施肥</button>
+          <button type="button" class="island-harvest-fab" id="island-harvest-all" data-act="harvest" hidden>一键收获</button>
+        </div>
       </div>
     `;
     wrap = root.querySelector(".island-yards");
@@ -60,11 +65,19 @@ export function renderYards(root, { onTapPlot, onTapGrass, onHarvestAll, onSwitc
     wrap.querySelectorAll("[data-yard]").forEach((btn) => {
       btn.addEventListener("click", () => onSwitchYard(btn.getAttribute("data-yard")));
     });
-    const harvest = wrap.querySelector("[data-act=harvest]");
-    if (harvest) harvest.addEventListener("click", onHarvestAll);
+    const fabs = wrap.querySelector("#island-care-fabs");
+    if (fabs && !fabs._bound) {
+      fabs._bound = true;
+      fabs.addEventListener("click", (ev) => {
+        const btn = ev.target.closest("[data-act]");
+        if (!btn || btn.hidden || btn.disabled) return;
+        if (onCareBatch) onCareBatch(btn.getAttribute("data-act"));
+      });
+    }
     bindGrid(onTapPlot, onTapGrass);
     bindPager();
     bindSwipe();
+    syncHomeChrome();
   } else {
     const wasPeek = wrap.classList.contains("is-peek");
     wrap.classList.toggle("is-peek", peek);
@@ -117,12 +130,7 @@ function bindYardsPeek(wrap, onOpenEvents) {
 export function syncHomeChrome() {
   const status = document.getElementById("island-grow-status");
   if (status) status.textContent = growStatusLine();
-  const harvest = document.getElementById("island-harvest-all");
-  if (harvest) {
-    const ripe = ripeYard().length;
-    harvest.hidden = ripe === 0;
-    harvest.textContent = harvestLabel(ripe);
-  }
+  syncCareFabs();
   const grid = document.getElementById("island-plot-grid");
   if (grid) grid.innerHTML = plotGridMarkup();
   const pager = document.getElementById("island-plot-pager");
@@ -146,8 +154,33 @@ function yardTabs() {
   }).join("");
 }
 
-function harvestLabel(ripe) {
-  return ripe > 1 ? `一键收获 ${ripe}` : "一键收获";
+function careLabel(kind, n) {
+  const names = {
+    water: "一键浇水",
+    tend: "一键打理",
+    fertilize: "一键施肥",
+    harvest: "一键收获",
+  };
+  const name = names[kind] || "一键";
+  return n > 1 ? `${name} ${n}` : name;
+}
+
+function syncCareFabs() {
+  const box = document.getElementById("island-care-fabs");
+  if (!box) return;
+  const counts = {
+    water: thirstyYard().length,
+    tend: yardPlots().filter((p) => p.can_tend).length,
+    fertilize: yardPlots().filter((p) => p.can_fertilize).length,
+    harvest: ripeYard().length,
+  };
+  box.querySelectorAll("[data-act]").forEach((btn) => {
+    const kind = btn.getAttribute("data-act");
+    const n = counts[kind] || 0;
+    btn.hidden = n === 0;
+    btn.textContent = careLabel(kind, n);
+  });
+  box.hidden = Object.values(counts).every((n) => n === 0);
 }
 
 const GRASS = "/static/island/assets/grass.png";
