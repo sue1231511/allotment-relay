@@ -1286,7 +1286,7 @@ KITCHEN_DISHES = {
     "icefish_kelp": {
         "name": "冰鱼海藻汤", "emoji": "🍲",
         "ings": ["fish_icefish", "crop_kelp", "crop_ginger"],
-        "base_sell": 77, "energy": 26, "tags": ["sea"],
+        "base_sell": 62, "energy": 26, "tags": ["sea"],
     },
     "chili_grouper": {
         "name": "红烧石斑", "emoji": "🌶️",
