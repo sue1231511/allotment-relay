@@ -373,6 +373,62 @@ body.is-wedding-day .play-today,
   font: inherit;
 }
 
+.play-plot-overview {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #f7f3ea;
+}
+
+.play-plot-overview-kicker {
+  margin: 0 0 8px;
+  font-size: 11px;
+  letter-spacing: .04em;
+  color: var(--muted);
+  text-align: center;
+}
+
+.play-plot-overview-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.play-plot-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 56px;
+  padding: 8px 6px;
+  border-radius: 12px;
+  background: #fffdf8;
+  border: 1px solid var(--line);
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.play-plot-stat small {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.play-plot-stat b {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.play-plot-stat.is-on small,
+.play-plot-stat.is-on b {
+  color: #f7f3ea;
+}
+
+.play-plot-stat.is-on.is-ripe { background: #95b98a; border-color: #95b98a; }
+.play-plot-stat.is-on.is-tend { background: #8aa56e; border-color: #8aa56e; }
+.play-plot-stat.is-on.is-water { background: #6e9aa8; border-color: #6e9aa8; }
+
 .play-plot-batch {
   display: flex;
   flex-wrap: wrap;

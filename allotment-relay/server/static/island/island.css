@@ -732,6 +732,87 @@ body.island-app.is-playing.is-yards .island-actionbar {
   color: #d8ebe8;
 }
 
+.island-plot-overview {
+  margin: 8px 10px 0;
+  padding: 8px 10px 10px;
+  border-radius: 16px;
+  background: rgba(255, 253, 248, .9);
+  border: 1px solid var(--is-line);
+  color: var(--is-deep);
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.island-yards.is-peek .island-plot-overview {
+  background: rgba(16, 22, 30, .84);
+  border-color: rgba(236, 214, 160, .55);
+  color: #f6f0e4;
+  box-shadow: 0 10px 28px rgba(10, 16, 22, .28);
+}
+
+.island-plot-overview-kicker {
+  margin: 0 0 6px;
+  font-size: 11px;
+  letter-spacing: .04em;
+  text-align: center;
+  color: #5b7377;
+}
+
+.island-yards.is-peek .island-plot-overview-kicker {
+  color: #d1c8b5;
+}
+
+.island-plot-overview-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.island-plot-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  min-height: 48px;
+  padding: 6px 4px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .45);
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.island-yards.is-peek .island-plot-stat {
+  background: rgba(255, 253, 248, .12);
+  color: #f6f0e4;
+}
+
+.island-plot-stat small {
+  font-size: 11px;
+}
+
+.island-plot-stat b {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.island-plot-stat.is-on.is-ripe { background: #95b98a; color: #f7f3ea; }
+.island-plot-stat.is-on.is-tend { background: #8aa56e; color: #f7f3ea; }
+.island-plot-stat.is-on.is-water { background: #6e9aa8; color: #f7f3ea; }
+
+.island-plot-overview-note {
+  display: none;
+  margin: 6px 0 0;
+  font-size: 11px;
+  text-align: center;
+  color: #5b7377;
+}
+
+.island-yards:not(.is-peek) .island-plot-overview-note {
+  display: block;
+}
+
 .island-grow-status {
   margin: 8px 10px 0;
   min-height: 44px;

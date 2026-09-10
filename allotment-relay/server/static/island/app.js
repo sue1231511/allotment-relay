@@ -21,7 +21,7 @@ import {
 } from "./store.js?v=island-modulefix2";
 import { renderHud } from "./hud.js?v=dual-panels1";
 import { renderMap } from "./map.js?v=hotspot-fix1";
-import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=farm-batch1";
+import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=plot-overview1";
 import { renderShore, renderShoreYard, renderPortHub, renderBeachHub } from "./scenes/shore.js?v=island-modulefix2";
 import { renderPlaza } from "./scenes/plaza.js?v=island-modulefix2";
 import { renderPlace } from "./scenes/place.js?v=island-modulefix2";

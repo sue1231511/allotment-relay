@@ -404,6 +404,29 @@ function renderWedding() {
   }
 }
 
+function plotCareStats(parcels) {
+  const growing = (p) => p.state === 'growing' || p.state === 'tending';
+  return {
+    ripe: parcels.filter((p) => p.state === 'ready' || p.state === 'overripe').length,
+    tend: parcels.filter((p) => growing(p) && !p.tended).length,
+    water: parcels.filter((p) => growing(p) && !p.watered).length,
+  };
+}
+
+function plotOverviewHtml(parcels) {
+  const stats = plotCareStats(parcels);
+  const chip = (kind, label, n) => (
+    `<span class="play-plot-stat is-${kind}${n ? ' is-on' : ''}"><small>${label}</small><b>${n}</b></span>`
+  );
+  return `
+    <p class="play-plot-overview-kicker">份地地况 · 菜地果园温室合计</p>
+    <div class="play-plot-overview-row">
+      ${chip('ripe', '成熟', stats.ripe)}
+      ${chip('tend', '待打理', stats.tend)}
+      ${chip('water', '待浇水', stats.water)}
+    </div>`;
+}
+
 function plotButtons(p) {
   const token = p.token || String(p.slot);
   const acts = [];
@@ -503,6 +526,8 @@ function renderPlots() {
   ];
   const board = $('play-plots');
   if (board) board.innerHTML = parts.join('') || '<p class="muted">还没有地。</p>';
+  const overview = $('play-plot-overview');
+  if (overview) overview.innerHTML = plotOverviewHtml(parcels);
   const sub = $('play-plots-sub');
   if (sub) {
     sub.textContent = `菜地 ${plotCount} · 果园 ${treeCount}${shedCount ? ` · 温室 ${shedCount}` : ''} · 全部展示`;
