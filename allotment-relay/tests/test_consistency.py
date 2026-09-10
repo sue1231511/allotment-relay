@@ -103,6 +103,7 @@ def test_mcp_descriptions() -> None:
     steward = _tool_blob(mcp, "steward_ops")
     assert "enroll" in steward and "岛缘" in steward and "引航" in steward
     assert "invite_ops" in steward
+    assert "同时在线" in steward
 
     ut = _tool_blob(mcp, "undertide_ops")
     assert "猫猫" in ut and "岛缘" in ut and "help" in ut
@@ -488,6 +489,8 @@ def test_relay_manual_covers_systems() -> None:
         "点按会闪一下",
         "弹窗会弹一下",
         "共用一个号",
+        "可同时在线",
+        "不要贴 MCP 地址",
         "点单打赏只在 /play",
         "邻居名册",
         "/manual",
@@ -625,6 +628,9 @@ def test_human_island_manual() -> None:
         "有效岛民",
         "小馆停堂",
         "人和管家",
+        "可同时在线",
+        "不要把 MCP 地址整段贴进网页",
+        "网页说凭证无效",
         "编剧社",
         "诊所地点",
         "调理",
@@ -861,6 +867,7 @@ def test_patron_pages_share_steward_key() -> None:
     site_key = (root / "server/static/site-key.js").read_text(encoding="utf-8")
     assert "tidal_island_steward_api_key" in site_key
     assert "loadSavedKey" in site_key
+    assert "normalizeSiteKey" in site_key
     assert "fetchBoundSteward" in site_key
     lounge_js = (root / "server/static/lounge.js").read_text(encoding="utf-8")
     play_html = (root / "server/templates/play.html").read_text(encoding="utf-8")
@@ -899,7 +906,7 @@ def test_patron_pages_share_steward_key() -> None:
     assert "/static/island/assets/sprites/tt.webp" in island_boot
     assert "island-tt-stand" in island_shop
     assert ".island-shop.is-peek .island-tt-stand" in island_css
-    assert "map-load-fast1" in island_html
+    assert "keynorm1" in island_html
     assert 'rel="preload"' in island_html
     assert "island-map.webp" in island_html
     assert "preloadMap" in island_boot

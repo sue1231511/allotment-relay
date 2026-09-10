@@ -86,7 +86,7 @@ async def relay_manual() -> str:
     return await game.relay_manual()
 
 
-@mcp.tool(description="身份档案。空=sheet。例：enroll 安 · 岛缘 · 引航 · board tickets。勿 invite_ops。")
+@mcp.tool(description="身份档案。空=sheet。例：enroll 安 · 岛缘 · 引航 · board tickets。勿 invite_ops。人机同号可同时在线。")
 async def steward_ops(command: str = "sheet") -> str:
     from . import progress as progress_mod
     return progress_mod.attach_note(

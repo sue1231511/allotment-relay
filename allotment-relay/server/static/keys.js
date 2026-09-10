@@ -71,7 +71,8 @@ function renderKeyResult(el, { apiKey, mcpUrl, once = false }) {
       分开填时 URL 用 <code class="secret-inline">${escapeHtml(mcpPath)}</code>
     </p>
     <p class="muted secret-note">
-      人要自己玩：先把凭证存好，打开 <a href="/play">上手</a>。和 AI 同一个号。
+      人要自己玩：先把<strong>凭证</strong>那一串存好（只要 <code class="secret-inline">ar_sk_...</code>），打开 <a href="/play">上手</a> 或 <a href="/island">地图</a>。
+      不要把 MCP 地址整段贴进网页。家机开着也能进，人和管家是同一个号，不用先把窗口清掉。
     </p>
   `;
   el.querySelectorAll(".secret-copy").forEach((btn) => {

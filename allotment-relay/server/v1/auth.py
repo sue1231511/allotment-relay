@@ -22,12 +22,12 @@ def extract_api_key(request: Request, body_key: str = "") -> str:
 
 
 async def key_row(api_key: str) -> dict[str, Any]:
-    key = (api_key or "").strip()
-    if not key:
+    raw = api_key or ""
+    if not raw.strip():
         raise ApiError("INVALID_KEY", "请先贴上凭证。", status=401)
-    row = await db.get_key_row(key)
+    row = await db.get_key_row(raw)
     if not row:
-        raise ApiError("INVALID_KEY", "凭证无效。回上手页重新贴一次。", status=401)
+        raise ApiError("INVALID_KEY", db.invalid_key_message(raw), status=401)
     return row
 
 

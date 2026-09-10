@@ -1,4 +1,4 @@
-import { api, loadKey } from "./api.js?v=hearts1";
+import { api, loadKey } from "./api.js?v=keynorm1";
 import { openFarmEvents, closeFarmEvents } from "./ui/farm-events.js?v=farm-events1";
 import { renderMarketHub } from "./scenes/market-hub.js?v=flowers1";
 import { renderFlorist } from "./scenes/florist.js?v=flowers1";

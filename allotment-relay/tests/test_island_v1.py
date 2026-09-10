@@ -1267,8 +1267,8 @@ def test_island_page_is_modular() -> None:
     assert "warmScenesLater" in app
     assert "waitScenePics" in app
     assert html.count("island.css?v=farm-batch1") == 1
-    assert html.count("app.js?v=farm-batch1") == 1
-    assert html.count("boot.js?v=map-load-fast1") == 1
+    assert html.count("app.js?v=keynorm1") == 1
+    assert html.count("boot.js?v=keynorm1") == 1
     assert 'rel="preload"' in html
     assert "island-map.webp" in html
     assert html.count("lounge-embed.css?v=lounge-stickers9") == 1
@@ -1336,8 +1336,8 @@ def test_island_page_is_modular() -> None:
     assert '"hut-1"' in art_js and '"hut-4"' in art_js
     for name in ("hut-1.png", "hut-2.png", "hut-3.png", "hut-4.png"):
         assert (ROOT / "server/static/island/assets/scenes" / name).exists(), name
-    assert "map-load-fast1" in html
-    assert "boot.js?v=map-load-fast1" in html
+    assert "keynorm1" in html
+    assert "boot.js?v=keynorm1" in html
     assert 'id="island-boot-veil"' in html
     assert "正在进入" in html
     assert "fonts.googleapis.com" not in html

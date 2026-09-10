@@ -455,10 +455,10 @@ def seed_options(stock: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 async def snapshot(api_key: str) -> dict[str, Any]:
-    key = api_key.strip()
+    key = db.normalize_api_key(api_key) or (api_key or "").strip()
     row = await db.get_key_row(key)
     if not row:
-        raise ValueError("凭证无效")
+        raise ValueError(db.invalid_key_message(api_key))
     s = await db.get_steward_by_key_id(row["id"])
     enrolled = bool(s and s.get("enrolled"))
     dash = None
@@ -494,10 +494,10 @@ async def snapshot(api_key: str) -> dict[str, Any]:
 
 
 async def run_play(api_key: str, tool: str = "", command: str = "") -> dict[str, Any]:
-    key = api_key.strip()
+    key = db.normalize_api_key(api_key) or (api_key or "").strip()
     row = await db.get_key_row(key)
     if not row:
-        raise ValueError("凭证无效")
+        raise ValueError(db.invalid_key_message(api_key))
     text = ""
     verb = (tool or "").strip()
     if verb:

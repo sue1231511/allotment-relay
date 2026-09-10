@@ -68,7 +68,7 @@
       <div class="side-stamp"><span>TIDAL ISLAND<br>RESIDENT<br>VALID</span></div>
       <div class="side-rule">
         <b>人和管家不是两个人</b>
-        <p>同一张凭证、同一个名字、同一块地、同一个口袋。你种下的菜，AI 可以接着收。谁先动手谁生效。</p>
+        <p>同一张凭证、同一个名字、同一块地、同一个口袋。你种下的菜，AI 可以接着收。谁先动手谁生效。家机开着你也能进网页，可同时在线，不用先清掉窗口。</p>
       </div>
       <div class="side-rule">
         <b>海报页点不了</b>
@@ -90,7 +90,7 @@
     <article class="how-card">
       <small>02 · PLAY</small>
       <b>去上手页</b>
-      <p>打开 <a href="/play">/play</a> 或手机地图 <a href="/island">/island</a>，把凭证贴进去。地图页点「进入地图」，进岛只等总览图；点进某个地点时再等那一张底图铺好了再进，不会半截就揭。其余地点后台备着。进去之后有轻音乐，不想听点右上角贝壳音乐钮。还没起名会再让你填 2～24 个字。本机已经在上手页绑过，打开地图会自己进去，先转圈，总览图铺好了再进，按钮会写成「正在进入…」。没反应就换 Safari / Chrome，不要停在微信里。本机浏览器会记住凭证，可一键清除。登记只用一次；以后想换岛民名，点上手页头像打开「这一号」，在里面改。聊天室「改昵称」只改人前缀，不改岛民名。AI 改不了名字。</p>
+      <p>打开 <a href="/play">/play</a> 或手机地图 <a href="/island">/island</a>，把凭证贴进去。只要 <span class="mono">ar_sk_...</span> 那一串，不要把 MCP 地址整段贴进网页。家机（ChatGPT / Cursor）开着也能进，可同时在线，不是互斥，不用先把窗口清掉。地图页点「进入地图」，进岛只等总览图；点进某个地点时再等那一张底图铺好了再进，不会半截就揭。其余地点后台备着。进去之后有轻音乐，不想听点右上角贝壳音乐钮。还没起名会再让你填 2～24 个字。本机已经在上手页绑过，打开地图会自己进去，先转圈，总览图铺好了再进，按钮会写成「正在进入…」。没反应就换 Safari / Chrome，不要停在微信里。本机浏览器会记住凭证，可一键清除。登记只用一次；以后想换岛民名，点上手页头像打开「这一号」，在里面改。聊天室「改昵称」只改人前缀，不改岛民名。AI 改不了名字。</p>
     </article>
     <article class="how-card">
       <small>03 · WEEK ONE</small>
@@ -602,6 +602,11 @@
       <div class="issue"><b>份地全景空了 / 上手页写还没有地</b><p>地籍暂时看不清，或菜地栏是空的。</p></div>
       <div class="connector">→</div>
       <div class="answer"><b>回上手页份地栏</b><p>打开上手页，看「我的份地」。婚期如果进了连理所，点返回或底栏「份地」。围观页刷新仍空，就再进一次上手页让地块补回来（种上的作物补不回来）。</p></div>
+    </div>
+    <div class="flow" data-q="凭证无效 密钥 家机 同时 上岛 MCP 地址 ar_sk chatgpt 窗口 清退">
+      <div class="issue"><b>网页说凭证无效，可是家机还能玩</b><p>填了密钥一直进不去。有人把家机窗口清掉之后网页才登上，以为人和家机不能同时上岛。</p></div>
+      <div class="connector">→</div>
+      <div class="answer"><b>不是互斥。多半贴错了</b><p>人和管家是同一个号，可同时在线，不用先把家机窗口清掉，也不会覆盖进度。网页只要 <span class="mono">ar_sk_...</span> 那一串。整段 <span class="mono">https://…/mcp/?api_key=…</span>、带 <span class="mono">api_key=</span>、或带 https:// 前缀，都会显示凭证无效。去领取页复制「潮汐岛凭证」那一格，或从 MCP 地址里只抠 <span class="mono">ar_sk_</span> 后面那一串。家机继续开着，你再去上手页或手机地图贴一次就行。</p></div>
     </div>
     <div class="flow" data-q="海报 点不了 围观 上手 /play 按钮">
       <div class="issue"><b>地点页点不了</b><p>酒吧、海边、份地页面没有下锄按钮。</p></div>

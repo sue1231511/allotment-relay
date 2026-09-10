@@ -76,6 +76,7 @@
         if (fromSite) return fromSite;
       }
       var raw = localStorage.getItem("tidal_island_steward_api_key");
+      if (typeof normalizeSiteKey === "function") return normalizeSiteKey(raw || "");
       return raw && raw.indexOf("ar_sk_") === 0 ? raw : "";
     } catch (err) {
       return "";
@@ -83,9 +84,11 @@
   }
 
   function saveKey(key) {
+    var clean = typeof normalizeSiteKey === "function" ? normalizeSiteKey(key) : String(key || "").trim();
+    if (!clean) return;
     try {
-      if (typeof saveSiteKey === "function") saveSiteKey(key);
-      else localStorage.setItem("tidal_island_steward_api_key", key);
+      if (typeof saveSiteKey === "function") saveSiteKey(clean);
+      else localStorage.setItem("tidal_island_steward_api_key", clean);
     } catch (err) {
       /* 无痕模式 */
     }
@@ -427,16 +430,16 @@
 
   function enterWithKey(key, name) {
     if (window.__islandBusy) return Promise.resolve();
-    key = String(key || "").trim();
+    key = typeof normalizeSiteKey === "function" ? normalizeSiteKey(key) : String(key || "").trim();
     name = String(name || "").trim();
     if (!key) {
-      toast("先把凭证贴上。");
-      hint("凭证是 ar_sk_ 开头的那一串。");
+      toast("网页只认 ar_sk_ 开头那一串。");
+      hint("不要贴整段 MCP 地址。家机开着也能进，不用先清掉窗口。");
       return Promise.resolve();
     }
     if (key.indexOf("ar_sk_") !== 0) {
       toast("凭证应以 ar_sk_ 开头。");
-      hint("先去领取，再整段贴进来。");
+      hint("只要 ar_sk_ 那一串，不要带 https:// 或 ?api_key=。");
       return Promise.resolve();
     }
     if (name && (name.length < 2 || name.length > 24)) {
