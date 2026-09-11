@@ -74,19 +74,20 @@ def _kid() -> int:
 mcp = MCPServer(
     "allotment-relay",
     instructions=(
-        "潮汐岛多人份地游戏，不是聊天沙盒；禁止发明工具。"
-        "22个工具。先调 relay_manual；不会就 help。"
-        "仅参数 command。细则在手册/help。"
+        "潮汐岛多人份地。打招呼闲聊直接回，勿先调工具。"
+        "动手（种地/出海/上工）才调工具；禁止发明工具。"
+        "22个工具。不会写command再调relay_manual或help。"
+        "仅参数command。细则在手册/help。"
     ),
 )
 
 
-@mcp.tool(description="必读手册，无参数。先调一次再动手；禁止发明指令。新号先 steward_ops enroll 名字。")
+@mcp.tool(description="操作手册，无参数。打招呼勿调。要玩/不会写command再调。禁止发明指令。新号要玩再 steward_ops enroll 名字。")
 async def relay_manual() -> str:
     return await game.relay_manual()
 
 
-@mcp.tool(description="身份档案。空=sheet。例：enroll 安 · 岛缘 · 引航 · board tickets。勿 invite_ops。人机同号可同时在线。")
+@mcp.tool(description="身份档案。空=sheet。例：sheet · 岛缘 · 引航。要玩才 enroll 安。勿 invite_ops。人机同号可同时在线。")
 async def steward_ops(command: str = "sheet") -> str:
     from . import progress as progress_mod
     return progress_mod.attach_note(

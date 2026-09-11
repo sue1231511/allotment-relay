@@ -104,6 +104,7 @@ def test_mcp_descriptions() -> None:
     assert "enroll" in steward and "岛缘" in steward and "引航" in steward
     assert "invite_ops" in steward
     assert "同时在线" in steward
+    assert "要玩才 enroll" in steward
 
     ut = _tool_blob(mcp, "undertide_ops")
     assert "猫猫" in ut and "岛缘" in ut and "help" in ut
@@ -136,11 +137,16 @@ def test_mcp_descriptions() -> None:
 
     manual = mcp._tool_manager.get_tool("relay_manual").description or ""
     assert ("禁止发明" in manual or "编指令" in manual) and "enroll" in manual and "无参数" in manual
+    assert "打招呼勿调" in manual
+    assert "先调一次再动手" not in manual
+    assert "必读手册" not in manual
 
     instructions = mcp.instructions or ""
     assert "relay_manual" in instructions
     assert "不是聊天沙盒" in instructions or "禁止发明" in instructions
     assert "22" in instructions and "help" in instructions
+    assert "打招呼" in instructions
+    assert "先调 relay_manual" not in instructions
 
     quarry = _tool_blob(mcp, "quarry_ops")
     assert "status" in quarry and "探脉" in quarry and "mine_ops" in quarry
@@ -182,6 +188,9 @@ def test_relay_manual_covers_systems() -> None:
 
     text = asyncio.run(game.relay_manual())
     needles = [
+        "不要先调本手册或 enroll",
+        "不是每句开场白",
+        "人只打招呼时不要自己 enroll",
         "sow 1 甘蓝",
         "tend 1",
         "浇水",
@@ -628,6 +637,8 @@ def test_human_island_manual() -> None:
         "有效岛民",
         "小馆停堂",
         "人和管家",
+        "跟管家打招呼就行",
+        "打招呼不用读手册",
         "可同时在线",
         "不要把 MCP 地址整段贴进网页",
         "网页说凭证无效",
