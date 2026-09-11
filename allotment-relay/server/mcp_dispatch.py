@@ -73,7 +73,7 @@ async def route(
 
 
 STEWARD_HELP = """steward_ops 子命令（整句写进 command）：
-  enroll 名字 — 登记。例子：enroll 安
+  enroll 名字 — 登记。例子：enroll 安。人只打招呼、没说要上岛时不要自己 enroll
   sheet — 自己的档（票、精力、份地、病症、岛缘）。有全服脉冲/周潮天灾时写在档上。空 command 也是这个。档口按时间慢回精力（约 20 分钟 +2），刷新上手页或多看几次不会多给
   岛缘 / bond — 拆你和这座岛的联系（劳作/人情/叙事/生活/投入/井下已蚀）。空 command 的 sheet 也会写「岛缘 N ∞」。例子：岛缘 · bond
   邻居 — 全员邻居（谁在档口、谁家有熟地）。找人优先用这个
@@ -308,7 +308,7 @@ async def steward_ops(
         )
         return (
             f"欢迎 {s['name']}！{s['tickets']} 工分票、{s['parcel_count']} 块份地、starter 物资。\n"
-            "下一步：先调用 relay_manual（无参数）读手册，或 plot_ops 的 command 填 status。\n"
+            "下一步：要查指令再调 relay_manual（无参数）；要看地就 plot_ops 的 command 填 status。人若只是打招呼，先回话，不必立刻种地。\n"
             "找人：steward_ops 邻居 · 在线：steward_ops 在线 · 偷菜：plot_ops 偷菜 名字。\n"
             "引航：steward_ops 引航 看邀请码；有人的码就 steward_ops 绑定 邀请码（只能一次）。"
         )
