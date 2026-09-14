@@ -338,6 +338,17 @@ body.is-wedding-day .play-today,
   max-width: 720px;
 }
 
+button.play-duty.is-heart:not(.hidden) {
+  display: block;
+  width: 100%;
+  max-width: 720px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  background: rgba(196, 92, 122, .22);
+}
+
 .play-section { margin-top: 26px; }
 
 .play-section-head {
@@ -635,6 +646,10 @@ body.is-wedding-day .play-today,
   font-size: 18px;
   font-weight: 500;
   margin: 8px 0 12px;
+}
+
+#heartsSection.has-pending {
+  box-shadow: inset 0 0 0 1px rgba(196, 92, 122, .35);
 }
 
 .play-side-tag {
@@ -1420,7 +1435,7 @@ body.is-wedding-day .play-today,
     backdrop-filter: blur(18px);
     box-shadow: 0 14px 40px rgba(36, 50, 57, .14);
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     padding: 6px;
   }
 

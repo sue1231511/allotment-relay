@@ -348,6 +348,7 @@ function renderAll() {
   renderTote();
   renderGifts();
   renderHearts();
+  paintHeartBanner();
   renderMemories();
   if (state.placeId) renderPlace(state.placeId);
   consumeGo();
@@ -707,6 +708,15 @@ function bindHeartActions(root) {
   });
 }
 
+function paintHeartBanner() {
+  const banner = $('play-hearts-banner');
+  if (!banner) return;
+  const pending = ((state.dash && state.dash.hearts) || {}).pending || [];
+  const n = pending.length;
+  banner.textContent = n ? `有 ${n} 张日常心意待拆 · 点这里拆开` : '';
+  show(banner, n > 0);
+}
+
 function renderHearts() {
   const box = $('play-hearts');
   const countEl = $('play-hearts-count');
@@ -716,6 +726,11 @@ function renderHearts() {
   const album = hearts.album || [];
   const lim = hearts.limits || {};
   if (countEl) countEl.textContent = pending.length ? `待拆 ${pending.length}` : '—';
+  const section = $('heartsSection');
+  if (section) section.classList.toggle('has-pending', pending.length > 0);
+  paintHeartBanner();
+  const dock = $('play-dock-hearts');
+  if (dock) dock.textContent = pending.length ? `心意 ${pending.length}` : '心意';
   const head = `
     <div style="margin-bottom:8px" class="play-mini-actions">
       <button type="button" class="play-text-btn" id="play-hearts-refresh">刷新心意</button>
@@ -897,7 +912,17 @@ function consumeGo() {
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
   else if (isPlotGo(go)) goHome('plotsSection');
+  else if (go === 'hearts' || go === 'heart' || go === '心意') goHearts();
   else renderPlace(go);
+}
+
+function goHearts() {
+  show($('play-steward-page'), false);
+  show($('play-home'), true);
+  const el = $('heartsSection');
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  document.querySelectorAll('.play-dock button').forEach((b) => b.classList.remove('is-active'));
+  $('play-dock-hearts')?.classList.add('is-active');
 }
 
 async function openStewardPage() {
@@ -1572,6 +1597,8 @@ $('play-who-btn').addEventListener('click', () => {
   }
   openMe();
 });
+
+$('play-hearts-banner')?.addEventListener('click', () => goHearts());
 
 $('play-dock-steward')?.addEventListener('click', () => {
   openStewardPage();

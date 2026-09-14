@@ -1294,9 +1294,10 @@ async def bed_rest(s: dict[str, Any]) -> str:
 async def hut_ops(key_id: int, command: str) -> str:
     from .game import require_steward
 
-    s = await require_steward(key_id)
     parts = command.strip().split(maxsplit=2)
     verb = parts[0].lower() if parts else "status"
+    read_ok = verb in ("status", "help", "?", "帮助", "看", "look", "catalog", "图鉴")
+    s = await require_steward(key_id, exempt_duty=read_ok)
 
     if verb in STORAGE_ALIASES:
         return await cabinet_command(s, command.strip().split()[1:])

@@ -30,4 +30,93 @@
 
 .island-float-chip.is-heart {
   --chip-accent: #c45c7a;
+  z-index: 10;
+  top: env(safe-area-inset-top, 0px);
+  right: calc(min(58px, 16%) + min(88px, 24%) + 8px + 52px);
+  left: auto;
+  width: 52px;
+  height: 66px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  line-height: 1.15;
+  color: #5a3340;
+  background: rgba(255, 244, 236, .92);
+  border-radius: 14px;
+  box-shadow:
+    inset 0 0 0 1px rgba(196, 92, 122, .28),
+    0 2px 8px rgba(42, 58, 60, .14);
+  touch-action: manipulation;
 }
+.island-float-chip.is-heart[hidden],
+#island-heart-panel[hidden] {
+  display: none !important;
+}
+.island-float-chip-emoji {
+  font-size: 18px;
+  line-height: 1;
+}
+.island-float-chip-label {
+  font-size: 10px;
+  letter-spacing: .08em;
+  line-height: 1.2;
+}
+.island-float-chip-badge {
+  position: absolute;
+  top: 6px;
+  right: 4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #cc655a;
+  color: #fff8e9;
+  font-size: 10px;
+  line-height: 16px;
+  font-weight: 700;
+  text-align: center;
+}
+#island-heart-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 160;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: #122824d9;
+  padding: calc(24px + env(safe-area-inset-top)) 16px calc(30px + env(safe-area-inset-bottom));
+}
+#island-heart-panel .island-date-panel-inner {
+  max-width: 520px;
+  margin: auto;
+  padding: 22px;
+  background: #fff8e9;
+  color: #314c46;
+  border: 1px solid #d6b878;
+  border-radius: 18px;
+  line-height: 1.7;
+}
+#island-heart-panel header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+#island-heart-panel h2 { margin: 0; font-size: 22px; }
+#island-heart-panel button {
+  font: inherit;
+  padding: 8px 12px;
+  border: 1px solid #9ab1a2;
+  border-radius: 10px;
+  background: #f0eadb;
+  color: #244c3e;
+  cursor: pointer;
+}
+.island-heart-list { display: grid; gap: 12px; margin: 14px 0; }
+.island-heart-list article {
+  padding: 12px 0;
+  border-top: 1px solid #dfd2b3;
+}
+.island-heart-list article:first-child { border-top: 0; padding-top: 0; }
+.island-heart-list span { display: block; color: #64776a; font-size: 12px; }

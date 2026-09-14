@@ -3,7 +3,7 @@ import { openFarmEvents, closeFarmEvents } from "./ui/farm-events.js?v=farm-even
 import { renderMarketHub } from "./scenes/market-hub.js?v=flowers1";
 import { renderFlorist } from "./scenes/florist.js?v=flowers1";
 import { mountDates, dateSceneChanged, resetDates } from "./ui/companion-date.js?v=date-forget1";
-import { mountHearts, resetHearts } from "./ui/heart-gifts.js?v=hearts2";
+import { mountHearts, resetHearts, heartsPlaying } from "./ui/heart-gifts.js?v=hearts3";
 import {
   applySnapshot,
   duesBlocked,
@@ -115,6 +115,7 @@ function showPlay() {
     setBagChip(false);
   }
   paintBgmChip(true);
+  heartsPlaying();
   clearTimeout(bgmStartTimer);
   // 首屏场景图先走，避免 6MB 音乐和移动网络抢带宽。
   bgmStartTimer = setTimeout(startIslandBgm, 900);

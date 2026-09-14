@@ -314,9 +314,13 @@ async def public_contracts_list() -> list[dict[str, Any]]:
 
 
 async def alliance_ops(key_id: int, command: str) -> str:
-    s = await require_steward(key_id)
     parts = command.strip().split(maxsplit=2)
     verb = parts[0].lower() if parts else "online"
+    read_ok = verb in (
+        "online", "在线", "neighbors", "邻居", "neighbour", "cohort", "peers",
+        "rapport", "help", "?", "帮助",
+    )
+    s = await require_steward(key_id, exempt_duty=read_ok)
 
     if verb in ("online", "在线"):
         return await list_neighbors(s, online_only=True)
@@ -595,9 +599,9 @@ async def contract_ops(key_id: int, command: str) -> str:
 
 
 async def league_ops(key_id: int, command: str) -> str:
-    s = await require_steward(key_id)
     parts = command.strip().split()
     verb = parts[0].lower() if parts else "status"
+    s = await require_steward(key_id, exempt_duty=verb in ("status", "board", "help", "?", "帮助"))
 
     if verb == "status":
         snap = await league_snapshot()

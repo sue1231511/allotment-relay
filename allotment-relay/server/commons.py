@@ -107,7 +107,7 @@ def _spawn_line(row: dict[str, Any]) -> str:
         loot = f"{row['reward_tickets']} 票"
     else:
         loot = "物资"
-    return f"#{row['id']} {row['label']} · {loot}（剩 {left} 分，claim {row['id']}）"
+    return f"#{row['id']} {row['label']} · {loot}（剩 {left} 分，commons claim {row['id']} 或 claim {row['id']}）"
 
 
 async def commons_snapshot(conn: aiosqlite.Connection | None = None) -> list[dict[str, Any]]:

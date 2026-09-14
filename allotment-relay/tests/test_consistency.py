@@ -201,6 +201,7 @@ def test_relay_manual_covers_systems() -> None:
         "repair",
         "shed erect",
         "commons scan",
+        "claim 编号",
         "dove",
         "swap ",
         "market ",
