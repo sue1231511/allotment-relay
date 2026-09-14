@@ -22,6 +22,11 @@ export function mountHearts() {
   document.body.append(panel);
   chip.addEventListener("click", async () => {
     panel.hidden = false;
+    if (snap) paint();
+    else {
+      panel.innerHTML = `<div class="island-date-panel-inner"><header><h2>日常心意</h2><button type="button" data-heart-close>关闭</button></header><p>正在读取心意…</p></div>`;
+      panel.querySelector("[data-heart-close]")?.addEventListener("click", () => { panel.hidden = true; });
+    }
     await refresh();
     paint();
   });
