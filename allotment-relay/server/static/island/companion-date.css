@@ -32,7 +32,8 @@
   --chip-accent: #c45c7a;
   z-index: 10;
   top: env(safe-area-inset-top, 0px);
-  right: calc(min(58px, 16%) + min(88px, 24%) + 8px + 52px);
+  /* 约会牌隐藏时贴在背包左边，避免漂到地图正中被当成地点。 */
+  right: calc(min(58px, 16%) + min(88px, 24%) + 8px);
   left: auto;
   width: 52px;
   height: 66px;
@@ -49,6 +50,9 @@
     inset 0 0 0 1px rgba(196, 92, 122, .28),
     0 2px 8px rgba(42, 58, 60, .14);
   touch-action: manipulation;
+}
+.island-root:has(#island-date-chip:not([hidden])) .island-float-chip.is-heart {
+  right: calc(min(58px, 16%) + min(88px, 24%) + 8px + 52px);
 }
 .island-float-chip.is-heart[hidden],
 #island-heart-panel[hidden] {
