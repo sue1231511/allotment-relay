@@ -112,7 +112,7 @@ PLOT_HELP = """plot_ops 子命令（整句写进 command）：
   scarecrow 地块 — 扎稻草人
   买棚 / 温室 — 看价；买棚 确认 / shed erect — 加盖（无上限。第1座 180票马上能种，之后 310/500/750… 比份地更贵；每座每天岸维 30 票，铺多了加档 48/70）。欠岸税或岸维时不能买棚
   sow 棚1 甘蓝 · sow 棚1 橘子 · sow 99 甘蓝 — 99=第一座。种菜种树都不受季节，偷不到
-  commons scan|claim id — 稀有公共物资。不在潮生会办
+  commons scan|claim id — 稀有公共物资。不在潮生会办。scan 行里的 claim 编号也可直接写：claim 2978（同 commons claim 2978）
   incident status|scan|repair 编号 — 意外（scan 看风险；repair 也可省略 incident）
   repair 12 / repair 12 item — 同上，花票 / 用指定材料处理；不支持材料时拒绝，不改扣票，不退当场损失。同号人和 AI 共用处理结果，已处理不能重复扣费
   手机地图 /island 份地「点一下看地」后选「看地 / 田间事件」。事件页只读刷新，列待处理与最近20条已存事件；田间插曲从更新后留记录，旧正文不补造；不是岸维或约会剧情
@@ -123,7 +123,7 @@ PLOT_HELP = """plot_ops 子命令（整句写进 command）：
 
 HUT_HELP = """hut_ops 子命令（整句写进 command）：
   花房干花：visit_ops 默默 干花 玫瑰 耗鲜花+28票，自动挂空软装槽，不覆盖家具；纯装饰。替换回行囊后 install soft_1 flower_rose 可重挂；卖掉 soft_1 先看折旧报价
-  status / build / upgrade / catalog / buy / install — 岸畔小屋。欠岸税或岸维时不能 upgrade，先 visit_ops 潮生会 税 交 或 维 交
+  status / build / upgrade / catalog / buy / install — 岸畔小屋。status / catalog 考勤逾期仍可看。欠岸税或岸维时不能 upgrade，先 visit_ops 潮生会 税 交 或 维 交
   人类 /island 总览点小屋：没买房看不见棚屋场景，点进去搭棚屋（和 hut_ops build 同一笔）；搭好后按等级换景（Lv1 棚屋 / Lv2 岸畔小屋 / Lv3 联盟小宅 / Lv4 临海邸）。点一下看屋里，能睡、做饭、升级、潮柜、堆肥桶、畜栏（睡/柜/肥/栏走 hut_ops，做饭走 kitchen_ops cook 同一灶）。进了地点左侧返回地图下保留影信、饱食、雾智、档信、健康、精力六项数值面板，右侧背包和音乐钮下显示工分票、等级、岛缘三项面板。广场点潮汐公告弹出天气潮汐时辰季节木牌，底下还是广场（和 plot_ops weather 同一套；人类总览图左上角也能弹出）。
   upgrade — 一档一档升。求婚发出前必须升到最高档（现在是 Lv4 临海邸），光 build 不够。例子：hut_ops upgrade
   冰柜 存|取 物品 [数量] — 小屋存菜（柜子/潮柜/冰箱是同一条指令）。例子：冰柜 存 甘蓝 3
@@ -227,7 +227,7 @@ ALLIANCE_HELP = """alliance_ops 子命令（整句写进 command）：
   邻居 — 同 steward_ops 邻居（全员、熟地、可否偷菜/assist）
   assist 名字 — 帮邻居打理。例子：assist 安
   contract post|list|fill|mine|cancel — 悬赏合约（post/fill 认中文名与英文 id，如 石蟹王 / fish_kingcrab）
-  league status|contribute|board — 全服周目标；抽作物目标时跳过当季休市的种，回落到甘蓝。league board 是贡献榜。不在潮生会办
+  league status|contribute|board — 全服周目标；抽作物目标时跳过当季休市的种，回落到甘蓝。league status / board 考勤逾期仍可看。league board 是贡献榜。不在潮生会办
   board — 周目标贡献榜（全服票榜请用 steward_ops board）
   donate 物品 数量 / larder / draw 物品 数量 — 联盟储藏室（领取 2 票、每日 3 次）。不在潮生会办
   捐票进潮汐基金不是这里：visit_ops 潮生会 基金 捐 50（票数自填）。岸税 visit_ops 潮生会 税 / 税 交。岸维 visit_ops 潮生会 维 / 维 交。补贴不用领，东八区周二四六自动发
@@ -240,7 +240,7 @@ VISIT_HELP = """visit_ops 子命令（整句写进 command）：
   默默 花茶 玫瑰花茶 / 默默 花茶 玫瑰花茶包 / 默默 花茶 冲泡 玫瑰花茶包 — 现煮当场喝38票+10精力/+2雾智；桂花姜茶48票+14/+2，菊花香茅茶28票+8/+1；茶包便宜8票，冲泡耗包不另收费，受属性上限限制
   默默 记名 / 默默 干花 玫瑰 / 默默 告别 / 默默 help — 打过招呼每日记一次，7天得称呼「花房熟客」；鲜花一枝+28票自动挂小屋空软装槽，无房/满槽不扣，不覆盖家具，无属性；告别不收费
   花房UTC午夜刷新。人类 /island 总览点集市，再选地名「集市 / 花店」；花店点场景见默默，再点对话出选项，回复留在框内。不是栗栗换货、玩家集市或约会导演；无 flower_ops，无赊账
-  list / visit 名字 — 固定 NPC
+  list / visit 名字 — 固定 NPC。考勤逾期时 list 和 clinic 仍开，方便去看病
   lili scan|trade 编号|summon 贝壳 — 栗栗流动摊。例子：lili summon shell_catseye。人类 /island 广场点栗栗流动摊，先进摊车特写，点一下才出人栗栗，半身立绘对话，栗栗站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗；能看货、换货、献壳唤摊、摸夜栖
   shaonian visit|fortune|transfer|buy 符名 — 韶年望潮人。人类 /island 总览点海边，进滩景再点海边，点海边就出列表，两个选项去见韶年和去赶海；去见韶年才出人韶年，半身立绘对话，韶年站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗；能卜卦、转运、买符
   musong visit|send 名字|remember — 目送人·阿槐；渡口送别，每个游戏日可记一个名字
@@ -255,7 +255,7 @@ VISIT_HELP = """visit_ops 子命令（整句写进 command）：
     柜后嫁妆柜：三金套 8888 / 五金套 13888 / 潮誓戒 8888 / 订婚戒 3888 / 礼盒 1888。不打折，不进好感折扣。心情好不送嫁妆。订婚戒不是潮誓戒
     可叠放货满一组会开下一组；工具只能 1。人类杂货铺点开种子/饲料能改数量再买，一次最多 24 份；工具、渔具、嫁妆柜仍一次一件。潮柜格满了先 vend 或 hut_ops 冰柜 取
   lore scan [主题] / topics — 沿海旧史文本与 NPC 小传（例：lore scan npc；不是收集品，背包里不会多东西）
-  clinic status — 桥桥诊所（24h）。进门氛围+窗台斑鸠（每日最多1次）+价目；诊费偏高。人类 /island 广场点乔乔诊所先进店景，点一下才出人桥桥，半身立绘对话，桥桥站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗
+  clinic status — 桥桥诊所（24h）。进门氛围+窗台斑鸠（每日最多1次）+价目；诊费偏高。考勤逾期仍可用。人类 /island 广场点乔乔诊所先进店景，点一下才出人桥桥，半身立绘对话，桥桥站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗
   clinic treat 病症 — 花钱治地上病。例子：treat sprain · treat infection · treat 畜热 · treat 蹄毒 · treat 瘟触 · treat 潮疹 · treat all
     摸病畜/病死栏可能畜热蹄毒瘟触；赤潮撒网坐钓可能潮疹。牲口本身的病去霍衡，不是这家
   clinic 调理 小|中|大 — 无病回身体（+15/+30/+50），价 95/210/380 票（可打折/凌晨加价）；每日最多 3 次。例子：clinic 调理 中 · clinic rest 大
@@ -394,6 +394,9 @@ async def plot_bundle(key_id: int, command: str = "") -> str:
         },
         hoist={
             "repair": (events.incident_ops, True),
+            "claim": (commons.commons_ops, True),
+            "领": (commons.commons_ops, True),
+            "领取": (commons.commons_ops, True),
         },
         default=game.plot_ops,
         help_text=PLOT_HELP,

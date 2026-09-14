@@ -33,7 +33,7 @@ from .catalog import ITEM_NAMES
 from .game import require_steward
 
 TALE_HELP = """tale_ops 子命令（整句写进 command）：
-  list — 可接任务
+  list — 可接任务。考勤逾期时 list / status 仍可看，接任务和探索仍锁
   accept 任务key — 接任务；例：accept black_box_lover、accept memory_tide、accept spring_beyond_mountain、accept missing_pages、accept asking_around、accept mr_ke、accept tonight_damp、accept unhappy_service
   status — 当前进行中的任务
   explore [地点] — 按 status/hint 探索；黑盒阶段2 sea 找锈铁，阶段5/6 beach 找任务物品
@@ -1526,7 +1526,8 @@ async def tale_ops(key_id: int, command: str) -> str:
     if verb in ("help", "?", "帮助"):
         return TALE_HELP
 
-    s = await require_steward(key_id)
+    read_ok = not verb or verb in ("list", "列表", "status", "状态", "进度")
+    s = await require_steward(key_id, exempt_duty=read_ok)
     async with db.connect() as conn:
         if not verb or verb in ("list", "列表"):
             return await _cmd_list(conn, s)

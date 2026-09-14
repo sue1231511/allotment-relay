@@ -10,6 +10,7 @@ function esc(s) {
 }
 
 export function mountHearts() {
+  if (chip) return;
   chip = document.getElementById("island-heart-chip");
   badge = document.getElementById("island-heart-badge");
   if (!chip) return;
@@ -21,6 +22,11 @@ export function mountHearts() {
   document.body.append(panel);
   chip.addEventListener("click", async () => {
     panel.hidden = false;
+    if (snap) paint();
+    else {
+      panel.innerHTML = `<div class="island-date-panel-inner"><header><h2>日常心意</h2><button type="button" data-heart-close>关闭</button></header><p>正在读取心意…</p></div>`;
+      panel.querySelector("[data-heart-close]")?.addEventListener("click", () => { panel.hidden = true; });
+    }
     await refresh();
     paint();
   });
@@ -36,18 +42,33 @@ export function resetHearts() {
   if (panel) panel.hidden = true;
 }
 
+export function heartsPlaying() {
+  refresh();
+}
+
 async function refresh() {
+  if (!chip) return;
+  if (!document.body.classList.contains("is-playing")) {
+    chip.hidden = true;
+    if (panel) panel.hidden = true;
+    return;
+  }
   try {
     snap = await api.hearts();
     const n = (snap.pending || []).length;
-    if (chip) chip.hidden = false;
+    chip.hidden = false;
+    chip.removeAttribute("hidden");
+    chip.title = n ? `日常心意 · 待拆 ${n}` : "日常心意";
+    chip.setAttribute("aria-label", chip.title);
     if (badge) {
       badge.hidden = n <= 0;
       badge.textContent = String(n);
     }
     if (panel && !panel.hidden) paint();
   } catch {
-    /* 未登录等 */
+    chip.hidden = false;
+    chip.removeAttribute("hidden");
+    chip.title = "日常心意";
   }
 }
 

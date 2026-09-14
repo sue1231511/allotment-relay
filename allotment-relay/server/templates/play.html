@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css?v=lounge-stickers9">
-  <link rel="stylesheet" href="/static/play.css?v=farm-batch1">
+  <link rel="stylesheet" href="/static/play.css?v=hearts-entry1">
 </head>
 <body class="play-page{% if island_weddings %} is-wedding-day{% endif %}">
   {% include "partials/nav.html" %}
@@ -122,6 +122,7 @@
               <div class="play-meter"><small>岛缘</small><strong id="play-bond">—</strong></div>
             </div>
             <div class="play-duty hidden" id="play-duty"></div>
+            <button type="button" class="play-duty is-heart hidden" id="play-hearts-banner">有日常心意待拆</button>
             <div class="play-today-moon" aria-hidden="true"></div>
           </section>
 
@@ -199,7 +200,7 @@
             <div id="play-neighbors-list" class="play-neighbors"></div>
           </section>
 
-          <section class="play-sidecard">
+          <section class="play-sidecard" id="heartsSection">
             <div class="play-kicker">Hearts</div>
             <h3>日常心意 <span class="play-side-tag" id="play-hearts-count">—</span></h3>
             <div id="play-hearts"></div>
@@ -574,6 +575,7 @@
   <nav class="play-dock" aria-label="上手快捷">
     <button type="button" class="is-active" data-scroll="plotsSection">份地</button>
     <button type="button" data-scroll="placesSection">岛上</button>
+    <button type="button" data-scroll="heartsSection" id="play-dock-hearts">心意</button>
     <button type="button" data-scroll="memoriesSection">回忆</button>
     <button type="button" id="play-dock-steward">管家</button>
   </nav>
@@ -651,6 +653,6 @@
   <script src="/static/site-key.js?v=keynorm1"></script>
   <script src="/static/lounge.js?v=lounge-stickers9"></script>
   <script src="/static/wall.js?v=ting1"></script>
-  <script src="/static/play.js?v=keynorm1"></script>
+  <script src="/static/play.js?v=hearts-entry1"></script>
 </body>
 </html>

@@ -28,10 +28,22 @@ def _find_npc(query: str) -> dict[str, Any] | None:
     return None
 
 
+_CLINIC_NPC = ("qiaoqiao", "桥桥", "乔乔", "诊所", "clinic", "乔乔诊所")
+
+
+def _clinic_query(raw: str) -> bool:
+    q = (raw or "").strip().lower()
+    return q in {n.lower() for n in _CLINIC_NPC}
+
+
 async def npc_ops(key_id: int, command: str) -> str:
-    s = await require_steward(key_id)
     parts = command.strip().split(maxsplit=1)
     verb = parts[0].lower() if parts else "list"
+    rest = parts[1] if len(parts) > 1 else ""
+    read_ok = verb in ("list", "help", "?", "帮助", "thieves") or _clinic_query(verb) or (
+        verb in ("visit", "见") and _clinic_query(rest)
+    )
+    s = await require_steward(key_id, exempt_duty=read_ok)
 
     if verb == "list":
         lines = ["固定 NPC（visit 名字或 key）:"]
@@ -82,6 +94,9 @@ async def npc_ops(key_id: int, command: str) -> str:
         from . import chaoshen as chaoshen_mod
         if chaoshen_mod.is_alias(parts[1]):
             return await chaoshen_mod.chaoshen_ops(key_id, "问")
+        if _clinic_query(parts[1]):
+            from . import clinic as clinic_mod
+            return await clinic_mod.clinic_ops(key_id, "status")
         npc = _find_npc(parts[1])
         if not npc and parts[1].strip() in ("连理所", "民政局", "婚约"):
             npc = _find_npc("理枝") or _find_npc("lianli")
@@ -110,6 +125,9 @@ async def npc_ops(key_id: int, command: str) -> str:
         if npc["key"] == "huoheng":
             from . import vet as vet_mod
             return await vet_mod.vet_ops(key_id, "visit")
+        if npc["key"] == "qiaoqiao":
+            from . import clinic as clinic_mod
+            return await clinic_mod.clinic_ops(key_id, "status")
         line = random.choice(npc["lines"])
         extra = await _visit_context(s, npc["key"])
         gift = await _daily_visit_gift(s["id"], npc["key"])

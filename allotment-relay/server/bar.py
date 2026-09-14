@@ -184,7 +184,11 @@ def duty_line(steward: dict[str, Any]) -> str:
     left = shift_seconds_left(steward)
     if left < 0:
         overdue_h = abs(left) // 3600
-        return f"⚠ 酒吧考勤逾期 {overdue_h}h — 必须 bar_ops work。份地/出海/行囊/崖矿/工坊/衣泊坊委托已锁；诊所、吃饭、酒吧、潮下、换衣服仍可用"
+        return (
+            f"⚠ 酒吧考勤逾期 {overdue_h}h — 必须 bar_ops work。"
+            "份地/出海/行囊/崖矿/工坊/衣泊坊委托已锁；"
+            "诊所、吃饭、酒吧、潮下、换衣服、小屋看屋、潮闻/故事列表、周目标看板仍可用"
+        )
     if left < 86400:
         return f"酒吧考勤：{left // 3600}h 内须 bar_ops work（每 {config.BAR_MANDATORY_DAYS} 天一次）"
     days = left // 86400
@@ -195,7 +199,10 @@ async def assert_bar_duty(steward: dict[str, Any]) -> None:
     if is_shift_overdue(steward):
         raise ValueError(
             f"联盟规定每 {config.BAR_MANDATORY_DAYS} 天必须 bar_ops work 滨海酒吧上工。"
-            f"{BAR_OWNER_NAME}：「{steward['name']}，打卡去，别的指令等你上完班。」"
+            f"{BAR_OWNER_NAME}：「{steward['name']}，打卡去。"
+            "份地、出海、行囊、崖矿、工坊和衣泊坊委托先停着；"
+            "诊所（visit_ops clinic / list）、吃饭、酒吧、潮下、换衣服、小屋 status、"
+            "tale_ops / story_ops 列表、alliance_ops league status 仍可用。」"
         )
 
 
@@ -993,7 +1000,10 @@ async def _cmd_status(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
         "help 列出全部。心情只有荔栀自己定，想哄她用 cheer。",
     ])
     if is_shift_overdue(s):
-        lines.append("⚠ 考勤逾期：白天也可补班 work 岗位 day（票 ×0.72），其它 MCP 已暂停")
+        lines.append(
+            "⚠ 考勤逾期：白天也可补班 work 岗位 day（票 ×0.72）。"
+            "份地/出海/行囊/崖矿/工坊/衣泊坊委托已停；诊所和只读入口仍开"
+        )
         lines.append("诊所 clinic_ops 仍可挂号")
     return "\n".join(lines)
 

@@ -20,7 +20,7 @@ STORY_REWARD_STANDING = 5
 STORY_REWARD_MIST_WIT = 5
 
 STORY_HELP = """story_ops 人物故事探索（整句写进 command）：
-  list — 查看可探索故事；空 command 与 list 相同
+  list — 查看可探索故事；空 command 与 list 相同。考勤逾期时 list 仍可看，start / explore 仍锁
   start cinderella — 开始《灰姑娘》（重新游玩会重置本故事进度）
   start yesterday_no_proof — 开始《昨日无凭》（12 次顺序调查，自动进入结局）
   start left_for_tomorrow — 开始《留给明天》（5 幕顺序旁观，自动进入结局）
@@ -689,10 +689,11 @@ async def _review(conn: aiosqlite.Connection, steward_id: int, story_key: str) -
 
 
 async def story_ops(key_id: int, command: str = "list") -> str:
-    steward = await require_steward(key_id)
     cmd = " ".join((command or "list").strip().lower().split())
     if cmd in {"help", "帮助"}:
         return STORY_HELP
+    read_ok = cmd in {"list", "列表", ""}
+    steward = await require_steward(key_id, exempt_duty=read_ok)
     if cmd in {"list", "列表"}:
         listing = [
             "人物故事探索",
