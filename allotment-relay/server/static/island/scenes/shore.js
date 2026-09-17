@@ -71,7 +71,7 @@ export function renderPortHub(root, { onPeek, onClose, onChat, onDock } = {}) {
     boardH: 1672,
     rows: [
       { go: "chat", name: "闲聊", emoji: "💬", note: "全服聊天室。说话、发红包、对暗号、许愿墙。", price: "聊" },
-      { go: "dock", name: "看码头", emoji: "⚓", note: "撒网、坐钓、开船。", price: "看" },
+      { go: "dock", name: "看码头", emoji: "⚓", note: "撒网、坐钓、开船、管渔排。", price: "看" },
     ],
     onPeek,
     onClose,
