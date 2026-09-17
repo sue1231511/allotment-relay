@@ -211,7 +211,7 @@ async def relay_manual() -> str:
         "               command 例：status · build · catalog · buy cabinet · install soft_1 cabinet",
         "                 · buy fridge · buy compost_bin · install soft_1 compost_bin",
         "                 · buy bed · install hard_1 bed · 睡（回 50 精力 + 身体 6，每天一次，换班刷新）",
-        "                 · 冰柜 存 甘蓝 3 · 潮柜 扩 · 堆肥桶 存 羊粪 3 · 堆肥桶 取 堆肥 2 · 卖掉 soft_1 确认",
+        "                 · 冰柜 存 甘蓝 3 · 潮柜 扩 · 堆肥桶 存 羊粪 3 · 堆肥桶 取 堆肥 2 · 卖掉 soft_1 确认 · 卖掉 羊毛毯 确认",
         "                 · barn status · barn erect · barn buy sheep · barn feed · barn collect",
         "                 · mascot adopt 名字 scout|lucky|compost",
         "                 · buy miner_lamp · install soft_N miner_lamp",
@@ -228,7 +228,7 @@ async def relay_manual() -> str:
         "               人类回礼后须 heart_ops 拆 编号（看 12 只看不拆）；拆完人类端提醒/红点才消失。",
         "               不是 tote_ops gift（点名送物品/票进对方行囊），也不是聊天室红包",
         "  tote_ops     行囊/交换台/集市",
-        "               command 例：list · gifts · vend 鲭鱼 1 · vend 芒果 3 木瓜 2（批量）· gift 安 甘蓝 1",
+        "               command 例：list · gifts · vend 鲭鱼 1 · vend 羊毛毯 1 · vend 芒果 3 木瓜 2（批量）· gift 安 甘蓝 1",
         "                 · swap list · swap offer 甘蓝 2 · market list · market sell 甘蓝 2 8",
         "               人类 /island 总览点集市，先选「集市 / 花店」地名；选花店进默语花房，选集市进交易店景，点一下看摊，点一下才出摊位列表，能看街摊、买、挂货、下架、扩摊",
         "  kitchen_ops  厨房/小馆。空 command=菜谱",
@@ -440,7 +440,7 @@ async def relay_manual() -> str:
         "  被摘可 plot_ops amends 名字。打理/收成时仍可能随机被人摘",
         "",
         "【小屋 · 畜栏】",
-        "  hut_ops build 建棚屋 → catalog / buy / install 硬装软装。旧家具 hut_ops 卖掉 槽位 确认（折旧回收）",
+        "  hut_ops build 建棚屋 → catalog / buy / install 硬装软装。旧家具 hut_ops 卖掉 槽位|装件名 确认（折旧回收）；行囊里的也可 tote_ops vend 羊毛毯 1",
         "  人类 /island 总览点小屋：没买房看不见棚屋场景，点进去搭棚屋（和 hut_ops build 同一笔）；搭好后按 Lv1 棚屋 / Lv2 岸畔小屋 / Lv3 联盟小宅 / Lv4 临海邸换景。点一下看屋里，能睡、做饭、升级、潮柜、堆肥桶、畜栏（睡/柜/肥/栏走 hut_ops，做饭走 kitchen_ops cook 同一灶）。进了地点（菜地 / 果园 / 温室 / 井下总览除外）左侧返回地图下保留影信、饱食、雾智、档信、健康、精力六项数值面板，右侧背包和音乐钮下显示工分票、等级、岛缘三项面板。广场点潮汐公告弹出天气潮汐时辰季节木牌，底下还是广场（和 plot_ops weather 同一套；人类总览图左上角也能弹出）",
         "  存菜：buy cabinet 潮柜（生鲜，小偷翻不到）或 buy fridge 冰箱（熟菜），装好后 冰柜 存|取（柜子/潮柜/冰箱同义）",
         "  潮柜基础 30 格（按组占格）；行囊/潮柜/冰箱同种货可占多组（MC 式），每组基础 24 份，"
@@ -458,6 +458,7 @@ async def relay_manual() -> str:
         "  畜栏 hut_ops barn erect → buy 牛|羊|猪|狗|兔|鸡|鸭|山羊|蜂箱 → feed / collect / shear / churn",
         "    churn 只搅山羊奶成奶酪（先买山羊再 collect；牛奶不能搅）",
         "    牲口有寿：兔约3天、鸡鸭4、猪5、羊/山羊6、牛8、蜂箱10、狗12。过了栏空，老死不给肉（想收肉用 harvest）。干旱没喂可能渴死。status 看「龄N天/寿约D天」",
+        "    喂过的看门狗也占栏，status 每槽都写。人类 /island 小屋畜栏每一栏都会列出，不是空栏",
         "    牲口会得病（蹄瘟/羽疹/奶热/猪咳/螨箱/癞癣/暑渴/冻蹄/畜瘟）。病畜减产，拖着可能病死（不给肉）。邻栏会传。异常 visit_ops 霍衡 / 兽医 status · 兽医 treat 1 · 兽医 catalog",
         "    霍衡是蹄角棚岸兽医，治牲口不治人。空 visit_ops 霍衡=进门闲聊（真AI或固定台词；话偶尔飘一下正常）。人摸病死牲口可能畜热/蹄毒/瘟触 → visit_ops clinic treat。不是 hut_ops barn",
         "  吉祥物 mascot adopt 名字 scout|lucky|compost · upkeep · train · feed",
@@ -494,9 +495,9 @@ async def relay_manual() -> str:
         "  默默 花茶 玫瑰花茶 38票精力+10/雾智+2；桂花姜茶48票+14/+2，菊花香茅茶28票+8/+1。默默 花茶 玫瑰花茶包 买茶包（少8票）；默默 花茶 冲泡 玫瑰花茶包 耗包不另收费，受属性上限限制。",
         "  默默 记名 今天打过招呼才记，每天一次，累计7天称呼「花房熟客」不发票；默默 干花 玫瑰 耗已有花一枝+28票挂空软装槽，无房/满槽不扣款不耗花，不替换家具；纯装饰。替换退回行囊后 hut_ops install soft_1 flower_rose 可重挂。默默 告别 不收费。不是栗栗换货、玩家集市或约会导演消费，无赊账。",
         "【行囊 · 交换 · 集市】",
-        "  tote_ops list 列出中文名和英文 id（可叠放货写 x总量（N组 …））。vend 卖系统回收价；家具走 hut_ops 卖掉",
+        "  tote_ops list 列出中文名和英文 id（可叠放货写 x总量（N组 …））。vend 卖系统回收价；家具 vend 羊毛毯 1 按折旧（同 hut_ops 卖掉）",
         "  Tt酱货架买的种/饲料/工具，系统回收进价九成——退货少亏一成，别反复倒卖当印钞",
-        "  可叠放货满一组会自动开下一组（MC 式）；工具等只能 1。潮柜/冰箱格满了再 vend / 取走 / 扩栈 / 潮柜 扩",
+        "  可叠放货满一组会自动开下一组（MC 式）；工具/活物只能 1，装件可多件。潮柜/冰箱格满了再 vend / 取走 / 扩栈 / 潮柜 扩",
         "  未命名小鱼 vend 会再掷一次小咒事件（可能吐票、走回袋、解开或加重小咒）",
         "  gifts [条数] — 查谁给你送了什么、酒吧谁给你打赏（即时到账，这里只看记录）。也可写 收礼 / 收礼记录。tote_ops gifts 或 steward_ops 收礼",
         "  赠礼记录 [条数] — 查你送出的礼。tote_ops 赠礼记录",
@@ -611,6 +612,7 @@ async def relay_manual() -> str:
         "  craft_ops 把精矿、羊毛、漂绳、岸木打成钉/补丁/小屋家具。空 command 列出子命令，看砧用 status",
         "  没有 forge_ops / salvage_ops / exhibit_ops。不是 quarry_ops 洗，不是 tide_ops dig，不是 cook",
         "  打 铜钉 → 等分钟 → 取。砧上一次一件。铜钉修船半价；网补丁 craft_ops 补网 六小时空网-8%",
+        "  羊毛毯这类装件行囊可放多份，同一件能再打；取不下来时先卖掉或装上袋里那件。人类 /island 背包能点卖，屋里能装/卖掉",
         "  中盘：打 潮纹秤锤 / 铁锄刃 / 雾铅网坠 / 夜光滤网（要潮纹石、铁锭、雾铅、夜光髓）",
         "  补网时口袋有雾铅网坠会优先贴坠，12 小时空网 -14%，盖过普通补丁",
         "  盐田：涨潮 灌，晴天攒满 20 分钟 收盐，出海盐晶（和崖矿洗的是同一种，更慢更省）",
@@ -2509,7 +2511,7 @@ async def _tote_one(s: dict, command: str) -> str:
         )
         if tier < config.SATCHEL_STACK_TIERS_MAX:
             stack_note += f"，tote_ops 扩栈 加每组上限，{config.SATCHEL_STACK_COST}票/级+{config.SATCHEL_STACK_STEP}"
-        stack_note += "；工具/装件 1）"
+        stack_note += "；工具/活物 1，装件可多件）"
         lines = [f"工分票: {s['tickets']}", stack_note]
         for item, qty in stock.items():
             price = suggested_price(item) or ITEM_PRICES.get(item, 0)
@@ -2517,7 +2519,7 @@ async def _tote_one(s: dict, command: str) -> str:
             item_cap = item_stack_cap(item, stack_tier=tier)
             stack = format_stack_qty(qty, item_cap)
             if item.startswith("fit_") or item.startswith("deco_"):
-                lines.append(f"  {name} {stack} · {item} · 卖掉走 hut_ops 卖掉")
+                lines.append(f"  {name} {stack} · {item} · vend {name} 1（折旧，同 hut_ops 卖掉）")
             else:
                 lines.append(f"  {name} {stack} · {item} · vend {price}/个")
         return "\n".join(lines) if stock else f"工分票: {s['tickets']}\n行囊空"
@@ -2526,21 +2528,30 @@ async def _tote_one(s: dict, command: str) -> str:
         tokens = parts[1:]
         if len(tokens) % 2 != 0:
             raise ValueError("用法: vend 物品 数量 [物品 数量 ...]（物品和数量成对）")
+        furniture_only: list[tuple[str, int]] = []
         pairs = []
         for i in range(0, len(tokens), 2):
             item_key = resolve_item_key(tokens[i])
             if not item_key:
                 raise ValueError(unknown_item_message(tokens[i]))
             qty = _parse_int(tokens[i + 1])
+            if item_key.startswith("fit_") or item_key.startswith("deco_"):
+                furniture_only.append((item_key, qty))
+                continue
             price = suggested_price(item_key) or ITEM_PRICES.get(item_key, 0)
             if not price:
                 raise ValueError(f"不可出售 {item_label(item_key)}（{item_key}）")
-            if item_key.startswith("fit_") or item_key.startswith("deco_"):
-                raise ValueError(
-                    "旧家具按折旧卖：墙上的 hut_ops 卖掉 槽位 确认；"
-                    "行囊里的 hut_ops 卖掉 装件名 确认"
-                )
             pairs.append((item_key, qty, price))
+        if furniture_only and pairs:
+            raise ValueError(
+                "家具和普通货分开卖。家具一次 vend 羊毛毯 1，"
+                "或 hut_ops 卖掉 羊毛毯 确认"
+            )
+        if furniture_only:
+            if len(furniture_only) != 1 or int(furniture_only[0][1]) != 1:
+                raise ValueError("家具一次卖一件：vend 羊毛毯 1，或 hut_ops 卖掉 羊毛毯 确认")
+            from . import hut as hut_mod
+            return await hut_mod.furniture_sell_command(s, [furniture_only[0][0], "确认"])
         async with db.connect() as conn:
             results = []
             fate_notes: list[str] = []

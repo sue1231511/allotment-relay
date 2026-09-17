@@ -4,7 +4,8 @@ from __future__ import annotations
 from typing import Any
 
 from .. import barn, db, game, hut, kitchen
-from ..catalog import is_bed_key
+from ..catalog import HUT_HARD, HUT_SOFT, LILI_DECOR, is_bed_key
+from ..florist_catalog import FLORIST_DECOR
 from . import farm_service
 from .errors import ApiError, classify, humanize
 
@@ -28,6 +29,7 @@ TITLES = {
     "barn_harvest": "大收了",
     "barn_shear": "剪过毛",
     "barn_churn": "搅成奶酪了",
+    "sell_fit": "卖掉了",
 }
 
 _FIT_KIND = {
@@ -63,16 +65,33 @@ async def snapshot(api_key: str, key_id: int) -> dict[str, Any]:
     return snap
 
 
+_UNIQUE_FIT = {"bed", "cabinet", "fridge", "compost_bin", "hammock"}
+
+
+def _kind_for(key: str) -> str:
+    bare = hut._fitting_bare(key)
+    if bare in HUT_HARD or is_bed_key(bare) or bare == "hammock":
+        return "hard"
+    if bare in HUT_SOFT or bare in LILI_DECOR or bare in FLORIST_DECOR:
+        return "soft"
+    if str(key).startswith("deco_"):
+        return "soft"
+    raise ApiError("BAD_REQUEST", "小屋里装不了这一件。")
+
+
+def _is_unique_fitting(key: str) -> bool:
+    bare = hut._fitting_bare(key)
+    return is_bed_key(bare) or bare in _UNIQUE_FIT
+
+
 async def _empty_for(s: dict[str, Any], key: str) -> str:
-    kind = _FIT_KIND.get(key)
-    if not kind:
-        raise ApiError("BAD_REQUEST", "小屋里装不了这一件。")
+    kind = _kind_for(key)
     async with db.connect() as conn:
         fittings = await hut._fittings(conn, s["id"])
     lvl = int(s.get("hut_level") or 1)
     slot = hut.first_empty_slot(lvl, fittings, kind)
     if not slot:
-        raise ApiError("BAD_REQUEST", "没有空槽。先升级小屋。")
+        raise ApiError("BAD_REQUEST", "没有空槽。先升级小屋，或卖掉一件腾位置。")
     return slot
 
 
@@ -114,12 +133,15 @@ async def _buy_install(key_id: int, key: str) -> str:
 
 
 async def _install(key_id: int, key: str) -> str:
-    if key not in _FIT_KIND:
-        raise ApiError("BAD_REQUEST", "小屋里装不了这一件。")
     try:
         s = await game.require_steward(key_id)
     except ValueError as exc:
         raise classify(exc) from exc
+    _kind_for(key)
+    async with db.connect() as conn:
+        fittings = await hut._fittings(conn, s["id"])
+    if _is_unique_fitting(key) and _already_in(fittings, hut._fitting_bare(key)):
+        raise ApiError("BAD_REQUEST", "已经装上了。")
     slot = await _empty_for(s, key)
     return await hut.hut_ops(key_id, f"install {slot} {key}")
 
@@ -183,6 +205,10 @@ def _command(kind: str, target: str) -> tuple[str, str]:
         if not extra:
             raise ApiError("BAD_REQUEST", "先点要煮的菜，或点 2～5 样材料再下锅。")
         return "kitchen", f"cook {extra}"
+    if kind == "sell_fit":
+        if not extra:
+            raise ApiError("BAD_REQUEST", "先点要卖掉的那一件。")
+        return "hut", f"卖掉 {extra} 确认"
     raise ApiError("BAD_REQUEST", "小屋里没有这一下。")
 
 
@@ -200,8 +226,8 @@ async def act(api_key: str, key_id: int, kind: str, target: str = "") -> dict[st
             raise classify(exc) from exc
     elif verb == "install":
         key = (target or "").strip()
-        if key not in _FIT_KIND:
-            raise ApiError("BAD_REQUEST", "小屋里装不了这一件。")
+        if not key:
+            raise ApiError("BAD_REQUEST", "先点要装的那一件。")
         try:
             narrative = await _install(key_id, key)
         except ApiError:

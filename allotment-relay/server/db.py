@@ -2783,9 +2783,9 @@ async def satchel_stack_state(
     """返回 (have, cap, room)。
 
     MC 式：可叠放货一组上限为 cap，同种可开多组；行囊不限组数，room 对可叠放货视为充足。
-    工具 / 装件等 cap==1 仍只能 1 份。
+    工具 / 活物 cap==1 仍只能 1 份。装件每组 1 份，但行囊可放多件。
     """
-    from .catalog import item_stack_cap
+    from .catalog import TOOLS, item_stack_cap
 
     cur = await db.execute(
         "SELECT satchel_stack_extra FROM stewards WHERE id=?", (steward_id,)
@@ -2799,10 +2799,11 @@ async def satchel_stack_state(
     )
     row = await cur.fetchone()
     have = int(row[0] if row else 0)
-    if cap <= 1:
+    unique_one = item.startswith(("tool_", "live_")) or item in TOOLS
+    if cap <= 1 and unique_one:
         room = max(0, cap - have)
     else:
-        # 可叠放：满一组就另开一组，行囊侧不因「已有 cap」拒收
+        # 可叠放或装件：满一组就另开一组，行囊侧不因「已有 cap」拒收
         room = 10**9
     return have, cap, room
 

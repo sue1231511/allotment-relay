@@ -27,8 +27,8 @@ CRAFT_HELP = """craft_ops 子命令（整句写进 command）：
 
   status / 看 — 砧上在打什么、盐田、打捞窗口、陈列进度。空 command 不是看工坊，是本表
   图鉴 / catalog — 配方、盐田规则、打捞窗口、陈列套
-  打 铜钉 — 扣材料开始慢工（一砧一次；好了 craft_ops 取）。也可 打 潮纹秤锤 · 打 铁锄刃 · 打 雾铅网坠 · 打 夜光滤网 · 打 潮誓戒 · 打 订婚戒
-  取 — 领做好的成品
+  打 铜钉 — 扣材料开始慢工（一砧一次；好了 craft_ops 取）。也可 打 羊毛毯 · 打 潮纹秤锤 · 打 铁锄刃 · 打 雾铅网坠 · 打 夜光滤网 · 打 潮誓戒 · 打 订婚戒
+  取 — 领做好的成品。羊毛毯这类装件行囊可放多份，同一件能再打；取不下来时先卖掉或装上袋里那件
   补网 — 网补丁 6 小时空网 -8%；有雾铅网坠优先贴，12 小时 -14%。不是 gear upgrade
   盐田 — 看池；灌 — 涨潮灌一池（5 精力）；收盐 — 晴天攒满 20 分钟后收海盐晶
   开池 / 开池 确认 — 加盐田（最多 3 口，40/68/96 票）
@@ -36,7 +36,7 @@ CRAFT_HELP = """craft_ops 子命令（整句写进 command）：
   陈列 / 捐 亮壳一套 — 看套 / 捐货换称呼或装饰。也可 捐 砧上全套
   help — 本表
 
-例子：craft_ops status · craft_ops 打 铜钉 · craft_ops 打 潮纹秤锤 · craft_ops 打 订婚戒 · craft_ops 取 · craft_ops 灌 · craft_ops 打捞 · craft_ops 捐 亮壳一套 · craft_ops 捐 砧上全套
+例子：craft_ops status · craft_ops 打 铜钉 · craft_ops 打 羊毛毯 · craft_ops 打 潮纹秤锤 · craft_ops 打 订婚戒 · craft_ops 取 · craft_ops 灌 · craft_ops 打捞 · craft_ops 捐 亮壳一套 · craft_ops 捐 砧上全套
 涨潮灌盐田，晴天才晒。赶海 dig 涨潮关；打捞只认风暴窗口。
 订婚戒要潮信贝+海玻璃，不是潮誓戒。打完 marriage_ops 订婚 信物。
 人类网页 /workshop 是围观实况；打钉在 /play 或手机地图 /island 进岸工坊点。缺料时面板写出去哪弄。"""
@@ -375,7 +375,17 @@ async def _take_job(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
         )
     meta = CRAFT_RECIPES[prof["job_key"]]
     qty = int(prof["job_qty"] or meta["qty"])
-    await db.add_item(conn, s["id"], meta["out"], qty)
+    try:
+        await db.add_item(conn, s["id"], meta["out"], qty)
+    except ValueError as exc:
+        if str(meta["out"]).startswith(("fit_", "deco_")):
+            bare = meta["out"][4:] if meta["out"].startswith("fit_") else meta["out"]
+            raise ValueError(
+                f"行囊没法再收{item_label(meta['out'])}。"
+                f"先 hut_ops 卖掉 {bare} 确认，或装到空软装槽，再 craft_ops 取。"
+                "砧上这件还在，不取就打不了下一件。"
+            ) from exc
+        raise
     await conn.execute(
         """
         UPDATE steward_craft
