@@ -19,12 +19,18 @@ TITLES = {
     "seek": "寻信",
     "flower": "采花",
     "photo": "留影",
+    "捞瓶": "捞瓶",
+    "投瓶": "投瓶",
+    "回瓶": "回瓶",
+    "看瓶": "看瓶",
+    "扫瓶": "漂流瓶",
 }
 
 LOOK = {
     "status": "status",
     "beach": "beach scan",
     "voyage": "voyage status",
+    "bottle": "漂流瓶",
 }
 
 TIDE_KINDS = {
@@ -98,6 +104,20 @@ def _command(kind: str, target: str) -> tuple[str, str]:
         return "tide", cmd
     if verb in MARRY:
         return "marriage", MARRY[verb]
+    if verb in ("捞瓶", "扫瓶"):
+        return "tide", verb
+    if verb == "投瓶":
+        if not extra:
+            raise ApiError("BAD_REQUEST", "先写下要投进海里的话。")
+        return "tide", f"投瓶 {extra}"
+    if verb == "回瓶":
+        if not extra:
+            raise ApiError("BAD_REQUEST", "先写下回瓶的话。")
+        return "tide", f"回瓶 {extra}"
+    if verb == "看瓶":
+        if not extra:
+            raise ApiError("BAD_REQUEST", "先点要看的那只瓶。")
+        return "tide", f"看瓶 {extra}"
     raise ApiError("BAD_REQUEST", "潮岸没有这一下。")
 
 
@@ -126,7 +146,7 @@ async def _gear_view(steward_id: int) -> dict[str, Any]:
 
 async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
     """给 /island 港口和海边用。数值仍走 tide_ops / marriage_ops，这里只摊开能点的。"""
-    from .. import marine
+    from .. import marine, bottles
 
     gear = await _gear_view(s["id"])
     stock = await db.get_satchel(s["id"])
@@ -160,6 +180,15 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
         if fish
         else "袋里还没有渔获"
     )
+    bottles_view = await bottles.shore_view(conn, s["id"])
+    pending = int(bottles_view.get("pending") or 0)
+    leave_left = int(bottles_view.get("leave_left") or 0)
+    found_bottles = list(bottles_view.get("found") or [])
+    bottle_note = (
+        f"潮线有 {pending} 只瓶待捞。"
+        if pending
+        else "漂流瓶栏能看、捞、投、回。"
+    )
     if hailed:
         port_line = "黑旗截停。先点打、逃、谈或买路。"
         beach_line = f"{tide_name}。船在海上碰上事了，先去港口。"
@@ -168,13 +197,13 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
         beach_line = f"{tide_name}。港口那边碰上未命名小鱼了。"
     elif sailing:
         port_line = f"船在海上。{tide_name}。看船、归港在码头。"
-        beach_line = f"{tide_name}。赶海、寻信在沙滩。"
+        beach_line = f"{tide_name}。赶海、寻信在沙滩。{bottle_note}"
     elif not gear["can_net"] and not gear["can_cast"]:
         port_line = f"{tide_name}。先把渔网或钓竿备上，再撒网坐钓。"
-        beach_line = f"{tide_name}。赶海、寻信在沙滩。围观页只看。"
+        beach_line = f"{tide_name}。赶海、寻信在沙滩。围观页只看。{bottle_note}"
     else:
         port_line = f"{tide_name}。撒网、坐钓、开船在码头；闲聊是另一个选项。围观页只看。"
-        beach_line = f"{tide_name}。赶海、寻信在沙滩。围观页只看。"
+        beach_line = f"{tide_name}。赶海、寻信在沙滩。围观页只看。{bottle_note}"
 
     port_tabs = [
         {"key": "cast", "label": "岸边", "badge": ""},
@@ -182,6 +211,7 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
     ]
     beach_tabs = [
         {"key": "beach", "label": "赶海", "badge": ""},
+        {"key": "bottle", "label": "漂流瓶", "badge": str(pending) if pending else ""},
         {"key": "vow", "label": "信物", "badge": ""},
     ]
 
@@ -414,6 +444,72 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
             detail="先寻信、采花或赶海，再在这儿留影。最高档去灯塔。",
         ),
     ]
+    bottle_items = [
+        _sku(
+            sid="look-bottle",
+            kind="look",
+            name="看潮线",
+            emoji="🫙",
+            note=f"{pending} 只待捞 · 今日还能投 {leave_left} 只。",
+            price="看",
+            can=True,
+            target="bottle",
+            detail="漂流瓶是岛民留在潮线的话，不是听潮亭木牌，也不是潮生会告示。",
+        ),
+        _sku(
+            sid="fish-bottle",
+            kind="捞瓶",
+            name="捞瓶",
+            emoji="🎣",
+            note="随机捞一只。未必有缘，空网也正常。",
+            price="捞",
+            can=True,
+            target="",
+            detail="不花钱。捞到才能回。不要发明 bottle_ops。",
+        ),
+        _sku(
+            sid="leave-bottle",
+            kind="投瓶",
+            name="投瓶",
+            emoji="✉️",
+            note=f"写一句话入海。每天最多 {config.BOTTLE_LEAVE_DAILY} 只，今日剩 {leave_left}。",
+            price="投",
+            can=leave_left > 0,
+            target="",
+            detail="点开写下正文。可空署名，默认岛民名。不是聊天室，也不是木牌。",
+        ),
+    ]
+    for row in found_bottles:
+        bid = int(row["id"])
+        sig = row.get("signature") or row.get("author_name") or "?"
+        snippet = str(row.get("body") or "")[:24]
+        bottle_items.append(
+            _sku(
+                sid=f"read-{bid}",
+                kind="看瓶",
+                name=f"看 #{bid}",
+                emoji="📜",
+                note=f"{sig}：{snippet}",
+                price="看",
+                can=True,
+                target=str(bid),
+                detail="你捞到的瓶。回过的也能再看。",
+            )
+        )
+        if not row.get("reply_at"):
+            bottle_items.append(
+                _sku(
+                    sid=f"reply-{bid}",
+                    kind="回瓶",
+                    name=f"回 #{bid}",
+                    emoji="💬",
+                    note=f"回给 {sig}。只能回一次。",
+                    price="回",
+                    can=True,
+                    target=str(bid),
+                    detail="只有你捞到的瓶才能回。回完投瓶者下次看档能看见。",
+                )
+            )
 
     port_shelf = {
         "name": "港口",
@@ -430,6 +526,7 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
         "tabs": beach_tabs,
         "items": {
             "beach": beach_items,
+            "bottle": bottle_items,
             "vow": vow_items,
         },
     }

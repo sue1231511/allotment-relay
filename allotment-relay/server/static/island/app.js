@@ -26,7 +26,7 @@ import { renderShore, renderShoreYard, renderPortHub, renderBeachHub } from "./s
 import { renderPlaza } from "./scenes/plaza.js?v=island-modulefix2";
 import { renderPlace } from "./scenes/place.js?v=island-modulefix2";
 import { hideClimateSheet, showClimateSheet } from "./ui/climate.js?v=island-modulefix2";
-import { renderHut } from "./scenes/hut.js?v=island-modulefix2";
+import { renderHut } from "./scenes/hut.js?v=bottles-cozy1";
 import { renderShop } from "./scenes/shop.js?v=tt-sprite1";
 import { renderLili } from "./scenes/lili.js?v=island-modulefix2";
 import { renderClinic } from "./scenes/clinic.js?v=island-modulefix2";
@@ -2159,6 +2159,37 @@ function tapShore(kind, target, id) {
   }
   if (!row.can) {
     showHintSheet({ title: row.name || shoreTitle(), body: row.detail || row.note || "这会儿做不了。" });
+    return;
+  }
+  if (kind === "投瓶") {
+    showFormSheet({
+      title: row.name || "投瓶",
+      body: row.detail || "写进瓶子里的话。每天最多 3 只。不是听潮亭，也不是聊天室。",
+      fields: [
+        { id: "body", label: "瓶中话", placeholder: "今晚浪很大", max: 180, rows: 4, empty: "先写下要投进海里的话。" },
+        { id: "sig", label: "署名（可空）", placeholder: "默认岛民名", max: 40 },
+      ],
+      confirm: "投进海里",
+      onConfirm: (vals) => {
+        const body = String(vals.body || "").trim();
+        const sig = String(vals.sig || "").trim();
+        runShore("投瓶", sig ? `${body} — ${sig}` : body);
+      },
+    });
+    return;
+  }
+  if (kind === "回瓶") {
+    showFormSheet({
+      title: row.name || "回瓶",
+      body: row.detail || "回给投瓶的人。只能回一次。",
+      fields: [
+        { id: "body", label: "回一句", placeholder: "海里见", max: 180, rows: 3, empty: "先写下回瓶的话。" },
+      ],
+      confirm: "回",
+      onConfirm: (vals) => {
+        runShore("回瓶", `${row.target || target || ""} ${vals.body}`.trim());
+      },
+    });
     return;
   }
   showActSheet({

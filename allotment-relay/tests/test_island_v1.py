@@ -1267,7 +1267,7 @@ def test_island_page_is_modular() -> None:
     assert "warmScenesLater" in app
     assert "waitScenePics" in app
     assert html.count("island.css?v=farm-batch1") == 1
-    assert html.count("app.js?v=keynorm1") == 1
+    assert html.count("app.js?v=bottles-cozy1") == 1
     assert html.count("boot.js?v=keynorm1") == 1
     assert 'rel="preload"' in html
     assert "island-map.webp" in html
@@ -1327,7 +1327,7 @@ def test_island_page_is_modular() -> None:
     assert "去上手页" not in hut_js
     assert "api.hutAct" in app
     assert "keepHut" in app
-    assert 'hut.js?v=island-modulefix2' in app
+    assert 'hut.js?v=bottles-cozy1' in app
     assert "kind === \"cook_mix\"" in app
     assert "openHut" in app
     assert "renderHut" in app

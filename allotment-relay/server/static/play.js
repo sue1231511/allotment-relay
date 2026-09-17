@@ -1814,7 +1814,13 @@ document.body.addEventListener('click', (e) => {
     return;
   }
   if (btn.classList.contains('place-tool')) selectPlaceTool(btn);
-  act(payload.tool, payload.command);
+  let command = payload.command;
+  if (payload.tool === 'tide_ops' && command === '投瓶') {
+    const text = window.prompt('写进瓶子里的话（每天最多 3 只）', '');
+    if (!text || !text.trim()) return;
+    command = `投瓶 ${text.trim()}`;
+  }
+  act(payload.tool, command);
 });
 
 $('memory-filters').addEventListener('click', (e) => {

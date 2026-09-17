@@ -431,6 +431,7 @@ BOSS_DAILY_ATTACKS = 8
 # 漂流瓶
 BOTTLE_LEAVE_DAILY = 3
 BOTTLE_FISH_CHANCE = _event_rate(0.12)
+BOTTLE_WASH_CHANCE = _event_rate(0.16)  # 翻沙偶尔冲上一只，不是必出
 
 # 滨海酒吧 — 暮/夜上工，票少补贴厚；每 2 天必须 shift 一次
 BAR_SHIFT_DAILY = 4

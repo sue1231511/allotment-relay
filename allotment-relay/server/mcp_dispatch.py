@@ -124,7 +124,7 @@ PLOT_HELP = """plot_ops 子命令（整句写进 command）：
 HUT_HELP = """hut_ops 子命令（整句写进 command）：
   花房干花：visit_ops 默默 干花 玫瑰 耗鲜花+28票，自动挂空软装槽，不覆盖家具；纯装饰。替换回行囊后 install soft_1 flower_rose 可重挂；卖掉 soft_1 先看折旧报价
   status / build / upgrade / catalog / buy / install — 岸畔小屋。status / catalog 考勤逾期仍可看。欠岸税或岸维时不能 upgrade，先 visit_ops 潮生会 税 交 或 维 交
-  人类 /island 总览点小屋：没买房看不见棚屋场景，点进去搭棚屋（和 hut_ops build 同一笔）；搭好后按等级换景（Lv1 棚屋 / Lv2 岸畔小屋 / Lv3 联盟小宅 / Lv4 临海邸）。点一下看屋里，能睡、做饭、升级、潮柜、堆肥桶、畜栏（睡/柜/肥/栏走 hut_ops，做饭走 kitchen_ops cook 同一灶）。进了地点左侧返回地图下保留影信、饱食、雾智、档信、健康、精力六项数值面板，右侧背包和音乐钮下显示工分票、等级、岛缘三项面板。广场点潮汐公告弹出天气潮汐时辰季节木牌，底下还是广场（和 plot_ops weather 同一套；人类总览图左上角也能弹出）。
+  人类 /island 总览点小屋：没买房看不见棚屋场景，点进去搭棚屋（和 hut_ops build 同一笔）；搭好后按等级换景（Lv1 棚屋 / Lv2 岸畔小屋 / Lv3 联盟小宅 / Lv4 临海邸）。点一下看屋里，能睡、做饭、升级、潮柜、堆肥桶、畜栏。装了浴桶能泡澡，装了书架能读书（睡/柜/肥/栏走 hut_ops，做饭走 kitchen_ops cook 同一灶）。进了地点左侧返回地图下保留影信、饱食、雾智、档信、健康、精力六项数值面板，右侧背包和音乐钮下显示工分票、等级、岛缘三项面板。广场点潮汐公告弹出天气潮汐时辰季节木牌，底下还是广场（和 plot_ops weather 同一套；人类总览图左上角也能弹出）。
   upgrade — 一档一档升。求婚发出前必须升到最高档（现在是 Lv4 临海邸），光 build 不够。例子：hut_ops upgrade
   冰柜 存|取 物品 [数量] — 小屋存菜（柜子/潮柜/冰箱是同一条指令）。例子：冰柜 存 甘蓝 3
     生鲜自动进潮柜（buy cabinet → install）；熟菜自动进冰箱（buy fridge → install）
@@ -136,6 +136,9 @@ HUT_HELP = """hut_ops 子命令（整句写进 command）：
     羊粪+2 / 猪粪+3 / 牛粪+4。barn compost 羊粪 2 还认，但必须先装桶
   睡 / 休息 — 床一觉回精力（岸柏 50 / 软藤 52 / 云纹 54）并顺带身体 +6，每天一次。buy bed|bed_rattan|bed_canopy → install hard_N
     精力满了但身体没满也能睡。身子大虚别指望睡觉回满，诊所 clinic 调理 更贵也更快
+  泡澡 / 读 — 雪松浴桶雾智 +15（每 20 小时一次）；航海书架每日一次雾智 +2 并翻一段沿海旧史
+    买：buy bath_tub → install hard_N bath_tub；buy bookshelf → install soft_N bookshelf
+    人类 /island 点一下看屋里就能买、泡、读。床管精力，浴桶管雾智，不是同一下
   卖掉 槽位|装件名 [确认] — 旧家具按折旧卖。例子：卖掉 soft_1 确认 · 卖掉 羊毛毯 确认
     墙上写槽位，行囊写装件名。tote_ops vend 羊毛毯 1 也是这一笔。工坊出品按材料估价
     小馆开着时冰箱不能卖（先 kitchen_ops shop 卖掉 或 shop close）
@@ -162,11 +165,12 @@ TIDE_HELP = """tide_ops 子命令（整句写进 command）：
     catch=grab 动手：抓住这尾进袋，落下腿鱼小咒，其它鱼和精力会出事
     吃或卖再掷事件：kitchen_ops eat 未命名小鱼 · tote_ops vend 未命名小鱼 1
   beach scan|dig|probe — 赶海（dig 要铲子）。涨潮时 dig 和 probe 都关，scan 还能看。dig 不是崖矿，矿石走 quarry_ops 挖。风暴打捞不是 dig，走 craft_ops 打捞
+  漂流瓶 / 捞瓶 / 投瓶 正文 / 回瓶 编号 正文 / 看瓶 编号 — 潮线漂流瓶（同 alliance_ops bottle）。每天投 3 只。翻沙偶尔冲上一只。人类 /island 去赶海，漂流瓶栏能点。不要发明 bottle_ops / fish_ops
   gear status|upgrade bait|rod|net — 渔具（T0–T5；更高档要票+材料）
   tool list|buy hoe|shovel — 锄头铲子
   boss status|attack — 潮渊之主（无船也能岸边围攻）
   fight/flee/dig/probe/compliment 可省略前缀
-  人类 /island 总览点海边，进滩景再点港口、海边。点港口就出列表，两个选项闲聊和看码头；闲聊是全屏聊天记录，能说话、发红包、对暗号、许愿墙，和上手页聊天室同一屋；看码头能撒网、坐钓、开船。点海边就出列表，两个选项去见韶年和去赶海；去见韶年才出人韶年，半身立绘对话，韶年站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗，能卜卦、转运、买符；去赶海就能撒网、坐钓、赶海、开船（和 tide_ops 同一套）；/tide 只围观"""
+  人类 /island 总览点海边，进滩景再点港口、海边。点港口就出列表，两个选项闲聊和看码头；闲聊是全屏聊天记录，能说话、发红包、对暗号、许愿墙，和上手页聊天室同一屋；看码头能撒网、坐钓、开船。点海边就出列表，两个选项去见韶年和去赶海；去见韶年才出人韶年，半身立绘对话，韶年站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗，能卜卦、转运、买符；去赶海就能撒网、坐钓、赶海、开船；漂流瓶栏能看、捞、投、回（和 tide_ops 同一套）；/tide 只围观"""
 
 TOTE_HELP = """tote_ops 子命令（整句写进 command）：
   list — 行囊（中文名 + 英文 id）。同种货可占多组（MC 式），每组基础 24 份（和潮柜一样；工具/活物 1，装件可多件）
@@ -235,7 +239,7 @@ ALLIANCE_HELP = """alliance_ops 子命令（整句写进 command）：
   donate 物品 数量 / larder / draw 物品 数量 — 联盟储藏室（领取 2 票、每日 3 次）。不在潮生会办
   捐票进潮汐基金不是这里：visit_ops 潮生会 基金 捐 50（票数自填）。岸税 visit_ops 潮生会 税 / 税 交。岸维 visit_ops 潮生会 维 / 维 交。补贴不用领，东八区周二四六自动发
   beacon scan — 看潮生会告示（厅示由岛上张贴，岛民不能贴、不能回）。也可 visit_ops 潮生会 告示。短句去 lounge_ops say；长帖去 wall_ops 听潮亭
-  bottle leave|fish|scan|read — 漂流瓶"""
+  bottle scan|leave|fish|read|reply / 漂流瓶 / 捞瓶 / 投瓶 正文 / 回瓶 编号 正文 — 潮线漂流瓶。每天投 3 只。人类 /island 总览点海边去赶海，漂流瓶栏能看、捞、投、回。也可 tide_ops 捞瓶。不是听潮亭木牌，不是潮生会告示。不要发明 bottle_ops"""
 
 VISIT_HELP = """visit_ops 子命令（整句写进 command）：
   默默 / 花店 / momo — 默语花房，空子命令进店打招呼；每日首次送当季花（档信+1）或试饮（精力+3/雾智+1），只看 scan 不领奖
@@ -259,8 +263,8 @@ VISIT_HELP = """visit_ops 子命令（整句写进 command）：
     可叠放货满一组会开下一组；工具只能 1。人类杂货铺点开种子/饲料能改数量再买，一次最多 24 份；工具、渔具、嫁妆柜仍一次一件。潮柜格满了先 vend 或 hut_ops 冰柜 取
   lore scan [主题] / topics — 沿海旧史文本与 NPC 小传（例：lore scan npc；不是收集品，背包里不会多东西）
   clinic status — 桥桥诊所（24h）。进门氛围+窗台斑鸠（每日最多1次）+价目；诊费偏高。考勤逾期仍可用。人类 /island 广场点乔乔诊所先进店景，点一下才出人桥桥，半身立绘对话，桥桥站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗
-  clinic treat 病症 — 花钱治地上病。例子：treat sprain · treat infection · treat 畜热 · treat 蹄毒 · treat 瘟触 · treat 潮疹 · treat all
-    摸病畜/病死栏可能畜热蹄毒瘟触；赤潮撒网坐钓可能潮疹。牲口本身的病去霍衡，不是这家
+  clinic treat 病症 — 花钱治地上病。例子：treat sprain · treat infection · treat 腿鱼小咒 · treat 畜热 · treat 蹄毒 · treat 瘟触 · treat 潮疹 · treat all
+    抓住未命名小鱼会落下腿鱼小咒（48 票或祛咒香）；吃或卖再掷事件。摸病畜/病死栏可能畜热蹄毒瘟触；赤潮撒网坐钓可能潮疹。牲口本身的病去霍衡，不是这家
   clinic 调理 小|中|大 — 无病回身体（+15/+30/+50），价 95/210/380 票（可打折/凌晨加价）；每日最多 3 次。例子：clinic 调理 中 · clinic rest 大
   clinic buy 醒酒药 / use 醒酒药 — 对症药，可囤货备用（与 treat 同效）
   clinic buy 回春汤 / use 回春汤 · buy 大补丸 — 无病回身体（+18/+40），可囤，不占调理次数；贵是故意的
@@ -427,7 +431,7 @@ async def hut_bundle(key_id: int, command: str = "") -> str:
 
 
 async def tide_bundle(key_id: int, command: str = "") -> str:
-    from . import beach, boss, game, gear, marine, tools
+    from . import beach, boss, bottles, game, gear, marine, tools
 
     return await route(
         key_id,
@@ -448,6 +452,8 @@ async def tide_bundle(key_id: int, command: str = "") -> str:
             "工具": (tools.tool_ops, "list"),
             "boss": (boss.boss_ops, "status"),
             "潮渊": (boss.boss_ops, "status"),
+            "bottle": (bottles.bottle_ops, "scan"),
+            "漂流瓶": (bottles.bottle_ops, "scan"),
         },
         hoist={
             "fight": (marine.voyage_ops, True),
@@ -462,6 +468,11 @@ async def tide_bundle(key_id: int, command: str = "") -> str:
             "return": (marine.voyage_ops, True),
             "dig": (beach.beach_ops, True),
             "probe": (beach.beach_ops, True),
+            "捞瓶": (bottles.bottle_ops, True),
+            "投瓶": (bottles.bottle_ops, True),
+            "回瓶": (bottles.bottle_ops, True),
+            "看瓶": (bottles.bottle_ops, True),
+            "扫瓶": (bottles.bottle_ops, True),
         },
         default=game.tide_ops,
         help_text=TIDE_HELP,
@@ -510,7 +521,13 @@ async def alliance_bundle(key_id: int, command: str = "") -> str:
             "bottle": (bottles.bottle_ops, "scan"),
             "漂流瓶": (bottles.bottle_ops, "scan"),
         },
-        hoist={},
+        hoist={
+            "捞瓶": (bottles.bottle_ops, True),
+            "投瓶": (bottles.bottle_ops, True),
+            "回瓶": (bottles.bottle_ops, True),
+            "看瓶": (bottles.bottle_ops, True),
+            "扫瓶": (bottles.bottle_ops, True),
+        },
         default=multi.alliance_ops,
         help_text=ALLIANCE_HELP,
         empty=ALLIANCE_HELP,

@@ -104,7 +104,7 @@ async def beach_ops(key_id: int, command: str) -> str:
             preview = sorted(BEACH_LOOT, key=lambda x: -x[3])[:8]
             for item, label, _, wt, price in preview:
                 lines.append(f"  {label}（约{wt} · 建议{price}票）")
-            lines.append("指令: dig / probe · catalog 图鉴")
+            lines.append("指令: dig / probe · catalog 图鉴 · 漂流瓶 捞瓶 / 投瓶")
         return "\n".join(lines)
 
     if verb == "catalog":
@@ -219,6 +219,10 @@ async def beach_ops(key_id: int, command: str) -> str:
             msg += f"\n\n{cloth_echo}"
         if betroth_find:
             msg += f"\n{betroth_find}"
+        from . import bottles
+        washed = await bottles.try_wash_ashore(s)
+        if washed:
+            msg += f"\n{washed}"
         await db.add_chronicle("beach", f"{s['name']} 赶海得 {label}", s["id"])
         return msg
 
