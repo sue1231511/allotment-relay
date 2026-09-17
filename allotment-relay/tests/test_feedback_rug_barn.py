@@ -33,9 +33,9 @@ async def _enroll(db, email: str, name: str) -> tuple[int, int]:
             "SELECT id FROM stewards WHERE key_id=?", (row["id"],)
         )).fetchone())[0]
         await conn.execute(
-            "UPDATE stewards SET last_bar_shift_at=1, energy=80, tickets=800, "
+            "UPDATE stewards SET last_bar_shift_at=?, energy=80, tickets=800, "
             "hut_built=1, hut_level=2, barn_built=1 WHERE id=?",
-            (sid,),
+            (db.now(), sid),
         )
         await conn.commit()
     return row["id"], sid
