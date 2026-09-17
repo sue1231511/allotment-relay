@@ -951,6 +951,9 @@ async def _resolve_voyage(
         fail_chance += 0.06
     if pulse and pulse.get("effect_type") == "red_tide":
         fail_chance += 0.04
+    from . import works as works_mod
+    if await works_mod.active_bonus(conn, "dock"):
+        fail_chance = max(0.04, fail_chance - 0.04)
 
     extra = await events.roll_after_action(s, "voyage_return", conn, voyage=voyage)
     s = await _refresh_steward(conn, s["id"])

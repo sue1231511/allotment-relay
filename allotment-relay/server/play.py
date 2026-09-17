@@ -193,7 +193,7 @@ PLACES: list[dict[str, Any]] = [
         "id": "hui",
         "name": "潮生会",
         "kicker": "Hall",
-        "blurb": "岛上管事的地方。问事、岸税、岸维、潮汐基金、告示。告示只看不贴。不能入会。",
+        "blurb": "岛上管事的地方。问事、岸税、岸维、潮汐基金、告示、岸上工程、本周纪事。告示只看不贴。工程不是基金。不能入会。",
         "href": "/hui",
         "live": "打开潮生会现场 →",
         "rail": "今天来潮生会做什么",
@@ -204,6 +204,9 @@ PLACES: list[dict[str, Any]] = [
             {"label": "岸维", "note": "产业维修费。每天划；份地 10/18/28、果园 20/32/48、温室 30/48/70，铺多了加档，起步免", "tool": "visit_ops", "command": "潮生会 维"},
             {"label": "潮汐基金", "note": "岛均与发放日。先托到 800，再按岛均补", "tool": "visit_ops", "command": "潮生会 基金"},
             {"label": "告示", "note": "墙上贴了什么（厅示，不能自己贴）", "tool": "visit_ops", "command": "潮生会 告示"},
+            {"label": "本周纪事", "note": "根据岛上真事写成。不是周目标", "tool": "steward_ops", "command": "周报"},
+            {"label": "岸上工程", "note": "全岛一起修码头或换透镜。不是潮汐基金", "tool": "visit_ops", "command": "潮生会 工程"},
+            {"label": "捐工料", "note": "写下岸木/铜钉/票。例：岸木 10 或 50", "tool": "visit_ops", "command": "潮生会 工程 捐"},
         ],
     },
     {

@@ -39,12 +39,16 @@ async def full_state(api_key: str, *, welcome: str = "") -> dict[str, Any]:
             raise classify(exc) from exc
     pulse = await events.public_pulse_snapshot()
     notice_list = await lounge_service.notices()
+    from .. import gazette as gazette_mod
+    gaz = await gazette_mod.payload()
+    climate = play.climate_bits()
+    climate["gazette"] = gaz
     body: dict[str, Any] = {
         "ok": True,
         "enrolled": enrolled,
         "me": views.player_view(dash, enrolled=enrolled),
         "farm": farm,
-        "world": views.world_view(play.climate_bits(), notices=notice_list, pulse=pulse),
+        "world": views.world_view(climate, notices=notice_list, pulse=pulse),
         "shore": None,
     }
     if enrolled:

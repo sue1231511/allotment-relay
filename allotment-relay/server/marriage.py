@@ -3547,6 +3547,8 @@ async def _cmd_hold(s: dict[str, Any], rest: str) -> str:
             f"{loc}的灯塔将为他们亮灯。"
         )
         await db.add_chronicle("marriage", news, actor_id=s["id"], conn=conn)
+        from . import traces as traces_mod
+        await traces_mod.maybe_wedding_mark(conn, s)
         await db.add_chronicle(
             "lighthouse",
             f"灯塔为岛民「{s['name']}」与 TA 的人类亮了一夜。",
@@ -3807,6 +3809,8 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
         spoken = f"草稿写着「{partner}」。订婚现在就能办，不用彩礼。"
     else:
         spoken = "登记员理枝把册子摊开。先看档案。订婚、成婚、婚期都在这儿点。"
+    from . import traces as traces_mod
+    spoken = await traces_mod.blend(conn, "lianli", spoken)
 
     tabs = [
         {"key": "desk", "label": "档案", "badge": ""},

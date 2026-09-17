@@ -180,6 +180,8 @@ async def eatery_command(s: dict[str, Any], command: str) -> str:
             )
             from . import bond as bond_mod
             await bond_mod.grant(conn, s["id"], bond_mod.EATERY_OPEN, "life", once="eatery_open")
+            from . import traces as traces_mod
+            await traces_mod.maybe_eatery_mark(conn, s, label)
             await conn.commit()
         await db.add_chronicle("eatery", f"{s['name']} 开张「{label}」", s["id"])
         from . import upkeep as upkeep_mod
@@ -718,6 +720,8 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
         line = f"{open_n} 家在开火 · 今日还能吃 {dine_left} 顿"
     else:
         line = f"{paused_n} 家欠岸维停堂"
+    from . import traces as traces_mod
+    line = await traces_mod.blend(conn, "eatery", line)
     return {
         "name": "岸畔小馆",
         "line": line,

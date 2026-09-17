@@ -1814,7 +1814,13 @@ document.body.addEventListener('click', (e) => {
     return;
   }
   if (btn.classList.contains('place-tool')) selectPlaceTool(btn);
-  act(payload.tool, payload.command);
+  let command = payload.command;
+  if (payload.tool === 'visit_ops' && command === '潮生会 工程 捐') {
+    const text = window.prompt('捐什么（岸木 10 / 铜钉 4 / 50）', '岸木 10');
+    if (!text || !text.trim()) return;
+    command = `潮生会 工程 捐 ${text.trim()}`;
+  }
+  act(payload.tool, command);
 });
 
 $('memory-filters').addEventListener('click', (e) => {

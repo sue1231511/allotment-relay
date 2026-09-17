@@ -320,6 +320,83 @@ async def _check_florist_regular(conn, s: dict[str, Any]) -> bool:
     return await _exists(conn, "SELECT 1 FROM steward_florist WHERE steward_id=? AND stamps>=7", s["id"])
 
 
+async def _count(conn: aiosqlite.Connection, sql: str, *args: Any) -> int:
+    row = await (await conn.execute(sql, args)).fetchone()
+    return int(row[0] or 0) if row else 0
+
+
+async def _check_night_lamp(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
+    return await _count(
+        conn,
+        "SELECT COUNT(*) FROM chronicle WHERE actor_id=? AND action='buxing' AND text LIKE '%在灯塔守夜%'",
+        s["id"],
+    ) >= 7
+
+
+async def _check_rain_borrow(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
+    return await _count(conn, "SELECT COUNT(*) FROM assist_log WHERE helper_id=?", s["id"]) >= 12
+
+
+async def _check_market_tooth(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
+    return await _count(
+        conn,
+        "SELECT COUNT(*) FROM chronicle WHERE actor_id=? AND action='market'",
+        s["id"],
+    ) >= 20
+
+
+async def _check_well_regular(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
+    return await _count(
+        conn,
+        "SELECT COUNT(*) FROM chronicle WHERE actor_id=? AND action='undertide'",
+        s["id"],
+    ) >= 12
+
+
+async def _check_sinker(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
+    total = await _count(
+        conn,
+        "SELECT COUNT(*) FROM chronicle WHERE actor_id=? AND action='voyage'",
+        s["id"],
+    )
+    if total < 8:
+        return False
+    fails = await _count(
+        conn,
+        """
+        SELECT COUNT(*) FROM chronicle
+        WHERE actor_id=? AND action='voyage' AND (text LIKE '%风暴折返%' OR text LIKE '%船损%')
+        """,
+        s["id"],
+    )
+    return fails >= 6 and (fails / total) >= 0.6
+
+
+async def _check_dawn_tea(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
+    from . import world as world_mod
+
+    rows = await (await conn.execute(
+        "SELECT created_at FROM chronicle WHERE actor_id=? AND action='buxing' AND text LIKE '%喝茶%'",
+        (s["id"],),
+    )).fetchall()
+    n = sum(1 for (ts,) in rows if world_mod.day_phase_at(int(ts or 0)) == "night")
+    return n >= 3
+
+
+async def _check_pigeon(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
+    return int(s.get("clinic_dove_affinity") or 0) >= 16
+
+
+async def _check_orange_seat(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
+    row = await (await conn.execute(
+        "SELECT cheers, tip_total FROM star_fans WHERE steward_id=?",
+        (s["id"],),
+    )).fetchone()
+    if not row:
+        return False
+    return int(row[0] or 0) >= 5 or int(row[1] or 0) >= 80
+
+
 ACHIEVEMENTS: dict[str, dict[str, Any]] = {
     "florist_regular": {
         "name": "花房熟客", "hint": "在默语花房累计7个游戏日记名", "aliases": (),
@@ -535,6 +612,62 @@ ACHIEVEMENTS: dict[str, dict[str, Any]] = {
         "aliases": ("同潮", "被引来的"),
         "check": _check_same_tide,
     },
+    "night_lamp": {
+        "name": "夜灯守人",
+        "hint": "岛自己安的",
+        "aliases": ("守灯的", "夜里还在塔上"),
+        "silent": True,
+        "check": _check_night_lamp,
+    },
+    "rain_borrow": {
+        "name": "借雨的人",
+        "hint": "岛自己安的",
+        "aliases": ("替人浇过", "顺手浇邻地"),
+        "silent": True,
+        "check": _check_rain_borrow,
+    },
+    "market_tooth": {
+        "name": "潮市牙人",
+        "hint": "岛自己安的",
+        "aliases": ("倒货的", "摊边转的"),
+        "silent": True,
+        "check": _check_market_tooth,
+    },
+    "well_regular": {
+        "name": "岸下熟客",
+        "hint": "岛自己安的",
+        "aliases": ("井下常客", "又下井了"),
+        "silent": True,
+        "check": _check_well_regular,
+    },
+    "sinker": {
+        "name": "浪里翻的",
+        "hint": "岛自己安的",
+        "aliases": ("沉船专业户", "修船常客"),
+        "silent": True,
+        "check": _check_sinker,
+    },
+    "dawn_tea": {
+        "name": "夜茶客",
+        "hint": "岛自己安的",
+        "aliases": ("卯时茶", "夜里喝茶"),
+        "silent": True,
+        "check": _check_dawn_tea,
+    },
+    "pigeon": {
+        "name": "喂斑的",
+        "hint": "岛自己安的",
+        "aliases": ("斑鸠的人", "窗台熟"),
+        "silent": True,
+        "check": _check_pigeon,
+    },
+    "orange_seat": {
+        "name": "前排的人",
+        "hint": "岛自己安的",
+        "aliases": ("小橘前排", "场场都到"),
+        "silent": True,
+        "check": _check_orange_seat,
+    },
 }
 
 # 里程碑才发，不对每一级。新客起步约 Lv3，从 Lv4 开始。
@@ -645,7 +778,10 @@ async def _unlock(
     await db.add_chronicle(
         "title", f"{steward['name']} 解锁称呼「{name}」", steward["id"], conn=conn
     )
-    _push_note(f"称呼解锁：{name}（steward_ops 称呼 {name} 佩戴）")
+    if ACHIEVEMENTS.get(key, {}).get("silent"):
+        _push_note(f"岛上有人开始叫你「{name}」。steward_ops 称呼 {name} 佩戴")
+    else:
+        _push_note(f"称呼解锁：{name}（steward_ops 称呼 {name} 佩戴）")
 
 
 async def grant_title(
@@ -785,18 +921,25 @@ async def list_text(steward: dict[str, Any]) -> str:
     async with db.connect() as conn:
         have = await _unlocked_keys(conn, s["id"])
     worn = (s.get("worn_title") or "").strip()
+    listed = [k for k, meta in ACHIEVEMENTS.items() if k in have or not meta.get("silent")]
+    silent_have = [k for k in have if ACHIEVEMENTS.get(k, {}).get("silent")]
     lines = [
         ranks_mod.progress_line(ranked["xp"]),
         f"佩戴称呼：{display_title(ranked)}",
-        f"已解锁 {len(have)}/{len(ACHIEVEMENTS)}：",
+        f"已解锁 {len(have)}/{len(listed)}：",
     ]
     for key, meta in ACHIEVEMENTS.items():
+        if key not in have and meta.get("silent"):
+            continue
         mark = "★" if key in have else "·"
         extra = " ←戴着" if key == worn else ""
         if key in have:
-            lines.append(f"  {mark} {meta['name']}{extra}")
+            tag = " · 岛安的" if meta.get("silent") else ""
+            lines.append(f"  {mark} {meta['name']}{tag}{extra}")
         else:
             lines.append(f"  {mark} ？？？（{meta['hint']}）")
+    if silent_have:
+        lines.append("有些称呼是岛自己安的，成就表里事先看不见。")
     nxt = next_reward_level(ranked["level"])
     if nxt:
         lines.append(f"下一档升级礼：{format_reward(nxt)}")
@@ -830,8 +973,11 @@ async def wear(steward: dict[str, Any], token: str) -> str:
             have = await _unlocked_keys(conn, steward["id"])
             await conn.commit()
         if key not in have:
+            hint = ACHIEVEMENTS[key].get("hint") or ""
+            if ACHIEVEMENTS[key].get("silent"):
+                raise ValueError(f"还没人这么叫你。")
             raise ValueError(
-                f"还没解锁「{achievement_name(key)}」（{ACHIEVEMENTS[key]['hint']}）"
+                f"还没解锁「{achievement_name(key)}」（{hint}）"
             )
         await conn.execute(
             "UPDATE stewards SET worn_title=? WHERE id=?", (key, steward["id"])

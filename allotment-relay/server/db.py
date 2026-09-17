@@ -2247,6 +2247,40 @@ async def init_db() -> None:
             "ALTER TABLE barn_animals ADD COLUMN ailment TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE barn_animals ADD COLUMN ailment_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN barn_disease_day INTEGER NOT NULL DEFAULT 0",
+            """
+            CREATE TABLE IF NOT EXISTS island_traces (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                place TEXT NOT NULL,
+                kind TEXT NOT NULL,
+                steward_id INTEGER NOT NULL DEFAULT 0,
+                text TEXT NOT NULL,
+                created_at INTEGER NOT NULL,
+                UNIQUE(place, kind, steward_id)
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_island_traces_place ON island_traces(place, id DESC)",
+            """
+            CREATE TABLE IF NOT EXISTS island_works (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                slug TEXT NOT NULL,
+                opened_at INTEGER NOT NULL,
+                status TEXT NOT NULL DEFAULT 'open',
+                have_json TEXT NOT NULL DEFAULT '{}',
+                completed_at INTEGER NOT NULL DEFAULT 0,
+                bonus_until INTEGER NOT NULL DEFAULT 0
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS island_work_gifts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                work_id INTEGER NOT NULL,
+                steward_id INTEGER NOT NULL,
+                item TEXT NOT NULL,
+                qty INTEGER NOT NULL,
+                created_at INTEGER NOT NULL
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_island_work_gifts_work ON island_work_gifts(work_id, id DESC)",
         ):
             try:
                 await db.execute(ddl)

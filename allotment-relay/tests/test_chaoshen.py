@@ -86,6 +86,9 @@ async def test_chaoshen_desk_and_refuse() -> None:
     assert "alliance_ops league" in help_text, help_text
     assert "plot_ops commons" in help_text, help_text
     assert "不能贴" in help_text, help_text
+    assert "工程 捐 岸木 10" in help_text, help_text
+    assert "潮生会 纪事" in help_text, help_text
+    assert "潮生会 周" not in help_text, help_text
     assert "潮汐基金" in desk, desk
 
 

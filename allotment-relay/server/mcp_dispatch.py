@@ -82,7 +82,8 @@ STEWARD_HELP = """steward_ops 子命令（整句写进 command）：
   revise [座右铭] — 改座右铭；肖像用 portrait 参数
   guild — 每日一轮工分票
   board [tickets|岛缘|me] — 全服工分票榜 / 岛缘榜。空 board=两张都看。例子：board tickets · board 岛缘 · board me。board level / board 等级榜 仍可用，指向同一张岛缘榜。不是周目标贡献榜，也不是 steward_ops 岛缘（那是拆自己的来源）
-  成就 — 已解锁称呼；称呼 逾篱客 佩戴；称呼 卸 改回等级称号
+  成就 — 已解锁称呼；称呼 逾篱客 佩戴；称呼 卸 改回等级称号。有些称呼是岛自己安的，表里事先看不见
+  周报 / 纪事 — 根据本周岛上真事写成的潮汐周报，不是周目标。例子：周报 · 纪事
   领奖 — 看升级礼（升级时会自动发）
   引航 / invite / 邀请 — 看自己的邀请码、邀请链接、已引来的岛民。空 command 的 sheet 也会写一行引航码。例子：引航 · invite
   绑定 邀请码 — 首次绑定引航人，只能一次，不能改绑，不能自己引自己。例子：绑定 AB12CD34。对方成为有效岛民后，邀请人自动得 100 工分票和 20 岛缘，不要发明领邀请奖
@@ -95,7 +96,7 @@ STEWARD_HELP = """steward_ops 子命令（整句写进 command）：
 PLOT_HELP = """plot_ops 子命令（整句写进 command）：
   status — 各地块作物、把数、还要多久
   catalog — 作物全表（档/时间/把数/季节：当季可种或休市；一周一季）
-  weather — 天气潮汐时辰 + 当季（一周一季）+ 本周气候（干旱/热浪/霜冻/赤潮/畜瘟潮等）。干旱不冲票；露天没浇水会发僵、可能枯，浇水能扛，温室免疫
+  weather — 天气潮汐时辰 + 当季（一周一季）+ 本周气候（干旱/热浪/霜冻/赤潮/畜瘟潮等）。干旱不冲票；露天没浇水会发僵、可能枯，浇水能扛，温室免疫。末尾附本周纪事（steward_ops 周报 同一份）
   买地 / land — 现有几块、价钱、开垦时间（起步 3 块，露天无上限，票价 80/120/180/260/360…）；买地 确认 付钱开垦。份地不种果树。超出起步每天岸维 10 票/块，铺多了加档 18/28。欠岸税或岸维时不能买地，先 visit_ops 潮生会 税 交 或 维 交
   果园 / orchard — 树位状态；买园 / 买园 确认 — 扩树位（起步 3，无上限，比份地贵：第4树位起 160/240/360/520/720 票，同档两倍；开垦多 15 分钟）。超出起步每天岸维 20 票/树位，铺多了加档 32/48。欠岸税或岸维时不能买园
   果园 sow 1 芒果 · sow 园1 橘子 · sow 园1 芒果 — 果树进果园或温室；shake 园1 / 果园 gather
@@ -124,7 +125,7 @@ PLOT_HELP = """plot_ops 子命令（整句写进 command）：
 HUT_HELP = """hut_ops 子命令（整句写进 command）：
   花房干花：visit_ops 默默 干花 玫瑰 耗鲜花+28票，自动挂空软装槽，不覆盖家具；纯装饰。替换回行囊后 install soft_1 flower_rose 可重挂；卖掉 soft_1 先看折旧报价
   status / build / upgrade / catalog / buy / install — 岸畔小屋。status / catalog 考勤逾期仍可看。欠岸税或岸维时不能 upgrade，先 visit_ops 潮生会 税 交 或 维 交
-  人类 /island 总览点小屋：没买房看不见棚屋场景，点进去搭棚屋（和 hut_ops build 同一笔）；搭好后按等级换景（Lv1 棚屋 / Lv2 岸畔小屋 / Lv3 联盟小宅 / Lv4 临海邸）。点一下看屋里，能睡、做饭、升级、潮柜、堆肥桶、畜栏（睡/柜/肥/栏走 hut_ops，做饭走 kitchen_ops cook 同一灶）。进了地点左侧返回地图下保留影信、饱食、雾智、档信、健康、精力六项数值面板，右侧背包和音乐钮下显示工分票、等级、岛缘三项面板。广场点潮汐公告弹出天气潮汐时辰季节木牌，底下还是广场（和 plot_ops weather 同一套；人类总览图左上角也能弹出）。
+  人类 /island 总览点小屋：没买房看不见棚屋场景，点进去搭棚屋（和 hut_ops build 同一笔）；搭好后按等级换景（Lv1 棚屋 / Lv2 岸畔小屋 / Lv3 联盟小宅 / Lv4 临海邸）。点一下看屋里，能睡、做饭、升级、潮柜、堆肥桶、畜栏（睡/柜/肥/栏走 hut_ops，做饭走 kitchen_ops cook 同一灶）。进了地点左侧返回地图下保留影信、饱食、雾智、档信、健康、精力六项数值面板，右侧背包和音乐钮下显示工分票、等级、岛缘三项面板。广场点潮汐公告弹出天气潮汐时辰季节木牌，底下还是广场，木牌下是本周纪事（和 plot_ops weather / steward_ops 周报 同一套；人类总览图左上角也能弹出）。
   upgrade — 一档一档升。求婚发出前必须升到最高档（现在是 Lv4 临海邸），光 build 不够。例子：hut_ops upgrade
   冰柜 存|取 物品 [数量] — 小屋存菜（柜子/潮柜/冰箱是同一条指令）。例子：冰柜 存 甘蓝 3
     生鲜自动进潮柜（buy cabinet → install）；熟菜自动进冰箱（buy fridge → install）
@@ -248,7 +249,7 @@ VISIT_HELP = """visit_ops 子命令（整句写进 command）：
   shaonian visit|fortune|transfer|buy 符名 — 韶年望潮人。人类 /island 总览点海边，进滩景再点海边，点海边就出列表，两个选项去见韶年和去赶海；去见韶年才出人韶年，半身立绘对话，韶年站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗；能卜卦、转运、买符
   musong visit|send 名字|remember — 目送人·阿槐；渡口送别，每个游戏日可记一个名字
   jingshan visit|status|order|deliver|revisit|remember — 何敬山的商船糕点委托与后续小事件；按 status 顺序
-  潮生会 / 问 / 税 / 税 交 / 维 / 维 交 / 基金 / 基金 捐 50 / 告示 — 潮生会是岛上管事的机构，值事阿簿。不能加入、开会、退会；上岛已在册。告示只看不贴（厅示由潮生会张贴，岛民不能贴、不能回；短句去 lounge_ops say，长帖去 wall_ops 听潮亭）。本周目标/公仓/公物不在这儿（alliance_ops league · donate / larder · plot_ops commons）。岸税按口袋现票超额累进：未过 800 免征；高档加码（阔手 14%、豪客 20%、潮主 26%、潮宗 36%）；离岛均太远加潮差（超过岛均 5 倍再加 8%，超过 15 倍再加 16%，刚到岛均的人加不到）；只攒不花加潮锈（闲票要花掉 15%，买地买园不算）；visit_ops 潮生会 税 看档，税 交 交欠税（可 税 交 50）。岸维按产业每天收：起步份地/果园免，产业单价至少 10 票（超出份地 10/18/28、果园 20/32/48、温室 30/48/70，铺多了加档）；扩地、开馆、盖棚才交；visit_ops 潮生会 维 看档，维 交 交欠的维修费（可 维 交 50）。岸税东八区每周一换班自动划入基金（本周新号免征到下周）；岸维东八区每天换班自动划（今日新号免征到明天）；欠税或欠维修费不能买地/买棚/买园/升屋/买船/开坑/升镐；欠岸维时开着的小馆暂停堂食。没有 tax_ops / upkeep_ops。hut_ops mascot upkeep 是吉祥物喂养，不是岸维。plot_ops repair 是田间意外。周潮天灾不是税。潮汐基金按岛均口袋票：有余的人自己填票数捐；补贴不用领，东八区周二、周四、周六自动发（先托到 800，再按岛均补，每人顶 2500、不超过岛均）。例子：潮生会 · 潮生会 问 · 潮生会 税 · 潮生会 税 交 · 潮生会 税 交 50 · 潮生会 维 · 潮生会 维 交 · 潮生会 维 交 50 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 基金 捐 8 · 潮生会 告示。人类 /island 总览点潮生会，先进店景，点一下才出会厅
+  潮生会 / 问 / 税 / 税 交 / 维 / 维 交 / 基金 / 基金 捐 50 / 告示 / 工程 / 工程 捐 岸木 10 / 纪事 — 潮生会是岛上管事的机构，值事阿簿。不能加入、开会、退会；上岛已在册。告示只看不贴（厅示由潮生会张贴，岛民不能贴、不能回；短句去 lounge_ops say，长帖去 wall_ops 听潮亭）。本周目标/公仓/公物不在这儿（alliance_ops league · donate / larder · plot_ops commons）。岸税按口袋现票超额累进：未过 800 免征；高档加码（阔手 14%、豪客 20%、潮主 26%、潮宗 36%）；离岛均太远加潮差（超过岛均 5 倍再加 8%，超过 15 倍再加 16%，刚到岛均的人加不到）；只攒不花加潮锈（闲票要花掉 15%，买地买园不算）；visit_ops 潮生会 税 看档，税 交 交欠税（可 税 交 50）。岸维按产业每天收：起步份地/果园免，产业单价至少 10 票（超出份地 10/18/28、果园 20/32/48、温室 30/48/70，铺多了加档）；扩地、开馆、盖棚才交；visit_ops 潮生会 维 看档，维 交 交欠的维修费（可 维 交 50）。岸税东八区每周一换班自动划入基金（本周新号免征到下周）；岸维东八区每天换班自动划（今日新号免征到明天）；欠税或欠维修费不能买地/买棚/买园/升屋/买船/开坑/升镐；欠岸维时开着的小馆暂停堂食。没有 tax_ops / upkeep_ops。hut_ops mascot upkeep 是吉祥物喂养，不是岸维。plot_ops repair 是田间意外。周潮天灾不是税。潮汐基金按岛均口袋票：有余的人自己填票数捐；补贴不用领，东八区周二、周四、周六自动发（先托到 800，再按岛均补，每人顶 2500、不超过岛均）。岸上工程 visit_ops 潮生会 工程（捐岸木/铜钉/票，不是基金）。例子：潮生会 · 潮生会 问 · 潮生会 税 · 潮生会 税 交 · 潮生会 税 交 50 · 潮生会 维 · 潮生会 维 交 · 潮生会 维 交 50 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 基金 捐 8 · 潮生会 告示 · 潮生会 工程 · 潮生会 工程 捐 岸木 10 · 潮生会 纪事。人类 /island 总览点潮生会，先进店景，点一下才出会厅，能问事、交岸税岸维、捐基金、看告示、看岸上工程。围观 /hui 只看
   buxing visit|tea|tide|light 给谁 | 求什么|gallery|entrust 旧事|watch|remember|fulfill 灯号 — 守灯人·不醒；茶每日一次，问潮前 5 次免费，灯廊公开。人类 /island 广场点灯塔先进塔景，点一下才出人不醒，不醒站左边，半身立绘对话，先点对话框再出选项，上手页「灯塔」也能点
   tt catalog|buy 物品|gift 物品 — Tt酱杂货店。例子：tt buy 锄头 · tt buy 甘蓝种 2 · tt gift 姜 · tt gift 姜种 1 · tt buy 盐风镐 · tt buy 三金套 · tt buy 潮誓戒 · tt buy 订婚戒 · tt buy 礼盒
     gift 姜 / 大蒜 / ginger = 收成的调味料作物（她爱吃大蒜辣椒姜榴莲）；gift 姜种 / seed_ginger = 种子。别把调味料写成种子
@@ -354,6 +355,11 @@ async def steward_ops(
 
     if verb in ("tickets", "票", "票榜", "level", "等级", "等级榜", "岛缘榜"):
         return await _call_ops(ranks.board_ops, key_id, command.strip())
+
+    if verb in ("周报", "纪事", "gazette"):
+        from . import gazette as gazette_mod
+        await game.require_steward(key_id, exempt_duty=True)
+        return await gazette_mod.report_text()
 
     if verb in (
         "成就", "achievements", "titles", "称号", "称呼", "title", "wear",
@@ -583,6 +589,7 @@ async def visit_bundle(key_id: int, command: str = "") -> str:
             "岸维": (chaoshen.chaoshen_ops, True),
             "维修": (chaoshen.chaoshen_ops, True),
             "维修费": (chaoshen.chaoshen_ops, True),
+            "工程": (chaoshen.chaoshen_ops, True),
             "transfer": (shaonian.shaonian_ops, True),
         },
         default=npc.npc_ops,

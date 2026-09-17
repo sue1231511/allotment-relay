@@ -175,6 +175,8 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
     else:
         port_line = f"{tide_name}。撒网、坐钓、开船在码头；闲聊是另一个选项。围观页只看。"
         beach_line = f"{tide_name}。赶海、寻信在沙滩。围观页只看。"
+    from .. import traces as traces_mod
+    port_line = await traces_mod.blend(conn, "harbor", port_line)
 
     port_tabs = [
         {"key": "cast", "label": "岸边", "badge": ""},
