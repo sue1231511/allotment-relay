@@ -1363,7 +1363,7 @@ function itemSheet(name) {
   const it = ((state.dash && state.dash.stock) || []).find((row) => (row.name || row.item) === name);
   const bits = stockStoryBits(it);
   const story = bits.length
-    ? `<div class="play-item-story">${bits.map((ln) => `<p class="muted">${esc(ln)}</p>`).join('')}</div>`
+    ? `<div class="play-item-story" style="flex:1 0 100%">${bits.map((ln) => `<p class="muted">${esc(ln)}</p>`).join('')}</div>`
     : '';
   openSheet(name, `
     ${story}
