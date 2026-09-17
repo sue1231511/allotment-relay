@@ -87,7 +87,7 @@ async def relay_manual() -> str:
     return await game.relay_manual()
 
 
-@mcp.tool(description="身份档案。空=sheet。例：sheet · 岛缘 · 引航。要玩才 enroll 安。勿 invite_ops。人机同号可同时在线。")
+@mcp.tool(description="身份档案。空=sheet。例：sheet · 岛缘 · 周报 · 引航。要玩才 enroll 安。勿 invite_ops。人机同号可同时在线。")
 async def steward_ops(command: str = "sheet") -> str:
     from . import progress as progress_mod
     return progress_mod.attach_note(
@@ -95,7 +95,7 @@ async def steward_ops(command: str = "sheet") -> str:
     )
 
 
-@mcp.tool(description="份地果园与田间事件。空=指令表。例：status · sow 1 甘蓝 · 浇水 · commons scan · claim 2978。勿 sow_all/plant；repair≠岸维。人类 /island 份地点一下看地后选看地/田间事件。")
+@mcp.tool(description="份地果园与田间事件。空=指令表。例：status · sow 1 甘蓝 · weather · 浇水。weather 末尾附本周纪事。勿 sow_all/plant；repair≠岸维。人类 /island 份地点一下看地后选看地/田间事件。")
 async def plot_ops(
     command: Annotated[str, Field(description="incident status 看待处理；repair 12 花票；repair 12 item 用材料（不支持则拒绝，不改扣票）。同号手游共用记录，刷新不掷事件，不退当场损失。空=指令表。")] = "",
 ) -> str:
@@ -112,7 +112,7 @@ async def tide_ops(command: str = "") -> str:
     return await mux._call_ops(mux.tide_bundle, _kid(), command)
 
 
-@mcp.tool(description="行囊集市。空=列表。例：list · vend 鲭鱼 1 · vend 羊毛毯 1。家具走折旧。送礼≠红包。")
+@mcp.tool(description="行囊集市。空=列表。例：list · 履历 · vend 鲭鱼 1。戒/稀有鱼有来历。送礼≠红包。")
 async def tote_ops(command: str = "") -> str:
     return await mux._call_ops(mux.tote_bundle, _kid(), command)
 
@@ -127,7 +127,7 @@ async def alliance_ops(command: str = "") -> str:
     return await mux._call_ops(mux.alliance_bundle, _kid(), command)
 
 
-@mcp.tool(description="NPC、杂货、诊所、兽医与花店。空=help。例：list · clinic · tt buy 甘蓝种 2。桥桥治人≠霍衡治牲口；潮生会不能加入。")
+@mcp.tool(description="NPC、杂货、诊所、兽医与花店。空=help。例：list · clinic · 潮生会 工程。桥桥治人≠霍衡治牲口；潮生会不能加入。")
 async def visit_ops(command: Annotated[str, Field(description="整句子命令；空=help。霍衡=兽医；clinic=桥桥；默默=花店。税/维走潮生会。漾漾=衣泊坊。")] = "") -> str:
     return await mux._call_ops(mux.visit_bundle, _kid(), command)
 

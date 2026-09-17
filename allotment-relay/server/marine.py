@@ -680,6 +680,11 @@ async def pen_ops(key_id: int, command: str) -> str:
             meta = SEA_CATCH[species]
             qty = 2 if pen.get("fed") else 1
             await db.add_item(conn, s["id"], f"fish_{species}", qty)
+            from . import ledger as ledger_mod
+            await ledger_mod.note_gain(
+                conn, s["id"], f"fish_{species}", qty,
+                f"{meta['emoji']}{meta['name']}由{s['name']}于{ledger_mod.calendar_phrase()}从渔排收起",
+            )
             await conn.execute(
                 "UPDATE fish_pens SET species=NULL, stocked_at=NULL, fed=0 WHERE id=?",
                 (pen["id"],),
@@ -951,6 +956,9 @@ async def _resolve_voyage(
         fail_chance += 0.06
     if pulse and pulse.get("effect_type") == "red_tide":
         fail_chance += 0.04
+    from . import works as works_mod
+    if await works_mod.active_bonus(conn, "dock"):
+        fail_chance = max(0.04, fail_chance - 0.04)
 
     extra = await events.roll_after_action(s, "voyage_return", conn, voyage=voyage)
     s = await _refresh_steward(conn, s["id"])

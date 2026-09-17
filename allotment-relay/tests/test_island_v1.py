@@ -556,6 +556,11 @@ async def _test_island_v1_api() -> None:
     assert hall["name"] == "潮生会", hall
     assert any(t["key"] == "tax" for t in hall["tabs"]), hall
     assert any(t["key"] == "fund" for t in hall["tabs"]), hall
+    assert any(t["key"] == "works" for t in hall["tabs"]), hall
+    work_skus = (hall.get("items") or {}).get("works") or []
+    assert any(row.get("name") == "本周纪事" for row in work_skus), work_skus
+    assert any(row.get("kind") == "donate_work" for row in work_skus), work_skus
+    assert any(row.get("kind") == "donate_mat" for row in work_skus), work_skus
     asked = client.post(
         "/api/v1/hui/act",
         headers=_auth(key, {"Idempotency-Key": "hui-look-ask"}),
@@ -1064,6 +1069,9 @@ async def _test_island_v1_api() -> None:
     assert world.json()["world"]["weather_code"] in {"clear", "misty", "gale"}
     assert world.json()["world"]["season"]
     assert world.json()["world"]["season_hint"]
+    gaz = world.json()["world"].get("gazette") or {}
+    assert gaz.get("title"), gaz
+    assert isinstance(gaz.get("lines"), list), gaz
 
     bought = client.post(
         "/api/v1/farm/buy",
@@ -1266,8 +1274,8 @@ def test_island_page_is_modular() -> None:
     assert "warmScenesInBackground" in (ROOT / "server/static/island/boot.js").read_text(encoding="utf-8")
     assert "warmScenesLater" in app
     assert "waitScenePics" in app
-    assert html.count("island.css?v=farm-batch1") == 1
-    assert html.count("app.js?v=keynorm1") == 1
+    assert html.count("island.css?v=ledger1") == 1
+    assert html.count("app.js?v=ledger1") == 1
     assert html.count("boot.js?v=keynorm1") == 1
     assert 'rel="preload"' in html
     assert "island-map.webp" in html
@@ -1601,6 +1609,7 @@ def test_island_page_is_modular() -> None:
     assert "island-bag-grid" in bag_js
     assert "data-page" in bag_js
     assert "const PAGE = 20" in bag_js
+    assert "island-bag-story" in bag_js
     assert "左边吃，右边卖" not in bag_js
     assert "island-item" not in bag_js
     assert "data-vend" in bag_js
@@ -1702,6 +1711,11 @@ def test_island_page_is_modular() -> None:
     assert "island-climate-val" in climate_js
     assert "时辰" in climate_js
     assert "island-climate-title" not in climate_js
+    assert "island-gazette" in climate_js
+    assert "island-climate-stack" in climate_js
+    assert "本周纪事" in climate_js
+    assert ".island-gazette" in css
+    assert ".island-climate-stack" in css
     assert "rgba(35, 48, 56, .28)" in css
     assert "1536 / 1024" in css
     assert "min(360px" in css

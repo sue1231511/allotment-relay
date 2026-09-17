@@ -727,6 +727,16 @@ async def furniture_sell_command(s: dict[str, Any], rest: list[str]) -> str:
             if not await db.take_item(conn, s["id"], target["item"], 1):
                 raise ValueError("行囊里已经没有这件了")
             label = item_label(target["item"])
+        from . import ledger as ledger_mod
+        sold_item = (
+            target["item"] if target["where"] == "bag"
+            else (target["item_key"] if str(target.get("item_key") or "").startswith(("fit_", "deco_"))
+                  else f"fit_{target['item_key']}")
+        )
+        await ledger_mod.consume(
+            conn, s["id"], sold_item, 1,
+            extra=f"后卖掉，{ledger_mod.calendar_phrase()}。履历到此",
+        )
         await conn.execute(
             "UPDATE stewards SET tickets=tickets+? WHERE id=?",
             (quote["refund"], s["id"]),

@@ -13,6 +13,8 @@ TITLES = {
     "pay": "交过了",
     "pay_part": "交过了",
     "donate": "捐进了",
+    "donate_work": "捐进了",
+    "donate_mat": "捐进了",
 }
 
 LOOK = {
@@ -21,6 +23,8 @@ LOOK = {
     "upkeep": "维",
     "fund": "基金",
     "notice": "告示",
+    "work": "工程",
+    "gazette": "纪事",
 }
 
 
@@ -46,6 +50,22 @@ def _command(kind: str, target: str) -> str:
         if not n.isdigit():
             raise ApiError("BAD_REQUEST", "先写下要捐的票数。")
         return f"基金 捐 {n}"
+    if kind == "donate_work":
+        n = extra.split()[-1] if extra else ""
+        if not n.isdigit():
+            raise ApiError("BAD_REQUEST", "先写下要捐的票数。")
+        return f"工程 捐 {n}"
+    if kind == "donate_mat":
+        head, _, amt = extra.partition(":")
+        head = (head or extra).strip()
+        amt = (amt or "1").strip()
+        if not amt.isdigit():
+            raise ApiError("BAD_REQUEST", "先写下份数。")
+        if head in ("craft_timber", "timber", "岸木"):
+            return f"工程 捐 岸木 {amt}"
+        if head in ("craft_copper_nails", "nails", "铜钉"):
+            return f"工程 捐 铜钉 {amt}"
+        raise ApiError("BAD_REQUEST", "这期只要岸木或铜钉。")
     raise ApiError("BAD_REQUEST", "潮生会里没有这一下。")
 
 

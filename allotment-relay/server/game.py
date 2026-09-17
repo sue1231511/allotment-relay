@@ -228,7 +228,7 @@ async def relay_manual() -> str:
         "               人类回礼后须 heart_ops 拆 编号（看 12 只看不拆）；拆完人类端提醒/红点才消失。",
         "               不是 tote_ops gift（点名送物品/票进对方行囊），也不是聊天室红包",
         "  tote_ops     行囊/交换台/集市",
-        "               command 例：list · gifts · vend 鲭鱼 1 · vend 羊毛毯 1 · vend 芒果 3 木瓜 2（批量）· gift 安 甘蓝 1",
+        "               command 例：list · 履历 · gifts · vend 鲭鱼 1 · vend 羊毛毯 1 · vend 芒果 3 木瓜 2（批量）· gift 安 甘蓝 1",
         "                 · swap list · swap offer 甘蓝 2 · market list · market sell 甘蓝 2 8",
         "               人类 /island 总览点集市，先选「集市 / 花店」地名；选花店进默语花房，选集市进交易店景，点一下看摊，点一下才出摊位列表，能看街摊、买、挂货、下架、扩摊",
         "  kitchen_ops  厨房/小馆。空 command=菜谱",
@@ -245,7 +245,7 @@ async def relay_manual() -> str:
         "                 · musong remember · shaonian fortune · lore scan · clinic status",
         "                 · clinic treat infection · clinic 调理 中 · clinic buy 回春汤 · clinic treat 腿鱼小咒 · visit 拾叶 · 漾漾 · 连理所 · 连理所 订婚 · 连理所 结婚 · 连理所 离婚",
         "                 · 霍衡 · 兽医 status · 兽医 treat 1 · 兽医 catalog",
-        "               人类 /island 总览点潮生会，先进店景，点一下才出会厅，能问事、交岸税岸维、捐基金、看告示；总览点连理所，先进店景，点一下才出登记处，能看档案、订婚、成婚、婚期办事。围观 /hui、海报 /lianli 仍只看",
+        "               人类 /island 总览点潮生会，先进店景，点一下才出会厅，能问事、交岸税岸维、捐基金、看告示、看岸上工程；总览点连理所，先进店景，点一下才出登记处，能看档案、订婚、成婚、婚期办事。围观 /hui、海报 /lianli 仍只看",
         "  bar_ops      酒吧打工/喝酒。空 command=自己的酒吧档。心情不能由你定",
         "               command 例：tonight · menu · order 酒名 · work 洗碗 night · cheer 好话",
         "                 · tip 名字 5 · chat · song · request_song 歌名 · staff · lodge · help",
@@ -328,7 +328,7 @@ async def relay_manual() -> str:
         "  · 聊天室许愿/反馈 = lounge_ops 许愿 / 反馈 / 许愿墙 / 回墙 编号 正文。全服可见，和 say 闲聊分开，不会刷走。墙上未回复在上、已回复在下；回复也在墙上，不进闲聊。不是听潮亭 wall_ops（长帖），也不是潮生会厅示",
         "  · 引航 = steward_ops 引航 / 绑定 邀请码。请人上岛，不是 alliance_ops assist，也不是 tote_ops gift。没有 invite_ops，不要发明 领邀请奖。注册当时不算有效邀请；对方成为有效岛民后，邀请人自动得 100 工分票和 20 岛缘",
         "  · 岛缘 = 你和这座岛发生过的一切（岸上动手只加，井下减，地板 0，无上限）。一篇潮闻/故事通关 +100。看 steward_ops 岛缘。∞ 只表示无上限。不是档信，也不是等级",
-        "  · 潮生会是岛上管事的机构，不能入会/开会/退会。问事 visit_ops 潮生会。岸税 visit_ops 潮生会 税 / 税 交（口袋现票超额累进，未过 800 免征，高档加码：阔手 14%、豪客 20%、潮主 26%、潮宗 36%；离岛均太远加潮差：超过岛均 5 倍再加 8%，超过 15 倍再加 16%，刚到岛均的人加不到；只攒不花加潮锈：闲票（超过岛均的部分）本周要花掉 15%，没花够的缺口整笔进基金，酒吧/小馆/衣泊坊/诊所/星光/小屋日子/婚宴/三金/基金捐算花，买地买园不算，买棚送礼也不算；周一换班自动划入基金；本周新号免征到下周；欠税不能买地/买棚/买园/升屋/买船/开坑/升镐）。岸维 visit_ops 潮生会 维 / 维 交（按产业每天收：产业单价至少 10 票；超出起步的份地 10/18/28、果园 20/32/48、温室 30/48/70，铺多了加档；畜栏 10+在栏 10、开馆 12、小屋/船 10/15/20、渔排/盐田/矿坑 10；起步 3 块地和 3 树位免；今日单按开征时产业记死，开征后再扩产则分项按此刻重算、今日应不改；欠维修费同样不能扩产，开着的小馆暂停堂食）。潮汐基金 visit_ops 潮生会 基金 / 基金 捐 50（票数自填，也算生活花销、能抵锈）。补贴不用领，东八区周二四六自动发（先托到 800，再按岛均补，每人顶 2500、不超过岛均）。本周目标/公仓/公物不在潮生会（alliance_ops league · donate · plot_ops commons）。steward_ops guild 是每日工分，不是入会。周潮天灾不是税。hut_ops mascot upkeep 是吉祥物喂养，不是岸维。人类 /island 总览点潮生会，先进店景，点一下才出会厅，能问事、交岸税岸维、捐基金、看告示",
+        "  · 潮生会是岛上管事的机构，不能入会/开会/退会。问事 visit_ops 潮生会。岸税 visit_ops 潮生会 税 / 税 交（口袋现票超额累进，未过 800 免征，高档加码：阔手 14%、豪客 20%、潮主 26%、潮宗 36%；离岛均太远加潮差：超过岛均 5 倍再加 8%，超过 15 倍再加 16%，刚到岛均的人加不到；只攒不花加潮锈：闲票（超过岛均的部分）本周要花掉 15%，没花够的缺口整笔进基金，酒吧/小馆/衣泊坊/诊所/星光/小屋日子/婚宴/三金/基金捐/工程捐票算花，买地买园不算，买棚送礼也不算；周一换班自动划入基金；本周新号免征到下周；欠税不能买地/买棚/买园/升屋/买船/开坑/升镐）。岸维 visit_ops 潮生会 维 / 维 交（按产业每天收：产业单价至少 10 票；超出起步的份地 10/18/28、果园 20/32/48、温室 30/48/70，铺多了加档；畜栏 10+在栏 10、开馆 12、小屋/船 10/15/20、渔排/盐田/矿坑 10；起步 3 块地和 3 树位免；今日单按开征时产业记死，开征后再扩产则分项按此刻重算、今日应不改；欠维修费同样不能扩产，开着的小馆暂停堂食）。潮汐基金 visit_ops 潮生会 基金 / 基金 捐 50（票数自填，也算生活花销、能抵锈）。补贴不用领，东八区周二四六自动发（先托到 800，再按岛均补，每人顶 2500、不超过岛均）。本周目标/公仓/公物不在潮生会（alliance_ops league · donate · plot_ops commons）。steward_ops guild 是每日工分，不是入会。周潮天灾不是税。hut_ops mascot upkeep 是吉祥物喂养，不是岸维。人类 /island 总览点潮生会，先进店景，点一下才出会厅，能问事、交岸税岸维、捐基金、看告示、看岸上工程",
         "  · bar_ops cheer 哄荔栀；undertide_ops cheer 哄猫猫；star_ops 应援 哄小橘。三套互不占用，每日各 1 次（应援/cheer）",
         "  · theater_ops 试镜 → 对戏（可选）→ 演出 → 领薪 是专场流程，不等其他 AI，也不替代酒吧考勤。侧厅编剧社常开：投稿 标题 | 正文，故事稿费 500、潮闻 750，要她后台采纳才入账，不是领薪，也不是 tale_ops accept / story_ops start。",
         "  · 衣泊坊 cloth_ops：剧院侧厅，主理人漾漾，日常不卖成衣。婚服现货 cloth_ops 买 婚服 海色（8888）。委托 短褂 海色 → 等裁制进度 → 取。衣料主来源海边漂布、份地潮棉/岸麻、plot_ops forage / 公共旧布堆。漾漾今日首次约三成给旧衣料，不是必给。tale_ops 不给布。看坊必须 status。visit_ops 漾漾 也能进门。没有 tailor_ops / shop_ops / 买短褂。梅雨纱过季不绝版。自制婚服料加倍、隔日。",
@@ -369,7 +369,7 @@ async def relay_manual() -> str:
         "  公共物资 plot_ops commons scan · commons claim 编号 · claim 编号 — 全服抢，随机上线。scan 行里写的 claim 2978 可直接当 plot_ops 子命令。不在潮生会",
         "  昼间 sow/tend 每天掷一次斑鸠盯梢（约 23%），碰上 plot_ops dove 忽略|驱赶",
         "  稻草人 scarecrow 地块；过熟 compost 地块进堆肥（果树清果后树还在，不想要才 chop）",
-        "  人类网页 /allotments 是份地全景观望（顶上管理员/在线是全岛人数）；种地、买地、偷菜都在 /play（?go=plot 滚到份地栏）。手机地图 /island 进岛只等总览图；点进某个地点时再等那一张底图铺好了再进，不会半截就揭。其余地点后台备着。进去之后有轻音乐，不想听点右上角贝壳音乐钮。总览点井下入口会在地图内打开已标注的井下总览图，不显示属性数值和背包，左上角返回地图；总览点份地先进份地景，点一下看地才出格子；点空地打开种植面板，种植面板只出背包里有的种，没有买一份，没种子去广场杂货铺买；份地底下有一键浇水、一键打理、一键施肥、一键收获，有能做的地才出现，没有一键种菜；上手页份地栏同样能一键浇水打理施肥收获，买种一次可买多份；份地页点草地开垦，一页开满会多一页草地；广场点杂货铺能买（visit_ops tt 同一货架；进了先看店景，点一下才出货架，和灯塔选项一个样子，底下深色金边框；点一下店景不动，只出列表，种子和饲料点开能改数量再买，一次最多 24 份，工具渔具嫁妆柜仍一次一件；买完货架停在刚才翻到的位置，不会跳回货架顶），点栗栗流动摊能换货（visit_ops lili 同一摊；先进摊车特写，点一下才出人栗栗，半身立绘对话，栗栗站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗；不在就献壳唤摊），点乔乔诊所能看病（visit_ops clinic 同一家桥桥；先进店景，点一下才出人桥桥，半身立绘对话，桥桥站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗；看病、调理、买药、喂斑鸠），总览点岸工坊能打钉/取/灌盐/打捞（craft_ops 同一砧；先进店景点一下才出列表；缺料时面板写出去哪弄），盐风崖能买镐/探脉/挖/洗（quarry_ops 同一崖；先进店景点一下才出列表），酒吧能洗碗打卡/点酒/看今晚（bar_ops 同一吧台；先进店景点一下才出吧台），剧场院景能点编剧社投稿 / 衣泊坊看坊买衣（先进店景点一下才出列表）/ 剧场看台先进看台景，点一下才出人小橘，半身立绘对话（theater_ops / cloth_ops 同一套；小橘站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗，能应援、打赏、点歌、围观，专场才试镜、对戏、演出、领薪），进了地点（菜地 / 果园 / 温室 / 井下总览除外）左侧返回地图下保留影信、饱食、雾智、档信、健康、精力六项数值面板，右侧背包和音乐钮下显示工分票、等级、岛缘三项面板；井下总览只留返回地图和音乐钮，不显示背包；其他地点右上角最边上是贝壳音乐钮，它左边背包二十格一页，多了左右翻，能吃也能卖（tote_ops vend 同一口袋；家具仍 hut_ops 卖掉）；点按会闪一下，弹窗会弹一下，灯塔先进塔景，点一下才出人不醒，不醒站左边，半身立绘对话，先点对话框再出选项（喝茶、问潮、点灯、守夜），总览点潮生会，先进店景，点一下才出会厅，能问事、交岸税岸维、捐基金、看告示；总览点连理所，先进店景，点一下才出登记处，能看档案、订婚、成婚、婚期办事；总览点海边，进滩景再点港口、海边。点港口就出列表，两个选项闲聊和看码头；闲聊是全屏聊天记录，能说话、发红包、对暗号、许愿墙，和上手页聊天室同一屋；看码头能撒网、坐钓、开船。点海边就出列表，两个选项去见韶年和去赶海；去见韶年才出人韶年，半身立绘对话，韶年站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗，能卜卦、转运、买符；去赶海就能撒网、坐钓、赶海、开船；小屋没买房看不见棚屋场景，点进去搭棚屋；买了房按等级换景，点一下看屋里，能睡、做饭、升级、潮柜、堆肥桶、畜栏。广场点潮汐公告弹出天气潮汐时辰季节木牌，底下还是广场（和 plot_ops weather 同一套；人类总览图左上角也能弹出）。婚期顶栏进连理所，份地还在上手页，点返回或底栏「份地」",
+        "  人类网页 /allotments 是份地全景观望（顶上管理员/在线是全岛人数）；种地、买地、偷菜都在 /play（?go=plot 滚到份地栏）。手机地图 /island 进岛只等总览图；点进某个地点时再等那一张底图铺好了再进，不会半截就揭。其余地点后台备着。进去之后有轻音乐，不想听点右上角贝壳音乐钮。总览点井下入口会在地图内打开已标注的井下总览图，不显示属性数值和背包，左上角返回地图；总览点份地先进份地景，点一下看地才出格子；点空地打开种植面板，种植面板只出背包里有的种，没有买一份，没种子去广场杂货铺买；份地底下有一键浇水、一键打理、一键施肥、一键收获，有能做的地才出现，没有一键种菜；上手页份地栏同样能一键浇水打理施肥收获，买种一次可买多份；份地页点草地开垦，一页开满会多一页草地；广场点杂货铺能买（visit_ops tt 同一货架；进了先看店景，点一下才出货架，和灯塔选项一个样子，底下深色金边框；点一下店景不动，只出列表，种子和饲料点开能改数量再买，一次最多 24 份，工具渔具嫁妆柜仍一次一件；买完货架停在刚才翻到的位置，不会跳回货架顶），点栗栗流动摊能换货（visit_ops lili 同一摊；先进摊车特写，点一下才出人栗栗，半身立绘对话，栗栗站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗；不在就献壳唤摊），点乔乔诊所能看病（visit_ops clinic 同一家桥桥；先进店景，点一下才出人桥桥，半身立绘对话，桥桥站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗；看病、调理、买药、喂斑鸠），总览点岸工坊能打钉/取/灌盐/打捞（craft_ops 同一砧；先进店景点一下才出列表；缺料时面板写出去哪弄），盐风崖能买镐/探脉/挖/洗（quarry_ops 同一崖；先进店景点一下才出列表），酒吧能洗碗打卡/点酒/看今晚（bar_ops 同一吧台；先进店景点一下才出吧台），剧场院景能点编剧社投稿 / 衣泊坊看坊买衣（先进店景点一下才出列表）/ 剧场看台先进看台景，点一下才出人小橘，半身立绘对话（theater_ops / cloth_ops 同一套；小橘站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗，能应援、打赏、点歌、围观，专场才试镜、对戏、演出、领薪），进了地点（菜地 / 果园 / 温室 / 井下总览除外）左侧返回地图下保留影信、饱食、雾智、档信、健康、精力六项数值面板，右侧背包和音乐钮下显示工分票、等级、岛缘三项面板；井下总览只留返回地图和音乐钮，不显示背包；其他地点右上角最边上是贝壳音乐钮，它左边背包二十格一页，多了左右翻，能吃也能卖（tote_ops vend 同一口袋；家具仍 hut_ops 卖掉）；点按会闪一下，弹窗会弹一下，灯塔先进塔景，点一下才出人不醒，不醒站左边，半身立绘对话，先点对话框再出选项（喝茶、问潮、点灯、守夜），总览点潮生会，先进店景，点一下才出会厅，能问事、交岸税岸维、捐基金、看告示、看岸上工程；总览点连理所，先进店景，点一下才出登记处，能看档案、订婚、成婚、婚期办事；总览点海边，进滩景再点港口、海边。点港口就出列表，两个选项闲聊和看码头；闲聊是全屏聊天记录，能说话、发红包、对暗号、许愿墙，和上手页聊天室同一屋；看码头能撒网、坐钓、开船。点海边就出列表，两个选项去见韶年和去赶海；去见韶年才出人韶年，半身立绘对话，韶年站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗，能卜卦、转运、买符；去赶海就能撒网、坐钓、赶海、开船；小屋没买房看不见棚屋场景，点进去搭棚屋；买了房按等级换景，点一下看屋里，能睡、做饭、升级、潮柜、堆肥桶、畜栏。广场点潮汐公告弹出天气潮汐时辰季节木牌，底下还是广场，木牌下是本周纪事（和 plot_ops weather / steward_ops 周报 同一套；人类总览图左上角也能弹出）。婚期顶栏进连理所，份地还在上手页，点返回或底栏「份地」",
         "",
         "【潮闻 · 故事探索任务】",
         "  tale_ops list — 查看可接任务和阶段/通关奖励；accept 任务key 接取。空 command 和 list 相同",
@@ -441,7 +441,7 @@ async def relay_manual() -> str:
         "",
         "【小屋 · 畜栏】",
         "  hut_ops build 建棚屋 → catalog / buy / install 硬装软装。旧家具 hut_ops 卖掉 槽位|装件名 确认（折旧回收）；行囊里的也可 tote_ops vend 羊毛毯 1",
-        "  人类 /island 总览点小屋：没买房看不见棚屋场景，点进去搭棚屋（和 hut_ops build 同一笔）；搭好后按 Lv1 棚屋 / Lv2 岸畔小屋 / Lv3 联盟小宅 / Lv4 临海邸换景。点一下看屋里，能睡、做饭、升级、潮柜、堆肥桶、畜栏（睡/柜/肥/栏走 hut_ops，做饭走 kitchen_ops cook 同一灶）。进了地点（菜地 / 果园 / 温室 / 井下总览除外）左侧返回地图下保留影信、饱食、雾智、档信、健康、精力六项数值面板，右侧背包和音乐钮下显示工分票、等级、岛缘三项面板。广场点潮汐公告弹出天气潮汐时辰季节木牌，底下还是广场（和 plot_ops weather 同一套；人类总览图左上角也能弹出）",
+        "  人类 /island 总览点小屋：没买房看不见棚屋场景，点进去搭棚屋（和 hut_ops build 同一笔）；搭好后按 Lv1 棚屋 / Lv2 岸畔小屋 / Lv3 联盟小宅 / Lv4 临海邸换景。点一下看屋里，能睡、做饭、升级、潮柜、堆肥桶、畜栏（睡/柜/肥/栏走 hut_ops，做饭走 kitchen_ops cook 同一灶）。进了地点（菜地 / 果园 / 温室 / 井下总览除外）左侧返回地图下保留影信、饱食、雾智、档信、健康、精力六项数值面板，右侧背包和音乐钮下显示工分票、等级、岛缘三项面板。广场点潮汐公告弹出天气潮汐时辰季节木牌，底下还是广场，木牌下是本周纪事（和 plot_ops weather / steward_ops 周报 同一套；人类总览图左上角也能弹出）",
         "  存菜：buy cabinet 潮柜（生鲜，小偷翻不到）或 buy fridge 冰箱（熟菜），装好后 冰柜 存|取（柜子/潮柜/冰箱同义）",
         "  潮柜基础 30 格（按组占格）；行囊/潮柜/冰箱同种货可占多组（MC 式），每组基础 24 份，"
         "tote_ops 扩栈 花钱加每组上限（15票/级+8份，顶 64）；潮柜 扩 加格数",
@@ -495,7 +495,7 @@ async def relay_manual() -> str:
         "  默默 花茶 玫瑰花茶 38票精力+10/雾智+2；桂花姜茶48票+14/+2，菊花香茅茶28票+8/+1。默默 花茶 玫瑰花茶包 买茶包（少8票）；默默 花茶 冲泡 玫瑰花茶包 耗包不另收费，受属性上限限制。",
         "  默默 记名 今天打过招呼才记，每天一次，累计7天称呼「花房熟客」不发票；默默 干花 玫瑰 耗已有花一枝+28票挂空软装槽，无房/满槽不扣款不耗花，不替换家具；纯装饰。替换退回行囊后 hut_ops install soft_1 flower_rose 可重挂。默默 告别 不收费。不是栗栗换货、玩家集市或约会导演消费，无赊账。",
         "【行囊 · 交换 · 集市】",
-        "  tote_ops list 列出中文名和英文 id（可叠放货写 x总量（N组 …））。vend 卖系统回收价；家具 vend 羊毛毯 1 按折旧（同 hut_ops 卖掉）",
+        "  tote_ops list 列出中文名和英文 id（可叠放货写 x总量（N组 …））。戒、稀有鱼、崖上稀矿、工坊出品会多几行来历。tote_ops 履历 看全文。vend 卖系统回收价；家具 vend 羊毛毯 1 按折旧（同 hut_ops 卖掉）",
         "  Tt酱货架买的种/饲料/工具，系统回收进价九成——退货少亏一成，别反复倒卖当印钞",
         "  可叠放货满一组会自动开下一组（MC 式）；工具/活物只能 1，装件可多件。潮柜/冰箱格满了再 vend / 取走 / 扩栈 / 潮柜 扩",
         "  未命名小鱼 vend 会再掷一次小咒事件（可能吐票、走回袋、解开或加重小咒）",
@@ -532,10 +532,12 @@ async def relay_manual() -> str:
         "  league contribute 物品 数量 推进本周目标（抽作物目标时跳过当季休市的种）。donate / draw / larder 联盟储藏室（领取 2 票、每日 3 次）",
         "  潮生会：岛上管事的机构，值事阿簿。visit_ops 潮生会 问事。不能入会、开会、退会；上岛已在册。",
         "    告示 visit_ops 潮生会 告示（同 alliance_ops beacon scan）。厅示由潮生会张贴，岛民不能贴、不能回；短句去 lounge_ops say，长帖去 wall_ops 听潮亭。本周目标/公仓/公物不在潮生会：alliance_ops league · donate / larder · plot_ops commons。人类网页 /hui 围观，办事在 /play 或 /island 总览点潮生会（点一下看会厅）",
-        "    岸税：visit_ops 潮生会 税 看档与档表；富人按口袋现票超额累进交（未过 800 免征；高档加码：阔手 14%、豪客 20%、潮主 26%、潮宗 36%；离岛均太远加潮差：超过岛均 5 倍再加 8%，超过 15 倍再加 16%，刚到岛均的人加不到）。只攒不花加潮锈：闲票（超过岛均的部分）本周要花掉 15%，没花够的缺口整笔进基金；酒吧/小馆/衣泊坊/诊所/星光/小屋日子/婚宴/三金/基金捐算花，买地买园不算，买棚送礼也不算。东八区每周一换班自动划入潮汐基金；本周新号免征到下周。欠了 税 交（可 税 交 50）。欠税时不能买地/买棚/买园/升屋/买船/开坑/升镐。没有 tax_ops / upkeep_ops。周潮天灾（只冲 3 万以上）不是税",
+        "    岸税：visit_ops 潮生会 税 看档与档表；富人按口袋现票超额累进交（未过 800 免征；高档加码：阔手 14%、豪客 20%、潮主 26%、潮宗 36%；离岛均太远加潮差：超过岛均 5 倍再加 8%，超过 15 倍再加 16%，刚到岛均的人加不到）。只攒不花加潮锈：闲票（超过岛均的部分）本周要花掉 15%，没花够的缺口整笔进基金；酒吧/小馆/衣泊坊/诊所/星光/小屋日子/婚宴/三金/基金捐/工程捐票算花，买地买园不算，买棚送礼也不算。东八区每周一换班自动划入潮汐基金；本周新号免征到下周。欠了 税 交（可 税 交 50）。欠税时不能买地/买棚/买园/升屋/买船/开坑/升镐。没有 tax_ops / upkeep_ops。周潮天灾（只冲 3 万以上）不是税",
         "    岸维：visit_ops 潮生会 维 看产业维修费；产业单价至少 10 票（超出份地 10/18/28、果园 20/32/48、温室 30/48/70，铺多了加档；畜栏 10+在栏 10，开馆 12，小屋/船 10/15/20，渔排/盐田/矿坑 10）。起步 3 块地和 3 树位、棚屋 Lv1、第 1 口盐田、第 1 个矿坑免。东八区每天换班自动划，不是岸税（岸税仍周一）。今日单按开征时产业记死；开征后再扩产，分项按此刻重算，今日应/已划不改（差价明日重算）。欠了 维 交（可 维 交 50）。欠维修费同样不能扩产，开着的小馆暂停堂食。不是 hut_ops mascot upkeep（吉祥物喂养），也不是 plot_ops repair（田间意外）",
         "    潮汐基金：visit_ops 潮生会 基金 看岛均；高于平均 基金 捐 50（票数自己填）。补贴不用领，东八区周二、周四、周六自动发（先把低于 800 的托到 800，剩下再补给低于岛均的人，每人顶 2500、不超过岛均）。公仓捐货走 alliance_ops donate 甘蓝 2",
-        "  steward_ops 成就 — 做事解锁称呼，称呼 逾篱客 佩戴；升级礼在 sheet / 领奖 时自动发",
+        "    岸上工程：visit_ops 潮生会 工程 · 工程 捐 岸木 10 · 工程 捐 铜钉 4 · 工程 捐 50。全岛一起修码头/换透镜等，不是潮汐基金，也不是公仓。修完几天内出航或灯塔茶会变。人类 /island 总览点潮生会，点一下看会厅，工程栏能捐",
+        "  steward_ops 成就 — 做事解锁称呼，称呼 逾篱客 佩戴；升级礼在 sheet / 领奖 时自动发。有些称呼是岛自己安的，成就表里事先看不见",
+        "  steward_ops 周报 — 根据本周岛上真事写成的潮汐周报，不是周目标。人类广场点潮汐公告也能看见",
         "  steward_ops 引航 — 看自己的邀请码和已引来的岛民；绑定 邀请码 首次结引航关系（只能一次，不能自己引自己）。对方成为有效岛民后，邀请人自动得 100 工分票和 20 岛缘",
         "  visit_ops list 看固定 NPC。tt 买种/饲料/渔具/锄铲/盐风镐；tt gift 姜（调味料作物，不是姜种；要送种写姜种）。lili 流动摊（不在就 summon 献壳；人类 /island 广场点栗栗流动摊，先进摊车特写，点一下才出人栗栗，半身立绘对话，栗栗站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗）。韶年 fortune 卜卦；人类 /island 总览点海边，进滩景再点海边，点海边就出列表，两个选项去见韶年和去赶海；去见韶年才出人韶年，半身立绘对话，韶年站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗；能卜卦、转运、买符",
         "  目送人·阿槐：musong visit 去渡口；musong send 名字 每游戏日送别一次；musong remember 回看名字",
@@ -1007,7 +1009,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
     verb = parts[0].lower() if parts else ""
 
     if verb == "weather":
-        return world.climate_report()
+        from . import gazette as gazette_mod
+        return world.climate_report() + "\n\n" + await gazette_mod.report_text()
 
     if verb == "dove":
         sub = parts[1].lower() if len(parts) > 1 else ""
@@ -2027,6 +2030,12 @@ async def tide_ops(key_id: int, command: str) -> str:
         gear_bonus = int(meta["sell"] * max(0.0, val_mult - 1.0)) + tier_bonus
         async with db.connect() as conn:
             await db.add_item(conn, s["id"], f"fish_{catch}", 1)
+            from . import ledger as ledger_mod
+            await ledger_mod.note_gain(
+                conn, s["id"], f"fish_{catch}", 1,
+                f"{meta['emoji']}{meta['name']}由{s['name']}于{ledger_mod.calendar_phrase()}"
+                f"在{world.tide_label(tide)}捞起",
+            )
             if gear_bonus > 0:
                 await conn.execute(
                     "UPDATE stewards SET tickets=tickets+? WHERE id=?",
@@ -2106,6 +2115,12 @@ async def tide_ops(key_id: int, command: str) -> str:
         gear_bonus = int(meta["sell"] * max(0.0, val_mult - 1.0)) + tier_bonus
         async with db.connect() as conn:
             await db.add_item(conn, s["id"], f"fish_{catch}", 1)
+            from . import ledger as ledger_mod
+            await ledger_mod.note_gain(
+                conn, s["id"], f"fish_{catch}", 1,
+                f"{meta['emoji']}{meta['name']}由{s['name']}于{ledger_mod.calendar_phrase()}"
+                f"在{world.tide_label(tide)}捞起",
+            )
             if gear_bonus > 0:
                 await conn.execute(
                     "UPDATE stewards SET tickets=tickets+? WHERE id=?",
@@ -2281,6 +2296,11 @@ async def _shed_one(s: dict, cmd: str) -> str:
                 raise ValueError("行囊数量不足")
             if online:
                 await db.add_item(conn, peer["id"], item_key, qty)
+                from . import ledger as ledger_mod
+                await ledger_mod.transfer(
+                    conn, s["id"], peer["id"], item_key, qty,
+                    extra=f"后当面交给{peer['name']}，{ledger_mod.calendar_phrase()}",
+                )
                 await conn.commit()
                 msg = (
                     f"{s['name']} 当面交给 {peer['name']} "
@@ -2442,6 +2462,11 @@ async def swap_ops(key_id: int, command: str) -> str:
                 raise ValueError(f"领取需要 {claim_fee} 票")
             await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (claim_fee, s["id"]))
             await db.add_item(conn, s["id"], lot["item"], lot["quantity"])
+            from . import ledger as ledger_mod
+            await ledger_mod.transfer(
+                conn, int(lot["depositor_id"]), s["id"], lot["item"], int(lot["quantity"]),
+                extra=f"后在交换台到了{s['name']}手里，{ledger_mod.calendar_phrase()}",
+            )
             await conn.execute("UPDATE swap_lots SET claimed_by=? WHERE id=?", (s["id"], lot_id))
             await conn.commit()
         fee_note = f"（协作度≥{social_mod.RAPPORT_SWAP_DISCOUNT} 手续费 {claim_fee} 票）" if claim_fee < SWAP_CLAIM_FEE else ""
@@ -2501,6 +2526,7 @@ async def _tote_one(s: dict, command: str) -> str:
     verb = parts[0].lower() if parts else "list"
     if verb == "list":
         from .catalog import format_stack_qty
+        from . import ledger as ledger_mod
 
         stock = await db.get_satchel(s["id"])
         tier = int(s.get("satchel_stack_extra") or 0)
@@ -2512,6 +2538,8 @@ async def _tote_one(s: dict, command: str) -> str:
         if tier < config.SATCHEL_STACK_TIERS_MAX:
             stack_note += f"，tote_ops 扩栈 加每组上限，{config.SATCHEL_STACK_COST}票/级+{config.SATCHEL_STACK_STEP}"
         stack_note += "；工具/活物 1，装件可多件）"
+        async with db.connect() as conn:
+            previews = await ledger_mod.preview_map(conn, s["id"])
         lines = [f"工分票: {s['tickets']}", stack_note]
         for item, qty in stock.items():
             price = suggested_price(item) or ITEM_PRICES.get(item, 0)
@@ -2522,7 +2550,39 @@ async def _tote_one(s: dict, command: str) -> str:
                 lines.append(f"  {name} {stack} · {item} · vend {name} 1（折旧，同 hut_ops 卖掉）")
             else:
                 lines.append(f"  {name} {stack} · {item} · vend {price}/个")
+            story = previews.get(item) or []
+            if story:
+                lines.extend(f"      {ln}" for ln in story[:3])
+        if previews:
+            lines.append("有来历的物：tote_ops 履历 看全文。甘蓝那种没有。")
         return "\n".join(lines) if stock else f"工分票: {s['tickets']}\n行囊空"
+    if verb in ("履历", "ledger", "来历", "前科"):
+        from . import ledger as ledger_mod
+
+        token = " ".join(parts[1:]).strip() if len(parts) > 1 else ""
+        item_key = resolve_item_key(token) if token else None
+        if token and not item_key:
+            raise ValueError(unknown_item_message(token))
+        async with db.connect() as conn:
+            rows = await ledger_mod.stories_for(conn, s["id"], item_key)
+        if not rows:
+            if token:
+                return f"{item_label(item_key)}没有履历。戒、稀有鱼、崖上稀矿、工坊出品才会记。"
+            return "行囊里还没有带履历的东西。戒、稀有鱼、崖上稀矿、工坊出品才会记。甘蓝没有前科。"
+        lines = ["物品履历（不是成就，也不加数值）："]
+        grouped: dict[str, list[list[str]]] = {}
+        for row in rows:
+            grouped.setdefault(row["item"], []).append(row["lines"])
+        for item, bunch in grouped.items():
+            lines.append(f"  {item_label(item)} ×{len(bunch)}")
+            show = bunch[:3]
+            for i, story in enumerate(show, 1):
+                if len(bunch) > 1:
+                    lines.append(f"    其一 {i}：")
+                lines.extend(f"      {ln}" for ln in story)
+            if len(bunch) > 3:
+                lines.append(f"    还有 {len(bunch) - 3} 份同名的，来历不一定一样。")
+        return "\n".join(lines)
     if verb == "vend" and len(parts) >= 3:
         # 支持批量：vend item1 qty1 item2 qty2 ...（每对一个物品+数量）
         tokens = parts[1:]
@@ -2558,6 +2618,11 @@ async def _tote_one(s: dict, command: str) -> str:
             for item_key, qty, price in pairs:
                 if not await db.take_item(conn, s["id"], item_key, qty):
                     raise ValueError(f"数量不足（需要 {item_key} x{qty}）")
+                from . import ledger as ledger_mod
+                await ledger_mod.consume(
+                    conn, s["id"], item_key, qty,
+                    extra=f"后卖进回收堆，{ledger_mod.calendar_phrase()}。履历到此",
+                )
                 gain = price * qty
                 await conn.execute(
                     "UPDATE stewards SET tickets=tickets+? WHERE id=?", (gain, s["id"])
@@ -2674,6 +2739,11 @@ async def _tote_one(s: dict, command: str) -> str:
                         f"行囊不足 {ITEM_NAMES.get(item_key, item_key)}（{item_key}）x{qty}"
                     )
                 await db.add_item(conn, peer["id"], item_key, qty)
+                from . import ledger as ledger_mod
+                await ledger_mod.transfer(
+                    conn, s["id"], peer["id"], item_key, qty,
+                    extra=f"后赠予{peer['name']}，{ledger_mod.calendar_phrase()}",
+                )
                 gift_line = f"{ITEM_NAMES.get(item_key, item_key)}（{item_key}）x{qty}"
             await multi_mod._bump_rapport(conn, s["id"], peer["id"], 3)
             chronicle = f"{s['name']} 送礼给 {peer['name']}：{gift_line}"
@@ -2698,7 +2768,7 @@ async def _tote_one(s: dict, command: str) -> str:
         n = _parse_int(parts[1], "数量") if len(parts) >= 2 else 1
         return await _satchel_stack_expand(s, n)
     raise ValueError(
-        f"未知 tote 指令: {command}（list / gifts / 赠礼记录 / vend 物品 数量 / gift|送礼 名字 物品|票 数量 / 扩栈 [数量]）"
+        f"未知 tote 指令: {command}（list / 履历 / gifts / 赠礼记录 / vend 物品 数量 / gift|送礼 名字 物品|票 数量 / 扩栈 [数量]）"
     )
 
 

@@ -58,11 +58,14 @@ CHAOSHEN_HELP = f"""visit_ops 潮生会 子命令（整句写进 command）：
   基金 — 潮汐基金：岛均口袋票。有余的人自己填票数捐进来
   基金 捐 50 — 捐票，票数自己填（最少 {FUND_MIN_DONATE}）；口袋须高于岛均，捐完仍须不低于岛均
   告示 — 看墙上厅示（岛上贴的，岛民不能贴、不能回）。短句去聊天室 lounge_ops say；长帖去听潮亭 wall_ops
-  岸税东八区每周一换班自动划入基金（本周新号免征到下周）。离岛均太远另加潮差附加（超过岛均 5 倍再加 8%，超过 15 倍再加 16%）。只攒不花另加潮锈：闲票（超过岛均的部分）本周要花掉 15%，没花够的缺口整笔进基金；酒吧/小馆/衣泊坊/诊所/星光/小屋日子/婚宴/三金/基金捐算花，买地买园不算，买棚送礼也不算。岸维东八区每天换班自动划（今日新号免征到明天）。补贴不用领、没有 MCP 指令。东八区{FUND_PAY_WEEKDAY_LABEL}自动发：先把低于 {FUND_FLOOR} 的托到 {FUND_FLOOR}，剩下再补给低于岛均的人（每人顶 {FUND_PAY_CAP}、不超过岛均）
+  工程 — 看本月全岛公共工程（修码头/换透镜/旧温室/听潮亭补瓦）。不是潮汐基金，也不是公仓
+  工程 捐 岸木 10 / 工程 捐 铜钉 4 / 工程 捐 50 — 捐材料或票。修完全岛有几天好处。不是 基金 捐
+  纪事 — 本周纪事，根据岛上真事写成，同 steward_ops 周报。不是周目标。例子：潮生会 纪事
+  岸税东八区每周一换班自动划入基金（本周新号免征到下周）。离岛均太远另加潮差附加（超过岛均 5 倍再加 8%，超过 15 倍再加 16%）。只攒不花另加潮锈：闲票（超过岛均的部分）本周要花掉 15%，没花够的缺口整笔进基金；酒吧/小馆/衣泊坊/诊所/星光/小屋日子/婚宴/三金/基金捐/工程捐票算花，买地买园不算，买棚送礼也不算。岸维东八区每天换班自动划（今日新号免征到明天）。补贴不用领、没有 MCP 指令。东八区{FUND_PAY_WEEKDAY_LABEL}自动发：先把低于 {FUND_FLOOR} 的托到 {FUND_FLOOR}，剩下再补给低于岛均的人（每人顶 {FUND_PAY_CAP}、不超过岛均）
   没有入会 / 开会 / 退会。{ORG_NAME}是岛上管事的机构，上岛时已经在册。
   本周目标 / 公仓 / 公物不在这儿：alliance_ops league · alliance_ops donate / larder · plot_ops commons
-例子：潮生会 · 潮生会 问 · 潮生会 税 · 潮生会 税 交 · 潮生会 税 交 50 · 潮生会 维 · 潮生会 维 交 · 潮生会 维 交 50 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 基金 捐 8 · 潮生会 告示
-容易搞混：税=强制岸税（富人按档交，税入基金）。维=产业维修费（产业越大越交，也入基金）。基金 捐 50=自愿捐票（须高于岛均）。mascot upkeep=吉祥物喂养。plot_ops repair=田间意外。周潮天灾=只冲 3 万以上，不是税。公仓捐货走 alliance_ops donate 甘蓝 2。不要写潮生会 补贴。steward_ops guild=每日工分轮值，不是入会；alliance_ops board=周目标贡献榜。没有 tax_ops / upkeep_ops。告示不能贴：那是厅示，不是聊天室。人类 /island 总览点潮生会，先进店景，点一下才出会厅，能问事、交岸税岸维、捐基金、看告示。围观 /hui 只看。"""
+例子：潮生会 · 潮生会 问 · 潮生会 税 · 潮生会 税 交 · 潮生会 税 交 50 · 潮生会 维 · 潮生会 维 交 · 潮生会 维 交 50 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 基金 捐 8 · 潮生会 告示 · 潮生会 工程 · 潮生会 工程 捐 岸木 10 · 潮生会 纪事
+容易搞混：税=强制岸税（富人按档交，税入基金）。维=产业维修费（产业越大越交，也入基金）。基金 捐 50=自愿捐票（须高于岛均）。工程 捐=全岛修码头这类，要岸木铜钉或票，不是均贫富。纪事=本周岛上真事，同 steward_ops 周报，不是周目标。mascot upkeep=吉祥物喂养。plot_ops repair=田间意外。周潮天灾=只冲 3 万以上，不是税。公仓捐货走 alliance_ops donate 甘蓝 2。不要写潮生会 补贴。steward_ops guild=每日工分轮值，不是入会；alliance_ops board=周目标贡献榜。没有 tax_ops / upkeep_ops。告示不能贴：那是厅示，不是聊天室。人类 /island 总览点潮生会，先进店景，点一下才出会厅，能问事、交岸税岸维、捐基金、看告示、看岸上工程。围观 /hui 只看。"""
 
 _DOOR_LINES = (
     "坐。先报名字。入会？没有这回事。",
@@ -649,6 +652,19 @@ async def chaoshen_ops(key_id: int, command: str = "") -> str:
     if verb_l in ("仓", "larder", "公仓", "库"):
         raise ValueError(_larder_refuse())
 
+    if verb in ("工程", "岸上工程") or verb_l in ("works", "project"):
+        from . import works as works_mod
+        rest = " ".join(parts[1:])
+        head = rest.split()[0] if rest else ""
+        if head in ("捐", "donate"):
+            gift = rest.split(None, 1)[1] if len(rest.split()) > 1 else ""
+            return await works_mod.donate(key_id, gift)
+        return await works_mod.status_text(key_id)
+
+    if verb in ("纪事",) or verb_l in ("gazette",):
+        from . import gazette as gazette_mod
+        return await gazette_mod.report_text()
+
     if verb_l in ("捐", "donate"):
         if len(parts) >= 2 and (parts[1].isdigit() or parts[1] in ("票", "工分票")):
             raise ValueError("捐票请走潮汐基金：visit_ops 潮生会 基金 捐 50")
@@ -927,6 +943,9 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
     """给 /island 潮生会用。数值仍走 visit_ops 潮生会，这里只摊开能点的。"""
     from . import tax as tax_mod
     from . import upkeep as upkeep_mod
+    from . import works as works_mod
+    from . import traces as traces_mod
+    from . import gazette as gazette_mod
 
     tax_snap = await tax_mod.snapshot(conn, s["id"])
     upkeep_snap = await upkeep_mod.snapshot(conn, s["id"])
@@ -948,6 +967,8 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
     notice_n = len(notices)
     can_donate = bool(fund.get("can_donate"))
     max_donate = int(fund.get("max_donate") or 0)
+    work = await works_mod.snapshot(conn)
+    gaz = await gazette_mod.compile_week(conn)
 
     parts = [duty, _tax_brief(tax_snap).split("· 先")[0].split("· 看档")[0].strip()]
     parts.append(_upkeep_brief(upkeep_snap).split("· 先")[0].split("· 看档")[0].strip())
@@ -957,7 +978,8 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
     elif upkeep_owed:
         spoken = f"欠岸维 {upkeep_owed}。点岸维交。"
     else:
-        spoken = "阿簿在。问事、交税交维、捐基金、看厅示。不能入会，也不能贴告示。"
+        spoken = "阿簿在。问事、交税交维、捐基金、看厅示、看岸上工程。不能入会，也不能贴告示。"
+    spoken = await traces_mod.blend(conn, "plaza", spoken)
 
     tax_badge = str(tax_owed) if tax_owed else ""
     upkeep_badge = str(upkeep_owed) if upkeep_owed else ""
@@ -966,6 +988,7 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
         {"key": "tax", "label": "岸税", "badge": tax_badge},
         {"key": "upkeep", "label": "岸维", "badge": upkeep_badge},
         {"key": "fund", "label": "基金", "badge": ""},
+        {"key": "works", "label": "工程", "badge": "修" if work.get("open") else ""},
         {"key": "notices", "label": "告示", "badge": str(notice_n) if notice_n else ""},
     ]
 
@@ -1084,6 +1107,70 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
             target="fund",
         ),
     ]
+    timber = int((await (await conn.execute(
+        "SELECT COALESCE(quantity,0) FROM satchel WHERE steward_id=? AND item='craft_timber'",
+        (s["id"],),
+    )).fetchone() or [0])[0] or 0)
+    nails = int((await (await conn.execute(
+        "SELECT COALESCE(quantity,0) FROM satchel WHERE steward_id=? AND item='craft_copper_nails'",
+        (s["id"],),
+    )).fetchone() or [0])[0] or 0)
+    work_open = bool(work.get("open"))
+    work_items = [
+        _sku(
+            sid="work-look",
+            kind="look",
+            name=work.get("name") or "岸上工程",
+            emoji="🪵",
+            note=work.get("progress") or work.get("blurb") or "",
+            detail=work.get("blurb") or "",
+            price="看",
+            can=True,
+            target="work",
+        ),
+        _sku(
+            sid="gaz-look",
+            kind="look",
+            name="本周纪事",
+            emoji="📰",
+            note=(gaz.get("title") or "根据岛上真事写成。"),
+            detail="\n".join(gaz.get("lines") or []),
+            price="看",
+            can=True,
+            target="gazette",
+        ),
+        _sku(
+            sid="work-tickets",
+            kind="donate_work",
+            name="捐票修工程",
+            emoji="🎫",
+            note="不是潮汐基金。票数自己填。" if work_open else "这期已经收工。",
+            detail=work.get("blurb") or "",
+            price="捐" if work_open and tickets > 0 else "看",
+            can=bool(work_open and tickets > 0),
+            target="tickets",
+        ),
+        _sku(
+            sid="work-timber",
+            kind="donate_mat",
+            name="捐岸木",
+            emoji="🪵",
+            note=f"行囊 {timber}。" if work_open else "这期已经收工。",
+            price="捐" if work_open and timber else "看",
+            can=bool(work_open and timber > 0),
+            target="craft_timber",
+        ),
+        _sku(
+            sid="work-nails",
+            kind="donate_mat",
+            name="捐铜钉",
+            emoji="🔩",
+            note=f"行囊 {nails}。" if work_open else "这期已经收工。",
+            price="捐" if work_open and nails else "看",
+            can=bool(work_open and nails > 0),
+            target="craft_copper_nails",
+        ),
+    ]
     notice_items = [
         _sku(
             sid=f"notice-{row[0]}",
@@ -1122,6 +1209,7 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
             "tax": tax_items,
             "upkeep": upkeep_items,
             "fund": fund_items,
+            "works": work_items,
             "notices": notice_items,
         },
         "tax_arrears": tax_owed,

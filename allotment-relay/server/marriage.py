@@ -2314,6 +2314,11 @@ async def _cmd_seek_ring(s: dict[str, Any], rest: str) -> str:
         await energy.spend(conn, s["id"], SEEK_ENERGY, action="寻戒")
         qty = 1 if random.random() < 0.7 else 2
         await db.add_item(conn, s["id"], RING_ITEM, qty)
+        from . import ledger as ledger_mod
+        await ledger_mod.note_gain(
+            conn, s["id"], RING_ITEM, qty,
+            f"{item_label(RING_ITEM)}由{s['name']}于{ledger_mod.calendar_phrase()}在退潮沙滩拾起",
+        )
         await _note_event(conn, int(row["id"]), "seek", f"海边拾到潮誓砂×{qty}", day=today)
         await conn.commit()
     return (
@@ -2525,6 +2530,13 @@ async def _cmd_gold(s: dict[str, Any], rest: str) -> str:
         if five:
             for item in GOLD_FIVE_EXTRA:
                 await db.take_item(conn, int(s["id"]), item, 1)
+        from . import ledger as ledger_mod
+        gold_items = list(GOLD_THREE) + (list(GOLD_FIVE_EXTRA) if five else [])
+        for item in gold_items:
+            await ledger_mod.consume(
+                conn, int(s["id"]), item, 1,
+                extra=f"后登记进婚书，{ledger_mod.calendar_phrase()}",
+            )
         await conn.execute(
             "UPDATE marriages SET gold_three=1, gold_five=?, updated_at=? WHERE id=?",
             (1 if five else 0, db.now(), row["id"]),
@@ -2752,6 +2764,11 @@ async def _betroth_seek(s: dict[str, Any], rest: str = "") -> str:
         await energy.spend(conn, s["id"], BETROTHAL_SEEK_ENERGY, action="订婚寻信")
         qty = 1 if random.random() < 0.75 else 2
         await db.add_item(conn, s["id"], BETROTHAL_SHELL_ITEM, qty)
+        from . import ledger as ledger_mod
+        await ledger_mod.note_gain(
+            conn, s["id"], BETROTHAL_SHELL_ITEM, qty,
+            f"{item_label(BETROTHAL_SHELL_ITEM)}由{s['name']}于{ledger_mod.calendar_phrase()}在潮线拾起",
+        )
         await _note_event(conn, int(row["id"]), "betroth_seek", f"海边拾到潮信贝×{qty}", day=today)
         await conn.commit()
     return (
@@ -2769,10 +2786,20 @@ async def _betroth_token(s: dict[str, Any], rest: str = "") -> str:
     async with db.connect() as conn:
         if await _satchel_qty(conn, int(s["id"]), BETROTHAL_RING_ITEM) >= 1:
             await db.take_item(conn, int(s["id"]), BETROTHAL_RING_ITEM, 1)
+            from . import ledger as ledger_mod
+            await ledger_mod.consume(
+                conn, int(s["id"]), BETROTHAL_RING_ITEM, 1,
+                extra=f"后作为订婚信物登记进连理所，{ledger_mod.calendar_phrase()}",
+            )
             amount = BETROTHAL_RING_SHOP
             src = "订婚戒"
         elif await _satchel_qty(conn, int(s["id"]), BETROTHAL_SHELL_ITEM) >= 1:
             await db.take_item(conn, int(s["id"]), BETROTHAL_SHELL_ITEM, 1)
+            from . import ledger as ledger_mod
+            await ledger_mod.consume(
+                conn, int(s["id"]), BETROTHAL_SHELL_ITEM, 1,
+                extra=f"后作为订婚信物登记进连理所，{ledger_mod.calendar_phrase()}",
+            )
             amount = BETROTHAL_SHELL_VALUE
             src = "潮信贝"
         else:
@@ -3547,6 +3574,8 @@ async def _cmd_hold(s: dict[str, Any], rest: str) -> str:
             f"{loc}的灯塔将为他们亮灯。"
         )
         await db.add_chronicle("marriage", news, actor_id=s["id"], conn=conn)
+        from . import traces as traces_mod
+        await traces_mod.maybe_wedding_mark(conn, s)
         await db.add_chronicle(
             "lighthouse",
             f"灯塔为岛民「{s['name']}」与 TA 的人类亮了一夜。",
@@ -3807,6 +3836,8 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
         spoken = f"草稿写着「{partner}」。订婚现在就能办，不用彩礼。"
     else:
         spoken = "登记员理枝把册子摊开。先看档案。订婚、成婚、婚期都在这儿点。"
+    from . import traces as traces_mod
+    spoken = await traces_mod.blend(conn, "lianli", spoken)
 
     tabs = [
         {"key": "desk", "label": "档案", "badge": ""},

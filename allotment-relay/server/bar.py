@@ -1104,6 +1104,8 @@ async def _cmd_request_song(conn: aiosqlite.Connection, s: dict[str, Any], song_
     if random.random() < 0.15:
         msg += "\n【全场有人跟着哼了两句】"
     await db.add_chronicle("bar_song", f"{s['name']} 点歌《{song['title']}》", s["id"], conn=conn)
+    from . import traces as traces_mod
+    await traces_mod.maybe_song_mark(conn, s, song["title"])
     reaction = owner_event_reaction(state, day, "request_song")
     return append_owner_reaction(msg, reaction)
 
@@ -1892,6 +1894,8 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
         line = f"营业中 · {duty}"
     else:
         line = f"打烊 · {duty}"
+    from . import traces as traces_mod
+    line = await traces_mod.blend(conn, "bar", line)
     return {
         "name": COASTAL_BAR["name"],
         "line": line,

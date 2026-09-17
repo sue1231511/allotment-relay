@@ -117,7 +117,8 @@ function tapSlot(sheet, it, { onEat, onVend }) {
   const name = it.name || it.item;
   const eat = !!it.can_eat;
   const vend = it.can_vend !== false;
-  if (eat && vend) {
+  const story = Array.isArray(it.story) ? it.story.filter(Boolean) : [];
+  if (story.length || (eat && vend)) {
     showSlotPop(sheet, it, { onEat, onVend });
     return;
   }
@@ -137,21 +138,33 @@ function showSlotPop(sheet, it, { onEat, onVend }) {
   if (!pop) return;
   const name = it.name || it.item;
   const price = it.vend_price ? `${it.vend_price}票` : "";
+  const eat = !!it.can_eat;
+  const vend = it.can_vend !== false;
+  const story = (Array.isArray(it.story) ? it.story : []).filter(Boolean);
+  const storyHtml = story.map((ln) => `<p class="island-bag-story">${esc(ln)}</p>`).join("");
+  const acts = [];
+  if (eat) acts.push(`<button type="button" class="island-btn" data-eat="${esc(name)}">吃</button>`);
+  if (vend) acts.push(`<button type="button" class="island-btn primary" data-vend="${esc(name)}">卖${price ? ` ${esc(price)}` : ""}</button>`);
+  if (!acts.length) acts.push(`<button type="button" class="island-btn" data-pop-close>收起</button>`);
   pop.innerHTML = `
     <p>${esc(name)} ×${esc(it.qty)}</p>
+    ${storyHtml}
     <div class="island-bag-pop-acts">
-      <button type="button" class="island-btn" data-eat="${esc(name)}">吃</button>
-      <button type="button" class="island-btn primary" data-vend="${esc(name)}">卖${price ? ` ${esc(price)}` : ""}</button>
+      ${acts.join("")}
     </div>
   `;
   popIn(pop);
-  pop.querySelector("[data-eat]").addEventListener("click", (ev) => {
+  pop.querySelector("[data-eat]")?.addEventListener("click", (ev) => {
     ev.stopPropagation();
     popOut(pop, () => { if (onEat) onEat(name); });
   });
-  pop.querySelector("[data-vend]").addEventListener("click", (ev) => {
+  pop.querySelector("[data-vend]")?.addEventListener("click", (ev) => {
     ev.stopPropagation();
     popOut(pop, () => { if (onVend) onVend(it); });
+  });
+  pop.querySelector("[data-pop-close]")?.addEventListener("click", (ev) => {
+    ev.stopPropagation();
+    popOut(pop);
   });
 }
 

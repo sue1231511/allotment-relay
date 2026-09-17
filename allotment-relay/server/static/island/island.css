@@ -1828,7 +1828,9 @@ body.island-app.is-climate-open .island-float-chip {
   position: absolute;
   left: 12%;
   right: 12%;
-  top: 38%;
+  top: 28%;
+  max-height: 52%;
+  overflow: auto;
   padding: 14px 14px 12px;
   border-radius: 16px;
   background: rgba(254, 244, 223, .96);
@@ -1841,6 +1843,14 @@ body.island-app.is-climate-open .island-float-chip {
   margin: 0 0 10px;
   color: #5f7a58;
   font-size: 15px;
+}
+
+.island-bag-story {
+  margin: 0 0 6px !important;
+  color: #7a6a4e;
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: left;
 }
 
 .island-bag-pop-acts {
@@ -2643,11 +2653,47 @@ button.is-tap,
   border-radius: 0;
   box-shadow: none;
   padding: 12px 8px;
-  overflow: hidden;
+  overflow: auto;
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 8;
+}
+
+.island-climate-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: min(360px, 86vw);
+}
+
+.island-gazette {
+  width: 100%;
+  background: rgba(248, 243, 230, .92);
+  color: #3f463c;
+  border: 1px solid rgba(90, 78, 54, .28);
+  border-radius: 10px;
+  padding: 10px 12px 12px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.island-gazette b {
+  display: block;
+  font-size: 12px;
+  letter-spacing: .12em;
+}
+
+.island-gazette em {
+  display: block;
+  font-style: normal;
+  font-weight: 600;
+  margin: 4px 0 6px;
+}
+
+.island-gazette p {
+  margin: 0 0 4px;
 }
 
 .island-climate {

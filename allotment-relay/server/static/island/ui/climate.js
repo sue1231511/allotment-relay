@@ -24,11 +24,22 @@ export function climateOf() {
     tide_hint: w.tide_hint || "",
     phase_hint: w.phase_hint || "",
     season_hint: w.season_hint || "",
+    gazette: w.gazette || {},
   };
 }
 
 export function climatePanelHtml(c, { closeable = false } = {}) {
+  const gaz = c.gazette || {};
+  const lines = Array.isArray(gaz.lines) ? gaz.lines : [];
+  const gazHtml = gaz.title
+    ? `<aside class="island-gazette" aria-label="本周纪事">
+        <b>本周纪事</b>
+        <em>${esc(gaz.title)}</em>
+        ${lines.slice(0, 7).map((ln) => `<p>${esc(ln)}</p>`).join("")}
+      </aside>`
+    : "";
   return `
+    <div class="island-climate-stack">
     <section class="island-climate is-${esc(c.phase_code || "day")}" role="dialog" aria-label="天气潮汐时辰季节" style="background-image:url('/static/island/assets/climate-frame.png')">
       ${closeable ? `<button type="button" class="island-climate-x" data-climate-close aria-label="关闭"></button>` : ""}
       <span class="island-climate-lab" data-k="weather">天气</span>
@@ -40,6 +51,8 @@ export function climatePanelHtml(c, { closeable = false } = {}) {
       <b class="island-climate-val" data-k="phase">${esc(c.phase)}</b>
       <b class="island-climate-val" data-k="season">${esc(c.season)}</b>
     </section>
+    ${gazHtml}
+    </div>
   `;
 }
 

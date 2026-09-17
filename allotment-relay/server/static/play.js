@@ -599,6 +599,10 @@ function renderTide() {
   `;
 }
 
+function stockStoryBits(it) {
+  return Array.isArray(it && it.story) ? it.story.filter(Boolean) : [];
+}
+
 function renderTote() {
   const stock = ((state.dash && state.dash.stock) || []).filter((it) => Number(it.qty) > 0);
   const countEl = $('play-tote-count');
@@ -607,11 +611,15 @@ function renderTote() {
     $('play-tote').innerHTML = '<p class="muted">口袋空着。</p>';
     return;
   }
-  $('play-tote').innerHTML = stock.map((it) => `
-    <button type="button" data-item="${esc(it.name)}" data-qty="${it.qty}">
-      ${esc(it.name)} ×${it.qty}
-    </button>
-  `).join('');
+  $('play-tote').innerHTML = stock.map((it) => {
+    const bits = stockStoryBits(it);
+    const title = bits.length ? ` title="${esc(bits.join(' / '))}"` : '';
+    const mark = bits.length ? ' <small>履历</small>' : '';
+    return `
+    <button type="button" data-item="${esc(it.name)}" data-qty="${it.qty}"${title}>
+      ${esc(it.name)} ×${it.qty}${mark}
+    </button>`;
+  }).join('');
 }
 
 function renderGifts() {
@@ -1022,7 +1030,12 @@ function renderStewardPage(data) {
 
   const stock = data.stock || [];
   $('play-steward-stock-count').textContent = `TOTE · ${data.stock_count ?? stock.length} 种`;
-  $('play-steward-stock').innerHTML = stock.length ? stock.map((it) => `<span><b>${esc(it.name || it.item || '')}</b><em>×${it.qty}</em></span>`).join('') : '<p class="muted">行囊空</p>';
+  $('play-steward-stock').innerHTML = stock.length ? stock.map((it) => {
+    const bits = Array.isArray(it.story) ? it.story.filter(Boolean) : [];
+    const title = bits.length ? ` title="${esc(bits.join(' / '))}"` : '';
+    const mark = bits.length ? '<small>履历</small>' : '';
+    return `<span${title}><b>${esc(it.name || it.item || '')}</b><em>×${it.qty}</em>${mark}</span>`;
+  }).join('') : '<p class="muted">行囊空</p>';
 
   const gifts = data.gifts || [];
   $('play-steward-gifts').innerHTML = gifts.length ? gifts.slice(0, 6).map((g) => `<article><time>${esc(islandFmtStamp(g.created_at))}</time><div><strong>${esc(g.who || '')} · ${esc(g.kind || '')}</strong><p>${esc(g.text || '')}</p></div></article>`).join('') : '<p class="muted">暂无收礼 / 打赏</p>';
@@ -1347,7 +1360,13 @@ function buySeedSheet() {
 }
 
 function itemSheet(name) {
+  const it = ((state.dash && state.dash.stock) || []).find((row) => (row.name || row.item) === name);
+  const bits = stockStoryBits(it);
+  const story = bits.length
+    ? `<div class="play-item-story" style="flex:1 0 100%">${bits.map((ln) => `<p class="muted">${esc(ln)}</p>`).join('')}</div>`
+    : '';
   openSheet(name, `
+    ${story}
     <button type="button" class="play-mini-btn primary" data-act='{"tool":"kitchen_ops","command":"eat ${name}"}'>吃</button>
     <button type="button" class="play-mini-btn" data-act='{"tool":"tote_ops","command":"vend ${name} 1"}'>卖 1</button>
   `);
@@ -1814,7 +1833,13 @@ document.body.addEventListener('click', (e) => {
     return;
   }
   if (btn.classList.contains('place-tool')) selectPlaceTool(btn);
-  act(payload.tool, payload.command);
+  let command = payload.command;
+  if (payload.tool === 'visit_ops' && command === '潮生会 工程 捐') {
+    const text = window.prompt('捐什么（岸木 10 / 铜钉 4 / 50）', '岸木 10');
+    if (!text || !text.trim()) return;
+    command = `潮生会 工程 捐 ${text.trim()}`;
+  }
+  act(payload.tool, command);
 });
 
 $('memory-filters').addEventListener('click', (e) => {

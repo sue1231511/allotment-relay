@@ -50,6 +50,9 @@ def test_knobs() -> None:
     assert "atelier" in ACHIEVEMENTS
     assert ACHIEVEMENTS["atelier"]["name"] == "满砧"
     assert "full_cabinet" in ACHIEVEMENTS
+    assert ACHIEVEMENTS["night_lamp"]["name"] == "夜灯守人"
+    assert ACHIEVEMENTS["night_lamp"].get("silent") is True
+    assert ACHIEVEMENTS["rain_borrow"]["name"] == "借雨的人"
     assert any(k == "quarry_copper_bar" for k, _n in LEVEL_REWARDS[50]["items"])
     assert any(k == "quarry_tide_stone" for k, _n in LEVEL_REWARDS[70]["items"])
     assert any(k == "fit_tide_crest" for k, _n in LEVEL_REWARDS[99]["items"])

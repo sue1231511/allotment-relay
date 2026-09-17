@@ -138,6 +138,7 @@ def world_view(
         "tide_hint": bits.get("tide_hint") or "",
         "phase_hint": bits.get("phase_hint") or "",
         "season_hint": bits.get("season_hint") or "",
+        "gazette": bits.get("gazette") or {},
         "notices": notices or [],
         "pulse": pulse,
     }

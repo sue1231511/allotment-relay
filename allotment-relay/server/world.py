@@ -127,9 +127,14 @@ def current_tide() -> str:
     return ["ebb", "slack", "flood"][phase]
 
 
-def current_day_phase() -> str:
-    phase = int(__import__("time").time() // DAY_PHASE_CYCLE) % 3
+def day_phase_at(ts: int | None = None) -> str:
+    t = int(ts if ts is not None else time.time())
+    phase = int(t // DAY_PHASE_CYCLE) % 3
     return ["day", "dusk", "night"][phase]
+
+
+def current_day_phase() -> str:
+    return day_phase_at()
 
 
 def weather_label(code: str) -> str:

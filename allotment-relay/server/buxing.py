@@ -53,10 +53,17 @@ async def _tea(s: dict) -> str:
     async with db.connect() as conn:
         state = await _state(conn, s["id"])
         if int(state["tea_day"]) == db.day_id(): return "壶里还有茶。他把杯子往你这边推了推。\n“今天喝过了。坐着就行。”"
+        await db.add_chronicle("buxing", f"{s['name']} 在灯塔喝了茶", s["id"], conn=conn)
         got = await energy.restore(conn, s["id"], 2)
+        from . import works as works_mod
+        extra_n = 0
+        if await works_mod.active_bonus(conn, "lens"):
+            extra_n = await energy.restore(conn, s["id"], 1)
+            got += extra_n
         await conn.execute("UPDATE steward_buxing SET tea_day=?,updated_at=? WHERE steward_id=?", (db.day_id(), db.now(), s["id"]))
         await conn.commit()
-    return f"他给你倒了一杯。\n“茶不要钱。”\n\n精力 +{got}（每日一次）"
+    bonus = " 透镜换过了，茶更烫。" if extra_n else ""
+    return f"他给你倒了一杯。\n“茶不要钱。”\n\n精力 +{got}（每日一次）{bonus}"
 
 async def _tide(s: dict) -> str:
     async with db.connect() as conn:
@@ -117,6 +124,11 @@ async def _watch(s: dict) -> str:
         await conn.execute("UPDATE steward_buxing SET wicks=wicks+10,updated_at=? WHERE steward_id=?", (db.now(), s["id"]))
         from . import bond as bond_mod
         await bond_mod.grant(conn, s["id"], bond_mod.BUXING_WATCH, "people", once="buxing_watch")
+        await db.add_chronicle("buxing", f"{s['name']} 在灯塔守夜", s["id"], conn=conn)
+        from . import traces as traces_mod
+        from . import progress as progress_mod
+        await traces_mod.maybe_watch_mark(conn, s)
+        await progress_mod.scan_achievements(conn, s)
         await conn.commit()
     return "他把灯芯剪短一点。\n“今晚风好。上来吧。”\n\n你们在塔上坐到潮声变轻。他只说：\n“阿桐看南边，我看航道。不是一回事。”\n\n灯油钱 −60 票 · 灯芯 +10"
 
@@ -184,6 +196,7 @@ def _light_row(row) -> dict[str, Any]:
 
 async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
     """给 /island 灯塔立绘对话用。数值仍走 buxing_ops。"""
+    from . import traces as traces_mod
     state = await _state(conn, int(s["id"]))
     tickets = int(s.get("tickets") or 0)
     tea_done = int(state["tea_day"]) == db.day_id()
@@ -243,7 +256,7 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
         "name": "灯塔",
         "speaker": "不醒",
         "title": "守灯人·不醒",
-        "line": "茶不要钱。坐。",
+        "line": await traces_mod.blend(conn, "lighthouse", "茶不要钱。坐。"),
         "wicks": int(state["wicks"]),
         "tea_done": tea_done,
         "tide_count": tide_count,
