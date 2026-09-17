@@ -124,7 +124,7 @@ PLOT_HELP = """plot_ops 子命令（整句写进 command）：
 HUT_HELP = """hut_ops 子命令（整句写进 command）：
   花房干花：visit_ops 默默 干花 玫瑰 耗鲜花+28票，自动挂空软装槽，不覆盖家具；纯装饰。替换回行囊后 install soft_1 flower_rose 可重挂；卖掉 soft_1 先看折旧报价
   status / build / upgrade / catalog / buy / install — 岸畔小屋。status / catalog 考勤逾期仍可看。欠岸税或岸维时不能 upgrade，先 visit_ops 潮生会 税 交 或 维 交
-  人类 /island 总览点小屋：没买房看不见棚屋场景，点进去搭棚屋（和 hut_ops build 同一笔）；搭好后按等级换景（Lv1 棚屋 / Lv2 岸畔小屋 / Lv3 联盟小宅 / Lv4 临海邸）。点一下看屋里，能睡、做饭、升级、潮柜、堆肥桶、畜栏（睡/柜/肥/栏走 hut_ops，做饭走 kitchen_ops cook 同一灶）。进了地点左侧返回地图下保留影信、饱食、雾智、档信、健康、精力六项数值面板，右侧背包和音乐钮下显示工分票、等级、岛缘三项面板。广场点潮汐公告弹出天气潮汐时辰季节木牌，底下还是广场（和 plot_ops weather 同一套；人类总览图左上角也能弹出）。
+  人类 /island 总览点小屋：没买房看不见棚屋场景，点进去搭棚屋（和 hut_ops build 同一笔）；搭好后按等级换景（Lv1 棚屋 / Lv2 岸畔小屋 / Lv3 联盟小宅 / Lv4 临海邸）。点一下看屋里，能睡、做饭、升级、潮柜、堆肥桶、畜栏。装了腌菜坛能腌，装了晾鱼架能晾（睡/柜/肥/栏/腌/晾走 hut_ops，做饭走 kitchen_ops cook 同一灶）。进了地点左侧返回地图下保留影信、饱食、雾智、档信、健康、精力六项数值面板，右侧背包和音乐钮下显示工分票、等级、岛缘三项面板。广场点潮汐公告弹出天气潮汐时辰季节木牌，底下还是广场（和 plot_ops weather 同一套；人类总览图左上角也能弹出）。
   upgrade — 一档一档升。求婚发出前必须升到最高档（现在是 Lv4 临海邸），光 build 不够。例子：hut_ops upgrade
   冰柜 存|取 物品 [数量] — 小屋存菜（柜子/潮柜/冰箱是同一条指令）。例子：冰柜 存 甘蓝 3
     生鲜自动进潮柜（buy cabinet → install）；熟菜自动进冰箱（buy fridge → install）
@@ -136,6 +136,9 @@ HUT_HELP = """hut_ops 子命令（整句写进 command）：
     羊粪+2 / 猪粪+3 / 牛粪+4。barn compost 羊粪 2 还认，但必须先装桶
   睡 / 休息 — 床一觉回精力（岸柏 50 / 软藤 52 / 云纹 54）并顺带身体 +6，每天一次。buy bed|bed_rattan|bed_canopy → install hard_N
     精力满了但身体没满也能睡。身子大虚别指望睡觉回满，诊所 clinic 调理 更贵也更快
+  腌 / 晾 — 腌菜坛 2 蔬菜→1 坛腌菜；晾鱼架 2 同种生鱼→1 条鱼干。例子：腌 甘蓝 4 · 晾 鲭鱼 4
+    买：buy pickle_crock → install hard_N pickle_crock；buy fish_rack → install soft_N fish_rack
+    人类 /island 点一下看屋里就能买、腌、晾。不是灶上的 cook，也不是畜栏
   卖掉 槽位|装件名 [确认] — 旧家具按折旧卖。例子：卖掉 soft_1 确认 · 卖掉 羊毛毯 确认
     墙上写槽位，行囊写装件名。tote_ops vend 羊毛毯 1 也是这一笔。工坊出品按材料估价
     小馆开着时冰箱不能卖（先 kitchen_ops shop 卖掉 或 shop close）
@@ -156,7 +159,11 @@ TIDE_HELP = """tide_ops 子命令（整句写进 command）：
     未命名小鱼不能网，只能坐钓：net 网不到、也不触发遭遇；出海期间 cast 才可能碰上
     鱼种变多：沙丁/银鱼/黄鱼/生蚝/梭子蟹/真鲷/马鲛/飞鱼/鲥鱼/冰鱼/石斑/八爪/鲍鱼/龙虾/金枪/旗鱼。catalog 看图鉴。飞鱼春夏、鲥鱼春、冰鱼冬
     赤潮周 net/cast/赶海更容易水母蛰和潮疹，人去 visit_ops clinic，不是霍衡。渔汛才是手气上调
-  pen status — 渔排；扩池后可指定池号：stock herring 2 · feed 2 · harvest 2 · label 2 薄荷池
+  pen status — 渔排；扩池后可指定池号：投苗 灰鲱 2 · 投饵 2 · 收排 2 · 名池 2 薄荷池 · 巡排
+    也可 pen stock herring 2 · feed 2 · harvest 2 · label 2 薄荷池。不写池号会选空池/待投饵/可收
+    搭排 140 票第一口，扩池 120 票第二口，最多 2。每天岸维 10/座
+    收排时赶上这种鱼爱来的潮汐会多一条。巡排每 8 小时、2 精力，可能捡到堆肥或饵
+    人类 /island 港口看码头，渔排栏能搭、投苗、投饵、收、巡。不要发明 pen_ops / fish_ops
   voyage buy|depart|return|fight|flee|parley|bribe — 出海 / 黑旗（fight/flee 可省略 voyage）。欠岸税或岸维时不能买船
   compliment|release|catch|grab — 未命名小鱼（可省略 voyage）。compliment=release 礼遇回赠普通鱼；
     catch=grab 动手：抓住这尾进袋，落下腿鱼小咒，其它鱼和精力会出事
@@ -166,7 +173,7 @@ TIDE_HELP = """tide_ops 子命令（整句写进 command）：
   tool list|buy hoe|shovel — 锄头铲子
   boss status|attack — 潮渊之主（无船也能岸边围攻）
   fight/flee/dig/probe/compliment 可省略前缀
-  人类 /island 总览点海边，进滩景再点港口、海边。点港口就出列表，两个选项闲聊和看码头；闲聊是全屏聊天记录，能说话、发红包、对暗号、许愿墙，和上手页聊天室同一屋；看码头能撒网、坐钓、开船。点海边就出列表，两个选项去见韶年和去赶海；去见韶年才出人韶年，半身立绘对话，韶年站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗，能卜卦、转运、买符；去赶海就能撒网、坐钓、赶海、开船（和 tide_ops 同一套）；/tide 只围观"""
+  人类 /island 总览点海边，进滩景再点港口、海边。点港口就出列表，两个选项闲聊和看码头；闲聊是全屏聊天记录，能说话、发红包、对暗号、许愿墙，和上手页聊天室同一屋；看码头能撒网、坐钓、开船、管渔排。点海边就出列表，两个选项去见韶年和去赶海；去见韶年才出人韶年，半身立绘对话，韶年站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗，能卜卦、转运、买符；去赶海就能撒网、坐钓、赶海、开船（和 tide_ops 同一套）；/tide 只围观"""
 
 TOTE_HELP = """tote_ops 子命令（整句写进 command）：
   list — 行囊（中文名 + 英文 id）。同种货可占多组（MC 式），每组基础 24 份（和潮柜一样；工具/活物 1，装件可多件）
@@ -462,6 +469,17 @@ async def tide_bundle(key_id: int, command: str = "") -> str:
             "return": (marine.voyage_ops, True),
             "dig": (beach.beach_ops, True),
             "probe": (beach.beach_ops, True),
+            "搭排": (marine.pen_ops, True),
+            "建排": (marine.pen_ops, True),
+            "扩池": (marine.pen_ops, True),
+            "投苗": (marine.pen_ops, True),
+            "放苗": (marine.pen_ops, True),
+            "投饵": (marine.pen_ops, True),
+            "喂排": (marine.pen_ops, True),
+            "收排": (marine.pen_ops, True),
+            "名池": (marine.pen_ops, True),
+            "巡排": (marine.pen_ops, True),
+            "看排": (marine.pen_ops, True),
         },
         default=game.tide_ops,
         help_text=TIDE_HELP,

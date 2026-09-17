@@ -646,7 +646,7 @@ function tapHut(kind, target, id) {
     });
     return;
   }
-  if (kind === "put" || kind === "take" || kind === "compost_put" || kind === "compost_take" || kind === "barn_churn" || kind === "expand") {
+  if (kind === "put" || kind === "take" || kind === "compost_put" || kind === "compost_take" || kind === "barn_churn" || kind === "expand" || kind === "pickle" || kind === "dry") {
     const have = Number(row.qty) || 0;
     if (have > 1 || kind === "expand") {
       showFormSheet({
@@ -2159,6 +2159,33 @@ function tapShore(kind, target, id) {
   }
   if (!row.can) {
     showHintSheet({ title: row.name || shoreTitle(), body: row.detail || row.note || "这会儿做不了。" });
+    return;
+  }
+  if (kind === "投苗") {
+    const t = String(row.target || target || "").trim();
+    if (/^\d+$/.test(t)) {
+      showFormSheet({
+        title: row.name || "投苗",
+        body: row.detail || "写下要投的品种。深海鱼不能养。",
+        fields: [
+          { id: "species", label: "品种", placeholder: "灰鲱", max: 24, empty: "先写下要投的苗。" },
+        ],
+        confirm: "投苗",
+        onConfirm: (vals) => runShore("投苗", `${vals.species} ${t}`.trim()),
+      });
+      return;
+    }
+  }
+  if (kind === "名池") {
+    showFormSheet({
+      title: row.name || "名池",
+      body: row.detail || "给这口池起个名字。",
+      fields: [
+        { id: "label", label: "池名", placeholder: "薄荷池", max: 40, empty: "先写下池名。" },
+      ],
+      confirm: "起名",
+      onConfirm: (vals) => runShore("名池", `${row.target || target || ""} ${vals.label}`.trim()),
+    });
     return;
   }
   showActSheet({

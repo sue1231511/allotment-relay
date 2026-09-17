@@ -51,6 +51,7 @@ ACTION_DRAIN = {
     "pen_feed": (-1, 0, 0),
     "pen_harvest": (-1, 0, 0),
     "pen_stock": (-1, 0, 0),
+    "pen_patrol": (0, 1, 0),
     "voyage_depart": (-2, -2, 0),
     "voyage_return": (-2, -1, 0),
     "guild": (0, 1, 0),

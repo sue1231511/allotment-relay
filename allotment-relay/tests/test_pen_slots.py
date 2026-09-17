@@ -167,7 +167,7 @@ async def test_pen_ops() -> None:
         "卖掉或吃掉",
     )
 
-    label_bare = await _expect_error(marine.pen_ops(kid, "label"), "用法: pen label")
+    label_bare = await _expect_error(marine.pen_ops(kid, "label"), "用法: 名池")
     assert "未知 pen 指令" not in label_bare
 
     named = await marine.pen_ops(kid, "label 2 薄荷池")
