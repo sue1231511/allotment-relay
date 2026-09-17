@@ -26,11 +26,25 @@ def _can_eat(item: str) -> bool:
 def _stock_row(it: dict[str, Any]) -> dict[str, Any]:
     item = str(it.get("item") or "")
     furniture = item.startswith("fit_") or item.startswith("deco_")
+    if furniture:
+        from ..hut import _fitting_value, furniture_sell_quote
+
+        try:
+            val = _fitting_value(item)
+            price = int(furniture_sell_quote(val["cost"], 0)["refund"])
+        except ValueError:
+            price = 1
+        return {
+            **it,
+            "can_eat": False,
+            "can_vend": True,
+            "vend_price": price,
+        }
     price = int(suggested_price(item) or ITEM_PRICES.get(item, 0) or 0)
     return {
         **it,
         "can_eat": _can_eat(item),
-        "can_vend": bool(item_vendable(item) and not furniture),
+        "can_vend": bool(item_vendable(item)),
         "vend_price": price,
     }
 

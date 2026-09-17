@@ -461,11 +461,25 @@ def _fitting_value(key: str) -> dict[str, Any]:
         return {"name": meta["name"], "cost": meta["sell"], "junk": False}
     if bare in HUT_HARD:
         meta = HUT_HARD[bare]
-        return {"name": meta["name"], "cost": meta["cost"], "junk": False}
+        return {"name": meta["name"], "cost": _fitting_cost(bare, meta.get("cost")), "junk": False}
     if bare in HUT_SOFT:
         meta = HUT_SOFT[bare]
-        return {"name": meta["name"], "cost": meta["cost"], "junk": False}
+        return {"name": meta["name"], "cost": _fitting_cost(bare, meta.get("cost")), "junk": False}
     raise ValueError(f"这不是能卖的家具: {key}")
+
+
+def _fitting_cost(bare: str, listed: Any) -> int:
+    """工坊出品标价常是 0，按材料回收价估，免得卖掉只值 1 票。"""
+    cost = max(0, int(listed or 0))
+    if cost > 0:
+        return cost
+    from .catalog import CRAFT_RECIPES, ITEM_PRICES
+
+    need = (CRAFT_RECIPES.get(bare) or {}).get("need") or {}
+    total = 0
+    for item, qty in need.items():
+        total += int(ITEM_PRICES.get(item, 0) or 0) * int(qty)
+    return max(0, total)
 
 
 def _is_fridge_key(key: str) -> bool:
@@ -570,19 +584,34 @@ async def _dump_meals(conn: aiosqlite.Connection, steward_id: int) -> int:
     return moved
 
 
+def _plain_token(token: str) -> str:
+    t = (token or "").strip()
+    if t and not t[0].isalnum():
+        return t[1:]
+    return t
+
+
 def _token_hits_fitting(token: str, key: str, name: str) -> bool:
     t = token.strip().lower()
     if not t:
         return False
     bare = _fitting_bare(key).lower()
+    satchel = key if key.startswith(("fit_", "deco_")) else f"fit_{bare}"
+    label = item_label(satchel)
     aliases = {
         key.lower(),
         bare,
         f"fit_{bare}",
+        satchel.lower(),
         name.lower(),
         name,
+        label.lower(),
+        label,
+        _plain_token(t),
+        _plain_token(name),
+        _plain_token(label),
     }
-    return t in aliases or t == key.lower()
+    return t in aliases or _plain_token(t) in aliases or t == key.lower()
 
 
 async def furniture_sell_command(s: dict[str, Any], rest: list[str]) -> str:
@@ -1405,14 +1434,14 @@ async def hut_ops(key_id: int, command: str) -> str:
                 "再 hut_ops 堆肥桶 存 羊粪 3（别进潮柜）"
             )
         if fittings:
-            lines.append("旧家具按折旧卖：hut_ops 卖掉 槽位")
+            lines.append("旧家具按折旧卖：hut_ops 卖掉 槽位 或 卖掉 羊毛毯 确认")
         return "\n".join(lines)
 
     if verb == "catalog":
         kind = parts[1].lower() if len(parts) > 1 else "all"
         lines = [
             f"小屋建造：{config.HUT_BUILD_COST} 票（hut_ops build）",
-            "小屋装件 catalog（buy 后 install 到槽位；旧了 hut_ops 卖掉 槽位）:",
+            "小屋装件 catalog（buy 后 install 到槽位；旧了 hut_ops 卖掉 槽位|装件名）:",
         ]
         if kind in ("all", "hard"):
             lines.append("【硬装】")
@@ -2145,6 +2174,61 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
                 can=True,
                 target="status",
             ))
+        fit_rows = await _fitting_rows(conn, s["id"])
+        for r in fit_rows:
+            val = _fitting_value(r["item_key"])
+            quote = furniture_sell_quote(val["cost"], r.get("installed_at"))
+            home_items.append(_sku(
+                sid=f"sell-{r['slot']}",
+                kind="sell_fit",
+                name=f"卖掉{_fit_name(r['item_key'])}",
+                emoji=_item_emoji(r["item_key"] if str(r["item_key"]).startswith(("fit_", "deco_")) else f"fit_{_fitting_bare(r['item_key'])}"),
+                note=f"{r['slot']} · {_wear_text(quote['age_s'])} · 回收 {quote['refund']} 票。",
+                detail="按折旧回收，不是系统价。冰箱若还在给小馆用，要先关馆。",
+                price=f"{quote['refund']} 票",
+                can=True,
+                target=r["slot"],
+            ))
+        for item, qty in (stock or {}).items():
+            n = int(qty or 0)
+            if n <= 0:
+                continue
+            if not (item.startswith("fit_") or item.startswith("deco_")):
+                continue
+            bare = _fitting_bare(item)
+            try:
+                kind, meta = _catalog_item(bare)
+            except ValueError:
+                kind, meta = "soft", {"name": item_label(item), "emoji": _item_emoji(item)}
+            empty = empty_hard if kind == "hard" else empty_soft
+            unique = bare in {"cabinet", "fridge", "compost_bin"} or is_bed_key(bare) or bare == "hammock"
+            label = str(meta.get("name") or item_label(item))
+            extra = f" x{n}" if n > 1 else ""
+            if empty and not unique:
+                home_items.append(_sku(
+                    sid=f"install-bag-{item}",
+                    kind="install",
+                    name=f"装{label}",
+                    emoji=_item_emoji(item),
+                    note=f"行囊里有{extra}。装到空的{kind}槽。",
+                    detail="工坊打的羊毛毯、风铃这类软装，装上才挂在屋里。同一件能装多份到不同槽。",
+                    price="装",
+                    can=True,
+                    target=bare,
+                ))
+            val = _fitting_value(item)
+            quote = furniture_sell_quote(val["cost"], 0)
+            home_items.append(_sku(
+                sid=f"sell-bag-{item}",
+                kind="sell_fit",
+                name=f"卖掉行囊{label}",
+                emoji=_item_emoji(item),
+                note=f"未上墙{extra} · 折旧回收 {quote['refund']} 票。",
+                detail="行囊里的家具按中档折旧卖。背包点卖也是这一笔。不要走系统价 vend。",
+                price=f"{quote['refund']} 票",
+                can=True,
+                target=item,
+            ))
 
     cab_items: list[dict[str, Any]] = []
     if built and not has_cab:
@@ -2471,6 +2555,37 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
             from . import barn_disease as barn_disease_mod
             sick = barn_disease_mod.animal_ailment_label(row)
             sick_bit = f"病着：{sick}。去上手页点找兽医。" if sick else ""
+            if spec.get("guard"):
+                state = "守夜中" if row.get("guard") else "幼犬"
+            elif spec.get("hive"):
+                state = "采蜜中" if fed else "待喂"
+            elif ready_h:
+                state = "可大收"
+            elif fed:
+                state = "放养"
+            else:
+                state = "待喂"
+            slot_bits = [state]
+            if age:
+                slot_bits.append(age)
+            if sick:
+                slot_bits.append(f"病着：{sick}")
+            slot_bits.append(f"第{slot}栏占着，买牲口进不到这里。")
+            barn_items.append(_sku(
+                sid=f"slot-{slot}",
+                kind="look",
+                name=f"#{slot} {spec['name']}",
+                emoji=spec.get("emoji") or "·",
+                note=" · ".join(slot_bits),
+                detail=(
+                    "喂过的看门狗没有每日可收，栏位仍占着，不是空栏。"
+                    if spec.get("guard")
+                    else "点下面的喂 / 收 / 大收。栏空了才会出现买牲口。"
+                ),
+                price="看",
+                can=True,
+                target="status",
+            ))
             if not fed:
                 barn_items.append(_sku(
                     sid=f"feed-{slot}",

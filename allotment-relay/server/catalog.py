@@ -210,6 +210,17 @@ def resolve_item_key(token: str, *, prefer: str = "any") -> str | None:
     exact = [k for k, v in ITEM_NAMES.items() if v == raw]
     if len(exact) == 1:
         return exact[0]
+    # 行囊名常带 emoji：🧶羊毛毯；玩家会写 羊毛毯
+    stripped = [
+        k for k, v in ITEM_NAMES.items()
+        if v and not v[0].isalnum() and v[1:] == raw
+    ]
+    if len(stripped) == 1:
+        return stripped[0]
+    if len(stripped) > 1:
+        fit = [k for k in stripped if k.startswith(("fit_", "deco_"))]
+        if len(fit) == 1:
+            return fit[0]
     if raw in ("兔肉", "生兔肉", "🍖兔肉"):
         return "meat_rabbit"
     if raw in ("猪肉", "生猪肉", "🥓猪肉"):
@@ -282,6 +293,16 @@ def resolve_item_key(token: str, *, prefer: str = "any") -> str | None:
             return key
         if raw in (meta.get("aliases") or ()) or norm == key:
             return key
+
+    for cat in (HUT_HARD, HUT_SOFT):
+        for k, v in cat.items():
+            names = {k, f"fit_{k}", v.get("name", ""), f"{v.get('emoji', '')}{v.get('name', '')}"}
+            if raw in names or norm in {k, f"fit_{k}"}:
+                return f"fit_{k}"
+    for k, v in LILI_DECOR.items():
+        names = {k, f"deco_{k}", v.get("name", ""), f"{v.get('emoji', '')}{v.get('name', '')}"}
+        if raw in names or norm in {k, f"deco_{k}"}:
+            return f"deco_{k}"
 
     return None
 
@@ -2054,7 +2075,7 @@ def item_label(item: str) -> str:
 
 
 def item_stack_cap(item: str, *, stack_tier: int = 0) -> int:
-    """一组（一格）叠放上限。MC 式：同种货可占多组。工具 / 装件 / 活物只能 1。"""
+    """一组（一格）叠放上限。MC 式：同种货可占多组。工具 / 活物只能 1；装件每组 1 份，行囊可放多件。"""
     from . import config
     if item.startswith(("fit_", "deco_", "live_", "tool_")):
         return 1

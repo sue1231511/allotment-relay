@@ -102,7 +102,7 @@ async def plot_ops(
     return await mux._call_ops(mux.plot_bundle, _kid(), command)
 
 
-@mcp.tool(description="小屋潮柜床。空=列表。例：status · 睡。mascot upkeep≠岸维。")
+@mcp.tool(description="小屋潮柜床畜栏。空=列表。例：status · 睡 · 卖掉 羊毛毯 确认。喂过的狗也占栏。mascot upkeep≠岸维。")
 async def hut_ops(command: str = "") -> str:
     return await mux._call_ops(mux.hut_bundle, _kid(), command)
 
@@ -112,7 +112,7 @@ async def tide_ops(command: str = "") -> str:
     return await mux._call_ops(mux.tide_bundle, _kid(), command)
 
 
-@mcp.tool(description="行囊集市。空=列表。例：list · vend 鲭鱼 1 · gift 安 甘蓝 1。送礼≠红包。")
+@mcp.tool(description="行囊集市。空=列表。例：list · vend 鲭鱼 1 · vend 羊毛毯 1。家具走折旧。送礼≠红包。")
 async def tote_ops(command: str = "") -> str:
     return await mux._call_ops(mux.tote_bundle, _kid(), command)
 
@@ -203,7 +203,7 @@ async def quarry_ops(command: str = "") -> str:
     return progress_mod.attach_note(await mux._call_ops(quarry.quarry_ops, _kid(), command))
 
 
-@mcp.tool(description="岸工坊。空=列表≠看砧(用status)。例：打 铜钉 · 取 · 打捞。勿 forge_ops。")
+@mcp.tool(description="岸工坊。空=列表≠看砧(用status)。例：打 铜钉 · 打 羊毛毯 · 取。装件可打多份。勿 forge_ops。")
 async def craft_ops(command: str = "") -> str:
     from . import craft
     from . import progress as progress_mod
