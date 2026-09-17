@@ -46,6 +46,9 @@ def test_help_copy() -> None:
     assert "履历" in (tote.description or "")
     bag = (ROOT / "server/static/island/ui/bag.js").read_text(encoding="utf-8")
     assert "island-bag-story" in bag
+    play_js = (ROOT / "server/static/play.js").read_text(encoding="utf-8")
+    assert "play-item-story" in play_js
+    assert "stockStoryBits" in play_js
     html = (ROOT / "server/templates/partials/island-manual-content.html").read_text(encoding="utf-8")
     assert "点开会写出从哪来" in html
 

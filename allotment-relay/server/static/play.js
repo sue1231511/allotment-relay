@@ -599,6 +599,10 @@ function renderTide() {
   `;
 }
 
+function stockStoryBits(it) {
+  return Array.isArray(it && it.story) ? it.story.filter(Boolean) : [];
+}
+
 function renderTote() {
   const stock = ((state.dash && state.dash.stock) || []).filter((it) => Number(it.qty) > 0);
   const countEl = $('play-tote-count');
@@ -607,11 +611,15 @@ function renderTote() {
     $('play-tote').innerHTML = '<p class="muted">口袋空着。</p>';
     return;
   }
-  $('play-tote').innerHTML = stock.map((it) => `
-    <button type="button" data-item="${esc(it.name)}" data-qty="${it.qty}">
-      ${esc(it.name)} ×${it.qty}
-    </button>
-  `).join('');
+  $('play-tote').innerHTML = stock.map((it) => {
+    const bits = stockStoryBits(it);
+    const title = bits.length ? ` title="${esc(bits.join(' / '))}"` : '';
+    const mark = bits.length ? ' <small>履历</small>' : '';
+    return `
+    <button type="button" data-item="${esc(it.name)}" data-qty="${it.qty}"${title}>
+      ${esc(it.name)} ×${it.qty}${mark}
+    </button>`;
+  }).join('');
 }
 
 function renderGifts() {
@@ -1352,7 +1360,13 @@ function buySeedSheet() {
 }
 
 function itemSheet(name) {
+  const it = ((state.dash && state.dash.stock) || []).find((row) => (row.name || row.item) === name);
+  const bits = stockStoryBits(it);
+  const story = bits.length
+    ? `<div class="play-item-story">${bits.map((ln) => `<p class="muted">${esc(ln)}</p>`).join('')}</div>`
+    : '';
   openSheet(name, `
+    ${story}
     <button type="button" class="play-mini-btn primary" data-act='{"tool":"kitchen_ops","command":"eat ${name}"}'>吃</button>
     <button type="button" class="play-mini-btn" data-act='{"tool":"tote_ops","command":"vend ${name} 1"}'>卖 1</button>
   `);
