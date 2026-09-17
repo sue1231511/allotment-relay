@@ -228,7 +228,7 @@ async def relay_manual() -> str:
         "               人类回礼后须 heart_ops 拆 编号（看 12 只看不拆）；拆完人类端提醒/红点才消失。",
         "               不是 tote_ops gift（点名送物品/票进对方行囊），也不是聊天室红包",
         "  tote_ops     行囊/交换台/集市",
-        "               command 例：list · gifts · vend 鲭鱼 1 · vend 羊毛毯 1 · vend 芒果 3 木瓜 2（批量）· gift 安 甘蓝 1",
+        "               command 例：list · 履历 · gifts · vend 鲭鱼 1 · vend 羊毛毯 1 · vend 芒果 3 木瓜 2（批量）· gift 安 甘蓝 1",
         "                 · swap list · swap offer 甘蓝 2 · market list · market sell 甘蓝 2 8",
         "               人类 /island 总览点集市，先选「集市 / 花店」地名；选花店进默语花房，选集市进交易店景，点一下看摊，点一下才出摊位列表，能看街摊、买、挂货、下架、扩摊",
         "  kitchen_ops  厨房/小馆。空 command=菜谱",
@@ -495,7 +495,7 @@ async def relay_manual() -> str:
         "  默默 花茶 玫瑰花茶 38票精力+10/雾智+2；桂花姜茶48票+14/+2，菊花香茅茶28票+8/+1。默默 花茶 玫瑰花茶包 买茶包（少8票）；默默 花茶 冲泡 玫瑰花茶包 耗包不另收费，受属性上限限制。",
         "  默默 记名 今天打过招呼才记，每天一次，累计7天称呼「花房熟客」不发票；默默 干花 玫瑰 耗已有花一枝+28票挂空软装槽，无房/满槽不扣款不耗花，不替换家具；纯装饰。替换退回行囊后 hut_ops install soft_1 flower_rose 可重挂。默默 告别 不收费。不是栗栗换货、玩家集市或约会导演消费，无赊账。",
         "【行囊 · 交换 · 集市】",
-        "  tote_ops list 列出中文名和英文 id（可叠放货写 x总量（N组 …））。vend 卖系统回收价；家具 vend 羊毛毯 1 按折旧（同 hut_ops 卖掉）",
+        "  tote_ops list 列出中文名和英文 id（可叠放货写 x总量（N组 …））。戒、稀有鱼、崖上稀矿、工坊出品会多几行来历。tote_ops 履历 看全文。vend 卖系统回收价；家具 vend 羊毛毯 1 按折旧（同 hut_ops 卖掉）",
         "  Tt酱货架买的种/饲料/工具，系统回收进价九成——退货少亏一成，别反复倒卖当印钞",
         "  可叠放货满一组会自动开下一组（MC 式）；工具/活物只能 1，装件可多件。潮柜/冰箱格满了再 vend / 取走 / 扩栈 / 潮柜 扩",
         "  未命名小鱼 vend 会再掷一次小咒事件（可能吐票、走回袋、解开或加重小咒）",
@@ -2030,6 +2030,12 @@ async def tide_ops(key_id: int, command: str) -> str:
         gear_bonus = int(meta["sell"] * max(0.0, val_mult - 1.0)) + tier_bonus
         async with db.connect() as conn:
             await db.add_item(conn, s["id"], f"fish_{catch}", 1)
+            from . import ledger as ledger_mod
+            await ledger_mod.note_gain(
+                conn, s["id"], f"fish_{catch}", 1,
+                f"{meta['emoji']}{meta['name']}由{s['name']}于{ledger_mod.calendar_phrase()}"
+                f"在{world.tide_label(tide)}捞起",
+            )
             if gear_bonus > 0:
                 await conn.execute(
                     "UPDATE stewards SET tickets=tickets+? WHERE id=?",
@@ -2109,6 +2115,12 @@ async def tide_ops(key_id: int, command: str) -> str:
         gear_bonus = int(meta["sell"] * max(0.0, val_mult - 1.0)) + tier_bonus
         async with db.connect() as conn:
             await db.add_item(conn, s["id"], f"fish_{catch}", 1)
+            from . import ledger as ledger_mod
+            await ledger_mod.note_gain(
+                conn, s["id"], f"fish_{catch}", 1,
+                f"{meta['emoji']}{meta['name']}由{s['name']}于{ledger_mod.calendar_phrase()}"
+                f"在{world.tide_label(tide)}捞起",
+            )
             if gear_bonus > 0:
                 await conn.execute(
                     "UPDATE stewards SET tickets=tickets+? WHERE id=?",
@@ -2284,6 +2296,11 @@ async def _shed_one(s: dict, cmd: str) -> str:
                 raise ValueError("行囊数量不足")
             if online:
                 await db.add_item(conn, peer["id"], item_key, qty)
+                from . import ledger as ledger_mod
+                await ledger_mod.transfer(
+                    conn, s["id"], peer["id"], item_key, qty,
+                    extra=f"后当面交给{peer['name']}，{ledger_mod.calendar_phrase()}",
+                )
                 await conn.commit()
                 msg = (
                     f"{s['name']} 当面交给 {peer['name']} "
@@ -2445,6 +2462,11 @@ async def swap_ops(key_id: int, command: str) -> str:
                 raise ValueError(f"领取需要 {claim_fee} 票")
             await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (claim_fee, s["id"]))
             await db.add_item(conn, s["id"], lot["item"], lot["quantity"])
+            from . import ledger as ledger_mod
+            await ledger_mod.transfer(
+                conn, int(lot["depositor_id"]), s["id"], lot["item"], int(lot["quantity"]),
+                extra=f"后在交换台到了{s['name']}手里，{ledger_mod.calendar_phrase()}",
+            )
             await conn.execute("UPDATE swap_lots SET claimed_by=? WHERE id=?", (s["id"], lot_id))
             await conn.commit()
         fee_note = f"（协作度≥{social_mod.RAPPORT_SWAP_DISCOUNT} 手续费 {claim_fee} 票）" if claim_fee < SWAP_CLAIM_FEE else ""
@@ -2504,6 +2526,7 @@ async def _tote_one(s: dict, command: str) -> str:
     verb = parts[0].lower() if parts else "list"
     if verb == "list":
         from .catalog import format_stack_qty
+        from . import ledger as ledger_mod
 
         stock = await db.get_satchel(s["id"])
         tier = int(s.get("satchel_stack_extra") or 0)
@@ -2515,6 +2538,8 @@ async def _tote_one(s: dict, command: str) -> str:
         if tier < config.SATCHEL_STACK_TIERS_MAX:
             stack_note += f"，tote_ops 扩栈 加每组上限，{config.SATCHEL_STACK_COST}票/级+{config.SATCHEL_STACK_STEP}"
         stack_note += "；工具/活物 1，装件可多件）"
+        async with db.connect() as conn:
+            previews = await ledger_mod.preview_map(conn, s["id"])
         lines = [f"工分票: {s['tickets']}", stack_note]
         for item, qty in stock.items():
             price = suggested_price(item) or ITEM_PRICES.get(item, 0)
@@ -2525,7 +2550,39 @@ async def _tote_one(s: dict, command: str) -> str:
                 lines.append(f"  {name} {stack} · {item} · vend {name} 1（折旧，同 hut_ops 卖掉）")
             else:
                 lines.append(f"  {name} {stack} · {item} · vend {price}/个")
+            story = previews.get(item) or []
+            if story:
+                lines.extend(f"      {ln}" for ln in story[:3])
+        if previews:
+            lines.append("有来历的物：tote_ops 履历 看全文。甘蓝那种没有。")
         return "\n".join(lines) if stock else f"工分票: {s['tickets']}\n行囊空"
+    if verb in ("履历", "ledger", "来历", "前科"):
+        from . import ledger as ledger_mod
+
+        token = " ".join(parts[1:]).strip() if len(parts) > 1 else ""
+        item_key = resolve_item_key(token) if token else None
+        if token and not item_key:
+            raise ValueError(unknown_item_message(token))
+        async with db.connect() as conn:
+            rows = await ledger_mod.stories_for(conn, s["id"], item_key)
+        if not rows:
+            if token:
+                return f"{item_label(item_key)}没有履历。戒、稀有鱼、崖上稀矿、工坊出品才会记。"
+            return "行囊里还没有带履历的东西。戒、稀有鱼、崖上稀矿、工坊出品才会记。甘蓝没有前科。"
+        lines = ["物品履历（不是成就，也不加数值）："]
+        grouped: dict[str, list[list[str]]] = {}
+        for row in rows:
+            grouped.setdefault(row["item"], []).append(row["lines"])
+        for item, bunch in grouped.items():
+            lines.append(f"  {item_label(item)} ×{len(bunch)}")
+            show = bunch[:3]
+            for i, story in enumerate(show, 1):
+                if len(bunch) > 1:
+                    lines.append(f"    其一 {i}：")
+                lines.extend(f"      {ln}" for ln in story)
+            if len(bunch) > 3:
+                lines.append(f"    还有 {len(bunch) - 3} 份同名的，来历不一定一样。")
+        return "\n".join(lines)
     if verb == "vend" and len(parts) >= 3:
         # 支持批量：vend item1 qty1 item2 qty2 ...（每对一个物品+数量）
         tokens = parts[1:]
@@ -2561,6 +2618,11 @@ async def _tote_one(s: dict, command: str) -> str:
             for item_key, qty, price in pairs:
                 if not await db.take_item(conn, s["id"], item_key, qty):
                     raise ValueError(f"数量不足（需要 {item_key} x{qty}）")
+                from . import ledger as ledger_mod
+                await ledger_mod.consume(
+                    conn, s["id"], item_key, qty,
+                    extra=f"后卖进回收堆，{ledger_mod.calendar_phrase()}。履历到此",
+                )
                 gain = price * qty
                 await conn.execute(
                     "UPDATE stewards SET tickets=tickets+? WHERE id=?", (gain, s["id"])
@@ -2677,6 +2739,11 @@ async def _tote_one(s: dict, command: str) -> str:
                         f"行囊不足 {ITEM_NAMES.get(item_key, item_key)}（{item_key}）x{qty}"
                     )
                 await db.add_item(conn, peer["id"], item_key, qty)
+                from . import ledger as ledger_mod
+                await ledger_mod.transfer(
+                    conn, s["id"], peer["id"], item_key, qty,
+                    extra=f"后赠予{peer['name']}，{ledger_mod.calendar_phrase()}",
+                )
                 gift_line = f"{ITEM_NAMES.get(item_key, item_key)}（{item_key}）x{qty}"
             await multi_mod._bump_rapport(conn, s["id"], peer["id"], 3)
             chronicle = f"{s['name']} 送礼给 {peer['name']}：{gift_line}"
@@ -2701,7 +2768,7 @@ async def _tote_one(s: dict, command: str) -> str:
         n = _parse_int(parts[1], "数量") if len(parts) >= 2 else 1
         return await _satchel_stack_expand(s, n)
     raise ValueError(
-        f"未知 tote 指令: {command}（list / gifts / 赠礼记录 / vend 物品 数量 / gift|送礼 名字 物品|票 数量 / 扩栈 [数量]）"
+        f"未知 tote 指令: {command}（list / 履历 / gifts / 赠礼记录 / vend 物品 数量 / gift|送礼 名字 物品|票 数量 / 扩栈 [数量]）"
     )
 
 

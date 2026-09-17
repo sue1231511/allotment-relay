@@ -213,8 +213,8 @@ CLOTH_HELP = f"""cloth_ops 子命令（整句写进 command）：
   买 婚服 海色 — 婚服现货，选色当天进衣橱。{WEDDING_DRESS_SHOP_PRICE} 票。再 marriage_ops 婚服
   买 订婚服 海色 — 订婚服现货，{BETROTHAL_ATTIRE_SHOP} 票。不是婚服。再 marriage_ops 订婚 服装
   委托 短褂 海色 — 把衣料和染料交给{NPC_NAME}，开始裁制。也可 委托 呢衣 墨色 潮纹 · 委托 裙 沙色 素 漂布 · 委托 婚服 海色 双潮 · 委托 订婚服 海色
-  取 — 领做好的衣服（裁制进度走完才能取；自制婚服隔日）
-  衣橱 — 自己裁出来的衣服（不占行囊，不能卖）
+  取 — 领做好的衣服（裁制进度走完才能取；自制婚服隔日）。衣橱会写下谁哪天取的
+  衣橱 — 自己裁出来的衣服（不占行囊，不能卖）。来历写在衣服下面
   穿 1 / 穿 灯塔守夜人的旧呢衣 — 换上；同时只能穿一件
   脱 — 脱下
   故事 — 已经触发过的衣物来历。不是 tale_ops 潮闻任务，也不给布
@@ -657,6 +657,9 @@ async def _cmd_claim(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
     story = prof["job_story"]
     if story and story in STORIES:
         origin = STORIES[story]["origin"]
+    from . import ledger as ledger_mod
+    made = f"由{s['name']}于{ledger_mod.calendar_phrase()}在{SHOP_NAME}取下。"
+    origin = (made + (origin or "")).strip()
     cur = await conn.execute(
         """
         INSERT INTO steward_wardrobe (
@@ -726,7 +729,11 @@ async def _cmd_buy_wedding(conn: aiosqlite.Connection, s: dict[str, Any], rest: 
     from . import tax as tax_mod
     await tax_mod.record_life_spend(conn, s["id"], cost, "cloth")
     name = garment_name(cut, color, motif, "shop")
-    origin = "衣泊坊现货。没交布，是柜上那挂。"
+    from . import ledger as ledger_mod
+    origin = (
+        f"由{s['name']}于{ledger_mod.calendar_phrase()}在衣泊坊柜上取下。"
+        "衣泊坊现货。没交布，是柜上那挂。"
+    )
     cur = await conn.execute(
         """
         INSERT INTO steward_wardrobe (

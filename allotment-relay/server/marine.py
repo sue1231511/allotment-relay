@@ -680,6 +680,11 @@ async def pen_ops(key_id: int, command: str) -> str:
             meta = SEA_CATCH[species]
             qty = 2 if pen.get("fed") else 1
             await db.add_item(conn, s["id"], f"fish_{species}", qty)
+            from . import ledger as ledger_mod
+            await ledger_mod.note_gain(
+                conn, s["id"], f"fish_{species}", qty,
+                f"{meta['emoji']}{meta['name']}由{s['name']}于{ledger_mod.calendar_phrase()}从渔排收起",
+            )
             await conn.execute(
                 "UPDATE fish_pens SET species=NULL, stocked_at=NULL, fed=0 WHERE id=?",
                 (pen["id"],),

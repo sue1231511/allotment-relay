@@ -107,6 +107,11 @@ async def compile_week(conn, *, ts: int | None = None) -> dict[str, Any]:
         lines.append("物的履历：" + stats["objects"][0])
     elif stats["gifts"]:
         lines.append(stats["gifts"][0])
+    from . import ledger as ledger_mod
+    led = await ledger_mod.recent_lines(conn, since=start, limit=2)
+    if led:
+        lines = [ln for ln in lines if not ln.startswith("物的履历：")]
+        lines.append("物的履历：" + led[0])
     if stats["craft"]:
         lines.append(stats["craft"][0])
     if stats["songs"]:

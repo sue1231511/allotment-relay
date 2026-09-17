@@ -1022,7 +1022,12 @@ function renderStewardPage(data) {
 
   const stock = data.stock || [];
   $('play-steward-stock-count').textContent = `TOTE · ${data.stock_count ?? stock.length} 种`;
-  $('play-steward-stock').innerHTML = stock.length ? stock.map((it) => `<span><b>${esc(it.name || it.item || '')}</b><em>×${it.qty}</em></span>`).join('') : '<p class="muted">行囊空</p>';
+  $('play-steward-stock').innerHTML = stock.length ? stock.map((it) => {
+    const bits = Array.isArray(it.story) ? it.story.filter(Boolean) : [];
+    const title = bits.length ? ` title="${esc(bits.join(' / '))}"` : '';
+    const mark = bits.length ? '<small>履历</small>' : '';
+    return `<span${title}><b>${esc(it.name || it.item || '')}</b><em>×${it.qty}</em>${mark}</span>`;
+  }).join('') : '<p class="muted">行囊空</p>';
 
   const gifts = data.gifts || [];
   $('play-steward-gifts').innerHTML = gifts.length ? gifts.slice(0, 6).map((g) => `<article><time>${esc(islandFmtStamp(g.created_at))}</time><div><strong>${esc(g.who || '')} · ${esc(g.kind || '')}</strong><p>${esc(g.text || '')}</p></div></article>`).join('') : '<p class="muted">暂无收礼 / 打赏</p>';

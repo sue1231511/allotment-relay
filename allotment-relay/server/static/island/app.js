@@ -49,7 +49,7 @@ async function lighthouseScene() {
   if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-modulefix2");
   return lighthouseMod;
 }
-import { renderBag } from "./ui/bag.js?v=island-modulefix2";
+import { renderBag } from "./ui/bag.js?v=ledger1";
 import { setBackChip, setBagChip } from "./ui/back-map.js?v=dual-panels1";
 import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=island-modulefix2";
 import { popOut } from "./ui/pop.js?v=island-modulefix2";

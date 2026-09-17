@@ -164,6 +164,10 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
         }
         for k, q in sorted(stock.items(), key=lambda x: (-x[1], x[0]))
     ]
+    from . import ledger as ledger_mod
+    async with db.connect() as conn:
+        previews = await ledger_mod.preview_map(conn, s["id"])
+    stock_items = ledger_mod.attach_stock(stock_items, previews)
 
     incident_views = [
         {

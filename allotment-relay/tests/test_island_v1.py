@@ -1274,8 +1274,8 @@ def test_island_page_is_modular() -> None:
     assert "warmScenesInBackground" in (ROOT / "server/static/island/boot.js").read_text(encoding="utf-8")
     assert "warmScenesLater" in app
     assert "waitScenePics" in app
-    assert html.count("island.css?v=gazette1") == 1
-    assert html.count("app.js?v=gazette2") == 1
+    assert html.count("island.css?v=ledger1") == 1
+    assert html.count("app.js?v=ledger1") == 1
     assert html.count("boot.js?v=keynorm1") == 1
     assert 'rel="preload"' in html
     assert "island-map.webp" in html
@@ -1609,6 +1609,7 @@ def test_island_page_is_modular() -> None:
     assert "island-bag-grid" in bag_js
     assert "data-page" in bag_js
     assert "const PAGE = 20" in bag_js
+    assert "island-bag-story" in bag_js
     assert "左边吃，右边卖" not in bag_js
     assert "island-item" not in bag_js
     assert "data-vend" in bag_js

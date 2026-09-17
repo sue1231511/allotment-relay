@@ -88,6 +88,8 @@ def test_mcp_descriptions() -> None:
 
     tote = _tool_blob(mcp, "tote_ops")
     assert "vend" in tote and ("gift" in tote or "送礼" in tote)
+    assert "履历" in tote
+    assert "履历" in tote
 
     star = _tool_blob(mcp, "star_ops")
     assert "小橘" in star and "应援" in star and "围观" in star

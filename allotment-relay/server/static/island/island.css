@@ -1828,7 +1828,9 @@ body.island-app.is-climate-open .island-float-chip {
   position: absolute;
   left: 12%;
   right: 12%;
-  top: 38%;
+  top: 28%;
+  max-height: 52%;
+  overflow: auto;
   padding: 14px 14px 12px;
   border-radius: 16px;
   background: rgba(254, 244, 223, .96);
@@ -1841,6 +1843,14 @@ body.island-app.is-climate-open .island-float-chip {
   margin: 0 0 10px;
   color: #5f7a58;
   font-size: 15px;
+}
+
+.island-bag-story {
+  margin: 0 0 6px !important;
+  color: #7a6a4e;
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: left;
 }
 
 .island-bag-pop-acts {

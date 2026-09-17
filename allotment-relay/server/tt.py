@@ -705,12 +705,24 @@ async def tt_ops(key_id: int, command: str) -> str:
                 from . import tax as tax_mod
                 await tax_mod.record_life_spend(conn, s["id"], cost, "tt")
             pieces = (DOWRY_SETS.get(item) or {}).get("pieces")
+            from . import ledger as ledger_mod
+            shop_line = (
+                f"由{s['name']}于{ledger_mod.calendar_phrase()}从 Tt酱柜上买下"
+            )
             if pieces:
                 for piece in pieces:
                     await db.add_item(conn, s["id"], piece, 1)
+                    await ledger_mod.note_gain(
+                        conn, s["id"], piece, 1,
+                        f"{_item_label(piece)}{shop_line}",
+                    )
                 bought_label = extra_meta.get("name") or item
             else:
                 await db.add_item(conn, s["id"], item, qty)
+                await ledger_mod.note_gain(
+                    conn, s["id"], item, qty,
+                    f"{_item_label(item)}{shop_line}",
+                )
                 bought_label = _item_label(item)
             gear_note = await _grant_shop_gear(conn, s["id"], item)
             await db.add_chronicle(

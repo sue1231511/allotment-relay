@@ -220,6 +220,11 @@ async def market_ops(key_id: int, command: str) -> str:
                 (pay, lot["seller_id"]),
             )
             await db.add_item(conn, s["id"], lot["item"], buy_qty)
+            from . import ledger as ledger_mod
+            await ledger_mod.transfer(
+                conn, int(lot["seller_id"]), s["id"], lot["item"], int(buy_qty),
+                extra=f"后在潮市易手给{s['name']}，{ledger_mod.calendar_phrase()}",
+            )
             if buy_qty >= lot["quantity"]:
                 await conn.execute(
                     "UPDATE market_listings SET buyer_id=?, sold_at=? WHERE id=?",

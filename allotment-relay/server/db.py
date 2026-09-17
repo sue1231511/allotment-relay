@@ -2281,6 +2281,19 @@ async def init_db() -> None:
             )
             """,
             "CREATE INDEX IF NOT EXISTS idx_island_work_gifts_work ON island_work_gifts(work_id, id DESC)",
+            """
+            CREATE TABLE IF NOT EXISTS item_ledgers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                item TEXT NOT NULL,
+                owner_id INTEGER NOT NULL DEFAULT 0,
+                lines_json TEXT NOT NULL DEFAULT '[]',
+                born_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL,
+                alive INTEGER NOT NULL DEFAULT 1
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_item_ledgers_owner ON item_ledgers(owner_id, item, alive, id)",
+            "ALTER TABLE steward_craft ADD COLUMN job_origin TEXT NOT NULL DEFAULT ''",
         ):
             try:
                 await db.execute(ddl)

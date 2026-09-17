@@ -28,8 +28,8 @@ QUARRY_HELP = """quarry_ops 子命令（整句写进 command）：
   catalog / 图鉴 — 矿脉、矿石、镐档
   买镐 — 80 票买 T1 盐风镐（Tt酱 tt buy 盐风镐 同一档；铲子 42 / 粗网 28）
   探脉 [坑号] — 给空坑找一条矿脉（要镐；8 精力，20 分钟冷却，约 18% 空探）
-  挖 [坑号] — 对着矿脉挥镐（要 T1 镐；精力 16→11；全坑共用 36 分钟冷却；每坑再 40 分钟；每日 8 镐）
-  洗 海盐砂 [数量] — 2 份原矿出 1 份精矿（6 精力/份精矿，约 12% 冲散）。数量是原矿，须成对
+  挖 [坑号] — 对着矿脉挥镐（要 T1 镐；精力 16→11；全坑共用 36 分钟冷却；每坑再 40 分钟；每日 8 镐）。金砂/雾铅/夜光髓/潮纹会记下从哪条脉来
+  洗 海盐砂 [数量] — 2 份原矿出 1 份精矿（6 精力/份精矿，约 12% 冲散）。数量是原矿，须成对。精矿会接上原矿的来历
   开坑 / 开坑 确认 — 看价与开凿时间 / 付钱加坑（起步 1 个，无上限，90/142/218…）。欠岸税或岸维时不能开坑/升镐
   升镐 / 升镐 确认 — 花票+精矿升一档（T2 铜镐起；T5 雾铅镐满）
   help — 本表
@@ -581,6 +581,12 @@ async def _hew(conn: aiosqlite.Connection, s: dict[str, Any], token: str) -> str
         raw_key = vein_meta["raw"]
         await db.add_item(conn, s["id"], raw_key, qty)
         got.append((raw_key, qty))
+        from . import ledger as ledger_mod
+        await ledger_mod.note_gain(
+            conn, s["id"], raw_key, qty,
+            f"{item_label(raw_key)}由{s['name']}于{ledger_mod.calendar_phrase()}"
+            f"在{ledger_mod.claim_place(target['slot'], target['vein'])}掘出",
+        )
         if random.random() < 0.06 + pick["tier"] * 0.015:
             bonus_key = random.choice(["quarry_shale", "quarry_salt_sand"])
             if bonus_key != raw_key:
@@ -681,8 +687,18 @@ async def _wash(conn: aiosqlite.Connection, s: dict[str, Any], rest: str) -> str
     for _ in range(batches):
         if random.random() >= config.QUARRY_WASH_FAIL:
             kept += 1
+    from . import ledger as ledger_mod
+    gone = await ledger_mod.consume(conn, s["id"], item, qty)
     if kept:
         await db.add_item(conn, s["id"], refined, kept)
+        story = [
+            f"{item_label(refined)}由{s['name']}于{ledger_mod.calendar_phrase()}在盐风崖洗净"
+        ]
+        for lines in gone:
+            snip = ledger_mod.origin_snippet(lines, item)
+            if snip and snip not in story:
+                story.append(snip)
+        await ledger_mod.birth(conn, s["id"], refined, story, qty=kept)
     await db.add_chronicle(
         "quarry",
         f"{s['name']} 洗净 {item_label(item)} x{qty} → {kept}",

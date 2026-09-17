@@ -28,7 +28,7 @@ CRAFT_HELP = """craft_ops 子命令（整句写进 command）：
   status / 看 — 砧上在打什么、盐田、打捞窗口、陈列进度。空 command 不是看工坊，是本表
   图鉴 / catalog — 配方、盐田规则、打捞窗口、陈列套
   打 铜钉 — 扣材料开始慢工（一砧一次；好了 craft_ops 取）。也可 打 羊毛毯 · 打 潮纹秤锤 · 打 铁锄刃 · 打 雾铅网坠 · 打 夜光滤网 · 打 潮誓戒 · 打 订婚戒
-  取 — 领做好的成品。羊毛毯这类装件行囊可放多份，同一件能再打；取不下来时先卖掉或装上袋里那件
+  取 — 领做好的成品。戒、秤锤、网坠这类会记下谁打的、材料从哪来。羊毛毯这类装件行囊可放多份，同一件能再打；取不下来时先卖掉或装上袋里那件
   补网 — 网补丁 6 小时空网 -8%；有雾铅网坠优先贴，12 小时 -14%。不是 gear upgrade
   盐田 — 看池；灌 — 涨潮灌一池（5 精力）；收盐 — 晴天攒满 20 分钟后收海盐晶
   开池 / 开池 确认 — 加盐田（最多 3 口，40/68/96 票）
@@ -119,7 +119,8 @@ async def ensure_profile(conn: aiosqlite.Connection, steward_id: int) -> dict[st
         """
         SELECT job_key, job_ready_at, job_qty, pan_count, last_salvage_at,
                salvages_total, crafts_total, net_patch_until,
-               COALESCE(net_patch_empty, 0) AS net_patch_empty
+               COALESCE(net_patch_empty, 0) AS net_patch_empty,
+               COALESCE(job_origin, '') AS job_origin
         FROM steward_craft WHERE steward_id=?
         """,
         (steward_id,),
@@ -148,6 +149,7 @@ async def ensure_profile(conn: aiosqlite.Connection, steward_id: int) -> dict[st
             "crafts_total": 0,
             "net_patch_until": 0,
             "net_patch_empty": 0.0,
+            "job_origin": "",
         }
     count = int(row["pan_count"] or 1)
     have = await (await conn.execute(
@@ -168,6 +170,7 @@ async def ensure_profile(conn: aiosqlite.Connection, steward_id: int) -> dict[st
         "crafts_total": int(row["crafts_total"] or 0),
         "net_patch_until": int(row["net_patch_until"] or 0),
         "net_patch_empty": float(row["net_patch_empty"] or 0),
+        "job_origin": str(row["job_origin"] or ""),
     }
 
 
@@ -341,17 +344,25 @@ async def _start_job(conn: aiosqlite.Connection, s: dict[str, Any], token: str) 
     if missing:
         raise ValueError("缺材料：" + "、".join(missing) + "。矿走 quarry_ops 洗，毛走畜栏，木靠 plot_ops chop")
     await energy.spend(conn, s["id"], int(meta["energy"]), action="工坊")
+    from . import ledger as ledger_mod
+    inherited: list[str] = []
     for item, qty in meta["need"].items():
         if not await db.take_item(conn, s["id"], item, qty):
             raise ValueError(f"扣 {item_label(item)} 失败。再试一次")
+        gone = await ledger_mod.consume(conn, s["id"], item, qty)
+        for lines in gone:
+            snip = ledger_mod.origin_snippet(lines, item)
+            if snip and snip not in inherited:
+                inherited.append(snip)
     ready = now + int(meta["seconds"])
+    origin_blob = ledger_mod._dump(inherited)  # noqa: SLF001
     await conn.execute(
         """
         UPDATE steward_craft
-        SET job_key=?, job_ready_at=?, job_qty=?
+        SET job_key=?, job_ready_at=?, job_qty=?, job_origin=?
         WHERE steward_id=?
         """,
-        (key, ready, int(meta["qty"]), s["id"]),
+        (key, ready, int(meta["qty"]), origin_blob, s["id"]),
     )
     await db.add_chronicle(
         "craft", f"{s['name']} 开始打{meta['name']}", s["id"], conn=conn
@@ -386,10 +397,18 @@ async def _take_job(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
                 "砧上这件还在，不取就打不了下一件。"
             ) from exc
         raise
+    from . import ledger as ledger_mod
+    inherited = ledger_mod._load(prof.get("job_origin") or "")  # noqa: SLF001
+    made = item_label(meta["out"])
+    story = [f"{made}由{s['name']}于{ledger_mod.calendar_phrase()}在岸工坊打造"]
+    for snip in inherited:
+        if snip and snip not in story:
+            story.append(snip)
+    await ledger_mod.birth(conn, s["id"], meta["out"], story, qty=qty)
     await conn.execute(
         """
         UPDATE steward_craft
-        SET job_key='', job_ready_at=0, job_qty=0, crafts_total=crafts_total+1
+        SET job_key='', job_ready_at=0, job_qty=0, job_origin='', crafts_total=crafts_total+1
         WHERE steward_id=?
         """,
         (s["id"],),
