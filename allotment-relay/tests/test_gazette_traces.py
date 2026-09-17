@@ -66,6 +66,7 @@ async def _test_empty_gazette_and_titles() -> None:
     assert "潮汐周报" in report, report
     assert "不是周目标" in report, report
     assert "岸上工程" in report or "工程" in report, report
+    assert "旧码头翻修" in report or "岸木" in report or "工程" in report, report
 
     listed = await progress.progress_ops(kid, "成就")
     assert "夜灯守人" not in listed, listed

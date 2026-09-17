@@ -125,8 +125,11 @@ async def compile_week(conn, *, ts: int | None = None) -> dict[str, Any]:
         lines.append("没捞到大新闻。人还在，地还在。")
     from . import works as works_mod
     work = await works_mod.snapshot(conn)
-    if work:
-        lines.append(work["headline"])
+    headline = (work or {}).get("headline") or ""
+    if headline:
+        lines = [ln for ln in lines if ln != headline][:6] + [headline]
+    else:
+        lines = lines[:8]
     title = _pick_title(stats)
     return {
         "week": db.week_id(ts),

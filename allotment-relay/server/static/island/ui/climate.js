@@ -35,7 +35,7 @@ export function climatePanelHtml(c, { closeable = false } = {}) {
     ? `<aside class="island-gazette" aria-label="本周纪事">
         <b>本周纪事</b>
         <em>${esc(gaz.title)}</em>
-        ${lines.slice(0, 5).map((ln) => `<p>${esc(ln)}</p>`).join("")}
+        ${lines.slice(0, 7).map((ln) => `<p>${esc(ln)}</p>`).join("")}
       </aside>`
     : "";
   return `
