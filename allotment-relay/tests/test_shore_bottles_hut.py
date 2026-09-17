@@ -193,6 +193,9 @@ def test_docs_name_the_new_verbs() -> None:
     app = (ROOT / "server/static/island/app.js").read_text(encoding="utf-8")
     assert 'kind === "投瓶"' in app
     assert 'kind === "回瓶"' in app
+    assert "optional: true" in app
+    modal = (ROOT / "server/static/island/ui/modal.js").read_text(encoding="utf-8")
+    assert "field.optional" in modal
     manual = (ROOT / "server/templates/partials/island-manual-content.html").read_text(encoding="utf-8")
     assert "漂流瓶栏能看" in manual
     assert "装了浴桶能泡澡" in manual

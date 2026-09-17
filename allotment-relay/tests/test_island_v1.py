@@ -1267,7 +1267,7 @@ def test_island_page_is_modular() -> None:
     assert "warmScenesLater" in app
     assert "waitScenePics" in app
     assert html.count("island.css?v=farm-batch1") == 1
-    assert html.count("app.js?v=bottles-cozy1") == 1
+    assert html.count("app.js?v=bottles-cozy2") == 1
     assert html.count("boot.js?v=keynorm1") == 1
     assert 'rel="preload"' in html
     assert "island-map.webp" in html
@@ -1430,7 +1430,7 @@ def test_island_page_is_modular() -> None:
     assert "await waitScenePics" in app
     assert "warmScenesLater" in app
     assert "enterGen" in app
-    assert 'from "./ui/modal.js?v=farm-batch1"' in app
+    assert 'from "./ui/modal.js?v=bottles-cozy2"' in app
     modal_src = (ROOT / "server/static/island/ui/modal.js").read_text(encoding="utf-8")
     assert "export function showFormSheet" in modal_src
     assert "export function showPickSheet" in modal_src

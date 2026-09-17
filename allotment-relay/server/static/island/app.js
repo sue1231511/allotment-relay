@@ -54,7 +54,7 @@ import { setBackChip, setBagChip } from "./ui/back-map.js?v=dual-panels1";
 import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=island-modulefix2";
 import { popOut } from "./ui/pop.js?v=island-modulefix2";
 import { bgmMuted, playBgm, setBgmMuted, startIslandBgm, stopBgm } from "./ui/bgm.js?v=undertide-bgm1";
-import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showVendSheet, toast } from "./ui/modal.js?v=farm-batch1";
+import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showVendSheet, toast } from "./ui/modal.js?v=bottles-cozy2";
 
 const sceneEl = () => document.getElementById("island-scene");
 const sheetEl = () => document.getElementById("island-sheet");
@@ -2166,8 +2166,8 @@ function tapShore(kind, target, id) {
       title: row.name || "投瓶",
       body: row.detail || "写进瓶子里的话。每天最多 3 只。不是听潮亭，也不是聊天室。",
       fields: [
-        { id: "body", label: "瓶中话", placeholder: "今晚浪很大", max: 180, rows: 4, empty: "先写下要投进海里的话。" },
-        { id: "sig", label: "署名（可空）", placeholder: "默认岛民名", max: 40 },
+        { id: "body", label: "瓶中话", type: "textarea", placeholder: "今晚浪很大", max: 180, rows: 4, empty: "先写下要投进海里的话。" },
+        { id: "sig", label: "署名（可空）", placeholder: "默认岛民名", max: 40, optional: true },
       ],
       confirm: "投进海里",
       onConfirm: (vals) => {
