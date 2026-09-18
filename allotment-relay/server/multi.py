@@ -365,6 +365,7 @@ async def alliance_ops(key_id: int, command: str) -> str:
         day = _day_id()
         extra_tickets = 0
         cofarm_note: str | None = None
+        cofarm_league: str | None = None
         async with db.connect() as conn:
             cur = await conn.execute(
                 "SELECT 1 FROM assist_log WHERE helper_id=? AND target_id=? AND day=?",
@@ -403,13 +404,18 @@ async def alliance_ops(key_id: int, command: str) -> str:
             await bond_mod.grant(conn, s["id"], bond_mod.ASSIST, "give")
             from . import neighbor_cofarm as cofarm_mod
             cofarm_note = await cofarm_mod.after_assist(conn, s["id"], peer["id"])
+            cofarm_league = await cofarm_mod.league_extra_after_assist(conn, s["id"], peer["id"])
             from . import island_collections as coll_mod
             await coll_mod.sync_unlocks(conn, s["id"])
+            if cofarm_league:
+                await db.add_chronicle("league", cofarm_league, s["id"], conn=conn)
             await conn.commit()
         ticket_gain = ASSIST_TICKETS + extra_tickets
         msg = f"{s['name']} 帮 {peer['name']} 打理了 {len(rows)} 块份地，+{ticket_gain} 票"
         if cofarm_note:
             msg += f"\n{cofarm_note}"
+        if cofarm_league:
+            msg += f"\n{cofarm_league}"
         if extra_tickets:
             msg += f"（协作度≥{social_mod.RAPPORT_ASSIST_BONUS} 额外 +{extra_tickets}）"
         await db.add_chronicle("assist", msg, s["id"], peer["id"])

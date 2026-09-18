@@ -122,6 +122,8 @@ PROCESSED_ITEMS = {
     "drink_brine_sour": {"name": "卤边酸汽", "emoji": "🥤", "sell": 16},
     "drink_ginger_highball": {"name": "潮姜嗨棒", "emoji": "🥃", "sell": 24},
     "drink_fog_port": {"name": "雾港热朗姆", "emoji": "☕", "sell": 28},
+    "drink_sea_lime": {"name": "海涯青柠汽", "emoji": "🥤", "sell": 17},
+    "drink_peat_tea": {"name": "岸灶麦茶", "emoji": "🍵", "sell": 16},
 }
 
 

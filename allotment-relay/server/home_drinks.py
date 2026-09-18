@@ -7,9 +7,11 @@ from .catalog import ITEM_NAMES, resolve_item_key, unknown_item_message
 # drink_item -> (bar 酒 key, 减价票)
 BAR_BRING: dict[str, tuple[str, int]] = {
     "drink_mist_pea_tea": ("dusk_wheat", 6),
-    "drink_brine_sour": ("sea_salt_lager", 5),
+    "drink_brine_sour": ("plum_soda", 5),
     "drink_ginger_highball": ("lighthouse_gin", 8),
     "drink_fog_port": ("rum", 7),
+    "drink_sea_lime": ("yuzu_sparkle", 6),
+    "drink_peat_tea": ("dusk_wheat", 5),
 }
 
 RECIPES: dict[str, dict] = {
@@ -36,6 +38,18 @@ RECIPES: dict[str, dict] = {
         "ings": [("proc_black_salt", 1), ("crop_fogpea", 1), ("proc_syrup", 1)],
         "out": "drink_fog_port",
         "energy": 10,
+    },
+    "sea_lime": {
+        "label": "海涯青柠汽",
+        "ings": [("crop_lime", 2), ("quarry_salt", 1)],
+        "out": "drink_sea_lime",
+        "energy": 5,
+    },
+    "peat_tea": {
+        "label": "岸灶麦茶",
+        "ings": [("crop_beet", 1), ("proc_tea_leaf", 1)],
+        "out": "drink_peat_tea",
+        "energy": 6,
     },
 }
 

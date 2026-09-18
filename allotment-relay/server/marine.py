@@ -1309,7 +1309,15 @@ async def _resolve_voyage(
             msg += f"\n{disc}"
         if extra:
             msg += f"\n{extra}"
-        msg += "\n" + _hail_prompt(payload)
+        from . import bad_event_tiers as tiers_mod
+
+        route_tier = {
+            "near": tiers_mod.TIER_LIGHT,
+            "far": tiers_mod.TIER_MID,
+            "deep": tiers_mod.TIER_HEAVY,
+        }.get(voyage.get("route") or "", tiers_mod.roll_tier())
+        hail_body = _hail_prompt(payload) + tiers_mod.repair_hint("hail", tier=route_tier)
+        msg += "\n" + tiers_mod.tag(route_tier, hail_body)
         await conn.execute(
             "INSERT INTO chronicle (action, actor_id, target_id, text, created_at) VALUES (?, ?, ?, ?, ?)",
             ("voyage", s["id"], None, f"{s['name']} 归港遇黑旗截停", db.now()),
@@ -1480,7 +1488,7 @@ async def voyage_ops(key_id: int, command: str) -> str:
                 from . import boat_hull as hull_mod
                 lines.append(await hull_mod.status_line(conn, s["id"]))
         else:
-            lines.append("船: 无 — buy skiff|cutter|drifter")
+            lines.append(f"船: 无 — buy {'|'.join(BOATS.keys())}")
         if voyage:
             left = max(0, voyage["returns_at"] - db.now())
             route = VOYAGE_ROUTES[voyage["route"]]["label"]

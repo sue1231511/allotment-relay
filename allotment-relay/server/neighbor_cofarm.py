@@ -133,6 +133,29 @@ async def after_assist(conn, helper_id: int, target_id: int) -> str | None:
     return "共耕：顺手帮浇了 1 块份地。"
 
 
+async def league_extra_after_assist(conn, helper_id: int, target_id: int) -> str | None:
+    """共耕中且本周目标是 assist 时，额外 +1 周目标进度。"""
+    await ensure_table(conn)
+    day = db.day_id()
+    cur = await conn.execute(
+        """
+        SELECT 1 FROM neighbor_cofarm
+        WHERE steward_id=? AND partner_id=? AND until_day>=?
+        """,
+        (helper_id, target_id, day),
+    )
+    if not await cur.fetchone():
+        return None
+    from . import multi as multi_mod
+    row = await multi_mod._ensure_league_week(conn)
+    if row["completed"] or row["goal_key"] != "assist":
+        return None
+    bonus = await multi_mod._league_add_progress(conn, helper_id, 1)
+    if bonus:
+        return bonus
+    return "共耕加成：本周 assist 周目标 +1"
+
+
 async def dispatch(conn, steward: dict, parts: list[str]) -> str:
     await ensure_table(conn)
     if not parts:

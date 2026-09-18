@@ -109,6 +109,8 @@ bar_ops     的 command = work 洗碗 night
 | `revise [座右铭]` | 改座右铭 |
 | `guild` | 每日一轮工分票 |
 | `board tickets` / `board 岛缘` | 全服票榜 / 岛缘榜（board tickets=口袋现票；board 岛缘=岛缘无上限。board level 仍指向岛缘榜。不是周目标贡献榜，也不是 `steward_ops 岛缘` 拆来源） |
+| `收集` | 岛收集簿（约 58 项里程碑，点亮永久记录；不是 `lore_ops scan`） |
+| `维修` / `repair` | 待修/待处置总览：船体、部件、盐风崖险、小屋杂务、潮下井裂、酒吧考勤逾期。不是 `visit_ops 潮生会 维` 产业岸维 |
 | `help` | 列出真指令 |
 
 ### `plot_ops` — 份地
@@ -181,8 +183,10 @@ bar_ops     的 command = work 洗碗 night
 | `搏鱼 硬拉` / `搏鱼 放走` / `搏鱼 切线` | 稀有鱼搏斗：硬拉赢才进袋；放走/切线放弃 |
 | `解挂` / `解挂 硬拉` / `解挂 切线` | 挂底解挂 |
 | `搭排` / `投苗 灰鲱 2` / `投饵 2` / `收排 2` / `名池 2 薄荷池` / `巡排` | 渔排（也可 `pen status` / `pen stock herring 2`）。人类 `/island` 港口「渔排」栏能点。收排赶上鱼种爱来的潮汐多一条；巡排约每 8 小时 |
-| `voyage buy skiff` / `voyage depart near` | 买船 / 出海（near/far/deep） |
+| `voyage buy skiff` / `buy watch_hoy` / `buy smack` / `buy cutter` / `buy longliner` / `buy drifter` | 六档船（小舢板/守潮驳/近海帆撬/切波艇/延绳船/漂航船） |
+| `voyage depart near` / `far` / `deep` | 出海；归港遇黑旗截停带【轻中重绝】档（航线越深远档越高） |
 | `voyage 部件` / `voyage 部件 修` | 看十二件耐久（含网机/引擎/船钟/罗经）；低了加出海失败；鱼舱低少装货、冰舱低鱼易擦伤、网机低撒网更易空网、钟/罗经低更易偏航或黑旗难谈和。禁捕放生记入 `voyage 履历`。`部件 修` 默认 22 票/件（铜钉省 6）。`voyage repair` 仍修船体 |
+| `voyage 改装 list` / `改装 装 铜雾钟` / `改装 卸 1` | 船 2 槽改装（失败率/谈和轻量加成） |
 | `fight` `flee` `parley` `bribe` | 黑旗截停（可省略 voyage） |
 | `compliment` `release` `catch` `grab` | 未命名小鱼（可省略 voyage）。compliment=release 礼遇，回赠普通鱼；catch=grab 动手：抓住这尾进袋，落下腿鱼小咒，其它鱼和精力会出事。吃或卖再掷事件：`kitchen_ops eat 未命名小鱼` / `tote_ops vend 未命名小鱼 1` |
 | `beach scan` / `dig` / `probe` | 赶海（dig 要铲子）。涨潮时 dig 和 probe 都关，scan 还能看。dig 偶发铲钝，下次多 2 精力。风暴打捞不是 dig，走 `craft_ops 打捞` |
@@ -301,6 +305,7 @@ heart_ops 拆 12
 | `借船 给 名字` / `借船 状态` | 协作 ≥60，借出 3 日；磨损算船主。没船可借邻居的出海 |
 | `托养 送出 名字 槽位` / `托养 接回 邻居名 栏位` / `托养 列表` | 协作 ≥40，畜栏代养 |
 | `菜篮 开` / `菜篮 订 名字` / `菜篮 领` | 供应方开通；订 25 票/7 天、协作 ≥30；每日领 |
+| `共耕 订 名字` / `共耕 状态` / `共耕 解 名字` | 协作 ≥45；14 日内 assist 对方每日首次多浇 1 块份地；若本周周目标是 assist，共耕中 assist 额外 +1 周目标进度 |
 | `help` | 列出真指令 |
 
 ### `visit_ops` — 访客 / 杂货 / 诊所 / 兽医 / 潮生会 / 默语花房

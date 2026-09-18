@@ -48,6 +48,23 @@ ENTRIES: list[tuple[str, str, str | None, str | None]] = [
     ("cutter_boat", "切波艇", None, "boat_cutter"),
     ("drifter_boat", "漂航船", None, "boat_drifter"),
     ("orchard", "首棵成树", None, "orchard"),
+    ("hail_black", "黑旗照面", None, "hail_chronicle"),
+    ("parley_ok", "海上谈成", None, "parley_win"),
+    ("league_week", "周目标出力", None, "league_contrib"),
+    ("hearth_brew", "灶台点亮", None, "hearth_disc"),
+    ("marriage", "潮誓成婚", None, "married"),
+    ("wall_post", "听潮亭钉牌", None, "wall_post"),
+    ("star_tip", "小橘打赏", None, "star_tip"),
+    ("fish_kingcrab", "石蟹王", "fish_kingcrab", None),
+    ("quarry_marrow", "髓矿", "quarry_marrow", None),
+    ("drink_sea_lime", "海涯青柠汽", "drink_sea_lime", None),
+    ("watch_hoy", "守潮驳", None, "boat_watch"),
+    ("longliner", "延绳船", None, "boat_longliner"),
+    ("shed_plot", "温室首收", None, "greenhouse_harvest"),
+    ("bar_order", "酒吧点单", None, "bar_order"),
+    ("contract_fill", "完成悬赏", None, "contract_fill"),
+    ("undertide_pit", "深坑一战", None, "pit_fight"),
+    ("layer_link", "层间信使", None, "layer_msg"),
 ]
 
 
@@ -184,6 +201,91 @@ async def _milestone(conn, steward_id: int, key: str | None) -> bool:
     if key == "orchard":
         cur = await conn.execute(
             "SELECT 1 FROM parcels WHERE steward_id=? AND orchard=1 AND crop IS NOT NULL LIMIT 1",
+            (steward_id,),
+        )
+        return (await cur.fetchone()) is not None
+    if key == "hail_chronicle":
+        cur = await conn.execute(
+            "SELECT 1 FROM chronicle WHERE actor_id=? AND text LIKE '%黑旗%' LIMIT 1",
+            (steward_id,),
+        )
+        return (await cur.fetchone()) is not None
+    if key == "parley_win":
+        cur = await conn.execute(
+            "SELECT 1 FROM chronicle WHERE actor_id=? AND text LIKE '%黑旗：parley%' LIMIT 1",
+            (steward_id,),
+        )
+        return (await cur.fetchone()) is not None
+    if key == "league_contrib":
+        cur = await conn.execute(
+            "SELECT 1 FROM league_contrib WHERE steward_id=? LIMIT 1",
+            (steward_id,),
+        )
+        return (await cur.fetchone()) is not None
+    if key == "hearth_disc":
+        cur = await conn.execute(
+            "SELECT 1 FROM hearth_discoveries WHERE discoverer_id=? LIMIT 1",
+            (steward_id,),
+        )
+        return (await cur.fetchone()) is not None
+    if key == "married":
+        cur = await conn.execute(
+            "SELECT 1 FROM marriages WHERE steward_id=? AND status='married' LIMIT 1",
+            (steward_id,),
+        )
+        return (await cur.fetchone()) is not None
+    if key == "wall_post":
+        cur = await conn.execute(
+            "SELECT 1 FROM wall_threads WHERE steward_id=? AND deleted=0 LIMIT 1",
+            (steward_id,),
+        )
+        return (await cur.fetchone()) is not None
+    if key == "star_tip":
+        cur = await conn.execute(
+            "SELECT 1 FROM star_tips WHERE steward_id=? LIMIT 1",
+            (steward_id,),
+        )
+        return (await cur.fetchone()) is not None
+    if key == "boat_watch":
+        cur = await conn.execute("SELECT boat_key FROM stewards WHERE id=?", (steward_id,))
+        row = await cur.fetchone()
+        bk = row[0] if row else ""
+        return bk in ("watch_hoy", "cutter", "smack", "drifter", "longliner")
+    if key == "boat_longliner":
+        cur = await conn.execute("SELECT boat_key FROM stewards WHERE id=?", (steward_id,))
+        row = await cur.fetchone()
+        return row and row[0] in ("longliner", "drifter")
+    if key == "greenhouse_harvest":
+        cur = await conn.execute(
+            """
+            SELECT 1 FROM parcels
+            WHERE steward_id=? AND greenhouse=1 AND harvest_left=0 AND crop IS NOT NULL
+            LIMIT 1
+            """,
+            (steward_id,),
+        )
+        return (await cur.fetchone()) is not None
+    if key == "bar_order":
+        cur = await conn.execute(
+            "SELECT 1 FROM bar_drink_orders WHERE patron_id=? LIMIT 1",
+            (steward_id,),
+        )
+        return (await cur.fetchone()) is not None
+    if key == "contract_fill":
+        cur = await conn.execute(
+            "SELECT 1 FROM contracts WHERE filler_id=? AND status='filled' LIMIT 1",
+            (steward_id,),
+        )
+        return (await cur.fetchone()) is not None
+    if key == "pit_fight":
+        cur = await conn.execute(
+            "SELECT 1 FROM chronicle WHERE actor_id=? AND text LIKE '%深坑%' LIMIT 1",
+            (steward_id,),
+        )
+        return (await cur.fetchone()) is not None
+    if key == "layer_msg":
+        cur = await conn.execute(
+            "SELECT 1 FROM chronicle WHERE actor_id=? AND text LIKE '%潮返地面%' LIMIT 1",
             (steward_id,),
         )
         return (await cur.fetchone()) is not None

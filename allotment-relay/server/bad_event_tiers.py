@@ -45,6 +45,7 @@ REPAIR_HINTS: dict[str, str] = {
     "hut": "→ hut_ops 杂务 · hut_ops 家维 交 · visit_ops clinic 调理",
     "undertide": "→ undertide_ops medic · visit_ops clinic treat 斗场震伤",
     "beach": "→ 再动一次同动作消 debuff · visit_ops clinic 调理 小",
+    "hail": "→ tide_ops fight|flee|parley|bribe · steward_ops 维修 看总览",
 }
 
 

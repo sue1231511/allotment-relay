@@ -145,8 +145,11 @@ GREENHOUSE_CLEAR_SECONDS = [greenhouse_clear_seconds(i) for i in range(5)]
 
 BOATS = {
     "skiff": {"name": "小舢板", "cost": 85, "rank": 1, "repair": 12, "cargo": 2},
+    "watch_hoy": {"name": "守潮驳", "cost": 95, "rank": 1, "repair": 14, "cargo": 3},
     "cutter": {"name": "切波艇", "cost": 220, "rank": 2, "repair": 28, "cargo": 4},
+    "smack": {"name": "近海帆撬", "cost": 195, "rank": 2, "repair": 26, "cargo": 5},
     "drifter": {"name": "漂航船", "cost": 420, "rank": 3, "repair": 45, "cargo": 6},
+    "longliner": {"name": "延绳船", "cost": 460, "rank": 3, "repair": 48, "cargo": 7},
 }
 
 VOYAGE_ROUTES = {
