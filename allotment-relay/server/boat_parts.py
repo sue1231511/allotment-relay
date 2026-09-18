@@ -1,11 +1,11 @@
-"""船只部件 — 十件（§59 第二批 #19，目标 8～12 类）。"""
+"""船只部件 — 十一件（§59 第二批 #19，目标 8～12 类）。"""
 from __future__ import annotations
 
 from . import db
 
 PARTS = (
     "sail", "rudder", "lantern", "anchor", "hawser", "bilge",
-    "hold", "ice", "net_winch", "engine",
+    "hold", "ice", "net_winch", "engine", "bell",
 )
 DEFAULT = 100
 
@@ -20,6 +20,7 @@ PART_LABELS: dict[str, str] = {
     "ice": "冰",
     "net_winch": "网",
     "engine": "机",
+    "bell": "钟",
 }
 
 
@@ -87,6 +88,10 @@ def _loss_for_part(key: str, route: str, *, storm: bool) -> int:
         extra += 2 if route == "deep" else 1
     if key == "net_winch" and route == "near":
         extra += 1
+    if key == "bell" and storm:
+        extra += 2
+    elif key == "bell" and route in ("far", "deep"):
+        extra += 1
     return base + extra
 
 
@@ -145,6 +150,13 @@ def fail_bonus(parts: dict[str, tuple[int, int]]) -> float:
         extra += 0.05
     elif engine < 0.55:
         extra += 0.02
+    bell = _ratio(parts, "bell")
+    if bell < 0.35:
+        extra += 0.04
+    elif bell < 0.55:
+        extra += 0.02
+    elif bell >= 0.85:
+        extra -= 0.03
     return extra
 
 
@@ -245,7 +257,7 @@ async def status_line(conn, steward_id: int) -> str:
 
 
 def compact_note(parts: dict[str, tuple[int, int]]) -> str:
-    """岛端一行简写：帆/舵/灯/锚/缆/泵/舱/冰/网/机。"""
+    """岛端一行简写：帆/舵/灯/锚/缆/泵/舱/冰/网/机/钟。"""
     return "".join(
         f"{PART_LABELS[k]}{parts[k][0]}/{parts[k][1]}"
         for k in PARTS

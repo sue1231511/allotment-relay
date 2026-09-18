@@ -166,7 +166,7 @@ TIDE_HELP = """tide_ops 子命令（整句写进 command）：
     收排时赶上这种鱼爱来的潮汐会多一条。巡排每 8 小时、2 精力，可能捡到堆肥或饵
     人类 /island 港口看码头，渔排栏能搭、投苗、投饵、收、巡。不要发明 pen_ops / fish_ops
   voyage buy|depart|return|fight|flee|parley|bribe — 出海 / 黑旗（fight/flee 可省略 voyage）。欠岸税或岸维时不能买船
-  voyage 部件 / 部件 修 — 十件（含网机/引擎）。舱低少装货、冰低鱼易擦伤、网机低 tide_ops net 更易空网。部件 修 默认 22 票/件（铜钉省 6）。voyage repair 仍修船体。协作≥40 谈和成功率 +10%
+  voyage 部件 / 部件 修 — 十一件（含网机/引擎/船钟）。舱低少装货、冰低鱼易擦伤、网机低 tide_ops net 更易空网、钟低出海更易偏航。部件 修 默认 22 票/件（铜钉省 6）。voyage repair 仍修船体。协作≥40 谈和成功率 +10%
   compliment|release|catch|grab — 未命名小鱼（可省略 voyage）。compliment=release 礼遇回赠普通鱼；
     catch=grab 动手：抓住这尾进袋，落下腿鱼小咒，其它鱼和精力会出事
     吃或卖再掷事件：kitchen_ops eat 未命名小鱼 · tote_ops vend 未命名小鱼 1
