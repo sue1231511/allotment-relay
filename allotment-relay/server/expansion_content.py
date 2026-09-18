@@ -178,6 +178,16 @@ EXTRA_HEARTH_RECIPES = {
     _sig("fish_grouper", "crop_tomato"): {"name": "番茄石斑", "sell": 72, "tags": ["sea"]},
     _sig("crop_chili", "proc_vinegar"): {"name": "醋泡辣椒", "sell": 34, "tags": ["seasoning"]},
     _sig("proc_tofu", "crop_chili"): {"name": "麻辣豆腐", "sell": 39, "tags": ["legume"]},
+    _sig("crop_kale", "fish_herring"): {"name": "鲱鱼甘蓝锅", "sell": 44, "tags": ["sea", "leaf"]},
+    _sig("proc_black_salt", "fish_mackerel"): {"name": "黑盐鲭段", "sell": 56, "tags": ["sea", "special"]},
+    _sig("crop_fogpea", "proc_rice_wine"): {"name": "雾豆酒酿", "sell": 41, "tags": ["special", "drink"]},
+    _sig("quarry_salt", "crop_beet"): {"name": "盐渍甜菜", "sell": 36, "tags": ["root"]},
+    _sig("fish_sardine", "crop_kale"): {"name": "沙丁甘蓝卷", "sell": 43, "tags": ["sea"]},
+    _sig("crop_tide_ginger", "fish_seatrout"): {"name": "潮姜鳟片", "sell": 52, "tags": ["sea"]},
+    _sig("compost", "crop_kale"): {"name": "堆肥润甘蓝", "sell": 32, "tags": ["leaf"]},
+    _sig("pickles", "proc_bread"): {"name": "腌菜三明治", "sell": 38, "tags": ["snack"]},
+    _sig("fish_lanternfish", "proc_black_salt"): {"name": "黑盐灯鱼", "sell": 74, "tags": ["sea", "special"]},
+    _sig("crop_lime", "fish_glassshrimp"): {"name": "青柠玻璃虾", "sell": 48, "tags": ["sea"]},
 }
 
 

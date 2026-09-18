@@ -11,7 +11,7 @@ SYSTEM_LABEL: dict[str, str] = {
     "undertide": "潮下井裂",
     "voyage": "出海",
     "beach": "赶海",
-    "plot": "份地",
+    "plot": "份地/打理",
 }
 
 

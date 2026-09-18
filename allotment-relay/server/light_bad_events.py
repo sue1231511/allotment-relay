@@ -6,6 +6,15 @@ import random
 from . import bad_event_tiers as tiers_mod
 from . import db
 
+DEBUFF_SYSTEM: dict[str, str] = {
+    "stove_stubborn": "plot",
+    "humid_soft": "plot",
+    "line_tangle": "plot",
+    "net_weed": "beach",
+    "shovel_dull": "beach",
+    "probe_sand": "beach",
+}
+
 
 async def ensure_flags_table(conn) -> None:
     await conn.execute(
@@ -24,6 +33,20 @@ async def set_flag(conn, steward_id: int, flag_key: str) -> None:
     await conn.execute(
         "INSERT OR REPLACE INTO steward_moment_flags (steward_id, flag_key) VALUES (?, ?)",
         (steward_id, flag_key),
+    )
+
+
+async def set_debuff(
+    conn,
+    steward_id: int,
+    flag_key: str,
+    tier: str,
+    summary: str,
+) -> None:
+    await set_flag(conn, steward_id, flag_key)
+    system = DEBUFF_SYSTEM.get(flag_key, "plot")
+    await tiers_mod.record_open(
+        conn, steward_id, system, tier, summary, ref_key=flag_key,
     )
 
 
@@ -48,6 +71,10 @@ async def take_flag(conn, steward_id: int, flag_key: str) -> bool:
         "DELETE FROM steward_moment_flags WHERE steward_id=? AND flag_key=?",
         (steward_id, flag_key),
     )
+    if flag_key in DEBUFF_SYSTEM:
+        await tiers_mod.record_resolved(
+            conn, steward_id, DEBUFF_SYSTEM[flag_key], ref_key=flag_key,
+        )
     return True
 
 
@@ -70,22 +97,19 @@ async def roll_tend_glitch(conn, steward_id: int, plot: dict) -> str | None:
                 "斑鸠啄了一口，这茬收成少了一把（还能收，不是枯病）。",
             )
     if roll < 0.65:
-        await set_flag(conn, steward_id, "stove_stubborn")
-        return tiers_mod.tag(
-            tiers_mod.roll_tier(weights=(0.35, 0.40, 0.20, 0.05)),
-            "灶台不好点火：下次做饭多耗 1 精力（已记下，做一次饭就消）。",
-        )
+        tier = tiers_mod.roll_tier(weights=(0.35, 0.40, 0.20, 0.05))
+        msg = "灶台不好点火：下次做饭多耗 1 精力（已记下，做一次饭就消）。"
+        await set_debuff(conn, steward_id, "stove_stubborn", tier, msg)
+        return tiers_mod.tag(tier, msg)
     if roll < 0.85:
-        await set_flag(conn, steward_id, "humid_soft")
-        return tiers_mod.tag(
-            tiers_mod.roll_tier(weights=(0.30, 0.45, 0.20, 0.05)),
-            "潮气进棚，软装有发潮味：下次睡觉少回 3 精力（已记下，睡一次就消）。",
-        )
-    await set_flag(conn, steward_id, "line_tangle")
-    return tiers_mod.tag(
-        tiers_mod.TIER_LIGHT,
-        "鱼线打结了：下次坐钓空杆率 +12%（已记下，坐钓一次就消）。",
-    )
+        tier = tiers_mod.roll_tier(weights=(0.30, 0.45, 0.20, 0.05))
+        msg = "潮气进棚，软装有发潮味：下次睡觉少回 3 精力（已记下，睡一次就消）。"
+        await set_debuff(conn, steward_id, "humid_soft", tier, msg)
+        return tiers_mod.tag(tier, msg)
+    tier = tiers_mod.TIER_LIGHT
+    msg = "鱼线打结了：下次坐钓空杆率 +12%（已记下，坐钓一次就消）。"
+    await set_debuff(conn, steward_id, "line_tangle", tier, msg)
+    return tiers_mod.tag(tier, msg)
 
 
 async def apply_stove_penalty(conn, steward_id: int) -> int:
@@ -113,12 +137,13 @@ async def roll_net_snag(conn, steward_id: int) -> str | None:
     """撒网后小概率挂水草，影响下次空网率。"""
     if random.random() > 0.07:
         return None
-    await set_flag(conn, steward_id, "net_weed")
-    return tiers_mod.tag(
-        tiers_mod.roll_tier(weights=(0.45, 0.35, 0.15, 0.05)),
+    tier = tiers_mod.roll_tier(weights=(0.45, 0.35, 0.15, 0.05))
+    msg = (
         "渔网挂水草：下次撒网空网率 +10%（已记下，撒一次就消）。"
-        + tiers_mod.repair_hint("beach"),
+        + tiers_mod.repair_hint("beach")
     )
+    await set_debuff(conn, steward_id, "net_weed", tier, msg)
+    return tiers_mod.tag(tier, msg)
 
 
 async def sleep_energy_penalty(conn, steward_id: int) -> int:
@@ -142,21 +167,23 @@ async def probe_energy_penalty(conn, steward_id: int) -> int:
 async def roll_probe_sand_glitch(conn, steward_id: int) -> str | None:
     if random.random() > 0.08:
         return None
-    await set_flag(conn, steward_id, "probe_sand")
-    return tiers_mod.tag(
-        tiers_mod.TIER_MID,
+    tier = tiers_mod.TIER_MID
+    msg = (
         "沙坍回填：下次掏洞多耗 2 精力（已记下，掏一次就消）。"
-        + tiers_mod.repair_hint("beach"),
+        + tiers_mod.repair_hint("beach")
     )
+    await set_debuff(conn, steward_id, "probe_sand", tier, msg)
+    return tiers_mod.tag(tier, msg)
 
 
 async def roll_beach_dig_glitch(conn, steward_id: int) -> str | None:
     """翻沙后小概率铲刃发钝，下次多耗精力。"""
     if random.random() > 0.09:
         return None
-    await set_flag(conn, steward_id, "shovel_dull")
-    return tiers_mod.tag(
-        tiers_mod.roll_tier(),
+    tier = tiers_mod.roll_tier()
+    msg = (
         "铲刃磕在礁上发钝：下次赶海翻沙多耗 2 精力（已记下，翻一次就消）。"
-        + tiers_mod.repair_hint("beach"),
+        + tiers_mod.repair_hint("beach")
     )
+    await set_debuff(conn, steward_id, "shovel_dull", tier, msg)
+    return tiers_mod.tag(tier, msg)

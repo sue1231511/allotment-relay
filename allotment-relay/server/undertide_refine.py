@@ -29,6 +29,14 @@ RECIPES: dict[str, dict] = {
         "energy": 9,
         "hint": "井底卤晶 + 岸工坊铜钉 → 多两枚铜钉（崖↔潮下↔工坊闭环）",
     },
+    "tide_black_salt": {
+        "label": "潮重黑盐",
+        "emoji": "🧂",
+        "ings": [("ut_black_salt", 1), ("quarry_tide_stone", 1), ("quarry_salt", 1)],
+        "out": ("proc_black_salt", 2),
+        "energy": 11,
+        "hint": "潮下黑盐 + 崖上潮石 + 盐晶 → 双倍岸上黑盐（厨房特殊菜）",
+    },
 }
 
 

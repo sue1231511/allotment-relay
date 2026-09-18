@@ -227,6 +227,12 @@ async def _check_collection_master(conn: aiosqlite.Connection, s: dict[str, Any]
     return await _collection_unlock_count(conn, s["id"]) >= 55
 
 
+async def _check_collection_legend(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
+    from . import island_collections as coll_mod
+
+    return await _collection_unlock_count(conn, s["id"]) >= len(coll_mod.ENTRIES)
+
+
 async def _check_crafter(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
     return await _exists(
         conn,
@@ -639,6 +645,12 @@ ACHIEVEMENTS: dict[str, dict[str, Any]] = {
         "hint": "岛收集簿点亮 55 项",
         "aliases": ("岛藏师", "簿中通"),
         "check": _check_collection_master,
+    },
+    "collection_legend": {
+        "name": "岛藏全典",
+        "hint": "岛收集簿全部点亮",
+        "aliases": ("全典人", "簿满档"),
+        "check": _check_collection_legend,
     },
     "navigator": {
         "name": "引航人",
