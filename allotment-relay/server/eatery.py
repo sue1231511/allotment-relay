@@ -465,6 +465,16 @@ async def _dine_combo(
         from . import bond as bond_mod
         await bond_mod.grant(conn, guest["id"], bond_mod.DINE_GUEST, "life")
         await bond_mod.grant(conn, shop["id"], bond_mod.DINE_HOST, "life")
+        await db.add_chronicle(
+            "eatery",
+            f"{guest['name']} 在 {shop['name']} 的馆吃套餐 {spec['name']}",
+            guest["id"],
+            shop["id"],
+            conn=conn,
+        )
+        from . import island_collections as coll_mod
+        await coll_mod.sync_unlocks(conn, guest["id"])
+        await coll_mod.sync_unlocks(conn, shop["id"])
         await conn.commit()
     label = shop.get("eatery_label") or f"{shop['name']}的馆"
     msg = (
@@ -481,12 +491,6 @@ async def _dine_combo(
     )
     if cured_line:
         msg += f"\n{cured_line}"
-    await db.add_chronicle(
-        "eatery",
-        f"{guest['name']} 在 {shop['name']} 的馆吃套餐 {spec['name']}",
-        guest["id"],
-        shop["id"],
-    )
     return msg
 
 
@@ -587,6 +591,9 @@ async def _dine(guest: dict[str, Any], shop_name: str, item_ref: str | None) -> 
         from . import bond as bond_mod
         await bond_mod.grant(conn, guest["id"], bond_mod.DINE_GUEST, "life")
         await bond_mod.grant(conn, shop["id"], bond_mod.DINE_HOST, "life")
+        from . import island_collections as coll_mod
+        await coll_mod.sync_unlocks(conn, guest["id"])
+        await coll_mod.sync_unlocks(conn, shop["id"])
         await conn.commit()
     dish = item_label(picked["item"])
     label = shop.get("eatery_label") or f"{shop['name']}的馆"

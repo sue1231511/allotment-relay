@@ -29,6 +29,10 @@ ENTRIES: list[tuple[str, str, str | None, str | None]] = [
     ("hut4", "临海邸梦", None, "hut4"),
     ("greenhouse", "温室起架", None, "greenhouse"),
     ("eatery", "开过小馆", None, "eatery"),
+    ("eatery_combo_dine", "套餐堂食", None, "eatery_combo_dine"),
+    ("eatery_set_served", "齐柜出餐", None, "eatery_set_served"),
+    ("tide_ginger_crab", "潮姜蟹盏", "meal:tide_ginger_crab", None),
+    ("brine_clam_pot", "卤蟹锅香", "meal:brine_clam_pot", None),
     ("black_salt_fish", "黑盐炖鱼成", "meal:black_salt_fish", None),
     ("fog_mushroom_soup", "雾菇汤香", "meal:fog_mushroom_soup", None),
     ("lantern_sashimi", "灯笼鱼刺身", "meal:lantern_sashimi", None),
@@ -136,6 +140,24 @@ async def _milestone(conn, steward_id: int, key: str | None) -> bool:
             "SELECT eatery_open FROM stewards WHERE id=?", (steward_id,)
         )
         return bool(int((await cur.fetchone())[0] or 0))
+    if key == "eatery_combo_dine":
+        cur = await conn.execute(
+            """
+            SELECT 1 FROM chronicle
+            WHERE actor_id=? AND action='eatery' AND text LIKE '%吃套餐%' LIMIT 1
+            """,
+            (steward_id,),
+        )
+        return (await cur.fetchone()) is not None
+    if key == "eatery_set_served":
+        cur = await conn.execute(
+            """
+            SELECT 1 FROM chronicle
+            WHERE target_id=? AND action='eatery' AND text LIKE '%吃套餐%' LIMIT 1
+            """,
+            (steward_id,),
+        )
+        return (await cur.fetchone()) is not None
     if key == "undertide":
         cur = await conn.execute(
             "SELECT access FROM steward_undertide WHERE steward_id=?",

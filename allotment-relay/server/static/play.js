@@ -1569,18 +1569,44 @@ function currentEateryShop() {
   return (state.eaterySnap.shops || []).find((s) => s.name === name) || state.eaterySnap.shops[0];
 }
 
+function eateryUrlPrefs() {
+  const p = new URLSearchParams(location.search);
+  return {
+    shop: (p.get('shop') || p.get('host') || '').trim(),
+    item: (p.get('combo') || p.get('item') || '').trim(),
+  };
+}
+
+function applyEateryUrlPrefs() {
+  const prefs = eateryUrlPrefs();
+  if (!prefs.shop && !prefs.item) return;
+  const shopSel = $('play-eatery-shop');
+  if (prefs.shop && [...shopSel.options].some((o) => o.value === prefs.shop)) {
+    shopSel.value = prefs.shop;
+  }
+  fillEateryMenu(currentEateryShop());
+  const itemSel = $('play-eatery-item');
+  if (!prefs.item) return;
+  const opt = [...itemSel.options].find(
+    (o) => o.value === prefs.item || o.textContent.includes(prefs.item),
+  );
+  if (opt) itemSel.value = opt.value;
+}
+
 function fillEateryMenu(shop) {
   const itemSel = $('play-eatery-item');
   const prev = itemSel.value;
-  if (!shop || !shop.menu.length) {
+  const menu = shop?.menu || [];
+  const combos = shop?.combos || [];
+  if (!shop || (!menu.length && !combos.length)) {
     itemSel.innerHTML = '<option value="">店内推荐</option>';
     return;
   }
-  const comboOpts = (shop.combos || []).map((c) => {
+  const comboOpts = combos.map((c) => {
     const pct = c.discount_pct || 88;
     return `<option value="${esc(c.name)}">🍱 套餐·${esc(c.name)} — ${c.price} 票（${pct}%）</option>`;
   }).join('');
-  itemSel.innerHTML = '<option value="">店内推荐</option>' + shop.menu.map((m) =>
+  itemSel.innerHTML = '<option value="">店内推荐</option>' + menu.map((m) =>
     `<option value="${esc(m.item)}">${esc(m.name)} — ${m.price} 票</option>`
   ).join('') + comboOpts;
   if ([...itemSel.options].some((o) => o.value === prev)) itemSel.value = prev;
@@ -1598,6 +1624,7 @@ async function loadEateryPatron() {
     : '<option value="">暂无开张小馆</option>';
   if ([...shopSel.options].some((o) => o.value === prevShop)) shopSel.value = prevShop;
   fillEateryMenu(currentEateryShop());
+  applyEateryUrlPrefs();
 }
 
 $('play-key-form').addEventListener('submit', async (e) => {

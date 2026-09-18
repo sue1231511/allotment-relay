@@ -173,6 +173,18 @@ async def _check_eatery_set_chef(conn: aiosqlite.Connection, s: dict[str, Any]) 
     )
 
 
+async def _check_eatery_set_chef3(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
+    cur = await conn.execute(
+        """
+        SELECT COUNT(*) FROM chronicle
+        WHERE target_id=? AND action='eatery' AND text LIKE '%吃套餐%'
+        """,
+        (s["id"],),
+    )
+    row = await cur.fetchone()
+    return bool(row and int(row[0] or 0) >= 3)
+
+
 async def _check_giver(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
     return await _exists(
         conn,
@@ -553,6 +565,12 @@ ACHIEVEMENTS: dict[str, dict[str, Any]] = {
         "hint": "你的馆卖出过一次齐柜套餐堂食",
         "aliases": ("套餐掌厨", "齐柜套餐"),
         "check": _check_eatery_set_chef,
+    },
+    "eatery_set_chef3": {
+        "name": "套餐名厨",
+        "hint": "你的馆累计卖出 3 次套餐堂食",
+        "aliases": ("三连齐柜", "套餐掌勺"),
+        "check": _check_eatery_set_chef3,
     },
     "giver": {
         "name": "散手",

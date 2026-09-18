@@ -1037,6 +1037,17 @@
   font-weight: 500;
 }
 
+.dish-order-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: rgba(44, 62, 64, 0.35);
+  text-underline-offset: 3px;
+}
+
+.dish-order-link:hover {
+  color: #1a4a52;
+}
+
 .dish .price {
   font-size: 12px;
   color: #6c7b7d;

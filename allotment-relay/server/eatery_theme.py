@@ -137,6 +137,18 @@ SET_MENUS: tuple[dict, ...] = (
         "keys": frozenset({"lantern_sashimi", "brine_clam_pot"}),
         "hint": "刺身+卤蟹锅，夜场气质。",
     },
+    {
+        "name": "海藻蛋花席",
+        "slug": "kelp_egg_home",
+        "keys": frozenset({"kelp_egg_soup", "fogpea_tofu"}),
+        "hint": "岸灶汤品双拼，暖胃。",
+    },
+    {
+        "name": "崖席三味",
+        "slug": "cliff_trio",
+        "keys": frozenset({"chop_head", "black_salt_fish", "brine_kelp_pot"}),
+        "hint": "三道硬菜齐柜，招牌级。",
+    },
 )
 
 

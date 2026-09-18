@@ -10,6 +10,13 @@ function clock(epoch) {
   return islandFmtClock(epoch);
 }
 
+function playEateryHref(hostName, { comboName, itemRef } = {}) {
+  const q = new URLSearchParams({ go: 'eatery', shop: hostName });
+  if (comboName) q.set('combo', comboName);
+  else if (itemRef) q.set('item', itemRef);
+  return `/play?${q.toString()}`;
+}
+
 function splitMenuColumns(shops) {
   const dishes = [];
   for (const shop of shops) {
@@ -17,18 +24,24 @@ function splitMenuColumns(shops) {
     for (const m of shop.menu || []) {
       dishes.push({
         shop: shop.label,
+        host: shop.name,
         name: m.name,
         price: m.price,
         combo: false,
+        itemRef: m.item,
+        href: playEateryHref(shop.name, { itemRef: m.item }),
       });
     }
     for (const c of shop.combos || []) {
       const dishNames = (c.dishes || []).map((d) => d.name).join(' + ');
       dishes.push({
         shop: shop.label,
+        host: shop.name,
         name: `🍱 套餐·${c.name}${dishNames ? `（${dishNames}）` : ''}`,
         price: c.price,
         combo: true,
+        comboName: c.name,
+        href: playEateryHref(shop.name, { comboName: c.name }),
       });
     }
   }
@@ -81,7 +94,7 @@ async function loadEatery() {
         ${rows.map(d => `
           <div class="dish">
             <div class="dish-top">
-              <strong>${esc(d.shop)} · ${esc(d.name)}</strong>
+              <strong>${esc(d.shop)} · <a class="dish-order-link" href="${esc(d.href)}">${esc(d.name)}</a></strong>
               <span class="price">${esc(d.price)} 票</span>
             </div>
           </div>
