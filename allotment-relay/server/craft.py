@@ -34,6 +34,7 @@ CRAFT_HELP = """craft_ops 子命令（整句写进 command）：
   开池 / 开池 确认 — 加盐田（最多 3 口，40/68/96 票）
   打捞 — 阵风中、阵风后晴天、周潮或船损才能下滩。不是 dig。夜光滤网减空捞
   捞险 割绳|弃货|硬拽 — 打捞后小概率缆绳缠脚：割绳（漂绳×1 或 8 票）/ 弃货（刚捞的各减 1）/ 硬拽（12 精力更险）
+  淬火 泼水|戴胚|硬取 — 金属件好了小概率烫手：泼水（盐×1 或 6 票）/ 戴胚（羊毛×1 或 8 票）/ 硬取（10 精力可能烫伤）。未处置不能 取
   陈列 / 捐 亮壳一套 — 看套 / 捐货换称呼或装饰。也可 捐 砧上全套
   help — 本表
 
@@ -122,7 +123,8 @@ async def ensure_profile(conn: aiosqlite.Connection, steward_id: int) -> dict[st
                salvages_total, crafts_total, net_patch_until,
                COALESCE(net_patch_empty, 0) AS net_patch_empty,
                COALESCE(job_origin, '') AS job_origin,
-               salvage_hazard, salvage_hazard_json
+               salvage_hazard, salvage_hazard_json,
+               anvil_hazard, anvil_hazard_json
         FROM steward_craft WHERE steward_id=?
         """,
         (steward_id,),
@@ -154,6 +156,8 @@ async def ensure_profile(conn: aiosqlite.Connection, steward_id: int) -> dict[st
             "job_origin": "",
             "salvage_hazard": "",
             "salvage_hazard_json": "",
+            "anvil_hazard": "",
+            "anvil_hazard_json": "",
         }
     count = int(row["pan_count"] or 1)
     have = await (await conn.execute(
@@ -177,6 +181,8 @@ async def ensure_profile(conn: aiosqlite.Connection, steward_id: int) -> dict[st
         "job_origin": str(row["job_origin"] or ""),
         "salvage_hazard": str(row["salvage_hazard"] or ""),
         "salvage_hazard_json": str(row["salvage_hazard_json"] or ""),
+        "anvil_hazard": str(row["anvil_hazard"] or "") if "anvil_hazard" in row.keys() else "",
+        "anvil_hazard_json": str(row["anvil_hazard_json"] or "") if "anvil_hazard_json" in row.keys() else "",
     }
 
 
@@ -381,10 +387,21 @@ async def _start_job(conn: aiosqlite.Connection, s: dict[str, Any], token: str) 
 
 
 async def _take_job(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
+    from . import workshop_anvil_quench as quench_mod
+
     prof = await ensure_profile(conn, s["id"])
     if not prof["job_key"]:
         raise ValueError("砧上是空的。craft_ops 打 铜钉")
     now = db.now()
+    if prof["job_ready_at"] <= now:
+        await quench_mod.maybe_when_ready(
+            conn,
+            s["id"],
+            job_key=prof["job_key"],
+            ready_at=int(prof["job_ready_at"] or 0),
+            now=now,
+        )
+    await quench_mod.assert_not_blocked(conn, s["id"])
     if prof["job_ready_at"] > now:
         meta = CRAFT_RECIPES.get(prof["job_key"], {})
         raise ValueError(
@@ -819,6 +836,12 @@ async def craft_ops(key_id: int, command: str = "") -> str:
             text = await snag_mod.resolve(conn, s, rest)
             await conn.commit()
             return text
+        if verb in ("淬火", "quench", "anvil", "烫"):
+            from . import workshop_anvil_quench as quench_mod
+
+            text = await quench_mod.resolve(conn, s, rest)
+            await conn.commit()
+            return text
         if verb in ("陈列", "exhibit", "柜"):
             text = await _exhibit_status(conn, s)
             await conn.commit()
@@ -842,20 +865,45 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
     stock = await db.get_satchel(s["id"])
     energy_now = int(s.get("energy") or 0)
     tickets = int(s.get("tickets") or 0)
+    from . import workshop_anvil_quench as quench_mod
+
     busy = bool(prof["job_key"])
     job = None
     if prof["job_key"]:
         meta = CRAFT_RECIPES.get(prof["job_key"], {})
         remain = max(0, int(prof["job_ready_at"] or 0) - now)
+        if remain <= 0:
+            await quench_mod.maybe_when_ready(
+                conn,
+                s["id"],
+                job_key=prof["job_key"],
+                ready_at=int(prof["job_ready_at"] or 0),
+                now=now,
+            )
+            prof = await ensure_profile(conn, s["id"])
+        quench = prof.get("anvil_hazard") == quench_mod.HAZARD_QUENCH
+        quench_actions = (
+            quench_mod.ui_actions(tickets=tickets, stock=stock, energy_now=energy_now)
+            if quench else []
+        )
+        can_take = remain <= 0 and not quench
+        if quench:
+            job_note = "件还烫手！先泼水、戴胚或硬取。"
+        elif remain <= 0:
+            job_note = "好了，可以取"
+        else:
+            job_note = f"还要 {_fmt_left(remain)}"
         job = {
             "id": prof["job_key"],
             "name": meta.get("name", prof["job_key"]),
             "emoji": meta.get("emoji", "🔨"),
             "remain_sec": remain,
             "ready": remain <= 0,
-            "can_take": remain <= 0,
-            "note": "好了，可以取" if remain <= 0 else f"还要 {_fmt_left(remain)}",
-            "detail": "好了，可以取下来。" if remain <= 0 else f"还要 {_fmt_left(remain)}。砧上一次一件，好了再取。",
+            "can_take": can_take,
+            "hazard": prof.get("anvil_hazard") or "",
+            "quench_actions": quench_actions,
+            "note": job_note,
+            "detail": job_note + (" 砧上一次一件。" if remain <= 0 else " 砧上一次一件，好了再取。"),
         }
     recipes = []
     for key, meta in CRAFT_RECIPES.items():
@@ -1034,7 +1082,15 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
         "name": "岸工坊",
         "line": line,
         "tabs": [
-            {"key": "anvil", "label": "砧上", "badge": "好了" if job and job.get("ready") else ("在打" if job else "")},
+            {
+                "key": "anvil",
+                "label": "砧上",
+                "badge": (
+                    "烫"
+                    if job and job.get("hazard") == quench_mod.HAZARD_QUENCH
+                    else ("好了" if job and job.get("ready") else ("在打" if job else ""))
+                ),
+            },
             {"key": "salt", "label": "盐田", "badge": "收" if any(p.get("can_harvest") for p in pans) else ("灌" if any(p.get("can_fill") for p in pans) else "")},
             {
                 "key": "salvage",

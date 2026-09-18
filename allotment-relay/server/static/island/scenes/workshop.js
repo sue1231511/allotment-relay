@@ -86,15 +86,29 @@ function anvilMarkup(shop) {
   const job = shop.job;
   const rows = [];
   if (job) {
-    rows.push(sku(
-      "take",
-      "",
-      { emoji: job.emoji, name: job.ready ? `取 ${job.name}` : `正在打 ${job.name}` },
-      job.note || "",
-      job.ready ? "取" : "等",
-      Boolean(job.can_take),
-      job.ready ? "is-ready" : "",
-    ));
+    if (job.hazard === "quench" && (job.quench_actions || []).length) {
+      for (const act of job.quench_actions) {
+        rows.push(sku(
+          "anvil_quench",
+          act.action,
+          { emoji: "🔥", name: `淬火·${act.label}` },
+          job.note || act.hint || "",
+          act.label,
+          Boolean(act.can),
+          act.can ? "is-ready" : "",
+        ));
+      }
+    } else {
+      rows.push(sku(
+        "take",
+        "",
+        { emoji: job.emoji, name: job.ready ? `取 ${job.name}` : `正在打 ${job.name}` },
+        job.note || "",
+        job.ready ? "取" : "等",
+        Boolean(job.can_take),
+        job.ready ? "is-ready" : "",
+      ));
+    }
   }
   for (const row of shop.recipes || []) {
     const need = needLine(row.need) || row.note || "";
