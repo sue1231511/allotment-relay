@@ -1,12 +1,19 @@
-"""船只部件 — 第二批：帆/舵/灯。"""
+"""船只部件 — 六件：帆 / 舵 / 灯 / 锚 / 缆 / 底泵。"""
 from __future__ import annotations
-
-import random
 
 from . import db
 
-PARTS = ("sail", "rudder", "lantern")
+PARTS = ("sail", "rudder", "lantern", "anchor", "hawser", "bilge")
 DEFAULT = 100
+
+PART_LABELS: dict[str, str] = {
+    "sail": "帆",
+    "rudder": "舵",
+    "lantern": "灯",
+    "anchor": "锚",
+    "hawser": "缆",
+    "bilge": "泵",
+}
 
 
 async def ensure_table(conn) -> None:
@@ -46,38 +53,74 @@ async def get_all(conn, steward_id: int) -> dict[str, tuple[int, int]]:
     return out
 
 
-async def wear_voyage(conn, steward_id: int, route: str, *, storm: bool) -> str:
-    loss = {"near": 2, "far": 4, "deep": 6}.get(route, 3)
+def _loss_for_part(key: str, route: str, *, storm: bool) -> int:
+    base = {"near": 2, "far": 4, "deep": 6}.get(route, 3)
+    extra = 0
     if storm:
-        loss += 4
+        extra += 2
+        if key == "sail":
+            extra += 2
+        if key == "bilge":
+            extra += 3
+        if key == "hawser":
+            extra += 1
+    if route == "near" and key == "anchor":
+        extra += 1
+    if route == "deep" and key == "hawser":
+        extra += 1
+    if key == "lantern" and storm:
+        extra += 1
+    return base + extra
+
+
+async def wear_voyage(conn, steward_id: int, route: str, *, storm: bool) -> str:
     parts = await get_all(conn, steward_id)
     notes = []
     for key, (dur, mx) in parts.items():
-        extra = 1 if key == "sail" and storm else 0
-        new = max(0, dur - loss - extra)
+        loss = _loss_for_part(key, route, storm=storm)
+        new = max(0, dur - loss)
         await conn.execute(
             "UPDATE steward_boat_parts SET durability=? WHERE steward_id=? AND part_key=?",
             (new, steward_id, key),
         )
-        label = {"sail": "帆", "rudder": "舵", "lantern": "灯"}.get(key, key)
+        label = PART_LABELS.get(key, key)
         notes.append(f"{label}{new}/{mx}")
     return "部件 " + " · ".join(notes)
 
 
+def _ratio(parts: dict[str, tuple[int, int]], key: str) -> float:
+    d, mx = parts.get(key, (DEFAULT, DEFAULT))
+    return d / max(1, mx)
+
+
 def fail_bonus(parts: dict[str, tuple[int, int]]) -> float:
-    sail = parts.get("sail", (100, 100))[0] / max(1, parts.get("sail", (100, 100))[1])
-    rudder = parts.get("rudder", (100, 100))[0] / max(1, parts.get("rudder", (100, 100))[1])
     extra = 0.0
+    sail = _ratio(parts, "sail")
+    rudder = _ratio(parts, "rudder")
     if sail < 0.35:
         extra += 0.08
     elif sail < 0.55:
         extra += 0.04
     if rudder < 0.35:
         extra += 0.06
+    anchor = _ratio(parts, "anchor")
+    if anchor < 0.35:
+        extra += 0.05
+    elif anchor < 0.55:
+        extra += 0.02
+    hawser = _ratio(parts, "hawser")
+    if hawser < 0.35:
+        extra += 0.05
+    bilge = _ratio(parts, "bilge")
+    if bilge < 0.35:
+        extra += 0.04
+    lantern = _ratio(parts, "lantern")
+    if lantern < 0.35:
+        extra += 0.03
     return extra
 
 
-async def repair_all(conn, steward_id: int, tickets: int = 18) -> str:
+async def repair_all(conn, steward_id: int, tickets: int = 22) -> str:
     cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (steward_id,))
     have = int((await cur.fetchone())[0])
     if have < tickets:
@@ -95,7 +138,8 @@ async def repair_all(conn, steward_id: int, tickets: int = 18) -> str:
         "UPDATE steward_boat_parts SET durability=max_dur WHERE steward_id=?",
         (steward_id,),
     )
-    return f"帆/舵/灯回满（-{cost} 票{'·用钉' if nail else ''}）"
+    labels = "/".join(PART_LABELS[k] for k in PARTS)
+    return f"{labels}回满（-{cost} 票{'·用钉' if nail else ''}）"
 
 
 async def status_line(conn, steward_id: int) -> str:
@@ -103,6 +147,14 @@ async def status_line(conn, steward_id: int) -> str:
     bits = []
     for key in PARTS:
         d, mx = parts[key]
-        label = {"sail": "帆", "rudder": "舵", "lantern": "灯"}[key]
-        bits.append(f"{label}{d}/{mx}")
+        bits.append(f"{PART_LABELS[key]}{d}/{mx}")
     return "船部件 " + " · ".join(bits) + " · voyage_ops 部件 修"
+
+
+def compact_note(parts: dict[str, tuple[int, int]]) -> str:
+    """岛端一行简写：帆/舵/灯/锚/缆/泵。"""
+    return "".join(
+        f"{PART_LABELS[k]}{parts[k][0]}/{parts[k][1]}"
+        for k in PARTS
+        if k in parts
+    )
