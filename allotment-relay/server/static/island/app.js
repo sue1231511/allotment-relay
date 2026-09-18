@@ -1600,6 +1600,23 @@ function tapHall(kind, target) {
     runHall(kind, "");
     return;
   }
+  if (kind === "mic_feedback") {
+    const row = (shop.mic_choices || []).find((item) => item.target === target);
+    if (!row || !row.can_act) {
+      showHintSheet({
+        title: (row && row.name) || "麦险",
+        body: (row && (row.detail || row.note)) || "麦还在啸。",
+      });
+      return;
+    }
+    showActSheet({
+      title: row.name || `麦险·${target}`,
+      body: row.note || "先处置麦啸。",
+      confirm: "确认",
+      onConfirm: () => runHall("mic_feedback", target),
+    });
+    return;
+  }
   if (kind === "curtain_jam") {
     const row = (shop.curtain_choices || []).find((item) => item.target === target);
     if (!row || !row.can) {

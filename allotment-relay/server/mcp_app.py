@@ -148,7 +148,7 @@ async def undertide_ops(command: Annotated[str, Field(description="整句子命�
     return progress_mod.attach_note(await mux._call_ops(undertide.undertide_ops, _kid(), command))
 
 
-@mcp.tool(description="小橘。空=档。例：应援 好话 · 打赏 20 · 围观。应援须面板确认；勿编福利。")
+@mcp.tool(description="小橘。空=档。例：应援 好话 · 打赏 20 · 围观 · 麦险 润麦。专场围观后麦啸未处置不能再围观/打赏。应援须面板确认；勿编福利。")
 async def star_ops(command: str = "") -> str:
     from . import star
     return await mux._call_ops(star.star_ops, _kid(), command)

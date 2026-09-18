@@ -80,6 +80,16 @@ function hallChoices(shop) {
   const board = shop.board || {};
   const jobs = shop.jobs || [];
   const stars = shop.stars || [];
+  const mic = (shop.mic_choices || []).map((row) => ({
+    id: row.id || "mic_feedback",
+    target: row.target || "",
+    label: row.name,
+    price: row.price || "处置",
+    can: Boolean(row.can_act),
+    detail: row.detail || row.note,
+    note: row.note,
+    name: row.name,
+  }));
   const curtain = (shop.curtain_choices || []).map((row) => ({
     id: row.kind || "curtain_jam",
     target: row.target || "",
@@ -91,6 +101,7 @@ function hallChoices(shop) {
     name: row.name,
   }));
   return [
+    ...mic,
     ...curtain,
     {
       id: "look",

@@ -30,6 +30,7 @@ TITLES = {
     "perform": "演完了",
     "claim": "领了薪",
     "curtain_jam": "剧险处置",
+    "mic_feedback": "麦险处置",
     "cheer": "应援",
     "tip": "打赏",
     "song": "点了歌",
@@ -45,6 +46,10 @@ def _command(kind: str, target: str = "") -> str:
         if not extra:
             raise ApiError("BAD_REQUEST", "先选扶幕、换场或硬演。")
         return f"剧险 {extra}"
+    if kind == "mic_feedback":
+        if not extra:
+            raise ApiError("BAD_REQUEST", "先选润麦、退后或硬听。")
+        return f"麦险 {extra}"
     verb = KINDS.get(kind)
     if not verb:
         raise ApiError("BAD_REQUEST", "剧场看台没有这一下。")
