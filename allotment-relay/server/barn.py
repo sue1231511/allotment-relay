@@ -159,6 +159,14 @@ async def barn_ops(key_id: int, command: str) -> str:
         async with db.connect() as conn:
             return await pedigree_mod.status(conn, s["id"])
 
+    if verb in ("breed", "配种", "繁殖"):
+        from . import barn_breeding as breed_mod
+        slot = int(parts[1]) if len(parts) > 1 else 1
+        async with db.connect() as conn:
+            msg = await breed_mod.try_breed(conn, s, slot)
+            await conn.commit()
+        return msg
+
     if verb == "status":
         async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row

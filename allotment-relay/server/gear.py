@@ -136,18 +136,20 @@ async def gear_ops(key_id: int, command: str) -> str:
     if verb == "status":
         async with db.connect() as conn:
             gear = await get_gear(conn, s["id"])
+            from . import gear_wear as gear_wear_mod
+            from . import fishing_parts as fish_parts_mod
+            lines = [
+                "渔具 tier（数值）：",
+                _format_tier("bait", gear["bait"]),
+                _format_tier("rod", gear["rod"]),
+                _format_tier("net", gear["net"]),
+                "upgrade bait|rod|net — 升一级",
+                "repair net|rod|line|hook|reel — 修耐久（12 票回满）",
+                "钓鱼: tide_ops cast · 水层 near · 搏鱼 · 解挂",
+                await gear_wear_mod.status_line(conn),
+                await fish_parts_mod.status_line(conn, s["id"]),
+            ]
             await conn.commit()
-        from . import gear_wear as gear_wear_mod
-        lines = [
-            "渔具 tier（数值）：",
-            _format_tier("bait", gear["bait"]),
-            _format_tier("rod", gear["rod"]),
-            _format_tier("net", gear["net"]),
-            "upgrade bait|rod|net — 升一级",
-            "repair net|rod — 修用具耐久（12 票回满）",
-            "钓鱼: tide_ops cast（竿+饵） / tide_ops net（网 tier）",
-            await gear_wear_mod.status_line(conn),
-        ]
         return "\n".join(lines)
 
     if verb == "upgrade" and len(parts) >= 2:
@@ -183,12 +185,16 @@ async def gear_ops(key_id: int, command: str) -> str:
         return msg + flavor.maybe_suffix(["渔具升级，潮线都客气三分", "数值到位，鱼自己上岸"])
 
     if verb == "repair" and len(parts) >= 2:
-        from . import gear_wear as gear_wear_mod
         key = parts[1].lower()
-        if key not in gear_wear_mod.GEAR_KEYS:
-            raise ValueError("可修: net, rod, hoe, shovel, pickaxe")
         async with db.connect() as conn:
-            msg = await gear_wear_mod.repair(conn, s["id"], key)
+            if key in ("hook", "reel"):
+                from . import fishing_parts as fish_parts_mod
+                msg = await fish_parts_mod.repair(conn, s["id"], key)
+            else:
+                from . import gear_wear as gear_wear_mod
+                if key not in gear_wear_mod.GEAR_KEYS:
+                    raise ValueError("可修: net, rod, line, hook, reel, hoe, shovel, pickaxe")
+                msg = await gear_wear_mod.repair(conn, s["id"], key)
             await conn.commit()
         return msg
 

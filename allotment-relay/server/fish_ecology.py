@@ -108,8 +108,13 @@ async def pick(
     tide: str | None,
     rarity_cap: int | None,
     allow_cast_only: bool = False,
+    layer_override: str | None = None,
 ) -> str:
-    zones = ZONE_FOR_MODE.get(mode, {"shore", "near"})
+    if layer_override:
+        from . import sea_layer_pref as layer_mod
+        zones = layer_mod.zones_for_layer(layer_override)
+    else:
+        zones = ZONE_FOR_MODE.get(mode, {"shore", "near"})
     await ensure_table(conn)
     wk = _week_id()
     cur = await conn.execute(

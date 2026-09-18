@@ -1157,6 +1157,9 @@ async def _resolve_voyage(
         fail_chance += 0.06
     if pulse and pulse.get("effect_type") == "red_tide":
         fail_chance += 0.04
+    from . import boat_parts as boat_parts_mod
+    parts = await boat_parts_mod.get_all(conn, s["id"])
+    fail_chance += boat_parts_mod.fail_bonus(parts)
 
     extra = await events.roll_after_action(s, "voyage_return", conn, voyage=voyage)
     s = await _refresh_steward(conn, s["id"])
@@ -1171,6 +1174,9 @@ async def _resolve_voyage(
     from . import boat_hull as hull_mod
     from . import voyage_chronicle as vlog_mod
     hull_note = await hull_mod.wear_after_voyage(
+        conn, s["id"], voyage["route"], storm=failed or world.current_weather() == "gale",
+    )
+    parts_note = await boat_parts_mod.wear_voyage(
         conn, s["id"], voyage["route"], storm=failed or world.current_weather() == "gale",
     )
 
@@ -1200,7 +1206,7 @@ async def _resolve_voyage(
         enc = None
     msg = f"{route['label']}归港：" + "，".join(loot_lines)
     msg += flavor.maybe_suffix(flavor.VOYAGE_RETURN_BAD if failed else flavor.VOYAGE_RETURN_GOOD)
-    msg += f" · {hull_note}"
+    msg += f" · {hull_note} · {parts_note}"
     await vlog_mod.append(
         conn, s["id"],
         f"归港 {route['label']}{'（折返）' if failed else ''} · {hull_note}",
@@ -1333,6 +1339,17 @@ async def voyage_ops(key_id: int, command: str) -> str:
         from . import voyage_chronicle as vlog_mod
         async with db.connect() as conn:
             return await vlog_mod.status(conn, s["id"])
+
+    if verb in ("部件", "parts"):
+        from . import boat_parts as boat_parts_mod
+        rest = (parts[1] if len(parts) > 1 else "").split()
+        sub = rest[0].lower() if rest else "status"
+        async with db.connect() as conn:
+            if sub in ("修", "repair", "fix"):
+                msg = await boat_parts_mod.repair_all(conn, s["id"])
+                await conn.commit()
+                return msg
+            return await boat_parts_mod.status_line(conn, s["id"])
 
     if verb == "status":
         async with db.connect() as conn:

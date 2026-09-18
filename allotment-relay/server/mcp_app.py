@@ -107,7 +107,7 @@ async def hut_ops(command: str = "") -> str:
     return await mux._call_ops(mux.hut_bundle, _kid(), command)
 
 
-@mcp.tool(description="渔获出海赶海渔排漂流瓶。空=列表。例：net · 搭排 · 巡排 · 投苗 灰鲱 2 · dig · 捞瓶。人类 /island 港口渔排栏。dig≠崖矿；勿 pen_ops/fish_ops/bottle_ops。")
+@mcp.tool(description="渔获出海赶海渔排漂流瓶。空=列表。例：net · cast · 水层 near · 搏鱼 硬拉 · 解挂 · dig。人类 /island 港口渔排栏。dig≠崖矿。")
 async def tide_ops(command: str = "") -> str:
     return await mux._call_ops(mux.tide_bundle, _kid(), command)
 
