@@ -460,7 +460,12 @@ async def _can_cook_mix(conn: aiosqlite.Connection, steward_id: int) -> bool:
 
 async def _mark_cook(conn: aiosqlite.Connection, steward_id: int, *, mix: bool = False) -> None:
     from . import hut_appliances as appl_mod
+    from . import energy as energy_mod
+    from . import light_bad_events as light_mod
 
+    extra_nrg = await light_mod.apply_stove_penalty(conn, steward_id)
+    if extra_nrg:
+        await energy_mod.spend(conn, steward_id, extra_nrg, action="灶台难点火")
     await appl_mod.wear_stove(conn, steward_id)
     day = _day_id()
     col = "mix_count" if mix else "count"

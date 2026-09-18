@@ -492,7 +492,7 @@ async def relay_manual() -> str:
         "  鱼群生态：同种捞多了本周变稀；visit_ops 潮生会 禁捕 看禁捞种+压力。网/钓碰上禁捕罚15票放生",
         "  水层 tide_ops 水层 near|shore|far|deep 定下次网/钓海域；钩/卷线器 gear status 看，挂底 tide_ops 解挂",
         "  大鱼搏斗：稀有鱼可能触发 tide_ops 搏鱼 硬拉|放走|切线（不进袋直到硬拉赢）",
-        "  船部件 voyage_ops 部件 / 部件 修 — 帆/舵/灯/锚/缆/底泵六件，低了加出海失败（修默认 22 票，铜钉省 6）。畜栏 barn_ops breed 1 配种 · 惊逃 1 诱回|围栏|急追 · recover 1 等同诱回 · status 看性格",
+        "  船部件 voyage_ops 部件 / 部件 修 — 帆/舵/灯/锚/缆/底泵/鱼舱/冰舱八件，低了加出海失败；舱低少装货、冰低鱼易擦伤（修默认 22 票，铜钉省 6）。plot_ops tend 偶发轻微插曲：鸟啄少一把、灶台难点火、鱼线打结空杆↑。畜栏 barn_ops breed 1 配种 · 惊逃 1 诱回|围栏|急追 · recover 1 等同诱回 · status 看性格",
         "  船只履历 voyage_ops 履历；畜栏 barn_ops 履历；小屋 hut_ops 修屋顶 · 修冰箱 · 修灶（厨电低则保鲜差/做饭更费神）",
         "  井蚀 undertide_ops descend/enter 磨损井壁；蚀≥70 可能井裂 → 井险 清井|绑索|硬闯（硬下 enter/descend 会拦）。清井=20票；人类 /island 恶猫钱庄也能点",
         "  家具套装 hut_ops status 看「套装」：灶链/咸鲜排/眠巢。成婚且 home 登记时睡觉偶发家庭小事件",
@@ -2342,6 +2342,11 @@ async def tide_ops(key_id: int, command: str) -> str:
             parts = [x for x in (pulse, msg, extra) if x]
             return "\n".join(parts)
         empty_chance = 0.24 - empty_b - await events.net_bonus_chance() + await events.net_fog_penalty()
+        async with db.connect() as conn:
+            from . import light_bad_events as light_mod
+            tangle = await light_mod.cast_empty_bonus(conn, s["id"])
+            await conn.commit()
+        empty_chance += tangle
         if not no_empty and random.random() < max(0.05, empty_chance):
             msg = f"空杆 饵T{bait['tier']} 竿T{rod['tier']}——鱼看了直摇头"
             parts = [x for x in (pulse, msg, extra) if x]

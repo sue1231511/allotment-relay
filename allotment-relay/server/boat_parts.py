@@ -1,9 +1,9 @@
-"""船只部件 — 六件：帆 / 舵 / 灯 / 锚 / 缆 / 底泵。"""
+"""船只部件 — 八件：帆 / 舵 / 灯 / 锚 / 缆 / 底泵 / 鱼舱 / 冰舱（§59 第二批 #19）。"""
 from __future__ import annotations
 
 from . import db
 
-PARTS = ("sail", "rudder", "lantern", "anchor", "hawser", "bilge")
+PARTS = ("sail", "rudder", "lantern", "anchor", "hawser", "bilge", "hold", "ice")
 DEFAULT = 100
 
 PART_LABELS: dict[str, str] = {
@@ -13,6 +13,8 @@ PART_LABELS: dict[str, str] = {
     "anchor": "锚",
     "hawser": "缆",
     "bilge": "泵",
+    "hold": "舱",
+    "ice": "冰",
 }
 
 
@@ -70,6 +72,12 @@ def _loss_for_part(key: str, route: str, *, storm: bool) -> int:
         extra += 1
     if key == "lantern" and storm:
         extra += 1
+    if key == "hold" and route in ("far", "deep"):
+        extra += 1
+    if key == "ice" and route == "deep":
+        extra += 2
+    elif key == "ice" and route == "far":
+        extra += 1
     return base + extra
 
 
@@ -117,7 +125,32 @@ def fail_bonus(parts: dict[str, tuple[int, int]]) -> float:
     lantern = _ratio(parts, "lantern")
     if lantern < 0.35:
         extra += 0.03
+    hold = _ratio(parts, "hold")
+    if hold < 0.35:
+        extra += 0.04
+    ice = _ratio(parts, "ice")
+    if ice < 0.35:
+        extra += 0.03
     return extra
+
+
+def effective_cargo(cargo: int, parts: dict[str, tuple[int, int]]) -> int:
+    hold = _ratio(parts, "hold")
+    if hold < 0.35:
+        return max(1, cargo - 2)
+    if hold < 0.55:
+        return max(1, cargo - 1)
+    return cargo
+
+
+def fish_state_for_ice(parts: dict[str, tuple[int, int]], default_state: str) -> str:
+    """冰舱低时归港鱼状态偏差。"""
+    ice = _ratio(parts, "ice")
+    if ice < 0.35:
+        return "bruised" if default_state in ("fresh", "firm") else default_state
+    if ice < 0.55 and default_state == "fresh":
+        return "firm"
+    return default_state
 
 
 async def repair_all(conn, steward_id: int, tickets: int = 22) -> str:
@@ -152,7 +185,7 @@ async def status_line(conn, steward_id: int) -> str:
 
 
 def compact_note(parts: dict[str, tuple[int, int]]) -> str:
-    """岛端一行简写：帆/舵/灯/锚/缆/泵。"""
+    """岛端一行简写：帆/舵/灯/锚/缆/泵/舱/冰。"""
     return "".join(
         f"{PART_LABELS[k]}{parts[k][0]}/{parts[k][1]}"
         for k in PARTS
