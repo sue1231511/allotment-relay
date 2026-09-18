@@ -1404,15 +1404,18 @@ async def hut_ops(key_id: int, command: str) -> str:
 
     if verb == "status":
         roof_line = ""
+        home_status_note = ""
         async with db.connect() as conn:
             fittings = await _fittings(conn, s["id"])
             if s.get("hut_built"):
                 from . import hut_appliances as appl_mod
                 from . import hut_roof as roof_mod
+                from . import home_events as home_events_mod
                 roof_line = await roof_mod.status_line(conn, s["id"])
                 appl_line = await appl_mod.status_line(conn, s["id"], hut_built=True)
                 if appl_line:
                     roof_line = (roof_line + "\n" + appl_line) if roof_line else appl_line
+                home_status_note = await home_events_mod.roll_on_status(conn, s) or ""
         if not s.get("hut_built"):
             return (
                 f"小屋: 未建 — hut_ops build（{config.HUT_BUILD_COST} 票）\n"
@@ -1494,6 +1497,8 @@ async def hut_ops(key_id: int, command: str) -> str:
             )
         if fittings:
             lines.append("旧家具按折旧卖：hut_ops 卖掉 槽位 或 卖掉 羊毛毯 确认")
+        if home_status_note:
+            lines.append(home_status_note)
         return "\n".join(lines)
 
     if verb == "catalog":

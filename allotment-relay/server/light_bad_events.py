@@ -108,3 +108,17 @@ async def sleep_energy_penalty(conn, steward_id: int) -> int:
     if await take_flag(conn, steward_id, "humid_soft"):
         return 3
     return 0
+
+
+async def dig_energy_penalty(conn, steward_id: int) -> int:
+    if await take_flag(conn, steward_id, "shovel_dull"):
+        return 2
+    return 0
+
+
+async def roll_beach_dig_glitch(conn, steward_id: int) -> str | None:
+    """翻沙后小概率铲刃发钝，下次多耗精力。"""
+    if random.random() > 0.09:
+        return None
+    await set_flag(conn, steward_id, "shovel_dull")
+    return "铲刃磕在礁上发钝：下次赶海翻沙多耗 2 精力（已记下，翻一次就消）。"

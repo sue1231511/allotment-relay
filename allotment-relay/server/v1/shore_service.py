@@ -263,11 +263,16 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
         {"key": "vow", "label": "信物", "badge": ""},
     ]
 
+    from .. import fish_ban as fish_ban_mod
+
+    ban_hint = fish_ban_mod.brief_ban()
     net_note = (
         f"{gear['net_cost_tickets']} 票 · {gear['net_energy']} 精力 · 网 T{gear['net_tier']}"
         if gear["can_net"]
         else "还没有渔网。杂货铺买粗渔网，或升渔具。"
     )
+    if ban_hint != "本周无禁捞种":
+        net_note = f"{net_note} · {ban_hint}"
     cast_note = (
         f"{gear['cast_cost_tickets']} 票 · {gear['cast_energy']} 精力 · 饵 {gear['bait_worm']}"
         if gear["can_cast"]

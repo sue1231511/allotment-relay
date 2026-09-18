@@ -23,6 +23,18 @@ COMBO_SETS: dict[str, dict] = {
         "needs": ("plank_floor", "rain_gutter", "glass_window"),
         "hint": "地板+雨槽+玻璃窗：屋顶磨损略慢（睡时少耗）",
     },
+    "storm_line": {
+        "slug": "storm_line",
+        "name": "防风铃阵",
+        "needs": ("storm_shutter", "net_dreamcatcher", "tide_clock"),
+        "hint": "窗板+捕梦+潮汐钟：小屋意外再略少",
+    },
+    "study_row": {
+        "slug": "study_row",
+        "name": "书海角",
+        "needs": ("bookshelf", "sea_chart", "tide_lamp"),
+        "hint": "书架+海图+潮灯：读书雾智再+1",
+    },
 }
 
 
@@ -47,6 +59,13 @@ def apply_combos(b: HutBonus) -> list[str]:
         elif slug == "rest_nest":
             b.gale_event *= 0.88
             b.event_mult *= 0.96
+        elif slug == "storm_line":
+            b.event_mult *= 0.90
+            b.gale_event *= 0.88
+            b.wildlife_bad *= 0.92
+        elif slug == "study_row":
+            b.brew_mist += 1
+            b.night_mist_save += 1
     return active
 
 

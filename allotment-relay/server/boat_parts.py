@@ -1,11 +1,11 @@
-"""船只部件 — 十一件（§59 第二批 #19，目标 8～12 类）。"""
+"""船只部件 — 十二件（§59 第二批 #19，目标 8～12 类）。"""
 from __future__ import annotations
 
 from . import db
 
 PARTS = (
     "sail", "rudder", "lantern", "anchor", "hawser", "bilge",
-    "hold", "ice", "net_winch", "engine", "bell",
+    "hold", "ice", "net_winch", "engine", "bell", "compass",
 )
 DEFAULT = 100
 
@@ -21,6 +21,7 @@ PART_LABELS: dict[str, str] = {
     "net_winch": "网",
     "engine": "机",
     "bell": "钟",
+    "compass": "罗",
 }
 
 
@@ -92,6 +93,10 @@ def _loss_for_part(key: str, route: str, *, storm: bool) -> int:
         extra += 2
     elif key == "bell" and route in ("far", "deep"):
         extra += 1
+    if key == "compass" and route == "deep":
+        extra += 2
+    elif key == "compass" and route == "far":
+        extra += 1
     return base + extra
 
 
@@ -157,7 +162,28 @@ def fail_bonus(parts: dict[str, tuple[int, int]]) -> float:
         extra += 0.02
     elif bell >= 0.85:
         extra -= 0.03
+    compass = _ratio(parts, "compass")
+    if compass < 0.35:
+        extra += 0.05
+    elif compass < 0.55:
+        extra += 0.02
+    elif compass >= 0.85:
+        extra -= 0.04
     return extra
+
+
+def parley_bonus(parts: dict[str, tuple[int, int]]) -> float:
+    """黑旗谈和成功率加成（罗经准）。"""
+    r = _ratio(parts, "compass")
+    if r < 0.35:
+        return -0.06
+    if r < 0.55:
+        return -0.03
+    if r >= 0.85:
+        return 0.08
+    if r >= 0.65:
+        return 0.04
+    return 0.0
 
 
 def net_winch_empty_delta(parts: dict[str, tuple[int, int]]) -> float:
@@ -257,7 +283,7 @@ async def status_line(conn, steward_id: int) -> str:
 
 
 def compact_note(parts: dict[str, tuple[int, int]]) -> str:
-    """岛端一行简写：帆/舵/灯/锚/缆/泵/舱/冰/网/机/钟。"""
+    """岛端一行简写：帆/舵/灯/锚/缆/泵/舱/冰/网/机/钟/罗。"""
     return "".join(
         f"{PART_LABELS[k]}{parts[k][0]}/{parts[k][1]}"
         for k in PARTS
