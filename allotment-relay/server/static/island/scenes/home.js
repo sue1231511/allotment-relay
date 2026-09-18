@@ -1,4 +1,5 @@
 import {
+  allPlots,
   formatRemain,
   growStatusLine,
   landSnap,
@@ -34,7 +35,7 @@ export function renderHome(root, { onOpenLand }) {
 export function renderYards(root, { onTapPlot, onTapGrass, onCareBatch, onSwitchYard, onOpenEvents }) {
   const peek = !state.yardsShelf;
   let wrap = root.querySelector(".island-yards");
-  if (!wrap || !wrap.querySelector(".island-yards-board") || !wrap.querySelector(".island-care-fabs")) {
+  if (!wrap || !wrap.querySelector(".island-yards-board") || !wrap.querySelector(".island-care-fabs") || !wrap.querySelector("#island-plot-overview")) {
     root.innerHTML = `
       <div class="island-yards${peek ? " is-peek" : ""}">
         <div class="island-yards-board">
@@ -48,6 +49,7 @@ export function renderYards(root, { onTapPlot, onTapGrass, onCareBatch, onSwitch
         <div class="island-yard-tabs" role="tablist" aria-label="地块类型">
           ${yardTabs()}
         </div>
+        <div class="island-plot-overview" id="island-plot-overview">${overviewMarkup()}</div>
         <p class="island-grow-status" id="island-grow-status">${esc(growStatusLine())}</p>
         <div class="island-plot-grid" id="island-plot-grid">${plotGridMarkup()}</div>
         <div class="island-plot-pager" id="island-plot-pager">${pagerMarkup()}</div>
@@ -128,6 +130,8 @@ function bindYardsPeek(wrap, onOpenEvents) {
 }
 
 export function syncHomeChrome() {
+  const overview = document.getElementById("island-plot-overview");
+  if (overview) overview.innerHTML = overviewMarkup();
   const status = document.getElementById("island-grow-status");
   if (status) status.textContent = growStatusLine();
   syncCareFabs();
@@ -152,6 +156,25 @@ function yardTabs() {
     const on = yard.key === state.yard;
     return `<button type="button" role="tab" class="${on ? "is-on" : ""}" data-yard="${esc(yard.key)}" aria-selected="${on ? "true" : "false"}">${esc(yard.label)} <small>${n}</small></button>`;
   }).join("");
+}
+
+function overviewMarkup() {
+  const plots = allPlots();
+  const ripe = plots.filter((p) => p.can_harvest).length;
+  const tend = plots.filter((p) => p.can_tend).length;
+  const water = plots.filter((p) => p.can_water).length;
+  const chip = (kind, label, n) => (
+    `<span class="island-plot-stat is-${kind}${n ? " is-on" : ""}"><small>${label}</small><b>${n}</b></span>`
+  );
+  return `
+    <p class="island-plot-overview-kicker">份地地况 · 菜地果园温室合计</p>
+    <div class="island-plot-overview-row">
+      ${chip("ripe", "成熟", ripe)}
+      ${chip("tend", "待打理", tend)}
+      ${chip("water", "待浇水", water)}
+    </div>
+    <p class="island-plot-overview-note">底下的一键只动当前这一栏</p>
+  `;
 }
 
 function careLabel(kind, n) {

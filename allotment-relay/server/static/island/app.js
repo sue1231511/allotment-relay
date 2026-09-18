@@ -21,12 +21,12 @@ import {
 } from "./store.js?v=island-modulefix2";
 import { renderHud } from "./hud.js?v=dual-panels1";
 import { renderMap } from "./map.js?v=hotspot-fix1";
-import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=farm-batch1";
+import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=plot-overview1";
 import { renderShore, renderShoreYard, renderPortHub, renderBeachHub } from "./scenes/shore.js?v=island-modulefix2";
 import { renderPlaza } from "./scenes/plaza.js?v=island-modulefix2";
 import { renderPlace } from "./scenes/place.js?v=island-modulefix2";
-import { hideClimateSheet, showClimateSheet } from "./ui/climate.js?v=gazette2";
-import { renderHut } from "./scenes/hut.js?v=island-modulefix2";
+import { hideClimateSheet, showClimateSheet } from "./ui/climate.js?v=island-modulefix2";
+import { renderHut } from "./scenes/hut.js?v=bottles-cozy1";
 import { renderShop } from "./scenes/shop.js?v=tt-sprite1";
 import { renderLili } from "./scenes/lili.js?v=island-modulefix2";
 import { renderClinic } from "./scenes/clinic.js?v=island-modulefix2";
@@ -49,12 +49,12 @@ async function lighthouseScene() {
   if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-modulefix2");
   return lighthouseMod;
 }
-import { renderBag } from "./ui/bag.js?v=ledger1";
+import { renderBag } from "./ui/bag.js?v=island-modulefix2";
 import { setBackChip, setBagChip } from "./ui/back-map.js?v=dual-panels1";
 import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=island-modulefix2";
 import { popOut } from "./ui/pop.js?v=island-modulefix2";
 import { bgmMuted, playBgm, setBgmMuted, startIslandBgm, stopBgm } from "./ui/bgm.js?v=undertide-bgm1";
-import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showVendSheet, toast } from "./ui/modal.js?v=farm-batch1";
+import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showVendSheet, toast } from "./ui/modal.js?v=bottles-cozy2";
 
 const sceneEl = () => document.getElementById("island-scene");
 const sheetEl = () => document.getElementById("island-sheet");
@@ -2161,6 +2161,37 @@ function tapShore(kind, target, id) {
     showHintSheet({ title: row.name || shoreTitle(), body: row.detail || row.note || "这会儿做不了。" });
     return;
   }
+  if (kind === "投瓶") {
+    showFormSheet({
+      title: row.name || "投瓶",
+      body: row.detail || "写进瓶子里的话。每天最多 3 只。不是听潮亭，也不是聊天室。",
+      fields: [
+        { id: "body", label: "瓶中话", type: "textarea", placeholder: "今晚浪很大", max: 180, rows: 4, empty: "先写下要投进海里的话。" },
+        { id: "sig", label: "署名（可空）", placeholder: "默认岛民名", max: 40, optional: true },
+      ],
+      confirm: "投进海里",
+      onConfirm: (vals) => {
+        const body = String(vals.body || "").trim();
+        const sig = String(vals.sig || "").trim();
+        runShore("投瓶", sig ? `${body} — ${sig}` : body);
+      },
+    });
+    return;
+  }
+  if (kind === "回瓶") {
+    showFormSheet({
+      title: row.name || "回瓶",
+      body: row.detail || "回给投瓶的人。只能回一次。",
+      fields: [
+        { id: "body", label: "回一句", placeholder: "海里见", max: 180, rows: 3, empty: "先写下回瓶的话。" },
+      ],
+      confirm: "回",
+      onConfirm: (vals) => {
+        runShore("回瓶", `${row.target || target || ""} ${vals.body}`.trim());
+      },
+    });
+    return;
+  }
   showActSheet({
     title: row.name || shoreTitle(),
     body: row.detail || row.note || "点一下就办。",
@@ -2292,55 +2323,23 @@ function tapHui(kind, target, id) {
     lookHui(target, row);
     return;
   }
-    if (kind === "donate") {
-      if (!row.can) {
-        showHintSheet({ title: row.name || "捐基金", body: row.detail || row.note || "口袋不高于岛均，捐不了。" });
-        return;
-      }
-      const max = shop.fund_max || shop.max_donate || "";
-      showFormSheet({
-        title: "捐进潮汐基金",
-        body: row.detail || `票数自己填。最少 ${shop.min_donate || 1}。`,
-        fields: [
-          { id: "amount", label: "票数", placeholder: max ? String(max) : "50", max: 8, empty: "先写下票数。" },
-        ],
-        confirm: "捐进去",
-        onConfirm: (vals) => runHui("donate", String(vals.amount)),
-      });
+  if (kind === "donate") {
+    if (!row.can) {
+      showHintSheet({ title: row.name || "捐基金", body: row.detail || row.note || "口袋不高于岛均，捐不了。" });
       return;
     }
-    if (kind === "donate_work") {
-      if (!row.can) {
-        showHintSheet({ title: row.name || "捐工程", body: row.detail || row.note || "这期已经收工。" });
-        return;
-      }
-      showFormSheet({
-        title: "捐票修工程",
-        body: row.detail || "不是潮汐基金。票数自己填。",
-        fields: [
-          { id: "amount", label: "票数", placeholder: "50", max: 8, empty: "先写下票数。" },
-        ],
-        confirm: "捐进去",
-        onConfirm: (vals) => runHui("donate_work", String(vals.amount)),
-      });
-      return;
-    }
-    if (kind === "donate_mat") {
-      if (!row.can) {
-        showHintSheet({ title: row.name || "捐工料", body: row.detail || row.note || "行囊没有。" });
-        return;
-      }
-      showFormSheet({
-        title: row.name || "捐工料",
-        body: row.note || "写下份数。",
-        fields: [
-          { id: "amount", label: "份数", placeholder: "1", max: 4, empty: "先写下份数。" },
-        ],
-        confirm: "捐进去",
-        onConfirm: (vals) => runHui("donate_mat", `${target}:${vals.amount}`),
-      });
-      return;
-    }
+    const max = shop.fund_max || shop.max_donate || "";
+    showFormSheet({
+      title: "捐进潮汐基金",
+      body: row.detail || `票数自己填。最少 ${shop.min_donate || 1}。`,
+      fields: [
+        { id: "amount", label: "票数", placeholder: max ? String(max) : "50", max: 8, empty: "先写下票数。" },
+      ],
+      confirm: "捐进去",
+      onConfirm: (vals) => runHui("donate", String(vals.amount)),
+    });
+    return;
+  }
   if (kind === "pay_part") {
     if (!row.can) {
       showHintSheet({ title: row.name || "交一部分", body: row.detail || row.note || "这会儿不欠。" });

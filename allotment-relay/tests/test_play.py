@@ -148,10 +148,18 @@ def test_play_page_lists_all_plot_kinds() -> None:
     assert "goHome('plotsSection')" in js
     assert 'data-buy-seed' in html
     assert "play-plot-batch" in html
+    assert "play-plot-overview" in html
     assert "一键浇水" in html
     assert "一键打理" in html
     assert "一键施肥" in html
     assert "一键收获" in html
+    assert "plotOverviewHtml" in js
+    assert "plotCareStats" in js
+    assert "待打理" in js
+    assert "待浇水" in js
+    css = (ROOT / "server" / "static" / "play.css").read_text()
+    assert ".play-plot-overview" in css
+    assert ".play-plot-stat.is-on.is-ripe" in css
     assert "seedBuyHtml" in js
     assert "buy 5 ${cmd}" in js
     assert "buy 10 ${cmd}" in js

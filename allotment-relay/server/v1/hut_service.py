@@ -13,6 +13,8 @@ from .errors import ApiError, classify, humanize
 TITLES = {
     "look": "看屋",
     "sleep": "睡觉",
+    "bath": "泡澡",
+    "read": "读书",
     "cook": "出锅了",
     "upgrade": "升级",
     "buy_install": "装上了",
@@ -37,6 +39,8 @@ _FIT_KIND = {
     "cabinet": "soft",
     "fridge": "soft",
     "compost_bin": "soft",
+    "bath_tub": "hard",
+    "bookshelf": "soft",
 }
 
 
@@ -65,7 +69,7 @@ async def snapshot(api_key: str, key_id: int) -> dict[str, Any]:
     return snap
 
 
-_UNIQUE_FIT = {"bed", "cabinet", "fridge", "compost_bin", "hammock"}
+_UNIQUE_FIT = {"bed", "cabinet", "fridge", "compost_bin", "hammock", "bath_tub", "bookshelf"}
 
 
 def _kind_for(key: str) -> str:
@@ -153,6 +157,10 @@ def _command(kind: str, target: str) -> tuple[str, str]:
         return "hut", "status"
     if kind == "sleep":
         return "hut", "睡"
+    if kind == "bath":
+        return "hut", "泡澡"
+    if kind == "read":
+        return "hut", "读"
     if kind == "upgrade":
         return "hut", "upgrade"
     if kind == "put":

@@ -2,7 +2,7 @@ import { hutScene, state } from "../store.js?v=island-modulefix2";
 import { bindShopFrame, ensureShopFrame, setShopPeek } from "../ui/shop-frame.js?v=island-modulefix2";
 import { esc } from "../ui/modal.js?v=island-modulefix2";
 
-/** 没买房看不见棚屋场景。买了才按等级换景，点一下看屋里能睡、做饭、升级、潮柜、堆肥桶、畜栏。 */
+/** 没买房看不见棚屋场景。买了才按等级换景，点一下看屋里能睡、做饭、升级、潮柜、堆肥桶、畜栏。装了浴桶能泡澡，装了书架能读书。 */
 
 const mixSel = [];
 
@@ -14,7 +14,7 @@ export function renderHut(root, { onBuild, onAct, onSwitchTab, onOpenShelf, onCl
       <div class="island-place is-locked">
         <article class="island-place-card is-lock">
           <b>还没买房</b>
-          <p>棚屋场景还锁着。搭好才看得见棚屋，再升到岸畔小屋、联盟小宅、临海邸会换景。点一下看屋里，能睡、做饭、升级、潮柜、堆肥桶、畜栏。</p>
+          <p>棚屋场景还锁着。搭好才看得见棚屋，再升到岸畔小屋、联盟小宅、临海邸会换景。点一下看屋里，能睡、做饭、升级、潮柜、堆肥桶、畜栏。装了浴桶能泡澡，装了书架能读书。</p>
           <button type="button" class="island-btn primary wide" data-act="build">搭棚屋 · ${esc(String(info.cost))} 票</button>
         </article>
       </div>
