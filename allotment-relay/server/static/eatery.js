@@ -19,6 +19,16 @@ function splitMenuColumns(shops) {
         shop: shop.label,
         name: m.name,
         price: m.price,
+        combo: false,
+      });
+    }
+    for (const c of shop.combos || []) {
+      const dishNames = (c.dishes || []).map((d) => d.name).join(' + ');
+      dishes.push({
+        shop: shop.label,
+        name: `🍱 套餐·${c.name}${dishNames ? `（${dishNames}）` : ''}`,
+        price: c.price,
+        combo: true,
       });
     }
   }
@@ -53,7 +63,7 @@ async function loadEatery() {
           ${s.theme ? `<p class="shop-theme"><strong>${esc(s.theme)}</strong></p>` : ''}
           <p>${esc(s.blurb || s.portrait || '汤是热的。')}</p>
           <div class="shop-foot">
-            <span>${esc(s.menu.length)} 道菜</span>
+            <span>${esc(s.menu.length)} 道菜${(s.combos || []).length ? ` · ${s.combos.length} 套套餐` : ''}</span>
             <span>今日 ${esc(s.diners_today || 0)} 人用餐</span>
             <span>店主 ${esc(s.name)}</span>
           </div>
@@ -93,7 +103,7 @@ async function loadEatery() {
           </div>
         `;
       }).join('')
-    : '<p class="pl-empty">还没有用餐记录。去上手页点一顿，这里就会亮起来。</p>';
+    : '<p class="pl-empty">还没有用餐记录。去上手页或手机地图点小馆点一顿（齐柜套餐在上手页选套餐名），这里就会亮起来。</p>';
 }
 
 loadEatery().catch(() => {

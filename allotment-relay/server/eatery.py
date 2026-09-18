@@ -648,6 +648,20 @@ async def public_eatery_snapshot() -> dict[str, Any]:
             theme_line = theme_mod.menu_theme_line(menu_items)
             if theme_line and not paused:
                 blurb = f"{blurb} · {theme_line}"[:120]
+            combos_out: list[dict[str, Any]] = []
+            if not paused:
+                pct = int(round(theme_mod.COMBO_DINE_DISCOUNT * 100))
+                for spec, combo_rows in theme_mod.ready_combos_for_menu(menu):
+                    combos_out.append({
+                        "name": spec["name"],
+                        "slug": spec["slug"],
+                        "price": theme_mod.combo_dine_price(combo_rows),
+                        "discount_pct": pct,
+                        "dishes": [
+                            {"item": r["item"], "name": item_label(r["item"])}
+                            for r in combo_rows
+                        ],
+                    })
             out_shops.append({
                 "name": sh["name"],
                 "badge": sh["badge"],
@@ -666,6 +680,7 @@ async def public_eatery_snapshot() -> dict[str, Any]:
                     }
                     for m in menu
                 ],
+                "combos": combos_out,
             })
         orders = await (await conn.execute(
             """

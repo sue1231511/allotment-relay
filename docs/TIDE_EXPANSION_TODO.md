@@ -8,23 +8,23 @@
 
 | 批次 | 内容 | 状态 |
 |------|------|------|
-| 52–53 | trouble flash 扫尾、套餐 dine 88% | ✅ |
-| 54 | `/island` 小馆堂食列表套餐行（🍱 套餐按钮） | ✅ |
-| 55 | SET_MENUS ×5、我的馆套餐 hint、成就「套餐客」 | ✅ |
+| 54–55 | 岛 UI 套餐、SET_MENUS×5、套餐客 | ✅ |
+| 56 | `/eatery` 公开快照 combos、/play 选套餐下单 | ✅ |
+| 57 | 成就「齐柜主」、SET_MENUS×7 | ✅ |
 
 ---
 
 ## 坏事件 / 经济
 
-- ✅ 全岛 trouble flash · 炼 ×5 · 菜谱 137 · 主题+套餐 dine+岛 UI
+- ✅ 全岛 trouble flash · 炼 ×5 · 菜谱 137 · 主题+套餐 dine+岛/play/eatery UI · 套餐客+齐柜主
 
 ---
 
-## batch56+ 建议
+## 后续（可选 / 长尾）
 
-1. `/play` 或围观 `/eatery` 套餐入口（可选）  
-2. 套餐客之后：馆主「齐柜套餐」次数成就  
+- 更多 SET_MENUS 或收藏册与套餐联动  
+- 围观页一键跳 `/play?go=eatery` 并预选店（体验 polish）
 
 ---
 
-*最后更新：batch55。*
+*最后更新：batch57。*

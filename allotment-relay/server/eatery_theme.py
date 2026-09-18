@@ -125,7 +125,29 @@ SET_MENUS: tuple[dict, ...] = (
         "keys": frozenset({"blueberry_tart", "mango_pudding"}),
         "hint": "两道甜点齐柜，下午茶气质。",
     },
+    {
+        "name": "黑盐潮锅",
+        "slug": "black_brine_pot",
+        "keys": frozenset({"black_salt_fish", "brine_kelp_pot"}),
+        "hint": "黑盐鱼配卤藻锅，海味浓。",
+    },
+    {
+        "name": "灯海双鲜",
+        "slug": "lantern_brine",
+        "keys": frozenset({"lantern_sashimi", "brine_clam_pot"}),
+        "hint": "刺身+卤蟹锅，夜场气质。",
+    },
 )
+
+
+def ready_combos_for_menu(menu: list[dict]) -> list[tuple[dict, list[dict]]]:
+    """齐柜可点的套餐：(spec, menu_rows)。"""
+    out: list[tuple[dict, list[dict]]] = []
+    for spec in SET_MENUS:
+        rows = pick_menu_rows_for_set(menu, spec)
+        if rows:
+            out.append((spec, rows))
+    return out
 
 
 def resolve_set_menu(token: str) -> dict | None:

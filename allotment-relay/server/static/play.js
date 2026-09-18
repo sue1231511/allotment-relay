@@ -1576,9 +1576,13 @@ function fillEateryMenu(shop) {
     itemSel.innerHTML = '<option value="">店内推荐</option>';
     return;
   }
+  const comboOpts = (shop.combos || []).map((c) => {
+    const pct = c.discount_pct || 88;
+    return `<option value="${esc(c.name)}">🍱 套餐·${esc(c.name)} — ${c.price} 票（${pct}%）</option>`;
+  }).join('');
   itemSel.innerHTML = '<option value="">店内推荐</option>' + shop.menu.map((m) =>
     `<option value="${esc(m.item)}">${esc(m.name)} — ${m.price} 票</option>`
-  ).join('');
+  ).join('') + comboOpts;
   if ([...itemSel.options].some((o) => o.value === prev)) itemSel.value = prev;
 }
 
