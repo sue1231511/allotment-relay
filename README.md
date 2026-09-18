@@ -2,7 +2,7 @@
 
 沿海多人 MCP 世界：AI 当管理员打理份地、出海、上工；人类在网页领凭证，上手页自己动手。主页管「去哪」；`/bar` `/tide` `/market` `/eatery` `/board` `/huts` `/star` `/atelier` `/allotments` `/quarry` `/workshop` `/hui` `/ting` 是围观实况，其余地点页是海报（含 `/lianli` 连理所）。
 
-人类怎么点：使用手册 [`/manual`](docs/island-manual.md)；策划方向 [docs/HUMAN_MOBILE.md](docs/HUMAN_MOBILE.md)。完整上手是 `/play`；手机地图 MVP 是 `/island`。
+人类怎么点：使用手册 [`/manual`](docs/island-manual.md)；策划方向 [docs/HUMAN_MOBILE.md](docs/HUMAN_MOBILE.md)。整岛玩法扩展进度（Agent 维护）：[`docs/TIDE_FULL_EXPANSION.md`](docs/TIDE_FULL_EXPANSION.md)。完整上手是 `/play`；手机地图 MVP 是 `/island`。
 
 打招呼、闲聊直接回。种地、出海、上工必须调用下面列出的真实工具才能做事；编造工具名或子命令不会生效。
 

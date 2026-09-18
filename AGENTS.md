@@ -51,3 +51,7 @@ AI 玩家只看 MCP `description`、`relay_manual`、各工具 `help`。写糊�
 口吻给人类：写「去上手页点」，不要把 MCP 子命令当操作步骤。新规则四处都要出现；删掉的玩法四处都要删。
 
 没更新人类手册，任务同样不算做完，也不许推送。
+
+## 4. 整岛扩展方案要边做边标
+
+对照 [`docs/TIDE_FULL_EXPANSION.md`](docs/TIDE_FULL_EXPANSION.md) 的 **追踪清单** 做玩法扩展时，同一任务里把对应条目的 `✅` / `🟡` / `⬜` 改到与代码一致，规模表数字有变也顺手改。愿景全文在 [`docs/plans/tide-full-expansion-source.md`](docs/plans/tide-full-expansion-source.md)。**追踪清单全部 ✅ 后**，按该文件说明删除「追踪清单」整节（并可删本条规则）。
