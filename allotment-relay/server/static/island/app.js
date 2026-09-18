@@ -869,6 +869,19 @@ function clinicRow(kind, target, id) {
 function tapClinic(kind, target, id) {
   const row = clinicRow(kind, target, id) || {};
   const body = row.detail || row.note || (state.clinic && state.clinic.line) || "这会儿诊所用不上这一下。";
+  if (kind === "queue_jam") {
+    if (!row.can) {
+      showHintSheet({ title: row.name || "诊险", body: row.detail || row.note || body });
+      return;
+    }
+    showActSheet({
+      title: row.name || `诊险·${target}`,
+      body: row.detail || row.note || (state.clinic && state.clinic.queue_note) || body,
+      confirm: "确认",
+      onConfirm: () => runClinic("queue_jam", target),
+    });
+    return;
+  }
   if (kind === "look" || !row.can) {
     speakClinic(body);
     return;
@@ -2530,6 +2543,19 @@ function lianliRow(kind, target, id) {
 
 function tapLianli(kind, target, id) {
   const row = lianliRow(kind, target, id) || {};
+  if (kind === "desk_jam") {
+    if (!row.can) {
+      showHintSheet({ title: row.name || "所险", body: row.detail || row.note || (state.lianli && state.lianli.jam_note) || "这会儿处置不了。" });
+      return;
+    }
+    showActSheet({
+      title: row.name || `所险·${target}`,
+      body: row.note || (state.lianli && state.lianli.jam_note) || "册子乱页，先处置。",
+      confirm: "确认",
+      onConfirm: () => runLianli("desk_jam", target),
+    });
+    return;
+  }
   if (kind === "look") {
     if (row.can === false) {
       showHintSheet({ title: row.name || "登记处", body: row.detail || row.note || "这会儿还不行。" });

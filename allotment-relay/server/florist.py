@@ -17,6 +17,7 @@ FLORIST_HELP = """visit_ops 默默 子命令（整句写进 command）：
   默默 花茶 玫瑰花茶包 — 买茶包入行囊，价格比现煮少8票；默默 花茶 冲泡 玫瑰花茶包 消耗一包喝，不另收费，效果同现煮（均受属性上限限制）
   默默 记名 — 今天打过招呼才能记，每游戏日一次，累计7天解锁可佩戴称呼「花房熟客」，不发票
   默默 干花 玫瑰 — 消耗已有鲜花一枝+28票做干花，自动挂进小屋空软装槽；无房/无空槽则不扣款不耗花，不覆盖原家具。纯装饰，之后可从小屋查看/卖掉
+  默默 花险 开窗|洒水|硬做 — 干花后小概率花粉扑面，未处置不能再买花/干花/花茶。人类 /island 花店也能点
   默默 告别 — 只说再见，不领奖不消费；默默 help 看本说明。每天按游戏日UTC午夜刷新
 例：默默 scan · 默默 买花 玫瑰 · 默默 花茶 玫瑰花茶
 人类 /island 总览点集市，先选「集市 / 花店」。花店先进店景，点一下见默默，点对话框出选项；回应就在对话框内。
@@ -63,10 +64,21 @@ async def _drink(conn, sid: int, key: str) -> str:
     return f"喝下{tea['name']}，精力 +{got}，雾智至多 +{tea['wit']}（不超过上限）。"
 
 async def player_view(conn, s: dict) -> dict:
+    from . import florist_pollen_sniff as sniff_mod
+
     conn.row_factory = aiosqlite.Row
     sid, day = s["id"], db.day_id()
     st = await _state(conn, sid)
     stock = {r[0]: r[1] for r in await (await conn.execute("SELECT item,quantity FROM satchel WHERE steward_id=? AND quantity>0", (sid,))).fetchall()}
+    tickets = int(s.get("tickets") or 0)
+    energy_now = int(s.get("energy") or 0)
+    hazard = await sniff_mod.get_hazard(conn, sid)
+    sniff_actions = (
+        sniff_mod.ui_actions(tickets=tickets, stock=stock, energy_now=energy_now)
+        if hazard == sniff_mod.HAZARD_SNIFF
+        else []
+    )
+    sniff_block = hazard == sniff_mod.HAZARD_SNIFF
     flowers = [{"key": k, **FLOWERS[k], "cost": await _price(conn, sid, k)} for k in daily_flowers(day)]
     actions = [{"kind": "language", "label": "听花语", "cost": 0 if st["language_day"] != day else 5},
                {"kind": "stamp", "label": f"记名 · {st['stamps']}/7天", "cost": 0}]
@@ -84,9 +96,23 @@ async def player_view(conn, s: dict) -> dict:
         if qty:
             actions.append({"kind": "dry", "target": k, "label": f"干花 · {f['name']}（有{qty}枝）· 耗1枝，挂小屋空软装槽", "cost": 28})
     actions += [{"kind": "look", "label": "看今日花单茶单", "cost": 0}, {"kind": "bye", "label": "告别", "cost": 0}]
-    return {"name": "默语花房", "speaker": "默默", "line": "满屋花草，梁上晾着香茅姜串，柜台后是一排花茶罐。", "day": day,
+    for act in sniff_actions:
+        actions.insert(0, {
+            "kind": "pollen_sniff",
+            "target": act["action"],
+            "label": f"花险·{act['label']}（{act.get('hint') or ''}）",
+            "cost": 0,
+            "can": bool(act.get("can")),
+        })
+    if sniff_block:
+        for row in actions:
+            if row.get("kind") not in ("pollen_sniff", "look", "bye"):
+                row["can"] = False
+    line = "花粉还呛人，先处置花险。" if sniff_block else "满屋花草，梁上晾着香茅姜串，柜台后是一排花茶罐。"
+    return {"name": "默语花房", "speaker": "默默", "line": line, "day": day,
             "flowers": flowers, "actions": actions, "stamps": st["stamps"], "visited_today": st["visit_day"] == day,
-            "stock": {k: v for k, v in stock.items() if k.startswith("flower_")}}
+            "stock": {k: v for k, v in stock.items() if k.startswith("flower_")},
+            "hazard": hazard, "sniff_actions": sniff_actions, "sniff_note": "干花后花粉扑面，先处置。" if sniff_block else ""}
 
 def _scan(view: dict) -> str:
     flowers = "\n".join(f"  {f['name']} {f['cost']}票 · 花语：{f['meaning']}" for f in view["flowers"])
@@ -174,7 +200,11 @@ async def _act(conn, s: dict, verb: str, target: str) -> str:
             raise ValueError("行囊没有这枝鲜花，先买花。")
         await _pay(conn, sid, 28)
         await conn.execute("INSERT INTO hut_fittings(steward_id,slot,item_key,installed_at) VALUES(?,?,?,?)", (sid, slot, f"deco_flower_{k}", db.now()))
+        from . import florist_pollen_sniff as sniff_mod
+        sniff_note = await sniff_mod.maybe_after_dry(conn, sid) or ""
         result = f"我替你把这一季的花留住。\n消耗{FLOWERS[k]['name']}一枝、28票；干花挂在小屋 {slot}。纯装饰，无属性加成。"
+        if sniff_note:
+            result += f"\n{sniff_note}"
     elif verb == "告别":
         result = line("bye")
     else:
@@ -192,6 +222,15 @@ async def command(sid: int, command: str = "", *, idem: str = "") -> str:
         s = dict(await (await conn.execute("SELECT * FROM stewards WHERE id=?", (sid,))).fetchone())
         if verb in ("help", "帮助", "?"):
             return FLORIST_HELP
+        if verb in ("花险", "pollen", "花粉"):
+            from . import florist_pollen_sniff as sniff_mod
+            msg = await sniff_mod.resolve(conn, s, target)
+            if idem:
+                await conn.execute("INSERT INTO florist_receipts(steward_id,idem_key,command,narrative,created_at) VALUES(?,?,?,?,?)", (sid, idem, command.strip(), msg, db.now()))
+            await conn.commit()
+            return msg
+        from . import florist_pollen_sniff as sniff_mod
+        await sniff_mod.assert_not_blocked(conn, sid)
         if verb in ("scan", "看", "花单"):
             return _scan(await player_view(conn, s))
         if idem:

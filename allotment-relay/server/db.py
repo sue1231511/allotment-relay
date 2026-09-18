@@ -2326,6 +2326,12 @@ async def init_db() -> None:
             "ALTER TABLE stewards ADD COLUMN lili_hazard_json TEXT",
             "ALTER TABLE stewards ADD COLUMN wall_hazard TEXT",
             "ALTER TABLE stewards ADD COLUMN wall_hazard_json TEXT",
+            "ALTER TABLE stewards ADD COLUMN marriage_hazard TEXT",
+            "ALTER TABLE stewards ADD COLUMN marriage_hazard_json TEXT",
+            "ALTER TABLE stewards ADD COLUMN clinic_hazard TEXT",
+            "ALTER TABLE stewards ADD COLUMN clinic_hazard_json TEXT",
+            "ALTER TABLE stewards ADD COLUMN florist_hazard TEXT",
+            "ALTER TABLE stewards ADD COLUMN florist_hazard_json TEXT",
         ):
             try:
                 await db.execute(ddl)

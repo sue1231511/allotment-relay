@@ -20,6 +20,10 @@ def _command(kind: str, target: str) -> str:
         if target:
             raise ApiError("BAD_REQUEST", "这一下不需要另填名字。")
         return {"visit": "visit", "language": "花语", "stamp": "记名", "look": "scan", "bye": "告别"}[kind]
+    if kind == "pollen_sniff":
+        if not target:
+            raise ApiError("BAD_REQUEST", "先选开窗、洒水或硬做。")
+        return f"花险 {target}"
     if kind in ("buy", "dry"):
         if not target or any(c.isspace() for c in target):
             raise ApiError("BAD_REQUEST", "先点要买或做干花的那一枝。")
