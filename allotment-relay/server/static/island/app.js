@@ -31,7 +31,7 @@ import { renderShop } from "./scenes/shop.js?v=tt-sprite1";
 import { renderLili } from "./scenes/lili.js?v=island-modulefix2";
 import { renderClinic } from "./scenes/clinic.js?v=island-modulefix2";
 import { renderShaonian } from "./scenes/shaonian.js?v=island-modulefix2";
-import { renderWorkshop } from "./scenes/workshop.js?v=island-modulefix2";
+import { renderWorkshop } from "./scenes/workshop.js?v=workshop-snag1";
 import { renderQuarry } from "./scenes/quarry.js?v=quarry-collapse1";
 import { renderBar } from "./scenes/bar.js?v=island-modulefix2";
 import { renderTheater } from "./scenes/theater.js?v=island-modulefix2";
@@ -914,7 +914,7 @@ function workshopRow(kind, target) {
     return (shop.pans || []).find((row) => String(row.slot) === String(target));
   }
   if (kind === "open_pan") return shop.next_pan;
-  if (kind === "salvage") return shop.salvage;
+  if (kind === "salvage" || kind === "salvage_snag") return shop.salvage;
   if (kind === "patch") return shop.patch;
   if (kind === "donate") return (shop.exhibits || []).find((row) => row.name === target);
   return null;
@@ -928,6 +928,10 @@ function workshopCan(kind, row) {
   if (kind === "harvest") return Boolean(row.can_harvest);
   if (kind === "open_pan") return Boolean(row.can_buy);
   if (kind === "salvage") return Boolean(row.can_salvage);
+  if (kind === "salvage_snag") {
+    const act = (row.snag_actions || []).find((a) => a.action === target);
+    return Boolean(act && act.can);
+  }
   if (kind === "patch") return Boolean(row.can_patch);
   if (kind === "donate") return Boolean(row.can_donate);
   return false;
@@ -959,6 +963,7 @@ function tapWorkshop(kind, target) {
     harvest: ["收盐", body, "确认收"],
     open_pan: ["开新池", body, "确认开"],
     salvage: ["打捞", body, "确认捞"],
+    salvage_snag: ["缠网", body, "确认"],
     donate: ["捐陈列", body, "确认捐"],
     patch: ["补网", body, "确认贴"],
   }[kind] || ["岸工坊", body, "确认"];

@@ -129,10 +129,24 @@ function saltMarkup(shop) {
 function salvageMarkup(shop) {
   const s = shop.salvage || {};
   const p = shop.patch || {};
-  return [
-    sku("salvage", "", { emoji: "🪵", name: "下滩打捞" }, s.note || "", s.can_salvage ? "捞" : "看", Boolean(s.can_salvage), s.can_salvage ? "is-ready" : ""),
-    sku("patch", "", { emoji: "🩹", name: "补网" }, p.note || "", p.can_patch ? "贴" : "看", Boolean(p.can_patch)),
-  ].join("");
+  const rows = [];
+  if (s.hazard === "snag" && (s.snag_actions || []).length) {
+    for (const act of s.snag_actions) {
+      rows.push(sku(
+        "salvage_snag",
+        act.action,
+        { emoji: "🪢", name: `缠网·${act.label}` },
+        s.note || "",
+        act.label,
+        Boolean(act.can),
+        act.can ? "is-ready" : "",
+      ));
+    }
+  } else {
+    rows.push(sku("salvage", "", { emoji: "🪵", name: "下滩打捞" }, s.note || "", s.can_salvage ? "捞" : "看", Boolean(s.can_salvage), s.can_salvage ? "is-ready" : ""));
+  }
+  rows.push(sku("patch", "", { emoji: "🩹", name: "补网" }, p.note || "", p.can_patch ? "贴" : "看", Boolean(p.can_patch)));
+  return rows.join("");
 }
 
 function exhibitMarkup(shop) {
