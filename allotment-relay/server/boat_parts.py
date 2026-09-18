@@ -155,20 +155,22 @@ def fail_bonus(parts: dict[str, tuple[int, int]]) -> float:
         extra += 0.05
     elif engine < 0.55:
         extra += 0.02
-    bell = _ratio(parts, "bell")
-    if bell < 0.35:
-        extra += 0.04
-    elif bell < 0.55:
-        extra += 0.02
-    elif bell >= 0.85:
-        extra -= 0.03
-    compass = _ratio(parts, "compass")
-    if compass < 0.35:
-        extra += 0.05
-    elif compass < 0.55:
-        extra += 0.02
-    elif compass >= 0.85:
-        extra -= 0.04
+    if "bell" in parts:
+        bell = _ratio(parts, "bell")
+        if bell < 0.35:
+            extra += 0.04
+        elif bell < 0.55:
+            extra += 0.02
+        elif bell >= 0.85:
+            extra -= 0.03
+    if "compass" in parts:
+        compass = _ratio(parts, "compass")
+        if compass < 0.35:
+            extra += 0.05
+        elif compass < 0.55:
+            extra += 0.02
+        elif compass >= 0.85:
+            extra -= 0.04
     return extra
 
 
