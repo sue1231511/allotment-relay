@@ -486,6 +486,9 @@ async def relay_manual() -> str:
         "  船体 hull 随航程磨损（voyage_ops status 看）；低 hull 可能变待修。repair 票修同时回满 hull",
         "  坐钓 cast 另耗鱼线耐久（tide_ops gear 看 line）；线旧可能断线（票饵仍花，无鱼）→ gear repair line",
         "  鱼群生态：同种捞多了本周变稀；visit_ops 潮生会 禁捕 看禁捞种+压力。网/钓碰上禁捕罚15票放生",
+        "  水层 tide_ops 水层 near|shore|far|deep 定下次网/钓海域；钩/卷线器 gear status 看，挂底 tide_ops 解挂",
+        "  大鱼搏斗：稀有鱼可能触发 tide_ops 搏鱼 硬拉|放走|切线（不进袋直到硬拉赢）",
+        "  船部件 voyage_ops 部件 / 部件 修；帆舵灯低加出海失败。畜栏 barn_ops breed 1 配种（适龄已喂）",
         "  船只履历 voyage_ops 履历；畜栏 barn_ops 履历；小屋 hut_ops 修屋顶（低顶睡觉少回精力）",
         "  井蚀 undertide_ops descend/enter 磨损井壁；undertide_ops 清井 花票维护；status 看蚀度",
         "  家具套装 hut_ops status 看「套装」：灶链/咸鲜排/眠巢。成婚且 home 登记时睡觉偶发家庭小事件",
@@ -2105,6 +2108,33 @@ async def tide_ops(key_id: int, command: str) -> str:
         async with db.connect() as conn:
             return await catches_mod.fish_catalog(conn, s["id"])
 
+    if verb in ("搏鱼", "fight-fish", "fishfight"):
+        from . import big_fish_fight as fight_mod
+        sub = " ".join(parts[1:]) if len(parts) > 1 else "status"
+        async with db.connect() as conn:
+            msg = await fight_mod.resolve(conn, s, sub.split()[0] if sub.split() else "status")
+            await conn.commit()
+        return f"{pulse}\n{msg}" if pulse else msg
+
+    if verb in ("解挂", "unsnag", "snag"):
+        from . import fishing_parts as parts_mod
+        sub = parts[1] if len(parts) > 1 else ""
+        async with db.connect() as conn:
+            msg = await parts_mod.clear_snag(conn, s["id"], sub or "status")
+            await conn.commit()
+        return msg
+
+    if verb in ("水层", "layer", "zone"):
+        from . import sea_layer_pref as layer_mod
+        sub = parts[1].lower() if len(parts) > 1 else "status"
+        async with db.connect() as conn:
+            if sub in ("status", "查看", ""):
+                ly = await layer_mod.get_layer(conn, s["id"])
+                return f"当前水层偏好：{ly}（shore/near/far/deep）"
+            msg = await layer_mod.set_layer(conn, s["id"], sub)
+            await conn.commit()
+        return msg
+
     if verb == "net":
         cost = 4
         async with db.connect() as conn:
@@ -2143,16 +2173,20 @@ async def tide_ops(key_id: int, command: str) -> str:
             return f"{pulse}\n{msg}" if pulse else msg
         rarity_cap = 3 + rarity_bonus
         meta = None
+        fight_msg = None
         async with db.connect() as conn:
             from . import fish_ecology as fish_ecology_mod
             from . import fish_ban as fish_ban_mod
+            from . import sea_layer_pref as layer_mod
+            layer = await layer_mod.get_layer(conn, s["id"])
             cap = min(6, rarity_cap + 1) if fortune_key == "fish_catch" else rarity_cap
             catch = await fish_ecology_mod.pick(
-                conn, mode="net", tide=tide, rarity_cap=cap,
+                conn, mode="net", tide=tide, rarity_cap=cap, layer_override=layer,
             )
             if catch_bonus and random.random() < catch_bonus:
                 catch = await fish_ecology_mod.pick(
                     conn, mode="net", tide=tide, rarity_cap=min(6, rarity_cap + 1),
+                    layer_override=layer,
                 )
             ban_msg = await fish_ban_mod.enforce(conn, s["id"], catch)
             if ban_msg:
@@ -2165,36 +2199,46 @@ async def tide_ops(key_id: int, command: str) -> str:
             from . import item_traits as traits_mod
             state = traits_mod.roll_fish_state(catch)
             weight = traits_mod.roll_fish_weight_kg(catch)
-            await traits_mod.grant_satchel(
-                conn, s["id"], f"fish_{catch}", 1,
-                quality=state, weight_kg=weight,
+            from . import big_fish_fight as fight_mod
+            fight_msg = await fight_mod.maybe_start(
+                conn, s["id"], catch, weight_kg=weight, state=state, rod_tier=stats["net"]["tier"],
             )
-            from . import ledger as ledger_mod
-            await ledger_mod.note_gain(
-                conn, s["id"], f"fish_{catch}", 1,
-                f"{meta['emoji']}{meta['name']}{weight}kg·{traits_mod.FISH_STATE_LABEL.get(state, state)}"
-                f"由{s['name']}于{ledger_mod.calendar_phrase()}"
-                f"在{world.tide_label(tide)}捞起",
-            )
-            if gear_bonus > 0:
+            if not fight_msg:
+                await traits_mod.grant_satchel(
+                    conn, s["id"], f"fish_{catch}", 1,
+                    quality=state, weight_kg=weight,
+                )
+                from . import ledger as ledger_mod
+                await ledger_mod.note_gain(
+                    conn, s["id"], f"fish_{catch}", 1,
+                    f"{meta['emoji']}{meta['name']}{weight}kg·{traits_mod.FISH_STATE_LABEL.get(state, state)}"
+                    f"由{s['name']}于{ledger_mod.calendar_phrase()}"
+                    f"在{world.tide_label(tide)}捞起",
+                )
+            if gear_bonus > 0 and not fight_msg:
                 await conn.execute(
                     "UPDATE stewards SET tickets=tickets+? WHERE id=?",
                     (gear_bonus, s["id"]),
                 )
             from . import catches as catches_mod
-            await catches_mod.record_catch(conn, s["id"], f"fish_{catch}")
-            await survival.bump(conn, s["id"], satiety=5)
+            if not fight_msg:
+                await catches_mod.record_catch(conn, s["id"], f"fish_{catch}")
+            await survival.bump(conn, s["id"], satiety=5 if not fight_msg else 2)
             from . import marine as marine_mod
             voyage = await marine_mod._get_voyage(conn, s["id"])
-            if voyage and voyage.get("status") == "sailing":
+            if voyage and voyage.get("status") == "sailing" and not fight_msg:
                 await marine_mod.append_voyage_fish(conn, voyage, f"fish_{catch}")
             # 未命名小鱼不能网：撒网不触发遭遇，渔获池也排除 walkblue
             from . import tale as tale_mod
-            await tale_mod.check_item_progress(conn, s["id"], f"fish_{catch}", 1)
+            if not fight_msg:
+                await tale_mod.check_item_progress(conn, s["id"], f"fish_{catch}", 1)
             tale_extra = await tale_mod.check_action_progress(conn, s["id"], "sea")
             await conn.commit()
         from . import gear_wear as gear_wear_mod
         acc = await gear_wear_mod.maybe_accident_note(net_dur, net_mx)
+        if fight_msg:
+            parts_out = [x for x in (pulse, fight_msg, extra, disc) if x]
+            return "\n".join(parts_out)
         msg = (
             f"{s['name']} 在{world.tide_label(tide)}网到 {meta['emoji']}{meta['name']} "
             f"{weight}kg [{traits_mod.FISH_STATE_LABEL.get(state, state)}][网T{stats['net']['tier']}]"
@@ -2220,8 +2264,14 @@ async def tide_ops(key_id: int, command: str) -> str:
 
     if verb == "cast":
         cost = 3
+        fight_msg = None
         async with db.connect() as conn:
             from . import energy as energy_mod, gear
+            from . import fishing_parts as fish_parts_mod
+            from . import big_fish_fight as fight_mod
+            await fish_parts_mod.assert_can_cast(conn, s["id"])
+            if await fight_mod.get_pending(conn, s["id"]):
+                raise ValueError("有大鱼在搏斗。先 tide_ops 搏鱼 硬拉|放走|切线")
             stats = await gear.get_stats(conn, s["id"])
             rod, bait = stats["rod"], stats["bait"]
             if rod["tier"] < 1:
@@ -2236,6 +2286,7 @@ async def tide_ops(key_id: int, command: str) -> str:
             from . import gear_wear as gear_wear_mod
             rod_dur, rod_mx = await gear_wear_mod.wear(conn, s["id"], "rod")
             line_dur, line_mx = await gear_wear_mod.wear(conn, s["id"], "line")
+            snagged, snag_note = await fish_parts_mod.wear_cast(conn, s["id"])
             extra = await events.roll_after_action(s, "net", conn)
             disc = await commons.roll_discovery(conn, s, "net")
             from . import shaonian as shaonian_mod
@@ -2243,6 +2294,9 @@ async def tide_ops(key_id: int, command: str) -> str:
             fortune_key = daily.get("fortune") or ""
             no_empty = await shaonian_mod.fishing_no_empty(conn, s["id"])
             await conn.commit()
+            if snagged:
+                parts_out = [x for x in (pulse, snag_note, extra, disc) if x]
+                return "\n".join(parts_out)
         catch_b, rarity_b, empty_b, _ = gear.combined_fish_bonus(bait=bait, rod=rod)
         snap_p = gear_wear_mod.line_snap_chance(line_dur, line_mx)
         if snap_p > 0 and random.random() < snap_p:
@@ -2261,14 +2315,19 @@ async def tide_ops(key_id: int, command: str) -> str:
         async with db.connect() as conn:
             from . import fish_ecology as fish_ecology_mod
             from . import fish_ban as fish_ban_mod
+            from . import sea_layer_pref as layer_mod
+            from . import big_fish_fight as fight_mod
+            layer = await layer_mod.get_layer(conn, s["id"])
             cap = min(6, rarity_cap + 1) if fortune_key == "fish_catch" else rarity_cap
             catch = await fish_ecology_mod.pick(
                 conn, mode="cast", tide=tide, rarity_cap=cap, allow_cast_only=True,
+                layer_override=layer,
             )
             if catch_b and random.random() < catch_b + 0.08:
                 catch = await fish_ecology_mod.pick(
                     conn, mode="cast", tide=tide,
                     rarity_cap=min(6, rarity_cap + 1), allow_cast_only=True,
+                    layer_override=layer,
                 )
             ban_msg = await fish_ban_mod.enforce(conn, s["id"], catch)
             if ban_msg:
@@ -2281,40 +2340,49 @@ async def tide_ops(key_id: int, command: str) -> str:
             from . import item_traits as traits_mod
             state = traits_mod.roll_fish_state(catch)
             weight = traits_mod.roll_fish_weight_kg(catch)
-            await traits_mod.grant_satchel(
-                conn, s["id"], f"fish_{catch}", 1,
-                quality=state, weight_kg=weight,
+            fight_msg = await fight_mod.maybe_start(
+                conn, s["id"], catch, weight_kg=weight, state=state, rod_tier=rod["tier"],
             )
-            from . import ledger as ledger_mod
-            await ledger_mod.note_gain(
-                conn, s["id"], f"fish_{catch}", 1,
-                f"{meta['emoji']}{meta['name']}{weight}kg·{traits_mod.FISH_STATE_LABEL.get(state, state)}"
-                f"由{s['name']}于{ledger_mod.calendar_phrase()}"
-                f"在{world.tide_label(tide)}捞起",
-            )
-            if gear_bonus > 0:
+            if not fight_msg:
+                await traits_mod.grant_satchel(
+                    conn, s["id"], f"fish_{catch}", 1,
+                    quality=state, weight_kg=weight,
+                )
+                from . import ledger as ledger_mod
+                await ledger_mod.note_gain(
+                    conn, s["id"], f"fish_{catch}", 1,
+                    f"{meta['emoji']}{meta['name']}{weight}kg·{traits_mod.FISH_STATE_LABEL.get(state, state)}"
+                    f"由{s['name']}于{ledger_mod.calendar_phrase()}"
+                    f"在{world.tide_label(tide)}捞起",
+                )
+            if gear_bonus > 0 and not fight_msg:
                 await conn.execute(
                     "UPDATE stewards SET tickets=tickets+? WHERE id=?",
                     (gear_bonus, s["id"]),
                 )
             from . import catches as catches_mod
-            await catches_mod.record_catch(conn, s["id"], f"fish_{catch}")
-            await survival.bump(conn, s["id"], satiety=4)
+            if not fight_msg:
+                await catches_mod.record_catch(conn, s["id"], f"fish_{catch}")
+            await survival.bump(conn, s["id"], satiety=4 if not fight_msg else 2)
             from . import marine as marine_mod
             voyage = await marine_mod._get_voyage(conn, s["id"])
             legged = None
             curse_line = None
             if catch == "walkblue":
                 curse_line = await marine_mod.on_obtain_walkblue(conn, s["id"])
-            if voyage and voyage.get("status") == "sailing":
+            if voyage and voyage.get("status") == "sailing" and not fight_msg:
                 await marine_mod.append_voyage_fish(conn, voyage, f"fish_{catch}")
                 if catch != "walkblue":
                     legged = await marine_mod.try_legged_fish_encounter(conn, s, voyage)
             from . import tale as tale_mod
-            await tale_mod.check_item_progress(conn, s["id"], f"fish_{catch}", 1)
+            if not fight_msg:
+                await tale_mod.check_item_progress(conn, s["id"], f"fish_{catch}", 1)
             tale_extra = await tale_mod.check_action_progress(conn, s["id"], "sea")
             await conn.commit()
         acc = await gear_wear_mod.maybe_accident_note(rod_dur, rod_mx)
+        if fight_msg:
+            parts_out = [x for x in (pulse, fight_msg, extra, disc) if x]
+            return "\n".join(parts_out)
         msg = (
             f"坐钓 {meta['emoji']}{meta['name']} {weight}kg "
             f"[{traits_mod.FISH_STATE_LABEL.get(state, state)}][饵T{bait['tier']} 竿T{rod['tier']}]"

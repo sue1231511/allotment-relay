@@ -102,13 +102,15 @@ async def plot_ops(
     return await mux._call_ops(mux.plot_bundle, _kid(), command)
 
 
-@mcp.tool(description="小屋潮柜床畜栏腌晾。空=列表。例：status · 睡 · 修屋顶 · 腌 甘蓝 4 · 晾 鲭鱼 4。屋顶耐久低则睡觉少回精力。mascot upkeep≠岸维。")
+@mcp.tool(description="小屋潮柜床畜栏腌晾。空=列表。例：status · 睡 · 修屋顶 · barn breed 1 · 腌 甘蓝 4 · 晾 鲭鱼 4。屋顶耐久低则睡觉少回精力。mascot upkeep≠岸维。")
 async def hut_ops(command: str = "") -> str:
     return await mux._call_ops(mux.hut_bundle, _kid(), command)
 
 
-@mcp.tool(description="渔获出海赶海渔排漂流瓶。空=列表。例：net · 搭排 · 巡排 · 投苗 灰鲱 2 · dig · 捞瓶。人类 /island 港口渔排栏。dig≠崖矿；勿 pen_ops/fish_ops/bottle_ops。")
-async def tide_ops(command: str = "") -> str:
+@mcp.tool(description="渔获出海赶海渔排漂流瓶。空=列表。例：net · cast · 水层 near · 搏鱼 硬拉 · 解挂 · voyage 部件 修 · dig。人类 /island 港口渔排栏。dig≠崖矿。")
+async def tide_ops(
+    command: Annotated[str, Field(description="net/cast · 水层 shore|near|far|deep · 搏鱼 硬拉|放走|切线 · 解挂 · gear repair hook · voyage 部件 修 · dig 赶海。")] = "",
+) -> str:
     return await mux._call_ops(mux.tide_bundle, _kid(), command)
 
 

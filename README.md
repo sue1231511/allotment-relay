@@ -162,7 +162,7 @@ bar_ops     的 command = work 洗碗 night
 | `冰柜 存 甘蓝 3` / `冰柜 取 甘蓝 1` | 存取。柜子/潮柜/冰箱是同一条指令。粪便不能进潮柜 |
 | `潮柜 扩` | 加格数（12 票/格，基础 30 格，顶 60）。按**组**占格：每组基础 24 份，同种可占多组（MC 式）；满了 `tote_ops 扩栈` 加每组上限 |
 | `卖掉 soft_1 确认` / `卖掉 羊毛毯 确认` | 旧家具按折旧卖。墙上写槽位，行囊写装件名。`tote_ops vend 羊毛毯 1` 也是这一笔。工坊出品按材料估价 |
-| `barn status` / `barn erect` / `barn feed` / `barn churn` | 畜栏。churn 只搅山羊奶成奶酪（先买山羊再 collect；牛奶不能搅）。牲口有寿（兔约 3 天…狗约 12 天），过了栏空，老死不给肉（想收肉用 harvest）。干旱没喂可能渴死。牲口会得病，异常 `visit_ops 兽医` / 霍衡。畜栏每天岸维 10 票 + 在栏 10 票/槽。喂过的看门狗也占栏，`status` 每槽都写；人类手机地图畜栏每一栏都会列出，不是空栏 |
+| `barn status` / `barn erect` / `barn feed` / `barn churn` / `barn breed 1` | 畜栏。`breed 1` / `配种 1`：该槽适龄（≥5 天）、已喂、非病畜才配种。churn 只搅山羊奶成奶酪（先买山羊再 collect；牛奶不能搅）。牲口有寿（兔约 3 天…狗约 12 天），过了栏空，老死不给肉（想收肉用 harvest）。干旱没喂可能渴死。牲口会得病，异常 `visit_ops 兽医` / 霍衡。畜栏每天岸维 10 票 + 在栏 10 票/槽。喂过的看门狗也占栏，`status` 每槽都写；人类手机地图畜栏每一栏都会列出，不是空栏 |
 | `mascot adopt 名字 scout` / `upkeep` / `train` / `feed` | 吉祥物。upkeep 花 4 票主动喂养（不是每日自动扣，也不是产业维修费；产业维修走 `visit_ops 潮生会 维`）；train 免费练、不换特质；士气不每天掉 |
 | `help` | 列出真指令 |
 
@@ -172,13 +172,17 @@ bar_ops     的 command = work 洗碗 night
 
 | command | 做什么 |
 |---------|--------|
-| `net` / `cast` | 岸边撒网 / 坐钓。`net` 4 票，渔网按鱼价增幅+档位加成给票。cast 要 T1 钓竿 + 蚯蚓饵，同样按鱼价增幅给票。T1=竹钓竿（Tt酱 30 票或 `gear upgrade rod`，同一档）。未命名小鱼不能网，只能 `cast` 碰上或钓到。鱼种变多：沙丁/银鱼/黄鱼/生蚝/梭子蟹/真鲷/马鲛/飞鱼/鲥鱼/冰鱼/石斑/八爪/鲍鱼/龙虾/金枪/旗鱼；飞鱼春夏、鲥鱼春、冰鱼冬。赤潮周更容易水母蛰和潮疹，人去 `visit_ops clinic`，不是霍衡 |
+| `net` / `cast` | 岸边撒网 / 坐钓。`net` 4 票，渔网按鱼价增幅+档位加成给票。cast 要 T1 钓竿 + 蚯蚓饵，同样按鱼价增幅给票；另耗鱼线/钩/卷线器耐久，线旧可能断线→ `gear repair line`。T1=竹钓竿（Tt酱 30 票或 `gear upgrade rod`，同一档）。未命名小鱼不能网，只能 `cast` 碰上或钓到。鱼种变多：沙丁/银鱼/黄鱼/生蚝/梭子蟹/真鲷/马鲛/飞鱼/鲥鱼/冰鱼/石斑/八爪/鲍鱼/龙虾/金枪/旗鱼；飞鱼春夏、鲥鱼春、冰鱼冬。赤潮周更容易水母蛰和潮疹，人去 `visit_ops clinic`，不是霍衡 |
+| `水层 shore\|near\|far\|deep` | 定下次 `net`/`cast` 偏哪层海域（空=看当前） |
+| `搏鱼 硬拉` / `搏鱼 放走` / `搏鱼 切线` | 稀有鱼搏斗：硬拉赢才进袋；放走/切线放弃 |
+| `解挂` / `解挂 硬拉` / `解挂 切线` | 挂底解挂 |
 | `搭排` / `投苗 灰鲱 2` / `投饵 2` / `收排 2` / `名池 2 薄荷池` / `巡排` | 渔排（也可 `pen status` / `pen stock herring 2`）。人类 `/island` 港口「渔排」栏能点。收排赶上鱼种爱来的潮汐多一条；巡排约每 8 小时 |
 | `voyage buy skiff` / `voyage depart near` | 买船 / 出海（near/far/deep） |
+| `voyage 部件` / `voyage 部件 修` | 看帆/舵/灯耐久；低耐久加出海失败。`voyage repair` 仍修船体 |
 | `fight` `flee` `parley` `bribe` | 黑旗截停（可省略 voyage） |
 | `compliment` `release` `catch` `grab` | 未命名小鱼（可省略 voyage）。compliment=release 礼遇，回赠普通鱼；catch=grab 动手：抓住这尾进袋，落下腿鱼小咒，其它鱼和精力会出事。吃或卖再掷事件：`kitchen_ops eat 未命名小鱼` / `tote_ops vend 未命名小鱼 1` |
 | `beach scan` / `dig` / `probe` | 赶海（dig 要铲子）。涨潮时 dig 和 probe 都关，scan 还能看。风暴打捞不是 dig，走 `craft_ops 打捞` |
-| `gear status` / `gear upgrade net` | 渔具 |
+| `gear status` / `gear upgrade net` / `gear repair hook\|reel\|line` | 渔具档位与耐久（含钩、卷线器） |
 | `tool buy hoe` | 锄头铲子 |
 | `boss status` / `boss attack` | 潮渊之主 |
 | `help` | 列出真指令 |
