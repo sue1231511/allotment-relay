@@ -1158,6 +1158,7 @@ function switchBarTab(tab) {
 
 function barRow(kind, target) {
   const shop = state.bar || {};
+  if (kind === "sink_flood") return shop.sink || {};
   if (kind === "work") return (shop.jobs || []).find((row) => row.cmd === target);
   if (kind === "order") return (shop.drinks || []).find((row) => row.name === target);
   if (kind === "cheer" || kind === "look") return shop.tonight || {};
@@ -1166,6 +1167,10 @@ function barRow(kind, target) {
 
 function barCan(kind, row) {
   if (!row) return false;
+  if (kind === "sink_flood") {
+    const act = (row.flood_actions || []).find((a) => a.action === target);
+    return Boolean(act && act.can);
+  }
   if (kind === "work") return Boolean(row.can_work);
   if (kind === "order") return Boolean(row.can_order);
   if (kind === "cheer") return Boolean(row.can_cheer);
@@ -1185,6 +1190,19 @@ function tapBar(kind, target) {
     return;
   }
   const body = (row && (row.detail || row.note || row.cheer_note)) || "做这一下？";
+  if (kind === "sink_flood") {
+    if (!barCan(kind, row)) {
+      showHintSheet({ title: "碗险", body: (shop.sink && shop.sink.note) || body });
+      return;
+    }
+    showActSheet({
+      title: `碗险·${target}`,
+      body: shop.sink?.note || body,
+      confirm: "确认",
+      onConfirm: () => runBar("sink_flood", target),
+    });
+    return;
+  }
   if (!barCan(kind, row)) {
     showHintSheet({
       title: (row && row.name) || ({
@@ -1581,7 +1599,7 @@ function eateryRow(kind, target) {
   }
   if (kind === "stock") return (mine.stock || []).find((row) => row.item === target);
   if (kind === "unstock") return (mine.menu || []).find((row) => String(row.id) === String(target));
-  if (kind === "open" || kind === "sell") return mine;
+  if (kind === "open" || kind === "sell" || kind === "smoke_panic") return mine;
   return (shop.dishes || []).find((row) => `${row.shop}|${row.id}` === target)
     || (mine.stock || []).find((row) => row.item === target)
     || mine;
@@ -1600,13 +1618,18 @@ function tapEatery(kind, target) {
   }
   const row = eateryRow(kind, target);
   const body = (row && (row.detail || row.note || row.open_note || row.sell_note)) || "做这一下？";
-  const can = {
-    dine: Boolean(row && row.can_dine),
-    stock: Boolean(row && row.can_stock),
-    unstock: Boolean(row && row.can_unstock),
-    open: Boolean(mine.can_open),
-    sell: Boolean(mine.can_sell),
-  }[kind];
+  const smokeAct = kind === "smoke_panic"
+    ? (mine.smoke_actions || []).find((a) => a.action === target)
+    : null;
+  const can = kind === "smoke_panic"
+    ? Boolean(smokeAct && smokeAct.can)
+    : {
+      dine: Boolean(row && row.can_dine),
+      stock: Boolean(row && row.can_stock),
+      unstock: Boolean(row && row.can_unstock),
+      open: Boolean(mine.can_open),
+      sell: Boolean(mine.can_sell),
+    }[kind];
   if (!can) {
     showHintSheet({
       title: (row && row.name) || ({
@@ -1615,6 +1638,7 @@ function tapEatery(kind, target) {
         unstock: "撤菜单",
         open: "开馆",
         sell: "卖掉小馆",
+        smoke_panic: "灶险",
       }[kind] || "岸畔小馆"),
       body,
     });
@@ -1626,6 +1650,7 @@ function tapEatery(kind, target) {
     unstock: ["撤菜单", body, "确认撤"],
     open: ["开馆", mine.open_note || body, "确认开"],
     sell: ["卖掉小馆", mine.sell_note || body, "确认卖"],
+    smoke_panic: ["灶险", "灶台糊烟，先处置。", "确认"],
   }[kind] || ["岸畔小馆", body, "确认"];
   showActSheet({
     title: pack[0],
@@ -1748,6 +1773,7 @@ function marketRow(kind, target) {
   if (kind === "cancel") return (mine.listings || []).find((row) => String(row.id) === String(target));
   if (kind === "sell") return (mine.goods || []).find((row) => row.item === target);
   if (kind === "expand") return mine;
+  if (kind === "stall_gust") return mine;
   return null;
 }
 
@@ -1779,14 +1805,19 @@ function tapMarket(kind, target) {
     });
     return;
   }
-  const can = {
-    buy: Boolean(row.can_buy),
-    cancel: Boolean(row.can_cancel),
-    expand: Boolean(mine.can_expand),
-  }[kind];
+  const gustAct = kind === "stall_gust"
+    ? (mine.gust_actions || []).find((a) => a.action === target)
+    : null;
+  const can = kind === "stall_gust"
+    ? Boolean(gustAct && gustAct.can)
+    : {
+      buy: Boolean(row.can_buy),
+      cancel: Boolean(row.can_cancel),
+      expand: Boolean(mine.can_expand),
+    }[kind];
   if (!can) {
     showHintSheet({
-      title: row.name || ({ buy: "买", cancel: "下架", expand: "扩摊" }[kind] || "集市"),
+      title: row.name || ({ buy: "买", cancel: "下架", expand: "扩摊", stall_gust: "摊险" }[kind] || "集市"),
       body: row.detail || row.note || mine.expand_note || "这会儿还不行。",
     });
     return;
@@ -1795,6 +1826,7 @@ function tapMarket(kind, target) {
     buy: ["买下", row.detail || `一共 ${row.cost} 票（含手续费）。`, "确认买"],
     cancel: ["下架", row.detail || "货退回行囊。", "确认下架"],
     expand: ["扩一格", mine.expand_note || "加一格摊位。", "确认扩"],
+    stall_gust: ["摊险", mine.expand_note || body, "确认"],
   }[kind] || ["集市", "做这一下？", "确认"];
   showActSheet({
     title: pack[0],

@@ -216,6 +216,11 @@ def _command(kind: str, target: str) -> tuple[str, str]:
         if not extra.isdigit():
             raise ApiError("BAD_REQUEST", "先点要寻回的那一栏。")
         return "barn", f"recover {extra}"
+    if kind == "barn_rescue":
+        slot, _, action = extra.partition("|")
+        if not slot.isdigit() or not action:
+            raise ApiError("BAD_REQUEST", "先选诱回、围栏或急追。")
+        return "barn", f"惊逃 {slot} {action}"
     if kind == "repair_appliance":
         key = (extra or "").strip().lower()
         if key == "fridge":

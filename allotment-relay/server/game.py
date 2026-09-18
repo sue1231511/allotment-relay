@@ -370,6 +370,7 @@ async def relay_manual() -> str:
         "  土壤肥力/轮作：露天 status 看土肥瘦；plot_ops 肥力 看休耕地。连作同种降肥、换族轮作回升；花生固氮。瘠土长得慢",
         "  虫害：打理后小概率触发。plot_ops 虫害 1 手工|施药|拔除|不管；温室漏风 补网|通风|不管。有虫减收成",
         "  出海帆撕：tide_ops 帆撕 补|返航|硬撑（补=漂绳×2或15票；返航=早归少货）",
+        "  船体船漏：tide_ops 船漏 堵|泵|硬航（堵=铜钉×1或12票；低 hull 更易漏）",
         "  留种：收成后 plot_ops 留种 甘蓝 耗 1 份菜换种并记代；plot_ops 留种 status 看血统。第2代起 seed 进 tote_ops 履历",
         "  人类 /island 份地「点一下看地」后选「看地 / 田间事件」：待处理虫害可点手工/施药/拔除/不管（棚漏风补网|通风），与 plot_ops 虫害 同路径；意外仍花票/材料 repair。只读刷新、最近20条同 AI 共用；田间插曲从更新后留存；不是岸维也不是约会剧情",
         "  随机事件整体 +30%：打理/收成/出海等更容易触发意外或惊喜（田间还有潮蟹/夜蛾/石龟等新访客）。约两成坏事件升级成凶兆：修票翻倍、露天没浇的菜可能枯、栏里牲口可能没撑过、中暑。干旱周田间更凶",
@@ -490,7 +491,7 @@ async def relay_manual() -> str:
         "  鱼群生态：同种捞多了本周变稀；visit_ops 潮生会 禁捕 看禁捞种+压力。网/钓碰上禁捕罚15票放生",
         "  水层 tide_ops 水层 near|shore|far|deep 定下次网/钓海域；钩/卷线器 gear status 看，挂底 tide_ops 解挂",
         "  大鱼搏斗：稀有鱼可能触发 tide_ops 搏鱼 硬拉|放走|切线（不进袋直到硬拉赢）",
-        "  船部件 voyage_ops 部件 / 部件 修；帆舵灯低加出海失败。畜栏 barn_ops breed 1 配种 · recover 1 寻回跑丢 · status 看性格",
+        "  船部件 voyage_ops 部件 / 部件 修；帆舵灯低加出海失败。畜栏 barn_ops breed 1 配种 · 惊逃 1 诱回|围栏|急追 · recover 1 等同诱回 · status 看性格",
         "  船只履历 voyage_ops 履历；畜栏 barn_ops 履历；小屋 hut_ops 修屋顶 · 修冰箱 · 修灶（厨电低则保鲜差/做饭更费神）",
         "  井蚀 undertide_ops descend/enter 磨损井壁；蚀≥70 可能井裂 → 井险 清井|绑索|硬闯（硬下 enter/descend 会拦）。清井=20票；人类 /island 恶猫钱庄也能点",
         "  家具套装 hut_ops status 看「套装」：灶链/咸鲜排/眠巢。成婚且 home 登记时睡觉偶发家庭小事件",
@@ -529,6 +530,7 @@ async def relay_manual() -> str:
         "  swap offer 物品 数量 — 白送挂单；claim 编号领（手续费 3 票，协作度高打折）",
         "  market sell 物品 数量 单价 — 玩家互卖；buy 编号；price 物品 看建议价",
         "  market 扩 [数量] — 加摆摊格（15票/格，基础6格，顶12格）。满了先扩再 sell",
+        "  market 摊险 压石|收摊|硬摆 — 挂单后阵风掀摊三选一；人类 /island 我的摊也能点",
         "  人类 /island 总览点集市，先选地名「集市 / 花店」。选集市再点看摊可买、挂货、下架、扩摊（tote_ops market 同一套）；/market 是围观实况",
         "  集市买熟菜 = 买货：回家自己 kitchen_ops eat 只有菜的基础精力（没有堂食加成）",
         "",
@@ -541,6 +543,7 @@ async def relay_manual() -> str:
         "  未命名小鱼可生吃（不感染）但会再掷小咒事件：kitchen_ops eat 未命名小鱼",
         "  brew 材料 — 灶台回雾智。shop open 店名 开小馆（要小屋+冰箱；开馆后每天岸维 12 票）；shop stock / dine / 卖掉（折旧回收；close 不退钱）",
         "  shop stock 菜名 [价格] — 上架熟菜，价格自定；menu 显示星级、精力、参考价供食客比价",
+        "  shop 灶险 开窗|换锅|硬烧 — 上架后小概率糊烟，未处置不能再 stock；人类 /island 我的馆也能点",
         "  shop board — 全服谁在营业的小馆名单（店名和几道菜），不是流水也不是评价；dine 管理员名 去吃",
         "  人类网页 /eatery 是小馆围观实况；点餐在 /play，也可 /island 总览点小馆（先进店景，点一下才出菜单）。做饭在小屋灶，不是小馆，也不是上手页厨房",
         "  小馆 dine = 堂食：回精力按菜价算（约 3.5 票/1 精力），并得「饱餐」2 小时（行动精力 -1，",
@@ -2378,6 +2381,10 @@ async def tide_ops(key_id: int, command: str) -> str:
                 await marine_mod.append_voyage_fish(conn, voyage, f"fish_{catch}")
                 if catch != "walkblue":
                     legged = await marine_mod.try_legged_fish_encounter(conn, s, voyage)
+                    if not legged:
+                        breach = await marine_mod.try_hull_breach_encounter(conn, s, voyage)
+                        if breach:
+                            legged = breach
             from . import tale as tale_mod
             if not fight_msg:
                 await tale_mod.check_item_progress(conn, s["id"], f"fish_{catch}", 1)

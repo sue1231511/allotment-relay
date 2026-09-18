@@ -2828,17 +2828,25 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
                 slot_bits.append(temper_mod.label(row))
             slot_bits.append(f"第{slot}栏占着，买牲口进不到这里。")
             if int(row.get("escaped_at") or 0) > 0:
-                barn_items.append(_sku(
-                    sid=f"recover-{slot}",
-                    kind="barn_recover",
-                    name=f"寻回 #{slot} {spec['name']}",
-                    emoji="🏃",
-                    note="8 票 + 6 精力。找回来得再喂。",
-                    detail="受惊跑丢的牲口。不是喂牲口那一下。",
-                    price="寻",
-                    can=tickets >= 8 and energy_now >= 6,
-                    target=str(slot),
-                ))
+                from . import barn_runaway_rescue as rescue_mod
+
+                for act in rescue_mod.ui_actions(
+                    tickets=tickets,
+                    stock=stock,
+                    energy_now=energy_now,
+                    species=species,
+                ):
+                    barn_items.append(_sku(
+                        sid=f"rescue-{slot}-{act['action']}",
+                        kind="barn_rescue",
+                        name=f"惊逃·{act['label']} #{slot}",
+                        emoji="🏃",
+                        note=f"{spec['name']}跑丢了 · {act.get('hint') or ''}",
+                        detail="诱回/围栏/急追三选一，和 barn_ops 惊逃 同一套。",
+                        price=act["label"],
+                        can=bool(act.get("can")),
+                        target=f"{slot}|{act['action']}",
+                    ))
                 continue
             barn_items.append(_sku(
                 sid=f"slot-{slot}",

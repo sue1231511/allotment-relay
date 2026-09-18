@@ -14,6 +14,7 @@ TITLES = {
     "unstock": "撤下来了",
     "open": "开张了",
     "sell": "卖掉了",
+    "smoke_panic": "灶险处置",
 }
 
 
@@ -43,6 +44,10 @@ def _command(kind: str, target: str) -> str:
         if name in ("确认", "ok", "yes", "confirm", "卖"):
             return "shop 卖掉 确认"
         return "shop 卖掉"
+    if kind == "smoke_panic":
+        if not name:
+            raise ApiError("BAD_REQUEST", "先选开窗、换锅或硬烧。")
+        return f"shop 灶险 {name}"
     raise ApiError("BAD_REQUEST", "小馆里没有这一下。")
 
 

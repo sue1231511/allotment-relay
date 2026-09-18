@@ -91,6 +91,19 @@ function mineMarkup(shop) {
   const lots = mine.listings || [];
   const goods = mine.goods || [];
   const parts = [];
+  if (mine.hazard === "gust" && (mine.gust_actions || []).length) {
+    for (const act of mine.gust_actions) {
+      parts.push(sku(
+        "stall_gust",
+        act.action,
+        { emoji: "💨", name: `摊险·${act.label}` },
+        mine.expand_note || act.hint || "",
+        act.label,
+        Boolean(act.can),
+        act.can ? "is-ready" : "",
+      ));
+    }
+  }
   parts.push(sku(
     mine.can_expand ? "expand" : "look",
     "1",

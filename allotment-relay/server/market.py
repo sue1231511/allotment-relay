@@ -19,7 +19,8 @@ MARKET_HELP = """tote_ops market 子命令（整句写进 command）：
   cancel 编号 — 下架，货退回行囊
   price 物品 — 看建议价
   扩 [数量] — 加摊格，15 票/格，顶 12 格
-  例子：market list · market sell 甘蓝 2 8 · market buy 3 · market 扩
+  摊险 压石|收摊|硬摆 — 挂单后小概率阵风掀摊，未处置不能 sell/buy
+  例子：market list · market sell 甘蓝 2 8 · market buy 3 · market 扩 · 摊险 压石
   集市卖的是货，不是小馆堂食。买熟菜回家自己吃，没有饱餐加成。
   人类 /island 总览点集市，先进店景，点一下才出摊位列表，能看街摊、买、挂自己的货、下架、扩摊。"""
 
@@ -139,6 +140,14 @@ async def market_ops(key_id: int, command: str) -> str:
         )
         return "\n".join(lines)
 
+    if verb in ("摊险", "stall", "gust", "掀摊"):
+        from . import market_stall_gust as gust_mod
+
+        async with db.connect() as conn:
+            text = await gust_mod.resolve(conn, s, parts[1] if len(parts) > 1 else "")
+            await conn.commit()
+        return text
+
     if verb == "sell" and len(parts) >= 4:
         raw_item, qty_s, price_s = parts[1], parts[2], parts[3]
         item_key = resolve_item_key(raw_item)
@@ -152,6 +161,9 @@ async def market_ops(key_id: int, command: str) -> str:
             )
         sug = suggested_price(item_key)
         async with db.connect() as conn:
+            from . import market_stall_gust as gust_mod
+
+            await gust_mod.assert_not_blocked(conn, s["id"])
             extra = await _market_extra(conn, s["id"])
             cap = market_list_cap(extra)
             cur = await conn.execute(
@@ -179,21 +191,28 @@ async def market_ops(key_id: int, command: str) -> str:
                 """,
                 (s["id"], item_key, qty, price, sug, note[:60], db.now()),
             )
+            gust_note = await gust_mod.maybe_after_sell(conn, s["id"])
             await conn.commit()
         hint = flavor.pick([
             "建议价仅供参考，别跟票置气",
             "范姐：缺啥买啥，别囤到烂",
             "串门顺便看看邻居卖啥",
         ])
-        return (
+        msg = (
             f"上架 {ITEM_NAMES.get(item_key, item_key)}（{item_key}）x{qty} "
             f"@{price}票（建议{sug}）— {hint}"
         )
+        if gust_note:
+            msg += f"\n{gust_note}"
+        return msg
 
     if verb == "buy" and len(parts) >= 2:
         lot_id = _parse_int(parts[1], "挂单编号")
         qty = _parse_int(parts[2], "数量") if len(parts) > 2 else None
         async with db.connect() as conn:
+            from . import market_stall_gust as gust_mod
+
+            await gust_mod.assert_not_blocked(conn, s["id"])
             conn.row_factory = aiosqlite.Row
             lot = dict(await (await conn.execute(
                 "SELECT * FROM market_listings WHERE id=? AND buyer_id IS NULL",
@@ -203,6 +222,8 @@ async def market_ops(key_id: int, command: str) -> str:
                 raise ValueError("挂单不存在或已售出")
             if lot["seller_id"] == s["id"]:
                 raise ValueError("不能买自己的挂单")
+            seller_id = int(lot["seller_id"])
+            await gust_mod.assert_not_blocked(conn, seller_id)
             buy_qty = qty or lot["quantity"]
             if buy_qty < 1 or buy_qty > lot["quantity"]:
                 raise ValueError("数量不对")
@@ -289,9 +310,19 @@ def _tag(price: int, suggested: int) -> str:
 
 async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str, Any]:
     """给 /island 集市用。数值仍走 market_ops，这里只摊开能点的。"""
+    from . import market_stall_gust as gust_mod
+
     extra = await _market_extra(conn, s["id"])
     cap = market_list_cap(extra)
     tickets = int(s.get("tickets") or 0)
+    energy_now = int(s.get("energy") or 0)
+    stock = await db.get_satchel(s["id"])
+    hazard = await gust_mod.get_hazard(conn, s["id"])
+    gust_actions = (
+        gust_mod.ui_actions(tickets=tickets, stock=stock, energy_now=energy_now)
+        if hazard == gust_mod.HAZARD_GUST
+        else []
+    )
     conn.row_factory = aiosqlite.Row
     rows = await (await conn.execute(
         """
@@ -371,7 +402,7 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
             "emoji": "🧺",
             "qty": n,
             "suggested": sug,
-            "can_sell": room,
+            "can_sell": room and hazard != gust_mod.HAZARD_GUST,
             "note": (
                 f"摊满了 {used}/{cap}，先扩。"
                 if not room
@@ -411,8 +442,14 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
             "cap": cap,
             "max": config.MARKET_LIST_SLOTS_MAX,
             "slot_cost": config.MARKET_SLOT_COST,
-            "can_expand": can_expand,
-            "expand_note": expand_note,
+            "can_expand": can_expand and hazard != gust_mod.HAZARD_GUST,
+            "expand_note": (
+                "摊布还在晃！先处置掀摊。"
+                if hazard == gust_mod.HAZARD_GUST
+                else expand_note
+            ),
+            "hazard": hazard,
+            "gust_actions": gust_actions,
             "listings": mine_list,
             "goods": goods,
         },
