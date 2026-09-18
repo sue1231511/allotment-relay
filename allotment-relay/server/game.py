@@ -188,7 +188,7 @@ async def relay_manual() -> str:
         "",
         "━━━ 工具地图（21 个玩法工具）━━━",
         "  steward_ops  登记/档案/邻居/工分/全服榜/岛缘/引航",
-        "               command 例：enroll 安 · sheet · 岛缘 · 邻居 · 在线 · peer 名字 · guild · board tickets · board 岛缘 · 引航 · 绑定 AB12CD34",
+        "               command 例：enroll 安 · sheet · 岛缘 · 邻居 · 在线 · peer 名字 · 协作 · guild · board tickets · board 岛缘 · 引航 · 绑定 AB12CD34",
         "               人类网页 /board 是全服榜围观（票榜·岛缘榜）；点名字去 /play 看邻居",
         "               人类网页 /play 点名字看档、读岛上回忆、看邻居名册（本机会记住）",
         "               人类网页 /play 可点按同一套指令，和 AI 共用一个号、可同时在线（网页只贴 ar_sk_ 那一串，不要贴 MCP 地址；不用先把家机窗口清掉）",
@@ -567,6 +567,7 @@ async def relay_manual() -> str:
         "  人类网页 /play 点餐，也可 /island 总览点小馆。挂摊买货也可 /island 总览点集市。钉木牌也可 /island 总览点听潮亭。撒网赶海也可 /island 总览点海边。/tide 海边、/market 集市围观、/huts 小屋、/star 小橘、/allotments 份地、/quarry 盐风崖、/workshop 岸工坊、/ting 听潮亭是围观实况；地点海报还可看别的岸线",
         "",
         "【协作 · 访客】",
+        "  steward_ops 协作 — 和各位岛民的协作分总览与档位（≥20 交换台 claim 2 票 · ≥40 海上谈和 +10% · ≥60 assist 对方 +2 票 · ≥80 酒吧打赏对方 +15%）。steward_ops peer 名字 看公开档也会写你和 TA 的分。alliance_ops rapport 名字 只查单人。赠礼 +3、assist、打赏等会涨分",
         "  assist 名字 帮邻居打理，每日每人一次。contract post 石蟹王 1 75 发悬赏（中文名/英文 id 都行），他人 fill 编号",
         "  league contribute 物品 数量 推进本周目标（抽作物目标时跳过当季休市的种）。donate / draw / larder 联盟储藏室（领取 2 票、每日 3 次）",
         "  潮生会：岛上管事的机构，值事阿簿。visit_ops 潮生会 问事。不能入会、开会、退会；上岛已在册。",
@@ -914,7 +915,7 @@ async def steward_revise(key_id: int, motto: str = "", portrait: str = "") -> st
     return "资料已修订"
 
 
-async def peer_sheet(name: str) -> str:
+async def peer_sheet(name: str, *, viewer_id: int | None = None) -> str:
     s = await db.get_steward_by_name(name)
     if not s or not s["enrolled"]:
         raise ValueError(f"未找到管理员: {name}")
@@ -923,8 +924,18 @@ async def peer_sheet(name: str) -> str:
     from . import progress as progress_mod
     from . import bond as bond_mod
     ranked = ranks_mod.attach_level(s)
-    return "\n".join([
+    rapport_line = ""
+    if viewer_id and int(viewer_id) != int(s["id"]):
+        from . import social as social_mod
+
+        score = await social_mod.get_rapport(int(viewer_id), int(s["id"]))
+        rapport_line = social_mod.rapport_peer_blurb(score)
+    lines = [
         f"管理员: {s['name']} ({s['badge']})",
+    ]
+    if rapport_line:
+        lines.append(rapport_line)
+    lines.extend([
         f"座右铭: {s['motto']}",
         f"肖像: {s['portrait']}",
         f"工分票: {s['tickets']}",
@@ -942,6 +953,7 @@ async def peer_sheet(name: str) -> str:
         f"岛务: 潮生会（值事阿簿）→ visit_ops 潮生会 · 岸税 税 · 岸维 维 · 潮汐基金 基金 捐 50（票数自填；补贴周二四六自动发）",
         f"串门: plot_ops 偷菜 {s['name']} · alliance_ops assist {s['name']}",
     ])
+    return "\n".join(lines)
 
 
 async def guild_shift(key_id: int) -> str:

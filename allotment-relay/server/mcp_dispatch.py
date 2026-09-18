@@ -78,7 +78,8 @@ STEWARD_HELP = """steward_ops 子命令（整句写进 command）：
   岛缘 / bond — 拆你和这座岛的联系（劳作/人情/叙事/生活/投入/井下已蚀）。空 command 的 sheet 也会写「岛缘 N ∞」。例子：岛缘 · bond
   邻居 — 全员邻居（谁在档口、谁家有熟地）。找人优先用这个
   在线 — 只看档口里的人
-  peer 名字 — 看别人的公开档；不写名字 = 邻居表
+  peer 名字 — 看别人的公开档（会写你和 TA 的协作度与档位）；不写名字 = 邻居表
+  协作 / rapport / 协作度 — 你的协作总览：和谁最熟、档位说明（≥20 交换 claim 2 票等）
   revise [座右铭] — 改座右铭；肖像用 portrait 参数
   guild — 每日一轮工分票
   board [tickets|岛缘|me] — 全服工分票榜 / 岛缘榜。空 board=两张都看。例子：board tickets · board 岛缘 · board me。board level / board 等级榜 仍可用，指向同一张岛缘榜。不是周目标贡献榜，也不是 steward_ops 岛缘（那是拆自己的来源）
@@ -90,7 +91,7 @@ STEWARD_HELP = """steward_ops 子命令（整句写进 command）：
   天灾：人类日历一周一次周潮，低中高随机，只冲 3 万以上的超额。sheet 能看见
   人类网页 /play 点按同一套指令，和 AI 共用一个号、可同时在线。网页只贴 ar_sk_ 那一串，不要贴 MCP 地址，不用先把家机窗口清掉。点单打赏、邻居名册都在 /play
   人类手机地图进入具体地点后，左侧保留影信/饱食/雾智/档信/健康/精力六项数值面板，右侧三项面板显示工分票、等级、岛缘；菜地/果园/温室/井下总览不显示两块面板
-  容易搞混：引航是请人上岛；alliance_ops assist 是帮邻居打理；tote_ops gift 是送礼。没有 invite_ops，不要发明 领邀请奖"""
+  容易搞混：引航是请人上岛；alliance_ops assist 是帮邻居打理；tote_ops gift 是送礼。alliance_ops rapport 名字 只查单人分；steward_ops 协作 看总览+档位。没有 invite_ops，不要发明 领邀请奖"""
 
 PLOT_HELP = """plot_ops 子命令（整句写进 command）：
   status — 各地块作物、把数、还要多久
@@ -352,7 +353,14 @@ async def steward_ops(
             from . import multi
             s = await game.require_steward(key_id)
             return await _call_ops(multi.list_neighbors, s, online_only=False)
-        return await _call_ops(game.peer_sheet, peer)
+        s = await game.require_steward(key_id, exempt_duty=True)
+        return await _call_ops(game.peer_sheet, peer, viewer_id=s["id"])
+
+    if verb in ("协作", "rapport", "协作度"):
+        from . import social as social_mod
+
+        s = await game.require_steward(key_id, exempt_duty=True)
+        return await _call_ops(social_mod.rapport_sheet, s["id"])
 
     if verb in ("online", "在线"):
         from . import multi
