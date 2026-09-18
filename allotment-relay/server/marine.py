@@ -1137,6 +1137,8 @@ async def _resolve_voyage(
     route = VOYAGE_ROUTES[voyage["route"]]
     s = await _refresh_steward(conn, s["id"])
     fail_chance = route["fail"] + await events.voyage_fail_modifier()
+    from . import layer_link as layer_link_mod
+    fail_chance *= await layer_link_mod.voyage_fail_mult(conn)
     from . import social as social_mod
     fail_chance = max(0.05, fail_chance - social_mod.badge_val(s, "voyage_fail_reduce"))
     if world.current_weather() == "gale":

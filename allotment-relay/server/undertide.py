@@ -1317,7 +1317,8 @@ async def undertide_ops(key_id: int, command: str) -> str:
             event = await _maybe_event(conn, s, ut)
             kroom = await _check_k_room(conn, ut)
             from . import undertide_tide as utide
-            mult, tide_line = await utide.tide_mult(conn)
+            from . import layer_link as layer_link_mod
+            mult, tide_line = await layer_link_mod.effective_ut_mult(conn)
             tide_note = f"\n\n（{utcopy.TIDE_HINT.format(line=tide_line)}）" if tide_line else ""
             av = await avatar_key(conn, s["id"])
             head = utcopy.AVATAR_K_ENTER if av == "K" else utcopy.pick(utcopy.ENTER_POOL)

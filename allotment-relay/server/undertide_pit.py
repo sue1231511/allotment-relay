@@ -364,6 +364,11 @@ async def pit_ops(
             await utmod._bump_rep(conn, s["id"], utcfg.UT_PIT_WIN_REP)
             await bond_mod.well(conn, s["id"], bond_mod.WELL_WIN)
             lines.append(win_msg)
+            if random.random() < 0.14:
+                mat = "ut_pit_silt" if random.random() < 0.65 else "ut_brine_crystal"
+                await db.add_item(conn, s["id"], mat, 1)
+                from .catalog import ITEM_NAMES
+                lines.append(f"\n（坑底带出 {ITEM_NAMES.get(mat, mat)} ×1）")
             lines.append(f"\n（入场 −{entry} · 胜奖 +{prize} · 影信 +{utcfg.UT_PIT_WIN_REP}）{entry_discount_note}")
             # 胜者也可能挂彩
             if random.random() < 0.30:

@@ -46,6 +46,10 @@ async def _pressure(conn, species: str) -> int:
 
 async def bump_pressure(conn, species: str, amount: int = 1) -> None:
     await ensure_table(conn)
+    from . import layer_link as layer_link_mod
+    relief = await layer_link_mod.fish_pressure_relief(conn)
+    if relief < 1.0 and amount > 0:
+        amount = max(1, int(amount * relief))
     wk = _week_id()
     await conn.execute(
         """

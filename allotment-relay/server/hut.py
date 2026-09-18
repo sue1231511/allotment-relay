@@ -273,6 +273,8 @@ def bonuses_for(keys: set[str] | list[str]) -> HutBonus:
     if b.has(*LILI_FENG_SHUI_SETS["sea_dream"]["needs"]):
         b.good_share *= 1.08
         b.wildlife_bad *= 0.95
+    from . import hut_combos as hut_combos_mod
+    hut_combos_mod.apply_combos(b)
     return b
 
 
@@ -1253,6 +1255,8 @@ async def bed_rest(s: dict[str, Any]) -> str:
             "先 hut_ops build 小屋，再 buy bed → install hard_N bed（岸柏板床）"
         )
     leak = None
+    home_note = None
+    well_note = None
     async with db.connect() as conn:
         cur = await conn.execute(
             "SELECT item_key FROM hut_fittings WHERE steward_id=?", (s["id"],)
@@ -1286,6 +1290,10 @@ async def bed_rest(s: dict[str, Any]) -> str:
                 f"（一觉回 {sleep_energy} 精力，每天一次）"
             )
         leak = await roof_mod.maybe_weather_wear(conn, s["id"], hut_built=True)
+        from . import home_events as home_events_mod
+        home_note = await home_events_mod.roll_on_sleep(conn, s)
+        from . import layer_link as layer_link_mod
+        well_note = await layer_link_mod.surface_well_drain(conn, s["id"])
         restored = await energy_mod.restore(conn, s["id"], sleep_energy)
         health_gain = 0
         if restored <= 0:
@@ -1324,6 +1332,10 @@ async def bed_rest(s: dict[str, Any]) -> str:
         msg += vanity
     if leak:
         msg += f"\n{leak}"
+    if home_note:
+        msg += f"\n{home_note}"
+    if well_note:
+        msg += f"\n{well_note}"
     return msg
 
 
@@ -1404,9 +1416,14 @@ async def hut_ops(key_id: int, command: str) -> str:
         if lvl < 3:
             nxt = HUT_LEVELS[lvl + 1]
             lines.append(f"升级 Lv{lvl + 1} {nxt['name']}：{nxt['upgrade']} 票 → upgrade")
-        active = bonuses_for(fittings.values()).summary()
+        bonus = bonuses_for(fittings.values())
+        active = bonus.summary()
         if active:
             lines.append(active)
+        from . import hut_combos as hut_combos_mod
+        combo = hut_combos_mod.combo_summary(bonus.keys)
+        if combo:
+            lines.append(combo)
         if roof_line:
             lines.append(roof_line)
         if int(s.get("invite_lantern") or 0):

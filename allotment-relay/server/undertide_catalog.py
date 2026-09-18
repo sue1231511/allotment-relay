@@ -54,6 +54,14 @@ COMMON_GOODS = {
     "waxed_canvas": {"name": "打蜡帆布", "emoji": "📦", "base": 13, "vend": 17},
     "storm_matches": {"name": "防风火柴", "emoji": "🔥", "base": 9, "vend": 12},
     "quiet_bell": {"name": "哑铃铛", "emoji": "🔕", "base": 11, "vend": 15},
+    "brine_crystal": {
+        "name": "盐泥晶", "emoji": "💎", "base": 28, "vend": 36,
+        "hint": "井壁刮下的结晶。craft_ops 可灌盐田加速，或留作履历纪念物",
+    },
+    "pit_silt": {
+        "name": "深坑淤片", "emoji": "🟫", "base": 16, "vend": 21,
+        "hint": "深坑底带的泥片。捐潮生会工程或换票",
+    },
 }
 
 # ── 稀有黑货（layer=rare，每轮至多 1 种库存 1）────────────
