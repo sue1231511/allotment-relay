@@ -57,7 +57,7 @@ async def maybe_after_hew(
     return (
         f"坑{slot}顶上传来碎石滚落——塌方了！"
         f" quarry_ops 塌方 {slot} 撑柱|撤人|硬挖"
-        "（撑柱=岸木×2或12票；撤人=这脉作废但人没事；硬挖=不花钱，可能空挥+损镐档）"
+        "（撑柱=岸木×2或12票；撤人=这脉作废但人没事；硬挖=不花钱更险，小概率落石后多一块矿）"
     )
 
 
@@ -134,8 +134,15 @@ async def resolve(
         return f"{label} 撤出来了。这条脉作废，quarry_ops 探脉 {slot} 再找。"
 
     # 硬挖
+    vein_key = row[2] or ""
     await _clear_hazard(conn, sid, slot)
     msg = f"{label} 顶着落石硬挖。"
+    from .catalog import QUARRY_VEINS
+
+    if vein_key in QUARRY_VEINS and random.random() < 0.12:
+        raw_key = QUARRY_VEINS[vein_key]["raw"]
+        await db.add_item(conn, sid, raw_key, 1)
+        msg += f" 落石滚开，多捡到一块{item_label(raw_key)}。"
     if random.random() < 0.38:
         await conn.execute(
             """
