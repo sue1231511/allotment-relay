@@ -194,6 +194,73 @@ async def _clear_pest(conn, plot_id: int) -> None:
     )
 
 
+def slot_ref(plot: dict[str, Any]) -> str:
+    from . import land as land_mod
+
+    return land_mod.slot_label(plot)
+
+
+def ui_actions(
+    plot: dict[str, Any],
+    *,
+    tickets: int,
+    stock: dict[str, int],
+) -> list[dict[str, Any]]:
+    """Human /island 虫害按钮；与 handle() 子命令一致。"""
+    key = plot.get("pest_key") or ""
+    if key == "gh_leak":
+        have_twine = int(stock.get("drift_twine") or 0)
+        return [
+            {
+                "action": "补网",
+                "label": "补网",
+                "hint": "漂绳×1",
+                "can": have_twine >= 1,
+                "disabled_reason": "背包缺漂绳×1",
+            },
+            {"action": "通风", "label": "开侧窗通风", "hint": "", "can": True, "disabled_reason": ""},
+            {"action": "不管", "label": "先观望", "hint": "", "can": True, "disabled_reason": ""},
+        ]
+    return [
+        {"action": "手工", "label": "手工除虫", "hint": "", "can": True, "disabled_reason": ""},
+        {
+            "action": "施药",
+            "label": f"施药（{DRUG_TICKETS} 票）",
+            "hint": "",
+            "can": tickets >= DRUG_TICKETS,
+            "disabled_reason": f"票不够（要 {DRUG_TICKETS}）",
+        },
+        {
+            "action": "拔除",
+            "label": "拔除病株",
+            "hint": "清虫但作物没了",
+            "can": True,
+            "disabled_reason": "",
+        },
+        {"action": "不管", "label": "先不管", "hint": "", "can": True, "disabled_reason": ""},
+    ]
+
+
+def pest_row_for_api(
+    plot: dict[str, Any],
+    *,
+    tickets: int,
+    stock: dict[str, int],
+) -> dict[str, Any]:
+    key = plot.get("pest_key") or ""
+    meta = PEST_META.get(key, {"name": key, "emoji": "⚠"})
+    return {
+        "slot": slot_ref(plot),
+        "label": slot_ref(plot),
+        "crop": plot.get("crop") or "",
+        "pest_key": key,
+        "pest_name": meta.get("name", key),
+        "emoji": meta.get("emoji", "⚠"),
+        "level": int(plot.get("pest_level") or 1),
+        "actions": ui_actions(plot, tickets=tickets, stock=stock),
+    }
+
+
 def yield_mult(plot: dict[str, Any]) -> float:
     key = plot.get("pest_key")
     if not key:

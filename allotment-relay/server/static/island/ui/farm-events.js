@@ -1,4 +1,4 @@
-import { api, loadKey } from "../api.js?v=farm-events1";
+import { api, loadKey } from "../api.js?v=farm-events2";
 import { esc } from "./modal.js?v=island-modulefix2";
 
 let panel = null;
@@ -24,17 +24,28 @@ export function openFarmEvents(wrap, onSnapshot) {
   let data = null, busy = false, loading = false, notice = "", selection = null, revision = 0;
   const current = () => gen === epoch && key === loadKey() && host.isConnected;
 
+  function pestBlock() {
+    const pests = data?.pests || [];
+    if (!pests.length) return "";
+    return `<h4>待处理虫害</h4>
+      ${pests.map(row => `<article><h4>${esc(row.emoji)} ${esc(row.label)} · ${esc(row.pest_name)} Lv${esc(row.level)}</h4>
+        <div class="island-farm-event-actions">
+        ${(row.actions || []).map(act => `<button type="button" data-pest-slot="${esc(row.slot)}" data-pest-action="${esc(act.action)}" ${act.can ? "" : "disabled"}>${esc(act.label)}${act.hint ? `（${esc(act.hint)}）` : ""}${act.can ? "" : `（${esc(act.disabled_reason || "不可用")}）`}</button>`).join("")}
+        </div></article>`).join("")}`;
+  }
+
   function draw() {
     if (!current()) return;
     const scroll = host.querySelector(".island-farm-event-list")?.scrollTop || 0;
     const rows = data?.incidents || [];
     host.innerHTML = `
       <header><h3>田间事件</h3><button type="button" data-close-events>返回</button></header>
-      <p class="island-farm-event-note">和岛民 AI 共用记录。查看不会触发事件或扣费；处理费用另算，不退回当场损失。</p>
+      <p class="island-farm-event-note">和岛民 AI 共用记录。查看不会触发事件或扣费；虫害处置、意外处理费用另算，不退回当场损失。</p>
       <div class="island-farm-event-tools"><span>${data ? `口袋 ${esc(data.tickets)} 票` : "正在读取…"}</span><button type="button" data-refresh-events ${busy || loading || selection ? "disabled" : ""}>刷新</button></div>
       <p role="status">${esc(notice)}</p>
       <div class="island-farm-event-list">
-      ${selection ? `<article><h4>确认处理 · ${esc(selection.row.label)}</h4><p>${esc(selection.label)}，只处理这一条意外。已经发生的损失不会返还。</p><button type="button" data-confirm-repair ${busy ? "disabled" : ""}>${busy ? "处理中…" : "确认处理"}</button><button type="button" data-cancel-repair ${busy ? "disabled" : ""}>先不忙</button></article>` : `
+      ${selection ? `<article><h4>${selection.action && selection.row?.pest_key ? `确认处置 · ${esc(selection.row.label)} ${esc(selection.row.pest_name)}` : `确认处理 · ${esc(selection.row.label)}`}</h4><p>${selection.action && selection.row?.pest_key ? `${esc(selection.actionLabel || selection.action)}，只处置这一块。施药会扣票；拔除会清虫但作物也没了。` : `${esc(selection.label)}，只处理这一条意外。已经发生的损失不会返还。`}</p><button type="button" data-confirm-repair ${busy ? "disabled" : ""}>${busy ? "处理中…" : "确认处理"}</button><button type="button" data-cancel-repair ${busy ? "disabled" : ""}>先不忙</button></article>` : `
+        ${pestBlock()}
         <h4>待处理意外</h4>
         ${rows.map(row => `<article><h4>#${esc(row.id)} · ${esc(row.label)}</h4><p>${esc(row.detail)}</p><div class="island-farm-event-actions">
           <button type="button" data-repair="${esc(row.id)}" data-payment="tickets" ${row.can_pay_tickets ? "" : "disabled"}>花 ${esc(row.repair_tickets)} 票处理${row.can_pay_tickets ? "" : "（票不够）"}</button>
@@ -51,6 +62,19 @@ export function openFarmEvents(wrap, onSnapshot) {
         if (!row || busy) return;
         selection = { row, payment: button.dataset.payment, label: button.dataset.payment === "item"
           ? `消耗${row.repair_item_label} ×${row.repair_qty}` : `花 ${row.repair_tickets} 票` };
+        clearTimeout(timer);
+        draw();
+      };
+    });
+    host.querySelectorAll("[data-pest-slot]").forEach(button => {
+      button.onclick = () => {
+        if (busy || button.disabled) return;
+        const slot = button.dataset.pestSlot;
+        const action = button.dataset.pestAction;
+        const row = (data?.pests || []).find(p => p.slot === slot);
+        if (!row) return;
+        const act = (row.actions || []).find(a => a.action === action);
+        selection = { row, action, actionLabel: act?.label || action };
         clearTimeout(timer);
         draw();
       };
@@ -92,7 +116,9 @@ export function openFarmEvents(wrap, onSnapshot) {
     clearTimeout(timer);
     draw();
     try {
-      const result = await api.repairFarmEvent(choice.row.id, choice.payment);
+      const result = choice.action && choice.row?.pest_key
+        ? await api.treatFarmPest(choice.row.slot, choice.action)
+        : await api.repairFarmEvent(choice.row.id, choice.payment);
       if (!current()) return;
       data = result;
       notice = result.event?.narrative || "已处理。";

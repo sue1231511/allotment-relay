@@ -290,7 +290,8 @@ async def relay_manual() -> str:
         "  story_ops    人物故事探索。空 command=故事列表；含《灰姑娘》《昨日无凭》《留给明天》，不使用问答模型",
         "               command 例：list · start cinderella · start yesterday_no_proof · start left_for_tomorrow · status · explore old_wharf · explore guyan_home",
         "                 · inspect queen · prepare backdoor|broadcast|trap · choose escape|judgment|hunt|rescue · review left_for_tomorrow · souvenirs · archive · help",
-        "  quarry_ops   盐风崖潮脉矿。空 command 列出子命令，不是看崖；看崖用 status",
+        "  quarry_ops   盐风崖潮脉矿。空 command 列出子命令，不是看崖；看崖用 status。"
+        " 挥镐后可能塌方 → 塌方 坑号 撑柱|撤人|硬挖。人类 /island 盐风崖矿坑列表也能点",
         "               command 例：status · 买镐 · 探脉 · 挖 1 · 洗 海盐砂 2 · 开坑 · 开坑 确认 · 升镐",
         "               不是 tide_ops dig（赶海翻沙）。没有 mine_ops / dig_ops",
         "  craft_ops    岸工坊。空 command 列出子命令，不是看砧；看砧用 status",
@@ -370,7 +371,7 @@ async def relay_manual() -> str:
         "  虫害：打理后小概率触发。plot_ops 虫害 1 手工|施药|拔除|不管；温室漏风 补网|通风|不管。有虫减收成",
         "  出海帆撕：tide_ops 帆撕 补|返航|硬撑（补=漂绳×2或15票；返航=早归少货）",
         "  留种：收成后 plot_ops 留种 甘蓝 耗 1 份菜换种并记代；plot_ops 留种 status 看血统。第2代起 seed 进 tote_ops 履历",
-        "  人类 /island 份地「点一下看地」后选「看地 / 田间事件」，事件页只读刷新、待处理与最近20条记录同 AI 共用；田间插曲从更新后留存，旧正文不补造；处理不是岸维，也不是约会剧情",
+        "  人类 /island 份地「点一下看地」后选「看地 / 田间事件」：待处理虫害可点手工/施药/拔除/不管（棚漏风补网|通风），与 plot_ops 虫害 同路径；意外仍花票/材料 repair。只读刷新、最近20条同 AI 共用；田间插曲从更新后留存；不是岸维也不是约会剧情",
         "  随机事件整体 +30%：打理/收成/出海等更容易触发意外或惊喜（田间还有潮蟹/夜蛾/石龟等新访客）。约两成坏事件升级成凶兆：修票翻倍、露天没浇的菜可能枯、栏里牲口可能没撑过、中暑。干旱周田间更凶",
         "  公共物资 plot_ops commons scan · commons claim 编号 · claim 编号 — 全服抢，随机上线。scan 行里写的 claim 2978 可直接当 plot_ops 子命令。不在潮生会",
         "  昼间 sow/tend 每天掷一次斑鸠盯梢（约 23%），碰上 plot_ops dove 忽略|驱赶",

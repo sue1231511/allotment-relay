@@ -68,6 +68,7 @@ async def exercise():
                         response = await client.get("/api/v1/farm/events", headers=auth)
                         assert response.status_code == 200, response.text
                         body = response.json()
+                        assert isinstance(body.get("pests"), list)
                         assert len(body["incidents"]) == 4
                         assert "只有另一人" not in response.text
                     assert await balance() == before
