@@ -79,6 +79,18 @@ async def save_from_crop(conn, steward: dict[str, Any], crop: str) -> str:
     )
     seed = f"seed_{crop}"
     await db.add_item(conn, steward["id"], seed, 1)
+    if gen >= 2:
+        from . import ledger as ledger_mod
+        await ledger_mod.birth_story(
+            conn,
+            steward["id"],
+            seed,
+            [
+                f"{label}由{steward['name']}留种",
+                f"倾向{note}，{ledger_mod.calendar_phrase()}",
+            ],
+            qty=1,
+        )
     chron = f"{steward['name']} 留种 {label}（{note}）"
     await db.add_chronicle("plot", chron, steward["id"], conn=conn)
     return f"留种成功：{label}，{note}。已得{CROPS[crop]['name']}种×1（下次 sow 会带上血统）"

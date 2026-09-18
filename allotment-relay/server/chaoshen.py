@@ -61,6 +61,7 @@ CHAOSHEN_HELP = f"""visit_ops 潮生会 子命令（整句写进 command）：
   工程 — 看本月全岛公共工程（修码头/换透镜/旧温室/听潮亭补瓦）。不是潮汐基金，也不是公仓
   工程 捐 岸木 10 / 工程 捐 铜钉 4 / 工程 捐 50 — 捐材料或票。修完全岛有几天好处。不是 基金 捐
   纪事 — 本周纪事，根据岛上真事写成，同 steward_ops 周报。不是周目标。例子：潮生会 纪事
+  禁捕 — 本周禁捞鱼种 + 全岛鱼群压力摘要（网/钓碰上禁捕种罚 15 票并放生）。例子：潮生会 禁捕
   岸税东八区每周一换班自动划入基金（本周新号免征到下周）。离岛均太远另加潮差附加（超过岛均 5 倍再加 8%，超过 15 倍再加 16%）。只攒不花另加潮锈：闲票（超过岛均的部分）本周要花掉 15%，没花够的缺口整笔进基金；酒吧/小馆/衣泊坊/诊所/星光/小屋日子/婚宴/三金/基金捐/工程捐票算花，买地买园不算，买棚送礼也不算。岸维东八区每天换班自动划（今日新号免征到明天）。补贴不用领、没有 MCP 指令。东八区{FUND_PAY_WEEKDAY_LABEL}自动发：先把低于 {FUND_FLOOR} 的托到 {FUND_FLOOR}，剩下再补给低于岛均的人（每人顶 {FUND_PAY_CAP}、不超过岛均）
   没有入会 / 开会 / 退会。{ORG_NAME}是岛上管事的机构，上岛时已经在册。
   本周目标 / 公仓 / 公物不在这儿：alliance_ops league · alliance_ops donate / larder · plot_ops commons
@@ -664,6 +665,13 @@ async def chaoshen_ops(key_id: int, command: str = "") -> str:
     if verb in ("纪事",) or verb_l in ("gazette",):
         from . import gazette as gazette_mod
         return await gazette_mod.report_text()
+
+    if verb in ("禁捕", "禁渔") or verb_l in ("fishban", "banfish"):
+        from . import fish_ban as fish_ban_mod
+        from . import fish_ecology as fish_ecology_mod
+        async with db.connect() as conn:
+            eco = await fish_ecology_mod.status_line(conn)
+        return fish_ban_mod.notice_text() + "\n" + eco
 
     if verb_l in ("捐", "donate"):
         if len(parts) >= 2 and (parts[1].isdigit() or parts[1] in ("票", "工分票")):

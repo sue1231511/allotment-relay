@@ -1252,6 +1252,7 @@ async def bed_rest(s: dict[str, Any]) -> str:
         raise ValueError(
             "先 hut_ops build 小屋，再 buy bed → install hard_N bed（岸柏板床）"
         )
+    leak = None
     async with db.connect() as conn:
         cur = await conn.execute(
             "SELECT item_key FROM hut_fittings WHERE steward_id=?", (s["id"],)
@@ -1270,6 +1271,9 @@ async def bed_rest(s: dict[str, Any]) -> str:
                 "或 buy hammock → install soft_N hammock"
             )
         sleep_energy = bed_sleep_energy(bed_key) if bed_key else config.HAMMOCK_ENERGY
+        from . import hut_roof as roof_mod
+        roof, mx = await roof_mod.get_roof(conn, s["id"])
+        sleep_energy = max(10, sleep_energy - roof_mod.sleep_penalty(roof, mx))
         row = await (await conn.execute(
             "SELECT bed_rest_at FROM stewards WHERE id=?", (s["id"],)
         )).fetchone()
@@ -1281,6 +1285,7 @@ async def bed_rest(s: dict[str, Any]) -> str:
                 f"今天睡过了，潮声换班后再来（约 {hours} 小时后）"
                 f"（一觉回 {sleep_energy} 精力，每天一次）"
             )
+        leak = await roof_mod.maybe_weather_wear(conn, s["id"], hut_built=True)
         restored = await energy_mod.restore(conn, s["id"], sleep_energy)
         health_gain = 0
         if restored <= 0:
@@ -1317,6 +1322,8 @@ async def bed_rest(s: dict[str, Any]) -> str:
     )
     if vanity:
         msg += vanity
+    if leak:
+        msg += f"\n{leak}"
     return msg
 
 
@@ -1355,12 +1362,23 @@ async def hut_ops(key_id: int, command: str) -> str:
     if verb in ("读", "读书", "翻书", "read"):
         return await bookshelf_read(s)
 
+    if verb in ("修屋顶", "roof", "补屋顶"):
+        from . import hut_roof as roof_mod
+        async with db.connect() as conn:
+            msg = await roof_mod.repair(conn, s["id"])
+            await conn.commit()
+        return msg
+
     if verb in ("卖掉", "sell", "变卖", "出售"):
         return await furniture_sell_command(s, command.strip().split()[1:])
 
     if verb == "status":
+        roof_line = ""
         async with db.connect() as conn:
             fittings = await _fittings(conn, s["id"])
+            if s.get("hut_built"):
+                from . import hut_roof as roof_mod
+                roof_line = await roof_mod.status_line(conn, s["id"])
         if not s.get("hut_built"):
             return (
                 f"小屋: 未建 — hut_ops build（{config.HUT_BUILD_COST} 票）\n"
@@ -1389,6 +1407,8 @@ async def hut_ops(key_id: int, command: str) -> str:
         active = bonuses_for(fittings.values()).summary()
         if active:
             lines.append(active)
+        if roof_line:
+            lines.append(roof_line)
         if int(s.get("invite_lantern") or 0):
             lines.append("岸灯（引航纪念）亮着。")
         bonus = bonuses_for(fittings.values())
