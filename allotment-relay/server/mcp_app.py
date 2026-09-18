@@ -154,7 +154,7 @@ async def star_ops(command: str = "") -> str:
     return await mux._call_ops(star.star_ops, _kid(), command)
 
 
-@mcp.tool(description="小剧场。空=看板。例：试镜·对戏·演出·领薪·投稿。不替酒吧考勤。")
+@mcp.tool(description="小剧场。空=看板。例：试镜·演出·领薪·剧险 扶幕·投稿·稿险 抚纸。幕/稿险未处置不能领薪/再投。不替酒吧考勤。")
 async def theater_ops(command: str = "") -> str:
     from . import theater
     return await mux._call_ops(theater.theater_ops, _kid(), command)

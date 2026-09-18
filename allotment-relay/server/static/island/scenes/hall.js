@@ -80,7 +80,18 @@ function hallChoices(shop) {
   const board = shop.board || {};
   const jobs = shop.jobs || [];
   const stars = shop.stars || [];
+  const curtain = (shop.curtain_choices || []).map((row) => ({
+    id: row.kind || "curtain_jam",
+    target: row.target || "",
+    label: row.name,
+    price: row.price || "处置",
+    can: Boolean(row.can),
+    detail: row.detail || row.note,
+    note: row.note,
+    name: row.name,
+  }));
   return [
+    ...curtain,
     {
       id: "look",
       target: "board",

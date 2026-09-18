@@ -1317,6 +1317,23 @@ function tapWriters(kind, target) {
     });
     return;
   }
+  if (kind === "script_jam") {
+    const row = (shop.script_skus || []).find((item) => (item.cmd || item.target) === target);
+    if (!row || !row.can_buy) {
+      showHintSheet({
+        title: (row && row.name) || "稿险",
+        body: (row && (row.detail || row.note)) || shop.script_note || "稿槽还卡着。",
+      });
+      return;
+    }
+    showActSheet({
+      title: row.name || `稿险·${target}`,
+      body: row.note || shop.script_note || "先处置稿槽。",
+      confirm: "确认",
+      onConfirm: () => runWriters("script_jam", target),
+    });
+    return;
+  }
   if (kind === "submit") {
     if (!shop.can_submit) {
       showHintSheet({ title: "投稿", body: shop.submit_note || "待审已经满了。" });
@@ -1581,6 +1598,23 @@ function tapHall(kind, target) {
       return;
     }
     runHall(kind, "");
+    return;
+  }
+  if (kind === "curtain_jam") {
+    const row = (shop.curtain_choices || []).find((item) => item.target === target);
+    if (!row || !row.can) {
+      showHintSheet({
+        title: (row && row.name) || "剧险",
+        body: (row && (row.detail || row.note)) || shop.curtain_note || "幕布还卡着。",
+      });
+      return;
+    }
+    showActSheet({
+      title: row.name || `剧险·${target}`,
+      body: row.note || shop.curtain_note || "先处置幕布。",
+      confirm: "确认",
+      onConfirm: () => runHall("curtain_jam", target),
+    });
     return;
   }
   const row = (shop.jobs || []).find((item) => item.id === kind);

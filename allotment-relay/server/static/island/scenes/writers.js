@@ -72,7 +72,17 @@ function sku(kind, target, title, note, price, on, extra = "") {
 }
 
 function deskMarkup(shop) {
+  const snag = (shop.script_skus || []).map((row) => sku(
+    "script_jam",
+    row.cmd || row.target || "",
+    { emoji: row.emoji || "📜", name: row.name || "稿险" },
+    row.note || shop.script_note || "",
+    row.can_buy ? "确认" : "看",
+    Boolean(row.can_buy),
+    row.can_buy ? "is-ready" : "",
+  ));
   const rows = [
+    ...snag,
     sku(
       "submit",
       "",
