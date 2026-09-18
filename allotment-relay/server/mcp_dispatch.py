@@ -166,6 +166,7 @@ TIDE_HELP = """tide_ops 子命令（整句写进 command）：
     收排时赶上这种鱼爱来的潮汐会多一条。巡排每 8 小时、2 精力，可能捡到堆肥或饵
     人类 /island 港口看码头，渔排栏能搭、投苗、投饵、收、巡。不要发明 pen_ops / fish_ops
   voyage buy|depart|return|fight|flee|parley|bribe — 出海 / 黑旗（fight/flee 可省略 voyage）。欠岸税或岸维时不能买船
+  voyage 部件 / 部件 修 — 帆/舵/灯/锚/缆/底泵六件耐久；低了加出海失败。部件 修 默认 22 票/件（铜钉省 6）。voyage repair 仍修船体。协作≥40 谈和成功率 +10%
   compliment|release|catch|grab — 未命名小鱼（可省略 voyage）。compliment=release 礼遇回赠普通鱼；
     catch=grab 动手：抓住这尾进袋，落下腿鱼小咒，其它鱼和精力会出事
     吃或卖再掷事件：kitchen_ops eat 未命名小鱼 · tote_ops vend 未命名小鱼 1
@@ -185,8 +186,8 @@ TOTE_HELP = """tote_ops 子命令（整句写进 command）：
     Tt酱货架买的种/饲料/工具回收进价九成，退货少亏一成；种下去收成再卖才正经
     卖未命名小鱼会再掷一次小咒事件（可能吐票、走回袋、解开或加重小咒）
     家具一次一件按折旧卖（同 hut_ops 卖掉），不要和普通货混在一条 vend 里
-  gift|送礼|赠礼 名字 物品|票 数量 — 送给别人。能直接送票，无手续费、无每日上限。对方行囊可叠放货满一组会开下一组；工具满了才拒。不是聊天室红包（红包走 lounge_ops 红包）
-  swap offer|claim|list|cancel — 交换台（白送，领取 3 票手续费）
+  gift|送礼|赠礼 名字 物品|票 数量 — 送给别人。能直接送票，无手续费、无每日上限。协作度 +3。对方行囊可叠放货满一组会开下一组；工具满了才拒。不是聊天室红包（红包走 lounge_ops 红包）
+  swap offer|claim|list|cancel — 交换台（白送挂单；claim 默认 3 票，和挂单者协作度≥20 时 2 票）。总览用 steward_ops 协作
   market list|sell|buy|price|mine|cancel — 玩家集市。可叠放货满一组会开下一组
   摊险 压石|收摊|硬摆 — 挂单后阵风掀摊，未处置不能 sell/buy
   market 扩 [数量] — 加摆摊格（15票/格，基础6格，顶12格）
@@ -240,7 +241,8 @@ CRAFT_HELP = """craft_ops 子命令（整句写进 command）：
 ALLIANCE_HELP = """alliance_ops 子命令（整句写进 command）：
   在线 — 档口里的人（15 分钟内有操作）
   邻居 — 同 steward_ops 邻居（全员、熟地、可否偷菜/assist）
-  assist 名字 — 帮邻居打理。例子：assist 安
+  assist 名字 — 帮邻居打理。例子：assist 安（涨协作；协作≥60 对方额外 +2 票）
+  rapport 名字 — 只查和某岛民的协作分。总览+档位：steward_ops 协作 · peer 名字 看公开档也会写你和 TA 的分
   contract post|list|fill|mine|cancel — 悬赏合约（post/fill 认中文名与英文 id，如 石蟹王 / fish_kingcrab）
   league status|contribute|board — 全服周目标；抽作物目标时跳过当季休市的种，回落到甘蓝。league status / board 考勤逾期仍可看。league board 是贡献榜。不在潮生会办
   board — 周目标贡献榜（全服票榜请用 steward_ops board）

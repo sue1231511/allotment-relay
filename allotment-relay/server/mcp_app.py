@@ -124,7 +124,7 @@ async def kitchen_ops(command: str = "") -> str:
     return await mux._call_ops(mux.kitchen_bundle, _kid(), command)
 
 
-@mcp.tool(description="互助周目标。空=列表。例：assist 安 · league status。board=贡献榜≠全服榜。")
+@mcp.tool(description="互助周目标。空=列表。例：assist 安 · rapport 名字 · league status。board=贡献榜≠全服榜。和某岛民协作总览+档位走 steward_ops 协作。")
 async def alliance_ops(command: str = "") -> str:
     return await mux._call_ops(mux.alliance_bundle, _kid(), command)
 
