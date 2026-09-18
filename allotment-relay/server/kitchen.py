@@ -102,7 +102,12 @@ async def ate_cooked_meal(conn: aiosqlite.Connection, steward_id: int) -> str | 
     return "热乎饭把营养不良压下一档。再吃一顿熟菜就利索了（或 visit_ops clinic treat 营养不良）。"
 
 
-def _roll_stars(steward: dict[str, Any], dish_key: str) -> int:
+def _roll_stars(
+    steward: dict[str, Any],
+    dish_key: str,
+    *,
+    quality_bonus: int = 0,
+) -> int:
     meta = KITCHEN_DISHES[dish_key]
     base = 3
     if steward.get("hut_built") and steward.get("hut_level", 0) >= 2:
@@ -112,6 +117,7 @@ def _roll_stars(steward: dict[str, Any], dish_key: str) -> int:
         for ing in meta["ings"]
     ):
         base += random.randint(0, 1)
+    base += quality_bonus
     if random.random() < 0.08:
         base += 1
     if random.random() < 0.03:
@@ -464,6 +470,15 @@ async def _mark_cook(conn: aiosqlite.Connection, steward_id: int, *, mix: bool =
     from . import light_bad_events as light_mod
 
     extra_nrg = await light_mod.apply_stove_penalty(conn, steward_id)
+    from . import hut_domestic as dom_mod
+    from . import hut as hut_mod
+
+    has_fridge = await hut_mod._has_fitting(conn, steward_id, "fridge")
+    cur = await conn.execute("SELECT hut_built, hut_level FROM stewards WHERE id=?", (steward_id,))
+    st = await cur.fetchone()
+    if st and int(st[0]):
+        _, paid = await dom_mod._mask(conn, steward_id)
+        extra_nrg += dom_mod.stove_extra_energy(paid)
     if extra_nrg:
         await energy_mod.spend(conn, steward_id, extra_nrg, action="灶台难点火")
     await appl_mod.wear_stove(conn, steward_id)
@@ -485,10 +500,15 @@ async def _cook_named(s: dict[str, Any], dish_key: str) -> str:
             raise ValueError(
                 f"今日定点菜上限 {config.KITCHEN_RECIPE_COOK_DAILY}（换班后刷新）"
             )
+        from . import item_traits as traits_mod
+
+        qualities: list[str] = []
         for ing in meta["ings"]:
             if not await db.take_item(conn, s["id"], ing, 1):
                 raise ValueError(f"缺少 {ITEM_NAMES.get(ing, ing)}")
-        stars = _roll_stars(s, dish_key)
+            qualities.extend(await traits_mod.pop_qualities(conn, s["id"], ing, 1))
+        q_bonus = traits_mod.cooking_star_bonus(qualities)
+        stars = _roll_stars(s, dish_key, quality_bonus=q_bonus)
         item = dish_item(dish_key, stars)
         await db.add_item(conn, s["id"], item, 1)
         await _mark_cook(conn, s["id"])
@@ -521,10 +541,14 @@ async def _cook_mix(s: dict[str, Any], ings: list[str]) -> str:
             raise ValueError(
                 f"今日自由组合上限 {config.KITCHEN_MIX_COOK_DAILY}（换班后刷新）"
             )
+        from . import item_traits as traits_mod
+
+        qualities: list[str] = []
         for ing in ings:
             if not await db.take_item(conn, s["id"], ing, 1):
                 raise ValueError(f"缺少 {ITEM_NAMES.get(ing, ing)}")
-        result = cook_mix.score_mix(ings, s)
+            qualities.extend(await traits_mod.pop_qualities(conn, s["id"], ing, 1))
+        result = cook_mix.score_mix(ings, s, quality_bonus=traits_mod.cooking_star_bonus(qualities))
         await db.add_item(conn, s["id"], result.item, 1)
         await _mark_cook(conn, s["id"], mix=True)
         sat = 3 if result.grade == "j" else 6
@@ -563,7 +587,8 @@ async def kitchen_ops(key_id: int, command: str) -> str:
         return (
             "kitchen_ops 子命令（整句写进 command）：\n"
             "  menu — 菜谱与定价\n"
-            "  cook 菜名 — 定点菜（每天 10 次），例如 cook 蒜蓉生蚝 · cook 沙丁甘蓝锅 · cook 蒜蓉龙虾 · cook 旗鱼排\n"
+            "  cook 菜名 — 定点菜（每天 10 次），例如 cook 蒜蓉生蚝 · cook 黑盐炖鱼 · cook 雾菇汤 · cook 灯笼鱼刺身\n"
+            "             食材品质影响星级；特殊菜 eat 时有额外效果/代价\n"
             "  cook 材料1 材料2 … — 自由组合 2~5 样（每天 24 次），例如 cook 甘蓝 鲭鱼\n"
             "             人类 /island 总览点小屋，点一下看屋里就能煮（灶栏，和 cook 同一套；定点菜点菜名，乱炖先点材料再下锅）\n"
             "  eat 物品 — 回精力。熟菜回得最多，并点滴回 1 身体；水果可生吃但只回一点、连吃会营养不良；\n"
@@ -735,11 +760,19 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             restored = await energy.restore(conn, s["id"], gain)
             await survival.bump(conn, s["id"], satiety=min(20, gain // 2 + 8))
             health_note = None
+            special_line = None
             if is_cooked_item(item) or item.startswith("meal_"):
                 from . import health as health_mod
                 hgain = await health_mod.restore_health(conn, s["id"], config.COOKED_EAT_HEALTH)
                 if hgain:
                     health_note = f"身体 +{hgain}"
+                if item.startswith("dish_"):
+                    dkey = item.replace("dish_", "", 1)
+                    if "_s" in dkey:
+                        dkey = dkey.rsplit("_s", 1)[0]
+                    from . import kitchen_special as special_mod
+                    if dkey in special_mod.SPECIAL_DISH_KEYS:
+                        special_line = await special_mod.apply_on_eat(conn, s["id"], dkey)
             walkblue_line = None
             if item == "fish_walkblue":
                 from . import marine as marine_mod
@@ -752,6 +785,8 @@ async def kitchen_ops(key_id: int, command: str) -> str:
         msg = f"吃了 {item_label(item)}（{item}），精力 +{restored}"
         if health_note:
             msg += f"，{health_note}"
+        if special_line:
+            msg += f"\n{special_line}"
         if item.startswith("fish_") or item == "wild_mint":
             msg += "（生吃安全，不会感染）"
             if item == "fish_walkblue":

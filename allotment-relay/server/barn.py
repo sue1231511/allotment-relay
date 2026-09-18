@@ -152,7 +152,9 @@ def _line(animal: dict | None, slot: int) -> str:
     t = (animal.get("temper") or "").strip()
     if t:
         extra += f" · {temper_mod.label(animal)}"
-    return f"  #{slot}: {spec['emoji']}{spec['name']}（{state}）{ped_bit}{extra}"
+    from . import barn_names as names_mod
+    shown = names_mod.display_name(animal, spec)
+    return f"  #{slot}: {spec['emoji']}{shown}（{state}）{ped_bit}{extra}"
 
 
 async def barn_ops(key_id: int, command: str) -> str:
@@ -191,6 +193,17 @@ async def barn_ops(key_id: int, command: str) -> str:
         slot = int(parts[1]) if len(parts) > 1 else 1
         async with db.connect() as conn:
             msg = await rescue_mod.resolve(conn, s, slot, "诱回")
+            await conn.commit()
+        return msg
+
+    if verb in ("起名", "name", "命名"):
+        from . import barn_names as names_mod
+        if len(parts) < 3:
+            raise ValueError("起名 槽位 名字（例 barn_ops 起名 1 豆花）")
+        slot = int(parts[1])
+        nm = " ".join(parts[2:])
+        async with db.connect() as conn:
+            msg = await names_mod.rename(conn, s, slot, nm)
             await conn.commit()
         return msg
 

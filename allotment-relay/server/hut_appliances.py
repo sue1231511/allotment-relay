@@ -110,15 +110,18 @@ async def stove_penalty(conn, steward_id: int) -> int:
 async def fridge_spoil_mult(conn, steward_id: int) -> float:
     if not await has_appliance(conn, steward_id, "fridge"):
         return 1.0
+    from . import hut_domestic as dom_mod
+    _, paid = await dom_mod._mask(conn, steward_id)
+    dom = dom_mod.fridge_spoil_mult(paid)
     dur, mx = await _get(conn, steward_id, "fridge")
     if mx <= 0:
-        return 1.0
+        return dom
     ratio = dur / mx
     if ratio >= 0.5:
-        return 1.0
+        return dom
     if ratio >= 0.25:
-        return 0.85
-    return 0.65
+        return dom * 0.85
+    return dom * 0.65
 
 
 async def repair(conn, steward_id: int, key: str, tickets: int = 16) -> str:

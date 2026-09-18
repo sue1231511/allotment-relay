@@ -578,7 +578,7 @@ HUT_HARD = {
     "bath_tub": {"name": "雪松浴桶", "cost": 85, "emoji": "🛁", "hint": "hut_ops 泡澡：雾智 +15，每 20 小时一次（床管精力，浴桶管雾智）"},
     "pickle_crock": {"name": "腌菜坛", "cost": 70, "emoji": "🫙", "hint": "hut_ops 腌 甘蓝 4：2 蔬菜 → 1 坛腌菜（可生吃 +6、可当 cook 佐料、可囤潮柜）"},
     "bed_rattan": {"name": "软藤床", "cost": 95, "emoji": "🛌", "sleep_energy": 52,
-                   "hint": "藤编软垫，好看好睡；一觉 +52 精力（每天一次）"},
+                   "hint": "藤编软垫 +52 精力；雨雾天潮湿损耗快，睡时可能少回 2"},
     "bed_canopy": {"name": "云纹纱榻", "cost": 145, "emoji": "🌙", "sleep_energy": 54,
                    "hint": "纱幔轻垂，主要是漂亮；一觉 +54 精力（每天一次）"},
     "plank_floor": {"name": "防潮板地", "cost": 48, "emoji": "🪵", "hint": "意外掷骰 ×0.90"},
@@ -1338,6 +1338,21 @@ KITCHEN_DISHES = {
         "name": "旗鱼排", "emoji": "🗡️",
         "ings": ["fish_swordfish", "crop_ginger", "crop_rye"],
         "base_sell": 133, "energy": 34, "tags": ["sea", "rich"],
+    },
+    "black_salt_fish": {
+        "name": "黑盐炖鱼", "emoji": "🍲",
+        "ings": ["proc_black_salt", "fish_mackerel", "crop_tide_ginger"],
+        "base_sell": 88, "energy": 38, "tags": ["sea", "special"],
+    },
+    "fog_mushroom_soup": {
+        "name": "雾菇汤", "emoji": "🍄",
+        "ings": ["crop_fog_mushroom", "wild_mint", "crop_garlic"],
+        "base_sell": 72, "energy": 26, "tags": ["special"],
+    },
+    "lantern_sashimi": {
+        "name": "灯笼鱼刺身", "emoji": "🏮",
+        "ings": ["fish_lanternfish", "crop_ginger", "crop_lime"],
+        "base_sell": 95, "energy": 32, "tags": ["sea", "special"],
     },
 }
 

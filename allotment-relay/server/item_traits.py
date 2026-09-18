@@ -272,6 +272,65 @@ async def purge_spoiled(conn, steward_id: int, loc: str = "satchel") -> list[str
     return notes
 
 
+async def pop_qualities(
+    conn,
+    steward_id: int,
+    item: str,
+    qty: int,
+    *,
+    loc: str = "satchel",
+) -> list[str]:
+    """按 FIFO 扣 trait 批次，返回每份品质（无 trait 则 plain/firm）。"""
+    if qty <= 0:
+        return []
+    await ensure_trait_tables(conn)
+    out: list[str] = []
+    left = qty
+    cur = await conn.execute(
+        """
+        SELECT id, qty, quality FROM item_trait_batches
+        WHERE steward_id=? AND loc=? AND item=?
+        ORDER BY id ASC
+        """,
+        (steward_id, loc, item),
+    )
+    rows = await cur.fetchall()
+    for row in rows:
+        if left <= 0:
+            break
+        bid, have, quality = int(row[0]), int(row[1]), (row[2] or "")
+        take = min(have, left)
+        left -= take
+        q = quality or ("plain" if item.startswith("crop_") else "firm")
+        out.extend([q] * take)
+        if take >= have:
+            await conn.execute("DELETE FROM item_trait_batches WHERE id=?", (bid,))
+        else:
+            await conn.execute(
+                "UPDATE item_trait_batches SET qty=qty-? WHERE id=?",
+                (take, bid),
+            )
+    if left > 0:
+        default = "plain" if item.startswith("crop_") else "firm"
+        out.extend([default] * left)
+    return out
+
+
+def cooking_star_bonus(qualities: list[str]) -> int:
+    """食材品质 → 星级偏移（§四十七）。"""
+    bonus = 0
+    for q in qualities:
+        if q in ("flavor", "plump", "fresh", "roe"):
+            bonus += 1
+        elif q in ("tender", "firm"):
+            pass
+        elif q in ("bugbit", "twisted", "overripe", "bruised", "old", "parasite"):
+            bonus -= 1
+        elif q == "odd":
+            bonus += 1
+    return max(-2, min(3, bonus))
+
+
 async def consume_fifo(
     conn,
     steward_id: int,

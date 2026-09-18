@@ -93,6 +93,10 @@ def accident_extra_chance(dur: int, max_dur: int) -> float:
 async def wear(conn, steward_id: int, gear_key: str, amount: int | None = None) -> tuple[int, int]:
     dur, mx = await ensure_gear(conn, steward_id, gear_key)
     loss = amount if amount is not None else WEAR_PER_USE.get(gear_key, 1)
+    from . import hut as hut_mod
+    b = await hut_mod.get_bonuses(conn, steward_id)
+    if b.gear_wear_mult != 1.0:
+        loss = max(1, int(round(loss * b.gear_wear_mult)))
     new = max(0, dur - loss)
     await conn.execute(
         """

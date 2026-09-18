@@ -102,7 +102,7 @@ async def plot_ops(
     return await mux._call_ops(mux.plot_bundle, _kid(), command)
 
 
-@mcp.tool(description="小屋潮柜床畜栏腌晾。空=列表。例：status · 睡 · 修屋顶 · 修冰箱 · 修灶 · barn breed 1 · barn recover 1 · 腌 甘蓝 4 · 晾 鲭鱼 4。屋顶/厨电耐久低有惩罚；份地 tend 潮气发潮则下次睡少回 3 精力。mascot upkeep≠岸维。人类 /island 小屋可点配种/寻回/修厨电。")
+@mcp.tool(description="小屋潮柜床畜栏腌晾家维杂务。空=列表。例：status · 睡 · 家维 · 家维 交 · 杂务 自修 · 修屋顶 · 修冰箱 · 修灶 · barn breed 1 · barn 起名 1 豆花 · 腌 甘蓝 4。家维=灯油/冷藏/防潮（不缴只降睡/保鲜/灶效，不封房）；杂务=结霜/门轴等三选一。屋顶/厨电耐久低有惩罚。mascot upkeep≠岸维。人类 /island 小屋可点配种/寻回/修厨电。")
 async def hut_ops(command: str = "") -> str:
     return await mux._call_ops(mux.hut_bundle, _kid(), command)
 
@@ -119,7 +119,7 @@ async def tote_ops(command: str = "") -> str:
     return await mux._call_ops(mux.tote_bundle, _kid(), command)
 
 
-@mcp.tool(description="厨房小馆。空=菜谱。例：cook 蒜蓉生蚝 · eat 鲭鱼。勿 eat_ops。下馆子")
+@mcp.tool(description="厨房小馆。空=菜谱。例：cook 蒜蓉生蚝 · cook 黑盐炖鱼 · eat 鲭鱼。食材品质影响星级；特殊菜如黑盐炖鱼/雾菇汤/灯笼鱼刺身有强增益也有代价。勿 eat_ops。下馆子")
 async def kitchen_ops(command: str = "") -> str:
     return await mux._call_ops(mux.kitchen_bundle, _kid(), command)
 

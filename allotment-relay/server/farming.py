@@ -219,6 +219,8 @@ def roll_grow(crop_key: str, plot: dict[str, Any] | None = None) -> tuple[int, s
         target = int(target * 0.92)
     if world.current_weather() == "misty" and crop_key in {"fogpea", "kelp"}:
         target = int(target * 0.88)
+    if world.current_weather() in ("rain", "misty") and crop_key == "fog_mushroom":
+        target = int(target * 0.82)
     if world.current_weather() == "clear" and "tropic" in meta.get("tags", []):
         target = int(target * 0.90)
     ratio = target / median
@@ -254,6 +256,20 @@ def effective_grow(plot: dict[str, Any], crop_key: str | None = None) -> int:
         bool(plot.get("watered")),
         tropic=tropic,
     )
+    crop = crop_key or plot.get("crop")
+    if crop == "rice" and not plot.get("watered") and not plot.get("greenhouse"):
+        mult *= 1.18
+    if crop == "moon_bean":
+        from datetime import datetime, timezone, timedelta
+        hour = datetime.fromtimestamp(db.now(), timezone(timedelta(hours=8))).hour
+        if hour >= 20 or hour < 6:
+            mult *= 0.90
+    if crop == "saltgrass":
+        fert = int(plot.get("soil_fertility") or 70)
+        if fert < 45:
+            mult *= 0.92
+    if crop == "garden_mint" and plot.get("crop") == "garden_mint":
+        mult *= 0.96
     return max(60, int(base * mult))
 
 

@@ -35,6 +35,24 @@ COMBO_SETS: dict[str, dict] = {
         "needs": ("bookshelf", "sea_chart", "tide_lamp"),
         "hint": "书架+海图+潮灯：读书雾智再+1",
     },
+    "fisher_home": {
+        "slug": "fisher_home",
+        "name": "渔夫之家",
+        "needs": ("fish_rack", "herring_mobile", "sea_chart", "plank_floor"),
+        "hint": "晾架+鲱风铃+海图+防潮板：坐钓/撒网耗材损耗略低",
+    },
+    "miner_home": {
+        "slug": "miner_home",
+        "name": "矿工之家",
+        "needs": ("miner_lamp", "bookshelf", "brick_hearth"),
+        "hint": "矿灯+书架+灶基：崖矿挥镐少耗 1 精力，睡觉少回 2",
+    },
+    "florist_home": {
+        "slug": "florist_home",
+        "name": "花房之家",
+        "needs": ("bramble_wreath", "mint_cushion", "glass_window", "fog_curtain"),
+        "hint": "莓环+薄荷垫+玻璃窗+雾纱：visit 来访率略升，意外略多",
+    },
 }
 
 
@@ -66,6 +84,14 @@ def apply_combos(b: HutBonus) -> list[str]:
         elif slug == "study_row":
             b.brew_mist += 1
             b.night_mist_save += 1
+        elif slug == "fisher_home":
+            b.gear_wear_mult *= 0.90
+        elif slug == "miner_home":
+            b.quarry_energy_save += 1
+            b.sleep_penalty += 2
+        elif slug == "florist_home":
+            b.good_share *= 0.92
+            b.event_mult *= 1.06
     return active
 
 

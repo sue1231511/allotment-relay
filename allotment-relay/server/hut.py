@@ -166,6 +166,8 @@ class HutBonus:
     wildlife_bad: float = 1.0
     dove_steal: float = 1.0
     salvage_empty: float = 1.0
+    gear_wear_mult: float = 1.0
+    sleep_penalty: int = 0
 
     def has(self, *names: str) -> bool:
         return any(n in self.keys for n in names)
@@ -1292,6 +1294,23 @@ async def bed_rest(s: dict[str, Any]) -> str:
         leak = await roof_mod.maybe_weather_wear(conn, s["id"], hut_built=True)
         from . import home_events as home_events_mod
         home_note = await home_events_mod.roll_on_sleep(conn, s)
+        from . import hut_chores as chore_mod
+        chore_note = await chore_mod.maybe_roll(
+            conn, s["id"],
+            hut_built=True,
+            hut_level=int(s.get("hut_level") or 1),
+        )
+        if chore_note:
+            home_note = (home_note + "\n" + chore_note) if home_note else chore_note
+        from . import hut_domestic as dom_mod
+        _, paid_dom = await dom_mod._mask(conn, s["id"])
+        sleep_energy = max(10, sleep_energy - dom_mod.sleep_penalty(paid_dom))
+        from . import hut as hut_self
+        hut_b = await hut_self.get_bonuses(conn, s["id"])
+        sleep_energy = max(10, sleep_energy - hut_b.sleep_penalty)
+        from . import world
+        if bed_key == "bed_rattan" and world.current_weather() in ("rain", "misty", "gale"):
+            sleep_energy = max(10, sleep_energy - 2)
         from . import layer_link as layer_link_mod
         well_note = await layer_link_mod.surface_well_drain(conn, s["id"])
         from . import light_bad_events as light_mod
@@ -1399,6 +1418,41 @@ async def hut_ops(key_id: int, command: str) -> str:
             await conn.commit()
         return msg
 
+    if verb in ("家维", "domestic", "缴费"):
+        from . import hut_domestic as dom_mod
+        rest = command.strip().split()[1:]
+        async with db.connect() as conn:
+            if rest and rest[0].lower() in ("交", "pay"):
+                amt = int(rest[1]) if len(rest) > 1 and rest[1].isdigit() else None
+                msg = await dom_mod.pay(conn, s["id"], amt)
+            else:
+                has_fridge = await _has_fitting(conn, s["id"], "fridge")
+                view = await dom_mod.assess(
+                    conn, s["id"],
+                    hut_built=bool(s.get("hut_built")),
+                    hut_level=int(s.get("hut_level") or 1),
+                    has_fridge=has_fridge,
+                )
+                if not view["fees"]:
+                    msg = "家维：Lv2 起交灯油；有冰箱交冷藏；Lv3 起交防潮。不缴只降性能。"
+                else:
+                    bits = [f"{f['label']}{f['cost']}票{'✓' if f['paid'] else ''}" for f in view["fees"]]
+                    msg = f"家维今日：{' · '.join(bits)}。差 {view['due']} 票 → 家维 交"
+            await conn.commit()
+        return msg
+
+    if verb in ("杂务", "chore", "家务"):
+        from . import hut_chores as chore_mod
+        rest = command.strip().split()[1:]
+        async with db.connect() as conn:
+            if not rest:
+                suf = await chore_mod.status_suffix(conn, s["id"])
+                msg = suf or "没有待处理杂务。"
+            else:
+                msg = await chore_mod.resolve(conn, s, rest[0])
+            await conn.commit()
+        return msg
+
     if verb in ("卖掉", "sell", "变卖", "出售"):
         return await furniture_sell_command(s, command.strip().split()[1:])
 
@@ -1416,6 +1470,19 @@ async def hut_ops(key_id: int, command: str) -> str:
                 if appl_line:
                     roof_line = (roof_line + "\n" + appl_line) if roof_line else appl_line
                 home_status_note = await home_events_mod.roll_on_status(conn, s) or ""
+                from . import hut_chores as chore_mod
+                from . import hut_domestic as dom_mod
+                chore_suf = await chore_mod.status_suffix(conn, s["id"])
+                if chore_suf:
+                    home_status_note = (home_status_note + "\n" + chore_suf) if home_status_note else chore_suf
+                dom_line = await dom_mod.status_line(
+                    conn, s["id"],
+                    hut_built=True,
+                    hut_level=int(s.get("hut_level") or 1),
+                    has_fridge="fridge" in fittings.values(),
+                )
+                if dom_line:
+                    home_status_note = (home_status_note + "\n" + dom_line) if home_status_note else dom_line
         if not s.get("hut_built"):
             return (
                 f"小屋: 未建 — hut_ops build（{config.HUT_BUILD_COST} 票）\n"

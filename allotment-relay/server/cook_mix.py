@@ -122,7 +122,12 @@ def _sig(ings: list[str]) -> str:
     return hashlib.sha1(blob.encode()).hexdigest()[:8]
 
 
-def score_mix(ings: list[str], steward: dict[str, Any] | None = None) -> MixResult:
+def score_mix(
+    ings: list[str],
+    steward: dict[str, Any] | None = None,
+    *,
+    quality_bonus: int = 0,
+) -> MixResult:
     if len(ings) < 2:
         raise ValueError("自由组合至少 2 样材料")
     if len(ings) > 5:
@@ -174,6 +179,8 @@ def score_mix(ings: list[str], steward: dict[str, Any] | None = None) -> MixResu
         stars = 1
         tier = min(9, sum(ITEM_PRICES.get(i, 1) for i in ings) // 20)
 
+    if quality_bonus:
+        stars += quality_bonus
     if steward and steward.get("hut_built") and steward.get("hut_level", 0) >= 2 and grade != "j":
         stars += 1
     if grade != "j" and random.random() < 0.08:

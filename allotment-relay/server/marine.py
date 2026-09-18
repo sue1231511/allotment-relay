@@ -1198,6 +1198,8 @@ async def _resolve_voyage(
         enc_payload = {}
     if enc_payload.get("early_return"):
         cargo = max(1, cargo - 1)
+    from . import event_opportunity as opp_mod
+    opp_line = await opp_mod.maybe_voyage_hard_luck(conn, s, enc_payload)
     fish_loot: list[str] = []
     loot_table = voyage_loot_table(voyage["route"], rarity_bonus=await _hook_rarity_bonus(conn, s["id"]))
 
@@ -1249,6 +1251,8 @@ async def _resolve_voyage(
     if enc and enc.kind == "bad" and await shaonian_mod.skip_bad_sea(conn, s["id"]):
         enc = None
     msg = f"{route['label']}归港：" + "，".join(loot_lines)
+    if opp_line:
+        msg += f" · {opp_line}"
     msg += flavor.maybe_suffix(flavor.VOYAGE_RETURN_BAD if failed else flavor.VOYAGE_RETURN_GOOD)
     msg += f" · {hull_note} · {parts_note}"
     await vlog_mod.append(
