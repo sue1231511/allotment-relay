@@ -19,6 +19,15 @@ SYSTEM_LABEL: dict[str, str] = {
     "clinic": "乔乔诊所",
     "vet": "蹄角棚",
     "ting": "听潮亭",
+    "theater": "剧场",
+    "lianli": "连理所",
+    "cloth": "衣泊坊",
+    "lili": "栗栗摊",
+    "guild": "潮生会",
+    "florist": "默语花房",
+    "musong": "敬山渡口",
+    "jingshan": "景山送糕",
+    "beach_omen": "韶年卦摊",
 }
 
 

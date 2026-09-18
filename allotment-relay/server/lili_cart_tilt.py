@@ -121,12 +121,12 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
             paid = f"-{cost} 票"
         else:
             paid = "黑麦×1"
-        await _clear(conn, sid)
+        await _clear(conn, sid, flash_summary=f"栗险：{norm}，已结。")
         return f"压稳货箱，铃鹿不闹了。（{paid}）"
 
     if norm == "唤铃":
         await energy.spend(conn, sid, 5, action="栗栗唤铃")
-        await _clear(conn, sid)
+        await _clear(conn, sid, flash_summary=f"栗险：{norm}，已结。")
         return "摇响铃铛，夜栖把摊脚顶住了。"
 
     await energy.spend(conn, sid, 10, action="栗栗硬绑")
@@ -136,13 +136,25 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
             if await db.take_item(conn, sid, shell, 1):
                 lost = "绑绳时滑走一枚贝壳。"
                 break
-    await _clear(conn, sid)
+    await _clear(conn, sid, flash_summary=f"栗险：{norm}，已结。")
     return f"硬绑好摊绳，继续换货。{lost}"
 
 
-async def _clear(conn, steward_id: int) -> None:
+async def _clear(
+    conn,
+    steward_id: int,
+    *,
+    flash_summary: str = "",
+) -> None:
     await ensure_columns(conn)
     await conn.execute(
         "UPDATE stewards SET lili_hazard=NULL, lili_hazard_json=NULL WHERE id=?",
         (steward_id,),
     )
+
+    if flash_summary:
+        from . import hazard_flash as hf
+
+        await hf.on_trouble_cleared(
+            conn, steward_id, "lili", flash_summary, "lili_cart",
+        )

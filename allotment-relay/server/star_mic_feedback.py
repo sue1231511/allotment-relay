@@ -109,7 +109,7 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
 
     if norm == "润麦":
         await energy.spend(conn, sid, 5, action="小橘润麦")
-        await _clear(conn, sid)
+        await _clear(conn, sid, flash_summary=f"麦险：{norm}，已结。")
         return "调了调麦，啸声平了。"
 
     if norm == "退后":
@@ -128,17 +128,29 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
             paid = f"-{cost} 票"
         else:
             paid = "雾豌豆×1"
-        await _clear(conn, sid)
+        await _clear(conn, sid, flash_summary=f"麦险：{norm}，已结。")
         return f"退到后排，耳朵舒服多了。（{paid}）"
 
     await energy.spend(conn, sid, 10, action="小橘硬听")
-    await _clear(conn, sid)
+    await _clear(conn, sid, flash_summary=f"麦险：{norm}，已结。")
     return "硬撑听完，小橘朝你比了个歉意的手势。"
 
 
-async def _clear(conn, steward_id: int) -> None:
+async def _clear(
+    conn,
+    steward_id: int,
+    *,
+    flash_summary: str = "",
+) -> None:
     await ensure_columns(conn)
     await conn.execute(
         "UPDATE stewards SET star_hazard=NULL, star_hazard_json=NULL WHERE id=?",
         (steward_id,),
     )
+
+    if flash_summary:
+        from . import hazard_flash as hf
+
+        await hf.on_trouble_cleared(
+            conn, steward_id, "theater", flash_summary, "star_mic",
+        )

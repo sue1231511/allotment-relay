@@ -132,22 +132,34 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
             paid = f"-{cost} 票"
         else:
             paid = "页岩砖×1"
-        await _clear(conn, sid)
+        await _clear(conn, sid, flash_summary=f"卦险：{norm}，已结。")
         return f"压好卦石，韶年把盘扶正。（{paid}）"
 
     if norm == "问潮":
         await energy.spend(conn, sid, 4, action="韶年问潮")
-        await _clear(conn, sid)
+        await _clear(conn, sid, flash_summary=f"卦险：{norm}，已结。")
         return "听潮一息，卦纹稳下来。"
 
     await energy.spend(conn, sid, 8, action="韶年硬信")
-    await _clear(conn, sid)
+    await _clear(conn, sid, flash_summary=f"卦险：{norm}，已结。")
     return "硬按住卦盘，继续信今日卦象。"
 
 
-async def _clear(conn, steward_id: int) -> None:
+async def _clear(
+    conn,
+    steward_id: int,
+    *,
+    flash_summary: str = "",
+) -> None:
     await ensure_columns(conn)
     await conn.execute(
         "UPDATE stewards SET shaonian_hazard=NULL, shaonian_hazard_json=NULL WHERE id=?",
         (steward_id,),
     )
+
+    if flash_summary:
+        from . import hazard_flash as hf
+
+        await hf.on_trouble_cleared(
+            conn, steward_id, "beach_omen", flash_summary, "shaonian_omen",
+        )

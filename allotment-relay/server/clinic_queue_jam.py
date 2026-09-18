@@ -106,7 +106,7 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
 
     if norm == "候诊":
         await energy.spend(conn, sid, 5, action="诊所候诊")
-        await _clear(conn, sid)
+        await _clear(conn, sid, flash_summary=f"诊险：{norm}，已结。")
         return "排到窗口，桥桥把病历合上。"
 
     if norm == "加号":
@@ -119,17 +119,29 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
             "UPDATE stewards SET tickets=tickets-12 WHERE id=?",
             (sid,),
         )
-        await _clear(conn, sid)
+        await _clear(conn, sid, flash_summary=f"诊险：{norm}，已结。")
         return "加号费交上，叫号屏终于安静。（−12 票）"
 
     await energy.spend(conn, sid, 8, action="诊所硬治")
-    await _clear(conn, sid)
+    await _clear(conn, sid, flash_summary=f"诊险：{norm}，已结。")
     return "挤过人群，可以正常开药了。"
 
 
-async def _clear(conn, steward_id: int) -> None:
+async def _clear(
+    conn,
+    steward_id: int,
+    *,
+    flash_summary: str = "",
+) -> None:
     await ensure_columns(conn)
     await conn.execute(
         "UPDATE stewards SET clinic_hazard=NULL, clinic_hazard_json=NULL WHERE id=?",
         (steward_id,),
     )
+
+    if flash_summary:
+        from . import hazard_flash as hf
+
+        await hf.on_trouble_cleared(
+            conn, steward_id, "clinic", flash_summary, "clinic_queue",
+        )

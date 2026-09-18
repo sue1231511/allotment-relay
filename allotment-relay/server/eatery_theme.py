@@ -92,23 +92,62 @@ def _menu_dish_keys(items: list[str]) -> set[str]:
     return out
 
 
+COMBO_DINE_DISCOUNT = 0.88  # 套餐堂食一次买齐，总价 ×88%（算 1 次 dine 额度）
+
 SET_MENUS: tuple[dict, ...] = (
     {
         "name": "潮卤海味双拼",
+        "slug": "sea_brine_combo",
         "keys": frozenset({"tide_ginger_crab", "brine_clam_pot"}),
         "hint": "两菜分别 stock，价自定；堂食可连点。",
     },
     {
         "name": "雾潮三式",
+        "slug": "fog_trio",
         "keys": frozenset({"black_salt_fish", "fog_mushroom_soup", "lantern_sashimi"}),
         "hint": "三道特殊菜齐柜，适合写进招牌。",
     },
     {
         "name": "烈火海味",
+        "slug": "spicy_sea",
         "keys": frozenset({"sichuan_kelp_fish", "chop_head"}),
         "hint": "椒香+鱼头，辣味爱好者会找。",
     },
 )
+
+
+def resolve_set_menu(token: str) -> dict | None:
+    t = (token or "").strip()
+    if not t:
+        return None
+    low = t.lower().replace(" ", "")
+    for spec in SET_MENUS:
+        if t == spec["name"] or low == spec.get("slug", ""):
+            return spec
+        if low.replace("_", "") == spec["name"].replace(" ", ""):
+            return spec
+    return None
+
+
+def pick_menu_rows_for_set(
+    menu: list[dict],
+    spec: dict,
+) -> list[dict]:
+    """每条 keys 各取菜单上一行（按 dish_key 匹配）。"""
+    need = spec["keys"]
+    by_key: dict[str, dict] = {}
+    for row in menu:
+        dk = _dish_key_from_item(row["item"])
+        if dk and dk in need and dk not in by_key:
+            by_key[dk] = row
+    if set(by_key.keys()) < need:
+        return []
+    return [by_key[k] for k in sorted(need)]
+
+
+def combo_dine_price(rows: list[dict]) -> int:
+    total = sum(int(r["price"]) for r in rows)
+    return max(1, int(round(total * COMBO_DINE_DISCOUNT)))
 
 
 def set_menu_lines(items: list[str]) -> list[str]:
@@ -138,7 +177,10 @@ def set_menu_lines(items: list[str]) -> list[str]:
 
 
 def set_menu_report(items: list[str]) -> str:
-    lines = ["小馆套餐建议（价仍 shop stock 自定，不自动捆绑扣票）："]
+    pct = int(round((1 - COMBO_DINE_DISCOUNT) * 100))
+    lines = [
+        f"小馆套餐（stock 价自定；堂食 shop dine 店主 套餐名 一次买齐享 {pct}% 折，占 1 次 dine 额度）：",
+    ]
     themed = set_menu_lines(items)
     if themed:
         lines.extend(themed)

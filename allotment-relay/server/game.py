@@ -561,7 +561,7 @@ async def relay_manual() -> str:
         "  熟菜回精力 22 起比生吃划算得多，并点滴身体 +1。熟菜可 vend 或 hut_ops 冰柜 存 / kitchen_ops store",
         "  未命名小鱼可生吃（不感染）但会再掷小咒事件：kitchen_ops eat 未命名小鱼",
         "  brew 材料 — 灶台回雾智。shop open 店名 开小馆（要小屋+冰箱；开馆后每天岸维 12 票）；shop stock / dine / 卖掉（折旧回收；close 不退钱）",
-        "  shop stock 菜名 [价格] — 上架熟菜，价格自定；shop 套餐 看推荐组合（不自动捆绑扣票）；board 显示气质",
+        "  shop stock 菜名 [价格] — 上架熟菜；shop 套餐 看组合；shop dine 店主 潮卤海味双拼 等套餐名=一次买齐 88% 价（1 次 dine 额度）；board 显示气质",
         "  shop 灶险 开窗|换锅|硬烧 — 上架后小概率糊烟，未处置不能再 stock；人类 /island 我的馆也能点",
         "  shop board — 全服谁在营业的小馆名单（店名和几道菜），不是流水也不是评价；dine 管理员名 去吃",
         "  人类网页 /eatery 是小馆围观实况；点餐在 /play，也可 /island 总览点小馆（先进店景，点一下才出菜单）。做饭在小屋灶，不是小馆，也不是上手页厨房",

@@ -87,7 +87,7 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
 
     if norm == "候潮":
         await energy.spend(conn, sid, 4, action="渡口候潮")
-        await _clear(conn, sid)
+        await _clear(conn, sid, flash_summary=f"别险：{norm}，已结。")
         return "等潮息一页，册上的字又清楚了。"
 
     if norm == "燃灯":
@@ -106,17 +106,29 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
             paid = f"-{cost} 票"
         else:
             paid = "矿灯芯×1"
-        await _clear(conn, sid)
+        await _clear(conn, sid, flash_summary=f"别险：{norm}，已结。")
         return f"灯下烘干册页，阿槐继续记名。（{paid}）"
 
     await energy.spend(conn, sid, 8, action="渡口硬别")
-    await _clear(conn, sid)
+    await _clear(conn, sid, flash_summary=f"别险：{norm}，已结。")
     return "硬把名字描完，雾还在栈桥上。"
 
 
-async def _clear(conn, steward_id: int) -> None:
+async def _clear(
+    conn,
+    steward_id: int,
+    *,
+    flash_summary: str = "",
+) -> None:
     await ensure_columns(conn)
     await conn.execute(
         "UPDATE stewards SET musong_hazard=NULL, musong_hazard_json=NULL WHERE id=?",
         (steward_id,),
     )
+
+    if flash_summary:
+        from . import hazard_flash as hf
+
+        await hf.on_trouble_cleared(
+            conn, steward_id, "musong", flash_summary, "musong_fog",
+        )

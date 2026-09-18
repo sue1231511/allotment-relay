@@ -106,7 +106,7 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
 
     if norm == "排队":
         await energy.spend(conn, sid, 6, action="潮生会排队")
-        await _clear(conn, sid)
+        await _clear(conn, sid, flash_summary=f"会险：{norm}，已结。")
         return "排到窗口前，阿簿把簿子理平了。"
 
     if norm == "补票":
@@ -119,7 +119,7 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
             "UPDATE stewards SET tickets=tickets-5 WHERE id=?",
             (sid,),
         )
-        await _clear(conn, sid)
+        await _clear(conn, sid, flash_summary=f"会险：{norm}，已结。")
         return "塞了五票当谢仪，队伍让开一条缝。"
 
     await energy.spend(conn, sid, 10, action="潮生会硬挤")
@@ -130,13 +130,25 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
             (sid,),
         )
         extra = "挤掉几张零票（−3 票）。"
-    await _clear(conn, sid)
+    await _clear(conn, sid, flash_summary=f"会险：{norm}，已结。")
     return f"挤过人群，簿子终于合上。{extra}"
 
 
-async def _clear(conn, steward_id: int) -> None:
+async def _clear(
+    conn,
+    steward_id: int,
+    *,
+    flash_summary: str = "",
+) -> None:
     await ensure_columns(conn)
     await conn.execute(
         "UPDATE stewards SET hui_hazard=NULL, hui_hazard_json=NULL WHERE id=?",
         (steward_id,),
     )
+
+    if flash_summary:
+        from . import hazard_flash as hf
+
+        await hf.on_trouble_cleared(
+            conn, steward_id, "guild", flash_summary, "hui_rush",
+        )

@@ -388,6 +388,108 @@ async def eatery_command(s: dict[str, Any], command: str) -> str:
     )
 
 
+async def _dine_combo(
+    guest: dict[str, Any],
+    shop: dict[str, Any],
+    rows: list[dict],
+    spec: dict,
+    *,
+    day: int,
+) -> str:
+    from . import eatery_theme as theme_mod
+
+    price = theme_mod.combo_dine_price(rows)
+    async with db.connect() as conn:
+        cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (guest["id"],))
+        if (await cur.fetchone())[0] < price:
+            raise ValueError(f"套餐需要 {price} 票")
+        await conn.execute(
+            "UPDATE stewards SET tickets=tickets-? WHERE id=?",
+            (price, guest["id"]),
+        )
+        await conn.execute(
+            "UPDATE stewards SET tickets=tickets+? WHERE id=?",
+            (price, shop["id"]),
+        )
+        gain = 0
+        cured_line = None
+        for picked in rows:
+            await conn.execute("DELETE FROM eatery_menu WHERE id=?", (picked["id"],))
+            gain += _eat_gain(picked["item"], picked["price"])
+            from . import kitchen as kitchen_mod
+            line = await kitchen_mod.ate_cooked_meal(conn, guest["id"])
+            if line:
+                cured_line = line
+        gain = min(50, gain + 2)
+        restored = await energy.restore(conn, guest["id"], gain)
+        from . import health as health_mod
+        dine_heal = await health_mod.restore_health(conn, guest["id"], config.DINE_HEALTH)
+        await conn.execute(
+            "UPDATE stewards SET dine_buff_until=? WHERE id=?",
+            (db.now() + config.DINE_BUFF_SECONDS, guest["id"]),
+        )
+        await survival.bump(
+            conn,
+            guest["id"],
+            satiety=min(22, gain // 2 + 8),
+            mist_wit=config.DINE_BUFF_MIST_WIT,
+            standing=config.DINE_BUFF_STANDING,
+        )
+        await conn.execute(
+            """
+            INSERT INTO eatery_rolls (steward_id, day, count) VALUES (?,?,1)
+            ON CONFLICT(steward_id, day) DO UPDATE SET count = count + 1
+            """,
+            (guest["id"], day),
+        )
+        note = flavor.pick([
+            "套餐齐上，姜姨多看了两眼",
+            "一套吃完，海风都甜一点",
+            "老板收碗时说了声「会点」",
+        ])
+        items_note = " + ".join(item_label(r["item"]) for r in rows)
+        await conn.execute(
+            """
+            INSERT INTO eatery_orders (shop_id, patron_id, item, price, note, created_at)
+            VALUES (?,?,?,?,?,?)
+            """,
+            (
+                shop["id"],
+                guest["id"],
+                rows[0]["item"],
+                price,
+                f"套餐·{spec['name']}：{items_note}。{note}",
+                db.now(),
+            ),
+        )
+        from . import bond as bond_mod
+        await bond_mod.grant(conn, guest["id"], bond_mod.DINE_GUEST, "life")
+        await bond_mod.grant(conn, shop["id"], bond_mod.DINE_HOST, "life")
+        await conn.commit()
+    label = shop.get("eatery_label") or f"{shop['name']}的馆"
+    msg = (
+        f"在「{label}」套餐「{spec['name']}」（{items_note}）"
+        f" −{price} 票（原价 {sum(r['price'] for r in rows)} 的 "
+        f"{int(theme_mod.COMBO_DINE_DISCOUNT * 100)}%），精力 +{restored}"
+        + (f"，身体 +{dine_heal}" if dine_heal else "")
+        + f"\n{note}"
+    )
+    hours = config.DINE_BUFF_SECONDS // 3600
+    msg += (
+        f"\n堂食「饱餐」{hours} 小时：行动精力 -1；"
+        f"雾智 +{config.DINE_BUFF_MIST_WIT}、档信 +{config.DINE_BUFF_STANDING}。"
+    )
+    if cured_line:
+        msg += f"\n{cured_line}"
+    await db.add_chronicle(
+        "eatery",
+        f"{guest['name']} 在 {shop['name']} 的馆吃套餐 {spec['name']}",
+        guest["id"],
+        shop["id"],
+    )
+    return msg
+
+
 async def _dine(guest: dict[str, Any], shop_name: str, item_ref: str | None) -> str:
     shop = await db.get_steward_by_name(shop_name)
     if not shop or not shop.get("eatery_open"):
@@ -409,6 +511,18 @@ async def _dine(guest: dict[str, Any], shop_name: str, item_ref: str | None) -> 
         menu = await _menu_rows(conn, shop["id"])
         if not menu:
             raise ValueError("这馆菜单空了，换一家")
+        if item_ref:
+            from . import eatery_theme as theme_mod
+
+            spec = theme_mod.resolve_set_menu(item_ref)
+            if spec:
+                combo_rows = theme_mod.pick_menu_rows_for_set(menu, spec)
+                if not combo_rows:
+                    raise ValueError(
+                        f"套餐「{spec['name']}」不齐，店主还差 stock。"
+                        " shop 套餐 看缺什么。"
+                    )
+                return await _dine_combo(guest, shop, combo_rows, spec, day=day)
         picked = None
         if item_ref:
             for r in menu:
