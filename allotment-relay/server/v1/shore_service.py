@@ -118,6 +118,18 @@ def _command(kind: str, target: str) -> tuple[str, str]:
     if verb in TIDE_KINDS:
         return "tide", TIDE_KINDS[verb]
     if verb == "voyage":
+        if extra == "mod list":
+            return "tide", "voyage 改装 list"
+        if extra.startswith("mod install "):
+            name = extra[len("mod install ") :].strip()
+            if not name:
+                raise ApiError("BAD_REQUEST", "先点要装的改装。")
+            return "tide", f"voyage 改装 装 {name}"
+        if extra.startswith("mod remove "):
+            slot = extra[len("mod remove ") :].strip()
+            if not slot.isdigit():
+                raise ApiError("BAD_REQUEST", "改装槽位不对。")
+            return "tide", f"voyage 改装 卸 {slot}"
         cmd = VOYAGE_OK.get(extra)
         if not cmd:
             raise ApiError("BAD_REQUEST", "出海没有这一下。")
@@ -500,6 +512,61 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
                 detail="一次回满帆、舵、灯。低耐久易出海失败。船体仍用「修船」。",
             )
         )
+        from .. import boat_mods as bmods_mod
+
+        installed_rows = await bmods_mod.list_installed(conn, s["id"])
+        installed_keys = {k for _slot, k in installed_rows}
+        mod_note = await bmods_mod.status_line(conn, s["id"])
+        voyage_items.append(
+            _sku(
+                sid="mod-list",
+                kind="voyage",
+                name="船改装",
+                emoji="⚙️",
+                note=mod_note if len(mod_note) < 72 else mod_note[:69] + "…",
+                price="看",
+                can=True,
+                target="mod list",
+                detail="最多 2 槽。与 MCP voyage_ops 改装 同一套。",
+            )
+        )
+        if len(installed_rows) < bmods_mod.MAX_MODS:
+            for mk, meta in bmods_mod.MODS.items():
+                if mk in installed_keys:
+                    continue
+                need_ok = all(int(stock.get(item) or 0) >= qty for item, qty in meta["need"])
+                can_mod = tickets >= int(meta["cost"]) and need_ok
+                need_txt = " + ".join(
+                    f"{ITEM_NAMES.get(i, i)}×{q}" for i, q in meta["need"]
+                )
+                voyage_items.append(
+                    _sku(
+                        sid=f"mod-{mk}",
+                        kind="voyage",
+                        name=f"装{meta['name']}",
+                        emoji=str(meta.get("emoji") or "⚙️"),
+                        note=f"{need_txt} · {meta['cost']}票",
+                        price=str(meta["cost"]),
+                        can=can_mod,
+                        target=f"mod install {mk}",
+                        detail=str(meta.get("hint") or meta["name"]),
+                    )
+                )
+        for slot, mkey in installed_rows:
+            m = bmods_mod.MODS.get(mkey, {})
+            voyage_items.append(
+                _sku(
+                    sid=f"mod-rm-{slot}",
+                    kind="voyage",
+                    name=f"卸槽{slot}",
+                    emoji="🧰",
+                    note=m.get("name") or mkey,
+                    price="卸",
+                    can=True,
+                    target=f"mod remove {slot}",
+                    detail="卸下改装，材料不退。",
+                )
+            )
     if vstatus == "sail_tear":
         for sid, target, emoji, label in (
             ("sail-patch", "sail patch", "🪡", "补帆"),

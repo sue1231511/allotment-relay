@@ -63,7 +63,13 @@ async def digest(conn, steward_id: int) -> str:
         if bar_mod.is_shift_overdue(s):
             lines.append("  · 酒吧考勤逾期 → bar_ops work")
             n += 1
+    from . import bad_event_tier_store as tier_store_mod
+
+    open_tiers = await tier_store_mod.list_open(conn, steward_id, limit=4)
+    for row in open_tiers:
+        lines.append(f"  · {row['line']}")
+        n += 1
     if n == 0:
-        return "暂无集中待维修项。分散 debuff 看 sheet；坏事件档位居【轻中重绝】。"
-    lines.append(f"共 {n} 类。详情仍看各工具 status。")
+        return "暂无集中待维修项。分散 debuff 看 sheet；坏事件档位居【轻中重绝】。steward_ops 灾档 看持久化记录。"
+    lines.append(f"共 {n} 类。详情仍看各工具 status · steward_ops 灾档")
     return "\n".join(lines)

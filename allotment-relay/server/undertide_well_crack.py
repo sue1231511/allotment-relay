@@ -48,6 +48,14 @@ async def maybe_after_bump(conn, steward_id: int, *, old: int, new: int) -> str 
     from . import bad_event_tiers as tiers_mod
 
     tier = tiers_mod.TIER_FATAL if new >= wc_mod.MAX_CORROSION - 5 else tiers_mod.TIER_HEAVY
+    await tiers_mod.record_open(
+        conn,
+        steward_id,
+        "undertide",
+        tier,
+        f"井壁裂（蚀 {new}）",
+        ref_key="well_crack",
+    )
     return tiers_mod.tag(
         tier,
         f"井壁裂了道缝（蚀 {new}/{wc_mod.MAX_CORROSION}）！"
@@ -155,6 +163,9 @@ async def _clear(conn, steward_id: int) -> None:
         """,
         (steward_id,),
     )
+    from . import bad_event_tiers as tiers_mod
+
+    await tiers_mod.record_resolved(conn, steward_id, "undertide", ref_key="well_crack")
 
 
 async def player_snippet(conn, steward: dict[str, Any]) -> dict[str, Any]:

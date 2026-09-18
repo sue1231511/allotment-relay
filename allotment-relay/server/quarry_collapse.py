@@ -59,6 +59,14 @@ async def maybe_after_hew(
     tier = tiers_mod.TIER_HEAVY if weather in ("gale", "storm") else tiers_mod.roll_tier(
         weights=(0.20, 0.35, 0.35, 0.10)
     )
+    await tiers_mod.record_open(
+        conn,
+        steward_id,
+        "quarry",
+        tier,
+        f"坑{slot}塌方",
+        ref_key=str(slot),
+    )
     return tiers_mod.tag(
         tier,
         f"坑{slot}顶上传来碎石滚落——塌方了！"
@@ -182,3 +190,6 @@ async def _clear_hazard(conn, steward_id: int, slot: int) -> None:
         """,
         (steward_id, slot),
     )
+    from . import bad_event_tiers as tiers_mod
+
+    await tiers_mod.record_resolved(conn, steward_id, "quarry", ref_key=str(slot))

@@ -205,6 +205,28 @@ async def _check_quarrier(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool
     )
 
 
+async def _collection_unlock_count(conn: aiosqlite.Connection, steward_id: int) -> int:
+    row = await (
+        await conn.execute(
+            "SELECT COUNT(*) FROM steward_collection_unlock WHERE steward_id=?",
+            (steward_id,),
+        )
+    ).fetchone()
+    return int(row[0] or 0)
+
+
+async def _check_collection_scout(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
+    return await _collection_unlock_count(conn, s["id"]) >= 25
+
+
+async def _check_collection_keeper(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
+    return await _collection_unlock_count(conn, s["id"]) >= 40
+
+
+async def _check_collection_master(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
+    return await _collection_unlock_count(conn, s["id"]) >= 55
+
+
 async def _check_crafter(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
     return await _exists(
         conn,
@@ -599,6 +621,24 @@ ACHIEVEMENTS: dict[str, dict[str, Any]] = {
         "hint": "陈列柜六套都捐过",
         "aliases": ("满柜", "六套齐"),
         "check": _check_full_cabinet,
+    },
+    "collection_scout": {
+        "name": "收集簿学徒",
+        "hint": "岛收集簿点亮 25 项",
+        "aliases": ("簿中学徒", "收集学徒"),
+        "check": _check_collection_scout,
+    },
+    "collection_keeper": {
+        "name": "潮痕簿记",
+        "hint": "岛收集簿点亮 40 项",
+        "aliases": ("簿记人", "收集簿记"),
+        "check": _check_collection_keeper,
+    },
+    "collection_master": {
+        "name": "岛藏通",
+        "hint": "岛收集簿点亮 55 项",
+        "aliases": ("岛藏师", "簿中通"),
+        "check": _check_collection_master,
     },
     "navigator": {
         "name": "引航人",

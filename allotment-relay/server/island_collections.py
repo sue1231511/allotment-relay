@@ -320,6 +320,10 @@ async def sync_unlocks(conn, steward_id: int) -> int:
         )
         if cur.rowcount:
             new += 1
+    s = await db.get_steward_by_id(steward_id)
+    if s:
+        from . import progress as progress_mod
+        await progress_mod.scan_achievements(conn, s)
     return new
 
 

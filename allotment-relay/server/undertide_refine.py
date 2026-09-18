@@ -21,6 +21,14 @@ RECIPES: dict[str, dict] = {
         "energy": 8,
         "hint": "潮下黑盐 + 崖盐 → 岸上厨房用的黑盐（黑盐炖鱼）",
     },
+    "brine_nails": {
+        "label": "卤浸钉",
+        "emoji": "🔩",
+        "ings": [("ut_brine_crystal", 1), ("craft_copper_nails", 2)],
+        "out": ("craft_copper_nails", 4),
+        "energy": 9,
+        "hint": "井底卤晶 + 岸工坊铜钉 → 多两枚铜钉（崖↔潮下↔工坊闭环）",
+    },
 }
 
 

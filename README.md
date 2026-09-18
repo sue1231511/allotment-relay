@@ -111,6 +111,7 @@ bar_ops     的 command = work 洗碗 night
 | `board tickets` / `board 岛缘` | 全服票榜 / 岛缘榜（board tickets=口袋现票；board 岛缘=岛缘无上限。board level 仍指向岛缘榜。不是周目标贡献榜，也不是 `steward_ops 岛缘` 拆来源） |
 | `收集` | 岛收集簿（约 58 项里程碑，点亮永久记录；不是 `lore_ops scan`） |
 | `维修` / `repair` | 待修/待处置总览：船体、部件、盐风崖险、小屋杂务、潮下井裂、酒吧考勤逾期。不是 `visit_ops 潮生会 维` 产业岸维 |
+| `灾档` / `tierlog` | 未结案四档坏事件持久化记录（轻中重绝）；处置后自动结案 |
 | `help` | 列出真指令 |
 
 ### `plot_ops` — 份地

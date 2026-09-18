@@ -74,6 +74,17 @@ async def maybe_roll(conn, steward_id: int, *, hut_built: bool, hut_level: int) 
         """,
         (steward_id, key, db.now()),
     )
+    from . import bad_event_tiers as tiers_mod
+
+    tier = tiers_mod.roll_tier(weights=(0.45, 0.35, 0.15, 0.05))
+    await tiers_mod.record_open(
+        conn,
+        steward_id,
+        "hut",
+        tier,
+        CHORE_META[key]["name"],
+        ref_key=key,
+    )
     meta = CHORE_META[key]
     return (
         f"{meta['emoji']}杂务：{meta['name']}。"
@@ -126,6 +137,9 @@ async def resolve(conn, steward: dict, choice: str) -> str:
     else:
         raise ValueError("杂务：自修 · 请匠 · 不管")
     await conn.execute("DELETE FROM steward_hut_chore WHERE steward_id=?", (steward["id"],))
+    from . import bad_event_tiers as tiers_mod
+
+    await tiers_mod.record_resolved(conn, steward["id"], "hut", ref_key=key)
     await db.add_chronicle("hut", f"{steward['name']} 处置杂务·{meta['name']}（{choice}）", steward["id"], conn=conn)
     from . import bad_event_tiers as tiers_mod
     if ch in ("不管", "ignore", "拖"):

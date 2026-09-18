@@ -1316,6 +1316,14 @@ async def _resolve_voyage(
             "far": tiers_mod.TIER_MID,
             "deep": tiers_mod.TIER_HEAVY,
         }.get(voyage.get("route") or "", tiers_mod.roll_tier())
+        await tiers_mod.record_open(
+            conn,
+            s["id"],
+            "hail",
+            route_tier,
+            f"{route['label']}归港黑旗",
+            ref_key=str(voyage["id"]),
+        )
         hail_body = _hail_prompt(payload) + tiers_mod.repair_hint("hail", tier=route_tier)
         msg += "\n" + tiers_mod.tag(route_tier, hail_body)
         await conn.execute(
@@ -1391,6 +1399,9 @@ async def _finish_voyage(steward_id: int, voyage: dict[str, Any], choice: str | 
             hail_msg = await _resolve_hail(
                 conn, s, voyage, choice, [], fish_loot, forced=bool(timeout_note)
             )
+            from . import bad_event_tiers as tiers_mod
+
+            await tiers_mod.record_resolved(conn, steward_id, "hail", ref_key=str(voyage["id"]))
             await conn.execute("DELETE FROM voyages WHERE id=?", (voyage["id"],))
             await conn.commit()
             msg = hail_msg
