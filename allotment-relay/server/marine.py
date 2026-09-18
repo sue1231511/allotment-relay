@@ -1445,6 +1445,15 @@ async def voyage_ops(key_id: int, command: str) -> str:
         else:
             lines.append("出海: 无 — depart near|far|deep")
         lines.append(world.climate_line())
+        async with db.connect() as conn:
+            from . import layer_link as layer_link_mod
+            from . import voyage_chronicle as vlog_mod
+            hint = await layer_link_mod.works_voyage_hint(conn)
+            if hint:
+                lines.append(hint)
+            recent = await vlog_mod.recent(conn, s["id"], limit=1)
+            if recent:
+                lines.append(f"船事：{recent[0]}")
         msg = "\n".join(lines)
         return f"{pulse}\n{msg}" if pulse else msg
 

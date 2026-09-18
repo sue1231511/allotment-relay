@@ -149,6 +149,12 @@ async def gear_ops(key_id: int, command: str) -> str:
                 await gear_wear_mod.status_line(conn),
                 await fish_parts_mod.status_line(conn, s["id"]),
             ]
+            from . import fish_ban as fish_ban_mod
+            from . import fish_ecology as fish_ecology_mod
+            ban = fish_ban_mod.brief_ban()
+            if ban != "本周无禁捞种":
+                lines.append(ban)
+            lines.append(await fish_ecology_mod.status_line(conn))
             await conn.commit()
         return "\n".join(lines)
 

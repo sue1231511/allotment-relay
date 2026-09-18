@@ -495,7 +495,8 @@ async def relay_manual() -> str:
         "  船部件 voyage_ops 部件 / 部件 修 — 十二件（帆舵灯锚缆泵舱冰网机钟罗），低了加出海失败；舱低少装货、冰低鱼易擦伤、网机低撒网更易空网、钟低偏航、罗经低黑旗谈和更难（修默认 22 票，铜钉省 6）。plot_ops tend 偶发轻微插曲：鸟啄/灶台/潮气/鱼线打结。tide_ops net 挂水草、dig 铲钝（各记一次消一次）。畜栏 barn_ops breed 1 配种 · 惊逃 1 诱回|围栏|急追 · recover 1 等同诱回 · status 看性格",
         "  船只履历 voyage_ops 履历（含禁捕放生）；畜栏 barn_ops 履历；小屋 hut_ops 修屋顶 · 修冰箱 · 修灶（厨电低则保鲜差/做饭更费神）",
         "  井蚀 undertide_ops descend/enter 磨损井壁；蚀≥70 可能井裂 → 井险 清井|绑索|硬闯（硬下 enter/descend 会拦）。清井=20票；人类 /island 恶猫钱庄也能点",
-        "  家具套装 hut_ops status 看「套装」：灶链/咸鲜排/眠巢/防风铃阵/书海角。成婚且 home 登记时睡觉/看屋偶发家庭小事件",
+        "  家具套装 hut_ops status 看「套装」：灶链/咸鲜排/眠巢/防风铃阵/书海角。成婚且 home 登记时睡觉/看屋/灶台 brew 偶发家庭小事件",
+        "  plot_ops status 附留种血统摘要；tide_ops 空列表/gear status 附禁捕+鱼群压力；voyage status 附工程加成与最近船事",
         "  岸上工程完工：码头降出海失败、听潮亭缓鱼群压力；地面风暴/晴微调井下倍率（enter 可见）",
         "  深坑胜场小概率掉盐泥晶/淤片（ut_ 黑市货）；工程捐材料仍走 visit_ops 潮生会 工程 捐",
         "  黑旗截停：fight / flee / parley / bribe（可省略 voyage；船罗经满谈和略易）",
@@ -1135,7 +1136,11 @@ async def _plot_one(s: dict, cmd: str) -> str:
         plots = [p for p in parcels if not p.get("orchard") and not p.get("greenhouse")]
         trees = [p for p in parcels if p.get("orchard")]
         sheds = [p for p in parcels if p.get("greenhouse")]
-        return "\n".join(
+        seed_note = ""
+        async with db.connect() as conn:
+            from . import seed_lineage as seed_lineage_mod
+            seed_note = await seed_lineage_mod.headline(conn, s["id"]) or ""
+        body = "\n".join(
             [
                 land_mod.sheet_note(s, parcels, orchard=False),
                 *(_parcel_line(p) for p in plots),
@@ -1145,6 +1150,9 @@ async def _plot_one(s: dict, cmd: str) -> str:
                 *(_parcel_line(p) for p in sheds),
             ]
         )
+        if seed_note:
+            body += "\n" + seed_note
+        return body
 
     if verb == "shed":
         return await _shed_one(s, " ".join(parts[1:]) or "status")

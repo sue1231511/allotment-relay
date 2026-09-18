@@ -116,6 +116,19 @@ async def dig_energy_penalty(conn, steward_id: int) -> int:
     return 0
 
 
+async def probe_energy_penalty(conn, steward_id: int) -> int:
+    if await take_flag(conn, steward_id, "probe_sand"):
+        return 2
+    return 0
+
+
+async def roll_probe_sand_glitch(conn, steward_id: int) -> str | None:
+    if random.random() > 0.08:
+        return None
+    await set_flag(conn, steward_id, "probe_sand")
+    return "沙坍回填：下次掏洞多耗 2 精力（已记下，掏一次就消）。"
+
+
 async def roll_beach_dig_glitch(conn, steward_id: int) -> str | None:
     """翻沙后小概率铲刃发钝，下次多耗精力。"""
     if random.random() > 0.09:

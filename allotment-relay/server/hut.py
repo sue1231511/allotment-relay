@@ -2779,6 +2779,17 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
         await barn.tick_animal_age(conn, s["id"])
         from . import barn_disease as barn_disease_mod
         await barn_disease_mod.tick_barn_disease(conn, s["id"])
+        barn_items.append(_sku(
+            sid="barn-pedigree",
+            kind="barn_pedigree",
+            name="畜栏履历",
+            emoji="📜",
+            note="血统与最近栏事（购入/治病/收产）。",
+            detail="和 barn_ops 履历 同一套。",
+            price="看",
+            can=True,
+            target="",
+        ))
         prev_factory = conn.row_factory
         conn.row_factory = aiosqlite.Row
         animals = await (await conn.execute(

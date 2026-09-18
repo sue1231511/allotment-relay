@@ -31,6 +31,7 @@ TITLES = {
     "barn_churn": "搅成奶酪了",
     "barn_breed": "配种了",
     "barn_recover": "寻回牲口了",
+    "barn_pedigree": "畜栏履历",
     "repair_appliance": "修好了",
     "sell_fit": "卖掉了",
     "pickle": "腌好了",
@@ -216,6 +217,8 @@ def _command(kind: str, target: str) -> tuple[str, str]:
         if not extra.isdigit():
             raise ApiError("BAD_REQUEST", "先点要寻回的那一栏。")
         return "barn", f"recover {extra}"
+    if kind == "barn_pedigree":
+        return "barn", "履历"
     if kind == "barn_rescue":
         slot, _, action = extra.partition("|")
         if not slot.isdigit() or not action:

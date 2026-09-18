@@ -908,6 +908,7 @@ async def _hearth_brew(s: dict[str, Any], ings: list[str]) -> str:
         raise ValueError("这组材料没有已知配方，kitchen_ops recipes 查看")
     recipe = HEARTH_RECIPES[sig]
     day = db.day_id()
+    home_cook = None
     async with db.connect() as conn:
         conn.row_factory = aiosqlite.Row
         row = await (await conn.execute(
@@ -940,8 +941,12 @@ async def _hearth_brew(s: dict[str, Any], ings: list[str]) -> str:
         )
         await survival.bump(conn, s["id"], satiety=10, mist_wit=8 + hut_b.brew_mist + int(social.badge_val(s, "brew_mist")))
         extra = await events.roll_after_action(s, "brew", conn)
+        from . import home_events as home_events_mod
+        home_cook = await home_events_mod.roll_on_cook(conn, s)
         await conn.commit()
     msg = f"灶台煮成「{recipe['name']}」→ {meal_item}（回雾智，可 eat / shop stock）"
+    if home_cook:
+        msg += f"\n{home_cook}"
     if hut_b.brew_mist:
         msg += " · 砖砌灶基加持"
     return f"{msg}\n{extra}" if extra else msg

@@ -56,6 +56,22 @@ async def voyage_fail_mult(conn) -> float:
     return m
 
 
+async def works_voyage_hint(conn) -> str | None:
+    """岸上工程对海事的当前加成摘要。"""
+    from . import works as works_mod
+
+    bits: list[str] = []
+    if await works_mod.active_bonus(conn, "dock"):
+        bits.append("码头工程：出海失败×0.90")
+    if await works_mod.active_bonus(conn, "shed"):
+        bits.append("旧温室工程：失败×0.97")
+    if await works_mod.active_bonus(conn, "ting"):
+        bits.append("听潮亭工程：鱼群压力×0.85")
+    if not bits:
+        return None
+    return "岸上工程加成：" + " · ".join(bits)
+
+
 async def fish_pressure_relief(conn) -> float:
     """听潮亭工程完工：全岛鱼群压力略缓。"""
     from . import works as works_mod
