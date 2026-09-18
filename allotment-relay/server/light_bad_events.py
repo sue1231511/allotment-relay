@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import random
 
+from . import bad_event_tiers as tiers_mod
 from . import db
 
 
@@ -64,15 +65,27 @@ async def roll_tend_glitch(conn, steward_id: int, plot: dict) -> str | None:
                 "UPDATE parcels SET harvest_left=MAX(1, harvest_left-1) WHERE id=?",
                 (plot["id"],),
             )
-            return "斑鸠啄了一口，这茬收成少了一把（还能收，不是枯病）。"
+            return tiers_mod.tag(
+                tiers_mod.TIER_MID,
+                "斑鸠啄了一口，这茬收成少了一把（还能收，不是枯病）。",
+            )
     if roll < 0.65:
         await set_flag(conn, steward_id, "stove_stubborn")
-        return "灶台不好点火：下次做饭多耗 1 精力（已记下，做一次饭就消）。"
+        return tiers_mod.tag(
+            tiers_mod.roll_tier(weights=(0.35, 0.40, 0.20, 0.05)),
+            "灶台不好点火：下次做饭多耗 1 精力（已记下，做一次饭就消）。",
+        )
     if roll < 0.85:
         await set_flag(conn, steward_id, "humid_soft")
-        return "潮气进棚，软装有发潮味：下次睡觉少回 3 精力（已记下，睡一次就消）。"
+        return tiers_mod.tag(
+            tiers_mod.roll_tier(weights=(0.30, 0.45, 0.20, 0.05)),
+            "潮气进棚，软装有发潮味：下次睡觉少回 3 精力（已记下，睡一次就消）。",
+        )
     await set_flag(conn, steward_id, "line_tangle")
-    return "鱼线打结了：下次坐钓空杆率 +12%（已记下，坐钓一次就消）。"
+    return tiers_mod.tag(
+        tiers_mod.TIER_LIGHT,
+        "鱼线打结了：下次坐钓空杆率 +12%（已记下，坐钓一次就消）。",
+    )
 
 
 async def apply_stove_penalty(conn, steward_id: int) -> int:

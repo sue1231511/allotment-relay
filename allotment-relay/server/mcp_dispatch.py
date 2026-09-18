@@ -84,6 +84,7 @@ STEWARD_HELP = """steward_ops 子命令（整句写进 command）：
   guild — 每日一轮工分票
   board [tickets|岛缘|me] — 全服工分票榜 / 岛缘榜。空 board=两张都看。例子：board tickets · board 岛缘 · board me。board level / board 等级榜 仍可用，指向同一张岛缘榜。不是周目标贡献榜，也不是 steward_ops 岛缘（那是拆自己的来源）
   成就 — 已解锁称呼；称呼 逾篱客 佩戴；称呼 卸 改回等级称号
+  收集 — 岛收集簿样板进度（只读；不是 lore scan）
   领奖 — 看升级礼（升级时会自动发）
   引航 / invite / 邀请 — 看自己的邀请码、邀请链接、已引来的岛民。空 command 的 sheet 也会写一行引航码。例子：引航 · invite
   绑定 邀请码 — 首次绑定引航人，只能一次，不能改绑，不能自己引自己。例子：绑定 AB12CD34。对方成为有效岛民后，邀请人自动得 100 工分票和 20 岛缘，不要发明领邀请奖
@@ -399,6 +400,10 @@ async def steward_ops(
 
     if verb in ("gifts", "收礼", "收到的礼", "收礼记录"):
         return await game.tote_ops(key_id, command.strip())
+
+    if verb in ("收集", "collections", "collection", "收集簿"):
+        from . import island_collections as coll_mod
+        return await coll_mod.collection_ops(key_id, command.strip())
 
     raise ValueError(f"未知 steward 指令: {command}\n{STEWARD_HELP}")
 

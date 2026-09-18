@@ -12,7 +12,7 @@
 |------|------|------|------|
 | 第一批 | 小屋家维、杂务、烹饪品质、特殊菜、畜栏起名 | ✅ batch37 | `hut_domestic` `hut_chores` `kitchen_special` `barn_names` |
 | 第二批 | 玩家连接 §57 | ✅ batch38 | `neighbor_links` 借船/托养/菜篮 + 出海借船磨损 |
-| 第三批 | 统一耐久、四层坏事件、内容量 KPI | ❌ | 见下方明细 |
+| 第三批 | 统一耐久、四层坏事件、内容量 KPI | 部分 batch39 | 四档标签 + 收集簿样板 |
 
 ---
 
@@ -44,7 +44,8 @@
 - ✅ 借船出海（batch38）
 - ❌ 文档级六类船 + 改装槽完整表
 - ❌ 船模/涂装收集
-- ❌ 统一「坏事件」四档（轻/中/重/绝）与全系统共用框架
+- 部分 统一「坏事件」四档（`bad_event_tiers.py` 标签；打理/杂务忽略已挂【轻中重绝】）
+- ❌ 四档与耐久/维修入口全系统接通
 
 ---
 
@@ -71,7 +72,7 @@
 | 鱼类/渔获 | 大表 | 部分 |
 | 作物 | 大表 | 部分 + 季节 |
 | 菜谱 | 100+ | 部分 + 3 特殊菜 |
-| 收集品 | 大表 | ❌ 骨架弱 |
+| 收集品 | 大表 | 部分 `steward_ops 收集` 12 项样板 |
 | NPC 小事件 | 多线 | 部分（何敬山等） |
 
 ---
@@ -83,13 +84,20 @@
 
 ---
 
-## 建议下一批（batch39+）
+## batch39（进行中）
 
-1. **统一坏事件 tier** — 抽 `bad_event_tiers.py`（或扩 `events.py`），接 voyage/quarry/undertide/hut 杂务。
+- ✅ `bad_event_tiers.py` — 轻/中/重/绝 标签；`light_bad_events` 打理意外、`hut_chores` 忽略
+- ✅ `island_collections.py` — `steward_ops 收集` 12 项样板
+- ❌ 坏事件接 voyage/quarry/undertide、持久化 tier 表
+- ❌ 收集簿持久化解锁 + 大表
+
+## 建议下一批（batch40+）
+
+1. **坏事件 tier 扩面** — quarry/undertide/voyage 归港、统一 repair 提示。
 2. **井下材料链** — 1～2 条可闭环合成（锚定现有 `undertide` 表）。
-3. **收集品簿** — `steward_collections` + `steward_ops 收集` 只读进度（先 10 条样板）。
+3. **收集簿扩表** — DB 解锁记录 + 50+ 项对照方案 KPI。
 4. **/play 邻居连接** — 名册档位够时露出「借船 / 托养 / 菜篮」入口（人类手册已写规则）。
 
 ---
 
-*最后更新：batch38 完成（玩家连接 + 待办本文件创建）。*
+*最后更新：batch39 部分（四档标签 + 收集簿样板）。*
