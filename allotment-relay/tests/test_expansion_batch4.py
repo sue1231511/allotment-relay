@@ -13,7 +13,7 @@ def test_sea_layers():
     from server import sea_layer_pref
 
     assert "near" in sea_layer_pref.zones_for_layer("near")
-    assert "deep" in sea_layer_pref.zones_for_layer("deep")[0]
+    assert "deep" in sea_layer_pref.zones_for_layer("deep")
 
 
 def test_boat_parts_fail():
