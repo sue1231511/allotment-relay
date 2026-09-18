@@ -2295,6 +2295,11 @@ async def init_db() -> None:
             )
             """,
             "CREATE INDEX IF NOT EXISTS idx_item_ledgers_owner ON item_ledgers(owner_id, item, alive, id)",
+            "ALTER TABLE parcels ADD COLUMN soil_fertility INTEGER NOT NULL DEFAULT 70",
+            "ALTER TABLE parcels ADD COLUMN last_crop TEXT",
+            "ALTER TABLE parcels ADD COLUMN pest_key TEXT",
+            "ALTER TABLE parcels ADD COLUMN pest_level INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE parcels ADD COLUMN seed_generation INTEGER NOT NULL DEFAULT 0",
         ):
             try:
                 await db.execute(ddl)

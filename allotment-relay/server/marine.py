@@ -1166,6 +1166,11 @@ async def _resolve_voyage(
     fish_loot: list[str] = []
     loot_table = voyage_loot_table(voyage["route"], rarity_bonus=await _hook_rarity_bonus(conn, s["id"]))
 
+    from . import boat_hull as hull_mod
+    hull_note = await hull_mod.wear_after_voyage(
+        conn, s["id"], voyage["route"], storm=failed or world.current_weather() == "gale",
+    )
+
     if failed:
         await conn.execute("UPDATE stewards SET boat_damaged=1 WHERE id=?", (s["id"],))
         loot_lines.append("风暴折返，几乎空舱")
@@ -1192,6 +1197,7 @@ async def _resolve_voyage(
         enc = None
     msg = f"{route['label']}归港：" + "，".join(loot_lines)
     msg += flavor.maybe_suffix(flavor.VOYAGE_RETURN_BAD if failed else flavor.VOYAGE_RETURN_GOOD)
+    msg += f" · {hull_note}"
     if s.get("boat_damaged"):
         msg += "（船损，voyage_ops repair）"
 
@@ -1341,6 +1347,9 @@ async def voyage_ops(key_id: int, command: str) -> str:
         if boat:
             dmg = " ⚠待修" if s.get("boat_damaged") else ""
             lines.append(f"船: {boat['name']}{dmg}（载货 {boat.get('cargo', 2)}）")
+            async with db.connect() as conn:
+                from . import boat_hull as hull_mod
+                lines.append(await hull_mod.status_line(conn, s["id"]))
         else:
             lines.append("船: 无 — buy skiff|cutter|drifter")
         if voyage:
@@ -1402,8 +1411,10 @@ async def voyage_ops(key_id: int, command: str) -> str:
                 "UPDATE stewards SET tickets=tickets-?, boat_damaged=0 WHERE id=?",
                 (cost, s["id"]),
             )
+            from . import boat_hull as hull_mod
+            await hull_mod.repair_full(conn, s["id"])
             await conn.commit()
-        return f"修船完成（-{cost} 票{nail_note}），可以 depart"
+        return f"修船完成（-{cost} 票{nail_note}），船体回满，可以 depart"
 
     if verb == "depart" and len(parts) >= 2:
         route_key = parts[1].split()[0].lower()

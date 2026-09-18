@@ -95,9 +95,9 @@ async def steward_ops(command: str = "sheet") -> str:
     )
 
 
-@mcp.tool(description="份地果园与田间事件。空=指令表。例：status · sow 1 甘蓝 · weather · 浇水。weather 末尾附本周纪事。勿 sow_all/plant；repair≠岸维。人类 /island 份地点一下看地后选看地/田间事件。")
+@mcp.tool(description="份地果园与田间事件。空=指令表。例：status · sow 1 甘蓝 · 肥力 · 虫害 1 施药 · 留种 甘蓝 · weather · 浇水。肥力/轮作、虫害处置、留种血统为第二批扩展。weather 末尾附本周纪事。勿 sow_all/plant；repair≠岸维。人类 /island 份地点一下看地后选看地/田间事件。")
 async def plot_ops(
-    command: Annotated[str, Field(description="incident status 看待处理；repair 12 花票；repair 12 item 用材料（不支持则拒绝，不改扣票）。同号手游共用记录，刷新不掷事件，不退当场损失。空=指令表。")] = "",
+    command: Annotated[str, Field(description="incident status 看待处理；repair 12 花票；repair 12 item 用材料。肥力 · 虫害 地块 手工|施药|拔除 · 留种 作物 · 留种 status。空=指令表。")] = "",
 ) -> str:
     return await mux._call_ops(mux.plot_bundle, _kid(), command)
 

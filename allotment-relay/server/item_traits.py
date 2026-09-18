@@ -120,6 +120,18 @@ def roll_crop_quality(plot: dict[str, Any]) -> str:
         weights["plump"] += 4
     if plot.get("greenhouse"):
         weights["overripe"] -= 2
+    fert = int(plot.get("soil_fertility") or 70)
+    if fert >= 85:
+        weights["plump"] += 3
+        weights["twisted"] -= 1
+    elif fert < 40:
+        weights["twisted"] += 4
+        weights["bugbit"] += 3
+    if plot.get("pest_key"):
+        weights["bugbit"] += 5
+        weights["plain"] += 2
+    from . import seed_lineage as seed_lineage_mod
+    seed_lineage_mod.apply_quality_bias(weights, plot)
     keys = list(weights.keys())
     w = [max(1, weights[k]) for k in keys]
     return random.choices(keys, weights=w)[0]

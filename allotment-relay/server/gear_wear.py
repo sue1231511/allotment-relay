@@ -6,17 +6,19 @@ from typing import Any
 
 from . import db
 
-GEAR_KEYS = ("net", "rod", "hoe", "shovel", "pickaxe")
+GEAR_KEYS = ("net", "rod", "line", "hoe", "shovel", "pickaxe")
 DEFAULT_MAX = {
     "net": 120,
     "rod": 100,
+    "line": 90,
     "hoe": 140,
     "shovel": 130,
     "pickaxe": 160,
 }
 WEAR_PER_USE = {
     "net": 2,
-    "rod": 2,
+    "rod": 1,
+    "line": 2,
     "hoe": 1,
     "shovel": 1,
     "pickaxe": 3,
@@ -123,7 +125,7 @@ async def repair(conn, steward_id: int, gear_key: str, tickets: int = 12) -> str
 
 
 async def status_line(conn, steward_id: int) -> str:
-    lines = ["用具耐久（低则效率降、事故略增；tide_ops gear repair net|rod · plot_ops gear repair hoe）："]
+    lines = ["用具耐久（低则效率降、事故略增；tide_ops gear repair net|rod|line · plot_ops gear repair hoe）："]
     for key in GEAR_KEYS:
         dur, mx = await ensure_gear(conn, steward_id, key)
         pct = int(100 * dur / mx) if mx else 0
@@ -135,3 +137,16 @@ async def maybe_accident_note(dur: int, max_dur: int) -> str:
     if random.random() < accident_extra_chance(dur, max_dur):
         return "（用具发涩，差点出岔子）"
     return ""
+
+
+def line_snap_chance(dur: int, max_dur: int) -> float:
+    if max_dur <= 0:
+        return 0.0
+    ratio = dur / max_dur
+    if ratio >= 0.55:
+        return 0.0
+    if ratio >= 0.3:
+        return 0.06
+    if ratio >= 0.15:
+        return 0.14
+    return 0.28
