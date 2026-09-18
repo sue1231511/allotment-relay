@@ -1,0 +1,186 @@
+from __future__ import annotations
+
+EXTRA_CROPS = {
+    "spinach": {'name': '菠菜', 'emoji': '🥬', 'seed_price': 8, 'sell': 17, 'grow': 55, 'yield': 5, 'tier': 1, 'spread': 0.24, 'tags': ['leaf']},
+    "lettuce": {'name': '生菜', 'emoji': '🥬', 'seed_price': 7, 'sell': 16, 'grow': 50, 'yield': 5, 'tier': 1, 'spread': 0.24, 'tags': ['leaf'], 'seasons': ('春', '秋')},
+    "celery": {'name': '芹菜', 'emoji': '🌿', 'seed_price': 9, 'sell': 18, 'grow': 70, 'yield': 4, 'tier': 2, 'spread': 0.24, 'tags': ['leaf']},
+    "chives": {'name': '韭菜', 'emoji': '🌿', 'seed_price': 8, 'sell': 17, 'grow': 65, 'yield': 5, 'tier': 1, 'spread': 0.24, 'tags': ['seasoning'], 'seasons': ('春', '夏', '秋')},
+    "scallion": {'name': '青葱', 'emoji': '🧅', 'seed_price': 7, 'sell': 15, 'grow': 55, 'yield': 5, 'tier': 1, 'spread': 0.24, 'tags': ['seasoning']},
+    "shiso": {'name': '紫苏', 'emoji': '🌿', 'seed_price': 11, 'sell': 22, 'grow': 75, 'yield': 4, 'tier': 2, 'spread': 0.24, 'tags': ['herb', 'seasoning'], 'seasons': ('夏',)},
+    "rapeseed": {'name': '油菜', 'emoji': '🌼', 'seed_price': 9, 'sell': 19, 'grow': 90, 'yield': 4, 'tier': 2, 'spread': 0.24, 'tags': ['leaf'], 'seasons': ('春',)},
+    "carrot": {'name': '胡萝卜', 'emoji': '🥕', 'seed_price': 8, 'sell': 18, 'grow': 85, 'yield': 4, 'tier': 2, 'spread': 0.24, 'tags': ['root']},
+    "daikon": {'name': '白萝卜', 'emoji': '🥕', 'seed_price': 7, 'sell': 16, 'grow': 80, 'yield': 4, 'tier': 2, 'spread': 0.24, 'tags': ['root'], 'seasons': ('秋', '冬')},
+    "potato": {'name': '土豆', 'emoji': '🥔', 'seed_price': 9, 'sell': 20, 'grow': 100, 'yield': 4, 'tier': 2, 'spread': 0.24, 'tags': ['root']},
+    "taro": {'name': '芋头', 'emoji': '🍠', 'seed_price': 10, 'sell': 21, 'grow': 95, 'yield': 4, 'tier': 2, 'spread': 0.24, 'tags': ['root', 'tropic']},
+    "lotus_root": {'name': '莲藕', 'emoji': '🪷', 'seed_price': 12, 'sell': 26, 'grow': 110, 'yield': 3, 'tier': 3, 'spread': 0.24, 'tags': ['root'], 'seasons': ('夏', '秋')},
+    "onion": {'name': '洋葱', 'emoji': '🧅', 'seed_price': 8, 'sell': 17, 'grow': 90, 'yield': 4, 'tier': 2, 'spread': 0.24, 'tags': ['seasoning']},
+    "yam": {'name': '山药', 'emoji': '🍠', 'seed_price': 11, 'sell': 24, 'grow': 120, 'yield': 3, 'tier': 3, 'spread': 0.24, 'tags': ['root']},
+    "soybean": {'name': '黄豆', 'emoji': '🫘', 'seed_price': 10, 'sell': 20, 'grow': 100, 'yield': 4, 'tier': 2, 'spread': 0.24, 'tags': ['legume']},
+    "green_pea": {'name': '豌豆', 'emoji': '🫛', 'seed_price': 9, 'sell': 19, 'grow': 85, 'yield': 5, 'tier': 1, 'spread': 0.24, 'tags': ['legume'], 'seasons': ('春',)},
+    "green_bean": {'name': '四季豆', 'emoji': '🫛', 'seed_price': 9, 'sell': 18, 'grow': 80, 'yield': 4, 'tier': 2, 'spread': 0.24, 'tags': ['legume'], 'seasons': ('春', '夏')},
+    "peanut": {'name': '花生', 'emoji': '🥜', 'seed_price': 10, 'sell': 22, 'grow': 110, 'yield': 4, 'tier': 2, 'spread': 0.24, 'tags': ['legume'], 'seasons': ('夏',)},
+    "adzuki": {'name': '红豆', 'emoji': '🫘', 'seed_price': 10, 'sell': 21, 'grow': 100, 'yield': 4, 'tier': 2, 'spread': 0.24, 'tags': ['legume']},
+    "tomato": {'name': '番茄', 'emoji': '🍅', 'seed_price': 11, 'sell': 24, 'grow': 90, 'yield': 4, 'tier': 2, 'spread': 0.24, 'tags': ['fruit'], 'seasons': ('夏',)},
+    "cucumber": {'name': '黄瓜', 'emoji': '🥒', 'seed_price': 9, 'sell': 20, 'grow': 75, 'yield': 5, 'tier': 1, 'spread': 0.24, 'tags': ['fruit'], 'seasons': ('春', '夏')},
+    "eggplant": {'name': '茄子', 'emoji': '🍆', 'seed_price': 10, 'sell': 22, 'grow': 95, 'yield': 4, 'tier': 2, 'spread': 0.24, 'tags': ['fruit'], 'seasons': ('夏',)},
+    "pumpkin": {'name': '南瓜', 'emoji': '🎃', 'seed_price': 12, 'sell': 28, 'grow': 150, 'yield': 6, 'tier': 3, 'spread': 0.24, 'tags': ['fruit'], 'seasons': ('秋',)},
+    "wax_gourd": {'name': '冬瓜', 'emoji': '🍈', 'seed_price': 11, 'sell': 25, 'grow': 140, 'yield': 3, 'tier': 3, 'spread': 0.24, 'tags': ['fruit'], 'seasons': ('夏',)},
+    "corn": {'name': '玉米', 'emoji': '🌽', 'seed_price': 10, 'sell': 22, 'grow': 110, 'yield': 4, 'tier': 2, 'spread': 0.24, 'tags': ['grain'], 'seasons': ('夏',)},
+    "bell_pepper": {'name': '彩椒', 'emoji': '🫑', 'seed_price': 12, 'sell': 26, 'grow': 100, 'yield': 4, 'tier': 2, 'spread': 0.24, 'tags': ['fruit'], 'seasons': ('夏',)},
+    "sichuan_pepper": {'name': '花椒', 'emoji': '🌶️', 'seed_price': 14, 'sell': 30, 'grow': 130, 'yield': 3, 'tier': 3, 'spread': 0.24, 'tags': ['seasoning'], 'seasons': ('秋',)},
+    "coriander": {'name': '香菜', 'emoji': '🌿', 'seed_price': 8, 'sell': 18, 'grow': 60, 'yield': 5, 'tier': 1, 'spread': 0.24, 'tags': ['herb', 'seasoning']},
+    "garden_mint": {'name': '薄荷', 'emoji': '🌿', 'seed_price': 9, 'sell': 19, 'grow': 65, 'yield': 5, 'tier': 1, 'spread': 0.24, 'tags': ['herb'], 'seasons': ('春', '夏')},
+    "rosemary": {'name': '迷迭香', 'emoji': '🌿', 'seed_price': 13, 'sell': 28, 'grow': 120, 'yield': 3, 'tier': 3, 'spread': 0.24, 'tags': ['herb']},
+    "basil": {'name': '罗勒', 'emoji': '🌿', 'seed_price': 11, 'sell': 24, 'grow': 85, 'yield': 4, 'tier': 2, 'spread': 0.24, 'tags': ['herb'], 'seasons': ('夏',)},
+    "turmeric": {'name': '姜黄', 'emoji': '🫚', 'seed_price': 12, 'sell': 26, 'grow': 100, 'yield': 4, 'tier': 2, 'spread': 0.24, 'tags': ['seasoning', 'tropic']},
+    "rice": {'name': '水稻', 'emoji': '🌾', 'seed_price': 10, 'sell': 22, 'grow': 130, 'yield': 4, 'tier': 2, 'spread': 0.24, 'tags': ['grain'], 'seasons': ('夏',)},
+    "wheat": {'name': '小麦', 'emoji': '🌾', 'seed_price': 8, 'sell': 18, 'grow': 120, 'yield': 4, 'tier': 2, 'spread': 0.24, 'tags': ['grain'], 'seasons': ('秋', '冬')},
+    "glutinous_rice": {'name': '糯米', 'emoji': '🌾', 'seed_price': 11, 'sell': 24, 'grow': 125, 'yield': 3, 'tier': 3, 'spread': 0.24, 'tags': ['grain']},
+    "oat": {'name': '燕麦', 'emoji': '🌾', 'seed_price': 9, 'sell': 20, 'grow': 115, 'yield': 4, 'tier': 2, 'spread': 0.24, 'tags': ['grain'], 'seasons': ('秋',)},
+    "sorghum": {'name': '高粱', 'emoji': '🌾', 'seed_price': 9, 'sell': 19, 'grow': 110, 'yield': 4, 'tier': 2, 'spread': 0.24, 'tags': ['grain'], 'seasons': ('夏',)},
+    "saltgrass": {'name': '海盐草', 'emoji': '🌿', 'seed_price': 13, 'sell': 27, 'grow': 90, 'yield': 4, 'tier': 2, 'spread': 0.24, 'tags': ['sea', 'special']},
+    "tide_ginger": {'name': '潮姜', 'emoji': '🫚', 'seed_price': 14, 'sell': 30, 'grow': 95, 'yield': 4, 'tier': 2, 'spread': 0.24, 'tags': ['seasoning', 'special']},
+    "fog_mushroom": {'name': '雾菇', 'emoji': '🍄', 'seed_price': 15, 'sell': 32, 'grow': 100, 'yield': 3, 'tier': 3, 'spread': 0.24, 'tags': ['special'], 'seasons': ('秋', '冬')},
+    "moon_bean": {'name': '月豆', 'emoji': '🫛', 'seed_price': 13, 'sell': 29, 'grow': 105, 'yield': 4, 'tier': 2, 'spread': 0.24, 'tags': ['legume', 'special']},
+    "red_algae": {'name': '红藻', 'emoji': '🌿', 'seed_price': 11, 'sell': 23, 'grow': 80, 'yield': 4, 'tier': 2, 'spread': 0.24, 'tags': ['sea']},
+    "blue_tide_moss": {'name': '蓝潮苔', 'emoji': '🌿', 'seed_price': 12, 'sell': 25, 'grow': 85, 'yield': 4, 'tier': 2, 'spread': 0.24, 'tags': ['sea', 'special']},
+    "lamp_sprout": {'name': '灯芽菜', 'emoji': '💡', 'seed_price': 16, 'sell': 34, 'grow': 70, 'yield': 3, 'tier': 3, 'spread': 0.24, 'tags': ['leaf', 'special']},
+}
+
+EXTRA_TREES = {
+    "apple": {'name': '苹果', 'emoji': '🍎', 'seed_price': 18, 'sell': 32, 'grow': 230, 'yield': 3, 'tier': 4, 'spread': 0.24, 'tags': ['fruit'], 'seasons': ('秋', '冬'), 'tree': True, 'shake': True},
+    "pear": {'name': '梨', 'emoji': '🍐', 'seed_price': 17, 'sell': 30, 'grow': 220, 'yield': 3, 'tier': 4, 'spread': 0.24, 'tags': ['fruit'], 'seasons': ('秋',), 'tree': True},
+    "peach": {'name': '桃', 'emoji': '🍑', 'seed_price': 19, 'sell': 34, 'grow': 210, 'yield': 3, 'tier': 4, 'spread': 0.24, 'tags': ['fruit'], 'seasons': ('夏',), 'tree': True},
+    "plum": {'name': '李', 'emoji': '🫐', 'seed_price': 16, 'sell': 28, 'grow': 200, 'yield': 3, 'tier': 4, 'spread': 0.24, 'tags': ['fruit'], 'seasons': ('夏',), 'tree': True},
+    "cherry": {'name': '樱桃', 'emoji': '🍒', 'seed_price': 22, 'sell': 40, 'grow': 180, 'yield': 2, 'tier': 5, 'spread': 0.2, 'tags': ['fruit', 'berry'], 'seasons': ('春',), 'tree': True},
+    "grape": {'name': '葡萄', 'emoji': '🍇', 'seed_price': 20, 'sell': 36, 'grow': 240, 'yield': 3, 'tier': 4, 'spread': 0.24, 'tags': ['fruit'], 'seasons': ('夏', '秋'), 'tree': True},
+    "persimmon": {'name': '柿子', 'emoji': '🍅', 'seed_price': 18, 'sell': 33, 'grow': 250, 'yield': 3, 'tier': 4, 'spread': 0.24, 'tags': ['fruit'], 'seasons': ('秋',), 'tree': True},
+    "jujube": {'name': '枣', 'emoji': '🫒', 'seed_price': 15, 'sell': 27, 'grow': 210, 'yield': 3, 'tier': 4, 'spread': 0.24, 'tags': ['fruit'], 'seasons': ('秋',), 'tree': True},
+    "longan": {'name': '龙眼', 'emoji': '🫐', 'seed_price': 21, 'sell': 38, 'grow': 260, 'yield': 2, 'tier': 5, 'spread': 0.2, 'tags': ['fruit', 'tropic'], 'seasons': ('夏',), 'tree': True},
+    "lychee": {'name': '荔枝', 'emoji': '🫐', 'seed_price': 23, 'sell': 42, 'grow': 270, 'yield': 2, 'tier': 5, 'spread': 0.2, 'tags': ['fruit', 'tropic'], 'seasons': ('夏',), 'tree': True},
+    "pomegranate": {'name': '石榴', 'emoji': '🍎', 'seed_price': 19, 'sell': 35, 'grow': 240, 'yield': 3, 'tier': 4, 'spread': 0.24, 'tags': ['fruit'], 'seasons': ('秋',), 'tree': True},
+    "fig": {'name': '无花果', 'emoji': '🍈', 'seed_price': 17, 'sell': 31, 'grow': 220, 'yield': 3, 'tier': 4, 'spread': 0.24, 'tags': ['fruit'], 'seasons': ('夏', '秋'), 'tree': True},
+}
+
+EXTRA_FISH = {
+    "clownfish": {"name": "小丑鱼", "emoji": "🐠", "sell": 26, "tides": ["flood"], "zones": ["near"], "rarity": 2, "pen": False},
+    "moray": {"name": "海鳝", "emoji": "🐍", "sell": 38, "tides": ["ebb", "flood"], "zones": ["far", "deep"], "rarity": 4, "pen": False},
+    "parrotfish": {"name": "鹦鹉鱼", "emoji": "🐡", "sell": 31, "tides": ["slack", "flood"], "zones": ["near", "far"], "rarity": 3, "pen": False},
+    "puffer": {"name": "河豚", "emoji": "🐡", "sell": 45, "tides": ["slack"], "zones": ["near", "far"], "rarity": 4, "pen": False},
+    "sailfish": {"name": "旗鱼（小）", "emoji": "🎣", "sell": 65, "tides": ["flood"], "zones": ["deep"], "rarity": 5, "pen": False},
+    "coelacanth": {"name": "腔棘鱼", "emoji": "🐟", "sell": 88, "tides": ["ebb"], "zones": ["deep"], "rarity": 6, "pen": False},
+    "reef_shark": {"name": "礁鲨", "emoji": "🦈", "sell": 52, "tides": ["flood"], "zones": ["far", "deep"], "rarity": 5, "pen": False},
+    "sea_bass": {"name": "海鲈", "emoji": "🐟", "sell": 27, "tides": ["ebb", "slack"], "zones": ["near"], "rarity": 2, "pen": True, "grow": 520, "stock_tickets": 15, "feed_item": "compost", "feed_qty": 1},
+}
+
+EXTRA_LIVESTOCK = {
+    "turkey": {"name": "火鸡", "emoji": "🦃", "buy": 88, "feed": "crop_corn", "feed_qty": 2, "grow": 720, "product": "meat_turkey", "product_qty": 2, "life_days": 5, "temper": "proud"},
+    "goose": {"name": "鹅", "emoji": "🪿", "buy": 92, "feed": "crop_kelp", "feed_qty": 2, "grow": 780, "product": "goose_egg", "product_qty": 1, "daily": True, "life_days": 6, "temper": "guard"},
+    "quail": {"name": "鹌鹑", "emoji": "🐦", "buy": 42, "feed": "crop_fogpea", "feed_qty": 1, "grow": 420, "product": "quail_egg", "product_qty": 3, "daily": True, "life_days": 3, "temper": "skittish"},
+    "alpaca": {"name": "羊驼", "emoji": "🦙", "buy": 210, "feed": "crop_hemp", "feed_qty": 2, "grow": 1100, "product": "alpaca_wool", "product_qty": 1, "manure": "manure_sheep", "manure_feed": 1, "life_days": 10, "temper": "calm"},
+}
+
+_LIVESTOCK_PRODUCTS = {
+    "meat_turkey": ("🍖", "火鸡肉", 32),
+    "goose_egg": ("🥚", "鹅蛋", 20),
+    "quail_egg": ("🥚", "鹌鹑蛋", 12),
+    "alpaca_wool": ("🧶", "羊驼毛", 38),
+}
+
+PROCESSED_ITEMS = {
+    "proc_flour": {"name": "面粉", "emoji": "🌾", "sell": 14},
+    "proc_rice": {"name": "大米", "emoji": "🍚", "sell": 12},
+    "proc_glutinous_flour": {"name": "糯米粉", "emoji": "🍡", "sell": 16},
+    "proc_tofu": {"name": "豆腐", "emoji": "🧈", "sell": 18},
+    "proc_soy_milk": {"name": "豆浆", "emoji": "🥛", "sell": 10},
+    "proc_cheese": {"name": "奶酪", "emoji": "🧀", "sell": 28},
+    "proc_butter": {"name": "黄油", "emoji": "🧈", "sell": 24},
+    "proc_cream": {"name": "奶油", "emoji": "🥛", "sell": 22},
+    "proc_beeswax": {"name": "蜂蜡", "emoji": "🕯️", "sell": 20},
+    "proc_cooking_oil": {"name": "食用油", "emoji": "🫗", "sell": 16},
+    "proc_olive_oil": {"name": "橄榄油", "emoji": "🫒", "sell": 26},
+    "proc_fish_sauce": {"name": "鱼酱", "emoji": "🫙", "sell": 22},
+    "proc_bean_paste": {"name": "豆酱", "emoji": "🫙", "sell": 18},
+    "proc_jam": {"name": "果酱", "emoji": "🍓", "sell": 24},
+    "proc_dried_fruit": {"name": "果干", "emoji": "🍇", "sell": 20},
+    "proc_jerky": {"name": "肉干", "emoji": "🥓", "sell": 26},
+    "proc_smoked_fish": {"name": "熏鱼", "emoji": "🐟", "sell": 30},
+    "proc_salt": {"name": "细盐", "emoji": "🧂", "sell": 8},
+    "proc_black_salt": {"name": "黑盐", "emoji": "🧂", "sell": 22},
+    "proc_spice_powder": {"name": "香料粉", "emoji": "🌶️", "sell": 18},
+    "proc_noodles": {"name": "面条", "emoji": "🍜", "sell": 16},
+    "proc_bread": {"name": "面包", "emoji": "🍞", "sell": 18},
+    "proc_rice_wine": {"name": "米酒", "emoji": "🍶", "sell": 22},
+    "proc_vinegar": {"name": "醋", "emoji": "🫙", "sell": 14},
+    "proc_syrup": {"name": "糖浆", "emoji": "🍯", "sell": 20},
+    "proc_cocoa": {"name": "可可粉", "emoji": "☕", "sell": 28},
+    "proc_coffee": {"name": "咖啡豆", "emoji": "☕", "sell": 30},
+    "proc_tea_leaf": {"name": "茶叶", "emoji": "🍵", "sell": 24},
+    "proc_nori": {"name": "海苔片", "emoji": "🌿", "sell": 15},
+    "proc_pickling_brine": {"name": "腌卤", "emoji": "🫙", "sell": 12},
+}
+
+
+def _sig(*items: str) -> str:
+    return "|".join(sorted(items))
+
+
+EXTRA_HEARTH_RECIPES = {
+    _sig("crop_tomato", "egg"): {"name": "番茄炒蛋", "sell": 38, "tags": ["home"]},
+    _sig("crop_potato", "crop_carrot"): {"name": "土豆胡萝卜泥", "sell": 34, "tags": ["root"]},
+    _sig("crop_rice", "fish_mackerel"): {"name": "鲭鱼饭团", "sell": 45, "tags": ["sea", "grain"]},
+    _sig("crop_spinach", "crop_garlic"): {"name": "蒜炒菠菜", "sell": 36, "tags": ["leaf"]},
+    _sig("crop_corn", "crop_bell_pepper"): {"name": "彩椒玉米", "sell": 40, "tags": ["grain"]},
+    _sig("crop_pumpkin", "proc_cream"): {"name": "奶油南瓜盅", "sell": 52, "tags": ["home"]},
+    _sig("proc_tofu", "crop_scallion"): {"name": "葱烧豆腐", "sell": 35, "tags": ["legume"]},
+    _sig("fish_yellowcroaker", "crop_ginger"): {"name": "姜葱黄鱼", "sell": 58, "tags": ["sea"]},
+    _sig("fish_clownfish", "crop_lemongrass"): {"name": "香茅小丑鱼", "sell": 48, "tags": ["sea"]},
+    _sig("crop_peanut", "proc_salt"): {"name": "盐焗花生", "sell": 32, "tags": ["snack"]},
+    _sig("crop_wheat", "proc_butter"): {"name": "黄油麦饼", "sell": 42, "tags": ["grain"]},
+    _sig("proc_noodles", "crop_kelp"): {"name": "海藻面", "sell": 44, "tags": ["sea"]},
+    _sig("proc_bread", "proc_jam"): {"name": "果酱吐司", "sell": 46, "tags": ["sweet"]},
+    _sig("milk", "proc_cocoa"): {"name": "可可奶", "sell": 40, "tags": ["drink"]},
+    _sig("egg", "crop_tomato"): {"name": "番茄蛋花", "sell": 37, "tags": ["home"]},
+    _sig("fish_tuna", "proc_soy_milk"): {"name": "奶煮金枪", "sell": 68, "tags": ["sea"]},
+    _sig("crop_fog_mushroom", "crop_garlic"): {"name": "雾菇蒜片", "sell": 50, "tags": ["special"]},
+    _sig("crop_lotus_root", "proc_vinegar"): {"name": "醋藕片", "sell": 43, "tags": ["root"]},
+    _sig("fish_octopus", "crop_chili"): {"name": "辣炒八爪", "sell": 62, "tags": ["sea"]},
+    _sig("crop_daikon", "fish_codling"): {"name": "鳕萝汤", "sell": 47, "tags": ["sea", "root"]},
+    _sig("proc_smoked_fish", "crop_cucumber"): {"name": "熏鱼黄瓜卷", "sell": 55, "tags": ["sea"]},
+    _sig("goat_cheese", "crop_basil"): {"name": "罗勒山羊奶酪", "sell": 48, "tags": ["dairy"]},
+    _sig("honey", "proc_tea_leaf"): {"name": "蜜茶", "sell": 38, "tags": ["drink"]},
+    _sig("crop_soybean", "proc_salt"): {"name": "盐豆", "sell": 33, "tags": ["legume"]},
+    _sig("fish_seabream", "crop_shiso"): {"name": "紫苏真鲷", "sell": 64, "tags": ["sea"]},
+    _sig("crop_eggplant", "crop_chili"): {"name": "鱼香茄子", "sell": 41, "tags": ["home"]},
+    _sig("proc_rice_wine", "crop_ginger"): {"name": "姜酒", "sell": 36, "tags": ["drink"]},
+    _sig("fish_lobster", "proc_butter"): {"name": "黄油龙虾", "sell": 88, "tags": ["sea"]},
+    _sig("crop_oat", "proc_cream"): {"name": "燕麦奶粥", "sell": 39, "tags": ["grain"]},
+    _sig("meat_pork", "proc_vinegar"): {"name": "醋溜猪肉", "sell": 52, "tags": ["meat"]},
+    _sig("proc_jerky", "crop_corn"): {"name": "肉干玉米棒", "sell": 49, "tags": ["snack"]},
+    _sig("fish_sardine", "proc_olive_oil"): {"name": "油浸沙丁", "sell": 42, "tags": ["sea"]},
+    _sig("crop_red_algae", "crop_tide_ginger"): {"name": "潮姜红藻汤", "sell": 46, "tags": ["sea"]},
+    _sig("proc_fish_sauce", "crop_rice"): {"name": "鱼酱拌饭", "sell": 44, "tags": ["sea", "grain"]},
+    _sig("crop_moon_bean", "crop_saltgrass"): {"name": "月豆盐草", "sell": 51, "tags": ["special"]},
+    _sig("fish_coelacanth", "wild_mint"): {"name": "薄荷腔棘", "sell": 95, "tags": ["sea", "rare"]},
+    _sig("proc_bread", "proc_cheese"): {"name": "奶酪面包", "sell": 48, "tags": ["dairy"]},
+    _sig("crop_peach", "proc_syrup"): {"name": "蜜桃糖浆", "sell": 54, "tags": ["fruit"]},
+    _sig("crop_lettuce", "crop_cucumber"): {"name": "凉拌青瓜", "sell": 33, "tags": ["leaf"]},
+    _sig("crop_carrot", "crop_onion"): {"name": "胡萝卜洋葱丝", "sell": 35, "tags": ["root"]},
+    _sig("fish_mullet", "crop_garlic"): {"name": "蒜香鲻鱼", "sell": 40, "tags": ["sea"]},
+    _sig("crop_wheat", "proc_salt"): {"name": "盐麦饼", "sell": 30, "tags": ["grain"]},
+    _sig("crop_potato", "proc_cooking_oil"): {"name": "炸薯角", "sell": 38, "tags": ["snack"]},
+    _sig("fish_grouper", "crop_tomato"): {"name": "番茄石斑", "sell": 72, "tags": ["sea"]},
+    _sig("crop_chili", "proc_vinegar"): {"name": "醋泡辣椒", "sell": 34, "tags": ["seasoning"]},
+    _sig("proc_tofu", "crop_chili"): {"name": "麻辣豆腐", "sell": 39, "tags": ["legume"]},
+}
+
+
+def merge_catalog(crops, sea_catch, livestock, hearth_recipes, craft_items):
+    crops.update(EXTRA_CROPS)
+    crops.update(EXTRA_TREES)
+    sea_catch.update(EXTRA_FISH)
+    livestock.update(EXTRA_LIVESTOCK)
+    hearth_recipes.update(EXTRA_HEARTH_RECIPES)
+    for key, meta in PROCESSED_ITEMS.items():
+        craft_items[key] = dict(meta)
+

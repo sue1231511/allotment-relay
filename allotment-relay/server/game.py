@@ -498,7 +498,7 @@ async def relay_manual() -> str:
         "  默默 花茶 玫瑰花茶 38票精力+10/雾智+2；桂花姜茶48票+14/+2，菊花香茅茶28票+8/+1。默默 花茶 玫瑰花茶包 买茶包（少8票）；默默 花茶 冲泡 玫瑰花茶包 耗包不另收费，受属性上限限制。",
         "  默默 记名 今天打过招呼才记，每天一次，累计7天称呼「花房熟客」不发票；默默 干花 玫瑰 耗已有花一枝+28票挂空软装槽，无房/满槽不扣款不耗花，不替换家具；纯装饰。替换退回行囊后 hut_ops install soft_1 flower_rose 可重挂。默默 告别 不收费。不是栗栗换货、玩家集市或约会导演消费，无赊账。",
         "【行囊 · 交换 · 集市】",
-        "  tote_ops list 列出中文名和英文 id（可叠放货写 x总量（N组 …））。戒、稀有鱼、崖上稀矿、工坊出品会多几行来历。tote_ops 履历 看全文。vend 卖系统回收价；家具 vend 羊毛毯 1 按折旧（同 hut_ops 卖掉）",
+        "  tote_ops list 列出中文名和英文 id（可叠放货写 x总量（N组 …））。菜/鱼带鲜度品质与鱼重；快坏会提示，变质 list 时自动丢。戒、稀有鱼、崖上稀矿、工坊出品会多几行来历。tote_ops 履历 看全文。vend 卖系统回收价（品质/鲜度/重量调价）；家具 vend 羊毛毯 1 按折旧（同 hut_ops 卖掉）",
         "  Tt酱货架买的种/饲料/工具，系统回收进价九成——退货少亏一成，别反复倒卖当印钞",
         "  可叠放货满一组会自动开下一组（MC 式）；工具/活物只能 1，装件可多件。潮柜/冰箱格满了再 vend / 取走 / 扩栈 / 潮柜 扩",
         "  未命名小鱼 vend 会再掷一次小咒事件（可能吐票、走回袋、解开或加重小咒）",
@@ -1357,9 +1357,24 @@ async def _plot_one(s: dict, cmd: str) -> str:
             if rows:
                 from . import bond as bond_mod
                 await bond_mod.grant(conn, s["id"], bond_mod.TEND, "labor")
+            from . import gear_wear as gear_wear_mod
+            if rows:
+                await gear_wear_mod.wear(conn, s["id"], "hoe")
+            glitch = ""
+            from . import light_bad_events as light_bad_mod
+            if slot_token:
+                glitch = await light_bad_mod.roll_tend_glitch(conn, s["id"], plot) or ""
+            elif rows:
+                prow = await (await conn.execute(
+                    "SELECT * FROM parcels WHERE id=?", (rows[0][0],)
+                )).fetchone()
+                if prow:
+                    glitch = await light_bad_mod.roll_tend_glitch(conn, s["id"], dict(prow)) or ""
             await conn.commit()
         noun = "树位" if orchard_ctx else "份地"
         msg = f"打理了 {len(rows)} 块{noun}" if rows else f"没有待打理的{noun}——苗都乖，或你还没种"
+        if glitch:
+            msg += f"\n{glitch}"
         if iron_edge and rows:
             msg += " · 铁锄刃松土"
         elif hoe and rows:
@@ -1719,11 +1734,17 @@ async def _plot_one(s: dict, cmd: str) -> str:
                                 (p["id"],),
                             )
                         continue
-                    await db.add_item(conn, s["id"], item_key, qty)
+                    from . import item_traits as traits_mod
+                    quality = traits_mod.roll_crop_quality(p)
+                    await traits_mod.grant_satchel(
+                        conn, s["id"], item_key, qty, quality=quality,
+                    )
                     harvest_note = ""
                     from . import shaonian as shaonian_mod
                     if await shaonian_mod.harvest_bonus_roll(conn, s["id"]):
-                        await db.add_item(conn, s["id"], item_key, qty)
+                        await traits_mod.grant_satchel(
+                            conn, s["id"], item_key, qty, quality=quality,
+                        )
                         harvest_note = f"(丰收卦+{qty})"
                     if keep_plot:
                         keep_plot, tree_note = await farming.record_tree_harvest(conn, p)
@@ -2004,6 +2025,8 @@ async def tide_ops(key_id: int, command: str) -> str:
                 raise ValueError(f"撒网需要 {cost} 工分票")
             await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (cost, s["id"]))
             await energy_mod.spend(conn, s["id"], energy_cost, action="撒网")
+            from . import gear_wear as gear_wear_mod
+            net_dur, net_mx = await gear_wear_mod.wear(conn, s["id"], "net")
             extra = await events.roll_after_action(s, "net", conn)
             disc = await commons.roll_discovery(conn, s, "net")
             from . import shaonian as shaonian_mod
@@ -2032,11 +2055,18 @@ async def tide_ops(key_id: int, command: str) -> str:
         val_mult, tier_bonus = gear.fish_catch_payout(stats, mode="net")
         gear_bonus = int(meta["sell"] * max(0.0, val_mult - 1.0)) + tier_bonus
         async with db.connect() as conn:
-            await db.add_item(conn, s["id"], f"fish_{catch}", 1)
+            from . import item_traits as traits_mod
+            state = traits_mod.roll_fish_state(catch)
+            weight = traits_mod.roll_fish_weight_kg(catch)
+            await traits_mod.grant_satchel(
+                conn, s["id"], f"fish_{catch}", 1,
+                quality=state, weight_kg=weight,
+            )
             from . import ledger as ledger_mod
             await ledger_mod.note_gain(
                 conn, s["id"], f"fish_{catch}", 1,
-                f"{meta['emoji']}{meta['name']}由{s['name']}于{ledger_mod.calendar_phrase()}"
+                f"{meta['emoji']}{meta['name']}{weight}kg·{traits_mod.FISH_STATE_LABEL.get(state, state)}"
+                f"由{s['name']}于{ledger_mod.calendar_phrase()}"
                 f"在{world.tide_label(tide)}捞起",
             )
             if gear_bonus > 0:
@@ -2056,10 +2086,14 @@ async def tide_ops(key_id: int, command: str) -> str:
             await tale_mod.check_item_progress(conn, s["id"], f"fish_{catch}", 1)
             tale_extra = await tale_mod.check_action_progress(conn, s["id"], "sea")
             await conn.commit()
+        from . import gear_wear as gear_wear_mod
+        acc = await gear_wear_mod.maybe_accident_note(net_dur, net_mx)
         msg = (
             f"{s['name']} 在{world.tide_label(tide)}网到 {meta['emoji']}{meta['name']} "
-            f"[网T{stats['net']['tier']}]"
+            f"{weight}kg [{traits_mod.FISH_STATE_LABEL.get(state, state)}][网T{stats['net']['tier']}]"
         )
+        if acc:
+            msg += f" {acc}"
         if gear_bonus > 0:
             msg += f" 渔具加成+{gear_bonus}票"
         msg += flavor.maybe_suffix(flavor.NET_SUFFIX)
@@ -2092,6 +2126,8 @@ async def tide_ops(key_id: int, command: str) -> str:
                 raise ValueError("缺少蚯蚓饵 bait_worm（tend 地块 / tide_ops dig 获取）")
             await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (cost, s["id"]))
             await energy_mod.spend(conn, s["id"], rod["energy"], action="坐钓")
+            from . import gear_wear as gear_wear_mod
+            rod_dur, rod_mx = await gear_wear_mod.wear(conn, s["id"], "rod")
             extra = await events.roll_after_action(s, "net", conn)
             disc = await commons.roll_discovery(conn, s, "net")
             from . import shaonian as shaonian_mod
@@ -2117,11 +2153,18 @@ async def tide_ops(key_id: int, command: str) -> str:
         val_mult, tier_bonus = gear.fish_catch_payout(stats, mode="cast")
         gear_bonus = int(meta["sell"] * max(0.0, val_mult - 1.0)) + tier_bonus
         async with db.connect() as conn:
-            await db.add_item(conn, s["id"], f"fish_{catch}", 1)
+            from . import item_traits as traits_mod
+            state = traits_mod.roll_fish_state(catch)
+            weight = traits_mod.roll_fish_weight_kg(catch)
+            await traits_mod.grant_satchel(
+                conn, s["id"], f"fish_{catch}", 1,
+                quality=state, weight_kg=weight,
+            )
             from . import ledger as ledger_mod
             await ledger_mod.note_gain(
                 conn, s["id"], f"fish_{catch}", 1,
-                f"{meta['emoji']}{meta['name']}由{s['name']}于{ledger_mod.calendar_phrase()}"
+                f"{meta['emoji']}{meta['name']}{weight}kg·{traits_mod.FISH_STATE_LABEL.get(state, state)}"
+                f"由{s['name']}于{ledger_mod.calendar_phrase()}"
                 f"在{world.tide_label(tide)}捞起",
             )
             if gear_bonus > 0:
@@ -2146,10 +2189,13 @@ async def tide_ops(key_id: int, command: str) -> str:
             await tale_mod.check_item_progress(conn, s["id"], f"fish_{catch}", 1)
             tale_extra = await tale_mod.check_action_progress(conn, s["id"], "sea")
             await conn.commit()
+        acc = await gear_wear_mod.maybe_accident_note(rod_dur, rod_mx)
         msg = (
-            f"坐钓 {meta['emoji']}{meta['name']} "
-            f"[饵T{bait['tier']} 竿T{rod['tier']}]"
+            f"坐钓 {meta['emoji']}{meta['name']} {weight}kg "
+            f"[{traits_mod.FISH_STATE_LABEL.get(state, state)}][饵T{bait['tier']} 竿T{rod['tier']}]"
         )
+        if acc:
+            msg += f" {acc}"
         if gear_bonus > 0:
             msg += f" 渔具加成+{gear_bonus}票"
         msg += flavor.maybe_suffix(["竿弯了，票没白花", "饵对路，鱼自来"])
@@ -2546,8 +2592,12 @@ async def _tote_one(s: dict, command: str) -> str:
             stack_note += f"，tote_ops 扩栈 加每组上限，{config.SATCHEL_STACK_COST}票/级+{config.SATCHEL_STACK_STEP}"
         stack_note += "；工具/活物 1，装件可多件）"
         async with db.connect() as conn:
+            from . import item_traits as traits_mod
+            spoiled = await traits_mod.purge_spoiled(conn, s["id"])
             previews = await ledger_mod.preview_map(conn, s["id"])
         lines = [f"工分票: {s['tickets']}", stack_note]
+        if spoiled:
+            lines.append("变质丢弃：" + "；".join(spoiled))
         for item, qty in stock.items():
             price = suggested_price(item) or ITEM_PRICES.get(item, 0)
             name = item_label(item)
@@ -2557,6 +2607,10 @@ async def _tote_one(s: dict, command: str) -> str:
                 lines.append(f"  {name} {stack} · {item} · vend {name} 1（折旧，同 hut_ops 卖掉）")
             else:
                 lines.append(f"  {name} {stack} · {item} · vend {price}/个")
+            async with db.connect() as conn:
+                trait_note = await traits_mod.summary_for_item(conn, s["id"], item)
+            if trait_note:
+                lines.append(f"      鲜度/品质: {trait_note}")
             story = previews.get(item) or []
             if story:
                 lines.extend(f"      {ln}" for ln in story[:3])
@@ -2622,15 +2676,18 @@ async def _tote_one(s: dict, command: str) -> str:
         async with db.connect() as conn:
             results = []
             fate_notes: list[str] = []
+            from . import item_traits as traits_mod
             for item_key, qty, price in pairs:
+                unit = await traits_mod.vend_unit_price(conn, s["id"], item_key, price)
                 if not await db.take_item(conn, s["id"], item_key, qty):
                     raise ValueError(f"数量不足（需要 {item_key} x{qty}）")
+                await traits_mod.consume_fifo(conn, s["id"], item_key, qty)
                 from . import ledger as ledger_mod
                 await ledger_mod.consume(
                     conn, s["id"], item_key, qty,
                     extra=f"后卖进回收堆，{ledger_mod.calendar_phrase()}。履历到此",
                 )
-                gain = price * qty
+                gain = unit * qty
                 await conn.execute(
                     "UPDATE stewards SET tickets=tickets+? WHERE id=?", (gain, s["id"])
                 )
