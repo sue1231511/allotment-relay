@@ -95,7 +95,7 @@ async def steward_ops(command: str = "sheet") -> str:
     )
 
 
-@mcp.tool(description="份地果园与田间事件。空=指令表。例：status · sow 1 甘蓝 · 肥力 · 虫害 1 施药 · 留种 甘蓝 · weather · 浇水。tend 极小概率鸟啄（收成-1，steward_ops 灾档 近日已结）/灶台难点火/潮气发潮/鱼线打结（debuff 记一次消一次）。肥力/轮作、虫害、留种。weather 附本周纪事。勿 sow_all/plant；repair≠岸维。人类 /island「田间事件」处置虫害；repair 只修 steward_incidents。")
+@mcp.tool(description="份地果园与田间事件。空=指令表。例：status · sow 1 甘蓝 · 肥力 · 虫害 1 施药 · 留种 甘蓝 · weather · 浇水。tend 极小概率鸟啄（收成-1，极少落该作物种；steward_ops 灾档 近日已结）/灶台难点火/潮气发潮/鱼线打结（debuff 记一次消一次）。肥力/轮作、虫害、留种。weather 附本周纪事。勿 sow_all/plant；repair≠岸维。人类 /island「田间事件」处置虫害；repair 只修 steward_incidents。")
 async def plot_ops(
     command: Annotated[str, Field(description="incident status；repair 编号。肥力 · 虫害 1 手工|施药|拔除|不管（温室漏风 补网|通风|不管）· 留种 作物。空=指令表。")] = "",
 ) -> str:
@@ -107,7 +107,7 @@ async def hut_ops(command: str = "") -> str:
     return await mux._call_ops(mux.hut_bundle, _kid(), command)
 
 
-@mcp.tool(description="渔获出海赶海渔排漂流瓶。空=列表。例：net · cast · 水层 near · 搏鱼 硬拉 · 解挂 · voyage 部件 修 · dig。net 偶发挂水草则下次空网率+10%（撒一次消）。人类 /island 港口岸边/出海/渔排栏可点同一套。dig≠崖矿。")
+@mcp.tool(description="渔获出海赶海渔排漂流瓶。空=列表。例：net · cast · 水层 near · 搏鱼 硬拉 · 解挂 · voyage 部件 修 · dig。解挂/搏鱼切线极少海玻璃或旧钩标记（下次坐钓进袋捎回钩耐久）。net 偶发挂水草则下次空网率+10%（撒一次消）。人类 /island 港口岸边/出海/渔排栏可点同一套。dig≠崖矿。")
 async def tide_ops(
     command: Annotated[str, Field(description="net/cast · 水层 · 搏鱼 · 解挂 · voyage 部件 修（全件回满）· 帆撕 补|返航|硬撑 · dig 赶海。")] = "",
 ) -> str:

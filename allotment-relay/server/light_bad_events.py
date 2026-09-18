@@ -101,7 +101,13 @@ async def roll_tend_glitch(conn, steward_id: int, plot: dict) -> str | None:
                 msg,
                 ref_key="flash:bird_peck",
             )
-            return tiers_mod.tag(tiers_mod.TIER_MID, msg)
+            from . import event_opportunity as opp_mod
+
+            luck = await opp_mod.maybe_bird_peck_luck(conn, steward_id, crop)
+            out = tiers_mod.tag(tiers_mod.TIER_MID, msg)
+            if luck:
+                out += f"\n{luck}"
+            return out
     if roll < 0.65:
         tier = tiers_mod.roll_tier(weights=(0.35, 0.40, 0.20, 0.05))
         msg = "灶台不好点火：下次做饭多耗 1 精力（已记下，做一次饭就消）。"

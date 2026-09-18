@@ -92,7 +92,13 @@ async def clear_snag(conn, steward_id: int, mode: str) -> str:
         )
         from . import gear_wear as gear_wear_mod
         await gear_wear_mod.wear(conn, steward_id, "line", amount=15)
-        return "切线解挂（钩-25，线大损）"
+        msg = "切线解挂（钩-25，线大损）"
+        from . import event_opportunity as opp_mod
+
+        luck = await opp_mod.maybe_line_cut_luck(conn, steward_id, context="unsnag")
+        if luck:
+            msg += f"\n{luck}"
+        return msg
     if mode in ("硬拉", "pull", "拉"):
         if random.random() < 0.45:
             await conn.execute(

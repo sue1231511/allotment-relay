@@ -114,7 +114,13 @@ async def resolve(conn, steward: dict, action: str) -> str:
             """,
             (steward["id"],),
         )
-        return f"切线跑路，{name} 脱钩（线钩大损）"
+        msg = f"切线跑路，{name} 脱钩（线钩大损）"
+        from . import event_opportunity as opp_mod
+
+        luck = await opp_mod.maybe_line_cut_luck(conn, steward["id"], context="fight")
+        if luck:
+            msg += f"\n{luck}"
+        return msg
 
     if act in ("硬拉", "pull", "拉", "fight"):
         win_p = 0.35 + rod_tier * 0.08
