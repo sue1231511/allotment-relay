@@ -632,7 +632,8 @@ async def relay_manual() -> str:
         "  酒吧考勤逾期同样锁崖矿。人类网页 /quarry 是围观实况（矿脉、挥镐、崖上纪事）；挥镐在 /play 或 /island 进盐风崖点",
         "",
         "【岸工坊】",
-        "  craft_ops 把精矿、羊毛、漂绳、岸木打成钉/补丁/小屋家具。空 command 列出子命令，看砧用 status",
+        "  craft_ops 把精矿、羊毛、漂绳、岸木打成钉/补丁/小屋家具。空 command 列出子命令，看砧用 status。"
+        " 打捞后可能缠网 → 捞险 割绳|弃货|硬拽；人类 /island 岸工坊打捞栏也能点",
         "  没有 forge_ops / salvage_ops / exhibit_ops。不是 quarry_ops 洗，不是 tide_ops dig，不是 cook",
         "  打 铜钉 → 等分钟 → 取。砧上一次一件。铜钉修船半价；网补丁 craft_ops 补网 六小时空网-8%",
         "  羊毛毯这类装件行囊可放多份，同一件能再打；取不下来时先卖掉或装上袋里那件。人类 /island 背包能点卖，屋里能装/卖掉",

@@ -33,6 +33,7 @@ CRAFT_HELP = """craft_ops 子命令（整句写进 command）：
   盐田 — 看池；灌 — 涨潮灌一池（5 精力）；收盐 — 晴天攒满 20 分钟后收海盐晶
   开池 / 开池 确认 — 加盐田（最多 3 口，40/68/96 票）
   打捞 — 阵风中、阵风后晴天、周潮或船损才能下滩。不是 dig。夜光滤网减空捞
+  捞险 割绳|弃货|硬拽 — 打捞后小概率缆绳缠脚：割绳（漂绳×1 或 8 票）/ 弃货（刚捞的各减 1）/ 硬拽（12 精力更险）
   陈列 / 捐 亮壳一套 — 看套 / 捐货换称呼或装饰。也可 捐 砧上全套
   help — 本表
 
@@ -120,7 +121,8 @@ async def ensure_profile(conn: aiosqlite.Connection, steward_id: int) -> dict[st
         SELECT job_key, job_ready_at, job_qty, pan_count, last_salvage_at,
                salvages_total, crafts_total, net_patch_until,
                COALESCE(net_patch_empty, 0) AS net_patch_empty,
-               COALESCE(job_origin, '') AS job_origin
+               COALESCE(job_origin, '') AS job_origin,
+               salvage_hazard, salvage_hazard_json
         FROM steward_craft WHERE steward_id=?
         """,
         (steward_id,),
@@ -150,6 +152,8 @@ async def ensure_profile(conn: aiosqlite.Connection, steward_id: int) -> dict[st
             "net_patch_until": 0,
             "net_patch_empty": 0.0,
             "job_origin": "",
+            "salvage_hazard": "",
+            "salvage_hazard_json": "",
         }
     count = int(row["pan_count"] or 1)
     have = await (await conn.execute(
@@ -171,6 +175,8 @@ async def ensure_profile(conn: aiosqlite.Connection, steward_id: int) -> dict[st
         "net_patch_until": int(row["net_patch_until"] or 0),
         "net_patch_empty": float(row["net_patch_empty"] or 0),
         "job_origin": str(row["job_origin"] or ""),
+        "salvage_hazard": str(row["salvage_hazard"] or ""),
+        "salvage_hazard_json": str(row["salvage_hazard_json"] or ""),
     }
 
 
@@ -569,13 +575,18 @@ async def _buy_pan(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
 
 
 async def _salvage(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
+    prof = await ensure_profile(conn, s["id"])
+    if prof.get("salvage_hazard"):
+        raise ValueError(
+            "缆绳还缠脚！先 craft_ops 捞险 割绳|弃货|硬拽。"
+            "人类 /island 岸工坊打捞栏也能点。"
+        )
     win = await _window(conn, s)
     if not win["open"]:
         raise ValueError(
             "滩上没风暴货。阵风中、阵风后的晴天、周潮或船损才能 craft_ops 打捞。"
             "退潮翻沙是 tide_ops dig，要铲子。"
         )
-    prof = await ensure_profile(conn, s["id"])
     now = db.now()
     left = int(prof["last_salvage_at"] or 0) + config.CRAFT_SALVAGE_COOLDOWN - now
     if left > 0:
@@ -657,6 +668,11 @@ async def _salvage(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
         msg += f"\n{boost}"
     if disc:
         msg += f"\n{disc}"
+    from . import workshop_salvage_snag as snag_mod
+
+    snag = await snag_mod.maybe_after_salvage(conn, s["id"], got_loot=bool(got))
+    if snag:
+        msg += f"\n{snag}"
     return msg
 
 
@@ -797,6 +813,12 @@ async def craft_ops(key_id: int, command: str = "") -> str:
             text = await _salvage(conn, s)
             await conn.commit()
             return text
+        if verb in ("捞险", "snag", "salvage_snag", "缠网"):
+            from . import workshop_salvage_snag as snag_mod
+
+            text = await snag_mod.resolve(conn, s, rest)
+            await conn.commit()
+            return text
         if verb in ("陈列", "exhibit", "柜"):
             text = await _exhibit_status(conn, s)
             await conn.commit()
@@ -923,8 +945,17 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
     )).fetchone()
     used = int(used_row[0] if used_row else 0)
     daily_left = max(0, config.CRAFT_SALVAGE_DAILY - used)
-    can_salvage = bool(win["open"]) and left <= 0 and daily_left > 0
-    if not win["open"]:
+    from . import workshop_salvage_snag as snag_mod
+
+    snag = prof.get("salvage_hazard") == snag_mod.HAZARD_SNAG
+    snag_actions = (
+        snag_mod.ui_actions(tickets=tickets, stock=stock, energy=energy_now)
+        if snag else []
+    )
+    can_salvage = bool(win["open"]) and left <= 0 and daily_left > 0 and not snag
+    if snag:
+        salvage_note = "缆绳缠脚！先割绳、弃货或硬拽，不能再捞。"
+    elif not win["open"]:
         salvage_note = "关着。等阵风、阵风后的晴天、周潮，或船损搁浅。不是赶海。"
     elif left > 0:
         salvage_note = f"刚捞过，{_fmt_left(left)}后再来。"
@@ -1005,7 +1036,11 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
         "tabs": [
             {"key": "anvil", "label": "砧上", "badge": "好了" if job and job.get("ready") else ("在打" if job else "")},
             {"key": "salt", "label": "盐田", "badge": "收" if any(p.get("can_harvest") for p in pans) else ("灌" if any(p.get("can_fill") for p in pans) else "")},
-            {"key": "salvage", "label": "打捞", "badge": "开" if can_salvage else ""},
+            {
+                "key": "salvage",
+                "label": "打捞",
+                "badge": "险" if snag else ("开" if can_salvage else ""),
+            },
             {"key": "exhibit", "label": "陈列", "badge": "可捐" if any(e.get("can_donate") for e in exhibits) else ""},
         ],
         "job": job,
@@ -1016,6 +1051,8 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
             "open": bool(win["open"]),
             "label": win["label"] if win.get("open") else "关着",
             "energy": int(win.get("energy") or 0),
+            "hazard": prof.get("salvage_hazard") or "",
+            "snag_actions": snag_actions,
             "can_salvage": can_salvage,
             "note": salvage_note,
             "detail": salvage_note + " 不是赶海翻沙。铜锭还是要去盐风崖洗。",

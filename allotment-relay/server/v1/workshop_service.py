@@ -17,6 +17,7 @@ KINDS = {
     "salvage": "打捞",
     "donate": "捐",
     "patch": "补网",
+    "salvage_snag": "捞险",
 }
 
 TITLES = {
@@ -28,6 +29,7 @@ TITLES = {
     "salvage": "打捞",
     "donate": "陈列上了",
     "patch": "补上网",
+    "salvage_snag": "捞险处置",
 }
 
 
@@ -48,6 +50,10 @@ def _command(kind: str, target: str) -> str:
         return f"灌 {name}"
     if kind == "harvest" and name:
         return f"收盐 {name}"
+    if kind == "salvage_snag":
+        if not name:
+            raise ApiError("BAD_REQUEST", "先选割绳、弃货或硬拽。")
+        return f"捞险 {name}"
     return verb
 
 
