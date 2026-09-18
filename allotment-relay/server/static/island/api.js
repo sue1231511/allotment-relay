@@ -87,6 +87,7 @@ export const api = {
   farm: () => req("/api/v1/farm"),
   farmEvents: () => req("/api/v1/farm/events"),
   repairFarmEvent: (incident_id, payment, idem) => req("/api/v1/farm/events/repair", { method: "POST", body: { incident_id, payment }, idem }),
+  treatFarmPest: (slot, action, idem) => req("/api/v1/farm/pests/treat", { method: "POST", body: { slot, action }, idem }),
   sow: (slot, crop, idem) => req(`/api/v1/farm/parcels/${encodeURIComponent(slot)}/sow`, { method: "POST", body: { crop }, idem }),
   water: (slot, idem) => req(`/api/v1/farm/parcels/${encodeURIComponent(slot)}/water`, { method: "POST", body: {}, idem }),
   tend: (slot, idem) => req(`/api/v1/farm/parcels/${encodeURIComponent(slot)}/tend`, { method: "POST", body: {}, idem }),

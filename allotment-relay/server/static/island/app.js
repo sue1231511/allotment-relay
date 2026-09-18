@@ -1,5 +1,5 @@
 import { api, loadKey } from "./api.js?v=keynorm1";
-import { openFarmEvents, closeFarmEvents } from "./ui/farm-events.js?v=farm-events1";
+import { openFarmEvents, closeFarmEvents } from "./ui/farm-events.js?v=farm-events2";
 import { renderMarketHub } from "./scenes/market-hub.js?v=flowers1";
 import { renderFlorist } from "./scenes/florist.js?v=flowers1";
 import { mountDates, dateSceneChanged, resetDates } from "./ui/companion-date.js?v=date-forget1";

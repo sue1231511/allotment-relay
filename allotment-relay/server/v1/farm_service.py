@@ -364,6 +364,13 @@ async def event_snapshot(steward_id: int) -> dict[str, Any]:
         tickets = int(owner["tickets"] or 0)
         stock_rows = await (await conn.execute("SELECT item, quantity FROM satchel WHERE steward_id=?", (steward_id,))).fetchall()
         stock = {r["item"]: r["quantity"] for r in stock_rows}
+        from .. import plot_pests as pests_mod
+
+        pest_rows = await pests_mod.list_pests(conn, steward_id)
+        pests = [
+            pests_mod.pest_row_for_api(dict(r), tickets=tickets, stock=stock)
+            for r in pest_rows
+        ]
         rows = await (await conn.execute(
             "SELECT * FROM steward_incidents WHERE steward_id=? AND resolved=0 ORDER BY created_at DESC, id DESC",
             (steward_id,),
@@ -385,8 +392,47 @@ async def event_snapshot(steward_id: int) -> dict[str, Any]:
             "can_pay_tickets": tickets >= cost,
             "can_pay_item": bool(item) and stock.get(item, 0) >= qty,
         })
-    return {"ok": True, "tickets": tickets, "incidents": incidents,
-            "history": [{"id": r["id"], "text": views_human(r["text"]), "created_at": r["created_at"]} for r in history]}
+    return {
+        "ok": True,
+        "tickets": tickets,
+        "pests": pests,
+        "incidents": incidents,
+        "history": [
+            {"id": r["id"], "text": views_human(r["text"]), "created_at": r["created_at"]}
+            for r in history
+        ],
+    }
+
+
+async def pest_treat(api_key: str, key_id: int, slot: str, action: str) -> dict[str, Any]:
+    import aiosqlite
+    from .. import plot_pests as pests_mod
+
+    target = (slot or "").strip()
+    act = (action or "").strip()
+    if not target or not act:
+        raise ApiError("BAD_REQUEST", "请选择地块和处置方式。")
+    s = await _prepare(key_id)
+    async with db.connect() as conn:
+        conn.row_factory = aiosqlite.Row
+        plot = await game._load_named_plot(
+            conn, s["id"], target, fallback_other=True,
+        )
+        if not plot.get("pest_key"):
+            raise ApiError("NOT_READY", "这块地没有虫害。", status=409)
+        try:
+            narrative = await pests_mod.handle(conn, s, plot, act)
+        except ValueError as exc:
+            raise classify(exc) from exc
+        await conn.commit()
+    result = await snapshot(api_key, s["id"])
+    result.update(await event_snapshot(s["id"]))
+    result["event"] = {
+        "title": "虫害",
+        "narrative": views_human(narrative),
+        "kind": "farm",
+    }
+    return result
 
 
 async def repair_event(api_key: str, key_id: int, incident_id: int, payment: str) -> dict[str, Any]:

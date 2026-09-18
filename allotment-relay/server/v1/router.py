@@ -32,6 +32,12 @@ class FarmRepairBody(BaseModel):
     api_key: str = ""
 
 
+class FarmPestTreatBody(BaseModel):
+    slot: str = Field(min_length=1, description="地块标记，如 #1、棚2")
+    action: str = Field(min_length=1, description="手工|施药|拔除|不管|补网|通风")
+    api_key: str = ""
+
+
 class ShoreBody(BaseModel):
     mode: str = "net"
     api_key: str = ""
@@ -247,6 +253,22 @@ async def farm_events(request: Request) -> Any:
     try:
         _, steward = await require_enrolled(extract_api_key(request))
         return await farm_service.event_snapshot(steward["id"])
+    except ApiError as exc:
+        return _error(exc)
+
+
+@router.post("/farm/pests/treat")
+async def treat_farm_pest(body: FarmPestTreatBody, request: Request) -> Any:
+    key = extract_api_key(request, body.api_key)
+    route = f"/farm/pests/treat/{body.slot}/{body.action}"
+    try:
+        sid, cached = await _write_guard(request, key, route)
+        if cached:
+            return _cached_response(cached)
+        row, _ = await require_enrolled(key)
+        data = await farm_service.pest_treat(key, row["id"], body.slot, body.action)
+        await idempotency.store(sid, route, _idem_key(request), 200, data)
+        return data
     except ApiError as exc:
         return _error(exc)
 

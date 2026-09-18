@@ -2320,6 +2320,18 @@ async def init_db() -> None:
         await _rebuild_parcels_orchard_unique(db)
         await _rebuild_parcels_kind_unique(db)
         await _migrate_greenhouse_slots(db)
+        # kind 重建会丢掉其后 ALTER 的扩展列；补回份地扩展字段。
+        for ddl in (
+            "ALTER TABLE parcels ADD COLUMN soil_fertility INTEGER NOT NULL DEFAULT 70",
+            "ALTER TABLE parcels ADD COLUMN last_crop TEXT",
+            "ALTER TABLE parcels ADD COLUMN pest_key TEXT",
+            "ALTER TABLE parcels ADD COLUMN pest_level INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE parcels ADD COLUMN seed_generation INTEGER NOT NULL DEFAULT 0",
+        ):
+            try:
+                await db.execute(ddl)
+            except aiosqlite.OperationalError:
+                pass
         await _heal_land_rows(db)
         from . import ranks as ranks_mod
         from . import disaster as disaster_mod

@@ -62,8 +62,9 @@ function setup() {
   host.querySelectorAll = () => host.repairs;
   const wrap = { append() { host.isConnected = true; } };
   const api = {
-    async farmEvents() { calls.reads++; const result = { tickets: 120, incidents: rows, history: [] }; if(readWait) await readWait; if(error) throw error; return result; },
-    async repairFarmEvent(id, payment) { calls.repairs.push({ id, payment }); if(repairWait) await repairWait; rows = []; return { tickets: 90, incidents: [], history: [], event: { narrative: "已处理" } }; },
+    async farmEvents() { calls.reads++; const result = { tickets: 120, incidents: rows, pests: [], history: [] }; if(readWait) await readWait; if(error) throw error; return result; },
+    async repairFarmEvent(id, payment) { calls.repairs.push({ id, payment }); if(repairWait) await repairWait; rows = []; return { tickets: 90, incidents: [], pests: [], history: [], event: { narrative: "已处理" } }; },
+    async treatFarmPest() { throw new Error("unexpected pest treat in incident tests"); },
   };
   const context = vm.createContext({ api, loadKey: () => savedKey, esc: s => String(s).replaceAll("<", "&lt;"),
     document: { createElement: () => host },

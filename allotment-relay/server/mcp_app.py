@@ -95,7 +95,7 @@ async def steward_ops(command: str = "sheet") -> str:
     )
 
 
-@mcp.tool(description="份地果园与田间事件。空=指令表。例：status · sow 1 甘蓝 · 肥力 · 虫害 1 施药 · 留种 甘蓝 · weather · 浇水。肥力/轮作、虫害处置、留种血统为第二批扩展。weather 末尾附本周纪事。勿 sow_all/plant；repair≠岸维。人类 /island 份地点一下看地后选看地/田间事件。")
+@mcp.tool(description="份地果园与田间事件。空=指令表。例：status · sow 1 甘蓝 · 肥力 · 虫害 1 施药 · 留种 甘蓝 · weather · 浇水。肥力/轮作、虫害处置、留种血统为第二批扩展。weather 末尾附本周纪事。勿 sow_all/plant；repair≠岸维。人类 /island 份地点「田间事件」也能处置虫害（与 虫害 子命令同路径）；repair 只修 steward_incidents 意外。")
 async def plot_ops(
     command: Annotated[str, Field(description="incident status；repair 编号。肥力 · 虫害 1 手工|施药|拔除|不管（温室漏风 补网|通风|不管）· 留种 作物。空=指令表。")] = "",
 ) -> str:
