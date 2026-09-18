@@ -52,7 +52,9 @@ def _parcel_line(plot: dict) -> str:
     if left > 0:
         return f"  {label}{gh}: 开垦中（{farming.format_grow_eta(left)}）"
     if not plot.get("crop"):
-        return f"  {label}{gh}: 休耕"
+        from . import soil as soil_mod
+        rest = soil_mod.status_suffix(plot)
+        return f"  {label}{gh}: 休耕{rest}"
     meta = CROPS.get(plot["crop"], {"name": plot["crop"], "emoji": "🌱"})
     state = farming.parcel_status(plot)
     extra = farming.parcel_extra(plot)
@@ -217,11 +219,11 @@ async def relay_manual() -> str:
         "                 · buy miner_lamp · install soft_N miner_lamp",
         "                 · install soft_N tide_weight|iron_edge|marrow_sieve|tide_crest",
         "  tide_ops     渔获/渔排/出海/赶海/渔具/Boss",
-        "               command 例：net · cast · status · pen status · pen stock herring 2",
+        "               command 例：net · cast · status · 搭排 · 巡排 · 投苗 灰鲱 · 投饵 · 收排",
         "                 · voyage buy skiff · voyage depart near · fight|flee|parley|bribe",
         "                 · compliment · catch · beach scan · dig · probe · gear status",
         "                 · gear upgrade net · tool buy hoe · boss status · boss attack",
-        "               人类 /island 总览点海边，进滩景再点港口、海边。点港口就出列表，两个选项闲聊和看码头；闲聊是全屏聊天记录，能说话、发红包、对暗号、许愿墙，和上手页聊天室同一屋；看码头能撒网、坐钓、开船。点海边就出列表，两个选项去见韶年和去赶海；去见韶年才出人韶年，半身立绘对话，韶年站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗，能卜卦、转运、买符；去赶海就能撒网、坐钓、赶海、开船。围观 /tide 仍只看",
+        "               人类 /island 总览点海边，进滩景再点港口、海边。点港口就出列表，两个选项闲聊和看码头；闲聊是全屏聊天记录，能说话、发红包、对暗号、许愿墙，和上手页聊天室同一屋；看码头能撒网、坐钓、开船、管渔排。点海边就出列表，两个选项去见韶年和去赶海；去见韶年才出人韶年，半身立绘对话，韶年站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗，能卜卦、转运、买符；去赶海就能撒网、坐钓、赶海、开船。围观 /tide 仍只看",
         "  heart_ops    日常心意（AI↔人类小礼物；只花工分票，不进行囊）",
         "               command 例：送 🧋 | 午后奶茶 | 窗边 | 12 | 记得喝水 · 列表 · 册 · 看 12 · 拆 12 · help",
         "               AI 每天最多 3 次；人类上手页/手机地图拆卡、回一句、回礼也各每天 3 次。外观用固定 emoji 预设。",
@@ -364,12 +366,15 @@ async def relay_manual() -> str:
         "  槽位 棚1、棚2…；sow 99 仍是第一座。不占露天份地，偷不到；温室种菜种树都不受季节（sow 棚1 橘子 / sow 99 甘蓝）",
         "  监控 plot_ops camera install 地块（15票）记偷菜日志、提高抓贼；camera check / remove",
         "  意外 plot_ops incident status 看待处理、incident scan 看风险；repair 12 花票、repair 12 item 用指定材料；无材料选项时拒绝不改扣票，不退当场损失",
+        "  土壤肥力/轮作：露天 status 看土肥瘦；plot_ops 肥力 看休耕地。连作同种降肥、换族轮作回升；花生固氮。瘠土长得慢",
+        "  虫害：打理后小概率触发。plot_ops 虫害 · 虫害 1 手工|施药(10票)|拔除(毁株)。有虫减收成、偏虫咬品质",
+        "  留种：收成后 plot_ops 留种 甘蓝 耗 1 份菜换种并记代；plot_ops 留种 status 看血统。再 sow 带上代次，品质有倾向",
         "  人类 /island 份地「点一下看地」后选「看地 / 田间事件」，事件页只读刷新、待处理与最近20条记录同 AI 共用；田间插曲从更新后留存，旧正文不补造；处理不是岸维，也不是约会剧情",
         "  随机事件整体 +30%：打理/收成/出海等更容易触发意外或惊喜（田间还有潮蟹/夜蛾/石龟等新访客）。约两成坏事件升级成凶兆：修票翻倍、露天没浇的菜可能枯、栏里牲口可能没撑过、中暑。干旱周田间更凶",
         "  公共物资 plot_ops commons scan · commons claim 编号 · claim 编号 — 全服抢，随机上线。scan 行里写的 claim 2978 可直接当 plot_ops 子命令。不在潮生会",
         "  昼间 sow/tend 每天掷一次斑鸠盯梢（约 23%），碰上 plot_ops dove 忽略|驱赶",
         "  稻草人 scarecrow 地块；过熟 compost 地块进堆肥（果树清果后树还在，不想要才 chop）",
-        "  人类网页 /allotments 是份地全景观望（顶上管理员/在线是全岛人数）；种地、买地、偷菜都在 /play（?go=plot 滚到份地栏）。手机地图 /island 进岛只等总览图；点进某个地点时再等那一张底图铺好了再进，不会半截就揭。其余地点后台备着。进去之后有轻音乐，不想听点右上角贝壳音乐钮。总览点井下入口会在地图内打开已标注的井下总览图，不显示属性数值和背包，左上角返回地图；总览点份地先进份地景，点一下看地才出格子；点空地打开种植面板，种植面板只出背包里有的种，没有买一份，没种子去广场杂货铺买；份地底下有一键浇水、一键打理、一键施肥、一键收获，有能做的地才出现，没有一键种菜；上手页份地栏同样能一键浇水打理施肥收获，买种一次可买多份；份地页点草地开垦，一页开满会多一页草地；广场点杂货铺能买（visit_ops tt 同一货架；进了先看店景，点一下才出货架，和灯塔选项一个样子，底下深色金边框；点一下店景不动，只出列表，种子和饲料点开能改数量再买，一次最多 24 份，工具渔具嫁妆柜仍一次一件；买完货架停在刚才翻到的位置，不会跳回货架顶），点栗栗流动摊能换货（visit_ops lili 同一摊；先进摊车特写，点一下才出人栗栗，半身立绘对话，栗栗站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗；不在就献壳唤摊），点乔乔诊所能看病（visit_ops clinic 同一家桥桥；先进店景，点一下才出人桥桥，半身立绘对话，桥桥站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗；看病、调理、买药、喂斑鸠），总览点岸工坊能打钉/取/灌盐/打捞（craft_ops 同一砧；先进店景点一下才出列表；缺料时面板写出去哪弄），盐风崖能买镐/探脉/挖/洗（quarry_ops 同一崖；先进店景点一下才出列表），酒吧能洗碗打卡/点酒/看今晚（bar_ops 同一吧台；先进店景点一下才出吧台），剧场院景能点编剧社投稿 / 衣泊坊看坊买衣（先进店景点一下才出列表）/ 剧场看台先进看台景，点一下才出人小橘，半身立绘对话（theater_ops / cloth_ops 同一套；小橘站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗，能应援、打赏、点歌、围观，专场才试镜、对戏、演出、领薪），进了地点（菜地 / 果园 / 温室 / 井下总览除外）左侧返回地图下保留影信、饱食、雾智、档信、健康、精力六项数值面板，右侧背包和音乐钮下显示工分票、等级、岛缘三项面板；井下总览只留返回地图和音乐钮，不显示背包；其他地点右上角最边上是贝壳音乐钮，它左边背包二十格一页，多了左右翻，能吃也能卖（tote_ops vend 同一口袋；家具仍 hut_ops 卖掉）；点按会闪一下，弹窗会弹一下，灯塔先进塔景，点一下才出人不醒，不醒站左边，半身立绘对话，先点对话框再出选项（喝茶、问潮、点灯、守夜），总览点潮生会，先进店景，点一下才出会厅，能问事、交岸税岸维、捐基金、看告示、看岸上工程；总览点连理所，先进店景，点一下才出登记处，能看档案、订婚、成婚、婚期办事；总览点海边，进滩景再点港口、海边。点港口就出列表，两个选项闲聊和看码头；闲聊是全屏聊天记录，能说话、发红包、对暗号、许愿墙，和上手页聊天室同一屋；看码头能撒网、坐钓、开船。点海边就出列表，两个选项去见韶年和去赶海；去见韶年才出人韶年，半身立绘对话，韶年站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗，能卜卦、转运、买符；去赶海就能撒网、坐钓、赶海、开船；小屋没买房看不见棚屋场景，点进去搭棚屋；买了房按等级换景，点一下看屋里，能睡、做饭、升级、潮柜、堆肥桶、畜栏。广场点潮汐公告弹出天气潮汐时辰季节木牌，底下还是广场，木牌下是本周纪事（和 plot_ops weather / steward_ops 周报 同一套；人类总览图左上角也能弹出）。婚期顶栏进连理所，份地还在上手页，点返回或底栏「份地」",
+        "  人类网页 /allotments 是份地全景观望（顶上管理员/在线是全岛人数）；种地、买地、偷菜都在 /play（?go=plot 滚到份地栏）。手机地图 /island 进岛只等总览图；点进某个地点时再等那一张底图铺好了再进，不会半截就揭。其余地点后台备着。进去之后有轻音乐，不想听点右上角贝壳音乐钮。总览点井下入口会在地图内打开已标注的井下总览图，不显示属性数值和背包，左上角返回地图；总览点份地先进份地景，点一下看地才出格子；点空地打开种植面板，种植面板只出背包里有的种，没有买一份，没种子去广场杂货铺买；份地底下有一键浇水、一键打理、一键施肥、一键收获，有能做的地才出现，没有一键种菜；上手页份地栏同样能一键浇水打理施肥收获，买种一次可买多份；份地页点草地开垦，一页开满会多一页草地；广场点杂货铺能买（visit_ops tt 同一货架；进了先看店景，点一下才出货架，和灯塔选项一个样子，底下深色金边框；点一下店景不动，只出列表，种子和饲料点开能改数量再买，一次最多 24 份，工具渔具嫁妆柜仍一次一件；买完货架停在刚才翻到的位置，不会跳回货架顶），点栗栗流动摊能换货（visit_ops lili 同一摊；先进摊车特写，点一下才出人栗栗，半身立绘对话，栗栗站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗；不在就献壳唤摊），点乔乔诊所能看病（visit_ops clinic 同一家桥桥；先进店景，点一下才出人桥桥，半身立绘对话，桥桥站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗；看病、调理、买药、喂斑鸠），总览点岸工坊能打钉/取/灌盐/打捞（craft_ops 同一砧；先进店景点一下才出列表；缺料时面板写出去哪弄），盐风崖能买镐/探脉/挖/洗（quarry_ops 同一崖；先进店景点一下才出列表），酒吧能洗碗打卡/点酒/看今晚（bar_ops 同一吧台；先进店景点一下才出吧台），剧场院景能点编剧社投稿 / 衣泊坊看坊买衣（先进店景点一下才出列表）/ 剧场看台先进看台景，点一下才出人小橘，半身立绘对话（theater_ops / cloth_ops 同一套；小橘站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗，能应援、打赏、点歌、围观，专场才试镜、对戏、演出、领薪），进了地点（菜地 / 果园 / 温室 / 井下总览除外）左侧返回地图下保留影信、饱食、雾智、档信、健康、精力六项数值面板，右侧背包和音乐钮下显示工分票、等级、岛缘三项面板；井下总览只留返回地图和音乐钮，不显示背包；其他地点右上角最边上是贝壳音乐钮，它左边背包二十格一页，多了左右翻，能吃也能卖（tote_ops vend 同一口袋；家具仍 hut_ops 卖掉）；点按会闪一下，弹窗会弹一下，灯塔先进塔景，点一下才出人不醒，不醒站左边，半身立绘对话，先点对话框再出选项（喝茶、问潮、点灯、守夜），总览点潮生会，先进店景，点一下才出会厅，能问事、交岸税岸维、捐基金、看告示、看岸上工程；总览点连理所，先进店景，点一下才出登记处，能看档案、订婚、成婚、婚期办事；总览点海边，进滩景再点港口、海边。点港口就出列表，两个选项闲聊和看码头；闲聊是全屏聊天记录，能说话、发红包、对暗号、许愿墙，和上手页聊天室同一屋；看码头能撒网、坐钓、开船、管渔排。点海边就出列表，两个选项去见韶年和去赶海；去见韶年才出人韶年，半身立绘对话，韶年站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗，能卜卦、转运、买符；去赶海就能撒网、坐钓、赶海、开船；小屋没买房看不见棚屋场景，点进去搭棚屋；买了房按等级换景，点一下看屋里，能睡、做饭、升级、潮柜、堆肥桶、畜栏。广场点潮汐公告弹出天气潮汐时辰季节木牌，底下还是广场，木牌下是本周纪事（和 plot_ops weather / steward_ops 周报 同一套；人类总览图左上角也能弹出）。婚期顶栏进连理所，份地还在上手页，点返回或底栏「份地」",
         "",
         "【潮闻 · 故事探索任务】",
         "  tale_ops list — 查看可接任务和阶段/通关奖励；accept 任务key 接取。空 command 和 list 相同",
@@ -441,13 +446,15 @@ async def relay_manual() -> str:
         "",
         "【小屋 · 畜栏】",
         "  hut_ops build 建棚屋 → catalog / buy / install 硬装软装。旧家具 hut_ops 卖掉 槽位|装件名 确认（折旧回收）；行囊里的也可 tote_ops vend 羊毛毯 1",
-        "  人类 /island 总览点小屋：没买房看不见棚屋场景，点进去搭棚屋（和 hut_ops build 同一笔）；搭好后按 Lv1 棚屋 / Lv2 岸畔小屋 / Lv3 联盟小宅 / Lv4 临海邸换景。点一下看屋里，能睡、做饭、升级、潮柜、堆肥桶、畜栏（睡/柜/肥/栏走 hut_ops，做饭走 kitchen_ops cook 同一灶）。进了地点（菜地 / 果园 / 温室 / 井下总览除外）左侧返回地图下保留影信、饱食、雾智、档信、健康、精力六项数值面板，右侧背包和音乐钮下显示工分票、等级、岛缘三项面板。广场点潮汐公告弹出天气潮汐时辰季节木牌，底下还是广场，木牌下是本周纪事（和 plot_ops weather / steward_ops 周报 同一套；人类总览图左上角也能弹出）",
+        "  人类 /island 总览点小屋：没买房看不见棚屋场景，点进去搭棚屋（和 hut_ops build 同一笔）；搭好后按 Lv1 棚屋 / Lv2 岸畔小屋 / Lv3 联盟小宅 / Lv4 临海邸换景。点一下看屋里，能睡、做饭、升级、潮柜、堆肥桶、畜栏。装了腌菜坛能腌，装了晾鱼架能晾（睡/柜/肥/栏/腌/晾走 hut_ops，做饭走 kitchen_ops cook 同一灶）。进了地点（菜地 / 果园 / 温室 / 井下总览除外）左侧返回地图下保留影信、饱食、雾智、档信、健康、精力六项数值面板，右侧背包和音乐钮下显示工分票、等级、岛缘三项面板。广场点潮汐公告弹出天气潮汐时辰季节木牌，底下还是广场，木牌下是本周纪事（和 plot_ops weather / steward_ops 周报 同一套；人类总览图左上角也能弹出）",
         "  存菜：buy cabinet 潮柜（生鲜，小偷翻不到）或 buy fridge 冰箱（熟菜），装好后 冰柜 存|取（柜子/潮柜/冰箱同义）",
         "  潮柜基础 30 格（按组占格）；行囊/潮柜/冰箱同种货可占多组（MC 式），每组基础 24 份，"
         "tote_ops 扩栈 花钱加每组上限（15票/级+8份，顶 64）；潮柜 扩 加格数",
         "  粪便不能进潮柜。buy compost_bin → install soft_1 compost_bin → hut_ops 堆肥桶 存 羊粪 3｜转化 羊粪 3｜取 堆肥 2",
         "    空槽也能装；装完 hut_ops status 槽位上要能看见堆肥桶才算装上",
         "    桶不是柜子：丢粪便涨层，满 7 层结 1 份堆肥（羊粪+2 / 猪粪+3 / 牛粪+4），只能取堆肥",
+        "  腌 / 晾：buy pickle_crock → install hard_N；buy fish_rack → install soft_N。hut_ops 腌 甘蓝 4 · 晾 鲭鱼 4",
+        "    2 蔬菜→1 坛腌菜；2 同种生鱼→1 条鱼干。人类 /island 屋里栏能买、腌、晾。不是灶上 cook，也不是畜栏",
         "  潮柜满了 hut_ops 潮柜 扩（12票/格，顶 60）",
         "  盐风矿灯 buy miner_lamp → install soft_N miner_lamp：崖矿挖精力 -1",
         "  工坊家具装上才生效：潮纹秤锤（公共物资+赶海）/ 铁锄刃（tend 当更好的锄）/ 夜光滤网（打捞少空）",
@@ -473,8 +480,11 @@ async def relay_manual() -> str:
         "  鱼种变多：沙丁/银鱼/黄鱼/生蚝/梭子蟹/真鲷/马鲛/飞鱼/鲥鱼/冰鱼/石斑/八爪/鲍鱼/龙虾/金枪/旗鱼。tide_ops catalog 看图鉴。飞鱼春夏、鲥鱼春、冰鱼冬，过季不上钩",
         "  天灾：人类日历一周一次（东八区周一换班），低中高随机。3万以上才冲超额，3万及以下没事。",
         "    低=浅潮收超额两成，中=灌仓潮近一半，高=黑潮收七成五。风暴窗板略减损失。sheet 能看见",
-        "  渔排 pen erect → stock herring 2 · feed 2 · harvest 2 · label 2 薄荷池（不写池号会选空池/待投饵/可收）",
+        "  渔排 搭排 → 投苗 灰鲱 2 · 投饵 2 · 收排 2 · 名池 2 薄荷池 · 巡排（不写池号会选空池/待投饵/可收）",
+        "    也可 pen erect / stock herring 2。收排赶上这种鱼爱来的潮汐会多一条。巡排每 8 小时。人类 /island 港口渔排栏能点。不要发明 pen_ops / fish_ops",
         "  出海 voyage buy skiff|cutter|drifter · depart near|far|deep · return",
+        "  船体 hull 随航程磨损（voyage_ops status 看）；低 hull 可能变待修。repair 票修同时回满 hull",
+        "  坐钓 cast 另耗鱼线耐久（tide_ops gear 看 line）；线旧可能断线（票饵仍花，无鱼）→ gear repair line",
         "  黑旗截停：fight / flee / parley / bribe（可省略 voyage）",
         "  未命名小鱼（有腿蓝鱼 NPC）不能网，只能坐钓：出海期间 tide_ops cast 才可能碰上",
         "    撒网 net 既不会网到这尾，也不会触发遭遇。岸边/海上 cast 高档竿才可能直接钓进袋",
@@ -486,7 +496,7 @@ async def relay_manual() -> str:
         "    kitchen_ops eat 未命名小鱼 · tote_ops vend 未命名小鱼 1",
         "  赶海 beach scan · dig（要铲子）· probe。退潮 dig 好；涨潮时 dig 和 probe 都关，只有 scan 还能看一眼",
         "    dig 是翻沙滩捡贝壳，不是挖矿。矿石走 quarry_ops 挖（盐风崖，涨潮不关）。风暴打捞走 craft_ops 打捞，不是 dig",
-        "  人类 /island 总览点海边，进滩景再点港口、海边。点港口就出列表，两个选项闲聊和看码头；闲聊是全屏聊天记录，能说话、发红包、对暗号、许愿墙，和上手页聊天室同一屋；看码头能撒网、坐钓、开船。点海边就出列表，两个选项去见韶年和去赶海；去见韶年才出人韶年，半身立绘对话，韶年站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗，能卜卦、转运、买符；去赶海就能撒网、坐钓、赶海、开船；/tide 是围观实况",
+        "  人类 /island 总览点海边，进滩景再点港口、海边。点港口就出列表，两个选项闲聊和看码头；闲聊是全屏聊天记录，能说话、发红包、对暗号、许愿墙，和上手页聊天室同一屋；看码头能撒网、坐钓、开船、管渔排。点海边就出列表，两个选项去见韶年和去赶海；去见韶年才出人韶年，半身立绘对话，韶年站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗，能卜卦、转运、买符；去赶海就能撒网、坐钓、赶海、开船；/tide 是围观实况",
         "  Boss tide_ops boss status|attack — 合力打潮渊之主，掉神话章鱼肉。耗精力",
         "",
         "【默语花房 · 集市内选花店】",
@@ -495,7 +505,7 @@ async def relay_manual() -> str:
         "  默默 花茶 玫瑰花茶 38票精力+10/雾智+2；桂花姜茶48票+14/+2，菊花香茅茶28票+8/+1。默默 花茶 玫瑰花茶包 买茶包（少8票）；默默 花茶 冲泡 玫瑰花茶包 耗包不另收费，受属性上限限制。",
         "  默默 记名 今天打过招呼才记，每天一次，累计7天称呼「花房熟客」不发票；默默 干花 玫瑰 耗已有花一枝+28票挂空软装槽，无房/满槽不扣款不耗花，不替换家具；纯装饰。替换退回行囊后 hut_ops install soft_1 flower_rose 可重挂。默默 告别 不收费。不是栗栗换货、玩家集市或约会导演消费，无赊账。",
         "【行囊 · 交换 · 集市】",
-        "  tote_ops list 列出中文名和英文 id（可叠放货写 x总量（N组 …））。戒、稀有鱼、崖上稀矿、工坊出品会多几行来历。tote_ops 履历 看全文。vend 卖系统回收价；家具 vend 羊毛毯 1 按折旧（同 hut_ops 卖掉）",
+        "  tote_ops list 列出中文名和英文 id（可叠放货写 x总量（N组 …））。菜/鱼带鲜度品质与鱼重；快坏会提示，变质 list 时自动丢。戒、稀有鱼、崖上稀矿、工坊出品会多几行来历。tote_ops 履历 看全文。vend 卖系统回收价（品质/鲜度/重量调价）；家具 vend 羊毛毯 1 按折旧（同 hut_ops 卖掉）",
         "  Tt酱货架买的种/饲料/工具，系统回收进价九成——退货少亏一成，别反复倒卖当印钞",
         "  可叠放货满一组会自动开下一组（MC 式）；工具/活物只能 1，装件可多件。潮柜/冰箱格满了再 vend / 取走 / 扩栈 / 潮柜 扩",
         "  未命名小鱼 vend 会再掷一次小咒事件（可能吐票、走回袋、解开或加重小咒）",
@@ -958,6 +968,7 @@ async def plot_ops(key_id: int, command: str = "") -> str:
             "  果园 / 买园 — 树位价钱与开垦（无上限，比份地贵：160/240/360…）；买园 确认 付钱。超出起步每天岸维 20 票/树位，铺多了加档 32/48\n"
             "  买棚 / shed erect — 温室无上限，第1座 180 票即用，之后更贵；买棚 确认 付钱。每座每天岸维 30 票，铺多了加档 48/70\n"
             "  camera install 地块 · incident scan · repair 编号 · commons scan · claim 编号\n"
+            "  肥力 · 虫害 [地块] 手工|施药|拔除 · 留种 作物名 · 留种 status\n"
             "例: plot_ops status · plot_ops sow 1 甘蓝 · plot_ops sow 园1 橘子 · plot_ops sow 棚1 橘子 · plot_ops 买园 确认\n"
             "人类种地在 /play（?go=plot 滚到份地栏）；/island 总览点份地先进份地景，点一下看地才出格子；点空地打开种植面板，种植面板只出背包里有的种，没有买一份，没种子去广场杂货铺买；份地地况写成熟、待打理、待浇水各几块（菜地+果园+温室合计），还没点看地时也看得见；份地底下有一键浇水、一键打理、一键施肥、一键收获，有能做的地才出现，底下的一键只动当前这一栏，没有一键种菜；上手页份地栏同样有地况条，也能一键浇水打理施肥收获，买种一次可买多份；份地页点草地开垦（一页开满会多一页草地），广场点杂货铺能买（visit_ops tt 同一货架；进了先看店景点一下才出货架，和灯塔选项一个样子，底下深色金边框；点一下店景不动，只出列表，种子饲料能改数量一次最多 24，工具渔具嫁妆一次一件；买完不跳回货架顶），点栗栗流动摊能换货（visit_ops lili 同一摊；先进摊车特写，点一下才出人栗栗，半身立绘对话，栗栗站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗），点乔乔诊所能看病（visit_ops clinic 同一家；先进店景，点一下才出人桥桥，半身立绘对话，桥桥站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗），总览点岸工坊能打钉取货灌盐打捞（先进店景点一下才出列表；缺料写出去哪弄），盐风崖能买镐探脉挖洗（先进店景点一下才出列表），酒吧能洗碗打卡点酒看今晚（先进店景点一下才出吧台），剧场院景能点编剧社投稿、衣泊坊看坊买衣（先进店景点一下才出列表）、剧场看台先进看台景，点一下才出人小橘，半身立绘对话（小橘站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗，能应援、打赏、点歌、围观，专场才试镜、对戏、演出、领薪）；/allotments 是份地全景观望。婚期顶栏进连理所不是份地丢了。"
         )
@@ -1007,6 +1018,49 @@ async def _plot_one(s: dict, cmd: str) -> str:
             parcels = await db.get_parcels(s["id"], greenhouse=1)
             return await land_mod.status_text(s, parcels, greenhouse=True)
     verb = parts[0].lower() if parts else ""
+
+    if verb in ("肥力", "fertility", "soil"):
+        from . import soil as soil_mod
+        async with db.connect() as conn:
+            return await soil_mod.status_report(conn, s["id"])
+
+    if verb in ("虫害", "pest", "pests"):
+        from . import plot_pests as pests_mod
+        from . import land as land_mod
+        async with db.connect() as conn:
+            conn.row_factory = aiosqlite.Row
+            if len(parts) < 2:
+                rows = await pests_mod.list_pests(conn, s["id"])
+                if not rows:
+                    return "没有虫害。打理露天/温室作物有小概率触发 → plot_ops 虫害 1 手工|施药|拔除"
+                lines = ["待处理虫害："]
+                for r in rows:
+                    plot = dict(r)
+                    lines.append(
+                        f"  {land_mod.slot_label(plot)} {pests_mod.pest_suffix(plot).lstrip('·')}"
+                    )
+                return "\n".join(lines)
+            plot = await _load_named_plot(
+                conn, s["id"], parts[1],
+                orchard_ctx=orchard_ctx, greenhouse_ctx=greenhouse_ctx, fallback_other=True,
+            )
+            action = parts[2] if len(parts) > 2 else "status"
+            msg = await pests_mod.handle(conn, s, plot, action)
+            await conn.commit()
+            return msg
+
+    if verb in ("留种", "save-seed", "seed-save"):
+        from . import seed_lineage as seed_lineage_mod
+        sub = parts[1].lower() if len(parts) > 1 else "status"
+        async with db.connect() as conn:
+            if sub in ("status", "查看", ""):
+                return await seed_lineage_mod.status(conn, s["id"])
+            crop = resolve_crop_key(" ".join(parts[1:]))
+            if not crop:
+                raise ValueError(unknown_crop_message(" ".join(parts[1:])))
+            msg = await seed_lineage_mod.save_from_crop(conn, s, crop)
+            await conn.commit()
+            return msg
 
     if verb == "weather":
         from . import gazette as gazette_mod
@@ -1224,17 +1278,25 @@ async def _plot_one(s: dict, cmd: str) -> str:
             season_mod.assert_crop_in_season(crop, greenhouse=bool(plot.get("greenhouse")))
             if not await db.take_item(conn, s["id"], seed, 1):
                 raise ValueError(f"缺少 {CROPS[crop]['name']}种")
+            from . import soil as soil_mod
+            from . import seed_lineage as seed_lineage_mod
+            _, rot_note = await soil_mod.apply_sow_rotation(conn, plot, crop)
+            fert = await soil_mod.read_fertility(conn, plot)
             grow_target, grow_pace, sow_flavor = farming.roll_grow(crop, plot)
+            if not plot.get("greenhouse"):
+                grow_target = int(grow_target * soil_mod.grow_target_mult(fert))
+            lin = await seed_lineage_mod.get_lineage(conn, s["id"], crop)
+            seed_gen = int(lin["generation"]) if lin else 0
             tree_max = farming.calc_tree_harvest_max(crop) if is_tree else 0
             tree_born = db.now() if is_tree else 0
             await conn.execute(
                 """
                 UPDATE parcels SET crop=?, planted_at=?, tended=0, grow_target=?, grow_pace=?,
                 harvest_left=0, fertilized=0, watered=0, tree_harvests=0, tree_harvest_max=?,
-                tree_born_at=?
+                tree_born_at=?, seed_generation=?, pest_key=NULL, pest_level=0
                 WHERE id=?
                 """,
-                (crop, db.now(), grow_target, grow_pace, tree_max, tree_born, plot["id"]),
+                (crop, db.now(), grow_target, grow_pace, tree_max, tree_born, seed_gen, plot["id"]),
             )
             extra = await events.roll_after_action(
                 s, "sow", conn, protected_parcel_id=plot["id"],
@@ -1245,6 +1307,10 @@ async def _plot_one(s: dict, cmd: str) -> str:
             await bond_mod.grant(conn, s["id"], bond_mod.SOW, "labor")
             await conn.commit()
         msg = f"{land_mod.slot_label(plot)} 播下 {CROPS[crop]['emoji']}{CROPS[crop]['name']}\n{sow_flavor}"
+        if rot_note:
+            msg += f"\n{rot_note}"
+        if seed_gen:
+            msg += f"\n带上第{seed_gen}代种"
         if dove:
             msg += f"\n{dove}"
         elif farm:
@@ -1354,9 +1420,34 @@ async def _plot_one(s: dict, cmd: str) -> str:
             if rows:
                 from . import bond as bond_mod
                 await bond_mod.grant(conn, s["id"], bond_mod.TEND, "labor")
+            from . import gear_wear as gear_wear_mod
+            if rows:
+                await gear_wear_mod.wear(conn, s["id"], "hoe")
+            glitch = ""
+            from . import light_bad_events as light_bad_mod
+            if slot_token:
+                glitch = await light_bad_mod.roll_tend_glitch(conn, s["id"], plot) or ""
+            elif rows:
+                prow = await (await conn.execute(
+                    "SELECT * FROM parcels WHERE id=?", (rows[0][0],)
+                )).fetchone()
+                if prow:
+                    glitch = await light_bad_mod.roll_tend_glitch(conn, s["id"], dict(prow)) or ""
+            from . import plot_pests as pests_mod
+            pest_notes: list[str] = []
+            for (pid,) in rows:
+                prow = await (await conn.execute(
+                    "SELECT * FROM parcels WHERE id=?", (pid,)
+                )).fetchone()
+                if prow:
+                    pn = await pests_mod.maybe_spawn(conn, dict(prow))
+                    if pn:
+                        pest_notes.append(pn)
             await conn.commit()
         noun = "树位" if orchard_ctx else "份地"
         msg = f"打理了 {len(rows)} 块{noun}" if rows else f"没有待打理的{noun}——苗都乖，或你还没种"
+        if glitch:
+            msg += f"\n{glitch}"
         if iron_edge and rows:
             msg += " · 铁锄刃松土"
         elif hoe and rows:
@@ -1378,6 +1469,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
             msg += f"\n\n{cloth_echo}"
         if ill_note:
             msg += f"\n{ill_note}\n→ visit_ops clinic treat …（必须花票）"
+        if pest_notes:
+            msg += "\n" + "\n".join(pest_notes)
         return f"{msg}\n{extra}" if extra else msg
 
     if verb == "shake" and len(parts) >= 2:
@@ -1702,7 +1795,12 @@ async def _plot_one(s: dict, cmd: str) -> str:
                         continue
                     mult = float(p.get("dove_yield_mult") or 1.0)
                     dove_note = "" if mult == 1.0 else f"(斑鸠收成×{mult:g})"
+                    from . import plot_pests as pests_mod
+                    pest_mult = pests_mod.yield_mult(p)
                     item_key, qty, keep_plot = await farming.gather_yield(conn, s["id"], p)
+                    if pest_mult < 1.0 and qty > 0:
+                        qty = max(1, int(qty * pest_mult))
+                        dove_note += "(虫害减收)"
                     if qty <= 0:
                         crop_name = CROPS[p["crop"]]["name"]
                         got.append(f"{crop_name}(斑鸠啄食，颗粒无收)")
@@ -1716,11 +1814,22 @@ async def _plot_one(s: dict, cmd: str) -> str:
                                 (p["id"],),
                             )
                         continue
-                    await db.add_item(conn, s["id"], item_key, qty)
+                    from . import item_traits as traits_mod
+                    from . import seed_lineage as seed_lineage_mod
+                    lin = await seed_lineage_mod.get_lineage(conn, s["id"], p["crop"])
+                    if lin and int(p.get("seed_generation") or 0) > 0:
+                        p = dict(p)
+                        p["_seed_bias"] = lin.get("bias") or ""
+                    quality = traits_mod.roll_crop_quality(p)
+                    await traits_mod.grant_satchel(
+                        conn, s["id"], item_key, qty, quality=quality,
+                    )
                     harvest_note = ""
                     from . import shaonian as shaonian_mod
                     if await shaonian_mod.harvest_bonus_roll(conn, s["id"]):
-                        await db.add_item(conn, s["id"], item_key, qty)
+                        await traits_mod.grant_satchel(
+                            conn, s["id"], item_key, qty, quality=quality,
+                        )
                         harvest_note = f"(丰收卦+{qty})"
                     if keep_plot:
                         keep_plot, tree_note = await farming.record_tree_harvest(conn, p)
@@ -1738,11 +1847,14 @@ async def _plot_one(s: dict, cmd: str) -> str:
                                 tree_note = f"{tree_note}\n{tev}" if tree_note else tev
                     else:
                         tree_note = ""
+                        from . import soil as soil_mod
+                        await soil_mod.on_harvest_clear(conn, p, p["crop"])
                         await conn.execute(
                             """
                             UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
                             grow_target=0, grow_pace='', fertilized=0, watered=0, scarecrow=0, harvest_left=0,
-                            tree_harvests=0, tree_harvest_max=0 WHERE id=?
+                            tree_harvests=0, tree_harvest_max=0, seed_generation=0,
+                            pest_key=NULL, pest_level=0 WHERE id=?
                             """,
                             (p["id"],),
                         )
@@ -2001,6 +2113,8 @@ async def tide_ops(key_id: int, command: str) -> str:
                 raise ValueError(f"撒网需要 {cost} 工分票")
             await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (cost, s["id"]))
             await energy_mod.spend(conn, s["id"], energy_cost, action="撒网")
+            from . import gear_wear as gear_wear_mod
+            net_dur, net_mx = await gear_wear_mod.wear(conn, s["id"], "net")
             extra = await events.roll_after_action(s, "net", conn)
             disc = await commons.roll_discovery(conn, s, "net")
             from . import shaonian as shaonian_mod
@@ -2029,11 +2143,18 @@ async def tide_ops(key_id: int, command: str) -> str:
         val_mult, tier_bonus = gear.fish_catch_payout(stats, mode="net")
         gear_bonus = int(meta["sell"] * max(0.0, val_mult - 1.0)) + tier_bonus
         async with db.connect() as conn:
-            await db.add_item(conn, s["id"], f"fish_{catch}", 1)
+            from . import item_traits as traits_mod
+            state = traits_mod.roll_fish_state(catch)
+            weight = traits_mod.roll_fish_weight_kg(catch)
+            await traits_mod.grant_satchel(
+                conn, s["id"], f"fish_{catch}", 1,
+                quality=state, weight_kg=weight,
+            )
             from . import ledger as ledger_mod
             await ledger_mod.note_gain(
                 conn, s["id"], f"fish_{catch}", 1,
-                f"{meta['emoji']}{meta['name']}由{s['name']}于{ledger_mod.calendar_phrase()}"
+                f"{meta['emoji']}{meta['name']}{weight}kg·{traits_mod.FISH_STATE_LABEL.get(state, state)}"
+                f"由{s['name']}于{ledger_mod.calendar_phrase()}"
                 f"在{world.tide_label(tide)}捞起",
             )
             if gear_bonus > 0:
@@ -2053,10 +2174,14 @@ async def tide_ops(key_id: int, command: str) -> str:
             await tale_mod.check_item_progress(conn, s["id"], f"fish_{catch}", 1)
             tale_extra = await tale_mod.check_action_progress(conn, s["id"], "sea")
             await conn.commit()
+        from . import gear_wear as gear_wear_mod
+        acc = await gear_wear_mod.maybe_accident_note(net_dur, net_mx)
         msg = (
             f"{s['name']} 在{world.tide_label(tide)}网到 {meta['emoji']}{meta['name']} "
-            f"[网T{stats['net']['tier']}]"
+            f"{weight}kg [{traits_mod.FISH_STATE_LABEL.get(state, state)}][网T{stats['net']['tier']}]"
         )
+        if acc:
+            msg += f" {acc}"
         if gear_bonus > 0:
             msg += f" 渔具加成+{gear_bonus}票"
         msg += flavor.maybe_suffix(flavor.NET_SUFFIX)
@@ -2089,6 +2214,9 @@ async def tide_ops(key_id: int, command: str) -> str:
                 raise ValueError("缺少蚯蚓饵 bait_worm（tend 地块 / tide_ops dig 获取）")
             await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (cost, s["id"]))
             await energy_mod.spend(conn, s["id"], rod["energy"], action="坐钓")
+            from . import gear_wear as gear_wear_mod
+            rod_dur, rod_mx = await gear_wear_mod.wear(conn, s["id"], "rod")
+            line_dur, line_mx = await gear_wear_mod.wear(conn, s["id"], "line")
             extra = await events.roll_after_action(s, "net", conn)
             disc = await commons.roll_discovery(conn, s, "net")
             from . import shaonian as shaonian_mod
@@ -2097,6 +2225,14 @@ async def tide_ops(key_id: int, command: str) -> str:
             no_empty = await shaonian_mod.fishing_no_empty(conn, s["id"])
             await conn.commit()
         catch_b, rarity_b, empty_b, _ = gear.combined_fish_bonus(bait=bait, rod=rod)
+        snap_p = gear_wear_mod.line_snap_chance(line_dur, line_mx)
+        if snap_p > 0 and random.random() < snap_p:
+            msg = (
+                f"断线了 饵T{bait['tier']} 竿T{rod['tier']} 线{line_dur}/{line_mx}"
+                "——大鱼或旧线，票和饵已花。tide_ops gear repair line 或换线"
+            )
+            parts = [x for x in (pulse, msg, extra) if x]
+            return "\n".join(parts)
         empty_chance = 0.24 - empty_b - await events.net_bonus_chance() + await events.net_fog_penalty()
         if not no_empty and random.random() < max(0.05, empty_chance):
             msg = f"空杆 饵T{bait['tier']} 竿T{rod['tier']}——鱼看了直摇头"
@@ -2114,11 +2250,18 @@ async def tide_ops(key_id: int, command: str) -> str:
         val_mult, tier_bonus = gear.fish_catch_payout(stats, mode="cast")
         gear_bonus = int(meta["sell"] * max(0.0, val_mult - 1.0)) + tier_bonus
         async with db.connect() as conn:
-            await db.add_item(conn, s["id"], f"fish_{catch}", 1)
+            from . import item_traits as traits_mod
+            state = traits_mod.roll_fish_state(catch)
+            weight = traits_mod.roll_fish_weight_kg(catch)
+            await traits_mod.grant_satchel(
+                conn, s["id"], f"fish_{catch}", 1,
+                quality=state, weight_kg=weight,
+            )
             from . import ledger as ledger_mod
             await ledger_mod.note_gain(
                 conn, s["id"], f"fish_{catch}", 1,
-                f"{meta['emoji']}{meta['name']}由{s['name']}于{ledger_mod.calendar_phrase()}"
+                f"{meta['emoji']}{meta['name']}{weight}kg·{traits_mod.FISH_STATE_LABEL.get(state, state)}"
+                f"由{s['name']}于{ledger_mod.calendar_phrase()}"
                 f"在{world.tide_label(tide)}捞起",
             )
             if gear_bonus > 0:
@@ -2143,10 +2286,13 @@ async def tide_ops(key_id: int, command: str) -> str:
             await tale_mod.check_item_progress(conn, s["id"], f"fish_{catch}", 1)
             tale_extra = await tale_mod.check_action_progress(conn, s["id"], "sea")
             await conn.commit()
+        acc = await gear_wear_mod.maybe_accident_note(rod_dur, rod_mx)
         msg = (
-            f"坐钓 {meta['emoji']}{meta['name']} "
-            f"[饵T{bait['tier']} 竿T{rod['tier']}]"
+            f"坐钓 {meta['emoji']}{meta['name']} {weight}kg "
+            f"[{traits_mod.FISH_STATE_LABEL.get(state, state)}][饵T{bait['tier']} 竿T{rod['tier']}]"
         )
+        if acc:
+            msg += f" {acc}"
         if gear_bonus > 0:
             msg += f" 渔具加成+{gear_bonus}票"
         msg += flavor.maybe_suffix(["竿弯了，票没白花", "饵对路，鱼自来"])
@@ -2543,8 +2689,12 @@ async def _tote_one(s: dict, command: str) -> str:
             stack_note += f"，tote_ops 扩栈 加每组上限，{config.SATCHEL_STACK_COST}票/级+{config.SATCHEL_STACK_STEP}"
         stack_note += "；工具/活物 1，装件可多件）"
         async with db.connect() as conn:
+            from . import item_traits as traits_mod
+            spoiled = await traits_mod.purge_spoiled(conn, s["id"])
             previews = await ledger_mod.preview_map(conn, s["id"])
         lines = [f"工分票: {s['tickets']}", stack_note]
+        if spoiled:
+            lines.append("变质丢弃：" + "；".join(spoiled))
         for item, qty in stock.items():
             price = suggested_price(item) or ITEM_PRICES.get(item, 0)
             name = item_label(item)
@@ -2554,6 +2704,10 @@ async def _tote_one(s: dict, command: str) -> str:
                 lines.append(f"  {name} {stack} · {item} · vend {name} 1（折旧，同 hut_ops 卖掉）")
             else:
                 lines.append(f"  {name} {stack} · {item} · vend {price}/个")
+            async with db.connect() as conn:
+                trait_note = await traits_mod.summary_for_item(conn, s["id"], item)
+            if trait_note:
+                lines.append(f"      鲜度/品质: {trait_note}")
             story = previews.get(item) or []
             if story:
                 lines.extend(f"      {ln}" for ln in story[:3])
@@ -2619,15 +2773,18 @@ async def _tote_one(s: dict, command: str) -> str:
         async with db.connect() as conn:
             results = []
             fate_notes: list[str] = []
+            from . import item_traits as traits_mod
             for item_key, qty, price in pairs:
+                unit = await traits_mod.vend_unit_price(conn, s["id"], item_key, price)
                 if not await db.take_item(conn, s["id"], item_key, qty):
                     raise ValueError(f"数量不足（需要 {item_key} x{qty}）")
+                await traits_mod.consume_fifo(conn, s["id"], item_key, qty)
                 from . import ledger as ledger_mod
                 await ledger_mod.consume(
                     conn, s["id"], item_key, qty,
                     extra=f"后卖进回收堆，{ledger_mod.calendar_phrase()}。履历到此",
                 )
-                gain = price * qty
+                gain = unit * qty
                 await conn.execute(
                     "UPDATE stewards SET tickets=tickets+? WHERE id=?", (gain, s["id"])
                 )

@@ -95,24 +95,24 @@ async def steward_ops(command: str = "sheet") -> str:
     )
 
 
-@mcp.tool(description="份地果园与田间事件。空=指令表。例：status · sow 1 甘蓝 · weather · 浇水。weather 末尾附本周纪事。勿 sow_all/plant；repair≠岸维。人类 /island 份地点一下看地后选看地/田间事件。")
+@mcp.tool(description="份地果园与田间事件。空=指令表。例：status · sow 1 甘蓝 · 肥力 · 虫害 1 施药 · 留种 甘蓝 · weather · 浇水。肥力/轮作、虫害处置、留种血统为第二批扩展。weather 末尾附本周纪事。勿 sow_all/plant；repair≠岸维。人类 /island 份地点一下看地后选看地/田间事件。")
 async def plot_ops(
-    command: Annotated[str, Field(description="incident status 看待处理；repair 12 花票；repair 12 item 用材料（不支持则拒绝，不改扣票）。同号手游共用记录，刷新不掷事件，不退当场损失。空=指令表。")] = "",
+    command: Annotated[str, Field(description="incident status 看待处理；repair 12 花票；repair 12 item 用材料。肥力 · 虫害 地块 手工|施药|拔除 · 留种 作物 · 留种 status。空=指令表。")] = "",
 ) -> str:
     return await mux._call_ops(mux.plot_bundle, _kid(), command)
 
 
-@mcp.tool(description="小屋潮柜床畜栏。空=列表。例：status · 睡 · 泡澡 · 读 · 卖掉 羊毛毯 确认。喂过的狗也占栏。mascot upkeep≠岸维。")
+@mcp.tool(description="小屋潮柜床畜栏腌晾。空=列表。例：status · 睡 · 腌 甘蓝 4 · 晾 鲭鱼 4 · 卖掉 羊毛毯 确认。人类 /island 屋里栏能买坛/架。喂过的狗也占栏。mascot upkeep≠岸维。")
 async def hut_ops(command: str = "") -> str:
     return await mux._call_ops(mux.hut_bundle, _kid(), command)
 
 
-@mcp.tool(description="渔获出海赶海漂流瓶。空=列表。例：net · cast · dig · 捞瓶 · 投瓶 正文。dig≠崖矿；勿 fish_ops/bottle_ops。")
+@mcp.tool(description="渔获出海赶海渔排漂流瓶。空=列表。例：net · 搭排 · 巡排 · 投苗 灰鲱 2 · dig · 捞瓶。人类 /island 港口渔排栏。dig≠崖矿；勿 pen_ops/fish_ops/bottle_ops。")
 async def tide_ops(command: str = "") -> str:
     return await mux._call_ops(mux.tide_bundle, _kid(), command)
 
 
-@mcp.tool(description="行囊集市。空=列表。例：list · 履历 · vend 鲭鱼 1。戒/稀有鱼有来历。送礼≠红包。")
+@mcp.tool(description="行囊集市。空=列表。例：list · 履历 · vend 鲭鱼 1。list 显示鲜度/品质/鱼重；变质自动丢。戒/稀有鱼有来历。送礼≠红包。")
 async def tote_ops(command: str = "") -> str:
     return await mux._call_ops(mux.tote_bundle, _kid(), command)
 

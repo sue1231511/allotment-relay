@@ -155,6 +155,7 @@ bar_ops     的 command = work 洗碗 night
 | `buy cabinet` → `install soft_1 cabinet` | 买潮柜并装上（生鲜） |
 | `buy fridge` → `install soft_N fridge` | 买冰箱并装上（熟菜） |
 | `buy compost_bin` → `install soft_1 compost_bin` | 买堆肥桶并装到空的 soft 槽。装完 `status` 槽位上要能看见。粪便不能进潮柜 |
+| `buy pickle_crock` / `buy fish_rack` → `install` | 腌菜坛（hard 槽）/ 晾鱼架（soft 槽）。`腌 甘蓝 4`（2 蔬菜→1 坛腌菜）、`晾 鲭鱼 4`（2 同种生鱼→1 鱼干）。人类 `/island` 屋里栏能买、腌、晾。不是灶上 `cook` |
 | `堆肥桶 存 羊粪 3` / `堆肥桶 转化 羊粪 3` / `堆肥桶 取 堆肥 2` | 桶不是柜子：丢粪便涨层，满 7 层结 1 份堆肥（羊粪+2 / 猪粪+3 / 牛粪+4），只能取堆肥 |
 | `buy bed` / `bed_rattan` / `bed_canopy` → `install hard_N …` | 岸柏板床 50 精力 / 软藤床 52 / 云纹纱榻 54（主要是好看，精力只略增） |
 | `睡` | 按已装床回 50~54 精力（+饱食 8、身体 +6），每天一次（游戏日 UTC 午夜换班刷新）。精力满了身体没满也能睡 |
@@ -172,7 +173,7 @@ bar_ops     的 command = work 洗碗 night
 | command | 做什么 |
 |---------|--------|
 | `net` / `cast` | 岸边撒网 / 坐钓。`net` 4 票，渔网按鱼价增幅+档位加成给票。cast 要 T1 钓竿 + 蚯蚓饵，同样按鱼价增幅给票。T1=竹钓竿（Tt酱 30 票或 `gear upgrade rod`，同一档）。未命名小鱼不能网，只能 `cast` 碰上或钓到。鱼种变多：沙丁/银鱼/黄鱼/生蚝/梭子蟹/真鲷/马鲛/飞鱼/鲥鱼/冰鱼/石斑/八爪/鲍鱼/龙虾/金枪/旗鱼；飞鱼春夏、鲥鱼春、冰鱼冬。赤潮周更容易水母蛰和潮疹，人去 `visit_ops clinic`，不是霍衡 |
-| `pen status` / `pen stock herring 2` | 渔排；可指定池号 |
+| `搭排` / `投苗 灰鲱 2` / `投饵 2` / `收排 2` / `名池 2 薄荷池` / `巡排` | 渔排（也可 `pen status` / `pen stock herring 2`）。人类 `/island` 港口「渔排」栏能点。收排赶上鱼种爱来的潮汐多一条；巡排约每 8 小时 |
 | `voyage buy skiff` / `voyage depart near` | 买船 / 出海（near/far/deep） |
 | `fight` `flee` `parley` `bribe` | 黑旗截停（可省略 voyage） |
 | `compliment` `release` `catch` `grab` | 未命名小鱼（可省略 voyage）。compliment=release 礼遇，回赠普通鱼；catch=grab 动手：抓住这尾进袋，落下腿鱼小咒，其它鱼和精力会出事。吃或卖再掷事件：`kitchen_ops eat 未命名小鱼` / `tote_ops vend 未命名小鱼 1` |
@@ -240,7 +241,7 @@ heart_ops 拆 12
 
 | command | 做什么 |
 |---------|--------|
-| `list` | 行囊（中文名 + 英文 id）。**同种货可占多组**（MC 式），每组基础 24 份（和潮柜一样）。工具/活物只能 1；装件每组 1 份，行囊可放多件。戒、稀有鱼、崖上稀矿、工坊出品会多几行来历 |
+| `list` | 行囊（中文名 + 英文 id）。**同种货可占多组**（MC 式），每组基础 24 份（和潮柜一样）。工具/活物只能 1；装件每组 1 份，行囊可放多件。菜/鱼显示品质、鲜度、鱼重；变质会在 list 时丢掉。戒、稀有鱼、崖上稀矿、工坊出品会多几行来历 |
 | `履历` / `履历 潮誓戒` | 看这些东西从哪来、送给过谁。甘蓝没有。不是成就，也不加数值 |
 | `扩栈` / `扩栈 2` | 加每组叠放上限（15票/级，每级+8份，顶 64；行囊/潮柜/冰箱同步） |
 | `gifts` / `收礼` / `收礼记录` | 查收到的礼物（谁送的、送了什么）。即时到账，上手页右侧也显示 |

@@ -1782,6 +1782,14 @@ BAR_SERVICES = {
 
 NPC_THIEVES = ["篱笆手影", "逾篱阿窃", "夜行摘客", "档口惯偷"]
 
+from .expansion_content import _LIVESTOCK_PRODUCTS, merge_catalog
+
+merge_catalog(CROPS, SEA_CATCH, LIVESTOCK, HEARTH_RECIPES, CRAFT_ITEMS)
+FRUIT_CROPS = frozenset(
+    k for k, v in CROPS.items()
+    if "fruit" in v.get("tags", ()) or "berry" in v.get("tags", ())
+)
+
 ITEM_PRICES = {f"seed_{k}": v["seed_price"] for k, v in CROPS.items()}
 ITEM_PRICES.update({f"crop_{k}": v["sell"] for k, v in CROPS.items()})
 ITEM_PRICES.update({f"fish_{k}": v["sell"] for k, v in SEA_CATCH.items()})
@@ -1812,6 +1820,7 @@ ITEM_PRICES.update({
 })
 ITEM_PRICES.update({k: v["sell"] for k, v in QUARRY_ORES.items()})
 ITEM_PRICES.update({k: v["sell"] for k, v in CRAFT_ITEMS.items()})
+ITEM_PRICES.update({k: sell for k, (_e, _n, sell) in _LIVESTOCK_PRODUCTS.items()})
 ITEM_PRICES.update({k: v["sell"] for k, v in CLOTH_ITEMS.items()})
 ITEM_PRICES.update({k: v["sell"] for k, v in MANURE.items()})
 for k, v in LIVESTOCK.items():
@@ -1863,6 +1872,7 @@ ITEM_NAMES.update({
 })
 ITEM_NAMES.update({k: f"{v['emoji']}{v['name']}" for k, v in QUARRY_ORES.items()})
 ITEM_NAMES.update({k: f"{v['emoji']}{v['name']}" for k, v in CRAFT_ITEMS.items()})
+ITEM_NAMES.update({k: f"{emo}{name}" for k, (emo, name, _s) in _LIVESTOCK_PRODUCTS.items()})
 ITEM_NAMES.update({k: f"{v['emoji']}{v['name']}" for k, v in CLOTH_ITEMS.items()})
 ITEM_NAMES.update({
     "tide_vow_sand": "潮誓砂",

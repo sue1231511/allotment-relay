@@ -597,6 +597,16 @@ def parcel_extra(plot: dict[str, Any]) -> str:
         age = tree_age_label(plot)
         if age:
             bits.append(age)
+    if not plot.get("greenhouse"):
+        from . import soil as soil_mod
+        bits.append(f"土{soil_mod.fertility_label(int(plot.get('soil_fertility') or 70))}")
+    from . import plot_pests as pests_mod
+    pest = pests_mod.pest_suffix(plot)
+    if pest:
+        bits.append(pest.lstrip("·"))
+    gen = int(plot.get("seed_generation") or 0)
+    if gen > 0:
+        bits.append(f"种{gen}代")
     return f"·{'·'.join(bits)}" if bits else ""
 
 

@@ -1041,6 +1041,7 @@ async def init_db() -> None:
             "ALTER TABLE stewards ADD COLUMN dine_buff_until INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN bath_soak_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN book_read_day INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN pen_patrol_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE voyages ADD COLUMN encounter TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE bar_daily_state ADD COLUMN auto_mood TEXT NOT NULL DEFAULT 'normal'",
             "ALTER TABLE bar_daily_state ADD COLUMN manual_mood_level TEXT NOT NULL DEFAULT ''",
@@ -1771,6 +1772,7 @@ async def init_db() -> None:
             )
             """,
             "ALTER TABLE steward_craft ADD COLUMN net_patch_empty REAL NOT NULL DEFAULT 0",
+            "ALTER TABLE steward_craft ADD COLUMN job_origin TEXT NOT NULL DEFAULT ''",
             """
             CREATE TABLE IF NOT EXISTS craft_pans (
                 steward_id INTEGER NOT NULL REFERENCES stewards(id),
@@ -2293,7 +2295,11 @@ async def init_db() -> None:
             )
             """,
             "CREATE INDEX IF NOT EXISTS idx_item_ledgers_owner ON item_ledgers(owner_id, item, alive, id)",
-            "ALTER TABLE steward_craft ADD COLUMN job_origin TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE parcels ADD COLUMN soil_fertility INTEGER NOT NULL DEFAULT 70",
+            "ALTER TABLE parcels ADD COLUMN last_crop TEXT",
+            "ALTER TABLE parcels ADD COLUMN pest_key TEXT",
+            "ALTER TABLE parcels ADD COLUMN pest_level INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE parcels ADD COLUMN seed_generation INTEGER NOT NULL DEFAULT 0",
         ):
             try:
                 await db.execute(ddl)
