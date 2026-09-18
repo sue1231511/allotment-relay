@@ -8,12 +8,14 @@ SPECIAL_DISH_KEYS = frozenset({
     "black_salt_fish",
     "fog_mushroom_soup",
     "lantern_sashimi",
+    "brine_clam_pot",
 })
 
 SPECIAL_ON_EAT = {
     "black_salt_fish": "black_salt",
     "fog_mushroom_soup": "fog_shroom",
     "lantern_sashimi": "lantern_raw",
+    "brine_clam_pot": "brine_clam",
 }
 
 
@@ -41,4 +43,8 @@ async def apply_on_eat(conn, steward_id: int, dish_key: str) -> str | None:
         from . import energy as energy_mod
         await energy_mod.restore(conn, steward_id, 18)
         return "灯笼鱼刺身极鲜，额外精力 +18。"
+    if kind == "brine_clam":
+        from . import survival
+        await survival.bump(conn, steward_id, satiety=8, mist_wit=2)
+        return "卤边潮锅下肚，饱食 +8、雾智 +2（适合开馆堂食或自己 eat）。"
     return None

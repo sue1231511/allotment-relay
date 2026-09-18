@@ -92,10 +92,16 @@ async def roll_tend_glitch(conn, steward_id: int, plot: dict) -> str | None:
                 "UPDATE parcels SET harvest_left=MAX(1, harvest_left-1) WHERE id=?",
                 (plot["id"],),
             )
-            return tiers_mod.tag(
+            msg = "斑鸠啄了一口，这茬收成少了一把（还能收，不是枯病）。"
+            await tiers_mod.record_flash(
+                conn,
+                steward_id,
+                "plot",
                 tiers_mod.TIER_MID,
-                "斑鸠啄了一口，这茬收成少了一把（还能收，不是枯病）。",
+                msg,
+                ref_key="flash:bird_peck",
             )
+            return tiers_mod.tag(tiers_mod.TIER_MID, msg)
     if roll < 0.65:
         tier = tiers_mod.roll_tier(weights=(0.35, 0.40, 0.20, 0.05))
         msg = "灶台不好点火：下次做饭多耗 1 精力（已记下，做一次饭就消）。"

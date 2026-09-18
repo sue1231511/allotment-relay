@@ -90,6 +90,56 @@ async def resolve(
     return n
 
 
+async def record_flash(
+    conn,
+    steward_id: int,
+    system_key: str,
+    tier: str,
+    summary: str,
+    *,
+    ref_key: str = "",
+) -> None:
+    """瞬时坏事件：直接记为已结案，供灾档「近日」段展示。"""
+    await ensure_table(conn)
+    now = db.now()
+    rk = ref_key or "flash:instant"
+    if not rk.startswith("flash:"):
+        rk = f"flash:{rk}"
+    await conn.execute(
+        """
+        INSERT INTO steward_tier_event
+        (steward_id, system_key, ref_key, tier, summary, status, created_at, resolved_at)
+        VALUES (?,?,?,?,?,'resolved',?,?)
+        """,
+        (steward_id, system_key, rk, tier, summary[:240], now, now),
+    )
+
+
+async def list_recent_flash(conn, steward_id: int, *, limit: int = 5) -> list[dict]:
+    await ensure_table(conn)
+    cur = await conn.execute(
+        """
+        SELECT system_key, tier, summary, resolved_at
+        FROM steward_tier_event
+        WHERE steward_id=? AND status='resolved' AND ref_key LIKE 'flash:%'
+        ORDER BY resolved_at DESC
+        LIMIT ?
+        """,
+        (steward_id, limit),
+    )
+    rows = await cur.fetchall()
+    out = []
+    for sys_k, tier, summary, _ts in rows:
+        label = tiers_mod.TIER_LABEL.get(tier, tier)
+        sys_nm = SYSTEM_LABEL.get(sys_k, sys_k)
+        out.append(
+            {
+                "line": f"【{label}·已结】{sys_nm} — {summary[:80]}",
+            }
+        )
+    return out
+
+
 async def list_open(conn, steward_id: int, *, limit: int = 12) -> list[dict]:
     await ensure_table(conn)
     conn.row_factory = None
@@ -122,10 +172,22 @@ async def list_open(conn, steward_id: int, *, limit: int = 12) -> list[dict]:
 
 async def format_report(conn, steward_id: int) -> str:
     rows = await list_open(conn, steward_id)
-    if not rows:
-        return "灾档：当前没有未结案的四档坏事件（轻中重绝）。分散 debuff 仍看各工具 status。"
-    lines = ["灾档（未结案坏事件，按最近记录）："]
-    for r in rows:
-        lines.append(f"  · {r['line']}")
-    lines.append("处置后这里会自动结案。总览也可 steward_ops 维修。")
+    flash = await list_recent_flash(conn, steward_id)
+    if not rows and not flash:
+        return (
+            "灾档：当前没有未结案的四档坏事件（轻中重绝）。"
+            "分散 debuff 仍看各工具 status。"
+        )
+    lines: list[str] = []
+    if rows:
+        lines.append("灾档（未结案坏事件，按最近记录）：")
+        for r in rows:
+            lines.append(f"  · {r['line']}")
+        lines.append("处置后这里会自动结案。总览也可 steward_ops 维修。")
+    else:
+        lines.append("灾档：当前没有未结案的四档坏事件（轻中重绝）。")
+    if flash:
+        lines.append("近日瞬时（鸟啄等当场了结，不占待处置）：")
+        for r in flash:
+            lines.append(f"  · {r['line']}")
     return "\n".join(lines)

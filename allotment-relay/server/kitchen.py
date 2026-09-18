@@ -619,16 +619,23 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             "价格自定（贵不贵食客自己比）。堂食带「饱餐」buff（集市买回去自己吃没有）。",
             "小屋 Lv2 更容易出 4★。熟菜回精力 22 起，比生吃划算得多。",
         ]
+        from . import kitchen_special as special_mod
+
         for key, meta in KITCHEN_DISHES.items():
             ings = " + ".join(
                 f"{ITEM_NAMES.get(i, i)}（{i}）" for i in meta["ings"]
             )
+            sp = " · 特殊料理" if key in special_mod.SPECIAL_DISH_KEYS else ""
             lines.append(
                 f"  {meta['emoji']}{meta['name']}（{key}） — {ings} "
                 f"（材料回收 {dish_ingredient_cost(key)} · "
                 f"3★可卖 {dish_sell_price(key, 3)} · "
-                f"+{meta['energy']}精力）"
+                f"+{meta['energy']}精力{sp}）"
             )
+        lines.append(
+            f"（定点菜 {len(KITCHEN_DISHES)} + 灶台 brew {len(HEARTH_RECIPES)} ≈ "
+            f"{len(KITCHEN_DISHES) + len(HEARTH_RECIPES)} 条可学菜谱；特殊料理适合 shop stock 堂食）"
+        )
         lines.append("")
         lines.append("灶台 brew（回雾智，2~3 种材料）：")
         for sig, recipe in HEARTH_RECIPES.items():

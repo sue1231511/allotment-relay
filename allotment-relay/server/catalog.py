@@ -1799,7 +1799,7 @@ NPC_THIEVES = ["篱笆手影", "逾篱阿窃", "夜行摘客", "档口惯偷"]
 
 from .expansion_content import _LIVESTOCK_PRODUCTS, merge_catalog
 
-merge_catalog(CROPS, SEA_CATCH, LIVESTOCK, HEARTH_RECIPES, CRAFT_ITEMS)
+merge_catalog(CROPS, SEA_CATCH, LIVESTOCK, HEARTH_RECIPES, CRAFT_ITEMS, KITCHEN_DISHES)
 FRUIT_CROPS = frozenset(
     k for k, v in CROPS.items()
     if "fruit" in v.get("tags", ()) or "berry" in v.get("tags", ())

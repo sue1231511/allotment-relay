@@ -188,15 +188,57 @@ EXTRA_HEARTH_RECIPES = {
     _sig("pickles", "proc_bread"): {"name": "腌菜三明治", "sell": 38, "tags": ["snack"]},
     _sig("fish_lanternfish", "proc_black_salt"): {"name": "黑盐灯鱼", "sell": 74, "tags": ["sea", "special"]},
     _sig("crop_lime", "fish_glassshrimp"): {"name": "青柠玻璃虾", "sell": 48, "tags": ["sea"]},
+    _sig("crop_rapeseed", "fish_herring"): {"name": "油菜鲱卷", "sell": 40, "tags": ["sea", "leaf"]},
+    _sig("crop_blue_tide_moss", "proc_vinegar"): {"name": "蓝潮醋拌", "sell": 38, "tags": ["sea", "special"]},
 }
 
 
-def merge_catalog(crops, sea_catch, livestock, hearth_recipes, craft_items):
+EXTRA_KITCHEN_DISHES = {
+    "tide_ginger_crab": {
+        "name": "潮姜石蟹", "emoji": "🦀",
+        "ings": ["fish_kingcrab", "crop_tide_ginger", "crop_garlic"],
+        "base_sell": 98, "energy": 32, "tags": ["sea", "special"],
+    },
+    "saltgrass_tomato_soup": {
+        "name": "盐草番茄汤", "emoji": "🍲",
+        "ings": ["crop_saltgrass", "crop_tomato", "proc_salt"],
+        "base_sell": 62, "energy": 26, "tags": ["sea", "home"],
+    },
+    "moon_bean_stew": {
+        "name": "月豆炖菜", "emoji": "🍲",
+        "ings": ["crop_moon_bean", "crop_carrot", "crop_onion"],
+        "base_sell": 58, "energy": 28, "tags": ["special", "legume"],
+    },
+    "blue_moss_salad": {
+        "name": "蓝潮苔沙拉", "emoji": "🥗",
+        "ings": ["crop_blue_tide_moss", "crop_cucumber", "proc_vinegar"],
+        "base_sell": 56, "energy": 22, "tags": ["sea", "special"],
+    },
+    "lamp_sprout_stir": {
+        "name": "灯芽蒜片", "emoji": "💡",
+        "ings": ["crop_lamp_sprout", "crop_garlic", "crop_chili"],
+        "base_sell": 64, "energy": 24, "tags": ["special", "spicy"],
+    },
+    "brine_kelp_pot": {
+        "name": "卤浸海藻锅", "emoji": "🍲",
+        "ings": ["crop_kelp", "proc_pickling_brine", "fish_codling"],
+        "base_sell": 70, "energy": 30, "tags": ["sea"],
+    },
+    "brine_clam_pot": {
+        "name": "卤边潮锅", "emoji": "🫕",
+        "ings": ["fish_kelpcrab", "proc_pickling_brine", "crop_tide_ginger"],
+        "base_sell": 82, "energy": 34, "tags": ["sea", "special"],
+    },
+}
+
+
+def merge_catalog(crops, sea_catch, livestock, hearth_recipes, craft_items, kitchen_dishes):
     crops.update(EXTRA_CROPS)
     crops.update(EXTRA_TREES)
     sea_catch.update(EXTRA_FISH)
     livestock.update(EXTRA_LIVESTOCK)
     hearth_recipes.update(EXTRA_HEARTH_RECIPES)
+    kitchen_dishes.update(EXTRA_KITCHEN_DISHES)
     for key, meta in PROCESSED_ITEMS.items():
         craft_items[key] = dict(meta)
 

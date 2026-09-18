@@ -87,7 +87,7 @@ async def relay_manual() -> str:
     return await game.relay_manual()
 
 
-@mcp.tool(description="身份档案。空=sheet。例：sheet · 岛缘 · 协作 · 收集 · 维修 · 灾档 · peer 名字 · 引航。协作=和各位岛民的协作分与档位；收集=岛收集簿（约58项，25/40/55/全档解锁称呼）；维修=待修总览；灾档=未结案四档坏事件（含份地/赶海 debuff）。要玩才 enroll 安。勿 invite_ops。")
+@mcp.tool(description="身份档案。空=sheet。例：sheet · 岛缘 · 协作 · 收集 · 维修 · 灾档 · peer 名字 · 引航。灾档=未结案四档坏事件（份地/赶海 debuff 等）+ 近日瞬时（鸟啄）；维修=待修总览。收集约58项。要玩才 enroll。勿 invite_ops。")
 async def steward_ops(command: str = "sheet") -> str:
     from . import progress as progress_mod
     return progress_mod.attach_note(
@@ -95,7 +95,7 @@ async def steward_ops(command: str = "sheet") -> str:
     )
 
 
-@mcp.tool(description="份地果园与田间事件。空=指令表。例：status · sow 1 甘蓝 · 肥力 · 虫害 1 施药 · 留种 甘蓝 · weather · 浇水。tend 极小概率鸟啄/灶台难点火/潮气发潮/鱼线打结（记一次消一次，后者影响下次 cast）。肥力/轮作、虫害处置、留种血统为第二批扩展。weather 末尾附本周纪事。勿 sow_all/plant；repair≠岸维。人类 /island 份地点「田间事件」也能处置虫害（与 虫害 子命令同路径）；repair 只修 steward_incidents 意外。")
+@mcp.tool(description="份地果园与田间事件。空=指令表。例：status · sow 1 甘蓝 · 肥力 · 虫害 1 施药 · 留种 甘蓝 · weather · 浇水。tend 极小概率鸟啄（收成-1，steward_ops 灾档 近日已结）/灶台难点火/潮气发潮/鱼线打结（debuff 记一次消一次）。肥力/轮作、虫害、留种。weather 附本周纪事。勿 sow_all/plant；repair≠岸维。人类 /island「田间事件」处置虫害；repair 只修 steward_incidents。")
 async def plot_ops(
     command: Annotated[str, Field(description="incident status；repair 编号。肥力 · 虫害 1 手工|施药|拔除|不管（温室漏风 补网|通风|不管）· 留种 作物。空=指令表。")] = "",
 ) -> str:
@@ -119,7 +119,7 @@ async def tote_ops(command: str = "") -> str:
     return await mux._call_ops(mux.tote_bundle, _kid(), command)
 
 
-@mcp.tool(description="厨房小馆。空=菜谱。例：cook 蒜蓉生蚝 · cook 黑盐炖鱼 · eat 鲭鱼。食材品质影响星级；特殊菜如黑盐炖鱼/雾菇汤/灯笼鱼刺身有强增益也有代价。勿 eat_ops。下馆子")
+@mcp.tool(description="厨房小馆。空=menu 菜谱（定点+brew 125+）。例：cook 潮姜石蟹 · cook 卤边潮锅 · eat 鲭鱼 · shop stock 菜名。特殊菜黑盐/雾菇/灯笼/卤边潮锅 eat 有增益或代价。勿 eat_ops。shop dine 堂食")
 async def kitchen_ops(command: str = "") -> str:
     return await mux._call_ops(mux.kitchen_bundle, _kid(), command)
 

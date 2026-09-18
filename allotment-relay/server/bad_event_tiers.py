@@ -75,6 +75,22 @@ async def record_resolved(
     await store_mod.resolve(conn, steward_id, system_key, ref_key=ref_key)
 
 
+async def record_flash(
+    conn,
+    steward_id: int,
+    system_key: str,
+    tier: str,
+    summary: str,
+    *,
+    ref_key: str = "",
+) -> None:
+    from . import bad_event_tier_store as store_mod
+
+    await store_mod.record_flash(
+        conn, steward_id, system_key, tier, summary, ref_key=ref_key,
+    )
+
+
 def repair_hint(system: str, *, tier: str | None = None) -> str:
     base = REPAIR_HINTS.get(system, "")
     if not base:
