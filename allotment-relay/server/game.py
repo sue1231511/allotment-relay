@@ -368,7 +368,7 @@ async def relay_manual() -> str:
         "  意外 plot_ops incident status 看待处理、incident scan 看风险；repair 12 花票、repair 12 item 用指定材料；无材料选项时拒绝不改扣票，不退当场损失",
         "  土壤肥力/轮作：露天 status 看土肥瘦；plot_ops 肥力 看休耕地。连作同种降肥、换族轮作回升；花生固氮。瘠土长得慢",
         "  虫害：打理后小概率触发。plot_ops 虫害 · 虫害 1 手工|施药(10票)|拔除(毁株)。有虫减收成、偏虫咬品质",
-        "  留种：收成后 plot_ops 留种 甘蓝 耗 1 份菜换种并记代；plot_ops 留种 status 看血统。再 sow 带上代次，品质有倾向",
+        "  留种：收成后 plot_ops 留种 甘蓝 耗 1 份菜换种并记代；plot_ops 留种 status 看血统。第2代起 seed 进 tote_ops 履历",
         "  人类 /island 份地「点一下看地」后选「看地 / 田间事件」，事件页只读刷新、待处理与最近20条记录同 AI 共用；田间插曲从更新后留存，旧正文不补造；处理不是岸维，也不是约会剧情",
         "  随机事件整体 +30%：打理/收成/出海等更容易触发意外或惊喜（田间还有潮蟹/夜蛾/石龟等新访客）。约两成坏事件升级成凶兆：修票翻倍、露天没浇的菜可能枯、栏里牲口可能没撑过、中暑。干旱周田间更凶",
         "  公共物资 plot_ops commons scan · commons claim 编号 · claim 编号 — 全服抢，随机上线。scan 行里写的 claim 2978 可直接当 plot_ops 子命令。不在潮生会",
@@ -485,6 +485,12 @@ async def relay_manual() -> str:
         "  出海 voyage buy skiff|cutter|drifter · depart near|far|deep · return",
         "  船体 hull 随航程磨损（voyage_ops status 看）；低 hull 可能变待修。repair 票修同时回满 hull",
         "  坐钓 cast 另耗鱼线耐久（tide_ops gear 看 line）；线旧可能断线（票饵仍花，无鱼）→ gear repair line",
+        "  鱼群生态：同种捞多了本周变稀；visit_ops 潮生会 禁捕 看禁捞种+压力。网/钓碰上禁捕罚15票放生",
+        "  船只履历 voyage_ops 履历；畜栏 barn_ops 履历；小屋 hut_ops 修屋顶（低顶睡觉少回精力）",
+        "  井蚀 undertide_ops descend/enter 磨损井壁；undertide_ops 清井 花票维护；status 看蚀度",
+        "  家具套装 hut_ops status 看「套装」：灶链/咸鲜排/眠巢。成婚且 home 登记时睡觉偶发家庭小事件",
+        "  岸上工程完工：码头降出海失败、听潮亭缓鱼群压力；地面风暴/晴微调井下倍率（enter 可见）",
+        "  深坑胜场小概率掉盐泥晶/淤片（ut_ 黑市货）；工程捐材料仍走 visit_ops 潮生会 工程 捐",
         "  黑旗截停：fight / flee / parley / bribe（可省略 voyage）",
         "  未命名小鱼（有腿蓝鱼 NPC）不能网，只能坐钓：出海期间 tide_ops cast 才可能碰上",
         "    撒网 net 既不会网到这尾，也不会触发遭遇。岸边/海上 cast 高档竿才可能直接钓进袋",
@@ -2136,13 +2142,26 @@ async def tide_ops(key_id: int, command: str) -> str:
                 msg += f"\n{disc}"
             return f"{pulse}\n{msg}" if pulse else msg
         rarity_cap = 3 + rarity_bonus
-        catch = shaonian_mod.pick_fish_with_fortune(tide, rarity_cap, fortune_key)
-        if catch_bonus and random.random() < catch_bonus:
-            catch = shaonian_mod.pick_fish_with_fortune(tide, min(6, rarity_cap + 1), fortune_key)
-        meta = SEA_CATCH[catch]
-        val_mult, tier_bonus = gear.fish_catch_payout(stats, mode="net")
-        gear_bonus = int(meta["sell"] * max(0.0, val_mult - 1.0)) + tier_bonus
+        meta = None
         async with db.connect() as conn:
+            from . import fish_ecology as fish_ecology_mod
+            from . import fish_ban as fish_ban_mod
+            cap = min(6, rarity_cap + 1) if fortune_key == "fish_catch" else rarity_cap
+            catch = await fish_ecology_mod.pick(
+                conn, mode="net", tide=tide, rarity_cap=cap,
+            )
+            if catch_bonus and random.random() < catch_bonus:
+                catch = await fish_ecology_mod.pick(
+                    conn, mode="net", tide=tide, rarity_cap=min(6, rarity_cap + 1),
+                )
+            ban_msg = await fish_ban_mod.enforce(conn, s["id"], catch)
+            if ban_msg:
+                await conn.commit()
+                parts_out = [x for x in (pulse, ban_msg, extra, disc) if x]
+                return "\n".join(parts_out)
+            meta = SEA_CATCH[catch]
+            val_mult, tier_bonus = gear.fish_catch_payout(stats, mode="net")
+            gear_bonus = int(meta["sell"] * max(0.0, val_mult - 1.0)) + tier_bonus
             from . import item_traits as traits_mod
             state = traits_mod.roll_fish_state(catch)
             weight = traits_mod.roll_fish_weight_kg(catch)
@@ -2239,17 +2258,26 @@ async def tide_ops(key_id: int, command: str) -> str:
             parts = [x for x in (pulse, msg, extra) if x]
             return "\n".join(parts)
         rarity_cap = 3 + rarity_b
-        catch = shaonian_mod.pick_fish_with_fortune(
-            tide, rarity_cap, fortune_key, allow_cast_only=True
-        )
-        if catch_b and random.random() < catch_b + 0.08:
-            catch = shaonian_mod.pick_fish_with_fortune(
-                tide, min(6, rarity_cap + 1), fortune_key, allow_cast_only=True
-            )
-        meta = SEA_CATCH[catch]
-        val_mult, tier_bonus = gear.fish_catch_payout(stats, mode="cast")
-        gear_bonus = int(meta["sell"] * max(0.0, val_mult - 1.0)) + tier_bonus
         async with db.connect() as conn:
+            from . import fish_ecology as fish_ecology_mod
+            from . import fish_ban as fish_ban_mod
+            cap = min(6, rarity_cap + 1) if fortune_key == "fish_catch" else rarity_cap
+            catch = await fish_ecology_mod.pick(
+                conn, mode="cast", tide=tide, rarity_cap=cap, allow_cast_only=True,
+            )
+            if catch_b and random.random() < catch_b + 0.08:
+                catch = await fish_ecology_mod.pick(
+                    conn, mode="cast", tide=tide,
+                    rarity_cap=min(6, rarity_cap + 1), allow_cast_only=True,
+                )
+            ban_msg = await fish_ban_mod.enforce(conn, s["id"], catch)
+            if ban_msg:
+                await conn.commit()
+                parts = [x for x in (pulse, ban_msg, extra) if x]
+                return "\n".join(parts)
+            meta = SEA_CATCH[catch]
+            val_mult, tier_bonus = gear.fish_catch_payout(stats, mode="cast")
+            gear_bonus = int(meta["sell"] * max(0.0, val_mult - 1.0)) + tier_bonus
             from . import item_traits as traits_mod
             state = traits_mod.roll_fish_state(catch)
             weight = traits_mod.roll_fish_weight_kg(catch)

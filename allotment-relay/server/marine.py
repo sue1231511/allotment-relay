@@ -1137,6 +1137,8 @@ async def _resolve_voyage(
     route = VOYAGE_ROUTES[voyage["route"]]
     s = await _refresh_steward(conn, s["id"])
     fail_chance = route["fail"] + await events.voyage_fail_modifier()
+    from . import layer_link as layer_link_mod
+    fail_chance *= await layer_link_mod.voyage_fail_mult(conn)
     from . import social as social_mod
     fail_chance = max(0.05, fail_chance - social_mod.badge_val(s, "voyage_fail_reduce"))
     if world.current_weather() == "gale":
@@ -1167,6 +1169,7 @@ async def _resolve_voyage(
     loot_table = voyage_loot_table(voyage["route"], rarity_bonus=await _hook_rarity_bonus(conn, s["id"]))
 
     from . import boat_hull as hull_mod
+    from . import voyage_chronicle as vlog_mod
     hull_note = await hull_mod.wear_after_voyage(
         conn, s["id"], voyage["route"], storm=failed or world.current_weather() == "gale",
     )
@@ -1198,6 +1201,10 @@ async def _resolve_voyage(
     msg = f"{route['label']}归港：" + "，".join(loot_lines)
     msg += flavor.maybe_suffix(flavor.VOYAGE_RETURN_BAD if failed else flavor.VOYAGE_RETURN_GOOD)
     msg += f" · {hull_note}"
+    await vlog_mod.append(
+        conn, s["id"],
+        f"归港 {route['label']}{'（折返）' if failed else ''} · {hull_note}",
+    )
     if s.get("boat_damaged"):
         msg += "（船损，voyage_ops repair）"
 
@@ -1322,6 +1329,11 @@ async def voyage_ops(key_id: int, command: str) -> str:
     parts = command.strip().split(maxsplit=1)
     verb = parts[0].lower() if parts else "status"
 
+    if verb in ("履历", "log", "chronicle"):
+        from . import voyage_chronicle as vlog_mod
+        async with db.connect() as conn:
+            return await vlog_mod.status(conn, s["id"])
+
     if verb == "status":
         async with db.connect() as conn:
             voyage = await _get_voyage(conn, s["id"])
@@ -1412,7 +1424,9 @@ async def voyage_ops(key_id: int, command: str) -> str:
                 (cost, s["id"]),
             )
             from . import boat_hull as hull_mod
+            from . import voyage_chronicle as vlog_mod
             await hull_mod.repair_full(conn, s["id"])
+            await vlog_mod.append(conn, s["id"], f"修船（-{cost}票{nail_note}）")
             await conn.commit()
         return f"修船完成（-{cost} 票{nail_note}），船体回满，可以 depart"
 
@@ -1446,6 +1460,12 @@ async def voyage_ops(key_id: int, command: str) -> str:
             duration = route["duration"]
             if world.current_weather() == "misty":
                 duration = int(duration * 1.15)
+            from . import voyage_chronicle as vlog_mod
+            boat = BOATS.get(s.get("boat_key") or "", {})
+            await vlog_mod.append(
+                conn, s["id"],
+                f"出航 {route['label']}（{boat.get('name', '船')}）",
+            )
             await conn.execute(
                 """
                 INSERT INTO voyages (steward_id, route, departed_at, returns_at, status, encounter)

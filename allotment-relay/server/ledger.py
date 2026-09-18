@@ -165,6 +165,39 @@ async def note_gain(conn, owner_id: int, item: str, qty: int, *lines: str) -> in
     return await birth(conn, owner_id, item, list(lines), qty=qty)
 
 
+async def birth_story(
+    conn,
+    owner_id: int,
+    item: str,
+    lines: list[str],
+    *,
+    qty: int = 1,
+) -> int:
+    """种子血统等：强制记履历（不受 is_notable 限制）。"""
+    if qty <= 0 or not (item or "").strip():
+        return 0
+    owner_id = int(owner_id)
+    have = await (await conn.execute(
+        "SELECT COUNT(*) FROM item_ledgers WHERE owner_id=? AND item=? AND alive=1",
+        (owner_id, item),
+    )).fetchone()
+    living = int((have[0] if have else 0) or 0)
+    n = min(int(qty), max(0, MAX_LIVING - living))
+    if n <= 0:
+        return 0
+    now = db.now()
+    blob = _dump(lines)
+    for _ in range(n):
+        await conn.execute(
+            """
+            INSERT INTO item_ledgers (item, owner_id, lines_json, born_at, updated_at, alive)
+            VALUES (?,?,?,?,?,1)
+            """,
+            (item, owner_id, blob, now, now),
+        )
+    return n
+
+
 async def _living_rows(conn, owner_id: int, item: str, qty: int):
     return await (await conn.execute(
         """

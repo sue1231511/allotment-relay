@@ -138,19 +138,26 @@ def _line(animal: dict | None, slot: int) -> str:
         state = f"放养{extra}"
     else:
         state = "待喂"
+    ped = (animal.get("pedigree_label") or "").strip()
+    ped_bit = f"·{ped}" if ped else ""
     age = animal_age_label(animal)
     extra = f" · {age}" if age else ""
     from . import barn_disease as barn_disease_mod
     sick = barn_disease_mod.animal_ailment_label(animal)
     if sick:
         extra += f" · 病{sick}"
-    return f"  #{slot}: {spec['emoji']}{spec['name']}（{state}）{extra}"
+    return f"  #{slot}: {spec['emoji']}{spec['name']}（{state}）{ped_bit}{extra}"
 
 
 async def barn_ops(key_id: int, command: str) -> str:
     s = await require_steward(key_id)
     parts = command.strip().split(maxsplit=2)
     verb = parts[0].lower() if parts else "status"
+
+    if verb in ("履历", "pedigree", "血统"):
+        from . import barn_pedigree as pedigree_mod
+        async with db.connect() as conn:
+            return await pedigree_mod.status(conn, s["id"])
 
     if verb == "status":
         async with db.connect() as conn:
@@ -283,13 +290,18 @@ async def barn_ops(key_id: int, command: str) -> str:
             )
             guard = 1 if meta.get("guard") else 0
             stocked = db.now() if not meta.get("hive") else db.now()
+            from . import barn_pedigree as pedigree_mod
+            _gen, ped_label = await pedigree_mod.next_generation(conn, s["id"], species)
             await conn.execute(
                 """
                 UPDATE barn_animals SET species=?, stocked_at=?, fed=0, guard=?, born_at=?,
-                    ailment='', ailment_at=0
+                    ailment='', ailment_at=0, pedigree_label=?
                 WHERE steward_id=? AND slot=?
                 """,
-                (species, stocked, guard, db.now(), s["id"], slot),
+                (species, stocked, guard, db.now(), ped_label, s["id"], slot),
+            )
+            await pedigree_mod.log(
+                conn, s["id"], slot, f"入栏 {ped_label}（-{meta['buy']}票）",
             )
             await conn.commit()
         if meta.get("guard"):

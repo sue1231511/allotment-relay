@@ -1274,6 +1274,8 @@ async def undertide_ops(key_id: int, command: str) -> str:
                 "UPDATE stewards SET tickets=tickets-? WHERE id=?", (utcfg.UT_DESCEND_COST, s["id"])
             )
             await conn.execute("UPDATE steward_undertide SET access=1 WHERE steward_id=?", (s["id"],))
+            from . import well_corrosion as well_corrosion_mod
+            well_note = await well_corrosion_mod.bump(conn, s["id"], 5)
             from . import bond as bond_mod
             await bond_mod.well(conn, s["id"], bond_mod.WELL_FIRST, once="well_first")
             av = await avatar_key(conn, s["id"])
@@ -1301,13 +1303,22 @@ async def undertide_ops(key_id: int, command: str) -> str:
                 ) + "\n\n" + utcopy.GUIDE_NOTE
             return utcopy.DESCEND_TEXT + "\n\n" + utcopy.GUIDE_NOTE
 
+        if verb in ("清井", "well-clean", "cleanswell"):
+            from . import well_corrosion as well_corrosion_mod
+            msg = await well_corrosion_mod.clean(conn, s["id"])
+            await conn.commit()
+            return hits_prefix + msg
+
         if verb == "enter":
             if not ut["access"]:
                 raise ValueError(utcopy.NO_ACCESS_HINT)
+            from . import well_corrosion as well_corrosion_mod
+            wnote = await well_corrosion_mod.bump(conn, s["id"], 2)
             event = await _maybe_event(conn, s, ut)
             kroom = await _check_k_room(conn, ut)
             from . import undertide_tide as utide
-            mult, tide_line = await utide.tide_mult(conn)
+            from . import layer_link as layer_link_mod
+            mult, tide_line = await layer_link_mod.effective_ut_mult(conn)
             tide_note = f"\n\n（{utcopy.TIDE_HINT.format(line=tide_line)}）" if tide_line else ""
             av = await avatar_key(conn, s["id"])
             head = utcopy.AVATAR_K_ENTER if av == "K" else utcopy.pick(utcopy.ENTER_POOL)
@@ -1329,10 +1340,15 @@ async def undertide_ops(key_id: int, command: str) -> str:
             from . import bond as bond_mod
             await bond_mod.well(conn, s["id"], bond_mod.WELL_ENTER)
             await conn.commit()
-            return hits_prefix + head + tide_note + event + kroom + hype_note + guide_tip
+            out = hits_prefix + head + tide_note + event + kroom + hype_note + guide_tip
+            if wnote:
+                out += f"\n{wnote}"
+            return out
 
         if verb == "status":
-            return hits_prefix + await _cmd_status(conn, s, ut)
+            from . import well_corrosion as well_corrosion_mod
+            base = hits_prefix + await _cmd_status(conn, s, ut)
+            return base + "\n" + await well_corrosion_mod.status_line(conn, s["id"])
 
         if verb == "repair":
             if not ut["access"]:
