@@ -26,6 +26,16 @@ TITLES = {
     "收排": "收排",
     "名池": "名池",
     "巡排": "巡排",
+    "layer": "水层",
+    "unsnag": "解挂",
+    "fishfight": "搏鱼",
+}
+
+LAYER_LABELS = {
+    "shore": "岸带",
+    "near": "近海",
+    "far": "外海",
+    "deep": "深槽",
 }
 
 LOOK = {
@@ -47,6 +57,8 @@ VOYAGE_OK = {
     "return": "voyage return",
     "buy skiff": "voyage buy skiff",
     "repair": "voyage repair",
+    "parts": "voyage 部件",
+    "parts repair": "voyage 部件 修",
     "fight": "fight",
     "flee": "flee",
     "parley": "parley",
@@ -114,6 +126,21 @@ def _command(kind: str, target: str) -> tuple[str, str]:
         if verb == "名池" and not extra:
             raise ApiError("BAD_REQUEST", "先写下池名。")
         return "tide", f"{verb} {extra}".strip()
+    if verb == "layer":
+        ly = (extra or "").lower()
+        if ly not in LAYER_LABELS:
+            raise ApiError("BAD_REQUEST", "水层只能选：岸带、近海、外海、深槽。")
+        return "tide", f"水层 {ly}"
+    if verb == "unsnag":
+        mode = (extra or "").strip()
+        if mode not in ("硬拉", "切线"):
+            raise ApiError("BAD_REQUEST", "解挂只能硬拉或切线。")
+        return "tide", f"解挂 {mode}"
+    if verb == "fishfight":
+        mode = (extra or "").strip()
+        if mode not in ("硬拉", "放走", "切线"):
+            raise ApiError("BAD_REQUEST", "搏鱼只能硬拉、放走或切线。")
+        return "tide", f"搏鱼 {mode}"
     raise ApiError("BAD_REQUEST", "潮岸没有这一下。")
 
 
@@ -142,9 +169,13 @@ async def _gear_view(steward_id: int) -> dict[str, Any]:
 
 async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
     """给 /island 港口和海边用。数值仍走 tide_ops / marriage_ops，这里只摊开能点的。"""
-    from .. import marine
+    from .. import big_fish_fight, boat_parts, fishing_parts, marine, sea_layer_pref
 
     gear = await _gear_view(s["id"])
+    sea_layer = await sea_layer_pref.get_layer(conn, s["id"])
+    layer_name = LAYER_LABELS.get(sea_layer, sea_layer)
+    _, _, hook_snag = await fishing_parts._get(conn, s["id"], "hook")
+    fish_fight = await big_fish_fight.get_pending(conn, s["id"])
     stock = await db.get_satchel(s["id"])
     tickets = int(s.get("tickets") or 0)
     energy_now = int(s.get("energy") or 0)
@@ -168,8 +199,15 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
     can_return = sailing and vstatus == "sailing"
     hailed = vstatus == "hailed"
     fish_enc = vstatus == "fish_encounter"
-    can_net = bool(gear["can_net"]) and tickets >= 4 and energy_now >= int(gear["net_energy"] or 0)
-    can_cast = bool(gear["can_cast"]) and tickets >= 3 and energy_now >= int(gear["cast_energy"] or 0)
+    blocked_fish = bool(hook_snag or fish_fight)
+    can_net = (
+        bool(gear["can_net"]) and tickets >= 4 and energy_now >= int(gear["net_energy"] or 0)
+        and not blocked_fish
+    )
+    can_cast = (
+        bool(gear["can_cast"]) and tickets >= 3 and energy_now >= int(gear["cast_energy"] or 0)
+        and not blocked_fish
+    )
     fish = {k: v for k, v in stock.items() if str(k).startswith("fish_")}
     catch_line = (
         "、".join(f"{ITEM_NAMES.get(k, k)}×{v}" for k, v in list(fish.items())[:4])
@@ -179,6 +217,16 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
     if hailed:
         port_line = "黑旗截停。先点打、逃、谈或买路。"
         beach_line = f"{tide_name}。船在海上碰上事了，先去港口。"
+    elif fish_fight:
+        from ..catalog import SEA_CATCH
+
+        sp = fish_fight["species"]
+        sp_name = SEA_CATCH.get(sp, {}).get("name") or sp
+        port_line = f"大鱼在搏斗：{sp_name} {fish_fight['weight_kg']}kg。先硬拉、放走或切线。"
+        beach_line = f"{tide_name}。港口有大鱼在搏斗，先去码头。"
+    elif hook_snag:
+        port_line = "钩挂底了。先解挂：硬拉或切线，再撒网坐钓。"
+        beach_line = f"{tide_name}。港口挂底了，先去码头解挂。"
     elif fish_enc:
         port_line = "未命名小鱼碰上了。礼遇或动手，二选一。"
         beach_line = f"{tide_name}。港口那边碰上未命名小鱼了。"
@@ -219,12 +267,66 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
             kind="look",
             name="看海况",
             emoji="🌊",
-            note=f"{tide_name} · {catch_line}",
+            note=f"{tide_name} · 水层{layer_name} · {catch_line}",
             price="看",
             can=True,
             target="status",
-            detail=f"{tide_name}。{catch_line}。不是围观页。",
+            detail=f"{tide_name}。下次网/钓按「{layer_name}」选鱼。{catch_line}。不是围观页。",
         ),
+    ]
+    for ly_key, ly_label in LAYER_LABELS.items():
+        cast_items.append(
+            _sku(
+                sid=f"layer-{ly_key}",
+                kind="layer",
+                name=f"水层·{ly_label}",
+                emoji="🧭",
+                note="已选" if sea_layer == ly_key else "定下次撒网/坐钓海域",
+                price="选" if sea_layer != ly_key else "✓",
+                can=sea_layer != ly_key,
+                target=ly_key,
+                detail="岸带最稳，深槽鱼更稀更凶。不是出海 depart 路线。",
+            )
+        )
+    if hook_snag:
+        for mode, note in (("硬拉", "赌一把把钩拉上来。"), ("切线", "钩线大损，但立刻能再钓。")):
+            cast_items.append(
+                _sku(
+                    sid=f"unsnag-{mode}",
+                    kind="unsnag",
+                    name=f"解挂·{mode}",
+                    emoji="⚓",
+                    note=note,
+                    price=mode,
+                    can=True,
+                    target=mode,
+                    detail="挂底时不能撒网坐钓。不是修渔网。",
+                )
+            )
+    if fish_fight:
+        from ..catalog import SEA_CATCH
+
+        sp = fish_fight["species"]
+        sp_name = SEA_CATCH.get(sp, {}).get("name") or sp
+        for mode, note in (
+            ("硬拉", "赢才进袋，可能脱钩。"),
+            ("放走", "不要这条了。"),
+            ("切线", "放弃，线钩会损。"),
+        ):
+            cast_items.append(
+                _sku(
+                    sid=f"fight-{mode}",
+                    kind="fishfight",
+                    name=f"搏鱼·{mode}",
+                    emoji="🐟",
+                    note=f"{sp_name} {fish_fight['weight_kg']}kg。{note}",
+                    price=mode,
+                    can=True,
+                    target=mode,
+                    detail="稀有鱼搏斗。硬拉赢才进行囊。",
+                )
+            )
+    cast_items.extend([
         _sku(
             sid="net",
             kind="net",
@@ -247,7 +349,7 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
             target="cast",
             detail="要钓竿和蚯蚓饵。出海期间才可能碰上未命名小鱼。",
         ),
-    ]
+    ])
     if not has_shovel:
         dig_note = "要铲子。去广场杂货铺买。"
     elif tide not in ("ebb", "slack"):
@@ -294,8 +396,19 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
             detail="赶海掏洞。涨潮关。不是挖矿。",
         ),
     ]
+    parts_note = ""
+    if boat_key:
+        parts = await boat_parts.get_all(conn, s["id"])
+        sail_d, sail_mx = parts["sail"]
+        rud_d, rud_mx = parts["rudder"]
+        lan_d, lan_mx = parts["lantern"]
+        parts_note = f" · 帆{sail_d}/{sail_mx}舵{rud_d}/{rud_mx}灯{lan_d}/{lan_mx}"
     if boat_name:
-        boat_note = f"{boat_name}" + (" · 待修" if damaged else "") + (" · 出海中" if sailing else "")
+        boat_note = (
+            f"{boat_name}{parts_note}"
+            + (" · 待修" if damaged else "")
+            + (" · 出海中" if sailing else "")
+        )
     else:
         boat_note = f"还没有船。小舢板 {skiff['cost']} 票。"
     voyage_items = [
@@ -356,6 +469,21 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
                 can=tickets >= int(boat.get("repair") or 12),
                 target="repair",
                 detail="船损不能出海。",
+            )
+        )
+    if boat_key and not sailing:
+        repair_parts_cost = 18
+        voyage_items.append(
+            _sku(
+                sid="parts-repair",
+                kind="voyage",
+                name="修帆舵灯",
+                emoji="🛠️",
+                note=f"{repair_parts_cost} 票起，备铜钉省 6 票。",
+                price="修",
+                can=tickets >= repair_parts_cost,
+                target="parts repair",
+                detail="一次回满帆、舵、灯。低耐久易出海失败。船体仍用「修船」。",
             )
         )
     if hailed:

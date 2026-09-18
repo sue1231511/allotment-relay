@@ -107,7 +107,7 @@ async def hut_ops(command: str = "") -> str:
     return await mux._call_ops(mux.hut_bundle, _kid(), command)
 
 
-@mcp.tool(description="渔获出海赶海渔排漂流瓶。空=列表。例：net · cast · 水层 near · 搏鱼 硬拉 · 解挂 · voyage 部件 修 · dig。人类 /island 港口渔排栏。dig≠崖矿。")
+@mcp.tool(description="渔获出海赶海渔排漂流瓶。空=列表。例：net · cast · 水层 near · 搏鱼 硬拉 · 解挂 · voyage 部件 修 · dig。人类 /island 港口岸边/出海/渔排栏可点同一套。dig≠崖矿。")
 async def tide_ops(
     command: Annotated[str, Field(description="net/cast · 水层 shore|near|far|deep · 搏鱼 硬拉|放走|切线 · 解挂 · gear repair hook · voyage 部件 修 · dig 赶海。")] = "",
 ) -> str:
