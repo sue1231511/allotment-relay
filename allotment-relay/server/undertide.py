@@ -1286,6 +1286,8 @@ async def undertide_ops(key_id: int, command: str) -> str:
             crack_note = await crack_mod.maybe_after_bump(
                 conn, s["id"], old=old_lvl, new=new_lvl,
             )
+            from . import layer_link as layer_link_mod
+            salt_note = await layer_link_mod.maybe_salt_blot_after_well(conn, s["id"])
             from . import bond as bond_mod
             await bond_mod.well(conn, s["id"], bond_mod.WELL_FIRST, once="well_first")
             av = await avatar_key(conn, s["id"])
@@ -1307,6 +1309,8 @@ async def undertide_ops(key_id: int, command: str) -> str:
                     out += f"\n{well_note}"
                 if crack_note:
                     out += f"\n{crack_note}"
+                if salt_note:
+                    out += f"\n{salt_note}"
                 return out
 
             if av == "K":
@@ -1348,10 +1352,11 @@ async def undertide_ops(key_id: int, command: str) -> str:
             crack_note = await crack_mod.maybe_after_bump(
                 conn, s["id"], old=old_lvl, new=new_lvl,
             )
+            from . import layer_link as layer_link_mod
+            salt_note = await layer_link_mod.maybe_salt_blot_after_well(conn, s["id"])
             event = await _maybe_event(conn, s, ut)
             kroom = await _check_k_room(conn, ut)
             from . import undertide_tide as utide
-            from . import layer_link as layer_link_mod
             mult, tide_line = await layer_link_mod.effective_ut_mult(conn)
             tide_note = f"\n\n（{utcopy.TIDE_HINT.format(line=tide_line)}）" if tide_line else ""
             av = await avatar_key(conn, s["id"])
@@ -1379,6 +1384,8 @@ async def undertide_ops(key_id: int, command: str) -> str:
                 out += f"\n{wnote}"
             if crack_note:
                 out += f"\n{crack_note}"
+            if salt_note:
+                out += f"\n{salt_note}"
             return out
 
         if verb == "status":

@@ -1,6 +1,8 @@
 """上下层环境联动 + 岸上工程加成 — 第三批。"""
 from __future__ import annotations
 
+import random
+
 from . import db, world
 
 
@@ -60,3 +62,47 @@ async def fish_pressure_relief(conn) -> float:
     if await works_mod.active_bonus(conn, "ting"):
         return 0.85
     return 1.0
+
+
+async def maybe_salt_blot_after_well(conn, steward_id: int) -> str | None:
+    """井蚀高时，潮返地面随机露天地盐斑（§53 上下层联动）。"""
+    from . import soil as soil_mod
+    from . import well_corrosion as wc_mod
+    from . import works as works_mod
+
+    lvl = await wc_mod.get_level(conn, steward_id)
+    if lvl < 78:
+        return None
+    chance = 0.08
+    if await works_mod.active_bonus(conn, "dock"):
+        chance *= 0.5
+    if await works_mod.active_bonus(conn, "shed"):
+        chance *= 0.85
+    if random.random() > chance:
+        return None
+    cur = await conn.execute(
+        """
+        SELECT id, slot FROM parcels
+        WHERE steward_id=? AND NOT orchard AND NOT greenhouse AND crop IS NOT NULL
+        ORDER BY RANDOM() LIMIT 1
+        """,
+        (steward_id,),
+    )
+    row = await cur.fetchone()
+    if not row:
+        return None
+    fid, slot = int(row[0]), row[1]
+    cur = await conn.execute(
+        "SELECT COALESCE(soil_fertility, ?) FROM parcels WHERE id=?",
+        (soil_mod.DEFAULT_FERTILITY, fid),
+    )
+    fert = int((await cur.fetchone())[0])
+    new_f = max(soil_mod.MIN_FERTILITY, fert - 12)
+    await conn.execute(
+        "UPDATE parcels SET soil_fertility=? WHERE id=?",
+        (new_f, fid),
+    )
+    return (
+        f"潮返地面：{slot}号地起盐斑，肥力 {fert}→{new_f}"
+        "（undertide_ops 清井；潮生会 工程 旧码头修完能略缓）"
+    )
