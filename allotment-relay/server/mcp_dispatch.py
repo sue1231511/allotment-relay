@@ -467,6 +467,7 @@ async def tide_bundle(key_id: int, command: str = "") -> str:
             "grab": (marine.voyage_ops, True),
             "depart": (marine.voyage_ops, True),
             "return": (marine.voyage_ops, True),
+            "帆撕": (marine.voyage_ops, True),
             "dig": (beach.beach_ops, True),
             "probe": (beach.beach_ops, True),
             "搭排": (marine.pen_ops, True),

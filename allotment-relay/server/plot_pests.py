@@ -13,6 +13,7 @@ PEST_META = {
     "salt_spot": {"name": "盐斑", "emoji": "🧂", "yield_penalty": 0.85},
     "weed": {"name": "杂草", "emoji": "🌾", "yield_penalty": 0.9},
     "blight": {"name": "菌病", "emoji": "🍄", "yield_penalty": 0.6},
+    "gh_leak": {"name": "温室漏风", "emoji": "💨", "yield_penalty": 0.88},
 }
 
 HAND_CLEAR_CHANCE = 0.55
@@ -25,6 +26,18 @@ async def maybe_spawn(conn, plot: dict[str, Any]) -> str | None:
         return None
     if plot.get("greenhouse"):
         base = 0.05
+        if random.random() < 0.04:
+            key = "gh_leak"
+            level = 1
+            await conn.execute(
+                "UPDATE parcels SET pest_key=?, pest_level=? WHERE id=?",
+                (key, level, plot["id"]),
+            )
+            meta = PEST_META[key]
+            return (
+                f"{meta['emoji']}{meta['name']}上了{plot.get('slot')}号棚"
+                f"（plot_ops 虫害 {plot.get('slot')} 补网|通风|不管）"
+            )
     else:
         base = 0.09
     fert = int(plot.get("soil_fertility") or 70)
@@ -110,6 +123,42 @@ async def handle(
             return f"{label} 施药 {meta['name']}清了（-{DRUG_TICKETS} 票）"
         return f"{label} 药力不够，{meta['name']}还在（-{DRUG_TICKETS} 票，可再施或拔除）"
 
+    if key == "gh_leak":
+        if act in ("补网", "补", "patch", "net"):
+            if not await db.take_item(conn, sid, "drift_twine", 1):
+                raise ValueError("补棚网要漂绳×1（赶海/工坊可得）")
+            await _clear_pest(conn, plot["id"])
+            return f"{label} 补了漏缝，{meta['name']}过了"
+        if act in ("通风", "vent", "开"):
+            lv = max(0, int(plot.get("pest_level") or 1) - 1)
+            if lv <= 0:
+                await _clear_pest(conn, plot["id"])
+                return f"{label} 通风一夜，{meta['name']}散了（这茬长得略慢）"
+            await conn.execute(
+                "UPDATE parcels SET pest_level=? WHERE id=?",
+                (lv, plot["id"]),
+            )
+            return f"{label} 开了侧窗，{meta['name']}轻了些"
+        if act in ("不管", "wait", "ignore", "观望"):
+            if random.random() < 0.35:
+                await _clear_pest(conn, plot["id"])
+                return f"{label} 风自己停了，{meta['name']}好了"
+            await conn.execute(
+                "UPDATE parcels SET pest_level=MIN(3, COALESCE(pest_level,1)+1) WHERE id=?",
+                (plot["id"],),
+            )
+            return f"{label} 漏风还在，{meta['name']}更恼（可补网或通风）"
+
+    if act in ("不管", "wait", "ignore", "观望"):
+        if random.random() < 0.28:
+            await _clear_pest(conn, plot["id"])
+            return f"{label} {meta['name']}自己退了"
+        await conn.execute(
+            "UPDATE parcels SET pest_level=MIN(3, COALESCE(pest_level,1)+1) WHERE id=?",
+            (plot["id"],),
+        )
+        return f"{label} 没管它，{meta['name']}蔓延了（可手工/施药/拔除）"
+
     if act in ("拔除", "拔", "rip", "burn", "烧"):
         crop = plot.get("crop")
         name = CROPS.get(crop or "", {}).get("name", crop or "作物")
@@ -132,7 +181,10 @@ async def handle(
             )
         return f"{label} 拔除病株，{name}没了，{meta['name']}也断了"
 
-    raise ValueError("虫害处置：手工 · 施药 · 拔除（例 plot_ops 虫害 1 施药）")
+    raise ValueError(
+        "虫害处置：手工 · 施药 · 拔除 · 不管"
+        "（温室漏风：补网|通风|不管。例 plot_ops 虫害 1 施药）"
+    )
 
 
 async def _clear_pest(conn, plot_id: int) -> None:
