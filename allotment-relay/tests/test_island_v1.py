@@ -1274,8 +1274,8 @@ def test_island_page_is_modular() -> None:
     assert "warmScenesInBackground" in (ROOT / "server/static/island/boot.js").read_text(encoding="utf-8")
     assert "warmScenesLater" in app
     assert "waitScenePics" in app
-    assert html.count("island.css?v=ledger1") == 1
-    assert html.count("app.js?v=ledger1") == 1
+    assert html.count("island.css?v=plot-overview2") == 1
+    assert html.count("app.js?v=plot-overview2") == 1
     assert html.count("boot.js?v=keynorm1") == 1
     assert 'rel="preload"' in html
     assert "island-map.webp" in html
@@ -1438,6 +1438,7 @@ def test_island_page_is_modular() -> None:
     assert "await waitScenePics" in app
     assert "warmScenesLater" in app
     assert "enterGen" in app
+    assert 'from "./scenes/home.js?v=plot-overview1"' in app
     assert 'from "./ui/modal.js?v=farm-batch1"' in app
     modal_src = (ROOT / "server/static/island/ui/modal.js").read_text(encoding="utf-8")
     assert "export function showFormSheet" in modal_src
@@ -1461,6 +1462,8 @@ def test_island_page_is_modular() -> None:
     assert "#7fa24a" not in css
     assert "#8faf4a" not in css
     assert "海边草地底图" in css
+    assert ".island-plot-overview" in css
+    assert ".island-plot-stat.is-on.is-ripe" in css
     assert 'sceneArt("yards")' in (ROOT / "server/static/island/scenes/home.js").read_text(encoding="utf-8")
     yards_png = ROOT / "server/static/island/assets/scenes/yards.png"
     assert yards_png.exists()
@@ -1796,6 +1799,12 @@ def test_island_page_is_modular() -> None:
     assert "island-fertilize-all" in home_js
     assert "onCareBatch" in home_js
     assert "一键浇水" in home_js
+    assert "island-plot-overview" in home_js
+    assert "份地地况" in home_js
+    assert "待打理" in home_js
+    assert "待浇水" in home_js
+    assert "成熟" in home_js
+    assert "allPlots" in home_js
     assert "sow_all" not in home_js
     assert "点一下看地" in home_js
     assert "is-peek" in home_js
