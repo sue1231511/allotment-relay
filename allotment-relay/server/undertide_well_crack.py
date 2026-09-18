@@ -45,10 +45,15 @@ async def maybe_after_bump(conn, steward_id: int, *, old: int, new: int) -> str 
         """,
         (HAZARD_CRACK, json.dumps(payload, ensure_ascii=False), steward_id),
     )
-    return (
+    from . import bad_event_tiers as tiers_mod
+
+    tier = tiers_mod.TIER_FATAL if new >= wc_mod.MAX_CORROSION - 5 else tiers_mod.TIER_HEAVY
+    return tiers_mod.tag(
+        tier,
         f"井壁裂了道缝（蚀 {new}/{wc_mod.MAX_CORROSION}）！"
         " undertide_ops 井险 清井|绑索|硬闯"
         "（清井=20票大维护；绑索=漂绳×1或10票；硬闯=不花钱但蚀度+6、可能扭伤）"
+        + tiers_mod.repair_hint("undertide", tier=tier),
     )
 
 
