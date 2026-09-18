@@ -146,6 +146,12 @@ def _line(animal: dict | None, slot: int) -> str:
     sick = barn_disease_mod.animal_ailment_label(animal)
     if sick:
         extra += f" · 病{sick}"
+    if int(animal.get("escaped_at") or 0) > 0:
+        return f"  #{slot}: {spec['emoji']}{spec['name']}（跑丢了）→ barn_ops 寻回 {slot}"
+    from . import barn_temper as temper_mod
+    t = (animal.get("temper") or "").strip()
+    if t:
+        extra += f" · {temper_mod.label(animal)}"
     return f"  #{slot}: {spec['emoji']}{spec['name']}（{state}）{ped_bit}{extra}"
 
 
@@ -167,12 +173,33 @@ async def barn_ops(key_id: int, command: str) -> str:
             await conn.commit()
         return msg
 
+    if verb in ("寻回", "recover", "roundup"):
+        from . import barn_escape as escape_mod
+        slot = int(parts[1]) if len(parts) > 1 else 1
+        async with db.connect() as conn:
+            msg = await escape_mod.recover(conn, s, slot)
+            await conn.commit()
+        return msg
+
     if verb == "status":
         async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             await tick_animal_age(conn, s["id"])
             from . import barn_disease as barn_disease_mod
+            from . import barn_escape as escape_mod
+            from . import barn_temper as temper_mod
+
+            await temper_mod.backfill_empty(conn, s["id"])
             disease_notes = await barn_disease_mod.tick_barn_disease(conn, s["id"])
+            escape_notes: list[str] = []
+            rows_pre = await (await conn.execute(
+                "SELECT * FROM barn_animals WHERE steward_id=? ORDER BY slot",
+                (s["id"],),
+            )).fetchall()
+            for r in rows_pre:
+                note = await escape_mod.tick_escape(conn, s["id"], dict(r))
+                if note:
+                    escape_notes.append(note)
             await conn.commit()
             rows = await (await conn.execute(
                 "SELECT * FROM barn_animals WHERE steward_id=? ORDER BY slot",
@@ -186,6 +213,8 @@ async def barn_ops(key_id: int, command: str) -> str:
         for note in s.get("_life_notes") or []:
             lines.append(note)
         for note in disease_notes:
+            lines.append(note)
+        for note in escape_notes:
             lines.append(note)
         by_slot = {r["slot"]: dict(r) for r in rows}
         for slot in range(1, config.BARN_SLOTS + 1):
@@ -299,14 +328,17 @@ async def barn_ops(key_id: int, command: str) -> str:
             guard = 1 if meta.get("guard") else 0
             stocked = db.now() if not meta.get("hive") else db.now()
             from . import barn_pedigree as pedigree_mod
+            from . import barn_temper as temper_mod
+
             _gen, ped_label = await pedigree_mod.next_generation(conn, s["id"], species)
+            temper = temper_mod.roll_for_species(species)
             await conn.execute(
                 """
                 UPDATE barn_animals SET species=?, stocked_at=?, fed=0, guard=?, born_at=?,
-                    ailment='', ailment_at=0, pedigree_label=?
+                    ailment='', ailment_at=0, pedigree_label=?, temper=?, escaped_at=0
                 WHERE steward_id=? AND slot=?
                 """,
-                (species, stocked, guard, db.now(), ped_label, s["id"], slot),
+                (species, stocked, guard, db.now(), ped_label, temper, s["id"], slot),
             )
             await pedigree_mod.log(
                 conn, s["id"], slot, f"入栏 {ped_label}（-{meta['buy']}票）",
@@ -392,11 +424,20 @@ async def barn_ops(key_id: int, command: str) -> str:
             )).fetchone() or {})
             if not row.get("species"):
                 raise ValueError("空栏")
+            if int(row.get("escaped_at") or 0) > 0:
+                raise ValueError(f"#{slot} 跑丢了，先 barn_ops 寻回 {slot}")
+            from . import barn_temper as temper_mod
+
+            row = await temper_mod.ensure_temper(conn, row)
             meta = LIVESTOCK[row["species"]]
             if not (meta.get("daily") or meta.get("hive")):
                 raise ValueError("该动物不支持 collect，用 harvest")
             if not row.get("fed"):
                 raise ValueError("先 feed 再 collect")
+            if random.random() < temper_mod.collect_skip_chance(row):
+                return (
+                    f"#{slot} {temper_mod.label(row)}受惊，今天没收成（改天再来）"
+                )
             cur = await conn.execute(
                 "SELECT 1 FROM barn_daily_collect WHERE steward_id=? AND slot=? AND day=?",
                 (s["id"], slot, day),
@@ -405,6 +446,7 @@ async def barn_ops(key_id: int, command: str) -> str:
                 raise ValueError("今日已收过")
             product = meta["product"]
             qty = meta["product_qty"]
+            qty = temper_mod.adjust_yield(row, qty)
             from . import barn_disease as barn_disease_mod
             qty = barn_disease_mod.yield_qty(row, qty)
             extra = ""

@@ -205,6 +205,7 @@ async def register_gain(
     loc: str = "satchel",
     quality: str = "",
     weight_kg: float = 0.0,
+    spoil_mult: float = 1.0,
 ) -> None:
     if qty <= 0:
         return
@@ -212,7 +213,8 @@ async def register_gain(
     spoil_at = 0
     sec = _spoil_seconds(item, loc)
     if sec > 0:
-        spoil_at = db.now() + sec
+        mult = max(0.35, float(spoil_mult or 1.0))
+        spoil_at = db.now() + int(sec * mult)
     wmilli = int(round(weight_kg * 1000)) if weight_kg else 0
     await conn.execute(
         """

@@ -1381,6 +1381,20 @@ async def hut_ops(key_id: int, command: str) -> str:
             await conn.commit()
         return msg
 
+    if verb in ("修冰箱", "repair-fridge", "fix-fridge"):
+        from . import hut_appliances as appl_mod
+        async with db.connect() as conn:
+            msg = await appl_mod.repair(conn, s["id"], "fridge")
+            await conn.commit()
+        return msg
+
+    if verb in ("修灶", "修灶台", "repair-stove", "fix-stove"):
+        from . import hut_appliances as appl_mod
+        async with db.connect() as conn:
+            msg = await appl_mod.repair(conn, s["id"], "stove")
+            await conn.commit()
+        return msg
+
     if verb in ("卖掉", "sell", "变卖", "出售"):
         return await furniture_sell_command(s, command.strip().split()[1:])
 
@@ -1389,8 +1403,12 @@ async def hut_ops(key_id: int, command: str) -> str:
         async with db.connect() as conn:
             fittings = await _fittings(conn, s["id"])
             if s.get("hut_built"):
+                from . import hut_appliances as appl_mod
                 from . import hut_roof as roof_mod
                 roof_line = await roof_mod.status_line(conn, s["id"])
+                appl_line = await appl_mod.status_line(conn, s["id"], hut_built=True)
+                if appl_line:
+                    roof_line = (roof_line + "\n" + appl_line) if roof_line else appl_line
         if not s.get("hut_built"):
             return (
                 f"小屋: 未建 — hut_ops build（{config.HUT_BUILD_COST} 票）\n"
@@ -2309,6 +2327,28 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
             can=can_sleep,
             target="",
         ))
+        from . import hut_appliances as appl_mod
+
+        for app_key, app_label, app_emoji in (
+            ("fridge", "修冰箱", "🧊"),
+            ("stove", "修灶", "🔥"),
+        ):
+            if not await appl_mod.has_appliance(conn, s["id"], app_key):
+                continue
+            dur, mx = await appl_mod.get_durability(conn, s["id"], app_key)
+            if dur >= mx:
+                continue
+            home_items.append(_sku(
+                sid=f"repair-{app_key}",
+                kind="repair_appliance",
+                name=app_label,
+                emoji=app_emoji,
+                note=f"{'冰箱' if app_key == 'fridge' else '灶台'}{dur}/{mx}。16 票回满。",
+                detail="厨电低了：冰箱保鲜差、灶台做饭更费神。不是修屋顶。",
+                price="修",
+                can=tickets >= 16,
+                target=app_key,
+            ))
         _append_pantry_home(
             home_items,
             has_crock=has_crock,
@@ -2782,7 +2822,24 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
                 slot_bits.append(age)
             if sick:
                 slot_bits.append(f"病着：{sick}")
+            from . import barn_temper as temper_mod
+
+            if (row.get("temper") or "").strip():
+                slot_bits.append(temper_mod.label(row))
             slot_bits.append(f"第{slot}栏占着，买牲口进不到这里。")
+            if int(row.get("escaped_at") or 0) > 0:
+                barn_items.append(_sku(
+                    sid=f"recover-{slot}",
+                    kind="barn_recover",
+                    name=f"寻回 #{slot} {spec['name']}",
+                    emoji="🏃",
+                    note="8 票 + 6 精力。找回来得再喂。",
+                    detail="受惊跑丢的牲口。不是喂牲口那一下。",
+                    price="寻",
+                    can=tickets >= 8 and energy_now >= 6,
+                    target=str(slot),
+                ))
+                continue
             barn_items.append(_sku(
                 sid=f"slot-{slot}",
                 kind="look",
