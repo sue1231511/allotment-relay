@@ -1094,6 +1094,8 @@ async def _resolve_hail(
         from . import boat_parts as boat_parts_mod
         parts = await boat_parts_mod.get_all(conn, s["id"])
         chance += boat_parts_mod.parley_bonus(parts)
+        from . import boat_mods as bmods_mod
+        chance += (await bmods_mod.bonuses(conn, s["id"]))["parley_bonus"]
         if random.random() < chance:
             fine = random.randint(3, 8)
             await conn.execute(
@@ -1181,6 +1183,10 @@ async def _resolve_voyage(
     from . import boat_parts as boat_parts_mod
     parts = await boat_parts_mod.get_all(conn, s["id"])
     fail_chance += boat_parts_mod.fail_bonus(parts)
+    from . import boat_mods as bmods_mod
+
+    mod_b = await bmods_mod.bonuses(conn, s["id"])
+    fail_chance = max(0.05, fail_chance - mod_b["fail_reduce"])
     from . import voyage_sail_event as sail_ev_mod
 
     fail_chance += sail_ev_mod.fail_bonus_from_encounter(voyage)
@@ -1385,6 +1391,8 @@ async def _finish_voyage(steward_id: int, voyage: dict[str, Any], choice: str | 
             await db.add_chronicle("voyage", f"{s['name']} 黑旗：{choice}", steward_id)
         else:
             msg, fish_loot, _hailed = await _resolve_voyage(conn, s, voyage)
+            from . import island_collections as coll_mod
+            await coll_mod.sync_unlocks(conn, s["id"])
             await conn.commit()
     from . import multi
     for item in fish_loot:
@@ -1421,6 +1429,15 @@ async def voyage_ops(key_id: int, command: str) -> str:
                 await conn.commit()
                 return msg
             return await boat_parts_mod.status_line(conn, s["id"])
+
+    if verb in ("改装", "mod", "mods"):
+        from . import boat_mods as bmods_mod
+        rest = (parts[1] if len(parts) > 1 else "").split()
+        async with db.connect() as conn:
+            s = await _refresh_steward(conn, s["id"])
+            msg = await bmods_mod.dispatch(conn, s, rest)
+            await conn.commit()
+        return msg
 
     if verb == "status":
         async with db.connect() as conn:

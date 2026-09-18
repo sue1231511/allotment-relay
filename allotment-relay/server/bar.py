@@ -855,6 +855,17 @@ async def _cmd_order(conn: aiosqlite.Connection, s: dict[str, Any], drink_name: 
         shipwreck=shipwreck and drink_key == "shipwreck",
         first_discount=first_free,
     )
+    bring_note = ""
+    from . import home_drinks as hd_mod
+    from .catalog import ITEM_NAMES as _inames
+
+    for item_key, (bar_k, disc) in hd_mod.BAR_BRING.items():
+        if bar_k != drink_key:
+            continue
+        if await db.take_item(conn, s["id"], item_key, 1):
+            cost = max(1, cost - disc)
+            bring_note = f"（自带 {_inames.get(item_key, item_key)} −{disc} 票）"
+            break
 
     cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
     if (await cur.fetchone())[0] < cost:
@@ -932,7 +943,7 @@ async def _cmd_order(conn: aiosqlite.Connection, s: dict[str, Any], drink_name: 
     hangover = await health.maybe_roll_ailment(
         conn, s["id"], "bar_shift", chance=0.08, source="bar_drink",
     )
-    msg = f"«{drink['name']} · -{cost} 票\n\n{text}\n\n{note}»"
+    msg = f"«{drink['name']} · -{cost} 票{bring_note}\n\n{text}\n\n{note}»"
     if hangover:
         msg += f"\n\n{hangover}"
     drink_boost = await health.maybe_restore_health(

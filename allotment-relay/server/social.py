@@ -114,6 +114,7 @@ RAPPORT_PERKS: list[tuple[int, str]] = [
     (30, "alliance_ops 菜篮 订/领（供应方先 菜篮 开）"),
     (RAPPORT_PARLEY_BONUS, "海上被黑旗截停时，谈和成功率 +10%"),
     (40, "alliance_ops 托养 送出/接回/列表"),
+    (45, "alliance_ops 共耕 订/状态（assist 多浇 1 块地）"),
     (RAPPORT_ASSIST_BONUS, "alliance_ops assist 对方额外 +2 票 · 借船 给 名字"),
     (RAPPORT_TIP_BONUS, "bar_ops 打赏该岛民，对方实收 +15%"),
 ]

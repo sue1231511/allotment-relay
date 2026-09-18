@@ -599,6 +599,7 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             "  store 菜名 [数量] / fridge / take 菜名 — 冰箱熟菜（小屋要先装 fridge）\n"
             "             也可 hut_ops 冰柜 存|取，生鲜进潮柜、熟菜进冰箱\n"
             "  brew 材料 — 灶台（回雾智）\n"
+            "  泡 list / 泡 雾豆花青茶 — 自宅泡饮，带去 bar_ops order 对应酒可减价\n"
             "  shop board — 全服谁在营业的小馆名单（店名和几道菜），不是流水也不是评价\n"
             "  shop dine 店主名 — 下馆子堂食，也能回精力（按菜价，约 3.5 票/1 精力）+「饱餐」2 小时（行动精力 -1）+ 身体 +2\n"
             "             例子：shop board · shop dine 安。没菜就换一家，不要自己编馆名\n"
@@ -894,6 +895,10 @@ async def kitchen_ops(key_id: int, command: str) -> str:
 
     if verb == "brew":
         return await _hearth_brew(s, parts[1:])
+
+    if verb in ("泡", "drink", "自酿"):
+        from . import home_drinks as hd_mod
+        return await hd_mod.dispatch(s, parts[1:])
 
     raise ValueError(
         f"未知 kitchen 指令: {command}。先 kitchen_ops help 或 menu。"

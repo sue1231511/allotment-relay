@@ -253,7 +253,8 @@ ALLIANCE_HELP = """alliance_ops 子命令（整句写进 command）：
   bottle leave|fish|scan|read — 漂流瓶
   借船 给 名字 / 借船 状态 — 协作≥60 借出 3 日；磨损算船主。没船可借邻居的出海
   托养 送出 名字 槽位 / 托养 接回 邻居名 栏位 / 托养 列表 — 协作≥40
-  菜篮 开 / 菜篮 订 名字 / 菜篮 领 — 供应方开通；订 25 票/7 天、协作≥30；每日 领"""
+  菜篮 开 / 菜篮 订 名字 / 菜篮 领 — 供应方开通；订 25 票/7 天、协作≥30；每日 领
+  共耕 订 名字 / 共耕 状态 / 共耕 解 名字 — 协作≥45；assist 每日首次多浇邻居 1 块地（14 日）"""
 
 VISIT_HELP = """visit_ops 子命令（整句写进 command）：
   默默 / 花店 / momo — 默语花房，空子命令进店打招呼；每日首次送当季花（档信+1）或试饮（精力+3/雾智+1），只看 scan 不领奖
@@ -555,7 +556,7 @@ async def tote_bundle(key_id: int, command: str = "") -> str:
 
 
 async def alliance_bundle(key_id: int, command: str = "") -> str:
-    from . import bottles, game, multi, neighbor_links
+    from . import bottles, game, multi, neighbor_cofarm_ops, neighbor_links
 
     return await route(
         key_id,
@@ -582,6 +583,8 @@ async def alliance_bundle(key_id: int, command: str = "") -> str:
             "foster": (neighbor_links.neighbor_links_ops, True),
             "菜篮": (neighbor_links.neighbor_links_ops, True),
             "basket": (neighbor_links.neighbor_links_ops, True),
+            "共耕": (neighbor_cofarm_ops.cofarm_ops, True),
+            "cofarm": (neighbor_cofarm_ops.cofarm_ops, True),
         },
         default=multi.alliance_ops,
         help_text=ALLIANCE_HELP,

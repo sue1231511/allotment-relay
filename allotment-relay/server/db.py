@@ -2313,6 +2313,24 @@ async def init_db() -> None:
                 PRIMARY KEY (steward_id, coll_key)
             )
             """,
+            """
+            CREATE TABLE IF NOT EXISTS steward_boat_mod (
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                slot INTEGER NOT NULL,
+                mod_key TEXT NOT NULL,
+                installed_at INTEGER NOT NULL,
+                PRIMARY KEY (steward_id, slot)
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS neighbor_cofarm (
+                steward_id INTEGER NOT NULL,
+                partner_id INTEGER NOT NULL,
+                until_day INTEGER NOT NULL,
+                last_assist_day INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (steward_id, partner_id)
+            )
+            """,
             "ALTER TABLE quarry_claims ADD COLUMN hazard TEXT",
             "ALTER TABLE quarry_claims ADD COLUMN hazard_json TEXT",
             "ALTER TABLE steward_craft ADD COLUMN salvage_hazard TEXT",

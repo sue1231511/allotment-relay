@@ -670,6 +670,8 @@ async def _hew(conn: aiosqlite.Connection, s: dict[str, Any], token: str) -> str
     )
     if cave:
         msg += f"\n{cave}"
+    from . import island_collections as coll_mod
+    await coll_mod.sync_unlocks(conn, s["id"])
     return msg
 
 

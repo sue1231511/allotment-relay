@@ -598,11 +598,12 @@ function neighborSheet(person) {
   }).join('');
   const ticketBtn = `<button type="button" class="play-mini-btn" data-act='${JSON.stringify({ tool: 'tote_ops', command: `gift ${name} 票 5` })}'>送 5 票</button>`;
   const rap = Number(person.rapport || 0);
-  const rapNote = rap > 0 ? `<p class="muted" style="margin-top:6px">协作度 ${rap}${rap >= 60 ? ' · 可借船' : rap >= 40 ? ' · 可托养' : rap >= 30 ? ' · 可订菜篮' : ''}</p>` : '';
+  const rapNote = rap > 0 ? `<p class="muted" style="margin-top:6px">协作度 ${rap}${rap >= 60 ? ' · 可借船' : rap >= 40 ? ' · 可托养' : rap >= 30 ? ' · 可订菜篮' : ''}${rap >= 45 ? ' · 可共耕' : ''}</p>` : '';
   const linkBtns = [
     rap >= 60 ? `<button type="button" class="play-mini-btn" data-act='${JSON.stringify({ tool: 'alliance_ops', command: `借船 给 ${name}` })}'>借船</button>` : '',
     rap >= 40 ? `<button type="button" class="play-mini-btn" data-act='${JSON.stringify({ tool: 'alliance_ops', command: `托养 送出 ${name} 1` })}'>托养</button>` : '',
     rap >= 30 ? `<button type="button" class="play-mini-btn" data-act='${JSON.stringify({ tool: 'alliance_ops', command: `菜篮 订 ${name}` })}'>订菜篮</button>` : '',
+    rap >= 45 ? `<button type="button" class="play-mini-btn" data-act='${JSON.stringify({ tool: 'alliance_ops', command: `共耕 订 ${name}` })}'>共耕</button>` : '',
   ].filter(Boolean).join('');
   const ripe = person.ripe ? `熟地 ${person.ripe}` : '暂无熟地';
   const where = person.home ? '在档口' : (person.ago || '不在');

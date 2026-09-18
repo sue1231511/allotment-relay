@@ -34,6 +34,20 @@ ENTRIES: list[tuple[str, str, str | None, str | None]] = [
     ("lantern_sashimi", "灯笼鱼刺身", "meal:lantern_sashimi", None),
     ("undertide_enter", "潮下踏足", None, "undertide"),
     ("voyage_far", "远海归港", None, "voyage_far"),
+    ("voyage_deep", "深漂归港", None, "voyage_deep"),
+    ("drink_mist", "自泡雾豆茶", "drink_mist_pea_tea", None),
+    ("drink_fog_port", "雾港热朗姆", "drink_fog_port", None),
+    ("quarry_tide", "潮石入袋", "quarry_tide_stone", None),
+    ("quarry_fog_lead", "雾铅在握", "quarry_fog_lead", None),
+    ("fish_lantern", "灯笼鱼影", "fish_lanternfish", None),
+    ("bar_work", "洗过酒吧碗", None, "bar_work"),
+    ("boat_mod", "船改装上手", None, "boat_mod"),
+    ("cofarm", "共耕之约", None, "cofarm"),
+    ("assist_day", "帮邻居一天", None, "assist_log"),
+    ("deep_echo_drink", "点过深海回声", None, "bar_deep_echo"),
+    ("cutter_boat", "切波艇", None, "boat_cutter"),
+    ("drifter_boat", "漂航船", None, "boat_drifter"),
+    ("orchard", "首棵成树", None, "orchard"),
 ]
 
 
@@ -114,9 +128,62 @@ async def _milestone(conn, steward_id: int, key: str | None) -> bool:
         return bool(row and int(row[0] or 0))
     if key == "voyage_far":
         cur = await conn.execute(
-            """
-            SELECT 1 FROM voyages WHERE steward_id=? AND route='far' LIMIT 1
-            """,
+            "SELECT 1 FROM voyages WHERE steward_id=? AND route='far' LIMIT 1",
+            (steward_id,),
+        )
+        return (await cur.fetchone()) is not None
+    if key == "voyage_deep":
+        cur = await conn.execute(
+            "SELECT 1 FROM voyages WHERE steward_id=? AND route='deep' LIMIT 1",
+            (steward_id,),
+        )
+        return (await cur.fetchone()) is not None
+    if key == "bar_work":
+        cur = await conn.execute(
+            "SELECT 1 FROM bar_shifts WHERE steward_id=? LIMIT 1",
+            (steward_id,),
+        )
+        return (await cur.fetchone()) is not None
+    if key == "boat_mod":
+        cur = await conn.execute(
+            "SELECT 1 FROM steward_boat_mod WHERE steward_id=? LIMIT 1",
+            (steward_id,),
+        )
+        return (await cur.fetchone()) is not None
+    if key == "cofarm":
+        cur = await conn.execute(
+            "SELECT 1 FROM neighbor_cofarm WHERE steward_id=? LIMIT 1",
+            (steward_id,),
+        )
+        return (await cur.fetchone()) is not None
+    if key == "assist_log":
+        cur = await conn.execute(
+            "SELECT 1 FROM assist_log WHERE helper_id=? LIMIT 1",
+            (steward_id,),
+        )
+        return (await cur.fetchone()) is not None
+    if key == "bar_deep_echo":
+        cur = await conn.execute(
+            "SELECT 1 FROM bar_drink_orders WHERE patron_id=? AND drink_key='deep_echo' LIMIT 1",
+            (steward_id,),
+        )
+        return (await cur.fetchone()) is not None
+    if key == "boat_cutter":
+        cur = await conn.execute(
+            "SELECT boat_key FROM stewards WHERE id=?", (steward_id,),
+        )
+        row = await cur.fetchone()
+        bk = row[0] if row else ""
+        return bk in ("cutter", "drifter")
+    if key == "boat_drifter":
+        cur = await conn.execute(
+            "SELECT boat_key FROM stewards WHERE id=?", (steward_id,),
+        )
+        row = await cur.fetchone()
+        return row and row[0] == "drifter"
+    if key == "orchard":
+        cur = await conn.execute(
+            "SELECT 1 FROM parcels WHERE steward_id=? AND orchard=1 AND crop IS NOT NULL LIMIT 1",
             (steward_id,),
         )
         return (await cur.fetchone()) is not None
@@ -132,6 +199,10 @@ async def _entry_met(conn, steward_id: int, entry: tuple) -> bool:
 
 async def sync_unlocks(conn, steward_id: int) -> int:
     await ensure_table(conn)
+    from . import boat_mods as bmods_mod
+    await bmods_mod.ensure_table(conn)
+    from . import neighbor_cofarm as cofarm_mod
+    await cofarm_mod.ensure_table(conn)
     new = 0
     now = db.now()
     for entry in ENTRIES:
