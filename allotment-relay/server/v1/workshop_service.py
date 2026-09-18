@@ -18,6 +18,7 @@ KINDS = {
     "donate": "捐",
     "patch": "补网",
     "salvage_snag": "捞险",
+    "anvil_quench": "淬火",
 }
 
 TITLES = {
@@ -30,6 +31,7 @@ TITLES = {
     "donate": "陈列上了",
     "patch": "补上网",
     "salvage_snag": "捞险处置",
+    "anvil_quench": "淬火处置",
 }
 
 
@@ -54,6 +56,10 @@ def _command(kind: str, target: str) -> str:
         if not name:
             raise ApiError("BAD_REQUEST", "先选割绳、弃货或硬拽。")
         return f"捞险 {name}"
+    if kind == "anvil_quench":
+        if not name:
+            raise ApiError("BAD_REQUEST", "先选泼水、戴胚或硬取。")
+        return f"淬火 {name}"
     return verb
 
 

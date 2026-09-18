@@ -31,7 +31,7 @@ import { renderShop } from "./scenes/shop.js?v=tt-sprite1";
 import { renderLili } from "./scenes/lili.js?v=island-modulefix2";
 import { renderClinic } from "./scenes/clinic.js?v=island-modulefix2";
 import { renderShaonian } from "./scenes/shaonian.js?v=island-modulefix2";
-import { renderWorkshop } from "./scenes/workshop.js?v=workshop-snag1";
+import { renderWorkshop } from "./scenes/workshop.js?v=workshop-quench1";
 import { renderQuarry } from "./scenes/quarry.js?v=quarry-collapse1";
 import { renderBar } from "./scenes/bar.js?v=island-modulefix2";
 import { renderTheater } from "./scenes/theater.js?v=island-modulefix2";
@@ -915,6 +915,7 @@ function workshopRow(kind, target) {
   }
   if (kind === "open_pan") return shop.next_pan;
   if (kind === "salvage" || kind === "salvage_snag") return shop.salvage;
+  if (kind === "anvil_quench") return shop.job;
   if (kind === "patch") return shop.patch;
   if (kind === "donate") return (shop.exhibits || []).find((row) => row.name === target);
   return null;
@@ -930,6 +931,10 @@ function workshopCan(kind, row) {
   if (kind === "salvage") return Boolean(row.can_salvage);
   if (kind === "salvage_snag") {
     const act = (row.snag_actions || []).find((a) => a.action === target);
+    return Boolean(act && act.can);
+  }
+  if (kind === "anvil_quench") {
+    const act = (row.quench_actions || []).find((a) => a.action === target);
     return Boolean(act && act.can);
   }
   if (kind === "patch") return Boolean(row.can_patch);
