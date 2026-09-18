@@ -654,7 +654,10 @@ async def _hew(conn: aiosqlite.Connection, s: dict[str, Any], token: str) -> str
         + flavor.maybe_suffix(["盐风灌进袖口", "镐落石开", "崖壁比人硬，人比石久"])
     )
     if ill:
-        msg += f"\n{ill}\n→ visit_ops clinic treat 岩尘入肺（必须花票）"
+        from . import bad_event_tiers as tiers_mod
+
+        msg += f"\n{tiers_mod.tag(tiers_mod.roll_tier(weights=(0.25, 0.40, 0.28, 0.07)), ill)}"
+        msg += f"\n{tiers_mod.repair_hint('quarry', tier=tiers_mod.TIER_MID)}"
     if boost:
         msg += f"\n{boost}"
     if disc:
@@ -728,10 +731,15 @@ async def _wash(conn: aiosqlite.Connection, s: dict[str, Any], rest: str) -> str
     )
     ref_meta = QUARRY_ORES[refined]
     if kept <= 0:
-        return (
+        from . import bad_event_tiers as tiers_mod
+
+        tier = tiers_mod.roll_tier(weights=(0.35, 0.40, 0.20, 0.05))
+        return tiers_mod.tag(
+            tier,
             f"洗 {item_label(item)} x{qty}：潮水把砂冲散了，精矿没留下"
             f"（-{cost} 精力）。再 quarry_ops 挖。"
             + flavor.maybe_suffix(["洗手时什么也没留下", "潮水比人贪"])
+            + tiers_mod.repair_hint("quarry", tier=tier),
         )
     lost = batches - kept
     lost_s = f"，冲散 {lost} 批" if lost else ""

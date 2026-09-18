@@ -114,7 +114,11 @@ async def roll_net_snag(conn, steward_id: int) -> str | None:
     if random.random() > 0.07:
         return None
     await set_flag(conn, steward_id, "net_weed")
-    return "渔网挂水草：下次撒网空网率 +10%（已记下，撒一次就消）。"
+    return tiers_mod.tag(
+        tiers_mod.roll_tier(weights=(0.45, 0.35, 0.15, 0.05)),
+        "渔网挂水草：下次撒网空网率 +10%（已记下，撒一次就消）。"
+        + tiers_mod.repair_hint("beach"),
+    )
 
 
 async def sleep_energy_penalty(conn, steward_id: int) -> int:
@@ -139,7 +143,11 @@ async def roll_probe_sand_glitch(conn, steward_id: int) -> str | None:
     if random.random() > 0.08:
         return None
     await set_flag(conn, steward_id, "probe_sand")
-    return "沙坍回填：下次掏洞多耗 2 精力（已记下，掏一次就消）。"
+    return tiers_mod.tag(
+        tiers_mod.TIER_MID,
+        "沙坍回填：下次掏洞多耗 2 精力（已记下，掏一次就消）。"
+        + tiers_mod.repair_hint("beach"),
+    )
 
 
 async def roll_beach_dig_glitch(conn, steward_id: int) -> str | None:
@@ -147,4 +155,8 @@ async def roll_beach_dig_glitch(conn, steward_id: int) -> str | None:
     if random.random() > 0.09:
         return None
     await set_flag(conn, steward_id, "shovel_dull")
-    return "铲刃磕在礁上发钝：下次赶海翻沙多耗 2 精力（已记下，翻一次就消）。"
+    return tiers_mod.tag(
+        tiers_mod.roll_tier(),
+        "铲刃磕在礁上发钝：下次赶海翻沙多耗 2 精力（已记下，翻一次就消）。"
+        + tiers_mod.repair_hint("beach"),
+    )

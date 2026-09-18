@@ -60,9 +60,26 @@ async def neighbor_roster(steward: dict[str, Any], *, online_only: bool = False)
         peers = [dict(r) for r in rows]
         from . import ranks as ranks_mod
         peers = [ranks_mod.attach_level(p) for p in peers]
+        rapport_map: dict[int, int] = {}
+        if peers:
+            ids = [p["id"] for p in peers]
+            ph = ",".join("?" * len(ids))
+            cur = await conn.execute(
+                f"""
+                SELECT steward_a, steward_b, score FROM rapport
+                WHERE steward_a=? AND steward_b IN ({ph})
+                   OR steward_b=? AND steward_a IN ({ph})
+                """,
+                (steward["id"], *ids, steward["id"], *ids),
+            )
+            for row in await cur.fetchall():
+                a, b, sc = int(row[0]), int(row[1]), int(row[2])
+                other = b if a == steward["id"] else a
+                rapport_map[other] = sc
         for p in peers:
             p["ripe"] = await _ripe_outdoor_count(conn, p["id"])
             p["home"] = bool(p["last_active_at"] and p["last_active_at"] > cut)
+            p["rapport"] = rapport_map.get(p["id"], 0)
 
     if online_only:
         peers = [p for p in peers if p["home"]]
@@ -73,6 +90,7 @@ async def neighbor_roster(steward: dict[str, Any], *, online_only: bool = False)
             "ripe": int(p.get("ripe") or 0),
             "home": bool(p.get("home")),
             "ago": db.fmt_cst(p["last_active_at"]),
+            "rapport": int(p.get("rapport") or 0),
         }
         for p in peers
     ]

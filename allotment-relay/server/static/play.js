@@ -597,15 +597,23 @@ function neighborSheet(person) {
     return `<button type="button" class="play-mini-btn" data-act='${cmd}'>送 ${esc(it.name)}</button>`;
   }).join('');
   const ticketBtn = `<button type="button" class="play-mini-btn" data-act='${JSON.stringify({ tool: 'tote_ops', command: `gift ${name} 票 5` })}'>送 5 票</button>`;
+  const rap = Number(person.rapport || 0);
+  const rapNote = rap > 0 ? `<p class="muted" style="margin-top:6px">协作度 ${rap}${rap >= 60 ? ' · 可借船' : rap >= 40 ? ' · 可托养' : rap >= 30 ? ' · 可订菜篮' : ''}</p>` : '';
+  const linkBtns = [
+    rap >= 60 ? `<button type="button" class="play-mini-btn" data-act='${JSON.stringify({ tool: 'alliance_ops', command: `借船 给 ${name}` })}'>借船</button>` : '',
+    rap >= 40 ? `<button type="button" class="play-mini-btn" data-act='${JSON.stringify({ tool: 'alliance_ops', command: `托养 送出 ${name} 1` })}'>托养</button>` : '',
+    rap >= 30 ? `<button type="button" class="play-mini-btn" data-act='${JSON.stringify({ tool: 'alliance_ops', command: `菜篮 订 ${name}` })}'>订菜篮</button>` : '',
+  ].filter(Boolean).join('');
   const ripe = person.ripe ? `熟地 ${person.ripe}` : '暂无熟地';
   const where = person.home ? '在档口' : (person.ago || '不在');
   openSheet(name, `
-    <p class="muted">${esc(where)} · ${esc(ripe)}</p>
+    <p class="muted">${esc(where)} · ${esc(ripe)}</p>${rapNote}
     <div class="play-mini-actions" style="margin-top:10px;flex-wrap:wrap">
       <button type="button" class="play-mini-btn" data-act='${JSON.stringify({ tool: 'steward_ops', command: `peer ${name}` })}'>看档</button>
       <button type="button" class="play-mini-btn" data-act='${JSON.stringify({ tool: 'alliance_ops', command: `assist ${name}` })}'>帮忙打理</button>
       <button type="button" class="play-mini-btn" data-act='${JSON.stringify({ tool: 'plot_ops', command: `偷菜 ${name}` })}'>偷菜</button>
       <button type="button" class="play-mini-btn" data-act='${JSON.stringify({ tool: 'plot_ops', command: `amends ${name}` })}'>致歉</button>
+      ${linkBtns}
     </div>
     ${giftBtns
       ? `<div style="margin-top:12px"><p class="muted">送礼即时到账，对方在右侧「收礼 / 打赏」可见。</p>

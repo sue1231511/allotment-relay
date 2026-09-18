@@ -1572,4 +1572,14 @@ async def undertide_ops(key_id: int, command: str) -> str:
         if verb == "kroom":
             return await _cmd_kroom(conn, s, ut, rest)
 
+        if verb in ("炼", "refine", "smelt"):
+            if not ut["access"]:
+                raise ValueError(utcopy.NO_ACCESS_HINT)
+            from . import undertide_refine as ref_mod
+
+            sub = rest.split() if rest else []
+            msg = await ref_mod.dispatch(conn, s, sub)
+            await conn.commit()
+            return hits_prefix + msg + await _maybe_event(conn, s, ut)
+
     raise ValueError(f"未知 undertide 指令: {command}\n{utcopy.HELP}")

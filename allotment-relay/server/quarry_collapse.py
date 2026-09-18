@@ -54,10 +54,17 @@ async def maybe_after_hew(
         """,
         (HAZARD_COLLAPSE, json.dumps(payload, ensure_ascii=False), steward_id, slot),
     )
-    return (
+    from . import bad_event_tiers as tiers_mod
+
+    tier = tiers_mod.TIER_HEAVY if weather in ("gale", "storm") else tiers_mod.roll_tier(
+        weights=(0.20, 0.35, 0.35, 0.10)
+    )
+    return tiers_mod.tag(
+        tier,
         f"坑{slot}顶上传来碎石滚落——塌方了！"
         f" quarry_ops 塌方 {slot} 撑柱|撤人|硬挖"
         "（撑柱=岸木×2或12票；撤人=这脉作废但人没事；硬挖=不花钱更险，小概率落石后多一块矿）"
+        + tiers_mod.repair_hint("quarry", tier=tier),
     )
 
 

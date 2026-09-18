@@ -2305,6 +2305,14 @@ async def init_db() -> None:
             "ALTER TABLE barn_animals ADD COLUMN temper TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE barn_animals ADD COLUMN escaped_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE barn_animals ADD COLUMN real_owner_id INTEGER NOT NULL DEFAULT 0",
+            """
+            CREATE TABLE IF NOT EXISTS steward_collection_unlock (
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                coll_key TEXT NOT NULL,
+                unlocked_at INTEGER NOT NULL,
+                PRIMARY KEY (steward_id, coll_key)
+            )
+            """,
             "ALTER TABLE quarry_claims ADD COLUMN hazard TEXT",
             "ALTER TABLE quarry_claims ADD COLUMN hazard_json TEXT",
             "ALTER TABLE steward_craft ADD COLUMN salvage_hazard TEXT",

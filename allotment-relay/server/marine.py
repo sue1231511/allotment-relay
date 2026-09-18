@@ -1227,7 +1227,14 @@ async def _resolve_voyage(
 
     if failed and not loan_lender_id:
         await conn.execute("UPDATE stewards SET boat_damaged=1 WHERE id=?", (s["id"],))
-        loot_lines.append("风暴折返，几乎空舱")
+        from . import bad_event_tiers as tiers_mod
+
+        loot_lines.append(
+            tiers_mod.tag(
+                tiers_mod.TIER_HEAVY,
+                "风暴折返，几乎空舱" + tiers_mod.repair_hint("voyage", tier=tiers_mod.TIER_HEAVY),
+            )
+        )
         if random.random() < 0.35:
             item = random.choice(loot_table)
             await db.add_item(conn, s["id"], item, 1)

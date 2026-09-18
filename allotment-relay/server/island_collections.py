@@ -1,25 +1,53 @@
-"""岛收集簿（样板）— 行囊/产业里程碑，只读进度。"""
+"""岛收集簿 — 里程碑点亮（持久化解锁）。"""
 from __future__ import annotations
 
 from . import db
 from .catalog import ITEM_NAMES
 from .game import require_steward
 
-# (key, 标题, satchel_item 或 None, 特殊键 hut|boat|barn)
+# (key, 标题, satchel/meal item 或 None, 里程碑键)
 ENTRIES: list[tuple[str, str, str | None, str | None]] = [
     ("kale", "甘蓝入门", "crop_kale", None),
     ("beet", "甜菜一行", "crop_beet", None),
     ("fogpea", "雾豆初收", "crop_fogpea", None),
+    ("ginger", "潮姜入袋", "crop_tide_ginger", None),
     ("herring", "鲱鳞闪光", "fish_herring", None),
     ("sardine", "沙丁一串", "fish_sardine", None),
+    ("mackerel", "鲭鱼入网", "fish_mackerel", None),
     ("pickles", "腌坛开盖", "pickles", None),
     ("compost", "堆肥上手", "compost", None),
+    ("quarry_copper", "铜脉初鸣", "quarry_copper", None),
+    ("quarry_salt", "盐晶在手", "quarry_salt", None),
+    ("quarry_iron_bar", "铁条出炉", "quarry_iron_bar", None),
+    ("craft_copper_nails", "岸钉入包", "craft_copper_nails", None),
+    ("ut_pit_silt", "坑底淤泥", "ut_pit_silt", None),
+    ("ut_brine_crystal", "卤晶在手", "ut_brine_crystal", None),
+    ("proc_black_salt", "岸黑盐成", "proc_black_salt", None),
     ("skiff", "第一艘船", None, "boat"),
     ("barn", "畜栏开张", None, "barn"),
     ("hut2", "小屋二档", None, "hut2"),
+    ("hut4", "临海邸梦", None, "hut4"),
+    ("greenhouse", "温室起架", None, "greenhouse"),
+    ("eatery", "开过小馆", None, "eatery"),
     ("black_salt_fish", "黑盐炖鱼成", "meal:black_salt_fish", None),
     ("fog_mushroom_soup", "雾菇汤香", "meal:fog_mushroom_soup", None),
+    ("lantern_sashimi", "灯笼鱼刺身", "meal:lantern_sashimi", None),
+    ("undertide_enter", "潮下踏足", None, "undertide"),
+    ("voyage_far", "远海归港", None, "voyage_far"),
 ]
+
+
+async def ensure_table(conn) -> None:
+    await conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS steward_collection_unlock (
+            steward_id INTEGER NOT NULL REFERENCES stewards(id),
+            coll_key TEXT NOT NULL,
+            unlocked_at INTEGER NOT NULL,
+            PRIMARY KEY (steward_id, coll_key)
+        )
+        """
+    )
 
 
 async def _has_item(conn, steward_id: int, item: str) -> bool:
@@ -54,28 +82,95 @@ async def _milestone(conn, steward_id: int, key: str | None) -> bool:
         return bool(int((await cur.fetchone())[0] or 0))
     if key == "hut2":
         cur = await conn.execute(
-            "SELECT hut_built, hut_level FROM stewards WHERE id=?", (steward_id,)
+            "SELECT hut_built, hut_level FROM stewards WHERE id=?",
+            (steward_id,),
         )
         row = await cur.fetchone()
         return bool(row and int(row[0]) and int(row[1] or 0) >= 2)
+    if key == "hut4":
+        cur = await conn.execute(
+            "SELECT hut_built, hut_level FROM stewards WHERE id=?",
+            (steward_id,),
+        )
+        row = await cur.fetchone()
+        return bool(row and int(row[0]) and int(row[1] or 0) >= 4)
+    if key == "greenhouse":
+        cur = await conn.execute(
+            "SELECT 1 FROM parcels WHERE steward_id=? AND greenhouse=1 LIMIT 1",
+            (steward_id,),
+        )
+        return (await cur.fetchone()) is not None
+    if key == "eatery":
+        cur = await conn.execute(
+            "SELECT eatery_open FROM stewards WHERE id=?", (steward_id,)
+        )
+        return bool(int((await cur.fetchone())[0] or 0))
+    if key == "undertide":
+        cur = await conn.execute(
+            "SELECT access FROM steward_undertide WHERE steward_id=?",
+            (steward_id,),
+        )
+        row = await cur.fetchone()
+        return bool(row and int(row[0] or 0))
+    if key == "voyage_far":
+        cur = await conn.execute(
+            """
+            SELECT 1 FROM voyages WHERE steward_id=? AND route='far' LIMIT 1
+            """,
+            (steward_id,),
+        )
+        return (await cur.fetchone()) is not None
     return False
 
 
+async def _entry_met(conn, steward_id: int, entry: tuple) -> bool:
+    _key, _title, item, mile = entry
+    if item:
+        return await _has_item(conn, steward_id, item)
+    return await _milestone(conn, steward_id, mile)
+
+
+async def sync_unlocks(conn, steward_id: int) -> int:
+    await ensure_table(conn)
+    new = 0
+    now = db.now()
+    for entry in ENTRIES:
+        key = entry[0]
+        if not await _entry_met(conn, steward_id, entry):
+            continue
+        cur = await conn.execute(
+            """
+            INSERT OR IGNORE INTO steward_collection_unlock (steward_id, coll_key, unlocked_at)
+            VALUES (?,?,?)
+            """,
+            (steward_id, key, now),
+        )
+        if cur.rowcount:
+            new += 1
+    return new
+
+
 async def sheet(conn, steward_id: int) -> str:
-    lines = [f"岛收集簿（样板 {len(ENTRIES)} 项，只读进度；不是 lore scan）："]
-    done = 0
+    await sync_unlocks(conn, steward_id)
+    cur = await conn.execute(
+        "SELECT coll_key FROM steward_collection_unlock WHERE steward_id=?",
+        (steward_id,),
+    )
+    unlocked = {r[0] for r in await cur.fetchall()}
+    lines = [f"岛收集簿（{len(ENTRIES)} 项，点亮后永久记录；不是 lore scan）："]
     for key, title, item, mile in ENTRIES:
-        ok = False
-        if item:
-            ok = await _has_item(conn, steward_id, item)
-        elif mile:
-            ok = await _milestone(conn, steward_id, mile)
-        if ok:
-            done += 1
+        ok = key in unlocked
         mark = "✓" if ok else "·"
-        hint = ITEM_NAMES.get(item, item) if item else mile or ""
-        lines.append(f"  {mark} {title}" + (f"（{hint}）" if not ok and hint else ""))
-    lines.append(f"进度 {done}/{len(ENTRIES)}。背包曾持有即算点亮。")
+        hint = ""
+        if not ok:
+            if item and not item.startswith("meal:"):
+                hint = ITEM_NAMES.get(item, item)
+            elif item:
+                hint = item.split(":", 1)[-1]
+            elif mile:
+                hint = mile
+        lines.append(f"  {mark} {title}" + (f"（{hint}）" if hint else ""))
+    lines.append(f"进度 {len(unlocked)}/{len(ENTRIES)}。")
     return "\n".join(lines)
 
 
@@ -85,6 +180,8 @@ async def collection_ops(key_id: int, command: str = "") -> str:
     read_ok = verb in ("", "status", "列表", "list", "help", "?", "帮助", "收集")
     s = await require_steward(key_id, exempt_duty=read_ok)
     if verb in ("help", "?", "帮助"):
-        return "steward_ops 收集 — 岛收集簿样板进度（只读，不是 lore scan）"
+        return "steward_ops 收集 — 岛收集簿（点亮永久保存；不是 lore scan）"
     async with db.connect() as conn:
-        return await sheet(conn, s["id"])
+        msg = await sheet(conn, s["id"])
+        await conn.commit()
+        return msg
