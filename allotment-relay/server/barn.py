@@ -154,7 +154,8 @@ def _line(animal: dict | None, slot: int) -> str:
         extra += f" · {temper_mod.label(animal)}"
     from . import barn_names as names_mod
     shown = names_mod.display_name(animal, spec)
-    return f"  #{slot}: {spec['emoji']}{shown}（{state}）{ped_bit}{extra}"
+    foster = " · 代养" if int(animal.get("real_owner_id") or 0) else ""
+    return f"  #{slot}: {spec['emoji']}{shown}（{state}）{ped_bit}{extra}{foster}"
 
 
 async def barn_ops(key_id: int, command: str) -> str:

@@ -249,7 +249,10 @@ ALLIANCE_HELP = """alliance_ops 子命令（整句写进 command）：
   donate 物品 数量 / larder / draw 物品 数量 — 联盟储藏室（领取 2 票、每日 3 次）。不在潮生会办
   捐票进潮汐基金不是这里：visit_ops 潮生会 基金 捐 50（票数自填）。岸税 visit_ops 潮生会 税 / 税 交。岸维 visit_ops 潮生会 维 / 维 交。补贴不用领，东八区周二四六自动发
   beacon scan — 看潮生会告示（厅示由岛上张贴，岛民不能贴、不能回）。也可 visit_ops 潮生会 告示。短句去 lounge_ops say；长帖去 wall_ops 听潮亭
-  bottle leave|fish|scan|read — 漂流瓶"""
+  bottle leave|fish|scan|read — 漂流瓶
+  借船 给 名字 / 借船 状态 — 协作≥60 借出 3 日；磨损算船主。没船可借邻居的出海
+  托养 送出 名字 槽位 / 托养 接回 邻居名 栏位 / 托养 列表 — 协作≥40
+  菜篮 开 / 菜篮 订 名字 / 菜篮 领 — 供应方开通；订 25 票/7 天、协作≥30；每日 领"""
 
 VISIT_HELP = """visit_ops 子命令（整句写进 command）：
   默默 / 花店 / momo — 默语花房，空子命令进店打招呼；每日首次送当季花（档信+1）或试饮（精力+3/雾智+1），只看 scan 不领奖
@@ -547,7 +550,7 @@ async def tote_bundle(key_id: int, command: str = "") -> str:
 
 
 async def alliance_bundle(key_id: int, command: str = "") -> str:
-    from . import bottles, game, multi
+    from . import bottles, game, multi, neighbor_links
 
     return await route(
         key_id,
@@ -567,7 +570,14 @@ async def alliance_bundle(key_id: int, command: str = "") -> str:
             "bottle": (bottles.bottle_ops, "scan"),
             "漂流瓶": (bottles.bottle_ops, "scan"),
         },
-        hoist={},
+        hoist={
+            "借船": (neighbor_links.neighbor_links_ops, True),
+            "loan": (neighbor_links.neighbor_links_ops, True),
+            "托养": (neighbor_links.neighbor_links_ops, True),
+            "foster": (neighbor_links.neighbor_links_ops, True),
+            "菜篮": (neighbor_links.neighbor_links_ops, True),
+            "basket": (neighbor_links.neighbor_links_ops, True),
+        },
         default=multi.alliance_ops,
         help_text=ALLIANCE_HELP,
         empty=ALLIANCE_HELP,

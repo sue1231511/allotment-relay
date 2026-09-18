@@ -1190,12 +1190,14 @@ async def _resolve_voyage(
 
     failed = random.random() < fail_chance
     loot_lines = []
-    boat = BOATS.get(s.get("boat_key") or "", {})
-    cargo = boat_parts_mod.effective_cargo(boat.get("cargo", 2), parts)
     try:
         enc_payload = json.loads(voyage.get("encounter") or "{}")
     except json.JSONDecodeError:
         enc_payload = {}
+    eff_boat_key = enc_payload.get("boat_key") or s.get("boat_key") or ""
+    loan_lender_id = int(enc_payload.get("loan_lender_id") or 0)
+    boat = BOATS.get(eff_boat_key, {})
+    cargo = boat_parts_mod.effective_cargo(boat.get("cargo", 2), parts)
     if enc_payload.get("early_return"):
         cargo = max(1, cargo - 1)
     from . import event_opportunity as opp_mod
@@ -1205,15 +1207,25 @@ async def _resolve_voyage(
 
     from . import boat_hull as hull_mod
     from . import voyage_chronicle as vlog_mod
-    hull_note = await hull_mod.wear_after_voyage(
-        conn, s["id"], voyage["route"], storm=failed or world.current_weather() == "gale",
-    )
-    parts_note = await boat_parts_mod.wear_voyage(
-        conn, s["id"], voyage["route"], storm=failed or world.current_weather() == "gale",
-    )
+    from . import neighbor_links as nlink_mod
+
+    storm = failed or world.current_weather() == "gale"
+    loan_note: str | None = None
+    if loan_lender_id:
+        loan_note = await nlink_mod.boat_loan_after_voyage(
+            conn, s["id"], storm=storm,
+        )
+        hull_note = parts_note = ""
+    else:
+        hull_note = await hull_mod.wear_after_voyage(
+            conn, s["id"], voyage["route"], storm=storm,
+        )
+        parts_note = await boat_parts_mod.wear_voyage(
+            conn, s["id"], voyage["route"], storm=storm,
+        )
     parts = await boat_parts_mod.get_all(conn, s["id"])
 
-    if failed:
+    if failed and not loan_lender_id:
         await conn.execute("UPDATE stewards SET boat_damaged=1 WHERE id=?", (s["id"],))
         loot_lines.append("风暴折返，几乎空舱")
         if random.random() < 0.35:
@@ -1254,13 +1266,17 @@ async def _resolve_voyage(
     if opp_line:
         msg += f" · {opp_line}"
     msg += flavor.maybe_suffix(flavor.VOYAGE_RETURN_BAD if failed else flavor.VOYAGE_RETURN_GOOD)
-    msg += f" · {hull_note} · {parts_note}"
+    wear_line = loan_note if loan_note else f"{hull_note} · {parts_note}".strip(" ·")
+    if wear_line:
+        msg += f" · {wear_line}"
     await vlog_mod.append(
         conn, s["id"],
-        f"归港 {route['label']}{'（折返）' if failed else ''} · {hull_note}",
+        f"归港 {route['label']}{'（折返）' if failed else ''} · {wear_line or '—'}",
     )
-    if s.get("boat_damaged"):
+    if s.get("boat_damaged") and not loan_lender_id:
         msg += "（船损，voyage_ops repair）"
+    elif failed and loan_lender_id:
+        msg += "（借船折返，磨损记在船主）"
 
     if enc and enc.kind == "bad":
         payload = {
@@ -1523,11 +1539,25 @@ async def voyage_ops(key_id: int, command: str) -> str:
         route = VOYAGE_ROUTES[route_key]
         async with db.connect() as conn:
             s = await _refresh_steward(conn, s["id"])
-            if not s.get("boat_key"):
-                raise ValueError("先 voyage_ops buy 购船")
-            if s.get("boat_damaged"):
+            from . import neighbor_links as nlink_mod
+
+            loan_lender_id = 0
+            boat_key = s.get("boat_key") or ""
+            if not boat_key:
+                boat_key = await nlink_mod.effective_boat_key(conn, s) or ""
+                if boat_key:
+                    loan_lender_id = await nlink_mod.boat_loan_lender(conn, s["id"]) or 0
+            if not boat_key:
+                raise ValueError("先 voyage_ops buy 购船，或向邻居 alliance_ops 借船 给")
+            if s.get("boat_damaged") and not loan_lender_id:
                 raise ValueError("船损，先 repair")
-            if _boat_rank(s["boat_key"]) < _boat_rank(route["min_boat"]):
+            if loan_lender_id:
+                cur = await conn.execute(
+                    "SELECT boat_damaged FROM stewards WHERE id=?", (loan_lender_id,)
+                )
+                if int((await cur.fetchone())[0]):
+                    raise ValueError("借来的船主那边船损未修，先请对方 voyage_ops repair")
+            if _boat_rank(boat_key) < _boat_rank(route["min_boat"]):
                 need = BOATS[route["min_boat"]]["name"]
                 raise ValueError(f"{route['label']} 至少需要 {need}")
             if await _get_voyage(conn, s["id"]):
@@ -1547,17 +1577,22 @@ async def voyage_ops(key_id: int, command: str) -> str:
             if world.current_weather() == "misty":
                 duration = int(duration * 1.15)
             from . import voyage_chronicle as vlog_mod
-            boat = BOATS.get(s.get("boat_key") or "", {})
+            boat = BOATS.get(boat_key, {})
             await vlog_mod.append(
                 conn, s["id"],
                 f"出航 {route['label']}（{boat.get('name', '船')}）",
             )
+            enc0 = {
+                "voyage_fish": [],
+                "boat_key": boat_key,
+                "loan_lender_id": loan_lender_id,
+            }
             await conn.execute(
                 """
                 INSERT INTO voyages (steward_id, route, departed_at, returns_at, status, encounter)
                 VALUES (?,?,?,?, 'sailing', ?)
                 """,
-                (s["id"], route_key, now, now + duration, json.dumps({"voyage_fish": []})),
+                (s["id"], route_key, now, now + duration, json.dumps(enc0)),
             )
             voyage = await _get_voyage(conn, s["id"])
             assert voyage
