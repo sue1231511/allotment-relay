@@ -30,6 +30,15 @@ def is_banned(species: str, week_id: int | None = None) -> bool:
     return species in banned_species(week_id)
 
 
+def brief_ban(week_id: int | None = None) -> str:
+    """给 /island 会厅列表一行摘要（不含 MCP 子命令）。"""
+    banned = banned_species(week_id)
+    if not banned:
+        return "本周无禁捞种"
+    names = [SEA_CATCH[k]["name"] for k in banned if k in SEA_CATCH]
+    return f"禁捞：{'、'.join(names)}（网/钓碰上罚 15 票放生）"
+
+
 def notice_text(week_id: int | None = None) -> str:
     banned = banned_species(week_id)
     if not banned:

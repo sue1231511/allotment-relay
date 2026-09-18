@@ -26,6 +26,7 @@ LOOK = {
     "notice": "告示",
     "work": "工程",
     "gazette": "纪事",
+    "fishban": "禁捕",
 }
 
 
