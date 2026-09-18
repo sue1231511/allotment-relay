@@ -1864,6 +1864,26 @@ document.body.addEventListener('click', (e) => {
     if (!text || !text.trim()) return;
     command = `潮生会 工程 捐 ${text.trim()}`;
   }
+  if (payload.tool === 'tide_ops' && command === '投苗') {
+    const text = window.prompt('投哪种苗（例：灰鲱 或 沙鳗 2）', '灰鲱');
+    if (!text || !text.trim()) return;
+    command = `投苗 ${text.trim()}`;
+  }
+  if (payload.tool === 'tide_ops' && command === '名池') {
+    const text = window.prompt('给渔排起名（可写池号，例：薄荷池 或 2 薄荷池）', '薄荷池');
+    if (!text || !text.trim()) return;
+    command = `名池 ${text.trim()}`;
+  }
+  if (payload.tool === 'hut_ops' && command === '腌') {
+    const text = window.prompt('腌哪种蔬菜、几份（两份一坛，例：甘蓝 4）', '甘蓝 4');
+    if (!text || !text.trim()) return;
+    command = `腌 ${text.trim()}`;
+  }
+  if (payload.tool === 'hut_ops' && command === '晾') {
+    const text = window.prompt('晾哪种生鱼、几条（两条一条干，例：鲭鱼 4）', '鲭鱼 4');
+    if (!text || !text.trim()) return;
+    command = `晾 ${text.trim()}`;
+  }
   act(payload.tool, command);
 });
 

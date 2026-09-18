@@ -80,6 +80,8 @@ TIDE_LABELS = {
 PEN_ERECT_COST = 140
 PEN_EXPAND_COST = 120
 MAX_FISH_PENS = 2
+PEN_PATROL_COST_ENERGY = 2
+PEN_PATROL_COOLDOWN = 8 * 3600
 # 第一座温室历史上占 #99；现已迁到 棚1。露天买地仍跳过 99，sow 99 仍当 棚1
 GREENHOUSE_SLOT = 99
 GREENHOUSE_ALIAS_SLOT = 99
@@ -431,7 +433,6 @@ BOSS_DAILY_ATTACKS = 8
 # 漂流瓶
 BOTTLE_LEAVE_DAILY = 3
 BOTTLE_FISH_CHANCE = _event_rate(0.12)
-BOTTLE_WASH_CHANCE = _event_rate(0.16)  # 翻沙偶尔冲上一只，不是必出
 
 # 滨海酒吧 — 暮/夜上工，票少补贴厚；每 2 天必须 shift 一次
 BAR_SHIFT_DAILY = 4

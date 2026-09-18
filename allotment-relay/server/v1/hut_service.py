@@ -13,8 +13,6 @@ from .errors import ApiError, classify, humanize
 TITLES = {
     "look": "看屋",
     "sleep": "睡觉",
-    "bath": "泡澡",
-    "read": "读书",
     "cook": "出锅了",
     "upgrade": "升级",
     "buy_install": "装上了",
@@ -32,6 +30,8 @@ TITLES = {
     "barn_shear": "剪过毛",
     "barn_churn": "搅成奶酪了",
     "sell_fit": "卖掉了",
+    "pickle": "腌好了",
+    "dry": "晾好了",
 }
 
 _FIT_KIND = {
@@ -39,8 +39,8 @@ _FIT_KIND = {
     "cabinet": "soft",
     "fridge": "soft",
     "compost_bin": "soft",
-    "bath_tub": "hard",
-    "bookshelf": "soft",
+    "pickle_crock": "hard",
+    "fish_rack": "soft",
 }
 
 
@@ -69,7 +69,7 @@ async def snapshot(api_key: str, key_id: int) -> dict[str, Any]:
     return snap
 
 
-_UNIQUE_FIT = {"bed", "cabinet", "fridge", "compost_bin", "hammock", "bath_tub", "bookshelf"}
+_UNIQUE_FIT = {"bed", "cabinet", "fridge", "compost_bin", "hammock", "pickle_crock", "fish_rack"}
 
 
 def _kind_for(key: str) -> str:
@@ -157,10 +157,6 @@ def _command(kind: str, target: str) -> tuple[str, str]:
         return "hut", "status"
     if kind == "sleep":
         return "hut", "睡"
-    if kind == "bath":
-        return "hut", "泡澡"
-    if kind == "read":
-        return "hut", "读"
     if kind == "upgrade":
         return "hut", "upgrade"
     if kind == "put":
@@ -217,6 +213,14 @@ def _command(kind: str, target: str) -> tuple[str, str]:
         if not extra:
             raise ApiError("BAD_REQUEST", "先点要卖掉的那一件。")
         return "hut", f"卖掉 {extra} 确认"
+    if kind == "pickle":
+        if not extra:
+            raise ApiError("BAD_REQUEST", "先点要腌的蔬菜。")
+        return "hut", f"腌 {extra}"
+    if kind == "dry":
+        if not extra:
+            raise ApiError("BAD_REQUEST", "先点要晾的生鱼。")
+        return "hut", f"晾 {extra}"
     raise ApiError("BAD_REQUEST", "小屋里没有这一下。")
 
 

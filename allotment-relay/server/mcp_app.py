@@ -102,12 +102,12 @@ async def plot_ops(
     return await mux._call_ops(mux.plot_bundle, _kid(), command)
 
 
-@mcp.tool(description="小屋潮柜床畜栏。空=列表。例：status · 睡 · 泡澡 · 读 · 卖掉 羊毛毯 确认。喂过的狗也占栏。mascot upkeep≠岸维。")
+@mcp.tool(description="小屋潮柜床畜栏腌晾。空=列表。例：status · 睡 · 腌 甘蓝 4 · 晾 鲭鱼 4 · 卖掉 羊毛毯 确认。人类 /island 屋里栏能买坛/架。喂过的狗也占栏。mascot upkeep≠岸维。")
 async def hut_ops(command: str = "") -> str:
     return await mux._call_ops(mux.hut_bundle, _kid(), command)
 
 
-@mcp.tool(description="渔获出海赶海漂流瓶。空=列表。例：net · cast · dig · 捞瓶 · 投瓶 正文。dig≠崖矿；勿 fish_ops/bottle_ops。")
+@mcp.tool(description="渔获出海赶海渔排漂流瓶。空=列表。例：net · 搭排 · 巡排 · 投苗 灰鲱 2 · dig · 捞瓶。人类 /island 港口渔排栏。dig≠崖矿；勿 pen_ops/fish_ops/bottle_ops。")
 async def tide_ops(command: str = "") -> str:
     return await mux._call_ops(mux.tide_bundle, _kid(), command)
 

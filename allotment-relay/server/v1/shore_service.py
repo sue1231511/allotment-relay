@@ -19,18 +19,20 @@ TITLES = {
     "seek": "寻信",
     "flower": "采花",
     "photo": "留影",
-    "捞瓶": "捞瓶",
-    "投瓶": "投瓶",
-    "回瓶": "回瓶",
-    "看瓶": "看瓶",
-    "扫瓶": "漂流瓶",
+    "搭排": "搭排",
+    "扩池": "扩池",
+    "投苗": "投苗",
+    "投饵": "投饵",
+    "收排": "收排",
+    "名池": "名池",
+    "巡排": "巡排",
 }
 
 LOOK = {
     "status": "status",
     "beach": "beach scan",
     "voyage": "voyage status",
-    "bottle": "漂流瓶",
+    "pen": "渔排",
 }
 
 TIDE_KINDS = {
@@ -104,20 +106,14 @@ def _command(kind: str, target: str) -> tuple[str, str]:
         return "tide", cmd
     if verb in MARRY:
         return "marriage", MARRY[verb]
-    if verb in ("捞瓶", "扫瓶"):
+    if verb in ("搭排", "扩池", "巡排"):
         return "tide", verb
-    if verb == "投瓶":
-        if not extra:
-            raise ApiError("BAD_REQUEST", "先写下要投进海里的话。")
-        return "tide", f"投瓶 {extra}"
-    if verb == "回瓶":
-        if not extra:
-            raise ApiError("BAD_REQUEST", "先写下回瓶的话。")
-        return "tide", f"回瓶 {extra}"
-    if verb == "看瓶":
-        if not extra:
-            raise ApiError("BAD_REQUEST", "先点要看的那只瓶。")
-        return "tide", f"看瓶 {extra}"
+    if verb in ("投苗", "投饵", "收排", "名池"):
+        if verb == "投苗" and not extra:
+            raise ApiError("BAD_REQUEST", "先点要投的苗。")
+        if verb == "名池" and not extra:
+            raise ApiError("BAD_REQUEST", "先写下池名。")
+        return "tide", f"{verb} {extra}".strip()
     raise ApiError("BAD_REQUEST", "潮岸没有这一下。")
 
 
@@ -146,7 +142,7 @@ async def _gear_view(steward_id: int) -> dict[str, Any]:
 
 async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
     """给 /island 港口和海边用。数值仍走 tide_ops / marriage_ops，这里只摊开能点的。"""
-    from .. import marine, bottles
+    from .. import marine
 
     gear = await _gear_view(s["id"])
     stock = await db.get_satchel(s["id"])
@@ -180,15 +176,6 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
         if fish
         else "袋里还没有渔获"
     )
-    bottles_view = await bottles.shore_view(conn, s["id"])
-    pending = int(bottles_view.get("pending") or 0)
-    leave_left = int(bottles_view.get("leave_left") or 0)
-    found_bottles = list(bottles_view.get("found") or [])
-    bottle_note = (
-        f"潮线有 {pending} 只瓶待捞。"
-        if pending
-        else "漂流瓶栏能看、捞、投、回。"
-    )
     if hailed:
         port_line = "黑旗截停。先点打、逃、谈或买路。"
         beach_line = f"{tide_name}。船在海上碰上事了，先去港口。"
@@ -197,21 +184,22 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
         beach_line = f"{tide_name}。港口那边碰上未命名小鱼了。"
     elif sailing:
         port_line = f"船在海上。{tide_name}。看船、归港在码头。"
-        beach_line = f"{tide_name}。赶海、寻信在沙滩。{bottle_note}"
+        beach_line = f"{tide_name}。赶海、寻信在沙滩。"
     elif not gear["can_net"] and not gear["can_cast"]:
         port_line = f"{tide_name}。先把渔网或钓竿备上，再撒网坐钓。"
-        beach_line = f"{tide_name}。赶海、寻信在沙滩。围观页只看。{bottle_note}"
+        beach_line = f"{tide_name}。赶海、寻信在沙滩。围观页只看。"
     else:
-        port_line = f"{tide_name}。撒网、坐钓、开船在码头；闲聊是另一个选项。围观页只看。"
-        beach_line = f"{tide_name}。赶海、寻信在沙滩。围观页只看。{bottle_note}"
+        port_line = f"{tide_name}。撒网、坐钓、开船、管渔排在码头；闲聊是另一个选项。围观页只看。"
+        beach_line = f"{tide_name}。赶海、寻信在沙滩。围观页只看。"
 
+    pen_view = await marine.shore_pen_view(conn, s)
     port_tabs = [
         {"key": "cast", "label": "岸边", "badge": ""},
         {"key": "voyage", "label": "出海", "badge": "海" if sailing else ""},
+        {"key": "pen", "label": "渔排", "badge": pen_view.get("badge") or ""},
     ]
     beach_tabs = [
         {"key": "beach", "label": "赶海", "badge": ""},
-        {"key": "bottle", "label": "漂流瓶", "badge": str(pending) if pending else ""},
         {"key": "vow", "label": "信物", "badge": ""},
     ]
 
@@ -444,70 +432,156 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
             detail="先寻信、采花或赶海，再在这儿留影。最高档去灯塔。",
         ),
     ]
-    bottle_items = [
+
+    pen_items = [
         _sku(
-            sid="look-bottle",
+            sid="look-pen",
             kind="look",
-            name="看潮线",
-            emoji="🫙",
-            note=f"{pending} 只待捞 · 今日还能投 {leave_left} 只。",
+            name="看渔排",
+            emoji="🪣",
+            note=(
+                f"{pen_view['count']} 口 · 待投饵 {pen_view['hungry']} · 可收 {pen_view['ready']}"
+                if pen_view["count"]
+                else f"还没有渔排。搭第一口 {pen_view['erect_cost']} 票。"
+            ),
             price="看",
             can=True,
-            target="bottle",
-            detail="漂流瓶是岛民留在潮线的话，不是听潮亭木牌，也不是潮生会告示。",
-        ),
-        _sku(
-            sid="fish-bottle",
-            kind="捞瓶",
-            name="捞瓶",
-            emoji="🎣",
-            note="随机捞一只。未必有缘，空网也正常。",
-            price="捞",
-            can=True,
-            target="",
-            detail="不花钱。捞到才能回。不要发明 bottle_ops。",
-        ),
-        _sku(
-            sid="leave-bottle",
-            kind="投瓶",
-            name="投瓶",
-            emoji="✉️",
-            note=f"写一句话入海。每天最多 {config.BOTTLE_LEAVE_DAILY} 只，今日剩 {leave_left}。",
-            price="投",
-            can=leave_left > 0,
-            target="",
-            detail="点开写下正文。可空署名，默认岛民名。不是聊天室，也不是木牌。",
+            target="pen",
+            detail="渔排是养苗的池，不是撒网坐钓。岸维按座收。不要发明 pen_ops / fish_ops。",
         ),
     ]
-    for row in found_bottles:
-        bid = int(row["id"])
-        sig = row.get("signature") or row.get("author_name") or "?"
-        snippet = str(row.get("body") or "")[:24]
-        bottle_items.append(
+    if not pen_view["count"]:
+        pen_items.append(
             _sku(
-                sid=f"read-{bid}",
-                kind="看瓶",
-                name=f"看 #{bid}",
-                emoji="📜",
-                note=f"{sig}：{snippet}",
-                price="看",
-                can=True,
-                target=str(bid),
-                detail="你捞到的瓶。回过的也能再看。",
+                sid="erect-pen",
+                kind="搭排",
+                name="搭渔排",
+                emoji="🪵",
+                note=f"{pen_view['erect_cost']} 票。欠岸税或岸维不能扩产。",
+                price=str(pen_view["erect_cost"]),
+                can=bool(pen_view["can_erect"]),
+                target="",
+                detail="港口边上扎第一口池。搭好再投苗、投饵、收排。不是畜栏。",
             )
         )
-        if not row.get("reply_at"):
-            bottle_items.append(
+    else:
+        if pen_view["count"] < pen_view["max"]:
+            pen_items.append(
                 _sku(
-                    sid=f"reply-{bid}",
-                    kind="回瓶",
-                    name=f"回 #{bid}",
-                    emoji="💬",
-                    note=f"回给 {sig}。只能回一次。",
-                    price="回",
+                    sid="expand-pen",
+                    kind="扩池",
+                    name="扩第二池",
+                    emoji="➕",
+                    note=f"{pen_view['expand_cost']} 票。最多 {pen_view['max']} 口。",
+                    price=str(pen_view["expand_cost"]),
+                    can=bool(pen_view["can_expand"]),
+                    target="",
+                    detail="再扎一口。投苗时写池号，或不写就投空池。",
+                )
+            )
+        wait = int(pen_view.get("patrol_wait") or 0)
+        if wait > 0:
+            hours = wait // 3600 + (1 if wait % 3600 else 0)
+            patrol_note = f"刚巡过，约 {hours} 小时后再来。"
+        else:
+            patrol_note = f"{config.PEN_PATROL_COST_ENERGY} 精力。可能捡到堆肥或饵，不是撒网。"
+        pen_items.append(
+            _sku(
+                sid="patrol-pen",
+                kind="巡排",
+                name="巡排",
+                emoji="🚶",
+                note=patrol_note,
+                price="巡" if pen_view["can_patrol"] else "看",
+                can=bool(pen_view["can_patrol"]),
+                target="",
+                detail="绕池走一圈。不是赶海翻沙，也不是畜栏喂牲口。",
+            )
+        )
+        empty_pens = [p for p in pen_view["pens"] if p["state"] == "empty"]
+        for pen in empty_pens:
+            for starter in pen_view["starters"]:
+                pen_items.append(
+                    _sku(
+                        sid=f"stock-{pen['slot']}-{starter['key']}",
+                        kind="投苗",
+                        name=f"投苗·{starter['name']} {pen['tag']}",
+                        emoji=starter["emoji"],
+                        note=f"{starter['cost']} 票。空池投苗。",
+                        price=str(starter["cost"]),
+                        can=bool(starter["can"]),
+                        target=f"{starter['name']} {pen['slot']}",
+                        detail="花钱买苗投进空池。不是撒网那一下。投完记得投饵。",
+                    )
+                )
+            pen_items.append(
+                _sku(
+                    sid=f"stock-other-{pen['slot']}",
+                    kind="投苗",
+                    name=f"投别的苗 {pen['tag']}",
+                    emoji="✏️",
+                    note="写品种名，如鲭鱼、海鳟。深海鱼不能养。",
+                    price="投",
                     can=True,
-                    target=str(bid),
-                    detail="只有你捞到的瓶才能回。回完投瓶者下次看档能看见。",
+                    target=str(pen["slot"]),
+                    detail="空池投苗。可养的看渔排。不要发明 fish_ops。",
+                )
+            )
+        for pen in pen_view["pens"]:
+            if pen["state"] == "hungry":
+                have = f"{pen['feed_name']} {pen['feed_have']}/{pen['feed_qty']}"
+                pen_items.append(
+                    _sku(
+                        sid=f"feed-{pen['slot']}",
+                        kind="投饵",
+                        name=f"投饵 {pen['tag']}",
+                        emoji="🪴",
+                        note=f"{pen['emoji']}{pen['name']} 待投饵。要 {have}。",
+                        price="饵" if pen["can_feed"] else "缺",
+                        can=bool(pen["can_feed"]),
+                        target=str(pen["slot"]),
+                        detail="投过饵长得快，收的时候也多一条。不是畜栏喂牲口。",
+                    )
+                )
+            if pen["state"] == "ready":
+                pen_items.append(
+                    _sku(
+                        sid=f"harvest-{pen['slot']}",
+                        kind="收排",
+                        name=f"收排 {pen['tag']}",
+                        emoji="🧺",
+                        note=f"{pen['emoji']}{pen['name']} 可收。赶对潮汐多一条。",
+                        price="收",
+                        can=True,
+                        target=str(pen["slot"]),
+                        detail="收进行囊。赶这种鱼爱来的潮汐会多收一条。不是撒网。",
+                    )
+                )
+            if pen["state"] == "fed":
+                pen_items.append(
+                    _sku(
+                        sid=f"wait-{pen['slot']}",
+                        kind="look",
+                        name=f"{pen['tag']} {pen['name']}",
+                        emoji=pen["emoji"] or "🪣",
+                        note=f"放养中 · {pen['wait']}",
+                        price="看",
+                        can=True,
+                        target="pen",
+                        detail="还没长成。先巡排或等一等。",
+                    )
+                )
+            pen_items.append(
+                _sku(
+                    sid=f"label-{pen['slot']}",
+                    kind="名池",
+                    name=f"给{pen['tag']}起名",
+                    emoji="🏷️",
+                    note="给这口池写个名字，方便认。",
+                    price="名",
+                    can=True,
+                    target=str(pen["slot"]),
+                    detail="点开写下池名。不是听潮亭木牌。",
                 )
             )
 
@@ -518,6 +592,7 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
         "items": {
             "cast": cast_items,
             "voyage": voyage_items,
+            "pen": pen_items,
         },
     }
     beach_shelf = {
@@ -526,7 +601,6 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
         "tabs": beach_tabs,
         "items": {
             "beach": beach_items,
-            "bottle": bottle_items,
             "vow": vow_items,
         },
     }

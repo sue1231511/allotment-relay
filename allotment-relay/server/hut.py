@@ -1143,7 +1143,7 @@ async def bath_soak(s: dict[str, Any]) -> str:
     if not s.get("hut_built"):
         raise ValueError("先 hut_ops build 小屋，再 buy bath_tub → install hard_N bath_tub")
     async with db.connect() as conn:
-        if not await _has_named_fitting(conn, s["id"], "bath_tub"):
+        if not await _has_fitting(conn, s["id"], "bath_tub"):
             raise ValueError("小屋里还没有浴桶 — hut_ops buy bath_tub → install hard_N bath_tub")
         row = await (await conn.execute(
             "SELECT bath_soak_at FROM stewards WHERE id=?", (s["id"],)
@@ -1226,7 +1226,7 @@ async def bookshelf_read(s: dict[str, Any]) -> str:
     from .lore import LORE_TOPIC_LABELS, LORE_TOPICS
     import random as _random
     async with db.connect() as conn:
-        if not await _has_named_fitting(conn, s["id"], "bookshelf"):
+        if not await _has_fitting(conn, s["id"], "bookshelf"):
             raise ValueError("小屋里还没有书架 — buy bookshelf → install soft_N bookshelf")
         day = db.day_id()
         row = await (await conn.execute(
@@ -1879,57 +1879,168 @@ def _has_fit(fittings: dict[str, str], name: str) -> bool:
     return any(_fitting_bare(key) == name for key in fittings.values())
 
 
-def _offer_unique_fit(
+def _append_pantry_home(
     home_items: list[dict[str, Any]],
     *,
-    key: str,
-    slot_kind: str,
-    name: str,
-    emoji: str,
-    cost: int,
-    purpose: str,
+    has_crock: bool,
+    has_rack: bool,
     tickets: int,
     stock: dict[str, Any],
-    empty: str | None,
+    empty_hard: str | None,
+    empty_soft: str | None,
 ) -> None:
-    bag = int(stock.get(f"fit_{key}") or 0) > 0
-    slot_label = "硬装" if slot_kind == "hard" else "软装"
-    if bag and empty:
-        home_items.append(_sku(
-            sid=f"install-{key}",
-            kind="install",
-            name=f"装{name}",
-            emoji=emoji,
-            note=f"行囊里有{name}，装上才能{purpose}。",
-            detail=f"装到空的{slot_label}槽。装好就能{purpose}。",
-            price="装",
-            can=True,
-            target=key,
-        ))
-    elif empty:
-        home_items.append(_sku(
-            sid=f"buy-{key}",
-            kind="buy_install",
-            name=f"买{name}",
-            emoji=emoji,
-            note=f"{cost} 票。装上才能{purpose}。",
-            detail=f"买{name}并装上，要 {cost} 票。",
-            price=f"{cost} 票",
-            can=tickets >= cost,
-            target=key,
-        ))
+    from .catalog import SEA_CATCH, is_vegetable_item
+
+    crock = HUT_HARD["pickle_crock"]
+    rack = HUT_SOFT["fish_rack"]
+    if has_crock:
+        vegs = [
+            (item, int(qty or 0))
+            for item, qty in (stock or {}).items()
+            if is_vegetable_item(str(item)) and int(qty or 0) >= config.PICKLE_VEG_PER_JAR
+        ]
+        if vegs:
+            for item, have in vegs:
+                even = have - (have % config.PICKLE_VEG_PER_JAR)
+                home_items.append(_sku(
+                    sid=f"pickle-{item}",
+                    kind="pickle",
+                    name=f"腌·{item_label(item)}",
+                    emoji="🫙",
+                    note=f"行囊 {have}。{config.PICKLE_VEG_PER_JAR} 份一坛。",
+                    detail="只能腌蔬菜。水果不用腌。腌菜能生吃、下锅、进潮柜。",
+                    price="腌",
+                    can=True,
+                    target=f"{item_label(item)} {even}",
+                    qty=even,
+                ))
+        else:
+            home_items.append(_sku(
+                sid="pickle-empty",
+                kind="look",
+                name="腌菜坛空着",
+                emoji="🫙",
+                note="坛在。要两份同种蔬菜才腌得动。",
+                detail="份地收菜再来。水果不用腌。",
+                price="看",
+                can=True,
+                target="status",
+            ))
     else:
-        home_items.append(_sku(
-            sid=f"{key}-slot",
-            kind="look",
-            name=f"{slot_label}槽满了",
-            emoji=emoji,
-            note=f"没有空槽装{name}。先升级小屋。",
-            detail=f"{slot_label}槽满了。先升级再买{name}。",
-            price="看",
-            can=True,
-            target="status",
-        ))
+        bag = int(stock.get("fit_pickle_crock") or 0) > 0
+        if bag and empty_hard:
+            home_items.append(_sku(
+                sid="install-crock",
+                kind="install",
+                name="装腌菜坛",
+                emoji="🫙",
+                note="行囊里有坛，装上才能腌。",
+                detail="装到空的硬装槽。装好就能腌蔬菜。",
+                price="装",
+                can=True,
+                target="pickle_crock",
+            ))
+        elif empty_hard:
+            home_items.append(_sku(
+                sid="buy-crock",
+                kind="buy_install",
+                name="买腌菜坛",
+                emoji="🫙",
+                note=f"{crock['cost']} 票。装上才能腌菜。",
+                detail=f"买腌菜坛并装上，要 {crock['cost']} 票。两份蔬菜一坛。不是畜栏，也不是灶。",
+                price=f"{crock['cost']} 票",
+                can=tickets >= int(crock["cost"]),
+                target="pickle_crock",
+            ))
+        else:
+            home_items.append(_sku(
+                sid="crock-slot",
+                kind="look",
+                name="硬装槽满了",
+                emoji="🫙",
+                note="没有空槽装腌菜坛。先升级或卖掉一件。",
+                detail="硬装槽满了。先腾位置再买坛。",
+                price="看",
+                can=True,
+                target="status",
+            ))
+    if has_rack:
+        fishes = []
+        for item, qty in (stock or {}).items():
+            key = str(item)
+            if not key.startswith("fish_"):
+                continue
+            have = int(qty or 0)
+            if have < config.DRY_FISH_PER:
+                continue
+            spec = SEA_CATCH.get(key[5:]) or {}
+            fishes.append((key, have, spec))
+        if fishes:
+            for item, have, spec in fishes:
+                even = have - (have % config.DRY_FISH_PER)
+                name = spec.get("name") or item_label(item)
+                home_items.append(_sku(
+                    sid=f"dry-{item}",
+                    kind="dry",
+                    name=f"晾·{name}",
+                    emoji="🪝",
+                    note=f"行囊 {have}。{config.DRY_FISH_PER} 条一条干。",
+                    detail="只晾生鱼。鱼干能生吃、下锅当蛋白、进潮柜。",
+                    price="晾",
+                    can=True,
+                    target=f"{name} {even}",
+                    qty=even,
+                ))
+        else:
+            home_items.append(_sku(
+                sid="dry-empty",
+                kind="look",
+                name="晾鱼架空着",
+                emoji="🪝",
+                note="架子在。要两条同种生鱼才晾得动。",
+                detail="港口收排或撒网有鱼再来。不是畜栏。",
+                price="看",
+                can=True,
+                target="status",
+            ))
+    else:
+        bag = int(stock.get("fit_fish_rack") or 0) > 0
+        if bag and empty_soft:
+            home_items.append(_sku(
+                sid="install-rack",
+                kind="install",
+                name="装晾鱼架",
+                emoji="🪝",
+                note="行囊里有架子，装上才能晾。",
+                detail="装到空的软装槽。装好就能晾生鱼。",
+                price="装",
+                can=True,
+                target="fish_rack",
+            ))
+        elif empty_soft:
+            home_items.append(_sku(
+                sid="buy-rack",
+                kind="buy_install",
+                name="买晾鱼架",
+                emoji="🪝",
+                note=f"{rack['cost']} 票。装上才能晾鱼。",
+                detail=f"买晾鱼架并装上，要 {rack['cost']} 票。两条同种生鱼一条干。",
+                price=f"{rack['cost']} 票",
+                can=tickets >= int(rack["cost"]),
+                target="fish_rack",
+            ))
+        else:
+            home_items.append(_sku(
+                sid="rack-slot",
+                kind="look",
+                name="软装槽满了",
+                emoji="🪝",
+                note="没有空槽装晾鱼架。先升级或卖掉一件。",
+                detail="软装槽满了。先腾位置再买架。",
+                price="看",
+                can=True,
+                target="status",
+            ))
 
 
 async def _cook_tab_items(
@@ -2093,25 +2204,17 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
     has_cab = _has_fit(fittings, "cabinet")
     has_fridge = _has_fit(fittings, "fridge")
     has_bin = _has_fit(fittings, "compost_bin")
-    has_tub = _has_fit(fittings, "bath_tub")
-    has_shelf = _has_fit(fittings, "bookshelf")
+    has_crock = _has_fit(fittings, "pickle_crock")
+    has_rack = _has_fit(fittings, "fish_rack")
     slept = False
-    last_bath = 0
-    book_day = 0
     if built:
         row = await (await conn.execute(
-            "SELECT bed_rest_at, bath_soak_at, book_read_day FROM stewards WHERE id=?",
-            (s["id"],),
+            "SELECT bed_rest_at FROM stewards WHERE id=?", (s["id"],)
         )).fetchone()
         last = int(row[0] if row else 0)
-        last_bath = int(row[1] if row else 0)
-        book_day = int(row[2] if row else 0)
         slept = bool(last and db.day_id(last) >= db.day_id())
     need_rest = energy_now < 100 or health_now < 100
     can_sleep = bool(built and has_bed and not slept and need_rest)
-    bath_wait = (last_bath + config.BATH_COOLDOWN - db.now()) if last_bath else 0
-    can_bath = bool(built and has_tub and bath_wait <= 0)
-    can_read = bool(built and has_shelf and book_day != db.day_id())
     sleep_energy = config.BED_REST_ENERGY
     if has_bed:
         for key in fittings.values():
@@ -2129,15 +2232,11 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
     if not built:
         spoken = "还没搭棚屋。点搭棚屋。"
     elif can_sleep:
-        spoken = "困了就睡。泡澡、读书、灶、潮柜、堆肥、畜栏也在这儿。"
-    elif can_bath:
-        spoken = "浴桶热着。灶、潮柜、堆肥、畜栏也在这儿。"
-    elif can_read:
-        spoken = "书架还没翻过。灶、潮柜、堆肥、畜栏也在这儿。"
+        spoken = "困了就睡。灶、潮柜、堆肥桶、畜栏、腌晾也在这儿。"
     elif not has_bed:
-        spoken = "先买张床再睡。灶、潮柜、堆肥、畜栏也在这儿。"
+        spoken = "先买张床再睡。灶、潮柜、堆肥、畜栏、腌晾也在这儿。"
     else:
-        spoken = "今天睡过了。灶、潮柜、堆肥、畜栏还在。"
+        spoken = "今天睡过了。灶、潮柜、堆肥、畜栏、腌晾还在。"
 
     home_items: list[dict[str, Any]] = []
     if built:
@@ -2173,65 +2272,15 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
             can=can_sleep,
             target="",
         ))
-        if has_tub:
-            if can_bath:
-                bath_note = f"雾智 +{config.BATH_MIST_WIT}。每 20 小时一次。床管精力，浴桶管雾智。"
-            else:
-                hours = max(1, bath_wait // 3600 + (1 if bath_wait % 3600 else 0))
-                bath_note = f"刚泡过，约 {hours} 小时后再来。"
-            home_items.append(_sku(
-                sid="bath",
-                kind="bath",
-                name="泡澡",
-                emoji="🛁",
-                note=bath_note,
-                detail=bath_note,
-                price="泡" if can_bath else "看",
-                can=can_bath,
-                target="",
-            ))
-        else:
-            _offer_unique_fit(
-                home_items,
-                key="bath_tub",
-                slot_kind="hard",
-                name="雪松浴桶",
-                emoji="🛁",
-                cost=int(HUT_HARD["bath_tub"]["cost"]),
-                purpose="泡澡",
-                tickets=tickets,
-                stock=stock,
-                empty=empty_hard,
-            )
-        if has_shelf:
-            if can_read:
-                read_note = f"雾智 +{config.BOOKSHELF_MIST_WIT}，翻一段沿海旧史。每天一次。"
-            else:
-                read_note = "今天翻过书了，明日再读。"
-            home_items.append(_sku(
-                sid="read",
-                kind="read",
-                name="读书",
-                emoji="📚",
-                note=read_note,
-                detail=read_note + "不是 visit_ops lore scan 那本全服旧史目录，是家里这架。",
-                price="读" if can_read else "看",
-                can=can_read,
-                target="",
-            ))
-        else:
-            _offer_unique_fit(
-                home_items,
-                key="bookshelf",
-                slot_kind="soft",
-                name="航海书架",
-                emoji="📚",
-                cost=int(HUT_SOFT["bookshelf"]["cost"]),
-                purpose="读书",
-                tickets=tickets,
-                stock=stock,
-                empty=empty_soft,
-            )
+        _append_pantry_home(
+            home_items,
+            has_crock=has_crock,
+            has_rack=has_rack,
+            tickets=tickets,
+            stock=stock,
+            empty_hard=empty_hard,
+            empty_soft=empty_soft,
+        )
         if not has_bed:
             bag_bed = int(stock.get("fit_bed") or 0) > 0
             if bag_bed and empty_hard:
@@ -2327,7 +2376,7 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
             except ValueError:
                 kind, meta = "soft", {"name": item_label(item), "emoji": _item_emoji(item)}
             empty = empty_hard if kind == "hard" else empty_soft
-            unique = bare in {"cabinet", "fridge", "compost_bin", "bath_tub", "bookshelf"} or is_bed_key(bare) or bare == "hammock"
+            unique = bare in {"cabinet", "fridge", "compost_bin", "pickle_crock", "fish_rack"} or is_bed_key(bare) or bare == "hammock"
             label = str(meta.get("name") or item_label(item))
             extra = f" x{n}" if n > 1 else ""
             if empty and not unique:
@@ -2815,7 +2864,7 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
     if has_cab or has_fridge:
         cab_badge = str(sum(1 for row in cab_items if row["kind"] in ("put", "take"))) or ""
     tabs = [
-        {"key": "home", "label": "屋里", "badge": "睡" if can_sleep else ("泡" if can_bath else ("读" if can_read else ""))},
+        {"key": "home", "label": "屋里", "badge": "睡" if can_sleep else ""},
         {"key": "cook", "label": "灶", "badge": str(cook_ready) if cook_ready else ""},
         {"key": "cabinet", "label": "潮柜", "badge": cab_badge},
         {"key": "compost", "label": "堆肥", "badge": str(ready) if ready else ""},

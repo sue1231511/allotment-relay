@@ -21,12 +21,12 @@ import {
 } from "./store.js?v=island-modulefix2";
 import { renderHud } from "./hud.js?v=dual-panels1";
 import { renderMap } from "./map.js?v=hotspot-fix1";
-import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=plot-overview1";
+import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=farm-batch1";
 import { renderShore, renderShoreYard, renderPortHub, renderBeachHub } from "./scenes/shore.js?v=island-modulefix2";
 import { renderPlaza } from "./scenes/plaza.js?v=island-modulefix2";
 import { renderPlace } from "./scenes/place.js?v=island-modulefix2";
 import { hideClimateSheet, showClimateSheet } from "./ui/climate.js?v=island-modulefix2";
-import { renderHut } from "./scenes/hut.js?v=bottles-cozy1";
+import { renderHut } from "./scenes/hut.js?v=island-modulefix2";
 import { renderShop } from "./scenes/shop.js?v=tt-sprite1";
 import { renderLili } from "./scenes/lili.js?v=island-modulefix2";
 import { renderClinic } from "./scenes/clinic.js?v=island-modulefix2";
@@ -54,7 +54,7 @@ import { setBackChip, setBagChip } from "./ui/back-map.js?v=dual-panels1";
 import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=island-modulefix2";
 import { popOut } from "./ui/pop.js?v=island-modulefix2";
 import { bgmMuted, playBgm, setBgmMuted, startIslandBgm, stopBgm } from "./ui/bgm.js?v=undertide-bgm1";
-import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showVendSheet, toast } from "./ui/modal.js?v=bottles-cozy2";
+import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showVendSheet, toast } from "./ui/modal.js?v=farm-batch1";
 
 const sceneEl = () => document.getElementById("island-scene");
 const sheetEl = () => document.getElementById("island-sheet");
@@ -646,7 +646,7 @@ function tapHut(kind, target, id) {
     });
     return;
   }
-  if (kind === "put" || kind === "take" || kind === "compost_put" || kind === "compost_take" || kind === "barn_churn" || kind === "expand") {
+  if (kind === "put" || kind === "take" || kind === "compost_put" || kind === "compost_take" || kind === "barn_churn" || kind === "expand" || kind === "pickle" || kind === "dry") {
     const have = Number(row.qty) || 0;
     if (have > 1 || kind === "expand") {
       showFormSheet({
@@ -2161,34 +2161,30 @@ function tapShore(kind, target, id) {
     showHintSheet({ title: row.name || shoreTitle(), body: row.detail || row.note || "这会儿做不了。" });
     return;
   }
-  if (kind === "投瓶") {
-    showFormSheet({
-      title: row.name || "投瓶",
-      body: row.detail || "写进瓶子里的话。每天最多 3 只。不是听潮亭，也不是聊天室。",
-      fields: [
-        { id: "body", label: "瓶中话", type: "textarea", placeholder: "今晚浪很大", max: 180, rows: 4, empty: "先写下要投进海里的话。" },
-        { id: "sig", label: "署名（可空）", placeholder: "默认岛民名", max: 40, optional: true },
-      ],
-      confirm: "投进海里",
-      onConfirm: (vals) => {
-        const body = String(vals.body || "").trim();
-        const sig = String(vals.sig || "").trim();
-        runShore("投瓶", sig ? `${body} — ${sig}` : body);
-      },
-    });
-    return;
+  if (kind === "投苗") {
+    const t = String(row.target || target || "").trim();
+    if (/^\d+$/.test(t)) {
+      showFormSheet({
+        title: row.name || "投苗",
+        body: row.detail || "写下要投的品种。深海鱼不能养。",
+        fields: [
+          { id: "species", label: "品种", placeholder: "灰鲱", max: 24, empty: "先写下要投的苗。" },
+        ],
+        confirm: "投苗",
+        onConfirm: (vals) => runShore("投苗", `${vals.species} ${t}`.trim()),
+      });
+      return;
+    }
   }
-  if (kind === "回瓶") {
+  if (kind === "名池") {
     showFormSheet({
-      title: row.name || "回瓶",
-      body: row.detail || "回给投瓶的人。只能回一次。",
+      title: row.name || "名池",
+      body: row.detail || "给这口池起个名字。",
       fields: [
-        { id: "body", label: "回一句", placeholder: "海里见", max: 180, rows: 3, empty: "先写下回瓶的话。" },
+        { id: "label", label: "池名", placeholder: "薄荷池", max: 40, empty: "先写下池名。" },
       ],
-      confirm: "回",
-      onConfirm: (vals) => {
-        runShore("回瓶", `${row.target || target || ""} ${vals.body}`.trim());
-      },
+      confirm: "起名",
+      onConfirm: (vals) => runShore("名池", `${row.target || target || ""} ${vals.label}`.trim()),
     });
     return;
   }
