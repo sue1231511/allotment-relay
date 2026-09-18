@@ -1188,7 +1188,7 @@ async def _resolve_voyage(
     failed = random.random() < fail_chance
     loot_lines = []
     boat = BOATS.get(s.get("boat_key") or "", {})
-    cargo = boat.get("cargo", 2)
+    cargo = boat_parts_mod.effective_cargo(boat.get("cargo", 2), parts)
     try:
         enc_payload = json.loads(voyage.get("encounter") or "{}")
     except json.JSONDecodeError:
@@ -1206,6 +1206,7 @@ async def _resolve_voyage(
     parts_note = await boat_parts_mod.wear_voyage(
         conn, s["id"], voyage["route"], storm=failed or world.current_weather() == "gale",
     )
+    parts = await boat_parts_mod.get_all(conn, s["id"])
 
     if failed:
         await conn.execute("UPDATE stewards SET boat_damaged=1 WHERE id=?", (s["id"],))
@@ -1218,11 +1219,24 @@ async def _resolve_voyage(
                 fish_loot.append(item)
     else:
         picks = random.sample(loot_table, k=min(cargo, len(loot_table)))
+        from . import item_traits as traits_mod
         for item in picks:
-            await db.add_item(conn, s["id"], item, 1)
-            loot_lines.append(f"{ITEM_NAMES.get(item, item)} x1")
             if item.startswith("fish_"):
+                species = item.replace("fish_", "", 1)
+                state = traits_mod.roll_fish_state(species)
+                state = boat_parts_mod.fish_state_for_ice(parts, state)
+                weight = traits_mod.roll_fish_weight_kg(species)
+                await traits_mod.grant_satchel(
+                    conn, s["id"], item, 1, quality=state, weight_kg=weight,
+                )
                 fish_loot.append(item)
+                loot_lines.append(
+                    f"{ITEM_NAMES.get(item, item)} x1"
+                    f"（{traits_mod.FISH_STATE_LABEL.get(state, state)}）"
+                )
+            else:
+                await db.add_item(conn, s["id"], item, 1)
+                loot_lines.append(f"{ITEM_NAMES.get(item, item)} x1")
 
     enc = event_gen.generate_naval_encounter(
         voyage["route"],

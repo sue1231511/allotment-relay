@@ -1,4 +1,4 @@
-"""Boat six-part wear and fail bonus."""
+"""Boat part wear and fail bonus (八部件)."""
 from __future__ import annotations
 
 import asyncio
