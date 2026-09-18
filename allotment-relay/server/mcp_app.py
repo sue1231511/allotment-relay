@@ -95,19 +95,19 @@ async def steward_ops(command: str = "sheet") -> str:
     )
 
 
-@mcp.tool(description="份地果园与田间事件。空=指令表。例：status · sow 1 甘蓝 · 肥力 · 虫害 1 施药 · 留种 甘蓝 · weather · 浇水。肥力/轮作、虫害处置、留种血统为第二批扩展。weather 末尾附本周纪事。勿 sow_all/plant；repair≠岸维。人类 /island 份地点「田间事件」也能处置虫害（与 虫害 子命令同路径）；repair 只修 steward_incidents 意外。")
+@mcp.tool(description="份地果园与田间事件。空=指令表。例：status · sow 1 甘蓝 · 肥力 · 虫害 1 施药 · 留种 甘蓝 · weather · 浇水。tend 极小概率鸟啄/灶台难点火/潮气发潮/鱼线打结（记一次消一次，后者影响下次 cast）。肥力/轮作、虫害处置、留种血统为第二批扩展。weather 末尾附本周纪事。勿 sow_all/plant；repair≠岸维。人类 /island 份地点「田间事件」也能处置虫害（与 虫害 子命令同路径）；repair 只修 steward_incidents 意外。")
 async def plot_ops(
     command: Annotated[str, Field(description="incident status；repair 编号。肥力 · 虫害 1 手工|施药|拔除|不管（温室漏风 补网|通风|不管）· 留种 作物。空=指令表。")] = "",
 ) -> str:
     return await mux._call_ops(mux.plot_bundle, _kid(), command)
 
 
-@mcp.tool(description="小屋潮柜床畜栏腌晾。空=列表。例：status · 睡 · 修屋顶 · 修冰箱 · 修灶 · barn breed 1 · barn recover 1 · 腌 甘蓝 4 · 晾 鲭鱼 4。屋顶/厨电耐久低有惩罚。mascot upkeep≠岸维。人类 /island 小屋可点配种/寻回/修厨电。")
+@mcp.tool(description="小屋潮柜床畜栏腌晾。空=列表。例：status · 睡 · 修屋顶 · 修冰箱 · 修灶 · barn breed 1 · barn recover 1 · 腌 甘蓝 4 · 晾 鲭鱼 4。屋顶/厨电耐久低有惩罚；份地 tend 潮气发潮则下次睡少回 3 精力。mascot upkeep≠岸维。人类 /island 小屋可点配种/寻回/修厨电。")
 async def hut_ops(command: str = "") -> str:
     return await mux._call_ops(mux.hut_bundle, _kid(), command)
 
 
-@mcp.tool(description="渔获出海赶海渔排漂流瓶。空=列表。例：net · cast · 水层 near · 搏鱼 硬拉 · 解挂 · voyage 部件 修 · dig。人类 /island 港口岸边/出海/渔排栏可点同一套。dig≠崖矿。")
+@mcp.tool(description="渔获出海赶海渔排漂流瓶。空=列表。例：net · cast · 水层 near · 搏鱼 硬拉 · 解挂 · voyage 部件 修 · dig。net 偶发挂水草则下次空网率+10%（撒一次消）。人类 /island 港口岸边/出海/渔排栏可点同一套。dig≠崖矿。")
 async def tide_ops(
     command: Annotated[str, Field(description="net/cast · 水层 · 搏鱼 · 解挂 · voyage 部件 修（六件回满）· 帆撕 补|返航|硬撑 · dig 赶海。")] = "",
 ) -> str:

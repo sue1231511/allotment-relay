@@ -69,7 +69,8 @@ async def roll_tend_glitch(conn, steward_id: int, plot: dict) -> str | None:
         await set_flag(conn, steward_id, "stove_stubborn")
         return "灶台不好点火：下次做饭多耗 1 精力（已记下，做一次饭就消）。"
     if roll < 0.85:
-        return "潮气进棚，软装有发潮味——不影响数值，换晴会好。"
+        await set_flag(conn, steward_id, "humid_soft")
+        return "潮气进棚，软装有发潮味：下次睡觉少回 3 精力（已记下，睡一次就消）。"
     await set_flag(conn, steward_id, "line_tangle")
     return "鱼线打结了：下次坐钓空杆率 +12%（已记下，坐钓一次就消）。"
 
@@ -86,3 +87,24 @@ async def cast_empty_bonus(conn, steward_id: int) -> float:
     if await take_flag(conn, steward_id, "line_tangle"):
         return 0.12
     return 0.0
+
+
+async def net_empty_bonus(conn, steward_id: int) -> float:
+    """渔网挂水草：空网率加成（消费一次）。"""
+    if await take_flag(conn, steward_id, "net_weed"):
+        return 0.10
+    return 0.0
+
+
+async def roll_net_snag(conn, steward_id: int) -> str | None:
+    """撒网后小概率挂水草，影响下次空网率。"""
+    if random.random() > 0.07:
+        return None
+    await set_flag(conn, steward_id, "net_weed")
+    return "渔网挂水草：下次撒网空网率 +10%（已记下，撒一次就消）。"
+
+
+async def sleep_energy_penalty(conn, steward_id: int) -> int:
+    if await take_flag(conn, steward_id, "humid_soft"):
+        return 3
+    return 0
