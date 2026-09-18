@@ -966,6 +966,8 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
     from . import works as works_mod
     from . import traces as traces_mod
     from . import gazette as gazette_mod
+    from . import fish_ban as fish_ban_mod
+    from . import fish_ecology as fish_ecology_mod
 
     tax_snap = await tax_mod.snapshot(conn, s["id"])
     upkeep_snap = await upkeep_mod.snapshot(conn, s["id"])
@@ -1022,7 +1024,19 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
         {"key": "notices", "label": "告示", "badge": str(notice_n) if notice_n else ""},
     ]
 
+    fish_eco_line = await fish_ecology_mod.status_line(conn)
     ask_items = [
+        _sku(
+            sid="fishban-look",
+            kind="look",
+            name="禁捕与鱼群",
+            emoji="🐟",
+            note=fish_ban_mod.brief_ban(),
+            detail=f"{fish_ban_mod.notice_text()}\n{fish_eco_line}",
+            price="看",
+            can=True,
+            target="fishban",
+        ),
         _sku(
             sid="ask",
             kind="look",
