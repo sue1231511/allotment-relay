@@ -572,7 +572,7 @@ async def relay_manual() -> str:
         "",
         "【协作 · 访客】",
         "  steward_ops 协作 — 和各位岛民的协作分总览与档位（≥20 交换台 claim 2 票 · ≥40 海上谈和 +10% · ≥60 assist 对方 +2 票 · ≥80 酒吧打赏对方 +15%）。steward_ops peer 名字 看公开档也会写你和 TA 的分。alliance_ops rapport 名字 只查单人。赠礼 +3、assist、打赏等会涨分",
-        "  assist 名字 帮邻居打理，每日每人一次。借船 给 名字（协作≥60，3 日，磨损算船主）· 借船 状态；托养 送出/接回/列表（≥40）；菜篮 开/订/领（≥30，订 25 票/7 天）；共耕 订/状态/解（≥45，assist 每日首次多浇 1 块地；共耕中且本周目标是 assist 时额外 +1 周目标进度）",
+        "  assist 名字 帮邻居打理，每日每人一次。借船 给 名字（协作≥60，3 日，磨损算船主）· 借船 状态（含借出/临期）；临期 24h 内 steward_ops sheet 与纪事提醒；托养 送出/接回/列表（≥40）；菜篮 开/订/领（≥30，订 25 票/7 天）；共耕 订/状态/解（≥45，assist 每日首次多浇 1 块地；共耕中且本周目标是 assist 时额外 +1 周目标进度）",
         "  kitchen_ops 泡 list — 自宅泡饮（6 种），带去 bar_ops order 对应酒可减价。voyage_ops 改装 list — 船 2 槽改装",
         "  contract post 石蟹王 1 75 发悬赏（中文名/英文 id 都行），他人 fill 编号",
         "  league contribute 物品 数量 推进本周目标（抽作物目标时跳过当季休市的种）。donate / draw / larder 联盟储藏室（领取 2 票、每日 3 次）",
@@ -718,6 +718,8 @@ async def steward_sheet(key_id: int) -> str:
         lili_hint = await lili_mod.active_visit_hint(conn)
         hut_summary = (await hut_mod.get_bonuses(conn, s["id"])).summary()
         handoff_notes = await _collect_handoffs(conn, s["id"])
+        from . import neighbor_links as nlink_mod
+        loan_notes = await nlink_mod.loan_reminder_notices(conn, s["id"])
         bottle_notes = await _collect_bottle_replies(conn, s["id"])
         open_incidents = await events.list_open_incidents_on(conn, s["id"])
         dove_pending = await farming.get_gugu_dove_pending(conn, s["id"])
@@ -813,6 +815,8 @@ async def steward_sheet(key_id: int) -> str:
     from . import tt as tt_mod
     lines.append(tt_mod.shopfront_line() + " → visit_ops tt")
     for note in handoff_notes:
+        lines.append(note)
+    for note in loan_notes:
         lines.append(note)
     for note in bottle_notes:
         lines.append(note)

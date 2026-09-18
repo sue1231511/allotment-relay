@@ -17,6 +17,7 @@ FOSTER_DAYS = 7
 BASKET_DAYS = 7
 BASKET_FEE = 25
 BOAT_LOAN_SEC = 3 * 86400
+LOAN_REMINDER_SEC = 86400
 
 BASKET_POOL = (
     "egg", "duck_egg", "crop_kale", "crop_beet", "crop_fogpea",
@@ -54,6 +55,15 @@ async def ensure_tables(conn) -> None:
             last_claim_day INTEGER NOT NULL DEFAULT 0,
             paid_tickets INTEGER NOT NULL,
             PRIMARY KEY (buyer_id, seller_id)
+        )
+        """
+    )
+    await conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS neighbor_loan_reminder (
+            loan_key TEXT PRIMARY KEY,
+            steward_id INTEGER NOT NULL,
+            ping_day INTEGER NOT NULL
         )
         """
     )
@@ -135,7 +145,109 @@ async def boat_loan_status(conn, steward_id: int) -> str | None:
             "DELETE FROM neighbor_boat_loan WHERE borrower_id=?", (steward_id,)
         )
         return None
-    return f"借船中：{row[3]} 的 {row[1]}（到期 {db.fmt_cst(row[2])}）"
+    left = int(row[2]) - db.now()
+    extra = ""
+    if left <= LOAN_REMINDER_SEC:
+        extra = f" · 约 {max(1, left // 3600)} 小时内到期"
+    return f"借船中：{row[3]} 的 {row[1]}（到期 {db.fmt_cst(row[2])}{extra}）"
+
+
+async def _reminder_ping(conn, loan_key: str, steward_id: int) -> bool:
+    day = db.day_id()
+    cur = await conn.execute(
+        """
+        INSERT OR IGNORE INTO neighbor_loan_reminder (loan_key, steward_id, ping_day)
+        VALUES (?,?,?)
+        """,
+        (loan_key, steward_id, day),
+    )
+    return cur.rowcount > 0
+
+
+async def loan_reminder_notices(conn, steward_id: int, *, ping: bool = True) -> list[str]:
+    """借船临期提醒：sheet 每次可见；站内纪事（loan_reminder）每日每笔最多一条。"""
+    await ensure_tables(conn)
+    now = db.now()
+    out: list[str] = []
+    cur = await conn.execute(
+        """
+        SELECT lender_id, boat_key, until_ts FROM neighbor_boat_loan WHERE borrower_id=?
+        """,
+        (steward_id,),
+    )
+    row = await cur.fetchone()
+    if row and int(row[2]) > now:
+        left = int(row[2]) - now
+        if left <= LOAN_REMINDER_SEC:
+            lender = await db.get_steward_by_id(int(row[0]))
+            lname = lender["name"] if lender else "?"
+            hrs = max(1, left // 3600)
+            line = (
+                f"借船提醒：{lname} 的 {row[1]} 约 {hrs} 小时内到期"
+                " → voyage_ops return · alliance_ops 借船 状态"
+            )
+            out.append(line)
+            if ping:
+                key = f"br:{steward_id}:{row[2]}"
+                if await _reminder_ping(conn, key, steward_id):
+                    await db.add_chronicle(
+                        "loan_reminder", line, steward_id, int(row[0]), conn=conn,
+                    )
+    cur = await conn.execute(
+        """
+        SELECT borrower_id, boat_key, until_ts FROM neighbor_boat_loan
+        WHERE lender_id=? AND until_ts>?
+        """,
+        (steward_id, now),
+    )
+    for bid, bk, until in await cur.fetchall():
+        left = int(until) - now
+        if left > LOAN_REMINDER_SEC:
+            continue
+        borrower = await db.get_steward_by_id(int(bid))
+        bname = borrower["name"] if borrower else "?"
+        hrs = max(1, left // 3600)
+        line = (
+            f"借出提醒：{bname} 仍借你的 {bk}，约 {hrs} 小时内到期"
+            "（磨损仍记你账）"
+        )
+        out.append(line)
+        if ping:
+            key = f"ln:{steward_id}:{bid}:{until}"
+            if await _reminder_ping(conn, key, steward_id):
+                await db.add_chronicle(
+                    "loan_reminder", line, steward_id, int(bid), conn=conn,
+                )
+    return out
+
+
+async def boat_loan_status_report(conn, steward_id: int) -> str:
+    """借船 状态：在借 / 借出 + 临期行。"""
+    lines: list[str] = []
+    br = await boat_loan_status(conn, steward_id)
+    if br:
+        lines.append(br)
+    now = db.now()
+    cur = await conn.execute(
+        """
+        SELECT b.name, l.boat_key, l.until_ts FROM neighbor_boat_loan l
+        JOIN stewards b ON b.id=l.borrower_id
+        WHERE l.lender_id=? AND l.until_ts>?
+        """,
+        (steward_id, now),
+    )
+    for bname, bk, until in await cur.fetchall():
+        left = int(until) - now
+        extra = ""
+        if left <= LOAN_REMINDER_SEC:
+            extra = f" · 约 {max(1, left // 3600)} 小时内到期"
+        lines.append(f"借出中：{bname} 用 {bk}（到期 {db.fmt_cst(until)}{extra}）")
+    if not lines:
+        return "当前没有在借的船，也没有借出中的船。"
+    for note in await loan_reminder_notices(conn, steward_id, ping=False):
+        if note not in lines:
+            lines.append(note)
+    return "\n".join(lines)
 
 
 async def effective_boat_key(conn, steward: dict) -> str | None:
@@ -438,8 +550,7 @@ async def dispatch(conn, steward: dict, parts: list[str]) -> str:
         if len(parts) >= 3 and parts[1] in ("给", "lend", "出"):
             return await boat_loan_give(conn, steward, parts[2])
         if len(parts) >= 2 and parts[1] in ("状态", "status"):
-            line = await boat_loan_status(conn, steward["id"])
-            return line or "当前没有在借的船。"
+            return await boat_loan_status_report(conn, steward["id"])
         raise ValueError("借船 给 名字 · 借船 状态")
     if sub in ("托养", "foster"):
         if parts[1] in ("送出", "出") and len(parts) >= 4:

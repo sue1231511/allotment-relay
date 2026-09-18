@@ -297,6 +297,7 @@ heart_ops 拆 12
 |---------|--------|
 | `邻居` / `在线` | 全员 / 档口里的人 |
 | `assist 安` | 帮邻居打理，每日每人一次（涨协作；协作 ≥60 时对方额外 +2 票） |
+| `借船 给 名字` / `借船 状态` | 协作 ≥60，借出约 3 日；磨损算船主。到期前 24 小时 sheet 与纪事 `loan_reminder` 提醒（每日每笔最多一条） |
 | `rapport 名字` | 只查和某岛民的协作分（总览+档位用 `steward_ops 协作`） |
 | `contract list` / `contract post 甘蓝 3 20` | 悬赏 |
 | `league status` / `league board` | 本周目标 / 贡献榜 |
