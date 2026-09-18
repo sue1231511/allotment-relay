@@ -411,10 +411,7 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
     parts_note = ""
     if boat_key:
         parts = await boat_parts.get_all(conn, s["id"])
-        sail_d, sail_mx = parts["sail"]
-        rud_d, rud_mx = parts["rudder"]
-        lan_d, lan_mx = parts["lantern"]
-        parts_note = f" · 帆{sail_d}/{sail_mx}舵{rud_d}/{rud_mx}灯{lan_d}/{lan_mx}"
+        parts_note = " · " + boat_parts.compact_note(parts)
     if boat_name:
         boat_note = (
             f"{boat_name}{parts_note}"
