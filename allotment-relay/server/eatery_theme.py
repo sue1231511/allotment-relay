@@ -113,6 +113,18 @@ SET_MENUS: tuple[dict, ...] = (
         "keys": frozenset({"sichuan_kelp_fish", "chop_head"}),
         "hint": "椒香+鱼头，辣味爱好者会找。",
     },
+    {
+        "name": "雾豆暖锅",
+        "slug": "fog_home",
+        "keys": frozenset({"fogpea_tofu", "wax_gourd_rib"}),
+        "hint": "岸菜双拼，适合写进家常招牌。",
+    },
+    {
+        "name": "甜口双碟",
+        "slug": "sweet_pair",
+        "keys": frozenset({"blueberry_tart", "mango_pudding"}),
+        "hint": "两道甜点齐柜，下午茶气质。",
+    },
 )
 
 

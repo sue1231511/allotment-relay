@@ -752,6 +752,25 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
         ORDER BY last_active_at DESC LIMIT 24
         """
     )).fetchall()
+    from . import eatery_theme as theme_mod
+
+    def _dine_gate(
+        *,
+        mine: bool,
+        paused: bool,
+        price: int,
+    ) -> tuple[bool, str]:
+        if mine:
+            return False, "自己的馆，别刷单"
+        if paused:
+            return False, "欠岸维停堂 · 店主要交岸维"
+        if dine_left <= 0:
+            return False, f"今日下馆子上限 {config.EATERY_DINE_DAILY}"
+        if tickets < price:
+            return False, f"要 {price} 票，现在 {tickets}"
+        extra = ""
+        return True, extra
+
     dishes: list[dict[str, Any]] = []
     open_n = 0
     paused_n = 0
@@ -786,19 +805,12 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
         for m in menu:
             energy = dish_energy(m["item"]) or 0
             price = int(m["price"] or 0)
-            can = False
-            if mine:
-                note = "自己的馆，别刷单"
-            elif paused:
-                note = f"欠岸维停堂 · 店主要交岸维"
-            elif dine_left <= 0:
-                note = f"今日下馆子上限 {config.EATERY_DINE_DAILY}"
-            elif tickets < price:
-                note = f"要 {price} 票，现在 {tickets}"
-            else:
-                can = True
+            can, gate_note = _dine_gate(mine=mine, paused=paused, price=price)
+            if can:
                 extra = f" · 精力+{energy}" if energy else ""
                 note = f"{label} · {price} 票{extra}"
+            else:
+                note = gate_note
             dishes.append({
                 "id": int(m["id"]),
                 "shop": row["name"],
@@ -810,11 +822,46 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
                 "energy": int(energy),
                 "paused": paused,
                 "mine": mine,
+                "is_combo": False,
                 "can_dine": can,
                 "note": note,
                 "detail": (
                     f"在「{label}」吃 {item_label(m['item'])}。"
                     f"{note}。堂食带饱餐两小时，家里自己吃没有。"
+                ),
+            })
+        for spec in theme_mod.SET_MENUS:
+            combo_rows = theme_mod.pick_menu_rows_for_set(menu, spec)
+            if not combo_rows:
+                continue
+            combo_price = theme_mod.combo_dine_price(combo_rows)
+            names = " + ".join(item_label(r["item"]) for r in combo_rows)
+            gain_hint = sum(dish_energy(r["item"]) or 0 for r in combo_rows) + 2
+            can, gate_note = _dine_gate(mine=mine, paused=paused, price=combo_price)
+            pct = int(round(theme_mod.COMBO_DINE_DISCOUNT * 100))
+            if can:
+                note = f"{label} · 套餐 {combo_price} 票（{pct}%）· 约 +{min(50, gain_hint)} 精力"
+            else:
+                note = gate_note
+            dishes.append({
+                "id": f"combo:{spec['slug']}",
+                "shop": row["name"],
+                "label": label,
+                "item": "",
+                "combo_name": spec["name"],
+                "name": f"套餐·{spec['name']}",
+                "emoji": "🍱",
+                "price": combo_price,
+                "energy": min(50, gain_hint),
+                "paused": paused,
+                "mine": mine,
+                "is_combo": True,
+                "can_dine": can,
+                "note": note,
+                "detail": (
+                    f"在「{label}」一次吃齐：{names}。"
+                    f" {combo_price} 票（单品合计的 {pct}%），占 1 次堂食额度。"
+                    f" {note}"
                 ),
             })
     has_fridge = await (await conn.execute(
@@ -853,9 +900,12 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
             "detail": f"上架 {item_label(item)}。参考约 {ref} 票，价格按参考价。",
         })
     my_menu: list[dict[str, Any]] = []
+    set_hints: list[str] = []
     sell_quote = None
     if s.get("eatery_open"):
-        for m in await _menu_rows(conn, s["id"]):
+        my_menu_items = await _menu_rows(conn, s["id"])
+        set_hints = theme_mod.set_menu_lines([m["item"] for m in my_menu_items])
+        for m in my_menu_items:
             my_menu.append({
                 "id": int(m["id"]),
                 "item": m["item"],
@@ -910,6 +960,7 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
             "open_cost": config.EATERY_OPEN_COST,
             "open_note": open_note,
             "menu": my_menu,
+            "set_hints": set_hints,
             "stock": stock,
             "can_sell": bool(s.get("eatery_open")),
             "sell_refund": int((sell_quote or {}).get("refund") or 0),

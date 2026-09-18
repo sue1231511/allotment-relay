@@ -72,15 +72,18 @@ function sku(kind, target, title, note, price, on, extra = "") {
 }
 
 function boardMarkup(shop) {
-  const rows = (shop.dishes || []).map((row) => sku(
-    row.can_dine ? "dine" : "look",
-        `${row.shop}|${row.id}`,
-    { emoji: row.emoji, name: row.name },
-    row.note || "",
-    row.can_dine ? "吃" : "看",
-    Boolean(row.can_dine),
-    row.can_dine ? "is-ready" : "",
-  ));
+  const rows = (shop.dishes || []).map((row) => {
+    const targetKey = row.is_combo ? (row.combo_name || row.id) : row.id;
+    return sku(
+      row.can_dine ? "dine" : "look",
+      `${row.shop}|${targetKey}`,
+      { emoji: row.emoji, name: row.name },
+      row.note || "",
+      row.can_dine ? (row.is_combo ? "套餐" : "吃") : "看",
+      Boolean(row.can_dine),
+      row.can_dine ? (row.is_combo ? "is-ready is-combo" : "is-ready") : (row.is_combo ? "is-combo" : ""),
+    );
+  });
   return rows.join("") || `<p class="island-shop-empty">还没人开张。有小屋和冰箱就能在「我的馆」开张。</p>`;
 }
 
@@ -141,6 +144,11 @@ function mineMarkup(shop) {
       `收 ${mine.sell_refund || 0}`,
       true,
     ));
+  }
+  if ((mine.set_hints || []).length) {
+    rows.unshift(
+      `<div class="island-shop-hint">${mine.set_hints.map((line) => `<p>${esc(line)}</p>`).join("")}</div>`,
+    );
   }
   if (!(mine.menu || []).length && !(mine.stock || []).length) {
     rows.unshift(`<p class="island-shop-empty">菜单空着。行囊有熟菜就能上架。</p>`);

@@ -1689,7 +1689,10 @@ function eateryRow(kind, target) {
   const mine = shop.mine || {};
   if (kind === "dine") {
     const [host, id] = String(target || "").split("|");
-    return (shop.dishes || []).find((row) => row.shop === host && String(row.id) === String(id));
+    return (shop.dishes || []).find((row) => (
+      row.shop === host
+      && (String(row.id) === String(id) || row.combo_name === id)
+    ));
   }
   if (kind === "stock") return (mine.stock || []).find((row) => row.item === target);
   if (kind === "unstock") return (mine.menu || []).find((row) => String(row.id) === String(target));
@@ -1739,7 +1742,7 @@ function tapEatery(kind, target) {
     return;
   }
   const pack = {
-    dine: ["堂食", body, "确认吃"],
+    dine: [row && row.is_combo ? "套餐堂食" : "堂食", body, row && row.is_combo ? "确认套餐" : "确认吃"],
     stock: ["上架", body, "确认上"],
     unstock: ["撤菜单", body, "确认撤"],
     open: ["开馆", mine.open_note || body, "确认开"],

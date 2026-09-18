@@ -157,6 +157,14 @@ async def _check_eatery(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
     return bool(s.get("eatery_open"))
 
 
+async def _check_eatery_combo(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
+    return await _exists(
+        conn,
+        "SELECT 1 FROM chronicle WHERE actor_id=? AND action='eatery' AND text LIKE '%套餐%' LIMIT 1",
+        s["id"],
+    )
+
+
 async def _check_giver(conn: aiosqlite.Connection, s: dict[str, Any]) -> bool:
     return await _exists(
         conn,
@@ -525,6 +533,12 @@ ACHIEVEMENTS: dict[str, dict[str, Any]] = {
         "hint": "开过岸畔小馆",
         "aliases": ("开馆人", "敢开馆"),
         "check": _check_eatery,
+    },
+    "eatery_combo": {
+        "name": "套餐客",
+        "hint": "在小馆吃过一次套餐堂食",
+        "aliases": ("会点套餐的", "套餐堂食"),
+        "check": _check_eatery_combo,
     },
     "giver": {
         "name": "散手",
