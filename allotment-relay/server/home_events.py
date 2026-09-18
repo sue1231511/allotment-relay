@@ -66,6 +66,24 @@ async def survival_bump_satiety(conn, steward_id: int, amount: int) -> None:
     await survival.bump(conn, steward_id, satiety=amount)
 
 
+async def roll_on_cook(conn, steward: dict) -> str | None:
+    ctx = await _home_context(conn, steward["id"])
+    if not ctx or random.random() > 0.12:
+        return None
+    partner = ctx["partner"] or "伴侣"
+    roll = random.random()
+    if roll < 0.5:
+        await conn.execute(
+            "UPDATE stewards SET mist_wit=MIN(100, mist_wit+1) WHERE id=?",
+            (steward["id"],),
+        )
+        return f"{partner} 帮你试了一口咸淡，雾智 +1。"
+    if roll < 0.78:
+        return f"{partner} 把窗推开散油烟，灶边没那么闷了。"
+    await survival_bump_satiety(conn, steward["id"], 2)
+    return f"{partner} 给你留了半盘菜（饱食 +2）。"
+
+
 async def roll_on_status(conn, steward: dict) -> str | None:
     """看屋时偶发一句（不扣资源为主）。"""
     ctx = await _home_context(conn, steward["id"])

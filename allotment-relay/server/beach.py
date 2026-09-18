@@ -243,6 +243,7 @@ async def beach_ops(key_id: int, command: str) -> str:
         now = db.now()
         day = db.day_id(now)
         w = world.current_weather()
+        probe_glitch = None
         async with db.connect() as conn:
             cur = await conn.execute(
                 "SELECT last_at FROM beach_probe_rolls WHERE steward_id=? AND day=?",
@@ -252,7 +253,10 @@ async def beach_ops(key_id: int, command: str) -> str:
             if row and now - row[0] < config.BEACH_PROBE_COOLDOWN:
                 left = config.BEACH_PROBE_COOLDOWN - (now - row[0])
                 raise ValueError(f"洞刚掏过，{left // 60} 分后再试")
-            await energy.spend(conn, s["id"], config.BEACH_PROBE_ENERGY, action="掏洞")
+            from . import light_bad_events as light_mod
+            probe_extra = await light_mod.probe_energy_penalty(conn, s["id"])
+            await energy.spend(conn, s["id"], config.BEACH_PROBE_ENERGY + probe_extra, action="掏洞")
+            probe_glitch = await light_mod.roll_probe_sand_glitch(conn, s["id"])
 
             item, _, qty = _roll_loot(tide, w, probe=True)
             if tide != "ebb":
@@ -297,6 +301,8 @@ async def beach_ops(key_id: int, command: str) -> str:
             await conn.commit()
 
         msg = f"掏洞：{label} x{qty}{charm_msg}{clock_msg}"
+        if probe_glitch:
+            msg += f"\n{probe_glitch}"
         msg += flavor.maybe_suffix([
             "洞里货不多，但胜在新鲜",
             "沙蟹横着跑，你横着捞",

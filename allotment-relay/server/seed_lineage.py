@@ -110,6 +110,26 @@ def apply_quality_bias(weights: dict[str, int], plot: dict[str, Any]) -> None:
         weights["plump"] = weights.get("plump", 1) + 3
 
 
+async def headline(conn, steward_id: int, limit: int = 2) -> str | None:
+    """份地 status 一行摘要。"""
+    await ensure_table(conn)
+    cur = await conn.execute(
+        """
+        SELECT crop, generation, label FROM steward_seed_lineage
+        WHERE steward_id=? ORDER BY generation DESC LIMIT ?
+        """,
+        (steward_id, limit),
+    )
+    rows = await cur.fetchall()
+    if not rows:
+        return None
+    bits = []
+    for crop, gen, label in rows:
+        name = CROPS.get(crop, {}).get("name", crop)
+        bits.append(f"{name}{label or f'第{gen}代'}")
+    return "留种血统：" + " · ".join(bits) + "（plot_ops 留种 status 全文）"
+
+
 async def status(conn, steward_id: int) -> str:
     await ensure_table(conn)
     cur = await conn.execute(
