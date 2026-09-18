@@ -50,6 +50,7 @@ async function loadEatery() {
             <h3>${esc(s.label)}</h3>
             <span class="shop-badge">${s.paused ? '暂停堂食' : '营业'}</span>
           </div>
+          ${s.theme ? `<p class="shop-theme"><strong>${esc(s.theme)}</strong></p>` : ''}
           <p>${esc(s.blurb || s.portrait || '汤是热的。')}</p>
           <div class="shop-foot">
             <span>${esc(s.menu.length)} 道菜</span>

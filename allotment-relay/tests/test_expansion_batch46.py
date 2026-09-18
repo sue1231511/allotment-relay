@@ -18,7 +18,7 @@ def test_recipe_catalog_100_plus():
 
 def test_bird_peck_flash_in_tierlog():
     async def run():
-        from server import bad_event_tier_store as ts, db, light_bad_events as lb
+        from server import bad_event_tier_store as ts, db
         from server import bad_event_tiers as tiers_mod
 
         with tempfile.TemporaryDirectory() as tmp:

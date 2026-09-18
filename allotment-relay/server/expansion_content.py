@@ -190,6 +190,9 @@ EXTRA_HEARTH_RECIPES = {
     _sig("crop_lime", "fish_glassshrimp"): {"name": "青柠玻璃虾", "sell": 48, "tags": ["sea"]},
     _sig("crop_rapeseed", "fish_herring"): {"name": "油菜鲱卷", "sell": 40, "tags": ["sea", "leaf"]},
     _sig("crop_blue_tide_moss", "proc_vinegar"): {"name": "蓝潮醋拌", "sell": 38, "tags": ["sea", "special"]},
+    _sig("proc_pickling_brine", "crop_lamp_sprout"): {"name": "卤灯芽", "sell": 44, "tags": ["special"]},
+    _sig("fish_sardine", "crop_sichuan_pepper"): {"name": "花椒沙丁", "sell": 41, "tags": ["sea", "spicy"]},
+    _sig("crop_moon_bean", "proc_rice_wine"): {"name": "月豆酒饭", "sell": 46, "tags": ["special", "drink"]},
 }
 
 
@@ -228,6 +231,21 @@ EXTRA_KITCHEN_DISHES = {
         "name": "卤边潮锅", "emoji": "🫕",
         "ings": ["fish_kelpcrab", "proc_pickling_brine", "crop_tide_ginger"],
         "base_sell": 82, "energy": 34, "tags": ["sea", "special"],
+    },
+    "fogpea_tofu": {
+        "name": "雾豆烧豆腐", "emoji": "🍲",
+        "ings": ["crop_fogpea", "proc_tofu", "crop_scallion"],
+        "base_sell": 54, "energy": 26, "tags": ["special", "legume"],
+    },
+    "red_algae_pancake": {
+        "name": "红藻薄饼", "emoji": "🥞",
+        "ings": ["crop_red_algae", "crop_wheat", "egg"],
+        "base_sell": 52, "energy": 24, "tags": ["sea", "snack"],
+    },
+    "sichuan_kelp_fish": {
+        "name": "花椒海藻鱼", "emoji": "🐟",
+        "ings": ["fish_greenling", "crop_sichuan_pepper", "crop_kelp"],
+        "base_sell": 76, "energy": 30, "tags": ["sea", "spicy"],
     },
 }
 

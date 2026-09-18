@@ -119,7 +119,7 @@ async def tote_ops(command: str = "") -> str:
     return await mux._call_ops(mux.tote_bundle, _kid(), command)
 
 
-@mcp.tool(description="厨房小馆。空=menu 菜谱（定点+brew 125+）。例：cook 潮姜石蟹 · cook 卤边潮锅 · eat 鲭鱼 · shop stock 菜名。特殊菜黑盐/雾菇/灯笼/卤边潮锅 eat 有增益或代价。勿 eat_ops。shop dine 堂食")
+@mcp.tool(description="厨房小馆。空=menu 菜谱（130+）。例：cook 雾豆烧豆腐 · shop stock 菜名 · shop board 看主题 · eat 鲭鱼。stock 凑海味/特殊线有提示。特殊菜 eat 有增益或代价。shop dine 堂食")
 async def kitchen_ops(command: str = "") -> str:
     return await mux._call_ops(mux.kitchen_bundle, _kid(), command)
 
@@ -142,7 +142,7 @@ async def bar_ops(command: str = "") -> str:
 
 
 @mcp.tool(description="潮下地下世界。空=help。例：well · descend · enter · 井险 清井；bank debt；dice/lantern/draw。井蚀≥70 可能井裂三选一，未处置不能 descend/enter。/island 恶猫钱庄可存取借还与井险；赌场骰/灯/牌；其余仍上手页。")
-async def undertide_ops(command: Annotated[str, Field(description="整句子命令；空=help。入口 well→descend→enter。炼 list/brine_crystal/岸黑盐=淤泥+崖盐闭环。钱庄 bank；赌场 dice/lantern/draw。手机地图只接钱庄和赌场，后室铺/恩怨墙/医务间仍用这里或上手页。")] = "") -> str:
+async def undertide_ops(command: Annotated[str, Field(description="整句子命令；空=help。入口 well→descend→enter。炼 list/brine_crystal/岸黑盐/pickling_brine/灶腌卤=崖↔潮下↔厨房闭环。钱庄 bank；赌场 dice/lantern/draw。手机地图只接钱庄和赌场，后室/恩怨墙/医务间仍用这里或上手页。")] = "") -> str:
     from . import undertide
     from . import progress as progress_mod
     return progress_mod.attach_note(await mux._call_ops(undertide.undertide_ops, _kid(), command))

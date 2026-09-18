@@ -2182,7 +2182,7 @@ async def _cook_tab_items(
     """小屋灶栏。数值仍走 kitchen_ops cook，这里只摊开能点的定点菜和乱炖材料。"""
     from collections import Counter
 
-    from . import cook_mix, kitchen
+    from . import cook_mix, kitchen, kitchen_special
     from .catalog import KITCHEN_DISHES, is_fiber_item
 
     used, mix_used = await kitchen._cook_counts(conn, s["id"])
@@ -2253,10 +2253,16 @@ async def _cook_tab_items(
             can = False
             price = "看"
         else:
-            note = f"{ings_txt} · eat +{energy}"
+            sp = " · 特殊" if key in kitchen_special.SPECIAL_DISH_KEYS else ""
+            note = f"{ings_txt} · eat +{energy}{sp}"
             can = True
             price = "煮"
             ready_n += 1
+        sp_detail = (
+            "特殊料理，吃了有额外效果/代价，适合开馆 stock。"
+            if key in kitchen_special.SPECIAL_DISH_KEYS
+            else ""
+        )
         recipe_rows.append(_sku(
             sid=f"cook-{key}",
             kind="cook",
@@ -2266,6 +2272,7 @@ async def _cook_tab_items(
             detail=(
                 f"{ings_txt}。定点菜，每天 {recipe_cap} 次。"
                 + (f"缺：{'、'.join(short)}。" if short else f"下锅后可 eat 回 {energy} 精力。")
+                + (f" {sp_detail}" if sp_detail else "")
             ),
             price=price,
             can=can,

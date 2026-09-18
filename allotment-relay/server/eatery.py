@@ -145,7 +145,10 @@ async def eatery_command(s: dict[str, Any], command: str) -> str:
                 label = sh["eatery_label"] or f"{sh['name']}的馆"
                 n = len(menu)
                 tag = " ←你" if sh["id"] == s["id"] else ""
-                lines.append(f"  {sh['name']}「{label}」{n} 道菜{tag}")
+                from . import eatery_theme as theme_mod
+
+                theme = theme_mod.board_suffix([m["item"] for m in menu])
+                lines.append(f"  {sh['name']}「{label}」{n} 道菜{theme}{tag}")
             lines.append("dine 管理员名 [菜编号] · shop stock 菜 · 不想开了 shop 卖掉 · 人类网页 /play 点餐")
             if paused_n:
                 lines.append(f"{paused_n} 家欠岸维暂停堂食；店主要 visit_ops 潮生会 维 交")
@@ -313,7 +316,10 @@ async def eatery_command(s: dict[str, Any], command: str) -> str:
                 (s["id"], item, price, db.now()),
             )
             smoke_note = await smoke_mod.maybe_after_stock(conn, s["id"])
+            menu_after = await _menu_rows(conn, s["id"])
             await conn.commit()
+        from . import eatery_theme as theme_mod
+
         vend = suggested_price(item)
         energy = dish_energy(item)
         energy_note = f" · 精力+{energy}" if energy else ""
@@ -321,6 +327,12 @@ async def eatery_command(s: dict[str, Any], command: str) -> str:
             f"上架 {item_label(item)} — {price} 票"
             f"（参考约 {ref}{energy_note} · 系统回收 {vend}）"
         )
+        combo = theme_mod.stock_combo_hint(
+            [m["item"] for m in menu_after],
+            item,
+        )
+        if combo:
+            msg += f"\n{combo}"
         if smoke_note:
             msg += f"\n{smoke_note}"
         return msg
@@ -501,11 +513,18 @@ async def public_eatery_snapshot() -> dict[str, Any]:
             paused = int(sh["upkeep_arrears"] or 0) > 0
             if paused:
                 blurb = "欠岸维，暂停堂食。"
+            from . import eatery_theme as theme_mod
+
+            menu_items = [m["item"] for m in menu]
+            theme_line = theme_mod.menu_theme_line(menu_items)
+            if theme_line and not paused:
+                blurb = f"{blurb} · {theme_line}"[:120]
             out_shops.append({
                 "name": sh["name"],
                 "badge": sh["badge"],
                 "portrait": sh["portrait"],
                 "label": sh["eatery_label"] or f"{sh['name']}的馆",
+                "theme": theme_line,
                 "blurb": blurb,
                 "paused": paused,
                 "diners_today": int(diners or 0),

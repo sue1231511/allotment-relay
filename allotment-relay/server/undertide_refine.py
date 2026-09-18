@@ -37,6 +37,14 @@ RECIPES: dict[str, dict] = {
         "energy": 11,
         "hint": "潮下黑盐 + 崖上潮石 + 盐晶 → 双倍岸上黑盐（厨房特殊菜）",
     },
+    "pickling_brine": {
+        "label": "灶腌卤",
+        "emoji": "🫙",
+        "ings": [("ut_brine_crystal", 1), ("quarry_salt", 2), ("crop_ginger", 1)],
+        "out": ("proc_pickling_brine", 2),
+        "energy": 9,
+        "hint": "井底卤晶 + 崖盐 + 岸姜 → 腌卤（厨房卤边潮锅/卤浸海藻锅）",
+    },
 }
 
 
@@ -89,7 +97,11 @@ async def refine(conn, steward: dict, recipe_key: str) -> str:
     return (
         f"炼成 {meta['emoji']}{meta['label']} → {out_name}×{out_qty}"
         f"（-{meta['energy']} 精力）。"
-        + ("可 kitchen 黑盐炖鱼。" if out_item == "proc_black_salt" else "可 undertide sell 或留作深货。")
+        + (
+            "可 kitchen 黑盐炖鱼/卤边潮锅。"
+            if out_item in ("proc_black_salt", "proc_pickling_brine")
+            else "可 undertide sell 或留作深货。"
+        )
     )
 
 

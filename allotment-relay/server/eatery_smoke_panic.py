@@ -96,7 +96,7 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
 
     if norm == "开窗":
         await energy.spend(conn, sid, 4, action="小馆开窗")
-        await _clear(conn, sid)
+        await _clear(conn, sid, flash_summary="小馆糊烟：开窗散烟，灶险已结。")
         return "推开窗，烟散了大半。"
 
     if norm == "换锅":
@@ -115,10 +115,10 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
             paid = f"-{cost} 票"
         else:
             paid = "海盐晶×1"
-        await _clear(conn, sid)
+        await _clear(conn, sid, flash_summary="小馆糊烟：换锅稳火，灶险已结。")
         return f"换了新锅，火稳了。（{paid}）"
 
-    await _clear(conn, sid)
+    await _clear(conn, sid, flash_summary="小馆糊烟：硬烧过关，灶险已结。")
     from . import health
 
     ill = await health.maybe_roll_ailment(
@@ -130,9 +130,20 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
     return msg
 
 
-async def _clear(conn, steward_id: int) -> None:
+async def _clear(conn, steward_id: int, *, flash_summary: str = "") -> None:
     await ensure_columns(conn)
     await conn.execute(
         "UPDATE stewards SET eatery_hazard=NULL, eatery_hazard_json=NULL WHERE id=?",
         (steward_id,),
     )
+    if flash_summary:
+        from . import bad_event_tiers as tiers_mod
+
+        await tiers_mod.record_flash(
+            conn,
+            steward_id,
+            "hut",
+            tiers_mod.TIER_LIGHT,
+            flash_summary,
+            ref_key="flash:eatery_smoke",
+        )
