@@ -30,6 +30,7 @@ QUARRY_HELP = """quarry_ops 子命令（整句写进 command）：
   探脉 [坑号] — 给空坑找一条矿脉（要镐；8 精力，20 分钟冷却，约 18% 空探）
   挖 [坑号] — 对着矿脉挥镐（要 T1 镐；精力 16→11；全坑共用 36 分钟冷却；每坑再 40 分钟；每日 8 镐）。金砂/雾铅/夜光髓/潮纹会记下从哪条脉来
   洗 海盐砂 [数量] — 2 份原矿出 1 份精矿（6 精力/份精矿，约 12% 冲散）。数量是原矿，须成对。精矿会接上原矿的来历
+  塌方 [坑号] 撑柱|撤人|硬挖 — 挥镐后小概率落石堵脉：撑柱（岸木×2 或 12 票）/ 撤人（脉作废）/ 硬挖（不花钱更险）
   开坑 / 开坑 确认 — 看价与开凿时间 / 付钱加坑（起步 1 个，无上限，90/142/218…）。欠岸税或岸维时不能开坑/升镐
   升镐 / 升镐 确认 — 花票+精矿升一档（T2 铜镐起；T5 雾铅镐满）
   help — 本表
@@ -197,7 +198,7 @@ async def _claims(conn: aiosqlite.Connection, steward_id: int) -> list[dict[str,
     conn.row_factory = aiosqlite.Row
     rows = await (await conn.execute(
         """
-        SELECT slot, vein, strikes_left, ready_at, last_hew_at
+        SELECT slot, vein, strikes_left, ready_at, last_hew_at, hazard, hazard_json
         FROM quarry_claims WHERE steward_id=? ORDER BY slot
         """,
         (steward_id,),
@@ -218,12 +219,16 @@ async def _claims(conn: aiosqlite.Connection, steward_id: int) -> list[dict[str,
             "strikes_left": int(r["strikes_left"] or 0),
             "ready_at": ready_at,
             "last_hew_at": int(r["last_hew_at"] or 0),
+            "hazard": r["hazard"] or "",
+            "hazard_json": r["hazard_json"] or "",
         })
     return out
 
 
 def _claim_line(c: dict[str, Any], *, now: int, pick_tier: int) -> str:
     label = _claim_label(c["slot"])
+    if c.get("hazard") == "collapse":
+        return f"  {label} ⚠塌方 — quarry_ops 塌方 {c['slot']} 撑柱|撤人|硬挖"
     if c["ready_at"] > now:
         return f"  {label} 开凿中，{_fmt_left(c['ready_at'] - now)}后能探"
     vein = c["vein"]
@@ -429,6 +434,10 @@ async def _prospect(conn: aiosqlite.Connection, s: dict[str, Any], token: str) -
         target = empties[0]
     if target is None:
         raise ValueError("没有这个坑。quarry_ops status")
+    if target.get("hazard"):
+        raise ValueError(
+            f"{_claim_label(target['slot'])} 塌方堵着，先 quarry_ops 塌方 {target['slot']} 撑柱|撤人|硬挖"
+        )
     if target["ready_at"] > now:
         raise ValueError(
             f"{_claim_label(target['slot'])}还在开凿，{_fmt_left(target['ready_at'] - now)}后再探"
@@ -531,6 +540,10 @@ async def _hew(conn: aiosqlite.Connection, s: dict[str, Any], token: str) -> str
         target = ready[0]
     if target is None:
         raise ValueError("没有这个坑。quarry_ops status")
+    if target.get("hazard"):
+        raise ValueError(
+            f"{_claim_label(target['slot'])} 塌方堵着，先 quarry_ops 塌方 {target['slot']} 撑柱|撤人|硬挖"
+        )
     if target["ready_at"] > now:
         raise ValueError(f"{_claim_label(target['slot'])}还在开凿")
     if not target["vein"] or target["strikes_left"] <= 0:
@@ -646,6 +659,14 @@ async def _hew(conn: aiosqlite.Connection, s: dict[str, Any], token: str) -> str
         msg += f"\n{boost}"
     if disc:
         msg += f"\n{disc}"
+    from . import quarry_collapse as collapse_mod
+
+    cave = await collapse_mod.maybe_after_hew(
+        conn, s["id"], int(target["slot"]),
+        strikes_left=left, vein=vein or target["vein"],
+    )
+    if cave:
+        msg += f"\n{cave}"
     return msg
 
 
@@ -867,6 +888,19 @@ async def quarry_ops(key_id: int, command: str = "") -> str:
             text = await _hew(conn, s, rest)
             await conn.commit()
             return text
+        if verb in ("塌方", "collapse", "hazard", "落石"):
+            from . import quarry_collapse as collapse_mod
+
+            slot_tok = (rest.split()[0] if rest else "").strip()
+            choice = " ".join(rest.split()[1:]) if rest and len(rest.split()) > 1 else ""
+            if not slot_tok or not choice:
+                raise ValueError("用法：quarry_ops 塌方 坑号 撑柱|撤人|硬挖")
+            slot = _parse_slot(slot_tok, (await ensure_profile(conn, s["id"]))["claim_count"])
+            if slot is None:
+                raise ValueError("请写坑号，例如 quarry_ops 塌方 1 撑柱")
+            text = await collapse_mod.resolve(conn, s, slot, choice)
+            await conn.commit()
+            return text
         if verb in ("洗", "wash", "refine", "淘"):
             text = await _wash(conn, s, rest)
             await conn.commit()
@@ -914,16 +948,29 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
     used = int(used_row[0] if used_row else 0)
     daily_left = max(0, config.QUARRY_HEW_DAILY_CAP - used)
     hew_energy = await _hew_energy(conn, s["id"], pick["tier"]) if pick["tier"] >= 1 else 0
+    from . import quarry_collapse as collapse_mod
+
     pits = []
     for c in claims:
         vein = c["vein"]
         meta = QUARRY_VEINS.get(vein) or {}
+        hazard = c.get("hazard") or ""
+        collapse_actions: list[dict[str, Any]] = []
+        if hazard == collapse_mod.HAZARD_COLLAPSE:
+            collapse_actions = collapse_mod.ui_actions(tickets=tickets, stock=stock)
         clearing = int(c["ready_at"] or 0) > now
         empty = (not vein) or int(c["strikes_left"] or 0) <= 0
         pit_cd = max(0, int(c["last_hew_at"] or 0) + config.QUARRY_HEW_COOLDOWN - now)
         need_tier = int(meta.get("min_tier") or 1)
         gated = (not empty) and pick["tier"] < need_tier
-        if clearing:
+        if hazard == collapse_mod.HAZARD_COLLAPSE:
+            state = "hazard"
+            remain = 0
+            name = f"{meta.get('emoji', '🪨')}{meta.get('name', vein or '脉')}"
+            note = f"{name} 塌方堵着 · 先处置"
+            can_prospect = False
+            can_hew = False
+        elif clearing:
             state = "clearing"
             remain = int(c["ready_at"]) - now
             note = f"开凿中，还要 {_fmt_left(remain)}"
@@ -975,6 +1022,8 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
             "slot": int(c["slot"]),
             "state": state,
             "vein": vein,
+            "hazard": hazard,
+            "collapse_actions": collapse_actions,
             "name": meta.get("name") or f"坑{c['slot']}",
             "emoji": meta.get("emoji") or "🪨",
             "strikes_left": int(c["strikes_left"] or 0),

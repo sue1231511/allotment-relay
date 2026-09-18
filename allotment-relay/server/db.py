@@ -2304,6 +2304,8 @@ async def init_db() -> None:
             "ALTER TABLE barn_animals ADD COLUMN pedigree_label TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE barn_animals ADD COLUMN temper TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE barn_animals ADD COLUMN escaped_at INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE quarry_claims ADD COLUMN hazard TEXT",
+            "ALTER TABLE quarry_claims ADD COLUMN hazard_json TEXT",
         ):
             try:
                 await db.execute(ddl)

@@ -15,6 +15,7 @@ KINDS = {
     "wash": "洗",
     "open_pit": "开坑 确认",
     "upgrade": "升镐 确认",
+    "collapse": "塌方",
 }
 
 TITLES = {
@@ -24,6 +25,7 @@ TITLES = {
     "wash": "洗了矿",
     "open_pit": "开了新坑",
     "upgrade": "镐升了一档",
+    "collapse": "塌方处置",
 }
 
 
@@ -40,6 +42,11 @@ def _command(kind: str, target: str) -> str:
         return f"探脉 {name}"
     if kind == "hew" and name:
         return f"挖 {name}"
+    if kind == "collapse":
+        parts = name.split(None, 1)
+        if len(parts) < 2:
+            raise ApiError("BAD_REQUEST", "塌方要先选坑和撑柱/撤人/硬挖。")
+        return f"塌方 {parts[0]} {parts[1]}"
     return verb
 
 

@@ -80,6 +80,20 @@ function sku(kind, target, title, note, price, on, extra = "") {
 function pitsMarkup(shop) {
   const rows = [];
   for (const pit of shop.pits || []) {
+    if (pit.hazard === "collapse" && (pit.collapse_actions || []).length) {
+      for (const act of pit.collapse_actions) {
+        rows.push(sku(
+          "collapse",
+          `${pit.slot} ${act.action}`,
+          { emoji: "⚠️", name: `坑${pit.slot}·${act.label}` },
+          pit.note,
+          act.label,
+          Boolean(act.can),
+          act.can ? "is-ready" : "",
+        ));
+      }
+      continue;
+    }
     if (pit.can_hew) {
       rows.push(sku("hew", String(pit.slot), { emoji: pit.emoji, name: `坑${pit.slot}` }, pit.note, "挖", true, "is-ready"));
     } else if (pit.can_prospect) {

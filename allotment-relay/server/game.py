@@ -290,7 +290,8 @@ async def relay_manual() -> str:
         "  story_ops    人物故事探索。空 command=故事列表；含《灰姑娘》《昨日无凭》《留给明天》，不使用问答模型",
         "               command 例：list · start cinderella · start yesterday_no_proof · start left_for_tomorrow · status · explore old_wharf · explore guyan_home",
         "                 · inspect queen · prepare backdoor|broadcast|trap · choose escape|judgment|hunt|rescue · review left_for_tomorrow · souvenirs · archive · help",
-        "  quarry_ops   盐风崖潮脉矿。空 command 列出子命令，不是看崖；看崖用 status",
+        "  quarry_ops   盐风崖潮脉矿。空 command 列出子命令，不是看崖；看崖用 status。"
+        " 挥镐后可能塌方 → 塌方 坑号 撑柱|撤人|硬挖。人类 /island 盐风崖矿坑列表也能点",
         "               command 例：status · 买镐 · 探脉 · 挖 1 · 洗 海盐砂 2 · 开坑 · 开坑 确认 · 升镐",
         "               不是 tide_ops dig（赶海翻沙）。没有 mine_ops / dig_ops",
         "  craft_ops    岸工坊。空 command 列出子命令，不是看砧；看砧用 status",

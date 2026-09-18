@@ -198,7 +198,7 @@ async def story_ops(command: str = "list") -> str:
     return await mux._call_ops(story.story_ops, _kid(), command)
 
 
-@mcp.tool(description="盐风崖矿。空=列表≠看崖(用status)。例：买镐 · 探脉 · 挖 1。≠赶海dig；勿 mine_ops。")
+@mcp.tool(description="盐风崖矿。空=列表≠看崖(用status)。例：买镐 · 探脉 · 挖 1 · 塌方 1 撑柱。挥镐小概率塌方三选一；人类/island 矿坑也能处置。≠赶海dig；勿 mine_ops。")
 async def quarry_ops(command: str = "") -> str:
     from . import quarry
     from . import progress as progress_mod

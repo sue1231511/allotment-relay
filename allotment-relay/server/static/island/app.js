@@ -32,7 +32,7 @@ import { renderLili } from "./scenes/lili.js?v=island-modulefix2";
 import { renderClinic } from "./scenes/clinic.js?v=island-modulefix2";
 import { renderShaonian } from "./scenes/shaonian.js?v=island-modulefix2";
 import { renderWorkshop } from "./scenes/workshop.js?v=island-modulefix2";
-import { renderQuarry } from "./scenes/quarry.js?v=island-modulefix2";
+import { renderQuarry } from "./scenes/quarry.js?v=quarry-collapse1";
 import { renderBar } from "./scenes/bar.js?v=island-modulefix2";
 import { renderTheater } from "./scenes/theater.js?v=island-modulefix2";
 import { renderWriters } from "./scenes/writers.js?v=island-modulefix2";
@@ -1039,8 +1039,9 @@ function switchQuarryTab(tab) {
 
 function quarryRow(kind, target) {
   const q = state.quarry || {};
-  if (kind === "prospect" || kind === "hew") {
-    return (q.pits || []).find((row) => String(row.slot) === String(target));
+  if (kind === "prospect" || kind === "hew" || kind === "collapse") {
+    const slot = String(kind === "collapse" ? String(target || "").split(/\s+/)[0] : target);
+    return (q.pits || []).find((row) => String(row.slot) === slot);
   }
   if (kind === "wash") {
     const name = String(target || "").split(/\s+/)[0];
@@ -1059,6 +1060,10 @@ function quarryCan(kind, row) {
   if (kind === "open_pit") return Boolean(row.can_buy);
   if (kind === "buy_pick") return Boolean(row.can_buy);
   if (kind === "upgrade") return Boolean(row.can_upgrade);
+  if (kind === "collapse") {
+    const act = String(target || "").split(/\s+/).slice(1).join(" ");
+    return Boolean((row.collapse_actions || []).find((a) => a.action === act && a.can));
+  }
   return false;
 }
 
@@ -1086,6 +1091,7 @@ function tapQuarry(kind, target) {
     open_pit: ["开新坑", body, "确认开"],
     buy_pick: ["买镐", body, "确认买"],
     upgrade: ["升镐", body, "确认升"],
+    collapse: ["塌方", body, "确认"],
   }[kind] || ["盐风崖", body, "确认"];
   showActSheet({
     title: pack[0],
