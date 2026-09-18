@@ -62,4 +62,6 @@ async def enforce(conn, steward_id: int, species: str) -> str | None:
         (fine, steward_id),
     )
     name = SEA_CATCH.get(species, {}).get("name", species)
+    from . import voyage_chronicle as vlog_mod
+    await vlog_mod.append(conn, steward_id, f"禁捕放生 {name}（-{fine}票）")
     return f"禁捕：{name}已放生（-{fine} 票）"

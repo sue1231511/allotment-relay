@@ -170,7 +170,7 @@ bar_ops     的 command = work 洗碗 night
 
 ### `tide_ops` — 海
 
-空 command = 子命令列表。撒网前要先升级渔网。人类 `/island` 港口「看码头」→「岸边」栏可点水层/解挂/搏鱼，「出海」栏可修帆/舵/灯/锚/缆/底泵/鱼舱/冰舱/网机/引擎/船钟十一件（与 MCP 同一套数值）。
+空 command = 子命令列表。撒网前要先升级渔网。人类 `/island` 港口「看码头」→「岸边」栏可点水层/解挂/搏鱼，「出海」栏可修帆/舵/灯/锚/缆/底泵/鱼舱/冰舱/网机/引擎/船钟/罗经十二件（与 MCP 同一套数值）。岸边撒网行附本周禁捕摘要。
 
 | command | 做什么 |
 |---------|--------|
@@ -180,10 +180,10 @@ bar_ops     的 command = work 洗碗 night
 | `解挂` / `解挂 硬拉` / `解挂 切线` | 挂底解挂 |
 | `搭排` / `投苗 灰鲱 2` / `投饵 2` / `收排 2` / `名池 2 薄荷池` / `巡排` | 渔排（也可 `pen status` / `pen stock herring 2`）。人类 `/island` 港口「渔排」栏能点。收排赶上鱼种爱来的潮汐多一条；巡排约每 8 小时 |
 | `voyage buy skiff` / `voyage depart near` | 买船 / 出海（near/far/deep） |
-| `voyage 部件` / `voyage 部件 修` | 看十一件耐久（含网机/引擎/船钟）；低了加出海失败；鱼舱低少装货、冰舱低鱼易擦伤、网机低撒网更易空网、钟低更易偏航。`部件 修` 默认 22 票/件（铜钉省 6）。`voyage repair` 仍修船体 |
+| `voyage 部件` / `voyage 部件 修` | 看十二件耐久（含网机/引擎/船钟/罗经）；低了加出海失败；鱼舱低少装货、冰舱低鱼易擦伤、网机低撒网更易空网、钟/罗经低更易偏航或黑旗难谈和。禁捕放生记入 `voyage 履历`。`部件 修` 默认 22 票/件（铜钉省 6）。`voyage repair` 仍修船体 |
 | `fight` `flee` `parley` `bribe` | 黑旗截停（可省略 voyage） |
 | `compliment` `release` `catch` `grab` | 未命名小鱼（可省略 voyage）。compliment=release 礼遇，回赠普通鱼；catch=grab 动手：抓住这尾进袋，落下腿鱼小咒，其它鱼和精力会出事。吃或卖再掷事件：`kitchen_ops eat 未命名小鱼` / `tote_ops vend 未命名小鱼 1` |
-| `beach scan` / `dig` / `probe` | 赶海（dig 要铲子）。涨潮时 dig 和 probe 都关，scan 还能看。风暴打捞不是 dig，走 `craft_ops 打捞` |
+| `beach scan` / `dig` / `probe` | 赶海（dig 要铲子）。涨潮时 dig 和 probe 都关，scan 还能看。dig 偶发铲钝，下次多 2 精力。风暴打捞不是 dig，走 `craft_ops 打捞` |
 | `gear status` / `gear upgrade net` / `gear repair hook\|reel\|line` | 渔具档位与耐久（含钩、卷线器） |
 | `tool buy hoe` | 锄头铲子 |
 | `boss status` / `boss attack` | 潮渊之主 |

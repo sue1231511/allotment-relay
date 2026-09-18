@@ -132,7 +132,11 @@ async def beach_ops(key_id: int, command: str) -> str:
             if row and now - row[0] < config.BEACH_COOLDOWN:
                 left = config.BEACH_COOLDOWN - (now - row[0])
                 raise ValueError(f"这片滩刚翻过，{left // 60} 分后再来")
-            await energy.spend(conn, s["id"], config.BEACH_ENERGY, action="赶海")
+            from . import light_bad_events as light_mod
+            dig_extra = await light_mod.dig_energy_penalty(conn, s["id"])
+            cost = config.BEACH_ENERGY + dig_extra
+            await energy.spend(conn, s["id"], cost, action="赶海")
+            dig_glitch = await light_mod.roll_beach_dig_glitch(conn, s["id"])
 
             item, label, qty = _roll_loot(tide, w, probe=False)
             label, qty = await _grant_loot(conn, s["id"], item, qty)
@@ -197,6 +201,8 @@ async def beach_ops(key_id: int, command: str) -> str:
             await conn.commit()
 
         msg = f"赶海：{label} x{qty}{extra_msg}"
+        if dig_glitch:
+            msg += f"\n{dig_glitch}"
         if beach_ill:
             msg += f"\n{beach_ill}\n→ visit_ops clinic treat …（必须花票）"
         if beach_boost:

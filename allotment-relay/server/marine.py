@@ -1091,6 +1091,9 @@ async def _resolve_hail(
         from . import social as social_mod
         max_r = await social_mod.max_rapport(s["id"])
         chance = 0.22 + standing / 220 + mist / 280 + social_mod.parley_bonus_chance(max_r)
+        from . import boat_parts as boat_parts_mod
+        parts = await boat_parts_mod.get_all(conn, s["id"])
+        chance += boat_parts_mod.parley_bonus(parts)
         if random.random() < chance:
             fine = random.randint(3, 8)
             await conn.execute(

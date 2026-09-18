@@ -23,3 +23,13 @@ def test_furniture_combo_keys():
     from server import hut_combos
 
     assert "kitchen_line" in hut_combos.COMBO_SETS
+    assert "storm_line" in hut_combos.COMBO_SETS
+
+
+def test_storm_line_combo():
+    from server.hut import HutBonus
+    from server import hut_combos
+
+    b = HutBonus(keys={"storm_shutter", "net_dreamcatcher", "tide_clock"})
+    active = hut_combos.apply_combos(b)
+    assert "防风铃阵" in active
