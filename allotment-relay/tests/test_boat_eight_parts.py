@@ -24,7 +24,7 @@ def test_eight_parts_and_cargo_ice():
                     parts = await boat_parts.get_all(conn, s["id"])
                     await conn.commit()
                 assert set(parts.keys()) == set(boat_parts.PARTS)
-                assert len(boat_parts.PARTS) == 8
+                assert len(boat_parts.PARTS) == 10
 
         parts_full = {k: (100, 100) for k in boat_parts.PARTS}
         assert boat_parts.effective_cargo(4, parts_full) == 4
@@ -35,6 +35,9 @@ def test_eight_parts_and_cargo_ice():
         low_ice = dict(parts_full)
         low_ice["ice"] = (20, 100)
         assert boat_parts.fish_state_for_ice(low_ice, "fresh") == "bruised"
+        low_winch = dict(parts_full)
+        low_winch["net_winch"] = (10, 100)
+        assert boat_parts.net_winch_empty_delta(low_winch) == 0.07
 
     asyncio.run(run())
 

@@ -1,9 +1,12 @@
-"""船只部件 — 八件：帆 / 舵 / 灯 / 锚 / 缆 / 底泵 / 鱼舱 / 冰舱（§59 第二批 #19）。"""
+"""船只部件 — 十件（§59 第二批 #19，目标 8～12 类）。"""
 from __future__ import annotations
 
 from . import db
 
-PARTS = ("sail", "rudder", "lantern", "anchor", "hawser", "bilge", "hold", "ice")
+PARTS = (
+    "sail", "rudder", "lantern", "anchor", "hawser", "bilge",
+    "hold", "ice", "net_winch", "engine",
+)
 DEFAULT = 100
 
 PART_LABELS: dict[str, str] = {
@@ -15,6 +18,8 @@ PART_LABELS: dict[str, str] = {
     "bilge": "泵",
     "hold": "舱",
     "ice": "冰",
+    "net_winch": "网",
+    "engine": "机",
 }
 
 
@@ -78,6 +83,10 @@ def _loss_for_part(key: str, route: str, *, storm: bool) -> int:
         extra += 2
     elif key == "ice" and route == "far":
         extra += 1
+    if key == "engine" and route in ("far", "deep"):
+        extra += 2 if route == "deep" else 1
+    if key == "net_winch" and route == "near":
+        extra += 1
     return base + extra
 
 
@@ -131,7 +140,58 @@ def fail_bonus(parts: dict[str, tuple[int, int]]) -> float:
     ice = _ratio(parts, "ice")
     if ice < 0.35:
         extra += 0.03
+    engine = _ratio(parts, "engine")
+    if engine < 0.35:
+        extra += 0.05
+    elif engine < 0.55:
+        extra += 0.02
     return extra
+
+
+def net_winch_empty_delta(parts: dict[str, tuple[int, int]]) -> float:
+    r = _ratio(parts, "net_winch")
+    if r < 0.35:
+        return 0.07
+    if r < 0.55:
+        return 0.03
+    if r >= 0.85:
+        return -0.05
+    return 0.0
+
+
+async def net_empty_adjust(conn, steward_id: int) -> float:
+    cur = await conn.execute("SELECT boat_key FROM stewards WHERE id=?", (steward_id,))
+    row = await cur.fetchone()
+    if not row or not row[0]:
+        return 0.0
+    parts = await get_all(conn, steward_id)
+    return net_winch_empty_delta(parts)
+
+
+async def wear_net_winch(conn, steward_id: int, *, loss: int = 2) -> None:
+    cur = await conn.execute("SELECT boat_key FROM stewards WHERE id=?", (steward_id,))
+    row = await cur.fetchone()
+    if not row or not row[0]:
+        return
+    await ensure_table(conn)
+    cur = await conn.execute(
+        "SELECT durability, max_dur FROM steward_boat_parts WHERE steward_id=? AND part_key='net_winch'",
+        (steward_id,),
+    )
+    row = await cur.fetchone()
+    if not row:
+        await get_all(conn, steward_id)
+        cur = await conn.execute(
+            "SELECT durability, max_dur FROM steward_boat_parts WHERE steward_id=? AND part_key='net_winch'",
+            (steward_id,),
+        )
+        row = await cur.fetchone()
+    dur, mx = int(row[0]), int(row[1])
+    new = max(0, dur - loss)
+    await conn.execute(
+        "UPDATE steward_boat_parts SET durability=? WHERE steward_id=? AND part_key='net_winch'",
+        (new, steward_id),
+    )
 
 
 def effective_cargo(cargo: int, parts: dict[str, tuple[int, int]]) -> int:
@@ -185,7 +245,7 @@ async def status_line(conn, steward_id: int) -> str:
 
 
 def compact_note(parts: dict[str, tuple[int, int]]) -> str:
-    """岛端一行简写：帆/舵/灯/锚/缆/泵/舱/冰。"""
+    """岛端一行简写：帆/舵/灯/锚/缆/泵/舱/冰/网/机。"""
     return "".join(
         f"{PART_LABELS[k]}{parts[k][0]}/{parts[k][1]}"
         for k in PARTS
