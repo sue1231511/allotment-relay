@@ -2810,6 +2810,27 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
                     can=can_feed,
                     target=str(slot),
                 ))
+            else:
+                from . import barn_breeding as breed_mod
+                born = int(row.get("born_at") or row.get("stocked_at") or 0)
+                age_ok = (not born) or (db.now() - born >= breed_mod.MIN_AGE_SEC)
+                can_breed = (
+                    species in breed_mod.BREEDABLE
+                    and not sick
+                    and age_ok
+                )
+                if can_breed:
+                    barn_items.append(_sku(
+                        sid=f"breed-{slot}",
+                        kind="barn_breed",
+                        name=f"配种 #{slot} {spec['name']}",
+                        emoji="💞",
+                        note="适龄已喂。多耗一份饲料，不一定成。",
+                        detail="鸡羊兔等可配种。病畜不配。不是喂牲口那一下。",
+                        price="配",
+                        can=True,
+                        target=str(slot),
+                    ))
             if spec.get("daily") or spec.get("hive"):
                 can_c = bool(fed) and slot not in collected
                 if can_c:
