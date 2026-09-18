@@ -31,6 +31,7 @@ STAR_HELP = f"""star_ops 子命令（整句写进 command）：
     平常及以上：粉丝固定再+10；粉丝累计给小橘的实收打赏每满20票再+1。
   粉丝团 — 入团。一人一次，退团这个选项不存在；围观回神+10、档信翻倍（fan）
   应援榜 — 谁在真金白银地捧她（board）
+  麦险 润麦|退后|硬听 — 专场围观后小概率麦啸，未处置不能再 围观/打赏/点歌/应援。人类 /island 剧场看台也能点
   她常驻荔栀的酒馆，随时能开小剧场专场。人类去 /island 剧场看台（先进看台景，点一下才出人小橘）点应援打赏点歌围观（和 star_ops 同一套）；/play 也能打赏。/star 是围观实况（今晚档、应援榜、动态）。"""
 
 # 演出事件池 — 按她面板心情档加权：她心情好不好，观众听得出来
@@ -183,6 +184,9 @@ async def _cmd_status() -> str:
 
 
 async def _cmd_cheer(conn: aiosqlite.Connection, s: dict[str, Any], words: str) -> str:
+    from . import star_mic_feedback as mic_mod
+
+    await mic_mod.assert_not_blocked(conn, s["id"])
     words = words.strip()
     if not words:
         raise ValueError("用法: star_ops 应援 好话 — 空话递不进收件盒")
@@ -211,6 +215,9 @@ async def _do_tip(
     note: str,
     source: str,
 ) -> str:
+    from . import star_mic_feedback as mic_mod
+
+    await mic_mod.assert_not_blocked(conn, s["id"])
     if amount < config.STAR_TIP_MIN:
         raise ValueError("打赏至少 1 票")
     if amount > config.STAR_TIP_MAX:
@@ -267,6 +274,9 @@ async def _do_tip(
 
 
 async def _cmd_song(conn: aiosqlite.Connection, s: dict[str, Any], song: str) -> str:
+    from . import star_mic_feedback as mic_mod
+
+    await mic_mod.assert_not_blocked(conn, s["id"])
     song = song.strip()
     if not song:
         raise ValueError("用法: star_ops 点歌 歌名")
@@ -293,7 +303,9 @@ async def _cmd_song(conn: aiosqlite.Connection, s: dict[str, Any], song: str) ->
 async def _cmd_watch(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
     from . import energy as energy_mod
     from . import survival as survival_mod
+    from . import star_mic_feedback as mic_mod
 
+    await mic_mod.assert_not_blocked(conn, s["id"])
     state = await _ensure_state(conn)
     if not _venue_active_today(state):
         raise ValueError(
@@ -367,6 +379,9 @@ async def _cmd_watch(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
         gift_line = (gift_line or "") + "\n" + dye
     if echo:
         gift_line = (gift_line or "") + "\n" + echo
+    mic_note = await mic_mod.maybe_after_stage_watch(
+        conn, s["id"], venue=str(state.get("venue") or "")
+    ) or ""
     await conn.commit()
     if backlash:
         energy_line = (
@@ -384,7 +399,8 @@ async def _cmd_watch(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
     return (
         f"«{venue} · {STAR_NAME}的场\n\n{event}{note_line}\n\n"
         f"{energy_line}"
-        f" · 档信+{2 if is_fan else 1}{'（粉丝团加成）' if is_fan else ''}{gift_line}»"
+        f" · 档信+{2 if is_fan else 1}{'（粉丝团加成）' if is_fan else ''}{gift_line}"
+        f"{'\n' + mic_note if mic_note else ''}»"
     )
 
 
@@ -483,7 +499,20 @@ async def hall_star_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> list[
             f"酒馆日 {config.STAR_WATCH_DAILY} 次，专场日 {config.STAR_STAGE_WATCH_DAILY} 次。"
         )
     fan_note = "你已经在团里了。入团不能退。" if is_fan else "入团一次，不能退。围观回神多一点。"
-    return [
+    from . import star_mic_feedback as mic_mod
+
+    stock = await db.get_satchel(s["id"])
+    hazard = await mic_mod.get_hazard(conn, s["id"])
+    mic_actions = (
+        mic_mod.ui_actions(tickets=tickets, stock=stock, energy_now=energy_now)
+        if hazard == mic_mod.HAZARD_MIC
+        else []
+    )
+    mic_block = hazard == mic_mod.HAZARD_MIC
+    if mic_block:
+        can_cheer = can_tip = can_song = can_watch = False
+        cheer_note = tip_note = song_note = watch_note = "麦还在啸，先处置麦险。"
+    rows = [
         {
             "id": "cheer",
             "cmd": "应援",
@@ -542,6 +571,32 @@ async def hall_star_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> list[
             "detail": "谁在真金白银地捧她。榜一是头粉。",
         },
     ]
+    return rows
+
+
+async def hall_mic_choices(conn: aiosqlite.Connection, s: dict[str, Any]) -> list[dict[str, Any]]:
+    from . import star_mic_feedback as mic_mod
+
+    tickets = int(s.get("tickets") or 0)
+    energy_now = int(s.get("energy") or 0)
+    stock = await db.get_satchel(s["id"])
+    hazard = await mic_mod.get_hazard(conn, s["id"])
+    if hazard != mic_mod.HAZARD_MIC:
+        return []
+    return [
+        {
+            "id": "mic_feedback",
+            "target": act["action"],
+            "name": f"麦险·{act['label']}",
+            "note": act.get("hint") or "",
+            "detail": act.get("disabled_reason") or act.get("hint") or "",
+            "price": act["label"],
+            "can_act": bool(act.get("can")),
+        }
+        for act in mic_mod.ui_actions(
+            tickets=tickets, stock=stock, energy_now=energy_now
+        )
+    ]
 
 
 async def star_ops(key_id: int, command: str) -> str:
@@ -558,6 +613,13 @@ async def star_ops(key_id: int, command: str) -> str:
         return await _cmd_status()
 
     s = await require_steward(key_id, exempt_duty=True)
+    if verb in ("麦险", "mic", "啸麦"):
+        from . import star_mic_feedback as mic_mod
+
+        async with db.connect() as conn:
+            msg = await mic_mod.resolve(conn, s, rest)
+            await conn.commit()
+        return msg
     async with db.connect() as conn:
         if verb in ("cheer", "应援", "捧场", "喊话"):
             return await _cmd_cheer(conn, s, rest)

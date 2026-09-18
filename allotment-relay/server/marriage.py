@@ -1685,6 +1685,12 @@ async def _dispatch(s: dict[str, Any], command: str = "") -> str:
         return await _cmd_status(s)
     verb, rest = (raw.split(None, 1) + [""])[:2]
     key = verb.lower()
+    if key in ("所险", "desk-jam", "registry", "册乱"):
+        from . import marriage_desk_jam as jam_mod
+        async with db.connect() as conn:
+            msg = await jam_mod.resolve(conn, s, rest)
+            await conn.commit()
+        return msg
     table = {
         "help": _cmd_help,
         "?": _cmd_help,
@@ -2627,6 +2633,9 @@ async def _cmd_betroth(s: dict[str, Any], rest: str) -> str:
     fn = table.get(verb) or table.get(key)
     if not fn:
         raise ValueError(f"看不懂「{verb}」。\n{_betrothal_help_text()}")
+    from . import marriage_desk_jam as jam_mod
+    async with db.connect() as conn:
+        await jam_mod.assert_not_blocked(conn, s["id"])
     return await fn(s, more)
 
 
@@ -2657,14 +2666,17 @@ async def _pay_from_pocket(conn: aiosqlite.Connection, s: dict[str, Any], amount
 
 async def _set_betroth_col(
     conn: aiosqlite.Connection, row: dict[str, Any], col: str, amount: int, note: str
-) -> dict[str, Any]:
+) -> tuple[dict[str, Any], str]:
+    from . import marriage_desk_jam as jam_mod
+
     await conn.execute(
         f"UPDATE marriages SET {col}=?, updated_at=? WHERE id=?",
         (amount, db.now(), row["id"]),
     )
     await _note_event(conn, int(row["id"]), "status", note, day=db.day_id())
-    fresh = await _own(conn, row["steward_id"])
-    return fresh or row
+    fresh = await _own(conn, row["steward_id"]) or row
+    hazard = await jam_mod.maybe_after_betroth_step(conn, int(fresh["steward_id"])) or ""
+    return fresh, hazard
 
 
 async def _issue_betrothal_confirm(conn: aiosqlite.Connection, row: dict[str, Any]) -> str:
@@ -2808,13 +2820,14 @@ async def _betroth_token(s: dict[str, Any], rest: str = "") -> str:
                 f"工坊 craft_ops 打 订婚戒；现货 visit_ops tt buy 订婚戒（{BETROTHAL_RING_SHOP}）。"
                 "不是潮誓戒，也不是求婚草稿的信物栏。"
             )
-        row = await _set_betroth_col(
+        row, hazard = await _set_betroth_col(
             conn, row, "betrothal_token", amount,
             f"订婚信物记下：{src}。",
         )
         seal = await _maybe_seal_text(conn, row)
         await conn.commit()
-    return f"信物记下了（{src}）。不是潮誓戒。{seal}"
+    tail = f"\n{hazard}" if hazard else ""
+    return f"信物记下了（{src}）。不是潮誓戒。{seal}{tail}"
 
 
 async def _betroth_feast_last(conn: aiosqlite.Connection, marriage_id: int) -> str:
@@ -2842,6 +2855,7 @@ def _betroth_feast_venue_from_note(note: str) -> str:
 
 
 async def _betroth_feast(s: dict[str, Any], rest: str) -> str:
+    hazard = ""
     async with db.connect() as conn:
         own = await _own(conn, s["id"])
     if own and own["status"] == STATUS_MARRIED:
@@ -2908,9 +2922,10 @@ async def _betroth_feast(s: dict[str, Any], rest: str) -> str:
             note = f"订婚宴自办{dish_bit}" if dish_bit else "订婚宴自办"
         else:
             note = f"订婚宴：{label} {_bride_label(amount)}。"
-        row = await _set_betroth_col(conn, row, "betrothal_feast", amount if not self_cook else BETROTHAL_FEAST_MIN, note)
+        row, hazard = await _set_betroth_col(conn, row, "betrothal_feast", amount if not self_cook else BETROTHAL_FEAST_MIN, note)
         seal = await _maybe_seal_text(conn, row)
         await conn.commit()
+    tail = f"\n{hazard}" if hazard else ""
     if changing:
         bits = [f"订婚宴改成{'自办' if self_cook else label}。"]
         if not self_cook:
@@ -2922,13 +2937,13 @@ async def _betroth_feast(s: dict[str, Any], rest: str) -> str:
         if old_self and not self_cook:
             bits.append("自办的菜不退。")
         bits.append("不是结婚吃席。")
-        return " ".join(bits) + (seal or "")
+        return " ".join(bits) + (seal or "") + tail
     if self_cook:
-        return f"{note}。厨房熟菜收走了。选了还能改。{seal}"
+        return f"{note}。厨房熟菜收走了。选了还能改。{seal}{tail}"
     where = "上手页小馆" if new_venue == "eatery" else "上手页酒吧"
     return (
         f"{label} {_bride_label(amount)} 当场花掉，不进潮汐基金。人去{where}。"
-        f"选了还能改。不是结婚吃席。{seal}"
+        f"选了还能改。不是结婚吃席。{seal}{tail}"
     )
 
 
@@ -2984,12 +2999,13 @@ async def _betroth_bouquet(s: dict[str, Any], rest: str = "") -> str:
                 "给何敬山送糕点，他会再塞你一块。"
             )
         amount, src = chosen
-        row = await _set_betroth_col(
+        row, hazard = await _set_betroth_col(
             conn, row, "betrothal_bouquet", amount, f"订婚花束记下：{src}。"
         )
         seal = await _maybe_seal_text(conn, row)
         await conn.commit()
-    return f"花束记下了（{src}）。{seal}"
+    tail = f"\n{hazard}" if hazard else ""
+    return f"花束记下了（{src}）。{seal}{tail}"
 
 
 async def _betroth_attire(s: dict[str, Any], rest: str = "") -> str:
@@ -3017,14 +3033,16 @@ async def _betroth_attire(s: dict[str, Any], rest: str = "") -> str:
             amount = BETROTHAL_ATTIRE_MIN
         if amount > BETROTHAL_ATTIRE_MAX:
             amount = BETROTHAL_ATTIRE_MAX
-        row = await _set_betroth_col(
+        row, hazard = await _set_betroth_col(
             conn, row, "betrothal_attire", amount,
             f"订婚服装记下：「{g['name']}」。",
         )
         await conn.commit()
+    tail = f"\n{hazard}" if hazard else ""
     return (
         f"「{g['name']}」记进订婚档案。衣还在衣橱里。不是婚服。"
         + ("" if _betrothal_confirmed(row) else "\n" + "\n".join(_betrothal_progress_lines(row)))
+        + tail
     )
 
 
@@ -3070,6 +3088,7 @@ def _photo_help_line() -> str:
 
 
 async def _betroth_photo(s: dict[str, Any], rest: str) -> str:
+    hazard = ""
     async with db.connect() as conn:
         own = await _own(conn, s["id"])
     if own and own["status"] == STATUS_MARRIED:
@@ -3140,21 +3159,23 @@ async def _betroth_photo(s: dict[str, Any], rest: str) -> str:
             )
             from . import tax as tax_mod
             await tax_mod.record_life_spend(conn, s["id"], delta, "marriage")
-        row = await _set_betroth_col(
+        row, hazard = await _set_betroth_col(
             conn, row, "betrothal_photo", amount,
             f"在{label}留影 {_bride_label(amount)}。",
         )
         await conn.commit()
+    tail = f"\n{hazard}" if hazard else ""
     if changing:
         bits = [f"留影改成{label} {_bride_label(amount)}。"]
         if delta > 0:
             bits.append(f"补了 {delta} 票，不进潮汐基金。")
         elif delta < 0:
             bits.append(f"退回 {-delta} 票到口袋，不进潮汐基金。")
-        return " ".join(bits)
+        return " ".join(bits) + tail
     return (
         f"{label}留影 {_bride_label(amount)} 记下了。纪念册当场花掉，不进潮汐基金。"
         "选了还能改。"
+        + tail
     )
 
 
@@ -3799,11 +3820,21 @@ def _shelf_sku(
 
 async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str, Any]:
     """给 /island 连理所用。数值仍走 marriage_ops，这里只摊开能点的。"""
+    from . import marriage_desk_jam as jam_mod
+
     row = await _own(conn, s["id"])
     status = (row or {}).get("status") or ""
     label = STATUS_LABEL.get(status, "还没有婚约")
     partner = (row or {}).get("partner_name") or ""
     tickets = int(s.get("tickets") or 0)
+    energy_now = int(s.get("energy") or 0)
+    hazard = await jam_mod.get_hazard(conn, s["id"])
+    jam_actions = (
+        jam_mod.ui_actions(tickets=tickets, energy_now=energy_now)
+        if hazard == jam_mod.HAZARD_JAM
+        else []
+    )
+    jam_block = hazard == jam_mod.HAZARD_JAM
     pending_divorce = _pending_kind(row) == KIND_DIVORCE
     has_draft = bool(row and status in ACTIVE)
     betrothal_open = bool(row and status in BETROTHAL_OPEN)
@@ -3836,6 +3867,8 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
         spoken = f"草稿写着「{partner}」。订婚现在就能办，不用彩礼。"
     else:
         spoken = "登记员理枝把册子摊开。先看档案。订婚、成婚、婚期都在这儿点。"
+    if jam_block:
+        spoken = "册子乱页了，先处置所险。"
     from . import traces as traces_mod
     spoken = await traces_mod.blend(conn, "lianli", spoken)
 
@@ -3867,6 +3900,28 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
         _shelf_sku(sid="buy-ring", kind="buy", name="买订婚戒", emoji="💍", note="Tt酱嫁妆柜 3888。不是潮誓戒。买完再点登记信物。", price="3888", can=tickets >= 3888, target="订婚戒", command="tt buy 订婚戒"),
         _shelf_sku(sid="buy-box", kind="buy", name="买礼盒", emoji="🎁", note="Tt酱嫁妆柜 1888。买完再点登记花束。", price="1888", can=tickets >= 1888, target="礼盒", command="tt buy 礼盒"),
     ]
+    jam_skus = [
+        _shelf_sku(
+            sid=f"jam-{act['action']}",
+            kind="desk_jam",
+            name=f"所险·{act['label']}",
+            emoji="📒",
+            note=act.get("hint") or "",
+            price=act["label"],
+            can=bool(act.get("can")),
+            target=act["action"],
+            command=f"所险 {act['action']}",
+        )
+        for act in jam_actions
+    ]
+    if jam_block:
+        betroth = [
+            {**item, "can": False}
+            if item.get("kind") == "act"
+            else item
+            for item in betroth
+        ]
+    betroth = jam_skus + betroth
     hold = [
         _shelf_sku(sid="buy-gold", kind="buy", name="买三金套", emoji="🥇", note="Tt酱嫁妆柜 8888，不打折。买完再点金饰。", price="8888", can=tickets >= 8888, target="三金套", command="tt buy 三金套"),
         _shelf_sku(sid="gold", kind="act", name="金饰", emoji="✨", note="订契后把行囊里的三金登记进婚书。", price="登", can=engaged or married, target="金饰", command="金饰"),
@@ -3948,6 +4003,9 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
         "name": OFFICE,
         "line": spoken,
         "clerk": CLERK,
+        "hazard": hazard,
+        "jam_actions": jam_actions,
+        "jam_note": "册子乱页，先处置所险。" if jam_block else "",
         "status": status,
         "status_label": label,
         "partner": partner,

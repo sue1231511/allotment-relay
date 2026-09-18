@@ -14,6 +14,7 @@ TITLES = {
     "transfer": "转了运",
     "buy": "买到了符",
     "look": "卦书",
+    "omen_gust": "卦险处置",
 }
 
 
@@ -28,6 +29,10 @@ def _command(kind: str, target: str) -> str:
         if not extra:
             raise ApiError("BAD_REQUEST", "先点要买的那张符。")
         return f"buy {extra}"
+    if verb == "omen_gust":
+        if not extra:
+            raise ApiError("BAD_REQUEST", "先选压石、问潮或硬信。")
+        return f"卦险 {extra}"
     raise ApiError("BAD_REQUEST", "滩头没有这一下。")
 
 

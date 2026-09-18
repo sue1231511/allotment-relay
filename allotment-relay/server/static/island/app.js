@@ -794,6 +794,19 @@ function liliRow(kind, target, id) {
 function tapLili(kind, target, id) {
   const row = liliRow(kind, target, id) || {};
   const body = row.detail || row.note || (state.lili && state.lili.line) || "这会儿摊上没有这一下。";
+  if (kind === "cart_tilt") {
+    if (!row.can) {
+      showHintSheet({ title: row.name || "栗险", body: row.detail || row.note || body });
+      return;
+    }
+    showActSheet({
+      title: row.name || `栗险·${target}`,
+      body: row.detail || row.note || (state.lili && state.lili.tilt_note) || body,
+      confirm: "确认",
+      onConfirm: () => runLili("cart_tilt", target),
+    });
+    return;
+  }
   if (kind === "look" || !row.can) {
     speakLili(body);
     return;
@@ -856,6 +869,19 @@ function clinicRow(kind, target, id) {
 function tapClinic(kind, target, id) {
   const row = clinicRow(kind, target, id) || {};
   const body = row.detail || row.note || (state.clinic && state.clinic.line) || "这会儿诊所用不上这一下。";
+  if (kind === "queue_jam") {
+    if (!row.can) {
+      showHintSheet({ title: row.name || "诊险", body: row.detail || row.note || body });
+      return;
+    }
+    showActSheet({
+      title: row.name || `诊险·${target}`,
+      body: row.detail || row.note || (state.clinic && state.clinic.queue_note) || body,
+      confirm: "确认",
+      onConfirm: () => runClinic("queue_jam", target),
+    });
+    return;
+  }
   if (kind === "look" || !row.can) {
     speakClinic(body);
     return;
@@ -1291,6 +1317,23 @@ function tapWriters(kind, target) {
     });
     return;
   }
+  if (kind === "script_jam") {
+    const row = (shop.script_skus || []).find((item) => (item.cmd || item.target) === target);
+    if (!row || !row.can_buy) {
+      showHintSheet({
+        title: (row && row.name) || "稿险",
+        body: (row && (row.detail || row.note)) || shop.script_note || "稿槽还卡着。",
+      });
+      return;
+    }
+    showActSheet({
+      title: row.name || `稿险·${target}`,
+      body: row.note || shop.script_note || "先处置稿槽。",
+      confirm: "确认",
+      onConfirm: () => runWriters("script_jam", target),
+    });
+    return;
+  }
   if (kind === "submit") {
     if (!shop.can_submit) {
       showHintSheet({ title: "投稿", body: shop.submit_note || "待审已经满了。" });
@@ -1371,6 +1414,23 @@ function tapAtelier(kind, target) {
     showHintSheet({
       title: target === "worn" ? (desk.worn || "身上") : (desk.job || "看坊"),
       body,
+    });
+    return;
+  }
+  if (kind === "thread_snag") {
+    const row = (shop.snag_skus || []).find((item) => (item.cmd || item.target) === target);
+    if (!row || !row.can_buy) {
+      showHintSheet({
+        title: (row && row.name) || "坊险",
+        body: (row && (row.detail || row.note)) || shop.snag_note || "梭子还缠着。",
+      });
+      return;
+    }
+    showActSheet({
+      title: row.name || `坊险·${target}`,
+      body: row.note || shop.snag_note || "线头缠梭，先处置。",
+      confirm: "确认",
+      onConfirm: () => runAtelier("thread_snag", target),
     });
     return;
   }
@@ -1538,6 +1598,40 @@ function tapHall(kind, target) {
       return;
     }
     runHall(kind, "");
+    return;
+  }
+  if (kind === "mic_feedback") {
+    const row = (shop.mic_choices || []).find((item) => item.target === target);
+    if (!row || !row.can_act) {
+      showHintSheet({
+        title: (row && row.name) || "麦险",
+        body: (row && (row.detail || row.note)) || "麦还在啸。",
+      });
+      return;
+    }
+    showActSheet({
+      title: row.name || `麦险·${target}`,
+      body: row.note || "先处置麦啸。",
+      confirm: "确认",
+      onConfirm: () => runHall("mic_feedback", target),
+    });
+    return;
+  }
+  if (kind === "curtain_jam") {
+    const row = (shop.curtain_choices || []).find((item) => item.target === target);
+    if (!row || !row.can) {
+      showHintSheet({
+        title: (row && row.name) || "剧险",
+        body: (row && (row.detail || row.note)) || shop.curtain_note || "幕布还卡着。",
+      });
+      return;
+    }
+    showActSheet({
+      title: row.name || `剧险·${target}`,
+      body: row.note || shop.curtain_note || "先处置幕布。",
+      confirm: "确认",
+      onConfirm: () => runHall("curtain_jam", target),
+    });
     return;
   }
   const row = (shop.jobs || []).find((item) => item.id === kind);
@@ -1895,7 +1989,26 @@ function tingThread(id) {
 
 function tapTing(kind, target) {
   const shop = state.ting || {};
+  if (kind === "plank_loose") {
+    const actions = shop.plank_actions || [];
+    const act = actions.find((row) => row.action === target) || {};
+    if (!act.can) {
+      showHintSheet({ title: `亭险·${target}`, body: act.disabled_reason || shop.plank_note || "这会儿处置不了。" });
+      return;
+    }
+    showActSheet({
+      title: `亭险·${target}`,
+      body: act.hint || shop.plank_note || "木牌松了，先处置。",
+      confirm: "确认",
+      onConfirm: () => runTing("plank_loose", target),
+    });
+    return;
+  }
   if (kind === "post") {
+    if (shop.plank_block) {
+      showHintSheet({ title: "钉一块", body: shop.plank_note || "木牌还松着，先处置亭险。" });
+      return;
+    }
     const board = target || state.tingTab || "ask";
     const meta = (shop.boards && shop.boards[board]) || {};
     const tab = (shop.tabs || []).find((row) => row.key === board);
@@ -2294,6 +2407,19 @@ function tapShaonian(kind, target, id) {
     runShaonian(kind, target || row.target || "catalog");
     return;
   }
+  if (kind === "omen_gust") {
+    if (!row.can) {
+      showHintSheet({ title: row.name || "卦险", body: row.detail || row.note || (state.shaonian && state.shaonian.omen_note) || "这会儿处置不了。" });
+      return;
+    }
+    showActSheet({
+      title: row.name || `卦险·${target}`,
+      body: row.note || (state.shaonian && state.shaonian.omen_note) || "潮风掀卦盘，先处置。",
+      confirm: "确认",
+      onConfirm: () => runShaonian("omen_gust", target),
+    });
+    return;
+  }
   if (!row.can) {
     speakShaonian(row.detail || row.note || "这会儿卜不了。");
     return;
@@ -2363,6 +2489,19 @@ function huiRow(kind, target, id) {
 function tapHui(kind, target, id) {
   const shop = state.hui || {};
   const row = huiRow(kind, target, id) || {};
+  if (kind === "clerk_rush") {
+    if (!row.can) {
+      showHintSheet({ title: row.name || "会险", body: row.detail || row.note || shop.rush_note || "这会儿处置不了。" });
+      return;
+    }
+    showActSheet({
+      title: row.name || `会险·${target}`,
+      body: row.detail || row.note || shop.rush_note || "交完票门口还挤，先处置。",
+      confirm: "确认",
+      onConfirm: () => runHui("clerk_rush", target),
+    });
+    return;
+  }
   if (kind === "look") {
     lookHui(target, row);
     return;
@@ -2485,6 +2624,19 @@ function lianliRow(kind, target, id) {
 
 function tapLianli(kind, target, id) {
   const row = lianliRow(kind, target, id) || {};
+  if (kind === "desk_jam") {
+    if (!row.can) {
+      showHintSheet({ title: row.name || "所险", body: row.detail || row.note || (state.lianli && state.lianli.jam_note) || "这会儿处置不了。" });
+      return;
+    }
+    showActSheet({
+      title: row.name || `所险·${target}`,
+      body: row.note || (state.lianli && state.lianli.jam_note) || "册子乱页，先处置。",
+      confirm: "确认",
+      onConfirm: () => runLianli("desk_jam", target),
+    });
+    return;
+  }
   if (kind === "look") {
     if (row.can === false) {
       showHintSheet({ title: row.name || "登记处", body: row.detail || row.note || "这会儿还不行。" });
@@ -2590,8 +2742,23 @@ function lighthouseChoice(kind) {
   return (shop.choices || []).find((row) => row.id === kind) || null;
 }
 
-function tapLighthouse(kind) {
+function tapLighthouse(kind, target) {
   const shop = state.lighthouse || {};
+  if (kind === "beacon_gust") {
+    const actions = shop.beacon_actions || [];
+    const act = actions.find((row) => row.action === target) || {};
+    if (!act.can) {
+      showHintSheet({ title: `灯险·${target}`, body: act.disabled_reason || shop.beacon_note || "这会儿处置不了。" });
+      return;
+    }
+    showActSheet({
+      title: `灯险·${target}`,
+      body: act.hint || shop.beacon_note || "塔窗还在晃。",
+      confirm: "确认",
+      onConfirm: () => runLighthouse("beacon_gust", target),
+    });
+    return;
+  }
   const row = lighthouseChoice(kind);
   if (kind === "light") {
     if (row && !row.can) {

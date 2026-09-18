@@ -8,7 +8,8 @@ MUSONG_HELP = """visit_ops musong 子命令（整句写进 command）：
   musong visit — 去渡口见目送人·阿槐；空子命令也是 visit
   musong send 名字 — 请阿槐替你目送一个人；每个游戏日一次
   musong remember — 查看最近记下的送别
-例子：musong visit · musong send 安 · musong remember
+  musong 别险 候潮|燃灯|硬别 — 目送后小概率雾糊册，未处置不能再 send/remember
+例子：musong visit · musong send 安 · musong 别险 候潮 · musong remember
 这是公开世界里的虚构纪事，只写一个简短称呼，不要填写现实隐私。"""
 
 
@@ -43,6 +44,9 @@ async def _send(steward: dict, name: str) -> str:
         raise ValueError("送别称呼最多 24 个字符")
     day = db.day_id()
     async with db.connect() as conn:
+        from . import musong_sendoff_fog as fog_mod
+
+        await fog_mod.assert_not_blocked(conn, steward["id"])
         exists = await (await conn.execute(
             "SELECT 1 FROM musong_sendoffs WHERE steward_id=? AND day=?",
             (steward["id"], day),
@@ -57,12 +61,17 @@ async def _send(steward: dict, name: str) -> str:
         await db.add_chronicle(
             "musong", f"{steward['name']} 请阿槐目送了 {target}", steward["id"], conn=conn
         )
+        fog_note = await fog_mod.maybe_after_send(conn, steward["id"]) or ""
         await conn.commit()
-    return _scene(target) + "\n\n雾智 +2 · 档信 +1（今日送别）"
+    tail = f"\n{fog_note}" if fog_note else ""
+    return _scene(target) + "\n\n雾智 +2 · 档信 +1（今日送别）" + tail
 
 
 async def _remember(steward_id: int) -> str:
     async with db.connect() as conn:
+        from . import musong_sendoff_fog as fog_mod
+
+        await fog_mod.assert_not_blocked(conn, steward_id)
         rows = await (await conn.execute(
             """SELECT target_name, day FROM musong_sendoffs
                WHERE steward_id=? ORDER BY created_at DESC LIMIT 8""",
@@ -90,4 +99,11 @@ async def musong_ops(key_id: int, command: str = "visit") -> str:
         return await _send(steward, rest)
     if verb in {"remember", "记得", "册子"}:
         return await _remember(steward["id"])
+    if verb in {"别险", "fog", "雾险"}:
+        from . import musong_sendoff_fog as fog_mod
+
+        async with db.connect() as conn:
+            msg = await fog_mod.resolve(conn, steward, rest)
+            await conn.commit()
+        return msg
     raise ValueError(f"未知 musong 指令：{command}\n{MUSONG_HELP}")

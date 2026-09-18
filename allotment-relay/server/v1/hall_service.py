@@ -29,6 +29,8 @@ TITLES = {
     "rehearse": "对过戏",
     "perform": "演完了",
     "claim": "领了薪",
+    "curtain_jam": "剧险处置",
+    "mic_feedback": "麦险处置",
     "cheer": "应援",
     "tip": "打赏",
     "song": "点了歌",
@@ -38,7 +40,16 @@ TITLES = {
 }
 
 
-def _command(kind: str) -> str:
+def _command(kind: str, target: str = "") -> str:
+    extra = (target or "").strip()
+    if kind == "curtain_jam":
+        if not extra:
+            raise ApiError("BAD_REQUEST", "先选扶幕、换场或硬演。")
+        return f"剧险 {extra}"
+    if kind == "mic_feedback":
+        if not extra:
+            raise ApiError("BAD_REQUEST", "先选润麦、退后或硬听。")
+        return f"麦险 {extra}"
     verb = KINDS.get(kind)
     if not verb:
         raise ApiError("BAD_REQUEST", "剧场看台没有这一下。")
@@ -108,7 +119,7 @@ async def act(api_key: str, key_id: int, kind: str, target: str = "") -> dict[st
             "speaker": "小橘",
         }
         return snap
-    command = _command(verb)
+    command = _command(verb, target)
     try:
         narrative = await theater.theater_ops(key_id, command)
     except ValueError as exc:

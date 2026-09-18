@@ -21,8 +21,10 @@ THEATER_HELP = """theater_ops 子命令（整句写进 command）：
   编剧社 / 稿件 — 侧厅收稿台：看规矩和自己的稿；常开，不需今晚专场
   投稿 标题 | 正文 — 把潮闻或人物故事投进编剧社。也可 投稿 潮闻 标题 | 正文 / 投稿 故事 标题 | 正文（只是建议，最终她定）
   撤回 编号 — 撤回自己还在待审的稿
+  剧险 扶幕|换场|硬演 — 演出后小概率幕布卡住，未处置不能再 领薪。人类 /island 剧场看台也能点
+  稿险 抚纸|压镇|硬投 — 投稿后小概率稿纸卡槽，未处置不能再 投稿。人类 /island 编剧社也能点
   试镜/对戏/演出只在小橘当晚开 stage 小剧场专场时开放；编剧社常开。不替代 bar_ops work 的考勤。
-  例子：看板 · 试镜 · 对戏 · 演出 · 领薪 · 编剧社 · 投稿 岸上旧收音机 | 第一幕……
+  例子：看板 · 试镜 · 对戏 · 演出 · 领薪 · 剧险 扶幕 · 编剧社 · 投稿 岸上旧收音机 | 第一幕…… · 稿险 抚纸
   头粉=star_ops 应援榜第一名；头粉好感获取和每日上限翻倍，不翻倍工资。
   投稿不是 tale_ops accept / story_ops start（那是玩已有篇章）；稿费不是 领薪（那是专场工资）。不要发明 采纳 / 发稿费。
   人类 /island 总览点剧场，进院景再点编剧社 / 衣泊坊 / 剧场看台。编剧社常开能投稿；剧场看台先进看台景，点一下才出人小橘，半身立绘对话，小橘站左边，只露上半身（全身的二分之一），先点对话框再出选项，点选项话写在对话框里，不另弹窗，能应援、打赏、点歌、围观（star_ops 同一套），要专场才试镜演出领薪。"""
@@ -262,17 +264,25 @@ async def _cmd_perform(conn: aiosqlite.Connection, s: dict) -> str:
         extra_lines += f"\n{dye}"
     if echo:
         extra_lines += f"\n{echo}"
+    from . import theater_curtain_jam as curtain_mod
+
+    curtain_note = await curtain_mod.maybe_after_perform(conn, s["id"]) or ""
     await conn.commit()
+    tail = f"\n{curtain_note}" if curtain_note else ""
     return (
         f"«{run['play_title']} · {run['role_label']}\n{OUTCOME_COPY[outcome]}\n"
         f"结果：{OUTCOME_LABELS[outcome]} · 待领 {payout}票 · 档信+{standing_gain} · 雾智+{mist_gain}"
         f" · 小橘好感+{affinity_gain}{'（头粉双倍）' if run['head_fan'] and affinity_gain else ''}"
         f"{' · ' + '、'.join(extras) if extras else ''}{extra_lines}\n"
         "→ theater_ops 领薪。»"
+        + tail
     )
 
 
 async def _cmd_claim(conn: aiosqlite.Connection, s: dict) -> str:
+    from . import theater_curtain_jam as curtain_mod
+
+    await curtain_mod.assert_not_blocked(conn, s["id"])
     run = await _pending_run(conn, s["id"])
     if not run or not run["outcome"]:
         raise ValueError("还没有可领的演出工资。先 theater_ops 试镜 → 演出。")
@@ -382,6 +392,9 @@ async def _cmd_guild(conn: aiosqlite.Connection, s: dict) -> str:
 
 
 async def _cmd_submit(conn: aiosqlite.Connection, s: dict, rest: str) -> str:
+    from . import theater_script_jam as script_mod
+
+    await script_mod.assert_not_blocked(conn, s["id"])
     pitch, title, body = _parse_submit(rest)
     pending = await (await conn.execute(
         "SELECT COUNT(*) FROM star_scripts WHERE steward_id=? AND status='pending'",
@@ -397,14 +410,17 @@ async def _cmd_submit(conn: aiosqlite.Connection, s: dict, rest: str) -> str:
         (s["id"], title, body, pitch, db.now()),
     )
     script_id = cur.lastrowid
+    jam_note = await script_mod.maybe_after_submit(conn, s["id"]) or ""
     await conn.commit()
     hint = f"你建议做成{PITCH_LABELS[pitch]}；最终她定。" if pitch else "没指定故事或潮闻，她自己看。"
+    tail = f"\n{jam_note}" if jam_note else ""
     return (
         f"«稿已进编剧社 #{script_id} 《{title}》\n"
         f"{hint}\n"
         f"故事稿费 {config.THEATER_SCRIPT_STORY_PAY} · 潮闻稿费 {config.THEATER_SCRIPT_TALE_PAY}。"
         "要等小橘后台点采纳才入账，不是 theater_ops 领薪。\n"
         "看自己的稿：theater_ops 编剧社。»"
+        + tail
     )
 
 
@@ -553,14 +569,39 @@ async def writers_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[st
             "note": extra or SCRIPT_STATUS_LABELS.get(row["status"], row["status"]),
             "detail": extra or "待审的稿能撤回。稿费要她后台采纳才入账，不是领薪。",
         })
-    can_submit = pending < config.THEATER_SCRIPT_PENDING_MAX
-    return {
-        "name": "编剧社",
-        "line": f"侧厅常开 · 待审 {pending}/{config.THEATER_SCRIPT_PENDING_MAX}",
-        "tabs": [{"key": "desk", "label": "收稿台", "badge": "投" if can_submit else ""}],
-        "scripts": scripts,
-        "can_submit": can_submit,
-        "submit_note": (
+    from . import theater_script_jam as script_mod
+
+    tickets = int(s.get("tickets") or 0)
+    energy_now = int(s.get("energy") or 0)
+    stock = await db.get_satchel(s["id"])
+    hazard = await script_mod.get_hazard(conn, s["id"])
+    script_actions = (
+        script_mod.ui_actions(tickets=tickets, stock=stock, energy_now=energy_now)
+        if hazard == script_mod.HAZARD_SCRIPT
+        else []
+    )
+    script_block = hazard == script_mod.HAZARD_SCRIPT
+    can_submit = pending < config.THEATER_SCRIPT_PENDING_MAX and not script_block
+    line = f"侧厅常开 · 待审 {pending}/{config.THEATER_SCRIPT_PENDING_MAX}"
+    if script_block:
+        line = "稿槽卡住了，先处置稿险。" + line
+    script_skus = [
+        {
+            "id": f"script-{act['action']}",
+            "kind": "script_jam",
+            "cmd": act["action"],
+            "name": f"稿险·{act['label']}",
+            "emoji": "📜",
+            "can_buy": bool(act.get("can")),
+            "note": act.get("hint") or "",
+            "detail": act.get("disabled_reason") or act.get("hint") or "",
+        }
+        for act in script_actions
+    ]
+    submit_note = (
+        "稿槽卡着，先处置稿险。"
+        if script_block
+        else (
             f"待审已经 {config.THEATER_SCRIPT_PENDING_MAX} 篇。等她看完，或先撤回一篇。"
             if not can_submit
             else (
@@ -568,7 +609,19 @@ async def writers_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[st
                 f"{config.THEATER_SCRIPT_BODY_MIN} 字。故事稿费 {config.THEATER_SCRIPT_STORY_PAY}，"
                 f"潮闻 {config.THEATER_SCRIPT_TALE_PAY}。不是接现有篇章，也不是领薪。"
             )
-        ),
+        )
+    )
+    return {
+        "name": "编剧社",
+        "line": line,
+        "hazard": hazard,
+        "script_actions": script_actions,
+        "script_note": "投稿后稿纸卡槽，先处置。" if script_block else "",
+        "script_skus": script_skus,
+        "tabs": [{"key": "desk", "label": "收稿台", "badge": "投" if can_submit else ""}],
+        "scripts": scripts,
+        "can_submit": can_submit,
+        "submit_note": submit_note,
         "pending": pending,
         "pending_max": config.THEATER_SCRIPT_PENDING_MAX,
         "story_pay": config.THEATER_SCRIPT_STORY_PAY,
@@ -612,7 +665,18 @@ async def hall_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str, 
     can_perform = bool(
         open_now and run and not run["outcome"] and energy_now >= config.THEATER_SHOW_ENERGY
     )
-    can_claim = bool(pending and pending["outcome"] and not pending["claimed"])
+    from . import theater_curtain_jam as curtain_mod
+
+    tickets = int(s.get("tickets") or 0)
+    stock = await db.get_satchel(s["id"])
+    hazard = await curtain_mod.get_hazard(conn, s["id"])
+    curtain_actions = (
+        curtain_mod.ui_actions(tickets=tickets, stock=stock, energy_now=energy_now)
+        if hazard == curtain_mod.HAZARD_CURTAIN
+        else []
+    )
+    curtain_block = hazard == curtain_mod.HAZARD_CURTAIN
+    can_claim = bool(pending and pending["outcome"] and not pending["claimed"]) and not curtain_block
     if not open_now:
         audition_note = "小橘今晚没有在小剧场开专场。"
         rehearse_note = audition_note
@@ -649,10 +713,27 @@ async def hall_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str, 
                 else f"耗 {config.THEATER_SHOW_ENERGY} 精力，按岗位和对戏结算。"
             )
     claim_note = (
-        f"待领 {int(pending['payout'] or 0)} 票。忘了领也不会丢。"
-        if can_claim
-        else "还没有可领的演出工资。"
+        "幕布卡着，先处置剧险。"
+        if curtain_block
+        else (
+            f"待领 {int(pending['payout'] or 0)} 票。忘了领也不会丢。"
+            if can_claim
+            else "还没有可领的演出工资。"
+        )
     )
+    curtain_choices = [
+        {
+            "id": f"curtain-{act['action']}",
+            "kind": "curtain_jam",
+            "target": act["action"],
+            "name": f"剧险·{act['label']}",
+            "note": act.get("hint") or "",
+            "detail": act.get("disabled_reason") or act.get("hint") or "",
+            "price": act["label"],
+            "can": bool(act.get("can")),
+        }
+        for act in curtain_actions
+    ]
     jobs = [
         {
             "id": "audition",
@@ -691,7 +772,9 @@ async def hall_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str, 
             "detail": claim_note + "稿费不是领薪。",
         },
     ]
-    if can_claim:
+    if curtain_block:
+        spoken = "幕布卡住了，先处置剧险，再领薪。"
+    elif can_claim:
         spoken = f"这场演完了。去领薪，{int(pending['payout'] or 0)} 票。"
     elif not open_now:
         if venue == "bar" and venue_date == _day():
@@ -730,7 +813,12 @@ async def hall_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str, 
             ),
         },
         "stars": await star.hall_star_view(conn, s),
+        "mic_choices": await star.hall_mic_choices(conn, s),
         "jobs": jobs,
+        "hazard": hazard,
+        "curtain_actions": curtain_actions,
+        "curtain_note": "演出后幕布卡住，先处置。" if curtain_block else "",
+        "curtain_choices": curtain_choices,
         "can_audition": can_audition,
         "can_rehearse": can_rehearse,
         "can_perform": can_perform,
@@ -743,6 +831,20 @@ async def theater_ops(key_id: int, command: str) -> str:
     first, rest = _split_cmd(cmd)
     verb = first.lower()
     s = await require_steward(key_id)
+    if verb in ("剧险", "curtain", "幕险"):
+        from . import theater_curtain_jam as curtain_mod
+
+        async with db.connect() as conn:
+            msg = await curtain_mod.resolve(conn, s, rest)
+            await conn.commit()
+        return msg
+    if verb in ("稿险", "script", "稿卡"):
+        from . import theater_script_jam as script_mod
+
+        async with db.connect() as conn:
+            msg = await script_mod.resolve(conn, s, rest)
+            await conn.commit()
+        return msg
     async with db.connect() as conn:
         conn.row_factory = aiosqlite.Row
         if verb in ("", "看板", "status", "board"):

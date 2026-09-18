@@ -18,6 +18,7 @@ TITLES = {
     "watch": "守了一夜",
     "remember": "潮汐簿",
     "fulfill": "还了愿",
+    "beacon_gust": "灯险处置",
 }
 
 SPEAKERS = {
@@ -43,6 +44,10 @@ def _command(kind: str, target: str) -> str:
         if not name.isdigit():
             raise ApiError("BAD_REQUEST", "先点要还愿的那盏灯。")
         return f"fulfill {name}"
+    if verb == "beacon_gust":
+        if not name:
+            raise ApiError("BAD_REQUEST", "先选压窗、避风或硬守。")
+        return f"灯险 {name}"
     raise ApiError("BAD_REQUEST", "灯塔里没有这一下。")
 
 

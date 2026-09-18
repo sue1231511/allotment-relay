@@ -15,7 +15,8 @@ JINGSHAN_HELP = """visit_ops jingshan 子命令（整句写进 command）：
   jingshan deliver — 商船到货后把糕点送去
   jingshan revisit — 换一个游戏日后再去院子看看
   jingshan remember — 后续完成后重读那条短探索记录
-例子：jingshan visit · jingshan order · jingshan deliver
+  jingshan 箱险 捆扎|垫木|硬提 — 送糕后小概率木箱松，未处置不能再 order/deliver/revisit
+例子：jingshan visit · jingshan order · jingshan deliver · jingshan 箱险 捆扎
 故事严格按顺序推进；苏月琴不是单独的固定 NPC。完整后会收入网页「我的 AI」的岛上回忆，可重看四段完整事件。"""
 
 EXPLORE_RECORD = (
@@ -202,6 +203,9 @@ async def _visit(steward: dict[str, Any]) -> str:
 
 async def _order(steward: dict[str, Any]) -> str:
     async with db.connect() as conn:
+        from . import jingshan_crate_loose as crate_mod
+
+        await crate_mod.assert_not_blocked(conn, steward["id"])
         state = await _state(conn, steward["id"])
         stage = int(state["stage"])
         if stage < 1:
@@ -218,6 +222,9 @@ async def _order(steward: dict[str, Any]) -> str:
 
 async def _deliver(steward: dict[str, Any]) -> str:
     async with db.connect() as conn:
+        from . import jingshan_crate_loose as crate_mod
+
+        await crate_mod.assert_not_blocked(conn, steward["id"])
         state = await _state(conn, steward["id"])
         stage = int(state["stage"])
         if stage < 2:
@@ -231,9 +238,11 @@ async def _deliver(steward: dict[str, Any]) -> str:
         )
         from . import marriage as marriage_mod
         pastry = await marriage_mod.maybe_jingshan_pastry(conn, steward["id"])
+        crate_note = await crate_mod.maybe_after_deliver(conn, steward["id"]) or ""
         await conn.commit()
     extra = f"\n{pastry}" if pastry else ""
-    return DELIVER_SCENE + "\n\n饱食 +2\n后续：换一个游戏日后 visit_ops jingshan revisit" + extra
+    tail = f"\n{crate_note}" if crate_note else ""
+    return DELIVER_SCENE + "\n\n饱食 +2\n后续：换一个游戏日后 visit_ops jingshan revisit" + extra + tail
 
 
 async def _revisit_in_conn(
@@ -258,6 +267,9 @@ async def _revisit_in_conn(
 
 async def _revisit(steward: dict[str, Any]) -> str:
     async with db.connect() as conn:
+        from . import jingshan_crate_loose as crate_mod
+
+        await crate_mod.assert_not_blocked(conn, steward["id"])
         state = await _state(conn, steward["id"])
         return await _revisit_in_conn(steward, conn, state)
 
@@ -280,7 +292,9 @@ async def _status(steward_id: int) -> str:
 
 async def jingshan_ops(key_id: int, command: str = "visit") -> str:
     steward = await require_steward(key_id)
-    verb = ((command or "visit").strip().split(maxsplit=1) or ["visit"])[0].lower()
+    parts = (command or "visit").strip().split(maxsplit=1)
+    verb = (parts[0] if parts else "visit").lower()
+    rest = parts[1] if len(parts) > 1 else ""
     if verb in {"help", "帮助"}:
         return JINGSHAN_HELP
     if verb in {"visit", "拜访", "见"}:
@@ -295,4 +309,11 @@ async def jingshan_ops(key_id: int, command: str = "visit") -> str:
         return await _remember(steward["id"])
     if verb in {"status", "进度"}:
         return await _status(steward["id"])
+    if verb in {"箱险", "crate", "箱松"}:
+        from . import jingshan_crate_loose as crate_mod
+
+        async with db.connect() as conn:
+            msg = await crate_mod.resolve(conn, steward, rest)
+            await conn.commit()
+        return msg
     raise ValueError(f"未知 jingshan 指令：{command}\n{JINGSHAN_HELP}")

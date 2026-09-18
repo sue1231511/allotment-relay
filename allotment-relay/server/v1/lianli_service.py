@@ -14,6 +14,7 @@ TITLES = {
     "buy": "买下了",
     "bless": "写下了",
     "gift": "送到了",
+    "desk_jam": "所险处置",
 }
 
 LOOK = {
@@ -59,6 +60,10 @@ def _command(kind: str, target: str) -> tuple[str, str]:
         if not extra:
             raise ApiError("BAD_REQUEST", "连理所里没有这一下。")
         return "marriage", extra
+    if kind == "desk_jam":
+        if not extra:
+            raise ApiError("BAD_REQUEST", "先选理档、补章或硬签。")
+        return "marriage", f"所险 {extra}"
     raise ApiError("BAD_REQUEST", "连理所里没有这一下。")
 
 

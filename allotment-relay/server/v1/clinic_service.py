@@ -16,6 +16,7 @@ TITLES = {
     "dove": "喂了斑鸠",
     "chat": "聊了聊",
     "look": "乔乔诊所",
+    "queue_jam": "诊险处置",
 }
 
 
@@ -51,6 +52,10 @@ def _command(kind: str, target: str) -> str:
         return "dove 喂"
     if kind == "chat":
         return "chat"
+    if kind == "queue_jam":
+        if not extra:
+            raise ApiError("BAD_REQUEST", "先选候诊、加号或硬治。")
+        return f"诊险 {extra}"
     raise ApiError("BAD_REQUEST", "诊所用不上这一下。")
 
 

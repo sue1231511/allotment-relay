@@ -214,6 +214,7 @@ CLOTH_HELP = f"""cloth_ops 子命令（整句写进 command）：
   买 订婚服 海色 — 订婚服现货，{BETROTHAL_ATTIRE_SHOP} 票。不是婚服。再 marriage_ops 订婚 服装
   委托 短褂 海色 — 把衣料和染料交给{NPC_NAME}，开始裁制。也可 委托 呢衣 墨色 潮纹 · 委托 裙 沙色 素 漂布 · 委托 婚服 海色 双潮 · 委托 订婚服 海色
   取 — 领做好的衣服（裁制进度走完才能取；自制婚服隔日）。衣橱会写下谁哪天取的
+  坊险 剪线|润梭|硬取 — 取衣后小概率线头缠梭，未处置不能再 取/委托/买。人类 /island 衣泊坊也能点
   衣橱 — 自己裁出来的衣服（不占行囊，不能卖）。来历写在衣服下面
   穿 1 / 穿 灯塔守夜人的旧呢衣 — 换上；同时只能穿一件
   脱 — 脱下
@@ -684,12 +685,16 @@ async def _cmd_claim(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
     await db.add_chronicle(
         "cloth", f"{s['name']} 在{SHOP_NAME}取走「{prof['job_name']}」", s["id"], conn=conn,
     )
+    from . import cloth_thread_snag as snag_mod
+    snag_note = await snag_mod.maybe_after_claim(conn, s["id"]) or ""
     extra = ""
     if origin:
         extra = f"\n{origin}\n穿去对应地点可能多一句。cloth_ops 穿 {gid}"
+    tail = f"\n{snag_note}" if snag_note else ""
     return (
         f"{NPC_NAME}把「{prof['job_name']}」叠好递过来。"
         f"\n进衣橱 #{gid}（不占行囊，不能卖）。cloth_ops 穿 {gid} · 衣橱{extra}"
+        + tail
     )
 
 
@@ -989,6 +994,7 @@ def beach_loot_item() -> str:
 async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str, Any]:
     """给 /island 衣泊坊用。数值仍走 cloth_ops，这里只摊开能点的。"""
     from . import bar as bar_mod
+    from . import cloth_thread_snag as snag_mod
 
     conn.row_factory = aiosqlite.Row
     prof = await ensure_profile(conn, s["id"])
@@ -996,11 +1002,23 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
     season = current_cloth_season()
     worn = await worn_garment(conn, s["id"])
     tickets = int(s.get("tickets") or 0)
+    energy_now = int(s.get("energy") or 0)
+    stock = await db.get_satchel(s["id"])
+    hazard = await snag_mod.get_hazard(conn, s["id"])
+    snag_actions = (
+        snag_mod.ui_actions(tickets=tickets, stock=stock, energy_now=energy_now)
+        if hazard == snag_mod.HAZARD_SNAG
+        else []
+    )
+    snag_block = hazard == snag_mod.HAZARD_SNAG
     overdue = bar_mod.is_shift_overdue(s)
     job_name = prof["job_name"]
     ready_at = int(prof["job_ready_at"] or 0)
-    can_take = bool(job_name and ready_at <= now)
-    if overdue:
+    can_take = bool(job_name and ready_at <= now) and not snag_block
+    if snag_block:
+        take_note = "梭子还缠着，先处置坊险。"
+        can_take = False
+    elif overdue:
         take_note = "考勤逾期，先去酒吧洗碗。看坊、衣橱、换衣服仍可用。"
         can_take = False
     elif can_take:
@@ -1022,7 +1040,7 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
     ):
         for color_key in ("sea", "ink", "sand", "fog"):
             color = COLORS[color_key]["name"]
-            can = tickets >= price and not overdue
+            can = tickets >= price and not overdue and not snag_block
             if overdue:
                 note = "考勤逾期，先去酒吧洗碗。"
             elif tickets < price:
@@ -1067,9 +1085,27 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
         line = f"{cloth_season_label(season)} · 能买现货"
     else:
         line = f"{cloth_season_label(season)} · {NPC_NAME}在"
+    snag_skus = [
+        {
+            "id": f"snag-{act['action']}",
+            "kind": "thread_snag",
+            "cmd": act["action"],
+            "name": f"坊险·{act['label']}",
+            "emoji": "🧵",
+            "price": 0,
+            "can_buy": bool(act.get("can")),
+            "note": act.get("hint") or "",
+            "detail": act.get("disabled_reason") or act.get("hint") or "",
+        }
+        for act in snag_actions
+    ]
     return {
         "name": SHOP_NAME,
-        "line": line,
+        "line": ("线头缠着梭子，先处置坊险。" if snag_block else line),
+        "hazard": hazard,
+        "snag_actions": snag_actions,
+        "snag_note": "取衣后线头缠梭，先处置。" if snag_block else "",
+        "snag_skus": snag_skus,
         "tabs": [
             {"key": "desk", "label": "看坊", "badge": "取" if can_take else ""},
             {"key": "shop", "label": "现货", "badge": "买" if any_buy else ""},
@@ -1105,7 +1141,17 @@ async def cloth_ops(key_id: int, command: str = "") -> str:
     duty_verbs = {"委托", "sew", "裁", "取", "claim", "买", "buy"}
     s = await require_steward(key_id, exempt_duty=verb not in duty_verbs)
 
+    if verb in ("坊险", "snag", "thread", "缠梭"):
+        from . import cloth_thread_snag as snag_mod
+        async with db.connect() as conn:
+            msg = await snag_mod.resolve(conn, s, rest.strip())
+            await conn.commit()
+        return msg
+
     async with db.connect() as conn:
+        from . import cloth_thread_snag as snag_mod
+        if verb in ("取", "claim", "委托", "sew", "裁", "买", "buy"):
+            await snag_mod.assert_not_blocked(conn, s["id"])
         if verb in ("status", "看", "看坊", "scan"):
             text = await _status_text(conn, s)
         elif verb in ("catalog", "图鉴"):

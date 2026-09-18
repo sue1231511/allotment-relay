@@ -14,6 +14,7 @@ TITLES = {
     "wear": "换上了",
     "remove": "脱下了",
     "visit": "见了漾漾",
+    "thread_snag": "坊险处置",
 }
 
 
@@ -33,6 +34,10 @@ def _command(kind: str, target: str) -> str:
         return "脱"
     if kind == "visit":
         return "漾漾"
+    if kind == "thread_snag":
+        if not name:
+            raise ApiError("BAD_REQUEST", "先选剪线、润梭或硬取。")
+        return f"坊险 {name}"
     raise ApiError("BAD_REQUEST", "衣泊坊里没有这一下。")
 
 

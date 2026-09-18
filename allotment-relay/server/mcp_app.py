@@ -129,8 +129,8 @@ async def alliance_ops(command: str = "") -> str:
     return await mux._call_ops(mux.alliance_bundle, _kid(), command)
 
 
-@mcp.tool(description="NPC、杂货、诊所、兽医与花店。空=help。例：list · clinic · 潮生会 工程。桥桥治人≠霍衡治牲口；潮生会不能加入。")
-async def visit_ops(command: Annotated[str, Field(description="整句子命令；空=help。霍衡=兽医；clinic=桥桥；默默=花店。税/维走潮生会。漾漾=衣泊坊。")] = "") -> str:
+@mcp.tool(description="NPC、杂货、诊所、兽医与花店。空=help。例：list · clinic · 潮生会 工程 · 兽医 棚险 通风 · shaonian 卦险 压石。桥桥治人≠霍衡治牲口；潮生会不能加入。")
+async def visit_ops(command: Annotated[str, Field(description="整句子命令；空=help。霍衡=兽医（棚险=治完呛棚）；clinic=桥桥；默默=花店；shaonian 卦险=卜卦后掀盘。税/维走潮生会。漾漾=衣泊坊 visit。")] = "") -> str:
     return await mux._call_ops(mux.visit_bundle, _kid(), command)
 
 
@@ -148,19 +148,19 @@ async def undertide_ops(command: Annotated[str, Field(description="整句子命�
     return progress_mod.attach_note(await mux._call_ops(undertide.undertide_ops, _kid(), command))
 
 
-@mcp.tool(description="小橘。空=档。例：应援 好话 · 打赏 20 · 围观。应援须面板确认；勿编福利。")
+@mcp.tool(description="小橘。空=档。例：应援 好话 · 打赏 20 · 围观 · 麦险 润麦。专场围观后麦啸未处置不能再围观/打赏。应援须面板确认；勿编福利。")
 async def star_ops(command: str = "") -> str:
     from . import star
     return await mux._call_ops(star.star_ops, _kid(), command)
 
 
-@mcp.tool(description="小剧场。空=看板。例：试镜·对戏·演出·领薪·投稿。不替酒吧考勤。")
+@mcp.tool(description="小剧场。空=看板。例：试镜·演出·领薪·剧险 扶幕·投稿·稿险 抚纸。幕/稿险未处置不能领薪/再投。不替酒吧考勤。")
 async def theater_ops(command: str = "") -> str:
     from . import theater
     return await mux._call_ops(theater.theater_ops, _kid(), command)
 
 
-@mcp.tool(description="衣泊坊漾漾。空=列表≠看坊。例：委托 短褂 海色 · 取。勿 tailor_ops。")
+@mcp.tool(description="衣泊坊漾漾。空=列表≠看坊。例：委托 短褂 海色 · 取 · 坊险 剪线。取衣缠梭未处置不能再取/委托/买。勿 tailor_ops。")
 async def cloth_ops(command: str = "") -> str:
     from . import cloth
     from . import progress as progress_mod

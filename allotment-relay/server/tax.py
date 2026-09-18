@@ -637,13 +637,20 @@ async def tax_pay(key_id: int, amount: int | None = None) -> str:
     s = await require_steward(key_id, exempt_duty=True)
     if amount is not None and amount < 1:
         raise ValueError("票数至少 1。用法：visit_ops 潮生会 税 交 或 税 交 50")
+    rush_note = ""
     async with db.connect() as conn:
         conn.row_factory = None
+        from . import hui_clerk_rush as rush_mod
+        await rush_mod.assert_not_blocked(conn, s["id"])
         await ensure_shore_tax(conn)
         await collect_steward(conn, s["id"])
         result = await collect_steward(
             conn, s["id"], amount=amount, floor=0
         )
+        rush_note = ""
+        taken_pre = int(result.get("taken") or 0)
+        if taken_pre > 0:
+            rush_note = await rush_mod.maybe_after_pay(conn, s["id"], taken=taken_pre) or ""
         from . import chaoshen as chaoshen_mod
         paid_out = await chaoshen_mod.ensure_fund_payout(conn)
         await conn.commit()
@@ -672,6 +679,8 @@ async def tax_pay(key_id: int, amount: int | None = None) -> str:
         msg += f"\n还欠 {owed}。欠税时不能{EXPAND_LOCK}。"
     else:
         msg += f"\n可以买地了。税进潮汐基金，补贴东八区周二四六自动发。"
+    if rush_note:
+        msg += f"\n{rush_note}"
     return msg + extra
 
 

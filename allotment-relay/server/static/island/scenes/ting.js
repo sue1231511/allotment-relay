@@ -75,13 +75,25 @@ function boardMarkup(shop, tab) {
   const board = (shop.boards && shop.boards[tab]) || {};
   const rows = board.threads || [];
   const parts = [];
+  if ((shop.plank_actions || []).length) {
+    for (const act of shop.plank_actions) {
+      parts.push(sku(
+        "plank_loose",
+        act.action,
+        { emoji: "🪵", name: `亭险·${act.label}` },
+        act.hint || shop.plank_note || "",
+        act.label,
+        Boolean(act.can),
+      ));
+    }
+  }
   parts.push(sku(
     "post",
     tab,
     { emoji: "🪵", name: "钉一块" },
     board.hint || shop.post_note || "标题和正文分开写。",
     "钉",
-    true,
+    !shop.plank_block,
   ));
   if (!rows.length) {
     parts.push(`<p class="island-shop-empty">这块还空着。先钉一块。不是聊天室，不是厅示。</p>`);

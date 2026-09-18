@@ -420,9 +420,20 @@ async def clinic_ops(key_id: int, command: str) -> str:
             await conn.commit()
         return scene + "\n\n" + msg
 
+    if verb in ("诊险", "queue", "候诊区"):
+        from . import clinic_queue_jam as jam_mod
+        rest = " ".join(parts[1:]) if len(parts) > 1 else ""
+        async with db.connect() as conn:
+            msg = await jam_mod.resolve(conn, s, rest)
+            await conn.commit()
+        return msg
+
     if verb == "treat" and len(parts) >= 2:
         target = " ".join(parts[1:]).strip().lower()
+        jam_note = ""
         async with db.connect() as conn:
+            from . import clinic_queue_jam as jam_mod
+            await jam_mod.assert_not_blocked(conn, s["id"])
             # 无标药盒：就医自动抵扣一次，本次治疗费减半（消耗）
             treat_mult = mult
             pill_note = ""
@@ -446,8 +457,13 @@ async def clinic_ops(key_id: int, command: str) -> str:
                     msg = line + "\n" + msg
             if pill_note:
                 msg += f"\n{pill_note}"
+            jam_note = ""
+            if "没治" not in msg and "没有" not in msg and "不够" not in msg:
+                jam_note = await jam_mod.maybe_after_treat(conn, s["id"]) or ""
             await db.add_chronicle("clinic", f"{s['name']} {msg}", s["id"], conn=conn)
             await conn.commit()
+        if jam_note:
+            msg += f"\n{jam_note}"
         if price_note:
             msg += f"\n（{price_note}）"
         return scene + "\n\n" + msg
@@ -485,6 +501,8 @@ def _sku(
 
 async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str, Any]:
     """给 /island 乔乔诊所。数值仍走 clinic_ops，这里只摊开能点的。"""
+    from . import clinic_queue_jam as jam_mod
+
     ailments = await health.list_ailments(conn, s["id"])
     cur = await conn.execute(
         "SELECT item, quantity FROM satchel WHERE steward_id=? AND quantity>0",
@@ -492,6 +510,14 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
     )
     stock = {row[0]: int(row[1]) for row in await cur.fetchall()}
     tickets = int(s.get("tickets") or 0)
+    energy_now = int(s.get("energy") or 0)
+    hazard = await jam_mod.get_hazard(conn, s["id"])
+    queue_actions = (
+        jam_mod.ui_actions(tickets=tickets, energy_now=energy_now)
+        if hazard == jam_mod.HAZARD_JAM
+        else []
+    )
+    queue_block = hazard == jam_mod.HAZARD_JAM
     body = int(s.get("health") or 100)
     day = db.day_id()
     tonic_used = int(s.get("clinic_tonic_count") or 0) if int(s.get("clinic_tonic_day") or 0) == day else 0
@@ -501,7 +527,9 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
     meter = health.meter_line(s, ailments)
     bridge = [a for a in ailments if not health.bridge_refuses(a)]
     pit = [a for a in ailments if health.bridge_refuses(a)]
-    if bridge:
+    if queue_block:
+        line = "候诊区还堵着，先处置诊险。"
+    elif bridge:
         line = f"桥桥在。地上病 {len(bridge)} 项。{meter}"
     elif pit:
         line = f"桥桥在。井下伤她不接，找晏安。{meter}"
@@ -510,7 +538,20 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
     else:
         line = "桥桥在。地上的病来看病，没病可调理，药架能买，窗台能喂斑鸠。"
 
-    treat_items: list[dict[str, Any]] = []
+    treat_items: list[dict[str, Any]] = [
+        _sku(
+            sid=f"queue-{act['action']}",
+            kind="queue_jam",
+            name=f"诊险·{act['label']}",
+            emoji="🩺",
+            note=act.get("hint") or "",
+            detail=act.get("disabled_reason") or act.get("hint") or "",
+            price=act["label"],
+            can=bool(act.get("can")),
+            target=act["action"],
+        )
+        for act in queue_actions
+    ]
     if bridge:
         treat_all_cost = sum(health._bill_cost(a["cost"]) for a in bridge)  # noqa: SLF001
         treat_items.append(_sku(
@@ -521,7 +562,7 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
             note=f"地上病 {len(bridge)} 项，合计约 {treat_all_cost} 票。井下伤不接。",
             detail="visit_ops clinic treat all 同一套。诊费偏高，不赊账。慢性病要歇够间隔。",
             price=f"{treat_all_cost}票",
-            can=tickets >= treat_all_cost and all(a.get("treat_ready") for a in bridge),
+            can=(not queue_block) and tickets >= treat_all_cost and all(a.get("treat_ready") for a in bridge),
             target="all",
         ))
         for a in bridge:
@@ -533,7 +574,7 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
                     extra += " · 现在可压一档"
                 else:
                     extra += f" · 还需歇 {health.fmt_wait(a['treat_wait'])}"
-            can = bool(a.get("treat_ready")) and tickets >= billed
+            can = (not queue_block) and bool(a.get("treat_ready")) and tickets >= billed
             treat_items.append(_sku(
                 sid=f"treat-{a['key']}",
                 kind="treat",
@@ -677,6 +718,9 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
         "name": "乔乔诊所",
         "speaker": "桥桥",
         "line": line,
+        "hazard": hazard,
+        "queue_actions": queue_actions,
+        "queue_note": "候诊区还堵，先处置诊险。" if queue_block else "",
         "tabs": tabs,
         "items": {
             "treat": treat_items,

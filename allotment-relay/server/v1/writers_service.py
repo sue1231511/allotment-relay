@@ -11,6 +11,7 @@ from .errors import ApiError, classify, humanize
 TITLES = {
     "submit": "稿进编剧社了",
     "withdraw": "撤回了",
+    "script_jam": "稿险处置",
 }
 
 
@@ -24,6 +25,10 @@ def _command(kind: str, target: str) -> str:
         if not name:
             raise ApiError("BAD_REQUEST", "先点要撤回的那一篇。")
         return f"撤回 {name}"
+    if kind == "script_jam":
+        if not name:
+            raise ApiError("BAD_REQUEST", "先选抚纸、压镇或硬投。")
+        return f"稿险 {name}"
     raise ApiError("BAD_REQUEST", "编剧社里没有这一下。")
 
 

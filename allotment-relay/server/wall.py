@@ -57,6 +57,7 @@ wall_ops — 听潮亭木牌墙（岛民论坛；空 command=看亭）
                        看这块木牌上的帖
   看 12 / 帖 12         看第 12 号帖（楼主+回复）
   贴 问事 标题 | 正文    钉一块新木牌。标题和正文用 | 分开
+  亭险 加固|换钉|硬钉 — 钉牌后小概率木牌松脱，未处置不能再 贴/回。人类 /island 听潮亭也能点
   回 12 正文            回第 12 号帖
   撕 12                 撕自己的帖（软删，整帖从墙上拿下）
   撕 12 5               撕自己在 12 号帖里的第 5 条回复
@@ -131,6 +132,8 @@ async def _require_enrolled(key_id: int) -> dict[str, Any]:
 
 
 async def _assert_can_post(conn: aiosqlite.Connection, steward: dict[str, Any]) -> None:
+    from . import wall_plank_loose as loose_mod
+    await loose_mod.assert_not_blocked(conn, int(steward["id"]))
     from . import lounge
     try:
         await lounge._assert_can_speak(conn, steward)
@@ -342,8 +345,19 @@ async def public_snapshot(board: str | None = None) -> dict[str, Any]:
 
 async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str, Any]:
     """给 /island 听潮亭用。数值仍走 wall_ops，这里只摊开能点的。"""
+    from . import wall_plank_loose as loose_mod
     conn.row_factory = aiosqlite.Row
     my_id = int(s["id"])
+    tickets = int(s.get("tickets") or 0)
+    energy_now = int(s.get("energy") or 0)
+    stock = await db.get_satchel(my_id)
+    hazard = await loose_mod.get_hazard(conn, my_id)
+    plank_actions = (
+        loose_mod.ui_actions(tickets=tickets, stock=stock, energy_now=energy_now)
+        if hazard == loose_mod.HAZARD_LOOSE
+        else []
+    )
+    plank_block = hazard == loose_mod.HAZARD_LOOSE
     counts = await _board_counts(conn)
 
     async def cards(*, board: str | None = None, mine: bool = False) -> list[dict[str, Any]]:
@@ -396,13 +410,19 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
     )).fetchone())["n"] or 0)
     tabs.append({"key": "mine", "label": "我的", "badge": str(mine_n) if mine_n else ""})
     total = sum(int(counts.get(bid, 0) or 0) for bid in BOARDS)
-    if total:
+    if plank_block:
+        spoken = "刚钉的牌松了，先处置亭险。"
+    elif total:
         spoken = f"亭柱上 {total} 块木牌。点一块看全文，能回、能撕自己的。"
     else:
         spoken = "亭里还空着。先钉一块。不是聊天室，不是潮生会厅示。"
     return {
         "name": "听潮亭",
         "line": spoken,
+        "hazard": hazard,
+        "plank_actions": plank_actions,
+        "plank_note": "木牌松脱，先处置再钉再回。" if plank_block else "",
+        "plank_block": plank_block,
         "tabs": tabs,
         "boards": boards,
         "mine": mine_rows,
@@ -453,9 +473,14 @@ async def create_thread(
             """,
             (bid, actor["id"], title_text, body_text, source, now, now),
         )
+        from . import wall_plank_loose as loose_mod
+        loose_extra = await loose_mod.maybe_after_post(conn, actor["id"]) or ""
         await conn.commit()
         tid = int(cur.lastrowid)
-    return await get_thread(tid)
+    view = await get_thread(tid)
+    if loose_extra:
+        view["hazard_note"] = loose_extra
+    return view
 
 
 async def add_reply(
@@ -643,6 +668,13 @@ async def wall_ops(key_id: int, command: str) -> str:
     if verb_l in ("help", "帮助", "?"):
         return WALL_HELP
 
+    if verb in ("亭险", "plank", "loose", "松钉"):
+        from . import wall_plank_loose as loose_mod
+        async with db.connect() as conn:
+            msg = await loose_mod.resolve(conn, s, rest)
+            await conn.commit()
+        return msg
+
     if not raw or verb_l in ("看亭", "scan", "亭", "墙", "木牌", "list"):
         async with db.connect() as conn:
             counts = await _board_counts(conn)
@@ -664,7 +696,9 @@ async def wall_ops(key_id: int, command: str) -> str:
     if verb_l in ("贴", "钉", "post", "发帖"):
         board_raw, title, body = _split_post(rest)
         view = await create_thread(s, board_raw, title, body, source="mcp")
-        return f"已钉 #{view['id']}《{view['title']}》到{view['board_name']}。\n\n{_render_thread(view)}"
+        extra = view.get("hazard_note") or ""
+        tail = f"\n\n{extra}" if extra else ""
+        return f"已钉 #{view['id']}《{view['title']}》到{view['board_name']}。{tail}\n\n{_render_thread(view)}"
 
     if verb_l in ("回", "回复", "reply"):
         bits = rest.split(None, 1)

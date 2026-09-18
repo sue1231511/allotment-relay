@@ -79,7 +79,17 @@ function listMarkup(shop, tab) {
 
 function deskMarkup(shop) {
   const d = shop.desk || {};
+  const snag = (shop.snag_skus || []).map((row) => sku(
+    "thread_snag",
+    row.cmd || row.target || "",
+    { emoji: row.emoji || "🧵", name: row.name || "坊险" },
+    row.note || shop.snag_note || "",
+    row.can_buy ? (row.note || "确认") : "看",
+    Boolean(row.can_buy),
+    row.can_buy ? "is-ready" : "",
+  ));
   return [
+    ...snag,
     sku("look", "job", { emoji: "🧵", name: d.job === "空闲" ? "台上空闲" : d.job }, d.take_note || "", d.can_take ? "取" : "看", Boolean(d.can_take), d.can_take ? "is-ready" : ""),
     sku("take", "", { emoji: "📦", name: "取衣" }, d.take_note || "", d.can_take ? "取" : "看", Boolean(d.can_take), d.can_take ? "is-ready" : ""),
     sku("look", "worn", { emoji: "👕", name: d.worn || "没穿" }, d.worn_note || "", d.can_remove ? "脱" : "看", Boolean(d.can_remove)),
