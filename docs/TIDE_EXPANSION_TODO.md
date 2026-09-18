@@ -21,4 +21,14 @@
 
 ---
 
-*最后更新：batch60。*
+## 文档（AGENTS 四处）
+
+| 面 | 状态 |
+|----|------|
+| `relay_manual` / `STEWARD_HELP` / README 工具表 | ✅ batch61（62 项收集、套餐成就、`/eatery` 深链） |
+| `mcp_app` `kitchen_ops` 套餐 dine | ✅ |
+| 人类手册 `island-manual-content.html` | ✅ 小馆 + 收集簿卡片 |
+
+---
+
+*最后更新：batch61 文档扫尾。*
