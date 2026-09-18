@@ -1294,6 +1294,10 @@ async def bed_rest(s: dict[str, Any]) -> str:
         home_note = await home_events_mod.roll_on_sleep(conn, s)
         from . import layer_link as layer_link_mod
         well_note = await layer_link_mod.surface_well_drain(conn, s["id"])
+        from . import light_bad_events as light_mod
+        humid_pen = await light_mod.sleep_energy_penalty(conn, s["id"])
+        if humid_pen:
+            sleep_energy = max(10, sleep_energy - humid_pen)
         restored = await energy_mod.restore(conn, s["id"], sleep_energy)
         health_gain = 0
         if restored <= 0:
