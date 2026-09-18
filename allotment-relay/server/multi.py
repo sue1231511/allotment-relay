@@ -329,11 +329,14 @@ async def alliance_ops(key_id: int, command: str) -> str:
         return await list_neighbors(s, online_only=False)
 
     if verb == "rapport" and len(parts) >= 2:
+        from . import social as social_mod
+
         peer = await db.get_steward_by_name(parts[1])
         if not peer:
             raise ValueError("找不到该管理员")
         score = await _get_rapport(s["id"], peer["id"])
-        return f"与 {peer['name']} 的协作度：{score}（互助/合约/协助会提升）"
+        blurb = social_mod.rapport_peer_blurb(score)
+        return f"与 {peer['name']} — {blurb}（赠礼/assist/打赏等会涨；总览 steward_ops 协作）"
 
     if verb == "assist" and len(parts) >= 2:
         peer = await db.get_steward_by_name(parts[1])
