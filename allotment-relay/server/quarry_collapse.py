@@ -134,7 +134,9 @@ async def resolve(
             paid = f"-{cost} 票"
         else:
             paid = f"{item_label('craft_timber')}×2"
-        await _clear_hazard(conn, sid, slot)
+        await _clear_hazard(
+            conn, sid, slot, flash_summary=f"盐风崖塌方：撑柱稳坑，坑{slot} 险已结。",
+        )
         return f"{label} 撑住落石，脉还在，继续挖。（{paid}）"
 
     if norm == "撤人":
@@ -146,11 +148,21 @@ async def resolve(
             """,
             (sid, slot),
         )
+        from . import bad_event_tiers as tiers_mod
+
+        await tiers_mod.record_resolved(conn, sid, "quarry", ref_key=str(slot))
+        from . import hazard_flash as hf
+
+        await hf.on_trouble_cleared(
+            conn, sid, "quarry", f"盐风崖塌方：撤人作废脉，坑{slot} 险已结。", "quarry_collapse",
+        )
         return f"{label} 撤出来了。这条脉作废，quarry_ops 探脉 {slot} 再找。"
 
     # 硬挖
     vein_key = row[2] or ""
-    await _clear_hazard(conn, sid, slot)
+    await _clear_hazard(
+        conn, sid, slot, flash_summary=f"盐风崖塌方：硬挖过关，坑{slot} 险已结。",
+    )
     msg = f"{label} 顶着落石硬挖。"
     from .catalog import QUARRY_VEINS
 
@@ -182,7 +194,13 @@ async def resolve(
     return msg
 
 
-async def _clear_hazard(conn, steward_id: int, slot: int) -> None:
+async def _clear_hazard(
+    conn,
+    steward_id: int,
+    slot: int,
+    *,
+    flash_summary: str = "",
+) -> None:
     await conn.execute(
         """
         UPDATE quarry_claims SET hazard=NULL, hazard_json=NULL
@@ -193,3 +211,9 @@ async def _clear_hazard(conn, steward_id: int, slot: int) -> None:
     from . import bad_event_tiers as tiers_mod
 
     await tiers_mod.record_resolved(conn, steward_id, "quarry", ref_key=str(slot))
+    if flash_summary:
+        from . import hazard_flash as hf
+
+        await hf.on_trouble_cleared(
+            conn, steward_id, "quarry", flash_summary, "quarry_collapse",
+        )

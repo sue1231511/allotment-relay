@@ -138,10 +138,17 @@ async def resolve(conn, steward: dict, choice: str) -> str:
         raise ValueError("杂务：自修 · 请匠 · 不管")
     await conn.execute("DELETE FROM steward_hut_chore WHERE steward_id=?", (steward["id"],))
     from . import bad_event_tiers as tiers_mod
+    from . import hazard_flash as hf
 
     await tiers_mod.record_resolved(conn, steward["id"], "hut", ref_key=key)
+    await hf.on_trouble_cleared(
+        conn,
+        steward["id"],
+        "hut",
+        f"小屋杂务「{meta['name']}」已处置（{choice}）。",
+        f"hut_chore_{key}",
+    )
     await db.add_chronicle("hut", f"{steward['name']} 处置杂务·{meta['name']}（{choice}）", steward["id"], conn=conn)
-    from . import bad_event_tiers as tiers_mod
     if ch in ("不管", "ignore", "拖"):
         note = tiers_mod.tag(tiers_mod.roll_tier(), note)
     return f"杂务「{meta['name']}」：{note}"

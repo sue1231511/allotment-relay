@@ -106,7 +106,7 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
 
     if norm == "通风":
         await energy.spend(conn, sid, 5, action="蹄角棚通风")
-        await _clear(conn, sid)
+        await _clear(conn, sid, flash_summary="蹄角棚险：通风散味，棚险已结。")
         return "推开侧窗，风把闷气带走。"
 
     if norm == "换草":
@@ -125,17 +125,28 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
             paid = f"-{cost} 票"
         else:
             paid = "堆肥×1"
-        await _clear(conn, sid)
+        await _clear(conn, sid, flash_summary="蹄角棚险：换草除味，棚险已结。")
         return f"铺一层新垫草，牲口气淡了。（{paid}）"
 
     await energy.spend(conn, sid, 9, action="蹄角棚硬留")
-    await _clear(conn, sid)
+    await _clear(conn, sid, flash_summary="蹄角棚险：硬留过关，棚险已结。")
     return "捏着鼻子把活干完，霍衡递来一块薄荷皂。"
 
 
-async def _clear(conn, steward_id: int) -> None:
+async def _clear(
+    conn,
+    steward_id: int,
+    *,
+    flash_summary: str = "",
+) -> None:
     await ensure_columns(conn)
     await conn.execute(
         "UPDATE stewards SET vet_hazard=NULL, vet_hazard_json=NULL WHERE id=?",
         (steward_id,),
     )
+    if flash_summary:
+        from . import hazard_flash as hf
+
+        await hf.on_trouble_cleared(
+            conn, steward_id, "vet", flash_summary, "vet_fumes",
+        )

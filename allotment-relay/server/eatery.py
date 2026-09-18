@@ -355,6 +355,15 @@ async def eatery_command(s: dict[str, Any], command: str) -> str:
             await conn.commit()
         return f"撤下 {item_label(row['item'])}，回行囊"
 
+    if verb in ("套餐", "setmenu", "combo", "set"):
+        if not s.get("eatery_open"):
+            raise ValueError("先 shop open")
+        async with db.connect() as conn:
+            menu = await _menu_rows(conn, s["id"])
+        from . import eatery_theme as theme_mod
+
+        return theme_mod.set_menu_report([m["item"] for m in menu])
+
     if verb == "menu":
         if not s.get("eatery_open"):
             raise ValueError("先 shop open")
@@ -363,13 +372,19 @@ async def eatery_command(s: dict[str, Any], command: str) -> str:
         label = s.get("eatery_label") or f"{s['name']}的馆"
         if not menu:
             return f"「{label}」菜单空 — shop stock 菜"
-        return f"「{label}」菜单:\n" + "\n".join(_menu_line(r) for r in menu)
+        from . import eatery_theme as theme_mod
+
+        body = f"「{label}」菜单:\n" + "\n".join(_menu_line(r) for r in menu)
+        sets = theme_mod.set_menu_lines([m["item"] for m in menu])
+        if sets:
+            body += "\n\n套餐建议:\n" + "\n".join(sets)
+        return body
 
     if verb == "dine" and len(parts) >= 2:
         return await _dine(s, parts[1], parts[2] if len(parts) > 2 else None)
 
     raise ValueError(
-        "未知 shop 指令（board/open/label/close/卖掉/stock/unstock/menu/dine）"
+        "未知 shop 指令（board/open/label/close/卖掉/stock/unstock/menu/套餐/dine）"
     )
 
 

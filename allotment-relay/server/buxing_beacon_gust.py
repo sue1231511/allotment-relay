@@ -138,12 +138,12 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
             paid = f"-{cost} 票"
         else:
             paid = "页岩砖×1"
-        await _clear(conn, sid)
+        await _clear(conn, sid, flash_summary="灯塔灯险：压窗稳灯，灯险已结。")
         return f"压好窗闩，灯芯稳了。（{paid}）"
 
     if norm == "避风":
         await energy.spend(conn, sid, 8, action="灯塔避风")
-        await _clear(conn, sid)
+        await _clear(conn, sid, flash_summary="灯塔灯险：避风守灯，灯险已结。")
         return "躲进塔心一圈，风过再点灯。"
 
     await energy.spend(conn, sid, 12, action="灯塔硬守")
@@ -154,11 +154,16 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
             (sid,),
         )
         lost = "风刮走一点灯油（−5 票）。"
-    await _clear(conn, sid)
+    await _clear(conn, sid, flash_summary="灯塔灯险：硬守过关，灯险已结。")
     return f"硬顶住窗框，守住了。{lost}"
 
 
-async def _clear(conn, steward_id: int) -> None:
+async def _clear(
+    conn,
+    steward_id: int,
+    *,
+    flash_summary: str = "",
+) -> None:
     await ensure_columns(conn)
     await conn.execute(
         """
@@ -168,3 +173,9 @@ async def _clear(conn, steward_id: int) -> None:
         """,
         (db.now(), steward_id),
     )
+    if flash_summary:
+        from . import hazard_flash as hf
+
+        await hf.on_trouble_cleared(
+            conn, steward_id, "lighthouse", flash_summary, "beacon_gust",
+        )

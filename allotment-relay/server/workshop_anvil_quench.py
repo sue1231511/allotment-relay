@@ -161,7 +161,7 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
             paid = f"-{cost} 票"
         else:
             paid = f"{item_label('quarry_salt')}×1"
-        await _clear(conn, sid)
+        await _clear(conn, sid, flash_summary="淬火烫手：泼水降温，砧险已结。")
         return f"泼盐雾，白烟散了，可以取了。（{paid}）"
 
     if norm == "戴胚":
@@ -180,11 +180,11 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
             paid = f"-{cost} 票"
         else:
             paid = "羊毛×1"
-        await _clear(conn, sid)
+        await _clear(conn, sid, flash_summary="淬火烫手：戴胚取件，砧险已结。")
         return f"垫羊毛把件夹出来了。（{paid}）"
 
     await energy.spend(conn, sid, 10, action="淬火硬取")
-    await _clear(conn, sid)
+    await _clear(conn, sid, flash_summary="淬火烫手：硬取过关，砧险已结。")
     from . import health
 
     ill = await health.maybe_roll_ailment(
@@ -196,7 +196,12 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
     return msg
 
 
-async def _clear(conn, steward_id: int) -> None:
+async def _clear(
+    conn,
+    steward_id: int,
+    *,
+    flash_summary: str = "",
+) -> None:
     await ensure_columns(conn)
     await conn.execute(
         """
@@ -205,3 +210,9 @@ async def _clear(conn, steward_id: int) -> None:
         """,
         (steward_id,),
     )
+    if flash_summary:
+        from . import hazard_flash as hf
+
+        await hf.on_trouble_cleared(
+            conn, steward_id, "craft", flash_summary, "anvil_quench",
+        )

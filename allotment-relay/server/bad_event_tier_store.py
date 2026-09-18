@@ -14,6 +14,11 @@ SYSTEM_LABEL: dict[str, str] = {
     "plot": "份地/打理",
     "market": "集市",
     "bar": "凯斯酒吧",
+    "craft": "岸工坊",
+    "lighthouse": "灯塔",
+    "clinic": "乔乔诊所",
+    "vet": "蹄角棚",
+    "ting": "听潮亭",
 }
 
 

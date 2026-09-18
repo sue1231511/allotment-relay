@@ -109,7 +109,7 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
 
     if norm == "清井":
         msg = await wc_mod.clean(conn, sid, tickets=20)
-        await _clear(conn, sid)
+        await _clear(conn, sid, flash_summary="潮下井裂：清井处置，井险已结。")
         return msg
 
     if norm == "绑索":
@@ -133,7 +133,7 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
             "UPDATE steward_undertide SET well_corrosion=MAX(0, well_corrosion-12) WHERE steward_id=?",
             (sid,),
         )
-        await _clear(conn, sid)
+        await _clear(conn, sid, flash_summary="潮下井裂：绑索加固，井险已结。")
         lvl = await wc_mod.get_level(conn, sid)
         return f"绑索加固，裂口勒住了。（{paid}，井蚀 {lvl}/{wc_mod.MAX_CORROSION}）"
 
@@ -141,7 +141,7 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
         "UPDATE steward_undertide SET well_corrosion=MIN(?, well_corrosion+6) WHERE steward_id=?",
         (wc_mod.MAX_CORROSION, sid),
     )
-    await _clear(conn, sid)
+    await _clear(conn, sid, flash_summary="潮下井裂：硬闯过关，井险已结。")
     from . import health
 
     ill = await health.maybe_roll_ailment(
@@ -154,7 +154,12 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
     return msg
 
 
-async def _clear(conn, steward_id: int) -> None:
+async def _clear(
+    conn,
+    steward_id: int,
+    *,
+    flash_summary: str = "",
+) -> None:
     await ensure_columns(conn)
     await conn.execute(
         """
@@ -166,6 +171,12 @@ async def _clear(conn, steward_id: int) -> None:
     from . import bad_event_tiers as tiers_mod
 
     await tiers_mod.record_resolved(conn, steward_id, "undertide", ref_key="well_crack")
+    if flash_summary:
+        from . import hazard_flash as hf
+
+        await hf.on_trouble_cleared(
+            conn, steward_id, "undertide", flash_summary, "well_crack",
+        )
 
 
 async def player_snippet(conn, steward: dict[str, Any]) -> dict[str, Any]:

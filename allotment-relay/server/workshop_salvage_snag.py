@@ -110,7 +110,7 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
             paid = f"-{cost} 票"
         else:
             paid = f"{item_label('drift_twine')}×1"
-        await _clear(conn, sid)
+        await _clear(conn, sid, flash_summary="打捞缠脚：割绳脱身，捞险已结。")
         return f"割断绳圈，脚出来了，货还在。（{paid}）"
 
     if norm == "弃货":
@@ -125,13 +125,13 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
             ):
                 await db.take_item(conn, sid, key, 1)
                 lost.append(item_label(key))
-        await _clear(conn, sid)
+        await _clear(conn, sid, flash_summary="打捞缠脚：弃货脱身，捞险已结。")
         if lost:
             return f"弃货脱身：{'、'.join(lost[:4])} 各少了 1（缠绳里泡坏了）。"
         return "弃货脱身：绳圈里没剩什么，人先上来了。"
 
     await energy.spend(conn, sid, 12, action="硬拽")
-    await _clear(conn, sid)
+    await _clear(conn, sid, flash_summary="打捞缠脚：硬拽过关，捞险已结。")
     from . import health
 
     ill = await health.maybe_roll_ailment(
@@ -143,7 +143,12 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
     return msg
 
 
-async def _clear(conn, steward_id: int) -> None:
+async def _clear(
+    conn,
+    steward_id: int,
+    *,
+    flash_summary: str = "",
+) -> None:
     await conn.execute(
         """
         UPDATE steward_craft SET salvage_hazard=NULL, salvage_hazard_json=NULL
@@ -151,3 +156,9 @@ async def _clear(conn, steward_id: int) -> None:
         """,
         (steward_id,),
     )
+    if flash_summary:
+        from . import hazard_flash as hf
+
+        await hf.on_trouble_cleared(
+            conn, steward_id, "craft", flash_summary, "salvage_snag",
+        )

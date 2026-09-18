@@ -87,7 +87,7 @@ async def relay_manual() -> str:
     return await game.relay_manual()
 
 
-@mcp.tool(description="身份档案。空=sheet。例：sheet · 灾档 · 维修 · 收集 · 岛缘。灾档=未结案四档 + 近日瞬时（鸟啄/灶险/摊险/碗险）。维修=待修总览。要玩才 enroll。勿 invite_ops。")
+@mcp.tool(description="身份档案。空=sheet。例：sheet · 灾档 · 维修。灾档=未结案四档 + 近日瞬时（鸟啄、各 trouble 处置结案）。维修=待修总览。要玩才 enroll。")
 async def steward_ops(command: str = "sheet") -> str:
     from . import progress as progress_mod
     return progress_mod.attach_note(
@@ -119,7 +119,7 @@ async def tote_ops(command: str = "") -> str:
     return await mux._call_ops(mux.tote_bundle, _kid(), command)
 
 
-@mcp.tool(description="厨房小馆。空=menu 菜谱（130+）。例：cook 雾豆烧豆腐 · shop stock 菜名 · shop board 看主题 · eat 鲭鱼。stock 凑海味/特殊线有提示。特殊菜 eat 有增益或代价。shop dine 堂食")
+@mcp.tool(description="厨房小馆。空=menu（130+）。例：shop stock 菜名 · shop 套餐 · shop board · cook 蓝潮苔羹 · eat 鲭鱼。套餐=齐不齐建议，价仍自定。shop dine 堂食")
 async def kitchen_ops(command: str = "") -> str:
     return await mux._call_ops(mux.kitchen_bundle, _kid(), command)
 

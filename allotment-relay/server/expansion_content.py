@@ -193,6 +193,8 @@ EXTRA_HEARTH_RECIPES = {
     _sig("proc_pickling_brine", "crop_lamp_sprout"): {"name": "卤灯芽", "sell": 44, "tags": ["special"]},
     _sig("fish_sardine", "crop_sichuan_pepper"): {"name": "花椒沙丁", "sell": 41, "tags": ["sea", "spicy"]},
     _sig("crop_moon_bean", "proc_rice_wine"): {"name": "月豆酒饭", "sell": 46, "tags": ["special", "drink"]},
+    _sig("crop_wax_gourd", "proc_salt"): {"name": "盐渍冬瓜", "sell": 36, "tags": ["home"]},
+    _sig("fish_shad", "crop_blue_tide_moss"): {"name": "蓝苔鲥片", "sell": 48, "tags": ["sea"]},
 }
 
 
@@ -246,6 +248,16 @@ EXTRA_KITCHEN_DISHES = {
         "name": "花椒海藻鱼", "emoji": "🐟",
         "ings": ["fish_greenling", "crop_sichuan_pepper", "crop_kelp"],
         "base_sell": 76, "energy": 30, "tags": ["sea", "spicy"],
+    },
+    "blue_moss_soup": {
+        "name": "蓝潮苔羹", "emoji": "🥣",
+        "ings": ["crop_blue_tide_moss", "proc_tofu", "crop_ginger"],
+        "base_sell": 58, "energy": 24, "tags": ["sea", "special"],
+    },
+    "wax_gourd_rib": {
+        "name": "冬瓜岸鸭", "emoji": "🍲",
+        "ings": ["crop_wax_gourd", "duck_egg", "crop_garlic"],
+        "base_sell": 62, "energy": 28, "tags": ["home"],
     },
 }
 

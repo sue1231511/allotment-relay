@@ -81,3 +81,70 @@ def stock_combo_hint(menu_items: list[str], new_item: str) -> str | None:
 def board_suffix(items: list[str]) -> str:
     line = menu_theme_line(items)
     return f" — {line}" if line else ""
+
+
+def _menu_dish_keys(items: list[str]) -> set[str]:
+    out: set[str] = set()
+    for it in items:
+        dk = _dish_key_from_item(it)
+        if dk:
+            out.add(dk)
+    return out
+
+
+SET_MENUS: tuple[dict, ...] = (
+    {
+        "name": "潮卤海味双拼",
+        "keys": frozenset({"tide_ginger_crab", "brine_clam_pot"}),
+        "hint": "两菜分别 stock，价自定；堂食可连点。",
+    },
+    {
+        "name": "雾潮三式",
+        "keys": frozenset({"black_salt_fish", "fog_mushroom_soup", "lantern_sashimi"}),
+        "hint": "三道特殊菜齐柜，适合写进招牌。",
+    },
+    {
+        "name": "烈火海味",
+        "keys": frozenset({"sichuan_kelp_fish", "chop_head"}),
+        "hint": "椒香+鱼头，辣味爱好者会找。",
+    },
+)
+
+
+def set_menu_lines(items: list[str]) -> list[str]:
+    """套餐建议（不绑定价，只提示齐不齐）。"""
+    keys = _menu_dish_keys(items)
+    if not keys:
+        return []
+    lines: list[str] = []
+    for spec in SET_MENUS:
+        need = spec["keys"]
+        if need <= keys:
+            lines.append(f"  ✅ 套餐·{spec['name']} — 已齐。{spec['hint']}")
+            continue
+        overlap = keys & need
+        if overlap:
+            miss = need - keys
+            labels = [
+                KITCHEN_DISHES[k]["name"]
+                for k in sorted(miss)
+                if k in KITCHEN_DISHES
+            ]
+            if labels:
+                lines.append(
+                    f"  … 套餐·{spec['name']} 还差：{'、'.join(labels)}"
+                )
+    return lines
+
+
+def set_menu_report(items: list[str]) -> str:
+    lines = ["小馆套餐建议（价仍 shop stock 自定，不自动捆绑扣票）："]
+    themed = set_menu_lines(items)
+    if themed:
+        lines.extend(themed)
+    else:
+        lines.append("  还没凑齐推荐套餐。先 stock 定点熟菜（dish_）。")
+    theme = menu_theme_line(items)
+    if theme:
+        lines.append(f"当前气质：{theme}")
+    return "\n".join(lines)
