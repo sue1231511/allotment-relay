@@ -173,11 +173,24 @@ async def barn_ops(key_id: int, command: str) -> str:
             await conn.commit()
         return msg
 
+    if verb in ("惊逃", "escape", "runaway"):
+        from . import barn_runaway_rescue as rescue_mod
+
+        if len(parts) < 3:
+            raise ValueError("惊逃 槽位 诱回|围栏|急追（例 barn_ops 惊逃 1 诱回）")
+        slot = int(parts[1])
+        choice = parts[2]
+        async with db.connect() as conn:
+            msg = await rescue_mod.resolve(conn, s, slot, choice)
+            await conn.commit()
+        return msg
+
     if verb in ("寻回", "recover", "roundup"):
-        from . import barn_escape as escape_mod
+        from . import barn_runaway_rescue as rescue_mod
+
         slot = int(parts[1]) if len(parts) > 1 else 1
         async with db.connect() as conn:
-            msg = await escape_mod.recover(conn, s, slot)
+            msg = await rescue_mod.resolve(conn, s, slot, "诱回")
             await conn.commit()
         return msg
 

@@ -62,6 +62,9 @@ VOYAGE_OK = {
     "sail patch": "voyage 帆撕 补",
     "sail return": "voyage 帆撕 返航",
     "sail go": "voyage 帆撕 硬撑",
+    "hull plug": "voyage 船漏 堵",
+    "hull pump": "voyage 船漏 泵",
+    "hull sail": "voyage 船漏 硬航",
     "fight": "fight",
     "flee": "flee",
     "parley": "parley",
@@ -236,6 +239,9 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
     elif vstatus == "sail_tear":
         port_line = "帆撕了！出海栏先选：补帆、返航或硬撑。"
         beach_line = f"{tide_name}。船在海上帆撕了，去港口处理。"
+    elif vstatus == "hull_breach":
+        port_line = "船底进水！出海栏先选：堵缝、泵水或硬航。"
+        beach_line = f"{tide_name}。船在海上漏水了，去港口处理。"
     elif sailing:
         port_line = f"船在海上。{tide_name}。看船、归港在码头。"
         beach_line = f"{tide_name}。赶海、寻信在沙滩。"
@@ -509,6 +515,25 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
                     can=True,
                     target=target,
                     detail="补=漂绳×2或15票；返航=约1分钟靠岸少货；硬撑=继续但更险。",
+                )
+            )
+    if vstatus == "hull_breach":
+        for sid, target, emoji, label in (
+            ("hull-plug", "hull plug", "🔩", "堵缝"),
+            ("hull-pump", "hull pump", "🪣", "泵水"),
+            ("hull-sail", "hull sail", "⛵", "硬航"),
+        ):
+            voyage_items.append(
+                _sku(
+                    sid=sid,
+                    kind="voyage",
+                    name=label,
+                    emoji=emoji,
+                    note="船漏三选一。",
+                    price=label,
+                    can=True,
+                    target=target,
+                    detail="堵=铜钉×1或12票；泵=10精力；硬航=再损船体。",
                 )
             )
     if hailed:

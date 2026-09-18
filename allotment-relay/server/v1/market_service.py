@@ -13,6 +13,7 @@ TITLES = {
     "sell": "挂上了",
     "cancel": "下架了",
     "expand": "扩了摊",
+    "stall_gust": "摊险处置",
 }
 
 
@@ -33,6 +34,10 @@ def _command(kind: str, target: str) -> str:
     if kind == "expand":
         n = extra or "1"
         return f"扩 {n}"
+    if kind == "stall_gust":
+        if not extra:
+            raise ApiError("BAD_REQUEST", "先选压石、收摊或硬摆。")
+        return f"摊险 {extra}"
     raise ApiError("BAD_REQUEST", "集市里没有这一下。")
 
 

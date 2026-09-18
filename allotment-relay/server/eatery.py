@@ -262,6 +262,14 @@ async def eatery_command(s: dict[str, Any], command: str) -> str:
             f"冰箱还在小屋里。"
         )
 
+    if verb in ("灶险", "smoke", "stove", "糊锅"):
+        from . import eatery_smoke_panic as smoke_mod
+
+        async with db.connect() as conn:
+            msg = await smoke_mod.resolve(conn, s, parts[1] if len(parts) > 1 else "")
+            await conn.commit()
+        return msg
+
     if verb == "stock" and len(parts) >= 2:
         if not s.get("eatery_open"):
             raise ValueError("先 shop open")
@@ -275,6 +283,9 @@ async def eatery_command(s: dict[str, Any], command: str) -> str:
         if not (item.startswith("dish_") or item.startswith("meal_")):
             raise ValueError("只能上架熟菜 dish_* / meal_*")
         async with db.connect() as conn:
+            from . import eatery_smoke_panic as smoke_mod
+
+            await smoke_mod.assert_not_blocked(conn, s["id"])
             menu = await _menu_rows(conn, s["id"])
             if len(menu) >= config.EATERY_MENU_MAX:
                 raise ValueError(f"菜单满了（{config.EATERY_MENU_MAX}）")
@@ -301,14 +312,18 @@ async def eatery_command(s: dict[str, Any], command: str) -> str:
                 "INSERT INTO eatery_menu (steward_id, item, price, listed_at) VALUES (?,?,?,?)",
                 (s["id"], item, price, db.now()),
             )
+            smoke_note = await smoke_mod.maybe_after_stock(conn, s["id"])
             await conn.commit()
         vend = suggested_price(item)
         energy = dish_energy(item)
         energy_note = f" · 精力+{energy}" if energy else ""
-        return (
+        msg = (
             f"上架 {item_label(item)} — {price} 票"
             f"（参考约 {ref}{energy_note} · 系统回收 {vend}）"
         )
+        if smoke_note:
+            msg += f"\n{smoke_note}"
+        return msg
 
     if verb == "unstock" and len(parts) >= 2:
         try:
@@ -658,14 +673,22 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
         "SELECT 1 FROM hut_fittings WHERE steward_id=? AND item_key='fridge'",
         (s["id"],),
     )).fetchone() is not None
-    satchel = await (await conn.execute(
-        "SELECT item, quantity FROM satchel WHERE steward_id=? AND quantity>0 ORDER BY item",
-        (s["id"],),
-    )).fetchall()
+    from . import eatery_smoke_panic as smoke_mod
+
+    hazard = await smoke_mod.get_hazard(conn, s["id"])
+    satchel = await db.get_satchel(s["id"])
+    smoke_actions = (
+        smoke_mod.ui_actions(
+            tickets=tickets,
+            stock=satchel,
+            energy_now=int(s.get("energy") or 0),
+        )
+        if hazard == smoke_mod.HAZARD_SMOKE
+        else []
+    )
     stock: list[dict[str, Any]] = []
-    for raw in satchel:
-        item = raw["item"] if not isinstance(raw, dict) else raw["item"]
-        qty = int(raw["quantity"] if not isinstance(raw, dict) else raw["quantity"])
+    for item, qty_raw in satchel.items():
+        qty = int(qty_raw or 0)
         if not kitchen_mod.is_cooked_item(item):
             continue
         ref = eatery_reference_price(item)
@@ -677,7 +700,7 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
             "qty": qty,
             "ref": int(ref),
             "energy": int(energy),
-            "can_stock": bool(s.get("eatery_open")),
+            "can_stock": bool(s.get("eatery_open")) and hazard != smoke_mod.HAZARD_SMOKE,
             "note": f"行囊 {qty} · 参考 {ref} 票",
             "detail": f"上架 {item_label(item)}。参考约 {ref} 票，价格按参考价。",
         })
@@ -746,5 +769,7 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
                 f"现在卖掉可回收 {sell_quote['refund']} 票（{sell_quote['pct']}%）。{sell_quote['note']}"
                 if sell_quote else "没有在开的馆。"
             ),
+            "hazard": hazard,
+            "smoke_actions": smoke_actions,
         },
     }

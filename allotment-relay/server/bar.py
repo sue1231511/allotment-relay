@@ -72,6 +72,7 @@ BAR_HELP = """bar_ops 子命令（整句写进 command）：
   song / request_song 歌名 — 驻唱「我哪有旺夫命」/ 点歌
   staff — 今晚员工
   lodge — 走投无路才收：管饭+工钱15，干 6 小时，期间哪儿也去不了
+  碗险 疏通|加班|硬摞 — 洗碗后小概率水槽堵，未处置不能再 work
   心情不能由 AI 定。想哄她用 cheer。没有 duo / set_mood。
   人类 /island 进酒吧能洗碗打卡、点酒、看今晚（先进店景，点一下才出吧台）。点单打赏、双人吧台仍在上手页。"""
 
@@ -611,6 +612,9 @@ async def _run_work(
     if used >= config.BAR_SHIFT_DAILY:
         raise ValueError(f"今日上工上限 {config.BAR_SHIFT_DAILY}，明天再来")
 
+    from . import bar_sink_flood as flood_mod
+
+    await flood_mod.assert_not_blocked(conn, s["id"])
     await energy.spend(conn, s["id"], config.BAR_SHIFT_ENERGY, action="酒吧上工")
 
     state = await _ensure_daily_state(conn)
@@ -718,6 +722,9 @@ async def _run_work(
     )
     if boost:
         msg += f"\n{boost}"
+    flood_note = await flood_mod.maybe_after_work(conn, s["id"], job_id=job_id)
+    if flood_note:
+        msg += f"\n{flood_note}"
     reaction = owner_event_reaction(state, day, "work")
     return append_owner_reaction(msg, reaction)
 
@@ -1470,6 +1477,15 @@ async def bar_ops(key_id: int, command: str) -> str:
             await conn.commit()
         return msg
 
+    if verb in ("碗险", "sink", "dish-flood", "flooded"):
+        from . import bar_sink_flood as flood_mod
+
+        sub = parts[1] if len(parts) > 1 else ""
+        async with db.connect() as conn:
+            text = await flood_mod.resolve(conn, s, sub)
+            await conn.commit()
+        return text
+
     if verb == "work":
         rest = command.strip()[4:].strip()
         wp = rest.split()
@@ -1789,6 +1805,14 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
         (s["id"], _day_id()),
     )
     used = int((await cur.fetchone() or [0])[0] or 0)
+    from . import bar_sink_flood as flood_mod
+
+    hazard = await flood_mod.get_hazard(conn, s["id"])
+    flood_actions = (
+        flood_mod.ui_actions(tickets=tickets, energy_now=energy_now)
+        if hazard == flood_mod.HAZARD_FLOOD
+        else []
+    )
     jobs: list[dict[str, Any]] = []
     for jid, meta in BAR_JOBS.items():
         ok, reason = _job_eligible(skills, jid, period)
@@ -1800,6 +1824,9 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
             note = f"{COASTAL_BAR['name']} 暮/夜才营业"
         elif used >= config.BAR_SHIFT_DAILY:
             note = f"今日上工上限 {config.BAR_SHIFT_DAILY}"
+        elif hazard == flood_mod.HAZARD_FLOOD:
+            note = "水槽还堵！先疏通、加班或硬摞"
+            can = False
         elif energy_now < config.BAR_SHIFT_ENERGY:
             note = f"精力不够，上工要 {config.BAR_SHIFT_ENERGY}"
         elif not ok:
@@ -1907,8 +1934,21 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
         "used": used,
         "daily": config.BAR_SHIFT_DAILY,
         "energy": config.BAR_SHIFT_ENERGY,
+        "sink": {
+            "hazard": hazard,
+            "flood_actions": flood_actions,
+            "note": "后厨水槽堵了，先处置再打卡。" if hazard == flood_mod.HAZARD_FLOOD else "",
+        },
         "tabs": [
-            {"key": "work", "label": "上工", "badge": "洗" if any_work else ""},
+            {
+                "key": "work",
+                "label": "上工",
+                "badge": (
+                    "堵"
+                    if hazard == flood_mod.HAZARD_FLOOD
+                    else ("洗" if any_work else "")
+                ),
+            },
             {"key": "menu", "label": "酒单", "badge": "点" if any_order else ""},
             {"key": "tonight", "label": "今晚", "badge": "哄" if can_cheer else ""},
         ],

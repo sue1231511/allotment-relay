@@ -78,7 +78,22 @@ function sku(kind, target, title, note, price, on, extra = "") {
 }
 
 function workMarkup(shop) {
-  const rows = (shop.jobs || []).map((row) => sku(
+  const sink = shop.sink || {};
+  const hazardRows = [];
+  if (sink.hazard === "flood" && (sink.flood_actions || []).length) {
+    for (const act of sink.flood_actions) {
+      hazardRows.push(sku(
+        "sink_flood",
+        act.action,
+        { emoji: "🚰", name: `碗险·${act.label}` },
+        sink.note || act.hint || "",
+        act.label,
+        Boolean(act.can),
+        act.can ? "is-ready" : "",
+      ));
+    }
+  }
+  const rows = hazardRows.concat((shop.jobs || []).map((row) => sku(
     "work",
     row.cmd,
     { emoji: row.emoji, name: row.name },
@@ -86,7 +101,7 @@ function workMarkup(shop) {
     row.can_work ? "上工" : "看",
     Boolean(row.can_work),
     row.cmd === "洗碗" && row.can_work ? "is-ready" : "",
-  ));
+  )));
   return rows.join("") || `<p class="island-shop-empty">这会儿没班可上。洗碗暮/夜就能打卡。</p>`;
 }
 

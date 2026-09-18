@@ -87,6 +87,19 @@ function boardMarkup(shop) {
 function mineMarkup(shop) {
   const mine = shop.mine || {};
   const rows = [];
+  if (mine.hazard === "smoke" && (mine.smoke_actions || []).length) {
+    for (const act of mine.smoke_actions) {
+      rows.push(sku(
+        "smoke_panic",
+        act.action,
+        { emoji: "💨", name: `灶险·${act.label}` },
+        "灶台糊烟，先处置再上架。",
+        act.label,
+        Boolean(act.can),
+        act.can ? "is-ready" : "",
+      ));
+    }
+  }
   if (!mine.open) {
     rows.push(sku(
       mine.can_open ? "open" : "look",

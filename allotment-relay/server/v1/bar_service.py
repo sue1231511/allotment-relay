@@ -12,6 +12,7 @@ TITLES = {
     "work": "上工",
     "order": "点了酒",
     "cheer": "跟荔栀说了",
+    "sink_flood": "碗险处置",
 }
 
 
@@ -29,6 +30,10 @@ def _command(kind: str, target: str) -> str:
         if not name:
             raise ApiError("BAD_REQUEST", "说点什么。荔栀不接受沉默的讨好。")
         return f"cheer {name[:100]}"
+    if kind == "sink_flood":
+        if not name:
+            raise ApiError("BAD_REQUEST", "先选疏通、加班或硬摞。")
+        return f"碗险 {name}"
     raise ApiError("BAD_REQUEST", "酒吧里没有这一下。")
 
 

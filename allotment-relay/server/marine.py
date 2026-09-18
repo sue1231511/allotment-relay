@@ -312,7 +312,7 @@ async def shore_pen_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[
 async def _get_voyage(conn: aiosqlite.Connection, steward_id: int) -> dict[str, Any] | None:
     conn.row_factory = aiosqlite.Row
     row = await (await conn.execute(
-        "SELECT * FROM voyages WHERE steward_id=? AND status IN ('sailing','hailed','fish_encounter','sail_tear')",
+        "SELECT * FROM voyages WHERE steward_id=? AND status IN ('sailing','hailed','fish_encounter','sail_tear','hull_breach')",
         (steward_id,),
     )).fetchone()
     return dict(row) if row else None
@@ -382,11 +382,29 @@ def _legged_fish_prompt(payload: dict[str, Any]) -> str:
     return banner + "\n" + flavor.LEGGED_FISH_CHOICES
 
 
+async def try_hull_breach_encounter(
+    conn: aiosqlite.Connection, s: dict[str, Any], voyage: dict[str, Any]
+) -> str | None:
+    if voyage.get("status") != "sailing":
+        return None
+    from . import boat_hull as hull_mod
+    from . import voyage_hull_breach as breach_mod
+
+    hull, mx = await hull_mod.get_hull(conn, s["id"])
+    return await breach_mod.maybe_mid_voyage(
+        conn,
+        s["id"],
+        int(voyage["id"]),
+        hull_ratio=hull / max(1, mx),
+        route_key=str(voyage.get("route") or "near"),
+    )
+
+
 async def try_legged_fish_encounter(
     conn: aiosqlite.Connection, s: dict[str, Any], voyage: dict[str, Any]
 ) -> str | None:
     """出海期间 tide_ops cast 坐钓后判定未命名小鱼遭遇。撒网不会碰上。"""
-    if voyage.get("status") != "sailing":
+    if voyage.get("status") not in ("sailing",):
         return None
     chance = await _legged_fish_roll_chance_async(conn, voyage["route"])
     if random.random() >= chance:
@@ -1382,6 +1400,12 @@ async def voyage_ops(key_id: int, command: str) -> str:
                 "帆撕了！先 tide_ops 帆撕 补|返航|硬撑"
                 "（补=漂绳×2或15票；返航=早归少货；硬撑=继续但更险）"
             )
+        if voyage and voyage.get("status") == "hull_breach":
+            prefix = f"{pulse}\n" if pulse else ""
+            return prefix + (
+                "船底进水！先 tide_ops 船漏 堵|泵|硬航"
+                "（堵=铜钉×1或12票；泵=10精力；硬航=再损船体）"
+            )
         if voyage and db.now() >= voyage["returns_at"]:
             auto = await _finish_voyage(s["id"], voyage)
             prefix = f"{pulse}\n" if pulse else ""
@@ -1539,6 +1563,18 @@ async def voyage_ops(key_id: int, command: str) -> str:
         prefix = f"{pulse}\n" if pulse else ""
         return prefix + msg
 
+    if verb in ("船漏", "hull-breach", "leak", "breach"):
+        sub = parts[1] if len(parts) > 1 else ""
+        from . import voyage_hull_breach as breach_mod
+        async with db.connect() as conn:
+            voyage = await _get_voyage(conn, s["id"])
+            if not voyage:
+                raise ValueError("没有在处理的航程")
+            msg = await breach_mod.resolve(conn, s, voyage, sub or "status")
+            await conn.commit()
+        prefix = f"{pulse}\n" if pulse else ""
+        return prefix + msg
+
     if verb in ("fight", "flee", "parley", "bribe"):
         async with db.connect() as conn:
             voyage = await _get_voyage(conn, s["id"])
@@ -1546,6 +1582,8 @@ async def voyage_ops(key_id: int, command: str) -> str:
             raise ValueError("没有截停中的航程")
         if voyage.get("status") == "sail_tear":
             raise ValueError("帆撕待决 — 先 tide_ops 帆撕 补|返航|硬撑")
+        if voyage.get("status") == "hull_breach":
+            raise ValueError("船漏待决 — 先 tide_ops 船漏 堵|泵|硬航")
         if voyage.get("status") == "fish_encounter":
             raise ValueError("未命名小鱼还在 — 先 tide_ops compliment|release|catch|grab")
         if voyage.get("status") == "sailing":
@@ -1631,7 +1669,7 @@ async def public_snapshot() -> dict[str, Any]:
         out = (await (await conn.execute(
             """
             SELECT COUNT(*) FROM voyages
-            WHERE status IN ('sailing','hailed','fish_encounter','sail_tear')
+            WHERE status IN ('sailing','hailed','fish_encounter','sail_tear','hull_breach')
             """
         )).fetchone())[0]
         pens = (await (await conn.execute(
@@ -1653,7 +1691,7 @@ async def public_snapshot() -> dict[str, Any]:
             SELECT s.name, v.route, v.returns_at
             FROM voyages v
             JOIN stewards s ON s.id = v.steward_id
-            WHERE v.status IN ('sailing','hailed','fish_encounter','sail_tear')
+            WHERE v.status IN ('sailing','hailed','fish_encounter','sail_tear','hull_breach')
             ORDER BY v.returns_at ASC LIMIT 8
             """
         )).fetchall()
