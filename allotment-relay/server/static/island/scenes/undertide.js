@@ -111,10 +111,25 @@ function paintUndertideChoices(wrap, bank, under, mode = "main") {
 }
 
 function deskChoices(bank, under, mode) {
-  if (bank) return [
-    { kind: "bank_debt", label: "查账" }, { kind: "bank_borrow", label: "借票" }, { kind: "bank_repay", target: "ask", label: "还款" },
-    { kind: "bank_save", label: "存钱" }, { kind: "bank_take", target: "ask", label: "取钱" },
-  ];
+  if (bank) {
+    const rows = [];
+    const well = under.well || {};
+    if (well.hazard === "crack" && (well.crack_actions || []).length) {
+      for (const act of well.crack_actions) {
+        rows.push({
+          kind: "well_crack",
+          target: act.action,
+          label: `井裂·${act.label}`,
+          note: act.can ? (act.hint || "") : (act.disabled_reason || ""),
+        });
+      }
+    }
+    rows.push(
+      { kind: "bank_debt", label: "查账" }, { kind: "bank_borrow", label: "借票" }, { kind: "bank_repay", target: "ask", label: "还款" },
+      { kind: "bank_save", label: "存钱" }, { kind: "bank_take", target: "ask", label: "取钱" },
+    );
+    return rows;
+  }
   if (mode === "dice") return [
     { kind: "casino_dice", target: "small", label: "押小", note: "×2" }, { kind: "casino_dice", target: "big", label: "押大", note: "×2" }, { kind: "casino_dice", target: "black", label: "押黑潮", note: "对子 ×5" },
   ];
@@ -129,6 +144,7 @@ function deskChoices(bank, under, mode) {
 
 function chooseDeskAction(kind, target, bank, wrap, under) {
   if (kind === "menu") return paintUndertideChoices(wrap, bank, under, target);
+  if (kind === "well_crack") return runDeskAction(kind, target, bank, wrap);
   if (kind === "bank_debt" || kind === "casino_desk") return runDeskAction(kind, "", bank, wrap);
   if (kind === "bank_save" || kind === "bank_borrow") return askAmount(kind, "票数", bank, wrap);
   if (kind === "bank_take" || kind === "bank_repay") {

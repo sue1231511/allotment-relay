@@ -1263,6 +1263,9 @@ async def undertide_ops(key_id: int, command: str) -> str:
             return utcopy.WELL_HINTED + ("\n\n（undertide_ops descend — 下去，3 票）" if not ut["access"] else "")
 
         if verb == "descend":
+            from . import undertide_well_crack as crack_mod
+
+            await crack_mod.assert_not_blocked(conn, s["id"])
             if not ut["well_hint"]:
                 raise ValueError("后院那口枯井被木板半封着。没什么特别的。（还不该下去）")
             if ut["access"]:
@@ -1275,7 +1278,14 @@ async def undertide_ops(key_id: int, command: str) -> str:
             )
             await conn.execute("UPDATE steward_undertide SET access=1 WHERE steward_id=?", (s["id"],))
             from . import well_corrosion as well_corrosion_mod
+            from . import undertide_well_crack as crack_mod
+
+            old_lvl = await well_corrosion_mod.get_level(conn, s["id"])
             well_note = await well_corrosion_mod.bump(conn, s["id"], 5)
+            new_lvl = await well_corrosion_mod.get_level(conn, s["id"])
+            crack_note = await crack_mod.maybe_after_bump(
+                conn, s["id"], old=old_lvl, new=new_lvl,
+            )
             from . import bond as bond_mod
             await bond_mod.well(conn, s["id"], bond_mod.WELL_FIRST, once="well_first")
             av = await avatar_key(conn, s["id"])
@@ -1291,17 +1301,32 @@ async def undertide_ops(key_id: int, command: str) -> str:
                     "undertide", f"井底的人收了一张新门票。{s['name']} 下去了。", s["id"], conn=conn
                 )
             await conn.commit()
+            def _descend_out(text: str) -> str:
+                out = text + "\n\n" + utcopy.GUIDE_NOTE
+                if well_note:
+                    out += f"\n{well_note}"
+                if crack_note:
+                    out += f"\n{crack_note}"
+                return out
+
             if av == "K":
-                return utcopy.DESCEND_TEXT.replace(
+                return _descend_out(utcopy.DESCEND_TEXT.replace(
                     "井底有人给你让了半步路。没人看你，但所有人都知道你是新来的。",
                     "井底有人给你让了半步路——抬头看清是你，又把那半步收了回去。\n\n没人议论。议论老板，不是这儿的规矩。",
-                ) + "\n\n" + utcopy.GUIDE_NOTE
+                ))
             if av == "anan":
-                return utcopy.DESCEND_TEXT.replace(
+                return _descend_out(utcopy.DESCEND_TEXT.replace(
                     "井底有人给你让了半步路。没人看你，但所有人都知道你是新来的。",
                     "越往下越暖。医务间的方向飘来消毒水的味道——你闭着眼都认得。\n\n井底有人给你让了半步路。你摆摆手，径直往下。\n\n回家的路，不用人让。",
-                ) + "\n\n" + utcopy.GUIDE_NOTE
-            return utcopy.DESCEND_TEXT + "\n\n" + utcopy.GUIDE_NOTE
+                ))
+            return _descend_out(utcopy.DESCEND_TEXT)
+
+        if verb in ("井险", "well-crack", "crack", "井裂"):
+            from . import undertide_well_crack as crack_mod
+
+            msg = await crack_mod.resolve(conn, s, rest)
+            await conn.commit()
+            return hits_prefix + msg
 
         if verb in ("清井", "well-clean", "cleanswell"):
             from . import well_corrosion as well_corrosion_mod
@@ -1310,10 +1335,19 @@ async def undertide_ops(key_id: int, command: str) -> str:
             return hits_prefix + msg
 
         if verb == "enter":
+            from . import undertide_well_crack as crack_mod
+
+            await crack_mod.assert_not_blocked(conn, s["id"])
             if not ut["access"]:
                 raise ValueError(utcopy.NO_ACCESS_HINT)
             from . import well_corrosion as well_corrosion_mod
+
+            old_lvl = await well_corrosion_mod.get_level(conn, s["id"])
             wnote = await well_corrosion_mod.bump(conn, s["id"], 2)
+            new_lvl = await well_corrosion_mod.get_level(conn, s["id"])
+            crack_note = await crack_mod.maybe_after_bump(
+                conn, s["id"], old=old_lvl, new=new_lvl,
+            )
             event = await _maybe_event(conn, s, ut)
             kroom = await _check_k_room(conn, ut)
             from . import undertide_tide as utide
@@ -1343,6 +1377,8 @@ async def undertide_ops(key_id: int, command: str) -> str:
             out = hits_prefix + head + tide_note + event + kroom + hype_note + guide_tip
             if wnote:
                 out += f"\n{wnote}"
+            if crack_note:
+                out += f"\n{crack_note}"
             return out
 
         if verb == "status":

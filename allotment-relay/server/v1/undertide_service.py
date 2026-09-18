@@ -22,6 +22,7 @@ TITLES = {
     "casino_dice": "黑潮骰",
     "casino_lantern": "最后一盏灯",
     "casino_draw": "死人抽牌",
+    "well_crack": "井险处置",
 }
 
 
@@ -70,11 +71,18 @@ def _command(kind: str, target: str) -> str:
         if not 12 <= stand <= 20:
             raise ApiError("BAD_REQUEST", "停牌点只能在 12 到 20。")
         return f"draw {_amount(bits[0])} {stand}"
+    if kind == "well_crack":
+        if not target:
+            raise ApiError("BAD_REQUEST", "先选清井、绑索或硬闯。")
+        return f"井险 {target}"
     raise ApiError("BAD_REQUEST", "这里没有这一下。")
 
 
 async def snapshot(api_key: str, key_id: int) -> dict[str, Any]:
     """读取两个桌面的原始说明；未下井时赌场保留锁定提示。"""
+    from .. import db
+    from .. import undertide_well_crack as crack_mod
+
     try:
         bank = await undertide.undertide_ops(key_id, "bank debt")
     except ValueError as exc:
@@ -85,11 +93,15 @@ async def snapshot(api_key: str, key_id: int) -> dict[str, Any]:
     except ValueError as exc:
         casino = str(exc)
         casino_open = False
+    s = await db.get_steward_by_key_id(key_id)
+    async with db.connect() as conn:
+        well = await crack_mod.player_snippet(conn, s or {"id": 0, "tickets": 0})
     snap = await farm_service.snapshot(api_key, key_id)
     snap["undertide"] = {
         "bank": humanize(bank),
         "casino": humanize(casino),
         "casino_open": casino_open,
+        "well": well,
     }
     return snap
 
