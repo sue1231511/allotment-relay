@@ -492,7 +492,7 @@ async def relay_manual() -> str:
         "  大鱼搏斗：稀有鱼可能触发 tide_ops 搏鱼 硬拉|放走|切线（不进袋直到硬拉赢）",
         "  船部件 voyage_ops 部件 / 部件 修；帆舵灯低加出海失败。畜栏 barn_ops breed 1 配种 · recover 1 寻回跑丢 · status 看性格",
         "  船只履历 voyage_ops 履历；畜栏 barn_ops 履历；小屋 hut_ops 修屋顶 · 修冰箱 · 修灶（厨电低则保鲜差/做饭更费神）",
-        "  井蚀 undertide_ops descend/enter 磨损井壁；undertide_ops 清井 花票维护；status 看蚀度",
+        "  井蚀 undertide_ops descend/enter 磨损井壁；蚀≥70 可能井裂 → 井险 清井|绑索|硬闯（硬下 enter/descend 会拦）。清井=20票；人类 /island 恶猫钱庄也能点",
         "  家具套装 hut_ops status 看「套装」：灶链/咸鲜排/眠巢。成婚且 home 登记时睡觉偶发家庭小事件",
         "  岸上工程完工：码头降出海失败、听潮亭缓鱼群压力；地面风暴/晴微调井下倍率（enter 可见）",
         "  深坑胜场小概率掉盐泥晶/淤片（ut_ 黑市货）；工程捐材料仍走 visit_ops 潮生会 工程 捐",
