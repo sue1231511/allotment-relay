@@ -30,6 +30,8 @@ TITLES = {
     "barn_shear": "剪过毛",
     "barn_churn": "搅成奶酪了",
     "barn_breed": "配种了",
+    "barn_recover": "寻回牲口了",
+    "repair_appliance": "修好了",
     "sell_fit": "卖掉了",
     "pickle": "腌好了",
     "dry": "晾好了",
@@ -210,6 +212,17 @@ def _command(kind: str, target: str) -> tuple[str, str]:
         if not extra.isdigit():
             raise ApiError("BAD_REQUEST", "先点要配种的那一栏。")
         return "barn", f"breed {extra}"
+    if kind == "barn_recover":
+        if not extra.isdigit():
+            raise ApiError("BAD_REQUEST", "先点要寻回的那一栏。")
+        return "barn", f"recover {extra}"
+    if kind == "repair_appliance":
+        key = (extra or "").strip().lower()
+        if key == "fridge":
+            return "hut", "修冰箱"
+        if key == "stove":
+            return "hut", "修灶"
+        raise ApiError("BAD_REQUEST", "只能修冰箱或灶台。")
     if kind == "cook":
         if not extra:
             raise ApiError("BAD_REQUEST", "先点要煮的菜，或点 2～5 样材料再下锅。")

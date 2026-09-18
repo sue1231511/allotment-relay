@@ -102,7 +102,7 @@ async def plot_ops(
     return await mux._call_ops(mux.plot_bundle, _kid(), command)
 
 
-@mcp.tool(description="小屋潮柜床畜栏腌晾。空=列表。例：status · 睡 · 修屋顶 · barn breed 1 · 腌 甘蓝 4 · 晾 鲭鱼 4。屋顶耐久低则睡觉少回精力。mascot upkeep≠岸维。")
+@mcp.tool(description="小屋潮柜床畜栏腌晾。空=列表。例：status · 睡 · 修屋顶 · 修冰箱 · 修灶 · barn breed 1 · barn recover 1 · 腌 甘蓝 4 · 晾 鲭鱼 4。屋顶/厨电耐久低有惩罚。mascot upkeep≠岸维。人类 /island 小屋可点配种/寻回/修厨电。")
 async def hut_ops(command: str = "") -> str:
     return await mux._call_ops(mux.hut_bundle, _kid(), command)
 

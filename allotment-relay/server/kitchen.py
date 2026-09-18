@@ -364,6 +364,9 @@ async def fridge_put(s: dict[str, Any], token: str, qty: int = 1) -> str:
                 """,
                 (s["id"], dish_key, stars, qty, db.now()),
             )
+        from . import hut_appliances as appl_mod
+
+        await appl_mod.wear_fridge(conn, s["id"])
         await conn.commit()
     return f"入冰箱 {_fridge_label(dish_key, stars)} x{qty}"
 
@@ -456,6 +459,9 @@ async def _can_cook_mix(conn: aiosqlite.Connection, steward_id: int) -> bool:
 
 
 async def _mark_cook(conn: aiosqlite.Connection, steward_id: int, *, mix: bool = False) -> None:
+    from . import hut_appliances as appl_mod
+
+    await appl_mod.wear_stove(conn, steward_id)
     day = _day_id()
     col = "mix_count" if mix else "count"
     await conn.execute(
