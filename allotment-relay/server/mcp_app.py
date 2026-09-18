@@ -87,7 +87,7 @@ async def relay_manual() -> str:
     return await game.relay_manual()
 
 
-@mcp.tool(description="身份档案。空=sheet。例：sheet · 灾档 · 维修。灾档=未结案四档 + 近日瞬时（鸟啄、各 trouble 处置结案）。维修=待修总览。要玩才 enroll。")
+@mcp.tool(description="身份档案。空=sheet。例：enroll 名字（要玩才 enroll）· sheet · 岛缘 · 引航 · 成就 · 收集 · 灾档 · 维修。无 invite_ops。/play 与 AI 同时在线共号。")
 async def steward_ops(command: str = "sheet") -> str:
     from . import progress as progress_mod
     return progress_mod.attach_note(
@@ -119,7 +119,7 @@ async def tote_ops(command: str = "") -> str:
     return await mux._call_ops(mux.tote_bundle, _kid(), command)
 
 
-@mcp.tool(description="厨房小馆。空=menu（137）。例：shop dine 安 潮卤海味双拼（套餐88%价）· shop 套餐 · stock 菜名。trouble 结案看 steward 灾档。shop dine 单菜或套餐名。")
+@mcp.tool(description="厨房小馆。空=menu（137）。例：cook 蒜蓉生蚝 · eat 鲭鱼 · shop dine 安 潮卤海味双拼（套餐88%价）· shop 套餐 · stock 菜名。勿 eat_ops。trouble 结案看 steward 灾档。")
 async def kitchen_ops(command: str = "") -> str:
     return await mux._call_ops(mux.kitchen_bundle, _kid(), command)
 
@@ -141,7 +141,7 @@ async def bar_ops(command: str = "") -> str:
     return progress_mod.attach_note(await mux._call_ops(bar.bar_ops, _kid(), command))
 
 
-@mcp.tool(description="潮下地下世界。空=help。例：well · descend · enter · 井险 清井；bank debt；dice/lantern/draw。井蚀≥70 可能井裂三选一，未处置不能 descend/enter。/island 恶猫钱庄可存取借还与井险；赌场骰/灯/牌；其余仍上手页。")
+@mcp.tool(description="潮下地下世界。空=help。例：well · descend · enter · 井险 清井；bank debt；dice/lantern/draw。猫猫 NPC；下井减岛缘。井蚀≥70 可能井裂三选一，未处置不能 descend/enter。/island 恶猫钱庄可存取借还与井险；赌场骰/灯/牌；其余仍上手页。")
 async def undertide_ops(command: Annotated[str, Field(description="整句子命令；空=help。入口 well→descend→enter。炼 list/brine_crystal/岸黑盐/pickling_brine/灶腌卤=崖↔潮下↔厨房闭环。钱庄 bank；赌场 dice/lantern/draw。手机地图只接钱庄和赌场，后室/恩怨墙/医务间仍用这里或上手页。")] = "") -> str:
     from . import undertide
     from . import progress as progress_mod
@@ -154,7 +154,7 @@ async def star_ops(command: str = "") -> str:
     return await mux._call_ops(star.star_ops, _kid(), command)
 
 
-@mcp.tool(description="小剧场。空=看板。例：试镜·演出·领薪·剧险 扶幕·投稿·稿险 抚纸。幕/稿险未处置不能领薪/再投。不替酒吧考勤。")
+@mcp.tool(description="小剧场。空=看板。例：试镜·对戏·演出·领薪·剧险 扶幕·投稿 岸上旧收音机 | 正文·稿险 抚纸。幕/稿险未处置不能领薪/再投。不替酒吧考勤。")
 async def theater_ops(command: str = "") -> str:
     from . import theater
     return await mux._call_ops(theater.theater_ops, _kid(), command)

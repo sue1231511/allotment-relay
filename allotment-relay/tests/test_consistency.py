@@ -1253,7 +1253,7 @@ def test_bar_ops_help() -> None:
     assert "set_mood" not in text or "没有" in text
 
 
-async def test_bar_ops_chat_not_coroutine_error() -> None:
+async def _test_bar_ops_chat_not_coroutine_error_async() -> None:
     """bar_ops chat 曾因 await fetchone()[0] 括号错位稳定炸 'coroutine' object is not subscriptable。"""
     tmp = Path(tempfile.mkdtemp(prefix="consist-bar-chat-"))
     db = await _boot(tmp)
@@ -1268,7 +1268,11 @@ async def test_bar_ops_chat_not_coroutine_error() -> None:
     assert "荔栀" in again or "唠嗑" in again, again
 
 
-async def test_scrump_victim_chronicle() -> None:
+def test_bar_ops_chat_not_coroutine_error() -> None:
+    asyncio.run(_test_bar_ops_chat_not_coroutine_error_async())
+
+
+async def _test_scrump_victim_chronicle_async() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="consist-scrump-"))
     db = await _boot(tmp)
     from server import events
@@ -1294,7 +1298,11 @@ async def test_scrump_victim_chronicle() -> None:
         assert "邻乙" in row[0] and "羽衣甘蓝" in row[0], row[0]
 
 
-async def test_cheer_targets_isolated() -> None:
+def test_scrump_victim_chronicle() -> None:
+    asyncio.run(_test_scrump_victim_chronicle_async())
+
+
+async def _test_cheer_targets_isolated_async() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="consist-cheer-"))
     db = await _boot(tmp)
     from server import bar, undertide
@@ -1330,7 +1338,11 @@ async def test_cheer_targets_isolated() -> None:
         assert "说过一次" in str(exc), exc
 
 
-async def test_kitchen_vend_chinese_and_incident_hint() -> None:
+def test_cheer_targets_isolated() -> None:
+    asyncio.run(_test_cheer_targets_isolated_async())
+
+
+async def _test_kitchen_vend_chinese_and_incident_hint_async() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="consist-vend-"))
     db = await _boot(tmp)
     from server import catalog, events, kitchen
@@ -1354,6 +1366,10 @@ async def test_kitchen_vend_chinese_and_incident_hint() -> None:
     assert "plot_ops" in hint or "无未处理" in hint or "风平浪静" in hint, hint
 
 
+def test_kitchen_vend_chinese_and_incident_hint() -> None:
+    asyncio.run(_test_kitchen_vend_chinese_and_incident_hint_async())
+
+
 def main() -> None:
     test_bar_job_aliases()
     test_mcp_descriptions()
@@ -1364,10 +1380,10 @@ def main() -> None:
     test_patron_pages_share_steward_key()
     test_promo_place_pages()
     test_bar_ops_help()
-    asyncio.run(test_bar_ops_chat_not_coroutine_error())
-    asyncio.run(test_scrump_victim_chronicle())
-    asyncio.run(test_cheer_targets_isolated())
-    asyncio.run(test_kitchen_vend_chinese_and_incident_hint())
+    test_bar_ops_chat_not_coroutine_error()
+    test_scrump_victim_chronicle()
+    test_cheer_targets_isolated()
+    test_kitchen_vend_chinese_and_incident_hint()
     print("consistency tests ok")
 
 

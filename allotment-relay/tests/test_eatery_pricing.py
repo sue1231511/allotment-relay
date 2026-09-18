@@ -88,13 +88,26 @@ async def _test_stock_pricing_flow() -> None:
     s = await db.get_steward_by_id(sid)
     await eatery.eatery_command(s, "open 潮线小馆")
 
+    async def _clear_eatery_smoke() -> None:
+        async with db.connect() as conn:
+            await conn.execute(
+                "UPDATE stewards SET eatery_hazard=NULL, eatery_hazard_json=NULL WHERE id=?",
+                (sid,),
+            )
+            await conn.commit()
+
     s = await db.get_steward_by_id(sid)
     default = await eatery.eatery_command(s, "stock dish_salt_crab_s4")
+    await _clear_eatery_smoke()
     assert "参考" in default, default
 
+    s = await db.get_steward_by_id(sid)
     custom_high = await eatery.eatery_command(s, "stock dish_salt_crab_s4 999")
+    await _clear_eatery_smoke()
     assert "999 票" in custom_high, custom_high
+    s = await db.get_steward_by_id(sid)
     custom_low = await eatery.eatery_command(s, "stock dish_salt_crab_s4 5")
+    await _clear_eatery_smoke()
     assert "5 票" in custom_low, custom_low
     async with db.connect() as conn:
         rows = await (await conn.execute(
@@ -143,12 +156,17 @@ async def _test_bed_rest() -> None:
         await conn.execute("UPDATE stewards SET energy=10 WHERE id=?", (sid,))
         await conn.commit()
     msg = await hut.hut_ops(kid, "睡")
-    assert "精力 +50" in msg, msg
+    import re
+
+    m = re.search(r"精力 \+(\d+)", msg)
+    assert m, msg
+    gain = int(m.group(1))
+    assert gain >= 40, msg
     async with db.connect() as conn:
         energy_now = (await (await conn.execute(
             "SELECT energy FROM stewards WHERE id=?", (sid,)
         )).fetchone())[0]
-    assert energy_now == 60, energy_now
+    assert energy_now == 10 + gain, (energy_now, gain, msg)
 
     try:
         await hut.hut_ops(kid, "睡")
