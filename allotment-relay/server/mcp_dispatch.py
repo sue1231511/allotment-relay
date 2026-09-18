@@ -170,7 +170,7 @@ TIDE_HELP = """tide_ops 子命令（整句写进 command）：
   compliment|release|catch|grab — 未命名小鱼（可省略 voyage）。compliment=release 礼遇回赠普通鱼；
     catch=grab 动手：抓住这尾进袋，落下腿鱼小咒，其它鱼和精力会出事
     吃或卖再掷事件：kitchen_ops eat 未命名小鱼 · tote_ops vend 未命名小鱼 1
-  beach scan|dig|probe — 赶海（dig 要铲子）。涨潮时 dig 和 probe 都关，scan 还能看。dig 偶发铲钝、probe 偶发沙坍：下次多 2 精力（各记一次消一次）。dig 不是崖矿，矿石走 quarry_ops 挖。storm 打捞不是 dig，走 craft_ops 打捞
+  beach scan|dig|probe — 赶海（dig 要铲子）。涨潮时 dig 和 probe 都关，scan 还能看。dig 偶发铲钝、probe 偶发沙坍：下次多 2 精力（各记一次消一次）。dig 不是崖矿，矿石走 quarry_ops 挖。风暴打捞不是 dig，走 craft_ops 打捞
   gear status|upgrade bait|rod|net — 渔具（T0–T5；更高档要票+材料）
   tool list|buy hoe|shovel — 锄头铲子
   boss status|attack — 潮渊之主（无船也能岸边围攻）
