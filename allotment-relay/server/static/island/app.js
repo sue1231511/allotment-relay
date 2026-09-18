@@ -1400,6 +1400,23 @@ function tapAtelier(kind, target) {
     });
     return;
   }
+  if (kind === "thread_snag") {
+    const row = (shop.snag_skus || []).find((item) => (item.cmd || item.target) === target);
+    if (!row || !row.can_buy) {
+      showHintSheet({
+        title: (row && row.name) || "坊险",
+        body: (row && (row.detail || row.note)) || shop.snag_note || "梭子还缠着。",
+      });
+      return;
+    }
+    showActSheet({
+      title: row.name || `坊险·${target}`,
+      body: row.note || shop.snag_note || "线头缠梭，先处置。",
+      confirm: "确认",
+      onConfirm: () => runAtelier("thread_snag", target),
+    });
+    return;
+  }
   if (kind === "take") {
     if (!desk.can_take) {
       showHintSheet({ title: "取衣", body: desk.take_note || "台上还没有做好的衣服。" });
@@ -2337,6 +2354,19 @@ function tapShaonian(kind, target, id) {
   const row = shaonianRow(kind, target, id);
   if (kind === "look") {
     runShaonian(kind, target || row.target || "catalog");
+    return;
+  }
+  if (kind === "omen_gust") {
+    if (!row.can) {
+      showHintSheet({ title: row.name || "卦险", body: row.detail || row.note || (state.shaonian && state.shaonian.omen_note) || "这会儿处置不了。" });
+      return;
+    }
+    showActSheet({
+      title: row.name || `卦险·${target}`,
+      body: row.note || (state.shaonian && state.shaonian.omen_note) || "潮风掀卦盘，先处置。",
+      confirm: "确认",
+      onConfirm: () => runShaonian("omen_gust", target),
+    });
     return;
   }
   if (!row.can) {

@@ -15,6 +15,7 @@ VET_HELP = """蹄角棚 · 岸兽医霍衡（visit_ops 霍衡 / 兽医 / 蹄角�
   空 command / visit / 进门 — 闲聊。对白可能来自真 AI（OpenAI 兼容接口，站长配 VET_NPC_*）；没配或挂了走固定台词。霍衡说话偶尔飘一下，正常。
   status — 看你栏里的病。例子：visit_ops 兽医 status · visit_ops 霍衡 status
   treat 1 — 治 #1，扣票清病。例子：visit_ops 兽医 treat 1 · visit_ops 霍衡 treat 2
+  棚险 通风|换草|硬留 — 治完牲口小概率棚里呛，未处置不能再 treat
   catalog — 牲口病价目
   chat 栏里羊蹄缝发黑 — 跟他说（只写对白，不改票、不治栏）
   help — 本说明
@@ -104,6 +105,13 @@ async def vet_ops(key_id: int, command: str) -> str:
     if verb in ("help", "帮助", "?"):
         return VET_HELP
 
+    if verb in ("棚险", "stall", "fumes", "氨气"):
+        from . import vet_stall_fumes as fumes_mod
+        async with db.connect() as conn:
+            msg = await fumes_mod.resolve(conn, s, rest)
+            await conn.commit()
+        return msg
+
     async with db.connect() as conn:
         conn.row_factory = aiosqlite.Row
         await tick_animal_age(conn, s["id"])
@@ -146,6 +154,8 @@ async def vet_ops(key_id: int, command: str) -> str:
             return "\n".join(lines)
 
         if verb in ("treat", "治", "医"):
+            from . import vet_stall_fumes as fumes_mod
+            await fumes_mod.assert_not_blocked(conn, s["id"])
             token = rest.split()[0] if rest else ""
             if not token.isdigit():
                 raise ValueError("兽医 treat 后面跟槽位数字。例子：visit_ops 兽医 treat 1")
@@ -186,11 +196,14 @@ async def vet_ops(key_id: int, command: str) -> str:
                 s["id"],
                 conn=conn,
             )
+            fumes_note = await fumes_mod.maybe_after_treat(conn, s["id"]) or ""
             await conn.commit()
+            tail = f"\n{fumes_note}" if fumes_note else ""
             return (
                 f"霍衡给 #{slot} {spec.get('emoji', '')}{spec.get('name', '')} 处理了{meta['name']}。"
                 f"-{cost} 票。栏清了。\n"
                 "「人要是也烧，去桥桥。这不是人的药。」"
+                + tail
             )
 
         said = rest if verb in ("visit", "进门", "chat", "说", "闲聊") else raw

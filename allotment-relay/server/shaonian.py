@@ -120,8 +120,18 @@ async def shaonian_ops(key_id: int, command: str) -> str:
             line += f"\n今日卦：{fortune_label(fortune)} — {meta.get('hint', '')}"
         return f"韶年：{line}{note}"
 
+    if verb in ("卦险", "omen", "gust", "卦风"):
+        from . import shaonian_omen_gust as gust_mod
+        rest = " ".join(parts[1:]) if len(parts) > 1 else ""
+        async with db.connect() as conn:
+            msg = await gust_mod.resolve(conn, s, rest)
+            await conn.commit()
+        return msg
+
     if verb == "fortune":
         async with db.connect() as conn:
+            from . import shaonian_omen_gust as gust_mod
+            await gust_mod.assert_not_blocked(conn, s["id"])
             row = await _ensure_row(conn, s["id"], today)
             casts = row["fortune_casts"]
             cost = 0 if casts == 0 else FORTUNE_COST
@@ -151,15 +161,20 @@ async def shaonian_ops(key_id: int, command: str) -> str:
                 s["id"],
                 conn=conn,
             )
+            gust_note = await gust_mod.maybe_after_fortune(conn, s["id"]) or ""
             await conn.commit()
+        tail = f"\n{gust_note}" if gust_note else ""
         return (
             f"韶年望潮人卜卦{cost_note}\n"
             f"「{meta['name']}」{meta['omen']} — {meta['line']}\n"
             f"今日：{meta['hint']}"
+            + tail
         )
 
     if verb == "transfer":
         async with db.connect() as conn:
+            from . import shaonian_omen_gust as gust_mod
+            await gust_mod.assert_not_blocked(conn, s["id"])
             row = await _ensure_row(conn, s["id"], today)
             fortune = row.get("fortune") or ""
             if not fortune:
@@ -288,8 +303,19 @@ async def shaonian_ops(key_id: int, command: str) -> str:
 
 async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str, Any]:
     """给 /island 海边立绘对话用。数值仍走 shaonian_ops。"""
+    from . import shaonian_omen_gust as gust_mod
+
     today = day_id()
     row = await _ensure_row(conn, s["id"], today)
+    stock = await db.get_satchel(s["id"])
+    energy_now = int(s.get("energy") or 0)
+    hazard = await gust_mod.get_hazard(conn, s["id"])
+    omen_actions = (
+        gust_mod.ui_actions(tickets=int(s.get("tickets") or 0), stock=stock, energy_now=energy_now)
+        if hazard == gust_mod.HAZARD_GUST
+        else []
+    )
+    omen_block = hazard == gust_mod.HAZARD_GUST
     cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
     got = await cur.fetchone()
     tickets = int(got[0] if got else s.get("tickets") or 0)
@@ -336,7 +362,7 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
             "note": fortune_note,
             "detail": fortune_note,
             "price": "免费" if fortune_cost == 0 else f"{fortune_cost}票",
-            "can": fortune_can,
+            "can": fortune_can and not omen_block,
         },
         {
             "id": "transfer",
@@ -346,7 +372,7 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
             "note": transfer_note,
             "detail": transfer_note,
             "price": f"{TRANSFER_COST}票",
-            "can": transfer_can,
+            "can": transfer_can and not omen_block,
         },
         {
             "id": "catalog",
@@ -382,8 +408,23 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
             "note": note,
             "detail": note,
             "price": tag,
-            "can": can,
+            "can": can and not omen_block,
         })
+    if omen_block:
+        line = "卦盘还在晃，先处置卦险。" + (f"\n{line}" if fortune else "")
+    omen_choices = [
+        {
+            "id": f"omen-{act['action']}",
+            "kind": "omen_gust",
+            "target": act["action"],
+            "name": f"卦险·{act['label']}",
+            "note": act.get("hint") or "",
+            "detail": act.get("disabled_reason") or act.get("hint") or "",
+            "price": act["label"],
+            "can": bool(act.get("can")),
+        }
+        for act in omen_actions
+    ]
     return {
         "name": "韶年望潮人",
         "speaker": "韶年",
@@ -391,7 +432,10 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
         "line": line,
         "tickets": tickets,
         "fortune": fortune,
-        "choices": choices,
+        "hazard": hazard,
+        "omen_actions": omen_actions,
+        "omen_note": "潮风掀卦盘，先处置。" if omen_block else "",
+        "choices": omen_choices + choices,
     }
 
 
