@@ -15,6 +15,7 @@ TITLES = {
     "donate": "捐进了",
     "donate_work": "捐进了",
     "donate_mat": "捐进了",
+    "clerk_rush": "会险处置",
 }
 
 LOOK = {
@@ -66,6 +67,10 @@ def _command(kind: str, target: str) -> str:
         if head in ("craft_copper_nails", "nails", "铜钉"):
             return f"工程 捐 铜钉 {amt}"
         raise ApiError("BAD_REQUEST", "这期只要岸木或铜钉。")
+    if kind == "clerk_rush":
+        if not extra:
+            raise ApiError("BAD_REQUEST", "先选排队、补票或硬挤。")
+        return f"会险 {extra}"
     raise ApiError("BAD_REQUEST", "潮生会里没有这一下。")
 
 

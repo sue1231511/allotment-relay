@@ -13,6 +13,7 @@ TITLES = {
     "post": "钉上了",
     "reply": "回了",
     "tear": "撕了",
+    "plank_loose": "亭险处置",
 }
 
 
@@ -39,6 +40,10 @@ def _command(kind: str, target: str) -> str:
         if not extra:
             raise ApiError("BAD_REQUEST", "先点要撕的那块木牌。")
         return f"撕 {extra}"
+    if kind == "plank_loose":
+        if not extra:
+            raise ApiError("BAD_REQUEST", "先选加固、换钉或硬钉。")
+        return f"亭险 {extra}"
     raise ApiError("BAD_REQUEST", "听潮亭里没有这一下。")
 
 

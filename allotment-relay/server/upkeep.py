@@ -609,11 +609,18 @@ async def upkeep_pay(key_id: int, amount: int | None = None) -> str:
     s = await require_steward(key_id, exempt_duty=True)
     if amount is not None and amount < 1:
         raise ValueError("票数至少 1。用法：visit_ops 潮生会 维 交 或 维 交 50")
+    rush_note = ""
     async with db.connect() as conn:
         conn.row_factory = None
+        from . import hui_clerk_rush as rush_mod
+        await rush_mod.assert_not_blocked(conn, s["id"])
         await ensure_shore_upkeep(conn)
         await collect_steward(conn, s["id"])
         result = await collect_steward(conn, s["id"], amount=amount, floor=0)
+        rush_note = ""
+        taken_pre = int(result.get("taken") or 0)
+        if taken_pre > 0:
+            rush_note = await rush_mod.maybe_after_pay(conn, s["id"], taken=taken_pre) or ""
         from . import chaoshen as chaoshen_mod
         paid_out = await chaoshen_mod.ensure_fund_payout(conn)
         await conn.commit()
@@ -642,6 +649,8 @@ async def upkeep_pay(key_id: int, amount: int | None = None) -> str:
         msg += f"\n还欠 {owed}。欠维修费时不能{EXPAND_LOCK}；开着的小馆仍暂停堂食。"
     else:
         msg += f"\n可以买地了，小馆也能再开堂。费进潮汐基金。"
+    if rush_note:
+        msg += f"\n{rush_note}"
     return msg + extra
 
 

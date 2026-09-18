@@ -55,6 +55,7 @@ CHAOSHEN_HELP = f"""visit_ops 潮生会 子命令（整句写进 command）：
   税 交 / 税 交 50 — 交欠税（可填票数）。没有 tax_ops。欠税时不能买地/买棚/买园/升屋/买船/开坑/升镐
   维 / 岸维 / 维修 — 岸维：按产业每天收维修费。起步份地/果园免，产业单价至少 10 票（超出份地 10/18/28、果园 20/32/48、温室 30/48/70，铺多了加档）；扩地、开馆、盖棚才交。今日单按开征时产业记死；开征后再扩产，分项按此刻重算，今日应/已划不改（差价明日重算，不是漏减免）
   维 交 / 维 交 50 — 交欠的维修费。欠维修费时不能扩产；开着的小馆暂停堂食。不是 hut_ops mascot upkeep
+  会险 排队|补票|硬挤 — 税/维 交票后小概率门口排队潮，未处置不能再 税 交/维 交。人类 /island 潮生会也能点
   基金 — 潮汐基金：岛均口袋票。有余的人自己填票数捐进来
   基金 捐 50 — 捐票，票数自己填（最少 {FUND_MIN_DONATE}）；口袋须高于岛均，捐完仍须不低于岛均
   告示 — 看墙上厅示（岛上贴的，岛民不能贴、不能回）。短句去聊天室 lounge_ops say；长帖去听潮亭 wall_ops
@@ -623,6 +624,16 @@ async def chaoshen_ops(key_id: int, command: str = "") -> str:
     if verb_l in JOIN_VERBS or verb in JOIN_VERBS:
         raise ValueError(_join_refuse(verb))
 
+    if verb in ("会险", "rush", "clerkrush", "排队潮"):
+        from .game import require_steward
+        from . import hui_clerk_rush as rush_mod
+        s = await require_steward(key_id, exempt_duty=True)
+        rest = raw.split(None, 1)[1] if len(parts) > 1 else ""
+        async with db.connect() as conn:
+            msg = await rush_mod.resolve(conn, s, rest)
+            await conn.commit()
+        return msg
+
     if verb_l in ("", "问", "看", "visit", "status", "事", "问事", "desk"):
         return await _front_desk(key_id)
 
@@ -949,6 +960,7 @@ def _sku(
 
 async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
     """给 /island 潮生会用。数值仍走 visit_ops 潮生会，这里只摊开能点的。"""
+    from . import hui_clerk_rush as rush_mod
     from . import tax as tax_mod
     from . import upkeep as upkeep_mod
     from . import works as works_mod
@@ -972,6 +984,14 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
     tax_owed = int(tax_mine.get("arrears") or 0)
     upkeep_owed = int(upkeep_mine.get("arrears") or 0)
     tickets = int(s.get("tickets") or 0)
+    energy_now = int(s.get("energy") or 0)
+    hazard = await rush_mod.get_hazard(conn, s["id"])
+    rush_actions = (
+        rush_mod.ui_actions(tickets=tickets, energy_now=energy_now)
+        if hazard == rush_mod.HAZARD_RUSH
+        else []
+    )
+    rush_block = hazard == rush_mod.HAZARD_RUSH
     notice_n = len(notices)
     can_donate = bool(fund.get("can_donate"))
     max_donate = int(fund.get("max_donate") or 0)
@@ -981,7 +1001,9 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
     parts = [duty, _tax_brief(tax_snap).split("· 先")[0].split("· 看档")[0].strip()]
     parts.append(_upkeep_brief(upkeep_snap).split("· 先")[0].split("· 看档")[0].strip())
     parts.append(_fund_brief(fund))
-    if tax_owed:
+    if rush_block:
+        spoken = "门口还堵着，先处置会险。"
+    elif tax_owed:
         spoken = f"欠岸税 {tax_owed}。点岸税交。"
     elif upkeep_owed:
         spoken = f"欠岸维 {upkeep_owed}。点岸维交。"
@@ -1036,7 +1058,7 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
             note=f"欠 {tax_owed}。能交多少交多少。" if tax_owed else "这会儿不欠岸税。",
             detail="欠税时不能买地、买棚、买园、升屋、买船、开坑、升镐。",
             price="交" if tax_owed else "看",
-            can=bool(tax_owed and tickets > 0),
+            can=bool(tax_owed and tickets > 0 and not rush_block),
             target="tax",
         ),
         _sku(
@@ -1046,7 +1068,7 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
             emoji="✏️",
             note="自己填票数。不够就先交能交的。",
             price="填",
-            can=bool(tax_owed and tickets > 0),
+            can=bool(tax_owed and tickets > 0 and not rush_block),
             target="tax",
         ),
     ]
@@ -1074,7 +1096,7 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
             note=f"欠 {upkeep_owed}。产业维修费，每天划。" if upkeep_owed else "这会儿不欠岸维。",
             detail="欠维修费同样不能扩产；开着的小馆会暂停堂食。不是吉祥物喂养。",
             price="交" if upkeep_owed else "看",
-            can=bool(upkeep_owed and tickets > 0),
+            can=bool(upkeep_owed and tickets > 0 and not rush_block),
             target="upkeep",
         ),
         _sku(
@@ -1084,7 +1106,7 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
             emoji="✏️",
             note="自己填票数。",
             price="填",
-            can=bool(upkeep_owed and tickets > 0),
+            can=bool(upkeep_owed and tickets > 0 and not rush_block),
             target="upkeep",
         ),
     ]
@@ -1207,14 +1229,32 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
             ),
         ]
 
+    rush_items = [
+        _sku(
+            sid=f"rush-{act['action']}",
+            kind="clerk_rush",
+            name=f"会险·{act['label']}",
+            emoji="📒",
+            note=act.get("hint") or "",
+            detail=act.get("disabled_reason") or act.get("hint") or "",
+            price=act["label"],
+            can=bool(act.get("can")),
+            target=act["action"],
+        )
+        for act in rush_actions
+    ]
+
     return {
         "name": ORG_NAME,
         "line": spoken,
         "clerk": CLERK_NAME,
+        "hazard": hazard,
+        "rush_actions": rush_actions,
+        "rush_note": "交完票门口还挤，先处置会险。" if rush_block else "",
         "tabs": tabs,
         "items": {
-            "ask": ask_items,
-            "tax": tax_items,
+            "ask": rush_items + ask_items,
+            "tax": rush_items + tax_items,
             "upkeep": upkeep_items,
             "fund": fund_items,
             "works": work_items,

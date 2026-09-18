@@ -86,17 +86,29 @@ function paintTalk(wrap, shop, onAct) {
   bindAdvance(wrap);
   const list = wrap.querySelector("#island-lighthouse-choices");
   if (!list) return;
-  const rows = shop.choices || [];
+  const hazard = (shop.beacon_actions || []).map((act) => ({
+    id: `beacon_gust:${act.action}`,
+    label: `灯险·${act.label}`,
+    price: act.hint || "",
+    can: Boolean(act.can),
+  }));
+  const rows = hazard.concat(shop.choices || []);
   list.innerHTML = rows.map((row) => {
     const fee = row.price ? `<small>${esc(row.price)}</small>` : "";
-    return `<button type="button" class="island-vn-choice ${row.can ? "" : "is-off"}" data-act="${esc(row.id)}">
+    const actId = row.id || "";
+    return `<button type="button" class="island-vn-choice ${row.can ? "" : "is-off"}" data-act="${esc(actId)}">
       <b>${esc(row.label)}</b>
       ${fee}
     </button>`;
   }).join("");
   list.querySelectorAll("[data-act]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      if (onAct) onAct(btn.getAttribute("data-act"), "");
+      const act = btn.getAttribute("data-act") || "";
+      if (act.startsWith("beacon_gust:")) {
+        if (onAct) onAct("beacon_gust", act.split(":")[1] || "");
+        return;
+      }
+      if (onAct) onAct(act, "");
     });
   });
 }

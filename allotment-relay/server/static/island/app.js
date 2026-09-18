@@ -794,6 +794,19 @@ function liliRow(kind, target, id) {
 function tapLili(kind, target, id) {
   const row = liliRow(kind, target, id) || {};
   const body = row.detail || row.note || (state.lili && state.lili.line) || "这会儿摊上没有这一下。";
+  if (kind === "cart_tilt") {
+    if (!row.can) {
+      showHintSheet({ title: row.name || "栗险", body: row.detail || row.note || body });
+      return;
+    }
+    showActSheet({
+      title: row.name || `栗险·${target}`,
+      body: row.detail || row.note || (state.lili && state.lili.tilt_note) || body,
+      confirm: "确认",
+      onConfirm: () => runLili("cart_tilt", target),
+    });
+    return;
+  }
   if (kind === "look" || !row.can) {
     speakLili(body);
     return;
@@ -1895,7 +1908,26 @@ function tingThread(id) {
 
 function tapTing(kind, target) {
   const shop = state.ting || {};
+  if (kind === "plank_loose") {
+    const actions = shop.plank_actions || [];
+    const act = actions.find((row) => row.action === target) || {};
+    if (!act.can) {
+      showHintSheet({ title: `亭险·${target}`, body: act.disabled_reason || shop.plank_note || "这会儿处置不了。" });
+      return;
+    }
+    showActSheet({
+      title: `亭险·${target}`,
+      body: act.hint || shop.plank_note || "木牌松了，先处置。",
+      confirm: "确认",
+      onConfirm: () => runTing("plank_loose", target),
+    });
+    return;
+  }
   if (kind === "post") {
+    if (shop.plank_block) {
+      showHintSheet({ title: "钉一块", body: shop.plank_note || "木牌还松着，先处置亭险。" });
+      return;
+    }
     const board = target || state.tingTab || "ask";
     const meta = (shop.boards && shop.boards[board]) || {};
     const tab = (shop.tabs || []).find((row) => row.key === board);
@@ -2363,6 +2395,19 @@ function huiRow(kind, target, id) {
 function tapHui(kind, target, id) {
   const shop = state.hui || {};
   const row = huiRow(kind, target, id) || {};
+  if (kind === "clerk_rush") {
+    if (!row.can) {
+      showHintSheet({ title: row.name || "会险", body: row.detail || row.note || shop.rush_note || "这会儿处置不了。" });
+      return;
+    }
+    showActSheet({
+      title: row.name || `会险·${target}`,
+      body: row.detail || row.note || shop.rush_note || "交完票门口还挤，先处置。",
+      confirm: "确认",
+      onConfirm: () => runHui("clerk_rush", target),
+    });
+    return;
+  }
   if (kind === "look") {
     lookHui(target, row);
     return;
@@ -2590,8 +2635,23 @@ function lighthouseChoice(kind) {
   return (shop.choices || []).find((row) => row.id === kind) || null;
 }
 
-function tapLighthouse(kind) {
+function tapLighthouse(kind, target) {
   const shop = state.lighthouse || {};
+  if (kind === "beacon_gust") {
+    const actions = shop.beacon_actions || [];
+    const act = actions.find((row) => row.action === target) || {};
+    if (!act.can) {
+      showHintSheet({ title: `灯险·${target}`, body: act.disabled_reason || shop.beacon_note || "这会儿处置不了。" });
+      return;
+    }
+    showActSheet({
+      title: `灯险·${target}`,
+      body: act.hint || shop.beacon_note || "塔窗还在晃。",
+      confirm: "确认",
+      onConfirm: () => runLighthouse("beacon_gust", target),
+    });
+    return;
+  }
   const row = lighthouseChoice(kind);
   if (kind === "light") {
     if (row && !row.can) {

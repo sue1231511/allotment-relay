@@ -14,6 +14,7 @@ TITLES = {
     "pet": "摸了夜栖",
     "junk": "换到了",
     "look": "流动摊",
+    "cart_tilt": "栗险处置",
 }
 
 
@@ -34,6 +35,10 @@ def _command(kind: str, target: str) -> str:
         return "pet"
     if verb == "junk":
         return "junk"
+    if verb == "cart_tilt":
+        if not extra:
+            raise ApiError("BAD_REQUEST", "先选压货、唤铃或硬绑。")
+        return f"栗险 {extra}"
     raise ApiError("BAD_REQUEST", "摊上没有这一下。")
 
 

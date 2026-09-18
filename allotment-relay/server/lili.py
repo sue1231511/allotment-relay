@@ -329,7 +329,15 @@ async def lili_ops(key_id: int, command: str) -> str:
             await conn.commit()
             return msg
 
+        if verb in ("栗险", "tilt", "cart-tilt", "摊歪"):
+            from . import lili_cart_tilt as tilt_mod
+            msg = await tilt_mod.resolve(conn, s, " ".join(parts[1:]))
+            await conn.commit()
+            return msg
+
         if verb in ("trade", "swap", "buy") and len(parts) >= 2:
+            from . import lili_cart_tilt as tilt_mod
+            await tilt_mod.assert_not_blocked(conn, s["id"])
             if not visit:
                 raise ValueError("栗栗不在，visit_ops lili scan 蹲点")
             try:
@@ -401,10 +409,13 @@ async def lili_ops(key_id: int, command: str) -> str:
             else:
                 extra_lines.append("铃鹿铃铛响了一声，成交。")
 
+            tilt_note = await tilt_mod.maybe_after_trade(conn, s["id"]) or ""
             await conn.commit()
             msg = f"成交：{get_name} x{row['get_qty']}"
             if tickets and row["ticket_cost"] > tickets:
                 msg += f"（票 {tickets}，域等级减免 {row['ticket_cost'] - tickets}）"
+            if tilt_note:
+                extra_lines.append(tilt_note)
             return msg + "\n" + "\n".join(extra_lines)
 
         if verb == "visit":
@@ -518,12 +529,21 @@ def _give_ready(stock: dict[str, int], give: dict[str, int]) -> tuple[bool, str]
 
 async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str, Any]:
     """给 /island 用的流动摊。数值仍走 lili_ops，这里只摊开能点的。"""
+    from . import lili_cart_tilt as tilt_mod
     spawned = await maybe_spawn_visit(conn)
     visit = await _active_visit(conn)
     levels = await steward_domain_levels(conn, s["id"])
     today = day_id()
     stock = await db.get_satchel(s["id"])
     tickets = int(s.get("tickets") or 0)
+    energy_now = int(s.get("energy") or 0)
+    hazard = await tilt_mod.get_hazard(conn, s["id"])
+    tilt_actions = (
+        tilt_mod.ui_actions(tickets=tickets, stock=stock, energy_now=energy_now)
+        if hazard == tilt_mod.HAZARD_TILT
+        else []
+    )
+    tilt_block = hazard == tilt_mod.HAZARD_TILT
     block = await lili_extras.stars_block(conn, s["id"])
     st = await lili_extras.load_summon_state(conn, s["id"])
     here = visit is not None
@@ -554,9 +574,9 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
             if stock_left <= 0:
                 can = False
                 note = "已售罄"
-            elif block:
+            elif block or tilt_block:
                 can = False
-                note = block
+                note = block or "摊车还歪着，先处置栗险。"
             elif not ready:
                 can = False
                 note = why
@@ -656,10 +676,28 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
         ),
     ]
 
+    tilt_skus = [
+        _sku(
+            sid=f"tilt-{act['action']}",
+            kind="cart_tilt",
+            name=f"栗险·{act['label']}",
+            emoji="🌰",
+            note=act.get("hint") or "",
+            detail=act.get("disabled_reason") or act.get("hint") or "",
+            price=act["label"],
+            can=bool(act.get("can")),
+            target=act["action"],
+        )
+        for act in tilt_actions
+    ]
+
     return {
         "name": "栗栗流动摊",
         "speaker": "栗栗",
-        "line": line,
+        "line": ("摊车歪了，先处置栗险。" if tilt_block else line),
+        "hazard": hazard,
+        "tilt_actions": tilt_actions,
+        "tilt_note": "换货后摊车倾斜，先处置再换。" if tilt_block else "",
         "here": here,
         "left_min": left,
         "tabs": [
@@ -668,7 +706,7 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
             {"key": "side", "label": "摊边", "badge": ""},
         ],
         "items": {
-            "shelf": offers,
+            "shelf": tilt_skus + offers,
             "summon": summons,
             "side": side,
         },

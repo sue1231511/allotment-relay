@@ -16,7 +16,8 @@ BUXING_HELP = """visit_ops buxing 子命令（整句写进 command）：
   buxing watch — 花 60 票上塔守夜；不需要先攒灯芯
   buxing remember — 看自己的潮汐簿与灯芯
   buxing fulfill 灯号 — 还愿；免费，在那盏灯旁记一个成了的记号
-例子：buxing tea · buxing tide · buxing light 给妈妈 | 求平安
+  buxing 灯险 压窗|避风|硬守 — 守夜后小概率阵风晃塔，未处置不能再 tea/tide/light/watch
+例子：buxing tea · buxing tide · buxing light 给妈妈 | 求平安 · buxing 灯险 压窗
 不要把现实隐私写进名牌、愿望或旧事；灯廊是公开的文字场景。
 人类 /island 广场点灯塔先进塔景，点一下才出人不醒，不醒站左边，半身立绘对话，先点对话框再出选项（喝茶、问潮、点灯、守夜），和这里同一套。上手页「灯塔」也能点。"""
 
@@ -51,6 +52,8 @@ async def _visit(s: dict) -> str:
 
 async def _tea(s: dict) -> str:
     async with db.connect() as conn:
+        from . import buxing_beacon_gust as gust_mod
+        await gust_mod.assert_not_blocked(conn, s["id"])
         state = await _state(conn, s["id"])
         if int(state["tea_day"]) == db.day_id(): return "壶里还有茶。他把杯子往你这边推了推。\n“今天喝过了。坐着就行。”"
         await db.add_chronicle("buxing", f"{s['name']} 在灯塔喝了茶", s["id"], conn=conn)
@@ -67,6 +70,8 @@ async def _tea(s: dict) -> str:
 
 async def _tide(s: dict) -> str:
     async with db.connect() as conn:
+        from . import buxing_beacon_gust as gust_mod
+        await gust_mod.assert_not_blocked(conn, s["id"])
         state = await _state(conn, s["id"]); count = int(state["tide_count"])
         if count >= 5:
             tickets = (await (await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))).fetchone())[0]
@@ -89,6 +94,8 @@ def _light_parts(raw: str) -> tuple[str, str]:
 async def _light(s: dict, raw: str) -> str:
     label, wish = _light_parts(raw)
     async with db.connect() as conn:
+        from . import buxing_beacon_gust as gust_mod
+        await gust_mod.assert_not_blocked(conn, s["id"])
         tickets = (await (await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))).fetchone())[0]
         if tickets < 15: raise ValueError("灯油钱 15 票，票不够。")
         await conn.execute("UPDATE stewards SET tickets=tickets-15 WHERE id=?", (s["id"],))
@@ -110,6 +117,8 @@ async def _entrust(s: dict, raw: str) -> str:
     text = " ".join(raw.split())
     if not text or len(text) > 120: raise ValueError("旧事写 1～120 个字符；不要填写现实隐私。")
     async with db.connect() as conn:
+        from . import buxing_beacon_gust as gust_mod
+        await gust_mod.assert_not_blocked(conn, s["id"])
         await _state(conn, s["id"])
         await conn.execute("INSERT INTO buxing_entries (steward_id,kind,body,created_at) VALUES (?, 'entrust', ?, ?)", (s["id"], text, db.now()))
         await conn.execute("UPDATE steward_buxing SET wicks=wicks+5,updated_at=? WHERE steward_id=?", (db.now(), s["id"]))
@@ -117,7 +126,10 @@ async def _entrust(s: dict, raw: str) -> str:
     return "他没有接你手里的东西，只在簿上写了一行。\n“东西你留着，话我记下。”\n\n灯芯 +5"
 
 async def _watch(s: dict) -> str:
+    gust_note = ""
     async with db.connect() as conn:
+        from . import buxing_beacon_gust as gust_mod
+        await gust_mod.assert_not_blocked(conn, s["id"])
         tickets = (await (await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))).fetchone())[0]
         if tickets < 60: raise ValueError("守夜的灯油钱 60 票，票不够。")
         await conn.execute("UPDATE stewards SET tickets=tickets-60 WHERE id=?", (s["id"],)); await _state(conn, s["id"])
@@ -129,8 +141,10 @@ async def _watch(s: dict) -> str:
         from . import progress as progress_mod
         await traces_mod.maybe_watch_mark(conn, s)
         await progress_mod.scan_achievements(conn, s)
+        gust_note = await gust_mod.maybe_after_watch(conn, s["id"]) or ""
         await conn.commit()
-    return "他把灯芯剪短一点。\n“今晚风好。上来吧。”\n\n你们在塔上坐到潮声变轻。他只说：\n“阿桐看南边，我看航道。不是一回事。”\n\n灯油钱 −60 票 · 灯芯 +10"
+    tail = f"\n\n{gust_note}" if gust_note else ""
+    return "他把灯芯剪短一点。\n“今晚风好。上来吧。”\n\n你们在塔上坐到潮声变轻。他只说：\n“阿桐看南边，我看航道。不是一回事。”\n\n灯油钱 −60 票 · 灯芯 +10" + tail
 
 async def _remember(sid: int) -> str:
     async with db.connect() as conn:
@@ -150,6 +164,12 @@ async def _fulfill(s: dict, raw: str) -> str:
 async def buxing_ops(key_id: int, command: str = "visit") -> str:
     s = await require_steward(key_id); parts = (command or "visit").strip().split(maxsplit=1); verb = parts[0].lower() if parts else "visit"; rest = parts[1] if len(parts)>1 else ""
     if verb in {"help", "帮助"}: return BUXING_HELP
+    if verb in ("灯险", "beacon", "塔险", "gust"):
+        from . import buxing_beacon_gust as gust_mod
+        async with db.connect() as conn:
+            msg = await gust_mod.resolve(conn, s, rest)
+            await conn.commit()
+        return msg
     if verb in {"visit", "见", "拜访"}: return await _visit(s)
     if verb in {"tea", "茶"}: return await _tea(s)
     if verb in {"tide", "问潮"}: return await _tide(s)
@@ -196,9 +216,19 @@ def _light_row(row) -> dict[str, Any]:
 
 async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
     """给 /island 灯塔立绘对话用。数值仍走 buxing_ops。"""
+    from . import buxing_beacon_gust as gust_mod
     from . import traces as traces_mod
     state = await _state(conn, int(s["id"]))
     tickets = int(s.get("tickets") or 0)
+    energy_now = int(s.get("energy") or 0)
+    stock = await db.get_satchel(s["id"])
+    hazard = await gust_mod.get_hazard(conn, s["id"])
+    beacon_actions = (
+        gust_mod.ui_actions(tickets=tickets, stock=stock, energy_now=energy_now)
+        if hazard == gust_mod.HAZARD_GALE
+        else []
+    )
+    blocked = hazard == gust_mod.HAZARD_GALE
     tea_done = int(state["tea_day"]) == db.day_id()
     tide_count = int(state["tide_count"])
     tide_free = max(0, 5 - tide_count)
@@ -227,23 +257,23 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
     light_can = tickets >= 15
     watch_can = tickets >= 60
     choices = [
-        _choice("tea", "喝一杯茶", tea_note, can=not tea_done, price="免费"),
+        _choice("tea", "喝一杯茶", tea_note, can=(not tea_done) and not blocked, price="免费"),
         _choice(
-            "tide", "问明天的潮", tide_note, can=tide_can,
+            "tide", "问明天的潮", tide_note, can=tide_can and not blocked,
             price="免费" if tide_count < 5 else "3 票",
             confirm=tide_confirm,
         ),
         _choice(
             "light", "点一盏守夜灯",
             "15 票，回 4 精力。名牌和愿望会挂上灯廊，全岛看得见。" if light_can else "灯油钱 15 票，票不够。",
-            can=light_can, price="15 票", needs="light",
+            can=light_can and not blocked, price="15 票", needs="light",
         ),
         _choice("gallery", "看灯廊", "全岛公开的名牌与愿望。"),
-        _choice("entrust", "托付一件旧事", "不收票。东西你留着，话记下。别写现实隐私。", needs="text"),
+        _choice("entrust", "托付一件旧事", "不收票。东西你留着，话记下。别写现实隐私。", needs="text", can=not blocked),
         _choice(
             "watch", "留下来守夜",
             "60 票上塔坐一夜。不需要先攒灯芯。" if watch_can else "守夜的灯油钱 60 票，票不够。",
-            can=watch_can, price="60 票", confirm="确认守夜",
+            can=watch_can and not blocked, price="60 票", confirm="确认守夜",
         ),
         _choice("remember", "翻潮汐簿", f"灯芯 {int(state['wicks'])} 根。看自己的旧事和灯。"),
         _choice(
@@ -256,7 +286,14 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
         "name": "灯塔",
         "speaker": "不醒",
         "title": "守灯人·不醒",
-        "line": await traces_mod.blend(conn, "lighthouse", "茶不要钱。坐。"),
+        "line": await traces_mod.blend(
+            conn,
+            "lighthouse",
+            "塔窗还在晃，先处置灯险。" if blocked else "茶不要钱。坐。",
+        ),
+        "hazard": hazard,
+        "beacon_actions": beacon_actions,
+        "beacon_note": "阵风晃塔，先处置再喝茶守夜。" if blocked else "",
         "wicks": int(state["wicks"]),
         "tea_done": tea_done,
         "tide_count": tide_count,
