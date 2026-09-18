@@ -112,16 +112,16 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
             "UPDATE stewards SET tickets=tickets-? WHERE id=?",
             (cost, sid),
         )
-        await _clear(conn, sid)
+        await _clear(conn, sid, flash_summary="酒吧碗险：疏通水槽，碗险已结。")
         return f"通下水了，碗能继续洗。（-{cost} 票）"
 
     if norm == "加班":
         await energy.spend(conn, sid, 12, action="酒吧加班")
-        await _clear(conn, sid)
+        await _clear(conn, sid, flash_summary="酒吧碗险：加班摞碗，碗险已结。")
         return "加一班把碗摞完，地面也擦了。"
 
     await energy.spend(conn, sid, 6, action="酒吧硬摞")
-    await _clear(conn, sid)
+    await _clear(conn, sid, flash_summary="酒吧碗险：硬摞过关，碗险已结。")
     from . import health
 
     ill = await health.maybe_roll_ailment(
@@ -133,9 +133,20 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
     return msg
 
 
-async def _clear(conn, steward_id: int) -> None:
+async def _clear(conn, steward_id: int, *, flash_summary: str = "") -> None:
     await ensure_columns(conn)
     await conn.execute(
         "UPDATE stewards SET bar_hazard=NULL, bar_hazard_json=NULL WHERE id=?",
         (steward_id,),
     )
+    if flash_summary:
+        from . import bad_event_tiers as tiers_mod
+
+        await tiers_mod.record_flash(
+            conn,
+            steward_id,
+            "bar",
+            tiers_mod.TIER_LIGHT,
+            flash_summary,
+            ref_key="flash:bar_sink",
+        )

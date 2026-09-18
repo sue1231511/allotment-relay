@@ -128,7 +128,7 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
             paid = f"-{cost} 票"
         else:
             paid = "页岩砖×1"
-        await _clear(conn, sid)
+        await _clear(conn, sid, flash_summary="集市掀摊：压石稳摊，摊险已结。")
         return f"压好角石，摊布不再乱飞。（{paid}）"
 
     if norm == "收摊":
@@ -147,7 +147,7 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
             extra = f"最新一单 #{row[0]} 已下架回行囊。"
         else:
             extra = "摊上空了，风也停了。"
-        await _clear(conn, sid)
+        await _clear(conn, sid, flash_summary="集市掀摊：收摊避风，摊险已结。")
         return f"收摊喘口气。（{extra}）"
 
     await energy.spend(conn, sid, 10, action="集市硬摆")
@@ -170,13 +170,24 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
         elif row:
             await conn.execute("DELETE FROM market_listings WHERE id=?", (row[0],))
             lost = "有一单被风刮没了。"
-    await _clear(conn, sid)
+    await _clear(conn, sid, flash_summary="集市掀摊：硬摆过关，摊险已结。")
     return f"硬拽住摊脚，继续卖。{lost}"
 
 
-async def _clear(conn, steward_id: int) -> None:
+async def _clear(conn, steward_id: int, *, flash_summary: str = "") -> None:
     await ensure_columns(conn)
     await conn.execute(
         "UPDATE stewards SET market_hazard=NULL, market_hazard_json=NULL WHERE id=?",
         (steward_id,),
     )
+    if flash_summary:
+        from . import bad_event_tiers as tiers_mod
+
+        await tiers_mod.record_flash(
+            conn,
+            steward_id,
+            "market",
+            tiers_mod.TIER_LIGHT,
+            flash_summary,
+            ref_key="flash:market_gust",
+        )

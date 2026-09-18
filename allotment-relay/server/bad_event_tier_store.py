@@ -12,6 +12,8 @@ SYSTEM_LABEL: dict[str, str] = {
     "voyage": "出海",
     "beach": "赶海",
     "plot": "份地/打理",
+    "market": "集市",
+    "bar": "凯斯酒吧",
 }
 
 

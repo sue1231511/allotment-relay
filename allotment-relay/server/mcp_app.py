@@ -87,7 +87,7 @@ async def relay_manual() -> str:
     return await game.relay_manual()
 
 
-@mcp.tool(description="身份档案。空=sheet。例：sheet · 岛缘 · 协作 · 收集 · 维修 · 灾档 · peer 名字 · 引航。灾档=未结案四档坏事件（份地/赶海 debuff 等）+ 近日瞬时（鸟啄）；维修=待修总览。收集约58项。要玩才 enroll。勿 invite_ops。")
+@mcp.tool(description="身份档案。空=sheet。例：sheet · 灾档 · 维修 · 收集 · 岛缘。灾档=未结案四档 + 近日瞬时（鸟啄/灶险/摊险/碗险）。维修=待修总览。要玩才 enroll。勿 invite_ops。")
 async def steward_ops(command: str = "sheet") -> str:
     from . import progress as progress_mod
     return progress_mod.attach_note(

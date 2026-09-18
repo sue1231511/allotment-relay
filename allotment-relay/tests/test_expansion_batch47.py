@@ -55,3 +55,30 @@ def test_eatery_smoke_flash():
                 assert any("糊烟" in f["line"] for f in flash)
 
     asyncio.run(run())
+
+
+def test_market_gust_flash():
+    async def run():
+        from server import bad_event_tier_store as ts, db, market_stall_gust as gust
+
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            with patch.object(db, "DATA_DIR", folder), patch.object(db, "DB_PATH", folder / "relay.db"):
+                await db.init_db()
+                key = await db.create_api_key("m@example.com")
+                row = await db.get_key_row(key)
+                await db.enroll_steward(row["id"], "Stall", "", "naturalist", "")
+                s = await db.get_steward_by_key_id(row["id"])
+                async with db.connect() as conn:
+                    await gust.ensure_columns(conn)
+                    await conn.execute(
+                        "UPDATE stewards SET market_hazard=? WHERE id=?",
+                        (gust.HAZARD_GUST, s["id"]),
+                    )
+                    await gust.resolve(conn, dict(s), "压石")
+                    await conn.commit()
+                async with db.connect() as conn:
+                    flash = await ts.list_recent_flash(conn, s["id"])
+                assert any("掀摊" in f["line"] for f in flash)
+
+    asyncio.run(run())
