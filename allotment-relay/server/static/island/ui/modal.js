@@ -291,6 +291,10 @@ export function showFormSheet({ title, body, fields = [], confirm, onConfirm, on
       const el = root.querySelector(`#island-form-${field.id}`);
       const text = String(el && el.value || "").trim();
       if (!text) {
+        if (field.optional) {
+          vals[field.id] = "";
+          continue;
+        }
         toast(field.empty || `先写下${field.label || "这一栏"}。`);
         return;
       }

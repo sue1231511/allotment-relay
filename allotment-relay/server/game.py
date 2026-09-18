@@ -2163,9 +2163,13 @@ async def tide_ops(key_id: int, command: str) -> str:
             msg += f"\n\n{tale_extra}"
         return f"{pulse}\n{msg}" if pulse else msg
 
-    if verb == "bottle":
+    if verb in ("bottle", "漂流瓶", "捞瓶", "投瓶", "回瓶", "看瓶", "扫瓶"):
         from . import bottles
-        return await bottles.bottle_ops(key_id, "fish")
+        raw = command.strip()
+        if verb in ("bottle", "漂流瓶"):
+            bits = raw.split(None, 1)
+            raw = bits[1] if len(bits) > 1 else "scan"
+        return await bottles.bottle_ops(key_id, raw)
 
     raise ValueError(f"未知 tide 指令: {command}")
 

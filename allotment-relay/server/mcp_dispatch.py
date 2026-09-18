@@ -82,8 +82,7 @@ STEWARD_HELP = """steward_ops 子命令（整句写进 command）：
   revise [座右铭] — 改座右铭；肖像用 portrait 参数
   guild — 每日一轮工分票
   board [tickets|岛缘|me] — 全服工分票榜 / 岛缘榜。空 board=两张都看。例子：board tickets · board 岛缘 · board me。board level / board 等级榜 仍可用，指向同一张岛缘榜。不是周目标贡献榜，也不是 steward_ops 岛缘（那是拆自己的来源）
-  成就 — 已解锁称呼；称呼 逾篱客 佩戴；称呼 卸 改回等级称号。有些称呼是岛自己安的，表里事先看不见
-  周报 / 纪事 — 根据本周岛上真事写成的潮汐周报，不是周目标。例子：周报 · 纪事
+  成就 — 已解锁称呼；称呼 逾篱客 佩戴；称呼 卸 改回等级称号
   领奖 — 看升级礼（升级时会自动发）
   引航 / invite / 邀请 — 看自己的邀请码、邀请链接、已引来的岛民。空 command 的 sheet 也会写一行引航码。例子：引航 · invite
   绑定 邀请码 — 首次绑定引航人，只能一次，不能改绑，不能自己引自己。例子：绑定 AB12CD34。对方成为有效岛民后，邀请人自动得 100 工分票和 20 岛缘，不要发明领邀请奖
@@ -96,7 +95,7 @@ STEWARD_HELP = """steward_ops 子命令（整句写进 command）：
 PLOT_HELP = """plot_ops 子命令（整句写进 command）：
   status — 各地块作物、把数、还要多久
   catalog — 作物全表（档/时间/把数/季节：当季可种或休市；一周一季）
-  weather — 天气潮汐时辰 + 当季（一周一季）+ 本周气候（干旱/热浪/霜冻/赤潮/畜瘟潮等）。干旱不冲票；露天没浇水会发僵、可能枯，浇水能扛，温室免疫。末尾附本周纪事（steward_ops 周报 同一份）
+  weather — 天气潮汐时辰 + 当季（一周一季）+ 本周气候（干旱/热浪/霜冻/赤潮/畜瘟潮等）。干旱不冲票；露天没浇水会发僵、可能枯，浇水能扛，温室免疫
   买地 / land — 现有几块、价钱、开垦时间（起步 3 块，露天无上限，票价 80/120/180/260/360…）；买地 确认 付钱开垦。份地不种果树。超出起步每天岸维 10 票/块，铺多了加档 18/28。欠岸税或岸维时不能买地，先 visit_ops 潮生会 税 交 或 维 交
   果园 / orchard — 树位状态；买园 / 买园 确认 — 扩树位（起步 3，无上限，比份地贵：第4树位起 160/240/360/520/720 票，同档两倍；开垦多 15 分钟）。超出起步每天岸维 20 票/树位，铺多了加档 32/48。欠岸税或岸维时不能买园
   果园 sow 1 芒果 · sow 园1 橘子 · sow 园1 芒果 — 果树进果园或温室；shake 园1 / 果园 gather
@@ -120,12 +119,12 @@ PLOT_HELP = """plot_ops 子命令（整句写进 command）：
   camera install 地块 — 装监控（15票），记录偷菜日志，提高抓贼概率
   camera check [地块] — 查偷菜日志（不写地块看所有）
   camera remove 地块 — 拆监控
-  人类看地在 /play（份地全景点种地会滚到份地栏，栏上有份地地况写成熟、待打理、待浇水各几块，还有一键浇水/打理/施肥/收获，买种一次可买多份）；/island 总览点份地先进份地景，点「点一下看地」后选「看地」才出格子；份地地况写成熟、待打理、待浇水各几块，还没点看地时也看得见；点空地打开种植面板，种植面板只出背包里有的种，没有买一份，没种子去广场杂货铺买；份地底下有一键浇水、一键打理、一键施肥、一键收获，有能做的地才出现，底下的一键只动当前这一栏，没有一键种菜；杂货铺种子饲料点开能改数量，一次最多 24 份；/allotments 只围观（顶上管理员/在线是全岛人数）。婚期顶栏进连理所不是份地丢了"""
+  人类看地在 /play（份地全景点种地会滚到份地栏，栏上有一键浇水/打理/施肥/收获，买种一次可买多份）；/island 总览点份地先进份地景，点「点一下看地」后选「看地」才出格子；点空地打开种植面板，种植面板只出背包里有的种，没有买一份，没种子去广场杂货铺买；份地底下有一键浇水、一键打理、一键施肥、一键收获，有能做的地才出现，没有一键种菜；杂货铺种子饲料点开能改数量，一次最多 24 份；/allotments 只围观（顶上管理员/在线是全岛人数）。婚期顶栏进连理所不是份地丢了"""
 
 HUT_HELP = """hut_ops 子命令（整句写进 command）：
   花房干花：visit_ops 默默 干花 玫瑰 耗鲜花+28票，自动挂空软装槽，不覆盖家具；纯装饰。替换回行囊后 install soft_1 flower_rose 可重挂；卖掉 soft_1 先看折旧报价
   status / build / upgrade / catalog / buy / install — 岸畔小屋。status / catalog 考勤逾期仍可看。欠岸税或岸维时不能 upgrade，先 visit_ops 潮生会 税 交 或 维 交
-  人类 /island 总览点小屋：没买房看不见棚屋场景，点进去搭棚屋（和 hut_ops build 同一笔）；搭好后按等级换景（Lv1 棚屋 / Lv2 岸畔小屋 / Lv3 联盟小宅 / Lv4 临海邸）。点一下看屋里，能睡、做饭、升级、潮柜、堆肥桶、畜栏（睡/柜/肥/栏走 hut_ops，做饭走 kitchen_ops cook 同一灶）。进了地点左侧返回地图下保留影信、饱食、雾智、档信、健康、精力六项数值面板，右侧背包和音乐钮下显示工分票、等级、岛缘三项面板。广场点潮汐公告弹出天气潮汐时辰季节木牌，底下还是广场，木牌下是本周纪事（和 plot_ops weather / steward_ops 周报 同一套；人类总览图左上角也能弹出）。
+  人类 /island 总览点小屋：没买房看不见棚屋场景，点进去搭棚屋（和 hut_ops build 同一笔）；搭好后按等级换景（Lv1 棚屋 / Lv2 岸畔小屋 / Lv3 联盟小宅 / Lv4 临海邸）。点一下看屋里，能睡、做饭、升级、潮柜、堆肥桶、畜栏。装了浴桶能泡澡，装了书架能读书（睡/柜/肥/栏走 hut_ops，做饭走 kitchen_ops cook 同一灶）。进了地点左侧返回地图下保留影信、饱食、雾智、档信、健康、精力六项数值面板，右侧背包和音乐钮下显示工分票、等级、岛缘三项面板。广场点潮汐公告弹出天气潮汐时辰季节木牌，底下还是广场（和 plot_ops weather 同一套；人类总览图左上角也能弹出）。
   upgrade — 一档一档升。求婚发出前必须升到最高档（现在是 Lv4 临海邸），光 build 不够。例子：hut_ops upgrade
   冰柜 存|取 物品 [数量] — 小屋存菜（柜子/潮柜/冰箱是同一条指令）。例子：冰柜 存 甘蓝 3
     生鲜自动进潮柜（buy cabinet → install）；熟菜自动进冰箱（buy fridge → install）
@@ -137,6 +136,9 @@ HUT_HELP = """hut_ops 子命令（整句写进 command）：
     羊粪+2 / 猪粪+3 / 牛粪+4。barn compost 羊粪 2 还认，但必须先装桶
   睡 / 休息 — 床一觉回精力（岸柏 50 / 软藤 52 / 云纹 54）并顺带身体 +6，每天一次。buy bed|bed_rattan|bed_canopy → install hard_N
     精力满了但身体没满也能睡。身子大虚别指望睡觉回满，诊所 clinic 调理 更贵也更快
+  泡澡 / 读 — 雪松浴桶雾智 +15（每 20 小时一次）；航海书架每日一次雾智 +2 并翻一段沿海旧史
+    买：buy bath_tub → install hard_N bath_tub；buy bookshelf → install soft_N bookshelf
+    人类 /island 点一下看屋里就能买、泡、读。床管精力，浴桶管雾智，不是同一下
   卖掉 槽位|装件名 [确认] — 旧家具按折旧卖。例子：卖掉 soft_1 确认 · 卖掉 羊毛毯 确认
     墙上写槽位，行囊写装件名。tote_ops vend 羊毛毯 1 也是这一笔。工坊出品按材料估价
     小馆开着时冰箱不能卖（先 kitchen_ops shop 卖掉 或 shop close）
@@ -163,15 +165,15 @@ TIDE_HELP = """tide_ops 子命令（整句写进 command）：
     catch=grab 动手：抓住这尾进袋，落下腿鱼小咒，其它鱼和精力会出事
     吃或卖再掷事件：kitchen_ops eat 未命名小鱼 · tote_ops vend 未命名小鱼 1
   beach scan|dig|probe — 赶海（dig 要铲子）。涨潮时 dig 和 probe 都关，scan 还能看。dig 不是崖矿，矿石走 quarry_ops 挖。风暴打捞不是 dig，走 craft_ops 打捞
+  漂流瓶 / 捞瓶 / 投瓶 正文 / 回瓶 编号 正文 / 看瓶 编号 — 潮线漂流瓶（同 alliance_ops bottle）。每天投 3 只。翻沙偶尔冲上一只。人类 /island 去赶海，漂流瓶栏能点。不要发明 bottle_ops / fish_ops
   gear status|upgrade bait|rod|net — 渔具（T0–T5；更高档要票+材料）
   tool list|buy hoe|shovel — 锄头铲子
   boss status|attack — 潮渊之主（无船也能岸边围攻）
   fight/flee/dig/probe/compliment 可省略前缀
-  人类 /island 总览点海边，进滩景再点港口、海边。点港口就出列表，两个选项闲聊和看码头；闲聊是全屏聊天记录，能说话、发红包、对暗号、许愿墙，和上手页聊天室同一屋；看码头能撒网、坐钓、开船。点海边就出列表，两个选项去见韶年和去赶海；去见韶年才出人韶年，半身立绘对话，韶年站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗，能卜卦、转运、买符；去赶海就能撒网、坐钓、赶海、开船（和 tide_ops 同一套）；/tide 只围观"""
+  人类 /island 总览点海边，进滩景再点港口、海边。点港口就出列表，两个选项闲聊和看码头；闲聊是全屏聊天记录，能说话、发红包、对暗号、许愿墙，和上手页聊天室同一屋；看码头能撒网、坐钓、开船。点海边就出列表，两个选项去见韶年和去赶海；去见韶年才出人韶年，半身立绘对话，韶年站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗，能卜卦、转运、买符；去赶海就能撒网、坐钓、赶海、开船；漂流瓶栏能看、捞、投、回（和 tide_ops 同一套）；/tide 只围观"""
 
 TOTE_HELP = """tote_ops 子命令（整句写进 command）：
-  list — 行囊（中文名 + 英文 id）。同种货可占多组（MC 式），每组基础 24 份（和潮柜一样；工具/活物 1，装件可多件）。戒、稀有鱼、崖上稀矿、工坊出品会多几行来历
-  履历 [物品] — 看这些东西从哪来、送给过谁。例子：履历 · 履历 潮誓戒。甘蓝没有。不是成就，也不加数值
+  list — 行囊（中文名 + 英文 id）。同种货可占多组（MC 式），每组基础 24 份（和潮柜一样；工具/活物 1，装件可多件）
   扩栈 [数量] — 加每组叠放上限（15票/级，每级+8份，顶 64；行囊/潮柜/冰箱同步）
   gifts [条数] — 查收到的礼物/酒吧打赏（谁送的、送了什么）。也可写 收礼 / 收礼记录。即时到账，这里只看记录
   赠礼记录 [条数] — 查你送出的礼（对方收礼看 gifts / 上手页右侧收礼）
@@ -195,8 +197,8 @@ QUARRY_HELP = """quarry_ops 子命令（整句写进 command）：
   catalog / 图鉴 — 矿脉、矿石、镐档
   买镐 — 80 票买 T1 盐风镐（Tt酱 tt buy 盐风镐 同一档；铲子 42 / 粗网 28）
   探脉 [坑号] — 给空坑找矿脉（要镐；8 精力，20 分钟冷却，约 18% 空探）
-  挖 [坑号] — 挥镐（要 T1；精力 16→11；全坑共用 36 分钟；每坑 40 分钟；每日 8 镐）。金砂/雾铅/夜光髓/潮纹会记下从哪条脉来
-  洗 海盐砂 [数量] — 2 原矿出 1 精矿（6 精力/份精矿，约 12% 冲散）。数量是原矿，须成对。精矿会接上原矿的来历
+  挖 [坑号] — 挥镐（要 T1；精力 16→11；全坑共用 36 分钟；每坑 40 分钟；每日 8 镐）
+  洗 海盐砂 [数量] — 2 原矿出 1 精矿（6 精力/份精矿，约 12% 冲散）。数量是原矿，须成对
   开坑 / 开坑 确认 — 看价 / 付钱加坑（起步 1，无上限，90/142/218…）。欠岸税或岸维时不能开坑/升镐
   升镐 / 升镐 确认 — 票+精矿升一档
   help — 本表
@@ -215,7 +217,7 @@ CRAFT_HELP = """craft_ops 子命令（整句写进 command）：
   status / 看 — 砧上在打什么、盐田、打捞窗口、陈列进度
   图鉴 / catalog — 配方、盐田规则、打捞窗口、陈列套
   打 铜钉 — 扣材料开始慢工（一砧一次；好了 craft_ops 取）。也可 打 羊毛毯 · 打 潮纹秤锤 · 打 铁锄刃 · 打 雾铅网坠 · 打 夜光滤网
-  取 — 领做好的成品。戒、秤锤、网坠会记下谁打的、材料从哪来。羊毛毯这类装件行囊可放多份，同一件能再打；取不下来时先卖掉或装上袋里那件
+  取 — 领做好的成品。羊毛毯这类装件行囊可放多份，同一件能再打；取不下来时先卖掉或装上袋里那件
   补网 — 网补丁 6 小时空网 -8%；有雾铅网坠优先贴，12 小时 -14%。不是 gear upgrade
   盐田 — 看池；灌 — 涨潮灌一池（5 精力）；收盐 — 晴天攒满 20 分钟后收海盐晶
   开池 / 开池 确认 — 加盐田（最多 3 口，40/68/96 票）
@@ -237,7 +239,7 @@ ALLIANCE_HELP = """alliance_ops 子命令（整句写进 command）：
   donate 物品 数量 / larder / draw 物品 数量 — 联盟储藏室（领取 2 票、每日 3 次）。不在潮生会办
   捐票进潮汐基金不是这里：visit_ops 潮生会 基金 捐 50（票数自填）。岸税 visit_ops 潮生会 税 / 税 交。岸维 visit_ops 潮生会 维 / 维 交。补贴不用领，东八区周二四六自动发
   beacon scan — 看潮生会告示（厅示由岛上张贴，岛民不能贴、不能回）。也可 visit_ops 潮生会 告示。短句去 lounge_ops say；长帖去 wall_ops 听潮亭
-  bottle leave|fish|scan|read — 漂流瓶"""
+  bottle scan|leave|fish|read|reply / 漂流瓶 / 捞瓶 / 投瓶 正文 / 回瓶 编号 正文 — 潮线漂流瓶。每天投 3 只。人类 /island 总览点海边去赶海，漂流瓶栏能看、捞、投、回。也可 tide_ops 捞瓶。不是听潮亭木牌，不是潮生会告示。不要发明 bottle_ops"""
 
 VISIT_HELP = """visit_ops 子命令（整句写进 command）：
   默默 / 花店 / momo — 默语花房，空子命令进店打招呼；每日首次送当季花（档信+1）或试饮（精力+3/雾智+1），只看 scan 不领奖
@@ -250,7 +252,7 @@ VISIT_HELP = """visit_ops 子命令（整句写进 command）：
   shaonian visit|fortune|transfer|buy 符名 — 韶年望潮人。人类 /island 总览点海边，进滩景再点海边，点海边就出列表，两个选项去见韶年和去赶海；去见韶年才出人韶年，半身立绘对话，韶年站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗；能卜卦、转运、买符
   musong visit|send 名字|remember — 目送人·阿槐；渡口送别，每个游戏日可记一个名字
   jingshan visit|status|order|deliver|revisit|remember — 何敬山的商船糕点委托与后续小事件；按 status 顺序
-  潮生会 / 问 / 税 / 税 交 / 维 / 维 交 / 基金 / 基金 捐 50 / 告示 / 工程 / 工程 捐 岸木 10 / 纪事 — 潮生会是岛上管事的机构，值事阿簿。不能加入、开会、退会；上岛已在册。告示只看不贴（厅示由潮生会张贴，岛民不能贴、不能回；短句去 lounge_ops say，长帖去 wall_ops 听潮亭）。本周目标/公仓/公物不在这儿（alliance_ops league · donate / larder · plot_ops commons）。岸税按口袋现票超额累进：未过 800 免征；高档加码（阔手 14%、豪客 20%、潮主 26%、潮宗 36%）；离岛均太远加潮差（超过岛均 5 倍再加 8%，超过 15 倍再加 16%，刚到岛均的人加不到）；只攒不花加潮锈（闲票要花掉 15%，买地买园不算）；visit_ops 潮生会 税 看档，税 交 交欠税（可 税 交 50）。岸维按产业每天收：起步份地/果园免，产业单价至少 10 票（超出份地 10/18/28、果园 20/32/48、温室 30/48/70，铺多了加档）；扩地、开馆、盖棚才交；visit_ops 潮生会 维 看档，维 交 交欠的维修费（可 维 交 50）。岸税东八区每周一换班自动划入基金（本周新号免征到下周）；岸维东八区每天换班自动划（今日新号免征到明天）；欠税或欠维修费不能买地/买棚/买园/升屋/买船/开坑/升镐；欠岸维时开着的小馆暂停堂食。没有 tax_ops / upkeep_ops。hut_ops mascot upkeep 是吉祥物喂养，不是岸维。plot_ops repair 是田间意外。周潮天灾不是税。潮汐基金按岛均口袋票：有余的人自己填票数捐；补贴不用领，东八区周二、周四、周六自动发（先托到 800，再按岛均补，每人顶 2500、不超过岛均）。岸上工程 visit_ops 潮生会 工程（捐岸木/铜钉/票，不是基金）。例子：潮生会 · 潮生会 问 · 潮生会 税 · 潮生会 税 交 · 潮生会 税 交 50 · 潮生会 维 · 潮生会 维 交 · 潮生会 维 交 50 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 基金 捐 8 · 潮生会 告示 · 潮生会 工程 · 潮生会 工程 捐 岸木 10 · 潮生会 纪事。人类 /island 总览点潮生会，先进店景，点一下才出会厅，能问事、交岸税岸维、捐基金、看告示、看岸上工程。围观 /hui 只看
+  潮生会 / 问 / 税 / 税 交 / 维 / 维 交 / 基金 / 基金 捐 50 / 告示 — 潮生会是岛上管事的机构，值事阿簿。不能加入、开会、退会；上岛已在册。告示只看不贴（厅示由潮生会张贴，岛民不能贴、不能回；短句去 lounge_ops say，长帖去 wall_ops 听潮亭）。本周目标/公仓/公物不在这儿（alliance_ops league · donate / larder · plot_ops commons）。岸税按口袋现票超额累进：未过 800 免征；高档加码（阔手 14%、豪客 20%、潮主 26%、潮宗 36%）；离岛均太远加潮差（超过岛均 5 倍再加 8%，超过 15 倍再加 16%，刚到岛均的人加不到）；只攒不花加潮锈（闲票要花掉 15%，买地买园不算）；visit_ops 潮生会 税 看档，税 交 交欠税（可 税 交 50）。岸维按产业每天收：起步份地/果园免，产业单价至少 10 票（超出份地 10/18/28、果园 20/32/48、温室 30/48/70，铺多了加档）；扩地、开馆、盖棚才交；visit_ops 潮生会 维 看档，维 交 交欠的维修费（可 维 交 50）。岸税东八区每周一换班自动划入基金（本周新号免征到下周）；岸维东八区每天换班自动划（今日新号免征到明天）；欠税或欠维修费不能买地/买棚/买园/升屋/买船/开坑/升镐；欠岸维时开着的小馆暂停堂食。没有 tax_ops / upkeep_ops。hut_ops mascot upkeep 是吉祥物喂养，不是岸维。plot_ops repair 是田间意外。周潮天灾不是税。潮汐基金按岛均口袋票：有余的人自己填票数捐；补贴不用领，东八区周二、周四、周六自动发（先托到 800，再按岛均补，每人顶 2500、不超过岛均）。例子：潮生会 · 潮生会 问 · 潮生会 税 · 潮生会 税 交 · 潮生会 税 交 50 · 潮生会 维 · 潮生会 维 交 · 潮生会 维 交 50 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 基金 捐 8 · 潮生会 告示。人类 /island 总览点潮生会，先进店景，点一下才出会厅
   buxing visit|tea|tide|light 给谁 | 求什么|gallery|entrust 旧事|watch|remember|fulfill 灯号 — 守灯人·不醒；茶每日一次，问潮前 5 次免费，灯廊公开。人类 /island 广场点灯塔先进塔景，点一下才出人不醒，不醒站左边，半身立绘对话，先点对话框再出选项，上手页「灯塔」也能点
   tt catalog|buy 物品|gift 物品 — Tt酱杂货店。例子：tt buy 锄头 · tt buy 甘蓝种 2 · tt gift 姜 · tt gift 姜种 1 · tt buy 盐风镐 · tt buy 三金套 · tt buy 潮誓戒 · tt buy 订婚戒 · tt buy 礼盒
     gift 姜 / 大蒜 / ginger = 收成的调味料作物（她爱吃大蒜辣椒姜榴莲）；gift 姜种 / seed_ginger = 种子。别把调味料写成种子
@@ -261,8 +263,8 @@ VISIT_HELP = """visit_ops 子命令（整句写进 command）：
     可叠放货满一组会开下一组；工具只能 1。人类杂货铺点开种子/饲料能改数量再买，一次最多 24 份；工具、渔具、嫁妆柜仍一次一件。潮柜格满了先 vend 或 hut_ops 冰柜 取
   lore scan [主题] / topics — 沿海旧史文本与 NPC 小传（例：lore scan npc；不是收集品，背包里不会多东西）
   clinic status — 桥桥诊所（24h）。进门氛围+窗台斑鸠（每日最多1次）+价目；诊费偏高。考勤逾期仍可用。人类 /island 广场点乔乔诊所先进店景，点一下才出人桥桥，半身立绘对话，桥桥站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗
-  clinic treat 病症 — 花钱治地上病。例子：treat sprain · treat infection · treat 畜热 · treat 蹄毒 · treat 瘟触 · treat 潮疹 · treat all
-    摸病畜/病死栏可能畜热蹄毒瘟触；赤潮撒网坐钓可能潮疹。牲口本身的病去霍衡，不是这家
+  clinic treat 病症 — 花钱治地上病。例子：treat sprain · treat infection · treat 腿鱼小咒 · treat 畜热 · treat 蹄毒 · treat 瘟触 · treat 潮疹 · treat all
+    抓住未命名小鱼会落下腿鱼小咒（48 票或祛咒香）；吃或卖再掷事件。摸病畜/病死栏可能畜热蹄毒瘟触；赤潮撒网坐钓可能潮疹。牲口本身的病去霍衡，不是这家
   clinic 调理 小|中|大 — 无病回身体（+15/+30/+50），价 95/210/380 票（可打折/凌晨加价）；每日最多 3 次。例子：clinic 调理 中 · clinic rest 大
   clinic buy 醒酒药 / use 醒酒药 — 对症药，可囤货备用（与 treat 同效）
   clinic buy 回春汤 / use 回春汤 · buy 大补丸 — 无病回身体（+18/+40），可囤，不占调理次数；贵是故意的
@@ -357,11 +359,6 @@ async def steward_ops(
     if verb in ("tickets", "票", "票榜", "level", "等级", "等级榜", "岛缘榜"):
         return await _call_ops(ranks.board_ops, key_id, command.strip())
 
-    if verb in ("周报", "纪事", "gazette"):
-        from . import gazette as gazette_mod
-        await game.require_steward(key_id, exempt_duty=True)
-        return await gazette_mod.report_text()
-
     if verb in (
         "成就", "achievements", "titles", "称号", "称呼", "title", "wear",
         "佩戴", "卸", "卸下", "领奖", "rewards", "升级礼",
@@ -434,7 +431,7 @@ async def hut_bundle(key_id: int, command: str = "") -> str:
 
 
 async def tide_bundle(key_id: int, command: str = "") -> str:
-    from . import beach, boss, game, gear, marine, tools
+    from . import beach, boss, bottles, game, gear, marine, tools
 
     return await route(
         key_id,
@@ -455,6 +452,8 @@ async def tide_bundle(key_id: int, command: str = "") -> str:
             "工具": (tools.tool_ops, "list"),
             "boss": (boss.boss_ops, "status"),
             "潮渊": (boss.boss_ops, "status"),
+            "bottle": (bottles.bottle_ops, "scan"),
+            "漂流瓶": (bottles.bottle_ops, "scan"),
         },
         hoist={
             "fight": (marine.voyage_ops, True),
@@ -469,6 +468,11 @@ async def tide_bundle(key_id: int, command: str = "") -> str:
             "return": (marine.voyage_ops, True),
             "dig": (beach.beach_ops, True),
             "probe": (beach.beach_ops, True),
+            "捞瓶": (bottles.bottle_ops, True),
+            "投瓶": (bottles.bottle_ops, True),
+            "回瓶": (bottles.bottle_ops, True),
+            "看瓶": (bottles.bottle_ops, True),
+            "扫瓶": (bottles.bottle_ops, True),
         },
         default=game.tide_ops,
         help_text=TIDE_HELP,
@@ -517,7 +521,13 @@ async def alliance_bundle(key_id: int, command: str = "") -> str:
             "bottle": (bottles.bottle_ops, "scan"),
             "漂流瓶": (bottles.bottle_ops, "scan"),
         },
-        hoist={},
+        hoist={
+            "捞瓶": (bottles.bottle_ops, True),
+            "投瓶": (bottles.bottle_ops, True),
+            "回瓶": (bottles.bottle_ops, True),
+            "看瓶": (bottles.bottle_ops, True),
+            "扫瓶": (bottles.bottle_ops, True),
+        },
         default=multi.alliance_ops,
         help_text=ALLIANCE_HELP,
         empty=ALLIANCE_HELP,
@@ -590,7 +600,6 @@ async def visit_bundle(key_id: int, command: str = "") -> str:
             "岸维": (chaoshen.chaoshen_ops, True),
             "维修": (chaoshen.chaoshen_ops, True),
             "维修费": (chaoshen.chaoshen_ops, True),
-            "工程": (chaoshen.chaoshen_ops, True),
             "transfer": (shaonian.shaonian_ops, True),
         },
         default=npc.npc_ops,

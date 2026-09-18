@@ -1335,7 +1335,7 @@ def test_island_page_is_modular() -> None:
     assert "去上手页" not in hut_js
     assert "api.hutAct" in app
     assert "keepHut" in app
-    assert 'hut.js?v=island-modulefix2' in app
+    assert 'hut.js?v=bottles-cozy1' in app
     assert "kind === \"cook_mix\"" in app
     assert "openHut" in app
     assert "renderHut" in app
@@ -1439,7 +1439,7 @@ def test_island_page_is_modular() -> None:
     assert "warmScenesLater" in app
     assert "enterGen" in app
     assert 'from "./scenes/home.js?v=plot-overview1"' in app
-    assert 'from "./ui/modal.js?v=farm-batch1"' in app
+    assert 'from "./ui/modal.js?v=bottles-cozy2"' in app
     modal_src = (ROOT / "server/static/island/ui/modal.js").read_text(encoding="utf-8")
     assert "export function showFormSheet" in modal_src
     assert "export function showPickSheet" in modal_src
