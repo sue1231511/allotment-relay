@@ -120,4 +120,10 @@ async def resolve(conn, steward: dict[str, Any], slot: int, choice: str) -> str:
         "UPDATE barn_animals SET escaped_at=0, fed=0 WHERE steward_id=? AND slot=?",
         (sid, slot),
     )
-    return f"#{slot} {meta['name']}回栏了。（{paid}，今天得再喂）"
+    from . import event_opportunity as opp_mod
+
+    trail = await opp_mod.maybe_runaway_trail_luck(conn, steward, norm)
+    base = f"#{slot} {meta['name']}回栏了。（{paid}，今天得再喂）"
+    if trail:
+        base += f"\n{trail}"
+    return base

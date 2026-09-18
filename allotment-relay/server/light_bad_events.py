@@ -138,11 +138,14 @@ async def cast_empty_bonus(conn, steward_id: int) -> float:
     return 0.0
 
 
-async def net_empty_bonus(conn, steward_id: int) -> float:
-    """渔网挂水草：空网率加成（消费一次）。"""
-    if await take_flag(conn, steward_id, "net_weed"):
-        return 0.10
-    return 0.0
+async def net_empty_bonus(conn, steward_id: int) -> tuple[float, str | None]:
+    """渔网挂水草：空网率加成（消费一次）。返回 (加成, 理网小确幸文案)。"""
+    if not await take_flag(conn, steward_id, "net_weed"):
+        return 0.0, None
+    from . import event_opportunity as opp_mod
+
+    luck = await opp_mod.maybe_net_weed_clear_luck(conn, steward_id)
+    return 0.10, luck
 
 
 async def roll_net_snag(conn, steward_id: int) -> str | None:

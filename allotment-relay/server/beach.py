@@ -198,9 +198,16 @@ async def beach_ops(key_id: int, command: str) -> str:
             cloth_echo = await cloth_mod.try_echo(conn, s, "beach")
             from . import marriage as marriage_mod
             betroth_find = await marriage_mod.maybe_place_find(conn, s["id"], "beach")
+            from . import event_opportunity as opp_mod
+
+            storm_luck = await opp_mod.maybe_storm_beach_luck(
+                conn, s["id"], context="dig", weather=w,
+            )
             await conn.commit()
 
         msg = f"赶海：{label} x{qty}{extra_msg}"
+        if storm_luck:
+            msg += f"\n{storm_luck}"
         if dig_glitch:
             msg += f"\n{dig_glitch}"
         if beach_ill:

@@ -75,7 +75,8 @@ def test_light_bad_flags():
                     assert bonus == 0.12
                     assert not await lb.has_flag(conn, s["id"], "line_tangle")
                     await lb.set_flag(conn, s["id"], "net_weed")
-                    assert await lb.net_empty_bonus(conn, s["id"]) == 0.10
+                    weed_adj, _ = await lb.net_empty_bonus(conn, s["id"])
+                    assert weed_adj == 0.10
                     await lb.set_flag(conn, s["id"], "humid_soft")
                     assert await lb.sleep_energy_penalty(conn, s["id"]) == 3
                     assert not await lb.has_flag(conn, s["id"], "humid_soft")

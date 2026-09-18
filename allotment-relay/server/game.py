@@ -492,7 +492,7 @@ async def relay_manual() -> str:
         "  鱼群生态：同种捞多了本周变稀；visit_ops 潮生会 禁捕 看禁捞种+压力。网/钓碰上禁捕罚15票放生",
         "  水层 tide_ops 水层 near|shore|far|deep 定下次网/钓海域；钩/卷线器 gear status 看，挂底 tide_ops 解挂",
         "  大鱼搏斗：稀有鱼可能触发 tide_ops 搏鱼 硬拉|放走|切线（不进袋直到硬拉赢）",
-        "  船部件 voyage_ops 部件 / 部件 修 — 十二件（帆舵灯锚缆泵舱冰网机钟罗），低了加出海失败；舱低少装货、冰低鱼易擦伤、网机低撒网更易空网、钟低偏航、罗经低黑旗谈和更难（修默认 22 票，铜钉省 6）。plot_ops tend 偶发鸟啄/灶台/潮气/鱼线打结（鸟啄极少落种；切线或搏鱼切线极少海玻璃或旧钩下次坐钓捎回；硬撑归港见漂流箱）。tide_ops net 挂水草、dig 铲钝（各记一次消一次）。畜栏 barn_ops breed 1 配种 · 惊逃 1 诱回|围栏|急追 · recover 1 等同诱回 · status 看性格",
+        "  船部件 voyage_ops 部件 / 部件 修 — 十二件（帆舵灯锚缆泵舱冰网机钟罗），低了加出海失败；舱低少装货、冰低鱼易擦伤、网机低撒网更易空网、钟低偏航、罗经低黑旗谈和更难（修默认 22 票，铜钉省 6）。plot_ops tend 偶发鸟啄/灶台/潮气/鱼线打结（鸟啄极少落种；切线或搏鱼切线极少海玻璃或旧钩下次坐钓捎回；硬撑归港见漂流箱）。tide_ops net 挂水草（下次撒网消 debuff 时极少抠出饵/漂绳）、雨风暴撒网/赶海 dig 极少特殊贝壳；barn_ops 寻回逃畜极少跟足迹摸到潮边藏货。dig 铲钝（各记一次消一次）。畜栏 barn_ops breed 1 配种 · 惊逃 1 诱回|围栏|急追 · recover 1 等同诱回 · status 看性格",
         "  船只履历 voyage_ops 履历（含禁捕放生）；畜栏 barn_ops 履历 · 起名 1 名字；小屋 hut_ops 家维 · 家维 交（灯油/冷藏/防潮）· 杂务 自修|请匠|不管 · 修屋顶 · 修冰箱 · 修灶",
         "  kitchen_ops cook 会吃食材品质涨星级；menu 列定点+brew 约 130+ 条。特殊菜：黑盐炖鱼 · 雾菇汤 · 灯笼鱼刺身 · 卤边潮锅（eat 有增益/代价，适合 shop stock）",
         "  井蚀 undertide_ops descend/enter 磨损井壁；蚀≥70 可能井裂 → 井险 清井|绑索|硬闯（硬下 enter/descend 会拦）。清井=20票；人类 /island 恶猫钱庄也能点",
@@ -2219,8 +2219,9 @@ async def tide_ops(key_id: int, command: str) -> str:
             await boat_parts_mod.wear_net_winch(conn, s["id"])
             from . import light_bad_events as light_mod
             snag_note = await light_mod.roll_net_snag(conn, s["id"])
-            weed_adj = await light_mod.net_empty_bonus(conn, s["id"])
+            weed_adj, weed_clear_luck = await light_mod.net_empty_bonus(conn, s["id"])
             await conn.commit()
+        weed_clear_luck = weed_clear_luck or ""
         empty_chance = (
             0.18 - await events.net_bonus_chance() - empty_reduce - catch_bonus * 0.4
             + await events.net_fog_penalty() - net_patch + net_part_adj + weed_adj
@@ -2233,10 +2234,13 @@ async def tide_ops(key_id: int, command: str) -> str:
                 msg += f"\n{extra}"
             if disc:
                 msg += f"\n{disc}"
+            if weed_clear_luck:
+                msg += f"\n{weed_clear_luck}"
             return f"{pulse}\n{msg}" if pulse else msg
         rarity_cap = 3 + rarity_bonus
         meta = None
         fight_msg = None
+        storm_luck = ""
         async with db.connect() as conn:
             from . import fish_ecology as fish_ecology_mod
             from . import fish_ban as fish_ban_mod
@@ -2295,8 +2299,12 @@ async def tide_ops(key_id: int, command: str) -> str:
             from . import tale as tale_mod
             if not fight_msg:
                 await tale_mod.check_item_progress(conn, s["id"], f"fish_{catch}", 1)
+            from . import event_opportunity as opp_mod
+
+            storm_luck = await opp_mod.maybe_storm_beach_luck(conn, s["id"], context="net")
             tale_extra = await tale_mod.check_action_progress(conn, s["id"], "sea")
             await conn.commit()
+        storm_luck = storm_luck or ""
         from . import gear_wear as gear_wear_mod
         acc = await gear_wear_mod.maybe_accident_note(net_dur, net_mx)
         if fight_msg:
@@ -2319,6 +2327,10 @@ async def tide_ops(key_id: int, command: str) -> str:
             msg = msg + f"\n{bonus}"
         if snag_note:
             msg += f"\n{snag_note}"
+        if weed_clear_luck:
+            msg += f"\n{weed_clear_luck}"
+        if storm_luck:
+            msg += f"\n{storm_luck}"
         if extra:
             msg += f"\n{extra}"
         if disc:

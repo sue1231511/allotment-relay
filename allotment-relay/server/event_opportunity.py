@@ -3,8 +3,10 @@ from __future__ import annotations
 
 import random
 
-from . import db
+from . import db, world
 from .catalog import CROPS
+
+STORM_WEATHER = frozenset({"rain", "storm", "gale"})
 
 
 async def maybe_voyage_hard_luck(conn, steward: dict, encounter: dict) -> str | None:
@@ -82,3 +84,61 @@ async def maybe_consume_hook_refind(conn, steward_id: int) -> str | None:
         (steward_id,),
     )
     return "进袋时线头一紧——潮里那只旧钩被捎回来了（钩耐久+22）。"
+
+
+async def maybe_net_weed_clear_luck(conn, steward_id: int) -> str | None:
+    """撒网消「挂水草」debuff 时，小概率从网里抠出货。"""
+    if random.random() > 0.13:
+        return None
+    if random.random() < 0.52:
+        await db.add_item(conn, steward_id, "bait_worm", 2)
+        return "理网扯水草，抠出两包活饵——网虽挂过，虫没跑。"
+    await db.add_item(conn, steward_id, "drift_twine", 1)
+    return "水草里缠一截新漂绳，理网时不算白忙。"
+
+
+async def maybe_storm_beach_luck(
+    conn,
+    steward_id: int,
+    *,
+    context: str,
+    weather: str | None = None,
+) -> str | None:
+    """雨/风暴天气赶海或撒网，小概率冲出特殊贝壳。"""
+    w = weather or world.current_weather()
+    if w not in STORM_WEATHER:
+        return None
+    if random.random() > 0.12:
+        return None
+    shells = (
+        ("fossil_shell", "暴雨冲出化石贝壳"),
+        ("shell_conch", "浪涌推来一只海螺"),
+        ("shell_catseye", "猫眼螺被浪打上岸"),
+        ("shell_scallop", "扇贝壳从沙里翻出来"),
+    )
+    key, phrase = random.choice(shells)
+    await db.add_item(conn, steward_id, key, 1)
+    if context == "dig":
+        return f"{phrase}——坏天气里多捡一件。"
+    return f"{phrase}，网里竟夹着浪赏。"
+
+
+async def maybe_runaway_trail_luck(conn, steward: dict, choice: str) -> str | None:
+    """寻回逃畜时小概率跟足迹找到潮边藏货（急追略高）。"""
+    norm = (choice or "").strip()
+    chase = norm in ("急追",) or norm.lower() in ("chase",)
+    if random.random() > (0.14 if chase else 0.08):
+        return None
+    sid = steward["id"]
+    roll = random.random()
+    if roll < 0.4:
+        await db.add_item(conn, sid, "bait_worm", 3)
+        return "追着蹄印拐进潮洼，捡到几包活饵——像隐藏补给点。"
+    if roll < 0.7:
+        await db.add_item(conn, sid, "shell_mussel", 2)
+        return "牲口停过的石缝里嵌着青口贝，像谁藏的小宝库。"
+    await db.add_item(conn, sid, "sea_glass", 2)
+    await db.add_chronicle(
+        "plot", f"{steward['name']} 寻回逃畜时摸到潮边藏贝点", sid, conn=conn,
+    )
+    return "跟着足迹摸到潮边藏贝点，拾两枚海玻璃。"
