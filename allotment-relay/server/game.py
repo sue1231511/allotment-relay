@@ -282,7 +282,7 @@ async def relay_manual() -> str:
         "  undertide_ops 潮下地下世界。新手别一上来乱闯。先 help，再 well → descend → enter；/island 的恶猫钱庄可存取借还、死人赌场可玩骰/灯/抽牌（同一套账）。",
         "               cheer 哄的是潮下猫猫，不是荔栀。深坑 pit board 井壁胜场榜（≥5场，不是票榜）",
         "               深坑伤可 visit_ops clinic treat 斗场震伤/深坑重创，或 undertide_ops medic。",
-        "               井下减岛缘（第一次 descend −25，之后 enter −12）；well 看一眼不算。",
+        "               井下减岛缘（第一次 descend −25，之后 enter −12）；well 看一眼不算。井蚀高（≥78）下井偶发潮返地面盐斑，随机一块露天地肥力下降；清井 + 潮生会 工程 修码头/旧温室能略缓。",
         "  tale_ops     潮闻故事探索任务。空 command=可接任务列表",
         "               command 例：list · accept black_box_lover · accept memory_tide · accept spring_beyond_mountain · accept missing_pages · accept asking_around · accept mr_ke · accept tonight_damp · accept unhappy_service · status",
         "                 · explore beach · explore south_lane · explore shenzhi_home · explore cheng_home · explore west_market · explore ke_shop · explore rain_woods · explore warehouse_corner",
