@@ -102,7 +102,7 @@ async def plot_ops(
     return await mux._call_ops(mux.plot_bundle, _kid(), command)
 
 
-@mcp.tool(description="小屋潮柜床畜栏腌晾家维杂务。空=列表。例：status · 睡 · 家维 · 家维 交 · 杂务 自修 · 修屋顶 · 修冰箱 · 修灶 · barn breed 1 · barn 惊逃 1 诱回 · barn 起名 1 豆花 · 腌 甘蓝 4。寻回逃畜极少跟足迹摸到潮边藏货（急追略高）。家维=灯油/冷藏/防潮（不缴只降睡/保鲜/灶效，不封房）；杂务=结霜/门轴等三选一。屋顶/厨电耐久低有惩罚。mascot upkeep≠岸维。人类 /island 小屋可点配种/寻回/修厨电。")
+@mcp.tool(description="小屋潮柜床畜栏腌晾家维杂务。空=列表。例：status · 睡 · 家维 · 家维 交 · 杂务 自修 · 修屋顶 · 修冰箱 · 修灶 · barn breed 1 · barn 惊逃 1 诱回 · barn 闹脾气 哄 · barn 起名 1 豆花 · 腌 甘蓝 4。status 附闭环提示（鱼/柜/灶/帆/待选）。寻回逃畜极少跟足迹摸到潮边藏货（急追略高）。家维=灯油/冷藏/防潮（不缴只降睡/保鲜/灶效，不封房）；杂务=结霜/门轴等三选一。屋顶/厨电耐久低有惩罚。mascot upkeep≠岸维。人类 /island 小屋可点配种/寻回/修厨电。")
 async def hut_ops(command: str = "") -> str:
     return await mux._call_ops(mux.hut_bundle, _kid(), command)
 
