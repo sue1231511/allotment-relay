@@ -206,3 +206,21 @@ def test_tree_traits_coffee_grape():
     ):
         n = farming.harvest_pool({"crop": "grape", "tended": 1})
     assert n == 3
+
+    with patch.object(world, "current_weather", return_value="gale"), patch.object(
+        world, "field_climate_effect", return_value=""
+    ):
+        coco = farming.harvest_pool({"crop": "coconut", "tended": 1})
+    assert coco == 3
+    with patch.object(world, "field_climate_effect", return_value=""), patch.object(
+        world, "current_weather", return_value="gale"
+    ):
+        plot3 = {
+            "crop": "coconut", "greenhouse": 0, "tended": 0, "fertilized": 0,
+            "watered": 0, "grow_target": 270 * 60, "soil_fertility": 70,
+        }
+        coco_g = farming.effective_grow(plot3, "coconut")
+        other = dict(plot3)
+        other["crop"] = "cacao"
+        cacao_g = farming.effective_grow(other, "cacao")
+    assert coco_g < cacao_g
