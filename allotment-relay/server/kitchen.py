@@ -509,8 +509,19 @@ async def _cook_named(s: dict[str, Any], dish_key: str) -> str:
             qualities.extend(await traits_mod.pop_qualities(conn, s["id"], ing, 1))
         q_bonus = traits_mod.cooking_star_bonus(qualities)
         stars = _roll_stars(s, dish_key, quality_bonus=q_bonus)
+        from . import loop_couple as loop_mod
+
+        stars, fail_note = await loop_mod.adjust_cook_stars(conn, s["id"], stars)
         item = dish_item(dish_key, stars)
         await db.add_item(conn, s["id"], item, 1)
+        from . import ledger as ledger_mod
+        from .kitchen_special import SPECIAL_DISH_KEYS
+
+        if dish_key in SPECIAL_DISH_KEYS:
+            await ledger_mod.note_gain(
+                conn, s["id"], item, 1,
+                f"{meta['name']}{stars}星由{s['name']}于{ledger_mod.calendar_phrase()}在灶台上成",
+            )
         await _mark_cook(conn, s["id"])
         await survival.bump(conn, s["id"], satiety=6, mist_wit=4)
         from . import bond as bond_mod
