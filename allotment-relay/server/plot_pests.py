@@ -308,6 +308,25 @@ def ui_actions(
 ) -> list[dict[str, Any]]:
     """Human /island 虫害按钮；与 handle() 子命令一致。"""
     key = plot.get("pest_key") or ""
+    if key == "sinkhole":
+        have_compost = int(stock.get("compost") or 0)
+        return [
+            {
+                "action": "填土",
+                "label": f"填土（堆肥×{SINKHOLE_FILL_COMPOST}+{SINKHOLE_FILL_TICKETS}票）",
+                "hint": "堆肥×2",
+                "can": have_compost >= SINKHOLE_FILL_COMPOST and tickets >= SINKHOLE_FILL_TICKETS,
+                "disabled_reason": "缺堆肥或票不够",
+            },
+            {
+                "action": "围起来",
+                "label": f"围起来（{FENCE_TICKETS} 票）",
+                "hint": "不再蔓延",
+                "can": tickets >= FENCE_TICKETS,
+                "disabled_reason": f"票不够（要 {FENCE_TICKETS}）",
+            },
+            {"action": "不管", "label": "先不管", "hint": "可能塌邻地", "can": True, "disabled_reason": ""},
+        ]
     if key == "gh_leak":
         have_twine = int(stock.get("drift_twine") or 0)
         return [
