@@ -369,7 +369,7 @@ async def relay_manual() -> str:
         "  监控 plot_ops camera install 地块（15票）记偷菜日志、提高抓贼；camera check / remove",
         "  意外 plot_ops incident status 看待处理、incident scan 看风险；repair 12 花票、repair 12 item 用指定材料；无材料选项时拒绝不改扣票，不退当场损失",
         "  土壤肥力/轮作：露天 status 看土肥瘦；plot_ops 肥力 看休耕地。连作同种降肥、换族轮作回升；花生固氮。瘠土长得慢",
-        "  虫害：打理后小概率触发。plot_ops 虫害 1 手工|施药|拔除|不管；温室漏风 补网|通风|不管。有虫减收成",
+        "  虫害：打理后小概率触发。plot_ops 虫害 1 手工|施药|拔除|不管；温室漏风 补网|通风|不管；岸上地陷 填土|围起来|不管。拔除菌病小概率得灰肥。有虫减收成",
         "  出海帆撕：tide_ops 帆撕 补|返航|硬撑（补=漂绳×2或15票；返航=早归少货）",
         "  船体船漏：tide_ops 船漏 堵|泵|硬航（堵=铜钉×1或12票；低 hull 更易漏）",
         "  留种：收成后 plot_ops 留种 甘蓝 耗 1 份菜换种并记代；plot_ops 留种 status 看血统。第2代起 seed 进 tote_ops 履历",
