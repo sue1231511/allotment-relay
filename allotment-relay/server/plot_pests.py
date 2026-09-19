@@ -14,7 +14,12 @@ PEST_META = {
     "weed": {"name": "杂草", "emoji": "🌾", "yield_penalty": 0.9},
     "blight": {"name": "菌病", "emoji": "🍄", "yield_penalty": 0.6},
     "gh_leak": {"name": "温室漏风", "emoji": "💨", "yield_penalty": 0.88},
+    "sinkhole": {"name": "地陷", "emoji": "🕳️", "yield_penalty": 0.35},
 }
+
+SINKHOLE_FILL_TICKETS = 12
+SINKHOLE_FILL_COMPOST = 2
+FENCE_TICKETS = 8
 
 HAND_CLEAR_CHANCE = 0.55
 DRUG_TICKETS = 10
