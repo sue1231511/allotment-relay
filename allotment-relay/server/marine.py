@@ -1242,6 +1242,13 @@ async def _resolve_voyage(
             conn, s["id"], voyage["route"], storm=storm,
         )
     parts = await boat_parts_mod.get_all(conn, wear_owner_id or s["id"])
+    from . import event_catalog as evcat_mod
+
+    hold_note = await evcat_mod.roll_hold_leak(
+        conn, wear_owner_id or s["id"], fatal=bool(failed and storm)
+    )
+    if hold_note:
+        loot_lines.append(hold_note)
 
     if failed and not loan_lender_id:
         dmg_id = share_founder_id or s["id"]
