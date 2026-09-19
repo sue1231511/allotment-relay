@@ -286,3 +286,91 @@ async def resolve(conn, steward: dict[str, Any], event_key: str, act: str) -> st
         elif act == "隔离":
             await light_mod.set_flag(conn, sid, "barn_isolated")
             note = "病畜隔开了，未病的先保住。"
+        elif act == "自己处理":
+            if __import__("random").random() < 0.45:
+                note = "自己上手，误诊了，病还在。"
+            else:
+                from . import barn_disease as dis_mod
+
+                cur = await conn.execute(
+                    "SELECT slot FROM barn_animals WHERE steward_id=? AND species IS NOT NULL "
+                    "ORDER BY slot LIMIT 1",
+                    (sid,),
+                )
+                one = await cur.fetchone()
+                if one:
+                    await dis_mod.clear_ailment(conn, sid, int(one[0]))
+                note = "自己处理好了一只，其余还病着。"
+        else:
+            note = "拖着：可能自己好，也可能恶化。"
+    elif event_key == "stove_stubborn":
+        if act == "清灰":
+            await light_mod.take_flag(conn, sid, "stove_stubborn")
+            note = "灶灰清了，下次点火不再拗。"
+        elif act == "硬烧":
+            await light_mod.set_flag(conn, sid, "stove_hard")
+            note = "硬烧：能出菜，星级容易掉一档。"
+        else:
+            note = "不管，下次做饭还可能卡火。"
+    elif event_key == "humid_soft":
+        if act == "晾晒":
+            await light_mod.take_flag(conn, sid, "humid_soft")
+            note = "潮气散了。"
+        elif act == "请匠":
+            await light_mod.take_flag(conn, sid, "humid_soft")
+            note = "匠人来过，家具干了。"
+        else:
+            note = "不管，屋里还潮。"
+    elif event_key == "fridge_break":
+        if act == "修冰箱":
+            await conn.execute(
+                "UPDATE steward_hut_appliance SET durability=max_dur "
+                "WHERE steward_id=? AND appliance_key='fridge'",
+                (sid,),
+            )
+            note = "冰箱修好了。"
+        elif act == "用盐冰":
+            took = await db.take_item(conn, sid, "proc_black_salt", 1)
+            if not took:
+                took = await db.take_item(conn, sid, "quarry_salt", 1)
+            if took:
+                note = "垫了一把盐，熟菜能再撑半天。"
+            else:
+                await conn.execute(
+                    "UPDATE stewards SET tickets=tickets+? WHERE id=?",
+                    (tickets, sid),
+                )
+                raise ValueError("用盐冰要黑盐或海盐一把")
+        else:
+            note = "不管，熟菜坏得更快。"
+    elif event_key == "roof_leak_bad":
+        if act == "修屋顶":
+            await conn.execute(
+                "UPDATE steward_hut_roof SET roof=max_roof WHERE steward_id=?",
+                (sid,),
+            )
+            note = "屋顶补上了。"
+        elif act == "接盆":
+            note = "盆接着漏，家具暂不湿，屋顶还破。"
+        else:
+            note = "不管，漏雨还在。"
+    elif event_key == "storm_wreck":
+        if act == "修船":
+            note = "记下了，去港口修船体。"
+        elif act == "捞残骸":
+            await db.add_item(conn, sid, "wreck_scrap", 1)
+            note = "浪里捞起一块古旧船件。"
+        else:
+            note = "不管，船还残。"
+    elif event_key == "bird_peck" and act == "补种":
+        note = "鸟啄过的地，下次 sow 那一格少耗 1 精力（记下了）。"
+        await light_mod.set_flag(conn, sid, "bird_reseed")
+    elif event_key == "shovel_dull" and act == "磨刃":
+        await light_mod.take_flag(conn, sid, "shovel_dull")
+        note = "铲刃磨了。"
+    else:
+        note = f"选了{act}。"
+
+    await _clear(conn, sid, event_key)
+    pay = f"（-{tickets} 票）" if tickets else ""
+    return tiers_mod.tag(tiers_mod.TIER_LIGHT, f"{spec.get('via') or event_key}：{act}{pay}。{note}")
