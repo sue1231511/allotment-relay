@@ -1324,7 +1324,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
                 gh_flag = 0
         elif orchard_flag:
             raise ValueError(
-                "果园只种果树（青柠/橘子/木瓜/香蕉/芒果/椰子/榴莲）。"
+                "果园只种果树（青柠/橘子/柚子/柠檬/桃/橄榄/桑葚/咖啡/可可等）。"
                 "蔬菜走 plot_ops sow 1 甘蓝 或 sow 棚1 甘蓝"
             )
         elif greenhouse_ctx:
