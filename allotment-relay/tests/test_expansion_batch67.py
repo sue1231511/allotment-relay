@@ -139,6 +139,9 @@ def test_mint_spread_and_leaf_water():
                     cur = await conn.execute(
                         "SELECT crop FROM parcels WHERE id=?", (pid2,)
                     )
+                    assert (await cur.fetchone())[0] == "garden_mint"
+                    await conn.commit()
+
     asyncio.run(run())
 
 
