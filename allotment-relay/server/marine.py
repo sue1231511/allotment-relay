@@ -1291,6 +1291,12 @@ async def _resolve_voyage(
     msg = f"{route['label']}归港：" + "，".join(loot_lines)
     if opp_line:
         msg += f" · {opp_line}"
+    wreck_line = await opp_mod.maybe_storm_wreck_luck(conn, s["id"], storm=storm)
+    if wreck_line:
+        msg += f" · {wreck_line}"
+    share_line = await share_mod.after_voyage_payout(conn, s, fish_loot)
+    if share_line:
+        msg += f" · {share_line}"
     msg += flavor.maybe_suffix(flavor.VOYAGE_RETURN_BAD if failed else flavor.VOYAGE_RETURN_GOOD)
     wear_line = loan_note if loan_note else f"{hull_note} · {parts_note}".strip(" ·")
     if wear_line:
