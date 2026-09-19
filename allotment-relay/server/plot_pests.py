@@ -112,6 +112,9 @@ async def handle(
     if act in ("status", "查看", ""):
         return f"{label} {meta.get('name', key)} Lv{plot.get('pest_level')}"
 
+    if key == "sinkhole":
+        return await _handle_sinkhole(conn, steward, plot, act, label)
+
     if act in ("手工", "hand", "捉", "捉虫"):
         if random.random() < HAND_CLEAR_CHANCE:
             await _clear_pest(conn, plot["id"])
