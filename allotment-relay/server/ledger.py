@@ -102,6 +102,8 @@ def is_notable(item: str) -> bool:
         return False
     if key in NOTABLE_KEYS:
         return True
+    if any(key.startswith(p) for p in NOTABLE_PREFIXES):
+        return True
     name = ITEM_NAMES.get(key) or ""
     if "戒" in name or key.endswith("_ring"):
         return True
