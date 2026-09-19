@@ -149,9 +149,10 @@ HUT_HELP = """hut_ops 子命令（整句写进 command）：
     小馆开着时冰箱不能卖（先 kitchen_ops shop 卖掉 或 shop close）
   barn status|erect|buy|feed|collect|shear|churn — 畜栏。churn 只搅山羊奶成奶酪（先买山羊再 collect；牛奶不能搅）
     牲口有寿（兔约3天…狗约12天），过了栏空，老死不给肉（想收肉用 harvest）。干旱没喂可能渴死
-    牲口会得病（蹄瘟/羽疹/畜瘟等）。病畜减产，拖着可能病死。异常 visit_ops 兽医 / 霍衡 treat 槽位。摸病死牲口可能沾病菌，人去 clinic
+    牲口会得病（蹄瘟/羽疹/畜瘟/难产/火羽疹/鹅脚肿/鹑寒/驼疹等）。barn breed 配种成约 14% 难产。病畜减产，拖着可能病死。异常 visit_ops 兽医 / 霍衡 treat 槽位。摸病死牲口可能沾病菌，人去 clinic
     喂过的看门狗也占栏，status 每槽都写。人类 /island 小屋畜栏每一栏都会列出，不是空栏
     barn 惊逃 槽 诱回|围栏|急追 — 寻回跑丢的牲口；成功极少跟足迹摸到潮边藏货（急追略高）。例：barn 惊逃 1 诱回
+    barn 闹脾气 哄|关栏|不管 — 栏里闹脾气待选；疫病则 隔离|兽医|拖着
   mascot adopt 名字 scout|lucky|compost / upkeep / train / feed — 吉祥物
     upkeep 花 4 票主动喂养，不是每日自动扣，也不是产业维修费（产业维修 visit_ops 潮生会 维）；train 免费练、不换特质；feed 耗宠物饲料。士气不每天掉。
   buy miner_lamp → install soft_N miner_lamp — 盐风矿灯，崖矿挖精力 -1
