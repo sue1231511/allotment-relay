@@ -1672,6 +1672,7 @@ async def voyage_ops(key_id: int, command: str) -> str:
                 "voyage_fish": [],
                 "boat_key": boat_key,
                 "loan_lender_id": loan_lender_id,
+                "share_founder_id": share_founder_id,
             }
             await conn.execute(
                 """
