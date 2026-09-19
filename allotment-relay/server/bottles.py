@@ -64,7 +64,8 @@ async def shore_view(conn: aiosqlite.Connection, steward_id: int) -> dict:
 
 async def try_wash_ashore(s: dict) -> str | None:
     """翻沙偶尔冲上一只瓶。没缘分就当没看见，不盖过赶海正文。"""
-    if random.random() > config.BOTTLE_WASH_CHANCE:
+    chance = float(getattr(config, "BOTTLE_WASH_CHANCE", 0.08) or 0.08)
+    if random.random() > chance:
         return None
     async with db.connect() as conn:
         conn.row_factory = aiosqlite.Row
