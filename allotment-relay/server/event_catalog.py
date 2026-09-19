@@ -32,7 +32,7 @@ NAMED_EVENTS: tuple[dict[str, str], ...] = (
     {"key": "gh_leak", "tier": tiers_mod.TIER_MID, "name": "温室漏风", "mod": "plot_pests"},
     {"key": "rats", "tier": tiers_mod.TIER_MID, "name": "鼠害", "mod": "plot_pests"},
     {"key": "wind_scorch", "tier": tiers_mod.TIER_MID, "name": "海风灼叶", "mod": "plot_pests"},
-    {"key": "woodworm", "tier": tiers_mod.TIER_MID, "name": "木材虫蚋", "mod": "hut_chores"},
+    {"key": "woodworm", "tier": tiers_mod.TIER_MID, "name": "木材虫蛀", "mod": "hut_chores"},
     {"key": "stove_clog", "tier": tiers_mod.TIER_MID, "name": "灶台堵塞", "mod": "hut_chores"},
     {"key": "mold_soft", "tier": tiers_mod.TIER_MID, "name": "家具发霉", "mod": "hut_chores"},
     {"key": "hold_leak", "tier": tiers_mod.TIER_MID, "name": "鱼舱进水", "mod": "event_catalog"},
