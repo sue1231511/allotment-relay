@@ -226,7 +226,7 @@ EXTRA_HEARTH_RECIPES = {
     _sig("proc_black_salt", "fish_mackerel"): {"name": "黑盐鲭段", "sell": 56, "tags": ["sea", "special"]},
     _sig("crop_fogpea", "proc_rice_wine"): {"name": "雾豆酒酿", "sell": 41, "tags": ["special", "drink"]},
     _sig("quarry_salt", "crop_beet"): {"name": "盐渍甜菜", "sell": 36, "tags": ["root"]},
-    _sig("fish_sardine", "crop_kale"): {"name": "沙丁甘蓝卷", "sell": 43, "tags": ["sea"]},
+    _sig("fish_sardine", "crop_spinach"): {"name": "沙丁菠菜卷", "sell": 43, "tags": ["sea"]},
     _sig("crop_tide_ginger", "fish_seatrout"): {"name": "潮姜鳟片", "sell": 52, "tags": ["sea"]},
     _sig("compost", "crop_kale"): {"name": "堆肥润甘蓝", "sell": 32, "tags": ["leaf"]},
     _sig("pickles", "proc_bread"): {"name": "腌菜三明治", "sell": 38, "tags": ["snack"]},
