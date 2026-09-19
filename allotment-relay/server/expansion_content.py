@@ -510,6 +510,96 @@ EXTRA_KITCHEN_DISHES = {
         "ings": ["crop_pumpkin", "proc_cream", "proc_salt"],
         "base_sell": 44, "energy": 22, "tags": ["home"],
     },
+    "kelp_rib_soup": {
+        "name": "海带排骨汤", "emoji": "🍲",
+        "ings": ["crop_kelp", "meat_pork", "crop_ginger"],
+        "base_sell": 54, "energy": 26, "tags": ["sea", "meat"],
+    },
+    "chicken_soup": {
+        "name": "鸡汤", "emoji": "🍲",
+        "ings": ["meat_turkey", "crop_ginger", "crop_scallion"],
+        "base_sell": 50, "energy": 26, "tags": ["home"],
+    },
+    "goat_milk_soup": {
+        "name": "羊奶浓汤", "emoji": "🥛",
+        "ings": ["goat_milk", "proc_cream", "crop_onion"],
+        "base_sell": 48, "energy": 22, "tags": ["dairy"],
+    },
+    "mushroom_soup": {
+        "name": "菌菇汤", "emoji": "🍄",
+        "ings": ["crop_fog_mushroom", "proc_tofu", "crop_scallion"],
+        "base_sell": 52, "energy": 22, "tags": ["home"],
+    },
+    "tide_ginger_fish_soup": {
+        "name": "潮姜鱼汤", "emoji": "🍲",
+        "ings": ["crop_tide_ginger", "fish_greenling", "crop_scallion"],
+        "base_sell": 54, "energy": 24, "tags": ["sea"],
+    },
+    "tomato_fish_soup": {
+        "name": "番茄鱼汤", "emoji": "🍲",
+        "ings": ["crop_tomato", "fish_sardine", "crop_onion"],
+        "base_sell": 46, "energy": 24, "tags": ["sea"],
+    },
+    "lotus_soup": {
+        "name": "莲藕汤", "emoji": "🪷",
+        "ings": ["crop_lotus_root", "crop_ginger", "proc_salt"],
+        "base_sell": 42, "energy": 20, "tags": ["home"],
+    },
+    "yam_chicken_soup": {
+        "name": "山药鸡汤", "emoji": "🍲",
+        "ings": ["crop_yam", "meat_turkey", "crop_ginger"],
+        "base_sell": 56, "energy": 26, "tags": ["home"],
+    },
+    "plain_rice": {
+        "name": "白米饭", "emoji": "🍚",
+        "ings": ["proc_rice", "proc_salt"],
+        "base_sell": 18, "energy": 16, "tags": ["grain"],
+    },
+    "glutinous_rice_bowl": {
+        "name": "糯米饭", "emoji": "🍚",
+        "ings": ["crop_glutinous_rice", "proc_salt"],
+        "base_sell": 22, "energy": 18, "tags": ["grain"],
+    },
+    "fish_congee": {
+        "name": "鱼片粥", "emoji": "🥣",
+        "ings": ["proc_rice", "fish_codling", "crop_ginger"],
+        "base_sell": 40, "energy": 22, "tags": ["sea", "grain"],
+    },
+    "pumpkin_congee": {
+        "name": "南瓜粥", "emoji": "🥣",
+        "ings": ["proc_rice", "crop_pumpkin", "proc_salt"],
+        "base_sell": 34, "energy": 20, "tags": ["grain"],
+    },
+    "seafood_noodle": {
+        "name": "海鲜面", "emoji": "🍜",
+        "ings": ["proc_noodles", "fish_mackerel", "crop_scallion"],
+        "base_sell": 50, "energy": 26, "tags": ["sea", "grain"],
+    },
+    "scallion_noodle": {
+        "name": "葱油面", "emoji": "🍜",
+        "ings": ["proc_noodles", "crop_scallion", "proc_cooking_oil"],
+        "base_sell": 36, "energy": 20, "tags": ["grain"],
+    },
+    "tomato_noodle": {
+        "name": "番茄面", "emoji": "🍜",
+        "ings": ["proc_noodles", "crop_tomato", "egg"],
+        "base_sell": 38, "energy": 22, "tags": ["grain"],
+    },
+    "crab_rice_bowl": {
+        "name": "蟹肉饭", "emoji": "🍚",
+        "ings": ["proc_rice", "fish_swimmingcrab", "egg"],
+        "base_sell": 62, "energy": 28, "tags": ["sea", "grain"],
+    },
+    "grilled_onigiri": {
+        "name": "烤饭团", "emoji": "🍙",
+        "ings": ["proc_rice", "proc_salt", "crop_kelp"],
+        "base_sell": 28, "energy": 18, "tags": ["grain"],
+    },
+    "corn_rice": {
+        "name": "玉米饭", "emoji": "🍚",
+        "ings": ["proc_rice", "crop_corn", "proc_salt"],
+        "base_sell": 30, "energy": 20, "tags": ["grain"],
+    },
 }
 
 
