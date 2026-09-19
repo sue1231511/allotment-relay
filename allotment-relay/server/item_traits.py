@@ -130,6 +130,30 @@ def roll_crop_quality(plot: dict[str, Any]) -> str:
     if plot.get("pest_key"):
         weights["bugbit"] += 5
         weights["plain"] += 2
+    from . import world as world_mod
+    w = world_mod.current_weather()
+    if w in ("gale",):
+        weights["twisted"] += 2
+    if w in ("misty",):
+        weights["tender"] += 2
+    climate = world_mod.field_climate_effect()
+    if climate in ("frost", "snowbound"):
+        weights["twisted"] += 3
+    if climate in ("drought", "heatwave"):
+        weights["overripe"] += 3
+        weights["tender"] -= 2
+    last = plot.get("last_crop")
+    if last and last == plot.get("crop"):
+        weights["plain"] += 3
+        weights["flavor"] = max(1, weights.get("flavor", 1) - 2)
+    crop = plot.get("crop")
+    seasons = (CROPS.get(crop) or {}).get("seasons") if crop else None
+    if seasons:
+        from . import season as season_mod
+        now_s = season_mod.season_name()
+        if now_s not in seasons and not plot.get("greenhouse"):
+            weights["twisted"] += 3
+            weights["plain"] += 2
     from . import seed_lineage as seed_lineage_mod
     seed_lineage_mod.apply_quality_bias(weights, plot)
     keys = list(weights.keys())
