@@ -533,6 +533,8 @@ async def _cook_named(s: dict[str, Any], dish_key: str) -> str:
         f"出菜 {dish_display_name(dish_key, stars)} "
         f"（建议 vend {sell} 票 · 材料回收 {cost} · +{meta['energy']}精力若 eat）"
     )
+    if fail_note:
+        msg += f" · {fail_note}"
     msg += flavor.maybe_suffix([
         "灶台：这锅有灵魂",
         "姜姨点头：够味",
