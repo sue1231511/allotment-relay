@@ -5,7 +5,6 @@ import math
 from typing import Any
 
 from . import db
-from .catalog import ITEM_NAMES
 from .config import BOATS
 from .game import require_steward
 
