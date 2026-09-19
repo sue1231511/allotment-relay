@@ -73,7 +73,20 @@ ENTRIES: list[tuple[str, str, str | None, str | None]] = [
     ("craft_boat_model", "船模入柜", "craft_boat_model", None),
     ("crop_pomelo", "柚子入园", "crop_pomelo", None),
     ("crop_coffee", "咖啡豆熟", "crop_coffee", None),
-]
+    ("drink_mint_tea", "薄荷茶一盏", "drink_mint_tea", None),
+    ("drink_apple_juice", "苹果汁入杯", "drink_apple_juice", None),
+    ("craft_shell_case", "贝壳柜成", "craft_shell_case", None),
+    ("craft_ore_case", "矿石柜成", "craft_ore_case", None),
+    ("craft_bottle_rack", "酒瓶架成", "craft_bottle_rack", None),
+    ("craft_flower_book", "花册入柜", "craft_flower_book", None),
+    ("craft_old_photo", "老照片压好", "craft_old_photo", None),
+    ("craft_tide_stamp", "潮汐邮票", "craft_tide_stamp", None),
+    ("craft_npc_sign", "请人签过名", "craft_npc_sign", None),
+    ("wreck_scrap", "古旧船件", "wreck_scrap", None),
+    ("craft_relic", "地下遗物", "craft_relic", None),
+    ("craft_fish_bone", "大型鱼骨", "craft_fish_bone", None),
+    ("craft_seed_box", "稀有种子盒", "craft_seed_box", None),
+}
 
 
 async def ensure_table(conn) -> None:
