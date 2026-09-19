@@ -127,7 +127,11 @@ async def roll_tend_glitch(conn, steward_id: int, plot: dict) -> str | None:
         tier = tiers_mod.roll_tier(weights=(0.30, 0.45, 0.20, 0.05))
         msg = "潮气进棚，软装有发潮味：下次睡觉少回 3 精力（已记下，睡一次就消）。"
         await set_debuff(conn, steward_id, "humid_soft", tier, msg)
-        return tiers_mod.tag(tier, msg)
+        from . import event_choice as choice_mod
+
+        extra = await choice_mod.offer(conn, steward_id, "humid_soft")
+        tagged = tiers_mod.tag(tier, msg)
+        return f"{tagged}\n{extra}" if extra else tagged
     tier = tiers_mod.TIER_LIGHT
     msg = "鱼线打结了：下次坐钓空杆率 +12%（已记下，坐钓一次就消）。"
     await set_debuff(conn, steward_id, "line_tangle", tier, msg)
