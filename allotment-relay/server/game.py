@@ -1089,7 +1089,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
             if len(parts) < 2:
                 rows = await pests_mod.list_pests(conn, s["id"])
                 if not rows:
-                    return "没有虫害。打理露天/温室作物有小概率触发 → plot_ops 虫害 1 手工|施药|拔除"
+                    return "没有虫害。打理露天/温室作物有小概率触发 → plot_ops 虫害 1 手工|施药|拔除（地陷 填土|围起来）"
                 lines = ["待处理虫害："]
                 for r in rows:
                     plot = dict(r)
