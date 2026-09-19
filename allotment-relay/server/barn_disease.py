@@ -186,6 +186,8 @@ def _pick_for_species(species: str, climate: str | None) -> str | None:
     keys: list[str] = []
     weights: list[int] = []
     for key, meta in BARN_AILMENTS.items():
+        if meta.get("breed_only"):
+            continue
         allowed = meta.get("species") or frozenset()
         if species not in allowed:
             continue
