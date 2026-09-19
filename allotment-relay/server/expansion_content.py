@@ -63,7 +63,7 @@ EXTRA_TREES = {
     "pomelo": {'name': '柚子', 'emoji': '🍊', 'seed_price': 18, 'sell': 33, 'grow': 240, 'yield': 3, 'tier': 4, 'spread': 0.24, 'tags': ['fruit'], 'seasons': ('秋', '冬'), 'tree': True, 'shake': True},
     "lemon": {'name': '柠檬', 'emoji': '🍋', 'seed_price': 16, 'sell': 29, 'grow': 210, 'yield': 3, 'tier': 4, 'spread': 0.24, 'tags': ['fruit'], 'seasons': ('冬', '春'), 'tree': True, 'shake': True},
     "olive": {'name': '橄榄', 'emoji': '🫒', 'seed_price': 20, 'sell': 36, 'grow': 260, 'yield': 3, 'tier': 4, 'spread': 0.22, 'tags': ['fruit'], 'seasons': ('秋',), 'tree': True},
-    "mulberry": {'name': '桑荫', 'emoji': '🫐', 'seed_price': 15, 'sell': 28, 'grow': 190, 'yield': 3, 'tier': 4, 'spread': 0.24, 'tags': ['fruit', 'berry'], 'seasons': ('春', '夏'), 'tree': True},
+    "mulberry": {'name': '桑葚', 'emoji': '🫐', 'seed_price': 15, 'sell': 28, 'grow': 190, 'yield': 3, 'tier': 4, 'spread': 0.24, 'tags': ['fruit', 'berry'], 'seasons': ('春', '夏'), 'tree': True},
     "coffee": {'name': '咖啡', 'emoji': '☕', 'seed_price': 24, 'sell': 44, 'grow': 280, 'yield': 2, 'tier': 5, 'spread': 0.2, 'tags': ['fruit', 'tropic'], 'seasons': ('春', '夏'), 'tree': True},
     "cacao": {'name': '可可', 'emoji': '🍫', 'seed_price': 26, 'sell': 48, 'grow': 290, 'yield': 2, 'tier': 5, 'spread': 0.2, 'tags': ['fruit', 'tropic'], 'seasons': ('夏',), 'tree': True},
 }
