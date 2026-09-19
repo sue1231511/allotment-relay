@@ -933,6 +933,66 @@ CRAFT_RECIPES = {
         "seconds": 1080, "energy": 6,
         "hint": "风暴捞到的潮骸残件+岸木钉成小船。岛收集簿会点亮",
     },
+    "shell_case": {
+        "name": "贝壳柜", "emoji": "🐚", "out": "craft_shell_case", "qty": 1,
+        "need": {"shell_scallop": 1, "shell_conch": 1, "craft_timber": 1},
+        "seconds": 840, "energy": 5,
+        "hint": "赶海捡的壳钉成柜。纯收藏，岛收集簿会点亮。不是陈列柜捐亮壳",
+    },
+    "ore_case": {
+        "name": "矿石柜", "emoji": "💎", "out": "craft_ore_case", "qty": 1,
+        "need": {"quarry_salt": 1, "quarry_brick": 1, "craft_timber": 1},
+        "seconds": 900, "energy": 5,
+        "hint": "盐晶和砖搁进小柜。纯收藏。不是陈列柜捐精矿",
+    },
+    "bottle_rack": {
+        "name": "酒瓶架", "emoji": "🍷", "out": "craft_bottle_rack", "qty": 1,
+        "need": {"craft_timber": 2, "proc_rice_wine": 1},
+        "seconds": 780, "energy": 4,
+        "hint": "空瓶架，纯好看。岛收集簿会点亮",
+    },
+    "flower_book": {
+        "name": "花册", "emoji": "📒", "out": "craft_flower_book", "qty": 1,
+        "need": {"wild_mint": 1, "crop_rapeseed": 1, "craft_timber": 1},
+        "seconds": 720, "energy": 4,
+        "hint": "压一页花。纯收藏，不是花店干花",
+    },
+    "old_photo": {
+        "name": "老照片", "emoji": "📷", "out": "craft_old_photo", "qty": 1,
+        "need": {"wet_note": 1, "sea_glass": 1},
+        "seconds": 600, "energy": 3,
+        "hint": "漂流瓶纸条压进海玻璃。纯收藏",
+    },
+    "tide_stamp": {
+        "name": "潮汐邮票", "emoji": "📮", "out": "craft_tide_stamp", "qty": 1,
+        "need": {"sea_glass": 1, "quarry_salt": 1},
+        "seconds": 480, "energy": 3,
+        "hint": "海玻璃印一枚。纯收藏，不加数值",
+    },
+    "npc_sign": {
+        "name": "NPC签名物", "emoji": "✍️", "out": "craft_npc_sign", "qty": 1,
+        "need": {"wet_note": 1, "honey": 1},
+        "seconds": 540, "energy": 3,
+        "hint": "潮笺请人签一笔。纯收藏，不是成就",
+    },
+    "relic": {
+        "name": "地下遗物", "emoji": "🗿", "out": "craft_relic", "qty": 1,
+        "need": {"ut_brine_crystal": 1, "quarry_tide_stone": 1},
+        "seconds": 1200, "energy": 7,
+        "hint": "井下卤晶配潮纹石。纯收藏",
+    },
+    "fish_bone": {
+        "name": "大型鱼骨", "emoji": "🦴", "out": "craft_fish_bone", "qty": 1,
+        "need": {"fish_codling": 1, "craft_timber": 1},
+        "seconds": 840, "energy": 5,
+        "hint": "鳕骨钉上墙。纯收藏，不是卖鱼",
+    },
+    "seed_box": {
+        "name": "稀有种子盒", "emoji": "📦", "out": "craft_seed_box", "qty": 1,
+        "need": {"seed_fogpea": 1, "craft_timber": 1},
+        "seconds": 660, "energy": 4,
+        "hint": "雾豆种收进盒。纯收藏，种不再能播",
+    },
 }
 
 # 陈列柜：捐出指定货，换称呼和/或小屋装饰。不印钞
