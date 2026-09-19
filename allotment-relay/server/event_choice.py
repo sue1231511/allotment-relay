@@ -43,7 +43,7 @@ CHOICES: dict[str, dict[str, Any]] = {
     "well_crack": {"via": "井下井险", "opts": ("清井", "绑索", "硬闯"), "owned": True},
     "dystocia": {"via": "小屋找兽医", "opts": ("兽医", "自己处理", "拖着"), "owned": False},
     "storm_wreck": {"via": "港口修船", "opts": ("修船", "捞残骸", "不管"), "owned": False},
-    "epidemic": {"via": "畜栏灾选", "opts": ("绔离", "兽医", "拖着"), "owned": False},
+    "epidemic": {"via": "畜栏灾选", "opts": ("隔离", "兽医", "拖着"), "owned": False},
     "tide_press": {"via": "潮生会工程", "opts": ("捐排水", "不管"), "owned": True},
     "sinkhole": {"via": "份地田间事件", "opts": ("填土", "围起来", "不管"), "owned": True},
     "crop_wipe": {"via": "份地田间事件", "opts": ("手工", "施药", "拔除"), "owned": True},
