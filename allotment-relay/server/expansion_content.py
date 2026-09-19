@@ -600,7 +600,120 @@ EXTRA_KITCHEN_DISHES = {
         "ings": ["proc_rice", "crop_corn", "proc_salt"],
         "base_sell": 30, "energy": 20, "tags": ["grain"],
     },
+    "fish_noodle": {
+        "name": "鱼汤面", "emoji": "🍜",
+        "ings": ["proc_noodles", "fish_herring", "crop_ginger"],
+        "base_sell": 44, "energy": 24, "tags": ["sea", "grain"],
+    },
+    "minced_noodle": {
+        "name": "肉末面", "emoji": "🍜",
+        "ings": ["proc_noodles", "meat_pork", "crop_scallion"],
+        "base_sell": 46, "energy": 24, "tags": ["grain", "meat"],
+    },
+    "urchin_rice": {
+        "name": "海胆饭", "emoji": "🍚",
+        "ings": ["proc_rice", "fish_seaurchin", "egg"],
+        "base_sell": 64, "energy": 26, "tags": ["sea", "grain"],
+    },
+    "apple_pie": {
+        "name": "苹果派", "emoji": "🥧",
+        "ings": ["crop_apple", "proc_flour", "proc_butter"],
+        "base_sell": 48, "energy": 22, "tags": ["sweet"],
+    },
+    "pumpkin_pie": {
+        "name": "南瓜派", "emoji": "🥧",
+        "ings": ["crop_pumpkin", "proc_flour", "proc_cream"],
+        "base_sell": 46, "energy": 22, "tags": ["sweet"],
+    },
+    "coconut_pudding": {
+        "name": "椰奶布丁", "emoji": "🍮",
+        "ings": ["crop_coconut", "proc_cream", "proc_syrup"],
+        "base_sell": 44, "energy": 20, "tags": ["sweet"],
+    },
+    "mango_pudding": {
+        "name": "芒果布丁", "emoji": "🍮",
+        "ings": ["crop_mango", "proc_cream", "proc_syrup"],
+        "base_sell": 48, "energy": 20, "tags": ["sweet"],
+    },
+    "blueberry_cake": {
+        "name": "蓝莓蛋糕", "emoji": "🍰",
+        "ings": ["crop_blueberry", "proc_flour", "egg"],
+        "base_sell": 50, "energy": 22, "tags": ["sweet"],
+    },
+    "mochi": {
+        "name": "糯米团", "emoji": "🍡",
+        "ings": ["proc_glutinous_flour", "proc_syrup", "crop_adzuki"],
+        "base_sell": 38, "energy": 20, "tags": ["sweet"],
+    },
+    "honey_bread": {
+        "name": "蜂蜜面包", "emoji": "🍞",
+        "ings": ["proc_bread", "honey", "proc_butter"],
+        "base_sell": 40, "energy": 20, "tags": ["sweet"],
+    },
+    "orange_tart": {
+        "name": "橘子挞", "emoji": "🥧",
+        "ings": ["crop_orange", "proc_flour", "egg"],
+        "base_sell": 44, "energy": 20, "tags": ["sweet"],
+    },
+    "raisin_bread": {
+        "name": "葡萄干面包", "emoji": "🍞",
+        "ings": ["proc_bread", "proc_dried_fruit", "proc_butter"],
+        "base_sell": 42, "energy": 20, "tags": ["sweet"],
+    },
+    "cherry_pie": {
+        "name": "樱桃派", "emoji": "🥧",
+        "ings": ["crop_cherry", "proc_flour", "proc_butter"],
+        "base_sell": 52, "energy": 22, "tags": ["sweet"],
+    },
+    "adzuki_cake": {
+        "name": "红豆糕", "emoji": "🍡",
+        "ings": ["crop_adzuki", "proc_glutinous_flour", "proc_syrup"],
+        "base_sell": 40, "energy": 20, "tags": ["sweet"],
+    },
+    "honey_cake": {
+        "name": "蜂蜜蛋糕", "emoji": "🍰",
+        "ings": ["honey", "proc_flour", "egg"],
+        "base_sell": 46, "energy": 22, "tags": ["sweet"],
+    },
+    "goose_custard": {
+        "name": "鹅蛋羹", "emoji": "🥚",
+        "ings": ["goose_egg", "proc_salt", "crop_scallion"],
+        "base_sell": 36, "energy": 18, "tags": ["home"],
+    },
+    "quail_skewer": {
+        "name": "鹌鹑蛋串", "emoji": "🍢",
+        "ings": ["quail_egg", "proc_salt", "crop_scallion"],
+        "base_sell": 32, "energy": 16, "tags": ["snack"],
+    },
 }
+
+PLAN_CROP_NAMES = frozenset({
+    "菠菜", "生菜", "芹菜", "韭菜", "青葱", "紫苏", "油菜",
+    "胡萝卜", "白萝卜", "土豆", "芋头", "莲藕", "洋葱", "山药",
+    "黄豆", "豌豆", "四季豆", "花生", "红豆",
+    "番茄", "黄瓜", "茄子", "南瓜", "冬瓜", "玉米", "彩椒",
+    "花椒", "香菜", "薄荷", "迷迭香", "罗勒", "姜黄",
+    "水稻", "小麦", "糯米", "燕麦", "高粱",
+    "海盐草", "潮姜", "雾菇", "月豆", "红藻", "蓝潮苔", "灯芽菜",
+})
+
+PLAN_DISH_NAMES = frozenset({
+    "番茄炒蛋", "蒜蓉生菜", "青椒炒肉", "土豆炖肉", "南瓜炖菜",
+    "香煎土豆饼", "蒜香虾", "葱油鱼", "萝卜炖鱼", "海鲜炒饭",
+    "韭菜炒蛋", "芹菜炒肉", "茄子煲", "玉米炖鸡", "洋葱炒肉",
+    "清蒸石斑", "盐烤鲭鱼", "香煎金枪鱼", "辣炒八爪", "蒜蓉生蚝",
+    "龙虾浓汤", "蟹肉焗饭", "鲍鱼炖汤", "海胆蒸蛋", "酸辣鱼汤",
+    "香煎黑鲷", "烤鱿鱼", "河豚锅", "海鳗饭", "金枪鱼刺身",
+    "萝卜鱼汤", "玉米浓汤", "南瓜浓汤", "海带排骨汤", "鸡汤",
+    "羊奶浓汤", "菌菇汤", "潮姜鱼汤", "雾菇汤", "番茄鱼汤",
+    "莲藕汤", "山药鸡汤",
+    "白米饭", "糯米饭", "鱼片粥", "南瓜粥", "海鲜面",
+    "葱油面", "番茄面", "蟹肉饭", "烤饭团", "玉米饭",
+    "鱼汤面", "肉末面", "海胆饭",
+    "苹果派", "南瓜派", "椰奶布丁", "芒果布丁", "蓝莓蛋糕",
+    "柠檬蛋糕", "可可饼干", "糯米团", "蜂蜜面包", "橘子挞",
+    "葡萄干面包", "樱桃派", "红豆糕", "蜂蜜蛋糕",
+})
 
 
 def merge_catalog(crops, sea_catch, livestock, hearth_recipes, craft_items, kitchen_dishes):
