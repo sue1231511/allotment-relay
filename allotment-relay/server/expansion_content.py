@@ -130,6 +130,14 @@ PROCESSED_ITEMS = {
     "drink_fog_port": {"name": "雾港热朗姆", "emoji": "☕", "sell": 28},
     "drink_sea_lime": {"name": "海涯青柠汽", "emoji": "🥤", "sell": 17},
     "drink_peat_tea": {"name": "岸灶麦茶", "emoji": "🍵", "sell": 16},
+    "drink_pomelo_tea": {"name": "柚子茶", "emoji": "🍵", "sell": 20},
+    "drink_lemon_water": {"name": "柠檬水", "emoji": "🍋", "sell": 15},
+    "drink_coffee": {"name": "手冲咖啡", "emoji": "☕", "sell": 26},
+    "drink_cocoa": {"name": "热可可", "emoji": "🍫", "sell": 24},
+    "ash_fert": {"name": "病株灰肥", "emoji": "🪵", "sell": 9},
+    "wreck_scrap": {"name": "潮骸残件", "emoji": "🪵", "sell": 16},
+    "craft_gyotaku": {"name": "鱼拓", "emoji": "🐟", "sell": 28},
+    "craft_boat_model": {"name": "船模", "emoji": "⛵", "sell": 42},
 }
 
 
