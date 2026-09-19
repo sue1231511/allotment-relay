@@ -132,6 +132,8 @@ PROCESSED_ITEMS = {
     "proc_tea_leaf": {"name": "茶叶", "emoji": "🍵", "sell": 24},
     "proc_nori": {"name": "海苔片", "emoji": "🌿", "sell": 15},
     "proc_pickling_brine": {"name": "腌卤", "emoji": "🫙", "sell": 12},
+    "proc_candied_fruit": {"name": "糖渍果", "emoji": "🍑", "sell": 26},
+    "proc_fruit_vinegar": {"name": "果醋", "emoji": "🫙", "sell": 22},
     "drink_mist_pea_tea": {"name": "雾豆花青茶", "emoji": "🍵", "sell": 18},
     "drink_brine_sour": {"name": "卤边酸汽", "emoji": "🥤", "sell": 16},
     "drink_ginger_highball": {"name": "潮姜嗨棒", "emoji": "🥃", "sell": 24},
