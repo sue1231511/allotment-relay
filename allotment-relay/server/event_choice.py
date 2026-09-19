@@ -13,7 +13,7 @@ from . import db
 CHOICES: dict[str, dict[str, Any]] = {
     "bird_peck": {"via": "份地田间事件", "opts": ("不管", "补种"), "owned": False},
     "line_slip": {"via": "海边再钓", "opts": ("再钓", "换饵"), "owned": False},
-    "humid_soft": {"via": "小屋杂务", "opts": ("晒晒", "不管", "请匠"), "owned": False},
+    "humid_soft": {"via": "小屋杂务", "opts": ("晾晒", "不管", "请匠"), "owned": False},
     "stove_stubborn": {"via": "小屋灶台", "opts": ("清灰", "硬烧", "不管"), "owned": False},
     "barn_fuss": {"via": "畜栏闹脾气", "opts": ("哄", "关栏", "不管"), "owned": False},
     "line_tangle": {"via": "渔具栏", "opts": ("解开", "剪断", "不管"), "owned": False},
