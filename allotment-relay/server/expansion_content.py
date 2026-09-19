@@ -77,6 +77,14 @@ EXTRA_FISH = {
     "coelacanth": {"name": "腔棘鱼", "emoji": "🐟", "sell": 88, "tides": ["ebb"], "zones": ["deep"], "rarity": 6, "pen": False},
     "reef_shark": {"name": "礁鲨", "emoji": "🦈", "sell": 52, "tides": ["flood"], "zones": ["far", "deep"], "rarity": 5, "pen": False},
     "sea_bass": {"name": "海鲈", "emoji": "🐟", "sell": 27, "tides": ["ebb", "slack"], "zones": ["near"], "rarity": 2, "pen": True, "grow": 520, "stock_tickets": 15, "feed_item": "compost", "feed_qty": 1},
+    "needlefish": {"name": "针鱼", "emoji": "🐟", "sell": 18, "tides": ["ebb", "slack"], "zones": ["shore"], "rarity": 1, "pen": False},
+    "mudskipper": {"name": "弹涂鱼", "emoji": "🐟", "sell": 16, "tides": ["ebb"], "zones": ["shore"], "rarity": 1, "pen": False},
+    "horse_mackerel": {"name": "竹荚鱼", "emoji": "🐟", "sell": 24, "tides": ["flood", "slack"], "zones": ["near"], "rarity": 2, "pen": True, "grow": 480, "stock_tickets": 12, "feed_item": "crop_kelp", "feed_qty": 1},
+    "black_seabream": {"name": "黑鲲", "emoji": "🐟", "sell": 34, "tides": ["flood"], "zones": ["near", "far"], "rarity": 3, "pen": False},
+    "hairtail": {"name": "带鱼", "emoji": "🐟", "sell": 36, "tides": ["ebb", "flood"], "zones": ["far"], "rarity": 3, "pen": False},
+    "skipjack": {"name": "鳇鱼", "emoji": "🐟", "sell": 42, "tides": ["flood"], "zones": ["far", "deep"], "rarity": 4, "pen": False},
+    "angler": {"name": "鬃鰰", "emoji": "🐡", "sell": 58, "tides": ["ebb"], "zones": ["deep"], "rarity": 5, "pen": False},
+    "fogfin": {"name": "雾鳍", "emoji": "🐟", "sell": 72, "tides": ["slack", "flood"], "zones": ["deep"], "rarity": 6, "pen": False},
 }
 
 EXTRA_LIVESTOCK = {
