@@ -27,7 +27,22 @@ def test_catalog_trees_craft_collections():
     assert "craft_boat_model" in keys
     assert "pomelo_tea" in RECIPES
     assert "lemon_water" in RECIPES
+    assert "mint_tea" in RECIPES
+    assert "pear_soup" in RECIPES
+    assert len(RECIPES) >= 20
     assert "病株灰肥" in ITEM_NAMES.get("ash_fert", "")
+    assert "craft_shell_case" in CRAFT_ITEMS
+    assert "craft_seed_box" in CRAFT_ITEMS
+    assert "shell_case" in CRAFT_RECIPES
+    assert "seed_box" in CRAFT_RECIPES
+    assert "贝壳柜" in ITEM_NAMES.get("craft_shell_case", "")
+    assert "苹果酒" in {r.get("name") for r in HEARTH_RECIPES.values()}
+    keys = {e[0] for e in ENTRIES}
+    assert "craft_gyotaku" in keys
+    assert "craft_boat_model" in keys
+    assert "craft_shell_case" in keys
+    assert "craft_seed_box" in keys
+    assert "wreck_scrap" in keys
 
 
 def test_docs_name_partner_boat():
