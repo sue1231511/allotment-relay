@@ -1121,10 +1121,15 @@ async def _resolve_hail(
         if random.random() < 0.45:
             table = voyage_loot_table(route, rarity_bonus=await _hook_rarity_bonus(conn, s["id"]))
             extra_fish = random.choice(table)
-            await db.add_item(conn, s["id"], extra_fish, 1)
-            if extra_fish.startswith("fish_"):
-                fish_loot.append(extra_fish)
-            loot_lines.append(f"缴获 {ITEM_NAMES.get(extra_fish, extra_fish)} x1")
+            from . import fish_ban as fish_ban_mod
+            ban_msg = await fish_ban_mod.maybe_release_item(conn, s["id"], extra_fish)
+            if ban_msg:
+                loot_lines.append(ban_msg)
+            else:
+                await db.add_item(conn, s["id"], extra_fish, 1)
+                if extra_fish.startswith("fish_"):
+                    fish_loot.append(extra_fish)
+                loot_lines.append(f"缴获 {ITEM_NAMES.get(extra_fish, extra_fish)} x1")
         await survival_bump_safe(conn, s["id"], standing=3, mist_wit=2)
         msg = flavor.fill(flavor.pick(flavor.HAIL_FIGHT_WIN), who=who, n=bonus)
         if loot_lines:
