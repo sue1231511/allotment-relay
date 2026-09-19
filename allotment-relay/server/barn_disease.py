@@ -118,6 +118,7 @@ BARN_AILMENT_ALIASES = {
     "暑渴": "heat_thirst",
     "冻蹄": "frost_bite",
     "畜瘟": "murrain",
+    "难产": "dystocia",
 }
 
 
