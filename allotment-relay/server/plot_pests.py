@@ -195,11 +195,16 @@ async def handle(
                 "UPDATE parcels SET soil_fertility=MAX(15, COALESCE(soil_fertility,70)-5) WHERE id=?",
                 (plot["id"],),
             )
-        return f"{label} 拔除病株，{name}没了，{meta['name']}也断了"
+        luck = ""
+        from . import event_opportunity as opp_mod
+        note = await opp_mod.maybe_blight_pull_luck(conn, sid, key)
+        if note:
+            luck = f" · {note}"
+        return f"{label} 拔除病株，{name}没了，{meta['name']}也断了{luck}"
 
     raise ValueError(
         "虫害处置：手工 · 施药 · 拔除 · 不管"
-        "（温室漏风：补网|通风|不管。例 plot_ops 虫害 1 施药）"
+        "（温室漏风：补网|通风|不管。地陷：填土|围起来|不管。例 plot_ops 虫害 1 施药）"
     )
 
 
