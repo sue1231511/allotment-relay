@@ -19,7 +19,7 @@ NAMED_EVENTS: tuple[dict[str, str], ...] = (
     {"key": "line_tangle", "tier": tiers_mod.TIER_LIGHT, "name": "鱼线打结", "mod": "light_bad_events"},
     {"key": "net_weed", "tier": tiers_mod.TIER_LIGHT, "name": "渔网挂水草", "mod": "light_bad_events"},
     {"key": "shovel_dull", "tier": tiers_mod.TIER_LIGHT, "name": "铲刃发钝", "mod": "light_bad_events"},
-    {"key": "probe_sand", "tier": tiers_mod.TIER_LIGHT, "name": "沙垮回填", "mod": "light_bad_events"},
+    {"key": "probe_sand", "tier": tiers_mod.TIER_LIGHT, "name": "沙坍回填", "mod": "light_bad_events"},
     {"key": "frost_chore", "tier": tiers_mod.TIER_LIGHT, "name": "冰箱结霜", "mod": "hut_chores"},
     {"key": "door_hinge", "tier": tiers_mod.TIER_LIGHT, "name": "门轴坏", "mod": "hut_chores"},
     {"key": "roof_drip", "tier": tiers_mod.TIER_LIGHT, "name": "屋顶渗水", "mod": "hut_chores"},
