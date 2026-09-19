@@ -110,6 +110,10 @@ def is_notable(item: str) -> bool:
         return int(meta.get("rarity") or 0) >= 4
     if key.startswith("shell_shine_"):
         return True
+    if key.startswith("dish_"):
+        from .kitchen_special import SPECIAL_DISH_KEYS
+
+        return any(f"dish_{k}_" in key or key.startswith(f"dish_{k}_") for k in SPECIAL_DISH_KEYS)
     return False
 
 
