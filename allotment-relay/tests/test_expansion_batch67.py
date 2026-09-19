@@ -101,3 +101,45 @@ def test_mint_spread_and_leaf_water():
             "spinach",
         )
     assert dry > wet
+
+    async def run():
+        from server import db
+
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            with patch.object(db, "DATA_DIR", folder), patch.object(db, "DB_PATH", folder / "relay.db"):
+                await db.init_db()
+                key = await db.create_api_key("m@example.com")
+                row = await db.get_key_row(key)
+                await db.enroll_steward(row["id"], "薄荷", "", "naturalist", "")
+                s = await db.get_steward_by_key_id(row["id"])
+                async with db.connect() as conn:
+                    cur = await conn.execute(
+                        "SELECT id, slot FROM parcels WHERE steward_id=? AND orchard=0 AND greenhouse=0 ORDER BY slot LIMIT 2",
+                        (s["id"],),
+                    )
+                    plots = await cur.fetchall()
+                    pid, slot = plots[0]
+                    pid2, slot2 = plots[1]
+                    await conn.execute(
+                        "UPDATE parcels SET crop='garden_mint', slot=? WHERE id=?",
+                        (slot, pid),
+                    )
+                    await conn.execute(
+                        "UPDATE parcels SET crop=NULL WHERE id=?",
+                        (pid2,),
+                    )
+                    plot = {
+                        "id": pid, "slot": slot, "crop": "garden_mint",
+                        "orchard": 0, "greenhouse": 0,
+                    }
+                    with patch("server.farming.random.random", lambda: 0.01):
+                        msg = await farming.maybe_mint_spread(conn, s["id"], plot)
+                    assert msg and "薄荷窜" in msg
+                    cur = await conn.execute(
+                        "SELECT crop FROM parcels WHERE id=?", (pid2,)
+                    )
+                    assert (await cur.fetchone())[0] == "garden_mint"
+                    await conn.commit()
+
+    asyncio.run(run())
