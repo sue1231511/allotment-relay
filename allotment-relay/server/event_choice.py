@@ -201,3 +201,88 @@ async def _clear(conn, steward_id: int, event_key: str) -> None:
         "DELETE FROM steward_event_choices WHERE steward_id=? AND event_key=?",
         (int(steward_id), event_key),
     )
+
+
+async def resolve(conn, steward: dict[str, Any], event_key: str, act: str) -> str:
+    sid = int(steward["id"])
+    spec = CHOICES.get(event_key)
+    if not spec:
+        raise ValueError(f"没有这件事的选项：{event_key}")
+    opts = spec["opts"]
+    if spec.get("owned"):
+        return f"{event_key} 走原入口：{spec['via']}（{'｜'.join(opts)}）"
+    await ensure_table(conn)
+    row = await (await conn.execute(
+        "SELECT payload_json FROM steward_event_choices WHERE steward_id=? AND event_key=?",
+        (sid, event_key),
+    )).fetchone()
+    if not row:
+        raise ValueError(f"没有待选的{spec.get('via') or event_key}。先碰上这件事。")
+    act = (act or "").strip()
+    aliases = {
+        "ignore": "不管", "wait": "不管", "skip": "不管",
+        "vet": "兽医", "self": "自己处理", "delay": "拖着",
+        "soothe": "哄", "pen": "关栏",
+        "clean": "清灰", "force": "硬烧",
+        "dry": "晾晒", "smith": "请匠",
+        "fix": "修", "return": "返航", "push": "硬撑",
+        "ice": "用盐冰", "basin": "接盆",
+        "iso": "隔离", "scrap": "捞残骸",
+        "reseed": "补种", "whet": "磨刃",
+    }
+    act = aliases.get(act, act)
+    if act not in opts:
+        raise ValueError(f"{spec.get('via') or event_key} 选项：{'｜'.join(opts)}")
+
+    tickets = int(TICKET_COSTS.get(act) or 0)
+    if tickets:
+        have = int(steward.get("tickets") or 0)
+        if have < tickets:
+            raise ValueError(f"{act}要 {tickets} 票，你只有 {have}")
+        await conn.execute(
+            "UPDATE stewards SET tickets=tickets-? WHERE id=?",
+            (tickets, sid),
+        )
+        steward["tickets"] = have - tickets
+
+    from . import light_bad_events as light_mod
+    from . import event_catalog as evcat_mod
+
+    note = ""
+    if event_key == "barn_fuss":
+        if act == "哄":
+            await evcat_mod.take_barn_fuss(conn, sid)
+            note = "栏里消停了，下次收成不再少一把。"
+        elif act == "关栏":
+            await light_mod.set_flag(conn, sid, "barn_fuss_penned")
+            note = "关起来了。收成仍少一把，疫病难窜栏。"
+        else:
+            note = "不管它，下次 collect 仍少一把。"
+    elif event_key in ("hold_leak", "hold_break"):
+        if act == "修":
+            await conn.execute(
+                "UPDATE steward_boat_parts SET durability=MIN(durability+40, max_dur) "
+                "WHERE steward_id=? AND part_key='hold'",
+                (sid,),
+            )
+            note = "鱼舱补上了。"
+        elif act == "返航":
+            await light_mod.set_flag(conn, sid, "hold_return")
+            note = "记下早归。到点少装一舱。"
+        else:
+            await light_mod.set_flag(conn, sid, "hold_hard")
+            note = "硬撑：舱低故障更高，可继续出航。"
+    elif event_key in ("epidemic", "murrain", "murrain_week", "dystocia"):
+        if act == "兽医":
+            from . import barn_disease as dis_mod
+
+            cur = await conn.execute(
+                "SELECT slot FROM barn_animals WHERE steward_id=? AND species IS NOT NULL",
+                (sid,),
+            )
+            for (slot,) in await cur.fetchall():
+                await dis_mod.clear_ailment(conn, sid, int(slot))
+            note = "霍衡走了一圈，栏里病清了。"
+        elif act == "隔离":
+            await light_mod.set_flag(conn, sid, "barn_isolated")
+            note = "病畜隔开了，未病的先保住。"
