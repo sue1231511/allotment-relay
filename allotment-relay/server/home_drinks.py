@@ -89,6 +89,66 @@ RECIPES: dict[str, dict] = {
         "out": "drink_cocoa",
         "energy": 7,
     },
+    "mint_tea": {
+        "label": "薄荷茶",
+        "ings": [("wild_mint", 1), ("proc_tea_leaf", 1)],
+        "out": "drink_mint_tea",
+        "energy": 5,
+    },
+    "ginger_tea": {
+        "label": "姜茶",
+        "ings": [("crop_tide_ginger", 1), ("proc_tea_leaf", 1)],
+        "out": "drink_ginger_tea",
+        "energy": 6,
+    },
+    "fruit_tea": {
+        "label": "果茶",
+        "ings": [("crop_apple", 1), ("proc_tea_leaf", 1)],
+        "out": "drink_fruit_tea",
+        "energy": 6,
+    },
+    "coconut_milk": {
+        "label": "椰奶",
+        "ings": [("crop_coconut", 1), ("milk", 1)],
+        "out": "drink_coconut_milk",
+        "energy": 7,
+    },
+    "soy_milk": {
+        "label": "豆浆",
+        "ings": [("crop_soybean", 1), ("quarry_salt", 1)],
+        "out": "drink_soy_milk",
+        "energy": 5,
+    },
+    "apple_juice": {
+        "label": "苹果汁",
+        "ings": [("crop_apple", 1), ("honey", 1)],
+        "out": "drink_apple_juice",
+        "energy": 5,
+    },
+    "grape_juice": {
+        "label": "葡萄汁",
+        "ings": [("crop_grape", 1), ("honey", 1)],
+        "out": "drink_grape_juice",
+        "energy": 5,
+    },
+    "pomegranate_juice": {
+        "label": "石榴汁",
+        "ings": [("crop_pomegranate", 1), ("honey", 1)],
+        "out": "drink_pomegranate_juice",
+        "energy": 6,
+    },
+    "honey_water": {
+        "label": "蜂蜜水",
+        "ings": [("honey", 1), ("quarry_salt", 1)],
+        "out": "drink_honey_water",
+        "energy": 4,
+    },
+    "pear_soup": {
+        "label": "梨汤",
+        "ings": [("crop_pear", 1), ("honey", 1)],
+        "out": "drink_pear_soup",
+        "energy": 6,
+    },
 }
 
 
