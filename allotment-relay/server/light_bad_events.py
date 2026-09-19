@@ -13,6 +13,7 @@ DEBUFF_SYSTEM: dict[str, str] = {
     "net_weed": "beach",
     "shovel_dull": "beach",
     "probe_sand": "beach",
+    "barn_fuss": "barn",
 }
 
 
