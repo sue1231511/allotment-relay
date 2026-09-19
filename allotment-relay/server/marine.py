@@ -1211,6 +1211,7 @@ async def _resolve_voyage(
     if enc_payload.get("early_return"):
         cargo = max(1, cargo - 1)
     from . import event_opportunity as opp_mod
+    from . import neighbor_boat_share as share_mod
     opp_line = await opp_mod.maybe_voyage_hard_luck(conn, s, enc_payload)
     fish_loot: list[str] = []
     loot_table = voyage_loot_table(voyage["route"], rarity_bonus=await _hook_rarity_bonus(conn, s["id"]))
