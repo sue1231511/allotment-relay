@@ -123,7 +123,7 @@ def catalog_text() -> str:
             lines.append(
                 f"  {meta['name']} {meta['cost']} 票 — visit_ops 服务 {meta['name']}"
             )
-    lines.append("例子：visit_ops 服务 · 服务 磨刀 · 服务 鱼处理 鲛鱼 · 服务 动物清洁 1")
+    lines.append("例子：visit_ops 服务 · 服务 磨刀 · 服务 鱼处理 鲭鱼 · 服务 动物清洁 1")
     return "\n".join(lines)
 
 
