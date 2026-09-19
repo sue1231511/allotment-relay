@@ -10,6 +10,7 @@ from typing import Any
 from . import bad_event_tiers as tiers_mod
 from . import db
 
+# key -> (via 人类入口, 选项…)
 CHOICES: dict[str, dict[str, Any]] = {
     "bird_peck": {"via": "份地田间事件", "opts": ("不管", "补种"), "owned": False},
     "line_slip": {"via": "海边再钓", "opts": ("再钓", "换饵"), "owned": False},
