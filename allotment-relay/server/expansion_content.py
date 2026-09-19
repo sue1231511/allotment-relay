@@ -319,6 +319,26 @@ EXTRA_KITCHEN_DISHES = {
         "ings": ["crop_wax_gourd", "duck_egg", "crop_garlic"],
         "base_sell": 62, "energy": 28, "tags": ["home"],
     },
+    "tide_bone_soup": {
+        "name": "潮骨汤", "emoji": "🍲",
+        "ings": ["quarry_marrow", "fish_codling", "crop_tide_ginger"],
+        "base_sell": 96, "energy": 36, "tags": ["sea", "special"],
+    },
+    "moon_bean_cake": {
+        "name": "月豆糕", "emoji": "🍡",
+        "ings": ["crop_moon_bean", "proc_glutinous_flour", "honey"],
+        "base_sell": 68, "energy": 26, "tags": ["special", "sweet"],
+    },
+    "red_algae_soup": {
+        "name": "红藻羹", "emoji": "🥣",
+        "ings": ["crop_red_algae", "crop_ginger", "proc_salt"],
+        "base_sell": 58, "energy": 24, "tags": ["sea", "special"],
+    },
+    "night_lantern_tea": {
+        "name": "夜灯茶", "emoji": "🏮",
+        "ings": ["fish_lanternfish", "proc_tea_leaf", "crop_lamp_sprout"],
+        "base_sell": 86, "energy": 22, "tags": ["special", "drink"],
+    },
 }
 
 
