@@ -116,3 +116,30 @@ async def share_founder_id(conn, steward_id: int) -> int | None:
 def _share_cost(boat_key: str, n: int) -> int:
     cost = int(_boat_meta(boat_key)["cost"])
     return max(1, math.ceil(cost / max(2, n)))
+
+
+async def open_share(conn, founder: dict, boat_token: str) -> str:
+    await ensure_tables(conn)
+    if await _member_share(conn, founder["id"]):
+        raise ValueError("你已经在一艘合伙船里。alliance_ops 合伙 状态")
+    boat_key = _resolve_boat(boat_token)
+    await conn.execute(
+        """
+        INSERT INTO neighbor_boat_share (founder_id, boat_key, status, created_at)
+        VALUES (?,?, 'open', ?)
+        """,
+        (founder["id"], boat_key, db.now()),
+    )
+    cur = await conn.execute("SELECT last_insert_rowid()")
+    share_id = int((await cur.fetchone())[0])
+    await conn.execute(
+        "INSERT INTO neighbor_boat_share_member (share_id, steward_id, paid) VALUES (?,?,0)",
+        (share_id, founder["id"]),
+    )
+    name = _boat_meta(boat_key)["name"]
+    each = _share_cost(boat_key, 2)
+    return (
+        f"合伙开了：{name}。再找 1～2 人 alliance_ops 合伙 入 {founder['name']}。"
+        f"满 2 人各付 {each} 票才下水和。协作要 ≥{RAPPORT_SHARE}。"
+        f"不是借船（借船是把自己的船借三天）。"
+    )
