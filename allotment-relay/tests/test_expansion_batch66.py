@@ -59,8 +59,11 @@ def test_docs_name_partner_boat():
         encoding="utf-8"
     )
     assert "合伙" in manual
+    assert "alliance_ops" not in manual
     track = (root.parent / "docs/TIDE_FULL_EXPANSION.md").read_text(encoding="utf-8")
     assert "合伙船" in track and "⬜ | 合伙船" not in track
+    assert "饮品 15～20" in track and "✅ | 饮品" in track
+    assert "贝壳柜" in track
 
 
 def test_partner_boat_open_join_payout_repair():
