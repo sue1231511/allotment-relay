@@ -1305,8 +1305,10 @@ async def _resolve_voyage(
         conn, s["id"],
         f"归港 {route['label']}{'（折返）' if failed else ''} · {wear_line or '—'}",
     )
-    if s.get("boat_damaged") and not loan_lender_id:
+    if s.get("boat_damaged") and not loan_lender_id and not share_founder_id:
         msg += "（船损，voyage_ops repair）"
+    elif failed and share_founder_id and share_founder_id != s["id"]:
+        msg += "（合伙船折返，磨损记在发起人；voyage_ops repair 平摊）"
     elif failed and loan_lender_id:
         msg += "（借船折返，磨损记在船主）"
 
