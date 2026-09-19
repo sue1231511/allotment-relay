@@ -56,14 +56,14 @@ def _resolve_boat(token: str) -> str:
     raw = (token or "").strip()
     if raw in BOATS:
         if raw not in SHARE_BOATS:
-            raise ValueError("合伙只合买大船（切波艇/近海帆擎/漂航船/延绳船），舢板自己买")
+            raise ValueError("合伙只合买大船（切波艇/近海帆撬/漂航船/延绳船），舢板自己买")
         return raw
     for key, meta in BOATS.items():
         if meta["name"] == raw or raw in meta["name"]:
             if key not in SHARE_BOATS:
-                raise ValueError("合伙只合买大船（切波艇/近海帆擎/漂航船/延绳船），舢板自己买")
+                raise ValueError("合伙只合买大船（切波艇/近海帆撬/漂航船/延绳船），舢板自己买")
             return key
-    raise ValueError("船型：切波艇 · 近海帆擎 · 漂航船 · 延绳船（alliance_ops 合伙 开 漂航船）")
+    raise ValueError("船型：切波艇 · 近海帆撬 · 漂航船 · 延绳船（alliance_ops 合伙 开 漂航船）")
 
 
 async def _member_share(conn, steward_id: int) -> dict | None:
