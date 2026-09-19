@@ -2918,8 +2918,8 @@ async def _tote_one(s: dict, command: str) -> str:
             rows = await ledger_mod.stories_for(conn, s["id"], item_key)
         if not rows:
             if token:
-                return f"{item_label(item_key)}没有履历。戒、稀有鱼、崖上稀矿、工坊出品才会记。"
-            return "行囊里还没有带履历的东西。戒、稀有鱼、崖上稀矿、工坊出品才会记。甘蓝没有前科。"
+                return f"{item_label(item_key)}没有履历。戒、稀有鱼、崖上稀矿、工坊出品、鱼拓船模邮票签名遗物、特殊料理才会记。"
+            return "行囊里还没有带履历的东西。戒、稀有鱼、崖上稀矿、工坊出品、鱼拓船模邮票签名遗物、特殊料理才会记。甘蓝没有前科。"
         lines = ["物品履历（不是成就，也不加数值）："]
         grouped: dict[str, list[list[str]]] = {}
         for row in rows:
