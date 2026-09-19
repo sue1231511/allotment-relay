@@ -921,6 +921,18 @@ CRAFT_RECIPES = {
         "seconds": 600, "energy": 6,
         "hint": "不是潮誓戒。海边 订婚 寻信 得潮信贝，再打。现货 visit_ops tt buy 订婚戒。marriage_ops 订婚 信物 登记",
     },
+    "gyotaku": {
+        "name": "鱼拓", "emoji": "🐟", "out": "craft_gyotaku", "qty": 1,
+        "need": {"fish_sardine": 1, "craft_timber": 1},
+        "seconds": 720, "energy": 5,
+        "hint": "沙丁印一张挂墙上。岛收集簿会点亮。不是卖鱼",
+    },
+    "boat_model": {
+        "name": "船模", "emoji": "⛵", "out": "craft_boat_model", "qty": 1,
+        "need": {"craft_timber": 2, "craft_copper_nails": 1, "wreck_scrap": 1},
+        "seconds": 1080, "energy": 6,
+        "hint": "风暴捞到的潮骸残件+岸木钉成小船。岛收集簿会点亮",
+    },
 }
 
 # 陈列柜：捐出指定货，换称呼和/或小屋装饰。不印钞
