@@ -499,6 +499,10 @@ async def barn_ops(key_id: int, command: str) -> str:
             qty = temper_mod.adjust_yield(row, qty)
             from . import barn_disease as barn_disease_mod
             qty = barn_disease_mod.yield_qty(row, qty)
+            from . import event_catalog as evcat_mod
+
+            if await evcat_mod.take_barn_fuss(conn, s["id"]):
+                qty = max(1, qty - 1)
             extra = ""
             if meta.get("hive") and random.random() < 0.2:
                 qty += 1
