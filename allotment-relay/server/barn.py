@@ -543,6 +543,16 @@ async def barn_ops(key_id: int, command: str) -> str:
         if ill:
             bits.append(ill)
             bits.append("人的病去 visit_ops clinic treat")
+        from . import event_catalog as evcat_mod
+
+        async with db.connect() as conn:
+            fuss = await evcat_mod.roll_barn_fuss(conn, s["id"])
+            epi = await evcat_mod.roll_epidemic(conn, s["id"])
+            await conn.commit()
+        if fuss:
+            bits.append(fuss)
+        if epi:
+            bits.append(epi)
         return "\n".join(bits)
 
     if verb == "harvest":
