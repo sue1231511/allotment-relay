@@ -350,6 +350,86 @@ EXTRA_KITCHEN_DISHES = {
         "ings": ["fish_lanternfish", "proc_tea_leaf", "crop_lamp_sprout"],
         "base_sell": 86, "energy": 22, "tags": ["special", "drink"],
     },
+    "tomato_egg": {
+        "name": "番茄炒蛋", "emoji": "🍳",
+        "ings": ["crop_tomato", "egg", "crop_scallion"],
+        "base_sell": 38, "energy": 20, "tags": ["home"],
+    },
+    "garlic_lettuce": {
+        "name": "蒜蓉生菜", "emoji": "🥗",
+        "ings": ["crop_lettuce", "crop_garlic", "proc_salt"],
+        "base_sell": 36, "energy": 18, "tags": ["home", "leaf"],
+    },
+    "pepper_pork": {
+        "name": "青椒炒肉", "emoji": "🥩",
+        "ings": ["meat_pork", "crop_bell_pepper", "crop_garlic"],
+        "base_sell": 52, "energy": 26, "tags": ["home", "meat"],
+    },
+    "potato_pork_stew": {
+        "name": "土豆炖肉", "emoji": "🍲",
+        "ings": ["crop_potato", "meat_pork", "crop_onion"],
+        "base_sell": 54, "energy": 28, "tags": ["home", "meat"],
+    },
+    "pumpkin_stew": {
+        "name": "南瓜炖菜", "emoji": "🎃",
+        "ings": ["crop_pumpkin", "crop_carrot", "crop_onion"],
+        "base_sell": 48, "energy": 24, "tags": ["home"],
+    },
+    "potato_cake": {
+        "name": "香煎土豆饼", "emoji": "🥔",
+        "ings": ["crop_potato", "egg", "proc_flour"],
+        "base_sell": 40, "energy": 22, "tags": ["home", "snack"],
+    },
+    "garlic_shrimp": {
+        "name": "蒜香虾", "emoji": "🦐",
+        "ings": ["fish_glassshrimp", "crop_garlic", "crop_scallion"],
+        "base_sell": 58, "energy": 24, "tags": ["sea", "home"],
+    },
+    "scallion_oil_fish": {
+        "name": "葱油鱼", "emoji": "🐟",
+        "ings": ["fish_mullet", "crop_scallion", "proc_cooking_oil"],
+        "base_sell": 46, "energy": 24, "tags": ["sea", "home"],
+    },
+    "daikon_fish_stew": {
+        "name": "萝卜炖鱼", "emoji": "🍲",
+        "ings": ["crop_daikon", "fish_codling", "crop_ginger"],
+        "base_sell": 50, "energy": 26, "tags": ["sea", "home"],
+    },
+    "seafood_fried_rice": {
+        "name": "海鲜炒饭", "emoji": "🍚",
+        "ings": ["proc_rice", "fish_sardine", "egg"],
+        "base_sell": 48, "energy": 26, "tags": ["sea", "grain"],
+    },
+    "chive_egg": {
+        "name": "韭菜炒蛋", "emoji": "🍳",
+        "ings": ["crop_chives", "egg", "proc_salt"],
+        "base_sell": 34, "energy": 18, "tags": ["home"],
+    },
+    "celery_pork": {
+        "name": "芹菜炒肉", "emoji": "🥩",
+        "ings": ["crop_celery", "meat_pork", "crop_garlic"],
+        "base_sell": 50, "energy": 24, "tags": ["home", "meat"],
+    },
+    "eggplant_pot": {
+        "name": "茄子煲", "emoji": "🍆",
+        "ings": ["crop_eggplant", "crop_garlic", "proc_soy_milk"],
+        "base_sell": 44, "energy": 22, "tags": ["home"],
+    },
+    "corn_chicken": {
+        "name": "玉米炖鸡", "emoji": "🍲",
+        "ings": ["crop_corn", "meat_turkey", "crop_ginger"],
+        "base_sell": 56, "energy": 28, "tags": ["home", "meat"],
+    },
+    "onion_pork": {
+        "name": "洋葱炒肉", "emoji": "🥩",
+        "ings": ["crop_onion", "meat_pork", "proc_soy_milk"],
+        "base_sell": 50, "energy": 24, "tags": ["home", "meat"],
+    },
+    "steam_grouper": {
+        "name": "清蒸石斑", "emoji": "🐠",
+        "ings": ["fish_grouper", "crop_ginger", "crop_scallion"],
+        "base_sell": 78, "energy": 32, "tags": ["sea"],
+    },
 }
 
 
