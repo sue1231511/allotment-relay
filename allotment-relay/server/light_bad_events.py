@@ -118,7 +118,11 @@ async def roll_tend_glitch(conn, steward_id: int, plot: dict) -> str | None:
         tier = tiers_mod.roll_tier(weights=(0.35, 0.40, 0.20, 0.05))
         msg = "灶台不好点火：下次做饭多耗 1 精力（已记下，做一次饭就消）。"
         await set_debuff(conn, steward_id, "stove_stubborn", tier, msg)
-        return tiers_mod.tag(tier, msg)
+        from . import event_choice as choice_mod
+
+        extra = await choice_mod.offer(conn, steward_id, "stove_stubborn")
+        tagged = tiers_mod.tag(tier, msg)
+        return f"{tagged}\n{extra}" if extra else tagged
     if roll < 0.85:
         tier = tiers_mod.roll_tier(weights=(0.30, 0.45, 0.20, 0.05))
         msg = "潮气进棚，软装有发潮味：下次睡觉少回 3 精力（已记下，睡一次就消）。"
