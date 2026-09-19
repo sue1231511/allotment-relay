@@ -57,7 +57,7 @@ async def apply_on_eat(conn, steward_id: int, dish_key: str) -> str | None:
             "UPDATE stewards SET max_energy=MAX(20, max_energy-6) WHERE id=?",
             (steward_id,),
         )
-        return "雾茸汤下肚，雾智 +8，但两小时内精力上限 -6。"
+        return "雾菇汤下肚，雾智 +8，但两小时内精力上限 -6。"
     if kind == "lantern_raw":
         if random.random() < 0.18:
             from . import health as health_mod
