@@ -552,6 +552,8 @@ def harvest_pool(plot: dict[str, Any]) -> int:
         climate = world.field_climate_effect()
         if w == "gale" or climate in ("thunderstorm", "warm_rain", "spring_flood"):
             n = max(1, n - 1)
+    if crop == "coconut" and world.current_weather() == "gale":
+        n = max(n, int(CROPS.get("coconut", {}).get("yield") or 2) + (1 if plot.get("tended") else 0))
     return n
 
 
