@@ -257,3 +257,150 @@ async def join_share(conn, joiner: dict, founder_name: str) -> str:
         f"谁出航谁收渔获，同伴分票；修船费用平摊。"
         f"登记在 {founder['name']} 名下，不是借船。"
     )
+
+
+async def status_report(conn, steward_id: int) -> str:
+    await ensure_tables(conn)
+    row = await _member_share(conn, steward_id)
+    if not row:
+        return (
+            "没有合伙船。alliance_ops 合伙 开 漂航船 · 合伙 入 发起人名。"
+            "只合买大船；舢板自己 voyage buy。不是借船。"
+        )
+    members = await _members(conn, row["id"])
+    name = _boat_meta(row["boat_key"])["name"]
+    each = _share_cost(row["boat_key"], max(2, len(members)))
+    lines = [
+        f"合伙{name} · {row['status']} · {len(members)}/{MAX_MEMBERS} 人",
+        "船员：" + "、".join(f"{m['name']}(已付{m['paid']})" for m in members),
+    ]
+    if row["status"] == "open":
+        lines.append(f"再来人 合伙 入；满 2 人各付 {each} 票下水")
+    else:
+        lines.append("出航用这艘（比自己舢板大就走伙船）。修船 voyage repair 会平摊。")
+    lines.append("散伙：alliance_ops 合伙 散")
+    return "\n".join(lines)
+
+
+async def dissolve(conn, steward: dict) -> str:
+    await ensure_tables(conn)
+    row = await _member_share(conn, steward["id"])
+    if not row:
+        raise ValueError("没有合伙可散")
+    if row["founder_id"] != steward["id"]:
+        raise ValueError("只有发起人能散伙")
+    members = await _members(conn, row["id"])
+    name = _boat_meta(row["boat_key"])["name"]
+    if row["status"] == "active":
+        back = int(_boat_meta(row["boat_key"])["cost"]) // 2
+        cut = back // max(1, len(members))
+        for m in members:
+            await conn.execute(
+                "UPDATE stewards SET tickets=tickets+? WHERE id=?",
+                (cut, m["id"]),
+            )
+        await conn.execute(
+            "UPDATE stewards SET boat_key='' WHERE id=? AND boat_key=?",
+            (row["founder_id"], row["boat_key"]),
+        )
+        note = f"船按半价拆了，每人回 {cut} 票"
+    else:
+        for m in members:
+            if m["paid"]:
+                await conn.execute(
+                    "UPDATE stewards SET tickets=tickets+? WHERE id=?",
+                    (m["paid"], m["id"]),
+                )
+        note = "还没下水，已付的退回"
+    await conn.execute("DELETE FROM neighbor_boat_share_member WHERE share_id=?", (row["id"],))
+    await conn.execute("DELETE FROM neighbor_boat_share WHERE id=?", (row["id"],))
+    return f"合伙{name}散了。{note}"
+
+
+async def split_repair(conn, payer_id: int, cost: int) -> tuple[int, str]:
+    """修船时平摊。返回 (payer 实际扣的票, 说明)。"""
+    row = await _member_share(conn, payer_id)
+    if not row or row["status"] != "active":
+        return cost, ""
+    members = await _members(conn, row["id"])
+    if len(members) < 2:
+        return cost, ""
+    each = max(1, math.ceil(cost / len(members)))
+    charged = 0
+    names = []
+    for m in members:
+        cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (m["id"],))
+        have = int((await cur.fetchone())[0])
+        take = min(each, have)
+        if take:
+            await conn.execute(
+                "UPDATE stewards SET tickets=tickets-? WHERE id=?",
+                (take, m["id"]),
+            )
+            charged += take
+            names.append(f"{m['name']}-{take}")
+    leftover = max(0, cost - charged)
+    if leftover:
+        await conn.execute(
+            "UPDATE stewards SET tickets=MAX(0, tickets-?) WHERE id=?",
+            (leftover, payer_id),
+        )
+        charged += leftover
+    return 0, f"合伙平摊（{'，'.join(names)}）"
+
+
+async def after_voyage_payout(conn, voyager: dict, fish_loot: list[str]) -> str | None:
+    row = await _member_share(conn, voyager["id"])
+    if not row or row["status"] != "active":
+        return None
+    members = [m for m in await _members(conn, row["id"]) if m["id"] != voyager["id"]]
+    if not members:
+        return None
+    from .catalog import ITEM_PRICES
+    value = 0
+    for item in fish_loot:
+        value += int(ITEM_PRICES.get(item) or 12)
+    cut = max(8, value // max(1, len(members) + 1))
+    bits = []
+    for m in members:
+        await conn.execute(
+            "UPDATE stewards SET tickets=tickets+? WHERE id=?",
+            (cut, m["id"]),
+        )
+        bits.append(f"{m['name']}+{cut}票")
+    return "合伙分红：" + "，".join(bits)
+
+
+async def dispatch(conn, steward: dict, parts: list[str]) -> str:
+    await ensure_tables(conn)
+    if not parts:
+        return (
+            "合伙 开 漂航船 · 合伙 入 发起人名 · 合伙 状态 · 合伙 散\n"
+            "多人合买大船，收益和维修共同承担。不是借船。"
+        )
+    verb = parts[0].lower()
+    if verb in ("开", "open", "start"):
+        if len(parts) < 2:
+            raise ValueError("用法: 合伙 开 漂航船")
+        return await open_share(conn, steward, parts[1])
+    if verb in ("入", "join"):
+        if len(parts) < 2:
+            raise ValueError("用法: 合伙 入 发起人名")
+        return await join_share(conn, steward, parts[1])
+    if verb in ("状态", "status"):
+        return await status_report(conn, steward["id"])
+    if verb in ("散", "散伙", "dissolve"):
+        return await dissolve(conn, steward)
+    raise ValueError("合伙 开 漂航船 · 入 名字 · 状态 · 散")
+
+
+async def boat_share_ops(key_id: int, command: str) -> str:
+    parts = command.strip().split()
+    if parts and parts[0].lower() in ("合伙", "share", "合买"):
+        parts = parts[1:]
+    read_ok = not parts or parts[0].lower() in ("状态", "status")
+    s = await require_steward(key_id, exempt_duty=read_ok)
+    async with db.connect() as conn:
+        msg = await dispatch(conn, s, parts)
+        await conn.commit()
+    return msg
