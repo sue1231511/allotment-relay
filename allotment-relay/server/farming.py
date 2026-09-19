@@ -278,6 +278,9 @@ def effective_grow(plot: dict[str, Any], crop_key: str | None = None) -> int:
         climate = world.field_climate_effect()
         if climate in ("frost", "snowbound"):
             mult *= 1.28
+    if crop == "coconut" and not plot.get("greenhouse"):
+        if world.current_weather() == "gale":
+            mult *= 0.94
     return max(60, int(base * mult))
 
 
