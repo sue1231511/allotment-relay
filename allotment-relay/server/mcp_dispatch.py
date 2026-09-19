@@ -427,6 +427,16 @@ async def steward_ops(
         async with db.connect() as conn:
             return await tier_store_mod.format_report(conn, s["id"])
 
+    if verb in ("灾选", "待选", "eventchoice", "choices"):
+        from . import event_choice as choice_mod
+        s = await game.require_steward(key_id, exempt_duty=True)
+        rest = command.strip().split(maxsplit=1)
+        tail = rest[1] if len(rest) > 1 else ""
+        async with db.connect() as conn:
+            msg = await choice_mod.handle(conn, s, tail)
+            await conn.commit()
+        return msg
+
     raise ValueError(f"未知 steward 指令: {command}\n{STEWARD_HELP}")
 
 
