@@ -134,7 +134,7 @@ async def status_report(conn, steward_id: int) -> str:
     rows = await cur.fetchall()
     if not rows:
         return "还没有露天份地。"
-    lines = ["露天肥力（连作降、轮作升；花生固氮；plot_ops 肥力）："]
+    lines = ["露天肥力（连作降、轮作升；花生/黄豆固氮；plot_ops 肥力）："]
     for slot, orch, gh, fert, last, crop in rows:
         if crop:
             continue
