@@ -1571,30 +1571,43 @@ async def voyage_ops(key_id: int, command: str) -> str:
     if verb == "repair":
         async with db.connect() as conn:
             s = await _refresh_steward(conn, s["id"])
-            if not s.get("boat_key"):
+            from . import neighbor_boat_share as share_mod
+
+            founder_id = await share_mod.share_founder_id(conn, s["id"])
+            owner_id = founder_id or s["id"]
+            owner = await _refresh_steward(conn, owner_id) if founder_id else s
+            if not owner.get("boat_key"):
                 raise ValueError("还没有船")
-            if not s.get("boat_damaged"):
+            if not owner.get("boat_damaged"):
                 return "船况良好，无需修理"
-            cost = BOATS[s["boat_key"]]["repair"]
+            cost = BOATS[owner["boat_key"]]["repair"]
             nail_note = ""
             if await db.take_item(conn, s["id"], "craft_copper_nails", 1):
                 cost = max(1, cost // 2)
                 nail_note = "，用了一颗工坊铜钉"
-            cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
-            if (await cur.fetchone())[0] < cost:
-                if nail_note:
-                    await db.add_item(conn, s["id"], "craft_copper_nails", 1)
-                raise ValueError(f"修船需要 {cost} 票")
+            leftover, share_note = await share_mod.split_repair(conn, s["id"], cost)
+            if not share_note:
+                cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
+                if (await cur.fetchone())[0] < leftover:
+                    if nail_note:
+                        await db.add_item(conn, s["id"], "craft_copper_nails", 1)
+                    raise ValueError(f"修船需要 {cost} 票")
+                await conn.execute(
+                    "UPDATE stewards SET tickets=tickets-? WHERE id=?",
+                    (leftover, s["id"]),
+                )
             await conn.execute(
-                "UPDATE stewards SET tickets=tickets-?, boat_damaged=0 WHERE id=?",
-                (cost, s["id"]),
+                "UPDATE stewards SET boat_damaged=0 WHERE id=?",
+                (owner_id,),
             )
             from . import boat_hull as hull_mod
             from . import voyage_chronicle as vlog_mod
-            await hull_mod.repair_full(conn, s["id"])
-            await vlog_mod.append(conn, s["id"], f"修船（-{cost}票{nail_note}）")
+            await hull_mod.repair_full(conn, owner_id)
+            extra = f"；{share_note}" if share_note else ""
+            await vlog_mod.append(conn, s["id"], f"修船（-{cost}票{nail_note}{extra}）")
             await conn.commit()
-        return f"修船完成（-{cost} 票{nail_note}），船体回满，可以 depart"
+        extra = f"；{share_note}" if share_note else ""
+        return f"修船完成（-{cost} 票{nail_note}{extra}），船体回满，可以 depart"
 
     if verb == "depart" and len(parts) >= 2:
         route_key = parts[1].split()[0].lower()
