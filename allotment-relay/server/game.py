@@ -510,7 +510,7 @@ async def relay_manual() -> str:
         "    小咒：visit_ops clinic treat 腿鱼小咒（48 票或祛咒香）。吃或卖再掷随机事件：",
         "    kitchen_ops eat 未命名小鱼 · tote_ops vend 未命名小鱼 1",
         "  赶海 beach scan · dig（要铲子）· probe。退潮 dig 好；涨潮时 dig 和 probe 都关，只有 scan 还能看一眼",
-        "    dig 偶发铲钝：下次翻沙多 2 精力。人类 /island 港口岸边撒网行会附禁捕摘要",
+        "    dig 偶发铲钝：下次翻沙多 2 精力。翻沙偶尔冲上一只漂流瓶。人类 /island 港口岸边撒网行会附禁捕摘要",
         "    dig 是翻沙滩捡贝壳，不是挖矿。矿石走 quarry_ops 挖（盐风崖，涨潮不关）。风暴打捞走 craft_ops 打捞，不是 dig",
         "  人类 /island 总览点海边，进滩景再点港口、海边。点港口就出列表，两个选项闲聊和看码头；闲聊是全屏聊天记录，能说话、发红包、对暗号、许愿墙，和上手页聊天室同一屋；看码头「岸边」栏撒网、坐钓、点水层/解挂/搏鱼，「出海」栏开船、修全船部件，「渔排」栏管排。点海边就去赶海或见韶年；/tide 是围观实况",
         "  Boss tide_ops boss status|attack — 合力打潮渊之主，掉神话章鱼肉。耗精力",
