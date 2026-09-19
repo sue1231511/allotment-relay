@@ -281,6 +281,11 @@ def effective_grow(plot: dict[str, Any], crop_key: str | None = None) -> int:
     if crop == "coconut" and not plot.get("greenhouse"):
         if world.current_weather() == "gale":
             mult *= 0.94
+    if crop == "grape" and not plot.get("tended") and not plot.get("greenhouse"):
+        mult *= 1.14
+    tags = meta.get("tags", ())
+    if "leaf" in tags and not plot.get("watered") and not plot.get("greenhouse"):
+        mult *= 1.08
     return max(60, int(base * mult))
 
 
