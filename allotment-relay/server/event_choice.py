@@ -80,7 +80,7 @@ CHOICES: dict[str, dict[str, Any]] = {
     "peach_worm": {"via": "份地田间事件", "opts": ("手工", "施药", "拔除"), "owned": True},
     "grape_rot": {"via": "份地田间事件", "opts": ("手工", "施药", "拔除"), "owned": True},
     "storm_wreck_part": {"via": "港口出海栏", "opts": ("补", "返航", "硬撑"), "owned": True},
-    "murrain_week": {"via": "小屋找兽医", "opts": ("兽医", "绔离", "拖着"), "owned": False},
+    "murrain_week": {"via": "小屋找兽医", "opts": ("兽医", "隔离", "拖着"), "owned": False},
     "quarry_dust": {"via": "广场诊所", "opts": ("treat", "不管"), "owned": True},
     "well_fall": {"via": "井下井险", "opts": ("清井", "绑索", "硬闯"), "owned": True},
     "fish_ban": {"via": "潮生会禁捕", "opts": ("放生", "认罚"), "owned": True},
