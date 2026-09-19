@@ -1023,6 +1023,60 @@ CRAFT_RECIPES = {
         "seconds": 720, "energy": 3,
         "hint": "甘蓝泡卤。延长保存",
     },
+    "salted_egg": {
+        "name": "咸蛋", "emoji": "🥚", "out": "proc_salted_egg", "qty": 1,
+        "need": {"egg": 1, "proc_salt": 1},
+        "seconds": 840, "energy": 3,
+        "hint": "蛋+细盐。延长保存",
+    },
+    "fermented_bean": {
+        "name": "发酵豆", "emoji": "🫘", "out": "proc_fermented_bean", "qty": 1,
+        "need": {"crop_soybean": 1, "proc_salt": 1},
+        "seconds": 960, "energy": 4,
+        "hint": "黄豆发酵。可再做酱",
+    },
+    "pickled_radish": {
+        "name": "腌萝卜", "emoji": "🥕", "out": "proc_pickled_radish", "qty": 1,
+        "need": {"crop_daikon": 1, "proc_salt": 1},
+        "seconds": 720, "energy": 3,
+        "hint": "白萝卜腌。延长保存",
+    },
+    "sauerkraut": {
+        "name": "酸菜", "emoji": "🥬", "out": "proc_sauerkraut", "qty": 1,
+        "need": {"crop_kale": 1, "proc_vinegar": 1},
+        "seconds": 780, "energy": 3,
+        "hint": "甘蓝醋渍",
+    },
+    "boat_wax": {
+        "name": "船蜡", "emoji": "🪵", "out": "boat_wax", "qty": 1,
+        "need": {"proc_beeswax": 1, "proc_olive_oil": 1},
+        "seconds": 480, "energy": 3,
+        "hint": "蜂蜡抹船。长期消耗",
+    },
+    "damp_guard": {
+        "name": "防潮剂", "emoji": "🧴", "out": "damp_guard", "qty": 1,
+        "need": {"proc_salt": 1, "quarry_salt": 1},
+        "seconds": 420, "energy": 2,
+        "hint": "细盐+海盐。家维防潮用",
+    },
+    "bandage": {
+        "name": "绷带", "emoji": "🩹", "out": "bandage", "qty": 1,
+        "need": {"drift_twine": 1, "proc_salt": 1},
+        "seconds": 300, "energy": 2,
+        "hint": "漂绳+盐。诊所可囤",
+    },
+    "patch_cloth": {
+        "name": "修补布", "emoji": "🧵", "out": "patch_cloth", "qty": 1,
+        "need": {"wool": 1, "drift_twine": 1},
+        "seconds": 480, "energy": 3,
+        "hint": "羊毛补丁。修帆/软装",
+    },
+    "alpaca_throw": {
+        "name": "羊驼毯", "emoji": "🧶", "out": "wool_rug", "qty": 1,
+        "need": {"alpaca_wool": 1, "drift_twine": 1},
+        "seconds": 720, "energy": 4,
+        "hint": "羊驼毛进工坊。和羊毛毯同槽软装",
+    },
 }
 
 # 陈列柜：捐出指定货，换称呼和/或小屋装饰。不印钞
