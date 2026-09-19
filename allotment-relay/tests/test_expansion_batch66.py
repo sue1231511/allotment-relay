@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 
 def test_catalog_trees_craft_collections():
-    from server.catalog import CROPS, CRAFT_ITEMS, CRAFT_RECIPES, ITEM_NAMES
+    from server.catalog import CROPS, CRAFT_ITEMS, CRAFT_RECIPES, HEARTH_RECIPES, ITEM_NAMES
     from server.island_collections import ENTRIES
     from server.home_drinks import RECIPES
 
