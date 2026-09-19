@@ -76,3 +76,28 @@ def test_crop_quality_factors_and_fish_state():
     with patch.object(world, "current_weather", return_value="gale"):
         st = traits.roll_fish_state("sardine", layer="deep", weather="gale")
     assert st in traits.FISH_STATE_KEYS
+
+
+def test_mint_spread_and_leaf_water():
+    from server import farming, world
+
+    with patch.object(world, "current_weather", return_value="calm"), patch.object(
+        world, "field_climate_effect", return_value=""
+    ), patch.object(world, "grow_multiplier", return_value=1.0), patch.object(
+        world, "climate_grow_mult", return_value=1.0
+    ):
+        dry = farming.effective_grow(
+            {
+                "crop": "spinach", "greenhouse": 0, "tended": 1, "fertilized": 0,
+                "watered": 0, "grow_target": 55 * 60, "soil_fertility": 70,
+            },
+            "spinach",
+        )
+        wet = farming.effective_grow(
+            {
+                "crop": "spinach", "greenhouse": 0, "tended": 1, "fertilized": 0,
+                "watered": 1, "grow_target": 55 * 60, "soil_fertility": 70,
+            },
+            "spinach",
+        )
+    assert dry > wet
