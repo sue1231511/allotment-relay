@@ -69,6 +69,10 @@ ENTRIES: list[tuple[str, str, str | None, str | None]] = [
     ("contract_fill", "完成悬赏", None, "contract_fill"),
     ("undertide_pit", "深坑一战", None, "pit_fight"),
     ("layer_link", "层间信使", None, "layer_msg"),
+    ("craft_gyotaku", "第一幅鱼拓", "craft_gyotaku", None),
+    ("craft_boat_model", "船模入柜", "craft_boat_model", None),
+    ("crop_pomelo", "柚子入园", "crop_pomelo", None),
+    ("crop_coffee", "咖啡豆熟", "crop_coffee", None),
 ]
 
 
