@@ -49,3 +49,30 @@ def test_catalog_fish_boats_dishes_craft():
     assert "柠檬醋" in names
     assert "蜜桃糖浆" in names
     assert CROPS["garden_mint"]["name"] == "薄荷"
+
+
+def test_crop_quality_factors_and_fish_state():
+    from server import item_traits as traits
+    from server import world
+
+    plot = {
+        "watered": 1, "tended": 1, "fertilized": 1, "greenhouse": 0,
+        "soil_fertility": 90, "crop": "tomato", "last_crop": "kale",
+    }
+    with patch.object(world, "current_weather", return_value="misty"), patch.object(
+        world, "field_climate_effect", return_value=""
+    ):
+        q = traits.roll_crop_quality(plot)
+    assert q in traits.CROP_QUALITY_KEYS
+
+    same = dict(plot)
+    same["last_crop"] = "tomato"
+    with patch.object(world, "current_weather", return_value="gale"), patch.object(
+        world, "field_climate_effect", return_value="heatwave"
+    ):
+        q2 = traits.roll_crop_quality(same)
+    assert q2 in traits.CROP_QUALITY_KEYS
+
+    with patch.object(world, "current_weather", return_value="gale"):
+        st = traits.roll_fish_state("sardine", layer="deep", weather="gale")
+    assert st in traits.FISH_STATE_KEYS
