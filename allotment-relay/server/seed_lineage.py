@@ -79,7 +79,7 @@ async def save_from_crop(conn, steward: dict[str, Any], crop: str) -> str:
     )
     seed = f"seed_{crop}"
     await db.add_item(conn, steward["id"], seed, 1)
-    if gen >= 2:
+    if gen >= 1:
         from . import ledger as ledger_mod
         await ledger_mod.birth_story(
             conn,
