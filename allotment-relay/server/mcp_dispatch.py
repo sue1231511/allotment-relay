@@ -596,6 +596,9 @@ async def alliance_bundle(key_id: int, command: str = "") -> str:
         hoist={
             "借船": (neighbor_links.neighbor_links_ops, True),
             "loan": (neighbor_links.neighbor_links_ops, True),
+            "合伙": (neighbor_boat_share.boat_share_ops, True),
+            "share": (neighbor_boat_share.boat_share_ops, True),
+            "合买": (neighbor_boat_share.boat_share_ops, True),
             "托养": (neighbor_links.neighbor_links_ops, True),
             "foster": (neighbor_links.neighbor_links_ops, True),
             "菜篮": (neighbor_links.neighbor_links_ops, True),
