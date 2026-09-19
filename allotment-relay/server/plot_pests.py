@@ -48,18 +48,26 @@ async def maybe_spawn(conn, plot: dict[str, Any]) -> str | None:
     fert = int(plot.get("soil_fertility") or 70)
     if fert < 40:
         base += 0.04
+    if (plot.get("crop") or "") == "peach":
+        base += 0.05
     if random.random() > base:
         return None
-    key = random.choice(list(PEST_META.keys()))
+    pool = [k for k in PEST_META if k not in ("gh_leak", "sinkhole")]
+    if not plot.get("greenhouse") and random.random() < 0.12:
+        key = "sinkhole"
+    else:
+        key = random.choice(pool)
     level = random.randint(1, 2)
     await conn.execute(
         "UPDATE parcels SET pest_key=?, pest_level=? WHERE id=?",
         (key, level, plot["id"]),
     )
     meta = PEST_META[key]
+    acts = "填土|围起来|不管" if key == "sinkhole" else "手工|施药|拔除"
+    where = "号棚" if plot.get("greenhouse") else "号地"
     return (
-        f"{meta['emoji']}{meta['name']}上了{plot.get('slot')}号地"
-        f"（plot_ops 虫害 {plot.get('slot')} 手工|施药|拔除）"
+        f"{meta['emoji']}{meta['name']}上了{plot.get('slot')}{where}"
+        f"（plot_ops 虫害 {plot.get('slot')} {acts}）"
     )
 
 
