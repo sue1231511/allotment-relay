@@ -55,7 +55,7 @@ NAMED_EVENTS: tuple[dict[str, str], ...] = (
     {"key": "deer", "tier": tiers_mod.TIER_LIGHT, "name": "鹿啃叶", "mod": "farming"},
     {"key": "boar", "tier": tiers_mod.TIER_MID, "name": "野猪拱地", "mod": "farming"},
     {"key": "gull", "tier": tiers_mod.TIER_LIGHT, "name": "鸥啄浆", "mod": "farming"},
-    {"key": "slug", "tier": tiers_mod.TIER_LIGHT, "name": "蚩蝥", "mod": "farming"},
+    {"key": "slug", "tier": tiers_mod.TIER_LIGHT, "name": "蛞蝓", "mod": "farming"},
     {"key": "crow", "tier": tiers_mod.TIER_LIGHT, "name": "乌鸦", "mod": "farming"},
     {"key": "dove", "tier": tiers_mod.TIER_MID, "name": "斑鸠盯梢", "mod": "farming"},
     {"key": "woodpecker", "tier": tiers_mod.TIER_LIGHT, "name": "啄木鸟", "mod": "farming"},
