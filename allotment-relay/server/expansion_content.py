@@ -430,6 +430,86 @@ EXTRA_KITCHEN_DISHES = {
         "ings": ["fish_grouper", "crop_ginger", "crop_scallion"],
         "base_sell": 78, "energy": 32, "tags": ["sea"],
     },
+    "salt_mackerel": {
+        "name": "盐烤鲭鱼", "emoji": "🐠",
+        "ings": ["fish_mackerel", "proc_salt", "crop_lemon"],
+        "base_sell": 52, "energy": 24, "tags": ["sea"],
+    },
+    "sear_tuna": {
+        "name": "香煎金枪鱼", "emoji": "🐟",
+        "ings": ["fish_tuna", "proc_olive_oil", "crop_garlic"],
+        "base_sell": 72, "energy": 30, "tags": ["sea"],
+    },
+    "garlic_oyster": {
+        "name": "蒜蓉生蚝", "emoji": "🦪",
+        "ings": ["fish_oyster", "crop_garlic", "crop_chili"],
+        "base_sell": 54, "energy": 22, "tags": ["sea"],
+    },
+    "lobster_bisque": {
+        "name": "龙虾浓汤", "emoji": "🦞",
+        "ings": ["fish_lobster", "proc_cream", "crop_onion"],
+        "base_sell": 92, "energy": 34, "tags": ["sea"],
+    },
+    "crab_rice": {
+        "name": "蟹肉焗饭", "emoji": "🦀",
+        "ings": ["fish_swimmingcrab", "proc_rice", "proc_cheese"],
+        "base_sell": 68, "energy": 30, "tags": ["sea", "grain"],
+    },
+    "abalone_soup": {
+        "name": "鲍鱼炖汤", "emoji": "🐚",
+        "ings": ["fish_abalone", "crop_ginger", "crop_kelp"],
+        "base_sell": 74, "energy": 30, "tags": ["sea"],
+    },
+    "urchin_egg": {
+        "name": "海胆蒸蛋", "emoji": "🥚",
+        "ings": ["fish_seaurchin", "egg", "proc_salt"],
+        "base_sell": 58, "energy": 22, "tags": ["sea"],
+    },
+    "hot_sour_fish": {
+        "name": "酸辣鱼汤", "emoji": "🍲",
+        "ings": ["fish_seatrout", "crop_chili", "proc_vinegar"],
+        "base_sell": 56, "energy": 26, "tags": ["sea"],
+    },
+    "sear_bream": {
+        "name": "香煎黑鲷", "emoji": "🐟",
+        "ings": ["fish_black_seabream", "proc_olive_oil", "crop_shiso"],
+        "base_sell": 64, "energy": 26, "tags": ["sea"],
+    },
+    "roast_squid": {
+        "name": "烤鱿鱼", "emoji": "🦑",
+        "ings": ["fish_octopus", "crop_chili", "proc_cooking_oil"],
+        "base_sell": 60, "energy": 24, "tags": ["sea"],
+    },
+    "puffer_pot": {
+        "name": "河豚锅", "emoji": "🐡",
+        "ings": ["fish_puffer", "proc_tofu", "crop_scallion"],
+        "base_sell": 80, "energy": 28, "tags": ["sea"],
+    },
+    "eel_rice": {
+        "name": "海鳗饭", "emoji": "🍚",
+        "ings": ["fish_wolfeel", "proc_rice", "crop_scallion"],
+        "base_sell": 66, "energy": 28, "tags": ["sea", "grain"],
+    },
+    "tuna_sashimi": {
+        "name": "金枪鱼刺身", "emoji": "🍣",
+        "ings": ["fish_tuna", "proc_sashimi", "crop_shiso"],
+        "base_sell": 76, "energy": 20, "tags": ["sea"],
+    },
+    "daikon_fish_soup": {
+        "name": "萝卜鱼汤", "emoji": "🍲",
+        "ings": ["crop_daikon", "fish_herring", "crop_ginger"],
+        "base_sell": 44, "energy": 24, "tags": ["sea"],
+    },
+    "corn_chowder": {
+        "name": "玉米浓汤", "emoji": "🌽",
+        "ings": ["crop_corn", "proc_cream", "proc_salt"],
+        "base_sell": 42, "energy": 22, "tags": ["home"],
+    },
+    "pumpkin_soup": {
+        "name": "南瓜浓汤", "emoji": "🎃",
+        "ings": ["crop_pumpkin", "proc_cream", "proc_salt"],
+        "base_sell": 44, "energy": 22, "tags": ["home"],
+    },
 }
 
 
