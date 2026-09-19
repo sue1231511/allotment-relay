@@ -1512,6 +1512,11 @@ async def _plot_one(s: dict, cmd: str) -> str:
                     pn = await pests_mod.maybe_spawn(conn, dict(prow))
                     if pn:
                         pest_notes.append(pn)
+            from . import event_catalog as evcat_mod
+
+            wipe = await evcat_mod.roll_crop_wipe(conn, s["id"])
+            if wipe:
+                pest_notes.append(wipe)
             await conn.commit()
         noun = "树位" if orchard_ctx else "份地"
         msg = f"打理了 {len(rows)} 块{noun}" if rows else f"没有待打理的{noun}——苗都乖，或你还没种"
