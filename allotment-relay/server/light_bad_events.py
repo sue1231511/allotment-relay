@@ -215,4 +215,8 @@ async def roll_beach_dig_glitch(conn, steward_id: int) -> str | None:
         + tiers_mod.repair_hint("beach")
     )
     await set_debuff(conn, steward_id, "shovel_dull", tier, msg)
-    return tiers_mod.tag(tier, msg)
+    from . import event_choice as choice_mod
+
+    extra = await choice_mod.offer(conn, steward_id, "shovel_dull")
+    tagged = tiers_mod.tag(tier, msg)
+    return f"{tagged}\n{extra}" if extra else tagged
