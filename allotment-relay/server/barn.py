@@ -186,6 +186,19 @@ async def barn_ops(key_id: int, command: str) -> str:
             await conn.commit()
         return msg
 
+    if verb in ("闹脾气", "fuss"):
+        from . import event_choice as choice_mod
+
+        act = parts[1] if len(parts) > 1 else ""
+        async with db.connect() as conn:
+            if not act:
+                msg = await choice_mod.format_report(conn, s["id"])
+            else:
+                key = "epidemic" if act in ("隔离", "兽医", "拖着") else "barn_fuss"
+                msg = await choice_mod.resolve(conn, s, key, act)
+            await conn.commit()
+        return msg
+
     if verb in ("惊逃", "escape", "runaway"):
         from . import barn_runaway_rescue as rescue_mod
 
