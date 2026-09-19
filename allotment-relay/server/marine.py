@@ -1227,6 +1227,13 @@ async def _resolve_voyage(
             conn, s["id"], storm=storm,
         )
         hull_note = parts_note = ""
+    elif share_founder_id and share_founder_id != s["id"]:
+        hull_note = await hull_mod.wear_after_voyage(
+            conn, share_founder_id, voyage["route"], storm=storm,
+        )
+        parts_note = await boat_parts_mod.wear_voyage(
+            conn, share_founder_id, voyage["route"], storm=storm,
+        )
     else:
         hull_note = await hull_mod.wear_after_voyage(
             conn, s["id"], voyage["route"], storm=storm,
@@ -1234,10 +1241,11 @@ async def _resolve_voyage(
         parts_note = await boat_parts_mod.wear_voyage(
             conn, s["id"], voyage["route"], storm=storm,
         )
-    parts = await boat_parts_mod.get_all(conn, s["id"])
+    parts = await boat_parts_mod.get_all(conn, wear_owner_id or s["id"])
 
     if failed and not loan_lender_id:
-        await conn.execute("UPDATE stewards SET boat_damaged=1 WHERE id=?", (s["id"],))
+        dmg_id = share_founder_id or s["id"]
+        await conn.execute("UPDATE stewards SET boat_damaged=1 WHERE id=?", (dmg_id,))
         from . import bad_event_tiers as tiers_mod
 
         loot_lines.append(
