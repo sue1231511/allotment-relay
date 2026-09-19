@@ -694,6 +694,8 @@ async def visit_bundle(key_id: int, command: str = "") -> str:
             "lianli": (marriage.marriage_ops, "desk"),
             "民政局": (marriage.marriage_ops, "desk"),
             "婚约": (marriage.marriage_ops, "desk"),
+            "服务": (npc_services_ops, "list"),
+            "收费服务": (npc_services_ops, "list"),
         },
         hoist={
             "treat": (clinic.clinic_ops, True),
