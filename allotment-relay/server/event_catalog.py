@@ -179,7 +179,7 @@ async def roll_hold_leak(conn, steward_id: int, *, fatal: bool = False) -> str |
 
 
 async def roll_crop_wipe(conn, steward_id: int) -> str | None:
-    """灾难：大面积作物毁坏（风暴/疫病周才掴）。"""
+    """灾难：大面积作物毁坏（风暴/疫病周才掷）。"""
     if random.random() > 0.04:
         return None
     cur = await conn.execute(
