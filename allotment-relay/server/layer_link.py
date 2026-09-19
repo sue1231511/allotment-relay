@@ -67,6 +67,8 @@ async def works_voyage_hint(conn) -> str | None:
         bits.append("旧温室工程：失败×0.97")
     if await works_mod.active_bonus(conn, "ting"):
         bits.append("听潮亭工程：鱼群压力×0.85")
+    if await works_mod.active_bonus(conn, "drain"):
+        bits.append("排水工程：井蚀涨得慢、潮返盐斑少")
     if not bits:
         return None
     return "岸上工程加成：" + " · ".join(bits)
