@@ -161,7 +161,7 @@ def roll_crop_quality(plot: dict[str, Any]) -> str:
     return random.choices(keys, weights=w)[0]
 
 
-def roll_fish_state(species: str) -> str:
+def roll_fish_state(species: str, *, layer: str = "", weather: str = "") -> str:
     meta = SEA_CATCH.get(species) or {}
     rarity = int(meta.get("rarity") or 1)
     weights = {
@@ -173,6 +173,17 @@ def roll_fish_state(species: str) -> str:
         "parasite": 3,
         "odd": 2 + rarity // 2,
     }
+    if layer in ("shore",):
+        weights["bruised"] += 3
+        weights["fresh"] -= 1
+    if layer in ("deep",):
+        weights["parasite"] += 2
+        weights["odd"] += 2
+    if weather == "gale":
+        weights["bruised"] += 4
+        weights["fresh"] = max(1, weights["fresh"] - 2)
+    if weather == "misty":
+        weights["fresh"] += 3
     keys = list(weights.keys())
     w = [max(1, weights[k]) for k in keys]
     return random.choices(keys, weights=w)[0]
