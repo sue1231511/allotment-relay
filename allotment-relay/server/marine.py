@@ -1254,8 +1254,13 @@ async def _resolve_voyage(
                     fish_loot.append(item)
     else:
         picks = random.sample(loot_table, k=min(cargo, len(loot_table)))
+        from . import fish_ban as fish_ban_mod
         from . import item_traits as traits_mod
         for item in picks:
+            ban_msg = await fish_ban_mod.maybe_release_item(conn, s["id"], item)
+            if ban_msg:
+                loot_lines.append(ban_msg)
+                continue
             if item.startswith("fish_"):
                 species = item.replace("fish_", "", 1)
                 state = traits_mod.roll_fish_state(species)
