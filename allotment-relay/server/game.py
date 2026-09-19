@@ -220,7 +220,7 @@ async def relay_manual() -> str:
         "                 · install soft_N tide_weight|iron_edge|marrow_sieve|tide_crest",
         "  tide_ops     渔获/渔排/出海/赶海/渔具/Boss",
         "               command 例：net · cast · status · 搭排 · 巡排 · 投苗 灰鲱 · 投饵 · 收排",
-        "                 · voyage buy skiff|watch_hoy|smack|cutter|longliner|drifter · voyage depart near · fight|flee|parley|bribe",
+        "                 · voyage buy raft|skiff|watch_hoy|smack|cutter|longliner|drifter（木筌/舧板/小渔船/帆船/切波/双桃/雾海） · voyage depart near · fight|flee|parley|bribe",
         "                 · compliment · catch · beach scan · dig · probe · gear status",
         "                 · gear upgrade net · tool buy hoe · boss status · boss attack",
         "               人类 /island 总览点海边，进滩景再点港口、海边。点港口就出列表，两个选项闲聊和看码头；闲聊是全屏聊天记录，能说话、发红包、对暗号、许愿墙，和上手页聊天室同一屋；看码头能撒网、坐钓、开船、管渔排。点海边就出列表，两个选项去见韶年和去赶海；去见韶年才出人韶年，半身立绘对话，韶年站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗，能卜卦、转运、买符；去赶海就能撒网、坐钓、赶海、开船。围观 /tide 仍只看",
