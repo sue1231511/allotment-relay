@@ -166,3 +166,38 @@ async def offer(conn, steward_id: int, event_key: str, **payload: Any) -> str | 
     )
     opts = "｜".join(spec["opts"])
     return f"待选 {spec.get('via') or event_key}：{opts}（上手页管家档点灾选）"
+
+
+async def list_open(conn, steward_id: int) -> list[dict[str, Any]]:
+    await ensure_table(conn)
+    rows = await (await conn.execute(
+        """
+        SELECT event_key, payload_json, created_at FROM steward_event_choices
+        WHERE steward_id=?
+        ORDER BY created_at DESC
+        """,
+        (int(steward_id),),
+    )).fetchall()
+    out: list[dict[str, Any]] = []
+    for row in rows:
+        key = str(row[0])
+        spec = CHOICES.get(key) or {}
+        try:
+            payload = json.loads(row[1] or "{}")
+        except json.JSONDecodeError:
+            payload = {}
+        out.append({
+            "key": key,
+            "opts": spec.get("opts") or (),
+            "via": spec.get("via") or "",
+            "payload": payload,
+            "created_at": int(row[2] or 0),
+        })
+    return out
+
+
+async def _clear(conn, steward_id: int, event_key: str) -> None:
+    await conn.execute(
+        "DELETE FROM steward_event_choices WHERE steward_id=? AND event_key=?",
+        (int(steward_id), event_key),
+    )
