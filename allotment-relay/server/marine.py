@@ -1617,16 +1617,25 @@ async def voyage_ops(key_id: int, command: str) -> str:
         async with db.connect() as conn:
             s = await _refresh_steward(conn, s["id"])
             from . import neighbor_links as nlink_mod
+            from . import neighbor_boat_share as share_mod
 
             loan_lender_id = 0
-            boat_key = s.get("boat_key") or ""
+            share_founder_id = 0
+            boat_key = await nlink_mod.effective_boat_key(conn, s) or ""
             if not boat_key:
-                boat_key = await nlink_mod.effective_boat_key(conn, s) or ""
-                if boat_key:
-                    loan_lender_id = await nlink_mod.boat_loan_lender(conn, s["id"]) or 0
-            if not boat_key:
-                raise ValueError("先 voyage_ops buy 购船，或向邻居 alliance_ops 借船 给")
-            if s.get("boat_damaged") and not loan_lender_id:
+                raise ValueError("先 voyage_ops buy 购船，或向邻居 alliance_ops 借船 给 / 合伙 入")
+            share_key = await share_mod.share_boat_key(conn, s["id"])
+            if share_key and boat_key == share_key:
+                share_founder_id = await share_mod.share_founder_id(conn, s["id"]) or 0
+            elif not s.get("boat_key"):
+                loan_lender_id = await nlink_mod.boat_loan_lender(conn, s["id"]) or 0
+            if share_founder_id:
+                cur = await conn.execute(
+                    "SELECT boat_damaged FROM stewards WHERE id=?", (share_founder_id,)
+                )
+                if int((await cur.fetchone())[0]):
+                    raise ValueError("合伙船损未修，先 voyage_ops repair（费用平摊）")
+            elif s.get("boat_damaged") and not loan_lender_id:
                 raise ValueError("船损，先 repair")
             if loan_lender_id:
                 cur = await conn.execute(
