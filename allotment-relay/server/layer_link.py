@@ -96,6 +96,8 @@ async def maybe_salt_blot_after_well(conn, steward_id: int) -> str | None:
         chance *= 0.5
     if await works_mod.active_bonus(conn, "shed"):
         chance *= 0.85
+    if await works_mod.active_bonus(conn, "drain"):
+        chance *= 0.4
     if random.random() > chance:
         return None
     cur = await conn.execute(
