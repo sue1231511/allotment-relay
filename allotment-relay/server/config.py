@@ -144,6 +144,7 @@ GREENHOUSE_EXPAND_COSTS = [greenhouse_expand_cost(i) for i in range(5)]
 GREENHOUSE_CLEAR_SECONDS = [greenhouse_clear_seconds(i) for i in range(5)]
 
 BOATS = {
+    "raft": {"name": "木筏", "cost": 36, "rank": 0, "repair": 6, "cargo": 1},
     "skiff": {"name": "小舢板", "cost": 85, "rank": 1, "repair": 12, "cargo": 2},
     "watch_hoy": {"name": "守潮驳", "cost": 95, "rank": 1, "repair": 14, "cargo": 3},
     "cutter": {"name": "切波艇", "cost": 220, "rank": 2, "repair": 28, "cargo": 4},
@@ -152,8 +153,42 @@ BOATS = {
     "longliner": {"name": "延绳船", "cost": 460, "rank": 3, "repair": 48, "cargo": 7},
 }
 
+BOAT_ALIASES = {
+    "木筏": "raft",
+    "raft": "raft",
+    "舢板": "skiff",
+    "小舢板": "skiff",
+    "帆船": "smack",
+    "近海帆撬": "smack",
+    "小渔船": "watch_hoy",
+    "守潮驳": "watch_hoy",
+    "切波": "cutter",
+    "切波艇": "cutter",
+    "双桅": "drifter",
+    "漂航船": "drifter",
+    "雾海": "longliner",
+    "延绳船": "longliner",
+}
+
+
+def resolve_boat_key(token: str) -> str | None:
+    raw = (token or "").strip()
+    if not raw:
+        return None
+    low = raw.lower()
+    if low in BOATS:
+        return low
+    alias = BOAT_ALIASES.get(raw) or BOAT_ALIASES.get(low)
+    if alias:
+        return alias
+    for key, meta in BOATS.items():
+        name = str(meta.get("name") or "")
+        if raw == name or raw in name or low == name.lower():
+            return key
+    return None
+
 VOYAGE_ROUTES = {
-    "near": {"label": "近岸", "duration": 480, "fuel": 8, "min_boat": "skiff", "fail": 0.14},
+    "near": {"label": "近岸", "duration": 480, "fuel": 8, "min_boat": "raft", "fail": 0.14},
     "far": {"label": "外海", "duration": 1200, "fuel": 18, "min_boat": "cutter", "fail": 0.24},
     "deep": {"label": "深漂", "duration": 2400, "fuel": 35, "min_boat": "drifter", "fail": 0.34},
 }

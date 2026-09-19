@@ -509,8 +509,19 @@ async def _cook_named(s: dict[str, Any], dish_key: str) -> str:
             qualities.extend(await traits_mod.pop_qualities(conn, s["id"], ing, 1))
         q_bonus = traits_mod.cooking_star_bonus(qualities)
         stars = _roll_stars(s, dish_key, quality_bonus=q_bonus)
+        from . import loop_couple as loop_mod
+
+        stars, fail_note = await loop_mod.adjust_cook_stars(conn, s["id"], stars)
         item = dish_item(dish_key, stars)
         await db.add_item(conn, s["id"], item, 1)
+        from . import ledger as ledger_mod
+        from .kitchen_special import SPECIAL_DISH_KEYS
+
+        if dish_key in SPECIAL_DISH_KEYS:
+            await ledger_mod.note_gain(
+                conn, s["id"], item, 1,
+                f"{meta['name']}{stars}星由{s['name']}于{ledger_mod.calendar_phrase()}在灶台上成",
+            )
         await _mark_cook(conn, s["id"])
         await survival.bump(conn, s["id"], satiety=6, mist_wit=4)
         from . import bond as bond_mod
@@ -522,6 +533,8 @@ async def _cook_named(s: dict[str, Any], dish_key: str) -> str:
         f"出菜 {dish_display_name(dish_key, stars)} "
         f"（建议 vend {sell} 票 · 材料回收 {cost} · +{meta['energy']}精力若 eat）"
     )
+    if fail_note:
+        msg += f" · {fail_note}"
     msg += flavor.maybe_suffix([
         "灶台：这锅有灵魂",
         "姜姨点头：够味",
@@ -599,7 +612,7 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             "  store 菜名 [数量] / fridge / take 菜名 — 冰箱熟菜（小屋要先装 fridge）\n"
             "             也可 hut_ops 冰柜 存|取，生鲜进潮柜、熟菜进冰箱\n"
             "  brew 材料 — 灶台（回雾智）\n"
-            "  泡 list / 泡 雾豆花青茶 — 自宅泡饮（6 种），带去 bar_ops order 对应酒可减价\n"
+            "  泡 list / 泡 雾豆花青茶 — 自宅泡饮（20 种，含柚子茶/柠檬水/薄荷茶/姜茶/果茶/椰奶/豆浆/苹果汁等），带去 bar_ops order 对应酒可减价\n"
             "  shop board — 全服谁在营业的小馆名单（店名和几道菜），不是流水也不是评价\n"
             "  shop dine 店主名 — 下馆子堂食，也能回精力（按菜价，约 3.5 票/1 精力）+「饱餐」2 小时（行动精力 -1）+ 身体 +2\n"
             "             例子：shop board · shop dine 安。没菜就换一家，不要自己编馆名\n"

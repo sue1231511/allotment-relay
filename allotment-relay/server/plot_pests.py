@@ -13,8 +13,15 @@ PEST_META = {
     "salt_spot": {"name": "盐斑", "emoji": "🧂", "yield_penalty": 0.85},
     "weed": {"name": "杂草", "emoji": "🌾", "yield_penalty": 0.9},
     "blight": {"name": "菌病", "emoji": "🍄", "yield_penalty": 0.6},
+    "wind_scorch": {"name": "海风灼叶", "emoji": "🌬️", "yield_penalty": 0.8},
+    "rats": {"name": "鼠害", "emoji": "🐀", "yield_penalty": 0.7},
     "gh_leak": {"name": "温室漏风", "emoji": "💨", "yield_penalty": 0.88},
+    "sinkhole": {"name": "地陷", "emoji": "🕳️", "yield_penalty": 0.35},
 }
+
+SINKHOLE_FILL_TICKETS = 12
+SINKHOLE_FILL_COMPOST = 2
+FENCE_TICKETS = 8
 
 HAND_CLEAR_CHANCE = 0.55
 DRUG_TICKETS = 10
@@ -43,18 +50,36 @@ async def maybe_spawn(conn, plot: dict[str, Any]) -> str | None:
     fert = int(plot.get("soil_fertility") or 70)
     if fert < 40:
         base += 0.04
+    if (plot.get("crop") or "") == "peach":
+        base += 0.05
+    from . import world as world_mod
+    if world_mod.current_weather() == "gale" and not plot.get("greenhouse"):
+        base += 0.03
+    sid = int(plot.get("steward_id") or 0)
+    if sid:
+        from . import barn as barn_mod
+        if await barn_mod.has_species(conn, sid, "chicken"):
+            base *= 0.72
     if random.random() > base:
         return None
-    key = random.choice(list(PEST_META.keys()))
+    pool = [k for k in PEST_META if k not in ("gh_leak", "sinkhole")]
+    if world_mod.current_weather() == "gale" and not plot.get("greenhouse"):
+        pool = pool + ["wind_scorch", "wind_scorch"]
+    if not plot.get("greenhouse") and random.random() < 0.12:
+        key = "sinkhole"
+    else:
+        key = random.choice(pool)
     level = random.randint(1, 2)
     await conn.execute(
         "UPDATE parcels SET pest_key=?, pest_level=? WHERE id=?",
         (key, level, plot["id"]),
     )
     meta = PEST_META[key]
+    acts = "填土|围起来|不管" if key == "sinkhole" else "手工|施药|拔除"
+    where = "号棚" if plot.get("greenhouse") else "号地"
     return (
-        f"{meta['emoji']}{meta['name']}上了{plot.get('slot')}号地"
-        f"（plot_ops 虫害 {plot.get('slot')} 手工|施药|拔除）"
+        f"{meta['emoji']}{meta['name']}上了{plot.get('slot')}{where}"
+        f"（plot_ops 虫害 {plot.get('slot')} {acts}）"
     )
 
 
@@ -98,6 +123,9 @@ async def handle(
 
     if act in ("status", "查看", ""):
         return f"{label} {meta.get('name', key)} Lv{plot.get('pest_level')}"
+
+    if key == "sinkhole":
+        return await _handle_sinkhole(conn, steward, plot, act, label)
 
     if act in ("手工", "hand", "捉", "捉虫"):
         if random.random() < HAND_CLEAR_CHANCE:
@@ -179,12 +207,96 @@ async def handle(
                 "UPDATE parcels SET soil_fertility=MAX(15, COALESCE(soil_fertility,70)-5) WHERE id=?",
                 (plot["id"],),
             )
-        return f"{label} 拔除病株，{name}没了，{meta['name']}也断了"
+        luck = ""
+        from . import event_opportunity as opp_mod
+        note = await opp_mod.maybe_blight_pull_luck(conn, sid, key)
+        if note:
+            luck = f" · {note}"
+        return f"{label} 拔除病株，{name}没了，{meta['name']}也断了{luck}"
 
     raise ValueError(
         "虫害处置：手工 · 施药 · 拔除 · 不管"
-        "（温室漏风：补网|通风|不管。例 plot_ops 虫害 1 施药）"
+        "（温室漏风：补网|通风|不管。地陷：填土|围起来|不管。例 plot_ops 虫害 1 施药）"
     )
+
+
+async def _handle_sinkhole(conn, steward: dict[str, Any], plot: dict[str, Any], act: str, label: str) -> str:
+    sid = steward["id"]
+    fenced = int(plot.get("pest_level") or 1) >= 3
+    if act in ("填土", "fill", "填", "填坑"):
+        cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (sid,))
+        have = int((await cur.fetchone())[0])
+        if have < SINKHOLE_FILL_TICKETS:
+            raise ValueError(f"填土要 {SINKHOLE_FILL_TICKETS} 票，你只有 {have}")
+        if not await db.take_item(conn, sid, "compost", SINKHOLE_FILL_COMPOST):
+            raise ValueError(f"填土要堆肥×{SINKHOLE_FILL_COMPOST}（plot_ops compost 或 hut 堆肥桶）")
+        await conn.execute(
+            "UPDATE stewards SET tickets=tickets-? WHERE id=?",
+            (SINKHOLE_FILL_TICKETS, sid),
+        )
+        await _clear_pest(conn, plot["id"])
+        return (
+            f"{label} 填平了地陷（堆肥×{SINKHOLE_FILL_COMPOST}，-{SINKHOLE_FILL_TICKETS} 票）。"
+            "作物还在，能继续长。"
+        )
+    if act in ("围起来", "围", "fence", "拦"):
+        if fenced:
+            return f"{label} 已经围住了，不会再塌邻地。要平坑：虫害 {plot.get('slot')} 填土"
+        cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (sid,))
+        have = int((await cur.fetchone())[0])
+        if have < FENCE_TICKETS:
+            raise ValueError(f"围起来要 {FENCE_TICKETS} 票，你只有 {have}")
+        await conn.execute(
+            "UPDATE stewards SET tickets=tickets-? WHERE id=?",
+            (FENCE_TICKETS, sid),
+        )
+        await conn.execute(
+            "UPDATE parcels SET pest_level=3 WHERE id=?",
+            (plot["id"],),
+        )
+        return (
+            f"{label} 用木桩围住了坑（-{FENCE_TICKETS} 票），不会塌到邻地。"
+            f"坑还在，收成薄。填平：虫害 {plot.get('slot')} 填土"
+        )
+    if act in ("不管", "wait", "ignore", "观望"):
+        if fenced:
+            return f"{label} 坑还在，但已经围住，没有往外塌"
+        spread = await _spread_sinkhole(conn, steward["id"], plot["id"])
+        if spread:
+            return f"{label} 没管它，地陷蔓延到{spread}"
+        await conn.execute(
+            "UPDATE parcels SET pest_level=MIN(3, COALESCE(pest_level,1)+1) WHERE id=?",
+            (plot["id"],),
+        )
+        return f"{label} 坑更大了（可填土或围起来）"
+    raise ValueError(
+        f"地陷处置：填土（堆肥×{SINKHOLE_FILL_COMPOST}+{SINKHOLE_FILL_TICKETS}票）· 围起来 · 不管"
+        f"（例 plot_ops 虫害 {plot.get('slot')} 填土）"
+    )
+
+
+async def _spread_sinkhole(conn, steward_id: int, plot_id: int) -> str | None:
+    from . import land as land_mod
+
+    cur = await conn.execute(
+        """
+        SELECT id, slot, orchard, greenhouse, crop
+        FROM parcels
+        WHERE steward_id=? AND id!=? AND greenhouse=0
+          AND (pest_key IS NULL OR pest_key='')
+        ORDER BY slot
+        """,
+        (steward_id, plot_id),
+    )
+    rows = [dict(r) for r in await cur.fetchall()]
+    if not rows:
+        return None
+    target = random.choice(rows)
+    await conn.execute(
+        "UPDATE parcels SET pest_key='sinkhole', pest_level=1 WHERE id=?",
+        (target["id"],),
+    )
+    return land_mod.slot_label(target)
 
 
 async def _clear_pest(conn, plot_id: int) -> None:
@@ -208,6 +320,25 @@ def ui_actions(
 ) -> list[dict[str, Any]]:
     """Human /island 虫害按钮；与 handle() 子命令一致。"""
     key = plot.get("pest_key") or ""
+    if key == "sinkhole":
+        have_compost = int(stock.get("compost") or 0)
+        return [
+            {
+                "action": "填土",
+                "label": f"填土（堆肥×{SINKHOLE_FILL_COMPOST}+{SINKHOLE_FILL_TICKETS}票）",
+                "hint": "堆肥×2",
+                "can": have_compost >= SINKHOLE_FILL_COMPOST and tickets >= SINKHOLE_FILL_TICKETS,
+                "disabled_reason": "缺堆肥或票不够",
+            },
+            {
+                "action": "围起来",
+                "label": f"围起来（{FENCE_TICKETS} 票）",
+                "hint": "不再蔓延",
+                "can": tickets >= FENCE_TICKETS,
+                "disabled_reason": f"票不够（要 {FENCE_TICKETS}）",
+            },
+            {"action": "不管", "label": "先不管", "hint": "可能塌邻地", "can": True, "disabled_reason": ""},
+        ]
     if key == "gh_leak":
         have_twine = int(stock.get("drift_twine") or 0)
         return [

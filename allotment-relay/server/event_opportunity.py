@@ -142,3 +142,26 @@ async def maybe_runaway_trail_luck(conn, steward: dict, choice: str) -> str | No
         "plot", f"{steward['name']} 寻回逃畜时摸到潮边藏贝点", sid, conn=conn,
     )
     return "跟着足迹摸到潮边藏贝点，拾两枚海玻璃。"
+
+
+async def maybe_blight_pull_luck(conn, steward_id: int, pest_key: str) -> str | None:
+    """拔除菌病病株时，小概率烧出灰肥。"""
+    if pest_key != "blight":
+        return None
+    if random.random() > 0.22:
+        return None
+    await db.add_item(conn, steward_id, "ash_fert", 1)
+    await db.add_chronicle(
+        "plot", "病株烧成一把灰肥", steward_id, conn=conn,
+    )
+    return "病株烧成一把灰肥（施肥 1 灰肥，比普通堆肥猛一点）。"
+
+
+async def maybe_storm_wreck_luck(conn, steward_id: int, *, storm: bool) -> str | None:
+    """风暴折返/阵风归港，小概率捞到别人的残骸。"""
+    if not storm:
+        return None
+    if random.random() > 0.16:
+        return None
+    await db.add_item(conn, steward_id, "wreck_scrap", 1)
+    return "浪里挂住一截别人的船骸——潮骸残件×1（可打船模）。"

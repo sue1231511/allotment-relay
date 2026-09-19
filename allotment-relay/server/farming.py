@@ -61,6 +61,8 @@ def fertilizer_cut_rate(item: str, *, compost_mascot: bool = False) -> float:
 
     if item in MANURE:
         rate = float(MANURE[item]["fertilize_boost"])
+    elif item == "ash_fert":
+        rate = float(config.FERTILIZE_COMPOST_CUT) + 0.06
     else:
         rate = config.FERTILIZE_COMPOST_CUT
     if compost_mascot:
@@ -73,6 +75,8 @@ def fertilizer_label(item: str) -> str:
 
     if item in MANURE:
         return MANURE[item]["name"]
+    if item == "ash_fert":
+        return "病株灰肥"
     return "堆肥"
 
 
@@ -270,6 +274,18 @@ def effective_grow(plot: dict[str, Any], crop_key: str | None = None) -> int:
             mult *= 0.92
     if crop == "garden_mint" and plot.get("crop") == "garden_mint":
         mult *= 0.96
+    if crop == "coffee" and not plot.get("greenhouse"):
+        climate = world.field_climate_effect()
+        if climate in ("frost", "snowbound"):
+            mult *= 1.28
+    if crop == "coconut" and not plot.get("greenhouse"):
+        if world.current_weather() == "gale":
+            mult *= 0.94
+    if crop == "grape" and not plot.get("tended") and not plot.get("greenhouse"):
+        mult *= 1.14
+    tags = meta.get("tags", ())
+    if "leaf" in tags and not plot.get("watered") and not plot.get("greenhouse"):
+        mult *= 1.08
     return max(60, int(base * mult))
 
 
@@ -536,6 +552,13 @@ def harvest_pool(plot: dict[str, Any]) -> int:
     n = int(CROPS.get(crop, {}).get("yield") or 3)
     if plot.get("tended"):
         n += 1
+    if crop == "grape":
+        w = world.current_weather()
+        climate = world.field_climate_effect()
+        if w == "gale" or climate in ("thunderstorm", "warm_rain", "spring_flood"):
+            n = max(1, n - 1)
+    if crop == "coconut" and world.current_weather() == "gale":
+        n = max(n, int(CROPS.get("coconut", {}).get("yield") or 2) + (1 if plot.get("tended") else 0))
     return n
 
 
@@ -1024,6 +1047,8 @@ async def maybe_gugu_dove_stalk(
         await _mark_gugu_dove_rolled(conn, steward["id"])
         return None
     chance = config.GUGU_DOVE_DAILY_CHANCE
+    if plot.get("crop") == "cherry":
+        chance *= 1.55
     from . import hut as hut_mod
     from . import barn as barn_mod
     hut_b = await hut_mod.get_bonuses(conn, steward["id"])
@@ -1158,3 +1183,38 @@ async def shake_tree(
         if tev:
             extra = f"{note}\n{tev}" if note else tev
     return item, qty, extra
+
+
+async def maybe_mint_spread(conn, steward_id: int, plot: dict[str, Any]) -> str | None:
+    """薄荷打理后偶发窜到邻地空格。"""
+    if plot.get("crop") != "garden_mint":
+        return None
+    if plot.get("greenhouse") or plot.get("orchard"):
+        return None
+    if random.random() > 0.22:
+        return None
+    slot = int(plot.get("slot") or 0)
+    cur = await conn.execute(
+        """
+        SELECT id, slot FROM parcels
+        WHERE steward_id=? AND COALESCE(orchard,0)=0 AND COALESCE(greenhouse,0)=0
+          AND (crop IS NULL OR crop='')
+          AND slot IN (?, ?)
+        ORDER BY slot
+        """,
+        (steward_id, slot - 1, slot + 1),
+    )
+    rows = await cur.fetchall()
+    if not rows:
+        return None
+    tid, tslot = random.choice(rows)
+    grow = int((CROPS.get("garden_mint") or {}).get("grow") or 65) * 60
+    await conn.execute(
+        """
+        UPDATE parcels SET crop='garden_mint', planted_at=?, tended=0,
+        grow_target=?, grow_pace='spread', fertilized=0, watered=0, harvest_left=0
+        WHERE id=?
+        """,
+        (db.now(), max(60, int(grow * 0.92)), tid),
+    )
+    return f"薄荷窜到了{tslot}号地（自己长出来的，记得打理）"

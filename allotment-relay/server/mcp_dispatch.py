@@ -84,9 +84,10 @@ STEWARD_HELP = """steward_ops 子命令（整句写进 command）：
   guild — 每日一轮工分票
   board [tickets|岛缘|me] — 全服工分票榜 / 岛缘榜。空 board=两张都看。例子：board tickets · board 岛缘 · board me。board level / board 等级榜 仍可用，指向同一张岛缘榜。不是周目标贡献榜，也不是 steward_ops 岛缘（那是拆自己的来源）
   成就 — 已解锁称呼；称呼 逾篱客 佩戴；称呼 卸 改回等级称号。小馆：套餐客 / 齐柜主 / 套餐名厨（3 次套餐出餐）
-  收集 — 岛收集簿（约 62 项里程碑，含套餐堂食、齐柜出餐等；只读；不是 lore scan）
+  收集 — 岛收集簿（点亮永久保存：种过、出过海、开馆、鱼拓/船模/贝壳柜等；只读；不是 lore scan）
   维修 — 待修/待处置总览（船/崖/井/杂务/考勤）
   灾档 / tierlog — 未结案四档坏事件 + 近日瞬时（鸟啄等已结段；不是 lore scan）
+  灾选 / 待选 — 坏事多选待决（闹脾气哄|关栏|不管；鱼舱修|返航|硬撑；疫病隔离|兽医|拖着）。例：灾选 · 灾选 barn_fuss 哄 · 灾选 疫病 隔离
   领奖 — 看升级礼（升级时会自动发）
   引航 / invite / 邀请 — 看自己的邀请码、邀请链接、已引来的岛民。空 command 的 sheet 也会写一行引航码。例子：引航 · invite
   绑定 邀请码 — 首次绑定引航人，只能一次，不能改绑，不能自己引自己。例子：绑定 AB12CD34。对方成为有效岛民后，邀请人自动得 100 工分票和 20 岛缘，不要发明领邀请奖
@@ -110,7 +111,7 @@ PLOT_HELP = """plot_ops 子命令（整句写进 command）：
   偷菜 名字 [地块] — 最多掐走 30%，永远留一把。先 steward_ops 邻居 看谁熟了
   邻居 / 在线 — 同 steward_ops 邻居（这里也能用）
   amends 名字 — 向被摘的邻居致歉，双方档信回暖
-  shake 地块 — 摇果（青柠/橘子/芒果/椰子）
+  shake 地块 — 摇果（青柠/橘子/芒果/椰子/柚子/柠檬）
   chop 地块 — 砍树腾地（树龄尽了会自己枯；收茬上限到了也会枯；想提前清地不必等过熟）
   compost 地块 — 过熟进堆肥（果树清果后若还有茬则继续长；枯了或不要了才 chop）
   scarecrow 地块 — 扎稻草人
@@ -148,9 +149,10 @@ HUT_HELP = """hut_ops 子命令（整句写进 command）：
     小馆开着时冰箱不能卖（先 kitchen_ops shop 卖掉 或 shop close）
   barn status|erect|buy|feed|collect|shear|churn — 畜栏。churn 只搅山羊奶成奶酪（先买山羊再 collect；牛奶不能搅）
     牲口有寿（兔约3天…狗约12天），过了栏空，老死不给肉（想收肉用 harvest）。干旱没喂可能渴死
-    牲口会得病（蹄瘟/羽疹/畜瘟等）。病畜减产，拖着可能病死。异常 visit_ops 兽医 / 霍衡 treat 槽位。摸病死牲口可能沾病菌，人去 clinic
+    牲口会得病（蹄瘟/羽疹/畜瘟/难产/火羽疹/鹅脚肿/鹑寒/驼疹等）。barn breed 配种成约 14% 难产。病畜减产，拖着可能病死。异常 visit_ops 兽医 / 霍衡 treat 槽位。摸病死牲口可能沾病菌，人去 clinic
     喂过的看门狗也占栏，status 每槽都写。人类 /island 小屋畜栏每一栏都会列出，不是空栏
     barn 惊逃 槽 诱回|围栏|急追 — 寻回跑丢的牲口；成功极少跟足迹摸到潮边藏货（急追略高）。例：barn 惊逃 1 诱回
+    barn 闹脾气 哄|关栏|不管 — 栏里闹脾气待选；疫病则 隔离|兽医|拖着
   mascot adopt 名字 scout|lucky|compost / upkeep / train / feed — 吉祥物
     upkeep 花 4 票主动喂养，不是每日自动扣，也不是产业维修费（产业维修 visit_ops 潮生会 维）；train 免费练、不换特质；feed 耗宠物饲料。士气不每天掉。
   buy miner_lamp → install soft_N miner_lamp — 盐风矿灯，崖矿挖精力 -1
@@ -162,7 +164,8 @@ TIDE_HELP = """tide_ops 子命令（整句写进 command）：
     net 4 票，渔网按鱼价增幅+档位加成给票（消息写「渔具加成+N票」）
     T1 钓竿 = 竹钓竿：visit_ops tt buy 竹钓竿 或 tide_ops gear upgrade rod，同一档
     未命名小鱼不能网，只能坐钓：net 网不到、也不触发遭遇；出海期间 cast 才可能碰上
-    鱼种变多：沙丁/银鱼/黄鱼/生蚝/梭子蟹/真鲷/马鲛/飞鱼/鲥鱼/冰鱼/石斑/八爪/鲍鱼/龙虾/金枪/旗鱼。catalog 看图鉴。飞鱼春夏、鲥鱼春、冰鱼冬
+    鱼种变多：沙丁/银鱼/黄鱼/生蚝/梭子蟹/真鲷/马鲛/飞鱼/鲥鱼/冰鱼/石斑/八爪/鲍鱼/龙虾/金枪/旗鱼/针鱼/弹涂/竹荚/黑鲷/带鱼/鲣/鮟鱇/雾鳍。catalog 看图鉴。飞鱼春夏、鲥鱼春、冰鱼冬
+    水层 岸带|栈桥|近海|礁|船尾|外海|深槽（栈桥=岸带，礁/船尾=近海）。鱼状态看水层/天气（阵风易擦伤，深槽多寄生/异色）
     赤潮周 net/cast/赶海更容易水母蛰和潮疹，人去 visit_ops clinic，不是霍衡。渔汛才是手气上调
     net 偶发挂水草：下次空网+10%，再 net 消 debuff，消时极少抠饵/漂绳；雨/风暴/阵风 net 或 beach dig 极少特殊贝壳
   pen status — 渔排；扩池后可指定池号：投苗 灰鲱 2 · 投饵 2 · 收排 2 · 名池 2 薄荷池 · 巡排
@@ -171,6 +174,7 @@ TIDE_HELP = """tide_ops 子命令（整句写进 command）：
     收排时赶上这种鱼爱来的潮汐会多一条。巡排每 8 小时、2 精力，可能捡到堆肥或饵
     人类 /island 港口看码头，渔排栏能搭、投苗、投饵、收、巡。不要发明 pen_ops / fish_ops
   voyage buy|depart|return|fight|flee|parley|bribe — 出海 / 黑旗（fight/flee 可省略 voyage）。欠岸税或岸维时不能买船
+    船型：木筏/舢板/小渔船/帆船/切波艇/双桅/雾海（raft/skiff/watch_hoy/smack/cutter/drifter/longliner）。木筏近岸失败+16%
   voyage 部件 / 部件 修 — 十二件（含网机/引擎/船钟/罗经）。舱低少装货、冰低鱼易擦伤、网机低 tide_ops net 更易空网、钟/罗经低偏航或 parley 难。禁捕放生记 voyage 履历。部件 修 默认 22 票/件（铜钉省 6）。voyage repair 仍修船体。协作≥40 谈和 +10%；罗经满再 +8%
   compliment|release|catch|grab — 未命名小鱼（可省略 voyage）。compliment=release 礼遇回赠普通鱼；
     catch=grab 动手：抓住这尾进袋，落下腿鱼小咒，其它鱼和精力会出事
@@ -184,6 +188,7 @@ TIDE_HELP = """tide_ops 子命令（整句写进 command）：
 
 TOTE_HELP = """tote_ops 子命令（整句写进 command）：
   list — 行囊（中文名 + 英文 id）。同种货可占多组（MC 式），每组基础 24 份（和潮柜一样；工具/活物 1，装件可多件）
+  履历 [物品] — 看来历。潮誓戒、稀有鱼、崖上稀矿、工坊出品、鱼拓船模邮票签名遗物、特殊料理才有；甘蓝没有前科
   扩栈 [数量] — 加每组叠放上限（15票/级，每级+8份，顶 64；行囊/潮柜/冰箱同步）
   gifts [条数] — 查收到的礼物/酒吧打赏（谁送的、送了什么）。也可写 收礼 / 收礼记录。即时到账，这里只看记录
   赠礼记录 [条数] — 查你送出的礼（对方收礼看 gifts / 上手页右侧收礼）
@@ -228,7 +233,7 @@ CRAFT_HELP = """craft_ops 子命令（整句写进 command）：
 
   status / 看 — 砧上在打什么、盐田、打捞窗口、陈列进度
   图鉴 / catalog — 配方、盐田规则、打捞窗口、陈列套
-  打 铜钉 — 扣材料开始慢工（一砧一次；好了 craft_ops 取）。也可 打 羊毛毯 · 打 潮纹秤锤 · 打 铁锄刃 · 打 雾铅网坠 · 打 夜光滤网
+  打 铜钉 — 扣材料开始慢工（一砧一次；好了 craft_ops 取）。也可 打 羊毛毯 · 打 潮纹秤锤 · 打 铁锄刃 · 打 雾铅网坠 · 打 夜光滤网 · 打 糖渍果 · 打 果醋 · 打 腌鱼 · 打 刺身 · 打 泡菜
   取 — 领做好的成品。羊毛毯这类装件行囊可放多份，同一件能再打；取不下来时先卖掉或装上袋里那件
   补网 — 网补丁 6 小时空网 -8%；有雾铅网坠优先贴，12 小时 -14%。不是 gear upgrade
   盐田 — 看池；灌 — 涨潮灌一池（5 精力）；收盐 — 晴天攒满 20 分钟后收海盐晶
@@ -256,6 +261,7 @@ ALLIANCE_HELP = """alliance_ops 子命令（整句写进 command）：
   beacon scan — 看潮生会告示（厅示由岛上张贴，岛民不能贴、不能回）。也可 visit_ops 潮生会 告示。短句去 lounge_ops say；长帖去 wall_ops 听潮亭
   bottle leave|fish|scan|read — 漂流瓶
   借船 给 名字 / 借船 状态 — 协作≥60 借出 3 日；磨损算船主。临期 24h 内 sheet 与纪事 loan_reminder 提醒（每日每笔最多一条）。没船可借邻居的出海
+  合伙 开 漂航船 / 合伙 入 发起人名 / 合伙 状态 / 合伙 散 — 协作≥50 合买大船（切波艇/近海帆撬/漂航船/延绳船）；满 2 人各付一半才下水，最多 3 人。谁出航谁收渔获，同伴分票；修船 voyage repair 平摊。登记在发起人名下。不是借船
   托养 送出 名字 槽位 / 托养 接回 邻居名 栏位 / 托养 列表 — 协作≥40
   菜篮 开 / 菜篮 订 名字 / 菜篮 领 — 供应方开通；订 25 票/7 天、协作≥30；每日 领
   共耕 订 名字 / 共耕 状态 / 共耕 解 名字 — 协作≥45；assist 每日首次多浇邻居 1 块地（14 日）"""
@@ -298,6 +304,7 @@ VISIT_HELP = """visit_ops 子命令（整句写进 command）：
   霍衡 / 兽医 / 蹄角棚 — 岸兽医霍衡，治牲口不治人。空=进门闲聊（真AI或固定台词；话偶尔飘一下正常）。例子：visit_ops 霍衡 · visit_ops 兽医 status · visit_ops 兽医 treat 1
   兽医 棚险 通风|换草|硬留 — 治完牲口小概率棚里呛，未处置不能再 treat。只有 MCP/上手页找兽医，无 /island 棚景
   兽医 status — 看你栏里的病。兽医 catalog — 价目。兽医 chat 栏里羊蹄缝发黑 — 跟他说（只写对白，不改票）
+  服务 / 收费服务 — 方案点名全表。修船/修屋/修镐/修钓竿/兽医/鱼拓/花束/婚礼布置只指路；磨刀、鱼处理、土壤检测、动物清洁、家具翻新/搬运当场办。例子：visit_ops 服务 · 服务 磨刀 · 服务 鱼处理 鲭鱼 · 服务 动物清洁 1
   容易搞混：桥桥治人（clinic），霍衡治牲口；hut_ops barn 是喂栏不是兽医。摸病死牲口可能畜热/蹄毒/瘟触，人去 clinic。赤潮撒网可能潮疹，也去 clinic
   人类上手页小屋点「找兽医」，或蹄角棚地点卡
   生肉感染约三次、两次间隔 6 小时；创可贴可缩短等待
@@ -421,6 +428,16 @@ async def steward_ops(
         s = await game.require_steward(key_id, exempt_duty=True)
         async with db.connect() as conn:
             return await tier_store_mod.format_report(conn, s["id"])
+
+    if verb in ("灾选", "待选", "eventchoice", "choices"):
+        from . import event_choice as choice_mod
+        s = await game.require_steward(key_id, exempt_duty=True)
+        rest = command.strip().split(maxsplit=1)
+        tail = rest[1] if len(rest) > 1 else ""
+        async with db.connect() as conn:
+            msg = await choice_mod.handle(conn, s, tail)
+            await conn.commit()
+        return msg
 
     raise ValueError(f"未知 steward 指令: {command}\n{STEWARD_HELP}")
 
@@ -572,7 +589,7 @@ async def tote_bundle(key_id: int, command: str = "") -> str:
 
 
 async def alliance_bundle(key_id: int, command: str = "") -> str:
-    from . import bottles, game, multi, neighbor_cofarm_ops, neighbor_links
+    from . import bottles, game, multi, neighbor_boat_share, neighbor_cofarm_ops, neighbor_links
 
     return await route(
         key_id,
@@ -595,6 +612,9 @@ async def alliance_bundle(key_id: int, command: str = "") -> str:
         hoist={
             "借船": (neighbor_links.neighbor_links_ops, True),
             "loan": (neighbor_links.neighbor_links_ops, True),
+            "合伙": (neighbor_boat_share.boat_share_ops, True),
+            "share": (neighbor_boat_share.boat_share_ops, True),
+            "合买": (neighbor_boat_share.boat_share_ops, True),
             "托养": (neighbor_links.neighbor_links_ops, True),
             "foster": (neighbor_links.neighbor_links_ops, True),
             "菜篮": (neighbor_links.neighbor_links_ops, True),
@@ -606,6 +626,18 @@ async def alliance_bundle(key_id: int, command: str = "") -> str:
         help_text=ALLIANCE_HELP,
         empty=ALLIANCE_HELP,
     )
+
+
+async def npc_services_ops(key_id: int, command: str = "") -> str:
+    from . import db, npc_services
+
+    s = await db.get_steward_by_key_id(key_id)
+    if not s:
+        raise ValueError("先 steward_ops enroll")
+    async with db.connect() as conn:
+        msg = await npc_services.handle(conn, s, command)
+        await conn.commit()
+    return msg
 
 
 async def visit_bundle(key_id: int, command: str = "") -> str:
@@ -664,6 +696,8 @@ async def visit_bundle(key_id: int, command: str = "") -> str:
             "lianli": (marriage.marriage_ops, "desk"),
             "民政局": (marriage.marriage_ops, "desk"),
             "婚约": (marriage.marriage_ops, "desk"),
+            "服务": (npc_services_ops, "list"),
+            "收费服务": (npc_services_ops, "list"),
         },
         hoist={
             "treat": (clinic.clinic_ops, True),

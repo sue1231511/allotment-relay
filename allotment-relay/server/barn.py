@@ -24,6 +24,16 @@ async def has_guard_dog(conn: aiosqlite.Connection, steward_id: int) -> bool:
     return await cur.fetchone() is not None
 
 
+async def has_species(conn: aiosqlite.Connection, steward_id: int, species: str) -> bool:
+    if not species:
+        return False
+    cur = await conn.execute(
+        "SELECT 1 FROM barn_animals WHERE steward_id=? AND species=? LIMIT 1",
+        (steward_id, species),
+    )
+    return await cur.fetchone() is not None
+
+
 def _ready(animal: dict, species: str) -> bool:
     meta = LIVESTOCK[species]
     if meta.get("guard") or meta.get("hive"):
@@ -173,6 +183,19 @@ async def barn_ops(key_id: int, command: str) -> str:
         slot = int(parts[1]) if len(parts) > 1 else 1
         async with db.connect() as conn:
             msg = await breed_mod.try_breed(conn, s, slot)
+            await conn.commit()
+        return msg
+
+    if verb in ("闹脾气", "fuss"):
+        from . import event_choice as choice_mod
+
+        act = parts[1] if len(parts) > 1 else ""
+        async with db.connect() as conn:
+            if not act:
+                msg = await choice_mod.format_report(conn, s["id"])
+            else:
+                key = "epidemic" if act in ("隔离", "兽医", "拖着") else "barn_fuss"
+                msg = await choice_mod.resolve(conn, s, key, act)
             await conn.commit()
         return msg
 
@@ -476,6 +499,10 @@ async def barn_ops(key_id: int, command: str) -> str:
             qty = temper_mod.adjust_yield(row, qty)
             from . import barn_disease as barn_disease_mod
             qty = barn_disease_mod.yield_qty(row, qty)
+            from . import event_catalog as evcat_mod
+
+            if await evcat_mod.take_barn_fuss(conn, s["id"]):
+                qty = max(1, qty - 1)
             extra = ""
             if meta.get("hive") and random.random() < 0.2:
                 qty += 1
@@ -516,6 +543,16 @@ async def barn_ops(key_id: int, command: str) -> str:
         if ill:
             bits.append(ill)
             bits.append("人的病去 visit_ops clinic treat")
+        from . import event_catalog as evcat_mod
+
+        async with db.connect() as conn:
+            fuss = await evcat_mod.roll_barn_fuss(conn, s["id"])
+            epi = await evcat_mod.roll_epidemic(conn, s["id"])
+            await conn.commit()
+        if fuss:
+            bits.append(fuss)
+        if epi:
+            bits.append(epi)
         return "\n".join(bits)
 
     if verb == "harvest":

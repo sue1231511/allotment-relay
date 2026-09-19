@@ -67,6 +67,8 @@ async def works_voyage_hint(conn) -> str | None:
         bits.append("旧温室工程：失败×0.97")
     if await works_mod.active_bonus(conn, "ting"):
         bits.append("听潮亭工程：鱼群压力×0.85")
+    if await works_mod.active_bonus(conn, "drain"):
+        bits.append("排水工程：井蚀涨得慢、潮返盐斑少")
     if not bits:
         return None
     return "岸上工程加成：" + " · ".join(bits)
@@ -94,6 +96,8 @@ async def maybe_salt_blot_after_well(conn, steward_id: int) -> str | None:
         chance *= 0.5
     if await works_mod.active_bonus(conn, "shed"):
         chance *= 0.85
+    if await works_mod.active_bonus(conn, "drain"):
+        chance *= 0.4
     if random.random() > chance:
         return None
     cur = await conn.execute(
@@ -120,5 +124,5 @@ async def maybe_salt_blot_after_well(conn, steward_id: int) -> str | None:
     )
     return (
         f"潮返地面：{slot}号地起盐斑，肥力 {fert}→{new_f}"
-        "（undertide_ops 清井；潮生会 工程 旧码头修完能略缓）"
+        "（undertide_ops 清井；潮生会 工程 旧码头/岸下排水修完能略缓）"
     )

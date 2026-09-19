@@ -1202,11 +1202,16 @@ async def _resolve_voyage(
         enc_payload = {}
     eff_boat_key = enc_payload.get("boat_key") or s.get("boat_key") or ""
     loan_lender_id = int(enc_payload.get("loan_lender_id") or 0)
+    share_founder_id = int(enc_payload.get("share_founder_id") or 0)
+    wear_owner_id = share_founder_id or loan_lender_id
+    if wear_owner_id:
+        parts = await boat_parts_mod.get_all(conn, wear_owner_id)
     boat = BOATS.get(eff_boat_key, {})
     cargo = boat_parts_mod.effective_cargo(boat.get("cargo", 2), parts)
     if enc_payload.get("early_return"):
         cargo = max(1, cargo - 1)
     from . import event_opportunity as opp_mod
+    from . import neighbor_boat_share as share_mod
     opp_line = await opp_mod.maybe_voyage_hard_luck(conn, s, enc_payload)
     fish_loot: list[str] = []
     loot_table = voyage_loot_table(voyage["route"], rarity_bonus=await _hook_rarity_bonus(conn, s["id"]))
@@ -1222,6 +1227,13 @@ async def _resolve_voyage(
             conn, s["id"], storm=storm,
         )
         hull_note = parts_note = ""
+    elif share_founder_id and share_founder_id != s["id"]:
+        hull_note = await hull_mod.wear_after_voyage(
+            conn, share_founder_id, voyage["route"], storm=storm,
+        )
+        parts_note = await boat_parts_mod.wear_voyage(
+            conn, share_founder_id, voyage["route"], storm=storm,
+        )
     else:
         hull_note = await hull_mod.wear_after_voyage(
             conn, s["id"], voyage["route"], storm=storm,
@@ -1229,10 +1241,18 @@ async def _resolve_voyage(
         parts_note = await boat_parts_mod.wear_voyage(
             conn, s["id"], voyage["route"], storm=storm,
         )
-    parts = await boat_parts_mod.get_all(conn, s["id"])
+    parts = await boat_parts_mod.get_all(conn, wear_owner_id or s["id"])
+    from . import event_catalog as evcat_mod
+
+    hold_note = await evcat_mod.roll_hold_leak(
+        conn, wear_owner_id or s["id"], fatal=bool(failed and storm)
+    )
+    if hold_note:
+        loot_lines.append(hold_note)
 
     if failed and not loan_lender_id:
-        await conn.execute("UPDATE stewards SET boat_damaged=1 WHERE id=?", (s["id"],))
+        dmg_id = share_founder_id or s["id"]
+        await conn.execute("UPDATE stewards SET boat_damaged=1 WHERE id=?", (dmg_id,))
         from . import bad_event_tiers as tiers_mod
 
         loot_lines.append(
@@ -1278,6 +1298,12 @@ async def _resolve_voyage(
     msg = f"{route['label']}归港：" + "，".join(loot_lines)
     if opp_line:
         msg += f" · {opp_line}"
+    wreck_line = await opp_mod.maybe_storm_wreck_luck(conn, s["id"], storm=storm)
+    if wreck_line:
+        msg += f" · {wreck_line}"
+    share_line = await share_mod.after_voyage_payout(conn, s, fish_loot)
+    if share_line:
+        msg += f" · {share_line}"
     msg += flavor.maybe_suffix(flavor.VOYAGE_RETURN_BAD if failed else flavor.VOYAGE_RETURN_GOOD)
     wear_line = loan_note if loan_note else f"{hull_note} · {parts_note}".strip(" ·")
     if wear_line:
@@ -1286,8 +1312,10 @@ async def _resolve_voyage(
         conn, s["id"],
         f"归港 {route['label']}{'（折返）' if failed else ''} · {wear_line or '—'}",
     )
-    if s.get("boat_damaged") and not loan_lender_id:
+    if s.get("boat_damaged") and not loan_lender_id and not share_founder_id:
         msg += "（船损，voyage_ops repair）"
+    elif failed and share_founder_id and share_founder_id != s["id"]:
+        msg += "（合伙船折返，磨损记在发起人；voyage_ops repair 平摊）"
     elif failed and loan_lender_id:
         msg += "（借船折返，磨损记在船主）"
 
@@ -1550,30 +1578,43 @@ async def voyage_ops(key_id: int, command: str) -> str:
     if verb == "repair":
         async with db.connect() as conn:
             s = await _refresh_steward(conn, s["id"])
-            if not s.get("boat_key"):
+            from . import neighbor_boat_share as share_mod
+
+            founder_id = await share_mod.share_founder_id(conn, s["id"])
+            owner_id = founder_id or s["id"]
+            owner = await _refresh_steward(conn, owner_id) if founder_id else s
+            if not owner.get("boat_key"):
                 raise ValueError("还没有船")
-            if not s.get("boat_damaged"):
+            if not owner.get("boat_damaged"):
                 return "船况良好，无需修理"
-            cost = BOATS[s["boat_key"]]["repair"]
+            cost = BOATS[owner["boat_key"]]["repair"]
             nail_note = ""
             if await db.take_item(conn, s["id"], "craft_copper_nails", 1):
                 cost = max(1, cost // 2)
                 nail_note = "，用了一颗工坊铜钉"
-            cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
-            if (await cur.fetchone())[0] < cost:
-                if nail_note:
-                    await db.add_item(conn, s["id"], "craft_copper_nails", 1)
-                raise ValueError(f"修船需要 {cost} 票")
+            leftover, share_note = await share_mod.split_repair(conn, s["id"], cost)
+            if not share_note:
+                cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
+                if (await cur.fetchone())[0] < leftover:
+                    if nail_note:
+                        await db.add_item(conn, s["id"], "craft_copper_nails", 1)
+                    raise ValueError(f"修船需要 {cost} 票")
+                await conn.execute(
+                    "UPDATE stewards SET tickets=tickets-? WHERE id=?",
+                    (leftover, s["id"]),
+                )
             await conn.execute(
-                "UPDATE stewards SET tickets=tickets-?, boat_damaged=0 WHERE id=?",
-                (cost, s["id"]),
+                "UPDATE stewards SET boat_damaged=0 WHERE id=?",
+                (owner_id,),
             )
             from . import boat_hull as hull_mod
             from . import voyage_chronicle as vlog_mod
-            await hull_mod.repair_full(conn, s["id"])
-            await vlog_mod.append(conn, s["id"], f"修船（-{cost}票{nail_note}）")
+            await hull_mod.repair_full(conn, owner_id)
+            extra = f"；{share_note}" if share_note else ""
+            await vlog_mod.append(conn, s["id"], f"修船（-{cost}票{nail_note}{extra}）")
             await conn.commit()
-        return f"修船完成（-{cost} 票{nail_note}），船体回满，可以 depart"
+        extra = f"；{share_note}" if share_note else ""
+        return f"修船完成（-{cost} 票{nail_note}{extra}），船体回满，可以 depart"
 
     if verb == "depart" and len(parts) >= 2:
         route_key = parts[1].split()[0].lower()
@@ -1583,16 +1624,25 @@ async def voyage_ops(key_id: int, command: str) -> str:
         async with db.connect() as conn:
             s = await _refresh_steward(conn, s["id"])
             from . import neighbor_links as nlink_mod
+            from . import neighbor_boat_share as share_mod
 
             loan_lender_id = 0
-            boat_key = s.get("boat_key") or ""
+            share_founder_id = 0
+            boat_key = await nlink_mod.effective_boat_key(conn, s) or ""
             if not boat_key:
-                boat_key = await nlink_mod.effective_boat_key(conn, s) or ""
-                if boat_key:
-                    loan_lender_id = await nlink_mod.boat_loan_lender(conn, s["id"]) or 0
-            if not boat_key:
-                raise ValueError("先 voyage_ops buy 购船，或向邻居 alliance_ops 借船 给")
-            if s.get("boat_damaged") and not loan_lender_id:
+                raise ValueError("先 voyage_ops buy 购船，或向邻居 alliance_ops 借船 给 / 合伙 入")
+            share_key = await share_mod.share_boat_key(conn, s["id"])
+            if share_key and boat_key == share_key:
+                share_founder_id = await share_mod.share_founder_id(conn, s["id"]) or 0
+            elif not s.get("boat_key"):
+                loan_lender_id = await nlink_mod.boat_loan_lender(conn, s["id"]) or 0
+            if share_founder_id:
+                cur = await conn.execute(
+                    "SELECT boat_damaged FROM stewards WHERE id=?", (share_founder_id,)
+                )
+                if int((await cur.fetchone())[0]):
+                    raise ValueError("合伙船损未修，先 voyage_ops repair（费用平摊）")
+            elif s.get("boat_damaged") and not loan_lender_id:
                 raise ValueError("船损，先 repair")
             if loan_lender_id:
                 cur = await conn.execute(
@@ -1629,6 +1679,7 @@ async def voyage_ops(key_id: int, command: str) -> str:
                 "voyage_fish": [],
                 "boat_key": boat_key,
                 "loan_lender_id": loan_lender_id,
+                "share_founder_id": share_founder_id,
             }
             await conn.execute(
                 """

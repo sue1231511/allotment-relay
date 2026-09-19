@@ -96,6 +96,52 @@ BARN_AILMENTS: dict[str, dict[str, Any]] = {
         "contagious": True,
         "contact": 0.48,
     },
+    "dystocia": {
+        "name": "难产",
+        "emoji": "🩺",
+        "cost": 24,
+        "species": frozenset({"chicken", "duck", "rabbit", "goat", "pig", "sheep"}),
+        "human": None,
+        "yield_mult": 0.4,
+        "weight": 0,
+        "breed_only": True,
+    },
+    "turkey_pox": {
+        "name": "火羽疹",
+        "emoji": "\ud83e\udd83",
+        "cost": 16,
+        "species": frozenset({"turkey"}),
+        "human": "barn_fever",
+        "yield_mult": 0.5,
+        "weight": 14,
+    },
+    "goose_gout": {
+        "name": "鹅脚肿",
+        "emoji": "\ud83e\udda2",
+        "cost": 15,
+        "species": frozenset({"goose"}),
+        "human": None,
+        "yield_mult": 0.55,
+        "weight": 12,
+    },
+    "quail_chill": {
+        "name": "鹑寒",
+        "emoji": "\ud83d\udc26",
+        "cost": 11,
+        "species": frozenset({"quail"}),
+        "human": None,
+        "yield_mult": 0.6,
+        "weight": 14,
+    },
+    "alpaca_rash": {
+        "name": "驼疹",
+        "emoji": "\ud83e\udd99",
+        "cost": 18,
+        "species": frozenset({"alpaca"}),
+        "human": "barn_fever",
+        "yield_mult": 0.55,
+        "weight": 12,
+    },
 }
 
 BARN_AILMENT_ALIASES = {
@@ -108,6 +154,11 @@ BARN_AILMENT_ALIASES = {
     "暑渴": "heat_thirst",
     "冻蹄": "frost_bite",
     "畜瘟": "murrain",
+    "难产": "dystocia",
+    "火羽疹": "turkey_pox",
+    "鹅脚肿": "goose_gout",
+    "鹑寒": "quail_chill",
+    "驼疹": "alpaca_rash",
 }
 
 
@@ -175,6 +226,8 @@ def _pick_for_species(species: str, climate: str | None) -> str | None:
     keys: list[str] = []
     weights: list[int] = []
     for key, meta in BARN_AILMENTS.items():
+        if meta.get("breed_only"):
+            continue
         allowed = meta.get("species") or frozenset()
         if species not in allowed:
             continue

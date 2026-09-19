@@ -1469,6 +1469,15 @@ async def hut_ops(key_id: int, command: str) -> str:
                 appl_line = await appl_mod.status_line(conn, s["id"], hut_built=True)
                 if appl_line:
                     roof_line = (roof_line + "\n" + appl_line) if roof_line else appl_line
+                from . import durability as dura_mod
+                from . import play_cascade as cascade_mod
+
+                dur_line = await dura_mod.status_line(conn, s["id"])
+                if dur_line:
+                    roof_line = (roof_line + "\n" + dur_line) if roof_line else dur_line
+                casc = await cascade_mod.hint(conn, s)
+                if casc:
+                    roof_line = (roof_line + "\n" + casc) if roof_line else casc
                 home_status_note = await home_events_mod.roll_on_status(conn, s) or ""
                 from . import hut_chores as chore_mod
                 from . import hut_domestic as dom_mod

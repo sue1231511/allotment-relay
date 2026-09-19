@@ -50,6 +50,36 @@ NOTABLE_KEYS = {
 }
 NOTABLE_KEYS.update(GOLD_THREE)
 NOTABLE_KEYS.update(GOLD_FIVE_EXTRA)
+NOTABLE_KEYS.update({
+    "craft_gyotaku",
+    "craft_boat_model",
+    "craft_shell_case",
+    "craft_ore_case",
+    "craft_bottle_rack",
+    "craft_flower_book",
+    "craft_old_photo",
+    "craft_tide_stamp",
+    "craft_npc_sign",
+    "wreck_scrap",
+    "craft_relic",
+    "craft_fish_bone",
+    "craft_seed_box",
+    "proc_black_salt",
+    "drink_fog_port",
+})
+
+NOTABLE_PREFIXES = (
+    "craft_gyotaku",
+    "craft_boat_model",
+    "craft_relic",
+    "craft_old_photo",
+    "craft_tide_stamp",
+    "craft_npc_sign",
+    "craft_fish_bone",
+    "craft_seed_box",
+    "relic_",
+    "wine_",
+)
 
 
 def calendar_phrase(ts: int | None = None) -> str:
@@ -72,6 +102,8 @@ def is_notable(item: str) -> bool:
         return False
     if key in NOTABLE_KEYS:
         return True
+    if any(key.startswith(p) for p in NOTABLE_PREFIXES):
+        return True
     name = ITEM_NAMES.get(key) or ""
     if "戒" in name or key.endswith("_ring"):
         return True
@@ -80,6 +112,10 @@ def is_notable(item: str) -> bool:
         return int(meta.get("rarity") or 0) >= 4
     if key.startswith("shell_shine_"):
         return True
+    if key.startswith("dish_"):
+        from .kitchen_special import SPECIAL_DISH_KEYS
+
+        return any(f"dish_{k}_" in key or key.startswith(f"dish_{k}_") for k in SPECIAL_DISH_KEYS)
     return False
 
 
