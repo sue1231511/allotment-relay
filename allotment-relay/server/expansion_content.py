@@ -214,6 +214,13 @@ EXTRA_HEARTH_RECIPES = {
     _sig("crop_mulberry", "proc_rice_wine"): {"name": "桑葚酒", "sell": 40, "tags": ["drink"]},
     _sig("crop_pomelo", "proc_tea_leaf"): {"name": "柚子茶盏", "sell": 38, "tags": ["drink"]},
     _sig("crop_olive", "proc_salt"): {"name": "盐渍橄榄", "sell": 36, "tags": ["snack"]},
+    _sig("crop_apple", "proc_rice_wine"): {"name": "苹果酒", "sell": 42, "tags": ["drink"]},
+    _sig("crop_grape", "proc_rice_wine"): {"name": "葡萄酒", "sell": 44, "tags": ["drink"]},
+    _sig("honey", "proc_rice_wine"): {"name": "蜂蜜酒", "sell": 46, "tags": ["drink"]},
+    _sig("crop_pomegranate", "proc_rice_wine"): {"name": "石榴酒", "sell": 45, "tags": ["drink"]},
+    _sig("crop_coconut", "proc_rice_wine"): {"name": "椰酒", "sell": 43, "tags": ["drink"]},
+    _sig("crop_sorghum", "proc_rice_wine"): {"name": "高粱酒", "sell": 41, "tags": ["drink"]},
+    _sig("crop_grape", "quarry_salt"): {"name": "果味气泡酒", "sell": 38, "tags": ["drink"]},
 }
 
 
