@@ -13,6 +13,8 @@ PEST_META = {
     "salt_spot": {"name": "盐斑", "emoji": "🧂", "yield_penalty": 0.85},
     "weed": {"name": "杂草", "emoji": "🌾", "yield_penalty": 0.9},
     "blight": {"name": "菌病", "emoji": "🍄", "yield_penalty": 0.6},
+    "wind_scorch": {"name": "海风灼叶", "emoji": "🌬️", "yield_penalty": 0.8},
+    "rats": {"name": "鼠害", "emoji": "🐀", "yield_penalty": 0.7},
     "gh_leak": {"name": "温室漏风", "emoji": "💨", "yield_penalty": 0.88},
     "sinkhole": {"name": "地陷", "emoji": "🕳️", "yield_penalty": 0.35},
 }
