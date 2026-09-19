@@ -52,9 +52,19 @@ async def maybe_spawn(conn, plot: dict[str, Any]) -> str | None:
         base += 0.04
     if (plot.get("crop") or "") == "peach":
         base += 0.05
+    from . import world as world_mod
+    if world_mod.current_weather() == "gale" and not plot.get("greenhouse"):
+        base += 0.03
+    sid = int(plot.get("steward_id") or 0)
+    if sid:
+        from . import barn as barn_mod
+        if await barn_mod.has_species(conn, sid, "chicken"):
+            base *= 0.72
     if random.random() > base:
         return None
     pool = [k for k in PEST_META if k not in ("gh_leak", "sinkhole")]
+    if world_mod.current_weather() == "gale" and not plot.get("greenhouse"):
+        pool = pool + ["wind_scorch", "wind_scorch"]
     if not plot.get("greenhouse") and random.random() < 0.12:
         key = "sinkhole"
     else:
