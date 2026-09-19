@@ -573,7 +573,7 @@ async def tote_bundle(key_id: int, command: str = "") -> str:
 
 
 async def alliance_bundle(key_id: int, command: str = "") -> str:
-    from . import bottles, game, multi, neighbor_cofarm_ops, neighbor_links
+    from . import bottles, game, multi, neighbor_boat_share, neighbor_cofarm_ops, neighbor_links
 
     return await route(
         key_id,
