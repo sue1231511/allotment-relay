@@ -143,3 +143,117 @@ async def open_share(conn, founder: dict, boat_token: str) -> str:
         f"满 2 人各付 {each} 票才下水和。协作要 ≥{RAPPORT_SHARE}。"
         f"不是借船（借船是把自己的船借三天）。"
     )
+
+
+async def join_share(conn, joiner: dict, founder_name: str) -> str:
+    await ensure_tables(conn)
+    if await _member_share(conn, joiner["id"]):
+        raise ValueError("你已经在一艘合伙船里")
+    founder = await db.get_steward_by_name(founder_name)
+    if not founder:
+        raise ValueError("找不到该岛民")
+    if founder["id"] == joiner["id"]:
+        raise ValueError("发起人不用入自己的伙")
+    cur = await conn.execute(
+        """
+        SELECT id, boat_key, status FROM neighbor_boat_share
+        WHERE founder_id=? AND status IN ('open','active')
+        ORDER BY id DESC LIMIT 1
+        """,
+        (founder["id"],),
+    )
+    row = await cur.fetchone()
+    if not row:
+        raise ValueError(f"{founder['name']} 没有进行中的合伙。请对方 合伙 开 漂航船")
+    share_id, boat_key, status = int(row[0]), row[1], row[2]
+    members = await _members(conn, share_id)
+    if any(m["id"] == joiner["id"] for m in members):
+        raise ValueError("你已经在这艘伙里")
+    if len(members) >= MAX_MEMBERS:
+        raise ValueError(f"这艘伙满了（最多 {MAX_MEMBERS} 人）")
+    r = await _rapport(conn, joiner["id"], founder["id"])
+    if r < RAPPORT_SHARE:
+        raise ValueError(f"合伙要协作 ≥{RAPPORT_SHARE}（当前 {r}）")
+    if status == "active":
+        buyin = _share_cost(boat_key, len(members) + 1)
+        cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (joiner["id"],))
+        have = int((await cur.fetchone())[0])
+        if have < buyin:
+            raise ValueError(f"入伙买位要 {buyin} 票（现 {have}）")
+        await conn.execute(
+            "UPDATE stewards SET tickets=tickets-? WHERE id=?",
+            (buyin, joiner["id"]),
+        )
+        refund = buyin // max(1, len(members))
+        for m in members:
+            await conn.execute(
+                "UPDATE stewards SET tickets=tickets+? WHERE id=?",
+                (refund, m["id"]),
+            )
+        await conn.execute(
+            "INSERT INTO neighbor_boat_share_member (share_id, steward_id, paid) VALUES (?,?,?)",
+            (share_id, joiner["id"], buyin),
+        )
+        return (
+            f"入伙 { _boat_meta(boat_key)['name'] }（-{buyin} 票）。"
+            f"原船员各分回 {refund} 票。收益和维修共同承担。"
+        )
+
+    await conn.execute(
+        "INSERT INTO neighbor_boat_share_member (share_id, steward_id, paid) VALUES (?,?,0)",
+        (share_id, joiner["id"]),
+    )
+    members = await _members(conn, share_id)
+    each = _share_cost(boat_key, len(members))
+    paid_ok = True
+    for m in members:
+        cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (m["id"],))
+        have = int((await cur.fetchone())[0])
+        if have < each:
+            paid_ok = False
+            break
+    name = _boat_meta(boat_key)["name"]
+    if not paid_ok or len(members) < 2:
+        return (
+            f"已入伙，等人齐。{name} 满 2 人各付 {each} 票才下水。"
+            f"现在 {len(members)} 人。"
+        )
+    for m in members:
+        await conn.execute(
+            "UPDATE stewards SET tickets=tickets-? WHERE id=?",
+            (each, m["id"]),
+        )
+        await conn.execute(
+            "UPDATE neighbor_boat_share_member SET paid=? WHERE share_id=? AND steward_id=?",
+            (each, share_id, m["id"]),
+        )
+    await conn.execute(
+        "UPDATE neighbor_boat_share SET status='active' WHERE id=?",
+        (share_id,),
+    )
+    founder_row = await db.get_steward_by_id(founder["id"])
+    old = (founder_row or {}).get("boat_key") or ""
+    refund_note = ""
+    if old and old != boat_key:
+        back = int(_boat_meta(old)["cost"]) // 2
+        await conn.execute(
+            "UPDATE stewards SET tickets=tickets+? WHERE id=?",
+            (back, founder["id"]),
+        )
+        refund_note = f"发起人旧船按半价退 {back} 票。"
+    await conn.execute(
+        "UPDATE stewards SET boat_key=?, boat_damaged=0 WHERE id=?",
+        (boat_key, founder["id"]),
+    )
+    names = "、".join(m["name"] for m in members)
+    await db.add_chronicle(
+        "sea",
+        f"{names} 合伙买下 {name}",
+        founder["id"],
+        conn=conn,
+    )
+    return (
+        f"{name} 下水了。{names} 各付 {each} 票。{refund_note}"
+        f"谁出航谁收渔获，同伴分票；修船费用平摊。"
+        f"登记在 {founder['name']} 名下，不是借船。"
+    )
