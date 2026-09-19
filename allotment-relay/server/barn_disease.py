@@ -106,6 +106,42 @@ BARN_AILMENTS: dict[str, dict[str, Any]] = {
         "weight": 0,
         "breed_only": True,
     },
+    "turkey_pox": {
+        "name": "火羽疹",
+        "emoji": "\ud83e\udd83",
+        "cost": 16,
+        "species": frozenset({"turkey"}),
+        "human": "barn_fever",
+        "yield_mult": 0.5,
+        "weight": 14,
+    },
+    "goose_gout": {
+        "name": "鹅脚肿",
+        "emoji": "\ud83e\udda2",
+        "cost": 15,
+        "species": frozenset({"goose"}),
+        "human": None,
+        "yield_mult": 0.55,
+        "weight": 12,
+    },
+    "quail_chill": {
+        "name": "鹑寒",
+        "emoji": "\ud83d\udc26",
+        "cost": 11,
+        "species": frozenset({"quail"}),
+        "human": None,
+        "yield_mult": 0.6,
+        "weight": 14,
+    },
+    "alpaca_rash": {
+        "name": "驼疹",
+        "emoji": "\ud83e\udd99",
+        "cost": 18,
+        "species": frozenset({"alpaca"}),
+        "human": "barn_fever",
+        "yield_mult": 0.55,
+        "weight": 12,
+    },
 }
 
 BARN_AILMENT_ALIASES = {
