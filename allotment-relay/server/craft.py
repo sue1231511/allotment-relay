@@ -64,6 +64,16 @@ def _item_where(item: str) -> str:
         "fish_walkblue": "海里少见的未命名小鱼",
         "craft_copper_nails": "砧上打铜钉",
         "craft_net_patch": "砧上打网补丁",
+        "wreck_scrap": "风暴出航偶尔捡到",
+        "fish_sardine": "撒网或坐钓",
+        "fish_codling": "撒网或坐钓",
+        "proc_rice_wine": "灶台酿或加工",
+        "ut_brine_crystal": "潮下捡卤晶",
+        "seed_fogpea": "杂货铺或留种",
+        "wet_note": "赶海漂流瓶",
+        "honey": "小屋蜂箱",
+        "wild_mint": "份地野薄荷",
+        "crop_rapeseed": "菜地油菜",
     }
     if item in table:
         return table[item]
