@@ -95,9 +95,9 @@ async def steward_ops(command: str = "sheet") -> str:
     )
 
 
-@mcp.tool(description="份地果园与田间事件。空=指令表。例：status · sow 1 甘蓝 · 肥力 · 虫害 1 施药 · 留种 甘蓝 · weather · 浇水。tend 极小概率鸟啄（收成-1，极少落该作物种；steward_ops 灾档 近日已结）/灶台难点火/潮气发潮/鱼线打结（debuff 记一次消一次）。肥力/轮作、虫害、留种。weather 附本周纪事。勿 sow_all/plant；repair≠岸维。人类 /island「田间事件」处置虫害；repair 只修 steward_incidents。")
+@mcp.tool(description="份地果园与田间事件。空=指令表。例：status · sow 1 甘蓝 · 肥力 · 虫害 1 施药 · 虫害 1 填土 · 留种 甘蓝 · weather · 浇水。tend 极小概率鸟啄（收成-1，极少落该作物种；steward_ops 灾档 近日已结）/灶台难点火/潮气发潮/鱼线打结（debuff 记一次消一次）。肥力/轮作、虫害、地陷、留种。weather 附本周纪事。勿 sow_all/plant；repair≠岸维。人类 /island「田间事件」处置虫害；repair 只修 steward_incidents。")
 async def plot_ops(
-    command: Annotated[str, Field(description="incident status；repair 编号。肥力 · 虫害 1 手工|施药|拔除|不管（温室漏风 补网|通风|不管）· 留种 作物。空=指令表。")] = "",
+    command: Annotated[str, Field(description="incident status；repair 编号。肥力 · 虫害 1 手工|施药|拔除|不管（温室漏风 补网|通风|不管；地陷 填土|围起来|不管）· 留种 作物。空=指令表。")] = "",
 ) -> str:
     return await mux._call_ops(mux.plot_bundle, _kid(), command)
 
