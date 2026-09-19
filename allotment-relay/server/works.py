@@ -46,6 +46,15 @@ PROJECTS: list[dict[str, Any]] = [
         "place": "ting",
         "done": "亭上新瓦还反光。钉的字干得慢一点。",
     },
+    {
+        "slug": "drain_works",
+        "name": "岸下排水",
+        "blurb": "井口返潮。捐岸木、铜钉或票。修完潮压缓几天。",
+        "need": {"craft_timber": 18, "craft_copper_nails": 14, "tickets": 360},
+        "bonus": "drain",
+        "place": "plaza",
+        "done": "排水渠通了。井口不那么咸。",
+    },
 ]
 PROJECT_BY_SLUG = {p["slug"]: p for p in PROJECTS}
 MATTER = {"craft_timber", "craft_copper_nails"}
