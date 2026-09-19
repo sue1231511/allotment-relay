@@ -81,6 +81,9 @@ async def apply_sow_rotation(
     if crop == "peanut":
         fert = min(MAX_FERTILITY, fert + 4)
         notes.append("花生固氮，土略肥")
+    if crop == "soybean":
+        fert = min(MAX_FERTILITY, fert + 3)
+        notes.append("黄豆固氮，土略肥")
     await conn.execute(
         "UPDATE parcels SET soil_fertility=? WHERE id=?",
         (fert, fid),
