@@ -55,6 +55,30 @@ RECIPES: dict[str, dict] = {
         "out": "drink_peat_tea",
         "energy": 6,
     },
+    "pomelo_tea": {
+        "label": "柚子茶",
+        "ings": [("crop_pomelo", 1), ("proc_tea_leaf", 1)],
+        "out": "drink_pomelo_tea",
+        "energy": 6,
+    },
+    "lemon_water": {
+        "label": "柠檬水",
+        "ings": [("crop_lemon", 1), ("quarry_salt", 1)],
+        "out": "drink_lemon_water",
+        "energy": 4,
+    },
+    "coffee_cup": {
+        "label": "手冲咖啡",
+        "ings": [("crop_coffee", 1), ("proc_syrup", 1)],
+        "out": "drink_coffee",
+        "energy": 8,
+    },
+    "cocoa_cup": {
+        "label": "热可可",
+        "ings": [("crop_cacao", 1), ("milk", 1)],
+        "out": "drink_cocoa",
+        "energy": 7,
+    },
 }
 
 
