@@ -191,3 +191,31 @@ def test_dystocia_and_seed_ledger():
                     await conn.commit()
 
     asyncio.run(run())
+
+
+def test_pests_chicken_and_docs():
+    from server.plot_pests import PEST_META
+    from pathlib import Path
+
+    assert "wind_scorch" in PEST_META
+    assert "rats" in PEST_META
+    root = Path(__file__).resolve().parents[1]
+    help_txt = (root / "server/mcp_dispatch.py").read_text(encoding="utf-8")
+    assert "木筏" in help_txt
+    assert "栈桥" in help_txt
+    assert "难产" in help_txt
+    readme = (root.parent / "README.md").read_text(encoding="utf-8")
+    assert "voyage buy raft" in readme
+    assert "栈桥" in readme
+    game = (root / "server/game.py").read_text(encoding="utf-8")
+    assert "木筏" in game
+    manual = (root / "server/templates/partials/island-manual-content.html").read_text(
+        encoding="utf-8"
+    )
+    assert "木筏" in manual
+    assert "难产" in manual
+    assert "栈桥" in manual
+    assert "alliance_ops" not in manual
+    track = (root.parent / "docs/TIDE_FULL_EXPANSION.md").read_text(encoding="utf-8")
+    assert "tide-full-expansion-source.md" in track
+    assert "SEA_CATCH" in track
