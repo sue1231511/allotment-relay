@@ -16,6 +16,16 @@ BAR_BRING: dict[str, tuple[str, int]] = {
     "drink_lemon_water": ("plum_soda", 4),
     "drink_coffee": ("rum", 5),
     "drink_cocoa": ("dusk_wheat", 5),
+    "drink_mint_tea": ("dusk_wheat", 4),
+    "drink_ginger_tea": ("lighthouse_gin", 5),
+    "drink_fruit_tea": ("yuzu_sparkle", 5),
+    "drink_coconut_milk": ("rum", 6),
+    "drink_soy_milk": ("dusk_wheat", 4),
+    "drink_apple_juice": ("plum_soda", 4),
+    "drink_grape_juice": ("yuzu_sparkle", 5),
+    "drink_pomegranate_juice": ("rum", 5),
+    "drink_honey_water": ("dusk_wheat", 4),
+    "drink_pear_soup": ("plum_soda", 5),
 }
 
 RECIPES: dict[str, dict] = {
