@@ -24,6 +24,16 @@ async def has_guard_dog(conn: aiosqlite.Connection, steward_id: int) -> bool:
     return await cur.fetchone() is not None
 
 
+async def has_species(conn: aiosqlite.Connection, steward_id: int, species: str) -> bool:
+    if not species:
+        return False
+    cur = await conn.execute(
+        "SELECT 1 FROM barn_animals WHERE steward_id=? AND species=? LIMIT 1",
+        (steward_id, species),
+    )
+    return await cur.fetchone() is not None
+
+
 def _ready(animal: dict, species: str) -> bool:
     meta = LIVESTOCK[species]
     if meta.get("guard") or meta.get("hive"):
