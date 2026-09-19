@@ -88,7 +88,7 @@ async def hint(conn, steward: dict[str, Any]) -> str | None:
     elif worn:
         bits.append("维修：票不够，先卖加工货或下馆")
     if fish and pickled <= 0 and not meals:
-        bits.append("加工：鱼可腌/晒/打刺身再卖，生鱼柜旧压价")
+        bits.append("加工：鱼可腌/晾/打刺身再卖，生鱼柜旧压价")
     if crops and not meals and stove_on and stove_dur / max(1, stove_mx) < 0.45:
         bits.append("加工：灶旧了，先小屋点修灶再出菜，硬烧可能掉星")
     if meals or pickled:
