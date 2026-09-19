@@ -78,7 +78,7 @@ NAMED_EVENTS: tuple[dict[str, str], ...] = (
     {"key": "line_snap", "tier": tiers_mod.TIER_MID, "name": "断线", "mod": "fishing_parts"},
     {"key": "snag", "tier": tiers_mod.TIER_MID, "name": "挂底", "mod": "fishing_parts"},
     {"key": "big_fight", "tier": tiers_mod.TIER_MID, "name": "大鱼搏斗", "mod": "big_fish_fight"},
-    {"key": "aphid", "tier": tiers_mod.TIER_MID, "name": "蚁虫", "mod": "plot_pests"},
+    {"key": "aphid", "tier": tiers_mod.TIER_MID, "name": "蚜虫", "mod": "plot_pests"},
     {"key": "root_rot", "tier": tiers_mod.TIER_MID, "name": "根腐", "mod": "plot_pests"},
     {"key": "blight", "tier": tiers_mod.TIER_HEAVY, "name": "菌病", "mod": "plot_pests"},
     {"key": "peach_worm", "tier": tiers_mod.TIER_MID, "name": "桃虫", "mod": "farming"},
