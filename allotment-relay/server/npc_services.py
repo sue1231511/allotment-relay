@@ -181,7 +181,7 @@ async def handle(conn, steward: dict[str, Any], raw: str) -> str:
         token = parts[1] if len(parts) > 1 else ""
         item = resolve_item_key(token) if token else ""
         if not item or not item.startswith("fish_"):
-            raise ValueError("鱼处理要写鱼名。例：服务 鱼处理 鲛鱼")
+            raise ValueError("鱼处理要写鱼名。例：服务 鱼处理 鲭鱼")
         species = item[5:]
         if species not in SEA_CATCH:
             raise ValueError("这种鱼处理不了")
