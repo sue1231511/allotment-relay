@@ -486,7 +486,7 @@ async def relay_manual() -> str:
         "    低=浅潮收超额两成，中=灌仓潮近一半，高=黑潮收七成五。风暴窗板略减损失。sheet 能看见",
         "  渔排 搭排 → 投苗 灰鲱 2 · 投饵 2 · 收排 2 · 名池 2 薄荷池 · 巡排（不写池号会选空池/待投饵/可收）",
         "    也可 pen erect / stock herring 2。收排赶上这种鱼爱来的潮汐会多一条。巡排每 8 小时。人类 /island 港口渔排栏能点。不要发明 pen_ops / fish_ops",
-        "  出海 voyage buy raft|skiff|watch_hoy|smack|cutter|longliner|drifter（木筌/舧板/小渔船/帆船/切波/双桃/雾海） · depart near|far|deep · return",
+        "  出海 voyage buy raft|skiff|watch_hoy|smack|cutter|longliner|drifter（木筏/舢板/小渔船/帆船/切波/双桅/雾海） · depart near|far|deep · return",
         "  船体 hull 随航程磨损（voyage_ops status 看）；低 hull 可能变待修。repair 票修同时回满 hull",
         "  坐钓 cast 另耗鱼线耐久（tide_ops gear 看 line）；线旧可能断线（票饵仍花，无鱼）→ gear repair line",
         "  鱼群生态：同种捞多了本周变稀；visit_ops 潮生会 禁捕 看禁捞种+压力。网/钓碰上禁捕罚15票放生",
