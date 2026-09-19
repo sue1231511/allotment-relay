@@ -472,6 +472,9 @@ async def vend_unit_price(
     if wmilli and item.startswith("fish_"):
         kg = wmilli / 1000.0
         mult *= min(1.8, 0.85 + kg * 0.04)
+    from . import loop_couple as loop_mod
+
+    mult *= await loop_mod.fridge_price_mult(conn, steward_id, item)
     return max(1, int(base * mult))
 
 
