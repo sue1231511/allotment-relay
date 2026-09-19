@@ -1183,3 +1183,38 @@ async def shake_tree(
         if tev:
             extra = f"{note}\n{tev}" if note else tev
     return item, qty, extra
+
+
+async def maybe_mint_spread(conn, steward_id: int, plot: dict[str, Any]) -> str | None:
+    """薄荷打理后偶发窜到邻地空格。"""
+    if plot.get("crop") != "garden_mint":
+        return None
+    if plot.get("greenhouse") or plot.get("orchard"):
+        return None
+    if random.random() > 0.22:
+        return None
+    slot = int(plot.get("slot") or 0)
+    cur = await conn.execute(
+        """
+        SELECT id, slot FROM parcels
+        WHERE steward_id=? AND COALESCE(orchard,0)=0 AND COALESCE(greenhouse,0)=0
+          AND (crop IS NULL OR crop='')
+          AND slot IN (?, ?)
+        ORDER BY slot
+        """,
+        (steward_id, slot - 1, slot + 1),
+    )
+    rows = await cur.fetchall()
+    if not rows:
+        return None
+    tid, tslot = random.choice(rows)
+    grow = int((CROPS.get("garden_mint") or {}).get("grow") or 65) * 60
+    await conn.execute(
+        """
+        UPDATE parcels SET crop='garden_mint', planted_at=?, tended=0,
+        grow_target=?, grow_pace='spread', fertilized=0, watered=0, harvest_left=0
+        WHERE id=?
+        """,
+        (db.now(), max(60, int(grow * 0.92)), tid),
+    )
+    return f"薄荷窜到了{tslot}号地（自己长出来的，记得打理）"
