@@ -217,7 +217,7 @@ async def handle(conn, steward: dict[str, Any], raw: str) -> str:
                 "UPDATE barn_animals SET ailment='', ailment_at=0 WHERE id=?",
                 (row[0],),
             )
-            return f"{slot}号栏洗过了（-{cost} 票）。暑渴/癬癫退了。"
+            return f"{slot}号栏洗过了（-{cost} 票）。暑渴/癞癣退了。"
         return f"{slot}号栏洗过了（-{cost} 票）。身上干净，病还在的仍要找兽医。"
 
     if do == "move":
