@@ -50,6 +50,36 @@ NOTABLE_KEYS = {
 }
 NOTABLE_KEYS.update(GOLD_THREE)
 NOTABLE_KEYS.update(GOLD_FIVE_EXTRA)
+NOTABLE_KEYS.update({
+    "craft_gyotaku",
+    "craft_boat_model",
+    "craft_shell_case",
+    "craft_ore_case",
+    "craft_bottle_rack",
+    "craft_flower_book",
+    "craft_old_photo",
+    "craft_tide_stamp",
+    "craft_npc_sign",
+    "wreck_scrap",
+    "craft_relic",
+    "craft_fish_bone",
+    "craft_seed_box",
+    "proc_black_salt",
+    "drink_fog_port",
+})
+
+NOTABLE_PREFIXES = (
+    "craft_gyotaku",
+    "craft_boat_model",
+    "craft_relic",
+    "craft_old_photo",
+    "craft_tide_stamp",
+    "craft_npc_sign",
+    "craft_fish_bone",
+    "craft_seed_box",
+    "relic_",
+    "wine_",
+)
 
 
 def calendar_phrase(ts: int | None = None) -> str:
