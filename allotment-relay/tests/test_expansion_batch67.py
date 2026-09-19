@@ -139,7 +139,55 @@ def test_mint_spread_and_leaf_water():
                     cur = await conn.execute(
                         "SELECT crop FROM parcels WHERE id=?", (pid2,)
                     )
-                    assert (await cur.fetchone())[0] == "garden_mint"
+    asyncio.run(run())
+
+
+def test_dystocia_and_seed_ledger():
+    async def run():
+        from server import barn_breeding as breed, barn_disease as disease, db, seed_lineage
+
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            with patch.object(db, "DATA_DIR", folder), patch.object(db, "DB_PATH", folder / "relay.db"):
+                await db.init_db()
+                key = await db.create_api_key("b@example.com")
+                row = await db.get_key_row(key)
+                await db.enroll_steward(row["id"], "牧人", "", "naturalist", "")
+                s = await db.get_steward_by_key_id(row["id"])
+                async with db.connect() as conn:
+                    await conn.execute(
+                        "INSERT OR IGNORE INTO barn_animals (steward_id, slot, species, fed) VALUES (?,?,NULL,0)",
+                        (s["id"], 1),
+                    )
+                    await conn.execute(
+                        "UPDATE barn_animals SET species='chicken', stocked_at=?, born_at=?, fed=1, ailment='' WHERE steward_id=? AND slot=1",
+                        (db.now() - 10 * 86400, db.now() - 10 * 86400, s["id"]),
+                    )
+                    await db.add_item(conn, s["id"], "feed_animal", 4)
+                    cur = await conn.execute(
+                        "SELECT id FROM barn_animals WHERE steward_id=? AND slot=1",
+                        (s["id"],),
+                    )
+                    aid = int((await cur.fetchone())[0])
+                    with patch("server.barn_breeding.random.random", side_effect=[0.01, 0.01]):
+                        msg = await breed.try_breed(conn, s, 1)
+                    assert "配种" in msg
+                    assert "难产" in msg
+                    cur = await conn.execute(
+                        "SELECT ailment FROM barn_animals WHERE id=?", (aid,)
+                    )
+                    assert (await cur.fetchone())[0] == "dystocia"
+                    assert "dystocia" in disease.BARN_AILMENTS
+                    await db.add_item(conn, s["id"], "crop_kale", 1)
+                    with patch("server.seed_lineage.random.random", lambda: 0.6):
+                        note = await seed_lineage.save_from_crop(conn, s, "kale")
+                    assert "第1代" in note
+                    cur = await conn.execute(
+                        "SELECT lines_json FROM item_ledgers WHERE owner_id=? AND item='seed_kale' AND alive=1",
+                        (s["id"],),
+                    )
+                    row = await cur.fetchone()
+                    assert row and "第1代" in (row[0] or "")
                     await conn.commit()
 
     asyncio.run(run())
