@@ -99,6 +99,18 @@ RECIPE_USE = {
     "marrow_sieve": "装到小屋，风暴打捞少空捞",
     "tide_vow_ring": "自制婚戒，比店里慢",
     "betroth_ring": "不是潮誓戒。打完去连理所登记信物",
+    "gyotaku": "挂墙上，岛收集簿会点亮",
+    "boat_model": "纯收藏，岛收集簿会点亮",
+    "shell_case": "纯收藏，不是陈列柜捐亮壳",
+    "ore_case": "纯收藏，不是陈列柜捐精矿",
+    "bottle_rack": "纯好看",
+    "flower_book": "纯收藏，不是花店干花",
+    "old_photo": "纯收藏",
+    "tide_stamp": "纯收藏，不加数值",
+    "npc_sign": "纯收藏，不是成就",
+    "relic": "纯收藏",
+    "fish_bone": "纯收藏，不是卖鱼",
+    "seed_box": "纯收藏，种不再能播",
 }
 
 
