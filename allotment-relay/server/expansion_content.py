@@ -209,6 +209,11 @@ EXTRA_HEARTH_RECIPES = {
     _sig("crop_moon_bean", "proc_rice_wine"): {"name": "月豆酒饭", "sell": 46, "tags": ["special", "drink"]},
     _sig("crop_wax_gourd", "proc_salt"): {"name": "盐渍冬瓜", "sell": 36, "tags": ["home"]},
     _sig("fish_shad", "crop_blue_tide_moss"): {"name": "蓝苔鲥片", "sell": 48, "tags": ["sea"]},
+    _sig("crop_lemon", "proc_flour"): {"name": "柠檬蛋糕", "sell": 46, "tags": ["sweet"]},
+    _sig("proc_cocoa", "proc_flour"): {"name": "可可饼干", "sell": 44, "tags": ["sweet"]},
+    _sig("crop_mulberry", "proc_rice_wine"): {"name": "桑葚酒", "sell": 40, "tags": ["drink"]},
+    _sig("crop_pomelo", "proc_tea_leaf"): {"name": "柚子茶盏", "sell": 38, "tags": ["drink"]},
+    _sig("crop_olive", "proc_salt"): {"name": "盐渍橄榄", "sell": 36, "tags": ["snack"]},
 }
 
 
