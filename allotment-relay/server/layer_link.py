@@ -124,5 +124,5 @@ async def maybe_salt_blot_after_well(conn, steward_id: int) -> str | None:
     )
     return (
         f"潮返地面：{slot}号地起盐斑，肥力 {fert}→{new_f}"
-        "（undertide_ops 清井；潮生会 工程 旧码头修完能略缓）"
+        "（undertide_ops 清井；潮生会 工程 旧码头/岸下排水修完能略缓）"
     )
