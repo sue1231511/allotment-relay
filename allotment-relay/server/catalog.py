@@ -993,6 +993,36 @@ CRAFT_RECIPES = {
         "seconds": 660, "energy": 4,
         "hint": "雾豆种收进盒。纯收藏，种不再能播",
     },
+    "candied_fruit": {
+        "name": "糖渍果", "emoji": "🍑", "out": "proc_candied_fruit", "qty": 1,
+        "need": {"crop_peach": 1, "proc_syrup": 1},
+        "seconds": 720, "energy": 4,
+        "hint": "桃+糖浆慢渍。灶上也能出糖渍梨/樱桃",
+    },
+    "fruit_vinegar": {
+        "name": "果醋", "emoji": "🫙", "out": "proc_fruit_vinegar", "qty": 1,
+        "need": {"crop_plum": 1, "proc_vinegar": 1},
+        "seconds": 840, "energy": 4,
+        "hint": "李子泡醋。灶上也能出醋渍李/柠檬醋",
+    },
+    "pickled_fish": {
+        "name": "腌鱼", "emoji": "🐟", "out": "proc_pickled_fish", "qty": 1,
+        "need": {"fish_sardine": 1, "proc_pickling_brine": 1},
+        "seconds": 900, "energy": 4,
+        "hint": "沙丁+腌卤。收费服务「鱼处理」也能出",
+    },
+    "sashimi": {
+        "name": "刺身", "emoji": "🍣", "out": "proc_sashimi", "qty": 1,
+        "need": {"fish_tuna": 1, "crop_shiso": 1},
+        "seconds": 360, "energy": 3,
+        "hint": "金枪片生。耐放不如腌熏",
+    },
+    "kimchi": {
+        "name": "泡菜", "emoji": "🥬", "out": "proc_kimchi", "qty": 1,
+        "need": {"crop_kale": 1, "proc_pickling_brine": 1},
+        "seconds": 720, "energy": 3,
+        "hint": "甘蓝泡卤。延长保存",
+    },
 }
 
 # 陈列柜：捐出指定货，换称呼和/或小屋装饰。不印钞
