@@ -75,6 +75,8 @@ def fertilizer_label(item: str) -> str:
 
     if item in MANURE:
         return MANURE[item]["name"]
+    if item == "ash_fert":
+        return "病株灰肥"
     return "堆肥"
 
 
