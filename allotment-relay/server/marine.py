@@ -1202,6 +1202,10 @@ async def _resolve_voyage(
         enc_payload = {}
     eff_boat_key = enc_payload.get("boat_key") or s.get("boat_key") or ""
     loan_lender_id = int(enc_payload.get("loan_lender_id") or 0)
+    share_founder_id = int(enc_payload.get("share_founder_id") or 0)
+    wear_owner_id = share_founder_id or loan_lender_id
+    if wear_owner_id:
+        parts = await boat_parts_mod.get_all(conn, wear_owner_id)
     boat = BOATS.get(eff_boat_key, {})
     cargo = boat_parts_mod.effective_cargo(boat.get("cargo", 2), parts)
     if enc_payload.get("early_return"):
