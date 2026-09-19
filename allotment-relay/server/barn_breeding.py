@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import random
 
+import aiosqlite
+
 from . import db
 from .catalog import LIVESTOCK, MANURE, ITEM_NAMES
 
@@ -11,6 +13,7 @@ MIN_AGE_SEC = 5 * 86400
 
 
 async def try_breed(conn, steward: dict, slot: int) -> str:
+    conn.row_factory = aiosqlite.Row
     cur = await conn.execute(
         "SELECT * FROM barn_animals WHERE steward_id=? AND slot=?",
         (steward["id"], slot),
@@ -52,4 +55,11 @@ async def try_breed(conn, steward: dict, slot: int) -> str:
     from . import barn_pedigree as pedigree_mod
     await pedigree_mod.log(conn, steward["id"], slot, f"{meta['name']}配种成功")
     await pedigree_mod.next_generation(conn, steward["id"], species)
+    if random.random() < 0.14:
+        from . import barn_disease as barn_disease_mod
+        aid = int(animal.get("id") or 0)
+        if aid:
+            await barn_disease_mod.apply_ailment(conn, aid, "dystocia")
+            await pedigree_mod.log(conn, steward["id"], slot, f"{meta['name']}难产")
+            out += " · 难产了，先 visit_ops 兽医 treat"
     return out
