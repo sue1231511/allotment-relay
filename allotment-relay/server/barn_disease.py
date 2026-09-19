@@ -155,6 +155,10 @@ BARN_AILMENT_ALIASES = {
     "冻蹄": "frost_bite",
     "畜瘟": "murrain",
     "难产": "dystocia",
+    "火羽疹": "turkey_pox",
+    "鹅脚肿": "goose_gout",
+    "鹑寒": "quail_chill",
+    "驼疹": "alpaca_rash",
 }
 
 
