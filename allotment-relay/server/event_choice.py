@@ -374,3 +374,48 @@ async def resolve(conn, steward: dict[str, Any], event_key: str, act: str) -> st
     await _clear(conn, sid, event_key)
     pay = f"（-{tickets} 票）" if tickets else ""
     return tiers_mod.tag(tiers_mod.TIER_LIGHT, f"{spec.get('via') or event_key}：{act}{pay}。{note}")
+
+
+async def format_report(conn, steward_id: int) -> str:
+    open_rows = await list_open(conn, steward_id)
+    lines = ["待选坏事（每条至少两路，不全是扣票）："]
+    if open_rows:
+        for row in open_rows:
+            lines.append(
+                f"  {row['via'] or row['key']}：{'｜'.join(row['opts'])}"
+                f" → 管家档灾选 {row['key']} 选项"
+            )
+    else:
+        lines.append("  眼下没有待选。碰上闹脾气/鱼舱进水/疫病/灶台卡火会记在这里。")
+    lines.append("已有入口不重复记：帆撕走港口、虫害走田间事件、惊逃走畜栏、塌方走盐风崖。")
+    return "\n".join(lines)
+
+
+async def handle(conn, steward: dict[str, Any], command: str) -> str:
+    parts = (command or "").strip().split()
+    if not parts or parts[0] in ("list", "status", "待选", ""):
+        return await format_report(conn, steward["id"])
+    if parts[0] in ("catalog", "册", "全表"):
+        lines = [f"事件多选 {covered_count()} 条："]
+        for key, spec in CHOICES.items():
+            lines.append(f"  {key} {'｜'.join(spec['opts'])}（{spec['via']}）")
+        return "\n".join(lines[:40]) + ("\n  …" if len(CHOICES) > 38 else "")
+    event_key = parts[0]
+    aliases = {spec.get("via"): key for key, spec in CHOICES.items()}
+    aliases.update({
+        "闹脾气": "barn_fuss",
+        "鱼舱": "hold_leak",
+        "疫病": "epidemic",
+        "灶台": "stove_stubborn",
+        "发潮": "humid_soft",
+        "冰箱": "fridge_break",
+        "屋顶": "roof_leak_bad",
+    })
+    event_key = aliases.get(event_key, event_key)
+    if event_key not in CHOICES:
+        raise ValueError("灾选 事件 选项（例：灾选 barn_fuss 哄 · 灾选 疫病 隔离）")
+    act = parts[1] if len(parts) > 1 else ""
+    if not act:
+        spec = CHOICES[event_key]
+        return f"{spec['via']} 选项：{'｜'.join(spec['opts'])}"
+    return await resolve(conn, steward, event_key, act)
