@@ -1632,8 +1632,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
                 fert_token = rest[0]
         fert_item = resolve_item_key(fert_token) or fert_token
         from .catalog import MANURE
-        if fert_item not in MANURE and fert_item != "compost":
-            raise ValueError("施肥用堆肥或羊粪/猪粪/牛粪。例子：施肥 1 · 施肥 1 羊粪")
+        if fert_item not in MANURE and fert_item not in ("compost", "ash_fert"):
+            raise ValueError("施肥用堆肥、病株灰肥或羊粪/猪粪/牛粪。例子：施肥 1 · 施肥 1 灰肥")
         async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             if slot_token:
