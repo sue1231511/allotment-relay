@@ -11,7 +11,7 @@ from . import bad_event_tiers as tiers_mod
 
 NAMED_EVENTS: tuple[dict[str, str], ...] = (
     # 轻微
-    {"key": "bird_peck", "tier": tiers_mod.TIER_LIGHT, "name": "鸟啃菜", "mod": "light_bad_events"},
+    {"key": "bird_peck", "tier": tiers_mod.TIER_LIGHT, "name": "鸟啄菜", "mod": "light_bad_events"},
     {"key": "line_slip", "tier": tiers_mod.TIER_LIGHT, "name": "鱼脱钩", "mod": "fishing_parts"},
     {"key": "humid_soft", "tier": tiers_mod.TIER_LIGHT, "name": "家具发潮", "mod": "light_bad_events"},
     {"key": "stove_stubborn", "tier": tiers_mod.TIER_LIGHT, "name": "灶台不好点火", "mod": "light_bad_events"},
