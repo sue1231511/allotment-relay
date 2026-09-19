@@ -12,6 +12,10 @@ BAR_BRING: dict[str, tuple[str, int]] = {
     "drink_fog_port": ("rum", 7),
     "drink_sea_lime": ("yuzu_sparkle", 6),
     "drink_peat_tea": ("dusk_wheat", 5),
+    "drink_pomelo_tea": ("yuzu_sparkle", 6),
+    "drink_lemon_water": ("plum_soda", 4),
+    "drink_coffee": ("rum", 5),
+    "drink_cocoa": ("dusk_wheat", 5),
 }
 
 RECIPES: dict[str, dict] = {
