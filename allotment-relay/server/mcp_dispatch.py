@@ -626,6 +626,18 @@ async def alliance_bundle(key_id: int, command: str = "") -> str:
     )
 
 
+async def npc_services_ops(key_id: int, command: str = "") -> str:
+    from . import db, npc_services
+
+    s = await db.get_steward_by_key_id(key_id)
+    if not s:
+        raise ValueError("先 steward_ops enroll")
+    async with db.connect() as conn:
+        msg = await npc_services.handle(conn, s, command)
+        await conn.commit()
+    return msg
+
+
 async def visit_bundle(key_id: int, command: str = "") -> str:
     from . import buxing, chaoshen, clinic, cloth, florist, jingshan, lili, lore_ops as lore_mod, marriage, musong, npc, shaonian, tt, vet
 
