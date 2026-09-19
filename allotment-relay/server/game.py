@@ -2195,7 +2195,7 @@ async def tide_ops(key_id: int, command: str) -> str:
         async with db.connect() as conn:
             if sub in ("status", "查看", ""):
                 ly = await layer_mod.get_layer(conn, s["id"])
-                return f"当前水层偏好：{ly}（shore/near/far/deep）"
+                return f"当前水层偏好：{ly}（岸带/栈桥 · 近海/礁/船尾 · 外海 · 深槽）"
             msg = await layer_mod.set_layer(conn, s["id"], sub)
             await conn.commit()
         return msg
