@@ -148,6 +148,16 @@ PROCESSED_ITEMS = {
     "wreck_scrap": {"name": "潮骸残件", "emoji": "🪵", "sell": 16},
     "craft_gyotaku": {"name": "鱼拓", "emoji": "🐟", "sell": 28},
     "craft_boat_model": {"name": "船模", "emoji": "⛵", "sell": 42},
+    "craft_shell_case": {"name": "贝壳柜", "emoji": "🐚", "sell": 36},
+    "craft_ore_case": {"name": "矿石柜", "emoji": "💎", "sell": 38},
+    "craft_bottle_rack": {"name": "酒瓶架", "emoji": "🍷", "sell": 34},
+    "craft_flower_book": {"name": "花册", "emoji": "📒", "sell": 30},
+    "craft_old_photo": {"name": "老照片", "emoji": "📷", "sell": 24},
+    "craft_tide_stamp": {"name": "潮汐邮票", "emoji": "📮", "sell": 22},
+    "craft_npc_sign": {"name": "NPC签名物", "emoji": "✍️", "sell": 26},
+    "craft_relic": {"name": "地下遗物", "emoji": "🗿", "sell": 48},
+    "craft_fish_bone": {"name": "大型鱼骨", "emoji": "🦴", "sell": 32},
+    "craft_seed_box": {"name": "稀有种子盒", "emoji": "📦", "sell": 28},
 }
 
 
