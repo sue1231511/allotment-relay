@@ -99,7 +99,7 @@ async def on_harvest_clear(conn, plot: dict[str, Any], crop: str) -> None:
         (DEFAULT_FERTILITY, plot["id"]),
     )
     fert = int((await cur.fetchone())[0])
-    if crop == "peanut":
+    if crop in ("peanut", "soybean"):
         fert = min(MAX_FERTILITY, fert + 6)
     await conn.execute(
         """
