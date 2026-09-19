@@ -1037,6 +1037,8 @@ async def maybe_gugu_dove_stalk(
         await _mark_gugu_dove_rolled(conn, steward["id"])
         return None
     chance = config.GUGU_DOVE_DAILY_CHANCE
+    if plot.get("crop") == "cherry":
+        chance *= 1.55
     from . import hut as hut_mod
     from . import barn as barn_mod
     hut_b = await hut_mod.get_bonuses(conn, steward["id"])
