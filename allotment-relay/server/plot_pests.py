@@ -208,6 +208,85 @@ async def handle(
     )
 
 
+async def _handle_sinkhole(conn, steward: dict[str, Any], plot: dict[str, Any], act: str, label: str) -> str:
+    sid = steward["id"]
+    fenced = int(plot.get("pest_level") or 1) >= 3
+    if act in ("填土", "fill", "填", "填坑"):
+        cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (sid,))
+        have = int((await cur.fetchone())[0])
+        if have < SINKHOLE_FILL_TICKETS:
+            raise ValueError(f"填土要 {SINKHOLE_FILL_TICKETS} 票，你只有 {have}")
+        if not await db.take_item(conn, sid, "compost", SINKHOLE_FILL_COMPOST):
+            raise ValueError(f"填土要堆肥×{SINKHOLE_FILL_COMPOST}（plot_ops compost 或 hut 堆肥桶）")
+        await conn.execute(
+            "UPDATE stewards SET tickets=tickets-? WHERE id=?",
+            (SINKHOLE_FILL_TICKETS, sid),
+        )
+        await _clear_pest(conn, plot["id"])
+        return (
+            f"{label} 填平了地陷（堆肥×{SINKHOLE_FILL_COMPOST}，-{SINKHOLE_FILL_TICKETS} 票）。"
+            "作物还在，能继续长。"
+        )
+    if act in ("围起来", "围", "fence", "拦"):
+        if fenced:
+            return f"{label} 已经围住了，不会再塌邻地。要平坑：虫害 {plot.get('slot')} 填土"
+        cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (sid,))
+        have = int((await cur.fetchone())[0])
+        if have < FENCE_TICKETS:
+            raise ValueError(f"围起来要 {FENCE_TICKETS} 票，你只有 {have}")
+        await conn.execute(
+            "UPDATE stewards SET tickets=tickets-? WHERE id=?",
+            (FENCE_TICKETS, sid),
+        )
+        await conn.execute(
+            "UPDATE parcels SET pest_level=3 WHERE id=?",
+            (plot["id"],),
+        )
+        return (
+            f"{label} 用木桩围住了坑（-{FENCE_TICKETS} 票），不会塌到邻地。"
+            f"坑还在，收成薄。填平：虫害 {plot.get('slot')} 填土"
+        )
+    if act in ("不管", "wait", "ignore", "观望"):
+        if fenced:
+            return f"{label} 坑还在，但已经围住，没有往外塌"
+        spread = await _spread_sinkhole(conn, steward["id"], plot["id"])
+        if spread:
+            return f"{label} 没管它，地陷蔓延到{spread}"
+        await conn.execute(
+            "UPDATE parcels SET pest_level=MIN(3, COALESCE(pest_level,1)+1) WHERE id=?",
+            (plot["id"],),
+        )
+        return f"{label} 坑更大了（可填土或围起来）"
+    raise ValueError(
+        f"地陷处置：填土（堆肥×{SINKHOLE_FILL_COMPOST}+{SINKHOLE_FILL_TICKETS}票）· 围起来 · 不管"
+        f"（例 plot_ops 虫害 {plot.get('slot')} 填土）"
+    )
+
+
+async def _spread_sinkhole(conn, steward_id: int, plot_id: int) -> str | None:
+    from . import land as land_mod
+
+    cur = await conn.execute(
+        """
+        SELECT id, slot, orchard, greenhouse, crop
+        FROM parcels
+        WHERE steward_id=? AND id!=? AND greenhouse=0
+          AND (pest_key IS NULL OR pest_key='')
+        ORDER BY slot
+        """,
+        (steward_id, plot_id),
+    )
+    rows = [dict(r) for r in await cur.fetchall()]
+    if not rows:
+        return None
+    target = random.choice(rows)
+    await conn.execute(
+        "UPDATE parcels SET pest_key='sinkhole', pest_level=1 WHERE id=?",
+        (target["id"],),
+    )
+    return land_mod.slot_label(target)
+
+
 async def _clear_pest(conn, plot_id: int) -> None:
     await conn.execute(
         "UPDATE parcels SET pest_key=NULL, pest_level=0 WHERE id=?",
