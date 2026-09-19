@@ -96,6 +96,16 @@ BARN_AILMENTS: dict[str, dict[str, Any]] = {
         "contagious": True,
         "contact": 0.48,
     },
+    "dystocia": {
+        "name": "难产",
+        "emoji": "🩺",
+        "cost": 24,
+        "species": frozenset({"chicken", "duck", "rabbit", "goat", "pig", "sheep"}),
+        "human": None,
+        "yield_mult": 0.4,
+        "weight": 0,
+        "breed_only": True,
+    },
 }
 
 BARN_AILMENT_ALIASES = {
