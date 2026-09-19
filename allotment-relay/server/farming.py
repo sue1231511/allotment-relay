@@ -61,6 +61,8 @@ def fertilizer_cut_rate(item: str, *, compost_mascot: bool = False) -> float:
 
     if item in MANURE:
         rate = float(MANURE[item]["fertilize_boost"])
+    elif item == "ash_fert":
+        rate = float(config.FERTILIZE_COMPOST_CUT) + 0.06
     else:
         rate = config.FERTILIZE_COMPOST_CUT
     if compost_mascot:
