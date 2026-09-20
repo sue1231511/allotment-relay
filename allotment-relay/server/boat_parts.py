@@ -281,7 +281,7 @@ async def status_line(conn, steward_id: int) -> str:
     for key in PARTS:
         d, mx = parts[key]
         bits.append(f"{PART_LABELS[key]}{d}/{mx}")
-    return "船部件 " + " · ".join(bits) + " · voyage_ops 部件 修"
+    return "船部件 " + " · ".join(bits) + " · tide_ops voyage 部件 修"
 
 
 def compact_note(parts: dict[str, tuple[int, int]]) -> str:
