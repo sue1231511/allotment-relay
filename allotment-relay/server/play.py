@@ -368,7 +368,7 @@ PLACES: list[dict[str, Any]] = [
             {"label": "后室铺", "note": "看当日货架。收账鬼可能强买强卖", "tool": "undertide_ops", "command": "market"},
             {"label": "认栽成交", "note": "阿标那一笔认了", "tool": "undertide_ops", "command": "racket accept"},
             {"label": "硬扛", "note": "不认阿标那一笔。战力判定", "tool": "undertide_ops", "command": "racket refuse"},
-            {"label": "恨恨墙", "note": "看悬赏榜", "tool": "undertide_ops", "command": "bounty"},
+            {"label": "恩怨墙", "note": "看悬赏榜", "tool": "undertide_ops", "command": "bounty"},
             {"label": "医务间", "note": "晏安只收井下伤。先看向导再点", "tool": "undertide_ops", "command": "medic"},
             {"label": "help", "note": "真指令列表", "tool": "undertide_ops", "command": "help"},
         ],
