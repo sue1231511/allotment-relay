@@ -159,6 +159,10 @@ async def market_ops(key_id: int, command: str) -> str:
             raise ValueError(
                 f"{ITEM_NAMES.get(item_key, item_key)}（{item_key}）不宜上架"
             )
+        from . import fish_ban as fish_ban_mod
+        refuse = fish_ban_mod.refuse_trade(item_key)
+        if refuse:
+            raise ValueError(refuse)
         sug = suggested_price(item_key)
         async with db.connect() as conn:
             from . import market_stall_gust as gust_mod
