@@ -2471,6 +2471,8 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
     has_bin = _has_fit(fittings, "compost_bin")
     has_crock = _has_fit(fittings, "pickle_crock")
     has_rack = _has_fit(fittings, "fish_rack")
+    has_tub = _has_fit(fittings, "bath_tub")
+    has_shelf = _has_fit(fittings, "bookshelf")
     slept = False
     if built:
         row = await (await conn.execute(
