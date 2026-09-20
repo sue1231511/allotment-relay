@@ -50,6 +50,8 @@ PLACES: list[dict[str, Any]] = [
             {"label": "撒网", "note": "花票换渔获", "tool": "tide_ops", "command": "net"},
             {"label": "坐钓", "note": "要钓竿和饵", "tool": "tide_ops", "command": "cast"},
             {"label": "赶海看看", "note": "先扫一眼沙滩", "tool": "tide_ops", "command": "beach scan"},
+            {"label": "捞瓶", "note": "赶海捞一只漂流瓶。不是听潮亭木牌", "tool": "tide_ops", "command": "捞瓶"},
+            {"label": "投瓶", "note": "写下要扔进海里的那句。每天最多 3", "tool": "tide_ops", "command": "投瓶"},
             {"label": "翻沙", "note": "要铲子；涨潮关。写下求婚草稿后可能翻到潮信贝或潮花", "tool": "tide_ops", "command": "dig"},
             {"label": "寻信物", "note": "写下求婚草稿就能找。潮线找潮信贝，再去工坊打订婚戒或连理所登记。不用彩礼", "tool": "marriage_ops", "command": "订婚 寻信"},
             {"label": "采花", "note": "写下求婚草稿就能采。潮花拿去连理所登记花束。不用彩礼", "tool": "marriage_ops", "command": "订婚 采花"},
