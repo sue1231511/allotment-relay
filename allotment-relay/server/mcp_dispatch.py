@@ -145,6 +145,9 @@ HUT_HELP = """hut_ops 子命令（整句写进 command）：
   腌 / 晾 — 腌菜坛 2 蔬菜→1 坛腌菜；晾鱼架 2 同种生鱼→1 条鱼干。例子：腌 甘蓝 4 · 晾 鲭鱼 4
     买：buy pickle_crock → install hard_N pickle_crock；buy fish_rack → install soft_N fish_rack
     人类 /island 点一下看屋里就能买、腌、晾。不是灶上的 cook，也不是畜栏
+  泡澡 / 沐浴 / bath — 要雪松浴桶（buy bath_tub → install hard_N）。雾智 +15，每 20 小时一次。床管精力，浴桶管雾智。人类 /island 小屋和上手页小屋都能点。不要把 hut_ops 泡 当成泡饮（泡饮走 kitchen_ops 泡）
+  读书 / 翻书 / read — 要航海书架（buy bookshelf → install soft_N）。每天一次，雾智 +2 并翻一段沿海旧史
+  修屋顶 — 屋顶低睡觉少回精力。人类 /island 小屋漏雨时能点。修冰箱 / 修灶 厨电低了才出
   卖掉 槽位|装件名 [确认] — 旧家具按折旧卖。例子：卖掉 soft_1 确认 · 卖掉 羊毛毯 确认
     墙上写槽位，行囊写装件名。tote_ops vend 羊毛毯 1 也是这一笔。工坊出品按材料估价
     小馆开着时冰箱不能卖（先 kitchen_ops shop 卖掉 或 shop close）
