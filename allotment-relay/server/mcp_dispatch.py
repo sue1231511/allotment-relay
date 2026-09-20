@@ -423,6 +423,11 @@ async def steward_ops(
         from . import island_collections as coll_mod
         return await coll_mod.collection_ops(key_id, command.strip())
 
+    if verb in ("周报", "纪事", "gazette"):
+        from . import gazette as gazette_mod
+        await game.require_steward(key_id, exempt_duty=True)
+        return await gazette_mod.report_text()
+
     if verb in ("维修", "repair", "待办", "fixme"):
         from . import repair_digest as rep_mod
         s = await game.require_steward(key_id, exempt_duty=True)
