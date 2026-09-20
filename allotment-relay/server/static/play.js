@@ -353,6 +353,9 @@ function renderAll() {
   renderStories();
   if (state.placeId) renderPlace(state.placeId);
   consumeGo();
+  if (window.tidalPwa && typeof window.tidalPwa.nudgeFromDash === "function") {
+    window.tidalPwa.nudgeFromDash(d);
+  }
 }
 
 function renderWedding() {
