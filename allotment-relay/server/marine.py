@@ -868,7 +868,10 @@ async def pen_ops(key_id: int, command: str) -> str:
         if bonus:
             await db.add_chronicle("league", bonus, None)
             msg += f"\n{bonus}"
-        await db.add_chronicle("pen", f"{s['name']} 渔排收网 {meta['name']} x{qty}", s["id"])
+        if ban_msg:
+            await db.add_chronicle("pen", f"{s['name']} 渔排收网碰上禁捞 {meta['name']}", s["id"])
+        else:
+            await db.add_chronicle("pen", f"{s['name']} 渔排收网 {meta['name']} x{qty}", s["id"])
         if disc:
             msg += f"\n{disc}"
         if extra:
