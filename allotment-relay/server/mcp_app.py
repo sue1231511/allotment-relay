@@ -87,7 +87,7 @@ async def relay_manual() -> str:
     return await game.relay_manual()
 
 
-@mcp.tool(description="身份档案。空=sheet。例：enroll 名字（要玩才 enroll）· sheet · 岛缘 · 引航 · 成就 · 收集 · 灾档 · 维修。无 invite_ops。/play 与 AI 同时在线共号。")
+@mcp.tool(description="身份档案。空=sheet。例：enroll 名字（要玩才 enroll）· sheet · 岛缘 · 引航 · 成就 · 收集 · 灾档 · 灾选 · 维修。灾选=坏事多选待决（哄/修/隔离等）。无 invite_ops。/play 与 AI 同时在线共号。")
 async def steward_ops(command: str = "sheet") -> str:
     from . import progress as progress_mod
     return progress_mod.attach_note(
@@ -95,14 +95,14 @@ async def steward_ops(command: str = "sheet") -> str:
     )
 
 
-@mcp.tool(description="份地果园与田间事件。空=指令表。例：status · sow 1 甘蓝 · 肥力 · 虫害 1 施药 · 留种 甘蓝 · weather · 浇水。tend 极小概率鸟啄（收成-1，极少落该作物种；steward_ops 灾档 近日已结）/灶台难点火/潮气发潮/鱼线打结（debuff 记一次消一次）。肥力/轮作、虫害、留种。weather 附本周纪事。勿 sow_all/plant；repair≠岸维。人类 /island「田间事件」处置虫害；repair 只修 steward_incidents。")
+@mcp.tool(description="份地果园与田间事件。空=指令表。例：status · sow 1 甘蓝 · 肥力 · 虫害 1 施药 · 虫害 1 填土 · 留种 甘蓝 · weather · 浇水。tend 极小概率鸟啄（收成-1，极少落该作物种；steward_ops 灾档 近日已结）/灶台难点火/潮气发潮/鱼线打结（debuff 记一次消一次）。肥力/轮作、虫害、地陷、留种。weather 附本周纪事。勿 sow_all/plant；repair≠岸维。人类 /island「田间事件」处置虫害；repair 只修 steward_incidents。")
 async def plot_ops(
-    command: Annotated[str, Field(description="incident status；repair 编号。肥力 · 虫害 1 手工|施药|拔除|不管（温室漏风 补网|通风|不管）· 留种 作物。空=指令表。")] = "",
+    command: Annotated[str, Field(description="incident status；repair 编号。肥力 · 虫害 1 手工|施药|拔除|不管（温室漏风 补网|通风|不管；地陷 填土|围起来|不管）· 留种 作物。空=指令表。")] = "",
 ) -> str:
     return await mux._call_ops(mux.plot_bundle, _kid(), command)
 
 
-@mcp.tool(description="小屋潮柜床畜栏腌晾家维杂务。空=列表。例：status · 睡 · 家维 · 家维 交 · 杂务 自修 · 修屋顶 · 修冰箱 · 修灶 · barn breed 1 · barn 惊逃 1 诱回 · barn 起名 1 豆花 · 腌 甘蓝 4。寻回逃畜极少跟足迹摸到潮边藏货（急追略高）。家维=灯油/冷藏/防潮（不缴只降睡/保鲜/灶效，不封房）；杂务=结霜/门轴等三选一。屋顶/厨电耐久低有惩罚。mascot upkeep≠岸维。人类 /island 小屋可点配种/寻回/修厨电。")
+@mcp.tool(description="小屋潮柜床畜栏腌晾家维杂务。空=列表。例：status · 睡 · 家维 · 家维 交 · 杂务 自修 · 修屋顶 · 修冰箱 · 修灶 · barn breed 1 · barn 惊逃 1 诱回 · barn 闹脾气 哄 · barn 起名 1 豆花 · 腌 甘蓝 4。status 附闭环提示（鱼/柜/灶/帆/待选）。寻回逃畜极少跟足迹摸到潮边藏货（急追略高）。家维=灯油/冷藏/防潮（不缴只降睡/保鲜/灶效，不封房）；杂务=结霜/门轴等三选一。屋顶/厨电耐久低有惩罚。mascot upkeep≠岸维。人类 /island 小屋可点配种/寻回/修厨电。")
 async def hut_ops(command: str = "") -> str:
     return await mux._call_ops(mux.hut_bundle, _kid(), command)
 
@@ -114,17 +114,17 @@ async def tide_ops(
     return await mux._call_ops(mux.tide_bundle, _kid(), command)
 
 
-@mcp.tool(description="行囊集市。空=列表。例：list · 履历 · vend 鲭鱼 1。list 显示鲜度/品质/鱼重；变质自动丢。戒/稀有鱼有来历。送礼≠红包。")
+@mcp.tool(description="行囊集市。空=列表。例：list · 履历 · vend 鲭鱼 1。list 显示鲜度/品质/鱼重；变质自动丢。戒/稀有鱼/鱼拓船模邮票/特殊料理有来历。柜旧生鱼少卖。送礼≠红包。")
 async def tote_ops(command: str = "") -> str:
     return await mux._call_ops(mux.tote_bundle, _kid(), command)
 
 
-@mcp.tool(description="厨房小馆。空=menu（137）。例：cook 蒜蓉生蚝 · eat 鲭鱼 · shop dine 安 潮卤海味双拼（套餐88%价）· shop 套餐 · stock 菜名。勿 eat_ops。trouble 结案看 steward 灾档。")
+@mcp.tool(description="厨房小馆。空=menu（149）。例：cook 蒜蓉生蚝 · eat 鲭鱼 · shop dine 安 潮卤海味双拼（套餐88%价）· shop 套餐 · stock 菜名。泡 list / 泡 薄荷茶。勿 eat_ops。trouble 结案看 steward 灾档。")
 async def kitchen_ops(command: str = "") -> str:
     return await mux._call_ops(mux.kitchen_bundle, _kid(), command)
 
 
-@mcp.tool(description="互助周目标与邻居连接。空=列表。例：assist 安 · 借船 给 名字 · 托养 送出 名字 1 · 菜篮 订 名字 · league status。board=贡献榜≠全服榜。协作总览 steward_ops 协作。")
+@mcp.tool(description="互助周目标与邻居连接。空=列表。例：assist 安 · 借船 给 名字 · 合伙 开 漂航船 · 托养 送出 名字 1 · 菜篮 订 名字 · league status。board=贡献榜≠全服榜。协作总览 steward_ops 协作。合伙≠借船。")
 async def alliance_ops(command: str = "") -> str:
     return await mux._call_ops(mux.alliance_bundle, _kid(), command)
 

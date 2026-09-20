@@ -81,6 +81,9 @@ async def apply_sow_rotation(
     if crop == "peanut":
         fert = min(MAX_FERTILITY, fert + 4)
         notes.append("花生固氮，土略肥")
+    if crop == "soybean":
+        fert = min(MAX_FERTILITY, fert + 3)
+        notes.append("黄豆固氮，土略肥")
     await conn.execute(
         "UPDATE parcels SET soil_fertility=? WHERE id=?",
         (fert, fid),
@@ -96,7 +99,7 @@ async def on_harvest_clear(conn, plot: dict[str, Any], crop: str) -> None:
         (DEFAULT_FERTILITY, plot["id"]),
     )
     fert = int((await cur.fetchone())[0])
-    if crop == "peanut":
+    if crop in ("peanut", "soybean"):
         fert = min(MAX_FERTILITY, fert + 6)
     await conn.execute(
         """
@@ -131,7 +134,7 @@ async def status_report(conn, steward_id: int) -> str:
     rows = await cur.fetchall()
     if not rows:
         return "还没有露天份地。"
-    lines = ["露天肥力（连作降、轮作升；花生固氮；plot_ops 肥力）："]
+    lines = ["露天肥力（连作降、轮作升；花生/黄豆固氮；plot_ops 肥力）："]
     for slot, orch, gh, fert, last, crop in rows:
         if crop:
             continue

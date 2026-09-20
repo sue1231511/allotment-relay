@@ -13,6 +13,7 @@ DEBUFF_SYSTEM: dict[str, str] = {
     "net_weed": "beach",
     "shovel_dull": "beach",
     "probe_sand": "beach",
+    "barn_fuss": "barn",
 }
 
 
@@ -107,17 +108,30 @@ async def roll_tend_glitch(conn, steward_id: int, plot: dict) -> str | None:
             out = tiers_mod.tag(tiers_mod.TIER_MID, msg)
             if luck:
                 out += f"\n{luck}"
+            from . import event_choice as choice_mod
+
+            extra = await choice_mod.offer(conn, steward_id, "bird_peck")
+            if extra:
+                out += f"\n{extra}"
             return out
     if roll < 0.65:
         tier = tiers_mod.roll_tier(weights=(0.35, 0.40, 0.20, 0.05))
         msg = "灶台不好点火：下次做饭多耗 1 精力（已记下，做一次饭就消）。"
         await set_debuff(conn, steward_id, "stove_stubborn", tier, msg)
-        return tiers_mod.tag(tier, msg)
+        from . import event_choice as choice_mod
+
+        extra = await choice_mod.offer(conn, steward_id, "stove_stubborn")
+        tagged = tiers_mod.tag(tier, msg)
+        return f"{tagged}\n{extra}" if extra else tagged
     if roll < 0.85:
         tier = tiers_mod.roll_tier(weights=(0.30, 0.45, 0.20, 0.05))
         msg = "潮气进棚，软装有发潮味：下次睡觉少回 3 精力（已记下，睡一次就消）。"
         await set_debuff(conn, steward_id, "humid_soft", tier, msg)
-        return tiers_mod.tag(tier, msg)
+        from . import event_choice as choice_mod
+
+        extra = await choice_mod.offer(conn, steward_id, "humid_soft")
+        tagged = tiers_mod.tag(tier, msg)
+        return f"{tagged}\n{extra}" if extra else tagged
     tier = tiers_mod.TIER_LIGHT
     msg = "鱼线打结了：下次坐钓空杆率 +12%（已记下，坐钓一次就消）。"
     await set_debuff(conn, steward_id, "line_tangle", tier, msg)
@@ -201,4 +215,8 @@ async def roll_beach_dig_glitch(conn, steward_id: int) -> str | None:
         + tiers_mod.repair_hint("beach")
     )
     await set_debuff(conn, steward_id, "shovel_dull", tier, msg)
-    return tiers_mod.tag(tier, msg)
+    from . import event_choice as choice_mod
+
+    extra = await choice_mod.offer(conn, steward_id, "shovel_dull")
+    tagged = tiers_mod.tag(tier, msg)
+    return f"{tagged}\n{extra}" if extra else tagged

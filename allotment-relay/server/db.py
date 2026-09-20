@@ -2331,6 +2331,23 @@ async def init_db() -> None:
                 PRIMARY KEY (steward_id, partner_id)
             )
             """,
+            """
+            CREATE TABLE IF NOT EXISTS neighbor_boat_share (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                founder_id INTEGER NOT NULL,
+                boat_key TEXT NOT NULL,
+                status TEXT NOT NULL,
+                created_at INTEGER NOT NULL
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS neighbor_boat_share_member (
+                share_id INTEGER NOT NULL,
+                steward_id INTEGER NOT NULL,
+                paid INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (share_id, steward_id)
+            )
+            """,
             "ALTER TABLE quarry_claims ADD COLUMN hazard TEXT",
             "ALTER TABLE quarry_claims ADD COLUMN hazard_json TEXT",
             "ALTER TABLE steward_craft ADD COLUMN salvage_hazard TEXT",

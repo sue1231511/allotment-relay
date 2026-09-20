@@ -251,10 +251,18 @@ async def boat_loan_status_report(conn, steward_id: int) -> str:
 
 
 async def effective_boat_key(conn, steward: dict) -> str | None:
-    """无自有船时可用借来的船出海。"""
-    key = steward.get("boat_key") or ""
-    if key:
-        return key
+    """自有船、合伙大船（档位不低于自有）、借来的船。"""
+    from . import neighbor_boat_share as share_mod
+    from .config import BOATS
+
+    personal = steward.get("boat_key") or ""
+    share = await share_mod.share_boat_key(conn, steward["id"])
+    pers_rank = int((BOATS.get(personal) or {}).get("rank") or 0) if personal else 0
+    share_rank = int((BOATS.get(share) or {}).get("rank") or 0) if share else 0
+    if share and share_rank >= pers_rank:
+        return share
+    if personal:
+        return personal
     await ensure_tables(conn)
     cur = await conn.execute(
         "SELECT boat_key, until_ts FROM neighbor_boat_loan WHERE borrower_id=?",

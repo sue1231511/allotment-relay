@@ -10,6 +10,33 @@ LAYER_ZONES = {
     "deep": {"deep", "far"},
 }
 
+LAYER_ALIASES = {
+    "栈桥": "shore",
+    "pier": "shore",
+    "岸带": "shore",
+    "岸": "shore",
+    "礁": "near",
+    "reef": "near",
+    "船尾": "near",
+    "stern": "near",
+    "近海": "near",
+    "浅湾": "near",
+    "外海": "far",
+    "深槽": "deep",
+    "深": "deep",
+}
+
+
+def resolve_layer(token: str) -> str:
+    raw = (token or "").strip()
+    low = raw.lower()
+    if low in LAYER_ZONES:
+        return low
+    alias = LAYER_ALIASES.get(raw) or LAYER_ALIASES.get(low)
+    if alias:
+        return alias
+    raise ValueError("水层：岸带/栈桥 · 近海/礁/船尾 · 外海 · 深槽（tide_ops 水层 栈桥）")
+
 
 async def ensure_table(conn) -> None:
     await conn.execute(
@@ -38,9 +65,7 @@ async def get_layer(conn, steward_id: int) -> str:
 
 
 async def set_layer(conn, steward_id: int, layer: str) -> str:
-    layer = layer.lower()
-    if layer not in LAYER_ZONES:
-        raise ValueError("水层：shore · near · far · deep（tide_ops 水层 near）")
+    layer = resolve_layer(layer)
     await ensure_table(conn)
     await conn.execute(
         """

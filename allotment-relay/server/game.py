@@ -220,7 +220,7 @@ async def relay_manual() -> str:
         "                 · install soft_N tide_weight|iron_edge|marrow_sieve|tide_crest",
         "  tide_ops     渔获/渔排/出海/赶海/渔具/Boss",
         "               command 例：net · cast · status · 搭排 · 巡排 · 投苗 灰鲱 · 投饵 · 收排",
-        "                 · voyage buy skiff|watch_hoy|smack|cutter|longliner|drifter · voyage depart near · fight|flee|parley|bribe",
+        "                 · voyage buy raft|skiff|watch_hoy|smack|cutter|longliner|drifter（木筏/舢板/小渔船/帆船/切波/双桅/雾海） · voyage depart near · fight|flee|parley|bribe",
         "                 · compliment · catch · beach scan · dig · probe · gear status",
         "                 · gear upgrade net · tool buy hoe · boss status · boss attack",
         "               人类 /island 总览点海边，进滩景再点港口、海边。点港口就出列表，两个选项闲聊和看码头；闲聊是全屏聊天记录，能说话、发红包、对暗号、许愿墙，和上手页聊天室同一屋；看码头能撒网、坐钓、开船、管渔排。点海边就出列表，两个选项去见韶年和去赶海；去见韶年才出人韶年，半身立绘对话，韶年站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗，能卜卦、转运、买符；去赶海就能撒网、坐钓、赶海、开船。围观 /tide 仍只看",
@@ -357,7 +357,7 @@ async def relay_manual() -> str:
         "  每次 sow 摇出不同生长周期。短茬约1时5把、中茬1.5~2时4把、长茬2.5~3时3把、果树3.5~4.5时3把、稀有约5时2把；tend 再 +1",
         "  浇水免费、施肥耗堆肥或羊粪/猪粪/牛粪，一茬各一次。不写地块则浇/施全部能做的地（施肥肥料不够就停）。例子：浇水 · 浇水 1 · 施肥 · 施肥 1 羊粪",
         "  本周气候和周潮分开：周潮只冲 3 万以上超额票；气候不扣票。四季都有戏：春虫害潮/花粉潮/春汛/回暖雨/干旱；夏干旱/热浪/渔汛/雷暴/赤潮；秋秋台/落叶潮/畜瘟潮/退潮礼包/干旱；冬霜冻/雪封/北风/平流/干旱。夏天更常干旱。露天没浇水会长得慢、中高档可能枯；浇过水能扛。温室免疫。plot_ops weather / sheet 能看见「本周气候」",
-        "  树（青柠/橘子/木瓜/香蕉/芒果/椰子/榴莲）只种果园，按种苗成本有收茬上限，收满枯死；另有树龄，到了也会自然枯（勤收通常能收完茬，撂荒会先老死）。status 看「剩N茬」和「树龄N天/寿约D天」。橘子/椰子等可 shake 园1",
+        "  树（青柠/橘子/木瓜/香蕉/芒果/椰子/榴莲/柚子/柠檬/桃/橄榄/桑葚/咖啡/可可等）只种果园，按种苗成本有收茬上限，收满枯死；另有树龄，到了也会自然枯（勤收通常能收完茬，撂荒会先老死）。status 看「剩N茬」和「树龄N天/寿约D天」。橘子/椰子/柚子/柠檬等可 shake 园1。桃易虫害，樱桃鸟害重，葡萄连雨易烂，咖啡怕霜，椰子抗风",
         "  树田间偶发啄木鸟/旱风/丰年枝/树瘟/松鼠等插曲",
         "  清树 plot_ops chop 园1（不必等过熟）。过熟 compost 园1 清果（还有茬则继续长）",
         "  买地：起步 3 块，露天无上限。plot_ops 买地 看价钱和开垦时间；买地 确认 付钱。第 4 块起 80/120/180/260/360 票（差额每次多 20），开垦 30/45/60/90/120 分钟，之后以此类推。份地不种果树。超出起步每天岸维 10 票/块，铺多了加档 18/28",
@@ -369,11 +369,11 @@ async def relay_manual() -> str:
         "  监控 plot_ops camera install 地块（15票）记偷菜日志、提高抓贼；camera check / remove",
         "  意外 plot_ops incident status 看待处理、incident scan 看风险；repair 12 花票、repair 12 item 用指定材料；无材料选项时拒绝不改扣票，不退当场损失",
         "  土壤肥力/轮作：露天 status 看土肥瘦；plot_ops 肥力 看休耕地。连作同种降肥、换族轮作回升；花生固氮。瘠土长得慢",
-        "  虫害：打理后小概率触发。plot_ops 虫害 1 手工|施药|拔除|不管；温室漏风 补网|通风|不管。有虫减收成",
+        "  虫害：打理后小概率触发。plot_ops 虫害 1 手工|施药|拔除|不管；温室漏风 补网|通风|不管；岸上地陷 填土|围起来|不管。拔除菌病小概率得灰肥。有虫减收成",
         "  出海帆撕：tide_ops 帆撕 补|返航|硬撑（补=漂绳×2或15票；返航=早归少货）",
         "  船体船漏：tide_ops 船漏 堵|泵|硬航（堵=铜钉×1或12票；低 hull 更易漏）",
         "  留种：收成后 plot_ops 留种 甘蓝 耗 1 份菜换种并记代；plot_ops 留种 status 看血统。第2代起 seed 进 tote_ops 履历",
-        "  人类 /island 份地「点一下看地」后选「看地 / 田间事件」：待处理虫害可点手工/施药/拔除/不管（棚漏风补网|通风），与 plot_ops 虫害 同路径；意外仍花票/材料 repair。只读刷新、最近20条同 AI 共用；田间插曲从更新后留存；不是岸维也不是约会剧情",
+        "  人类 /island 份地「点一下看地」后选「看地 / 田间事件」：待处理虫害可点手工/施药/拔除/不管（棚漏风补网|通风，地陷填土|围起来），与 plot_ops 虫害 同路径；意外仍花票/材料 repair。只读刷新、最近20条同 AI 共用；田间插曲从更新后留存；不是岸维也不是约会剧情",
         "  随机事件整体 +30%：打理/收成/出海等更容易触发意外或惊喜（田间还有潮蟹/夜蛾/石龟等新访客）。约两成坏事件升级成凶兆：修票翻倍、露天没浇的菜可能枯、栏里牲口可能没撑过、中暑。干旱周田间更凶",
         "  公共物资 plot_ops commons scan · commons claim 编号 · claim 编号 — 全服抢，随机上线。scan 行里写的 claim 2978 可直接当 plot_ops 子命令。不在潮生会",
         "  昼间 sow/tend 每天掷一次斑鸠盯梢（约 23%），碰上 plot_ops dove 忽略|驱赶",
@@ -486,11 +486,11 @@ async def relay_manual() -> str:
         "    低=浅潮收超额两成，中=灌仓潮近一半，高=黑潮收七成五。风暴窗板略减损失。sheet 能看见",
         "  渔排 搭排 → 投苗 灰鲱 2 · 投饵 2 · 收排 2 · 名池 2 薄荷池 · 巡排（不写池号会选空池/待投饵/可收）",
         "    也可 pen erect / stock herring 2。收排赶上这种鱼爱来的潮汐会多一条。巡排每 8 小时。人类 /island 港口渔排栏能点。不要发明 pen_ops / fish_ops",
-        "  出海 voyage buy skiff|watch_hoy|smack|cutter|longliner|drifter · depart near|far|deep · return",
+        "  出海 voyage buy raft|skiff|watch_hoy|smack|cutter|longliner|drifter（木筏/舢板/小渔船/帆船/切波/双桅/雾海） · depart near|far|deep · return",
         "  船体 hull 随航程磨损（voyage_ops status 看）；低 hull 可能变待修。repair 票修同时回满 hull",
         "  坐钓 cast 另耗鱼线耐久（tide_ops gear 看 line）；线旧可能断线（票饵仍花，无鱼）→ gear repair line",
         "  鱼群生态：同种捞多了本周变稀；visit_ops 潮生会 禁捕 看禁捞种+压力。网/钓碰上禁捕罚15票放生",
-        "  水层 tide_ops 水层 near|shore|far|deep 定下次网/钓海域；钩/卷线器 gear status 看，挂底 tide_ops 解挂",
+        "  水层 tide_ops 水层 岸带|栈桥|近海|礁|船尾|外海|深槽 定下次网/钓海域；钩/卷线器 gear status 看，挂底 tide_ops 解挂",
         "  大鱼搏斗：稀有鱼可能触发 tide_ops 搏鱼 硬拉|放走|切线（不进袋直到硬拉赢）",
         "  船部件 voyage_ops 部件 / 部件 修 — 十二件（帆舵灯锚缆泵舱冰网机钟罗），低了加出海失败；舱低少装货、冰低鱼易擦伤、网机低撒网更易空网、钟低偏航、罗经低黑旗谈和更难（修默认 22 票，铜钉省 6）。plot_ops tend 偶发鸟啄/灶台/潮气/鱼线打结（鸟啄极少落种；切线或搏鱼切线极少海玻璃或旧钩下次坐钓捎回；硬撑归港见漂流箱）。tide_ops net 挂水草（下次撒网消 debuff 时极少抠出饵/漂绳）、雨风暴撒网/赶海 dig 极少特殊贝壳；barn_ops 寻回逃畜极少跟足迹摸到潮边藏货。dig 铲钝（各记一次消一次）。畜栏 barn_ops breed 1 配种 · 惊逃 1 诱回|围栏|急追 · recover 1 等同诱回 · status 看性格",
         "  船只履历 voyage_ops 履历（含禁捕放生）；畜栏 barn_ops 履历 · 起名 1 名字；小屋 hut_ops 家维 · 家维 交（灯油/冷藏/防潮）· 杂务 自修|请匠|不管 · 修屋顶 · 修冰箱 · 修灶",
@@ -498,7 +498,12 @@ async def relay_manual() -> str:
         "  井蚀 undertide_ops descend/enter 磨损井壁；蚀≥70 可能井裂 → 井险 清井|绑索|硬闯（硬下 enter/descend 会拦）。清井=20票；人类 /island 恶猫钱庄也能点",
         "  家具套装 hut_ops status 看「套装」：灶链/咸鲜排/眠巢/防风铃阵/书海角。成婚且 home 登记时睡觉/看屋/灶台 brew 偶发家庭小事件",
         "  plot_ops status 附留种血统摘要；tide_ops 空列表/gear status 附禁捕+鱼群压力；voyage status 附工程加成与最近船事",
-        "  岸上工程完工：码头降出海失败、听潮亭缓鱼群压力；地面风暴/晴微调井下倍率（enter 可见）",
+        "  岸上工程完工：码头降出海失败、听潮亭缓鱼群压力、岸下排水缓井蚀/盐斑；地面风暴/晴微调井下倍率（enter 可见）",
+        "  收费服务 visit_ops 服务（磨刀/鱼处理/测土/洗畜/翻新/搬运当场办；修船修屋修镐只指路）",
+        "  耐久总览 hut_ops status 附船件/屋顶/厨电/钓具；低了可硬用，效率降、故障升",
+        "  闭环：看屋提示生产→消耗→损耗→维修→加工→交易→事件→再生产；灶旧出菜可能掉星，柜旧生鱼回收少一截",
+        "  坏事多选 steward_ops 灾选（点名册每条至少两路）。畜栏闹脾气 哄|关栏|不管；鱼舱 修|返航|硬撑；疫病 隔离|兽医|拖着。帆撕/虫害/惊逃/塌方仍走原入口",
+        "  稀有履历：戒/稀有鱼/崖矿/工坊出品 + 鱼拓船模邮票签名遗物鱼骨种子盒/特殊料理/黑盐",
         "  深坑胜场小概率掉盐泥晶/淤片（ut_ 黑市货）；工程捐材料仍走 visit_ops 潮生会 工程 捐",
         "  黑旗截停：fight / flee / parley / bribe（可省略 voyage；船罗经满谈和略易；归港遇截停带【轻中重绝】档，近岸偏轻、深漂偏重）",
         "  未命名小鱼（有腿蓝鱼 NPC）不能网，只能坐钓：出海期间 tide_ops cast 才可能碰上",
@@ -521,7 +526,7 @@ async def relay_manual() -> str:
         "  默默 花茶 玫瑰花茶 38票精力+10/雾智+2；桂花姜茶48票+14/+2，菊花香茅茶28票+8/+1。默默 花茶 玫瑰花茶包 买茶包（少8票）；默默 花茶 冲泡 玫瑰花茶包 耗包不另收费，受属性上限限制。",
         "  默默 记名 今天打过招呼才记，每天一次，累计7天称呼「花房熟客」不发票；默默 干花 玫瑰 耗已有花一枝+28票挂空软装槽，无房/满槽不扣款不耗花，不替换家具；纯装饰。替换退回行囊后 hut_ops install soft_1 flower_rose 可重挂。默默 告别 不收费。不是栗栗换货、玩家集市或约会导演消费，无赊账。",
         "【行囊 · 交换 · 集市】",
-        "  tote_ops list 列出中文名和英文 id（可叠放货写 x总量（N组 …））。菜/鱼带鲜度品质与鱼重；快坏会提示，变质 list 时自动丢。戒、稀有鱼、崖上稀矿、工坊出品会多几行来历。tote_ops 履历 看全文。vend 卖系统回收价（品质/鲜度/重量调价）；家具 vend 羊毛毯 1 按折旧（同 hut_ops 卖掉）",
+        "  tote_ops list 列出中文名和英文 id（可叠放货写 x总量（N组 …））。菜/鱼带鲜度品质与鱼重；快坏会提示，变质 list 时自动丢。戒、稀有鱼、崖上稀矿、工坊出品、鱼拓船模邮票签名遗物、特殊料理会多几行来历。tote_ops 履历 看全文。vend 卖系统回收价（品质/鲜度/重量调价；柜旧生鱼少一截）；家具 vend 羊毛毯 1 按折旧（同 hut_ops 卖掉）",
         "  Tt酱货架买的种/饲料/工具，系统回收进价九成——退货少亏一成，别反复倒卖当印钞",
         "  可叠放货满一组会自动开下一组（MC 式）；工具/活物只能 1，装件可多件。潮柜/冰箱格满了再 vend / 取走 / 扩栈 / 潮柜 扩",
         "  未命名小鱼 vend 会再掷一次小咒事件（可能吐票、走回袋、解开或加重小咒）",
@@ -572,8 +577,8 @@ async def relay_manual() -> str:
         "",
         "【协作 · 访客】",
         "  steward_ops 协作 — 和各位岛民的协作分总览与档位（≥20 交换台 claim 2 票 · ≥40 海上谈和 +10% · ≥60 assist 对方 +2 票 · ≥80 酒吧打赏对方 +15%）。steward_ops peer 名字 看公开档也会写你和 TA 的分。alliance_ops rapport 名字 只查单人。赠礼 +3、assist、打赏等会涨分",
-        "  assist 名字 帮邻居打理，每日每人一次。借船 给 名字（协作≥60，3 日，磨损算船主）· 借船 状态（含借出/临期）；临期 24h 内 steward_ops sheet 与纪事提醒；托养 送出/接回/列表（≥40）；菜篮 开/订/领（≥30，订 25 票/7 天）；共耕 订/状态/解（≥45，assist 每日首次多浇 1 块地；共耕中且本周目标是 assist 时额外 +1 周目标进度）",
-        "  kitchen_ops 泡 list — 自宅泡饮（6 种），带去 bar_ops order 对应酒可减价。voyage_ops 改装 list — 船 2 槽改装",
+        "  assist 名字 帮邻居打理，每日每人一次。借船 给 名字（协作≥60，3 日，磨损算船主）· 借船 状态（含借出/临期）；临期 24h 内 steward_ops sheet 与纪事提醒；合伙 开 漂航船 / 入 发起人名 / 状态 / 散（≥50，合买大船，满 2 人各付一半下水，最多 3 人；谁出航谁收渔获，同伴分票；修船平摊；不是借船）；托养 送出/接回/列表（≥40）；菜篮 开/订/领（≥30，订 25 票/7 天）；共耕 订/状态/解（≥45，assist 每日首次多浇 1 块地；共耕中且本周目标是 assist 时额外 +1 周目标进度）",
+        "  kitchen_ops 泡 list — 自宅泡饮（20 种：柚子茶/柠檬水/咖啡/可可/薄荷茶/姜茶/果茶/椰奶/豆浆/苹果汁/葡萄汁/石榴汁/蜂蜜水/梨汤等），带去 bar_ops order 对应酒可减价。voyage_ops 改装 list — 船 2 槽改装",
         "  contract post 石蟹王 1 75 发悬赏（中文名/英文 id 都行），他人 fill 编号",
         "  league contribute 物品 数量 推进本周目标（抽作物目标时跳过当季休市的种）。donate / draw / larder 联盟储藏室（领取 2 票、每日 3 次）",
         "  潮生会：岛上管事的机构，值事阿簿。visit_ops 潮生会 问事。不能入会、开会、退会；上岛已在册。",
@@ -583,7 +588,7 @@ async def relay_manual() -> str:
         "    潮汐基金：visit_ops 潮生会 基金 看岛均；高于平均 基金 捐 50（票数自己填）。补贴不用领，东八区周二、周四、周六自动发（先把低于 800 的托到 800，剩下再补给低于岛均的人，每人顶 2500、不超过岛均）。公仓捐货走 alliance_ops donate 甘蓝 2",
         "    岸上工程：visit_ops 潮生会 工程 · 工程 捐 岸木 10 · 工程 捐 铜钉 4 · 工程 捐 50。全岛一起修码头/换透镜等，不是潮汐基金，也不是公仓。修完几天内出航或灯塔茶会变。人类 /island 总览点潮生会，点一下看会厅，工程栏能捐",
         "  steward_ops 成就 — 套餐客/齐柜主/套餐名厨（3 次出餐）；steward_ops 收集 含套餐堂食、齐柜出餐等点亮项；升级礼在 sheet / 领奖 时自动发。有些称呼岛自己安，成就表事先看不见",
-        "  steward_ops 收集 — 岛收集簿（约 62 项里程碑，含套餐堂食/齐柜出餐等；只读进度，不是 lore scan）",
+        "  steward_ops 收集 — 岛收集簿（里程碑点亮后永久保存：种过、出过海、开馆、鱼拓/船模/贝壳柜/矿石柜等；只读进度，不是 lore scan）",
         "  steward_ops 维修 — 待修/待处置总览（船体/部件/崖险/杂务/井裂/酒吧考勤；不是 visit_ops 潮生会 维 岸维）",
         "  steward_ops 灾档 — 未结案四档坏事件；各 trouble（亭/剧/稿/诊/所/坊/栗/会/卦/花/别/箱…）结案也记「近日已结」",
         "  steward_ops 周报 — 根据本周岛上真事写成的潮汐周报，不是周目标。人类广场点潮汐公告也能看见",
@@ -665,7 +670,7 @@ async def relay_manual() -> str:
         " 打捞后可能缠网 → 捞险 割绳|弃货|硬拽；人类 /island 岸工坊打捞栏也能点。"
         " 金属件好了可能烫手 → 淬火 泼水|戴胚|硬取；人类 /island 砧上栏也能点。未处置不能 取",
         "  没有 forge_ops / salvage_ops / exhibit_ops。不是 quarry_ops 洗，不是 tide_ops dig，不是 cook",
-        "  打 铜钉 → 等分钟 → 取。砧上一次一件。铜钉修船半价；网补丁 craft_ops 补网 六小时空网-8%",
+        "  打 铜钉 → 等分钟 → 取。砧上一次一件。铜钉修船半价；网补丁 craft_ops 补网 六小时空网-8%。也可 打 鱼拓 / 船模 / 贝壳柜 / 矿石柜 / 酒瓶架 等收藏件（纯好看，岛收集簿会点亮）",
         "  羊毛毯这类装件行囊可放多份，同一件能再打；取不下来时先卖掉或装上袋里那件。人类 /island 背包能点卖，屋里能装/卖掉",
         "  中盘：打 潮纹秤锤 / 铁锄刃 / 雾铅网坠 / 夜光滤网（要潮纹石、铁锭、雾铅、夜光髓）",
         "  补网时口袋有雾铅网坠会优先贴坠，12 小时空网 -14%，盖过普通补丁",
@@ -1025,7 +1030,7 @@ async def plot_ops(key_id: int, command: str = "") -> str:
             "  果园 / 买园 — 树位价钱与开垦（无上限，比份地贵：160/240/360…）；买园 确认 付钱。超出起步每天岸维 20 票/树位，铺多了加档 32/48\n"
             "  买棚 / shed erect — 温室无上限，第1座 180 票即用，之后更贵；买棚 确认 付钱。每座每天岸维 30 票，铺多了加档 48/70\n"
             "  camera install 地块 · incident scan · repair 编号 · commons scan · claim 编号\n"
-            "  肥力 · 虫害 [地块] 手工|施药|拔除 · 留种 作物名 · 留种 status\n"
+            "  肥力 · 虫害 [地块] 手工|施药|拔除|填土|围起来 · 留种 作物名 · 留种 status\n"
             "例: plot_ops status · plot_ops sow 1 甘蓝 · plot_ops sow 园1 橘子 · plot_ops sow 棚1 橘子 · plot_ops 买园 确认\n"
             "人类种地在 /play（?go=plot 滚到份地栏）；/island 总览点份地先进份地景，点一下看地才出格子；点空地打开种植面板，种植面板只出背包里有的种，没有买一份，没种子去广场杂货铺买；份地地况写成熟、待打理、待浇水各几块（菜地+果园+温室合计），还没点看地时也看得见；份地底下有一键浇水、一键打理、一键施肥、一键收获，有能做的地才出现，底下的一键只动当前这一栏，没有一键种菜；上手页份地栏同样有地况条，也能一键浇水打理施肥收获，买种一次可买多份；份地页点草地开垦（一页开满会多一页草地），广场点杂货铺能买（visit_ops tt 同一货架；进了先看店景点一下才出货架，和灯塔选项一个样子，底下深色金边框；点一下店景不动，只出列表，种子饲料能改数量一次最多 24，工具渔具嫁妆一次一件；买完不跳回货架顶），点栗栗流动摊能换货（visit_ops lili 同一摊；先进摊车特写，点一下才出人栗栗，半身立绘对话，栗栗站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗），点乔乔诊所能看病（visit_ops clinic 同一家；先进店景，点一下才出人桥桥，半身立绘对话，桥桥站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗），总览点岸工坊能打钉取货灌盐打捞（先进店景点一下才出列表；缺料写出去哪弄），盐风崖能买镐探脉挖洗（先进店景点一下才出列表），酒吧能洗碗打卡点酒看今晚（先进店景点一下才出吧台），剧场院景能点编剧社投稿、衣泊坊看坊买衣（先进店景点一下才出列表）、剧场看台先进看台景，点一下才出人小橘，半身立绘对话（小橘站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗，能应援、打赏、点歌、围观，专场才试镜、对戏、演出、领薪）；/allotments 是份地全景观望。婚期顶栏进连理所不是份地丢了。"
         )
@@ -1089,7 +1094,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
             if len(parts) < 2:
                 rows = await pests_mod.list_pests(conn, s["id"])
                 if not rows:
-                    return "没有虫害。打理露天/温室作物有小概率触发 → plot_ops 虫害 1 手工|施药|拔除"
+                    return "没有虫害。打理露天/温室作物有小概率触发 → plot_ops 虫害 1 手工|施药|拔除（地陷 填土|围起来）"
                 lines = ["待处理虫害："]
                 for r in rows:
                     plot = dict(r)
@@ -1324,7 +1329,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
                 gh_flag = 0
         elif orchard_flag:
             raise ValueError(
-                "果园只种果树（青柠/橘子/木瓜/香蕉/芒果/椰子/榴莲）。"
+                "果园只种果树（青柠/橘子/柚子/柠檬/桃/橄榄/桑葚/咖啡/可可等）。"
                 "蔬菜走 plot_ops sow 1 甘蓝 或 sow 棚1 甘蓝"
             )
         elif greenhouse_ctx:
@@ -1507,6 +1512,11 @@ async def _plot_one(s: dict, cmd: str) -> str:
                     pn = await pests_mod.maybe_spawn(conn, dict(prow))
                     if pn:
                         pest_notes.append(pn)
+            from . import event_catalog as evcat_mod
+
+            wipe = await evcat_mod.roll_crop_wipe(conn, s["id"])
+            if wipe:
+                pest_notes.append(wipe)
             await conn.commit()
         noun = "树位" if orchard_ctx else "份地"
         msg = f"打理了 {len(rows)} 块{noun}" if rows else f"没有待打理的{noun}——苗都乖，或你还没种"
@@ -1632,8 +1642,8 @@ async def _plot_one(s: dict, cmd: str) -> str:
                 fert_token = rest[0]
         fert_item = resolve_item_key(fert_token) or fert_token
         from .catalog import MANURE
-        if fert_item not in MANURE and fert_item != "compost":
-            raise ValueError("施肥用堆肥或羊粪/猪粪/牛粪。例子：施肥 1 · 施肥 1 羊粪")
+        if fert_item not in MANURE and fert_item not in ("compost", "ash_fert"):
+            raise ValueError("施肥用堆肥、病株灰肥或羊粪/猪粪/牛粪。例子：施肥 1 · 施肥 1 灰肥")
         async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
             if slot_token:
@@ -2185,7 +2195,7 @@ async def tide_ops(key_id: int, command: str) -> str:
         async with db.connect() as conn:
             if sub in ("status", "查看", ""):
                 ly = await layer_mod.get_layer(conn, s["id"])
-                return f"当前水层偏好：{ly}（shore/near/far/deep）"
+                return f"当前水层偏好：{ly}（岸带/栈桥 · 近海/礁/船尾 · 外海 · 深槽）"
             msg = await layer_mod.set_layer(conn, s["id"], sub)
             await conn.commit()
         return msg
@@ -2913,8 +2923,8 @@ async def _tote_one(s: dict, command: str) -> str:
             rows = await ledger_mod.stories_for(conn, s["id"], item_key)
         if not rows:
             if token:
-                return f"{item_label(item_key)}没有履历。戒、稀有鱼、崖上稀矿、工坊出品才会记。"
-            return "行囊里还没有带履历的东西。戒、稀有鱼、崖上稀矿、工坊出品才会记。甘蓝没有前科。"
+                return f"{item_label(item_key)}没有履历。戒、稀有鱼、崖上稀矿、工坊出品、鱼拓船模邮票签名遗物、特殊料理才会记。"
+            return "行囊里还没有带履历的东西。戒、稀有鱼、崖上稀矿、工坊出品、鱼拓船模邮票签名遗物、特殊料理才会记。甘蓝没有前科。"
         lines = ["物品履历（不是成就，也不加数值）："]
         grouped: dict[str, list[list[str]]] = {}
         for row in rows:

@@ -29,6 +29,10 @@ async def get_level(conn, steward_id: int) -> int:
 
 async def bump(conn, steward_id: int, amount: int = 3) -> str | None:
     await ensure_column(conn)
+    from . import works as works_mod
+
+    if amount > 0 and await works_mod.active_bonus(conn, "drain"):
+        amount = max(1, int(amount * 0.55))
     lvl = await get_level(conn, steward_id)
     if lvl >= BLOCK_AT:
         raise ValueError(

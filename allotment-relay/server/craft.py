@@ -27,7 +27,7 @@ CRAFT_HELP = """craft_ops 子命令（整句写进 command）：
 
   status / 看 — 砧上在打什么、盐田、打捞窗口、陈列进度。空 command 不是看工坊，是本表
   图鉴 / catalog — 配方、盐田规则、打捞窗口、陈列套
-  打 铜钉 — 扣材料开始慢工（一砧一次；好了 craft_ops 取）。也可 打 羊毛毯 · 打 潮纹秤锤 · 打 铁锄刃 · 打 雾铅网坠 · 打 夜光滤网 · 打 潮誓戒 · 打 订婚戒
+  打 铜钉 — 扣材料开始慢工（一砧一次；好了 craft_ops 取）。也可 打 羊毛毯 · 打 潮纹秤锤 · 打 铁锄刃 · 打 雾铅网坠 · 打 夜光滤网 · 打 潮誓戒 · 打 订婚戒 · 打 鱼拓 · 打 船模 · 打 贝壳柜 · 打 矿石柜 · 打 酒瓶架 · 打 花册 · 打 老照片 · 打 潮汐邮票 · 打 地下遗物 · 打 大型鱼骨 · 打 稀有种子盒
   取 — 领做好的成品。戒、秤锤、网坠这类会记下谁打的、材料从哪来。羊毛毯这类装件行囊可放多份，同一件能再打；取不下来时先卖掉或装上袋里那件
   补网 — 网补丁 6 小时空网 -8%；有雾铅网坠优先贴，12 小时 -14%。不是 gear upgrade
   盐田 — 看池；灌 — 涨潮灌一池（5 精力）；收盐 — 晴天攒满 20 分钟后收海盐晶
@@ -64,6 +64,16 @@ def _item_where(item: str) -> str:
         "fish_walkblue": "海里少见的未命名小鱼",
         "craft_copper_nails": "砧上打铜钉",
         "craft_net_patch": "砧上打网补丁",
+        "wreck_scrap": "风暴出航偶尔捡到",
+        "fish_sardine": "撒网或坐钓",
+        "fish_codling": "撒网或坐钓",
+        "proc_rice_wine": "灶台酿或加工",
+        "ut_brine_crystal": "潮下捡卤晶",
+        "seed_fogpea": "杂货铺或留种",
+        "wet_note": "赶海漂流瓶",
+        "honey": "小屋蜂箱",
+        "wild_mint": "份地野薄荷",
+        "crop_rapeseed": "菜地油菜",
     }
     if item in table:
         return table[item]
@@ -89,6 +99,18 @@ RECIPE_USE = {
     "marrow_sieve": "装到小屋，风暴打捞少空捞",
     "tide_vow_ring": "自制婚戒，比店里慢",
     "betroth_ring": "不是潮誓戒。打完去连理所登记信物",
+    "gyotaku": "挂墙上，岛收集簿会点亮",
+    "boat_model": "纯收藏，岛收集簿会点亮",
+    "shell_case": "纯收藏，不是陈列柜捐亮壳",
+    "ore_case": "纯收藏，不是陈列柜捐精矿",
+    "bottle_rack": "纯好看",
+    "flower_book": "纯收藏，不是花店干花",
+    "old_photo": "纯收藏",
+    "tide_stamp": "纯收藏，不加数值",
+    "npc_sign": "纯收藏，不是成就",
+    "relic": "纯收藏",
+    "fish_bone": "纯收藏，不是卖鱼",
+    "seed_box": "纯收藏，种不再能播",
 }
 
 

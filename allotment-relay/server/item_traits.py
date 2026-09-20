@@ -130,6 +130,30 @@ def roll_crop_quality(plot: dict[str, Any]) -> str:
     if plot.get("pest_key"):
         weights["bugbit"] += 5
         weights["plain"] += 2
+    from . import world as world_mod
+    w = world_mod.current_weather()
+    if w in ("gale",):
+        weights["twisted"] += 2
+    if w in ("misty",):
+        weights["tender"] += 2
+    climate = world_mod.field_climate_effect()
+    if climate in ("frost", "snowbound"):
+        weights["twisted"] += 3
+    if climate in ("drought", "heatwave"):
+        weights["overripe"] += 3
+        weights["tender"] -= 2
+    last = plot.get("last_crop")
+    if last and last == plot.get("crop"):
+        weights["plain"] += 3
+        weights["flavor"] = max(1, weights.get("flavor", 1) - 2)
+    crop = plot.get("crop")
+    seasons = (CROPS.get(crop) or {}).get("seasons") if crop else None
+    if seasons:
+        from . import season as season_mod
+        now_s = season_mod.season_name()
+        if now_s not in seasons and not plot.get("greenhouse"):
+            weights["twisted"] += 3
+            weights["plain"] += 2
     from . import seed_lineage as seed_lineage_mod
     seed_lineage_mod.apply_quality_bias(weights, plot)
     keys = list(weights.keys())
@@ -137,7 +161,7 @@ def roll_crop_quality(plot: dict[str, Any]) -> str:
     return random.choices(keys, weights=w)[0]
 
 
-def roll_fish_state(species: str) -> str:
+def roll_fish_state(species: str, *, layer: str = "", weather: str = "") -> str:
     meta = SEA_CATCH.get(species) or {}
     rarity = int(meta.get("rarity") or 1)
     weights = {
@@ -149,6 +173,17 @@ def roll_fish_state(species: str) -> str:
         "parasite": 3,
         "odd": 2 + rarity // 2,
     }
+    if layer in ("shore",):
+        weights["bruised"] += 3
+        weights["fresh"] -= 1
+    if layer in ("deep",):
+        weights["parasite"] += 2
+        weights["odd"] += 2
+    if weather == "gale":
+        weights["bruised"] += 4
+        weights["fresh"] = max(1, weights["fresh"] - 2)
+    if weather == "misty":
+        weights["fresh"] += 3
     keys = list(weights.keys())
     w = [max(1, weights[k]) for k in keys]
     return random.choices(keys, weights=w)[0]
@@ -437,6 +472,9 @@ async def vend_unit_price(
     if wmilli and item.startswith("fish_"):
         kg = wmilli / 1000.0
         mult *= min(1.8, 0.85 + kg * 0.04)
+    from . import loop_couple as loop_mod
+
+    mult *= await loop_mod.fridge_price_mult(conn, steward_id, item)
     return max(1, int(base * mult))
 
 
