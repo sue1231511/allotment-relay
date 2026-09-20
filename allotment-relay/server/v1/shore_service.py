@@ -955,6 +955,7 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
         "tabs": beach_tabs,
         "items": {
             "beach": beach_items,
+            "bottle": bottle_items,
             "vow": vow_items,
         },
     }
