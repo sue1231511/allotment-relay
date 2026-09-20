@@ -3114,7 +3114,7 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
                         name=f"惊逃·{act['label']} #{slot}",
                         emoji="🏃",
                         note=f"{spec['name']}跑丢了 · {act.get('hint') or ''}",
-                        detail="诱回/围栏/急追三选一，和 barn_ops 惊逃 同一套。",
+                        detail="诱回/围栏/急追三选一，和管家「惊逃」同一套。",
                         price=act["label"],
                         can=bool(act.get("can")),
                         target=f"{slot}|{act['action']}",
