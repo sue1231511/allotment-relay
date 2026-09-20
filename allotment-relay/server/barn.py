@@ -475,7 +475,7 @@ async def barn_ops(key_id: int, command: str) -> str:
             if not row.get("species"):
                 raise ValueError("空栏")
             if int(row.get("escaped_at") or 0) > 0:
-                raise ValueError(f"#{slot} 跑丢了，先 barn_ops 寻回 {slot}")
+                raise ValueError(f"#{slot} 跑丢了，先 hut_ops barn 寻回 {slot}")
             from . import barn_temper as temper_mod
 
             row = await temper_mod.ensure_temper(conn, row)
