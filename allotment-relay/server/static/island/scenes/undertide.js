@@ -48,24 +48,26 @@ export function renderUndertide(root, { onDetailChange } = {}) {
 }
 
 function renderUndertideNpc(root, spot) {
-  const bank = spot.id === "undertide-bank";
+  const stand = spot.sprite
+    ? `<div class="island-vn-stand is-half"><img class="island-vn-sprite" src="/static/island/assets/sprites/${spot.sprite}.png" alt="${esc(spot.name || spot.speaker)}" draggable="false"></div>`
+    : "";
   root.innerHTML = `
-    <div class="island-vn island-undertide-vn is-peek">
+    <div class="island-vn island-undertide-vn is-peek" data-ut-desk="${esc(spot.desk)}">
       <div class="island-vn-board">
         ${sceneArt(spot.id)}
-        <div class="island-vn-stand is-half"><img class="island-vn-sprite" src="/static/island/assets/sprites/${spot.sprite}.png" alt="${esc(spot.name)}" draggable="false"></div>
+        ${stand}
         <div class="island-vn-talk is-line">
           <button type="button" class="island-vn-box" data-ut-advance><span class="island-vn-name"></span><p class="island-vn-line"></p><i class="island-vn-more" aria-hidden="true"></i></button>
           <div class="island-vn-choices"></div>
         </div>
-        <button type="button" class="island-scene-tap">点一下${bank ? "见行长" : "见 Silas"}</button>
+        <button type="button" class="island-scene-tap">点一下${spot.peek}</button>
       </div>
     </div>
   `;
   const wrap = root.querySelector(".island-undertide-vn");
   const board = wrap.querySelector(".island-vn-board");
   board.addEventListener("click", () => {
-    if (wrap.classList.contains("is-peek")) openUndertideNpc(wrap, bank);
+    if (wrap.classList.contains("is-peek")) openUndertideNpc(wrap, spot);
   });
 }
 
