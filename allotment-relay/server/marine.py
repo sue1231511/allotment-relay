@@ -1268,10 +1268,15 @@ async def _resolve_voyage(
         )
         if random.random() < 0.35:
             item = random.choice(loot_table)
-            await db.add_item(conn, s["id"], item, 1)
-            loot_lines.append(f"勉强留下 {ITEM_NAMES.get(item, item)} x1")
-            if item.startswith("fish_"):
-                fish_loot.append(item)
+            from . import fish_ban as fish_ban_mod
+            ban_msg = await fish_ban_mod.maybe_release_item(conn, s["id"], item)
+            if ban_msg:
+                loot_lines.append(ban_msg)
+            else:
+                await db.add_item(conn, s["id"], item, 1)
+                loot_lines.append(f"勉强留下 {ITEM_NAMES.get(item, item)} x1")
+                if item.startswith("fish_"):
+                    fish_loot.append(item)
     else:
         picks = random.sample(loot_table, k=min(cargo, len(loot_table)))
         from . import item_traits as traits_mod
