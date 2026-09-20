@@ -1,0 +1,25 @@
+{
+  "name": "潮汐岛",
+  "short_name": "潮汐岛",
+  "description": "人和管家公用一个号。上手页动手，断网时仍能打开岛民手册。",
+  "start_url": "/play",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f4f1ea",
+  "theme_color": "#2c4a4e",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "/static/pwa/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/island/assets/chip-bgm-play.png",
+      "sizes": "420x295",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
