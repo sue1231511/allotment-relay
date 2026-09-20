@@ -56,7 +56,7 @@ async def snapshot(conn, steward_id: int) -> list[dict[str, Any]]:
                 boat_mod.PART_LABELS.get(key, key),
                 dur,
                 mx,
-                "voyage_ops 部件 修",
+                "tide_ops voyage 部件 修",
             )
         )
 
