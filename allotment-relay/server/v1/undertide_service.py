@@ -132,6 +132,16 @@ async def snapshot(api_key: str, key_id: int) -> dict[str, Any]:
     except ValueError as exc:
         casino = str(exc)
         casino_open = False
+
+    async def _desk(command: str) -> str:
+        try:
+            return humanize(await undertide.undertide_ops(key_id, command))
+        except ValueError as exc:
+            return humanize(str(exc))
+
+    market = await _desk("market")
+    bounty = await _desk("bounty")
+    medic = await _desk("pit")
     s = await db.get_steward_by_key_id(key_id)
     async with db.connect() as conn:
         well = await crack_mod.player_snippet(conn, s or {"id": 0, "tickets": 0})
@@ -140,6 +150,9 @@ async def snapshot(api_key: str, key_id: int) -> dict[str, Any]:
         "bank": humanize(bank),
         "casino": humanize(casino),
         "casino_open": casino_open,
+        "market": market,
+        "bounty": bounty,
+        "medic": medic,
         "well": well,
     }
     return snap
