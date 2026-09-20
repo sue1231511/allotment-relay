@@ -2954,6 +2954,10 @@ async def _tote_one(s: dict, command: str) -> str:
             if item_key.startswith("fit_") or item_key.startswith("deco_"):
                 furniture_only.append((item_key, qty))
                 continue
+            from . import fish_ban as fish_ban_mod
+            refuse = fish_ban_mod.refuse_trade(item_key)
+            if refuse:
+                raise ValueError(refuse)
             price = suggested_price(item_key) or ITEM_PRICES.get(item_key, 0)
             if not price:
                 raise ValueError(f"不可出售 {item_label(item_key)}（{item_key}）")
