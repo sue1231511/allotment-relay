@@ -1670,7 +1670,7 @@ async def voyage_ops(key_id: int, command: str) -> str:
                     "SELECT boat_damaged FROM stewards WHERE id=?", (share_founder_id,)
                 )
                 if int((await cur.fetchone())[0]):
-                    raise ValueError("合伙船损未修，先 voyage_ops repair（费用平摊）")
+                    raise ValueError("合伙船损未修，先 tide_ops voyage repair（费用平摊）")
             elif s.get("boat_damaged") and not loan_lender_id:
                 raise ValueError("船损，先 repair")
             if loan_lender_id:
