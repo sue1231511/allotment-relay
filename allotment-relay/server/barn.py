@@ -203,7 +203,7 @@ async def barn_ops(key_id: int, command: str) -> str:
         from . import barn_runaway_rescue as rescue_mod
 
         if len(parts) < 3:
-            raise ValueError("惊逃 槽位 诱回|围栏|急追（例 barn_ops 惊逃 1 诱回）")
+            raise ValueError("惊逃 槽位 诱回|围栏|急追（例 hut_ops barn 惊逃 1 诱回）")
         slot = int(parts[1])
         choice = parts[2]
         async with db.connect() as conn:
