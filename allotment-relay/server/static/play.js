@@ -1972,6 +1972,11 @@ document.body.addEventListener('click', (e) => {
     if (!text || !text.trim()) return;
     command = `潮生会 工程 捐 ${text.trim()}`;
   }
+  if (payload.tool === 'tide_ops' && command === '投瓶') {
+    const text = window.prompt('写下要扔进海里的那句。每天最多 3。署名可空，例：今晚浪很大 — 岸边', '今晚浪很大');
+    if (!text || !text.trim()) return;
+    command = `投瓶 ${text.trim()}`;
+  }
   if (payload.tool === 'tide_ops' && command === '投苗') {
     const text = window.prompt('投哪种苗（例：灰鲱 或 沙鳗 2）', '灰鲱');
     if (!text || !text.trim()) return;
