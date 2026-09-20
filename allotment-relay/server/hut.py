@@ -3037,7 +3037,7 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
             name="畜栏履历",
             emoji="📜",
             note="血统与最近栏事（购入/治病/收产）。",
-            detail="和 barn_ops 履历 同一套。",
+            detail="和管家「畜栏履历」同一套。",
             price="看",
             can=True,
             target="",
