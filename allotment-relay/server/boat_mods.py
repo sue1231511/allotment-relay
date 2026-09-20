@@ -79,7 +79,7 @@ async def bonuses(conn, steward_id: int) -> dict[str, float]:
 async def status_line(conn, steward_id: int) -> str:
     rows = await list_installed(conn, steward_id)
     if not rows:
-        return f"改装槽 0/{MAX_MODS} 空。voyage_ops 改装 list"
+        return f"改装槽 0/{MAX_MODS} 空。tide_ops voyage 改装 list"
     bits = []
     for slot, key in rows:
         m = MODS.get(key, {})
