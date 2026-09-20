@@ -289,8 +289,15 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
         {"key": "voyage", "label": "出海", "badge": "海" if sailing else ""},
         {"key": "pen", "label": "渔排", "badge": pen_view.get("badge") or ""},
     ]
+    from .. import bottles as bottles_mod
+
+    bottle_view = await bottles_mod.shore_view(conn, s["id"])
+    bottle_pending = int(bottle_view.get("pending") or 0)
+    bottle_left = int(bottle_view.get("leave_left") or 0)
+    bottle_found = list(bottle_view.get("found") or [])
     beach_tabs = [
         {"key": "beach", "label": "赶海", "badge": ""},
+        {"key": "bottle", "label": "漂流瓶", "badge": str(bottle_pending) if bottle_pending else ""},
         {"key": "vow", "label": "信物", "badge": ""},
     ]
 
