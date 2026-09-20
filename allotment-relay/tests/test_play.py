@@ -188,6 +188,10 @@ def test_play_page_lists_all_plot_kinds() -> None:
     assert "parseActPayload" in js
     assert "setWorkStatus" in js
     assert "bar_place_actions" in (ROOT / "server" / "play.py").read_text()
+    assert 'id="storiesSection"' in html
+    assert "潮闻与故事" in html
+    assert "renderStories" in js
+    assert "story_ui" in js
 
 
 if __name__ == "__main__":
