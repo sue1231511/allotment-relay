@@ -163,7 +163,7 @@ async def roll_hold_leak(conn, steward_id: int, *, fatal: bool = False) -> str |
     )
     tier = tiers_mod.TIER_FATAL if fatal else tiers_mod.TIER_HEAVY
     if fatal:
-        msg = f"鱼舱裂开进水（舱 {hold}→{new}）。可修 / 返航 / 硬撑。voyage_ops 部件 修"
+        msg = f"鱼舱裂开进水（舱 {hold}→{new}）。可修 / 返航 / 硬撑。tide_ops voyage 部件 修"
     else:
         msg = f"鱼舱渗水（舱 {hold}→{new}）。可修 / 继续。voyage_ops 部件 修"
     await tiers_mod.record_flash(
