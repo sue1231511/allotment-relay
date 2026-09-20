@@ -136,49 +136,91 @@ function deskChoices(spot, under, mode) {
     );
     return rows;
   }
-  if (mode === "dice") return [
-    { kind: "casino_dice", target: "small", label: "押小", note: "×2" }, { kind: "casino_dice", target: "big", label: "押大", note: "×2" }, { kind: "casino_dice", target: "black", label: "押黑潮", note: "对子 ×5" },
+  if (spot.desk === "casino") {
+    if (mode === "dice") return [
+      { kind: "casino_dice", target: "small", label: "押小", note: "×2" }, { kind: "casino_dice", target: "big", label: "押大", note: "×2" }, { kind: "casino_dice", target: "black", label: "押黑潮", note: "对子 ×5" },
+    ];
+    if (mode === "lantern") return [
+      { kind: "casino_lantern", target: "start", label: "开一局" }, { kind: "casino_lantern", target: "continue", label: "继续" }, { kind: "casino_lantern", target: "cash", label: "收手" },
+    ];
+    if (!under.casino_open) return [{ kind: "casino_desk", label: "看门牌" }];
+    return [
+      { kind: "casino_desk", label: "看赌桌" }, { kind: "menu", target: "dice", label: "黑潮骰" }, { kind: "menu", target: "lantern", label: "最后一盏灯" }, { kind: "casino_draw", label: "死人抽牌" },
+    ];
+  }
+  if (spot.desk === "market") return [
+    { kind: "market_desk", label: "看货架" },
+    { kind: "racket_accept", label: "认栽成交", note: "阿标那一笔认了" },
+    { kind: "racket_refuse", label: "硬扛", note: "战力判定" },
+    { kind: "market_buy", label: "按编号买" },
+    { kind: "market_repair", label: "找掌柜修" },
   ];
-  if (mode === "lantern") return [
-    { kind: "casino_lantern", target: "start", label: "开一局" }, { kind: "casino_lantern", target: "continue", label: "继续" }, { kind: "casino_lantern", target: "cash", label: "收手" },
+  if (spot.desk === "bounty") return [
+    { kind: "bounty_desk", label: "看墙" },
+    { kind: "bounty_take", label: "接单" },
+    { kind: "bounty_post", label: "挂单" },
   ];
-  if (!under.casino_open) return [{ kind: "casino_desk", label: "看门牌" }];
   return [
-    { kind: "casino_desk", label: "看赌桌" }, { kind: "menu", target: "dice", label: "黑潮骰" }, { kind: "menu", target: "lantern", label: "最后一盏灯" }, { kind: "casino_draw", label: "死人抽牌" },
+    { kind: "medic", target: "ring_shock", label: "治斗场震伤" },
+    { kind: "medic", target: "pit_trauma", label: "治深坑重创" },
+    { kind: "medic", target: "sprain", label: "治扭伤" },
+    { kind: "medic", target: "backache", label: "治腰肌劳损" },
+    { kind: "pit_drug", target: "list", label: "看体质药" },
   ];
 }
 
-function chooseDeskAction(kind, target, bank, wrap, under) {
-  if (kind === "menu") return paintUndertideChoices(wrap, bank, under, target);
-  if (kind === "well_crack") return runDeskAction(kind, target, bank, wrap);
-  if (kind === "bank_debt" || kind === "casino_desk") return runDeskAction(kind, "", bank, wrap);
-  if (kind === "bank_save" || kind === "bank_borrow") return askAmount(kind, "票数", bank, wrap);
-  if (kind === "bank_take" || kind === "bank_repay") {
-    if (target === "ask") return askAmount(kind, "票数（填 all 可全部）", bank, wrap, "", true);
+function chooseDeskAction(kind, target, spot, wrap, under) {
+  if (kind === "menu") return paintUndertideChoices(wrap, spot, under, target);
+  if (kind === "well_crack") return runDeskAction(kind, target, spot, wrap);
+  if (kind === "bank_debt" || kind === "casino_desk" || kind === "market_desk" || kind === "bounty_desk" || kind === "market_repair" || kind === "racket_accept" || kind === "racket_refuse" || kind === "medic" || kind === "pit_drug") {
+    return runDeskAction(kind, target, spot, wrap);
   }
-  if (kind === "casino_dice") return askAmount(kind, "下注票数", bank, wrap, target);
-  if (kind === "casino_lantern") return target === "start" ? askAmount(kind, "下注票数", bank, wrap) : runDeskAction(kind, target, bank, wrap);
+  if (kind === "bank_save" || kind === "bank_borrow") return askAmount(kind, "票数", spot, wrap);
+  if (kind === "bank_take" || kind === "bank_repay") {
+    if (target === "ask") return askAmount(kind, "票数（填 all 可全部）", spot, wrap, "", true);
+  }
+  if (kind === "casino_dice") return askAmount(kind, "下注票数", spot, wrap, target);
+  if (kind === "casino_lantern") return target === "start" ? askAmount(kind, "下注票数", spot, wrap) : runDeskAction(kind, target, spot, wrap);
   if (kind === "casino_draw") {
-    return showFormSheet({ title: "死人抽牌", body: "填下注和停牌点（12 到 20），这一把一次结算。", fields: [{ id: "bet", label: "下注票数", placeholder: "10" }, { id: "stand", label: "停牌点", placeholder: "17" }], confirm: "发牌", onConfirm: (values) => runDeskAction(kind, `${values.bet} ${values.stand}`, bank, wrap) });
+    return showFormSheet({ title: "死人抽牌", body: "填下注和停牌点（12 到 20），这一把一次结算。", fields: [{ id: "bet", label: "下注票数", placeholder: "10" }, { id: "stand", label: "停牌点", placeholder: "17" }], confirm: "发牌", onConfirm: (values) => runDeskAction(kind, `${values.bet} ${values.stand}`, spot, wrap) });
+  }
+  if (kind === "market_buy") {
+    return showFormSheet({ title: "按编号买", body: "写下货架编号。离柜概不认账。", fields: [{ id: "slot", label: "编号", placeholder: "1" }], confirm: "买", onConfirm: (values) => runDeskAction(kind, values.slot, spot, wrap) });
+  }
+  if (kind === "bounty_take") {
+    return showFormSheet({ title: "接单", body: "写下墙上的悬赏编号。", fields: [{ id: "id", label: "编号", placeholder: "1" }], confirm: "接", onConfirm: (values) => runDeskAction(kind, values.id, spot, wrap) });
+  }
+  if (kind === "bounty_post") {
+    return showFormSheet({
+      title: "挂单",
+      body: "steal 毁地，beat 打人。赏金另加手续费。",
+      fields: [
+        { id: "tier", label: "steal 或 beat", placeholder: "beat" },
+        { id: "name", label: "名字", placeholder: "对方管家名" },
+        { id: "bounty", label: "赏金", placeholder: "40" },
+      ],
+      confirm: "挂",
+      onConfirm: (values) => runDeskAction(kind, `${values.tier} ${values.name} ${values.bounty}`, spot, wrap),
+    });
   }
 }
 
-function askAmount(kind, label, bank, wrap, prefix = "", allowAll = false) {
+function askAmount(kind, label, spot, wrap, prefix = "", allowAll = false) {
   showFormSheet({
     title: label,
     body: allowAll ? "填正整数，或填 all 一次结清。实际限额和余额由柜台当场核。" : "只收正整数；实际限额和余额由柜台当场核。",
     fields: [{ id: "amount", label, placeholder: "10" }],
     confirm: "交给柜台",
-    onConfirm: (values) => runDeskAction(kind, prefix ? `${prefix} ${values.amount}` : values.amount, bank, wrap),
+    onConfirm: (values) => runDeskAction(kind, prefix ? `${prefix} ${values.amount}` : values.amount, spot, wrap),
   });
 }
 
-async function runDeskAction(kind, target, bank, wrap) {
+async function runDeskAction(kind, target, spot, wrap) {
   try {
     const snap = await api.undertideAct(kind, target);
     const event = snap.event || {};
     if (!wrap || !wrap.isConnected) return;
-    paintUndertideTalk(wrap, bank, snap.undertide || {}, event.narrative || "这一下结清了。");
+    paintUndertideTalk(wrap, spot, snap.undertide || {}, event.narrative || "这一下结清了。");
   } catch (err) {
     toast(err.message || "这一下没做成。");
   }
