@@ -142,7 +142,7 @@ async def uninstall(conn, steward: dict, slot: int) -> str:
 async def dispatch(conn, steward: dict, parts: list[str]) -> str:
     await ensure_table(conn)
     if not parts or parts[0].lower() in ("list", "列表", "help"):
-        lines = [f"船改装（最多 {MAX_MODS} 槽，voyage_ops 改装 装 名 / 卸 槽位）："]
+        lines = [f"船改装（最多 {MAX_MODS} 槽，tide_ops voyage 改装 装 名 / 卸 槽位）："]
         for key, meta in MODS.items():
             need = " + ".join(f"{ITEM_NAMES.get(i, i)}×{q}" for i, q in meta["need"])
             lines.append(
