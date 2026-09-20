@@ -660,7 +660,7 @@ function renderGifts() {
   const gifts = (state.dash && state.dash.gifts) || [];
   const head = `<div style="margin-bottom:8px"><button type="button" class="play-text-btn" data-act='{"tool":"tote_ops","command":"gifts"}'>刷新收礼记录</button></div>`;
   if (!gifts.length) {
-    $('play-gifts').innerHTML = `${head}<p>暂无收礼 / 打赏</p><p class="muted">别人送你礼或酒吧打赏会列在这里；也可 tote_ops gifts 或 steward_ops 收礼。</p>`;
+    $('play-gifts').innerHTML = `${head}<p>暂无收礼 / 打赏</p><p class="muted">别人送你礼或酒吧打赏会列在这里。点上面「刷新收礼记录」再看一眼。</p>`;
     return;
   }
   $('play-gifts').innerHTML = head + gifts.slice(0, 6).map((g) => `
