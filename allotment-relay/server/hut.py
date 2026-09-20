@@ -2448,7 +2448,7 @@ async def _cook_tab_items(
 
 
 async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str, Any]:
-    """给 /island 小屋用。数值仍走 hut_ops / barn_ops / kitchen_ops cook，这里只摊开能点的。"""
+    """给 /island 小屋用。数值仍走 hut_ops / hut_ops barn / kitchen_ops cook，这里只摊开能点的。"""
     from . import barn, kitchen
     from .catalog import bed_sleep_energy
 
