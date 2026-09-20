@@ -1486,6 +1486,7 @@ button.play-duty.is-heart:not(.hidden) {
   .play-meters { grid-template-columns: 1fr 1fr; }
   .play-plots,
   .play-places,
+  .play-story-grid,
   .play-page .memory-grid,
   .play-sidecol { grid-template-columns: 1fr; }
 
