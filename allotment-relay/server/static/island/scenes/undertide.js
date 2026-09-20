@@ -35,11 +35,7 @@ export function renderUndertide(root, { onDetailChange } = {}) {
   };
 
   const showPlace = (spot) => {
-    if (spot.id === "undertide-bank" || spot.id === "undertide-casino") {
-      renderUndertideNpc(root, spot);
-    } else {
-      renderPlace(root, { id: spot.id, title: spot.title });
-    }
+    renderUndertideNpc(root, spot);
     if (typeof onDetailChange === "function") onDetailChange(true, showMap);
   };
 
