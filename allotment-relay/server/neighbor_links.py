@@ -184,7 +184,7 @@ async def loan_reminder_notices(conn, steward_id: int, *, ping: bool = True) -> 
             hrs = max(1, left // 3600)
             line = (
                 f"借船提醒：{lname} 的 {row[1]} 约 {hrs} 小时内到期"
-                " → voyage_ops return · alliance_ops 借船 状态"
+                " → tide_ops voyage return · alliance_ops 借船 状态"
             )
             out.append(line)
             if ping:
