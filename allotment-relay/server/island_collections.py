@@ -86,7 +86,7 @@ ENTRIES: list[tuple[str, str, str | None, str | None]] = [
     ("craft_relic", "地下遗物", "craft_relic", None),
     ("craft_fish_bone", "大型鱼骨", "craft_fish_bone", None),
     ("craft_seed_box", "稀有种子盒", "craft_seed_box", None),
-}
+]
 
 
 async def ensure_table(conn) -> None:
