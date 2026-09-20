@@ -46,7 +46,7 @@ async def recent(conn, steward_id: int, limit: int = 8) -> list[str]:
 async def status(conn, steward_id: int) -> str:
     rows = await recent(conn, steward_id)
     if not rows:
-        return "还没有船事记录。depart/归港/repair 会自动记。voyage_ops 履历"
+        return "还没有船事记录。depart/归港/repair 会自动记。tide_ops voyage 履历"
     lines = ["船只履历（近几条）："]
     for t in rows:
         lines.append(f"  · {t}")
