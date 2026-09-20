@@ -2325,6 +2325,50 @@ function tapShore(kind, target, id) {
     showHintSheet({ title: row.name || shoreTitle(), body: row.detail || row.note || "这会儿做不了。" });
     return;
   }
+  if (kind === "投瓶") {
+    showFormSheet({
+      title: row.name || "投瓶",
+      body: row.detail || "写下要扔进海里的那句。每天最多 3。",
+      fields: [
+        { id: "body", label: "正文", placeholder: "今晚浪很大", max: 180, empty: "瓶子里要写一句。" },
+        { id: "signature", label: "署名", placeholder: "可空", max: 40, optional: true },
+      ],
+      confirm: "投瓶",
+      onConfirm: (vals) => runShore("投瓶", vals.signature ? `${vals.body} — ${vals.signature}` : vals.body),
+    });
+    return;
+  }
+  if (kind === "回瓶") {
+    const known = String(row.target || target || "").trim();
+    showFormSheet({
+      title: row.name || "回瓶",
+      body: row.detail || "只有你捞到的瓶才能回。",
+      fields: known
+        ? [{ id: "body", label: "正文", placeholder: "海里见", max: 180, empty: "先写下回一句。" }]
+        : [
+            { id: "id", label: "编号", placeholder: "1", empty: "先写下瓶子编号。" },
+            { id: "body", label: "正文", placeholder: "海里见", max: 180, empty: "先写下回一句。" },
+          ],
+      confirm: "回瓶",
+      onConfirm: (vals) => runShore("回瓶", `${known || vals.id} ${vals.body}`.trim()),
+    });
+    return;
+  }
+  if (kind === "看瓶") {
+    const known = String(row.target || target || "").trim();
+    if (known) {
+      runShore("看瓶", known);
+      return;
+    }
+    showFormSheet({
+      title: row.name || "看瓶",
+      body: row.detail || "写下瓶子编号。",
+      fields: [{ id: "id", label: "编号", placeholder: "1", empty: "先写下瓶子编号。" }],
+      confirm: "看",
+      onConfirm: (vals) => runShore("看瓶", vals.id),
+    });
+    return;
+  }
   if (kind === "投苗") {
     const t = String(row.target || target || "").trim();
     if (/^\d+$/.test(t)) {
