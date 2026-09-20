@@ -298,7 +298,7 @@ VISIT_HELP = """visit_ops 子命令（整句写进 command）：
     可叠放货满一组会开下一组；工具只能 1。人类杂货铺点开种子/饲料能改数量再买，一次最多 24 份；工具、渔具、嫁妆柜仍一次一件。潮柜格满了先 vend 或 hut_ops 冰柜 取
   lore scan [主题] / topics — 沿海旧史文本与 NPC 小传（例：lore scan npc；不是收集品，背包里不会多东西）
   clinic status — 桥桥诊所（24h）。进门氛围+窗台斑鸠（每日最多1次）+价目；诊费偏高。考勤逾期仍可用。人类 /island 广场点乔乔诊所先进店景，点一下才出人桥桥，半身立绘对话，桥桥站左边，只露上半身，先点对话框再出选项，点选项话写在对话框里，不另弹窗
-  clinic treat 病症 — 花钱治地上病。例子：treat sprain · treat infection · treat 畜热 · treat 蹄毒 · treat 瘟触 · treat 潮疹 · treat all
+  clinic treat 病症 — 花钱治地上病。例子：treat sprain · treat infection · treat 畜热 · treat 蹄毒 · treat 瘟触 · treat 潮疹 · treat 腿鱼小咒 · treat all
   clinic 诊险 候诊|加号|硬治 — 治完病小概率候诊区堵，未处置不能再 treat/调理。人类 /island 乔乔诊所也能点
     摸病畜/病死栏可能畜热蹄毒瘟触；赤潮撒网坐钓可能潮疹。牲口本身的病去霍衡，不是这家
   clinic 调理 小|中|大 — 无病回身体（+15/+30/+50），价 95/210/380 票（可打折/凌晨加价）；每日最多 3 次。例子：clinic 调理 中 · clinic rest 大
