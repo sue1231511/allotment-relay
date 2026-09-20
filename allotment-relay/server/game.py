@@ -489,7 +489,7 @@ async def relay_manual() -> str:
         "  出海 voyage buy raft|skiff|watch_hoy|smack|cutter|longliner|drifter（木筏/舢板/小渔船/帆船/切波/双桅/雾海） · depart near|far|deep · return",
         "  船体 hull 随航程磨损（voyage_ops status 看）；低 hull 可能变待修。repair 票修同时回满 hull",
         "  坐钓 cast 另耗鱼线耐久（tide_ops gear 看 line）；线旧可能断线（票饵仍花，无鱼）→ gear repair line",
-        "  鱼群生态：同种捞多了本周变稀；visit_ops 潮生会 禁捕 看禁捞种+压力。网/钓碰上禁捕罚15票放生",
+        "  鱼群生态：同种捞多了本周变稀；visit_ops 潮生会 禁捕 看禁捞种+压力。岸边网钓、出海归港碰上禁捕罚15票放生，不能进袋也不能卖",
         "  水层 tide_ops 水层 岸带|栈桥|近海|礁|船尾|外海|深槽 定下次网/钓海域；钩/卷线器 gear status 看，挂底 tide_ops 解挂",
         "  大鱼搏斗：稀有鱼可能触发 tide_ops 搏鱼 硬拉|放走|切线（不进袋直到硬拉赢）",
         "  船部件 voyage_ops 部件 / 部件 修 — 十二件（帆舵灯锚缆泵舱冰网机钟罗），低了加出海失败；舱低少装货、冰低鱼易擦伤、网机低撒网更易空网、钟低偏航、罗经低黑旗谈和更难（修默认 22 票，铜钉省 6）。plot_ops tend 偶发鸟啄/灶台/潮气/鱼线打结（鸟啄极少落种；切线或搏鱼切线极少海玻璃或旧钩下次坐钓捎回；硬撑归港见漂流箱）。tide_ops net 挂水草（下次撒网消 debuff 时极少抠出饵/漂绳）、雨风暴撒网/赶海 dig 极少特殊贝壳；barn_ops 寻回逃畜极少跟足迹摸到潮边藏货。dig 铲钝（各记一次消一次）。畜栏 barn_ops breed 1 配种 · 惊逃 1 诱回|围栏|急追 · recover 1 等同诱回 · status 看性格",
@@ -515,7 +515,7 @@ async def relay_manual() -> str:
         "    小咒：visit_ops clinic treat 腿鱼小咒（48 票或祛咒香）。吃或卖再掷随机事件：",
         "    kitchen_ops eat 未命名小鱼 · tote_ops vend 未命名小鱼 1",
         "  赶海 beach scan · dig（要铲子）· probe。退潮 dig 好；涨潮时 dig 和 probe 都关，只有 scan 还能看一眼",
-        "    dig 偶发铲钝：下次翻沙多 2 精力。人类 /island 港口岸边撒网行会附禁捕摘要",
+        "    dig 偶发铲钝：下次翻沙多 2 精力。翻沙偶尔冲上一只漂流瓶。人类 /island 港口岸边撒网行会附禁捕摘要",
         "    dig 是翻沙滩捡贝壳，不是挖矿。矿石走 quarry_ops 挖（盐风崖，涨潮不关）。风暴打捞走 craft_ops 打捞，不是 dig",
         "  人类 /island 总览点海边，进滩景再点港口、海边。点港口就出列表，两个选项闲聊和看码头；闲聊是全屏聊天记录，能说话、发红包、对暗号、许愿墙，和上手页聊天室同一屋；看码头「岸边」栏撒网、坐钓、点水层/解挂/搏鱼，「出海」栏开船、修全船部件，「渔排」栏管排。点海边就去赶海或见韶年；/tide 是围观实况",
         "  Boss tide_ops boss status|attack — 合力打潮渊之主，掉神话章鱼肉。耗精力",
@@ -2954,6 +2954,10 @@ async def _tote_one(s: dict, command: str) -> str:
             if item_key.startswith("fit_") or item_key.startswith("deco_"):
                 furniture_only.append((item_key, qty))
                 continue
+            from . import fish_ban as fish_ban_mod
+            refuse = fish_ban_mod.refuse_trade(item_key)
+            if refuse:
+                raise ValueError(refuse)
             price = suggested_price(item_key) or ITEM_PRICES.get(item_key, 0)
             if not price:
                 raise ValueError(f"不可出售 {item_label(item_key)}（{item_key}）")
