@@ -350,6 +350,7 @@ function renderAll() {
   renderHearts();
   paintHeartBanner();
   renderMemories();
+  renderStories();
   if (state.placeId) renderPlace(state.placeId);
   consumeGo();
 }
