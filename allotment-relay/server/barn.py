@@ -223,7 +223,7 @@ async def barn_ops(key_id: int, command: str) -> str:
     if verb in ("起名", "name", "命名"):
         from . import barn_names as names_mod
         if len(parts) < 3:
-            raise ValueError("起名 槽位 名字（例 barn_ops 起名 1 豆花）")
+            raise ValueError("起名 槽位 名字（例 hut_ops barn 起名 1 豆花）")
         slot = int(parts[1])
         nm = " ".join(parts[2:])
         async with db.connect() as conn:
