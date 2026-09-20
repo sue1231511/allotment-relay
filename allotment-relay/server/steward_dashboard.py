@@ -49,6 +49,8 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
         )).fetchone()
         ut = await undertide_mod._ensure_ut(conn, s["id"])
         memories = await memory_archive.list_memories(conn, s["id"])
+        from . import story_progress
+        story_ui = await story_progress.snapshot(conn, s)
         from . import quarry as quarry_mod
         from . import craft as craft_mod
         quarry_view = await quarry_mod.dashboard_view(conn, s["id"])
@@ -256,6 +258,7 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
         "craft": craft_view,
         "cloth": cloth_view,
         "memories": memories,
+        "story_ui": story_ui,
         "flags": {
             "greenhouse": bool(s.get("greenhouse")),
             "hut_built": bool(s.get("hut_built")),

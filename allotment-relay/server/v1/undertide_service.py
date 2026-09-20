@@ -1,4 +1,4 @@
-"""潮下钱庄与赌场的移动端适配层。
+"""潮下钱庄、赌场、后室铺、恩怨墙、医务间的移动端适配层。
 
 数值、债务、限额和随机结算全部仍走 ``undertide_ops``；这里仅把手机上可点的
 有限动作翻成既有命令，避免前端另算一套钱。
@@ -23,6 +23,16 @@ TITLES = {
     "casino_lantern": "最后一盏灯",
     "casino_draw": "死人抽牌",
     "well_crack": "井险处置",
+    "market_desk": "后室铺",
+    "market_buy": "按编号买",
+    "market_repair": "找掌柜修",
+    "racket_accept": "认栽成交",
+    "racket_refuse": "硬扛",
+    "bounty_desk": "恩怨墙",
+    "bounty_take": "接单",
+    "bounty_post": "挂单",
+    "medic": "晏安医务间",
+    "pit_drug": "体质药",
 }
 
 
@@ -75,11 +85,40 @@ def _command(kind: str, target: str) -> str:
         if not target:
             raise ApiError("BAD_REQUEST", "先选清井、绑索或硬闯。")
         return f"井险 {target}"
+    if kind == "market_desk":
+        return "market"
+    if kind == "market_buy":
+        if not target:
+            raise ApiError("BAD_REQUEST", "先写下货架编号。")
+        return f"buy {target}"
+    if kind == "market_repair":
+        return "repair"
+    if kind == "racket_accept":
+        return "racket accept"
+    if kind == "racket_refuse":
+        return "racket refuse"
+    if kind == "bounty_desk":
+        return "bounty"
+    if kind == "bounty_take":
+        if not target:
+            raise ApiError("BAD_REQUEST", "先写下悬赏编号。")
+        return f"bounty take {target}"
+    if kind == "bounty_post":
+        bits = target.split()
+        if len(bits) < 3 or bits[0] not in {"steal", "beat"}:
+            raise ApiError("BAD_REQUEST", "挂单要写 steal 或 beat、名字和赏金。")
+        return f"bounty post {target}"
+    if kind == "medic":
+        if not target:
+            raise ApiError("BAD_REQUEST", "先选要治的井下伤。")
+        return f"medic {target}"
+    if kind == "pit_drug":
+        return f"pit drug {target}".strip() if target else "pit drug list"
     raise ApiError("BAD_REQUEST", "这里没有这一下。")
 
 
 async def snapshot(api_key: str, key_id: int) -> dict[str, Any]:
-    """读取两个桌面的原始说明；未下井时赌场保留锁定提示。"""
+    """读取钱庄、赌场、后室铺、恩怨墙、医务间的原始说明；未下井时保留锁定提示。"""
     from .. import db
     from .. import undertide_well_crack as crack_mod
 
@@ -93,6 +132,16 @@ async def snapshot(api_key: str, key_id: int) -> dict[str, Any]:
     except ValueError as exc:
         casino = str(exc)
         casino_open = False
+
+    async def _desk(command: str) -> str:
+        try:
+            return humanize(await undertide.undertide_ops(key_id, command))
+        except ValueError as exc:
+            return humanize(str(exc))
+
+    market = await _desk("market")
+    bounty = await _desk("bounty")
+    medic = await _desk("pit")
     s = await db.get_steward_by_key_id(key_id)
     async with db.connect() as conn:
         well = await crack_mod.player_snippet(conn, s or {"id": 0, "tickets": 0})
@@ -101,6 +150,9 @@ async def snapshot(api_key: str, key_id: int) -> dict[str, Any]:
         "bank": humanize(bank),
         "casino": humanize(casino),
         "casino_open": casino_open,
+        "market": market,
+        "bounty": bounty,
+        "medic": medic,
         "well": well,
     }
     return snap

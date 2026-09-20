@@ -72,6 +72,21 @@ async def _test_play_api() -> None:
     names = [p["name"] for p in seen["neighbors"]["people"]]
     assert "对岸的人" in names, seen["neighbors"]
 
+    ui = enrolled["dashboard"].get("story_ui") or {}
+    assert ui.get("available"), ui
+    assert any(x.get("command") == "accept black_box_lover" for x in ui["available"]), ui
+    accepted = await play_mod.run_play(key, "tale_ops", "accept black_box_lover")
+    assert "黑盒" in (accepted.get("text") or ""), accepted.get("text")
+    active = (accepted["dashboard"].get("story_ui") or {}).get("active") or []
+    assert any(x.get("key") == "black_box_lover" for x in active), active
+    started = await play_mod.run_play(key, "story_ops", "start yesterday_no_proof")
+    ysteps = next(
+        (x.get("actions") or [])
+        for x in ((started["dashboard"].get("story_ui") or {}).get("active") or [])
+        if x.get("key") == "yesterday_no_proof"
+    )
+    assert any(a.get("command") == "explore old_wharf" for a in ysteps), ysteps
+
     sown = await play_mod.run_play(key, "plot_ops", "sow 1 甘蓝")
     assert sown["ok"] is True, sown
     plots = sown["dashboard"]["parcels"]
@@ -81,9 +96,9 @@ async def _test_play_api() -> None:
     ids = {p["id"] for p in sown["places"]}
     assert {"bar", "eatery", "star", "clinic", "hut", "hui", "atelier", "ting"} <= ids, ids
     week1 = [p["id"] for p in sown["places"] if p.get("week1")]
-    assert week1 == ["tide", "hut", "bar", "eatery", "lounge", "ting", "hui"], week1
+    assert week1 == ["tide", "hut", "bar", "eatery", "lounge", "ting", "hui", "clinic"], week1
     clinic = next(p for p in sown["places"] if p["id"] == "clinic")
-    assert clinic["week1"] is False, clinic
+    assert clinic["week1"] is True, clinic
     assert any(a["command"] == "clinic treat all" for a in clinic["actions"]), clinic
     assert any(a["command"] == "clinic 调理 中" for a in clinic["actions"]), clinic
     bar = next(p for p in sown["places"] if p["id"] == "bar")
@@ -173,6 +188,10 @@ def test_play_page_lists_all_plot_kinds() -> None:
     assert "parseActPayload" in js
     assert "setWorkStatus" in js
     assert "bar_place_actions" in (ROOT / "server" / "play.py").read_text()
+    assert 'id="storiesSection"' in html
+    assert "潮闻与故事" in html
+    assert "renderStories" in js
+    assert "story_ui" in js
 
 
 if __name__ == "__main__":

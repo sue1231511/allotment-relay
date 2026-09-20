@@ -107,9 +107,9 @@ async def hut_ops(command: str = "") -> str:
     return await mux._call_ops(mux.hut_bundle, _kid(), command)
 
 
-@mcp.tool(description="渔获出海赶海渔排漂流瓶。空=列表。例：net · cast · 水层 near · 搏鱼 硬拉 · 解挂 · voyage 部件 修 · dig。解挂/搏鱼切线极少海玻璃或旧钩标记（下次坐钓进袋捎回钩耐久）。net 偶发挂水草则下次空网率+10%（撒一次消，消时极少抠出饵/漂绳）；雨/风暴撒网极少网到特殊贝壳。beach dig 同天气极少冲出贝壳，偶尔冲上一只漂流瓶。本周禁捞种岸边网钓、出海归港和渔排收都罚15票放生，不能卖。人类 /island 港口岸边/出海/渔排栏可点同一套。dig≠崖矿。")
+@mcp.tool(description="渔获出海赶海渔排漂流瓶。空=列表。例：net · cast · 水层 near · 搏鱼 硬拉 · 解挂 · voyage 部件 修 · dig · 捞瓶 · 投瓶。解挂/搏鱼切线极少海玻璃或旧钩标记（下次坐钓进袋捎回钩耐久）。net 偶发挂水草则下次空网率+10%（撒一次消，消时极少抠出饵/漂绳）；雨/风暴撒网极少网到特殊贝壳。beach dig 同天气极少冲出贝壳，偶尔冲上一只漂流瓶。本周禁捞种岸边网钓、出海归港和渔排收都罚15票放生，不能卖。人类 /island 港口岸边/出海/渔排栏可点同一套；赶海漂流瓶栏能看、捞、投、回。dig≠崖矿。")
 async def tide_ops(
-    command: Annotated[str, Field(description="net/cast · 水层 · 搏鱼 · 解挂 · voyage 部件 修（全件回满）· 帆撕 补|返航|硬撑 · dig 赶海。")] = "",
+    command: Annotated[str, Field(description="net/cast · 水层 · 搏鱼 · 解挂 · voyage 部件 修（全件回满）· 帆撕 补|返航|硬撑 · dig 赶海 · 捞瓶 · 投瓶。")] = "",
 ) -> str:
     return await mux._call_ops(mux.tide_bundle, _kid(), command)
 
@@ -142,7 +142,7 @@ async def bar_ops(command: str = "") -> str:
 
 
 @mcp.tool(description="潮下地下世界。空=help。例：well · descend · enter · 井险 清井；bank debt；dice/lantern/draw。猫猫 NPC；下井减岛缘。井蚀≥70 可能井裂三选一，未处置不能 descend/enter。/island 恶猫钱庄可存取借还与井险；赌场骰/灯/牌；其余仍上手页。")
-async def undertide_ops(command: Annotated[str, Field(description="整句子命令；空=help。入口 well→descend→enter。炼 list/brine_crystal/岸黑盐/pickling_brine/灶腌卤=崖↔潮下↔厨房闭环。钱庄 bank；赌场 dice/lantern/draw。手机地图只接钱庄和赌场，后室/恩怨墙/医务间仍用这里或上手页。")] = "") -> str:
+async def undertide_ops(command: Annotated[str, Field(description="整句子命令；空=help。入口 well→descend→enter。炼 list/brine_crystal/岸黑盐/pickling_brine/灶腌卤=崖↔潮下↔厨房闭环。钱庄 bank；赌场 dice/lantern/draw。手机地图钱庄、赌场、后室铺、恩怨墙、医务间都能点；上手页井下栏也能点。")] = "") -> str:
     from . import undertide
     from . import progress as progress_mod
     return progress_mod.attach_note(await mux._call_ops(undertide.undertide_ops, _kid(), command))

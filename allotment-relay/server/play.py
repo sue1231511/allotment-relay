@@ -227,7 +227,7 @@ PLACES: list[dict[str, Any]] = [
         "kicker": "Clinic",
         "blurb": "地上的病来这里。井下伤归晏安，桥桥不接。",
         "rail": "今天来诊所做什么",
-        "week1": False,
+        "week1": True,
         "actions": [
             {"label": "进门", "note": "氛围、斑鸠、价目", "tool": "visit_ops", "command": "clinic status"},
             {"label": "看病", "note": "一次尽量治完当前地上病", "tool": "visit_ops", "command": "clinic treat all"},
@@ -365,6 +365,11 @@ PLACES: list[dict[str, Any]] = [
         "caution": True,
         "actions": [
             {"label": "向导", "note": "先读规矩", "tool": "undertide_ops", "command": "guide"},
+            {"label": "后室铺", "note": "看当日货架。收账鬼可能强买强卖", "tool": "undertide_ops", "command": "market"},
+            {"label": "认栽成交", "note": "阿标那一笔认了", "tool": "undertide_ops", "command": "racket accept"},
+            {"label": "硬扛", "note": "不认阿标那一笔。战力判定", "tool": "undertide_ops", "command": "racket refuse"},
+            {"label": "恩怨墙", "note": "看悬赏榜", "tool": "undertide_ops", "command": "bounty"},
+            {"label": "医务间", "note": "晏安只收井下伤。先看向导再点", "tool": "undertide_ops", "command": "medic"},
             {"label": "help", "note": "真指令列表", "tool": "undertide_ops", "command": "help"},
         ],
     },
