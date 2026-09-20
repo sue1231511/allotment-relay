@@ -157,7 +157,7 @@ def _line(animal: dict | None, slot: int) -> str:
     if sick:
         extra += f" · 病{sick}"
     if int(animal.get("escaped_at") or 0) > 0:
-        return f"  #{slot}: {spec['emoji']}{spec['name']}（跑丢了）→ barn_ops 寻回 {slot}"
+        return f"  #{slot}: {spec['emoji']}{spec['name']}（跑丢了）→ hut_ops barn 寻回 {slot}"
     from . import barn_temper as temper_mod
     t = (animal.get("temper") or "").strip()
     if t:
