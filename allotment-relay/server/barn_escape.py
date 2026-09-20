@@ -26,7 +26,7 @@ async def tick_escape(conn, steward_id: int, animal: dict) -> str | None:
     meta = LIVESTOCK[animal["species"]]
     return (
         f"#{animal['slot']} {meta['name']}受惊跑了（性格{temper_mod.label(animal)}）"
-        f" → barn_ops 寻回 {animal['slot']}"
+        f" → hut_ops barn 寻回 {animal['slot']}"
     )
 
 
