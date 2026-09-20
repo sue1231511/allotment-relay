@@ -1602,7 +1602,7 @@ async def voyage_ops(key_id: int, command: str) -> str:
             )
             await conn.commit()
         await db.add_chronicle("boat", f"{s['name']} 购入 {meta['name']}", s["id"])
-        return f"购入 {meta['name']}（-{cost} 票）。可 voyage_ops depart 出海"
+        return f"购入 {meta['name']}（-{cost} 票）。可 tide_ops voyage depart 出海"
 
     if verb == "repair":
         async with db.connect() as conn:
