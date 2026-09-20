@@ -2183,6 +2183,124 @@ def _append_pantry_home(
             ))
 
 
+def _append_cozy_home(
+    home_items: list[dict[str, Any]],
+    *,
+    has_tub: bool,
+    has_shelf: bool,
+    tickets: int,
+    stock: dict[str, Any],
+    empty_hard: str | None,
+    empty_soft: str | None,
+    can_bath: bool,
+    bath_note: str,
+    can_read: bool,
+    read_note: str,
+) -> None:
+    tub = HUT_HARD["bath_tub"]
+    shelf = HUT_SOFT["bookshelf"]
+    if has_tub:
+        home_items.append(_sku(
+            sid="bath",
+            kind="bath",
+            name="泡澡",
+            emoji="🛁",
+            note=bath_note,
+            detail="雾智，每 20 小时一次。床管精力，浴桶管雾智。不是厨房泡饮。",
+            price="泡" if can_bath else "看",
+            can=can_bath,
+            target="",
+        ))
+    else:
+        bag = int(stock.get("fit_bath_tub") or 0) > 0
+        if bag and empty_hard:
+            home_items.append(_sku(
+                sid="install-tub",
+                kind="install",
+                name="装雪松浴桶",
+                emoji="🛁",
+                note="行囊里有浴桶，装上才能泡澡。",
+                detail="装到空的硬装槽。装好就能泡澡。",
+                price="装",
+                can=True,
+                target="bath_tub",
+            ))
+        elif empty_hard:
+            home_items.append(_sku(
+                sid="buy-tub",
+                kind="buy_install",
+                name="买雪松浴桶",
+                emoji="🛁",
+                note=f"{tub['cost']} 票。装上才能泡澡。",
+                detail=f"买雪松浴桶并装上，要 {tub['cost']} 票。床管精力，浴桶管雾智。不是厨房泡饮。",
+                price=f"{tub['cost']} 票",
+                can=tickets >= int(tub["cost"]),
+                target="bath_tub",
+            ))
+        else:
+            home_items.append(_sku(
+                sid="tub-slot",
+                kind="look",
+                name="硬装槽满了",
+                emoji="🛁",
+                note="没有空槽装浴桶。先升级或卖掉一件。",
+                detail="硬装槽满了。先腾位置再买浴桶。",
+                price="看",
+                can=True,
+                target="status",
+            ))
+    if has_shelf:
+        home_items.append(_sku(
+            sid="read",
+            kind="read",
+            name="读书",
+            emoji="📚",
+            note=read_note,
+            detail="每天一次，雾智 +2，翻一段沿海旧史。不是诊所调理。",
+            price="读" if can_read else "看",
+            can=can_read,
+            target="",
+        ))
+    else:
+        bag = int(stock.get("fit_bookshelf") or 0) > 0
+        if bag and empty_soft:
+            home_items.append(_sku(
+                sid="install-shelf",
+                kind="install",
+                name="装航海书架",
+                emoji="📚",
+                note="行囊里有书架，装上才能读书。",
+                detail="装到空的软装槽。装好就能读书。",
+                price="装",
+                can=True,
+                target="bookshelf",
+            ))
+        elif empty_soft:
+            home_items.append(_sku(
+                sid="buy-shelf",
+                kind="buy_install",
+                name="买航海书架",
+                emoji="📚",
+                note=f"{shelf['cost']} 票。装上才能读书。",
+                detail=f"买航海书架并装上，要 {shelf['cost']} 票。每天一次，翻一段沿海旧史。",
+                price=f"{shelf['cost']} 票",
+                can=tickets >= int(shelf["cost"]),
+                target="bookshelf",
+            ))
+        else:
+            home_items.append(_sku(
+                sid="shelf-slot",
+                kind="look",
+                name="软装槽满了",
+                emoji="📚",
+                note="没有空槽装书架。先升级或卖掉一件。",
+                detail="软装槽满了。先腾位置再买书架。",
+                price="看",
+                can=True,
+                target="status",
+            ))
+
+
 async def _cook_tab_items(
     conn: aiosqlite.Connection,
     s: dict[str, Any],
