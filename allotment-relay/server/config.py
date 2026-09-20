@@ -473,6 +473,8 @@ BOTTLE_LEAVE_DAILY = 3
 BOTTLE_FISH_CHANCE = _event_rate(0.12)
 # 赶海翻沙偶尔冲上一只瓶；缺这个常量 dig 会直接报 AttributeError
 BOTTLE_WASH_CHANCE = _event_rate(0.08)
+# 旧名：有的部署还在读这个，和 WASH 同一值
+BOTTLE_WISH_CHANCE = BOTTLE_WASH_CHANCE
 
 # 滨海酒吧 — 暮/夜上工，票少补贴厚；每 2 天必须 shift 一次
 BAR_SHIFT_DAILY = 4
