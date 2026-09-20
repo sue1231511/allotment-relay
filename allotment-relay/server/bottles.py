@@ -62,34 +62,48 @@ async def shore_view(conn: aiosqlite.Connection, steward_id: int) -> dict:
     }
 
 
+def _wash_chance() -> float:
+    raw = (
+        getattr(config, "BOTTLE_WASH_CHANCE", None)
+        or getattr(config, "BOTTLE_WISH_CHANCE", None)
+        or 0.08
+    )
+    try:
+        return float(raw)
+    except (TypeError, ValueError):
+        return 0.08
+
+
 async def try_wash_ashore(s: dict) -> str | None:
     """翻沙偶尔冲上一只瓶。没缘分就当没看见，不盖过赶海正文。"""
-    chance = float(getattr(config, "BOTTLE_WASH_CHANCE", 0.08) or 0.08)
-    if random.random() > chance:
-        return None
-    async with db.connect() as conn:
-        conn.row_factory = aiosqlite.Row
-        row = await (await conn.execute(
-            """
-            SELECT b.*, a.name AS author_name
-            FROM drift_bottles b
-            JOIN stewards a ON a.id=b.author_id
-            WHERE b.found_by IS NULL AND b.author_id != ?
-            ORDER BY RANDOM() LIMIT 1
-            """,
-            (s["id"],),
-        )).fetchone()
-        if not row:
+    try:
+        if random.random() > _wash_chance():
             return None
-        bottle = dict(row)
-        await conn.execute(
-            "UPDATE drift_bottles SET found_by=?, found_at=? WHERE id=?",
-            (s["id"], db.now(), bottle["id"]),
-        )
-        await conn.commit()
-    sig = bottle.get("signature") or bottle.get("author_name", "?")
-    await db.add_chronicle("bottle", f"{s['name']} 赶海捡到漂流瓶", s["id"])
-    return f"潮线冲上一只瓶 #{bottle['id']}：「{bottle['body']}」— {sig}"
+        async with db.connect() as conn:
+            conn.row_factory = aiosqlite.Row
+            row = await (await conn.execute(
+                """
+                SELECT b.*, a.name AS author_name
+                FROM drift_bottles b
+                JOIN stewards a ON a.id=b.author_id
+                WHERE b.found_by IS NULL AND b.author_id != ?
+                ORDER BY RANDOM() LIMIT 1
+                """,
+                (s["id"],),
+            )).fetchone()
+            if not row:
+                return None
+            bottle = dict(row)
+            await conn.execute(
+                "UPDATE drift_bottles SET found_by=?, found_at=? WHERE id=?",
+                (s["id"], db.now(), bottle["id"]),
+            )
+            await conn.commit()
+        sig = bottle.get("signature") or bottle.get("author_name", "?")
+        await db.add_chronicle("bottle", f"{s['name']} 赶海捡到漂流瓶", s["id"])
+        return f"潮线冲上一只瓶 #{bottle['id']}：「{bottle['body']}」— {sig}"
+    except Exception:
+        return None
 
 
 async def bottle_ops(key_id: int, command: str) -> str:
