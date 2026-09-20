@@ -233,7 +233,10 @@ async def beach_ops(key_id: int, command: str) -> str:
         if betroth_find:
             msg += f"\n{betroth_find}"
         from . import bottles
-        washed = await bottles.try_wash_ashore(s)
+        try:
+            washed = await bottles.try_wash_ashore(s)
+        except Exception:
+            washed = None
         if washed:
             msg += f"\n{washed}"
         await db.add_chronicle("beach", f"{s['name']} 赶海得 {label}", s["id"])
