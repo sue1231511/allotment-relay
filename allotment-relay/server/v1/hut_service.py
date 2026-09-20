@@ -236,6 +236,12 @@ def _command(kind: str, target: str) -> tuple[str, str]:
         if key == "stove":
             return "hut", "修灶"
         raise ApiError("BAD_REQUEST", "只能修冰箱或灶台。")
+    if kind == "repair_roof":
+        return "hut", "修屋顶"
+    if kind == "bath":
+        return "hut", "泡澡"
+    if kind == "read":
+        return "hut", "读书"
     if kind == "cook":
         if not extra:
             raise ApiError("BAD_REQUEST", "先点要煮的菜，或点 2～5 样材料再下锅。")
