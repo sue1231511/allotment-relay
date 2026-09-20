@@ -489,7 +489,7 @@ async def relay_manual() -> str:
         "  出海 voyage buy raft|skiff|watch_hoy|smack|cutter|longliner|drifter（木筏/舢板/小渔船/帆船/切波/双桅/雾海） · depart near|far|deep · return",
         "  船体 hull 随航程磨损（tide_ops voyage status 看）；低 hull 可能变待修。repair 票修同时回满 hull",
         "  坐钓 cast 另耗鱼线耐久（tide_ops gear 看 line）；线旧可能断线（票饵仍花，无鱼）→ gear repair line",
-        "  鱼群生态：同种捞多了本周变稀；visit_ops 潮生会 禁捕 看禁捞种+压力。岸边网钓、出海归港碰上禁捕罚15票放生，不能进袋也不能卖",
+        "  鱼群生态：同种捞多了本周变稀；visit_ops 潮生会 禁捕 看禁捞种+压力。岸边网钓、出海归港、渔排收碰上禁捕罚15票放生，不能进袋也不能卖",
         "  水层 tide_ops 水层 岸带|栈桥|近海|礁|船尾|外海|深槽 定下次网/钓海域；钩/卷线器 gear status 看，挂底 tide_ops 解挂",
         "  大鱼搏斗：稀有鱼可能触发 tide_ops 搏鱼 硬拉|放走|切线（不进袋直到硬拉赢）",
         "  船部件 voyage_ops 部件 / 部件 修 — 十二件（帆舵灯锚缆泵舱冰网机钟罗），低了加出海失败；舱低少装货、冰低鱼易擦伤、网机低撒网更易空网、钟低偏航、罗经低黑旗谈和更难（修默认 22 票，铜钉省 6）。plot_ops tend 偶发鸟啄/灶台/潮气/鱼线打结（鸟啄极少落种；切线或搏鱼切线极少海玻璃或旧钩下次坐钓捎回；硬撑归港见漂流箱）。tide_ops net 挂水草（下次撒网消 debuff 时极少抠出饵/漂绳）、雨风暴撒网/赶海 dig 极少特殊贝壳；barn_ops 寻回逃畜极少跟足迹摸到潮边藏货。dig 铲钝（各记一次消一次）。畜栏 barn_ops breed 1 配种 · 惊逃 1 诱回|围栏|急追 · recover 1 等同诱回 · status 看性格",
