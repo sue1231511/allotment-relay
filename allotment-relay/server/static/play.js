@@ -894,6 +894,12 @@ function renderMemories() {
 function extraPlaceActions(place) {
   const extra = [];
   const voyage = (state.dash && state.dash.voyage) || '';
+  const ui = storyUi();
+  for (const item of (ui.active || [])) {
+    for (const act of item.actions || []) {
+      if (act.place === place.id) extra.push(act);
+    }
+  }
   if (place.id === 'hui') {
     const dues = duesOf(state.dash);
     if (Number(dues.tax_arrears || 0) > 0) {
