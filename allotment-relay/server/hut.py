@@ -2561,6 +2561,42 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
                 can=tickets >= 16,
                 target=app_key,
             ))
+        from . import hut_roof as roof_mod
+
+        roof, rmx = await roof_mod.get_roof(conn, s["id"])
+        if roof < rmx:
+            home_items.append(_sku(
+                sid="repair-roof",
+                kind="repair_roof",
+                name="修屋顶",
+                emoji="🏠",
+                note=f"屋顶 {roof}/{rmx}。14 票，有漂绳省 4。",
+                detail="屋顶低了睡觉少回精力。不是修冰箱，也不是岸维。",
+                price="修",
+                can=tickets >= 14,
+                target="",
+            ))
+        soak_at = 0
+        read_day = 0
+        cozy_row = await (await conn.execute(
+            "SELECT bath_soak_at, book_read_day FROM stewards WHERE id=?",
+            (s["id"],),
+        )).fetchone()
+        if cozy_row:
+            soak_at = int(cozy_row[0] or 0)
+            read_day = int(cozy_row[1] or 0)
+        wait = soak_at + int(config.BATH_COOLDOWN) - db.now()
+        can_bath = bool(has_tub) and wait <= 0
+        if has_tub and wait > 0:
+            bath_note = f"刚泡过，约 {wait // 3600 + 1} 小时后再来。"
+        else:
+            bath_note = "雾智 +15，饱食 +4。每 20 小时一次。"
+        can_read = bool(has_shelf) and read_day != db.day_id()
+        read_note = (
+            "今天读过了，明天再来。"
+            if has_shelf and not can_read
+            else "每天一次，雾智 +2，翻一段沿海旧史。"
+        )
         _append_pantry_home(
             home_items,
             has_crock=has_crock,
@@ -2569,6 +2605,19 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
             stock=stock,
             empty_hard=empty_hard,
             empty_soft=empty_soft,
+        )
+        _append_cozy_home(
+            home_items,
+            has_tub=has_tub,
+            has_shelf=has_shelf,
+            tickets=tickets,
+            stock=stock,
+            empty_hard=empty_hard,
+            empty_soft=empty_soft,
+            can_bath=can_bath,
+            bath_note=bath_note,
+            can_read=can_read,
+            read_note=read_note,
         )
         if not has_bed:
             bag_bed = int(stock.get("fit_bed") or 0) > 0
