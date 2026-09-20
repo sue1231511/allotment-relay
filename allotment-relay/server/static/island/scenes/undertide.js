@@ -103,21 +103,21 @@ function paintUndertideTalk(wrap, spot, under, override = "") {
   box.onclick = () => paintUndertideChoices(wrap, spot, under);
 }
 
-function paintUndertideChoices(wrap, bank, under, mode = "main") {
+function paintUndertideChoices(wrap, spot, under, mode = "main") {
   const talk = wrap.querySelector(".island-vn-talk");
   const list = wrap.querySelector(".island-vn-choices");
   if (!talk || !list) return;
   talk.classList.remove("is-line");
   talk.classList.add("is-picks");
-  const rows = deskChoices(bank, under, mode);
+  const rows = deskChoices(spot, under, mode);
   list.innerHTML = rows.map((row) => `<button type="button" class="island-vn-choice" data-ut-kind="${esc(row.kind)}" data-ut-target="${esc(row.target || "")}"><b>${esc(row.label)}</b>${row.note ? `<small>${esc(row.note)}</small>` : ""}</button>`).join("");
   list.querySelectorAll("[data-ut-kind]").forEach((btn) => btn.addEventListener("click", () => chooseDeskAction(
-    btn.getAttribute("data-ut-kind"), btn.getAttribute("data-ut-target") || "", bank, wrap, under,
+    btn.getAttribute("data-ut-kind"), btn.getAttribute("data-ut-target") || "", spot, wrap, under,
   )));
 }
 
-function deskChoices(bank, under, mode) {
-  if (bank) {
+function deskChoices(spot, under, mode) {
+  if (spot.desk === "bank") {
     const rows = [];
     const well = under.well || {};
     if (well.hazard === "crack" && (well.crack_actions || []).length) {
