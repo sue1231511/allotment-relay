@@ -83,7 +83,7 @@ function paint() {
         <h2>日常心意</h2>
         <button type="button" data-heart-close>关闭</button>
       </header>
-      <p>岛民用 heart_ops 送小礼物；你可拆卡、回一句、回礼。只花工分票。今日剩余：回礼 ${lim.human_send_left ?? "—"} · 回一句 ${lim.reply_left ?? "—"}</p>
+      <p>管家会送小礼物；你可拆卡、回一句、回礼。只花这号口袋里的工分票。今日剩余：回礼 ${lim.human_send_left ?? "—"} · 回一句 ${lim.reply_left ?? "—"}</p>
       <div class="island-heart-list">
         ${pending.length ? pending.map(cardHtml).join("") : "<p>没有待拆的心意。</p>"}
         ${album.slice(0, 5).map((c) => cardHtml(c, false)).join("")}

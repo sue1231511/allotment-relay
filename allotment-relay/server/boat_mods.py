@@ -79,7 +79,7 @@ async def bonuses(conn, steward_id: int) -> dict[str, float]:
 async def status_line(conn, steward_id: int) -> str:
     rows = await list_installed(conn, steward_id)
     if not rows:
-        return f"改装槽 0/{MAX_MODS} 空。voyage_ops 改装 list"
+        return f"改装槽 0/{MAX_MODS} 空。tide_ops voyage 改装 list"
     bits = []
     for slot, key in rows:
         m = MODS.get(key, {})
@@ -89,7 +89,7 @@ async def status_line(conn, steward_id: int) -> str:
 
 async def install(conn, steward: dict, mod_token: str) -> str:
     if not steward.get("boat_key"):
-        raise ValueError("先 voyage_ops buy 购船")
+        raise ValueError("先 tide_ops voyage buy 购船")
     key = mod_token.strip().lower().replace(" ", "_")
     if key not in MODS:
         for mk, meta in MODS.items():
@@ -97,7 +97,7 @@ async def install(conn, steward: dict, mod_token: str) -> str:
                 key = mk
                 break
     if key not in MODS:
-        raise ValueError("voyage_ops 改装 list 看可选")
+        raise ValueError("tide_ops voyage 改装 list 看可选")
     meta = MODS[key]
     rows = await list_installed(conn, steward["id"])
     if any(k == key for _, k in rows):
@@ -142,7 +142,7 @@ async def uninstall(conn, steward: dict, slot: int) -> str:
 async def dispatch(conn, steward: dict, parts: list[str]) -> str:
     await ensure_table(conn)
     if not parts or parts[0].lower() in ("list", "列表", "help"):
-        lines = [f"船改装（最多 {MAX_MODS} 槽，voyage_ops 改装 装 名 / 卸 槽位）："]
+        lines = [f"船改装（最多 {MAX_MODS} 槽，tide_ops voyage 改装 装 名 / 卸 槽位）："]
         for key, meta in MODS.items():
             need = " + ".join(f"{ITEM_NAMES.get(i, i)}×{q}" for i, q in meta["need"])
             lines.append(

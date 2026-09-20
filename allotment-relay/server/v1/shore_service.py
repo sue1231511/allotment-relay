@@ -527,7 +527,7 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
                 price="看",
                 can=True,
                 target="mod list",
-                detail="最多 2 槽。与 MCP voyage_ops 改装 同一套。",
+                detail="最多 2 槽。和管家「船改装」同一套。",
             )
         )
         if len(installed_rows) < bmods_mod.MAX_MODS:

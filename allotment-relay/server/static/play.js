@@ -660,7 +660,7 @@ function renderGifts() {
   const gifts = (state.dash && state.dash.gifts) || [];
   const head = `<div style="margin-bottom:8px"><button type="button" class="play-text-btn" data-act='{"tool":"tote_ops","command":"gifts"}'>刷新收礼记录</button></div>`;
   if (!gifts.length) {
-    $('play-gifts').innerHTML = `${head}<p>暂无收礼 / 打赏</p><p class="muted">别人送你礼或酒吧打赏会列在这里；也可 tote_ops gifts 或 steward_ops 收礼。</p>`;
+    $('play-gifts').innerHTML = `${head}<p>暂无收礼 / 打赏</p><p class="muted">别人送你礼或酒吧打赏会列在这里。点上面「刷新收礼记录」再看一眼。</p>`;
     return;
   }
   $('play-gifts').innerHTML = head + gifts.slice(0, 6).map((g) => `
@@ -787,7 +787,7 @@ function renderHearts() {
     body += '<p style="margin-top:10px"><strong>心意册</strong></p>' + album.slice(0, 6).map((c) => heartCardHtml(c)).join('');
   }
   if (!pending.length && !album.length) {
-    body = '<p>还没有心意卡。让岛民执行 heart_ops 送 🧋 | 名字 | 场景 | 票数。</p>';
+    body = '<p>还没有心意卡。让管家送一份心意就行，只花口袋里的工分票。</p>';
   }
   box.innerHTML = head + body;
   bindHeartActions(box);

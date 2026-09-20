@@ -77,7 +77,7 @@ async def status(conn, steward_id: int) -> str:
     )
     logs = [r[0] for r in await cur2.fetchall()]
     if not gens and not logs:
-        return "还没有畜栏履历。购入/治病/收产会自动记。barn_ops 履历"
+        return "还没有畜栏履历。购入/治病/收产会自动记。hut_ops barn 履历"
     lines = ["畜栏血统/履历："]
     for sp, gen in gens:
         name = LIVESTOCK.get(sp, {}).get("name", sp)

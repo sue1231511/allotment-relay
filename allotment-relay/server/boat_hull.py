@@ -71,4 +71,4 @@ async def repair_full(conn, steward_id: int) -> None:
 async def status_line(conn, steward_id: int) -> str:
     hull, mx = await get_hull(conn, steward_id)
     pct = int(100 * hull / mx) if mx else 0
-    return f"船体 {hull}/{mx}（{pct}%）voyage_ops repair 会一并补满"
+    return f"船体 {hull}/{mx}（{pct}%）tide_ops voyage repair 会一并补满"

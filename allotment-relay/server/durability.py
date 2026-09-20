@@ -32,8 +32,8 @@ def repair_cost(current: int, maximum: int, *, base: int = 16) -> int:
 
 
 SYSTEMS: tuple[dict[str, str], ...] = (
-    {"key": "boat", "label": "船件", "fix": "voyage_ops 部件 修", "ui": "港口看出海栏修帆舵灯"},
-    {"key": "roof", "label": "屋顶", "fix": "hut_ops 修屋顶", "ui": "小屋点修屋顶"},
+    {"key": "boat", "label": "船件", "fix": "tide_ops voyage 部件 修", "ui": "港口看出海栏修帆舵灯"},
+    {"key": "roof", "label": "屋顶", "fix": "hut_ops 修屋顶", "ui": "让管家修屋顶"},
     {"key": "fridge", "label": "冰箱", "fix": "hut_ops 修冰箱", "ui": "小屋点修冰箱"},
     {"key": "stove", "label": "灶台", "fix": "hut_ops 修灶", "ui": "小屋点修灶"},
     {"key": "hook", "label": "鱼钩", "fix": "tide_ops gear repair hook", "ui": "渔具栏"},
@@ -56,7 +56,7 @@ async def snapshot(conn, steward_id: int) -> list[dict[str, Any]]:
                 boat_mod.PART_LABELS.get(key, key),
                 dur,
                 mx,
-                "voyage_ops 部件 修",
+                "tide_ops voyage 部件 修",
             )
         )
 

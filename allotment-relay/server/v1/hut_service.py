@@ -33,6 +33,9 @@ TITLES = {
     "barn_recover": "寻回牲口了",
     "barn_pedigree": "畜栏履历",
     "repair_appliance": "修好了",
+    "repair_roof": "修好了",
+    "bath": "泡过了",
+    "read": "读过了",
     "sell_fit": "卖掉了",
     "pickle": "腌好了",
     "dry": "晾好了",
@@ -45,6 +48,8 @@ _FIT_KIND = {
     "compost_bin": "soft",
     "pickle_crock": "hard",
     "fish_rack": "soft",
+    "bath_tub": "hard",
+    "bookshelf": "soft",
 }
 
 
@@ -73,7 +78,7 @@ async def snapshot(api_key: str, key_id: int) -> dict[str, Any]:
     return snap
 
 
-_UNIQUE_FIT = {"bed", "cabinet", "fridge", "compost_bin", "hammock", "pickle_crock", "fish_rack"}
+_UNIQUE_FIT = {"bed", "cabinet", "fridge", "compost_bin", "hammock", "pickle_crock", "fish_rack", "bath_tub", "bookshelf"}
 
 
 def _kind_for(key: str) -> str:
@@ -231,6 +236,12 @@ def _command(kind: str, target: str) -> tuple[str, str]:
         if key == "stove":
             return "hut", "修灶"
         raise ApiError("BAD_REQUEST", "只能修冰箱或灶台。")
+    if kind == "repair_roof":
+        return "hut", "修屋顶"
+    if kind == "bath":
+        return "hut", "泡澡"
+    if kind == "read":
+        return "hut", "读书"
     if kind == "cook":
         if not extra:
             raise ApiError("BAD_REQUEST", "先点要煮的菜，或点 2～5 样材料再下锅。")

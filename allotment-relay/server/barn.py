@@ -157,7 +157,7 @@ def _line(animal: dict | None, slot: int) -> str:
     if sick:
         extra += f" · 病{sick}"
     if int(animal.get("escaped_at") or 0) > 0:
-        return f"  #{slot}: {spec['emoji']}{spec['name']}（跑丢了）→ barn_ops 寻回 {slot}"
+        return f"  #{slot}: {spec['emoji']}{spec['name']}（跑丢了）→ hut_ops barn 寻回 {slot}"
     from . import barn_temper as temper_mod
     t = (animal.get("temper") or "").strip()
     if t:
@@ -203,7 +203,7 @@ async def barn_ops(key_id: int, command: str) -> str:
         from . import barn_runaway_rescue as rescue_mod
 
         if len(parts) < 3:
-            raise ValueError("惊逃 槽位 诱回|围栏|急追（例 barn_ops 惊逃 1 诱回）")
+            raise ValueError("惊逃 槽位 诱回|围栏|急追（例 hut_ops barn 惊逃 1 诱回）")
         slot = int(parts[1])
         choice = parts[2]
         async with db.connect() as conn:
@@ -223,7 +223,7 @@ async def barn_ops(key_id: int, command: str) -> str:
     if verb in ("起名", "name", "命名"):
         from . import barn_names as names_mod
         if len(parts) < 3:
-            raise ValueError("起名 槽位 名字（例 barn_ops 起名 1 豆花）")
+            raise ValueError("起名 槽位 名字（例 hut_ops barn 起名 1 豆花）")
         slot = int(parts[1])
         nm = " ".join(parts[2:])
         async with db.connect() as conn:
@@ -346,7 +346,7 @@ async def barn_ops(key_id: int, command: str) -> str:
 
     if verb == "buy" and len(parts) >= 2:
         if not s.get("barn_built"):
-            raise ValueError("先 barn_ops erect")
+            raise ValueError("先 hut_ops barn erect")
         species = parts[1].lower()
         slot = int(parts[2]) if len(parts) > 2 else 1
         if species not in LIVESTOCK:
@@ -475,7 +475,7 @@ async def barn_ops(key_id: int, command: str) -> str:
             if not row.get("species"):
                 raise ValueError("空栏")
             if int(row.get("escaped_at") or 0) > 0:
-                raise ValueError(f"#{slot} 跑丢了，先 barn_ops 寻回 {slot}")
+                raise ValueError(f"#{slot} 跑丢了，先 hut_ops barn 寻回 {slot}")
             from . import barn_temper as temper_mod
 
             row = await temper_mod.ensure_temper(conn, row)

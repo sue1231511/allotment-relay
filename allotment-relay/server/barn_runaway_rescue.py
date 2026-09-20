@@ -64,7 +64,7 @@ async def resolve(conn, steward: dict[str, Any], slot: int, choice: str) -> str:
             norm = zh
             break
     if not norm:
-        raise ValueError(f"惊逃处置：诱回 · 围栏 · 急追（例 barn_ops 惊逃 {slot} 诱回）")
+        raise ValueError(f"惊逃处置：诱回 · 围栏 · 急追（例 hut_ops barn 惊逃 {slot} 诱回）")
     sid = steward["id"]
     meta = LIVESTOCK[animal["species"]]
     feed = meta.get("feed") or "crop_wheat"

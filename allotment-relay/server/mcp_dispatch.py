@@ -85,7 +85,8 @@ STEWARD_HELP = """steward_ops 子命令（整句写进 command）：
   board [tickets|岛缘|me] — 全服工分票榜 / 岛缘榜。空 board=两张都看。例子：board tickets · board 岛缘 · board me。board level / board 等级榜 仍可用，指向同一张岛缘榜。不是周目标贡献榜，也不是 steward_ops 岛缘（那是拆自己的来源）
   成就 — 已解锁称呼；称呼 逾篱客 佩戴；称呼 卸 改回等级称号。小馆：套餐客 / 齐柜主 / 套餐名厨（3 次套餐出餐）
   收集 — 岛收集簿（点亮永久保存：种过、出过海、开馆、鱼拓/船模/贝壳柜等；只读；不是 lore scan）
-  维修 — 待修/待处置总览（船/崖/井/杂务/考勤）
+  维修 — 待修/待处置总览（船/崖/井/杂务/考勤）。不是潮生会岸维费（visit_ops 潮生会 维）
+  周报 / 纪事 — 本周岛上真事写成的潮汐周报，不是周目标。人类广场点潮汐公告也能看见。同 visit_ops 潮生会 纪事
   灾档 / tierlog — 未结案四档坏事件 + 近日瞬时（鸟啄等已结段；不是 lore scan）
   灾选 / 待选 — 坏事多选待决（闹脾气哄|关栏|不管；鱼舱修|返航|硬撑；疫病隔离|兽医|拖着）。例：灾选 · 灾选 barn_fuss 哄 · 灾选 疫病 隔离
   领奖 — 看升级礼（升级时会自动发）
@@ -144,6 +145,9 @@ HUT_HELP = """hut_ops 子命令（整句写进 command）：
   腌 / 晾 — 腌菜坛 2 蔬菜→1 坛腌菜；晾鱼架 2 同种生鱼→1 条鱼干。例子：腌 甘蓝 4 · 晾 鲭鱼 4
     买：buy pickle_crock → install hard_N pickle_crock；buy fish_rack → install soft_N fish_rack
     人类 /island 点一下看屋里就能买、腌、晾。不是灶上的 cook，也不是畜栏
+  泡澡 / 沐浴 / bath — 要雪松浴桶（buy bath_tub → install hard_N）。雾智 +15，每 20 小时一次。床管精力，浴桶管雾智。人类 /island 小屋和上手页小屋都能点。不要把 hut_ops 泡 当成泡饮（泡饮走 kitchen_ops 泡）
+  读书 / 翻书 / read — 要航海书架（buy bookshelf → install soft_N）。每天一次，雾智 +2 并翻一段沿海旧史
+  修屋顶 — 屋顶低睡觉少回精力。人类 /island 小屋漏雨时能点。修冰箱 / 修灶 厨电低了才出
   卖掉 槽位|装件名 [确认] — 旧家具按折旧卖。例子：卖掉 soft_1 确认 · 卖掉 羊毛毯 确认
     墙上写槽位，行囊写装件名。tote_ops vend 羊毛毯 1 也是这一笔。工坊出品按材料估价
     小馆开着时冰箱不能卖（先 kitchen_ops shop 卖掉 或 shop close）
@@ -175,12 +179,13 @@ TIDE_HELP = """tide_ops 子命令（整句写进 command）：
     人类 /island 港口看码头，渔排栏能搭、投苗、投饵、收、巡。不要发明 pen_ops / fish_ops
   voyage buy|depart|return|fight|flee|parley|bribe — 出海 / 黑旗（fight/flee 可省略 voyage）。欠岸税或岸维时不能买船
     船型：木筏/舢板/小渔船/帆船/切波艇/双桅/雾海（raft/skiff/watch_hoy/smack/cutter/drifter/longliner）。木筏近岸失败+16%
-    归港渔获也走本周禁捕：禁捞种当场罚 15 票放生，不进袋也不能 vend
+    归港渔获、渔排收也走本周禁捕：禁捞种当场罚 15 票放生，不进袋也不能 vend
   voyage 部件 / 部件 修 — 十二件（含网机/引擎/船钟/罗经）。舱低少装货、冰低鱼易擦伤、网机低 tide_ops net 更易空网、钟/罗经低偏航或 parley 难。禁捕放生记 voyage 履历。部件 修 默认 22 票/件（铜钉省 6）。voyage repair 仍修船体。协作≥40 谈和 +10%；罗经满再 +8%
   compliment|release|catch|grab — 未命名小鱼（可省略 voyage）。compliment=release 礼遇回赠普通鱼；
     catch=grab 动手：抓住这尾进袋，落下腿鱼小咒，其它鱼和精力会出事
     吃或卖再掷事件：kitchen_ops eat 未命名小鱼 · tote_ops vend 未命名小鱼 1
   beach scan|dig|probe — 赶海（dig 要铲子）。涨潮时 dig 和 probe 都关，scan 还能看。dig 偶发铲钝、probe 偶发沙坍：下次多 2 精力（各记一次消一次）。dig 不是崖矿，矿石走 quarry_ops 挖。风暴打捞不是 dig，走 craft_ops 打捞。翻沙偶尔冲上一只漂流瓶
+  漂流瓶 / 投瓶 / 捞瓶 / 看瓶 / 回瓶 — 投每天最多 3。不要发明 bottle_ops。也可 alliance_ops bottle
   gear status|upgrade bait|rod|net — 渔具（T0–T5；更高档要票+材料）
   tool list|buy hoe|shovel — 锄头铲子
   boss status|attack — 潮渊之主（无船也能岸边围攻）
@@ -417,6 +422,11 @@ async def steward_ops(
     if verb in ("收集", "collections", "collection", "收集簿"):
         from . import island_collections as coll_mod
         return await coll_mod.collection_ops(key_id, command.strip())
+
+    if verb in ("周报", "纪事", "gazette"):
+        from . import gazette as gazette_mod
+        await game.require_steward(key_id, exempt_duty=True)
+        return await gazette_mod.report_text()
 
     if verb in ("维修", "repair", "待办", "fixme"):
         from . import repair_digest as rep_mod

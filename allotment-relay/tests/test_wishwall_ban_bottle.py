@@ -94,6 +94,7 @@ def test_ban_copy_covers_voyage() -> None:
 
     text = fish_ban.brief_ban(100) + fish_ban.notice_text(100)
     assert "出海归港" in text
+    assert "渔排收" in text
     assert "不能卖" in text or "不能进袋" in text
 
 
@@ -185,3 +186,29 @@ async def _test_vend_refuses_banned_fish() -> None:
             assert "禁捞" in str(exc)
     stock = await db.get_satchel(sid)
     assert stock.get("fish_glassshrimp", 0) == 1
+
+
+def test_pen_harvest_releases_banned_fish() -> None:
+    asyncio.run(_test_pen_harvest_releases_banned_fish())
+
+
+async def _test_pen_harvest_releases_banned_fish() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="ban-pen-"))
+    db = await _boot(tmp)
+    from server import fish_ban, marine
+
+    kid, sid = await _enroll(db, "penban@example.com", "收排人", tickets=400)
+    erected = await marine.pen_ops(kid, "erect")
+    assert "渔排" in erected or "排" in erected, erected
+    async with db.connect() as conn:
+        await conn.execute(
+            "UPDATE fish_pens SET species=?, stocked_at=?, fed=1 "
+            "WHERE steward_id=? AND slot=1",
+            ("herring", db.now() - 10**7, sid),
+        )
+        await conn.commit()
+    with patch.object(fish_ban, "banned_species", return_value=["herring"]):
+        msg = await marine.pen_ops(kid, "harvest")
+    assert "禁捞" in msg or "放生" in msg, msg
+    stock = await db.get_satchel(sid)
+    assert stock.get("fish_herring", 0) == 0, stock

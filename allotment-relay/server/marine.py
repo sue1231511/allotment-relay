@@ -837,7 +837,12 @@ async def pen_ops(key_id: int, command: str) -> str:
             tide_hit = tide in (meta.get("tides") or ())
             if tide_hit:
                 qty += 1
-            await db.add_item(conn, s["id"], f"fish_{species}", qty)
+            from . import fish_ban as fish_ban_mod
+            ban_msg = await fish_ban_mod.maybe_release_item(
+                conn, s["id"], f"fish_{species}"
+            )
+            if not ban_msg:
+                await db.add_item(conn, s["id"], f"fish_{species}", qty)
             await conn.execute(
                 "UPDATE fish_pens SET species=NULL, stocked_at=NULL, fed=0 WHERE id=?",
                 (pen["id"],),
@@ -845,19 +850,28 @@ async def pen_ops(key_id: int, command: str) -> str:
             extra = await events.roll_after_action(s, "pen_harvest", conn, pen=pen)
             disc = await commons.roll_discovery(conn, s, "pen_harvest")
             from . import tale as tale_mod
-            await tale_mod.check_item_progress(conn, s["id"], f"fish_{species}", qty)
+            if not ban_msg:
+                await tale_mod.check_item_progress(conn, s["id"], f"fish_{species}", qty)
             tale_extra = await tale_mod.check_action_progress(conn, s["id"], "sea")
             await conn.commit()
         from . import multi
-        bonus = await multi.on_league_item(s["id"], f"fish_{species}", qty)
-        msg = f"收排 {_pen_tag(pen)} {meta['emoji']}{meta['name']} x{qty}"
-        if tide_hit:
+        bonus = ""
+        if not ban_msg:
+            bonus = await multi.on_league_item(s["id"], f"fish_{species}", qty)
+        if ban_msg:
+            msg = f"收排 {_pen_tag(pen)}：{ban_msg}（本周禁捞，{qty} 条未进袋）"
+        else:
+            msg = f"收排 {_pen_tag(pen)} {meta['emoji']}{meta['name']} x{qty}"
+        if tide_hit and not ban_msg:
             msg += f"（赶{world.tide_label(tide)}多收一条）"
         msg += flavor.maybe_suffix(flavor.PEN_HARVEST_SUFFIX)
         if bonus:
             await db.add_chronicle("league", bonus, None)
             msg += f"\n{bonus}"
-        await db.add_chronicle("pen", f"{s['name']} 渔排收网 {meta['name']} x{qty}", s["id"])
+        if ban_msg:
+            await db.add_chronicle("pen", f"{s['name']} 渔排收网碰上禁捞 {meta['name']}", s["id"])
+        else:
+            await db.add_chronicle("pen", f"{s['name']} 渔排收网 {meta['name']} x{qty}", s["id"])
         if disc:
             msg += f"\n{disc}"
         if extra:
@@ -1328,9 +1342,9 @@ async def _resolve_voyage(
         f"归港 {route['label']}{'（折返）' if failed else ''} · {wear_line or '—'}",
     )
     if s.get("boat_damaged") and not loan_lender_id and not share_founder_id:
-        msg += "（船损，voyage_ops repair）"
+        msg += "（船损，tide_ops voyage repair）"
     elif failed and share_founder_id and share_founder_id != s["id"]:
-        msg += "（合伙船折返，磨损记在发起人；voyage_ops repair 平摊）"
+        msg += "（合伙船折返，磨损记在发起人；tide_ops voyage repair 平摊）"
     elif failed and loan_lender_id:
         msg += "（借船折返，磨损记在船主）"
 
@@ -1421,7 +1435,7 @@ async def _finish_voyage(steward_id: int, voyage: dict[str, Any], choice: str | 
                 return prefix + await _finish_voyage(steward_id, voyage, choice)
             if voyage.get("status") == "sailing" and db.now() >= voyage["returns_at"]:
                 return prefix + await _finish_voyage(steward_id, voyage)
-            return prefix + "航程继续。可用 tide_ops cast 坐钓（未命名小鱼只认钓竿），或等归港 voyage_ops return"
+            return prefix + "航程继续。可用 tide_ops cast 坐钓（未命名小鱼只认钓竿），或等归港 tide_ops voyage return"
         if voyage.get("status") == "hailed":
             if choice is None and not _hail_expired(voyage):
                 raw = voyage.get("encounter") or "{}"
@@ -1588,7 +1602,7 @@ async def voyage_ops(key_id: int, command: str) -> str:
             )
             await conn.commit()
         await db.add_chronicle("boat", f"{s['name']} 购入 {meta['name']}", s["id"])
-        return f"购入 {meta['name']}（-{cost} 票）。可 voyage_ops depart 出海"
+        return f"购入 {meta['name']}（-{cost} 票）。可 tide_ops voyage depart 出海"
 
     if verb == "repair":
         async with db.connect() as conn:
@@ -1645,7 +1659,7 @@ async def voyage_ops(key_id: int, command: str) -> str:
             share_founder_id = 0
             boat_key = await nlink_mod.effective_boat_key(conn, s) or ""
             if not boat_key:
-                raise ValueError("先 voyage_ops buy 购船，或向邻居 alliance_ops 借船 给 / 合伙 入")
+                raise ValueError("先 tide_ops voyage buy 购船，或向邻居 alliance_ops 借船 给 / 合伙 入")
             share_key = await share_mod.share_boat_key(conn, s["id"])
             if share_key and boat_key == share_key:
                 share_founder_id = await share_mod.share_founder_id(conn, s["id"]) or 0
@@ -1656,7 +1670,7 @@ async def voyage_ops(key_id: int, command: str) -> str:
                     "SELECT boat_damaged FROM stewards WHERE id=?", (share_founder_id,)
                 )
                 if int((await cur.fetchone())[0]):
-                    raise ValueError("合伙船损未修，先 voyage_ops repair（费用平摊）")
+                    raise ValueError("合伙船损未修，先 tide_ops voyage repair（费用平摊）")
             elif s.get("boat_damaged") and not loan_lender_id:
                 raise ValueError("船损，先 repair")
             if loan_lender_id:
@@ -1664,7 +1678,7 @@ async def voyage_ops(key_id: int, command: str) -> str:
                     "SELECT boat_damaged FROM stewards WHERE id=?", (loan_lender_id,)
                 )
                 if int((await cur.fetchone())[0]):
-                    raise ValueError("借来的船主那边船损未修，先请对方 voyage_ops repair")
+                    raise ValueError("借来的船主那边船损未修，先请对方 tide_ops voyage repair")
             if _boat_rank(boat_key) < _boat_rank(route["min_boat"]):
                 need = BOATS[route["min_boat"]]["name"]
                 raise ValueError(f"{route['label']} 至少需要 {need}")

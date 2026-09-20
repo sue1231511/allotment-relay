@@ -2183,6 +2183,124 @@ def _append_pantry_home(
             ))
 
 
+def _append_cozy_home(
+    home_items: list[dict[str, Any]],
+    *,
+    has_tub: bool,
+    has_shelf: bool,
+    tickets: int,
+    stock: dict[str, Any],
+    empty_hard: str | None,
+    empty_soft: str | None,
+    can_bath: bool,
+    bath_note: str,
+    can_read: bool,
+    read_note: str,
+) -> None:
+    tub = HUT_HARD["bath_tub"]
+    shelf = HUT_SOFT["bookshelf"]
+    if has_tub:
+        home_items.append(_sku(
+            sid="bath",
+            kind="bath",
+            name="泡澡",
+            emoji="🛁",
+            note=bath_note,
+            detail="雾智，每 20 小时一次。床管精力，浴桶管雾智。不是厨房泡饮。",
+            price="泡" if can_bath else "看",
+            can=can_bath,
+            target="",
+        ))
+    else:
+        bag = int(stock.get("fit_bath_tub") or 0) > 0
+        if bag and empty_hard:
+            home_items.append(_sku(
+                sid="install-tub",
+                kind="install",
+                name="装雪松浴桶",
+                emoji="🛁",
+                note="行囊里有浴桶，装上才能泡澡。",
+                detail="装到空的硬装槽。装好就能泡澡。",
+                price="装",
+                can=True,
+                target="bath_tub",
+            ))
+        elif empty_hard:
+            home_items.append(_sku(
+                sid="buy-tub",
+                kind="buy_install",
+                name="买雪松浴桶",
+                emoji="🛁",
+                note=f"{tub['cost']} 票。装上才能泡澡。",
+                detail=f"买雪松浴桶并装上，要 {tub['cost']} 票。床管精力，浴桶管雾智。不是厨房泡饮。",
+                price=f"{tub['cost']} 票",
+                can=tickets >= int(tub["cost"]),
+                target="bath_tub",
+            ))
+        else:
+            home_items.append(_sku(
+                sid="tub-slot",
+                kind="look",
+                name="硬装槽满了",
+                emoji="🛁",
+                note="没有空槽装浴桶。先升级或卖掉一件。",
+                detail="硬装槽满了。先腾位置再买浴桶。",
+                price="看",
+                can=True,
+                target="status",
+            ))
+    if has_shelf:
+        home_items.append(_sku(
+            sid="read",
+            kind="read",
+            name="读书",
+            emoji="📚",
+            note=read_note,
+            detail="每天一次，雾智 +2，翻一段沿海旧史。不是诊所调理。",
+            price="读" if can_read else "看",
+            can=can_read,
+            target="",
+        ))
+    else:
+        bag = int(stock.get("fit_bookshelf") or 0) > 0
+        if bag and empty_soft:
+            home_items.append(_sku(
+                sid="install-shelf",
+                kind="install",
+                name="装航海书架",
+                emoji="📚",
+                note="行囊里有书架，装上才能读书。",
+                detail="装到空的软装槽。装好就能读书。",
+                price="装",
+                can=True,
+                target="bookshelf",
+            ))
+        elif empty_soft:
+            home_items.append(_sku(
+                sid="buy-shelf",
+                kind="buy_install",
+                name="买航海书架",
+                emoji="📚",
+                note=f"{shelf['cost']} 票。装上才能读书。",
+                detail=f"买航海书架并装上，要 {shelf['cost']} 票。每天一次，翻一段沿海旧史。",
+                price=f"{shelf['cost']} 票",
+                can=tickets >= int(shelf["cost"]),
+                target="bookshelf",
+            ))
+        else:
+            home_items.append(_sku(
+                sid="shelf-slot",
+                kind="look",
+                name="软装槽满了",
+                emoji="📚",
+                note="没有空槽装书架。先升级或卖掉一件。",
+                detail="软装槽满了。先腾位置再买书架。",
+                price="看",
+                can=True,
+                target="status",
+            ))
+
+
 async def _cook_tab_items(
     conn: aiosqlite.Connection,
     s: dict[str, Any],
@@ -2330,7 +2448,7 @@ async def _cook_tab_items(
 
 
 async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str, Any]:
-    """给 /island 小屋用。数值仍走 hut_ops / barn_ops / kitchen_ops cook，这里只摊开能点的。"""
+    """给 /island 小屋用。数值仍走 hut_ops / hut_ops barn / kitchen_ops cook，这里只摊开能点的。"""
     from . import barn, kitchen
     from .catalog import bed_sleep_energy
 
@@ -2353,6 +2471,8 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
     has_bin = _has_fit(fittings, "compost_bin")
     has_crock = _has_fit(fittings, "pickle_crock")
     has_rack = _has_fit(fittings, "fish_rack")
+    has_tub = _has_fit(fittings, "bath_tub")
+    has_shelf = _has_fit(fittings, "bookshelf")
     slept = False
     if built:
         row = await (await conn.execute(
@@ -2441,6 +2561,42 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
                 can=tickets >= 16,
                 target=app_key,
             ))
+        from . import hut_roof as roof_mod
+
+        roof, rmx = await roof_mod.get_roof(conn, s["id"])
+        if roof < rmx:
+            home_items.append(_sku(
+                sid="repair-roof",
+                kind="repair_roof",
+                name="修屋顶",
+                emoji="🏠",
+                note=f"屋顶 {roof}/{rmx}。14 票，有漂绳省 4。",
+                detail="屋顶低了睡觉少回精力。不是修冰箱，也不是岸维。",
+                price="修",
+                can=tickets >= 14,
+                target="",
+            ))
+        soak_at = 0
+        read_day = 0
+        cozy_row = await (await conn.execute(
+            "SELECT bath_soak_at, book_read_day FROM stewards WHERE id=?",
+            (s["id"],),
+        )).fetchone()
+        if cozy_row:
+            soak_at = int(cozy_row[0] or 0)
+            read_day = int(cozy_row[1] or 0)
+        wait = soak_at + int(config.BATH_COOLDOWN) - db.now()
+        can_bath = bool(has_tub) and wait <= 0
+        if has_tub and wait > 0:
+            bath_note = f"刚泡过，约 {wait // 3600 + 1} 小时后再来。"
+        else:
+            bath_note = "雾智 +15，饱食 +4。每 20 小时一次。"
+        can_read = bool(has_shelf) and read_day != db.day_id()
+        read_note = (
+            "今天读过了，明天再来。"
+            if has_shelf and not can_read
+            else "每天一次，雾智 +2，翻一段沿海旧史。"
+        )
         _append_pantry_home(
             home_items,
             has_crock=has_crock,
@@ -2449,6 +2605,19 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
             stock=stock,
             empty_hard=empty_hard,
             empty_soft=empty_soft,
+        )
+        _append_cozy_home(
+            home_items,
+            has_tub=has_tub,
+            has_shelf=has_shelf,
+            tickets=tickets,
+            stock=stock,
+            empty_hard=empty_hard,
+            empty_soft=empty_soft,
+            can_bath=can_bath,
+            bath_note=bath_note,
+            can_read=can_read,
+            read_note=read_note,
         )
         if not has_bed:
             bag_bed = int(stock.get("fit_bed") or 0) > 0
@@ -2545,7 +2714,7 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
             except ValueError:
                 kind, meta = "soft", {"name": item_label(item), "emoji": _item_emoji(item)}
             empty = empty_hard if kind == "hard" else empty_soft
-            unique = bare in {"cabinet", "fridge", "compost_bin", "pickle_crock", "fish_rack"} or is_bed_key(bare) or bare == "hammock"
+            unique = bare in {"cabinet", "fridge", "compost_bin", "pickle_crock", "fish_rack", "bath_tub", "bookshelf"} or is_bed_key(bare) or bare == "hammock"
             label = str(meta.get("name") or item_label(item))
             extra = f" x{n}" if n > 1 else ""
             if empty and not unique:
@@ -2868,7 +3037,7 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
             name="畜栏履历",
             emoji="📜",
             note="血统与最近栏事（购入/治病/收产）。",
-            detail="和 barn_ops 履历 同一套。",
+            detail="和管家「畜栏履历」同一套。",
             price="看",
             can=True,
             target="",
@@ -2945,7 +3114,7 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
                         name=f"惊逃·{act['label']} #{slot}",
                         emoji="🏃",
                         note=f"{spec['name']}跑丢了 · {act.get('hint') or ''}",
-                        detail="诱回/围栏/急追三选一，和 barn_ops 惊逃 同一套。",
+                        detail="诱回/围栏/急追三选一，和管家「惊逃」同一套。",
                         price=act["label"],
                         can=bool(act.get("can")),
                         target=f"{slot}|{act['action']}",

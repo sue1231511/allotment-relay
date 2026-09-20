@@ -14,7 +14,7 @@ async def digest(conn, steward_id: int) -> str:
     )
     row = await cur.fetchone()
     if row and int(row[0]):
-        lines.append("  · 船体损坏 → voyage_ops repair")
+        lines.append("  · 船体损坏 → tide_ops voyage repair")
         n += 1
     if row and row[1]:
         from . import boat_parts as parts_mod

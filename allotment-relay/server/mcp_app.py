@@ -102,12 +102,12 @@ async def plot_ops(
     return await mux._call_ops(mux.plot_bundle, _kid(), command)
 
 
-@mcp.tool(description="小屋潮柜床畜栏腌晾家维杂务。空=列表。例：status · 睡 · 家维 · 家维 交 · 杂务 自修 · 修屋顶 · 修冰箱 · 修灶 · barn breed 1 · barn 惊逃 1 诱回 · barn 闹脾气 哄 · barn 起名 1 豆花 · 腌 甘蓝 4。status 附闭环提示（鱼/柜/灶/帆/待选）。寻回逃畜极少跟足迹摸到潮边藏货（急追略高）。家维=灯油/冷藏/防潮（不缴只降睡/保鲜/灶效，不封房）；杂务=结霜/门轴等三选一。屋顶/厨电耐久低有惩罚。mascot upkeep≠岸维。人类 /island 小屋可点配种/寻回/修厨电。")
+@mcp.tool(description="小屋潮柜床畜栏腌晾家维杂务。空=列表。例：status · 睡 · 家维 · 家维 交 · 杂务 自修 · 修屋顶 · 修冰箱 · 修灶 · 泡澡 · 读书 · barn breed 1 · barn 惊逃 1 诱回 · barn 闹脾气 哄 · barn 起名 1 豆花 · 腌 甘蓝 4。status 附闭环提示（鱼/柜/灶/帆/待选）。寻回逃畜极少跟足迹摸到潮边藏货（急追略高）。家维=灯油/冷藏/防潮（不缴只降睡/保鲜/灶效，不封房）；杂务=结霜/门轴等三选一。屋顶/厨电耐久低有惩罚。泡澡≠kitchen_ops 泡。mascot upkeep≠岸维。人类 /island 小屋可点配种/寻回/修屋顶/修厨电/泡澡/读书。")
 async def hut_ops(command: str = "") -> str:
     return await mux._call_ops(mux.hut_bundle, _kid(), command)
 
 
-@mcp.tool(description="渔获出海赶海渔排漂流瓶。空=列表。例：net · cast · 水层 near · 搏鱼 硬拉 · 解挂 · voyage 部件 修 · dig。解挂/搏鱼切线极少海玻璃或旧钩标记（下次坐钓进袋捎回钩耐久）。net 偶发挂水草则下次空网率+10%（撒一次消，消时极少抠出饵/漂绳）；雨/风暴撒网极少网到特殊贝壳。beach dig 同天气极少冲出贝壳，偶尔冲上一只漂流瓶。本周禁捞种岸边网钓和出海归港都罚15票放生，不能卖。人类 /island 港口岸边/出海/渔排栏可点同一套。dig≠崖矿。")
+@mcp.tool(description="渔获出海赶海渔排漂流瓶。空=列表。例：net · cast · 水层 near · 搏鱼 硬拉 · 解挂 · voyage 部件 修 · dig。解挂/搏鱼切线极少海玻璃或旧钩标记（下次坐钓进袋捎回钩耐久）。net 偶发挂水草则下次空网率+10%（撒一次消，消时极少抠出饵/漂绳）；雨/风暴撒网极少网到特殊贝壳。beach dig 同天气极少冲出贝壳，偶尔冲上一只漂流瓶。本周禁捞种岸边网钓、出海归港和渔排收都罚15票放生，不能卖。人类 /island 港口岸边/出海/渔排栏可点同一套。dig≠崖矿。")
 async def tide_ops(
     command: Annotated[str, Field(description="net/cast · 水层 · 搏鱼 · 解挂 · voyage 部件 修（全件回满）· 帆撕 补|返航|硬撑 · dig 赶海。")] = "",
 ) -> str:

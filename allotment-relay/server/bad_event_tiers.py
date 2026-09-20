@@ -41,7 +41,7 @@ def sleep_penalty_for_tier(tier: str) -> int:
 
 REPAIR_HINTS: dict[str, str] = {
     "quarry": "→ visit_ops clinic treat 岩尘入肺 · quarry_ops 塌方 撑柱|撤人|硬挖",
-    "voyage": "→ voyage_ops repair · 部件 tide_ops 船件 status",
+    "voyage": "→ tide_ops voyage repair · 部件 tide_ops voyage 部件 修",
     "hut": "→ hut_ops 杂务 · hut_ops 家维 交 · visit_ops clinic 调理",
     "undertide": "→ undertide_ops medic · visit_ops clinic treat 斗场震伤",
     "beach": "→ 再动一次同动作消 debuff · visit_ops clinic 调理 小",
