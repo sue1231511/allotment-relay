@@ -451,6 +451,87 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
             detail="赶海掏洞。涨潮关。不是挖矿。",
         ),
     ]
+    bottle_items = [
+        _sku(
+            sid="look-bottle",
+            kind="look",
+            name="看漂流瓶",
+            emoji="🍾",
+            note=f"海上 {bottle_pending} 只待捞。今天还能投 {bottle_left}。",
+            price="看",
+            can=True,
+            target="bottle",
+            detail="扫一眼海里还有几只。不是听潮亭木牌。",
+        ),
+        _sku(
+            sid="fish-bottle",
+            kind="捞瓶",
+            name="捞瓶",
+            emoji="🎣",
+            note="随机捞一只。缘分未到也正常。",
+            price="捞",
+            can=True,
+            target="",
+            detail="捞到的才能回。每天投瓶另算上限。",
+        ),
+        _sku(
+            sid="leave-bottle",
+            kind="投瓶",
+            name="投瓶",
+            emoji="📝",
+            note=f"写下要扔进海里的那句。今天还能投 {bottle_left}。" if bottle_left else "今天投满了，明天再来。",
+            price="投" if bottle_left else "满",
+            can=bottle_left > 0,
+            target="",
+            detail="每天最多 3。署名可空。不是听潮亭木牌。",
+        ),
+    ]
+    if bottle_found:
+        for row in bottle_found:
+            bid = str(row.get("id") or "")
+            if not bid:
+                continue
+            bottle_items.append(
+                _sku(
+                    sid=f"read-bottle-{bid}",
+                    kind="看瓶",
+                    name=f"看瓶 #{bid}",
+                    emoji="👀",
+                    note=str(row.get("body") or "")[:24] or f"#{bid}",
+                    price="看",
+                    can=True,
+                    target=bid,
+                    detail="看你捞到的这只。",
+                )
+            )
+            if not row.get("reply_at"):
+                bottle_items.append(
+                    _sku(
+                        sid=f"reply-bottle-{bid}",
+                        kind="回瓶",
+                        name=f"回瓶 #{bid}",
+                        emoji="↩️",
+                        note="只有你捞到的瓶才能回。",
+                        price="回",
+                        can=True,
+                        target=bid,
+                        detail="回一句给投瓶的人。",
+                    )
+                )
+    else:
+        bottle_items.append(
+            _sku(
+                sid="reply-bottle",
+                kind="回瓶",
+                name="回瓶",
+                emoji="↩️",
+                note="写下编号和要回的那句。只有你捞到的才能回。",
+                price="回",
+                can=True,
+                target="",
+                detail="先捞到一只，再回。",
+            )
+        )
     parts_note = ""
     if boat_key:
         parts = await boat_parts.get_all(conn, s["id"])
