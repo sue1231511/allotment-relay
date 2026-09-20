@@ -10,7 +10,7 @@ SERVICES: dict[str, dict[str, Any]] = {
     "boat_repair": {
         "name": "修船",
         "cost": 0,
-        "via": "港口看出海栏点修船，或 voyage_ops repair",
+        "via": "港口看出海栏点修船，或 tide_ops voyage repair",
         "aliases": ("修船", "船修"),
     },
     "hut_repair": {
