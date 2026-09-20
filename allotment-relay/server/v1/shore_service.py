@@ -149,6 +149,20 @@ def _command(kind: str, target: str) -> tuple[str, str]:
         if verb == "名池" and not extra:
             raise ApiError("BAD_REQUEST", "先写下池名。")
         return "tide", f"{verb} {extra}".strip()
+    if verb == "投瓶":
+        if not extra:
+            raise ApiError("BAD_REQUEST", "瓶子里要写一句。")
+        return "tide", f"投瓶 {extra}"
+    if verb == "捞瓶":
+        return "tide", "捞瓶"
+    if verb == "看瓶":
+        if not extra:
+            raise ApiError("BAD_REQUEST", "先写下瓶子编号。")
+        return "tide", f"看瓶 {extra}"
+    if verb == "回瓶":
+        if not extra:
+            raise ApiError("BAD_REQUEST", "先写下编号和要回的那句。")
+        return "tide", f"回瓶 {extra}"
     if verb == "layer":
         ly = (extra or "").lower()
         if ly not in LAYER_LABELS:
