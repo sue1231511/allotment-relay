@@ -787,7 +787,7 @@ function renderHearts() {
     body += '<p style="margin-top:10px"><strong>心意册</strong></p>' + album.slice(0, 6).map((c) => heartCardHtml(c)).join('');
   }
   if (!pending.length && !album.length) {
-    body = '<p>还没有心意卡。让岛民执行 heart_ops 送 🧋 | 名字 | 场景 | 票数。</p>';
+    body = '<p>还没有心意卡。让管家送一份心意就行，只花口袋里的工分票。</p>';
   }
   box.innerHTML = head + body;
   bindHeartActions(box);
