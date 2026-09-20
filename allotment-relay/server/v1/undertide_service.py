@@ -85,6 +85,35 @@ def _command(kind: str, target: str) -> str:
         if not target:
             raise ApiError("BAD_REQUEST", "先选清井、绑索或硬闯。")
         return f"井险 {target}"
+    if kind == "market_desk":
+        return "market"
+    if kind == "market_buy":
+        if not target:
+            raise ApiError("BAD_REQUEST", "先写下货架编号。")
+        return f"buy {target}"
+    if kind == "market_repair":
+        return "repair"
+    if kind == "racket_accept":
+        return "racket accept"
+    if kind == "racket_refuse":
+        return "racket refuse"
+    if kind == "bounty_desk":
+        return "bounty"
+    if kind == "bounty_take":
+        if not target:
+            raise ApiError("BAD_REQUEST", "先写下悬赏编号。")
+        return f"bounty take {target}"
+    if kind == "bounty_post":
+        bits = target.split()
+        if len(bits) < 3 or bits[0] not in {"steal", "beat"}:
+            raise ApiError("BAD_REQUEST", "挂单要写 steal 或 beat、名字和赏金。")
+        return f"bounty post {target}"
+    if kind == "medic":
+        if not target:
+            raise ApiError("BAD_REQUEST", "先选要治的井下伤。")
+        return f"medic {target}"
+    if kind == "pit_drug":
+        return f"pit drug {target}".strip() if target else "pit drug list"
     raise ApiError("BAD_REQUEST", "这里没有这一下。")
 
 
