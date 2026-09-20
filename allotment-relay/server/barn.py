@@ -346,7 +346,7 @@ async def barn_ops(key_id: int, command: str) -> str:
 
     if verb == "buy" and len(parts) >= 2:
         if not s.get("barn_built"):
-            raise ValueError("先 barn_ops erect")
+            raise ValueError("先 hut_ops barn erect")
         species = parts[1].lower()
         slot = int(parts[2]) if len(parts) > 2 else 1
         if species not in LIVESTOCK:
