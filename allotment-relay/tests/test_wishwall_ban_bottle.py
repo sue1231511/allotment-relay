@@ -47,7 +47,18 @@ def test_bottle_wash_chance_exists() -> None:
     from server import config
 
     assert hasattr(config, "BOTTLE_WASH_CHANCE")
+    assert hasattr(config, "BOTTLE_WISH_CHANCE")
     assert 0 < float(config.BOTTLE_WASH_CHANCE) < 1
+    assert float(config.BOTTLE_WISH_CHANCE) == float(config.BOTTLE_WASH_CHANCE)
+
+
+def test_island_collections_entries_is_list() -> None:
+    from server.island_collections import ENTRIES
+
+    assert isinstance(ENTRIES, list)
+    assert ENTRIES
+    assert ENTRIES[0][0] == "kale"
+    assert ENTRIES[-1][0] == "craft_seed_box"
 
 
 def test_try_wash_ashore_survives_missing_constant() -> None:
@@ -61,14 +72,21 @@ async def _test_try_wash_ashore_survives_missing_constant() -> None:
 
     kid, sid = await _enroll(db, "wash@example.com", "铲沙人")
     s = await db.get_steward_by_id(sid)
-    saved = config.BOTTLE_WASH_CHANCE
+    saved_wash = getattr(config, "BOTTLE_WASH_CHANCE", None)
+    saved_wish = getattr(config, "BOTTLE_WISH_CHANCE", None)
     try:
-        delattr(config, "BOTTLE_WASH_CHANCE")
+        if hasattr(config, "BOTTLE_WASH_CHANCE"):
+            delattr(config, "BOTTLE_WASH_CHANCE")
+        if hasattr(config, "BOTTLE_WISH_CHANCE"):
+            delattr(config, "BOTTLE_WISH_CHANCE")
         with patch("server.bottles.random.random", return_value=0.99):
             msg = await bottles.try_wash_ashore(s)
         assert msg is None
     finally:
-        config.BOTTLE_WASH_CHANCE = saved
+        if saved_wash is not None:
+            config.BOTTLE_WASH_CHANCE = saved_wash
+        if saved_wish is not None:
+            config.BOTTLE_WISH_CHANCE = saved_wish
 
 
 def test_ban_copy_covers_voyage() -> None:
