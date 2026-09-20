@@ -78,7 +78,7 @@ async def snapshot(api_key: str, key_id: int) -> dict[str, Any]:
     return snap
 
 
-_UNIQUE_FIT = {"bed", "cabinet", "fridge", "compost_bin", "hammock", "pickle_crock", "fish_rack"}
+_UNIQUE_FIT = {"bed", "cabinet", "fridge", "compost_bin", "hammock", "pickle_crock", "fish_rack", "bath_tub", "bookshelf"}
 
 
 def _kind_for(key: str) -> str:
