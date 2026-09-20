@@ -1659,7 +1659,7 @@ async def voyage_ops(key_id: int, command: str) -> str:
             share_founder_id = 0
             boat_key = await nlink_mod.effective_boat_key(conn, s) or ""
             if not boat_key:
-                raise ValueError("先 voyage_ops buy 购船，或向邻居 alliance_ops 借船 给 / 合伙 入")
+                raise ValueError("先 tide_ops voyage buy 购船，或向邻居 alliance_ops 借船 给 / 合伙 入")
             share_key = await share_mod.share_boat_key(conn, s["id"])
             if share_key and boat_key == share_key:
                 share_founder_id = await share_mod.share_founder_id(conn, s["id"]) or 0
