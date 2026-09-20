@@ -23,6 +23,16 @@ TITLES = {
     "casino_lantern": "最后一盏灯",
     "casino_draw": "死人抽牌",
     "well_crack": "井险处置",
+    "market_desk": "后室铺",
+    "market_buy": "按编号买",
+    "market_repair": "找掌柜修",
+    "racket_accept": "认栽成交",
+    "racket_refuse": "硬扛",
+    "bounty_desk": "恩怨墙",
+    "bounty_take": "接单",
+    "bounty_post": "挂单",
+    "medic": "晏安医务间",
+    "pit_drug": "体质药",
 }
 
 
