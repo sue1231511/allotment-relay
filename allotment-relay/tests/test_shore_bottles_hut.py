@@ -204,8 +204,20 @@ def test_docs_name_the_new_verbs() -> None:
     mcp = (ROOT / "server/mcp_app.py").read_text(encoding="utf-8")
     assert "捞瓶" in mcp and "泡澡" in mcp
     from server.mcp_dispatch import VISIT_HELP, TIDE_HELP, HUT_HELP
+    from server.v1 import undertide_service
     assert "腿鱼小咒" in VISIT_HELP
     assert "捞瓶" in TIDE_HELP and "泡澡" in HUT_HELP
+    assert undertide_service._command("market_desk", "") == "market"
+    assert undertide_service._command("bounty_desk", "") == "bounty"
+    assert undertide_service._command("medic", "sprain") == "medic sprain"
+    assert undertide_service._command("racket_accept", "") == "racket accept"
+    ut_js = (ROOT / "server/static/island/scenes/undertide.js").read_text(encoding="utf-8")
+    assert "market_desk" in ut_js and "bounty_desk" in ut_js and 'desk: "medic"' in ut_js
+    play = (ROOT / "server/play.py").read_text(encoding="utf-8")
+    assert '"command": "market"' in play and '"command": "bounty"' in play
+    html = (ROOT / "server/templates/play.html").read_text(encoding="utf-8")
+    assert "潮闻与故事" in html
+    assert "诊所进全部地点" not in html
 
 
 def main() -> None:
