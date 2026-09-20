@@ -97,7 +97,7 @@ async def install(conn, steward: dict, mod_token: str) -> str:
                 key = mk
                 break
     if key not in MODS:
-        raise ValueError("voyage_ops 改装 list 看可选")
+        raise ValueError("tide_ops voyage 改装 list 看可选")
     meta = MODS[key]
     rows = await list_installed(conn, steward["id"])
     if any(k == key for _, k in rows):
