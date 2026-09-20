@@ -258,6 +258,7 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
         "craft": craft_view,
         "cloth": cloth_view,
         "memories": memories,
+        "story_ui": story_ui,
         "flags": {
             "greenhouse": bool(s.get("greenhouse")),
             "hut_built": bool(s.get("hut_built")),
