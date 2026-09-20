@@ -1435,7 +1435,7 @@ async def _finish_voyage(steward_id: int, voyage: dict[str, Any], choice: str | 
                 return prefix + await _finish_voyage(steward_id, voyage, choice)
             if voyage.get("status") == "sailing" and db.now() >= voyage["returns_at"]:
                 return prefix + await _finish_voyage(steward_id, voyage)
-            return prefix + "航程继续。可用 tide_ops cast 坐钓（未命名小鱼只认钓竿），或等归港 voyage_ops return"
+            return prefix + "航程继续。可用 tide_ops cast 坐钓（未命名小鱼只认钓竿），或等归港 tide_ops voyage return"
         if voyage.get("status") == "hailed":
             if choice is None and not _hail_expired(voyage):
                 raw = voyage.get("encounter") or "{}"
