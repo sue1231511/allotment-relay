@@ -837,7 +837,12 @@ async def pen_ops(key_id: int, command: str) -> str:
             tide_hit = tide in (meta.get("tides") or ())
             if tide_hit:
                 qty += 1
-            await db.add_item(conn, s["id"], f"fish_{species}", qty)
+            from . import fish_ban as fish_ban_mod
+            ban_msg = await fish_ban_mod.maybe_release_item(
+                conn, s["id"], f"fish_{species}"
+            )
+            if not ban_msg:
+                await db.add_item(conn, s["id"], f"fish_{species}", qty)
             await conn.execute(
                 "UPDATE fish_pens SET species=NULL, stocked_at=NULL, fed=0 WHERE id=?",
                 (pen["id"],),
@@ -845,13 +850,19 @@ async def pen_ops(key_id: int, command: str) -> str:
             extra = await events.roll_after_action(s, "pen_harvest", conn, pen=pen)
             disc = await commons.roll_discovery(conn, s, "pen_harvest")
             from . import tale as tale_mod
-            await tale_mod.check_item_progress(conn, s["id"], f"fish_{species}", qty)
+            if not ban_msg:
+                await tale_mod.check_item_progress(conn, s["id"], f"fish_{species}", qty)
             tale_extra = await tale_mod.check_action_progress(conn, s["id"], "sea")
             await conn.commit()
         from . import multi
-        bonus = await multi.on_league_item(s["id"], f"fish_{species}", qty)
-        msg = f"收排 {_pen_tag(pen)} {meta['emoji']}{meta['name']} x{qty}"
-        if tide_hit:
+        bonus = ""
+        if not ban_msg:
+            bonus = await multi.on_league_item(s["id"], f"fish_{species}", qty)
+        if ban_msg:
+            msg = f"收排 {_pen_tag(pen)}：{ban_msg}（本周禁捞，{qty} 条未进袋）"
+        else:
+            msg = f"收排 {_pen_tag(pen)} {meta['emoji']}{meta['name']} x{qty}"
+        if tide_hit and not ban_msg:
             msg += f"（赶{world.tide_label(tide)}多收一条）"
         msg += flavor.maybe_suffix(flavor.PEN_HARVEST_SUFFIX)
         if bonus:
