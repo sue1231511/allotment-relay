@@ -94,6 +94,7 @@ def test_ban_copy_covers_voyage() -> None:
 
     text = fish_ban.brief_ban(100) + fish_ban.notice_text(100)
     assert "出海归港" in text
+    assert "渔排收" in text
     assert "不能卖" in text or "不能进袋" in text
 
 
