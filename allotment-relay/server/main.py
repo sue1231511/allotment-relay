@@ -208,6 +208,34 @@ async def island_manual_page(request: Request):
     return await _html(request, "manual.html", active="manual")
 
 
+@app.get("/offline", response_class=HTMLResponse)
+async def offline_page(request: Request):
+    """断网回落页。说明书级静态页，上手和地图仍要联网。"""
+    return await _html(request, "offline.html", active=None)
+
+
+@app.get("/manifest.webmanifest")
+async def web_manifest():
+    return FileResponse(
+        STATIC_DIR / "pwa" / "manifest.webmanifest",
+        media_type="application/manifest+json",
+        headers={"Cache-Control": "no-cache"},
+    )
+
+
+@app.get("/sw.js")
+async def service_worker():
+    """必须挂在站点根，否则服务工作线作用域只覆盖 /static。"""
+    return FileResponse(
+        STATIC_DIR / "pwa" / "sw.js",
+        media_type="application/javascript",
+        headers={
+            "Cache-Control": "no-cache",
+            "Service-Worker-Allowed": "/",
+        },
+    )
+
+
 @app.get("/island-manual")
 async def island_manual_alias():
     return RedirectResponse("/manual", status_code=302)
