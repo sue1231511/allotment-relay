@@ -2714,7 +2714,7 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
             except ValueError:
                 kind, meta = "soft", {"name": item_label(item), "emoji": _item_emoji(item)}
             empty = empty_hard if kind == "hard" else empty_soft
-            unique = bare in {"cabinet", "fridge", "compost_bin", "pickle_crock", "fish_rack"} or is_bed_key(bare) or bare == "hammock"
+            unique = bare in {"cabinet", "fridge", "compost_bin", "pickle_crock", "fish_rack", "bath_tub", "bookshelf"} or is_bed_key(bare) or bare == "hammock"
             label = str(meta.get("name") or item_label(item))
             extra = f" x{n}" if n > 1 else ""
             if empty and not unique:
