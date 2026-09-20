@@ -64,7 +64,7 @@ SERVICES: dict[str, dict[str, Any]] = {
     "boat_name": {
         "name": "船命名",
         "cost": 0,
-        "via": "voyage_ops 履历；改名走船主自己记，不另开收费窗",
+        "via": "tide_ops voyage 履历；改名走船主自己记，不另开收费窗",
         "aliases": ("船命名", "船名"),
     },
     "gyotaku": {
