@@ -71,27 +71,36 @@ function renderUndertideNpc(root, spot) {
   });
 }
 
-async function openUndertideNpc(wrap, bank) {
+async function openUndertideNpc(wrap, spot) {
   wrap.classList.remove("is-peek");
   try {
     const snap = await api.undertide();
-    paintUndertideTalk(wrap, bank, snap.undertide || {});
+    paintUndertideTalk(wrap, spot, snap.undertide || {});
   } catch (err) {
-    paintUndertideTalk(wrap, bank, {}, err.message || "这会儿不见客。");
+    paintUndertideTalk(wrap, spot, {}, err.message || "这会儿不见客。");
   }
 }
 
-function paintUndertideTalk(wrap, bank, under, override = "") {
+function deskLine(spot, under) {
+  if (spot.desk === "bank") return under.bank;
+  if (spot.desk === "casino") return under.casino;
+  if (spot.desk === "market") return under.market;
+  if (spot.desk === "bounty") return under.bounty;
+  if (spot.desk === "medic") return under.medic;
+  return "";
+}
+
+function paintUndertideTalk(wrap, spot, under, override = "") {
   const talk = wrap.querySelector(".island-vn-talk");
   const name = wrap.querySelector(".island-vn-name");
   const line = wrap.querySelector(".island-vn-line");
   const box = wrap.querySelector("[data-ut-advance]");
   if (!talk || !name || !line || !box) return;
-  name.textContent = bank ? "恶猫钱庄行长" : "Silas";
-  line.textContent = override || (bank ? under.bank : under.casino) || "这会儿没有可看的。";
+  name.textContent = spot.speaker;
+  line.textContent = override || deskLine(spot, under) || "这会儿没有可看的。";
   talk.classList.add("is-line");
   talk.classList.remove("is-picks");
-  box.onclick = () => paintUndertideChoices(wrap, bank, under);
+  box.onclick = () => paintUndertideChoices(wrap, spot, under);
 }
 
 function paintUndertideChoices(wrap, bank, under, mode = "main") {
