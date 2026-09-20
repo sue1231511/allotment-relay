@@ -118,7 +118,7 @@ def _command(kind: str, target: str) -> str:
 
 
 async def snapshot(api_key: str, key_id: int) -> dict[str, Any]:
-    """读取两个桌面的原始说明；未下井时赌场保留锁定提示。"""
+    """读取钱庄、赌场、后室铺、恩怨墙、医务间的原始说明；未下井时保留锁定提示。"""
     from .. import db
     from .. import undertide_well_crack as crack_mod
 
