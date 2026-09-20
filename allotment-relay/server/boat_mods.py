@@ -89,7 +89,7 @@ async def status_line(conn, steward_id: int) -> str:
 
 async def install(conn, steward: dict, mod_token: str) -> str:
     if not steward.get("boat_key"):
-        raise ValueError("先 voyage_ops buy 购船")
+        raise ValueError("先 tide_ops voyage buy 购船")
     key = mod_token.strip().lower().replace(" ", "_")
     if key not in MODS:
         for mk, meta in MODS.items():
