@@ -227,7 +227,7 @@ PLACES: list[dict[str, Any]] = [
         "kicker": "Clinic",
         "blurb": "地上的病来这里。井下伤归晏安，桥桥不接。",
         "rail": "今天来诊所做什么",
-        "week1": False,
+        "week1": True,
         "actions": [
             {"label": "进门", "note": "氛围、斑鸠、价目", "tool": "visit_ops", "command": "clinic status"},
             {"label": "看病", "note": "一次尽量治完当前地上病", "tool": "visit_ops", "command": "clinic treat all"},
