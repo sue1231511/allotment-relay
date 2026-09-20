@@ -695,6 +695,7 @@ button.play-duty.is-heart:not(.hidden) {
   gap: 12px;
 }
 
+.play-story-card,
 .play-page .memory-card {
   min-height: 170px;
   border: 1px solid var(--line);
