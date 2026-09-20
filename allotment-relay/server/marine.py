@@ -1678,7 +1678,7 @@ async def voyage_ops(key_id: int, command: str) -> str:
                     "SELECT boat_damaged FROM stewards WHERE id=?", (loan_lender_id,)
                 )
                 if int((await cur.fetchone())[0]):
-                    raise ValueError("借来的船主那边船损未修，先请对方 voyage_ops repair")
+                    raise ValueError("借来的船主那边船损未修，先请对方 tide_ops voyage repair")
             if _boat_rank(boat_key) < _boat_rank(route["min_boat"]):
                 need = BOATS[route["min_boat"]]["name"]
                 raise ValueError(f"{route['label']} 至少需要 {need}")
