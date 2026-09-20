@@ -72,6 +72,21 @@ async def _test_play_api() -> None:
     names = [p["name"] for p in seen["neighbors"]["people"]]
     assert "对岸的人" in names, seen["neighbors"]
 
+    ui = enrolled["dashboard"].get("story_ui") or {}
+    assert ui.get("available"), ui
+    assert any(x.get("command") == "accept black_box_lover" for x in ui["available"]), ui
+    accepted = await play_mod.run_play(key, "tale_ops", "accept black_box_lover")
+    assert "黑盒" in (accepted.get("text") or ""), accepted.get("text")
+    active = (accepted["dashboard"].get("story_ui") or {}).get("active") or []
+    assert any(x.get("key") == "black_box_lover" for x in active), active
+    started = await play_mod.run_play(key, "story_ops", "start yesterday_no_proof")
+    ysteps = next(
+        (x.get("actions") or [])
+        for x in ((started["dashboard"].get("story_ui") or {}).get("active") or [])
+        if x.get("key") == "yesterday_no_proof"
+    )
+    assert any(a.get("command") == "explore old_wharf" for a in ysteps), ysteps
+
     sown = await play_mod.run_play(key, "plot_ops", "sow 1 甘蓝")
     assert sown["ok"] is True, sown
     plots = sown["dashboard"]["parcels"]
