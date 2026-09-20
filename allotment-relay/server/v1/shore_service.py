@@ -47,6 +47,7 @@ LOOK = {
     "beach": "beach scan",
     "voyage": "voyage status",
     "pen": "渔排",
+    "bottle": "漂流瓶",
 }
 
 TIDE_KINDS = {
