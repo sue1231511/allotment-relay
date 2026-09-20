@@ -48,6 +48,8 @@ _FIT_KIND = {
     "compost_bin": "soft",
     "pickle_crock": "hard",
     "fish_rack": "soft",
+    "bath_tub": "hard",
+    "bookshelf": "soft",
 }
 
 
