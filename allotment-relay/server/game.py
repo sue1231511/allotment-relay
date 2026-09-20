@@ -423,7 +423,7 @@ async def relay_manual() -> str:
         "  abandon 任务key 放弃；board 看完成榜；不会就 help",
         "",
         "【人物故事探索】",
-        "  story_ops list — 查看故事。空 command 与 list 相同；status 看最近操作的故事，也可带故事 key",
+        "  story_ops list — 查看故事。空 command 与 list 相同；status 看最近操作的故事，也可带故事 key。人类 /play「潮闻与故事」能开始，调查按钮不是对话窗",
         "  《昨日无凭》：start yesterday_no_proof → explore old_wharf；之后严格按 status 给出的地点顺序调查，共 12 幕行动",
         "  不耗精力、无强制替角色作决定；最后自动完成第十三幕。每幕首次 +30 票，13 幕共 390 票，重读不重复",
         "  通关另奖 120 票、档信+6、雾智+10、称呼「旧事见证人」",
