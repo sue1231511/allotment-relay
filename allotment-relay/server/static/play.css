@@ -35,6 +35,23 @@
   text-underline-offset: 3px;
 }
 
+.play-pwa-btn {
+  display: inline;
+  margin-left: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #536d71;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.play-pwa-btn.hidden {
+  display: none !important;
+}
+
 .play-identity {
   display: flex;
   align-items: center;
