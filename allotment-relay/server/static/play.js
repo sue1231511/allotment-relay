@@ -891,6 +891,67 @@ function renderMemories() {
   }).join('');
 }
 
+function storyUi() {
+  return (state.dash && state.dash.story_ui) || { available: [], active: [], done: [] };
+}
+
+function storyActButton(act) {
+  return `<button type="button" class="btn primary" data-act='${JSON.stringify({ tool: act.tool, command: act.command })}'>${esc(act.label)}</button>`;
+}
+
+function renderStories() {
+  const root = $('play-stories');
+  if (!root) return;
+  const ui = storyUi();
+  const available = ui.available || [];
+  const active = ui.active || [];
+  const done = ui.done || [];
+  if (!available.length && !active.length && !done.length) {
+    root.innerHTML = '<p class="muted">还没有可接的潮闻或人物故事。</p>';
+    return;
+  }
+  const names = Object.fromEntries((state.places || []).map((pl) => [pl.id, pl.name]));
+  names.plot = '份地';
+  const blocks = [];
+  if (available.length) {
+    blocks.push(`<div class="play-story-group"><h3>可接</h3><div class="play-story-grid">${available.map((item) => `
+      <article class="play-story-card kind-${esc(item.kind)}">
+        <span class="memory-kind">${item.kind === 'tale' ? '潮闻' : '故事'}</span>
+        <h3>《${esc(item.title)}》</h3>
+        <p class="memory-blurb">${esc(item.blurb || item.note || '')}</p>
+        ${storyActButton(item)}
+      </article>`).join('')}</div></div>`);
+  }
+  if (active.length) {
+    blocks.push(`<div class="play-story-group"><h3>进行中</h3><div class="play-story-grid">${active.map((item) => {
+      const acts = item.actions || [];
+      const buttons = acts.map((act) => {
+        if (act.place && act.place !== 'plot') {
+          return `<button type="button" class="btn" data-place="${esc(act.place)}">去${esc(names[act.place] || '对应地点')}</button>`;
+        }
+        return storyActButton(act);
+      }).join('');
+      return `
+      <article class="play-story-card is-active kind-${esc(item.kind)}">
+        <span class="memory-kind">${item.kind === 'tale' ? '潮闻' : '故事'}</span>
+        <h3>《${esc(item.title)}》</h3>
+        <p class="memory-blurb">${esc(item.blurb || '')}</p>
+        <div class="play-story-acts">${buttons || '<p class="muted">走到对应地点再点当前一步。</p>'}</div>
+      </article>`;
+    }).join('')}</div></div>`);
+  }
+  if (done.length) {
+    blocks.push(`<div class="play-story-group"><h3>已完成</h3><div class="play-story-grid">${done.map((item) => `
+      <article class="play-story-card is-done kind-${esc(item.kind)}">
+        <span class="memory-kind">${item.kind === 'tale' ? '潮闻' : '故事'}</span>
+        <h3>《${esc(item.title)}》</h3>
+        <p class="memory-blurb">${esc(item.ending || '通关了。去岛上回忆再看。')}</p>
+        ${item.replay ? storyActButton(item.replay) : ''}
+      </article>`).join('')}</div></div>`);
+  }
+  root.innerHTML = blocks.join('');
+}
+
 function extraPlaceActions(place) {
   const extra = [];
   const voyage = (state.dash && state.dash.voyage) || '';
