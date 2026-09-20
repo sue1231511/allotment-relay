@@ -668,6 +668,26 @@ button.play-duty.is-heart:not(.hidden) {
 
 .play-place-card .go { align-self: flex-start; position: relative; z-index: 1; }
 
+.play-stories {
+  display: grid;
+  gap: 16px;
+}
+
+.play-story-group h3 {
+  font-family: "Noto Serif SC", serif;
+  font-size: 16px;
+  font-weight: 500;
+  margin: 0 0 8px;
+}
+
+.play-story-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.play-story-grid,
 .play-memories.memory-grid,
 .play-page .memory-grid {
   display: grid;
