@@ -49,7 +49,7 @@ async def neighbor_roster(steward: dict[str, Any], *, online_only: bool = False)
         )).fetchone())[0])
         rows = await (await conn.execute(
             """
-            SELECT id, name, badge, last_active_at, COALESCE(xp, 0) AS xp,
+            SELECT id, name, badge, motto, portrait, last_active_at, COALESCE(xp, 0) AS xp,
                    COALESCE(worn_title, '') AS worn_title
             FROM stewards
             WHERE enrolled=1 AND id != ?
@@ -87,6 +87,8 @@ async def neighbor_roster(steward: dict[str, Any], *, online_only: bool = False)
         {
             "name": p["name"],
             "title": p.get("display_title") or p.get("title") or p["badge"],
+            "motto": p.get("motto") or "",
+            "portrait": p.get("portrait") or "",
             "ripe": int(p.get("ripe") or 0),
             "home": bool(p.get("home")),
             "ago": db.fmt_cst(p["last_active_at"]),

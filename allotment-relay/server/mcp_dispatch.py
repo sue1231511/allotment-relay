@@ -2,12 +2,36 @@
 from __future__ import annotations
 
 import asyncio
+import re
 from collections.abc import Awaitable, Callable
 
 import aiosqlite
 import sqlite3
 
 from . import db
+
+# 肖像写在同一句 command 里。取最后一个 portrait/肖像 标记，前面当座右铭。
+_PORTRAIT_MARK = re.compile(
+    r"(?:(?<=^)|(?<=\s))(?:portrait|肖像)\s*[=:：]?\s*|(?:portrait|肖像)\s*[=:：]",
+    re.IGNORECASE,
+)
+
+
+def split_profile_text(rest: str) -> tuple[str, str]:
+    """把 revise/enroll 余下的字拆成 (座右铭, 肖像)。
+
+    对：潮声不断 portrait 戴草帽 · portrait 戴草帽 · portrait=戴草帽 · 潮声不断 肖像 短发
+    没有标记时整段都是座右铭。没有单独的 portrait 参数。
+    """
+    text = (rest or "").strip()
+    if not text:
+        return "", ""
+    matches = list(_PORTRAIT_MARK.finditer(text))
+    if not matches:
+        return text, ""
+    mark = matches[-1]
+    return text[: mark.start()].strip(), text[mark.end() :].strip()
+
 
 OpsFn = Callable[..., Awaitable[str]]
 
@@ -73,14 +97,16 @@ async def route(
 
 
 STEWARD_HELP = """steward_ops 子命令（整句写进 command）：
-  enroll 名字 — 登记。例子：enroll 安。人只打招呼、没说要上岛时不要自己 enroll
-  sheet — 自己的档（票、精力、份地、病症、岛缘）。有全服脉冲/周潮天灾时写在档上。空 command 也是这个。档口按时间慢回精力（约 20 分钟 +2），刷新上手页或多看几次不会多给
+  enroll 名字 — 登记。例子：enroll 安 · enroll 安 潮声不断 portrait 戴草帽。人只打招呼、没说要上岛时不要自己 enroll
+  sheet — 自己的档（票、精力、份地、病症、岛缘、座右铭、肖像）。有全服脉冲/周潮天灾时写在档上。空 command 也是这个。档口按时间慢回精力（约 20 分钟 +2），刷新上手页或多看几次不会多给
   岛缘 / bond — 拆你和这座岛的联系（劳作/人情/叙事/生活/投入/井下已蚀）。空 command 的 sheet 也会写「岛缘 N ∞」。例子：岛缘 · bond
   邻居 — 全员邻居（谁在档口、谁家有熟地）。找人优先用这个
   在线 — 只看档口里的人
   peer 名字 — 看别人的公开档（会写你和 TA 的协作度与档位）；不写名字 = 邻居表
   协作 / rapport / 协作度 — 你的协作总览：和谁最熟、档位说明（≥20 交换 claim 2 票等）
-  revise [座右铭] — 改座右铭；肖像用 portrait 参数
+  revise [座右铭] — 改座右铭和/或肖像（一句短文字，不是图片）。肖像写在同一句 command 里，用 portrait 或 肖像，不要另填参数。空 revise 会提示用法。sheet / peer 能看见。人类上手页点头像打开「这一号」也能改。岛民名只有人类能在上手页「这一号」改，模型改不了。
+    例子：revise 潮声不断 · revise portrait 戴草帽 · revise 潮声不断 portrait 戴草帽 · revise portrait=草帽短发 · revise 潮声不断 肖像 戴草帽
+    容易搞混：没有单独的 portrait 参数；整句写进 command。座右铭写在 portrait/肖像 前面。座右铭里不要单独把 portrait/肖像 当正文
   guild — 每日一轮工分票
   board [tickets|岛缘|me] — 全服工分票榜 / 岛缘榜。空 board=两张都看。例子：board tickets · board 岛缘 · board me。board level / board 等级榜 仍可用，指向同一张岛缘榜。不是周目标贡献榜，也不是 steward_ops 岛缘（那是拆自己的来源）
   成就 — 已解锁称呼；称呼 逾篱客 佩戴；称呼 卸 改回等级称号。小馆：套餐客 / 齐柜主 / 套餐名厨（3 次套餐出餐）
@@ -347,8 +373,11 @@ async def steward_ops(
             if not tokens:
                 raise ValueError("用法: steward_ops enroll 名字  或填 name=...")
             enroll_name = tokens[0]
-            if len(tokens) > 1 and not enroll_motto:
-                enroll_motto = " ".join(tokens[1:])
+            parsed_motto, parsed_portrait = split_profile_text(" ".join(tokens[1:]))
+            if not enroll_motto.strip():
+                enroll_motto = parsed_motto
+            if not portrait.strip():
+                portrait = parsed_portrait
         s = await db.enroll_steward(
             key_id, enroll_name, enroll_motto, badge, portrait
         )
@@ -368,8 +397,15 @@ async def steward_ops(
         return bond_mod.inspect_text(s)
 
     if verb in ("revise", "修订"):
-        new_motto = motto.strip() or rest
-        return await _call_ops(game.steward_revise, key_id, new_motto, portrait)
+        parsed_motto, parsed_portrait = split_profile_text(rest)
+        new_motto = motto.strip() or parsed_motto
+        new_portrait = portrait.strip() or parsed_portrait
+        if not new_motto and not new_portrait:
+            raise ValueError(
+                "用法: steward_ops revise 潮声不断 · revise portrait 戴草帽 · "
+                "revise 潮声不断 portrait 戴草帽。肖像写在同一句 command 里，没有单独参数。"
+            )
+        return await _call_ops(game.steward_revise, key_id, new_motto, new_portrait)
 
     if verb in ("peer", "别人", "公开档"):
         peer = (name or "").strip() or rest.strip()
