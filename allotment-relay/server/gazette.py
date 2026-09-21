@@ -4,14 +4,15 @@ from __future__ import annotations
 from typing import Any
 
 from . import db, world
-from .config import WEEK_SECONDS
+from .disaster import cst_week_ordinal, cst_week_start
 
 RARE_FISH = ("旗鱼", "金枪", "龙虾", "鲍鱼", "石斑", "马鲛", "真鲷")
 OBJECT_MARKS = ("戒", "衣", "冠", "呢衣", "婚服", "标本", "雾银")
 
 
 def week_start(ts: int | None = None) -> int:
-    return db.week_id(ts) * WEEK_SECONDS
+    """东八区本周一 00:00。和岸税、周目标同一周界，不是 UTC 周四。"""
+    return cst_week_start(ts)
 
 
 def _pick_title(stats: dict[str, Any]) -> str:
@@ -137,7 +138,7 @@ async def compile_week(conn, *, ts: int | None = None) -> dict[str, Any]:
         lines = lines[:8]
     title = _pick_title(stats)
     return {
-        "week": db.week_id(ts),
+        "week": cst_week_ordinal(ts),
         "title": title,
         "lines": lines[:8],
         "work": work,

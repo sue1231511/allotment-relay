@@ -527,7 +527,12 @@ async def _apply_effects(
     exclude_parcel_id: int | None = None,
 ) -> tuple[list[str], dict[str, Any]]:
     ailment_msgs: list[str] = []
-    ledger: dict[str, Any] = {"ticket_delta": 0, "stolen": None, "loot": []}
+    ledger: dict[str, Any] = {
+        "ticket_delta": 0,
+        "stolen": None,
+        "loot": [],
+        "released": [],
+    }
     exclude = {exclude_parcel_id} if exclude_parcel_id else set()
     for eff in effects:
         if eff == "plot_untend":
@@ -664,8 +669,15 @@ async def _apply_effects(
         elif eff.startswith("loot:"):
             _, item, qty_s = eff.split(":", 2)
             qty = int(qty_s)
-            await db.add_item(conn, steward["id"], item, qty)
-            ledger["loot"].append((item, qty))
+            from . import fish_ban as fish_ban_mod
+            ban_msg = await fish_ban_mod.maybe_release_item(
+                conn, steward["id"], item, must_release=True
+            )
+            if ban_msg:
+                ledger["released"].append(ban_msg)
+            else:
+                await db.add_item(conn, steward["id"], item, qty)
+                ledger["loot"].append((item, qty))
         elif eff.startswith("ailment:"):
             key = eff.split(":", 1)[1]
             msg = await health.inflict(conn, steward["id"], key, source="event")
@@ -685,6 +697,8 @@ async def _ledger_lines(
         lines.append(f"失物：{stolen}")
     for item, qty in ledger.get("loot") or ():
         lines.append(f"入袋：{ITEM_NAMES.get(item, item)}（{item}）x{qty}")
+    for released in ledger.get("released") or ():
+        lines.append(released)
     delta = int(ledger.get("ticket_delta") or 0)
     if delta:
         cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (steward_id,))

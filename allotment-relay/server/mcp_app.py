@@ -87,7 +87,7 @@ async def relay_manual() -> str:
     return await game.relay_manual()
 
 
-@mcp.tool(description="身份档案。空=sheet。例：enroll 名字（要玩才 enroll）· sheet · revise 潮声不断 portrait 戴草帽 · 岛缘 · 引航 · 成就 · 收集 · 灾档 · 灾选 · 维修。肖像写进 command，没有单独 portrait 参数。灾选=坏事多选待决（哄/修/隔离等）。无 invite_ops。/play 与 AI 同时在线共号。人类 /play 可加到主屏幕。")
+@mcp.tool(description="身份档案。空=sheet。例：enroll 名字（要玩才 enroll）· sheet · revise 潮声不断 portrait 戴草帽 · 岛缘 · 引航 · 成就 · 收集 · 灾档 · 灾选 · 维修 · 周报。肖像写进 command，没有单独 portrait 参数。灾选=坏事多选待决（哄/修/隔离等）。周报≠周目标，本周=东八区周一。无 invite_ops。/play 与 AI 同时在线共号。人类 /play 可加到主屏幕。")
 async def steward_ops(command: str = "sheet") -> str:
     from . import progress as progress_mod
     return progress_mod.attach_note(
@@ -107,7 +107,7 @@ async def hut_ops(command: str = "") -> str:
     return await mux._call_ops(mux.hut_bundle, _kid(), command)
 
 
-@mcp.tool(description="渔获出海赶海渔排漂流瓶。空=列表。例：net · cast · 水层 near · 搏鱼 硬拉 · 解挂 · voyage 部件 修 · dig · 捞瓶 · 投瓶。解挂/搏鱼切线极少海玻璃或旧钩标记（下次坐钓进袋捎回钩耐久）。net 偶发挂水草则下次空网率+10%（撒一次消，消时极少抠出饵/漂绳）；雨/风暴撒网极少网到特殊贝壳。beach dig 同天气极少冲出贝壳，偶尔冲上一只漂流瓶。本周禁捞种岸边网钓、出海归港、渔排收、赶海翻沙、工坊打捞都罚15票放生，不能卖。人类 /island 港口岸边/出海/渔排栏可点同一套；赶海漂流瓶栏能看、捞、投、回。dig≠崖矿。")
+@mcp.tool(description="渔获出海赶海渔排漂流瓶。空=列表。例：net · cast · 水层 near · 搏鱼 硬拉 · 解挂 · voyage 部件 修 · dig · 捞瓶 · 投瓶。解挂/搏鱼切线极少海玻璃或旧钩标记（下次坐钓进袋捎回钩耐久）。net 偶发挂水草则下次空网率+10%（撒一次消，消时极少抠出饵/漂绳）；雨/风暴撒网极少网到特殊贝壳。beach dig 同天气极少冲出贝壳，偶尔冲上一只漂流瓶。本周禁捞种岸边网钓、出海归港、渔排收、赶海翻沙、工坊打捞、海上偶遇都罚15票放生，不能卖。人类 /island 港口岸边/出海/渔排栏可点同一套；赶海漂流瓶栏能看、捞、投、回。dig≠崖矿。")
 async def tide_ops(
     command: Annotated[str, Field(description="net/cast · 水层 · 搏鱼 · 解挂 · voyage 部件 修（全件回满）· 帆撕 补|返航|硬撑 · dig 赶海 · 捞瓶 · 投瓶。")] = "",
 ) -> str:
@@ -124,7 +124,7 @@ async def kitchen_ops(command: str = "") -> str:
     return await mux._call_ops(mux.kitchen_bundle, _kid(), command)
 
 
-@mcp.tool(description="互助周目标与邻居连接。空=列表。例：assist 安 · 借船 给 名字 · 合伙 开 漂航船 · 托养 送出 名字 1 · 菜篮 订 名字 · league status。board=贡献榜≠全服榜。协作总览 steward_ops 协作。合伙≠借船。")
+@mcp.tool(description="互助周目标与邻居连接。空=列表。例：assist 安 · 借船 给 名字 · 合伙 开 漂航船 · 托养 送出 名字 1 · 菜篮 订 名字 · league status。board=贡献榜≠全服榜。本周=东八区周一，和岸税同一周。协作总览 steward_ops 协作。合伙≠借船。")
 async def alliance_ops(command: str = "") -> str:
     return await mux._call_ops(mux.alliance_bundle, _kid(), command)
 
