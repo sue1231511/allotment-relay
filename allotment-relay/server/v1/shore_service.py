@@ -78,6 +78,13 @@ VOYAGE_OK = {
     "release": "release",
     "catch": "catch",
     "grab": "grab",
+    "绕行": "voyage 绕行",
+    "继续": "voyage 继续",
+    "停船": "voyage 停船",
+    "捞": "voyage 捞",
+    "看": "voyage 看",
+    "下网": "voyage 下网",
+    "靠近": "voyage 靠近",
 }
 
 MARRY = {
@@ -224,6 +231,11 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
     boat_name = boat.get("name") or ""
     damaged = bool(s.get("boat_damaged"))
     voyage = await marine._get_voyage(conn, s["id"])
+    if voyage and voyage.get("status") == "sailing":
+        from .. import voyage_sea_node as sea_mod
+
+        await sea_mod.maybe_on_watch(conn, voyage)
+        voyage = await marine._get_voyage(conn, s["id"])
     sailing = bool(voyage)
     vstatus = (voyage or {}).get("status") or ""
     row = await marriage._own(conn, s["id"])
@@ -273,6 +285,10 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
     elif vstatus == "hull_breach":
         port_line = "船底进水！出海栏先选：堵缝、泵水或硬航。"
         beach_line = f"{tide_name}。船在海上漏水了，去港口处理。"
+    elif vstatus == "sea_node":
+        from .. import voyage_sea_node as sea_mod
+        port_line = sea_mod.prompt(voyage).split("\n")[0] + " 出海栏先选。"
+        beach_line = f"{tide_name}。船在海上碰上事了，去港口处理。"
     elif sailing:
         port_line = f"船在海上。{tide_name}。看船、归港在码头。"
         beach_line = f"{tide_name}。赶海、寻信在沙滩。"
@@ -710,6 +726,26 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
                     can=True,
                     target=target,
                     detail="堵=铜钉×1或12票；泵=10精力；硬航=再损船体。",
+                )
+            )
+    if vstatus == "sea_node":
+        from .. import voyage_sea_node as sea_mod
+
+        payload = sea_mod._payload(voyage)
+        kind = payload.get("sea_node") or "fog"
+        meta = sea_mod.KINDS.get(kind) or sea_mod.KINDS["fog"]
+        for ch in meta["choices"]:
+            voyage_items.append(
+                _sku(
+                    sid=f"sea-{ch}",
+                    kind="voyage",
+                    name=ch,
+                    emoji="🌫️",
+                    note=meta["line"],
+                    price=ch,
+                    can=True,
+                    target=ch,
+                    detail=meta["line"] + " 不是黑旗，也不是帆撕。",
                 )
             )
     if hailed:

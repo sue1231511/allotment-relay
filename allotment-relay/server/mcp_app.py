@@ -95,7 +95,7 @@ async def steward_ops(command: str = "sheet") -> str:
     )
 
 
-@mcp.tool(description="份地果园与田间事件。空=指令表。例：status · sow 1 甘蓝 · 肥力 · 虫害 1 施药 · 虫害 1 填土 · 留种 甘蓝 · weather · 浇水。tend 极小概率鸟啄（收成-1，极少落该作物种；steward_ops 灾档 近日已结）/灶台难点火/潮气发潮/鱼线打结（debuff 记一次消一次）。肥力/轮作、虫害、地陷、留种。weather 附本周纪事。勿 sow_all/plant；repair≠岸维。人类 /island「田间事件」处置虫害；repair 只修 steward_incidents。")
+@mcp.tool(description="份地果园与田间事件。空=指令表。例：status · sow 1 甘蓝 · 肥力 · 虫害 1 施药 · 虫害 1 填土 · 留种 甘蓝 · weather · 浇水。阵风当天露天地不用浇。weather 附本周纪事和岛上传言（传言不标真假）。tend 极小概率鸟啄（收成-1，极少落该作物种；steward_ops 灾档 近日已结）/灶台难点火/潮气发潮/鱼线打结（debuff 记一次消一次）。肥力/轮作、虫害、地陷、留种。勿 sow_all/plant；repair≠岸维。人类 /island「田间事件」处置虫害；repair 只修 steward_incidents。")
 async def plot_ops(
     command: Annotated[str, Field(description="incident status；repair 编号。肥力 · 虫害 1 手工|施药|拔除|不管（温室漏风 补网|通风|不管；地陷 填土|围起来|不管）· 留种 作物。空=指令表。")] = "",
 ) -> str:
@@ -107,9 +107,9 @@ async def hut_ops(command: str = "") -> str:
     return await mux._call_ops(mux.hut_bundle, _kid(), command)
 
 
-@mcp.tool(description="渔获出海赶海渔排漂流瓶。空=列表。例：net · cast · 水层 near · 搏鱼 硬拉 · 解挂 · voyage 部件 修 · dig · 捞瓶 · 投瓶。解挂/搏鱼切线极少海玻璃或旧钩标记（下次坐钓进袋捎回钩耐久）。net 偶发挂水草则下次空网率+10%（撒一次消，消时极少抠出饵/漂绳）；雨/风暴撒网极少网到特殊贝壳。beach dig 同天气极少冲出贝壳，偶尔冲上一只漂流瓶。本周禁捞种岸边网钓、出海归港和渔排收都罚15票放生，不能卖。人类 /island 港口岸边/出海/渔排栏可点同一套；赶海漂流瓶栏能看、捞、投、回。dig≠崖矿。")
+@mcp.tool(description="渔获出海赶海渔排漂流瓶。空=列表。例：net · cast · 水层 near · 搏鱼 硬拉 · 解挂 · voyage 部件 修 · 绕行 · 捞瓶 · dig。途中节点（雾/漂箱/岛影）先 绕行|继续|停船，不是黑旗。解挂/搏鱼切线极少海玻璃或旧钩标记（下次坐钓进袋捎回钩耐久）。net 偶发挂水草则下次空网率+10%（撒一次消，消时极少抠出饵/漂绳）；雨/风暴撒网极少网到特殊贝壳。beach dig 同天气极少冲出贝壳，偶尔冲上一只漂流瓶或失物。本周禁捞种岸边网钓、出海归港和渔排收都罚15票放生，不能卖。人类 /island 港口岸边/出海/渔排栏可点同一套；赶海漂流瓶栏能看、捞、投、回。dig≠崖矿。")
 async def tide_ops(
-    command: Annotated[str, Field(description="net/cast · 水层 · 搏鱼 · 解挂 · voyage 部件 修（全件回满）· 帆撕 补|返航|硬撑 · dig 赶海 · 捞瓶 · 投瓶。")] = "",
+    command: Annotated[str, Field(description="net/cast · 水层 · 搏鱼 · 解挂 · voyage 部件 修（全件回满）· 帆撕 补|返航|硬撑 · 绕行|继续|停船 · dig 赶海 · 捞瓶 · 投瓶。")] = "",
 ) -> str:
     return await mux._call_ops(mux.tide_bundle, _kid(), command)
 
@@ -129,8 +129,8 @@ async def alliance_ops(command: str = "") -> str:
     return await mux._call_ops(mux.alliance_bundle, _kid(), command)
 
 
-@mcp.tool(description="NPC、杂货、诊所、兽医与花店。空=help。例：list · clinic · 潮生会 工程 · 兽医 棚险 通风 · shaonian 卦险 压石。桥桥治人≠霍衡治牲口；潮生会不能加入。")
-async def visit_ops(command: Annotated[str, Field(description="整句子命令；空=help。霍衡=兽医（棚险=治完呛棚）；clinic=桥桥；默默=花店；shaonian 卦险=卜卦后掀盘。税/维走潮生会。漾漾=衣泊坊 visit。")] = "") -> str:
+@mcp.tool(description="NPC、杂货、诊所、兽医与花店。空=help。例：list · clinic · 潮生会 工程 · 潮生会 失物 · 兽医 棚险 通风 · shaonian 卦险 压石。失物=捡到的东西可问/交还/送礼，不是任务。桥桥治人≠霍衡治牲口；潮生会不能加入。")
+async def visit_ops(command: Annotated[str, Field(description="整句子命令；空=help。霍衡=兽医（棚险=治完呛棚）；clinic=桥桥；默默=花店；shaonian 卦险=卜卦后掀盘。税/维/失物走潮生会。漾漾=衣泊坊 visit。")] = "") -> str:
     return await mux._call_ops(mux.visit_bundle, _kid(), command)
 
 
@@ -198,7 +198,7 @@ async def story_ops(command: str = "list") -> str:
     return await mux._call_ops(story.story_ops, _kid(), command)
 
 
-@mcp.tool(description="盐风崖矿。空=列表≠看崖(用status)。例：买镐 · 探脉 · 挖 1 · 塌方 1 撑柱。挥镐小概率塌方三选一；人类/island 矿坑也能处置。≠赶海dig；勿 mine_ops。")
+@mcp.tool(description="盐风崖矿。空=列表≠看崖(用status)。例：买镐 · 探脉 · 挖 1 · 塌方 1 撑柱。海雾可能摸到平时看不见的脉。挥镐小概率塌方三选一；人类/island 矿坑也能处置。≠赶海dig；勿 mine_ops。")
 async def quarry_ops(command: str = "") -> str:
     from . import quarry
     from . import progress as progress_mod

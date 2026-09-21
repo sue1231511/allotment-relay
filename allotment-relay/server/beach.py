@@ -239,6 +239,14 @@ async def beach_ops(key_id: int, command: str) -> str:
             washed = None
         if washed:
             msg += f"\n{washed}"
+        from . import lost_found as lost_mod
+
+        try:
+            found = await lost_mod.try_wash(s)
+        except Exception:
+            found = None
+        if found:
+            msg += f"\n{found}"
         await db.add_chronicle("beach", f"{s['name']} 赶海得 {label}", s["id"])
         return msg
 

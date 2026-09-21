@@ -292,7 +292,10 @@ async def fridge_status_text(s: dict[str, Any]) -> str:
         )
     used = sum(stacks_needed(int(r["quantity"] or 0), stack_cap) for r in rows)
     lines = [f"冰箱 {used}/{config.FRIDGE_SLOTS} 格（每组最多 {stack_cap}，同种可多组）:"]
-    expire = config.FRIDGE_DAYS * config.FORAGE_COOLDOWN_DAY
+    expire = int(config.FRIDGE_DAYS * config.FORAGE_COOLDOWN_DAY)
+    from . import world as world_mod
+
+    expire = max(600, int(expire * world_mod.fridge_spoil_mult()))
     for r in rows:
         q = int(r["quantity"] or 0)
         age = db.now() - r["stored_at"]

@@ -16,6 +16,7 @@ TITLES = {
     "donate_work": "捐进了",
     "donate_mat": "捐进了",
     "clerk_rush": "会险处置",
+    "lost_turn": "交还了",
 }
 
 LOOK = {
@@ -27,6 +28,8 @@ LOOK = {
     "work": "工程",
     "gazette": "纪事",
     "fishban": "禁捕",
+    "lost": "失物",
+    "lost-ask": "失物 问",
 }
 
 
@@ -72,6 +75,10 @@ def _command(kind: str, target: str) -> str:
         if not extra:
             raise ApiError("BAD_REQUEST", "先选排队、补票或硬挤。")
         return f"会险 {extra}"
+    if kind == "lost_turn":
+        if not extra:
+            raise ApiError("BAD_REQUEST", "先点要交还的那件。")
+        return f"失物 交 {extra}"
     raise ApiError("BAD_REQUEST", "潮生会里没有这一下。")
 
 

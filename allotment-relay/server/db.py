@@ -2390,6 +2390,22 @@ async def init_db() -> None:
             "ALTER TABLE stewards ADD COLUMN jingshan_hazard_json TEXT",
             "ALTER TABLE stewards ADD COLUMN star_hazard TEXT",
             "ALTER TABLE stewards ADD COLUMN star_hazard_json TEXT",
+            """
+            CREATE TABLE IF NOT EXISTS lost_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                item TEXT NOT NULL,
+                holder_id INTEGER NOT NULL DEFAULT 0,
+                owner_hint TEXT NOT NULL DEFAULT '',
+                mark TEXT NOT NULL DEFAULT '',
+                payload_json TEXT NOT NULL DEFAULT '{}',
+                source TEXT NOT NULL DEFAULT '',
+                created_at INTEGER NOT NULL,
+                resolved INTEGER NOT NULL DEFAULT 0,
+                resolution TEXT NOT NULL DEFAULT '',
+                resolved_at INTEGER NOT NULL DEFAULT 0
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_lost_items_holder ON lost_items(holder_id, resolved, id)",
         ):
             try:
                 await db.execute(ddl)

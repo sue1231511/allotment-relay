@@ -79,6 +79,7 @@ NOTABLE_PREFIXES = (
     "craft_seed_box",
     "relic_",
     "wine_",
+    "lost_",
 )
 
 

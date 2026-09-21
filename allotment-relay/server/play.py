@@ -219,6 +219,7 @@ PLACES: list[dict[str, Any]] = [
             {"label": "岸维", "note": "产业维修费。每天划；份地 10/18/28、果园 20/32/48、温室 30/48/70，铺多了加档，起步免", "tool": "visit_ops", "command": "潮生会 维"},
             {"label": "潮汐基金", "note": "岛均与发放日。先托到 800，再按岛均补", "tool": "visit_ops", "command": "潮生会 基金"},
             {"label": "告示", "note": "墙上贴了什么（厅示，不能自己贴）", "tool": "visit_ops", "command": "潮生会 告示"},
+            {"label": "失物", "note": "酒吧洗碗、赶海翻沙偶尔捡到。可问、交还或送给谁。不是任务", "tool": "visit_ops", "command": "潮生会 失物"},
         ],
     },
     {
@@ -376,7 +377,8 @@ PLACES: list[dict[str, Any]] = [
 ]
 
 
-def climate_bits() -> dict[str, str]:
+def climate_bits() -> dict[str, Any]:
+    from . import folklore as folklore_mod
     from . import season as season_mod
 
     w, t, p = world.current_weather(), world.current_tide(), world.current_day_phase()
@@ -394,6 +396,7 @@ def climate_bits() -> dict[str, str]:
         "tide_hint": world.TIDE_HINT.get(t, ""),
         "phase_hint": world.PHASE_HINT.get(p, ""),
         "season_hint": world.SEASON_HINT,
+        "rumors": folklore_mod.public_lines(),
     }
 
 

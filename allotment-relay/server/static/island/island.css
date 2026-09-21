@@ -2800,6 +2800,16 @@ button.is-tap,
   margin: 0 0 4px;
 }
 
+.island-rumors {
+  background: rgba(236, 242, 238, .92);
+}
+
+.island-rumors em {
+  font-weight: 400;
+  opacity: .78;
+  margin-top: 6px;
+}
+
 .island-climate {
   position: relative;
   width: min(360px, 78vw, calc(40dvh * 1536 / 1024));

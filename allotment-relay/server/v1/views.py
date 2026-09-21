@@ -139,6 +139,7 @@ def world_view(
         "phase_hint": bits.get("phase_hint") or "",
         "season_hint": bits.get("season_hint") or "",
         "gazette": bits.get("gazette") or {},
+        "rumors": bits.get("rumors") or [],
         "notices": notices or [],
         "pulse": pulse,
     }
@@ -233,7 +234,7 @@ def farm_parcel(view: dict[str, Any], raw: dict[str, Any] | None = None) -> dict
         "tended": bool(view.get("tended")),
         "remain_sec": remain_seconds(raw, view),
         "can_sow": view.get("state") == "fallow",
-        "can_water": view.get("state") in ("growing", "tending") and not view.get("watered"),
+        "can_water": view.get("state") in ("growing", "tending") and not view.get("watered") and not (raw and world.plot_rains(raw)),
         "can_tend": view.get("state") in ("growing", "tending") and not view.get("tended"),
         "can_fertilize": view.get("state") in ("growing", "tending") and not view.get("fertilized"),
         "can_harvest": view.get("state") in ("ready", "overripe"),

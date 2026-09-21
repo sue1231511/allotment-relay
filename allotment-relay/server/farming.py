@@ -252,16 +252,18 @@ def effective_grow(plot: dict[str, Any], crop_key: str | None = None) -> int:
     )
     if plot.get("fertilized"):
         mult *= config.FERTILIZE_GROW_MULT
-    if plot.get("watered"):
+    watered = world.plot_watered(plot)
+    if watered:
         mult *= config.WATER_GROW_MULT
     tropic = "tropic" in meta.get("tags", ())
     mult *= world.climate_grow_mult(
         bool(plot.get("greenhouse")),
-        bool(plot.get("watered")),
+        watered,
         tropic=tropic,
     )
+    mult *= world.orchard_clear_mult(plot)
     crop = crop_key or plot.get("crop")
-    if crop == "rice" and not plot.get("watered") and not plot.get("greenhouse"):
+    if crop == "rice" and not watered and not plot.get("greenhouse"):
         mult *= 1.18
     if crop == "moon_bean":
         from datetime import datetime, timezone, timedelta
@@ -284,7 +286,7 @@ def effective_grow(plot: dict[str, Any], crop_key: str | None = None) -> int:
     if crop == "grape" and not plot.get("tended") and not plot.get("greenhouse"):
         mult *= 1.14
     tags = meta.get("tags", ())
-    if "leaf" in tags and not plot.get("watered") and not plot.get("greenhouse"):
+    if "leaf" in tags and not watered and not plot.get("greenhouse"):
         mult *= 1.08
     return max(60, int(base * mult))
 
@@ -627,6 +629,8 @@ def parcel_extra(plot: dict[str, Any]) -> str:
         bits.append(format_grow_eta(left))
     if plot.get("watered"):
         bits.append("水")
+    elif world.plot_rains(plot):
+        bits.append("雨")
     if plot.get("fertilized"):
         bits.append("肥")
     if plot.get("scarecrow"):

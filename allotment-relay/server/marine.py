@@ -312,7 +312,7 @@ async def shore_pen_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[
 async def _get_voyage(conn: aiosqlite.Connection, steward_id: int) -> dict[str, Any] | None:
     conn.row_factory = aiosqlite.Row
     row = await (await conn.execute(
-        "SELECT * FROM voyages WHERE steward_id=? AND status IN ('sailing','hailed','fish_encounter','sail_tear','hull_breach')",
+        "SELECT * FROM voyages WHERE steward_id=? AND status IN ('sailing','hailed','fish_encounter','sail_tear','hull_breach','sea_node')",
         (steward_id,),
     )).fetchone()
     return dict(row) if row else None
@@ -1209,6 +1209,9 @@ async def _resolve_voyage(
     from . import voyage_sail_event as sail_ev_mod
 
     fail_chance += sail_ev_mod.fail_bonus_from_encounter(voyage)
+    from . import voyage_sea_node as sea_mod
+
+    fail_chance += sea_mod.fail_bonus_from_encounter(voyage)
 
     extra = await events.roll_after_action(s, "voyage_return", conn, voyage=voyage)
     s = await _refresh_steward(conn, s["id"])
@@ -1543,6 +1546,21 @@ async def voyage_ops(key_id: int, command: str) -> str:
                 "船底进水！先 tide_ops 船漏 堵|泵|硬航"
                 "（堵=铜钉×1或12票；泵=10精力；硬航=再损船体）"
             )
+        if voyage and voyage.get("status") == "sea_node":
+            from . import voyage_sea_node as sea_mod
+
+            prefix = f"{pulse}\n" if pulse else ""
+            return prefix + sea_mod.prompt(voyage)
+        if voyage and voyage.get("status") == "sailing":
+            from . import voyage_sea_node as sea_mod
+
+            async with db.connect() as conn:
+                note = await sea_mod.maybe_on_watch(conn, voyage)
+                await conn.commit()
+                voyage = await _get_voyage(conn, s["id"])
+            if note:
+                prefix = f"{pulse}\n" if pulse else ""
+                return prefix + note
         if voyage and db.now() >= voyage["returns_at"]:
             auto = await _finish_voyage(s["id"], voyage)
             prefix = f"{pulse}\n" if pulse else ""
@@ -1763,6 +1781,24 @@ async def voyage_ops(key_id: int, command: str) -> str:
         prefix = f"{pulse}\n" if pulse else ""
         return prefix + msg
 
+    if verb in ("绕行", "继续", "停船", "捞", "看", "下网", "靠近", "sea", "node"):
+        sub = parts[1] if len(parts) > 1 else verb
+        if verb in ("sea", "node"):
+            sub = parts[1] if len(parts) > 1 else "status"
+        from . import voyage_sea_node as sea_mod
+        async with db.connect() as conn:
+            voyage = await _get_voyage(conn, s["id"])
+            if not voyage:
+                raise ValueError("没有在处理的航程")
+            if sub in ("status", "") and voyage.get("status") == "sea_node":
+                msg = sea_mod.prompt(voyage)
+            else:
+                choice = sub if verb in ("sea", "node") else verb
+                msg = await sea_mod.resolve(conn, s, voyage, choice)
+            await conn.commit()
+        prefix = f"{pulse}\n" if pulse else ""
+        return prefix + msg
+
     if verb in ("fight", "flee", "parley", "bribe"):
         async with db.connect() as conn:
             voyage = await _get_voyage(conn, s["id"])
@@ -1772,6 +1808,8 @@ async def voyage_ops(key_id: int, command: str) -> str:
             raise ValueError("帆撕待决 — 先 tide_ops 帆撕 补|返航|硬撑")
         if voyage.get("status") == "hull_breach":
             raise ValueError("船漏待决 — 先 tide_ops 船漏 堵|泵|硬航")
+        if voyage.get("status") == "sea_node":
+            raise ValueError("途中节点待决 — 先 tide_ops 绕行|继续|停船（或捞/看/下网/靠近）")
         if voyage.get("status") == "fish_encounter":
             raise ValueError("未命名小鱼还在 — 先 tide_ops compliment|release|catch|grab")
         if voyage.get("status") == "sailing":
@@ -1796,6 +1834,8 @@ async def voyage_ops(key_id: int, command: str) -> str:
             voyage = await _get_voyage(conn, s["id"])
         if not voyage:
             return "没有进行中的航程"
+        if voyage.get("status") == "sea_node":
+            raise ValueError("途中节点待决 — 先 tide_ops 绕行|继续|停船（或捞/看/下网/靠近）")
         if voyage.get("status") == "fish_encounter":
             raise ValueError("未命名小鱼还在 — 先 tide_ops compliment|release|catch|grab")
         if db.now() < voyage["returns_at"]:
@@ -1808,6 +1848,8 @@ async def voyage_ops(key_id: int, command: str) -> str:
             voyage = await _get_voyage(conn, s["id"])
         if not voyage:
             return "没有进行中的航程"
+        if voyage.get("status") == "sea_node":
+            raise ValueError("途中节点待决 — 先 tide_ops 绕行|继续|停船（或捞/看/下网/靠近）")
         if voyage.get("status") == "fish_encounter":
             raise ValueError("未命名小鱼还在 — 先 tide_ops compliment|release|catch|grab")
         if db.now() < voyage["returns_at"]:
@@ -1827,7 +1869,7 @@ async def voyage_ops(key_id: int, command: str) -> str:
 
     raise ValueError(
         f"未知 voyage 指令: {command}（status/buy/repair/depart/return/moor/"
-        "compliment|release|catch|grab/fight|flee|parley|bribe）"
+        "compliment|release|catch|grab/fight|flee|parley|bribe/绕行|继续|停船）"
     )
 
 
@@ -1857,7 +1899,7 @@ async def public_snapshot() -> dict[str, Any]:
         out = (await (await conn.execute(
             """
             SELECT COUNT(*) FROM voyages
-            WHERE status IN ('sailing','hailed','fish_encounter','sail_tear','hull_breach')
+            WHERE status IN ('sailing','hailed','fish_encounter','sail_tear','hull_breach','sea_node')
             """
         )).fetchone())[0]
         pens = (await (await conn.execute(
@@ -1879,7 +1921,7 @@ async def public_snapshot() -> dict[str, Any]:
             SELECT s.name, v.route, v.returns_at
             FROM voyages v
             JOIN stewards s ON s.id = v.steward_id
-            WHERE v.status IN ('sailing','hailed','fish_encounter','sail_tear','hull_breach')
+            WHERE v.status IN ('sailing','hailed','fish_encounter','sail_tear','hull_breach','sea_node')
             ORDER BY v.returns_at ASC LIMIT 8
             """
         )).fetchall()

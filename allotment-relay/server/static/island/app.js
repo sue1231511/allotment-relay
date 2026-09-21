@@ -25,7 +25,7 @@ import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=farm
 import { renderShore, renderShoreYard, renderPortHub, renderBeachHub } from "./scenes/shore.js?v=island-modulefix2";
 import { renderPlaza } from "./scenes/plaza.js?v=island-modulefix2";
 import { renderPlace } from "./scenes/place.js?v=island-modulefix2";
-import { hideClimateSheet, showClimateSheet } from "./ui/climate.js?v=island-modulefix2";
+import { hideClimateSheet, showClimateSheet } from "./ui/climate.js?v=rumors1";
 import { renderHut } from "./scenes/hut.js?v=island-modulefix2";
 import { renderShop } from "./scenes/shop.js?v=tt-sprite1";
 import { renderLili } from "./scenes/lili.js?v=island-modulefix2";
@@ -2596,6 +2596,48 @@ function tapHui(kind, target, id) {
       body: row.detail || row.note || "把欠的交上。",
       confirm: "确认交",
       onConfirm: () => runHui("pay", target),
+    });
+    return;
+  }
+  if (kind === "lost_turn") {
+    if (!row.can) {
+      showHintSheet({ title: row.name || "失物", body: row.detail || row.note || "这会儿交不了。" });
+      return;
+    }
+    showActSheet({
+      title: row.name || "交还",
+      body: row.detail || row.note || "交给潮生会。不问你从哪来。",
+      confirm: "交还",
+      onConfirm: () => runHui("lost_turn", target),
+    });
+    return;
+  }
+  if (kind === "donate_work") {
+    if (!row.can) {
+      showHintSheet({ title: row.name || "捐工程", body: row.detail || row.note || "这期已经收工。" });
+      return;
+    }
+    showFormSheet({
+      title: "捐票修工程",
+      body: row.detail || row.note || "不是潮汐基金。票数自己填。",
+      fields: [
+        { id: "amount", label: "票数", placeholder: "50", max: 8, empty: "先写下票数。" },
+      ],
+      confirm: "捐进去",
+      onConfirm: (vals) => runHui("donate_work", String(vals.amount)),
+    });
+    return;
+  }
+  if (kind === "donate_mat") {
+    if (!row.can) {
+      showHintSheet({ title: row.name || "捐材料", body: row.detail || row.note || "行囊里没有。" });
+      return;
+    }
+    showActSheet({
+      title: row.name || "捐材料",
+      body: row.detail || row.note || "捐进岸上工程。",
+      confirm: "捐",
+      onConfirm: () => runHui("donate_mat", target),
     });
   }
 }

@@ -498,6 +498,11 @@ def _drink_price(
         if lizhi_mult != 1.0:
             price = max(1, int(price * lizhi_mult))
 
+    from . import world as world_mod
+
+    if world_mod.cold_snap() and dtype in {"烈酒", "特调"}:
+        price = max(1, int(price * 0.82))
+
     return price
 
 
@@ -569,6 +574,12 @@ async def _apply_event(
     standing = event.get("standing")
     if standing:
         await survival.bump(conn, s["id"], standing=standing)
+
+    from . import lost_found as lost_mod
+
+    lost_line = await lost_mod.maybe_from_bar(conn, s, event)
+    if lost_line:
+        lines.append(lost_line)
 
     if event.get("global"):
         day = _day_id()
@@ -805,6 +816,11 @@ async def _cmd_menu(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
     else:
         lines.append("（现在打烊中，看看菜谱可以，点单暮场再来）")
     lines.append("")
+    from . import world as world_mod
+
+    if world_mod.cold_snap():
+        lines.append("寒潮：烈酒和特调便宜一截。人挤着喝热的。")
+        lines.append("")
     for key, drink in BAR_DRINKS.items():
         if drink.get("hidden"):
             if not await _has_unlock(conn, s["id"], drink.get("unlock", key)):
