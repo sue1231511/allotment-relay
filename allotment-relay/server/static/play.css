@@ -1577,7 +1577,8 @@ button.play-duty.is-heart:not(.hidden) {
   font-size: 12px;
   color: #758284;
 }
-.play-rename input {
+.play-rename input,
+.play-rename textarea {
   padding: 11px 12px;
   border-radius: 12px;
   border: 1px solid rgba(35, 48, 56, .14);

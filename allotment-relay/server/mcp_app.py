@@ -87,7 +87,7 @@ async def relay_manual() -> str:
     return await game.relay_manual()
 
 
-@mcp.tool(description="身份档案。空=sheet。例：enroll 名字（要玩才 enroll）· sheet · 岛缘 · 引航 · 成就 · 收集 · 灾档 · 灾选 · 维修。灾选=坏事多选待决（哄/修/隔离等）。无 invite_ops。/play 与 AI 同时在线共号。人类 /play 可加到主屏幕。")
+@mcp.tool(description="身份档案。空=sheet。例：enroll 名字（要玩才 enroll）· sheet · revise 潮声不断 portrait 戴草帽 · 岛缘 · 引航 · 成就 · 收集 · 灾档 · 灾选 · 维修。肖像写进 command，没有单独 portrait 参数。灾选=坏事多选待决（哄/修/隔离等）。无 invite_ops。/play 与 AI 同时在线共号。人类 /play 可加到主屏幕。")
 async def steward_ops(command: str = "sheet") -> str:
     from . import progress as progress_mod
     return progress_mod.attach_note(

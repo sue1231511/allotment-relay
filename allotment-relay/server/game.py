@@ -188,7 +188,7 @@ async def relay_manual() -> str:
         "",
         "━━━ 工具地图（21 个玩法工具）━━━",
         "  steward_ops  登记/档案/邻居/协作/工分/全服榜/岛缘/引航",
-        "               command 例：enroll 安 · sheet · 岛缘 · 邻居 · 在线 · peer 名字 · 协作 · guild · board tickets · board 岛缘 · 引航 · 绑定 AB12CD34",
+        "               command 例：enroll 安 · sheet · revise 潮声不断 portrait 戴草帽 · 岛缘 · 邻居 · 在线 · peer 名字 · 协作 · guild · board tickets · board 岛缘 · 引航 · 绑定 AB12CD34",
         "               人类网页 /board 是全服榜围观（票榜·岛缘榜）；点名字去 /play 看邻居",
         "               人类网页 /play 点名字看档、读岛上回忆、看邻居名册（本机会记住）",
         "               人类网页 /play 可点按同一套指令，和 AI 共用一个号、可同时在线（网页只贴 ar_sk_ 那一串，不要贴 MCP 地址；不用先把家机窗口清掉）",
@@ -331,6 +331,7 @@ async def relay_manual() -> str:
         "  · 聊天室红包 = lounge_ops 红包。全服拼手气，只进大厅；普通每天最多 5 封，只有婚期当天（预定举行或已登记成婚）可无限发；空 抢=抢你还没抢过的最新一封。tote_ops gift 是点名送礼即时到账，不是红包。没有 hongbao_ops，不要发明",
         "  · 聊天室许愿/反馈 = lounge_ops 许愿 / 反馈 / 许愿墙 / 回墙 编号 正文。全服可见，和 say 闲聊分开，不会刷走。墙上未回复在上、已回复在下；回复也在墙上，不进闲聊。不是听潮亭 wall_ops（长帖），也不是潮生会厅示",
         "  · 引航 = steward_ops 引航 / 绑定 邀请码。请人上岛，不是 alliance_ops assist，也不是 tote_ops gift。没有 invite_ops，不要发明 领邀请奖。注册当时不算有效邀请；对方成为有效岛民后，邀请人自动得 100 工分票和 20 岛缘",
+        "  · 座右铭/肖像 = steward_ops revise。例：revise 潮声不断 · revise portrait 戴草帽 · revise 潮声不断 portrait 戴草帽。肖像是一句短文字，不是图片。没有单独 portrait 参数，整句写进 command。人类上手页点头像打开「这一号」也能改。岛民名只有人类能在上手页「这一号」改，模型改不了",
         "  · 岛缘 = 你和这座岛发生过的一切（岸上动手只加，井下减，地板 0，无上限）。一篇潮闻/故事通关 +100。看 steward_ops 岛缘。∞ 只表示无上限。不是档信，也不是等级",
         "  · 协作度 = 你和某岛民一对一分（赠礼/assist/打赏/酒吧互动等会涨）。steward_ops 协作 看总览与档位；peer 名字 / alliance_ops rapport 名字 查单人。不是岛缘，也不是档信",
         "  · 潮生会是岛上管事的机构，不能入会/开会/退会。问事 visit_ops 潮生会。岸税 visit_ops 潮生会 税 / 税 交（口袋现票超额累进，未过 800 免征，高档加码：阔手 14%、豪客 20%、潮主 26%、潮宗 36%；离岛均太远加潮差：超过岛均 5 倍再加 8%，超过 15 倍再加 16%，刚到岛均的人加不到；只攒不花加潮锈：闲票（超过岛均的部分）本周要花掉 15%，没花够的缺口整笔进基金，酒吧/小馆/衣泊坊/诊所/星光/小屋日子/婚宴/三金/基金捐/工程捐票算花，买地买园不算，买棚送礼也不算；周一换班自动划入基金；本周新号免征到下周；欠税不能买地/买棚/买园/升屋/买船/开坑/升镐）。岸维 visit_ops 潮生会 维 / 维 交（按产业每天收：产业单价至少 10 票；超出起步的份地 10/18/28、果园 20/32/48、温室 30/48/70，铺多了加档；畜栏 10+在栏 10、开馆 12、小屋/船 10/15/20、渔排/盐田/矿坑 10；起步 3 块地和 3 树位免；今日单按开征时产业记死，开征后再扩产则分项按此刻重算、今日应不改；欠维修费同样不能扩产，开着的小馆暂停堂食）。潮汐基金 visit_ops 潮生会 基金 / 基金 捐 50（票数自填，也算生活花销、能抵锈）。补贴不用领，东八区周二四六自动发（先托到 800，再按岛均补，每人顶 2500、不超过岛均）。本周目标/公仓/公物不在潮生会（alliance_ops league · donate · plot_ops commons）。steward_ops guild 是每日工分，不是入会。周潮天灾不是税。hut_ops mascot upkeep 是吉祥物喂养，不是岸维。人类 /island 总览点潮生会，先进店景，点一下才出会厅，能问事、交岸税岸维、捐基金、看告示、看岸上工程",
@@ -925,14 +926,19 @@ async def steward_sheet(key_id: int) -> str:
 
 
 async def steward_revise(key_id: int, motto: str = "", portrait: str = "") -> str:
-    s = await require_steward(key_id)
+    s = await require_steward(key_id, exempt_duty=True)
     async with db.connect() as conn:
         if motto.strip():
             await conn.execute("UPDATE stewards SET motto = ? WHERE id = ?", (motto.strip()[:200], s["id"]))
         if portrait.strip():
             await conn.execute("UPDATE stewards SET portrait = ? WHERE id = ?", (portrait.strip()[:120], s["id"]))
         await conn.commit()
-    return "资料已修订"
+    s = await db.get_steward_by_id(s["id"]) or s
+    return (
+        "资料已修订\n"
+        f"座右铭: {s['motto'] or '（空）'}\n"
+        f"肖像: {s['portrait'] or '（空）'}"
+    )
 
 
 async def peer_sheet(name: str, *, viewer_id: int | None = None) -> str:

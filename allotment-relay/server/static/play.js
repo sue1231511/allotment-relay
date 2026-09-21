@@ -611,8 +611,10 @@ function neighborSheet(person) {
   ].filter(Boolean).join('');
   const ripe = person.ripe ? `熟地 ${person.ripe}` : '暂无熟地';
   const where = person.home ? '在档口' : (person.ago || '不在');
+  const portrait = person.portrait ? `<p class="muted" style="margin-top:6px">${esc(person.portrait)}</p>` : '';
+  const motto = person.motto ? `<p style="margin-top:6px">「${esc(person.motto)}」</p>` : '';
   openSheet(name, `
-    <p class="muted">${esc(where)} · ${esc(ripe)}</p>${rapNote}
+    <p class="muted">${esc(where)} · ${esc(ripe)}</p>${portrait}${motto}${rapNote}
     <div class="play-mini-actions" style="margin-top:10px;flex-wrap:wrap">
       <button type="button" class="play-mini-btn" data-act='${JSON.stringify({ tool: 'steward_ops', command: `peer ${name}` })}'>看档</button>
       <button type="button" class="play-mini-btn" data-act='${JSON.stringify({ tool: 'alliance_ops', command: `assist ${name}` })}'>帮忙打理</button>
@@ -1101,6 +1103,7 @@ function renderStewardPage(data) {
       <em>${esc(st.label || (st.online ? '在线' : '离线'))}</em>
     </div>
     ${data.motto ? `<p class="play-steward-motto">「${esc(data.motto)}」</p>` : ''}
+    ${data.portrait ? `<p class="muted">${esc(data.portrait)}</p>` : ''}
     <div class="play-steward-chips">${badges.map((x) => `<span>${esc(x)}</span>`).join('')}</div>`;
 
   $('play-steward-stat-band').innerHTML = `
@@ -1185,10 +1188,22 @@ function openMe() {
       <button type="submit" class="play-mini-btn primary">保存新名字</button>
       <p class="error hidden" id="play-rename-err"></p>
     </form>
+    <form id="play-profile-form" class="play-rename">
+      <label>座右铭
+        <input id="play-profile-motto" type="text" maxlength="200" value="${esc(d.motto || '')}" autocomplete="off" placeholder="一句短话，写在公开档上">
+      </label>
+      <label>肖像
+        <input id="play-profile-portrait" type="text" maxlength="120" value="${esc(d.portrait || '')}" autocomplete="off" placeholder="外貌短写，不是上传图片">
+      </label>
+      <p class="muted">座右铭和肖像会写在你的公开档上。肖像是一句文字，不是照片。管家也能改这两项，改不了名字。</p>
+      <button type="submit" class="play-mini-btn primary">保存座右铭 / 肖像</button>
+      <p class="error hidden" id="play-profile-err"></p>
+    </form>
     <p>精力 ${m.energy || 0}/${m.energy_max || 100} · 工分票 ${d.tickets}</p>
     <p style="margin-top:6px">岛缘 ${d.island_bond ?? m.island_bond ?? 0} ∞${d.bond_flavor ? ' · ' + esc(d.bond_flavor) : ''}</p>
     <p style="margin-top:6px">饱食 ${m.satiety ?? '—'} · 雾智 ${m.mist_wit ?? '—'} · 档信 ${m.standing ?? '—'}</p>
     ${d.motto ? `<p style="margin-top:8px">「${esc(d.motto)}」</p>` : ''}
+    ${d.portrait ? `<p class="muted" style="margin-top:6px">${esc(d.portrait)}</p>` : ''}
     ${lines.health && lines.health.includes('（') ? `<p class="muted" style="margin-top:8px">${esc(lines.health)}</p>` : ''}
     <div class="play-rule">${esc(lines.bar_duty || '每 2 天须去酒吧上工。')}</div>
     ${duesLine(d) ? `<div class="play-rule">${esc(duesLine(d))}。去潮生会交。</div>` : ''}
@@ -1247,6 +1262,32 @@ function openMe() {
         }
         openMe();
         setLog(data.text || '名字已改。');
+      } catch (ex) {
+        err.classList.remove('hidden');
+        err.textContent = ex.message;
+      }
+    });
+  }
+  const profileForm = $('play-profile-form');
+  if (profileForm) {
+    profileForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const err = $('play-profile-err');
+      err.classList.add('hidden');
+      const motto = ($('play-profile-motto').value || '').trim();
+      const portrait = ($('play-profile-portrait').value || '').trim();
+      if (!motto && !portrait) {
+        err.classList.remove('hidden');
+        err.textContent = '写一句座右铭或肖像';
+        return;
+      }
+      let cmd = 'revise';
+      if (motto) cmd += ` ${motto}`;
+      if (portrait) cmd += ` portrait ${portrait}`;
+      try {
+        const data = await api('steward_ops', cmd);
+        applySnap(data, data.text || '资料已修订');
+        openMe();
       } catch (ex) {
         err.classList.remove('hidden');
         err.textContent = ex.message;
