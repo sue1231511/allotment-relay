@@ -95,6 +95,8 @@ def test_ban_copy_covers_voyage() -> None:
     text = fish_ban.brief_ban(100) + fish_ban.notice_text(100)
     assert "出海归港" in text
     assert "渔排收" in text
+    assert "赶海翻沙" in text
+    assert "工坊打捞" in text
     assert "不能卖" in text or "不能进袋" in text
 
 
@@ -212,3 +214,82 @@ async def _test_pen_harvest_releases_banned_fish() -> None:
     assert "禁捞" in msg or "放生" in msg, msg
     stock = await db.get_satchel(sid)
     assert stock.get("fish_herring", 0) == 0, stock
+
+
+def test_beach_loot_releases_banned_fish() -> None:
+    asyncio.run(_test_beach_loot_releases_banned_fish())
+
+
+async def _test_beach_loot_releases_banned_fish() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="ban-beach-"))
+    db = await _boot(tmp)
+    from server import beach, fish_ban
+
+    _, sid = await _enroll(db, "beachban@example.com", "翻沙人", tickets=200)
+    async with db.connect() as conn:
+        with patch.object(fish_ban, "banned_species", return_value=["razorclam"]):
+            label, qty = await beach._grant_loot(conn, sid, "fish_razorclam", 2)
+        await conn.commit()
+    assert qty == 0, (label, qty)
+    assert "放生" in label or "禁捕" in label, label
+    stock = await db.get_satchel(sid)
+    assert stock.get("fish_razorclam", 0) == 0, stock
+    async with db.connect() as conn:
+        tickets = int((await (await conn.execute(
+            "SELECT tickets FROM stewards WHERE id=?", (sid,)
+        )).fetchone())[0])
+    assert tickets < 200
+
+
+def test_salvage_releases_banned_fish() -> None:
+    asyncio.run(_test_salvage_releases_banned_fish())
+
+
+async def _test_salvage_releases_banned_fish() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="ban-salv-"))
+    db = await _boot(tmp)
+    from server import craft, fish_ban, health, world
+
+    kid, sid = await _enroll(db, "salvban@example.com", "捞滩人", tickets=200)
+    gale = {
+        "open": True, "kind": "gale", "label": "风暴中",
+        "energy": 10, "empty": 0.0, "hazard": 0.0,
+    }
+    old_win = world.salvage_window
+    old_choices = craft.random.choices
+    old_crand = craft.random.random
+    old_hrand = health.random.random
+    world.salvage_window = lambda **kw: gale  # type: ignore[assignment]
+    try:
+        craft.random.choices = lambda keys, weights=None, k=1: ["fish_herring"]  # type: ignore[method-assign]
+        health.random.random = lambda: 0.99  # type: ignore[method-assign]
+        craft.random.random = lambda: 0.99  # type: ignore[method-assign]
+        with patch.object(fish_ban, "banned_species", return_value=["herring"]):
+            msg = await craft.craft_ops(kid, "打捞")
+        assert "放生" in msg or "禁捕" in msg, msg
+        stock = await db.get_satchel(sid)
+        assert stock.get("fish_herring", 0) == 0, stock
+        async with db.connect() as conn:
+            tickets = int((await (await conn.execute(
+                "SELECT tickets FROM stewards WHERE id=?", (sid,)
+            )).fetchone())[0])
+        assert tickets < 200
+    finally:
+        world.salvage_window = old_win
+        craft.random.choices = old_choices
+        craft.random.random = old_crand
+        health.random.random = old_hrand
+
+
+if __name__ == "__main__":
+    test_bottle_wash_chance_exists()
+    test_island_collections_entries_is_list()
+    test_try_wash_ashore_survives_missing_constant()
+    test_ban_copy_covers_voyage()
+    test_refuse_trade_blocks_banned_fish()
+    test_voyage_return_releases_banned_fish()
+    test_vend_refuses_banned_fish()
+    test_pen_harvest_releases_banned_fish()
+    test_beach_loot_releases_banned_fish()
+    test_salvage_releases_banned_fish()
+    print("ok")

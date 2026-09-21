@@ -8,7 +8,7 @@ from . import db
 from .catalog import SEA_CATCH
 
 FINE = 15
-BAN_SCOPE = "岸边网钓、出海归港、渔排收碰上"
+BAN_SCOPE = "岸边网钓、出海归港、渔排收、赶海翻沙、工坊打捞碰上"
 
 
 def _week_id(ts: int | None = None) -> int:
@@ -122,3 +122,13 @@ async def maybe_release_item(
     if not species:
         return None
     return await enforce(conn, steward_id, species, must_release=must_release)
+
+
+async def grant_or_release(conn, steward_id: int, item: str, qty: int = 1) -> str | None:
+    """禁捞则放生并返回说明；否则入库，返回 None。"""
+    msg = await maybe_release_item(conn, steward_id, item)
+    if msg:
+        return msg
+    if qty > 0:
+        await db.add_item(conn, steward_id, item, qty)
+    return None

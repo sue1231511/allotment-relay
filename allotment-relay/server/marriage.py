@@ -121,6 +121,7 @@ MARRIAGE_HELP = """marriage_ops 子命令（整句写进 command）：
   人类不用注册潮汐岛账号。岛上不问你爱的是谁。只问对方有没有答应。
   没有 propose_marriage / attend_wedding / send_wedding_gift / divorce_ops 这种独立工具。
   空 command = 看自己的婚约档案。已婚时偶尔多一句屋里的事，不是签到，没有奖励。
+  考勤逾期仍可档案 / desk / 筹备 / 婚书 / 婚礼只读；求婚、彩礼、发出、订婚办事、举行要先 bar_ops work。离婚答应/拒绝仍开，免得人类卡着。
   visit_ops 连理所 / visit_ops 理枝 也能进门。visit_ops 连理所 结婚 / 离婚 走同一套。
 
   desk / 连理所 / 理枝 / 进门 — 进连理所，看自己的档案
@@ -1675,8 +1676,34 @@ def _dossier_lines(row: dict[str, Any], *, guests: int, memories: int, displays:
 
 
 async def marriage_ops(key_id: int, command: str = "") -> str:
-    s = await require_steward(key_id, exempt_duty=True)
+    s = await require_steward(key_id, exempt_duty=_duty_exempt(command))
     return await _dispatch(s, command)
+
+
+_MARRIAGE_READ = {
+    "", "help", "?", "帮助", "status", "看", "档案",
+    "desk", "连理所", "理枝", "进门", "民政局",
+    "筹备", "婚礼", "婚书", "回忆",
+}
+
+
+def _duty_exempt(command: str) -> bool:
+    raw = (command or "").strip()
+    if not raw:
+        return True
+    verb, rest = (raw.split(None, 1) + [""])[:2]
+    key = verb.lower()
+    while key in ("desk", "连理所", "理枝", "进门", "民政局") and rest.strip():
+        verb, rest = (rest.split(None, 1) + [""])[:2]
+        key = verb.lower()
+    if key in ("出游",):
+        sub = (rest.split(None, 1)[0].lower() if rest.strip() else "")
+        return sub in ("", "看", "查看", "status")
+    if key in ("居所",):
+        return not rest.strip() or rest.strip().lower() in ("看", "status")
+    if key in ("离婚", "分居", "退契"):
+        return True
+    return key in _MARRIAGE_READ
 
 
 async def _dispatch(s: dict[str, Any], command: str = "") -> str:

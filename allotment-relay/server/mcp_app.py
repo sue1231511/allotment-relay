@@ -107,7 +107,7 @@ async def hut_ops(command: str = "") -> str:
     return await mux._call_ops(mux.hut_bundle, _kid(), command)
 
 
-@mcp.tool(description="渔获出海赶海渔排漂流瓶。空=列表。例：net · cast · 水层 near · 搏鱼 硬拉 · 解挂 · voyage 部件 修 · dig · 捞瓶 · 投瓶。解挂/搏鱼切线极少海玻璃或旧钩标记（下次坐钓进袋捎回钩耐久）。net 偶发挂水草则下次空网率+10%（撒一次消，消时极少抠出饵/漂绳）；雨/风暴撒网极少网到特殊贝壳。beach dig 同天气极少冲出贝壳，偶尔冲上一只漂流瓶。本周禁捞种岸边网钓、出海归港和渔排收都罚15票放生，不能卖。人类 /island 港口岸边/出海/渔排栏可点同一套；赶海漂流瓶栏能看、捞、投、回。dig≠崖矿。")
+@mcp.tool(description="渔获出海赶海渔排漂流瓶。空=列表。例：net · cast · 水层 near · 搏鱼 硬拉 · 解挂 · voyage 部件 修 · dig · 捞瓶 · 投瓶。解挂/搏鱼切线极少海玻璃或旧钩标记（下次坐钓进袋捎回钩耐久）。net 偶发挂水草则下次空网率+10%（撒一次消，消时极少抠出饵/漂绳）；雨/风暴撒网极少网到特殊贝壳。beach dig 同天气极少冲出贝壳，偶尔冲上一只漂流瓶。本周禁捞种岸边网钓、出海归港、渔排收、赶海翻沙、工坊打捞都罚15票放生，不能卖。人类 /island 港口岸边/出海/渔排栏可点同一套；赶海漂流瓶栏能看、捞、投、回。dig≠崖矿。")
 async def tide_ops(
     command: Annotated[str, Field(description="net/cast · 水层 · 搏鱼 · 解挂 · voyage 部件 修（全件回满）· 帆撕 补|返航|硬撑 · dig 赶海 · 捞瓶 · 投瓶。")] = "",
 ) -> str:
@@ -167,7 +167,7 @@ async def cloth_ops(command: str = "") -> str:
     return progress_mod.attach_note(await mux._call_ops(cloth.cloth_ops, _kid(), command))
 
 
-@mcp.tool(description="婚约/导演约会。空=婚档。例：约会 小馆 · 出游 查看。求婚走连理所。勿date_ops/propose_marriage。")
+@mcp.tool(description="婚约/导演约会。空=婚档。例：约会 小馆 · 出游 查看。逾期档案仍开；求婚发出要先 work。求婚走连理所。勿date_ops/propose_marriage。")
 async def marriage_ops(command: Annotated[str, Field(description="整句命令；help看全表。手游图标只看/应邀；出游 继续 0 / 出游 自定义 1 | 行动 带当前幕号；失败重试原幕，受理后只 出游 查看；出游 删除 编号删已结束回忆。")] = "") -> str:
     from . import marriage
     from . import progress as progress_mod
@@ -205,7 +205,7 @@ async def quarry_ops(command: str = "") -> str:
     return progress_mod.attach_note(await mux._call_ops(quarry.quarry_ops, _kid(), command))
 
 
-@mcp.tool(description="岸工坊。空=列表≠看砧(用status)。例：打 铜钉 · 取 · 淬火 泼水 · 打捞 · 捞险 割绳。金属淬火/打捞缠网各三选一；人类/island 砧上/打捞栏同路径。勿 forge_ops。")
+@mcp.tool(description="岸工坊。空=列表≠看砧(用status)。例：打 铜钉 · 取 · 淬火 泼水 · 打捞 · 捞险 割绳。金属淬火/打捞缠网各三选一；打捞碰上禁捞当场放生。人类/island 砧上/打捞栏同路径。勿 forge_ops。")
 async def craft_ops(command: str = "") -> str:
     from . import craft
     from . import progress as progress_mod

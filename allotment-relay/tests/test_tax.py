@@ -339,6 +339,47 @@ async def test_rust_offset_by_life_spend() -> None:
         db.now = real_now
 
 
+async def test_hut_build_upgrade_not_life_spend() -> None:
+    """搭棚屋/升屋像买棚一样不算潮锈；买家具仍算小屋日子。"""
+    tmp = Path(tempfile.mkdtemp(prefix="tax-hut-"))
+    db = await _boot(tmp)
+    from server import hut, tt
+
+    kid, sid = await _enroll(db, "hutrust@example.com", "棚客")
+    async with db.connect() as conn:
+        await conn.execute(
+            "UPDATE stewards SET tickets=800, last_bar_shift_at=? WHERE id=?",
+            (db.now(), sid),
+        )
+        await conn.commit()
+    built = await hut.hut_ops(kid, "build")
+    assert "棚屋" in built or "就绪" in built, built
+    upgraded = await hut.hut_ops(kid, "upgrade")
+    assert "升级" in upgraded or "岸畔" in upgraded, upgraded
+    async with db.connect() as conn:
+        spent = int((await (await conn.execute(
+            "SELECT COALESCE(SUM(amount),0) FROM shore_life_spend WHERE steward_id=?",
+            (sid,),
+        )).fetchone())[0])
+    assert spent == 0, spent
+    bought = await hut.hut_ops(kid, "buy mint_cushion")
+    assert "购入" in bought or "薄荷" in bought, bought
+    async with db.connect() as conn:
+        spent = int((await (await conn.execute(
+            "SELECT COALESCE(SUM(amount),0) FROM shore_life_spend WHERE steward_id=?",
+            (sid,),
+        )).fetchone())[0])
+    assert spent == 26, spent
+    gifted = await tt.tt_ops(kid, "gift 票 12")
+    assert "票" in gifted or "抽屉" in gifted or "好感" in gifted, gifted
+    async with db.connect() as conn:
+        spent = int((await (await conn.execute(
+            "SELECT COALESCE(SUM(amount),0) FROM shore_life_spend WHERE steward_id=?",
+            (sid,),
+        )).fetchone())[0])
+    assert spent == 26, spent
+
+
 async def test_no_tax_ops() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="tax-noops-"))
     db = await _boot(tmp)
@@ -363,6 +404,7 @@ def test_tax() -> None:
     asyncio.run(test_partial_pay_and_help())
     asyncio.run(test_gap_levy_on_whale())
     asyncio.run(test_rust_offset_by_life_spend())
+    asyncio.run(test_hut_build_upgrade_not_life_spend())
     asyncio.run(test_no_tax_ops())
 
 

@@ -45,7 +45,7 @@ def _locked(exc: BaseException) -> bool:
 async def _run() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="duty-read-"))
     db = await _boot(tmp)
-    from server import clinic, hut, mcp_dispatch as mux, npc, story, tale, theater
+    from server import clinic, hut, marriage, mcp_dispatch as mux, npc, story, tale, theater
     from server import game
 
     kid, _sid = await _enroll(db, "duty-read@example.com", "逾期客")
@@ -93,6 +93,34 @@ async def _run() -> None:
         raise AssertionError("overdue should still lock theater audition")
     except ValueError as exc:
         assert _locked(exc), exc
+
+    desk = await marriage.marriage_ops(kid, "")
+    assert desk and not _locked(ValueError(desk)), desk
+    status = await marriage.marriage_ops(kid, "status")
+    assert status and not _locked(ValueError(status)), status
+    try:
+        prep = await marriage.marriage_ops(kid, "筹备")
+        assert prep and not _locked(ValueError(prep)), prep
+    except ValueError as exc:
+        assert not _locked(exc), exc
+        assert "草稿" in str(exc) or "求婚" in str(exc), exc
+    visit_desk = await mux.visit_bundle(kid, "连理所")
+    assert visit_desk and not _locked(ValueError(visit_desk)), visit_desk
+    try:
+        await marriage.marriage_ops(kid, "求婚 阿潮")
+        raise AssertionError("overdue should still lock marriage propose")
+    except ValueError as exc:
+        assert _locked(exc), exc
+    try:
+        await marriage.marriage_ops(kid, "发出")
+        raise AssertionError("overdue should still lock marriage send")
+    except ValueError as exc:
+        assert _locked(exc), exc
+    try:
+        div = await marriage.marriage_ops(kid, "离婚")
+        assert not _locked(ValueError(div)), div
+    except ValueError as exc:
+        assert not _locked(exc), exc
 
     try:
         await game.plot_ops(kid, "status")
