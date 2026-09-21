@@ -63,11 +63,12 @@ CHAOSHEN_HELP = f"""visit_ops 潮生会 子命令（整句写进 command）：
   工程 捐 岸木 10 / 工程 捐 铜钉 4 / 工程 捐 50 — 捐材料或票。修完全岛有几天好处。不是 基金 捐
   纪事 — 本周纪事，根据岛上真事写成，同 steward_ops 周报。不是周目标。例子：潮生会 纪事
   禁捕 — 本周禁捞鱼种 + 全岛鱼群压力摘要（岸边网钓、出海归港碰上禁捕种罚 15 票并放生，不能卖）。例子：潮生会 禁捕
+  失物 / 失物 问 / 失物 交 银色打火机 — 酒吧洗碗、赶海翻沙偶尔捡到别人丢掉的东西。可自己留、问阿簿、交给潮生会，或 tote_ops gift 送给谁。不是任务、不是寻人木牌。例子：潮生会 失物 · 潮生会 失物 问 · 潮生会 失物 交 旧外套
   岸税东八区每周一换班自动划入基金（本周新号免征到下周）。离岛均太远另加潮差附加（超过岛均 5 倍再加 8%，超过 15 倍再加 16%）。只攒不花另加潮锈：闲票（超过岛均的部分）本周要花掉 15%，没花够的缺口整笔进基金；酒吧/小馆/衣泊坊/诊所/星光/小屋日子/婚宴/三金/基金捐/工程捐票算花，买地买园不算，买棚送礼也不算。岸维东八区每天换班自动划（今日新号免征到明天）。补贴不用领、没有 MCP 指令。东八区{FUND_PAY_WEEKDAY_LABEL}自动发：先把低于 {FUND_FLOOR} 的托到 {FUND_FLOOR}，剩下再补给低于岛均的人（每人顶 {FUND_PAY_CAP}、不超过岛均）
   没有入会 / 开会 / 退会。{ORG_NAME}是岛上管事的机构，上岛时已经在册。
   本周目标 / 公仓 / 公物不在这儿：alliance_ops league · alliance_ops donate / larder · plot_ops commons
-例子：潮生会 · 潮生会 问 · 潮生会 税 · 潮生会 税 交 · 潮生会 税 交 50 · 潮生会 维 · 潮生会 维 交 · 潮生会 维 交 50 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 基金 捐 8 · 潮生会 告示 · 潮生会 工程 · 潮生会 工程 捐 岸木 10 · 潮生会 纪事
-容易搞混：税=强制岸税（富人按档交，税入基金）。维=产业维修费（产业越大越交，也入基金）。基金 捐 50=自愿捐票（须高于岛均）。工程 捐=全岛修码头这类，要岸木铜钉或票，不是均贫富。纪事=本周岛上真事，同 steward_ops 周报，不是周目标。mascot upkeep=吉祥物喂养。plot_ops repair=田间意外。周潮天灾=只冲 3 万以上，不是税。公仓捐货走 alliance_ops donate 甘蓝 2。不要写潮生会 补贴。steward_ops guild=每日工分轮值，不是入会；alliance_ops board=周目标贡献榜。没有 tax_ops / upkeep_ops。告示不能贴：那是厅示，不是聊天室。人类 /island 总览点潮生会，先进店景，点一下才出会厅，能问事、交岸税岸维、捐基金、看告示、看岸上工程。围观 /hui 只看。"""
+例子：潮生会 · 潮生会 问 · 潮生会 税 · 潮生会 税 交 · 潮生会 税 交 50 · 潮生会 维 · 潮生会 维 交 · 潮生会 维 交 50 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 基金 捐 8 · 潮生会 告示 · 潮生会 工程 · 潮生会 工程 捐 岸木 10 · 潮生会 纪事 · 潮生会 失物 · 潮生会 失物 问 · 潮生会 失物 交 银色打火机
+容易搞混：税=强制岸税（富人按档交，税入基金）。维=产业维修费（产业越大越交，也入基金）。基金 捐 50=自愿捐票（须高于岛均）。工程 捐=全岛修码头这类，要岸木铜钉或票，不是均贫富。纪事=本周岛上真事，同 steward_ops 周报，不是周目标。失物=捡到的别人的东西，不是寻人木牌、不是任务。mascot upkeep=吉祥物喂养。plot_ops repair=田间意外。周潮天灾=只冲 3 万以上，不是税。公仓捐货走 alliance_ops donate 甘蓝 2。不要写潮生会 补贴。steward_ops guild=每日工分轮值，不是入会；alliance_ops board=周目标贡献榜。没有 tax_ops / upkeep_ops。告示不能贴：那是厅示，不是聊天室。人类 /island 总览点潮生会，先进店景，点一下才出会厅，能问事、交岸税岸维、捐基金、看告示、看岸上工程、看失物柜。围观 /hui 只看。"""
 
 _DOOR_LINES = (
     "坐。先报名字。入会？没有这回事。",
@@ -153,7 +154,7 @@ async def _front_desk(key_id: int) -> str:
     lines.extend([
         "",
         f"潮汐 {world.tide_label(world.current_tide())} · {world.weather_label(world.current_weather())}",
-        "办事：visit_ops 潮生会 税 · 潮生会 税 交 · 潮生会 维 · 潮生会 维 交 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 告示",
+        "办事：visit_ops 潮生会 税 · 潮生会 税 交 · 潮生会 维 · 潮生会 维 交 · 潮生会 基金 · 潮生会 基金 捐 50 · 潮生会 告示 · 潮生会 失物",
         "本周目标走 alliance_ops league。公仓走 alliance_ops donate / larder。公物走 plot_ops commons。",
         f"岸税按口袋交（周一划），岸维按产业交（每天划）。潮汐基金：捐票自己填数。补贴不用领，东八区{FUND_PAY_WEEKDAY_LABEL}自动发。不能加入。上岛已在册。",
     ])
@@ -684,6 +685,25 @@ async def chaoshen_ops(key_id: int, command: str = "") -> str:
             eco = await fish_ecology_mod.status_line(conn)
         return fish_ban_mod.notice_text() + "\n" + eco
 
+    if verb in ("失物",) or verb_l in ("lost", "lostfound", "lost_found"):
+        from .game import require_steward
+        from . import lost_found as lost_mod
+        s = await require_steward(key_id, exempt_duty=True)
+        rest_parts = parts[1:]
+        sub = rest_parts[0] if rest_parts else ""
+        async with db.connect() as conn:
+            if sub in ("问", "ask"):
+                msg = await lost_mod.ask(conn, s)
+            elif sub in ("交", "还", "turn", "交还"):
+                token = " ".join(rest_parts[1:]).strip()
+                if not token:
+                    raise ValueError("交哪件？visit_ops 潮生会 失物 交 银色打火机")
+                msg = await lost_mod.turn_in(conn, s, token)
+                await conn.commit()
+            else:
+                msg = await lost_mod.status_text(conn, s)
+        return msg
+
     if verb_l in ("捐", "donate"):
         if len(parts) >= 2 and (parts[1].isdigit() or parts[1] in ("票", "工分票")):
             raise ValueError("捐票请走潮汐基金：visit_ops 潮生会 基金 捐 50")
@@ -966,6 +986,7 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
     from . import works as works_mod
     from . import traces as traces_mod
     from . import gazette as gazette_mod
+    from . import lost_found as lost_mod
     from . import fish_ban as fish_ban_mod
     from . import fish_ecology as fish_ecology_mod
 
@@ -1010,21 +1031,25 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
     elif upkeep_owed:
         spoken = f"欠岸维 {upkeep_owed}。点岸维交。"
     else:
-        spoken = "阿簿在。问事、交税交维、捐基金、看厅示、看岸上工程。不能入会，也不能贴告示。"
+        spoken = "阿簿在。问事、交税交维、捐基金、看厅示、看岸上工程、看失物柜。不能入会，也不能贴告示。"
     spoken = await traces_mod.blend(conn, "plaza", spoken)
 
     tax_badge = str(tax_owed) if tax_owed else ""
     upkeep_badge = str(upkeep_owed) if upkeep_owed else ""
+
+    fish_eco_line = await fish_ecology_mod.status_line(conn)
+    lost_rows = await lost_mod.held(conn, s["id"])
+    lost_badge = str(len(lost_rows)) if lost_rows else ""
     tabs = [
         {"key": "ask", "label": "问事", "badge": ""},
         {"key": "tax", "label": "岸税", "badge": tax_badge},
         {"key": "upkeep", "label": "岸维", "badge": upkeep_badge},
         {"key": "fund", "label": "基金", "badge": ""},
         {"key": "works", "label": "工程", "badge": "修" if work.get("open") else ""},
+        {"key": "lost", "label": "失物", "badge": lost_badge},
         {"key": "notices", "label": "告示", "badge": str(notice_n) if notice_n else ""},
     ]
 
-    fish_eco_line = await fish_ecology_mod.status_line(conn)
     ask_items = [
         _sku(
             sid="fishban-look",
@@ -1257,6 +1282,7 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
         )
         for act in rush_actions
     ]
+    lost_items = await lost_mod.player_items(conn, s)
 
     return {
         "name": ORG_NAME,
@@ -1272,6 +1298,7 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
             "upkeep": upkeep_items,
             "fund": fund_items,
             "works": work_items,
+            "lost": lost_items,
             "notices": notice_items,
         },
         "tax_arrears": tax_owed,

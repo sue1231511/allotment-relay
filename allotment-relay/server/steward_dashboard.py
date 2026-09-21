@@ -103,7 +103,7 @@ async def fetch_dashboard(api_key: str) -> dict[str, Any]:
             "greenhouse": gh,
             "orchard": orchard,
             "token": token,
-            "watered": bool(p.get("watered")),
+            "watered": bool(p.get("watered")) or world.plot_rains(p),
             "fertilized": bool(p.get("fertilized")),
             "tended": bool(p.get("tended")),
             "shake": False,

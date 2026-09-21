@@ -33,7 +33,7 @@ async def _state(conn, sid: int) -> dict:
 
 def _forecast() -> str:
     tide = {"ebb": "明早潮线还低，滩上能捡东西。", "slack": "明早潮平，赶海别走太远。", "flood": "明早水还往上走，别在滩上久留。"}.get(world.current_tide(), "明早先看潮线再下滩。")
-    wind = "午后风大，出海趁早。" if world.current_weather() in {"windy", "storm"} else "风还稳，近海可以去。"
+    wind = "午后风大，出海趁早。" if world.current_weather() == "gale" else "风还稳，近海可以去。"
     return tide + wind
 
 async def _visit(s: dict) -> str:
@@ -66,7 +66,12 @@ async def _tea(s: dict) -> str:
         await conn.execute("UPDATE steward_buxing SET tea_day=?,updated_at=? WHERE steward_id=?", (db.day_id(), db.now(), s["id"]))
         await conn.commit()
     bonus = " 透镜换过了，茶更烫。" if extra_n else ""
-    return f"他给你倒了一杯。\n“茶不要钱。”\n\n精力 +{got}（每日一次）{bonus}"
+    from . import folklore as folklore_mod
+    rumor = ""
+    lines = folklore_mod.public_lines()
+    if lines:
+        rumor = f"\n他望了一眼窗外。「{lines[0]}」没说信不信。"
+    return f"他给你倒了一杯。\n“茶不要钱。”\n\n精力 +{got}（每日一次）{bonus}{rumor}"
 
 async def _tide(s: dict) -> str:
     async with db.connect() as conn:

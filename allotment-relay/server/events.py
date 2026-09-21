@@ -915,7 +915,7 @@ async def net_fog_penalty() -> float:
         return 0.12
     if climate == "thunderstorm":
         return 0.08
-    return 0.0
+    return world_mod.misty_fish_empty()
 
 
 async def discovery_chance_bonus() -> float:

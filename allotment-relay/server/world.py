@@ -168,14 +168,14 @@ def climate_line() -> str:
 
 
 WEATHER_NOW = {
-    "clear": "晴朗：热带播种生长目标 ×0.90；赶海贝壳权重 +5；意外 ×0.85",
-    "misty": "海雾：已 tend 生长 ×0.85；赶海珠砂/海玻璃等 +8；出海耗时 ×1.15；酒吧小费 +2",
-    "gale": "阵风：生长未 tend ×1.60 / 已 tend ×1.35（放任长得快，但虫害/野兽/被薅也专挑没人看的地）；意外 ×1.45；出海失败 +0.12；黑旗战力 −8；craft_ops 打捞 开窗（风暴中更危险）",
+    "clear": "晴朗：热带播种生长目标 ×0.90；果园再快一截；赶海贝壳权重 +5；意外 ×0.85；冰箱冰货更容易坏",
+    "misty": "海雾：已 tend 生长 ×0.85；赶海珠砂/海玻璃等 +8；出海耗时 ×1.15；酒吧小费 +2；岸边网钓更容易空；盐风崖可能摸到平时看不见的脉",
+    "gale": "阵风：露天地算被雨浇过一轮（不用再浇）；生长未 tend ×1.60 / 已 tend ×1.35（放任长得快，但虫害/野兽/被薅也专挑没人看的地）；意外 ×1.45；出海失败 +0.12；黑旗战力 −8；craft_ops 打捞 开窗（风暴中更危险）",
 }
 TIDE_NOW = {
     "ebb": "退潮：赶海 dig 贝壳/渔获权重↑；崖矿铁砂床/页岩层更肥",
     "slack": "平潮：probe 掏洞（权重略补）；崖矿铜绿缝略肥",
-    "flood": "涨潮：dig 和 probe 都不可用，只有 beach scan 还能看一眼；崖矿不关，盐脉更肥；盐田 craft_ops 灌 只能这时灌",
+    "flood": "涨潮：dig 和 probe 都不可用，只有 beach scan 还能看一眼；崖矿不关，盐脉更肥；盐田 craft_ops 灌 只能这时灌；井下赌场这会儿进不去",
 }
 PHASE_NOW = {
     "day": "昼：斑鸠只在这时出现；酒吧默认打烊（逾期补班票 ×0.72）",
@@ -185,14 +185,14 @@ PHASE_NOW = {
 
 # 人类木牌短句。不写 MCP 子命令，数值仍以 WEATHER_NOW / TIDE_NOW / PHASE_NOW 为准。
 WEATHER_HINT = {
-    "clear": "地里长得稳，赶海贝壳多一点。",
-    "misty": "打理过的地慢一点。出海多花时间，酒吧小费好一点。",
-    "gale": "没人看的地疯长，也更容易出事。出海容易失败，岸工坊能打捞。",
+    "clear": "果园长得欢。冰箱里的冰货更容易坏。",
+    "misty": "钓鱼容易空网。盐风崖可能摸到平时看不见的脉。出海多花时间。",
+    "gale": "露天地被雨浇过一轮，不用再浇。港口危险，出海容易翻。",
 }
 TIDE_HINT = {
-    "ebb": "能赶海。崖上铁砂更肥。",
+    "ebb": "赶海东西多。崖上铁砂更肥。",
     "slack": "能掏洞。崖上铜绿略肥。",
-    "flood": "赶海和掏洞都不行。盐脉更肥，盐田只能这时灌。",
+    "flood": "赶海和掏洞都不行。井下赌场这会儿进不去。盐田只能这时灌。",
 }
 PHASE_HINT = {
     "day": "斑鸠只在这时出现。酒吧默认打烊。",
@@ -252,6 +252,49 @@ def grow_multiplier(weather: str, tended: bool, in_greenhouse: bool) -> float:
     if current_day_phase() == "night" and not in_greenhouse:
         return 1.08
     return 1.0
+
+
+def plot_rains(plot: dict | None = None, *, greenhouse: bool | None = None) -> bool:
+    """阵风当一轮雨：露天未浇的地也按浇过算。温室不淋。"""
+    gh = greenhouse
+    if gh is None and plot is not None:
+        gh = bool(plot.get("greenhouse"))
+    return current_weather() == "gale" and not bool(gh)
+
+
+def plot_watered(plot: dict) -> bool:
+    return bool(plot.get("watered")) or plot_rains(plot)
+
+
+def orchard_clear_mult(plot: dict) -> float:
+    if plot.get("orchard") and not plot.get("greenhouse") and current_weather() == "clear":
+        return 0.90
+    return 1.0
+
+
+def fridge_spoil_mult() -> float:
+    return 0.72 if current_weather() == "clear" else 1.0
+
+
+def misty_fish_empty() -> float:
+    return 0.08 if current_weather() == "misty" else 0.0
+
+
+def misty_hidden_vein_bonus(vein_key: str) -> int:
+    if current_weather() != "misty":
+        return 0
+    if vein_key in {"fog", "tide", "marrow", "gold"}:
+        return 10
+    return 0
+
+
+def flood_closes_casino() -> bool:
+    return current_tide() == "flood"
+
+
+def cold_snap() -> bool:
+    key = active_climate_effect() or field_climate_effect()
+    return key in {"frost", "snowbound", "north_wind"}
 
 
 def climate_grow_mult(in_greenhouse: bool, watered: bool, tropic: bool = False) -> float:

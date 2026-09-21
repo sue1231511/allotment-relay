@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .. import db, farming, game, land as land_mod
+from .. import db, farming, game, land as land_mod, world
 from ..catalog import CROPS, resolve_crop_key
 from .errors import ApiError, classify
 from . import views
@@ -177,6 +177,8 @@ async def water(api_key: str, key_id: int, slot: int | str) -> dict[str, Any]:
         raise ApiError("NOT_READY", "这块地还是空的。", status=409)
     if farming.plot_ready(plot) or farming.plot_overripe(plot):
         raise ApiError("NOT_READY", "已经熟了，浇也赶不上。直接收吧。", status=409)
+    if world.plot_rains(plot):
+        raise ApiError("ALREADY_DONE", "阵风已经替这块地浇过一轮，不用浇。", status=409)
     if plot.get("watered"):
         raise ApiError("ALREADY_DONE", "这一茬已经浇过水了。", status=409)
 

@@ -1532,6 +1532,10 @@ async def undertide_ops(key_id: int, command: str) -> str:
         if verb in ("casino", "dice", "lantern", "draw"):
             if not ut["access"]:
                 raise ValueError(utcopy.NO_ACCESS_HINT)
+            from . import world as world_mod
+
+            if world_mod.flood_closes_casino():
+                raise ValueError("涨潮。赌场这会儿进不去。恶猫说是进水，没人看见水。")
             if verb == "casino":
                 return f"{utcopy.CASINO_HEADER}\n{utcopy.CASINO_DESC}\n\n" \
                        f"骰子：dice small|big|black 注（×2/×2/×5）\n" \

@@ -2058,6 +2058,11 @@ ITEM_NAMES.update({
     "gold_earrings": "潮金耳环",
     "gold_bangle": "潮金镯",
     "gold_pendant": "潮金坠",
+    "lost_lighter": "银色打火机",
+    "lost_coat": "旧外套",
+    "lost_list": "湿了的购物单",
+    "lost_photo": "无名照片",
+    "lost_band": "模糊的银戒",
 })
 ITEM_PRICES["tide_vow_sand"] = 1
 ITEM_PRICES["tide_vow_ring"] = 8888
@@ -2071,6 +2076,11 @@ ITEM_PRICES["gold_bracelet"] = 3888
 ITEM_PRICES["gold_earrings"] = 1888
 ITEM_PRICES["gold_bangle"] = 2888
 ITEM_PRICES["gold_pendant"] = 1888
+ITEM_PRICES["lost_lighter"] = 12
+ITEM_PRICES["lost_coat"] = 8
+ITEM_PRICES["lost_list"] = 1
+ITEM_PRICES["lost_photo"] = 1
+ITEM_PRICES["lost_band"] = 18
 
 # 嫁妆柜价目。票按 1 元。三金不含婚戒。
 # 按岛均约四千调过：必办全套（彩礼+戒+三金+婚服+滩席）约四万，阔手能办。彩礼上限十万，再高不让写，免得攀比。

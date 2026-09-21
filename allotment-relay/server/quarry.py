@@ -82,6 +82,9 @@ def _vein_weight(key: str, *, tide: str, weather: str, phase: str, pick_tier: in
     w += int((meta.get("tide_bonus") or {}).get(tide, 0))
     w += int((meta.get("weather_bonus") or {}).get(weather, 0))
     w += int((meta.get("phase_bonus") or {}).get(phase, 0))
+    from . import world as world_mod
+
+    w += world_mod.misty_hidden_vein_bonus(key)
     return max(0, w)
 
 
@@ -114,7 +117,7 @@ def climate_hint(*, tide: str, weather: str, phase: str) -> list[str]:
     else:
         lines.append("平潮：铜绿缝略肥")
     if weather == "misty":
-        lines.append("海雾：潮纹 / 雾铅 / 夜光髓权重↑")
+        lines.append("海雾：潮纹 / 雾铅 / 夜光髓权重↑，还可能摸到平时看不见的脉")
     elif weather == "gale":
         lines.append("阵风：铁砂床权重↑，空挥 +6%")
     elif weather == "clear":

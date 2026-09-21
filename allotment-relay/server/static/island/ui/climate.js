@@ -25,6 +25,7 @@ export function climateOf() {
     phase_hint: w.phase_hint || "",
     season_hint: w.season_hint || "",
     gazette: w.gazette || {},
+    rumors: Array.isArray(w.rumors) ? w.rumors : [],
   };
 }
 
@@ -36,6 +37,14 @@ export function climatePanelHtml(c, { closeable = false } = {}) {
         <b>本周纪事</b>
         <em>${esc(gaz.title)}</em>
         ${lines.slice(0, 7).map((ln) => `<p>${esc(ln)}</p>`).join("")}
+      </aside>`
+    : "";
+  const rumors = Array.isArray(c.rumors) ? c.rumors : [];
+  const rumorHtml = rumors.length
+    ? `<aside class="island-gazette island-rumors" aria-label="岛上传言">
+        <b>岛上最近在传</b>
+        ${rumors.slice(0, 3).map((ln) => `<p>${esc(ln)}</p>`).join("")}
+        <em>没人保证哪句是真的</em>
       </aside>`
     : "";
   return `
@@ -52,6 +61,7 @@ export function climatePanelHtml(c, { closeable = false } = {}) {
       <b class="island-climate-val" data-k="season">${esc(c.season)}</b>
     </section>
     ${gazHtml}
+    ${rumorHtml}
     </div>
   `;
 }
