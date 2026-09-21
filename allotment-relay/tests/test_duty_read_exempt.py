@@ -45,7 +45,7 @@ def _locked(exc: BaseException) -> bool:
 async def _run() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="duty-read-"))
     db = await _boot(tmp)
-    from server import clinic, hut, mcp_dispatch as mux, npc, story, tale
+    from server import clinic, hut, mcp_dispatch as mux, npc, story, tale, theater
     from server import game
 
     kid, _sid = await _enroll(db, "duty-read@example.com", "逾期客")
@@ -73,6 +73,26 @@ async def _run() -> None:
 
     league = await mux.alliance_bundle(kid, "league status")
     assert "周" in league or "目标" in league or "联盟" in league, league
+
+    neighbors = await mux.steward_ops(kid, "邻居")
+    assert neighbors and not _locked(ValueError(neighbors)), neighbors
+    online = await mux.steward_ops(kid, "在线")
+    assert online and not _locked(ValueError(online)), online
+
+    help_txt = await theater.theater_ops(kid, "help")
+    assert "看板" in help_txt, help_txt
+    try:
+        board = await theater.theater_ops(kid, "看板")
+        assert board and not _locked(ValueError(board)), board
+    except ValueError as exc:
+        assert not _locked(exc), exc
+        assert "专场" in str(exc) or "剧场" in str(exc), exc
+
+    try:
+        await theater.theater_ops(kid, "试镜")
+        raise AssertionError("overdue should still lock theater audition")
+    except ValueError as exc:
+        assert _locked(exc), exc
 
     try:
         await game.plot_ops(kid, "status")

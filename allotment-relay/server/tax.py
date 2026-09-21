@@ -241,7 +241,7 @@ def gap_lines(avg: int) -> list[str]:
             f"潮差附加：岛均还没算出来。超过岛均 {GAP_SOFT_MULT} 倍的部分再加 "
             f"{int(GAP_SOFT_RATE * 100)}%，超过 {GAP_HARD_MULT} 倍再加 "
             f"{int(GAP_HARD_RATE * 100)}%。",
-            f"{RUST_NAME}：闲票本周要花掉 {int(RUST_RATE * 100)}%。买地买园不算花。",
+            f"{RUST_NAME}：闲票本周要花掉 {int(RUST_RATE * 100)}%。买地买园不算花，买棚送礼也不算。",
         ]
     soft, hard = gap_thresholds(avg)
     return [
@@ -600,7 +600,7 @@ def _status_text(snap: dict[str, Any]) -> str:
                 lines.append(
                     f"生活花销 {spent} / 免锈要 {need}"
                     + (f" · 还差 {short}" if short else " · 本周够了")
-                    + "（买地买园不算）"
+                    + "（买地买园不算，买棚送礼也不算）"
                 )
         else:
             lines.append(

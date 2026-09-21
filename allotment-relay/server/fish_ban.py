@@ -11,8 +11,10 @@ FINE = 15
 BAN_SCOPE = "岸边网钓、出海归港、渔排收碰上"
 
 
-def _week_id() -> int:
-    return int(db.day_id()) // 7
+def _week_id(ts: int | None = None) -> int:
+    """和岸税/周潮同一套「本周」：东八区周一换班，不是 UTC 日序号。"""
+    from .disaster import cst_week_ordinal
+    return cst_week_ordinal(ts)
 
 
 def banned_species(week_id: int | None = None) -> list[str]:

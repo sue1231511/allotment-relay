@@ -29,8 +29,10 @@ async def ensure_table(conn) -> None:
     )
 
 
-def _week_id() -> int:
-    return int(db.day_id()) // 7
+def _week_id(ts: int | None = None) -> int:
+    """和禁捕、岸税同一套「本周」：东八区周一换班。"""
+    from .disaster import cst_week_ordinal
+    return cst_week_ordinal(ts)
 
 
 async def _pressure(conn, species: str) -> int:

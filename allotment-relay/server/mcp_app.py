@@ -119,7 +119,7 @@ async def tote_ops(command: str = "") -> str:
     return await mux._call_ops(mux.tote_bundle, _kid(), command)
 
 
-@mcp.tool(description="厨房小馆。空=menu（149）。例：cook 蒜蓉生蚝 · eat 鲭鱼 · shop dine 安 潮卤海味双拼（套餐88%价）· shop 套餐 · stock 菜名。泡 list / 泡 薄荷茶。勿 eat_ops。trouble 结案看 steward 灾档。")
+@mcp.tool(description="厨房小馆。空=menu。例：cook 蒜蓉生蚝 · eat 鲭鱼 · shop dine 安 潮卤海味双拼（套餐88%价）· shop 套餐 · stock 菜名。泡 list / 泡 薄荷茶。勿 eat_ops。trouble 结案看 steward 灾档。")
 async def kitchen_ops(command: str = "") -> str:
     return await mux._call_ops(mux.kitchen_bundle, _kid(), command)
 
@@ -154,7 +154,7 @@ async def star_ops(command: str = "") -> str:
     return await mux._call_ops(star.star_ops, _kid(), command)
 
 
-@mcp.tool(description="小剧场。空=看板。例：试镜·对戏·演出·领薪·剧险 扶幕·投稿 岸上旧收音机 | 正文·稿险 抚纸。幕/稿险未处置不能领薪/再投。不替酒吧考勤。")
+@mcp.tool(description="小剧场。空=看板。例：试镜·对戏·演出·领薪·剧险 扶幕·投稿 岸上旧收音机 | 正文·稿险 抚纸。逾期看板仍开；试镜要先 work。幕/稿险未处置不能领薪/再投。不替酒吧考勤。")
 async def theater_ops(command: str = "") -> str:
     from . import theater
     return await mux._call_ops(theater.theater_ops, _kid(), command)
