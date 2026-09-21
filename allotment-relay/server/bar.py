@@ -188,7 +188,7 @@ def duty_line(steward: dict[str, Any]) -> str:
         return (
             f"⚠ 酒吧考勤逾期 {overdue_h}h — 必须 bar_ops work。"
             "份地/出海/行囊/崖矿/工坊/衣泊坊委托已锁；"
-            "诊所、吃饭、酒吧、潮下、换衣服、小屋看屋、潮闻/故事列表、周目标看板仍可用"
+            "诊所、吃饭、酒吧、潮下、换衣服、小屋看屋、邻居名册、小剧场看板、连理所档案、潮闻/故事列表、周目标看板仍可用"
         )
     if left < 86400:
         return f"酒吧考勤：{left // 3600}h 内须 bar_ops work（每 {config.BAR_MANDATORY_DAYS} 天一次）"
@@ -203,6 +203,7 @@ async def assert_bar_duty(steward: dict[str, Any]) -> None:
             f"{BAR_OWNER_NAME}：「{steward['name']}，打卡去。"
             "份地、出海、行囊、崖矿、工坊和衣泊坊委托先停着；"
             "诊所（visit_ops clinic / list）、吃饭、酒吧、潮下、换衣服、小屋 status、"
+            "steward_ops 邻居、theater_ops 看板、marriage_ops 档案、"
             "tale_ops / story_ops 列表、alliance_ops league status 仍可用。」"
         )
 

@@ -780,8 +780,6 @@ async def _gift_tickets(steward: dict[str, Any], qty: int) -> str:
             await conn.commit()
             return f"今日送礼已满 {GIFT_DAILY_CAP} 次。Tt酱挥手：账本要下班。"
         await _pay(conn, steward["id"], qty)
-        from . import tax as tax_mod
-        await tax_mod.record_life_spend(conn, steward["id"], qty, "tt")
         score = await _affinity(conn, steward["id"])
         raw = min(TICKET_GAIN_CAP, max(1, qty // TICKET_PER_POINT))
         gain = apply_gift_gain(raw, score, cap=TICKET_GAIN_CAP)

@@ -31,6 +31,13 @@ def human_week_id(ts: int | None = None) -> str:
     return f"{iso.year}-W{iso.week:02d}"
 
 
+def cst_week_ordinal(ts: int | None = None) -> int:
+    """东八区 ISO 周年周，例如 202634。和岸税、周潮同一周界（周一换班）。"""
+    dt = datetime.fromtimestamp(ts if ts is not None else db.now(), CST)
+    iso = dt.isocalendar()
+    return iso.year * 100 + iso.week
+
+
 def week_flag_key(week_id: str | None = None) -> str:
     return f"{config.WEEKLY_TIDE_FLAG_PREFIX}{week_id or human_week_id()}"
 

@@ -98,6 +98,7 @@ def test_mcp_descriptions() -> None:
     theater = _tool_blob(mcp, "theater_ops")
     for word in ("试镜", "对戏", "演出", "领薪"):
         assert word in theater, word
+    assert "逾期" in theater
 
     bar = _tool_blob(mcp, "bar_ops")
     assert "洗碗" in bar and "荔栀" in bar
@@ -178,6 +179,8 @@ def test_mcp_descriptions() -> None:
         "潮生会 税 交", "潮生会 维 交", "潮生会 基金 捐 50", "tax_ops", "upkeep_ops",
         "订婚没有彩礼", "离婚 答应", "潮誓戒", "竹钓竿", "未命名小鱼",
         "堆肥桶 存 羊粪", "sow_all", "偷菜",
+        "买棚送礼也不算", "升屋、搭棚屋也不算", "steward_ops 邻居", "theater_ops 看板",
+        "和岸税同一周", "以 menu 为准", "赶海翻沙、工坊打捞",
     ):
         assert needle in man, needle
     assert "平常回10" in STAR_HELP
@@ -359,6 +362,9 @@ def test_relay_manual_covers_systems() -> None:
         "潮差",
         "潮锈",
         "买地买园不算",
+        "买棚送礼也不算",
+        "升屋、搭棚屋也不算",
+        "赶海翻沙、工坊打捞",
         "先托到 800",
         "kitchen_ops eat",
         "下馆子",
@@ -520,6 +526,13 @@ def test_relay_manual_covers_systems() -> None:
         "hongbao_ops",
         "拆 12",
         "看 12",
+        "买棚送礼也不算",
+        "升屋、搭棚屋也不算",
+        "赶海翻沙、工坊打捞",
+        "steward_ops 邻居",
+        "theater_ops 看板",
+        "和岸税同一周",
+        "以 menu 为准",
     ]
     missing = [n for n in needles if n not in text]
     assert not missing, f"relay_manual missing: {missing}"
@@ -636,6 +649,11 @@ def test_human_island_manual() -> None:
         "潮差",
         "潮锈",
         "买地买园不算",
+        "买棚、升屋、搭棚屋、给邻居送礼也不算",
+        "赶海翻沙",
+        "工坊打捞",
+        "连理所看档案",
+        "求婚发出要先打卡",
         "先托到 800",
         "引航",
         "欠岸维",
@@ -992,6 +1010,8 @@ def test_patron_pages_share_steward_key() -> None:
     assert 'id="play-lounge"' in play_html
     assert 'id="play-wall"' in play_html
     assert 'id="play-neighbors"' in play_html
+    assert "衣泊坊委托" in play_html
+    assert "不能扩产" in play_html
     assert 'id="play-me"' in play_html
     assert 'id="memory-modal"' in play_html
     assert 'id="play-today"' in play_html

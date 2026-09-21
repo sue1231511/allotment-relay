@@ -54,13 +54,26 @@ def test_levy_math() -> None:
 
 
 def test_human_week_id_cst_monday() -> None:
-    from server.disaster import human_week_id, week_flag_key
+    from server.disaster import cst_week_ordinal, human_week_id, week_flag_key
 
     # 2026-08-23 15:00 UTC = 2026-08-23 23:00 CST, Sunday of ISO week 34
     assert human_week_id(1787497200) == "2026-W34"
     # 2026-08-23 16:00 UTC = 2026-08-24 00:00 CST, Monday week 35
     assert human_week_id(1787500800) == "2026-W35"
     assert week_flag_key("2026-W35") == "weekly_tide:2026-W35"
+    assert cst_week_ordinal(1787497200) == 202634
+    assert cst_week_ordinal(1787500800) == 202635
+
+
+def test_fish_ban_week_matches_tax_week() -> None:
+    from server import fish_ban, fish_ecology
+    from server.disaster import cst_week_ordinal
+
+    assert fish_ban._week_id(1787497200) == 202634
+    assert fish_ban._week_id(1787500800) == 202635
+    assert fish_ecology._week_id(1787497200) == cst_week_ordinal(1787497200)
+    assert fish_ban.banned_species(202634) == fish_ban.banned_species(202634)
+    assert fish_ban.banned_species(202634) != fish_ban.banned_species(202635)
 
 
 def test_net_payout_uses_sell_cut() -> None:
@@ -204,6 +217,7 @@ def test_net_costs_four() -> None:
 if __name__ == "__main__":
     test_levy_math()
     test_human_week_id_cst_monday()
+    test_fish_ban_week_matches_tax_week()
     test_net_payout_uses_sell_cut()
     test_weekly_tide_only_over_30k()
     test_net_costs_four()

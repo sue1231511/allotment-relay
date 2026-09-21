@@ -32,7 +32,7 @@ CRAFT_HELP = """craft_ops 子命令（整句写进 command）：
   补网 — 网补丁 6 小时空网 -8%；有雾铅网坠优先贴，12 小时 -14%。不是 gear upgrade
   盐田 — 看池；灌 — 涨潮灌一池（5 精力）；收盐 — 晴天攒满 20 分钟后收海盐晶
   开池 / 开池 确认 — 加盐田（最多 3 口，40/68/96 票）
-  打捞 — 阵风中、阵风后晴天、周潮或船损才能下滩。不是 dig。夜光滤网减空捞
+  打捞 — 阵风中、阵风后晴天、周潮或船损才能下滩。不是 dig。夜光滤网减空捞。碰上禁捞渔获当场罚 15 票放生
   捞险 割绳|弃货|硬拽 — 打捞后小概率缆绳缠脚：割绳（漂绳×1 或 8 票）/ 弃货（刚捞的各减 1）/ 硬拽（12 精力更险）
   淬火 泼水|戴胚|硬取 — 金属件好了小概率烫手：泼水（盐×1 或 6 票）/ 戴胚（羊毛×1 或 8 票）/ 硬取（10 精力可能烫伤）。未处置不能 取
   陈列 / 捐 亮壳一套 — 看套 / 捐货换称呼或装饰。也可 捐 砧上全套
@@ -664,8 +664,13 @@ async def _salvage(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
         items, weights = [r[0] for r in table], [r[2] for r in table]
         item = random.choices(items, weights=weights, k=1)[0]
         qty = 2 if item == "drift_twine" and random.random() < 0.35 else 1
-        await db.add_item(conn, s["id"], item, qty)
-        got.append((item, qty))
+        from . import fish_ban as fish_ban_mod
+        ban_msg = await fish_ban_mod.maybe_release_item(conn, s["id"], item)
+        if ban_msg:
+            extra += f"；{ban_msg}"
+        else:
+            await db.add_item(conn, s["id"], item, qty)
+            got.append((item, qty))
         if random.random() < 0.06:
             await db.add_item(conn, s["id"], "craft_timber", 1)
             got.append(("craft_timber", 1))

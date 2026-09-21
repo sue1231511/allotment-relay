@@ -24,6 +24,7 @@ THEATER_HELP = """theater_ops 子命令（整句写进 command）：
   剧险 扶幕|换场|硬演 — 演出后小概率幕布卡住，未处置不能再 领薪。人类 /island 剧场看台也能点
   稿险 抚纸|压镇|硬投 — 投稿后小概率稿纸卡槽，未处置不能再 投稿。人类 /island 编剧社也能点
   试镜/对戏/演出只在小橘当晚开 stage 小剧场专场时开放；编剧社常开。不替代 bar_ops work 的考勤。
+  考勤逾期仍可看板 / 关系 / 编剧社只读；试镜、对戏、演出、领薪、投稿要先 bar_ops work。
   例子：看板 · 试镜 · 对戏 · 演出 · 领薪 · 剧险 扶幕 · 编剧社 · 投稿 岸上旧收音机 | 第一幕…… · 稿险 抚纸
   头粉=star_ops 应援榜第一名；头粉好感获取和每日上限翻倍，不翻倍工资。
   投稿不是 tale_ops accept / story_ops start（那是玩已有篇章）；稿费不是 领薪（那是专场工资）。不要发明 采纳 / 发稿费。
@@ -830,7 +831,14 @@ async def theater_ops(key_id: int, command: str) -> str:
     cmd = (command or "").strip()
     first, rest = _split_cmd(cmd)
     verb = first.lower()
-    s = await require_steward(key_id)
+    if verb in ("help", "?", "帮助"):
+        return THEATER_HELP
+    read_ok = verb in (
+        "", "看板", "status", "board",
+        "关系", "affinity",
+        "编剧社", "guild", "desk", "稿件", "scripts", "manuscripts",
+    )
+    s = await require_steward(key_id, exempt_duty=read_ok)
     if verb in ("剧险", "curtain", "幕险"):
         from . import theater_curtain_jam as curtain_mod
 
@@ -849,8 +857,6 @@ async def theater_ops(key_id: int, command: str) -> str:
         conn.row_factory = aiosqlite.Row
         if verb in ("", "看板", "status", "board"):
             return await _cmd_board(conn, s)
-        if verb in ("help", "?", "帮助"):
-            return THEATER_HELP
         if verb in ("编剧社", "guild", "desk", "稿件", "scripts", "manuscripts"):
             return await _cmd_guild(conn, s)
         if verb in ("投稿", "submit", "pitch"):

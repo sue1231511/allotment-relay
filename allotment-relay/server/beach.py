@@ -49,10 +49,14 @@ async def _grant_loot(
     item: str,
     qty: int,
 ) -> tuple[str, int]:
-    """发放赶海掉落；贝壳带品相。"""
+    """发放赶海掉落；贝壳带品相。禁捞渔获当场放生，不进袋。"""
     from . import cloth as cloth_mod
+    from . import fish_ban as fish_ban_mod
     from .catalog import item_label
     item = cloth_mod.maybe_upgrade_beach_fabric(item)
+    ban_msg = await fish_ban_mod.maybe_release_item(conn, steward_id, item)
+    if ban_msg:
+        return ban_msg, 0
     if item.startswith("shell_"):
         from . import lili_extras
         from collections import Counter
@@ -151,16 +155,17 @@ async def beach_ops(key_id: int, command: str) -> str:
             if season_dye:
                 extra_msg += f"，{season_dye}"
             from . import lili_extras
-            if await lili_extras.has_blessing(conn, s["id"], "fair_wind"):
+            if qty > 0 and await lili_extras.has_blessing(conn, s["id"], "fair_wind"):
                 await lili_extras.consume_blessing(conn, s["id"], "fair_wind")
                 bonus_label, _ = await _grant_loot(conn, s["id"], item, max(1, qty // 2))
                 extra_msg += f"，顺风 +{bonus_label}"
             from . import shaonian as shaonian_mod
-            if await shaonian_mod.beach_double(conn, s["id"]):
+            if qty > 0 and await shaonian_mod.beach_double(conn, s["id"]):
                 dlabel, _ = await _grant_loot(conn, s["id"], item, qty)
                 extra_msg += f"，赶海符翻倍 +{dlabel} x{qty}"
             from . import catches as catches_mod
-            await catches_mod.record_catch(conn, s["id"], item)
+            if qty > 0:
+                await catches_mod.record_catch(conn, s["id"], item)
             if tide == "ebb" and random.random() < 0.14:
                 bait = random.choice([x for x in BEACH_LOOT if x[0].startswith("bait_")])
                 await db.add_item(conn, s["id"], bait[0], 1)
@@ -205,7 +210,7 @@ async def beach_ops(key_id: int, command: str) -> str:
             )
             await conn.commit()
 
-        msg = f"赶海：{label} x{qty}{extra_msg}"
+        msg = f"赶海：{label} x{qty}{extra_msg}" if qty > 0 else f"赶海：{label}{extra_msg}"
         if storm_luck:
             msg += f"\n{storm_luck}"
         if dig_glitch:
@@ -274,11 +279,12 @@ async def beach_ops(key_id: int, command: str) -> str:
             label, qty = await _grant_loot(conn, s["id"], item, qty)
             charm_msg = ""
             from . import shaonian as shaonian_mod
-            if await shaonian_mod.beach_double(conn, s["id"]):
+            if qty > 0 and await shaonian_mod.beach_double(conn, s["id"]):
                 dlabel, _ = await _grant_loot(conn, s["id"], item, qty)
                 charm_msg = f"，赶海符翻倍 +{dlabel} x{qty}"
             from . import catches as catches_mod
-            await catches_mod.record_catch(conn, s["id"], item)
+            if qty > 0:
+                await catches_mod.record_catch(conn, s["id"], item)
             clock_msg = ""
             from . import hut as hut_mod
             hut_b = await hut_mod.get_bonuses(conn, s["id"])
@@ -310,7 +316,7 @@ async def beach_ops(key_id: int, command: str) -> str:
             betroth_find = await marriage_mod.maybe_place_find(conn, s["id"], "beach")
             await conn.commit()
 
-        msg = f"掏洞：{label} x{qty}{charm_msg}{clock_msg}"
+        msg = f"掏洞：{label} x{qty}{charm_msg}{clock_msg}" if qty > 0 else f"掏洞：{label}{charm_msg}{clock_msg}"
         if probe_glitch:
             msg += f"\n{probe_glitch}"
         msg += flavor.maybe_suffix([
