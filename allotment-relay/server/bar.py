@@ -240,7 +240,8 @@ async def _ensure_skills(conn: aiosqlite.Connection, steward_id: int) -> dict[st
 
 
 async def _league_completed(conn: aiosqlite.Connection) -> bool:
-    wid = db.week_id()
+    from .disaster import cst_week_ordinal
+    wid = cst_week_ordinal()
     cur = await conn.execute(
         "SELECT completed FROM league_week WHERE week_id=? AND completed=1", (wid,)
     )

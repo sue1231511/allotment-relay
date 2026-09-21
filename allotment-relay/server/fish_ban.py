@@ -8,7 +8,7 @@ from . import db
 from .catalog import SEA_CATCH
 
 FINE = 15
-BAN_SCOPE = "岸边网钓、出海归港、渔排收、赶海翻沙、工坊打捞碰上"
+BAN_SCOPE = "岸边网钓、出海归港、渔排收、赶海翻沙、工坊打捞、海上偶遇碰上"
 
 
 def _week_id(ts: int | None = None) -> int:

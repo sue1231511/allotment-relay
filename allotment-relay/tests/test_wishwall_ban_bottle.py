@@ -97,6 +97,7 @@ def test_ban_copy_covers_voyage() -> None:
     assert "渔排收" in text
     assert "赶海翻沙" in text
     assert "工坊打捞" in text
+    assert "海上偶遇" in text
     assert "不能卖" in text or "不能进袋" in text
 
 
@@ -281,6 +282,55 @@ async def _test_salvage_releases_banned_fish() -> None:
         health.random.random = old_hrand
 
 
+def test_event_loot_releases_banned_fish() -> None:
+    asyncio.run(_test_event_loot_releases_banned_fish())
+
+
+async def _test_event_loot_releases_banned_fish() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="ban-event-"))
+    db = await _boot(tmp)
+    from server import events, fish_ban
+
+    _, sid = await _enroll(db, "eventban@example.com", "偶遇人", tickets=200)
+    s = await db.get_steward_by_id(sid)
+    async with db.connect() as conn:
+        with patch.object(fish_ban, "banned_species", return_value=["herring"]):
+            msgs, ledger = await events._apply_effects(
+                conn, s, ["loot:fish_herring:2"], plot_id_holder=[None]
+            )
+        await conn.commit()
+    assert not ledger.get("loot"), ledger
+    assert ledger.get("released"), ledger
+    assert any("放生" in m or "禁捕" in m for m in ledger["released"]), ledger
+    lines = await _ledger_lines_for(sid, ledger)
+    assert any("放生" in ln or "禁捕" in ln for ln in lines), lines
+    stock = await db.get_satchel(sid)
+    assert stock.get("fish_herring", 0) == 0, stock
+    async with db.connect() as conn:
+        tickets = int((await (await conn.execute(
+            "SELECT tickets FROM stewards WHERE id=?", (sid,)
+        )).fetchone())[0])
+    assert tickets == 200 - fish_ban.FINE
+
+    # 非禁捞种仍进袋
+    async with db.connect() as conn:
+        with patch.object(fish_ban, "banned_species", return_value=["herring"]):
+            _, ok_ledger = await events._apply_effects(
+                conn, s, ["loot:fish_mackerel:1"], plot_id_holder=[None]
+            )
+        await conn.commit()
+    assert ("fish_mackerel", 1) in (ok_ledger.get("loot") or []), ok_ledger
+    stock = await db.get_satchel(sid)
+    assert stock.get("fish_mackerel", 0) == 1, stock
+
+
+async def _ledger_lines_for(sid: int, ledger: dict) -> list[str]:
+    from server import db, events
+
+    async with db.connect() as conn:
+        return await events._ledger_lines(conn, sid, ledger)
+
+
 if __name__ == "__main__":
     test_bottle_wash_chance_exists()
     test_island_collections_entries_is_list()
@@ -292,4 +342,5 @@ if __name__ == "__main__":
     test_pen_harvest_releases_banned_fish()
     test_beach_loot_releases_banned_fish()
     test_salvage_releases_banned_fish()
+    test_event_loot_releases_banned_fish()
     print("ok")

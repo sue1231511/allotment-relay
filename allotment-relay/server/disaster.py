@@ -38,6 +38,15 @@ def cst_week_ordinal(ts: int | None = None) -> int:
     return iso.year * 100 + iso.week
 
 
+def cst_week_start(ts: int | None = None) -> int:
+    """东八区本周一 00:00 的 Unix 时间戳。和岸税、周潮、周目标、纪事同一周界。"""
+    dt = datetime.fromtimestamp(ts if ts is not None else db.now(), CST)
+    monday = dt.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(
+        days=dt.weekday()
+    )
+    return int(monday.timestamp())
+
+
 def week_flag_key(week_id: str | None = None) -> str:
     return f"{config.WEEKLY_TIDE_FLAG_PREFIX}{week_id or human_week_id()}"
 

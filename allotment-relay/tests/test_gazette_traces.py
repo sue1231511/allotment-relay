@@ -140,6 +140,40 @@ async def _test_empty_gazette_and_titles() -> None:
     assert "潮汐周报" in week, week
 
 
+def test_gazette_week_window_is_cst_monday() -> None:
+    asyncio.run(_test_gazette_week_window_is_cst_monday())
+
+
+async def _test_gazette_week_window_is_cst_monday() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="gazette-week-"))
+    db = await _boot(tmp)
+    _, sid = await _enroll(db, "weekgaz@example.com", "周报客")
+    from server import gazette
+
+    sunday = 1787497200  # 2026-08-23 23:00 CST, still W34
+    monday = 1787500800  # 2026-08-24 00:00 CST, W35
+    async with db.connect() as conn:
+        await conn.execute(
+            "INSERT INTO chronicle (action, actor_id, target_id, text, created_at) "
+            "VALUES (?,?,?,?,?)",
+            ("bar_order", sid, None, "上周那杯不该进本周", sunday),
+        )
+        await conn.execute(
+            "INSERT INTO chronicle (action, actor_id, target_id, text, created_at) "
+            "VALUES (?,?,?,?,?)",
+            ("bar_order", sid, None, "本周第一杯", monday + 3600),
+        )
+        await conn.commit()
+        data = await gazette.compile_week(conn, ts=monday + 2 * 86400)
+    assert data["week"] == 202635, data
+    assert gazette.week_start(monday + 2 * 86400) == monday
+    assert gazette.week_start(sunday) < monday
+    # 只有周一之后那杯算本周
+    assert data.get("lines") is not None
+    blob = " ".join(data["lines"])
+    assert "酒吧记了 1 杯" in blob, data
+
+
 def test_hui_http_skus() -> None:
     asyncio.run(_test_hui_http_skus())
 
@@ -183,6 +217,7 @@ async def _test_hui_http_skus() -> None:
 def main() -> None:
     test_help_copy()
     test_empty_gazette_and_titles()
+    test_gazette_week_window_is_cst_monday()
     test_hui_http_skus()
     print("gazette traces tests ok")
 

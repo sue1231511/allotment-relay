@@ -54,7 +54,7 @@ def test_levy_math() -> None:
 
 
 def test_human_week_id_cst_monday() -> None:
-    from server.disaster import cst_week_ordinal, human_week_id, week_flag_key
+    from server.disaster import cst_week_ordinal, cst_week_start, human_week_id, week_flag_key
 
     # 2026-08-23 15:00 UTC = 2026-08-23 23:00 CST, Sunday of ISO week 34
     assert human_week_id(1787497200) == "2026-W34"
@@ -63,6 +63,10 @@ def test_human_week_id_cst_monday() -> None:
     assert week_flag_key("2026-W35") == "weekly_tide:2026-W35"
     assert cst_week_ordinal(1787497200) == 202634
     assert cst_week_ordinal(1787500800) == 202635
+    # 周一 00:00 CST 就是这周的起点；周日夜里仍算上一周
+    assert cst_week_start(1787500800) == 1787500800
+    assert cst_week_start(1787497200) < 1787500800
+    assert cst_week_start(1787500800 + 3 * 86400) == 1787500800
 
 
 def test_fish_ban_week_matches_tax_week() -> None:
@@ -74,6 +78,19 @@ def test_fish_ban_week_matches_tax_week() -> None:
     assert fish_ecology._week_id(1787497200) == cst_week_ordinal(1787497200)
     assert fish_ban.banned_species(202634) == fish_ban.banned_species(202634)
     assert fish_ban.banned_species(202634) != fish_ban.banned_species(202635)
+
+
+def test_league_and_gazette_week_match_tax_week() -> None:
+    from server import gazette, multi
+    from server.disaster import cst_week_ordinal, cst_week_start
+
+    assert multi._week_id(1787497200) == 202634
+    assert multi._week_id(1787500800) == 202635
+    assert multi._week_id(1787497200) == cst_week_ordinal(1787497200)
+    assert gazette.week_start(1787500800) == cst_week_start(1787500800)
+    assert gazette.week_start(1787500800) == 1787500800
+    assert gazette.week_start(1787497200) == cst_week_start(1787497200)
+    assert gazette.week_start(1787497200) != gazette.week_start(1787500800)
 
 
 def test_net_payout_uses_sell_cut() -> None:
@@ -218,6 +235,7 @@ if __name__ == "__main__":
     test_levy_math()
     test_human_week_id_cst_monday()
     test_fish_ban_week_matches_tax_week()
+    test_league_and_gazette_week_match_tax_week()
     test_net_payout_uses_sell_cut()
     test_weekly_tide_only_over_30k()
     test_net_costs_four()

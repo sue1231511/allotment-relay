@@ -154,8 +154,10 @@ async def list_neighbors(steward: dict[str, Any], *, online_only: bool = False) 
     return "\n".join(lines)
 
 
-def _week_id() -> int:
-    return db.week_id()
+def _week_id(ts: int | None = None) -> int:
+    """和岸税/禁捕同一套「本周」：东八区周一换班，不是 UTC 周四。"""
+    from .disaster import cst_week_ordinal
+    return cst_week_ordinal(ts)
 
 
 def _day_id() -> int:

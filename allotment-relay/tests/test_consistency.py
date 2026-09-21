@@ -181,6 +181,7 @@ def test_mcp_descriptions() -> None:
         "堆肥桶 存 羊粪", "sow_all", "偷菜",
         "买棚送礼也不算", "升屋、搭棚屋也不算", "steward_ops 邻居", "theater_ops 看板",
         "和岸税同一周", "以 menu 为准", "赶海翻沙、工坊打捞",
+        "海上偶遇", "和岸税、周目标同一周", "和岸税、禁捕、纪事同一周",
     ):
         assert needle in man, needle
     assert "平常回10" in STAR_HELP
@@ -365,6 +366,7 @@ def test_relay_manual_covers_systems() -> None:
         "买棚送礼也不算",
         "升屋、搭棚屋也不算",
         "赶海翻沙、工坊打捞",
+        "海上偶遇",
         "先托到 800",
         "kitchen_ops eat",
         "下馆子",
@@ -529,9 +531,12 @@ def test_relay_manual_covers_systems() -> None:
         "买棚送礼也不算",
         "升屋、搭棚屋也不算",
         "赶海翻沙、工坊打捞",
+        "海上偶遇",
         "steward_ops 邻居",
         "theater_ops 看板",
         "和岸税同一周",
+        "和岸税、周目标同一周",
+        "和岸税、禁捕、纪事同一周",
         "以 menu 为准",
     ]
     missing = [n for n in needles if n not in text]
@@ -652,6 +657,8 @@ def test_human_island_manual() -> None:
         "买棚、升屋、搭棚屋、给邻居送礼也不算",
         "赶海翻沙",
         "工坊打捞",
+        "海上偶遇",
+        "周目标和本周纪事都跟岸税一样",
         "连理所看档案",
         "求婚发出要先打卡",
         "先托到 800",
