@@ -600,7 +600,7 @@ def _catalog_text(score: int) -> str:
     for key in order:
         lines.extend(groups[key])
         lines.append("")
-    lines.append("buy 物品 [数量] · gift 物品 [数量] · 中文名或 id 都行。例：buy 甘蓝种 2；工具/渔具/嫁妆一次 1")
+    lines.append("buy 物品 [数量] · gift 物品 [数量] · 中文名或 id 都行。例：buy 甘蓝种 2（货架上写成白菜种（羽衣甘蓝））；工具/渔具/嫁妆一次 1")
     lines.append("系统回收进价九成（退货少亏一成），别反复倒卖当正业")
     lines.append("可叠放货满一组会开下一组（MC 式；工具只能 1）")
     lines.append("送礼一次一笔，件数不叠；4 心起减半，8 心起更慢")
@@ -617,7 +617,7 @@ async def tt_ops(key_id: int, command: str) -> str:
         return (
             "visit_ops tt — Tt酱杂货店\n"
             "  status / catalog — 货架与好感\n"
-            "  buy 物品 [数量] — 种子/饲料/渔网钓竿/蚯蚓饵/锄铲/剪刀挤奶器/嫁妆柜。例：buy 甘蓝种 2。工具/渔具/嫁妆一次 1\n"
+            "  buy 物品 [数量] — 种子/饲料/渔网钓竿/蚯蚓饵/锄铲/剪刀挤奶器/嫁妆柜。例：buy 甘蓝种 2（货架写成白菜种（羽衣甘蓝））。工具/渔具/嫁妆一次 1\n"
             "  种子看季节（一周一季）：catalog 标当季/休市；过季买不了，等到开窗或 sow 棚1\n"
             "  货架货系统回收进价九成，退货少亏一点，别买了再 tote_ops vend 当印钞\n"
             "    可叠放货满一组会开下一组；工具只能 1。潮柜格满了先 vend 或 hut_ops 冰柜 取\n"
@@ -935,15 +935,13 @@ SHELF_TABS = (
     ("dowry", "嫁妆", ("dowry",)),
 )
 
-_SHELF_ALIAS = {"kale": "白菜", "beet": "胡萝卜", "fogpea": "番茄"}
-
-
 def _shelf_label(item: str) -> str:
     if item.startswith("seed_"):
         crop = item[5:]
-        nick = _SHELF_ALIAS.get(crop)
-        if nick:
-            return f"{nick}种"
+        from .catalog import CROP_FACE, crop_face_name
+
+        if crop in CROP_FACE:
+            return crop_face_name(crop, seed=True)
     return _item_label(item)
 
 

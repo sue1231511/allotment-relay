@@ -5,7 +5,7 @@ from typing import Any
 
 from . import db, steward_dashboard, world
 from . import mcp_dispatch as mux
-from .catalog import CROPS
+from .catalog import CROP_FACE, CROPS, crop_face_name
 
 
 def _tools() -> dict[str, Any]:
@@ -59,7 +59,7 @@ PLACES: list[dict[str, Any]] = [
             {"label": "近海出发", "note": "开船出海", "tool": "tide_ops", "command": "voyage depart near"},
             {"label": "看船", "note": "船况与航程", "tool": "tide_ops", "command": "voyage status"},
             {"label": "看渔排", "note": "几口池、有没有苗。不是撒网", "tool": "tide_ops", "command": "渔排"},
-            {"label": "搭渔排", "note": "第一口 140 票。欠岸税或岸维不能扩产", "tool": "tide_ops", "command": "搭排"},
+            {"label": "搭渔排", "note": "第一口 140 票。欠岸税（口袋按周）或岸维（地和屋子每天的维修）不能扩产", "tool": "tide_ops", "command": "搭排"},
             {"label": "巡排", "note": "每 8 小时绕池一圈，可能捡到堆肥或饵", "tool": "tide_ops", "command": "巡排"},
             {"label": "投苗", "note": "空池投苗。写下品种，可带池号。例：灰鲱 或 沙鳗 2", "tool": "tide_ops", "command": "投苗"},
             {"label": "投饵", "note": "待投饵的池。不写池号会选饿的那口", "tool": "tide_ops", "command": "投饵"},
@@ -462,10 +462,12 @@ def seed_options(stock: list[dict[str, Any]]) -> list[dict[str, Any]]:
         meta = CROPS.get(crop) or {}
         aliases = meta.get("aliases") or []
         sow_name = aliases[0] if aliases else (meta.get("name") or crop)
+        face = crop_face_name(crop, seed=True) if crop in CROP_FACE else sow_name
         out.append({
             "item": item,
             "crop": crop,
             "name": sow_name,
+            "label": face,
             "full": meta.get("name") or crop,
             "emoji": meta.get("emoji") or "🌱",
             "qty": qty,

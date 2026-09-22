@@ -2655,9 +2655,39 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
                     can=True,
                     target="status",
                 ))
+        from . import hut_domestic as dom_mod
+
+        dom = await dom_mod.assess(
+            conn, s["id"],
+            hut_built=True,
+            hut_level=lvl,
+            has_fridge=has_fridge,
+        )
+        if dom["due"] > 0:
+            unpaid = "、".join(
+                f"{f['label']} {f['cost']} 票" for f in dom["fees"] if not f["paid"]
+            )
+            home_items.append(_sku(
+                sid="domestic",
+                kind="domestic",
+                name="家维",
+                emoji="🪔",
+                note=f"{unpaid}。差 {dom['due']} 票。灯油、冷藏、防潮，不缴不封屋。",
+                detail="家维是小屋每天的灯油、冰箱冷藏和防潮。不缴不封屋，只让睡得浅、冰箱慢、灶更费神。岸税在潮生会按周交口袋里的票，岸维在潮生会按天交地和屋子的维修。修屋顶、修冰箱是坏了才修。",
+                price="交",
+                can=tickets >= int(dom["due"]),
+                target="",
+            ))
         if nxt:
-            if not dues_ok:
-                up_note = "欠岸税或岸维，交清才能升屋。去潮生会。"
+            if tax_owed and upkeep_owed:
+                up_note = (
+                    f"欠岸税 {tax_owed}（口袋按周交）和岸维 {upkeep_owed}（地和屋子每天的维修）。"
+                    "交清才能升屋。去潮生会分栏交。"
+                )
+            elif tax_owed:
+                up_note = f"欠岸税 {tax_owed}。口袋里的票，按周交。去潮生会岸税栏，交清才能升屋。"
+            elif upkeep_owed:
+                up_note = f"欠岸维 {upkeep_owed}。铺开的地和屋子，每天的维修。去潮生会岸维栏，交清才能升屋。"
             elif tickets < upgrade_cost:
                 up_note = f"要 {upgrade_cost} 票，现在 {tickets}。"
             else:

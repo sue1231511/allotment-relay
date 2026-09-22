@@ -95,14 +95,14 @@ async def steward_ops(command: str = "sheet") -> str:
     )
 
 
-@mcp.tool(description="份地果园与田间事件。空=指令表。例：status · sow 1 甘蓝 · 肥力 · 虫害 1 施药 · 虫害 1 填土 · 留种 甘蓝 · weather · 浇水。tend 极小概率鸟啄（收成-1，极少落该作物种；steward_ops 灾档 近日已结）/灶台难点火/潮气发潮/鱼线打结（debuff 记一次消一次）。肥力/轮作、虫害、地陷、留种。weather 附本周纪事。勿 sow_all/plant；repair≠岸维。人类 /island「田间事件」处置虫害；repair 只修 steward_incidents。")
+@mcp.tool(description="份地果园与田间事件。空=指令表。例：status · sow 1 甘蓝 · 肥力 · 虫害 1 施药 · 虫害 1 填土 · 留种 甘蓝 · weather · 浇水。tend 极小概率鸟啄（收成-1，极少落该作物种；steward_ops 灾档 近日已结）/灶台难点火/潮气发潮/鱼线打结（debuff 记一次消一次）。肥力/轮作、虫害、地陷、留种。weather 附本周纪事。勿 sow_all/plant；repair≠岸维。起步三样写成白菜（羽衣甘蓝）、胡萝卜（甜菜）、番茄（雾豌豆），sow 仍认甘蓝/甜菜/雾豌豆。人类 /island「田间事件」处置虫害；repair 只修 steward_incidents。")
 async def plot_ops(
     command: Annotated[str, Field(description="incident status；repair 编号。肥力 · 虫害 1 手工|施药|拔除|不管（温室漏风 补网|通风|不管；地陷 填土|围起来|不管）· 留种 作物。空=指令表。")] = "",
 ) -> str:
     return await mux._call_ops(mux.plot_bundle, _kid(), command)
 
 
-@mcp.tool(description="小屋潮柜床畜栏腌晾家维杂务。空=列表。例：status · 睡 · 家维 · 家维 交 · 杂务 自修 · 修屋顶 · 修冰箱 · 修灶 · 泡澡 · 读书 · barn breed 1 · barn 惊逃 1 诱回 · barn 闹脾气 哄 · barn 起名 1 豆花 · 腌 甘蓝 4。status 附闭环提示（鱼/柜/灶/帆/待选）。寻回逃畜极少跟足迹摸到潮边藏货（急追略高）。家维=灯油/冷藏/防潮（不缴只降睡/保鲜/灶效，不封房）；杂务=结霜/门轴等三选一。屋顶/厨电耐久低有惩罚。泡澡≠kitchen_ops 泡。mascot upkeep≠岸维。人类 /island 小屋可点配种/寻回/修屋顶/修厨电/泡澡/读书。")
+@mcp.tool(description="小屋潮柜床畜栏腌晾家维杂务。空=列表。例：status · 睡 · 家维 · 家维 交 · 杂务 自修 · 修屋顶 · 修冰箱 · 修灶 · 泡澡 · 读书 · barn breed 1 · barn 惊逃 1 诱回 · barn 闹脾气 哄 · barn 起名 1 豆花 · 腌 甘蓝 4。status 附闭环提示（鱼/柜/灶/帆/待选）。寻回逃畜极少跟足迹摸到潮边藏货（急追略高）。家维=灯油/冷藏/防潮（不缴只降睡/保鲜/灶效，不封房）；杂务=结霜/门轴等三选一。屋顶/厨电耐久低有惩罚。泡澡≠kitchen_ops 泡。mascot upkeep≠岸维。人类 /island 小屋可点配种/寻回/修屋顶/修厨电/泡澡/读书；欠家维时列表有「家维」（灯油/冷藏/防潮），点一下交清，不是岸税也不是岸维。")
 async def hut_ops(command: str = "") -> str:
     return await mux._call_ops(mux.hut_bundle, _kid(), command)
 

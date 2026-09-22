@@ -8,6 +8,7 @@ from . import config, db, events, flavor, farming, health, survival, world
 from . import commons
 from .catalog import (
     CROPS,
+    crop_face_name,
     resolve_crop_key,
     resolve_item_key,
     unknown_crop_message,
@@ -58,7 +59,8 @@ def _parcel_line(plot: dict) -> str:
     meta = CROPS.get(plot["crop"], {"name": plot["crop"], "emoji": "🌱"})
     state = farming.parcel_status(plot)
     extra = farming.parcel_extra(plot)
-    return f"  {label}{gh}: {meta['emoji']}{meta['name']}（{state}{extra}）"
+    shown = crop_face_name(plot["crop"])
+    return f"  {label}{gh}: {meta['emoji']}{shown}（{state}{extra}）"
 
 
 async def _load_named_plot(
@@ -176,7 +178,7 @@ async def relay_manual() -> str:
         "  ④ plot_ops tend · 浇水 · 施肥 — 不写地块则全部待打理/能浇/能施的地；写地块只动一块。一茬浇水和施肥各一次。肥料不够施肥会停",
         "  ⑤ 等熟了 plot_ops gather — 全收；或 gather 1 只收 1 号",
         "  ⑥ tote_ops list 看行囊 · tote_ops vend 甘蓝 3 卖票",
-        "  ⑦ 种子不够：visit_ops tt catalog · visit_ops tt buy 甘蓝种 2 · plot_ops buy 5 甘蓝",
+        "  ⑦ 种子不够：visit_ops tt catalog · visit_ops tt buy 甘蓝种 2 · plot_ops buy 5 甘蓝（货架和行囊写成白菜种（羽衣甘蓝），口头写甘蓝或白菜都行）",
         "     人类上手页份地栏和手机地图份地都有地况条，份地地况写成熟、待打理、待浇水各几块；底下都能一键浇水/打理/施肥/收获；买种可一次买多份。没有一键种菜。杂货铺种子饲料点开能改数量，一次最多 24。",
         "     人类手机地图：进广场点杂货铺，先看店景；再点一下，Tt酱半身立绘和货架一起出现。",
         f"  ⑧ 每 {BAR_MANDATORY_DAYS} 天必须 bar_ops work 一次（暮/夜上工；逾期锁份地/出海/行囊/崖矿/工坊/衣泊坊委托；诊所、吃饭、酒吧、潮下、换衣服、小屋 status、steward_ops 邻居、theater_ops 看板、marriage_ops 档案、潮闻/故事列表、周目标看板仍可用）",
@@ -365,7 +367,7 @@ async def relay_manual() -> str:
         "  买地：起步 3 块，露天无上限。plot_ops 买地 看价钱和开垦时间；买地 确认 付钱。第 4 块起 80/120/180/260/360 票（差额每次多 20），开垦 30/45/60/90/120 分钟，之后以此类推。份地不种果树。超出起步每天岸维 10 票/块，铺多了加档 18/28",
         "  果园：起步 3 个树位，无上限，比份地贵（树种一次能连摘）。plot_ops 果园 / 买园 看价；买园 确认 付钱。第 4 树位起 160/240/360/520/720 票（同档份地两倍），开垦比同档份地多 15 分钟。只种果树：sow 园1 橘子 · sow 园1 芒果 · 果园 sow 1 芒果。收：果园 gather · gather 园1 · shake 园1。超出起步每天岸维 20 票/树位，铺多了加档 32/48",
         "  季节：一周一季（春→夏→秋→冬循环，现实 7 天换一季）。买种 + 露天/果园 sow 须当季；已种的继续长、继续收。行囊过季种子等到开窗",
-        "  甘蓝/甜菜/雾豆/浅海藻 全年可种。潮棉春夏、岸麻秋冬（衣泊坊衣料，不能当菜吃）。plot_ops catalog / weather 看当季可种；过季 sow/buy/tt buy 种子会拒，并写下一开窗季节",
+        "  白菜（羽衣甘蓝）/胡萝卜（甜菜）/番茄（雾豌豆）/浅海藻 全年可种。店、种植面板、地块和行囊都写成这个样子。口头仍可 sow 甘蓝 / 甜菜 / 雾豌豆，也可写白菜 / 胡萝卜 / 番茄。潮棉春夏、岸麻秋冬（衣泊坊衣料，不能当菜吃）。plot_ops catalog / weather 看当季可种；过季 sow/buy/tt buy 种子会拒，并写下一开窗季节",
         "  温室无上限：plot_ops 买棚 看价；买棚 确认 / shed erect 付钱。第 1 座 180 票马上能种，之后 310/500/750/1060… 比份地更陡，要开垦。每座每天岸维 30 票，铺多了加档 48/70",
         "  槽位 棚1、棚2…；sow 99 仍是第一座。不占露天份地，偷不到；温室种菜种树都不受季节（sow 棚1 橘子 / sow 99 甘蓝）",
         "  监控 plot_ops camera install 地块（15票）记偷菜日志、提高抓贼；camera check / remove",
@@ -495,7 +497,7 @@ async def relay_manual() -> str:
         "  水层 tide_ops 水层 岸带|栈桥|近海|礁|船尾|外海|深槽 定下次网/钓海域；钩/卷线器 gear status 看，挂底 tide_ops 解挂",
         "  大鱼搏斗：稀有鱼可能触发 tide_ops 搏鱼 硬拉|放走|切线（不进袋直到硬拉赢）",
         "  船部件 tide_ops voyage 部件 / 部件 修 — 十二件（帆舵灯锚缆泵舱冰网机钟罗），低了加出海失败；舱低少装货、冰低鱼易擦伤、网机低撒网更易空网、钟低偏航、罗经低黑旗谈和更难（修默认 22 票，铜钉省 6）。plot_ops tend 偶发鸟啄/灶台/潮气/鱼线打结（鸟啄极少落种；切线或搏鱼切线极少海玻璃或旧钩下次坐钓捎回；硬撑归港见漂流箱）。tide_ops net 挂水草（下次撒网消 debuff 时极少抠出饵/漂绳）、雨风暴撒网/赶海 dig 极少特殊贝壳；hut_ops barn 寻回逃畜极少跟足迹摸到潮边藏货。dig 铲钝（各记一次消一次）。畜栏 hut_ops barn breed 1 配种 · 惊逃 1 诱回|围栏|急追 · recover 1 等同诱回 · status 看性格",
-        "  船只履历 tide_ops voyage 履历（含禁捕放生）；畜栏 hut_ops barn 履历 · 起名 1 名字；小屋 hut_ops 家维 · 家维 交（灯油/冷藏/防潮）· 杂务 自修|请匠|不管 · 修屋顶 · 修冰箱 · 修灶",
+        "  船只履历 tide_ops voyage 履历（含禁捕放生）；畜栏 hut_ops barn 履历 · 起名 1 名字；小屋 hut_ops 家维 · 家维 交（灯油/冷藏/防潮，不是岸税也不是岸维）· 杂务 自修|请匠|不管 · 修屋顶 · 修冰箱 · 修灶。人类 /island 小屋欠着时列表有「家维」，写着灯油/冷藏/防潮，点一下交清",
         "  kitchen_ops cook 会吃食材品质涨星级；menu 列定点+brew（条数以 menu 为准）。特殊菜：黑盐炖鱼 · 雾菇汤 · 灯笼鱼刺身 · 卤边潮锅（eat 有增益/代价，适合 shop stock）",
         "  井蚀 undertide_ops descend/enter 磨损井壁；蚀≥70 可能井裂 → 井险 清井|绑索|硬闯（硬下 enter/descend 会拦）。清井=20票；人类 /island 恶猫钱庄也能点",
         "  家具套装 hut_ops status 看「套装」：灶链/咸鲜排/眠巢/防风铃阵/书海角。成婚且 home 登记时睡觉/看屋/灶台 brew 偶发家庭小事件",

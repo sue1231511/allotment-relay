@@ -34,6 +34,7 @@ TITLES = {
     "barn_pedigree": "畜栏履历",
     "repair_appliance": "修好了",
     "repair_roof": "修好了",
+    "domestic": "家维交了",
     "bath": "泡过了",
     "read": "读过了",
     "sell_fit": "卖掉了",
@@ -238,6 +239,8 @@ def _command(kind: str, target: str) -> tuple[str, str]:
         raise ApiError("BAD_REQUEST", "只能修冰箱或灶台。")
     if kind == "repair_roof":
         return "hut", "修屋顶"
+    if kind == "domestic":
+        return "hut", "家维 交"
     if kind == "bath":
         return "hut", "泡澡"
     if kind == "read":

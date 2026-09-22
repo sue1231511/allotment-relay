@@ -27,7 +27,7 @@ export function renderPlantPanel(root, { onSelect, onPlant, onClose }) {
         <div class="island-plant-hero">
           <span class="island-crop-art is-lg">${selected ? cropArt(selected.key, "ripe") : ""}</span>
           <b>${esc(selected ? selected.label : "—")}</b>
-          <small>${esc(selected ? `${selected.name}种 ×${selected.seed_qty}` : "行囊里没有能种的种子")}</small>
+          <small>${esc(selected ? `种子 ×${selected.seed_qty}` : "行囊里没有能种的种子")}</small>
         </div>
         <button type="button" class="island-plant-arrow" data-act="next" aria-label="下一种">›</button>
       </div>

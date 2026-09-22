@@ -113,6 +113,10 @@ function turnPage(delta, sheet, handlers) {
   renderBag(sheet, handlers);
 }
 
+function shownName(it) {
+  return (it && (it.label || it.name || it.item)) || "";
+}
+
 function tapSlot(sheet, it, { onEat, onVend }) {
   const name = it.name || it.item;
   const eat = !!it.can_eat;
@@ -137,6 +141,7 @@ function showSlotPop(sheet, it, { onEat, onVend }) {
   const pop = sheet.querySelector("#island-bag-pop");
   if (!pop) return;
   const name = it.name || it.item;
+  const shown = shownName(it);
   const price = it.vend_price ? `${it.vend_price}票` : "";
   const eat = !!it.can_eat;
   const vend = it.can_vend !== false;
@@ -147,7 +152,7 @@ function showSlotPop(sheet, it, { onEat, onVend }) {
   if (vend) acts.push(`<button type="button" class="island-btn primary" data-vend="${esc(name)}">卖${price ? ` ${esc(price)}` : ""}</button>`);
   if (!acts.length) acts.push(`<button type="button" class="island-btn" data-pop-close>收起</button>`);
   pop.innerHTML = `
-    <p>${esc(name)} ×${esc(it.qty)}</p>
+    <p>${esc(shown)} ×${esc(it.qty)}</p>
     ${storyHtml}
     <div class="island-bag-pop-acts">
       ${acts.join("")}
@@ -173,11 +178,12 @@ function slotMarkup(it, index) {
     return `<button type="button" class="island-bag-slot is-empty" tabindex="-1" aria-hidden="true"></button>`;
   }
   const name = it.name || it.item;
+  const shown = shownName(it);
   const acts = [];
   if (it.can_eat) acts.push("吃");
   if (it.can_vend !== false) acts.push("卖");
   return `
-    <button type="button" class="island-bag-slot" data-slot="${esc(name)}" data-index="${index}" ${it.can_eat ? `data-eat="${esc(name)}"` : ""} ${it.can_vend !== false ? `data-vend="${esc(name)}"` : ""} aria-label="${esc(name)} ×${esc(it.qty)}${acts.length ? `，${acts.join("或")}` : ""}">
+    <button type="button" class="island-bag-slot" data-slot="${esc(name)}" data-index="${index}" ${it.can_eat ? `data-eat="${esc(name)}"` : ""} ${it.can_vend !== false ? `data-vend="${esc(name)}"` : ""} aria-label="${esc(shown)} ×${esc(it.qty)}${acts.length ? `，${acts.join("或")}` : ""}">
       ${itemGlyph(it)}
       <span class="island-bag-qty">${esc(it.qty)}</span>
     </button>

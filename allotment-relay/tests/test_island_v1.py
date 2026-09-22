@@ -95,8 +95,8 @@ async def _test_island_v1_api() -> None:
     farm_body = farm0.json()["farm"]
     panel = farm_body["panel"]
     labels = [c["label"] for c in panel]
-    assert panel[0]["key"] == "kale" and panel[0]["label"] == "白菜", panel[0]
-    assert "胡萝卜" in labels and "番茄" in labels
+    assert panel[0]["key"] == "kale" and panel[0]["label"] == "白菜（羽衣甘蓝）", panel[0]
+    assert "胡萝卜（甜菜）" in labels and "番茄（雾豌豆）" in labels
     assert any(c["key"] == "chili" for c in panel)
     assert not any(c["key"] == "durian" for c in panel)
     orchard_panel = farm_body["panels"]["orchard"]
@@ -115,6 +115,7 @@ async def _test_island_v1_api() -> None:
     assert "seed_kale" in sku_ids and "tool_hoe" in sku_ids, sku_ids
     kale = next(row for row in shelf["items"] if row["id"] == "seed_kale")
     assert kale["can_buy"] is True and int(kale["price"]) > 0, kale
+    assert kale.get("label") == "白菜种（羽衣甘蓝）", kale
     shop_buy = client.post(
         "/api/v1/shop/buy",
         headers=_auth(key, {"Idempotency-Key": "shop-kale-1"}),
@@ -1275,7 +1276,7 @@ def test_island_page_is_modular() -> None:
     assert "warmScenesLater" in app
     assert "waitScenePics" in app
     assert html.count("island.css?v=soon-pop1") == 1
-    assert html.count("app.js?v=soon-pop1") == 1
+    assert html.count("app.js?v=face-dues1") == 1
     assert html.count("boot.js?v=keynorm1") == 1
     assert 'rel="preload"' in html
     assert "island-map.webp" in html

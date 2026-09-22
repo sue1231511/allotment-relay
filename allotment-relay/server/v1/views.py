@@ -5,8 +5,10 @@ from typing import Any
 
 from .. import config, farming, play, steward_dashboard, world
 from ..catalog import (
+    CROP_FACE,
     CROPS,
     ITEM_PRICES,
+    crop_face_name,
     is_fruit_item,
     is_raw_meat,
     item_vendable,
@@ -41,12 +43,22 @@ def _stock_row(it: dict[str, Any]) -> dict[str, Any]:
             "vend_price": price,
         }
     price = int(suggested_price(item) or ITEM_PRICES.get(item, 0) or 0)
-    return {
+    row = {
         **it,
         "can_eat": _can_eat(item),
         "can_vend": bool(item_vendable(item)),
         "vend_price": price,
     }
+    crop_key = ""
+    seed = False
+    if item.startswith("seed_"):
+        crop_key = item[5:]
+        seed = True
+    elif item.startswith("crop_"):
+        crop_key = item[5:]
+    if crop_key in CROP_FACE:
+        row["label"] = crop_face_name(crop_key, seed=seed)
+    return row
 
 
 def appearance_of(parcel: dict[str, Any]) -> str:
@@ -187,11 +199,12 @@ def panel_crops(
             continue
         aliases = meta.get("aliases") or []
         sow_name = aliases[0] if aliases else (meta.get("name") or key)
+        shown = crop_face_name(key) if key in CROP_FACE else (PANEL_ALIASES.get(key) or (meta.get("name") or sow_name))
         grow_min = int(meta.get("grow") or 0)
         out.append({
             "key": key,
-            "label": PANEL_ALIASES.get(key) or (meta.get("name") or sow_name),
-            "name": sow_name,
+            "label": shown,
+            "name": shown,
             "full": meta.get("name") or sow_name,
             "emoji": meta.get("emoji") or "🌱",
             "grow_min": grow_min,
@@ -215,6 +228,15 @@ def farm_parcel(view: dict[str, Any], raw: dict[str, Any] | None = None) -> dict
         kind = "orchard"
     else:
         kind = "home"
+    name = view.get("name")
+    label = view.get("label") or ""
+    if crop_key in CROP_FACE:
+        shown = crop_face_name(crop_key)
+        canon = str(meta.get("name") or "")
+        if canon and name == canon:
+            name = shown
+        if canon and canon in label:
+            label = label.replace(canon, shown, 1)
     return {
         "slot": view.get("slot"),
         "token": view.get("token"),
@@ -224,10 +246,10 @@ def farm_parcel(view: dict[str, Any], raw: dict[str, Any] | None = None) -> dict
         "state": view.get("state"),
         "appearance": visual_stage(raw, view),
         "crop": crop_key,
-        "name": view.get("name"),
+        "name": name,
         "emoji": view.get("emoji") or meta.get("emoji") or "🌱",
         "detail": view.get("detail") or "",
-        "label": view.get("label") or "",
+        "label": label,
         "watered": bool(view.get("watered")),
         "fertilized": bool(view.get("fertilized")),
         "tended": bool(view.get("tended")),

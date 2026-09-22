@@ -290,6 +290,21 @@ def next_levy_line(ts: int | None = None, *, done: bool = False) -> str:
     return "东八区每周一换班自动划税"
 
 
+def dues_plain(steward: dict[str, Any] | None, *, doing: str) -> str:
+    """人被拦住时看的一句：哪一笔、交什么、去哪一栏。"""
+    row = steward or {}
+    tax = int(row.get("tax_arrears") or 0)
+    upkeep = int(row.get("upkeep_arrears") or 0)
+    bits: list[str] = []
+    if tax > 0:
+        bits.append(f"欠岸税 {tax}（口袋里的票，按周交）")
+    if upkeep > 0:
+        bits.append(f"欠岸维 {upkeep}（铺开的地和屋子，每天的维修）")
+    if not bits:
+        return ""
+    return "，".join(bits) + f"。交清才能{doing}。去潮生会，岸税和岸维分两栏。小屋灯油是家维，不在潮生会。"
+
+
 def assert_clear(steward: dict[str, Any]) -> None:
     owed = int(steward.get("tax_arrears") or 0)
     if owed > 0:
