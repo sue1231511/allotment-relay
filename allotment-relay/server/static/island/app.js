@@ -19,8 +19,8 @@ import {
   tickQuarry,
   tickWorkshop,
 } from "./store.js?v=island-modulefix2";
-import { renderHud } from "./hud.js?v=dual-panels1";
-import { renderMap } from "./map.js?v=hotspot-fix1";
+import { renderHud } from "./hud.js?v=face-dues1";
+import { renderMap } from "./map.js?v=hotspot-fix2";
 import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=farm-batch1";
 import { renderShore, renderShoreYard, renderPortHub, renderBeachHub } from "./scenes/shore.js?v=island-modulefix2";
 import { renderPlaza } from "./scenes/plaza.js?v=island-modulefix2";
@@ -43,15 +43,15 @@ import { renderMarket } from "./scenes/market.js?v=island-modulefix2";
 import { renderTing } from "./scenes/ting.js?v=island-modulefix2";
 import { renderHui } from "./scenes/hui.js?v=island-modulefix2";
 import { renderLianli } from "./scenes/lianli.js?v=island-modulefix2";
-import { renderUndertide } from "./scenes/undertide.js?v=undertide-desks1";
+import { renderUndertide } from "./scenes/undertide.js?v=soon-pop1";
 let lighthouseMod = null;
 async function lighthouseScene() {
   if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-modulefix2");
   return lighthouseMod;
 }
-import { renderBag } from "./ui/bag.js?v=island-modulefix2";
+import { renderBag } from "./ui/bag.js?v=face-dues1";
 import { setBackChip, setBagChip } from "./ui/back-map.js?v=dual-panels1";
-import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=island-modulefix2";
+import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=face-dues1";
 import { popOut } from "./ui/pop.js?v=island-modulefix2";
 import { bgmMuted, playBgm, setBgmMuted, startIslandBgm, stopBgm } from "./ui/bgm.js?v=undertide-bgm1";
 import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showVendSheet, toast } from "./ui/modal.js?v=farm-batch1";
@@ -2905,11 +2905,22 @@ async function buyShopSku(item, qty = 1) {
   await act(() => api.shopBuy(item.id, n), { keepShop: true, listTop, quiet: true });
 }
 
+function duesToast() {
+  const dues = (state.me && state.me.dues) || {};
+  const tax = Number(dues.tax_arrears || 0);
+  const upkeep = Number(dues.upkeep_arrears || 0);
+  const bits = [];
+  if (tax > 0) bits.push(`欠岸税 ${tax}（口袋里的票，按周交）`);
+  if (upkeep > 0) bits.push(`欠岸维 ${upkeep}（铺开的地和屋子，每天的维修）`);
+  if (!bits.length) return "还有没交清的。去潮生会，岸税和岸维分两栏。";
+  return `${bits.join("，")}。交清才能开垦。去潮生会，岸税和岸维分两栏。`;
+}
+
 function tapGrass() {
   closePlant();
   hideModal();
   if (duesBlocked()) {
-    toast("欠岸税或岸维，交清才能开垦。先去潮生会。");
+    toast(duesToast());
     return;
   }
   const snap = landSnap();
@@ -3023,7 +3034,7 @@ async function sowSelected(crop) {
     toast("先点一块空地。");
     return;
   }
-  await act(() => api.sow(plotToken(plot), crop.name || crop.key), { keepPlant: false });
+  await act(() => api.sow(plotToken(plot), crop.key || crop.name), { keepPlant: false });
 }
 
 async function harvestAll() {

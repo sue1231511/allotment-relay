@@ -159,7 +159,7 @@ def test_play_http_revise_portrait() -> None:
             client = TestClient(app)
             play = client.get("/play")
             assert play.status_code == 200
-            assert "play.js?v=revise-portrait1" in play.text
+            assert "play.js?v=face-dues1" in play.text
             manual = client.get("/manual")
             assert manual.status_code == 200
             assert "想改座右铭 / 肖像" in manual.text
@@ -198,7 +198,7 @@ def test_help_and_manual_name_the_real_syntax() -> None:
     assert "play-profile-form" in play_js
     assert "play-profile-portrait" in play_js
     assert "steward_ops" in play_js and "revise" in play_js
-    assert "play.js?v=revise-portrait1" in play_html
+    assert "play.js?v=face-dues1" in play_html
 
     manual = (ROOT / "server/templates/partials/island-manual-content.html").read_text(
         encoding="utf-8"

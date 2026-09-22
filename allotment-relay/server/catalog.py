@@ -9,7 +9,7 @@ import re
 from .florist_catalog import FLORIST_ITEMS
 CROPS = {
     # ── 短茬（约 1 时，把数多）──
-    "kale":        {"name": "羽衣甘蓝", "emoji": "🥬", "seed_price": 7,  "sell": 16, "grow":  60, "yield": 5, "tier": 1, "spread": 0.30, "tags": ["leaf"], "aliases": ["甘蓝", "羽衣"]},
+    "kale":        {"name": "羽衣甘蓝", "emoji": "🥬", "seed_price": 7,  "sell": 16, "grow":  60, "yield": 5, "tier": 1, "spread": 0.30, "tags": ["leaf"], "aliases": ["甘蓝", "羽衣", "白菜"]},
     "garlic":      {"name": "大蒜",     "emoji": "🧄", "seed_price": 9,  "sell": 18, "grow":  65, "yield": 5, "tier": 1, "spread": 0.22, "tags": ["seasoning"], "seasons": ("秋", "冬")},
     "lemongrass":  {"name": "香茅",     "emoji": "🌿", "seed_price": 10, "sell": 20, "grow":  70, "yield": 5, "tier": 1, "spread": 0.22, "tags": ["seasoning", "tropic", "herb"], "seasons": ("春", "夏")},
     "chili":       {"name": "辣椒",     "emoji": "🌶️", "seed_price": 11, "sell": 22, "grow":  70, "yield": 5, "tier": 1, "spread": 0.24, "tags": ["seasoning"], "seasons": ("春", "夏")},
@@ -17,8 +17,8 @@ CROPS = {
     "ginger":      {"name": "姜",       "emoji": "🫚", "seed_price": 12, "sell": 24, "grow":  80, "yield": 5, "tier": 1, "spread": 0.22, "tags": ["seasoning", "tropic"], "seasons": ("春", "夏", "秋")},
     # ── 中茬（约 1.5~2 时）──
     "kelp":        {"name": "浅海藻",   "emoji": "🌿", "seed_price": 11, "sell": 24, "grow":  85, "yield": 4, "tier": 2, "spread": 0.30, "tags": ["sea"]},
-    "fogpea":      {"name": "雾豌豆",   "emoji": "🫛", "seed_price": 10, "sell": 23, "grow":  90, "yield": 4, "tier": 2, "spread": 0.28, "tags": ["legume"]},
-    "beet":        {"name": "甜菜",     "emoji": "🫘", "seed_price": 9,  "sell": 21, "grow": 100, "yield": 4, "tier": 2, "spread": 0.26, "tags": ["root"]},
+    "fogpea":      {"name": "雾豌豆",   "emoji": "🫛", "seed_price": 10, "sell": 23, "grow":  90, "yield": 4, "tier": 2, "spread": 0.28, "tags": ["legume"], "aliases": ["番茄", "雾豆"]},
+    "beet":        {"name": "甜菜",     "emoji": "🫘", "seed_price": 9,  "sell": 21, "grow": 100, "yield": 4, "tier": 2, "spread": 0.26, "tags": ["root"], "aliases": ["胡萝卜"]},
     "rye":         {"name": "黑麦",     "emoji": "🌾", "seed_price": 8,  "sell": 19, "grow": 120, "yield": 4, "tier": 2, "spread": 0.28, "tags": ["grain"], "seasons": ("秋", "冬")},
     "cotton":      {"name": "潮棉",     "emoji": "☁️", "seed_price": 11, "sell": 14, "grow": 100, "yield": 4, "tier": 2, "spread": 0.24, "tags": ["fiber"], "aliases": ["棉", "棉花"], "seasons": ("春", "夏")},
     "hemp":        {"name": "岸麻",     "emoji": "🌿", "seed_price": 12, "sell": 15, "grow": 110, "yield": 4, "tier": 2, "spread": 0.24, "tags": ["fiber"], "aliases": ["麻", "苎麻"], "seasons": ("秋", "冬")},
@@ -104,12 +104,35 @@ def is_fiber_item(item: str) -> bool:
     return item.startswith("crop_") and item[5:] in FIBER_CROPS
 
 
+# 店面叫法。括号里是行囊和地块上的本名，两处写在一起，买完能对上。
+CROP_FACE = {
+    "kale": ("白菜", "羽衣甘蓝"),
+    "beet": ("胡萝卜", "甜菜"),
+    "fogpea": ("番茄", "雾豌豆"),
+}
+
+
+def crop_face_name(key: str, *, seed: bool = False) -> str:
+    """人看见的作物名。起步三样把店名和本名写在一起。"""
+    meta = CROPS.get(key) or {}
+    pair = CROP_FACE.get(key)
+    if pair:
+        nick, canon = pair
+        if seed:
+            return f"{nick}种（{canon}）"
+        return f"{nick}（{canon}）"
+    body = str(meta.get("name") or key)
+    return f"{body}种" if seed else body
+
+
 _CROP_SUFFIXES = ("种子", "种", "苗")
 
 
 def resolve_crop_key(token: str) -> str | None:
     """英文 key、中文全名、别名、去后缀种/种子 均可解析。"""
     raw = token.strip()
+    if "（" in raw:
+        raw = raw.split("（", 1)[0].strip()
     if not raw:
         return None
 

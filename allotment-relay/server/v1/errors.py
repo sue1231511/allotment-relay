@@ -44,6 +44,16 @@ def humanize(text: str) -> str:
     return cleaned or "这次没做成。"
 
 
+def _dues_locked_message(raw: str) -> str:
+    tax = "岸税" in raw
+    upkeep = "岸维" in raw or "维修" in raw
+    if tax and not upkeep:
+        return "欠岸税。这是口袋里按周交的票，去潮生会点岸税那一栏。小屋灯油是家维，不在这儿。"
+    if upkeep and not tax:
+        return "欠岸维。这是铺开的地和屋子每天的维修，去潮生会点岸维那一栏。不是岸税，也不是小屋家维。"
+    return "岸税和岸维都还欠着。岸税是口袋按周交的票，岸维是地和屋子每天的维修。去潮生会分栏交。"
+
+
 def classify(exc: BaseException) -> ApiError:
     raw = str(exc)
     msg = humanize(raw)
@@ -74,7 +84,7 @@ def classify(exc: BaseException) -> ApiError:
     if "还在开垦" in raw:
         return ApiError("NOT_READY", msg or "上一块还在开垦。", status=409, detail=msg)
     if ("欠" in raw) and ("岸税" in raw or "维修" in raw or "岸维" in raw):
-        return ApiError("DUES_LOCKED", "欠岸税或岸维，交清才能开垦。先去潮生会。", status=403, detail=msg)
+        return ApiError("DUES_LOCKED", _dues_locked_message(raw), status=403, detail=msg)
     if "已经浇过" in raw:
         return ApiError("ALREADY_DONE", "这块地这一茬已经浇过水了。", status=409, detail=msg)
     if "已经施过" in raw:

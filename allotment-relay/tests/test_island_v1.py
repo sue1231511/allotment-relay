@@ -95,8 +95,8 @@ async def _test_island_v1_api() -> None:
     farm_body = farm0.json()["farm"]
     panel = farm_body["panel"]
     labels = [c["label"] for c in panel]
-    assert panel[0]["key"] == "kale" and panel[0]["label"] == "白菜", panel[0]
-    assert "胡萝卜" in labels and "番茄" in labels
+    assert panel[0]["key"] == "kale" and panel[0]["label"] == "白菜（羽衣甘蓝）", panel[0]
+    assert "胡萝卜（甜菜）" in labels and "番茄（雾豌豆）" in labels
     assert any(c["key"] == "chili" for c in panel)
     assert not any(c["key"] == "durian" for c in panel)
     orchard_panel = farm_body["panels"]["orchard"]
@@ -115,6 +115,7 @@ async def _test_island_v1_api() -> None:
     assert "seed_kale" in sku_ids and "tool_hoe" in sku_ids, sku_ids
     kale = next(row for row in shelf["items"] if row["id"] == "seed_kale")
     assert kale["can_buy"] is True and int(kale["price"]) > 0, kale
+    assert kale.get("label") == "白菜种（羽衣甘蓝）", kale
     shop_buy = client.post(
         "/api/v1/shop/buy",
         headers=_auth(key, {"Idempotency-Key": "shop-kale-1"}),
@@ -1274,8 +1275,8 @@ def test_island_page_is_modular() -> None:
     assert "warmScenesInBackground" in (ROOT / "server/static/island/boot.js").read_text(encoding="utf-8")
     assert "warmScenesLater" in app
     assert "waitScenePics" in app
-    assert html.count("island.css?v=plot-overview2") == 1
-    assert html.count("app.js?v=plot-overview2") == 1
+    assert html.count("island.css?v=soon-pop1") == 1
+    assert html.count("app.js?v=face-dues1") == 1
     assert html.count("boot.js?v=keynorm1") == 1
     assert 'rel="preload"' in html
     assert "island-map.webp" in html
@@ -1391,6 +1392,7 @@ def test_island_page_is_modular() -> None:
     assert "island-hot" in map_js
     assert "data-href" in map_js
     assert 'go: "workshop"' in map_js
+    assert "left: 56, top: 24, w: 42, h: 14" in map_js
     assert 'go: "quarry"' in map_js
     assert '"/workshop"' not in map_js
     assert '"/quarry"' not in map_js
@@ -1404,6 +1406,14 @@ def test_island_page_is_modular() -> None:
     assert '"/lianli"' not in map_js
     assert 'go: "undertide"' in map_js
     assert '"/undertide"' not in map_js
+    ut_js = (ROOT / "server/static/island/scenes/undertide.js").read_text(encoding="utf-8")
+    for title in ("深坑", "凯斯酒馆", "地下监牢", "K室"):
+        assert title in ut_js
+    assert "data-undertide-soon" in ut_js
+    assert "showSoonPop" in ut_js
+    modal_js = (ROOT / "server/static/island/ui/modal.js").read_text(encoding="utf-8")
+    assert "功能开发中~" in modal_js
+    assert "island-soon" in (ROOT / "server/static/island/island.css").read_text(encoding="utf-8")
     assert "岸畔小馆" in map_js
     assert "972" in map_js
     assert "1619" in map_js

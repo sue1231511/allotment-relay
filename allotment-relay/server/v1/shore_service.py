@@ -231,7 +231,10 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
     can_dig = has_shovel and tide in ("ebb", "slack") and energy_now >= int(config.BEACH_ENERGY)
     can_probe = has_shovel and tide in ("ebb", "slack") and energy_now >= int(config.BEACH_PROBE_ENERGY)
     skiff = config.BOATS["skiff"]
-    can_buy_boat = (not boat_key) and tickets >= int(skiff["cost"])
+    from .. import tax as tax_mod
+
+    boat_dues = tax_mod.dues_plain(s, doing="买")
+    can_buy_boat = (not boat_key) and tickets >= int(skiff["cost"]) and not boat_dues
     can_depart = bool(boat_key) and not damaged and not sailing
     can_return = sailing and vstatus == "sailing"
     hailed = vstatus == "hailed"
@@ -561,7 +564,7 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
             kind="voyage",
             name="买小舢板",
             emoji="🛶",
-            note=f"{skiff['cost']} 票。欠岸税或岸维不能买。" if not boat_key else f"已有{boat_name}。",
+            note=(boat_dues or f"{skiff['cost']} 票。") if not boat_key else f"已有{boat_name}。",
             price=str(skiff["cost"]),
             can=can_buy_boat,
             target="buy skiff",
@@ -811,7 +814,7 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
                 kind="搭排",
                 name="搭渔排",
                 emoji="🪵",
-                note=f"{pen_view['erect_cost']} 票。欠岸税或岸维不能扩产。",
+                note=tax_mod.dues_plain(s, doing="搭") or f"{pen_view['erect_cost']} 票。",
                 price=str(pen_view["erect_cost"]),
                 can=bool(pen_view["can_erect"]),
                 target="",

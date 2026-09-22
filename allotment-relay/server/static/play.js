@@ -39,6 +39,34 @@ function duesUrgent(dash) {
   return Number(dues.tax_arrears || 0) > 0 || Number(dues.upkeep_arrears || 0) > 0;
 }
 
+const CROP_FACE = [
+  ["羽衣甘蓝种", "白菜种（羽衣甘蓝）"],
+  ["羽衣甘蓝", "白菜（羽衣甘蓝）"],
+  ["甜菜种", "胡萝卜种（甜菜）"],
+  ["甜菜", "胡萝卜（甜菜）"],
+  ["雾豌豆种", "番茄种（雾豌豆）"],
+  ["雾豌豆", "番茄（雾豌豆）"],
+];
+
+function faceCrop(name) {
+  const raw = String(name || "");
+  for (const pair of CROP_FACE) {
+    if (raw === pair[0]) return pair[1];
+  }
+  return raw;
+}
+
+function duesBlockText(dash) {
+  const dues = duesOf(dash);
+  const tax = Number(dues.tax_arrears || 0);
+  const upkeep = Number(dues.upkeep_arrears || 0);
+  const bits = [];
+  if (tax > 0) bits.push(`欠岸税 ${tax}（口袋里的票，按周交）`);
+  if (upkeep > 0) bits.push(`欠岸维 ${upkeep}（铺开的地和屋子，每天的维修）`);
+  if (!bits.length) return "还有没交清的。去潮生会，岸税和岸维分两栏。";
+  return `${bits.join("，")}。交清才能开垦。去潮生会分栏交。`;
+}
+
 function duesLine(dash) {
   const dues = duesOf(dash);
   const bits = [];
@@ -132,7 +160,7 @@ function showPlaceResult(text) {
 function stockPreview(limit = 3) {
   const stock = ((state.dash && state.dash.stock) || []).filter((it) => Number(it.qty) > 0);
   if (!stock.length) return '空';
-  return stock.slice(0, limit).map((it) => `${it.name || it.label || it.item} ×${it.qty}`).join(' · ');
+  return stock.slice(0, limit).map((it) => `${faceCrop(it.name || it.label || it.item)} ×${it.qty}`).join(' · ');
 }
 
 function placeContextRows(place) {
@@ -464,7 +492,7 @@ function plotCardHtml(p) {
         <span class="play-plot-slot">${esc(slotLabel)}</span>
         <span class="play-state">${esc(plotStateLabel(p.state))}</span>
       </div>
-      <div class="play-crop">${p.emoji ? esc(p.emoji) + ' ' : ''}${esc(p.name)}</div>
+      <div class="play-crop">${p.emoji ? esc(p.emoji) + ' ' : ''}${esc(faceCrop(p.name))}</div>
       <div class="play-detail">${esc(p.detail || '')}</div>
       <div class="acts">${plotButtons(p)}</div>
     </article>`;
@@ -483,7 +511,7 @@ function landExpandHtml(snap) {
   const quote = JSON.stringify({ tool: 'plot_ops', command: snap.quote_cmd });
   if (duesUrgent(state.dash)) {
     return `<div class="play-land-expand is-busy">
-      <span>欠岸税或岸维，交清才能开垦</span>
+      <span>${esc(duesBlockText(state.dash))}</span>
       <button type="button" class="play-mini-btn" data-act='${quote}'>看价</button>
       <button type="button" class="play-mini-btn primary" data-place="hui">去潮生会</button>
     </div>`;
@@ -598,7 +626,7 @@ function neighborSheet(person) {
     .slice(0, 8);
   const giftBtns = stock.map((it) => {
     const cmd = JSON.stringify({ tool: 'tote_ops', command: `gift ${name} ${it.name} 1` });
-    return `<button type="button" class="play-mini-btn" data-act='${cmd}'>送 ${esc(it.name)}</button>`;
+    return `<button type="button" class="play-mini-btn" data-act='${cmd}'>送 ${esc(faceCrop(it.name))}</button>`;
   }).join('');
   const ticketBtn = `<button type="button" class="play-mini-btn" data-act='${JSON.stringify({ tool: 'tote_ops', command: `gift ${name} 票 5` })}'>送 5 票</button>`;
   const rap = Number(person.rapport || 0);
@@ -657,7 +685,7 @@ function renderTote() {
     const mark = bits.length ? ' <small>履历</small>' : '';
     return `
     <button type="button" data-item="${esc(it.name)}" data-qty="${it.qty}"${title}>
-      ${esc(it.name)} ×${it.qty}${mark}
+      ${esc(faceCrop(it.name))} ×${it.qty}${mark}
     </button>`;
   }).join('');
 }
@@ -1142,7 +1170,7 @@ function renderStewardPage(data) {
     const bits = Array.isArray(it.story) ? it.story.filter(Boolean) : [];
     const title = bits.length ? ` title="${esc(bits.join(' / '))}"` : '';
     const mark = bits.length ? '<small>履历</small>' : '';
-    return `<span${title}><b>${esc(it.name || it.item || '')}</b><em>×${it.qty}</em>${mark}</span>`;
+    return `<span${title}><b>${esc(faceCrop(it.name || it.item || ''))}</b><em>×${it.qty}</em>${mark}</span>`;
   }).join('') : '<p class="muted">行囊空</p>';
 
   const gifts = data.gifts || [];
@@ -1471,7 +1499,7 @@ function sowSheet(token) {
     return !s.tree;
   });
   const sowBtns = seeds.map((s) => (
-    `<button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"sow ${token} ${s.name}"}'>${s.emoji || ''} ${s.name} ×${s.qty}</button>`
+    `<button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"sow ${token} ${s.name}"}'>${s.emoji || ''} ${esc(s.label || faceCrop(s.name))} ×${s.qty}</button>`
   )).join('');
   if (!seeds.length) {
     openSheet(`种到 ${token}`, `<p class="muted">口袋里没有能种在这儿的种。买当季或全年的，过季会拒。</p>${seedBuyHtml()}`);
@@ -1482,9 +1510,9 @@ function sowSheet(token) {
 
 function seedBuyHtml() {
   const crops = [
-    ["甘蓝", "甘蓝种"],
-    ["甜菜", "甜菜种"],
-    ["雾豌豆", "雾豆种"],
+    ["甘蓝", "白菜种（羽衣甘蓝）"],
+    ["甜菜", "胡萝卜种（甜菜）"],
+    ["雾豌豆", "番茄种（雾豌豆）"],
     ["浅海藻", "浅海藻种"],
   ];
   const rows = crops.map(([cmd, label]) => `
@@ -1502,7 +1530,7 @@ function seedBuyHtml() {
 }
 
 function buySeedSheet() {
-  openSheet('买种', `<p class="muted">买当季或全年种。甘蓝 / 甜菜 / 雾豆 / 浅海藻全年可种。过季会拒。</p>${seedBuyHtml()}`);
+  openSheet('买种', `<p class="muted">买当季或全年种。白菜（羽衣甘蓝）/ 胡萝卜（甜菜）/ 番茄（雾豌豆）/ 浅海藻全年可种。过季会拒。</p>${seedBuyHtml()}`);
 }
 
 function itemSheet(name) {

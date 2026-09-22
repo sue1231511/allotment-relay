@@ -17,8 +17,8 @@ export function renderHud() {
   const notes = [];
   const dues = me.dues || {};
   if (String(me.duty || "").includes("逾期")) notes.push({ go: "bar", text: "酒吧考勤逾期，去洗碗。" });
-  if (Number(dues.tax_arrears) > 0) notes.push({ go: "hui", text: `欠岸税 ${dues.tax_arrears}。` });
-  if (Number(dues.upkeep_arrears) > 0) notes.push({ go: "hui", text: `欠岸维 ${dues.upkeep_arrears}。` });
+  if (Number(dues.tax_arrears) > 0) notes.push({ go: "hui", text: `欠岸税 ${dues.tax_arrears}。口袋按周交，去潮生会岸税栏。` });
+  if (Number(dues.upkeep_arrears) > 0) notes.push({ go: "hui", text: `欠岸维 ${dues.upkeep_arrears}。地和屋子每天的维修，去潮生会岸维栏。` });
   if (me.satiety != null && Number(me.satiety) <= 20) notes.push({ go: "eatery", text: "饿了，去小馆或打开行囊吃一口。" });
   ribbon.hidden = notes.length === 0;
   ribbon.innerHTML = notes.map((n) => `<button type="button" data-go="${n.go}">${n.text}</button>`).join("");

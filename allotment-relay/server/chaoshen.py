@@ -1049,7 +1049,7 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
         ),
     ]
     tax_note = (
-        f"欠 {tax_owed}。口袋 {tickets}。"
+        f"欠 {tax_owed}。口袋里的票，按周交。现在口袋 {tickets}。"
         if tax_owed
         else (f"{tax_mine.get('band') or '免征'}档 · 周应约 {tax_mine.get('due_now') or 0}" if tax_mine else "看档表。")
     )
@@ -1069,7 +1069,7 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
             kind="pay",
             name="交清欠税",
             emoji="💰",
-            note=f"欠 {tax_owed}。能交多少交多少。" if tax_owed else "这会儿不欠岸税。",
+            note=f"欠 {tax_owed}。去这一栏交。不是岸维，也不是小屋家维。" if tax_owed else "这会儿不欠岸税。",
             detail="欠税时不能买地、买棚、买园、升屋、买船、开坑、升镐。",
             price="交" if tax_owed else "看",
             can=bool(tax_owed and tickets > 0 and not rush_block),
@@ -1087,7 +1087,7 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
         ),
     ]
     upkeep_note = (
-        f"欠 {upkeep_owed}。" + ("小馆已停堂。" if upkeep_mine.get("shop_paused") else "")
+        f"欠 {upkeep_owed}。铺开的地和屋子，每天的维修。" + ("小馆已停堂。" if upkeep_mine.get("shop_paused") else "")
         if upkeep_owed
         else f"日应约 {upkeep_mine.get('due_now') or 0}"
     )
@@ -1107,8 +1107,8 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
             kind="pay",
             name="交清欠维",
             emoji="🔧",
-            note=f"欠 {upkeep_owed}。产业维修费，每天划。" if upkeep_owed else "这会儿不欠岸维。",
-            detail="欠维修费同样不能扩产；开着的小馆会暂停堂食。不是吉祥物喂养。",
+            note=f"欠 {upkeep_owed}。产业维修，每天划。不是岸税，也不是小屋家维。" if upkeep_owed else "这会儿不欠岸维。",
+            detail="欠维修费同样不能扩产；开着的小馆会暂停堂食。不是吉祥物喂养，也不是小屋灯油。",
             price="交" if upkeep_owed else "看",
             can=bool(upkeep_owed and tickets > 0 and not rush_block),
             target="upkeep",
