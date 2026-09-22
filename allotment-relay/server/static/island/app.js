@@ -20,7 +20,7 @@ import {
   tickWorkshop,
 } from "./store.js?v=island-modulefix2";
 import { renderHud } from "./hud.js?v=dual-panels1";
-import { renderMap } from "./map.js?v=hotspot-fix1";
+import { renderMap } from "./map.js?v=hotspot-fix2";
 import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=farm-batch1";
 import { renderShore, renderShoreYard, renderPortHub, renderBeachHub } from "./scenes/shore.js?v=island-modulefix2";
 import { renderPlaza } from "./scenes/plaza.js?v=island-modulefix2";
@@ -43,7 +43,7 @@ import { renderMarket } from "./scenes/market.js?v=island-modulefix2";
 import { renderTing } from "./scenes/ting.js?v=island-modulefix2";
 import { renderHui } from "./scenes/hui.js?v=island-modulefix2";
 import { renderLianli } from "./scenes/lianli.js?v=island-modulefix2";
-import { renderUndertide } from "./scenes/undertide.js?v=undertide-desks1";
+import { renderUndertide } from "./scenes/undertide.js?v=soon-pop1";
 let lighthouseMod = null;
 async function lighthouseScene() {
   if (!lighthouseMod) lighthouseMod = await import("./scenes/lighthouse.js?v=island-modulefix2");

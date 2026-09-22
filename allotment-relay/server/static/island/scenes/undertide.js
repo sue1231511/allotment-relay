@@ -1,6 +1,6 @@
 import { layoutCoverBoard, sceneArt } from "../ui/art.js?v=undertide-desks1";
 import { api } from "../api.js?v=undertide-desks1";
-import { esc, showFormSheet, toast } from "../ui/modal.js?v=undertide-desks1";
+import { esc, showFormSheet, showSoonPop, toast } from "../ui/modal.js?v=soon-pop1";
 
 /** 热区对齐井下总览原有的地点牌；底图本身不改动。 */
 const HOTS = [
@@ -9,6 +9,14 @@ const HOTS = [
   { id: "undertide-bank", title: "恶猫钱庄", desk: "bank", speaker: "恶猫钱庄行长", peek: "见行长", sprite: "cat-bank-president", name: "恶猫钱庄行长", left: 65, top: 16, w: 31, h: 22 },
   { id: "undertide-casino", title: "死人赌场", desk: "casino", speaker: "Silas", peek: "见 Silas", sprite: "silas", name: "Silas", left: 65, top: 37, w: 31, h: 20 },
   { id: "undertide-medic", title: "晏安医务间", desk: "medic", speaker: "晏安", peek: "见晏安", left: 65, top: 58, w: 31, h: 18 },
+];
+
+/** 图上有牌子、手机还没接上的屋子。点开只出小窗。 */
+const SOON = [
+  { id: "pit", title: "深坑", left: 8, top: 39, w: 28, h: 14 },
+  { id: "tavern", title: "凯斯酒馆", left: 30, top: 54, w: 30, h: 14 },
+  { id: "prison", title: "地下监牢", left: 6, top: 68, w: 28, h: 14 },
+  { id: "kroom", title: "K室", left: 36, top: 74, w: 26, h: 14 },
 ];
 
 /** 先展示完整总览，点已有地点牌才进入对应场景。 */
@@ -20,6 +28,7 @@ export function renderUndertide(root, { onDetailChange } = {}) {
       <div class="island-map-board island-undertide-board">
         ${sceneArt("undertide-map")}
         ${HOTS.map(hotMarkup).join("")}
+        ${SOON.map(soonMarkup).join("")}
       </div>
     </div>
   `;
@@ -29,6 +38,12 @@ export function renderUndertide(root, { onDetailChange } = {}) {
         const id = btn.getAttribute("data-undertide-place");
         const spot = HOTS.find((item) => item.id === id);
         if (spot) showPlace(spot);
+      });
+    });
+    root.querySelectorAll("[data-undertide-soon]").forEach((btn) => {
+      btn.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        showSoonPop();
       });
     });
     layoutCoverBoard(root.querySelector(".island-undertide-map"), ".island-undertide-board", 941, 1672);
@@ -229,4 +244,9 @@ async function runDeskAction(kind, target, spot, wrap) {
 function hotMarkup(spot) {
   const style = `left:${spot.left}%;top:${spot.top}%;width:${spot.w}%;height:${spot.h}%`;
   return `<button type="button" class="island-hot" data-undertide-place="${spot.id}" style="${style}" aria-label="${spot.title}"></button>`;
+}
+
+function soonMarkup(spot) {
+  const style = `left:${spot.left}%;top:${spot.top}%;width:${spot.w}%;height:${spot.h}%`;
+  return `<button type="button" class="island-hot" data-undertide-soon="${spot.id}" style="${style}" aria-label="${spot.title}"></button>`;
 }

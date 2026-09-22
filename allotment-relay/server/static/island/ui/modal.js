@@ -1,8 +1,19 @@
 import { popIn, popOut } from "./pop.js?v=island-modulefix2";
 
+function clearSoon(root) {
+  if (!root) return;
+  clearTimeout(root._soon);
+  root._soon = 0;
+  if (root._soonClose) {
+    root.removeEventListener("click", root._soonClose);
+    root._soonClose = null;
+  }
+}
+
 function paintModal(html) {
   const root = document.getElementById("island-modal");
   if (!root) return null;
+  clearSoon(root);
   root.innerHTML = html;
   popIn(root);
   return root;
@@ -436,9 +447,23 @@ function cardMarkup(inner, extraClass) {
   </article>`;
 }
 
+/** 地图上还没接上的牌子。小窗，点一下或稍等就收。 */
+export function showSoonPop() {
+  const root = document.getElementById("island-modal");
+  if (!root) return;
+  clearSoon(root);
+  root.innerHTML = `<p class="island-soon" role="dialog">功能开发中~</p>`;
+  popIn(root);
+  const close = () => hideModal();
+  root._soonClose = close;
+  root.addEventListener("click", close);
+  root._soon = setTimeout(close, 1600);
+}
+
 export function hideModal() {
   const root = document.getElementById("island-modal");
   if (!root) return;
+  clearSoon(root);
   popOut(root, () => {
     root.innerHTML = "";
   });

@@ -142,7 +142,7 @@ async def bar_ops(command: str = "") -> str:
 
 
 @mcp.tool(description="潮下地下世界。空=help。例：well · descend · enter · 井险 清井；bank debt；dice/lantern/draw。猫猫 NPC；下井减岛缘。井蚀≥70 可能井裂三选一，未处置不能 descend/enter。/island 恶猫钱庄可存取借还与井险；赌场骰/灯/牌；其余仍上手页。")
-async def undertide_ops(command: Annotated[str, Field(description="整句子命令；空=help。入口 well→descend→enter。炼 list/brine_crystal/岸黑盐/pickling_brine/灶腌卤=崖↔潮下↔厨房闭环。钱庄 bank；赌场 dice/lantern/draw。手机地图钱庄、赌场、后室铺、恩怨墙、医务间都能点；上手页井下栏也能点。")] = "") -> str:
+async def undertide_ops(command: Annotated[str, Field(description="整句子命令；空=help。入口 well→descend→enter。炼 list/brine_crystal/岸黑盐/pickling_brine/灶腌卤=崖↔潮下↔厨房闭环。钱庄 bank；赌场 dice/lantern/draw。手机地图钱庄、赌场、后室铺、恩怨墙、医务间都能点；深坑、凯斯酒馆、地下监牢、K室点开只提示功能开发中，仍用本工具。上手页井下栏也能点。")] = "") -> str:
     from . import undertide
     from . import progress as progress_mod
     return progress_mod.attach_note(await mux._call_ops(undertide.undertide_ops, _kid(), command))

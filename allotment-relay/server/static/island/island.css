@@ -2030,6 +2030,19 @@ body.island-app.is-climate-open .island-float-chip {
 .island-card .island-btn { min-height: 44px; }
 .island-card .island-care-acts { flex-shrink: 0; }
 
+.island-soon {
+  margin: 0;
+  padding: 14px 22px;
+  border-radius: 16px;
+  background: #fffdf8;
+  color: #2a3a3c;
+  font-size: 16px;
+  line-height: 1.4;
+  letter-spacing: .04em;
+  box-shadow: 0 8px 0 rgba(42, 58, 60, .16);
+  border: 2px solid #c4a574;
+}
+
 .island-toast {
   position: fixed;
   left: 50%;

@@ -5,7 +5,8 @@ const HOTS = [
   { go: "hut", cls: "is-hut", name: "岸畔小屋", left: 8, top: 5, w: 24, h: 16 },
   { go: "yards", cls: "is-home", name: "份地", label: "家园", left: 36, top: 7, w: 26, h: 18 },
   { go: "shore", cls: "is-shore", name: "海边", left: 66, top: 10, w: 30, h: 16 },
-  { go: "workshop", cls: "is-workshop", name: "岸工坊", left: 56, top: 27, w: 24, h: 13 },
+  /* 牌子画在屋子右边，旧热区只盖到屋身，点牌子没反应 */
+  { go: "workshop", cls: "is-workshop", name: "岸工坊", left: 56, top: 24, w: 42, h: 14 },
   /* 左列标签偏上：盐风崖在酒吧正上方；旧坐标把 quarry 盖在酒吧、bar 盖在集市上 */
   { go: "quarry", cls: "is-quarry", name: "盐风崖", left: 3, top: 26, w: 22, h: 12 },
   { go: "plaza", cls: "is-plaza", name: "广场", left: 36, top: 40, w: 28, h: 16 },
