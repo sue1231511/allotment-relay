@@ -174,7 +174,7 @@ async def marriage_ops(command: Annotated[str, Field(description="整句命令�
     return progress_mod.attach_note(await mux._call_ops(marriage.marriage_ops, _kid(), command))
 
 
-@mcp.tool(description="潮闻任务。空=list。例：list · accept tonight_damp · explore beach。")
+@mcp.tool(description="潮闻任务。空=list。例：list · accept tonight_damp · explore beach · review。")
 async def tale_ops(command: str = "list") -> str:
     from . import tale
     return await mux._call_ops(tale.tale_ops, _kid(), command)

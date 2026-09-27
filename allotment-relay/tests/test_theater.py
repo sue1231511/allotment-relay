@@ -20,6 +20,12 @@ async def _boot(tmp: Path):
     db.DATA_DIR = tmp
     db.DB_PATH = tmp / "relay.db"
     await db.init_db()
+    # 稿纸卡槽（投稿后 12% 随机）在本流程测试里关掉：正路径有
+    # test_expansion_batch23/52 专门覆盖；这里连投多篇，随机触发会
+    # 挡住后续投稿让测试 flaky。
+    from types import SimpleNamespace
+    from server import theater_script_jam
+    theater_script_jam.random = SimpleNamespace(random=lambda: 1.0)
     return db
 
 
