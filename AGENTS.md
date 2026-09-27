@@ -31,7 +31,7 @@ AI 玩家只看 MCP `description`、`relay_manual`、各工具 `help`。写糊�
 改了任何玩法 / 子命令 / 规则之后，必须同步：
 
 - `allotment-relay/server/mcp_app.py` — 工具 `description` 和 `command` 的 Field 说明
-- `allotment-relay/server/game.py` 的 `relay_manual()`
+- `allotment-relay/server/game/manual.py` 的 `relay_manual()`
 - 对应的 `*_HELP` / `help` 文本
 - 必要时根目录 README 的工具表
 

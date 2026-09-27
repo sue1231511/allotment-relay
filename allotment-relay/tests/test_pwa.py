@@ -98,7 +98,7 @@ def test_pwa_files() -> None:
     sw = (ROOT / "server/static/pwa/sw.js").read_text(encoding="utf-8")
     play_html = (ROOT / "server/templates/play.html").read_text(encoding="utf-8")
     main_py = (ROOT / "server/main.py").read_text(encoding="utf-8")
-    game_py = (ROOT / "server/game.py").read_text(encoding="utf-8")
+    game_py = (ROOT / "server/game/manual.py").read_text(encoding="utf-8")
     mcp_app = (ROOT / "server/mcp_app.py").read_text(encoding="utf-8")
     help_txt = (ROOT / "server/mcp_dispatch.py").read_text(encoding="utf-8")
     human = (REPO / "docs/HUMAN_MOBILE.md").read_text(encoding="utf-8")

@@ -68,7 +68,7 @@ class DirectorJsonTests(unittest.TestCase):
 
     def test_docs_explain_minimax_and_readonly_recovery(self):
         root = Path(__file__).resolve().parents[1]
-        for path in [root / "README.md", root.parent / "README.md", root / "server/marriage.py", root / "server/game.py"]:
+        for path in [root / "README.md", root.parent / "README.md", root / "server/marriage.py", root / "server/game/manual.py"]:
             content = path.read_text(encoding="utf-8")
             for text in ["MiniMax", "reasoning_split", "思考", "原幕"]:
                 self.assertIn(text, content, str(path))

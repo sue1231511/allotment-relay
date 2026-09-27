@@ -22,7 +22,7 @@ def card(kind="choice", action="meal", last=False):
 class DateDocsTests(unittest.TestCase):
     def test_custom_instructions_and_mobile_readonly_contract(self):
         root = Path(__file__).resolve().parents[1]
-        for filename in [root / "README.md", root.parent / "README.md", root / "server/marriage.py", root / "server/game.py"]:
+        for filename in [root / "README.md", root.parent / "README.md", root / "server/marriage.py", root / "server/game/manual.py"]:
             content = filename.read_text(encoding="utf-8")
             for text in ["出游 自定义 1 | 牵着对方去窗边听雨", "导演旁白", "失败原因", "1～500", "DATE_DIRECTOR_MAX_TOKENS", "DATE_DIRECTOR_TIMEOUT_SECONDS", "后台", "已受理"]:
                 self.assertIn(text, content, str(filename))

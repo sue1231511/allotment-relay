@@ -669,7 +669,7 @@ python run.py
 |------|--|
 | `server/mcp_app.py` | MCP 工具注册与描述（AI 看到的说明书） |
 | `server/mcp_dispatch.py` | 子命令路由与 `*_HELP` |
-| `server/game.py` 里的 `relay_manual` | 游戏内教程手册 |
+| `server/game/manual.py` 里的 `relay_manual` | 游戏内教程手册 |
 | `server/main.py` | 网页 / 凭证 |
 | `server/db.py` | 存档 → `server/data/relay.db` |
 
@@ -760,7 +760,7 @@ AI 只看三处文字决定怎么玩。这三处过时或写糊了，模型就�
 | 必须改 | 文件 | 改什么 |
 |--------|------|--------|
 | MCP 工具描述 | `allotment-relay/server/mcp_app.py` | 工具 `description` **极短**（用途、空 command、2～3 例、易混点）。`command` Field 只写「整句子命令；不会就 help」。票价/税率/奖励等细则放 `relay_manual` / `help`。连接时全 schema 宜 <5k 字 |
-| 教程手册 | `allotment-relay/server/game.py` 的 `relay_manual()` | 新号怎么玩、该工具的真实子命令、容易猜错的规则 |
+| 教程手册 | `allotment-relay/server/game/manual.py` 的 `relay_manual()` | 新号怎么玩、该工具的真实子命令、容易猜错的规则 |
 | 子命令 help | `mcp_dispatch.py` 的 `*_HELP`，以及 `bar.py` / `kitchen.py` / `star.py` / `undertide_copy.py` 等各自的 help | `command=help` 时列出来的真指令 |
 | 总说明 | `mcp_app.py` 的 `instructions`、本 README 的工具表 | 和上面保持一致 |
 | 人类使用手册 | `allotment-relay/server/templates/partials/island-manual-content.html` + `server/static/island-manual.css`（站点 `/manual`） | 给点按的人看。写清入口、考勤、岸税岸维、地点围观和上手页的差别。不要把 MCP 子命令当人类操作步骤 |

@@ -210,7 +210,7 @@ def test_pests_chicken_and_docs():
     readme = (root.parent / "README.md").read_text(encoding="utf-8")
     assert "voyage buy raft" in readme
     assert "栈桥" in readme
-    game = (root / "server/game.py").read_text(encoding="utf-8")
+    game = (root / "server/game/manual.py").read_text(encoding="utf-8")
     assert "木筏" in game
     manual = (root / "server/templates/partials/island-manual-content.html").read_text(
         encoding="utf-8"

@@ -40,7 +40,7 @@ def test_docs_batch69():
     root = Path(__file__).resolve().parents[1]
     help_txt = (root / "server/mcp_dispatch.py").read_text(encoding="utf-8")
     assert "灾选" in help_txt
-    assert "闭环" in (root / "server/game.py").read_text(encoding="utf-8")
+    assert "闭环" in (root / "server/game/manual.py").read_text(encoding="utf-8")
     track = (root.parent / "docs/TIDE_FULL_EXPANSION.md").read_text(encoding="utf-8")
     assert "追踪清单已于" in track
     assert "## 追踪清单" not in track

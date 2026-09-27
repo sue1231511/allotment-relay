@@ -53,7 +53,7 @@ def test_docs_name_partner_boat():
     assert "合伙 开 漂航船" in help_txt
     readme = (root.parent / "README.md").read_text(encoding="utf-8")
     assert "合伙 开 漂航船" in readme
-    game = (root / "server/game.py").read_text(encoding="utf-8")
+    game = (root / "server/game/manual.py").read_text(encoding="utf-8")
     assert "合伙 开 漂航船" in game
     manual = (root / "server/templates/partials/island-manual-content.html").read_text(
         encoding="utf-8"

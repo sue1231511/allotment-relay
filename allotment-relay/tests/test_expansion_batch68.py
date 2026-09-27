@@ -65,6 +65,6 @@ def test_docs_batch68():
     track = (root.parent / "docs/TIDE_FULL_EXPANSION.md").read_text(encoding="utf-8")
     assert "tide-full-expansion-source.md" in track
     assert "点名册每条≥2路" in track
-    game = (root / "server/game.py").read_text(encoding="utf-8")
+    game = (root / "server/game/manual.py").read_text(encoding="utf-8")
     assert "收费服务" in game
     assert "岸下排水" in game
