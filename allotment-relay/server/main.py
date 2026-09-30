@@ -70,6 +70,28 @@ app = FastAPI(
     redirect_slashes=False,
 )
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+
+
+@app.exception_handler(Exception)
+async def api_unexpected_error(request: Request, exc: Exception):
+    """API 永远返回可读 JSON，避免前端只看到“服务端没有返回可读结果”。
+    页面路由仍保留普通 500 行为。
+    """
+    if request.url.path.startswith("/api/"):
+        return JSONResponse(
+            status_code=500,
+            content={
+                "ok": False,
+                "error": {
+                    "code": "SERVER_ERROR",
+                    "message": "服务端处理失败，请稍后重试。",
+                    "detail": str(exc)[:300],
+                },
+            },
+        )
+    raise exc
+
+
 app.include_router(island_v1_router)
 app.include_router(date_router)
 app.include_router(florist_router)
