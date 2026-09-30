@@ -1,4 +1,4 @@
-"""未命名小鱼回家线：只对部署环境变量绑定的人类管理员生效。"""
+"""未命名小鱼回家线：女性小鱼定期回男性人类伴侣的家。"""
 from __future__ import annotations
 
 from . import config, db
