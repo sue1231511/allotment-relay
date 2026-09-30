@@ -745,6 +745,13 @@ CREATE TABLE IF NOT EXISTS musong_sendoffs (
     PRIMARY KEY (steward_id, day)
 );
 
+CREATE TABLE IF NOT EXISTS legged_fish_home_visits (
+    steward_id INTEGER PRIMARY KEY REFERENCES stewards(id),
+    visit_count INTEGER NOT NULL DEFAULT 0,
+    last_visit_at INTEGER NOT NULL DEFAULT 0,
+    updated_at INTEGER NOT NULL DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS steward_jingshan (
     steward_id INTEGER PRIMARY KEY REFERENCES stewards(id),
     stage INTEGER NOT NULL DEFAULT 0,
