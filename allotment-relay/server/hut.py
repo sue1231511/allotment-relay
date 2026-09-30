@@ -1479,6 +1479,14 @@ async def hut_ops(key_id: int, command: str) -> str:
                 if casc:
                     roof_line = (roof_line + "\n" + casc) if roof_line else casc
                 home_status_note = await home_events_mod.roll_on_status(conn, s) or ""
+                from . import fish_home as fish_home_mod
+                fish_home_note = await fish_home_mod.maybe_visit(conn, s) or ""
+                if fish_home_note:
+                    home_status_note = (
+                        home_status_note + "\n" + fish_home_note
+                        if home_status_note else fish_home_note
+                    )
+                    await conn.commit()
                 from . import hut_chores as chore_mod
                 from . import hut_domestic as dom_mod
                 chore_suf = await chore_mod.status_suffix(conn, s["id"])
