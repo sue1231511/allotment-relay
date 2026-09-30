@@ -436,12 +436,13 @@ async def _wilt_unwatered_outdoor(
             continue
         await conn.execute(
             """
-            UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
-                grow_target=0, grow_pace='', fertilized=0, watered=0,
-                harvest_left=0, ready_at=0, tree_born_at=0
+            UPDATE parcels
+            SET tended=0,
+                watered=0,
+                planted_at=CASE WHEN planted_at IS NULL THEN planted_at ELSE planted_at + ? END
             WHERE id=?
             """,
-            (plot["id"],),
+            (random.randint(900, 1800), plot["id"]),
         )
         wilted += 1
     return wilted
