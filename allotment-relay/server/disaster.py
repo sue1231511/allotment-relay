@@ -529,12 +529,18 @@ async def apply_season_climate(
     hit_plots = 0
     wilted = 0
     animals = 0
+    label = config.SEASON_CLIMATE_LABELS.get(effect, effect)
     for s in rows:
         sid = int(s["id"])
+        personal_hits = 0
+        personal_wilt = 0
         if delay:
-            hit_plots += await _delay_unwatered_outdoor(conn, sid, delay)
+            personal_hits = await _delay_unwatered_outdoor(conn, sid, delay)
+            hit_plots += personal_hits
         if wilt_p > 0:
-            wilted += await _wilt_unwatered_outdoor(conn, sid, wilt_p)
+            personal_wilt = await _wilt_unwatered_outdoor(conn, sid, wilt_p)
+            wilted += personal_wilt
+        lost: list[str] = []
         if thirst_p > 0:
             lost = await _thirst_unfed_animals(conn, sid, thirst_p)
             animals += len(lost)
@@ -545,6 +551,20 @@ async def apply_season_climate(
                     sid,
                     conn=conn,
                 )
+        effects = []
+        if personal_hits:
+            effects.append(f"{personal_hits} 块露天地生长受阻")
+        if personal_wilt:
+            effects.append(f"{personal_wilt} 块露天地受重创")
+        if lost:
+            effects.append(f"{len(lost)} 头牲口损失")
+        if effects:
+            await db.add_chronicle(
+                "climate_hit",
+                f"{s['name']} — 气候·{label}：{'；'.join(effects)}",
+                sid,
+                conn=conn,
+            )
 
     label = config.SEASON_CLIMATE_LABELS.get(effect, effect)
     grade = config.WEEKLY_TIDE_GRADES[intensity]
