@@ -154,6 +154,7 @@ async def _maybe_wipe_outdoor(
     steward_id: int,
     chance: float,
 ) -> int:
+    """旧名保留兼容。周潮只重创露天作物，不再静默清空整块地。"""
     cur = await conn.execute(
         """
         SELECT id FROM parcels
@@ -162,20 +163,21 @@ async def _maybe_wipe_outdoor(
         (steward_id,),
     )
     ids = [r[0] for r in await cur.fetchall()]
-    wiped = 0
+    hit = 0
     for pid in ids:
         if random.random() <= chance:
             await conn.execute(
                 """
-                UPDATE parcels SET crop=NULL, planted_at=NULL, tended=0,
-                    grow_target=0, grow_pace='', fertilized=0, watered=0,
-                    harvest_left=0, ready_at=0
+                UPDATE parcels
+                SET tended=0,
+                    watered=0,
+                    planted_at=CASE WHEN planted_at IS NULL THEN planted_at ELSE planted_at + 1200 END
                 WHERE id=?
                 """,
                 (pid,),
             )
-            wiped += 1
-    return wiped
+            hit += 1
+    return hit
 
 
 async def _untend_outdoor(conn: aiosqlite.Connection) -> None:
