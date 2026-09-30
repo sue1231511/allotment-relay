@@ -1111,7 +1111,42 @@ async def incident_ops(key_id: int, command: str) -> str:
                 if r.get("repair_item"):
                     item = r["repair_item"]
                     lines.append(f"    或用 {ITEM_NAMES.get(item, item)} x{r.get('repair_qty') or 1}：plot_ops repair {r['id']} item")
+        lines.append("历史记录：plot_ops incident history")
         return "\n".join(lines) if lines else "风平浪静，暂无意外"
+
+    if verb in ("history", "历史", "记录", "log"):
+        limit = 20
+        if len(parts) >= 2:
+            try:
+                limit = max(1, min(50, int(parts[1])))
+            except ValueError:
+                pass
+        actions = (
+            "incident", "incident_fix", "disaster", "climate",
+            "climate_hit", "pulse_hit", "tree_age",
+            "mascot_weight", "mascot_walk", "legged_fish_home",
+        )
+        placeholders = ",".join("?" for _ in actions)
+        async with db.connect() as conn:
+            conn.row_factory = aiosqlite.Row
+            rows = await (await conn.execute(
+                f"""
+                SELECT action, text, created_at
+                FROM chronicle
+                WHERE (actor_id=? OR actor_id IS NULL)
+                  AND action IN ({placeholders})
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (s["id"], *actions, limit),
+            )).fetchall()
+        if not rows:
+            return "还没有可查的事件记录。"
+        lines = ["【事件记录】最近发生过的天气、天灾、意外和特殊剧情："]
+        for row in rows:
+            text = str(row["text"] or "").strip()
+            lines.append(f"{db.fmt_cst(int(row['created_at']))} · {text}")
+        return "\n".join(lines)
 
     if verb == "pulse":
         pulse = await public_pulse_snapshot()
