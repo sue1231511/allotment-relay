@@ -29,7 +29,7 @@ def _is_bound_home(steward: dict) -> bool:
     bound = config.LEGGED_FISH_HOME_HUMAN
     if not bound:
         return False
-    return _human_name(steward).casefold() == bound.casefold()
+    return str(steward.get("name") or "").strip().casefold() == bound.casefold()
 
 
 async def maybe_visit(conn, steward: dict) -> str | None:
