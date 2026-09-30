@@ -303,6 +303,11 @@ LEGGED_FISH_CHANCE = {
 LEGGED_FISH_RARE_GIFT_CHANCE = _event_rate(0.14)
 LEGGED_FISH_GRAB_ENERGY = 30
 
+# 未命名小鱼回家线。伴侣名只从部署环境变量读取，不进仓库。
+# 值应填写对应岛民的人类管理员昵称（与 lounge_human_name 一致）。
+LEGGED_FISH_HOME_HUMAN = os.environ.get("LEGGED_FISH_HOME_HUMAN", "").strip()
+LEGGED_FISH_HOME_COOLDOWN = 3 * FORAGE_COOLDOWN_DAY
+
 # 份地野生动物 / 田间随机
 FARM_EVENT_DAILY_CAP = max(1, round(4 * EVENT_RATE_MULT))
 FARM_TRIGGER_CHANCE = {
