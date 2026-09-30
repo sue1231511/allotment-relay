@@ -185,6 +185,7 @@ HUT_HELP = """hut_ops 子命令（整句写进 command）：
     barn 闹脾气 哄|关栏|不管 — 栏里闹脾气待选；疫病则 隔离|兽医|拖着
   mascot adopt 名字 scout|lucky|compost / upkeep / train / feed — 吉祥物
     upkeep 花 4 票主动喂养，不是每日自动扣，也不是产业维修费（产业维修 visit_ops 潮生会 维）；train 免费练、不换特质；feed 耗宠物饲料。士气不每天掉。
+  plot_ops incident history [条数] — 查最近事件记录：天气/天灾/个人意外/特殊剧情，默认 20 条，最多 50 条。
     吉祥物名为「咕咕咕」时有身体数值：体重/体力。吃多会变「肥咕咕」，过肥进入「走地鸡」并触发额外剧情；mascot 减肥 / 散步 每天一次，管理员可带它减肥，但它不一定配合。
   buy miner_lamp → install soft_N miner_lamp — 盐风矿灯，崖矿挖精力 -1
   install soft_N tide_weight|iron_edge|marrow_sieve — 工坊家具，装上才生效（秤锤/铁锄刃/滤网）
