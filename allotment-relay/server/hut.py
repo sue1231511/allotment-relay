@@ -602,20 +602,30 @@ def _token_hits_fitting(token: str, key: str, name: str) -> bool:
     bare = _fitting_bare(key).lower()
     satchel = key if key.startswith(("fit_", "deco_")) else f"fit_{bare}"
     label = item_label(satchel)
+    # Only candidate aliases belong in this set. 以前把 _plain_token(t)（用户输入本身）
+    # 也塞进 aliases，导致任何输入都会命中第一件家具，出现“soft_3 明明是鲱鱼风铃，
+    # 预览却变成别的家具”的串位问题。
     aliases = {
         key.lower(),
         bare,
         f"fit_{bare}",
         satchel.lower(),
         name.lower(),
-        name,
+        _plain_token(name).lower(),
         label.lower(),
-        label,
-        _plain_token(t),
-        _plain_token(name),
-        _plain_token(label),
+        _plain_token(label).lower(),
     }
-    return t in aliases or _plain_token(t) in aliases or t == key.lower()
+    plain = _plain_token(t).lower()
+    return t in aliases or plain in aliases or t == key.lower()
+
+
+def _normalize_furniture_slot_token(token: str) -> str:
+    """Accept soft_3 / soft 3 / soft-3 (same for hard slots)."""
+    t = (token or "").strip().lower().replace("-", "_")
+    parts = t.replace("_", " ").split()
+    if len(parts) == 2 and parts[0] in {"soft", "hard"} and parts[1].isdigit():
+        return f"{parts[0]}_{int(parts[1])}"
+    return t
 
 
 async def furniture_sell_command(s: dict[str, Any], rest: list[str]) -> str:
