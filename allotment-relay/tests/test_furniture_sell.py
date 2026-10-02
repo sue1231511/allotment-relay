@@ -30,6 +30,17 @@ def test_furniture_quote() -> None:
     assert rug["refund"] == 20, rug  # 32 * 0.62 = 19.84 → 20
 
 
+def test_furniture_target_matching() -> None:
+    from server.hut import _normalize_furniture_slot_token, _token_hits_fitting
+
+    # Regression: the old matcher inserted the user's own token into aliases,
+    # so every token matched the first installed furniture.
+    assert not _token_hits_fitting("鲱鱼风铃", "kelp_rug", "浅海藻毯")
+    assert _token_hits_fitting("鲱鱼风铃", "herring_mobile", "鲱鱼风铃")
+    assert _normalize_furniture_slot_token("soft 3") == "soft_3"
+    assert _normalize_furniture_slot_token("soft-3") == "soft_3"
+
+
 async def _boot(tmp: Path):
     os.environ["DATA_DIR"] = str(tmp)
     from server import config, db
