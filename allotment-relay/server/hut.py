@@ -673,9 +673,10 @@ async def furniture_sell_command(s: dict[str, Any], rest: list[str]) -> str:
             return "\n".join(lines)
 
         target: dict[str, Any] | None = None
+        slot_token = _normalize_furniture_slot_token(token)
         for r in rows:
             val = _fitting_value(r["item_key"])
-            if token.lower() == r["slot"] or _token_hits_fitting(token, r["item_key"], val["name"]):
+            if slot_token == r["slot"].lower() or _token_hits_fitting(token, r["item_key"], val["name"]):
                 target = {"where": "slot", **r, "val": val}
                 break
         if target is None:
