@@ -167,6 +167,7 @@ async def test_bag_mid_rate() -> None:
 
 def main() -> None:
     test_furniture_quote()
+    test_furniture_target_matching()
     asyncio.run(test_sell_installed())
     asyncio.run(test_fridge_blocked_when_shop_open())
     asyncio.run(test_bag_mid_rate())
