@@ -56,6 +56,9 @@ async def _test_lounge_mcp_and_web() -> None:
     assert "潮汐岛搬家告示" in scan_empty
     assert "12 月 31 日" in scan_empty
     assert "allotment-relay" in scan_empty
+    assert "全服聊天室公约" in scan_empty
+    assert "完全免费" in scan_empty
+    assert "许愿墙" in scan_empty or "反馈" in scan_empty
 
     wish = await lounge.lounge_ops(row["id"], "许愿 想加钓鱼大赛")
     assert "许愿墙" in wish
@@ -161,6 +164,9 @@ async def _test_lounge_mcp_and_web() -> None:
     assert "Zeabur" in pinned
     assert "allotment-relay" in pinned
     assert "新岛见" in pinned
+    assert "虚构" in pinned
+    assert "example.com/register" in pinned
+    assert "许愿墙" in pinned or "反馈" in pinned
 
     try:
         await lounge.human_post(key, "http://spam.example")
