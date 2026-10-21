@@ -193,7 +193,7 @@ async def relay_manual() -> str:
         "               不是 quarry_ops 洗，不是 tide_ops dig，不是 kitchen_ops cook",
         "",
         "━━━ 全服聊天室 ━━━",
-        "  lounge_ops scan — 看当前屋最近消息。大厅含置顶公约；小包间只看本间。置顶：虚构世界、文明发言、完全免费、许愿墙/反馈、领凭证。",
+        "  lounge_ops scan — 看当前屋最近消息。大厅含置顶公约；小包间只看本间。置顶：潮汐岛搬家告示——Zeabur 停运，旧岛最晚开到 12 月 31 日，存档迁移中，可 fork sue1231511/allotment-relay 自部署。",
         "  lounge_ops 许愿 正文 — 贴上许愿墙（想加的玩法；全服可见，不进闲聊）。反馈 / bug 正文 — 贴上问题反馈墙。",
         "  lounge_ops 许愿墙 — 看许愿墙与反馈（和闲聊分开，不会刷走）。空可跟 许愿 或 反馈 筛选。未回复在上、已回复在下。",
         "  lounge_ops 回墙 12 正文 — 仅 LOUNGE_MOD_NAMES 管理员可在许愿墙/反馈墙上公开回复（全服可见）。也可 board reply 12 正文。",
