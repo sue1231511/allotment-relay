@@ -618,6 +618,7 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             "             例子：shop board · shop dine 安。没菜就换一家，不要自己编馆名\n"
             "             人类 /island 总览点小馆，先进店景，点一下才出菜单列表，能堂食。做饭在小屋灶，不是小馆\n"
             "  shop open|stock|卖掉 — 开馆 / 上菜（stock 菜名 [价格]，参考价提示但不限区间）/ 关张回收\n"
+            "  灶险 开窗|换锅|硬烧 — 上菜时灶台糊烟的三选一处置（shop 灶险 … 同一条）\n"
             f"             开馆后每天岸维 {upkeep.EATERY} 票（visit_ops 潮生会 维）；欠维修费会暂停堂食\n"
             "             集市买的菜回家自己吃只有基础精力——饭馆卖堂食，集市卖货\n"
             f"{EAT_RULES}"
@@ -909,6 +910,12 @@ async def kitchen_ops(key_id: int, command: str) -> str:
         rest = " ".join(parts[1:]) if len(parts) > 1 else "board"
         from . import eatery
         return await eatery.eatery_command(s, rest)
+
+    # 灶险提示写的是「kitchen_ops 灶险 开窗|换锅|硬烧」，顶层必须认这个词；
+    # 「shop 灶险 …」走上面分支，两种口径都能到 eatery.resolve
+    if verb in ("灶险", "smoke", "stove", "糊锅"):
+        from . import eatery
+        return await eatery.eatery_command(s, command)
 
     if verb == "recipes":
         return await _hearth_catalog()

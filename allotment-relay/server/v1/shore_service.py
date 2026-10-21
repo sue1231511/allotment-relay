@@ -59,6 +59,8 @@ TIDE_KINDS = {
 
 VOYAGE_OK = {
     "depart near": "voyage depart near",
+    "depart far": "voyage depart far",
+    "depart deep": "voyage depart deep",
     "return": "voyage return",
     "buy skiff": "voyage buy skiff",
     "repair": "voyage repair",
@@ -233,6 +235,7 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
     skiff = config.BOATS["skiff"]
     can_buy_boat = (not boat_key) and tickets >= int(skiff["cost"])
     can_depart = bool(boat_key) and not damaged and not sailing
+    boat_rank = int(boat.get("rank") or 0)
     can_return = sailing and vstatus == "sailing"
     hailed = vstatus == "hailed"
     fish_enc = vstatus == "fish_encounter"
@@ -578,6 +581,32 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
             target="depart near",
             detail="近岸航程。外海深漂要更大的船。",
         ),
+        *([
+            _sku(
+                sid="depart-far",
+                kind="voyage",
+                name="外海出发",
+                emoji="🌊",
+                note="远一点的海，鱼更稀，坏遭遇也多。" if boat_rank >= 2 else "切波艇/近海帆撬以上才能去。",
+                price="开",
+                can=can_depart and boat_rank >= 2,
+                target="depart far",
+                detail="外海航程。深漂要漂航船/延绳船。",
+            )
+        ] if boat_key and not sailing else []),
+        *([
+            _sku(
+                sid="depart-deep",
+                kind="voyage",
+                name="深漂出发",
+                emoji="🌌",
+                note="最深的海，稀有鱼与深漂线在这。",
+                price="开",
+                can=can_depart and boat_rank >= 3,
+                target="depart deep",
+                detail="深漂航程，归港黑旗档也更高。",
+            )
+        ] if boat_key and not sailing and boat_rank >= 3 else []),
         _sku(
             sid="return",
             kind="voyage",

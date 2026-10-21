@@ -450,10 +450,12 @@ def _fitting_value(key: str) -> dict[str, Any]:
     if flower_key in FLORIST_DECOR:
         meta = FLORIST_DECOR[flower_key]
         return {"name": meta["name"], "cost": meta["sell"], "junk": False}
-    if raw.startswith("deco_junk_") or raw in LILI_JUNK_DECOR:
-        jk = raw.replace("deco_junk_", "") if raw.startswith("deco_junk_") else raw
+    if raw.startswith("deco_junk_"):
+        jk = raw.replace("deco_junk_", "", 1)
         meta = LILI_JUNK_DECOR.get(jk, {})
         return {"name": meta.get("name", key), "cost": 8, "junk": True}
+    if raw.startswith("deco_") and raw[5:] in LILI_JUNK_DECOR:
+        return {"name": key, "cost": 8, "junk": True}
     if raw.startswith("deco_"):
         dk = raw[5:]
         if dk in LILI_DECOR:
@@ -469,7 +471,12 @@ def _fitting_value(key: str) -> dict[str, Any]:
     if bare in HUT_SOFT:
         meta = HUT_SOFT[bare]
         return {"name": meta["name"], "cost": _fitting_cost(bare, meta.get("cost")), "junk": False}
-    raise ValueError(f"这不是能卖的家具: {key}")
+    # 未知/历史遗留的装件键（如早期花房发过的 deco_rose）不能炸小屋快照，按杂项折价
+    return {
+        "name": item_label(raw) if str(raw).startswith(("fit_", "deco_")) else key,
+        "cost": 8,
+        "junk": True,
+    }
 
 
 def _fitting_cost(bare: str, listed: Any) -> int:

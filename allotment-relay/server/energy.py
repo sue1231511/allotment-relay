@@ -40,7 +40,7 @@ async def spend(
 
     ailments = await health.list_ailments(conn, steward_id)
     amount += health.energy_extra(ailments)
-    cap = health.max_energy_cap(ailments)
+    cap = health.max_energy_cap(ailments, await health.active_cap_cut(conn, steward_id))
     cur = await conn.execute(
         "SELECT energy, dine_buff_until FROM stewards WHERE id=?", (steward_id,)
     )
@@ -71,7 +71,7 @@ async def _energy_cap(conn: aiosqlite.Connection, steward_id: int) -> int:
     from . import health
 
     ailments = await health.list_ailments(conn, steward_id)
-    return health.max_energy_cap(ailments)
+    return health.max_energy_cap(ailments, await health.active_cap_cut(conn, steward_id))
 
 
 async def restore(
@@ -82,7 +82,7 @@ async def restore(
     from . import health
 
     ailments = await health.list_ailments(conn, steward_id)
-    cap = health.max_energy_cap(ailments)
+    cap = health.max_energy_cap(ailments, await health.active_cap_cut(conn, steward_id))
     cur = await conn.execute("SELECT energy FROM stewards WHERE id=?", (steward_id,))
     row = await cur.fetchone()
     stored = row[0] if row else config.START_ENERGY
@@ -142,7 +142,7 @@ def meter_line(steward: dict[str, Any], ailments: list[dict[str, Any]] | None = 
     from . import health
 
     e = steward.get("energy", config.START_ENERGY)
-    cap = health.max_energy_cap(ailments or [])
+    cap = health.max_energy_cap(ailments or [], health.steward_cap_cut(steward))
     hint = ""
     if e < 20:
         hint = flavor.pick([
@@ -150,6 +150,10 @@ def meter_line(steward: dict[str, Any], ailments: list[dict[str, Any]] | None = 
             "没劲撒网，先整口热乎的",
             "精力见底，别硬撑",
         ])
+    cut_left = int(steward.get("energy_cap_cut_until") or 0) - db.now()
+    if cut_left > 0 and health.steward_cap_cut(steward):
+        fed = f"汤后发沉：{cut_left // 60 + 1} 分钟内精力上限 -{health.steward_cap_cut(steward)}"
+        hint = f"{hint}；{fed}" if hint else fed
     left = int(steward.get("dine_buff_until") or 0) - db.now()
     if left > 0:
         fed = f"饱餐中：行动 -1 精力，剩 {left // 60 + 1} 分钟"

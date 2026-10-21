@@ -1046,6 +1046,8 @@ async def init_db() -> None:
             "ALTER TABLE stewards ADD COLUMN fruit_streak INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN bed_rest_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN dine_buff_until INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN energy_cap_cut INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE stewards ADD COLUMN energy_cap_cut_until INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN bath_soak_at INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN book_read_day INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN pen_patrol_at INTEGER NOT NULL DEFAULT 0",
@@ -2438,6 +2440,17 @@ async def init_db() -> None:
             except aiosqlite.OperationalError:
                 pass
         await _heal_land_rows(db)
+        # 羊驼毯旧配方产出过裸 wool_rug（无中文名、vend 0、装不上墙）；归位到独立装件键。
+        # 墙上 hut_fittings 的 wool_rug 都是从 fit_wool_rug 装上去的真羊毛毯，不动。
+        await db.execute(
+            "UPDATE satchel SET item='fit_alpaca_throw' WHERE item='wool_rug'"
+        )
+        # 深漂归港的旧判定 failed 不授予深海回声，收集簿却点亮；给这批玩家补授
+        await db.execute(
+            "INSERT OR IGNORE INTO bar_unlocks (steward_id, unlock_key)"
+            " SELECT steward_id, 'deep_echo' FROM steward_collection_unlock"
+            " WHERE coll_key='voyage_deep'"
+        )
         from . import ranks as ranks_mod
         from . import disaster as disaster_mod
         from . import chaoshen as chaoshen_mod

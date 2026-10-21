@@ -622,6 +622,8 @@ HUT_SOFT = {
                    "hint": "工坊打。guild_shift 档信 +1。hut_ops buy 买不了"},
     "wool_rug": {"name": "羊毛毯", "cost": 0, "emoji": "🧶", "craft_only": True,
                  "hint": "工坊打。纯好看。hut_ops buy 买不了"},
+    "alpaca_throw": {"name": "羊驼毯", "cost": 0, "emoji": "🧶", "craft_only": True,
+                     "hint": "工坊打。纯好看。hut_ops buy 买不了"},
     "shine_rail": {"name": "亮壳轨", "cost": 0, "emoji": "✨", "craft_only": True,
                    "hint": "陈列柜捐齐亮壳后发。纯好看。hut_ops buy 买不了"},
     "marrow_jar": {"name": "夜光髓瓶", "cost": 0, "emoji": "🌟", "craft_only": True,
@@ -1072,7 +1074,7 @@ CRAFT_RECIPES = {
         "hint": "羊毛补丁。修帆/软装",
     },
     "alpaca_throw": {
-        "name": "羊驼毯", "emoji": "🧶", "out": "wool_rug", "qty": 1,
+        "name": "羊驼毯", "emoji": "🧶", "out": "fit_alpaca_throw", "qty": 1,
         "need": {"alpaca_wool": 1, "drift_twine": 1},
         "seconds": 720, "energy": 4,
         "hint": "羊驼毛进工坊。和羊毛毯同槽软装",

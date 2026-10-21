@@ -36,7 +36,7 @@ export function renderPlantPanel(root, { onSelect, onPlant, onClose }) {
         <span>成熟时间 ${esc(selected ? selected.grow_text : "—")}</span>
         <span>预计收获 ${esc(selected ? `${selected.yield}棵` : "—")}</span>
       </div>
-      ${selected ? "" : `<p class="island-plant-empty">去广场杂货铺买。种植面板只出背包里有的种，没有买一份。</p>`}
+      ${selected ? "" : `<p class="island-plant-empty">${esc(emptyHint())}</p>`}
       <button type="button" class="island-plant-go" data-act="plant" ${selected && idle ? "" : "disabled"}>
         ${!selected ? "没有种子" : !idle ? "先点一块空地" : `种下${esc(selected.label)}`}
       </button>
@@ -60,8 +60,19 @@ export function renderPlantPanel(root, { onSelect, onPlant, onClose }) {
   });
 }
 
-function bindSwipe(el, { onLeft, onRight }) {
-  if (!el) return;
+// 空手进面板的提示按地块类型说清该买什么种：果园只收果树，菜种种不进来
+function emptyHint() {
+  const kind = state.yard || "home";
+  if (kind === "orchard") {
+    return "果园只收果树。去广场杂货铺买果树种（当季的青柠/橘子/木瓜/芒果…），菜种种不进来。种植面板只出背包里有的种。";
+  }
+  if (kind === "greenhouse") {
+    return "棚里菜种树种都能种。去广场杂货铺买种。种植面板只出背包里有的种。";
+  }
+  return "去广场杂货铺买。种植面板只出背包里有的种，没有买一份。";
+}
+
+function bindSwipe(el, { onLeft, onRight }) {  if (!el) return;
   let x0 = 0;
   el.addEventListener("touchstart", (ev) => {
     x0 = ev.changedTouches[0].clientX;

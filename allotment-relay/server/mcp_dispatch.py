@@ -630,7 +630,8 @@ async def tote_bundle(key_id: int, command: str = "") -> str:
             "market": (market.market_ops, "list"),
             "集市": (market.market_ops, "list"),
         },
-        hoist={},
+        # 摊险提示写的是「tote_ops 摊险 压石|收摊|硬摆」，market_ops 顶层就认「摊险」，整句转过去
+        hoist={"摊险": (market.market_ops, True), "stall": (market.market_ops, True)},
         default=game.tote_ops,
         help_text=TOTE_HELP,
         empty=TOTE_HELP,

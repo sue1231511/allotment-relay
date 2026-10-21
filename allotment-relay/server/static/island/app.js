@@ -21,12 +21,12 @@ import {
 } from "./store.js?v=island-modulefix2";
 import { renderHud } from "./hud.js?v=dual-panels1";
 import { renderMap } from "./map.js?v=hotspot-fix1";
-import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=farm-batch1";
+import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=plot-overview1";
 import { renderShore, renderShoreYard, renderPortHub, renderBeachHub } from "./scenes/shore.js?v=island-modulefix2";
 import { renderPlaza } from "./scenes/plaza.js?v=island-modulefix2";
 import { renderPlace } from "./scenes/place.js?v=island-modulefix2";
 import { hideClimateSheet, showClimateSheet } from "./ui/climate.js?v=island-modulefix2";
-import { renderHut } from "./scenes/hut.js?v=island-modulefix2";
+import { renderHut } from "./scenes/hut.js?v=bottles-cozy1";
 import { renderShop } from "./scenes/shop.js?v=tt-sprite1";
 import { renderLili } from "./scenes/lili.js?v=island-modulefix2";
 import { renderClinic } from "./scenes/clinic.js?v=island-modulefix2";
@@ -54,7 +54,7 @@ import { setBackChip, setBagChip } from "./ui/back-map.js?v=dual-panels1";
 import { hidePlantPanel, renderPlantPanel } from "./ui/plant-panel.js?v=island-modulefix2";
 import { popOut } from "./ui/pop.js?v=island-modulefix2";
 import { bgmMuted, playBgm, setBgmMuted, startIslandBgm, stopBgm } from "./ui/bgm.js?v=undertide-bgm1";
-import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showVendSheet, toast } from "./ui/modal.js?v=farm-batch1";
+import { careActs, hideModal, showActSheet, showBuySheet, showCareSheet, showCheerSheet, showExpandSheet, showEvent, showFormSheet, showHintSheet, showPickSheet, showVendSheet, toast } from "./ui/modal.js?v=bottles-cozy2";
 
 const sceneEl = () => document.getElementById("island-scene");
 const sheetEl = () => document.getElementById("island-sheet");
@@ -795,16 +795,12 @@ function tapLili(kind, target, id) {
   const row = liliRow(kind, target, id) || {};
   const body = row.detail || row.note || (state.lili && state.lili.line) || "这会儿摊上没有这一下。";
   if (kind === "cart_tilt") {
+    // 立绘对话不另弹窗：点不了的原因、执行的结果都用栗栗的话说
     if (!row.can) {
-      showHintSheet({ title: row.name || "栗险", body: row.detail || row.note || body });
+      speakLili(body);
       return;
     }
-    showActSheet({
-      title: row.name || `栗险·${target}`,
-      body: row.detail || row.note || (state.lili && state.lili.tilt_note) || body,
-      confirm: "确认",
-      onConfirm: () => runLili("cart_tilt", target),
-    });
+    runLili("cart_tilt", target);
     return;
   }
   if (kind === "look" || !row.can) {
@@ -870,16 +866,12 @@ function tapClinic(kind, target, id) {
   const row = clinicRow(kind, target, id) || {};
   const body = row.detail || row.note || (state.clinic && state.clinic.line) || "这会儿诊所用不上这一下。";
   if (kind === "queue_jam") {
+    // 立绘对话不另弹窗
     if (!row.can) {
-      showHintSheet({ title: row.name || "诊险", body: row.detail || row.note || body });
+      speakClinic(row.detail || row.note || body);
       return;
     }
-    showActSheet({
-      title: row.name || `诊险·${target}`,
-      body: row.detail || row.note || (state.clinic && state.clinic.queue_note) || body,
-      confirm: "确认",
-      onConfirm: () => runClinic("queue_jam", target),
-    });
+    runClinic("queue_jam", target);
     return;
   }
   if (kind === "look" || !row.can) {
@@ -1603,35 +1595,19 @@ function tapHall(kind, target) {
   if (kind === "mic_feedback") {
     const row = (shop.mic_choices || []).find((item) => item.target === target);
     if (!row || !row.can_act) {
-      showHintSheet({
-        title: (row && row.name) || "麦险",
-        body: (row && (row.detail || row.note)) || "麦还在啸。",
-      });
+      speakHall((row && (row.detail || row.note)) || "麦还在啸。");
       return;
     }
-    showActSheet({
-      title: row.name || `麦险·${target}`,
-      body: row.note || "先处置麦啸。",
-      confirm: "确认",
-      onConfirm: () => runHall("mic_feedback", target),
-    });
+    runHall("mic_feedback", target);
     return;
   }
   if (kind === "curtain_jam") {
     const row = (shop.curtain_choices || []).find((item) => item.target === target);
     if (!row || !row.can) {
-      showHintSheet({
-        title: (row && row.name) || "剧险",
-        body: (row && (row.detail || row.note)) || shop.curtain_note || "幕布还卡着。",
-      });
+      speakHall((row && (row.detail || row.note)) || shop.curtain_note || "幕布还卡着。");
       return;
     }
-    showActSheet({
-      title: row.name || `剧险·${target}`,
-      body: row.note || shop.curtain_note || "先处置幕布。",
-      confirm: "确认",
-      onConfirm: () => runHall("curtain_jam", target),
-    });
+    runHall("curtain_jam", target);
     return;
   }
   const row = (shop.jobs || []).find((item) => item.id === kind);
@@ -2455,16 +2431,12 @@ function tapShaonian(kind, target, id) {
     return;
   }
   if (kind === "omen_gust") {
+    // 立绘对话不另弹窗：点不了的原因、执行的结果都用韶年的话说
     if (!row.can) {
-      showHintSheet({ title: row.name || "卦险", body: row.detail || row.note || (state.shaonian && state.shaonian.omen_note) || "这会儿处置不了。" });
+      speakShaonian(row.detail || row.note || (state.shaonian && state.shaonian.omen_note) || "这会儿处置不了。");
       return;
     }
-    showActSheet({
-      title: row.name || `卦险·${target}`,
-      body: row.note || (state.shaonian && state.shaonian.omen_note) || "潮风掀卦盘，先处置。",
-      confirm: "确认",
-      onConfirm: () => runShaonian("omen_gust", target),
-    });
+    runShaonian("omen_gust", target);
     return;
   }
   if (!row.can) {

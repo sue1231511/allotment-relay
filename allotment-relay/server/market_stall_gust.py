@@ -10,6 +10,9 @@ from . import db, energy
 
 HAZARD_GUST = "gust"
 
+# 和灶险/淬火同一个坑：没有处置时限会永久拦着买卖，过了一天风自己停
+HAZARD_TTL = 86400
+
 
 async def ensure_columns(conn) -> None:
     for ddl in (
@@ -25,11 +28,23 @@ async def ensure_columns(conn) -> None:
 async def get_hazard(conn, steward_id: int) -> str:
     await ensure_columns(conn)
     cur = await conn.execute(
-        "SELECT market_hazard FROM stewards WHERE id=?",
+        "SELECT market_hazard, market_hazard_json FROM stewards WHERE id=?",
         (steward_id,),
     )
     row = await cur.fetchone()
-    return (row[0] or "") if row else ""
+    hazard = (row[0] or "") if row else ""
+    if hazard and row and row[1]:
+        try:
+            ts = int(json.loads(row[1]).get("ts") or 0)
+        except Exception:
+            ts = 0
+        if ts and db.now() - ts > HAZARD_TTL:
+            await conn.execute(
+                "UPDATE stewards SET market_hazard=NULL, market_hazard_json=NULL WHERE id=?",
+                (steward_id,),
+            )
+            return ""
+    return hazard
 
 
 def _chance() -> float:
@@ -55,10 +70,10 @@ async def maybe_after_sell(conn, steward_id: int) -> str | None:
         UPDATE stewards SET market_hazard=?, market_hazard_json=?
         WHERE id=?
         """,
-        (HAZARD_GUST, json.dumps({"kind": "stall_gust"}, ensure_ascii=False), steward_id),
+        (HAZARD_GUST, json.dumps({"kind": "stall_gust", "ts": db.now()}, ensure_ascii=False), steward_id),
     )
     return (
-        "一阵风把摊布掀起来了！"
+        "一阵风把摊布掀起来了！得先稳摊处置（压石 / 收摊 / 硬摆）。"
         " tote_ops 摊险 压石|收摊|硬摆"
         "（压石=砖×1或8票；收摊=6精力撤一单；硬摆=10精力可能丢货）"
     )
@@ -67,7 +82,8 @@ async def maybe_after_sell(conn, steward_id: int) -> str | None:
 async def assert_not_blocked(conn, steward_id: int) -> None:
     if await get_hazard(conn, steward_id) == HAZARD_GUST:
         raise ValueError(
-            "摊还在晃，先 tote_ops 摊险 压石|收摊|硬摆。"
+            "摊还在晃，得先稳摊处置（压石 / 收摊 / 硬摆）。"
+            " tote_ops 摊险 压石|收摊|硬摆。"
             "人类 /island 集市「我的摊」也能点。"
         )
 
@@ -109,7 +125,7 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
             norm = zh
             break
     if not norm:
-        raise ValueError("摊险处置：压石 · 收摊 · 硬摆（例 tote_ops 摊险 压石）")
+        raise ValueError("摊险处置：压石 · 收摊 · 硬摆。例 tote_ops 摊险 压石")
     sid = steward["id"]
 
     if norm == "压石":

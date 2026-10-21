@@ -247,7 +247,12 @@ async def _test_island_v1_api() -> None:
     )
     assert early_take.status_code >= 400, early_take.text
     async with db.connect() as conn:
-        await conn.execute("UPDATE steward_craft SET job_ready_at=1 WHERE steward_id=?", (sid,))
+        # 淬火是 17% 概率事件，且 hazard 会残留拦 take；测试只验证「好了能取」，先清场
+        await conn.execute(
+            "UPDATE steward_craft SET job_ready_at=1, anvil_hazard=NULL, anvil_hazard_json=NULL"
+            " WHERE steward_id=?",
+            (sid,),
+        )
         await conn.commit()
     took = client.post(
         "/api/v1/workshop/act",
@@ -503,6 +508,12 @@ async def _test_island_v1_api() -> None:
         json={"kind": "buy", "target": str(lot_id)},
     )
     assert own_buy.status_code >= 400, own_buy.text
+    # 挂单会小概率掷中「摊还在晃」，hazard 残留会拦 buy；这里只验证成交链路，先清场
+    async with db.connect() as conn:
+        await conn.execute(
+            "UPDATE stewards SET market_hazard=NULL, market_hazard_json=NULL"
+        )
+        await conn.commit()
     guest_buy = client.post(
         "/api/v1/market/act",
         headers=_auth(host_key, {"Idempotency-Key": "market-buy"}),

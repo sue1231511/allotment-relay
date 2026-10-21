@@ -1406,7 +1406,9 @@ async def _resolve_voyage(
     if disc:
         msg += f"\n{disc}"
 
-    if voyage["route"] == "deep" and not failed:
+    # 深漂归港就解锁深海回声：失败归港也算「人回来了」，和收集簿「深漂归港」同一判定，
+    # 否则收集簿点亮而酒永远锁着
+    if voyage["route"] == "deep":
         from . import bar as bar_mod
         await bar_mod.grant_bar_unlock(s["id"], "deep_echo")
 

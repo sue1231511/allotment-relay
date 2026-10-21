@@ -10,6 +10,9 @@ from .catalog import CRAFT_RECIPES, item_label
 
 HAZARD_QUENCH = "quench"
 
+# 和灶险/摊晃同一个坑：没有处置时限会永久拦着 取，过了一天自动散
+HAZARD_TTL = 86400
+
 METAL_JOB_KEYS = frozenset(
     key
     for key, meta in CRAFT_RECIPES.items()
@@ -47,11 +50,23 @@ async def ensure_columns(conn) -> None:
 async def get_hazard(conn, steward_id: int) -> str:
     await ensure_columns(conn)
     cur = await conn.execute(
-        "SELECT anvil_hazard FROM steward_craft WHERE steward_id=?",
+        "SELECT anvil_hazard, anvil_hazard_json FROM steward_craft WHERE steward_id=?",
         (steward_id,),
     )
     row = await cur.fetchone()
-    return (row[0] or "") if row else ""
+    hazard = (row[0] or "") if row else ""
+    if hazard and row and row[1]:
+        try:
+            ts = int(json.loads(row[1]).get("ts") or 0)
+        except Exception:
+            ts = 0
+        if ts and db.now() - ts > HAZARD_TTL:
+            await conn.execute(
+                "UPDATE steward_craft SET anvil_hazard=NULL, anvil_hazard_json=NULL WHERE steward_id=?",
+                (steward_id,),
+            )
+            return ""
+    return hazard
 
 
 async def maybe_when_ready(
@@ -71,7 +86,7 @@ async def maybe_when_ready(
     if random.random() > 0.17:
         return None
     meta = CRAFT_RECIPES.get(job_key, {})
-    payload = {"job_key": job_key, "name": meta.get("name", job_key)}
+    payload = {"job_key": job_key, "name": meta.get("name", job_key), "ts": db.now()}
     await ensure_columns(conn)
     await conn.execute(
         """
@@ -82,7 +97,7 @@ async def maybe_when_ready(
     )
     name = meta.get("name", job_key)
     return (
-        f"{name} 还在白烟里烫手！"
+        f"{name} 还在白烟里烫手！得先淬火（泼水 / 戴胚 / 硬取）。"
         " craft_ops 淬火 泼水|戴胚|硬取"
         "（泼水=盐×1或6票；戴胚=羊毛×1或8票；硬取=10精力可能烫伤）"
     )
@@ -91,7 +106,8 @@ async def maybe_when_ready(
 async def assert_not_blocked(conn, steward_id: int) -> None:
     if await get_hazard(conn, steward_id) == HAZARD_QUENCH:
         raise ValueError(
-            "件还烫着，先 craft_ops 淬火 泼水|戴胚|硬取。"
+            "件还烫着，得先淬火处置（泼水 / 戴胚 / 硬取）。"
+            " craft_ops 淬火 泼水|戴胚|硬取。"
             "人类 /island 岸工坊砧上栏也能点。"
         )
 
@@ -142,7 +158,7 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
             norm = zh
             break
     if not norm:
-        raise ValueError("淬火处置：泼水 · 戴胚 · 硬取（例 craft_ops 淬火 泼水）")
+        raise ValueError("淬火处置：泼水 · 戴胚 · 硬取。例 craft_ops 淬火 泼水")
     sid = steward["id"]
 
     if norm == "泼水":

@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import random
 
+from . import db
+
 SPECIAL_DISH_KEYS = frozenset({
     "black_salt_fish",
     "fog_mushroom_soup",
@@ -53,9 +55,10 @@ async def apply_on_eat(conn, steward_id: int, dish_key: str) -> str | None:
     if kind == "fog_shroom":
         from . import survival
         await survival.bump(conn, steward_id, mist_wit=8)
+        # 精力上限是动态值（100 - 病症 cut），没有 max_energy 列；临时削减走 energy_cap_cut
         await conn.execute(
-            "UPDATE stewards SET max_energy=MAX(20, max_energy-6) WHERE id=?",
-            (steward_id,),
+            "UPDATE stewards SET energy_cap_cut=?, energy_cap_cut_until=? WHERE id=?",
+            (6, db.now() + 7200, steward_id),
         )
         return "雾菇汤下肚，雾智 +8，但两小时内精力上限 -6。"
     if kind == "lantern_raw":
@@ -105,8 +108,8 @@ async def apply_on_eat(conn, steward_id: int, dish_key: str) -> str | None:
         await survival.bump(conn, steward_id, satiety=8)
         if random.random() < 0.14:
             await conn.execute(
-                "UPDATE stewards SET max_energy=MAX(20, max_energy-4) WHERE id=?",
-                (steward_id,),
+                "UPDATE stewards SET energy_cap_cut=?, energy_cap_cut_until=? WHERE id=?",
+                (4, db.now() + 7200, steward_id),
             )
             return "潮骨汤补得猛，饱食 +8、精力 +12，但身子发沉，精力上限 -4。"
         return "潮骨汤下肚，饱食 +8、额外精力 +12。"

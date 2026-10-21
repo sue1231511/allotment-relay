@@ -10,6 +10,9 @@ from . import db, energy
 
 HAZARD_SMOKE = "smoke"
 
+# 麻烦档没有处置入口时限就会永久卡住 shop stock（灾档又不记未结案），过了一天自动散
+HAZARD_TTL = 86400
+
 
 async def ensure_columns(conn) -> None:
     for ddl in (
@@ -25,11 +28,23 @@ async def ensure_columns(conn) -> None:
 async def get_hazard(conn, steward_id: int) -> str:
     await ensure_columns(conn)
     cur = await conn.execute(
-        "SELECT eatery_hazard FROM stewards WHERE id=?",
+        "SELECT eatery_hazard, eatery_hazard_json FROM stewards WHERE id=?",
         (steward_id,),
     )
     row = await cur.fetchone()
-    return (row[0] or "") if row else ""
+    hazard = (row[0] or "") if row else ""
+    if hazard and row and row[1]:
+        try:
+            ts = int(json.loads(row[1]).get("ts") or 0)
+        except Exception:
+            ts = 0
+        if ts and db.now() - ts > HAZARD_TTL:
+            await conn.execute(
+                "UPDATE stewards SET eatery_hazard=NULL, eatery_hazard_json=NULL WHERE id=?",
+                (steward_id,),
+            )
+            return ""
+    return hazard
 
 
 async def maybe_after_stock(conn, steward_id: int) -> str | None:
@@ -43,10 +58,10 @@ async def maybe_after_stock(conn, steward_id: int) -> str | None:
         UPDATE stewards SET eatery_hazard=?, eatery_hazard_json=?
         WHERE id=?
         """,
-        (HAZARD_SMOKE, json.dumps({"kind": "stove"}, ensure_ascii=False), steward_id),
+        (HAZARD_SMOKE, json.dumps({"kind": "stove", "ts": db.now()}, ensure_ascii=False), steward_id),
     )
     return (
-        "灶台糊了满屋烟！"
+        "灶台糊了满屋烟！得先灶险处置（开窗 / 换锅 / 硬烧）。"
         " kitchen_ops 灶险 开窗|换锅|硬烧"
         "（开窗=4精力；换锅=盐×1或10票；硬烧=可能呛咳）"
     )
@@ -55,7 +70,8 @@ async def maybe_after_stock(conn, steward_id: int) -> str | None:
 async def assert_not_blocked(conn, steward_id: int) -> None:
     if await get_hazard(conn, steward_id) == HAZARD_SMOKE:
         raise ValueError(
-            "烟还没散，先 kitchen_ops 灶险 开窗|换锅|硬烧。"
+            "烟还没散，得先灶险处置（开窗 / 换锅 / 硬烧）。"
+            " kitchen_ops 灶险 开窗|换锅|硬烧。"
             "人类 /island 小馆「我的馆」也能点。"
         )
 
@@ -91,7 +107,7 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
             norm = zh
             break
     if not norm:
-        raise ValueError("灶险处置：开窗 · 换锅 · 硬烧（例 kitchen_ops 灶险 开窗）")
+        raise ValueError("灶险处置：开窗 · 换锅 · 硬烧。例 kitchen_ops 灶险 开窗")
     sid = steward["id"]
 
     if norm == "开窗":

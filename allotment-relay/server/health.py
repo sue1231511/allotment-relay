@@ -358,12 +358,43 @@ def energy_extra(ailments: list[dict[str, Any]]) -> int:
     return total
 
 
-def max_energy_cap(ailments: list[dict[str, Any]]) -> int:
+def max_energy_cap(ailments: list[dict[str, Any]], extra_cut: int = 0) -> int:
     cap = config.MAX_ENERGY
     for a in ailments:
         meta = AILMENTS.get(a["key"], {})
         cap -= meta.get("max_energy_cut", 0)
+    cap -= max(0, int(extra_cut))
     return max(35, cap)
+
+
+async def active_cap_cut(conn: aiosqlite.Connection, steward_id: int) -> int:
+    """特殊料理的限时精力上限削减（雾菇汤/潮骨汤）。过期顺手清零。"""
+    cur = await conn.execute(
+        "SELECT energy_cap_cut, energy_cap_cut_until FROM stewards WHERE id=?",
+        (steward_id,),
+    )
+    row = await cur.fetchone()
+    if not row:
+        return 0
+    cut = int(row[0] or 0)
+    until = int(row[1] or 0)
+    if cut <= 0 or until <= db.now():
+        if cut != 0 or until != 0:
+            await conn.execute(
+                "UPDATE stewards SET energy_cap_cut=0, energy_cap_cut_until=0 WHERE id=?",
+                (steward_id,),
+            )
+        return 0
+    return cut
+
+
+def steward_cap_cut(steward: dict[str, Any]) -> int:
+    """同步版：从已查出的 steward dict 读限时上限削减（只读，不清零）。"""
+    cut = int(steward.get("energy_cap_cut") or 0)
+    until = int(steward.get("energy_cap_cut_until") or 0)
+    if cut <= 0 or until <= db.now():
+        return 0
+    return cut
 
 
 def event_bias(steward: dict[str, Any], ailment_count: int) -> float:

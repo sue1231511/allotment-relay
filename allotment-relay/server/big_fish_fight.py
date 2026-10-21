@@ -130,6 +130,9 @@ async def resolve(conn, steward: dict, action: str) -> str:
                 conn, steward["id"], f"fish_{species}", 1,
                 quality=pending["state"], weight_kg=pending["weight_kg"],
             )
+            # cast/net 路径只在没进搏斗时记图鉴，这里补上搏鱼入袋这一笔
+            from . import catches as catches_mod
+            await catches_mod.record_catch(conn, steward["id"], f"fish_{species}")
             return f"硬拉上岸！{name} {pending['weight_kg']}kg 进袋"
         await conn.execute(
             """

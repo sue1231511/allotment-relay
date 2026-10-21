@@ -935,16 +935,22 @@ SHELF_TABS = (
     ("dowry", "嫁妆", ("dowry",)),
 )
 
+# 起步三样的界面俗称（家园面板 PANEL_ALIASES 同一套）。
+# 货架上有真的番茄/胡萝卜作物，俗称只能写进备注，不能当格子名——
+# 否则「番茄种」两格撞名，点「番茄种」买到的是雾豌豆种。
 _SHELF_ALIAS = {"kale": "白菜", "beet": "胡萝卜", "fogpea": "番茄"}
 
 
 def _shelf_label(item: str) -> str:
-    if item.startswith("seed_"):
-        crop = item[5:]
-        nick = _SHELF_ALIAS.get(crop)
-        if nick:
-            return f"{nick}种"
     return _item_label(item)
+
+
+def _shelf_note(item: str, note: str) -> str:
+    if item.startswith("seed_"):
+        nick = _SHELF_ALIAS.get(item[5:])
+        if nick:
+            note = (note + "；" if note else "") + f"家园面板里叫「{nick}种」"
+    return note
 
 
 async def shelf_view(
@@ -984,6 +990,7 @@ async def shelf_view(
             note = "嫁妆柜不打折"
         elif price != base:
             note = f"原价 {base}"
+        note = _shelf_note(item, note)
         emoji = extra.get("emoji") or ""
         if item.startswith("seed_"):
             emoji = (CROPS.get(item[5:]) or {}).get("emoji") or "🌱"

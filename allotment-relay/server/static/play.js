@@ -1474,19 +1474,32 @@ function sowSheet(token) {
     `<button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"sow ${token} ${s.name}"}'>${s.emoji || ''} ${s.name} ×${s.qty}</button>`
   )).join('');
   if (!seeds.length) {
-    openSheet(`种到 ${token}`, `<p class="muted">口袋里没有能种在这儿的种。买当季或全年的，过季会拒。</p>${seedBuyHtml()}`);
+    const hint = String(token).startsWith('园')
+      ? '口袋里没有能种在这儿的果树种。果园只收果树，下面就能买。'
+      : '口袋里没有能种在这儿的种。买当季或全年的，过季会拒。';
+    openSheet(`种到 ${token}`, `<p class="muted">${hint}</p>${seedBuyHtml(token)}`);
     return;
   }
-  openSheet(`种到 ${token}`, `${sowBtns}<p class="muted" style="margin-top:10px">没有想要的就买，一次可买多份。</p>${seedBuyHtml()}`);
+  openSheet(`种到 ${token}`, `${sowBtns}<p class="muted" style="margin-top:10px">没有想要的就买，一次可买多份。</p>${seedBuyHtml(token)}`);
 }
 
-function seedBuyHtml() {
-  const crops = [
-    ["甘蓝", "甘蓝种"],
-    ["甜菜", "甜菜种"],
-    ["雾豌豆", "雾豆种"],
-    ["浅海藻", "浅海藻种"],
-  ];
+function seedBuyHtml(token) {
+  // 份地/温室给全年菜种；果园只收果树，摆果树种，不然玩家买一堆菜种种不进来
+  const orchardOnly = String(token || '').startsWith('园');
+  const crops = orchardOnly
+    ? [
+        ["青柠", "青柠种"],
+        ["橘子", "橘子种"],
+        ["木瓜", "木瓜种"],
+        ["香蕉", "香蕉种"],
+        ["芒果", "芒果种"],
+      ]
+    : [
+        ["甘蓝", "甘蓝种"],
+        ["甜菜", "甜菜种"],
+        ["雾豌豆", "雾豆种"],
+        ["浅海藻", "浅海藻种"],
+      ];
   const rows = crops.map(([cmd, label]) => `
     <div class="play-seed-buy">
       <span>${esc(label)}</span>
@@ -1494,15 +1507,18 @@ function seedBuyHtml() {
       <button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"buy 5 ${cmd}"}'>买 5</button>
       <button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"buy 10 ${cmd}"}'>买 10</button>
     </div>`).join("");
+  const tip = orchardOnly
+    ? "果园只收果树。更多树种去广场杂货铺；过季会拒。"
+    : "一次可买多份，最多心里有数就行。过季会拒。";
   return `
     <button type="button" class="play-mini-btn" data-act='{"tool":"plot_ops","command":"catalog"}'>看当季</button>
-    <p class="muted" style="margin:8px 0 0">一次可买多份，最多心里有数就行。过季会拒。</p>
+    <p class="muted" style="margin:8px 0 0">${tip}</p>
     ${rows}
   `;
 }
 
 function buySeedSheet() {
-  openSheet('买种', `<p class="muted">买当季或全年种。甘蓝 / 甜菜 / 雾豆 / 浅海藻全年可种。过季会拒。</p>${seedBuyHtml()}`);
+  openSheet('买种', `<p class="muted">买当季或全年种。甘蓝 / 甜菜 / 雾豆 / 浅海藻全年可种；果树种看「看当季」或去杂货铺。过季会拒。</p>${seedBuyHtml()}`);
 }
 
 function itemSheet(name) {
@@ -1538,9 +1554,10 @@ function parseActPayload(raw) {
 }
 
 async function act(tool, command) {
+  const busy = document.querySelectorAll('.play-page button.btn, .play-page .play-mini-btn, .play-page .place-tool, .play-go');
   try {
     setWorkStatus('处理中…');
-    document.querySelectorAll('.play-page button.btn, .play-page .play-mini-btn, .play-page .place-tool, .play-go').forEach((b) => { b.disabled = true; });
+    busy.forEach((b) => { b.disabled = true; });
     const data = await api(tool, command);
     applySnap(data, data.text || '');
     setWorkStatus('完成');
@@ -1553,12 +1570,22 @@ async function act(tool, command) {
     const msg = err.message || String(err);
     setLog(msg);
     setWorkStatus('未做成');
+    // 失败原因要在手边的弹层里看得见，不能只进日志区让人以为按钮坏了
+    const body = $('play-sheet-body');
+    if (body && $('play-sheet') && !$('play-sheet').classList.contains('hidden')) {
+      const tip = document.createElement('p');
+      tip.className = 'muted';
+      tip.style.cssText = 'margin:0 0 8px;color:#c0392b;font-weight:600';
+      tip.textContent = `没做成：${msg}`;
+      body.prepend(tip);
+    }
     const workarea = $('play-place-workspace');
     if (workarea && state.placeId) {
       workarea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
   } finally {
-    document.querySelectorAll('button[disabled]').forEach((b) => { b.disabled = false; });
+    // 只解禁这一轮自己禁掉的，别把页面本来就禁用的按钮也放开
+    busy.forEach((b) => { b.disabled = false; });
   }
 }
 
