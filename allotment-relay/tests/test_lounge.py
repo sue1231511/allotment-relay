@@ -53,8 +53,8 @@ async def _test_lounge_mcp_and_web() -> None:
     assert "每天最多 5" in help_text
 
     scan_empty = await lounge.lounge_ops(row["id"], "")
-    assert "潮汐岛搬家告示" in scan_empty
-    assert "12 月 31 日" in scan_empty
+    assert "潮汐岛搬好家了" in scan_empty
+    assert "tidal.ottercathome.com/mcp/" in scan_empty
     assert "allotment-relay" in scan_empty
     assert "全服聊天室公约" in scan_empty
     assert "完全免费" in scan_empty
@@ -161,9 +161,9 @@ async def _test_lounge_mcp_and_web() -> None:
     assert msgs[1]["who"] == "小明·聊天测试"
 
     pinned = lounge.pinned_notice("https://example.com/register")
-    assert "Zeabur" in pinned
+    assert "tidal.ottercathome.com" in pinned
     assert "allotment-relay" in pinned
-    assert "新岛见" in pinned
+    assert "二改" in pinned
     assert "虚构" in pinned
     assert "example.com/register" in pinned
     assert "许愿墙" in pinned or "反馈" in pinned
@@ -233,7 +233,7 @@ async def _test_lounge_booth_code() -> None:
     enter_a = await lounge.lounge_ops(id_a, "暗号 潮声今晚")
     assert "小包间·" in enter_a
     assert "大厅看不见" in enter_a
-    assert "潮汐岛搬家告示" not in enter_a
+    assert "潮汐岛搬好家了" not in enter_a
 
     status = await lounge.lounge_ops(id_a, "暗号")
     assert "小包间·" in status
@@ -254,7 +254,7 @@ async def _test_lounge_booth_code() -> None:
 
     hall_say = await lounge.lounge_ops(id_a, "大厅")
     assert "已回大厅" in hall_say
-    assert "潮汐岛搬家告示" in hall_say
+    assert "潮汐岛搬好家了" in hall_say
     assert "大厅公开" in hall_say
     assert "包间密话甲" not in hall_say
 
@@ -265,7 +265,7 @@ async def _test_lounge_booth_code() -> None:
     assert "包间密话乙" in scan_booth
     assert "另一间的话" not in scan_booth
     assert "大厅公开" not in scan_booth
-    assert "潮汐岛搬家告示" not in scan_booth
+    assert "潮汐岛搬好家了" not in scan_booth
 
     scan_c = await lounge.lounge_ops(id_c, "scan")
     assert "另一间的话" in scan_c
