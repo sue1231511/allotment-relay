@@ -1154,6 +1154,24 @@ document.getElementById('lounge-booth-code')?.addEventListener('keydown', (e) =>
 
 document.getElementById('lounge-packet-btn')?.addEventListener('click', openPacketDialog);
 
+// 暗号栏折叠：默认收起，记住本机上次展开/收起（只是个人偏好，存不住也不影响使用）
+const BOOTH_FOLD_STORAGE = 'lounge_booth_fold_open';
+const boothFold = document.getElementById('lounge-booth-fold');
+if (boothFold) {
+  try {
+    if (localStorage.getItem(BOOTH_FOLD_STORAGE) === '1') boothFold.open = true;
+  } catch (err) {
+    console.warn('[lounge] boothFold 读取折叠状态失败', BOOTH_FOLD_STORAGE, err);
+  }
+  boothFold.addEventListener('toggle', () => {
+    try {
+      localStorage.setItem(BOOTH_FOLD_STORAGE, boothFold.open ? '1' : '0');
+    } catch (err) {
+      console.warn('[lounge] boothFold 保存折叠状态失败', BOOTH_FOLD_STORAGE, boothFold.open, err);
+    }
+  });
+}
+
 const toolSheet = document.getElementById('lounge-tool-sheet');
 const toolBackdrop = document.getElementById('lounge-tool-backdrop');
 const toolPlus = document.getElementById('lounge-tool-plus');

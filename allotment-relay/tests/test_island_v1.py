@@ -1290,8 +1290,8 @@ def test_island_page_is_modular() -> None:
     assert html.count("boot.js?v=keynorm1") == 1
     assert 'rel="preload"' in html
     assert "island-map.webp" in html
-    assert html.count("lounge-embed.css?v=lounge-stickers9") == 1
-    assert "lounge.js?v=lounge-stickers9" in html
+    assert html.count("lounge-embed.css?v=lounge-booth-fold1") == 1
+    assert "lounge.js?v=lounge-booth-fold1" in html
     assert "island-time.js" in html
     assert 'include "partials/island-lounge.html"' in html
     lounge_embed = (ROOT / "server/templates/partials/island-lounge.html").read_text(encoding="utf-8")
@@ -1317,6 +1317,9 @@ def test_island_page_is_modular() -> None:
     assert "/api/lounge/board" in lounge_js
     assert "body.island-app.is-port-chat" in lounge_css
     assert ".lounge-booth-bar" in lounge_css
+    assert '<details class="lounge-booth-bar" id="lounge-booth-fold"' in lounge_embed
+    assert ".lounge-booth-summary" in lounge_css
+    assert "lounge_booth_fold_open" in lounge_js
     assert "发红包" in html
     assert "对暗号" in html
     assert "许愿墙" in html

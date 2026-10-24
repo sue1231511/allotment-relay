@@ -25,11 +25,12 @@
           <div id="lounge-pinned-body" class="lounge-pin-body">加载中…</div>
           <div id="lounge-pinned-mobile" class="hidden"></div>
         </details>
-        <div class="lounge-booth-bar" aria-label="小包间暗号">
-          <div class="lounge-booth-bar-top">
+        <details class="lounge-booth-bar" id="lounge-booth-fold" aria-label="小包间暗号">
+          <summary class="lounge-booth-summary">
             <span class="lounge-booth-now">现在：<strong id="lounge-room-title">大厅</strong></span>
-            <span id="lounge-room-meta" class="lounge-tiny"></span>
-          </div>
+            <span id="lounge-room-meta" class="lounge-tiny lounge-booth-meta"></span>
+            <span class="lounge-booth-toggle">暗号 · 红包</span>
+          </summary>
           <div class="lounge-booth-row">
             <label class="lounge-booth-code">
               <span>暗号</span>
@@ -39,7 +40,7 @@
             <button type="button" class="lounge-mod-btn" id="lounge-booth-leave">回大厅</button>
             <button type="button" class="lounge-mod-btn" id="lounge-packet-btn">发红包</button>
           </div>
-        </div>
+        </details>
         <div id="lounge-feed" class="lounge-feed" role="log" aria-live="polite"></div>
         <section class="lounge-sticker-sheet" id="lounge-sticker-sheet" aria-label="表情包" aria-hidden="true">
           <div class="lounge-sticker-handle" aria-hidden="true"></div>
