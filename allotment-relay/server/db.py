@@ -2275,6 +2275,27 @@ async def init_db() -> None:
             "CREATE INDEX IF NOT EXISTS idx_home_caretakes_caretaker "
             "ON home_caretakes(caretaker_id, active)",
             """
+            CREATE TABLE IF NOT EXISTS typhoon_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                week INTEGER NOT NULL UNIQUE,
+                phase TEXT NOT NULL DEFAULT 'pending',
+                landfall_at INTEGER NOT NULL,
+                prep_wood INTEGER NOT NULL DEFAULT 0,
+                prep_tickets INTEGER NOT NULL DEFAULT 0,
+                summary TEXT NOT NULL DEFAULT '',
+                created_at INTEGER NOT NULL
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS typhoon_preps (
+                event_id INTEGER NOT NULL REFERENCES typhoon_events(id),
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                kind TEXT NOT NULL,
+                created_at INTEGER NOT NULL,
+                PRIMARY KEY (event_id, steward_id)
+            )
+            """,
+            """
             CREATE TABLE IF NOT EXISTS heart_gifts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 steward_id INTEGER NOT NULL REFERENCES stewards(id),

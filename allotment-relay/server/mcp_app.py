@@ -130,7 +130,7 @@ async def alliance_ops(command: str = "") -> str:
 
 
 @mcp.tool(description="NPC、杂货、诊所、兽医与花店。空=help。例：list · clinic · 潮生会 工程 · 兽医 棚险 通风 · shaonian 卦险 压石。桥桥治人≠霍衡治牲口；潮生会不能加入。")
-async def visit_ops(command: Annotated[str, Field(description="整句子命令；空=help。霍衡=兽医（棚险=治完呛棚）；clinic=桥桥；默默=花店；shaonian 卦险=卜卦后掀盘。税/维走潮生会。漾漾=衣泊坊 visit。")] = "") -> str:
+async def visit_ops(command: Annotated[str, Field(description="整句子命令；空=help。霍衡=兽医（棚险=治完呛棚）；clinic=桥桥；默默=花店；shaonian 卦险=卜卦后掀盘。税/维/行情/台风走潮生会。漾漾=衣泊坊 visit。")] = "") -> str:
     return await mux._call_ops(mux.visit_bundle, _kid(), command)
 
 
