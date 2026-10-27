@@ -256,6 +256,7 @@ async def muscle_ops(
                 "UPDATE satchel SET quantity=0 WHERE steward_id=? AND item=? AND quantity<=0",
                 (s["id"], item_key),
             )
+            await db.sync_batches(conn, s["id"], item_key)
             await conn.execute("UPDATE stewards SET tickets=tickets+? WHERE id=?", (gain, s["id"]))
             near = not no_resist and (my_power - their_power) < 8
             await utmod._bump_rep(conn, s["id"], -2 if near else -1)

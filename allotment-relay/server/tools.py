@@ -45,6 +45,8 @@ async def tool_ops(key_id: int, command: str) -> str:
                 return f"已有 {TOOLS[key]['name']}"
             await db.spend_tickets(conn, s["id"], cost, reason="tool buy")
             await db.add_item(conn, s["id"], item, 1)
+            from . import paid_ledger
+            await paid_ledger.record_purchase(conn, s["id"], item, 1, int(cost))
             if key.startswith("net_"):
                 from . import gear
                 g = await gear.get_gear(conn, s["id"])

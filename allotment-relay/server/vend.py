@@ -14,7 +14,7 @@ from dataclasses import dataclass
 
 import aiosqlite
 
-from . import pricing
+from . import paid_ledger, pricing
 
 _log = logging.getLogger(__name__)
 
@@ -61,8 +61,8 @@ async def unit_preview(conn: aiosqlite.Connection, steward_id: int, item: str) -
     if entry is None or entry.get("notote"):
         return _flat_price(item)
     if entry.get("cls") == "buy":
-        hearts = await tt_hearts(conn, steward_id) if "tt" in (entry.get("ch") or ()) else 0
-        return pricing.refund_for_player(item, hearts)
+        slices = await paid_ledger.refund_plan(conn, steward_id, item, 1)
+        return pricing.refund_from_paid(item, slices[0][1]) if slices else pricing.ref_value(item)
     return pricing.ref_value(item)
 
 
@@ -81,13 +81,17 @@ async def plan(conn: aiosqlite.Connection, steward_id: int, item: str, qty: int)
             raise ValueError("这件东西卖不出价")
         return VendPlan(item, qty, unit * qty, first_unit=unit)
 
-    # 可买品：回收价 = 此刻买入价 × 0.9
+    # 可买品：每一批按它当初的实付单价 × 0.9 退；没有实付记录的件走保守价
     if entry.get("cls") == "buy":
-        hearts = await tt_hearts(conn, steward_id) if "tt" in (entry.get("ch") or ()) else 0
-        unit = pricing.refund_for_player(item, hearts)
-        if unit <= 0:
-            raise ValueError("这件东西卖不出价")
-        return VendPlan(item, qty, unit * qty, first_unit=unit)
+        total = 0
+        first = 0
+        for count, paid in await paid_ledger.refund_plan(conn, steward_id, item, qty):
+            unit = pricing.refund_from_paid(item, paid)
+            if unit <= 0:
+                raise ValueError("这件东西卖不出价")
+            total += unit * count
+            first = first or unit
+        return VendPlan(item, qty, total, first_unit=first)
 
     # 产出品：逐批、逐件
     from . import fish_market

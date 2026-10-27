@@ -500,6 +500,7 @@ async def vend_segments(
 
 async def reconcile_batches(conn, steward_id: int, item: str, *, loc: str = "satchel") -> int:
     """批次总量超过背包实际数量时，丢掉多出来的最老批次（幽灵批次）。返回丢掉的件数。"""
+    await ensure_trait_tables(conn)
     cur = await conn.execute(
         "SELECT COALESCE(SUM(qty),0) FROM item_trait_batches WHERE steward_id=? AND loc=? AND item=?",
         (steward_id, loc, item),

@@ -448,6 +448,7 @@ async def _cmd_sell(
         "UPDATE satchel SET quantity=0 WHERE steward_id=? AND item=? AND quantity<=0",
         (s["id"], key),
     )
+    await db.sync_batches(conn, s["id"], key)
     await conn.execute("UPDATE stewards SET tickets=tickets+? WHERE id=?", (total, s["id"]))
     from . import bond as bond_mod
     await bond_mod.well(conn, s["id"], bond_mod.WELL_MARKET)

@@ -196,13 +196,17 @@ async def market_ops(key_id: int, command: str) -> str:
                         f"（{config.MARKET_SLOT_COST}票/格，顶 {config.MARKET_LIST_SLOTS_MAX}）"
                     )
                 raise ValueError(f"挂单已满 {used}/{cap}。{hint}")
-            if not await db.take_item(conn, s["id"], item_key, qty):
+            carried = await db.take_item_carry(
+                conn, s["id"], item_key, qty, settle_traits=False,
+            )
+            if carried is None:
                 raise ValueError(
                     f"行囊数量不足（需要 {item_key} x{qty}）"
                 )
             from . import item_traits as traits_mod
+            from . import paid_ledger
             await traits_mod.release_for_departure(conn, s["id"], item_key, qty)
-            await conn.execute(
+            cur_ins = await conn.execute(
                 """
                 INSERT INTO market_listings
                 (seller_id, item, quantity, price, suggested, note, created_at)
@@ -210,6 +214,7 @@ async def market_ops(key_id: int, command: str) -> str:
                 """,
                 (s["id"], item_key, qty, price, sug, note[:60], db.now()),
             )
+            await paid_ledger.stash(conn, "market", int(cur_ins.lastrowid), item_key, carried)
             gust_note = await gust_mod.maybe_after_sell(conn, s["id"])
             await conn.commit()
         hint = flavor.pick([
@@ -260,6 +265,11 @@ async def market_ops(key_id: int, command: str) -> str:
             pay = lot["price"] * buy_qty
             await db.grant_tickets(conn, lot["seller_id"], pay, reason="market sale")
             await db.add_item(conn, s["id"], lot["item"], buy_qty)
+            from . import paid_ledger
+            await paid_ledger.give(
+                conn, s["id"], lot["item"],
+                await paid_ledger.unstash(conn, "market", lot_id, lot["item"], int(buy_qty)),
+            )
             from . import ledger as ledger_mod
             await ledger_mod.transfer(
                 conn, int(lot["seller_id"]), s["id"], lot["item"], int(buy_qty),
@@ -300,11 +310,20 @@ async def market_ops(key_id: int, command: str) -> str:
                 raise ValueError("找不到可取消的挂单")
             if int(lot["quantity"] or 0) >= 1:
                 await db.add_item(conn, s["id"], lot["item"], lot["quantity"])
+                from . import paid_ledger
+                await paid_ledger.give(
+                    conn, s["id"], lot["item"],
+                    await paid_ledger.unstash(
+                        conn, "market", lot_id, lot["item"], int(lot["quantity"]),
+                    ),
+                )
             else:
                 _log.warning(
                     "market cancel: 异常旧挂单只删记录不退货 steward=%s lot=%s item=%s qty=%s price=%s",
                     s["id"], lot_id, lot["item"], lot["quantity"], lot["price"],
                 )
+            from . import paid_ledger as _pl
+            await _pl.discard(conn, "market", lot_id)
             await conn.execute("DELETE FROM market_listings WHERE id=?", (lot_id,))
             await conn.commit()
         return f"已下架 #{lot_id}，物品退回行囊"

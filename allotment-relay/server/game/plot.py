@@ -324,6 +324,10 @@ async def _plot_one(s: dict, cmd: str) -> str:
         async with db.connect() as conn:
             await db.spend_tickets(conn, s["id"], cost, reason="plot buy seed")
             await db.add_item(conn, s["id"], seed, qty)
+            from .. import paid_ledger
+            await paid_ledger.record_purchase(
+                conn, s["id"], seed, qty, int(CROPS[crop]["seed_price"]),
+            )
             await conn.commit()
         return (
             f"购入 {CROPS[crop]['name']}种 x{qty}（-{cost} 票）。"

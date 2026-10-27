@@ -2462,7 +2462,7 @@ def dish_energy(item: str) -> int | None:
 def suggested_price(item: str) -> int:
     """玩家无关的回收参考价（集市建议价、小馆参考价等展示用）。
 
-    实际回收价由 vend.plan 逐玩家逐批计算：可买品按该玩家此刻买入价 ×0.9，
+    实际回收价由 vend.plan 逐玩家逐批计算：可买品按每批当初的实付单价 ×0.9（paid_ledger），没有实付记录的按保守价，
     产出品按品质批次与渔市行情。手作信物恒为 0（不可回收）。
     """
     from .pricing import is_token

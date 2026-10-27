@@ -7,7 +7,8 @@
 * 回收（系统从玩家手里收）：
     - 产出品（作物、鱼、蛋、矿……）：`floor(0.70 × B × 修正)`，修正夹在 [0.50, 1.50]。
       B 取 `ceil(现行回收价 / 0.70)`，所以修正为 1 时回收价与改版前完全一致。
-    - 可买品：**回收价 = 该玩家此刻的买入价 × 0.9**。同一个人、同一时刻，买入价恒大于回收价。
+    - 可买品：**回收价 = 每批当初的实付单价 × 0.9**（实付价跟着货走，见 paid_ledger）；
+      没有付款记录的件取保守价 ref_value（全岛最低买入价 × 0.9）。
     - 手作信物（订婚戒、潮誓戒等）：不进价格簿，不可卖给任何商店回收；
       玩家之间可以送礼、交换、挂集市。
 * 加工（做饭、手工……）：成品回收价 ≤ 2.0 × 材料回收价合计。
@@ -194,6 +195,27 @@ def refund_for_player(item: str, hearts: int) -> int:
     else:
         buy_now = min_buy_price(item)
     value = buy_now * REFUND_PCT // 100
+    fixed = entry.get("sell")
+    if fixed is not None:
+        value = min(value, int(fixed))
+    cap = _CAPS.get(item)
+    if cap is not None:
+        value = min(value, cap)
+    return value
+
+
+def refund_from_paid(item: str, paid_unit: int) -> int:
+    """可买品一件的退货价。paid_unit>0：最初那笔系统收款（实付单价）× 0.9 向下取整；
+    paid_unit=0：这件没有实付记录，取保守价 ref_value（全岛最低买入价 × 0.9）。
+    固定回收价（花、茶包）和加工封顶照样约束。信物不退。"""
+    if item in TOKEN_ITEMS:
+        return 0
+    entry = price_book.BOOK.get(item)
+    if not entry:
+        return 0
+    if int(paid_unit) <= 0:
+        return ref_value(item)
+    value = int(paid_unit) * REFUND_PCT // 100
     fixed = entry.get("sell")
     if fixed is not None:
         value = min(value, int(fixed))

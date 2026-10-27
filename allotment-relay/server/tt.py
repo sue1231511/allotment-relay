@@ -175,7 +175,7 @@ VISIT_LINES = [
     "渔具入门在这儿买。更高档带着漂绳去 tide_ops gear upgrade。",
     "盐风镐是崖矿入门，比铲子和渔网贵。买了就能 quarry_ops 探脉 / 挖。更高档 quarry_ops 升镐。",
     "柜后那屉是嫁妆。三金、五金、婚戒、订婚戒、礼盒。不打折。结婚的人来翻。订婚戒不是潮誓戒。",
-    "货架买的种、饲料、工具可以退：按你此刻的买入价退九成（好感折扣也算在内）。戒指是信物，不退。别当印钞反复倒卖。",
+    "货架买的种、饲料、工具可以退：按你当初实付的价退九成（好感折扣已经算在实付价里；货转手后，退货价还是按最初那笔付的价）。戒指是信物，不退。别当印钞反复倒卖。",
 ]
 
 
@@ -237,7 +237,7 @@ def sku_base_price(item: str) -> int | None:
 
 
 def refund_price(item: str, score: int) -> int | None:
-    """退货价 = 该玩家此刻的买入价 × 0.9（向下取整）。信物不退，返回 None。"""
+    """按此刻买入价算的退货价上限（展示参考）。真正退货按每批当初的实付价 × 0.9，见 paid_ledger。信物不退，返回 None。"""
     if pricing.is_token(item):
         return None
     base = sku_base_price(item)
@@ -607,7 +607,7 @@ def _catalog_text(score: int) -> str:
         lines.extend(groups[key])
         lines.append("")
     lines.append("buy 物品 [数量] · gift 物品 [数量] · 中文名或 id 都行。例：buy 甘蓝种 2；工具/渔具/嫁妆一次 1")
-    lines.append("退货（tote_ops vend）按你此刻的买入价退九成，亏一成；订婚戒、潮誓戒是信物，不能退")
+    lines.append("退货（tote_ops vend）按你当初实付的价退九成，亏一成；订婚戒、潮誓戒是信物，不能退")
     lines.append("可叠放货满一组会开下一组（MC 式；工具只能 1）")
     lines.append("送礼一次一笔，件数不叠；4 心起减半，8 心起更慢")
     lines.append("gift 姜 / 大蒜 = 调味料作物；gift 姜种 / 大蒜种 = 种子（别混）")
@@ -625,7 +625,7 @@ async def tt_ops(key_id: int, command: str) -> str:
             "  status / catalog — 货架与好感\n"
             "  buy 物品 [数量] — 种子/饲料/渔网钓竿/蚯蚓饵/锄铲/剪刀挤奶器/嫁妆柜。例：buy 甘蓝种 2。工具/渔具/嫁妆一次 1\n"
             "  种子看季节（一周一季）：catalog 标当季/休市；过季买不了，等到开窗或 sow 棚1\n"
-            "  货架货可退：tote_ops vend 按你此刻的买入价退九成（好感折扣也算），戒指等信物不退\n"
+            "  货架货可退：tote_ops vend 按当初实付价退九成（转手也跟着货走），戒指等信物不退\n"
             "    可叠放货满一组会开下一组；工具只能 1。潮柜格满了先 vend 或 hut_ops 冰柜 取\n"
             "  gift 物品 [数量] — 送礼（一次一笔，每日最多 3 次；4 心减半，8 心更慢）\n"
             "    写「姜」「大蒜」「辣椒」送的是收成的调味料作物，不是种子；爱吃大蒜/辣椒/姜/榴莲\n"
@@ -725,6 +725,8 @@ async def tt_ops(key_id: int, command: str) -> str:
                 bought_label = extra_meta.get("name") or item
             else:
                 await db.add_item(conn, s["id"], item, qty)
+                from . import paid_ledger
+                await paid_ledger.record_purchase(conn, s["id"], item, qty, cost // qty)
                 await ledger_mod.note_gain(
                     conn, s["id"], item, qty,
                     f"{_item_label(item)}{shop_line}",

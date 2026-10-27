@@ -506,7 +506,7 @@ async def _cook_named(s: dict[str, Any], dish_key: str) -> str:
 
         qualities: list[str] = []
         for ing in meta["ings"]:
-            if not await db.take_item(conn, s["id"], ing, 1):
+            if not await db.take_item(conn, s["id"], ing, 1, settle_traits=False):
                 raise ValueError(f"缺少 {ITEM_NAMES.get(ing, ing)}")
             qualities.extend(await traits_mod.pop_qualities(conn, s["id"], ing, 1))
         q_bonus = traits_mod.cooking_star_bonus(qualities)
@@ -560,7 +560,7 @@ async def _cook_mix(s: dict[str, Any], ings: list[str]) -> str:
 
         qualities: list[str] = []
         for ing in ings:
-            if not await db.take_item(conn, s["id"], ing, 1):
+            if not await db.take_item(conn, s["id"], ing, 1, settle_traits=False):
                 raise ValueError(f"缺少 {ITEM_NAMES.get(ing, ing)}")
             qualities.extend(await traits_mod.pop_qualities(conn, s["id"], ing, 1))
         result = cook_mix.score_mix(ings, s, quality_bonus=traits_mod.cooking_star_bonus(qualities))
@@ -885,7 +885,7 @@ async def kitchen_ops(key_id: int, command: str) -> str:
                 if "卖不出价" in str(exc):
                     raise ValueError("这道菜卖不出价") from exc
                 raise
-            if not await db.take_item(conn, s["id"], item, 1):
+            if not await db.take_item(conn, s["id"], item, 1, settle_traits=False):
                 raise ValueError("行囊里没有这道菜")
             from . import item_traits as traits_mod
             from . import ledger as ledger_mod

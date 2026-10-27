@@ -193,7 +193,7 @@ async def _tote_one(s: dict, command: str) -> str:
                     if "卖不出价" in str(exc):
                         raise ValueError(f"不可出售 {item_label(item_key)}（{item_key}）") from exc
                     raise
-                if not await db.take_item(conn, s["id"], item_key, qty):
+                if not await db.take_item(conn, s["id"], item_key, qty, settle_traits=False):
                     raise ValueError(f"数量不足（需要 {item_key} x{qty}）")
                 await traits_mod.consume_fifo(conn, s["id"], item_key, qty)
                 await ledger_mod.consume(
@@ -304,13 +304,18 @@ async def _tote_one(s: dict, command: str) -> str:
                             peer["name"], item_key, have, qty, cap, room=room
                         )
                     )
-                if not await db.take_item(conn, s["id"], item_key, qty):
+                carried = await db.take_item_carry(
+                    conn, s["id"], item_key, qty, settle_traits=False,
+                )
+                if carried is None:
                     raise ValueError(
                         f"行囊不足 {ITEM_NAMES.get(item_key, item_key)}（{item_key}）x{qty}"
                     )
                 from .. import item_traits as traits_gift
+                from .. import paid_ledger
                 await traits_gift.release_for_departure(conn, s["id"], item_key, qty)
                 await db.add_item(conn, peer["id"], item_key, qty)
+                await paid_ledger.give(conn, peer["id"], item_key, carried)
                 from .. import ledger as ledger_mod
                 await ledger_mod.transfer(
                     conn, s["id"], peer["id"], item_key, qty,

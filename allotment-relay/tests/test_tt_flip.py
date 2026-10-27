@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tt酱退货：回收价 = 该玩家此刻的买入价 × 0.9。同一个人、同一时刻，买入价恒大于回收价。"""
+"""Tt酱退货：按此刻买入价算的上限恒小于买入价（纯函数）；真正的退货按每批实付价，见 test_paid_batches.py。"""
 from __future__ import annotations
 
 import asyncio
