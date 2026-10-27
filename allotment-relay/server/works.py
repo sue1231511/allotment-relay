@@ -5,6 +5,7 @@ import json
 from typing import Any
 
 from . import db
+from .inputs import parse_positive_int
 from .catalog import item_label, resolve_item_key
 
 BONUS_SECONDS = 7 * 86400
@@ -193,11 +194,11 @@ def _parse_gift(raw: str) -> tuple[str, int]:
     if not parts:
         raise ValueError("用法：visit_ops 潮生会 工程 捐 岸木 10 · 工程 捐 铜钉 4 · 工程 捐 50")
     if len(parts) == 1 and parts[0].isdigit():
-        return "tickets", int(parts[0])
+        return "tickets", parse_positive_int(parts[0], "票数")
     if parts[0] in ("票", "工分票", "tickets") and len(parts) >= 2 and parts[1].isdigit():
-        return "tickets", int(parts[1])
+        return "tickets", parse_positive_int(parts[1], "票数")
     if parts[-1].isdigit():
-        qty = int(parts[-1])
+        qty = parse_positive_int(parts[-1])
         token = " ".join(parts[:-1])
     else:
         qty = 1

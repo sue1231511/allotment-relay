@@ -8,6 +8,7 @@ from typing import Any
 import aiosqlite
 
 from . import config, db, flavor
+from .inputs import parse_positive_int
 from .florist_catalog import FLORIST_DECOR
 from .catalog import (
     CROPS,
@@ -792,7 +793,7 @@ def _parse_storage_name_qty(tokens: list[str]) -> tuple[str, int]:
     qty = 1
     name_tokens = list(tokens)
     if name_tokens and name_tokens[-1].isdigit():
-        qty = max(1, int(name_tokens[-1]))
+        qty = parse_positive_int(name_tokens[-1])
         name_tokens = name_tokens[:-1]
     if not name_tokens:
         raise ValueError("要写物品名")
@@ -989,7 +990,7 @@ async def cabinet_command(s: dict[str, Any], rest: list[str]) -> str:
     if verb in ("扩", "扩容", "加格", "买格", "expand"):
         n = 1
         if len(rest) > 1 and rest[1].isdigit():
-            n = max(1, int(rest[1]))
+            n = parse_positive_int(rest[1])
         return await cabinet_expand(s, n)
 
     putting = verb in ("put", "store", "存", "放", "入")
@@ -1133,7 +1134,7 @@ async def compost_bin_command(s: dict[str, Any], rest: list[str]) -> str:
         qty = None
         tokens = list(rest[1:])
         if tokens and tokens[-1].isdigit():
-            qty = max(1, int(tokens[-1]))
+            qty = parse_positive_int(tokens[-1])
             tokens = tokens[:-1]
         if tokens:
             raw = " ".join(tokens)
@@ -1196,7 +1197,7 @@ async def pickle_crops(s: dict[str, Any], rest: list[str]) -> str:
         raise ValueError("水果不用腌，直接吃或做甜品")
     if not is_vegetable_item(item):
         raise ValueError("只能腌蔬菜")
-    qty = max(1, int(rest[1])) if len(rest) > 1 and rest[1].isdigit() else 1
+    qty = parse_positive_int(rest[1]) if len(rest) > 1 and rest[1].isdigit() else 1
     async with db.connect() as conn:
         if not await _has_fitting(conn, s["id"], "pickle_crock"):
             raise ValueError("小屋里还没有腌菜坛 — buy pickle_crock → install hard_N pickle_crock")
@@ -1224,7 +1225,7 @@ async def dry_fish(s: dict[str, Any], rest: list[str]) -> str:
     fish_key = item[5:] if item.startswith("fish_") and item[5:] in SEA_CATCH else None
     if not fish_key:
         raise ValueError("晾鱼架只收生鱼")
-    qty = max(1, int(rest[1])) if len(rest) > 1 and rest[1].isdigit() else 1
+    qty = parse_positive_int(rest[1]) if len(rest) > 1 and rest[1].isdigit() else 1
     async with db.connect() as conn:
         if not await _has_fitting(conn, s["id"], "fish_rack"):
             raise ValueError("小屋里还没有晾鱼架 — buy fish_rack → install soft_N fish_rack")
@@ -1397,7 +1398,7 @@ async def hut_ops(key_id: int, command: str) -> str:
     if verb in ("扩柜", "加格"):
         n = 1
         if len(parts) > 1 and parts[1].isdigit():
-            n = max(1, int(parts[1]))
+            n = parse_positive_int(parts[1])
         return await cabinet_expand(s, n)
 
     if verb in ("睡", "睡觉", "sleep", "休息", "rest"):
@@ -1441,7 +1442,7 @@ async def hut_ops(key_id: int, command: str) -> str:
         rest = command.strip().split()[1:]
         async with db.connect() as conn:
             if rest and rest[0].lower() in ("交", "pay"):
-                amt = int(rest[1]) if len(rest) > 1 and rest[1].isdigit() else None
+                amt = parse_positive_int(rest[1], "票数") if len(rest) > 1 and rest[1].isdigit() else None
                 msg = await dom_mod.pay(conn, s["id"], amt)
             else:
                 has_fridge = await _has_fitting(conn, s["id"], "fridge")
@@ -1705,10 +1706,7 @@ async def hut_ops(key_id: int, command: str) -> str:
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
             if (await cur.fetchone())[0] < meta["cost"]:
                 raise ValueError(f"购买需要 {meta['cost']} 票")
-            await conn.execute(
-                "UPDATE stewards SET tickets=tickets-? WHERE id=?",
-                (meta["cost"], s["id"]),
-            )
+            await db.spend_tickets(conn, s["id"], int(meta["cost"]), reason="hut buy fitting")
             from . import tax as tax_mod
             await tax_mod.record_life_spend(conn, s["id"], meta["cost"], "hut")
             await db.add_item(conn, s["id"], fit_item, 1)

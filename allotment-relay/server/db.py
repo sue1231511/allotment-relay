@@ -1,5 +1,6 @@
 import asyncio
 import contextvars
+import logging
 import re
 import secrets
 import sqlite3
@@ -22,6 +23,8 @@ from .config import (
     START_TICKETS,
     WEEK_SECONDS,
 )
+
+_log = logging.getLogger(__name__)
 
 # 单进程内串行化 SQLite 访问，避免多云端 Agent 并发时 database is locked
 _CST = timezone(timedelta(hours=8))
@@ -3059,6 +3062,58 @@ async def satchel_stack_state(
     return have, cap, room
 
 
+async def spend_tickets(
+    conn: aiosqlite.Connection,
+    steward_id: int,
+    amount: int,
+    *,
+    reason: str = "",
+) -> int:
+    """扣票的公共函数。amount 必须是 ≥1 的整数；余额不足抛 ValueError。返回扣后余额。
+
+    用条件 UPDATE（tickets>=amount）+ rowcount 判定，不依赖「先 SELECT 再 UPDATE」。
+    """
+    if not isinstance(amount, int) or amount <= 0:
+        _log.warning(
+            "spend_tickets 拒绝非正金额 steward=%s amount=%r reason=%s",
+            steward_id, amount, reason, stack_info=True,
+        )
+        raise ValueError(f"扣票金额必须是 ≥1 的整数（{reason or '未注明'}: {amount}）")
+    cur = await conn.execute(
+        "UPDATE stewards SET tickets=tickets-? WHERE id=? AND tickets>=?",
+        (amount, steward_id, amount),
+    )
+    if cur.rowcount != 1:
+        row = await (await conn.execute(
+            "SELECT tickets FROM stewards WHERE id=?", (steward_id,)
+        )).fetchone()
+        have = int(row[0]) if row else 0
+        raise ValueError(f"工分票不足，需要 {amount}（现 {have}）")
+    row = await (await conn.execute(
+        "SELECT tickets FROM stewards WHERE id=?", (steward_id,)
+    )).fetchone()
+    return int(row[0])
+
+
+async def grant_tickets(
+    conn: aiosqlite.Connection,
+    steward_id: int,
+    amount: int,
+    *,
+    reason: str = "",
+) -> None:
+    """加票的公共函数。amount 必须是 ≥1 的整数。"""
+    if not isinstance(amount, int) or amount <= 0:
+        _log.warning(
+            "grant_tickets 拒绝非正金额 steward=%s amount=%r reason=%s",
+            steward_id, amount, reason, stack_info=True,
+        )
+        raise ValueError(f"加票金额必须是 ≥1 的整数（{reason or '未注明'}: {amount}）")
+    await conn.execute(
+        "UPDATE stewards SET tickets=tickets+? WHERE id=?", (amount, steward_id)
+    )
+
+
 async def add_item(
     db: aiosqlite.Connection,
     steward_id: int,
@@ -3067,8 +3122,13 @@ async def add_item(
     *,
     over_cap: bool = False,
 ) -> None:
-    if qty <= 0:
-        return
+    # 第二道防线：入口解析已拒绝 ≤0，这里再挡一次，防止新入口漏校验。
+    if not isinstance(qty, int) or qty <= 0:
+        _log.warning(
+            "add_item 拒绝非正数量 steward=%s item=%s qty=%r", steward_id, item, qty,
+            stack_info=True,
+        )
+        raise ValueError(f"物品数量必须是 ≥1 的整数（{item} x{qty}）")
     if not over_cap:
         from .catalog import satchel_full_message
 
@@ -3086,6 +3146,13 @@ async def add_item(
 
 
 async def take_item(db: aiosqlite.Connection, steward_id: int, item: str, qty: int) -> bool:
+    # 第二道防线：负数会让「取走」变成「凭空发物品」，0 会让「没交货」也算成功。
+    if not isinstance(qty, int) or qty <= 0:
+        _log.warning(
+            "take_item 拒绝非正数量 steward=%s item=%s qty=%r", steward_id, item, qty,
+            stack_info=True,
+        )
+        raise ValueError(f"物品数量必须是 ≥1 的整数（{item} x{qty}）")
     cur = await db.execute(
         "SELECT quantity FROM satchel WHERE steward_id = ? AND item = ?",
         (steward_id, item),

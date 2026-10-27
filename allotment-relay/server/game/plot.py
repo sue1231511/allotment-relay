@@ -5,6 +5,7 @@ from typing import Any
 import aiosqlite
 
 from .. import config, db, events, flavor, farming, health, survival, world
+from ..inputs import parse_positive_int
 from .. import commons
 from ..catalog import (
     CROPS,
@@ -313,7 +314,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
         return msg
 
     if verb == "buy" and len(parts) >= 3:
-        qty, crop = _parse_int(parts[1]), resolve_crop_key(" ".join(parts[2:]))
+        qty, crop = parse_positive_int(parts[1]), resolve_crop_key(" ".join(parts[2:]))
         if not crop:
             raise ValueError(unknown_crop_message(" ".join(parts[2:])))
         from .. import season as season_mod
@@ -321,10 +322,7 @@ async def _plot_one(s: dict, cmd: str) -> str:
         seed = f"seed_{crop}"
         cost = CROPS[crop]["seed_price"] * qty
         async with db.connect() as conn:
-            cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
-            if (await cur.fetchone())[0] < cost:
-                raise ValueError(f"工分票不足，需要 {cost}")
-            await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (cost, s["id"]))
+            await db.spend_tickets(conn, s["id"], cost, reason="plot buy seed")
             await db.add_item(conn, s["id"], seed, qty)
             await conn.commit()
         return (

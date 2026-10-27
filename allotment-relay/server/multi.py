@@ -1,8 +1,10 @@
+import logging
 from typing import Any
 
 import aiosqlite
 
 from . import db, world
+from .inputs import parse_positive_int
 from .catalog import ITEM_NAMES, resolve_item_key, unknown_item_message
 from .config import (
     ASSIST_RAPPORT,
@@ -16,6 +18,8 @@ from .config import (
     SCRUMP_DAILY,
 )
 from .game import require_steward, _parse_int
+
+_log = logging.getLogger(__name__)
 
 
 def _ago(ts: int) -> str:
@@ -438,7 +442,7 @@ async def alliance_ops(key_id: int, command: str) -> str:
         return msg
 
     if verb == "donate" and len(parts) >= 3:
-        item, qty = parts[1], int(parts[2])
+        item, qty = parts[1], parse_positive_int(parts[2])
         async with db.connect() as conn:
             if not await db.take_item(conn, s["id"], item, qty):
                 raise ValueError("行囊不足")
@@ -471,7 +475,7 @@ async def alliance_ops(key_id: int, command: str) -> str:
         )
 
     if verb == "draw" and len(parts) >= 3:
-        item, qty = parts[1], int(parts[2])
+        item, qty = parts[1], parse_positive_int(parts[2])
         day = _day_id()
         async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
@@ -650,7 +654,7 @@ async def contract_ops(key_id: int, command: str) -> str:
         return "\n".join(lines)
 
     if verb == "post" and len(parts) >= 4 and parts[1] in ("看护", "佣工", "labor"):
-        days, reward = int(parts[2]), int(parts[3])
+        days, reward = parse_positive_int(parts[2], "委托天数"), parse_positive_int(parts[3], "酬劳")
         if not 1 <= days <= LABOR_MAX_DAYS:
             raise ValueError(f"委托天数 1~{LABOR_MAX_DAYS} 天")
         if reward < days * LABOR_MIN_DAILY:
@@ -659,10 +663,7 @@ async def contract_ops(key_id: int, command: str) -> str:
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
             if (await cur.fetchone())[0] < reward:
                 raise ValueError("工分票不足以支付酬劳")
-            await conn.execute(
-                "UPDATE stewards SET tickets = tickets - ? WHERE id=?",
-                (reward, s["id"]),
-            )
+            await db.spend_tickets(conn, s["id"], reward, reason="labor contract escrow")
             await conn.execute(
                 """
                 INSERT INTO contracts
@@ -679,20 +680,15 @@ async def contract_ops(key_id: int, command: str) -> str:
         return msg + "（酬劳已托管）"
 
     if verb == "post" and len(parts) >= 4:
-        raw_item, qty, reward = parts[1], int(parts[2]), int(parts[3])
+        raw_item, qty, reward = parts[1], parse_positive_int(parts[2]), parse_positive_int(parts[3], "酬劳")
         item = resolve_item_key(raw_item)
         if not item:
             raise ValueError(unknown_item_message(raw_item))
-        if reward < 1:
-            raise ValueError("酬劳至少 1 票")
         async with db.connect() as conn:
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
             if (await cur.fetchone())[0] < reward:
                 raise ValueError("工分票不足以支付酬劳")
-            await conn.execute(
-                "UPDATE stewards SET tickets = tickets - ? WHERE id=?",
-                (reward, s["id"]),
-            )
+            await db.spend_tickets(conn, s["id"], reward, reason="contract escrow")
             await conn.execute(
                 """
                 INSERT INTO contracts (poster_id, want_item, want_qty, reward_tickets, created_at)
@@ -753,6 +749,12 @@ async def contract_ops(key_id: int, command: str) -> str:
             want_raw = str(c["want_item"] or "")
             want = resolve_item_key(want_raw) or want_raw
             qty = int(c["want_qty"] or 0)
+            if qty < 1 or int(c["reward_tickets"] or 0) < 1:
+                _log.warning(
+                    "contract fill: 拒绝异常旧合约 cid=%s poster=%s filler=%s want=%s qty=%s reward=%s",
+                    cid, c["poster_id"], s["id"], want_raw, qty, c["reward_tickets"],
+                )
+                raise ValueError("这份合约的数量或酬劳异常（≤0），不能交付。请发布人 contract cancel 撤掉。")
             took = await db.take_item(conn, s["id"], want, qty)
             if not took and want != want_raw:
                 took = await db.take_item(conn, s["id"], want_raw, qty)
@@ -768,10 +770,7 @@ async def contract_ops(key_id: int, command: str) -> str:
                     (want, cid),
                 )
             await db.add_item(conn, c["poster_id"], want, qty)
-            await conn.execute(
-                "UPDATE stewards SET tickets = tickets + ? WHERE id=?",
-                (c["reward_tickets"], s["id"]),
-            )
+            await db.grant_tickets(conn, s["id"], int(c["reward_tickets"]), reason="contract fill")
             await conn.execute(
                 "UPDATE contracts SET status='filled', filler_id=? WHERE id=?",
                 (s["id"], cid),
@@ -828,7 +827,7 @@ async def league_ops(key_id: int, command: str) -> str:
         return f"本周联盟目标：{snap['label']} {snap['progress']}/{snap['target']}"
 
     if verb == "contribute" and len(parts) >= 3:
-        item, qty = parts[1], int(parts[2])
+        item, qty = parts[1], parse_positive_int(parts[2])
         async with db.connect() as conn:
             row = await _ensure_league_week(conn)
             if row["completed"]:

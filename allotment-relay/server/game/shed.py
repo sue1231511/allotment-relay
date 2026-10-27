@@ -1,3 +1,4 @@
+import logging
 import random
 import re
 from typing import Any
@@ -6,6 +7,7 @@ import aiosqlite
 
 from .. import config, db, events, flavor, farming, health, survival, world
 from .. import commons
+from ..inputs import parse_positive_int
 from ..catalog import (
     CROPS,
     resolve_crop_key,
@@ -35,6 +37,8 @@ from ..config import (
 
 
 from .base import _parse_int, _parcel_line, _load_named_plot, require_steward
+
+_log = logging.getLogger(__name__)
 from .tide import _collect_handoffs
 
 
@@ -95,7 +99,7 @@ async def _shed_one(s: dict, cmd: str) -> str:
         if not m:
             raise ValueError("用法: handoff 名字 物品 数量")
         peer_name, item, qty_s = m.group(1), m.group(2), m.group(3)
-        qty = int(qty_s)
+        qty = parse_positive_int(qty_s)
         peer = await db.get_steward_by_name(peer_name)
         if not peer:
             raise ValueError("找不到管理员")
@@ -418,7 +422,7 @@ async def swap_ops(key_id: int, command: str) -> str:
         item_key = resolve_item_key(parts[1])
         if not item_key:
             raise ValueError(unknown_item_message(parts[1]))
-        qty = _parse_int(parts[2])
+        qty = parse_positive_int(parts[2])
         note = parts[3] if len(parts) > 3 else ""
         async with db.connect() as conn:
             if not await db.take_item(conn, s["id"], item_key, qty):
@@ -449,6 +453,8 @@ async def swap_ops(key_id: int, command: str) -> str:
                 raise ValueError("该挂单不存在或已被领走")
             if lot["depositor_id"] == s["id"]:
                 raise ValueError("不能领取自己的挂单")
+            if int(lot["quantity"] or 0) < 1:
+                raise ValueError("这张挂单的数量异常（≤0），不能领取。请挂单人 swap_ops cancel 撤掉。")
             rapport = await social_mod.get_rapport(s["id"], lot["depositor_id"], conn=conn)
             claim_fee = social_mod.swap_claim_fee(rapport)
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
@@ -476,7 +482,13 @@ async def swap_ops(key_id: int, command: str) -> str:
             )).fetchone() or {})
             if not lot:
                 raise ValueError("找不到可撤回的挂单")
-            await db.add_item(conn, s["id"], lot["item"], lot["quantity"])
+            if int(lot["quantity"] or 0) >= 1:
+                await db.add_item(conn, s["id"], lot["item"], lot["quantity"])
+            else:
+                _log.warning(
+                    "swap cancel: 异常旧挂单只删记录不退货 steward=%s lot=%s item=%s qty=%s",
+                    s["id"], lot_id, lot["item"], lot["quantity"],
+                )
             await conn.execute("DELETE FROM swap_lots WHERE id=?", (lot_id,))
             await conn.commit()
         return f"已撤回 #{lot_id}，物品退回行囊"

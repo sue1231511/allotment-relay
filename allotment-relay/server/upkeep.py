@@ -666,8 +666,8 @@ async def upkeep_command(key_id: int, command: str = "") -> str:
     if verb in ("交", "付", "还") or verb_l in ("pay", "payupkeep"):
         amt = None
         if rest:
-            from .game import _parse_int
-            amt = _parse_int(rest[0], "票数")
+            from .inputs import parse_positive_int
+            amt = parse_positive_int(rest[0], "票数")
         return await upkeep_pay(key_id, amt)
     if verb in ("维", "岸维", "维修", "维修费") or verb_l in (
         "upkeep", "maintenance", "repairfee", "levyupkeep"
@@ -675,8 +675,8 @@ async def upkeep_command(key_id: int, command: str = "") -> str:
         if rest and rest[0] in ("交", "付", "还", "pay"):
             amt = None
             if len(rest) >= 2:
-                from .game import _parse_int
-                amt = _parse_int(rest[1], "票数")
+                from .inputs import parse_positive_int
+                amt = parse_positive_int(rest[1], "票数")
             return await upkeep_pay(key_id, amt)
         if rest and rest[0].lower() in ("help", "?", "帮助"):
             return UPKEEP_HELP

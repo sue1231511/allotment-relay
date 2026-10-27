@@ -6,6 +6,7 @@ import aiosqlite
 
 from .. import config, db, events, flavor, farming, health, survival, world
 from .. import commons
+from ..inputs import parse_positive_int
 from ..catalog import (
     CROPS,
     resolve_crop_key,
@@ -53,9 +54,10 @@ async def _satchel_stack_expand(s: dict, n: int = 1) -> str:
                 f"扩栈需要 {cost} 票（每级 {config.SATCHEL_STACK_COST} 票，+{config.SATCHEL_STACK_STEP} 份/格），"
                 f"你只有 {tickets} 票"
             )
+        await db.spend_tickets(conn, s["id"], cost, reason="satchel stack expand")
         await conn.execute(
-            "UPDATE stewards SET tickets=tickets-?, satchel_stack_extra=? WHERE id=?",
-            (cost, extra + n, s["id"]),
+            "UPDATE stewards SET satchel_stack_extra=? WHERE id=?",
+            (extra + n, s["id"]),
         )
         await conn.commit()
     new_tier = extra + n
@@ -150,7 +152,7 @@ async def _tote_one(s: dict, command: str) -> str:
             item_key = resolve_item_key(tokens[i])
             if not item_key:
                 raise ValueError(unknown_item_message(tokens[i]))
-            qty = _parse_int(tokens[i + 1])
+            qty = parse_positive_int(tokens[i + 1])
             if item_key.startswith("fit_") or item_key.startswith("deco_"):
                 furniture_only.append((item_key, qty))
                 continue
@@ -257,9 +259,7 @@ async def _tote_one(s: dict, command: str) -> str:
     if verb in ("gift", "送礼", "赠礼") and len(parts) >= 4:
         peer_name = parts[1]
         token = parts[2]
-        qty = _parse_int(parts[3])
-        if qty < 1:
-            raise ValueError("送礼数量至少 1")
+        qty = parse_positive_int(parts[3], "送礼数量")
         note = " ".join(parts[4:])[:80] if len(parts) > 4 else ""
         async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
@@ -275,19 +275,8 @@ async def _tote_one(s: dict, command: str) -> str:
             from .. import multi as multi_mod
             token_l = token.lower()
             if token_l in ("tickets", "票", "工分票"):
-                cur = await conn.execute(
-                    "SELECT tickets FROM stewards WHERE id=?", (s["id"],)
-                )
-                if (await cur.fetchone())[0] < qty:
-                    raise ValueError(f"工分票不足，需要 {qty} 票")
-                await conn.execute(
-                    "UPDATE stewards SET tickets=tickets-? WHERE id=?",
-                    (qty, s["id"]),
-                )
-                await conn.execute(
-                    "UPDATE stewards SET tickets=tickets+? WHERE id=?",
-                    (qty, peer["id"]),
-                )
+                await db.spend_tickets(conn, s["id"], qty, reason="tote gift tickets")
+                await db.grant_tickets(conn, peer["id"], qty, reason="tote gift tickets")
                 gift_line = f"{qty} 工分票"
                 item_key = None
             else:
@@ -336,7 +325,7 @@ async def _tote_one(s: dict, command: str) -> str:
             "篱边人情：送了就要认",
         ])
     if verb in ("扩栈", "expand_stack", "stack_expand"):
-        n = _parse_int(parts[1], "数量") if len(parts) >= 2 else 1
+        n = parse_positive_int(parts[1], "数量") if len(parts) >= 2 else 1
         return await _satchel_stack_expand(s, n)
     raise ValueError(
         f"未知 tote 指令: {command}（list / 履历 / gifts / 赠礼记录 / vend 物品 数量 / gift|送礼 名字 物品|票 数量 / 扩栈 [数量]）"

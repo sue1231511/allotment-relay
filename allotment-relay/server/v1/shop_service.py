@@ -5,7 +5,7 @@ from typing import Any
 
 from .. import db, game, tt
 from . import farm_service
-from .errors import ApiError, classify, humanize
+from .errors import ApiError, classify, humanize, clean_qty
 
 
 async def catalog(api_key: str, key_id: int) -> dict[str, Any]:
@@ -32,7 +32,7 @@ async def buy(api_key: str, key_id: int, item: str, qty: int = 1) -> dict[str, A
     name = (item or "").strip()
     if not name:
         raise ApiError("BAD_REQUEST", "先点货架上的东西。")
-    n = max(1, min(24, int(qty or 1)))
+    n = clean_qty(qty, 24)
     try:
         await game.require_steward(key_id)
     except ValueError as exc:

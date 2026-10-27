@@ -8,6 +8,7 @@ from typing import Any
 import aiosqlite
 
 from . import commons, config, db, energy, flavor, health, world
+from .inputs import parse_positive_int
 from .catalog import (
     PICK_TIERS,
     QUARRY_ORES,
@@ -682,7 +683,7 @@ async def _wash(conn: aiosqlite.Connection, s: dict[str, Any], rest: str) -> str
     qty = config.QUARRY_WASH_RAW_PER
     name_toks = parts
     if name_toks[-1].isdigit():
-        qty = max(1, int(name_toks[-1]))
+        qty = parse_positive_int(name_toks[-1])
         name_toks = name_toks[:-1]
     token = " ".join(name_toks)
     item = resolve_ore_key(token)

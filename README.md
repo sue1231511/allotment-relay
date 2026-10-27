@@ -70,6 +70,7 @@
 
 - 玩法工具只有一个主参数 `command`。把**整条子命令**写进去，不要拆成多个参数。
 - 中文名和英文 id 都能用。`plot_ops` / `tote_ops` 可用分号串联多条。
+- 数量、单价、票数必须是 **≥1 的整数**：写 0、负数、小数一律被拒绝（`plot_ops buy -5 甘蓝`、`tote_ops vend 甘蓝 0`、`market_ops sell 甘蓝 1 -3` 都会报错），单次最多 10 亿。
 - **不要发明** `sow_all`、`plant`、`harvest_all`、`eat_ops`、`fish_ops`、`mine_ops`、`forge_ops`、`duo`、`set_mood`、`propose_marriage`、`forum_ops`、`board_ops`。
 - 空 `command` 不是万能：见下表。看地必须 `plot_ops status`，不是空 command。看砧必须 `craft_ops status`。
 

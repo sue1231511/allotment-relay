@@ -9,6 +9,7 @@ from typing import Any
 import aiosqlite
 
 from . import config, db, energy, flavor, social, survival, upkeep
+from .inputs import parse_positive_int
 from .catalog import (
     HEARTH_RECIPES,
     ITEM_NAMES,
@@ -832,7 +833,7 @@ async def kitchen_ops(key_id: int, command: str) -> str:
         tokens = parts[1:]
         qty = 1
         if tokens[-1].isdigit():
-            qty = max(1, int(tokens[-1]))
+            qty = parse_positive_int(tokens[-1])
             tokens = tokens[:-1]
         if not tokens:
             raise ValueError("用法: kitchen_ops store 菜名 [数量]（或 hut_ops 冰柜 存 菜名）")
@@ -845,7 +846,7 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             tokens = rest[1:]
             qty = 1
             if tokens and tokens[-1].isdigit():
-                qty = max(1, int(tokens[-1]))
+                qty = parse_positive_int(tokens[-1])
                 tokens = tokens[:-1]
             if sub in ("put", "store", "存", "放", "入") and tokens:
                 return await fridge_put(s, " ".join(tokens), qty)
@@ -857,7 +858,7 @@ async def kitchen_ops(key_id: int, command: str) -> str:
         tokens = parts[1:]
         qty = 1
         if tokens[-1].isdigit():
-            qty = max(1, int(tokens[-1]))
+            qty = parse_positive_int(tokens[-1])
             tokens = tokens[:-1]
         if not tokens:
             raise ValueError("用法: kitchen_ops take 菜名 [数量]（或 hut_ops 冰柜 取 菜名）")
