@@ -110,12 +110,21 @@ async def _test_db_layer() -> None:
     await _give(db, sid, "crop_kale", 2)
     async with db.connect() as conn:
         for bad in (0, -1, -50):
-            await _rejects(db.add_item(conn, sid, "crop_kale", bad))
-            await _rejects(db.take_item(conn, sid, "crop_kale", bad))
             await _rejects(db.spend_tickets(conn, sid, bad, reason="t"))
             await _rejects(db.grant_tickets(conn, sid, bad, reason="t"))
+        for bad in (-1, -50):
+            await _rejects(db.add_item(conn, sid, "crop_kale", bad))
+            await _rejects(db.take_item(conn, sid, "crop_kale", bad))
+        await _rejects(db.add_item(conn, sid, "crop_kale", 1.5))
+        await _rejects(db.take_item(conn, sid, "crop_kale", True))
+        # 0：当作什么都没发生，不报错、不建行、不动库存
+        await db.add_item(conn, sid, "crop_beet", 0)
+        assert await db.take_item(conn, sid, "crop_kale", 0) is True
+        assert await db.take_item(conn, sid, "crop_nothere", 0) is True
         await conn.commit()
     assert await _qty(db, sid, "crop_kale") == 2
+    assert await _qty(db, sid, "crop_beet") == 0
+    assert await _qty(db, sid, "crop_nothere") == 0
     assert await _tickets(db, sid) == 100
     # 正常路径
     async with db.connect() as conn:
@@ -179,7 +188,13 @@ async def _test_vend() -> None:
 
 
 # ── B / B2：集市 ─────────────────────────────────────────────────────────
-def test_market_negative_and_legacy() -> None:
+def test_market_negative_and_legacy(monkeypatch) -> None:
+    from server import market_stall_gust
+
+    async def _no_gust(conn, steward_id):  # 挂单后随机掀摊会让后续 sell/buy 被拦，测试要确定性
+        return ""
+
+    monkeypatch.setattr(market_stall_gust, "maybe_after_sell", _no_gust)
     asyncio.run(_test_market())
 
 
@@ -338,8 +353,52 @@ async def _test_v1() -> None:
     assert clean_qty(500, 24) == 24
 
 
+# ── 一次性清理脚本：只清负数格子，不动票，默认只预览 ───────────────────
+def test_clear_negative_satchel_script() -> None:
+    asyncio.run(_test_clear_script())
+
+
+async def _test_clear_script() -> None:
+    import importlib.util
+    import sqlite3
+
+    tmp = Path(tempfile.mkdtemp(prefix="inval-clear-"))
+    db = await _boot(tmp)
+    _, a = await _enroll(db, "a@x.com", "清理甲", 777)
+    _, b = await _enroll(db, "b@x.com", "清理乙", 5)
+    async with db.connect() as conn:
+        await conn.execute("INSERT INTO satchel (steward_id,item,quantity) VALUES (?,?,?) ON CONFLICT(steward_id,item) DO UPDATE SET quantity=excluded.quantity", (a, "seed_kale", -285715))
+        await conn.execute("INSERT INTO satchel (steward_id,item,quantity) VALUES (?,?,?) ON CONFLICT(steward_id,item) DO UPDATE SET quantity=excluded.quantity", (b, "crop_beet", -3))
+        await conn.execute("INSERT INTO satchel (steward_id,item,quantity) VALUES (?,?,?) ON CONFLICT(steward_id,item) DO UPDATE SET quantity=excluded.quantity", (b, "crop_kale", 4))
+        await conn.commit()
+    spec = importlib.util.spec_from_file_location("clear_neg", ROOT / "scripts" / "clear_negative_satchel.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    dbfile = str(tmp / "relay.db")
+
+    def neg() -> int:
+        c = sqlite3.connect(dbfile)
+        try:
+            return c.execute("SELECT COUNT(*) FROM satchel WHERE quantity<0").fetchone()[0]
+        finally:
+            c.close()
+
+    assert mod.main(["--db", dbfile]) == 0           # 预览：不改
+    assert neg() == 2
+    assert mod.main(["--db", dbfile, "--apply"]) == 0
+    assert neg() == 0
+    assert list(tmp.glob("relay.db.before-negative-clear-*.bak")), "应有备份"
+    assert await _qty(db, b, "crop_kale") == 4       # 正数格子不动
+    assert await _tickets(db, a) == 777              # 票不动
+    assert await _tickets(db, b) == 5
+    assert mod.main(["--db", str(tmp / "nope.db")]) == 2
+    # 不属于启动流程：没有任何 server 模块导入它
+    for py in (ROOT / "server").rglob("*.py"):
+        assert "clear_negative_satchel" not in py.read_text(encoding="utf-8"), py
+
+
 if __name__ == "__main__":
     test_parse_positive_int()
-    for fn in (_test_db_layer, _test_plot_buy, _test_vend, _test_market, _test_family_c, _test_zero, _test_v1):
+    for fn in (_test_db_layer, _test_plot_buy, _test_vend, _test_market, _test_family_c, _test_zero, _test_v1, _test_clear_script):
         asyncio.run(fn())
     print("ok")

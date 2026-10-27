@@ -3122,13 +3122,18 @@ async def add_item(
     *,
     over_cap: bool = False,
 ) -> None:
-    # 第二道防线：入口解析已拒绝 ≤0，这里再挡一次，防止新入口漏校验。
-    if not isinstance(qty, int) or qty <= 0:
+    # 第二道防线：负数（或非整数）一律拒绝；0 当作「什么都没发生」直接返回。
+    # 入口解析（inputs.parse_positive_int）已拒绝用户写的 ≤0；内部算出来的 0
+    # （收成 0 件、产量取整成 0 等）是正常情况，不该报错。
+    if isinstance(qty, bool) or not isinstance(qty, int) or qty < 0:
         _log.warning(
-            "add_item 拒绝非正数量 steward=%s item=%s qty=%r", steward_id, item, qty,
+            "add_item 拒绝非法数量 steward=%s item=%s qty=%r", steward_id, item, qty,
             stack_info=True,
         )
-        raise ValueError(f"物品数量必须是 ≥1 的整数（{item} x{qty}）")
+        raise ValueError(f"物品数量不能是负数或非整数（{item} x{qty}）")
+    if qty == 0:
+        _log.debug("add_item qty=0，无事发生 steward=%s item=%s", steward_id, item)
+        return
     if not over_cap:
         from .catalog import satchel_full_message
 
@@ -3146,13 +3151,16 @@ async def add_item(
 
 
 async def take_item(db: aiosqlite.Connection, steward_id: int, item: str, qty: int) -> bool:
-    # 第二道防线：负数会让「取走」变成「凭空发物品」，0 会让「没交货」也算成功。
-    if not isinstance(qty, int) or qty <= 0:
+    # 第二道防线：负数会让「取走」变成「凭空发物品」，必须拒绝；0 当作「什么都没发生」。
+    if isinstance(qty, bool) or not isinstance(qty, int) or qty < 0:
         _log.warning(
-            "take_item 拒绝非正数量 steward=%s item=%s qty=%r", steward_id, item, qty,
+            "take_item 拒绝非法数量 steward=%s item=%s qty=%r", steward_id, item, qty,
             stack_info=True,
         )
-        raise ValueError(f"物品数量必须是 ≥1 的整数（{item} x{qty}）")
+        raise ValueError(f"物品数量不能是负数或非整数（{item} x{qty}）")
+    if qty == 0:
+        _log.debug("take_item qty=0，无事发生 steward=%s item=%s", steward_id, item)
+        return True
     cur = await db.execute(
         "SELECT quantity FROM satchel WHERE steward_id = ? AND item = ?",
         (steward_id, item),
