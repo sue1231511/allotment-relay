@@ -2261,6 +2261,20 @@ async def init_db() -> None:
             )
             """,
             """
+            CREATE TABLE IF NOT EXISTS home_caretakes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                owner_id INTEGER NOT NULL REFERENCES stewards(id),
+                caretaker_id INTEGER NOT NULL REFERENCES stewards(id),
+                started_at INTEGER NOT NULL,
+                active INTEGER NOT NULL DEFAULT 1,
+                harvest_count INTEGER NOT NULL DEFAULT 0,
+                last_harvest_day TEXT NOT NULL DEFAULT '',
+                ended_at INTEGER NOT NULL DEFAULT 0
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_home_caretakes_caretaker "
+            "ON home_caretakes(caretaker_id, active)",
+            """
             CREATE TABLE IF NOT EXISTS heart_gifts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 steward_id INTEGER NOT NULL REFERENCES stewards(id),

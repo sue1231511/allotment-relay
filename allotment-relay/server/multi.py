@@ -360,6 +360,11 @@ async def alliance_ops(key_id: int, command: str) -> str:
         blurb = social_mod.rapport_peer_blurb(score)
         return f"与 {peer['name']} — {blurb}（赠礼/assist/打赏等会涨；总览 steward_ops 协作）"
 
+    if verb in ("荒宅", "代管", "代管收", "caretake"):
+        from . import caretaker as caretaker_mod
+
+        return await caretaker_mod.caretaker_ops(key_id, command)
+
     if verb == "assist" and len(parts) >= 2:
         peer = await db.get_steward_by_name(parts[1])
         if not peer:
