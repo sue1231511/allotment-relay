@@ -334,10 +334,18 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
         FROM market_listings l
         JOIN stewards d ON d.id = l.seller_id
         WHERE l.buyer_id IS NULL
-        ORDER BY l.created_at DESC LIMIT 24
+        ORDER BY l.created_at DESC LIMIT 60
         """
     )).fetchall()
-    mine_rows = [r for r in rows if int(r["seller_id"]) == int(s["id"])]
+    # 「我的摊」按摊主独立查全量；不能从街摊展示窗口里筛，
+    # 否则挂单多时自己的老单被 LIMIT 截掉，摊位显示 0/N
+    mine_rows = await (await conn.execute(
+        """
+        SELECT * FROM market_listings
+        WHERE seller_id=? AND buyer_id IS NULL ORDER BY created_at DESC
+        """,
+        (s["id"],),
+    )).fetchall()
     used = len(mine_rows)
     listings = []
     for r in rows:
@@ -351,7 +359,10 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
             note = "自己的摊，不能买。"
             can = False
         elif tickets < cost:
-            note = f"要 {cost} 票（含手续费 {config.MARKET_FEE}），现在 {tickets}"
+            note = (
+                f"{r['seller_name']} · 要 {cost} 票"
+                f"（含手续费 {config.MARKET_FEE}），现在 {tickets}"
+            )
             can = False
         else:
             note = f"{r['seller_name']} · {price} 票/个"

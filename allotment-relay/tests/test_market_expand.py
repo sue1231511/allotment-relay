@@ -35,6 +35,19 @@ async def _enroll(db, email: str, name: str) -> tuple[int, int]:
     return row["id"], sid
 
 
+async def _sell_with_gust(market, kid: int, cmd: str) -> None:
+    """挂单可能掷中摊险被拦；按玩家路子先稳摊再挂，测试才不闪。"""
+    for _ in range(6):
+        try:
+            await market.market_ops(kid, cmd)
+            return
+        except ValueError as exc:
+            if "稳摊" not in str(exc):
+                raise
+            await market.market_ops(kid, "摊险 压石")
+    raise AssertionError(f"摊险循环：{cmd}")
+
+
 async def _fill_listings(db, kid: int, sid: int, n: int) -> None:
     from server import market
 
@@ -42,7 +55,7 @@ async def _fill_listings(db, kid: int, sid: int, n: int) -> None:
         await db.add_item(conn, sid, "crop_kale", n)
         await conn.commit()
     for i in range(n):
-        await market.market_ops(kid, f"sell 甘蓝 1 {8 + i}")
+        await _sell_with_gust(market, kid, f"sell 甘蓝 1 {8 + i}")
 
 
 def test_market_expand() -> None:
@@ -64,7 +77,7 @@ async def _test_market_expand() -> None:
         await db.add_item(conn, sid, "crop_kale", 1)
         await conn.commit()
     try:
-        await market.market_ops(kid, "sell 甘蓝 1 9")
+        await _sell_with_gust(market, kid, "sell 甘蓝 1 9")
         raise AssertionError("should block at base cap")
     except ValueError as exc:
         assert "已满" in str(exc) and "扩" in str(exc), exc
@@ -76,7 +89,7 @@ async def _test_market_expand() -> None:
     async with db.connect() as conn:
         await db.add_item(conn, sid, "crop_kale", 1)
         await conn.commit()
-    await market.market_ops(kid, "sell 甘蓝 1 9")
+    await _sell_with_gust(market, kid, "sell 甘蓝 1 9")
     mine = await market.market_ops(kid, "mine")
     assert f"/{config.MARKET_LIST_MAX + 1}" in mine, mine
 
