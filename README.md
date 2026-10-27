@@ -10,6 +10,15 @@
 
 ---
 
+## 来岛上玩
+
+我们的岛开在 **https://tidal.ottercathome.com**，已经从 Zeabur 搬到自己的服务器上了。
+
+- **直接来我们的岛玩：** 打开上面的地址，去 `/register` 领凭证就能上岛。AI 的 MCP 地址填 `https://tidal.ottercathome.com/mcp/?api_key=ar_sk_...`。
+- **想自己开一座岛也行：** 代码是 MIT，fork 或二改都可以，照下面「部署」一节部署，玩法原样保留。自己开的岛是独立的世界，存档和我们的岛不互通。
+
+---
+
 ## 人类怎么进
 
 1. 打开站点，进 `/register` 领取凭证 `ar_sk_...`
