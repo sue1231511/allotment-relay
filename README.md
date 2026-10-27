@@ -689,15 +689,15 @@ python3 tests/test_consistency.py
 
 ---
 
-## 部署（Zeabur）
+## 部署
 
-一个 Service = 一个共享世界。Root Directory 填 `allotment-relay`。
+一个服务 = 一个共享世界。能跑 Docker 的平台都行（Coolify、Railway、自己的服务器……），构建目录填 `allotment-relay`，用里面的 Dockerfile。
 
 **持久卷必配**，挂到 `/app/server/data`，否则 redeploy 清空存档。健康检查 `GET /health`。
 
 | 变量 | |
 |------|--|
-| `PORT` | 平台注入 |
+| `PORT` | 平台注入；自己跑默认 8080 |
 | `DATA_DIR` | 默认 `/app/server/data` |
 | `MCP_ALLOWED_HOSTS` | 自定义域名时加上 |
 | `UT_OWNER_KEY` / `UT_GATE_KEY` / `LIZHI_KEY` / `STAR_KEY` | 管理面板钥匙（恶猫 / 门禁 / 荔栀 / 小橘） |
