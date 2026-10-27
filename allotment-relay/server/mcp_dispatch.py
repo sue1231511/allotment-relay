@@ -287,7 +287,8 @@ ALLIANCE_HELP = """alliance_ops 子命令（整句写进 command）：
   邻居 — 同 steward_ops 邻居（全员、熟地、可否偷菜/assist）
   assist 名字 — 帮邻居打理。例子：assist 安（涨协作；协作≥60 对方额外 +2 票）
   rapport 名字 — 只查和某岛民的协作分。总览+档位：steward_ops 协作 · peer 名字 看公开档也会写你和 TA 的分
-  contract post|list|fill|mine|cancel — 悬赏合约（post/fill 认中文名与英文 id，如 石蟹王 / fish_kingcrab）
+  contract post|list|take|fill|mine|cancel — 悬赏合约（post/fill 认中文名与英文 id，如 石蟹王 / fish_kingcrab）
+  contract post 看护 天数 酬票 — 劳动佣工：他人 take 接单后每天 assist 雇主记履约，当日工钱即时到账；满勤结案，超期按天退款（接单要协作度≥20）
   league status|contribute|board — 全服周目标（本周=东八区周一换班，和岸税、禁捕、纪事同一周）；抽作物目标时跳过当季休市的种，回落到甘蓝。league status / board 考勤逾期仍可看。league board 是贡献榜。不在潮生会办
   board — 周目标贡献榜（全服票榜请用 steward_ops board）
   donate 物品 数量 / larder / draw 物品 数量 — 联盟储藏室（领取 2 票、每日 3 次）。不在潮生会办

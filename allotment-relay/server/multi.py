@@ -370,6 +370,7 @@ async def alliance_ops(key_id: int, command: str) -> str:
         extra_tickets = 0
         cofarm_note: str | None = None
         cofarm_league: str | None = None
+        labor_note: str | None = None
         async with db.connect() as conn:
             cur = await conn.execute(
                 "SELECT 1 FROM assist_log WHERE helper_id=? AND target_id=? AND day=?",
@@ -411,11 +412,14 @@ async def alliance_ops(key_id: int, command: str) -> str:
             cofarm_league = await cofarm_mod.league_extra_after_assist(conn, s["id"], peer["id"])
             from . import island_collections as coll_mod
             await coll_mod.sync_unlocks(conn, s["id"])
+            labor_note = await _labor_on_assist(conn, s["id"], peer["id"])
             if cofarm_league:
                 await db.add_chronicle("league", cofarm_league, s["id"], conn=conn)
             await conn.commit()
         ticket_gain = ASSIST_TICKETS + extra_tickets
         msg = f"{s['name']} 帮 {peer['name']} 打理了 {len(rows)} 块份地，+{ticket_gain} 票"
+        if labor_note:
+            msg += "\n" + labor_note
         if cofarm_note:
             msg += f"\n{cofarm_note}"
         if cofarm_league:
@@ -503,6 +507,85 @@ async def alliance_ops(key_id: int, command: str) -> str:
     raise ValueError(f"未知 alliance 指令: {command}")
 
 
+LABOR_KIND = "labor"
+LABOR_MIN_DAILY = 3
+LABOR_MAX_DAYS = 14
+LABOR_TAKE_RAPPORT = 20
+
+
+def _labor_daily_pay(reward: int, days: int, done_before: int) -> int:
+    """当日工钱：整除按天，最后一天把余数一次结清。"""
+    daily = reward // max(days, 1)
+    if done_before + 1 >= days:
+        daily += reward - daily * days
+    return daily
+
+
+async def _ensure_labor_expiry(conn) -> None:
+    """劳动合约过了宽限期仍未满勤：未履约天数的托管款退雇主，合约结案。"""
+    conn.row_factory = aiosqlite.Row
+    rows = await (await conn.execute(
+        "SELECT id, poster_id, reward_tickets, labor_days, labor_done FROM contracts "
+        "WHERE kind=? AND status='taken' AND deadline>0 AND deadline<?",
+        (LABOR_KIND, db.now()),
+    )).fetchall()
+    for c in rows:
+        done = int(c["labor_done"] or 0)
+        days = max(int(c["labor_days"] or 1), 1)
+        if done < days:
+            daily = int(c["reward_tickets"]) // days
+            refund = max(0, int(c["reward_tickets"]) - daily * done)
+            if refund:
+                await conn.execute(
+                    "UPDATE stewards SET tickets=tickets+? WHERE id=?",
+                    (refund, c["poster_id"]),
+                )
+        await conn.execute(
+            "UPDATE contracts SET status='expired' WHERE id=?", (c["id"],)
+        )
+
+
+async def _labor_on_assist(conn, helper_id: int, target_id: int) -> str | None:
+    """佣工日结：接单人当天 assist 雇主即记一天履约，当日工钱即时到账。"""
+    day = _day_id()
+    conn.row_factory = aiosqlite.Row
+    rows = await (await conn.execute(
+        "SELECT * FROM contracts WHERE kind=? AND status='taken' AND filler_id=? AND poster_id=?",
+        (LABOR_KIND, helper_id, target_id),
+    )).fetchall()
+    notes: list[str] = []
+    for c in rows:
+        done = int(c["labor_done"] or 0)
+        days = int(c["labor_days"] or 0)
+        if days < 1 or done >= days:
+            continue
+        cur = await conn.execute(
+            "SELECT 1 FROM contracts_labor_days WHERE contract_id=? AND day=?",
+            (c["id"], day),
+        )
+        if await cur.fetchone():
+            continue
+        pay = _labor_daily_pay(int(c["reward_tickets"]), days, done)
+        await conn.execute(
+            "INSERT INTO contracts_labor_days (contract_id, day) VALUES (?,?)",
+            (c["id"], day),
+        )
+        await conn.execute(
+            "UPDATE contracts SET labor_done=labor_done+1 WHERE id=?", (c["id"],)
+        )
+        await conn.execute(
+            "UPDATE stewards SET tickets=tickets+? WHERE id=?", (pay, helper_id)
+        )
+        if done + 1 >= days:
+            await conn.execute(
+                "UPDATE contracts SET status='filled' WHERE id=?", (c["id"],)
+            )
+            notes.append(f"佣工合约 #{c['id']} 满勤结案，尾款 +{pay} 票")
+        else:
+            notes.append(f"佣工合约 #{c['id']} 履约 {done + 1}/{days} 天，当日工钱 +{pay} 票")
+    return "\n".join(notes) if notes else None
+
+
 async def contract_ops(key_id: int, command: str) -> str:
     s = await require_steward(key_id)
     parts = command.strip().split()
@@ -511,6 +594,8 @@ async def contract_ops(key_id: int, command: str) -> str:
     if verb == "list":
         async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
+            await _ensure_labor_expiry(conn)
+            await conn.commit()
             rows = await (await conn.execute(
                 """
                 SELECT c.*, p.name AS poster_name FROM contracts c
@@ -520,26 +605,73 @@ async def contract_ops(key_id: int, command: str) -> str:
             )).fetchall()
         if not rows:
             return "暂无开放合约"
-        return "\n".join(
-            f"#{r['id']} {r['poster_name']} 要 {ITEM_NAMES.get(r['want_item'], r['want_item'])} x{r['want_qty']} "
-            f"酬 {r['reward_tickets']} 票"
-            for r in rows
-        )
+        lines = []
+        for r in rows:
+            if r["kind"] == LABOR_KIND:
+                lines.append(
+                    f"#{r['id']} {r['poster_name']} 挂看护委托 {r['labor_days']} 天 "
+                    f"酬 {r['reward_tickets']} 票（contract take {r['id']} 接单，每天 assist 雇主记履约）"
+                )
+            else:
+                lines.append(
+                    f"#{r['id']} {r['poster_name']} 要 {ITEM_NAMES.get(r['want_item'], r['want_item'])} x{r['want_qty']} "
+                    f"酬 {r['reward_tickets']} 票"
+                )
+        return "\n".join(lines)
 
     if verb == "mine":
         async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
+            await _ensure_labor_expiry(conn)
+            await conn.commit()
             rows = await (await conn.execute(
-                "SELECT * FROM contracts WHERE poster_id=? AND status='open' ORDER BY id DESC",
+                "SELECT * FROM contracts WHERE poster_id=? AND status IN ('open','taken') ORDER BY id DESC",
                 (s["id"],),
             )).fetchall()
         if not rows:
             return "你没有挂出的合约"
-        return "\n".join(
-            f"#{r['id']} 要 {ITEM_NAMES.get(r['want_item'], r['want_item'])} x{r['want_qty']} "
-            f"酬 {r['reward_tickets']} 票"
-            for r in rows
-        )
+        lines = []
+        for r in rows:
+            if r["kind"] == LABOR_KIND:
+                state = f"已接 {r['labor_done'] or 0}/{r['labor_days']} 天" if r["status"] == "taken" else "等人接"
+                lines.append(
+                    f"#{r['id']} 看护委托 {r['labor_days']} 天 酬 {r['reward_tickets']} 票（{state}）"
+                )
+            else:
+                lines.append(
+                    f"#{r['id']} 要 {ITEM_NAMES.get(r['want_item'], r['want_item'])} x{r['want_qty']} "
+                    f"酬 {r['reward_tickets']} 票"
+                )
+        return "\n".join(lines)
+
+    if verb == "post" and len(parts) >= 4 and parts[1] in ("看护", "佣工", "labor"):
+        days, reward = int(parts[2]), int(parts[3])
+        if not 1 <= days <= LABOR_MAX_DAYS:
+            raise ValueError(f"委托天数 1~{LABOR_MAX_DAYS} 天")
+        if reward < days * LABOR_MIN_DAILY:
+            raise ValueError(f"看护委托酬劳至少 {days * LABOR_MIN_DAILY} 票（每天至少 {LABOR_MIN_DAILY} 票）")
+        async with db.connect() as conn:
+            cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
+            if (await cur.fetchone())[0] < reward:
+                raise ValueError("工分票不足以支付酬劳")
+            await conn.execute(
+                "UPDATE stewards SET tickets = tickets - ? WHERE id=?",
+                (reward, s["id"]),
+            )
+            await conn.execute(
+                """
+                INSERT INTO contracts
+                (poster_id, want_item, want_qty, reward_tickets, created_at,
+                 kind, labor_days, deadline)
+                VALUES (?,?,?,?,?,?,?,?)
+                """,
+                (s["id"], "", 0, reward, db.now(), LABOR_KIND, days,
+                 db.now() + (days + 2) * 86400),
+            )
+            await conn.commit()
+        msg = f"{s['name']} 挂出看护委托：{days} 天，酬 {reward} 票（托管；接单 contract take，每天 assist 雇主记履约，过期未满勤按天退款）"
+        await db.add_chronicle("contract", msg, s["id"])
+        return msg + "（酬劳已托管）"
 
     if verb == "post" and len(parts) >= 4:
         raw_item, qty, reward = parts[1], int(parts[2]), int(parts[3])
@@ -568,6 +700,38 @@ async def contract_ops(key_id: int, command: str) -> str:
         await db.add_chronicle("contract", msg, s["id"])
         return msg + "（酬劳已托管）"
 
+    if verb == "take" and len(parts) >= 2:
+        cid = _parse_int(parts[1], "合约编号")
+        async with db.connect() as conn:
+            conn.row_factory = aiosqlite.Row
+            await _ensure_labor_expiry(conn)
+            c = dict(await (await conn.execute(
+                "SELECT * FROM contracts WHERE id=? AND status='open' AND kind=?",
+                (cid, LABOR_KIND),
+            )).fetchone() or {})
+            if not c:
+                raise ValueError("劳动合约不存在、已被接走或已结案")
+            if c["poster_id"] == s["id"]:
+                raise ValueError("不能接自己的委托")
+            rapport = await _get_rapport(s["id"], c["poster_id"])
+            if rapport < LABOR_TAKE_RAPPORT:
+                raise ValueError(
+                    f"接看护委托要和雇主协作度 ≥{LABOR_TAKE_RAPPORT}（现在 {rapport}）；"
+                    "先送礼、打点、下馆子处熟再来"
+                )
+            await conn.execute(
+                "UPDATE contracts SET status='taken', filler_id=? WHERE id=? AND status='open'",
+                (s["id"], cid),
+            )
+            await conn.commit()
+        poster = await db.get_steward_by_id(c["poster_id"])
+        pname = poster["name"] if poster else "?"
+        return (
+            f"接下 {pname} 的看护委托 #{cid}：{c['labor_days']} 天酬 {c['reward_tickets']} 票。"
+            f"每天 alliance_ops assist {pname} 记一天履约，当日工钱即时到账；"
+            f"满勤自动结案，超期未满勤按天退款给雇主"
+        )
+
     if verb == "fill" and len(parts) >= 2:
         cid = _parse_int(parts[1], "合约编号")
         async with db.connect() as conn:
@@ -579,6 +743,8 @@ async def contract_ops(key_id: int, command: str) -> str:
                 raise ValueError("合约不存在或已关闭")
             if c["poster_id"] == s["id"]:
                 raise ValueError("不能交付自己的合约")
+            if c.get("kind") == LABOR_KIND:
+                raise ValueError("看护委托走 contract take 接单、每天 assist 雇主记履约，不交物品")
             want_raw = str(c["want_item"] or "")
             want = resolve_item_key(want_raw) or want_raw
             qty = int(c["want_qty"] or 0)
@@ -619,19 +785,28 @@ async def contract_ops(key_id: int, command: str) -> str:
         cid = _parse_int(parts[1], "合约编号")
         async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
+            await _ensure_labor_expiry(conn)
             c = dict(await (await conn.execute(
-                "SELECT * FROM contracts WHERE id=? AND poster_id=? AND status='open'",
+                "SELECT * FROM contracts WHERE id=? AND poster_id=? AND status IN ('open','taken')",
                 (cid, s["id"]),
             )).fetchone() or {})
             if not c:
                 raise ValueError("无法取消该合约")
-            await conn.execute(
-                "UPDATE stewards SET tickets = tickets + ? WHERE id=?",
-                (c["reward_tickets"], s["id"]),
-            )
+            refund = int(c["reward_tickets"])
+            note = ""
+            if c["kind"] == LABOR_KIND and c["status"] == "taken":
+                done = int(c["labor_done"] or 0)
+                days = max(int(c["labor_days"] or 1), 1)
+                refund = max(0, int(c["reward_tickets"]) - (int(c["reward_tickets"]) // days) * done)
+                note = f"（已履约 {done} 天的工钱不追回，退回未履约部分）"
+            if refund:
+                await conn.execute(
+                    "UPDATE stewards SET tickets = tickets + ? WHERE id=?",
+                    (refund, s["id"]),
+                )
             await conn.execute("UPDATE contracts SET status='cancelled' WHERE id=?", (cid,))
             await conn.commit()
-        return f"合约 #{cid} 已取消，酬劳退回"
+        return f"合约 #{cid} 已取消，退回 {refund} 票{note}"
 
     raise ValueError(f"未知 contract 指令: {command}")
 

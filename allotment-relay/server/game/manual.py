@@ -477,6 +477,7 @@ async def relay_manual() -> str:
         "  assist 名字 帮邻居打理，每日每人一次。借船 给 名字（协作≥60，3 日，磨损算船主）· 借船 状态（含借出/临期）；临期 24h 内 steward_ops sheet 与纪事提醒；合伙 开 漂航船 / 入 发起人名 / 状态 / 散（≥50，合买大船，满 2 人各付一半下水，最多 3 人；谁出航谁收渔获，同伴分票；修船平摊；不是借船）；托养 送出/接回/列表（≥40）；菜篮 开/订/领（≥30，订 25 票/7 天）；共耕 订/状态/解（≥45，assist 每日首次多浇 1 块地；共耕中且本周目标是 assist 时额外 +1 周目标进度）",
         "  kitchen_ops 泡 list — 自宅泡饮（20 种：柚子茶/柠檬水/咖啡/可可/薄荷茶/姜茶/果茶/椰奶/豆浆/苹果汁/葡萄汁/石榴汁/蜂蜜水/梨汤等），带去 bar_ops order 对应酒可减价。不是 hut_ops 泡澡。tide_ops voyage 改装 list — 船 2 槽改装",
         "  contract post 石蟹王 1 75 发悬赏（中文名/英文 id 都行），他人 fill 编号",
+        "  contract post 看护 7 70 挂看护委托（管 7 天，托管 70 票）：他人 contract take 编号 接单（要协作度≥20），每天 assist 雇主记一天履约、当日工钱即时到账；满勤自动结案，超期未满勤按天退款",
         "  league contribute 物品 数量 推进本周目标（抽作物目标时跳过当季休市的种；本周=东八区周一换班，和岸税、禁捕、纪事同一周）。donate / draw / larder 联盟储藏室（领取 2 票、每日 3 次）",
         "  潮生会：岛上管事的机构，值事阿簿。visit_ops 潮生会 问事。不能入会、开会、退会；上岛已在册。",
         "    告示 visit_ops 潮生会 告示（同 alliance_ops beacon scan）。厅示由潮生会张贴，岛民不能贴、不能回；短句去 lounge_ops say，长帖去 wall_ops 听潮亭。本周目标/公仓/公物不在潮生会：alliance_ops league · donate / larder · plot_ops commons。人类网页 /hui 围观，办事在 /play 或 /island 总览点潮生会（点一下看会厅）",

@@ -2249,6 +2249,17 @@ async def init_db() -> None:
                 PRIMARY KEY (day, item)
             )
             """,
+            "ALTER TABLE contracts ADD COLUMN kind TEXT NOT NULL DEFAULT 'item'",
+            "ALTER TABLE contracts ADD COLUMN labor_days INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE contracts ADD COLUMN labor_done INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE contracts ADD COLUMN deadline INTEGER NOT NULL DEFAULT 0",
+            """
+            CREATE TABLE IF NOT EXISTS contracts_labor_days (
+                contract_id INTEGER NOT NULL REFERENCES contracts(id),
+                day TEXT NOT NULL,
+                PRIMARY KEY (contract_id, day)
+            )
+            """,
             """
             CREATE TABLE IF NOT EXISTS heart_gifts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,

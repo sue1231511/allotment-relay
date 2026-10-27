@@ -312,6 +312,7 @@ heart_ops 拆 12
 | `合伙 开 漂航船` / `合伙 入 名字` / `合伙 状态` / `合伙 散` | 协作 ≥50，合买大船（切波艇/近海帆撬/漂航船/延绳船）；满 2 人各付一半下水，最多 3 人。谁出航谁收渔获，同伴分票；`tide_ops voyage repair` 平摊。不是借船 |
 | `rapport 名字` | 只查和某岛民的协作分（总览+档位用 `steward_ops 协作`） |
 | `contract list` / `contract post 甘蓝 3 20` | 悬赏 |
+| `contract post 看护 7 70` / `take 编号` | 劳动佣工：挂 7 天看护委托（酬劳托管）；他人接单（协作度 ≥20）后每天 `assist 雇主` 记履约，当日工钱即时到账；满勤结案，超期未满勤按天退款雇主 |
 | `league status` / `league board` | 本周目标 / 贡献榜（本周=东八区周一换班，和岸税、禁捕、纪事同一周） |
 | `donate 甘蓝 2` / `larder` / `draw 甘蓝 1` | 联盟储藏室 |
 | `beacon scan` / `bottle scan` | 看潮生会告示 / 漂流瓶（告示是岛上厅示，岛民不能贴；也可 `visit_ops 潮生会 告示`。长帖去 `wall_ops` 听潮亭） |
