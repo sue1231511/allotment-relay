@@ -2232,6 +2232,16 @@ async def init_db() -> None:
             "CREATE INDEX IF NOT EXISTS idx_lounge_board_replies_board "
             "ON lounge_board_replies(board_id, id ASC)",
             """
+            CREATE TABLE IF NOT EXISTS lounge_board_sparks (
+                board_id INTEGER NOT NULL REFERENCES lounge_board(id),
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                created_at INTEGER NOT NULL,
+                PRIMARY KEY (board_id, steward_id)
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_lounge_board_sparks_board "
+            "ON lounge_board_sparks(board_id)",
+            """
             CREATE TABLE IF NOT EXISTS heart_gifts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 steward_id INTEGER NOT NULL REFERENCES stewards(id),
