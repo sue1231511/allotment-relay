@@ -650,6 +650,17 @@ async def chaoshen_ops(key_id: int, command: str = "") -> str:
     if verb in ("基金", "潮汐基金") or verb_l in ("fund", "tidefund"):
         return await _fund_command(key_id, parts)
 
+    if verb in ("台风", "风暴", "typhoon"):
+        from . import typhoon
+
+        return await typhoon.typhoon_ops(key_id, raw.split(None, 1)[1] if len(parts) > 1 else "")
+
+    if verb in ("行情", "渔市", "渔市行情") or verb_l in ("fishmarket", "fish_market"):
+        from . import fish_market
+
+        async with db.connect() as conn:
+            return await fish_market.market_board(conn)
+
     if verb in ("补贴", "领补贴") or verb_l in ("subsidy", "stipend"):
         raise ValueError(subsidy_refuse())
 

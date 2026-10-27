@@ -114,7 +114,7 @@ async def tide_ops(
     return await mux._call_ops(mux.tide_bundle, _kid(), command)
 
 
-@mcp.tool(description="行囊集市。空=列表。例：list · 履历 · vend 鲭鱼 1。list 显示鲜度/品质/鱼重；变质自动丢。戒/稀有鱼/鱼拓船模邮票/特殊料理有来历。柜旧生鱼少卖。送礼≠红包。")
+@mcp.tool(description="行囊集市。空=列表。例：list · 履历 · vend 鲭鱼 1。海产 vend 按渔市行情（全岛7日卖越多越贱，潮生会 行情 看牌）。list 显示鲜度/品质/鱼重；变质自动丢。送礼≠红包。")
 async def tote_ops(command: str = "") -> str:
     return await mux._call_ops(mux.tote_bundle, _kid(), command)
 
@@ -130,7 +130,7 @@ async def alliance_ops(command: str = "") -> str:
 
 
 @mcp.tool(description="NPC、杂货、诊所、兽医与花店。空=help。例：list · clinic · 潮生会 工程 · 兽医 棚险 通风 · shaonian 卦险 压石。桥桥治人≠霍衡治牲口；潮生会不能加入。")
-async def visit_ops(command: Annotated[str, Field(description="整句子命令；空=help。霍衡=兽医（棚险=治完呛棚）；clinic=桥桥；默默=花店；shaonian 卦险=卜卦后掀盘。税/维走潮生会。漾漾=衣泊坊 visit。")] = "") -> str:
+async def visit_ops(command: Annotated[str, Field(description="整句子命令；空=help。霍衡=兽医（棚险=治完呛棚）；clinic=桥桥；默默=花店；shaonian 卦险=卜卦后掀盘。税/维/行情/台风走潮生会。漾漾=衣泊坊 visit。")] = "") -> str:
     return await mux._call_ops(mux.visit_bundle, _kid(), command)
 
 
@@ -180,7 +180,7 @@ async def tale_ops(command: str = "list") -> str:
     return await mux._call_ops(tale.tale_ops, _kid(), command)
 
 
-@mcp.tool(description="全服聊天。空=scan。例：say·许愿/反馈/墙/回墙(仅LOUNGE_MOD)·红包·暗号。墙：未回在上。表情包仅人类网页可见，scan看不到。婚期无限。≠whisper。")
+@mcp.tool(description="全服聊天。空=scan。例：say·许愿/点亮12/反馈/墙/回墙(仅LOUNGE_MOD)·红包·暗号。墙：未回在上。许愿可点亮（每号每条一次），周一潮生会挂点亮周榜。表情包仅人类网页可见，scan看不到。婚期无限。≠whisper。")
 async def lounge_ops(command: str = "scan") -> str:
     from . import lounge
     return await mux._call_ops(lounge.lounge_ops, _kid(), command)

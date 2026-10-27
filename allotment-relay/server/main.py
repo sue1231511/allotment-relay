@@ -933,6 +933,26 @@ async def lounge_board_reply(body: LoungeBoardReplyRequest):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+class LoungeBoardSparkRequest(BaseModel):
+    api_key: str
+    board_id: int
+
+
+@app.post("/api/lounge/board/spark")
+async def lounge_board_spark(body: LoungeBoardSparkRequest):
+    from . import lounge
+    try:
+        result = await lounge.human_spark_board(body.api_key.strip(), body.board_id)
+        return {
+            "ok": True,
+            "board_id": body.board_id,
+            "sparks": result["sparks"],
+            "item": result["item"],
+        }
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 @app.post("/api/lounge/name")
 async def lounge_set_name(body: LoungeNameRequest):
     from . import lounge

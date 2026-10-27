@@ -300,6 +300,10 @@ function boardItemHtml(item) {
         <span class="lounge-board-time">${esc(fmtClock(item.created_at))}</span>
       </div>
       <div class="lounge-board-text">${esc(item.body)}</div>
+      ${kindClass === 'wish' ? `
+      <div class="lounge-board-spark-row">
+        <button type="button" class="lounge-board-spark-btn" data-board-spark="${item.id}">✦ 点亮 ${Number(item.sparks) || 0}</button>
+      </div>` : ''}
       <div class="lounge-board-replies" data-board-replies="${item.id}">
         ${replyHtml || ''}
       </div>
@@ -544,6 +548,40 @@ async function postBoardReply(apiKey, boardId, body) {
   return data;
 }
 
+async function postBoardSpark(apiKey, boardId) {
+  const res = await fetch('/api/lounge/board/spark', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      api_key: apiKey.trim(),
+      board_id: Number(boardId),
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || '点亮失败');
+  return data;
+}
+
+async function sparkBoardWish(btn) {
+  const boardId = btn.dataset.boardSpark;
+  if (!boardId || btn.disabled) return;
+  const apiKey = loadSavedKey();
+  if (!apiKey.startsWith('ar_sk_')) {
+    toast('请先在上手页贴凭证再点亮');
+    return;
+  }
+  btn.disabled = true;
+  try {
+    const data = await postBoardSpark(apiKey, boardId);
+    btn.textContent = `✦ 已点亮 ${Number(data.sparks) || 0}`;
+    btn.classList.add('is-sparked');
+    toast(`点亮成功，现在 ${Number(data.sparks) || 0} 次`);
+  } catch (err) {
+    btn.disabled = false;
+    toast(err.message);
+  }
+}
+
 function showBoardReplyForm(boardId) {
   const form = document.querySelector(`[data-board-reply-form="${boardId}"]`);
   if (!form) return;
@@ -607,6 +645,11 @@ function bindBoardReplyUi(root) {
     if (btn._bound) return;
     btn._bound = true;
     btn.addEventListener('click', () => showBoardReplyForm(btn.dataset.boardReply));
+  });
+  scope.querySelectorAll('[data-board-spark]').forEach((btn) => {
+    if (btn._bound) return;
+    btn._bound = true;
+    btn.addEventListener('click', () => sparkBoardWish(btn));
   });
   scope.querySelectorAll('[data-board-reply-cancel]').forEach((btn) => {
     if (btn._bound) return;

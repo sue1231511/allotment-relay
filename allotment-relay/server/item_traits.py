@@ -464,7 +464,10 @@ async def vend_unit_price(
     )
     row = await cur.fetchone()
     if not row:
-        return base
+        from . import fish_market
+
+        sea_mult, _ = await fish_market.mult_for(conn, item)
+        return max(1, int(base * sea_mult))
     quality, wmilli, spoil_at = row[0], int(row[1] or 0), int(row[2] or 0)
     if spoil_at and spoil_at <= db.now():
         return max(1, base // 5)
@@ -475,7 +478,10 @@ async def vend_unit_price(
     from . import loop_couple as loop_mod
 
     mult *= await loop_mod.fridge_price_mult(conn, steward_id, item)
-    return max(1, int(base * mult))
+    from . import fish_market
+
+    sea_mult, _ = await fish_market.mult_for(conn, item)
+    return max(1, int(base * mult * sea_mult))
 
 
 async def format_list_extra(conn, steward_id: int, item: str) -> str:

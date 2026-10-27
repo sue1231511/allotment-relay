@@ -63,6 +63,7 @@ lounge_ops — 全服聊天室（答疑、互助；许愿/反馈走许愿墙；�
   mod ban 名字         踢出聊天室（永久禁言）
   mod unban 名字       解除踢出
   许愿 / wish 正文     贴上许愿墙（想加的玩法；全服可见，不进闲聊）
+  点亮 12 / spark 12   给愿望点亮（每号每条一次；周一点亮榜挂潮生会告示）
   反馈 / feedback / bug 正文
                        贴上问题反馈墙（bug/异常；全服可见，不进闲聊）
   许愿墙 / 壁榜 / board [许愿|反馈]
@@ -255,6 +256,7 @@ def _board_row_to_view(
         "created_at": int(row["created_at"]),
         "replies": reply_rows,
         "reply_count": len(reply_rows),
+        "sparks": int(row.get("sparks") or 0),
     }
 
 
@@ -280,8 +282,11 @@ def _format_board_list(items: list[dict[str, Any]]) -> str:
         lines.append(f"—— {title} ——")
         for item in group:
             ts = db.fmt_cst_ymd_hm(int(item["created_at"]))
+            spark_note = (
+                f" · ✦{item['sparks']} 次点亮" if int(item.get("sparks") or 0) else ""
+            )
             lines.append(
-                f"#{item['id']} {item['kind_label']} · {item['who']} · {ts}\n{item['body']}"
+                f"#{item['id']} {item['kind_label']} · {item['who']} · {ts}{spark_note}\n{item['body']}"
             )
             for reply in item.get("replies") or []:
                 rts = db.fmt_cst_ymd_hm(int(reply["created_at"]))
@@ -440,13 +445,121 @@ async def post_board_reply(
     return {"item": item, "reply": reply}
 
 
+async def spark_board_item(steward_id: int, board_id: int) -> dict[str, Any]:
+    """给许愿墙的愿望点亮。每号每条一次；反馈墙不点亮。"""
+    bid = int(board_id)
+    if bid < 1:
+        raise ValueError("用法: lounge_ops 点亮 12")
+    async with db.connect() as conn:
+        conn.row_factory = aiosqlite.Row
+        row = await (await conn.execute(
+            "SELECT id, kind FROM lounge_board WHERE id=?", (bid,),
+        )).fetchone()
+        if not row:
+            raise ValueError(f"墙上没有 #{bid}")
+        if row["kind"] != BOARD_KIND_WISH:
+            raise ValueError("只有许愿墙的愿望能点亮；反馈墙是给管理员看的，不用点亮")
+        mine = await (await conn.execute(
+            "SELECT 1 FROM lounge_board_sparks WHERE board_id=? AND steward_id=?",
+            (bid, steward_id),
+        )).fetchone()
+        if mine:
+            raise ValueError(f"你已经点亮过 #{bid}，每个愿望一次就够")
+        await conn.execute(
+            "INSERT INTO lounge_board_sparks (board_id, steward_id, created_at) VALUES (?,?,?)",
+            (bid, steward_id, db.now()),
+        )
+        await conn.commit()
+    item = await get_board_item(bid)
+    return {"item": item, "sparks": int(item.get("sparks") or 0)}
+
+
+SPARK_TOP_N = 3
+SPARK_WEEK_TAG = "许愿周榜"
+
+
+async def ensure_spark_weekly(conn: aiosqlite.Connection) -> dict[str, Any] | None:
+    """东八区每周一换班时，把上周许愿墙点亮 Top3 挂上潮生会告示。
+
+    惰性结算：读墙/点亮时顺带查 world_flags，本周没结过就补上一周的榜。
+    """
+    from .disaster import cst_week_ordinal, cst_week_start
+
+    moment = db.now()
+    flag_key = f"wish_top_{cst_week_ordinal(moment)}"
+    conn.row_factory = aiosqlite.Row
+    existing = await (await conn.execute(
+        "SELECT 1 FROM world_flags WHERE flag_key=?", (flag_key,)
+    )).fetchone()
+    if existing:
+        return None
+    this_week_start = cst_week_start(moment)
+    last_week_start = this_week_start - 7 * 86400
+    rows = await (await conn.execute(
+        """
+        SELECT b.id, b.body, b.steward_id, s.name,
+               COUNT(sp.steward_id) AS sparks
+        FROM lounge_board b
+        JOIN stewards s ON s.id = b.steward_id
+        LEFT JOIN lounge_board_sparks sp ON sp.board_id = b.id
+        WHERE b.kind=? AND b.created_at >= ? AND b.created_at < ?
+        GROUP BY b.id
+        HAVING sparks > 0
+        ORDER BY sparks DESC, b.id ASC
+        LIMIT ?
+        """,
+        (BOARD_KIND_WISH, last_week_start, this_week_start, SPARK_TOP_N),
+    )).fetchall()
+    detail = ""
+    top: list[dict[str, Any]] = []
+    if rows:
+        medal = ["①", "②", "③"]
+        lines = []
+        for i, r in enumerate(rows):
+            top.append({"id": int(r["id"]), "who": r["name"], "sparks": int(r["sparks"])})
+            lines.append(
+                f"{medal[i]} {r['name']} 的愿望「{r['body'][:40]}」— {int(r['sparks'])} 次点亮"
+            )
+        detail = " · ".join(f"#{t['id']}×{t['sparks']}" for t in top)
+        body = (
+            "【许愿墙周榜】上周全岛最想点亮的三条愿望：\n"
+            + "\n".join(lines)
+            + "\n点亮越多的愿望越先做。想上墙：聊天室点「＋」许愿。"
+        )
+        await conn.execute(
+            "INSERT INTO hui_notices (tag, body, created_at, retracted) VALUES (?,?,?,0)",
+            (SPARK_WEEK_TAG, body, moment),
+        )
+        await db.add_chronicle(
+            "hui",
+            f"潮生会贴出许愿墙周榜：{detail[:120]}",
+            None,
+            conn=conn,
+        )
+    await conn.execute(
+        "INSERT INTO world_flags (flag_key, applied_at, detail) VALUES (?,?,?)",
+        (flag_key, moment, detail or "no-sparks"),
+    )
+    return {"week": flag_key, "top": top}
+
+
+async def human_spark_board(api_key: str, board_id: int) -> dict[str, Any]:
+    row = await db.get_key_row(api_key.strip())
+    if not row:
+        raise ValueError("凭证无效")
+    s = await _require_enrolled(row["id"])
+    return await spark_board_item(s["id"], board_id)
+
+
 async def get_board_item(item_id: int) -> dict[str, Any]:
     async with db.connect() as conn:
         conn.row_factory = aiosqlite.Row
         row = await (await conn.execute(
             """
             SELECT b.id, b.kind, b.body, b.source, b.created_at, b.steward_id,
-                   s.name, s.lounge_human_name
+                   s.name, s.lounge_human_name,
+                   (SELECT COUNT(*) FROM lounge_board_sparks sp
+                    WHERE sp.board_id = b.id) AS sparks
             FROM lounge_board b
             JOIN stewards s ON s.id = b.steward_id
             WHERE b.id = ?
@@ -480,11 +593,15 @@ async def list_board_items(
         params.append(int(before_id))
     where = " AND ".join(clauses)
     async with db.connect() as conn:
+        await ensure_spark_weekly(conn)
+        await conn.commit()
         conn.row_factory = aiosqlite.Row
         rows = await (await conn.execute(
             f"""
             SELECT b.id, b.kind, b.body, b.source, b.created_at, b.steward_id,
-                   s.name, s.lounge_human_name
+                   s.name, s.lounge_human_name,
+                   (SELECT COUNT(*) FROM lounge_board_sparks sp
+                    WHERE sp.board_id = b.id) AS sparks
             FROM lounge_board b
             JOIN stewards s ON s.id = b.steward_id
             WHERE {where}
@@ -1428,6 +1545,18 @@ async def lounge_ops(key_id: int, command: str, *, register_url: str = "/registe
         view = await post_board_item(s["id"], BOARD_KIND_FEEDBACK, rest, source="mcp")
         return f"已贴上反馈墙 #{view['id']}：{rest[:80]}"
 
+    if verb in ("点亮", "spark", "赞"):
+        bits = rest.split(None, 1)
+        if not bits or not bits[0].isdigit():
+            raise ValueError("用法: lounge_ops 点亮 12（许愿墙的愿望，每号每条一次）")
+        result = await spark_board_item(s["id"], int(bits[0]))
+        item = result["item"]
+        return (
+            f"点亮了 #{item['id']} 的愿望「{item['body'][:40]}」"
+            f"，现在 {result['sparks']} 次点亮。"
+            f"每周一潮生会告示挂上周点亮榜，点亮最多的先做。"
+        )
+
     if verb in ("回墙", "墙回", "replywall") or (
         verb == "board" and rest.lower().startswith("reply ")
     ):
@@ -1476,7 +1605,7 @@ async def lounge_ops(key_id: int, command: str, *, register_url: str = "/registe
         return _format_board_list(items)
 
     raise ValueError(
-        f"未知 lounge 指令: {command}（scan / say / 许愿 / 反馈 / 许愿墙 / 回墙 / 红包 / 抢 / 暗号 / 大厅 / name / mod / help）"
+        f"未知 lounge 指令: {command}（scan / say / 许愿 / 点亮 / 反馈 / 许愿墙 / 回墙 / 红包 / 抢 / 暗号 / 大厅 / name / mod / help）"
     )
 
 

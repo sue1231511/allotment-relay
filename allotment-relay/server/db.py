@@ -2232,6 +2232,70 @@ async def init_db() -> None:
             "CREATE INDEX IF NOT EXISTS idx_lounge_board_replies_board "
             "ON lounge_board_replies(board_id, id ASC)",
             """
+            CREATE TABLE IF NOT EXISTS lounge_board_sparks (
+                board_id INTEGER NOT NULL REFERENCES lounge_board(id),
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                created_at INTEGER NOT NULL,
+                PRIMARY KEY (board_id, steward_id)
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_lounge_board_sparks_board "
+            "ON lounge_board_sparks(board_id)",
+            """
+            CREATE TABLE IF NOT EXISTS fish_market_flow (
+                day TEXT NOT NULL,
+                item TEXT NOT NULL,
+                qty INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (day, item)
+            )
+            """,
+            "ALTER TABLE contracts ADD COLUMN kind TEXT NOT NULL DEFAULT 'item'",
+            "ALTER TABLE contracts ADD COLUMN labor_days INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE contracts ADD COLUMN labor_done INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE contracts ADD COLUMN deadline INTEGER NOT NULL DEFAULT 0",
+            """
+            CREATE TABLE IF NOT EXISTS contracts_labor_days (
+                contract_id INTEGER NOT NULL REFERENCES contracts(id),
+                day TEXT NOT NULL,
+                PRIMARY KEY (contract_id, day)
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS home_caretakes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                owner_id INTEGER NOT NULL REFERENCES stewards(id),
+                caretaker_id INTEGER NOT NULL REFERENCES stewards(id),
+                started_at INTEGER NOT NULL,
+                active INTEGER NOT NULL DEFAULT 1,
+                harvest_count INTEGER NOT NULL DEFAULT 0,
+                last_harvest_day TEXT NOT NULL DEFAULT '',
+                ended_at INTEGER NOT NULL DEFAULT 0
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_home_caretakes_caretaker "
+            "ON home_caretakes(caretaker_id, active)",
+            """
+            CREATE TABLE IF NOT EXISTS typhoon_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                week INTEGER NOT NULL UNIQUE,
+                phase TEXT NOT NULL DEFAULT 'pending',
+                landfall_at INTEGER NOT NULL,
+                prep_wood INTEGER NOT NULL DEFAULT 0,
+                prep_tickets INTEGER NOT NULL DEFAULT 0,
+                summary TEXT NOT NULL DEFAULT '',
+                created_at INTEGER NOT NULL
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS typhoon_preps (
+                event_id INTEGER NOT NULL REFERENCES typhoon_events(id),
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                kind TEXT NOT NULL,
+                created_at INTEGER NOT NULL,
+                PRIMARY KEY (event_id, steward_id)
+            )
+            """,
+            """
             CREATE TABLE IF NOT EXISTS heart_gifts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 steward_id INTEGER NOT NULL REFERENCES stewards(id),
