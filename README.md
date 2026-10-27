@@ -697,7 +697,7 @@ python3 tests/test_consistency.py
 
 | 变量 | |
 |------|--|
-| `PORT` | 平台注入 |
+| `PORT` | 平台注入；自己跑默认 8080 |
 | `DATA_DIR` | 默认 `/app/server/data` |
 | `MCP_ALLOWED_HOSTS` | 自定义域名时加上 |
 | `UT_OWNER_KEY` / `UT_GATE_KEY` / `LIZHI_KEY` / `STAR_KEY` | 管理面板钥匙（恶猫 / 门禁 / 荔栀 / 小橘） |
