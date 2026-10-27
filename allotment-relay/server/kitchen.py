@@ -10,6 +10,7 @@ import aiosqlite
 
 from . import config, db, energy, flavor, social, survival, upkeep
 from .inputs import parse_positive_int
+from . import vend as vend_mod
 from .catalog import (
     HEARTH_RECIPES,
     ITEM_NAMES,
@@ -876,20 +877,29 @@ async def kitchen_ops(key_id: int, command: str) -> str:
                     item = await _pick_cooked_satchel(conn, s["id"], resolved)
                 except ValueError:
                     item = resolved
-            if not await db.take_item(conn, s["id"], item, 1):
-                raise ValueError("行囊里没有这道菜")
-            price = suggested_price(item)
             if parse_mix_item(item):
                 register_mix_item(item)
-                price = suggested_price(item)
-            if not price:
-                price = ITEM_PRICES.get(item, 0)
-            if not price:
-                raise ValueError("这道菜卖不出价")
-            await conn.execute(
-                "UPDATE stewards SET tickets=tickets+? WHERE id=?",
-                (price, s["id"]),
+            try:
+                plan = await vend_mod.plan(conn, s["id"], item, 1)
+            except ValueError as exc:
+                if "卖不出价" in str(exc):
+                    raise ValueError("这道菜卖不出价") from exc
+                raise
+            if not await db.take_item(conn, s["id"], item, 1):
+                raise ValueError("行囊里没有这道菜")
+            from . import item_traits as traits_mod
+            from . import ledger as ledger_mod
+            from . import fish_market as fish_market_mod
+            await traits_mod.consume_fifo(conn, s["id"], item, 1)
+            await ledger_mod.consume(
+                conn, s["id"], item, 1,
+                extra=f"后卖进回收堆，{ledger_mod.calendar_phrase()}。履历到此",
             )
+            price = plan.total
+            if price > 0:
+                await db.grant_tickets(conn, s["id"], price, reason="kitchen vend")
+            if plan.flow_units:
+                await fish_market_mod.record_sale(conn, item, plan.flow_units)
             walkblue_line = None
             if item == "fish_walkblue":
                 from . import marine as marine_mod

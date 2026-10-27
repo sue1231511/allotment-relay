@@ -2,11 +2,14 @@
 from __future__ import annotations
 
 import json
+import logging
 import random
 from typing import Any
 
 from . import db
 from .catalog import CROPS, ITEM_PRICES, SEA_CATCH, item_label
+
+_log = logging.getLogger(__name__)
 
 # ── 作物品质 ──
 CROP_QUALITY_KEYS = (
@@ -447,41 +450,104 @@ async def summary_for_item(
     return "｜".join(bits)
 
 
-async def vend_unit_price(
+async def vend_segments(
     conn,
     steward_id: int,
     item: str,
-    base: int,
-) -> int:
+    qty: int,
+) -> list[tuple[int, float, bool]]:
+    """按 FIFO 把要卖的 qty 件拆成若干段：[(件数, 批次修正乘积, 是否已变质), ...]。
+
+    批次修正 = 品质 × 重量（鱼）× 冰箱（生鱼）。没有批次记录的件（渔排收的、别人送的）修正为 1。
+    每段只用自己那一批的系数——一次卖 N 件的总价 = 逐件卖 N 次的总价。
+    """
     await ensure_trait_tables(conn)
+    await reconcile_batches(conn, steward_id, item)
     cur = await conn.execute(
         """
-        SELECT quality, weight_milli, spoil_at FROM item_trait_batches
+        SELECT quality, weight_milli, spoil_at, qty FROM item_trait_batches
         WHERE steward_id=? AND loc='satchel' AND item=?
-        ORDER BY id ASC LIMIT 1
+        ORDER BY id ASC
         """,
         (steward_id, item),
     )
+    rows = await cur.fetchall()
+    segments: list[tuple[int, float, bool]] = []
+    left = int(qty)
+    if rows and item.startswith("fish_"):
+        from . import loop_couple as loop_mod
+
+        fridge = await loop_mod.fridge_price_mult(conn, steward_id, item)
+    else:
+        fridge = 1.0
+    now = db.now()
+    for quality, wmilli, spoil_at, have in rows:
+        if left <= 0:
+            break
+        take = min(int(have), left)
+        left -= take
+        if int(spoil_at or 0) and int(spoil_at) <= now:
+            segments.append((take, 1.0, True))
+            continue
+        mult = price_multiplier(quality, fish=item.startswith("fish_"))
+        if wmilli and item.startswith("fish_"):
+            mult *= min(1.8, 0.85 + (int(wmilli) / 1000.0) * 0.04)
+        segments.append((take, mult * fridge, False))
+    if left > 0:
+        segments.append((left, 1.0, False))
+    return segments
+
+
+async def reconcile_batches(conn, steward_id: int, item: str, *, loc: str = "satchel") -> int:
+    """批次总量超过背包实际数量时，丢掉多出来的最老批次（幽灵批次）。返回丢掉的件数。"""
+    cur = await conn.execute(
+        "SELECT COALESCE(SUM(qty),0) FROM item_trait_batches WHERE steward_id=? AND loc=? AND item=?",
+        (steward_id, loc, item),
+    )
+    batch_total = int((await cur.fetchone())[0] or 0)
+    if batch_total <= 0 or loc != "satchel":
+        return 0
+    cur = await conn.execute(
+        "SELECT quantity FROM satchel WHERE steward_id=? AND item=?", (steward_id, item)
+    )
     row = await cur.fetchone()
-    if not row:
-        from . import fish_market
+    have = int(row[0]) if row else 0
+    extra = batch_total - have
+    if extra <= 0:
+        return 0
+    _log.warning(
+        "reconcile_batches: 批次 %d 件 > 背包 %d 件，丢弃最老 %d 件幽灵批次 steward=%s item=%s",
+        batch_total, have, extra, steward_id, item,
+    )
+    dropped = 0
+    cur = await conn.execute(
+        "SELECT id, qty FROM item_trait_batches WHERE steward_id=? AND loc=? AND item=? ORDER BY id ASC",
+        (steward_id, loc, item),
+    )
+    for bid, bq in await cur.fetchall():
+        if dropped >= extra:
+            break
+        cut = min(int(bq), extra - dropped)
+        dropped += cut
+        if cut >= int(bq):
+            await conn.execute("DELETE FROM item_trait_batches WHERE id=?", (bid,))
+        else:
+            await conn.execute("UPDATE item_trait_batches SET qty=qty-? WHERE id=?", (cut, bid))
+    return dropped
 
-        sea_mult, _ = await fish_market.mult_for(conn, item)
-        return max(1, int(base * sea_mult))
-    quality, wmilli, spoil_at = row[0], int(row[1] or 0), int(row[2] or 0)
-    if spoil_at and spoil_at <= db.now():
-        return max(1, base // 5)
-    mult = price_multiplier(quality, fish=item.startswith("fish_"))
-    if wmilli and item.startswith("fish_"):
-        kg = wmilli / 1000.0
-        mult *= min(1.8, 0.85 + kg * 0.04)
-    from . import loop_couple as loop_mod
 
-    mult *= await loop_mod.fridge_price_mult(conn, steward_id, item)
-    from . import fish_market
-
-    sea_mult, _ = await fish_market.mult_for(conn, item)
-    return max(1, int(base * mult * sea_mult))
+async def release_for_departure(conn, steward_id: int, item: str, qty: int) -> None:
+    """物品离开背包（送礼、挂集市、捐赠、交付、交换台……）时，同步释放对应批次，
+    不留「幽灵批次」。只处理会记批次的货（作物、鱼等）。"""
+    if qty <= 0 or not is_trackable(item):
+        return
+    try:
+        await consume_fifo(conn, steward_id, item, qty)
+    except Exception:
+        _log.exception(
+            "release_for_departure 失败 steward=%s item=%s qty=%s", steward_id, item, qty
+        )
+        raise
 
 
 async def format_list_extra(conn, steward_id: int, item: str) -> str:

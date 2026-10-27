@@ -67,7 +67,7 @@ BAR_HELP = """bar_ops 子命令（整句写进 command）：
     暮才有白班、夜才有夜班；逾期白天可补班 ×0.72
     每 2 天必须 work 一次，否则锁份地/出海/行囊/崖矿/工坊/衣泊坊委托
   cheer 好话 — 哄荔栀（每日 1 次）。潮下猫猫用 undertide_ops cheer；小橘用 star_ops 应援
-  tip 名字 票数 [备注] — 给当班员工小费
+  tip 名字 票数 [备注] — 给当班员工小费。协作度≥80 对方多收 15%，加成从当晚酒吧营业额池出（池空没有）；每对号每日最多互相打赏 10 次、合计 1000 票
   chat [话题] — 跟荔栀唠
   song / request_song 歌名 — 驻唱「我哪有旺夫命」/ 点歌
   staff — 今晚员工
@@ -1157,18 +1157,45 @@ async def _cmd_tip(
     if peer["id"] not in worked:
         raise ValueError(f"{peer['name']} 今晚未当班，无法收小费（bar_ops staff 查看）")
 
-    cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
-    if (await cur.fetchone())[0] < amount:
-        raise ValueError(f"票不足，需要 {amount}")
+    # 每对号每日上限（不分方向）：挡住两个号来回刷
+    from . import pricing as pricing_mod
+    day_now = _day_id()
+    cur = await conn.execute(
+        """
+        SELECT COUNT(*), COALESCE(SUM(amount), 0) FROM bar_tips
+        WHERE day=? AND ((from_id=? AND to_id=?) OR (from_id=? AND to_id=?))
+        """,
+        (day_now, s["id"], peer["id"], peer["id"], s["id"]),
+    )
+    pair_count, pair_sum = await cur.fetchone()
+    if int(pair_count) >= pricing_mod.TIP_PAIR_DAILY_COUNT:
+        raise ValueError(
+            f"你们俩今天互相打赏已经 {pricing_mod.TIP_PAIR_DAILY_COUNT} 次了，明天再说"
+        )
+    if int(pair_sum) + amount > pricing_mod.TIP_PAIR_DAILY_AMOUNT:
+        left = max(0, pricing_mod.TIP_PAIR_DAILY_AMOUNT - int(pair_sum))
+        raise ValueError(
+            f"你们俩今天互相打赏上限 {pricing_mod.TIP_PAIR_DAILY_AMOUNT} 票，已打 {int(pair_sum)}，"
+            f"最多还能打 {left}"
+        )
 
-    await conn.execute("UPDATE stewards SET tickets=tickets-? WHERE id=?", (amount, s["id"]))
+    await db.spend_tickets(conn, s["id"], amount, reason="bar tip")
     from . import social as social_mod
     rapport = await social_mod.get_rapport(s["id"], peer["id"], conn=conn)
-    tip_bonus = social_mod.tip_amount_bonus(rapport, amount)
-    total_to_peer = amount + tip_bonus
-    await conn.execute(
-        "UPDATE stewards SET tickets=tickets+? WHERE id=?", (total_to_peer, peer["id"])
+    wanted_bonus = social_mod.tip_amount_bonus(rapport, amount)
+    # 加成不再凭空铸票：从当日酒吧营业额池里出（点单花掉的票），池空为止
+    pool_state = await _ensure_daily_state(conn)
+    pool_left = max(
+        0, int(pool_state.get("revenue_tickets") or 0) - int(pool_state.get("tip_bonus_paid") or 0)
     )
+    tip_bonus = min(wanted_bonus, pool_left)
+    if tip_bonus > 0:
+        await conn.execute(
+            "UPDATE bar_daily_state SET tip_bonus_paid = tip_bonus_paid + ? WHERE day=?",
+            (tip_bonus, day_now),
+        )
+    total_to_peer = amount + tip_bonus
+    await db.grant_tickets(conn, peer["id"], total_to_peer, reason="bar tip")
     await conn.execute(
         """
         INSERT INTO bar_tips (from_id, to_id, amount, note, day, created_at)
@@ -1191,7 +1218,9 @@ async def _cmd_tip(
     day = _day_id()
     msg = f"小费已送达 · -{amount} 票 → {peer['name']}"
     if tip_bonus:
-        msg += f"（协作度≥{social_mod.RAPPORT_TIP_BONUS}，对方实收 +{tip_bonus}）"
+        msg += f"（协作度≥{social_mod.RAPPORT_TIP_BONUS}，对方实收 +{tip_bonus}，加成从今晚酒吧营业额里出）"
+    elif wanted_bonus:
+        msg += f"（协作度够了，但今晚酒吧营业额池已经空了，没有加成。每对号每日最多 {pricing_mod.TIP_PAIR_DAILY_COUNT} 次、{pricing_mod.TIP_PAIR_DAILY_AMOUNT} 票）"
     if note:
         msg += f"\n备注：{note}\n{random.choice(BAR_TIP_NOTE)}"
     elif amount >= 40:

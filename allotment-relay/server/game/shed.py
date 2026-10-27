@@ -120,6 +120,8 @@ async def _shed_one(s: dict, cmd: str) -> str:
                     )
             if not await db.take_item(conn, s["id"], item_key, qty):
                 raise ValueError("行囊数量不足")
+            from .. import item_traits as traits_mod
+            await traits_mod.release_for_departure(conn, s["id"], item_key, qty)
             if online:
                 await db.add_item(conn, peer["id"], item_key, qty)
                 from .. import ledger as ledger_mod
@@ -429,6 +431,8 @@ async def swap_ops(key_id: int, command: str) -> str:
                 raise ValueError(
                     f"行囊不足 {ITEM_NAMES.get(item_key, item_key)}（id: {item_key}）"
                 )
+            from .. import item_traits as traits_mod
+            await traits_mod.release_for_departure(conn, s["id"], item_key, qty)
             await conn.execute(
                 "INSERT INTO swap_lots (depositor_id, item, quantity, note, created_at) VALUES (?,?,?,?,?)",
                 (s["id"], item_key, qty, note[:80], db.now()),

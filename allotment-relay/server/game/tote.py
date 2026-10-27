@@ -7,6 +7,8 @@ import aiosqlite
 from .. import config, db, events, flavor, farming, health, survival, world
 from .. import commons
 from ..inputs import parse_positive_int
+from .. import pricing as pricing_mod
+from .. import vend as vend_mod
 from ..catalog import (
     CROPS,
     resolve_crop_key,
@@ -96,14 +98,19 @@ async def _tote_one(s: dict, command: str) -> str:
         if spoiled:
             lines.append("变质丢弃：" + "；".join(spoiled))
         for item, qty in stock.items():
-            price = suggested_price(item) or ITEM_PRICES.get(item, 0)
+            async with db.connect() as conn_p:
+                price = await vend_mod.unit_preview(conn_p, s["id"], item)
             name = item_label(item)
             item_cap = item_stack_cap(item, stack_tier=tier)
             stack = format_stack_qty(qty, item_cap)
             if item.startswith("fit_") or item.startswith("deco_"):
                 lines.append(f"  {name} {stack} · {item} · vend {name} 1（折旧，同 hut_ops 卖掉）")
+            elif pricing_mod.is_token(item):
+                lines.append(f"  {name} {stack} · {item} · 手作信物，不能回收；可 gift 送人、挂集市")
+            elif price > 0:
+                lines.append(f"  {name} {stack} · {item} · vend 约{price}/个")
             else:
-                lines.append(f"  {name} {stack} · {item} · vend {price}/个")
+                lines.append(f"  {name} {stack} · {item} · 不可回收")
             async with db.connect() as conn:
                 trait_note = await traits_mod.summary_for_item(conn, s["id"], item)
             if trait_note:
@@ -160,10 +167,9 @@ async def _tote_one(s: dict, command: str) -> str:
             refuse = fish_ban_mod.refuse_trade(item_key)
             if refuse:
                 raise ValueError(refuse)
-            price = suggested_price(item_key) or ITEM_PRICES.get(item_key, 0)
-            if not price:
-                raise ValueError(f"不可出售 {item_label(item_key)}（{item_key}）")
-            pairs.append((item_key, qty, price))
+            if pricing_mod.is_token(item_key):
+                raise ValueError(vend_mod.TOKEN_REFUSE)
+            pairs.append((item_key, qty))
         if furniture_only and pairs:
             raise ValueError(
                 "家具和普通货分开卖。家具一次 vend 羊毛毯 1，"
@@ -178,24 +184,28 @@ async def _tote_one(s: dict, command: str) -> str:
             results = []
             fate_notes: list[str] = []
             from .. import item_traits as traits_mod
-            for item_key, qty, price in pairs:
-                unit = await traits_mod.vend_unit_price(conn, s["id"], item_key, price)
+            from .. import ledger as ledger_mod
+            from .. import fish_market
+            for item_key, qty in pairs:
+                try:
+                    plan = await vend_mod.plan(conn, s["id"], item_key, qty)
+                except ValueError as exc:
+                    if "卖不出价" in str(exc):
+                        raise ValueError(f"不可出售 {item_label(item_key)}（{item_key}）") from exc
+                    raise
                 if not await db.take_item(conn, s["id"], item_key, qty):
                     raise ValueError(f"数量不足（需要 {item_key} x{qty}）")
                 await traits_mod.consume_fifo(conn, s["id"], item_key, qty)
-                from .. import ledger as ledger_mod
                 await ledger_mod.consume(
                     conn, s["id"], item_key, qty,
                     extra=f"后卖进回收堆，{ledger_mod.calendar_phrase()}。履历到此",
                 )
-                gain = unit * qty
-                await conn.execute(
-                    "UPDATE stewards SET tickets=tickets+? WHERE id=?", (gain, s["id"])
-                )
-                from .. import fish_market
-                await fish_market.record_sale(conn, item_key, qty)
-                _, sea_note = await fish_market.mult_for(conn, item_key)
-                results.append((item_key, qty, gain, sea_note))
+                gain = plan.total
+                if gain > 0:
+                    await db.grant_tickets(conn, s["id"], gain, reason="vend")
+                if plan.flow_units:
+                    await fish_market.record_sale(conn, item_key, plan.flow_units)
+                results.append((item_key, qty, gain, plan.sea_note))
                 if item_key == "fish_walkblue":
                     from .. import marine as marine_mod
                     fate_notes.append(
@@ -298,6 +308,8 @@ async def _tote_one(s: dict, command: str) -> str:
                     raise ValueError(
                         f"行囊不足 {ITEM_NAMES.get(item_key, item_key)}（{item_key}）x{qty}"
                     )
+                from .. import item_traits as traits_gift
+                await traits_gift.release_for_departure(conn, s["id"], item_key, qty)
                 await db.add_item(conn, peer["id"], item_key, qty)
                 from .. import ledger as ledger_mod
                 await ledger_mod.transfer(

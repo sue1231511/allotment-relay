@@ -446,6 +446,8 @@ async def alliance_ops(key_id: int, command: str) -> str:
         async with db.connect() as conn:
             if not await db.take_item(conn, s["id"], item, qty):
                 raise ValueError("行囊不足")
+            from . import item_traits as traits_mod
+            await traits_mod.release_for_departure(conn, s["id"], item, qty)
             await conn.execute(
                 """
                 INSERT INTO larder (item, quantity) VALUES (?, ?)
@@ -764,6 +766,8 @@ async def contract_ops(key_id: int, command: str) -> str:
                 raise ValueError(
                     f"行囊里没有足够物资（需要 {ITEM_NAMES.get(want, want)} / {want} x{qty}）"
                 )
+            from . import item_traits as traits_mod
+            await traits_mod.release_for_departure(conn, s["id"], want, qty)
             if want != want_raw:
                 await conn.execute(
                     "UPDATE contracts SET want_item=? WHERE id=? AND status='open'",
@@ -837,6 +841,8 @@ async def league_ops(key_id: int, command: str) -> str:
                 raise ValueError(f"本周目标是「{meta['label']}」，请捐 {meta.get('item', '?')}")
             if not await db.take_item(conn, s["id"], item, qty):
                 raise ValueError("行囊不足")
+            from . import item_traits as traits_mod
+            await traits_mod.release_for_departure(conn, s["id"], item, qty)
             bonus = await _league_add_progress(conn, s["id"], qty)
             await conn.commit()
         msg = f"{s['name']} 为联盟周目标贡献 {ITEM_NAMES.get(item, item)} x{qty}"

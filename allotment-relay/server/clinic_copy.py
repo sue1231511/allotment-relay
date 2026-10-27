@@ -280,12 +280,14 @@ def medicine_is_tonic(meta: dict[str, Any]) -> bool:
 
 
 def register_medicine_items() -> None:
+    from . import pricing
     from .catalog import ITEM_NAMES, ITEM_PRICES
 
     for key, meta in CLINIC_MEDICINES.items():
         label = f"{meta['emoji']}{meta['name']}"
         ITEM_NAMES[key] = label
-        ITEM_PRICES[key] = int(meta["price"])
+        # 药的回收价由价格簿推出（买入价 ×0.9，最低买入价是诊所九折），不再等于标价
+        ITEM_PRICES[key] = pricing.ref_value(key)
 
 
 def pick_treat_line(ailment_key: str) -> str:

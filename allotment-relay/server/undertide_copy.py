@@ -1200,7 +1200,7 @@ undertide_ops status — 影信 · 债务 · 案底 · 状态
 undertide_ops market — 后室铺货架
 undertide_ops buy <编号> — 买入（真货/次品/假货，离柜概不认账；偶尔刷装备）
 undertide_ops repair — 找掌柜修身上的装备（按损耗比例收费）
-undertide_ops sell <物品> [数量] — 掌柜处出货（销赃）
+undertide_ops sell <物品> [数量] — 掌柜处出货。后室铺买来的货（店货）按行价收，恒低于买价；强买抢来的「（赃）」货走高价销赃通道，两种货分开记（sell 名字（赃） 卖赃物）
 undertide_ops 炼 list — 潮下炼制（淤泥+崖盐→卤晶；潮下黑盐→岸上黑盐）
 undertide_ops 炼 brine_crystal / 炼 岸黑盐 — 扣行囊炼一次
 undertide_ops racket [accept|refuse] — 收账鬼阿标强买强卖（每日一单）

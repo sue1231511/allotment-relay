@@ -1064,6 +1064,7 @@ async def init_db() -> None:
             "ALTER TABLE bar_daily_state ADD COLUMN owner_event_date INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE bar_daily_state ADD COLUMN owner_event_enabled INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE bar_daily_state ADD COLUMN first_order_free INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE bar_daily_state ADD COLUMN tip_bonus_paid INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE bar_daily_state ADD COLUMN duo_nudge TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE bar_daily_state ADD COLUMN duo_steward_a INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE bar_daily_state ADD COLUMN duo_steward_b INTEGER NOT NULL DEFAULT 0",

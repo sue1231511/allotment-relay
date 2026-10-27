@@ -13,6 +13,7 @@ import aiosqlite
 
 from . import db
 from .inputs import parse_positive_int
+from . import pricing
 from . import undertide_catalog as cat
 from . import undertide_config as utcfg
 from . import undertide_copy as utcopy
@@ -244,11 +245,15 @@ def _item_meta(item_key: str) -> dict[str, Any]:
 
 
 def _resolve_sell_key(token: str) -> str | None:
-    """把中文名/原 key/完整 ut_ key 归一成行囊里的销赃 key（ut_ 或 ut_.._s）。"""
+    """把中文名/原 key/完整 ut_ key 归一成行囊里的销赃 key。
+
+    ut_xxx / ut_xxx_s = 店货（后室铺买来的真货/次品）；utl_xxx = 赃物（强买抢来的）。
+    中文名后面写「（赃）」认赃物，不写认店货。
+    """
     t = (token or "").strip()
     if not t:
         return None
-    if t.startswith("ut_"):
+    if t.startswith(("ut_", pricing.LOOT_PREFIX)):
         return t
     goods_all = (cat.COMMON_GOODS, cat.LINKED_GOODS, cat.RARE_GOODS, cat.UT_GEAR_GOODS)
     # 原 key（可带 _s 次品后缀）
@@ -256,9 +261,11 @@ def _resolve_sell_key(token: str) -> str | None:
     for goods in goods_all:
         if base in goods:
             return f"ut_{t}"
-    # 中文名（真货 / 次品）
+    # 中文名（真货 / 次品 / 赃物）
     for goods in goods_all:
         for k, v in goods.items():
+            if t in (f"{v['name']}（赃）", f"{v['name']}(赃)"):
+                return pricing.LOOT_PREFIX + k
             if t == v["name"]:
                 return f"ut_{k}"
             if t == f"{v['name']}（次品）" or (t.endswith("次品") and t.startswith(v["name"])):
@@ -401,19 +408,37 @@ async def _cmd_sell(
     if not row or row["quantity"] < qty:
         raise ValueError(f"行囊里没有 {key} x{qty}（tote_ops list 查看）")
 
-    base_key = key[3:-2] if key.endswith("_s") else key[3:]
+    is_loot = pricing.is_loot(key)
+    if is_loot:
+        base_key = key[len(pricing.LOOT_PREFIX):]
+    else:
+        base_key = key[3:-2] if key.endswith("_s") else key[3:]
     meta = _item_meta(base_key)
-    is_stolen = not key.endswith("_s")
+    if "base" not in meta:
+        raise ValueError("掌柜不收装备，只收货。")
+    sub = (not is_loot) and key.endswith("_s")
     from . import undertide_tide as utide
     tide, _ = await utide.tide_mult(conn)
-    if is_stolen:
-        mult = random.uniform(1.5, 1.9) * tide
+    lucky = False
+    if is_loot:
+        # 赃物：强买抢来的，任何商店都买不到，走原来的高价销赃通道
+        unit = pricing.fence_loot_payout(
+            int(meta["vend"]), u=random.uniform(pricing.FENCE_LOOT_LO, pricing.FENCE_LOOT_HI),
+            tide=tide, lucky=False,
+        )
+        total = unit * qty
+        lucky = random.random() < pricing.FENCE_SHOP_LUCKY_CHANCE
+        if lucky:
+            total *= int(pricing.FENCE_LOOT_LUCKY)
     else:
-        mult = 0.45  # 次品出货价
-    total = int(meta["vend"] * mult) * qty
-    lucky = is_stolen and random.random() < 0.05
-    if lucky:
-        total *= 2
+        # 店货：后室铺买来的货，出货价恒低于最低买入价（买卖这条线不赚钱）
+        lucky = random.random() < pricing.FENCE_SHOP_LUCKY_CHANCE
+        unit = pricing.fence_shop_payout(
+            int(meta["base"]),
+            u=random.uniform(pricing.FENCE_SHOP_LO, pricing.FENCE_SHOP_HI),
+            tide=tide, lucky=lucky, substandard=sub,
+        )
+        total = unit * qty
 
     await conn.execute(
         "UPDATE satchel SET quantity=quantity-? WHERE steward_id=? AND item=?",
@@ -428,12 +453,14 @@ async def _cmd_sell(
     await bond_mod.well(conn, s["id"], bond_mod.WELL_MARKET)
     await conn.commit()
 
-    if lucky:
-        line = f"掌柜理货的手停了一下。\n「今晚刚好有人找这个。」\n\n{meta['name']} x{qty} → {total} 票（识货·双倍）"
-    elif is_stolen:
-        line = f"{meta['name']} x{qty} → {total} 票。\n掌柜收货的手很稳。他不问来路，只认货。"
-    else:
+    if is_loot and lucky:
+        line = f"掌柜理货的手停了一下。\n「今晚刚好有人找这个。」\n\n{meta['name']}（赃）x{qty} → {total} 票（识货·双倍）"
+    elif is_loot:
+        line = f"{meta['name']}（赃）x{qty} → {total} 票。\n掌柜收货的手很稳。他不问来路，只认货。"
+    elif sub:
         line = f"{meta['name']}（次品）x{qty} → {total} 票。\n掌柜掂了掂：「缩水的就按缩水的算。」"
+    else:
+        line = f"{meta['name']} x{qty} → {total} 票。\n掌柜翻了翻账：「这是铺子里出去的货，按行价收，别指望赚。赃货另算。」"
     return line
 
 

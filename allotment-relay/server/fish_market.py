@@ -64,24 +64,36 @@ async def _window_flow(conn: aiosqlite.Connection, item: str) -> int:
     return int(row[0] or 0)
 
 
+def sea_mult_at(base: int, flow: int) -> float:
+    """近 7 日全岛已卖 flow 条时，下一条的行情系数（纯函数）。"""
+    ratio = max(0, int(flow)) / week_norm(base)
+    mult = max(MULT_FLOOR, min(SCARCE_CAP, SCARCE_CAP - SLOPE * ratio))
+    return round(mult, 2)
+
+
+def mult_note(mult: float) -> str:
+    if mult >= 1.08:
+        return "稀少看涨"
+    if mult <= 0.92:
+        return "近期卖得多了，走低"
+    return ""
+
+
+async def window_flow(conn: aiosqlite.Connection, item: str) -> int:
+    return await _window_flow(conn, item)
+
+
 async def mult_for(conn: aiosqlite.Connection, item: str) -> tuple[float, str]:
-    """该鱼当前行情系数与一句说明。非渔市货恒为 (1.0, '')。"""
+    """该鱼当前行情系数与一句说明。非海产货恒为 (1.0, '')。"""
     if not is_market_fish(item):
         return 1.0, ""
-    from .catalog import suggested_price
+    from .pricing import ref_value
 
-    base = int(suggested_price(item) or 0)
+    base = int(ref_value(item) or 0)
     if base <= 0:
         return 1.0, ""
-    ratio = await _window_flow(conn, item) / week_norm(base)
-    mult = max(MULT_FLOOR, min(SCARCE_CAP, SCARCE_CAP - SLOPE * ratio))
-    mult = round(mult, 2)
-    note = ""
-    if mult >= 1.08:
-        note = "稀少看涨"
-    elif mult <= 0.92:
-        note = "近期卖得多了，走低"
-    return mult, note
+    mult = sea_mult_at(base, await _window_flow(conn, item))
+    return mult, mult_note(mult)
 
 
 async def market_board(conn: aiosqlite.Connection) -> str:

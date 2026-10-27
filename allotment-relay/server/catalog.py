@@ -308,9 +308,21 @@ def resolve_item_key(token: str, *, prefer: str = "any") -> str | None:
 
 
 def item_vendable(item_key: str) -> bool:
+    """能不能卖给商店回收（tote_ops vend）。手作信物不行。"""
+    from .pricing import is_token
+
+    if is_token(item_key):
+        return False
     if item_key.startswith("dish_"):
         return True
     return ITEM_PRICES.get(item_key, 0) > 0
+
+
+def item_tradable(item_key: str) -> bool:
+    """能不能在玩家之间流转（集市挂单、交换台等）：可回收的货，加上手作信物。"""
+    from .pricing import is_token
+
+    return is_token(item_key) or item_vendable(item_key)
 
 SEA_CATCH = {
     "herring": {"name": "灰鲱", "emoji": "🐟", "sell": 14, "tides": ["ebb", "slack"], "zones": ["shore", "near"], "rarity": 1, "pen": True, "grow": 400, "stock_tickets": 9, "feed_item": "compost", "feed_qty": 1},
@@ -2155,6 +2167,11 @@ for _goods in (_utc.COMMON_GOODS, _utc.LINKED_GOODS, _utc.RARE_GOODS, _utc.UT_GE
     for _k, _v in _goods.items():
         ITEM_NAMES[f"ut_{_k}"] = f"{_v['emoji']}{_v['name']}"
         ITEM_NAMES[f"ut_{_k}_s"] = f"{_v['emoji']}{_v['name']}（次品）"
+# 赃物（强买抢来的 utl_ 货）：名字后缀「（赃）」，任何商店都买不到
+for _goods in (_utc.COMMON_GOODS, _utc.RARE_GOODS):
+    for _k, _v in _goods.items():
+        if _k not in ("pit_silt", "brine_crystal"):
+            ITEM_NAMES[f"utl_{_k}"] = f"{_v['emoji']}{_v['name']}（赃）"
 
 
 def dish_item(key: str, stars: int = 3) -> str:
@@ -2215,6 +2232,12 @@ def mix_display_name(grade: str, sig: str, stars: int) -> str:
 
 
 def mix_sell_price(grade: str, tier: int, stars: int) -> int:
+    from .pricing import mix_cap_from_tier
+
+    return min(_mix_sell_price_raw(grade, tier, stars), mix_cap_from_tier(tier))
+
+
+def _mix_sell_price_raw(grade: str, tier: int, stars: int) -> int:
     listed = MIX_SELL.get(grade, MIX_SELL["o"]).get(stars, 8)
     star_mult = {1: 0.7, 2: 0.9, 3: 1.05, 4: 1.3, 5: 1.55}.get(stars, 1.05)
     # tier = food_value // 20，用桶中值估材料回收，3★ 起不倒贴
@@ -2389,13 +2412,24 @@ def dish_ingredient_cost(key: str) -> int:
 
 
 def dish_base_sell(key: str) -> int:
-    """3★ 系统回收价：菜谱基价（≈材料×1.1）与材料×保底倍率取高。卖给玩家更赚。"""
+    """3★ 系统回收价：菜谱基价（≈材料×1.1）与材料×保底倍率取高，再受加工封顶。"""
     listed = int(KITCHEN_DISHES[key]["base_sell"])
     floor = max(8, int(round(dish_ingredient_cost(key) * COOK_STAR3_FLOOR)))
-    return max(listed, floor)
+    return min(max(listed, floor), dish_cap(key))
+
+
+def dish_cap(key: str) -> int:
+    """加工封顶：菜的回收价 ≤ 2.0 × 材料回收价合计。"""
+    from .pricing import proc_cap
+
+    return proc_cap(dish_ingredient_cost(key))
 
 
 def dish_sell_price(key: str, stars: int) -> int:
+    return min(_dish_sell_price_raw(key, stars), dish_cap(key)) if key in KITCHEN_DISHES else _dish_sell_price_raw(key, stars)
+
+
+def _dish_sell_price_raw(key: str, stars: int) -> int:
     if key.startswith("mix_"):
         parsed = parse_mix_item(dish_item(key, stars))
         if parsed:
@@ -2426,11 +2460,16 @@ def dish_energy(item: str) -> int | None:
 
 
 def suggested_price(item: str) -> int:
+    """玩家无关的回收参考价（集市建议价、小馆参考价等展示用）。
+
+    实际回收价由 vend.plan 逐玩家逐批计算：可买品按该玩家此刻买入价 ×0.9，
+    产出品按品质批次与渔市行情。手作信物恒为 0（不可回收）。
+    """
+    from .pricing import is_token
+
     key = resolve_item_key(item) or item
-    from . import tt as tt_mod
-    shop = tt_mod.recycle_price(key)
-    if shop is not None:
-        return shop
+    if is_token(key):
+        return 0
     parsed = parse_mix_item(key)
     if parsed:
         grade, tier, _sig, stars = parsed
@@ -2557,3 +2596,36 @@ def voyage_loot_table(route_key: str, rarity_bonus: int = 0) -> list[str]:
     for item, _ in RANDOM_LOOT:
         table.append(item)
     return table
+
+
+# ── 价格簿接管 ITEM_PRICES ─────────────────────────────────────────────────
+# 上面所有字面价保留为「改版前快照」LEGACY_ITEM_PRICES（价格簿生成与对照测试用）。
+# 运行时的 ITEM_PRICES 由价格簿派生（原地更新，别的模块 import 到的还是同一个 dict）：
+#   产出品 = floor(0.70B) = 改版前回收价；可买品 = 最低买入价 × 0.9；手作信物不在表里。
+LEGACY_ITEM_PRICES: dict[str, int] = dict(ITEM_PRICES)
+
+
+def _apply_price_book() -> None:
+    from . import pricing
+    from .price_book import BOOK
+
+    for token in pricing.TOKEN_ITEMS:
+        ITEM_PRICES.pop(token, None)
+    # 先登记加工封顶（成品回收价 ≤ 2.0 × 材料回收价合计），两遍以覆盖「成品做材料」
+    for _ in range(2):
+        for recipe in CRAFT_RECIPES.values():
+            out = recipe["out"]
+            if out not in BOOK or out in pricing.TOKEN_ITEMS:
+                continue
+            total = 0
+            for need_item, need_qty in recipe["need"].items():
+                total += pricing.ref_value(need_item) * int(need_qty)
+            pricing.register_cap(out, pricing.proc_cap(total, int(recipe.get("qty", 1))))
+    for item, entry in BOOK.items():
+        if entry.get("notote"):
+            ITEM_PRICES.pop(item, None)
+            continue
+        ITEM_PRICES[item] = pricing.ref_value(item)
+
+
+_apply_price_book()

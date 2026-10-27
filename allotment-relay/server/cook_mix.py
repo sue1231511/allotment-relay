@@ -76,7 +76,7 @@ def classify(item: str) -> str:
         return "junk"
     if item.startswith("shell_") and item not in FOOD_SHELLS:
         return "junk"
-    if item.startswith("ut_"):
+    if item.startswith(("ut_", "utl_")):
         return "junk"
     if item.startswith("quarry_") and item != "quarry_salt":
         return "junk"

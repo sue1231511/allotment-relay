@@ -9,6 +9,7 @@ from typing import Any
 import aiosqlite
 
 from . import db
+from . import pricing
 from . import undertide_catalog as cat
 from . import undertide_config as utcfg
 from . import undertide_copy as utcopy
@@ -164,7 +165,8 @@ async def muscle_ops(
         if win:
             hurt = margin < 8 and not no_resist
             for key, qty in data["stock"]:
-                await db.add_item(conn, s["id"], key, qty)
+                # 强买抢来的是赃物（utl_），不是店货：任何商店都买不到，销赃走高价通道
+                await db.add_item(conn, s["id"], pricing.loot_key(key), qty)
             await conn.execute(
                 "UPDATE stewards SET tickets=MAX(0,tickets-?) WHERE id=?", (pay, s["id"])
             )
@@ -216,11 +218,24 @@ async def muscle_ops(
         )).fetchone()
         if not row or row["quantity"] < 1:
             raise ValueError(f"行囊里没有 {item_key}（tote_ops list / undertide market 的货）")
-        base_key = item_key[3:-2] if item_key.endswith("_s") else item_key[3:]
+        is_loot = pricing.is_loot(item_key)
+        if is_loot:
+            base_key = item_key[len(pricing.LOOT_PREFIX):]
+        else:
+            base_key = item_key[3:-2] if item_key.endswith("_s") else item_key[3:]
         meta = (cat.LINKED_GOODS.get(base_key) or cat.RARE_GOODS.get(base_key)
-                or cat.COMMON_GOODS.get(base_key) or {"name": item_key, "vend": 10})
-        mult = random.uniform(*utcfg.UT_PUSH_GAIN)
-        gain = int(meta.get("vend", 10) * mult)
+                or cat.COMMON_GOODS.get(base_key) or {"name": item_key, "vend": 10, "base": 8})
+        if is_loot:
+            # 赃物：任何商店都买不到，保持原来的高价通道
+            mult = random.uniform(*utcfg.UT_PUSH_GAIN)
+            gain = int(meta.get("vend", 10) * mult)
+        else:
+            # 店货：出价恒低于后室铺最低买入价
+            gain = pricing.fence_shop_payout(
+                int(meta.get("base", 8)),
+                u=random.uniform(pricing.FENCE_SHOP_LO, pricing.FENCE_SHOP_HI),
+                tide=1.0, lucky=False, substandard=item_key.endswith("_s"),
+            )
 
         my_power = await _my_power(conn, s["id"])
         their_power = utcfg.UT_NPC_TIERS[npc["tier"]]
