@@ -2242,6 +2242,14 @@ async def init_db() -> None:
             "CREATE INDEX IF NOT EXISTS idx_lounge_board_sparks_board "
             "ON lounge_board_sparks(board_id)",
             """
+            CREATE TABLE IF NOT EXISTS fish_market_flow (
+                day TEXT NOT NULL,
+                item TEXT NOT NULL,
+                qty INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (day, item)
+            )
+            """,
+            """
             CREATE TABLE IF NOT EXISTS heart_gifts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 steward_id INTEGER NOT NULL REFERENCES stewards(id),

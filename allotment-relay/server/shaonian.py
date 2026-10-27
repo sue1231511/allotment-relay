@@ -162,12 +162,16 @@ async def shaonian_ops(key_id: int, command: str) -> str:
                 conn=conn,
             )
             gust_note = await gust_mod.maybe_after_fortune(conn, s["id"]) or ""
+            from . import fish_market
+
+            market_note = await fish_market.fortune_hint(conn)
             await conn.commit()
         tail = f"\n{gust_note}" if gust_note else ""
         return (
             f"韶年望潮人卜卦{cost_note}\n"
             f"「{meta['name']}」{meta['omen']} — {meta['line']}\n"
-            f"今日：{meta['hint']}"
+            f"今日：{meta['hint']}\n"
+            f"{market_note}"
             + tail
         )
 

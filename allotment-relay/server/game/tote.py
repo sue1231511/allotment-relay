@@ -190,7 +190,10 @@ async def _tote_one(s: dict, command: str) -> str:
                 await conn.execute(
                     "UPDATE stewards SET tickets=tickets+? WHERE id=?", (gain, s["id"])
                 )
-                results.append((item_key, qty, gain))
+                from .. import fish_market
+                await fish_market.record_sale(conn, item_key, qty)
+                _, sea_note = await fish_market.mult_for(conn, item_key)
+                results.append((item_key, qty, gain, sea_note))
                 if item_key == "fish_walkblue":
                     from .. import marine as marine_mod
                     fate_notes.append(
@@ -200,11 +203,16 @@ async def _tote_one(s: dict, command: str) -> str:
                     )
             await conn.commit()
         if len(results) == 1:
-            item_key, qty, gain = results[0]
+            item_key, qty, gain, sea_note = results[0]
             msg = f"出售 {ITEM_NAMES.get(item_key, item_key)}（{item_key}）x{qty}，+{gain} 票"
+            if sea_note:
+                msg += f"（渔市：{sea_note}）"
         else:
-            total = sum(g for _, _, g in results)
-            lines = [f"  {ITEM_NAMES.get(k, k)} x{q}，+{g} 票" for k, q, g in results]
+            total = sum(g for _, _, g, _ in results)
+            lines = [
+                f"  {ITEM_NAMES.get(k, k)} x{q}，+{g} 票" + (f"（{n}）" if n else "")
+                for k, q, g, n in results
+            ]
             lines.append(f"合计 +{total} 票")
             msg = "批量出售：\n" + "\n".join(lines)
         if fate_notes:

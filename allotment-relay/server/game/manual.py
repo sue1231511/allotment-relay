@@ -125,6 +125,7 @@ async def relay_manual() -> str:
         "               不是 tote_ops gift（点名送物品/票进对方行囊），也不是聊天室红包",
         "  tote_ops     行囊/交换台/集市",
         "               command 例：list · 履历 · gifts · vend 鲭鱼 1 · vend 羊毛毯 1 · vend 芒果 3 木瓜 2（批量）· gift 安 甘蓝 1",
+        "               海产 vend 按渔市行情结算：近 7 日全岛卖得越多越贱（×0.65~×1.20），看牌 visit_ops 潮生会 行情；韶年卜卦附渔市卦象",
         "                 · swap list · swap offer 甘蓝 2 · market list · market sell 甘蓝 2 8",
         "               人类 /island 总览点集市，先选「集市 / 花店」地名；选花店进默语花房，选集市进交易店景，点一下看摊，点一下才出摊位列表，能看街摊、买、挂货、下架、扩摊",
         "  kitchen_ops  厨房/小馆。空 command=菜谱",
