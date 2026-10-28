@@ -1003,6 +1003,42 @@ async def connect() -> AsyncIterator[aiosqlite.Connection]:
                 _DB_CONN.reset(token)
 
 
+async def run_flagged_migration(conn, flag_key: str, label: str, worker) -> int:
+    """一次性数据迁移的统一外壳：补数据和写「已补」标记在同一个保存点（SAVEPOINT）里。
+
+    worker(conn, stats) 只做数据修改，不许自己 commit、不许自己写标记；随手把已处理条数记在
+    stats["processed"]。成功：数据和标记一起落库。失败：整体回滚到保存点（数据和标记都不留），
+    用日志记下迁移名、异常栈、已处理条数，原样抛出——标记没写，下次启动会重试，
+    所以不会出现「标记写了、数据没补完」。已经有标记就直接返回 0。
+    """
+    row = await (await conn.execute("SELECT 1 FROM world_flags WHERE flag_key=?", (flag_key,))).fetchone()
+    if row:
+        return 0
+    stats: dict[str, int] = {"processed": 0}
+    sp = "mig_" + "".join(ch if ch.isalnum() else "_" for ch in flag_key)
+    await conn.execute(f"SAVEPOINT {sp}")
+    try:
+        result = await worker(conn, stats)
+        await conn.execute(
+            "INSERT OR IGNORE INTO world_flags (flag_key, applied_at, detail) VALUES (?,?,?)",
+            (flag_key, now(), f"{label} processed={result}"),
+        )
+        await conn.execute(f"RELEASE SAVEPOINT {sp}")
+    except Exception:
+        _log.exception(
+            "一次性迁移失败，已整体回滚（数据和标记都没留），下次启动重试 迁移=%s 标记=%s 已处理=%d 条",
+            label, flag_key, stats["processed"],
+        )
+        try:
+            await conn.execute(f"ROLLBACK TO SAVEPOINT {sp}")
+            await conn.execute(f"RELEASE SAVEPOINT {sp}")
+        except Exception:
+            _log.exception("迁移回滚本身失败 迁移=%s 标记=%s", label, flag_key)
+        raise
+    _log.info("一次性迁移完成 迁移=%s 标记=%s 处理=%d 条", label, flag_key, result)
+    return result
+
+
 def is_db_locked_error(exc: BaseException) -> bool:
     if isinstance(exc, (aiosqlite.OperationalError, sqlite3.OperationalError)):
         return "locked" in str(exc).lower()
@@ -2545,11 +2581,20 @@ async def init_db() -> None:
         await bond_mod.backfill_all(db)
         from . import invite as invite_mod
         await invite_mod.backfill_invite_codes(db)
+        # 一次性数据迁移：每个都是「保存点 + 标记」原子的，失败整体回滚并写日志（含异常栈、已处理条数）。
+        # 失败不拦岛启动：回滚后库停在迁移之前的样子（老存货按旧规则：没有记录的货不变质、
+        # 退货走保守价），下次启动自动重试。这几项只是补批次账的元数据，不值得让全岛起不来。
         from . import paid_ledger
-        await paid_ledger.backfill_legacy(db)
         from . import item_traits as traits_init
-        await traits_init.heal_ghost_batches(db)
-        await traits_init.backfill_spoil_clock(db)
+        for mig_name, mig in (
+            ("实付批次补账", paid_ledger.backfill_legacy),
+            ("幽灵批次对齐", traits_init.heal_ghost_batches),
+            ("老存货补变质起点", traits_init.backfill_spoil_clock),
+        ):
+            try:
+                await mig(db)
+            except Exception:
+                _log.error("启动迁移「%s」失败：已回滚，岛继续启动，下次启动重试（异常栈见上一条日志）", mig_name)
         await db.commit()
 
 

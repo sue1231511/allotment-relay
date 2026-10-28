@@ -257,46 +257,41 @@ async def refund_plan(
 
 
 async def backfill_legacy(conn: aiosqlite.Connection) -> int:
-    """一次性补账（init_db 里跑，world_flags 防重复）。
+    """一次性补账（init_db 里跑）。
 
     上线前买的货没有批次。给每个玩家背包里「没有批次的记账货」补一批，实付单价取
     **持有人此刻在 Tt 的买入价**——也就是改版前退货会给他的那个价，所以对老实人退货金额不变。
     这一步只加批次行，不动任何人的物品和票。挂在集市/交换台/公仓/交接里的旧货不补，
-    取回或被领走后按无批次件算（保守价）。
+    取回或被领走后按无批次件算（保守价）。补数据和「已补」标记在同一个保存点里（db.run_flagged_migration）。
     """
-    cur = await conn.execute("SELECT 1 FROM world_flags WHERE flag_key=?", (FLAG_BACKFILL,))
-    if await cur.fetchone():
-        return 0
+    from . import db
+
+    return await db.run_flagged_migration(conn, FLAG_BACKFILL, "实付批次补账", _backfill_work)
+
+
+async def _backfill_work(conn: aiosqlite.Connection, stats: dict[str, int]) -> int:
     from . import tt as tt_mod
 
     added = 0
-    try:
-        rows = await (await conn.execute(
-            "SELECT steward_id, item, quantity FROM satchel WHERE quantity>0"
-        )).fetchall()
-        hearts_cache: dict[int, int] = {}
-        for sid, item, qty in rows:
-            if not is_tracked(item):
-                continue
-            missing = int(qty) - await batch_total(conn, int(sid), item)
-            if missing <= 0:
-                continue
-            if int(sid) not in hearts_cache:
-                score = await tt_mod._affinity(conn, int(sid))  # noqa: SLF001
-                hearts_cache[int(sid)] = tt_mod.hearts(score)
-            paid = pricing.tt_buy_price(pricing.base_price(item), hearts_cache[int(sid)])
-            if paid <= 0:
-                continue
-            await _insert(conn, STEWARD, int(sid), item, [(missing, paid)])
-            added += missing
-        await conn.execute(
-            "INSERT OR IGNORE INTO world_flags (flag_key, applied_at, detail) VALUES (?,?,?)",
-            (FLAG_BACKFILL, _now(), f"added={added}"),
-        )
-    except Exception:
-        _log.exception("paid_ledger.backfill_legacy 失败")
-        raise
-    _log.info("paid_ledger.backfill_legacy 完成：补了 %d 件", added)
+    rows = await (await conn.execute(
+        "SELECT steward_id, item, quantity FROM satchel WHERE quantity>0"
+    )).fetchall()
+    hearts_cache: dict[int, int] = {}
+    for sid, item, qty in rows:
+        if not is_tracked(item):
+            continue
+        missing = int(qty) - await batch_total(conn, int(sid), item)
+        if missing <= 0:
+            continue
+        if int(sid) not in hearts_cache:
+            score = await tt_mod._affinity(conn, int(sid))  # noqa: SLF001
+            hearts_cache[int(sid)] = tt_mod.hearts(score)
+        paid = pricing.tt_buy_price(pricing.base_price(item), hearts_cache[int(sid)])
+        if paid <= 0:
+            continue
+        await _insert(conn, STEWARD, int(sid), item, [(missing, paid)])
+        added += missing
+        stats["processed"] += 1
     return added
 
 

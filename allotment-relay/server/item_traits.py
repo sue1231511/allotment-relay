@@ -614,28 +614,20 @@ async def release_for_departure(conn, steward_id: int, item: str, qty: int) -> N
 
 
 async def heal_ghost_batches(conn) -> int:
-    """一次性（init_db 里跑，world_flags 防重复）：把旧版本留下的幽灵批次对齐背包。
-    只改批次账，不动任何人的物品和票。返回丢掉的幽灵件数。"""
-    flag = "trait_ghost_heal_v1"
-    cur = await conn.execute("SELECT 1 FROM world_flags WHERE flag_key=?", (flag,))
-    if await cur.fetchone():
-        return 0
+    """一次性（init_db 里跑）：把旧版本留下的幽灵批次对齐背包。
+    只改批次账，不动任何人的物品和票。返回丢掉的幽灵件数。补数据和标记在同一个保存点里。"""
+    return await db.run_flagged_migration(conn, "trait_ghost_heal_v1", "幽灵批次对齐", _heal_work)
+
+
+async def _heal_work(conn, stats: dict[str, int]) -> int:
     await ensure_trait_tables(conn)
     dropped = 0
-    try:
-        pairs = await (await conn.execute(
-            "SELECT DISTINCT steward_id, item FROM item_trait_batches WHERE loc='satchel'"
-        )).fetchall()
-        for sid, it in pairs:
-            dropped += await reconcile_batches(conn, int(sid), it)
-        await conn.execute(
-            "INSERT OR IGNORE INTO world_flags (flag_key, applied_at, detail) VALUES (?,?,?)",
-            (flag, db.now(), f"dropped={dropped}"),
-        )
-    except Exception:
-        _log.exception("heal_ghost_batches 失败")
-        raise
-    _log.info("heal_ghost_batches 完成：对齐掉 %d 件幽灵批次", dropped)
+    pairs = await (await conn.execute(
+        "SELECT DISTINCT steward_id, item FROM item_trait_batches WHERE loc='satchel'"
+    )).fetchall()
+    for sid, it in pairs:
+        dropped += await reconcile_batches(conn, int(sid), it)
+        stats["processed"] += 1
     return dropped
 
 
@@ -910,16 +902,19 @@ async def _unbatched(conn, owner: int, loc: str, item: str, have: int) -> int:
 
 
 async def backfill_spoil_clock(conn) -> int:
-    """一次性（init_db 里跑，world_flags 防重复）：旧版本里没有变质记录的存货，从上线这一刻起
+    """一次性（init_db 里跑）：旧版本里没有变质记录的存货，从上线这一刻起
     各给一整段完整保质期——行囊 ×1、潮柜 ×1.8、冰箱 ×3.5（不按已存放多久折算）。
 
     范围：背包、潮柜、冰箱，以及还挂在集市/交换台/公仓/台阶交接里的货（按行囊算）。
     已经有批次的件不动；新批次品质留空，价格和做菜星级都和没有批次时一样。
     只加批次行，不动任何人的物品和票。补完写一条全岛纪事和一条潮生会告示。返回补了多少件。
+    补批次、写纪事/告示和「已补」标记在同一个保存点里（db.run_flagged_migration）：
+    中途失败整体回滚，下次启动重试。
     """
-    cur = await conn.execute("SELECT 1 FROM world_flags WHERE flag_key=?", (SPOIL_CLOCK_FLAG,))
-    if await cur.fetchone():
-        return 0
+    return await db.run_flagged_migration(conn, SPOIL_CLOCK_FLAG, "老存货补变质起点", _spoil_clock_work)
+
+
+async def _spoil_clock_work(conn, stats: dict[str, int]) -> int:
     await ensure_trait_tables(conn)
     from . import kitchen
 
@@ -942,50 +937,66 @@ async def backfill_spoil_clock(conn) -> int:
             """,
             (owner, loc, item, missing, now + sec),
         )
+        stats["processed"] += 1
         return missing
 
-    try:
-        for sid, item, qty in await (await conn.execute(
-            "SELECT steward_id, item, quantity FROM satchel WHERE quantity>0"
-        )).fetchall():
-            added += await fill(int(sid), "satchel", item, int(qty), "satchel")
-        for sid, item, qty in await (await conn.execute(
-            "SELECT steward_id, item, quantity FROM hut_cabinet WHERE quantity>0"
-        )).fetchall():
-            added += await fill(int(sid), "cabinet", item, int(qty), "cabinet")
-        fridge: dict[tuple[int, str], int] = {}
-        for sid, dish_key, stars, qty in await (await conn.execute(
-            "SELECT steward_id, dish_key, stars, quantity FROM meal_storage WHERE quantity>0"
-        )).fetchall():
-            key = (int(sid), kitchen._fridge_satchel_item(dish_key, int(stars)))  # noqa: SLF001
-            fridge[key] = fridge.get(key, 0) + int(qty)
-        for (sid, item), qty in fridge.items():
-            added += await fill(sid, "fridge", item, qty, "fridge")
-        for kind, sql in (
-            ("market", "SELECT id, item, quantity FROM market_listings WHERE buyer_id IS NULL AND quantity>0"),
-            ("swap", "SELECT id, item, quantity FROM swap_lots WHERE claimed_by IS NULL AND quantity>0"),
-            ("handoff", "SELECT id, item, quantity FROM handoffs WHERE picked_up=0 AND quantity>0"),
-        ):
-            for ref, item, qty in await (await conn.execute(sql)).fetchall():
-                added += await fill(0, escrow_loc(kind, int(ref)), item, int(qty), "satchel")
-        for item, qty in await (await conn.execute(
-            "SELECT item, quantity FROM larder WHERE quantity>0"
-        )).fetchall():
-            added += await fill(0, escrow_loc("larder", 0), item, int(qty), "satchel")
+    for sid, item, qty in await (await conn.execute(
+        "SELECT steward_id, item, quantity FROM satchel WHERE quantity>0"
+    )).fetchall():
+        added += await fill(int(sid), "satchel", item, int(qty), "satchel")
+    for sid, item, qty in await (await conn.execute(
+        "SELECT steward_id, item, quantity FROM hut_cabinet WHERE quantity>0"
+    )).fetchall():
+        added += await fill(int(sid), "cabinet", item, int(qty), "cabinet")
+    fridge: dict[tuple[int, str], int] = {}
+    for sid, dish_key, stars, qty in await (await conn.execute(
+        "SELECT steward_id, dish_key, stars, quantity FROM meal_storage WHERE quantity>0"
+    )).fetchall():
+        key = (int(sid), kitchen._fridge_satchel_item(dish_key, int(stars)))  # noqa: SLF001
+        fridge[key] = fridge.get(key, 0) + int(qty)
+    for (sid, item), qty in fridge.items():
+        added += await fill(sid, "fridge", item, qty, "fridge")
+    for kind, sql in (
+        ("market", "SELECT id, item, quantity FROM market_listings WHERE buyer_id IS NULL AND quantity>0"),
+        ("swap", "SELECT id, item, quantity FROM swap_lots WHERE claimed_by IS NULL AND quantity>0"),
+        ("handoff", "SELECT id, item, quantity FROM handoffs WHERE picked_up=0 AND quantity>0"),
+    ):
+        for ref, item, qty in await (await conn.execute(sql)).fetchall():
+            added += await fill(0, escrow_loc(kind, int(ref)), item, int(qty), "satchel")
+    for item, qty in await (await conn.execute(
+        "SELECT item, quantity FROM larder WHERE quantity>0"
+    )).fetchall():
+        added += await fill(0, escrow_loc("larder", 0), item, int(qty), "satchel")
 
-        row = await (await conn.execute("SELECT COUNT(*) FROM stewards")).fetchone()
-        if int((row[0] if row else 0) or 0) > 0:
-            await db.add_chronicle("spoil_notice", SPOIL_NOTICE, None, conn=conn)
-            await conn.execute(
-                "INSERT INTO hui_notices (tag, body, created_at, retracted) VALUES ('厅示', ?, ?, 0)",
-                (SPOIL_NOTICE, now),
-            )
+    row = await (await conn.execute("SELECT COUNT(*) FROM stewards")).fetchone()
+    if int((row[0] if row else 0) or 0) > 0:
+        await db.add_chronicle("spoil_notice", SPOIL_NOTICE, None, conn=conn)
         await conn.execute(
-            "INSERT OR IGNORE INTO world_flags (flag_key, applied_at, detail) VALUES (?,?,?)",
-            (SPOIL_CLOCK_FLAG, now, f"added={added}"),
+            "INSERT INTO hui_notices (tag, body, created_at, retracted) VALUES ('厅示', ?, ?, 0)",
+            (SPOIL_NOTICE, now),
         )
-    except Exception:
-        _log.exception("backfill_spoil_clock 失败")
-        raise
-    _log.info("backfill_spoil_clock 完成：给老存货补了 %d 件的变质起点", added)
     return added
+
+
+async def sweep_escrow(conn, kind: str, ref: int, item: str, listed_qty: int) -> int:
+    """挂单（集市/交换台/公仓）里已经变质的批次：删掉这些批次，返回变质的件数（不超过挂单件数）。
+    调用方负责从挂单/储藏室里扣掉同样件数、清理实付批次、写纪事——变质的货不能成交。"""
+    if listed_qty <= 0 or not is_trackable(item):
+        return 0
+    try:
+        await ensure_trait_tables(conn)
+        rows = await (await conn.execute(
+            """
+            SELECT id, qty FROM item_trait_batches
+            WHERE steward_id=0 AND loc=? AND item=? AND spoil_at>0 AND spoil_at<=? ORDER BY id
+            """,
+            (escrow_loc(kind, ref), item, db.now()),
+        )).fetchall()
+        cut = 0
+        for bid, qty in rows:
+            await conn.execute("DELETE FROM item_trait_batches WHERE id=?", (bid,))
+            cut += int(qty)
+        return min(cut, int(listed_qty))
+    except Exception:
+        _log.exception("sweep_escrow 失败 kind=%s ref=%s item=%s", kind, ref, item)
+        raise

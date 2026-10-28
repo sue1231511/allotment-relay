@@ -339,6 +339,36 @@ async def public_contracts_list() -> list[dict[str, Any]]:
         ]
 
 
+async def settle_expired_larder(conn: aiosqlite.Connection, item: str | None = None) -> list[str]:
+    """联盟储藏室里已经变质的件：清掉（变质丢弃规则），写全岛纪事，返回提示行。变质的货不能被领走。"""
+    from . import item_traits as traits_mod
+    from . import paid_ledger
+
+    prev = conn.row_factory
+    conn.row_factory = aiosqlite.Row
+    try:
+        sql = "SELECT item, quantity FROM larder WHERE quantity>0"
+        args: tuple = ()
+        if item:
+            sql += " AND item=?"
+            args = (item,)
+        rows = [(r["item"], int(r["quantity"])) for r in await (await conn.execute(sql, args)).fetchall()]
+    finally:
+        conn.row_factory = prev
+    notes: list[str] = []
+    for it, have in rows:
+        cut = await traits_mod.sweep_escrow(conn, "larder", 0, it, have)
+        if cut <= 0:
+            continue
+        await paid_ledger.unstash(conn, "larder", 0, it, cut)
+        await conn.execute("UPDATE larder SET quantity=quantity-? WHERE item=?", (cut, it))
+        label = ITEM_NAMES.get(it, it)
+        await db.add_chronicle("spoil", f"联盟储藏室里的 {label}（{it}）x{cut} 已变质，只好丢掉", None, conn=conn)
+        _log.info("larder 变质清理 item=%s cut=%s", it, cut)
+        notes.append(f"{label}×{cut} 已变质，已清理")
+    return notes
+
+
 async def alliance_ops(key_id: int, command: str) -> str:
     parts = command.strip().split(maxsplit=2)
     verb = parts[0].lower() if parts else "online"
@@ -472,13 +502,16 @@ async def alliance_ops(key_id: int, command: str) -> str:
 
     if verb == "larder":
         async with db.connect() as conn:
+            swept = await settle_expired_larder(conn)
+            await conn.commit()
             conn.row_factory = aiosqlite.Row
             rows = await (await conn.execute(
                 "SELECT item, quantity FROM larder WHERE quantity > 0 ORDER BY item"
             )).fetchall()
+        spoil_head = ("变质清理：" + "；".join(swept) + "\n") if swept else ""
         if not rows:
-            return "储藏室是空的，欢迎 donate"
-        return "联盟储藏室：\n" + "\n".join(
+            return spoil_head + "储藏室是空的，欢迎 donate"
+        return spoil_head + "联盟储藏室：\n" + "\n".join(
             f"  {ITEM_NAMES.get(r['item'], r['item'])} x{r['quantity']}" for r in rows
         )
 
@@ -495,10 +528,14 @@ async def alliance_ops(key_id: int, command: str) -> str:
             used = row["count"] if row else 0
             if used >= LARDER_DRAWS_PER_DAY:
                 raise ValueError(f"今日领取上限 {LARDER_DRAWS_PER_DAY}")
+            swept = await settle_expired_larder(conn, item)
+            if swept:
+                await conn.commit()
             cur = await conn.execute("SELECT quantity FROM larder WHERE item=?", (item,))
             lrow = await cur.fetchone()
             if not lrow or lrow[0] < qty:
-                raise ValueError("储藏室库存不足")
+                note = ("（" + "；".join(swept) + "，没有扣你的领取费）") if swept else ""
+                raise ValueError(f"储藏室库存不足{note}")
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
             if (await cur.fetchone())[0] < LARDER_DRAW_FEE:
                 raise ValueError(f"领取需 {LARDER_DRAW_FEE} 票")
@@ -773,14 +810,19 @@ async def contract_ops(key_id: int, command: str) -> str:
                     cid, c["poster_id"], s["id"], want_raw, qty, c["reward_tickets"],
                 )
                 raise ValueError("这份合约的数量或酬劳异常（≤0），不能交付。请发布人 contract cancel 撤掉。")
+            from . import item_traits as traits_pre
+            rotten_notes = await traits_pre.purge_spoiled(conn, s["id"], item=want)
+            if rotten_notes:
+                await conn.commit()      # 变质的货先清掉并落库；交付只收新鲜货
             took = await db.take_item_carry(conn, s["id"], want, qty, settle_traits=False)
             if took is None and want != want_raw:
                 took = await db.take_item_carry(conn, s["id"], want_raw, qty, settle_traits=False)
                 if took is not None:
                     want = want_raw
             if took is None:
+                note = ("\n变质丢弃：" + "；".join(rotten_notes)) if rotten_notes else ""
                 raise ValueError(
-                    f"行囊里没有足够物资（需要 {ITEM_NAMES.get(want, want)} / {want} x{qty}）"
+                    f"行囊里没有足够物资（需要 {ITEM_NAMES.get(want, want)} / {want} x{qty}）{note}"
                 )
             from . import item_traits as traits_mod
             trait_slices = await traits_mod.carry_out(conn, s["id"], want, qty)
@@ -806,6 +848,8 @@ async def contract_ops(key_id: int, command: str) -> str:
         pname = poster["name"] if poster else "?"
         msg = f"{s['name']} 完成 {pname} 的合约 #{cid}，+{c['reward_tickets']} 票"
         await db.add_chronicle("contract_fill", msg, s["id"], c["poster_id"])
+        if rotten_notes:
+            msg += "\n变质丢弃：" + "；".join(rotten_notes)
         return msg
 
     if verb == "cancel" and len(parts) >= 2:
