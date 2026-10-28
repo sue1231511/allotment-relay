@@ -162,6 +162,8 @@
   line-height: .95;
   font-weight: 500;
   margin: 14px 0 8px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .board-page .big-label {
