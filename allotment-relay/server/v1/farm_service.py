@@ -13,7 +13,7 @@ from typing import Any
 
 from .. import db, farming, game, land as land_mod
 from ..catalog import CROPS, resolve_crop_key
-from .errors import ApiError, classify
+from .errors import ApiError, classify, clean_qty
 from . import views
 
 
@@ -74,7 +74,7 @@ async def buy(api_key: str, key_id: int, crop: str, qty: int = 1) -> dict[str, A
     crop_key = resolve_crop_key((crop or "").strip())
     if not crop_key:
         raise ApiError("BAD_REQUEST", "没有这种作物。")
-    n = max(1, min(24, int(qty or 1)))
+    n = clean_qty(qty, 24)
     sow_name = (CROPS[crop_key].get("aliases") or [CROPS[crop_key]["name"]])[0]
     try:
         narrative = await game._plot_one(s, f"buy {n} {sow_name}")

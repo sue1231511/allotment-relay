@@ -11,6 +11,7 @@ from typing import Any
 import aiosqlite
 
 from . import db, energy
+from .inputs import parse_positive_int
 from .catalog import (
     BETROTHAL_ATTIRE_MAX,
     BETROTHAL_ATTIRE_MIN,
@@ -3485,7 +3486,7 @@ async def _cmd_gift(s: dict[str, Any], rest: str) -> str:
     note = ""
     idx = 2
     if len(parts) > 2 and parts[2].isdigit():
-        qty = max(1, min(12, int(parts[2])))
+        qty = min(12, parse_positive_int(parts[2]))
         idx = 3
     if len(parts) > idx:
         note = _clip(" ".join(parts[idx:]), 80)

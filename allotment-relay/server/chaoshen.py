@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from . import bar, db, events, flavor, world
+from .inputs import parse_positive_int
 from .game import require_steward, _parse_int
 
 FUND_NAME = "潮汐基金"
@@ -605,7 +606,7 @@ async def _fund_command(key_id: int, parts: list[str]) -> str:
     if head in ("捐", "donate", "捐票"):
         if len(rest) < 2:
             raise ValueError("票数自己填。用法：visit_ops 潮生会 基金 捐 50")
-        return await fund_donate(key_id, _parse_int(rest[1], "票数"))
+        return await fund_donate(key_id, parse_positive_int(rest[1], "票数"))
     if head in ("领", "补贴", "claim", "draw"):
         raise ValueError(subsidy_refuse())
     raise ValueError(
@@ -667,7 +668,7 @@ async def chaoshen_ops(key_id: int, command: str = "") -> str:
     if verb in ("捐票",) or verb_l in ("donatetickets", "donate_tickets"):
         if len(parts) < 2:
             raise ValueError("票数自己填。用法：visit_ops 潮生会 基金 捐 50")
-        return await fund_donate(key_id, _parse_int(parts[1], "票数"))
+        return await fund_donate(key_id, parse_positive_int(parts[1], "票数"))
 
     if verb_l in ("周", "league", "目标", "周目标"):
         raise ValueError(_league_refuse(verb))

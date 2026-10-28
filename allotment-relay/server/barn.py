@@ -371,10 +371,7 @@ async def barn_ops(key_id: int, command: str) -> str:
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
             if (await cur.fetchone())[0] < meta["buy"]:
                 raise ValueError(f"需要 {meta['buy']} 票")
-            await conn.execute(
-                "UPDATE stewards SET tickets=tickets-? WHERE id=?",
-                (meta["buy"], s["id"]),
-            )
+            await db.spend_tickets(conn, s["id"], int(meta["buy"]), reason="barn buy animal")
             guard = 1 if meta.get("guard") else 0
             stocked = db.now() if not meta.get("hive") else db.now()
             from . import barn_pedigree as pedigree_mod

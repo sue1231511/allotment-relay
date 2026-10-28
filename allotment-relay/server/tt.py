@@ -9,6 +9,7 @@ from typing import Any
 import aiosqlite
 
 from . import config, db, flavor
+from .inputs import parse_positive_int
 from .catalog import (
     CROPS,
     DOWRY_SETS,
@@ -485,11 +486,7 @@ async def _pay(conn: aiosqlite.Connection, steward_id: int, cost: int) -> int:
     have = (await cur.fetchone())[0]
     if have < cost:
         raise ValueError(f"工分票不足，需要 {cost}（现 {have}）")
-    await conn.execute(
-        "UPDATE stewards SET tickets=tickets-? WHERE id=?",
-        (cost, steward_id),
-    )
-    return have - cost
+    return await db.spend_tickets(conn, steward_id, cost, reason="tt pay")
 
 
 def _status_block(score: int) -> str:
@@ -670,10 +667,10 @@ async def tt_ops(key_id: int, command: str) -> str:
         qty = 1
         name_toks = parts[1:]
         if name_toks[-1].isdigit():
-            qty = max(1, int(name_toks[-1]))
+            qty = parse_positive_int(name_toks[-1])
             name_toks = name_toks[:-1]
         if len(name_toks) >= 2 and name_toks[0].isdigit():
-            qty = max(1, int(name_toks[0]))
+            qty = parse_positive_int(name_toks[0])
             name_toks = name_toks[1:]
         item = resolve_shop_item(" ".join(name_toks))
         if not item:
@@ -757,7 +754,7 @@ async def tt_ops(key_id: int, command: str) -> str:
         qty = 1
         name_toks = parts[1:]
         if name_toks[-1].isdigit():
-            qty = max(1, int(name_toks[-1]))
+            qty = parse_positive_int(name_toks[-1])
             name_toks = name_toks[:-1]
         token = " ".join(name_toks)
         if token in ("票", "工分票", "tickets", "ticket"):

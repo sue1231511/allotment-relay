@@ -752,10 +752,7 @@ async def pen_ops(key_id: int, command: str) -> str:
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
             if (await cur.fetchone())[0] < meta["stock_tickets"]:
                 raise ValueError(f"投苗需要 {meta['stock_tickets']} 票")
-            await conn.execute(
-                "UPDATE stewards SET tickets=tickets-? WHERE id=?",
-                (meta["stock_tickets"], s["id"]),
-            )
+            await db.spend_tickets(conn, s["id"], int(meta["stock_tickets"]), reason="pen stock")
             await conn.execute(
                 "UPDATE fish_pens SET species=?, stocked_at=?, fed=0 WHERE id=?",
                 (species, db.now(), pen["id"]),

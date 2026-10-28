@@ -12,6 +12,7 @@ from typing import Any
 import aiosqlite
 
 from . import db
+from .inputs import parse_positive_int
 from . import undertide_catalog as cat
 from . import undertide_config as utcfg
 from . import undertide_copy as utcopy
@@ -392,10 +393,7 @@ async def _cmd_sell(
     key = _resolve_sell_key(item_token)
     if not key:
         raise ValueError("掌柜只收潮下货（ut_ 开头 key）。地上货走 tote_ops vend。")
-    try:
-        qty = max(1, int(qty_token))
-    except ValueError:
-        qty = 1
+    qty = parse_positive_int(qty_token)
     conn.row_factory = aiosqlite.Row
     row = await (await conn.execute(
         "SELECT quantity FROM satchel WHERE steward_id=? AND item=?", (s["id"], key)

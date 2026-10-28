@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 import aiosqlite
@@ -9,7 +10,10 @@ import aiosqlite
 from . import config, db, flavor
 from .catalog import ITEM_NAMES, item_label, item_vendable, resolve_item_key, suggested_price, unknown_item_message
 from .game import require_steward, _parse_int
+from .inputs import parse_positive_int
 
+
+_log = logging.getLogger(__name__)
 
 MARKET_HELP = """tote_ops market 子命令（整句写进 command）：
   list — 街上在售的挂单；空 command 也是 list
@@ -20,6 +24,7 @@ MARKET_HELP = """tote_ops market 子命令（整句写进 command）：
   price 物品 — 看建议价
   扩 [数量] — 加摊格，15 票/格，顶 12 格
   摊险 压石|收摊|硬摆 — 挂单后小概率阵风掀摊，未处置不能 sell/buy
+  数量、单价必须是 ≥1 的整数，0 和负数会被拒绝。
   例子：market list · market sell 甘蓝 2 8 · market buy 3 · market 扩 · 摊险 压石
   集市卖的是货，不是小馆堂食。买熟菜回家自己吃，没有饱餐加成。
   人类 /island 总览点集市，先进店景，点一下才出摊位列表，能看街摊、买、挂自己的货、下架、扩摊。"""
@@ -65,9 +70,10 @@ async def market_expand(s: dict, n: int = 1) -> str:
             raise ValueError(
                 f"加 {n} 格需要 {cost} 票（每格 {config.MARKET_SLOT_COST}）"
             )
+        await db.spend_tickets(conn, s["id"], cost, reason="market expand")
         await conn.execute(
-            "UPDATE stewards SET tickets=tickets-?, market_extra=market_extra+? WHERE id=?",
-            (cost, n, s["id"]),
+            "UPDATE stewards SET market_extra=market_extra+? WHERE id=?",
+            (n, s["id"]),
         )
         await conn.commit()
         new_cap = market_list_cap(extra + n)
@@ -85,7 +91,7 @@ async def market_ops(key_id: int, command: str) -> str:
     if verb in ("expand", "扩", "扩容", "加格"):
         n = 1
         if len(parts) >= 2:
-            n = max(1, _parse_int(parts[1], "数量"))
+            n = parse_positive_int(parts[1], "数量")
         return await market_expand(s, n)
 
     if verb == "list":
@@ -153,7 +159,7 @@ async def market_ops(key_id: int, command: str) -> str:
         item_key = resolve_item_key(raw_item)
         if not item_key:
             raise ValueError(unknown_item_message(raw_item))
-        qty, price = _parse_int(qty_s), _parse_int(price_s, "单价")
+        qty, price = parse_positive_int(qty_s), parse_positive_int(price_s, "单价")
         note = parts[4] if len(parts) > 4 else ""
         if not item_vendable(item_key):
             raise ValueError(
@@ -212,7 +218,7 @@ async def market_ops(key_id: int, command: str) -> str:
 
     if verb == "buy" and len(parts) >= 2:
         lot_id = _parse_int(parts[1], "挂单编号")
-        qty = _parse_int(parts[2], "数量") if len(parts) > 2 else None
+        qty = parse_positive_int(parts[2], "数量") if len(parts) > 2 else None
         async with db.connect() as conn:
             from . import market_stall_gust as gust_mod
 
@@ -227,6 +233,12 @@ async def market_ops(key_id: int, command: str) -> str:
             if lot["seller_id"] == s["id"]:
                 raise ValueError("不能买自己的挂单")
             seller_id = int(lot["seller_id"])
+            if int(lot["price"] or 0) < 1 or int(lot["quantity"] or 0) < 1:
+                _log.warning(
+                    "market buy: 拒绝异常旧挂单 lot=%s seller=%s item=%s qty=%s price=%s buyer=%s",
+                    lot_id, seller_id, lot["item"], lot["quantity"], lot["price"], s["id"],
+                )
+                raise ValueError("这张挂单的数量或单价异常（≤0），不能买。请卖家 market_ops cancel 撤掉。")
             await gust_mod.assert_not_blocked(conn, seller_id)
             buy_qty = qty or lot["quantity"]
             if buy_qty < 1 or buy_qty > lot["quantity"]:
@@ -235,15 +247,9 @@ async def market_ops(key_id: int, command: str) -> str:
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
             if (await cur.fetchone())[0] < cost:
                 raise ValueError(f"需要 {cost} 票（含手续费 {config.MARKET_FEE}）")
-            await conn.execute(
-                "UPDATE stewards SET tickets=tickets-? WHERE id=?",
-                (cost, s["id"]),
-            )
+            await db.spend_tickets(conn, s["id"], cost, reason="market buy")
             pay = lot["price"] * buy_qty
-            await conn.execute(
-                "UPDATE stewards SET tickets=tickets+? WHERE id=?",
-                (pay, lot["seller_id"]),
-            )
+            await db.grant_tickets(conn, lot["seller_id"], pay, reason="market sale")
             await db.add_item(conn, s["id"], lot["item"], buy_qty)
             from . import ledger as ledger_mod
             await ledger_mod.transfer(
@@ -283,7 +289,13 @@ async def market_ops(key_id: int, command: str) -> str:
             )).fetchone() or {})
             if not lot:
                 raise ValueError("找不到可取消的挂单")
-            await db.add_item(conn, s["id"], lot["item"], lot["quantity"])
+            if int(lot["quantity"] or 0) >= 1:
+                await db.add_item(conn, s["id"], lot["item"], lot["quantity"])
+            else:
+                _log.warning(
+                    "market cancel: 异常旧挂单只删记录不退货 steward=%s lot=%s item=%s qty=%s price=%s",
+                    s["id"], lot_id, lot["item"], lot["quantity"], lot["price"],
+                )
             await conn.execute("DELETE FROM market_listings WHERE id=?", (lot_id,))
             await conn.commit()
         return f"已下架 #{lot_id}，物品退回行囊"

@@ -110,3 +110,16 @@ def classify(exc: BaseException) -> ApiError:
     if "未知" in raw or "用法" in raw:
         return ApiError("BAD_REQUEST", msg or "这次点的内容服务端不认。", status=400, detail=msg)
     return ApiError("ACTION_FAILED", msg or "这次没做成。", status=400, detail=msg)
+
+
+def clean_qty(qty: Any, maximum: int) -> int:
+    """HTTP 层数量：缺省 1；≤0、非整数一律 400；超过 maximum 按 maximum 截。"""
+    if qty is None:
+        return 1
+    try:
+        n = int(qty)
+    except (TypeError, ValueError):
+        raise ApiError("BAD_REQUEST", "数量须为整数。") from None
+    if n < 1:
+        raise ApiError("BAD_REQUEST", "数量至少为 1。")
+    return min(n, maximum)

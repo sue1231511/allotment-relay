@@ -162,14 +162,14 @@ async def _buy_medicine(
 ) -> str:
     meta = CLINIC_MEDICINES[med_key]
     unit = health._bill_cost(int(meta["price"]), cost_mult=cost_mult, cost_add=cost_add)  # noqa: SLF001
+    if qty < 1:
+        raise ValueError("买药数量至少为 1")
     cost = unit * qty
     cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
     tickets = (await cur.fetchone())[0]
     if tickets < cost:
         raise ValueError(f"买 {meta['name']} 要 {cost} 票，你只有 {tickets} 票")
-    await conn.execute(
-        "UPDATE stewards SET tickets=tickets-? WHERE id=?", (cost, s["id"]),
-    )
+    await db.spend_tickets(conn, s["id"], cost, reason="clinic buy medicine")
     from . import tax as tax_mod
     await tax_mod.record_life_spend(conn, s["id"], cost, "clinic")
     await db.add_item(conn, s["id"], med_key, qty)

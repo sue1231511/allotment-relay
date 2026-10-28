@@ -43,10 +43,7 @@ async def tool_ops(key_id: int, command: str) -> str:
             stock = await db.get_satchel(s["id"])
             if stock.get(item, 0) > 0:
                 return f"已有 {TOOLS[key]['name']}"
-            await conn.execute(
-                "UPDATE stewards SET tickets=tickets-? WHERE id=?",
-                (cost, s["id"]),
-            )
+            await db.spend_tickets(conn, s["id"], cost, reason="tool buy")
             await db.add_item(conn, s["id"], item, 1)
             if key.startswith("net_"):
                 from . import gear

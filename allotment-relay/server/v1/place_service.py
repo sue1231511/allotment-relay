@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Any
 
 from .. import game, play
-from .errors import ApiError, classify, humanize
+from .errors import ApiError, classify, humanize, clean_qty
 from . import farm_service
 
 
@@ -94,7 +94,7 @@ async def vend(api_key: str, key_id: int, item: str, qty: int = 1) -> dict[str, 
     name = (item or "").strip()
     if not name:
         raise ApiError("BAD_REQUEST", "先选要卖的东西。")
-    n = max(1, min(99, int(qty or 1)))
+    n = clean_qty(qty, 99)
     try:
         s = await game.require_steward(key_id)
     except ValueError as exc:
