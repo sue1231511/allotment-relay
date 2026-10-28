@@ -10,6 +10,44 @@ function fmt(n) {
   return Number(n || 0).toLocaleString('zh-CN');
 }
 
+// 两侧大数字栏宽只有 220px，七位数放不下会换行。一万以上缩写：123K、2.07M、1B。
+// 保留三位有效数字；进位到 1000 时升一级（999,999 显示 1M，不显示 1000K）。
+const SHORT_UNITS = [[1e9, 'B'], [1e6, 'M'], [1e3, 'K']];
+function shortNum(n) {
+  const v = Number(n || 0);
+  const a = Math.abs(v);
+  const sign = v < 0 ? '-' : '';
+  if (a < 1e4) return fmt(v);
+  for (let i = 0; i < SHORT_UNITS.length; i++) {
+    const [base, unit] = SHORT_UNITS[i];
+    if (a < base) continue;
+    const x = a / base;
+    const digits = x >= 100 ? 0 : x >= 10 ? 1 : 2;
+    const r = Number(x.toFixed(digits));
+    if (r >= 1000 && i > 0) {
+      const [upBase, upUnit] = SHORT_UNITS[i - 1];
+      return sign + String(Number((a / upBase).toFixed(2))) + upUnit;
+    }
+    return sign + String(r) + unit;
+  }
+  return fmt(v);
+}
+
+// 大数字显示缩写，悬停和读屏给完整数字
+function setBigNumber(id, value) {
+  const el = document.getElementById(id);
+  if (value == null) {
+    el.textContent = '—';
+    el.removeAttribute('title');
+    el.removeAttribute('aria-label');
+    return;
+  }
+  const full = fmt(value);
+  el.textContent = shortNum(value);
+  el.title = full;
+  el.setAttribute('aria-label', full);
+}
+
 function padRank(n) {
   return String(n).padStart(2, '0');
 }
