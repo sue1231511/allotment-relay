@@ -52,7 +52,7 @@ def test_resolve_and_catalog() -> None:
     assert meta["name"] == "橘子"
     assert ITEM_NAMES["crop_orange"] == "橘子"
     assert ITEM_NAMES["seed_orange"] == "橘子种"
-    assert ITEM_PRICES["seed_orange"] == 16
+    assert CROPS["orange"]["seed_price"] == 16
     assert ITEM_PRICES["crop_orange"] == 30
 
     with season.pinned_season("冬"):

@@ -159,6 +159,12 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
         row = await cur.fetchone()
         if row:
             await db.add_item(conn, sid, row[1], int(row[2]))
+            from . import paid_ledger
+            await paid_ledger.give(
+                conn, sid, row[1],
+                await paid_ledger.unstash(conn, "market", int(row[0]), row[1], int(row[2])),
+            )
+            await paid_ledger.discard(conn, "market", int(row[0]))
             await conn.execute("DELETE FROM market_listings WHERE id=?", (row[0],))
             extra = f"最新一单 #{row[0]} 已下架回行囊。"
         else:
@@ -178,12 +184,16 @@ async def resolve(conn, steward: dict[str, Any], choice: str) -> str:
         )
         row = await cur.fetchone()
         if row and int(row[2]) > 1:
+            from . import paid_ledger
+            await paid_ledger.unstash(conn, "market", int(row[0]), row[1], 1)
             await conn.execute(
                 "UPDATE market_listings SET quantity=quantity-1 WHERE id=?",
                 (row[0],),
             )
             lost = "有一件货被风刮跑了。"
         elif row:
+            from . import paid_ledger
+            await paid_ledger.discard(conn, "market", int(row[0]))
             await conn.execute("DELETE FROM market_listings WHERE id=?", (row[0],))
             lost = "有一单被风刮没了。"
     await _clear(conn, sid, flash_summary="集市掀摊：硬摆过关，摊险已结。")

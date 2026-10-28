@@ -444,8 +444,15 @@ async def alliance_ops(key_id: int, command: str) -> str:
     if verb == "donate" and len(parts) >= 3:
         item, qty = parts[1], parse_positive_int(parts[2])
         async with db.connect() as conn:
-            if not await db.take_item(conn, s["id"], item, qty):
+            carried = await db.take_item_carry(
+                conn, s["id"], item, qty, settle_traits=False,
+            )
+            if carried is None:
                 raise ValueError("行囊不足")
+            from . import item_traits as traits_mod
+            from . import paid_ledger
+            await traits_mod.release_for_departure(conn, s["id"], item, qty)
+            await paid_ledger.stash(conn, "larder", 0, item, carried)
             await conn.execute(
                 """
                 INSERT INTO larder (item, quantity) VALUES (?, ?)
@@ -499,6 +506,11 @@ async def alliance_ops(key_id: int, command: str) -> str:
                 (qty, item),
             )
             await db.add_item(conn, s["id"], item, qty)
+            from . import paid_ledger
+            await paid_ledger.give(
+                conn, s["id"], item,
+                await paid_ledger.unstash(conn, "larder", 0, item, qty),
+            )
             await conn.execute(
                 "UPDATE stewards SET tickets = tickets - ? WHERE id=?",
                 (LARDER_DRAW_FEE, s["id"]),
@@ -755,21 +767,25 @@ async def contract_ops(key_id: int, command: str) -> str:
                     cid, c["poster_id"], s["id"], want_raw, qty, c["reward_tickets"],
                 )
                 raise ValueError("这份合约的数量或酬劳异常（≤0），不能交付。请发布人 contract cancel 撤掉。")
-            took = await db.take_item(conn, s["id"], want, qty)
-            if not took and want != want_raw:
-                took = await db.take_item(conn, s["id"], want_raw, qty)
-                if took:
+            took = await db.take_item_carry(conn, s["id"], want, qty, settle_traits=False)
+            if took is None and want != want_raw:
+                took = await db.take_item_carry(conn, s["id"], want_raw, qty, settle_traits=False)
+                if took is not None:
                     want = want_raw
-            if not took:
+            if took is None:
                 raise ValueError(
                     f"行囊里没有足够物资（需要 {ITEM_NAMES.get(want, want)} / {want} x{qty}）"
                 )
+            from . import item_traits as traits_mod
+            await traits_mod.release_for_departure(conn, s["id"], want, qty)
             if want != want_raw:
                 await conn.execute(
                     "UPDATE contracts SET want_item=? WHERE id=? AND status='open'",
                     (want, cid),
                 )
             await db.add_item(conn, c["poster_id"], want, qty)
+            from . import paid_ledger
+            await paid_ledger.give(conn, c["poster_id"], want, took)
             await db.grant_tickets(conn, s["id"], int(c["reward_tickets"]), reason="contract fill")
             await conn.execute(
                 "UPDATE contracts SET status='filled', filler_id=? WHERE id=?",
@@ -835,8 +851,10 @@ async def league_ops(key_id: int, command: str) -> str:
             meta = _goal_meta(row["goal_key"])
             if meta.get("item") != item:
                 raise ValueError(f"本周目标是「{meta['label']}」，请捐 {meta.get('item', '?')}")
-            if not await db.take_item(conn, s["id"], item, qty):
+            if not await db.take_item(conn, s["id"], item, qty, settle_traits=False):
                 raise ValueError("行囊不足")
+            from . import item_traits as traits_mod
+            await traits_mod.release_for_departure(conn, s["id"], item, qty)
             bonus = await _league_add_progress(conn, s["id"], qty)
             await conn.commit()
         msg = f"{s['name']} 为联盟周目标贡献 {ITEM_NAMES.get(item, item)} x{qty}"

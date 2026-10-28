@@ -8,7 +8,8 @@ from typing import Any
 import aiosqlite
 
 from . import config, db, flavor
-from .catalog import ITEM_NAMES, item_label, item_vendable, resolve_item_key, suggested_price, unknown_item_message
+from .catalog import ITEM_NAMES, item_label, item_tradable, resolve_item_key, suggested_price, unknown_item_message
+from . import pricing
 from .game import require_steward, _parse_int
 from .inputs import parse_positive_int
 
@@ -24,7 +25,7 @@ MARKET_HELP = """tote_ops market 子命令（整句写进 command）：
   price 物品 — 看建议价
   扩 [数量] — 加摊格，15 票/格，顶 12 格
   摊险 压石|收摊|硬摆 — 挂单后小概率阵风掀摊，未处置不能 sell/buy
-  数量、单价必须是 ≥1 的整数，0 和负数会被拒绝。
+  数量、单价必须是 ≥1 的整数，0 和负数会被拒绝；单价最多是基础价的 100 倍，没有下限。订婚戒、潮誓戒等手作信物不能卖给商店，但可以在这里挂单交易。
   例子：market list · market sell 甘蓝 2 8 · market buy 3 · market 扩 · 摊险 压石
   集市卖的是货，不是小馆堂食。买熟菜回家自己吃，没有饱餐加成。
   人类 /island 总览点集市，先进店景，点一下才出摊位列表，能看街摊、买、挂自己的货、下架、扩摊。"""
@@ -161,7 +162,7 @@ async def market_ops(key_id: int, command: str) -> str:
             raise ValueError(unknown_item_message(raw_item))
         qty, price = parse_positive_int(qty_s), parse_positive_int(price_s, "单价")
         note = parts[4] if len(parts) > 4 else ""
-        if not item_vendable(item_key):
+        if not item_tradable(item_key):
             raise ValueError(
                 f"{ITEM_NAMES.get(item_key, item_key)}（{item_key}）不宜上架"
             )
@@ -170,6 +171,12 @@ async def market_ops(key_id: int, command: str) -> str:
         if refuse:
             raise ValueError(refuse)
         sug = suggested_price(item_key)
+        base_b = pricing.base_price(item_key)
+        if base_b and price > base_b * pricing.MARKET_PRICE_MAX_MULT:
+            raise ValueError(
+                f"单价太离谱了：{ITEM_NAMES.get(item_key, item_key)} 最多挂 "
+                f"{base_b * pricing.MARKET_PRICE_MAX_MULT} 票/个（基础价 {base_b} 的 {pricing.MARKET_PRICE_MAX_MULT} 倍）"
+            )
         async with db.connect() as conn:
             from . import market_stall_gust as gust_mod
 
@@ -189,11 +196,17 @@ async def market_ops(key_id: int, command: str) -> str:
                         f"（{config.MARKET_SLOT_COST}票/格，顶 {config.MARKET_LIST_SLOTS_MAX}）"
                     )
                 raise ValueError(f"挂单已满 {used}/{cap}。{hint}")
-            if not await db.take_item(conn, s["id"], item_key, qty):
+            carried = await db.take_item_carry(
+                conn, s["id"], item_key, qty, settle_traits=False,
+            )
+            if carried is None:
                 raise ValueError(
                     f"行囊数量不足（需要 {item_key} x{qty}）"
                 )
-            await conn.execute(
+            from . import item_traits as traits_mod
+            from . import paid_ledger
+            await traits_mod.release_for_departure(conn, s["id"], item_key, qty)
+            cur_ins = await conn.execute(
                 """
                 INSERT INTO market_listings
                 (seller_id, item, quantity, price, suggested, note, created_at)
@@ -201,6 +214,7 @@ async def market_ops(key_id: int, command: str) -> str:
                 """,
                 (s["id"], item_key, qty, price, sug, note[:60], db.now()),
             )
+            await paid_ledger.stash(conn, "market", int(cur_ins.lastrowid), item_key, carried)
             gust_note = await gust_mod.maybe_after_sell(conn, s["id"])
             await conn.commit()
         hint = flavor.pick([
@@ -251,6 +265,11 @@ async def market_ops(key_id: int, command: str) -> str:
             pay = lot["price"] * buy_qty
             await db.grant_tickets(conn, lot["seller_id"], pay, reason="market sale")
             await db.add_item(conn, s["id"], lot["item"], buy_qty)
+            from . import paid_ledger
+            await paid_ledger.give(
+                conn, s["id"], lot["item"],
+                await paid_ledger.unstash(conn, "market", lot_id, lot["item"], int(buy_qty)),
+            )
             from . import ledger as ledger_mod
             await ledger_mod.transfer(
                 conn, int(lot["seller_id"]), s["id"], lot["item"], int(buy_qty),
@@ -291,11 +310,20 @@ async def market_ops(key_id: int, command: str) -> str:
                 raise ValueError("找不到可取消的挂单")
             if int(lot["quantity"] or 0) >= 1:
                 await db.add_item(conn, s["id"], lot["item"], lot["quantity"])
+                from . import paid_ledger
+                await paid_ledger.give(
+                    conn, s["id"], lot["item"],
+                    await paid_ledger.unstash(
+                        conn, "market", lot_id, lot["item"], int(lot["quantity"]),
+                    ),
+                )
             else:
                 _log.warning(
                     "market cancel: 异常旧挂单只删记录不退货 steward=%s lot=%s item=%s qty=%s price=%s",
                     s["id"], lot_id, lot["item"], lot["quantity"], lot["price"],
                 )
+            from . import paid_ledger as _pl
+            await _pl.discard(conn, "market", lot_id)
             await conn.execute("DELETE FROM market_listings WHERE id=?", (lot_id,))
             await conn.commit()
         return f"已下架 #{lot_id}，物品退回行囊"
@@ -417,7 +445,7 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
     goods = []
     room = used < cap
     for item, qty in (stock or {}).items():
-        if not item_vendable(item):
+        if not item_tradable(item):
             continue
         n = int(qty or 0)
         if n < 1:

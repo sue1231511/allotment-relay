@@ -17,7 +17,7 @@ def test_expansion_catalog_static():
 
     assert "spinach" in catalog.CROPS
     assert "apple" in catalog.CROPS
-    assert catalog.ITEM_PRICES.get("seed_tomato") == 11
+    assert catalog.CROPS["tomato"]["seed_price"] == 11
     assert "clownfish" in catalog.SEA_CATCH
     assert catalog.ITEM_PRICES.get("proc_flour") == 14
     assert "turkey" in catalog.LIVESTOCK

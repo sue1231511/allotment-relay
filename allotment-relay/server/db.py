@@ -397,6 +397,17 @@ CREATE TABLE IF NOT EXISTS world_flags (
     detail TEXT NOT NULL DEFAULT ''
 );
 
+-- 实付批次账（paid_ledger.py）：owner_kind=steward 是背包里的批次，其余是挂单暂存
+CREATE TABLE IF NOT EXISTS paid_batches (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    owner_kind TEXT NOT NULL DEFAULT 'steward',
+    owner_id INTEGER NOT NULL,
+    item TEXT NOT NULL,
+    qty INTEGER NOT NULL,
+    paid_unit INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_paid_batches_owner ON paid_batches(owner_kind, owner_id, item, id);
+
 CREATE TABLE IF NOT EXISTS hut_compost_bin (
     steward_id INTEGER PRIMARY KEY REFERENCES stewards(id),
     fill INTEGER NOT NULL DEFAULT 0,
@@ -1064,6 +1075,7 @@ async def init_db() -> None:
             "ALTER TABLE bar_daily_state ADD COLUMN owner_event_date INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE bar_daily_state ADD COLUMN owner_event_enabled INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE bar_daily_state ADD COLUMN first_order_free INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE bar_daily_state ADD COLUMN tip_bonus_paid INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE bar_daily_state ADD COLUMN duo_nudge TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE bar_daily_state ADD COLUMN duo_steward_a INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE bar_daily_state ADD COLUMN duo_steward_b INTEGER NOT NULL DEFAULT 0",
@@ -2533,6 +2545,10 @@ async def init_db() -> None:
         await bond_mod.backfill_all(db)
         from . import invite as invite_mod
         await invite_mod.backfill_invite_codes(db)
+        from . import paid_ledger
+        await paid_ledger.backfill_legacy(db)
+        from . import item_traits as traits_init
+        await traits_init.heal_ghost_batches(db)
         await db.commit()
 
 
@@ -3150,7 +3166,17 @@ async def add_item(
     )
 
 
-async def take_item(db: aiosqlite.Connection, steward_id: int, item: str, qty: int) -> bool:
+async def take_item_carry(
+    db: aiosqlite.Connection, steward_id: int, item: str, qty: int,
+    *, settle_traits: bool = True,
+) -> list[tuple[int, int]] | None:
+    """取走物品。背包不够返回 None；够了返回带出的实付批次切片 [(件数, 实付单价), ...]。
+
+    取走之后批次账（实付批次、品质批次）立刻对齐背包：批次总量不会超过背包数量，
+    调用方即使忘了释放批次，也不会留下幽灵批次。转手的调用方把切片交给收货人（paid_ledger.give）。
+    settle_traits=False 只给「自己按先进先出扣品质批次」的调用方（做饭取品质、vend 逐批计价、
+    送礼/集市/交换台等已经 release_for_departure 的路径）用，避免重复扣；实付批次总是对齐。
+    """
     # 第二道防线：负数会让「取走」变成「凭空发物品」，必须拒绝；0 当作「什么都没发生」。
     if isinstance(qty, bool) or not isinstance(qty, int) or qty < 0:
         _log.warning(
@@ -3160,14 +3186,14 @@ async def take_item(db: aiosqlite.Connection, steward_id: int, item: str, qty: i
         raise ValueError(f"物品数量不能是负数或非整数（{item} x{qty}）")
     if qty == 0:
         _log.debug("take_item qty=0，无事发生 steward=%s item=%s", steward_id, item)
-        return True
+        return []
     cur = await db.execute(
         "SELECT quantity FROM satchel WHERE steward_id = ? AND item = ?",
         (steward_id, item),
     )
     row = await cur.fetchone()
     if not row or row[0] < qty:
-        return False
+        return None
     new_qty = row[0] - qty
     if new_qty <= 0:
         await db.execute(
@@ -3179,7 +3205,40 @@ async def take_item(db: aiosqlite.Connection, steward_id: int, item: str, qty: i
             "UPDATE satchel SET quantity = ? WHERE steward_id = ? AND item = ?",
             (new_qty, steward_id, item),
         )
-    return True
+    try:
+        from . import item_traits as traits_mod
+        from . import paid_ledger
+
+        slices = await paid_ledger.consume(db, steward_id, item, qty)
+        if settle_traits and traits_mod.is_trackable(item):
+            await traits_mod.reconcile_batches(db, steward_id, item)
+        return slices
+    except Exception:
+        _log.exception("take_item 对齐批次账失败 steward=%s item=%s qty=%s", steward_id, item, qty)
+        raise
+
+
+async def take_item(
+    db: aiosqlite.Connection, steward_id: int, item: str, qty: int,
+    *, settle_traits: bool = True,
+) -> bool:
+    return (
+        await take_item_carry(db, steward_id, item, qty, settle_traits=settle_traits)
+    ) is not None
+
+
+async def sync_batches(db: aiosqlite.Connection, steward_id: int, item: str) -> None:
+    """直接改过 satchel 表的少数路径用：让批次账对齐背包。"""
+    try:
+        from . import item_traits as traits_mod
+        from . import paid_ledger
+
+        await paid_ledger.trim_to_satchel(db, steward_id, item)
+        if traits_mod.is_trackable(item):
+            await traits_mod.reconcile_batches(db, steward_id, item)
+    except Exception:
+        _log.exception("sync_batches 失败 steward=%s item=%s", steward_id, item)
+        raise
 
 
 async def get_parcels(

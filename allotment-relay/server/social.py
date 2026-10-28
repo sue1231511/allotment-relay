@@ -81,9 +81,10 @@ def assist_ticket_bonus(rapport_with_target: int) -> int:
 
 
 def tip_amount_bonus(rapport_with_tipper: int, amount: int) -> int:
-    if rapport_with_tipper >= RAPPORT_TIP_BONUS:
-        return max(1, int(amount * 0.15))
-    return 0
+    """协作度够了，对方「想要」的加成（15%）。实际能不能发、发多少，由酒吧营业额池决定（bar._cmd_tip）。"""
+    from . import pricing
+
+    return pricing.tip_bonus_wanted(amount, rapport_with_tipper >= RAPPORT_TIP_BONUS)
 
 
 def badge_val(steward: dict[str, Any], key: str, default: float = 0.0) -> float:
@@ -117,7 +118,7 @@ RAPPORT_PERKS: list[tuple[int, str]] = [
     (45, "alliance_ops 共耕 订/状态（assist 多浇 1 块地）"),
     (50, "alliance_ops 合伙 开/入（合买大船，收益和维修共同承担）"),
     (RAPPORT_ASSIST_BONUS, "alliance_ops assist 对方额外 +2 票 · 借船 给 名字"),
-    (RAPPORT_TIP_BONUS, "bar_ops 打赏该岛民，对方实收 +15%"),
+    (RAPPORT_TIP_BONUS, "bar_ops 打赏该岛民，对方多收 15%（从当晚酒吧营业额里出，池空为止；每对号每日 10 次/1000 票）"),
 ]
 
 
@@ -166,7 +167,7 @@ async def rapport_sheet(steward_id: int) -> str:
         f"  ≥{RAPPORT_SWAP_DISCOUNT} 交换台 claim 2 票 · "
         f"≥{RAPPORT_PARLEY_BONUS} 谈和 +10% · "
         f"≥{RAPPORT_ASSIST_BONUS} assist +2 票 · "
-        f"≥{RAPPORT_TIP_BONUS} 打赏 +15%",
+        f"≥{RAPPORT_TIP_BONUS} 打赏 +15%（酒吧营业额出，有日上限）",
         f"你目前最高协作：{top}",
     ]
     if rows:
