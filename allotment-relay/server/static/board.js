@@ -139,7 +139,7 @@ function renderMe(kind, mine, meId, unbound) {
 
 function renderTicketWing(data, mine) {
   const lead = data.ticket_lead;
-  document.getElementById('ticket-lead-n').textContent = lead ? fmt(lead.tickets) : '—';
+  setBigNumber('ticket-lead-n', lead ? lead.tickets : null);
   document.getElementById('ticket-lead-gap').innerHTML = lead
     ? `领先第二名 <strong>+${esc(fmt(lead.gap_second))}</strong>`
     : '领先第二名 <strong>—</strong>';
