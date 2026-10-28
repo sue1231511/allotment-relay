@@ -2549,6 +2549,7 @@ async def init_db() -> None:
         await paid_ledger.backfill_legacy(db)
         from . import item_traits as traits_init
         await traits_init.heal_ghost_batches(db)
+        await traits_init.backfill_spoil_clock(db)
         await db.commit()
 
 

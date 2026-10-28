@@ -887,3 +887,105 @@ async def purge_storage(
             _log.exception("purge_storage 失败 steward=%s kind=%s item=%s", steward_id, kind, it)
             raise
     return notes
+
+
+# ═══ 老存货补变质起点（一次性）══════════════════════════════════════════
+SPOIL_CLOCK_FLAG = "spoil_clock_backfill_v1"
+
+SPOIL_NOTICE = (
+    "【柜子和冰箱现在会变质】潮柜让货变质慢 1.8 倍、冰箱慢 3.5 倍，但不是不坏：存进去、取出来不重新计时，"
+    "放太久照样坏，丢了什么会写在回复里；送人、挂集市、换给别人，货的新鲜程度也跟着走。"
+    "已经放在柜子、冰箱里的老存货，以及没有新鲜记录的老货，从今天起各给一整段保质期重新起算："
+    "潮柜里作物约 5.4 天、鱼约 2.7 天；冰箱里熟菜约 2.6 天；行囊里作物 3 天、鱼 1.5 天、熟菜 18 小时。"
+    "到期前取出来用掉或卖掉就好。"
+)
+
+
+async def _unbatched(conn, owner: int, loc: str, item: str, have: int) -> int:
+    row = await (await conn.execute(
+        "SELECT COALESCE(SUM(qty),0) FROM item_trait_batches WHERE steward_id=? AND loc=? AND item=?",
+        (owner, loc, item),
+    )).fetchone()
+    return max(0, int(have) - int((row[0] if row else 0) or 0))
+
+
+async def backfill_spoil_clock(conn) -> int:
+    """一次性（init_db 里跑，world_flags 防重复）：旧版本里没有变质记录的存货，从上线这一刻起
+    各给一整段完整保质期——行囊 ×1、潮柜 ×1.8、冰箱 ×3.5（不按已存放多久折算）。
+
+    范围：背包、潮柜、冰箱，以及还挂在集市/交换台/公仓/台阶交接里的货（按行囊算）。
+    已经有批次的件不动；新批次品质留空，价格和做菜星级都和没有批次时一样。
+    只加批次行，不动任何人的物品和票。补完写一条全岛纪事和一条潮生会告示。返回补了多少件。
+    """
+    cur = await conn.execute("SELECT 1 FROM world_flags WHERE flag_key=?", (SPOIL_CLOCK_FLAG,))
+    if await cur.fetchone():
+        return 0
+    await ensure_trait_tables(conn)
+    from . import kitchen
+
+    now = db.now()
+    added = 0
+
+    async def fill(owner: int, loc: str, item: str, have: int, clock_loc: str) -> int:
+        if not is_trackable(item):
+            return 0
+        missing = await _unbatched(conn, owner, loc, item, have)
+        if missing <= 0:
+            return 0
+        sec = _spoil_seconds(item, clock_loc)
+        if sec <= 0:
+            return 0
+        await conn.execute(
+            """
+            INSERT INTO item_trait_batches (steward_id, loc, item, qty, quality, weight_milli, spoil_at)
+            VALUES (?,?,?,?,'',0,?)
+            """,
+            (owner, loc, item, missing, now + sec),
+        )
+        return missing
+
+    try:
+        for sid, item, qty in await (await conn.execute(
+            "SELECT steward_id, item, quantity FROM satchel WHERE quantity>0"
+        )).fetchall():
+            added += await fill(int(sid), "satchel", item, int(qty), "satchel")
+        for sid, item, qty in await (await conn.execute(
+            "SELECT steward_id, item, quantity FROM hut_cabinet WHERE quantity>0"
+        )).fetchall():
+            added += await fill(int(sid), "cabinet", item, int(qty), "cabinet")
+        fridge: dict[tuple[int, str], int] = {}
+        for sid, dish_key, stars, qty in await (await conn.execute(
+            "SELECT steward_id, dish_key, stars, quantity FROM meal_storage WHERE quantity>0"
+        )).fetchall():
+            key = (int(sid), kitchen._fridge_satchel_item(dish_key, int(stars)))  # noqa: SLF001
+            fridge[key] = fridge.get(key, 0) + int(qty)
+        for (sid, item), qty in fridge.items():
+            added += await fill(sid, "fridge", item, qty, "fridge")
+        for kind, sql in (
+            ("market", "SELECT id, item, quantity FROM market_listings WHERE buyer_id IS NULL AND quantity>0"),
+            ("swap", "SELECT id, item, quantity FROM swap_lots WHERE claimed_by IS NULL AND quantity>0"),
+            ("handoff", "SELECT id, item, quantity FROM handoffs WHERE picked_up=0 AND quantity>0"),
+        ):
+            for ref, item, qty in await (await conn.execute(sql)).fetchall():
+                added += await fill(0, escrow_loc(kind, int(ref)), item, int(qty), "satchel")
+        for item, qty in await (await conn.execute(
+            "SELECT item, quantity FROM larder WHERE quantity>0"
+        )).fetchall():
+            added += await fill(0, escrow_loc("larder", 0), item, int(qty), "satchel")
+
+        row = await (await conn.execute("SELECT COUNT(*) FROM stewards")).fetchone()
+        if int((row[0] if row else 0) or 0) > 0:
+            await db.add_chronicle("spoil_notice", SPOIL_NOTICE, None, conn=conn)
+            await conn.execute(
+                "INSERT INTO hui_notices (tag, body, created_at, retracted) VALUES ('厅示', ?, ?, 0)",
+                (SPOIL_NOTICE, now),
+            )
+        await conn.execute(
+            "INSERT OR IGNORE INTO world_flags (flag_key, applied_at, detail) VALUES (?,?,?)",
+            (SPOIL_CLOCK_FLAG, now, f"added={added}"),
+        )
+    except Exception:
+        _log.exception("backfill_spoil_clock 失败")
+        raise
+    _log.info("backfill_spoil_clock 完成：给老存货补了 %d 件的变质起点", added)
+    return added
