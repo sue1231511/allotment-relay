@@ -890,7 +890,7 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             from . import item_traits as traits_mod
             from . import ledger as ledger_mod
             from . import fish_market as fish_market_mod
-            await traits_mod.consume_fifo(conn, s["id"], item, 1)
+            spoil_notes = await traits_mod.consume_fifo(conn, s["id"], item, 1)
             await ledger_mod.consume(
                 conn, s["id"], item, 1,
                 extra=f"后卖进回收堆，{ledger_mod.calendar_phrase()}。履历到此",
@@ -915,6 +915,8 @@ async def kitchen_ops(key_id: int, command: str) -> str:
         msg = f"出售 {item_label(item)} +{price} 票{note}"
         if walkblue_line:
             msg += f"\n{walkblue_line}"
+        if spoil_notes:
+            msg += "\n变质丢弃：" + "；".join(spoil_notes)
         return msg
 
     if verb in ("shop", "stall", "eatery"):

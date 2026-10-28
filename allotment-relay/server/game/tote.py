@@ -80,6 +80,11 @@ async def _tote_one(s: dict, command: str) -> str:
         from ..catalog import format_stack_qty
         from .. import ledger as ledger_mod
 
+        from .. import item_traits as traits_mod
+        # 先清变质并落库，再读背包：列表上看到的数量就是清完之后的，丢了什么、多少写在回复里
+        async with db.connect() as conn:
+            spoiled = await traits_mod.purge_spoiled(conn, s["id"])
+            await conn.commit()
         stock = await db.get_satchel(s["id"])
         tier = int(s.get("satchel_stack_extra") or 0)
         cap = item_stack_cap("crop_kale", stack_tier=tier)
@@ -91,8 +96,6 @@ async def _tote_one(s: dict, command: str) -> str:
             stack_note += f"，tote_ops 扩栈 加每组上限，{config.SATCHEL_STACK_COST}票/级+{config.SATCHEL_STACK_STEP}"
         stack_note += "；工具/活物 1，装件可多件）"
         async with db.connect() as conn:
-            from .. import item_traits as traits_mod
-            spoiled = await traits_mod.purge_spoiled(conn, s["id"])
             previews = await ledger_mod.preview_map(conn, s["id"])
         lines = [f"工分票: {s['tickets']}", stack_note]
         if spoiled:
@@ -183,6 +186,7 @@ async def _tote_one(s: dict, command: str) -> str:
         async with db.connect() as conn:
             results = []
             fate_notes: list[str] = []
+            spoil_notes: list[str] = []
             from .. import item_traits as traits_mod
             from .. import ledger as ledger_mod
             from .. import fish_market
@@ -195,7 +199,9 @@ async def _tote_one(s: dict, command: str) -> str:
                     raise
                 if not await db.take_item(conn, s["id"], item_key, qty, settle_traits=False):
                     raise ValueError(f"数量不足（需要 {item_key} x{qty}）")
-                await traits_mod.consume_fifo(conn, s["id"], item_key, qty)
+                spoil_notes.extend(
+                    await traits_mod.consume_fifo(conn, s["id"], item_key, qty)
+                )
                 await ledger_mod.consume(
                     conn, s["id"], item_key, qty,
                     extra=f"后卖进回收堆，{ledger_mod.calendar_phrase()}。履历到此",
@@ -229,6 +235,8 @@ async def _tote_one(s: dict, command: str) -> str:
             msg = "批量出售：\n" + "\n".join(lines)
         if fate_notes:
             msg += "\n" + "\n".join(fate_notes)
+        if spoil_notes:
+            msg += "\n变质丢弃：" + "；".join(spoil_notes)
         return msg
     if verb in ("gifts", "收礼", "收到的礼", "收礼记录"):
         from .. import multi as multi_mod

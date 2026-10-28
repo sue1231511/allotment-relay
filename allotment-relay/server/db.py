@@ -2547,6 +2547,8 @@ async def init_db() -> None:
         await invite_mod.backfill_invite_codes(db)
         from . import paid_ledger
         await paid_ledger.backfill_legacy(db)
+        from . import item_traits as traits_init
+        await traits_init.heal_ghost_batches(db)
         await db.commit()
 
 

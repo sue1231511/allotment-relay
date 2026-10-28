@@ -114,7 +114,7 @@ async def tide_ops(
     return await mux._call_ops(mux.tide_bundle, _kid(), command)
 
 
-@mcp.tool(description="行囊集市。空=列表。例：list · 履历 · vend 鲭鱼 1。海产 vend 按渔市行情（全岛7日卖越多越贱，一条条往下滑；潮生会 行情 看牌）。货架货 vend=按当初实付价退九成（实付价跟着货走，送人/集市转手也不变；没有付款记录的货按全岛最低买入价退九成）。订婚戒/潮誓戒等手作信物不能 vend，可 gift 或挂集市。list 显示鲜度/品质/鱼重；变质自动丢。送礼≠红包。")
+@mcp.tool(description="行囊集市。空=列表。例：list · 履历 · vend 鲭鱼 1。海产 vend 按渔市行情（全岛7日卖越多越贱，一条条往下滑；潮生会 行情 看牌）。货架货 vend=按当初实付价退九成（实付价跟着货走，送人/集市转手也不变；没有付款记录的货按全岛最低买入价退九成）。订婚戒/潮誓戒等手作信物不能 vend，可 gift 或挂集市。list 显示鲜度/品质/鱼重；变质只在 list 或 vend 同种货时丢，回复里写明丢了什么多少（变质丢弃：…）。送礼≠红包。")
 async def tote_ops(command: str = "") -> str:
     return await mux._call_ops(mux.tote_bundle, _kid(), command)
 
