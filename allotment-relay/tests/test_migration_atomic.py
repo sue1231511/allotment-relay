@@ -173,3 +173,88 @@ async def _init_db_fail_open(caplog, monkeypatch) -> None:
     assert after["flag"] == 1 and after["notice"] == 1 and after["batches"] > before["batches"]
     await db.init_db()                           # 再启动：不重复
     assert await _snapshot(db) == after
+
+
+# ── 线上已有 #340 写法的标记：新外壳必须认得，不重跑、不重复插入 ──────────────────
+
+def test_flag_names_are_pinned_to_what_340_wrote_in_production() -> None:
+    from server import item_traits, paid_ledger
+
+    assert paid_ledger.FLAG_BACKFILL == "paid_batch_backfill_v1"
+    assert item_traits.GHOST_HEAL_FLAG == "trait_ghost_heal_v1"
+
+
+def test_340_style_flags_in_the_db_are_honored_no_rerun_no_duplicates() -> None:
+    asyncio.run(_legacy_flags())
+
+
+async def _legacy_flags() -> None:
+    from server import paid_ledger
+
+    db = await _boot(Path(tempfile.mkdtemp(prefix="mig-340-")))
+    sid = await _legacy(db)
+    ts = 1_790_000_000
+
+    async def counts() -> dict[str, int]:
+        async with db.connect() as conn:
+            paid = (await (await conn.execute("SELECT COUNT(*), COALESCE(SUM(qty),0) FROM paid_batches")).fetchone())
+            kale = (await (await conn.execute(
+                "SELECT COALESCE(SUM(qty),0) FROM item_trait_batches WHERE steward_id=? AND loc='satchel' "
+                "AND item='crop_kale'", (sid,))).fetchone())[0]
+        return {"paid_rows": int(paid[0]), "paid_qty": int(paid[1]), "kale_batch_qty": int(kale)}
+
+    # 线上状态：#340 部署时跑过这两个迁移，留下了（旧写法的）标记；之后又出现了「重跑就会改库」的数据
+    async with db.connect() as conn:
+        await db.add_item(conn, sid, "feed_animal", 12)                       # Tt 货，没有实付批次
+        await db.add_item(conn, sid, "crop_kale", 5)
+        await conn.execute(
+            "INSERT INTO item_trait_batches (steward_id, loc, item, qty, quality, weight_milli, spoil_at) "
+            "VALUES (?, 'satchel', 'crop_kale', 20, 'plain', 0, ?)", (sid, db.now() + 100000))   # 幽灵 20 件
+        await conn.execute("DELETE FROM world_flags WHERE flag_key IN ('paid_batch_backfill_v1','trait_ghost_heal_v1')")
+        await conn.execute(      # #340 的写法：detail 是 added=N / dropped=N
+            "INSERT INTO world_flags (flag_key, applied_at, detail) VALUES ('paid_batch_backfill_v1', ?, 'added=7')", (ts,))
+        await conn.execute(
+            "INSERT INTO world_flags (flag_key, applied_at, detail) VALUES ('trait_ghost_heal_v1', ?, 'dropped=0')", (ts,))
+        await conn.commit()
+    before = await counts()
+    assert before["paid_qty"] == 0 and before["kale_batch_qty"] == 20
+
+    await db.init_db()                                   # 部署新版本：启动
+    after = await counts()
+    assert after == before, f"旧标记在，两个迁移不能重跑、批次数量不能变：{before} → {after}"
+    async with db.connect() as conn:
+        rows = dict(await (await conn.execute(
+            "SELECT flag_key, detail FROM world_flags WHERE flag_key IN ('paid_batch_backfill_v1','trait_ghost_heal_v1')"
+        )).fetchall())
+        direct_paid = await paid_ledger.backfill_legacy(conn)
+        from server import item_traits
+        direct_heal = await item_traits.heal_ghost_batches(conn)
+        await conn.commit()
+    assert rows == {"paid_batch_backfill_v1": "added=7", "trait_ghost_heal_v1": "dropped=0"}, "旧标记原样保留"
+    assert direct_paid == 0 and direct_heal == 0
+    assert await counts() == before
+
+    # 对照：没有旧标记（比如标记丢了）时迁移会跑——证明上面「没变」确实是因为认出了标记
+    async with db.connect() as conn:
+        await conn.execute("DELETE FROM world_flags WHERE flag_key IN ('paid_batch_backfill_v1','trait_ghost_heal_v1')")
+        await conn.commit()
+    await db.init_db()
+    ran = await counts()
+    async with db.connect() as conn:
+        tracked_in_satchel = sum(
+            int(q) for it, q in await (await conn.execute(
+                "SELECT item, quantity FROM satchel WHERE steward_id=? AND quantity>0", (sid,))).fetchall()
+            if paid_ledger.is_tracked(it)
+        )
+    assert tracked_in_satchel >= 12 and ran["paid_qty"] == tracked_in_satchel, "背包里每件记账货都补了实付批次"
+    async with db.connect() as conn:
+        kale_in_satchel = (await (await conn.execute(
+            "SELECT quantity FROM satchel WHERE steward_id=? AND item='crop_kale'", (sid,))).fetchone())[0]
+    assert ran["kale_batch_qty"] == kale_in_satchel, "幽灵批次被对齐到背包数量"
+
+    # 就算标记丢了又重跑一次：迁移本身只补「缺的」，不会重复插入实付批次
+    async with db.connect() as conn:
+        await conn.execute("DELETE FROM world_flags WHERE flag_key IN ('paid_batch_backfill_v1','trait_ghost_heal_v1')")
+        await conn.commit()
+    await db.init_db()
+    assert await counts() == ran

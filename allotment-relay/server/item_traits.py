@@ -613,10 +613,14 @@ async def release_for_departure(conn, steward_id: int, item: str, qty: int) -> N
         raise
 
 
+# 线上（#340 部署时）已经写入的标记名，不许改：改了会让已经跑过的迁移在新版本里重跑。
+GHOST_HEAL_FLAG = "trait_ghost_heal_v1"
+
+
 async def heal_ghost_batches(conn) -> int:
     """一次性（init_db 里跑）：把旧版本留下的幽灵批次对齐背包。
     只改批次账，不动任何人的物品和票。返回丢掉的幽灵件数。补数据和标记在同一个保存点里。"""
-    return await db.run_flagged_migration(conn, "trait_ghost_heal_v1", "幽灵批次对齐", _heal_work)
+    return await db.run_flagged_migration(conn, GHOST_HEAL_FLAG, "幽灵批次对齐", _heal_work)
 
 
 async def _heal_work(conn, stats: dict[str, int]) -> int:

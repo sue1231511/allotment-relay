@@ -24,6 +24,7 @@ from . import price_book, pricing
 _log = logging.getLogger(__name__)
 
 STEWARD = "steward"
+# 线上（#340 部署时）已经写入的标记名，不许改：改了会让已经跑过的迁移在新版本里重跑。
 FLAG_BACKFILL = "paid_batch_backfill_v1"
 
 Slices = list[tuple[int, int]]   # [(件数, 实付单价), ...]
