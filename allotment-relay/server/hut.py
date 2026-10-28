@@ -373,9 +373,12 @@ async def _cabinet_rows(conn: aiosqlite.Connection, steward_id: int) -> list[tup
 
 async def dump_cabinet(conn: aiosqlite.Connection, steward_id: int) -> int:
     rows = await _cabinet_rows(conn, steward_id)
+    from . import item_traits as traits_mod
+
     moved = 0
     for item, qty in rows:
         await db.add_item(conn, steward_id, item, qty, over_cap=True)
+        await traits_mod.take_out_of(conn, steward_id, item, qty, "cabinet")
         moved += qty
     await conn.execute("DELETE FROM hut_cabinet WHERE steward_id=?", (steward_id,))
     return moved
@@ -587,9 +590,10 @@ async def _dump_meals(conn: aiosqlite.Connection, steward_id: int) -> int:
     moved = 0
     for r in rows:
         qty = int(r["quantity"] or 1)
-        await db.add_item(
-            conn, steward_id, dish_item(r["dish_key"], r["stars"]), qty, over_cap=True,
-        )
+        meal = dish_item(r["dish_key"], r["stars"])
+        await db.add_item(conn, steward_id, meal, qty, over_cap=True)
+        from . import item_traits as traits_mod
+        await traits_mod.take_out_of(conn, steward_id, meal, qty, "fridge")
         moved += qty
     if moved:
         await conn.execute("DELETE FROM meal_storage WHERE steward_id=?", (steward_id,))
@@ -821,10 +825,15 @@ def _is_cooked_item(item: str) -> bool:
 
 async def _cabinet_status_text(s: dict[str, Any]) -> str:
     stack_cap = item_stack_cap("crop_kale", stack_tier=int(s.get("satchel_stack_extra") or 0))
+    from . import item_traits as traits_mod
+
     async with db.connect() as conn:
         installed = await has_cabinet(conn, s["id"])
+        spoiled = await traits_mod.purge_storage(conn, s["id"], "cabinet") if installed else []
+        await conn.commit()
         extra = await _cabinet_extra(conn, s["id"]) if installed else 0
         rows = await _cabinet_rows(conn, s["id"]) if installed else []
+    spoil_line = ("变质丢弃：" + "；".join(spoiled) + "\n") if spoiled else ""
     if not installed:
         return (
             "潮柜：未装 — hut_ops buy cabinet → install soft_N cabinet。"
@@ -835,7 +844,7 @@ async def _cabinet_status_text(s: dict[str, Any]) -> str:
         f"满了 hut_ops 潮柜 扩（{config.CABINET_SLOT_COST}票/格，顶 {config.CABINET_SLOTS_MAX}）"
     )
     if not rows:
-        return (
+        return spoil_line + (
             f"潮柜空（{cap} 格；每组最多 {stack_cap}，同种可占多组）。"
             f"hut_ops 冰柜 存 甘蓝 3。{expand_hint}"
         )
@@ -845,7 +854,7 @@ async def _cabinet_status_text(s: dict[str, Any]) -> str:
         stacks_needed(q, item_stack_cap(it, stack_tier=int(s.get("satchel_stack_extra") or 0)))
         for it, q in rows
     )
-    lines = [f"潮柜 {used}/{cap} 格（{len(rows)} 种货；每组最多 {stack_cap}，同种可多组）:"]
+    lines = [f"{spoil_line}潮柜 {used}/{cap} 格（{len(rows)} 种货；每组最多 {stack_cap}，同种可多组）:".lstrip("\n")]
     for item, qty in rows:
         item_cap = item_stack_cap(item, stack_tier=int(s.get("satchel_stack_extra") or 0))
         lines.append(f"  {item_label(item)}（{item}） {format_stack_qty(qty, item_cap)}")
@@ -903,8 +912,10 @@ async def cabinet_put(s: dict[str, Any], item: str, qty: int) -> str:
                     free_slots=max(0, slot_cap - used),
                 )
             )
-        if not await db.take_item(conn, s["id"], item, qty):
+        if not await db.take_item(conn, s["id"], item, qty, settle_traits=False):
             raise ValueError("行囊没有这么多")
+        from . import item_traits as traits_mod
+        await traits_mod.store_into(conn, s["id"], item, qty, "cabinet")
         await conn.execute(
             """
             INSERT INTO hut_cabinet (steward_id, item, quantity, stored_at)
@@ -925,6 +936,8 @@ async def cabinet_take(s: dict[str, Any], item: str, qty: int) -> str:
                 "还没装潮柜。hut_ops buy cabinet → install soft_N cabinet。"
                 "熟菜走冰箱：hut_ops 冰柜 取 菜名"
             )
+        from . import item_traits as traits_mod
+        spoiled = await traits_mod.purge_storage(conn, s["id"], "cabinet", item=item)
         cur = await conn.execute(
             "SELECT quantity FROM hut_cabinet WHERE steward_id=? AND item=?",
             (s["id"], item),
@@ -932,7 +945,9 @@ async def cabinet_take(s: dict[str, Any], item: str, qty: int) -> str:
         row = await cur.fetchone()
         have_n = row[0] if row else 0
         if have_n < qty:
-            raise ValueError("柜子里没有这么多")
+            await conn.commit()
+            note = ("\n变质丢弃：" + "；".join(spoiled)) if spoiled else ""
+            raise ValueError(f"柜子里没有这么多{note}")
         new_n = have_n - qty
         if new_n <= 0:
             await conn.execute(
@@ -945,8 +960,10 @@ async def cabinet_take(s: dict[str, Any], item: str, qty: int) -> str:
                 (new_n, s["id"], item),
             )
         await db.add_item(conn, s["id"], item, qty)
+        await traits_mod.take_out_of(conn, s["id"], item, qty, "cabinet")
         await conn.commit()
-    return f"取出 {item_label(item)} x{qty}，回行囊"
+    note = ("\n变质丢弃：" + "；".join(spoiled)) if spoiled else ""
+    return f"取出 {item_label(item)} x{qty}，回行囊{note}"
 
 
 async def cabinet_expand(s: dict[str, Any], n: int = 1) -> str:

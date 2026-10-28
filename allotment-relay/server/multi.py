@@ -451,8 +451,9 @@ async def alliance_ops(key_id: int, command: str) -> str:
                 raise ValueError("行囊不足")
             from . import item_traits as traits_mod
             from . import paid_ledger
-            await traits_mod.release_for_departure(conn, s["id"], item, qty)
+            trait_slices = await traits_mod.carry_out(conn, s["id"], item, qty)
             await paid_ledger.stash(conn, "larder", 0, item, carried)
+            await traits_mod.stash_traits(conn, "larder", 0, item, trait_slices)
             await conn.execute(
                 """
                 INSERT INTO larder (item, quantity) VALUES (?, ?)
@@ -510,6 +511,11 @@ async def alliance_ops(key_id: int, command: str) -> str:
             await paid_ledger.give(
                 conn, s["id"], item,
                 await paid_ledger.unstash(conn, "larder", 0, item, qty),
+            )
+            from . import item_traits as traits_mod
+            await traits_mod.deposit(
+                conn, s["id"], item,
+                await traits_mod.unstash_traits(conn, "larder", 0, item, qty),
             )
             await conn.execute(
                 "UPDATE stewards SET tickets = tickets - ? WHERE id=?",
@@ -777,7 +783,7 @@ async def contract_ops(key_id: int, command: str) -> str:
                     f"行囊里没有足够物资（需要 {ITEM_NAMES.get(want, want)} / {want} x{qty}）"
                 )
             from . import item_traits as traits_mod
-            await traits_mod.release_for_departure(conn, s["id"], want, qty)
+            trait_slices = await traits_mod.carry_out(conn, s["id"], want, qty)
             if want != want_raw:
                 await conn.execute(
                     "UPDATE contracts SET want_item=? WHERE id=? AND status='open'",
@@ -786,6 +792,7 @@ async def contract_ops(key_id: int, command: str) -> str:
             await db.add_item(conn, c["poster_id"], want, qty)
             from . import paid_ledger
             await paid_ledger.give(conn, c["poster_id"], want, took)
+            await traits_mod.deposit(conn, c["poster_id"], want, trait_slices)
             await db.grant_tickets(conn, s["id"], int(c["reward_tickets"]), reason="contract fill")
             await conn.execute(
                 "UPDATE contracts SET status='filled', filler_id=? WHERE id=?",

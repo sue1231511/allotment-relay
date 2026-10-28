@@ -205,7 +205,7 @@ async def market_ops(key_id: int, command: str) -> str:
                 )
             from . import item_traits as traits_mod
             from . import paid_ledger
-            await traits_mod.release_for_departure(conn, s["id"], item_key, qty)
+            trait_slices = await traits_mod.carry_out(conn, s["id"], item_key, qty)
             cur_ins = await conn.execute(
                 """
                 INSERT INTO market_listings
@@ -215,6 +215,7 @@ async def market_ops(key_id: int, command: str) -> str:
                 (s["id"], item_key, qty, price, sug, note[:60], db.now()),
             )
             await paid_ledger.stash(conn, "market", int(cur_ins.lastrowid), item_key, carried)
+            await traits_mod.stash_traits(conn, "market", int(cur_ins.lastrowid), item_key, trait_slices)
             gust_note = await gust_mod.maybe_after_sell(conn, s["id"])
             await conn.commit()
         hint = flavor.pick([
@@ -270,6 +271,11 @@ async def market_ops(key_id: int, command: str) -> str:
                 conn, s["id"], lot["item"],
                 await paid_ledger.unstash(conn, "market", lot_id, lot["item"], int(buy_qty)),
             )
+            from . import item_traits as traits_mod
+            await traits_mod.deposit(
+                conn, s["id"], lot["item"],
+                await traits_mod.unstash_traits(conn, "market", lot_id, lot["item"], int(buy_qty)),
+            )
             from . import ledger as ledger_mod
             await ledger_mod.transfer(
                 conn, int(lot["seller_id"]), s["id"], lot["item"], int(buy_qty),
@@ -317,13 +323,22 @@ async def market_ops(key_id: int, command: str) -> str:
                         conn, "market", lot_id, lot["item"], int(lot["quantity"]),
                     ),
                 )
+                from . import item_traits as traits_mod
+                await traits_mod.deposit(
+                    conn, s["id"], lot["item"],
+                    await traits_mod.unstash_traits(
+                        conn, "market", lot_id, lot["item"], int(lot["quantity"]),
+                    ),
+                )
             else:
                 _log.warning(
                     "market cancel: 异常旧挂单只删记录不退货 steward=%s lot=%s item=%s qty=%s price=%s",
                     s["id"], lot_id, lot["item"], lot["quantity"], lot["price"],
                 )
             from . import paid_ledger as _pl
+            from . import item_traits as _it
             await _pl.discard(conn, "market", lot_id)
+            await _it.discard_traits(conn, "market", lot_id)
             await conn.execute("DELETE FROM market_listings WHERE id=?", (lot_id,))
             await conn.commit()
         return f"已下架 #{lot_id}，物品退回行囊"

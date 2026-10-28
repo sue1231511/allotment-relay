@@ -451,6 +451,12 @@ async def _collect_handoffs(conn: aiosqlite.Connection, steward_id: int) -> list
             await paid_ledger.unstash(conn, "handoff", int(r["id"]), r["item"], int(r["quantity"])),
         )
         await paid_ledger.discard(conn, "handoff", int(r["id"]))
+        from .. import item_traits as traits_mod
+        await traits_mod.deposit(
+            conn, steward_id, r["item"],
+            await traits_mod.unstash_traits(conn, "handoff", int(r["id"]), r["item"], int(r["quantity"])),
+        )
+        await traits_mod.discard_traits(conn, "handoff", int(r["id"]))
         await conn.execute("UPDATE handoffs SET picked_up=1 WHERE id=?", (r["id"],))
         label = ITEM_NAMES.get(r["item"], r["item"])
         notes.append(f"台阶交接：{r['from_name']} 放下的 {label} x{r['quantity']} 已入袋")

@@ -637,3 +637,253 @@ async def heal_ghost_batches(conn) -> int:
         raise
     _log.info("heal_ghost_batches 完成：对齐掉 %d 件幽灵批次", dropped)
     return dropped
+
+
+# ═══ 变质时间跟着货走：转手、存柜/取柜都不重置保鲜期 ═══════════════════════
+#
+# 批次 = (件数, 品质, 重量毫克, 变质时刻)。转手时批次原样带给收货人（挂单期间按真实时间照常变质）；
+# 存潮柜/冰箱时，剩余寿命按位置倍率放慢（柜 ×1.8，冰箱 ×3.5），取出来再按倍率折回去：
+# 保鲜只是变慢，不是不坏，也不会因为存取一下就重新计时。
+TraitSlice = tuple[int, str, int, int]
+
+
+def escrow_loc(kind: str, ref: int) -> str:
+    return f"{kind}:{int(ref)}"
+
+
+def scale_slices(slices: list[TraitSlice], factor: float) -> list[TraitSlice]:
+    """把每一批「剩余寿命」乘 factor。不会变质的批次（spoil_at=0）和已经过期的批次不动。"""
+    now = db.now()
+    out: list[TraitSlice] = []
+    for qty, quality, wmilli, spoil_at in slices:
+        if spoil_at and spoil_at > now and factor > 0:
+            spoil_at = now + max(1, int((spoil_at - now) * factor))
+        out.append((qty, quality, wmilli, spoil_at))
+    return out
+
+
+def loc_factor(from_loc: str, to_loc: str) -> float:
+    return SPOIL_LOC_MULT.get(to_loc, 1.0) / SPOIL_LOC_MULT.get(from_loc, 1.0)
+
+
+async def _pop_trait_fifo(
+    conn, owner: int, loc: str, item: str, qty: int,
+) -> list[TraitSlice]:
+    if qty <= 0:
+        return []
+    rows = await (await conn.execute(
+        """
+        SELECT id, qty, quality, weight_milli, spoil_at FROM item_trait_batches
+        WHERE steward_id=? AND loc=? AND item=? ORDER BY id ASC
+        """,
+        (owner, loc, item),
+    )).fetchall()
+    left = qty
+    out: list[TraitSlice] = []
+    for bid, have, quality, wmilli, spoil_at in rows:
+        if left <= 0:
+            break
+        have = int(have)
+        take = min(have, left)
+        left -= take
+        out.append((take, quality or "", int(wmilli or 0), int(spoil_at or 0)))
+        if take >= have:
+            await conn.execute("DELETE FROM item_trait_batches WHERE id=?", (bid,))
+        else:
+            await conn.execute("UPDATE item_trait_batches SET qty=qty-? WHERE id=?", (take, bid))
+    return out
+
+
+async def _insert_trait_rows(
+    conn, owner: int, loc: str, item: str, slices: list[TraitSlice],
+) -> None:
+    for qty, quality, wmilli, spoil_at in slices:
+        if qty <= 0:
+            continue
+        await conn.execute(
+            """
+            INSERT INTO item_trait_batches
+            (steward_id, loc, item, qty, quality, weight_milli, spoil_at)
+            VALUES (?,?,?,?,?,?,?)
+            """,
+            (owner, loc, item, qty, quality or "", wmilli, spoil_at),
+        )
+
+
+async def carry_out(
+    conn, steward_id: int, item: str, qty: int, *, loc: str = "satchel",
+) -> list[TraitSlice]:
+    """取走 qty 件的品质批次（先进先出）并带出；不会变质/没记批次的货返回空。"""
+    if qty <= 0 or not is_trackable(item):
+        return []
+    try:
+        await ensure_trait_tables(conn)
+        return await _pop_trait_fifo(conn, steward_id, loc, item, qty)
+    except Exception:
+        _log.exception("carry_out 失败 steward=%s item=%s qty=%s loc=%s", steward_id, item, qty, loc)
+        raise
+
+
+async def deposit(
+    conn, steward_id: int, item: str, slices: list[TraitSlice] | None,
+    *, loc: str = "satchel",
+) -> None:
+    """收货/入柜落账。调用方已经把物品放进对应位置；背包批次总量不会超过背包数量。"""
+    if not slices or not is_trackable(item):
+        return
+    try:
+        await ensure_trait_tables(conn)
+        await _insert_trait_rows(conn, steward_id, loc, item, slices)
+        if loc == "satchel":
+            await reconcile_batches(conn, steward_id, item)
+    except Exception:
+        _log.exception("deposit 失败 steward=%s item=%s loc=%s", steward_id, item, loc)
+        raise
+
+
+async def stash_traits(
+    conn, kind: str, ref: int, item: str, slices: list[TraitSlice] | None,
+) -> None:
+    """挂单暂存（集市/交换台/公仓/台阶交接）；挂单期间照常按真实时间变质。"""
+    if not slices or not is_trackable(item):
+        return
+    try:
+        await ensure_trait_tables(conn)
+        await _insert_trait_rows(conn, 0, escrow_loc(kind, ref), item, slices)
+    except Exception:
+        _log.exception("stash_traits 失败 kind=%s ref=%s item=%s", kind, ref, item)
+        raise
+
+
+async def unstash_traits(conn, kind: str, ref: int, item: str, qty: int) -> list[TraitSlice]:
+    if qty <= 0 or not is_trackable(item):
+        return []
+    try:
+        await ensure_trait_tables(conn)
+        return await _pop_trait_fifo(conn, 0, escrow_loc(kind, ref), item, qty)
+    except Exception:
+        _log.exception("unstash_traits 失败 kind=%s ref=%s item=%s", kind, ref, item)
+        raise
+
+
+async def discard_traits(conn, kind: str, ref: int) -> None:
+    try:
+        await ensure_trait_tables(conn)
+        await conn.execute(
+            "DELETE FROM item_trait_batches WHERE steward_id=0 AND loc=?", (escrow_loc(kind, ref),),
+        )
+    except Exception:
+        _log.exception("discard_traits 失败 kind=%s ref=%s", kind, ref)
+        raise
+
+
+async def store_into(
+    conn, steward_id: int, item: str, qty: int, to_loc: str,
+) -> None:
+    """物品已经从背包取走、放进柜子：把背包里对应的批次搬进柜子，剩余寿命放慢。"""
+    slices = await carry_out(conn, steward_id, item, qty, loc="satchel")
+    await deposit(conn, steward_id, item, scale_slices(slices, loc_factor("satchel", to_loc)), loc=to_loc)
+
+
+async def take_out_of(
+    conn, steward_id: int, item: str, qty: int, from_loc: str,
+) -> None:
+    """物品已经放回背包：把柜子里对应的批次搬回背包，剩余寿命折回背包时间。"""
+    slices = await carry_out(conn, steward_id, item, qty, loc=from_loc)
+    await deposit(conn, steward_id, item, scale_slices(slices, loc_factor(from_loc, "satchel")), loc="satchel")
+
+
+async def _storage_qty_and_take(
+    conn, steward_id: int, kind: str, item: str, qty: int | None,
+) -> int:
+    """读（qty=None）或扣（qty>0）柜子里的件数，返回柜子里原有（读）/实际扣掉（扣）的件数。"""
+    if kind == "cabinet":
+        row = await (await conn.execute(
+            "SELECT quantity FROM hut_cabinet WHERE steward_id=? AND item=?", (steward_id, item),
+        )).fetchone()
+        have = int(row[0]) if row else 0
+        if qty is None:
+            return have
+        cut = min(have, qty)
+        if cut <= 0:
+            return 0
+        if have - cut <= 0:
+            await conn.execute("DELETE FROM hut_cabinet WHERE steward_id=? AND item=?", (steward_id, item))
+        else:
+            await conn.execute(
+                "UPDATE hut_cabinet SET quantity=? WHERE steward_id=? AND item=?", (have - cut, steward_id, item),
+            )
+        return cut
+    # fridge：熟菜按 (dish_key, stars) 分行
+    from . import kitchen
+
+    dish_key, stars = kitchen._fridge_parts(item)  # noqa: SLF001
+    rows = await (await conn.execute(
+        "SELECT id, quantity FROM meal_storage WHERE steward_id=? AND dish_key=? AND stars=? ORDER BY id",
+        (steward_id, dish_key, stars),
+    )).fetchall()
+    have = sum(int(r[1] or 0) for r in rows)
+    if qty is None:
+        return have
+    left = min(have, qty)
+    cut_total = left
+    for rid, rq in rows:
+        if left <= 0:
+            break
+        rq = int(rq or 0)
+        cut = min(rq, left)
+        left -= cut
+        if rq - cut <= 0:
+            await conn.execute("DELETE FROM meal_storage WHERE id=?", (rid,))
+        else:
+            await conn.execute("UPDATE meal_storage SET quantity=? WHERE id=?", (rq - cut, rid))
+    return cut_total
+
+
+async def purge_storage(
+    conn, steward_id: int, kind: str, *, item: str | None = None,
+) -> list[str]:
+    """潮柜(cabinet)/冰箱(fridge) 里已经变质的批次：按真实件数从柜子里扣掉，返回提示行。
+    保鲜只是变慢，放久了照样坏。每一批只扣 min(批次件数, 柜子里真有的件数)。"""
+    await ensure_trait_tables(conn)
+    now = db.now()
+    sql = (
+        "SELECT DISTINCT item FROM item_trait_batches "
+        "WHERE steward_id=? AND loc=? AND spoil_at>0 AND spoil_at<=?"
+    )
+    args: list = [steward_id, kind, now]
+    if item:
+        sql += " AND item=?"
+        args.append(item)
+    items = [r[0] for r in await (await conn.execute(sql, args)).fetchall()]
+    where = "潮柜" if kind == "cabinet" else "冰箱"
+    notes: list[str] = []
+    for it in items:
+        try:
+            rows = await (await conn.execute(
+                """
+                SELECT id, qty, quality FROM item_trait_batches
+                WHERE steward_id=? AND loc=? AND item=? AND spoil_at>0 AND spoil_at<=? ORDER BY id
+                """,
+                (steward_id, kind, it, now),
+            )).fetchall()
+            for rid, qty, quality in rows:
+                await conn.execute("DELETE FROM item_trait_batches WHERE id=?", (rid,))
+                cut = await _storage_qty_and_take(conn, steward_id, kind, it, int(qty))
+                if cut < int(qty):
+                    _log.warning(
+                        "purge_storage: 批次 %d 件 > %s 里 %d 件，只丢 %d 件 steward=%s item=%s",
+                        int(qty), where, cut, cut, steward_id, it,
+                    )
+                if cut <= 0:
+                    continue
+                q = CROP_QUALITY_LABEL.get(quality) or FISH_STATE_LABEL.get(quality) or quality
+                notes.append(f"{where}里的{item_label(it)}×{cut}{('·' + q) if q else ''} 放坏了，只好丢掉")
+                _log.info("purge_storage 丢弃变质 steward=%s %s item=%s qty=%s", steward_id, kind, it, cut)
+                await db.add_chronicle(
+                    "spoil", f"{where}变质丢弃 {item_label(it)}（{it}）x{cut}", steward_id, conn=conn,
+                )
+        except Exception:
+            _log.exception("purge_storage 失败 steward=%s kind=%s item=%s", steward_id, kind, it)
+            raise
+    return notes
