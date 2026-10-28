@@ -321,9 +321,10 @@ async def _tote_one(s: dict, command: str) -> str:
                     )
                 from .. import item_traits as traits_gift
                 from .. import paid_ledger
-                await traits_gift.release_for_departure(conn, s["id"], item_key, qty)
+                trait_slices = await traits_gift.carry_out(conn, s["id"], item_key, qty)
                 await db.add_item(conn, peer["id"], item_key, qty)
                 await paid_ledger.give(conn, peer["id"], item_key, carried)
+                await traits_gift.deposit(conn, peer["id"], item_key, trait_slices)
                 from .. import ledger as ledger_mod
                 await ledger_mod.transfer(
                     conn, s["id"], peer["id"], item_key, qty,

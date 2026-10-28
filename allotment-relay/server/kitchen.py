@@ -272,8 +272,12 @@ async def fridge_status_text(s: dict[str, Any]) -> str:
 
     tier = int(s.get("satchel_stack_extra") or 0)
     stack_cap = item_stack_cap("dish_salt_crab_s4", stack_tier=tier)
+    from . import item_traits as traits_mod
+
     async with db.connect() as conn:
         installed = await _has_fridge(conn, s["id"])
+        spoiled = await traits_mod.purge_storage(conn, s["id"], "fridge") if installed else []
+        await conn.commit()
         conn.row_factory = aiosqlite.Row
         rows = await (await conn.execute(
             """
@@ -282,25 +286,23 @@ async def fridge_status_text(s: dict[str, Any]) -> str:
             """,
             (s["id"],),
         )).fetchall()
+    spoil_line = ("变质丢弃：" + "；".join(spoiled) + "\n") if spoiled else ""
     if not installed:
         return (
             "冰箱：未装 — hut_ops buy fridge → install soft_N fridge。"
             "熟菜用 hut_ops 冰柜 存 盐焗沙蟹"
         )
     if not rows:
-        return (
+        return spoil_line + (
             f"冰箱空（{config.FRIDGE_SLOTS} 格；每组最多 {stack_cap}，同种可占多组）。"
             "hut_ops 冰柜 存 盐焗沙蟹 · kitchen_ops store 菜名"
         )
     used = sum(stacks_needed(int(r["quantity"] or 0), stack_cap) for r in rows)
-    lines = [f"冰箱 {used}/{config.FRIDGE_SLOTS} 格（每组最多 {stack_cap}，同种可多组）:"]
-    expire = config.FRIDGE_DAYS * config.FORAGE_COOLDOWN_DAY
+    lines = [f"{spoil_line}冰箱 {used}/{config.FRIDGE_SLOTS} 格（每组最多 {stack_cap}，同种可多组）:"]
     for r in rows:
         q = int(r["quantity"] or 0)
-        age = db.now() - r["stored_at"]
-        stale = " ⚠快过期" if age > expire * 0.85 else ""
         lines.append(
-            f"  {_fridge_label(r['dish_key'], r['stars'])} {format_stack_qty(q, stack_cap)}{stale}"
+            f"  {_fridge_label(r['dish_key'], r['stars'])} {format_stack_qty(q, stack_cap)}"
         )
     lines.append("取：hut_ops 冰柜 取 菜名 · kitchen_ops take 菜名")
     return "\n".join(lines)
@@ -357,8 +359,10 @@ async def fridge_put(s: dict[str, Any], token: str, qty: int = 1) -> str:
                 f"（每组最多 {stack_cap}，同种可占多组；已用约 {used + stacks_needed(stacked, stack_cap)} 格）。"
                 f"先 eat / 取走一些，或 tote_ops 扩栈 让每组更厚。"
             )
-        if not await db.take_item(conn, s["id"], item, qty):
+        if not await db.take_item(conn, s["id"], item, qty, settle_traits=False):
             raise ValueError("行囊里没有这么多熟菜")
+        from . import item_traits as traits_mod
+        await traits_mod.store_into(conn, s["id"], item, qty, "fridge")
         if existing:
             await conn.execute(
                 "UPDATE meal_storage SET quantity=quantity+? WHERE id=?",
@@ -414,7 +418,11 @@ def _fridge_row_matches(row: dict[str, Any], token: str) -> bool:
 
 async def fridge_take(s: dict[str, Any], token: str, qty: int = 1) -> str:
     qty = max(1, int(qty))
+    from . import item_traits as traits_mod
+
     async with db.connect() as conn:
+        spoiled = await traits_mod.purge_storage(conn, s["id"], "fridge")
+        await conn.commit()
         conn.row_factory = aiosqlite.Row
         rows = [dict(r) for r in await (await conn.execute(
             "SELECT * FROM meal_storage WHERE steward_id=? ORDER BY stored_at",
@@ -425,13 +433,15 @@ async def fridge_take(s: dict[str, Any], token: str, qty: int = 1) -> str:
             if _fridge_row_matches(r, token):
                 picked = r
                 break
+        spoil_note = ("\n变质丢弃：" + "；".join(spoiled)) if spoiled else ""
         if not picked:
-            raise ValueError("冰箱里没有这道菜")
+            raise ValueError(f"冰箱里没有这道菜{spoil_note}")
         have = int(picked["quantity"] or 1)
         if have < qty:
-            raise ValueError("冰箱里没有这么多")
+            raise ValueError(f"冰箱里没有这么多{spoil_note}")
         item = _fridge_satchel_item(picked["dish_key"], picked["stars"])
         await db.add_item(conn, s["id"], item, qty)
+        await traits_mod.take_out_of(conn, s["id"], item, qty, "fridge")
         left = have - qty
         if left <= 0:
             await conn.execute("DELETE FROM meal_storage WHERE id=?", (picked["id"],))
@@ -441,7 +451,7 @@ async def fridge_take(s: dict[str, Any], token: str, qty: int = 1) -> str:
                 (left, picked["id"]),
             )
         await conn.commit()
-    return f"从冰箱取出 {_fridge_label(picked['dish_key'], picked['stars'])} x{qty}，回行囊"
+    return f"从冰箱取出 {_fridge_label(picked['dish_key'], picked['stars'])} x{qty}，回行囊{spoil_note}"
 
 
 async def _cook_counts(conn: aiosqlite.Connection, steward_id: int) -> tuple[int, int]:

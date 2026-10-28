@@ -84,6 +84,55 @@ async def market_expand(s: dict, n: int = 1) -> str:
     )
 
 
+async def settle_expired_listing(conn: aiosqlite.Connection, lot: dict) -> tuple[int, int]:
+    """挂单里已经变质的件：清掉、退不回也卖不出（变质丢弃规则），给卖家留纪事。
+    返回 (剩余件数, 清掉的件数)。调用方在成交前先调，买家不会为烂货付钱。"""
+    from . import item_traits as traits_mod
+    from . import paid_ledger
+
+    lot_id, item = int(lot["id"]), lot["item"]
+    have = int(lot["quantity"] or 0)
+    cut = await traits_mod.sweep_escrow(conn, "market", lot_id, item, have)
+    if cut <= 0:
+        return have, 0
+    await paid_ledger.unstash(conn, "market", lot_id, item, cut)
+    remain = have - cut
+    if remain <= 0:
+        await paid_ledger.discard(conn, "market", lot_id)
+        await traits_mod.discard_traits(conn, "market", lot_id)
+        await conn.execute("DELETE FROM market_listings WHERE id=?", (lot_id,))
+    else:
+        await conn.execute("UPDATE market_listings SET quantity=? WHERE id=?", (remain, lot_id))
+    await db.add_chronicle(
+        "spoil",
+        f"集市挂单#{lot_id} 的 {ITEM_NAMES.get(item, item)}（{item}）x{cut} 已变质，只好丢掉",
+        int(lot["seller_id"]), conn=conn,
+    )
+    _log.info("market 挂单变质清理 lot=%s seller=%s item=%s cut=%s remain=%s", lot_id, lot["seller_id"], item, cut, remain)
+    return remain, cut
+
+
+async def sweep_expired_listings(conn: aiosqlite.Connection, *, seller_id: int | None = None) -> list[str]:
+    """看集市前先把所有已变质的挂单件清掉，返回提示行。"""
+    prev = conn.row_factory
+    conn.row_factory = aiosqlite.Row
+    try:
+        sql = "SELECT * FROM market_listings WHERE buyer_id IS NULL AND quantity>0"
+        args: tuple = ()
+        if seller_id is not None:
+            sql += " AND seller_id=?"
+            args = (seller_id,)
+        lots = [dict(r) for r in await (await conn.execute(sql, args)).fetchall()]
+    finally:
+        conn.row_factory = prev
+    notes: list[str] = []
+    for lot in lots:
+        _remain, cut = await settle_expired_listing(conn, lot)
+        if cut:
+            notes.append(f"#{lot['id']} {ITEM_NAMES.get(lot['item'], lot['item'])}×{cut} 已变质，已清理")
+    return notes
+
+
 async def market_ops(key_id: int, command: str) -> str:
     s = await require_steward(key_id)
     parts = command.strip().split(maxsplit=3)
@@ -97,6 +146,8 @@ async def market_ops(key_id: int, command: str) -> str:
 
     if verb == "list":
         async with db.connect() as conn:
+            swept = await sweep_expired_listings(conn)
+            await conn.commit()
             conn.row_factory = aiosqlite.Row
             rows = await (await conn.execute(
                 """
@@ -107,8 +158,9 @@ async def market_ops(key_id: int, command: str) -> str:
                 ORDER BY l.created_at DESC LIMIT 20
                 """
             )).fetchall()
+        spoil_head = ("变质清理：" + "；".join(swept) + "\n") if swept else ""
         if not rows:
-            return "集市暂无挂单 — market_ops sell 物品 数量 单价"
+            return spoil_head + "集市暂无挂单 — market_ops sell 物品 数量 单价"
         lines = []
         for r in rows:
             sug = r["suggested"]
@@ -123,10 +175,12 @@ async def market_ops(key_id: int, command: str) -> str:
                 f"{ITEM_NAMES.get(item_id, item_id)}（{item_id}）x{r['quantity']} "
                 f"@{r['price']}票/个（建议{sug}）{hint} {r['note']}"
             )
-        return "\n".join(lines)
+        return spoil_head + "\n".join(lines)
 
     if verb == "mine":
         async with db.connect() as conn:
+            await sweep_expired_listings(conn, seller_id=s["id"])
+            await conn.commit()
             conn.row_factory = aiosqlite.Row
             extra = await _market_extra(conn, s["id"])
             cap = market_list_cap(extra)
@@ -205,7 +259,7 @@ async def market_ops(key_id: int, command: str) -> str:
                 )
             from . import item_traits as traits_mod
             from . import paid_ledger
-            await traits_mod.release_for_departure(conn, s["id"], item_key, qty)
+            trait_slices = await traits_mod.carry_out(conn, s["id"], item_key, qty)
             cur_ins = await conn.execute(
                 """
                 INSERT INTO market_listings
@@ -215,6 +269,7 @@ async def market_ops(key_id: int, command: str) -> str:
                 (s["id"], item_key, qty, price, sug, note[:60], db.now()),
             )
             await paid_ledger.stash(conn, "market", int(cur_ins.lastrowid), item_key, carried)
+            await traits_mod.stash_traits(conn, "market", int(cur_ins.lastrowid), item_key, trait_slices)
             gust_note = await gust_mod.maybe_after_sell(conn, s["id"])
             await conn.commit()
         hint = flavor.pick([
@@ -254,6 +309,16 @@ async def market_ops(key_id: int, command: str) -> str:
                 )
                 raise ValueError("这张挂单的数量或单价异常（≤0），不能买。请卖家 market_ops cancel 撤掉。")
             await gust_mod.assert_not_blocked(conn, seller_id)
+            # 变质的货不能成交：先清掉过期的件（写纪事），清完没货就拒绝，买家一分钱不扣
+            remain, rotten = await settle_expired_listing(conn, lot)
+            rot_note = ""
+            if rotten:
+                await conn.commit()
+                label = ITEM_NAMES.get(lot["item"], lot["item"])
+                if remain <= 0:
+                    raise ValueError(f"这张挂单的货已经变质（{label}×{rotten}），已清理，没有扣你的票。")
+                lot["quantity"] = remain
+                rot_note = f"（挂单里有 {rotten} 件已变质被清理，只按剩下的新鲜货成交）"
             buy_qty = qty or lot["quantity"]
             if buy_qty < 1 or buy_qty > lot["quantity"]:
                 raise ValueError("数量不对")
@@ -269,6 +334,11 @@ async def market_ops(key_id: int, command: str) -> str:
             await paid_ledger.give(
                 conn, s["id"], lot["item"],
                 await paid_ledger.unstash(conn, "market", lot_id, lot["item"], int(buy_qty)),
+            )
+            from . import item_traits as traits_mod
+            await traits_mod.deposit(
+                conn, s["id"], lot["item"],
+                await traits_mod.unstash_traits(conn, "market", lot_id, lot["item"], int(buy_qty)),
             )
             from . import ledger as ledger_mod
             await ledger_mod.transfer(
@@ -289,7 +359,7 @@ async def market_ops(key_id: int, command: str) -> str:
         seller = await db.get_steward_by_id(lot["seller_id"])
         msg = (
             f"购入 {ITEM_NAMES.get(lot['item'], lot['item'])}（{lot['item']}）x{buy_qty} "
-            f"（-{cost}票，卖家 {seller['name'] if seller else '?'}）"
+            f"（-{cost}票，卖家 {seller['name'] if seller else '?'}）{rot_note}"
         )
         await db.add_chronicle(
             "market",
@@ -317,13 +387,22 @@ async def market_ops(key_id: int, command: str) -> str:
                         conn, "market", lot_id, lot["item"], int(lot["quantity"]),
                     ),
                 )
+                from . import item_traits as traits_mod
+                await traits_mod.deposit(
+                    conn, s["id"], lot["item"],
+                    await traits_mod.unstash_traits(
+                        conn, "market", lot_id, lot["item"], int(lot["quantity"]),
+                    ),
+                )
             else:
                 _log.warning(
                     "market cancel: 异常旧挂单只删记录不退货 steward=%s lot=%s item=%s qty=%s price=%s",
                     s["id"], lot_id, lot["item"], lot["quantity"], lot["price"],
                 )
             from . import paid_ledger as _pl
+            from . import item_traits as _it
             await _pl.discard(conn, "market", lot_id)
+            await _it.discard_traits(conn, "market", lot_id)
             await conn.execute("DELETE FROM market_listings WHERE id=?", (lot_id,))
             await conn.commit()
         return f"已下架 #{lot_id}，物品退回行囊"

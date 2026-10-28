@@ -102,7 +102,7 @@ async def plot_ops(
     return await mux._call_ops(mux.plot_bundle, _kid(), command)
 
 
-@mcp.tool(description="小屋潮柜床畜栏腌晾家维杂务。空=列表。例：status · 睡 · 家维 · 家维 交 · 杂务 自修 · 修屋顶 · 修冰箱 · 修灶 · 泡澡 · 读书 · barn breed 1 · barn 惊逃 1 诱回 · barn 闹脾气 哄 · barn 起名 1 豆花 · 腌 甘蓝 4。status 附闭环提示（鱼/柜/灶/帆/待选）。寻回逃畜极少跟足迹摸到潮边藏货（急追略高）。家维=灯油/冷藏/防潮（不缴只降睡/保鲜/灶效，不封房）；杂务=结霜/门轴等三选一。屋顶/厨电耐久低有惩罚。泡澡≠kitchen_ops 泡。mascot upkeep≠岸维。人类 /island 小屋可点配种/寻回/修屋顶/修厨电/泡澡/读书。")
+@mcp.tool(description="小屋潮柜床畜栏腌晾家维杂务。空=列表。潮柜/冰箱只让货变质变慢（×1.8/×3.5），不是不坏，存取不重新计时。例：status · 睡 · 家维 · 家维 交 · 杂务 自修 · 修屋顶 · 修冰箱 · 修灶 · 泡澡 · 读书 · barn breed 1 · barn 惊逃 1 诱回 · barn 闹脾气 哄 · barn 起名 1 豆花 · 腌 甘蓝 4。status 附闭环提示（鱼/柜/灶/帆/待选）。寻回逃畜极少跟足迹摸到潮边藏货（急追略高）。家维=灯油/冷藏/防潮（不缴只降睡/保鲜/灶效，不封房）；杂务=结霜/门轴等三选一。屋顶/厨电耐久低有惩罚。泡澡≠kitchen_ops 泡。mascot upkeep≠岸维。人类 /island 小屋可点配种/寻回/修屋顶/修厨电/泡澡/读书。")
 async def hut_ops(command: str = "") -> str:
     return await mux._call_ops(mux.hut_bundle, _kid(), command)
 
@@ -114,7 +114,7 @@ async def tide_ops(
     return await mux._call_ops(mux.tide_bundle, _kid(), command)
 
 
-@mcp.tool(description="行囊集市。空=列表。例：list · 履历 · vend 鲭鱼 1。海产 vend 按渔市行情（全岛7日卖越多越贱，一条条往下滑；潮生会 行情 看牌）。货架货 vend=按当初实付价退九成（实付价跟着货走，送人/集市转手也不变；没有付款记录的货按全岛最低买入价退九成）。订婚戒/潮誓戒等手作信物不能 vend，可 gift 或挂集市。list 显示鲜度/品质/鱼重；变质只在 list 或 vend 同种货时丢，回复里写明丢了什么多少（变质丢弃：…）。送礼≠红包。")
+@mcp.tool(description="行囊集市。空=列表。例：list · 履历 · vend 鲭鱼 1。海产 vend 按渔市行情（全岛7日卖越多越贱，一条条往下滑；潮生会 行情 看牌）。货架货 vend=按当初实付价退九成（实付价跟着货走，送人/集市转手也不变；没有付款记录的货按全岛最低买入价退九成）。订婚戒/潮誓戒等手作信物不能 vend，可 gift 或挂集市。list 显示鲜度/品质/鱼重；变质只在 list 或 vend 同种货时丢，回复里写明丢了什么多少（变质丢弃：…）。挂单里的货过了保质期不能成交（买家不扣票，过期件被清掉并记纪事）。送礼≠红包。")
 async def tote_ops(command: str = "") -> str:
     return await mux._call_ops(mux.tote_bundle, _kid(), command)
 

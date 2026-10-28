@@ -125,10 +125,11 @@ async def _shed_one(s: dict, cmd: str) -> str:
                 raise ValueError("行囊数量不足")
             from .. import item_traits as traits_mod
             from .. import paid_ledger
-            await traits_mod.release_for_departure(conn, s["id"], item_key, qty)
+            trait_slices = await traits_mod.carry_out(conn, s["id"], item_key, qty)
             if online:
                 await db.add_item(conn, peer["id"], item_key, qty)
                 await paid_ledger.give(conn, peer["id"], item_key, carried)
+                await traits_mod.deposit(conn, peer["id"], item_key, trait_slices)
                 from .. import ledger as ledger_mod
                 await ledger_mod.transfer(
                     conn, s["id"], peer["id"], item_key, qty,
@@ -146,6 +147,7 @@ async def _shed_one(s: dict, cmd: str) -> str:
                 (s["id"], peer["id"], item_key, qty, db.now()),
             )
             await paid_ledger.stash(conn, "handoff", int(cur_h.lastrowid), item_key, carried)
+            await traits_mod.stash_traits(conn, "handoff", int(cur_h.lastrowid), item_key, trait_slices)
             await conn.commit()
         return (
             f"已把 {ITEM_NAMES.get(item_key, item_key)} x{qty} 放在 {peer_name} 温室台阶"
@@ -404,6 +406,33 @@ async def beacon_ops(key_id: int, command: str) -> str:
 
 
 
+async def settle_expired_swap(conn: aiosqlite.Connection, lot: dict) -> tuple[int, int]:
+    """交换台挂单里已经变质的件：清掉（变质丢弃规则），给挂单人留纪事。返回 (剩余件数, 清掉的件数)。"""
+    from .. import item_traits as traits_mod
+    from .. import paid_ledger
+
+    lot_id, item = int(lot["id"]), lot["item"]
+    have = int(lot["quantity"] or 0)
+    cut = await traits_mod.sweep_escrow(conn, "swap", lot_id, item, have)
+    if cut <= 0:
+        return have, 0
+    await paid_ledger.unstash(conn, "swap", lot_id, item, cut)
+    remain = have - cut
+    if remain <= 0:
+        await paid_ledger.discard(conn, "swap", lot_id)
+        await traits_mod.discard_traits(conn, "swap", lot_id)
+        await conn.execute("DELETE FROM swap_lots WHERE id=?", (lot_id,))
+    else:
+        await conn.execute("UPDATE swap_lots SET quantity=? WHERE id=?", (remain, lot_id))
+    await db.add_chronicle(
+        "spoil",
+        f"交换台挂单#{lot_id} 的 {ITEM_NAMES.get(item, item)}（{item}）x{cut} 已变质，只好丢掉",
+        int(lot["depositor_id"]), conn=conn,
+    )
+    _log.info("swap 挂单变质清理 lot=%s depositor=%s item=%s cut=%s remain=%s", lot_id, lot["depositor_id"], item, cut, remain)
+    return remain, cut
+
+
 async def swap_ops(key_id: int, command: str) -> str:
     s = await require_steward(key_id)
     parts = command.strip().split(maxsplit=3)
@@ -412,6 +441,15 @@ async def swap_ops(key_id: int, command: str) -> str:
     if verb == "list":
         async with db.connect() as conn:
             conn.row_factory = aiosqlite.Row
+            open_lots = [dict(r) for r in await (await conn.execute(
+                "SELECT * FROM swap_lots WHERE claimed_by IS NULL AND quantity>0"
+            )).fetchall()]
+            swept: list[str] = []
+            for open_lot in open_lots:
+                _r, cut = await settle_expired_swap(conn, open_lot)
+                if cut:
+                    swept.append(f"#{open_lot['id']} {ITEM_NAMES.get(open_lot['item'], open_lot['item'])}×{cut} 已变质，已清理")
+            await conn.commit()
             rows = await (await conn.execute(
                 """
                 SELECT l.id, l.item, l.quantity, l.note, d.name
@@ -419,9 +457,10 @@ async def swap_ops(key_id: int, command: str) -> str:
                 WHERE l.claimed_by IS NULL ORDER BY l.created_at DESC LIMIT 15
                 """
             )).fetchall()
+        spoil_head = ("变质清理：" + "；".join(swept) + "\n") if swept else ""
         if not rows:
-            return "交换台为空"
-        return "\n".join(
+            return spoil_head + "交换台为空"
+        return spoil_head + "\n".join(
             f"#{r['id']} {r['name']} 出让 {ITEM_NAMES.get(r['item'],r['item'])} x{r['quantity']} {r['note']}"
             for r in rows
         )
@@ -442,12 +481,13 @@ async def swap_ops(key_id: int, command: str) -> str:
                 )
             from .. import item_traits as traits_mod
             from .. import paid_ledger
-            await traits_mod.release_for_departure(conn, s["id"], item_key, qty)
+            trait_slices = await traits_mod.carry_out(conn, s["id"], item_key, qty)
             cur_s = await conn.execute(
                 "INSERT INTO swap_lots (depositor_id, item, quantity, note, created_at) VALUES (?,?,?,?,?)",
                 (s["id"], item_key, qty, note[:80], db.now()),
             )
             await paid_ledger.stash(conn, "swap", int(cur_s.lastrowid), item_key, carried)
+            await traits_mod.stash_traits(conn, "swap", int(cur_s.lastrowid), item_key, trait_slices)
             await conn.commit()
         await db.add_chronicle(
             "swap",
@@ -470,6 +510,14 @@ async def swap_ops(key_id: int, command: str) -> str:
                 raise ValueError("不能领取自己的挂单")
             if int(lot["quantity"] or 0) < 1:
                 raise ValueError("这张挂单的数量异常（≤0），不能领取。请挂单人 swap_ops cancel 撤掉。")
+            # 变质的货不能成交：先清掉过期的件（写纪事），清完没货就拒绝，领取费一分不收
+            remain, rotten = await settle_expired_swap(conn, lot)
+            if rotten:
+                await conn.commit()
+                label = ITEM_NAMES.get(lot["item"], lot["item"])
+                if remain <= 0:
+                    raise ValueError(f"这张挂单的货已经变质（{label}×{rotten}），已清理，没有收你的领取费。")
+                lot["quantity"] = remain
             rapport = await social_mod.get_rapport(s["id"], lot["depositor_id"], conn=conn)
             claim_fee = social_mod.swap_claim_fee(rapport)
             cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
@@ -482,6 +530,12 @@ async def swap_ops(key_id: int, command: str) -> str:
                 conn, s["id"], lot["item"],
                 await paid_ledger.unstash(conn, "swap", lot_id, lot["item"], int(lot["quantity"])),
             )
+            from .. import item_traits as traits_mod
+            await traits_mod.deposit(
+                conn, s["id"], lot["item"],
+                await traits_mod.unstash_traits(conn, "swap", lot_id, lot["item"], int(lot["quantity"])),
+            )
+            await traits_mod.discard_traits(conn, "swap", lot_id)
             from .. import ledger as ledger_mod
             await ledger_mod.transfer(
                 conn, int(lot["depositor_id"]), s["id"], lot["item"], int(lot["quantity"]),
@@ -511,12 +565,21 @@ async def swap_ops(key_id: int, command: str) -> str:
                         conn, "swap", lot_id, lot["item"], int(lot["quantity"]),
                     ),
                 )
+                from .. import item_traits as traits_mod
+                await traits_mod.deposit(
+                    conn, s["id"], lot["item"],
+                    await traits_mod.unstash_traits(
+                        conn, "swap", lot_id, lot["item"], int(lot["quantity"]),
+                    ),
+                )
             else:
                 _log.warning(
                     "swap cancel: 异常旧挂单只删记录不退货 steward=%s lot=%s item=%s qty=%s",
                     s["id"], lot_id, lot["item"], lot["quantity"],
                 )
             await paid_ledger.discard(conn, "swap", lot_id)
+            from .. import item_traits as traits_cancel
+            await traits_cancel.discard_traits(conn, "swap", lot_id)
             await conn.execute("DELETE FROM swap_lots WHERE id=?", (lot_id,))
             await conn.commit()
         return f"已撤回 #{lot_id}，物品退回行囊"
