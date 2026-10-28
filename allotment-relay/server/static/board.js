@@ -200,7 +200,7 @@ function bondRows(data) {
 function renderLevelWing(data, mine) {
   const lead = data.bond_lead || data.level_lead;
   const rows = bondRows(data);
-  document.getElementById('level-lead-n').textContent = lead ? fmt(lead.bond) : '—';
+  setBigNumber('level-lead-n', lead ? lead.bond : null);
   document.getElementById('level-lead-next').innerHTML = lead
     ? `口感 <strong>${esc(lead.flavor || '')}</strong>`
     : '口感 <strong>—</strong>';
