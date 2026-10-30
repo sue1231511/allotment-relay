@@ -10,6 +10,7 @@ from .errors import ApiError, classify, humanize
 
 KINDS = {
     "craft": "打",
+    "process": "加工",
     "take": "取",
     "fill": "灌",
     "harvest": "收盐",
@@ -23,6 +24,7 @@ KINDS = {
 
 TITLES = {
     "craft": "开打了",
+    "process": "加工好了",
     "take": "取到了",
     "fill": "灌进盐田",
     "harvest": "收了盐",
@@ -44,6 +46,10 @@ def _command(kind: str, target: str) -> str:
         if not name:
             raise ApiError("BAD_REQUEST", "先点砧上要打的东西。")
         return f"打 {name}"
+    if kind == "process":
+        if not name:
+            raise ApiError("BAD_REQUEST", "先点要加工的东西。")
+        return f"加工 {name}"
     if kind == "donate":
         if not name:
             raise ApiError("BAD_REQUEST", "先点要捐的那一套。")

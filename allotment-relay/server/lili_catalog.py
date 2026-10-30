@@ -48,7 +48,8 @@ DECO_DOMAINS: dict[str, list[str]] = {
     "kelp_tassel": ["farm", "beach"],
 }
 
-SKIP_PREFIXES = ("deco_", "fit_", "tool_", "live_", "meal_", "dish_", "seed_")
+# proc_ 加工品不进栗栗的收货池：要交的料必须是玩家能直接种/捞/拾到的原料
+SKIP_PREFIXES = ("deco_", "fit_", "tool_", "live_", "meal_", "dish_", "seed_", "proc_")
 
 
 def day_id() -> int:

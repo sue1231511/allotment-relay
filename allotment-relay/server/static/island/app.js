@@ -31,7 +31,7 @@ import { renderShop } from "./scenes/shop.js?v=tt-sprite1";
 import { renderLili } from "./scenes/lili.js?v=island-modulefix2";
 import { renderClinic } from "./scenes/clinic.js?v=island-modulefix2";
 import { renderShaonian } from "./scenes/shaonian.js?v=island-modulefix2";
-import { renderWorkshop } from "./scenes/workshop.js?v=workshop-quench1";
+import { renderWorkshop } from "./scenes/workshop.js?v=workshop-process1";
 import { renderQuarry } from "./scenes/quarry.js?v=quarry-collapse1";
 import { renderBar } from "./scenes/bar.js?v=island-modulefix2";
 import { renderTheater } from "./scenes/theater.js?v=island-modulefix2";
@@ -657,7 +657,8 @@ function tapHut(kind, target, id) {
         ],
         confirm: row.price || "确认",
         onConfirm: (vals) => {
-          const base = String(row.target || target || "").replace(/\s+\d+$/, "");
+          const raw = String(row.target || target || "").trim();
+          const base = /^\d+$/.test(raw) ? "" : raw.replace(/\s+\d+$/, "");
           runHut(kind, `${base} ${vals.qty}`.trim());
         },
       });
@@ -927,6 +928,7 @@ function switchWorkshopTab(tab) {
 function workshopRow(kind, target) {
   const shop = state.workshop || {};
   if (kind === "craft") return (shop.recipes || []).find((row) => row.name === target);
+  if (kind === "process") return (shop.process || []).find((row) => row.name === target);
   if (kind === "take") return shop.job;
   if (kind === "fill" || kind === "harvest") {
     return (shop.pans || []).find((row) => String(row.slot) === String(target));
@@ -942,6 +944,7 @@ function workshopRow(kind, target) {
 function workshopCan(kind, row) {
   if (!row) return false;
   if (kind === "craft") return Boolean(row.can_craft);
+  if (kind === "process") return Boolean(row.can_process);
   if (kind === "take") return Boolean(row.can_take);
   if (kind === "fill") return Boolean(row.can_fill);
   if (kind === "harvest") return Boolean(row.can_harvest);
@@ -974,8 +977,21 @@ function tapWorkshop(kind, target) {
         patch: "补网",
         donate: "陈列",
         craft: target || "砧上",
+        process: target || "加工台",
       }[kind] || "岸工坊"),
       body,
+    });
+    return;
+  }
+  if (kind === "process") {
+    showFormSheet({
+      title: row.name || "加工台",
+      body,
+      fields: [
+        { id: "qty", label: "批数（不写按 1 批）", placeholder: "1", max: 2, optional: true },
+      ],
+      confirm: "确认加工",
+      onConfirm: (vals) => runWorkshop(kind, `${target} ${vals.qty}`.trim()),
     });
     return;
   }

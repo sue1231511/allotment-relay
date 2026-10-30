@@ -1286,7 +1286,7 @@ def test_island_page_is_modular() -> None:
     assert "warmScenesLater" in app
     assert "waitScenePics" in app
     assert html.count("island.css?v=plot-overview2") == 1
-    assert html.count("app.js?v=plot-overview2") == 1
+    assert html.count("app.js?v=workshop-process1") == 1
     assert html.count("boot.js?v=keynorm1") == 1
     assert 'rel="preload"' in html
     assert "island-map.webp" in html

@@ -647,6 +647,8 @@ async def barn_ops(key_id: int, command: str) -> str:
         return await hut.compost_bin_command(s, ["存", *parts[1:]])
 
     if verb == "churn":
+        if len(parts) > 1 and not parts[1].isdigit():
+            raise ValueError("churn 后面写山羊奶份数，例：churn 4（两份奶一份奶酪）")
         qty = int(parts[1]) if len(parts) > 1 else 2
         if qty < 2:
             raise ValueError("churn 至少山羊奶 x2 → 奶酪 x1")

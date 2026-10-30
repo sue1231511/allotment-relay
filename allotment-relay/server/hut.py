@@ -3270,7 +3270,7 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
                 name="搅山羊奶",
                 emoji="🧀",
                 note=f"行囊山羊奶 {milk}。两份奶一份奶酪。",
-                detail="只搅山羊奶。牛奶不能搅。",
+                detail=f"只搅山羊奶，牛奶不能搅。份数填山羊奶的份数（行囊有 {milk}），两份奶搅一份奶酪，单数会少搅一份。",
                 price="搅",
                 can=True,
                 target=str(milk - (milk % 2)),

@@ -14,21 +14,32 @@ from . import commons, config, db, energy, flavor, health, world
 from .catalog import (
     CRAFT_RECIPES,
     EXHIBIT_SETS,
+    PROCESS_RECIPES,
     item_label,
     resolve_exhibit_key,
+    resolve_process_key,
     resolve_recipe_key,
 )
 from .game import require_steward
 
-CRAFT_HELP = """craft_ops 子命令（整句写进 command）：
-  岸工坊。把崖矿精矿、羊毛、漂绳、岸木做成东西；附带盐田、风暴打捞、陈列柜。
+_PROCESS_MAX_BATCH = 20
+
+
+def _build_craft_help() -> str:
+    """「打…」「加工…」两串从配方表生成，加配方不会再漏。"""
+    make_list = " · ".join(f"打 {meta['name']}" for meta in CRAFT_RECIPES.values())
+    process_list = " · ".join(f"加工 {meta['name']}" for meta in PROCESS_RECIPES.values())
+    return f"""craft_ops 子命令（整句写进 command）：
+  岸工坊。把崖矿精矿、羊毛、漂绳、岸木做成东西；附带加工台、盐田、风暴打捞、陈列柜。
   不是 quarry_ops（崖上挥镐洗矿）。不是 tide_ops dig（赶海翻沙，要铲子）。
   不是 kitchen_ops cook。没有 forge_ops / salvage_ops / exhibit_ops。
 
   status / 看 — 砧上在打什么、盐田、打捞窗口、陈列进度。空 command 不是看工坊，是本表
-  图鉴 / catalog — 配方、盐田规则、打捞窗口、陈列套
-  打 铜钉 — 扣材料开始慢工（一砧一次；好了 craft_ops 取）。也可 打 羊毛毯 · 打 潮纹秤锤 · 打 铁锄刃 · 打 雾铅网坠 · 打 夜光滤网 · 打 潮誓戒 · 打 订婚戒 · 打 鱼拓 · 打 船模 · 打 贝壳柜 · 打 矿石柜 · 打 酒瓶架 · 打 花册 · 打 老照片 · 打 潮汐邮票 · 打 地下遗物 · 打 大型鱼骨 · 打 稀有种子盒
+  图鉴 / catalog — 配方、加工台、盐田规则、打捞窗口、陈列套
+  打 铜钉 — 扣材料开始慢工（一砧一次；好了 craft_ops 取）。全部能打的：{make_list}
   取 — 领做好的成品。戒、秤锤、网坠这类会记下谁打的、材料从哪来。羊毛毯这类装件行囊可放多份，同一件能再打；取不下来时先卖掉或装上袋里那件
+  加工 — 不带名称：列出加工台能做的全部加工品和各自的材料
+  加工 面粉 3 — 立刻加工（不占砧，不用等）：扣原料和精力，当场进行囊。名称后的数字是批数，缺省 1 批，一次最多 {_PROCESS_MAX_BATCH} 批。灶台菜、泡饮、岸工坊食品配方要的面粉 / 大米 / 细盐 / 糖浆 / 奶油这类 proc_ 材料都从这里来。全部能加工的：{process_list}
   补网 — 网补丁 6 小时空网 -8%；有雾铅网坠优先贴，12 小时 -14%。不是 gear upgrade
   盐田 — 看池；灌 — 涨潮灌一池（5 精力）；收盐 — 晴天攒满 20 分钟后收海盐晶
   开池 / 开池 确认 — 加盐田（最多 3 口，40/68/96 票）
@@ -38,10 +49,14 @@ CRAFT_HELP = """craft_ops 子命令（整句写进 command）：
   陈列 / 捐 亮壳一套 — 看套 / 捐货换称呼或装饰。也可 捐 砧上全套
   help — 本表
 
-例子：craft_ops status · craft_ops 打 铜钉 · craft_ops 打 羊毛毯 · craft_ops 打 潮纹秤锤 · craft_ops 打 订婚戒 · craft_ops 取 · craft_ops 灌 · craft_ops 打捞 · craft_ops 捐 亮壳一套 · craft_ops 捐 砧上全套
+例子：craft_ops status · craft_ops 打 铜钉 · craft_ops 取 · craft_ops 加工 面粉 3 · craft_ops 加工 细盐 · craft_ops 灌 · craft_ops 打捞 · craft_ops 捐 亮壳一套
+加工 ≠ 打：加工台立刻出货、不占砧；打是慢工，一砧一次，好了要取。加工 ≠ kitchen_ops cook（灶台做菜）；山羊奶酪走 hut_ops barn churn，不是加工 奶酪（那是牛奶做的 proc_cheese）。
 涨潮灌盐田，晴天才晒。赶海 dig 涨潮关；打捞只认风暴窗口。
 订婚戒要潮信贝+海玻璃，不是潮誓戒。打完 marriage_ops 订婚 信物。
-人类网页 /workshop 是围观实况；打钉在 /play 或手机地图 /island 进岸工坊点。缺料时面板写出去哪弄。"""
+人类网页 /workshop 是围观实况；打钉、加工在 /play 或手机地图 /island 进岸工坊点。缺料时面板写出去哪弄。"""
+
+
+CRAFT_HELP = _build_craft_help()
 
 
 def _item_where(item: str) -> str:
@@ -81,6 +96,15 @@ def _item_where(item: str) -> str:
         return "赶海捡亮壳"
     if item.startswith("shell_"):
         return "赶海"
+    for meta in PROCESS_RECIPES.values():
+        if meta["out"] == item:
+            return "岸工坊加工台"
+    if item.startswith("crop_"):
+        return "份地种"
+    if item in ("milk", "egg", "meat_pork", "goat_milk"):
+        return "小屋畜栏"
+    if item.startswith("fish_"):
+        return "撒网或坐钓"
     return ""
 
 
@@ -258,6 +282,87 @@ def _pan_progress(brine_at: int, *, now: int) -> tuple[int, int]:
     return min(got, need), need
 
 
+def _process_need_text(meta: dict[str, Any]) -> str:
+    return "、".join(f"{item_label(k)}x{v}" for k, v in meta["need"].items())
+
+
+def _process_line(meta: dict[str, Any]) -> str:
+    return (
+        f"  {meta['name']} ← {_process_need_text(meta)} → {item_label(meta['out'])}x{meta['qty']}"
+        f"（每批 {meta['energy']} 精力）{meta['hint']}"
+    )
+
+
+def _parse_process_args(rest: str) -> tuple[str, int]:
+    """「面粉 3」→ ("面粉", 3)；批数缺省 1。"""
+    parts = (rest or "").split()
+    batches = 1
+    if parts and parts[-1].isdigit():
+        batches = int(parts[-1])
+        parts = parts[:-1]
+    if batches < 1 or batches > _PROCESS_MAX_BATCH:
+        raise ValueError(f"批数写 1～{_PROCESS_MAX_BATCH}。例：craft_ops 加工 面粉 3")
+    return " ".join(parts), batches
+
+
+async def _process(conn: aiosqlite.Connection, s: dict[str, Any], rest: str) -> str:
+    name, batches = _parse_process_args(rest)
+    if not name:
+        lines = [
+            "加工台（craft_ops 加工 名称 [批数]，立刻出货，不占砧）：",
+            *(_process_line(meta) for meta in PROCESS_RECIPES.values()),
+            "例：craft_ops 加工 面粉 3 · craft_ops 加工 细盐",
+        ]
+        return "\n".join(lines)
+    key = resolve_process_key(name)
+    if not key:
+        raise ValueError(
+            f"加工台不认识 {name}。craft_ops 加工 看全部；山羊奶酪走 hut_ops barn churn，不在这里"
+        )
+    meta = PROCESS_RECIPES[key]
+    missing = []
+    for item, qty in meta["need"].items():
+        want = int(qty) * batches
+        have = await (await conn.execute(
+            "SELECT quantity FROM satchel WHERE steward_id=? AND item=?",
+            (s["id"], item),
+        )).fetchone()
+        got = int(have[0] if have else 0)
+        if got < want:
+            where = _item_where(item)
+            missing.append(
+                f"{item_label(item)} x{want}（有 {got}{'，去' + where if where else ''}）"
+            )
+    if missing:
+        raise ValueError(f"缺材料：{'、'.join(missing)}（{batches} 批）")
+    await energy.spend(conn, s["id"], int(meta["energy"]) * batches, action="加工")
+    from . import ledger as ledger_mod
+
+    inherited: list[str] = []
+    for item, qty in meta["need"].items():
+        want = int(qty) * batches
+        if not await db.take_item(conn, s["id"], item, want):
+            raise ValueError(f"扣 {item_label(item)} 失败。再试一次")
+        gone = await ledger_mod.consume(conn, s["id"], item, want)
+        for lines in gone:
+            snip = ledger_mod.origin_snippet(lines, item)
+            if snip and snip not in inherited:
+                inherited.append(snip)
+    out_qty = int(meta["qty"]) * batches
+    await db.add_item(conn, s["id"], meta["out"], out_qty)
+    made = item_label(meta["out"])
+    story = [f"{made}由{s['name']}于{ledger_mod.calendar_phrase()}在岸工坊加工台加工"]
+    for snip in inherited:
+        if snip and snip not in story:
+            story.append(snip)
+    await ledger_mod.birth(conn, s["id"], meta["out"], story, qty=out_qty)
+    return (
+        f"加工 {meta['name']} {batches} 批 → {made} x{out_qty}"
+        f"（-{int(meta['energy']) * batches} 精力，不占砧）。"
+        + flavor.maybe_suffix(["磨盘转得比人勤", "台面上落了一层粉"])
+    )
+
+
 def _catalog_text() -> str:
     lines = [
         "岸工坊图鉴",
@@ -271,6 +376,12 @@ def _catalog_text() -> str:
             f"  {meta['emoji']}{meta['name']} ← {need}"
             f"（{meta['seconds'] // 60} 分 / {meta['energy']} 精力）{meta['hint']}"
         )
+    lines.append("")
+    lines.append(
+        f"加工台（craft_ops 加工 名称 [批数]，立刻出货，不占砧；一次最多 {_PROCESS_MAX_BATCH} 批）："
+    )
+    for meta in PROCESS_RECIPES.values():
+        lines.append(_process_line(meta))
     lines.append("")
     lines.append(
         f"盐田：涨潮 craft_ops 灌（{config.CRAFT_SALT_FILL_ENERGY} 精力），"
@@ -345,7 +456,7 @@ async def _status_text(conn: aiosqlite.Connection, s: dict[str, Any]) -> str:
         lines.append("陈列未捐：" + "、".join(pending))
     else:
         lines.append(f"陈列柜 {len(EXHIBIT_SETS)} 套齐了。")
-    lines.append("指令：打 铜钉 · 打 潮纹秤锤 · 取 · 灌 · 收盐 · 打捞 · 捐 亮壳一套 · 捐 砧上全套 · 图鉴")
+    lines.append("指令：打 铜钉 · 打 潮纹秤锤 · 取 · 加工 面粉 3 · 灌 · 收盐 · 打捞 · 捐 亮壳一套 · 捐 砧上全套 · 图鉴")
     return "\n".join(lines)
 
 
@@ -818,6 +929,10 @@ async def craft_ops(key_id: int, command: str = "") -> str:
             text = await _start_job(conn, s, rest)
             await conn.commit()
             return text
+        if verb in ("加工", "process", "磨"):
+            text = await _process(conn, s, rest)
+            await conn.commit()
+            return text
         if verb in ("取", "collect", "领"):
             text = await _take_job(conn, s)
             await conn.commit()
@@ -976,6 +1091,43 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
             "detail": _need_detail(needs, note, hint),
         })
     recipes.sort(key=lambda row: (not row["can_craft"], row["name"]))
+    process = []
+    for key, meta in PROCESS_RECIPES.items():
+        needs = []
+        short = []
+        for item, qty in meta["need"].items():
+            have = int(stock.get(item) or 0)
+            needs.append({
+                "item": item,
+                "label": item_label(item),
+                "qty": int(qty),
+                "have": have,
+                "where": _item_where(item),
+            })
+            if have < int(qty):
+                short.append(f"{item_label(item)}差{int(qty) - have}")
+        energy_need = int(meta["energy"])
+        if short:
+            note = "缺 " + "、".join(short)
+            can = False
+        elif energy_now < energy_need:
+            note = "精力不够"
+            can = False
+        else:
+            note = f"每批出 {item_label(meta['out'])} x{int(meta['qty'])} · {energy_need} 精力"
+            can = True
+        process.append({
+            "id": key,
+            "name": meta["name"],
+            "need": needs,
+            "out_qty": int(meta["qty"]),
+            "energy": energy_need,
+            "hint": meta["hint"],
+            "can_process": can,
+            "note": note,
+            "detail": _need_detail(needs, note, meta["hint"] + "。立刻出货，不占砧"),
+        })
+    process.sort(key=lambda row: (not row["can_process"], row["name"]))
     flood = world.current_tide() == "flood"
     weather = world.current_weather()
     pans = []
@@ -1118,6 +1270,7 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
                     else ("好了" if job and job.get("ready") else ("在打" if job else ""))
                 ),
             },
+            {"key": "process", "label": "加工", "badge": "可做" if any(r["can_process"] for r in process) else ""},
             {"key": "salt", "label": "盐田", "badge": "收" if any(p.get("can_harvest") for p in pans) else ("灌" if any(p.get("can_fill") for p in pans) else "")},
             {
                 "key": "salvage",
@@ -1128,6 +1281,7 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
         ],
         "job": job,
         "recipes": recipes,
+        "process": process,
         "pans": pans,
         "next_pan": next_pan,
         "salvage": {

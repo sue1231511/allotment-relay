@@ -64,6 +64,7 @@ function paintList(wrap, shop, tab, onAct, listTop) {
 }
 
 function listMarkup(shop, tab) {
+  if (tab === "process") return processMarkup(shop);
   if (tab === "salt") return saltMarkup(shop);
   if (tab === "salvage") return salvageMarkup(shop);
   if (tab === "exhibit") return exhibitMarkup(shop);
@@ -72,7 +73,7 @@ function listMarkup(shop, tab) {
 
 function sku(kind, target, title, note, price, on, extra = "") {
   return `<button type="button" class="island-shop-sku ${on ? "" : "is-off"} ${extra}" data-act="${esc(kind)}" data-target="${esc(target)}">
-    <span class="island-shop-emoji">${esc(title.emoji || "·")}</span>
+    <span class="island-shop-emoji">${title.svg || esc(title.emoji || "·")}</span>
     <span class="island-shop-name"><b>${esc(title.name)}</b><small>${esc(note)}</small></span>
     <span class="island-shop-price">${esc(price)}</span>
   </button>`;
@@ -122,6 +123,22 @@ function anvilMarkup(shop) {
     ));
   }
   return rows.join("") || `<p class="island-shop-empty">砧上这会儿没活。</p>`;
+}
+
+// 手绘磨盘小图标：加工台一行一个，不用 emoji
+const MILL_SVG = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="9" rx="8" ry="3"/><path d="M4 9v4c0 1.7 3.6 3 8 3s8-1.3 8-3V9"/><path d="M12 6V3.5"/><path d="M12 3.5h4"/><path d="M7 19.5h10"/></svg>`;
+
+function processMarkup(shop) {
+  const rows = (shop.process || []).map((row) => sku(
+    "process",
+    row.name,
+    { svg: MILL_SVG, name: row.name },
+    row.note || needLine(row.need) || "",
+    row.can_process ? "加工" : "看",
+    Boolean(row.can_process),
+    row.can_process ? "is-ready" : "",
+  ));
+  return rows.join("") || `<p class="island-shop-empty">加工台这会儿没活。</p>`;
 }
 
 function saltMarkup(shop) {

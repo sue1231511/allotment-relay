@@ -179,7 +179,7 @@ def _command(kind: str, target: str) -> tuple[str, str]:
             raise ApiError("BAD_REQUEST", "先点要取的那一件。")
         return "hut", f"冰柜 取 {name} {qty}"
     if kind == "expand":
-        n = extra if extra.isdigit() else "1"
+        _, n = _qty_tail(extra, 1)
         return "hut", f"潮柜 扩 {n}"
     if kind == "compost_put":
         name, qty = _qty_tail(extra, 1)
@@ -187,7 +187,7 @@ def _command(kind: str, target: str) -> tuple[str, str]:
             raise ApiError("BAD_REQUEST", "先点要沤的粪便。")
         return "hut", f"堆肥桶 存 {name} {qty}"
     if kind == "compost_take":
-        qty = extra if extra.isdigit() else ""
+        _, qty = _qty_tail(extra, None)
         return "hut", f"堆肥桶 取 堆肥 {qty}".strip()
     if kind == "barn_erect":
         return "barn", "erect"
@@ -212,7 +212,7 @@ def _command(kind: str, target: str) -> tuple[str, str]:
             raise ApiError("BAD_REQUEST", "先点要剪毛的那一栏。")
         return "barn", f"shear {extra}"
     if kind == "barn_churn":
-        n = extra if extra.isdigit() else "2"
+        _, n = _qty_tail(extra, 2)
         return "barn", f"churn {n}"
     if kind == "barn_breed":
         if not extra.isdigit():

@@ -1093,6 +1093,40 @@ CRAFT_RECIPES = {
     },
 }
 
+# 加工台：岸工坊里不占砧的即时加工（craft_ops 加工 名称 [批数]）。
+# 把种出来/养出来/捞上来的原料磨成 proc_ 加工品，给灶台菜、泡饮、岸工坊食品配方做材料。
+# need 是一批的用量，qty 是一批的产出；成品回收价由 _apply_price_book 按材料封顶。
+PROCESS_RECIPES = {
+    "salt": {"name": "细盐", "out": "proc_salt", "qty": 2, "need": {"quarry_salt": 1}, "energy": 1, "hint": "崖盐/盐田海盐晶磨细"},
+    "flour": {"name": "面粉", "out": "proc_flour", "qty": 2, "need": {"crop_wheat": 2}, "energy": 2, "hint": "小麦磨粉"},
+    "rice": {"name": "大米", "out": "proc_rice", "qty": 1, "need": {"crop_rice": 1}, "energy": 2, "hint": "稻谷脱壳"},
+    "glutinous_flour": {"name": "糯米粉", "out": "proc_glutinous_flour", "qty": 1, "need": {"crop_glutinous_rice": 1}, "energy": 2, "hint": "糯稻磨粉"},
+    "noodles": {"name": "面条", "out": "proc_noodles", "qty": 1, "need": {"proc_flour": 2}, "energy": 2, "hint": "面粉擀条，先加工面粉"},
+    "bread": {"name": "面包", "out": "proc_bread", "qty": 1, "need": {"proc_flour": 2, "egg": 1}, "energy": 3, "hint": "面粉+蛋，先加工面粉"},
+    "tofu": {"name": "豆腐", "out": "proc_tofu", "qty": 1, "need": {"crop_soybean": 2}, "energy": 2, "hint": "黄豆点卤"},
+    "soy_milk": {"name": "豆浆", "out": "proc_soy_milk", "qty": 1, "need": {"crop_soybean": 1}, "energy": 2, "hint": "黄豆磨浆（不是泡饮的豆浆）"},
+    "bean_paste": {"name": "豆酱", "out": "proc_bean_paste", "qty": 1, "need": {"crop_soybean": 1, "proc_salt": 1}, "energy": 2, "hint": "黄豆+细盐，先加工细盐"},
+    "cream": {"name": "奶油", "out": "proc_cream", "qty": 1, "need": {"milk": 2}, "energy": 2, "hint": "牛奶撇油"},
+    "butter": {"name": "黄油", "out": "proc_butter", "qty": 1, "need": {"milk": 3}, "energy": 3, "hint": "牛奶搅打"},
+    "cheese": {"name": "奶酪", "out": "proc_cheese", "qty": 1, "need": {"milk": 3}, "energy": 3, "hint": "牛奶凝乳。山羊奶酪走畜栏 churn，不是这个"},
+    "beeswax": {"name": "蜂蜡", "out": "proc_beeswax", "qty": 1, "need": {"honey": 2}, "energy": 2, "hint": "蜂巢熬蜡"},
+    "cooking_oil": {"name": "食用油", "out": "proc_cooking_oil", "qty": 1, "need": {"crop_rapeseed": 2}, "energy": 2, "hint": "油菜籽压榨"},
+    "olive_oil": {"name": "橄榄油", "out": "proc_olive_oil", "qty": 1, "need": {"crop_olive": 2}, "energy": 3, "hint": "橄榄冷榨"},
+    "fish_sauce": {"name": "鱼酱", "out": "proc_fish_sauce", "qty": 1, "need": {"fish_sardine": 3, "proc_salt": 1}, "energy": 3, "hint": "沙丁+细盐，先加工细盐"},
+    "syrup": {"name": "糖浆", "out": "proc_syrup", "qty": 1, "need": {"crop_beet": 2}, "energy": 2, "hint": "甜菜熬浆"},
+    "jam": {"name": "果酱", "out": "proc_jam", "qty": 1, "need": {"crop_apple": 2, "proc_syrup": 1}, "energy": 3, "hint": "苹果+糖浆，先加工糖浆"},
+    "dried_fruit": {"name": "果干", "out": "proc_dried_fruit", "qty": 2, "need": {"crop_grape": 2}, "energy": 2, "hint": "葡萄晾干"},
+    "jerky": {"name": "肉干", "out": "proc_jerky", "qty": 1, "need": {"meat_pork": 1, "proc_salt": 1}, "energy": 3, "hint": "猪肉+细盐，先加工细盐"},
+    "smoked_fish": {"name": "熏鱼", "out": "proc_smoked_fish", "qty": 1, "need": {"fish_mackerel": 1, "proc_salt": 1}, "energy": 3, "hint": "鲭鱼+细盐，先加工细盐"},
+    "spice_powder": {"name": "香料粉", "out": "proc_spice_powder", "qty": 1, "need": {"crop_chili": 1, "crop_garlic": 1}, "energy": 2, "hint": "辣椒+蒜磨粉"},
+    "rice_wine": {"name": "米酒", "out": "proc_rice_wine", "qty": 1, "need": {"crop_rice": 2}, "energy": 3, "hint": "稻米酿酒"},
+    "vinegar": {"name": "醋", "out": "proc_vinegar", "qty": 2, "need": {"proc_rice_wine": 1}, "energy": 2, "hint": "米酒再酿，先加工米酒"},
+    "cocoa": {"name": "可可粉", "out": "proc_cocoa", "qty": 1, "need": {"crop_cacao": 1}, "energy": 3, "hint": "可可豆焙磨"},
+    "coffee": {"name": "咖啡豆", "out": "proc_coffee", "qty": 1, "need": {"crop_coffee": 1}, "energy": 3, "hint": "咖啡果脱壳烘焙"},
+    "tea_leaf": {"name": "茶叶", "out": "proc_tea_leaf", "qty": 1, "need": {"crop_mulberry": 2}, "energy": 2, "hint": "桑叶炒青（岛上的茶）"},
+    "nori": {"name": "海苔片", "out": "proc_nori", "qty": 1, "need": {"crop_kelp": 2}, "energy": 2, "hint": "海带晒片"},
+}
+
 # 陈列柜：捐出指定货，换称呼和/或小屋装饰。不印钞
 EXHIBIT_SETS = {
     "shine_shells": {
@@ -1172,6 +1206,26 @@ def resolve_recipe_key(token: str) -> str | None:
     item = resolve_item_key(raw) if raw else None
     if item:
         for key, meta in CRAFT_RECIPES.items():
+            if meta["out"] == item:
+                return key
+    return None
+
+
+def resolve_process_key(token: str) -> str | None:
+    raw = (token or "").strip()
+    if not raw:
+        return None
+    if raw in PROCESS_RECIPES:
+        return raw
+    low = raw.lower().replace(" ", "_")
+    if low in PROCESS_RECIPES:
+        return low
+    for key, meta in PROCESS_RECIPES.items():
+        if meta["name"] == raw or meta["out"] == raw or meta["out"] == low:
+            return key
+    item = resolve_item_key(raw)
+    if item:
+        for key, meta in PROCESS_RECIPES.items():
             if meta["out"] == item:
                 return key
     return None
@@ -2612,8 +2666,8 @@ def _apply_price_book() -> None:
     for token in pricing.TOKEN_ITEMS:
         ITEM_PRICES.pop(token, None)
     # 先登记加工封顶（成品回收价 ≤ 2.0 × 材料回收价合计），两遍以覆盖「成品做材料」
-    for _ in range(2):
-        for recipe in CRAFT_RECIPES.values():
+    for _ in range(3):
+        for recipe in (*CRAFT_RECIPES.values(), *PROCESS_RECIPES.values()):
             out = recipe["out"]
             if out not in BOOK or out in pricing.TOKEN_ITEMS:
                 continue

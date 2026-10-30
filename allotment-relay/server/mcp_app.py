@@ -205,7 +205,7 @@ async def quarry_ops(command: str = "") -> str:
     return progress_mod.attach_note(await mux._call_ops(quarry.quarry_ops, _kid(), command))
 
 
-@mcp.tool(description="岸工坊。空=列表≠看砧(用status)。例：打 铜钉 · 取 · 淬火 泼水 · 打捞 · 捞险 割绳。金属淬火/打捞缠网各三选一；打捞碰上禁捞当场放生。人类/island 砧上/打捞栏同路径。勿 forge_ops。")
+@mcp.tool(description="岸工坊。空=列表≠看砧(用status)。例：打 铜钉 · 取 · 加工 面粉 3 · 淬火 泼水 · 打捞 · 捞险 割绳。加工=加工台立刻出货不占砧(名称后数字是批数，不写1批；面粉/大米/细盐/糖浆/奶油等灶台菜和泡饮要的proc_材料都从这来；不带名称列出全部)，≠打(慢工要取)≠kitchen_ops cook；山羊奶酪走hut_ops barn churn。金属淬火/打捞缠网各三选一；打捞碰上禁捞当场放生。人类/island 砧上/加工/打捞栏同路径。勿 forge_ops。")
 async def craft_ops(command: str = "") -> str:
     from . import craft
     from . import progress as progress_mod
