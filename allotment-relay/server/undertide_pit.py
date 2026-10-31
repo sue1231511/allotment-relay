@@ -544,3 +544,20 @@ async def _spawn_replacement(conn: aiosqlite.Connection, level: int) -> None:
         "INSERT OR IGNORE INTO ut_pit_fighters (name, level, power, flavor) VALUES (?,?,?,?)",
         (name, level, _ladder(level)[2] + random.randint(-3, 3), "顶上那个位置的新人。"),
     )
+
+
+async def fighters_view(conn: aiosqlite.Connection) -> list[dict[str, Any]]:
+    """深坑在册斗士（只读）。手机地图拿它画「选斗士」按钮，数值和 pit list 同一份。"""
+    await _ensure_fighters(conn)
+    conn.row_factory = aiosqlite.Row
+    rows = await (await conn.execute(
+        "SELECT * FROM ut_pit_fighters WHERE alive=1 ORDER BY level, name"
+    )).fetchall()
+    out = []
+    for r in rows:
+        entry, prize, _, _ = _ladder(r["level"])
+        out.append({
+            "name": r["name"], "level": int(r["level"]), "entry": entry, "prize": prize,
+            "wins": int(r["wins"]), "losses": int(r["losses"]), "flavor": r["flavor"],
+        })
+    return out
