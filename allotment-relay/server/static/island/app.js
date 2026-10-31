@@ -21,14 +21,15 @@ import {
 } from "./store.js?v=island-modulefix2";
 import { renderHud } from "./hud.js?v=dual-panels1";
 import { renderMap } from "./map.js?v=hotspot-fix1";
-import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=plot-overview1";
+import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=home1";
 import { renderShore, renderShoreYard, renderPortHub, renderBeachHub } from "./scenes/shore.js?v=island-modulefix2";
 import { renderPlaza } from "./scenes/plaza.js?v=island-modulefix2";
 import { renderPlace } from "./scenes/place.js?v=island-modulefix2";
 import { hideClimateSheet, showClimateSheet } from "./ui/climate.js?v=story1";
 import { openStories, resetStories } from "./ui/stories.js?v=story1";
 import { mountStoryHook } from "./ui/story-hook.js?v=story1";
-import { openProfile } from "./ui/profile.js?v=story1";
+import { openProfile } from "./ui/profile.js?v=home1";
+import { openField } from "./ui/field.js?v=home1";
 import { hidePanel } from "./ui/panel.js?v=story1";
 import { renderHut } from "./scenes/hut.js?v=bottles-cozy1";
 import { renderShop } from "./scenes/shop.js?v=tt-sprite1";
@@ -243,6 +244,7 @@ async function enterScene(name, opts) {
         onTapGrass: tapGrass,
         onCareBatch: careBatch,
         onSwitchYard: switchYard,
+        onOpenField: () => openField(),
         onOpenEvents: wrap => openFarmEvents(wrap, data => {
           applySnapshot(data);
           renderHud();
@@ -657,6 +659,17 @@ function tapHut(kind, target, id) {
     showHintSheet({
       title: row.name || "小屋",
       body: row.detail || row.note || "这会儿还不行。",
+    });
+    return;
+  }
+  if (kind === "barn_name" || kind === "mascot_adopt") {
+    const isBarn = kind === "barn_name";
+    showFormSheet({
+      title: row.name || (isBarn ? "起名" : "领养吉祥物"),
+      body: row.detail || row.note || "",
+      fields: [{ id: "name", label: "名字", placeholder: isBarn ? "豆花" : "咕咕", max: isBarn ? 12 : 20, empty: "先写下名字。" }],
+      confirm: row.price || "确认",
+      onConfirm: (vals) => runHut(kind, `${row.target || target || ""}|${vals.name.replace(/\s+/g, "")}`),
     });
     return;
   }

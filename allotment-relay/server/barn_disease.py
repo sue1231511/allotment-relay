@@ -108,7 +108,7 @@ BARN_AILMENTS: dict[str, dict[str, Any]] = {
     },
     "turkey_pox": {
         "name": "火羽疹",
-        "emoji": "\ud83e\udd83",
+        "emoji": "\U0001F983",
         "cost": 16,
         "species": frozenset({"turkey"}),
         "human": "barn_fever",
@@ -117,7 +117,7 @@ BARN_AILMENTS: dict[str, dict[str, Any]] = {
     },
     "goose_gout": {
         "name": "鹅脚肿",
-        "emoji": "\ud83e\udda2",
+        "emoji": "\U0001F9A2",
         "cost": 15,
         "species": frozenset({"goose"}),
         "human": None,
@@ -126,7 +126,7 @@ BARN_AILMENTS: dict[str, dict[str, Any]] = {
     },
     "quail_chill": {
         "name": "鹑寒",
-        "emoji": "\ud83d\udc26",
+        "emoji": "\U0001F426",
         "cost": 11,
         "species": frozenset({"quail"}),
         "human": None,
@@ -135,7 +135,7 @@ BARN_AILMENTS: dict[str, dict[str, Any]] = {
     },
     "alpaca_rash": {
         "name": "驼疹",
-        "emoji": "\ud83e\udd99",
+        "emoji": "\U0001F999",
         "cost": 18,
         "species": frozenset({"alpaca"}),
         "human": "barn_fever",

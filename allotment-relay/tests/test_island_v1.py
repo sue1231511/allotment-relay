@@ -1314,8 +1314,8 @@ def test_island_page_is_modular() -> None:
     assert "warmScenesInBackground" in (ROOT / "server/static/island/boot.js").read_text(encoding="utf-8")
     assert "warmScenesLater" in app
     assert "waitScenePics" in app
-    assert html.count("island.css?v=story1") == 1
-    assert html.count("app.js?v=story1") == 1
+    assert html.count("island.css?v=home1") == 1
+    assert html.count("app.js?v=home1") == 1
     assert html.count("boot.js?v=keynorm1") == 1
     assert 'rel="preload"' in html
     assert "island-map.webp" in html
@@ -1484,7 +1484,7 @@ def test_island_page_is_modular() -> None:
     assert "await waitScenePics" in app
     assert "warmScenesLater" in app
     assert "enterGen" in app
-    assert 'from "./scenes/home.js?v=plot-overview1"' in app
+    assert 'from "./scenes/home.js?v=home1"' in app
     assert 'from "./ui/modal.js?v=mod-unify1"' in app
     modal_src = (ROOT / "server/static/island/ui/modal.js").read_text(encoding="utf-8")
     assert "export function showFormSheet" in modal_src

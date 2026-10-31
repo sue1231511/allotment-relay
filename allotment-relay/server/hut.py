@@ -2615,6 +2615,84 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
                 can=tickets >= 14,
                 target="",
             ))
+        from . import hut_chores as chore_mod
+        from . import hut_domestic as dom_mod
+
+        dom = await dom_mod.assess(conn, s["id"], hut_built=True, hut_level=lvl, has_fridge=has_fridge)
+        if dom["fees"]:
+            fee_bits = "、".join(f"{f['label']}{f['cost']}票{'（已交）' if f['paid'] else ''}" for f in dom["fees"])
+            home_items.append(_sku(
+                sid="domestic-pay",
+                kind="chore_pay",
+                name="交家维",
+                emoji="",
+                note=f"今日：{fee_bits}。" + (f"还差 {dom['due']} 票。" if dom["due"] else "都交了。"),
+                detail="灯油 / 冷藏 / 防潮。不交只降睡觉、保鲜、灶台的效果，不封房。不是岸维，也不是吉祥物 upkeep。",
+                price="交" if dom["due"] else "已交",
+                can=bool(dom["due"]) and tickets >= dom["due"],
+                target="",
+            ))
+        chore_key = await chore_mod.get_chore(conn, s["id"])
+        if chore_key and chore_key in chore_mod.CHORE_META:
+            cm = chore_mod.CHORE_META[chore_key]
+            self_label, self_nrg, _ = cm["self"]
+            npc_cost = cm["npc"][0]
+            for choice, label, note, ok in (
+                ("自修", f"杂务·{cm['name']}·自修", f"{self_label}，{self_nrg} 精力。", energy_now >= self_nrg),
+                ("请匠", f"杂务·{cm['name']}·请匠", f"{npc_cost} 票。", tickets >= npc_cost),
+                ("不管", f"杂务·{cm['name']}·不管", cm["ignore"], True),
+            ):
+                home_items.append(_sku(
+                    sid=f"chore-{choice}",
+                    kind="chore_task",
+                    name=label,
+                    emoji="",
+                    note=note,
+                    detail="三选一，处置后这件杂务就结了。",
+                    price=choice,
+                    can=ok,
+                    target=choice,
+                ))
+        mascot_name = str(s.get("mascot_name") or "").strip()
+        if not mascot_name:
+            for trait, label, note in (
+                ("scout", "领养吉祥物·探路", "取名后领养。"),
+                ("lucky", "领养吉祥物·好运", "取名后领养。"),
+                ("compost", "领养吉祥物·沤肥", "堆肥桶多沤一层。"),
+            ):
+                home_items.append(_sku(
+                    sid=f"mascot-adopt-{trait}", kind="mascot_adopt", name=label, emoji="", note=note,
+                    detail="特质领养后定了。名字 1~20 字。", price="领养", can=True, target=trait,
+                ))
+        else:
+            spirit = int(s.get("mascot_spirit") or 0)
+            home_items.append(_sku(
+                sid="mascot-status", kind="mascot_status", name=f"吉祥物 {mascot_name}",
+                emoji="", note=f"{s.get('mascot_trait') or ''} · 士气 {spirit}/100", detail="看吉祥物。", price="看", can=True,
+            ))
+            home_items.append(_sku(
+                sid="mascot-upkeep", kind="mascot_upkeep", name="喂养吉祥物", emoji="",
+                note="4 票主动喂养，不是每日自动扣，也不是岸维。", detail="花票涨士气。", price="喂养",
+                can=tickets >= 4,
+            ))
+            home_items.append(_sku(
+                sid="mascot-train", kind="mascot_train", name="陪吉祥物练练", emoji="",
+                note="免费，不换特质。", detail="练一练。", price="练", can=True,
+            ))
+            home_items.append(_sku(
+                sid="mascot-feed", kind="mascot_feed", name="给吉祥物喂饲料", emoji="",
+                note="耗宠物饲料。", detail="行囊里要有宠物饲料。", price="喂",
+                can=True,
+            ))
+            if mascot_name == "咕咕咕":
+                home_items.append(_sku(
+                    sid="mascot-diet", kind="mascot_diet", name="带咕咕咕减肥", emoji="",
+                    note="每天一次，它不一定配合。", detail="体重高了才有用。", price="减肥", can=True,
+                ))
+                home_items.append(_sku(
+                    sid="mascot-walk", kind="mascot_walk", name="带咕咕咕散步", emoji="",
+                    note="每天一次。", detail="散步。", price="散步", can=True,
+                ))
         soak_at = 0
         read_day = 0
         cozy_row = await (await conn.execute(
@@ -3174,6 +3252,16 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
                 can=True,
                 target="status",
             ))
+            barn_items.append(_sku(
+                sid=f"name-{slot}", kind="barn_name", name=f"给 #{slot} 起名", emoji="",
+                note="1~12 字。", detail="起个名字，栏里就叫它。", price="起名", can=True, target=str(slot),
+            ))
+            if sick:
+                barn_items.append(_sku(
+                    sid=f"vet-{slot}", kind="vet_treat", name=f"请霍衡看 #{slot}", emoji="",
+                    note=f"病着：{sick}。兽医治牲口，不治人。", detail="价目看「兽医价目」。", price="请兽医",
+                    can=True, target=str(slot),
+                ))
             if not fed:
                 barn_items.append(_sku(
                     sid=f"feed-{slot}",
@@ -3288,6 +3376,34 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
                 can=True,
                 target="status",
             ))
+
+    if built and barn_items:
+        from . import event_choice as choice_mod
+        from . import vet_stall_fumes as vet_mod
+
+        for row in await choice_mod.list_open(conn, s["id"]):
+            if row["key"] in ("barn_fuss", "epidemic"):
+                for opt in row.get("opts") or []:
+                    barn_items.append(_sku(
+                        sid=f"fuss-{row['key']}-{opt}", kind="barn_fuss", name=f"{row.get('via') or row['key']}·{opt}",
+                        emoji="", note="栏里待选的事，选一路。", detail="和管家「barn 闹脾气」同一套。",
+                        price=opt, can=True, target=opt,
+                    ))
+        if await vet_mod.get_hazard(conn, s["id"]):
+            for act in vet_mod.ui_actions(tickets=tickets, stock=stock, energy_now=energy_now):
+                barn_items.append(_sku(
+                    sid=f"vetfume-{act['action']}", kind="vet_fumes", name=f"棚里呛·{act['label']}", emoji="",
+                    note=act.get("hint") or "", detail="兽医治完后棚里呛，处置前不能再请兽医。",
+                    price=act["label"], can=bool(act.get("can")), target=act["action"],
+                ))
+        barn_items.append(_sku(
+            sid="vet-catalog", kind="vet_catalog", name="兽医价目", emoji="", note="霍衡治牲口的价目。",
+            detail="看价目。", price="看", can=True,
+        ))
+        barn_items.append(_sku(
+            sid="vet-status", kind="vet_status", name="兽医看一遍栏里的病", emoji="", note="看栏里谁病了。",
+            detail="只看，不收费。", price="看", can=True,
+        ))
 
     cook_items: list[dict[str, Any]] = []
     cook_ready = 0

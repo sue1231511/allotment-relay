@@ -2,6 +2,7 @@ import { api } from "../api.js?v=mod-unify1";
 import { esc, showFormSheet, toast } from "./modal.js?v=mod-unify1";
 import { setPanel, showPanel } from "./panel.js?v=story1";
 import { applySnapshot } from "../store.js?v=island-modulefix2";
+import { openNeighbors } from "./neighbors.js?v=home1";
 
 /** 「这一号」：点状态木牌打开。文字都是 steward_ops 已有的子命令返回的那一段。 */
 const MENU = [
@@ -15,6 +16,7 @@ const MENU = [
   ["gazette", "本周纪事", "全岛这一周"],
   ["repair", "待办", "要修的、要处置的"],
   ["gifts", "收礼", "收到的礼"],
+  ["neighbors", "邻居与互助", "名册、帮忙、借船、合伙、托养、合约"],
   ["edit", "改档", "座右铭、肖像、岛民名"],
 ];
 
@@ -81,6 +83,7 @@ function showText(title, text, extra = "") {
 
 async function openItem(id) {
   if (id === "edit") return openEdit();
+  if (id === "neighbors") return openNeighbors({ onBack: paintMenu });
   if (id === "choices") return openChoices();
   if (id === "invite") return openInvite();
   const kindOf = { sheet: "sheet", bond: "bond", titles: "titles", collection: "collection", tierlog: "tierlog", gazette: "gazette", repair: "repair", gifts: "gifts" };
