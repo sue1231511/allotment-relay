@@ -2865,3 +2865,178 @@ button.is-tap,
 .island-sheet.is-climate.is-out .island-climate {
   animation: island-pop-out .2s ease-in both;
 }
+
+
+/* —— 通用面板（这一号、潮闻与故事、本处的故事） —— */
+.island-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 8px calc(10px + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
+  background: rgba(20, 28, 34, .52);
+}
+
+.island-panel[hidden] { display: none; }
+
+.island-panel-card {
+  width: min(440px, 100%);
+  max-height: min(82vh, 720px);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  background: rgba(16, 22, 30, .95);
+  border: 1px solid rgba(236, 214, 160, .55);
+  border-radius: 10px;
+  color: #f6f0e4;
+  box-shadow: 0 14px 36px rgba(10, 16, 22, .4);
+  overflow: hidden;
+}
+
+.island-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px 8px;
+  border-bottom: 1px solid rgba(236, 214, 160, .28);
+}
+
+.island-panel-head h2 { margin: 0; font-size: 17px; font-weight: 600; }
+
+.island-panel-x {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid rgba(236, 214, 160, .5);
+  border-radius: 6px;
+  background: rgba(42, 53, 68, .8);
+  color: #f6f0e4;
+}
+
+.island-panel-body {
+  overflow-y: auto;
+  padding: 10px 14px 14px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.island-panel-body .island-fine { color: rgba(246, 240, 228, .72); margin: 4px 0 8px; }
+
+.island-panel-sec {
+  margin: 14px 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  color: rgba(236, 214, 160, .92);
+}
+
+.island-panel-item {
+  margin: 0 0 8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(236, 214, 160, .3);
+  border-radius: 8px;
+  background: rgba(42, 53, 68, .55);
+}
+
+.island-panel-item.is-head { background: rgba(60, 74, 90, .6); }
+.island-panel-item b { display: block; font-size: 15px; }
+.island-panel-item p { margin: 4px 0 6px; line-height: 1.5; }
+.island-panel-item small { display: block; color: rgba(246, 240, 228, .72); line-height: 1.4; margin-top: 2px; }
+.island-panel-text { white-space: pre-wrap; word-break: break-word; }
+.island-panel-item .island-btn { margin-top: 8px; }
+
+.island-panel-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+
+.island-panel-step {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(236, 214, 160, .25);
+}
+.island-panel-step .island-btn { margin-top: 0; flex: none; }
+
+.island-panel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
+
+.island-panel-tile {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 56px;
+  padding: 8px 10px;
+  border: 1px solid rgba(236, 214, 160, .5);
+  border-radius: 8px;
+  background: rgba(16, 22, 30, .78);
+  color: #f6f0e4;
+  font: inherit;
+  text-align: left;
+}
+.island-panel-tile b { font-size: 14px; }
+.island-panel-tile small { font-size: 11px; color: rgba(246, 240, 228, .72); }
+
+/* 面板打开时：表单、提示框、吐司要盖在面板上面；底下的浮动钮收起。 */
+body.is-panel-open .island-modal { z-index: 60; }
+body.is-panel-open .island-toast { z-index: 70; }
+body.is-panel-open .island-float-chip,
+body.is-panel-open .island-story-hook { visibility: hidden; }
+
+/* 点状态木牌进「这一号」 */
+.island-float-chip.is-stats[role="button"],
+.island-float-chip.is-status[role="button"] { pointer-events: auto; cursor: pointer; }
+
+/* 走到对应地点冒出来的故事小牌 */
+.island-story-hook {
+  appearance: none;
+  position: fixed;
+  z-index: 11;
+  top: calc(70px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: min(64vw, 280px);
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(236, 214, 160, .7);
+  border-radius: 17px;
+  background: rgba(16, 22, 30, .86);
+  color: #f6f0e4;
+  font: inherit;
+  font-size: 13px;
+  box-shadow: 0 6px 16px rgba(10, 16, 22, .3);
+}
+.island-story-hook[hidden] { display: none; }
+.island-story-hook span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 潮汐公告木牌里的「潮闻与故事」入口 */
+.island-climate-story {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 42px;
+  margin-top: 8px;
+  border: 1px solid rgba(236, 214, 160, .7);
+  border-radius: 8px;
+  background: rgba(16, 22, 30, .82);
+  color: #f6f0e4;
+  font: inherit;
+  font-size: 14px;
+}
+
+.island-panel-where { flex: none; max-width: 40%; text-align: right; color: rgba(236, 214, 160, .9) !important; }
+.island-panel-item p { font-size: 14px; }
