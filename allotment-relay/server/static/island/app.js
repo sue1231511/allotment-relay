@@ -25,7 +25,11 @@ import { renderHome, renderYards, syncHomeChrome } from "./scenes/home.js?v=plot
 import { renderShore, renderShoreYard, renderPortHub, renderBeachHub } from "./scenes/shore.js?v=island-modulefix2";
 import { renderPlaza } from "./scenes/plaza.js?v=island-modulefix2";
 import { renderPlace } from "./scenes/place.js?v=island-modulefix2";
-import { hideClimateSheet, showClimateSheet } from "./ui/climate.js?v=island-modulefix2";
+import { hideClimateSheet, showClimateSheet } from "./ui/climate.js?v=story1";
+import { openStories, resetStories } from "./ui/stories.js?v=story1";
+import { mountStoryHook } from "./ui/story-hook.js?v=story1";
+import { openProfile } from "./ui/profile.js?v=story1";
+import { hidePanel } from "./ui/panel.js?v=story1";
 import { renderHut } from "./scenes/hut.js?v=bottles-cozy1";
 import { renderShop } from "./scenes/shop.js?v=tt-sprite1";
 import { renderLili } from "./scenes/lili.js?v=island-modulefix2";
@@ -123,6 +127,9 @@ function showPlay() {
 
 function showGate() {
   closeFarmEvents();
+  hidePanel();
+  resetStories();
+  mountStoryHook("map", { enrolled: false });
   resetDates();
   resetHearts();
   state.florist = null;
@@ -225,6 +232,7 @@ async function enterScene(name, opts) {
   setBackChip(name !== "map", () => enterScene(state.backTo || "map"), {
     showStats: name !== "yards" && name !== "undertide",
   });
+  mountStoryHook(name);
   try {
     if (name === "yards") {
       stopWorkshopTick();
@@ -547,7 +555,13 @@ async function openClimateSheet() {
     /* 木牌用上次读到的海况 */
   }
   state.tab = "climate";
-  showClimateSheet(sheet, { onClose: closeClimate });
+  showClimateSheet(sheet, {
+    onClose: closeClimate,
+    onStories: () => {
+      closeClimate();
+      openStories();
+    },
+  });
 }
 
 function paintHut(listTop = 0) {
@@ -3370,8 +3384,30 @@ function bindDock() {
   }
 }
 
+/** 点状态木牌（左：影信饱食…；右：工分票等级岛缘）打开「这一号」。 */
+function bindProfileChips() {
+  ["island-stats", "island-status"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.setAttribute("role", "button");
+    el.setAttribute("tabindex", "0");
+    const open = () => openProfile({ onChange: renderHud });
+    el.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      open();
+    });
+    el.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter" || ev.key === " ") {
+        ev.preventDefault();
+        open();
+      }
+    });
+  });
+}
+
 async function start() {
   bindDock();
+  bindProfileChips();
   window.__islandApp = true;
   window.__islandStart = startFromSnapshot;
   if (window.__islandPending) {

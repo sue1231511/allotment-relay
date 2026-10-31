@@ -42,12 +42,23 @@ def _auth(key: str, extra: dict | None = None) -> dict:
 import pytest
 
 
-@pytest.fixture(autouse=True)
-def _no_anvil_quench(pin_random):
-    """取件时有 17% 概率掷淬火险，整条流程会被拦在「件还烫着」；这里测接口，不靠运气（淬火另有专测）。"""
-    from server import workshop_anvil_quench
+# 各地点的「随机小险」（水槽堵、麦啸、淬火…）有概率在动作后自己冒出来，会把整条流程拦在半路。
+# 这里测接口，不靠运气；每种险的处置各有专测（test_expansion_batch*）。
+_HAZARD_MODULES = (
+    "bar_sink_flood", "buxing_beacon_gust", "clinic_queue_jam", "cloth_thread_snag", "eatery_smoke_panic",
+    "florist_pollen_sniff", "hui_clerk_rush", "jingshan_crate_loose", "lili_cart_tilt", "market_stall_gust",
+    "marriage_desk_jam", "musong_sendoff_fog", "quarry_collapse", "shaonian_omen_gust", "star_mic_feedback",
+    "theater_curtain_jam", "theater_script_jam", "vet_stall_fumes", "wall_plank_loose",
+    "workshop_anvil_quench", "workshop_salvage_snag",
+)
 
-    pin_random(workshop_anvil_quench)
+
+@pytest.fixture(autouse=True)
+def _no_spontaneous_hazards(pin_random):
+    import importlib
+
+    for name in _HAZARD_MODULES:
+        pin_random(importlib.import_module(f"server.{name}"))
 
 
 def test_island_v1_api() -> None:
@@ -1300,8 +1311,8 @@ def test_island_page_is_modular() -> None:
     assert "warmScenesInBackground" in (ROOT / "server/static/island/boot.js").read_text(encoding="utf-8")
     assert "warmScenesLater" in app
     assert "waitScenePics" in app
-    assert html.count("island.css?v=plot-overview2") == 1
-    assert html.count("app.js?v=undertide-desks2") == 1
+    assert html.count("island.css?v=story1") == 1
+    assert html.count("app.js?v=story1") == 1
     assert html.count("boot.js?v=keynorm1") == 1
     assert 'rel="preload"' in html
     assert "island-map.webp" in html

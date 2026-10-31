@@ -1,6 +1,7 @@
 import { state } from "../store.js?v=island-modulefix2";
 import { esc } from "./modal.js?v=mod-unify1";
 import { popIn, popOut } from "./pop.js?v=island-modulefix2";
+import { BOOK_SVG } from "./stories.js?v=story1";
 
 const WEATHER_CODE = { 晴朗: "clear", 海雾: "misty", 阵风: "gale" };
 const TIDE_CODE = { 退潮: "ebb", 平潮: "slack", 涨潮: "flood" };
@@ -52,11 +53,12 @@ export function climatePanelHtml(c, { closeable = false } = {}) {
       <b class="island-climate-val" data-k="season">${esc(c.season)}</b>
     </section>
     ${gazHtml}
+    ${closeable ? `<button type="button" class="island-climate-story" data-open-stories>${BOOK_SVG}<span>潮闻与故事</span></button>` : ""}
     </div>
   `;
 }
 
-export function showClimateSheet(sheet, { onClose } = {}) {
+export function showClimateSheet(sheet, { onClose, onStories } = {}) {
   const c = climateOf();
   const already = sheet.classList.contains("is-climate") && !sheet.hidden;
   sheet.classList.add("is-climate");
@@ -68,6 +70,12 @@ export function showClimateSheet(sheet, { onClose } = {}) {
     btn.addEventListener("click", (ev) => {
       ev.stopPropagation();
       hideClimateSheet(sheet, onClose);
+    });
+  });
+  sheet.querySelectorAll("[data-open-stories]").forEach((btn) => {
+    btn.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      if (typeof onStories === "function") onStories();
     });
   });
   sheet.addEventListener("click", (ev) => {
