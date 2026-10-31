@@ -15,6 +15,7 @@ TITLES = {
     "remove": "脱下了",
     "visit": "见了漾漾",
     "thread_snag": "坊险处置",
+    "commission": "接下委托",
 }
 
 
@@ -34,11 +35,29 @@ def _command(kind: str, target: str) -> str:
         return "脱"
     if kind == "visit":
         return "漾漾"
+    if kind == "commission":
+        bits = name.split()
+        if not 2 <= len(bits) <= 3:
+            raise ApiError("BAD_REQUEST", "先选版型、颜色，纹样可不选。")
+        if cloth.resolve_cut(bits[0]) is None or cloth.resolve_color(bits[1]) is None:
+            raise ApiError("BAD_REQUEST", "版型或颜色不对，先在坊里点图鉴里有的。")
+        if len(bits) == 3 and cloth.resolve_motif(bits[2]) is None:
+            raise ApiError("BAD_REQUEST", "纹样不对，先在坊里点图鉴里有的。")
+        return "委托 " + " ".join(bits)
     if kind == "thread_snag":
         if not name:
             raise ApiError("BAD_REQUEST", "先选剪线、润梭或硬取。")
         return f"坊险 {name}"
     raise ApiError("BAD_REQUEST", "衣泊坊里没有这一下。")
+
+
+def _catalog() -> dict[str, Any]:
+    """委托能选的版型、颜色、纹样（名字和图鉴同一份；衣料不选，坊里按手里有的自动挑）。"""
+    return {
+        "cuts": [{"name": meta["name"]} for meta in cloth.CUTS.values()],
+        "colors": [{"name": meta["name"]} for meta in cloth.COLORS.values()],
+        "motifs": [{"name": meta["name"]} for meta in cloth.MOTIFS.values()],
+    }
 
 
 async def snapshot(api_key: str, key_id: int) -> dict[str, Any]:
@@ -50,7 +69,7 @@ async def snapshot(api_key: str, key_id: int) -> dict[str, Any]:
         shelf = await cloth.player_view(conn, s)
         await conn.commit()
     snap = await farm_service.snapshot(api_key, s["id"])
-    snap["atelier"] = shelf
+    snap["atelier"] = {**shelf, "catalog": _catalog()}
     return snap
 
 

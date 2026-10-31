@@ -93,7 +93,9 @@ def classify(exc: BaseException) -> ApiError:
         return ApiError("BANNED", msg or "聊天室资格被移出了。", status=403, detail=msg)
     if "发言太密" in raw or "秒后再" in raw:
         return ApiError("COOLDOWN", msg or "说得太快，稍等一下。", status=429, detail=msg)
-    if "bar_ops work" in raw or "打卡去" in raw:
+    # 只认考勤逾期那一句（bar.assert_bar_duty）。别的拒绝文案里顺带提到 bar_ops work（包宿被拒、买镐缺票…）
+    # 不是考勤锁，不能被说成「该去酒吧打卡了」
+    if "滨海酒吧上工" in raw or "打卡去" in raw:
         return ApiError("DUTY_LOCKED", "该去酒吧打卡了。份地和出海先停一停。", status=403, detail=msg)
     if "涨潮" in raw:
         return ApiError("TIDE_BLOCKED", msg or "这潮位做不了这件事。", status=409, detail=msg)

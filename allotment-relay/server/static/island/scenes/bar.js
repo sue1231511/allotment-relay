@@ -132,6 +132,13 @@ function tonightMarkup(shop) {
       Boolean(t.can_cheer),
       t.can_cheer ? "is-ready" : "",
     ),
+    sku("tonight", "", { emoji: "", name: "今晚的场子" }, "驻唱、特调、活动、小橘开不开嗓。", "看", true),
+    sku("staff", "", { emoji: "", name: "今晚员工" }, "看谁当班。", "看", true),
+    sku("song", "", { emoji: "", name: "听驻唱" }, "驻唱的歌单。", "听", true),
+    sku("request_song", "", { emoji: "", name: "点歌" }, "写一个歌名。", "点", true),
+    sku("tip", "", { emoji: "", name: "给员工小费" }, "给当班员工打赏。", "给", true),
+    sku("chat", "", { emoji: "", name: "跟荔栀唠" }, "聊两句，不是哄她。", "唠", true),
+    sku("lodge", "", { emoji: "", name: "包宿" }, "走投无路才收。", "看", true),
   ];
   return rows.join("");
 }
