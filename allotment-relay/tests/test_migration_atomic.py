@@ -258,3 +258,57 @@ async def _legacy_flags() -> None:
         await conn.commit()
     await db.init_db()
     assert await counts() == ran
+
+
+# ── 启动日志：跳过、成功、失败三种结果都能从日志里认出来 ──────────────────────────
+
+def test_startup_logs_show_skip_success_and_failure_for_each_migration(caplog, monkeypatch) -> None:
+    asyncio.run(_startup_logs(caplog, monkeypatch))
+
+
+async def _startup_logs(caplog, monkeypatch) -> None:
+    from server import item_traits
+
+    db = await _boot(Path(tempfile.mkdtemp(prefix="mig-logs-")))
+    sid_legacy = await _legacy(db)          # 清掉三个标记、造好老存货
+    names = {
+        "实付批次补账": "paid_batch_backfill_v1",
+        "幽灵批次对齐": "trait_ghost_heal_v1",
+        "老存货补变质起点": FLAG,
+    }
+    # 线上状态：前两个在 #340 时已跑过（旧标记在），第三个是新的
+    async with db.connect() as conn:
+        for flag in ("paid_batch_backfill_v1", "trait_ghost_heal_v1"):
+            await conn.execute(
+                "INSERT INTO world_flags (flag_key, applied_at, detail) VALUES (?, 1, 'old')", (flag,))
+        await conn.commit()
+
+    def lines() -> list[str]:
+        return [r.getMessage() for r in caplog.records if "一次性迁移" in r.getMessage()]
+
+    with caplog.at_level(logging.INFO):
+        await db.init_db()
+    first = lines()
+    for name in ("实付批次补账", "幽灵批次对齐"):
+        assert any(f"迁移={name}" in m and f"标记={names[name]}" in m and "已完成，跳过" in m for m in first), (name, first)
+    assert any("一次性迁移完成" in m and "迁移=老存货补变质起点" in m and f"标记={FLAG}" in m and "处理=" in m for m in first), first
+
+    caplog.clear()
+    with caplog.at_level(logging.INFO):
+        await db.init_db()
+    second = lines()
+    for name, flag in names.items():
+        assert any(f"迁移={name}" in m and f"标记={flag}" in m and "已完成，跳过" in m for m in second), (name, second)
+
+    # 失败：下一个新标记的迁移在 ERROR 级别带名字、标记名、已处理条数
+    async with db.connect() as conn:
+        await conn.execute("DELETE FROM world_flags WHERE flag_key=?", (FLAG,))
+        await db.add_item(conn, sid_legacy, "fish_herring", 2)      # 再来一点没有变质记录的货，迁移才有东西可补
+        await conn.commit()
+    monkeypatch.setattr(item_traits, "_spoil_seconds", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("坏了")))
+    caplog.clear()
+    with caplog.at_level(logging.INFO):
+        await db.init_db()
+    fail = [r for r in caplog.records if "一次性迁移失败" in r.getMessage()]
+    assert fail and fail[0].levelno == logging.ERROR and "迁移=老存货补变质起点" in fail[0].getMessage()
+    assert f"标记={FLAG}" in fail[0].getMessage() and "已处理=" in fail[0].getMessage()

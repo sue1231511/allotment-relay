@@ -289,7 +289,10 @@ async def test_status_explains_midday_holdings_change() -> None:
     db = await _boot(tmp)
     from server import mcp_dispatch
 
+    from server import disaster
+
     real_now = db.now
+    real_pick_climate = disaster.pick_season_climate
     db.now = lambda: ENROLL_TUE
     kid, sid = await _enroll(db, "midday@example.com", "午后升屋")
     # 温室30+畜栏10+在栏4×10+小馆12+第二矿坑10+切波艇15 = 117；再加小屋会变
@@ -323,6 +326,10 @@ async def test_status_explains_midday_holdings_change() -> None:
         await conn.commit()
 
     db.now = lambda: NEXT_DAY
+    # 固定每周季节气候的随机结果：测试日期是固定的夏天，第一次 require_steward（下面的 潮生会 维）
+    # 会随机掷一周气候，掷到干旱/热浪时没喂的牲口会按概率渴死，在栏数少一只、应缴就不是 137
+    # （原来时好时坏的根源）。这里只把气候钉成雷暴（不缺水），游戏逻辑一行没动；finally 里还原。
+    disaster.pick_season_climate = lambda season=None: "thunderstorm"
     try:
         async with db.connect() as conn:
             await conn.execute(
@@ -348,6 +355,7 @@ async def test_status_explains_midday_holdings_change() -> None:
         assert arrears2 == 0, arrears2
     finally:
         db.now = real_now
+        disaster.pick_season_climate = real_pick_climate
 
 
 def main() -> None:
