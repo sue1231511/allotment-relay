@@ -94,10 +94,10 @@ def fish_catch_payout(stats: dict[str, dict[str, Any]], *, mode: str) -> tuple[f
         mult = 1.0 + bait["catch"] * 0.65 + rod["catch"] * 1.05
         bonus = bait["tier"] + rod["tier"] * 2
         return mult, bonus
+    # 网只给固定的「网到+N票」（N=网的档位），不按鱼价乘系数；渔具说明（_format_tier）一直是这么写的。
+    # 鱼价增幅只属于竿 + 饵（cast）。
     net = stats["net"]
-    mult = 1.0 + net["catch"] * 1.25 + net["tier"] * 0.05
-    bonus = net["tier"] * 2
-    return mult, bonus
+    return 1.0, int(net["tier"])
 
 
 def _format_tier(kind: str, tier: int) -> str:

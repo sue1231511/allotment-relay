@@ -1571,7 +1571,7 @@ KITCHEN_DISHES = {
     "fog_mushroom_soup": {
         "name": "雾菇汤", "emoji": "🍄",
         "ings": ["crop_fog_mushroom", "wild_mint", "crop_garlic"],
-        "base_sell": 72, "energy": 26, "tags": ["special"],
+        "base_sell": 64, "energy": 26, "tags": ["special"],
     },
     "lantern_sashimi": {
         "name": "灯笼鱼刺身", "emoji": "🏮",

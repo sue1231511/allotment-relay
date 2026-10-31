@@ -43,12 +43,15 @@ def test_named_dishes_obey_premium_cap_at_every_star() -> None:
         assert catalog.dish_base_sell(key) <= pricing.P_MAX * cost + 1e-9
 
 
-def test_brine_kelp_pot_is_the_example_that_got_capped() -> None:
+def test_brine_kelp_pot_is_no_longer_capped_and_black_salt_fish_still_is() -> None:
     from server import catalog
 
-    # 材料 44，改版前 5★ 卖 119（2.7 倍），现在封顶 88
-    assert catalog.dish_sell_price("brine_kelp_pot", 5) == 88
-    assert catalog.dish_sell_price("brine_kelp_pot", 3) == 70   # 3★ 本来就没超，不变
+    # 卤浸海藻锅原来的定价 70（材料 44 的 1.59 倍），5★ 119 被 2.0× 封顶压到 88。
+    # 系统回收只小赚（3★ ≈ 材料 ×1.1），定价改回 48 以后 5★ 是 81，不再碰顶。
+    assert catalog.dish_sell_price("brine_kelp_pot", 3) == 48
+    assert catalog.dish_sell_price("brine_kelp_pot", 5) == 81 <= catalog.dish_cap("brine_kelp_pot")
+    # 现在还会被封顶的例子：黑盐炖鱼 5★ 原价 149，封到 148
+    assert catalog.dish_sell_price("black_salt_fish", 5) == catalog.dish_cap("black_salt_fish") == 148
 
 
 def _worst_case_random(monkeypatch):
