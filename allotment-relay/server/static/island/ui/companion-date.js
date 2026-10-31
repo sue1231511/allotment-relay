@@ -1,5 +1,5 @@
-import { api } from "../api.js?v=date-forget1";
-import { esc, toast } from "./modal.js?v=island-modulefix2";
+import { api } from "../api.js?v=mod-unify1";
+import { esc, toast } from "./modal.js?v=mod-unify1";
 
 let navigate, scene = "map", rows = [], timer = 0, loading = false, openId = 0, busy = false;
 let chip, panel, painted = "";

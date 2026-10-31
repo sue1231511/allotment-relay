@@ -1,5 +1,5 @@
 import { state } from "../store.js?v=island-modulefix2";
-import { esc } from "./modal.js?v=island-modulefix2";
+import { esc } from "./modal.js?v=mod-unify1";
 import { popIn, popOut } from "./pop.js?v=island-modulefix2";
 
 const WEATHER_CODE = { 晴朗: "clear", 海雾: "misty", 阵风: "gale" };

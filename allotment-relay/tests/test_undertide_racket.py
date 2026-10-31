@@ -8,8 +8,19 @@ import sys
 import tempfile
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+
+
+@pytest.fixture(autouse=True)
+def _racket_always_today(monkeypatch):
+    """阿标每天出不出手由「日期×号」定的种子决定，有的日子这个号当天不出手，先 scan 一下就把当天记成「已跳过」。
+    这里测的是出手之后的流程，所以让每天都出手，结果不再随日历变。"""
+    from server import undertide_config as utcfg
+
+    monkeypatch.setattr(utcfg, "UT_RACKET_CHANCE", 1.0)
 
 
 async def _boot(tmp: Path):

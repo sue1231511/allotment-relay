@@ -1,5 +1,5 @@
 import { ripeYard, state, thirstyYard, yardPlots } from "../store.js?v=island-modulefix2";
-import { esc } from "./modal.js?v=island-modulefix2";
+import { esc } from "./modal.js?v=mod-unify1";
 
 export function renderQuest(sheet) {
   const me = state.me || {};

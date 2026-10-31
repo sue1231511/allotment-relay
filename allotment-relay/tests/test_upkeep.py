@@ -9,8 +9,18 @@ import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+
+
+@pytest.fixture(autouse=True)
+def _no_barn_escape(monkeypatch):
+    """畜栏牲口每次状态刷新有概率受惊跑掉，跑掉的不计维；本文件数的是固定在栏头数，不靠运气。"""
+    from server import barn_escape
+
+    monkeypatch.setattr(barn_escape.random, "random", lambda: 1.0)
 
 CST = timezone(timedelta(hours=8))
 

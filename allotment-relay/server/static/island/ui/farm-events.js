@@ -1,5 +1,5 @@
-import { api, loadKey } from "../api.js?v=farm-events2";
-import { esc } from "./modal.js?v=island-modulefix2";
+import { api, loadKey } from "../api.js?v=mod-unify1";
+import { esc } from "./modal.js?v=mod-unify1";
 
 let panel = null;
 let epoch = 0;
