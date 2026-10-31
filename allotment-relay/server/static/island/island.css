@@ -3091,3 +3091,15 @@ body.is-panel-open .island-story-hook { visibility: hidden; }
 .island-panel-person.is-home { border-color: rgba(143, 200, 160, .8); }
 .island-panel-person b { font-size: 15px; }
 .island-panel-person small { font-size: 11px; color: rgba(246, 240, 228, .72); }
+
+/* 手绘 SVG 图标：服务端文案里的 emoji 落进页面时换成它（ui/emoji-svg.js） */
+.island-ico {
+  display: inline-block;
+  width: 1.15em;
+  height: 1.15em;
+  margin: 0 .08em;
+  vertical-align: -.2em;
+  font-style: normal;
+  line-height: 1;
+}
+.island-ico svg { display: block; width: 100%; height: 100%; }
