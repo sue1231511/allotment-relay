@@ -13,6 +13,11 @@
 | `scenes/undertide-bounty.png` | 恩怨墙具体场景（已就位；从井下总览点恩怨墙进入，能看墙、接单、挂单，返回井下地图） | 1024×1536 |
 | `scenes/undertide-medic.png` | 晏安医务间具体场景（已就位；从井下总览点晏安医务间进入，能治井下伤、看体质药，返回井下地图） | 1024×1536 |
 | `scenes/undertide-casino.png` | 死人赌场具体场景（已就位；从井下总览点死人赌场进入，Silas 会出现在场景左侧，可玩骰/灯/抽牌） | 1024×1536 |
+| `scenes/undertide-well.png` | 井口具体场景（**待出图**，现为占位框；从井下总览点「井下入口」进入，能看井、下井、进入潮下、看档案和指南、清井；没下过井时深坑、酒馆会引到这里） | 1024×1536 |
+| `scenes/undertide-pit.png` | 深坑具体场景（**待出图**，现为占位框；点深坑进入，没下井先引去井口；下井后能选斗士、选打法下坑，看斗士榜和井壁胜场榜） | 1024×1536 |
+| `scenes/undertide-tavern.png` | 凯斯酒馆具体场景（**待出图**，现为占位框；点酒馆进入，能看黑板、跟荔栀说话、耳语人买消息、查雇主、看动态、点红宝石、卖血） | 1024×1536 |
+| `scenes/undertide-jail.png` | 地下监牢具体场景（**待出图**，现为占位框；点监牢进入，不用下井也能进，能看牢房、赎身、服刑、苦力） | 1024×1536 |
+| `scenes/undertide-kroom.png` | K 室具体场景（**待出图**，现为占位框；点 K 室进入，不用下井也能进，能看、结算、价值回收） | 1024×1536 |
 | `sprites/cat-bank-president.png` | 恶猫钱庄行长立绘（透明底；钱庄场景使用） | 1024×1536 |
 | `sprites/silas.png` | Silas 荷官立绘（透明底；死人赌场场景使用） | 1024×1536 |
 
@@ -85,3 +90,31 @@
 立绘完整提示词：
 
 > Use case: stylized-concept. Asset type: one transparent PNG NPC sprite for a cozy seaside mobile life simulation. Subject: 默默, an unmistakably adult florist around 30, gentle and androgynous appearance, dark brown hair loosely tied back, cream linen shirt with rolled sleeves and a muted green florist apron, holding a small wrapped bouquet with relaxed natural hands, welcoming reserved smile, looking toward the viewer. Style: refined hand-drawn watercolor storybook game character, fine warm outlines, delicate watercolor paper shading, compatible with soft coastal village illustrations. Framing: head to waist only, full head and both shoulders visible with padding, upper body centered, intended to overlay at the left of a shop counter; not a full-body figure, no legs, no chibi proportions. GENUINELY TRANSPARENT alpha background with clean edges, no checkerboard illustration, no environment, no text, no watermark, no props outside the held bouquet.
+
+## 井下五处（2026-10-31，待出图）
+
+下面五张图在 `/island` 里现在显示「插图位」框，功能已接好。生成后放 `scenes/{id}.png`（1024×1536，竖屏，无人物），再把 `scenes/` 下对应项在 `ui/art.js` 的 `SLOTS` 里保持 `noWebp: true`（出了同名 WebP 再去掉）。统一画风：和已就位的井下总览、后室铺、钱庄、赌场一致——藤蔓爬满的石洞、暖黄提灯、青绿水光、手绘水彩加水粉的绘本质感。底部四分之一会被对话框盖住，别把关键物件放在最下面；左侧留一块空地，以后要加立绘能站。
+
+公共后缀（每条提示词都要带）：
+
+> No people, no characters, no lettering, no logo, no UI, no watermark. Complete frame, no blank margins.
+
+井口完整提示词：
+
+> Use case: stylized-concept. Asset type: portrait background for a cozy Chinese coastal life-simulation mobile game, underground area. Generate ONE background image, 2:3 portrait composition, warm finely detailed watercolor and gouache storybook illustration with delicate hand-drawn texture, overgrown stone cave lit by hanging brass lanterns, teal water glints and green vines, matching an earlier map of the same cave. Subject: the top of a deep old well shaft seen from just inside the cave entrance: a round mossy stone well rim in the middle foreground with a wooden ladder and a rope disappearing down into a faintly glowing teal darkness, a half-boarded wooden cover leaning at its side, a few lanterns hanging from rope above, pale daylight and falling vines at the very top edge, small pool of shallow water at the base. Quiet, slightly uneasy mood. The lower quarter stays calm and uncluttered for a dialogue panel; an open flat stone floor at the left side.
+
+深坑完整提示词：
+
+> Use case: stylized-concept. Asset type: portrait background for a cozy Chinese coastal life-simulation mobile game, underground area. Generate ONE background image, 2:3 portrait composition, warm finely detailed watercolor and gouache storybook illustration with delicate hand-drawn texture, vine-covered stone cave lit by brass lanterns, matching an earlier map of the same cave. Subject: a circular underground fighting pit seen slightly from above: round sand-and-stone arena floor with a faded compass-like mosaic in the center, curved stone spectator steps rising in rings, torn red-coral banners and rope barriers, a weapon rack and a bucket of water at the edge, lanterns on posts, moss and small flowers softening the harshness. Tense but storybook-gentle, no blood, no injuries. Keep the lower quarter calm for a dialogue panel; open floor at the left side.
+
+凯斯酒馆完整提示词：
+
+> Use case: stylized-concept. Asset type: portrait background for a cozy Chinese coastal life-simulation mobile game, underground area. Generate ONE background image, 2:3 portrait composition, warm finely detailed watercolor and gouache storybook illustration with delicate hand-drawn texture, vine-covered stone cave lit by brass lanterns, matching an earlier map of the same cave. Subject: the interior of a round underground tavern, no people: a curved wooden bar counter with a row of round stools, shelves of bottles and glass jars behind it, a teal scalloped awning over the counter, a few small round tables with candles, a chalkboard on the wall covered in scribbled but unreadable marks, a dim corner table with an empty chair, warm amber light with the lowest, brightest glow in the middle. Lived-in and a little shady, not luxurious. The lower quarter stays calm for a dialogue panel; open floor at the left side.
+
+地下监牢完整提示词：
+
+> Use case: stylized-concept. Asset type: portrait background for a cozy Chinese coastal life-simulation mobile game, underground area. Generate ONE background image, 2:3 portrait composition, warm finely detailed watercolor and gouache storybook illustration with delicate hand-drawn texture, vine-covered stone cave lit by brass lanterns, matching an earlier map of the same cave. Subject: a small underground jail inside a round cave chamber: a curved wrought-iron cage fence with an open door in the front, a plain wooden bench and a bucket inside, a heavy wooden work table with a rope and a pile of sacks outside the cage, a hanging lantern, a ring of keys on a nail, damp stone floor with a puddle reflecting lantern light, a little moss. Austere but gentle, storybook not grim, no chains on anyone. The lower quarter stays calm for a dialogue panel; open floor at the left side.
+
+K 室完整提示词：
+
+> Use case: stylized-concept. Asset type: portrait background for a cozy Chinese coastal life-simulation mobile game, underground area. Generate ONE background image, 2:3 portrait composition, warm finely detailed watercolor and gouache storybook illustration with delicate hand-drawn texture, vine-covered stone cave lit by brass lanterns, matching an earlier map of the same cave. Subject: the front of a private office door at the end of an underground passage: a large round arched wooden door with a brass ship-wheel style handle at the center, teal silk drapes tied back on both sides, brass lamp posts topped with glowing lanterns, a worn rug with a seashell motif leading to the door, small pools of water and starfish at the edges, a faint warm light leaking from under the door. Quiet, expensive, slightly intimidating. The lower quarter stays calm for a dialogue panel; open floor at the left side.

@@ -510,11 +510,11 @@ async def bar_act(request: Request, body: BarActBody):
 
 
 @router.get("/undertide")
-async def undertide_status(request: Request):
+async def undertide_status(request: Request, desk: str = ""):
     try:
         key = extract_api_key(request)
         row, _ = await require_enrolled(key)
-        return await undertide_service.snapshot(key, int(row["id"]))
+        return await undertide_service.snapshot(key, int(row["id"]), desk)
     except ApiError as exc:
         return _error(exc)
 

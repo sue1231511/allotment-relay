@@ -15,11 +15,11 @@ sys.path.insert(0, str(ROOT))
 
 
 @pytest.fixture(autouse=True)
-def _no_mic_feedback(monkeypatch):
+def _no_mic_feedback(pin_random):
     """专场围观有 16% 概率麦啸（麦险处置另见 test_expansion_batch24）；这里测分账和懒结算，不靠运气。"""
     from server import star_mic_feedback
 
-    monkeypatch.setattr(star_mic_feedback.random, "random", lambda: 1.0)  # 只在本用例内生效，结束自动还原
+    pin_random(star_mic_feedback)
 
 
 async def _boot(tmp: Path):
