@@ -39,6 +39,17 @@ def _auth(key: str, extra: dict | None = None) -> dict:
     return headers
 
 
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _no_anvil_quench(pin_random):
+    """取件时有 17% 概率掷淬火险，整条流程会被拦在「件还烫着」；这里测接口，不靠运气（淬火另有专测）。"""
+    from server import workshop_anvil_quench
+
+    pin_random(workshop_anvil_quench)
+
+
 def test_island_v1_api() -> None:
     asyncio.run(_test_island_v1_api())
     test_island_page_is_modular()
