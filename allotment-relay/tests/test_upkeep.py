@@ -16,7 +16,6 @@ sys.path.insert(0, str(ROOT))
 
 
 @pytest.fixture(autouse=True)
-<<<<<<< HEAD
 def _no_barn_escape(pin_random):
     """辅助钉：畜栏牲口有概率受惊跑掉，跑掉的不计维，本文件数的是固定在栏头数，所以把惊逃这个随机钉住。
     注意：test_status_explains_midday_holdings_change 时好时坏的真正根因不是惊逃，而是干旱/热浪周
