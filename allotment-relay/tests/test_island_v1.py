@@ -39,7 +39,30 @@ def _auth(key: str, extra: dict | None = None) -> dict:
     return headers
 
 
-def test_island_v1_api() -> None:
+def _pin_random_hazards(setattr_fn) -> None:
+    """这条测试只验证 /api/v1 的接口形状和主链路，不验证「随机小插曲」。动作之后随机掷出来的事件
+    （工坊淬火 17%、酒吧水槽堵塞 16%、通用事件钩子、田间事件鸟啄/蛞蝓、蚊群、斑鸠盯梢等）会残留并拦住下一步，
+    连着几十步累计下来原来约一半概率撞上一次，测试里「先清场」也清不干净（清完下一次查看又会重新掷）。
+    这里把这几个随机触发点钉成「不触发」，游戏逻辑没动；它们各自的玩法有专门的测试。"""
+    from server import bar_sink_flood, events, farming, workshop_anvil_quench
+
+    async def _nothing(*args, **kwargs):
+        return None
+
+    async def _false(*args, **kwargs):
+        return False
+
+    setattr_fn(workshop_anvil_quench, "maybe_when_ready", _nothing)
+    setattr_fn(bar_sink_flood, "maybe_after_work", _nothing)
+    setattr_fn(events, "roll_after_action", _nothing)
+    setattr_fn(events, "gnat_swarm_revert_tend", _false)      # 蚊群把刚打理的地打回去
+    setattr_fn(farming, "roll_farm_event", _nothing)           # 鸟啄/蛞蝓等会把 tended 清掉的田间事件
+    setattr_fn(farming, "roll_tree_event", _nothing)
+    setattr_fn(farming, "maybe_gugu_dove_stalk", _nothing)
+
+
+def test_island_v1_api(monkeypatch) -> None:
+    _pin_random_hazards(lambda mod, name, fn: monkeypatch.setattr(mod, name, fn))
     asyncio.run(_test_island_v1_api())
     test_island_page_is_modular()
 
@@ -265,8 +288,10 @@ async def _test_island_v1_api() -> None:
     bag = took.json()["me"]["stock"]
     assert any(it.get("item") == "craft_copper_nails" for it in bag), bag
 
+    # 买镐要 80 票，而前面买种子、买醒酒药之后账上只剩 ~82 票。诊所凌晨（UTC 0~6 点）每样加 5 票
+    # （clinic.CLINIC_NIGHT_SURCHARGE，是写进说明的设计），所以这一步原来随真实钟点时好时坏：
+    # 白天够、凌晨 77 票就买不起。这里补足票，测试不再依赖钟点；游戏逻辑没动。
     async with db.connect() as conn:
-        # 诊所药价随时段浮动（九折 / 凌晨加价），前面几笔花销不固定；买镐要 80 票，这里补足不靠运气
         await conn.execute("UPDATE stewards SET tickets=tickets+80 WHERE id=?", (sid,))
         await conn.commit()
     cliff0 = client.get("/api/v1/quarry", headers=_auth(key))
@@ -2446,5 +2471,7 @@ def test_island_page_is_modular() -> None:
 
 
 if __name__ == "__main__":
-    test_island_v1_api()
+    _pin_random_hazards(setattr)      # 脚本直跑没有 monkeypatch，进程结束即还原
+    asyncio.run(_test_island_v1_api())
+    test_island_page_is_modular()
     print("ok")
