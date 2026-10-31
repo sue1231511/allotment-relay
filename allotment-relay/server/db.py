@@ -1013,6 +1013,7 @@ async def run_flagged_migration(conn, flag_key: str, label: str, worker) -> int:
     """
     row = await (await conn.execute("SELECT 1 FROM world_flags WHERE flag_key=?", (flag_key,))).fetchone()
     if row:
+        _log.info("一次性迁移 迁移=%s 标记=%s 已完成，跳过", label, flag_key)
         return 0
     stats: dict[str, int] = {"processed": 0}
     sp = "mig_" + "".join(ch if ch.isalnum() else "_" for ch in flag_key)
