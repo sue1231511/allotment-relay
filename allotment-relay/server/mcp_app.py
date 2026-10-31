@@ -167,7 +167,7 @@ async def cloth_ops(command: str = "") -> str:
     return progress_mod.attach_note(await mux._call_ops(cloth.cloth_ops, _kid(), command))
 
 
-@mcp.tool(description="婚约/导演约会。空=婚档。例：约会 小馆 · 出游 查看。逾期档案仍开；求婚发出要先 work。求婚走连理所。勿date_ops/propose_marriage。")
+@mcp.tool(description="婚约/导演约会。空=婚档。例：约会 小馆 · 出游 查看 · 出游 自定义 1 | 牵着对方去窗边听雨。自定义行动写在竖线后，已受理就只 出游 查看，别反复继续。人类 /island 在背包左侧图标应邀、看旁白，打开不扣票。逾期档案仍开；求婚发出要先 work。求婚走连理所。勿date_ops/propose_marriage。")
 async def marriage_ops(command: Annotated[str, Field(description="整句命令；help看全表。手游图标只看/应邀；出游 继续 0 / 出游 自定义 1 | 行动 带当前幕号；失败重试原幕，受理后只 出游 查看；出游 删除 编号删已结束回忆。")] = "") -> str:
     from . import marriage
     from . import progress as progress_mod
@@ -192,7 +192,7 @@ async def wall_ops(command: str = "") -> str:
     return await mux._call_ops(wall.wall_ops, _kid(), command)
 
 
-@mcp.tool(description="人物故事。空=list。例：list · start cinderella。")
+@mcp.tool(description="人物故事：《灰姑娘》《昨日无凭》《留给明天》。空=list。例：start cinderella · start yesterday_no_proof · start left_for_tomorrow · status · review left_for_tomorrow。开始用 start，不是 tale_ops 的 accept；≠潮闻 tale_ops。")
 async def story_ops(command: str = "list") -> str:
     from . import story
     return await mux._call_ops(story.story_ops, _kid(), command)

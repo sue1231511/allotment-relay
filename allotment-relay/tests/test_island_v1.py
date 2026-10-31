@@ -1315,7 +1315,7 @@ def test_island_page_is_modular() -> None:
     assert "warmScenesLater" in app
     assert "waitScenePics" in app
     assert html.count("island.css?v=plot-overview2") == 1
-    assert html.count("app.js?v=workshop-process1") == 1
+    assert html.count("app.js?v=mod-unify1") == 1
     assert html.count("boot.js?v=keynorm1") == 1
     assert 'rel="preload"' in html
     assert "island-map.webp" in html
@@ -1360,6 +1360,9 @@ def test_island_page_is_modular() -> None:
     assert "clinic.js?v=island-modulefix2" in app
     assert "market.js?v=island-modulefix2" in app
     js_blob = "\n".join(p.read_text(encoding="utf-8") for p in (ROOT / "server/static/island").rglob("*.js"))
+    for mod in ("api", "art", "modal"):
+        # 同一个模块在不同文件里用不同的 ?v=，浏览器会各加载一份；统一成一个
+        assert len(set(re.findall(rf"/{mod}\.js\?v=([^\s\"']+)", js_blob))) == 1, mod
     store_vs = set(re.findall(r"store\.js\?v=([^\s\"']+)", js_blob))
     assert "island-modulefix2" in store_vs, store_vs
     assert 'from "../store.js?v=island-modulefix2"' in (ROOT / "server/static/island/scenes/atelier.js").read_text(encoding="utf-8")
@@ -1482,7 +1485,7 @@ def test_island_page_is_modular() -> None:
     assert "warmScenesLater" in app
     assert "enterGen" in app
     assert 'from "./scenes/home.js?v=plot-overview1"' in app
-    assert 'from "./ui/modal.js?v=bottles-cozy2"' in app
+    assert 'from "./ui/modal.js?v=mod-unify1"' in app
     modal_src = (ROOT / "server/static/island/ui/modal.js").read_text(encoding="utf-8")
     assert "export function showFormSheet" in modal_src
     assert "export function showPickSheet" in modal_src

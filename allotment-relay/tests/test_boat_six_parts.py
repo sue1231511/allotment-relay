@@ -34,5 +34,8 @@ def test_fail_bonus_six_parts():
     parts = {k: (100, 100) for k in boat_parts.PARTS}
     parts["anchor"] = (20, 100)
     parts["bilge"] = (20, 100)
+    # 钟、罗盘满耐久会各减 3%/4% 失败率（后加的第 7～12 件）；这里只验最早的六件，把它们放在不加不减的中段
+    parts["bell"] = (70, 100)
+    parts["compass"] = (70, 100)
     extra = boat_parts.fail_bonus(parts)
     assert extra >= 0.08

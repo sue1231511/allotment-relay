@@ -1,5 +1,5 @@
-import { api } from "../api.js?v=hearts1";
-import { toast } from "./modal.js?v=island-modulefix2";
+import { api } from "../api.js?v=mod-unify1";
+import { toast } from "./modal.js?v=mod-unify1";
 
 let chip, badge, panel, snap = null, timer = 0, busy = false;
 

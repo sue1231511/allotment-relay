@@ -59,7 +59,7 @@ function setup() {
     },
   });
   host.querySelector = sel => host.nodes?.[sel] || null;
-  host.querySelectorAll = () => host.repairs;
+  host.querySelectorAll = sel => (String(sel).includes("data-repair") ? host.repairs : []);
   const wrap = { append() { host.isConnected = true; } };
   const api = {
     async farmEvents() { calls.reads++; const result = { tickets: 120, incidents: rows, pests: [], history: [] }; if(readWait) await readWait; if(error) throw error; return result; },

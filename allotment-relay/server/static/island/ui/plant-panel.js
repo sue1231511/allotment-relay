@@ -1,6 +1,6 @@
 import { neighborCrop, cropArt } from "./crops.js?v=island-modulefix2";
 import { panelCrops, panelSubtitle, selectedPlot, state, yardMeta } from "../store.js?v=island-modulefix2";
-import { esc } from "./modal.js?v=island-modulefix2";
+import { esc } from "./modal.js?v=mod-unify1";
 import { popIn, popOut } from "./pop.js?v=island-modulefix2";
 
 export function renderPlantPanel(root, { onSelect, onPlant, onClose }) {
