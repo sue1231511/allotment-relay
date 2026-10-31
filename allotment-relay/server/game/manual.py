@@ -379,7 +379,7 @@ async def relay_manual() -> str:
         "【海】",
         "  渔具分 T0–T5。T1 钓竿 = Tt酱 30 票的竹钓竿；visit_ops tt buy 竹钓竿 和",
         "    tide_ops gear upgrade rod 买到的是同一档。更高档只能 gear upgrade（票+材料）。",
-        "  渔具升满不只加渔获率。撒网 net / 坐钓 cast 都按鱼价增幅+档位加成（消息写「渔具加成+N票」）。",
+        "  渔具升满不只加渔获率。坐钓 cast 按鱼价增幅（饵+竿）加档位票；撒网 net 只给网的档位固定票，不按鱼价抽成（消息写「渔具加成+N票」）。",
         "  撒网 net 要先 tide_ops gear upgrade net（或 tool buy net_basic）；坐钓 cast 要 T1 钓竿 + 蚯蚓饵",
         "  鱼种变多：沙丁/银鱼/黄鱼/生蚝/梭子蟹/真鲷/马鲛/飞鱼/鲥鱼/冰鱼/石斑/八爪/鲍鱼/龙虾/金枪/旗鱼。tide_ops catalog 看图鉴。飞鱼春夏、鲥鱼春、冰鱼冬，过季不上钩",
         "  天灾：人类日历一周一次（东八区周一换班），低中高随机。3万以上才冲超额，3万及以下没事。",
