@@ -16,12 +16,14 @@ sys.path.insert(0, str(ROOT))
 
 
 @pytest.fixture(autouse=True)
+<<<<<<< HEAD
 def _no_barn_escape(pin_random):
-    """畜栏牲口随时可能受惊跑掉、染病或被随机事件弄死，没了的不计维；本文件数的是固定在栏头数，不靠运气。"""
-    from server import barn_disease, barn_escape, disaster, events
+    """辅助钉：畜栏牲口有概率受惊跑掉，跑掉的不计维，本文件数的是固定在栏头数，所以把惊逃这个随机钉住。
+    注意：test_status_explains_midday_holdings_change 时好时坏的真正根因不是惊逃，而是干旱/热浪周
+    没喂的牲口会渴死（disaster._thirst_unfed_animals），那一条由该用例里把季节气候钉成雷暴解决（#343）。"""
+    from server import barn_escape
 
-    for module in (barn_escape, barn_disease, events, disaster):
-        pin_random(module)
+    pin_random(barn_escape)
 
 CST = timezone(timedelta(hours=8))
 
@@ -300,7 +302,10 @@ async def test_status_explains_midday_holdings_change() -> None:
     db = await _boot(tmp)
     from server import mcp_dispatch
 
+    from server import disaster
+
     real_now = db.now
+    real_pick_climate = disaster.pick_season_climate
     db.now = lambda: ENROLL_TUE
     kid, sid = await _enroll(db, "midday@example.com", "午后升屋")
     # 温室30+畜栏10+在栏4×10+小馆12+第二矿坑10+切波艇15 = 117；再加小屋会变
@@ -334,6 +339,10 @@ async def test_status_explains_midday_holdings_change() -> None:
         await conn.commit()
 
     db.now = lambda: NEXT_DAY
+    # 固定每周季节气候的随机结果：测试日期是固定的夏天，第一次 require_steward（下面的 潮生会 维）
+    # 会随机掷一周气候，掷到干旱/热浪时没喂的牲口会按概率渴死，在栏数少一只、应缴就不是 137
+    # （原来时好时坏的根源）。这里只把气候钉成雷暴（不缺水），游戏逻辑一行没动；finally 里还原。
+    disaster.pick_season_climate = lambda season=None: "thunderstorm"
     try:
         async with db.connect() as conn:
             await conn.execute(
@@ -359,6 +368,7 @@ async def test_status_explains_midday_holdings_change() -> None:
         assert arrears2 == 0, arrears2
     finally:
         db.now = real_now
+        disaster.pick_season_climate = real_pick_climate
 
 
 def main() -> None:
