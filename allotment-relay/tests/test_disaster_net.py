@@ -102,8 +102,9 @@ def test_net_payout_uses_sell_cut() -> None:
         "net": {"tier": 5, "catch": 0.34},
     }
     mult, bonus = fish_catch_payout(stats, mode="net")
-    assert mult == 1.0 + 0.34 * 1.25 + 5 * 0.05
-    assert bonus == 10
+    # 渔网不按鱼价乘系数，只给固定「网到+档位票」（HELP 一直这么写）；鱼价增幅只属于竿钓
+    assert mult == 1.0
+    assert bonus == 5
     cast_mult, _ = fish_catch_payout(stats, mode="cast")
     assert cast_mult > 1.0
 
