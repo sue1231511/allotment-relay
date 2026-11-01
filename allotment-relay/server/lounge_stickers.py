@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import logging
 import uuid
 from pathlib import Path
 from typing import Any
@@ -9,6 +11,8 @@ from typing import Any
 import aiosqlite
 
 from . import config, db
+
+_log = logging.getLogger(__name__)
 
 STICKER_MAX_BYTES = 3 * 1024 * 1024
 STICKER_MAX_PER_STEWARD = 64
@@ -206,6 +210,44 @@ async def save_uploaded_stickers(
             "先删掉不用的再添加。"
         )
 
+    # 校验、压缩图片（吃 CPU）、写文件：都先还数据库锁，并放到线程里，免得卡住整个岛
+    async with db.outside_lock():
+        prepared = await asyncio.to_thread(_prepare_files, files)
+        folder = sticker_dir_for(steward_id)
+        await asyncio.to_thread(_write_files, folder, prepared)
+    now = db.now()
+    created: list[dict[str, Any]] = []
+    try:
+        async with db.connect() as conn:
+            conn.row_factory = aiosqlite.Row
+            for filename, _data, _ext in prepared:
+                cur = await conn.execute(
+                    """
+                    INSERT INTO lounge_stickers (steward_id, filename, created_at)
+                    VALUES (?, ?, ?)
+                    """,
+                    (int(steward_id), filename, now),
+                )
+                created.append(
+                    _sticker_view(
+                        {"id": int(cur.lastrowid), "filename": filename, "created_at": now}
+                    )
+                )
+            await conn.commit()
+    except Exception:
+        _log.exception("表情包入库失败，清理已写的文件 位置=lounge_stickers.save_uploaded_stickers 岛民=%s 文件=%s",
+                       steward_id, [f for f, _d, _e in prepared])
+        for filename, _data, _ext in prepared:
+            try:
+                (folder / filename).unlink(missing_ok=True)
+            except OSError:
+                _log.exception("清理表情包文件失败 位置=lounge_stickers.save_uploaded_stickers 文件=%s", filename)
+        raise
+    return created
+
+
+def _prepare_files(files: list[tuple[str, str, bytes]]) -> list[tuple[str, bytes, str]]:
+    """逐张校验大小和文件头并压缩。纯 CPU，跑在线程里；校验不过抛 ValueError（文案同以前）。"""
     prepared: list[tuple[str, bytes, str]] = []
     for name, _ctype, raw in files:
         data = raw or b""
@@ -219,28 +261,12 @@ async def save_uploaded_stickers(
         ext, _mime = _sniff_image(data, name or "图片")
         data, ext = _compress_sticker(data, ext)
         prepared.append((f"{uuid.uuid4().hex}{ext}", data, ext))
+    return prepared
 
-    folder = sticker_dir_for(steward_id)
-    now = db.now()
-    created: list[dict[str, Any]] = []
-    async with db.connect() as conn:
-        conn.row_factory = aiosqlite.Row
-        for filename, data, _ext in prepared:
-            (folder / filename).write_bytes(data)
-            cur = await conn.execute(
-                """
-                INSERT INTO lounge_stickers (steward_id, filename, created_at)
-                VALUES (?, ?, ?)
-                """,
-                (int(steward_id), filename, now),
-            )
-            created.append(
-                _sticker_view(
-                    {"id": int(cur.lastrowid), "filename": filename, "created_at": now}
-                )
-            )
-        await conn.commit()
-    return created
+
+def _write_files(folder: Path, prepared: list[tuple[str, bytes, str]]) -> None:
+    for filename, data, _ext in prepared:
+        (folder / filename).write_bytes(data)
 
 
 async def delete_sticker(steward_id: int, sticker_id: int) -> None:

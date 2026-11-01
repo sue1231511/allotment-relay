@@ -74,9 +74,8 @@ def _ai_note(live: bool) -> str:
     return "（棚里这会儿没接外线，霍衡按老规矩说话。）"
 
 
-async def _talk(conn: aiosqlite.Connection, s: dict[str, Any], said: str = "") -> str:
-    ctx = await _context(conn, s, said)
-    line, live = await vet_npc.speak(ctx)
+def _talk_reply(ctx: dict[str, Any], line: str, live: bool) -> str:
+    """把模型（或兜底）的一句话拼成完整回复。纯字符串，不碰库。"""
     if not line.startswith("霍衡"):
         line = f"霍衡：「{line}」" if "：" not in line[:6] and ":" not in line[:6] else line
     bits = [flavor.pick(ATMOSPHERE), line, _ai_note(live)]
@@ -207,8 +206,11 @@ async def vet_ops(key_id: int, command: str) -> str:
             )
 
         said = rest if verb in ("visit", "进门", "chat", "说", "闲聊") else raw
-        msg = await _talk(conn, s, said)
-        if notes:
-            msg = "\n".join(notes) + "\n" + msg
-        return msg
-    return VET_HELP
+        talk_ctx = await _context(conn, s, said)
+    # 调模型最长要等 VET_NPC_TIMEOUT_SECONDS（默认 20 秒）：必须在数据库块外面、并且先还锁
+    async with db.outside_lock():
+        line, live = await vet_npc.speak(talk_ctx)
+    msg = _talk_reply(talk_ctx, line, live)
+    if notes:
+        msg = "\n".join(notes) + "\n" + msg
+    return msg

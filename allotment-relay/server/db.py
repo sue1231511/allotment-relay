@@ -988,11 +988,74 @@ CREATE INDEX IF NOT EXISTS idx_market_listings_seller ON market_listings(seller_
 """
 
 
+class DbBusyError(Exception):
+    """排队等数据库锁超时。不是 SQLite 自己的 locked；调用方应当把它当作「岛上太忙，稍后重试」。"""
+
+    def __init__(self, waited: float, label: str, holder: str, held: float) -> None:
+        super().__init__(DB_BUSY_MSG)
+        self.waited = waited
+        self.label = label
+        self.holder = holder
+        self.held = held
+
+
+# 当前持锁者和开始时间（仅用于日志；锁本身还是 _DB_MUTEX）
+_LOCK_HOLDER: dict[str, Any] = {"label": "", "since": 0.0}
+_REQ_LABEL: contextvars.ContextVar[str] = contextvars.ContextVar("_db_req_label", default="-")
+
+
+def _env_seconds(name: str, default: float, lo: float, hi: float) -> float:
+    import os
+
+    try:
+        value = float(os.environ.get(name, default))
+    except ValueError:
+        return default
+    return max(lo, min(hi, value))
+
+
+def lock_wait_timeout() -> float:
+    """排队等锁最长多久（秒）。默认 20，环境变量 DB_LOCK_WAIT_TIMEOUT_SECONDS 可调（1~120）。"""
+    return _env_seconds("DB_LOCK_WAIT_TIMEOUT_SECONDS", 20.0, 1.0, 120.0)
+
+
+def lock_hold_warn() -> float:
+    """占锁超过多久打 WARNING（秒）。默认 2，环境变量 DB_LOCK_HOLD_WARN_SECONDS 可调（0.1~60）。"""
+    return _env_seconds("DB_LOCK_HOLD_WARN_SECONDS", 2.0, 0.1, 60.0)
+
+
 @asynccontextmanager
 async def _open_raw() -> AsyncIterator[aiosqlite.Connection]:
-    """拿全局互斥锁 + 开一个新连接 + 设 PRAGMA。connect() 和请求内复用都走这里。"""
+    """拿全局互斥锁 + 开一个新连接 + 设 PRAGMA。connect() 和请求内复用都走这里。
+
+    等锁有上限（超时抛 DbBusyError，日志里写清谁在占、占了多久）；占锁超过阈值打 WARNING 带路由和耗时。
+    """
     global _DB_PRAGMAS_READY
-    async with _DB_MUTEX:
+    mutex = _DB_MUTEX
+    label = _REQ_LABEL.get()
+    t_ask = time.monotonic()
+    timeout = lock_wait_timeout()
+    try:
+        await asyncio.wait_for(mutex.acquire(), timeout=timeout)
+    except TimeoutError:
+        now_m = time.monotonic()
+        holder = str(_LOCK_HOLDER.get("label") or "未知")
+        since = float(_LOCK_HOLDER.get("since") or 0.0)
+        held = (now_m - since) if since else 0.0
+        _log.error(
+            "等数据库锁超时 位置=db._open_raw 路由=%s 已等=%.1fs 上限=%.0fs 当前占锁者=%s 已占=%.1fs",
+            label, now_m - t_ask, timeout, holder, held,
+        )
+        raise DbBusyError(now_m - t_ask, label, holder, held) from None
+    acquired = time.monotonic()
+    waited = acquired - t_ask
+    warn = lock_hold_warn()
+    if waited > warn:
+        _log.warning("等数据库锁偏久 路由=%s 等了=%.2fs（阈值 %.1fs） 前一个占锁者=%s",
+                     label, waited, warn, _LOCK_HOLDER.get("label") or "未知")
+    _LOCK_HOLDER["label"] = label
+    _LOCK_HOLDER["since"] = acquired
+    try:
         async with aiosqlite.connect(DB_PATH, timeout=60.0) as conn:
             await conn.execute("PRAGMA busy_timeout=30000")
             if not _DB_PRAGMAS_READY:
@@ -1001,6 +1064,13 @@ async def _open_raw() -> AsyncIterator[aiosqlite.Connection]:
                 await conn.execute("PRAGMA wal_autocheckpoint=1000")
                 _DB_PRAGMAS_READY = True
             yield conn
+    finally:
+        held = time.monotonic() - acquired
+        _LOCK_HOLDER["label"] = ""
+        _LOCK_HOLDER["since"] = 0.0
+        mutex.release()
+        if held > warn:
+            _log.warning("数据库锁占用过久 路由=%s 占用=%.2fs（阈值 %.1fs）", label, held, warn)
 
 
 class _RequestScope:
@@ -1031,7 +1101,7 @@ _REQ_SCOPE: contextvars.ContextVar[_RequestScope | None] = contextvars.ContextVa
 
 
 @asynccontextmanager
-async def request_scope() -> AsyncIterator[None]:
+async def request_scope(label: str = "") -> AsyncIterator[None]:
     """请求入口套一层：这次请求里所有最外层 `connect()` 共用同一个连接，不再各开各的。
 
     每个最外层 connect() 块的行为和以前「新开一个连接」逐条一致：块进入时 row_factory 复位为默认；
@@ -1044,11 +1114,13 @@ async def request_scope() -> AsyncIterator[None]:
         return
     scope = _RequestScope()
     token = _REQ_SCOPE.set(scope)
+    label_token = _REQ_LABEL.set(label or "-")
     try:
         yield
     finally:
         try:
             _REQ_SCOPE.reset(token)
+            _REQ_LABEL.reset(label_token)
         except ValueError:
             _log.exception("请求域复位失败（不在创建它的上下文里） 位置=db.request_scope")
         try:
@@ -1056,6 +1128,29 @@ async def request_scope() -> AsyncIterator[None]:
         except Exception:
             _log.exception("请求域释放连接失败 位置=db.request_scope 连接已开=%s", scope.conn is not None)
             raise
+
+
+async def release_request_lock() -> None:
+    """请求域里：先把锁和连接还回去（下次 connect() 会重新排队）。要做 AI/HTTP/文件/图片这类慢事前调用。
+
+    在 connect() 块里面调用放不掉锁（块还在用连接），会打 WARNING 并什么都不做——调用方要把慢事挪到块外面。
+    不在请求域里（脚本、测试、后台任务）：这时候本来就没人替你占着锁，什么都不做。
+    """
+    scope = _REQ_SCOPE.get()
+    if scope is None:
+        return
+    if _DB_CONN.get() is not None:
+        _log.warning("release_request_lock 被放在 connect() 块里，锁放不掉 位置=db.release_request_lock 路由=%s",
+                     _REQ_LABEL.get())
+        return
+    await scope.release()
+
+
+@asynccontextmanager
+async def outside_lock() -> AsyncIterator[None]:
+    """`async with db.outside_lock():` 里面做慢事，期间不占数据库锁。"""
+    await release_request_lock()
+    yield
 
 
 @asynccontextmanager

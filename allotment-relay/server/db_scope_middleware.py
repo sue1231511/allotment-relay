@@ -55,7 +55,7 @@ class DbScopeMiddleware:
             out.append(message)
 
         failure: BaseException | None = None
-        async with db.request_scope():
+        async with db.request_scope(f"{scope.get('method', '')} {scope.get('path', '')}"):
             try:
                 await self.app(scope, _replay(buffered, receive), capture)
             except BaseException as exc:  # noqa: BLE001  先放锁、再把错误原样抛出

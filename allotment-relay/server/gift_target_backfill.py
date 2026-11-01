@@ -7,7 +7,11 @@
 """
 from __future__ import annotations
 
+import re
+
 from . import db
+
+_NAME_RE = re.compile(r"送礼给 ([^：]+)：")
 
 GIFT_TARGET_FLAG = "gift_target_backfill_v1"
 
@@ -21,15 +25,26 @@ async def _backfill_work(conn, stats: dict[str, int]) -> int:
     names = await (await conn.execute(
         "SELECT id, name FROM stewards WHERE name != '' ORDER BY id ASC"
     )).fetchall()
+    by_name = {str(name).lower(): int(sid) for sid, name in names}  # 岛民名唯一（不分大小写）
     needles = [(int(sid), f"送礼给 {name}：".lower()) for sid, name in names]
-    fixed = 0
+    updates: list[tuple[int, int]] = []
     for chronicle_id, text in rows:
         low = str(text or "").lower()
-        for sid, needle in needles:
-            if needle in low:
-                await conn.execute("UPDATE chronicle SET target_id=? WHERE id=?", (sid, chronicle_id))
-                fixed += 1
+        target = 0
+        for m in _NAME_RE.finditer(low):  # 快路径：抽出「送礼给 X：」里的 X 直接查表
+            target = by_name.get(m.group(1), 0)
+            if target:
                 break
+        if not target:  # 名字里带全角冒号之类的，退回逐个比对
+            for sid, needle in needles:
+                if needle in low:
+                    target = sid
+                    break
+        if target:
+            updates.append((target, int(chronicle_id)))
+    if updates:
+        await conn.executemany("UPDATE chronicle SET target_id=? WHERE id=?", updates)
+    fixed = len(updates)
     stats["processed"] += fixed
     return fixed
 

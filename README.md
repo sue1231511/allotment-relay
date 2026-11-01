@@ -710,6 +710,10 @@ python3 tests/test_consistency.py
 | `UT_OWNER_KEY` / `UT_GATE_KEY` / `LIZHI_KEY` / `STAR_KEY` | 管理面板钥匙（恶猫 / 门禁 / 荔栀 / 小橘） |
 | `INVITE_ADMIN_KEY` | 引航风控后台钥匙（不设则 `/invite-admin` 关闭） |
 | `HUI_KEY` | 潮生会告示后台钥匙（不设则 `/hui-owner` 关闭）。厅示由制作方张贴，岛民只能看 |
+| `DB_LOCK_WAIT_TIMEOUT_SECONDS` | 排队等数据库锁最长多久，默认 20（1~120）。超时给玩家 503「数据库正忙」，日志写清谁在占锁 |
+| `DB_LOCK_HOLD_WARN_SECONDS` | 占着数据库锁超过多久打 WARNING（带路由和耗时），默认 2（0.1~60） |
+
+升级前后的备份、迁移耗时、回滚步骤见 [docs/rollout-perf.md](docs/rollout-perf.md)。
 
 ```bash
 cd allotment-relay
