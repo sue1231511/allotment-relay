@@ -2656,9 +2656,9 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
         mascot_name = str(s.get("mascot_name") or "").strip()
         if not mascot_name:
             for trait, label, note in (
-                ("scout", "领养吉祥物·探路", "取名后领养。"),
-                ("lucky", "领养吉祥物·好运", "取名后领养。"),
-                ("compost", "领养吉祥物·沤肥", "堆肥桶多沤一层。"),
+                ("scout", "领养吉祥物·探路", "田里少招野物；偷菜被抓罚款减半。"),
+                ("lucky", "领养吉祥物·好运", "少遇随机事件，多捡东西，出海更稳，打 Boss 更狠。"),
+                ("compost", "领养吉祥物·沤肥", "堆肥桶多沤一层，施肥更快熟。"),
             ):
                 home_items.append(_sku(
                     sid=f"mascot-adopt-{trait}", kind="mascot_adopt", name=label, emoji="", note=note,

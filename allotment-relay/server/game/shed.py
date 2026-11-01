@@ -187,7 +187,11 @@ async def mascot_ops(key_id: int, command: str) -> str:
 
     if verb == "status":
         if not s["mascot_name"]:
-            return "尚无吉祥物，adopt 名字 特质(scout/lucky/compost)"
+            return (
+                "尚无吉祥物，adopt 名字 特质：scout 探路（田里少招野物、偷菜被抓轻罚）/ "
+                "lucky 好运（少遇随机事件、多捡东西、出海稳、打 Boss 狠）/ "
+                "compost 沤肥（堆肥桶多沤、施肥更快）。特质领养后不能换"
+            )
         from .. import social as social_mod
         hint = social_mod.mascot_spirit_hint(s["mascot_spirit"])
         base = f"{s['mascot_name']} [{s['mascot_trait']}] 士气 {s['mascot_spirit']}/100"
