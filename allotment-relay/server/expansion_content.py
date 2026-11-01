@@ -298,12 +298,12 @@ EXTRA_KITCHEN_DISHES = {
     "brine_kelp_pot": {
         "name": "卤浸海藻锅", "emoji": "🍲",
         "ings": ["crop_kelp", "proc_pickling_brine", "fish_codling"],
-        "base_sell": 70, "energy": 30, "tags": ["sea"],
+        "base_sell": 48, "energy": 30, "tags": ["sea"],
     },
     "brine_clam_pot": {
         "name": "卤边潮锅", "emoji": "🫕",
         "ings": ["fish_kelpcrab", "proc_pickling_brine", "crop_tide_ginger"],
-        "base_sell": 82, "energy": 34, "tags": ["sea", "special"],
+        "base_sell": 75, "energy": 34, "tags": ["sea", "special"],
     },
     "fogpea_tofu": {
         "name": "雾豆烧豆腐", "emoji": "🍲",
@@ -398,7 +398,7 @@ EXTRA_KITCHEN_DISHES = {
     "seafood_fried_rice": {
         "name": "海鲜炒饭", "emoji": "🍚",
         "ings": ["proc_rice", "fish_sardine", "egg"],
-        "base_sell": 48, "energy": 26, "tags": ["sea", "grain"],
+        "base_sell": 42, "energy": 26, "tags": ["sea", "grain"],
     },
     "chive_egg": {
         "name": "韭菜炒蛋", "emoji": "🍳",
