@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Any
 
 from .. import barn, db, game, hut, kitchen
+from .. import mcp_dispatch as mux
 from ..catalog import HUT_HARD, HUT_SOFT, LILI_DECOR, is_bed_key
 from ..florist_catalog import FLORIST_DECOR
 from . import farm_service
@@ -39,7 +40,34 @@ TITLES = {
     "sell_fit": "卖掉了",
     "pickle": "腌好了",
     "dry": "晾好了",
+    "chore_pay": "交了家维",
+    "chore_task": "杂务处置了",
+    "mascot_adopt": "领养了吉祥物",
+    "mascot_status": "吉祥物",
+    "mascot_upkeep": "喂养吉祥物",
+    "mascot_train": "陪练",
+    "mascot_feed": "喂了饲料",
+    "mascot_diet": "减肥",
+    "mascot_walk": "散步",
+    "barn_name": "起了名",
+    "barn_fuss": "栏里的事处置了",
+    "vet_treat": "请了兽医",
+    "vet_fumes": "棚里呛处置了",
+    "vet_catalog": "兽医价目",
+    "vet_status": "栏里的病",
 }
+
+_TRAITS = {"scout", "lucky", "compost"}
+_CHORES = {"自修", "请匠", "不管"}
+_FUSS = {"哄", "关栏", "不管", "隔离", "兽医", "拖着"}
+_FUMES = {"通风", "换草", "硬留"}
+
+
+def _one_line(value: str, label: str, limit: int) -> str:
+    text = (value or "").strip()
+    if not text or len(text) > limit or any(ch in text for ch in "\r\n;"):
+        raise ApiError("BAD_REQUEST", f"{label}写一行，不超过 {limit} 个字。")
+    return text
 
 _FIT_KIND = {
     "bed": "hard",
@@ -258,6 +286,50 @@ def _command(kind: str, target: str) -> tuple[str, str]:
         if not extra:
             raise ApiError("BAD_REQUEST", "先点要晾的生鱼。")
         return "hut", f"晾 {extra}"
+    if kind == "chore_pay":
+        return "hut", "家维 交"
+    if kind == "chore_task":
+        if extra not in _CHORES:
+            raise ApiError("BAD_REQUEST", "杂务只能自修、请匠或不管。")
+        return "hut", f"杂务 {extra}"
+    if kind == "mascot_adopt":
+        trait, _, name = extra.partition("|")
+        if trait.strip() not in _TRAITS:
+            raise ApiError("BAD_REQUEST", "特质只能是探路、好运或沤肥。")
+        name = _one_line(name, "吉祥物的名字", 20)
+        if " " in name:
+            raise ApiError("BAD_REQUEST", "吉祥物的名字不能带空格。")
+        return "bundle", f"mascot adopt {name} {trait.strip()}"
+    if kind in ("mascot_status", "mascot_upkeep", "mascot_train", "mascot_feed"):
+        return "bundle", f"mascot {kind.split('_', 1)[1]}"
+    if kind == "mascot_diet":
+        return "bundle", "mascot 减肥"
+    if kind == "mascot_walk":
+        return "bundle", "mascot 散步"
+    if kind == "barn_name":
+        slot, _, name = extra.partition("|")
+        if not slot.strip().isdigit():
+            raise ApiError("BAD_REQUEST", "先点要起名的那一栏。")
+        name = _one_line(name, "名字", 12)
+        if " " in name:
+            raise ApiError("BAD_REQUEST", "名字不能带空格。")
+        return "barn", f"起名 {int(slot)} {name}"
+    if kind == "barn_fuss":
+        if extra not in _FUSS:
+            raise ApiError("BAD_REQUEST", "先选一路。")
+        return "barn", f"闹脾气 {extra}"
+    if kind == "vet_treat":
+        if not extra.isdigit():
+            raise ApiError("BAD_REQUEST", "先点要看的那一栏。")
+        return "visit", f"兽医 treat {extra}"
+    if kind == "vet_fumes":
+        if extra not in _FUMES:
+            raise ApiError("BAD_REQUEST", "棚险只能通风、换草或硬留。")
+        return "visit", f"兽医 棚险 {extra}"
+    if kind == "vet_catalog":
+        return "visit", "兽医 catalog"
+    if kind == "vet_status":
+        return "visit", "兽医 status"
     raise ApiError("BAD_REQUEST", "小屋里没有这一下。")
 
 
@@ -289,6 +361,12 @@ async def act(api_key: str, key_id: int, kind: str, target: str = "") -> dict[st
             if channel == "barn":
                 await game.require_steward(key_id)
                 narrative = await barn.barn_ops(key_id, command)
+            elif channel == "bundle":
+                await game.require_steward(key_id)
+                narrative = await mux.hut_bundle(key_id, command)
+            elif channel == "visit":
+                await game.require_steward(key_id)
+                narrative = await mux.visit_bundle(key_id, command)
             elif channel == "kitchen":
                 await game.require_steward(key_id)
                 narrative = await kitchen.kitchen_ops(key_id, command)

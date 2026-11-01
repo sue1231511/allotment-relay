@@ -3040,3 +3040,54 @@ body.is-panel-open .island-story-hook { visibility: hidden; }
 
 .island-panel-where { flex: none; max-width: 40%; text-align: right; color: rgba(236, 214, 160, .9) !important; }
 .island-panel-item p { font-size: 14px; }
+
+/* 份地里的「田间管理」 */
+.island-field-open {
+  appearance: none;
+  position: absolute;
+  z-index: 3;
+  right: 10px;
+  top: calc(118px + env(safe-area-inset-top, 0px));
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(236, 214, 160, .7);
+  border-radius: 17px;
+  background: rgba(16, 22, 30, .82);
+  color: #f6f0e4;
+  font: inherit;
+  font-size: 13px;
+}
+.island-yards.is-peek .island-field-open { display: none; }
+
+/* 柜台页签、邻居名册 */
+.island-panel-tabs { display: flex; gap: 6px; margin: 0 0 10px; overflow-x: auto; }
+.island-panel-tab {
+  appearance: none;
+  flex: none;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(236, 214, 160, .4);
+  border-radius: 17px;
+  background: transparent;
+  color: #f6f0e4;
+  font: inherit;
+  font-size: 13px;
+}
+.island-panel-tab.is-on { background: rgba(236, 214, 160, .22); border-color: rgba(236, 214, 160, .85); }
+.island-panel-people { display: grid; gap: 6px; margin: 6px 0 10px; }
+.island-panel-person {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid rgba(236, 214, 160, .3);
+  border-radius: 8px;
+  background: rgba(42, 53, 68, .55);
+  color: #f6f0e4;
+  font: inherit;
+  text-align: left;
+}
+.island-panel-person.is-home { border-color: rgba(143, 200, 160, .8); }
+.island-panel-person b { font-size: 15px; }
+.island-panel-person small { font-size: 11px; color: rgba(246, 240, 228, .72); }

@@ -32,7 +32,7 @@ export function renderHome(root, { onOpenLand }) {
   root.querySelector("[data-act=land]").addEventListener("click", onOpenLand);
 }
 
-export function renderYards(root, { onTapPlot, onTapGrass, onCareBatch, onSwitchYard, onOpenEvents }) {
+export function renderYards(root, { onTapPlot, onTapGrass, onCareBatch, onSwitchYard, onOpenEvents, onOpenField }) {
   const peek = !state.yardsShelf;
   let wrap = root.querySelector(".island-yards");
   if (!wrap || !wrap.querySelector(".island-yards-board") || !wrap.querySelector(".island-care-fabs") || !wrap.querySelector("#island-plot-overview")) {
@@ -53,6 +53,7 @@ export function renderYards(root, { onTapPlot, onTapGrass, onCareBatch, onSwitch
         <p class="island-grow-status" id="island-grow-status">${esc(growStatusLine())}</p>
         <div class="island-plot-grid" id="island-plot-grid">${plotGridMarkup()}</div>
         <div class="island-plot-pager" id="island-plot-pager">${pagerMarkup()}</div>
+        <button type="button" class="island-field-open" id="island-field-open">田间管理</button>
         <div class="island-care-fabs" id="island-care-fabs">
           <button type="button" class="island-harvest-fab" id="island-water-all" data-act="water" hidden>一键浇水</button>
           <button type="button" class="island-harvest-fab" id="island-tend-all" data-act="tend" hidden>一键打理</button>
@@ -64,6 +65,8 @@ export function renderYards(root, { onTapPlot, onTapGrass, onCareBatch, onSwitch
     wrap = root.querySelector(".island-yards");
     layoutCoverBoard(wrap, ".island-yards-board", 941, 1672);
     bindYardsPeek(wrap, onOpenEvents);
+    const fieldBtn = wrap.querySelector("#island-field-open");
+    if (fieldBtn && typeof onOpenField === "function") fieldBtn.addEventListener("click", onOpenField);
     wrap.querySelectorAll("[data-yard]").forEach((btn) => {
       btn.addEventListener("click", () => onSwitchYard(btn.getAttribute("data-yard")));
     });

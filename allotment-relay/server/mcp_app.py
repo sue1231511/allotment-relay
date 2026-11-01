@@ -95,14 +95,14 @@ async def steward_ops(command: str = "sheet") -> str:
     )
 
 
-@mcp.tool(description="份地果园与田间事件。空=指令表。例：status · sow 1 甘蓝 · 肥力 · 虫害 1 施药 · 虫害 1 填土 · 留种 甘蓝 · weather · 浇水。tend 极小概率鸟啄（收成-1，极少落该作物种；steward_ops 灾档 近日已结）/灶台难点火/潮气发潮/鱼线打结（debuff 记一次消一次）。肥力/轮作、虫害、地陷、留种。weather 附本周纪事。勿 sow_all/plant；repair≠岸维。人类 /island「田间事件」处置虫害；repair 只修 steward_incidents。")
+@mcp.tool(description="份地果园与田间事件。空=指令表。例：status · sow 1 甘蓝 · 肥力 · 虫害 1 施药 · 虫害 1 填土 · 留种 甘蓝 · weather · 浇水。tend 极小概率鸟啄（收成-1，极少落该作物种；steward_ops 灾档 近日已结）/灶台难点火/潮气发潮/鱼线打结（debuff 记一次消一次）。肥力/轮作、虫害、地陷、留种。人类 /island 份地「田间管理」能看肥力、留种、扎稻草人、装拆监控、看监控记录、砍树腾地、采集、看意外记录。weather 附本周纪事。勿 sow_all/plant；repair≠岸维。人类 /island「田间事件」处置虫害；repair 只修 steward_incidents。")
 async def plot_ops(
     command: Annotated[str, Field(description="incident status；repair 编号。肥力 · 虫害 1 手工|施药|拔除|不管（温室漏风 补网|通风|不管；地陷 填土|围起来|不管）· 留种 作物。空=指令表。")] = "",
 ) -> str:
     return await mux._call_ops(mux.plot_bundle, _kid(), command)
 
 
-@mcp.tool(description="小屋潮柜床畜栏腌晾家维杂务。空=列表。潮柜/冰箱只让货变质变慢（×1.8/×3.5），不是不坏，存取不重新计时。例：status · 睡 · 家维 · 家维 交 · 杂务 自修 · 修屋顶 · 修冰箱 · 修灶 · 泡澡 · 读书 · barn breed 1 · barn 惊逃 1 诱回 · barn 闹脾气 哄 · barn 起名 1 豆花 · 腌 甘蓝 4。status 附闭环提示（鱼/柜/灶/帆/待选）。寻回逃畜极少跟足迹摸到潮边藏货（急追略高）。家维=灯油/冷藏/防潮（不缴只降睡/保鲜/灶效，不封房）；杂务=结霜/门轴等三选一。屋顶/厨电耐久低有惩罚。泡澡≠kitchen_ops 泡。mascot upkeep≠岸维。人类 /island 小屋可点配种/寻回/修屋顶/修厨电/泡澡/读书。")
+@mcp.tool(description="小屋潮柜床畜栏腌晾家维杂务。空=列表。潮柜/冰箱只让货变质变慢（×1.8/×3.5），不是不坏，存取不重新计时。例：status · 睡 · 家维 · 家维 交 · 杂务 自修 · 修屋顶 · 修冰箱 · 修灶 · 泡澡 · 读书 · barn breed 1 · barn 惊逃 1 诱回 · barn 闹脾气 哄 · barn 起名 1 豆花 · 腌 甘蓝 4。status 附闭环提示（鱼/柜/灶/帆/待选）。寻回逃畜极少跟足迹摸到潮边藏货（急追略高）。家维=灯油/冷藏/防潮（不缴只降睡/保鲜/灶效，不封房）；杂务=结霜/门轴等三选一。屋顶/厨电耐久低有惩罚。泡澡≠kitchen_ops 泡。mascot upkeep≠岸维。人类 /island 小屋可点配种/寻回/修屋顶/修厨电/泡澡/读书，也能交家维、处置杂务、领养和照看吉祥物、给牲口起名、处置闹脾气与疫病、请霍衡看病。")
 async def hut_ops(command: str = "") -> str:
     return await mux._call_ops(mux.hut_bundle, _kid(), command)
 
@@ -124,12 +124,12 @@ async def kitchen_ops(command: str = "") -> str:
     return await mux._call_ops(mux.kitchen_bundle, _kid(), command)
 
 
-@mcp.tool(description="互助周目标与邻居连接。空=列表。例：assist 安 · 借船 给 名字 · 合伙 开 漂航船 · 托养 送出 名字 1 · 菜篮 订 名字 · league status。board=贡献榜≠全服榜。本周=东八区周一，和岸税同一周。协作总览 steward_ops 协作。合伙≠借船。")
+@mcp.tool(description="互助周目标与邻居连接。空=列表。例：assist 安 · 借船 给 名字 · 合伙 开 漂航船 · 托养 送出 名字 1 · 菜篮 订 名字 · league status。board=贡献榜≠全服榜。本周=东八区周一，和岸税同一周。协作总览 steward_ops 协作。合伙≠借船。人类 /island 点状态木牌进「这一号」→「邻居与互助」：名册、看公开档、帮忙打理、偷菜、致歉、借船、合伙、托养、菜篮、共耕、周目标、合约、储藏室，同一套规则。")
 async def alliance_ops(command: str = "") -> str:
     return await mux._call_ops(mux.alliance_bundle, _kid(), command)
 
 
-@mcp.tool(description="NPC、杂货、诊所、兽医与花店。空=help。例：list · clinic · 潮生会 工程 · 兽医 棚险 通风 · shaonian 卦险 压石。桥桥治人≠霍衡治牲口；潮生会不能加入。")
+@mcp.tool(description="NPC、杂货、诊所、兽医与花店。空=help。例：list · clinic · 潮生会 工程 · 兽医 棚险 通风 · shaonian 卦险 压石。桥桥治人≠霍衡治牲口；潮生会不能加入。人类 /island 小屋畜栏里能请霍衡（兽医 treat/status/catalog/棚险）。")
 async def visit_ops(command: Annotated[str, Field(description="整句子命令；空=help。霍衡=兽医（棚险=治完呛棚）；clinic=桥桥；默默=花店；shaonian 卦险=卜卦后掀盘。税/维/行情/台风走潮生会。漾漾=衣泊坊 visit。")] = "") -> str:
     return await mux._call_ops(mux.visit_bundle, _kid(), command)
 
