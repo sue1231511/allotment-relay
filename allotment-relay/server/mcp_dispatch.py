@@ -41,7 +41,8 @@ async def _call_ops(fn: OpsFn, *args, **kwargs) -> str:
     last: BaseException | None = None
     for attempt in range(5):
         try:
-            return await fn(*args, **kwargs)
+            async with db.request_scope():
+                return await fn(*args, **kwargs)
         except (aiosqlite.OperationalError, sqlite3.OperationalError) as exc:
             last = exc
             if not db.is_db_locked_error(exc) or attempt >= 4:

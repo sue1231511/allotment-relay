@@ -727,7 +727,18 @@ TALE_CATALOG.append(
 # ══ 内部工具 ═══════════════════════════════════════════════════
 
 async def _ensure_catalog(conn: aiosqlite.Connection) -> None:
-    """把静态任务目录幂等地刷进 tale_catalog 表。"""
+    """请求路径上的轻量检查：表里条数对得上就不动，缺了才补。
+
+    内容更新（改了任务文案/奖励）靠启动时的 refresh_catalog 全量刷新，不再每次请求写 48 条。
+    """
+    row = await (await conn.execute("SELECT COUNT(*) FROM tale_catalog")).fetchone()
+    if int(row[0] if row else 0) >= len(TALE_CATALOG):
+        return
+    await refresh_catalog(conn)
+
+
+async def refresh_catalog(conn: aiosqlite.Connection) -> None:
+    """把静态任务目录幂等地刷进 tale_catalog 表（启动时调用；条数不够时 _ensure_catalog 兜底）。"""
     for tale in TALE_CATALOG:
         await conn.execute(
             """

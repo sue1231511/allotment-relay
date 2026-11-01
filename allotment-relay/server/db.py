@@ -977,17 +977,21 @@ CREATE TABLE IF NOT EXISTS v1_idempotency (
 );
 CREATE INDEX IF NOT EXISTS idx_v1_idempotency_created
 ON v1_idempotency(created_at);
+
+-- 纪事是全库最大的表且只增不减：按人按动作查、按时间倒序取最新，都靠这几条索引（以前全表扫描）
+CREATE INDEX IF NOT EXISTS idx_chronicle_actor ON chronicle(actor_id, action, created_at);
+CREATE INDEX IF NOT EXISTS idx_chronicle_target ON chronicle(target_id, action, created_at);
+CREATE INDEX IF NOT EXISTS idx_chronicle_action ON chronicle(action, created_at);
+CREATE INDEX IF NOT EXISTS idx_chronicle_created ON chronicle(created_at);
+CREATE INDEX IF NOT EXISTS idx_market_listings_open ON market_listings(buyer_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_market_listings_seller ON market_listings(seller_id);
 """
 
 
 @asynccontextmanager
-async def connect() -> AsyncIterator[aiosqlite.Connection]:
-    """Open DB with busy wait — use as `async with connect() as conn:`."""
+async def _open_raw() -> AsyncIterator[aiosqlite.Connection]:
+    """拿全局互斥锁 + 开一个新连接 + 设 PRAGMA。connect() 和请求内复用都走这里。"""
     global _DB_PRAGMAS_READY
-    existing = _DB_CONN.get()
-    if existing is not None:
-        yield existing
-        return
     async with _DB_MUTEX:
         async with aiosqlite.connect(DB_PATH, timeout=60.0) as conn:
             await conn.execute("PRAGMA busy_timeout=30000")
@@ -996,11 +1000,95 @@ async def connect() -> AsyncIterator[aiosqlite.Connection]:
                 await conn.execute("PRAGMA synchronous=NORMAL")
                 await conn.execute("PRAGMA wal_autocheckpoint=1000")
                 _DB_PRAGMAS_READY = True
-            token = _DB_CONN.set(conn)
-            try:
-                yield conn
-            finally:
-                _DB_CONN.reset(token)
+            yield conn
+
+
+class _RequestScope:
+    """一次请求内共用的一个连接。第一次真的要用库时才开（不碰库的请求不拿锁、不开连接）。"""
+
+    __slots__ = ("conn", "_cm")
+
+    def __init__(self) -> None:
+        self.conn: aiosqlite.Connection | None = None
+        self._cm: Any = None
+
+    async def open(self) -> aiosqlite.Connection:
+        if self.conn is None:
+            cm = _open_raw()
+            self.conn = await cm.__aenter__()
+            self._cm = cm
+        return self.conn
+
+    async def release(self) -> None:
+        cm, self._cm, self.conn = self._cm, None, None
+        if cm is not None:
+            await cm.__aexit__(None, None, None)
+
+
+_REQ_SCOPE: contextvars.ContextVar[_RequestScope | None] = contextvars.ContextVar(
+    "_db_req_scope", default=None,
+)
+
+
+@asynccontextmanager
+async def request_scope() -> AsyncIterator[None]:
+    """请求入口套一层：这次请求里所有最外层 `connect()` 共用同一个连接，不再各开各的。
+
+    每个最外层 connect() 块的行为和以前「新开一个连接」逐条一致：块进入时 row_factory 复位为默认；
+    块退出时没提交的事务回滚（等于以前的关闭连接）；块内异常照常抛出。
+    互斥锁从第一次用库持有到请求结束（所以调用方要在锁外读完请求体、锁外发完响应）。
+    已经在请求域里、或已经有连接（嵌套）时什么也不做。
+    """
+    if _REQ_SCOPE.get() is not None or _DB_CONN.get() is not None:
+        yield
+        return
+    scope = _RequestScope()
+    token = _REQ_SCOPE.set(scope)
+    try:
+        yield
+    finally:
+        try:
+            _REQ_SCOPE.reset(token)
+        except ValueError:
+            _log.exception("请求域复位失败（不在创建它的上下文里） 位置=db.request_scope")
+        try:
+            await scope.release()
+        except Exception:
+            _log.exception("请求域释放连接失败 位置=db.request_scope 连接已开=%s", scope.conn is not None)
+            raise
+
+
+@asynccontextmanager
+async def connect() -> AsyncIterator[aiosqlite.Connection]:
+    """Open DB with busy wait — use as `async with connect() as conn:`."""
+    existing = _DB_CONN.get()
+    if existing is not None:
+        yield existing
+        return
+    scope = _REQ_SCOPE.get()
+    if scope is not None:
+        conn = await scope.open()
+        conn.row_factory = None
+        token = _DB_CONN.set(conn)
+        try:
+            yield conn
+        finally:
+            _DB_CONN.reset(token)
+            conn.row_factory = None
+            # 等同以前「块结束就关连接」：没提交的写入不留给下一个块
+            if conn.in_transaction:
+                try:
+                    await conn.rollback()
+                except Exception:
+                    _log.exception("请求域内块结束回滚失败 位置=db.connect")
+                    raise
+        return
+    async with _open_raw() as conn:
+        token = _DB_CONN.set(conn)
+        try:
+            yield conn
+        finally:
+            _DB_CONN.reset(token)
 
 
 async def run_flagged_migration(conn, flag_key: str, label: str, worker) -> int:
@@ -2587,17 +2675,24 @@ async def init_db() -> None:
         # 退货走保守价），下次启动自动重试。这几项只是补批次账的元数据，不值得让全岛起不来。
         from . import paid_ledger
         from . import item_traits as traits_init
-        from . import energy_notice
+        from . import energy_notice, gift_target_backfill
         for mig_name, mig in (
             ("实付批次补账", paid_ledger.backfill_legacy),
             ("幽灵批次对齐", traits_init.heal_ghost_batches),
             ("老存货补变质起点", traits_init.backfill_spoil_clock),
+            ("旧送礼补收礼人", gift_target_backfill.backfill_gift_targets),
             ("精力梯子告示", energy_notice.announce_energy_ladder),
         ):
             try:
                 await mig(db)
             except Exception:
                 _log.error("启动迁移「%s」失败：已回滚，岛继续启动，下次启动重试（异常栈见上一条日志）", mig_name)
+        from . import tale as tale_mod
+        try:
+            await tale_mod.refresh_catalog(db)  # 任务目录跟随部署刷新；请求路径只做条数检查
+        except Exception:
+            _log.exception("启动刷新任务目录失败 位置=db.init_db")
+            raise
         await db.commit()
 
 
@@ -3553,25 +3648,6 @@ def gift_display_text(
     return raw
 
 
-async def _repair_gift_targets(
-    conn: aiosqlite.Connection,
-    steward_id: int,
-    steward_name: str,
-) -> None:
-    """旧纪事若漏写 target_id，按正文「送礼给 名字」补回收礼人。"""
-    needle = f"送礼给 {steward_name}："
-    await conn.execute(
-        """
-        UPDATE chronicle
-        SET target_id=?
-        WHERE action IN ('gift', 'gift_inbox')
-          AND target_id IS NULL
-          AND text LIKE ?
-        """,
-        (steward_id, f"%{needle}%"),
-    )
-
-
 async def list_received_gifts(steward_id: int, limit: int = 20) -> list[dict[str, Any]]:
     async with connect() as db:
         db.row_factory = aiosqlite.Row
@@ -3579,9 +3655,6 @@ async def list_received_gifts(steward_id: int, limit: int = 20) -> list[dict[str
             await db.execute("SELECT name FROM stewards WHERE id=?", (steward_id,))
         ).fetchone()
         steward_name = str(name_row[0] or "") if name_row else ""
-        if steward_name:
-            await _repair_gift_targets(db, steward_id, steward_name)
-            await db.commit()
         # gift + gift_inbox 同一次送礼各写一条；多取再去重，旧数据只有 gift 的仍保留
         cur = await db.execute(
             """

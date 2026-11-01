@@ -1801,4 +1801,6 @@ async def hui_owner_retract(request: Request):
         return JSONResponse({"detail": str(exc)}, status_code=400)
 
 
-app = NormalizeMcpPathMiddleware(app)
+from .db_scope_middleware import DbScopeMiddleware
+
+app = NormalizeMcpPathMiddleware(DbScopeMiddleware(app))
