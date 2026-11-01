@@ -1314,8 +1314,8 @@ def test_island_page_is_modular() -> None:
     assert "warmScenesInBackground" in (ROOT / "server/static/island/boot.js").read_text(encoding="utf-8")
     assert "warmScenesLater" in app
     assert "waitScenePics" in app
-    assert html.count("island.css?v=plot-overview2") == 1
-    assert html.count("app.js?v=undertide-desks2") == 1
+    assert html.count("island.css?v=story1") == 1
+    assert html.count("app.js?v=story1") == 1
     assert html.count("boot.js?v=keynorm1") == 1
     assert 'rel="preload"' in html
     assert "island-map.webp" in html

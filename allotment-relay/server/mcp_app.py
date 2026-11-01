@@ -87,7 +87,7 @@ async def relay_manual() -> str:
     return await game.relay_manual()
 
 
-@mcp.tool(description="身份档案。空=sheet。例：enroll 名字（要玩才 enroll）· sheet · revise 潮声不断 portrait 戴草帽 · 岛缘 · 引航 · 成就 · 收集 · 灾档 · 灾选 · 维修 · 周报。肖像写进 command，没有单独 portrait 参数。灾选=坏事多选待决（哄/修/隔离等）。周报≠周目标，本周=东八区周一。无 invite_ops。/play 与 AI 同时在线共号。人类 /play 可加到主屏幕。")
+@mcp.tool(description="身份档案。空=sheet。例：enroll 名字（要玩才 enroll）· sheet · revise 潮声不断 portrait 戴草帽 · 岛缘 · 引航 · 成就 · 收集 · 灾档 · 灾选 · 维修 · 周报。肖像写进 command，没有单独 portrait 参数。灾选=坏事多选待决（哄/修/隔离等）。人类 /island 点状态木牌进「这一号」：档案、岛缘、成就称呼、收集、引航、灾选灾档、周报、待办、收礼、改座右铭肖像；改岛民名只有人类能改，模型改不了。周报≠周目标，本周=东八区周一。无 invite_ops。/play 与 AI 同时在线共号。人类 /play 可加到主屏幕。")
 async def steward_ops(command: str = "sheet") -> str:
     from . import progress as progress_mod
     return progress_mod.attach_note(
@@ -174,7 +174,7 @@ async def marriage_ops(command: Annotated[str, Field(description="整句命令�
     return progress_mod.attach_note(await mux._call_ops(marriage.marriage_ops, _kid(), command))
 
 
-@mcp.tool(description="潮闻任务。空=list。例：list · accept tonight_damp · explore beach · review。")
+@mcp.tool(description="潮闻任务。空=list。例：list · accept tonight_damp · explore beach · review。接取用 accept（故事才用 story_ops start）。人类 /island 在广场潮汐公告里翻「潮闻与故事」接取，进行中的一步走到对应地点会冒小牌，和 AI 同一份进度。")
 async def tale_ops(command: str = "list") -> str:
     from . import tale
     return await mux._call_ops(tale.tale_ops, _kid(), command)
@@ -192,7 +192,7 @@ async def wall_ops(command: str = "") -> str:
     return await mux._call_ops(wall.wall_ops, _kid(), command)
 
 
-@mcp.tool(description="人物故事：《灰姑娘》《昨日无凭》《留给明天》。空=list。例：start cinderella · start yesterday_no_proof · start left_for_tomorrow · status · review left_for_tomorrow。开始用 start，不是 tale_ops 的 accept；≠潮闻 tale_ops。")
+@mcp.tool(description="人物故事：《灰姑娘》《昨日无凭》《留给明天》。空=list。例：start cinderella · start yesterday_no_proof · start left_for_tomorrow · status · review left_for_tomorrow。开始用 start，不是 tale_ops 的 accept；≠潮闻 tale_ops。人类 /island 广场潮汐公告「潮闻与故事」里开始、回看，调查按钮不是对话窗。")
 async def story_ops(command: str = "list") -> str:
     from . import story
     return await mux._call_ops(story.story_ops, _kid(), command)
