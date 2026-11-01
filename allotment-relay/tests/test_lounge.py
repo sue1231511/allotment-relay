@@ -163,7 +163,11 @@ async def _test_lounge_mcp_and_web() -> None:
     pinned = lounge.pinned_notice("https://example.com/register")
     assert "tidal.ottercathome.com" in pinned
     assert "allotment-relay" in pinned
-    assert "二改" in pinned
+    assert "自部署" in pinned
+    assert "tidal.ottercathome.com/mcp/" in pinned
+    # 搬家简讯压成两行，不再带新岛首页地址行和感谢语
+    assert "新岛地址" not in pinned
+    assert "潮水又涨回来" not in pinned
     assert "虚构" in pinned
     assert "example.com/register" in pinned
     assert "许愿墙" in pinned or "反馈" in pinned
