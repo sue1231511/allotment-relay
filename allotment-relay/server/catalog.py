@@ -1326,12 +1326,12 @@ KITCHEN_DISHES = {
     "garlic_oyster": {
         "name": "蒜蓉生蚝", "emoji": "🦪",
         "ings": ["fish_seaurchin", "crop_garlic", "crop_chili"],
-        "base_sell": 77, "energy": 30, "tags": ["sea", "spicy"],
+        "base_sell": 77, "energy": 24, "tags": ["sea", "spicy"],
     },
     "blanch_shrimp": {
         "name": "白灼虾", "emoji": "🦐",
         "ings": ["fish_glassshrimp", "crop_ginger"],
-        "base_sell": 64, "energy": 28, "tags": ["sea"],
+        "base_sell": 64, "energy": 22, "tags": ["sea"],
     },
     "steam_fish": {
         "name": "清蒸鱼", "emoji": "🐟",
@@ -1341,12 +1341,12 @@ KITCHEN_DISHES = {
     "cheese_lobster": {
         "name": "芝士龙虾", "emoji": "🦞",
         "ings": ["fish_kingcrab", "crop_kale", "milk"],
-        "base_sell": 103, "energy": 36, "tags": ["sea", "rich"],
+        "base_sell": 103, "energy": 32, "tags": ["sea", "rich"],
     },
     "braised_fish": {
         "name": "红烧鱼", "emoji": "🍲",
         "ings": ["fish_mackerel", "crop_garlic", "crop_chili"],
-        "base_sell": 68, "energy": 28, "tags": ["sea"],
+        "base_sell": 68, "energy": 24, "tags": ["sea"],
     },
     "sour_fish": {
         "name": "酸汤鱼", "emoji": "🥘",
@@ -1356,57 +1356,57 @@ KITCHEN_DISHES = {
     "chop_head": {
         "name": "剁椒鱼头", "emoji": "🌶️",
         "ings": ["fish_lingcod", "crop_chili", "crop_garlic"],
-        "base_sell": 86, "energy": 32, "tags": ["sea", "spicy"],
+        "base_sell": 86, "energy": 28, "tags": ["sea", "spicy"],
     },
     "blueberry_tart": {
         "name": "蓝莓派", "emoji": "🥧",
         "ings": ["crop_blueberry", "crop_rye", "milk"],
-        "base_sell": 78, "energy": 24, "tags": ["dessert"],
+        "base_sell": 78, "energy": 28, "tags": ["dessert"],
     },
     "mango_pudding": {
         "name": "芒果椰奶冻", "emoji": "🍮",
         "ings": ["crop_mango", "crop_coconut", "milk"],
-        "base_sell": 86, "energy": 26, "tags": ["dessert", "tropic"],
+        "base_sell": 86, "energy": 30, "tags": ["dessert", "tropic"],
     },
     "orange_preserve": {
         "name": "糖渍橘子", "emoji": "🍊",
         "ings": ["crop_orange", "honey", "crop_ginger"],
-        "base_sell": 88, "energy": 24, "tags": ["dessert"],
+        "base_sell": 88, "energy": 30, "tags": ["dessert"],
     },
     "pineapple_fried_rice": {
         "name": "菠萝炒饭", "emoji": "🍚",
         "ings": ["crop_pineapple", "crop_rye", "egg"],
-        "base_sell": 72, "energy": 28, "tags": ["tropic"],
+        "base_sell": 72, "energy": 26, "tags": ["tropic"],
     },
     "papaya_salad": {
         "name": "青木瓜沙拉", "emoji": "🥗",
         "ings": ["crop_papaya", "crop_chili", "crop_lime"],
-        "base_sell": 90, "energy": 24, "tags": ["tropic", "sour"],
+        "base_sell": 90, "energy": 30, "tags": ["tropic", "sour"],
     },
     "lemongrass_steamed_fish": {
         "name": "香茅蒸鱼", "emoji": "🐟",
         "ings": ["fish_seatrout", "crop_lemongrass", "crop_ginger"],
-        "base_sell": 77, "energy": 30, "tags": ["sea", "tropic"],
+        "base_sell": 77, "energy": 26, "tags": ["sea", "tropic"],
     },
     "coconut_curry": {
         "name": "椰香咖喱", "emoji": "🍛",
         "ings": ["crop_coconut", "crop_chili", "crop_sweetpotato"],
-        "base_sell": 69, "energy": 28, "tags": ["tropic", "spicy"],
+        "base_sell": 69, "energy": 24, "tags": ["tropic", "spicy"],
     },
     "honey_garlic_prawn": {
         "name": "蜜蒜虾", "emoji": "🦐",
         "ings": ["fish_glassshrimp", "honey", "crop_garlic"],
-        "base_sell": 86, "energy": 32, "tags": ["sea", "sweet"],
+        "base_sell": 86, "energy": 28, "tags": ["sea", "sweet"],
     },
     "duck_egg_fried_rice": {
         "name": "鸭蛋炒饭", "emoji": "🍳",
         "ings": ["duck_egg", "crop_rye", "crop_garlic"],
-        "base_sell": 61, "energy": 26, "tags": ["rich"],
+        "base_sell": 61, "energy": 22, "tags": ["rich"],
     },
     "goat_cheese_salad": {
         "name": "山羊奶酪沙拉", "emoji": "🧀",
         "ings": ["goat_cheese", "crop_kale", "crop_lime"],
-        "base_sell": 81, "energy": 24, "tags": ["tropic"],
+        "base_sell": 81, "energy": 28, "tags": ["tropic"],
     },
     "durian_mousse": {
         "name": "榴莲慕斯", "emoji": "🍰",
@@ -1421,7 +1421,7 @@ KITCHEN_DISHES = {
     "scallop_garlic": {
         "name": "蒜蓉粉丝扇贝", "emoji": "🦪",
         "ings": ["shell_scallop", "crop_garlic", "crop_chili"],
-        "base_sell": 77, "energy": 28, "tags": ["sea"],
+        "base_sell": 77, "energy": 26, "tags": ["sea"],
     },
     "sweetpotato_pancake": {
         "name": "红薯烙", "emoji": "🥞",
@@ -1441,22 +1441,22 @@ KITCHEN_DISHES = {
     "pork_sweetpotato": {
         "name": "红薯烧肉", "emoji": "🍖",
         "ings": ["meat_pork", "crop_sweetpotato", "crop_chili"],
-        "base_sell": 74, "energy": 30, "tags": ["rich"],
+        "base_sell": 74, "energy": 26, "tags": ["rich"],
     },
     "rabbit_stew": {
         "name": "姜焖兔", "emoji": "🍲",
         "ings": ["meat_rabbit", "crop_kale", "crop_ginger"],
-        "base_sell": 66, "energy": 28, "tags": ["rich"],
+        "base_sell": 66, "energy": 24, "tags": ["rich"],
     },
     "banana_fritters": {
         "name": "香蕉椰丝饼", "emoji": "🍌",
         "ings": ["crop_banana", "crop_coconut", "honey"],
-        "base_sell": 86, "energy": 24, "tags": ["dessert", "tropic"],
+        "base_sell": 86, "energy": 28, "tags": ["dessert", "tropic"],
     },
     "mussel_garlic": {
         "name": "蒜香青口", "emoji": "🦪",
         "ings": ["shell_mussel", "crop_garlic", "crop_chili"],
-        "base_sell": 62, "energy": 24, "tags": ["sea"],
+        "base_sell": 62, "energy": 22, "tags": ["sea"],
     },
     "lime_steamed_fish": {
         "name": "青柠姜蒸鱼", "emoji": "🐟",
@@ -1466,12 +1466,12 @@ KITCHEN_DISHES = {
     "bramble_honey_tart": {
         "name": "莓蜜挞", "emoji": "🥧",
         "ings": ["crop_bramble", "honey", "crop_rye"],
-        "base_sell": 74, "energy": 22, "tags": ["dessert"],
+        "base_sell": 74, "energy": 28, "tags": ["dessert"],
     },
     "kelp_egg_soup": {
         "name": "海藻蛋花汤", "emoji": "🍲",
         "ings": ["crop_kelp", "egg", "crop_ginger"],
-        "base_sell": 58, "energy": 26, "tags": ["sea"],
+        "base_sell": 58, "energy": 22, "tags": ["sea"],
     },
     "papaya_chicken": {
         "name": "木瓜炖鸡", "emoji": "🍲",
@@ -1481,42 +1481,42 @@ KITCHEN_DISHES = {
     "fogpea_salad": {
         "name": "雾豆凉拌", "emoji": "🥗",
         "ings": ["crop_fogpea", "crop_garlic", "crop_chili"],
-        "base_sell": 55, "energy": 22, "tags": ["legume"],
+        "base_sell": 55, "energy": 24, "tags": ["legume"],
     },
     "sardine_kale": {
         "name": "沙丁甘蓝锅", "emoji": "🍲",
         "ings": ["fish_sardine", "crop_kale", "crop_garlic"],
-        "base_sell": 50, "energy": 24, "tags": ["sea"],
+        "base_sell": 50, "energy": 22, "tags": ["sea"],
     },
     "whitebait_omelette": {
         "name": "银鱼煎蛋", "emoji": "🍳",
         "ings": ["fish_whitebait", "egg", "crop_garlic"],
-        "base_sell": 49, "energy": 24, "tags": ["sea"],
+        "base_sell": 49, "energy": 22, "tags": ["sea"],
     },
     "steam_yellowcroaker": {
         "name": "清蒸黄鱼", "emoji": "🐟",
         "ings": ["fish_yellowcroaker", "crop_ginger", "crop_garlic"],
-        "base_sell": 72, "energy": 28, "tags": ["sea"],
+        "base_sell": 72, "energy": 26, "tags": ["sea"],
     },
     "roast_oyster": {
         "name": "烤生蚝", "emoji": "🦪",
         "ings": ["fish_oyster", "crop_garlic", "crop_chili"],
-        "base_sell": 66, "energy": 26, "tags": ["sea", "spicy"],
+        "base_sell": 66, "energy": 24, "tags": ["sea", "spicy"],
     },
     "ginger_swimmingcrab": {
         "name": "姜炒梭子蟹", "emoji": "🦀",
         "ings": ["fish_swimmingcrab", "crop_ginger", "crop_chili"],
-        "base_sell": 88, "energy": 28, "tags": ["sea", "spicy"],
+        "base_sell": 88, "energy": 30, "tags": ["sea", "spicy"],
     },
     "oil_seabream": {
         "name": "葱油真鲷", "emoji": "🐡",
         "ings": ["fish_seabream", "crop_garlic", "crop_ginger"],
-        "base_sell": 81, "energy": 30, "tags": ["sea"],
+        "base_sell": 81, "energy": 28, "tags": ["sea"],
     },
     "spanishmack_stew": {
         "name": "姜炖马鲛", "emoji": "🍲",
         "ings": ["fish_spanishmack", "crop_ginger", "crop_kale"],
-        "base_sell": 74, "energy": 28, "tags": ["sea"],
+        "base_sell": 74, "energy": 26, "tags": ["sea"],
     },
     "lemongrass_flyingfish": {
         "name": "香茅飞鱼", "emoji": "🐟",
@@ -1531,7 +1531,7 @@ KITCHEN_DISHES = {
     "icefish_kelp": {
         "name": "冰鱼海藻汤", "emoji": "🍲",
         "ings": ["fish_icefish", "crop_kelp", "crop_ginger"],
-        "base_sell": 62, "energy": 26, "tags": ["sea"],
+        "base_sell": 62, "energy": 24, "tags": ["sea"],
     },
     "chili_grouper": {
         "name": "红烧石斑", "emoji": "🌶️",
@@ -1546,7 +1546,7 @@ KITCHEN_DISHES = {
     "abalone_porridge": {
         "name": "鲍鱼粥", "emoji": "🥣",
         "ings": ["fish_abalone", "crop_rye", "crop_ginger"],
-        "base_sell": 104, "energy": 30, "tags": ["sea", "rich"],
+        "base_sell": 104, "energy": 32, "tags": ["sea", "rich"],
     },
     "garlic_lobster": {
         "name": "蒜蓉龙虾", "emoji": "🦞",
@@ -1556,22 +1556,22 @@ KITCHEN_DISHES = {
     "seared_tuna": {
         "name": "香煎金枪", "emoji": "🐟",
         "ings": ["fish_tuna", "crop_lime", "crop_chili"],
-        "base_sell": 116, "energy": 32, "tags": ["sea", "tropic"],
+        "base_sell": 116, "energy": 34, "tags": ["sea", "tropic"],
     },
     "swordfish_steak": {
         "name": "旗鱼排", "emoji": "🗡️",
         "ings": ["fish_swordfish", "crop_ginger", "crop_rye"],
-        "base_sell": 133, "energy": 34, "tags": ["sea", "rich"],
+        "base_sell": 133, "energy": 36, "tags": ["sea", "rich"],
     },
     "black_salt_fish": {
         "name": "黑盐炖鱼", "emoji": "🍲",
         "ings": ["proc_black_salt", "fish_mackerel", "crop_tide_ginger"],
-        "base_sell": 88, "energy": 38, "tags": ["sea", "special"],
+        "base_sell": 88, "energy": 28, "tags": ["sea", "special"],
     },
     "fog_mushroom_soup": {
         "name": "雾菇汤", "emoji": "🍄",
         "ings": ["crop_fog_mushroom", "wild_mint", "crop_garlic"],
-        "base_sell": 64, "energy": 26, "tags": ["special"],
+        "base_sell": 64, "energy": 24, "tags": ["special"],
     },
     "lantern_sashimi": {
         "name": "灯笼鱼刺身", "emoji": "🏮",
@@ -2303,15 +2303,30 @@ def _mix_sell_price_raw(grade: str, tier: int, stars: int) -> int:
     return max(listed + max(0, int(tier)) * 8, floored)
 
 
-def mix_energy(grade: str, stars: int) -> int:
-    # 做饭永远比生吃划算：生水果 4 / 生鱼 10 / 生肉 12 / 灶台 meal_ 18
+# 定点菜精力最低 22，吃到 = 精力 + 3×星。乱炖同星必须比它低，不然菜谱白学。
+NAMED_DISH_ENERGY_MIN = 22
+NAMED_DISH_ENERGY_MAX = 36
+
+
+def mix_energy_cap(stars: int) -> int:
+    """乱炖同星精力上限 = 同星定点菜最低（22+3×星）减 1。"""
+    return NAMED_DISH_ENERGY_MIN + 3 * int(stars) - 1
+
+
+def mix_energy(grade: str, stars: int, tier: int = 0) -> int:
+    """自由组合的精力。档（j/o/g/x）和星级定底，材料档 tier（材料身价 // 20）再加一点，花得多回得多；
+    封顶低于同星定点菜（见 mix_energy_cap）。梯子：生吃 < 零食饮品 < 乱炖 < 定点菜。"""
+    t = max(0, int(tier))
+    s = int(stars)
     if grade == "j":
-        return 5 + stars
-    if grade == "o":
-        return 12 + stars * 2
-    if grade == "g":
-        return 22 + stars * 4
-    return 32 + stars * 5
+        base = 4 + s + t // 5
+    elif grade == "o":
+        base = 12 + s * 3 + t // 3
+    elif grade == "g":
+        base = 16 + s * 3 + t // 3
+    else:
+        base = 20 + s * 3 + t // 3
+    return min(mix_energy_cap(s), base)
 
 
 def register_mix_item(item: str) -> str:
@@ -2498,8 +2513,8 @@ def _dish_sell_price_raw(key: str, stars: int) -> int:
 def dish_energy(item: str) -> int | None:
     parsed = parse_mix_item(item)
     if parsed:
-        grade, _tier, _sig, stars = parsed
-        return mix_energy(grade, stars)
+        grade, tier, _sig, stars = parsed
+        return mix_energy(grade, stars, tier)
     if item.startswith("dish_") and "_s" in item:
         base, star_s = item.rsplit("_s", 1)
         if star_s.isdigit():
