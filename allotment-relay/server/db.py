@@ -2587,10 +2587,12 @@ async def init_db() -> None:
         # 退货走保守价），下次启动自动重试。这几项只是补批次账的元数据，不值得让全岛起不来。
         from . import paid_ledger
         from . import item_traits as traits_init
+        from . import energy_notice
         for mig_name, mig in (
             ("实付批次补账", paid_ledger.backfill_legacy),
             ("幽灵批次对齐", traits_init.heal_ghost_batches),
             ("老存货补变质起点", traits_init.backfill_spoil_clock),
+            ("精力梯子告示", energy_notice.announce_energy_ladder),
         ):
             try:
                 await mig(db)
