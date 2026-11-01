@@ -31,6 +31,7 @@ import { mountStoryHook } from "./ui/story-hook.js?v=story1";
 import { openProfile } from "./ui/profile.js?v=home1";
 import { openField } from "./ui/field.js?v=home1";
 import { hidePanel } from "./ui/panel.js?v=story1";
+import { startEmojiSvg } from "./ui/emoji-svg.js?v=icons1";
 import { renderHut } from "./scenes/hut.js?v=bottles-cozy1";
 import { renderShop } from "./scenes/shop.js?v=tt-sprite1";
 import { renderLili } from "./scenes/lili.js?v=island-modulefix2";
@@ -3483,6 +3484,7 @@ function bindProfileChips() {
 }
 
 async function start() {
+  startEmojiSvg();
   bindDock();
   bindProfileChips();
   window.__islandApp = true;

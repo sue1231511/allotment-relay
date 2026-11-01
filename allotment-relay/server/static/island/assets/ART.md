@@ -118,3 +118,11 @@
 K 室完整提示词：
 
 > Use case: stylized-concept. Asset type: portrait background for a cozy Chinese coastal life-simulation mobile game, underground area. Generate ONE background image, 2:3 portrait composition, warm finely detailed watercolor and gouache storybook illustration with delicate hand-drawn texture, vine-covered stone cave lit by brass lanterns, matching an earlier map of the same cave. Subject: the front of a private office door at the end of an underground passage: a large round arched wooden door with a brass ship-wheel style handle at the center, teal silk drapes tied back on both sides, brass lamp posts topped with glowing lanterns, a worn rug with a seashell motif leading to the door, small pools of water and starfish at the edges, a faint warm light leaking from under the door. Quiet, expensive, slightly intimidating. The lower quarter stays calm for a dialogue panel; open floor at the left side.
+
+## 界面图标（手绘 SVG，不用 emoji）
+
+`/island` 不用 emoji 当图标。图标在 `ui/icons.js`（24×24 线描 SVG，颜色跟随文字），服务端文案和数据名字里带的 emoji 在落进页面时由 `ui/emoji-svg.js` 换成对应图标；聊天室消息和表情包是玩家写的内容，原样保留。
+
+- emoji → 图标的对照表是生成的：`python scripts/gen_emoji_icons.py`（`ui/emoji-map.js`，别手改）。新加了 emoji 没归类会落到通用小圆点，`tests/test_island_icons.py` 会提醒对照表过期。
+- ★ ☆ ♡ ✓ 是版面符号（星级、好感、对错），不当图标，保留为文字。
+- 要换更精致的图标：改 `icons.js` 里同名那一条，或补一条新图标再改生成脚本里的规则。
