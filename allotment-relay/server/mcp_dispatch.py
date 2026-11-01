@@ -41,7 +41,11 @@ async def _call_ops(fn: OpsFn, *args, **kwargs) -> str:
     last: BaseException | None = None
     for attempt in range(5):
         try:
-            return await fn(*args, **kwargs)
+            async with db.request_scope(f"MCP {getattr(fn, '__name__', 'ops')}"):
+                return await fn(*args, **kwargs)
+        except db.DbBusyError as exc:
+            # 排队等锁已经等满上限：别再重试（会把等待翻五倍），直接把清楚的话交给玩家
+            raise ValueError(db.DB_BUSY_MSG) from exc
         except (aiosqlite.OperationalError, sqlite3.OperationalError) as exc:
             last = exc
             if not db.is_db_locked_error(exc) or attempt >= 4:

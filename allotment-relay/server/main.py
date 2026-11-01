@@ -1,3 +1,5 @@
+import asyncio
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
@@ -10,6 +12,8 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 from . import db
 from .config import STATIC_DIR, TEMPLATES_DIR
 from .mcp_app import build_mcp_app
+
+_log = logging.getLogger(__name__)
 from .v1.router import router as island_v1_router
 from .v1.date_routes import router as date_router
 from .v1.florist_routes import router as florist_router
@@ -126,6 +130,18 @@ class KeyRequest(BaseModel):
         if "@" not in v or len(v) < 5:
             raise ValueError("邮箱格式无效")
         return v
+
+
+@app.exception_handler(db.DbBusyError)
+async def _db_busy_handler(request: Request, exc: db.DbBusyError):
+    """等数据库锁超时：给 503 + 一句人话，前端（island/api.js、play.js）都读得到。"""
+    _log.error("请求因等数据库锁超时失败 位置=main._db_busy_handler 路由=%s %s 已等=%.1fs 占锁者=%s",
+               request.method, request.url.path, exc.waited, exc.holder)
+    return JSONResponse(
+        {"ok": False, "error": {"code": "DB_BUSY", "message": db.DB_BUSY_MSG}, "detail": db.DB_BUSY_MSG},
+        status_code=503,
+        headers={"Retry-After": "10"},
+    )
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -847,7 +863,9 @@ async def lounge_sticker_file(sticker_id: int, variant: str = "full"):
     from fastapi.responses import FileResponse
     try:
         path = await stickers.sticker_file_path(sticker_id)
-        path = stickers.ensure_variant(path, variant)
+        # 缩略图缓存没命中时要解码、缩放图片（吃 CPU、读写文件）：先还锁，扔到线程里做
+        await db.release_request_lock()
+        path = await asyncio.to_thread(stickers.ensure_variant, path, variant)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return FileResponse(
@@ -1801,4 +1819,6 @@ async def hui_owner_retract(request: Request):
         return JSONResponse({"detail": str(exc)}, status_code=400)
 
 
-app = NormalizeMcpPathMiddleware(app)
+from .db_scope_middleware import DbScopeMiddleware
+
+app = NormalizeMcpPathMiddleware(DbScopeMiddleware(app))
