@@ -63,7 +63,8 @@ async def _test_undertide_racket_flow() -> None:
             "UPDATE steward_undertide SET access=1, well_hint=1 WHERE steward_id=?",
             (sid,),
         )
-        await conn.execute("UPDATE stewards SET tickets=200 WHERE id=?", (sid,))
+        # 阿标抽到的货按日期种子变，稀有货能到 400+ 票；钱包只给 200 的话，那几天会「票不够，赊账？找恶猫去」
+        await conn.execute("UPDATE stewards SET tickets=5000 WHERE id=?", (sid,))
         await conn.commit()
 
     scan = await undertide.undertide_ops(kid, "racket")
