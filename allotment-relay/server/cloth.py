@@ -229,7 +229,7 @@ CLOTH_HELP = f"""cloth_ops 子命令（整句写进 command）：
 季节：梅雨/盛夏/台风季/冬潮各有布和染料；错过不绝版，来年同一季再遇。
 当季合身精力 -1，盛夏穿呢衣/冬潮穿裙会 +1。没有 shop_ops / tailor_ops。
   人类网页 /atelier 是海报；裁衣在 /play。visit_ops 漾漾 也能进门。
-  人类 /island 总览点剧场，进院景再点衣泊坊：能看坊、买婚服订婚服、取衣、换衣服。委托短褂仍去上手页。"""
+  人类 /island 总览点剧场，进院景再点衣泊坊：能看坊、买婚服订婚服、取衣、换衣服。委托（版型、颜色、纹样三步选，衣料自动挑）在「看坊」栏点「接委托」。"""
 
 
 def current_cloth_season() -> str:
@@ -1026,7 +1026,7 @@ async def player_view(conn: aiosqlite.Connection, s: dict[str, Any]) -> dict[str
     elif job_name:
         take_note = f"正在裁 {job_name}，{_fmt_left(ready_at - now)}后再取。"
     else:
-        take_note = f"台上空闲。委托短褂去上手页交给{NPC_NAME}。"
+        take_note = f"台上空闲。想裁衣，手机地图在「看坊」栏点「接委托」，或上手页交给{NPC_NAME}。"
     worn_name = worn["name"] if worn else "没穿"
     if worn:
         delta = wear_energy_delta(worn["cut_key"], worn["fabric_key"], season)

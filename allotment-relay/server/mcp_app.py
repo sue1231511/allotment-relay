@@ -134,7 +134,7 @@ async def visit_ops(command: Annotated[str, Field(description="整句子命令�
     return await mux._call_ops(mux.visit_bundle, _kid(), command)
 
 
-@mcp.tool(description="酒吧。空=档。例：work 洗碗 night · cheer 好话。cheer=荔栀≠猫猫/小橘。")
+@mcp.tool(description="酒吧。空=档。例：work 洗碗 night · cheer 好话 · tip 名字 10 · request_song 歌名 · staff。cheer=荔栀≠猫猫/小橘。人类 /island 酒吧「今晚」栏也能点今晚、员工、驻唱、点歌、小费、唠嗑、包宿。")
 async def bar_ops(command: str = "") -> str:
     from . import bar
     from . import progress as progress_mod
@@ -160,7 +160,7 @@ async def theater_ops(command: str = "") -> str:
     return await mux._call_ops(theater.theater_ops, _kid(), command)
 
 
-@mcp.tool(description="衣泊坊漾漾。空=列表≠看坊。例：委托 短褂 海色 · 取 · 坊险 剪线。取衣缠梭未处置不能再取/委托/买。勿 tailor_ops。")
+@mcp.tool(description="衣泊坊漾漾。空=列表≠看坊。例：委托 短褂 海色 · 取 · 坊险 剪线。取衣缠梭未处置不能再取/委托/买。勿 tailor_ops。人类 /island 衣泊坊「看坊」栏「接委托」选版型、颜色、纹样，衣料自动挑。")
 async def cloth_ops(command: str = "") -> str:
     from . import cloth
     from . import progress as progress_mod

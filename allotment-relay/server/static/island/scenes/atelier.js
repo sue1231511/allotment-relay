@@ -94,6 +94,7 @@ function deskMarkup(shop) {
     sku("take", "", { emoji: "📦", name: "取衣" }, d.take_note || "", d.can_take ? "取" : "看", Boolean(d.can_take), d.can_take ? "is-ready" : ""),
     sku("look", "worn", { emoji: "👕", name: d.worn || "没穿" }, d.worn_note || "", d.can_remove ? "脱" : "看", Boolean(d.can_remove)),
     sku("remove", "", { emoji: "🧥", name: "脱下" }, d.worn_note || "本来就没穿。", d.can_remove ? "脱" : "看", Boolean(d.can_remove)),
+    sku("commission", "", { emoji: "", name: "接委托" }, d.job === "空闲" ? "交布和染料，漾漾一次只接一件。版型、颜色、纹样自己选，衣料按手里有的挑。" : "台上有活，做完取了才能再接。", d.job === "空闲" ? "选" : "看", d.job === "空闲"),
     sku("visit", "", { emoji: "🪡", name: "见漾漾" }, d.yangyang || "今日首次约三成给旧衣料，不是必给。", "见", true),
   ].join("");
 }
@@ -119,5 +120,5 @@ function closetMarkup(shop) {
     row.can_wear ? "穿" : "穿着",
     Boolean(row.can_wear),
   ));
-  return rows.join("") || `<p class="island-shop-empty">衣橱空着。现货买婚服订婚服，短褂委托仍在上手页。</p>`;
+  return rows.join("") || `<p class="island-shop-empty">衣橱空着。现货买婚服订婚服，或在「看坊」栏接委托自己裁。</p>`;
 }

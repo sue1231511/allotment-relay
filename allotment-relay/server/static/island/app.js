@@ -38,10 +38,10 @@ import { renderClinic } from "./scenes/clinic.js?v=island-modulefix2";
 import { renderShaonian } from "./scenes/shaonian.js?v=island-modulefix2";
 import { renderWorkshop } from "./scenes/workshop.js?v=workshop-process1";
 import { renderQuarry } from "./scenes/quarry.js?v=quarry-collapse1";
-import { renderBar } from "./scenes/bar.js?v=island-modulefix2";
+import { renderBar } from "./scenes/bar.js?v=misc1";
 import { renderTheater } from "./scenes/theater.js?v=island-modulefix2";
 import { renderWriters } from "./scenes/writers.js?v=island-modulefix2";
-import { renderAtelier } from "./scenes/atelier.js?v=island-modulefix2";
+import { renderAtelier } from "./scenes/atelier.js?v=misc1";
 import { renderHall } from "./scenes/hall.js?v=island-modulefix2";
 import { renderEatery } from "./scenes/eatery.js?v=island-modulefix2";
 import { renderMarket } from "./scenes/market.js?v=island-modulefix2";
@@ -1226,7 +1226,7 @@ function barRow(kind, target) {
   return null;
 }
 
-function barCan(kind, row) {
+function barCan(kind, row, target = "") {
   if (!row) return false;
   if (kind === "sink_flood") {
     const act = (row.flood_actions || []).find((a) => a.action === target);
@@ -1251,8 +1251,48 @@ function tapBar(kind, target) {
     return;
   }
   const body = (row && (row.detail || row.note || row.cheer_note)) || "做这一下？";
+  if (kind === "tonight" || kind === "staff" || kind === "song") {
+    runBar(kind, "");
+    return;
+  }
+  if (kind === "request_song") {
+    showFormSheet({
+      title: "点歌", body: "写一个歌名，驻唱听得到。",
+      fields: [{ id: "song", label: "歌名", placeholder: "歌名", max: 40 }], confirm: "点",
+      onConfirm: (v) => runBar("request_song", v.song),
+    });
+    return;
+  }
+  if (kind === "tip") {
+    showFormSheet({
+      title: "给员工小费", body: "写当班员工的名字和票数。协作度够高对方多收一点，加成从酒吧营业额池出，池空就没有；每对号每日有上限。",
+      fields: [
+        { id: "who", label: "员工名", placeholder: "名字", max: 24 },
+        { id: "amount", label: "票数", placeholder: "10", max: 6 },
+        { id: "note", label: "备注（可不写）", placeholder: "辛苦了", optional: true, max: 60 },
+      ],
+      confirm: "给",
+      onConfirm: (v) => runBar("tip", `${v.who.replace(/\s+/g, "")} ${v.amount}${v.note ? ` ${v.note}` : ""}`),
+    });
+    return;
+  }
+  if (kind === "chat") {
+    showFormSheet({
+      title: "跟荔栀唠", body: "想聊什么，写一句（可不写）。",
+      fields: [{ id: "topic", label: "话题", placeholder: "今晚人多不多", optional: true, max: 60 }], confirm: "唠",
+      onConfirm: (v) => runBar("chat", v.topic || ""),
+    });
+    return;
+  }
+  if (kind === "lodge") {
+    showActSheet({
+      title: "包宿", body: "走投无路才收：管饭加工钱，干 6 小时，期间哪儿也去不了。真穷得叮当响才准。",
+      confirm: "包宿", onConfirm: () => runBar("lodge", ""),
+    });
+    return;
+  }
   if (kind === "sink_flood") {
-    if (!barCan(kind, row)) {
+    if (!barCan(kind, row, target)) {
       showHintSheet({ title: "碗险", body: (shop.sink && shop.sink.note) || body });
       return;
     }
@@ -1449,6 +1489,30 @@ function tapAtelier(kind, target) {
     showHintSheet({
       title: target === "worn" ? (desk.worn || "身上") : (desk.job || "看坊"),
       body,
+    });
+    return;
+  }
+  if (kind === "commission") {
+    const desk2 = shop.desk || {};
+    if (desk2.job !== "空闲") {
+      showHintSheet({ title: "接委托", body: "台上有活，做完取了才能再接。" });
+      return;
+    }
+    const cat = shop.catalog || {};
+    const pickOf = (rows) => (rows || []).map((r) => ({ id: r.name, label: r.name }));
+    showPickSheet({
+      title: "选版型", body: "婚服、订婚服自己裁，料加倍、隔日取。",
+      options: pickOf(cat.cuts),
+      onConfirm: (cut) => showPickSheet({
+        title: "选颜色", body: "当季色要对季节。", options: pickOf(cat.colors),
+        onConfirm: (color) => showPickSheet({
+          title: "选纹样", body: "素面不加料；有纹样多一份料、多一点时间。衣料按手里有的自动挑。", options: pickOf(cat.motifs),
+          onConfirm: (motif) => showActSheet({
+            title: "接委托", body: `${cut} · ${color} · ${motif}。布和染料从行囊扣，开始裁制。`, confirm: "交给漾漾",
+            onConfirm: () => runAtelier("commission", motif === "素" ? `${cut} ${color}` : `${cut} ${color} ${motif}`),
+          }),
+        }),
+      }),
     });
     return;
   }
