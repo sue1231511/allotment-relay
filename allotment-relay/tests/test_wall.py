@@ -8,8 +8,18 @@ import sys
 import tempfile
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+
+
+@pytest.fixture(autouse=True)
+def _no_plank_loose(monkeypatch):
+    """钉牌后有 11% 概率钉子松（亭险）；这里测发帖上限和管理，不靠运气（亭险另见 test_expansion_batch17_20）。"""
+    from server import wall_plank_loose
+
+    monkeypatch.setattr(wall_plank_loose.random, "random", lambda: 1.0)
 
 
 async def _boot(tmp: Path):

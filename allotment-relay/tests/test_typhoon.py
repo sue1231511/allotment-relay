@@ -6,6 +6,8 @@ import asyncio
 import os
 import sys
 import tempfile
+import time
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -39,9 +41,27 @@ def test_typhoon() -> None:
     asyncio.run(_test_typhoon())
 
 
+def _this_week_monday_noon() -> int:
+    """本东八区周周一 12:00。预报只在周四 20:00 登陆前出现，真实时钟落在周五到周日测试就会红，所以钉住时钟。"""
+    cst = timezone(timedelta(hours=8))
+    now = datetime.fromtimestamp(time.time(), cst)
+    monday = (now - timedelta(days=now.weekday())).replace(hour=12, minute=0, second=0, microsecond=0)
+    return int(monday.timestamp())
+
+
 async def _test_typhoon() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="typhoon-"))
     db = await _boot(tmp)
+    real_now = db.now
+    monday = _this_week_monday_noon()
+    db.now = lambda: monday
+    try:
+        await _typhoon_flow(db)
+    finally:
+        db.now = real_now
+
+
+async def _typhoon_flow(db) -> None:
     from server import chaoshen, season, typhoon
 
     akid, asid = await _enroll(db, "a@example.com", "岛民安")

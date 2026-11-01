@@ -278,12 +278,13 @@ async def test_tide_fund_auto_payout() -> None:
 async def test_tide_fund_cap_raised() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="chaoshen-fund-cap-"))
     db = await _boot(tmp)
+    # 登记发生在同一东八区周：新号第一周免岸税，否则岸税先触发当天发放，捐的票要等下个发放日
+    real_now = db.now
+    db.now = lambda: TUE
     rich = await _enroll(db, "cap-rich@example.com", "阔余")
     poor = await _enroll(db, "cap-poor@example.com", "阔缺")
     from server import mcp_dispatch
 
-    real_now = db.now
-    db.now = lambda: TUE
     try:
         await _set_tickets(db, rich, 10000)
         await _set_tickets(db, poor, 100)
@@ -298,13 +299,14 @@ async def test_tide_fund_cap_raised() -> None:
 async def test_tide_fund_floor_first() -> None:
     tmp = Path(tempfile.mkdtemp(prefix="chaoshen-fund-floor-"))
     db = await _boot(tmp)
+    # 登记发生在同一东八区周：新号第一周免岸税，否则岸税先触发当天发放，捐的票要等下个发放日
+    real_now = db.now
+    db.now = lambda: TUE
     rich = await _enroll(db, "floor-rich@example.com", "托余")
     low = await _enroll(db, "floor-low@example.com", "托低")
     mid = await _enroll(db, "floor-mid@example.com", "托中")
     from server import mcp_dispatch
 
-    real_now = db.now
-    db.now = lambda: TUE
     try:
         await _set_tickets(db, rich, 4000)
         await _set_tickets(db, low, 100)

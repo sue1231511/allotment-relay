@@ -88,6 +88,17 @@ def _no_gust(monkeypatch):
     monkeypatch.setattr(market_stall_gust, "maybe_after_sell", _noop)
 
 
+@pytest.fixture(autouse=True)
+def _no_weekly_tax(monkeypatch):
+    """时间快进会跨东八区周，新号第一周免税一过期就会开税单；这里只测过期不扣票，岸税另有 test_tax。"""
+    from server import tax
+
+    async def _noop(conn=None, *, ts=None):
+        return None
+
+    monkeypatch.setattr(tax, "ensure_shore_tax", _noop)
+
+
 ITEM = "fish_herring"      # 鱼 36 小时
 
 

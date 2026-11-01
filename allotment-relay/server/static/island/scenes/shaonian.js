@@ -1,5 +1,5 @@
-import { sceneArt } from "../ui/art.js?v=island-modulefix2";
-import { esc } from "../ui/modal.js?v=island-modulefix2";
+import { sceneArt } from "../ui/art.js?v=mod-unify1";
+import { esc } from "../ui/modal.js?v=mod-unify1";
 import { state } from "../store.js?v=island-modulefix2";
 
 export function renderShaonian(root, { onAct, onMeet } = {}) {

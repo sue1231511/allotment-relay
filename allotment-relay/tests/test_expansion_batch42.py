@@ -49,10 +49,10 @@ def test_repair_digest_boat_damaged():
     asyncio.run(run())
 
 
-def test_six_boats_config():
+def test_seven_boats_config():
     from server.config import BOATS
 
-    assert len(BOATS) == 6
+    assert len(BOATS) == 7  # README 七档船
     assert "watch_hoy" in BOATS and "longliner" in BOATS
 
 

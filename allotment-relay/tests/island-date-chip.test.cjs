@@ -88,9 +88,9 @@ test("icon is a root sibling before bag; shares top and height with bag", () => 
   const asset = fs.readFileSync(path.join(root, "server/static/island/assets/chip-date.png"));
   assert.equal(asset.toString("hex", 0, 8), "89504e470d0a1a0a");
   assert.equal(asset[25], 6); // RGBA PNG; preserve original transparency.
-  assert.match(html, /companion-date.css\?v=date-chip2/);
-  assert.match(html, /app.js\?v=farm-events1/);
-  assert.match(read("server/static/island/app.js"), /companion-date.js\?v=date-chip1/);
+  assert.match(html, /companion-date.css\?v=[\w.-]+/); // 缓存戳每次改样式都会换，只要求带着戳
+  assert.match(html, /app.js\?v=[\w.-]+/);
+  assert.match(read("server/static/island/app.js"), /companion-date.js\?v=[\w.-]+/);
 });
 
 test("empty account opens a useful panel on map and click/refresh never accepts or spends", async () => {
@@ -179,7 +179,7 @@ test("network failure has a retry hint; scene changes and logout close the panel
 });
 
 test("tutorials point at the same date icon and preserve AI-led gameplay", () => {
-  for (const file of ["README.md", "../README.md", "server/game.py", "server/marriage.py", "server/templates/partials/island-manual-content.html"]) {
+  for (const file of ["README.md", "../README.md", "server/game/manual.py", "server/marriage.py", "server/templates/partials/island-manual-content.html"]) {
     assert.match(read(file), /背包左边/);
     assert.match(read(file), /同一水平/);
   }

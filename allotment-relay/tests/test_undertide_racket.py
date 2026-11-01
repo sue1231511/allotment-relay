@@ -8,8 +8,19 @@ import sys
 import tempfile
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+
+
+@pytest.fixture(autouse=True)
+def _racket_always_today(monkeypatch):
+    """阿标每天出不出手由「日期×号」定的种子决定，有的日子这个号当天不出手，先 scan 一下就把当天记成「已跳过」。
+    这里测的是出手之后的流程，所以让每天都出手，结果不再随日历变。"""
+    from server import undertide_config as utcfg
+
+    monkeypatch.setattr(utcfg, "UT_RACKET_CHANCE", 1.0)
 
 
 async def _boot(tmp: Path):
@@ -52,7 +63,8 @@ async def _test_undertide_racket_flow() -> None:
             "UPDATE steward_undertide SET access=1, well_hint=1 WHERE steward_id=?",
             (sid,),
         )
-        await conn.execute("UPDATE stewards SET tickets=200 WHERE id=?", (sid,))
+        # 阿标抽到的货按日期种子变，稀有货能到 400+ 票；钱包只给 200 的话，那几天会「票不够，赊账？找恶猫去」
+        await conn.execute("UPDATE stewards SET tickets=5000 WHERE id=?", (sid,))
         await conn.commit()
 
     scan = await undertide.undertide_ops(kid, "racket")

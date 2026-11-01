@@ -1,6 +1,6 @@
 import { hutScene, state } from "../store.js?v=island-modulefix2";
 import { bindShopFrame, ensureShopFrame, setShopPeek } from "../ui/shop-frame.js?v=island-modulefix2";
-import { esc } from "../ui/modal.js?v=island-modulefix2";
+import { esc } from "../ui/modal.js?v=mod-unify1";
 
 /** 没买房看不见棚屋场景。买了才按等级换景，点一下看屋里能睡、做饭、升级、潮柜、堆肥桶、畜栏。装了浴桶能泡澡，装了书架能读书。 */
 

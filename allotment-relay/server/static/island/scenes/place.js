@@ -1,5 +1,5 @@
-import { sceneArt } from "../ui/art.js?v=island-modulefix2";
-import { esc } from "../ui/modal.js?v=island-modulefix2";
+import { sceneArt } from "../ui/art.js?v=mod-unify1";
+import { esc } from "../ui/modal.js?v=mod-unify1";
 
 /** 具体地点只铺图和地名，不放洗碗、交税这些按钮。 */
 export function renderPlace(root, { id, title }) {

@@ -1,4 +1,4 @@
-import { layoutCoverBoard, sceneArt } from "../ui/art.js?v=island-modulefix2";
+import { layoutCoverBoard, sceneArt } from "../ui/art.js?v=mod-unify1";
 
 /** 总览仍只有集市入口，内层像广场一样点地名。 */
 export function renderMarketHub(root, { onOpen } = {}) {

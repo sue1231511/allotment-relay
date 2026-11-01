@@ -20,6 +20,7 @@ async def _boot(tmp: Path):
     config.DB_PATH = tmp / "relay.db"
     db.DATA_DIR = tmp
     db.DB_PATH = tmp / "relay.db"
+    db._DB_MUTEX = asyncio.Lock()  # test_invite 在一个用例里反复 asyncio.run，每个新循环要新锁
     await db.init_db()
     return db
 

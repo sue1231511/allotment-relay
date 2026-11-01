@@ -9,8 +9,20 @@ import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+
+
+@pytest.fixture(autouse=True)
+def _no_barn_escape(monkeypatch):
+    """辅助钉：畜栏牲口有概率受惊跑掉，跑掉的不计维，本文件数的是固定在栏头数，所以把这个随机钉住。
+    注意：test_status_explains_midday_holdings_change 时好时坏的真正根因不是惊逃，而是干旱/热浪周
+    没喂的牲口会渴死（disaster._thirst_unfed_animals），那一条由该用例里把季节气候钉成雷暴解决（#343）。"""
+    from server import barn_escape
+
+    monkeypatch.setattr(barn_escape.random, "random", lambda: 1.0)
 
 CST = timezone(timedelta(hours=8))
 

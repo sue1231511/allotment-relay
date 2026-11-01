@@ -1,6 +1,6 @@
-import { layoutCoverBoard, sceneArt } from "../ui/art.js?v=undertide-desks1";
-import { api } from "../api.js?v=undertide-desks1";
-import { esc, showFormSheet, toast } from "../ui/modal.js?v=undertide-desks1";
+import { layoutCoverBoard, sceneArt } from "../ui/art.js?v=mod-unify1";
+import { api } from "../api.js?v=mod-unify1";
+import { esc, showFormSheet, toast } from "../ui/modal.js?v=mod-unify1";
 
 /** 热区对齐井下总览原有的地点牌；底图本身不改动。 */
 const HOTS = [

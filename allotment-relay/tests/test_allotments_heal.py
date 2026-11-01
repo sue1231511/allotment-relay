@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 import os
 import sys
 import tempfile
@@ -126,7 +127,8 @@ def test_play_js_routes_plot_go_home() -> None:
     html = (ROOT / "server" / "templates" / "play.html").read_text(encoding="utf-8")
     assert "function isPlotGo" in js
     assert "goHome('plotsSection')" in js
-    assert "play.js?v=plot-overview2" in html
+    # 版本号是缓存戳，每次改 play.js 都会换；只要求页面带着戳加载，不钉死某一个
+    assert re.search(r"/static/play\.js\?v=[\w.-]+", html)
     assert "(d.meters && d.meters.energy)" not in js
 
 
