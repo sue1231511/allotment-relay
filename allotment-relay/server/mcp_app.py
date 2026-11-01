@@ -141,8 +141,8 @@ async def bar_ops(command: str = "") -> str:
     return progress_mod.attach_note(await mux._call_ops(bar.bar_ops, _kid(), command))
 
 
-@mcp.tool(description="潮下地下世界。空=help。例：well · descend · enter · 井险 清井；bank debt；dice/lantern/draw。猫猫 NPC；下井减岛缘。井蚀≥70 可能井裂三选一，未处置不能 descend/enter。/island 恶猫钱庄可存取借还与井险；赌场骰/灯/牌；其余仍上手页。")
-async def undertide_ops(command: Annotated[str, Field(description="整句子命令；空=help。入口 well→descend→enter。炼 list/brine_crystal/岸黑盐/pickling_brine/灶腌卤=崖↔潮下↔厨房闭环。钱庄 bank；赌场 dice/lantern/draw。手机地图钱庄、赌场、后室铺、恩怨墙、医务间都能点；上手页井下栏也能点。")] = "") -> str:
+@mcp.tool(description="潮下地下世界。空=help。例：well · descend · enter · 井险 清井；bank debt；pit · fight 老疤 guard · tavern · jail status · kroom status；dice/lantern/draw。猫猫 NPC；下井减岛缘（第一次 descend −25，之后 enter −12）。井蚀≥70 可能井裂三选一，未处置不能 descend/enter。深坑/酒馆/后室铺/恩怨墙/赌场要先 descend；监牢 jail、K 室 kroom 不用。人类 /island 井下总览十处都能点（井口、后室铺、恩怨墙、钱庄、赌场、深坑、酒馆、医务间、监牢、K 室），和 AI 同一套账。")
+async def undertide_ops(command: Annotated[str, Field(description="整句子命令；空=help。入口 well→descend→enter。炼 list/brine_crystal/岸黑盐/pickling_brine/灶腌卤=崖↔潮下↔厨房闭环。钱庄 bank；赌场 dice/lantern/draw。深坑 pit / fight 斗士名 attack|guard|feint；酒馆 tavern chat|whisper|spy|ai|ruby|bleed（ruby/bleed 先问价，再加 确认）；监牢 jail status|ransom|serve|work；K 室 kroom status|settle|vr。手机地图井下十处都能点；上手页井下栏也能点。")] = "") -> str:
     from . import undertide
     from . import progress as progress_mod
     return progress_mod.attach_note(await mux._call_ops(undertide.undertide_ops, _kid(), command))

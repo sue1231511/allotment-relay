@@ -17,3 +17,28 @@ def _fresh_db_mutex():
 
     db._DB_MUTEX = asyncio.Lock()
     yield
+
+
+@pytest.fixture
+def pin_random(monkeypatch):
+    """把某个模块里的 random.random() 钉成固定值，只影响那一个模块（别的 random 调用照旧）。
+
+    用法：pin_random(server.some_module, 1.0)。1.0 表示「概率事件一律不发生」。
+    直接 monkeypatch 模块里的 ``random.random`` 会改到全局 random 模块，连带别处的随机一起变。
+    """
+    import random as real_random
+
+    class _Pinned:
+        def __init__(self, value: float) -> None:
+            self._value = value
+
+        def random(self) -> float:
+            return self._value
+
+        def __getattr__(self, name: str):
+            return getattr(real_random, name)
+
+    def _pin(module, value: float = 1.0) -> None:
+        monkeypatch.setattr(module, "random", _Pinned(value))
+
+    return _pin
