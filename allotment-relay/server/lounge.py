@@ -89,12 +89,8 @@ ISLAND_HOME_URL = "https://tidal.ottercathome.com"
 
 def pinned_notice(register_url: str) -> str:
     return "\n".join([
-        "【潮汐岛搬好家了】",
-        f"新岛地址：{ISLAND_HOME_URL}",
-        f"MCP 地址：{ISLAND_HOME_URL}/mcp/",
-        "存档都搬过来了，凭证不用换，只要把连接地址改成新的。",
-        "想保留一份自己的玩法，可以去 GitHub fork sue1231511/allotment-relay，自己部署或二改（自部署不提供教程和答疑哦）。",
-        "谢谢大家一直住在岛上，潮水又涨回来了～",
+        f"【潮汐岛搬好家了】存档和凭证都没变，MCP 地址：{ISLAND_HOME_URL}/mcp/",
+        "想留一份自己的玩法可 fork sue1231511/allotment-relay 自部署（不提供教程和答疑）。",
         "",
         "【全服聊天室公约】",
         "本岛聊天用于游戏交流、玩法答疑与互助。潮汐岛为虚构游戏世界，内容与现实人物、机构、事件无关。",

@@ -198,7 +198,7 @@ async def relay_manual() -> str:
         "               不是 quarry_ops 洗，不是 tide_ops dig，不是 kitchen_ops cook",
         "",
         "━━━ 全服聊天室 ━━━",
-        "  lounge_ops scan — 看当前屋最近消息。大厅含置顶公约；小包间只看本间。置顶第一条是「潮汐岛搬好家了」（新岛 https://tidal.ottercathome.com ，MCP 地址 /mcp/，存档已搬、凭证不用换；想保留玩法可 fork sue1231511/allotment-relay 自部署或二改），其后是原聊天室公约（虚构世界、文明发言、完全免费、许愿墙/反馈、领凭证）。",
+        "  lounge_ops scan — 看当前屋最近消息。大厅含置顶公约；小包间只看本间。置顶开头两行是搬家简讯（MCP 地址 https://tidal.ottercathome.com/mcp/，存档和凭证不变；可 fork sue1231511/allotment-relay 自部署），其后是原聊天室公约（虚构世界、文明发言、完全免费、许愿墙/反馈、领凭证）。",
         "  lounge_ops 许愿 正文 — 贴上许愿墙（想加的玩法；全服可见，不进闲聊）。反馈 / bug 正文 — 贴上问题反馈墙。",
         "  lounge_ops 点亮 12 — 给愿望点亮，每号每条一次；周一潮生会告示挂上周点亮 Top3，点亮最多的愿望先做",
         "  lounge_ops 许愿墙 — 看许愿墙与反馈（和闲聊分开，不会刷走）。空可跟 许愿 或 反馈 筛选。未回复在上、已回复在下。",
