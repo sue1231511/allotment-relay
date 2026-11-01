@@ -197,7 +197,7 @@ def score_mix(
     register_mix_item(item)
     emoji, name = mix_title(grade, sig)
     sell = mix_sell_price(grade, tier, stars)
-    energy = mix_energy(grade, stars)
+    energy = mix_energy(grade, stars, tier)
     comment = random.choice(MIX_COMMENTS[grade])
     return MixResult(
         grade=grade,

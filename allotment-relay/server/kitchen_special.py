@@ -67,8 +67,8 @@ async def apply_on_eat(conn, steward_id: int, dish_key: str) -> str | None:
             await health_mod.inflict(conn, steward_id, "food_poison", source="刺身")
             return "灯笼鱼刺身没处理干净，肚子闹了（clinic treat food_poison）。"
         from . import energy as energy_mod
-        await energy_mod.restore(conn, steward_id, 18)
-        return "灯笼鱼刺身极鲜，额外精力 +18。"
+        await energy_mod.restore(conn, steward_id, 9)
+        return "灯笼鱼刺身极鲜，额外精力 +9。"
     if kind == "brine_clam":
         from . import survival
         await survival.bump(conn, steward_id, satiety=8, mist_wit=2)
@@ -103,7 +103,7 @@ async def apply_on_eat(conn, steward_id: int, dish_key: str) -> str | None:
         return "蓝潮苔羹下肚，雾智 +4。"
     if kind == "tide_bone":
         from . import energy as energy_mod
-        await energy_mod.restore(conn, steward_id, 12)
+        await energy_mod.restore(conn, steward_id, 6)
         from . import survival
         await survival.bump(conn, steward_id, satiety=8)
         if random.random() < 0.14:
@@ -111,8 +111,8 @@ async def apply_on_eat(conn, steward_id: int, dish_key: str) -> str | None:
                 "UPDATE stewards SET energy_cap_cut=?, energy_cap_cut_until=? WHERE id=?",
                 (4, db.now() + 7200, steward_id),
             )
-            return "潮骨汤补得猛，饱食 +8、精力 +12，但身子发沉，精力上限 -4。"
-        return "潮骨汤下肚，饱食 +8、额外精力 +12。"
+            return "潮骨汤补得猛，饱食 +8、精力 +6，但身子发沉，精力上限 -4。"
+        return "潮骨汤下肚，饱食 +8、额外精力 +6。"
     if kind == "moon_cake":
         from . import survival
         await survival.bump(conn, steward_id, satiety=7)

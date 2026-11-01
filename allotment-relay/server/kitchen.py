@@ -644,6 +644,7 @@ async def kitchen_ops(key_id: int, command: str) -> str:
             "系统回收压得低（3★≈材料价+10%）：想赚钱 shop stock 上架小馆——menu 给参考价和精力，",
             "价格自定（贵不贵食客自己比）。堂食带「饱餐」buff（集市买回去自己吃没有）。",
             "小屋 Lv2 更容易出 4★。熟菜回精力 22 起，比生吃划算得多。",
+            "精力梯子：生吃 < 零食饮品 < 乱炖 < 定点菜；定点菜 22～36（按材料价排）、吃到再加 3×星级，乱炖同星一定更低。",
         ]
         from . import kitchen_special as special_mod
 

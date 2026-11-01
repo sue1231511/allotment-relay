@@ -76,10 +76,50 @@ def test_mix_star3_covers_bucket() -> None:
 
 
 def test_mix_energy_beats_raw() -> None:
-    assert mix_energy("j", 1) >= 6
-    assert mix_energy("o", 2) >= 15
-    assert mix_energy("g", 3) >= 30
-    assert mix_energy("x", 3) >= 45
+    # 好搭配的乱炖比生吃（水果 4 / 生鱼 10 / 生肉 12）划算；垃圾档（j）本来就是废料，不比
+    assert mix_energy("o", 1) >= 15
+    assert mix_energy("g", 3) >= 25
+    assert mix_energy("x", 3) >= 29
+
+
+def test_energy_ladder_mix_below_named_dishes() -> None:
+    """梯子：生吃 < 零食饮品 < 乱炖 < 定点菜。乱炖同星任何档、任何材料档都低于同星最便宜的定点菜，不然菜谱白学。"""
+    from server.catalog import NAMED_DISH_ENERGY_MAX, NAMED_DISH_ENERGY_MIN
+
+    assert min(m["energy"] for m in KITCHEN_DISHES.values()) == NAMED_DISH_ENERGY_MIN
+    assert max(m["energy"] for m in KITCHEN_DISHES.values()) == NAMED_DISH_ENERGY_MAX
+    for stars in range(1, 6):
+        dish_floor = NAMED_DISH_ENERGY_MIN + 3 * stars
+        for grade in "joxg":
+            for tier in range(0, 10):
+                assert mix_energy(grade, stars, tier) < dish_floor, (grade, stars, tier)
+    # 档越高、材料越贵、星越高，精力不降
+    for stars in range(1, 6):
+        for tier in range(0, 10):
+            seq = [mix_energy(g, stars, tier) for g in "joxg"[:1] + "o" + "g" + "x"]
+            assert seq == sorted(seq), (stars, tier, seq)
+        for grade in "jogx":
+            assert [mix_energy(grade, stars, t) for t in range(10)] == sorted(mix_energy(grade, stars, t) for t in range(10))
+
+
+def test_named_dish_energy_follows_material_price() -> None:
+    """定点菜精力按材料价从低到高排：材料更贵的不会比便宜的回得更少。"""
+    from server.catalog import dish_ingredient_cost
+
+    ranked = sorted(KITCHEN_DISHES, key=lambda k: (dish_ingredient_cost(k), len(KITCHEN_DISHES[k]["ings"]), k))
+    energies = [KITCHEN_DISHES[k]["energy"] for k in ranked]
+    assert energies == sorted(energies)
+
+
+def test_special_dish_bonus_not_above_best_named_dish() -> None:
+    """特殊加成叠上去，3★ 吃到的总精力不超过定点菜 5★ 的最高值（36+15=51）。"""
+    best = NAMED_MAX_5 = 36 + 3 * 5
+    from server import kitchen_special as ks
+
+    bonus = {"lantern_sashimi": 9, "tide_bone_soup": 6, "moon_bean_stew": 8, "lamp_sprout_stir": 6, "moon_bean_cake": 5}
+    for key, extra in bonus.items():
+        assert key in ks.SPECIAL_DISH_KEYS
+        assert KITCHEN_DISHES[key]["energy"] + 3 * 3 + extra <= best, key
 
 
 def test_cook_daily_limits() -> None:
@@ -139,6 +179,7 @@ def main() -> None:
     test_named_dish_energy_beats_raw()
     test_mix_star3_covers_bucket()
     test_mix_energy_beats_raw()
+    test_energy_ladder_mix_below_named_dishes()
     test_cook_daily_limits()
     print("cook price tests ok")
     print(f"{'菜':<16} {'材料':>4} {'3★回收':>6} {'5★回收':>6} {'精力':>4} {'小馆参考':>6}  3★回收盈")

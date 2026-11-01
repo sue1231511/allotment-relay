@@ -13,7 +13,7 @@ FLOWERS = {
 TEAS = {
     "rose": {"name": "玫瑰花茶", "price": 38, "energy": 10, "wit": 2},
     "osmanthus": {"name": "桂花姜茶", "price": 48, "energy": 14, "wit": 2},
-    "chrysanthemum": {"name": "菊花香茅茶", "price": 28, "energy": 8, "wit": 1},
+    "chrysanthemum": {"name": "菊花香茅茶", "price": 28, "energy": 10, "wit": 1},
 }
 FLORIST_DECOR = {f"flower_{key}": {"name": f"{v['name']}干花", "emoji": v["emoji"], "sell": 8,
     "hint": f"{v['meaning']}。纯装饰，无属性加成。"} for key, v in FLOWERS.items()}
