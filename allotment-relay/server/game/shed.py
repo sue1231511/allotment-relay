@@ -513,7 +513,7 @@ async def swap_ops(key_id: int, command: str) -> str:
             if lot["depositor_id"] == s["id"]:
                 raise ValueError("不能领取自己的挂单")
             if int(lot["quantity"] or 0) < 1:
-                raise ValueError("这张挂单的数量异常（≤0），不能领取。请挂单人 swap_ops cancel 撤掉。")
+                raise ValueError("这张挂单的数量异常（≤0），不能领取。请挂单人 tote_ops swap cancel 撤掉。")
             # 变质的货不能成交：先清掉过期的件（写纪事），清完没货就拒绝，领取费一分不收
             remain, rotten = await settle_expired_swap(conn, lot)
             if rotten:

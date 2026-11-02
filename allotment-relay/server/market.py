@@ -49,7 +49,7 @@ def _expand_hint(extra: int) -> str:
         return f"（已扩满 {cap}/{config.MARKET_LIST_SLOTS_MAX} 格）"
     return (
         f"（{cap}/{config.MARKET_LIST_SLOTS_MAX} 格；"
-        f"market_ops 扩 [数量] 加格，{config.MARKET_SLOT_COST}票/格）"
+        f"tote_ops market 扩 [数量] 加格，{config.MARKET_SLOT_COST}票/格）"
     )
 
 
@@ -160,7 +160,7 @@ async def market_ops(key_id: int, command: str) -> str:
             )).fetchall()
         spoil_head = ("变质清理：" + "；".join(swept) + "\n") if swept else ""
         if not rows:
-            return spoil_head + "集市暂无挂单 — market_ops sell 物品 数量 单价"
+            return spoil_head + "集市暂无挂单 — tote_ops market sell 物品 数量 单价"
         lines = []
         for r in rows:
             sug = r["suggested"]
@@ -246,7 +246,7 @@ async def market_ops(key_id: int, command: str) -> str:
                 hint = ""
                 if cap < config.MARKET_LIST_SLOTS_MAX:
                     hint = (
-                        f" market_ops 扩 [数量] 加格"
+                        f" tote_ops market 扩 [数量] 加格"
                         f"（{config.MARKET_SLOT_COST}票/格，顶 {config.MARKET_LIST_SLOTS_MAX}）"
                     )
                 raise ValueError(f"挂单已满 {used}/{cap}。{hint}")
@@ -307,7 +307,7 @@ async def market_ops(key_id: int, command: str) -> str:
                     "market buy: 拒绝异常旧挂单 lot=%s seller=%s item=%s qty=%s price=%s buyer=%s",
                     lot_id, seller_id, lot["item"], lot["quantity"], lot["price"], s["id"],
                 )
-                raise ValueError("这张挂单的数量或单价异常（≤0），不能买。请卖家 market_ops cancel 撤掉。")
+                raise ValueError("这张挂单的数量或单价异常（≤0），不能买。请卖家 tote_ops market cancel 撤掉。")
             await gust_mod.assert_not_blocked(conn, seller_id)
             # 变质的货不能成交：先清掉过期的件（写纪事），清完没货就拒绝，买家一分钱不扣
             remain, rotten = await settle_expired_listing(conn, lot)

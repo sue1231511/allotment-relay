@@ -1,12 +1,15 @@
 """潮生会 — 岛上管事的机构。管理员来办事，不能加入、不能开、不能退。"""
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from . import bar, db, events, flavor, world
 from .inputs import parse_positive_int
 from .game import require_steward, _parse_int
+
+_log = logging.getLogger(__name__)
 
 FUND_NAME = "潮汐基金"
 FUND_MIN_DONATE = 1
@@ -58,7 +61,7 @@ CHAOSHEN_HELP = f"""visit_ops 潮生会 子命令（整句写进 command）：
   维 交 / 维 交 50 — 交欠的维修费。欠维修费时不能扩产；开着的小馆暂停堂食。不是 hut_ops mascot upkeep
   会险 排队|补票|硬挤 — 税/维 交票后小概率门口排队潮，未处置不能再 税 交/维 交。人类 /island 潮生会也能点
   基金 — 潮汐基金：岛均口袋票。有余的人自己填票数捐进来
-  基金 捐 50 — 捐票，票数自己填（最少 {FUND_MIN_DONATE}）；口袋须高于岛均，捐完仍须不低于岛均
+  基金 捐 50 — 捐票，票数自己填（最少 {FUND_MIN_DONATE}）；口袋须高于岛均，捐完仍须不低于岛均。捐基金给岛缘，按东八区当天累计捐款算（floor(6×√当天累计)），拆开捐不会多得，回执写这次加了多少岛缘
   告示 — 看墙上厅示（岛上贴的，岛民不能贴、不能回）。短句去聊天室 lounge_ops say；长帖去听潮亭 wall_ops
   工程 — 看本月全岛公共工程（修码头/换透镜/旧温室/听潮亭补瓦）。不是潮汐基金，也不是公仓
   工程 捐 岸木 10 / 工程 捐 铜钉 4 / 工程 捐 50 — 捐材料或票。修完全岛有几天好处。不是 基金 捐
@@ -367,6 +370,7 @@ def _fund_status_text(snap: dict[str, Any]) -> str:
     lines.extend([
         "",
         "捐：visit_ops 潮生会 基金 捐 50（票数自己填；捐完仍须不低于岛均）",
+        "岛缘：按东八区当天累计捐款算（floor(6×√当天累计)），拆开捐不会多得；跨天重新累计。",
         f"补贴不用领。东八区{FUND_PAY_WEEKDAY_LABEL}自动发：先把低于 {FUND_FLOOR} 的托到 {FUND_FLOOR}，剩下再按岛均补，每人顶 {FUND_PAY_CAP} 票、不超过岛均。",
         "不是公仓：公仓捐货走 alliance_ops donate 甘蓝 2，基金捐的是票。",
     ])
@@ -435,15 +439,35 @@ async def fund_donate(key_id: int, amount: int) -> str:
         )
         left = mine - amount
         from . import bond as bond_mod
-        gained = await bond_mod.grant(
-            conn, s["id"], bond_mod.donate_amount(amount), "give"
-        )
+        today = payout_day_int()
+        try:
+            prev_amount, prev_bond = await (await conn.execute(
+                "SELECT COALESCE(SUM(amount), 0), COALESCE(SUM(bond_granted), 0) "
+                "FROM fund_donations WHERE steward_id=? AND day=?",
+                (s["id"], today),
+            )).fetchone()
+            prev_amount, prev_bond = int(prev_amount), int(prev_bond)
+            day_total = prev_amount + amount
+            owed_bond = max(0, bond_mod.donate_bond_total(day_total) - prev_bond)
+            gained = await bond_mod.grant(conn, s["id"], owed_bond, "give")
+            await conn.execute(
+                "INSERT INTO fund_donations (steward_id, day, amount, bond_granted, created_at) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (s["id"], today, amount, int(gained), db.now()),
+            )
+        except Exception:
+            _log.exception(
+                "fund_donate 记当天累计/发岛缘失败 steward=%s day=%s amount=%s",
+                s["id"], today, amount,
+            )
+            raise
         msg = (
             f"{s['name']} 向{FUND_NAME}捐了 {amount} 票"
             f"（岛均 {avg}，捐后口袋 {left}）"
         )
-        if gained:
-            msg += f" · 岛缘 +{gained}"
+        if prev_amount > 0:
+            msg += f" · 今天累计捐 {day_total}，岛缘按累计算"
+        msg += f" · 岛缘 +{gained}" if gained else " · 岛缘 +0"
         await db.add_chronicle("fund", msg, s["id"], conn=conn)
         paid = await ensure_fund_payout(conn)
         await conn.commit()
