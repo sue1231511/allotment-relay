@@ -2095,6 +2095,18 @@ async def init_db() -> None:
                 PRIMARY KEY (steward_id, week_id)
             )
             """,
+            # 基金捐款按东八区当天累计算岛缘：每笔捐款记一行，岛缘 = floor(6×√当天累计) − 当天已给过的。
+            """
+            CREATE TABLE IF NOT EXISTS fund_donations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                day INTEGER NOT NULL,
+                amount INTEGER NOT NULL,
+                bond_granted INTEGER NOT NULL DEFAULT 0,
+                created_at INTEGER NOT NULL
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_fund_donations_day ON fund_donations(steward_id, day)",
             "ALTER TABLE shore_tax_bills ADD COLUMN tide_offset INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE shore_tax_bills ADD COLUMN cap_cut INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE shore_tax_bills ADD COLUMN pocket_before INTEGER NOT NULL DEFAULT 0",

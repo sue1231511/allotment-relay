@@ -239,8 +239,8 @@ async def steward_sheet(key_id: int) -> str:
         if used or cap > MARKET_LIST_MAX:
             expand = ""
             if cap < MARKET_LIST_SLOTS_MAX:
-                expand = f"；满了可 market_ops 扩（{MARKET_SLOT_COST}票/格）"
-            lines.append(f"集市摊格 {used}/{cap}{expand} → market_ops mine")
+                expand = f"；满了可 tote_ops market 扩（{MARKET_SLOT_COST}票/格）"
+            lines.append(f"集市摊格 {used}/{cap}{expand} → tote_ops market mine")
     # 濒死提示：钱包见底+精力见底时，把包宿的门指给他
     if int(s.get("tickets") or 0) < 20 and int(s.get("energy") or 100) < 30:
         lines.append(

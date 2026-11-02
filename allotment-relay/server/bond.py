@@ -191,6 +191,14 @@ def donate_amount(tickets: int) -> int:
     return max(1, int(math.floor(6 * math.sqrt(n))))
 
 
+def donate_bond_total(day_total: int) -> int:
+    """基金捐款一天内累计 day_total 票对应的岛缘总数：floor(6×√累计)。"""
+    n = max(0, int(day_total))
+    if n <= 0:
+        return 0
+    return int(math.floor(6 * math.sqrt(n)))
+
+
 def sheet_lines(s: dict[str, Any]) -> list[str]:
     n = int(s.get("island_bond") or 0)
     return [

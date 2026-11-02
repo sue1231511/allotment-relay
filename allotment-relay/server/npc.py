@@ -182,7 +182,7 @@ async def _visit_context(steward: dict, key: str) -> str:
         ings = " + ".join(ITEM_NAMES.get(i, i) for i in meta["ings"])
         return f"——今儿提一嘴：kitchen_ops cook {dish_key}（{ings}）"
     if key == "market_fan":
-        return "——缺料就 market_ops sell/buy，别跟建议价置气"
+        return "——缺料就 tote_ops market sell/buy，别跟建议价置气"
     if key == "lizhi":
         from . import bar as bar_mod
         open_now = bar_mod.is_open()
