@@ -211,7 +211,7 @@ WORLD_PULSE_CHANCE = _event_rate(0.05)
 WORLD_PULSE_DURATION = WEATHER_CYCLE
 
 # 天灾 — 人类日历每周（东八区周一换班）刮一次，低/中/高随机。
-# 只冲 3 万以上的超额；3 万及以下不受影响。
+# 只冲 3 万以上的超额；3 万及以下不受影响。冲走的票抵本周岸税（tax.settle_week_tax），一周总拿走封顶见 WEEKLY_TAKE_CAP_RATE。
 DISASTER_SAFE = 30000
 WEEKLY_TIDE_FLAG_PREFIX = "weekly_tide:"
 WEEKLY_TIDE_DURATION = 2 * 86400
@@ -219,6 +219,9 @@ WEEKLY_TIDE_RATES = {"low": 0.20, "mid": 0.45, "high": 0.75}
 WEEKLY_TIDE_LABELS = {"low": "浅潮", "mid": "灌仓潮", "high": "黑潮"}
 WEEKLY_TIDE_GRADES = {"low": "低", "mid": "中", "high": "高"}
 STORM_SHUTTER_LEVY_MULT = 0.85
+# 一周总拿走封顶：周潮实际冲走 + 本周岸税，合计不超过「周一结算前口袋」（周潮动手前记下的口袋）的这个比例。
+# 先压岸税；光周潮就超线时，周潮本身也压到这条线。旧欠税、岸维不在这个口径里。
+WEEKLY_TAKE_CAP_RATE = 0.5
 DISASTER_NOTICE_DAYS = 7
 
 # 季节气候：人类日历每周一次，和周潮分开。夏天更常干旱，冬天霜冻。

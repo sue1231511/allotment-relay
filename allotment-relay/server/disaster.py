@@ -1,7 +1,8 @@
-"""天灾：人类日历每周刮一次周潮，低/中/高随机，只冲 3 万以上。"""
+"""天灾：人类日历每周刮一次周潮，低/中/高随机，只冲 3 万以上。冲走的票抵本周岸税，周潮加岸税一周合计封顶。"""
 
 from __future__ import annotations
 
+import logging
 import random
 from datetime import datetime, timedelta, timezone
 from typing import Any, Literal
@@ -12,6 +13,8 @@ from . import config, db
 from .catalog import ITEM_NAMES
 
 Intensity = Literal["low", "mid", "high"]
+
+_log = logging.getLogger(__name__)
 
 WORLD_FLAGS_DDL = """
 CREATE TABLE IF NOT EXISTS world_flags (
@@ -89,15 +92,27 @@ async def _apply_levy(
     wash_fish: bool,
     wreck_boat: bool,
     wipe_crop_chance: float,
-) -> tuple[str | None, int]:
+    cap_taken: int | None = None,
+) -> tuple[str | None, int, int]:
+    """返回 (纪事行, 实冲票数, 被封顶少冲的票数)。
+
+    cap_taken：周潮最多冲这么多（周一结算前口袋 × WEEKLY_TAKE_CAP_RATE）。None = 不封顶。
+    封顶只作用在票上，冲鱼、拍船、冲地照旧。
+    """
     if taken <= 0:
-        return None, 0
+        return None, 0, 0
     if await _has_storm_shutter(conn, steward["id"]):
         taken = max(1, int(taken * config.STORM_SHUTTER_LEVY_MULT))
     have = int(steward.get("tickets") or 0)
     taken = min(taken, max(0, have - config.DISASTER_SAFE))
     if taken <= 0:
-        return None, 0
+        return None, 0, 0
+    cut = 0
+    if cap_taken is not None and taken > max(0, int(cap_taken)):
+        cut = taken - max(0, int(cap_taken))
+        taken = max(0, int(cap_taken))
+    if taken <= 0:
+        return None, 0, cut
     remain = have - taken
     await conn.execute(
         "UPDATE stewards SET tickets=? WHERE id=?",
@@ -121,10 +136,41 @@ async def _apply_levy(
     label = config.WEEKLY_TIDE_LABELS[intensity]
     grade = config.WEEKLY_TIDE_GRADES[intensity]
     line = f"{label}（{grade}）冲走 {taken} 工分票（余 {remain}）"
+    if cut:
+        pct = int(round(config.WEEKLY_TAKE_CAP_RATE * 100))
+        line += f"。一周总拿走封顶：最多冲到结算前口袋的 {pct}%，少冲了 {cut}"
+    line += "。这笔会抵本周岸税"
     if extras:
         line += "。" + "；".join(extras)
     await db.add_chronicle("disaster", f"{steward['name']} — {line}", steward["id"], conn=conn)
-    return line, taken
+    return line, taken, cut
+
+
+async def _record_ledger(
+    conn: aiosqlite.Connection,
+    *,
+    steward_id: int,
+    week_id: str,
+    pocket_before: int,
+    tide_taken: int,
+    tide_cut: int,
+    label: str,
+) -> None:
+    """记下本周结算前口袋和周潮实冲数，岸税开单时读它。出错只记日志，不拦周潮。"""
+    try:
+        await conn.execute(
+            """
+            INSERT OR IGNORE INTO weekly_tide_ledger
+                (steward_id, week_id, pocket_before, tide_taken, tide_cut, label)
+            VALUES (?,?,?,?,?,?)
+            """,
+            (steward_id, week_id, pocket_before, tide_taken, tide_cut, label),
+        )
+    except Exception:
+        _log.exception(
+            "周潮台账写入失败 位置=disaster._record_ledger 玩家=%s 周=%s 结算前口袋=%s 实冲=%s 封顶少冲=%s",
+            steward_id, week_id, pocket_before, tide_taken, tide_cut,
+        )
 
 
 async def _wash_fish(conn: aiosqlite.Connection, steward_id: int) -> list[str]:
@@ -260,20 +306,40 @@ async def apply_weekly_tide(
     drained = 0
     for s in stewards:
         tickets = int(s.get("tickets") or 0)
+        pocket_before = tickets  # 周一结算前口袋：周潮动手之前记下
         taken = levy_amount(tickets, intensity)
-        if taken <= 0:
-            continue
-        extras = _side_effects(intensity, taken, tickets)
-        line, actual = await _apply_levy(
+        actual = 0
+        cut = 0
+        if taken > 0:
+            extras = _side_effects(intensity, taken, tickets)
+            cap_taken = int(pocket_before * config.WEEKLY_TAKE_CAP_RATE)
+            try:
+                line, actual, cut = await _apply_levy(
+                    conn,
+                    s,
+                    taken,
+                    intensity=intensity,
+                    cap_taken=cap_taken,
+                    **extras,
+                )
+            except Exception:
+                _log.exception(
+                    "周潮冲票失败 位置=disaster.apply_weekly_tide 玩家=%s 周=%s 强度=%s 口袋=%s 应冲=%s 封顶=%s",
+                    s.get("id"), week_id, intensity, tickets, taken, cap_taken,
+                )
+                raise
+            if line:
+                hit += 1
+                drained += actual
+        await _record_ledger(
             conn,
-            s,
-            taken,
-            intensity=intensity,
-            **extras,
+            steward_id=int(s["id"]),
+            week_id=week_id,
+            pocket_before=pocket_before,
+            tide_taken=actual,
+            tide_cut=cut,
+            label=config.WEEKLY_TIDE_LABELS[intensity],
         )
-        if line:
-            hit += 1
-            drained += actual
     await _untend_outdoor(conn)
     label = config.WEEKLY_TIDE_LABELS[intensity]
     grade = config.WEEKLY_TIDE_GRADES[intensity]
@@ -281,6 +347,7 @@ async def apply_weekly_tide(
     detail = (
         f"{week_id} 周潮·{label}（{grade}）灌进档口：3万以上才冲，超额收 {rate_pct}%。"
         "风暴窗板能少冲一点。"
+        f"冲走的票抵本周岸税；周潮加岸税合计最多收周一结算前口袋的 {int(round(config.WEEKLY_TAKE_CAP_RATE * 100))}%。"
         f" 此轮 {hit} 人被冲，合计 {drained} 票入海。"
     )
     if hit:
