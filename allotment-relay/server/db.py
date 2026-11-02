@@ -2083,6 +2083,21 @@ async def init_db() -> None:
                 PRIMARY KEY (steward_id, week_id)
             )
             """,
+            # 周潮抵税 + 一周总拿走封顶：周潮动手前记下每人结算前口袋和周潮实冲数，岸税开单时读它。
+            """
+            CREATE TABLE IF NOT EXISTS weekly_tide_ledger (
+                steward_id INTEGER NOT NULL REFERENCES stewards(id),
+                week_id TEXT NOT NULL,
+                pocket_before INTEGER NOT NULL DEFAULT 0,
+                tide_taken INTEGER NOT NULL DEFAULT 0,
+                tide_cut INTEGER NOT NULL DEFAULT 0,
+                label TEXT NOT NULL DEFAULT '',
+                PRIMARY KEY (steward_id, week_id)
+            )
+            """,
+            "ALTER TABLE shore_tax_bills ADD COLUMN tide_offset INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE shore_tax_bills ADD COLUMN cap_cut INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE shore_tax_bills ADD COLUMN pocket_before INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE stewards ADD COLUMN invite_code TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE stewards ADD COLUMN invited_by INTEGER",
             "ALTER TABLE stewards ADD COLUMN invite_bound_at INTEGER NOT NULL DEFAULT 0",
@@ -2770,13 +2785,14 @@ async def init_db() -> None:
         # 退货走保守价），下次启动自动重试。这几项只是补批次账的元数据，不值得让全岛起不来。
         from . import paid_ledger
         from . import item_traits as traits_init
-        from . import energy_notice, gift_target_backfill
+        from . import energy_notice, gift_target_backfill, tide_tax_notice
         for mig_name, mig in (
             ("实付批次补账", paid_ledger.backfill_legacy),
             ("幽灵批次对齐", traits_init.heal_ghost_batches),
             ("老存货补变质起点", traits_init.backfill_spoil_clock),
             ("旧送礼补收礼人", gift_target_backfill.backfill_gift_targets),
             ("精力梯子告示", energy_notice.announce_energy_ladder),
+            ("周潮岸税封顶告示", tide_tax_notice.announce_tide_tax_cap),
         ):
             try:
                 await mig(db)

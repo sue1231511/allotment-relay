@@ -247,7 +247,7 @@ async def test_gap_levy_on_whale() -> None:
     """岛均被少数人拉高时，榜首要交潮差，刚到岛均的人不用。"""
     tmp = Path(tempfile.mkdtemp(prefix="tax-gap-"))
     db = await _boot(tmp)
-    from server import tax
+    from server import config, tax
 
     real_now = db.now
     db.now = lambda: ENROLL_TUE
@@ -271,8 +271,11 @@ async def test_gap_levy_on_whale() -> None:
             result = await tax.ensure_shore_tax(conn, ts=NEXT_MON)
             await conn.commit()
         avg = 12000
-        whale_due = tax.tax_due(200000, avg, 0)
+        whale_raw = tax.tax_due(200000, avg, 0)
+        # 新规：一周总拿走封顶 50%。鲸客按档应交 101808，超过 200000 的一半，岸税被封到 100000。
+        whale_due = min(whale_raw, int(200000 * config.WEEKLY_TAKE_CAP_RATE))
         mid_due = tax.tax_due(4000, avg, 0)
+        assert whale_raw > whale_due
         assert tax.gap_surcharge(4000, avg) == 0
         assert tax.rust_surcharge(4000, avg, 0) == 0
         assert tax.gap_surcharge(200000, avg) > 0
@@ -284,7 +287,7 @@ async def test_gap_levy_on_whale() -> None:
         assert mid_arrears == 0
         assert whale_left == 200000 - whale_due, (whale_left, whale_due)
         assert mid_left == 4000 - mid_due, (mid_left, mid_due)
-        assert whale_due > tax.bracket_due(200000) + tax.gap_surcharge(200000, avg)
+        assert whale_raw > tax.bracket_due(200000) + tax.gap_surcharge(200000, avg)
     finally:
         db.now = real_now
 

@@ -1,11 +1,14 @@
 """岸税 — 口袋现票超额累进。潮生会征收，税入潮汐基金。"""
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from . import db
+from . import config, db
 from .disaster import human_week_id
+
+_log = logging.getLogger(__name__)
 
 TAX_NAME = "岸税"
 TAX_FREE = 800
@@ -49,9 +52,11 @@ TAX_HELP = f"""visit_ops 潮生会 税（整句写进 command）：
 低档（温水/殷实）不动；阔手 14%、豪客 20%、潮主 26%、潮宗 36%。高档加码是为了把滚出来的票划回潮汐基金。
 潮差附加：口袋超过本周岛均 {GAP_SOFT_MULT} 倍的部分再加 {int(GAP_SOFT_RATE * 100)}%，超过 {GAP_HARD_MULT} 倍再加 {int(GAP_HARD_RATE * 100)}%。岛均四千时，两万以下不加；刚到岛均的人（第二十名那种）加不到。
 {RUST_NAME}：口袋超过岛均的闲票，本周生活花销要够闲票的 {int(RUST_RATE * 100)}%。没花够的缺口整笔进基金。酒吧、小馆、衣泊坊、诊所、星光、小屋日子、婚宴、三金、基金捐、工程捐票算花；买地、买园、买棚、升屋、搭棚屋、送礼不算。刚到岛均的人闲票为 0。周一按上周花销划。
+周潮抵税：周潮（浅潮/灌仓潮/黑潮）本周实际冲走你多少票，你本周岸税应交额先减掉多少，最低到 0；税单和纪事里写「黑潮已冲 X，抵税 X」。
+一周总拿走封顶：周潮实际冲走 + 本周岸税，合计不超过周一结算前口袋的 {int(round(config.WEEKLY_TAKE_CAP_RATE * 100))}%。先压岸税；光周潮就超线，周潮本身也压到这条线。旧欠税和岸维不算在内。
 东八区每周一换班自动划入潮汐基金（本周新号免征到下周）。自动划不会收到 {TAX_COLLECT_FLOOR} 以下；欠税时不能{EXPAND_LOCK}。
 例子：潮生会 税 · 潮生会 税 交 · 潮生会 税 交 50
-容易搞混：税=强制岸税（富人按档交）。维=产业维修费（visit_ops 潮生会 维，每天划）。基金 捐 50=自愿捐票（须高于岛均），也算生活花销、能抵锈。周潮天灾=只冲 3 万以上，不是税。人类 /island 总览点潮生会，先进店景，点一下才出会厅，能看档、交欠税。"""
+容易搞混：税=强制岸税（富人按档交）。维=产业维修费（visit_ops 潮生会 维，每天划）。基金 捐 50=自愿捐票（须高于岛均），也算生活花销、能抵锈。周潮天灾=只冲 3 万以上，不是税，但冲走的票会抵本周岸税。人类 /island 总览点潮生会，先进店景，点一下才出会厅，能看档、交欠税。"""
 
 
 def _cst_dt(ts: int | None = None) -> datetime:
@@ -156,6 +161,10 @@ async def record_life_spend(
             (int(steward_id), int(amount), (kind or "")[:32], ts if ts is not None else db.now()),
         )
     except Exception:
+        _log.exception(
+            "记生活花销失败 位置=tax.record_life_spend 玩家=%s 金额=%s 类别=%s 时间=%s",
+            steward_id, amount, kind, ts,
+        )
         return
 
 
@@ -200,6 +209,10 @@ async def life_spent(conn, steward_id: int, start_ts: int, end_ts: int) -> int:
         try:
             row = await (await conn.execute(sql, args)).fetchone()
         except Exception:
+            _log.exception(
+                "查生活花销失败，这一项按 0 算 位置=tax.life_spent 玩家=%s 起=%s 止=%s sql=%s",
+                sid, start_ts, end_ts, sql[:80],
+            )
             continue
         total += int((row[0] if row else 0) or 0)
     return max(0, total)
@@ -234,6 +247,53 @@ def tax_due(
     )
 
 
+def settle_week_tax(raw_due: int, pocket_before: int, tide_taken: int) -> dict[str, int]:
+    """周潮抵税 + 一周总拿走封顶，纯函数。
+
+    raw_due：照老规矩算出来的本周岸税（档表 + 潮差 + 潮锈）。
+    pocket_before：周一结算前口袋（周潮动手前）。tide_taken：周潮实际冲走的票。
+    1. 抵税：应交额先减掉 tide_taken，最低 0。
+    2. 封顶：周潮实冲 + 岸税，合计不超过 pocket_before × WEEKLY_TAKE_CAP_RATE；先压岸税。
+    返回 assessed（最终应交）、offset（周潮抵掉的）、cap_cut（封顶少收的）。
+    周潮自己的封顶在 disaster 里做，到这里 tide_taken 已经是封顶后的实冲数。
+    """
+    raw = max(0, int(raw_due or 0))
+    tide = max(0, int(tide_taken or 0))
+    offset = min(raw, tide)
+    after_offset = raw - offset
+    room = max(0, int(max(0, int(pocket_before or 0)) * config.WEEKLY_TAKE_CAP_RATE) - tide)
+    assessed = min(after_offset, room)
+    return {
+        "raw": raw,
+        "offset": offset,
+        "assessed": assessed,
+        "cap_cut": after_offset - assessed,
+    }
+
+
+async def tide_ledger(conn, steward_id: int, week_id: str) -> dict[str, Any] | None:
+    """本周周潮台账：结算前口袋、周潮实冲、封顶少冲、潮名。周潮还没刮过就是 None。"""
+    try:
+        row = await (await conn.execute(
+            "SELECT pocket_before, tide_taken, tide_cut, label FROM weekly_tide_ledger "
+            "WHERE steward_id=? AND week_id=?",
+            (steward_id, week_id),
+        )).fetchone()
+    except Exception:
+        _log.exception(
+            "读周潮台账失败，按没被冲算 位置=tax.tide_ledger 玩家=%s 周=%s", steward_id, week_id
+        )
+        return None
+    if not row:
+        return None
+    return {
+        "pocket_before": int(row[0] or 0),
+        "tide_taken": int(row[1] or 0),
+        "tide_cut": int(row[2] or 0),
+        "label": str(row[3] or "周潮"),
+    }
+
+
 def gap_lines(avg: int) -> list[str]:
     avg = max(0, int(avg or 0))
     if avg < 1:
@@ -259,6 +319,42 @@ async def island_pocket_avg(conn) -> int:
         "SELECT COALESCE(AVG(tickets), 0) FROM stewards WHERE enrolled=1"
     )).fetchone()
     return int(round(float(row[0] or 0)))
+
+
+def bill_chronicle(
+    name: str,
+    tickets: int,
+    assessed: int,
+    raw: int,
+    extra: int,
+    rust: int,
+    spent: int,
+    tide_label: str,
+    tide_taken: int,
+    offset: int,
+    cap_cut: int,
+    pocket_before: int,
+) -> str:
+    """税单纪事：把潮差、潮锈、周潮抵税、封顶都写清楚，玩家看得懂。"""
+    detail = f"{name} 本周{TAX_NAME}应 {assessed} 票（{band_name(tickets)}档，口袋 {tickets}"
+    if extra:
+        detail += f"，潮差 +{extra}"
+    if rust:
+        detail += f"，{RUST_NAME} +{rust}（上周花 {spent}）"
+    detail += "）"
+    if raw != assessed:
+        detail += f"。抵税、封顶前应交 {raw}"
+    if offset > 0:
+        detail += f"。{tide_label}已冲 {tide_taken}，抵税 {offset}"
+    if cap_cut > 0:
+        pct = int(round(config.WEEKLY_TAKE_CAP_RATE * 100))
+        detail += (
+            f"。一周总拿走封顶：周潮加岸税合计最多收结算前口袋 {pocket_before} 的 {pct}%，"
+            f"岸税少收 {cap_cut}"
+        )
+    if assessed <= 0:
+        detail += "。本周岸税免交"
+    return detail
 
 
 def bracket_lines() -> list[str]:
@@ -314,17 +410,23 @@ async def _ensure_fund(conn) -> None:
 
 async def _this_week_bill(conn, steward_id: int, week_id: str) -> dict[str, int]:
     row = await (await conn.execute(
-        "SELECT assessed, paid, tickets_at FROM shore_tax_bills "
-        "WHERE steward_id=? AND week_id=?",
+        "SELECT assessed, paid, tickets_at, tide_offset, cap_cut, pocket_before "
+        "FROM shore_tax_bills WHERE steward_id=? AND week_id=?",
         (steward_id, week_id),
     )).fetchone()
     if not row:
-        return {"assessed": 0, "paid": 0, "tickets_at": 0, "exists": 0}
+        return {
+            "assessed": 0, "paid": 0, "tickets_at": 0, "exists": 0,
+            "tide_offset": 0, "cap_cut": 0, "pocket_before": 0,
+        }
     return {
         "assessed": int(row[0] or 0),
         "paid": int(row[1] or 0),
         "tickets_at": int(row[2] or 0),
         "exists": 1,
+        "tide_offset": int(row[3] or 0),
+        "cap_cut": int(row[4] or 0),
+        "pocket_before": int(row[5] or 0),
     }
 
 
@@ -439,37 +541,57 @@ async def ensure_shore_tax(
         if _in_first_week(created_at, moment):
             skipped_new += 1
             continue
-        spent = await life_spent(conn, sid, rust_start, rust_end)
-        extra = gap_surcharge(tickets, avg)
-        rust = rust_surcharge(tickets, avg, spent)
-        assessed = tax_due(tickets, avg, spent)
-        existing_bill = await _this_week_bill(conn, sid, week_id)
-        if not existing_bill["exists"]:
-            await conn.execute(
-                """
-                INSERT INTO shore_tax_bills (steward_id, week_id, assessed, paid, tickets_at)
-                VALUES (?, ?, ?, 0, ?)
-                """,
-                (sid, week_id, assessed, tickets),
-            )
-            if assessed > 0:
+        try:
+            spent = await life_spent(conn, sid, rust_start, rust_end)
+            extra = gap_surcharge(tickets, avg)
+            rust = rust_surcharge(tickets, avg, spent)
+            raw = tax_due(tickets, avg, spent)
+            existing_bill = await _this_week_bill(conn, sid, week_id)
+            if not existing_bill["exists"]:
+                # 周潮台账：没有（周潮没刮过/台账写失败）就按当前口袋、没被冲算，只剩封顶。
+                ledger = await tide_ledger(conn, sid, week_id)
+                pocket_before = ledger["pocket_before"] if ledger else tickets
+                tide_taken = ledger["tide_taken"] if ledger else 0
+                tide_label = ledger["label"] if ledger else "周潮"
+                settled = settle_week_tax(raw, pocket_before, tide_taken)
+                assessed = settled["assessed"]
+                offset = settled["offset"]
+                cap_cut = settled["cap_cut"]
                 await conn.execute(
-                    "UPDATE stewards SET tax_arrears = tax_arrears + ? WHERE id=?",
-                    (assessed, sid),
+                    """
+                    INSERT INTO shore_tax_bills
+                        (steward_id, week_id, assessed, paid, tickets_at,
+                         tide_offset, cap_cut, pocket_before)
+                    VALUES (?, ?, ?, 0, ?, ?, ?, ?)
+                    """,
+                    (sid, week_id, assessed, tickets, offset, cap_cut, pocket_before),
                 )
+                if assessed > 0:
+                    await conn.execute(
+                        "UPDATE stewards SET tax_arrears = tax_arrears + ? WHERE id=?",
+                        (assessed, sid),
+                    )
+                    assessed_n += 1
+                    assessed_tickets += assessed
+                if raw > 0:
+                    await db.add_chronicle(
+                        "tax",
+                        bill_chronicle(
+                            name, tickets, assessed, raw, extra, rust, spent,
+                            tide_label, tide_taken, offset, cap_cut, pocket_before,
+                        ),
+                        sid,
+                        conn=conn,
+                    )
+            elif int(existing_bill["assessed"] or 0) > 0:
                 assessed_n += 1
-                assessed_tickets += assessed
-                detail = (
-                    f"{name} 本周{TAX_NAME}应 {assessed} 票（{band_name(tickets)}档，口袋 {tickets}"
-                )
-                if extra:
-                    detail += f"，潮差 +{extra}"
-                if rust:
-                    detail += f"，{RUST_NAME} +{rust}（上周花 {spent}）"
-                await db.add_chronicle("tax", detail + "）", sid, conn=conn)
-        elif assessed > 0:
-            assessed_n += 1
-            assessed_tickets += int(existing_bill["assessed"] or assessed)
+                assessed_tickets += int(existing_bill["assessed"])
+        except Exception:
+            _log.exception(
+                "开岸税单失败 位置=tax.ensure_shore_tax 玩家=%s 周=%s 口袋=%s 岛均=%s",
+                sid, week_id, tickets, avg,
+            )
+            raise
         paid = await collect_steward(conn, sid, ts=moment)
         collected += int(paid.get("taken") or 0)
     detail = (
@@ -522,10 +644,30 @@ async def snapshot(conn, steward_id: int | None = None, ts: int | None = None) -
         rust = rust_surcharge(tickets, avg, spent)
         idle = rust_idle(tickets, avg)
         need = rust_need(tickets, avg)
+        ledger = await tide_ledger(conn, steward_id, week_id)
+        if bill["exists"]:
+            tide_offset = int(bill["tide_offset"])
+            cap_cut = int(bill["cap_cut"])
+            due_now = tax_due(tickets, avg, spent)
+        else:
+            settled = settle_week_tax(
+                tax_due(tickets, avg, spent),
+                ledger["pocket_before"] if ledger else tickets,
+                ledger["tide_taken"] if ledger else 0,
+            )
+            tide_offset = settled["offset"]
+            cap_cut = settled["cap_cut"]
+            due_now = settled["assessed"]
         mine = {
             "tickets": tickets,
             "arrears": arrears,
-            "due_now": tax_due(tickets, avg, spent),
+            "due_now": due_now,
+            "tide_label": ledger["label"] if ledger else "",
+            "tide_taken": ledger["tide_taken"] if ledger else 0,
+            "tide_cut": ledger["tide_cut"] if ledger else 0,
+            "tide_offset": tide_offset,
+            "cap_cut": cap_cut,
+            "pocket_before": ledger["pocket_before"] if ledger else 0,
             "gap": extra,
             "rust": rust,
             "spent": spent,
@@ -545,6 +687,7 @@ async def snapshot(conn, steward_id: int | None = None, ts: int | None = None) -
         "gap_soft": gap_thresholds(avg)[0],
         "gap_hard": gap_thresholds(avg)[1],
         "rust_rate": int(RUST_RATE * 100),
+        "take_cap_pct": int(round(config.WEEKLY_TAKE_CAP_RATE * 100)),
         "done": bool(flag),
         "next": next_levy_line(ts, done=bool(flag)),
         "assessed": int(totals[0] or 0) if totals else 0,
@@ -567,6 +710,7 @@ def _status_text(snap: dict[str, Any]) -> str:
     lines = [
         f"潮生会 · {TAX_NAME}",
         "阿簿：口袋过了免税额就要按档交。超额累进，只算口袋现票。高档加码，离岛均太远再加潮差。只攒不花再加潮锈。税进潮汐基金。",
+        f"周潮冲走的票抵本周岸税，最低抵到 0。周潮加岸税一周合计不超过周一结算前口袋的 {int(round(config.WEEKLY_TAKE_CAP_RATE * 100))}%。",
         "",
         f"本周 {snap['week_id']} · {snap['next']}",
         f"全岛本周应 {snap['assessed']} / 已入池 {snap['collected']}",
@@ -583,7 +727,10 @@ def _status_text(snap: dict[str, Any]) -> str:
                 f"你的口袋：{mine['tickets']} 票 · {mine['band']}档"
                 f"（周应约 {mine['due_now']}）· 本周新号，免征到下周"
             )
-        elif mine["assessed"] or mine["paid"] or mine["arrears"] or mine["due_now"]:
+        elif (
+            mine["assessed"] or mine["paid"] or mine["arrears"] or mine["due_now"]
+            or int(mine.get("tide_offset") or 0)
+        ):
             gap = int(mine.get("gap") or 0)
             rust = int(mine.get("rust") or 0)
             spent = int(mine.get("spent") or 0)
@@ -595,6 +742,18 @@ def _status_text(snap: dict[str, Any]) -> str:
                 + (f" · {RUST_NAME} +{rust}" if rust else "")
                 + (f" · 欠 {mine['arrears']}" if mine["arrears"] else " · 已结清")
             )
+            tide_taken = int(mine.get("tide_taken") or 0)
+            if tide_taken > 0 or int(mine.get("cap_cut") or 0) > 0:
+                label = mine.get("tide_label") or "周潮"
+                pocket_before = int(mine.get("pocket_before") or 0)
+                pct = int(round(config.WEEKLY_TAKE_CAP_RATE * 100))
+                tide_line = f"本周{label}已冲 {tide_taken}，抵税 {int(mine.get('tide_offset') or 0)}"
+                if int(mine.get("tide_cut") or 0) > 0:
+                    tide_line += f"（周潮自己也封了顶，少冲 {int(mine['tide_cut'])}）"
+                if int(mine.get("cap_cut") or 0) > 0:
+                    tide_line += f" · 封顶少收岸税 {int(mine['cap_cut'])}"
+                tide_line += f" · 结算前口袋 {pocket_before}，周潮加岸税最多收 {pct}%"
+                lines.append(tide_line)
             if need or spent:
                 short = max(0, need - spent)
                 lines.append(
@@ -613,7 +772,7 @@ def _status_text(snap: dict[str, Any]) -> str:
     lines.extend([
         "",
         "交：visit_ops 潮生会 税 交（可 税 交 50 交一部分）",
-        "不是自愿捐：有余捐票走 潮生会 基金 捐 50。产业维修走 潮生会 维。周潮天灾不是税。",
+        "不是自愿捐：有余捐票走 潮生会 基金 捐 50。产业维修走 潮生会 维。周潮天灾不是税，但冲走的票会抵本周岸税。",
     ])
     return "\n".join(lines)
 
@@ -734,9 +893,22 @@ async def sheet_line(s: dict[str, Any]) -> str | None:
         )).fetchone()
         start, end = rust_window(previous=rust_use_previous(None, bool(flag)))
         spent = await life_spent(conn, int(s["id"]), start, end)
+        ledger = await tide_ledger(conn, int(s["id"]), human_week_id())
     extra = gap_surcharge(tickets, avg)
     rust = rust_surcharge(tickets, avg, spent)
-    due = tax_due(tickets, avg, spent)
+    raw_due = tax_due(tickets, avg, spent)
+    settled = settle_week_tax(
+        raw_due,
+        ledger["pocket_before"] if ledger else tickets,
+        ledger["tide_taken"] if ledger else 0,
+    )
+    due = settled["assessed"]
+    if settled["offset"] > 0 and due <= 0:
+        label = (ledger or {}).get("label") or "周潮"
+        return (
+            f"{TAX_NAME}：{label}已冲 {int((ledger or {}).get('tide_taken') or 0)}，"
+            f"抵税 {settled['offset']}，本周岸税免交 → visit_ops 潮生会 税"
+        )
     if due > 0:
         extras = []
         if extra:
