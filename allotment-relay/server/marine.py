@@ -390,7 +390,7 @@ async def try_hull_breach_encounter(
     from . import boat_hull as hull_mod
     from . import voyage_hull_breach as breach_mod
 
-    hull, mx = await hull_mod.get_hull(conn, s["id"])
+    hull, mx = await hull_mod.get_hull(conn, hull_mod.voyage_owner_id(s["id"], voyage))
     return await breach_mod.maybe_mid_voyage(
         conn,
         s["id"],
@@ -1546,14 +1546,30 @@ async def voyage_ops(key_id: int, command: str) -> str:
             auto = await _finish_voyage(s["id"], voyage)
             prefix = f"{pulse}\n" if pulse else ""
             return prefix + auto
-        boat = BOATS.get(s.get("boat_key") or "", {})
+        from . import boat_hull as hull_mod
+
         lines = []
+        async with db.connect() as conn:
+            owner_id, eff_key, relation = await hull_mod.hull_owner(conn, s)
+            boat = BOATS.get(eff_key, {}) if eff_key else {}
+            hull_line = ""
+            owner_damaged = False
+            if boat:
+                if owner_id == s["id"]:
+                    owner_damaged = bool(s.get("boat_damaged"))
+                else:
+                    cur = await conn.execute(
+                        "SELECT boat_damaged FROM stewards WHERE id=?", (owner_id,)
+                    )
+                    row = await cur.fetchone()
+                    owner_damaged = bool(row and int(row[0]))
+                hull_line = await hull_mod.status_line(conn, owner_id, relation=relation)
+            await conn.commit()
         if boat:
-            dmg = " ⚠待修" if s.get("boat_damaged") else ""
-            lines.append(f"船: {boat['name']}{dmg}（载货 {boat.get('cargo', 2)}）")
-            async with db.connect() as conn:
-                from . import boat_hull as hull_mod
-                lines.append(await hull_mod.status_line(conn, s["id"]))
+            dmg = " ⚠待修" if owner_damaged else ""
+            whose = {"share": "，合伙", "loan": "，借来的"}.get(relation, "")
+            lines.append(f"船: {boat['name']}{dmg}（载货 {boat.get('cargo', 2)}{whose}）")
+            lines.append(hull_line)
         else:
             lines.append(f"船: 无 — buy {'|'.join(BOATS.keys())}")
         if voyage:
@@ -1604,23 +1620,33 @@ async def voyage_ops(key_id: int, command: str) -> str:
         return f"购入 {meta['name']}（-{cost} 票）。可 tide_ops voyage depart 出海"
 
     if verb == "repair":
+        from . import boat_hull as hull_mod
+        from . import neighbor_boat_share as share_mod
+        from . import voyage_chronicle as vlog_mod
+
         async with db.connect() as conn:
             s = await _refresh_steward(conn, s["id"])
-            from . import neighbor_boat_share as share_mod
-
-            founder_id = await share_mod.share_founder_id(conn, s["id"])
-            owner_id = founder_id or s["id"]
-            owner = await _refresh_steward(conn, owner_id) if founder_id else s
-            if not owner.get("boat_key"):
+            owner_id, boat_key, relation = await hull_mod.hull_owner(conn, s)
+            if not boat_key:
                 raise ValueError("还没有船")
-            if not owner.get("boat_damaged"):
-                return "船况良好，无需修理"
-            cost = BOATS[owner["boat_key"]]["repair"]
+            if relation == "loan":
+                raise ValueError("借来的船由船主修：请对方 tide_ops voyage repair")
+            owner = s if owner_id == s["id"] else await _refresh_steward(conn, owner_id)
+            damaged = bool(owner.get("boat_damaged"))
+            hull, mx = await hull_mod.get_hull(conn, owner_id)
+            if not hull_mod.needs_repair(hull, mx, damaged):
+                await conn.commit()
+                return f"船况良好，无需修理（船体 {hull}/{mx}）"
+            meta = BOATS.get(boat_key) or {}
+            cost = hull_mod.repair_cost(int(meta.get("repair") or 12), hull, mx, damaged)
             nail_note = ""
-            if await db.take_item(conn, s["id"], "craft_copper_nails", 1):
+            if cost >= 2 and await db.take_item(conn, s["id"], "craft_copper_nails", 1):
                 cost = max(1, cost // 2)
                 nail_note = "，用了一颗工坊铜钉"
-            leftover, share_note = await share_mod.split_repair(conn, s["id"], cost)
+            if relation == "share":
+                leftover, share_note = await share_mod.split_repair(conn, s["id"], cost)
+            else:
+                leftover, share_note = cost, ""
             if not share_note:
                 cur = await conn.execute("SELECT tickets FROM stewards WHERE id=?", (s["id"],))
                 if (await cur.fetchone())[0] < leftover:
@@ -1635,14 +1661,13 @@ async def voyage_ops(key_id: int, command: str) -> str:
                 "UPDATE stewards SET boat_damaged=0 WHERE id=?",
                 (owner_id,),
             )
-            from . import boat_hull as hull_mod
-            from . import voyage_chronicle as vlog_mod
             await hull_mod.repair_full(conn, owner_id)
             extra = f"；{share_note}" if share_note else ""
-            await vlog_mod.append(conn, s["id"], f"修船（-{cost}票{nail_note}{extra}）")
+            what = "修船" if damaged else "补船体"
+            await vlog_mod.append(conn, s["id"], f"{what}（{hull}→{mx}，-{cost}票{nail_note}{extra}）")
             await conn.commit()
         extra = f"；{share_note}" if share_note else ""
-        return f"修船完成（-{cost} 票{nail_note}{extra}），船体回满，可以 depart"
+        return f"{what}完成（-{cost} 票{nail_note}{extra}），船体 {hull}/{mx} → {mx}/{mx}，可以 depart"
 
     if verb == "depart" and len(parts) >= 2:
         route_key = parts[1].split()[0].lower()

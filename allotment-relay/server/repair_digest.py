@@ -16,6 +16,12 @@ async def digest(conn, steward_id: int) -> str:
     if row and int(row[0]):
         lines.append("  · 船体损坏 → tide_ops voyage repair")
         n += 1
+    elif row and row[1]:
+        from . import boat_hull as hull_mod
+        hull, mx = await hull_mod.get_hull(conn, steward_id)
+        if hull < mx * 0.35:
+            lines.append(f"  · 船体偏低（{hull}/{mx}）→ tide_ops voyage repair 按比例补满")
+            n += 1
     if row and row[1]:
         from . import boat_parts as parts_mod
         parts = await parts_mod.get_all(conn, steward_id)

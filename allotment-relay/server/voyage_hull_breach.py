@@ -2,9 +2,27 @@
 from __future__ import annotations
 
 import json
+import logging
 import random
 
 from . import db, energy
+
+logger = logging.getLogger(__name__)
+
+
+async def _merged_payload(conn, voyage_id: int, patch: dict) -> str:
+    """保留出航时写进 encounter 的 boat_key / 合伙 / 借船 / 海上渔获，只覆盖本事件字段。"""
+    cur = await conn.execute("SELECT encounter FROM voyages WHERE id=?", (voyage_id,))
+    row = await cur.fetchone()
+    raw = (row[0] if row else None) or "{}"
+    try:
+        base = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        logger.exception("船漏: encounter 解析失败 voyage_id=%s encounter=%r", voyage_id, raw)
+        base = {}
+    if not isinstance(base, dict):
+        base = {}
+    return json.dumps({**base, **patch}, ensure_ascii=False)
 
 
 async def maybe_mid_voyage(
@@ -30,10 +48,10 @@ async def maybe_mid_voyage(
     row = await cur.fetchone()
     if not row or row[0] != "sailing":
         return None
-    payload = {"type": "hull_breach", "route": route_key}
+    payload = await _merged_payload(conn, voyage_id, {"type": "hull_breach", "route": route_key})
     await conn.execute(
         "UPDATE voyages SET status='hull_breach', encounter=? WHERE id=?",
-        (json.dumps(payload, ensure_ascii=False), voyage_id),
+        (payload, voyage_id),
     )
     return (
         "船底进了水！"
@@ -82,14 +100,15 @@ async def resolve(conn, steward: dict, voyage: dict, choice: str) -> str:
 
     from . import boat_hull as hull_mod
 
-    hull, mx = await hull_mod.get_hull(conn, sid)
+    owner_id = hull_mod.voyage_owner_id(sid, voyage)
+    hull, mx = await hull_mod.get_hull(conn, owner_id)
     loss = max(8, int(mx * 0.08))
     await conn.execute(
         "UPDATE steward_boat_hull SET hull=MAX(0, hull-?) WHERE steward_id=?",
-        (loss, sid),
+        (loss, owner_id),
     )
     await _resume(conn, vid)
-    hull2, mx2 = await hull_mod.get_hull(conn, sid)
+    hull2, mx2 = await hull_mod.get_hull(conn, owner_id)
     return f"硬扛过去（船体 {hull2}/{mx2}）。再漏就待修。"
 
 

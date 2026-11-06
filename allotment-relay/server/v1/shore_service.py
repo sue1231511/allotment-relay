@@ -225,6 +225,18 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
     boat = config.BOATS.get(boat_key) or {}
     boat_name = boat.get("name") or ""
     damaged = bool(s.get("boat_damaged"))
+    from .. import boat_hull
+
+    hull_owner_id, hull_boat_key, hull_relation = (
+        await boat_hull.hull_owner(conn, s) if boat_key else (s["id"], "", "self")
+    )
+    hull_now, hull_max = await boat_hull.get_hull(conn, hull_owner_id) if boat_key else (0, 0)
+    if boat_key and hull_owner_id != s["id"]:
+        cur = await conn.execute("SELECT boat_damaged FROM stewards WHERE id=?", (hull_owner_id,))
+        hrow = await cur.fetchone()
+        hull_damaged = bool(hrow and int(hrow[0]))
+    else:
+        hull_damaged = damaged
     voyage = await marine._get_voyage(conn, s["id"])
     sailing = bool(voyage)
     vstatus = (voyage or {}).get("status") or ""
@@ -542,6 +554,7 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
     if boat_name:
         boat_note = (
             f"{boat_name}{parts_note}"
+            + (f" · 船体 {hull_now}/{hull_max}" if hull_max else "")
             + (" · 待修" if damaged else "")
             + (" · 出海中" if sailing else "")
         )
@@ -619,18 +632,29 @@ async def player_view(conn, s: dict[str, Any]) -> dict[str, Any]:
             detail="提前返航。到点也会自动归港。",
         ),
     ]
-    if damaged and boat_key:
+    if (
+        boat_key
+        and hull_relation != "loan"
+        and boat_hull.needs_repair(hull_now, hull_max, hull_damaged)
+    ):
+        hull_cost = boat_hull.repair_cost(
+            int((config.BOATS.get(hull_boat_key) or boat).get("repair") or 12),
+            hull_now, hull_max, hull_damaged,
+        )
         voyage_items.append(
             _sku(
                 sid="repair",
                 kind="voyage",
                 name="修船",
                 emoji="🔧",
-                note=f"修理 {boat.get('repair', 12)} 票。有铜钉能少花。",
+                note=(
+                    f"船体 {hull_now}/{hull_max}，修理 {hull_cost} 票补满。有铜钉能少花。"
+                    + ("（合伙平摊）" if hull_relation == "share" else "")
+                ),
                 price="修",
-                can=tickets >= int(boat.get("repair") or 12),
+                can=tickets >= hull_cost or hull_relation == "share",
                 target="repair",
-                detail="船损不能出海。",
+                detail="船损不能出海；没坏但船体不满也能修，按缺的比例收票。",
             )
         )
     if boat_key and not sailing:

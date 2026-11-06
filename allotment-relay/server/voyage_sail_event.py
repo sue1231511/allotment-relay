@@ -8,10 +8,19 @@ from . import db
 from .catalog import ITEM_NAMES
 
 
+async def _voyage_row(conn, voyage_id: int) -> dict:
+    cur = await conn.execute("SELECT id, encounter FROM voyages WHERE id=?", (voyage_id,))
+    row = await cur.fetchone()
+    return {"id": row[0], "encounter": row[1]} if row else {}
+
+
 async def maybe_on_depart(conn, steward_id: int, voyage_id: int, route_key: str) -> str | None:
+    from . import boat_hull as hull_mod
     from . import boat_parts as parts_mod
 
-    parts = await parts_mod.get_all(conn, steward_id)
+    # 合伙 / 借船时帆记在船主身上（和归港磨损同一个人）
+    owner_id = hull_mod.voyage_owner_id(steward_id, await _voyage_row(conn, voyage_id))
+    parts = await parts_mod.get_all(conn, owner_id)
     sail_d, sail_mx = parts["sail"]
     ratio = sail_d / max(1, sail_mx)
     chance = 0.06
@@ -23,14 +32,14 @@ async def maybe_on_depart(conn, steward_id: int, voyage_id: int, route_key: str)
         chance += 0.08
     if random.random() > chance:
         return None
-    payload = {
-        "type": "sail_tear",
-        "route": route_key,
-        "hard_sail": False,
-    }
+    from . import voyage_hull_breach as breach_mod
+
+    payload = await breach_mod._merged_payload(
+        conn, voyage_id, {"type": "sail_tear", "route": route_key, "hard_sail": False},
+    )
     await conn.execute(
         "UPDATE voyages SET status='sail_tear', encounter=? WHERE id=?",
-        (json.dumps(payload, ensure_ascii=False), voyage_id),
+        (payload, voyage_id),
     )
     return (
         "出航不久帆撕了口子！"
@@ -54,6 +63,9 @@ async def resolve(conn, steward: dict, voyage: dict, choice: str) -> str:
     except json.JSONDecodeError:
         payload = {}
     route = payload.get("route") or voyage.get("route") or "near"
+    from . import boat_hull as hull_mod
+
+    owner_id = hull_mod.voyage_owner_id(steward["id"], voyage)
 
     if ch in ("补", "patch", "修"):
         if not await db.take_item(conn, steward["id"], "drift_twine", 2):
@@ -71,14 +83,14 @@ async def resolve(conn, steward: dict, voyage: dict, choice: str) -> str:
             paid = f"{ITEM_NAMES.get('drift_twine', '漂绳')}×2"
         from . import boat_parts as parts_mod
 
-        parts = await parts_mod.get_all(conn, steward["id"])
+        parts = await parts_mod.get_all(conn, owner_id)
         d, mx = parts["sail"]
         new = min(mx, d + 25)
         await conn.execute(
             """
             UPDATE steward_boat_parts SET durability=? WHERE steward_id=? AND part_key='sail'
             """,
-            (new, steward["id"]),
+            (new, owner_id),
         )
         await _resume_sailing(conn, voyage["id"])
         return f"补好帆（{paid}），继续 {route} 航程"
@@ -104,13 +116,13 @@ async def resolve(conn, steward: dict, voyage: dict, choice: str) -> str:
         await _resume_sailing(conn, voyage["id"])
         from . import boat_parts as parts_mod
 
-        parts = await parts_mod.get_all(conn, steward["id"])
+        parts = await parts_mod.get_all(conn, owner_id)
         d, mx = parts["sail"]
         await conn.execute(
             """
             UPDATE steward_boat_parts SET durability=? WHERE steward_id=? AND part_key='sail'
             """,
-            (max(0, d - 12), steward["id"]),
+            (max(0, d - 12), owner_id),
         )
         return "硬撑继续航。帆再损，归港更容易出事"
 

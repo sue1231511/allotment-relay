@@ -197,7 +197,7 @@ bar_ops     的 command = work 洗碗 night
 | `搭排` / `投苗 灰鲱 2` / `投饵 2` / `收排 2` / `名池 2 薄荷池` / `巡排` | 渔排（也可 `pen status` / `pen stock herring 2`）。人类 `/island` 港口「渔排」栏能点。收排赶上鱼种爱来的潮汐多一条；巡排约每 8 小时 |
 | `voyage buy raft` / `buy skiff` / `buy watch_hoy` / `buy smack` / `buy cutter` / `buy longliner` / `buy drifter` | 七档船（木筏/小舢板/守潮驳/近海帆撬/切波艇/延绳船/漂航船；也可买 木筏/舢板/小渔船/帆船/切波/双桅/雾海） |
 | `voyage depart near` / `far` / `deep` | 出海；归港遇黑旗截停带【轻中重绝】档（航线越深远档越高） |
-| `voyage 部件` / `voyage 部件 修` | 看十二件耐久（含网机/引擎/船钟/罗经）；低了加出海失败；鱼舱低少装货、冰舱低鱼易擦伤、网机低撒网更易空网、钟/罗经低更易偏航或黑旗难谈和。禁捕放生记入 `voyage 履历`。`部件 修` 默认 22 票/件（铜钉省 6）。`voyage repair` 仍修船体 |
+| `voyage 部件` / `voyage 部件 修` | 看十二件耐久（含网机/引擎/船钟/罗经）；低了加出海失败；鱼舱低少装货、冰舱低鱼易擦伤、网机低撒网更易空网、钟/罗经低更易偏航或黑旗难谈和。禁捕放生记入 `voyage 履历`。`部件 修` 默认 22 票/件（铜钉省 6）。`voyage repair` 仍修船体：待修收全价，没坏但船体不满按缺口比例收（至少 1 票），都补满 |
 | `voyage 改装 list` / `改装 装 铜雾钟` / `改装 卸 1` | 船 2 槽改装（失败率/谈和轻量加成） |
 | `fight` `flee` `parley` `bribe` | 黑旗截停（可省略 voyage） |
 | `compliment` `release` `catch` `grab` | 未命名小鱼（可省略 voyage）。compliment=release 礼遇，回赠普通鱼；catch=grab 动手：抓住这尾进袋，落下腿鱼小咒，其它鱼和精力会出事。吃或卖再掷事件：`kitchen_ops eat 未命名小鱼` / `tote_ops vend 未命名小鱼 1` |
